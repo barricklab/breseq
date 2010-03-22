@@ -1,0 +1,1811 @@
+#!/usr/bin/perl -w
+
+###
+# Pod Documentation
+###
+
+=head1 NAME
+
+breseq.pl
+
+=head1 SYNOPSIS
+
+Usage: breseq.pl [-a] [-q solexa|phred] -r reference.gbk reads.fastq
+
+Perform an analysis of bacterial resequencing data.
+
+=head1 DESCRIPTION
+
+=over
+
+=item B<-a>
+
+Print additional intermediate files.
+
+=item B<-q> solexa|phred
+
+Style of quality scores in fastq file. Must be either "solexa" (default) or "phred".
+Generally, if the largest ASCII values you see are no greater than 70 (=F) then you have "phred" style scores.
+If you have "solexa" style scores, then you probably see lowercase letters (=a). 
+
+=item B<--snp-error-analysis>
+
+Perform error analysis of SNPs. Do not predict mutations. Do not allow indels in read alignments. DEFAULT = OFF
+
+=item B<--require-full-matches>
+
+Matche entire reads. DEFAULT = OFF
+
+=item B<--max-mismatched-per-read>
+
+Disregard reads with more than this number of mismatches. DEFAULT = OFF
+
+=item B<--no-mismatch-prediction>
+
+Do not perform mismatch prediction.
+
+=item B<--no-deletion-prediction>
+
+Do not perform deletion prediction.
+
+=item B<--no-junction-prediction>
+
+Do not perform junction prediction.
+
+=item B<--no-alignment-generation>
+
+Do not generate alignments of reads to predicted mutations.
+
+=item B<--alignment-read-limit> int
+
+Only align this many reads (the first in the input files) to predicted mutations. FOR TESTING.
+
+=back
+
+=head1 AUTHOR
+
+Jeffrey Barrick <jbarrick@msu.edu>
+
+=head1 COPYRIGHT
+
+Copyright 2008-2009.  All rights reserved.
+
+=cut
+
+###
+# End Pod Documentation
+###
+
+our $VERSION = '0.00_02';
+
+#### Standard Perl Modules ####
+use strict;
+use Data::Dumper;
+use File::Path;
+use Getopt::Long;
+use Pod::Usage;
+use Storable;
+use POSIX qw(ceil floor);
+
+use FindBin;
+use lib $FindBin::Bin;
+$ENV{PATH} = "$ENV{PATH}:" . $FindBin::Bin;
+
+#### Breseq Perl Modules ####
+use BreseqUtility;
+use MummerDelta;
+use AlignmentAdjustment;
+use HybridReads;
+use CopyNumberVariation;
+use BreseqOutput;
+use AlignmentMaker;
+use AlignmentDatabase;
+
+#### BioPerl Modules ####
+use Bio::SeqIO;
+
+#### Configuration Options ####
+our $snp_log10_prob_cutoff = 5;			# log10 of evidence required for SNPs 
+our $read_limit;						# maximum number of reads to process
+our $copy_number_variation;				# perform copy number variation
+our @reference_genbank_file_names;      # files containing reference sequences
+
+## Special mode for error analysis ##
+our $snp_error_analysis;
+
+## Options for turning analysis off ##
+## Mainly for development, long names only ##
+our $no_junction_prediction;			# don't perform junction prediction steps
+our $no_mismatch_prediction;			# don't perform read mismatch/indel prediction steps
+our $no_deletion_prediction;			# don't perform deletion prediction steps
+our $no_alignment_generation;		# don't generate alignments
+our $alignment_read_limit;			# only go through this many reads when creating alignments
+our $no_filter_unwanted;
+
+## Save the options with which we were run for printing
+my $options;
+$options->{full_command_line} = "$0 @ARGV"; 
+$options->{quality_type} = '';					# quality score format
+$options->{predicted_quality_type} = '';
+$options->{min_quality} = 0;
+$options->{max_quality} = 0;
+$options->{min_length_for_snps} = 24;
+$options->{run_name} = '';
+$options->{clean} = 0;
+$options->{output_path} = '';
+
+my $unwanted_prefix = "UNWANTED:::";
+our %unwanted_sequences = ( 
+	'ILLUMINA_ADAPTOR'      => 'GATCGGAAGAGCTCGTATGCCGCTTCTGCTTCCGATC',  #Solexa Adaptor sequence.
+);
+
+## Keep a summary of certain statistics. 
+my $summary;
+$summary->{snps}->{nonsynonymous} = { num => 0, base_changes => {} };
+$summary->{snps}->{synonymous} = { num => 0, base_changes => {} };
+$summary->{snps}->{noncoding} = { num => 0, base_changes => {} };
+
+$summary->{reads}->{total_bases} = 0;
+$summary->{reads}->{total_reads} = 0;
+
+$summary->{reads}->{total_unique_reads} = 0;
+$summary->{reads}->{total_unique_read_matches} = 0;
+$summary->{reads}->{total_unique_read_mismatches} = 0;
+$summary->{reads}->{total_unique_read_insertions} = 0;
+$summary->{reads}->{total_unique_read_deletions} = 0;
+
+$summary->{reads}->{total_redundant_reads} = 0;
+$summary->{reads}->{total_redundant_read_matches} = 0;
+$summary->{reads}->{total_redundant_read_mismatches} = 0;
+$summary->{reads}->{total_redundant_read_insertions} = 0;
+$summary->{reads}->{total_redundant_read_deletions} = 0;
+
+
+my ($help, $man);
+my ($verbose);
+GetOptions(
+	'help|?' => \$help, 'man' => \$man,
+	'verbose|v' => \$verbose,
+## Options for input and output files
+	'name|n=s' => \$options->{run_name},	
+	'output-path|o=s' => \$options->{output_path},	
+	'reference-sequence|r=s' => \@reference_genbank_file_names,
+	'quality-style|q=s' => \$options->{quality_type},
+	'clean=s' => \$options->{clean},
+## Options for what results are printed
+	'quality-cutoff|c=s' => \$snp_log10_prob_cutoff,
+## Options for snp error analysis
+	'require-complete-match' => \$options->{require_complete_match},
+	'require-no-indel-match' => \$options->{require_no_indel_match},
+	'require-unique-match' => \$options->{require_unique_match},
+	'require-max-mismatches=s' => \$options->{require_max_mismatches},
+	'do-not-trim-ambiguous-ends' => \$options->{do_not_trim_ambiguous_ends},
+## Options for turning various analysis chunks off or on ##
+	'no-junction-prediction' => \$no_junction_prediction,
+	'no-mismatch-prediction' => \$no_mismatch_prediction,
+	'no-deletion-prediction' => \$no_deletion_prediction,
+	'no-alignment-generation' => \$no_alignment_generation,
+	'no-filter-unwanted' => \$no_filter_unwanted,
+	'copy-number-variation' => \$copy_number_variation,
+	'read-limit|l=s' => \$read_limit,
+	'alignment-read-limit=s' => \$alignment_read_limit,
+) or pod2usage(2);
+pod2usage(1) if $help;
+pod2usage(-exitstatus => 0, -verbose => 2) if $man;
+pod2usage(-exitstatus => 0, -verbose => 2) if (scalar @ARGV == 0);
+my @read_fastq_list = @ARGV;
+
+## Reference sequence provided?
+if (scalar @reference_genbank_file_names == 0)
+{
+	print STDERR "No reference sequences provided (-r).";
+	pod2usage(1);
+}
+
+## Find or create the output directory 
+if ($options->{output_path} && (!-e $options->{output_path}))
+{
+	if (!mkpath($options->{output_path}))
+	{
+		die "Could not find or create requested output path: $options->{output_path}\n";
+	}
+}
+
+###
+### Determine the requested or predicted format of quality scores
+###
+
+$options->{quality_type} = "\L$options->{quality_type}";
+
+## Check provided quality type
+if ($options->{quality_type} && ($options->{quality_type} ne 'solexa') && ($options->{quality_type} ne 'phred'))
+{
+	print STDERR "Invalid quality type provided (-q).";
+	pod2usage(1);
+}
+
+my $num_reads_to_preview = 1000;
+print STDERR "Predicting quality type and finding quality range from first $num_reads_to_preview read sequences.\n";
+my $in = FastqLite->new( -file => "<$read_fastq_list[0]" );
+($options->{predicted_quality_type}, $options->{min_quality}, $options->{max_quality}, $options->{quality_cdf}) 
+	= $in->predict_qual_format($num_reads_to_preview);
+
+## User did not specify quality style, use this one 
+if (!$options->{quality_type})
+{
+	$options->{quality_type} = $options->{predicted_quality_type};
+	print STDERR "Using predicted fastq quality score style: $options->{quality_type}\n";
+}
+## User specified quality style, does it agree with predicted?
+else
+{
+	print STDERR "Using user-specified fastq quality score style: $options->{quality_type}\n";
+	print STDERR "*** Warning! Predicted quality score style: $options->{predicted_quality_type} ***\n" 
+		if ($options->{predicted_quality_type} eq $options->{quality_type});
+}
+
+AlignmentMaker::set_quality_range($options->{quality_type}, $options->{min_quality}, $options->{max_quality}, $options->{quality_cdf});
+
+print STDERR "Min quality encountered: $options->{min_quality}\n";
+print STDERR "Max quality encountered: $options->{max_quality}\n";
+
+$FastqLite::using_solexa_quality = ($options->{quality_type} eq 'solexa');
+
+print STDERR "SNP quality cutoff: $snp_log10_prob_cutoff\n";
+
+
+#######  DEFAULT OUTPUT FILE NAMES  #######
+
+##### read conversion to fasta #####
+my $fasta_conversion_path = "fasta_conversion";
+$fasta_conversion_path = "$options->{output_path}/$fasta_conversion_path" if ($options->{output_path});
+my $fasta_conversion_done = "$fasta_conversion_path/fasta_conversion.done";
+my $reference_fasta_file_name = "$fasta_conversion_path/reference.fasta";
+my $unwanted_fasta_file_name = "$fasta_conversion_path/unwanted.fasta";
+my $fasta_converson_summary_file_name = "$fasta_conversion_path/summary.bin";
+
+##### mummer #####
+my $mummer_path = "mummer";
+$mummer_path = "$options->{output_path}/$mummer_path" if ($options->{output_path});
+my $mummer_done = "$mummer_path/mummer.done";
+
+##### alignment correction #####
+my $alignment_correction_path = "alignment_correction";
+$alignment_correction_path = "$options->{output_path}/$alignment_correction_path" if ($options->{output_path});
+my $alignment_correction_done = "$alignment_correction_path/alignment_correction.done";
+my $alignment_correction_sorted_file_name = "$alignment_correction_path/snps.diff.sorted.dat";
+my $alignment_correction_sort_done = "$alignment_correction_path/alignment_correction_sort.done";
+my $snp_diff_file_name = "$alignment_correction_path/snps.diff.dat";
+my $snps_all_tab_file_name = "$alignment_correction_path/snps.all.tab";
+my $coverage_file_name = "$alignment_correction_path/coverage.dat";
+my $unique_mummer_delta_file_name = "$alignment_correction_path/mummer.unique.corrected.delta";
+my $redundant_mummer_delta_file_name = "$alignment_correction_path/mummer.redundant.corrected.delta";
+my $coverage_tab_file_name = "$alignment_correction_path/coverage.tab";
+my $deletions_file_name = "$alignment_correction_path/deletions.tab";
+my $alignment_correction_summary_file_name = "$alignment_correction_path/summary.bin";
+my $alignment_database_name = "$alignment_correction_path/alignment_database";
+
+##### hybrid reads #####
+my $hybrid_read_path = "split_read";
+$hybrid_read_path = "$options->{output_path}/$hybrid_read_path" if ($options->{output_path});
+my $hybrid_read_fasta_file_name = "$hybrid_read_path/split_read.fasta";
+my $hybrid_read_fastq_file_name = "$hybrid_read_path/split_read.fastq";
+my $hybrid_read_delta_file_name = "$hybrid_read_path/split_read.delta";
+my $hybrid_read_mummer_prefix = "$hybrid_read_path/split_read_mummer";
+my $truncated_read_fasta_file_name = "$hybrid_read_path/truncated_read.fasta";
+my $truncated_read_fastq_file_name = "$hybrid_read_path/truncated_read.fastq";
+my $truncated_read_delta_file_name = "$hybrid_read_path/truncated_read.delta";
+my $truncated_read_mummer_prefix = "$hybrid_read_path/truncated_read_mummer";
+my $candidate_junctions_file_name = "$hybrid_read_path/candidate_junctions.fasta";
+my $hybrid_read_mummer_done = "$hybrid_read_path/mummer.done";
+
+##### output #####
+my $output_path = "output";
+$output_path = "$options->{output_path}/$output_path" if ($options->{output_path});
+my $junction_file_name = "$output_path/new_junctions.tab";
+my $snps_file_name = "$output_path/snps.tab";
+my $mutations_html_file_name = "$output_path/mutations.html";
+my $summary_html_file_name = "$output_path/summary.html";
+my $local_alignment_path = "alignment";
+my $alignment_path = "$output_path/$local_alignment_path";
+my $local_coverage_graph_path = "coverage";
+my $coverage_graph_path = "$output_path/$local_coverage_graph_path";
+
+##
+## Clean old results if requested
+##
+
+if ($options->{clean} > 0)
+{
+	rmtree([$output_path, $hybrid_read_path, $alignment_correction_path]);
+}
+if ($options->{clean} > 1)
+{
+	rmtree([$mummer_path, $fasta_conversion_path]);
+}
+
+
+###
+### SNP_diff file format
+###
+#
+# position in genome / insert count
+# + insert count means that there is an insertion BEFORE this position in the reference genome
+#
+
+###
+### Coverage file format
+###
+#
+# pair coverage is for between this base and the base BEFORE this one in the genome
+#
+
+BreseqOutput::record_time("Start");
+
+##
+# Convert the read fastq file to fasta for input into MUMmer
+##
+
+(-e $fasta_conversion_path) or mkpath($fasta_conversion_path) or die "Could not create directory $fasta_conversion_path\n";
+if (!-e "$fasta_conversion_done")
+{
+	print STDERR "Converting read fastq to fasta\n";
+
+	foreach my $read_fastq (@read_fastq_list)
+	{
+		#name without path or fastq ending
+		my $base_name = $read_fastq;
+		$base_name =~ s/\.fastq$//;
+		$base_name =~ s/^.+\///;
+		my $base_name_number = $base_name . ".\$";
+
+		#name with "fasta" substituted for "fastq"
+		my $read_fasta = $base_name_number;
+		$read_fasta .= ".fasta";
+
+		## create all relevant paths
+		$summary->{reads}->{per_file}->{$base_name}->{fastq_file_name} = $read_fastq;
+		$summary->{reads}->{per_file}->{$base_name}->{fasta_file_name} = "$fasta_conversion_path/$read_fasta";
+		$summary->{reads}->{per_file}->{$base_name}->{mummer_prefix} = "$mummer_path/$base_name_number.mummer";
+		$summary->{reads}->{per_file}->{$base_name}->{mummer_unwanted_prefix} = "$mummer_path/$base_name_number.mummer.unwanted";
+		$summary->{reads}->{per_file}->{$base_name}->{mummer_unique_corrected} = "$alignment_correction_path/$base_name.mummer.unique.corrected.delta";
+		$summary->{reads}->{per_file}->{$base_name}->{mummer_redundant_corrected} = "$alignment_correction_path/$base_name.mummer.redundant.corrected.delta";
+
+		my ($reads_in_file, $bases_in_file) = FastqLite::split_fastq_to_fasta(
+			$summary->{reads}->{per_file}->{$base_name}->{fastq_file_name}, 
+			$summary->{reads}->{per_file}->{$base_name}->{fasta_file_name}, 
+			{number_per_file=>1000000}
+		);
+		
+		$summary->{reads}->{total_reads} += $reads_in_file;
+		$summary->{reads}->{total_bases} += $bases_in_file;
+		$summary->{reads}->{per_file}->{$base_name}->{total_reads} = $reads_in_file;
+		$summary->{reads}->{per_file}->{$base_name}->{total_bases} = $bases_in_file;
+		
+		print STDERR "fastq file::$read_fastq\n";
+		print STDERR "  reads: $reads_in_file\n";
+		print STDERR "  bases: $bases_in_file\n";
+	}
+	
+	### Create UNWANTED fasta sequence file.
+	if (!$no_filter_unwanted)
+	{
+		open UNWANTED, ">$unwanted_fasta_file_name" or die "Could not open file $unwanted_fasta_file_name\n"; 
+		foreach my $key (keys %unwanted_sequences)
+		{
+			print UNWANTED ">$unwanted_prefix$key\n$unwanted_sequences{$key}\n";
+		}
+	}
+	
+	Storable::store($summary, $fasta_converson_summary_file_name) or die "Can't store data in file $fasta_converson_summary_file_name!\n";
+	
+	open DONE, ">$fasta_conversion_done";
+	close DONE;
+	BreseqOutput::record_time("Read fastq to fasta conversion");
+}
+else #load stored information
+{
+	$summary = Storable::retrieve($fasta_converson_summary_file_name);
+	die "Can't retrieve data from file $fasta_converson_summary_file_name!\n" if (!$summary);
+}
+
+print STDERR "fastq file::total\n";
+print STDERR "  reads: $summary->{reads}->{total_reads}\n";
+print STDERR "  total bases: $summary->{reads}->{total_bases}\n";
+
+
+##
+# Load the Input Genbank file
+##
+
+my ($ref_seqs, $ref_strings, $gene_lists, $is_lists);
+($ref_seqs, $ref_strings, $gene_lists, $is_lists) = load_reference_sequences($reference_fasta_file_name, @reference_genbank_file_names);
+BreseqOutput::record_time("Reference sequences converted and loaded");
+
+
+##
+# Run mummer to match all reads against the reference genome
+##
+
+print STDERR Dumper($summary);		
+		
+##Determine SNPs and rearrangements from looser matching
+(-e $mummer_path) or mkpath($mummer_path) or die "Could not create directory $mummer_path\n";
+if (! -e "$mummer_done")
+{
+	print STDERR "Performing MUMmer alignment...\n";	
+
+	my $extra_options = "";
+	$extra_options = "--nooptimize --breaklen 32000" if ($options->{require_complete_match});
+	
+	foreach my $key (sort keys %{$summary->{reads}->{per_file}})
+	{
+		my $i = 0;
+		INDEX: while (1)
+		{
+			my $query_fasta = $summary->{reads}->{per_file}->{$key}->{fasta_file_name};
+			$query_fasta =~ s/\$/$i/;
+			last INDEX if (!-e "$query_fasta");
+
+			### MUMmer to unwanted sequences
+			if (!$no_filter_unwanted) {
+				my $mummer_prefix = $summary->{reads}->{per_file}->{$key}->{mummer_unwanted_prefix};
+				$mummer_prefix =~ s/\$/$i/;
+				
+				## note lower minmatch parameter
+				my $minmatch = 9;  					## minimum length of exact match required
+				my $mincluster = $minmatch;			## minimum size of match that is extended
+				my $command = "nucmer --maxmatch -c $mincluster -l $minmatch --prefix $mummer_prefix $extra_options $unwanted_fasta_file_name $query_fasta";
+
+				print STDERR "$command\n";
+				my $res = system $command;
+				die "$res" if ($res);
+				unlink "$mummer_prefix.cluster";
+			}
+
+			### MUMmer to reference genome
+			{
+				my $mummer_prefix = $summary->{reads}->{per_file}->{$key}->{mummer_prefix};
+				$mummer_prefix =~ s/\$/$i/;
+			
+				my $minmatch = 14;  				## minimum length of exact match required
+				my $mincluster = $minmatch;			## minimum size of match that is extended
+				#my $breaklen = 8;					## force extension to read end if match is within this many nt of end
+													## only works if --nooptimize is also passed.
+				my $command = "nucmer --maxmatch -c $mincluster -l $minmatch --prefix $mummer_prefix $extra_options $reference_fasta_file_name $query_fasta";	 ## -b $breaklen --nooptimize
+
+				print STDERR "$command\n";
+				my $res = system $command;
+				die "$res" if ($res);
+				unlink "$mummer_prefix.cluster";
+			}		
+			
+		} continue {				
+			$i++;
+		}
+	}	
+	open DONE, ">$mummer_done";
+	close DONE;
+	BreseqOutput::record_time("MUMmer alignment of reads");
+
+}
+else
+{
+	print STDERR "MUMmer output already exists...\n";
+}
+	
+	
+##
+# Correct read alignments, record quality scores and coverage per position
+##
+
+##placeholder, will be used to handle multiple reference fragments at some point
+my @fragment_ids = sort keys %$ref_strings;
+my $seq_id = $fragment_ids[0];
+
+## Strategy: Create a file that gives coverage information for the reference sequence.
+## This has a fixed length, we don't have to store it in memory (but we do for speed).
+## Create a file describing each SNP that DOES NOT AGREE with this file.
+## Initially, this is unsorted.
+
+our $cov;
+
+## Create intermediate and output paths.
+(-e $alignment_correction_path) or mkpath($alignment_correction_path) or die "Could not create directory $alignment_correction_path\n";
+(-e $hybrid_read_path) or mkpath($hybrid_read_path) or die "Could not create directory $hybrid_read_path\n";
+(-e $output_path) or mkpath($output_path) or die "Could not create directory $output_path\n";
+(-e $alignment_path) or mkpath($alignment_path) or die "Could not create directory $alignment_path\n";
+
+if (!-e "$alignment_correction_done")
+{
+	print STDERR "Correcting ambiguous alignments and comparing sequences...\n";
+	
+	## Allocate a string big enough to hold data.
+	$cov = allocate_coverage(length($ref_strings->{$seq_id}));
+	
+	## Open the SNP diff file for writing.
+	my $snp_diff_fh;
+	open $snp_diff_fh, ">$snp_diff_file_name";
+
+	## Open a diff file (to get header).
+	my @keys = sort keys %{$summary->{reads}->{per_file}};
+	my $mummer_prefix = $summary->{reads}->{per_file}->{$keys[0]}->{mummer_prefix};
+	$mummer_prefix =~ s/\$/0/;
+	my $md_temp = MummerDelta->new(-file_name => "$mummer_prefix.delta", -dont_reverse => 1);
+
+	## Open the split delta and fasta files.
+	open HYBRID_FASTA, ">$hybrid_read_fasta_file_name" or die "Could not open $hybrid_read_fasta_file_name\n";
+	my $hybrid_fastq_fh;
+	open $hybrid_fastq_fh, ">$hybrid_read_fastq_file_name" or die "Could not open $hybrid_read_fastq_file_name\n";
+	my $mds = MummerDelta->new(-file_name => ">$hybrid_read_delta_file_name");
+	$mds->write_header($md_temp);
+	
+	## Open the truncated delta and fasta files.
+	open TRUNCATED_FASTA, ">$truncated_read_fasta_file_name" or die "Could not open $truncated_read_fasta_file_name\n";
+	my $truncated_fastq_fh;
+	open $truncated_fastq_fh, ">$truncated_read_fastq_file_name" or die "Could not open $truncated_read_fastq_file_name\n";
+	my $mdt = MummerDelta->new(-file_name => ">$truncated_read_delta_file_name");
+	$mdt->write_header($md_temp);
+	
+	## Open SNP database
+	my $alignment_database = new AlignmentDatabase(-name=>">$alignment_database_name");
+	my $database_index_list;
+	
+	my @snps;
+	my $done_reads = 0; 
+	my $num_snps_found = 0;
+	
+	foreach my $base_name (sort keys %{$summary->{reads}->{per_file}})
+	{
+		my $summary_names = $summary->{reads}->{per_file}->{$base_name};
+		
+		## Open the corrected delta files.
+		my $mdou = MummerDelta->new(-file_name => ">$summary_names->{mummer_unique_corrected}");
+		$mdou->write_header($md_temp);
+		my $mdor = MummerDelta->new(-file_name => ">$summary_names->{mummer_redundant_corrected}");
+		$mdor->write_header($md_temp);
+	
+		my $mummer_file_index = 0;
+		my $mummer_prefix = $summary_names->{mummer_prefix};
+		$mummer_prefix =~ s/\$/$mummer_file_index/;
+		my $mummer_unwanted_prefix = $summary_names->{mummer_unwanted_prefix};
+		$mummer_unwanted_prefix =~ s/\$/$mummer_file_index/;	
+		
+		## Open the read fastq file.
+		my $in = FastqLite->new( -file => "<$summary_names->{fastq_file_name}");
+		my $read_seq = { id => '' };
+		
+		## Loop through each file of mummer results.
+		while (-e "$mummer_prefix.delta")
+		{
+			print STDERR "$mummer_prefix $mummer_unwanted_prefix\n";
+		
+			#open the diff file
+			my $md = MummerDelta->new(-file_name => "$mummer_prefix.delta", -dont_reverse => 1);
+			my @read_matches = $md->get_next_list;		
+			
+			#open the unwanted diff file
+			my $mdu;
+			my @read_unwanted_matches;
+			if (!$no_filter_unwanted)
+			{
+				$mdu = MummerDelta->new(-file_name => "$mummer_unwanted_prefix.delta", -dont_reverse => 1);
+			 	@read_unwanted_matches = $md->get_next_list;		
+			}
+			
+			READ: while (scalar @read_matches)
+			{	
+				## Keep a count, so we can print out progress...
+				$done_reads++;
+				print STDERR "  $done_reads " . $num_snps_found. "\n" if ($done_reads % 1000 == 0);
+				
+				last if ((defined $read_limit) && ($done_reads > $read_limit));
+			
+				#We are only concerned with "non-dominated" matches.
+				@read_matches = MummerDelta::remove_dominated_matches_from_list(@read_matches);		
+				
+				#move forward until we reach the correct read in the fastq file
+				while ($read_seq->{id} ne $read_matches[0]->{query})
+				{
+					if (!$no_filter_unwanted)
+					{
+						if ((scalar @read_unwanted_matches > 0) && ($read_seq->{id} eq $read_unwanted_matches[0]->{query}))
+						{
+							@read_unwanted_matches = $mdu->get_next_list;	
+						}
+					}			
+					$read_seq = $in->next_seq;
+					die "Could not find sequence $read_matches[0]->{query}" if (!$read_seq);
+					
+					#we know that this loop will pass through every possible query
+					#so we know to read the next one once we are in step
+				}
+				
+				if (!$no_filter_unwanted)
+				{
+					if ((scalar @read_unwanted_matches > 0) && ($read_seq->{id} eq $read_unwanted_matches[0]->{query}))
+					{
+						push @read_matches, @read_unwanted_matches;
+					}
+				}
+							
+				##Determine which matches
+				my @match_groups = MummerDelta::to_match_groups(@read_matches);
+				
+				##add the sequence matched in the genome
+				foreach my $g (@match_groups)
+				{
+					my $m = $g->{matches}->[0];
+					$g->{ref_seq_matched} = substr $ref_strings->{$seq_id}, $m->{reference_start}-1, $m->{reference_end}-$m->{reference_start}+1;	
+				}
+				
+				##Ignore homopolymeric matches
+				#print STDERR "$read->{query}\n";
+				@match_groups = AlignmentAdjustment::filter_homopolymeric(\@match_groups, $read_seq->{seq});
+				next READ if (scalar @match_groups == 0);
+				
+				#### if any of the best match group are to an unwanted sequence, don't save
+				if (!$no_filter_unwanted)
+				{
+					MATCH_GROUP: foreach my $mg (@match_groups)
+					{
+						MATCH: foreach my $m (@{$mg->{matches}})
+						{
+							next READ if ($m->{reference} =~ m/^$unwanted_prefix/);
+						}
+					}
+				}
+				
+				
+				### disregard split matches
+				next READ if ($options->{require_unique_match} && (scalar @match_groups > 1));
+				
+											
+				#Now is our chance to decide which groups of matches are compatible,
+				#to change their boundaries and to come up with a final list.
+				if (scalar @match_groups > 1)
+				{			
+					#try adding together each pair of matches to make a longer match
+					my $best_pair_coverage = -1;
+					my $best_pair_mismatches = 9999;
+					my $best_pair_index_1;
+					my $best_pair_index_2;
+					my $best_intersection_fraction_1;
+					my $best_intersection_fraction_2;
+				
+					for (my $i=0; $i<scalar @match_groups; $i++)
+					{
+						my $mg1 = $match_groups[$i]->{matches}->[0];
+						for (my $j=$i+1; $j<scalar @match_groups; $j++)
+						{
+							my $mg2 = $match_groups[$j]->{matches}->[0];
+							
+							my $length_1 = $mg1->{query_end} - $mg1->{query_start} + 1;
+							my $length_2 = $mg2->{query_end} - $mg2->{query_start} + 1;
+							
+							my $union_start = ($mg1->{query_start} < $mg2->{query_start}) ? $mg1->{query_start} : $mg2->{query_start};
+							my $union_end = ($mg1->{query_end} > $mg2->{query_end}) ? $mg1->{query_end} : $mg2->{query_end};			
+							my $union_length = $union_end - $union_start + 1;
+
+							my $intersection_start = ($mg1->{query_start} > $mg2->{query_start}) ? $mg1->{query_start} : $mg2->{query_start};
+							my $intersection_end = ($mg1->{query_end} < $mg2->{query_end}) ? $mg1->{query_end} : $mg2->{query_end};			
+							my $intersection_length = $intersection_end - $intersection_start + 1;
+							
+							#intersection can be a negative number
+							$union_length += $intersection_length if ($intersection_length<0);
+										
+							my $total_mismatches = $mg1->{mismatches} + $mg2->{mismatches};
+						
+							if ( ($union_length > $best_pair_coverage) || (($union_length == $union_length) && ($total_mismatches < $best_pair_mismatches) ))
+							{
+								($best_pair_coverage, $best_pair_mismatches, $best_pair_index_1, $best_pair_index_2, $best_intersection_fraction_1, $best_intersection_fraction_2)
+									= ($union_length, $total_mismatches, $i, $j, $intersection_length / $length_1, $intersection_length / $length_2);
+							}
+						
+						}
+					}
+					#print STDERR "SPLIT HIT!!!\n";
+					#print STDERR Dumper(@match_groups);		
+						
+					# If either of the two parts of the read matches intersects the other by >= 75% of its length,
+					# then we do not allow them to be grouped. get rid of the shorter match (a larger percentage of
+					# its length will be in the intersection).
+				
+					# Tests have shown that removing this test adds a few more spurious predictions of new junctions
+					# setting the threshold lower (50%) misses some valid junctions in tests on Ara-1 genomes
+								
+					if (($best_intersection_fraction_1 >= 0.75) || ($best_intersection_fraction_2 >= 0.75))
+					{
+						## if there is a tie, then we don't know what to do!
+						next READ if ($best_intersection_fraction_1 == $best_intersection_fraction_2);
+						
+						my $best_match_group_index = ($best_intersection_fraction_1 < $best_intersection_fraction_2) ? $best_pair_index_1 : $best_pair_index_2;
+						my @new_match_groups;
+						push @new_match_groups, $match_groups[$best_match_group_index];
+						@match_groups = @new_match_groups;
+					}
+					else
+					{
+						my @new_match_groups;
+						push @new_match_groups, $match_groups[$best_pair_index_1];
+						push @new_match_groups, $match_groups[$best_pair_index_2];
+						@match_groups = @new_match_groups;
+					}
+				}	
+				
+				
+				##If we still have multiple match groups then it is a hybrid read split between two parts of the reference sequence.	
+				if (scalar @match_groups > 1)
+				{	
+					#print STDERR Dumper($read);
+
+					##if they have more than two match groups, we don't know what to do with them...
+					next READ if (scalar @match_groups > 2);
+					
+					@read_matches = ();
+					foreach my $mg (@match_groups)
+					{
+						push @read_matches, @{$mg->{matches}};
+					}				
+					$mds->write_item_list(@read_matches);
+							
+					print HYBRID_FASTA ">$read_seq->{id}\n$read_seq->{seq}\n";
+					FastqLite::write_seq($hybrid_fastq_fh, $read_seq);
+
+					##### DO NOT CALL SNPS FROM THESE READS!!!! #####
+					next READ;
+				}	
+
+				#### There is only one match group at this point. ###
+				
+				## Note: the length of all matches in a match group will be the same.
+				## Test too see if the part of the read matching is too short to call SNPs.
+				## It now qualifies as a truncated read for finding new junctions.
+				{
+					my $m = $match_groups[0]->{matches}->[0];						
+					if ($m->{query_end} - $m->{query_start} + 1 < $options->{min_length_for_snps})
+					{
+						$mdt->write_item_list(@read_matches);
+						print TRUNCATED_FASTA ">$read_seq->{id}\n$read_seq->{seq}\n";
+						FastqLite::write_seq($truncated_fastq_fh, $read_seq);
+						next READ;
+					}
+				}
+				
+				MATCH_GROUP: foreach my $mg (@match_groups)
+				{					
+					#print STDERR Dumper($mg);
+					my $max_qry_end;
+					my $min_qry_start;
+				
+					MATCH: for (my $i=0; $i< scalar @{$mg->{matches}}; $i++)
+					{
+						my $m = $mg->{matches}->[$i];
+					
+						$m->{redundancy} = scalar @{$mg->{matches}};
+					
+						########### Additional guards on whether to include in SNP predictions  ########### 
+						### disregard split matches
+						next READ if ($options->{require_unique_match} && ($m->{redundancy} > 1));
+						
+						### disregard matches that do not cover read
+						next READ if ($options->{require_complete_match} && (($m->{query_start} != 1) 
+							|| ($m->{query_end} != $m->{query_length})));
+				
+						### disregard matches with indels
+						next READ if ($options->{require_no_indel_match} && (scalar @{$m->{indels}} > 0));
+						
+						### disregard matches with too many base mismatches
+						next READ if ($options->{require_max_mismatches} && ($m->{mismatches} > $options->{require_max_mismatches}));
+						###################################################################################
+					
+						##record stats
+						$summary->{reads}->{total_unique_reads}++ if ($m->{redundancy} == 1);
+						$summary->{reads}->{total_redundant_reads}++ if ($m->{redundancy} > 1);
+
+						#print STDERR Dumper($m);
+						$max_qry_end = $m->{query_end} if (!defined $max_qry_end || ($m->{query_end} > $max_qry_end));
+						$min_qry_start = $m->{query_start} if (!defined $min_qry_start || ($m->{query_start} < $min_qry_start));
+
+						##Keep the quality in the correct orientation
+						my @quals = FastqLite::quals($read_seq);
+						@quals = reverse @quals if ($m->{strand} == -1);	
+						#print STDERR $read_seq->{id} . "\n@quals\n";
+						
+						#get the reference sequence matched
+						my $ref_string = substr $ref_strings->{$seq_id}, $m->{reference_start}-1, $m->{reference_end}-$m->{reference_start}+1;
+						my $qry_string = substr $read_seq->{seq}, $m->{query_start}-1, $m->{query_end} - $m->{query_start}+1;
+						$qry_string = FastqLite::revcom($qry_string) if ($m->{strand} == -1);
+						
+						my @ref;
+						my @qry;
+						if ($options->{do_not_trim_ambiguous_ends})
+						{
+							@ref = split //, $ref_string;
+							@qry = split //, $qry_string;
+						}
+						else #do trim ambiguous ends	
+						{
+							#expand, but keep bounded
+							my $expand_by = 36;
+							my $expand_left = ($m->{reference_start}-1 < $expand_by) ? $m->{reference_start}-1 : $expand_by;
+							my $expand_right = (length($ref_strings->{$seq_id})-$m->{reference_end} < $expand_by) ? length($ref_strings->{$seq_id})-$m->{reference_end} : $expand_by;
+							my $expanded_ref_string = substr $ref_strings->{$seq_id}, $m->{reference_start}-1-$expand_left, $m->{reference_end}-$m->{reference_start}+1+$expand_left+$expand_right;
+
+							my $ref_left_string = substr $ref_strings->{$seq_id}, $m->{reference_start}-1, $m->{reference_end}-$m->{reference_start}+1;
+							my $ref_right_string = substr $ref_strings->{$seq_id}, $m->{reference_start}-1, $m->{reference_end}-$m->{reference_start}+1;
+							
+							my $full_qry_string = $read_seq->{seq};
+							$full_qry_string = FastqLite::revcom($full_qry_string) if ($m->{strand} == -1);
+
+							#print STDERR Dumper($m);
+							#print STDERR "$ref_string\n$qry_string\n$full_qry_string\n";
+							
+							my ($r, $q) = AlignmentAdjustment::trim_ambiguous_ends($m, $ref_string, $qry_string, $full_qry_string, $expand_left, $expand_right, $expanded_ref_string);
+							@ref = @$r;
+							@qry = @$q;		
+						
+							#print STDERR Dumper($m);
+							#print STDERR "@qry\n@ref\n";	
+						}
+						
+								
+						##
+						# Adjust the positions of indels.
+						#
+						# (1) Shift ambiguous indels to the lowest coordinate on the top strand of the reference genome that is possible.
+						# (2) Additionaly, see if indels can be consolidated.
+						#
+						##	
+						
+						if (scalar @{$m->{indels}} > 0)
+						{
+							AlignmentAdjustment::shift_alignment_gaps(\@ref, \@qry);
+							my @new_indels = AlignmentAdjustment::alignment_to_indels(\@ref, \@qry);
+							$m->{indels} = \@new_indels;
+
+							print STDERR "match: strand $m->{strand}\n@ref\n@qry\n"  if ($verbose);
+							print STDERR Dumper($m) if ($verbose);
+						}
+					
+						##
+						# Record coverage and SNPS
+						##
+
+						## We have not passed any gaps so we can just offset past ambiguous ends
+						my $qual_pos = $m->{query_start}-1;
+						my $ref_pos = $m->{reference_start};
+						my $read_pos = 0;
+
+						my $insert_count = 0;
+						my $paired_log10_pr = 0; #start this way so the first nt not counted as a junction
+						#pairs indicate that both N and N-1 had the same base and no insertions between
+						
+						#print "@ref\n@qry\n";
+						## Loop through comparing each character
+						
+						my $new_database_entry = AlignmentDatabase::new_entry_header($m->{redundancy}, $m->{strand});
+						
+						#print Dumper($new_database_entry);
+						while ($read_pos < $m->{query_end}-$m->{query_start}+1)
+						{
+							#deletion in query relative to reference (insertion in reference)
+							#note that insertions are always AFTER the position given
+							if ($qry[$read_pos] eq '.')
+							{			
+								$insert_count = 0;
+								$paired_log10_pr = 0;
+									
+							 	my $snp = write_snp($snp_diff_fh, $ref_pos, $insert_count, $quals[$qual_pos], $m->{strand}, $m->{redundancy}, $qry[$read_pos]);
+							 	$num_snps_found++;						 	
+							 	$summary->{reads}->{total_unique_read_deletions}++ if ($m->{redundancy} == 1);
+							 	$summary->{reads}->{total_redundant_read_deletions}++ if ($m->{redundancy} > 1);
+							}
+							#insertion in query (deletion in reference)
+							elsif ($ref[$read_pos] eq '.')
+							{
+								##note that we are really still inserting after the previous reference position, because it was incremented already!
+								##it will be NOT incremented properly for following deletions and the next match/mismatch
+								$insert_count++;
+								$paired_log10_pr = 0;	
+								my $snp = write_snp($snp_diff_fh, $ref_pos, $insert_count, $quals[$qual_pos], $m->{strand}, $m->{redundancy}, $qry[$read_pos]);
+								$num_snps_found++;
+								$summary->{reads}->{total_unique_read_insertions}++ if ($m->{redundancy} == 1);
+							 	$summary->{reads}->{total_redundant_read_insertions}++ if ($m->{redundancy} > 1);
+							}
+							#mismatch, no insertion
+							elsif ($ref[$read_pos] ne $qry[$read_pos])
+							{	
+								$insert_count = 0;
+								$paired_log10_pr = 0;
+								my $snp = write_snp($snp_diff_fh, $ref_pos, $insert_count, $quals[$qual_pos], $m->{strand}, $m->{redundancy}, $qry[$read_pos]);
+								$num_snps_found++;	
+								$summary->{reads}->{total_unique_read_mismatches}++ if ($m->{redundancy} == 1);
+							 	$summary->{reads}->{total_redundant_read_mismatches}++ if ($m->{redundancy} > 1);
+							}
+							else #match, update coverage
+							{
+								$insert_count = 0;
+								my @item;
+								my $offset = ($m->{strand} == -1) ? 0 : 1;
+								my $log10_pr = FastqLite::quality_to_log10_error_probability($quals[$qual_pos]);
+								
+								#unique match
+								if ($m->{redundancy} == 1)
+								{
+									$item[0+$offset] = $log10_pr;
+									$item[2+$offset] = ($log10_pr + $paired_log10_pr)/2 if ($paired_log10_pr);
+									$item[4+$offset] = 1;
+									$item[6+$offset] = 1 if ($paired_log10_pr);
+								}
+								#redundant match
+								else
+								{						
+									$item[8+$offset] = 1 / $m->{redundancy};
+								}
+
+							    add_coverage(\$cov, $ref_pos, \@item);
+								$paired_log10_pr = $log10_pr;
+								
+								$summary->{reads}->{total_unique_read_matches}++ if ($m->{redundancy} == 1);
+							 	$summary->{reads}->{total_redundant_read_matches}++ if ($m->{redundancy} > 1);
+							}
+							
+							$new_database_entry .= AlignmentDatabase::encode_base($qry[$read_pos], $ref[$read_pos], $quals[$qual_pos]);
+										
+				 			#increment positions
+							$ref_pos++ if ($ref[$read_pos] ne '.');
+							$qual_pos++ if ($qry[$read_pos] ne '.');
+							$read_pos++;
+							
+						}
+					
+						#if ($m->{redundancy} == 1)
+						{
+							my $database_index_entry = $alignment_database->write_entry($m->{reference_start}, $m->{reference_end}, $new_database_entry);
+							if (length $new_database_entry < 36)
+							{
+								print Dumper($m);
+							}
+							$database_index_list .= $database_index_entry;
+						}
+						
+					}
+					
+					my @original_read_matches = grep { defined $_->{redundancy} } @read_matches;
+					@read_matches = grep { $_->{redundancy} == 1 } @original_read_matches;
+					$mdou->write_item_list(@read_matches) if (scalar @read_matches > 0);
+					@read_matches = grep { $_->{redundancy} > 1 } @original_read_matches;
+					$mdor->write_item_list(@read_matches) if (scalar @read_matches > 0);
+				} continue { 
+					#catch match groups that are truncated too short to qualify as matches
+					## record truncated reads (they may pass over new junctions)
+					##truncated reads were here
+				}
+			} continue {
+				@read_matches = $md->get_next_list;	
+			}
+				
+		} continue {	
+			$mummer_file_index++;
+			$mummer_prefix = $summary_names->{mummer_prefix};
+			$mummer_prefix =~ s/\$/$mummer_file_index/;
+			$mummer_unwanted_prefix = $summary_names->{mummer_unwanted_prefix};
+			$mummer_unwanted_prefix =~ s/\$/$mummer_file_index/;	
+		}
+	}
+
+	$alignment_database->write_index($database_index_list);
+
+	##
+	# Output raw SNP and coverage information
+	##
+	print STDERR "Writing coverage file...\n";
+	open COV, ">$coverage_file_name";
+	print COV $cov;
+	close COV;
+
+	close HYBRID_FASTA;
+	close $hybrid_fastq_fh;
+	close TRUNCATED_FASTA;
+	close $truncated_fastq_fh;
+	
+	Storable::store($summary, $alignment_correction_summary_file_name) or die "Can't store data in file $alignment_correction_summary_file_name!\n";
+	
+	open DONE, ">$alignment_correction_done";
+	close DONE;
+}
+else
+{
+	print STDERR "Correction of ambiguous alignments and comparison of sequences already complete.\n";
+	$summary = Storable::retrieve($alignment_correction_summary_file_name);
+	die "Can't retrieve data from file $alignment_correction_summary_file_name!\n" if (!$summary);
+}
+
+
+#### Sort the snp diffs by position
+
+##
+# Sort and combine the SNP diff files
+##
+if (!-e "$alignment_correction_sort_done")
+{
+	print STDERR "Sorting snp differences...\n";
+	my $sequence_length = length $ref_strings->{$seq_id};	
+	my $sorted_fh;
+	open $sorted_fh, ">$alignment_correction_sorted_file_name";
+	my $start_slice = 1;
+	my $slice_size = 100000;
+	while ($start_slice < $sequence_length)
+	{
+		my @snps = get_snps_in_range($snp_diff_file_name, $start_slice, $start_slice + $slice_size - 1);
+		@snps = sort { ($a->{position} <=> $b->{position}) || ($a->{insert_count} <=> $b->{insert_count}) } @snps;
+		$start_slice += $slice_size;
+		write_snp_list($sorted_fh, \@snps);
+	}
+
+	open DONE, ">$alignment_correction_sort_done";
+	close DONE;
+}
+else
+{
+	print STDERR "Sorting of snp differences already complete.\n";
+}	
+
+
+##
+# Make predictions of new junctions from hybrid reads
+##
+#if (-e $junction_file_name)
+#{
+#	print STDERR "Predicting new junctions already complete.\n";
+#}
+#else
+
+my @hybrids = ();
+@hybrids = HybridReads::hybrid_read_predictions(
+			  		$ref_strings, $gene_lists, $is_lists, $seq_id,
+					$hybrid_read_path, $hybrid_read_fasta_file_name, $hybrid_read_delta_file_name, 
+					$truncated_read_fasta_file_name, $truncated_read_delta_file_name, $junction_file_name,
+					$candidate_junctions_file_name, $hybrid_read_mummer_prefix, $truncated_read_mummer_prefix,
+					$hybrid_read_fastq_file_name, $truncated_read_fastq_file_name, $hybrid_read_mummer_done
+			) if (!$no_junction_prediction);
+
+##
+# Make predictions of point mutations, small indels, and large deletions
+##
+if ( (!-e $snps_file_name) || (!-e $deletions_file_name) 
+  || (!-e $snps_all_tab_file_name) || (!-e $coverage_tab_file_name) )
+{
+	print STDERR "Collecting and evaluating SNPs...\n";
+
+	## begin loop through different reference sequences here
+	{
+	
+		## set up information specific to this sequence
+		my @gene_list = @{$gene_lists->{$seq_id}};
+		my @is_list = @{$is_lists->{$seq_id}};
+		my $sequence_length = $ref_seqs->{$seq_id}->length;
+		my $ref_seq = $ref_seqs->{$seq_id};
+		
+		## read the entire coverage file, we're going to need it for coverage calculations
+		open COV, "<$coverage_file_name";
+		read COV, $cov, -s $coverage_file_name;
+		close COV;
+
+		##
+		# Copy Number Variation
+		##
+
+		my @max_likelihood_table;
+		@max_likelihood_table = analyze_copy_number_variation(\$cov, $sequence_length) if ($copy_number_variation);
+		
+		##
+		# SNPs
+		##
+
+		my @snps = ();
+		@snps = identify_snps(
+						$cov, 
+						$sequence_length,
+						\@max_likelihood_table, 
+						$alignment_correction_sorted_file_name, 
+						$snps_all_tab_file_name, 
+						$coverage_tab_file_name, 
+						$seq_id
+					) if (!$no_mismatch_prediction);
+		
+		##At this point we should fork to analyze the SNP errors
+		exit 0 if ($snp_error_analysis);
+
+
+		##
+		# Find deletions
+		##
+
+		my @deletions = ();
+		@deletions = identify_deletions(
+								$cov, 
+								$sequence_length, 
+								\@gene_list, 
+								\@is_list, 
+								$seq_id
+							) if (!$no_deletion_prediction);
+		
+		##
+		# Remove deletions that are in exactly the same positions as, or included within, SNPs
+		##
+
+		DEL: for (my $i=0; $i<scalar @deletions; $i++)
+		{
+			my $del = $deletions[$i];	 
+			
+			SNP: foreach my $snp (@snps)
+			{
+				##remove the deletion if exactly the same as the SNP
+				if ( ($del->{start} >= $snp->{start}) && ($del->{end} <= $snp->{end}) )
+				{
+					splice @deletions, $i, 1;
+					$i--;
+					last SNP;
+				}
+			}
+		}
+
+
+		##
+		# Write out deletion file
+		##
+
+		open DEL, ">$deletions_file_name";
+		print DEL "start\tend\tsize\tleft\tleft_inside\tright_inside\tright\tgenes\n";
+		foreach my $del (@deletions)
+		{
+			print DEL "$del->{line}\n";
+		}
+
+
+		##
+		# Draw coverage of genome and large deletions
+		##
+		my $success_at_coverage_graphs;
+		if (!-e $coverage_graph_path)
+		{
+			print STDERR "Drawing coverage graphs...\n";
+			my $res = system "graph_coverage.pl -p $coverage_graph_path -i $deletions_file_name -c $coverage_tab_file_name";
+			rmtree($coverage_graph_path) if ($res);
+			$success_at_coverage_graphs = ($res == 0);
+			
+			my $i=1;
+			foreach my $del (@deletions)
+			{
+				$del->{coverage_graph_link} = "$local_coverage_graph_path/$i.pdf";
+				$i++;
+			}
+		}
+		else
+		{
+			print STDERR "Drawing coverage graphs already complete.\n";
+		}
+
+		##
+		# Remove SNPs that overlap deletions
+		##
+
+		SNP: for (my $i=0; $i<scalar @snps; $i++)
+		{
+			my $snp = $snps[$i];
+			DEL: foreach my $del (@deletions)
+			{
+				##remove the SNP if it is located within the deletion
+				if ( ($del->{start} <= $snp->{start}) && ($del->{end} >= $snp->{end}) )
+				{
+					splice @snps, $i, 1;
+					$i--;
+					last DEL;
+				}
+			}
+		}
+
+
+		##
+		# Annotate SNPs
+		##
+
+		print STDERR "Annotating SNPs...\n";
+
+		annotate_snps(\@snps, \@gene_list, \@is_list, $ref_seq, $summary);
+
+		#print Dumper @snps;
+
+		##
+		# Output SNPs
+		##
+		
+		### make alignments first because we fill in a link field used by the summary file
+		my @composite_list; ##
+		push @composite_list, @snps;
+		
+		### look, we have to invent intervals for the deletions so each has an upstream and downstream.
+		foreach my $deletion (@deletions)
+		{
+			#ok, this has a circular reference, which may possibly be a very bad thing.
+			$deletion->{upstream_interval} = { start => $deletion->{start}-1, end => $deletion->{start}-1, 
+				deletion => $deletion, ref_string_ref => \$ref_strings->{$seq_id}, reference => $seq_id };
+			$deletion->{downstream_interval} = { start => $deletion->{end}+1, end => $deletion->{end}+1, 
+				deletion => $deletion, ref_string_ref => \$ref_strings->{$seq_id}, reference => $seq_id };
+			push @composite_list, $deletion->{upstream_interval};
+			push @composite_list, $deletion->{downstream_interval};
+		}
+		
+		### look, we have to invent intervals for the non-rearranged versions of the hybrid reads as well.
+		foreach my $hybrid (@hybrids)
+		{
+			print STDERR Dumper($hybrid);
+		
+			push @composite_list, $hybrid->{interval_1};
+			push @composite_list, $hybrid->{interval_2};
+		}
+		
+		#print STDERR Dumper(@composite_list);
+		
+		### make alignments that involve the reference genome
+		if (!$no_alignment_generation)
+		{
+			foreach my $key (sort keys %{$summary->{reads}->{per_file}})
+			{
+				my $fastq_file_name = $summary->{reads}->{per_file}->{$key}->{fastq_file_name};
+				my $unique_mummer_delta_file_name = $summary->{reads}->{per_file}->{$key}->{mummer_unique_corrected};
+			
+				AlignmentMaker::add_aligned_reads_to_intervals(
+					\@composite_list, 
+					$fastq_file_name, 
+					$unique_mummer_delta_file_name, 
+					$alignment_read_limit				## if undefined, used all reads
+				);
+			}
+		}
+		
+		### first name all the files/links, so backlinks work
+		foreach my $c (@composite_list)
+		{
+			my $html_alignment_file_name = "$c->{start}_$c->{end}_alignment.html";
+			$c->{link} = "$local_alignment_path/$html_alignment_file_name";
+			$c->{file_name} = "$alignment_path/$html_alignment_file_name";
+			$c->{ref_seq_ref} = \$ref_strings->{$seq_id};
+		}
+		
+		for (my $i=0; $i<scalar @hybrids; $i++)
+		{
+			my $c = $hybrids[$i];
+			my $html_alignment_file_name = "hybrid\_$i\_alignment.html";
+			$c->{link} = "$local_alignment_path/$html_alignment_file_name";
+			$c->{file_name} = "$alignment_path/$html_alignment_file_name";
+		}
+		
+		### now create alignment files
+		
+		foreach my $c (@composite_list, @hybrids)
+		{
+			#print STDERR "Creating alignment file: $c->{link}\n";
+			BreseqOutput::html_alignment_file($c);
+		}
+		
+		### make alignments that involve rearranged versions of the reference genome		
+		BreseqOutput::html_full_table($mutations_html_file_name, $options, \@snps, \@deletions, \@hybrids);
+#		BreseqOutput::text_snp_table($snps_file_name, "breseq snp output", \@snps);
+#		BreseqOutput::text_junction_table($junction_file_name, "breseq junction output", \@hybrids);
+	}
+}
+
+## record the final time and print summary table
+BreseqOutput::record_time("End");
+BreseqOutput::html_summary_table($summary_html_file_name, $options, \@BreseqOutput::execution_times, $summary);
+
+
+
+####
+#### END OF PROGRAM
+####
+#### begin function definitions
+####
+
+sub load_reference_sequences
+{
+	##need to eventually allow multiple reference sequences
+	my ($reference_fasta_file_name, @genbank_file_names) = @_;
+	print STDERR "Loading reference sequences...\n";
+	
+	my $create_ref_fasta = ((!-e "$reference_fasta_file_name") || (-s "$reference_fasta_file_name" == 0));
+	my $ref_o = Bio::SeqIO->new( -file => ">$reference_fasta_file_name", -format => 'fasta') if ($create_ref_fasta);
+	
+	if ($create_ref_fasta)
+	{
+		print STDERR "  Creating reference sequence FASTA file...\n";
+	}
+	else
+	{
+		print STDERR "  Reference sequence FASTA file already exists...\n";
+	}
+
+	my %ref_seqs;
+	my %ref_strings;
+	my %gene_lists;
+	my %is_lists;
+	my %fasta_file_names;
+
+	foreach my $genbank_file_name (@genbank_file_names)
+	{
+		## open this GenBank file
+		my $ref_i = Bio::SeqIO->new( -file => "<$genbank_file_name");
+
+		while (my $ref_seq = $ref_i->next_seq)
+		{
+			my $id = $ref_seq->id;
+			print STDERR "  Loading File::$genbank_file_name Sequence::$id\n";
+			$ref_seqs{$id} = $ref_seq;
+
+			$ref_o->write_seq($ref_seq) if ($create_ref_fasta);
+
+			##it is much faster to use substr to create the lists for nt comparisons than BioPerl trunc
+			$ref_strings{$id} = $ref_seq->seq;
+			$ref_strings{$id} = "\U$ref_strings{$id}"; ##uppercase for comparisons
+
+			##load the genbank record
+			my @Feature_List = $ref_seq->get_SeqFeatures();
+			my @gene_list;
+			my @is_list;
+			
+			FEATURE: foreach my $Feature ( @Feature_List ) 
+			{ 	
+				if ($Feature->primary_tag eq 'repeat_region')
+				{	
+					my $is;
+					$is->{gene} = get_tag($Feature, "mobile_element");
+					$is->{gene} =~ s/insertion sequence:// if ($is->{gene});
+					$is->{gene} = "unknown" if (!defined ($is->{gene}));
+					$is->{product} = "repeat region";
+
+					$is->{start} = $Feature->start;
+					$is->{end} = $Feature->end;
+					$is->{strand} = $Feature->strand;
+					push @is_list, $is;
+					next FEATURE;
+				}
+				
+				## add additional information to the last 
+				if (   ($Feature->primary_tag eq 'CDS') 
+					|| ($Feature->primary_tag eq 'tRNA') 
+					|| ($Feature->primary_tag eq 'rRNA') )
+
+				{
+					#Add information to last gene
+					my $gene;
+					$gene->{gene} = get_tag($Feature, "gene");
+					$gene->{gene} = get_tag($Feature, "locus_tag") if (!$gene->{gene});
+					$gene->{start} = $Feature->start;
+					$gene->{end} = $Feature->end;
+					$gene->{strand} = $Feature->strand;
+					$gene->{product} = "";
+					$gene->{note} = get_tag($Feature, "note");
+						
+					$gene->{accession} = get_tag($Feature, "protein_id");
+					$gene->{translation} = get_tag($Feature, "translation");
+					$gene->{product} = get_tag($Feature, "product");
+					
+					#set a type for the feature
+					$gene->{type} = $Feature->primary_tag;
+					$gene->{type} = "protein" if ($gene->{type} eq 'CDS');
+					$gene->{pseudogene} = get_tag($Feature, "pseudo");
+					$gene->{type} = "pseudogene" if ($gene->{pseudogene});
+					
+					##assume if there is no translation that we have a pseudogene...
+					$gene->{type} = "pseudogene" if (($Feature->primary_tag eq 'CDS') && (!$gene->{translation}));
+					$gene->{index} = scalar @gene_list;
+					
+					push @gene_list, $gene;		
+				}
+			}
+			
+			$gene_lists{$id} = \@gene_list;
+			$is_lists{$id} = \@is_list;	
+		}
+	}
+	
+	return (\%ref_seqs, \%ref_strings, \%gene_lists, \%is_lists);	
+}
+
+
+sub identify_snps
+{
+	my ($cov, $sequence_length, $max_likelihood_table, $sorted_snp_diff_file_name, $snps_all_tab_file_name, $coverage_tab_file_name, $seq_id) = @_;
+	my @snps;
+	
+	## open detailed output files
+	open SNP_ALL, ">$snps_all_tab_file_name" if (defined $snps_all_tab_file_name);
+	open COV_TAB, ">$coverage_tab_file_name" if (defined $coverage_tab_file_name);
+
+	my $snp_diff;
+	my $snp_diff_fh;
+	open $snp_diff_fh, "<$sorted_snp_diff_file_name";
+
+	my $on_snp_diff_index = 0;
+	my $next_snp_diff_ref;
+	##load the first SNP
+	{
+		my (%s);
+		if ( read_snp($snp_diff_fh, \%s) )
+		{
+			$next_snp_diff_ref = \%s;
+			$on_snp_diff_index++;
+		}			
+	}	
+
+	print " Sequence Length: $sequence_length\n";
+	#print " Number of SNP Differences: $num_snp_diffs\n";
+
+	## snps is the list of items that is passed with additional information for annotating
+	my @gene_list = @{$gene_lists->{$seq_id}};
+	my %pos_info;
+
+
+	## move forward until reaching a new position
+	my $position = 1;
+	my @current_raw_snps;
+	while ($position <= $sequence_length)
+	{
+		print STDERR " $position\n" if ($position % 10000 == 0);
+
+		#read the next position
+		my @coverage_item = get_coverage(\$cov, $position);
+		
+		
+		## item has 1) log10_pr -/+ strand
+		##          2) log_10_pr of pair -/+ strand
+		##          3) unique coverage -/+ strand
+		##          4) redundant coverage -/+ strand
+		
+		#collect all snp diffs corresponding to this position 
+		my @current_position_raw_snps;
+		SNP_DIFF: while ( (defined $next_snp_diff_ref) && ($next_snp_diff_ref->{position} == $position))
+		{
+			#save the next snp diff
+			push @{$current_position_raw_snps[$next_snp_diff_ref->{insert_count}]}, $next_snp_diff_ref;
+		
+			#load the next one in line
+			undef $next_snp_diff_ref;
+			my %s;
+			if (read_snp($snp_diff_fh, \%s))
+			{
+				$next_snp_diff_ref = \%s;
+				$on_snp_diff_index++;
+			}
+		}
+		
+		##print out information about this position and each insert count for which there were snp diffs
+		
+		my $last_insert_count_was_accepted = 1;
+		INSERT: for (my $insert_count=0; ($insert_count < 1) or ($insert_count < scalar @current_position_raw_snps); $insert_count++)
+		{	
+			# complete the initial part of the line
+			my $ref_base = ($insert_count == 0) ? substr($ref_strings->{$seq_id}, $position-1, 1) : '.';
+			my $coverage_line_part = join("\t", $coverage_item[4], $coverage_item[5], 
+				sprintf("%.1f", $coverage_item[8]),sprintf("%.1f", $coverage_item[9]),
+				$coverage_item[6], $coverage_item[7]);
+			my $line = "$position\t$insert_count\t$ref_base\t$coverage_line_part";
+
+			# zero out the info about this position
+			my $pos_info;
+			foreach my $base (@int_to_base)
+			{
+				$pos_info->{$base}->{log10_pr} = 0;
+				$pos_info->{$base}->{cov}->{1} = 0;
+				$pos_info->{$base}->{cov}->{-1} = 0;
+			}		
+			
+			#add reference coverage (unique only)
+			if ($insert_count == 0)
+			{
+				$pos_info->{$ref_base}->{log10_pr} += $coverage_item[0] + $coverage_item[1];
+				$pos_info->{$ref_base}->{cov}->{-1} += $coverage_item[4];
+				$pos_info->{$ref_base}->{cov}->{1}  += $coverage_item[5];
+			}		
+			
+			#add snp difference
+			foreach my $s (@{$current_position_raw_snps[$insert_count]})
+			{
+				next if ($s->{redundancy} > 1);
+				$pos_info->{$s->{base}}->{log10_pr} += FastqLite::quality_to_log10_error_probability($s->{quality});
+				$pos_info->{$s->{base}}->{cov}->{$s->{strand}}++;
+			}
+			
+			#print out complete information
+			my $total_log10_pr = 0;
+			my $best_base_log10_pr = 0;
+			my $best_base = '';
+			my ($total_cov, $best_cov);
+			$total_cov->{1} = 0;
+			$total_cov->{-1} = 0;
+			$best_cov->{1} = 0;
+			$best_cov->{-1} = 0;
+			foreach my $base (@int_to_base)
+			{			
+				my $current_base_info = $pos_info->{$base};
+
+				if ($current_base_info->{log10_pr} > $best_base_log10_pr)
+				{
+					$best_base = $base;
+					$best_base_log10_pr = $current_base_info->{log10_pr};
+					($best_cov->{-1},$best_cov->{1}) = ($current_base_info->{cov}->{-1},$current_base_info->{cov}->{1});
+				}
+				$total_log10_pr += $pos_info->{$base}->{log10_pr};
+				
+				my $log_pr = $current_base_info->{log10_pr};
+				my $top_cov = $current_base_info->{cov}->{1};
+				my $bot_cov = $current_base_info->{cov}->{-1};
+				my $log_10_pr_string = sprintf "%.1f", $log_pr;
+				$total_cov->{1}+=$top_cov;
+				$total_cov->{-1}+=$bot_cov;
+				
+				$line .= "\t$base\t" . sprintf("%.1f",$log_10_pr_string) . "\t($bot_cov/$top_cov)";
+			}
+			print SNP_ALL "$line\n" if (defined $snps_all_tab_file_name);
+			
+			#write out raw coverage information ONLY if we are at an insert count of zero
+			#so that there is one line in this file for each genome position
+			if (($insert_count == 0) && (defined $coverage_tab_file_name))
+			{
+				my $total_coverage =  int($coverage_item[4] + $coverage_item[5] + $coverage_item[8] + $coverage_item[9]);
+				my $cov_line = join("\t", $coverage_item[4], $coverage_item[5], 
+					sprintf("%.1f", $coverage_item[8]), sprintf("%.1f", $coverage_item[9]), 
+					(defined $max_likelihood_table->[$total_coverage]) ? $max_likelihood_table->[$total_coverage] : 0 );
+				print COV_TAB "$cov_line\n";
+			}
+			
+			## evaluate whether to call an actual snp!
+					
+			my $snp;
+			$snp->{start} = $position;
+			$snp->{end} = $position;
+			$snp->{reference} = $seq_id;
+						
+			$snp->{ref_seq} = $ref_base;
+			$snp->{new_seq} = $best_base;
+			
+			## at this point, we need to adjust insertions to be from -1 to the given position
+			## since the SNP diff format really means bases are inserted before the given position.
+			## ????? => not sure about this ==> Must be after comparing to deletions, and before annotating.
+			if ($snp->{ref_seq} eq '.')
+			{
+				$snp->{start}--;
+			}			
+			
+			$snp->{quality} = ($insert_count > 0) 
+				? $best_base_log10_pr - ($coverage_item[2] + $coverage_item[3])
+				: $best_base_log10_pr - ($total_log10_pr - $best_base_log10_pr);
+			
+			#for insertions relative to the reference, add the pair coverage
+			if ($insert_count > 0) 
+			{
+				 $total_cov->{-1} += $coverage_item[6];
+				 $total_cov->{1} += $coverage_item[7];
+			}
+			$snp->{total_coverage_string} = $total_cov->{-1} . "/" . $total_cov->{1};
+			$snp->{best_coverage_string} = $best_cov->{-1} . "/" . $best_cov->{1};
+
+			$snp->{insert_index} = $insert_count;
+			$snp->{info} = $line;
+			$snp->{id} = $seq_id;
+			
+			#$snp->{coverage_string} = $paired_bases->{-1}->[$pos] . "/" . $paired_bases->{1}->[$pos];
+
+			if ($last_insert_count_was_accepted && ($snp->{ref_seq} ne $snp->{new_seq}) && ($snp->{quality} > $snp_log10_prob_cutoff))
+			{
+				$last_insert_count_was_accepted = 1;
+				print Dumper($snp);
+				push @snps, $snp;
+			}
+			else
+			{
+				$last_insert_count_was_accepted = 0;
+			}
+			
+			#we always need to allow an insert count of one
+			$last_insert_count_was_accepted = 1 if ($insert_count == 0);
+		}
+		
+		
+	} continue {
+		$position++;
+		#last if ($position == 600000); ##debugging
+	}
+	close $snp_diff_fh;
+
+
+	##
+	# Gather together insertions and deletion SNPs that occur next to each other
+	##
+
+	my $lc;
+	for (my $i=0; $i<scalar @snps; $i++)
+	{
+		my $c = $snps[$i];	 
+		
+		#if the same position and both are tandem insertion
+		if ($lc && ($lc->{start} == $c->{start}) && ($lc->{insert_index}+1 == $c->{insert_index}))
+		{
+			$lc->{insert_index} = $c->{insert_index};
+			$lc->{new_seq} .= $c->{new_seq};
+			$lc->{quality} .= ",$c->{quality}";
+			$lc->{total_coverage_string} .= ",$c->{total_coverage_string}";
+			$lc->{best_coverage_string} .= ",$c->{best_coverage_string}";
+			splice @snps, $i, 1;
+			$i--;
+			next;
+		}
+		
+		#if the positions are next to each other and both are deletions...
+		if ($lc && ($lc->{end}+1 == $c->{start}) && ($lc->{new_seq} eq '.') && ($c->{new_seq} eq '.') )
+		{
+			$lc->{end} = $c->{start};
+			$lc->{ref_seq} .= $c->{ref_seq};
+			$lc->{quality} .= ",$c->{quality}";
+			$lc->{total_coverage_string} .= ",$c->{total_coverage_string}";
+			$lc->{best_coverage_string} .= ",$c->{best_coverage_string}";
+			splice @snps, $i, 1;
+			$i--;
+			next;
+		}
+		
+		$lc = $c;
+	}
+
+	return @snps;
+}
+
+sub identify_deletions
+{
+	my ($cov, $sequence_length, $gene_list_ref, $is_list_ref, $seq_id) = @_;
+
+	print STDERR "Searching for deletions...\n";
+	print STDERR "  Estimating average coverage...\n";
+
+	my $num_positions_with_nonzero_coverage = 0;
+	my $average_coverage;
+
+	for (my $i=0; $i<$sequence_length; $i++)
+	{
+		my @coverage_item = get_coverage(\$cov, $i);
+		
+		next if ( ($coverage_item[4] + $coverage_item[5] == 0) && ($coverage_item[8] + $coverage_item[9] == 0) );
+		
+		$num_positions_with_nonzero_coverage++;
+		$average_coverage+=$coverage_item[4]+$coverage_item[5]+$coverage_item[8]+$coverage_item[9];
+	}
+	$average_coverage/=$num_positions_with_nonzero_coverage;
+	my $deletion_propagation_cutoff = $average_coverage / 5;
+	my $deletion_seed_cutoff = 0;
+
+	print STDERR "  Average coverage: $average_coverage\n";
+	print STDERR "  Deletion seed cutoff: $deletion_seed_cutoff\n";
+	print STDERR "  Deletion propagation cutoff: $deletion_propagation_cutoff\n";
+
+	my $last_deletion_start_position;
+	my $last_coverage_item = [0,0,0,0,0,0,0,0,0,0];
+
+	my $this_deletion_reaches_seed_value = 0;
+	my $left_side_coverage_item;
+	my $left_inside_coverage_item;
+
+	my @deletions;
+
+
+	for (my $i=1; $i<=$sequence_length; $i++)
+	{
+		my @coverage_item = get_coverage(\$cov, $i);
+		my $unique_coverage = $coverage_item[4]+$coverage_item[5];	
+		my $repeat_coverage = $coverage_item[8]+$coverage_item[9];	
+
+		#keep track of the current place where we dropped below the propagation cutoff
+		if ($unique_coverage <= $deletion_propagation_cutoff)
+		{	
+			if (!defined $last_deletion_start_position)
+			{
+				$last_deletion_start_position = $i;
+				$left_side_coverage_item = $last_coverage_item;
+				$left_inside_coverage_item = \@coverage_item;
+			}
+		}
+			
+		##keep track of whether we've encountered the seed value
+		if ($unique_coverage + $repeat_coverage <= $deletion_seed_cutoff)
+		{
+			$this_deletion_reaches_seed_value = 1;
+		}
+
+		##if we are above the propagation cutoff then record the current deletion
+		if ( (defined $last_deletion_start_position) && ($unique_coverage > $deletion_propagation_cutoff) )
+		{
+			
+			if ($this_deletion_reaches_seed_value)
+			{
+				my $last_deletion_end_position = $i-1;
+
+				my $left_side_uniques = $left_side_coverage_item->[4]+$left_side_coverage_item->[5];
+				my $left_inside_uniques = $left_inside_coverage_item->[4]+$left_inside_coverage_item->[5];
+
+				my $right_side_uniques = $unique_coverage;
+				my $right_inside_uniques = $last_coverage_item->[4]+$last_coverage_item->[5];
+				
+				my $size = $last_deletion_end_position - $last_deletion_start_position + 1;
+				
+				
+				my $gene_string = '';
+				my $feature_start = get_overlapping_feature($last_deletion_start_position, $is_list_ref);
+				$feature_start = get_overlapping_feature($last_deletion_start_position, $gene_list_ref) if (!$feature_start);
+				
+				my $feature_end = get_overlapping_feature($last_deletion_end_position, $is_list_ref);
+				$feature_end = get_overlapping_feature($last_deletion_end_position, $gene_list_ref) if (!$feature_end);
+				
+				if ($feature_start)
+				{
+					$gene_string .= "[$feature_start->{gene}]";
+				}
+				
+				my $start_bound = ($feature_start) ? $feature_start->{end}-25 : $last_deletion_start_position;
+				my $end_bound = ($feature_end) ? $feature_end->{start} : $last_deletion_end_position;
+
+				foreach my $gene (@$gene_list_ref)
+				{
+					last if ($gene->{start} >= $end_bound);
+					
+					if ($gene->{start} > $start_bound)
+					{
+						$gene_string .= " " if ($gene_string);
+						$gene_string .= "$gene->{gene}";
+					}
+				}
+				
+				## only add the end gene if it isn't the start gene
+				if ($feature_end && (!$feature_start || ($feature_start != $feature_end)))
+				{
+					$gene_string .= " " if ($gene_string);
+					$gene_string .= "[$feature_end->{gene}]";
+				}
+				
+				##no genes found
+				$gene_string .= "noncoding" if (!$gene_string);
+
+				
+				##OK, take the gene names and concatenate everything between them... 
+				
+				my $line = "$last_deletion_start_position\t$last_deletion_end_position\t$size\t";
+				$line .= "$left_side_uniques\t$left_inside_uniques\t$right_inside_uniques\t$right_side_uniques\t$gene_string";
+				#print DEL "$line\n";
+				
+				my $del;
+				$del->{start} = $last_deletion_start_position;
+				$del->{end} = $last_deletion_end_position;
+				$del->{size} = $size;
+				$del->{left_unique_cov} = $left_side_uniques;
+				$del->{left_inside_unique_cov} = $left_inside_uniques;
+				$del->{right_inside_unique_cov} = $right_inside_uniques;
+				$del->{right_unique_cov} = $right_side_uniques;
+				$del->{gene_string} = $gene_string;
+				$del->{reference} = $seq_id;
+
+				$del->{line} = $line;
+				
+				push @deletions, $del;
+			}
+					
+			#reset the search
+			$this_deletion_reaches_seed_value = 0;
+			undef $last_deletion_start_position;
+		}
+		
+		$last_coverage_item = \@coverage_item;
+	}
+
+	return @deletions;
+}
