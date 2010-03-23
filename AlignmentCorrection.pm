@@ -42,7 +42,7 @@ use Data::Dumper;
 #compare matches to candidate junctions with matches to original genome
 sub correct_alignments
 {
-	my $verbose = 1;
+	my $verbose = 0;
 	my ($settings, $summary, $ref_seq_info) = @_;
 	my $gene_list_hash_ref = $ref_seq_info->{gene_lists};
 	my $is_list_hash_ref = $ref_seq_info->{is_lists};
