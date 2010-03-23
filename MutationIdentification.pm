@@ -248,8 +248,10 @@ sub identify_mutations
 	
 				my $cn = $cnv_cumulative_coverage / ($summary->{unique_coverage}->{$seq_id}->{average} * $cnv_tile_size);
 				my $start_pos = $cnv_tile_num * $cnv_tile_size + 1;
-				my $end_pos = ($cnv_tile_num+1) * $cnv_tile_size;				
-				my $GC = ($cnv_base_counts->{C} + $cnv_base_counts->{G}) / ($cnv_base_counts->{C} + $cnv_base_counts->{G} + $cnv_base_counts->{A} + $cnv_base_counts->{T});
+				my $end_pos = ($cnv_tile_num+1) * $cnv_tile_size;			
+				my $GC = 'NA';	
+				my $total = ($cnv_base_counts->{C} + $cnv_base_counts->{G} + $cnv_base_counts->{A} + $cnv_base_counts->{T});
+				$GC = ($cnv_base_counts->{C} + $cnv_base_counts->{G}) / $total if ($total > 0);
 				
 				#$print "$cnv_tile_num $start_pos\-$end_pos COV: $cn\n";
 	
