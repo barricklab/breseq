@@ -1,0 +1,6 @@
+syntax: glob
+tests/output
+.DS_Store
+tests/cnv_cov.tab
+tests/r_script.txt
+tests/r_script.txt.out
