@@ -112,7 +112,7 @@
 			<key>filename</key>
 			<string>MutationIdentification.pm</string>
 			<key>lastUsed</key>
-			<date>2010-03-23T01:56:33Z</date>
+			<date>2010-03-23T17:49:40Z</date>
 			<key>selected</key>
 			<true/>
 		</dict>
@@ -254,14 +254,14 @@
 			<key>caret</key>
 			<dict>
 				<key>column</key>
-				<integer>0</integer>
+				<integer>34</integer>
 				<key>line</key>
-				<integer>251</integer>
+				<integer>246</integer>
 			</dict>
 			<key>firstVisibleColumn</key>
 			<integer>0</integer>
 			<key>firstVisibleLine</key>
-			<integer>233</integer>
+			<integer>230</integer>
 		</dict>
 		<key>breseq.pl</key>
 		<dict>
@@ -292,6 +292,6 @@
 	<key>showFileHierarchyDrawer</key>
 	<true/>
 	<key>windowFrame</key>
-	<string>{{553, 28}, {779, 643}}</string>
+	<string>{{427, 101}, {779, 643}}</string>
 </dict>
 </plist>
