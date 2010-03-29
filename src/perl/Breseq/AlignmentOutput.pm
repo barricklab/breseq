@@ -3,8 +3,7 @@
 ###
 
 =head1 NAME
-
-AlignmentOutput.pm
+Breseq::AlignmentOutput.pm
 
 =head1 SYNOPSIS
 
@@ -29,7 +28,7 @@ Copyright 2009.  All rights reserved.
 
 use strict;
 
-package AlignmentOutput;
+package Breseq::AlignmentOutput;
 use vars qw(@ISA);
 use Bio::Root::Root;
 @ISA = qw( Bio::Root::RootI );
@@ -37,8 +36,8 @@ use Bio::Root::Root;
 use CGI qw/:standard *table *Tr *code *td start_b end_b start_i end_i/;
 
 use Bio::DB::Sam;
-use FastqLite;
-use BreseqShared;
+use Breseq::Fastq;
+use Breseq::Shared;
 use Data::Dumper;
 
 
@@ -266,7 +265,15 @@ sub create_alignment
 	my $bam = $open_bam_files{$bam_path.$fasta_path};
 
 	#$verbose = 1 if ($region eq "REL606:1893754-1893754");
-	my ($seq_id, $start, $end) = split /:|\.\.|\-/, $region;
+	my ($seq_id, $start, $end);
+	if ($region =~ m/(.+)\:(\d+)(\.\.|\-)(\d+)/)
+	{
+		($seq_id, $start, $end) = ($1, $2, $4);
+	}
+	else
+	{
+		($seq_id, $start, $end) = split /:|\.\.|\-/, $region;
+	}
 	my $reference_length = $bam->length($seq_id);
 	
 	##check the start and end for sanity....	

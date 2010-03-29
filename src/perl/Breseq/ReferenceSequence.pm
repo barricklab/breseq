@@ -4,7 +4,7 @@
 
 =head1 NAME
 
-FastqLite.pm
+Breseq::Fastq.pm
 
 =head1 SYNOPSIS
 
@@ -30,13 +30,13 @@ Copyright 2009.  All rights reserved.
 use strict;
 use Bio::Root::Root;
 
-package ReferenceSequence;
+package Breseq::ReferenceSequence;
 use vars qw(@ISA);
 @ISA = qw( Bio::Root::Root );
 
 use Bio::Seq::RichSeq;
-use BreseqSettings;
-use BreseqShared;
+use Breseq::Settings;
+use Breseq::Shared;
 use Data::Dumper;
 
 sub process_reference_sequences
@@ -150,7 +150,7 @@ sub process_reference_sequences
 	}
 	
 	## create SAM faidx
-	BreseqShared::system("samtools faidx $reference_fasta_file_name", 1);
+	Breseq::Shared::system("samtools faidx $reference_fasta_file_name", 1);
 		
 	return {'bioperl_ref_seqs' => \%ref_seqs, 'ref_strings' => \%ref_strings, 'gene_lists' =>\%gene_lists, 'is_lists' =>\%is_lists, 'seq_ids' => \@seq_ids};	
 }
@@ -309,8 +309,8 @@ sub annotate_mutations
 		$c->{gene_product} = $gene->{product};
 
 		#remember to revcom the changes if gene is on opposite strand
-		$c->{ref_rep_seq} = FastqLite::revcom($c->{ref_rep_seq}) if ($gene->{strand} == -1);		
-		$c->{new_rep_seq} = FastqLite::revcom($c->{new_rep_seq}) if ($gene->{strand} == -1);
+		$c->{ref_rep_seq} = Breseq::Fastq::revcom($c->{ref_rep_seq}) if ($gene->{strand} == -1);		
+		$c->{new_rep_seq} = Breseq::Fastq::revcom($c->{new_rep_seq}) if ($gene->{strand} == -1);
 		
 		### Single base substitution -- SNP-type
 		if (($gene->{translation}) && (length($c->{ref_rep_seq}) == 1) && (length($c->{new_rep_seq}) == 1))

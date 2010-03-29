@@ -4,7 +4,7 @@
 
 =head1 NAME
 
-BreseqShared.pm
+Breseq::Shared.pm
 
 =head1 SYNOPSIS
 
@@ -27,10 +27,10 @@ Copyright 2008.  All rights reserved.
 # End Pod Documentation
 ###
 
-package BreseqShared;
+package Breseq::Shared;
 use strict;
 
-use FastqLite;
+use Breseq::Fastq;
 
 require Exporter;
 our @ISA = qw( Exporter );
@@ -182,7 +182,7 @@ sub tam_write_moved_alignment
 		$aux_tags .= "\t" . "XL:i:$trim_left" . "\t" . "XR:i:$trim_right";
 	}
 
-	my ($q_start, $q_end) = BreseqShared::alignment_query_start_end($a);
+	my ($q_start, $q_end) = Breseq::Shared::alignment_query_start_end($a);
 
 	#setup all of the original read information
 	my @qual_scores = $a->qscore;
@@ -206,7 +206,7 @@ sub tam_write_moved_alignment
 	
 	if ($relative_strand == -1)
 	{
-		$seq = FastqLite::revcom($seq);
+		$seq = Breseq::Fastq::revcom($seq);
 		@qual_scores = reverse @qual_scores;
 		$flags ^= 16; #bitwise XOR to flip strand
 	}

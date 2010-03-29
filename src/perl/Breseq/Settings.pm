@@ -4,7 +4,7 @@
 
 =head1 NAME
 
-BreseqShared.pm
+Breseq::Shared.pm
 
 =head1 SYNOPSIS
 
@@ -27,12 +27,11 @@ Copyright 2008.  All rights reserved.
 # End Pod Documentation
 ###
 
-package BreseqSettings;
+package Breseq::Settings;
 use strict;
 use Bio::Root::Root;
 use Getopt::Long;
 use Data::Dumper;
-use File::Path;
 use Pod::Usage;
 
 
@@ -62,7 +61,7 @@ sub new
 	$self->{run_name} = '';
 	$self->{clean} = 0;
 	$self->{base_output_path} = '';
-	$self->{error_model_method} = 0;
+	$self->{error_model_method} = 'FIT';
 	
 	#used by CandidateJunctions.pm
 	$self->{minimum_reads_for_candidate_junction} = 1;
@@ -122,6 +121,7 @@ sub new
 		'polymorphism-fisher-strand-p-value-cutoff=s' => \$self->{polymorphism_fisher_strand_p_value_cutoff},
 		'unmatched-reads' => \$self->{unmatched_reads},
 		'maximum-candidate-junctions=s' => \$self->{maximum_candidate_junctions},
+		'error_model=s' => $self->{error_model_method},
 		'resume' => \$resume_run,
 		'continue' => \$continue_run,		
 	) or pod2usage(2);
@@ -130,8 +130,9 @@ sub new
 	pod2usage(-exitstatus => 0, -verbose => 2) if $man;
 	pod2usage(-exitstatus => 0, -verbose => 2) if (scalar @ARGV == 0);
 
-	#neaten up some settings
+	#neaten up some settings for later string comparisons
 	$self->{quality_type} = "\L$self->{quality_type}";
+	$self->{error_model_method} = "\U$self->{error_model_method}";
 	
 	#######  SETUP FILE NAMES  #######
 	### '#' replaced with read fastq name or seq_id of reference sequence
@@ -233,7 +234,13 @@ sub new
 	$self->{unknowns_text_file_name} = "$self->{output_path}/unknowns.tab";
 	$self->{settings_text_file_name} = "$self->{output_path}/settings.tab";
 	$self->{summary_text_file_name} = "$self->{output_path}/summary.tab";
+	$self->{tiled_coverage_text_file_name} = "$self->{output_path}/@.tiled_coverage.tab";
+	
 	$self->{long_pairs_file_name} = "$self->{output_path}/long_pairs.tab";
+
+	###### tmp ######
+	$self->{tmp_path} = "tmp";
+	$self->{tmp_path} = "$self->{base_output_path}/$self->{tmp_path}" if ($self->{base_output_path});
 	
 	#read sequence filenames are given as straight arguments
 	@{$self->{read_fastq_list}} = @ARGV;
@@ -243,15 +250,6 @@ sub new
 	{
 		print STDERR "No read sequence files provided.";
 		pod2usage(1);
-	}
-
-	## Find or create the output directory 
-	if ($self->{base_output_path} && (!-e $self->{base_output_path})) 
-	{
-		if (!mkpath($self->{base_output_path})) 
-		{
-			die "Could not find or create requested output path: $self->{base_output_path}\n";
-		}
 	}
 
 	##
@@ -382,9 +380,20 @@ sub substitute_file_name
 
 sub create_path
 {
+	use File::Path qw(make_path);
 	my ($self, $path_key) = @_;
 	my $path = $self->file_name($path_key);
-	(-e $path) or mkpath($path) or $self->throw("Could not create directory \'$path\'.");
+	(-e $path) or make_path($path) or $self->throw("Could not create path \'$path\'.");
+	return $path;
+}
+
+sub remove_path
+{
+	use File::Path qw(remove_tree);
+	my ($self, $path_key) = @_;
+	my $path = $self->file_name($path_key);
+	(-e $path) and remove_tree($path) or $self->throw("Could not remove path \'$path\'.");
+	return $path;
 }
 
 sub read_file_to_fastq_file_index

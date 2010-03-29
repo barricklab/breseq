@@ -27,7 +27,7 @@ Copyright 2008.  All rights reserved.
 # End Pod Documentation
 ###
 
-package CandidateJunction;
+package Breseq::CandidateJunction;
 use strict;
 
 require Exporter;
@@ -36,8 +36,8 @@ our @EXPORT = qw( $join_string );
 
 use Bio::DB::Sam;
 
-use BreseqShared;
-use FastqLite;
+use Breseq::Shared;
+use Breseq::Fastq;
 
 use Data::Dumper;
 
@@ -100,7 +100,7 @@ sub identify_candidate_junctions
 		
 		ALIGNMENT_LIST: while (1)
 		{		
-			($al, $last_alignment) = BreseqShared::tam_next_read_alignments($tam, $header, $last_alignment);
+			($al, $last_alignment) = Breseq::Shared::tam_next_read_alignments($tam, $header, $last_alignment);
 			last ALIGNMENT_LIST if (!$al);
 					
 			$i++;
@@ -222,8 +222,8 @@ sub identify_candidate_junctions
 	###
 	sub by_coord
 	{
-		my @al = BreseqShared::junction_name_split($a->{id});
-		my @bl = BreseqShared::junction_name_split($b->{id});
+		my @al = Breseq::Shared::junction_name_split($a->{id});
+		my @bl = Breseq::Shared::junction_name_split($b->{id});
 		return ($al[1] <=> $bl[1]); 
 	}
 	@combined_candidate_junctions = sort by_coord @combined_candidate_junctions;
@@ -238,7 +238,7 @@ sub identify_candidate_junctions
 	}
 	
 	## create SAM faidx
-	BreseqShared::system("samtools faidx $candidate_junction_fasta_file_name") if (scalar @combined_candidate_junctions > 0);
+	Breseq::Shared::system("samtools faidx $candidate_junction_fasta_file_name") if (scalar @combined_candidate_junctions > 0);
 	
 	$summary->{candidate_junction} = $hcs;
 }
@@ -247,7 +247,7 @@ sub _alignments_to_candidate_junctions
 {
 	my ($settings, $summary, $ref_seq_info, $candidate_junctions, $fai, $header, @al) = @_;
 
-	my $verbose = 1;
+	my $verbose = 0;
 		
 	### We are only concerned with different matches.
 	#print "Before removing same-reference alignments: " . (scalar @al) . "\n" if ($verbose);
@@ -273,8 +273,8 @@ sub _alignments_to_candidate_junctions
 			my $a1 = $al_ref->[$i];
 			my $a2 = $al_ref->[$j];					
 					
-			my ($a1_start, $a1_end) = BreseqShared::alignment_query_start_end($a1);			
-			my ($a2_start, $a2_end) = BreseqShared::alignment_query_start_end($a2);
+			my ($a1_start, $a1_end) = Breseq::Shared::alignment_query_start_end($a1);			
+			my ($a2_start, $a2_end) = Breseq::Shared::alignment_query_start_end($a2);
 		
 			#the read may be there but have no match!
 			next if (($a1_start == 0) || ($a2_start == 0));
@@ -329,7 +329,7 @@ sub _unique_alignments_with_redundancy
 		my $strand = 1 - 2 * $a->reversed;
 		my $interval = $header->target_name()->[$a->tid] . ":" . $a->start . "-" . $a->end;
 		my $dna = $fai->fetch($interval);
-		$dna = FastqLite::revcom($dna) if ($strand == -1);
+		$dna = Breseq::Fastq::revcom($dna) if ($strand == -1);
 		
 		#print "$i $strand $interval\n$dna\n";
 		
@@ -391,8 +391,8 @@ sub _alignments_to_candidate_junction
 	
 	#First, sort matches by their order in the query
 	my ($q1, $q2) = ($a1, $a2);
-	my ($q1_start, $q1_end) = BreseqShared::alignment_query_start_end($q1);
-	my ($q2_start, $q2_end) = BreseqShared::alignment_query_start_end($q2);
+	my ($q1_start, $q1_end) = Breseq::Shared::alignment_query_start_end($q1);
+	my ($q2_start, $q2_end) = Breseq::Shared::alignment_query_start_end($q2);
 		
 	print "$q1_start, $q1_end, $q2_start, $q2_end\n" if ($verbose);
 	($q1, $q2, $q1_start, $q2_start, $q1_end, $q2_end) = ($q2, $q1, $q2_start, $q1_start, $q2_end, $q1_end) if ($q2_start < $q1_start);		
@@ -592,11 +592,11 @@ sub _alignments_to_candidate_junction
 		($hash_coord_1, $hash_coord_2) = ($hash_coord_2, $hash_coord_1);
 		($hash_strand_1, $hash_strand_2) = ($hash_strand_2, $hash_strand_1);
 
-		$junction_seq_string = FastqLite::revcom($junction_seq_string);
-		$unique_read_seq_string = FastqLite::revcom($unique_read_seq_string);
+		$junction_seq_string = Breseq::Fastq::revcom($junction_seq_string);
+		$unique_read_seq_string = Breseq::Fastq::revcom($unique_read_seq_string);
 	}
 		
-	my $junction_id = BreseqShared::junction_name_join($hash_seq_id_1, $hash_coord_1, $hash_strand_1, $hash_seq_id_2, $hash_coord_2, $hash_strand_2, $overlap, $unique_read_seq_string);	
+	my $junction_id = Breseq::Shared::junction_name_join($hash_seq_id_1, $hash_coord_1, $hash_strand_1, $hash_seq_id_2, $hash_coord_2, $hash_strand_2, $overlap, $unique_read_seq_string);	
 	print "JUNCTION ID: $junction_id\n" if ($verbose);
 	
 	die "$junction_id " . $q1->qname . " " . $a2->qname  if (!$junction_seq_string);
@@ -620,7 +620,7 @@ sub _num_matches_from_end
 	my ($a, $refseq_str, $dir, $overlap) = @_;
 	
 	my $reversed = $a->reversed;
-	my ($q_start, $q_end) = BreseqShared::alignment_query_start_end($a);
+	my ($q_start, $q_end) = Breseq::Shared::alignment_query_start_end($a);
 	my $q_length = $q_end - $q_start + 1;
 	my ($q_seq_start, $q_seq_end) = ($q_start, $q_end);
 	($q_seq_start, $q_seq_end) = ($a->l_qseq - $q_seq_end + 1, $a->l_qseq - $q_seq_start + 1) if ($reversed);

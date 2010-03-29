@@ -27,7 +27,7 @@ Copyright 2008.  All rights reserved.
 # End Pod Documentation
 ###
 
-package AlignmentCorrection;
+package Breseq::AlignmentCorrection;
 require Exporter;
 
 use strict;
@@ -99,12 +99,12 @@ sub correct_alignments
 			$fastq_file_name[$i] = $settings->read_file_to_fastq_file_name($this_read_file);	
 			$fastq_file_index[$i] = $settings->read_file_to_fastq_file_index($this_read_file);		
 				
-			$in_fastq[$i] = FastqLite->new(-file => $this_fastq_file_name);
+			$in_fastq[$i] = Breseq::Fastq->new(-file => $this_fastq_file_name);
 			
 			if ($settings->{unmatched_reads})
 			{
 				my $unmatched_file_name = $settings->file_name('unmatched_read_file_name', {'#'=>$this_read_file});
-				$out_unmatched_fastq[$i] = FastqLite->new(-file => ">$unmatched_file_name");
+				$out_unmatched_fastq[$i] = Breseq::Fastq->new(-file => ">$unmatched_file_name");
 			}
 		}		
 
@@ -132,11 +132,11 @@ sub correct_alignments
 		if (!$settings->{no_junction_prediction})
 		{
 			($candidate_junction_al, $last_candidate_junction_alignment) 
-				= BreseqShared::tam_next_read_alignments($candidate_junction_tam, $candidate_junction_header, $last_candidate_junction_alignment);		
+				= Breseq::Shared::tam_next_read_alignments($candidate_junction_tam, $candidate_junction_header, $last_candidate_junction_alignment);		
 		}
 		
 		($reference_al, $last_reference_alignment) 
-			= BreseqShared::tam_next_read_alignments($reference_tam, $reference_header, $last_reference_alignment);
+			= Breseq::Shared::tam_next_read_alignments($reference_tam, $reference_header, $last_reference_alignment);
 		
 		my $f = 0;
 		READ: while (my $seq = $in_fastq[$f]->next_seq)
@@ -151,7 +151,7 @@ sub correct_alignments
 			{
 				$this_candidate_junction_al = $candidate_junction_al;
 				($candidate_junction_al, $last_candidate_junction_alignment) 
-					= BreseqShared::tam_next_read_alignments($candidate_junction_tam, $candidate_junction_header, $last_candidate_junction_alignment);
+					= Breseq::Shared::tam_next_read_alignments($candidate_junction_tam, $candidate_junction_header, $last_candidate_junction_alignment);
 			}
 			
 			#Does this read have reference sequence matches?
@@ -160,7 +160,7 @@ sub correct_alignments
 			{
 				$this_reference_al = $reference_al;
 				($reference_al, $last_reference_alignment) 
-					= BreseqShared::tam_next_read_alignments($reference_tam, $reference_header, $last_reference_alignment);
+					= Breseq::Shared::tam_next_read_alignments($reference_tam, $reference_header, $last_reference_alignment);
 			}			
 						
 			###			
@@ -174,7 +174,7 @@ sub correct_alignments
 				next if ($a->unmapped);
 				
 				my $junction_id = $candidate_junction_header->target_name()->[$a->tid];
-				my @scj = BreseqShared::junction_name_split($junction_id);
+				my @scj = Breseq::Shared::junction_name_split($junction_id);
 								
 				## find the start and end coordinates of the overlap
 				my $overlap = $scj[6];
@@ -238,7 +238,7 @@ sub correct_alignments
 				{
 					my $a = $this_dominant_candidate_junction_al[0];
 					my $junction_id = $candidate_junction_header->target_name()->[$a->tid];
-					print "$junction_id\n";
+					#print "$junction_id\n";
 					push @{$matched_junction{$junction_id}}, $item;
 				}	
 				else #multiple identical matches, ones with most hits later will win these matches
@@ -262,7 +262,7 @@ sub correct_alignments
 				## if not, then write to unmatched read file
 				elsif ($settings->{unmatched_reads}) 
 				{
-					FastqLite::write_seq($out_unmatched_fastq[$f]->{fh}, $seq);
+					$out_unmatched_fastq[$f]->write_seq($seq);
 					$s->{unmatched_reads}++;
 				}
 			}
@@ -322,8 +322,8 @@ sub correct_alignments
 		print "$key\n" if ($verbose);
 	
  		# how this list is made 
- 		# my $junction_id = BreseqShared::junction_name_join($hash_seq_id_1, $hash_coord_1, $hash_strand_1, $hash_seq_id_2, $hash_coord_2, $hash_strand_2, $overlap, $unique_read_seq_string);	
- 		my @split_key = BreseqShared::junction_name_split($key);
+ 		# my $junction_id = Breseq::Shared::junction_name_join($hash_seq_id_1, $hash_coord_1, $hash_strand_1, $hash_seq_id_2, $hash_coord_2, $hash_strand_2, $overlap, $unique_read_seq_string);	
+ 		my @split_key = Breseq::Shared::junction_name_split($key);
 
  		my ($upstream_reference, $upstream_position, $upstream_direction) = @split_key[0..2];
  		$upstream_direction = -1 if ($upstream_direction == 0);
@@ -404,7 +404,7 @@ sub correct_alignments
  			$item->{$key}->{hybrid} = $item;
  				
  			my ($prev_gene, $gene, $next_gene) 
- 				= ReferenceSequence::find_nearby_genes($item->{$key}, $gene_list_hash_ref->{$item->{$key}->{seq_id}});		
+ 				= Breseq::ReferenceSequence::find_nearby_genes($item->{$key}, $gene_list_hash_ref->{$item->{$key}->{seq_id}});		
  	
  			## noncoding
  			if (!$gene)
@@ -447,7 +447,7 @@ sub correct_alignments
 			
 			## determine IS elements
 			## Is it within an IS or near the boundary of an IS in the direction leading up to the junction?			
-			if (my $is = ReferenceSequence::find_closest_is_element($item->{$key}, $is_list_hash_ref->{$item->{$key}->{seq_id}}, 200, $item->{$key}->{strand}))
+			if (my $is = Breseq::ReferenceSequence::find_closest_is_element($item->{$key}, $is_list_hash_ref->{$item->{$key}->{seq_id}}, 200, $item->{$key}->{strand}))
 			{
 				$item->{$key}->{is}->{gene} = $is->{gene};
 				$item->{$key}->{is}->{interval} = ($is->{strand} == +1) ? "$is->{start}-$is->{end}" : "$is->{end}-$is->{start}"; 
@@ -474,7 +474,7 @@ sub correct_alignments
 					{
 						##write out match corresponding to this part to SAM file						
 						my $trim = _trim_ambiguous_ends($a, $candidate_junction_header, $candidate_junction_fai);
-						BreseqShared::tam_write_moved_alignment($RREF, $item->{$side_key}->{seq_id}, $fastq_file_index, $a, $side, $flanking_length, $item->{overlap}, $item->{$side_key}->{start}, $item->{$side_key}->{strand}, $trim);		
+						Breseq::Shared::tam_write_moved_alignment($RREF, $item->{$side_key}->{seq_id}, $fastq_file_index, $a, $side, $flanking_length, $item->{overlap}, $item->{$side_key}->{start}, $item->{$side_key}->{strand}, $trim);		
 					}
 				}
 			}
@@ -509,7 +509,7 @@ sub _write_reference_matches
 		push @trims, _trim_ambiguous_ends($a, $reference_header, $reference_fai, $ref_seq_info); #slightly faster than using fai	
 	}
 	
-	BreseqShared::tam_write_read_alignments($RREF, $reference_header, $fastq_file_index, \@reference_al, \@trims);
+	Breseq::Shared::tam_write_read_alignments($RREF, $reference_header, $fastq_file_index, \@reference_al, \@trims);
 }
 
 sub _alignment_begins_with_match_in_read
@@ -643,7 +643,7 @@ sub _trim_ambiguous_ends
 		$ref_string = $fai->fetch( $seq_id . ':' . $a->start . '-' . $a->end );
 	}
 		
-	my ($q_start, $q_end) = BreseqShared::alignment_query_start_end($a, { 'no_reverse' => 1} );
+	my ($q_start, $q_end) = Breseq::Shared::alignment_query_start_end($a, { 'no_reverse' => 1} );
 	my $q_length = $a->l_qseq;
 	my $qry_string = substr $a->qseq, $q_start-1, $q_end - $q_start + 1;
 	my $full_qry_string = $a->qseq;
@@ -971,7 +971,7 @@ sub _test_junction
 		die if (!defined $a);
 		
 		my $junction_id = $candidate_junction_header->target_name()->[$a->tid];
-		my @split_key = BreseqShared::junction_name_split($junction_id);
+		my @split_key = Breseq::Shared::junction_name_split($junction_id);
  		my $overlap = $split_key[6];
 		my $rev_key = ($a->reversed ? '1' : '0');
 
@@ -1057,7 +1057,7 @@ sub _test_junction
 		else
 		{
 			my @this_dominant_candidate_junction_al = @{$junction_read->{dominant_alignments}}; 
-			BreseqShared::tam_write_read_alignments($RCJ, $candidate_junction_header, $fastq_file_index, \@this_dominant_candidate_junction_al);
+			Breseq::Shared::tam_write_read_alignments($RCJ, $candidate_junction_header, $fastq_file_index, \@this_dominant_candidate_junction_al);
 			$RCJ->flush();
 		}
 	}

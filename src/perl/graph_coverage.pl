@@ -52,7 +52,6 @@ Copyright 2008.  All rights reserved.
 ###
 use strict;
 
-use File::Path;
 use FindBin;
 use lib $FindBin::Bin;
 use Data::Dumper;
@@ -99,11 +98,13 @@ if (!defined $downsample)
 	}
 	elsif ($input_file)
 	{
-		$downsample = 1000;
+#		$downsample = 1000;
+		$downsample = -1; #AUTO
 	}
 	else
 	{
 		$downsample = 1000;
+#		$downsample = 'AUTO';
 	}
 }
 
@@ -129,11 +130,11 @@ elsif ($input_file)
 	#print Dumper(@intervals);
 	@intervals = grep {$_->{seq_id} eq $seq_id} @intervals if ($seq_id);
 	#print Dumper(@intervals);
-	graph_coverage(\@intervals, $coverage_file, $output_deletions_file, $output_overview_file, $downsample, $max_coverage);
+	graph_coverage(\@intervals, $coverage_file, $output_deletions_file, $output_overview_file, $downsample, $max_coverage, $seq_id);
 }
 else #graph whole genome only
 {
-	graph_coverage([], $coverage_file, $output_deletions_file, $output_overview_file, $downsample, $max_coverage);
+	graph_coverage([], $coverage_file, $output_deletions_file, $output_overview_file, $downsample, $max_coverage, $seq_id);
 }
 
 sub read_deletion_tab
@@ -232,7 +233,12 @@ pos<-1:dim(cov)[1];
 pos = pos-0.5;
 pos = pos / 1000000;
 pdf("$output_file", $pdf_options)
-pos_down <- downsample(pos, $downsample)
+downsample_by <- $downsample
+if (downsample_by == -1)
+{
+	downsample_by = dim(v)[1];
+}
+pos_down <- downsample(pos, downsample_by)
 cov_down = c();
 cov_down\$unique_top_cov <- downsample(cov\$unique_top_cov, $downsample)
 cov_down\$unique_bot_cov <- downsample(cov\$unique_bot_cov, $downsample)
@@ -263,7 +269,7 @@ END
 
 sub graph_coverage
 {
-	my ($intervals, $coverage_file, $output_deletions_file, $output_overview_file, $downsample, $max_coverage) = @_;
+	my ($intervals, $coverage_file, $output_deletions_file, $output_overview_file, $downsample, $max_coverage, $seq_id) = @_;
 	
 	$max_coverage = "max(cov\$redundant_top_cov[start:end]+cov\$redundant_bot_cov[start:end], cov\$unique_top_cov[start:end]+cov\$unique_bot_cov[start:end])" if (!defined $max_coverage);
 	my $max_unique_coverage = "max(cov\$unique_top_cov[start:end]+cov\$unique_bot_cov[start:end])";
@@ -360,8 +366,13 @@ END
 		$interval->{genes} = "" if (!defined $interval->{genes});
 		$interval->{genes} =~ s/(.{80,}?)\s+/$1\\n/g;
 		
-		print R_SCRIPT "pdf(\"$output_path/$i.pdf\")\n" if ($output_path);
-		print R_SCRIPT "plot_coverage(pos,cov,$interval->{start},$interval->{end}, \"Predicted Deletion $interval->{start}-$interval->{end}\", \"$interval->{genes}\")\n";
+		my $deletion_title = "$output_path/$i\.pdf";
+		$deletion_title = "$output_path/$seq_id.$i\.pdf" if ($seq_id);
+		
+		print R_SCRIPT "pdf(\"$deletion_title\")\n" if ($output_path);
+		my $title = "Predicted Deletion $interval->{start}-$interval->{end}";
+		$title = "Predicted Deletion $seq_id:$interval->{start}-$interval->{end}" if ($seq_id);		
+		print R_SCRIPT "plot_coverage(pos,cov,$interval->{start},$interval->{end}, \"$title\", \"$interval->{genes}\")\n";
 		print R_SCRIPT "dev.off()\n" if ($output_path);
 		$i++;
 	}	
@@ -372,8 +383,8 @@ END
 	}	
 		
 	if ($output_overview_file)
-	{
-		print R_SCRIPT <<END;
+	{		
+		print R_SCRIPT <<END;		
 pos100 <- downsample(pos, $downsample)
 cov100 = c()
 cov100\$unique_top_cov <- downsample(cov\$unique_top_cov, $downsample)
@@ -385,13 +396,16 @@ cov100\$redundant_bot_cov <- downsample(cov\$redundant_bot_cov, $downsample)
 #cov100\$V5 <- downsample(cov100\$V5, $downsample)
 END
 
-		print R_SCRIPT "pdf(\"$output_path/overview.pdf\", $pdf_options)\n" if ($output_path);
+		my $coverage_title = "$output_path/overview.pdf";
+		$coverage_title = "$output_path/$seq_id\.overview.pdf" if ($seq_id);
+
+		print R_SCRIPT "pdf(\"$coverage_title\", $pdf_options)\n" if ($output_path);
 		print R_SCRIPT "plot_overview(pos100,cov100,1,dim(pos100)[1], \"Genome Overview\", \"\")\n";
 		print R_SCRIPT "dev.off()\n" if ($output_path);
 
-		print R_SCRIPT "pdf(\"$output_path/cnv.pdf\", $pdf_options)\n" if ($output_path);
-		print R_SCRIPT "plot_cnv(pos100,cov100,1,dim(pos100)[1], \"Copy Number Predictions\", \"\")\n";
-		print R_SCRIPT "dev.off()\n" if ($output_path);
+#		print R_SCRIPT "pdf(\"$output_path/cnv.pdf\", $pdf_options)\n" if ($output_path);
+#		print R_SCRIPT "plot_cnv(pos100,cov100,1,dim(pos100)[1], \"Copy Number Predictions\", \"\")\n";
+#		print R_SCRIPT "dev.off()\n" if ($output_path);
 
 	}
 
