@@ -4,7 +4,7 @@
 
 =head1 NAME
 
-FastqLite.pm
+Breseq::Fastq.pm
 
 =head1 SYNOPSIS
 
@@ -34,10 +34,10 @@ use Math::CDF;
 use Bio::Root::Root;
 use Bio::DB::Sam;
 
-use BreseqShared;
+use Breseq::Shared;
 
 
-package MutationIdentification;
+package Breseq::MutationIdentification;
 use vars qw(@ISA);
 @ISA = qw( Bio::Root::Root );
 
@@ -66,13 +66,14 @@ sub identify_mutations
     ## Data Preparation
 	###
 
-	my ($log10_correct_rates, $log10_error_rates) = ErrorCalibration::log10_error_rates($error_rates);
+	my ($log10_correct_rates, $log10_error_rates) = Breseq::ErrorCalibration::log10_error_rates($error_rates);
    
 	
 	REFERENCE: foreach our $seq_id (@seq_ids)
 	{				
 		my $this_mutation_identification_done_file_name = $settings->file_name('mutation_identification_done_file_name', {'@'=>$seq_id});
 		my $this_predicted_mutation_file_name = $settings->file_name('predicted_mutation_file_name', {'@'=>$seq_id});	
+		my $this_tiled_coverage_tab_file_name = $settings->file_name('tiled_coverage_text_file_name', {'@'=>$seq_id});	
 		
 		###
 		##  Already done with this reference sequence.
@@ -106,15 +107,15 @@ sub identify_mutations
 		### hash reference that is returned, contains fields:
 		###  'mutations', 'unknowns', 'deletions'
 		my @mutations;
-		our @unknowns;
-		our @deletions;
+		our @unknowns = ();
+		our @deletions = ();
 	
 		### DELETION PREDICTION: variables to keep track of during pileup
-		our $last_deletion_start_position;
+		our $last_deletion_start_position = undef;
 		our $this_deletion_reaches_seed_value = 0;
-		our $left_side_coverage_item;
-		our $left_inside_coverage_item;
-		our $last_position_coverage;
+		our $left_side_coverage_item = undef;
+		our $left_inside_coverage_item = undef;
+		our $last_position_coverage = undef;
 
 		### COPY NUMBER VARIATION: variables to keep track of during pileup
 		our $cnv_tile_size = 100;
@@ -125,6 +126,7 @@ sub identify_mutations
 		
 		### UNKNOWN INTERVALS: variable to keep track of during pileup
 		our $last_start_unknown_interval;
+
 		
 		my $cnv_coverage_tab_file_name = "cnv_cov.tab";
 		open CNV_COV, ">$cnv_coverage_tab_file_name" if (defined $cnv_coverage_tab_file_name);
@@ -219,6 +221,11 @@ sub identify_mutations
 						'right_inside_unique_cov' => $last_position_coverage->{unique}->{total},
 						'right_unique_cov' => $this_position_coverage->{unique}->{total},
 					};
+					$del->{'left_inside_unique_cov'} = 'NA' if (!defined $del->{'left_inside_unique_cov'});
+					$del->{'right_inside_unique_cov'} = 'NA' if (!defined $del->{'right_inside_unique_cov'});
+					
+					$del->{'left_unique_cov'} = 'NA' if (!defined $del->{'left_unique_cov'});
+					$del->{'right_unique_cov'} = 'NA' if (!defined $del->{'right_unique_cov'});
 
 					push @deletions, $del;
 				}
@@ -386,7 +393,7 @@ sub identify_mutations
 					my $complete_match = 1;
 					if ($settings->{require_complete_match})
 					{
-						my ($q_start, $q_end) = BreseqShared::alignment_query_start_end($a, {no_reverse=>1});
+						my ($q_start, $q_end) = Breseq::Shared::alignment_query_start_end($a, {no_reverse=>1});
 						$complete_match = ($q_start == 1) && ($q_end == $a->l_qseq);
 					}
 					## ...end replace
@@ -457,7 +464,7 @@ sub identify_mutations
 						##is the error rate defined?
 						my $base_key =  ($strand == +1) 
 							? $hypothetical_base . $base
-							: FastqLite::revcom($hypothetical_base) . FastqLite::revcom($base);
+							: Breseq::Fastq::revcom($hypothetical_base) . Breseq::Fastq::revcom($base);
 						
 						if (!defined $log10_correct_rates->[$fastq_file_index]->{$quality}->{$base_key})
 						{
@@ -719,6 +726,7 @@ sub identify_mutations
 	{				
 		my $this_predicted_mutation_file_name = $settings->file_name('predicted_mutation_file_name', {'@'=>$seq_id});	
 		my $mutation_info = Storable::retrieve($this_predicted_mutation_file_name) or die "Can't retrieve data in file $this_predicted_mutation_file_name!\n";
+		
 		$summary->{mutation_identification}->{$seq_id} = $mutation_info->{summary};
 		push @mutations, @{$mutation_info->{mutations}};
 		push @deletions, @{$mutation_info->{deletions}};

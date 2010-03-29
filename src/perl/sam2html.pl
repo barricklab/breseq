@@ -44,7 +44,7 @@ use lib $FindBin::Bin;
 
 use CGI qw/:standard/;
 
-use AlignmentOutput;
+useBreseq::AlignmentOutput;
 
 #Get options
 use Getopt::Long;
@@ -71,7 +71,7 @@ print OUT start_html(-title => "bam2html");
 
 foreach my $region (@regions)
 {
-	my $ao = AlignmentOutput->new;
+	my $ao =Breseq::AlignmentOutput->new;
 	print OUT $ao->html_alignment($bam_path, $fasta_path, $region);
 }
 print OUT end_html;
