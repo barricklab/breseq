@@ -363,7 +363,7 @@ sub _alignments_to_candidate_junction
 	my ($settings, $summary, $ref_seq_info, $fai, $header, $a1, $a2) = @_;
 		
 	my $verbose = 0;
-	$verbose = $a1->qname eq "30K88AAXX_LenskiSet2:8:3:1374:1537";
+	#$verbose = $a1->qname eq "30K88AAXX_LenskiSet2:8:3:1374:1537";
 	#$verbose = ($a1->start == 1) || ($a2->start == 1);	
 		
 	## set up local settings
@@ -587,10 +587,11 @@ sub _alignments_to_candidate_junction
 	#print "$junction_seq_string\n";
 	
 	#want to be sure that lowest ref coord is always first for consistency 
-	if ($hash_coord_2 < $hash_coord_1)
+	if ( ($hash_seq_id_2 lt $hash_seq_id_1) || (($hash_seq_id_1 eq $hash_seq_id_2) && ($hash_coord_2 < $hash_coord_1)) )
 	{
 		($hash_coord_1, $hash_coord_2) = ($hash_coord_2, $hash_coord_1);
 		($hash_strand_1, $hash_strand_2) = ($hash_strand_2, $hash_strand_1);
+		($hash_seq_id_1, $hash_seq_id_2) = ($hash_seq_id_2, $hash_seq_id_1);
 
 		$junction_seq_string = Breseq::Fastq::revcom($junction_seq_string);
 		$unique_read_seq_string = Breseq::Fastq::revcom($unique_read_seq_string);

@@ -160,7 +160,7 @@ sub tam_write_read_alignments
 
 sub tam_write_moved_alignment
 {
-	my $verbose = 0;
+	my $verbose = 1;
 	my ($fh, $seq_id, $fastq_file_index, $a, $junction_side, $flanking_length, $junction_overlap, $junction_pos, $junction_strand, $trim) = @_;
 	print STDERR Dumper($seq_id, $fastq_file_index, $a, $junction_side, $flanking_length, $junction_overlap, $junction_pos, $junction_strand, $trim) . "\n" if ($verbose);
 
@@ -350,7 +350,7 @@ sub tam_write_moved_alignment
 	my $l = join("\t", @ll) . "\n";
 	print STDERR $l if ($verbose);
 
-	die "CIGAR length does not match camculated length" if ($cigar_length != $a->l_qseq);
+	die "CIGAR length does not match calculated length" if ($cigar_length != $a->l_qseq);
 
 	print $fh $l;	
 }
