@@ -319,148 +319,70 @@ sub correct_alignments
 	my @hybrid_predictions;
  	foreach my $key (@sorted_keys)
  	{	  
+		my $matched_junction = 
 		print "$key\n" if ($verbose);
-	
- 		# how this list is made 
- 		# my $junction_id = Breseq::Shared::junction_name_join($hash_seq_id_1, $hash_coord_1, $hash_strand_1, $hash_seq_id_2, $hash_coord_2, $hash_strand_2, $overlap, $unique_read_seq_string);	
- 		my @split_key = Breseq::Shared::junction_name_split($key);
+		my $item = {key => $key, flanking_length => $flanking_length};
+		
+		# my $junction_id = Breseq::Shared::junction_name_join($hash_seq_id_1, $hash_coord_1, $hash_strand_1, $hash_seq_id_2, $hash_coord_2, $hash_strand_2, $overlap, $unique_read_seq_string);	
+		my @split_key = Breseq::Shared::junction_name_split($key);
 
- 		my ($upstream_reference, $upstream_position, $upstream_direction) = @split_key[0..2];
- 		$upstream_direction = -1 if ($upstream_direction == 0);
- 	 
- 		my ($downstream_reference, $downstream_position, $downstream_direction) = @split_key[3..5];
- 		$downstream_direction = -1 if ($downstream_direction == 0);
- 		
- 		my $overlap = $split_key[6];
- 		
- 		##
- 		## Create three intervals for making alignments and html output
- 		##    it would be nice to flag whether we think the original junction is still there
- 		##
- 	 	my $item;
- 	 	
- 	 	## (1) The first alignment has information relative to the junction candidates
-		if ($overlap == 0)
+		my ($upstream_reference, $upstream_position, $upstream_direction) = @split_key[0..2];
+		$upstream_direction = -1 if ($upstream_direction == 0);
+ 
+		my ($downstream_reference, $downstream_position, $downstream_direction) = @split_key[3..5];
+		$downstream_direction = -1 if ($downstream_direction == 0);
+	
+		$item->{overlap} = $split_key[6];
+		
+		##
+		## Create three intervals for making alignments and html output
+		##    it would be nice to flag whether we think the original junction is still there
+		##
+	 	
+		## (1) The first alignment has information relative to the junction candidates
+		if ($item->{overlap} == 0)
 		{
-			$item->{start} = $flanking_length;
-			$item->{end} = $flanking_length+1;			
+			$item->{start} = $item->{flanking_length};
+			$item->{end} = $item->{flanking_length}+1;			
 			$item->{mark} = '/';
 		}
-		elsif ($overlap > 0)
+		elsif ($item->{overlap} > 0)
 		{
-			$item->{start} = $flanking_length + 1 - $overlap;
-			$item->{end} = $flanking_length;
+			$item->{start} = $item->{flanking_length} + 1 - $item->{overlap};
+			$item->{end} = $item->{flanking_length};
 			$item->{mark} = '|';
 		}
-		else ## ($overlap < 0)
+		else ## ($item->{overlap} < 0)
 		{
-			$item->{start} = $flanking_length+1;
-			$item->{end} = $flanking_length-$overlap;
+			$item->{start} = $item->{flanking_length}+1;
+			$item->{end} = $item->{flanking_length}-$item->{overlap};
 			$item->{mark} = '*';
 		}
- 	 	$item->{seq_id} = $key;
- 		
- 		## This additional information is used for the complex reference line
- 		my $alignment_reference_info_1 = { 
- 			truncate_end => $flanking_length, 
- 			ghost_end => $upstream_position, 
- 			ghost_strand => $upstream_direction,
- 			ghost_seq_id => $upstream_reference
- 		};
+		$item->{seq_id} = $key;
+		
+		#### NOTE: For these intervals, the strand indicates which direction (relative to top strand of genome)
+		####       you move until you hit the given position to reproduce sequence in new junction.
 
- 		my $alignment_reference_info_2 = { 
- 			truncate_start => $flanking_length+1-$overlap, 
- 			ghost_start => $downstream_position, 
- 			ghost_strand => $downstream_direction,
- 			ghost_seq_id => $downstream_reference
- 		};
+		## (2) Alignment for the reference sequence that disagrees with the junction #1.
+ 		$item->{interval_1}->{start} = $upstream_position;
+		$item->{interval_1}->{end} = $upstream_position;
+		$item->{interval_1}->{strand} = $upstream_direction;		
+		$item->{interval_1}->{seq_id} = $upstream_reference;
 
- 		push @{$item->{alignment_reference_info_list}}, $alignment_reference_info_1, $alignment_reference_info_2;
- 		$item->{alignment_empty_change_line} = 1;
- 			
- 		#### NOTE: For these intervals, the strand indicates which direction (relative to top strand of genome)
- 		####       you move until you hit the given position to reproduce sequence in new junction.
+		## (3) Alignment for the reference sequence that disagrees with the junction #2.
+ 		$item->{interval_2}->{start} = $downstream_position;
+		$item->{interval_2}->{end} = $downstream_position;
+		$item->{interval_2}->{strand} = $downstream_direction; #switch strand so it refers to direction from position to seq in junction
+		$item->{interval_2}->{seq_id} = $downstream_reference;
 
- 		## (2) Alignment for the reference sequence that disagrees with the junction #1.
-	 	$item->{interval_1}->{start} = $upstream_position;
- 		$item->{interval_1}->{end} = $upstream_position;
- 		$item->{interval_1}->{strand} = $upstream_direction;		
- 		$item->{interval_1}->{seq_id} = $upstream_reference;
- 
- 		## (3) Alignment for the reference sequence that disagrees with the junction #2.
-	 	$item->{interval_2}->{start} = $downstream_position;
- 		$item->{interval_2}->{end} = $downstream_position;
- 		$item->{interval_2}->{strand} = $downstream_direction; #switch strand so it refers to direction from position to seq in junction
- 		$item->{interval_2}->{seq_id} = $downstream_reference;
- 	
- 		$item->{total_reads} = scalar @{$matched_junction{$key}};
- 		$item->{overlap} = $overlap;
+		$item->{total_reads} = scalar @{$matched_junction{$key}};
+		
+		push @hybrid_predictions, $item;
 
- 		#add gene information for each end
- 		$item->{hybrid} = $item;
- 		foreach my $key ('interval_1', 'interval_2')
- 		{			
- 			##create circular reference to self so we can print table at the top of the alignment
- 			$item->{$key}->{hybrid} = $item;
- 				
- 			my ($prev_gene, $gene, $next_gene) 
- 				= Breseq::ReferenceSequence::find_nearby_genes($item->{$key}, $gene_list_hash_ref->{$item->{$key}->{seq_id}});		
- 	
- 			## noncoding
- 			if (!$gene)
- 			{
- 				$item->{$key}->{gene}->{gene} .= ($prev_gene && $prev_gene->{gene}) ? $prev_gene->{gene} : '-';
- 				$item->{$key}->{gene}->{gene} .= "/";
- 				$item->{$key}->{gene}->{gene} .= ($next_gene && $next_gene->{gene}) ? $next_gene->{gene} : '-';
- 		
- 				if (defined $prev_gene)
-				{
-					$item->{$key}->{gene}->{position} .= ($prev_gene->{strand} == +1) ? "+" : "-";
-					$item->{$key}->{gene}->{position} .= ($item->{$key}->{start} - $prev_gene->{end});
-				}
-				$item->{$key}->{gene}->{gene_position} .= "/";
-				if (defined $next_gene)
-				{
-					$item->{$key}->{gene}->{position} .= ($next_gene->{strand} == +1) ? "-" : "+";
-					$item->{$key}->{gene}->{position} .= ($next_gene->{start} - $item->{$key}->{end});
-				}
-				
-				$item->{$key}->{gene}->{product} .= ($prev_gene && $prev_gene->{product}) ? $prev_gene->{product} : '-';
-				$item->{$key}->{gene}->{product} .= "/";			
-				$item->{$key}->{gene}->{product} .= ($next_gene && $next_gene->{product}) ? $next_gene->{product} : '-';
-	
-				$item->{$key}->{gene}->{interval} .= $prev_gene->{end}+1 if $prev_gene;
-				$item->{$key}->{gene}->{interval} .= "/"; 
-				$item->{$key}->{gene}->{interval} .= $next_gene->{start}-1 if $next_gene; 
-			} 
-			
-			## coding
-			else
-			{
-				$item->{$key}->{gene}->{gene} = $gene->{gene};
-				$item->{$key}->{gene}->{product} = $gene->{product};
-				my $gene_start = ($gene->{strand} == +1) ? $gene->{start} : $gene->{end};	
-				$item->{$key}->{gene}->{position} = abs($item->{$key}->{start}-$gene_start) + 1;
-				$item->{$key}->{gene}->{interval} = ($gene->{strand} == +1) ? "$gene->{start}-$gene->{end}" : "$gene->{end}-$gene->{start}"; 
-	 
-			}
-			
-			## determine IS elements
-			## Is it within an IS or near the boundary of an IS in the direction leading up to the junction?			
-			if (my $is = Breseq::ReferenceSequence::find_closest_is_element($item->{$key}, $is_list_hash_ref->{$item->{$key}->{seq_id}}, 200, $item->{$key}->{strand}))
-			{
-				$item->{$key}->{is}->{gene} = $is->{gene};
-				$item->{$key}->{is}->{interval} = ($is->{strand} == +1) ? "$is->{start}-$is->{end}" : "$is->{end}-$is->{start}"; 
-				$item->{$key}->{is}->{product} = $is->{product};
-			}
-			$item->{$key}->{annotate_key} = (defined $item->{$key}->{is}) ? 'is' : 'gene';			
-		}
-		print Dumper($item) if ($verbose);
-	
 		## create matches from UNIQUE sides of each match to reference genome
 		## this fixes, for example appearing to not have any coverage at the origin of a circular DNA fragment
 		### currently we do not add coverage to the IS element (which we would have to know all copies of to do...)
-				
+	
 		if ( $settings->{add_split_junction_sides} )
 		{
 			foreach my $match (@{$matched_junction{$key}})
@@ -470,29 +392,21 @@ sub correct_alignments
 				foreach my $side (1,2)
 				{
 					my $side_key = 'interval_' . $side;
-					if (!$item->{$side_key}->{is})
-					{
+
+	############## Need to add indication of whether this side of the junction is unique!!
+	############## And not count reads at a position if it is redundant!!
+	#				if (!$item->{$side_key}->{is})
+	#				{
 						##write out match corresponding to this part to SAM file						
 						my $trim = _trim_ambiguous_ends($a, $candidate_junction_header, $candidate_junction_fai);
-						Breseq::Shared::tam_write_moved_alignment($RREF, $item->{$side_key}->{seq_id}, $fastq_file_index, $a, $side, $flanking_length, $item->{overlap}, $item->{$side_key}->{start}, $item->{$side_key}->{strand}, $trim);		
-					}
+						Breseq::Shared::tam_write_moved_alignment($RREF, $item->{$side_key}->{seq_id}, $fastq_file_index, $a, $side, $item->{flanking_length}, $item->{overlap}, $item->{$side_key}->{start}, $item->{$side_key}->{strand}, $trim);		
+	#				}
 				}
 			}
 		}
-	
- 		push @hybrid_predictions, $item;
- 		
- 	}
-
-	sub by_hybrid
-	{
-		my $a_pos = (defined $a->{interval_1}->{is}) ? $a->{interval_2}->{start} : $a->{interval_1}->{start};
-		my $b_pos = (defined $b->{interval_1}->{is}) ? $b->{interval_2}->{start} : $b->{interval_1}->{start};
-		
-		return ($a_pos <=> $b_pos);
 	}
-	@hybrid_predictions = sort by_hybrid @hybrid_predictions;
-
+	
+ 
  	return @hybrid_predictions;	
 }
 

@@ -3,14 +3,14 @@
 <plist version="1.0">
 <dict>
 	<key>currentDocument</key>
-	<string>Breseq/AlignmentCorrection.pm</string>
+	<string>graph_coverage.pl</string>
 	<key>documents</key>
 	<array>
 		<dict>
 			<key>filename</key>
 			<string>breseq.pl</string>
 			<key>lastUsed</key>
-			<date>2010-03-28T14:16:43Z</date>
+			<date>2010-03-29T02:31:06Z</date>
 		</dict>
 		<dict>
 			<key>filename</key>
@@ -22,7 +22,9 @@
 			<key>filename</key>
 			<string>graph_coverage.pl</string>
 			<key>lastUsed</key>
-			<date>2010-03-29T00:16:55Z</date>
+			<date>2010-03-29T23:29:49Z</date>
+			<key>selected</key>
+			<true/>
 		</dict>
 		<dict>
 			<key>filename</key>
@@ -56,14 +58,30 @@
 			<key>caret</key>
 			<dict>
 				<key>column</key>
-				<integer>20</integer>
+				<integer>62</integer>
 				<key>line</key>
-				<integer>400</integer>
+				<integer>401</integer>
 			</dict>
+			<key>columnSelection</key>
+			<false/>
 			<key>firstVisibleColumn</key>
 			<integer>0</integer>
 			<key>firstVisibleLine</key>
-			<integer>369</integer>
+			<integer>365</integer>
+			<key>selectFrom</key>
+			<dict>
+				<key>column</key>
+				<integer>0</integer>
+				<key>line</key>
+				<integer>401</integer>
+			</dict>
+			<key>selectTo</key>
+			<dict>
+				<key>column</key>
+				<integer>0</integer>
+				<key>line</key>
+				<integer>402</integer>
+			</dict>
 		</dict>
 		<key>Breseq/AlignmentOutput.pm</key>
 		<dict>
@@ -126,14 +144,30 @@
 			<key>caret</key>
 			<dict>
 				<key>column</key>
-				<integer>0</integer>
+				<integer>19</integer>
 				<key>line</key>
-				<integer>728</integer>
+				<integer>732</integer>
 			</dict>
+			<key>columnSelection</key>
+			<false/>
 			<key>firstVisibleColumn</key>
 			<integer>0</integer>
 			<key>firstVisibleLine</key>
-			<integer>700</integer>
+			<integer>708</integer>
+			<key>selectFrom</key>
+			<dict>
+				<key>column</key>
+				<integer>0</integer>
+				<key>line</key>
+				<integer>732</integer>
+			</dict>
+			<key>selectTo</key>
+			<dict>
+				<key>column</key>
+				<integer>0</integer>
+				<key>line</key>
+				<integer>733</integer>
+			</dict>
 		</dict>
 		<key>Breseq/Output.pm</key>
 		<dict>
@@ -154,43 +188,43 @@
 			<key>caret</key>
 			<dict>
 				<key>column</key>
-				<integer>0</integer>
+				<integer>13</integer>
 				<key>line</key>
-				<integer>0</integer>
+				<integer>519</integer>
 			</dict>
 			<key>firstVisibleColumn</key>
 			<integer>0</integer>
 			<key>firstVisibleLine</key>
-			<integer>144</integer>
+			<integer>500</integer>
 		</dict>
 		<key>Breseq/Settings.pm</key>
 		<dict>
 			<key>caret</key>
 			<dict>
 				<key>column</key>
-				<integer>42</integer>
+				<integer>51</integer>
 				<key>line</key>
-				<integer>169</integer>
+				<integer>117</integer>
 			</dict>
 			<key>columnSelection</key>
 			<false/>
 			<key>firstVisibleColumn</key>
 			<integer>0</integer>
 			<key>firstVisibleLine</key>
-			<integer>147</integer>
+			<integer>83</integer>
 			<key>selectFrom</key>
 			<dict>
 				<key>column</key>
-				<integer>9</integer>
+				<integer>39</integer>
 				<key>line</key>
-				<integer>169</integer>
+				<integer>117</integer>
 			</dict>
 			<key>selectTo</key>
 			<dict>
 				<key>column</key>
-				<integer>42</integer>
+				<integer>59</integer>
 				<key>line</key>
-				<integer>169</integer>
+				<integer>117</integer>
 			</dict>
 		</dict>
 		<key>Breseq/Shared.pm</key>
@@ -212,14 +246,14 @@
 			<key>caret</key>
 			<dict>
 				<key>column</key>
-				<integer>50</integer>
+				<integer>24</integer>
 				<key>line</key>
-				<integer>362</integer>
+				<integer>884</integer>
 			</dict>
 			<key>firstVisibleColumn</key>
 			<integer>0</integer>
 			<key>firstVisibleLine</key>
-			<integer>338</integer>
+			<integer>856</integer>
 		</dict>
 		<key>fastq_utils.pl</key>
 		<dict>
@@ -247,7 +281,7 @@
 			<key>firstVisibleColumn</key>
 			<integer>0</integer>
 			<key>firstVisibleLine</key>
-			<integer>213</integer>
+			<integer>113</integer>
 		</dict>
 		<key>sam2html.pl</key>
 		<dict>
@@ -299,6 +333,6 @@
 	<key>showFileHierarchyDrawer</key>
 	<true/>
 	<key>windowFrame</key>
-	<string>{{257, 31}, {1029, 847}}</string>
+	<string>{{234, -353}, {1181, 823}}</string>
 </dict>
 </plist>

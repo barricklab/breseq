@@ -762,7 +762,7 @@ if (!$settings->{no_mutation_prediction}) #could remove conditional?
 		
 	print STDERR "Annotating deletions...\n";
 	Breseq::ReferenceSequence::annotate_deletions($settings, $summary, $ref_seq_info, \@deletions);
-	#print Dumper(\@deletions); ##DEUG
+	#print Dumper(\@deletions); ##DEUG		
 		
 	##
 	# Write text output files
@@ -879,6 +879,11 @@ sub html_output {}
 		push @new_hybrids, $hybrid 	if (($hybrid->{total_reads} >= $coverage_cutoff_1) || ($hybrid->{total_reads} >= $coverage_cutoff_2));
 	}
 	@hybrids = @new_hybrids;
+	
+	print STDERR "Annotating rearrangements...\n";
+	Breseq::ReferenceSequence::annotate_rearrangements($settings, $summary, $ref_seq_info, \@hybrids);
+	#print Dumper(\@hybrids); ##DEUG
+	
 	
 	foreach my $hybrid (@hybrids)
 	{
