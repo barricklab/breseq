@@ -905,6 +905,7 @@ sub html_output {}
 	 	$c->{file_name} = "$settings->{alignment_path}/$html_alignment_file_name";
 		$c->{bam_path} = $reference_bam_file_name;
 		$c->{fasta_path} = $reference_fasta_file_name;
+		print Dumper($c);
 	}
 		
 	## hybrids use different BAM files for making the alignments!!!

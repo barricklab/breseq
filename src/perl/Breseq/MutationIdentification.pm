@@ -606,6 +606,9 @@ sub identify_mutations
 					$mut->{total_coverage_string} = $total_cov->{-1} . "/" . $total_cov->{1};
 					$mut->{best_coverage_string} = $best_cov->{-1} . "/" . $best_cov->{1};
 					$mut->{insert_index} = $insert_count;
+					$mut->{insert_start} = $insert_count;
+					$mut->{insert_end} = $insert_count;
+					
 					print Dumper($mut);
 					push @mutations, $mut;
 				}
@@ -638,6 +641,8 @@ sub identify_mutations
 					$mut->{total_coverage_string} = $total_cov->{-1} . "/" . $total_cov->{1};
 					$mut->{best_coverage_string} = $best_cov->{-1} . "/" . $best_cov->{1};
 					$mut->{insert_index} = $insert_count;
+					$mut->{insert_start} = $insert_count;
+					$mut->{insert_end} = $insert_count;					
 					print Dumper($mut);
 					push @mutations, $mut;
 				}

@@ -256,7 +256,7 @@ sub create_alignment
 {
 	my $verbose = 0;
 	my ($self, $bam_path, $fasta_path, $region, $options) = @_;
-	
+		
 	## Start -- Workaround to avoid too many open files
 	if (!defined $open_bam_files{$bam_path.$fasta_path})
 	{
@@ -268,15 +268,15 @@ sub create_alignment
 	#$verbose = 1 if ($region eq "NC_001416‑1:4566-4566");
 	my ($seq_id, $start, $end);
 	my ($insert_start, $insert_end) = (0, 0);
-	if ($region =~ m/(.+)\:(\d+)(\.\.|\-)(\d+)/)
-	{
-		($seq_id, $start, $end) = ($1, $2, $4);
-	}
 	#syntax that includes insert counts
 	# e.g. NC_001416:4566.1-4566.1
-	elsif ($region =~ m/(.+)\:(\d+)\.(\d+)-(\d+)\.(\d+)/)
+	if ($region =~ m/(.+)\:(\d+)\.(\d+)-(\d+)\.(\d+)/)
+	{	
+		($seq_id, $start, $insert_start, $end, $insert_end) = ($1, $2, $3, $4, $5);
+	}
+	elsif ($region =~ m/(.+)\:(\d+)(\.\.|\-)(\d+)/)
 	{
-		($seq_id, $start, $end, $insert_start, $insert_end) = ($1, $2, $3, $4, $5);
+		($seq_id, $start, $end) = ($1, $2, $4);
 	}
 	else
 	{
@@ -357,8 +357,10 @@ sub create_alignment
 				$aligned_reference->{aligned_bases} .= $ref_bases;
 				$aligned_reference->{aligned_quals} .= chr(255);
 
-				##also update any positions if interest for gaps
-				$aligned_annotation->{aligned_bases} .= (($last_pos >= $start) && ($last_pos <= $end)) ? '|' : ' ';
+				##also update any positions if interest for gaps				
+				$aligned_annotation->{aligned_bases} .= 
+					( (($insert_start == 0) && ($last_pos == $start)) || (($last_pos > $start) && ($last_pos <= $end)) ) 
+					? '|' : ' ';
 				
 				$last_pos++;
 			}
@@ -433,10 +435,20 @@ sub create_alignment
 		$aligned_reference->{aligned_bases} .= '.' x ($max_indel) if ($max_indel > 0);
 		$aligned_reference->{aligned_quals} .= chr(255) x ($max_indel+1);
 
-		##also update any positions if interest for gaps
-		$aligned_annotation->{aligned_bases} .= (($pos >= $start) && ($pos <= $end)) ? '|' : ' ';
-		$aligned_annotation->{aligned_bases} .= ' ' x ($max_indel) if ($max_indel > 0);
-		
+		##also update any positions of interest for gaps
+		for (my $insert_count=0; $insert_count<=$max_indel; $insert_count++)
+		{	
+			if ( (($insert_start <= $insert_count) && ($pos == $start)) 
+				|| (($pos < $end) && ($pos > $start)) 
+				|| (($insert_end <= $insert_count) && ($pos == $end)) )
+			{ 
+				$aligned_annotation->{aligned_bases} .= '|'; 
+			}	
+			else
+			{
+				$aligned_annotation->{aligned_bases} .= ' ';
+			}	
+		}
 	};
 	$bam->pileup($region, $pileup_function);
 
