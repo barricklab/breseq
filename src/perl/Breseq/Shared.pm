@@ -160,7 +160,7 @@ sub tam_write_read_alignments
 
 sub tam_write_moved_alignment
 {
-	my $verbose = 1;
+	my $verbose = 0;
 	my ($fh, $seq_id, $fastq_file_index, $a, $junction_side, $flanking_length, $junction_overlap, $junction_pos, $junction_strand, $trim) = @_;
 	print STDERR Dumper($seq_id, $fastq_file_index, $a, $junction_side, $flanking_length, $junction_overlap, $junction_pos, $junction_strand, $trim) . "\n" if ($verbose);
 

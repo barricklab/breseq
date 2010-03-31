@@ -380,8 +380,16 @@ sub identify_mutations
 					my $trimmed = 0;
 					my $trim_left = $a->aux_get('XL');  
 					my $trim_right = $a->aux_get('XR');
+					
 					$trimmed = 1 if ((defined $trim_left) && ($p->qpos+1 <= $trim_left));
 					$trimmed = 1 if ((defined $trim_right) && ($a->query->length-$p->qpos <= $trim_right));
+					
+					##also trimmed if up to next position and this is an indel.
+					if ($indel != 0)
+					{
+						$trimmed = 1 if ((defined $trim_left) && ($p->qpos+1 <= $trim_left+1));
+						$trimmed = 1 if ((defined $trim_right) && ($a->query->length-$p->qpos <= $trim_right+1));
+					}
 					
 					my $redundancy = $a->aux_get('X1');
 					my $fastq_file_index = $a->aux_get('X2');

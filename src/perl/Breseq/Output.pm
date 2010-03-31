@@ -998,7 +998,7 @@ sub genome_diff
 
 	foreach my $hyb ($hybrid_list_ref)
 	{
-		print Dumper($hyb);
+#		print Dumper($hyb);
 	}
 	
 	foreach my $unk (@$unknown_list_ref)
