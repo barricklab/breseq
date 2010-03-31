@@ -249,7 +249,7 @@ sub _html_alignment_line
 }
 
 
-##temporary workaround to avoid too many open files
+## Workaround to avoid too many open files
 my %open_bam_files;
 
 sub create_alignment
@@ -257,18 +257,26 @@ sub create_alignment
 	my $verbose = 0;
 	my ($self, $bam_path, $fasta_path, $region, $options) = @_;
 	
-	##temporary workaround to avoid too many open files
+	## Start -- Workaround to avoid too many open files
 	if (!defined $open_bam_files{$bam_path.$fasta_path})
 	{
-	 $open_bam_files{$bam_path.$fasta_path} = Bio::DB::Sam->new(-bam =>$bam_path, -fasta=>$fasta_path);
+		$open_bam_files{$bam_path.$fasta_path} = Bio::DB::Sam->new(-bam =>$bam_path, -fasta=>$fasta_path);
 	}
 	my $bam = $open_bam_files{$bam_path.$fasta_path};
+	## End -- Workaround to avoid too many open files
 
-	#$verbose = 1 if ($region eq "REL606:1893754-1893754");
+	#$verbose = 1 if ($region eq "NC_001416‑1:4566-4566");
 	my ($seq_id, $start, $end);
+	my ($insert_start, $insert_end) = (0, 0);
 	if ($region =~ m/(.+)\:(\d+)(\.\.|\-)(\d+)/)
 	{
 		($seq_id, $start, $end) = ($1, $2, $4);
+	}
+	#syntax that includes insert counts
+	# e.g. NC_001416:4566.1-4566.1
+	elsif ($region =~ m/(.+)\:(\d+)\.(\d+)-(\d+)\.(\d+)/)
+	{
+		($seq_id, $start, $end, $insert_start, $insert_end) = ($1, $2, $3, $4, $5);
 	}
 	else
 	{
@@ -365,7 +373,7 @@ sub create_alignment
 			my $a = $p->alignment;
 			$updated->{$a->display_name} = 1;
 			
-			##this setup gives expected behavior from indel!
+			##this setup gives expected behavior for indels!
 			my $indel = $p->indel;
 			$indel = 0 if ($indel < 0);
 			$indel = -1 if ($p->is_del);

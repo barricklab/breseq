@@ -832,7 +832,7 @@ sub html_output {}
 			if ($c->{polymorphism})
 			{
 				my $polymorphism = $c->{polymorphism};
-				print Dumper($polymorphism);
+				#print Dumper($polymorphism);
 				
 				$accept = 0 if ($polymorphism->{log10_e_value} < $settings->{polymorphism_log10_e_value_cutoff});
 				$accept = 0 if ($polymorphism->{fisher_strand_p_value} < $settings->{polymorphism_fisher_strand_p_value_cutoff});

@@ -121,7 +121,7 @@ sub new
 		'polymorphism-fisher-strand-p-value-cutoff=s' => \$self->{polymorphism_fisher_strand_p_value_cutoff},
 		'unmatched-reads' => \$self->{unmatched_reads},
 		'maximum-candidate-junctions=s' => \$self->{maximum_candidate_junctions},
-		'error_model=s' => $self->{error_model_method},
+		'error-model=s' => \$self->{error_model_method},
 		'resume' => \$resume_run,
 		'continue' => \$continue_run,		
 	) or pod2usage(2);
@@ -133,7 +133,7 @@ sub new
 	#neaten up some settings for later string comparisons
 	$self->{quality_type} = "\L$self->{quality_type}";
 	$self->{error_model_method} = "\U$self->{error_model_method}";
-	
+		
 	#######  SETUP FILE NAMES  #######
 	### '#' replaced with read fastq name or seq_id of reference sequence
 	### '=' replaced by split file index
