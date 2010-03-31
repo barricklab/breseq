@@ -784,7 +784,9 @@ sub html_alignment_file
 	print HTML p;
 	my $ao =Breseq::AlignmentOutput->new;
 	
-	print HTML $ao->html_alignment($interval->{bam_path}, $interval->{fasta_path}, "$interval->{seq_id}:$interval->{start}-$interval->{end}");
+	$interval->{insert_start} = 0 if (!defined $interval->{insert_start});
+	$interval->{insert_end} = 0 if (!defined $interval->{insert_end});
+	print HTML $ao->html_alignment($interval->{bam_path}, $interval->{fasta_path}, "$interval->{seq_id}:$interval->{start}.$interval->{insert_start}-$interval->{end}.$interval->{insert_end}");	
 	
 	print HTML end_html;
 	close HTML;
