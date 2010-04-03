@@ -51,9 +51,11 @@ sub correct_alignments
 	## for now we just use mapping qualities from ssaha2, but could load ref sequences this way
 	my $reference_faidx_file_name = $settings->file_name('reference_fasta_file_name');
 	my $reference_fai = Bio::DB::Sam::Fai->load($reference_faidx_file_name);
-	
+		
 	my $candidate_junction_file_name = $settings->file_name('candidate_junction_fasta_file_name');
-	my $candidate_junction_fai = Bio::DB::Sam::Fai->load($candidate_junction_file_name) if (!$settings->{no_junction_prediction});	
+	## if there were no candidate junction (file is empty) then we seg fault if we try to use samtools on it...
+	$settings->{no_junction_prediction} = 1 if (-s $candidate_junction_file_name == 0);
+	my	$candidate_junction_fai = Bio::DB::Sam::Fai->load($candidate_junction_file_name) if (!$settings->{no_junction_prediction});		
 	
 	my $minimum_best_score = 0;
 	my $minimum_best_score_difference = 0;

@@ -348,6 +348,8 @@ sub identify_mutations
 					$pos_info->{$base}->{unique_cov}->{-1} = 0;
 					$pos_info->{$base}->{redundant_cov}->{1} = 0;
 					$pos_info->{$base}->{redundant_cov}->{-1} = 0;
+					$pos_info->{$base}->{mutation_cov}->{1} = 0;
+					$pos_info->{$base}->{mutation_cov}->{-1} = 0;					
 				}
 			
 				## keep track of coverage for deletion prediction
@@ -385,11 +387,11 @@ sub identify_mutations
 					$trimmed = 1 if ((defined $trim_right) && ($a->query->length-$p->qpos <= $trim_right));
 					
 					##also trimmed if up to next position and this is an indel.
-					if ($indel != 0)
-					{
-						$trimmed = 1 if ((defined $trim_left) && ($p->qpos+1 <= $trim_left+1));
-						$trimmed = 1 if ((defined $trim_right) && ($a->query->length-$p->qpos <= $trim_right+1));
-					}
+	#				if ($indel != 0)
+	#				{
+	#					$trimmed = 1 if ((defined $trim_left) && ($p->qpos+1 <= $trim_left+1));
+	#					$trimmed = 1 if ((defined $trim_right) && ($a->query->length-$p->qpos <= $trim_right+1));
+	#				}
 					
 					my $redundancy = $a->aux_get('X1');
 					my $fastq_file_index = $a->aux_get('X2');
@@ -446,6 +448,8 @@ sub identify_mutations
 					next if ($trimmed);
 					##don't use information from redundant reads!!
 					next if ($redundancy > 1);
+					
+					
 					
 					my $quality;
 					if ($indel < $insert_count) 
@@ -605,7 +609,6 @@ sub identify_mutations
 					$mut->{quality} = $e_value_call;		
 					$mut->{total_coverage_string} = $total_cov->{-1} . "/" . $total_cov->{1};
 					$mut->{best_coverage_string} = $best_cov->{-1} . "/" . $best_cov->{1};
-					$mut->{insert_index} = $insert_count;
 					$mut->{insert_start} = $insert_count;
 					$mut->{insert_end} = $insert_count;
 					
@@ -636,11 +639,9 @@ sub identify_mutations
 					
 					$mut->{new_seq} = $polymorphism->{second_base};
 					$mut->{polymorphism} = $polymorphism;
-						
 					$mut->{quality} = $polymorphism->{log10_e_value};		
 					$mut->{total_coverage_string} = $total_cov->{-1} . "/" . $total_cov->{1};
 					$mut->{best_coverage_string} = $best_cov->{-1} . "/" . $best_cov->{1};
-					$mut->{insert_index} = $insert_count;
 					$mut->{insert_start} = $insert_count;
 					$mut->{insert_end} = $insert_count;					
 					print Dumper($mut);
@@ -682,9 +683,9 @@ sub identify_mutations
 				my $c = $mutations[$i];	 
 
 				#if the same position and both are tandem insertion
-				if ($lc && ($lc->{start} == $c->{start}) && ($lc->{insert_index}+1 == $c->{insert_index}))
+				if ($lc && ($lc->{start} == $c->{start}) && ($lc->{insert_end}+1 == $c->{insert_start}))
 				{
-					$lc->{insert_index} = $c->{insert_index};
+					$lc->{insert_end} = $c->{insert_start};
 					$lc->{new_seq} .= $c->{new_seq};
 					$lc->{quality} .= ",$c->{quality}";
 					$lc->{total_coverage_string} .= ",$c->{total_coverage_string}";
