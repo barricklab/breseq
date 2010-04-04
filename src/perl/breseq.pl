@@ -789,7 +789,8 @@ if (!$settings->{no_mutation_prediction}) #could remove conditional?
 		if (!-e $this_plot_coverage_done_file_name)
 		{
 			my $this_complete_coverage_text_file_name = $settings->file_name('complete_coverage_text_file_name', {'@'=>$seq_id});			
-			Breseq::Shared::system("graph_coverage.pl -p $settings->{coverage_graph_path} -i $deletions_text_file_name -c $this_complete_coverage_text_file_name --seq_id=$seq_id");				
+			my $res = Breseq::Shared::system("graph_coverage.pl -t $tmp_path -p $settings->{coverage_graph_path} -i $deletions_text_file_name -c $this_complete_coverage_text_file_name --seq_id=$seq_id");				
+			die if ($res);
 			open DONE, ">$this_plot_coverage_done_file_name";
 			close DONE;
 		}
@@ -938,7 +939,7 @@ sub html_output {}
 	
 	print STDERR "Creating full HTML table...\n";	
 	my $mutation_file_name = $settings->file_name('mutations_html_file_name');
-	Breseq::Output::html_full_table($mutation_file_name, $settings, \@mutations, \@deletions, \@hybrids);
+	Breseq::Output::html_full_table($mutation_file_name, $settings, $ref_seq_info, \@mutations, \@deletions, \@hybrids);
 
 	###
 	## Output Genome Diff File

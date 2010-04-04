@@ -3,6 +3,7 @@
 
 breseq.pl \
 --error-model=QUALITY \
+--alignment-read-limit=20000 \
 -o output/lambda_multiple_reference \
 -r data/lambda/lambda-0.gbk \
 -r data/lambda/lambda-1.gbk \

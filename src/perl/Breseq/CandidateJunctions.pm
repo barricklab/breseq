@@ -220,13 +220,14 @@ sub identify_candidate_junctions
 	###
 	## Print out the candidate junctions, sorted by the lower coordinate, higher coord, then number
 	###
-	sub by_coord
+	sub by_ref_seq_coord
 	{
 		my @al = Breseq::Shared::junction_name_split($a->{id});
 		my @bl = Breseq::Shared::junction_name_split($b->{id});
-		return ($al[1] <=> $bl[1]); 
+		return (($ref_seq_info->{seq_order}->{$al[0]} <=> $ref_seq_info->{seq_order}->{$bl[0]}) ||  ($al[1] <=> $bl[1])); 
 	}
-	@combined_candidate_junctions = sort by_coord @combined_candidate_junctions;
+	
+	@combined_candidate_junctions = sort by_ref_seq_coord @combined_candidate_junctions;
 	
 	foreach my $junction (@combined_candidate_junctions)
 	{
@@ -252,10 +253,8 @@ sub _alignments_to_candidate_junctions
 	### We are only concerned with different matches.
 	#print "Before removing same-reference alignments: " . (scalar @al) . "\n" if ($verbose);
 	
-	#my ($al_ref, $r_ref) = _unique_alignments_with_redundancy($fai, $header, @al);
+	my ($al_ref, $r_ref) = _unique_alignments_with_redundancy($fai, $header, @al);
 	#print "After removing same-reference alignments: " . (scalar @al) . "\n" if ($verbose);
-
-	my $al_ref = \@al;
 
 	return if (scalar @$al_ref == 1);
 				
@@ -307,7 +306,9 @@ sub _alignments_to_candidate_junctions
 			  || (($a1_length > $intersection_length_nonzero) && ($a2_length >= $intersection_length_nonzero+$extra_length)) )
 #			if (($a1_length > $intersection_length_nonzero + $extra_length) && ($a2_length > $intersection_length_nonzero + $extra_length))
 			{
-				my ($junction_id, $junction_seq_string, $q1, $q2) = _alignments_to_candidate_junction($settings, $summary, $ref_seq_info, $fai, $header, $a1, $a2);
+				my $r1 = $r_ref->[$i];
+				my $r2 = $r_ref->[$j]; 
+				my ($junction_id, $junction_seq_string, $q1, $q2) = _alignments_to_candidate_junction($settings, $summary, $ref_seq_info, $fai, $header, $a1, $a2, $r1, $r2);
 
 				#add to number of observations			
 				$candidate_junctions->{$junction_seq_string}->{$junction_id} += ($a1_length - $union_length) ** 2 + ($a2_length - $union_length) ** 2;
@@ -321,18 +322,14 @@ sub _unique_alignments_with_redundancy
 	my ($fai, $header, @al) = @_;
 	my @new_al;
 	my $matched_reference_sequence_hash;
-	my $i=-1;
 	my @redundancy;
 	foreach my $a (@al)
 	{
-		$i++;
 		my $strand = 1 - 2 * $a->reversed;
 		my $interval = $header->target_name()->[$a->tid] . ":" . $a->start . "-" . $a->end;
 		my $dna = $fai->fetch($interval);
 		$dna = Breseq::Fastq::revcom($dna) if ($strand == -1);
-		
-		#print "$i $strand $interval\n$dna\n";
-		
+				
 		my $found = $matched_reference_sequence_hash->{$dna};
 		if ($found)
 		{
@@ -344,7 +341,6 @@ sub _unique_alignments_with_redundancy
 		$matched_reference_sequence_hash->{$dna} = scalar(@redundancy);
 		push @redundancy, 1;
 	}
-	
 	
 	return (\@new_al, \@redundancy);
 }
@@ -360,7 +356,7 @@ sub _unique_alignments_with_redundancy
 
 sub _alignments_to_candidate_junction
 {
-	my ($settings, $summary, $ref_seq_info, $fai, $header, $a1, $a2) = @_;
+	my ($settings, $summary, $ref_seq_info, $fai, $header, $a1, $a2, $r1, $r2) = @_;
 		
 	my $verbose = 0;
 	#$verbose = $a1->qname eq "30K88AAXX_LenskiSet2:8:3:1374:1537";
@@ -586,18 +582,22 @@ sub _alignments_to_candidate_junction
 	#print "$junction_id\n";
 	#print "$junction_seq_string\n";
 	
+	my $hash_redundancy_1 = ($r1 > 1) ? 1 : 0;
+	my $hash_redundancy_2 = ($r2 > 1) ? 1 : 0;
+	
 	#want to be sure that lowest ref coord is always first for consistency 
 	if ( ($hash_seq_id_2 lt $hash_seq_id_1) || (($hash_seq_id_1 eq $hash_seq_id_2) && ($hash_coord_2 < $hash_coord_1)) )
 	{
 		($hash_coord_1, $hash_coord_2) = ($hash_coord_2, $hash_coord_1);
 		($hash_strand_1, $hash_strand_2) = ($hash_strand_2, $hash_strand_1);
 		($hash_seq_id_1, $hash_seq_id_2) = ($hash_seq_id_2, $hash_seq_id_1);
+		($hash_redundancy_1, $hash_redundancy_2) = ($hash_redundancy_2, $hash_redundancy_1);
 
 		$junction_seq_string = Breseq::Fastq::revcom($junction_seq_string);
 		$unique_read_seq_string = Breseq::Fastq::revcom($unique_read_seq_string);
 	}
 		
-	my $junction_id = Breseq::Shared::junction_name_join($hash_seq_id_1, $hash_coord_1, $hash_strand_1, $hash_seq_id_2, $hash_coord_2, $hash_strand_2, $overlap, $unique_read_seq_string);	
+	my $junction_id = Breseq::Shared::junction_name_join($hash_seq_id_1, $hash_coord_1, $hash_strand_1, $hash_redundancy_1, $hash_seq_id_2, $hash_coord_2, $hash_strand_2, $hash_redundancy_2, $overlap, $unique_read_seq_string);	
 	print "JUNCTION ID: $junction_id\n" if ($verbose);
 	
 	die "$junction_id " . $q1->qname . " " . $a2->qname  if (!$junction_seq_string);

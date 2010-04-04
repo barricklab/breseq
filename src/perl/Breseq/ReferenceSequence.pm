@@ -61,6 +61,8 @@ sub process_reference_sequences
 	my %gene_lists;
 	my %is_lists;
 	my %fasta_file_names;
+	my %seq_order;
+	my $i = 0;
 
 	foreach my $genbank_file_name (@genbank_file_names)
 	{
@@ -146,13 +148,14 @@ sub process_reference_sequences
 			$s->{reference_seqs}->{$seq_id}->{display_id} = $ref_seq->display_id;
 			$s->{reference_seqs}->{$seq_id}->{accession} = $ref_seq->accession;
 			$s->{reference_seqs}->{$seq_id}->{accession} .= "." . $ref_seq->version if ($ref_seq->version);
+			$seq_order{$seq_id} = $i++;
 			}
 	}
 	
 	## create SAM faidx
 	Breseq::Shared::system("samtools faidx $reference_fasta_file_name", 1);
 		
-	return {'bioperl_ref_seqs' => \%ref_seqs, 'ref_strings' => \%ref_strings, 'gene_lists' =>\%gene_lists, 'is_lists' =>\%is_lists, 'seq_ids' => \@seq_ids};	
+	return {'bioperl_ref_seqs' => \%ref_seqs, 'ref_strings' => \%ref_strings, 'gene_lists' =>\%gene_lists, 'is_lists' =>\%is_lists, 'seq_ids' => \@seq_ids, 'seq_order' => \%seq_order };	
 }
 
 
@@ -509,7 +512,7 @@ sub annotate_deletions
 sub annotate_rearrangements
 {
 	my $verbose = 0;
-	my ($settings, $summary, $ref_seq_info, $rearrangements_ref) = @_;	
+	our ($settings, $summary, $ref_seq_info, $rearrangements_ref) = @_;	
 	
 	foreach my $item (@$rearrangements_ref)
 	{				
@@ -597,7 +600,10 @@ sub annotate_rearrangements
 		my $a_pos = (defined $a->{interval_1}->{is}) ? $a->{interval_2}->{start} : $a->{interval_1}->{start};
 		my $b_pos = (defined $b->{interval_1}->{is}) ? $b->{interval_2}->{start} : $b->{interval_1}->{start};
 	
-		return ($a_pos <=> $b_pos);
+		my $a_seq_order = (defined $a->{interval_1}->{is}) ? $ref_seq_info->{seq_order}->{$a->{interval_2}->{seq_id}} : $ref_seq_info->{seq_order}->{$a->{interval_1}->{seq_id}};
+		my $b_seq_order = (defined $b->{interval_1}->{is}) ? $ref_seq_info->{seq_order}->{$b->{interval_2}->{seq_id}} : $ref_seq_info->{seq_order}->{$b->{interval_1}->{seq_id}};		
+	
+		return (($a_seq_order <=> $b_seq_order) || ($a_pos <=> $b_pos));
 	}
 	@$rearrangements_ref = sort by_hybrid @$rearrangements_ref;
 }

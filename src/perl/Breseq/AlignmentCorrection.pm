@@ -179,7 +179,7 @@ sub correct_alignments
 				my @scj = Breseq::Shared::junction_name_split($junction_id);
 								
 				## find the start and end coordinates of the overlap
-				my $overlap = $scj[6];
+				my $overlap = $scj[8];
 				my ($junction_start, $junction_end);
 				
 				$junction_start = $flanking_length;
@@ -328,14 +328,14 @@ sub correct_alignments
 		# my $junction_id = Breseq::Shared::junction_name_join($hash_seq_id_1, $hash_coord_1, $hash_strand_1, $hash_seq_id_2, $hash_coord_2, $hash_strand_2, $overlap, $unique_read_seq_string);	
 		my @split_key = Breseq::Shared::junction_name_split($key);
 
-		my ($upstream_reference, $upstream_position, $upstream_direction) = @split_key[0..2];
+		my ($upstream_reference, $upstream_position, $upstream_direction, $upstream_redundant) = @split_key[0..3];
 		$upstream_direction = -1 if ($upstream_direction == 0);
  
-		my ($downstream_reference, $downstream_position, $downstream_direction) = @split_key[3..5];
+		my ($downstream_reference, $downstream_position, $downstream_direction, $downstream_redundant) = @split_key[4..7];
 		$downstream_direction = -1 if ($downstream_direction == 0);
 	
-		$item->{overlap} = $split_key[6];
-		
+		$item->{overlap} = $split_key[8];
+				
 		##
 		## Create three intervals for making alignments and html output
 		##    it would be nice to flag whether we think the original junction is still there
@@ -370,16 +370,39 @@ sub correct_alignments
 		$item->{interval_1}->{end} = $upstream_position;
 		$item->{interval_1}->{strand} = $upstream_direction;		
 		$item->{interval_1}->{seq_id} = $upstream_reference;
+		$item->{interval_1}->{redundant} = $upstream_redundant;
+
 
 		## (3) Alignment for the reference sequence that disagrees with the junction #2.
  		$item->{interval_2}->{start} = $downstream_position;
 		$item->{interval_2}->{end} = $downstream_position;
-		$item->{interval_2}->{strand} = $downstream_direction; #switch strand so it refers to direction from position to seq in junction
+		$item->{interval_2}->{strand} = $downstream_direction;
 		$item->{interval_2}->{seq_id} = $downstream_reference;
+		$item->{interval_2}->{redundant} = $downstream_redundant;
 
 		$item->{total_reads} = scalar @{$matched_junction{$key}};
 		
 		push @hybrid_predictions, $item;
+
+
+		#if there is overlapping sequence, and both sides are unique,
+		#then give overlap to first side
+		
+		if (!$item->{interval_1}->{redundant} && !$item->{interval_2}->{redundant})
+		{
+			if ($item->{overlap} > 0)
+			{
+				my $strand_direction = ($item->{interval_2}->{strand} > 0) ? +1 : -1;
+				
+				$item->{interval_2}->{start} += $item->{overlap} * $strand_direction;
+				$item->{interval_2}->{end} += $item->{overlap} * $strand_direction;
+				$item->{overlap} = 0;			
+			}			
+		}
+		### Note: Other adjustments to voerlap can happen at the later annotation stage
+		### because they will not affect coverage for calling deletions or mutations
+		### because they will be in redundantly matched sides of junctions
+		
 
 		## create matches from UNIQUE sides of each match to reference genome
 		## this fixes, for example appearing to not have any coverage at the origin of a circular DNA fragment
@@ -396,13 +419,16 @@ sub correct_alignments
 					my $side_key = 'interval_' . $side;
 
 	############## Need to add indication of whether this side of the junction is unique!!
-	############## And not count reads at a position if it is redundant!!
-	#				if (!$item->{$side_key}->{is})
-	#				{
+	
+	
+	
+                    ## Do not count for coverage if it is redundant is redundant!!
+					if (!$item->{$side_key}->{redundant})
+					{
 						##write out match corresponding to this part to SAM file						
 						my $trim = _trim_ambiguous_ends($a, $candidate_junction_header, $candidate_junction_fai);
 						Breseq::Shared::tam_write_moved_alignment($RREF, $item->{$side_key}->{seq_id}, $fastq_file_index, $a, $side, $item->{flanking_length}, $item->{overlap}, $item->{$side_key}->{start}, $item->{$side_key}->{strand}, $trim);		
-	#				}
+					}
 				}
 			}
 		}
@@ -888,7 +914,7 @@ sub _test_junction
 		
 		my $junction_id = $candidate_junction_header->target_name()->[$a->tid];
 		my @split_key = Breseq::Shared::junction_name_split($junction_id);
- 		my $overlap = $split_key[6];
+ 		my $overlap = $split_key[8];
 		my $rev_key = ($a->reversed ? '1' : '0');
 
 		my $this_left = $flanking_length;
