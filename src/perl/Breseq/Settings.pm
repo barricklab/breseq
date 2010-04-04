@@ -86,6 +86,8 @@ sub new
 	$self->{mutation_log10_e_value_cutoff} = 2;			# log10 of evidence required for SNP calls 
 	$self->{polymorphism_fisher_strand_p_value_cutoff} = 0.05;
 	
+	#keep this on by default
+	
 	my ($help, $man);
 	my ($resume_run, $continue_run);
 	GetOptions(
@@ -119,7 +121,7 @@ sub new
 		'polymorphism-log10-e-value-cutoff=s' => \$self->{polymorphism_log10_e_value_cutoff},
 		'polymorphism-fraction-cutoff=s' =>  \$self->{polymorphism_fraction_cutoff},	
 		'polymorphism-fisher-strand-p-value-cutoff=s' => \$self->{polymorphism_fisher_strand_p_value_cutoff},
-		'unmatched-reads' => \$self->{unmatched_reads},
+		'no-unmatched-reads' => \$self->{no_unmatched_reads},
 		'maximum-candidate-junctions=s' => \$self->{maximum_candidate_junctions},
 		'error-model=s' => \$self->{error_model_method},
 		'resume' => \$resume_run,
@@ -133,6 +135,9 @@ sub new
 	#neaten up some settings for later string comparisons
 	$self->{quality_type} = "\L$self->{quality_type}";
 	$self->{error_model_method} = "\U$self->{error_model_method}";
+	
+	#on by default
+	$self->{unmatched_reads} = ($self->{no_unmatched_reads}) ? 0 : 1;
 		
 	#######  SETUP FILE NAMES  #######
 	### '#' replaced with read fastq name or seq_id of reference sequence

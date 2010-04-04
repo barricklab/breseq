@@ -346,7 +346,7 @@ sub tam_write_moved_alignment
 	push @ll, $flags;
 	push @ll, $seq_id;
 	push @ll, $ref_start;
-	push @ll, $a->qual, $cigar_string, ($a->proper_pair ? '=' : '*'), $a->mate_start, $a->isize, $seq, $quality_score_string, $aux_tags;
+	push @ll, $a->qual, $cigar_string, ($a->proper_pair ? '=' : '*'), $a->mate_start, $a->isize, $seq, $quality_score_string, $aux_tags;	
 	my $l = join("\t", @ll) . "\n";
 	print STDERR $l if ($verbose);
 

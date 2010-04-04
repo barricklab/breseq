@@ -186,19 +186,19 @@ sub html_summary_table
 
 sub html_full_table
 {
-	my ($file_name, $options, $snps_list_ref, $deletion_list_ref, $hybrid_list_ref) = @_;
+	my ($file_name, $settings, $ref_seq_info, $snps_list_ref, $deletion_list_ref, $hybrid_list_ref) = @_;
 	open HTML, ">$file_name" or die "Could not open file: $file_name";
 	
 	print HTML 
 		start_html(
-			-title => "BRESEQ :: Predicted Mutations" . ($options->{run_name} ?  " :: $options->{run_name}" : ''), 
+			-title => "BRESEQ :: Predicted Mutations" . ($settings->{run_name} ?  " :: $settings->{run_name}" : ''), 
 			-head  => style({type => 'text/css'},$header_style_string),
 	    ),
 		html_snp_table_string($snps_list_ref),
 		p,
 		html_deletion_table_string($deletion_list_ref),
 		p,
-		html_junction_table_string($hybrid_list_ref),
+		html_junction_table_string($hybrid_list_ref, $ref_seq_info),
 		end_html;
 
 	close HTML;
@@ -234,7 +234,6 @@ sub html_snp_table_string
 			"codon change", 
 			"aa change", 
 			"gene", 
-			"product"
 		]
 	);	
 	$output_str.= th({-width => "100%"}, "product"); 
@@ -447,7 +446,7 @@ sub html_deletion_table_string
 
 sub html_junction_table_string
 {
-	my ($list_ref, $force_link) = @_;
+	our ($list_ref, $ref_seq_info, $force_link) = @_;
 	my $output_str = '';
 	
 	###
@@ -457,8 +456,11 @@ sub html_junction_table_string
 	{
 		my $a_pos = (defined $a->{interval_1}->{is}) ? $a->{interval_2}->{start} : $a->{interval_1}->{start};
 		my $b_pos = (defined $b->{interval_1}->{is}) ? $b->{interval_2}->{start} : $b->{interval_1}->{start};
-		
-		return ($a_pos <=> $b_pos);
+	
+		my $a_seq_order = (defined $a->{interval_1}->{is}) ? $ref_seq_info->{seq_order}->{$a->{interval_2}->{seq_id}} : $ref_seq_info->{seq_order}->{$a->{interval_1}->{seq_id}};
+		my $b_seq_order = (defined $b->{interval_1}->{is}) ? $ref_seq_info->{seq_order}->{$b->{interval_2}->{seq_id}} : $ref_seq_info->{seq_order}->{$b->{interval_1}->{seq_id}};		
+	
+		return (($a_seq_order <=> $b_seq_order) || ($a_pos <=> $b_pos));
 	}
 	@$list_ref = sort by_unique_coord @$list_ref;
 	
