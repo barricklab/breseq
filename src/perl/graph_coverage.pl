@@ -303,7 +303,7 @@ downsample_by <- $downsample
 if (downsample_by == -1)
 {
 	downsample_by = trunc(log10(dim(cov)[1]));
-	downsample_by = downsample_by - 2;
+	downsample_by = downsample_by - 3;
 	if (downsample_by < 0)
 	{
 		downsample_by = 0
