@@ -4,3 +4,9 @@ tests/output
 tests/cnv_cov.tab
 tests/r_script.txt
 tests/r_script.txt.out
+*.o
+*.a
+*.gz
+src/c/build
+*.tab
+*.out

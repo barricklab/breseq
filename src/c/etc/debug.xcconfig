@@ -1,0 +1,3 @@
+HEADER_SEARCH_PATHS = $(PROJECT_DIR)/samtools-0.1.7a /opt/local/include
+WARNING_CFLAGS = -Wall
+ARCHS=$(NATIVE_ARCH)

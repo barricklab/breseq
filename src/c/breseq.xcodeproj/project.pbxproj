@@ -1,0 +1,303 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 42;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		421ACF4A1170DFC300C2EB85 /* main.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 421ACF2B1170DEC400C2EB85 /* main.cpp */; };
+		421ACF581170E00A00C2EB85 /* libbam.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 421ACF571170E00A00C2EB85 /* libbam.a */; };
+		421ACF7E1170E5CA00C2EB85 /* libboost_program_options-mt.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 421ACF7D1170E5CA00C2EB85 /* libboost_program_options-mt.a */; };
+		421ACFA31170ED4B00C2EB85 /* error_count.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 421ACFA21170ED4B00C2EB85 /* error_count.cpp */; };
+		421ACFAD1170F05500C2EB85 /* libz.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 421ACFAC1170F05500C2EB85 /* libz.a */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXContainerItemProxy section */
+		421ACF601170E07C00C2EB85 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 421ACEB71170DB9600C2EB85 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 421ACF201170DC4400C2EB85 /* samtools */;
+			remoteInfo = samtools;
+		};
+/* End PBXContainerItemProxy section */
+
+/* Begin PBXFileReference section */
+		421ACF2B1170DEC400C2EB85 /* main.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = main.cpp; sourceTree = "<group>"; };
+		421ACF2F1170DF1800C2EB85 /* error_count */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = error_count; sourceTree = BUILT_PRODUCTS_DIR; };
+		421ACF361170DF3F00C2EB85 /* debug.xcconfig */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.xcconfig; path = debug.xcconfig; sourceTree = "<group>"; };
+		421ACF571170E00A00C2EB85 /* libbam.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = libbam.a; path = "samtools-0.1.7a/libbam.a"; sourceTree = "<group>"; };
+		421ACF7D1170E5CA00C2EB85 /* libboost_program_options-mt.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = "libboost_program_options-mt.a"; path = "/opt/local/lib/libboost_program_options-mt.a"; sourceTree = "<absolute>"; };
+		421ACFA01170EC3200C2EB85 /* error_count.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = error_count.h; sourceTree = "<group>"; };
+		421ACFA21170ED4B00C2EB85 /* error_count.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = error_count.cpp; sourceTree = "<group>"; };
+		421ACFAC1170F05500C2EB85 /* libz.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = libz.a; path = /opt/local/lib/libz.a; sourceTree = "<absolute>"; };
+/* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		421ACF2D1170DF1800C2EB85 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				421ACF581170E00A00C2EB85 /* libbam.a in Frameworks */,
+				421ACF7E1170E5CA00C2EB85 /* libboost_program_options-mt.a in Frameworks */,
+				421ACFAD1170F05500C2EB85 /* libz.a in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		421ACEB51170DB9600C2EB85 = {
+			isa = PBXGroup;
+			children = (
+				421ACF351170DF3F00C2EB85 /* etc */,
+				421ACF291170DEC400C2EB85 /* error_count */,
+				421ACF5F1170E06300C2EB85 /* lib */,
+				421ACF301170DF1800C2EB85 /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		421ACF291170DEC400C2EB85 /* error_count */ = {
+			isa = PBXGroup;
+			children = (
+				421ACF9F1170EC3200C2EB85 /* include */,
+				421ACF2A1170DEC400C2EB85 /* src */,
+			);
+			path = error_count;
+			sourceTree = "<group>";
+		};
+		421ACF2A1170DEC400C2EB85 /* src */ = {
+			isa = PBXGroup;
+			children = (
+				421ACFA21170ED4B00C2EB85 /* error_count.cpp */,
+				421ACF2B1170DEC400C2EB85 /* main.cpp */,
+			);
+			path = src;
+			sourceTree = "<group>";
+		};
+		421ACF301170DF1800C2EB85 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				421ACF2F1170DF1800C2EB85 /* error_count */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		421ACF351170DF3F00C2EB85 /* etc */ = {
+			isa = PBXGroup;
+			children = (
+				421ACF361170DF3F00C2EB85 /* debug.xcconfig */,
+			);
+			path = etc;
+			sourceTree = "<group>";
+		};
+		421ACF5F1170E06300C2EB85 /* lib */ = {
+			isa = PBXGroup;
+			children = (
+				421ACFAC1170F05500C2EB85 /* libz.a */,
+				421ACF7D1170E5CA00C2EB85 /* libboost_program_options-mt.a */,
+				421ACF571170E00A00C2EB85 /* libbam.a */,
+			);
+			name = lib;
+			sourceTree = "<group>";
+		};
+		421ACF9F1170EC3200C2EB85 /* include */ = {
+			isa = PBXGroup;
+			children = (
+				421ACFA01170EC3200C2EB85 /* error_count.h */,
+			);
+			path = include;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXLegacyTarget section */
+		421ACF201170DC4400C2EB85 /* samtools */ = {
+			isa = PBXLegacyTarget;
+			buildArgumentsString = "$(ACTION)";
+			buildConfigurationList = 421ACF251170DC6C00C2EB85 /* Build configuration list for PBXLegacyTarget "samtools" */;
+			buildPhases = (
+			);
+			buildToolPath = /usr/bin/make;
+			buildWorkingDirectory = "$(PROJECT_DIR)/samtools-0.1.7a";
+			dependencies = (
+			);
+			name = samtools;
+			passBuildSettingsInEnvironment = 1;
+			productName = samtools;
+		};
+/* End PBXLegacyTarget section */
+
+/* Begin PBXNativeTarget section */
+		421ACF2E1170DF1800C2EB85 /* error_count */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 421ACF341170DF1800C2EB85 /* Build configuration list for PBXNativeTarget "error_count" */;
+			buildPhases = (
+				421ACF2C1170DF1800C2EB85 /* Sources */,
+				421ACF2D1170DF1800C2EB85 /* Frameworks */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				421ACF611170E07C00C2EB85 /* PBXTargetDependency */,
+			);
+			name = error_count;
+			productName = error_count;
+			productReference = 421ACF2F1170DF1800C2EB85 /* error_count */;
+			productType = "com.apple.product-type.tool";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		421ACEB71170DB9600C2EB85 /* Project object */ = {
+			isa = PBXProject;
+			buildConfigurationList = 421ACEBA1170DB9600C2EB85 /* Build configuration list for PBXProject "breseq" */;
+			compatibilityVersion = "Xcode 2.4";
+			hasScannedForEncodings = 0;
+			mainGroup = 421ACEB51170DB9600C2EB85;
+			productRefGroup = 421ACF301170DF1800C2EB85 /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				421ACF201170DC4400C2EB85 /* samtools */,
+				421ACF2E1170DF1800C2EB85 /* error_count */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXSourcesBuildPhase section */
+		421ACF2C1170DF1800C2EB85 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				421ACF4A1170DFC300C2EB85 /* main.cpp in Sources */,
+				421ACFA31170ED4B00C2EB85 /* error_count.cpp in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		421ACF611170E07C00C2EB85 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 421ACF201170DC4400C2EB85 /* samtools */;
+			targetProxy = 421ACF601170E07C00C2EB85 /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
+
+/* Begin XCBuildConfiguration section */
+		421ACEB81170DB9600C2EB85 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				COPY_PHASE_STRIP = NO;
+			};
+			name = Debug;
+		};
+		421ACEB91170DB9600C2EB85 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				COPY_PHASE_STRIP = YES;
+			};
+			name = Release;
+		};
+		421ACF211170DC4400C2EB85 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				COPY_PHASE_STRIP = NO;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				PRODUCT_NAME = samtools;
+			};
+			name = Debug;
+		};
+		421ACF221170DC4400C2EB85 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				COPY_PHASE_STRIP = YES;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				GCC_ENABLE_FIX_AND_CONTINUE = NO;
+				PRODUCT_NAME = samtools;
+				ZERO_LINK = NO;
+			};
+			name = Release;
+		};
+		421ACF321170DF1800C2EB85 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = 421ACF361170DF3F00C2EB85 /* debug.xcconfig */;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				COPY_PHASE_STRIP = NO;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_ENABLE_FIX_AND_CONTINUE = YES;
+				GCC_MODEL_TUNING = G5;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				INSTALL_PATH = /usr/local/bin;
+				LIBRARY_SEARCH_PATHS = (
+					"$(inherited)",
+					"$(LIBRARY_SEARCH_PATHS_QUOTED_FOR_TARGET_1)",
+					/opt/local/lib,
+				);
+				LIBRARY_SEARCH_PATHS_QUOTED_FOR_TARGET_1 = "\"$(SRCROOT)/samtools-0.1.7a\"";
+				PREBINDING = NO;
+				PRODUCT_NAME = error_count;
+				USER_HEADER_SEARCH_PATHS = "$(PROJECT_DIR)/error_count/include";
+			};
+			name = Debug;
+		};
+		421ACF331170DF1800C2EB85 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				COPY_PHASE_STRIP = YES;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				GCC_ENABLE_FIX_AND_CONTINUE = NO;
+				GCC_MODEL_TUNING = G5;
+				INSTALL_PATH = /usr/local/bin;
+				LIBRARY_SEARCH_PATHS = (
+					"$(inherited)",
+					"$(LIBRARY_SEARCH_PATHS_QUOTED_FOR_TARGET_1)",
+					/opt/local/lib,
+				);
+				LIBRARY_SEARCH_PATHS_QUOTED_FOR_TARGET_1 = "\"$(SRCROOT)/samtools-0.1.7a\"";
+				PREBINDING = NO;
+				PRODUCT_NAME = error_count;
+				ZERO_LINK = NO;
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		421ACEBA1170DB9600C2EB85 /* Build configuration list for PBXProject "breseq" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				421ACEB81170DB9600C2EB85 /* Debug */,
+				421ACEB91170DB9600C2EB85 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		421ACF251170DC6C00C2EB85 /* Build configuration list for PBXLegacyTarget "samtools" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				421ACF211170DC4400C2EB85 /* Debug */,
+				421ACF221170DC4400C2EB85 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		421ACF341170DF1800C2EB85 /* Build configuration list for PBXNativeTarget "error_count" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				421ACF321170DF1800C2EB85 /* Debug */,
+				421ACF331170DF1800C2EB85 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+/* End XCConfigurationList section */
+	};
+	rootObject = 421ACEB71170DB9600C2EB85 /* Project object */;
+}
