@@ -1,0 +1,141 @@
+#load data
+X<-read.table("./tests/output/lambda/07_error_calibration/NC_001416.unique_only_coverage_distribution.tab", header=T)
+
+#create the distribution vector and fit
+Y<-rep(X$coverage, X$n)
+m<-mean(Y)
+v<-var(Y)
+D<-v/m
+
+i<-0
+max_n <- 0;
+max_i <- i;
+for (i in trunc(m/4):length(X$n))
+{		
+	if (X$n[i] > max_n)
+	{
+		max_n = X$n[i];
+		max_i = i;
+	}
+}
+
+
+
+#censor data on the right and left of the biggest maximum
+coverage_factor <- 0.5;
+
+i<-max_i
+while (i >= 1 && X$n[i]>coverage_factor*max_n)
+{	
+	i <- i-1;
+}
+start_i = i;
+
+i<-max_i
+while (i <= length(X$n) && X$n[i]>coverage_factor*max_n)
+{		
+	i <- i+1;
+}
+end_i <-i
+
+#now maximum likelihood find the best dispersion parameter
+
+inner_total<-0;
+for (i in start_i:end_i)
+{
+	inner_total = inner_total + X$n[i]; 
+}
+total_total<-sum(X$n);
+
+i<-max_i
+while (i <= length(X$n) && X$n[i]>0.01*max_n)
+{		
+	i <- i+1;
+}
+graph_end_i <-i
+
+f_nb <- function(par) {
+
+	mu = par[1];
+	size = par[2];
+	
+	dist<-c()
+	total <- 0;
+	for (i in start_i:end_i)
+	{	
+		dist[i] <- dnbinom(i, size=size, mu=mu);
+		total <- total + dist[i] 
+	}
+	#print (mu, size)
+	
+ 	l <- 0;
+	for (i in start_i:end_i)
+	{
+		l <- l + ((X$n[i]/inner_total)-(dist[i]/total))^2;
+	}
+	l;
+}
+
+nb_fit<-nlm(f_nb, c(m,1) )
+nb_fit_mu = nb_fit$estimate[1];
+nb_fit_size = nb_fit$estimate[2];
+
+print(nb_fit_size);
+print(nb_fit_mu);
+
+fit_nb = dnbinom(0:max(X$coverage), mu = nb_fit_mu, size=nb_fit_size)*total_total;
+
+
+f_p <- function(par) {
+
+	lambda = par[1];
+	
+	dist<-c()
+	total <- 0;
+	for (i in start_i:end_i)
+	{	
+		dist[i] <- dpois(i, lambda=lambda);
+		total <- total + dist[i] 
+	}
+	#print (total)
+	
+ 	l <- 0;
+	for (i in start_i:end_i)
+	{
+		l <- l + ((X$n[i]/inner_total)-(dist[i]/total))^2;
+	}
+	l;
+}
+
+p_fit<-nlm(f_p, c(m))
+p_fit_lambda = nb_fit$estimate[1];
+fit_p<-dpois(0:max(X$coverage), lambda = p_fit_lambda)*total_total;
+
+
+my_pch = 21
+my_col = "black";
+
+pdf("./tests/output/lambda/output/NC_001416.unique_coverage.pdf", height=6, width=7)
+par(mar=c(5,5,3,3));
+plot(0:10, 0:10, type="n", lty="solid", ylim=c(0, max(X$n, fit_p, fit_nb))*1.05, xlim=c(0, graph_end_i), lwd=1, xaxs="i", yaxs="i", axes=F, las=1, xlab="", ylab="", cex.lab=1.2, cex.axis=1.2 )
+box()
+#axis(2, cex.lab=1.2, las=1, cex.axis=1.2, labels=T, at=(0:6)*50000)
+axis(2, cex.lab=1.2, las=1, cex.axis=1.2, labels=T)
+axis(1, cex.lab=1.2, cex.axis=1.2, labels=T)
+
+#graph the coverage as points
+points(X$coverage, X$n, pch=my_pch, col=my_col, bg="white", cex=1.2)
+
+#graph the poisson fit
+lines(0:max(X$coverage), fit_p, lwd=3, lty="22", col="black");
+
+#graph the negative binomial fit
+lines(0:max(X$coverage), fit_nb, lwd=3, col="black");
+
+#print out some statistics
+print(m)
+print(v)
+print(D)
+
+dev.off()
+
