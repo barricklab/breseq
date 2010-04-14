@@ -57,6 +57,50 @@ my $command = shift @ARGV;
 $command = "\U$command";
 
 my $output_gd;
+
+if ($command eq 'SPLIT')
+{
+	use Breseq::Fastq;
+	use Getopt::Long;
+	use Pod::Usage;
+	my ($help, $man);
+	my $num_seq_per_file;
+	GetOptions(
+		'help|?' => \$help, 'man' => \$man,
+		'num|m=s' => \$num_seq_per_file,
+	) or pod2usage(2);
+	pod2usage(1) if $help;
+	pod2usage(-exitstatus => 0, -verbose => 2) if $man;	
+	die "Must provide number of sequences per output file (-n)\n" if (!$num_seq_per_file);
+
+	my ( $input_file ) = @ARGV;
+		
+	my $input_file_base = $input_file;
+	$input_file_base =~ s/\.(\S+?)$//;
+	my $input_file_suffix = $1 ? $1 : "";	
+	
+	my $i = 0;
+	my $read_num;
+	my $output_file;
+	
+	my $in_fastq = Breseq::Fastq->new(-file => $input_file);
+	my $out_fastq;
+
+	while ($_ = $in_fastq->next_seq)
+	{	
+		if (!$read_num || $read_num >= $num_seq_per_file)
+		{
+			$read_num = 0;
+			$i++;
+			$output_file = "$input_file_base.$i.$input_file_suffix";
+			$out_fastq = Breseq::Fastq->new(-file => ">" . $output_file);	
+		}
+		$out_fastq->write_seq($_);
+		$read_num++;	
+	}
+}
+
+
 if ($command eq 'NUMBER_PAIRED')
 {
 	use Breseq::Fastq;
@@ -85,8 +129,8 @@ if ($command eq 'NUMBER_PAIRED')
 	
 	for (my $i=1; $i<=scalar @in_list; $i++)
 	{
-		my $in_fastq = FastqLite->new(-file => $in_list[$i-1]);
-		my $out_fastq = FastqLite->new(-file => ">" . $out_list[$i-1]);
+		my $in_fastq = Breseq::Fastq->new(-file => $in_list[$i-1]);
+		my $out_fastq = Breseq::Fastq->new(-file => ">" . $out_list[$i-1]);
 		my $n = 1;
 		
 		while ($_ = $in_fastq->next_seq)
@@ -128,7 +172,6 @@ if ($command eq 'FASTA')
 
 if ($command eq 'MERGE_PAIRED')
 {
-	
 	#Get options
 	use Getopt::Long;
 	use Pod::Usage;
@@ -143,13 +186,16 @@ if ($command eq 'MERGE_PAIRED')
 	my ( $input_1, $input_2, $output ) = @ARGV;
 
 	#Open Input/output
-	my $in_fastq_1 = FastqLite->new(-file => $input_1);
-	my $in_fastq_2 = FastqLite->new(-file => $input_2);
-	my $out_fastq = FastqLite->new(-file => ">$output");
+	my $in_fastq_1 = Breseq::Fastq->new(-file => $input_1);
+	my $in_fastq_2 = Breseq::Fastq->new(-file => $input_2);
+	my $out_fastq = Breseq::Fastq->new(-file => ">$output");
 
 	my $line_1 = <INPUT_1>;
 	my $line_2 = <INPUT_2>;
-	while (($seq1 = $in_fastq->next_seq) && ($seq2 = $in_fastq->next_seq))
+	
+	my $seq1;
+	my $seq2;
+	while (($seq1 = $in_fastq_1->next_seq) && ($seq2 = $in_fastq_2->next_seq))
 	{
 		$out_fastq->write_seq($seq1);
 		$out_fastq->write_seq($seq2);
@@ -296,7 +342,7 @@ if ($command eq "QUALS_FASTQ")
 	
 	while (my $read_seq = $in_fastq->next_seq) 
 	{
-		$out_fastq->write_seq(, $read_seq);
+		$out_fastq->write_seq($read_seq);
 	}
 
 }
