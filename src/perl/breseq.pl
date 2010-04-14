@@ -134,6 +134,15 @@ my $settings = Breseq::Settings->new;
 Breseq::Output::record_time("Start");
 
 
+###
+### Bail right away if the output is already done.
+###
+
+{
+	my $output_done_file_name = $settings->file_name('output_done_file_name');	
+	die "Output is already complete.\n" if (-e $output_done_file_name);
+}
+
 ##
 # Convert the read fastq file to fasta for input into MUMmer
 sub sequence_conversion {}
@@ -963,8 +972,17 @@ sub html_output {}
 	open SUM, ">$settings_text_file_name";
 	print SUM Dumper($summary);
 	close SUM;
+
+	###
+	## Temporary debug output using Data::Dumper
+	###
+
+	## record the final time and print summary table
+	Breseq::Output::record_time("End");
+	Breseq::Output::html_summary_table($settings->{summary_html_file_name}, $settings, \@Breseq::Output::execution_times, $summary);
+
+	my $output_done_file_name = $settings->file_name('output_done_file_name');	
+	open DONE, ">$output_done_file_name";
+	close DONE;
 }
 
-## record the final time and print summary table
-Breseq::Output::record_time("End");
-Breseq::Output::html_summary_table($settings->{summary_html_file_name}, $settings, \@Breseq::Output::execution_times, $summary);

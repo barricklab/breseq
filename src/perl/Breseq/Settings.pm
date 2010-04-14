@@ -220,6 +220,7 @@ sub new
 	##### output #####
 	$self->{output_path} = "output";
 	$self->{output_path} = "$self->{base_output_path}/$self->{output_path}" if ($self->{base_output_path});
+	$self->{output_done_file_name} = "$self->{output_path}/output.done";
 	$self->{log_file_name} = "$self->{output_path}/log.out";
 	$self->{junction_file_name} = "$self->{output_path}/new_junctions.tab";
 	$self->{snps_file_name} = "$self->{output_path}/snps.tab";
