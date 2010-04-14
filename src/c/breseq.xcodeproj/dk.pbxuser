@@ -103,21 +103,19 @@
 					PBXFileDataSource_Warnings_ColumnID,
 				);
 			};
-			PBXPerProjectTemplateStateSaveDate = 292942563;
-			PBXWorkspaceStateSaveDate = 292942563;
+			PBXPerProjectTemplateStateSaveDate = 292948938;
+			PBXWorkspaceStateSaveDate = 292948938;
 		};
 		perUserProjectItems = {
 			427D613D117373FF00DD5AA5 /* PBXTextBookmark */ = 427D613D117373FF00DD5AA5 /* PBXTextBookmark */;
 			427D613F117373FF00DD5AA5 /* PBXTextBookmark */ = 427D613F117373FF00DD5AA5 /* PBXTextBookmark */;
 			427D6141117373FF00DD5AA5 /* PBXTextBookmark */ = 427D6141117373FF00DD5AA5 /* PBXTextBookmark */;
-			42828FD61175FB2F006C7B7D /* PBXTextBookmark */ = 42828FD61175FB2F006C7B7D /* PBXTextBookmark */;
 			42828FD71175FB2F006C7B7D /* PBXTextBookmark */ = 42828FD71175FB2F006C7B7D /* PBXTextBookmark */;
 			42828FD81175FB2F006C7B7D /* PBXTextBookmark */ = 42828FD81175FB2F006C7B7D /* PBXTextBookmark */;
-			42828FDA1175FB2F006C7B7D /* PBXTextBookmark */ = 42828FDA1175FB2F006C7B7D /* PBXTextBookmark */;
-			42828FDB1175FB2F006C7B7D /* PBXTextBookmark */ = 42828FDB1175FB2F006C7B7D /* PBXTextBookmark */;
 			42828FDC1175FB2F006C7B7D /* PBXTextBookmark */ = 42828FDC1175FB2F006C7B7D /* PBXTextBookmark */;
 			42828FDD1175FB2F006C7B7D /* PBXTextBookmark */ = 42828FDD1175FB2F006C7B7D /* PBXTextBookmark */;
 			42828FEE11760A5E006C7B7D /* PBXTextBookmark */ = 42828FEE11760A5E006C7B7D /* PBXTextBookmark */;
+			42D13A7211760BD0002B0761 /* PBXTextBookmark */ = 42D13A7211760BD0002B0761 /* PBXTextBookmark */;
 		};
 		sourceControlManager = 421ACEBB1170DB9600C2EB85 /* Source Control */;
 		userBuildSettings = {
@@ -199,21 +197,9 @@
 	};
 	421ACFA21170ED4B00C2EB85 /* error_count.cpp */ = {
 		uiCtxt = {
-			sepNavIntBoundsRect = "{{0, 0}, {1321, 6034}}";
-			sepNavSelRange = "{11891, 0}";
-			sepNavVisRange = "{4689, 830}";
-		};
-	};
-	42420D49117177F9006B0716 /* ErrorCalibration.pm */ = {
-		isa = PBXFileReference;
-		lastKnownFileType = text.script.perl;
-		name = ErrorCalibration.pm;
-		path = /Users/dk/Documents/research/extern/breseq/src/perl/ErrorCalibration.pm;
-		sourceTree = "<absolute>";
-		uiCtxt = {
-			sepNavIntBoundsRect = "{{0, 0}, {963, 13160}}";
-			sepNavSelRange = "{6727, 75}";
-			sepNavVisRange = "{4843, 2289}";
+			sepNavIntBoundsRect = "{{0, 0}, {963, 5642}}";
+			sepNavSelRange = "{8047, 0}";
+			sepNavVisRange = "{6411, 1925}";
 		};
 	};
 	427D613C117373FF00DD5AA5 /* bam.h */ = {
@@ -222,11 +208,6 @@
 		name = bam.h;
 		path = "/Users/dk/Documents/research/extern/breseq/src/c/samtools-0.1.7a/bam.h";
 		sourceTree = "<absolute>";
-		uiCtxt = {
-			sepNavIntBoundsRect = "{{0, 0}, {963, 9632}}";
-			sepNavSelRange = "{14435, 152}";
-			sepNavVisRange = "{13553, 1915}";
-		};
 	};
 	427D613D117373FF00DD5AA5 /* PBXTextBookmark */ = {
 		isa = PBXTextBookmark;
@@ -258,16 +239,6 @@
 		vrLen = 242;
 		vrLoc = 0;
 	};
-	42828FD61175FB2F006C7B7D /* PBXTextBookmark */ = {
-		isa = PBXTextBookmark;
-		fRef = 42420D49117177F9006B0716 /* ErrorCalibration.pm */;
-		name = "ErrorCalibration.pm: 221";
-		rLen = 75;
-		rLoc = 6727;
-		rType = 0;
-		vrLen = 2289;
-		vrLoc = 4843;
-	};
 	42828FD71175FB2F006C7B7D /* PBXTextBookmark */ = {
 		isa = PBXTextBookmark;
 		fRef = 427D613C117373FF00DD5AA5 /* bam.h */;
@@ -290,29 +261,10 @@
 	};
 	42828FD91175FB2F006C7B7D /* sam.h */ = {
 		isa = PBXFileReference;
+		lastKnownFileType = sourcecode.c.h;
 		name = sam.h;
 		path = "/Users/dk/Documents/research/extern/breseq/src/c/samtools-0.1.7a/sam.h";
 		sourceTree = "<absolute>";
-	};
-	42828FDA1175FB2F006C7B7D /* PBXTextBookmark */ = {
-		isa = PBXTextBookmark;
-		fRef = 421ACFA21170ED4B00C2EB85 /* error_count.cpp */;
-		name = "error_count.cpp: 153";
-		rLen = 0;
-		rLoc = 3803;
-		rType = 0;
-		vrLen = 1341;
-		vrLoc = 2922;
-	};
-	42828FDB1175FB2F006C7B7D /* PBXTextBookmark */ = {
-		isa = PBXTextBookmark;
-		fRef = 42420D49117177F9006B0716 /* ErrorCalibration.pm */;
-		name = "ErrorCalibration.pm: 221";
-		rLen = 75;
-		rLoc = 6727;
-		rType = 0;
-		vrLen = 2289;
-		vrLoc = 4843;
 	};
 	42828FDC1175FB2F006C7B7D /* PBXTextBookmark */ = {
 		isa = PBXTextBookmark;
@@ -336,11 +288,22 @@
 	};
 	42828FDE1175FB2F006C7B7D /* sam.h */ = {
 		isa = PBXFileReference;
+		lastKnownFileType = sourcecode.c.h;
 		name = sam.h;
 		path = "/Users/dk/Documents/research/extern/breseq/src/c/samtools-0.1.7a/sam.h";
 		sourceTree = "<absolute>";
 	};
 	42828FEE11760A5E006C7B7D /* PBXTextBookmark */ = {
+		isa = PBXTextBookmark;
+		fRef = 421ACFA21170ED4B00C2EB85 /* error_count.cpp */;
+		name = "error_count.cpp: 269";
+		rLen = 0;
+		rLoc = 8047;
+		rType = 0;
+		vrLen = 1925;
+		vrLoc = 6411;
+	};
+	42D13A7211760BD0002B0761 /* PBXTextBookmark */ = {
 		isa = PBXTextBookmark;
 		fRef = 421ACFA21170ED4B00C2EB85 /* error_count.cpp */;
 		name = "error_count.cpp: 269";

@@ -27,7 +27,7 @@ Copyright 2008.  All rights reserved.
 # End Pod Documentation
 ###
 
-package CandidateJunction;
+package Breseq::CandidateJunction;
 use strict;
 
 require Exporter;
@@ -36,8 +36,8 @@ our @EXPORT = qw( $join_string );
 
 use Bio::DB::Sam;
 
-use BreseqShared;
-use FastqLite;
+use Breseq::Shared;
+use Breseq::Fastq;
 
 use Data::Dumper;
 
@@ -100,7 +100,7 @@ sub identify_candidate_junctions
 		
 		ALIGNMENT_LIST: while (1)
 		{		
-			($al, $last_alignment) = BreseqShared::tam_next_read_alignments($tam, $header, $last_alignment);
+			($al, $last_alignment) = Breseq::Shared::tam_next_read_alignments($tam, $header, $last_alignment);
 			last ALIGNMENT_LIST if (!$al);
 					
 			$i++;
@@ -220,13 +220,14 @@ sub identify_candidate_junctions
 	###
 	## Print out the candidate junctions, sorted by the lower coordinate, higher coord, then number
 	###
-	sub by_coord
+	sub by_ref_seq_coord
 	{
-		my @al = BreseqShared::junction_name_split($a->{id});
-		my @bl = BreseqShared::junction_name_split($b->{id});
-		return ($al[1] <=> $bl[1]); 
+		my @al = Breseq::Shared::junction_name_split($a->{id});
+		my @bl = Breseq::Shared::junction_name_split($b->{id});
+		return (($ref_seq_info->{seq_order}->{$al[0]} <=> $ref_seq_info->{seq_order}->{$bl[0]}) ||  ($al[1] <=> $bl[1])); 
 	}
-	@combined_candidate_junctions = sort by_coord @combined_candidate_junctions;
+	
+	@combined_candidate_junctions = sort by_ref_seq_coord @combined_candidate_junctions;
 	
 	foreach my $junction (@combined_candidate_junctions)
 	{
@@ -238,7 +239,7 @@ sub identify_candidate_junctions
 	}
 	
 	## create SAM faidx
-	BreseqShared::system("samtools faidx $candidate_junction_fasta_file_name") if (scalar @combined_candidate_junctions > 0);
+	Breseq::Shared::system("samtools faidx $candidate_junction_fasta_file_name") if (scalar @combined_candidate_junctions > 0);
 	
 	$summary->{candidate_junction} = $hcs;
 }
@@ -247,15 +248,13 @@ sub _alignments_to_candidate_junctions
 {
 	my ($settings, $summary, $ref_seq_info, $candidate_junctions, $fai, $header, @al) = @_;
 
-	my $verbose = 1;
+	my $verbose = 0;
 		
 	### We are only concerned with different matches.
 	#print "Before removing same-reference alignments: " . (scalar @al) . "\n" if ($verbose);
 	
-	#my ($al_ref, $r_ref) = _unique_alignments_with_redundancy($fai, $header, @al);
+	my ($al_ref, $r_ref) = _unique_alignments_with_redundancy($fai, $header, @al);
 	#print "After removing same-reference alignments: " . (scalar @al) . "\n" if ($verbose);
-
-	my $al_ref = \@al;
 
 	return if (scalar @$al_ref == 1);
 				
@@ -273,8 +272,8 @@ sub _alignments_to_candidate_junctions
 			my $a1 = $al_ref->[$i];
 			my $a2 = $al_ref->[$j];					
 					
-			my ($a1_start, $a1_end) = BreseqShared::alignment_query_start_end($a1);			
-			my ($a2_start, $a2_end) = BreseqShared::alignment_query_start_end($a2);
+			my ($a1_start, $a1_end) = Breseq::Shared::alignment_query_start_end($a1);			
+			my ($a2_start, $a2_end) = Breseq::Shared::alignment_query_start_end($a2);
 		
 			#the read may be there but have no match!
 			next if (($a1_start == 0) || ($a2_start == 0));
@@ -307,7 +306,9 @@ sub _alignments_to_candidate_junctions
 			  || (($a1_length > $intersection_length_nonzero) && ($a2_length >= $intersection_length_nonzero+$extra_length)) )
 #			if (($a1_length > $intersection_length_nonzero + $extra_length) && ($a2_length > $intersection_length_nonzero + $extra_length))
 			{
-				my ($junction_id, $junction_seq_string, $q1, $q2) = _alignments_to_candidate_junction($settings, $summary, $ref_seq_info, $fai, $header, $a1, $a2);
+				my $r1 = $r_ref->[$i];
+				my $r2 = $r_ref->[$j]; 
+				my ($junction_id, $junction_seq_string, $q1, $q2) = _alignments_to_candidate_junction($settings, $summary, $ref_seq_info, $fai, $header, $a1, $a2, $r1, $r2);
 
 				#add to number of observations			
 				$candidate_junctions->{$junction_seq_string}->{$junction_id} += ($a1_length - $union_length) ** 2 + ($a2_length - $union_length) ** 2;
@@ -321,18 +322,14 @@ sub _unique_alignments_with_redundancy
 	my ($fai, $header, @al) = @_;
 	my @new_al;
 	my $matched_reference_sequence_hash;
-	my $i=-1;
 	my @redundancy;
 	foreach my $a (@al)
 	{
-		$i++;
 		my $strand = 1 - 2 * $a->reversed;
 		my $interval = $header->target_name()->[$a->tid] . ":" . $a->start . "-" . $a->end;
 		my $dna = $fai->fetch($interval);
-		$dna = FastqLite::revcom($dna) if ($strand == -1);
-		
-		#print "$i $strand $interval\n$dna\n";
-		
+		$dna = Breseq::Fastq::revcom($dna) if ($strand == -1);
+				
 		my $found = $matched_reference_sequence_hash->{$dna};
 		if ($found)
 		{
@@ -344,7 +341,6 @@ sub _unique_alignments_with_redundancy
 		$matched_reference_sequence_hash->{$dna} = scalar(@redundancy);
 		push @redundancy, 1;
 	}
-	
 	
 	return (\@new_al, \@redundancy);
 }
@@ -360,10 +356,10 @@ sub _unique_alignments_with_redundancy
 
 sub _alignments_to_candidate_junction
 {
-	my ($settings, $summary, $ref_seq_info, $fai, $header, $a1, $a2) = @_;
+	my ($settings, $summary, $ref_seq_info, $fai, $header, $a1, $a2, $r1, $r2) = @_;
 		
 	my $verbose = 0;
-	$verbose = $a1->qname eq "30K88AAXX_LenskiSet2:8:3:1374:1537";
+	#$verbose = $a1->qname eq "30K88AAXX_LenskiSet2:8:3:1374:1537";
 	#$verbose = ($a1->start == 1) || ($a2->start == 1);	
 		
 	## set up local settings
@@ -391,8 +387,8 @@ sub _alignments_to_candidate_junction
 	
 	#First, sort matches by their order in the query
 	my ($q1, $q2) = ($a1, $a2);
-	my ($q1_start, $q1_end) = BreseqShared::alignment_query_start_end($q1);
-	my ($q2_start, $q2_end) = BreseqShared::alignment_query_start_end($q2);
+	my ($q1_start, $q1_end) = Breseq::Shared::alignment_query_start_end($q1);
+	my ($q2_start, $q2_end) = Breseq::Shared::alignment_query_start_end($q2);
 		
 	print "$q1_start, $q1_end, $q2_start, $q2_end\n" if ($verbose);
 	($q1, $q2, $q1_start, $q2_start, $q1_end, $q2_end) = ($q2, $q1, $q2_start, $q1_start, $q2_end, $q1_end) if ($q2_start < $q1_start);		
@@ -586,17 +582,22 @@ sub _alignments_to_candidate_junction
 	#print "$junction_id\n";
 	#print "$junction_seq_string\n";
 	
+	my $hash_redundancy_1 = ($r1 > 1) ? 1 : 0;
+	my $hash_redundancy_2 = ($r2 > 1) ? 1 : 0;
+	
 	#want to be sure that lowest ref coord is always first for consistency 
-	if ($hash_coord_2 < $hash_coord_1)
+	if ( ($hash_seq_id_2 lt $hash_seq_id_1) || (($hash_seq_id_1 eq $hash_seq_id_2) && ($hash_coord_2 < $hash_coord_1)) )
 	{
 		($hash_coord_1, $hash_coord_2) = ($hash_coord_2, $hash_coord_1);
 		($hash_strand_1, $hash_strand_2) = ($hash_strand_2, $hash_strand_1);
+		($hash_seq_id_1, $hash_seq_id_2) = ($hash_seq_id_2, $hash_seq_id_1);
+		($hash_redundancy_1, $hash_redundancy_2) = ($hash_redundancy_2, $hash_redundancy_1);
 
-		$junction_seq_string = FastqLite::revcom($junction_seq_string);
-		$unique_read_seq_string = FastqLite::revcom($unique_read_seq_string);
+		$junction_seq_string = Breseq::Fastq::revcom($junction_seq_string);
+		$unique_read_seq_string = Breseq::Fastq::revcom($unique_read_seq_string);
 	}
 		
-	my $junction_id = BreseqShared::junction_name_join($hash_seq_id_1, $hash_coord_1, $hash_strand_1, $hash_seq_id_2, $hash_coord_2, $hash_strand_2, $overlap, $unique_read_seq_string);	
+	my $junction_id = Breseq::Shared::junction_name_join($hash_seq_id_1, $hash_coord_1, $hash_strand_1, $hash_redundancy_1, $hash_seq_id_2, $hash_coord_2, $hash_strand_2, $hash_redundancy_2, $overlap, $unique_read_seq_string);	
 	print "JUNCTION ID: $junction_id\n" if ($verbose);
 	
 	die "$junction_id " . $q1->qname . " " . $a2->qname  if (!$junction_seq_string);
@@ -620,7 +621,7 @@ sub _num_matches_from_end
 	my ($a, $refseq_str, $dir, $overlap) = @_;
 	
 	my $reversed = $a->reversed;
-	my ($q_start, $q_end) = BreseqShared::alignment_query_start_end($a);
+	my ($q_start, $q_end) = Breseq::Shared::alignment_query_start_end($a);
 	my $q_length = $q_end - $q_start + 1;
 	my ($q_seq_start, $q_seq_end) = ($q_start, $q_end);
 	($q_seq_start, $q_seq_end) = ($a->l_qseq - $q_seq_end + 1, $a->l_qseq - $q_seq_start + 1) if ($reversed);

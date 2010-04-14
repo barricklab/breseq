@@ -3,8 +3,7 @@
 ###
 
 =head1 NAME
-
-AlignmentOutput.pm
+Breseq::AlignmentOutput.pm
 
 =head1 SYNOPSIS
 
@@ -29,7 +28,7 @@ Copyright 2009.  All rights reserved.
 
 use strict;
 
-package AlignmentOutput;
+package Breseq::AlignmentOutput;
 use vars qw(@ISA);
 use Bio::Root::Root;
 @ISA = qw( Bio::Root::RootI );
@@ -37,8 +36,8 @@ use Bio::Root::Root;
 use CGI qw/:standard *table *Tr *code *td start_b end_b start_i end_i/;
 
 use Bio::DB::Sam;
-use FastqLite;
-use BreseqShared;
+use Breseq::Fastq;
+use Breseq::Shared;
 use Data::Dumper;
 
 
@@ -250,23 +249,39 @@ sub _html_alignment_line
 }
 
 
-##temporary workaround to avoid too many open files
+## Workaround to avoid too many open files
 my %open_bam_files;
 
 sub create_alignment
 {
 	my $verbose = 0;
 	my ($self, $bam_path, $fasta_path, $region, $options) = @_;
-	
-	##temporary workaround to avoid too many open files
+		
+	## Start -- Workaround to avoid too many open files
 	if (!defined $open_bam_files{$bam_path.$fasta_path})
 	{
-	 $open_bam_files{$bam_path.$fasta_path} = Bio::DB::Sam->new(-bam =>$bam_path, -fasta=>$fasta_path);
+		$open_bam_files{$bam_path.$fasta_path} = Bio::DB::Sam->new(-bam =>$bam_path, -fasta=>$fasta_path);
 	}
 	my $bam = $open_bam_files{$bam_path.$fasta_path};
+	## End -- Workaround to avoid too many open files
 
-	#$verbose = 1 if ($region eq "REL606:1893754-1893754");
-	my ($seq_id, $start, $end) = split /:|\.\.|\-/, $region;
+	#$verbose = 1 if ($region eq "NC_001416‑1:4566-4566");
+	my ($seq_id, $start, $end);
+	my ($insert_start, $insert_end) = (0, 0);
+	#syntax that includes insert counts
+	# e.g. NC_001416:4566.1-4566.1
+	if ($region =~ m/(.+)\:(\d+)\.(\d+)-(\d+)\.(\d+)/)
+	{	
+		($seq_id, $start, $insert_start, $end, $insert_end) = ($1, $2, $3, $4, $5);
+	}
+	elsif ($region =~ m/(.+)\:(\d+)(\.\.|\-)(\d+)/)
+	{
+		($seq_id, $start, $end) = ($1, $2, $4);
+	}
+	else
+	{
+		($seq_id, $start, $end) = split /:|\.\.|\-/, $region;
+	}
 	my $reference_length = $bam->length($seq_id);
 	
 	##check the start and end for sanity....	
@@ -342,8 +357,10 @@ sub create_alignment
 				$aligned_reference->{aligned_bases} .= $ref_bases;
 				$aligned_reference->{aligned_quals} .= chr(255);
 
-				##also update any positions if interest for gaps
-				$aligned_annotation->{aligned_bases} .= (($last_pos >= $start) && ($last_pos <= $end)) ? '|' : ' ';
+				##also update any positions if interest for gaps				
+				$aligned_annotation->{aligned_bases} .= 
+					( (($insert_start == 0) && ($last_pos == $start)) || (($last_pos > $start) && ($last_pos <= $end)) ) 
+					? '|' : ' ';
 				
 				$last_pos++;
 			}
@@ -358,7 +375,7 @@ sub create_alignment
 			my $a = $p->alignment;
 			$updated->{$a->display_name} = 1;
 			
-			##this setup gives expected behavior from indel!
+			##this setup gives expected behavior for indels!
 			my $indel = $p->indel;
 			$indel = 0 if ($indel < 0);
 			$indel = -1 if ($p->is_del);
@@ -418,10 +435,20 @@ sub create_alignment
 		$aligned_reference->{aligned_bases} .= '.' x ($max_indel) if ($max_indel > 0);
 		$aligned_reference->{aligned_quals} .= chr(255) x ($max_indel+1);
 
-		##also update any positions if interest for gaps
-		$aligned_annotation->{aligned_bases} .= (($pos >= $start) && ($pos <= $end)) ? '|' : ' ';
-		$aligned_annotation->{aligned_bases} .= ' ' x ($max_indel) if ($max_indel > 0);
-		
+		##also update any positions of interest for gaps
+		for (my $insert_count=0; $insert_count<=$max_indel; $insert_count++)
+		{	
+			if ( (($insert_start <= $insert_count) && ($pos == $start)) 
+				|| (($pos < $end) && ($pos > $start)) 
+				|| (($insert_end <= $insert_count) && ($pos == $end)) )
+			{ 
+				$aligned_annotation->{aligned_bases} .= '|'; 
+			}	
+			else
+			{
+				$aligned_annotation->{aligned_bases} .= ' ';
+			}	
+		}
 	};
 	$bam->pileup($region, $pileup_function);
 

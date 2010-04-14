@@ -4,7 +4,7 @@
 
 =head1 NAME
 
-FastqLite.pm
+Breseq::Fastq.pm
 
 =head1 SYNOPSIS
 
@@ -30,7 +30,7 @@ Copyright 2009.  All rights reserved.
 use strict;
 use Bio::Root::Root;
 
-package FastqLite;
+package Breseq::Fastq;
 use vars qw(@ISA);
 @ISA = qw( Bio::Root::RootI );
 
@@ -194,7 +194,7 @@ sub predict_qual_format
 		my $seq = $self->next_seq;
 		last if (!$seq);
 		
-		my @quals = FastqLite::quals($seq);
+		my @quals = Breseq::Fastq::quals($seq);
 		foreach my $q (@quals)
 		{
 			$qual_found_hash{$q}++;

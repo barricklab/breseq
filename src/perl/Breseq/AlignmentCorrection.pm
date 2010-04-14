@@ -27,7 +27,7 @@ Copyright 2008.  All rights reserved.
 # End Pod Documentation
 ###
 
-package AlignmentCorrection;
+package Breseq::AlignmentCorrection;
 require Exporter;
 
 use strict;
@@ -51,9 +51,11 @@ sub correct_alignments
 	## for now we just use mapping qualities from ssaha2, but could load ref sequences this way
 	my $reference_faidx_file_name = $settings->file_name('reference_fasta_file_name');
 	my $reference_fai = Bio::DB::Sam::Fai->load($reference_faidx_file_name);
-	
+		
 	my $candidate_junction_file_name = $settings->file_name('candidate_junction_fasta_file_name');
-	my $candidate_junction_fai = Bio::DB::Sam::Fai->load($candidate_junction_file_name) if (!$settings->{no_junction_prediction});	
+	## if there were no candidate junction (file is empty) then we seg fault if we try to use samtools on it...
+	$settings->{no_junction_prediction} = 1 if (-s $candidate_junction_file_name == 0);
+	my	$candidate_junction_fai = Bio::DB::Sam::Fai->load($candidate_junction_file_name) if (!$settings->{no_junction_prediction});		
 	
 	my $minimum_best_score = 0;
 	my $minimum_best_score_difference = 0;
@@ -99,12 +101,12 @@ sub correct_alignments
 			$fastq_file_name[$i] = $settings->read_file_to_fastq_file_name($this_read_file);	
 			$fastq_file_index[$i] = $settings->read_file_to_fastq_file_index($this_read_file);		
 				
-			$in_fastq[$i] = FastqLite->new(-file => $this_fastq_file_name);
+			$in_fastq[$i] = Breseq::Fastq->new(-file => $this_fastq_file_name);
 			
 			if ($settings->{unmatched_reads})
 			{
 				my $unmatched_file_name = $settings->file_name('unmatched_read_file_name', {'#'=>$this_read_file});
-				$out_unmatched_fastq[$i] = FastqLite->new(-file => ">$unmatched_file_name");
+				$out_unmatched_fastq[$i] = Breseq::Fastq->new(-file => ">$unmatched_file_name");
 			}
 		}		
 
@@ -132,11 +134,11 @@ sub correct_alignments
 		if (!$settings->{no_junction_prediction})
 		{
 			($candidate_junction_al, $last_candidate_junction_alignment) 
-				= BreseqShared::tam_next_read_alignments($candidate_junction_tam, $candidate_junction_header, $last_candidate_junction_alignment);		
+				= Breseq::Shared::tam_next_read_alignments($candidate_junction_tam, $candidate_junction_header, $last_candidate_junction_alignment);		
 		}
 		
 		($reference_al, $last_reference_alignment) 
-			= BreseqShared::tam_next_read_alignments($reference_tam, $reference_header, $last_reference_alignment);
+			= Breseq::Shared::tam_next_read_alignments($reference_tam, $reference_header, $last_reference_alignment);
 		
 		my $f = 0;
 		READ: while (my $seq = $in_fastq[$f]->next_seq)
@@ -151,7 +153,7 @@ sub correct_alignments
 			{
 				$this_candidate_junction_al = $candidate_junction_al;
 				($candidate_junction_al, $last_candidate_junction_alignment) 
-					= BreseqShared::tam_next_read_alignments($candidate_junction_tam, $candidate_junction_header, $last_candidate_junction_alignment);
+					= Breseq::Shared::tam_next_read_alignments($candidate_junction_tam, $candidate_junction_header, $last_candidate_junction_alignment);
 			}
 			
 			#Does this read have reference sequence matches?
@@ -160,7 +162,7 @@ sub correct_alignments
 			{
 				$this_reference_al = $reference_al;
 				($reference_al, $last_reference_alignment) 
-					= BreseqShared::tam_next_read_alignments($reference_tam, $reference_header, $last_reference_alignment);
+					= Breseq::Shared::tam_next_read_alignments($reference_tam, $reference_header, $last_reference_alignment);
 			}			
 						
 			###			
@@ -174,10 +176,10 @@ sub correct_alignments
 				next if ($a->unmapped);
 				
 				my $junction_id = $candidate_junction_header->target_name()->[$a->tid];
-				my @scj = BreseqShared::junction_name_split($junction_id);
+				my @scj = Breseq::Shared::junction_name_split($junction_id);
 								
 				## find the start and end coordinates of the overlap
-				my $overlap = $scj[6];
+				my $overlap = $scj[8];
 				my ($junction_start, $junction_end);
 				
 				$junction_start = $flanking_length;
@@ -238,7 +240,7 @@ sub correct_alignments
 				{
 					my $a = $this_dominant_candidate_junction_al[0];
 					my $junction_id = $candidate_junction_header->target_name()->[$a->tid];
-					print "$junction_id\n";
+					#print "$junction_id\n";
 					push @{$matched_junction{$junction_id}}, $item;
 				}	
 				else #multiple identical matches, ones with most hits later will win these matches
@@ -262,7 +264,7 @@ sub correct_alignments
 				## if not, then write to unmatched read file
 				elsif ($settings->{unmatched_reads}) 
 				{
-					FastqLite::write_seq($out_unmatched_fastq[$f]->{fh}, $seq);
+					$out_unmatched_fastq[$f]->write_seq($seq);
 					$s->{unmatched_reads}++;
 				}
 			}
@@ -319,148 +321,93 @@ sub correct_alignments
 	my @hybrid_predictions;
  	foreach my $key (@sorted_keys)
  	{	  
+		my $matched_junction = 
 		print "$key\n" if ($verbose);
-	
- 		# how this list is made 
- 		# my $junction_id = BreseqShared::junction_name_join($hash_seq_id_1, $hash_coord_1, $hash_strand_1, $hash_seq_id_2, $hash_coord_2, $hash_strand_2, $overlap, $unique_read_seq_string);	
- 		my @split_key = BreseqShared::junction_name_split($key);
+		my $item = {key => $key, flanking_length => $flanking_length};
+		
+		# my $junction_id = Breseq::Shared::junction_name_join($hash_seq_id_1, $hash_coord_1, $hash_strand_1, $hash_seq_id_2, $hash_coord_2, $hash_strand_2, $overlap, $unique_read_seq_string);	
+		my @split_key = Breseq::Shared::junction_name_split($key);
 
- 		my ($upstream_reference, $upstream_position, $upstream_direction) = @split_key[0..2];
- 		$upstream_direction = -1 if ($upstream_direction == 0);
- 	 
- 		my ($downstream_reference, $downstream_position, $downstream_direction) = @split_key[3..5];
- 		$downstream_direction = -1 if ($downstream_direction == 0);
- 		
- 		my $overlap = $split_key[6];
- 		
- 		##
- 		## Create three intervals for making alignments and html output
- 		##    it would be nice to flag whether we think the original junction is still there
- 		##
- 	 	my $item;
- 	 	
- 	 	## (1) The first alignment has information relative to the junction candidates
-		if ($overlap == 0)
+		my ($upstream_reference, $upstream_position, $upstream_direction, $upstream_redundant) = @split_key[0..3];
+		$upstream_direction = -1 if ($upstream_direction == 0);
+ 
+		my ($downstream_reference, $downstream_position, $downstream_direction, $downstream_redundant) = @split_key[4..7];
+		$downstream_direction = -1 if ($downstream_direction == 0);
+	
+		$item->{overlap} = $split_key[8];
+				
+		##
+		## Create three intervals for making alignments and html output
+		##    it would be nice to flag whether we think the original junction is still there
+		##
+	 	
+		## (1) The first alignment has information relative to the junction candidates
+		if ($item->{overlap} == 0)
 		{
-			$item->{start} = $flanking_length;
-			$item->{end} = $flanking_length+1;			
+			$item->{start} = $item->{flanking_length};
+			$item->{end} = $item->{flanking_length}+1;			
 			$item->{mark} = '/';
 		}
-		elsif ($overlap > 0)
+		elsif ($item->{overlap} > 0)
 		{
-			$item->{start} = $flanking_length + 1 - $overlap;
-			$item->{end} = $flanking_length;
+			$item->{start} = $item->{flanking_length} + 1 - $item->{overlap};
+			$item->{end} = $item->{flanking_length};
 			$item->{mark} = '|';
 		}
-		else ## ($overlap < 0)
+		else ## ($item->{overlap} < 0)
 		{
-			$item->{start} = $flanking_length+1;
-			$item->{end} = $flanking_length-$overlap;
+			$item->{start} = $item->{flanking_length}+1;
+			$item->{end} = $item->{flanking_length}-$item->{overlap};
 			$item->{mark} = '*';
 		}
- 	 	$item->{seq_id} = $key;
- 		
- 		## This additional information is used for the complex reference line
- 		my $alignment_reference_info_1 = { 
- 			truncate_end => $flanking_length, 
- 			ghost_end => $upstream_position, 
- 			ghost_strand => $upstream_direction,
- 			ghost_seq_id => $upstream_reference
- 		};
+		$item->{seq_id} = $key;
+		
+		#### NOTE: For these intervals, the strand indicates which direction (relative to top strand of genome)
+		####       you move until you hit the given position to reproduce sequence in new junction.
 
- 		my $alignment_reference_info_2 = { 
- 			truncate_start => $flanking_length+1-$overlap, 
- 			ghost_start => $downstream_position, 
- 			ghost_strand => $downstream_direction,
- 			ghost_seq_id => $downstream_reference
- 		};
+		## (2) Alignment for the reference sequence that disagrees with the junction #1.
+ 		$item->{interval_1}->{start} = $upstream_position;
+		$item->{interval_1}->{end} = $upstream_position;
+		$item->{interval_1}->{strand} = $upstream_direction;		
+		$item->{interval_1}->{seq_id} = $upstream_reference;
+		$item->{interval_1}->{redundant} = $upstream_redundant;
 
- 		push @{$item->{alignment_reference_info_list}}, $alignment_reference_info_1, $alignment_reference_info_2;
- 		$item->{alignment_empty_change_line} = 1;
- 			
- 		#### NOTE: For these intervals, the strand indicates which direction (relative to top strand of genome)
- 		####       you move until you hit the given position to reproduce sequence in new junction.
 
- 		## (2) Alignment for the reference sequence that disagrees with the junction #1.
-	 	$item->{interval_1}->{start} = $upstream_position;
- 		$item->{interval_1}->{end} = $upstream_position;
- 		$item->{interval_1}->{strand} = $upstream_direction;		
- 		$item->{interval_1}->{seq_id} = $upstream_reference;
- 
- 		## (3) Alignment for the reference sequence that disagrees with the junction #2.
-	 	$item->{interval_2}->{start} = $downstream_position;
- 		$item->{interval_2}->{end} = $downstream_position;
- 		$item->{interval_2}->{strand} = $downstream_direction; #switch strand so it refers to direction from position to seq in junction
- 		$item->{interval_2}->{seq_id} = $downstream_reference;
- 	
- 		$item->{total_reads} = scalar @{$matched_junction{$key}};
- 		$item->{overlap} = $overlap;
+		## (3) Alignment for the reference sequence that disagrees with the junction #2.
+ 		$item->{interval_2}->{start} = $downstream_position;
+		$item->{interval_2}->{end} = $downstream_position;
+		$item->{interval_2}->{strand} = $downstream_direction;
+		$item->{interval_2}->{seq_id} = $downstream_reference;
+		$item->{interval_2}->{redundant} = $downstream_redundant;
 
- 		#add gene information for each end
- 		$item->{hybrid} = $item;
- 		foreach my $key ('interval_1', 'interval_2')
- 		{			
- 			##create circular reference to self so we can print table at the top of the alignment
- 			$item->{$key}->{hybrid} = $item;
- 				
- 			my ($prev_gene, $gene, $next_gene) 
- 				= ReferenceSequence::find_nearby_genes($item->{$key}, $gene_list_hash_ref->{$item->{$key}->{seq_id}});		
- 	
- 			## noncoding
- 			if (!$gene)
- 			{
- 				$item->{$key}->{gene}->{gene} .= ($prev_gene && $prev_gene->{gene}) ? $prev_gene->{gene} : '-';
- 				$item->{$key}->{gene}->{gene} .= "/";
- 				$item->{$key}->{gene}->{gene} .= ($next_gene && $next_gene->{gene}) ? $next_gene->{gene} : '-';
- 		
- 				if (defined $prev_gene)
-				{
-					$item->{$key}->{gene}->{position} .= ($prev_gene->{strand} == +1) ? "+" : "-";
-					$item->{$key}->{gene}->{position} .= ($item->{$key}->{start} - $prev_gene->{end});
-				}
-				$item->{$key}->{gene}->{gene_position} .= "/";
-				if (defined $next_gene)
-				{
-					$item->{$key}->{gene}->{position} .= ($next_gene->{strand} == +1) ? "-" : "+";
-					$item->{$key}->{gene}->{position} .= ($next_gene->{start} - $item->{$key}->{end});
-				}
+		$item->{total_reads} = scalar @{$matched_junction{$key}};
+		
+		push @hybrid_predictions, $item;
+
+
+		#if there is overlapping sequence, and both sides are unique,
+		#then give overlap to first side
+		
+		if (!$item->{interval_1}->{redundant} && !$item->{interval_2}->{redundant})
+		{
+			if ($item->{overlap} > 0)
+			{
+				my $strand_direction = ($item->{interval_2}->{strand} > 0) ? +1 : -1;
 				
-				$item->{$key}->{gene}->{product} .= ($prev_gene && $prev_gene->{product}) ? $prev_gene->{product} : '-';
-				$item->{$key}->{gene}->{product} .= "/";			
-				$item->{$key}->{gene}->{product} .= ($next_gene && $next_gene->{product}) ? $next_gene->{product} : '-';
-	
-				$item->{$key}->{gene}->{interval} .= $prev_gene->{end}+1 if $prev_gene;
-				$item->{$key}->{gene}->{interval} .= "/"; 
-				$item->{$key}->{gene}->{interval} .= $next_gene->{start}-1 if $next_gene; 
-			} 
-			
-			## coding
-			else
-			{
-				$item->{$key}->{gene}->{gene} = $gene->{gene};
-				$item->{$key}->{gene}->{product} = $gene->{product};
-				my $gene_start = ($gene->{strand} == +1) ? $gene->{start} : $gene->{end};	
-				$item->{$key}->{gene}->{position} = abs($item->{$key}->{start}-$gene_start) + 1;
-				$item->{$key}->{gene}->{interval} = ($gene->{strand} == +1) ? "$gene->{start}-$gene->{end}" : "$gene->{end}-$gene->{start}"; 
-	 
-			}
-			
-			## determine IS elements
-			## Is it within an IS or near the boundary of an IS in the direction leading up to the junction?			
-			if (my $is = ReferenceSequence::find_closest_is_element($item->{$key}, $is_list_hash_ref->{$item->{$key}->{seq_id}}, 200, $item->{$key}->{strand}))
-			{
-				$item->{$key}->{is}->{gene} = $is->{gene};
-				$item->{$key}->{is}->{interval} = ($is->{strand} == +1) ? "$is->{start}-$is->{end}" : "$is->{end}-$is->{start}"; 
-				$item->{$key}->{is}->{product} = $is->{product};
-			}
-			$item->{$key}->{annotate_key} = (defined $item->{$key}->{is}) ? 'is' : 'gene';			
+				$item->{interval_2}->{start} += $item->{overlap} * $strand_direction;
+				$item->{interval_2}->{end} += $item->{overlap} * $strand_direction;
+				$item->{overlap} = 0;			
+			}			
 		}
-		print Dumper($item) if ($verbose);
-	
+		### Note: Other adjustments to voerlap can happen at the later annotation stage
+		### because they will not affect coverage for calling deletions or mutations
+		### because they will be in redundantly matched sides of junctions
+		
+
 		## create matches from UNIQUE sides of each match to reference genome
 		## this fixes, for example appearing to not have any coverage at the origin of a circular DNA fragment
 		### currently we do not add coverage to the IS element (which we would have to know all copies of to do...)
-				
+	
 		if ( $settings->{add_split_junction_sides} )
 		{
 			foreach my $match (@{$matched_junction{$key}})
@@ -470,29 +417,24 @@ sub correct_alignments
 				foreach my $side (1,2)
 				{
 					my $side_key = 'interval_' . $side;
-					if (!$item->{$side_key}->{is})
+
+	############## Need to add indication of whether this side of the junction is unique!!
+	
+	
+	
+                    ## Do not count for coverage if it is redundant is redundant!!
+					if (!$item->{$side_key}->{redundant})
 					{
 						##write out match corresponding to this part to SAM file						
 						my $trim = _trim_ambiguous_ends($a, $candidate_junction_header, $candidate_junction_fai);
-						BreseqShared::tam_write_moved_alignment($RREF, $item->{$side_key}->{seq_id}, $fastq_file_index, $a, $side, $flanking_length, $item->{overlap}, $item->{$side_key}->{start}, $item->{$side_key}->{strand}, $trim);		
+						Breseq::Shared::tam_write_moved_alignment($RREF, $item->{$side_key}->{seq_id}, $fastq_file_index, $a, $side, $item->{flanking_length}, $item->{overlap}, $item->{$side_key}->{start}, $item->{$side_key}->{strand}, $trim);		
 					}
 				}
 			}
 		}
-	
- 		push @hybrid_predictions, $item;
- 		
- 	}
-
-	sub by_hybrid
-	{
-		my $a_pos = (defined $a->{interval_1}->{is}) ? $a->{interval_2}->{start} : $a->{interval_1}->{start};
-		my $b_pos = (defined $b->{interval_1}->{is}) ? $b->{interval_2}->{start} : $b->{interval_1}->{start};
-		
-		return ($a_pos <=> $b_pos);
 	}
-	@hybrid_predictions = sort by_hybrid @hybrid_predictions;
-
+	
+ 
  	return @hybrid_predictions;	
 }
 
@@ -509,7 +451,7 @@ sub _write_reference_matches
 		push @trims, _trim_ambiguous_ends($a, $reference_header, $reference_fai, $ref_seq_info); #slightly faster than using fai	
 	}
 	
-	BreseqShared::tam_write_read_alignments($RREF, $reference_header, $fastq_file_index, \@reference_al, \@trims);
+	Breseq::Shared::tam_write_read_alignments($RREF, $reference_header, $fastq_file_index, \@reference_al, \@trims);
 }
 
 sub _alignment_begins_with_match_in_read
@@ -643,7 +585,7 @@ sub _trim_ambiguous_ends
 		$ref_string = $fai->fetch( $seq_id . ':' . $a->start . '-' . $a->end );
 	}
 		
-	my ($q_start, $q_end) = BreseqShared::alignment_query_start_end($a, { 'no_reverse' => 1} );
+	my ($q_start, $q_end) = Breseq::Shared::alignment_query_start_end($a, { 'no_reverse' => 1} );
 	my $q_length = $a->l_qseq;
 	my $qry_string = substr $a->qseq, $q_start-1, $q_end - $q_start + 1;
 	my $full_qry_string = $a->qseq;
@@ -971,8 +913,8 @@ sub _test_junction
 		die if (!defined $a);
 		
 		my $junction_id = $candidate_junction_header->target_name()->[$a->tid];
-		my @split_key = BreseqShared::junction_name_split($junction_id);
- 		my $overlap = $split_key[6];
+		my @split_key = Breseq::Shared::junction_name_split($junction_id);
+ 		my $overlap = $split_key[8];
 		my $rev_key = ($a->reversed ? '1' : '0');
 
 		my $this_left = $flanking_length;
@@ -1057,7 +999,7 @@ sub _test_junction
 		else
 		{
 			my @this_dominant_candidate_junction_al = @{$junction_read->{dominant_alignments}}; 
-			BreseqShared::tam_write_read_alignments($RCJ, $candidate_junction_header, $fastq_file_index, \@this_dominant_candidate_junction_al);
+			Breseq::Shared::tam_write_read_alignments($RCJ, $candidate_junction_header, $fastq_file_index, \@this_dominant_candidate_junction_al);
 			$RCJ->flush();
 		}
 	}
