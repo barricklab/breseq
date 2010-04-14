@@ -140,7 +140,11 @@ Breseq::Output::record_time("Start");
 
 {
 	my $output_done_file_name = $settings->file_name('output_done_file_name');	
-	die "Output is already complete.\n" if (-e $output_done_file_name);
+	if (-e $output_done_file_name)
+	{
+		print STDERR "Output is already complete.\n";
+		exit 0;
+	}
 }
 
 ##
