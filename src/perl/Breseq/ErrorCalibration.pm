@@ -4,7 +4,7 @@
 
 =head1 NAME
 
-FastqLite.pm
+Breseq::Fastq.pm
 
 =head1 SYNOPSIS
 
@@ -30,11 +30,12 @@ Copyright 2009.  All rights reserved.
 use strict;
 use Bio::Root::Root;
 
-package ErrorCalibration;
+package Breseq::ErrorCalibration;
 use vars qw(@ISA);
 @ISA = qw( Bio::Root::Root );
 
 use Data::Dumper;
+
 use Math::CDF;
 
 ###
@@ -56,6 +57,9 @@ our @base_list = ('A', 'T', 'C', 'G', '.');
 sub count
 {
 	my ($settings, $summary, $ref_seq_info) = @_;
+
+	## for this error method, we don't need to iterate through the sequence and count...
+	return if ($settings->{error_model_method} eq 'QUALITY');
 
 	my $reference_fasta_file_name = $settings->file_name('reference_fasta_file_name');
 	my $reference_bam_file_name = $settings->file_name('reference_bam_file_name');
@@ -173,7 +177,7 @@ sub count
 					next if ($base =~ /[nN]/);
 					
 					my $quality = $qscore->[$qpos];
-					$base = FastqLite::revcom($base) if ($reversed);
+					$base = Breseq::Fastq::revcom($base) if ($reversed);
 					my $key = $ref_base[$reversed] . $base; 
 					$error_hash->[$fastq_file_index]->{$quality}->{$key}++;
 					#$complex_error_hash->[$fastq_file_index]->{$neighborhood_quality}->{$quality}->{$key}++;
@@ -271,7 +275,7 @@ sub analyze_unique_coverage_distributions
 		my $this_unique_only_coverage_plot_file_name = $settings->file_name('unique_only_coverage_plot_file_name', {'@'=>$seq_id});
 		my $this_unique_only_coverage_distribution_file_name = $settings->file_name('unique_only_coverage_distribution_file_name', {'@'=>$seq_id});
 		
-		analyze_unique_coverage_distribution_file($this_unique_only_coverage_distribution_file_name, $this_unique_only_coverage_plot_file_name, $seq_id, $summary);
+		analyze_unique_coverage_distribution_file($settings, $this_unique_only_coverage_distribution_file_name, $this_unique_only_coverage_plot_file_name, $seq_id, $summary);
 	}
 }
 
@@ -279,8 +283,23 @@ sub analyze_unique_coverage_distributions
 ## and adds this information to the $summary
 sub analyze_unique_coverage_distribution_file
 {
-	my ($unique_only_coverage_file_name, $unique_only_coverage_plot_file_name, $seq_id, $summary) = @_;
-	my $R_script_file_name = "r_script.txt";
+	my ($settings, $unique_only_coverage_file_name, $unique_only_coverage_plot_file_name, $seq_id, $summary) = @_;
+
+	##initialize summary information
+	$summary->{unique_coverage}->{$seq_id}->{nbinom_size_parameter} = 'NA';
+	$summary->{unique_coverage}->{$seq_id}->{nbinom_prob_parameter} = 'NA'; 
+	$summary->{unique_coverage}->{$seq_id}->{average} = 1;
+	$summary->{unique_coverage}->{$seq_id}->{variance} = 'NA';
+	$summary->{unique_coverage}->{$seq_id}->{dispersion} = 'NA';
+	$summary->{unique_coverage}->{$seq_id}->{deletion_coverage_propagation_cutoff} = 5;
+
+## temporary method to avoid R code...
+## we bail early if in QUALITY mode
+	return if ($settings->{error_model_method} eq 'QUALITY');
+
+	my $tmp_path = $settings->create_path('tmp_path');
+		
+	my $R_script_file_name = "$tmp_path/r_script.txt";
 	open RSCRIPT, ">$R_script_file_name" or die;
 	
 print RSCRIPT <<EOF;
@@ -465,6 +484,8 @@ EOF
 	}
 	print "Chose: $i\n";
 	$summary->{unique_coverage}->{$seq_id}->{deletion_coverage_propagation_cutoff} = $i;
+	
+	$settings->remove_path('tmp_path');
 }
 
 sub save_error_file
@@ -652,50 +673,113 @@ sub error_counts_to_error_rates
 		#two options:
 		#(1) Calculate these probabilities directly
 	
-		if ($settings->{error_model_method} == 1)
-		{
-			die "Don't use this STRICT EMPIRICAL method for calculating error rates from error counts. Counts of zero cause problems.";
-			
+		if ($settings->{error_model_method} eq 'QUALITY')
+		{			
 			my $error_rates_hash;
-			$error_rates_hash = error_counts_to_error_rates_strict_empirical($this_error_counts_file_name);
+			$error_rates_hash = error_rates_calculated_from_quality();
 			save_error_file($this_error_rates_file_name, $error_rates_hash);
 		}
+		elsif ($settings->{error_model_method} eq 'EMPIRICAL')
+		{	
+			my $error_rates_hash;
+			$error_rates_hash = error_counts_to_error_rates_empirical($this_error_counts_file_name);
+			save_error_file($this_error_rates_file_name, $error_rates_hash);			
+		}
 		#(2) Calculate using log-linear model (assumes base quality calibration is correct!)
-		else
+		elsif ($settings->{error_model_method} eq 'FIT')
 		{			
-			error_counts_to_error_rates_using_R("r_script.txt", $this_error_counts_file_name, $this_error_rates_file_name, $this_error_rates_plot_file_name);
+			error_counts_to_error_rates_using_R($settings, $this_error_counts_file_name, $this_error_rates_file_name, $this_error_rates_plot_file_name);
+		}
+		else
+		{
+			die "Unknown Error Model Method:$settings->{error_model_method}\n";
 		}
 	}
 }
 
-sub error_counts_to_error_rates_strict_empirical
+sub error_rates_calculated_from_quality
 {
-	my ($error_counts_hash) = @_;
+	my ($quality_style, $relative_indel) = @_;
+	
+	##currently assumed...
+	$quality_style = 'ILLUMINA-1.3' if (!defined $quality_style);
+	
+	$relative_indel = 0.01 if (!defined $relative_indel);
+	
+	## expect current Illumina phred format for this to work??
+	my $error_rates_hash;
+	for (my $s=0; $s<=62; $s++)
+	{
+		my $total_error_rate = 10**(-$s/10);
+		
+		my $no_error = 1 - $total_error_rate;
+		my $each_rate = $total_error_rate / (3 + $relative_indel);
+		
+		my @bases = ('A', 'C', 'T', 'G', '.');
+		foreach my $b1 (@bases)
+		{
+			foreach my $b2 (@bases)
+			{
+				if ($b1 eq $b2)
+				{
+					$error_rates_hash->{$s}->{"$b1$b2"} = $no_error;
+				}
+				elsif (($b1 eq '.') || ($b2 eq '.'))
+				{
+					$error_rates_hash->{$s}->{"$b1$b2"} = $each_rate * $relative_indel;
+				}
+				else
+				{
+					$error_rates_hash->{$s}->{"$b1$b2"} = $each_rate;
+				}
+			}
+		}
+	}
+	
+	return $error_rates_hash;
+}
+
+sub error_counts_to_error_rates_empirical
+{
+	my ($this_error_counts_file_name) = @_;
+	my $error_counts_hash = load_error_file($this_error_counts_file_name);
+
 	my $error_rates_hash;
 	foreach my $q (sort keys %$error_counts_hash)
 	{
 		#find total with quality
 		my $total_bases_of_quality = 0;
 		my @quality_list = sort keys %{$error_counts_hash->{$q}};
-		
-		foreach my $k (@quality_list)
+			
+		my @bases = ('A', 'C', 'T', 'G', '.');
+		foreach my $b1 (@bases)
 		{
-			$total_bases_of_quality += $error_counts_hash->{$q}->{$k};
-		}
-		die "No bases with quality $q?" if ($total_bases_of_quality == 0);
-		
-		foreach my $k (@quality_list)
-		{
-			$error_rates_hash->{$q}->{$k} = $error_counts_hash->{$q}->{$k} / $total_bases_of_quality;
+			my $total_this_base = 0;
+			foreach my $b2 (@bases)
+			{
+				$total_this_base += $error_counts_hash->{$q}->{"$b1$b2"};
+			}
+			
+			foreach my $b2 (@bases)
+			{
+				$error_rates_hash->{$q}->{"$b1$b2"} = $error_counts_hash->{$q}->{"$b1$b2"} / $total_this_base;
+			}			
 		}
 	}
+	
 	return $error_rates_hash;
 }
 
 sub error_counts_to_error_rates_using_R
 {
-	my ($R_script_file_name, $input_file_name, $output_file_name, $plot_file_name) = @_;
+	my ($settings, $input_file_name, $output_file_name, $plot_file_name) = @_;
+	
+	
+	my $tmp_path = $settings->create_path('tmp_path');
 		
+	my $R_script_file_name = "$tmp_path/r_script.txt";
+	open RSCRIPT, ">$R_script_file_name" or die;
+			
 	my @bases = ('A', 'C', 'T', 'G', '.');
 	
 	my $regression_string = "X\$quality";
@@ -881,6 +965,8 @@ EOF
 	print "$command\n";
 	my $res = system $command;
 	(!$res) or die "Running R command failed.\n";
+	
+	$settings->remove_path('tmp_path');
 }
 
 sub assign_mapping_quality_to_matches
@@ -896,7 +982,7 @@ sub assign_mapping_quality_to_matches
 
 	#quality scores are the same for each match
 	my $quals;
-	@{$quals->{+1}} = FastqLite::quals($read_seq);
+	@{$quals->{+1}} = Breseq::Fastq::quals($read_seq);
 	@{$quals->{-1}} = reverse @{$quals->{+1}};
 	
 	## it would make sense to sort by length and mismatch before 
@@ -911,7 +997,7 @@ sub assign_mapping_quality_to_matches
 		
 		my $ref_string = substr $ref_strings->{$m->{reference}}, $m->{reference_start}-1, $m->{reference_end}-$m->{reference_start}+1;
 		my $qry_string = substr $read_seq->{seq}, $m->{query_start}-1, $m->{query_end} - $m->{query_start}+1;
-		$qry_string = FastqLite::revcom($qry_string) if ($m->{strand} == -1);
+		$qry_string = Breseq::Fastq::revcom($qry_string) if ($m->{strand} == -1);
 		
 #		print "$ref_string\n$qry_string\n";
 		

@@ -4,7 +4,7 @@
 
 =head1 NAME
 
-BreseqOutput.pm
+Breseq::Output.pm
 
 =head1 SYNOPSIS
 
@@ -27,7 +27,7 @@ Copyright 2009.  All rights reserved.
 # End Pod Documentation
 ###
 
-package BreseqOutput;
+package Breseq::Output;
 use strict;
 use CGI qw/:standard *table *Tr *th/;
 use Data::Dumper;
@@ -36,7 +36,7 @@ require Exporter;
 our @ISA = qw( Exporter );
 our @EXPORT = qw();
 
-use AlignmentOutput;
+use Breseq::AlignmentOutput;
 
 ## these style definitions are included between the
 ## HEAD tags of every generated page
@@ -186,19 +186,19 @@ sub html_summary_table
 
 sub html_full_table
 {
-	my ($file_name, $options, $snps_list_ref, $deletion_list_ref, $hybrid_list_ref) = @_;
+	my ($file_name, $settings, $ref_seq_info, $snps_list_ref, $deletion_list_ref, $hybrid_list_ref) = @_;
 	open HTML, ">$file_name" or die "Could not open file: $file_name";
 	
 	print HTML 
 		start_html(
-			-title => "BRESEQ :: Predicted Mutations" . ($options->{run_name} ?  " :: $options->{run_name}" : ''), 
+			-title => "BRESEQ :: Predicted Mutations" . ($settings->{run_name} ?  " :: $settings->{run_name}" : ''), 
 			-head  => style({type => 'text/css'},$header_style_string),
 	    ),
 		html_snp_table_string($snps_list_ref),
 		p,
 		html_deletion_table_string($deletion_list_ref),
 		p,
-		html_junction_table_string($hybrid_list_ref),
+		html_junction_table_string($hybrid_list_ref, $ref_seq_info),
 		end_html;
 
 	close HTML;
@@ -210,7 +210,7 @@ sub html_snp_table_string
 	my $output_str = '';
 	
 	my $q = new CGI;
-	$output_str.= start_table({-width => "100%", -border => 1, -cellspacing => 0, -cellpadding => 3});
+	$output_str.= start_table({-border => 1, -cellspacing => 0, -cellpadding => 3});
 	$output_str.= start_Tr();
 	
 	my $link = $force_link;
@@ -221,6 +221,7 @@ sub html_snp_table_string
 	}
 	$output_str.= th(
 		[
+			"seq",
 			"start", 
 			"end", 
 			"ref", 
@@ -233,9 +234,9 @@ sub html_snp_table_string
 			"codon change", 
 			"aa change", 
 			"gene", 
-			"product"
 		]
-	);		
+	);	
+	$output_str.= th({-width => "100%"}, "product"); 
 	$output_str.= end_Tr;
 	
 	foreach my $c (@$snps_list_ref)
@@ -313,6 +314,7 @@ sub html_snp_table_string
 			
 			$output_str.= td( 
 				[
+					make_nonbreaking($c->{seq_id}),
 					$c->{gene_shifted_start}, #. " (" . $c->{start} . ")", 
 					$c->{gene_shifted_end}, #. " (" . $c->{end} . ")", 
 					$ref_base_str, 
@@ -334,6 +336,7 @@ sub html_snp_table_string
 		{
 			$output_str.= td( 
 				[
+					make_nonbreaking($c->{seq_id}),
 					$c->{gene_shifted_start}, #. " (" . $c->{start} . ")", 
 					$c->{gene_shifted_end}, #. " (" . $c->{end} . ")", 
 					$c->{ref_seq}, 
@@ -363,7 +366,7 @@ sub html_deletion_table_string
 	my $output_str = '';
 	
 	my $q = new CGI;
-	$output_str.= start_table({-width => "100%", -border => 1, -cellspacing => 0, -cellpadding => 3});
+	$output_str.= start_table({-border => 1, -cellspacing => 0, -cellpadding => 3});
 	$output_str.= start_Tr();
 	
 	my $coverage_graphs;
@@ -386,16 +389,17 @@ sub html_deletion_table_string
 	
 	$output_str.= th(
 		[
+			"seq",
 			"start", 
 			"end", 
 			"size", 
 			"left_cov", 
 			"left_inside_cov", 
-			"right_inside_cov", 
+			"right_inside_cov",
 			"right_cov", 
-			"genes", 
 		]
 	);		
+	$output_str.= th({-width => "100%"}, "genes"); 
 	$output_str.= end_Tr;
 	
 	foreach my $c (@$list_ref)
@@ -422,6 +426,7 @@ sub html_deletion_table_string
 					
 		$output_str.= td( 
 			[
+				make_nonbreaking($c->{seq_id}),
 				$c->{start}, 
 				$c->{end},
 				$c->{size}, 
@@ -441,7 +446,7 @@ sub html_deletion_table_string
 
 sub html_junction_table_string
 {
-	my ($list_ref, $force_link) = @_;
+	our ($list_ref, $ref_seq_info, $force_link) = @_;
 	my $output_str = '';
 	
 	###
@@ -451,8 +456,11 @@ sub html_junction_table_string
 	{
 		my $a_pos = (defined $a->{interval_1}->{is}) ? $a->{interval_2}->{start} : $a->{interval_1}->{start};
 		my $b_pos = (defined $b->{interval_1}->{is}) ? $b->{interval_2}->{start} : $b->{interval_1}->{start};
-		
-		return ($a_pos <=> $b_pos);
+	
+		my $a_seq_order = (defined $a->{interval_1}->{is}) ? $ref_seq_info->{seq_order}->{$a->{interval_2}->{seq_id}} : $ref_seq_info->{seq_order}->{$a->{interval_1}->{seq_id}};
+		my $b_seq_order = (defined $b->{interval_1}->{is}) ? $ref_seq_info->{seq_order}->{$b->{interval_2}->{seq_id}} : $ref_seq_info->{seq_order}->{$b->{interval_1}->{seq_id}};		
+	
+		return (($a_seq_order <=> $b_seq_order) || ($a_pos <=> $b_pos));
 	}
 	@$list_ref = sort by_unique_coord @$list_ref;
 	
@@ -598,7 +606,7 @@ sub html_junction_table_string
 	
 	
 	my $q = new CGI;
-	$output_str.= start_table({-width => "100%", -border => 1, -cellspacing => 0, -cellpadding => 3});
+	$output_str.= start_table({-border => 1, -cellspacing => 0, -cellpadding => 3});
 	$output_str.= start_Tr();
 	
 	my $link = $force_link;
@@ -611,16 +619,16 @@ sub html_junction_table_string
 	{
 		$output_str.= th({-colspan=>2}, "&nbsp;"); 
 	}
+	$output_str.= th({-colspan=>2}, "position"); 		
 	$output_str.= th(
 		[
-			"position",
 			"overlap",
 			"reads", 
 			"gene",
 			"coords",
-			"product", 
 		]
 	);		
+	$output_str.= th({-colspan=>2, -width => "100%"}, "product"); 
 	$output_str.= end_Tr;
 	
 	## the rows in this table are linked (same background color for every two)
@@ -644,6 +652,7 @@ sub html_junction_table_string
 			$output_str.= start_Tr({-class=> "is_insertion_header"});
 			$output_str.= td({-colspan=>1}, '') if ($link); 
 			$output_str.= td({-colspan=>1}, '');
+			$output_str.= td({-colspan=>1}, make_nonbreaking($isi->{seq_id}));			
 			$output_str.= td({-colspan=>1}, $isi->{after_pos});
 			$output_str.= td({-colspan=>1}, '');
 			$output_str.= td({-colspan=>1}, '');
@@ -673,6 +682,7 @@ sub html_junction_table_string
 		
 		$output_str.= td({-rowspan=>2}, a({-href=>"$c->{link}"}, "*")) if ($link); 
 		$output_str.= td({-rowspan=>1}, a({-href=>"$c->{interval_1}->{link}"}, "?")) if ($link); 
+		$output_str.= td({-rowspan=>1}, make_nonbreaking($c->{$key}->{seq_id}));			
 		$output_str.= td( {-align=>"center"}, ($c->{$key}->{strand} == +1) ? $c->{$key}->{start} . "&nbsp;=": "=&nbsp;" . $c->{$key}->{start} );
 		$output_str.= td( {-rowspan=>2, -align=>"center"}, $c->{overlap} );
 		$output_str.= td( {-rowspan=>2, -align=>"center"}, "$c->{total_reads}" );
@@ -703,6 +713,7 @@ sub html_junction_table_string
 			$output_str.= start_Tr({-class=> "mutation_table_row_$row_bg_color_index"});
 		}
 		$output_str.= td({-rowspan=>1}, a({-href=>"$c->{interval_2}->{link}"}, "?")) if ($link); 
+		$output_str.= td({-rowspan=>1}, make_nonbreaking($c->{$key}->{seq_id}));		
 		$output_str.= td( {-align=>"center"}, ($c->{$key}->{strand} == +1) ? $c->{$key}->{start} . "&nbsp;=": "=&nbsp;" . $c->{$key}->{start} );
 		## gene data
 		{
@@ -773,9 +784,11 @@ sub html_alignment_file
 	}
 		
 	print HTML p;
-	my $ao = AlignmentOutput->new;
+	my $ao =Breseq::AlignmentOutput->new;
 	
-	print HTML $ao->html_alignment($interval->{bam_path}, $interval->{fasta_path}, "$interval->{seq_id}:$interval->{start}-$interval->{end}");
+	$interval->{insert_start} = 0 if (!defined $interval->{insert_start});
+	$interval->{insert_end} = 0 if (!defined $interval->{insert_end});
+	print HTML $ao->html_alignment($interval->{bam_path}, $interval->{fasta_path}, "$interval->{seq_id}:$interval->{start}.$interval->{insert_start}-$interval->{end}.$interval->{insert_end}");	
 	
 	print HTML end_html;
 	close HTML;
@@ -989,7 +1002,7 @@ sub genome_diff
 
 	foreach my $hyb ($hybrid_list_ref)
 	{
-		print Dumper($hyb);
+#		print Dumper($hyb);
 	}
 	
 	foreach my $unk (@$unknown_list_ref)
@@ -1094,6 +1107,13 @@ sub load_statistics
 {
 	my ($file_name) = @_;
 	return retrieve($file_name);
+}
+
+sub make_nonbreaking
+{
+	my ($text) = @_;
+	$text =~ s/-/&#8209;/g; #substitute nonbreaking dash		
+	return $text;
 }
 
 

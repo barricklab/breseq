@@ -4,7 +4,7 @@
 
 =head1 NAME
 
-FastqLite.pm
+Breseq::Fastq.pm
 
 =head1 SYNOPSIS
 
@@ -30,13 +30,13 @@ Copyright 2009.  All rights reserved.
 use strict;
 use Bio::Root::Root;
 
-package ReferenceSequence;
+package Breseq::ReferenceSequence;
 use vars qw(@ISA);
 @ISA = qw( Bio::Root::Root );
 
 use Bio::Seq::RichSeq;
-use BreseqSettings;
-use BreseqShared;
+use Breseq::Settings;
+use Breseq::Shared;
 use Data::Dumper;
 
 sub process_reference_sequences
@@ -61,6 +61,8 @@ sub process_reference_sequences
 	my %gene_lists;
 	my %is_lists;
 	my %fasta_file_names;
+	my %seq_order;
+	my $i = 0;
 
 	foreach my $genbank_file_name (@genbank_file_names)
 	{
@@ -146,13 +148,14 @@ sub process_reference_sequences
 			$s->{reference_seqs}->{$seq_id}->{display_id} = $ref_seq->display_id;
 			$s->{reference_seqs}->{$seq_id}->{accession} = $ref_seq->accession;
 			$s->{reference_seqs}->{$seq_id}->{accession} .= "." . $ref_seq->version if ($ref_seq->version);
+			$seq_order{$seq_id} = $i++;
 			}
 	}
 	
 	## create SAM faidx
-	BreseqShared::system("samtools faidx $reference_fasta_file_name", 1);
+	Breseq::Shared::system("samtools faidx $reference_fasta_file_name", 1);
 		
-	return {'bioperl_ref_seqs' => \%ref_seqs, 'ref_strings' => \%ref_strings, 'gene_lists' =>\%gene_lists, 'is_lists' =>\%is_lists, 'seq_ids' => \@seq_ids};	
+	return {'bioperl_ref_seqs' => \%ref_seqs, 'ref_strings' => \%ref_strings, 'gene_lists' =>\%gene_lists, 'is_lists' =>\%is_lists, 'seq_ids' => \@seq_ids, 'seq_order' => \%seq_order };	
 }
 
 
@@ -309,8 +312,8 @@ sub annotate_mutations
 		$c->{gene_product} = $gene->{product};
 
 		#remember to revcom the changes if gene is on opposite strand
-		$c->{ref_rep_seq} = FastqLite::revcom($c->{ref_rep_seq}) if ($gene->{strand} == -1);		
-		$c->{new_rep_seq} = FastqLite::revcom($c->{new_rep_seq}) if ($gene->{strand} == -1);
+		$c->{ref_rep_seq} = Breseq::Fastq::revcom($c->{ref_rep_seq}) if ($gene->{strand} == -1);		
+		$c->{new_rep_seq} = Breseq::Fastq::revcom($c->{new_rep_seq}) if ($gene->{strand} == -1);
 		
 		### Single base substitution -- SNP-type
 		if (($gene->{translation}) && (length($c->{ref_rep_seq}) == 1) && (length($c->{new_rep_seq}) == 1))
@@ -504,6 +507,107 @@ sub annotate_deletions
 		$deletion->{genes} = $gene_string;
 	}
 }
+
+
+sub annotate_rearrangements
+{
+	my $verbose = 0;
+	our ($settings, $summary, $ref_seq_info, $rearrangements_ref) = @_;	
+	
+	foreach my $item (@$rearrangements_ref)
+	{				
+		## This additional information is used for the complex reference line
+		my $alignment_reference_info_1 = { 
+			truncate_end => $item->{flanking_length}, 
+			ghost_end => $item->{interval_1}->{start}, 
+			ghost_strand => $item->{interval_1}->{strand},
+			ghost_seq_id => $item->{interval_1}->{seq_id}
+		};
+
+		my $alignment_reference_info_2 = { 
+			truncate_start => $item->{flanking_length}+1-$item->{overlap}, 
+			ghost_start => $item->{interval_2}->{start}, 
+			ghost_strand => $item->{interval_2}->{strand},
+			ghost_seq_id => $item->{interval_2}->{seq_id}
+		};
+
+		push @{$item->{alignment_reference_info_list}}, $alignment_reference_info_1, $alignment_reference_info_2;
+		$item->{alignment_empty_change_line} = 1;
+
+		#add gene information for each end
+		$item->{hybrid} = $item;
+		foreach my $key ('interval_1', 'interval_2')
+		{			
+			##create circular reference to self so we can print table at the top of the alignment
+			$item->{$key}->{hybrid} = $item;
+			
+			my ($prev_gene, $gene, $next_gene) 
+				= Breseq::ReferenceSequence::find_nearby_genes($item->{$key}, $ref_seq_info->{gene_lists}->{$item->{$key}->{seq_id}});		
+
+			## noncoding
+			if (!$gene)
+			{
+				$item->{$key}->{gene}->{gene} .= ($prev_gene && $prev_gene->{gene}) ? $prev_gene->{gene} : '-';
+				$item->{$key}->{gene}->{gene} .= "/";
+				$item->{$key}->{gene}->{gene} .= ($next_gene && $next_gene->{gene}) ? $next_gene->{gene} : '-';
+	
+				if (defined $prev_gene)
+				{
+					$item->{$key}->{gene}->{position} .= ($prev_gene->{strand} == +1) ? "+" : "-";
+					$item->{$key}->{gene}->{position} .= ($item->{$key}->{start} - $prev_gene->{end});
+				}
+				$item->{$key}->{gene}->{gene_position} .= "/";
+				if (defined $next_gene)
+				{
+					$item->{$key}->{gene}->{position} .= ($next_gene->{strand} == +1) ? "-" : "+";
+					$item->{$key}->{gene}->{position} .= ($next_gene->{start} - $item->{$key}->{end});
+				}
+		
+				$item->{$key}->{gene}->{product} .= ($prev_gene && $prev_gene->{product}) ? $prev_gene->{product} : '-';
+				$item->{$key}->{gene}->{product} .= "/";			
+				$item->{$key}->{gene}->{product} .= ($next_gene && $next_gene->{product}) ? $next_gene->{product} : '-';
+
+				$item->{$key}->{gene}->{interval} .= $prev_gene->{end}+1 if $prev_gene;
+				$item->{$key}->{gene}->{interval} .= "/"; 
+				$item->{$key}->{gene}->{interval} .= $next_gene->{start}-1 if $next_gene; 
+			}
+			## coding
+			else
+			{
+				$item->{$key}->{gene}->{gene} = $gene->{gene};
+				$item->{$key}->{gene}->{product} = $gene->{product};
+				my $gene_start = ($gene->{strand} == +1) ? $gene->{start} : $gene->{end};	
+				$item->{$key}->{gene}->{position} = abs($item->{$key}->{start}-$gene_start) + 1;
+				$item->{$key}->{gene}->{interval} = ($gene->{strand} == +1) ? "$gene->{start}-$gene->{end}" : "$gene->{end}-$gene->{start}"; 
+ 
+			}
+		
+			## determine IS elements
+			## Is it within an IS or near the boundary of an IS in the direction leading up to the junction?			
+			if (my $is = Breseq::ReferenceSequence::find_closest_is_element($item->{$key}, $ref_seq_info->{is_lists}->{$item->{$key}->{seq_id}}, 200, $item->{$key}->{strand}))
+			{
+				$item->{$key}->{is}->{gene} = $is->{gene};
+				$item->{$key}->{is}->{interval} = ($is->{strand} == +1) ? "$is->{start}-$is->{end}" : "$is->{end}-$is->{start}"; 
+				$item->{$key}->{is}->{product} = $is->{product};
+			}
+			$item->{$key}->{annotate_key} = (defined $item->{$key}->{is}) ? 'is' : 'gene';			
+		}
+		print Dumper($item) if ($verbose);
+	}
+
+	sub by_hybrid
+	{
+		my $a_pos = (defined $a->{interval_1}->{is}) ? $a->{interval_2}->{start} : $a->{interval_1}->{start};
+		my $b_pos = (defined $b->{interval_1}->{is}) ? $b->{interval_2}->{start} : $b->{interval_1}->{start};
+	
+		my $a_seq_order = (defined $a->{interval_1}->{is}) ? $ref_seq_info->{seq_order}->{$a->{interval_2}->{seq_id}} : $ref_seq_info->{seq_order}->{$a->{interval_1}->{seq_id}};
+		my $b_seq_order = (defined $b->{interval_1}->{is}) ? $ref_seq_info->{seq_order}->{$b->{interval_2}->{seq_id}} : $ref_seq_info->{seq_order}->{$b->{interval_1}->{seq_id}};		
+	
+		return (($a_seq_order <=> $b_seq_order) || ($a_pos <=> $b_pos));
+	}
+	@$rearrangements_ref = sort by_hybrid @$rearrangements_ref;
+}
+
 
 sub get_overlapping_feature
 {
