@@ -6,7 +6,7 @@
 namespace breseq {
 	
 	//! Calculate the errors in the given BAM file.
-	void error_count(const std::string& bam);
+	void error_count(const std::string& bam, const std::string& fasta);
 
 } // breseq
 
