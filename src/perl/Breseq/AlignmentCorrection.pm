@@ -54,7 +54,7 @@ sub correct_alignments
 		
 	my $candidate_junction_file_name = $settings->file_name('candidate_junction_fasta_file_name');
 	## if there were no candidate junction (file is empty) then we seg fault if we try to use samtools on it...
-	$settings->{no_junction_prediction} = 1 if (-s $candidate_junction_file_name == 0);
+	$settings->{no_junction_prediction} = 1 if ( (!-e $candidate_junction_file_name) || (-s $candidate_junction_file_name == 0) );
 	my	$candidate_junction_fai = Bio::DB::Sam::Fai->load($candidate_junction_file_name) if (!$settings->{no_junction_prediction});		
 	
 	my $minimum_best_score = 0;
