@@ -7,24 +7,52 @@
 #include <faidx.h>
 #include "error_count.h"
 
-typedef std::map<std::string,int> base_count_t;
-typedef std::map<uint8_t,base_count_t> qual_map_t;
 
 /*! User-defined struct that holds information to be used by the pileup function.
  */
 struct user_data {
+	
+	typedef std::map<std::string,int> base_count_t;
+	typedef std::map<uint8_t,base_count_t> qual_map_t;
+		
 	//! Constructor.
-	user_data() : in(0), ref(0), ref_seq(0), ref_seq_len(0) { }
+	user_data(const std::string& bam, const std::string& fasta)
+	: in(0), ref(0), ref_seq(0), ref_seq_len(0) {
+		using namespace std;
+		in = samopen(bam.c_str(), "rb", 0);
+		ref = fai_load(fasta.c_str());
+
+		// for each sequence id...
+		for(int i=0; i<in->header->n_targets; ++i) {
+			cerr << "  REFERENCE: " << in->header->target_name[i] << endl;
+			cerr << "  LENGTH: " << in->header->target_len[i] << endl;
+		}
+		
+		ostringstream region; region << in->header->target_name[0];
+		ref_seq = fai_fetch(ref, region.str().c_str(), &ref_seq_len);
+	}
+
+	//! Destructor.
+	~user_data() {	
+		samclose(in);
+		fai_destroy(ref);
+		free(ref_seq);
+	}
 
 	samfile_t* in; //!< BAM file handle.
 	faidx_t* ref; //!< FAI file handle.
 	char *ref_seq; //!< Reference sequence.
 	int ref_seq_len; //!< Length of the reference sequence.
 	
-	//## populated by pileup
-	//my $unique_only_coverage;
-	std::vector<int> unique_only_coverage; //!< ?
-	//## populated by pileup
+	/*! Coverage count table.
+	 
+	 This is a table of non-deletion reads per position to non-redundancy counts.
+	 For example, given unique_only_coverage[i] = x, for all aligned positions p:
+	 i is the number of reads that do not indicate a deletion at p
+	 x is the number of positions that have no redundancies
+	 */
+	std::vector<int> unique_only_coverage;
+	
 	//my $error_hash = [];		#list by fastq file index
 	// if this gets slow, see boost::multi_index_container
 	std::map<int32_t,qual_map_t> error_hash; //!< fastq_file_index -> quality map.
@@ -32,135 +60,97 @@ struct user_data {
 
 //1 for A, 2 for C, 4 for G,
 //8 for T and 15 for N.
-#define is_A(x) (x == 0x1)
-#define is_C(x) (x == 0x2)
-#define is_G(x) (x == 0x4)
-#define is_T(x) (x == 0x8)
-#define is_N(x) (x == 0xf)
+#define is_A(x) (x == 0x01)
+#define is_C(x) (x == 0x02)
+#define is_G(x) (x == 0x04)
+#define is_T(x) (x == 0x08)
+#define is_N(x) (x == 0x0f)
 
-// We're going to play a trick common in FFTs, and just use a lookup table to 
-// reverse bases.
-uint8_t _reverse_table[9] = {
-0x0, // 0:
-0x8, // 1: A -> T
-0x4, // 2: C -> G
-0x0, // 3:
-0x2, // 4: G -> C
-0x0, // 5:
-0x0, // 6:
-0x0, // 7:
-0x1, // 8: T -> A
-};
-#define revcom(x) (_reverse_table[static_cast<std::size_t>(x)])
+/*! Reverse a base.
+ */
+inline uint8_t reverse_base(uint8_t base) {
+	if(base > 0x0f) {
+		// ascii
+		switch(base) {
+			case 'A': return 'T';
+			case 'C': return 'G';
+			case 'G': return 'C';
+			case 'T': return 'A';
+			default: assert(false);
+		}
+	} else {
+		// sam-style 4-bit field
+		switch(base) {
+			case 0x1: return 0x8;
+			case 0x2: return 0x4;
+			case 0x4: return 0x2;
+			case 0x8: return 0x1;
+			default: assert(false);
+		}		
+	}
+}
 
-char _tochar_table[16] = {
-0,
-'A', // 0x1
-'C', // 0x2
-0,
-'G', // 0x4
-0,
-0,
-0,
-'T', // 0x8
-0,
-0,
-0,
-0,
-0,
-0,
-'.', // 0xf
-};
-#define tochar(x) (_tochar_table[static_cast<std::size_t>(x)])
-
+/*! Convert a base to an ASCII character.
+ */
+inline char base2char(uint8_t base) {
+	if(base > 0x0f) {
+		// already in ascii format
+		return static_cast<char>(base);
+	} else {
+		// sam-style 4-bit field
+		switch(base) {
+			case 0x01: return 'A';
+			case 0x02: return 'C';
+			case 0x04: return 'G';
+			case 0x08: return 'T';
+			case 0x0f: return '.';
+			default: assert(false);
+		}		
+	}
+}
 
 
 /*! Pileup callback for error count.
  
- \param tid chromosome id (?)
- \param pos starting position of this alignment
- \param n number of alignments at this position
- \param pl array of n alignments occuring at this position
+1) Testing for a relationship between the number of unique reads -> errors.
+ 
+ \param tid target id, corresponding to the index of this target's name
+ \param pos position of this alignment in the reference sequence
+ \param n number of alignments occurring at this position
+ \param pile array of n alignments occuring at this position
+ \param data pointer to user_data struct.
  */
-int error_count_callback(uint32_t tid, uint32_t pos, int n, const bam_pileup1_t *pl, void *data) {
+int error_count_callback(uint32_t tid, uint32_t pos, int n, const bam_pileup1_t *pile, void *data) {
 	using namespace std;
 	user_data* ud = reinterpret_cast<user_data*>(data);
-	
-	//my ($seq_id,$pos,$pileup) = @_;
-	//print STDERR "    POSITION:$pos\n" if ($pos % 10000 == 0);
 	
 	if((pos % 10000) == 0) {
 		cerr << "    POSITION:" << pos << endl;
 	}
-	
-	//my @ref_base; #index is 'reversed'
-	//$ref_base[0] = substr $ref_seq_string, $pos-1, 1;
-	//$ref_base[1] = substr $com_seq_string, $pos-1, 1;
-	char ref_base[] = {ud->ref_seq[pos], revcom(ud->ref_seq[pos])};
 
-	//my $unique_only_position = 1;
-	int unique_only_position=1;
-	//my $unique_coverage = 0;
-	int unique_coverage=0;
+	// reference bases {base, reversed base, null} in ascii:
+	char ref_base[] = {ud->ref_seq[pos], reverse_base(ud->ref_seq[pos]), 0};
+
+	size_t unique_coverage=0; // number of non-deletion, non-redundant alignments at this position.
+	bool has_redundant_reads=false; // flag indicating whether this position has any redundant reads.
 	
-	// grow our vector of unique coverages as needed, init to 0:
-	if(static_cast<std::size_t>(n) > ud->unique_only_coverage.size()) {
-		ud->unique_only_coverage.resize(n,0);
-	}
-	
-	//ALIGNMENT: for my $p (@$pileup) 
+	// for each alignment within this pileup:	
 	for(int i=0; i<n; ++i) {
-		const bam_pileup1_t* p=&pl[i];
+		const bam_pileup1_t* p=&pile[i];
+		const bam1_t* a=pile[i].b;
+
+		// is this a redundant read?  if so, don't process it - we're all done.
+		// also, mark this position as having a redundant read so that we don't update the
+		// coverage count when we're done looking at all the alignments.
+		bool redundant = (bam_aux2i(bam_aux_get(a,"X1")) > 1);
+		if(redundant) {
+			has_redundant_reads = true;
+			continue;
+		}
 		
-		//my $a = $p->alignment;
-		const bam1_t* a=pl[i].b;
-		
-		//my $indel = $p->indel;
-		//$indel = 0 if ($indel < 0);
-		//$indel = -1 if ($p->is_del);
-		//		int indel = p->indel;
-		//		if(indel < 0) {
-		//			indel = 0;
-		//		}
-		//		if(p->is_del) {
-		//			indel = -1;
-		//		}
-		// \todo but, indel isn't ever used!
-		
-		//my $redundancy = $a->aux_get('X1');
-		int32_t redundancy=bam_aux2i(bam_aux_get(a,"X1"));
-		
-//		if (!$p->is_del >= 0)
-//		{
-//			\todo this should always be true; p->is_del is a bitfield:1...
-//			
-//			if ($redundancy == 1)
-//			{
-//				$unique_coverage++;
-//			}
-//			else
-//			{
-//				$unique_only_position = 0;
-//			}
-//		}
-		// \todo this gives us different results... what's going on here?
-		
-		// indel can be > 1
-		//		if(!p->is_del) {
-//		@field  indel  indel length; 0 for no indel, positive for ins and negative for del
-//			@field  is_del 1 iff the base on the padded read is a deletion
-// \todo maybe don't count coverage of deleted bases?
-		// if(p->indel < 0)...
-			if(redundancy == 1) {
-				++unique_coverage;
-			} else {
-				unique_only_position = 0;
-			}
-		//		}
-				
-		//next if ($redundancy != 1);
-		if(redundancy != 1) {
-			continue;	// don't process non-unique reads
+		// track the number of non-deletion, non-redundant alignments:
+		if(!p->is_del) {
+			++unique_coverage;
 		}
 		
 		//my $qseq = $a->qseq;
@@ -200,11 +190,11 @@ int error_count_callback(uint32_t tid, uint32_t pos, int n, const bam_pileup1_t 
 			
 			// $base = FastqLite::revcom($base) if ($reversed);
 			if(reversed) {
-				base = revcom(base);
+				base = reverse_base(base);
 			}
 			
 			// my $key = $ref_base[$reversed] . $base; 
-			string key; key += static_cast<char>(ref_base[reversed]); key += tochar(base);
+			string key; key += static_cast<char>(ref_base[reversed]); key += base2char(base);
 			// $error_hash->[$fastq_file_index]->{$quality}->{$key}++;
 			++ud->error_hash[fastq_file_index][quality][key];
 
@@ -262,18 +252,23 @@ int error_count_callback(uint32_t tid, uint32_t pos, int n, const bam_pileup1_t 
 			uint8_t quality = qscore[qpos+1];
 			
 			//	my $key = '.' . $base; 
-			string key; key += '.'; key += tochar(base);
+			string key; key += '.'; key += base2char(base);
 			//	$error_hash->[$fastq_file_index]->{$quality}->{$key}++;
 			++ud->error_hash[fastq_file_index][quality][key];
 		}
 	}
-	
-	// record unique only coverage
-	// $unique_only_coverage->[$unique_coverage]++ if ($unique_only_position);
-	if(unique_only_position) {
-		++ud->unique_only_coverage[unique_coverage]; // see above, where we resize this vector.
+		
+	// NOTE: this can't move inside the for-loop; we're tracking information about
+	// the position, not each alignment.
+	// record coverage at this position, but only if there were no redundant reads:
+	if(!has_redundant_reads) {
+		// resize our coverage table as needed:
+		if(unique_coverage >= ud->unique_only_coverage.size()) {
+			ud->unique_only_coverage.resize(unique_coverage+1,0); // >= and +1 because of 0-indexing.
+		}
+		++ud->unique_only_coverage[unique_coverage];
 	}
-	
+
 	return 0;  
 }
 
@@ -286,7 +281,7 @@ void print_coverage_distribution(std::ostream& out, user_data& ud) {
 	//	# because these may be bona fide deletions
 	out << "coverage\tn" << endl;
 	//	for (my $i=1; $i<scalar @$unique_only_coverage_list_ref; $i++)
-	for(std::size_t i=0; i<ud.unique_only_coverage.size(); ++i) {
+	for(std::size_t i=1; i<ud.unique_only_coverage.size(); ++i) {
 		// my $cov = $unique_only_coverage_list_ref->[$i];
 		int cov = ud.unique_only_coverage[i];
 		// $cov = 0 if (!defined $cov); #some may be undefined, they mean zero
@@ -345,9 +340,9 @@ void print_error_file(std::ostream& out, user_data& ud, int32_t fastq_file_index
 	//		}
 	//		print ERR join("\t", @line_list). "\n";
 	//	}	
-	qual_map_t& qual_map=ud.error_hash[fastq_file_index];
+	user_data::qual_map_t& qual_map=ud.error_hash[fastq_file_index];
 	
-	for(qual_map_t::reverse_iterator iter=qual_map.rbegin(); iter!=qual_map.rend(); ++iter) {
+	for(user_data::qual_map_t::reverse_iterator iter=qual_map.rbegin(); iter!=qual_map.rend(); ++iter) {
 		out << static_cast<unsigned int>(iter->first);
 		for(int i=0; i<5; ++i) {
 			for(int j=0; j<5; ++j) {
@@ -364,44 +359,11 @@ void print_error_file(std::ostream& out, user_data& ud, int32_t fastq_file_index
  */
 void breseq::error_count(const std::string& bam, const std::string& fasta) {
 	using namespace std;
+	user_data ud(bam, fasta);
 	
-	//my ($settings, $summary, $ref_seq_info) = @_;
-	//
-	//my $reference_fasta_file_name = $settings->file_name('reference_fasta_file_name');
-	//my $reference_bam_file_name = $settings->file_name('reference_bam_file_name');
-	//my $bam = Bio::DB::Sam->new(-fasta => $reference_fasta_file_name, -bam => $reference_bam_file_name);
-	//my @seq_ids = $bam->seq_ids;
-	
-	user_data ud;
-	ud.in = samopen(bam.c_str(), "rb", 0);
-	ud.ref = fai_load(fasta.c_str());
-	
-	//foreach my $seq_id (@seq_ids)
-	//{							
-	//	my $sequence_length = $bam->length($seq_id);
-	//	print STDERR "  REFERENCE: $seq_id\n";
-	//	print STDERR "  LENGTH: $sequence_length\n";
-	
-	// for each sequence id...
-	for(int i=0; i<ud.in->header->n_targets; ++i) {
-		cerr << "  REFERENCE: " << ud.in->header->target_name[i] << endl;
-		cerr << "  LENGTH: " << ud.in->header->target_len[i] << endl;
-	}
-
-	//my $ref_seq_string = $ref_seq_info->{ref_strings}->{$seq_id};
-	//my $com_seq_string = $ref_seq_string;
-	//$com_seq_string =~ tr/ATCG/TAGC/;
-	ostringstream region; region << ud.in->header->target_name[0];
-	ud.ref_seq = fai_fetch(ud.ref, region.str().c_str(), &ud.ref_seq_len);
-	
-	// $bam->pileup($seq_id,$pileup_function);
 	sampileup(ud.in, -1, error_count_callback, &ud);
 
 	print_coverage_distribution(cout, ud);
 	
 	// print_error_file(cout, ud, 0);
-
-	samclose(ud.in);
-	fai_destroy(ud.ref);
-	free(ud.ref_seq);
 }
