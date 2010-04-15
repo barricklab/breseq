@@ -209,13 +209,14 @@ sub new
 	$self->{unique_only_coverage_distribution_file_name} = "$self->{error_calibration_path}/@.unique_only_coverage_distribution.tab";
 	$self->{error_rates_summary_file_name} = "$self->{error_calibration_path}/summary.bin";
 
-	##### mutation prediction #####
+	##### mutation identification #####
 	$self->{mutation_identification_path} = "08_mutation_identification";
 	$self->{mutation_identification_path} = "$self->{base_output_path}/$self->{mutation_identification_path}" if ($self->{base_output_path});
 	$self->{predicted_mutation_file_name} = "$self->{mutation_identification_path}/@.predicted_mutations.bin";
 	$self->{complete_mutations_text_file_name} = "$self->{mutation_identification_path}/@.mutations.tab";
 	$self->{complete_coverage_text_file_name} = "$self->{mutation_identification_path}/@.coverage.tab";
 	$self->{mutation_identification_done_file_name} = "$self->{mutation_identification_path}/@.mutation_identification.done";
+	$self->{cnv_coverage_tab_file_name} = "$self->{mutation_identification_path}/@.cnv_coverage.tab";
 
 	##### output #####
 	$self->{output_path} = "output";

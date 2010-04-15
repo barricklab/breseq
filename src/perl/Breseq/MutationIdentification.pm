@@ -127,10 +127,8 @@ sub identify_mutations
 		### UNKNOWN INTERVALS: variable to keep track of during pileup
 		our $last_start_unknown_interval;
 
-		
-		my $cnv_coverage_tab_file_name = "cnv_cov.tab";
+		my $cnv_coverage_tab_file_name = $settings->file_name('cnv_coverage_tab_file_name', {'@'=>$seq_id}); 
 		open CNV_COV, ">$cnv_coverage_tab_file_name" if (defined $cnv_coverage_tab_file_name);
-		CNV_COV->autoflush(1);
 		print CNV_COV "pos\tcov\tred\tgc\n";
 
 		my $last_insert_count_was_accepted = 1;
