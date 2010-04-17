@@ -1,10 +1,9 @@
 BRESEQ=./src/perl/breseq.pl
-TEST_INPUT=./tests/data
-TEST_OUTPUT=./tests/output
 
 all:
 
 check: lambda_test
+#	python tests/_testrunner/testrunner.py $@ ---testrunner-name=./run_tests
 
 lambda_test:
 	${BRESEQ} --no-junction \
