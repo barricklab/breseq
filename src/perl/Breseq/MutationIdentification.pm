@@ -50,7 +50,7 @@ our @base_list = ('A', 'T', 'C', 'G', '.');
 #does both within-read SNPs+indels and missing coverage deletions
 sub identify_mutations
 {
-	our ($settings, $summary, $ref_seq_info, $error_rates) = @_;
+	our ($settings, $summary, $error_rates) = @_;
 		
 	my $reference_fasta_file_name = $settings->file_name('reference_fasta_file_name');
 	my $reference_bam_file_name = $settings->file_name('reference_bam_file_name');
@@ -58,7 +58,12 @@ sub identify_mutations
 	my @seq_ids = $bam->seq_ids;
 	
 	## some local variable lookups for convenience
-	my $total_ref_length = $ref_seq_info->{total_length};
+	my $total_ref_length = 0;
+	foreach my $seq_id (@seq_ids)
+	{
+		$total_ref_length+= $bam->length($seq_id);
+	}
+	
 	my $log10_ref_length = log($total_ref_length) / log(10);	
 	our $s;
 	

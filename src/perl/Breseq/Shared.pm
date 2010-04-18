@@ -391,6 +391,114 @@ sub junction_name_split
 	return @s;
 }
 
+## moved here from ReferenceSequence.pm to avoid BioPerl requirement.
+sub process_reference_sequences
+{
+	my ($settings, $summary) = @_;
+	$summary->{sequence_conversion}->{total_reference_sequence_length} = 0;
+	my $s;
+	my $ref_seq_info;
+	my $i = 0;
+	
+	# get two pieces of information from $settings
+	my $reference_fasta_file_name = $settings->file_name('reference_fasta_file_name');
+	my @genbank_file_names = $settings->file_name('reference_genbank_file_names'); 
+		
+	print STDERR "Loading reference sequences...\n";
+
+	##open fasta file
+	open FASTA, ">$reference_fasta_file_name";
+
+	my %loaded_seq_ids;
+
+	foreach my $genbank_file_name (@genbank_file_names)
+	{
+		## open this GenBank file		
+		open GENBANK, "<$genbank_file_name";
+		
+		my $seq_id;
+		my $ref_seq = '';
+		my $specified_length = -1;
+		my $actual_length = 0;
+		my $seq_definition;
+		my $seq_version;
+		my $started_on_sequence = 0;
+		while ($_ = <GENBANK>)
+		{			
+			chomp $_;
+			
+			##end of a record
+			if ($_ =~ m/^\s*\/\/\s*$/)
+			{				
+				## error checking
+				($actual_length == $specified_length) or die "Error reading GenBank file entry: $seq_id\nLength in header ($specified_length) does not match length of sequence ($actual_length).\n";  
+				(!$loaded_seq_ids{$seq_id}) or die "Duplicate GenBank file entry: $seq_id\n";  
+				$loaded_seq_ids{$seq_id}++;
+				
+				$s->{$seq_id}->{length} = $actual_length;
+				$s->{$seq_id}->{definition} = (defined $seq_definition) ? $seq_definition : '';
+				
+				$s->{$seq_id}->{seq_id} = $seq_id;
+				$s->{$seq_id}->{version} = $seq_version;
+				
+				$s->{$seq_id}->{string} = $seq_id;
+				
+				
+				$summary->{sequence_conversion}->{total_reference_sequence_length} += $actual_length;
+				
+				## it would be nice to get rid of storing the whole genome in memory
+				$ref_seq_info->{ref_strings}->{$seq_id} = $ref_seq;
+				$ref_seq_info->{seq_order}->{$seq_id} = $i++;
+				push @{$ref_seq_info->{seq_ids}}, $seq_id;
+
+				### re-initialize to nothing for next sequence
+				undef $seq_id;
+				undef $seq_definition;
+				undef $seq_version;
+				$ref_seq = '';
+				$specified_length = -1;
+				$started_on_sequence = 0;
+				
+			}
+			elsif ($_ =~ m/\s*LOCUS\s+(\S+)\s+(\d+)\s+bp/)
+			{				
+				$seq_id = $1; 
+				$specified_length = $2;
+			}
+			elsif ($_ =~ m/\s*DEFINITION\s+(.+)$/)
+			{
+				$seq_definition = $1; 
+			}
+			elsif ($_ =~ m/\s*VERSION\s+(.+)$/)
+			{
+				$seq_version = $1; 
+			}			
+			elsif ($_ =~ m/\s*ORIGIN/)
+			{
+				print FASTA ">$seq_id\n";
+				$started_on_sequence = 1; 
+			}		
+			elsif ($started_on_sequence)
+			{
+				$_ =~ s/(\d|\s)//g;
+				$actual_length += length $_;
+				print FASTA "\U$_\n"; 
+				$ref_seq .= "\U$_";
+			}			
+		}
+		
+		print STDERR "  Loading File::$genbank_file_name\n";
+	}
+	
+	## create SAM faidx
+	Breseq::Shared::system("samtools faidx $reference_fasta_file_name", 1);
+	
+	$summary->{sequence_conversion}->{reference_sequences} = $s;	
+	
+	return $ref_seq_info;
+}
+
+
 
 return 1;
 

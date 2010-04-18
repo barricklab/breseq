@@ -124,7 +124,7 @@ our %unwanted_sequences = (
 );
 
 ## Keep a summary of certain statistics. 
-my $summary;
+my $summary = {};
 
 ###
 ### Get options from the command line
@@ -153,9 +153,9 @@ sub sequence_conversion {}
 ##
 
 my $ref_seq_info;
-my $ref_seq_info_file_name = $settings->file_name('ref_seq_info_file_name');
 my $sequence_converson_summary_file_name = $settings->file_name('sequence_conversion_summary_file_name');
 my $sequence_conversion_done_file_name = $settings->file_name('sequence_conversion_done_file_name');
+my $ref_seq_info_file_name = $settings->file_name('ref_seq_info_file_name');
 if (!-e $sequence_conversion_done_file_name) 
 {
 	my $s;
@@ -196,7 +196,9 @@ if (!-e $sequence_conversion_done_file_name)
 		$overall_max_read_length = $max_read_length if ((!defined $overall_max_read_length) || ($max_read_length > $overall_max_read_length));
 	}
 	$s->{max_read_length} = $overall_max_read_length;
+	$summary->{sequence_conversion} = $s;
 	
+
 	### The real way to do this is to add it to the FASTA file...
 	### Create UNWANTED fasta sequence file.
 	# if (!$settings->{no_filter_unwanted}) 
@@ -211,20 +213,10 @@ if (!-e $sequence_conversion_done_file_name)
 	# }
 		
 	## convert reference sequence to fasta and store other information so it can be reloaded quickly w/o bioperl
-	$ref_seq_info = Breseq::ReferenceSequence::process_reference_sequences($settings, $summary);
-	
-	## want to know the total length for some calculations
-	$ref_seq_info->{total_length} = 0;
-	foreach my $seq_id (@{$ref_seq_info->{seq_ids}}) 
-	{
-		$ref_seq_info->{total_length} += length $ref_seq_info->{ref_strings}->{$seq_id};
-		$s->{reference_seqs}->{$seq_id}->{length} = length $ref_seq_info->{ref_strings}->{$seq_id};
-	}
-	
+	$ref_seq_info = Breseq::Shared::process_reference_sequences($settings, $summary);
 	Storable::store($ref_seq_info, $ref_seq_info_file_name) or die "Can't store data in file $ref_seq_info_file_name!\n";
 	
 	## store summary information
-	$summary->{sequence_conversion} = $s;
 	Storable::store($summary->{sequence_conversion}, $sequence_converson_summary_file_name) or die "Can't store data in file $sequence_converson_summary_file_name!\n";
 	
 	open DONE, ">$sequence_conversion_done_file_name";
@@ -239,6 +231,7 @@ $summary->{sequence_conversion} = Storable::retrieve($sequence_converson_summary
 die "Can't retrieve data from file $sequence_converson_summary_file_name!\n" if (!$summary->{sequence_conversion});
 (defined $summary->{sequence_conversion}->{max_read_length}) or die "Can't retrieve max read length from file $sequence_converson_summary_file_name!\n";
 $settings->{max_read_length} = $summary->{sequence_conversion}->{max_read_length};
+$settings->{total_reference_sequence_length} = $summary->{sequence_conversion}->{total_reference_sequence_length};
 
 ##
 # Match all reads against the reference genome
@@ -761,12 +754,14 @@ if (!$settings->{no_mutation_prediction}) #could remove conditional?
 	# Predict SNPS, indels within reads, and large deletions
 	#   this function handles all file creation...
 	##
-	my $mutation_info =  Breseq::MutationIdentification::identify_mutations($settings, $summary, $ref_seq_info, $error_rates);
+	my $mutation_info =  Breseq::MutationIdentification::identify_mutations($settings, $summary, $error_rates);
 
 	@mutations = @{$mutation_info->{mutations}};
 	@deletions = @{$mutation_info->{deletions}};
 	@unknowns = @{$mutation_info->{unknowns}};
 }
+
+
 
 
 ###
@@ -788,10 +783,14 @@ sub genome_diff_output {}
 		push @new_hybrids, $hybrid 	if (($hybrid->{total_reads} >= $coverage_cutoff_1) || ($hybrid->{total_reads} >= $coverage_cutoff_2));
 	}
 	@hybrids = @new_hybrids;
-
-	my $genome_diff_file_name = $settings->file_name('genome_diff_file_name');
-	Breseq::Output::write_genome_diff($genome_diff_file_name, $settings, \@mutations, \@deletions, \@hybrids, \@unknowns);
+	
+	my $full_genome_diff_file_name = $settings->file_name('full_genome_diff_file_name');
+	my $filtered_genome_diff_file_name = $settings->file_name('filtered_genome_diff_file_name');
+	
+	Breseq::Output::write_genome_diff($full_genome_diff_file_name, $settings, \@mutations, \@deletions, \@hybrids, \@unknowns);
+	Breseq::Shared::system("gd_utils.pl FILTER -i $full_genome_diff_file_name -o $filtered_genome_diff_file_name");
 }
+
 
 
 
@@ -799,191 +798,11 @@ sub genome_diff_output {}
 ## Below this point is optional and has heftier prerequisites
 ## for running, including R and BioPerl
 ###
+if ($settings->{annotate})
 {
-	my $genome_diff_file_name = $settings->file_name('genome_diff_file_name');
-	my $mutation_info = Breseq::Output::read_genome_diff($genome_diff_file_name);
-		
-	my @mutations = @{$mutation_info->{mutations}};
-	my @deletions = @{$mutation_info->{deletions}};
-	my @unknowns = @{$mutation_info->{unknowns}};
-	my @hybrids = @{$mutation_info->{hybrids}};
-
-	##
-	# Annotate mutations and deletions
-	sub mutation_annotation {}	
-	##
-	print STDERR "Annotating within-read mutations...\n";
-	Breseq::ReferenceSequence::annotate_mutations($settings, $summary, $ref_seq_info, \@mutations);
-	#print Dumper(\@mutations); ##DEBUG
-		
-	print STDERR "Annotating deletions...\n";
-	Breseq::ReferenceSequence::annotate_deletions($settings, $summary, $ref_seq_info, \@deletions);
-	#print Dumper(\@deletions); ##DEUG		
-		
-	##
-	# Write text output files
-	sub text_output {}
-	##
-	print STDERR "Creating text output files...\n";
-	Breseq::Output::save_text_mutation_file($settings->file_name('mutations_text_file_name') , \@mutations);
-	Breseq::Output::save_text_deletion_file($settings->file_name('deletions_text_file_name') , \@deletions);
-	Breseq::Output::save_text_unknown_file($settings->file_name('unknowns_text_file_name') , \@unknowns);
-
-	##
-	# Plot coverage of genome and large deletions
-	sub plot_coverage {}
-	##
-	print STDERR "Drawing coverage graphs...\n";
-	$settings->create_path('alignment_path');
-	foreach my $seq_id (@{$ref_seq_info->{seq_ids}})
-	{
-		my $tmp_path = $settings->create_path('tmp_path'); 
-
-		my $deletions_text_file_name = $settings->file_name('deletions_text_file_name');
-		my $this_plot_coverage_done_file_name = $settings->file_name('plot_coverage_done_file_name', {'@'=>$seq_id});
-		
-		if (!-e $this_plot_coverage_done_file_name)
-		{
-			my $this_complete_coverage_text_file_name = $settings->file_name('complete_coverage_text_file_name', {'@'=>$seq_id});			
-			my $res = Breseq::Shared::system("graph_coverage.pl -t $tmp_path -p $settings->{coverage_graph_path} -i $deletions_text_file_name -c $this_complete_coverage_text_file_name --seq_id=$seq_id");				
-			die if ($res);
-			open DONE, ">$this_plot_coverage_done_file_name";
-			close DONE;
-		}
-		else
-		{
-			print STDERR "Drawing coverage graphs already complete.\n";
-		}
-		
-		$settings->remove_path('tmp_path'); 
-		
-		
-		#need to assign link names even if coverage was already drawn
-		my $i=1;
-		my @this_deletions = grep {$_->{seq_id} eq $seq_id} @deletions if ($seq_id);
-		foreach my $del (@this_deletions)
-		{
-			$del->{coverage_graph_link} = "$settings->{local_coverage_graph_path}/$seq_id\.$i\.pdf";
-			$i++;
-		}
-		
-	}
-
-	sub html_output {}
-
-	##
-	# Output SNPs
-	##
+	my $filtered_genome_diff_file_name = $settings->file_name('filtered_genome_diff_file_name');
+	Breseq::Shared::system("gd_utils.pl ANNOTATE -i $filtered_genome_diff_file_name $settings->{arguments}");
 	
-	### make alignments first because we fill in a link field used by the summary file
-	my @composite_list; ##
-	
-	### screen out polymorphism predictions at this step
-	if ($settings->{polymorphism_prediction})
-	{
-		foreach my $c (@mutations)
-		{
-			my $accept = 1;
-			
-			if ($c->{polymorphism})
-			{
-				my $polymorphism = $c->{polymorphism};
-				#print Dumper($polymorphism);
-				
-				$accept = 0 if ($polymorphism->{log10_e_value} < $settings->{polymorphism_log10_e_value_cutoff});
-				$accept = 0 if ($polymorphism->{fisher_strand_p_value} < $settings->{polymorphism_fisher_strand_p_value_cutoff});
-				$accept = 0 if ($polymorphism->{fraction} < $settings->{polymorphism_fraction_cutoff});
-				$accept = 0 if ($polymorphism->{fraction} > 1-$settings->{polymorphism_fraction_cutoff});	
-			}	
-			
-			print "ACCEPT: $accept\n";
-				
-			push @composite_list, $c if ($accept);
-		}
-		@mutations = @composite_list;
-	}
-	else
-	{
-		push @composite_list, @mutations;
-	}
-
-	# 
-	### look, we have to invent intervals for the deletions so each has an upstream and downstream.
-	foreach my $deletion (@deletions)
-	{
-	 	#ok, this has a circular reference, which may possibly be a very bad thing.
-	 	$deletion->{upstream_interval} = { start => $deletion->{start}-1, end => $deletion->{start}-1, 
-	 		deletion => $deletion, seq_id => $deletion->{seq_id} };
-	
-	 	$deletion->{downstream_interval} = { start => $deletion->{end}+1, end => $deletion->{end}+1, 
- 			deletion => $deletion, seq_id => $deletion->{seq_id} };
-		push @composite_list, $deletion->{upstream_interval};
-		push @composite_list, $deletion->{downstream_interval};
-	}	
-	 	
-	### look, we have to invent intervals for the non-rearranged versions of the hybrid reads as well.
-	### proper alignments can be made as part of the composite list
-		
-	print STDERR "Annotating rearrangements...\n";
-	Breseq::ReferenceSequence::annotate_rearrangements($settings, $summary, $ref_seq_info, \@hybrids);
-	#print Dumper(\@hybrids); ##DEUG
-	
-	
-	foreach my $hybrid (@hybrids)
-	{
-		#print STDERR Dumper($hybrid);	
-		push @composite_list, $hybrid;	
-	 	push @composite_list, $hybrid->{interval_1};
-	 	push @composite_list, $hybrid->{interval_2};
-	}
-
-	# ### first name all the files/links, so backlinks work
-
-	my $reference_bam_file_name = $settings->file_name('reference_bam_file_name');
-	my $reference_fasta_file_name = $settings->file_name('reference_fasta_file_name');
-		
-	foreach my $c (@composite_list)
-	{
-	 	my $html_alignment_file_name = "$c->{seq_id}_$c->{start}_$c->{end}_alignment.html";
-	 	$c->{link} = "$settings->{local_alignment_path}/$html_alignment_file_name";
-	 	$c->{file_name} = "$settings->{alignment_path}/$html_alignment_file_name";
-		$c->{bam_path} = $reference_bam_file_name;
-		$c->{fasta_path} = $reference_fasta_file_name;
-#		print Dumper($c);
-	}
-		
-	## hybrids use different BAM files for making the alignments!!!
-	my $junction_bam_file_name = $settings->file_name('junction_bam_file_name');
-	my $junction_fasta_file_name = $settings->file_name('candidate_junction_fasta_file_name');
-	
-	foreach my $c (@hybrids)
-	{	
-		$c->{bam_path} = $junction_bam_file_name;
-		$c->{fasta_path} = $junction_fasta_file_name;
-	}
-	 			
-	### now create alignment files
-	if (!$settings->{no_alignment_generation})
-	{
-	
-		print STDERR "Creating alignment HTML files...\n";
-		foreach my $c (@composite_list) # , @hybrids)
-		{
-			print STDERR "Creating alignment file: $c->{link}\n";
-			Breseq::Output::html_alignment_file($c);		
-		}
-	}
-	
-	### make alignments that involve rearranged versions of the reference genome	
-	
-	###
-	## HTML output
-	###	
-	
-	print STDERR "Creating full HTML table...\n";	
-	my $mutation_file_name = $settings->file_name('mutations_html_file_name');
-	Breseq::Output::html_full_table($mutation_file_name, $settings, $ref_seq_info, \@mutations, \@deletions, \@hybrids);
-
 	###
 	## Temporary debug output using Data::Dumper
 	###

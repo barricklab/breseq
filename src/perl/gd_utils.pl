@@ -87,7 +87,7 @@ if ("\U$command" eq 'FILTER')
 {
 	do_filter();
 }
-if ("\U$command" eq 'ANNOTATE')
+elsif ("\U$command" eq 'ANNOTATE')
 {
 	do_annotate();
 }
@@ -109,18 +109,54 @@ else
 }
 
 
-sub do_annotate
+sub do_filter
 {	
 	my ($help, $man, $verbose);
-	my $output = ".";
+	my $output = 'output.gd'; 
+	my $input = ();
+	
+	GetOptions(
+		'help|?' => \$help, 'man' => \$man,
+		'verbose|v' => \$verbose,
+		'output|o=s' => \$output,
+		'input|i=s' => \$input,
+			
+	) or pod2usage(2);
+	pod2usage(1) if $help;
+	pod2usage(-exitstatus => 0, -verbose => 2) if $man;
 
+	my $gd = Breseq::GenomeDiff->new(-FILE_NAME => $input);
+		
+	### screen out polymorphism predictions at this step
+	sub mutation_filter
+	{
+		my ($c) = @_;
+		
+		my $accept = 1;
+#		if ($c->{type} eq 'SNP')
+#		{
+#			my $polymorphism = $c->{polymorphism};
+#			
+#			$accept = 0 if ($polymorphism->{log10_e_value} < $settings->{polymorphism_log10_e_value_cutoff});
+#			$accept = 0 if ($polymorphism->{fisher_strand_p_value} < $settings->{polymorphism_fisher_strand_p_value_cutoff});
+#			$accept = 0 if ($polymorphism->{fraction} < $settings->{polymorphism_fraction_cutoff});
+#			$accept = 0 if ($polymorphism->{fraction} > 1-$settings->{polymorphism_fraction_cutoff});
+#		}	
+		
+		return $accept;
+	}	
+		
+	$gd->filter_mutations(\&mutation_filter);	
+	$gd->write($output);
+}
+
+sub do_annotate
+{	
 	use Breseq::Settings;
 	use Breseq::ReferenceSequence;
 	use Breseq::Output;
 	
 	my $settings = Breseq::Settings->new_annotate;
-
-	print Dumper($settings);
 
 	## load information about reference sequences from GenBank files
 	my $ref_seq_info = Breseq::ReferenceSequence::load_ref_seq_info(@{$settings->{reference_genbank_file_names}});
@@ -132,18 +168,53 @@ sub do_annotate
 	{
 		my $mutation_info = Breseq::Output::read_genome_diff($gd_file);
 
-		print Dumper($mutation_info, $gd_file);
-
 		push @mutations, @{$mutation_info->{mutations}};
 		push @deletions, @{$mutation_info->{deletions}};
 		push @unknowns, @{$mutation_info->{unknowns}};
 		push @hybrids, @{$mutation_info->{hybrids}};
+	}	
+	
+	###
+	## Gather together insertions and deletions that occur next to each other
+	## ...unless we are predicting polymorphisms
+	###
+
+	if (!$settings->{polymorphism_prediction})
+	{
+		my $lc;
+		for (my $i=0; $i<scalar @mutations; $i++)
+		{
+			my $c = $mutations[$i];	 
+
+			#if the same position and both are tandem insertion
+			if ($lc && ($lc->{start} == $c->{start}) && ($lc->{insert_end}+1 == $c->{insert_start}))
+			{
+				$lc->{insert_end} = $c->{insert_start};
+				$lc->{new_seq} .= $c->{new_seq};
+				$lc->{quality} .= ",$c->{quality}";
+				$lc->{total_coverage_string} .= ",$c->{total_coverage_string}";
+				$lc->{best_coverage_string} .= ",$c->{best_coverage_string}";
+				splice @mutations, $i, 1;
+				$i--;
+				next;
+			}
+
+			#if the positions are next to each other and both are deletions...
+			if ($lc && ($lc->{end}+1 == $c->{start}) && ($lc->{new_seq} eq '.') && ($c->{new_seq} eq '.') )
+			{
+				$lc->{end} = $c->{start};
+				$lc->{ref_seq} .= $c->{ref_seq};
+				$lc->{quality} .= ",$c->{quality}";
+				$lc->{total_coverage_string} .= ",$c->{total_coverage_string}";
+				$lc->{best_coverage_string} .= ",$c->{best_coverage_string}";
+				splice @mutations, $i, 1;
+				$i--;
+				next;
+			}
+
+			$lc = $c;
+		}
 	}
-	
-	#add filtering of results here
-	
-	print Dumper(@mutations);
-	
 	
 	##
 	# Annotate mutations and deletions
