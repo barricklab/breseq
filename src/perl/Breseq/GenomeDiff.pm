@@ -207,6 +207,12 @@ sub has_mutation
 	return 0;
 }
 
+sub filter_mutations
+{
+	my ($self, $filter_function) = @_;
+	@{$self->{mutations}} = grep { $filter_function->($_) } $self->mutations;
+}
+
 =head2 find_common_mutations
 
  Title   : get_next

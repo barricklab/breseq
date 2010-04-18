@@ -31,8 +31,6 @@ use strict;
 use Bio::Root::Root;
 
 package Breseq::ReferenceSequence;
-use vars qw(@ISA);
-@ISA = qw( Bio::Root::Root );
 
 use Bio::Seq::RichSeq;
 use Breseq::Settings;
@@ -141,126 +139,6 @@ sub load_ref_seq_info
 			
 	return {'bioperl_ref_seqs' => \%ref_seqs, 'ref_strings' => \%ref_strings, 'gene_lists' =>\%gene_lists, 'is_lists' =>\%is_lists, 'seq_ids' => \@seq_ids, 'seq_order' => \%seq_order };	
 }
-
-sub process_reference_sequences
-{
-	my ($settings, $summary) = @_;
-	my $s = $summary->{sequence_conversion};
-	
-	# get two pieces of information from $settings
-	my $reference_fasta_file_name = $settings->file_name('reference_fasta_file_name');
-	my @genbank_file_names = $settings->file_name('reference_genbank_file_names'); 
-		
-	print STDERR "Loading reference sequences...\n";
-
-	##list of sequence ids
-	my @seq_ids;
-
-	##open fasta file
-	my $ref_o = Bio::SeqIO->new( -file => ">$reference_fasta_file_name", -format => 'fasta');
-
-	my %ref_seqs;
-	my %ref_strings;
-	my %gene_lists;
-	my %is_lists;
-	my %fasta_file_names;
-	my %seq_order;
-	my $i = 0;
-
-	foreach my $genbank_file_name (@genbank_file_names)
-	{
-		## open this GenBank file
-		my $ref_i = Bio::SeqIO->new( -file => "<$genbank_file_name");
-		print STDERR "  Loading File::$genbank_file_name\n";
-
-		while (my $ref_seq = $ref_i->next_seq)
-		{
-			my $seq_id = $ref_seq->id;
-			push @seq_ids, $seq_id;
-			
-			print STDERR "    Sequence::$seq_id loaded.\n";
-			$ref_seqs{$seq_id} = $ref_seq;
-
-			$ref_o->write_seq($ref_seq);
-
-			##it is much faster to use substr to create the lists for nt comparisons than BioPerl trunc
-			$ref_strings{$seq_id} = $ref_seq->seq;
-			$ref_strings{$seq_id} = "\U$ref_strings{$seq_id}"; ##uppercase for comparisons
-
-			##load the genbank record
-			my @Feature_List = $ref_seq->get_SeqFeatures();
-			my @gene_list;
-			my @is_list;
-			
-			FEATURE: foreach my $Feature ( @Feature_List ) 
-			{ 	
-				if ($Feature->primary_tag eq 'repeat_region')
-				{	
-					my $is;
-					$is->{gene} = get_tag($Feature, "mobile_element");
-					$is->{gene} =~ s/insertion sequence:// if ($is->{gene});
-					$is->{gene} = "unknown" if (!defined ($is->{gene}));
-					$is->{product} = "repeat region";
-
-					$is->{start} = $Feature->start;
-					$is->{end} = $Feature->end;
-					$is->{strand} = $Feature->strand;
-					push @is_list, $is;
-					next FEATURE;
-				}
-				
-				## add additional information to the last 
-				if (   ($Feature->primary_tag eq 'CDS') 
-					|| ($Feature->primary_tag eq 'tRNA') 
-					|| ($Feature->primary_tag eq 'rRNA') )
-
-				{
-					#Add information to last gene
-					my $gene;
-					$gene->{gene} = get_tag($Feature, "gene");
-					$gene->{gene} = get_tag($Feature, "locus_tag") if (!$gene->{gene});
-					$gene->{start} = $Feature->start;
-					$gene->{end} = $Feature->end;
-					$gene->{strand} = $Feature->strand;
-					$gene->{product} = "";
-					$gene->{note} = get_tag($Feature, "note");
-						
-					$gene->{accession} = get_tag($Feature, "protein_id");
-					$gene->{translation} = get_tag($Feature, "translation");
-					$gene->{product} = get_tag($Feature, "product");
-					
-					#set a type for the feature
-					$gene->{type} = $Feature->primary_tag;
-					$gene->{type} = "protein" if ($gene->{type} eq 'CDS');
-					$gene->{pseudogene} = get_tag($Feature, "pseudo");
-					$gene->{type} = "pseudogene" if ($gene->{pseudogene});
-					
-					##assume if there is no translation that we have a pseudogene...
-					$gene->{type} = "pseudogene" if (($Feature->primary_tag eq 'CDS') && (!$gene->{translation}));
-					$gene->{index} = scalar @gene_list;
-					
-					push @gene_list, $gene;		
-				}
-			}
-			
-			$gene_lists{$seq_id} = \@gene_list;
-			$is_lists{$seq_id} = \@is_list;	
-			
-			#add information to summary
-			$s->{reference_seqs}->{$seq_id}->{length} = $ref_seq->length;
-			$s->{reference_seqs}->{$seq_id}->{display_id} = $ref_seq->display_id;
-			$s->{reference_seqs}->{$seq_id}->{accession} = $ref_seq->accession;
-			$s->{reference_seqs}->{$seq_id}->{accession} .= "." . $ref_seq->version if ($ref_seq->version);
-			$seq_order{$seq_id} = $i++;
-			}
-	}
-	
-	## create SAM faidx
-	Breseq::Shared::system("samtools faidx $reference_fasta_file_name", 1);
-		
-	return {'bioperl_ref_seqs' => \%ref_seqs, 'ref_strings' => \%ref_strings, 'gene_lists' =>\%gene_lists, 'is_lists' =>\%is_lists, 'seq_ids' => \@seq_ids, 'seq_order' => \%seq_order };	
-}
-
 
 sub annotate_mutations
 {

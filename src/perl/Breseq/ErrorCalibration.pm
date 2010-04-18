@@ -28,20 +28,15 @@ Copyright 2009.  All rights reserved.
 ###
 
 use strict;
-use Bio::Root::Root;
 
 package Breseq::ErrorCalibration;
-use vars qw(@ISA);
-@ISA = qw( Bio::Root::Root );
 
 use Data::Dumper;
-
 use Math::CDF;
 
 ###
 # Global Variables
 ###
-
 
 our @base_list = ('A', 'T', 'C', 'G', '.');
 
@@ -474,7 +469,7 @@ EOF
 
 	#calculate a coverage cutoff for deletions based on the fit distribution?
 	#this is the first coverage to give at least the requested probability
-	my $sequence_length = $summary->{sequence_conversion}->{reference_seqs}->{$seq_id}->{length};
+	my $sequence_length = $summary->{sequence_conversion}->{reference_sequences}->{$seq_id}->{length};
 	my $pr_cutoff = 1/$sequence_length*0.05;
 	my $i = 0;
 	while ( Math::CDF::pnbinom($i, $summary->{unique_coverage}->{$seq_id}->{nbinom_size_parameter}, $summary->{unique_coverage}->{$seq_id}->{nbinom_prob_parameter}) < $pr_cutoff ) 
@@ -624,7 +619,7 @@ sub load_error_rates
 sub log10_error_rates
 {
 	my ($error_rates) = @_;
-	
+		
 	## precalculate log10 probabilities and not probabilities 
 	## results in a significant speed-up of calculations	
 	my $log10_correct_rates;
@@ -659,6 +654,7 @@ sub log10_error_rates
 sub error_counts_to_error_rates
 {
 	my ($settings, $summary, $ref_seq_info) = @_;
+		
 	my @seq_ids = @{$ref_seq_info->{seq_ids}};
 	my @read_files = $settings->read_files;
 		

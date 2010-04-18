@@ -15,13 +15,13 @@ clean :
 	rm -r ${TEST_OUTPUT}
 
 lambda_test:
-	${BRESEQ} --no-junction \
+	${BRESEQ} -a --no-junction \
 		-o ${TEST_OUTPUT}/lambda \
 		-r ${TEST_INPUT}/lambda/lambda.gbk \
 		${TEST_INPUT}/lambda/lambda_mixed_population.fastq
 
 lambda_test_multiple_ref_seqs:
-	${BRESEQ} \
+	${BRESEQ} -a \
 		-o ${TEST_OUTPUT}/lambda_multiple_ref_seqs \
 		-r ${TEST_INPUT}/lambda/lambda.1.gbk \
 		-r ${TEST_INPUT}/lambda/lambda.2.gbk \
@@ -31,7 +31,7 @@ lambda_test_multiple_ref_seqs:
 		${TEST_INPUT}/lambda/lambda_mixed_population.fastq
 
 lambda_test_multiple_read_files:
-	${BRESEQ} --no-junction \
+	${BRESEQ} -a --no-junction \
 		-o ${TEST_OUTPUT}/lambda_multiple_read_files \
 		-r ${TEST_INPUT}/lambda/lambda.gbk \
 		${TEST_INPUT}/lambda/lambda_mixed_population.1.fastq \
@@ -41,7 +41,7 @@ lambda_test_multiple_read_files:
 		${TEST_INPUT}/lambda/lambda_mixed_population.5.fastq
 
 lambda_test_multiple_ref_seq_and_read_files:
-	${BRESEQ} \
+	${BRESEQ} -a \
 		-o ${TEST_OUTPUT}/lambda_multiple_ref_seq_and_read_files \
 		-r ${TEST_INPUT}/lambda/lambda.1.gbk \
 		-r ${TEST_INPUT}/lambda/lambda.2.gbk \

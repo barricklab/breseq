@@ -1035,8 +1035,6 @@ sub read_genome_diff
 	## Add mutations to it and then write file.
 	my $gd = Breseq::GenomeDiff->new(-file_name=>$file_name);
 
-	print Dumper($gd);
-
 	my $mutation_info;
 	@{$mutation_info->{mutations}} = grep {defined $_->{evidence} && $_->{evidence} eq 'read_alignment'} $gd->mutations;
 	

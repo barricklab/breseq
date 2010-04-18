@@ -52,7 +52,8 @@ sub new
 	@{$self->{reference_genbank_file_names}} = ();  # files containing reference sequences	
 	
 	## Set up default values for options
-	$self->{full_command_line} = "$0 @ARGV"; 
+	$self->{full_command_line} = "$0 @ARGV";
+	$self->{arguments} = "$0 @ARGV";
 	$self->{quality_type} = '';					# quality score format
 	$self->{predicted_quality_type} = '';
 	$self->{min_quality} = 0;
@@ -125,7 +126,8 @@ sub new
 		'maximum-candidate-junctions=s' => \$self->{maximum_candidate_junctions},
 		'error-model=s' => \$self->{error_model_method},
 		'resume' => \$self->{resume_run},
-		'continue' => \$self->{continue_run},		
+		'continue' => \$self->{continue_run},
+		'annotate|a' => \$self->{annotate},		
 	) or pod2usage(2);
 
 	pod2usage(1) if $help;
@@ -147,6 +149,7 @@ sub new_annotate
 	
 	## Set up default values for options
 	$self->{full_command_line} = "$0 @ARGV"; 
+	$self->{arguments} = "$0 @ARGV";	
 	$self->{quality_type} = '';					# quality score format
 	$self->{predicted_quality_type} = '';
 	$self->{min_quality} = 0;
@@ -219,7 +222,8 @@ sub new_annotate
 		'maximum-candidate-junctions=s' => \$self->{maximum_candidate_junctions},
 		'input-genome-diff|i=s' => \@{$self->{input_genome_diffs}},	
 		'resume' => \$self->{resume_run},
-		'continue' => \$self->{continue_run},	
+		'continue' => \$self->{continue_run},
+		'annotate|a' => \$self->{annotate},					
 	) or pod2usage(2);
 
 	pod2usage(1) if $help;
@@ -252,7 +256,7 @@ sub initialize
 	$self->{trimmed_fastq_file_name} = "$self->{sequence_conversion_path}/#.trimmed.fastq";
 	$self->{reference_fasta_file_name} = "$self->{sequence_conversion_path}/reference.fasta";
 	$self->{reference_faidx_file_name} = "$self->{sequence_conversion_path}/reference.fasta.fai";
-	$self->{ref_seq_info_file_name} = "$self->{sequence_conversion_path}/ref_seq_info.bin";
+    $self->{ref_seq_info_file_name} = "$self->{sequence_conversion_path}/ref_seq_info.bin";	
 	$self->{unwanted_fasta_file_name} = "$self->{sequence_conversion_path}/unwanted.fasta";
 	$self->{sequence_conversion_summary_file_name} = "$self->{sequence_conversion_path}/summary.bin";
 	$self->{sequence_conversion_done_file_name} = "$self->{sequence_conversion_path}/sequence_conversion.done";
@@ -329,7 +333,8 @@ sub initialize
 	$self->{junction_file_name} = "$self->{output_path}/new_junctions.tab";
 	$self->{snps_file_name} = "$self->{output_path}/snps.tab";
 	$self->{mutations_html_file_name} = "$self->{output_path}/mutations.html";
-	$self->{genome_diff_file_name} = "$self->{output_path}/mutations.gd";
+	$self->{full_genome_diff_file_name} = "$self->{output_path}/mutations.all.gd";
+	$self->{filtered_genome_diff_file_name} = "$self->{output_path}/mutations.gd";
 	$self->{summary_html_file_name} = "$self->{output_path}/summary.html";
 	$self->{local_alignment_path} = "alignment";
 	$self->{alignment_path} = "$self->{output_path}/$self->{local_alignment_path}";
