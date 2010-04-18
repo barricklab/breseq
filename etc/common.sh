@@ -19,6 +19,8 @@ FILE_PATTERN='-name *.tab -or -name *.html ! -name summary.html'
 HASH=`which shasum`
 # name of file containing expected hash values:
 EXPECTED=expected.sha1
+# name of testexec file
+TESTEXEC=testcmd.sh
 
 
 # build the list of hashes
