@@ -1,0 +1,10 @@
+syntax: glob
+tests/output
+.DS_Store
+*.o
+*.a
+*.gz
+src/c/build
+*.tab
+*.txt
+*.out
