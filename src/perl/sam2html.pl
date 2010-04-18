@@ -44,7 +44,7 @@ use lib $FindBin::Bin;
 
 use CGI qw/:standard/;
 
-useBreseq::AlignmentOutput;
+use Breseq::AlignmentOutput;
 
 #Get options
 use Getopt::Long;

@@ -37,6 +37,7 @@ our @ISA = qw( Exporter );
 our @EXPORT = qw();
 
 use Breseq::AlignmentOutput;
+use Breseq::GenomeDiff;
 
 ## these style definitions are included between the
 ## HEAD tags of every generated page
@@ -928,17 +929,14 @@ sub text_alignment_file
 	close TEXT;
 }
 
-sub genome_diff
+sub write_genome_diff
 {
 	my ($file_name, $settings, $snps_list_ref, $deletion_list_ref, $hybrid_list_ref, $unknown_list_ref) = @_;
-	open GD, ">$file_name" or die "Could not open file: $file_name";
 	
-	##easy as pie, dump key value pairs for everything...
+	## Create empty genome diff object.
+	## Add mutations to it and then write file.
+	my $gd = Breseq::GenomeDiff->new;
 
-	print GD "#=GENOME_DIFF 1.0\n";
-	print GD "#SAMPLE" . "read_fastq=" . join(",", $settings->read_fastq_file_names) .  "\n";
-
-	my @item_list;
 	foreach my $snp (@$snps_list_ref)
 	{
 		#print Dumper($snp);
@@ -953,34 +951,31 @@ sub genome_diff
 		{
 			$type = 'DEL';
 		}
-		elsif ((length $snp->{ref_seq} > 1) || (length $snp->{new_seq} > 1))
-		{
-			$type = 'SUB';
-		}
 		
 		my $item = { 
 			type => $type,
+			evidence => "read_alignment",
 			seq_id => $snp->{seq_id},
 			pos => $snp->{start},
-			gene => $snp->{gene},
-			product => $snp->{gene_product},
-			gene_pos => $snp->{gene_position},
-			ref => $snp->{ref_seq},
-			new => $snp->{new_seq},
+#			gene => $snp->{gene},
+#			product => $snp->{gene_product},
+#			gene_pos => $snp->{gene_position},
+			ref_base => $snp->{ref_seq},
+			new_base => $snp->{new_seq},
 			freq => 1,
-			quality => $snp->{display_quality},
+			quality => $snp->{quality},
 			tot_cov => $snp->{total_coverage_string},
 			new_cov => $snp->{best_coverage_string},
 		};
 		
-		delete $item->{ref_seq} if ($snp->{ref_seq} eq '.');
-		delete $item->{new_seq} if ($snp->{new_seq} eq '.');
+#		delete $item->{ref_seq} if ($snp->{ref_seq} eq '.');
+#		delete $item->{new_seq} if ($snp->{new_seq} eq '.');
 		
-		$item->{aa_change} = $snp->{aa_ref_seq} . $snp->{aa_position} . $snp->{aa_new_seq} if ($snp->{aa_position});
-		$item->{codon_change} = $snp->{codon_ref_seq} . '->' . $snp->{codon_new_seq} if ($snp->{aa_position});
-		$item->{snp_type} = $snp->{snp_type} if (defined $snp->{snp_type});
+#		$item->{aa_change} = $snp->{aa_ref_seq} . $snp->{aa_position} . $snp->{aa_new_seq} if ($snp->{aa_position});
+#		$item->{codon_change} = $snp->{codon_ref_seq} . '->' . $snp->{codon_new_seq} if ($snp->{aa_position});
+#		$item->{snp_type} = $snp->{snp_type} if (defined $snp->{snp_type});
 		
-		push @item_list, $item;
+		$gd->add_mutation($item);
 	}
 
 	foreach my $del (@$deletion_list_ref)
@@ -988,21 +983,33 @@ sub genome_diff
 		#print Dumper($del);
 		my $item = { 
 			type => 'DEL',
+			evidence => "missing_coverage",
 			seq_id => $del->{seq_id},
-			start => $del->{start},
-			end => $del->{end},
-			genes => $del->{genes},
-			left_outside_cov => $del->{left_unique_cov},
-			left_inside_cov => $del->{left_inside_unique_cov},
-			right_outside_cov => $del->{right_unique_cov},
-			right_inside_cov => $del->{right_inside_unique_cov},
+			pos => "$del->{start}-$del->{end}",
+#			genes => $del->{genes},
+			left_unique_cov => $del->{left_unique_cov},
+			left_inside_unique_cov => $del->{left_inside_unique_cov},
+			right_unique_cov => $del->{right_unique_cov},
+			right_inside_unique_cov => $del->{right_inside_unique_cov},
 		};
-		push @item_list, $item;
+		$gd->add_mutation($item);
 	}
 
 	foreach my $hyb ($hybrid_list_ref)
 	{
-#		print Dumper($hyb);
+		print Dumper($hyb);
+#		my $item = { 
+#			type => 'JCT',
+#			evidence => "missing_coverage",
+#			seq_id => $del->{seq_id},
+#			pos => "$del->{start}-$del->{end}",
+#			genes => $del->{genes},
+#			left_outside_cov => $del->{left_unique_cov},
+#			left_inside_cov => $del->{left_inside_unique_cov},
+#			right_outside_cov => $del->{right_unique_cov},
+#			right_inside_cov => $del->{right_inside_unique_cov},
+#		};
+#		$gd->add_mutation($item);
 	}
 	
 	foreach my $unk (@$unknown_list_ref)
@@ -1012,24 +1019,49 @@ sub genome_diff
 		my $item = { 
 			type => 'UNK',
 			seq_id => $unk->{seq_id},
-			start => $unk->{start},
-			end => $unk->{end},
+			pos => "$unk->{start}-$unk->{end}",
 		};
-		push @item_list, $item;
-	}
-	
-	foreach my $item (@item_list)
-	{
-		my @ll;
-		foreach my $key (sort keys %$item)
-		{
-			push @ll, "$key=\"$item->{$key}\"";
-		}
-		my $l = join ", ", @ll;
-		print GD "$l\n";
+		$gd->add_mutation($item);
 	}
 
-	close GD;
+	$gd->write($file_name);
+}
+
+sub read_genome_diff
+{
+	my ($file_name) = @_;
+	
+	## Create empty genome diff object.
+	## Add mutations to it and then write file.
+	my $gd = Breseq::GenomeDiff->new(-file_name=>$file_name);
+
+	print Dumper($gd);
+
+	my $mutation_info;
+	@{$mutation_info->{mutations}} = grep {defined $_->{evidence} && $_->{evidence} eq 'read_alignment'} $gd->mutations;
+	
+	foreach my $mut (@{$mutation_info->{mutations}})
+	{
+		$mut->{start} = $mut->{pos},
+		$mut->{end} = $mut->{pos},
+		$mut->{ref_seq}	= $mut->{ref_base},
+		$mut->{new_seq} = $mut->{new_base},
+		$mut->{total_coverage_string} = $mut->{tot_cov},
+		$mut->{best_coverage_string} = $mut->{new_cov},
+	}
+	
+	@{$mutation_info->{deletions}} = grep {defined $_->{evidence} && $_->{evidence} eq 'missing_coverage'} $gd->mutations;	
+	@{$mutation_info->{unknowns}}  = grep {$_->{type} eq 'UNK'} $gd->mutations;
+	
+	foreach my $mut (@{$mutation_info->{unknowns}}, @{$mutation_info->{deletions}})
+	{
+		($mut->{start}, $mut->{end}) = split /-/, $mut->{pos};
+		$mut->{size} = $mut->{end} - $mut->{start} + 1;
+	}
+	
+	@{$mutation_info->{hybrids}}   = grep {$_->{type} eq 'JCT'} $gd->mutations;
+		
+	return $mutation_info;
 }
 
 our @execution_times;

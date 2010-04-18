@@ -104,7 +104,7 @@ sub correct_alignments
 			$in_fastq[$i] = Breseq::Fastq->new(-file => $this_fastq_file_name);
 			
 			if ($settings->{unmatched_reads})
-			{
+			{				
 				my $unmatched_file_name = $settings->file_name('unmatched_read_file_name', {'#'=>$this_read_file});
 				$out_unmatched_fastq[$i] = Breseq::Fastq->new(-file => ">$unmatched_file_name");
 			}

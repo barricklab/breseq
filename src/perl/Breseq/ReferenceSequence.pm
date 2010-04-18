@@ -39,6 +39,109 @@ use Breseq::Settings;
 use Breseq::Shared;
 use Data::Dumper;
 
+
+##this is a version of the next subroutine tht only loads the features for annotation
+sub load_ref_seq_info
+{
+	my (@genbank_file_names) = @_;
+			
+	print STDERR "Loading reference sequences...\n";
+
+	##list of sequence ids
+	my @seq_ids;
+	my %ref_seqs;
+	my %ref_strings;
+	my %gene_lists;
+	my %is_lists;
+	my %fasta_file_names;
+	my %seq_order;
+	my $i = 0;
+
+	foreach my $genbank_file_name (@genbank_file_names)
+	{
+		## open this GenBank file
+		my $ref_i = Bio::SeqIO->new( -file => "<$genbank_file_name");
+		print STDERR "  Loading File::$genbank_file_name\n";
+
+		while (my $ref_seq = $ref_i->next_seq)
+		{
+			my $seq_id = $ref_seq->id;
+			push @seq_ids, $seq_id;
+			
+			print STDERR "    Sequence::$seq_id loaded.\n";
+			$ref_seqs{$seq_id} = $ref_seq;
+
+			##it is much faster to use substr to create the lists for nt comparisons than BioPerl trunc
+			$ref_strings{$seq_id} = $ref_seq->seq;
+			$ref_strings{$seq_id} = "\U$ref_strings{$seq_id}"; ##uppercase for comparisons
+
+			##load the genbank record
+			my @Feature_List = $ref_seq->get_SeqFeatures();
+			my @gene_list;
+			my @is_list;
+			
+			FEATURE: foreach my $Feature ( @Feature_List ) 
+			{ 	
+				if ($Feature->primary_tag eq 'repeat_region')
+				{	
+					my $is;
+					$is->{gene} = get_tag($Feature, "mobile_element");
+					$is->{gene} =~ s/insertion sequence:// if ($is->{gene});
+					$is->{gene} = "unknown" if (!defined ($is->{gene}));
+					$is->{product} = "repeat region";
+
+					$is->{start} = $Feature->start;
+					$is->{end} = $Feature->end;
+					$is->{strand} = $Feature->strand;
+					push @is_list, $is;
+					next FEATURE;
+				}
+				
+				## add additional information to the last 
+				if (   ($Feature->primary_tag eq 'CDS') 
+					|| ($Feature->primary_tag eq 'tRNA') 
+					|| ($Feature->primary_tag eq 'rRNA') )
+
+				{
+					#Add information to last gene
+					my $gene;
+					$gene->{gene} = get_tag($Feature, "gene");
+					$gene->{gene} = get_tag($Feature, "locus_tag") if (!$gene->{gene});
+					$gene->{start} = $Feature->start;
+					$gene->{end} = $Feature->end;
+					$gene->{strand} = $Feature->strand;
+					$gene->{product} = "";
+					$gene->{note} = get_tag($Feature, "note");
+						
+					$gene->{accession} = get_tag($Feature, "protein_id");
+					$gene->{translation} = get_tag($Feature, "translation");
+					$gene->{product} = get_tag($Feature, "product");
+					
+					#set a type for the feature
+					$gene->{type} = $Feature->primary_tag;
+					$gene->{type} = "protein" if ($gene->{type} eq 'CDS');
+					$gene->{pseudogene} = get_tag($Feature, "pseudo");
+					$gene->{type} = "pseudogene" if ($gene->{pseudogene});
+					
+					##assume if there is no translation that we have a pseudogene...
+					$gene->{type} = "pseudogene" if (($Feature->primary_tag eq 'CDS') && (!$gene->{translation}));
+					$gene->{index} = scalar @gene_list;
+					
+					push @gene_list, $gene;		
+				}
+			}
+			
+			$gene_lists{$seq_id} = \@gene_list;
+			$is_lists{$seq_id} = \@is_list;	
+			
+			#add information to summary
+			$seq_order{$seq_id} = $i++;
+			}
+	}
+			
+	return {'bioperl_ref_seqs' => \%ref_seqs, 'ref_strings' => \%ref_strings, 'gene_lists' =>\%gene_lists, 'is_lists' =>\%is_lists, 'seq_ids' => \@seq_ids, 'seq_order' => \%seq_order };	
+}
+
 sub process_reference_sequences
 {
 	my ($settings, $summary) = @_;
@@ -293,14 +396,6 @@ sub annotate_mutations
 			$c->{gene_product} .= "/";			
 			$c->{gene_product} .= $next_gene->{product} if (defined $next_gene);
 
-			#it's a SNP
-			if ((length($c->{ref_rep_seq}) == 1) && (length($c->{new_rep_seq}) == 1))
-			{
-				$summary->{snps}->{noncoding}->{num}++;
-				$summary->{snps}->{noncoding}->{base_changes}->{"$c->{ref_rep_seq}$c->{new_rep_seq}"}++;
-				$summary->{snps}->{total}->{num}++;
-				$summary->{snps}->{total}->{base_changes}->{"$c->{ref_rep_seq}$c->{new_rep_seq}"}++;
-			}
 			next SNP;
 		}
 		
@@ -339,11 +434,6 @@ sub annotate_mutations
 		    $c->{type} = "substitution";
 		    $c->{snp_type} = ($c->{aa_ref_seq} ne $c->{aa_new_seq}) ? "nonsynonymous" : "synonymous";
 			
-			## record for dN/dS statistics
-			$summary->{snps}->{$c->{snp_type}}->{num}++;
-			$summary->{snps}->{$c->{snp_type}}->{base_changes}->{"$c->{ref_rep_seq}$c->{new_rep_seq}"}++;
-			$summary->{snps}->{total}->{num}++;
-			$summary->{snps}->{total}->{base_changes}->{"$c->{ref_rep_seq}$c->{new_rep_seq}"}++;
 			next SNP;
 		}
 	

@@ -124,13 +124,116 @@ sub new
 		'no-unmatched-reads' => \$self->{no_unmatched_reads},
 		'maximum-candidate-junctions=s' => \$self->{maximum_candidate_junctions},
 		'error-model=s' => \$self->{error_model_method},
-		'resume' => \$resume_run,
-		'continue' => \$continue_run,		
+		'resume' => \$self->{resume_run},
+		'continue' => \$self->{continue_run},		
 	) or pod2usage(2);
 
 	pod2usage(1) if $help;
 	pod2usage(-exitstatus => 0, -verbose => 2) if $man;
 	pod2usage(-exitstatus => 0, -verbose => 2) if (scalar @ARGV == 0);
+	
+	$self->initialize;
+}
+
+
+sub new_annotate
+{	
+	my($caller,@args) = @_;
+	my $class = ref($caller) || $caller;
+	my $self = new Bio::Root::Root($caller, @args);
+	bless ($self, $class);
+	
+	@{$self->{reference_genbank_file_names}} = ();  # files containing reference sequences	
+	
+	## Set up default values for options
+	$self->{full_command_line} = "$0 @ARGV"; 
+	$self->{quality_type} = '';					# quality score format
+	$self->{predicted_quality_type} = '';
+	$self->{min_quality} = 0;
+	$self->{max_quality} = 0;
+	$self->{min_match_length} = 24;
+	$self->{run_name} = '';
+	$self->{clean} = 0;
+	$self->{base_output_path} = '';
+	$self->{error_model_method} = 'FIT';
+	
+	#used by CandidateJunctions.pm
+	$self->{minimum_reads_for_candidate_junction} = 1;
+	$self->{maximum_candidate_junctions} = 10000;
+	$self->{candidate_junction_read_limit} = undef;
+
+	#used by AlignmentCorrection.pm
+	$self->{require_first_read_base_to_match} = 0;
+	$self->{add_split_junction_sides} = 1;
+
+	$self->{no_junction_prediction} = undef;		# don't perform junction prediction steps
+	$self->{no_mutation_prediction} = undef;		# don't perform read mismatch/indel prediction steps
+	$self->{no_deletion_prediction} = undef;		# don't perform deletion prediction steps
+	$self->{no_alignment_generation} = undef;		# don't generate alignments
+	$self->{alignment_read_limit} = undef;			# only go through this many reads when creating alignments
+	$self->{correction_read_limit} = undef;			# only go through this many reads when correcting alignments
+	$self->{no_filter_unwanted} = undef;			# don't filter out unwanted reads with adaptor matches
+	$self->{unwanted_prefix} = "UNWANTED:::";	# prefix on unwanted read names
+	
+	#used by MutationIdentification.pm
+	$self->{polymorphism_log10_e_value_cutoff} = 2;
+	$self->{mutation_log10_e_value_cutoff} = 2;			# log10 of evidence required for SNP calls 
+	$self->{polymorphism_fisher_strand_p_value_cutoff} = 0.05;
+	
+	#keep this on by default
+	
+	my ($help, $man);
+	my ($resume_run, $continue_run);
+	GetOptions(
+		'help|?' => \$help, 'man' => \$man,
+		'verbose|v' => \$self->{verbose},
+	## Options for input and output files
+		'name|n=s' => \$self->{run_name},	
+		'output-path|o=s' => \$self->{base_output_path},	
+		'reference-sequence|r=s' => \@{$self->{reference_genbank_file_names}},
+		'quality-style|q=s' => \$self->{quality_type},
+		'clean=s' => \$self->{clean},
+	## Options for what results are printed
+		'quality-cutoff|c=s' => \$self->{snp_log10_prob_cutoff},
+	## Options for snp error analysis
+		'require-complete-match' => \$self->{require_complete_match},
+		'require-no-indel-match' => \$self->{require_no_indel_match},
+		'require-unique-match' => \$self->{require_unique_match},
+		'require-max-mismatches=s' => \$self->{require_max_mismatches},
+		'do-not-trim-ambiguous-ends' => \$self->{do_not_trim_ambiguous_ends},
+		'polymorphism-prediction' => \$self->{polymorphism_prediction},		
+	## Options for turning various analysis chunks off or on
+		'no-junction-prediction' => \$self->{no_junction_prediction},
+		'no-mismatch-prediction' => \$self->{no_mutation_prediction},
+		'no-deletion-prediction' => \$self->{no_deletion_prediction},
+		'no-alignment-generation' => \$self->{no_alignment_generation},
+		'no-filter-unwanted' => \$self->{no_filter_unwanted},
+		'copy-number-variation' => \$self->{copy_number_variation},		
+		'read-limit|l=s' => \$self->{read_limit},
+		'candidate-junction-read-limit=s' => \$self->{candidate_junction_read_limit},
+		'alignment-read-limit=s' => \$self->{alignment_read_limit},
+		'polymorphism-log10-e-value-cutoff=s' => \$self->{polymorphism_log10_e_value_cutoff},
+		'polymorphism-fraction-cutoff=s' =>  \$self->{polymorphism_fraction_cutoff},	
+		'polymorphism-fisher-strand-p-value-cutoff=s' => \$self->{polymorphism_fisher_strand_p_value_cutoff},
+		'no-unmatched-reads' => \$self->{no_unmatched_reads},
+		'maximum-candidate-junctions=s' => \$self->{maximum_candidate_junctions},
+		'input-genome-diff|i=s' => \@{$self->{input_genome_diffs}},	
+		'resume' => \$self->{resume_run},
+		'continue' => \$self->{continue_run},	
+	) or pod2usage(2);
+
+	pod2usage(1) if $help;
+	pod2usage(-exitstatus => 0, -verbose => 2) if $man;
+	pod2usage(-exitstatus => 0, -verbose => 2) if (scalar @ARGV == 0);
+	
+	$self->initialize;
+}
+
+
+## called after getting options from command line by new methods
+sub initialize
+{
+	my ($self) = @_;
 
 	#neaten up some settings for later string comparisons
 	$self->{quality_type} = "\L$self->{quality_type}";
@@ -314,7 +417,7 @@ sub new
 	}
 
 	## if the resume option is chosen, all values will be read from saved settings file
-	if ($resume_run || $continue_run)
+	if ($self->{resume_run} || $self->{continue_run})
 	{
 		$self->load_from_file;
 		print "Resuming run that was interrupted with same settings\n".

@@ -301,7 +301,7 @@ if (!-e $reference_alignment_done_file_name)
 }
 else
 {
-	print STDERR "Reference alignment already exists...\n";
+	print STDERR "Reference alignment already exists.\n";
 }
 
 ##
@@ -737,17 +737,14 @@ die "Can't retrieve data from file $error_rates_summary_file_name!\n" if (!$summ
 #these are determined by the loaded summary information
 $settings->{unique_coverage} = $summary->{unique_coverage};
 
-
-##
-# Load error rates
-##
-
-my $error_rates = Breseq::ErrorCalibration::load_error_rates($settings, $summary, $ref_seq_info);
-
 ##
 # Make predictions of point mutations, small indels, and large deletions
 sub mutation_prediction {}
 ##
+
+my @mutations;
+my @deletions;
+my @unknowns;
 
 if (!$settings->{no_mutation_prediction}) #could remove conditional?
 {		
@@ -756,18 +753,64 @@ if (!$settings->{no_mutation_prediction}) #could remove conditional?
 	$settings->create_path('mutation_identification_path');
 	
 	##
+	# Load error rates
+	##
+	my $error_rates = Breseq::ErrorCalibration::load_error_rates($settings, $summary, $ref_seq_info);
+	
+	##
 	# Predict SNPS, indels within reads, and large deletions
 	#   this function handles all file creation...
 	##
 	my $mutation_info =  Breseq::MutationIdentification::identify_mutations($settings, $summary, $ref_seq_info, $error_rates);
 
+	@mutations = @{$mutation_info->{mutations}};
+	@deletions = @{$mutation_info->{deletions}};
+	@unknowns = @{$mutation_info->{unknowns}};
+}
+
+
+###
+## Output Genome Diff File
+sub genome_diff_output {}
+###
+
+{	
+	print STDERR "Creating genome diff file...\n";
+
+	### filter what hybrids we believe in...
+	### this should also annotate and do much more of the filtering that is currently done
+	### during the prediction step
+	my @new_hybrids;
+	foreach my $hybrid (@hybrids)
+	{
+		my $coverage_cutoff_1 = $settings->{unique_coverage}->{$hybrid->{interval_1}->{seq_id}}->{deletion_coverage_propagation_cutoff};
+		my $coverage_cutoff_2 = $settings->{unique_coverage}->{$hybrid->{interval_2}->{seq_id}}->{deletion_coverage_propagation_cutoff};
+		push @new_hybrids, $hybrid 	if (($hybrid->{total_reads} >= $coverage_cutoff_1) || ($hybrid->{total_reads} >= $coverage_cutoff_2));
+	}
+	@hybrids = @new_hybrids;
+
+	my $genome_diff_file_name = $settings->file_name('genome_diff_file_name');
+	Breseq::Output::write_genome_diff($genome_diff_file_name, $settings, \@mutations, \@deletions, \@hybrids, \@unknowns);
+}
+
+
+
+###
+## Below this point is optional and has heftier prerequisites
+## for running, including R and BioPerl
+###
+{
+	my $genome_diff_file_name = $settings->file_name('genome_diff_file_name');
+	my $mutation_info = Breseq::Output::read_genome_diff($genome_diff_file_name);
+		
 	my @mutations = @{$mutation_info->{mutations}};
 	my @deletions = @{$mutation_info->{deletions}};
 	my @unknowns = @{$mutation_info->{unknowns}};
+	my @hybrids = @{$mutation_info->{hybrids}};
 
 	##
 	# Annotate mutations and deletions
-	sub mutation_and_deletion_annotation {}	
+	sub mutation_annotation {}	
 	##
 	print STDERR "Annotating within-read mutations...\n";
 	Breseq::ReferenceSequence::annotate_mutations($settings, $summary, $ref_seq_info, \@mutations);
@@ -825,9 +868,8 @@ if (!$settings->{no_mutation_prediction}) #could remove conditional?
 		}
 		
 	}
-	
 
-sub html_output {}
+	sub html_output {}
 
 	##
 	# Output SNPs
@@ -881,19 +923,7 @@ sub html_output {}
 	 	
 	### look, we have to invent intervals for the non-rearranged versions of the hybrid reads as well.
 	### proper alignments can be made as part of the composite list
-	
-	### filter what hybrids we believe in...
-	### this should also annotate and do much more of the filtering that is currently done
-	### during the prediction step
-	my @new_hybrids;
-	foreach my $hybrid (@hybrids)
-	{
-		my $coverage_cutoff_1 = $settings->{unique_coverage}->{$hybrid->{interval_1}->{seq_id}}->{deletion_coverage_propagation_cutoff};
-		my $coverage_cutoff_2 = $settings->{unique_coverage}->{$hybrid->{interval_2}->{seq_id}}->{deletion_coverage_propagation_cutoff};
-		push @new_hybrids, $hybrid 	if (($hybrid->{total_reads} >= $coverage_cutoff_1) || ($hybrid->{total_reads} >= $coverage_cutoff_2));
-	}
-	@hybrids = @new_hybrids;
-	
+		
 	print STDERR "Annotating rearrangements...\n";
 	Breseq::ReferenceSequence::annotate_rearrangements($settings, $summary, $ref_seq_info, \@hybrids);
 	#print Dumper(\@hybrids); ##DEUG
@@ -919,7 +949,7 @@ sub html_output {}
 	 	$c->{file_name} = "$settings->{alignment_path}/$html_alignment_file_name";
 		$c->{bam_path} = $reference_bam_file_name;
 		$c->{fasta_path} = $reference_fasta_file_name;
-		print Dumper($c);
+#		print Dumper($c);
 	}
 		
 	## hybrids use different BAM files for making the alignments!!!
@@ -955,15 +985,6 @@ sub html_output {}
 	Breseq::Output::html_full_table($mutation_file_name, $settings, $ref_seq_info, \@mutations, \@deletions, \@hybrids);
 
 	###
-	## Output Genome Diff File
-	###	
-	
-	print STDERR "Creating genome diff file...\n";	
-	my $genome_diff_file_name = $settings->file_name('genome_diff_file_name');
-	Breseq::Output::genome_diff($genome_diff_file_name, $settings, \@mutations, \@deletions, \@hybrids, \@unknowns);
-
-
-	###
 	## Temporary debug output using Data::Dumper
 	###
 
@@ -973,9 +994,9 @@ sub html_output {}
 	close SUM;
 	
 	my $settings_text_file_name = $settings->file_name('settings_text_file_name');
-	open SUM, ">$settings_text_file_name";
-	print SUM Dumper($summary);
-	close SUM;
+	open SETTINGS, ">$settings_text_file_name";
+	print SETTINGS Dumper($settings);
+	close SETTINGS;
 
 	###
 	## Temporary debug output using Data::Dumper
@@ -989,4 +1010,5 @@ sub html_output {}
 	open DONE, ">$output_done_file_name";
 	close DONE;
 }
+
 
