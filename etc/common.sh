@@ -1,17 +1,24 @@
 #!/bin/bash
 #
-# Common testing functionality.
+# Common testing functionality for breseq.
+#
+# Testing in breseq is based on matching sha1 hashes of files ('cause
+# the data itself is too big to want to store in hg).  But, some of the output
+# includes dates, so we only hash certain files.
 
-# define common variables; paths must be relative the location of this script!
+# common variables:
+# paths must either be relative to the location of this script or absolute.
 COMMONDIR=`dirname ${BASH_SOURCE}`
+# path to breseq:
 BRESEQ=${COMMONDIR}/../src/perl/breseq.pl
-
-# testing in breseq is based on matching sha1 hashes; which files should be hashed?
-# this pattern must be suitable for "find".
+# path to test data:
+DATADIR=${COMMONDIR}/../tests/data
+# this is a find-compatible list of files that we'll hash:
 FILE_PATTERN='-name *.tab -or -name *.html ! -name summary.html'
+# executable used to hash files:
 HASH=`which shasum`
+# name of file containing expected hash values:
 EXPECTED=expected.sha1
-TESTEXEC=testcmd.sh
 
 
 # build the list of hashes
@@ -31,8 +38,8 @@ do_build() {
 #
 do_check() {
     if [[ ! -e $1/${EXPECTED} ]]; then
-				echo "Test $1 does not have a list of expected values (${EXPECTED})."
-        do_usage
+        echo "Building expected values for test $1..."
+        do_build $1
     fi
     pushd $1 > /dev/null
     if ! ${HASH} --check ${EXPECTED} > /dev/null; then
@@ -57,34 +64,38 @@ do_clean() {
 # main test-running method
 # $1 == action
 # $2 == testdir
-# $3 == command-line to run test
+# testcmd == function that must be defined in the test command file.
 #
 do_test() {
 	case "$1" in
-    build)
-        do_build $2
-    ;;
-    check)
-        do_check $2
-    ;;
-    clean)
-        do_clean $2
-    ;;
-    test)
-        do_clean $2
-        testcmd # defined by $2/${TESTEXEC}
-        do_check $2
-    ;;
-    *)
-        do_usage
-    ;;
+        build)
+            do_build $2
+        ;;
+        check)
+            do_check $2
+        ;;
+        clean)
+            do_clean $2
+        ;;
+        rebuild)
+            do_clean $2
+            testcmd
+            do_build $2
+        ;;
+        test)
+            testcmd
+            do_check $2
+        ;;
+        *)
+            do_usage
+        ;;
 	esac
 }
 
 # print usage information.
 #
 do_usage() {
-    echo "Usage: $0 build|check|clean|test <testdir>" >&2
+    echo "Usage: $0 build|check|clean|rebuild|test <testdir>" >&2
     exit -1
 }
 
