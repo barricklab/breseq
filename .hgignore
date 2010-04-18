@@ -11,3 +11,4 @@ src/c/build
 *.out
 *.html
 *.tab
+*.swp
