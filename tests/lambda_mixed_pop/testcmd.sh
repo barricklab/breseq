@@ -6,8 +6,8 @@ SELF=`dirname ${BASH_SOURCE}`
 testcmd() {
     ${BRESEQ} --no-junction \
         -o ${SELF} \
-        -r ${SELF}/data/lambda.gbk \
-        ${SELF}/data/lambda_mixed_population.fastq
+        -r ${DATADIR}/lambda/lambda.gbk \
+        ${DATADIR}/lambda/lambda_mixed_population.fastq
 }
 
 do_test $1 ${SELF}
