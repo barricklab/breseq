@@ -2,6 +2,7 @@
 #include <cmath>
 #include <map>
 #include <sstream>
+#include <fstream>
 #include <vector>
 #include <sam.h>
 #include <faidx.h>
@@ -43,7 +44,7 @@ struct user_data {
 	faidx_t* ref; //!< FAI file handle.
 	char *ref_seq; //!< Reference sequence.
 	int ref_seq_len; //!< Length of the reference sequence.
-	
+
 	/*! Coverage count table.
 	 
 	 This is a table of non-deletion reads per position to non-redundancy counts.
@@ -138,7 +139,7 @@ int error_count_callback(uint32_t tid, uint32_t pos, int n, const bam_pileup1_t 
 	for(int i=0; i<n; ++i) {
 		const bam_pileup1_t* p=&pile[i];
 		const bam1_t* a=pile[i].b;
-
+		
 		// is this a redundant read?  if so, don't process it - we're all done.
 		// also, mark this position as having a redundant read so that we don't update the
 		// coverage count when we're done looking at all the alignments.
@@ -197,7 +198,6 @@ int error_count_callback(uint32_t tid, uint32_t pos, int n, const bam_pileup1_t 
 			string key; key += static_cast<char>(ref_base[reversed]); key += base2char(base);
 			// $error_hash->[$fastq_file_index]->{$quality}->{$key}++;
 			++ud->error_hash[fastq_file_index][quality][key];
-
 			// also add an observation of a non-gap non-gap			
 			// if ($qpos+1 < $query_end) {
 			if((qpos+1) < query_end) {
@@ -357,13 +357,26 @@ void print_error_file(std::ostream& out, user_data& ud, int32_t fastq_file_index
 
 /*! Calculate the errors in the given BAM file.
  */
-void breseq::error_count(const std::string& bam, const std::string& fasta) {
+void breseq::error_count(const std::string& bam, const std::string& fasta, const std::string& output) {
 	using namespace std;
 	user_data ud(bam, fasta);
 	
 	sampileup(ud.in, -1, error_count_callback, &ud);
-
-	print_coverage_distribution(cout, ud);
 	
-	// print_error_file(cout, ud, 0);
+	cerr << "a: " << ud.hit_a << " b: " << ud.hit_b << " c: " << ud.hit_c << endl;
+	
+	if(output.empty()) {
+		print_coverage_distribution(cout, ud);
+		print_error_file(cout, ud, 0);
+	} else {
+		string filename(output+"/unique_only_coverage_distribution.tab");
+		ofstream coverage(filename.c_str());		
+		print_coverage_distribution(coverage, ud);
+		coverage.close();
+
+		filename = output+"/error_counts.tab";
+		ofstream errors(filename.c_str());
+		print_error_file(errors, ud, 0);
+		errors.close();
+	}
 }
