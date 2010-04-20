@@ -12,6 +12,7 @@
 		421ACF7E1170E5CA00C2EB85 /* libboost_program_options-mt.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 421ACF7D1170E5CA00C2EB85 /* libboost_program_options-mt.a */; };
 		421ACFA31170ED4B00C2EB85 /* error_count.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 421ACFA21170ED4B00C2EB85 /* error_count.cpp */; };
 		421ACFAD1170F05500C2EB85 /* libz.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 421ACFAC1170F05500C2EB85 /* libz.a */; };
+		42A3A9B1117DE9B100A039E7 /* pileup.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 42A3A9B0117DE9B100A039E7 /* pileup.cpp */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -33,6 +34,9 @@
 		421ACFA01170EC3200C2EB85 /* error_count.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = error_count.h; sourceTree = "<group>"; };
 		421ACFA21170ED4B00C2EB85 /* error_count.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = error_count.cpp; sourceTree = "<group>"; };
 		421ACFAC1170F05500C2EB85 /* libz.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = libz.a; path = /opt/local/lib/libz.a; sourceTree = "<absolute>"; };
+		42A3A9AE117DE7F800A039E7 /* pileup.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = pileup.h; sourceTree = "<group>"; };
+		42A3A9B0117DE9B100A039E7 /* pileup.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = pileup.cpp; sourceTree = "<group>"; };
+		42A3A9D5117DEED500A039E7 /* common.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = common.h; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -73,6 +77,7 @@
 			children = (
 				421ACFA21170ED4B00C2EB85 /* error_count.cpp */,
 				421ACF2B1170DEC400C2EB85 /* main.cpp */,
+				42A3A9B0117DE9B100A039E7 /* pileup.cpp */,
 			);
 			path = src;
 			sourceTree = "<group>";
@@ -106,7 +111,9 @@
 		421ACF9F1170EC3200C2EB85 /* include */ = {
 			isa = PBXGroup;
 			children = (
+				42A3A9D5117DEED500A039E7 /* common.h */,
 				421ACFA01170EC3200C2EB85 /* error_count.h */,
+				42A3A9AE117DE7F800A039E7 /* pileup.h */,
 			);
 			path = include;
 			sourceTree = "<group>";
@@ -174,6 +181,7 @@
 			files = (
 				421ACF4A1170DFC300C2EB85 /* main.cpp in Sources */,
 				421ACFA31170ED4B00C2EB85 /* error_count.cpp in Sources */,
+				42A3A9B1117DE9B100A039E7 /* pileup.cpp in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

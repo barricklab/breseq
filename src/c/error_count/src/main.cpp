@@ -1,5 +1,7 @@
 #include <boost/program_options.hpp>
 #include <iostream>
+#include <string>
+#include <vector>
 #include "error_count.h"
 
 /*! Calculate error calibrations from FASTA and BAM reference files.
@@ -18,9 +20,11 @@ int main(int argc, char* argv[]) {
 	po::options_description cmdline_options("Allowed options");
 	cmdline_options.add_options()
 	("help,h", "produce this help message")
-	("bam,b", po::value<string>(), "bam file containing sequences to be aligned")
-	("fasta,f", po::value<string>(), "indexed fasta file of reference sequence")
-	("output,o", po::value<string>(), "directory for output");
+	("bam,b", po::value<string>(), "bam file(s) containing sequences to be aligned")
+	("fasta,f", po::value<vector<string> >(), "indexed fasta file(s) of reference sequence")
+	("output,o", po::value<string>(), "output directory")
+	("coverage,c", po::value<string>(), "coverage file name suffix")
+	("error,e", po::value<string>(), "error count file name suffix");
 	
 	po::variables_map options;
 	po::store(po::parse_command_line(argc, argv, cmdline_options), options);
@@ -30,8 +34,10 @@ int main(int argc, char* argv[]) {
 	if(options.count("help")
 		 || !options.count("bam")
 		 || !options.count("fasta")
-		 || !options.count("output")) {
-		cout << "Usage: error_count --bam <sequences.bam> --fasta <reference.fai> --output <path>" << endl;
+		 || !options.count("output")
+		 || !options.count("coverage")
+		 || !options.count("error")) {
+		cout << "Usage: error_count --bam <sequences.bam> --fasta <reference.fai> --output <path> --coverage <suffix> --error <suffix>" << endl;
 		cout << cmdline_options << endl;
 		return -1;
 	}
@@ -39,8 +45,10 @@ int main(int argc, char* argv[]) {
 	// attempt to calculate error calibrations:
 	try {
 		breseq::error_count(options["bam"].as<string>(),
-												options["fasta"].as<string>(),
-												options["output"].as<string>());
+												options["fasta"].as<vector<string> >(),
+												options["output"].as<string>(),
+												options["coverage"].as<string>(),
+												options["error"].as<string>());
 	} catch(...) {
 		// failed; 
 		return -1;
