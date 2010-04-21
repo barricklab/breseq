@@ -37,7 +37,7 @@ int main(int argc, char* argv[]) {
 		 || !options.count("output")
 		 || !options.count("coverage")
 		 || !options.count("error")) {
-		cout << "Usage: error_count --bam <sequences.bam> --fasta <reference.fai> --output <path> --coverage <suffix> --error <suffix>" << endl;
+		cout << "Usage: error_count --bam <sequences.bam> --fasta <reference.fasta> --output <path> --coverage <suffix> --error <suffix>" << endl;
 		cout << cmdline_options << endl;
 		return -1;
 	}
