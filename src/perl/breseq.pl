@@ -728,7 +728,7 @@ my @unknowns;
 
 if (!$settings->{no_mutation_prediction}) #could remove conditional?
 {		
-	print STDERR "Collecting and evaluating SNPs...\n";
+	print STDERR "Collecting and evaluating within-read mutations...\n";
 	
 	$settings->create_path('mutation_identification_path');
 	
