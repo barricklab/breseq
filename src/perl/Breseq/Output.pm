@@ -86,44 +86,60 @@ table	{
 ENDOFSTYLE
 
 
+sub html_index
+{
+	my ($file_name, $settings, $summary, $ref_seq_info, $annotated_mutations, $annotated_marginal) = @_;
+	open HTML, ">$file_name" or die "Could not open file: $file_name";    
+
+    print HTML start_html(
+			-title => "BRESEQ :: Index" . ($settings->{run_name} ? " :: $settings->{run_name}" : ''), 
+			-head  => style({type => 'text/css'}, $header_style_string),
+	);
+
+	print HTML a({-href=>$settings->html_path('summary_html_file_name')}, 'summary') . br;
+	print HTML a({-href=>$settings->html_path('mutations_html_file_name')}, 'mutation predictions') . br if ($annotated_mutations);
+	print HTML a({-href=>$settings->html_path('marginal_html_file_name')}, 'marginal predictions') . br if ($annotated_marginal);
+	print HTML a({-href=>$settings->html_path('log_file_name')}, 'log') . br;
+	
+	print HTML h2("Error Rates");	
+	
+	foreach my $read_file ($settings->read_files)
+	{
+		print HTML a({-href=>$settings->html_path('error_rates_plot_file_name', {'#'=>$read_file})}, $read_file) . br;
+	}
+	
+	print HTML h2("Coverage Distributions");	
+
+	foreach my $seq_id (@{$ref_seq_info->{seq_ids}})
+	{
+		print HTML a({-href=>$settings->html_path('unique_only_coverage_plot_file_name', {'@'=>$seq_id})}, $seq_id) . br;
+	}
+		
+	print HTML end_html;
+	close HTML;
+}
+
 ## Note that we do not overwrite past summary tables
 ## Instead, we move them. This is in case the script was
 ## Run multiple times.
 
 sub html_summary_table
 {
-	my ($file_name, $options, $times, $summary) = @_;
-	
-	## Move any old summary file.
-	# if (-e $file_name)
-	# {
-	# 	my $i = -1;
-	# 	my $old_file_name = '';
-	# 	do {
-	# 		$i++;
-	# 		$old_file_name = $file_name;
-	# 		die if (! ( $old_file_name =~ m/\.html$/) );
-	# 		$old_file_name =~ s/\.html$/\.$i\.html/;
-	# 	} while (-e $old_file_name);
-	# 	`mv $file_name $old_file_name`;
-	# }
+	my ($file_name, $settings, $summary, $times) = @_;
 	
 	## Create the current file...
 	open HTML, ">$file_name" or die "Could not open file: $file_name";    
     
     print HTML start_html(
-			-title => "BRESEQ :: Summary" . ($options->{run_name} ? " :: $options->{run_name}" : ''), 
-			-head  => style({type => 'text/css'},$header_style_string),
+			-title => "BRESEQ :: Summary" . ($settings->{run_name} ? " :: $settings->{run_name}" : ''), 
+			-head  => style({type => 'text/css'}, $header_style_string),
 	);
     
-    print HTML h1("Program Options");
-    print HTML h2("Command Line");
-	print HTML code(escapeHTML($options->{full_command_line}));
-	
-	print HTML start_table({-width => "100%", -border => 1, -cellspacing => 0, -cellpadding => 3});
-	print HTML Tr(th("Option"), th("Setting"));
-	print HTML Tr(td("Fastq quality score style"), td($options->{quality_type}));
-	print HTML end_table();
+#   print HTML h1("Program Options");
+#	print HTML start_table({-width => "100%", -border => 1, -cellspacing => 0, -cellpadding => 3});
+#	print HTML Tr(th("Option"), th("Setting"));
+#	print HTML Tr(td("Fastq quality score style"), td($settings->{quality_type}));
+#	print HTML end_table();
 		
 	## Write times
 	print HTML p . h1("Execution Times");
@@ -133,55 +149,41 @@ sub html_summary_table
 	{
 		print HTML Tr(td($time->{_name}), td($time->{_formatted_time}), td($time->{_formatted_time_elapsed}));
 	}
-	
 	my $formatted_total_time = time2string($times->[-1]->{_time} - $times->[0]->{_time});
 	print HTML Tr({-class=>"highlight_table_row"}, td({-colspan=>2}, b("Total Execution Time")), td(b($formatted_total_time)));
 	print HTML end_table();
 
 	print HTML h1("Summary Statistics");
 
-    print HTML h2("Data Overview");
+    print HTML h2("Read Sequence Files");
     print HTML start_table({-width => "100%", -border => 1, -cellspacing => 0, -cellpadding => 3});
-	foreach my $key (sort keys %{$summary->{reads}})
+	print HTML Tr(th("File"), th("Reads"), th("Bases"), th("Max Read Length"));
+	my $total_bases = 0;
+	my $total_reads = 0;
+	foreach my $key (sort keys %{$summary->{sequence_conversion}->{reads}})
 	{
-		print HTML Tr(td($key), td($summary->{reads}->{$key}));
+		my $c = $summary->{sequence_conversion}->{reads}->{$key};
+		print HTML Tr(td($key), td($c->{num_reads}), td($c->{total_bases}), td($c->{max_read_length}));
+		$total_bases += $c->{total_bases};
+		$total_reads += $c->{num_reads};
 	}
+	print HTML Tr({-class=>"highlight_table_row"}, td(b("Total")), td(b($total_reads)), td(b($total_bases)), td(b($summary->{sequence_conversion}->{max_read_length})));
 	print HTML end_table();
-
-
 
 	## Write reference sequence information
-    print HTML h2("Reference Sequences");
+    print HTML h2("Reference Sequence Files");
 	print HTML start_table({-width => "100%", -border => 1, -cellspacing => 0, -cellpadding => 3});
-	print HTML Tr(th("id"), th("accession"), th("description"), th("length"));
+	print HTML Tr(th("Accession"), th("Length"), th("Description"));
 	my $total_length = 0;
-	foreach my $seq_id (sort keys %{$summary->{reference_seqs}})
+	foreach my $seq_id (sort keys %{$summary->{sequence_conversion}->{reference_sequences}})
 	{
-		print HTML Tr(td($seq_id), td($summary->{reference_seqs}->{$seq_id}->{accession}), td($summary->{reference_seqs}->{$seq_id}->{description}), td($summary->{reference_seqs}->{$seq_id}->{length}));
-		$total_length+= $summary->{reference_seqs}->{$seq_id}->{length};
-	}
-	
-	
-	
-	print HTML Tr({-class=>"highlight_table_row"}, td({-colspan=>3}, b("Total")), td($total_length));
+		my $c = $summary->{sequence_conversion}->{reference_sequences}->{$seq_id};
+		print HTML Tr(td($seq_id), td($c->{length}), td($c->{definition}));
+		$total_length+= $c->{length};
+	}	
+	print HTML Tr({-class=>"highlight_table_row"}, td(b("Total")), td(b($total_length)), td());
 	print HTML end_table();
 
-    print HTML h2("Mutations");
-	print HTML start_table({-width => "100%", -border => 1, -cellspacing => 0, -cellpadding => 3});
-	print HTML Tr(td("Nonsynonymous SNPs (dN)"), td($summary->{snps}->{nonsynonymous}->{num}));
-	print HTML Tr(td("Synonymous SNPs (dS)"), td($summary->{snps}->{synonymous}->{num}));
-	print HTML Tr(td("Noncoding SNPs"), td($summary->{snps}->{noncoding}->{num}));
-
-	foreach my $snp_key (sort keys %{$summary->{snps}})
-	{
-		foreach my $key (sort keys %{$summary->{snps}->{$snp_key}->{base_changes}})
-		{
-			my @bases = split //, $key;
-			print HTML Tr(td("$snp_key SNP $bases[0]&rarr;$bases[1]"), td($summary->{snps}->{$snp_key}->{base_changes}->{$key}));
-		}
-	}
-	print HTML end_table();
-	print HTML end_html;
 	close HTML;
 }
 
@@ -195,11 +197,14 @@ sub html_full_table
 			-title => "BRESEQ :: Predicted Mutations" . ($settings->{run_name} ?  " :: $settings->{run_name}" : ''), 
 			-head  => style({type => 'text/css'},$header_style_string),
 	    ),
+		h2("Within-Read Mutations"),
 		html_snp_table_string($snps_list_ref),
 		p,
+		h2("Missing-Coverage Deletions"),
 		html_deletion_table_string($deletion_list_ref),
 		p,
-		html_junction_table_string($hybrid_list_ref, $ref_seq_info),
+		h2("Mosaic-Read Junctions"),
+		html_junction_table_string($settings, $hybrid_list_ref, $ref_seq_info),
 		end_html;
 
 	close HTML;
@@ -223,14 +228,11 @@ sub html_snp_table_string
 	$output_str.= th(
 		[
 			"seq",
-			"start", 
-			"end", 
-			"ref", 
-			"change", 
-			"quality", 
+			"pos", 
+			"mut", 
+			"score", 
 			"cov", 
 			"tot_cov", 
-			"type", 
 			"gene position", 
 			"codon change", 
 			"aa change", 
@@ -317,13 +319,10 @@ sub html_snp_table_string
 				[
 					make_nonbreaking($c->{seq_id}),
 					$c->{gene_shifted_start}, #. " (" . $c->{start} . ")", 
-					$c->{gene_shifted_end}, #. " (" . $c->{end} . ")", 
-					$ref_base_str, 
-					"$c->{new_seq} (FR=$display_fraction, SFET=$display_fisher_p_value)", 
+					code("$ref_base_str&rarr;$c->{new_seq}") . "&nbsp;(FR=$display_fraction, SFET=$display_fisher_p_value)", 
 					$display_quality, 
 					$best_coverage_string,
 					$total_coverage_string,
-					$c->{type}, 
 					$position, 
 					code($codon_change), 
 					code($aa_change), 
@@ -339,13 +338,10 @@ sub html_snp_table_string
 				[
 					make_nonbreaking($c->{seq_id}),
 					$c->{gene_shifted_start}, #. " (" . $c->{start} . ")", 
-					$c->{gene_shifted_end}, #. " (" . $c->{end} . ")", 
-					$c->{ref_seq}, 
-					$c->{new_seq}, 
+					code("$c->{ref_seq}&rarr;$c->{new_seq}"), 
 					$display_quality, 
 					$best_coverage_string,
 					$total_coverage_string,
-					$c->{type}, 
 					$position, 
 					code($codon_change), 
 					code($aa_change), 
@@ -394,10 +390,6 @@ sub html_deletion_table_string
 			"start", 
 			"end", 
 			"size", 
-			"left_cov", 
-			"left_inside_cov", 
-			"right_inside_cov",
-			"right_cov", 
 		]
 	);		
 	$output_str.= th({-width => "100%"}, "genes"); 
@@ -431,10 +423,6 @@ sub html_deletion_table_string
 				$c->{start}, 
 				$c->{end},
 				$c->{size}, 
-				$c->{left_unique_cov}, 
-				$c->{left_inside_unique_cov},
-				$c->{right_inside_unique_cov},
-				$c->{right_unique_cov},
 				i($gene_string),
 		
 			]
@@ -447,11 +435,11 @@ sub html_deletion_table_string
 
 sub html_junction_table_string
 {
-	our ($list_ref, $ref_seq_info, $force_link) = @_;
+	our ($settings, $list_ref, $ref_seq_info, $force_link) = @_;
 	my $output_str = '';
 	
 	###
-	# Sort the junctions by unique coordinates
+	# Sort the junctions by unique coordinates or by their scores
 	###
 	sub by_unique_coord
 	{
@@ -463,7 +451,25 @@ sub html_junction_table_string
 	
 		return (($a_seq_order <=> $b_seq_order) || ($a_pos <=> $b_pos));
 	}
-	@$list_ref = sort by_unique_coord @$list_ref;
+	
+	if ($settings->{sort_junctions_by_score})
+	{
+		@$list_ref = sort { -($a->{score} <=> $b->{score}) || ($a->{total_reads} <=> $a->{total_reads}) } @$list_ref;
+		my $last = 100;
+		$last = scalar @$list_ref if (scalar @$list_ref < $last);
+
+		my @new;
+		foreach my $j (0..($last-1))
+		{
+			push @new, $list_ref->[$j];
+		}
+		@$list_ref = @new;		
+	}
+	else
+	{
+		@$list_ref = sort by_unique_coord @$list_ref;
+	}
+	
 	
 	###
 	# Merge predictions for IS insertions
@@ -653,7 +659,7 @@ sub html_junction_table_string
 			$output_str.= start_Tr({-class=> "is_insertion_header"});
 			$output_str.= td({-colspan=>1}, '') if ($link); 
 			$output_str.= td({-colspan=>1}, '');
-			$output_str.= td({-colspan=>1}, make_nonbreaking($isi->{seq_id}));			
+			$output_str.= td({-colspan=>1}, '');			
 			$output_str.= td({-colspan=>1}, $isi->{after_pos});
 			$output_str.= td({-colspan=>1}, '');
 			$output_str.= td({-colspan=>1}, '');
@@ -743,7 +749,7 @@ sub html_junction_table_string
 
 sub html_alignment_file
 {
-	my ($interval) = @_;
+	my ($settings, $interval) = @_;
 	
 	my $title = '';
 	if (defined $interval->{deletion})
@@ -777,7 +783,7 @@ sub html_alignment_file
 	}
 	elsif (defined $interval->{hybrid})
 	{
-		print HTML html_junction_table_string([$interval->{hybrid}], 0);
+		print HTML html_junction_table_string($settings, [$interval->{hybrid}], undef, 0);
 	}
 	else
 	{
@@ -931,7 +937,7 @@ sub text_alignment_file
 
 sub write_genome_diff
 {
-	my ($file_name, $settings, $snps_list_ref, $deletion_list_ref, $hybrid_list_ref, $unknown_list_ref) = @_;
+	my ($file_name, $settings, $snps_list_ref, $deletion_list_ref, $hybrid_list_ref, $unknown_list_ref, $unsorted) = @_;
 	
 	## Create empty genome diff object.
 	## Add mutations to it and then write file.
@@ -966,7 +972,10 @@ sub write_genome_diff
 			quality => $snp->{quality},
 			tot_cov => $snp->{total_coverage_string},
 			new_cov => $snp->{best_coverage_string},
+			
 		};
+		
+		$item->{marginal} = 1 if ($snp->{marginal});
 		
 #		delete $item->{ref_seq} if ($snp->{ref_seq} eq '.');
 #		delete $item->{new_seq} if ($snp->{new_seq} eq '.');
@@ -995,21 +1004,36 @@ sub write_genome_diff
 		$gd->add_mutation($item);
 	}
 
-	foreach my $hyb ($hybrid_list_ref)
+	foreach my $hyb (@$hybrid_list_ref)
 	{
-		print Dumper($hyb);
-#		my $item = { 
-#			type => 'JCT',
-#			evidence => "missing_coverage",
-#			seq_id => $del->{seq_id},
-#			pos => "$del->{start}-$del->{end}",
-#			genes => $del->{genes},
-#			left_outside_cov => $del->{left_unique_cov},
-#			left_inside_cov => $del->{left_inside_unique_cov},
-#			right_outside_cov => $del->{right_unique_cov},
-#			right_inside_cov => $del->{right_inside_unique_cov},
-#		};
-#		$gd->add_mutation($item);
+		my $item = { 
+			type => 'JCT',
+			evidence => "mosaic_read",
+			seq_id => $hyb->{interval_1}->{seq_id},
+			pos => $hyb->{interval_1}->{start},
+			redundant => $hyb->{interval_1}->{redundant},
+			strand => $hyb->{interval_1}->{strand},
+			seq_id_2 => $hyb->{interval_2}->{seq_id},
+			pos_2 => $hyb->{interval_2}->{start},
+			redundant_2 => $hyb->{interval_2}->{redundant},
+			strand_2 => $hyb->{interval_2}->{strand},
+			key => $hyb->{key},
+			overlap => $hyb->{overlap},
+			total_reads => $hyb->{total_reads},
+			start => $hyb->{start},
+			end => $hyb->{end},
+			flanking_length => $hyb->{flanking_length},
+		};
+		
+		my $test_info = $hyb->{test_info};
+		foreach my $key (keys %$test_info)
+		{		
+			$item->{$key} = $test_info->{$key};
+		};		
+		
+		$item->{marginal} = 1 if ($hyb->{marginal});
+				
+		$gd->add_mutation($item);
 	}
 	
 	foreach my $unk (@$unknown_list_ref)
@@ -1023,8 +1047,8 @@ sub write_genome_diff
 		};
 		$gd->add_mutation($item);
 	}
-
-	$gd->write($file_name);
+	
+	$gd->write($file_name, $unsorted);
 }
 
 sub read_genome_diff
@@ -1057,8 +1081,23 @@ sub read_genome_diff
 		$mut->{size} = $mut->{end} - $mut->{start} + 1;
 	}
 	
-	@{$mutation_info->{hybrids}}   = grep {$_->{type} eq 'JCT'} $gd->mutations;
+	@{$mutation_info->{hybrids}} = grep {$_->{type} eq 'JCT'} $gd->mutations;
+	foreach my $mut (@{$mutation_info->{hybrids}})
+	{
+		$mut->{interval_1}->{start} = $mut->{pos};
+		$mut->{interval_1}->{end} = $mut->{pos};
+		$mut->{interval_1}->{strand} = $mut->{strand};
+		$mut->{interval_1}->{seq_id} = $mut->{seq_id};
+		$mut->{interval_1}->{redundant} = $mut->{redundant};
+
+		$mut->{interval_2}->{start} = $mut->{pos_2};
+		$mut->{interval_2}->{end} = $mut->{pos_2};
+		$mut->{interval_2}->{strand} = $mut->{strand_2};
+		$mut->{interval_2}->{seq_id} = $mut->{seq_id_2};
+		$mut->{interval_2}->{redundant} = $mut->{redundant_2};
 		
+		$mut->{seq_id} = $mut->{key};
+	}		
 	return $mutation_info;
 }
 

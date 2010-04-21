@@ -133,20 +133,6 @@ my $summary = {};
 my $settings = Breseq::Settings->new;
 Breseq::Output::record_time("Start");
 
-
-###
-### Bail right away if the output is already done.
-###
-
-{
-	my $output_done_file_name = $settings->file_name('output_done_file_name');	
-	if (-e $output_done_file_name)
-	{
-		print STDERR "Output is already complete.\n";
-		exit 0;
-	}
-}
-
 ##
 # Convert the read fastq file to fasta for input into MUMmer
 sub sequence_conversion {}
@@ -188,10 +174,11 @@ if (!-e $sequence_conversion_done_file_name)
 		{
 			my $read_length = length $seq->{seq};
 			$total_bases += $read_length;
+			$num_reads++;
 			$max_read_length = $read_length if ((!defined $max_read_length) || ($read_length > $max_read_length));
 		}
-		$s->{reads}->{$read_file}->{total_bases} = $max_read_length;
-		$s->{reads}->{$read_file}->{num_reads} = $max_read_length;
+		$s->{reads}->{$read_file}->{total_bases} = $total_bases;
+		$s->{reads}->{$read_file}->{num_reads} = $num_reads;
 		$s->{reads}->{$read_file}->{max_read_length} = $max_read_length;
 		$overall_max_read_length = $max_read_length if ((!defined $overall_max_read_length) || ($max_read_length > $overall_max_read_length));
 	}
@@ -764,70 +751,77 @@ if (!$settings->{no_mutation_prediction}) #could remove conditional?
 
 
 
-###
-## Output Genome Diff File
-sub genome_diff_output {}
-###
 
-{	
+my $output_done_file_name = $settings->file_name('output_done_file_name');	
+if (!-e $output_done_file_name)
+{
+	###
+	## Output Genome Diff File
+	sub genome_diff_output {}
+	###
 	print STDERR "Creating genome diff file...\n";
 
 	### filter what hybrids we believe in...
 	### this should also annotate and do much more of the filtering that is currently done
 	### during the prediction step
-	my @new_hybrids;
 	foreach my $hybrid (@hybrids)
 	{
 		my $coverage_cutoff_1 = $settings->{unique_coverage}->{$hybrid->{interval_1}->{seq_id}}->{deletion_coverage_propagation_cutoff};
 		my $coverage_cutoff_2 = $settings->{unique_coverage}->{$hybrid->{interval_2}->{seq_id}}->{deletion_coverage_propagation_cutoff};
-		push @new_hybrids, $hybrid 	if (($hybrid->{total_reads} >= $coverage_cutoff_1) || ($hybrid->{total_reads} >= $coverage_cutoff_2));
+		$hybrid->{marginal} = 1 if (($hybrid->{total_reads} < $coverage_cutoff_1) &&  ($hybrid->{total_reads} < $coverage_cutoff_2));
 	}
-	@hybrids = @new_hybrids;
 	
 	my $full_genome_diff_file_name = $settings->file_name('full_genome_diff_file_name');
 	my $filtered_genome_diff_file_name = $settings->file_name('filtered_genome_diff_file_name');
+	my $marginal_genome_diff_file_name = $settings->file_name('marginal_genome_diff_file_name');
 	
 	Breseq::Output::write_genome_diff($full_genome_diff_file_name, $settings, \@mutations, \@deletions, \@hybrids, \@unknowns);
-	Breseq::Shared::system("gd_utils.pl FILTER -i $full_genome_diff_file_name -o $filtered_genome_diff_file_name");
-}
+	my $conditions = "marginal!=1";
+	Breseq::Shared::system("gd_utils.pl FILTER -i $full_genome_diff_file_name -o $filtered_genome_diff_file_name -r $marginal_genome_diff_file_name $conditions");
 
 
+	###
+	## Below this point is optional and has heftier prerequisites
+	## for running, including R and BioPerl
+	## 
+	###
+	if (1)
+	{
+		my $marginal_html_file_name = $settings->file_name('marginal_html_file_name');
+		
+		my $res;
+		$res = Breseq::Shared::system("gd_utils.pl ANNOTATE -i $filtered_genome_diff_file_name $settings->{arguments} ", 0, 1);
+		my $annotated_mutations = ($res == 0);
+		$res = Breseq::Shared::system("gd_utils.pl ANNOTATE -i $marginal_genome_diff_file_name --html-mutation-file=$marginal_html_file_name --sort_junctions_by_score $settings->{arguments} ", 0, 1);
+		my $annotated_marginal = ($res == 0);
 
+		my $index_html_file_name = $settings->file_name('index_html_file_name');	
+		Breseq::Output::html_index($index_html_file_name, $settings, $summary, $ref_seq_info, $annotated_mutations, $annotated_marginal);
 
-###
-## Below this point is optional and has heftier prerequisites
-## for running, including R and BioPerl
-###
-if ($settings->{annotate})
-{
-	my $filtered_genome_diff_file_name = $settings->file_name('filtered_genome_diff_file_name');
-	Breseq::Shared::system("gd_utils.pl ANNOTATE -i $filtered_genome_diff_file_name $settings->{arguments}");
+		###
+		## Temporary debug output using Data::Dumper
+		###
+
+		my $summary_text_file_name = $settings->file_name('summary_text_file_name');
+		open SUM, ">$summary_text_file_name";
+		print SUM Dumper($summary);
+		close SUM;
 	
-	###
-	## Temporary debug output using Data::Dumper
-	###
-
-	my $summary_text_file_name = $settings->file_name('summary_text_file_name');
-	open SUM, ">$summary_text_file_name";
-	print SUM Dumper($summary);
-	close SUM;
-	
-	my $settings_text_file_name = $settings->file_name('settings_text_file_name');
-	open SETTINGS, ">$settings_text_file_name";
-	print SETTINGS Dumper($settings);
-	close SETTINGS;
-
-	###
-	## Temporary debug output using Data::Dumper
-	###
+		my $settings_text_file_name = $settings->file_name('settings_text_file_name');
+		open SETTINGS, ">$settings_text_file_name";
+		print SETTINGS Dumper($settings);
+		close SETTINGS;
+		
+		###
+		## Temporary debug output using Data::Dumper
+		###
+	}
 
 	## record the final time and print summary table
 	Breseq::Output::record_time("End");
-	Breseq::Output::html_summary_table($settings->{summary_html_file_name}, $settings, \@Breseq::Output::execution_times, $summary);
+	Breseq::Output::html_summary_table($settings->{summary_html_file_name}, $settings, $summary, \@Breseq::Output::execution_times);
 
 	my $output_done_file_name = $settings->file_name('output_done_file_name');	
 	open DONE, ">$output_done_file_name";
 	close DONE;
 }
-
-

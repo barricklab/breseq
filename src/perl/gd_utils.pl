@@ -113,6 +113,7 @@ sub do_filter
 {	
 	my ($help, $man, $verbose);
 	my $output = 'output.gd'; 
+	my $removed = 'removed.gd';
 	my $input = ();
 	
 	GetOptions(
@@ -120,33 +121,65 @@ sub do_filter
 		'verbose|v' => \$verbose,
 		'output|o=s' => \$output,
 		'input|i=s' => \$input,
-			
+		'removed|r=s' => \$removed,
 	) or pod2usage(2);
 	pod2usage(1) if $help;
 	pod2usage(-exitstatus => 0, -verbose => 2) if $man;
 
+	my @input_conditions = @ARGV;
+
+	our @conditions = ();
+	foreach my $ic (@input_conditions)
+	{		
+		my $c;
+	 	if (!($ic =~ m/^(.+?)\s*?(==|<=|>=|<|>|!=|\s+eq\s+|\s+ne\s+|\s+lt\s+|\s+gt\s+|\s+le\s+|\s+ge\s+)\s*?(.+)$/))
+		{
+			print STDERR "Could not interpret filter: $ic\n";
+			next;
+		}
+		
+		$c->{key} = $1;
+		$c->{value} = $3;
+		$c->{comparison} = $2;
+		push @conditions, $c;
+		
+		print STDERR "Condition: $c->{key} | $c->{comparison} | $c->{value}\n";
+		
+	}
+	
 	my $gd = Breseq::GenomeDiff->new(-FILE_NAME => $input);
 		
 	### screen out polymorphism predictions at this step
 	sub mutation_filter
 	{
-		my ($c) = @_;
+		my ($mut) = @_;
+		
 		
 		my $accept = 1;
-#		if ($c->{type} eq 'SNP')
-#		{
-#			my $polymorphism = $c->{polymorphism};
-#			
-#			$accept = 0 if ($polymorphism->{log10_e_value} < $settings->{polymorphism_log10_e_value_cutoff});
-#			$accept = 0 if ($polymorphism->{fisher_strand_p_value} < $settings->{polymorphism_fisher_strand_p_value_cutoff});
-#			$accept = 0 if ($polymorphism->{fraction} < $settings->{polymorphism_fraction_cutoff});
-#			$accept = 0 if ($polymorphism->{fraction} > 1-$settings->{polymorphism_fraction_cutoff});
-#		}	
+		
+		foreach my $c (@conditions)
+		{						
+			next if (!defined $mut->{$c->{key}});
+			
+			#print STDERR "return (\"$mut->{$c->{key}}\" $c->{comparison} \"$c->{value}\")\n";
+			
+			my $res = 1;
+			if ($c->{comparison} =~ m/(>)/)
+			{
+				$res = eval "return ($mut->{$c->{key}} $c->{comparison} $c->{value})";
+			}
+			else
+			{
+				$res = eval "return (\"$mut->{$c->{key}}\" $c->{comparison} \"$c->{value}\")";
+			}
+		 	$accept = ($accept && $res);
+		}
 		
 		return $accept;
 	}	
 		
-	$gd->filter_mutations(\&mutation_filter);	
+	my $removed_gd = $gd->filter_mutations(\&mutation_filter);
+	$removed_gd->write($removed) if ($removed);	
 	$gd->write($output);
 }
 
@@ -378,7 +411,7 @@ sub do_annotate
 		foreach my $c (@composite_list) # , @hybrids)
 		{
 			print STDERR "Creating alignment file: $c->{link}\n";
-			Breseq::Output::html_alignment_file($c);		
+			Breseq::Output::html_alignment_file($settings, $c);		
 		}
 	}
 
@@ -389,6 +422,7 @@ sub do_annotate
 
 	print STDERR "Creating full HTML table...\n";	
 	my $mutation_file_name = $settings->file_name('mutations_html_file_name');
+	$mutation_file_name = $settings->{html_mutation_file} if ($settings->{html_mutation_file});
 	Breseq::Output::html_full_table($mutation_file_name, $settings, $ref_seq_info, \@mutations, \@deletions, \@hybrids);
 	
 }

@@ -4,7 +4,7 @@ SELF=`dirname ${BASH_SOURCE}`
 . ${SELF}/../../etc/common.sh
 
 testcmd() {
-    ${BRESEQ} --no-junction \
+    ${BRESEQ} \
         -o ${SELF} \
         -r ${DATADIR}/lambda/lambda.gbk \
         ${DATADIR}/lambda/lambda_mixed_population.fastq

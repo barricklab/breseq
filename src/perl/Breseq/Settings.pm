@@ -84,7 +84,7 @@ sub new
 	
 	#used by MutationIdentification.pm
 	$self->{polymorphism_log10_e_value_cutoff} = 2;
-	$self->{mutation_log10_e_value_cutoff} = 2;			# log10 of evidence required for SNP calls 
+	$self->{mutation_log10_e_value_cutoff} = 2;			# log10 of evidence required for SNP calls 	
 	$self->{polymorphism_fisher_strand_p_value_cutoff} = 0.05;
 	
 	#keep this on by default
@@ -127,7 +127,6 @@ sub new
 		'error-model=s' => \$self->{error_model_method},
 		'resume' => \$self->{resume_run},
 		'continue' => \$self->{continue_run},
-		'annotate|a' => \$self->{annotate},		
 	) or pod2usage(2);
 
 	pod2usage(1) if $help;
@@ -135,6 +134,13 @@ sub new
 	pod2usage(-exitstatus => 0, -verbose => 2) if (scalar @ARGV == 0);
 	
 	$self->initialize;
+	
+	my ($sec,$min,$hour,$mday,$mon,$year,$wday,$yday,$isdst)=localtime(time);
+	my $time_stamp = sprintf "%4d-%02d-%02d %02d:%02d:%02d",$year+1900,$mon+1,$mday,$hour,$min,$sec;
+	$self->log($time_stamp);	
+	$self->log($self->{full_command_line});
+	
+	return $self;
 }
 
 
@@ -184,7 +190,6 @@ sub new_annotate
 	$self->{polymorphism_fisher_strand_p_value_cutoff} = 0.05;
 	
 	#keep this on by default
-	
 	my ($help, $man);
 	my ($resume_run, $continue_run);
 	GetOptions(
@@ -223,7 +228,8 @@ sub new_annotate
 		'input-genome-diff|i=s' => \@{$self->{input_genome_diffs}},	
 		'resume' => \$self->{resume_run},
 		'continue' => \$self->{continue_run},
-		'annotate|a' => \$self->{annotate},					
+		'html-mutation-file=s' => \$self->{html_mutation_file},
+		'sort_junctions_by_score' => \$self->{sort_junctions_by_score},
 	) or pod2usage(2);
 
 	pod2usage(1) if $help;
@@ -231,6 +237,8 @@ sub new_annotate
 	pod2usage(-exitstatus => 0, -verbose => 2) if (scalar @ARGV == 0);
 	
 	$self->initialize;
+		
+	return $self;
 }
 
 
@@ -292,6 +300,7 @@ sub initialize
 	$self->{unmatched_read_file_name} = "$self->{alignment_correction_path}/#.unmatched.fastq";
 	$self->{alignment_correction_summary_file_name} = "$self->{alignment_correction_path}/summary.bin";
 	$self->{alignment_correction_done_file_name} = "$self->{alignment_correction_path}/alignment_resolution.done";
+	$self->{rejected_junction_genome_diff_file_name} = "$self->{alignment_correction_path}/rejected_junctions.gd";
 
 	##### index BAM #####
 	$self->{bam_path} = "06_bam";
@@ -315,7 +324,9 @@ sub initialize
 	$self->{coverage_file_name} = "$self->{error_calibration_path}/@.coverage.tab";
 	$self->{unique_only_coverage_distribution_file_name} = "$self->{error_calibration_path}/@.unique_only_coverage_distribution.tab";
 	$self->{error_rates_summary_file_name} = "$self->{error_calibration_path}/summary.bin";
-
+	$self->{unique_coverage_distribution_r_script_file_name} = "$self->{error_calibration_path}/coverage.@.r_script";
+	$self->{error_rates_r_script_file_name} = "$self->{error_calibration_path}/error_rates.#.r_script";
+	
 	##### mutation identification #####
 	$self->{mutation_identification_path} = "08_mutation_identification";
 	$self->{mutation_identification_path} = "$self->{base_output_path}/$self->{mutation_identification_path}" if ($self->{base_output_path});
@@ -329,20 +340,27 @@ sub initialize
 	$self->{output_path} = "output";
 	$self->{output_path} = "$self->{base_output_path}/$self->{output_path}" if ($self->{base_output_path});
 	$self->{output_done_file_name} = "$self->{output_path}/output.done";
-	$self->{log_file_name} = "$self->{output_path}/log.out";
+	$self->{log_file_name} = "$self->{output_path}/log.txt";
 	$self->{junction_file_name} = "$self->{output_path}/new_junctions.tab";
 	$self->{snps_file_name} = "$self->{output_path}/snps.tab";
-	$self->{mutations_html_file_name} = "$self->{output_path}/mutations.html";
-	$self->{full_genome_diff_file_name} = "$self->{output_path}/mutations.all.gd";
-	$self->{filtered_genome_diff_file_name} = "$self->{output_path}/mutations.gd";
+	
+	$self->{index_html_file_name} = "$self->{output_path}/index.html";
 	$self->{summary_html_file_name} = "$self->{output_path}/summary.html";
+	$self->{mutations_html_file_name} = "$self->{output_path}/mutations.html";
+	$self->{marginal_html_file_name} = "$self->{output_path}/marginal.html";
+	
+	$self->{full_genome_diff_file_name} = "$self->{output_path}/candidates.gd";
+	$self->{filtered_genome_diff_file_name} = "$self->{output_path}/mutations.gd";
+	$self->{marginal_genome_diff_file_name} = "$self->{output_path}/marginal.gd";
+	
 	$self->{local_alignment_path} = "alignment";
 	$self->{alignment_path} = "$self->{output_path}/$self->{local_alignment_path}";
 	$self->{local_coverage_graph_path} = "coverage";
 	$self->{coverage_graph_path} = "$self->{output_path}/$self->{local_coverage_graph_path}";
 	$self->{plot_coverage_done_file_name} = "$self->{coverage_graph_path}/@.plot_coverage.done";
-	$self->{unique_only_coverage_plot_file_name} = "$self->{output_path}/@.unique_coverage.pdf";
-	$self->{error_rates_plot_file_name} = "$self->{output_path}/#.error_rates.pdf";
+	$self->{output_calibration_path} = "$self->{output_path}/calibration";
+	$self->{unique_only_coverage_plot_file_name} = "$self->{output_calibration_path}/@.unique_coverage.pdf";
+	$self->{error_rates_plot_file_name} = "$self->{output_calibration_path}/#.error_rates.pdf";
 	## text output files
 	$self->{mutations_text_file_name} = "$self->{output_path}/mutations.tab";
 	$self->{deletions_text_file_name} = "$self->{output_path}/deletions.tab";
@@ -397,8 +415,7 @@ sub initialize
 			my $read_file = $read_fastq_file;
 			$read_file =~ s/\.fastq$//; #no trailing .fastq
 			$read_file =~ s/.+\///; #no beginning path
-			push @{$self->{read_file_base_names}}, $read_file;	
-			
+			push @{$self->{read_file_base_names}}, $read_file;				
 			push @{$read_structure->{base_names}}, $read_file;	
 			push @{$self->{read_file_index_to_struct_index}}, $#{$self->{read_structures}};
 
@@ -444,11 +461,6 @@ sub initialize
 		rmtree([$self->{mummer_path}, $self->{fasta_conversion_path}]);
 	}
 
-	my ($sec,$min,$hour,$mday,$mon,$year,$wday,$yday,$isdst)=localtime(time);
-	my $time_stamp = sprintf "%4d-%02d-%02d %02d:%02d:%02d",$year+1900,$mon+1,$mday,$hour,$min,$sec;
-	$self->log($time_stamp);	
-	$self->log($self->{full_command_line});
-
 	return $self;
 }
 
@@ -490,6 +502,14 @@ sub substitute_file_name
 		
 	#otherwise return single value
 	return $file_name;
+}
+
+sub html_path
+{
+	my ($self, $file_name_key, $sub_hash)= @_;
+	my $file_name = $self->file_name($file_name_key,$sub_hash);	
+	$file_name =~ s/^$self->{output_path}\///;
+	$file_name or $self->throw("Settings file \"$file_name_key\" not found.");
 }
 
 
@@ -552,6 +572,8 @@ sub log
 	my ($self, $message) = @_;
 	
 	$self->create_path('output_path');
+	$self->create_path('output_calibration_path');
+	
 	open LOG, ">>", $self->file_name('log_file_name');
 	print LOG "$message\n";
 	close LOG;

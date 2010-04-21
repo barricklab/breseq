@@ -52,6 +52,9 @@ sub new
 	my $class = ref($caller) || $caller;
 	my $self = new Bio::Root::Root($caller, @args);
 
+	#initialize
+	@{$self->{mutations}} = ();
+
 	bless ($self, $class);
 	$self->{file_name} = $self->Bio::Root::RootI::_rearrange([qw(FILE_NAME)], @args);
 	$self->{file_name} = $self->Bio::Root::RootI::_rearrange([qw(FILE)], @args) if (!defined $self->{file_name});
@@ -156,7 +159,7 @@ sub mutations
 
 sub write
 {
-	my ($self, $file_name) = @_;
+	my ($self, $file_name, $no_sort) = @_;
 
 	## read version from first line
 	open OUT, ">$file_name" or $self->throw("Could not write file: $file_name");
@@ -172,7 +175,9 @@ sub write
 		return (($a->{seq_id} cmp $b->{seq_id}) || ($a_pos <=> $b_pos));
 	}
 
-	foreach my $mut (sort by_seq_id_pos @{$self->{mutations}})
+	@{$self->{mutations}} = sort by_seq_id_pos @{$self->{mutations}} if (!$no_sort);
+
+	foreach my $mut (@{$self->{mutations}})
 	{
 		print OUT $self->hash_to_line($mut) . "\n";
 	}
@@ -210,7 +215,24 @@ sub has_mutation
 sub filter_mutations
 {
 	my ($self, $filter_function) = @_;
-	@{$self->{mutations}} = grep { $filter_function->($_) } $self->mutations;
+	
+	my @new_mutations = ();
+	my $removed_gd = Breseq::GenomeDiff->new();
+	
+	foreach my $mut ($self->mutations)
+	{
+		if ($filter_function->($mut))
+		{
+			push @new_mutations, $mut;
+		}
+		else
+		{
+			$removed_gd->add_mutation($mut);
+		}
+	}
+	@{$self->{mutations}} = @new_mutations;
+	
+	return $removed_gd;
 }
 
 =head2 find_common_mutations

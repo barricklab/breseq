@@ -111,7 +111,8 @@ sub identify_mutations
 
 		### hash reference that is returned, contains fields:
 		###  'mutations', 'unknowns', 'deletions'
-		my @mutations;
+		our @mutations = ();
+		our @marginal_mutations = ();
 		our @unknowns = ();
 		our @deletions = ();
 	
@@ -516,6 +517,7 @@ sub identify_mutations
 
 				#otherwise correct to an e-value based on genome size
 				#could correct only to number of unique positions???
+				
 				if (defined $pr_call)
 				{
 					$e_value_call = $pr_call - $log10_ref_length;
@@ -570,7 +572,7 @@ sub identify_mutations
 						if ($polymorphism->{log10_e_value} >= 2)
 						{
 							$polymorphism_predicted = 1;
-							print Dumper($polymorphism);
+							#print Dumper($polymorphism);
 						}
 						$base_predicted = 1 if ($polymorphism_predicted);
 					}					
@@ -586,7 +588,8 @@ sub identify_mutations
 				
 				## evaluate whether to call an actual mutation!				
 				### skip if there is not enough evidence for a call or if it agrees with the reference
-				next if (!$base_predicted);
+			#	next if (!$base_predicted);	
+				next if (($e_value_call eq 'NA') || ($e_value_call < -$log10_ref_length));
 
 				## mutation and polymorphism are exclusive predictions.
 				my $mutation_predicted = (!$polymorphism_predicted) && ($best_base ne $ref_base);
@@ -615,8 +618,18 @@ sub identify_mutations
 					$mut->{insert_start} = $insert_count;
 					$mut->{insert_end} = $insert_count;
 					
-					print Dumper($mut);
-					push @mutations, $mut;
+
+					if ($e_value_call >= $settings->{mutation_log10_e_value_cutoff})
+					{
+						push @mutations, $mut;
+					}
+					else
+					{
+						$mut->{marginal} = 1;
+						push @marginal_mutations, $mut;
+					}
+					
+					#print Dumper($mut);
 				}
 				if ($polymorphism_predicted)
 				{
@@ -632,7 +645,7 @@ sub identify_mutations
 					$mut->{ref_seq} = $ref_base;
 					
 					### NOTE: This neglects the case where neither the first nor second base is the reference base					
-	#				die if (($polymorphism->{first_base} ne $ref_base) && ($polymorphism->{second_base} ne $ref_base));
+#					die if (($polymorphism->{first_base} ne $ref_base) && ($polymorphism->{second_base} ne $ref_base));
 					
 					if ($polymorphism->{second_base} eq $ref_base)
 					{
@@ -647,7 +660,7 @@ sub identify_mutations
 					$mut->{best_coverage_string} = $best_cov->{-1} . "/" . $best_cov->{1};
 					$mut->{insert_start} = $insert_count;
 					$mut->{insert_end} = $insert_count;					
-					print Dumper($mut);
+#					print Dumper($mut);
 					push @mutations, $mut;
 				}
 			} continue {
@@ -673,52 +686,12 @@ sub identify_mutations
 			#print Dumper(\@unknowns); ##DEBUG
 		}
 		
-		###
-		## Gather together insertions and deletions that occur next to each other
-		## ...unless we are predicting polymorphisms
-		###
-
-		if (!$settings->{polymorphism_prediction})
-		{
-			my $lc;
-			for (my $i=0; $i<scalar @mutations; $i++)
-			{
-				my $c = $mutations[$i];	 
-
-				#if the same position and both are tandem insertion
-				if ($lc && ($lc->{start} == $c->{start}) && ($lc->{insert_end}+1 == $c->{insert_start}))
-				{
-					$lc->{insert_end} = $c->{insert_start};
-					$lc->{new_seq} .= $c->{new_seq};
-					$lc->{quality} .= ",$c->{quality}";
-					$lc->{total_coverage_string} .= ",$c->{total_coverage_string}";
-					$lc->{best_coverage_string} .= ",$c->{best_coverage_string}";
-					splice @mutations, $i, 1;
-					$i--;
-					next;
-				}
-
-				#if the positions are next to each other and both are deletions...
-				if ($lc && ($lc->{end}+1 == $c->{start}) && ($lc->{new_seq} eq '.') && ($c->{new_seq} eq '.') )
-				{
-					$lc->{end} = $c->{start};
-					$lc->{ref_seq} .= $c->{ref_seq};
-					$lc->{quality} .= ",$c->{quality}";
-					$lc->{total_coverage_string} .= ",$c->{total_coverage_string}";
-					$lc->{best_coverage_string} .= ",$c->{best_coverage_string}";
-					splice @mutations, $i, 1;
-					$i--;
-					next;
-				}
-
-				$lc = $c;
-			}
-		}
-		
 		close COV;
 		close MUT;	
-
+		
+		push @mutations, @marginal_mutations;
 		remove_deletions_overlapping_mutations(\@deletions, \@mutations);
+
 
 		#a hash reference of hash references of list references
 		my $new_read_mut_info = {

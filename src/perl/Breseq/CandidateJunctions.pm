@@ -166,7 +166,7 @@ sub identify_candidate_junctions
 	##   eliminate subsequences as we go.
 	###
 	
-	print STDERR "  Before taking top candidates:" . (scalar @combined_candidate_junctions) . "\n";
+#	print STDERR "  Before taking top candidates:" . (scalar @combined_candidate_junctions) . "\n";
 	
 	my @duplicate_sequences;
 	if ((defined $settings->{maximum_candidate_junctions}) && (@combined_candidate_junctions > 0))
@@ -206,15 +206,15 @@ sub identify_candidate_junctions
 				$i++;
 			}
 			
-			print "    Number with junction score $current_reads_for_candidate_junction = " . (scalar @list_in_waiting) . "\n";
+#			print "    Number with junction score $current_reads_for_candidate_junction = " . (scalar @list_in_waiting) . "\n";
 		}
 		@combined_candidate_junctions = @remaining_ids;
 		$summary->{cutoff_reads_for_candidate_junction} = $cutoff_reads_for_candidate_junction;
 		
-		print STDERR "  Junction score cutoff for printing: $cutoff_reads_for_candidate_junction\n";
+#		print STDERR "  Junction score cutoff for printing: $cutoff_reads_for_candidate_junction\n";
 	}
 	
-	print STDERR "  After taking top candidates:" . (scalar @combined_candidate_junctions) . "\n";
+#	print STDERR "  After taking top candidates:" . (scalar @combined_candidate_junctions) . "\n";
 	
 	
 	###

@@ -5,6 +5,7 @@
 #include <vector>
 #include <sam.h>
 #include <faidx.h>
+#include <assert.h>
 #include "error_count.h"
 
 
