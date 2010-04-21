@@ -3,20 +3,20 @@
 <plist version="1.0">
 <dict>
 	<key>currentDocument</key>
-	<string>Breseq/ErrorCalibration.pm</string>
+	<string>Breseq/Output.pm</string>
 	<key>documents</key>
 	<array>
 		<dict>
 			<key>filename</key>
 			<string>breseq.pl</string>
 			<key>lastUsed</key>
-			<date>2010-04-18T20:07:31Z</date>
+			<date>2010-04-21T01:36:52Z</date>
 		</dict>
 		<dict>
 			<key>filename</key>
 			<string>sam2html.pl</string>
 			<key>lastUsed</key>
-			<date>2010-04-16T23:53:06Z</date>
+			<date>2010-04-20T21:38:17Z</date>
 		</dict>
 		<dict>
 			<key>filename</key>
@@ -28,19 +28,19 @@
 			<key>filename</key>
 			<string>gd_utils.pl</string>
 			<key>lastUsed</key>
-			<date>2010-04-18T19:34:08Z</date>
+			<date>2010-04-21T01:30:48Z</date>
 		</dict>
 		<dict>
 			<key>filename</key>
 			<string>fastq_utils.pl</string>
 			<key>lastUsed</key>
-			<date>2010-04-16T23:55:01Z</date>
+			<date>2010-04-20T00:40:53Z</date>
 		</dict>
 		<dict>
 			<key>filename</key>
 			<string>split_genbank.pl</string>
 			<key>lastUsed</key>
-			<date>2010-03-25T00:30:55Z</date>
+			<date>2010-04-20T22:59:24Z</date>
 		</dict>
 		<dict>
 			<key>expanded</key>
@@ -62,14 +62,14 @@
 			<key>caret</key>
 			<dict>
 				<key>column</key>
-				<integer>50</integer>
+				<integer>63</integer>
 				<key>line</key>
-				<integer>48</integer>
+				<integer>969</integer>
 			</dict>
 			<key>firstVisibleColumn</key>
 			<integer>0</integer>
 			<key>firstVisibleLine</key>
-			<integer>35</integer>
+			<integer>944</integer>
 		</dict>
 		<key>Breseq/AlignmentOutput.pm</key>
 		<dict>
@@ -85,34 +85,6 @@
 			<key>firstVisibleLine</key>
 			<integer>234</integer>
 		</dict>
-		<key>Breseq/CandidateJunctions.pm</key>
-		<dict>
-			<key>caret</key>
-			<dict>
-				<key>column</key>
-				<integer>0</integer>
-				<key>line</key>
-				<integer>216</integer>
-			</dict>
-			<key>firstVisibleColumn</key>
-			<integer>0</integer>
-			<key>firstVisibleLine</key>
-			<integer>202</integer>
-		</dict>
-		<key>Breseq/ErrorCalibration.pm</key>
-		<dict>
-			<key>caret</key>
-			<dict>
-				<key>column</key>
-				<integer>1</integer>
-				<key>line</key>
-				<integer>621</integer>
-			</dict>
-			<key>firstVisibleColumn</key>
-			<integer>0</integer>
-			<key>firstVisibleLine</key>
-			<integer>613</integer>
-		</dict>
 		<key>Breseq/Fastq.pm</key>
 		<dict>
 			<key>caret</key>
@@ -127,195 +99,75 @@
 			<key>firstVisibleLine</key>
 			<integer>17</integer>
 		</dict>
-		<key>Breseq/GenomeDiff.pm</key>
-		<dict>
-			<key>caret</key>
-			<dict>
-				<key>column</key>
-				<integer>2</integer>
-				<key>line</key>
-				<integer>204</integer>
-			</dict>
-			<key>firstVisibleColumn</key>
-			<integer>0</integer>
-			<key>firstVisibleLine</key>
-			<integer>183</integer>
-		</dict>
-		<key>Breseq/MutationIdentification.pm</key>
-		<dict>
-			<key>caret</key>
-			<dict>
-				<key>column</key>
-				<integer>17</integer>
-				<key>line</key>
-				<integer>50</integer>
-			</dict>
-			<key>columnSelection</key>
-			<false/>
-			<key>firstVisibleColumn</key>
-			<integer>0</integer>
-			<key>firstVisibleLine</key>
-			<integer>38</integer>
-			<key>selectFrom</key>
-			<dict>
-				<key>column</key>
-				<integer>4</integer>
-				<key>line</key>
-				<integer>50</integer>
-			</dict>
-			<key>selectTo</key>
-			<dict>
-				<key>column</key>
-				<integer>22</integer>
-				<key>line</key>
-				<integer>50</integer>
-			</dict>
-		</dict>
 		<key>Breseq/Output.pm</key>
-		<dict>
-			<key>caret</key>
-			<dict>
-				<key>column</key>
-				<integer>56</integer>
-				<key>line</key>
-				<integer>1009</integer>
-			</dict>
-			<key>firstVisibleColumn</key>
-			<integer>0</integer>
-			<key>firstVisibleLine</key>
-			<integer>968</integer>
-		</dict>
-		<key>Breseq/ReferenceSequence.pm</key>
-		<dict>
-			<key>caret</key>
-			<dict>
-				<key>column</key>
-				<integer>3</integer>
-				<key>line</key>
-				<integer>135</integer>
-			</dict>
-			<key>columnSelection</key>
-			<false/>
-			<key>firstVisibleColumn</key>
-			<integer>0</integer>
-			<key>firstVisibleLine</key>
-			<integer>114</integer>
-			<key>selectFrom</key>
-			<dict>
-				<key>column</key>
-				<integer>30</integer>
-				<key>line</key>
-				<integer>135</integer>
-			</dict>
-			<key>selectTo</key>
-			<dict>
-				<key>column</key>
-				<integer>3</integer>
-				<key>line</key>
-				<integer>135</integer>
-			</dict>
-		</dict>
-		<key>Breseq/Settings.pm</key>
-		<dict>
-			<key>caret</key>
-			<dict>
-				<key>column</key>
-				<integer>4</integer>
-				<key>line</key>
-				<integer>258</integer>
-			</dict>
-			<key>firstVisibleColumn</key>
-			<integer>0</integer>
-			<key>firstVisibleLine</key>
-			<integer>244</integer>
-		</dict>
-		<key>Breseq/Shared.pm</key>
-		<dict>
-			<key>caret</key>
-			<dict>
-				<key>column</key>
-				<integer>4</integer>
-				<key>line</key>
-				<integer>446</integer>
-			</dict>
-			<key>columnSelection</key>
-			<false/>
-			<key>firstVisibleColumn</key>
-			<integer>0</integer>
-			<key>firstVisibleLine</key>
-			<integer>421</integer>
-			<key>selectFrom</key>
-			<dict>
-				<key>column</key>
-				<integer>70</integer>
-				<key>line</key>
-				<integer>446</integer>
-			</dict>
-			<key>selectTo</key>
-			<dict>
-				<key>column</key>
-				<integer>4</integer>
-				<key>line</key>
-				<integer>446</integer>
-			</dict>
-		</dict>
-		<key>breseq.pl</key>
-		<dict>
-			<key>caret</key>
-			<dict>
-				<key>column</key>
-				<integer>92</integer>
-				<key>line</key>
-				<integer>756</integer>
-			</dict>
-			<key>firstVisibleColumn</key>
-			<integer>0</integer>
-			<key>firstVisibleLine</key>
-			<integer>736</integer>
-		</dict>
-		<key>fastq_utils.pl</key>
 		<dict>
 			<key>caret</key>
 			<dict>
 				<key>column</key>
 				<integer>1</integer>
 				<key>line</key>
-				<integer>128</integer>
+				<integer>78</integer>
 			</dict>
 			<key>firstVisibleColumn</key>
 			<integer>0</integer>
 			<key>firstVisibleLine</key>
-			<integer>149</integer>
+			<integer>67</integer>
+		</dict>
+		<key>Breseq/Settings.pm</key>
+		<dict>
+			<key>caret</key>
+			<dict>
+				<key>column</key>
+				<integer>31</integer>
+				<key>line</key>
+				<integer>220</integer>
+			</dict>
+			<key>firstVisibleColumn</key>
+			<integer>0</integer>
+			<key>firstVisibleLine</key>
+			<integer>196</integer>
+		</dict>
+		<key>breseq.pl</key>
+		<dict>
+			<key>caret</key>
+			<dict>
+				<key>column</key>
+				<integer>5</integer>
+				<key>line</key>
+				<integer>806</integer>
+			</dict>
+			<key>firstVisibleColumn</key>
+			<integer>0</integer>
+			<key>firstVisibleLine</key>
+			<integer>771</integer>
+		</dict>
+		<key>fastq_utils.pl</key>
+		<dict>
+			<key>caret</key>
+			<dict>
+				<key>column</key>
+				<integer>35</integer>
+				<key>line</key>
+				<integer>170</integer>
+			</dict>
+			<key>firstVisibleColumn</key>
+			<integer>0</integer>
+			<key>firstVisibleLine</key>
+			<integer>154</integer>
 		</dict>
 		<key>gd_utils.pl</key>
 		<dict>
 			<key>caret</key>
 			<dict>
 				<key>column</key>
-				<integer>17</integer>
+				<integer>75</integer>
 				<key>line</key>
-				<integer>161</integer>
+				<integer>423</integer>
 			</dict>
-			<key>columnSelection</key>
-			<false/>
 			<key>firstVisibleColumn</key>
 			<integer>0</integer>
 			<key>firstVisibleLine</key>
-			<integer>140</integer>
-			<key>selectFrom</key>
-			<dict>
-				<key>column</key>
-				<integer>4</integer>
-				<key>line</key>
-				<integer>161</integer>
-			</dict>
-			<key>selectTo</key>
-			<dict>
-				<key>column</key>
-				<integer>17</integer>
-				<key>line</key>
-				<integer>161</integer>
-			</dict>
+			<integer>384</integer>
 		</dict>
 		<key>graph_coverage.pl</key>
 		<dict>
@@ -331,43 +183,37 @@
 			<key>firstVisibleLine</key>
 			<integer>255</integer>
 		</dict>
-		<key>split_genbank.pl</key>
+		<key>sam2html.pl</key>
 		<dict>
 			<key>caret</key>
 			<dict>
 				<key>column</key>
-				<integer>49</integer>
+				<integer>16</integer>
 				<key>line</key>
-				<integer>99</integer>
+				<integer>44</integer>
 			</dict>
 			<key>firstVisibleColumn</key>
 			<integer>0</integer>
 			<key>firstVisibleLine</key>
-			<integer>87</integer>
+			<integer>22</integer>
 		</dict>
 	</dict>
 	<key>openDocuments</key>
 	<array>
 		<string>Breseq/Fastq.pm</string>
 		<string>fastq_utils.pl</string>
-		<string>Breseq/AlignmentCorrection.pm</string>
 		<string>Breseq/Settings.pm</string>
+		<string>sam2html.pl</string>
 		<string>graph_coverage.pl</string>
 		<string>Breseq/AlignmentOutput.pm</string>
-		<string>Breseq/CandidateJunctions.pm</string>
-		<string>Breseq/GenomeDiff.pm</string>
-		<string>Breseq/Shared.pm</string>
-		<string>split_genbank.pl</string>
-		<string>Breseq/ErrorCalibration.pm</string>
-		<string>Breseq/MutationIdentification.pm</string>
-		<string>Breseq/Output.pm</string>
 		<string>breseq.pl</string>
 		<string>gd_utils.pl</string>
-		<string>Breseq/ReferenceSequence.pm</string>
+		<string>Breseq/AlignmentCorrection.pm</string>
+		<string>Breseq/Output.pm</string>
 	</array>
 	<key>showFileHierarchyDrawer</key>
 	<true/>
 	<key>windowFrame</key>
-	<string>{{460, 195}, {838, 683}}</string>
+	<string>{{317, 24}, {1040, 816}}</string>
 </dict>
 </plist>

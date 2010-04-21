@@ -47,7 +47,7 @@ sub correct_alignments
 	my $gene_list_hash_ref = $ref_seq_info->{gene_lists};
 	my $is_list_hash_ref = $ref_seq_info->{is_lists};
 	my $flanking_length = $settings->{max_read_length};
-	
+		
 	## for now we just use mapping qualities from ssaha2, but could load ref sequences this way
 	my $reference_faidx_file_name = $settings->file_name('reference_fasta_file_name');
 	my $reference_fai = Bio::DB::Sam::Fai->load($reference_faidx_file_name);
@@ -279,35 +279,49 @@ sub correct_alignments
 	
 	###			
 	## Determine which junctions are real, prefer ones with most matches
-	##
-	## THIS NEEDS TO BE DEALT WITH!!!!
-	## Possible problem: What if all matches to a junction are degenerate because a very similar junction exists?
 	###
 	
+	my @rejected_keys = ();
+	my %junction_test_info;
+	
+	## first deal with ones with unique matches
 	my @sorted_keys = sort {-(scalar @{$matched_junction{$a}} <=> scalar @{$matched_junction{$b}})} keys %matched_junction;
 			
 	my @new_keys;
 	foreach my $key (@sorted_keys)
 	{
-		my $failed = _test_junction($key, \%matched_junction, \%degenerate_matches, $flanking_length, $minimum_best_score, $minimum_best_score_difference, $reference_fai, $ref_seq_info, $RREF, $reference_header, $RCJ, $candidate_junction_header);
-		push @new_keys, $key if (!$failed);
+		my $failed = _test_junction($key, \%matched_junction, \%degenerate_matches, \%junction_test_info, $flanking_length, $minimum_best_score, $minimum_best_score_difference, $reference_fai, $ref_seq_info, $RREF, $reference_header, $RCJ, $candidate_junction_header);
+
+		if (!$failed)
+		{
+			push @new_keys, $key; 
+		}
+		else
+		{
+			push @rejected_keys, $key;
+		}
 	}
 	
-	##strictly speaking... should re-sort after every successful junction prediction... 
+	
+	## next deal with ones with degenerate matches only	
 	@sorted_keys = sort {-(scalar keys %{$degenerate_matches{$a}} <=> scalar keys %{$degenerate_matches{$b}})} keys %degenerate_matches;
 	while (@sorted_keys)
 	{
 		my $key = shift @sorted_keys;
 		
-		print "Trying degenerate $key...\n";
+		print "Trying degenerate $key...\n" if ($verbose);
 		
 		next if (!defined $degenerate_matches{$key}); #they can be removed 
 		
-		my $failed = _test_junction($key, \%matched_junction, \%degenerate_matches, $flanking_length, $minimum_best_score, $minimum_best_score_difference, $reference_fai, $ref_seq_info, $RREF, $reference_header, $RCJ, $candidate_junction_header);
+		my $failed = _test_junction($key, \%matched_junction, \%degenerate_matches, \%junction_test_info, $flanking_length, $minimum_best_score, $minimum_best_score_difference, $reference_fai, $ref_seq_info, $RREF, $reference_header, $RCJ, $candidate_junction_header);
 		if (!$failed)
 		{
 			@sorted_keys = sort {-(scalar keys %{$degenerate_matches{$a}} <=> scalar keys %{$degenerate_matches{$b}})} keys %degenerate_matches;
 			push @new_keys, $key;
+		}
+		else
+		{
+			push @rejected_keys, $key;
 		}
 	}
 	@sorted_keys = @new_keys;
@@ -317,93 +331,16 @@ sub correct_alignments
 
 	#re-sort since some have gained reads from degenerate matches
 	@sorted_keys = sort {-(scalar @{$matched_junction{$a}} <=> scalar @{$matched_junction{$b}})} @sorted_keys;
+	@rejected_keys = sort {-(scalar @{$matched_junction{$a}} <=> scalar @{$matched_junction{$b}})} @rejected_keys;
+
 
 	my @hybrid_predictions;
  	foreach my $key (@sorted_keys)
  	{	  
-		my $matched_junction = 
 		print "$key\n" if ($verbose);
-		my $item = {key => $key, flanking_length => $flanking_length};
-		
-		# my $junction_id = Breseq::Shared::junction_name_join($hash_seq_id_1, $hash_coord_1, $hash_strand_1, $hash_seq_id_2, $hash_coord_2, $hash_strand_2, $overlap, $unique_read_seq_string);	
-		my @split_key = Breseq::Shared::junction_name_split($key);
-
-		my ($upstream_reference, $upstream_position, $upstream_direction, $upstream_redundant) = @split_key[0..3];
-		$upstream_direction = -1 if ($upstream_direction == 0);
- 
-		my ($downstream_reference, $downstream_position, $downstream_direction, $downstream_redundant) = @split_key[4..7];
-		$downstream_direction = -1 if ($downstream_direction == 0);
-	
-		$item->{overlap} = $split_key[8];
-				
-		##
-		## Create three intervals for making alignments and html output
-		##    it would be nice to flag whether we think the original junction is still there
-		##
-	 	
-		## (1) The first alignment has information relative to the junction candidates
-		if ($item->{overlap} == 0)
-		{
-			$item->{start} = $item->{flanking_length};
-			$item->{end} = $item->{flanking_length}+1;			
-			$item->{mark} = '/';
-		}
-		elsif ($item->{overlap} > 0)
-		{
-			$item->{start} = $item->{flanking_length} + 1 - $item->{overlap};
-			$item->{end} = $item->{flanking_length};
-			$item->{mark} = '|';
-		}
-		else ## ($item->{overlap} < 0)
-		{
-			$item->{start} = $item->{flanking_length}+1;
-			$item->{end} = $item->{flanking_length}-$item->{overlap};
-			$item->{mark} = '*';
-		}
-		$item->{seq_id} = $key;
-		
-		#### NOTE: For these intervals, the strand indicates which direction (relative to top strand of genome)
-		####       you move until you hit the given position to reproduce sequence in new junction.
-
-		## (2) Alignment for the reference sequence that disagrees with the junction #1.
- 		$item->{interval_1}->{start} = $upstream_position;
-		$item->{interval_1}->{end} = $upstream_position;
-		$item->{interval_1}->{strand} = $upstream_direction;		
-		$item->{interval_1}->{seq_id} = $upstream_reference;
-		$item->{interval_1}->{redundant} = $upstream_redundant;
-
-
-		## (3) Alignment for the reference sequence that disagrees with the junction #2.
- 		$item->{interval_2}->{start} = $downstream_position;
-		$item->{interval_2}->{end} = $downstream_position;
-		$item->{interval_2}->{strand} = $downstream_direction;
-		$item->{interval_2}->{seq_id} = $downstream_reference;
-		$item->{interval_2}->{redundant} = $downstream_redundant;
-
-		$item->{total_reads} = scalar @{$matched_junction{$key}};
-		
+		my $item = _junction_to_hybrid_list_item($key, scalar @{$matched_junction{$key}}, $flanking_length, $junction_test_info{$key});	
 		push @hybrid_predictions, $item;
-
-
-		#if there is overlapping sequence, and both sides are unique,
-		#then give overlap to first side
 		
-		if (!$item->{interval_1}->{redundant} && !$item->{interval_2}->{redundant})
-		{
-			if ($item->{overlap} > 0)
-			{
-				my $strand_direction = ($item->{interval_2}->{strand} > 0) ? +1 : -1;
-				
-				$item->{interval_2}->{start} += $item->{overlap} * $strand_direction;
-				$item->{interval_2}->{end} += $item->{overlap} * $strand_direction;
-				$item->{overlap} = 0;			
-			}			
-		}
-		### Note: Other adjustments to voerlap can happen at the later annotation stage
-		### because they will not affect coverage for calling deletions or mutations
-		### because they will be in redundantly matched sides of junctions
-		
-
 		## create matches from UNIQUE sides of each match to reference genome
 		## this fixes, for example appearing to not have any coverage at the origin of a circular DNA fragment
 		### currently we do not add coverage to the IS element (which we would have to know all copies of to do...)
@@ -417,12 +354,8 @@ sub correct_alignments
 				foreach my $side (1,2)
 				{
 					my $side_key = 'interval_' . $side;
-
-	############## Need to add indication of whether this side of the junction is unique!!
 	
-	
-	
-                    ## Do not count for coverage if it is redundant is redundant!!
+                    ## Do not count for coverage if it is redundant!!
 					if (!$item->{$side_key}->{redundant})
 					{
 						##write out match corresponding to this part to SAM file						
@@ -434,7 +367,25 @@ sub correct_alignments
 		}
 	}
 	
- 
+	my @rejected_hybrid_predictions = ();
+		
+	foreach my $key (@rejected_keys)
+	{
+		print "$key\n" if ($verbose);
+		my $item = _junction_to_hybrid_list_item($key, scalar @{$matched_junction{$key}}, $flanking_length, $junction_test_info{$key});
+		$item->{marginal}=1;
+		push @rejected_hybrid_predictions, $item;
+	}
+
+	my $rejected_junction_genome_diff_file_name = $settings->file_name('rejected_junction_genome_diff_file_name');
+	Breseq::Output::write_genome_diff($rejected_junction_genome_diff_file_name, $settings, [], [], \@rejected_hybrid_predictions, [], 1);
+
+	push @hybrid_predictions, @rejected_hybrid_predictions;
+
+	Breseq::Output::write_genome_diff($rejected_junction_genome_diff_file_name, $settings, [], [], \@hybrid_predictions, [], 1);
+
+	#print Dumper(@hybrid_predictions);
+
  	return @hybrid_predictions;	
 }
 
@@ -517,18 +468,6 @@ sub _alignment_list_to_dominant_best
 }
 
 
-sub _alignment_list_to_mapping_quality
-{
-	#has no clue what to do about mismatches...
-	my (@alignment_list) = @_;
-		
-	my $mapping_quality = $alignment_list[0]->aux_get("AS");
-	$mapping_quality -= $alignment_list[1]->aux_get("AS") if (scalar @alignment_list > 1);
-	
-	return $mapping_quality;
-}
-
-
 sub _trim_ambiguous_ends
 {
 	my $verbose = 0;
@@ -568,6 +507,7 @@ sub _trim_ambiguous_ends
 	{
 		$expanded_ref_string = substr $ref_strings->{$seq_id}, $a->start-$expand_left-1, ($a->end+$expand_right) - ($a->start-$expand_left) + 1;
 	}
+	## >>> transition to not using ref_seq_info
 	else
 	{
 		my $expanded_ref_range = $seq_id . ':' . ($a->start-$expand_left) . '-' . ($a->end+$expand_right);
@@ -579,6 +519,7 @@ sub _trim_ambiguous_ends
 	{
 		$ref_string = substr $ref_strings->{$seq_id}, $a->start-1, $a->end - $a->start + 1;
 	}	
+	## >>> transition to not using ref_seq_info	
 	else
 	{
 		my $ref_range = $seq_id . ':' . $a->start . '..' . $a->end;
@@ -870,15 +811,16 @@ sub _ambiguous_end_offsets_from_sequence
 
 sub _test_junction
 {
-	my ($key, $matched_junction_ref, $degenerate_matches_ref, $flanking_length, $minimum_best_score, $minimum_best_score_difference, $reference_fai, $ref_seq_info, $RREF, $reference_header, $RCJ, $candidate_junction_header) = @_;
+	my ($key, $matched_junction_ref, $degenerate_matches_ref, $junction_test_info_ref, $flanking_length, $minimum_best_score, $minimum_best_score_difference, $reference_fai, $ref_seq_info, $RREF, $reference_header, $RCJ, $candidate_junction_header) = @_;
 	
+	my $test_info;
 	my @unique_matches = ();
 	@unique_matches = @{$matched_junction_ref->{$key}} if (defined $matched_junction_ref->{$key});
 	my @degenerate_matches = ();
 	@degenerate_matches = map { $degenerate_matches_ref->{$key}->{$_} } sort keys %{$degenerate_matches_ref->{$key}} if (defined $degenerate_matches_ref->{$key});		
 		
 	my $failed = 0;
-	print "Junction Candidate: $key Unique Matches: " . (scalar @unique_matches) . " Degenerate Matches: " . (scalar @degenerate_matches) . "\n";
+#	print "Junction Candidate: $key Unique Matches: " . (scalar @unique_matches) . " Degenerate Matches: " . (scalar @degenerate_matches) . "\n";
 
 	#### TEST 1: 
 #	my $minimum_number_of_reads_for_junction = 3;	
@@ -889,6 +831,8 @@ sub _test_junction
 	my $alignment_on_each_side_cutoff_per_strand = 9; #10
 	my $max_left_per_strand = { '0'=> 0, '1'=>0 };
 	my $max_right_per_strand = { '0'=> 0, '1'=>0 };
+	my $count_per_strand = { '0'=> 0, '1'=>0 };
+	my $score = 0;
 	
 	### we also need to count degenerate matches b/c sometimes ambiguity unfairly penalizes real reads...
 	foreach my $item (@unique_matches, @degenerate_matches)
@@ -917,6 +861,8 @@ sub _test_junction
  		my $overlap = $split_key[8];
 		my $rev_key = ($a->reversed ? '1' : '0');
 
+		$count_per_strand->{$rev_key}++;
+
 		my $this_left = $flanking_length;
 		#positive overlap means part of this is in overlap region and should not be counted
 		$this_left -= $overlap if ($overlap > 0);
@@ -926,10 +872,12 @@ sub _test_junction
 		#negative overlap means we need to offset to get past the unique read sequence
 		$this_right -= $overlap if ($overlap < 0);
 		$this_right = $a->end - $this_right+1;
-		print "  " . $a->start . "-" . $a->end . " " . $overlap . " " . $rev_key . "\n";
-		print "  " . $item->{alignments}->[0]->qname . " LEFT: $this_left RIGHT: $this_right\n";
+#		print "  " . $a->start . "-" . $a->end . " " . $overlap . " " . $rev_key . "\n";
+#		print "  " . $item->{alignments}->[0]->qname . " LEFT: $this_left RIGHT: $this_right\n";
 
-
+		$score += $this_left**2;
+		$score += $this_right**2;
+	
 		$max_left_per_strand->{$rev_key} = $this_left if ($max_left_per_strand->{$rev_key} < $this_left);
 		$max_right_per_strand->{$rev_key} = $this_right if ($max_right_per_strand->{$rev_key} < $this_right);
 	}				
@@ -937,10 +885,29 @@ sub _test_junction
 	my $max_left = ($max_left_per_strand->{'0'} > $max_left_per_strand->{'1'}) ? $max_left_per_strand->{'0'} : $max_left_per_strand->{'1'};
 	my $max_right = ($max_right_per_strand->{'0'} > $max_right_per_strand->{'1'}) ? $max_right_per_strand->{'0'} : $max_right_per_strand->{'1'};
 
-	print "Max left = $max_left_per_strand->{0}, reversed = $max_left_per_strand->{1}\n";
-	print "Max Right = $max_right_per_strand->{0}, reversed = $max_right_per_strand->{1}\n";
-	print "Max left = $max_left, Max right = $max_right\n";
+
+#	print "Max left = $max_left_per_strand->{0}, reversed = $max_left_per_strand->{1}\n";
+#	print "Max Right = $max_right_per_strand->{0}, reversed = $max_right_per_strand->{1}\n";
+#	print "Max left = $max_left, Max right = $max_right\n";
 	
+	use Math::CDF;
+	my $strand_p_value = Math::CDF::pbinom($count_per_strand->{0}, $count_per_strand->{0}+$count_per_strand->{1}, 0.5);
+	$strand_p_value = 1-$strand_p_value if ($strand_p_value > 0.5);
+	$strand_p_value = sprintf "%.1e", $strand_p_value; #round immediately
+	
+	$test_info = {
+		max_left => $max_left,
+		max_left_minus => $max_left_per_strand->{0},
+		max_left_plus => $max_left_per_strand->{1},
+		max_right => $max_right,
+		max_right_minus => $max_right_per_strand->{0},
+		max_right_plus =>$max_right_per_strand->{1},
+		coverage_minus => $count_per_strand->{0},
+		coverage_plus => $count_per_strand->{1},
+		strand_p_value => $strand_p_value,
+		score => $score,
+	};
+		
 	$failed = ($max_left < $alignment_on_each_side_cutoff) || ($max_right < $alignment_on_each_side_cutoff)
 	       || ($max_left_per_strand->{'0'} < $alignment_on_each_side_cutoff_per_strand) || ($max_left_per_strand->{'1'} < $alignment_on_each_side_cutoff_per_strand)
 	       || ($max_right_per_strand->{'0'} < $alignment_on_each_side_cutoff_per_strand) || ($max_right_per_strand->{'1'} < $alignment_on_each_side_cutoff_per_strand);
@@ -957,7 +924,9 @@ sub _test_junction
 	### add degenerate matches and make them unavailable for other junctions
 	
 	##degenerate matches is a hash of junction_ids of read_names
-	if (!$failed || !scalar (@unique_matches == 0))
+	##strictly speaking we might want to wait until these degenerate matches
+	##could push a different junction across the threshold to success
+#	if (!$failed || !scalar (@unique_matches == 0))
 	{
 		if (defined $degenerate_matches_ref->{$key})
 		{
@@ -991,22 +960,109 @@ sub _test_junction
 	{
 		my $fastq_file_index = $junction_read->{fastq_file_index};
 		
-		if ($failed && (scalar @unique_matches > 0))
+		## write matches to the reference sequences if we failed
+		if ($failed)
 		{						
 			my $this_reference_al = $junction_read->{reference_alignments};
 			_write_reference_matches($minimum_best_score, $minimum_best_score_difference, $reference_fai, $ref_seq_info, $RREF, $reference_header, $fastq_file_index, @$this_reference_al);
 		}
-		else
+		
+		##write matches to the candidate junction SAM file regardless
 		{
 			my @this_dominant_candidate_junction_al = @{$junction_read->{dominant_alignments}}; 
 			Breseq::Shared::tam_write_read_alignments($RCJ, $candidate_junction_header, $fastq_file_index, \@this_dominant_candidate_junction_al);
 			$RCJ->flush();
 		}
 	}
-	
-	print "FAILED!!\n" if ($failed);
-	
+		
+	$junction_test_info_ref->{$key} = $test_info;
 	return $failed;
+}
+
+sub _junction_to_hybrid_list_item
+{
+	my ($key, $total_reads, $flanking_length, $test_info) = @_;
+	
+	my $item = {key => $key, flanking_length => $flanking_length, test_info => $test_info};
+	
+	## how this is made...
+	# my $junction_id = Breseq::Shared::junction_name_join($hash_seq_id_1, $hash_coord_1, $hash_strand_1, $hash_seq_id_2, $hash_coord_2, $hash_strand_2, $overlap, $unique_read_seq_string);	
+	my @split_key = Breseq::Shared::junction_name_split($key);
+
+	my ($upstream_reference, $upstream_position, $upstream_direction, $upstream_redundant) = @split_key[0..3];
+	$upstream_direction = -1 if ($upstream_direction == 0);
+
+	my ($downstream_reference, $downstream_position, $downstream_direction, $downstream_redundant) = @split_key[4..7];
+	$downstream_direction = -1 if ($downstream_direction == 0);
+
+	$item->{overlap} = $split_key[8];
+			
+	##
+	## Create three intervals for making alignments and html output
+	##    it would be nice to flag whether we think the original junction is still there
+	##
+
+ 	
+	## (1) The first alignment has information relative to the junction candidates
+	if ($item->{overlap} == 0)
+	{
+		$item->{start} = $item->{flanking_length};
+		$item->{end} = $item->{flanking_length}+1;			
+		$item->{mark} = '/';
+	}
+	elsif ($item->{overlap} > 0)
+	{
+		$item->{start} = $item->{flanking_length} + 1 - $item->{overlap};
+		$item->{end} = $item->{flanking_length};
+		$item->{mark} = '|';
+	}
+	else ## ($item->{overlap} < 0)
+	{
+		$item->{start} = $item->{flanking_length}+1;
+		$item->{end} = $item->{flanking_length}-$item->{overlap};
+		$item->{mark} = '*';
+	}
+	$item->{seq_id} = $key;
+	
+	#### NOTE: For these intervals, the strand indicates which direction (relative to top strand of genome)
+	####       you move until you hit the given position to reproduce sequence in new junction.
+
+	## (2) Alignment for the reference sequence that disagrees with the junction #1.
+	$item->{interval_1}->{start} = $upstream_position;
+	$item->{interval_1}->{end} = $upstream_position;
+	$item->{interval_1}->{strand} = $upstream_direction;		
+	$item->{interval_1}->{seq_id} = $upstream_reference;
+	$item->{interval_1}->{redundant} = $upstream_redundant;
+
+
+	## (3) Alignment for the reference sequence that disagrees with the junction #2.
+	$item->{interval_2}->{start} = $downstream_position;
+	$item->{interval_2}->{end} = $downstream_position;
+	$item->{interval_2}->{strand} = $downstream_direction;
+	$item->{interval_2}->{seq_id} = $downstream_reference;
+	$item->{interval_2}->{redundant} = $downstream_redundant;
+
+	$item->{total_reads} = $total_reads;
+	
+	#if there is overlapping sequence, and both sides are unique,
+	#then give overlap to first side
+	
+	if (!$item->{interval_1}->{redundant} && !$item->{interval_2}->{redundant})
+	{
+		if ($item->{overlap} > 0)
+		{
+			my $strand_direction = ($item->{interval_2}->{strand} > 0) ? +1 : -1;
+			
+			$item->{interval_2}->{start} += $item->{overlap} * $strand_direction;
+			$item->{interval_2}->{end} += $item->{overlap} * $strand_direction;
+			$item->{overlap} = 0;			
+		}			
+	}
+	### Note: Other adjustments to overlap can happen at the later annotation stage
+	### because they will not affect coverage for calling deletions or mutations
+	### because they will be in redundantly matched sides of junctions
+	
+	return $item;
 }
 
 

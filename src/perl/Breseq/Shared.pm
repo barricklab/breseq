@@ -54,10 +54,11 @@ our @int_to_base = ('A','C','T','G','.','N');
 
 sub system
 {
-	my ($command, $silent) = @_;	
+	my ($command, $silent, $continue) = @_;	
 	print STDERR "[system] $command\n" if (!$silent);
 	my $res = CORE::system $command;
-	die "$res" if ($res);
+	die "$res" if ($res && !$continue);
+	return $res;
 }
 
 sub poisson

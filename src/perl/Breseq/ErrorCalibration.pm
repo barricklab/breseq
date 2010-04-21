@@ -270,13 +270,13 @@ sub analyze_unique_coverage_distributions
 		my $this_unique_only_coverage_plot_file_name = $settings->file_name('unique_only_coverage_plot_file_name', {'@'=>$seq_id});
 		my $this_unique_only_coverage_distribution_file_name = $settings->file_name('unique_only_coverage_distribution_file_name', {'@'=>$seq_id});
 		
-		analyze_unique_coverage_distribution_file($settings, $this_unique_only_coverage_distribution_file_name, $this_unique_only_coverage_plot_file_name, $seq_id, $summary);
+		analyze_unique_coverage_distribution_file_using_R($settings, $this_unique_only_coverage_distribution_file_name, $this_unique_only_coverage_plot_file_name, $seq_id, $summary);
 	}
 }
 
 ## uses R to fit negative binomial distribution to coverage distribution
 ## and adds this information to the $summary
-sub analyze_unique_coverage_distribution_file
+sub analyze_unique_coverage_distribution_file_using_R
 {
 	my ($settings, $unique_only_coverage_file_name, $unique_only_coverage_plot_file_name, $seq_id, $summary) = @_;
 
@@ -288,15 +288,13 @@ sub analyze_unique_coverage_distribution_file
 	$summary->{unique_coverage}->{$seq_id}->{dispersion} = 'NA';
 	$summary->{unique_coverage}->{$seq_id}->{deletion_coverage_propagation_cutoff} = 5;
 
-## temporary method to avoid R code...
+## method to avoid R code...
 ## we bail early if in QUALITY mode
 	return if ($settings->{error_model_method} eq 'QUALITY');
 
-	my $tmp_path = $settings->create_path('tmp_path');
-		
-	my $R_script_file_name = "$tmp_path/r_script.txt";
-	open RSCRIPT, ">$R_script_file_name" or die;
-	
+	my $unique_coverage_distribution_r_script_file_name = $settings->file_name('unique_coverage_distribution_r_script_file_name', {'@' => $seq_id});
+	open RSCRIPT, ">$unique_coverage_distribution_r_script_file_name" or die "Could not create file: $unique_coverage_distribution_r_script_file_name\n";
+
 print RSCRIPT <<EOF;
 #load data
 X<-read.table("$unique_only_coverage_file_name", header=T)
@@ -307,35 +305,38 @@ m<-mean(Y)
 v<-var(Y)
 D<-v/m
 
+## we find the range to fit using a moving average to avoid noise problems
+ma5 = c(1, 1, 1, 1, 1)/5;
+X\$ma = filter(X\$n, ma5)
+
 i<-0
 max_n <- 0;
 max_i <- i;
-for (i in trunc(m/4):length(X\$n))
+for (i in trunc(m/4):length(X\$ma))
 {		
-	if (X\$n[i] > max_n)
+	if (!is.na(X\$ma[i]) && X\$ma[i] > max_n)
 	{
-		max_n = X\$n[i];
+		max_n = X\$ma[i];
 		max_i = i;
 	}
 }
 
-
-
 #censor data on the right and left of the biggest maximum
-coverage_factor <- 0.5;
+coverage_factor <- 0.25;
 
 i<-max_i
-while (i >= 1 && X\$n[i]>coverage_factor*max_n)
+while (i >= 1 && X\$ma[i] && X\$ma[i]>coverage_factor*max_n)
 {	
 	i <- i-1;
 }
 start_i = i;
 
-i<-max_i
-while (i <= length(X\$n) && X\$n[i]>coverage_factor*max_n)
-{		
-	i <- i+1;
-}
+i<-length(X\$ma);
+#i<-max_i
+#while (i <= length(X\$ma) && X\$ma[i]>coverage_factor*max_n)
+#{		
+#	i <- i+1;
+#}
 end_i <-i
 
 #now maximum likelihood find the best dispersion parameter
@@ -442,19 +443,16 @@ dev.off()
 EOF
 
 	close RSCRIPT;
+	
+	Breseq::Shared::system("R --vanilla < $unique_coverage_distribution_r_script_file_name > $unique_coverage_distribution_r_script_file_name\.out");
 
-	my $command = "R --vanilla < $R_script_file_name > $R_script_file_name\.out";
-	print "$command\n";
-	my $res = system $command;
-	(!$res) or die "Running R command failed.\n";
-
-	open ROUT, "<$R_script_file_name\.out" or die;
+	open ROUT, "<$unique_coverage_distribution_r_script_file_name\.out" or die;
 	my @lines = <ROUT>;
 	close ROUT;
 	chomp @lines;
 	
 	@lines = grep s/^\[1\]\s+//, @lines;
-	print Dumper(@lines);
+#	print Dumper(@lines);
 	
 	#First two lines are negative binomial parameters.
 	#Next three lines are average, standard deviation, and index of overdispersion
@@ -474,13 +472,11 @@ EOF
 	my $i = 0;
 	while ( Math::CDF::pnbinom($i, $summary->{unique_coverage}->{$seq_id}->{nbinom_size_parameter}, $summary->{unique_coverage}->{$seq_id}->{nbinom_prob_parameter}) < $pr_cutoff ) 
 	{ 
-		print "prob $i: " . Math::CDF::pnbinom($i, $summary->{unique_coverage}->{$seq_id}->{nbinom_size_parameter}, $summary->{unique_coverage}->{$seq_id}->{nbinom_prob_parameter}) . "\n";
+#		print "prob $i: " . Math::CDF::pnbinom($i, $summary->{unique_coverage}->{$seq_id}->{nbinom_size_parameter}, $summary->{unique_coverage}->{$seq_id}->{nbinom_prob_parameter}) . "\n";
 		$i++; 
 	}
-	print "Chose: $i\n";
+#	print "Chose: $i\n";
 	$summary->{unique_coverage}->{$seq_id}->{deletion_coverage_propagation_cutoff} = $i;
-	
-	$settings->remove_path('tmp_path');
 }
 
 sub save_error_file
@@ -656,7 +652,6 @@ sub error_counts_to_error_rates
 	my ($settings, $summary, $ref_seq_info) = @_;
 		
 	my @seq_ids = @{$ref_seq_info->{seq_ids}};
-	my @read_files = $settings->read_files;
 		
 	#for each error file: load results, convert, and save
 	foreach my $read_file ($settings->read_files)
@@ -684,7 +679,7 @@ sub error_counts_to_error_rates
 		#(2) Calculate using log-linear model (assumes base quality calibration is correct!)
 		elsif ($settings->{error_model_method} eq 'FIT')
 		{			
-			error_counts_to_error_rates_using_R($settings, $this_error_counts_file_name, $this_error_rates_file_name, $this_error_rates_plot_file_name);
+			error_counts_to_error_rates_using_R($settings, $this_error_counts_file_name, $this_error_rates_file_name, $this_error_rates_plot_file_name, $read_file);
 		}
 		else
 		{
@@ -768,18 +763,14 @@ sub error_counts_to_error_rates_empirical
 
 sub error_counts_to_error_rates_using_R
 {
-	my ($settings, $input_file_name, $output_file_name, $plot_file_name) = @_;
+	my ($settings, $input_file_name, $output_file_name, $plot_file_name, $read_file) = @_;
 	
-	
-	my $tmp_path = $settings->create_path('tmp_path');
-		
-	my $R_script_file_name = "$tmp_path/r_script.txt";
-	open RSCRIPT, ">$R_script_file_name" or die;
+	my $error_rates_r_script_file_name = $settings->file_name('error_rates_r_script_file_name', {'#' => $read_file});
+	open RSCRIPT, ">$error_rates_r_script_file_name" or die "Could not create file: $error_rates_r_script_file_name\n";
 			
 	my @bases = ('A', 'C', 'T', 'G', '.');
 	
 	my $regression_string = "X\$quality";
-	open RSCRIPT, ">$R_script_file_name";
 	print RSCRIPT <<EOF;	
 library(nnet);
 X <- read.table("$input_file_name", header = TRUE, sep = "\t")
@@ -864,7 +855,9 @@ new_plot <- function()
 {
 	#bottom, left, top, right
 	par(mar=c(5,5,3,3));
+	options(warn=-1)
 	plot(0, type="n", lty="solid", log="y", ylim=c(0.00000001, 1), xlim=c(min(X\$quality), max(X\$quality)), lwd=1, axes=F, xlab="", ylab="", las=1, cex.lab=1.2, cex.axis=1.2 )
+	options(warn=1)
 	box()
 	#y-axis
 	axis(2, cex.lab=1.2, las=1, cex.axis=1.2, yaxs="i", at = c(0.00000001, 0.0000001, 0.000001, 0.00001, 0.0001, 0.001, 0.01, 0.1, 1), label = c(expression(10^-8), expression(10^-7), expression(10^-6), expression(10^-5), expression(10^-4), expression(10^-3), expression(10^-2), expression(10^-1), expression(1)))
@@ -957,12 +950,7 @@ EOF
 	
 	close RSCRIPT;
 
-	my $command = "R --vanilla < $R_script_file_name > $R_script_file_name\.out";
-	print "$command\n";
-	my $res = system $command;
-	(!$res) or die "Running R command failed.\n";
-	
-	$settings->remove_path('tmp_path');
+	Breseq::Shared::system("R --vanilla < $error_rates_r_script_file_name > $error_rates_r_script_file_name\.out");
 }
 
 sub assign_mapping_quality_to_matches
