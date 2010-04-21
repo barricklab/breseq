@@ -56,13 +56,10 @@ namespace breseq {
 		
 		/*! Called for each alignment.
 		 */
-		virtual int callback(char* refseq, uint32_t tid, uint32_t pos, int n, const bam_pileup1_t *pile) {
+		virtual int callback(uint32_t tid, uint32_t pos, int n, const bam_pileup1_t *pile) {
 			using namespace std;
-			assert(tid < _seq_info.size());
+			assert(static_cast<std::size_t>(tid) < _seq_info.size());
 			sequence_info& info=_seq_info[tid];
-			
-			// reference bases {base, reversed base, null} in ascii:
-			char ref_base[] = {refseq[pos], reverse_base(refseq[pos]), 0};
 			
 			size_t unique_coverage=0; // number of non-deletion, non-redundant alignments at this position.
 			bool has_redundant_reads=false; // flag indicating whether this position has any redundant reads.
@@ -100,6 +97,9 @@ namespace breseq {
 				int32_t query_end = query_start + a->core.l_qseq;
 				//my $fastq_file_index = $a->aux_get('X2');
 				int32_t fastq_file_index=bam_aux2i(bam_aux_get(a,"X2"));
+				
+				char* refseq = get_refseq(tid, fastq_file_index);																	
+				char ref_base[] = {refseq[pos], reverse_base(refseq[pos]), 0};
 				
 				//In all that follows, be sure to keep track of strandedness of mutations!
 				
@@ -208,12 +208,16 @@ namespace breseq {
 		/*! Print coverage distribution.
 		 */
 		void print_coverage(const std::string& output_dir, const std::string& suffix) {
-			//			using namespace std;
-			//			out << "coverage\tn" << endl;
-			//			for(std::size_t i=1; i<unique_only_coverage.size(); ++i) {
-			//				int cov = unique_only_coverage[i];
-			//				out << i << "\t" << cov << endl;
-			//			}	
+			using namespace std;
+			for(std::size_t i=0; i<_seq_info.size(); ++i) {
+				string filename(output_dir + _bam->header->target_name[i] + "." + suffix);
+				ofstream out(filename.c_str());					
+				out << "coverage\tn" << endl;
+				for(std::size_t j=1; j<_seq_info[i].unique_only_coverage.size(); ++j) {
+					out << j << "\t" << _seq_info[i].unique_only_coverage[j] << endl;
+				}	
+				out.close();
+			}
 		}
 		
 		
@@ -271,8 +275,6 @@ namespace breseq {
 	};
 	
 	
-	/*! Count the errors in the given BAM file.
-	 */
 	void error_count(const std::string& bam, 
 									 const std::vector<std::string>& fastas,
 									 const std::string& output_dir,

@@ -3,24 +3,25 @@
 
 #include <boost/shared_ptr.hpp>
 #include <string>
+#include <map>
 #include <vector>
 #include <sam.h>
 #include <faidx.h>
 
 namespace breseq {
 
-	/*! Helper struct to manage a single reference sequence.
-	 */
+	//! Helper struct to manage a single reference sequence.
 	struct reference_sequence {
-	public:
-		reference_sequence(const std::string& fasta_filename, const std::string& region_name);
+	public:		
+		reference_sequence(const std::string& fasta_filename, const std::string& target);
 		~reference_sequence();
 		
 		faidx_t* _ref; //!< FAI file handle.
-		char* _seq; //!< Reference sequence.
-		int _len; //!< Sequence length.
+		char* _seq; //!< Reference sequence (ascii).
+		int _len; //<! Length of reference sequence.
 		
 	private:
+		// not allowed:
 		reference_sequence(const reference_sequence& that);
 		reference_sequence& operator=(const reference_sequence& that);
 	};
@@ -30,6 +31,7 @@ namespace breseq {
 	 */
 	class pileup_base {
 	public:
+		//! Type for a list of reference sequences.
 		typedef std::vector<boost::shared_ptr<reference_sequence> > refseq_list_t;
 		
 		//! Constructor.
@@ -38,17 +40,20 @@ namespace breseq {
 		//! Destructor.
 		virtual ~pileup_base();
 		
-		//! Run the pileup.
+		//! Retrieve the reference sequence for the given target and fai index.
+		char* get_refseq(int target, int idx);
+		
+		//! Run the pileup; will trigger callback for each alignment.
 		void pileup();
 		
 		//! Alignment callback.
-		virtual int callback(char* refseq, uint32_t tid, uint32_t pos, int n, const bam_pileup1_t *pile) = 0;
+		virtual int callback(uint32_t tid, uint32_t pos, int n, const bam_pileup1_t *pile) = 0;
 		
 	protected:
 		friend int first_level_callback(uint32_t tid, uint32_t pos, int n, const bam_pileup1_t *pile, void *data);
 
 		samfile_t* _bam; //!< BAM file handle.
-		refseq_list_t _ref_seqs; //!< Reference sequences.
+		std::map<int,refseq_list_t> _refs; //!< Reference sequences.
 	};	
 	
 } // breseq

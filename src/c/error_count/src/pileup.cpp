@@ -4,38 +4,54 @@
 #include "pileup.h"
 
 
-breseq::reference_sequence::reference_sequence(const std::string& fasta_filename, const std::string& region_name)
+/*! Constructor.
+ 
+ Open the FASTA and read the target reference sequence.
+ */
+breseq::reference_sequence::reference_sequence(const std::string& fasta_filename, const std::string& target)
 : _ref(0), _seq(0), _len(0) {
 	_ref = fai_load(fasta_filename.c_str());
 	assert(_ref);
 
-	_seq = fai_fetch(_ref, region_name.c_str(), &_len);	
+	_seq = fai_fetch(_ref, target.c_str(), &_len);
 	assert(_seq);
 	assert(_len > 0);
 }
 
 
+/*! Destructor.
+ */
 breseq::reference_sequence::~reference_sequence() {
 	if(_ref) { fai_destroy(_ref);	}
 	if(_seq) { free(_seq); }
 }
 
 
-/*! Constructor for single-BAM, single-FASTA error counting.
+/*! Retrieve the reference sequence for the given target and fasta index.
+ */
+char* breseq::pileup_base::get_refseq(int target, int idx) {
+	assert(_refs.find(target) != _refs.end());
+	assert(static_cast<std::size_t>(idx) < _refs[target].size());
+	return _refs[target][idx]->_seq;
+}
+
+
+/*! Constructor for single-BAM, >=0 FASTA.
  */
 breseq::pileup_base::pileup_base(const std::string& bam, const std::vector<std::string>& fastas)
 : _bam(0) {
 	using namespace std;
 	_bam = samopen(bam.c_str(), "rb", 0);
 	assert(_bam);
-	assert(_bam->header->n_targets == static_cast<int>(fastas.size()));
-	
-	// load the reference sequence for each target:
+
+	// load all the reference sequences:
 	for(int i=0; i<_bam->header->n_targets; ++i) {
 		cerr << "  REFERENCE: " << _bam->header->target_name[i] << endl;
 		cerr << "  LENGTH: " << _bam->header->target_len[i] << endl;
-		boost::shared_ptr<reference_sequence> refseq(new reference_sequence(fastas[i], _bam->header->target_name[i]));
-		_ref_seqs.push_back(refseq);
+		for(std::size_t j=0; j<fastas.size(); ++j) {
+			boost::shared_ptr<reference_sequence> refseq(new reference_sequence(fastas[j], _bam->header->target_name[i]));
+			_refs[i].push_back(refseq);
+		}
 	}
 }
 
@@ -58,9 +74,7 @@ int breseq::first_level_callback(uint32_t tid, uint32_t pos, int n, const bam_pi
 		std::cerr << "    POSITION:" << pos << std::endl;
 	}
 	
-	assert(tid < p->_ref_seqs.size());
-	assert(pos < static_cast<uint32_t>(p->_ref_seqs[tid]->_len));
-	p->callback(p->_ref_seqs[tid]->_seq,tid,pos,n,pile);
+	p->callback(tid,pos,n,pile);
 	return 0;
 }
 
