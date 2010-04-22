@@ -1,4 +1,4 @@
-#!/usr/bin/perl -w
+#!/usr/bin/env perl -w
 
 ###
 # Pod Documentation
@@ -819,7 +819,7 @@ if (!-e $output_done_file_name)
 
 	## record the final time and print summary table
 	Breseq::Output::record_time("End");
-	Breseq::Output::html_summary_table($settings->{summary_html_file_name}, $settings, $summary, \@Breseq::Output::execution_times);
+#	Breseq::Output::html_summary_table($settings->{summary_html_file_name}, $settings, $summary, \@Breseq::Output::execution_times);
 
 	my $output_done_file_name = $settings->file_name('output_done_file_name');	
 	open DONE, ">$output_done_file_name";

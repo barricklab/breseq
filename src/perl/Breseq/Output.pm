@@ -29,7 +29,7 @@ Copyright 2009.  All rights reserved.
 
 package Breseq::Output;
 use strict;
-use CGI qw/:standard *table *Tr *th/;
+use CGI qw/:standard *table *Tr *th *td *div/;
 use Data::Dumper;
 
 require Exporter;
@@ -42,14 +42,23 @@ use Breseq::GenomeDiff;
 ## these style definitions are included between the
 ## HEAD tags of every generated page
 our $header_style_string = <<ENDOFSTYLE;
+body {
+	font-family: sans-serif;
+	font-size: 11pt;
+}
 th 	{
 	background-color: rgb(0,0,0); 
 	color: rgb(255,255,255);
 }
 table	{
-#	background-color: rgb(245,245,245); 
+	background-color: rgb(0,0,0); 
 	color: rgb(0,0,0);
 }
+
+tr	{
+	background-color: rgb(255,255,255); 
+}
+
 .mutation_in_codon	{
 	color:red;
 	text-decoration : underline;
@@ -102,31 +111,81 @@ sub html_index
 			-head  => style({type => 'text/css'}, $header_style_string),
 	);
 
-	my $header = "Version $settings->{version}" . br . "Developed by Barrick JE and Knoester DB";
 
+	print HTML p;
 	print HTML start_table({-width => "100%", -border => 0, -cellspacing => 0, -cellpadding => 3});
-	print HTML Tr(td(img({-src=>$settings->html_path('breseq_graphic_to_file_name')})), td({-width => "100%"}, $header));
-	print HTML end_table;
-	
-	print HTML a({-href=>$settings->html_path('summary_html_file_name')}, 'summary') . br;
-	print HTML a({-href=>$settings->html_path('mutations_html_file_name')}, 'mutation predictions') . br if ($annotated_mutations);
-	print HTML a({-href=>$settings->html_path('marginal_html_file_name')}, 'marginal predictions') . br if ($annotated_marginal);
-	print HTML a({-href=>$settings->html_path('log_file_name')}, 'log') . br;
-	
-	print HTML h2("Error Rates");	
-	
+	print HTML start_Tr;
+	print HTML  td(img({-src=>$settings->html_path('breseq_graphic_to_file_name')}));
+	print HTML start_td({-width => "100%"});
+	print HTML start_div({-style=>"font-size: 14pt;"});
+	print HTML b(a({-href=>$settings->html_path('mutations_html_file_name')}, 'mutation predictions')) . br if ($annotated_mutations);
+	print HTML b(a({-href=>$settings->html_path('marginal_html_file_name')}, 'marginal predictions')) . br if ($annotated_marginal);
+	print HTML b(a({-href=>$settings->html_path('log_file_name')}, 'command line log'));
+	print HTML end_div;
+
+	print HTML end_td . end_Tr . end_table;
+
+	## Write fastq read file information
+	print HTML p;
+    print HTML start_table({-border => 0, -cellspacing => 1, -cellpadding => 5});
+	print HTML Tr(th(), th("fastq read file"), th("reads"), th("bases"), th("longest"));
+	my $total_bases = 0;
+	my $total_reads = 0;
 	foreach my $read_file ($settings->read_files)
 	{
-		print HTML a({-href=>$settings->html_path('error_rates_plot_file_name', {'#'=>$read_file})}, $read_file) . br;
+		my $c = $summary->{sequence_conversion}->{reads}->{$read_file};
+		print HTML Tr(
+			td(a({-href=>$settings->html_path('error_rates_plot_file_name', {'#'=>$read_file})}, "errors")),
+			td($read_file), 
+			td({-align=>"right"}, commify($c->{num_reads})), 
+			td({-align=>"right"},commify($c->{total_bases})), 
+			td($c->{max_read_length} . "&nbsp;bases"), 
+		);
+		$total_bases += $c->{total_bases};
+		$total_reads += $c->{num_reads};
 	}
-	
-	print HTML h2("Coverage Distributions");	
+	print HTML Tr({-class=>"highlight_table_row"}, 
+		td(),
+		td(b("total")), 
+		td({-align=>"right"},b(commify($total_reads))), 
+		td({-align=>"right"},b(commify($total_bases))), 
+		td(b($summary->{sequence_conversion}->{max_read_length} . "&nbsp;bases")), 
+	);
+	print HTML end_table();
 
+	## Write reference sequence information
+	print HTML p;
+	print HTML start_table({-border => 0, -cellspacing => 1, -cellpadding => 5});
+	print HTML Tr(
+		th(),
+		th(),
+		th("reference sequence"), 
+		th("length"), 
+		th("description")
+	);
+	my $total_length = 0;
 	foreach my $seq_id (@{$ref_seq_info->{seq_ids}})
 	{
-		print HTML a({-href=>$settings->html_path('unique_only_coverage_plot_file_name', {'@'=>$seq_id})}, $seq_id) . br;
-	}
+		my $c = $summary->{sequence_conversion}->{reference_sequences}->{$seq_id};
+		print HTML Tr(
+			td(a({-href=>$settings->html_path('coverage_plot_file_name', {'@'=>$seq_id})}, "coverage")), 
+			td(a({-href=>$settings->html_path('unique_only_coverage_plot_file_name', {'@'=>$seq_id})}, "distribution")), 
+			td($seq_id), 
+			td({-align=>"right"},commify($c->{length})), 
+			td($c->{definition})
+		);
+		$total_length+= $c->{length};
+	}	
+	print HTML Tr({-class=>"highlight_table_row"},
+		td(),
+		td(),
+		td(b("total")), 
+		td(b({-align=>"right"},commify($total_length))), 
+		td()
+	);
+	print HTML end_table();		
 		
+	print HTML hr . i($settings->{byline});	
 	print HTML end_html;
 	close HTML;
 }
@@ -228,7 +287,7 @@ sub html_snp_table_string
 	my $output_str = '';
 	
 	my $q = new CGI;
-	$output_str.= start_table({-border => 1, -cellspacing => 0, -cellpadding => 3});
+	$output_str.= start_table({-border => 0, -cellspacing => 1, -cellpadding => 3});
 	$output_str.= start_Tr();
 	
 	my $link = $force_link;
@@ -375,7 +434,7 @@ sub html_deletion_table_string
 	my $output_str = '';
 	
 	my $q = new CGI;
-	$output_str.= start_table({-border => 1, -cellspacing => 0, -cellpadding => 3});
+	$output_str.= start_table({-border => 0, -cellspacing => 1, -cellpadding => 3});
 	$output_str.= start_Tr();
 	
 	my $coverage_graphs;
@@ -625,7 +684,7 @@ sub html_junction_table_string
 	
 	
 	my $q = new CGI;
-	$output_str.= start_table({-border => 1, -cellspacing => 0, -cellpadding => 3});
+	$output_str.= start_table({-border => 0, -cellspacing => 1, -cellpadding => 3});
 	$output_str.= start_Tr();
 	
 	my $link = $force_link;
@@ -1198,6 +1257,18 @@ sub make_nonbreaking
 	my ($text) = @_;
 	$text =~ s/-/&#8209;/g; #substitute nonbreaking dash		
 	return $text;
+}
+
+sub commify 
+{
+	my $_  = shift;
+	s{(?<!\d|\.)(\d{4,})}
+	{
+		my $n = $1;
+     	$n=~s/(?<=.)(?=(?:.{3})+$)/,/g;
+     	$n;
+    }eg;
+   return $_;
 }
 
 

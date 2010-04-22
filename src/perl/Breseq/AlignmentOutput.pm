@@ -123,7 +123,7 @@ sub html_alignment
 	my @sorted_keys = sort { -($aligned_reads->{$a}->{aligned_bases} cmp $aligned_reads->{$b}->{aligned_bases}) } keys %$aligned_reads;
 	my $output = '';
 
-	$output .= start_table() . start_Tr() . start_td();
+	$output .= start_table({-style=>"background-color: rgb(255,255,255)"}) . start_Tr() . start_td({-style=>"font-size:10pt"});
 	foreach my $aligned_reference (@aligned_references)
 	{
 		$output .= $self->_html_alignment_line($aligned_reference, 1) . br;
