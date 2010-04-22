@@ -1,4 +1,4 @@
-#!/usr/bin/perl -w
+#!/usr/bin/env perl -w
 
 ###
 # Pod Documentation
@@ -6,20 +6,27 @@
 
 =head1 NAME
 
-count_mutations.pl
+gd_utils.pl
 
 =head1 SYNOPSIS
 
-Usage: count_mutations.pl -r reference.gbk -i mutations.tab [--seq-id=REL606 -o output.tab --ignore=REL606:2345342:A>C]
-
+Usage: gd_utils.pl COMMAND [options]
 
 =head1 DESCRIPTION
+
+Perform various operations on "genome diff" files.
+
+=over
+
+=head1 COMMAND: FILTER
 
 =over
 
 =item B<-r|--reference> file path
 
 Genbank file or files that will be used for annotating mutations.
+
+=back
 
 =item B<-i|--input-path> directory path
 
