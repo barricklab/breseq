@@ -127,9 +127,7 @@ sub identify_candidate_junctions
 		next if ($handled_seq->{$junction_seq});
 		
 		my @combined_candidate_junction_list = ();
-		
-		my $temp_seq = new Bio::Seq(-seq => $junction_seq);
-		my $rc_junction_seq = $temp_seq->revcom->seq;
+		my $rc_junction_seq = Breseq::Fastq::revcom($junction_seq);
 		
 		JUNCTION_ID: foreach my $junction_id (keys %{$candidate_junctions->{$junction_seq}} )
 		{
@@ -379,6 +377,11 @@ sub _alignments_to_candidate_junction
 	###                    1 means this is lowest coord of alignment, junction seq begins at higher coord
 	### On the RIGHT side: 0 means this is highest coord of alignment, junction seq continues to lower coord
 	###                    1 means this is lowest coord of alignment, junction seq continues to higher coord
+	###
+	### Note that there are more fields now than shown in this example...
+	###
+	### Need the junction key to include the offset to get to the junction within the read for cases where
+	### the junction is near the end of the sequence... test case exists in JEB574.
 				
 	my %printed_keys;
 	my $i = 0;
@@ -509,8 +512,7 @@ sub _alignments_to_candidate_junction
 	my $first_query_match_seq = substr $q1->qseq, $q1_start-1, $q1_end - $q1_start + 1;
 	if ($q1->reversed)
 	{
-		my $temp_seq = new Bio::Seq(-seq => $first_query_match_seq);		
-		$first_query_match_seq = $temp_seq->revcom->seq;
+		$first_query_match_seq = Breseq::Fastq::revcom($first_query_match_seq);
 	}
 	
 	## this only applies if the overlap is positive (sequence is shared between the two ends)
@@ -531,16 +533,14 @@ sub _alignments_to_candidate_junction
 	else 
 	{
 		my $add_seq = substr $reference_sequence_string_hash_ref->{$hash_seq_id_1},  $hash_coord_1-1, $flanking_length+$overlap_offset;
-		my $temp_seq = new Bio::Seq(-seq => $add_seq);
-		$add_seq = $temp_seq->revcom->seq;
+		$add_seq = Breseq::Fastq::revcom($add_seq);
 		print "1R: $add_seq\n" if ($verbose);
 		$junction_seq_string .= $add_seq;
 
 		if ($verbose && ($overlap > 0))
 		{
 			$first_overlap_seq = substr $reference_sequence_string_hash_ref->{$hash_seq_id_1},  $hash_coord_1-1, $overlap;
-			$temp_seq = new Bio::Seq(-seq => $first_overlap_seq);
-			$first_overlap_seq = $temp_seq->revcom->seq;
+			$first_overlap_seq = Breseq::Fastq::revcom($first_overlap_seq);
 		}		
 	}
 	
@@ -565,8 +565,8 @@ sub _alignments_to_candidate_junction
 	else # ($m_2->{hash_strand} * $m_2->{read_side} == -1)
 	{
 		my $add_seq = substr $reference_sequence_string_hash_ref->{$hash_seq_id_2},  $hash_coord_2-($flanking_length-1)-$overlap_offset-1, $flanking_length;
-		my $temp_seq = new Bio::Seq(-seq => $add_seq);
-		$add_seq = $temp_seq->revcom->seq;
+		$add_seq = Breseq::Fastq::revcom($add_seq);
+		
 		print "2R: $add_seq\n" if ($verbose);
 
 		$junction_seq_string .= $add_seq;
@@ -574,8 +574,7 @@ sub _alignments_to_candidate_junction
 		if ($verbose && ($overlap > 0))
 		{
 			$second_overlap_seq = substr $reference_sequence_string_hash_ref->{$hash_seq_id_2},  $hash_coord_2-$overlap, $overlap;
-			$temp_seq = new Bio::Seq(-seq => $second_overlap_seq);
-			$second_overlap_seq = $temp_seq->revcom->seq;
+			$second_overlap_seq = Breseq::Fastq::revcom($second_overlap_seq);
 		}
 				
 	}
@@ -606,9 +605,9 @@ sub _alignments_to_candidate_junction
 	my $junction_id = Breseq::Shared::junction_name_join($hash_seq_id_1, $hash_coord_1, $hash_strand_1, $hash_redundancy_1, $hash_seq_id_2, $hash_coord_2, $hash_strand_2, $hash_redundancy_2, $overlap, $unique_read_seq_string, $flanking_length);	
 	print "JUNCTION ID: $junction_id\n" if ($verbose);
 	
-	die "$junction_id " . $q1->qname . " " . $a2->qname  if (!$junction_seq_string);
-	
-	die if (length $junction_seq_string != 2*$flanking_length + abs($overlap));
+	die "Junction sequence not found: $junction_id " . $q1->qname . " " . $a2->qname  if (!$junction_seq_string);
+## this guard accidentally catches junctions near the ends of sequences...
+#	die "Incorrect length for $junction_seq_string: $junction_id " . $q1->qname . " " . $a2->qname if (length $junction_seq_string != 2*$flanking_length + abs($overlap));
 		
 	return ($junction_id, $junction_seq_string, $q1, $q2);
 }
