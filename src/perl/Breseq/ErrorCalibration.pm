@@ -180,6 +180,8 @@ sub count
 					## also add an observation of a non-gap non-gap
 					if ($qpos+1 < $query_end)
 					{
+						print $a->query->name . " $qpos $query_end\n";
+						
 						my $next_quality = $qscore->[$qpos+1];
 						my $avg_quality = POSIX::floor( ($quality + $next_quality) / 2);
 						$error_hash->[$fastq_file_index]->{$avg_quality}->{'..'}++;

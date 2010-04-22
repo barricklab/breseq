@@ -245,7 +245,8 @@ sub initialize
 {
 	my ($self) = @_;
 	
-	$self->{version} = '100421';
+	$self->{version} = '2010-04-21';
+	$self->{byline} = "Version $self->{version} | Developed by Barrick JE and Knoester DB";
 	$self->{script_path} = $FindBin::Bin;
 
 	#neaten up some settings for later string comparisons
@@ -358,6 +359,7 @@ sub initialize
 	$self->{alignment_path} = "$self->{output_path}/$self->{local_alignment_path}";
 	$self->{local_coverage_graph_path} = "coverage";
 	$self->{coverage_graph_path} = "$self->{output_path}/$self->{local_coverage_graph_path}";
+	$self->{coverage_plot_file_name} = "$self->{coverage_graph_path}/@.overview.pdf";
 	$self->{plot_coverage_done_file_name} = "$self->{coverage_graph_path}/@.plot_coverage.done";
 	$self->{output_calibration_path} = "$self->{output_path}/calibration";
 	$self->{unique_only_coverage_plot_file_name} = "$self->{output_calibration_path}/@.unique_coverage.pdf";
