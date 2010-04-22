@@ -409,7 +409,7 @@ sub do_annotate
 
 		print STDERR "Creating alignment HTML files...\n";
 		foreach my $c (@composite_list) # , @hybrids)
-		{
+		{			
 			print STDERR "Creating alignment file: $c->{link}\n";
 			Breseq::Output::html_alignment_file($settings, $c);		
 		}
