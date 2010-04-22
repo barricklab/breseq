@@ -349,10 +349,7 @@ sub correct_alignments
 					if (!$item->{$side_key}->{redundant})
 					{	
 						##write out match corresponding to this part to SAM file						
-						my $trim = _trim_ambiguous_ends($a, $candidate_junction_header, $candidate_junction_fai);
-						
-						print $item->{'key'} . "\n";
-						
+						my $trim = _trim_ambiguous_ends($a, $candidate_junction_header, $candidate_junction_fai);						
 						Breseq::Shared::tam_write_moved_alignment($RREF, $item->{$side_key}->{seq_id}, $fastq_file_index, $a, $side, $item->{flanking_length}, $item->{alignment_overlap}, $item->{$side_key}->{start}, $item->{$side_key}->{strand}, $trim);		
 					}
 				}
