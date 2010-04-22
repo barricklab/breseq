@@ -63,18 +63,24 @@ sub text_alignment
 	return 'No reads aligned.' if (!defined $alignment_info);
 	
 	my $aligned_reads = $alignment_info->{aligned_reads};
-	my $aligned_reference = $alignment_info->{aligned_reference};
+	my @aligned_references = @{$alignment_info->{aligned_references}};
 	
 	my $output = '';
 			
 	my @sorted_keys = sort { -($aligned_reads->{$a}->{aligned_bases} cmp $aligned_reads->{$b}->{aligned_bases}) } keys %$aligned_reads;
 	
-	$output .= _text_alignment_line($aligned_reference);
+	foreach my $aligned_reference (@aligned_references)
+	{
+		$output .= _text_alignment_line($aligned_reference);
+	}
 	foreach my $key (@sorted_keys)
 	{
 		$output .= _text_alignment_line($aligned_reads->{$key}) . br;
 	}	
-	$output .= _text_alignment_line($aligned_reference);
+	foreach my $aligned_reference (@aligned_references)
+	{
+		$output .= _text_alignment_line($aligned_reference);
+	}
 	return $output;	
 }
 
@@ -109,7 +115,7 @@ sub html_alignment
 
 	return p . "No reads aligned." if (!defined $alignment_info);
 	my $aligned_reads = $alignment_info->{aligned_reads};
-	my $aligned_reference = $alignment_info->{aligned_reference};
+	my @aligned_references = @{$alignment_info->{aligned_references}};
 	my $aligned_annotation = $alignment_info->{aligned_annotation};
 	
 	my $quality_range = $self->set_quality_range($aligned_reads);
@@ -118,7 +124,10 @@ sub html_alignment
 	my $output = '';
 
 	$output .= start_table() . start_Tr() . start_td();
-	$output .= $self->_html_alignment_line($aligned_reference, 1) . br;
+	foreach my $aligned_reference (@aligned_references)
+	{
+		$output .= $self->_html_alignment_line($aligned_reference, 1) . br;
+	}
 	$output .= $self->_html_alignment_line($aligned_annotation, 0) . br;
 	
 	##if there are too many alignments remove randomly until we reach limit!
@@ -135,7 +144,10 @@ sub html_alignment
 		$output .= $self->_html_alignment_line($aligned_reads->{$key}, 0, $quality_range) . br;
 	}	
 	$output .= $self->_html_alignment_line($aligned_annotation, 0) . br;
-	$output .= $self->_html_alignment_line($aligned_reference, 1) . br;
+	foreach my $aligned_reference (@aligned_references)
+	{
+		$output .= $self->_html_alignment_line($aligned_reference, 1) . br;
+	}
 	$output .= br;
 
 	## create legend information
@@ -291,11 +303,25 @@ sub create_alignment
 	$region = "$seq_id:$start-$end";
 	print "$bam_path  $fasta_path  $region\n" if ($verbose);
 
+
 	my $aligned_reads;
-	my $aligned_reference;
 	my $aligned_annotation;	
 	
-	$aligned_reference->{strand} = 0;
+	my @aligned_references = ( {} );
+	## More complex information about multiple reference sequence lines was provided
+	if (defined $options->{alignment_reference_info_list})
+	{
+		@aligned_references = @{$options->{alignment_reference_info_list}};
+	}
+#	else ## By default there is only a single reference sequence
+#	{
+#		$aligned_references[0]->{seq_id} = $seq_id;
+#	}
+	foreach my $aligned_reference (@aligned_references)
+	{
+		$aligned_reference->{seq_id} = $seq_id;
+		$aligned_reference->{strand} = 0;
+	}
 			
 	#retrieve unique alignments overlapping position
 	my $fetch_function = sub {
@@ -322,9 +348,11 @@ sub create_alignment
     	my ($seq_id,$pos,$pileup) = @_;
 		print "POSITION: $pos\n" if ($verbose);
 
-		$aligned_reference->{seq_id} = $seq_id;
-		$aligned_reference->{start} = $pos if (!defined $aligned_reference->{start});
-		$aligned_reference->{end} = $pos;
+		foreach my $aligned_reference (@aligned_references)
+		{
+			$aligned_reference->{start} = $pos if (!defined $aligned_reference->{start});
+			$aligned_reference->{end} = $pos;
+		}
 		
 		#cull the list to those we want to align
 		@$pileup = grep { defined $aligned_reads->{$_->alignment->display_name} } @$pileup;
@@ -354,9 +382,15 @@ sub create_alignment
 			
 				##now handle the reference sequence
 				my $ref_bases = $bam->segment($seq_id,$last_pos,$last_pos)->dna;
-				$aligned_reference->{aligned_bases} .= $ref_bases;
-				$aligned_reference->{aligned_quals} .= chr(255);
-
+				
+				foreach my $aligned_reference (@aligned_references)
+				{
+					my $my_ref_bases = $ref_bases;
+					$my_ref_bases = '.' if ($aligned_reference->{truncate_start} && ($last_pos < $aligned_reference->{truncate_start}))
+					                 || ($aligned_reference->{truncate_end} && ($last_pos > $aligned_reference->{truncate_end}));
+					$aligned_reference->{aligned_bases} .= $my_ref_bases;
+					$aligned_reference->{aligned_quals} .= chr(255);
+				}
 				##also update any positions if interest for gaps				
 				$aligned_annotation->{aligned_bases} .= 
 					( (($insert_start == 0) && ($last_pos == $start)) || (($last_pos > $start) && ($last_pos <= $end)) ) 
@@ -431,10 +465,17 @@ sub create_alignment
 		
 		##now handle the reference sequence
 		my $ref_base = $bam->segment($seq_id,$pos,$pos)->dna;
-		$aligned_reference->{aligned_bases} .= $ref_base;
-		$aligned_reference->{aligned_bases} .= '.' x ($max_indel) if ($max_indel > 0);
-		$aligned_reference->{aligned_quals} .= chr(255) x ($max_indel+1);
-
+		foreach my $aligned_reference (@aligned_references)
+		{
+			my $my_ref_base = $ref_base;
+			$my_ref_base = '.' if ($aligned_reference->{truncate_start} && ($last_pos < $aligned_reference->{truncate_start}))
+			                 || ($aligned_reference->{truncate_end} && ($last_pos > $aligned_reference->{truncate_end}));
+			
+			$aligned_reference->{aligned_bases} .= $my_ref_base;
+			$aligned_reference->{aligned_bases} .= '.' x ($max_indel) if ($max_indel > 0);
+			$aligned_reference->{aligned_quals} .= chr(255) x ($max_indel+1);
+		}
+		
 		##also update any positions of interest for gaps
 		for (my $insert_count=0; $insert_count<=$max_indel; $insert_count++)
 		{	
@@ -487,27 +528,55 @@ sub create_alignment
 			
 	###extend reference sequence as requested, be aware of ends of sequence
 	## handle left side extending past end
-	my $ref_extend_left = $max_extend_left;
-	my $ref_add_left = '';	
-	if ($aligned_reference->{start}-$max_extend_left < 1)
-	{
-		$ref_extend_left = $aligned_reference->{start} - 1;
-		$ref_add_left .= '-' x (1 - ($aligned_reference->{start}-$max_extend_left));
+	foreach my $aligned_reference (@aligned_references)
+	{	
+		my $ref_extend_left = $max_extend_left;
+		my $ref_add_left = '';	
+		if ($aligned_reference->{start}-$max_extend_left < 1)
+		{
+			$ref_extend_left = $aligned_reference->{start} - 1;
+			$ref_add_left .= '-' x (1 - ($aligned_reference->{start}-$max_extend_left));
+		}
+		## handle right side extending past end
+		my $ref_extend_right = $max_extend_right;
+		my $ref_add_right = '';
+		if ($aligned_reference->{end}+$max_extend_right > $reference_length)
+		{
+			$ref_extend_right = $reference_length - $aligned_reference->{end};
+			$ref_add_right .= '-' x (($aligned_reference->{end}+$max_extend_right) - $reference_length);
+		}
+		
+		my $pos;
+		$pos = $aligned_reference->{start}-$ref_extend_left;
+		while ($pos < $aligned_reference->{start})
+		{
+			my $base = $bam->segment($aligned_reference->{seq_id},$pos,$pos)->dna;	
+			$base = '.' if ($aligned_reference->{truncate_start} && ($pos < $aligned_reference->{truncate_start}))
+			                 || ($aligned_reference->{truncate_end} && ($pos > $aligned_reference->{truncate_end}));
+			$ref_add_left .= $base;
+			$pos++;
+		}
+		
+		$pos = $aligned_reference->{end}+1;
+		while ($pos <= $aligned_reference->{end}+$ref_extend_right)
+		{
+			my $base = $bam->segment($aligned_reference->{seq_id},$pos,$pos)->dna;	
+			$base = '.' if ($aligned_reference->{truncate_start} && ($pos < $aligned_reference->{truncate_start}))
+			                 || ($aligned_reference->{truncate_end} && ($pos > $aligned_reference->{truncate_end}));
+			$ref_add_right .= $base;
+			$pos++;
+		}
+		
+	#	$ref_add_left .= $bam->segment($aligned_reference->{seq_id},$aligned_reference->{start}-$ref_extend_left,$aligned_reference->{start}-1)->dna;	
+	#	$ref_add_right .= $bam->segment($aligned_reference->{seq_id},$aligned_reference->{end}+1,$aligned_reference->{end}+$ref_extend_right)->dna;
+		
+		
+		
+		$aligned_reference->{start} -= $ref_extend_left;
+		$aligned_reference->{end} += $ref_extend_right;
+		$aligned_reference->{aligned_bases} = $ref_add_left . $aligned_reference->{aligned_bases} . $ref_add_right;
+		$aligned_reference->{aligned_quals} = (chr(255) x $max_extend_left) . $aligned_reference->{aligned_quals} . (chr(255) x $max_extend_right);
 	}
-	## handle right side extending past end
-	my $ref_extend_right = $max_extend_right;
-	my $ref_add_right = '';
-	if ($aligned_reference->{end}+$max_extend_right > $reference_length)
-	{
-		$ref_extend_right = $reference_length - $aligned_reference->{end};
-		$ref_add_right .= '-' x (($aligned_reference->{end}+$max_extend_right) - $reference_length);
-	}
-	$ref_add_left .= $bam->segment($aligned_reference->{seq_id},$aligned_reference->{start}-$ref_extend_left,$aligned_reference->{start}-1)->dna;	
-	$ref_add_right .= $bam->segment($aligned_reference->{seq_id},$aligned_reference->{end}+1,$aligned_reference->{end}+$ref_extend_right)->dna;
-	$aligned_reference->{start} -= $ref_extend_left;
-	$aligned_reference->{end} += $ref_extend_right;
-	$aligned_reference->{aligned_bases} = $ref_add_left . $aligned_reference->{aligned_bases} . $ref_add_right;
-	$aligned_reference->{aligned_quals} = (chr(255) x $max_extend_left) . $aligned_reference->{aligned_quals} . (chr(255) x $max_extend_right);
 	
 	#extend annotation line
 	$aligned_annotation->{aligned_bases} = (' ' x $max_extend_left) . $aligned_annotation->{aligned_bases} . (' ' x $max_extend_right);
@@ -544,8 +613,29 @@ sub create_alignment
 			substr($aligned_read->{aligned_quals}, $right_pos, length($add_seq)) = $add_seq;			
 		}
 	}
+	
+	## swap out the ghost seq_ids
+	foreach my $ar (@aligned_references)
+	{	
+		$ar->{seq_id} = $ar->{ghost_seq_id} if (defined $ar->{ghost_seq_id});
+
+		if (defined $ar->{truncate_start})
+		{
+			$ar->{start} = $ar->{truncate_start};
+			my $len = $ar->{end} - $ar->{start} + 1;
+			$ar->{start} = $ar->{ghost_start};
+			$ar->{end} = $ar->{start} + $ar->{ghost_strand} * ($len - 1);
+		} 
+		if (defined $ar->{truncate_end})
+		{
+			$ar->{end} = $ar->{truncate_end};
+			my $len = $ar->{end} - $ar->{start} + 1;
+			$ar->{end} = $ar->{ghost_end};
+			$ar->{start} = $ar->{end} + $ar->{ghost_strand} * ($len - 1);
+		}	}
+	
 			
-	return { aligned_reads => $aligned_reads, aligned_reference => $aligned_reference, aligned_annotation => $aligned_annotation };
+	return { aligned_reads => $aligned_reads, aligned_references => \@aligned_references, aligned_annotation => $aligned_annotation };
 }
 
 

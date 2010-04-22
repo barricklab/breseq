@@ -89,6 +89,12 @@ ENDOFSTYLE
 sub html_index
 {
 	my ($file_name, $settings, $summary, $ref_seq_info, $annotated_mutations, $annotated_marginal) = @_;
+
+	#copy over the breseq_graphic
+	my $breseq_graphic_from_file_name = $settings->file_name('breseq_graphic_from_file_name');
+	my $breseq_graphic_to_file_name = $settings->file_name('breseq_graphic_to_file_name');
+	system("cp $breseq_graphic_from_file_name $breseq_graphic_to_file_name");
+
 	open HTML, ">$file_name" or die "Could not open file: $file_name";    
 
     print HTML start_html(
@@ -96,6 +102,12 @@ sub html_index
 			-head  => style({type => 'text/css'}, $header_style_string),
 	);
 
+	my $header = "Version $settings->{version}" . br . "Developed by Barrick JE and Knoester DB";
+
+	print HTML start_table({-width => "100%", -border => 0, -cellspacing => 0, -cellpadding => 3});
+	print HTML Tr(td(img({-src=>$settings->html_path('breseq_graphic_to_file_name')})), td({-width => "100%"}, $header));
+	print HTML end_table;
+	
 	print HTML a({-href=>$settings->html_path('summary_html_file_name')}, 'summary') . br;
 	print HTML a({-href=>$settings->html_path('mutations_html_file_name')}, 'mutation predictions') . br if ($annotated_mutations);
 	print HTML a({-href=>$settings->html_path('marginal_html_file_name')}, 'marginal predictions') . br if ($annotated_marginal);
@@ -791,11 +803,11 @@ sub html_alignment_file
 	}
 		
 	print HTML p;
-	my $ao =Breseq::AlignmentOutput->new;
+	my $ao = Breseq::AlignmentOutput->new;
 	
 	$interval->{insert_start} = 0 if (!defined $interval->{insert_start});
 	$interval->{insert_end} = 0 if (!defined $interval->{insert_end});
-	print HTML $ao->html_alignment($interval->{bam_path}, $interval->{fasta_path}, "$interval->{seq_id}:$interval->{start}.$interval->{insert_start}-$interval->{end}.$interval->{insert_end}");	
+	print HTML $ao->html_alignment($interval->{bam_path}, $interval->{fasta_path}, "$interval->{seq_id}:$interval->{start}.$interval->{insert_start}-$interval->{end}.$interval->{insert_end}", $interval);	
 	
 	print HTML end_html;
 	close HTML;
@@ -1097,6 +1109,9 @@ sub read_genome_diff
 		$mut->{interval_2}->{redundant} = $mut->{redundant_2};
 		
 		$mut->{seq_id} = $mut->{key};
+		
+		my @split_key = Breseq::Shared::junction_name_split($mut->{key});
+		$mut->{alignment_overlap} = $split_key[8];
 	}		
 	return $mutation_info;
 }

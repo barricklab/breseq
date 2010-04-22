@@ -512,21 +512,28 @@ sub _alignments_to_candidate_junction
 		my $temp_seq = new Bio::Seq(-seq => $first_query_match_seq);		
 		$first_query_match_seq = $temp_seq->revcom->seq;
 	}
+	
+	## this only applies if the overlap is positive (sequence is shared between the two ends)
+	my $overlap_offset = 0;
+	$overlap_offset = $overlap if ($overlap > 0);
+
+	print "Overlap offset: $overlap_offset\n" if ($verbose);
 
 	##first end
 	my $first_overlap_seq = '';
 	if ($hash_strand_1 == 0) #alignment is not reversed
 	{
-		my $add_seq = substr $reference_sequence_string_hash_ref->{$hash_seq_id_1},  $hash_coord_1-($flanking_length-1)-1, $flanking_length;
+		my $add_seq = substr $reference_sequence_string_hash_ref->{$hash_seq_id_1},  $hash_coord_1-($flanking_length-1)-1-$overlap_offset, $flanking_length+$overlap_offset;
+		print "1F: $add_seq\n" if ($verbose);
 		$junction_seq_string .= $add_seq;
 		$first_overlap_seq = substr $reference_sequence_string_hash_ref->{$hash_seq_id_1},  $hash_coord_1-$overlap, $overlap if ($overlap > 0);		
 	}
 	else 
 	{
-		my $add_seq = substr $reference_sequence_string_hash_ref->{$hash_seq_id_1},  $hash_coord_1-1, $flanking_length;
-				
+		my $add_seq = substr $reference_sequence_string_hash_ref->{$hash_seq_id_1},  $hash_coord_1-1, $flanking_length+$overlap_offset;
 		my $temp_seq = new Bio::Seq(-seq => $add_seq);
 		$add_seq = $temp_seq->revcom->seq;
+		print "1R: $add_seq\n" if ($verbose);
 		$junction_seq_string .= $add_seq;
 
 		if ($verbose && ($overlap > 0))
@@ -539,30 +546,29 @@ sub _alignments_to_candidate_junction
 	
 	print "read: $first_query_match_seq\n" if ($verbose);
 	print "$hash_strand_1 $overlap $first_overlap_seq\n" if ($verbose);
-	
-	print "1: $junction_seq_string\n" if ($verbose);
 	$junction_seq_string .= $unique_read_seq_string;
-	print "2: $junction_seq_string\n" if ($verbose);
-		
-	## this only applies if the overlap is positive (sequence is shared between the two ends)
-	my $overlap_offset = 0;
-	$overlap_offset = $overlap if ($overlap > 0);
+	print "+: $unique_read_seq_string\n" if ($verbose);
 		
 	##second end
 	my $second_overlap_seq = '';
 	if ($hash_strand_2 == +1) #alignment is not reversed 
 	{
-		my $add_seq = substr $reference_sequence_string_hash_ref->{$hash_seq_id_2},  $hash_coord_2+$overlap_offset-1, $flanking_length-$overlap_offset;
+		print "Size: " . ($flanking_length-$overlap_offset) . "\n" if ($verbose);
+		
+		my $add_seq = substr $reference_sequence_string_hash_ref->{$hash_seq_id_2},  $hash_coord_2+$overlap_offset-1, $flanking_length;
+		print "2F: $add_seq\n" if ($verbose);
+
 		$second_overlap_seq = substr $reference_sequence_string_hash_ref->{$hash_seq_id_2},  $hash_coord_2-1, $overlap if ($overlap > 0);
 
 		$junction_seq_string .= $add_seq;
 	}
 	else # ($m_2->{hash_strand} * $m_2->{read_side} == -1)
 	{
-		my $add_seq = substr $reference_sequence_string_hash_ref->{$hash_seq_id_2},  $hash_coord_2-($flanking_length-1)-1, $flanking_length-$overlap_offset;
-
+		my $add_seq = substr $reference_sequence_string_hash_ref->{$hash_seq_id_2},  $hash_coord_2-($flanking_length-1)-$overlap_offset-1, $flanking_length;
 		my $temp_seq = new Bio::Seq(-seq => $add_seq);
 		$add_seq = $temp_seq->revcom->seq;
+		print "2R: $add_seq\n" if ($verbose);
+
 		$junction_seq_string .= $add_seq;
 		
 		if ($verbose && ($overlap > 0))
@@ -597,10 +603,12 @@ sub _alignments_to_candidate_junction
 		$unique_read_seq_string = Breseq::Fastq::revcom($unique_read_seq_string);
 	}
 		
-	my $junction_id = Breseq::Shared::junction_name_join($hash_seq_id_1, $hash_coord_1, $hash_strand_1, $hash_redundancy_1, $hash_seq_id_2, $hash_coord_2, $hash_strand_2, $hash_redundancy_2, $overlap, $unique_read_seq_string);	
+	my $junction_id = Breseq::Shared::junction_name_join($hash_seq_id_1, $hash_coord_1, $hash_strand_1, $hash_redundancy_1, $hash_seq_id_2, $hash_coord_2, $hash_strand_2, $hash_redundancy_2, $overlap, $unique_read_seq_string, $flanking_length);	
 	print "JUNCTION ID: $junction_id\n" if ($verbose);
 	
 	die "$junction_id " . $q1->qname . " " . $a2->qname  if (!$junction_seq_string);
+	
+	die if (length $junction_seq_string != 2*$flanking_length + abs($overlap));
 		
 	return ($junction_id, $junction_seq_string, $q1, $q2);
 }

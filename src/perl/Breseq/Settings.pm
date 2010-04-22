@@ -33,7 +33,7 @@ use Bio::Root::Root;
 use Getopt::Long;
 use Data::Dumper;
 use Pod::Usage;
-
+use FindBin;
 
 use vars qw(@ISA);
 @ISA = qw( Bio::Root::Root );
@@ -70,7 +70,6 @@ sub new
 	$self->{candidate_junction_read_limit} = undef;
 
 	#used by AlignmentCorrection.pm
-	$self->{require_first_read_base_to_match} = 0;
 	$self->{add_split_junction_sides} = 1;
 
 	$self->{no_junction_prediction} = undef;		# don't perform junction prediction steps
@@ -172,7 +171,6 @@ sub new_annotate
 	$self->{candidate_junction_read_limit} = undef;
 
 	#used by AlignmentCorrection.pm
-	$self->{require_first_read_base_to_match} = 0;
 	$self->{add_split_junction_sides} = 1;
 
 	$self->{no_junction_prediction} = undef;		# don't perform junction prediction steps
@@ -246,6 +244,9 @@ sub new_annotate
 sub initialize
 {
 	my ($self) = @_;
+	
+	$self->{version} = '100421';
+	$self->{script_path} = $FindBin::Bin;
 
 	#neaten up some settings for later string comparisons
 	$self->{quality_type} = "\L$self->{quality_type}";
@@ -368,7 +369,10 @@ sub initialize
 	$self->{settings_text_file_name} = "$self->{output_path}/settings.tab";
 	$self->{summary_text_file_name} = "$self->{output_path}/summary.tab";
 	$self->{tiled_coverage_text_file_name} = "$self->{output_path}/@.tiled_coverage.tab";
-	
+
+	$self->{breseq_graphic_from_file_name} = "$self->{script_path}/breseq.png";
+	$self->{breseq_graphic_to_file_name} = "$self->{output_path}/breseq.png";
+
 	$self->{long_pairs_file_name} = "$self->{output_path}/long_pairs.tab";
 
 	###### tmp ######

@@ -161,13 +161,25 @@ sub tam_write_read_alignments
 
 sub tam_write_moved_alignment
 {
-	my $verbose = 0;
+	my $verbose = 1;
 	my ($fh, $seq_id, $fastq_file_index, $a, $junction_side, $flanking_length, $junction_overlap, $junction_pos, $junction_strand, $trim) = @_;
-	print STDERR Dumper($seq_id, $fastq_file_index, $a, $junction_side, $flanking_length, $junction_overlap, $junction_pos, $junction_strand, $trim) . "\n" if ($verbose);
+	
+	if ($verbose)
+	{
+		print STDERR "seq_id                = $seq_id\n";
+		print STDERR "fastq_id              = $fastq_file_index\n";
+		print STDERR "alignment->start      = " . $a->start . "  alignment->end = " . $a->end . "\n";
+		print STDERR "junction_side         = $junction_side\n";
+		print STDERR "flanking_length       = $flanking_length\n";
+		print STDERR "junction_overlap      = $junction_overlap\n";
+		print STDERR "junction_pos	        = $junction_pos\n";
+		print STDERR "trim...\n";
+		print STDERR Dumper($trim);
+	}
 
 	#alter it if we are on the opposite strand
 	my $relative_strand = (($junction_side==1) ? -1 : +1) * $junction_strand;
-	print STDERR "Rel strand = $relative_strand\n" if ($verbose);
+	print STDERR "relative strand = $relative_strand\n" if ($verbose);
 	
 	my $aux_tags = 'AS:i:' . $a->aux_get('AS') . "\t" . 'X1:i:' . '1' . "\t" . "X2:i:$fastq_file_index";
 	$aux_tags .= "\t" . "XJ:i:1"; #this flag indicates this is a junction match (could also add which direction?)
@@ -184,6 +196,8 @@ sub tam_write_moved_alignment
 	}
 
 	my ($q_start, $q_end) = Breseq::Shared::alignment_query_start_end($a);
+	print STDERR "q_start = $q_start\n" if ($verbose);
+	print STDERR "q_end = $q_end\n" if ($verbose);
 
 	#setup all of the original read information
 	my @qual_scores = $a->qscore;
@@ -211,12 +225,22 @@ sub tam_write_moved_alignment
 		@qual_scores = reverse @qual_scores;
 		$flags ^= 16; #bitwise XOR to flip strand
 	}
-		
-	#need to adjust read position if insertions or deletions relative to reference
-	my $seek_ref_pos = $flanking_length; 
 	
-	##TESTING need to capture actual place it starts for second half...	
-	$seek_ref_pos -= $junction_overlap if ($junction_side == 2);
+	#need to adjust read position if insertions or deletions relative to reference
+	
+	## seek_ref_pos gives the position where we want to split the read and only count one side
+	my $seek_ref_pos = $flanking_length;
+	if ($junction_side == 1) 
+	{
+		## offset to include the redundant part for overlaps > 0 on junction_side 1
+		$seek_ref_pos += $junction_overlap if ($junction_overlap > 0);
+	}
+	else
+	{
+		## offset past the common part
+		$seek_ref_pos += abs($junction_overlap) if ($junction_side == 2);
+	}
+	print STDERR "seek_ref_pos = $seek_ref_pos\n" if ($verbose);
 	
 	my $test_ref_pos = $a->start;
 	my $read_pos = $q_start;
@@ -241,9 +265,6 @@ sub tam_write_moved_alignment
 		last if ($test_ref_pos >= $seek_ref_pos);
 	}
 	
-	#correct for overshoot
-#	my $side_1_read_pos -= ($test_ref_pos - $seek_ref_pos);	
-	
 	my $side_1_ref_match_length = $seek_ref_pos - $a->start + 1;
 	my $side_2_ref_match_length = $a->end - $seek_ref_pos;
 	my $reference_match_length = ($junction_side == 1) ? $side_1_ref_match_length : $side_2_ref_match_length;
@@ -251,16 +272,13 @@ sub tam_write_moved_alignment
 	print STDERR "SEEK REF POS: $seek_ref_pos\n" if ($verbose);
 	print STDERR "SIDE1 REF MATCH LEN: $side_1_ref_match_length\n" if ($verbose);
 	print STDERR "SIDE2 REF MATCH LEN: $side_2_ref_match_length\n" if ($verbose);
-	
-	print STDERR "a->start: ".  $a->start . "\n" if ($verbose);
-	print STDERR "a->end: ".  $a->end . "\n" if ($verbose);
 	print STDERR "REF MATCH LENGTH: $reference_match_length\n" if ($verbose);
 
 	#recall: strand == 1 means this is the lowest coordinate of that junction side sequence
 	#        strand == 0 means this is the highest coordinate
 	#start of match in new reference coords
 	my $ref_start = ($junction_strand == 1)
-		? $junction_pos
+		? $junction_pos 
 		: $junction_pos - $reference_match_length + 1;
 	
 	###
@@ -300,9 +318,12 @@ sub tam_write_moved_alignment
 		$side_2_ref_length += $n if ($c->[0] ne 'I');
 		$side_2_read_length += $n if ($c->[0] ne 'D');
 	}
-	
-	print STDERR Dumper(\@side_1_cigar_list, $side_1_ref_length, $side_1_read_length, \@side_2_cigar_list, $side_2_ref_length, $side_2_read_length) if ($verbose);
-	print STDERR "JUNCTION SIDE: $junction_side\n" if ($verbose);
+
+	print STDERR "SIDE1 REF LEN: $side_1_ref_match_length\n" if ($verbose);
+	print STDERR "SIDE2 REF LEN: $side_2_ref_match_length\n" if ($verbose);
+	print STDERR "SIDE1 READ LEN: $side_1_read_length\n" if ($verbose);
+	print STDERR "SIDE2 READ LEN: $side_2_read_length\n" if ($verbose);	
+	print STDERR Dumper(\@side_1_cigar_list, \@side_2_cigar_list) if ($verbose);
 	
 	@$cigar_list = ($junction_side == 1) ? @side_1_cigar_list : @side_2_cigar_list;
 	
@@ -315,8 +336,6 @@ sub tam_write_moved_alignment
 	#additional padding on the end that is blocked	
 	$left_padding += $side_1_read_length if ($junction_side == 2);
 	$right_padding += $side_2_read_length if ($junction_side == 1);
-
-#	($left_padding, $right_padding) = ($right_padding, $left_padding) if ($relative_strand == -1);
 	
 	unshift @$cigar_list, ['S', $left_padding] if ($left_padding);
 	push @$cigar_list, ['S', $right_padding] if ($right_padding);
@@ -334,7 +353,6 @@ sub tam_write_moved_alignment
 		$cigar_length += $c->[1] if ($c->[0] ne 'D');
 	}
 	
-			
 	## assemble the quality score string
 	my $quality_score_string = '';
 	foreach my $s (@qual_scores)
@@ -343,7 +361,7 @@ sub tam_write_moved_alignment
 	}
 	
 	my @ll;
-	push @ll, $a->qname;
+	push @ll, $a->qname . "-M";
 	push @ll, $flags;
 	push @ll, $seq_id;
 	push @ll, $ref_start;

@@ -71,8 +71,6 @@ sub correct_alignments
 	my $resolved_junction_sam_file_name = $settings->file_name('resolved_junction_sam_file_name');
 	my $RCJ;
 	open $RCJ, ">$resolved_junction_sam_file_name" or die;
-
-
 	
 	my $reference_header;
 	my $candidate_junction_header;
@@ -167,7 +165,7 @@ sub correct_alignments
 						
 			###			
 			## Matches to candidate junctions may not overlap the junction.
-			## Reduce this list to only those that overlap the entire junction.
+			## Reduce this list to only those that overlap the ENTIRE junction.
 			###
 						
 			for (my $i=0; $i<scalar @$this_candidate_junction_al; $i++)
@@ -182,11 +180,11 @@ sub correct_alignments
 				my $overlap = $scj[8];
 				my ($junction_start, $junction_end);
 				
-				$junction_start = $flanking_length;
-				$junction_end = $flanking_length - $overlap + 1;
+				$junction_start = $flanking_length + 1;
+				$junction_end = $flanking_length + abs($overlap);
 								
-				if ( ($a->start > $junction_start) || ($a->end < $junction_start)
-			      || ($a->start > $junction_end) || ($a->end < $junction_end) )
+
+				if ( ($a->end <= $junction_end) || ($a->start >= $junction_start) )
 				{
 					splice  @$this_candidate_junction_al, $i, 1;
 					$i--;
@@ -197,18 +195,7 @@ sub correct_alignments
 			## Determine if the read has a better match to a candidate junction
 			## or to the reference sequence.
 			###
-
-
-			##Optionally, remove matches to junctions where the first base of the read does not match
-			@$this_candidate_junction_al = grep {_alignment_begins_with_match_in_read($_)} @$this_candidate_junction_al if ($settings->{require_first_read_base_to_match});
-			@$this_reference_al = grep {_alignment_begins_with_match_in_read($_)} @$this_reference_al if ($settings->{require_first_read_base_to_match});
-
 			
-			###			
-			## Determine if the read has a better match to a candidate junction
-			## or to the reference sequence.
-			###
-
 			my $best_candidate_junction_score = -9999;
 			my $best_reference_score = -9999;
 
@@ -225,7 +212,8 @@ sub correct_alignments
 			}
 						
 			### this read potentially supports a candidate junction		
-			if ($best_candidate_junction_score > $best_reference_score)
+#			if ($best_candidate_junction_score > $best_reference_score)
+			if ($best_candidate_junction_score >= $best_reference_score) #EXPERIMENTAL
 			{
 				my @this_dominant_candidate_junction_al = _alignment_list_to_dominant_best($minimum_best_score, undef, @$this_candidate_junction_al);
 				
@@ -260,12 +248,14 @@ sub correct_alignments
 				{
 					_write_reference_matches($minimum_best_score, $minimum_best_score_difference, $reference_fai, $ref_seq_info, $RREF, $reference_header, $fastq_file_index[$f], @$this_reference_al);
 				}
-				
-				## if not, then write to unmatched read file
-				elsif ($settings->{unmatched_reads}) 
+				else
 				{
-					$out_unmatched_fastq[$f]->write_seq($seq);
 					$s->{unmatched_reads}++;
+					## if not, then write to unmatched read file
+					if ($settings->{unmatched_reads}) 
+					{
+						$out_unmatched_fastq[$f]->write_seq($seq);
+					}
 				}
 			}
 		} continue {
@@ -357,10 +347,13 @@ sub correct_alignments
 	
                     ## Do not count for coverage if it is redundant!!
 					if (!$item->{$side_key}->{redundant})
-					{
+					{	
 						##write out match corresponding to this part to SAM file						
 						my $trim = _trim_ambiguous_ends($a, $candidate_junction_header, $candidate_junction_fai);
-						Breseq::Shared::tam_write_moved_alignment($RREF, $item->{$side_key}->{seq_id}, $fastq_file_index, $a, $side, $item->{flanking_length}, $item->{overlap}, $item->{$side_key}->{start}, $item->{$side_key}->{strand}, $trim);		
+						
+						print $item->{'key'} . "\n";
+						
+						Breseq::Shared::tam_write_moved_alignment($RREF, $item->{$side_key}->{seq_id}, $fastq_file_index, $a, $side, $item->{flanking_length}, $item->{alignment_overlap}, $item->{$side_key}->{start}, $item->{$side_key}->{strand}, $trim);		
 					}
 				}
 			}
@@ -865,12 +858,14 @@ sub _test_junction
 
 		my $this_left = $flanking_length;
 		#positive overlap means part of this is in overlap region and should not be counted
-		$this_left -= $overlap if ($overlap > 0);
+##JEB-TEST	$this_left -= $overlap if ($overlap > 0);
 		$this_left = $this_left - $a->start+1;
 
 		my $this_right = $flanking_length+1;
 		#negative overlap means we need to offset to get past the unique read sequence
-		$this_right -= $overlap if ($overlap < 0);
+		
+		$this_right -= abs($overlap);
+##JEB-TEST		$this_right -= $overlap if ($overlap < 0);
 		$this_right = $a->end - $this_right+1;
 #		print "  " . $a->start . "-" . $a->end . " " . $overlap . " " . $rev_key . "\n";
 #		print "  " . $item->{alignments}->[0]->qname . " LEFT: $this_left RIGHT: $this_right\n";
@@ -995,31 +990,32 @@ sub _junction_to_hybrid_list_item
 	my ($downstream_reference, $downstream_position, $downstream_direction, $downstream_redundant) = @split_key[4..7];
 	$downstream_direction = -1 if ($downstream_direction == 0);
 
+	## overlap may be adjusted below... this messes up making the alignment
 	$item->{overlap} = $split_key[8];
+	$item->{alignment_overlap} = $item->{overlap};			
 			
 	##
 	## Create three intervals for making alignments and html output
 	##    it would be nice to flag whether we think the original junction is still there
 	##
-
  	
 	## (1) The first alignment has information relative to the junction candidates
-	if ($item->{overlap} == 0)
+	if ($item->{alignment_overlap} == 0)
 	{
 		$item->{start} = $item->{flanking_length};
 		$item->{end} = $item->{flanking_length}+1;			
 		$item->{mark} = '/';
 	}
-	elsif ($item->{overlap} > 0)
+	elsif ($item->{alignment_overlap} > 0)
 	{
-		$item->{start} = $item->{flanking_length} + 1 - $item->{overlap};
-		$item->{end} = $item->{flanking_length};
+		$item->{start} = $item->{flanking_length}+1;
+		$item->{end} = $item->{flanking_length}+$item->{alignment_overlap};
 		$item->{mark} = '|';
 	}
 	else ## ($item->{overlap} < 0)
 	{
 		$item->{start} = $item->{flanking_length}+1;
-		$item->{end} = $item->{flanking_length}-$item->{overlap};
+		$item->{end} = $item->{flanking_length}-$item->{alignment_overlap};
 		$item->{mark} = '*';
 	}
 	$item->{seq_id} = $key;
@@ -1033,7 +1029,6 @@ sub _junction_to_hybrid_list_item
 	$item->{interval_1}->{strand} = $upstream_direction;		
 	$item->{interval_1}->{seq_id} = $upstream_reference;
 	$item->{interval_1}->{redundant} = $upstream_redundant;
-
 
 	## (3) Alignment for the reference sequence that disagrees with the junction #2.
 	$item->{interval_2}->{start} = $downstream_position;
