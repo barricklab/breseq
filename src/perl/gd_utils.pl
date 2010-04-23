@@ -293,7 +293,7 @@ sub do_annotate
 		if (!-e $this_plot_coverage_done_file_name)
 		{
 			my $this_complete_coverage_text_file_name = $settings->file_name('complete_coverage_text_file_name', {'@'=>$seq_id});			
-			my $res = Breseq::Shared::system("graph_coverage.pl -t $tmp_path -p $settings->{coverage_graph_path} -i $deletions_text_file_name -c $this_complete_coverage_text_file_name --seq_id=$seq_id");				
+			my $res = Breseq::Shared::system("perl graph_coverage.pl -t $tmp_path -p $settings->{coverage_graph_path} -i $deletions_text_file_name -c $this_complete_coverage_text_file_name --seq_id=$seq_id");				
 			die if ($res);
 			open DONE, ">$this_plot_coverage_done_file_name";
 			close DONE;
