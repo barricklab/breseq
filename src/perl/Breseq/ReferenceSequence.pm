@@ -567,17 +567,20 @@ sub annotate_rearrangements
 		print Dumper($item) if ($verbose);
 	}
 
-	sub by_hybrid
+	if (!$settings->{sort_junctions_by_score})
 	{
-		my $a_pos = (defined $a->{interval_1}->{is}) ? $a->{interval_2}->{start} : $a->{interval_1}->{start};
-		my $b_pos = (defined $b->{interval_1}->{is}) ? $b->{interval_2}->{start} : $b->{interval_1}->{start};
+		sub by_hybrid
+		{
+			my $a_pos = (defined $a->{interval_1}->{is}) ? $a->{interval_2}->{start} : $a->{interval_1}->{start};
+			my $b_pos = (defined $b->{interval_1}->{is}) ? $b->{interval_2}->{start} : $b->{interval_1}->{start};
 	
-		my $a_seq_order = (defined $a->{interval_1}->{is}) ? $ref_seq_info->{seq_order}->{$a->{interval_2}->{seq_id}} : $ref_seq_info->{seq_order}->{$a->{interval_1}->{seq_id}};
-		my $b_seq_order = (defined $b->{interval_1}->{is}) ? $ref_seq_info->{seq_order}->{$b->{interval_2}->{seq_id}} : $ref_seq_info->{seq_order}->{$b->{interval_1}->{seq_id}};		
+			my $a_seq_order = (defined $a->{interval_1}->{is}) ? $ref_seq_info->{seq_order}->{$a->{interval_2}->{seq_id}} : $ref_seq_info->{seq_order}->{$a->{interval_1}->{seq_id}};
+			my $b_seq_order = (defined $b->{interval_1}->{is}) ? $ref_seq_info->{seq_order}->{$b->{interval_2}->{seq_id}} : $ref_seq_info->{seq_order}->{$b->{interval_1}->{seq_id}};		
 	
-		return (($a_seq_order <=> $b_seq_order) || ($a_pos <=> $b_pos));
+			return (($a_seq_order <=> $b_seq_order) || ($a_pos <=> $b_pos));
+		}
+		@$rearrangements_ref = sort by_hybrid @$rearrangements_ref;
 	}
-	@$rearrangements_ref = sort by_hybrid @$rearrangements_ref;
 }
 
 

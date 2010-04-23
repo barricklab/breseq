@@ -510,47 +510,12 @@ sub html_junction_table_string
 	my $output_str = '';
 	
 	###
-	# Sort the junctions by unique coordinates or by their scores
-	###
-	sub by_unique_coord
-	{
-		my $a_pos = (defined $a->{interval_1}->{is}) ? $a->{interval_2}->{start} : $a->{interval_1}->{start};
-		my $b_pos = (defined $b->{interval_1}->{is}) ? $b->{interval_2}->{start} : $b->{interval_1}->{start};
-	
-		my $a_seq_order = (defined $a->{interval_1}->{is}) ? $ref_seq_info->{seq_order}->{$a->{interval_2}->{seq_id}} : $ref_seq_info->{seq_order}->{$a->{interval_1}->{seq_id}};
-		my $b_seq_order = (defined $b->{interval_1}->{is}) ? $ref_seq_info->{seq_order}->{$b->{interval_2}->{seq_id}} : $ref_seq_info->{seq_order}->{$b->{interval_1}->{seq_id}};		
-	
-		return (($a_seq_order <=> $b_seq_order) || ($a_pos <=> $b_pos));
-	}
-	
-	if ($settings->{sort_junctions_by_score})
-	{
-		@$list_ref = sort { -($a->{score} <=> $b->{score}) || ($a->{total_reads} <=> $a->{total_reads}) } @$list_ref;
-		my $last = 100;
-		$last = scalar @$list_ref if (scalar @$list_ref < $last);
-
-		my @new;
-		foreach my $j (0..($last-1))
-		{
-			push @new, $list_ref->[$j];
-		}
-		@$list_ref = @new;		
-	}
-	else
-	{
-		@$list_ref = sort by_unique_coord @$list_ref;
-	}
-	
-	
-	###
 	# Merge predictions for IS insertions
 	###
 	
 	##correct overlaps
 	foreach my $j (@$list_ref)
-	{
-		####should move this to the original annotation step...
-		
+	{		
 		sub add_interval_coords
 		{
 			my ($c) = @_;
@@ -624,64 +589,65 @@ sub html_junction_table_string
 			
 	}
 	
-	
-	
-	for (my $i=0; $i<scalar @$list_ref - 1; $i++)
+	## only annotate IS elements for real reads...
+	if (!$settings->{marginal_mode})
 	{
-		my $j1 = $list_ref->[$i];
-		my $j2 = $list_ref->[$i+1];		
+		for (my $i=0; $i<scalar @$list_ref - 1; $i++)
+		{
+			my $j1 = $list_ref->[$i];
+			my $j2 = $list_ref->[$i+1];		
 				
-		#must be same IS
-		next if (!defined $j1->{is} || !defined $j2->{is});
-		next if ($j1->{is}->{is}->{gene} ne $j2->{is}->{is}->{gene});
+			#must be same IS
+			next if (!defined $j1->{is} || !defined $j2->{is});
+			next if ($j1->{is}->{is}->{gene} ne $j2->{is}->{is}->{gene});
 				
-		#must have a non-negative overlap
-		next if ($j1->{overlap} < 0);
-		next if ($j2->{overlap} < 0);
+			#must have a non-negative overlap
+			next if ($j1->{overlap} < 0);
+			next if ($j2->{overlap} < 0);
 
-		#must be close together in real coords
-		next if (abs($j1->{uc}->{start} - $j2->{uc}->{start}) > 20);
+			#must be close together in real coords
+			next if (abs($j1->{uc}->{start} - $j2->{uc}->{start}) > 20);
 		
-		#the first unique coords are going into the IS element
-		my $uc1_strand = $j1->{uc}->{strand};
-		my $uc2_strand = $j2->{uc}->{strand};
-		next if ($uc1_strand != -$uc2_strand);
+			#the first unique coords are going into the IS element
+			my $uc1_strand = $j1->{uc}->{strand};
+			my $uc2_strand = $j2->{uc}->{strand};
+			next if ($uc1_strand != -$uc2_strand);
 		
-		my $is1_strand = - $j1->{is}->{strand} * $j1->{is}->{is}->{strand} * $j1->{uc}->{strand};
-		my $is2_strand = - $j2->{is}->{strand} * $j2->{is}->{is}->{strand} * $j2->{uc}->{strand};
-		my $is_strand = ($is1_strand == $is2_strand) ? $is2_strand : '0';
+			my $is1_strand = - $j1->{is}->{strand} * $j1->{is}->{is}->{strand} * $j1->{uc}->{strand};
+			my $is2_strand = - $j2->{is}->{strand} * $j2->{is}->{is}->{strand} * $j2->{uc}->{strand};
+			my $is_strand = ($is1_strand == $is2_strand) ? $is2_strand : '0';
 		
-		### add additional information to the first match, which will 
-		### cause a new line to be drawn in the new junction table
+			### add additional information to the first match, which will 
+			### cause a new line to be drawn in the new junction table
 		
-		$j1->{is_insertion}->{start} = ($uc1_strand == -1) ? $j2->{uc}->{start} : $j1->{uc}->{start};
-		$j1->{is_insertion}->{end} = ($uc1_strand == -1) ? $j1->{uc}->{start} : $j2->{uc}->{start};
-		$j1->{is_insertion}->{family} = $j1->{is}->{is}->{gene};
-		$j1->{is_insertion}->{is_strand} = $is_strand;
-		$j1->{is_insertion}->{is_size} = abs($j1->{is}->{is}->{end} - $j1->{is}->{is}->{start} + 1);
-		$j1->{is_insertion}->{after_pos} = $j1->{is_insertion}->{start} - 1;
-		$j1->{is_insertion}->{dup_size} = abs($j1->{is_insertion}->{end} - $j1->{is_insertion}->{start}) + 1;
+			$j1->{is_insertion}->{start} = ($uc1_strand == -1) ? $j2->{uc}->{start} : $j1->{uc}->{start};
+			$j1->{is_insertion}->{end} = ($uc1_strand == -1) ? $j1->{uc}->{start} : $j2->{uc}->{start};
+			$j1->{is_insertion}->{family} = $j1->{is}->{is}->{gene};
+			$j1->{is_insertion}->{is_strand} = $is_strand;
+			$j1->{is_insertion}->{is_size} = abs($j1->{is}->{is}->{end} - $j1->{is}->{is}->{start} + 1);
+			$j1->{is_insertion}->{after_pos} = $j1->{is_insertion}->{start} - 1;
+			$j1->{is_insertion}->{dup_size} = abs($j1->{is_insertion}->{end} - $j1->{is_insertion}->{start}) + 1;
 		
-		#sometimes the ends of the IS are not quite flush		
-		if ($j1->{is}->{strand} == -1)
-		{
-			$j1->{is_insertion}->{gap_left} = $j1->{is}->{start} - $j1->{is}->{is}->{end};
-		}
-		else
-		{
-			$j1->{is_insertion}->{gap_left} = $j1->{is}->{start} - $j1->{is}->{is}->{start};
-		}
+			#sometimes the ends of the IS are not quite flush		
+			if ($j1->{is}->{strand} == -1)
+			{
+				$j1->{is_insertion}->{gap_left} = $j1->{is}->{start} - $j1->{is}->{is}->{end};
+			}
+			else
+			{
+				$j1->{is_insertion}->{gap_left} = $j1->{is}->{start} - $j1->{is}->{is}->{start};
+			}
 		
-		if ($j2->{is}->{strand} == -1)
-		{
-			$j1->{is_insertion}->{gap_right} = $j2->{is}->{start} - $j2->{is}->{is}->{end};
-		}
-		else
-		{
-			$j1->{is_insertion}->{gap_right} = $j2->{is}->{start} - $j2->{is}->{is}->{start};
+			if ($j2->{is}->{strand} == -1)
+			{
+				$j1->{is_insertion}->{gap_right} = $j2->{is}->{start} - $j2->{is}->{is}->{end};
+			}
+			else
+			{
+				$j1->{is_insertion}->{gap_right} = $j2->{is}->{start} - $j2->{is}->{is}->{start};
+			}
 		}
 	}
-	
 	
 	my $q = new CGI;
 	$output_str.= start_table({-border => 0, -cellspacing => 1, -cellpadding => 3});
