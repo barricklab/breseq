@@ -1261,14 +1261,14 @@ sub make_nonbreaking
 
 sub commify 
 {
-	my $_  = shift;
-	s{(?<!\d|\.)(\d{4,})}
+	my ($input)  = @_;
+	$input =~ s{(?<!\d|\.)(\d{4,})}
 	{
 		my $n = $1;
      	$n=~s/(?<=.)(?=(?:.{3})+$)/,/g;
      	$n;
     }eg;
-   return $_;
+   return $input;
 }
 
 
