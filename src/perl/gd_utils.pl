@@ -372,10 +372,21 @@ sub do_annotate
 	### look, we have to invent intervals for the non-rearranged versions of the hybrid reads as well.
 	### proper alignments can be made as part of the composite list
 
-	print STDERR "Annotating rearrangements...\n";
-	Breseq::ReferenceSequence::annotate_rearrangements(undef, undef, $ref_seq_info, \@hybrids);
-	#print Dumper(\@hybrids); ##DEUG
+	###
+	# Sort the junctions by unique coordinates or by their scores
+	###
+	
+	if ($settings->{sort_junctions_by_score})
+	{
+		#sort and truncate list
+		@hybrids = sort { -($a->{score} <=> $b->{score}) || ($a->{total_reads} <=> $a->{total_reads}) } @hybrids;
+		my $last = $settings->{max_junctions_to_print};
+		$last = scalar @hybrids if (scalar @hybrids < $last);
+		$#hybrids = $last-1;	
+	}
 
+	print STDERR "Annotating rearrangements...\n";
+	Breseq::ReferenceSequence::annotate_rearrangements($settings, undef, $ref_seq_info, \@hybrids);
 
 	foreach my $hybrid (@hybrids)
 	{
@@ -384,6 +395,8 @@ sub do_annotate
 	 	push @composite_list, $hybrid->{interval_1};
 	 	push @composite_list, $hybrid->{interval_2};
 	}
+	
+	
 
 	# ### first name all the files/links, so backlinks work
 

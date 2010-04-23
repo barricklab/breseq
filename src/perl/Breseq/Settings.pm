@@ -227,13 +227,16 @@ sub new_annotate
 		'resume' => \$self->{resume_run},
 		'continue' => \$self->{continue_run},
 		'html-mutation-file=s' => \$self->{html_mutation_file},
-		'sort_junctions_by_score' => \$self->{sort_junctions_by_score},
+		'marginal-mode' => \$self->{marginal_mode},
 	) or pod2usage(2);
 
 	pod2usage(1) if $help;
 	pod2usage(-exitstatus => 0, -verbose => 2) if $man;
 	pod2usage(-exitstatus => 0, -verbose => 2) if (scalar @ARGV == 0);
 	
+	$self->{max_junctions_to_print} = 100  if ($self->{marginal_mode});
+	$self->{sort_junctions_by_score} = 1  if ($self->{marginal_mode});
+		
 	$self->initialize;
 		
 	return $self;

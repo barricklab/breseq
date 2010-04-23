@@ -790,9 +790,9 @@ if (!-e $output_done_file_name)
 		my $marginal_html_file_name = $settings->file_name('marginal_html_file_name');
 		
 		my $res;
-		$res = Breseq::Shared::system("gd_utils.pl ANNOTATE -i $filtered_genome_diff_file_name $settings->{arguments} ", 0, 1);
+		$res = Breseq::Shared::system("gd_utils.pl ANNOTATE -i $filtered_genome_diff_file_name $settings->{arguments} ");
 		my $annotated_mutations = ($res == 0);
-		$res = Breseq::Shared::system("gd_utils.pl ANNOTATE -i $marginal_genome_diff_file_name --html-mutation-file=$marginal_html_file_name --sort_junctions_by_score $settings->{arguments} ", 0, 1);
+		$res = Breseq::Shared::system("gd_utils.pl ANNOTATE -i $marginal_genome_diff_file_name --html-mutation-file=$marginal_html_file_name --marginal-mode $settings->{arguments} ");
 		my $annotated_marginal = ($res == 0);
 
 		my $index_html_file_name = $settings->file_name('index_html_file_name');	
