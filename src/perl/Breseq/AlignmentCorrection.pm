@@ -174,15 +174,14 @@ sub correct_alignments
 				next if ($a->unmapped);
 				
 				my $junction_id = $candidate_junction_header->target_name()->[$a->tid];
-				my @scj = Breseq::Shared::junction_name_split($junction_id);
-								
+				my $scj = Breseq::Shared::junction_name_split($junction_id);
+				my $overlap = $scj->{overlap};
+
 				## find the start and end coordinates of the overlap
-				my $overlap = $scj[8];
 				my ($junction_start, $junction_end);
 				
 				$junction_start = $flanking_length + 1;
 				$junction_end = $flanking_length + abs($overlap);
-								
 
 				if ( ($a->end <= $junction_end) || ($a->start >= $junction_start) )
 				{
@@ -280,7 +279,7 @@ sub correct_alignments
 	my @new_keys;
 	foreach my $key (@sorted_keys)
 	{
-		my $failed = _test_junction($key, \%matched_junction, \%degenerate_matches, \%junction_test_info, $flanking_length, $minimum_best_score, $minimum_best_score_difference, $reference_fai, $ref_seq_info, $RREF, $reference_header, $RCJ, $candidate_junction_header);
+		my $failed = _test_junction($key, \%matched_junction, \%degenerate_matches, \%junction_test_info, $minimum_best_score, $minimum_best_score_difference, $reference_fai, $ref_seq_info, $RREF, $reference_header, $RCJ, $candidate_junction_header);
 
 		if (!$failed)
 		{
@@ -303,7 +302,7 @@ sub correct_alignments
 		
 		next if (!defined $degenerate_matches{$key}); #they can be removed 
 		
-		my $failed = _test_junction($key, \%matched_junction, \%degenerate_matches, \%junction_test_info, $flanking_length, $minimum_best_score, $minimum_best_score_difference, $reference_fai, $ref_seq_info, $RREF, $reference_header, $RCJ, $candidate_junction_header);
+		my $failed = _test_junction($key, \%matched_junction, \%degenerate_matches, \%junction_test_info, $minimum_best_score, $minimum_best_score_difference, $reference_fai, $ref_seq_info, $RREF, $reference_header, $RCJ, $candidate_junction_header);
 		if (!$failed)
 		{
 			@sorted_keys = sort {-(scalar keys %{$degenerate_matches{$a}} <=> scalar keys %{$degenerate_matches{$b}})} keys %degenerate_matches;
@@ -328,7 +327,7 @@ sub correct_alignments
  	foreach my $key (@sorted_keys)
  	{	  
 		print "$key\n" if ($verbose);
-		my $item = _junction_to_hybrid_list_item($key, scalar @{$matched_junction{$key}}, $flanking_length, $junction_test_info{$key});	
+		my $item = _junction_to_hybrid_list_item($key, scalar @{$matched_junction{$key}}, $junction_test_info{$key});	
 		push @hybrid_predictions, $item;
 		
 		## create matches from UNIQUE sides of each match to reference genome
@@ -350,7 +349,7 @@ sub correct_alignments
 					{	
 						##write out match corresponding to this part to SAM file						
 						my $trim = _trim_ambiguous_ends($a, $candidate_junction_header, $candidate_junction_fai);						
-						Breseq::Shared::tam_write_moved_alignment($RREF, $item->{$side_key}->{seq_id}, $fastq_file_index, $a, $side, $item->{flanking_length}, $item->{alignment_overlap}, $item->{$side_key}->{start}, $item->{$side_key}->{strand}, $trim);		
+						Breseq::Shared::tam_write_moved_alignment($RREF, $item->{$side_key}->{seq_id}, $fastq_file_index, $a, $side, $item->{flanking_left}, $item->{alignment_overlap}, $item->{$side_key}->{start}, $item->{$side_key}->{strand}, $trim);		
 					}
 				}
 			}
@@ -362,7 +361,7 @@ sub correct_alignments
 	foreach my $key (@rejected_keys)
 	{
 		print "$key\n" if ($verbose);
-		my $item = _junction_to_hybrid_list_item($key, scalar @{$matched_junction{$key}}, $flanking_length, $junction_test_info{$key});
+		my $item = _junction_to_hybrid_list_item($key, scalar @{$matched_junction{$key}}, $junction_test_info{$key});
 		$item->{marginal}=1;
 		push @rejected_hybrid_predictions, $item;
 	}
@@ -801,7 +800,7 @@ sub _ambiguous_end_offsets_from_sequence
 
 sub _test_junction
 {
-	my ($key, $matched_junction_ref, $degenerate_matches_ref, $junction_test_info_ref, $flanking_length, $minimum_best_score, $minimum_best_score_difference, $reference_fai, $ref_seq_info, $RREF, $reference_header, $RCJ, $candidate_junction_header) = @_;
+	my ($key, $matched_junction_ref, $degenerate_matches_ref, $junction_test_info_ref, $minimum_best_score, $minimum_best_score_difference, $reference_fai, $ref_seq_info, $RREF, $reference_header, $RCJ, $candidate_junction_header) = @_;
 	
 	my $test_info;
 	my @unique_matches = ();
@@ -847,23 +846,23 @@ sub _test_junction
 		die if (!defined $a);
 		
 		my $junction_id = $candidate_junction_header->target_name()->[$a->tid];
-		my @split_key = Breseq::Shared::junction_name_split($junction_id);
- 		my $overlap = $split_key[8];
+		my $scj = Breseq::Shared::junction_name_split($junction_id);
+		my $overlap = $scj->{overlap};
+		my $flanking_left = $scj->{flanking_left};
+
 		my $rev_key = ($a->reversed ? '1' : '0');
 
 		$count_per_strand->{$rev_key}++;
 
-		my $this_left = $flanking_length;
-		#positive overlap means part of this is in overlap region and should not be counted
-##JEB-TEST	$this_left -= $overlap if ($overlap > 0);
+		##The left side goes exactly up to the flanking length
+		my $this_left = $flanking_left;
 		$this_left = $this_left - $a->start+1;
 
-		my $this_right = $flanking_length+1;
-		#negative overlap means we need to offset to get past the unique read sequence
-		
-		$this_right -= abs($overlap);
-##JEB-TEST		$this_right -= $overlap if ($overlap < 0);
+		#The right side starts after moving past any overlap (negative or positive)
+		my $this_right = $flanking_left+1;
+		$this_right += abs($overlap);
 		$this_right = $a->end - $this_right+1;
+
 #		print "  " . $a->start . "-" . $a->end . " " . $overlap . " " . $rev_key . "\n";
 #		print "  " . $item->{alignments}->[0]->qname . " LEFT: $this_left RIGHT: $this_right\n";
 
@@ -973,23 +972,19 @@ sub _test_junction
 
 sub _junction_to_hybrid_list_item
 {
-	my ($key, $total_reads, $flanking_length, $test_info) = @_;
+	my ($key, $total_reads, $test_info) = @_;
 	
-	my $item = {key => $key, flanking_length => $flanking_length, test_info => $test_info};
+	## split the key to an item with information about the junction
+	my $item = Breseq::Shared::junction_name_split($key);
+	$item->{key} = $key;
+	$item->{test_info} = $test_info;
 	
-	## how this is made...
-	# my $junction_id = Breseq::Shared::junction_name_join($hash_seq_id_1, $hash_coord_1, $hash_strand_1, $hash_seq_id_2, $hash_coord_2, $hash_strand_2, $overlap, $unique_read_seq_string);	
-	my @split_key = Breseq::Shared::junction_name_split($key);
-
-	my ($upstream_reference, $upstream_position, $upstream_direction, $upstream_redundant) = @split_key[0..3];
-	$upstream_direction = -1 if ($upstream_direction == 0);
-
-	my ($downstream_reference, $downstream_position, $downstream_direction, $downstream_redundant) = @split_key[4..7];
-	$downstream_direction = -1 if ($downstream_direction == 0);
-
 	## overlap may be adjusted below... this messes up making the alignment
-	$item->{overlap} = $split_key[8];
+	## 'alignment_overlap' is the original one that applies to the candidate junction BAM file
+	## 'overlap' is a version where overlap has been resolved if possible for adding sides of the
+	##    alignment
 	$item->{alignment_overlap} = $item->{overlap};			
+	
 			
 	##
 	## Create three intervals for making alignments and html output
@@ -999,40 +994,27 @@ sub _junction_to_hybrid_list_item
 	## (1) The first alignment has information relative to the junction candidates
 	if ($item->{alignment_overlap} == 0)
 	{
-		$item->{start} = $item->{flanking_length};
-		$item->{end} = $item->{flanking_length}+1;			
+		$item->{start} = $item->{flanking_left};
+		$item->{end} = $item->{flanking_left}+1;			
 		$item->{mark} = '/';
 	}
 	elsif ($item->{alignment_overlap} > 0)
 	{
-		$item->{start} = $item->{flanking_length}+1;
-		$item->{end} = $item->{flanking_length}+$item->{alignment_overlap};
+		$item->{start} = $item->{flanking_left}+1;
+		$item->{end} = $item->{flanking_left}+$item->{alignment_overlap};
 		$item->{mark} = '|';
 	}
 	else ## ($item->{overlap} < 0)
 	{
-		$item->{start} = $item->{flanking_length}+1;
-		$item->{end} = $item->{flanking_length}-$item->{alignment_overlap};
+		$item->{start} = $item->{flanking_left}+1;
+		$item->{end} = $item->{flanking_left}-$item->{alignment_overlap};
 		$item->{mark} = '*';
 	}
 	$item->{seq_id} = $key;
 	
-	#### NOTE: For these intervals, the strand indicates which direction (relative to top strand of genome)
-	####       you move until you hit the given position to reproduce sequence in new junction.
-
+	## These are now automatically created from splitting the junction jkey
 	## (2) Alignment for the reference sequence that disagrees with the junction #1.
-	$item->{interval_1}->{start} = $upstream_position;
-	$item->{interval_1}->{end} = $upstream_position;
-	$item->{interval_1}->{strand} = $upstream_direction;		
-	$item->{interval_1}->{seq_id} = $upstream_reference;
-	$item->{interval_1}->{redundant} = $upstream_redundant;
-
 	## (3) Alignment for the reference sequence that disagrees with the junction #2.
-	$item->{interval_2}->{start} = $downstream_position;
-	$item->{interval_2}->{end} = $downstream_position;
-	$item->{interval_2}->{strand} = $downstream_direction;
-	$item->{interval_2}->{seq_id} = $downstream_reference;
-	$item->{interval_2}->{redundant} = $downstream_redundant;
 
 	$item->{total_reads} = $total_reads;
 	

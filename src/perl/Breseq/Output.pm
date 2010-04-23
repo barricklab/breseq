@@ -1059,7 +1059,8 @@ sub write_genome_diff
 			total_reads => $hyb->{total_reads},
 			start => $hyb->{start},
 			end => $hyb->{end},
-			flanking_length => $hyb->{flanking_length},
+			flanking_left => $hyb->{flanking_left},
+			flanking_right => $hyb->{flanking_left},
 		};
 		
 		my $test_info = $hyb->{test_info};
@@ -1135,8 +1136,8 @@ sub read_genome_diff
 		
 		$mut->{seq_id} = $mut->{key};
 		
-		my @split_key = Breseq::Shared::junction_name_split($mut->{key});
-		$mut->{alignment_overlap} = $split_key[8];
+		my $scj = Breseq::Shared::junction_name_split($mut->{key});
+		$mut->{alignment_overlap} = $scj->{overlap};
 	}		
 	return $mutation_info;
 }

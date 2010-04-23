@@ -486,7 +486,7 @@ sub annotate_rearrangements
 	{				
 		## This additional information is used for the complex reference line
 		my $alignment_reference_info_1 = { 
-			truncate_end => $item->{flanking_length}, 
+			truncate_end => $item->{flanking_left}, 
 			ghost_end => $item->{interval_1}->{end}, 
 			ghost_strand => $item->{interval_1}->{strand},
 			ghost_seq_id => $item->{interval_1}->{seq_id}
@@ -495,7 +495,7 @@ sub annotate_rearrangements
 
 
 		my $alignment_reference_info_2 = { 
-			truncate_start => $item->{flanking_length}+1, 
+			truncate_start => $item->{flanking_left}+1, 
 			ghost_start => $item->{interval_2}->{start}, 
 			ghost_strand => $item->{interval_2}->{strand},
 			ghost_seq_id => $item->{interval_2}->{seq_id}

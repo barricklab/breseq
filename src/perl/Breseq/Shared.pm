@@ -161,8 +161,8 @@ sub tam_write_read_alignments
 
 sub tam_write_moved_alignment
 {
-	my $verbose = 0;
-	my ($fh, $seq_id, $fastq_file_index, $a, $junction_side, $flanking_length, $junction_overlap, $junction_pos, $junction_strand, $trim) = @_;
+	my $verbose = 1;
+	my ($fh, $seq_id, $fastq_file_index, $a, $junction_side, $flanking_left, $junction_overlap, $junction_pos, $junction_strand, $trim) = @_;
 	
 	if ($verbose)
 	{
@@ -170,7 +170,7 @@ sub tam_write_moved_alignment
 		print STDERR "fastq_id              = $fastq_file_index\n";
 		print STDERR "alignment->start      = " . $a->start . "  alignment->end = " . $a->end . "\n";
 		print STDERR "junction_side         = $junction_side\n";
-		print STDERR "flanking_length       = $flanking_length\n";
+		print STDERR "flanking_left       = $flanking_left\n";
 		print STDERR "junction_overlap      = $junction_overlap\n";
 		print STDERR "junction_pos	        = $junction_pos\n";
 		print STDERR "trim...\n";
@@ -229,7 +229,7 @@ sub tam_write_moved_alignment
 	#need to adjust read position if insertions or deletions relative to reference
 	
 	## seek_ref_pos gives the position where we want to split the read and only count one side
-	my $seek_ref_pos = $flanking_length;
+	my $seek_ref_pos = $flanking_left;
 	if ($junction_side == 1) 
 	{
 		## offset to include the redundant part for overlaps > 0 on junction_side 1
@@ -400,14 +400,39 @@ sub alignment_query_start_end
 our $junction_name_separator = '__';
 sub junction_name_join
 {
-	$_[6] =~ tr/-/n/;	
+	my $expected_items = 12;
+	if (scalar @_ != $expected_items)
+	{
+		die "Incorrect number of items for junction name.\n" . join(" ", @_) . "Expected $expected_items items.\n";
+	}
 	return join "$junction_name_separator", @_;
 }
 sub junction_name_split
 {
 	my @s = split /$junction_name_separator/, $_[0];
-	$s[6] =~ tr/n/-/;
-	return @s;
+	my $item;
+
+	$item->{interval_1}->{seq_id} 		= $s[0];
+	$item->{interval_1}->{start} 		= $s[1];
+	$item->{interval_1}->{end} 			= $s[1];
+	$item->{interval_1}->{strand} 		= $s[2];
+	$item->{interval_1}->{strand} = -1 if ($item->{interval_1}->{strand} == 0);
+	$item->{interval_1}->{redundant} 	= $s[3];
+
+	$item->{interval_2}->{seq_id} 		= $s[4];
+	$item->{interval_2}->{start} 		= $s[5];
+	$item->{interval_2}->{end} 			= $s[5];
+	$item->{interval_2}->{strand} 		= $s[6];
+	$item->{interval_2}->{strand} = -1 if ($item->{interval_2}->{strand} == 0);
+	$item->{interval_2}->{redundant} 	= $s[7];	
+
+	$item->{overlap} 					= $s[8];
+	$item->{unique_read_string} 		= $s[9];
+
+	$item->{flanking_left} 				= $s[10];
+	$item->{flanking_right} 			= $s[11];
+	
+	return $item;
 }
 
 ## moved here from ReferenceSequence.pm to avoid BioPerl requirement.
