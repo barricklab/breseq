@@ -468,7 +468,11 @@ EOF
 	#calculate a coverage cutoff for deletions based on the fit distribution?
 	#this is the first coverage to give at least the requested probability
 	my $sequence_length = $summary->{sequence_conversion}->{reference_sequences}->{$seq_id}->{length};
-	my $pr_cutoff = 1/$sequence_length*0.05;
+
+## testing more stringent cutoff
+## 	my $pr_cutoff = 1/$sequence_length*0.05;
+## One-tailed test p=0.01, no Bonferroni correction
+	my $pr_cutoff = 0.01;
 	my $i = 0;
 	while ( Math::CDF::pnbinom($i, $summary->{unique_coverage}->{$seq_id}->{nbinom_size_parameter}, $summary->{unique_coverage}->{$seq_id}->{nbinom_prob_parameter}) < $pr_cutoff ) 
 	{ 

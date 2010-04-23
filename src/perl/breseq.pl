@@ -120,8 +120,9 @@ use Bio::SeqIO;
 #### Configuration Options ####
 
 our %unwanted_sequences = ( 
-	'ILLUMINA_ADAPTOR'      => 'GATCGGAAGAGCTCGTATGCCGCTTCTGCTTCCGATC',  #Solexa Adaptor sequence.
-);
+	'UNWANTED::ILLUMINA_ADAPTOR_1'    => 'GATCGGAAGAGCTCGTATGCCGTCTTCTGCTTG',  #Solexa Adaptor sequence.
+	'UNWANTED::ILLUMINA_ADAPTOR_2'	  => 'ACACTCTTTCCCTACACGACGCTCTTCCGATCT'
+);                              
 
 ## Keep a summary of certain statistics. 
 my $summary = {};

@@ -220,9 +220,9 @@ sub identify_candidate_junctions
 	###
 	sub by_ref_seq_coord
 	{
-		my @al = Breseq::Shared::junction_name_split($a->{id});
-		my @bl = Breseq::Shared::junction_name_split($b->{id});
-		return (($ref_seq_info->{seq_order}->{$al[0]} <=> $ref_seq_info->{seq_order}->{$bl[0]}) ||  ($al[1] <=> $bl[1])); 
+		my $acj = Breseq::Shared::junction_name_split($a->{id});
+		my $bcj = Breseq::Shared::junction_name_split($b->{id});
+		return (($ref_seq_info->{seq_order}->{$acj->{interval_1}->{seq_id}} <=> $ref_seq_info->{seq_order}->{$bcj->{interval_1}->{seq_id}}) ||  ($acj->{interval_1}->{start} <=> $bcj->{interval_1}->{start})); 
 	}
 	
 	@combined_candidate_junctions = sort by_ref_seq_coord @combined_candidate_junctions;
@@ -523,9 +523,17 @@ sub _alignments_to_candidate_junction
 
 	##first end
 	my $first_overlap_seq = '';
+	my $flanking_left = $flanking_length;
 	if ($hash_strand_1 == 0) #alignment is not reversed
 	{
-		my $add_seq = substr $reference_sequence_string_hash_ref->{$hash_seq_id_1},  $hash_coord_1-($flanking_length-1)-1-$overlap_offset, $flanking_length+$overlap_offset;
+		my $start_pos = $hash_coord_1-($flanking_left-1)-1-$overlap_offset;
+		if ($start_pos < 0)
+		{
+			$flanking_left += $start_pos;
+			$start_pos = 0;
+		}
+		
+		my $add_seq = substr $reference_sequence_string_hash_ref->{$hash_seq_id_1},  $hash_coord_1-($flanking_left-1)-1-$overlap_offset, $flanking_left+$overlap_offset;
 		print "1F: $add_seq\n" if ($verbose);
 		$junction_seq_string .= $add_seq;
 		$first_overlap_seq = substr $reference_sequence_string_hash_ref->{$hash_seq_id_1},  $hash_coord_1-$overlap, $overlap if ($overlap > 0);		
@@ -550,12 +558,20 @@ sub _alignments_to_candidate_junction
 	print "+: $unique_read_seq_string\n" if ($verbose);
 		
 	##second end
+	my $flanking_right = $flanking_length;
 	my $second_overlap_seq = '';
 	if ($hash_strand_2 == +1) #alignment is not reversed 
 	{
 		print "Size: " . ($flanking_length-$overlap_offset) . "\n" if ($verbose);
 		
-		my $add_seq = substr $reference_sequence_string_hash_ref->{$hash_seq_id_2},  $hash_coord_2+$overlap_offset-1, $flanking_length;
+		my $end_pos = $hash_coord_2 + $overlap_offset - 1 + $flanking_right;
+		if ($end_pos >= length $reference_sequence_string_hash_ref->{$hash_seq_id_2})
+		{
+			$flanking_right -= ($end_pos - length $reference_sequence_string_hash_ref->{$hash_seq_id_2} + 1);
+			$end_pos = length $reference_sequence_string_hash_ref->{$hash_seq_id_2}-1;
+		}
+		
+		my $add_seq = substr $reference_sequence_string_hash_ref->{$hash_seq_id_2},  $end_pos - $flanking_right, $flanking_right;
 		print "2F: $add_seq\n" if ($verbose);
 
 		$second_overlap_seq = substr $reference_sequence_string_hash_ref->{$hash_seq_id_2},  $hash_coord_2-1, $overlap if ($overlap > 0);
@@ -602,12 +618,25 @@ sub _alignments_to_candidate_junction
 		$unique_read_seq_string = Breseq::Fastq::revcom($unique_read_seq_string);
 	}
 		
-	my $junction_id = Breseq::Shared::junction_name_join($hash_seq_id_1, $hash_coord_1, $hash_strand_1, $hash_redundancy_1, $hash_seq_id_2, $hash_coord_2, $hash_strand_2, $hash_redundancy_2, $overlap, $unique_read_seq_string, $flanking_length);	
+	my $junction_id = Breseq::Shared::junction_name_join(
+		$hash_seq_id_1, 
+		$hash_coord_1, 
+		$hash_strand_1, 
+		$hash_redundancy_1, 
+		$hash_seq_id_2, 
+		$hash_coord_2, 
+		$hash_strand_2, 
+		$hash_redundancy_2, 
+		$overlap, 
+		$unique_read_seq_string, 
+		$flanking_left, 
+		$flanking_right
+	);	
 	print "JUNCTION ID: $junction_id\n" if ($verbose);
 	
 	die "Junction sequence not found: $junction_id " . $q1->qname . " " . $a2->qname  if (!$junction_seq_string);
 ## this guard accidentally catches junctions near the ends of sequences...
-#	die "Incorrect length for $junction_seq_string: $junction_id " . $q1->qname . " " . $a2->qname if (length $junction_seq_string != 2*$flanking_length + abs($overlap));
+	die "Incorrect length for $junction_seq_string: $junction_id " . $q1->qname . " " . $a2->qname if (length $junction_seq_string != $flanking_left + $flanking_right + abs($overlap));
 		
 	return ($junction_id, $junction_seq_string, $q1, $q2);
 }
