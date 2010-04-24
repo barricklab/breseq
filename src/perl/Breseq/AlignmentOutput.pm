@@ -266,7 +266,7 @@ my %open_bam_files;
 
 sub create_alignment
 {
-	my $verbose = 0;
+	my $verbose = 1;
 	my ($self, $bam_path, $fasta_path, $region, $options) = @_;
 		
 	## Start -- Workaround to avoid too many open files
@@ -313,17 +313,22 @@ sub create_alignment
 	{
 		@aligned_references = @{$options->{alignment_reference_info_list}};
 	}
-#	else ## By default there is only a single reference sequence
-#	{
-#		$aligned_references[0]->{seq_id} = $seq_id;
-#	}
 	foreach my $aligned_reference (@aligned_references)
 	{
 		$aligned_reference->{seq_id} = $seq_id;
 		$aligned_reference->{strand} = 0;
 	}
+	
+	## IMPROVEMENT
+	## Need to ignore positions on the left and right that are only overlapped by
+	## Redundant reads. Currently Pileup will start and end on those coords.
+	## Since it doesn't know about redundancy marking.
+	
+	my $unique_start;
+	my $unique_end;
 			
-	#retrieve unique alignments overlapping position
+	## Retrieve all unique alignments overlapping position with "fetch"
+	## This lets us know how many slots we need to reserve for alignments.
 	my $fetch_function = sub {
 		my ($a) = @_;
 		#print $a->display_name,' ',$a->cigar_str,"\n";
@@ -336,17 +341,26 @@ sub create_alignment
 			$aligned_read->{length} = $a->query->length;
 			$aligned_read->{read_sequence} = $a->qseq;
 			$aligned_read->{qual_sequence} = $a->_qscore;
+			
+			## save in the hash, creating a spot for each read we will be aligning
 			$aligned_reads->{$a->display_name} = $aligned_read;
+			
+			## keep track of the earliest and latest coords we see in UNIQUE alignments
+			$unique_start = $a->start if (!defined $unique_start || $unique_start > $a->start);
+			$unique_end   = $a->end   if (!defined $unique_end   || $unique_end   < $a->end  );
+			
 		}
 	};
 	$bam->fetch($region, $fetch_function);	
-	
+
+	#create the alignment via "pileup"
 	my $last_pos;
-	
-	#create the alignment via pileup	
 	my $pileup_function = sub {
     	my ($seq_id,$pos,$pileup) = @_;
 		print "POSITION: $pos\n" if ($verbose);
+
+		return if ($pos < $unique_start);
+		return if ($pos > $unique_end);
 
 		foreach my $aligned_reference (@aligned_references)
 		{
@@ -354,10 +368,13 @@ sub create_alignment
 			$aligned_reference->{end} = $pos;
 		}
 		
-		#cull the list to those we want to align
+		## Cull the list to those we want to align
+		## Other alignments may overlap this position that DO NOT
+		## overlap the positions of interest. This removes them.
 		@$pileup = grep { defined $aligned_reads->{$_->alignment->display_name} } @$pileup;
 
-		##find the maximum indel count
+		## Find the maximum indel count
+		## We will add gaps to reads with an indel count lower than this.
 		my $max_indel = 0;
 		my $alignment_spans_position;
 		ALIGNMENT: for my $p (@$pileup) 
@@ -365,14 +382,16 @@ sub create_alignment
 			$alignment_spans_position->{$p->alignment->display_name} = 1;
 			$max_indel = $p->indel if ($p->indel > $max_indel);
 		}
+		print "MAX INDEL: $max_indel\n" if ($verbose);
 		
-		## reference only positions, with no aligned reads
+		## Reference only positions, with no aligned reads
 		## are never called, so we keep track of the last position to add them
 		if (defined $last_pos && ($last_pos < $pos - 1))
 		{
 			$last_pos++;
 			while ($last_pos < $pos)
 			{	
+				## READS: add gaps to all
 				foreach my $key (keys %$aligned_reads)
 				{
 					my $aligned_read = $aligned_reads->{$key};
@@ -380,9 +399,8 @@ sub create_alignment
 					$aligned_read->{aligned_quals} .= chr(255);					
 				}			
 			
-				##now handle the reference sequence
+				## REFERENCE SEQUENCES: add actual bases
 				my $ref_bases = $bam->segment($seq_id,$last_pos,$last_pos)->dna;
-				
 				foreach my $aligned_reference (@aligned_references)
 				{
 					my $my_ref_bases = $ref_bases;
@@ -391,7 +409,8 @@ sub create_alignment
 					$aligned_reference->{aligned_bases} .= $my_ref_bases;
 					$aligned_reference->{aligned_quals} .= chr(255);
 				}
-				##also update any positions if interest for gaps				
+				
+				## ANNOTATIONS: add gaps				
 				$aligned_annotation->{aligned_bases} .= 
 					( (($insert_start == 0) && ($last_pos == $start)) || (($last_pos > $start) && ($last_pos <= $end)) ) 
 					? '|' : ' ';
@@ -400,9 +419,9 @@ sub create_alignment
 			}
 		}
 		$last_pos = $pos;
-		
+		## END adding reference only positions.
 				
-		##now add to the alignment
+		## Now add this position to the alignments
 		my $updated;
 		ALIGNMENT: for my $p (@$pileup) 
 		{
@@ -414,6 +433,7 @@ sub create_alignment
 			$indel = 0 if ($indel < 0);
 			$indel = -1 if ($p->is_del);
 			
+			## Which read are we on?
 			my $aligned_read = $aligned_reads->{$a->display_name};
 			$aligned_read->{strand} = ($a->reversed) ? -1 : +1;
 			$aligned_read->{reference_start} = $pos if (!defined $aligned_read->{reference_start});
@@ -422,8 +442,7 @@ sub create_alignment
 			$aligned_read->{start} = $p->qpos+1 if (!defined $aligned_read->{start});
 			$aligned_read->{end} = $p->qpos+1;			
 			
-			print $p->is_del . "\n" if ($verbose);
-			
+			## READS: add aligned positions			
 			for (my $i=0; $i<=$max_indel; $i++)
 			{
 				if ($i > $indel)
@@ -441,26 +460,34 @@ sub create_alignment
 					{
 						my $trim_left = $a->aux_get('XL');
 						$base = "\L$base" if ((defined $trim_left) && ($p->qpos+1 <= $trim_left));
+						## alternate coloring scheme
 						#$base = chr(ord($base)+128) if ((defined $trim_left) && ($p->qpos+1 <= $trim_left));
 					  
 						my $trim_right = $a->aux_get('XR');	
-						$base = "\L$base" if ((defined $trim_right) && ($a->query->length-$p->qpos <= $trim_right));					
+						$base = "\L$base" if ((defined $trim_right) && ($a->query->length-$p->qpos <= $trim_right));
+						## alternate coloring scheme					
 						#$base = chr(ord($base)+128) if ((defined $trim_right) && ($a->query->length-$p->qpos <= $trim_right));						
 					}
 				
 					$aligned_read->{aligned_bases} .= $base;
 					$aligned_read->{aligned_quals} .= chr($quality);
 				}
+				
+				print $aligned_read->{aligned_bases} . " " .$aligned_read->{seq_id} . " " . $p->indel . "\n" if ($verbose);
 			}
 		}
 		
-		## handle reads with no alignment to this position
+		print Dumper($updated) if ($verbose);
+		
+		## READS: handle those with no 		
 		foreach my $key (keys %$aligned_reads)
 		{
 			next if ($updated->{$key});
 			my $aligned_read = $aligned_reads->{$key};
 			$aligned_read->{aligned_bases} .= ' ' x ($max_indel+1);
 			$aligned_read->{aligned_quals} .= chr(255) x ($max_indel+1);
+			
+			print $aligned_read->{aligned_bases} . " NOALIGN " . $key . " " . "\n" if ($verbose);
 		}
 		
 		##now handle the reference sequence

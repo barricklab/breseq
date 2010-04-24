@@ -361,7 +361,7 @@ sub tam_write_moved_alignment
 	}
 	
 	my @ll;
-	push @ll, $a->qname . "-M";
+	push @ll, $a->qname . "-M" . $junction_side;
 	push @ll, $flags;
 	push @ll, $seq_id;
 	push @ll, $ref_start;

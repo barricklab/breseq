@@ -76,9 +76,6 @@ Copyright 2008-2009.  All rights reserved.
 # End Pod Documentation
 ###
 
-=cut
-
-
 our $VERSION = '0.00_02';
 
 #### Standard Perl Modules ####
