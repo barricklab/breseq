@@ -60,7 +60,6 @@ breseq::pileup_base::pileup_base(const std::string& bam, const std::vector<std::
  */
 breseq::pileup_base::~pileup_base() {
 	samclose(_bam);
-	// reference sequence destructors called automatically.
 }
 
 
@@ -82,5 +81,5 @@ int breseq::first_level_callback(uint32_t tid, uint32_t pos, int n, const bam_pi
 /*! Run the pileup.
  */
 void breseq::pileup_base::pileup() {
-	sampileup(_bam, -1, first_level_callback, this);
+	sampileup(_bam, BAM_DEF_MASK, first_level_callback, this);
 }

@@ -24,7 +24,7 @@ int main(int argc, char* argv[]) {
 	("fasta,f", po::value<vector<string> >(), "indexed fasta file(s) of reference sequence")
 	("output,o", po::value<string>(), "output directory")
 	("coverage,c", po::value<string>(), "coverage file name suffix")
-	("error,e", po::value<string>(), "error count file name suffix");
+	("error,e", po::value<string>(), "error count file name prefix");
 	
 	po::variables_map options;
 	po::store(po::parse_command_line(argc, argv, cmdline_options), options);
@@ -37,7 +37,7 @@ int main(int argc, char* argv[]) {
 		 || !options.count("output")
 		 || !options.count("coverage")
 		 || !options.count("error")) {
-		cout << "Usage: error_count --bam <sequences.bam> --fasta <reference.fasta> --output <path> --coverage <suffix> --error <suffix>" << endl;
+		cout << "Usage: error_count --bam <sequences.bam> --fasta <reference.fasta> --output <path> --coverage <suffix> --error <prefix>" << endl;
 		cout << cmdline_options << endl;
 		return -1;
 	}

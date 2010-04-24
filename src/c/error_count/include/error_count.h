@@ -18,7 +18,7 @@ namespace breseq {
 									 const std::vector<std::string>& fastas,
 									 const std::string& output_dir,
 									 const std::string& coverage_suffix,
-									 const std::string& error_suffix);
+									 const std::string& error_prefix);
 	
 } // breseq
 

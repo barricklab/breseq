@@ -20,6 +20,7 @@ namespace breseq {
 	public:
 		typedef std::map<std::string,int> base_count_t;
 		typedef std::map<uint8_t,base_count_t> qual_map_t;
+		typedef std::map<int32_t,qual_map_t> fastq_map_t;
 		
 		/*! Information that is tracked per-sequence.
 		 */
@@ -32,10 +33,6 @@ namespace breseq {
 			 x is the number of positions that have no redundancies
 			 */
 			std::vector<int> unique_only_coverage;
-			
-			/*! fastq_file_index -> quality map.
-			 */
-			std::map<int32_t,qual_map_t> error_hash;
 		};
 		
 		
@@ -83,64 +80,56 @@ namespace breseq {
 					++unique_coverage;
 				}
 				
-				//my $qseq = $a->qseq;
-				uint8_t* qseq = bam1_seq(a);
-				//my $qpos = $p->qpos;
-				int32_t qpos = p->qpos;
-				//my $qscore = $a->qscore;
-				uint8_t* qscore = bam1_qual(a);
-				//my $reversed = $a->reversed;
-				uint32_t reversed = bam1_strand(a);
-				//my $query_start = $a->query->start;
-				int32_t query_start = a->core.pos;
-				//my $query_end = $a->query->end;
-				int32_t query_end = query_start + a->core.l_qseq;
-				//my $fastq_file_index = $a->aux_get('X2');
-				int32_t fastq_file_index=bam_aux2i(bam_aux_get(a,"X2"));
-				
-				char* refseq = get_refseq(tid, fastq_file_index);																	
-				char ref_base[] = {refseq[pos], reverse_base(refseq[pos]), 0};
-				
+				uint32_t reversed = bam1_strand(a); // are we on the reverse strand?
+				uint8_t* qseq = bam1_seq(a); // query sequence (read)
+				int32_t qpos = p->qpos; // position of the alignment in the query
+				// need to calculate the length of this query out to the last
+				// non-clip non-skip CIGAR operation.
+				uint32_t* cigar = bam1_cigar(a); // cigar array for this alignment
+				int32_t qlen = bam_cigar2qlen(&a->core, cigar); // total length of the query
+				for(uint32_t j=(a->core.n_cigar-1); j>0; --j) {
+					uint32_t op = cigar[j] & BAM_CIGAR_MASK;
+					uint32_t len = cigar[j] >> BAM_CIGAR_SHIFT;
+					if((op != BAM_CSOFT_CLIP) && (op != BAM_CHARD_CLIP) && (op != BAM_CREF_SKIP)) {
+						break;
+					}
+					qlen -= len;
+				}
+				uint8_t* qscore = bam1_qual(a); // quality score array
+				int32_t fastq_file_index=bam_aux2i(bam_aux_get(a,"X2")); // sequencer-generated read file
+
+				char* refseq = get_refseq(tid, fastq_file_index); // reference sequence
+				char ref_base[] = {refseq[pos], reverse_base(refseq[pos]), 0}; // reference base & its complement
+								
 				//In all that follows, be sure to keep track of strandedness of mutations!
-				
 				if(!p->is_del) {
-					//if (!$p->is_del) {
 					//# (1) base substitutions
 					//#     e.g. 'AG' key for observing a G in read at a place where the reference has an A
 					//#     IMPROVE by keeping track of flanking base context and scores?
 					//#     this would, for example, penalize low scoring sequences more
 					
-					// my $base  = substr($qseq, $qpos,1);
 					uint8_t base = bam1_seqi(qseq,qpos);
 					
-					// next if ($base =~ /[nN]/);
 					if(is_N(base)) {
 						continue;
 					}
 					
-					// my $quality = $qscore->[$qpos];
 					uint8_t quality = qscore[qpos];
 					
-					// $base = FastqLite::revcom($base) if ($reversed);
 					if(reversed) {
 						base = reverse_base(base);
 					}
 					
-					// my $key = $ref_base[$reversed] . $base; 
 					string key; key += static_cast<char>(ref_base[reversed]); key += base2char(base);
-					// $error_hash->[$fastq_file_index]->{$quality}->{$key}++;
-					++info.error_hash[fastq_file_index][quality][key];
+					++error_hash[fastq_file_index][quality][key];
+
 					// also add an observation of a non-gap non-gap			
-					// if ($qpos+1 < $query_end) {
-					if((qpos+1) < query_end) {
-						// my $next_quality = $qscore->[$qpos+1];
+					if((qpos+1) < qlen) {
 						uint8_t next_quality = qscore[qpos+1];
-						
-						// my $avg_quality = POSIX::floor( ($quality + $next_quality) / 2);
 						uint8_t avg_quality = floor((static_cast<float>(quality)+static_cast<float>(next_quality))/2.0);
-						
-						// $error_hash->[$fastq_file_index]->{$avg_quality}->{'..'}++;
-						++info.error_hash[fastq_file_index][avg_quality][".."];
+						++error_hash[fastq_file_index][avg_quality][".."];
+						// print $a->query->display_name . " $pos $qpos $query_end\n";
+						// std::cout << pos << " " << qpos << " " << qlen << std::endl;
 					}
 				} else if(p->indel == 0) {
 					//elsif ($p->indel == 0) {
@@ -152,13 +141,17 @@ namespace breseq {
 					//#     -- only count if there is no indel after this posision
 					// train error model only on single base insertions or deletions.
 					
-					//	my $quality = $qscore->[$qpos+(1-$reversed)];
 					uint8_t quality = qscore[qpos+(1-reversed)];
 					
-					//	my $key = $ref_base[$reversed] . '.';
 					string key; key += static_cast<char>(ref_base[reversed]); key += '.';
-					//	$error_hash->[$fastq_file_index]->{$quality}->{$key}++;	
-					++info.error_hash[fastq_file_index][quality][key];
+					++error_hash[fastq_file_index][quality][key];
+
+//					if ($qpos-1 >$query_start)
+//					{
+//						my $next_quality = $qscore->[$qpos-1];
+//						my $avg_quality = POSIX::floor( ($quality + $next_quality) / 2);
+//						$error_hash->[$fastq_file_index]->{$avg_quality}->{'..'}--;
+//					}			
 				} 
 				
 				if(p->indel == 1) {			
@@ -172,21 +165,15 @@ namespace breseq {
 					//#     -- only count if an indel = +1, meaning a single-base insertion
 					// train error model only on single base insertions or deletions.
 					
-					//	my $base  = substr($qseq,$qpos+1,1);
 					uint8_t base = bam1_seqi(qseq,qpos+1);
 					
-					//	next if ($base =~ /[nN]/);
 					if(is_N(base)) {
 						continue;
 					}
 					
-					//	my $quality = $a->qscore->[$qpos+1];
 					uint8_t quality = qscore[qpos+1];
-					
-					//	my $key = '.' . $base; 
 					string key; key += '.'; key += base2char(base);
-					//	$error_hash->[$fastq_file_index]->{$quality}->{$key}++;
-					++info.error_hash[fastq_file_index][quality][key];
+					++error_hash[fastq_file_index][quality][key];
 				}
 			}
 			
@@ -212,6 +199,7 @@ namespace breseq {
 			for(std::size_t i=0; i<_seq_info.size(); ++i) {
 				string filename(output_dir + _bam->header->target_name[i] + "." + suffix);
 				ofstream out(filename.c_str());					
+				
 				out << "coverage\tn" << endl;
 				for(std::size_t j=1; j<_seq_info[i].unique_only_coverage.size(); ++j) {
 					out << j << "\t" << _seq_info[i].unique_only_coverage[j] << endl;
@@ -223,55 +211,45 @@ namespace breseq {
 		
 		/*! Print error file.
 		 */
-		void print_error(const std::string& output_dir, const std::string& suffix) {
-			//										 
-			//										 //std::ostream& out, int32_t fastq_file_index) {
-			//			using namespace std;
-			//			char bases[] = {'A', 'T', 'C', 'G', '.'};
-			//			out << "quality";
-			//			
-			//			for(int i=0; i<5; ++i) {
-			//				for(int j=0; j<5; ++j) {
-			//					out << "\t" << bases[i] << bases[j];
-			//				}
-			//			}
-			//			out << endl;
-			//			
-			//			qual_map_t& qual_map=error_hash[fastq_file_index];			
-			//			for(qual_map_t::reverse_iterator iter=qual_map.rbegin(); iter!=qual_map.rend(); ++iter) {
-			//				out << static_cast<unsigned int>(iter->first);
-			//				for(int i=0; i<5; ++i) {
-			//					for(int j=0; j<5; ++j) {
-			//						string k; k += bases[i]; k += bases[j];
-			//						out << "\t" << iter->second[k];
-			//					}
-			//				}
-			//				out << endl;
-			//			}
+		void print_error(const std::string& output_dir, const std::string& prefix) {
+			using namespace std;
+			char bases[] = {'A', 'T', 'C', 'G', '.'};
+			
+			for(fastq_map_t::iterator iter=error_hash.begin(); iter!=error_hash.end(); ++iter) {
+				ostringstream filename;				
+				filename << output_dir << prefix;
+				if(error_hash.size() > 1) {
+					filename << "." << iter->first;
+				}
+				filename << ".error_counts.tab";
+				ofstream out(filename.str().c_str());
+				
+				out << "quality";
+				for(int i=0; i<5; ++i) {
+					for(int j=0; j<5; ++j) {
+						out << "\t" << bases[i] << bases[j];
+					}
+				}
+				out << endl;
+				
+				qual_map_t& qual_map=iter->second;
+				for(qual_map_t::reverse_iterator iter=qual_map.rbegin(); iter!=qual_map.rend(); ++iter) {
+					out << static_cast<unsigned int>(iter->first);
+					for(int i=0; i<5; ++i) {
+						for(int j=0; j<5; ++j) {
+							string k; k += bases[i]; k += bases[j];
+							out << "\t" << iter->second[k];
+						}
+					}
+					out << endl;
+				}
+				out.close();
+			}
 		}
-		
-		//		for(std::size_t i=0; i<fasta.size(); ++i) {
-		//			
-		//			if(output.empty()) {
-		//				ecp.print_coverage_distribution(cout);
-		//				ecp.print_error_file(cout, 0);
-		//			} else {
-		//				string filename(output+"/unique_only_coverage_distribution.tab");
-		//				ofstream coverage(filename.c_str());					
-		//				ecp.print_coverage_distribution(coverage);
-		//				coverage.close();
-		//				
-		//				filename = output+"/error_counts.tab";
-		//				ofstream errors(filename.c_str());
-		//				ecp.print_error_file(errors, 0);
-		//				errors.close();
-		//			}
-		//		}
-		// for each sequence id (target id) in the bam file, print the coverage distribution
-		// for each reference sequence, print the error counts
-		
+
 	protected:		
 		std::vector<sequence_info> _seq_info;
+		fastq_map_t error_hash; //! fastq_file_index -> quality map.
 	};
 	
 	
@@ -279,11 +257,11 @@ namespace breseq {
 									 const std::vector<std::string>& fastas,
 									 const std::string& output_dir,
 									 const std::string& coverage_suffix,
-									 const std::string& error_suffix) {
+									 const std::string& error_prefix) {
 		error_count_pileup ecp(bam, fastas);
 		ecp.pileup();
 		ecp.print_coverage(output_dir, coverage_suffix);
-		ecp.print_error(output_dir, error_suffix);
+		ecp.print_error(output_dir, error_prefix);
 	}
 	
 } // breseq
