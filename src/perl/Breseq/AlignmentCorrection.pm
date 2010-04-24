@@ -211,8 +211,14 @@ sub correct_alignments
 			}
 						
 			### this read potentially supports a candidate junction		
-#			if ($best_candidate_junction_score > $best_reference_score)
-			if ($best_candidate_junction_score >= $best_reference_score) #EXPERIMENTAL
+			if ($best_candidate_junction_score > $best_reference_score)
+#			if ($best_candidate_junction_score >= $best_reference_score) 
+## We really need the == case to be split out like we do degenerate matches. Only counted if
+## the junction is supported by one that do match better. Uncommenting this causes some
+## junctions to be predicted that are actually just the reference sequence!
+##
+## Same for things that only extend into the junction region. These should be kept track of
+## and only added to junctions that have support otherwise.
 			{
 				my @this_dominant_candidate_junction_al = _alignment_list_to_dominant_best($minimum_best_score, undef, @$this_candidate_junction_al);
 				

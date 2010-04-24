@@ -76,19 +76,6 @@ Copyright 2008-2009.  All rights reserved.
 # End Pod Documentation
 ###
 
-=head1 TO-DO LIST
-
-Need to print out reads that do not match or match unwanted sequences during candidate identification step.
-
-Problem with display of reads overlapping new junction boundaries?
-
-Need to have a step that disallows short read matches (when compiling alignment database)?
-
-Correct reads that match junctions into two halves that can be used for real coverage and
-on each half that they overlap. Eventually, get this information from alignment database and trim the remainder of the read
-and give it a special tag to show that it matches a junction.
-
-
 =cut
 
 
