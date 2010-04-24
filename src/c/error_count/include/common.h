@@ -54,7 +54,7 @@ namespace breseq {
 			}		
 		}
 	}
-	
+
 } // breseq
 
 #endif
