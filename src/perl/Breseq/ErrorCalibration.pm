@@ -104,7 +104,7 @@ sub count
 				##
 				# Only count coverage if there is no gap at this position
 				##
-				if (!$p->is_del >= 0)
+				if(!$p->is_del)
 				{
 					if ($redundancy == 1)
 					{
@@ -176,7 +176,6 @@ sub count
 					my $key = $ref_base[$reversed] . $base; 
 					$error_hash->[$fastq_file_index]->{$quality}->{$key}++;
 					#$complex_error_hash->[$fastq_file_index]->{$neighborhood_quality}->{$quality}->{$key}++;
-
 					## also add an observation of a non-gap non-gap
 					if ($qpos+1 < $query_end)
 					{	
@@ -197,7 +196,6 @@ sub count
 					my $key = $ref_base[$reversed] . '.'; 
 					$error_hash->[$fastq_file_index]->{$quality}->{$key}++;	
 					#$complex_error_hash->[$fastq_file_index]->{$neighborhood_quality}->{$quality}->{$key}++;						
-										
 				}
 				
 				# (3) insertion in read relative to reference
@@ -213,8 +211,7 @@ sub count
 					$error_hash->[$fastq_file_index]->{$quality}->{$key}++;
 					#$complex_error_hash->[$fastq_file_index]->{$neighborhood_quality}->{$quality}->{$key}++;
 				}	
-
-              } #end ALIGNMENT
+			} #end ALIGNMENT
 
 			# record unique only coverage
 			$unique_only_coverage->[$unique_coverage]++ if ($unique_only_position);
