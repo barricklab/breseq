@@ -204,7 +204,7 @@
 				<key>PBXProjectModuleGUID</key>
 				<string>423E8214118348A200B3B735</string>
 				<key>PBXProjectModuleLabel</key>
-				<string>ErrorCalibration.pm</string>
+				<string>error_count.cpp</string>
 				<key>PBXSplitModuleInNavigatorKey</key>
 				<dict>
 					<key>Split0</key>
@@ -212,14 +212,19 @@
 						<key>PBXProjectModuleGUID</key>
 						<string>423E8215118348AA00B3B735</string>
 						<key>PBXProjectModuleLabel</key>
-						<string>ErrorCalibration.pm</string>
+						<string>error_count.cpp</string>
 						<key>_historyCapacity</key>
 						<integer>0</integer>
 						<key>bookmark</key>
-						<string>423E821B118348B600B3B735</string>
+						<string>4209DD73118349C700A18EEA</string>
 						<key>history</key>
 						<array>
-							<string>423E8216118348AA00B3B735</string>
+							<string>4209DD71118349C700A18EEA</string>
+							<string>4209DD6E1183493200A18EEA</string>
+						</array>
+						<key>prevStack</key>
+						<array>
+							<string>4209DD72118349C700A18EEA</string>
 						</array>
 					</dict>
 					<key>SplitCount</key>
@@ -231,11 +236,11 @@
 			<key>Geometry</key>
 			<dict>
 				<key>Frame</key>
-				<string>{{0, 20}, {1032, 781}}</string>
+				<string>{{0, 20}, {1020, 781}}</string>
 				<key>PBXModuleWindowStatusBarHidden2</key>
 				<false/>
 				<key>RubberWindowFrame</key>
-				<string>420 56 1032 822 0 0 1440 878 </string>
+				<string>420 56 1020 822 0 0 1440 878 </string>
 			</dict>
 		</dict>
 	</array>
@@ -310,6 +315,7 @@
 							<key>PBXSmartGroupTreeModuleOutlineStateExpansionKey</key>
 							<array>
 								<string>421ACEB51170DB9600C2EB85</string>
+								<string>421ACF351170DF3F00C2EB85</string>
 								<string>421ACF291170DEC400C2EB85</string>
 								<string>421ACF9F1170EC3200C2EB85</string>
 								<string>421ACF2A1170DEC400C2EB85</string>
@@ -319,9 +325,9 @@
 							<key>PBXSmartGroupTreeModuleOutlineStateSelectionKey</key>
 							<array>
 								<array>
-									<integer>4</integer>
+									<integer>9</integer>
+									<integer>8</integer>
 									<integer>3</integer>
-									<integer>2</integer>
 									<integer>0</integer>
 								</array>
 							</array>
@@ -426,9 +432,9 @@
 			</array>
 			<key>TableOfContents</key>
 			<array>
-				<string>423E81B7118332D300B3B735</string>
+				<string>4209DD6F118349C700A18EEA</string>
 				<string>1CE0B1FE06471DED0097A5F4</string>
-				<string>423E81B8118332D300B3B735</string>
+				<string>4209DD70118349C700A18EEA</string>
 				<string>1CE0B20306471E060097A5F4</string>
 				<string>1CE0B20506471E060097A5F4</string>
 			</array>
@@ -564,11 +570,8 @@
 	<integer>5</integer>
 	<key>WindowOrderList</key>
 	<array>
-		<string>1C78EAAD065D492600B07095</string>
-		<string>421ACF271170DE8900C2EB85</string>
-		<string>1CD10A99069EF8BA00B06720</string>
-		<string>/Users/dk/Documents/research/extern/breseq/src/c/breseq.xcodeproj</string>
 		<string>423E8214118348A200B3B735</string>
+		<string>/Users/dk/Documents/research/extern/breseq/src/c/breseq.xcodeproj</string>
 	</array>
 	<key>WindowString</key>
 	<string>58 55 359 823 0 0 1440 878 </string>
