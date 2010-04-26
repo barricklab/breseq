@@ -537,4 +537,3 @@ sub do_subtract
 	$output_gd->write($output);
 }
 
-

@@ -49,13 +49,14 @@ use Breseq::AlignmentOutput;
 #Get options
 use Getopt::Long;
 use Pod::Usage;
-my ($help, $man);
+my ($help, $man, $verbose);
 my ($input_file, $start, $end);
 my $output_file = 'output.html';
 
 GetOptions(
 	'help|?' => \$help, 'man' => \$man,
 	'output|o=s' => \$output_file,
+	'verbose|v' => \$verbose,
 ) or pod2usage(2);
 pod2usage(1) if $help;
 pod2usage(-exitstatus => 0, -verbose => 2) if $man;
@@ -72,7 +73,7 @@ print OUT start_html(-title => "bam2html");
 foreach my $region (@regions)
 {
 	my $ao =Breseq::AlignmentOutput->new;
-	print OUT $ao->html_alignment($bam_path, $fasta_path, $region);
+	print OUT $ao->html_alignment($bam_path, $fasta_path, $region, {'verbose'=>$verbose});
 }
 print OUT end_html;
 close OUT;

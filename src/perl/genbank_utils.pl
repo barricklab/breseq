@@ -61,21 +61,30 @@ use File::Path;
 use FindBin;
 use lib $FindBin::Bin;
 use Data::Dumper;
-use Bio::SeqIO;
 use POSIX;
 
 #Get options
 use Getopt::Long;
 use Pod::Usage;
 
+my $command = shift @ARGV;
+
 if ($command eq 'SPLIT')
 {
-	do_split()
+	do_split();
 }
-
+elsif ("\U$command" eq 'MUTATE')
+{
+	do_mutate();
+}
+elsif ("\U$command" eq 'FASTA')
+{
+	do_convert_to_fasta();
+}
 
 sub do_split
 {
+	use Bio::SeqIO;
 	my ($help, $man);
 	my $verbose;
 	my $input;
@@ -83,11 +92,12 @@ sub do_split
 
 	GetOptions(
 		'help|?' => \$help, 'man' => \$man,
-		'input-path|p=s' => \$input,
 		'number|n=s' => \$n,
 	);
 	pod2usage(1) if $help;
 	pod2usage(-exitstatus => 0, -verbose => 2) if $man;
+
+	my $input = shift @ARGV;
 	
 	my $ref_i = Bio::SeqIO->new( -file => "<$input");
 	my $ref_seq = $ref_i->next_seq;
@@ -139,4 +149,67 @@ sub do_split
 		my $ref_o = Bio::SeqIO->new( -file => ">$output", -format => "GenBank");
 		$ref_o->write_seq($fragment);
 	}
+}
+
+## Changes fasta file
+sub do_mutate
+{
+	use Bio::SeqIO;
+	
+	my ($help, $man);
+	my $verbose;
+	my $output = "output.fna";
+
+	GetOptions(
+		'help|?' => \$help, 'man' => \$man,
+		'output|o=s' => \$output,
+	);
+	pod2usage(1) if $help;
+	pod2usage(-exitstatus => 0, -verbose => 2) if $man;
+
+	my $input = shift @ARGV;
+	my $change = shift @ARGV;
+
+	my $ref_i = Bio::SeqIO->new( -file => "<$input");
+	my $ref_seq = $ref_i->next_seq;
+	my $seq = $ref_seq->seq;
+	
+	my $ref_o = Bio::SeqIO->new( -file => ">$output");
+	
+	my ($pos, $len, $new) = split "-", $change;
+	
+	print "Position = $pos\n";
+	print "Length   = $len\n";
+	print "New      = $new\n";
+
+	$new =~ s/\.//g;
+	substr($seq, $pos-1, $len) = $new;
+	
+	$ref_seq->seq($seq);
+	$ref_o->write_seq($ref_seq);	
+}
+
+## Changes fasta file
+sub do_convert_to_fasta
+{
+	use Bio::SeqIO;
+	
+	my ($help, $man);
+	my $verbose;
+	my $output = "output.fna";
+
+	GetOptions(
+		'help|?' => \$help, 'man' => \$man,
+		'output|o=s' => \$output,
+	);
+	pod2usage(1) if $help;
+	pod2usage(-exitstatus => 0, -verbose => 2) if $man;
+
+	my $input = shift @ARGV;
+
+	my $ref_i = Bio::SeqIO->new( -file => "<$input");
+	my $ref_seq = $ref_i->next_seq;
+	
+	my $ref_o = Bio::SeqIO->new( -file => ">$output");
+	$ref_o->write_seq($ref_seq);	
 }

@@ -346,3 +346,101 @@ if ($command eq "QUALS_FASTQ")
 	}
 
 }
+
+if ($command eq "SIMULATE")
+{
+	do_simulate();
+}
+
+sub do_simulate
+{
+	use Getopt::Long;
+	use Pod::Usage;
+	use Bio::SeqIO;
+	use Breseq::Fastq;
+	my ($help, $man);
+
+	my $output = 'output.fastq';
+	my $coverage = 50;
+	my $read_length = 36;
+	my $circular = 1;
+	
+	my $base_error_rate = 0.001;
+	my $indel_error_rate = 0.0001;
+	
+	GetOptions(
+		'help|?' => \$help, 'man' => \$man,
+		'read-length|l=s' => \$read_length,
+		'coverage|c=s' => \$coverage,
+		'output|o=s' => \$output,
+	) or pod2usage(2);
+	pod2usage(1) if $help;
+	pod2usage(-exitstatus => 0, -verbose => 2) if $man;
+	my ( $input ) = @ARGV;
+
+	my $ref_i = Bio::SeqIO->new( -file => "<$input");
+	my $ref_seq = $ref_i->next_seq;
+	my $ref_sequence_string = $ref_seq->seq;
+	my $len = $ref_seq->length;
+
+	## add to the end to so that we can just subseq enven though it is circular
+#	$ref_sequence .= substr $seq, 0, $read_length;
+
+	our @bases = ("A", "T", "C", "G");
+
+	sub rand_base
+	{
+		return $bases[int rand 4];
+	}
+	
+	my @ref_seq;
+	$ref_seq[0] = $ref_sequence_string;
+	$ref_seq[1] = Breseq::Fastq::revcom($ref_seq[0]);
+	
+	my $out_fastq = Breseq::Fastq->new(-file => ">$output");
+	
+	my $num_reads = $coverage * $len / $read_length;
+	
+	print "NUM READS: $num_reads\n";
+	for (my $i=1; $i<=$num_reads; $i++)
+	{	
+		print STDERR "READ: $i\n" if ($i % 10000 == 0);
+			
+		my $strand = int rand(2);
+		my $seq = '';
+		my $pos = int rand($len);
+		POS: while (length $seq < $read_length)
+		{			
+			$pos+=1;
+			$pos = 0 if ($pos > $len);
+			
+			##deletion
+			next if (rand(1) < $indel_error_rate);
+			
+			##mutation
+			if (rand(1) < $base_error_rate)
+			{
+				$seq .= rand_base();
+			}
+			else
+			{				
+				$seq .= substr $ref_seq[$strand], $pos, 1;
+			}
+			
+			##insertion
+			while (rand(1) < $indel_error_rate)
+			{
+				last if (length $seq == $read_length);
+				$seq .= rand_base();
+			}
+			
+		}
+		
+		my $read_seq;
+		$read_seq->{id} = "READ-$i";
+		$read_seq->{seq} = $seq;				
+		$read_seq->{qual_chars} = 'A' x int(length($read_seq->{seq})/2);
+		$read_seq->{qual_chars} .= 'B' x (length($seq) - length($read_seq->{qual_chars}));
+		$out_fastq->write_seq($read_seq);
+	}
+}

@@ -355,7 +355,7 @@ sub correct_alignments
 					{	
 						##write out match corresponding to this part to SAM file						
 						my $trim = _trim_ambiguous_ends($a, $candidate_junction_header, $candidate_junction_fai);						
-						Breseq::Shared::tam_write_moved_alignment($RREF, $item->{$side_key}->{seq_id}, $fastq_file_index, $a, $side, $item->{flanking_left}, $item->{alignment_overlap}, $item->{$side_key}->{start}, $item->{$side_key}->{strand}, $trim);		
+						Breseq::Shared::tam_write_moved_alignment($RREF, $item->{$side_key}->{seq_id}, $fastq_file_index, $a, $side, $item->{flanking_left}, $item->{overlap}, $item->{alignment_overlap}, $item->{$side_key}->{start}, $item->{$side_key}->{strand}, $trim);		
 					}
 				}
 			}
@@ -371,15 +371,7 @@ sub correct_alignments
 		$item->{marginal}=1;
 		push @rejected_hybrid_predictions, $item;
 	}
-
-	my $rejected_junction_genome_diff_file_name = $settings->file_name('rejected_junction_genome_diff_file_name');
-	Breseq::Output::write_genome_diff($rejected_junction_genome_diff_file_name, $settings, [], [], \@rejected_hybrid_predictions, [], 1);
-
 	push @hybrid_predictions, @rejected_hybrid_predictions;
-
-	Breseq::Output::write_genome_diff($rejected_junction_genome_diff_file_name, $settings, [], [], \@hybrid_predictions, [], 1);
-
-	#print Dumper(@hybrid_predictions);
 
  	return @hybrid_predictions;	
 }

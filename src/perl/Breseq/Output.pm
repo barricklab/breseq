@@ -386,10 +386,10 @@ sub html_snp_table_string
 			my $display_fraction = sprintf "%.4f", 1-$c->{polymorphism}->{fraction};
 			my $display_fisher_p_value = sprintf "%.1E", $c->{polymorphism}->{fisher_strand_p_value};
 			
-			$output_str.= td( 
+			$output_str.= td(make_nonbreaking($c->{seq_id}));
+			$output_str.= td({-align=>"right"}, $c->{gene_shifted_start});
+			$output_str.= td(
 				[
-					make_nonbreaking($c->{seq_id}),
-					$c->{gene_shifted_start}, #. " (" . $c->{start} . ")", 
 					code("$ref_base_str&rarr;$c->{new_seq}") . "&nbsp;(FR=$display_fraction, SFET=$display_fisher_p_value)", 
 					$display_quality, 
 					$best_coverage_string,
@@ -405,10 +405,10 @@ sub html_snp_table_string
 		}
 		else
 		{
-			$output_str.= td( 
+			$output_str.= td(make_nonbreaking($c->{seq_id}));
+			$output_str.= td({-align=>"right"}, $c->{gene_shifted_start});
+			$output_str.= td(
 				[
-					make_nonbreaking($c->{seq_id}),
-					$c->{gene_shifted_start}, #. " (" . $c->{start} . ")", 
 					code("$c->{ref_seq}&rarr;$c->{new_seq}"), 
 					$display_quality, 
 					$best_coverage_string,
@@ -486,18 +486,12 @@ sub html_deletion_table_string
 			}
 		}
 		
-
-					
-		$output_str.= td( 
-			[
-				make_nonbreaking($c->{seq_id}),
-				$c->{start}, 
-				$c->{end},
-				$c->{size}, 
-				i($gene_string),
-		
-			]
-		);		
+		$output_str.= td(make_nonbreaking($c->{seq_id})); 
+		$output_str.= td({-align=>"right"}, $c->{start}); 
+		$output_str.= td({-align=>"right"}, $c->{end}); 
+		$output_str.= td({-align=>"right"}, $c->{size}); 
+		$output_str.= td(i($gene_string)); 
+			
 		$output_str.= end_Tr;
 	}
 	
@@ -700,7 +694,7 @@ sub html_junction_table_string
 			$output_str.= td({-colspan=>1}, $isi->{after_pos});
 			$output_str.= td({-colspan=>1}, '');
 			$output_str.= td({-colspan=>1}, '');
-			my $s = "$isi->{family} (";
+			my $s = "$isi->{family}&nbsp;(";
 			$s .= (($isi->{is_strand}==+1) ? '+' : (($isi->{is_strand}==-1) ? '&minus;' : '0'));
 			$s .= ")";
 			$output_str.= td({-colspan=>1}, $s);
@@ -1000,9 +994,8 @@ sub write_genome_diff
 			evidence => "read_alignment",
 			seq_id => $snp->{seq_id},
 			pos => $snp->{start},
-#			gene => $snp->{gene},
-#			product => $snp->{gene_product},
-#			gene_pos => $snp->{gene_position},
+			insert_start => $snp->{insert_start},
+			insert_end => $snp->{insert_end},
 			ref_base => $snp->{ref_seq},
 			new_base => $snp->{new_seq},
 			freq => 1,
@@ -1011,15 +1004,7 @@ sub write_genome_diff
 			new_cov => $snp->{best_coverage_string},
 			
 		};
-		
 		$item->{marginal} = 1 if ($snp->{marginal});
-		
-#		delete $item->{ref_seq} if ($snp->{ref_seq} eq '.');
-#		delete $item->{new_seq} if ($snp->{new_seq} eq '.');
-		
-#		$item->{aa_change} = $snp->{aa_ref_seq} . $snp->{aa_position} . $snp->{aa_new_seq} if ($snp->{aa_position});
-#		$item->{codon_change} = $snp->{codon_ref_seq} . '->' . $snp->{codon_new_seq} if ($snp->{aa_position});
-#		$item->{snp_type} = $snp->{snp_type} if (defined $snp->{snp_type});
 		
 		$gd->add_mutation($item);
 	}
