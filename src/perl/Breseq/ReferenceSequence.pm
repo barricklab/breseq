@@ -554,7 +554,7 @@ sub annotate_rearrangements
  
 			}
 		
-			## determine IS elements
+			## Determine IS elements
 			## Is it within an IS or near the boundary of an IS in the direction leading up to the junction?			
 			if (my $is = Breseq::ReferenceSequence::find_closest_is_element($item->{$key}, $ref_seq_info->{is_lists}->{$item->{$key}->{seq_id}}, 200, $item->{$key}->{strand}))
 			{
@@ -580,6 +580,105 @@ sub annotate_rearrangements
 			return (($a_seq_order <=> $b_seq_order) || ($a_pos <=> $b_pos));
 		}
 		@$rearrangements_ref = sort by_hybrid @$rearrangements_ref;
+	}
+	
+	
+	###
+	# IS insertion overlap correction
+	#
+	# For these the coordinates may have been offset incorrectly initially (because both sides of the junction may look unique)
+	# The goal is to offset through positive overlap to get as close as possible to the ends of the IS
+	###
+	foreach my $j (@$rearrangements_ref)
+	{	
+		
+		sub add_interval_coords
+		{
+			my ($c) = @_;
+			return if (!defined $c->{is}); 
+			
+			my ($is_start, $is_end) = split /-/, $c->{is}->{interval};
+			$c->{is}->{strand} = ($is_start < $is_end) ? +1 : -1; 
+			$c->{is}->{start} = ($is_start < $is_end) ? $is_start : $is_end; 
+			$c->{is}->{end} = ($is_start < $is_end) ? $is_end : $is_start;
+		}
+		
+		add_interval_coords($j->{interval_1});
+		add_interval_coords($j->{interval_2});
+		
+		$j->{interval_1}->{read_side} = -1;
+		$j->{interval_2}->{read_side} = +1;
+		
+		## if we found an IS element, then essentially reset the junction to its initial
+		## coordinates and overlap... otherwise we already used up the overlap,
+		## potentially in the wrong direction...
+			
+		if ((defined $j->{interval_1}->{is}) || (defined $j->{interval_1}->{is}))
+		{
+			my $scj = Breseq::Shared::junction_name_split($j->{seq_id});
+			$j->{interval_1}->{start} = $scj->{interval_1}->{start};
+			$j->{interval_1}->{end}   = $scj->{interval_1}->{end};
+
+			$j->{interval_2}->{start} = $scj->{interval_2}->{start};
+			$j->{interval_2}->{end}   = $scj->{interval_2}->{end};
+
+			$j->{overlap} = $scj->{overlap};
+		}
+		
+		if (defined $j->{interval_1}->{is})
+		{
+			if (abs($j->{interval_1}->{is}->{start} - $j->{interval_1}->{start}) <= 20)
+			{
+				$j->{is} = $j->{interval_1};
+				$j->{is}->{is}->{side_key} = 'start';
+			}
+			elsif (abs($j->{interval_1}->{is}->{end} - $j->{interval_1}->{start}) <= 20 )
+			{
+				$j->{is} = $j->{interval_1};
+				$j->{is}->{is}->{side_key} = 'end';
+			}
+			$j->{uc} = $j->{interval_2};
+		}
+		
+		if (!defined $j->{is} && defined $j->{interval_2}->{is})
+		{
+			if (abs($j->{interval_2}->{is}->{start} - $j->{interval_2}->{start}) <= 20)
+			{
+				$j->{is} = $j->{interval_2};
+				$j->{is}->{is}->{side_key} = 'start';
+			}
+			elsif (abs($j->{interval_2}->{is}->{end} - $j->{interval_2}->{start}) <= 20 )
+			{
+				$j->{is} = $j->{interval_2};
+				$j->{is}->{is}->{side_key} = 'end';
+			}
+			$j->{uc} = $j->{interval_1};
+		}
+		
+		next if (!defined $j->{is});
+		next if ($j->{overlap} < 0);
+		
+		my $j_overlap = $j->{overlap};
+		
+		### first, adjust the repetitive sequence boundary
+		if ($j_overlap > 0)
+		{
+			my $move_dist = abs($j->{is}->{start} - $j->{is}->{is}->{$j->{is}->{is}->{side_key}});
+			next if ($move_dist > $j_overlap);
+			if ($j->{is}->{start} + $j->{is}->{strand} * $move_dist == $j->{is}->{is}->{$j->{is}->{is}->{side_key}})			
+			{
+				$j->{is}->{start} += $j->{is}->{strand} * $move_dist;
+				$j_overlap -= $move_dist;
+			}
+		}
+		
+		### second, adjust the unique sequence side
+		if ($j_overlap > 0)
+		{
+			$j->{uc}->{start} += $j->{uc}->{strand} * $j_overlap;			
+		}
+		$j->{overlap} = 0;
+			
 	}
 }
 

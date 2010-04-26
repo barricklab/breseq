@@ -502,87 +502,7 @@ sub html_junction_table_string
 {
 	our ($settings, $list_ref, $ref_seq_info, $force_link) = @_;
 	my $output_str = '';
-	
-	###
-	# Merge predictions for IS insertions
-	###
-	
-	##correct overlaps
-	foreach my $j (@$list_ref)
-	{		
-		sub add_interval_coords
-		{
-			my ($c) = @_;
-			return if (!defined $c->{is}); 
-			
-			my ($is_start, $is_end) = split /-/, $c->{is}->{interval};
-			$c->{is}->{strand} = ($is_start < $is_end) ? +1 : -1; 
-			$c->{is}->{start} = ($is_start < $is_end) ? $is_start : $is_end; 
-			$c->{is}->{end } = ($is_start < $is_end) ? $is_end : $is_start;
-		}
 		
-		add_interval_coords($j->{interval_1});
-		add_interval_coords($j->{interval_2});
-		
-		$j->{interval_1}->{read_side} = -1;
-		$j->{interval_2}->{read_side} = +1;
-		
-		if (defined $j->{interval_1}->{is})
-		{
-			if (abs($j->{interval_1}->{is}->{start} - $j->{interval_1}->{start}) <= 20)
-			{
-				$j->{is} = $j->{interval_1};
-				$j->{is}->{is}->{side_key} = 'start';
-			}
-			elsif (abs($j->{interval_1}->{is}->{end} - $j->{interval_1}->{start}) <= 20 )
-			{
-				$j->{is} = $j->{interval_1};
-				$j->{is}->{is}->{side_key} = 'end';
-			}
-			$j->{uc} = $j->{interval_2};
-		}
-		
-		if (!defined $j->{is} && defined $j->{interval_2}->{is})
-		{
-			if (abs($j->{interval_2}->{is}->{start} - $j->{interval_2}->{start}) <= 20)
-			{
-				$j->{is} = $j->{interval_2};
-				$j->{is}->{is}->{side_key} = 'start';
-			}
-			elsif (abs($j->{interval_2}->{is}->{end} - $j->{interval_2}->{start}) <= 20 )
-			{
-				$j->{is} = $j->{interval_2};
-				$j->{is}->{is}->{side_key} = 'end';
-			}
-			$j->{uc} = $j->{interval_1};
-		}
-		
-		next if (!defined $j->{is});
-		next if ($j->{overlap} < 0);
-		
-		my $j_overlap = $j->{overlap};
-		
-		### first, adjust the repetitive sequence boundary
-		if ($j_overlap > 0)
-		{
-			my $move_dist = abs($j->{is}->{start} - $j->{is}->{is}->{$j->{is}->{is}->{side_key}});
-			next if ($move_dist > $j_overlap);
-			if ($j->{is}->{start} + $j->{is}->{strand} * $move_dist == $j->{is}->{is}->{$j->{is}->{is}->{side_key}})			
-			{
-				$j->{is}->{start} += $j->{is}->{strand} * $move_dist;
-				$j_overlap -= $move_dist;
-			}
-		}
-		
-		### second, adjust the unique sequence side
-		if ($j_overlap > 0)
-		{
-			$j->{uc}->{start} += $j->{uc}->{strand} * $j_overlap;			
-		}
-		$j->{overlap} = 0;
-			
-	}
-	
 	## only annotate IS elements for real reads...
 	if (!$settings->{marginal_mode})
 	{
@@ -616,6 +536,8 @@ sub html_junction_table_string
 		
 			$j1->{is_insertion}->{start} = ($uc1_strand == -1) ? $j2->{uc}->{start} : $j1->{uc}->{start};
 			$j1->{is_insertion}->{end} = ($uc1_strand == -1) ? $j1->{uc}->{start} : $j2->{uc}->{start};
+			$j1->{is_insertion}->{seq_id} = (defined $j1->{interval_1}->{is}) ? $j1->{interval_2}->{seq_id} : $j1->{interval_1}->{seq_id};
+			
 			$j1->{is_insertion}->{family} = $j1->{is}->{is}->{gene};
 			$j1->{is_insertion}->{is_strand} = $is_strand;
 			$j1->{is_insertion}->{is_size} = abs($j1->{is}->{is}->{end} - $j1->{is}->{is}->{start} + 1);
@@ -690,18 +612,18 @@ sub html_junction_table_string
 			$output_str.= start_Tr({-class=> "is_insertion_header"});
 			$output_str.= td({-colspan=>1}, '') if ($link); 
 			$output_str.= td({-colspan=>1}, '');
-			$output_str.= td({-colspan=>1}, '');			
-			$output_str.= td({-colspan=>1}, $isi->{after_pos});
+			$output_str.= td({-colspan=>1, -align=>"center"}, $isi->{seq_id});
+			$output_str.= td({-colspan=>1, -align=>"center"}, $isi->{after_pos});
 			$output_str.= td({-colspan=>1}, '');
 			$output_str.= td({-colspan=>1}, '');
 			my $s = "$isi->{family}&nbsp;(";
 			$s .= (($isi->{is_strand}==+1) ? '+' : (($isi->{is_strand}==-1) ? '&minus;' : '0'));
 			$s .= ")";
-			$output_str.= td({-colspan=>1}, $s);
+			$output_str.= td({-colspan=>1, -align=>"center"}, $s);
 			$s = "+$isi->{is_size} (+$isi->{dup_size}) bp";
-			$output_str.= td({-colspan=>1}, $s);			
+			$output_str.= td({-colspan=>1, -align=>"center"}, $s);			
 			$s = '';
-			$s .= "&nbsp;&nbsp;&nbsp;Warning! Not flush to repeat. Offsets: $isi->{gap_left}/$isi->{gap_right}" if ($isi->{gap_left} || $isi->{gap_right});
+			$s .= "Warning! Not flush to repeat. Offsets: $isi->{gap_left}/$isi->{gap_right}" if ($isi->{gap_left} || $isi->{gap_right});
 			$output_str.= td({-colspan=>1}, $s);			
 			$output_str.= end_Tr;
 			
