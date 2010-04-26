@@ -60,7 +60,7 @@ sub text_alignment
 	my ($self, $bam_path, $fasta_path, $region, $options) = @_;
 	$options->{text} = 1;
 	my $alignment_info = $self->create_alignment($bam_path, $fasta_path, $region, $options);
-	return 'No reads aligned.' if (!defined $alignment_info);
+	return 'No reads uniquely aligned to position.' if (!defined $alignment_info);
 	
 	my $aligned_reads = $alignment_info->{aligned_reads};
 	my @aligned_references = @{$alignment_info->{aligned_references}};
