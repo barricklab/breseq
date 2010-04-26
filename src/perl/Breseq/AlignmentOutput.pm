@@ -266,8 +266,8 @@ my %open_bam_files;
 
 sub create_alignment
 {
-	my $verbose = 0;
 	my ($self, $bam_path, $fasta_path, $region, $options) = @_;
+	my $verbose = $options->{'verbose'};
 		
 	## Start -- Workaround to avoid too many open files
 	if (!defined $open_bam_files{$bam_path.$fasta_path})

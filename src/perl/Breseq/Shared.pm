@@ -162,7 +162,7 @@ sub tam_write_read_alignments
 sub tam_write_moved_alignment
 {
 	my $verbose = 0;
-	my ($fh, $seq_id, $fastq_file_index, $a, $junction_side, $flanking_left, $junction_overlap, $junction_pos, $junction_strand, $trim) = @_;
+	my ($fh, $seq_id, $fastq_file_index, $a, $junction_side, $flanking_left, $junction_overlap, $alignment_overlap, $junction_pos, $junction_strand, $trim) = @_;
 	
 	if ($verbose)
 	{
@@ -172,6 +172,7 @@ sub tam_write_moved_alignment
 		print STDERR "junction_side         = $junction_side\n";
 		print STDERR "flanking_left       = $flanking_left\n";
 		print STDERR "junction_overlap      = $junction_overlap\n";
+		print STDERR "alignment_overlap      = $alignment_overlap\n";
 		print STDERR "junction_pos	        = $junction_pos\n";
 		print STDERR "trim...\n";
 		print STDERR Dumper($trim);
@@ -233,12 +234,19 @@ sub tam_write_moved_alignment
 	if ($junction_side == 1) 
 	{
 		## offset to include the redundant part for overlaps > 0 on junction_side 1
-		$seek_ref_pos += $junction_overlap if ($junction_overlap > 0);
+		$seek_ref_pos += $alignment_overlap if ($alignment_overlap > 0);
 	}
-	else
+	elsif ($junction_side == 2)
 	{
-		## offset past the common part
-		$seek_ref_pos += abs($junction_overlap) if ($junction_side == 2);
+		## offset past the common part of the alignment overlap
+		## for negative values, this is a gap
+		## for positive values, this is the common sequence
+  		$seek_ref_pos += abs($alignment_overlap);
+		## offset backwards for any REMAINING positive overlap.
+		$seek_ref_pos -= $junction_overlap if ($junction_overlap > 0)
+
+		### This results in incorrect alignments of side 2 (M2) for positive overlap!		
+###		$seek_ref_pos += abs($junction_overlap) if ($junction_side == 2);
 	}
 	print STDERR "seek_ref_pos = $seek_ref_pos\n" if ($verbose);
 	
@@ -259,7 +267,7 @@ sub tam_write_moved_alignment
 		}
 		else
 		{
-			$read_pos += $n;
+
 			$test_ref_pos += $n;
 		}
 		last if ($test_ref_pos >= $seek_ref_pos);
