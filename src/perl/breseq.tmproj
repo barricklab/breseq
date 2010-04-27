@@ -3,14 +3,14 @@
 <plist version="1.0">
 <dict>
 	<key>currentDocument</key>
-	<string>fastq_utils.pl</string>
+	<string>gd_utils.pl</string>
 	<key>documents</key>
 	<array>
 		<dict>
 			<key>filename</key>
 			<string>breseq.pl</string>
 			<key>lastUsed</key>
-			<date>2010-04-25T18:38:44Z</date>
+			<date>2010-04-26T23:20:38Z</date>
 		</dict>
 		<dict>
 			<key>filename</key>
@@ -28,15 +28,15 @@
 			<key>filename</key>
 			<string>fastq_utils.pl</string>
 			<key>lastUsed</key>
-			<date>2010-04-26T02:43:18Z</date>
-			<key>selected</key>
-			<true/>
+			<date>2010-04-26T20:47:08Z</date>
 		</dict>
 		<dict>
 			<key>filename</key>
 			<string>gd_utils.pl</string>
 			<key>lastUsed</key>
-			<date>2010-04-26T02:43:18Z</date>
+			<date>2010-04-26T23:28:37Z</date>
+			<key>selected</key>
+			<true/>
 		</dict>
 		<dict>
 			<key>filename</key>
@@ -78,30 +78,14 @@
 			<key>caret</key>
 			<dict>
 				<key>column</key>
-				<integer>23</integer>
+				<integer>46</integer>
 				<key>line</key>
-				<integer>508</integer>
+				<integer>62</integer>
 			</dict>
-			<key>columnSelection</key>
-			<false/>
 			<key>firstVisibleColumn</key>
 			<integer>0</integer>
 			<key>firstVisibleLine</key>
-			<integer>483</integer>
-			<key>selectFrom</key>
-			<dict>
-				<key>column</key>
-				<integer>11</integer>
-				<key>line</key>
-				<integer>508</integer>
-			</dict>
-			<key>selectTo</key>
-			<dict>
-				<key>column</key>
-				<integer>23</integer>
-				<key>line</key>
-				<integer>508</integer>
-			</dict>
+			<integer>37</integer>
 		</dict>
 		<key>Breseq/CandidateJunctions.pm</key>
 		<dict>
@@ -182,100 +166,114 @@
 			<key>caret</key>
 			<dict>
 				<key>column</key>
-				<integer>0</integer>
+				<integer>1</integer>
 				<key>line</key>
-				<integer>366</integer>
+				<integer>352</integer>
 			</dict>
 			<key>firstVisibleColumn</key>
 			<integer>0</integer>
 			<key>firstVisibleLine</key>
-			<integer>323</integer>
+			<integer>279</integer>
 		</dict>
 		<key>Breseq/MutationIdentification.pm</key>
 		<dict>
 			<key>caret</key>
 			<dict>
 				<key>column</key>
-				<integer>24</integer>
+				<integer>20</integer>
 				<key>line</key>
-				<integer>617</integer>
+				<integer>354</integer>
 			</dict>
-			<key>columnSelection</key>
-			<false/>
 			<key>firstVisibleColumn</key>
 			<integer>0</integer>
 			<key>firstVisibleLine</key>
-			<integer>592</integer>
-			<key>selectFrom</key>
-			<dict>
-				<key>column</key>
-				<integer>12</integer>
-				<key>line</key>
-				<integer>617</integer>
-			</dict>
-			<key>selectTo</key>
-			<dict>
-				<key>column</key>
-				<integer>24</integer>
-				<key>line</key>
-				<integer>617</integer>
-			</dict>
+			<integer>330</integer>
 		</dict>
 		<key>Breseq/Output.pm</key>
 		<dict>
 			<key>caret</key>
 			<dict>
 				<key>column</key>
-				<integer>33</integer>
+				<integer>26</integer>
 				<key>line</key>
-				<integer>693</integer>
+				<integer>805</integer>
 			</dict>
 			<key>firstVisibleColumn</key>
 			<integer>0</integer>
 			<key>firstVisibleLine</key>
-			<integer>674</integer>
+			<integer>782</integer>
 		</dict>
 		<key>Breseq/ReferenceSequence.pm</key>
 		<dict>
 			<key>caret</key>
 			<dict>
 				<key>column</key>
-				<integer>0</integer>
+				<integer>45</integer>
 				<key>line</key>
-				<integer>479</integer>
+				<integer>618</integer>
 			</dict>
 			<key>firstVisibleColumn</key>
 			<integer>0</integer>
 			<key>firstVisibleLine</key>
-			<integer>534</integer>
+			<integer>615</integer>
 		</dict>
 		<key>Breseq/Settings.pm</key>
 		<dict>
 			<key>caret</key>
 			<dict>
 				<key>column</key>
-				<integer>2</integer>
+				<integer>44</integer>
 				<key>line</key>
-				<integer>240</integer>
+				<integer>364</integer>
 			</dict>
 			<key>firstVisibleColumn</key>
 			<integer>0</integer>
 			<key>firstVisibleLine</key>
-			<integer>409</integer>
+			<integer>333</integer>
+		</dict>
+		<key>Breseq/Shared.pm</key>
+		<dict>
+			<key>caret</key>
+			<dict>
+				<key>column</key>
+				<integer>0</integer>
+				<key>line</key>
+				<integer>422</integer>
+			</dict>
+			<key>columnSelection</key>
+			<false/>
+			<key>firstVisibleColumn</key>
+			<integer>0</integer>
+			<key>firstVisibleLine</key>
+			<integer>404</integer>
+			<key>selectFrom</key>
+			<dict>
+				<key>column</key>
+				<integer>37</integer>
+				<key>line</key>
+				<integer>440</integer>
+			</dict>
+			<key>selectTo</key>
+			<dict>
+				<key>column</key>
+				<integer>0</integer>
+				<key>line</key>
+				<integer>422</integer>
+			</dict>
 		</dict>
 		<key>breseq.pl</key>
 		<dict>
 			<key>caret</key>
 			<dict>
 				<key>column</key>
-				<integer>3</integer>
+				<integer>1</integer>
 				<key>line</key>
-				<integer>76</integer>
+				<integer>808</integer>
 			</dict>
 			<key>firstVisibleColumn</key>
 			<integer>0</integer>
 			<key>firstVisibleLine</key>
-			<integer>40</integer>
+			<integer>764</integer>
 		</dict>
 		<key>fastq_utils.pl</key>
 		<dict>
@@ -296,30 +294,14 @@
 			<key>caret</key>
 			<dict>
 				<key>column</key>
-				<integer>41</integer>
+				<integer>3</integer>
 				<key>line</key>
-				<integer>231</integer>
+				<integer>309</integer>
 			</dict>
-			<key>columnSelection</key>
-			<false/>
 			<key>firstVisibleColumn</key>
 			<integer>0</integer>
 			<key>firstVisibleLine</key>
-			<integer>209</integer>
-			<key>selectFrom</key>
-			<dict>
-				<key>column</key>
-				<integer>29</integer>
-				<key>line</key>
-				<integer>231</integer>
-			</dict>
-			<key>selectTo</key>
-			<dict>
-				<key>column</key>
-				<integer>41</integer>
-				<key>line</key>
-				<integer>231</integer>
-			</dict>
+			<integer>274</integer>
 		</dict>
 		<key>genbank_utils.pl</key>
 		<dict>
@@ -381,11 +363,12 @@
 		<string>Breseq/MutationIdentification.pm</string>
 		<string>Breseq/Output.pm</string>
 		<string>Breseq/ReferenceSequence.pm</string>
+		<string>Breseq/Shared.pm</string>
 		<string>Breseq/CandidateJunctions.pm</string>
 	</array>
 	<key>showFileHierarchyDrawer</key>
 	<true/>
 	<key>windowFrame</key>
-	<string>{{500, 31}, {911, 847}}</string>
+	<string>{{250, 53}, {1082, 771}}</string>
 </dict>
 </plist>

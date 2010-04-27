@@ -467,17 +467,34 @@ EOF
 	my $sequence_length = $summary->{sequence_conversion}->{reference_sequences}->{$seq_id}->{length};
 
 ## testing more stringent cutoff
-## 	my $pr_cutoff = 1/$sequence_length*0.05;
-## One-tailed test p=0.01, no Bonferroni correction
-	my $pr_cutoff = 0.01;
-	my $i = 0;
-	while ( Math::CDF::pnbinom($i, $summary->{unique_coverage}->{$seq_id}->{nbinom_size_parameter}, $summary->{unique_coverage}->{$seq_id}->{nbinom_prob_parameter}) < $pr_cutoff ) 
-	{ 
-#		print "prob $i: " . Math::CDF::pnbinom($i, $summary->{unique_coverage}->{$seq_id}->{nbinom_size_parameter}, $summary->{unique_coverage}->{$seq_id}->{nbinom_prob_parameter}) . "\n";
-		$i++; 
+
+	{
+		## One-tailed test p=0.01, no Bonferroni correction
+		my $pr_cutoff = 0.01;
+		my $i = 0;
+		while ( Math::CDF::pnbinom($i, $summary->{unique_coverage}->{$seq_id}->{nbinom_size_parameter}, $summary->{unique_coverage}->{$seq_id}->{nbinom_prob_parameter}) < $pr_cutoff ) 
+		{ 
+	#		print "prob $i: " . Math::CDF::pnbinom($i, $summary->{unique_coverage}->{$seq_id}->{nbinom_size_parameter}, $summary->{unique_coverage}->{$seq_id}->{nbinom_prob_parameter}) . "\n";
+			$i++; 
+		}
+	#	print "Chose: $i\n";
+		$summary->{unique_coverage}->{$seq_id}->{deletion_coverage_propagation_cutoff} = $i;	
 	}
-#	print "Chose: $i\n";
-	$summary->{unique_coverage}->{$seq_id}->{deletion_coverage_propagation_cutoff} = $i;
+
+
+	{
+		## One-tailed test p=0.05, Bonferroni correction
+		my $pr_cutoff = 1/$sequence_length*0.05;
+		my $i = 0;
+		while ( Math::CDF::pnbinom($i, $summary->{unique_coverage}->{$seq_id}->{nbinom_size_parameter}, $summary->{unique_coverage}->{$seq_id}->{nbinom_prob_parameter}) < $pr_cutoff ) 
+		{ 
+	#		print "prob $i: " . Math::CDF::pnbinom($i, $summary->{unique_coverage}->{$seq_id}->{nbinom_size_parameter}, $summary->{unique_coverage}->{$seq_id}->{nbinom_prob_parameter}) . "\n";
+			$i++; 
+		}
+	#	print "Chose: $i\n";
+		$summary->{unique_coverage}->{$seq_id}->{junction_coverage_cutoff} = $i;
+	}
+
 }
 
 sub save_error_file

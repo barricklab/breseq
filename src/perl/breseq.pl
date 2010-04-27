@@ -734,9 +734,6 @@ if (!$settings->{no_mutation_prediction}) #could remove conditional?
 }
 
 
-
-
-
 my $output_done_file_name = $settings->file_name('output_done_file_name');	
 if (!-e $output_done_file_name)
 {
@@ -751,8 +748,8 @@ if (!-e $output_done_file_name)
 	### during the prediction step
 	foreach my $hybrid (@hybrids)
 	{
-		my $coverage_cutoff_1 = $settings->{unique_coverage}->{$hybrid->{interval_1}->{seq_id}}->{deletion_coverage_propagation_cutoff};
-		my $coverage_cutoff_2 = $settings->{unique_coverage}->{$hybrid->{interval_2}->{seq_id}}->{deletion_coverage_propagation_cutoff};
+		my $coverage_cutoff_1 = $settings->{unique_coverage}->{$hybrid->{interval_1}->{seq_id}}->{junction_coverage_cutoff};
+		my $coverage_cutoff_2 = $settings->{unique_coverage}->{$hybrid->{interval_2}->{seq_id}}->{junction_coverage_cutoff};
 		$hybrid->{marginal} = 1 if (($hybrid->{total_reads} < $coverage_cutoff_1) &&  ($hybrid->{total_reads} < $coverage_cutoff_2));
 	}
 	
