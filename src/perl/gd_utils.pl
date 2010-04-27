@@ -273,27 +273,27 @@ sub do_annotate
 	sub text_output {}
 	##
 	print STDERR "Creating text output files...\n";
-	Breseq::Output::save_text_mutation_file($settings->file_name('mutations_text_file_name') , \@mutations);
-	Breseq::Output::save_text_deletion_file($settings->file_name('deletions_text_file_name') , \@deletions);
-	Breseq::Output::save_text_unknown_file($settings->file_name('unknowns_text_file_name') , \@unknowns);
+#	Breseq::Output::save_text_mutation_file($settings->file_name('mutations_text_file_name') , \@mutations);
+#	Breseq::Output::save_text_deletion_file($settings->file_name('deletions_text_file_name') , \@deletions);
+#	Breseq::Output::save_text_unknown_file($settings->file_name('unknowns_text_file_name') , \@unknowns);
 	
 	##
 	# Plot coverage of genome and large deletions
 	sub plot_coverage {}
 	##
 	print STDERR "Drawing coverage graphs...\n";
-	$settings->create_path('alignment_path');
+	$settings->create_path('coverage_graph_path');
+	my $coverage_graph_path = $settings->file_name('coverage_graph_path');	
+	my $deletions_text_file_name = $settings->file_name('deletions_text_file_name');
+	Breseq::Output::save_text_deletion_file($deletions_text_file_name, \@deletions);
 	foreach my $seq_id (@{$ref_seq_info->{seq_ids}})
 	{
-		my $tmp_path = $settings->create_path('tmp_path'); 
-
-		my $deletions_text_file_name = $settings->file_name('deletions_text_file_name');
 		my $this_plot_coverage_done_file_name = $settings->file_name('plot_coverage_done_file_name', {'@'=>$seq_id});
 
 		if (!-e $this_plot_coverage_done_file_name)
 		{
 			my $this_complete_coverage_text_file_name = $settings->file_name('complete_coverage_text_file_name', {'@'=>$seq_id});			
-			my $res = Breseq::Shared::system("graph_coverage.pl -t $tmp_path -p $settings->{coverage_graph_path} -i $deletions_text_file_name -c $this_complete_coverage_text_file_name --seq_id=$seq_id");				
+			my $res = Breseq::Shared::system("graph_coverage.pl -t $coverage_graph_path -p $settings->{coverage_graph_path} -i $deletions_text_file_name -c $this_complete_coverage_text_file_name --seq_id=$seq_id");				
 			die if ($res);
 			open DONE, ">$this_plot_coverage_done_file_name";
 			close DONE;
@@ -303,9 +303,6 @@ sub do_annotate
 			print STDERR "Drawing coverage graphs already complete.\n";
 		}
 
-		$settings->remove_path('tmp_path'); 
-
-
 		#need to assign link names even if coverage was already drawn
 		my $i=1;
 		my @this_deletions = grep {$_->{seq_id} eq $seq_id} @deletions if ($seq_id);
@@ -314,8 +311,8 @@ sub do_annotate
 			$del->{coverage_graph_link} = "$settings->{local_coverage_graph_path}/$seq_id\.$i\.pdf";
 			$i++;
 		}
-
 	}
+#	$settings->remove_path('deletions_text_file_name');
 
 	sub html_output {}
 
@@ -426,6 +423,7 @@ sub do_annotate
 	### now create alignment files
 	if (!$settings->{no_alignment_generation})
 	{
+		$settings->create_path('alignment_path');
 
 		print STDERR "Creating alignment HTML files...\n";
 		foreach my $c (@composite_list) # , @hybrids)

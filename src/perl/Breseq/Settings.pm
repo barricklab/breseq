@@ -362,15 +362,16 @@ sub initialize
 	$self->{alignment_path} = "$self->{output_path}/$self->{local_alignment_path}";
 	$self->{local_coverage_graph_path} = "coverage";
 	$self->{coverage_graph_path} = "$self->{output_path}/$self->{local_coverage_graph_path}";
+	$self->{deletions_text_file_name} = "$self->{coverage_graph_path}/deletions.tab";
 	$self->{coverage_plot_file_name} = "$self->{coverage_graph_path}/@.overview.pdf";
 	$self->{plot_coverage_done_file_name} = "$self->{coverage_graph_path}/@.plot_coverage.done";
 	$self->{output_calibration_path} = "$self->{output_path}/calibration";
 	$self->{unique_only_coverage_plot_file_name} = "$self->{output_calibration_path}/@.unique_coverage.pdf";
 	$self->{error_rates_plot_file_name} = "$self->{output_calibration_path}/#.error_rates.pdf";
 	## text output files
-	$self->{mutations_text_file_name} = "$self->{output_path}/mutations.tab";
-	$self->{deletions_text_file_name} = "$self->{output_path}/deletions.tab";
-	$self->{unknowns_text_file_name} = "$self->{output_path}/unknowns.tab";
+#	$self->{mutations_text_file_name} = "$self->{output_path}/mutations.tab";
+#	$self->{deletions_text_file_name} = "$self->{output_path}/deletions.tab";
+#	$self->{unknowns_text_file_name} = "$self->{output_path}/unknowns.tab";
 	$self->{settings_text_file_name} = "$self->{output_path}/settings.tab";
 	$self->{summary_text_file_name} = "$self->{output_path}/summary.tab";
 	$self->{tiled_coverage_text_file_name} = "$self->{output_path}/@.tiled_coverage.tab";

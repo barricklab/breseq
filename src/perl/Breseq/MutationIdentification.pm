@@ -350,6 +350,8 @@ sub identify_mutations
 				{
 					$pos_info->{$base}->{unique_cov}->{1} = 0;
 					$pos_info->{$base}->{unique_cov}->{-1} = 0;
+					$pos_info->{$base}->{unique_trimmed_cov}->{1} = 0;
+					$pos_info->{$base}->{unique_trimmed_cov}->{-1} = 0;
 					$pos_info->{$base}->{redundant_cov}->{1} = 0;
 					$pos_info->{$base}->{redundant_cov}->{-1} = 0;
 					$pos_info->{$base}->{mutation_cov}->{1} = 0;
@@ -389,6 +391,10 @@ sub identify_mutations
 					
 					$trimmed = 1 if ((defined $trim_left) && ($p->qpos+1 <= $trim_left));
 					$trimmed = 1 if ((defined $trim_right) && ($a->query->length-$p->qpos <= $trim_right));
+
+					## EXPERIMENTAL -- moved from below		
+					##don't use information from trimmed reads!!
+#					next if ($trimmed);
 					
 					##also trimmed if up to next position and this is an indel.
 	#				if ($indel != 0)
@@ -401,17 +407,15 @@ sub identify_mutations
 					my $fastq_file_index = $a->aux_get('X2');
 					my $strand = $a->reversed ? -1 : +1;
 					
-					### Replace code below with this...
-					#my $complete_match = $a->aux_get('XC');
-					###
+					### Optionally, ony count reads that completely match
 					my $complete_match = 1;
 					if ($settings->{require_complete_match})
 					{
 						my ($q_start, $q_end) = Breseq::Shared::alignment_query_start_end($a, {no_reverse=>1});
 						$complete_match = ($q_start == 1) && ($q_end == $a->l_qseq);
 					}
-					## ...end replace
 					next if ($settings->{require_complete_match} && !$complete_match);
+					### End complete match condition
 					
 					my $base = ($indel < $insert_count) ? '.' : substr($a->qseq,$p->qpos + $insert_count,1);
 					##don't use bases without qualities!!
@@ -421,8 +425,12 @@ sub identify_mutations
 					### note that we count trimmed reads here, but not when looking for short indel mutations...
 					if ($redundancy == 1)
 					{
+						## this is only used when reporting coverage for within-read indels
+						## NOT for calling deletions...
+						
 						$this_position_coverage->{unique}->{$strand}++;
 						$pos_info->{$base}->{unique_cov}->{$strand}++;
+						$pos_info->{$base}->{unique_trimmed_cov}->{$strand}++ if (!$trimmed);
 
 						if ($indel > $insert_count)
 						{
@@ -442,14 +450,13 @@ sub identify_mutations
 					$this_position_coverage->{redundant}->{total} = $this_position_coverage->{redundant}->{-1} + $this_position_coverage->{redundant}->{+1};
 					$this_position_coverage->{raw_redundant}->{total} = $this_position_coverage->{raw_redundant}->{-1} + $this_position_coverage->{raw_redundant}->{+1};
 					$this_position_coverage->{total} = $this_position_coverage->{unique}->{total} + $this_position_coverage->{redundant}->{total};
-
-					### bail early if no reads overlapped the position and it had an insert count of >0
-					#last INSERT_COUNT if (($this_position_coverage->{unique}->{total} == 0) && ($insert_count > 0));
 					
 					$s->{coverage}->{unique_total}++ if ($this_position_unique_only_coverage && ($insert_count == 0));
 							
+					## EXPERIMENTAL -- moved above		
 					##don't use information from trimmed reads!!
 					next if ($trimmed);
+					
 					##don't use information from redundant reads!!
 					next if ($redundancy > 1);
 					
@@ -524,7 +531,7 @@ sub identify_mutations
 					$e_value_call = sprintf "%.1f", $e_value_call; #round immediately
 				}
 				
-				##did we predict a base at this position
+				##did we predict a base at this position?
 				my $base_predicted = ($e_value_call ne 'NA' && ($e_value_call >= $settings->{mutation_log10_e_value_cutoff}));
 				
 				##print out SNP call information
@@ -536,8 +543,8 @@ sub identify_mutations
 				foreach my $base (@base_list)
 				{			
 					my $current_base_info = $pos_info->{$base};
-					my $top_cov = $current_base_info->{unique_cov}->{1};
-					my $bot_cov = $current_base_info->{unique_cov}->{-1};
+					my $top_cov = $current_base_info->{unique_trimmed_cov}->{1};
+					my $bot_cov = $current_base_info->{unique_trimmed_cov}->{-1};
 					$total_cov->{1} += $top_cov;
 					$total_cov->{-1} += $bot_cov;
 					$line .= "\t$base\t" . "\t($bot_cov/$top_cov)";
