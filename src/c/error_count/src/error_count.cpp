@@ -155,7 +155,7 @@ namespace breseq {
 //						$error_hash->[$fastq_file_index]->{$avg_quality}->{'..'}--;
 //					}			
 				} 
-				
+				// an else here shouldn't change anything...
 				if(p->indel == 1) {			
 					//if ($p->indel == +1) {
 					//# (3) insertion in read relative to reference
