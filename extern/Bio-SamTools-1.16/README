@@ -1,0 +1,57 @@
+This is a Perl interface to the SAMtools sequence alignment interface.
+See http://samtools.sourceforge.net/.
+
+To compile this module, you must first download, unpack and compile
+SAMtools 0.1.4 or higher in some accessible directory. FOR SAMTOOLS
+VERSION 0.1.4, YOU MUST RUN "make -f makefile.generic" IN THE
+DISTRIBUTION DIRECTORY IN ORDER TO CREATE THE REQUIRED libbam.a
+LIBRARY FILE. For other versions, just "make" will usually work.
+
+Then set the environment variable SAMTOOLS to point to this directory.
+
+You will also need to install Bio::Perl from CPAN.
+
+Now run:
+
+  perl Build.PL
+  ./Build
+  ./Build test
+  (sudo) ./Build install
+
+TROUBLESHOOTING:
+
+If you encounter problems during compiling, you may need to edit
+Build.PL so that extra_compiler_flags matches the CFLAGS and DFLAGS
+settings in the Samtools Makefile.  Here are some common problems:
+
+1. When building this module, you get an error like the following:
+relocation R_X86_64_32 against `a local symbol' can not be used when
+making a shared object; recompile with -fPIC
+
+To fix this, edit the Makefile in the Samtools distribution by adding
+"-fPIC" to the CFLAGS line. It should look like this:
+
+  CFLAGS=	-g -Wall -O2 -fPIC #-m64 #-arch ppc
+
+Then do "make clean; make" in the Samtools directory to recompile the
+library. After this you should be able to build this module without
+errors.
+
+2. When building this module, you get an error about a missing math
+library. 
+
+To fix this, follow the recipe in (1) except add -m64 to CFLAGS so it
+looks like this:
+
+  CFLAGS=	-g -Wall -O2 -fPIC #-m64 #-arch ppc
+
+AUTHOR: 
+
+Lincoln D. Stein <lincoln.stein@gmail.com>
+
+Copyright (c) 2009 Ontario Institute for Cancer Research
+
+This package and its accompanying libraries is free software; you can
+redistribute it and/or modify it under the terms of the GPL (either
+version 1, or at your option, any later version) or the Artistic
+License 2.0.  Refer to LICENSE for the full license text.
