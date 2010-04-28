@@ -37,6 +37,8 @@ char* breseq::pileup_base::get_refseq(int target, int idx) {
 
 
 /*! Constructor for single-BAM, >=0 FASTA.
+ 
+ \todo this may consume lots of memory; see loading of reference sequence below.
  */
 breseq::pileup_base::pileup_base(const std::string& bam, const std::vector<std::string>& fastas)
 : _bam(0) {
