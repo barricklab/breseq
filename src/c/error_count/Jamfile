@@ -1,0 +1,10 @@
+project error_count ;
+
+exe error_count :
+    [ glob-tree *.cpp ]
+    /samtools//libbam
+    /user-config//boost_program_options
+    : <include>./include
+    :
+    : <include>./include
+    ;
