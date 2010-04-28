@@ -23,8 +23,7 @@ int main(int argc, char* argv[]) {
 	("bam,b", po::value<string>(), "bam file(s) containing sequences to be aligned")
 	("fasta,f", po::value<vector<string> >(), "indexed fasta file(s) of reference sequence")
 	("output,o", po::value<string>(), "output directory")
-	("coverage,c", po::value<string>(), "coverage file name suffix")
-	("error,e", po::value<string>(), "error count file name prefix");
+	("readfiles,r", po::value<vector<string> >(), "readfile names");
 	
 	po::variables_map options;
 	po::store(po::parse_command_line(argc, argv, cmdline_options), options);
@@ -35,9 +34,8 @@ int main(int argc, char* argv[]) {
 		 || !options.count("bam")
 		 || !options.count("fasta")
 		 || !options.count("output")
-		 || !options.count("coverage")
-		 || !options.count("error")) {
-		cout << "Usage: error_count --bam <sequences.bam> --fasta <reference.fasta> --output <path> --coverage <suffix> --error <prefix>" << endl;
+		 || !options.count("readfiles")) {
+		cout << "Usage: error_count --bam <sequences.bam> --fasta <reference.fasta> --output <path> --readfiles <filenames...>" << endl;
 		cout << cmdline_options << endl;
 		return -1;
 	}
@@ -47,8 +45,7 @@ int main(int argc, char* argv[]) {
 		breseq::error_count(options["bam"].as<string>(),
 												options["fasta"].as<vector<string> >(),
 												options["output"].as<string>(),
-												options["coverage"].as<string>(),
-												options["error"].as<string>());
+												options["readfiles"].as<vector<string> >());
 	} catch(...) {
 		// failed; 
 		return -1;

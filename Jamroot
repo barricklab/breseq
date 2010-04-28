@@ -1,0 +1,17 @@
+project breseq ;
+
+use-project /error_count : src/c/error_count ;
+use-project /samtools : src/c/samtools-0.1.7a ;
+
+alias all : /error_count//error_count ;
+build-project all ;
+
+alias install : install-bin ;
+explicit install install-bin ;
+
+install install-bin
+    : /error_count//error_count
+    : <install-dependencies>on
+        <install-type>EXE
+        <location>bin
+    ;

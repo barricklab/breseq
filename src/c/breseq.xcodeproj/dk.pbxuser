@@ -1,39 +1,5 @@
 // !$*UTF8*$!
 {
-	4209DD6E1183493200A18EEA /* PBXBookmark */ = {
-		isa = PBXBookmark;
-		fRef = 421ACFA21170ED4B00C2EB85 /* error_count.cpp */;
-	};
-	4209DD71118349C700A18EEA /* PBXTextBookmark */ = {
-		isa = PBXTextBookmark;
-		fRef = 423E8217118348AA00B3B735 /* ErrorCalibration.pm */;
-		name = "ErrorCalibration.pm: 1027";
-		rLen = 0;
-		rLoc = 29614;
-		rType = 0;
-		vrLen = 1404;
-		vrLoc = 1744;
-	};
-	4209DD72118349C700A18EEA /* PBXTextBookmark */ = {
-		isa = PBXTextBookmark;
-		fRef = 423E8217118348AA00B3B735 /* ErrorCalibration.pm */;
-		name = "ErrorCalibration.pm: 1027";
-		rLen = 0;
-		rLoc = 29614;
-		rType = 0;
-		vrLen = 1404;
-		vrLoc = 1744;
-	};
-	4209DD73118349C700A18EEA /* PBXTextBookmark */ = {
-		isa = PBXTextBookmark;
-		fRef = 421ACFA21170ED4B00C2EB85 /* error_count.cpp */;
-		name = "error_count.cpp: 12";
-		rLen = 0;
-		rLoc = 183;
-		rType = 0;
-		vrLen = 1465;
-		vrLoc = 7779;
-	};
 	421ACEB71170DB9600C2EB85 /* Project object */ = {
 		activeBuildConfigurationName = Debug;
 		activeExecutable = 421ACF311170DF1800C2EB85 /* error_count */;
@@ -129,14 +95,8 @@
 					PBXFileDataSource_Warnings_ColumnID,
 				);
 			};
-			PBXPerProjectTemplateStateSaveDate = 293816623;
-			PBXWorkspaceStateSaveDate = 293816623;
-		};
-		perUserProjectItems = {
-			4209DD6E1183493200A18EEA /* PBXBookmark */ = 4209DD6E1183493200A18EEA /* PBXBookmark */;
-			4209DD71118349C700A18EEA /* PBXTextBookmark */ = 4209DD71118349C700A18EEA /* PBXTextBookmark */;
-			4209DD72118349C700A18EEA /* PBXTextBookmark */ = 4209DD72118349C700A18EEA /* PBXTextBookmark */;
-			4209DD73118349C700A18EEA /* PBXTextBookmark */ = 4209DD73118349C700A18EEA /* PBXTextBookmark */;
+			PBXPerProjectTemplateStateSaveDate = 294149873;
+			PBXWorkspaceStateSaveDate = 294149873;
 		};
 		sourceControlManager = 421ACEBB1170DB9600C2EB85 /* Source Control */;
 		userBuildSettings = {
@@ -158,9 +118,9 @@
 	};
 	421ACF2B1170DEC400C2EB85 /* main.cpp */ = {
 		uiCtxt = {
-			sepNavIntBoundsRect = "{{0, 0}, {963, 826}}";
-			sepNavSelRange = "{1475, 0}";
-			sepNavVisRange = "{75, 1813}";
+			sepNavIntBoundsRect = "{{0, 0}, {961, 784}}";
+			sepNavSelRange = "{1247, 0}";
+			sepNavVisRange = "{37, 1714}";
 			sepNavWindowFrame = "{{1394, -27}, {1022, 878}}";
 		};
 	};
@@ -178,7 +138,7 @@
 		);
 		argumentStrings = (
 			"--help",
-			"--bam reference.bam --fasta reference.fasta --output ./ --coverage unique_only_coverage_distribution.tab --error lambda",
+			"--bam reference.bam --fasta reference.fasta --output ./ --readfiles lambda",
 		);
 		autoAttachOnCrash = 1;
 		breakpointsEnabled = 0;
@@ -212,29 +172,17 @@
 	};
 	421ACFA01170EC3200C2EB85 /* error_count.h */ = {
 		uiCtxt = {
-			sepNavIntBoundsRect = "{{0, 0}, {963, 750}}";
-			sepNavSelRange = "{900, 0}";
-			sepNavVisRange = "{0, 925}";
+			sepNavIntBoundsRect = "{{0, 0}, {961, 750}}";
+			sepNavSelRange = "{558, 188}";
+			sepNavVisRange = "{0, 768}";
 		};
 	};
 	421ACFA21170ED4B00C2EB85 /* error_count.cpp */ = {
 		uiCtxt = {
-			sepNavIntBoundsRect = "{{0, 0}, {961, 3780}}";
-			sepNavSelRange = "{183, 0}";
-			sepNavVisRange = "{7779, 1465}";
+			sepNavIntBoundsRect = "{{0, 0}, {961, 3976}}";
+			sepNavSelRange = "{8116, 0}";
+			sepNavVisRange = "{7632, 1412}";
 			sepNavWindowFrame = "{{419, 0}, {1022, 878}}";
-		};
-	};
-	423E8217118348AA00B3B735 /* ErrorCalibration.pm */ = {
-		isa = PBXFileReference;
-		lastKnownFileType = text.script.perl;
-		name = ErrorCalibration.pm;
-		path = /Users/dk/Documents/research/extern/breseq/src/perl/Breseq/ErrorCalibration.pm;
-		sourceTree = "<absolute>";
-		uiCtxt = {
-			sepNavIntBoundsRect = "{{0, 0}, {973, 14826}}";
-			sepNavSelRange = "{29614, 0}";
-			sepNavVisRange = "{1744, 1404}";
 		};
 	};
 	42A3A9AE117DE7F800A039E7 /* pileup.h */ = {
