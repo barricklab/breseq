@@ -1,0 +1,52 @@
+---
+name: Bio-SamTools
+version: 1.16
+author:
+  - 'Lincoln Stein <lincoln.stein@gmail.com>'
+abstract: Perl interface to SamTools library for DNA sequencing
+license: perl
+resources:
+  license: http://dev.perl.org/licenses/
+requires:
+  Bio::Root::Version: 1.005009001
+  perl: 5.008
+build_requires:
+  ExtUtils::CBuilder: 0
+provides:
+  Bio::DB::Bam:
+    file: lib/Bio/DB/Sam.pm
+  Bio::DB::Bam::AlignWrapper:
+    file: lib/Bio/DB/Bam/AlignWrapper.pm
+  Bio::DB::Bam::Alignment:
+    file: lib/Bio/DB/Bam/Alignment.pm
+  Bio::DB::Bam::FetchIterator:
+    file: lib/Bio/DB/Bam/FetchIterator.pm
+  Bio::DB::Bam::Pileup:
+    file: lib/Bio/DB/Bam/Pileup.pm
+  Bio::DB::Bam::PileupWrapper:
+    file: lib/Bio/DB/Bam/PileupWrapper.pm
+  Bio::DB::Bam::Query:
+    file: lib/Bio/DB/Bam/Query.pm
+  Bio::DB::Bam::ReadIterator:
+    file: lib/Bio/DB/Bam/ReadIterator.pm
+  Bio::DB::Bam::SplitAlignmentPart:
+    file: lib/Bio/DB/Bam/AlignWrapper.pm
+  Bio::DB::Bam::Target:
+    file: lib/Bio/DB/Bam/Target.pm
+  Bio::DB::Sam:
+    file: lib/Bio/DB/Sam.pm
+    version: 1.16
+  Bio::DB::Sam::Constants:
+    file: lib/Bio/DB/Sam/Constants.pm
+  Bio::DB::Sam::Fai:
+    file: lib/Bio/DB/Sam.pm
+  Bio::DB::Sam::Segment:
+    file: lib/Bio/DB/Sam/Segment.pm
+  Bio::DB::Sam::Segment::Iterator:
+    file: lib/Bio/DB/Sam/Segment.pm
+  Bio::SeqFeature::Coverage:
+    file: lib/Bio/DB/Sam.pm
+generated_by: Module::Build version 0.3
+meta-spec:
+  url: http://module-build.sourceforge.net/META-spec-v1.2.html
+  version: 1.2

@@ -58,9 +58,23 @@ sub count
 
 	my $reference_fasta_file_name = $settings->file_name('reference_fasta_file_name');
 	my $reference_bam_file_name = $settings->file_name('reference_bam_file_name');
+
+	## check to see if error_count++ is available:
+	my $errcountbin = $settings->{script_path} . "/../../bin/error_count";
+	if(-x $errcountbin) {
+		my $coverage_fn = $settings->file_name('unique_only_coverage_distribution_file_name', {'@'=>""});
+		my $outputdir = `dirname $coverage_fn`;
+		chomp $outputdir; $outputdir .= '/';
+		my $readfiles = join(',', $settings->read_files);
+			
+		system ("$errcountbin --bam $reference_bam_file_name --fasta $reference_fasta_file_name --output $outputdir --readfiles $readfiles") == 0
+			or die $!;
+		return; # error_count++ worked, so we're all done here.
+	}
+
 	my $bam = Bio::DB::Sam->new(-fasta => $reference_fasta_file_name, -bam => $reference_bam_file_name);
 	my @seq_ids = $bam->seq_ids;
-	
+		
 	## populated by pileup
 	my $error_hash = [];		#list by fastq file index
 	#my $complex_error_hash = [];		#list by fastq file index

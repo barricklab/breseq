@@ -196,10 +196,10 @@ namespace breseq {
 		
 		/*! Print coverage distribution.
 		 */
-		void print_coverage(const std::string& output_dir, const std::string& suffix) {
+		void print_coverage(const std::string& output_dir) {
 			using namespace std;
 			for(std::size_t i=0; i<_seq_info.size(); ++i) {
-				string filename(output_dir + _bam->header->target_name[i] + "." + suffix);
+				string filename(output_dir + _bam->header->target_name[i] + ".unique_only_coverage_distribution.tab");
 				ofstream out(filename.c_str());					
 				
 				out << "coverage\tn" << endl;
@@ -213,17 +213,15 @@ namespace breseq {
 		
 		/*! Print error file.
 		 */
-		void print_error(const std::string& output_dir, const std::string& prefix) {
+		void print_error(const std::string& output_dir, const std::vector<std::string>& readfiles) {
 			using namespace std;
 			char bases[] = {'A', 'T', 'C', 'G', '.'};
 			
+			assert(readfiles.size() == error_hash.size());
+			
 			for(fastq_map_t::iterator iter=error_hash.begin(); iter!=error_hash.end(); ++iter) {
-				ostringstream filename;				
-				filename << output_dir << prefix;
-				if(error_hash.size() > 1) {
-					filename << "." << iter->first;
-				}
-				filename << ".error_counts.tab";
+				ostringstream filename;
+				filename << output_dir << readfiles[iter->first] << ".error_counts.tab";
 				ofstream out(filename.str().c_str());
 				
 				out << "quality";
@@ -255,15 +253,16 @@ namespace breseq {
 	};
 	
 	
+	/*!
+	 */
 	void error_count(const std::string& bam, 
 									 const std::vector<std::string>& fastas,
 									 const std::string& output_dir,
-									 const std::string& coverage_suffix,
-									 const std::string& error_prefix) {
+									 const std::vector<std::string>& readfiles) {
 		error_count_pileup ecp(bam, fastas);
 		ecp.pileup();
-		ecp.print_coverage(output_dir, coverage_suffix);
-		ecp.print_error(output_dir, error_prefix);
+		ecp.print_coverage(output_dir);
+		ecp.print_error(output_dir, readfiles);
 	}
 	
 } // breseq
