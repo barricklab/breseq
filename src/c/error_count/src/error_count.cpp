@@ -128,7 +128,7 @@ namespace breseq {
 					// also add an observation of a non-gap non-gap			
 					if((qpos+1) < qlen) {
 						uint8_t next_quality = qscore[qpos+1];
-						uint8_t avg_quality = floor((static_cast<float>(quality)+static_cast<float>(next_quality))/2.0);
+						uint8_t avg_quality = static_cast<uint8_t>(floor((quality+next_quality)/2.0));
 						++error_hash[fastq_file_index][avg_quality][".."];
 						// print $a->query->display_name . " $pos $qpos $query_end\n";
 						// std::cout << pos << " " << qpos << " " << qlen << std::endl;
