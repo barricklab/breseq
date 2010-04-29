@@ -1,11 +1,10 @@
-project error_count ;
+project breseq ;
 
-exe error_count :
+lib libbreseq :
     [ glob-tree *.cpp ]
-    /breseq//libbreseq
     /samtools//libbam
-    /user-config//boost_program_options
     : <include>./include
+        <link>static
     :
     : <include>./include
     ;

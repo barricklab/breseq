@@ -2,7 +2,6 @@ project error_count ;
 
 exe error_count :
     [ glob-tree *.cpp ]
-    /breseq//libbreseq
     /samtools//libbam
     /user-config//boost_program_options
     : <include>./include

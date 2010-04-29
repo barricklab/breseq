@@ -1,7 +1,8 @@
 #include <assert.h>
 #include <iostream>
 #include <sstream>
-#include "pileup.h"
+
+#include "breseq/pileup.h"
 
 
 /*! Constructor.
@@ -27,18 +28,10 @@ breseq::reference_sequence::~reference_sequence() {
 }
 
 
-/*! Retrieve the reference sequence for the given target and fasta index.
- */
-char* breseq::pileup_base::get_refseq(int target, int idx) {
-	assert(_refs.find(target) != _refs.end());
-	assert(static_cast<std::size_t>(idx) < _refs[target].size());
-	return _refs[target][idx]->_seq;
-}
-
-
 /*! Constructor for single-BAM, >=0 FASTA.
  
- \todo this may consume lots of memory; see loading of reference sequence below.
+ \todo Change this to lazily load & cache reference sequences as they are needed,
+ instead of loading all sequences at once.
  */
 breseq::pileup_base::pileup_base(const std::string& bam, const std::vector<std::string>& fastas)
 : _bam(0) {
@@ -62,6 +55,15 @@ breseq::pileup_base::pileup_base(const std::string& bam, const std::vector<std::
  */
 breseq::pileup_base::~pileup_base() {
 	samclose(_bam);
+}
+
+
+/*! Retrieve the reference sequence for the given target and fasta index.
+ */
+char* breseq::pileup_base::get_refseq(int target, int idx) {
+	assert(_refs.find(target) != _refs.end());
+	assert(static_cast<std::size_t>(idx) < _refs[target].size());
+	return _refs[target][idx]->_seq;
 }
 
 
