@@ -12,7 +12,8 @@
 		421ACF7E1170E5CA00C2EB85 /* libboost_program_options-mt.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 421ACF7D1170E5CA00C2EB85 /* libboost_program_options-mt.a */; };
 		421ACFA31170ED4B00C2EB85 /* error_count.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 421ACFA21170ED4B00C2EB85 /* error_count.cpp */; };
 		421ACFAD1170F05500C2EB85 /* libz.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 421ACFAC1170F05500C2EB85 /* libz.a */; };
-		42A3A9B1117DE9B100A039E7 /* pileup.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 42A3A9B0117DE9B100A039E7 /* pileup.cpp */; };
+		42BA690F1189B819000B00B1 /* pileup.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 42BA69071189B7D1000B00B1 /* pileup.cpp */; };
+		42BA69101189B827000B00B1 /* libbreseq.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 42BA690C1189B7FD000B00B1 /* libbreseq.a */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -22,6 +23,13 @@
 			proxyType = 1;
 			remoteGlobalIDString = 421ACF201170DC4400C2EB85;
 			remoteInfo = samtools;
+		};
+		42BA691B1189B877000B00B1 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 421ACEB71170DB9600C2EB85 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 42BA690B1189B7FD000B00B1 /* breseq */;
+			remoteInfo = breseq;
 		};
 /* End PBXContainerItemProxy section */
 
@@ -34,9 +42,10 @@
 		421ACFA01170EC3200C2EB85 /* error_count.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = error_count.h; sourceTree = "<group>"; };
 		421ACFA21170ED4B00C2EB85 /* error_count.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = error_count.cpp; sourceTree = "<group>"; };
 		421ACFAC1170F05500C2EB85 /* libz.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = libz.a; path = /opt/local/lib/libz.a; sourceTree = "<absolute>"; };
-		42A3A9AE117DE7F800A039E7 /* pileup.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = pileup.h; sourceTree = "<group>"; };
-		42A3A9B0117DE9B100A039E7 /* pileup.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = pileup.cpp; sourceTree = "<group>"; };
-		42A3A9D5117DEED500A039E7 /* common.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = common.h; sourceTree = "<group>"; };
+		42BA69041189B7D1000B00B1 /* common.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = common.h; sourceTree = "<group>"; };
+		42BA69051189B7D1000B00B1 /* pileup.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = pileup.h; sourceTree = "<group>"; };
+		42BA69071189B7D1000B00B1 /* pileup.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = pileup.cpp; sourceTree = "<group>"; };
+		42BA690C1189B7FD000B00B1 /* libbreseq.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; includeInIndex = 0; path = libbreseq.a; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -44,9 +53,17 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				42BA69101189B827000B00B1 /* libbreseq.a in Frameworks */,
 				421ACF581170E00A00C2EB85 /* libbam.a in Frameworks */,
 				421ACF7E1170E5CA00C2EB85 /* libboost_program_options-mt.a in Frameworks */,
 				421ACFAD1170F05500C2EB85 /* libz.a in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		42BA690A1189B7FD000B00B1 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -58,6 +75,7 @@
 			children = (
 				421ACF351170DF3F00C2EB85 /* etc */,
 				421ACF291170DEC400C2EB85 /* error_count */,
+				42BA69011189B7D1000B00B1 /* libbreseq */,
 				421ACF5F1170E06300C2EB85 /* lib */,
 				421ACF301170DF1800C2EB85 /* Products */,
 			);
@@ -77,7 +95,6 @@
 			children = (
 				421ACFA21170ED4B00C2EB85 /* error_count.cpp */,
 				421ACF2B1170DEC400C2EB85 /* main.cpp */,
-				42A3A9B0117DE9B100A039E7 /* pileup.cpp */,
 			);
 			path = src;
 			sourceTree = "<group>";
@@ -86,6 +103,7 @@
 			isa = PBXGroup;
 			children = (
 				421ACF2F1170DF1800C2EB85 /* error_count */,
+				42BA690C1189B7FD000B00B1 /* libbreseq.a */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -111,14 +129,56 @@
 		421ACF9F1170EC3200C2EB85 /* include */ = {
 			isa = PBXGroup;
 			children = (
-				42A3A9D5117DEED500A039E7 /* common.h */,
 				421ACFA01170EC3200C2EB85 /* error_count.h */,
-				42A3A9AE117DE7F800A039E7 /* pileup.h */,
 			);
 			path = include;
 			sourceTree = "<group>";
 		};
+		42BA69011189B7D1000B00B1 /* libbreseq */ = {
+			isa = PBXGroup;
+			children = (
+				42BA69021189B7D1000B00B1 /* include */,
+				42BA69061189B7D1000B00B1 /* src */,
+			);
+			path = libbreseq;
+			sourceTree = "<group>";
+		};
+		42BA69021189B7D1000B00B1 /* include */ = {
+			isa = PBXGroup;
+			children = (
+				42BA69031189B7D1000B00B1 /* breseq */,
+			);
+			path = include;
+			sourceTree = "<group>";
+		};
+		42BA69031189B7D1000B00B1 /* breseq */ = {
+			isa = PBXGroup;
+			children = (
+				42BA69041189B7D1000B00B1 /* common.h */,
+				42BA69051189B7D1000B00B1 /* pileup.h */,
+			);
+			path = breseq;
+			sourceTree = "<group>";
+		};
+		42BA69061189B7D1000B00B1 /* src */ = {
+			isa = PBXGroup;
+			children = (
+				42BA69071189B7D1000B00B1 /* pileup.cpp */,
+			);
+			path = src;
+			sourceTree = "<group>";
+		};
 /* End PBXGroup section */
+
+/* Begin PBXHeadersBuildPhase section */
+		42BA69081189B7FD000B00B1 /* Headers */ = {
+			isa = PBXHeadersBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXHeadersBuildPhase section */
 
 /* Begin PBXLegacyTarget section */
 		421ACF201170DC4400C2EB85 /* samtools */ = {
@@ -149,11 +209,29 @@
 			);
 			dependencies = (
 				421ACF611170E07C00C2EB85 /* PBXTargetDependency */,
+				42BA691C1189B877000B00B1 /* PBXTargetDependency */,
 			);
 			name = error_count;
 			productName = error_count;
 			productReference = 421ACF2F1170DF1800C2EB85 /* error_count */;
 			productType = "com.apple.product-type.tool";
+		};
+		42BA690B1189B7FD000B00B1 /* breseq */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 42BA69191189B83D000B00B1 /* Build configuration list for PBXNativeTarget "breseq" */;
+			buildPhases = (
+				42BA69081189B7FD000B00B1 /* Headers */,
+				42BA69091189B7FD000B00B1 /* Sources */,
+				42BA690A1189B7FD000B00B1 /* Frameworks */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = breseq;
+			productName = breseq;
+			productReference = 42BA690C1189B7FD000B00B1 /* libbreseq.a */;
+			productType = "com.apple.product-type.library.static";
 		};
 /* End PBXNativeTarget section */
 
@@ -170,6 +248,7 @@
 			targets = (
 				421ACF201170DC4400C2EB85 /* samtools */,
 				421ACF2E1170DF1800C2EB85 /* error_count */,
+				42BA690B1189B7FD000B00B1 /* breseq */,
 			);
 		};
 /* End PBXProject section */
@@ -181,7 +260,14 @@
 			files = (
 				421ACF4A1170DFC300C2EB85 /* main.cpp in Sources */,
 				421ACFA31170ED4B00C2EB85 /* error_count.cpp in Sources */,
-				42A3A9B1117DE9B100A039E7 /* pileup.cpp in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		42BA69091189B7FD000B00B1 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				42BA690F1189B819000B00B1 /* pileup.cpp in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -192,6 +278,11 @@
 			isa = PBXTargetDependency;
 			target = 421ACF201170DC4400C2EB85 /* samtools */;
 			targetProxy = 421ACF601170E07C00C2EB85 /* PBXContainerItemProxy */;
+		};
+		42BA691C1189B877000B00B1 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 42BA690B1189B7FD000B00B1 /* breseq */;
+			targetProxy = 42BA691B1189B877000B00B1 /* PBXContainerItemProxy */;
 		};
 /* End PBXTargetDependency section */
 
@@ -275,6 +366,37 @@
 			};
 			name = Release;
 		};
+		42BA690D1189B7FE000B00B1 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = 421ACF361170DF3F00C2EB85 /* debug.xcconfig */;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				COPY_PHASE_STRIP = NO;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_ENABLE_FIX_AND_CONTINUE = YES;
+				GCC_MODEL_TUNING = G5;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				INSTALL_PATH = /usr/local/lib;
+				PREBINDING = NO;
+				PRODUCT_NAME = breseq;
+			};
+			name = Debug;
+		};
+		42BA690E1189B7FE000B00B1 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				COPY_PHASE_STRIP = YES;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				GCC_ENABLE_FIX_AND_CONTINUE = NO;
+				GCC_MODEL_TUNING = G5;
+				INSTALL_PATH = /usr/local/lib;
+				PREBINDING = NO;
+				PRODUCT_NAME = breseq;
+				ZERO_LINK = NO;
+			};
+			name = Release;
+		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
@@ -301,6 +423,15 @@
 			buildConfigurations = (
 				421ACF321170DF1800C2EB85 /* Debug */,
 				421ACF331170DF1800C2EB85 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		42BA69191189B83D000B00B1 /* Build configuration list for PBXNativeTarget "breseq" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				42BA690D1189B7FE000B00B1 /* Debug */,
+				42BA690E1189B7FE000B00B1 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
