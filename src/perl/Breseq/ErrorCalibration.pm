@@ -65,9 +65,10 @@ sub count
 		my $coverage_fn = $settings->file_name('unique_only_coverage_distribution_file_name', {'@'=>""});
 		my $outputdir = `dirname $coverage_fn`;
 		chomp $outputdir; $outputdir .= '/';
-		my $readfiles = join(',', $settings->read_files);
-			
-		system ("$errcountbin --bam $reference_bam_file_name --fasta $reference_fasta_file_name --output $outputdir --readfiles $readfiles") == 0
+		my $readfiles = join(" --readfile ", $settings->read_files);
+		my $cmdline = "$errcountbin --bam $reference_bam_file_name --fasta $reference_fasta_file_name --output $outputdir --readfile $readfiles";
+		print STDERR "$cmdline\n";
+		system ($cmdline) == 0
 			or die $!;
 		return; # error_count++ worked, so we're all done here.
 	}
