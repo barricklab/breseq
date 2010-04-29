@@ -33,7 +33,7 @@ breseq::reference_sequence::~reference_sequence() {
  \todo Change this to lazily load & cache reference sequences as they are needed,
  instead of loading all sequences at once.
  */
-breseq::pileup_base::pileup_base(const std::string& bam, const std::vector<std::string>& fastas)
+breseq::pileup_base::pileup_base(const std::string& bam, const std::string& fasta)
 : _bam(0) {
 	using namespace std;
 	_bam = samopen(bam.c_str(), "rb", 0);
@@ -43,10 +43,9 @@ breseq::pileup_base::pileup_base(const std::string& bam, const std::vector<std::
 	for(int i=0; i<_bam->header->n_targets; ++i) {
 		cerr << "  REFERENCE: " << _bam->header->target_name[i] << endl;
 		cerr << "  LENGTH: " << _bam->header->target_len[i] << endl;
-		for(std::size_t j=0; j<fastas.size(); ++j) {
-			boost::shared_ptr<reference_sequence> refseq(new reference_sequence(fastas[j], _bam->header->target_name[i]));
-			_refs[i].push_back(refseq);
-		}
+		boost::shared_ptr<reference_sequence> refseq(new reference_sequence(fasta, _bam->header->target_name[i]));
+		assert(static_cast<unsigned int>(refseq->_len) == _bam->header->target_len[i]);
+		_refs.push_back(refseq);
 	}
 }
 
@@ -60,10 +59,9 @@ breseq::pileup_base::~pileup_base() {
 
 /*! Retrieve the reference sequence for the given target and fasta index.
  */
-char* breseq::pileup_base::get_refseq(int target, int idx) {
-	assert(_refs.find(target) != _refs.end());
-	assert(static_cast<std::size_t>(idx) < _refs[target].size());
-	return _refs[target][idx]->_seq;
+char* breseq::pileup_base::get_refseq(int target) {
+	assert(static_cast<std::size_t>(target) < _refs.size());
+	return _refs[target]->_seq;
 }
 
 

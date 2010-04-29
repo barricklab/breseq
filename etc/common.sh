@@ -14,7 +14,7 @@ BRESEQ="perl -w ${COMMONDIR}/../src/perl/breseq.pl"
 # path to test data:
 DATADIR=${COMMONDIR}/../tests/data
 # this is a find-compatible list of files that we'll hash:
-FILE_PATTERN='-name *.tab -or -name *.html ! -name summary.html'
+FILE_PATTERN='( -name *.tab -or -name *.html ) -and -not -name settings.tab -and -not -name summary.tab'
 # executable used to hash files:
 HASH=`which sha1sum`
 # name of file containing expected hash values:
@@ -31,6 +31,16 @@ do_build() {
     for i in `find . ${FILE_PATTERN}`; do
         ${HASH} $i
     done > ${EXPECTED}
+    popd > /dev/null
+}
+
+
+# show the files that will be checked
+# $1 == testdir
+#
+do_show() {
+    pushd $1 > /dev/null
+    find . ${FILE_PATTERN}
     popd > /dev/null
 }
 
@@ -53,6 +63,26 @@ do_check() {
     echo "Passed check: $1"
     exit 0
 }
+
+
+# verbose check of current hashes against expected values.
+# $1 == testdir
+do_vcheck() {
+    if [[ ! -e $1/${EXPECTED} ]]; then
+        echo "Building expected values for test $1..."
+        do_build $1
+    fi
+    pushd $1 > /dev/null
+    if ! ${HASH} --check ${EXPECTED}; then
+        popd > /dev/null
+        echo "Failed check: $1"
+        exit -1
+    fi
+    popd > /dev/null
+    echo "Passed check: $1"
+    exit 0
+}
+
 
 
 # clean a test
@@ -84,9 +114,15 @@ do_test() {
             testcmd
             do_build $2
         ;;
+        show)
+            do_show $2
+        ;;
         test)
             testcmd
             do_check $2
+        ;;
+        vcheck)
+            do_vcheck $2
         ;;
         *)
             do_usage

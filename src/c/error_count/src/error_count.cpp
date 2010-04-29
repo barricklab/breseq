@@ -15,8 +15,8 @@
 
 /*! Constructor.
  */
-breseq::error_count_pileup::error_count_pileup(const std::string& bam, const std::vector<std::string>& fastas)
-: breseq::pileup_base(bam, fastas) {
+breseq::error_count_pileup::error_count_pileup(const std::string& bam, const std::string& fasta)
+: breseq::pileup_base(bam, fasta) {
 	// reserve enough space for the sequence info:
 	_seq_info.resize(_bam->header->n_targets);
 }
@@ -73,9 +73,9 @@ int breseq::error_count_pileup::callback(uint32_t tid, uint32_t pos, int n, cons
 			qlen -= len;
 		}
 		uint8_t* qscore = bam1_qual(a); // quality score array
-		int32_t fastq_file_index=bam_aux2i(bam_aux_get(a,"X2")); // sequencer-generated read file
+		int32_t fastq_file_index=bam_aux2i(bam_aux_get(a,"X2")); // sequencer-generated read file that this alignment belongs to
 		
-		char* refseq = get_refseq(tid, fastq_file_index); // reference sequence
+		char* refseq = get_refseq(tid); // reference sequence for this target
 		char ref_base[] = {refseq[pos], reverse_base(refseq[pos]), 0}; // reference base & its complement
 		
 		//In all that follows, be sure to keep track of strandedness of mutations!
@@ -224,10 +224,10 @@ void breseq::error_count_pileup::print_error(const std::string& output_dir, cons
 /*!
  */
 void breseq::error_count(const std::string& bam, 
-												 const std::vector<std::string>& fastas,
+												 const std::string& fasta,
 												 const std::string& output_dir,
 												 const std::vector<std::string>& readfiles) {
-	error_count_pileup ecp(bam, fastas);
+	error_count_pileup ecp(bam, fasta);
 	ecp.pileup();
 	ecp.print_coverage(output_dir);
 	ecp.print_error(output_dir, readfiles);

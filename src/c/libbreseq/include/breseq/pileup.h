@@ -35,13 +35,13 @@ namespace breseq {
 		typedef std::vector<boost::shared_ptr<reference_sequence> > refseq_list_t;
 		
 		//! Constructor.
-		pileup_base(const std::string& bam, const std::vector<std::string>& fastas);
+		pileup_base(const std::string& bam, const std::string& fasta);
 
 		//! Destructor.
 		virtual ~pileup_base();
 		
 		//! Retrieve the reference sequence for the given target and fai index.
-		char* get_refseq(int target, int idx);
+		char* get_refseq(int target);//, int idx);
 		
 		//! Run the pileup; will trigger callback for each alignment.
 		void pileup();
@@ -53,7 +53,7 @@ namespace breseq {
 		friend int first_level_callback(uint32_t tid, uint32_t pos, int n, const bam_pileup1_t *pile, void *data);
 
 		samfile_t* _bam; //!< BAM file handle.
-		std::map<int,refseq_list_t> _refs; //!< Reference sequences.
+		refseq_list_t _refs; //!< Reference sequences.
 	};	
 	
 } // breseq

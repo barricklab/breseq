@@ -20,10 +20,10 @@ int main(int argc, char* argv[]) {
 	po::options_description cmdline_options("Allowed options");
 	cmdline_options.add_options()
 	("help,h", "produce this help message")
-	("bam,b", po::value<string>(), "bam file(s) containing sequences to be aligned")
-	("fasta,f", po::value<vector<string> >(), "indexed fasta file(s) of reference sequence")
+	("bam,b", po::value<string>(), "bam file containing sequences to be aligned")
+	("fasta,f", po::value<string>(), "FASTA file of reference sequence")
 	("output,o", po::value<string>(), "output directory")
-	("readfiles,r", po::value<vector<string> >(), "readfile names");
+	("readfile,r", po::value<vector<string> >(), "names of readfiles (no extension)");
 	
 	po::variables_map options;
 	po::store(po::parse_command_line(argc, argv, cmdline_options), options);
@@ -34,8 +34,8 @@ int main(int argc, char* argv[]) {
 		 || !options.count("bam")
 		 || !options.count("fasta")
 		 || !options.count("output")
-		 || !options.count("readfiles")) {
-		cout << "Usage: error_count --bam <sequences.bam> --fasta <reference.fasta> --output <path> --readfiles <filenames...>" << endl;
+		 || !options.count("readfile")) {
+		cout << "Usage: error_count --bam <sequences.bam> --fasta <reference.fasta> --output <path> --readfile <filename>" << endl;
 		cout << cmdline_options << endl;
 		return -1;
 	}
@@ -43,9 +43,9 @@ int main(int argc, char* argv[]) {
 	// attempt to calculate error calibrations:
 	try {
 		breseq::error_count(options["bam"].as<string>(),
-												options["fasta"].as<vector<string> >(),
+												options["fasta"].as<string>(),
 												options["output"].as<string>(),
-												options["readfiles"].as<vector<string> >());
+												options["readfile"].as<vector<string> >());
 	} catch(...) {
 		// failed; 
 		return -1;

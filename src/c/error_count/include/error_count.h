@@ -16,7 +16,7 @@ namespace breseq {
 	 \param readfiles is a list of read files that were used to build the bam (do not include filename extension)
 	 */
 	void error_count(const std::string& bam, 
-									 const std::vector<std::string>& fastas,
+									 const std::string& fasta,
 									 const std::string& output_dir,
 									 const std::vector<std::string>& readfiles);
 	
@@ -45,7 +45,7 @@ namespace breseq {
 		
 		
 		//! Constructor.
-		error_count_pileup(const std::string& bam, const std::vector<std::string>& fastas);
+		error_count_pileup(const std::string& bam, const std::string& fasta);
 		
 		//! Destructor.
 		virtual ~error_count_pileup();		

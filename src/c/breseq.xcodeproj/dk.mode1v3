@@ -204,7 +204,7 @@
 				<key>PBXProjectModuleGUID</key>
 				<string>42BA69231189B9E6000B00B1</string>
 				<key>PBXProjectModuleLabel</key>
-				<string>MutationIdentification.pm</string>
+				<string>pileup.cpp</string>
 				<key>PBXSplitModuleInNavigatorKey</key>
 				<dict>
 					<key>Split0</key>
@@ -212,14 +212,32 @@
 						<key>PBXProjectModuleGUID</key>
 						<string>42BA692D1189CB0F000B00B1</string>
 						<key>PBXProjectModuleLabel</key>
-						<string>MutationIdentification.pm</string>
+						<string>pileup.cpp</string>
 						<key>_historyCapacity</key>
 						<integer>0</integer>
 						<key>bookmark</key>
-						<string>42BA692F1189CB0F000B00B1</string>
+						<string>4266BE9C118A2346009F863A</string>
 						<key>history</key>
 						<array>
-							<string>42BA692E1189CB0F000B00B1</string>
+							<string>42BA69421189D2E2000B00B1</string>
+							<string>4266BE8E118A2346009F863A</string>
+							<string>4266BE8F118A2346009F863A</string>
+							<string>4266BE90118A2346009F863A</string>
+							<string>4266BE91118A2346009F863A</string>
+							<string>4266BE92118A2346009F863A</string>
+							<string>4266BE93118A2346009F863A</string>
+						</array>
+						<key>nextStack</key>
+						<array>
+							<string>4266BE98118A2346009F863A</string>
+						</array>
+						<key>prevStack</key>
+						<array>
+							<string>42BA69491189D2E2000B00B1</string>
+							<string>4266BE94118A2346009F863A</string>
+							<string>4266BE95118A2346009F863A</string>
+							<string>4266BE96118A2346009F863A</string>
+							<string>4266BE97118A2346009F863A</string>
 						</array>
 					</dict>
 					<key>SplitCount</key>
@@ -324,10 +342,9 @@
 							<key>PBXSmartGroupTreeModuleOutlineStateSelectionKey</key>
 							<array>
 								<array>
-									<integer>13</integer>
-									<integer>11</integer>
-									<integer>10</integer>
-									<integer>9</integer>
+									<integer>7</integer>
+									<integer>6</integer>
+									<integer>3</integer>
 									<integer>0</integer>
 								</array>
 							</array>
@@ -432,9 +449,9 @@
 			</array>
 			<key>TableOfContents</key>
 			<array>
-				<string>42BA69111189B83D000B00B1</string>
+				<string>4266BE8C118A2346009F863A</string>
 				<string>1CE0B1FE06471DED0097A5F4</string>
-				<string>42BA69121189B83D000B00B1</string>
+				<string>4266BE8D118A2346009F863A</string>
 				<string>1CE0B20306471E060097A5F4</string>
 				<string>1CE0B20506471E060097A5F4</string>
 			</array>
@@ -570,8 +587,11 @@
 	<integer>5</integer>
 	<key>WindowOrderList</key>
 	<array>
-		<string>1CD10A99069EF8BA00B06720</string>
+		<string>4266BE9A118A2346009F863A</string>
+		<string>4266BE9B118A2346009F863A</string>
+		<string>1C78EAAD065D492600B07095</string>
 		<string>421ACF271170DE8900C2EB85</string>
+		<string>1CD10A99069EF8BA00B06720</string>
 		<string>/Users/dk/Documents/research/extern/breseq/src/c/breseq.xcodeproj</string>
 		<string>42BA69231189B9E6000B00B1</string>
 	</array>
@@ -614,8 +634,6 @@
 							<string>241pt</string>
 						</dict>
 						<dict>
-							<key>BecomeActive</key>
-							<true/>
 							<key>ContentConfiguration</key>
 							<dict>
 								<key>PBXBuildLogShowsTranscriptDefaultKey</key>
@@ -657,7 +675,7 @@
 			<key>TableOfContents</key>
 			<array>
 				<string>421ACF271170DE8900C2EB85</string>
-				<string>42BA68FE1189B79E000B00B1</string>
+				<string>4266BE74118A102A009F863A</string>
 				<string>1CD0528F0623707200166675</string>
 				<string>XCMainBuildResultsModuleGUID</string>
 			</array>
@@ -777,13 +795,13 @@
 			<key>TableOfContents</key>
 			<array>
 				<string>1CD10A99069EF8BA00B06720</string>
-				<string>42BA69251189C9E5000B00B1</string>
+				<string>4266BE75118A102A009F863A</string>
 				<string>1C162984064C10D400B95A72</string>
-				<string>42BA69261189C9E5000B00B1</string>
-				<string>42BA69271189C9E5000B00B1</string>
-				<string>42BA69281189C9E5000B00B1</string>
-				<string>42BA69291189C9E5000B00B1</string>
-				<string>42BA692A1189C9E5000B00B1</string>
+				<string>4266BE76118A102A009F863A</string>
+				<string>4266BE77118A102A009F863A</string>
+				<string>4266BE78118A102A009F863A</string>
+				<string>4266BE79118A102A009F863A</string>
+				<string>4266BE7A118A102A009F863A</string>
 			</array>
 			<key>ToolbarConfiguration</key>
 			<string>xcode.toolbar.config.debugV3</string>
@@ -947,7 +965,7 @@
 			<key>TableOfContents</key>
 			<array>
 				<string>1C78EAAD065D492600B07095</string>
-				<string>4227DF2711872AA50019D9A0</string>
+				<string>4266BE7D118A1182009F863A</string>
 				<string>1C78EAAC065D492600B07095</string>
 			</array>
 			<key>ToolbarConfiguration</key>
