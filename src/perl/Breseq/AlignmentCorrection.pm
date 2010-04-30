@@ -47,7 +47,7 @@ sub correct_alignments
 	my $gene_list_hash_ref = $ref_seq_info->{gene_lists};
 	my $is_list_hash_ref = $ref_seq_info->{is_lists};
 	my $flanking_length = $settings->{max_read_length};
-		
+				
 	## for now we just use mapping qualities from ssaha2, but could load ref sequences this way
 	my $reference_faidx_file_name = $settings->file_name('reference_fasta_file_name');
 	my $reference_fai = Bio::DB::Sam::Fai->load($reference_faidx_file_name);
@@ -136,7 +136,7 @@ sub correct_alignments
 		}
 		
 		($reference_al, $last_reference_alignment) 
-			= Breseq::Shared::tam_next_read_alignments($reference_tam, $reference_header, $last_reference_alignment);
+			= Breseq::Shared::tam_next_read_alignments($reference_tam, $reference_header, $last_reference_alignment);		
 		
 		my $f = 0;
 		READ: while (my $seq = $in_fastq[$f]->next_seq)
@@ -161,13 +161,32 @@ sub correct_alignments
 				$this_reference_al = $reference_al;
 				($reference_al, $last_reference_alignment) 
 					= Breseq::Shared::tam_next_read_alignments($reference_tam, $reference_header, $last_reference_alignment);
-			}			
+			}		
+			
+			## Nothing to be done if there were no matches to either
+			if ((@$this_candidate_junction_al == 0) && (@$this_reference_al == 0))
+			{
+				$s->{unmatched_reads}++;
+				## if not, then write to unmatched read file
+				if ($settings->{unmatched_reads}) 
+				{
+					$out_unmatched_fastq[$f]->write_seq($seq);
+				}
+				next READ;
+			}
 						
 			###			
 			## Matches to candidate junctions may not overlap the junction.
-			## Reduce this list to only those that overlap the ENTIRE junction.
+			##
+			## Reduce this list to those that overlap ANY PART of the junction.
+			## Keep the ones that only match through the overlap, but do not propagate
+			## to the opposite side, separate because they are only additional
+			## evidence for predicted junctions and NOT support for the new junction
+			## on their own. (They will also match the original reference genome equally well).
 			###
-						
+
+			my $this_overlap_only_al = []; #reads that just map to the overlap region of a junction
+			
 			for (my $i=0; $i<scalar @$this_candidate_junction_al; $i++)
 			{
 				my $a = $this_candidate_junction_al->[$i];
@@ -183,16 +202,38 @@ sub correct_alignments
 				$junction_start = $flanking_length + 1;
 				$junction_end = $flanking_length + abs($overlap);
 
-				if ( ($a->end <= $junction_end) || ($a->start >= $junction_start) )
+				## If it didn't overlap the junction at all, remove it
+				if ( ($a->start > $junction_end) || ($a->end < $junction_start) )
 				{
 					splice  @$this_candidate_junction_al, $i, 1;
 					$i--;
 				}
+				else
+				{	
+					## If it overlaps ONLY the overlap part of the junction
+					## then keep it separate in a special list...
+					## Note that this only applies if overlap is negative
+					## (if positive then the overlap part is unique sequence)
+					if ( ($overlap > 0) && ($a->end <= $junction_end) || ($a->start >= $junction_start) )
+					{						
+						my $overlap_only_match = splice  @$this_candidate_junction_al, $i, 1;
+						push @$this_overlap_only_al, $overlap_only_match;
+						$i--;
+					}
+				}		
 			}
 
 			###			
 			## Determine if the read has a better match to a candidate junction
 			## or to the reference sequence.
+			###
+
+			### There are three possible kinds of reads at this point
+			##
+			## 1: Read has a best match to the reference genome
+			## 2: Read has a best match (or multiple best matches) to junctions
+			## 3: Read has an equivalent match to the reference genome
+			##      and goes into the overlap part of a junction condidate
 			###
 			
 			my $best_candidate_junction_score = -9999;
@@ -203,40 +244,66 @@ sub correct_alignments
 				my $ca = $this_candidate_junction_al->[0];
 				$best_candidate_junction_score = $ca->aux_get("AS");
 			}
+			elsif (@$this_overlap_only_al)
+			{
+				my $ca = $this_overlap_only_al->[0];
+				$best_candidate_junction_score = $ca->aux_get("AS");
+			}
 			
 			if (@$this_reference_al)
 			{
 				my $ra = $this_reference_al->[0];
 				$best_reference_score = $ra->aux_get("AS");
 			}
-						
-			### this read potentially supports a candidate junction		
-			if ($best_candidate_junction_score > $best_reference_score)
-#			if ($best_candidate_junction_score >= $best_reference_score) 
-## We really need the == case to be split out like we do degenerate matches. Only counted if
-## the junction is supported by one that do match better. Uncommenting this causes some
-## junctions to be predicted that are actually just the reference sequence!
-##
-## Same for things that only extend into the junction region. These should be kept track of
-## and only added to junctions that have support otherwise.
-			{
-				my @this_dominant_candidate_junction_al = _alignment_list_to_dominant_best($minimum_best_score, undef, @$this_candidate_junction_al);
+
+			### DEBUG
+			#if ((@$this_overlap_only_al > 0))
+			#{
+			#	print $this_overlap_only_al->[0]->qname . "\n";
+			#	print "$best_candidate_junction_score >= $best_reference_score\n";
+			#}
+
+			### The best match we found to the reference was no better than the best to the
+			### candidate junction. This read potentially supports the candidate junction.
+			my $best_match_to_reference = ($best_candidate_junction_score < $best_reference_score);
+			if  (!$best_match_to_reference)
+			{	
+				
+				## We flag whether the best hit was overlap only.
+				my $best_candidate_junction_is_overlap_only = 0;
+				my @this_dominant_candidate_junction_al;
+				
+				if (@$this_candidate_junction_al)
+				{
+					@this_dominant_candidate_junction_al = _alignment_list_to_dominant_best($minimum_best_score, undef, @$this_candidate_junction_al);
+				}
+				else
+				{
+					$best_candidate_junction_is_overlap_only = 1;
+					@this_dominant_candidate_junction_al = _alignment_list_to_dominant_best($minimum_best_score, undef, @$this_overlap_only_al);
+				}
 				
 				my $item = {
-					alignments => $this_candidate_junction_al, 
-					reference_alignments => $this_reference_al, 
-					dominant_alignments => \@this_dominant_candidate_junction_al, 
-					fastq_file_index => $fastq_file_index[$f],
+		#			alignments => $this_candidate_junction_al,  					#candidate junction alignments that cross junction
+		#			overlap_only_alignments => $this_overlap_only_al,				#candidate junction alignments that end inside overlap
+					reference_alignments => $this_reference_al, 					# reference sequence alignments
+					dominant_alignments => \@this_dominant_candidate_junction_al,   #the BEST candidate junction alignments
+					dominant_alignment_is_overlap_only => $best_candidate_junction_is_overlap_only,
+					fastq_file_index => $fastq_file_index[$f],						#index of the fastq file this read came from
 				};
-				
+				#print Dumper($item);
+	
+				## Just one best hit, we put this in the hash that is used to predict junctions first
 				if (scalar @this_dominant_candidate_junction_al == 1)
 				{
 					my $a = $this_dominant_candidate_junction_al[0];
 					my $junction_id = $candidate_junction_header->target_name()->[$a->tid];
 					#print "$junction_id\n";
 					push @{$matched_junction{$junction_id}}, $item;
-				}	
-				else #multiple identical matches, ones with most hits later will win these matches
+				}					
+				## Multiple equivalent matches to junctions, ones with most hits later will win these matches
+				## these matches are added BEFORE scoring a junction prediction
+				else 
 				{					
 					foreach my $a (@this_dominant_candidate_junction_al)
 					{	
@@ -246,23 +313,12 @@ sub correct_alignments
 					}
 				}
 			}
-			else ### best match is to the reference, record in that SAM file.
-			{	
-				## are there matches to the reference?
-				if (scalar @$this_reference_al > 0)
-				{
-					_write_reference_matches($minimum_best_score, $minimum_best_score_difference, $reference_fai, $ref_seq_info, $RREF, $reference_header, $fastq_file_index[$f], @$this_reference_al);
-				}
-				else
-				{
-					$s->{unmatched_reads}++;
-					## if not, then write to unmatched read file
-					if ($settings->{unmatched_reads}) 
-					{
-						$out_unmatched_fastq[$f]->write_seq($seq);
-					}
-				}
+			### best match is to the reference, record in that SAM file.
+			if ($best_match_to_reference && (scalar @$this_reference_al > 0))
+			{
+				_write_reference_matches($minimum_best_score, $minimum_best_score_difference, $reference_fai, $ref_seq_info, $RREF, $reference_header, $fastq_file_index[$f], @$this_reference_al);
 			}
+
 		} continue {
 			$f++;
 			$f %= scalar @in_fastq;
@@ -822,9 +878,10 @@ sub _test_junction
 	my $score = 0;
 	
 	### we also need to count degenerate matches b/c sometimes ambiguity unfairly penalizes real reads...
-	foreach my $item (@unique_matches, @degenerate_matches)
+	READ: foreach my $item (@unique_matches, @degenerate_matches)
 	{
-		##there is only one dominant alignment for these matches at this point
+		## we don't want to count matches that do not extend through the overlap region
+		next READ if ($item->{dominant_alignment_is_overlap_only});
 		
 		#If there were no degenerate matches, then we could just take the
 		#one and only match in the 'dominant_alignments' array
@@ -943,8 +1000,9 @@ sub _test_junction
 				push @{$matched_junction_ref->{$key}}, $degenerate_match;
 			}
 		}
-	}
+	}	
 	
+	## Write out the matches to the proper SAM file depending on whether the junction succeeded or failed
 	foreach my $junction_read (@{$matched_junction_ref->{$key}})
 	{
 		my $fastq_file_index = $junction_read->{fastq_file_index};
