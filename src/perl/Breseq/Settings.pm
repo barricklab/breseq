@@ -66,7 +66,7 @@ sub new
 	
 	#used by CandidateJunctions.pm
 	$self->{minimum_reads_for_candidate_junction} = 1;
-	$self->{maximum_candidate_junctions} = 10000;
+	$self->{maximum_candidate_junctions} = 10000000;
 	$self->{candidate_junction_read_limit} = undef;
 
 	#used by AlignmentCorrection.pm
@@ -167,7 +167,7 @@ sub new_annotate
 	
 	#used by CandidateJunctions.pm
 	$self->{minimum_reads_for_candidate_junction} = 1;
-	$self->{maximum_candidate_junctions} = 10000;
+	$self->{maximum_candidate_junctions} = 100000000;
 	$self->{candidate_junction_read_limit} = undef;
 
 	#used by AlignmentCorrection.pm
@@ -255,6 +255,7 @@ sub initialize
 	#neaten up some settings for later string comparisons
 	$self->{quality_type} = "\L$self->{quality_type}";
 	$self->{error_model_method} = "\U$self->{error_model_method}";
+
 	
 	#on by default
 	$self->{unmatched_reads} = ($self->{no_unmatched_reads}) ? 0 : 1;

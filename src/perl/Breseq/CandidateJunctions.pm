@@ -110,7 +110,7 @@ sub identify_candidate_junctions
 			_alignments_to_candidate_junctions($settings, $summary, $ref_seq_info, $candidate_junctions, $fai, $header, @$al);
 		}	
 		
-		$hcs->{$read_file} = $s;
+		$hcs->{read_file}->{$read_file} = $s;
 	}		
 		
 		
@@ -158,62 +158,94 @@ sub identify_candidate_junctions
 	@combined_candidate_junctions = sort {-($a->{score} <=> $b->{score}) || (length($a->{seq}) <=> length($b->{seq}))} @combined_candidate_junctions;
 	print Dumper(@combined_candidate_junctions) if ($verbose);
 	
-	
 	###
-	## Limit the number of candidate junctions that we print (and record the cutoff)
-	##   eliminate subsequences as we go.
+	## Limit the number of candidate junctions that we print by:
+	##   (1) A maximum number of candidate junctions
+	##   (2) A maximum length of the sequences in candidate junctions
 	###
 	
-#	print STDERR "  Before taking top candidates:" . (scalar @combined_candidate_junctions) . "\n";
+	print STDERR "  Taking top candidate junctions..." . "\n";
+	
+	## this might be too time-consuming to be worth it...
+	my $total_cumulative_cj_length = 0;
+	my $total_candidate_junction_number = scalar @combined_candidate_junctions;
+	foreach my $c (@combined_candidate_junctions)
+	{
+		$total_cumulative_cj_length += length $c->{seq};
+	}
+	print STDERR "    Initial: Number = " . $total_candidate_junction_number . ", Cumulative Length = " . $total_cumulative_cj_length . "\n";
 	
 	my @duplicate_sequences;
+	my $cumulative_cj_length = 0;
+	my $lowest_accepted_score = 'NA';
+	
+	## Right now we limit the candidate junctions to have a length no longer than the reference sequence.
+	my $cj_length_limit = $summary->{sequence_conversion}->{total_reference_sequence_length};
+	my $maximum_candidate_junctions = $settings->{maximum_candidate_junctions};
+
 	if ((defined $settings->{maximum_candidate_junctions}) && (@combined_candidate_junctions > 0))
 	{	
-		my $cutoff_reads_for_candidate_junction;
 		my @remaining_ids = ();
 		my @list_in_waiting = ();
+		my $add_cj_length = 0;
+		my $num_duplicates = 0;
 	
 		my $i = 0;
-		my $current_reads_for_candidate_junction = $combined_candidate_junctions[$i]->{score};
+		my $current_score = $combined_candidate_junctions[$i]->{score};
 	
-		while (scalar(@remaining_ids) + scalar(@list_in_waiting) <= $settings->{maximum_candidate_junctions})
+		## Check to make sure that adding everything from the last iteration doesn't put us over any limits...
+		while (($cumulative_cj_length + $add_cj_length <= $cj_length_limit) && ( scalar(@remaining_ids) + scalar(@list_in_waiting) <= $maximum_candidate_junctions))
 		{			
+			## OK, add everything from the last iteration
+			$cumulative_cj_length += $add_cj_length;
 			push @remaining_ids, @list_in_waiting;
+			$lowest_accepted_score = $current_score;
+			
+			## Zero out what we will add
+			$add_cj_length = 0;
 			@list_in_waiting = ();
-			$cutoff_reads_for_candidate_junction = $current_reads_for_candidate_junction;
+			$num_duplicates = 0;
+			
+			## Check to make sure we haven't exhausted the list
 			last if ($i >= scalar @combined_candidate_junctions);
 
-			$current_reads_for_candidate_junction = $combined_candidate_junctions[$i]->{score};
-			CAND: while (($i < scalar @combined_candidate_junctions) && ($current_reads_for_candidate_junction == $combined_candidate_junctions[$i]->{score}))
+			$current_score = $combined_candidate_junctions[$i]->{score};
+			CAND: while (($i < scalar @combined_candidate_junctions) && ($combined_candidate_junctions[$i]->{score} == $current_score))
 			{
-				##Check here 
 				my $c = $combined_candidate_junctions[$i];
 				foreach my $dup (@duplicate_sequences)
 				{
 					#is this a subsequence of one already in the list?
 					if ( ($dup =~ m/$c->{seq}/) || ($dup =~ m/$c->{rc_seq}/) || ($c->{seq} =~ m/$dup/) || ($c->{rc_seq} =~ m/$dup/) ) 
 					{
+						$num_duplicates++;
 						print "Dup $dup\n$c->{seq}\n" if ($verbose);
 						next CAND;
 					}
 				}
-				
 				push @duplicate_sequences, $c->{seq};
 				push @list_in_waiting, $c;
+				$add_cj_length += length $c->{seq};
+				
 			} continue {
 				$i++;
 			}
 			
-#			print "    Number with junction score $current_reads_for_candidate_junction = " . (scalar @list_in_waiting) . "\n";
+			print "      Testing Score $current_score: Added = " . (scalar @list_in_waiting) . ", Length = " . $add_cj_length . ", Duplicate = " . $num_duplicates . "\n";
 		}
 		@combined_candidate_junctions = @remaining_ids;
-		$summary->{cutoff_reads_for_candidate_junction} = $cutoff_reads_for_candidate_junction;
-		
-#		print STDERR "  Junction score cutoff for printing: $cutoff_reads_for_candidate_junction\n";
 	}
 	
-#	print STDERR "  After taking top candidates:" . (scalar @combined_candidate_junctions) . "\n";
+	my $accepted_candidate_junction_number = scalar @combined_candidate_junctions;
+	print STDERR "    Accepted: Number = $accepted_candidate_junction_number, Score >= $lowest_accepted_score, Cumulative Length = $cumulative_cj_length\n";
 	
+	## Save summary statistics
+	$hcs->{total}->{number} = $total_candidate_junction_number;	
+	$hcs->{total}->{length} = $total_cumulative_cj_length;
+	
+	$hcs->{accepted}->{number} = $accepted_candidate_junction_number;	
+	$hcs->{accepted}->{length} = $cumulative_cj_length;
+	$hcs->{accepted}->{score_cutoff} = $lowest_accepted_score;
 	
 	###
 	## Print out the candidate junctions, sorted by the lower coordinate, higher coord, then number
@@ -263,20 +295,18 @@ sub _alignments_to_candidate_junctions
 	my %redundant_junction_sides;	
 	
 	### Try adding together each pair of matches to make a longer match
-	for (my $i=0; $i<scalar @$al_ref; $i++)
+	A1: for (my $i=0; $i<scalar @$al_ref; $i++)
 	{		
-		for (my $j=$i+1; $j<scalar @$al_ref; $j++)
+		my $a1 = $al_ref->[$i];
+		my ($a1_start, $a1_end) = Breseq::Shared::alignment_query_start_end($a1);			
+		next A1 if ($a1_start == 0); #this is only true if read has no matches
+		my $a1_length = $a1_end - $a1_start + 1;
+
+		A2: for (my $j=$i+1; $j<scalar @$al_ref; $j++)
 		{
-			my $a1 = $al_ref->[$i];
 			my $a2 = $al_ref->[$j];					
-					
-			my ($a1_start, $a1_end) = Breseq::Shared::alignment_query_start_end($a1);			
 			my ($a2_start, $a2_end) = Breseq::Shared::alignment_query_start_end($a2);
-		
-			#the read may be there but have no match!
-			next if (($a1_start == 0) || ($a2_start == 0));
-			
-			my $a1_length = $a1_end - $a1_start + 1;
+			next A2 if ($a2_start == 0); #this is only true if read has no matches
 			my $a2_length = $a2_end - $a2_start + 1;
 			
 			print join(" ", $a1_start, $a1_end, $a2_start, $a2_end) . "\n" if ($verbose);
@@ -294,22 +324,31 @@ sub _alignments_to_candidate_junctions
 			my $intersection_length_nonzero = ($intersection_length > 0) ? $intersection_length : 0;			
 						
 			#print "$i $j $union_start-$union_end $union_length $intersection_start-$intersection_end $intersection_length\n" if ($verbose);		
-		
-			#limit on how different they should be
+
+			## If the intersection is just one of the hits, then there is no point...
+			## At least one side should have this much unique sequence.
 			my $extra_length = 10;
-			my $extra_length_2 = 15;
 			
-			## if the intersection is one of the hits, then well... there is no point...
 			if ( (($a1_length >= $intersection_length_nonzero+$extra_length) && ($a2_length > $intersection_length_nonzero))
 			  || (($a1_length > $intersection_length_nonzero) && ($a2_length >= $intersection_length_nonzero+$extra_length)) )
-#			if (($a1_length > $intersection_length_nonzero + $extra_length) && ($a2_length > $intersection_length_nonzero + $extra_length))
+			# We used to make sure BOTH sides had at least this much extra length			
+			#if (($a1_length > $intersection_length_nonzero + $extra_length) && ($a2_length > $intersection_length_nonzero + $extra_length))
 			{
 				my $r1 = $r_ref->[$i];
 				my $r2 = $r_ref->[$j]; 
 				my ($junction_id, $junction_seq_string, $q1, $q2) = _alignments_to_candidate_junction($settings, $summary, $ref_seq_info, $fai, $header, $a1, $a2, $r1, $r2);
 
-				#add to number of observations			
-				$candidate_junctions->{$junction_seq_string}->{$junction_id} += ($a1_length - $union_length) ** 2 + ($a2_length - $union_length) ** 2;
+				## Add a score based on the current read. We want to favor junctions with reads that overlap each side quite a bit
+				## so we add the minimum that the read extends into each side of the candidate junction (not counting the overlap).
+				my $a1_length_diff = ($a1_length - $intersection_length_nonzero);
+				my $a2_length_diff = ($a2_length - $intersection_length_nonzero);
+				
+				$candidate_junctions->{$junction_seq_string}->{$junction_id} += ($a1_length_diff < $a2_length_diff) ? $a1_length_diff : $a2_length_diff;
+				#print "score: $candidate_junctions->{$junction_seq_string}->{$junction_id}\n";
+				
+				
+				### Old score squared both sides (giving advantage to very uneven overlap on each side)
+				#$candidate_junctions->{$junction_seq_string}->{$junction_id} += ($a1_length - $union_length) ** 2 + ($a2_length - $union_length) ** 2);
 			}
 		}
 	}		
@@ -628,7 +667,6 @@ sub _alignments_to_candidate_junction
 	print "JUNCTION ID: $junction_id\n" if ($verbose);
 	
 	die "Junction sequence not found: $junction_id " . $q1->qname . " " . $a2->qname  if (!$junction_seq_string);
-## this guard accidentally catches junctions near the ends of sequences...
 	die "Incorrect length for $junction_seq_string: $junction_id " . $q1->qname . " " . $a2->qname if (length $junction_seq_string != $flanking_left + $flanking_right + abs($overlap));
 		
 	return ($junction_id, $junction_seq_string, $q1, $q2);

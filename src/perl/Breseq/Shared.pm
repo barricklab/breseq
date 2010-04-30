@@ -161,7 +161,7 @@ sub tam_write_read_alignments
 
 sub tam_write_moved_alignment
 {
-	my $verbose = 1;
+	my $verbose = 0;
 	my ($fh, $seq_id, $fastq_file_index, $a, $junction_side, $flanking_left, $junction_overlap, $alignment_overlap, $junction_pos, $junction_strand, $trim) = @_;
 	
 	if ($verbose)
@@ -277,9 +277,11 @@ sub tam_write_moved_alignment
 	my $side_2_ref_match_length = $a->end - $seek_ref_pos;
 	my $reference_match_length = ($junction_side == 1) ? $side_1_ref_match_length : $side_2_ref_match_length;
 
-	### Don't count things that don't actually have any match on a side
-	return if ($side_1_ref_match_length < 0);
-	return if ($side_2_ref_match_length < 0);
+	### It's possible there may not actually be any match on this side
+	###  in cases of overlap. We must bail or get negative values
+	###  in the resulting CIGAR string.
+	return if (($junction_side == 1) && ($side_1_ref_match_length < 0));
+	return if (($junction_side == 2) && ($side_2_ref_match_length < 0));
 
 	print STDERR "SEEK REF POS: $seek_ref_pos\n" if ($verbose);
 	print STDERR "SIDE1 REF MATCH LEN: $side_1_ref_match_length\n" if ($verbose);
@@ -294,13 +296,15 @@ sub tam_write_moved_alignment
 		: $junction_pos - $reference_match_length + 1;
 	
 	###
-	## split the cigar list into two halves and keep track of their length in the read
+	## split the CIGAR list into two halves and keep track of their length in the read
 	###
 	my (@side_1_cigar_list, @side_2_cigar_list);
 	my ($side_1_ref_length, $side_2_ref_length) = (0, 0);
 	my ($side_1_read_length, $side_2_read_length) = (0, 0);	
 	
 	print STDERR Dumper($cigar_list) if ($verbose);
+	
+	## Remove CIGAR operations until we have enough length for side 1
 	while (my $c = shift @$cigar_list)
 	{
 		##gets longer unless this is an insertion relative to reference
@@ -323,6 +327,8 @@ sub tam_write_moved_alignment
 		
 		last if ($side_1_ref_length >= $side_1_ref_match_length);
 	}
+	
+	## Use the remaining CIGAR operations to construct side 2
 	while (my $c = shift @$cigar_list)
 	{
 		my $n = $c->[1];
@@ -357,6 +363,8 @@ sub tam_write_moved_alignment
 	print STDERR Dumper($cigar_list) if ($verbose);
 	print STDERR "Ref match length: $reference_match_length\n" if ($verbose);
 	
+	#### This is a double check to make sure the
+	#### CIGAR string lengths are correct
 	my $cigar_string = '';
 	my $cigar_length = 0;
 	foreach my $c (@$cigar_list)
@@ -365,7 +373,7 @@ sub tam_write_moved_alignment
 		$cigar_length += $c->[1] if ($c->[0] ne 'D');
 	}
 	
-	## assemble the quality score string
+	## Assemble the quality score string
 	my $quality_score_string = '';
 	foreach my $s (@qual_scores)
 	{
