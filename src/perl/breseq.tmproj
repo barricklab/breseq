@@ -3,14 +3,14 @@
 <plist version="1.0">
 <dict>
 	<key>currentDocument</key>
-	<string>gd_utils.pl</string>
+	<string>Breseq/AlignmentCorrection.pm</string>
 	<key>documents</key>
 	<array>
 		<dict>
 			<key>filename</key>
 			<string>breseq.pl</string>
 			<key>lastUsed</key>
-			<date>2010-04-26T23:20:38Z</date>
+			<date>2010-04-28T14:47:15Z</date>
 		</dict>
 		<dict>
 			<key>filename</key>
@@ -28,15 +28,13 @@
 			<key>filename</key>
 			<string>fastq_utils.pl</string>
 			<key>lastUsed</key>
-			<date>2010-04-26T20:47:08Z</date>
+			<date>2010-04-27T12:36:52Z</date>
 		</dict>
 		<dict>
 			<key>filename</key>
 			<string>gd_utils.pl</string>
 			<key>lastUsed</key>
-			<date>2010-04-26T23:28:37Z</date>
-			<key>selected</key>
-			<true/>
+			<date>2010-04-27T14:02:14Z</date>
 		</dict>
 		<dict>
 			<key>filename</key>
@@ -64,14 +62,14 @@
 			<key>caret</key>
 			<dict>
 				<key>column</key>
-				<integer>55</integer>
+				<integer>48</integer>
 				<key>line</key>
-				<integer>388</integer>
+				<integer>274</integer>
 			</dict>
 			<key>firstVisibleColumn</key>
 			<integer>0</integer>
 			<key>firstVisibleLine</key>
-			<integer>334</integer>
+			<integer>246</integer>
 		</dict>
 		<key>Breseq/AlignmentOutput.pm</key>
 		<dict>
@@ -92,44 +90,44 @@
 			<key>caret</key>
 			<dict>
 				<key>column</key>
-				<integer>0</integer>
+				<integer>16</integer>
 				<key>line</key>
-				<integer>629</integer>
+				<integer>358</integer>
 			</dict>
-			<key>columnSelection</key>
-			<false/>
 			<key>firstVisibleColumn</key>
 			<integer>0</integer>
 			<key>firstVisibleLine</key>
-			<integer>601</integer>
-			<key>selectFrom</key>
-			<dict>
-				<key>column</key>
-				<integer>17</integer>
-				<key>line</key>
-				<integer>632</integer>
-			</dict>
-			<key>selectTo</key>
-			<dict>
-				<key>column</key>
-				<integer>0</integer>
-				<key>line</key>
-				<integer>629</integer>
-			</dict>
+			<integer>325</integer>
 		</dict>
 		<key>Breseq/ErrorCalibration.pm</key>
 		<dict>
 			<key>caret</key>
 			<dict>
 				<key>column</key>
-				<integer>3</integer>
+				<integer>56</integer>
 				<key>line</key>
-				<integer>474</integer>
+				<integer>494</integer>
 			</dict>
+			<key>columnSelection</key>
+			<false/>
 			<key>firstVisibleColumn</key>
 			<integer>0</integer>
 			<key>firstVisibleLine</key>
-			<integer>440</integer>
+			<integer>464</integer>
+			<key>selectFrom</key>
+			<dict>
+				<key>column</key>
+				<integer>43</integer>
+				<key>line</key>
+				<integer>494</integer>
+			</dict>
+			<key>selectTo</key>
+			<dict>
+				<key>column</key>
+				<integer>67</integer>
+				<key>line</key>
+				<integer>494</integer>
+			</dict>
 		</dict>
 		<key>Breseq/Fastq.pm</key>
 		<dict>
@@ -180,14 +178,14 @@
 			<key>caret</key>
 			<dict>
 				<key>column</key>
-				<integer>20</integer>
+				<integer>31</integer>
 				<key>line</key>
-				<integer>354</integer>
+				<integer>100</integer>
 			</dict>
 			<key>firstVisibleColumn</key>
 			<integer>0</integer>
 			<key>firstVisibleLine</key>
-			<integer>330</integer>
+			<integer>93</integer>
 		</dict>
 		<key>Breseq/Output.pm</key>
 		<dict>
@@ -222,14 +220,30 @@
 			<key>caret</key>
 			<dict>
 				<key>column</key>
-				<integer>44</integer>
+				<integer>19</integer>
 				<key>line</key>
-				<integer>364</integer>
+				<integer>361</integer>
 			</dict>
+			<key>columnSelection</key>
+			<false/>
 			<key>firstVisibleColumn</key>
 			<integer>0</integer>
 			<key>firstVisibleLine</key>
-			<integer>333</integer>
+			<integer>344</integer>
+			<key>selectFrom</key>
+			<dict>
+				<key>column</key>
+				<integer>9</integer>
+				<key>line</key>
+				<integer>361</integer>
+			</dict>
+			<key>selectTo</key>
+			<dict>
+				<key>column</key>
+				<integer>23</integer>
+				<key>line</key>
+				<integer>361</integer>
+			</dict>
 		</dict>
 		<key>Breseq/Shared.pm</key>
 		<dict>
@@ -266,42 +280,42 @@
 			<key>caret</key>
 			<dict>
 				<key>column</key>
-				<integer>1</integer>
+				<integer>116</integer>
 				<key>line</key>
-				<integer>808</integer>
+				<integer>751</integer>
 			</dict>
 			<key>firstVisibleColumn</key>
 			<integer>0</integer>
 			<key>firstVisibleLine</key>
-			<integer>764</integer>
+			<integer>730</integer>
 		</dict>
 		<key>fastq_utils.pl</key>
 		<dict>
 			<key>caret</key>
 			<dict>
 				<key>column</key>
-				<integer>27</integer>
+				<integer>29</integer>
 				<key>line</key>
-				<integer>442</integer>
+				<integer>362</integer>
 			</dict>
 			<key>firstVisibleColumn</key>
 			<integer>0</integer>
 			<key>firstVisibleLine</key>
-			<integer>395</integer>
+			<integer>346</integer>
 		</dict>
 		<key>gd_utils.pl</key>
 		<dict>
 			<key>caret</key>
 			<dict>
 				<key>column</key>
-				<integer>3</integer>
+				<integer>2</integer>
 				<key>line</key>
-				<integer>309</integer>
+				<integer>420</integer>
 			</dict>
 			<key>firstVisibleColumn</key>
 			<integer>0</integer>
 			<key>firstVisibleLine</key>
-			<integer>274</integer>
+			<integer>406</integer>
 		</dict>
 		<key>genbank_utils.pl</key>
 		<dict>
@@ -369,6 +383,6 @@
 	<key>showFileHierarchyDrawer</key>
 	<true/>
 	<key>windowFrame</key>
-	<string>{{250, 53}, {1082, 771}}</string>
+	<string>{{223, 114}, {1210, 764}}</string>
 </dict>
 </plist>

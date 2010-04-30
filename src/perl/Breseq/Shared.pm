@@ -161,7 +161,7 @@ sub tam_write_read_alignments
 
 sub tam_write_moved_alignment
 {
-	my $verbose = 0;
+	my $verbose = 1;
 	my ($fh, $seq_id, $fastq_file_index, $a, $junction_side, $flanking_left, $junction_overlap, $alignment_overlap, $junction_pos, $junction_strand, $trim) = @_;
 	
 	if ($verbose)
@@ -276,6 +276,10 @@ sub tam_write_moved_alignment
 	my $side_1_ref_match_length = $seek_ref_pos - $a->start + 1;
 	my $side_2_ref_match_length = $a->end - $seek_ref_pos;
 	my $reference_match_length = ($junction_side == 1) ? $side_1_ref_match_length : $side_2_ref_match_length;
+
+	### Don't count things that don't actually have any match on a side
+	return if ($side_1_ref_match_length < 0);
+	return if ($side_2_ref_match_length < 0);
 
 	print STDERR "SEEK REF POS: $seek_ref_pos\n" if ($verbose);
 	print STDERR "SIDE1 REF MATCH LEN: $side_1_ref_match_length\n" if ($verbose);
