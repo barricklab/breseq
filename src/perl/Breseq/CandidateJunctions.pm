@@ -231,7 +231,8 @@ sub identify_candidate_junctions
 				$i++;
 			}
 			
-			print "      Testing Score $current_score: Added = " . (scalar @list_in_waiting) . ", Length = " . $add_cj_length . ", Duplicate = " . $num_duplicates . "\n";
+			print STDERR sprintf("      Testing Score %5d: Added = %4d, Length = %6d, Duplicate = %4d\n", $current_score, (scalar @list_in_waiting), $add_cj_length, $num_duplicates);
+			
 		}
 		@combined_candidate_junctions = @remaining_ids;
 	}

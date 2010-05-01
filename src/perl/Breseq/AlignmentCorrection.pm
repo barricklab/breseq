@@ -341,13 +341,13 @@ sub correct_alignments
 	my @new_keys;
 	foreach my $key (@sorted_keys)
 	{
-		my $failed = _test_junction($key, \%matched_junction, \%degenerate_matches, \%junction_test_info, $minimum_best_score, $minimum_best_score_difference, $reference_fai, $ref_seq_info, $RREF, $reference_header, $RCJ, $candidate_junction_header);
+		my ($failed, $has_non_overlap_only) = _test_junction($key, \%matched_junction, \%degenerate_matches, \%junction_test_info, $minimum_best_score, $minimum_best_score_difference, $reference_fai, $ref_seq_info, $RREF, $reference_header, $RCJ, $candidate_junction_header);
 
 		if (!$failed)
 		{
 			push @new_keys, $key; 
 		}
-		else
+		elsif (!$has_non_overlap_only)
 		{
 			push @rejected_keys, $key;
 		}
@@ -364,13 +364,13 @@ sub correct_alignments
 		
 		next if (!defined $degenerate_matches{$key}); #they can be removed 
 		
-		my $failed = _test_junction($key, \%matched_junction, \%degenerate_matches, \%junction_test_info, $minimum_best_score, $minimum_best_score_difference, $reference_fai, $ref_seq_info, $RREF, $reference_header, $RCJ, $candidate_junction_header);
+		my ($failed, $has_non_overlap_only) = _test_junction($key, \%matched_junction, \%degenerate_matches, \%junction_test_info, $minimum_best_score, $minimum_best_score_difference, $reference_fai, $ref_seq_info, $RREF, $reference_header, $RCJ, $candidate_junction_header);
 		if (!$failed)
 		{
 			@sorted_keys = sort {-(scalar keys %{$degenerate_matches{$a}} <=> scalar keys %{$degenerate_matches{$b}})} keys %degenerate_matches;
 			push @new_keys, $key;
 		}
-		else
+		elsif (!$has_non_overlap_only)
 		{
 			push @rejected_keys, $key;
 		}
@@ -870,18 +870,25 @@ sub _test_junction
 #	$failed = 1 if (scalar @unique_matches < $minimum_number_of_reads_for_junction);
 
 	#### TEST 2: There should be at least one read that goes a certain number of bp into the nonoverlap sequence on each side of the junction
-	my $alignment_on_each_side_cutoff = 14; #17
-	my $alignment_on_each_side_cutoff_per_strand = 9; #10
+
 	my $max_left_per_strand = { '0'=> 0, '1'=>0 };
 	my $max_right_per_strand = { '0'=> 0, '1'=>0 };
+	my $max_min_left_per_strand = { '0'=> 0, '1'=>0 };
+	my $max_min_right_per_strand = { '0'=> 0, '1'=>0 };	
 	my $count_per_strand = { '0'=> 0, '1'=>0 };
 	my $score = 0;
+	
+	## is there at least one read that isn't overlap only?
+	## displaying ones where it doesn't as marginals looks really confusing
+	my $has_non_overlap_only = 1; 
+	
 	
 	### we also need to count degenerate matches b/c sometimes ambiguity unfairly penalizes real reads...
 	READ: foreach my $item (@unique_matches, @degenerate_matches)
 	{
 		## we don't want to count matches that do not extend through the overlap region
 		next READ if ($item->{dominant_alignment_is_overlap_only});
+		$has_non_overlap_only = 0;
 		
 		#If there were no degenerate matches, then we could just take the
 		#one and only match in the 'dominant_alignments' array
@@ -921,20 +928,35 @@ sub _test_junction
 #		print "  " . $a->start . "-" . $a->end . " " . $overlap . " " . $rev_key . "\n";
 #		print "  " . $item->{alignments}->[0]->qname . " LEFT: $this_left RIGHT: $this_right\n";
 
-		$score += $this_left**2;
-		$score += $this_right**2;
+		## Update:
+		### Score = the minimum unique match length on a side
+		### Max_Min = the maximum of the minimum length match sides
+		### Max = the maximum match on a side
+		### Note that the max and min filtering is really a kind of poor man's KS test
+		###   if we implemented that with a certain coverage cutoff it would be a
+		###   more principled way of doing things... 
+		if ($this_left < $this_right)
+		{
+			$score += $this_left;
+			$max_min_left_per_strand->{$rev_key} = $this_left if ($max_min_left_per_strand->{$rev_key} < $this_left);
+			
+		}
+		else
+		{
+			$score += $this_right;
+			$max_min_right_per_strand->{$rev_key} = $this_right if ($max_min_right_per_strand->{$rev_key} < $this_right);
+		}
 	
 		$max_left_per_strand->{$rev_key} = $this_left if ($max_left_per_strand->{$rev_key} < $this_left);
 		$max_right_per_strand->{$rev_key} = $this_right if ($max_right_per_strand->{$rev_key} < $this_right);
+		
 	}				
 	
 	my $max_left = ($max_left_per_strand->{'0'} > $max_left_per_strand->{'1'}) ? $max_left_per_strand->{'0'} : $max_left_per_strand->{'1'};
 	my $max_right = ($max_right_per_strand->{'0'} > $max_right_per_strand->{'1'}) ? $max_right_per_strand->{'0'} : $max_right_per_strand->{'1'};
 
-
-#	print "Max left = $max_left_per_strand->{0}, reversed = $max_left_per_strand->{1}\n";
-#	print "Max Right = $max_right_per_strand->{0}, reversed = $max_right_per_strand->{1}\n";
-#	print "Max left = $max_left, Max right = $max_right\n";
+	my $max_min_left = ($max_min_left_per_strand->{'0'} > $max_min_left_per_strand->{'1'}) ? $max_min_left_per_strand->{'0'} : $max_min_left_per_strand->{'1'};
+	my $max_min_right = ($max_min_right_per_strand->{'0'} > $max_min_right_per_strand->{'1'}) ? $max_min_right_per_strand->{'0'} : $max_min_right_per_strand->{'1'};
 	
 	use Math::CDF;
 	my $strand_p_value = Math::CDF::pbinom($count_per_strand->{0}, $count_per_strand->{0}+$count_per_strand->{1}, 0.5);
@@ -948,15 +970,36 @@ sub _test_junction
 		max_right => $max_right,
 		max_right_minus => $max_right_per_strand->{0},
 		max_right_plus =>$max_right_per_strand->{1},
+		max_min_right => $max_min_right,
+		max_min_right_minus => $max_min_right_per_strand->{0},
+		max_min_right_plus =>$max_min_right_per_strand->{1},		
+		max_min_left => $max_min_left,
+		max_min_left_minus => $max_min_left_per_strand->{0},
+		max_min_left_plus =>$max_min_left_per_strand->{1},		
 		coverage_minus => $count_per_strand->{0},
 		coverage_plus => $count_per_strand->{1},
 		strand_p_value => $strand_p_value,
 		score => $score,
 	};
 		
-	$failed = ($max_left < $alignment_on_each_side_cutoff) || ($max_right < $alignment_on_each_side_cutoff)
-	       || ($max_left_per_strand->{'0'} < $alignment_on_each_side_cutoff_per_strand) || ($max_left_per_strand->{'1'} < $alignment_on_each_side_cutoff_per_strand)
-	       || ($max_right_per_strand->{'0'} < $alignment_on_each_side_cutoff_per_strand) || ($max_right_per_strand->{'1'} < $alignment_on_each_side_cutoff_per_strand);
+		
+	my $alignment_on_each_side_cutoff = 14; #17
+	my $alignment_on_each_side_cutoff_per_strand = 9; #10
+	my $alignment_on_each_side_min_cutoff = 5; #17
+
+	
+		
+	$failed = 	   ($max_left < $alignment_on_each_side_cutoff) 
+				|| ($max_right < $alignment_on_each_side_cutoff)
+	       		|| ($max_left_per_strand->{'0'} < $alignment_on_each_side_cutoff_per_strand) 
+				|| ($max_left_per_strand->{'1'} < $alignment_on_each_side_cutoff_per_strand)
+	       		|| ($max_right_per_strand->{'0'} < $alignment_on_each_side_cutoff_per_strand) 
+				|| ($max_right_per_strand->{'1'} < $alignment_on_each_side_cutoff_per_strand)
+	       		|| ($max_right_per_strand->{'0'} < $alignment_on_each_side_cutoff_per_strand) 
+				|| ($max_right_per_strand->{'1'} < $alignment_on_each_side_cutoff_per_strand)
+				|| ($max_min_left < $alignment_on_each_side_min_cutoff)
+				|| ($max_min_right < $alignment_on_each_side_min_cutoff)
+	;
 
 	#### TEST 3: Overlap should not be biased such that one side of the junction often has more of the
 	####         read overlapping it than the other. Use a sign test.
@@ -1015,6 +1058,7 @@ sub _test_junction
 		}
 		
 		##write matches to the candidate junction SAM file regardless
+		if (!$has_non_overlap_only) 
 		{
 			my @this_dominant_candidate_junction_al = @{$junction_read->{dominant_alignments}}; 
 			Breseq::Shared::tam_write_read_alignments($RCJ, $candidate_junction_header, $fastq_file_index, \@this_dominant_candidate_junction_al);
@@ -1023,7 +1067,7 @@ sub _test_junction
 	}
 		
 	$junction_test_info_ref->{$key} = $test_info;
-	return $failed;
+	return ($failed, $has_non_overlap_only);
 }
 
 sub _junction_to_hybrid_list_item
