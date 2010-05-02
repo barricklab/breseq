@@ -68,7 +68,7 @@ die "No BAM file defined.\n" if (!$bam_path);
 die "No fasta file defined.\n" if (!$fasta_path);
 
 open OUT, ">$output_file";
-print OUT start_html(-title => "bam2html");
+print OUT start_html(-title => "sam2html");
 
 foreach my $region (@regions)
 {

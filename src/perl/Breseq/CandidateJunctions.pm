@@ -179,7 +179,7 @@ sub identify_candidate_junctions
 	my $lowest_accepted_score = 'NA';
 	
 	## Right now we limit the candidate junctions to have a length no longer than the reference sequence.
-	my $cj_length_limit = $summary->{sequence_conversion}->{total_reference_sequence_length} * $settings->{maximum_candidate_junction_length_factor};
+	my $cj_length_limit = int($summary->{sequence_conversion}->{total_reference_sequence_length} * $settings->{maximum_candidate_junction_length_factor});
 	my $maximum_candidate_junctions = $settings->{maximum_candidate_junctions};
 	my $minimum_candidate_junctions = $settings->{minimum_candidate_junctions};
 
@@ -239,6 +239,9 @@ sub identify_candidate_junctions
 			} continue {
 				$i++;
 			}
+			
+			$new_number = scalar(@remaining_ids) + scalar(@list_in_waiting);
+			$new_length = $cumulative_cj_length + $add_cj_length;
 			
 			print STDERR sprintf("      Testing Score %5d: Added = %4d, Length = %6d, Duplicate = %4d\n", $current_score, (scalar @list_in_waiting), $add_cj_length, $num_duplicates);
 			
