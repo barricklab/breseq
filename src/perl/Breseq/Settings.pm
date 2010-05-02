@@ -194,9 +194,9 @@ sub initialize_1
 	
 	#used by CandidateJunctions.pm
 	$self->{minimum_reads_for_candidate_junction} = 1;
-	$self->{minimum_candidate_junctions} = 10000;				# Minimum number of candidate junctions to keep
-	$self->{maximum_candidate_junctions} = 10000;				# Maximum number of candidate junctions to keep
-	$self->{maximum_candidate_junction_length_factor} = 1;		# Only keep CJ lengths adding up to this times genome size 
+	$self->{minimum_candidate_junctions} = 200;					# Minimum number of candidate junctions to keep
+	$self->{maximum_candidate_junctions} = 5000;				# Maximum number of candidate junctions to keep
+	$self->{maximum_candidate_junction_length_factor} = 0.1;		# Only keep CJ lengths adding up to this times genome size 
 	$self->{candidate_junction_read_limit} = undef;			# FOR TESTING: only process this many reads when creating candidate junctions
 
 	#used by AlignmentCorrection.pm
