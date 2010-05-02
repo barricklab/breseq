@@ -98,6 +98,16 @@ sub count
 			print STDERR "    POSITION:$pos\n" if ($pos % 10000 == 0);
 
 			my @ref_base; #index is 'reversed'
+			
+			## temporary debug
+			my $ref_length = length $ref_seq_string;
+			
+			if ($pos > $ref_length)
+			{
+				print $pileup->[0]->alignment->qname . "\n";
+				die "Position outside of reference sequence $pos > $ref_length\n";
+			}
+			
 			$ref_base[0] = substr $ref_seq_string, $pos-1, 1;
 			$ref_base[1] = substr $com_seq_string, $pos-1, 1;
        		#$ref_base[0] = $bam->segment($seq_id,$pos,$pos)->dna;

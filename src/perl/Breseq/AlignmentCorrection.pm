@@ -409,9 +409,23 @@ sub correct_alignments
                     ## Do not count for coverage if it is redundant!!
 					if (!$item->{$side_key}->{redundant})
 					{	
-						##write out match corresponding to this part to SAM file						
+						##write out match corresponding to this part to SAM file
+						
+						##NOTE: this will not trim reads that extend to very near the end of the CJ sequence correctly!						
 						my $trim = _trim_ambiguous_ends($a, $candidate_junction_header, $candidate_junction_fai);						
-						Breseq::Shared::tam_write_moved_alignment($RREF, $item->{$side_key}->{seq_id}, $fastq_file_index, $a, $side, $item->{flanking_left}, $item->{overlap}, $item->{alignment_overlap}, $item->{$side_key}->{start}, $item->{$side_key}->{strand}, $trim);		
+						Breseq::Shared::tam_write_moved_alignment(
+							$RREF, 
+							$a, 
+							$fastq_file_index, 
+							$item->{$side_key}->{seq_id}, 
+							$item->{$side_key}->{start}, 
+							$item->{$side_key}->{strand},
+							$item->{overlap}, 
+							$side, 
+							$item->{flanking_left}, 
+							$item->{alignment_overlap}, 
+							$trim
+						);		
 					}
 				}
 			}

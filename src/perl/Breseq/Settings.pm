@@ -48,43 +48,8 @@ sub new
 	my $class = ref($caller) || $caller;
 	my $self = new Bio::Root::Root($caller, @args);
 	bless ($self, $class);
-	
-	@{$self->{reference_genbank_file_names}} = ();  # files containing reference sequences	
-	
-	## Set up default values for options
-	$self->{full_command_line} = "$0 @ARGV";
-	$self->{arguments} = "$0 @ARGV";
-	$self->{quality_type} = '';					# quality score format
-	$self->{predicted_quality_type} = '';
-	$self->{min_quality} = 0;
-	$self->{max_quality} = 0;
-	$self->{min_match_length} = 24;
-	$self->{run_name} = '';
-	$self->{clean} = 0;
-	$self->{base_output_path} = '';
-	$self->{error_model_method} = 'FIT';
-	
-	#used by CandidateJunctions.pm
-	$self->{minimum_reads_for_candidate_junction} = 1;
-	$self->{maximum_candidate_junctions} = 10000000;
-	$self->{candidate_junction_read_limit} = undef;
 
-	#used by AlignmentCorrection.pm
-	$self->{add_split_junction_sides} = 1;
-
-	$self->{no_junction_prediction} = undef;		# don't perform junction prediction steps
-	$self->{no_mutation_prediction} = undef;		# don't perform read mismatch/indel prediction steps
-	$self->{no_deletion_prediction} = undef;		# don't perform deletion prediction steps
-	$self->{no_alignment_generation} = undef;		# don't generate alignments
-	$self->{alignment_read_limit} = undef;			# only go through this many reads when creating alignments
-	$self->{correction_read_limit} = undef;			# only go through this many reads when correcting alignments
-	$self->{no_filter_unwanted} = undef;			# don't filter out unwanted reads with adaptor matches
-	$self->{unwanted_prefix} = "UNWANTED:::";	# prefix on unwanted read names
-	
-	#used by MutationIdentification.pm
-	$self->{polymorphism_log10_e_value_cutoff} = 2;
-	$self->{mutation_log10_e_value_cutoff} = 2;			# log10 of evidence required for SNP calls 	
-	$self->{polymorphism_fisher_strand_p_value_cutoff} = 0.05;
+	$self->initialize_1;
 	
 	#keep this on by default
 	
@@ -132,7 +97,7 @@ sub new
 	pod2usage(-exitstatus => 0, -verbose => 2) if $man;
 	pod2usage(-exitstatus => 0, -verbose => 2) if (scalar @ARGV == 0);
 	
-	$self->initialize;
+	$self->initialize_2;
 	
 	my ($sec,$min,$hour,$mday,$mon,$year,$wday,$yday,$isdst)=localtime(time);
 	my $time_stamp = sprintf "%4d-%02d-%02d %02d:%02d:%02d",$year+1900,$mon+1,$mday,$hour,$min,$sec;
@@ -149,43 +114,8 @@ sub new_annotate
 	my $class = ref($caller) || $caller;
 	my $self = new Bio::Root::Root($caller, @args);
 	bless ($self, $class);
-	
-	@{$self->{reference_genbank_file_names}} = ();  # files containing reference sequences	
-	
-	## Set up default values for options
-	$self->{full_command_line} = "$0 @ARGV"; 
-	$self->{arguments} = "$0 @ARGV";	
-	$self->{quality_type} = '';					# quality score format
-	$self->{predicted_quality_type} = '';
-	$self->{min_quality} = 0;
-	$self->{max_quality} = 0;
-	$self->{min_match_length} = 24;
-	$self->{run_name} = '';
-	$self->{clean} = 0;
-	$self->{base_output_path} = '';
-	$self->{error_model_method} = 'FIT';
-	
-	#used by CandidateJunctions.pm
-	$self->{minimum_reads_for_candidate_junction} = 1;
-	$self->{maximum_candidate_junctions} = 100000000;
-	$self->{candidate_junction_read_limit} = undef;
 
-	#used by AlignmentCorrection.pm
-	$self->{add_split_junction_sides} = 1;
-
-	$self->{no_junction_prediction} = undef;		# don't perform junction prediction steps
-	$self->{no_mutation_prediction} = undef;		# don't perform read mismatch/indel prediction steps
-	$self->{no_deletion_prediction} = undef;		# don't perform deletion prediction steps
-	$self->{no_alignment_generation} = undef;		# don't generate alignments
-	$self->{alignment_read_limit} = undef;			# only go through this many reads when creating alignments
-	$self->{correction_read_limit} = undef;			# only go through this many reads when correcting alignments
-	$self->{no_filter_unwanted} = undef;			# don't filter out unwanted reads with adaptor matches
-	$self->{unwanted_prefix} = "UNWANTED:::";	# prefix on unwanted read names
-	
-	#used by MutationIdentification.pm
-	$self->{polymorphism_log10_e_value_cutoff} = 2;
-	$self->{mutation_log10_e_value_cutoff} = 2;			# log10 of evidence required for SNP calls 
-	$self->{polymorphism_fisher_strand_p_value_cutoff} = 0.05;
+	$self->initialize_1;
 	
 	#keep this on by default
 	my ($help, $man);
@@ -237,14 +167,58 @@ sub new_annotate
 	$self->{max_junctions_to_print} = 100  if ($self->{marginal_mode});
 	$self->{sort_junctions_by_score} = 1  if ($self->{marginal_mode});
 		
-	$self->initialize;
+	$self->initialize_2;
 		
 	return $self;
 }
 
+## called before getting options from command line
+sub initialize_1
+{
+	my ($self) = @_;
 
-## called after getting options from command line by new methods
-sub initialize
+	@{$self->{reference_genbank_file_names}} = ();  # files containing reference sequences	
+	
+	## Set up default values for options
+	$self->{full_command_line} = "$0 @ARGV"; 
+	$self->{arguments} = "$0 @ARGV";	
+	$self->{quality_type} = '';					# quality score format
+	$self->{predicted_quality_type} = '';
+	$self->{min_quality} = 0;
+	$self->{max_quality} = 0;
+	$self->{min_match_length} = 24;
+	$self->{run_name} = '';
+	$self->{clean} = 0;
+	$self->{base_output_path} = '';
+	$self->{error_model_method} = 'FIT';
+	
+	#used by CandidateJunctions.pm
+	$self->{minimum_reads_for_candidate_junction} = 1;
+	$self->{minimum_candidate_junctions} = 10000;				# Minimum number of candidate junctions to keep
+	$self->{maximum_candidate_junctions} = 10000;				# Maximum number of candidate junctions to keep
+	$self->{maximum_candidate_junction_length_factor} = 1;		# Only keep CJ lengths adding up to this times genome size 
+	$self->{candidate_junction_read_limit} = undef;			# FOR TESTING: only process this many reads when creating candidate junctions
+
+	#used by AlignmentCorrection.pm
+	$self->{add_split_junction_sides} = 1;
+
+	$self->{no_junction_prediction} = undef;		# don't perform junction prediction steps
+	$self->{no_mutation_prediction} = undef;		# don't perform read mismatch/indel prediction steps
+	$self->{no_deletion_prediction} = undef;		# don't perform deletion prediction steps
+	$self->{no_alignment_generation} = undef;		# don't generate alignments
+	$self->{alignment_read_limit} = undef;			# only go through this many reads when creating alignments
+	$self->{correction_read_limit} = undef;			# only go through this many reads when correcting alignments
+	$self->{no_filter_unwanted} = undef;			# don't filter out unwanted reads with adaptor matches
+	$self->{unwanted_prefix} = "UNWANTED:::";	# prefix on unwanted read names
+	
+	#used by MutationIdentification.pm
+	$self->{polymorphism_log10_e_value_cutoff} = 2;
+	$self->{mutation_log10_e_value_cutoff} = 2;			# log10 of evidence required for SNP calls 
+	$self->{polymorphism_fisher_strand_p_value_cutoff} = 0.05;
+}
+
+## called after getting options from command line
+sub initialize_2
 {
 	my ($self) = @_;
 	

@@ -4,7 +4,7 @@ f92ddab994b5a6c5281e2c27847914bf61ad4ec3  ./07_error_calibration/NC_001416.uniqu
 f8b58fe4e22e5b2f5c683bd0777dc4f580cdbdef  ./08_mutation_identification/NC_001416.cnv_coverage.tab
 ebdd524e0bc51fd90a872b4f9ada18706914109e  ./08_mutation_identification/NC_001416.coverage.tab
 27c5a44caaaf02011af101590ad14c7f273c0dee  ./08_mutation_identification/NC_001416.mutations.tab
-6866da657d78db637575865e686def3733eb5c9f  ./output/alignment/NC_001416_0_0_alignment.html
+b6b35941a0f1cd549bf7f4ab76b89ea470e7921e  ./output/alignment/NC_001416_0_0_alignment.html
 06147d406da5200bc0624c3ede1374727c067ea0  ./output/alignment/NC_001416_109_109_alignment.html
 579430e4633caa5d88a0c31a6756ad1b7218702d  ./output/alignment/NC_001416_13180_13180_alignment.html
 e56c897ebcc1ef7b9f0becaf8b5c0d68a8032aed  ./output/alignment/NC_001416_13218_13218_alignment.html
@@ -60,7 +60,7 @@ f134386d7688c74e9664f0f2286e687d0ecc1027  ./output/alignment/NC_001416_47973_479
 dea4ec69481c39ce344f06a484c66e853b47d0f5  ./output/alignment/NC_001416_47978_47978_alignment.html
 ee02748ae92be2bbbf53d4f40b95ae9d8775e161  ./output/alignment/NC_001416_48160_48160_alignment.html
 5c5e6f5bf34e1da7f5eabb76d559c88204027450  ./output/alignment/NC_001416_48447_48447_alignment.html
-6323c6d1a189472b4a15d34395fdd90ea9cd5f62  ./output/alignment/NC_001416_48503_48503_alignment.html
+bfa6a6be2512475bf70bd54da9295f64d6ca82b2  ./output/alignment/NC_001416_48503_48503_alignment.html
 cae0336b92559babc9fdebfeb413d36319bac7ad  ./output/alignment/NC_001416_6482_6482_alignment.html
 10ef47f3e17b2aeb4c0b6b54478afc676b1e645d  ./output/alignment/NC_001416_7975_7975_alignment.html
 f2406c94cb415e19d5b6ebf5c29f8a621177ae25  ./output/alignment/NC_001416_7985_7985_alignment.html
@@ -85,5 +85,5 @@ b8f84afb1ce19d1174f9d37b2490e7aa0e90fe9b  ./output/alignment/NC_001416__7985__0_
 0016fa159a861032caac7d45aa8da8f705f72a01  ./output/alignment/NC_001416__8091__0__0__NC_001416__8091__0__0__10____35__35_36_45_alignment.html
 c8a5a05e66e4ce082a8f1ef936a1a61b4df2c29a  ./output/coverage/deletions.tab
 5ed5e4ab1cd17972f216bd9d7f6b1cad2668a48b  ./output/index.html
-454fc004a03c09f53ca48199689a07caaacf8958  ./output/marginal.html
+322a09f5153dc8d671b7f4492f435ef4f1838b76  ./output/marginal.html
 655c0c04873029fff1de76f620fbaeedb57ac185  ./output/mutations.html
