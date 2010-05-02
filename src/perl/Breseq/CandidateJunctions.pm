@@ -173,15 +173,22 @@ sub identify_candidate_junctions
 	{
 		$total_cumulative_cj_length += length $c->{seq};
 	}
-	print STDERR "    Initial: Number = " . $total_candidate_junction_number . ", Cumulative Length = " . $total_cumulative_cj_length . "\n";
-	
+		
 	my @duplicate_sequences;
 	my $cumulative_cj_length = 0;
 	my $lowest_accepted_score = 'NA';
 	
 	## Right now we limit the candidate junctions to have a length no longer than the reference sequence.
-	my $cj_length_limit = $summary->{sequence_conversion}->{total_reference_sequence_length};
+	my $cj_length_limit = $summary->{sequence_conversion}->{total_reference_sequence_length} * $settings->{maximum_candidate_junction_length_factor};
 	my $maximum_candidate_junctions = $settings->{maximum_candidate_junctions};
+	my $minimum_candidate_junctions = $settings->{minimum_candidate_junctions};
+
+	print STDERR sprintf ("  Minimum number to keep: %7d \n", $minimum_candidate_junctions);
+	print STDERR sprintf ("  Maximum number to keep: %7d \n", $maximum_candidate_junctions);
+	print STDERR sprintf ("  Maximum length to keep: %7d \n", $cj_length_limit);
+	
+	print STDERR "    Initial: Number = " . $total_candidate_junction_number . ", Cumulative Length = " . $total_cumulative_cj_length . "\n";
+
 
 	if ((defined $settings->{maximum_candidate_junctions}) && (@combined_candidate_junctions > 0))
 	{	
@@ -194,7 +201,9 @@ sub identify_candidate_junctions
 		my $current_score = $combined_candidate_junctions[$i]->{score};
 	
 		## Check to make sure that adding everything from the last iteration doesn't put us over any limits...
-		while (($cumulative_cj_length + $add_cj_length <= $cj_length_limit) && ( scalar(@remaining_ids) + scalar(@list_in_waiting) <= $maximum_candidate_junctions))
+		my $new_number = scalar(@remaining_ids) + scalar(@list_in_waiting);
+		my $new_length = $cumulative_cj_length + $add_cj_length;
+		while (	( $new_number <= $minimum_candidate_junctions ) || (($new_length <= $cj_length_limit) && ($new_number <= $maximum_candidate_junctions)) )
 		{			
 			## OK, add everything from the last iteration
 			$cumulative_cj_length += $add_cj_length;
