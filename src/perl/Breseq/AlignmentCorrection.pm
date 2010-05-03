@@ -265,54 +265,69 @@ sub correct_alignments
 
 			### The best match we found to the reference was no better than the best to the
 			### candidate junction. This read potentially supports the candidate junction.
-			my $best_match_to_reference = ($best_candidate_junction_score < $best_reference_score);
+			
+			### PROBLEMS WITH SPURIOUS PREDICTIONS SUPPORTED ONLY BY READS THAT MATCH REFERENCE BETTER
+			### ONLY allow EQUAL matches through if they match the overlap only, otherwise
+			### one spurious match that supports a new junction ????
+			my $best_match_to_reference = ($best_candidate_junction_score < $best_reference_score);			
 			if  (!$best_match_to_reference)
 			{	
+				my $equal_match_to_reference = ($best_candidate_junction_score == $best_reference_score);				
 				
 				## We flag whether the best hit was overlap only.
 				my $best_candidate_junction_is_overlap_only = 0;
 				my @this_dominant_candidate_junction_al;
 				
-				if (@$this_candidate_junction_al)
+				## only accept equal matches if they are to the overlap only 
+				## -- preventing them from adding to the score in cases where a normal read match
+				## to certain parts of the reference also creates junctions 
+				if (@$this_candidate_junction_al && !$equal_match_to_reference)
 				{
 					@this_dominant_candidate_junction_al = _alignment_list_to_dominant_best($minimum_best_score, undef, @$this_candidate_junction_al);
 				}
-				else
+				elsif (@$this_overlap_only_al)
 				{
 					$best_candidate_junction_is_overlap_only = 1;
 					@this_dominant_candidate_junction_al = _alignment_list_to_dominant_best($minimum_best_score, undef, @$this_overlap_only_al);
 				}
 				
-				my $item = {
-		#			alignments => $this_candidate_junction_al,  					#candidate junction alignments that cross junction
-		#			overlap_only_alignments => $this_overlap_only_al,				#candidate junction alignments that end inside overlap
-					reference_alignments => $this_reference_al, 					# reference sequence alignments
-					dominant_alignments => \@this_dominant_candidate_junction_al,   #the BEST candidate junction alignments
-					dominant_alignment_is_overlap_only => $best_candidate_junction_is_overlap_only,
-					fastq_file_index => $fastq_file_index[$f],						#index of the fastq file this read came from
-				};
-				#print Dumper($item);
-	
-				## Just one best hit, we put this in the hash that is used to predict junctions first
-				if (scalar @this_dominant_candidate_junction_al == 1)
+				$best_match_to_reference = 1 if (scalar @this_dominant_candidate_junction_al == 0);
+				
+				if (!$best_match_to_reference)
 				{
-					my $a = $this_dominant_candidate_junction_al[0];
-					my $junction_id = $candidate_junction_header->target_name()->[$a->tid];
-					#print "$junction_id\n";
-					push @{$matched_junction{$junction_id}}, $item;
-				}					
-				## Multiple equivalent matches to junctions, ones with most hits later will win these matches
-				## these matches are added BEFORE scoring a junction prediction
-				else 
-				{					
-					foreach my $a (@this_dominant_candidate_junction_al)
-					{	
+				
+					my $item = {
+			#			alignments => $this_candidate_junction_al,  					#candidate junction alignments that cross junction
+			#			overlap_only_alignments => $this_overlap_only_al,				#candidate junction alignments that end inside overlap
+						reference_alignments => $this_reference_al, 					# reference sequence alignments
+						dominant_alignments => \@this_dominant_candidate_junction_al,   #the BEST candidate junction alignments
+						dominant_alignment_is_overlap_only => $best_candidate_junction_is_overlap_only,
+						fastq_file_index => $fastq_file_index[$f],						#index of the fastq file this read came from
+					};
+					#print Dumper($item);
+	
+					## Just one best hit, we put this in the hash that is used to predict junctions first
+					if (scalar @this_dominant_candidate_junction_al == 1)
+					{
+						my $a = $this_dominant_candidate_junction_al[0];
 						my $junction_id = $candidate_junction_header->target_name()->[$a->tid];
-						my $read_name = $a->qname;
-						$degenerate_matches{$junction_id}->{$read_name} = $item;
+						#print "$junction_id\n";
+						push @{$matched_junction{$junction_id}}, $item;
+					}					
+					## Multiple equivalent matches to junctions, ones with most hits later will win these matches
+					## these matches are added BEFORE scoring a junction prediction
+					else 
+					{					
+						foreach my $a (@this_dominant_candidate_junction_al)
+						{	
+							my $junction_id = $candidate_junction_header->target_name()->[$a->tid];
+							my $read_name = $a->qname;
+							$degenerate_matches{$junction_id}->{$read_name} = $item;
+						}
 					}
 				}
 			}
+			
 			### best match is to the reference, record in that SAM file.
 			if ($best_match_to_reference && (scalar @$this_reference_al > 0))
 			{
