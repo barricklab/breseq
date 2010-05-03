@@ -491,11 +491,14 @@ EOF
 	#this is the first coverage to give at least the requested probability
 	my $sequence_length = $summary->{sequence_conversion}->{reference_sequences}->{$seq_id}->{length};
 
-## testing more stringent cutoff
-
 	{
+		## testing more stringent cutoff
+		
+		## One-tailed test p=0.05, Bonferroni correction
+		my $pr_cutoff = 0.05 / $sequence_length;
+		
 		## One-tailed test p=0.01, no Bonferroni correction
-		my $pr_cutoff = 0.01;
+		##my $pr_cutoff = 0.01;
 		my $i = 0;
 		while ( Math::CDF::pnbinom($i, $summary->{unique_coverage}->{$seq_id}->{nbinom_size_parameter}, $summary->{unique_coverage}->{$seq_id}->{nbinom_prob_parameter}) < $pr_cutoff ) 
 		{ 

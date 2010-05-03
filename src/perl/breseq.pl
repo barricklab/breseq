@@ -372,7 +372,7 @@ my @hybrids;
 my $alignment_correction_done_file_name = $settings->file_name('alignment_correction_done_file_name');
 if (!-e $alignment_correction_done_file_name)
 {
-	print STDERR "Resolving alignments with candidate junctions and ambiguous ends...\n";
+	print STDERR "Resolving alignments with candidate junctions and trimming ambiguous ends...\n";
 	$settings->create_path('alignment_correction_path');		
 	my $predicted_junctions_file_name = $settings->file_name('predicted_junction_file_name');
 	@hybrids = Breseq::AlignmentCorrection::correct_alignments($settings, $summary, $ref_seq_info);
@@ -386,7 +386,7 @@ if (!-e $alignment_correction_done_file_name)
 }
 else
 {
-	print STDERR "Resolving candidate junctions/ambiguous ends already complete.\n";
+	print STDERR "Resolving alignments to candidate junctions and trimming ambiguous ends already complete.\n";
 	my $predicted_junctions_file_name = $settings->file_name('predicted_junction_file_name');	
 	@hybrids = ();
 	@hybrids = @{Storable::retrieve($predicted_junctions_file_name)} if (!$settings->{no_junction_prediction});
@@ -743,15 +743,20 @@ if (!-e $output_done_file_name)
 	###
 	print STDERR "Creating genome diff file...\n";
 
-	### filter what hybrids we believe in...
-	### this should also annotate and do much more of the filtering that is currently done
-	### during the prediction step
-	foreach my $hybrid (@hybrids)
-	{
-		my $coverage_cutoff_1 = $settings->{unique_coverage}->{$hybrid->{interval_1}->{seq_id}}->{junction_coverage_cutoff};
-		my $coverage_cutoff_2 = $settings->{unique_coverage}->{$hybrid->{interval_2}->{seq_id}}->{junction_coverage_cutoff};
-		$hybrid->{marginal} = 1 if (($hybrid->{total_reads} < $coverage_cutoff_1) &&  ($hybrid->{total_reads} < $coverage_cutoff_2));
-	}
+	## PROBLEM: We can't apply the coverage cutoff until AFTER we count errors
+	##   (because only then do we have the distribution to fit)
+	##   but we have to choose which junctions we believe BEFORE counting
+	##   (because we put their split alignments in the BAM file)
+	##
+	### We have to apply a coverage cutoff at this last stage
+#	foreach my $hybrid (@hybrids)
+#	{
+#		my $coverage_cutoff_1 = $settings->{unique_coverage}->{$hybrid->{interval_1}->{seq_id}}->{junction_coverage_cutoff};
+#		my $coverage_cutoff_2 = $settings->{unique_coverage}->{$hybrid->{interval_2}->{seq_id}}->{junction_coverage_cutoff};
+#		$hybrid->{marginal} = 1 if (($hybrid->{test_info}->{total_reads} < $coverage_cutoff_1) &&  ($hybrid->{test_info}->{total_reads} < $coverage_cutoff_2));
+#	}
+	###
+	
 	
 	my $full_genome_diff_file_name = $settings->file_name('full_genome_diff_file_name');
 	my $filtered_genome_diff_file_name = $settings->file_name('filtered_genome_diff_file_name');
