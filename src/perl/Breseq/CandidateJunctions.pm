@@ -185,7 +185,7 @@ sub identify_candidate_junctions
 
 	print STDERR sprintf ("  Minimum number to keep: %7d \n", $minimum_candidate_junctions);
 	print STDERR sprintf ("  Maximum number to keep: %7d \n", $maximum_candidate_junctions);
-	print STDERR sprintf ("  Maximum length to keep: %7d \n", $cj_length_limit);
+	print STDERR sprintf ("  Maximum length to keep: %7d bases\n", $cj_length_limit);
 	
 	print STDERR "    Initial: Number = " . $total_candidate_junction_number . ", Cumulative Length = " . $total_cumulative_cj_length . "\n";
 

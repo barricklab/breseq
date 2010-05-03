@@ -399,7 +399,6 @@ sub correct_alignments
 	@sorted_keys = sort {-(scalar @{$matched_junction{$a}} <=> scalar @{$matched_junction{$b}})} @sorted_keys;
 	@rejected_keys = sort {-(scalar @{$matched_junction{$a}} <=> scalar @{$matched_junction{$b}})} @rejected_keys;
 
-
 	my @hybrid_predictions;
  	foreach my $key (@sorted_keys)
  	{	  
@@ -894,7 +893,7 @@ sub _test_junction
 	my $failed = 0;
 #	print "Junction Candidate: $key Unique Matches: " . (scalar @unique_matches) . " Degenerate Matches: " . (scalar @degenerate_matches) . "\n";
 
-	#### TEST 1: 
+	#### TEST 1: There should be a minimal number of reads supporting the junction
 #	my $minimum_number_of_reads_for_junction = 3;	
 #	$failed = 1 if (scalar @unique_matches < $minimum_number_of_reads_for_junction);
 
@@ -905,6 +904,7 @@ sub _test_junction
 	my $max_min_left_per_strand = { '0'=> 0, '1'=>0 };
 	my $max_min_right_per_strand = { '0'=> 0, '1'=>0 };	
 	my $count_per_strand = { '0'=> 0, '1'=>0 };
+	my $total_non_overlap_reads = 0;
 	my $score = 0;
 	
 	## is there at least one read that isn't overlap only?
@@ -917,6 +917,7 @@ sub _test_junction
 	{
 		## we don't want to count matches that do not extend through the overlap region
 		next READ if ($item->{dominant_alignment_is_overlap_only});
+		$total_non_overlap_reads++;
 		$has_non_overlap_only = 0;
 		
 		#If there were no degenerate matches, then we could just take the
@@ -1008,15 +1009,14 @@ sub _test_junction
 		coverage_minus => $count_per_strand->{0},
 		coverage_plus => $count_per_strand->{1},
 		strand_p_value => $strand_p_value,
+		total_non_overlap_reads => $total_non_overlap_reads,
 		score => $score,
 	};
 		
-		
-	my $alignment_on_each_side_cutoff = 14; #17
-	my $alignment_on_each_side_cutoff_per_strand = 9; #10
-	my $alignment_on_each_side_min_cutoff = 5; #17
-
-	
+	## These parameters still need additional testing
+	my $alignment_on_each_side_cutoff = 17; #14
+	my $alignment_on_each_side_cutoff_per_strand = 10; #9
+	my $alignment_on_each_side_min_cutoff = 5;
 		
 	$failed = 	   ($max_left < $alignment_on_each_side_cutoff) 
 				|| ($max_right < $alignment_on_each_side_cutoff)
@@ -1030,7 +1030,7 @@ sub _test_junction
 				|| ($max_min_right < $alignment_on_each_side_min_cutoff)
 	;
 
-	#### TEST 3: Overlap should not be biased such that one side of the junction often has more of the
+	#### TEST X: Overlap should not be biased such that one side of the junction often has more of the
 	####         read overlapping it than the other. Use a sign test.
 	####
 	####   >>>>  But it's really not this simple since reads might be biased by the sequences they match???	
@@ -1074,19 +1074,19 @@ sub _test_junction
 		}
 	}	
 	
-	## Write out the matches to the proper SAM file depending on whether the junction succeeded or failed
+	## Write out the matches to the proper SAM file(s) depending on whether the junction succeeded or failed
 	foreach my $junction_read (@{$matched_junction_ref->{$key}})
 	{
 		my $fastq_file_index = $junction_read->{fastq_file_index};
 		
-		## write matches to the reference sequences if we failed
+		## Write matches to reference sequences if we failed
 		if ($failed)
 		{						
 			my $this_reference_al = $junction_read->{reference_alignments};
 			_write_reference_matches($minimum_best_score, $minimum_best_score_difference, $reference_fai, $ref_seq_info, $RREF, $reference_header, $fastq_file_index, @$this_reference_al);
 		}
 		
-		##write matches to the candidate junction SAM file regardless
+		## REGARDLESS: write matches to the candidate junction SAM file 
 		if (!$has_non_overlap_only) 
 		{
 			my @this_dominant_candidate_junction_al = @{$junction_read->{dominant_alignments}}; 
