@@ -3,7 +3,7 @@
 <plist version="1.0">
 <dict>
 	<key>currentDocument</key>
-	<string>sam2html.pl</string>
+	<string>Breseq/Settings.pm</string>
 	<key>documents</key>
 	<array>
 		<dict>
@@ -16,9 +16,7 @@
 			<key>filename</key>
 			<string>sam2html.pl</string>
 			<key>lastUsed</key>
-			<date>2010-05-02T02:40:20Z</date>
-			<key>selected</key>
-			<true/>
+			<date>2010-05-02T12:15:22Z</date>
 		</dict>
 		<dict>
 			<key>filename</key>
@@ -64,14 +62,14 @@
 			<key>caret</key>
 			<dict>
 				<key>column</key>
-				<integer>3</integer>
+				<integer>18</integer>
 				<key>line</key>
-				<integer>399</integer>
+				<integer>409</integer>
 			</dict>
 			<key>firstVisibleColumn</key>
 			<integer>0</integer>
 			<key>firstVisibleLine</key>
-			<integer>389</integer>
+			<integer>388</integer>
 		</dict>
 		<key>Breseq/AlignmentOutput.pm</key>
 		<dict>
@@ -92,14 +90,14 @@
 			<key>caret</key>
 			<dict>
 				<key>column</key>
-				<integer>58</integer>
+				<integer>39</integer>
 				<key>line</key>
-				<integer>204</integer>
+				<integer>236</integer>
 			</dict>
 			<key>firstVisibleColumn</key>
 			<integer>0</integer>
 			<key>firstVisibleLine</key>
-			<integer>183</integer>
+			<integer>219</integer>
 		</dict>
 		<key>Breseq/ErrorCalibration.pm</key>
 		<dict>
@@ -206,14 +204,14 @@
 			<key>caret</key>
 			<dict>
 				<key>column</key>
-				<integer>5</integer>
+				<integer>31</integer>
 				<key>line</key>
-				<integer>115</integer>
+				<integer>194</integer>
 			</dict>
 			<key>firstVisibleColumn</key>
 			<integer>0</integer>
 			<key>firstVisibleLine</key>
-			<integer>25</integer>
+			<integer>201</integer>
 		</dict>
 		<key>Breseq/Shared.pm</key>
 		<dict>
@@ -227,7 +225,7 @@
 			<key>firstVisibleColumn</key>
 			<integer>0</integer>
 			<key>firstVisibleLine</key>
-			<integer>-1</integer>
+			<integer>156</integer>
 		</dict>
 		<key>breseq.pl</key>
 		<dict>
@@ -311,7 +309,7 @@
 			<key>firstVisibleColumn</key>
 			<integer>0</integer>
 			<key>firstVisibleLine</key>
-			<integer>31</integer>
+			<integer>16</integer>
 		</dict>
 	</dict>
 	<key>openDocuments</key>
@@ -337,6 +335,6 @@
 	<key>showFileHierarchyDrawer</key>
 	<true/>
 	<key>windowFrame</key>
-	<string>{{239, 56}, {924, 822}}</string>
+	<string>{{260, 226}, {1038, 619}}</string>
 </dict>
 </plist>

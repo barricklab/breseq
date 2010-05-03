@@ -293,9 +293,12 @@ sub _alignments_to_candidate_junctions
 
 	my $verbose = 0;
 		
+	### We don't want to predict a new junction from hits that are completely contained
+	### in other alignments. This can lead to problems later for repetitive regions.
+###	@al = _uncontained_alignments(@al);  EXPERIMENTAL
+		
 	### We are only concerned with different matches.
 	#print "Before removing same-reference alignments: " . (scalar @al) . "\n" if ($verbose);
-	
 	my ($al_ref, $r_ref) = _unique_alignments_with_redundancy($fai, $header, @al);
 	#print "After removing same-reference alignments: " . (scalar @al) . "\n" if ($verbose);
 
@@ -366,6 +369,38 @@ sub _alignments_to_candidate_junctions
 		}
 	}		
 }
+
+
+### experimental: this should probably pay attention to how many mismatches there are!@
+sub _uncontained_alignments
+{
+	my (@al) = @_;
+	
+	## assumes longer alignments are given first
+	A1: for (my $i=0; $i<scalar @al; $i++)
+	{		
+		my $a1 = $al[$i];
+		my ($a1_start, $a1_end) = Breseq::Shared::alignment_query_start_end($a1);			
+		next A1 if ($a1_start == 0); #this is only true if read has no matches
+		my $a1_length = $a1_end - $a1_start + 1;
+
+		A2: for (my $j=$i+1; $j<scalar @al; $j++)
+		{
+			my $a2 = $al[$i];
+			my ($a2_start, $a2_end) = Breseq::Shared::alignment_query_start_end($a2);			
+			my $a2_length = $a2_end - $a2_start + 1;
+			
+			if ( ($a2_start >= $a1_start) && ($a2_start <= $a1_end ) && ($a1_length > $a2_length) )
+			{
+				splice @al, $j, 1;
+				$j--;
+			}
+		}
+	}
+
+	return @al;
+}
+
 
 sub _unique_alignments_with_redundancy
 {
