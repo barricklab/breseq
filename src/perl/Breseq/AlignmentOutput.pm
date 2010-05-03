@@ -40,6 +40,13 @@ use Breseq::Fastq;
 use Breseq::Shared;
 use Data::Dumper;
 
+our $base_colors_hash = {
+	'G' => [ "rgb(230,230,230)", "rgb(210,210,210)", "rgb(140,140,140)", "rgb(70,70,70)", "rgb(0,0,0)" ],
+	'C' => [ "rgb(160,160,255)", "rgb(120,120,255)", "rgb(60,60,255)", "rgb(0,0,255)", "rgb(0,0,150)" ],
+	'A' => [ "rgb(255,210,210)", "rgb(255,180,180)", "rgb(255,100,100)", "rgb(255,20,20)", "rgb(200,0,0)" ],
+	'T' => [ "rgb(210,255,210)", "rgb(180,255,180)", "rgb(100,255,100)", "rgb(20,255,20)", "rgb(0,200,0)" ],
+	'N' => [ "rgb(128,0,128)", "rgb(128,0,128)", "rgb(128,0,128)", "rgb(128,0,128)", "rgb(128,0,128)" ],
+};
 
 sub new
 {
@@ -50,6 +57,18 @@ sub new
 	bless ($self, $class);
 	($self->{maximum_to_align}) = $self->Bio::Root::RootI::_rearrange([qw(MAXIMUM_TO_ALIGN)], @args);
 	$self->{maximum_to_align} = 1000 if (!defined $self->{maximum_to_align});
+
+	$self->{header_style_string} = '';
+	$self->{header_style_string} .= "\.NC {color: rgb(0,0,0); background-color: rgb(255,255,255)}\n"; #no color
+	foreach my $key (keys %$base_colors_hash)
+	{
+		for (my $i=0; $i<scalar @{$base_colors_hash->{$key}}; $i++)
+		{
+			$self->{header_style_string} .= "\.$key$i \{color: rgb(255,255,255); background-color: $base_colors_hash->{$key}->[$i]\}\n";
+		}
+	}
+	
+	$self->{no_color_index} = scalar(@{$base_colors_hash->{'G'}}) - 1;
 
 	return $self; 
 }
@@ -98,14 +117,6 @@ sub _text_alignment_line
 	return $a->{aligned_bases} . "  " . _strand_char($a->{strand}) . "  " . $a->{seq_id} . "\n";
 }
 
-our $base_colors_hash = {
-	'G' => [ "rgb(230,230,230)", "rgb(210,210,210)", "rgb(140,140,140)", "rgb(70,70,70)", "rgb(0,0,0)" ],
-	'C' => [ "rgb(160,160,255)", "rgb(120,120,255)", "rgb(60,60,255)", "rgb(0,0,255)", "rgb(0,0,150)" ],
-	'A' => [ "rgb(255,210,210)", "rgb(255,180,180)", "rgb(255,100,100)", "rgb(255,20,20)", "rgb(200,0,0)" ],
-	'T' => [ "rgb(210,255,210)", "rgb(180,255,180)", "rgb(100,255,100)", "rgb(20,255,20)", "rgb(0,200,0)" ],
-	'N' => [ "rgb(128,0,128)", "rgb(128,0,128)", "rgb(128,0,128)", "rgb(128,0,128)", "rgb(128,0,128)" ],
-};
-
 sub html_alignment
 {
 	my $verbose = 0;
@@ -123,6 +134,7 @@ sub html_alignment
 	my @sorted_keys = sort { -($aligned_reads->{$a}->{aligned_bases} cmp $aligned_reads->{$b}->{aligned_bases}) } keys %$aligned_reads;
 	my $output = '';
 
+	$output .= style($self->{header_style_string});
 	$output .= start_table({-style=>"background-color: rgb(255,255,255)"}) . start_Tr() . start_td({-style=>"font-size:10pt"});
 	foreach my $aligned_reference (@aligned_references)
 	{
@@ -198,7 +210,7 @@ sub _html_alignment_line
 		}
 	}
 	
-	my $last_color_string = '';
+	my $last_color = '';
 	for (my $i=0; $i<scalar @split_aligned_bases; $i++)
 	{
 		my $q = 255; 
@@ -211,38 +223,36 @@ sub _html_alignment_line
 		{
 			if (($q == 255) ||  (!defined $quality_range))
 			{
-				$color = ($b eq ' ') ? undef : $base_colors_hash->{"\U$b"}->[-1];
+				$color = ($b eq ' ') ? 'NC' : "\U$b" . $self->{no_color_index};
 			}
 			##Note: no color for $q == 254
 
 			elsif ((defined $quality_range) && (!($b =~ m/[.-]/))) #($b =~ m/[NATCGnatcg]/))
 			{
 				my $color_num = $quality_range->{qual_to_color_index}->[$q];
-				$color = $base_colors_hash->{"\U$b"}->[$color_num];
+				#$color = $base_colors_hash->{"\U$b"}->[$color_num];
+				$color = "\U$b" . $color_num;
 			}
 		}
 		
 		$b = '&nbsp;' if ($b eq ' ');	
-		my $color_string;
 		if (not defined $color)
 		{
-			$color_string = "color: rgb(0,0,0); background-color: rgb(255,255,255)";
+			$color = "NC";
+			#older version
+			#$color = "color: rgb(0,0,0); background-color: rgb(255,255,255)";
 		}
-		else
+
+		if ($color ne $last_color)
 		{
-			$color_string = "color: rgb(255,255,255); background-color: $color"
-		}
-		
-		if ($color_string ne $last_color_string)
-		{
-			$output .= "</font>" if ($last_color_string);
-			$output .= "<font style=\"$color_string\">";
-			$last_color_string = $color_string;
+			$output .= "</font>" if ($last_color);
+			$output .= "<font class=\"$color\">";
+			$last_color = $color;
 		}
 		$output .= $b;
 		
 	}
-	$output .= "</font>" if ($last_color_string);
+	$output .= "</font>" if ($last_color);
 	$output .= "&nbsp;&nbsp;" . _html_strand_char($a->{strand})  if (defined $a->{strand});
 	
 	
