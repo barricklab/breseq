@@ -56,11 +56,19 @@ do_check() {
     pushd $1 > /dev/null
     if ! ${HASH} --check ${EXPECTED} > /dev/null; then
         popd > /dev/null
+        echo ""
+        echo "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
         echo "Failed check: $1"
+        echo "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX" 
+        echo ""
         exit -1
     fi
     popd > /dev/null
+    echo ""
+    echo "OOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOO"
     echo "Passed check: $1"
+    echo "OOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOO"
+    echo ""
     exit 0
 }
 
