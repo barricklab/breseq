@@ -83,7 +83,7 @@ sub correct_alignments
 		my $s;
 		$s->{unmatched_reads} = 0;
 
-		## use the original fastq file to keep track of order
+		## use the original fastq files to keep track of order
 		## some matches may exist in only one or the other file
 		
 		my @in_fastq;
@@ -93,13 +93,11 @@ sub correct_alignments
 		my $i=0;
 		for (my $i=0; $i < scalar @{$read_struct->{base_names}}; $i++)
 		{
-			my $this_read_file = $read_struct->{base_names}->[$i];
-			my $this_fastq_file_name = $read_struct->{read_fastq_list}->[$i];
-			
+			my $this_read_file = $read_struct->{base_names}->[$i];			
 			$fastq_file_name[$i] = $settings->read_file_to_fastq_file_name($this_read_file);	
 			$fastq_file_index[$i] = $settings->read_file_to_fastq_file_index($this_read_file);		
 				
-			$in_fastq[$i] = Breseq::Fastq->new(-file => $this_fastq_file_name);
+			$in_fastq[$i] = Breseq::Fastq->new(-file => $fastq_file_name[$i]);
 			
 			if ($settings->{unmatched_reads})
 			{				
@@ -1014,8 +1012,8 @@ sub _test_junction
 	};
 		
 	## These parameters still need additional testing
-	my $alignment_on_each_side_cutoff = 17; #14
-	my $alignment_on_each_side_cutoff_per_strand = 10; #9
+	my $alignment_on_each_side_cutoff = 16; #14
+	my $alignment_on_each_side_cutoff_per_strand = 13; #9
 	my $alignment_on_each_side_min_cutoff = 5;
 		
 	$failed = 	   ($max_left < $alignment_on_each_side_cutoff) 

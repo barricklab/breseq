@@ -119,7 +119,7 @@ my $settings = Breseq::Settings->new;
 Breseq::Output::record_time("Start");
 
 ##
-# Convert the read fastq file to fasta for input into MUMmer
+# Convert the input reference GenBank into FASTA for alignment
 sub sequence_conversion {}
 ##
 
@@ -133,14 +133,15 @@ if (!-e $sequence_conversion_done_file_name)
 	$settings->create_path('sequence_conversion_path');
 	
 	## quality trimming the reads
+	## broken, and we need to guess or be given quality score format
 	if ($settings->{trim_reads})
 	{
 	 	print STDERR "  Trimming fastq reads for quality\n";
 	 	foreach my $read_file ($settings->read_files)
 		{
-			my $fastq_file_name = $settings->read_file_to_fastq_file_name($read_file);	
-			my $trimmed_fastq_file_name = $settings->file_name('trimmed_fastq_file_name', {'#'=>$read_file});
-			Breseq::Fastq::fastq_to_trimmed_fastq($fastq_file_name, $trimmed_fastq_file_name, $settings->{quality_score_offset});
+			my $fastq_file_name = $settings->read_file_to_original_fastq_file_name($read_file);	
+			my $trimmed_fastq_file_name = $settings->read_file_to_fastq_file_name($read_file);	
+			Breseq::Fastq::fastq_to_trimmed_fastq($fastq_file_name, $trimmed_fastq_file_name);
 		}
 	}
 	
@@ -201,7 +202,7 @@ $ref_seq_info = Storable::retrieve($ref_seq_info_file_name);
 die "Can't retrieve data from file $ref_seq_info_file_name!\n" if (!$ref_seq_info);
 $summary->{sequence_conversion} = Storable::retrieve($sequence_converson_summary_file_name);
 die "Can't retrieve data from file $sequence_converson_summary_file_name!\n" if (!$summary->{sequence_conversion});
-(defined $summary->{sequence_conversion}->{max_read_length}) or die "Can't retrieve max read length from file $sequence_converson_summary_file_name!\n";
+(defined $summary->{sequence_conversion}->{max_read_length}) or die "Can't retrieve max read length from file $sequence_converson_summary_file_name\n";
 $settings->{max_read_length} = $summary->{sequence_conversion}->{max_read_length};
 $settings->{total_reference_sequence_length} = $summary->{sequence_conversion}->{total_reference_sequence_length};
 
@@ -726,7 +727,7 @@ if (!$settings->{no_mutation_prediction}) #could remove conditional?
 	# Predict SNPS, indels within reads, and large deletions
 	#   this function handles all file creation...
 	##
-	my $mutation_info =  Breseq::MutationIdentification::identify_mutations($settings, $summary, $error_rates);
+	my $mutation_info =  Breseq::MutationIdentification::identify_mutations($settings, $summary, $ref_seq_info, $error_rates);
 
 	@mutations = @{$mutation_info->{mutations}};
 	@deletions = @{$mutation_info->{deletions}};

@@ -498,14 +498,21 @@ sub process_reference_sequences
 {
 	my ($settings, $summary) = @_;
 	$summary->{sequence_conversion}->{total_reference_sequence_length} = 0;
-	my $s;
 	my $ref_seq_info;
 	my $i = 0;
+	my $s;
 	
 	# get two pieces of information from $settings
 	my $reference_fasta_file_name = $settings->file_name('reference_fasta_file_name');
 	my @genbank_file_names = $settings->file_name('reference_genbank_file_names'); 
-		
+
+	my @junction_only_genbank_file_names = $settings->file_name('junction_only_reference_genbank_file_names'); 
+	my %junction_only_hash;
+	foreach my $jo (@junction_only_genbank_file_names)
+	{
+		$junction_only_hash{$jo} = 1;
+	}
+	
 	print STDERR "Loading reference sequences...\n";
 
 	##open fasta file
@@ -513,8 +520,12 @@ sub process_reference_sequences
 
 	my %loaded_seq_ids;
 
-	foreach my $genbank_file_name (@genbank_file_names)
+	foreach my $genbank_file_name (@genbank_file_names, @junction_only_genbank_file_names)
 	{
+		print STDERR "  Loading File::$genbank_file_name\n";
+		
+		my $junction_only = $junction_only_hash{$genbank_file_name};
+		
 		## open this GenBank file		
 		open GENBANK, "<$genbank_file_name";
 		
@@ -551,7 +562,15 @@ sub process_reference_sequences
 				## it would be nice to get rid of storing the whole genome in memory
 				$ref_seq_info->{ref_strings}->{$seq_id} = $ref_seq;
 				$ref_seq_info->{seq_order}->{$seq_id} = $i++;
-				push @{$ref_seq_info->{seq_ids}}, $seq_id;
+				
+				if (!$junction_only)
+				{
+					push @{$ref_seq_info->{seq_ids}}, $seq_id;
+				}
+				else
+				{
+					push @{$ref_seq_info->{junction_only_seq_ids}}, $seq_id;
+				}
 
 				### re-initialize to nothing for next sequence
 				undef $seq_id;
@@ -588,15 +607,13 @@ sub process_reference_sequences
 				$ref_seq .= "\U$_";
 			}			
 		}
-		
-		print STDERR "  Loading File::$genbank_file_name\n";
 	}
 	
 	## create SAM faidx
 	Breseq::Shared::system("samtools faidx $reference_fasta_file_name", 1);
 	
-	$summary->{sequence_conversion}->{reference_sequences} = $s;	
-	
+	$summary->{sequence_conversion}->{reference_sequences} = $s;
+		
 	return $ref_seq_info;
 }
 

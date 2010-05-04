@@ -50,12 +50,14 @@ our @base_list = ('A', 'T', 'C', 'G', '.');
 #does both within-read SNPs+indels and missing coverage deletions
 sub identify_mutations
 {
-	our ($settings, $summary, $error_rates) = @_;
+	our ($settings, $summary, $ref_seq_info, $error_rates) = @_;
 		
 	my $reference_fasta_file_name = $settings->file_name('reference_fasta_file_name');
 	my $reference_bam_file_name = $settings->file_name('reference_bam_file_name');
 	my $bam = Bio::DB::Sam->new(-fasta => $reference_fasta_file_name, -bam => $reference_bam_file_name);
-	my @seq_ids = $bam->seq_ids;
+	##my @seq_ids = $bam->seq_ids;
+	my @seq_ids = @{$ref_seq_info->{seq_ids}};
+	
 	
 	## some local variable lookups for convenience
 	my $total_ref_length = 0;
