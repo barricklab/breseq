@@ -197,9 +197,9 @@ sub do_annotate
 	use Breseq::Output;
 	
 	my $settings = Breseq::Settings->new_annotate;
-
+	
 	## load information about reference sequences from GenBank files
-	my $ref_seq_info = Breseq::ReferenceSequence::load_ref_seq_info(\@{$settings->{reference_genbank_file_names}}, \@{$settings->{junction_only_reference_genbank_file_names}});
+	my $ref_seq_info = Breseq::ReferenceSequence::load_ref_seq_info($settings);
 
 	#load all genome diff files
 	my (@mutations, @deletions, @unknowns, @hybrids);

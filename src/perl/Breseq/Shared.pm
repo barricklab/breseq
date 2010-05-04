@@ -493,6 +493,8 @@ sub junction_name_split
 	return $item;
 }
 
+
+##UNUSED
 ## moved here from ReferenceSequence.pm to avoid BioPerl requirement.
 sub process_reference_sequences
 {

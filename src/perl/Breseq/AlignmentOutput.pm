@@ -124,7 +124,7 @@ sub html_alignment
 	
 	my $alignment_info = $self->create_alignment($bam_path, $fasta_path, $region, $options);
 
-	return p . "No reads aligned to region." if (!defined $alignment_info);
+	return p . "No reads uniquely align to region." if (!defined $alignment_info);
 	my $aligned_reads = $alignment_info->{aligned_reads};
 	my @aligned_references = @{$alignment_info->{aligned_references}};
 	my $aligned_annotation = $alignment_info->{aligned_annotation};
