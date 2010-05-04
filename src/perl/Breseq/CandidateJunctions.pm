@@ -291,7 +291,7 @@ sub _alignments_to_candidate_junctions
 {
 	my ($settings, $summary, $ref_seq_info, $candidate_junctions, $fai, $header, @al) = @_;
 
-	my $verbose = 1;
+	my $verbose = 0;
 
 	### TO DO:
 	### We don't want to predict a new junction from hits that are completely contained
