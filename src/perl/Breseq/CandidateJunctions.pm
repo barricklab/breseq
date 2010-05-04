@@ -291,7 +291,7 @@ sub _alignments_to_candidate_junctions
 {
 	my ($settings, $summary, $ref_seq_info, $candidate_junctions, $fai, $header, @al) = @_;
 
-	my $verbose = 0;
+	my $verbose = 1;
 
 	### TO DO:
 	### We don't want to predict a new junction from hits that are completely contained
@@ -312,9 +312,7 @@ sub _alignments_to_candidate_junctions
 	### were used to construct a junction. We must mark redundant sides AFTER correcting for overlap.
 	my %redundant_junction_sides;
 	my @junctions;	
-	
-	print $al_ref->[0]->qname . "\n"  if ($verbose);
-	
+		
 	### Try adding together each pair of matches to make a longer match
 	A1: for (my $i=0; $i<scalar @$al_ref; $i++)
 	{		
@@ -330,7 +328,7 @@ sub _alignments_to_candidate_junctions
 			next A2 if ($a2_start == 0); #this is only true if read has no matches
 			my $a2_length = $a2_end - $a2_start + 1;
 			
-			print join(" ", $a1_start, $a1_end, $a2_start, $a2_end) . "\n" if ($verbose);
+			#print join(" ", $a1_start, $a1_end, $a2_start, $a2_end) . "\n" if ($verbose);
 						
 			my $union_start = ($a1_start < $a2_start) ? $a1_start : $a2_start;
 			my $union_end = ($a1_end > $a2_end) ? $a1_end : $a2_end;			
@@ -358,11 +356,11 @@ sub _alignments_to_candidate_junctions
 				my $r1 = $r_ref->[$i];
 				my $r2 = $r_ref->[$j]; 
 				
-				my ($junction_seq_string, $side_1_ref_seq, $side_2_ref_seq, @junction_id_list)
+				my ($junction_seq_string, $side_1_ref_seq, $side_2_ref_seq, $junction_coord_1, $junction_coord_2, @junction_id_list)
 					= _alignments_to_candidate_junction($settings, $summary, $ref_seq_info, $fai, $header, $a1, $a2, $r1, $r2);
-				
-				$redundant_junction_sides{$side_1_ref_seq}++;
-				$redundant_junction_sides{$side_2_ref_seq}++;
+							
+				$redundant_junction_sides{$side_1_ref_seq}->{$junction_coord_1}++;
+				$redundant_junction_sides{$side_2_ref_seq}->{$junction_coord_2}++;
 				
 				## Add a score based on the current read. We want to favor junctions with reads that overlap each side quite a bit
 				## so we add the minimum that the read extends into each side of the candidate junction (not counting the overlap).
@@ -380,12 +378,17 @@ sub _alignments_to_candidate_junctions
 		}
 	}	
 	
+	return if (scalar @junctions == 0);
+	print $al_ref->[0]->qname . "\n"  if ($verbose);
+	
+	
 	#only now that we've looked through everything can we determine whether the reference sequence matched 
 	#on a side was unique, after correcting for overlap
+	print Dumper(\%redundant_junction_sides) if ($verbose);
+	
 	foreach my $jct (@junctions)
 	{	
 		print Dumper($jct) if ($verbose);
-		print Dumper(\%redundant_junction_sides);
 		
 		my @junction_id_list = @{$jct->{list}};
 		my $junction_seq_string = $jct->{string};
@@ -394,8 +397,8 @@ sub _alignments_to_candidate_junctions
 		my $side_1_ref_seq = $jct->{side_1_ref_seq};
 		my $side_2_ref_seq = $jct->{side_2_ref_seq};
 
-		$junction_id_list[3] = 1 if ($redundant_junction_sides{$side_1_ref_seq} > 1);
-		$junction_id_list[7] = 1 if ($redundant_junction_sides{$side_2_ref_seq} > 1);
+		$junction_id_list[3] = 1 if (scalar keys %{$redundant_junction_sides{$side_1_ref_seq}} > 1);
+		$junction_id_list[7] = 1 if (scalar keys %{$redundant_junction_sides{$side_2_ref_seq}} > 1);
 		
 		my $junction_id = Breseq::Shared::junction_name_join(@junction_id_list);
 		
@@ -646,9 +649,6 @@ sub _alignments_to_candidate_junction
 
 	print "Overlap offset: $overlap_offset\n" if ($verbose);
 
-	### these are returned to check further for redundancy
-	my ($side_1_ref_seq, $side_2_ref_seq);
-
 	##first end
 	my $flanking_left = $flanking_length;
 	if ($hash_strand_1 == 0) #alignment is not reversed
@@ -664,9 +664,6 @@ sub _alignments_to_candidate_junction
 		my $add_seq = substr $reference_sequence_string_hash_ref->{$hash_seq_id_1},  $start_pos-1, $flanking_left+$overlap_offset;
 		print "1F: $add_seq\n" if ($verbose);
 		$junction_seq_string .= $add_seq;
-		
-		## this ignores the addition from positive overlap in $add_seq;
-		$side_1_ref_seq = substr $add_seq, 0, $flanking_left;
 	}
 	else 
 	{	
@@ -683,9 +680,6 @@ sub _alignments_to_candidate_junction
 		$add_seq = Breseq::Fastq::revcom($add_seq);
 		print "1R: $add_seq\n" if ($verbose);
 		$junction_seq_string .= $add_seq;
-		
-		## this ignores the addition from positive overlap in $add_seq;
-		$side_1_ref_seq = substr $add_seq, $overlap_offset, $flanking_left;
 	}
 	
 	print "read: $first_query_match_seq\n" if ($verbose);
@@ -707,9 +701,6 @@ sub _alignments_to_candidate_junction
 		my $add_seq = substr $reference_sequence_string_hash_ref->{$hash_seq_id_2},  $end_pos - $flanking_right, $flanking_right;
 		print "2F: $add_seq\n" if ($verbose);
 		$junction_seq_string .= $add_seq;
-		
-		## on the second side, the added sequence already has overlap removed
-		$side_2_ref_seq = $add_seq;
 	}
 	else # ($m_2->{hash_strand} * $m_2->{read_side} == -1)
 	{
@@ -725,9 +716,6 @@ sub _alignments_to_candidate_junction
 		$add_seq = Breseq::Fastq::revcom($add_seq);
 		print "2R: $add_seq\n" if ($verbose);
 		$junction_seq_string .= $add_seq;
-		
-		## on the second side, the added sequence already has overlap removed
-		$side_2_ref_seq = $add_seq;
 	}	
 	print "3: $junction_seq_string\n" if ($verbose);
 	
@@ -746,10 +734,14 @@ sub _alignments_to_candidate_junction
 		($hash_strand_1, $hash_strand_2) = ($hash_strand_2, $hash_strand_1);
 		($hash_seq_id_1, $hash_seq_id_2) = ($hash_seq_id_2, $hash_seq_id_1);
 		($hash_redundancy_1, $hash_redundancy_2) = ($hash_redundancy_2, $hash_redundancy_1);
-
+		($r1_start, $r2_start, $r1_end, $r2_end) = ($r2_start, $r1_start, $r2_end, $r1_end);
+		
 		$junction_seq_string = Breseq::Fastq::revcom($junction_seq_string);
 		$unique_read_seq_string = Breseq::Fastq::revcom($unique_read_seq_string);
 	}
+	
+	$ref_seq_matched_1 = substr $reference_sequence_string_hash_ref->{$hash_seq_id_1},  $r1_start-1, $r1_end - $r1_start + 1;
+	$ref_seq_matched_2 = substr $reference_sequence_string_hash_ref->{$hash_seq_id_2},  $r2_start-1+$overlap_offset, $r2_end - $r2_start + 1 - $overlap_offset;
 		
 	my @junction_id_list = (
 		$hash_seq_id_1, 
@@ -766,6 +758,9 @@ sub _alignments_to_candidate_junction
 		$flanking_right
 	);	
 	
+	my $junction_coord_1 = join "::", $hash_seq_id_1, $hash_coord_1, $hash_strand_1;
+	my $junction_coord_2 = join "::", $hash_seq_id_2, $hash_coord_2, $hash_strand_2;
+	
 	## this junction id is for debug printing, redundancy may be changed by the calling subroutine
 	## before it is saved this way...
 	my $junction_id = Breseq::Shared::junction_name_join(@junction_id_list);
@@ -775,7 +770,7 @@ sub _alignments_to_candidate_junction
 	die "Junction sequence not found: $junction_id " . $q1->qname . " " . $a2->qname  if (!$junction_seq_string);
 	die "Incorrect length for $junction_seq_string: $junction_id " . $q1->qname . " " . $a2->qname if (length $junction_seq_string != $flanking_left + $flanking_right + abs($overlap));
 		
-	return ($junction_seq_string, $ref_seq_matched_1, $ref_seq_matched_2, @junction_id_list);
+	return ($junction_seq_string, $ref_seq_matched_1, $ref_seq_matched_2, $junction_coord_1, $junction_coord_2, @junction_id_list);
 }
 
 
