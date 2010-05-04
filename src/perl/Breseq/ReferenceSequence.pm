@@ -38,31 +38,39 @@ use Breseq::Shared;
 use Data::Dumper;
 
 
-##this is a version of the next subroutine tht only loads the features for annotation
+##this is a version of the next subroutine that only loads the features for annotation
 sub load_ref_seq_info
 {
-	my ($genbank_file_names_ref, $junction_only_genbank_file_names_ref) = @_;
+	##summaryand create_fasta are optional
+	my ($settings, $summary, $create_fasta) = @_;
 			
 	print STDERR "Loading reference sequences...\n";
 
-	##list of sequence ids
-	my @seq_ids;
-	my @junction_only_seq_ids;
-	my %ref_seqs;
-	my %ref_strings;
-	my %gene_lists;
-	my %is_lists;
-	my %fasta_file_names;
-	my %seq_order;
+	$summary->{sequence_conversion}->{total_reference_sequence_length} = 0 if (defined $summary);
+	
+	my $ref_seq_info;
 	my $i = 0;
+	my $s;
+
+	# get two pieces of information from $settings
+	my @genbank_file_names = $settings->file_name('reference_genbank_file_names'); 
+	my @junction_only_genbank_file_names = $settings->file_name('junction_only_reference_genbank_file_names'); 
 
 	my %junction_only_hash;
-	foreach my $jo (@$junction_only_genbank_file_names_ref)
+	foreach my $jo (@junction_only_genbank_file_names)
 	{
 		$junction_only_hash{$jo} = 1;
 	}
+	
+	## optionally create FASTA for writing to...
+	my $fasta_o;
+	my $reference_fasta_file_name = $settings->file_name('reference_fasta_file_name');
+	if ($create_fasta)
+	{
+		$fasta_o = Bio::SeqIO->new( -format => "FASTA", -file => ">$reference_fasta_file_name");
+	}	
 
-	foreach my $genbank_file_name (@$genbank_file_names_ref, @$junction_only_genbank_file_names_ref)
+	foreach my $genbank_file_name (@genbank_file_names, @junction_only_genbank_file_names)
 	{
 		## open this GenBank file
 		my $ref_i = Bio::SeqIO->new( -file => "<$genbank_file_name");
@@ -72,23 +80,40 @@ sub load_ref_seq_info
 
 		while (my $ref_seq = $ref_i->next_seq)
 		{
-			my $seq_id = $ref_seq->id;
+			## optionally write out FASTA
+			if ($create_fasta)
+			{
+				$fasta_o->write_seq($ref_seq);
+			}
 			
+			my $seq_id = $ref_seq->id;
 			print STDERR "    Sequence::$seq_id loaded.\n";
-			$ref_seqs{$seq_id} = $ref_seq;
+			
+			$s->{$seq_id}->{seq_id} = $seq_id;
+			$s->{$seq_id}->{length} = $ref_seq->length;
+			$s->{$seq_id}->{definition} = $ref_seq->desc;
+			$s->{$seq_id}->{version} = $ref_seq->display_id;
+			$s->{$seq_id}->{string} = $seq_id;
+			
+			
+			$summary->{sequence_conversion}->{total_reference_sequence_length} += $ref_seq->length if (defined $summary);
+			
+			## it would be nice to get rid of storing the whole genome in memory
+			$ref_seq_info->{bioperl_ref_seqs}->{$seq_id} = $ref_seq;
+
+			##it is much faster to use substr to create the lists for nt comparisons than BioPerl trunc
+			$ref_seq_info->{ref_strings}->{$seq_id} = $ref_seq->seq;
+			$ref_seq_info->{ref_strings}->{$seq_id} = "\U$ref_seq_info->{ref_strings}->{$seq_id}";
+			$ref_seq_info->{seq_order}->{$seq_id} = $i++;
 			
 			if (!$junction_only)
 			{
-				push @seq_ids, $seq_id;
+				push @{$ref_seq_info->{seq_ids}}, $seq_id;
 			}
 			else
 			{
-				push @junction_only_seq_ids, $seq_id;
+				push @{$ref_seq_info->{junction_only_seq_ids}}, $seq_id;
 			}
-
-			##it is much faster to use substr to create the lists for nt comparisons than BioPerl trunc
-			$ref_strings{$seq_id} = $ref_seq->seq;
-			$ref_strings{$seq_id} = "\U$ref_strings{$seq_id}"; ##uppercase for comparisons
 
 			##load the genbank record
 			my @Feature_List = $ref_seq->get_SeqFeatures();
@@ -146,15 +171,18 @@ sub load_ref_seq_info
 				}
 			}
 			
-			$gene_lists{$seq_id} = \@gene_list;
-			$is_lists{$seq_id} = \@is_list;	
-			
-			#add information to summary
-			$seq_order{$seq_id} = $i++;
-			}
+			$ref_seq_info->{gene_lists}->{$seq_id} = \@gene_list;
+			$ref_seq_info->{is_lists}->{$seq_id} = \@is_list;	
+		}
 	}
 			
-	return {'bioperl_ref_seqs' => \%ref_seqs, 'ref_strings' => \%ref_strings, 'gene_lists' =>\%gene_lists, 'is_lists' =>\%is_lists, 'seq_ids' => \@seq_ids, 'junction_only_seq_ids' => \@junction_only_seq_ids, 'seq_order' => \%seq_order };	
+	#save statistics if requested
+	$summary->{sequence_conversion}->{reference_sequences} = $s if (defined $summary);
+
+	## create SAM faidx
+	Breseq::Shared::system("samtools faidx $reference_fasta_file_name", 1) if ($create_fasta);
+			
+	return $ref_seq_info;
 }
 
 sub annotate_mutations

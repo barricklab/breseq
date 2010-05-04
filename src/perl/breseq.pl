@@ -186,7 +186,7 @@ if (!-e $sequence_conversion_done_file_name)
 	# }
 		
 	## convert reference sequence to fasta and store other information so it can be reloaded quickly w/o bioperl
-	$ref_seq_info = Breseq::Shared::process_reference_sequences($settings, $summary);
+	$ref_seq_info = Breseq::ReferenceSequence::load_ref_seq_info($settings, $summary, 1);
 	Storable::store($ref_seq_info, $ref_seq_info_file_name) or die "Can't store data in file $ref_seq_info_file_name!\n";
 	
 	## store summary information

@@ -53,7 +53,7 @@ sub correct_alignments
 	my $reference_fai = Bio::DB::Sam::Fai->load($reference_faidx_file_name);
 		
 	my $candidate_junction_file_name = $settings->file_name('candidate_junction_fasta_file_name');
-	## if there were no candidate junction (file is empty) then we seg fault if we try to use samtools on it...
+	## if there were no candidate junctions (file is empty) then we seg fault if we try to use samtools on it...
 	$settings->{no_junction_prediction} = 1 if ( (!-e $candidate_junction_file_name) || (-s $candidate_junction_file_name == 0) );
 	my	$candidate_junction_fai = Bio::DB::Sam::Fai->load($candidate_junction_file_name) if (!$settings->{no_junction_prediction});		
 	
@@ -83,8 +83,8 @@ sub correct_alignments
 		my $s;
 		$s->{unmatched_reads} = 0;
 
-		## use the original fastq files to keep track of order
-		## some matches may exist in only one or the other file
+		## Traverse the original fastq files to keep track of order
+		## b/c some matches may exist in only one or the other file
 		
 		my @in_fastq;
 		my @fastq_file_name;
@@ -254,19 +254,13 @@ sub correct_alignments
 				$best_reference_score = $ra->aux_get("AS");
 			}
 
-			### DEBUG
-			#if ((@$this_overlap_only_al > 0))
-			#{
-			#	print $this_overlap_only_al->[0]->qname . "\n";
-			#	print "$best_candidate_junction_score >= $best_reference_score\n";
-			#}
 
 			### The best match we found to the reference was no better than the best to the
 			### candidate junction. This read potentially supports the candidate junction.
-			
-			### PROBLEMS WITH SPURIOUS PREDICTIONS SUPPORTED ONLY BY READS THAT MATCH REFERENCE BETTER
+			###
 			### ONLY allow EQUAL matches through if they match the overlap only, otherwise
-			### one spurious match that supports a new junction ????
+			### you can get predictions of new junctions with all reads supporting them
+			### actually mapping perfectly to the reference.
 			my $best_match_to_reference = ($best_candidate_junction_score < $best_reference_score);			
 			if  (!$best_match_to_reference)
 			{	
@@ -295,8 +289,6 @@ sub correct_alignments
 				{
 				
 					my $item = {
-			#			alignments => $this_candidate_junction_al,  					#candidate junction alignments that cross junction
-			#			overlap_only_alignments => $this_overlap_only_al,				#candidate junction alignments that end inside overlap
 						reference_alignments => $this_reference_al, 					# reference sequence alignments
 						dominant_alignments => \@this_dominant_candidate_junction_al,   #the BEST candidate junction alignments
 						dominant_alignment_is_overlap_only => $best_candidate_junction_is_overlap_only,
