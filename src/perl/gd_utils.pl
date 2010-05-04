@@ -199,7 +199,7 @@ sub do_annotate
 	my $settings = Breseq::Settings->new_annotate;
 
 	## load information about reference sequences from GenBank files
-	my $ref_seq_info = Breseq::ReferenceSequence::load_ref_seq_info(@{$settings->{reference_genbank_file_names}});
+	my $ref_seq_info = Breseq::ReferenceSequence::load_ref_seq_info(\@{$settings->{reference_genbank_file_names}}, \@{$settings->{junction_only_reference_genbank_file_names}});
 
 	#load all genome diff files
 	my (@mutations, @deletions, @unknowns, @hybrids);
@@ -286,6 +286,7 @@ sub do_annotate
 	my $coverage_graph_path = $settings->file_name('coverage_graph_path');	
 	my $deletions_text_file_name = $settings->file_name('deletions_text_file_name');
 	Breseq::Output::save_text_deletion_file($deletions_text_file_name, \@deletions);
+	
 	foreach my $seq_id (@{$ref_seq_info->{seq_ids}})
 	{
 		my $this_plot_coverage_done_file_name = $settings->file_name('plot_coverage_done_file_name', {'@'=>$seq_id});
@@ -418,6 +419,18 @@ sub do_annotate
 	{	
 		$c->{bam_path} = $junction_bam_file_name;
 		$c->{fasta_path} = $junction_fasta_file_name;
+		
+		## rename junctions so they don't clobber normal alignments
+		my $html_alignment_file_name = "JCT_$c->{seq_id}_$c->{start}_$c->{end}_alignment.html";
+	 	$c->{link} = "$settings->{local_alignment_path}/$html_alignment_file_name";
+	 	$c->{file_name} = "$settings->{alignment_path}/$html_alignment_file_name";
+	
+		foreach my $int ('interval_1', 'interval_2')
+		{
+			$html_alignment_file_name = "JCT_$c->{$int}->{seq_id}_$c->{$int}->{start}_$c->{$int}->{end}_alignment.html";
+			$c->{$int}->{link} = "$settings->{local_alignment_path}/$html_alignment_file_name";
+		 	$c->{$int}->{file_name} = "$settings->{alignment_path}/$html_alignment_file_name";
+		}
 	}
 
 	### now create alignment files

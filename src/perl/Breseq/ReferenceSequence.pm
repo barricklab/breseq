@@ -41,12 +41,13 @@ use Data::Dumper;
 ##this is a version of the next subroutine tht only loads the features for annotation
 sub load_ref_seq_info
 {
-	my (@genbank_file_names) = @_;
+	my ($genbank_file_names_ref, $junction_only_genbank_file_names_ref) = @_;
 			
 	print STDERR "Loading reference sequences...\n";
 
 	##list of sequence ids
 	my @seq_ids;
+	my @junction_only_seq_ids;
 	my %ref_seqs;
 	my %ref_strings;
 	my %gene_lists;
@@ -55,19 +56,35 @@ sub load_ref_seq_info
 	my %seq_order;
 	my $i = 0;
 
-	foreach my $genbank_file_name (@genbank_file_names)
+	my %junction_only_hash;
+	foreach my $jo (@$junction_only_genbank_file_names_ref)
+	{
+		$junction_only_hash{$jo} = 1;
+	}
+
+	foreach my $genbank_file_name (@$genbank_file_names_ref, @$junction_only_genbank_file_names_ref)
 	{
 		## open this GenBank file
 		my $ref_i = Bio::SeqIO->new( -file => "<$genbank_file_name");
 		print STDERR "  Loading File::$genbank_file_name\n";
 
+		my $junction_only = $junction_only_hash{$genbank_file_name};
+
 		while (my $ref_seq = $ref_i->next_seq)
 		{
 			my $seq_id = $ref_seq->id;
-			push @seq_ids, $seq_id;
 			
 			print STDERR "    Sequence::$seq_id loaded.\n";
 			$ref_seqs{$seq_id} = $ref_seq;
+			
+			if (!$junction_only)
+			{
+				push @seq_ids, $seq_id;
+			}
+			else
+			{
+				push @junction_only_seq_ids, $seq_id;
+			}
 
 			##it is much faster to use substr to create the lists for nt comparisons than BioPerl trunc
 			$ref_strings{$seq_id} = $ref_seq->seq;
@@ -137,7 +154,7 @@ sub load_ref_seq_info
 			}
 	}
 			
-	return {'bioperl_ref_seqs' => \%ref_seqs, 'ref_strings' => \%ref_strings, 'gene_lists' =>\%gene_lists, 'is_lists' =>\%is_lists, 'seq_ids' => \@seq_ids, 'seq_order' => \%seq_order };	
+	return {'bioperl_ref_seqs' => \%ref_seqs, 'ref_strings' => \%ref_strings, 'gene_lists' =>\%gene_lists, 'is_lists' =>\%is_lists, 'seq_ids' => \@seq_ids, 'junction_only_seq_ids' => \@junction_only_seq_ids, 'seq_order' => \%seq_order };	
 }
 
 sub annotate_mutations

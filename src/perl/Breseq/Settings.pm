@@ -62,6 +62,7 @@ sub new
 		'name|n=s' => \$self->{run_name},	
 		'output-path|o=s' => \$self->{base_output_path},	
 		'reference-sequence|r=s' => \@{$self->{reference_genbank_file_names}},
+		'junction-sequence|j=s' => \@{$self->{junction_only_reference_genbank_file_names}},		
 		'quality-style|q=s' => \$self->{quality_type},
 		'clean=s' => \$self->{clean},
 	## Options for what results are printed
@@ -91,6 +92,8 @@ sub new
 		'error-model=s' => \$self->{error_model_method},
 		'resume' => \$self->{resume_run},
 		'continue' => \$self->{continue_run},
+		'trim-reads' => \$self->{trim_reads},
+		
 	) or pod2usage(2);
 
 	pod2usage(1) if $help;
@@ -127,6 +130,7 @@ sub new_annotate
 		'name|n=s' => \$self->{run_name},	
 		'output-path|o=s' => \$self->{base_output_path},	
 		'reference-sequence|r=s' => \@{$self->{reference_genbank_file_names}},
+		'junction-sequence|j=s' => \@{$self->{junction_only_reference_genbank_file_names}},
 		'quality-style|q=s' => \$self->{quality_type},
 		'clean=s' => \$self->{clean},
 	## Options for what results are printed
@@ -158,6 +162,7 @@ sub new_annotate
 		'continue' => \$self->{continue_run},
 		'html-mutation-file=s' => \$self->{html_mutation_file},
 		'marginal-mode' => \$self->{marginal_mode},
+		'trim-reads' => \$self->{trim_reads},
 	) or pod2usage(2);
 
 	pod2usage(1) if $help;
@@ -178,6 +183,7 @@ sub initialize_1
 	my ($self) = @_;
 
 	@{$self->{reference_genbank_file_names}} = ();  # files containing reference sequences	
+	@{$self->{junction_only_reference_genbank_file_names}} = (); #files to look for junctions to but not align to
 	
 	## Set up default values for options
 	$self->{full_command_line} = "$0 @ARGV"; 
@@ -191,6 +197,7 @@ sub initialize_1
 	$self->{clean} = 0;
 	$self->{base_output_path} = '';
 	$self->{error_model_method} = 'FIT';
+	$self->{trim_reads} = 0;
 	
 	#used by CandidateJunctions.pm
 	$self->{minimum_reads_for_candidate_junction} = 1;
@@ -406,7 +413,8 @@ sub initialize_2
 
 			$self->{read_file_to_fastq_file_index}->{$read_file} = $fastq_file_index; 
 			$self->{read_file_to_fastq_file}->{$read_file} = $read_fastq_file; 
-		
+			$self->{read_file_to_trimmed_fastq_file}->{$read_file} = $self->file_name('trimmed_fastq_file_name', {'#' => $read_file});
+
 			#index for keeping track of what file reads came from in alignment database
 			#max is 256 b/c stored as unsigned byte in alignment database
 			die "Maximum of 256 input files allowed." if ($fastq_file_index > 255);
@@ -523,7 +531,24 @@ sub read_file_to_fastq_file_index
 	return $self->{read_file_to_fastq_file_index}->{$read_file};
 }
 
+#transparent to whether read trimming is on
 sub read_file_to_fastq_file_name
+{
+	my ($self, $read_file) = @_;
+	if ($self->{trim_reads})
+	{
+		$self->throw if (!defined $self->{read_file_to_trimmed_fastq_file}->{$read_file});
+		return $self->{read_file_to_trimmed_fastq_file}->{$read_file};
+	}
+	else
+	{
+		$self->throw if (!defined $self->{read_file_to_fastq_file}->{$read_file});
+		return $self->{read_file_to_fastq_file}->{$read_file};
+	}
+}
+
+# same as above but forces original fastq file name if trimming is on
+sub read_file_to_original_fastq_file_name
 {
 	my ($self, $read_file) = @_;
 	$self->throw if (!defined $self->{read_file_to_fastq_file}->{$read_file});

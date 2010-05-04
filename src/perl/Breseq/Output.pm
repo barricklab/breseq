@@ -176,6 +176,7 @@ sub html_index
 		);
 		$total_length+= $c->{length};
 	}	
+	
 	print HTML Tr({-class=>"highlight_table_row"},
 		td(),
 		td(),
@@ -183,8 +184,22 @@ sub html_index
 		td(b({-align=>"right"},commify($total_length))), 
 		td()
 	);
+	
+	## junction only reference sequences
+	foreach my $seq_id (@{$ref_seq_info->{junction_only_seq_ids}})
+	{
+		my $c = $summary->{sequence_conversion}->{reference_sequences}->{$seq_id};
+		print HTML Tr(
+			td({-colspan=>"2", -align=>"center"}, "junction&nbsp;only"), 
+			td($seq_id), 
+			td({-align=>"right"},commify($c->{length})), 
+			td($c->{definition})
+		);
+		$total_length+= $c->{length};
+	}
+	
 	print HTML end_table();		
-		
+	
 	print HTML hr . i($settings->{byline});	
 	print HTML end_html;
 	close HTML;

@@ -74,7 +74,8 @@ sub count
 	}
 
 	my $bam = Bio::DB::Sam->new(-fasta => $reference_fasta_file_name, -bam => $reference_bam_file_name);
-	my @seq_ids = $bam->seq_ids;
+	##my @seq_ids = $bam->seq_ids;
+	my @seq_ids = @{$ref_seq_info->{seq_ids}};
 		
 	## populated by pileup
 	my $error_hash = [];		#list by fastq file index
@@ -87,7 +88,7 @@ sub count
 		print STDERR "  LENGTH: $sequence_length\n";
 		
 		## populated by pileup
-		my $unique_only_coverage;
+		my $unique_only_coverage = [];
 		my $ref_seq_string = $ref_seq_info->{ref_strings}->{$seq_id};
 		my $com_seq_string = $ref_seq_string;
 		$com_seq_string =~ tr/ATCG/TAGC/;

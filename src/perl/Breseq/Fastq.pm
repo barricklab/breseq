@@ -396,11 +396,17 @@ sub fastq_to_encoded_name_fastq
 
 
 ##
-## shorten the names of fastq sequences and give them a file index
+## quality trim fastq
 ##
 sub fastq_to_trimmed_fastq
 {
-	my ($input, $output, $quality_score_offset) = @_;
+	my $verbose = 0;
+	my ($input, $output) = @_;
+
+	my $total_reads_processed = 0;
+	my $total_reads_removed = 0;
+	my $total_bases_kept = 0;
+	my $total_bases_removed = 0;
 
 	open IN, "<$input" or die "Could not open input file $output";
 	open OUT, ">$output" or die "Could not open output file $output";
@@ -408,14 +414,16 @@ sub fastq_to_trimmed_fastq
 	my $name = <IN>;
 	chomp $name;
 	my $read_index = 0;
+
+	my $chr_offset = 33; #breseq
+	my $quality_score_cutoff = $chr_offset + 10;
 	
 	while ($name)
 	{
 		$read_index++;
+		$total_reads_processed++;
 		($name =~ m/^\@/) or die; #small sanity check
-		
-		#new name
-		
+				
 		#then copy all of the other three lines normally
 		my $sequence = <IN>;
 		chomp $sequence;
@@ -425,43 +433,63 @@ sub fastq_to_trimmed_fastq
 		chomp $quality;
 		my @quals = split //, $quality;
 		my $pos = $#quals;
-		my $quality_score_cutoff = $quality_score_offset + 25;
-				
-		my $number_high_quality_in_a_row = 0;
-		while (($number_high_quality_in_a_row < 3) &&  ($pos >= 0))
+		
+		my $original_read_length = length $sequence;
+		
+		my $number_low_quality_bases_encountered = 0;
+		my $number_low_quality_bases_limit = 3;
+		my $last_high_quality_base_pos_encountered = 0;
+		foreach (my $pos = 0; $pos < $original_read_length; $pos++)
 		{
-			if (ord($quals[$pos]) >= $quality_score_cutoff)
+#			print "$pos " . ord($quals[$pos]) . "\n" if ($verbose);
+			
+			if (ord($quals[$pos]) < $quality_score_cutoff)
 			{
-				$number_high_quality_in_a_row++;
+				$number_low_quality_bases_encountered++;
 			}
 			else
 			{
-				$number_high_quality_in_a_row = 0;	
+				$last_high_quality_base_pos_encountered = $pos;
 			}
-			$pos--;
+			
+			last if ($number_low_quality_bases_encountered > $number_low_quality_bases_limit);
 		}
-		$pos += 3;
+		
+		my $high_quality_length = $last_high_quality_base_pos_encountered + 1;
+		my $minimum_read_Length = 25;
+		
+		print "$high_quality_length / $original_read_length\n" if ($verbose);
 		
 		#read must still be 25 nt long
-		if ( ($number_high_quality_in_a_row >= 3) && ($pos >= 24) )
+		if ( ($number_low_quality_bases_encountered <= $number_low_quality_bases_limit) && ($high_quality_length >= $minimum_read_Length) )
 		{
-#			if ($pos < 35)
-#			{
-#				print "$name " . ($pos+1) . "\n";
-#				print substr($sequence, 0, $pos+1) . "\n";
-#				print "+\n"; ##always truncate this line to save space
-#				print substr($quality, 0, $pos+1) . "\n";
-#			}
+			$total_bases_removed += $original_read_length - $high_quality_length;
+			$total_bases_kept += $high_quality_length;
+			
 			print OUT "$name\n";
-			print OUT substr($sequence, 0, $pos+1) . "\n";
+			print OUT substr($sequence, 0, $high_quality_length) . "\n";
 			print OUT "+\n"; ##always truncate this line to save space
-			print OUT substr($quality, 0, $pos+1) . "\n";
+			print OUT substr($quality, 0, $high_quality_length) . "\n";
 			
 		}
+		else
+		{
+			$total_reads_removed++;
+			$total_bases_removed += $original_read_length;
+		}
+		
+		
 		$name = <IN>;
 		chomp $name;
 		### should keep track of some statistics about what was lost!
 	}
+	
+	print "Total reads processed: $total_reads_processed\n";
+	print "Total reads removed: $total_reads_removed\n";
+	print "Total bases kept: $total_bases_kept\n";
+	print "Total bases removed: $total_bases_removed\n";
+	
+	return ($total_reads_processed, $total_reads_removed, $total_bases_kept, $total_bases_removed);
 }
 
 return 1;
