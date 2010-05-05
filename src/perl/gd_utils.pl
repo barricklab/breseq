@@ -376,6 +376,9 @@ sub do_annotate
 	
 	if ($settings->{sort_junctions_by_score})
 	{
+		#don't show junctions supported by only a few reads
+		@hybrids = grep {$_->{total_non_overlap_reads} > 2} @hybrids;
+		
 		#sort and truncate list
 		@hybrids = sort { -($a->{score} <=> $b->{score}) || ($a->{total_reads} <=> $a->{total_reads}) } @hybrids;
 		my $last = $settings->{max_junctions_to_print};

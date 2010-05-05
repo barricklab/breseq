@@ -404,6 +404,13 @@ sub _alignments_to_candidate_junctions
 		
 		$candidate_junctions->{$junction_seq_string}->{$junction_id} += $score;
 	}	
+	
+	## TO DO - we should really not decide on whether one side is redundant until ALL
+	## reads supporting the same junction key are looked at. Even one that is not redundant
+	## indicates that it is non-redundant, and that that example should win over other junctions
+	## with the same sequence
+	## BUT -- it seems like the unique junction will have a higher score and naturally win out
+	## so we will not implement this unless we find a case where it is a problem.
 }
 
 
