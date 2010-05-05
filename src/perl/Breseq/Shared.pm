@@ -458,10 +458,12 @@ sub alignment_query_start_end
 our $junction_name_separator = '__';
 sub junction_name_join
 {
-	my $expected_items = 12;
-	if (scalar @_ != $expected_items)
+	my $expected_items_1 = 10;
+	my $expected_items_2 = 12;
+	
+	if ( (scalar @_ != $expected_items_1) && (scalar @_ != $expected_items_2) )
 	{
-		die "Incorrect number of items for junction name.\n" . join(" ", @_) . "Expected $expected_items items.\n";
+		die "Incorrect number of items for junction name.\n" . join(",", @_) . "\nExpected $expected_items_1 or $expected_items_2 items.\n";
 	}
 	return join "$junction_name_separator", @_;
 }
@@ -475,20 +477,22 @@ sub junction_name_split
 	$item->{interval_1}->{end} 			= $s[1];
 	$item->{interval_1}->{strand} 		= $s[2];
 	$item->{interval_1}->{strand} = -1 if ($item->{interval_1}->{strand} == 0);
-	$item->{interval_1}->{redundant} 	= $s[3];
 
-	$item->{interval_2}->{seq_id} 		= $s[4];
-	$item->{interval_2}->{start} 		= $s[5];
-	$item->{interval_2}->{end} 			= $s[5];
-	$item->{interval_2}->{strand} 		= $s[6];
+	$item->{interval_2}->{seq_id} 		= $s[3];
+	$item->{interval_2}->{start} 		= $s[4];
+	$item->{interval_2}->{end} 			= $s[4];
+	$item->{interval_2}->{strand} 		= $s[5];
 	$item->{interval_2}->{strand} = -1 if ($item->{interval_2}->{strand} == 0);
-	$item->{interval_2}->{redundant} 	= $s[7];	
 
-	$item->{overlap} 					= $s[8];
-	$item->{unique_read_string} 		= $s[9];
+	$item->{overlap} 					= $s[6];
+	$item->{unique_read_string} 		= $s[7];
 
-	$item->{flanking_left} 				= $s[10];
-	$item->{flanking_right} 			= $s[11];
+	$item->{flanking_left} 				= $s[8];
+	$item->{flanking_right} 			= $s[9];
+	
+	#redundant items are last, becuse they are created at the last minute
+	$item->{interval_1}->{redundant} 	= $s[10];
+	$item->{interval_2}->{redundant} 	= $s[11];	
 	
 	return $item;
 }

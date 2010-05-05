@@ -654,11 +654,14 @@ sub html_junction_table_string
 		{
 			$output_str.= start_Tr({-class=> "mutation_table_row_$row_bg_color_index"});
 		}
+
+		my $redundant_annotate_key = 'junction_gene';
+		$redundant_annotate_key = 'junction_is' if ($c->{$key}->{redundant} == 1);
 		
 		$output_str.= td({-rowspan=>2}, a({-href=>"$c->{link}"}, "*")) if ($link); 
-		$output_str.= td({-rowspan=>1}, a({-href=>"$c->{interval_1}->{link}"}, "?")) if ($link); 
-		$output_str.= td({-rowspan=>1}, make_nonbreaking($c->{$key}->{seq_id}));			
-		$output_str.= td( {-align=>"center"}, ($c->{$key}->{strand} == +1) ? $c->{$key}->{start} . "&nbsp;=": "=&nbsp;" . $c->{$key}->{start} );
+		$output_str.= td({-rowspan=>1, -class=>"$redundant_annotate_key"}, a({-href=>"$c->{interval_1}->{link}"}, "?")) if ($link); 
+		$output_str.= td({-rowspan=>1, -class=>"$redundant_annotate_key"}, make_nonbreaking($c->{$key}->{seq_id}));			
+		$output_str.= td( {-align=>"center", -class=>"$redundant_annotate_key"}, ($c->{$key}->{strand} == +1) ? $c->{$key}->{start} . "&nbsp;=": "=&nbsp;" . $c->{$key}->{start} );
 		$output_str.= td( {-rowspan=>2, -align=>"center"}, $c->{overlap} );
 		$output_str.= td( {-rowspan=>2, -align=>"center"}, "$c->{total_reads}" );
 		## gene data
@@ -687,9 +690,13 @@ sub html_junction_table_string
 		{
 			$output_str.= start_Tr({-class=> "mutation_table_row_$row_bg_color_index"});
 		}
-		$output_str.= td({-rowspan=>1}, a({-href=>"$c->{interval_2}->{link}"}, "?")) if ($link); 
-		$output_str.= td({-rowspan=>1}, make_nonbreaking($c->{$key}->{seq_id}));		
-		$output_str.= td( {-align=>"center"}, ($c->{$key}->{strand} == +1) ? $c->{$key}->{start} . "&nbsp;=": "=&nbsp;" . $c->{$key}->{start} );
+		
+		$redundant_annotate_key = 'junction_gene';
+		$redundant_annotate_key = 'junction_is' if ($c->{$key}->{redundant} == 1);
+		
+		$output_str.= td({-rowspan=>1, -class=>"$redundant_annotate_key"}, a({-href=>"$c->{interval_2}->{link}"}, "?")) if ($link); 
+		$output_str.= td({-rowspan=>1, -class=>"$redundant_annotate_key"}, make_nonbreaking($c->{$key}->{seq_id}));		
+		$output_str.= td( {-align=>"center", -class=>"$redundant_annotate_key"}, ($c->{$key}->{strand} == +1) ? $c->{$key}->{start} . "&nbsp;=": "=&nbsp;" . $c->{$key}->{start} );
 		## gene data
 		{
 			my $info = $c->{$key}->{$c->{$key}->{annotate_key}};				
