@@ -480,7 +480,7 @@ sub fastq_to_trimmed_fastq
 		
 		
 		$name = <IN>;
-		chomp $name;
+		chomp $name if (defined $name);
 		### should keep track of some statistics about what was lost!
 	}
 	

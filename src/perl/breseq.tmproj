@@ -3,7 +3,7 @@
 <plist version="1.0">
 <dict>
 	<key>currentDocument</key>
-	<string>Breseq/Shared.pm</string>
+	<string>Breseq/CandidateJunctions.pm</string>
 	<key>documents</key>
 	<array>
 		<dict>
@@ -62,14 +62,14 @@
 			<key>caret</key>
 			<dict>
 				<key>column</key>
-				<integer>65</integer>
+				<integer>24</integer>
 				<key>line</key>
-				<integer>409</integer>
+				<integer>760</integer>
 			</dict>
 			<key>firstVisibleColumn</key>
 			<integer>0</integer>
 			<key>firstVisibleLine</key>
-			<integer>378</integer>
+			<integer>731</integer>
 		</dict>
 		<key>Breseq/MutationIdentification.pm</key>
 		<dict>
@@ -90,14 +90,14 @@
 			<key>caret</key>
 			<dict>
 				<key>column</key>
-				<integer>37</integer>
+				<integer>2</integer>
 				<key>line</key>
-				<integer>489</integer>
+				<integer>464</integer>
 			</dict>
 			<key>firstVisibleColumn</key>
 			<integer>0</integer>
 			<key>firstVisibleLine</key>
-			<integer>464</integer>
+			<integer>455</integer>
 		</dict>
 		<key>gd_utils.pl</key>
 		<dict>
@@ -124,6 +124,6 @@
 	<key>showFileHierarchyDrawer</key>
 	<true/>
 	<key>windowFrame</key>
-	<string>{{278, 33}, {1081, 674}}</string>
+	<string>{{207, 1}, {1135, 650}}</string>
 </dict>
 </plist>

@@ -129,6 +129,8 @@ my $sequence_conversion_done_file_name = $settings->file_name('sequence_conversi
 my $ref_seq_info_file_name = $settings->file_name('ref_seq_info_file_name');
 if (!-e $sequence_conversion_done_file_name) 
 {
+	print STDERR "Read and reference sequence file input...\n";
+	
 	my $s;
 	$settings->create_path('sequence_conversion_path');
 	
@@ -139,6 +141,7 @@ if (!-e $sequence_conversion_done_file_name)
 	 	print STDERR "  Trimming fastq reads for quality\n";
 	 	foreach my $read_file ($settings->read_files)
 		{
+			print STDERR "    READ FILE::$read_file\n";
 			my $fastq_file_name = $settings->read_file_to_original_fastq_file_name($read_file);	
 			my $trimmed_fastq_file_name = $settings->read_file_to_fastq_file_name($read_file);	
 			Breseq::Fastq::fastq_to_trimmed_fastq($fastq_file_name, $trimmed_fastq_file_name);
@@ -151,6 +154,7 @@ if (!-e $sequence_conversion_done_file_name)
 	my $overall_max_read_length;
 	foreach my $read_file ($settings->read_files)
 	{
+		print STDERR "    READ FILE::$read_file\n";
 		my $max_read_length;
 		my $total_bases = 0;
 		my $num_reads = 0;
@@ -195,6 +199,10 @@ if (!-e $sequence_conversion_done_file_name)
 	open DONE, ">$sequence_conversion_done_file_name";
 	close DONE;
 	Breseq::Output::record_time("Sequence conversion");
+}
+else
+{
+	print STDERR "Read and reference sequence file input already complete.\n";
 }
 
 #load this info
