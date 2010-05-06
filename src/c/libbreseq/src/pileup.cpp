@@ -68,7 +68,7 @@ char* breseq::pileup_base::get_refseq(int target) {
 /*! First-level callback, used to re-route the callback from samtools to the virtual
  function defined in breseq::pileup.
  */
-int breseq::first_level_callback(uint32_t tid, uint32_t pos, int n, const bam_pileup1_t *pile, void *data) {
+int first_level_callback(uint32_t tid, uint32_t pos, int n, const bam_pileup1_t *pile, void *data) {
 	breseq::pileup_base* p = reinterpret_cast<breseq::pileup_base*>(data);
 	
 	if((pos % 10000) == 0) {
@@ -78,7 +78,6 @@ int breseq::first_level_callback(uint32_t tid, uint32_t pos, int n, const bam_pi
 	p->callback(tid,pos,n,pile);
 	return 0;
 }
-
 
 /*! Run the pileup.
  */
