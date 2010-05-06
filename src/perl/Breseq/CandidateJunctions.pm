@@ -428,29 +428,53 @@ sub _alignments_to_candidate_junctions
 		
 		## initialize candidate junction if it didn't exist
 		## they are redundant by default, until proven otherwise
-		if (!defined $candidate_junctions->{$junction_seq_string}->{$junction_id})
+		my $cj = $candidate_junctions->{$junction_seq_string}->{$junction_id};
+		
+		if (!defined $cj)
 		{
-			$candidate_junctions->{$junction_seq_string}->{$junction_id}->{r1} = 1;
-			$candidate_junctions->{$junction_seq_string}->{$junction_id}->{r2} = 1;
+			##redundancies of each side
+			$cj->{r1} = 1;
+			$cj->{r2} = 1;
+			
+			##maximum nonoverlapping match size on each side
+			$cj->{L1} = 0;
+			$cj->{L2} = 0;
+			
+			$candidate_junctions->{$junction_seq_string}->{$junction_id} = $cj;
 		}
 		
 		## Update score of junction and the redundancy of each side
-		$candidate_junctions->{$junction_seq_string}->{$junction_id}->{score} += $score;
+		$cj->{score} += $score;
 		
 		print "Totals: $total_r1, $total_r2\n";
-		print "Redundancy (before): $candidate_junctions->{$junction_seq_string}->{$junction_id}->{r1} $candidate_junctions->{$junction_seq_string}->{$junction_id}->{r2}\n";
-		$candidate_junctions->{$junction_seq_string}->{$junction_id}->{r1} &= ($total_r1 > 1);
-		$candidate_junctions->{$junction_seq_string}->{$junction_id}->{r2} &= ($total_r2 > 1);
-		print "Redundancy (after): $candidate_junctions->{$junction_seq_string}->{$junction_id}->{r1} $candidate_junctions->{$junction_seq_string}->{$junction_id}->{r2}\n";
+		print "Redundancy (before): $cj->{r1} ($cj->{L1}) $cj->{r2} ($cj->{L2})\n";		
+		my $side_1_ref_match_length = length $side_1_ref_seq;
+		my $side_2_ref_match_length = length $side_2_ref_seq;
+		
+		
+		## Longer reads into a side trump the redundancy of shorter reads for two reasons
+		##   (1) obviously, the longer the read, the better the chance it is unique
+		##   (2) subtly, if the read barely has enough to match both sides of the junction,
+		##       there are situations where you can predict uniqueness because a short match
+		##       maps one place only with the overlap included, and the non-overlapping part is
+		##       unique, but once you have a longer match, you see that the non-overlapping
+		##       part was really redundant.
+		if ($side_1_ref_match_length > $cj->{L1})
+		{
+			$cj->{L1} = $side_1_ref_match_length;
+			$cj->{r1} = ($total_r1 > 1) ? 1 : 0;
+		}
+		
+		if ($side_2_ref_match_length > $cj->{L2})
+		{
+			$cj->{L2} = $side_1_ref_match_length;
+			$cj->{r2} = ($total_r2 > 1) ? 1 : 0;;
+		}		
+		print "Redundancy (after): $cj->{r1} ($cj->{L1}) $cj->{r2} ($cj->{L2})\n";		
+
 
 	}	
 	
-	## TO DO - we should really not decide on whether one side is redundant until ALL
-	## reads supporting the same junction key are looked at. Even one that is not redundant
-	## indicates that it is non-redundant, and that that example should win over other junctions
-	## with the same sequence
-	## BUT -- it seems like the unique junction will have a higher score and naturally win out
-	## so we will not implement this unless we find a case where it is a problem.
 }
 
 
