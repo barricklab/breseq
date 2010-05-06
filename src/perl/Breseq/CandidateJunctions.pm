@@ -569,8 +569,12 @@ sub _alignments_to_candidate_junction
 	my ($q2_start, $q2_end) = Breseq::Shared::alignment_query_start_end($q2);
 		
 	print "$q1_start, $q1_end, $q2_start, $q2_end\n" if ($verbose);
-	($q1, $q2, $q1_start, $q2_start, $q1_end, $q2_end) = ($q2, $q1, $q2_start, $q1_start, $q2_end, $q1_end) if ($q2_start < $q1_start);		
-	
+	# Reverse the coordinates to be consistently such that 1 refers to lowest...
+	if ($q2_start < $q1_start)
+	{
+		($q1, $q2, $q1_start, $q2_start, $q1_end, $q2_end) = ($q2, $q1, $q2_start, $q1_start, $q2_end, $q1_end);
+		($redundancy_1, $redundancy_2) = ($redundancy_2, $redundancy_1);	
+	}
 	#create hash key and store information about the location of this hit
 	my $hash_strand_1 = ($q1->reversed) ? +1 : 0;
 	my $hash_seq_id_1 = $header->target_name()->[$q1->tid];
@@ -811,8 +815,6 @@ sub _alignments_to_candidate_junction
 		($hash_coord_1, $hash_coord_2) = ($hash_coord_2, $hash_coord_1);
 		($hash_strand_1, $hash_strand_2) = ($hash_strand_2, $hash_strand_1);
 		($hash_seq_id_1, $hash_seq_id_2) = ($hash_seq_id_2, $hash_seq_id_1);
-#		($hash_redundancy_1, $hash_redundancy_2) = ($hash_redundancy_2, $hash_redundancy_1);
-#		($r1_start, $r2_start, $r1_end, $r2_end) = ($r2_start, $r1_start, $r2_end, $r1_end);
 		($redundancy_1, $redundancy_2) = ($redundancy_2, $redundancy_1);
 		($ref_seq_matched_1, $ref_seq_matched_2) = ($ref_seq_matched_2, $ref_seq_matched_1);
 			
