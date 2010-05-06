@@ -200,7 +200,7 @@ sub html_index
 	
 	print HTML end_table();		
 	
-	print HTML hr . i($settings->{byline});	
+	print HTML hr . $settings->{byline};	
 	print HTML end_html;
 	close HTML;
 }

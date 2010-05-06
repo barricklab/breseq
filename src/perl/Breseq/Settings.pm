@@ -501,7 +501,15 @@ sub html_path
 {
 	my ($self, $file_name_key, $sub_hash)= @_;
 	my $file_name = $self->file_name($file_name_key,$sub_hash);	
-	$file_name =~ s/^$self->{output_path}\///;
+	
+	## strip off the leading output path so we have a relative link
+	if (substr ($file_name, 0, length($self->{output_path})+1) eq "$self->{output_path}/")
+	{
+		substr ($file_name, 0, length($self->{output_path})+1) = '';
+	}
+# regular expression chokes when there are special characters like '+' in the string 
+# that are not escaped, it's treated like a double quoted string here.
+#	$file_name =~ s/^$self->{output_path}\///; 
 	$file_name or $self->throw("Settings file \"$file_name_key\" not found.");
 }
 
