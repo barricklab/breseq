@@ -373,6 +373,13 @@ sub _alignments_to_candidate_junctions
 				$redundant_junction_sides{$side_1_ref_seq}->{$junction_coord_1} += $r1-1;
 				$redundant_junction_sides{$side_2_ref_seq}->{$junction_coord_2} += $r2-1;
 				
+				# also add to the reverse complement, because we can't be sure of the strandedness
+				# (alternately we could reverse complement if the first base was an A or C, for example
+				## it seems like there could possibly be some cross-talk between sides of junctions here, that
+				## could snarl things up, but I'm not sure?
+				$redundant_junction_sides{Breseq::Fastq::revcom($side_1_ref_seq)}->{$junction_coord_1} += $r1-1;
+				$redundant_junction_sides{Breseq::Fastq::revcom($side_2_ref_seq)}->{$junction_coord_2} += $r2-1;
+				
 				## Add a score based on the current read. We want to favor junctions with reads that overlap each side quite a bit
 				## so we add the minimum that the read extends into each side of the candidate junction (not counting the overlap).
 				my $a1_length_diff = ($a1_length - $intersection_length_nonzero);
