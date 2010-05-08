@@ -213,7 +213,7 @@ sub do_annotate
 		push @unknowns, @{$mutation_info->{unknowns}};
 		push @hybrids, @{$mutation_info->{hybrids}};
 	}	
-	
+		
 	###
 	## Gather together insertions and deletions that occur next to each other
 	## ...unless we are predicting polymorphisms
@@ -388,6 +388,8 @@ sub do_annotate
 
 	print STDERR "Annotating rearrangements...\n";
 	Breseq::ReferenceSequence::annotate_rearrangements($settings, undef, $ref_seq_info, \@hybrids);
+
+	print Dumper(@hybrids);
 
 	foreach my $hybrid (@hybrids)
 	{

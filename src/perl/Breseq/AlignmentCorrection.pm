@@ -1037,12 +1037,9 @@ sub _test_junction
 	
 	
 	### If we passed all the tests, or we were only testing degenerate junctions
-	### add degenerate matches and make them unavailable for other junctions
-	
-	##degenerate matches is a hash of junction_ids of read_names
-	##strictly speaking we might want to wait until these degenerate matches
-	##could push a different junction across the threshold to success
-#	if (!$failed || !scalar (@unique_matches == 0))
+	### add degenerate matches and make them unavailable for other junctions	
+	### degenerate matches is a hash of junction_ids of read_names
+	if (!$failed || !scalar (@unique_matches == 0))
 	{
 		if (defined $degenerate_matches_ref->{$key})
 		{
@@ -1139,15 +1136,18 @@ sub _junction_to_hybrid_list_item
 	}
 	$item->{seq_id} = $key;
 	
-	## These are now automatically created from splitting the junction jkey
+	## These are now automatically created from splitting the junction key
 	## (2) Alignment for the reference sequence that disagrees with the junction #1.
 	## (3) Alignment for the reference sequence that disagrees with the junction #2.
 
 	$item->{total_reads} = $total_reads;
 	
+	## Correct for overlapping IS elements
+	
+	
+	
 	#if there is overlapping sequence, and both sides are unique,
 	#then give overlap to first side
-	
 	if (!$item->{interval_1}->{redundant} && !$item->{interval_2}->{redundant})
 	{
 		if ($item->{overlap} > 0)
@@ -1159,6 +1159,8 @@ sub _junction_to_hybrid_list_item
 			$item->{overlap} = 0;			
 		}			
 	}
+	
+	
 	### Note: Other adjustments to overlap can happen at the later annotation stage
 	### because they will not affect coverage for calling deletions or mutations
 	### because they will be in redundantly matched sides of junctions

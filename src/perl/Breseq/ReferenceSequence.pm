@@ -626,7 +626,7 @@ sub annotate_rearrangements
 		}
 		@$rearrangements_ref = sort by_hybrid @$rearrangements_ref;
 	}
-	
+
 	
 	###
 	# IS insertion overlap correction
@@ -637,7 +637,7 @@ sub annotate_rearrangements
 	foreach my $j (@$rearrangements_ref)
 	{	
 		
-		sub add_interval_coords
+		sub add_is_coords_from_interval
 		{
 			my ($c) = @_;
 			return if (!defined $c->{is}); 
@@ -648,8 +648,8 @@ sub annotate_rearrangements
 			$c->{is}->{end} = ($is_start < $is_end) ? $is_end : $is_start;
 		}
 		
-		add_interval_coords($j->{interval_1});
-		add_interval_coords($j->{interval_2});
+		add_is_coords_from_interval($j->{interval_1});
+		add_is_coords_from_interval($j->{interval_2});
 		
 		$j->{interval_1}->{read_side} = -1;
 		$j->{interval_2}->{read_side} = +1;
@@ -658,7 +658,7 @@ sub annotate_rearrangements
 		## coordinates and overlap... otherwise we already used up the overlap,
 		## potentially in the wrong direction...
 			
-		if ((defined $j->{interval_1}->{is}) || (defined $j->{interval_1}->{is}))
+		if ((defined $j->{interval_1}->{is}) || (defined $j->{interval_2}->{is}))
 		{
 			my $scj = Breseq::Shared::junction_name_split($j->{seq_id});
 			$j->{interval_1}->{start} = $scj->{interval_1}->{start};
@@ -670,61 +670,60 @@ sub annotate_rearrangements
 			$j->{overlap} = $scj->{overlap};
 		}
 		
+		## Determine which side of the junction is the IS and which is unique
+		## these point to the correct initial interval...
 		if (defined $j->{interval_1}->{is})
 		{
 			if (abs($j->{interval_1}->{is}->{start} - $j->{interval_1}->{start}) <= 20)
 			{
-				$j->{is} = $j->{interval_1};
-				$j->{is}->{is}->{side_key} = 'start';
+				$j->{is_interval} = $j->{interval_1};
+				$j->{is_interval}->{is}->{side_key} = 'start';
 			}
 			elsif (abs($j->{interval_1}->{is}->{end} - $j->{interval_1}->{start}) <= 20 )
 			{
-				$j->{is} = $j->{interval_1};
-				$j->{is}->{is}->{side_key} = 'end';
+				$j->{is_interval} = $j->{interval_1};
+				$j->{is_interval}->{is}->{side_key} = 'end';
 			}
-			$j->{uc} = $j->{interval_2};
+			$j->{unique_interval} = $j->{interval_2};
 		}
 		
 		if (!defined $j->{is} && defined $j->{interval_2}->{is})
 		{
 			if (abs($j->{interval_2}->{is}->{start} - $j->{interval_2}->{start}) <= 20)
 			{
-				$j->{is} = $j->{interval_2};
-				$j->{is}->{is}->{side_key} = 'start';
+				$j->{is_interval} = $j->{interval_2};
+				$j->{is_interval}->{is}->{side_key} = 'start';
 			}
 			elsif (abs($j->{interval_2}->{is}->{end} - $j->{interval_2}->{start}) <= 20 )
 			{
-				$j->{is} = $j->{interval_2};
-				$j->{is}->{is}->{side_key} = 'end';
+				$j->{is_interval} = $j->{interval_2};
+				$j->{is_interval}->{is}->{side_key} = 'end';
 			}
-			$j->{uc} = $j->{interval_1};
+			$j->{unique_interval} = $j->{interval_1};
 		}
 		
-		next if (!defined $j->{is});
-		next if ($j->{overlap} < 0);
+		## Ah, we don't have an is, we are done
+		next if (!defined $j->{is_interval});
 		
-		my $j_overlap = $j->{overlap};
+		## Ah, there is no overlap to play with, we are done
+		next if ($j->{overlap} <= 0);
 		
-		### first, adjust the repetitive sequence boundary
-		if ($j_overlap > 0)
-		{
-			my $move_dist = abs($j->{is}->{start} - $j->{is}->{is}->{$j->{is}->{is}->{side_key}});
-			next if ($move_dist > $j_overlap);
-			if ($j->{is}->{start} + $j->{is}->{strand} * $move_dist == $j->{is}->{is}->{$j->{is}->{is}->{side_key}})			
-			{
-				$j->{is}->{start} += $j->{is}->{strand} * $move_dist;
-				$j_overlap -= $move_dist;
-			}
-		}
+		## The following code implies $j->{overlap} > 0
+				
+		### first, adjust the repetitive sequence boundary to get as close to the IS as possible
+		my $move_dist = abs($j->{is_interval}->{start} - $j->{is_interval}->{is}->{$j->{is_interval}->{is}->{side_key}});
+		$move_dist = $j->{overlap} if ($move_dist > $j->{overlap});
+		$j->{is_interval}->{start} += $j->{is_interval}->{strand} * $move_dist;
+		$j->{overlap} -= $move_dist;
+		$j->{is_interval}->{end} = $j->{is_interval}->{start};
 		
-		### second, adjust the unique sequence side
-		if ($j_overlap > 0)
-		{
-			$j->{uc}->{start} += $j->{uc}->{strand} * $j_overlap;			
-		}
+		### second, adjust the unique sequence side with any remaining overlap
+		$j->{unique_interval}->{start} += $j->{unique_interval}->{strand} * $j->{overlap};	
+		$j->{unique_interval}->{end} = $j->{unique_interval}->{start};
+				
 		$j->{overlap} = 0;
-			
 	}
+	
 }
 
 
