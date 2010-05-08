@@ -298,7 +298,7 @@ sub _alignments_to_candidate_junctions
 {
 	my ($settings, $summary, $ref_seq_info, $candidate_junctions, $fai, $header, @al) = @_;
 
-	my $verbose = 1;
+	my $verbose = 0;
 
 	### TO DO:
 	### We don't want to predict a new junction from hits that are completely contained
@@ -377,6 +377,8 @@ sub _alignments_to_candidate_junctions
 				# (alternately we could reverse complement if the first base was an A or C, for example
 				## it seems like there could possibly be some cross-talk between sides of junctions here, that
 				## could snarl things up, but I'm not sure?
+				## TO DO: I'm too tired of this section to do it now, but the correct sequence strand could be 
+				## decided (keeping track of all the reversals) in _alignments_to_candidate_junction
 				$redundant_junction_sides{Breseq::Fastq::revcom($side_1_ref_seq)}->{$junction_coord_1} += $r1-1;
 				$redundant_junction_sides{Breseq::Fastq::revcom($side_2_ref_seq)}->{$junction_coord_2} += $r2-1;
 				
@@ -431,7 +433,7 @@ sub _alignments_to_candidate_junctions
 		}
 		
 		my $junction_id = Breseq::Shared::junction_name_join(@junction_id_list);
-		print "$junction_id\n";
+		print "$junction_id\n" if ($verbose);
 		
 		## initialize candidate junction if it didn't exist
 		## they are redundant by default, until proven otherwise
@@ -453,8 +455,8 @@ sub _alignments_to_candidate_junctions
 		## Update score of junction and the redundancy of each side
 		$cj->{score} += $score;
 		
-		print "Totals: $total_r1, $total_r2\n";
-		print "Redundancy (before): $cj->{r1} ($cj->{L1}) $cj->{r2} ($cj->{L2})\n";		
+		print "Totals: $total_r1, $total_r2\n" if ($verbose);
+		print "Redundancy (before): $cj->{r1} ($cj->{L1}) $cj->{r2} ($cj->{L2})\n" if ($verbose);		
 		my $side_1_ref_match_length = length $side_1_ref_seq;
 		my $side_2_ref_match_length = length $side_2_ref_seq;
 		
@@ -477,7 +479,7 @@ sub _alignments_to_candidate_junctions
 			$cj->{L2} = $side_1_ref_match_length;
 			$cj->{r2} = ($total_r2 > 1) ? 1 : 0;;
 		}		
-		print "Redundancy (after): $cj->{r1} ($cj->{L1}) $cj->{r2} ($cj->{L2})\n";		
+		print "Redundancy (after): $cj->{r1} ($cj->{L1}) $cj->{r2} ($cj->{L2})\n" if ($verbose);		
 
 
 	}	

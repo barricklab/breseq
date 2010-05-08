@@ -232,7 +232,7 @@ sub tam_write_moved_alignment
 	
 	## $junction_pos gives the position in the CJS 
 	## where we want to split the read and only count one side
-	## For side 1, we go UP to this coordinate
+	## For side 1, we go up to this coordinate
 	## Side 2 begins after this coordinate
 	my $junction_pos = $junction_flanking;
 	if ($junction_side == 1) 
@@ -270,12 +270,12 @@ sub tam_write_moved_alignment
 	my $test_read_pos = $a_read_start;
 	my $test_junction_pos = $a->start;
 	
-	## its possible that due to overlap we are already past the position we want
+	## it's possible that due to overlap we are already past the position we want
 	if ($test_junction_pos > $junction_pos)
 	{
 		$test_junction_pos = $junction_pos;
 	}
-	else
+	else	
 	{
 		## Remove CIGAR operations until we have enough length for side 1	
 		while (my $c = shift @$cigar_list)
@@ -328,6 +328,7 @@ sub tam_write_moved_alignment
 	#  In the candidate junction:
 	my $total_junction_match_length = $a->end - $a->start + 1;	
 	my $side_1_junction_match_length = $test_junction_pos - $a->start;
+	$side_1_junction_match_length = 0 if ($side_1_junction_match_length < 0);
 	my $side_2_junction_match_length = $total_junction_match_length - $side_1_junction_match_length;
 	my $junction_match_length = ($junction_side == 1) ? $side_1_junction_match_length : $side_2_junction_match_length;
 	print STDERR "total_junction_match_length = $total_junction_match_length\n" if ($verbose);
@@ -336,8 +337,21 @@ sub tam_write_moved_alignment
 	print STDERR "junction_match_length = $junction_match_length\n" if ($verbose);
 
 	# we could still be short of the junction
-	my $short_of_junction =  $a->start + $total_junction_match_length - 1 - $junction_pos;
-	$short_of_junction = 0 if ($short_of_junction > 0);
+	my $short_of_junction;
+	if ($junction_side == 1)
+	{
+		$short_of_junction =  $a->start + $total_junction_match_length - 1 - $junction_pos; 
+		#we end short of the junction if < 0, so we have to offset the reference position by this
+		$short_of_junction = 0 if ($short_of_junction > 0);
+	}
+	# or started matching after the junction
+	else #($junction_side = 2)
+	{
+		$short_of_junction =  $a->start - $junction_pos - 1;
+		#we start past the junction if > 0, so we have to offset the reference position by this
+		$short_of_junction = 0 if ($short_of_junction < 0);		
+	}
+	print STDERR "Short of junction = $short_of_junction\n" if ($verbose);
 
 	# Lots of debug output to make sure the CIGAR list is proper...
 	print STDERR "CIGAR for each side:\n" . Dumper(\@side_1_cigar_list, \@side_2_cigar_list) if ($verbose);
@@ -374,7 +388,7 @@ sub tam_write_moved_alignment
 	## Recall:
 	##  strand == 1 means this is the lowest coordinate of that junction side sequence
 	##  strand == 0 means this is the highest coordinate	
-	my $reference_match_start = ($reference_strand == 1) ? $reference_pos + $short_of_junction : $reference_pos - $junction_match_length + 1 + $short_of_junction;
+	my $reference_match_start = ($reference_strand == 1) ? $reference_pos + $short_of_junction : $reference_pos - ($junction_match_length - 1) - $short_of_junction;
 	
 	####
 	#### Convert the CIGAR list back to a CIGAR string

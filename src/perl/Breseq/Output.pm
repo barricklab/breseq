@@ -527,55 +527,60 @@ sub html_junction_table_string
 			my $j2 = $list_ref->[$i+1];		
 				
 			#must be same IS
-			next if (!defined $j1->{is} || !defined $j2->{is});
-			next if ($j1->{is}->{is}->{gene} ne $j2->{is}->{is}->{gene});
+			next if (!defined $j1->{is_interval} || !defined $j2->{is_interval});
+			next if ($j1->{is_interval}->{is}->{gene} ne $j2->{is_interval}->{is}->{gene});
 				
 			#must have a non-negative overlap
 			next if ($j1->{overlap} < 0);
 			next if ($j2->{overlap} < 0);
 
 			#must be close together in real coords
-			next if (abs($j1->{uc}->{start} - $j2->{uc}->{start}) > 20);
+			next if (abs($j1->{unique_interval}->{start} - $j2->{unique_interval}->{start}) > 20);
 		
 			#the first unique coords are going into the IS element
-			my $uc1_strand = $j1->{uc}->{strand};
-			my $uc2_strand = $j2->{uc}->{strand};
+			my $uc1_strand = $j1->{unique_interval}->{strand};
+			my $uc2_strand = $j2->{unique_interval}->{strand};
 			next if ($uc1_strand != -$uc2_strand);
 		
-			my $is1_strand = - $j1->{is}->{strand} * $j1->{is}->{is}->{strand} * $j1->{uc}->{strand};
-			my $is2_strand = - $j2->{is}->{strand} * $j2->{is}->{is}->{strand} * $j2->{uc}->{strand};
+			my $is1_strand = - $j1->{is_interval}->{strand} * $j1->{is_interval}->{is}->{strand} * $j1->{unique_interval}->{strand};
+			my $is2_strand = - $j2->{is_interval}->{strand} * $j2->{is_interval}->{is}->{strand} * $j2->{unique_interval}->{strand};
 			my $is_strand = ($is1_strand == $is2_strand) ? $is2_strand : '0';
 		
 			### add additional information to the first match, which will 
 			### cause a new line to be drawn in the new junction table
 		
-			$j1->{is_insertion}->{start} = ($uc1_strand == -1) ? $j2->{uc}->{start} : $j1->{uc}->{start};
-			$j1->{is_insertion}->{end} = ($uc1_strand == -1) ? $j1->{uc}->{start} : $j2->{uc}->{start};
+			$j1->{is_insertion}->{start} = ($uc1_strand == -1) ? $j2->{unique_interval}->{start} : $j1->{unique_interval}->{start};
+			$j1->{is_insertion}->{end} = ($uc1_strand == -1) ? $j1->{unique_interval}->{start} : $j2->{unique_interval}->{start};
 			$j1->{is_insertion}->{seq_id} = (defined $j1->{interval_1}->{is}) ? $j1->{interval_2}->{seq_id} : $j1->{interval_1}->{seq_id};
 			
-			$j1->{is_insertion}->{family} = $j1->{is}->{is}->{gene};
+			$j1->{is_insertion}->{family} = $j1->{is_interval}->{is}->{gene};
 			$j1->{is_insertion}->{is_strand} = $is_strand;
-			$j1->{is_insertion}->{is_size} = abs($j1->{is}->{is}->{end} - $j1->{is}->{is}->{start} + 1);
+			$j1->{is_insertion}->{is_size} = abs($j1->{is_interval}->{is}->{end} - $j1->{is_interval}->{is}->{start} + 1);
 			$j1->{is_insertion}->{after_pos} = $j1->{is_insertion}->{start} - 1;
 			$j1->{is_insertion}->{dup_size} = abs($j1->{is_insertion}->{end} - $j1->{is_insertion}->{start}) + 1;
 		
 			#sometimes the ends of the IS are not quite flush		
-			if ($j1->{is}->{strand} == -1)
+			if ($j1->{is_interval}->{strand} == -1)
 			{
-				$j1->{is_insertion}->{gap_left} = $j1->{is}->{start} - $j1->{is}->{is}->{end};
+				$j1->{is_insertion}->{gap_left} = $j1->{is_interval}->{is}->{end} - $j1->{is_interval}->{start};
 			}
 			else
 			{
-				$j1->{is_insertion}->{gap_left} = $j1->{is}->{start} - $j1->{is}->{is}->{start};
+				$j1->{is_insertion}->{gap_left} = $j1->{is_interval}->{is}->{start} - $j1->{is_interval}->{start};
 			}
 		
-			if ($j2->{is}->{strand} == -1)
+			if ($j2->{is_interval}->{strand} == -1)
 			{
-				$j1->{is_insertion}->{gap_right} = $j2->{is}->{start} - $j2->{is}->{is}->{end};
+				$j1->{is_insertion}->{gap_right} = $j2->{is_interval}->{is}->{end} - $j2->{is_interval}->{start};
 			}
 			else
 			{
-				$j1->{is_insertion}->{gap_right} = $j2->{is}->{start} - $j2->{is}->{is}->{start};
+				$j1->{is_insertion}->{gap_right} = $j2->{is_interval}->{is}->{start} - $j2->{is_interval}->{start};
+			}
+			
+			if ($j1->{unique_interval}->{strand} *  $j1->{unique_interval}->{read_side} == +1)
+			{
+				($j1->{is_insertion}->{gap_right}, $j1->{is_insertion}->{gap_left}) = ($j1->{is_insertion}->{gap_left}, $j1->{is_insertion}->{gap_right});
 			}
 		}
 	}
@@ -638,7 +643,13 @@ sub html_junction_table_string
 			$s = "+$isi->{is_size} (+$isi->{dup_size}) bp";
 			$output_str.= td({-colspan=>1, -align=>"center"}, $s);			
 			$s = '';
-			$s .= "Warning! Not flush to repeat. Offsets: $isi->{gap_left}/$isi->{gap_right}" if ($isi->{gap_left} || $isi->{gap_right});
+			
+			if ($isi->{gap_left} || $isi->{gap_right})
+			{
+				$isi->{gap_left} = sprintf("%+d", $isi->{gap_left});
+				$isi->{gap_right} = sprintf("%+d", $isi->{gap_right});
+				$s .= "Not flush to repeat ends. Inserted bases: $isi->{gap_left}/$isi->{gap_right}";
+			}
 			$output_str.= td({-colspan=>1}, $s);			
 			$output_str.= end_Tr;
 			
