@@ -156,8 +156,10 @@ sub tam_write_read_alignments
 	}
 }
 
-## We have to project the alignment onto a different reference sequence
-## one end marked as a continuation so this can be shown in alignment.
+## Project a read alignment from a candidate junction to the reference sequence
+##  and write out the result in a TAM file.
+## This is probably the most complicated function in all of breseq.
+## Abandon all hope, ye who enter here.
 
 sub tam_write_moved_alignment
 {
@@ -168,10 +170,11 @@ sub tam_write_moved_alignment
 		$seq_id, 				# REFERENCE: sequence id
 		$reference_pos, 		# REFERENCE: position of this junction side
 		$reference_strand, 		# REFERENCE: strand of this junction side (-1 or +1)
-		$reference_overlap, 	# REFERENCE: amount of overlap in the reference coords
+		$reference_overlap, 	# REFERENCE: amount of overlap in the reference coords on this side
 		$junction_side, 		# CJ: side of the junction (1 or 2) that we are writing
 		$junction_flanking, 	# CJ: number of bases before overlap in the candidate junction sequence 
 		$junction_overlap, 		# CJ: amount of overlap in the candidate junction sequence that we aligned to
+		$overlap_side,          # CJ: side we include the overlap on
 		$trim					# CJ: list with two items, indicating what the trim on each end is
 	) = @_;
 
@@ -229,6 +232,8 @@ sub tam_write_moved_alignment
 		$flags ^= 16; #bitwise XOR to flip strand
 	}
 	
+	## this isn't allowed!
+	die if ($reference_overlap < 0);
 	
 	## $junction_pos gives the position in the CJS 
 	## where we want to split the read and only count one side
@@ -237,21 +242,18 @@ sub tam_write_moved_alignment
 	my $junction_pos = $junction_flanking;
 	if ($junction_side == 1) 
 	{
-		## offset to include the redundant part for overlaps > 0 on junction_side 1
-		$junction_pos += $junction_overlap if ($junction_overlap > 0);
+		## Offset position to include additional sequence on this side
+		$junction_pos += $reference_overlap;		
 	}
 	elsif ($junction_side == 2)
 	{
 		## Offset past the common part of the alignment overlap:
 		##   for negative values, this is a gap
 		##   for positive values, this is the common sequence
-  		$junction_pos += abs($junction_overlap);
-
+		$junction_pos += abs($junction_overlap);
+		
 		## Offset backwards for any REMAINING positive overlap.
-		## that was not resolved in favor of one side or the other
-		## Note that this results in aligning this overlap region
-		## TWICE to the reference genome and may not be ideal
-		$junction_pos -= $reference_overlap if ($reference_overlap > 0)
+		$junction_pos -= $reference_overlap;
 	}
 	print STDERR "junction_pos = $junction_pos\n" if ($verbose);
 	
