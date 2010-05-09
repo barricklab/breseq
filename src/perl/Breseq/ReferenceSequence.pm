@@ -127,7 +127,7 @@ sub load_ref_seq_info
 					my $is;
 					$is->{gene} = get_tag($Feature, "mobile_element");
 					$is->{gene} =~ s/insertion sequence:// if ($is->{gene});
-					$is->{gene} = "unknown" if (!defined ($is->{gene}));
+					$is->{gene} = "unknown" if (!$is->{gene});
 					$is->{product} = "repeat region";
 
 					$is->{start} = $Feature->start;
@@ -658,17 +658,17 @@ sub annotate_rearrangements
 		## coordinates and overlap... otherwise we already used up the overlap,
 		## potentially in the wrong direction...
 			
-		if ((defined $j->{interval_1}->{is}) || (defined $j->{interval_2}->{is}))
-		{
-			my $scj = Breseq::Shared::junction_name_split($j->{seq_id});
-			$j->{interval_1}->{start} = $scj->{interval_1}->{start};
-			$j->{interval_1}->{end}   = $scj->{interval_1}->{end};
-
-			$j->{interval_2}->{start} = $scj->{interval_2}->{start};
-			$j->{interval_2}->{end}   = $scj->{interval_2}->{end};
-
-			$j->{overlap} = $scj->{overlap};
-		}
+		#if ((defined $j->{interval_1}->{is}) || (defined $j->{interval_2}->{is}))
+		#{
+		#	my $scj = Breseq::Shared::junction_name_split($j->{seq_id});
+		#	$j->{interval_1}->{start} = $scj->{interval_1}->{start};
+		#	$j->{interval_1}->{end}   = $scj->{interval_1}->{end};
+#
+#			$j->{interval_2}->{start} = $scj->{interval_2}->{start};
+#			$j->{interval_2}->{end}   = $scj->{interval_2}->{end};
+#
+#			$j->{overlap} = $scj->{overlap};
+#		}
 		
 		## Determine which side of the junction is the IS and which is unique
 		## these point to the correct initial interval...
@@ -702,7 +702,7 @@ sub annotate_rearrangements
 			$j->{unique_interval} = $j->{interval_1};
 		}
 		
-		## Ah, we don't have an is, we are done
+		## Ah, we don't have an IS, we are done
 		next if (!defined $j->{is_interval});
 		
 		## Ah, there is no overlap to play with, we are done
@@ -723,7 +723,7 @@ sub annotate_rearrangements
 				
 		$j->{overlap} = 0;
 	}
-	
+		
 }
 
 

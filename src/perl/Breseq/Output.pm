@@ -525,7 +525,7 @@ sub html_junction_table_string
 		{
 			my $j1 = $list_ref->[$i];
 			my $j2 = $list_ref->[$i+1];		
-				
+								
 			#must be same IS
 			next if (!defined $j1->{is_interval} || !defined $j2->{is_interval});
 			next if ($j1->{is_interval}->{is}->{gene} ne $j2->{is_interval}->{is}->{gene});
@@ -1076,6 +1076,7 @@ sub read_genome_diff
 		
 		$mut->{seq_id} = $mut->{key};
 		
+		## regenerate the alignment overlap from the junction_key
 		my $scj = Breseq::Shared::junction_name_split($mut->{key});
 		$mut->{alignment_overlap} = $scj->{overlap};
 	}		
