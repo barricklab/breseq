@@ -1,9 +1,9 @@
-7496c2f3f254311c1dd2fa7d6b9d68ba190b34f3  ./07_error_calibration/lambda_mixed_population.error_counts.tab
-6c4af8279b859b2a9534af7a52d627194d654528  ./07_error_calibration/lambda_mixed_population.error_rates.tab
+7fddbc975be517a42f1176f295a095fd28fbfb09  ./07_error_calibration/lambda_mixed_population.error_counts.tab
+2e6600131acc4f23c25f059130d7b75ad2c18887  ./07_error_calibration/lambda_mixed_population.error_rates.tab
 545233f721db28be7ed08aa320b1df0e7dc39c77  ./07_error_calibration/NC_001416.unique_only_coverage_distribution.tab
 1bf76eb78efaccaadfadffb26b49f67ed3192231  ./08_mutation_identification/NC_001416.cnv_coverage.tab
 043fac9a4964681d9a8524577f21980c30698568  ./08_mutation_identification/NC_001416.coverage.tab
-b4d80fcb991e5b8355cc7e7490a9464332bc2084  ./08_mutation_identification/NC_001416.mutations.tab
+ebce9c6c73443aae3052b559ad63c4205b90dc41  ./08_mutation_identification/NC_001416.mutations.tab
 3881b382af7ef7da270e6611f438bb6bd38c2c53  ./output/alignment/JCT_NC_001416_21737_21737_alignment.html
 fbc9b9fe8097a9acc5eb703ea328e9cf6608633c  ./output/alignment/JCT_NC_001416_27734_27734_alignment.html
 e5854a7c4ec406bc8d6b75b11994311529381ecc  ./output/alignment/JCT_NC_001416__21737__0__NC_001416__27729__1__5____35__35__0__0_36_40_alignment.html
@@ -42,6 +42,6 @@ ae4ef53f49fc54270bd603257547a1e071c841ce  ./output/alignment/NC_001416_47973_479
 9b66d10145d0e2a1dd8c6b1ba00744d690eab157  ./output/alignment/NC_001416_48470_48470_alignment.html
 58eb27d8f6e9f872baa89f9e6f912dbaf23c9e95  ./output/alignment/NC_001416_48503_48503_alignment.html
 c8a5a05e66e4ce082a8f1ef936a1a61b4df2c29a  ./output/coverage/deletions.tab
-b6d52f853b6f657ca19f91cfd0cd144c80e62eed  ./output/index.html
+22ca615869ab06fb3300766c078b40ec384a6e48  ./output/index.html
 297ef5f8e6db8b38e396409e7d9a24ca92cb163e  ./output/marginal.html
 04e005cb4be38bf7056b839f13a43be3ea64d658  ./output/mutations.html

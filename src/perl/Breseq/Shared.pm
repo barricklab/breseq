@@ -347,9 +347,9 @@ sub tam_write_moved_alignment
 	# or started matching after the junction
 	else #($junction_side = 2)
 	{
-		$short_of_junction =  $a->start - $junction_pos - 1;
+		$short_of_junction =  -($a->start - $junction_pos - 1);
 		#we start past the junction if > 0, so we have to offset the reference position by this
-		$short_of_junction = 0 if ($short_of_junction < 0);		
+		$short_of_junction = 0 if ($short_of_junction > 0);		
 	}
 	print STDERR "Short of junction = $short_of_junction\n" if ($verbose);
 
@@ -388,7 +388,7 @@ sub tam_write_moved_alignment
 	## Recall:
 	##  strand == 1 means this is the lowest coordinate of that junction side sequence
 	##  strand == 0 means this is the highest coordinate	
-	my $reference_match_start = ($reference_strand == 1) ? $reference_pos + $short_of_junction : $reference_pos - ($junction_match_length - 1) - $short_of_junction;
+	my $reference_match_start = ($reference_strand == 1) ? $reference_pos + $short_of_junction : $reference_pos - ($junction_match_length - 1) + $short_of_junction;
 	
 	####
 	#### Convert the CIGAR list back to a CIGAR string
