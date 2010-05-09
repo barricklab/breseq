@@ -389,7 +389,7 @@ sub do_annotate
 	print STDERR "Annotating rearrangements...\n";
 	Breseq::ReferenceSequence::annotate_rearrangements($settings, undef, $ref_seq_info, \@hybrids);
 
-	print Dumper(@hybrids);
+	#print Dumper(@hybrids);
 
 	foreach my $hybrid (@hybrids)
 	{

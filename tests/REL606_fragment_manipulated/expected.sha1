@@ -1,9 +1,9 @@
 b35bce0c6e5f29097e933314e49e39b79bd86796  ./07_error_calibration/REL606-5.unique_only_coverage_distribution.tab
-cf3c6d3223912bb3bb97e2ad002bae40ced5f51c  ./07_error_calibration/REL606.fragment.1.error_counts.tab
-26899cf397af36d46513990f929a16e0cac6ef04  ./07_error_calibration/REL606.fragment.1.error_rates.tab
+4fee3db4b499a0fb953820d444104082fae56b19  ./07_error_calibration/REL606.fragment.1.error_counts.tab
+5e7bd251bbbcc2424973af0bfa6d7c36be1ba416  ./07_error_calibration/REL606.fragment.1.error_rates.tab
 2f4d76e61cffb7a19ba4c91e8852bb9228862a84  ./08_mutation_identification/REL606-5.cnv_coverage.tab
 41eda79e34d723e099935ecd65cb9e2ef4661eea  ./08_mutation_identification/REL606-5.coverage.tab
-55059eb858ff5625497dfb86190ea125f9a1f8b0  ./08_mutation_identification/REL606-5.mutations.tab
+5dddff352ce9bf6ebf82e3e5e38e93a8f609c970  ./08_mutation_identification/REL606-5.mutations.tab
 d3048522ac80719ada59683baafa5aaf12132d83  ./output/alignment/JCT_REL606-5_16_16_alignment.html
 a8eaf29c5d1ce704881283112f6d73721e13af07  ./output/alignment/JCT_REL606-5_1_1_alignment.html
 887bca84301a9be64e3858a6d43f7108b091d289  ./output/alignment/JCT_REL606-5_28206_28206_alignment.html
@@ -33,6 +33,6 @@ d3be746eecac0a98ceb263c9f89fb9491e531274  ./output/alignment/REL606-5_1002_1002_
 4127bd7cd6b7669e0a72566509f96d21e89c4eda  ./output/alignment/REL606-5_35207_35207_alignment.html
 834c505dbfaaf159b62614d3c787792ace710677  ./output/alignment/REL606-5_4000_4000_alignment.html
 c8a5a05e66e4ce082a8f1ef936a1a61b4df2c29a  ./output/coverage/deletions.tab
-31b254d106455bf5ebb78da122874ca8921ee250  ./output/index.html
+36b142e2b4e2cf1a9462ad89e622e499848b2db1  ./output/index.html
 297ef5f8e6db8b38e396409e7d9a24ca92cb163e  ./output/marginal.html
 8ecca320dbbde771e0ed3ccb821c0882854c05f5  ./output/mutations.html
