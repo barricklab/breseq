@@ -1039,7 +1039,7 @@ sub _test_junction
 	### If we passed all the tests, or we were only testing degenerate junctions
 	### add degenerate matches and make them unavailable for other junctions	
 	### degenerate matches is a hash of junction_ids of read_names
-	if (!$failed || !scalar (@unique_matches == 0))
+	if (!$failed) # || !scalar (@unique_matches == 0))
 	{
 		if (defined $degenerate_matches_ref->{$key})
 		{
