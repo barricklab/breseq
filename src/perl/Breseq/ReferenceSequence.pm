@@ -528,25 +528,25 @@ sub annotate_rearrangements
 	our ($settings, $summary, $ref_seq_info, $rearrangements_ref) = @_;	
 	
 	foreach my $item (@$rearrangements_ref)
-	{				
-		## This additional information is used for the complex reference line
+	{			
+		## This additional information is used for the complex reference line.
+		## Note that it is completely determined by the original candidate junction sequence 
+		## positions and overlap: alignment_pos and alignment_overlap.
 		my $alignment_reference_info_1 = { 
 			truncate_end => $item->{flanking_left}, 
-			ghost_end => $item->{interval_1}->{end}, 
+			ghost_end => $item->{interval_1}->{alignment_pos}, 
 			ghost_strand => $item->{interval_1}->{strand},
 			ghost_seq_id => $item->{interval_1}->{seq_id}
 		};
 		$alignment_reference_info_1->{truncate_end} += $item->{alignment_overlap} if ($item->{alignment_overlap} > 0);
 
-
 		my $alignment_reference_info_2 = { 
 			truncate_start => $item->{flanking_left}+1, 
-			ghost_start => $item->{interval_2}->{start}, 
+			ghost_start => $item->{interval_2}->{alignment_pos}, 
 			ghost_strand => $item->{interval_2}->{strand},
 			ghost_seq_id => $item->{interval_2}->{seq_id}
 		};
 		$alignment_reference_info_2->{truncate_start} -= $item->{alignment_overlap} if ($item->{alignment_overlap} < 0);
-		$alignment_reference_info_2->{ghost_start} -= ($item->{alignment_overlap} - $item->{overlap}) if ($item->{alignment_overlap} - $item->{overlap} > 0);
 		
 		push @{$item->{alignment_reference_info_list}}, $alignment_reference_info_1, $alignment_reference_info_2;
 		$item->{alignment_empty_change_line} = 1;

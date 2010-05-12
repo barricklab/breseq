@@ -175,7 +175,8 @@ sub write
 		return (($a->{seq_id} cmp $b->{seq_id}) || ($a_pos <=> $b_pos));
 	}
 
-	@{$self->{mutations}} = sort by_seq_id_pos @{$self->{mutations}} if (!$no_sort);
+# sorting broken
+#	@{$self->{mutations}} = sort by_seq_id_pos @{$self->{mutations}} if (!$no_sort);
 
 	foreach my $mut (@{$self->{mutations}})
 	{

@@ -377,6 +377,7 @@ sub do_simulate
 	pod2usage(1) if $help;
 	pod2usage(-exitstatus => 0, -verbose => 2) if $man;
 	my ( $input ) = @ARGV;
+	pod2usage(1) if (!$input);
 
 	my $ref_i = Bio::SeqIO->new( -file => "<$input");
 	my $ref_seq = $ref_i->next_seq;

@@ -348,11 +348,12 @@ sub correct_alignments
 	{
 		my ($failed, $has_non_overlap_only) = _test_junction($key, \%matched_junction, \%degenerate_matches, \%junction_test_info, $minimum_best_score, $minimum_best_score_difference, $reference_fai, $ref_seq_info, $RREF, $reference_header, $RCJ, $candidate_junction_header);
 
-		if (!$failed)
+		if (!$failed && !$has_non_overlap_only)
 		{
 			push @new_keys, $key; 
 		}
-		elsif (!$has_non_overlap_only)
+#		else
+		elsif ($has_non_overlap_only)
 		{
 			push @rejected_keys, $key;
 		}
@@ -370,12 +371,13 @@ sub correct_alignments
 		next if (!defined $degenerate_matches{$key}); #they can be removed 
 		
 		my ($failed, $has_non_overlap_only) = _test_junction($key, \%matched_junction, \%degenerate_matches, \%junction_test_info, $minimum_best_score, $minimum_best_score_difference, $reference_fai, $ref_seq_info, $RREF, $reference_header, $RCJ, $candidate_junction_header);
-		if (!$failed)
+		if (!$failed && !$has_non_overlap_only)
 		{
 			@sorted_keys = sort {-(scalar keys %{$degenerate_matches{$a}} <=> scalar keys %{$degenerate_matches{$b}})} keys %degenerate_matches;
 			push @new_keys, $key;
 		}
-		elsif (!$has_non_overlap_only)
+#		else
+		elsif ($has_non_overlap_only)
 		{
 			push @rejected_keys, $key;
 		}
@@ -1227,7 +1229,8 @@ sub _junction_to_hybrid_list_item
 		if (defined $j->{is_interval})
 		{			
 			### first, adjust the repetitive sequence boundary to get as close to the IS as possible
-			my $move_dist = abs($j->{is_interval}->{start} - $j->{is_interval}->{is}->{$j->{is_interval}->{is}->{side_key}});
+			my $move_dist = $j->{is_interval}->{strand} * ($j->{is_interval}->{is}->{$j->{is_interval}->{is}->{side_key}} - $j->{is_interval}->{start});
+			$move_dist = 0 if ($move_dist < 0);
 			$move_dist = $j->{overlap} if ($move_dist > $j->{overlap});
 			$j->{is_interval}->{start} += $j->{is_interval}->{strand} * $move_dist;
 			$j->{overlap} -= $move_dist;

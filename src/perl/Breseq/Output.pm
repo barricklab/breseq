@@ -531,8 +531,12 @@ sub html_junction_table_string
 			next if ($j1->{is_interval}->{is}->{gene} ne $j2->{is_interval}->{is}->{gene});
 				
 			#must have a non-negative overlap
-			next if ($j1->{overlap} < 0);
-			next if ($j2->{overlap} < 0);
+#			next if ($j1->{overlap} < 0);
+#			next if ($j2->{overlap} < 0);
+
+			## positive overlap should be resolved by now
+			die if ($j1->{overlap} > 0);
+			die if ($j2->{overlap} > 0);
 
 			#must be close together in real coords
 			next if (abs($j1->{unique_interval}->{start} - $j2->{unique_interval}->{start}) > 20);
@@ -562,20 +566,20 @@ sub html_junction_table_string
 			#sometimes the ends of the IS are not quite flush		
 			if ($j1->{is_interval}->{strand} == -1)
 			{
-				$j1->{is_insertion}->{gap_left} = $j1->{is_interval}->{is}->{end} - $j1->{is_interval}->{start};
+				$j1->{is_insertion}->{gap_left} = $j1->{is_interval}->{start} - $j1->{is_interval}->{is}->{end} + abs($j1->{overlap});
 			}
 			else
 			{
-				$j1->{is_insertion}->{gap_left} = $j1->{is_interval}->{is}->{start} - $j1->{is_interval}->{start};
+				$j1->{is_insertion}->{gap_left} = $j1->{is_interval}->{is}->{start} - $j1->{is_interval}->{start} + abs($j1->{overlap});
 			}
 		
 			if ($j2->{is_interval}->{strand} == -1)
 			{
-				$j1->{is_insertion}->{gap_right} = $j2->{is_interval}->{is}->{end} - $j2->{is_interval}->{start};
+				$j1->{is_insertion}->{gap_right} = $j2->{is_interval}->{start} - $j2->{is_interval}->{is}->{end} + abs($j2->{overlap});
 			}
 			else
 			{
-				$j1->{is_insertion}->{gap_right} = $j2->{is_interval}->{is}->{start} - $j2->{is_interval}->{start};
+				$j1->{is_insertion}->{gap_right} = $j2->{is_interval}->{is}->{start} - $j2->{is_interval}->{start} + abs($j2->{overlap});
 			}
 			
 			if ($j1->{unique_interval}->{strand} *  $j1->{unique_interval}->{read_side} == +1)
@@ -634,23 +638,19 @@ sub html_junction_table_string
 			$output_str.= td({-colspan=>1}, '');
 			$output_str.= td({-colspan=>1, -align=>"center"}, $isi->{seq_id});
 			$output_str.= td({-colspan=>1, -align=>"center"}, $isi->{after_pos});
+			$output_str.= td({-colspan=>1, -align=>"center"}, "+$isi->{dup_size} bp");
 			$output_str.= td({-colspan=>1}, '');
-			$output_str.= td({-colspan=>1}, '');
-			my $s = "$isi->{family}&nbsp;(";
+			
+			my $s = '';
+			$s .=  "+$isi->{gap_left}&nbsp;bp&nbsp;" if ($isi->{gap_left} > 0);
+			$s .=  "&Delta;" . abs($isi->{gap_left}) . "&nbsp;bp&nbsp;" if ($isi->{gap_left} < 0);
+			$s .= "$isi->{family}&nbsp;(";
 			$s .= (($isi->{is_strand}==+1) ? '+' : (($isi->{is_strand}==-1) ? '&minus;' : '0'));
 			$s .= ")";
-			$output_str.= td({-colspan=>1, -align=>"center"}, $s);
-			$s = "+$isi->{is_size} (+$isi->{dup_size}) bp";
-			$output_str.= td({-colspan=>1, -align=>"center"}, $s);			
-			$s = '';
-			
-			if ($isi->{gap_left} || $isi->{gap_right})
-			{
-				$isi->{gap_left} = sprintf("%+d", $isi->{gap_left});
-				$isi->{gap_right} = sprintf("%+d", $isi->{gap_right});
-				$s .= "Not flush to repeat ends. Inserted bases: $isi->{gap_left}/$isi->{gap_right}";
-			}
-			$output_str.= td({-colspan=>1}, $s);			
+			$s .=  "&nbsp;+$isi->{gap_right}&nbsp;bp" if ($isi->{gap_right} > 0);
+			$s .=  "&nbsp;&Delta;" . abs($isi->{gap_right}) . "&nbsp;bp" if ($isi->{gap_right} < 0);
+			$output_str.= td({-colspan=>2, -align=>"center"}, $s);
+			$output_str.= td({-colspan=>1, -align=>"center"}, '');			
 			$output_str.= end_Tr;
 			
 			$body_countdown = 2;
@@ -986,21 +986,26 @@ sub write_genome_diff
 		my $item = { 
 			type => 'JCT',
 			evidence => "mosaic_read",
-			seq_id => $hyb->{interval_1}->{seq_id},
-			pos => $hyb->{interval_1}->{start},
-			redundant => $hyb->{interval_1}->{redundant},
-			strand => $hyb->{interval_1}->{strand},
-			seq_id_2 => $hyb->{interval_2}->{seq_id},
-			pos_2 => $hyb->{interval_2}->{start},
-			redundant_2 => $hyb->{interval_2}->{redundant},
-			strand_2 => $hyb->{interval_2}->{strand},
+			
+			side_1_seq_id => $hyb->{interval_1}->{seq_id},
+			side_1_pos => $hyb->{interval_1}->{start},
+			side_1_redundant => $hyb->{interval_1}->{redundant},
+			side_1_strand => $hyb->{interval_1}->{strand},
+			side_1_overlap => $hyb->{interval_1}->{overlap},
+			
+			side_2_seq_id => $hyb->{interval_2}->{seq_id},
+			side_2_pos => $hyb->{interval_2}->{start},
+			side_2_redundant => $hyb->{interval_2}->{redundant},
+			side_2_strand => $hyb->{interval_2}->{strand},
+			side_2_overlap => $hyb->{interval_2}->{overlap},
+			
 			key => $hyb->{key},
 			overlap => $hyb->{overlap},
 			total_reads => $hyb->{total_reads},
 			start => $hyb->{start},
 			end => $hyb->{end},
 			flanking_left => $hyb->{flanking_left},
-			flanking_right => $hyb->{flanking_left},
+			flanking_right => $hyb->{flanking_right},
 		};
 		
 		my $test_info = $hyb->{test_info};
@@ -1062,23 +1067,27 @@ sub read_genome_diff
 	@{$mutation_info->{hybrids}} = grep {$_->{type} eq 'JCT'} $gd->mutations;
 	foreach my $mut (@{$mutation_info->{hybrids}})
 	{
-		$mut->{interval_1}->{start} = $mut->{pos};
-		$mut->{interval_1}->{end} = $mut->{pos};
-		$mut->{interval_1}->{strand} = $mut->{strand};
-		$mut->{interval_1}->{seq_id} = $mut->{seq_id};
-		$mut->{interval_1}->{redundant} = $mut->{redundant};
+		$mut->{interval_1}->{start} = $mut->{side_1_pos};
+		$mut->{interval_1}->{end} = $mut->{side_1_pos};
+		$mut->{interval_1}->{strand} = $mut->{side_1_strand};
+		$mut->{interval_1}->{seq_id} = $mut->{side_1_seq_id};
+		$mut->{interval_1}->{redundant} = $mut->{side_1_redundant};
+		$mut->{interval_1}->{overlap} = $mut->{side_1_overlap};
 
-		$mut->{interval_2}->{start} = $mut->{pos_2};
-		$mut->{interval_2}->{end} = $mut->{pos_2};
-		$mut->{interval_2}->{strand} = $mut->{strand_2};
-		$mut->{interval_2}->{seq_id} = $mut->{seq_id_2};
-		$mut->{interval_2}->{redundant} = $mut->{redundant_2};
-		
+		$mut->{interval_2}->{start} = $mut->{side_2_pos};
+		$mut->{interval_2}->{end} = $mut->{side_2_pos};
+		$mut->{interval_2}->{strand} = $mut->{side_2_strand};
+		$mut->{interval_2}->{seq_id} = $mut->{side_2_seq_id};
+		$mut->{interval_2}->{redundant} = $mut->{side_2_redundant};
+		$mut->{interval_2}->{overlap} = $mut->{side_2_overlap};
+
 		$mut->{seq_id} = $mut->{key};
 		
 		## regenerate the alignment overlap from the junction_key
 		my $scj = Breseq::Shared::junction_name_split($mut->{key});
 		$mut->{alignment_overlap} = $scj->{overlap};
+		$mut->{interval_1}->{alignment_pos} = $scj->{interval_1}->{start};
+		$mut->{interval_2}->{alignment_pos} = $scj->{interval_2}->{start};
 	}		
 	return $mutation_info;
 }
