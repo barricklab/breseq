@@ -1185,7 +1185,7 @@ sub _junction_to_hybrid_list_item
 		
 	## Determine which side of the junction is the IS and which is unique
 	## these point to the correct initial interval...
-	if (defined $j->{interval_1}->{is})
+	if (defined $j->{interval_1}->{is} && !defined $j->{interval_2}->{is})
 	{
 		if (abs($j->{interval_1}->{is}->{start} - $j->{interval_1}->{start}) <= 20)
 		{
@@ -1200,7 +1200,7 @@ sub _junction_to_hybrid_list_item
 		$j->{unique_interval} = $j->{interval_2};
 	}
 	
-	if (!defined $j->{is} && defined $j->{interval_2}->{is})
+	if (!defined $j->{interval_1}->{is} && defined $j->{interval_2}->{is})
 	{
 		if (abs($j->{interval_2}->{is}->{start} - $j->{interval_2}->{start}) <= 20)
 		{
@@ -1213,6 +1213,13 @@ sub _junction_to_hybrid_list_item
 			$j->{is_interval}->{is}->{side_key} = 'end';
 		}
 		$j->{unique_interval} = $j->{interval_1};
+	}
+	
+	## both were IS! -- define as redundant here
+	if (defined $j->{interval_1}->{is} && defined $j->{interval_2}->{is})
+	{
+		$j->{interval_1}->{redundant} = 1;
+		$j->{interval_2}->{redundant} = 1;
 	}
 	
 	#by default, overlap is included on both sides of the junction (possibly changed below)
@@ -1243,6 +1250,7 @@ sub _junction_to_hybrid_list_item
 			$j->{unique_interval}->{overlap} -= $j->{overlap};
 			
 			$j->{overlap} = 0;
+			$j->{is_interval}->{redundant} = 1;
 		}
 	
 		### Should this be "elsif" or "if"?
