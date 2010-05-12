@@ -121,6 +121,9 @@ sub identify_candidate_junctions
 	my @combined_candidate_junctions;
 	my $handled_seq;
 	my %ids_to_print;
+	
+	## We should really sort the candidate junctions on something (seq_id then position?) so that we get 
+	## consistent results!!
 		
 	JUNCTION_SEQ: foreach my $junction_seq (keys %$candidate_junctions)
 	{	
@@ -849,6 +852,7 @@ sub _alignments_to_candidate_junction
 		($hash_strand_1, $hash_strand_2) = ($hash_strand_2, $hash_strand_1);
 		($hash_seq_id_1, $hash_seq_id_2) = ($hash_seq_id_2, $hash_seq_id_1);
 		($redundancy_1, $redundancy_2) = ($redundancy_2, $redundancy_1);
+		($flanking_left, $flanking_right) = ($flanking_right, $flanking_left);
 		($ref_seq_matched_1, $ref_seq_matched_2) = ($ref_seq_matched_2, $ref_seq_matched_1);
 			
 		$junction_seq_string = Breseq::Fastq::revcom($junction_seq_string);
