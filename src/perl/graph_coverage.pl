@@ -242,8 +242,8 @@ downsample <- function(m, factor)
 	#foreach column
 	for (j in c('unique_top_cov', 'unique_bot_cov', 'redundant_top_cov', 'redundant_bot_cov')) 
 	{
-		print(j)
-		print (m[[j]]);
+		#print(j)
+		#print (m[[j]]);
 		
 		new_c = c(1:new_entries);
 		for (i in 1:new_entries) 
@@ -310,10 +310,10 @@ if (downsample_by == -1)
 	}
 	downsample_by = 10**downsample_by
 }
-print (downsample_by);
+#print (downsample_by);
 	
 cov <- downsample(cov, downsample_by)
-print(cov)
+#print(cov)
 
 END
 

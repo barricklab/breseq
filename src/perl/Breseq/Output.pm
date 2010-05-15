@@ -642,13 +642,13 @@ sub html_junction_table_string
 			$output_str.= td({-colspan=>1}, '');
 			
 			my $s = '';
-			$s .=  "+$isi->{gap_left}&nbsp;bp&nbsp;" if ($isi->{gap_left} > 0);
-			$s .=  "&Delta;" . abs($isi->{gap_left}) . "&nbsp;bp&nbsp;" if ($isi->{gap_left} < 0);
+			$s .=  "+$isi->{gap_left}&nbsp;bp&nbsp;::&nbsp;" if ($isi->{gap_left} > 0);
+			$s .=  "&Delta;" . abs($isi->{gap_left}) . "&nbsp;bp&nbsp;::&nbsp;" if ($isi->{gap_left} < 0);
 			$s .= "$isi->{family}&nbsp;(";
 			$s .= (($isi->{is_strand}==+1) ? '+' : (($isi->{is_strand}==-1) ? '&minus;' : '0'));
 			$s .= ")";
-			$s .=  "&nbsp;+$isi->{gap_right}&nbsp;bp" if ($isi->{gap_right} > 0);
-			$s .=  "&nbsp;&Delta;" . abs($isi->{gap_right}) . "&nbsp;bp" if ($isi->{gap_right} < 0);
+			$s .=  "&nbsp;::&nbsp;+$isi->{gap_right}&nbsp;bp" if ($isi->{gap_right} > 0);
+			$s .=  "&nbsp;::&nbsp;&Delta;" . abs($isi->{gap_right}) . "&nbsp;bp" if ($isi->{gap_right} < 0);
 			$output_str.= td({-colspan=>2, -align=>"center"}, $s);
 			$output_str.= td({-colspan=>1, -align=>"center"}, '');			
 			$output_str.= end_Tr;

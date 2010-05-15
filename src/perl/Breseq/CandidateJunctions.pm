@@ -490,7 +490,8 @@ sub _alignments_to_candidate_junctions
 }
 
 
-### UNUSED -- may dramatically help 454 data analysis, longer reads
+### May dramatically help 454 data analysis, longer reads will lead to 
+### more spurious candidate junctions.
 ### experimental: this should pay attention to how many mismatches there are!@
 sub _uncontained_alignments
 {

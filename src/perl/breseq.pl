@@ -756,14 +756,15 @@ if (!-e $output_done_file_name)
 	##   (because only then do we have the distribution to fit)
 	##   but we have to choose which junctions we believe BEFORE counting
 	##   (because we put their split alignments in the BAM file)
+	## Ideally we would do this after step 7, then remove the offending read pieces from the BAM file
+	## before proceeding to SNP calling.
 	##
-	### We have to apply a coverage cutoff at this last stage
-#	foreach my $hybrid (@hybrids)
-#	{
-#		my $coverage_cutoff_1 = $settings->{unique_coverage}->{$hybrid->{interval_1}->{seq_id}}->{junction_coverage_cutoff};
-#		my $coverage_cutoff_2 = $settings->{unique_coverage}->{$hybrid->{interval_2}->{seq_id}}->{junction_coverage_cutoff};
-#		$hybrid->{marginal} = 1 if (($hybrid->{test_info}->{total_reads} < $coverage_cutoff_1) &&  ($hybrid->{test_info}->{total_reads} < $coverage_cutoff_2));
-#	}
+	foreach my $hybrid (@hybrids)
+	{
+		my $coverage_cutoff_1 = $settings->{unique_coverage}->{$hybrid->{interval_1}->{seq_id}}->{junction_coverage_cutoff};
+		my $coverage_cutoff_2 = $settings->{unique_coverage}->{$hybrid->{interval_2}->{seq_id}}->{junction_coverage_cutoff};
+		$hybrid->{marginal} = 1 if (($hybrid->{total_reads} < $coverage_cutoff_1) &&  ($hybrid->{total_reads} < $coverage_cutoff_2));
+	}
 	###
 	
 	
