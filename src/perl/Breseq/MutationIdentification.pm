@@ -626,7 +626,7 @@ sub identify_mutations
 					$mut->{best_coverage_string} = $best_cov->{-1} . "/" . $best_cov->{1};
 					$mut->{insert_start} = $insert_count;
 					$mut->{insert_end} = $insert_count;
-					
+					$mut->{frequency} = 1; ## this is not a polymorphism
 
 					if ($e_value_call >= $settings->{mutation_log10_e_value_cutoff})
 					{
@@ -646,25 +646,26 @@ sub identify_mutations
 					$best_cov->{1} = 0 if (!defined $best_cov->{1});
 					$best_cov->{-1} = 0 if (!defined $best_cov->{-1});
 
-					my $mut;
+					my $mut = $polymorphism;
 					$mut->{start} = $pos;
 					$mut->{end} = $pos;
 					$mut->{seq_id} = $seq_id;
 					
 					$mut->{ref_seq} = $ref_base;
 					
-					### NOTE: This neglects the case where neither the first nor second base is the reference base					
+					### NOTE: This neglects the case where neither the first nor second base is the reference base! Should almost never happen					
 #					die if (($polymorphism->{first_base} ne $ref_base) && ($polymorphism->{second_base} ne $ref_base));
 					
-					if ($polymorphism->{second_base} eq $ref_base)
+					if ($mut->{second_base} eq $ref_base)
 					{
-						($polymorphism->{first_base}, $polymorphism->{second_base}) = ($polymorphism->{second_base}, $polymorphism->{first_base});
-						$polymorphism->{fraction} = 1-$polymorphism->{fraction};
-					}	
+						($mut->{first_base}, $mut->{second_base}) = ($mut->{second_base}, $mut->{first_base});
+						$mut->{frequency} = 1-$mut->{frequency};
+					}						
 					
-					$mut->{new_seq} = $polymorphism->{second_base};
-					$mut->{polymorphism} = $polymorphism;
-					$mut->{quality} = $polymorphism->{log10_e_value};		
+					$mut->{new_seq} = $mut->{second_base};
+					#$mut->{polymorphism} = $polymorphism;
+					$mut->{polymorphism} = 1;
+					$mut->{quality} = $mut->{log10_e_value};		
 					$mut->{total_coverage_string} = $total_cov->{-1} . "/" . $total_cov->{1};
 					$mut->{best_coverage_string} = $best_cov->{-1} . "/" . $best_cov->{1};
 					$mut->{insert_start} = $insert_count;
@@ -700,7 +701,6 @@ sub identify_mutations
 		
 		push @mutations, @marginal_mutations;
 		remove_deletions_overlapping_mutations(\@deletions, \@mutations);
-
 
 		#a hash reference of hash references of list references
 		my $new_read_mut_info = {
@@ -921,7 +921,7 @@ sub _predict_polymorphism
 	# }
 	
 	$polymorphism = {
-		'fraction' => $max_likelihood_fr_first_base,
+		'frequency' => $max_likelihood_fr_first_base,
 		'first_base' => $first_base,
 		'second_base' => $second_base,
 		'p_value' => $chi_squared_pr,

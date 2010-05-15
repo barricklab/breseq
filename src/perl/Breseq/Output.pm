@@ -394,18 +394,15 @@ sub html_snp_table_string
 		
 		if ($c->{polymorphism})
 		{
-			
-			my $ref_base_str = $c->{ref_seq};
-			$ref_base_str .= " ($c->{ref_seq} ne $c->{polymorphism}->{first_base})" if ($c->{ref_seq} ne $c->{polymorphism}->{first_base});
-			
-			my $display_fraction = sprintf "%.4f", 1-$c->{polymorphism}->{fraction};
-			my $display_fisher_p_value = sprintf "%.1E", $c->{polymorphism}->{fisher_strand_p_value};
+						
+			my $display_frequency = sprintf "%.4f", 1-$c->{frequency};
+			my $display_fisher_p_value = sprintf "%.1E", $c->{fisher_strand_p_value};
 			
 			$output_str.= td(make_nonbreaking($c->{seq_id}));
 			$output_str.= td({-align=>"right"}, $c->{gene_shifted_start});
 			$output_str.= td(
 				[
-					code("$ref_base_str&rarr;$c->{new_seq}") . "&nbsp;(FR=$display_fraction, SFET=$display_fisher_p_value)", 
+					code("$c->{ref_seq}&rarr;$c->{new_seq}") . "&nbsp;(FR=$display_frequency, SFET=$display_fisher_p_value)", 
 					$display_quality, 
 					$best_coverage_string,
 					$total_coverage_string,
@@ -957,10 +954,16 @@ sub write_genome_diff
 			quality => $snp->{quality},
 			tot_cov => $snp->{total_coverage_string},
 			new_cov => $snp->{best_coverage_string},
-			
+			frequency => $snp->{frequency},
 		};
 		$item->{marginal} = 1 if ($snp->{marginal});
-		
+		$item->{polymorphism} = 1 if ($snp->{polymorphism});
+
+		if ($item->{polymorphism})
+		{
+			$item->{log10_e_value} = $snp->{log10_e_value};
+			$item->{fisher_strand_p_value} = $snp->{fisher_strand_p_value};
+		}
 		$gd->add_mutation($item);
 	}
 
