@@ -331,15 +331,14 @@ sub do_annotate
 		{
 			my $accept = 1;
 
+			print Dumper($c);
+
 			if ($c->{polymorphism})
 			{
-				my $polymorphism = $c->{polymorphism};
-				#print Dumper($polymorphism);
-
-				$accept = 0 if ($polymorphism->{log10_e_value} < $settings->{polymorphism_log10_e_value_cutoff});
-				$accept = 0 if ($polymorphism->{fisher_strand_p_value} < $settings->{polymorphism_fisher_strand_p_value_cutoff});
-				$accept = 0 if ($polymorphism->{fraction} < $settings->{polymorphism_fraction_cutoff});
-				$accept = 0 if ($polymorphism->{fraction} > 1-$settings->{polymorphism_fraction_cutoff});	
+				$accept = 0 if ($c->{log10_e_value} < $settings->{polymorphism_log10_e_value_cutoff});
+				$accept = 0 if ($c->{fisher_strand_p_value} < $settings->{polymorphism_fisher_strand_p_value_cutoff});
+				$accept = 0 if ($c->{frequency} < $settings->{polymorphism_frequency_cutoff});
+				$accept = 0 if ($c->{fraction} > 1-$settings->{polymorphism_frequency_cutoff});	
 			}	
 
 			print "ACCEPT: $accept\n";

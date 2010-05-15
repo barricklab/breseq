@@ -3,14 +3,14 @@
 <plist version="1.0">
 <dict>
 	<key>currentDocument</key>
-	<string>Breseq/Fastq.pm</string>
+	<string>Breseq/Settings.pm</string>
 	<key>documents</key>
 	<array>
 		<dict>
 			<key>filename</key>
 			<string>breseq.pl</string>
 			<key>lastUsed</key>
-			<date>2010-05-13T12:36:19Z</date>
+			<date>2010-05-15T03:21:12Z</date>
 		</dict>
 		<dict>
 			<key>filename</key>
@@ -120,14 +120,14 @@
 			<key>caret</key>
 			<dict>
 				<key>column</key>
-				<integer>19</integer>
+				<integer>17</integer>
 				<key>line</key>
-				<integer>466</integer>
+				<integer>457</integer>
 			</dict>
 			<key>firstVisibleColumn</key>
 			<integer>0</integer>
 			<key>firstVisibleLine</key>
-			<integer>445</integer>
+			<integer>441</integer>
 		</dict>
 		<key>Breseq/GenomeDiff.pm</key>
 		<dict>
@@ -164,28 +164,28 @@
 			<key>caret</key>
 			<dict>
 				<key>column</key>
-				<integer>0</integer>
+				<integer>38</integer>
 				<key>line</key>
-				<integer>46</integer>
+				<integer>669</integer>
 			</dict>
 			<key>firstVisibleColumn</key>
 			<integer>0</integer>
 			<key>firstVisibleLine</key>
-			<integer>36</integer>
+			<integer>634</integer>
 		</dict>
 		<key>Breseq/Output.pm</key>
 		<dict>
 			<key>caret</key>
 			<dict>
 				<key>column</key>
-				<integer>19</integer>
+				<integer>3</integer>
 				<key>line</key>
-				<integer>649</integer>
+				<integer>402</integer>
 			</dict>
 			<key>firstVisibleColumn</key>
 			<integer>0</integer>
 			<key>firstVisibleLine</key>
-			<integer>622</integer>
+			<integer>362</integer>
 		</dict>
 		<key>Breseq/ReferenceSequence.pm</key>
 		<dict>
@@ -206,29 +206,29 @@
 			<key>caret</key>
 			<dict>
 				<key>column</key>
-				<integer>48</integer>
+				<integer>3</integer>
 				<key>line</key>
-				<integer>153</integer>
+				<integer>143</integer>
 			</dict>
 			<key>columnSelection</key>
 			<false/>
 			<key>firstVisibleColumn</key>
 			<integer>0</integer>
 			<key>firstVisibleLine</key>
-			<integer>128</integer>
+			<integer>125</integer>
 			<key>selectFrom</key>
 			<dict>
 				<key>column</key>
-				<integer>39</integer>
+				<integer>26</integer>
 				<key>line</key>
-				<integer>153</integer>
+				<integer>143</integer>
 			</dict>
 			<key>selectTo</key>
 			<dict>
 				<key>column</key>
-				<integer>59</integer>
+				<integer>3</integer>
 				<key>line</key>
-				<integer>153</integer>
+				<integer>143</integer>
 			</dict>
 		</dict>
 		<key>Breseq/Shared.pm</key>
@@ -236,28 +236,28 @@
 			<key>caret</key>
 			<dict>
 				<key>column</key>
-				<integer>0</integer>
+				<integer>5</integer>
 				<key>line</key>
-				<integer>489</integer>
+				<integer>398</integer>
 			</dict>
 			<key>firstVisibleColumn</key>
 			<integer>0</integer>
 			<key>firstVisibleLine</key>
-			<integer>461</integer>
+			<integer>365</integer>
 		</dict>
 		<key>breseq.pl</key>
 		<dict>
 			<key>caret</key>
 			<dict>
 				<key>column</key>
-				<integer>46</integer>
+				<integer>90</integer>
 				<key>line</key>
-				<integer>757</integer>
+				<integer>765</integer>
 			</dict>
 			<key>firstVisibleColumn</key>
 			<integer>0</integer>
 			<key>firstVisibleLine</key>
-			<integer>728</integer>
+			<integer>734</integer>
 		</dict>
 		<key>fastq_utils.pl</key>
 		<dict>
@@ -337,6 +337,6 @@
 	<key>showFileHierarchyDrawer</key>
 	<true/>
 	<key>windowFrame</key>
-	<string>{{266, 44}, {997, 834}}</string>
+	<string>{{359, 83}, {950, 753}}</string>
 </dict>
 </plist>
