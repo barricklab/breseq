@@ -517,7 +517,7 @@ EOF
 
 	{
 		## One-tailed test p=0.05, Bonferroni correction
-		my $pr_cutoff = 1/$sequence_length*0.05;
+		my $pr_cutoff = 1/$sequence_length; # *0.05;
 		my $i = 0;
 		while ( Math::CDF::pnbinom($i, $summary->{unique_coverage}->{$seq_id}->{nbinom_size_parameter}, $summary->{unique_coverage}->{$seq_id}->{nbinom_prob_parameter}) < $pr_cutoff ) 
 		{ 
