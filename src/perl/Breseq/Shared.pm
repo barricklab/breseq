@@ -178,7 +178,7 @@ sub tam_write_moved_alignment
 		$trim					# CJ: list with two items, indicating what the trim on each end is
 	) = @_;
 
-	my $verbose = 1;
+	my $verbose = 0;
 	
 	if ($verbose)
 	{
