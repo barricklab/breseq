@@ -178,7 +178,7 @@ sub tam_write_moved_alignment
 		$trim					# CJ: list with two items, indicating what the trim on each end is
 	) = @_;
 
-	my $verbose = 0;
+	my $verbose = 1;
 	
 	if ($verbose)
 	{
@@ -390,7 +390,9 @@ sub tam_write_moved_alignment
 	## Recall:
 	##  strand == 1 means this is the lowest coordinate of that junction side sequence
 	##  strand == 0 means this is the highest coordinate	
-	my $reference_match_start = ($reference_strand == 1) ? $reference_pos + $short_of_junction : $reference_pos - ($junction_match_length - 1) + $short_of_junction;
+#	my $reference_match_start = ($reference_strand == 1) ? $reference_pos + $short_of_junction : $reference_pos - ($junction_match_length - 1) + $short_of_junction;
+	my $reference_match_start = ($reference_strand == 1) ? $reference_pos + $read_strand * $short_of_junction : $reference_pos - ($junction_match_length - 1) + $read_strand * $short_of_junction;
+#   $read_strand
 	
 	####
 	#### Convert the CIGAR list back to a CIGAR string
