@@ -39,6 +39,7 @@ use Math::CDF;
 ###
 
 our @base_list = ('A', 'T', 'C', 'G', '.');
+our $minimum_error_probability = 1E-256;
 
 =head2 alignment_database_calibrate
 
@@ -639,7 +640,7 @@ sub load_error_file
 		my @line_list = split "\t", $this_line;
 		my $this_quality = $line_list[0];
 		for (my $i=1; $i<scalar @header_list; $i++)
-		{
+		{			
 			$error_hash->{$this_quality}->{$header_list[$i]} = $line_list[$i];
 		}
 	}
@@ -805,6 +806,7 @@ sub error_counts_to_error_rates_empirical
 			foreach my $b2 (@bases)
 			{
 				$error_rates_hash->{$q}->{"$b1$b2"} = $error_counts_hash->{$q}->{"$b1$b2"} / $total_this_base;
+				$error_rates_hash->{$q}->{"$b1$b2"} = $minimum_error_probability if ($error_rates_hash->{$q}->{"$b1$b2"} < $minimum_error_probability);
 			}			
 		}
 	}
@@ -843,6 +845,19 @@ EOF
 		print RSCRIPT <<EOF;	
 myfit <- multinom( $response_string ~ $regression_string, X, na.action=na.fail, subset=($subset_string != 0), maxit=10000, MaxNWts=10000)
 Z = predict(myfit, X, type="probs")
+
+min_value <- $minimum_error_probability;
+for (i in 1:dim(Z)[1])
+{
+	for (j in 1:dim(Z)[2])
+	{
+		if (Z[i,j] < min_value)
+		{
+			Z[i,j] <- min_value;
+		}
+	}
+}
+
 Y = cbind(Y,Z)
 EOF
 	}
