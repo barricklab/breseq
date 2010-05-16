@@ -229,7 +229,7 @@ sub initialize_2
 {
 	my ($self) = @_;
 	
-	$self->{version} = '2010-04-21';
+	$self->{version} = '0.03';
 	$self->{byline} = "Version $self->{version} | Developed by Barrick JE and Knoester DB";
 	$self->{script_path} = $FindBin::Bin;
 

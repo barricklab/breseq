@@ -966,6 +966,11 @@ sub _calculate_log10_likelihood
 		my $pr_ref_base_given_obs 
 			= $pr_first_base * $error_rates->[$item->{fastq_file_index}]->{$item->{quality}}->{$first_base . $item->{base}}
 			+ (1-$pr_first_base) * $error_rates->[$item->{fastq_file_index}]->{$item->{quality}}->{$second_base . $item->{base}};
+		
+		print "Probability of error is zero.\n  Fastq File = $item->{fastq_file_index}\n"
+		  .  "  Quality = $item->{quality}\n  Error = $first_base$item->{base} $second_base$item->{base}\n"
+		  if ($pr_ref_base_given_obs == 0);
+			
 		$log10_likelihood += log($pr_ref_base_given_obs);		
 	}	
 	$log10_likelihood /= log(10);
