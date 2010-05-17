@@ -955,6 +955,9 @@ sub write_genome_diff
 			tot_cov => $snp->{total_coverage_string},
 			new_cov => $snp->{best_coverage_string},
 			frequency => $snp->{frequency},
+			bases => $snp->{bases},
+			qualities => $snp->{qualities},
+			strands => $snp->{strands},
 		};
 		$item->{marginal} = 1 if ($snp->{marginal});
 		$item->{polymorphism} = 1 if ($snp->{polymorphism});

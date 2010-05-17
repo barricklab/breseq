@@ -222,6 +222,7 @@ sub initialize_1
 	$self->{polymorphism_log10_e_value_cutoff} = 2;
 	$self->{mutation_log10_e_value_cutoff} = 2;			# log10 of evidence required for SNP calls 
 	$self->{polymorphism_fisher_strand_p_value_cutoff} = 0.05;
+	$self->{polymorphism_frequency_cutoff} = 0;   # cut off if < this or > 1-this
 }
 
 ## called after getting options from command line

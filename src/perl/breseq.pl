@@ -765,8 +765,7 @@ if (!-e $output_done_file_name)
 		my $coverage_cutoff_2 = $settings->{unique_coverage}->{$hybrid->{interval_2}->{seq_id}}->{junction_coverage_cutoff};
 		$hybrid->{marginal} = 1 if (($hybrid->{total_reads} < $coverage_cutoff_1) &&  ($hybrid->{total_reads} < $coverage_cutoff_2));
 	}
-	###
-	
+	###	
 	
 	my $full_genome_diff_file_name = $settings->file_name('full_genome_diff_file_name');
 	my $filtered_genome_diff_file_name = $settings->file_name('filtered_genome_diff_file_name');
