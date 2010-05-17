@@ -322,37 +322,8 @@ sub do_annotate
 	##
 
 	### make alignments first because we fill in a link field used by the summary file
-	my @composite_list; ##
+	my @composite_list;
 
-	### screen out polymorphism predictions at this step
-	if ($settings->{polymorphism_prediction})
-	{
-		foreach my $c (@mutations)
-		{
-			my $accept = 1;
-
-			print Dumper($c);
-
-			if ($c->{polymorphism})
-			{
-				$accept = 0 if ($c->{log10_e_value} < $settings->{polymorphism_log10_e_value_cutoff});
-				$accept = 0 if ($c->{fisher_strand_p_value} < $settings->{polymorphism_fisher_strand_p_value_cutoff});
-				$accept = 0 if ($c->{frequency} < $settings->{polymorphism_frequency_cutoff});
-				$accept = 0 if ($c->{fraction} > 1-$settings->{polymorphism_frequency_cutoff});	
-			}	
-
-			print "ACCEPT: $accept\n";
-
-			push @composite_list, $c if ($accept);
-		}
-		@mutations = @composite_list;
-	}
-	else
-	{
-		push @composite_list, @mutations;
-	}
-
-	# 
 	### look, we have to invent intervals for the deletions so each has an upstream and downstream.
 	foreach my $deletion (@deletions)
 	{
@@ -365,6 +336,8 @@ sub do_annotate
 		push @composite_list, $deletion->{upstream_interval};
 		push @composite_list, $deletion->{downstream_interval};
 	}	
+
+	push @composite_list, @mutations;
 
 	### look, we have to invent intervals for the non-rearranged versions of the hybrid reads as well.
 	### proper alignments can be made as part of the composite list

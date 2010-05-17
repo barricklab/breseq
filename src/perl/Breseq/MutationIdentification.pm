@@ -114,7 +114,6 @@ sub identify_mutations
 		### hash reference that is returned, contains fields:
 		###  'mutations', 'unknowns', 'deletions'
 		our @mutations = ();
-		our @marginal_mutations = ();
 		our @unknowns = ();
 		our @deletions = ();
 	
@@ -357,7 +356,7 @@ sub identify_mutations
 					$pos_info->{$base}->{redundant_cov}->{1} = 0;
 					$pos_info->{$base}->{redundant_cov}->{-1} = 0;
 					$pos_info->{$base}->{mutation_cov}->{1} = 0;
-					$pos_info->{$base}->{mutation_cov}->{-1} = 0;					
+					$pos_info->{$base}->{mutation_cov}->{-1} = 0;
 				}
 			
 				## keep track of coverage for deletion prediction
@@ -422,9 +421,9 @@ sub identify_mutations
 					my $base = ($indel < $insert_count) ? '.' : substr($a->qseq,$p->qpos + $insert_count,1);
 					##don't use bases without qualities!!
 					next if ($base =~ /[nN]/);
-	
+
 					##### update coverage if this is not a deletion in read relative to reference
-					### note that we count trimmed reads here, but not when looking for short indel mutations...
+					### note that we count trimmed reads here, but not when looking for short indel mutations...	
 					if ($redundancy == 1)
 					{
 						## this is only used when reporting coverage for within-read indels
@@ -446,23 +445,13 @@ sub identify_mutations
 						$this_position_coverage->{raw_redundant}->{$strand}++;			
 						$pos_info->{$base}->{redundant_cov}->{$strand}++;
 					}
-
-					#sum up observations
-					$this_position_coverage->{unique}->{total} = $this_position_coverage->{unique}->{-1} + $this_position_coverage->{unique}->{+1};
-					$this_position_coverage->{redundant}->{total} = $this_position_coverage->{redundant}->{-1} + $this_position_coverage->{redundant}->{+1};
-					$this_position_coverage->{raw_redundant}->{total} = $this_position_coverage->{raw_redundant}->{-1} + $this_position_coverage->{raw_redundant}->{+1};
-					$this_position_coverage->{total} = $this_position_coverage->{unique}->{total} + $this_position_coverage->{redundant}->{total};
-					
-					$s->{coverage}->{unique_total}++ if ($this_position_unique_only_coverage && ($insert_count == 0));
-							
+	
 					## EXPERIMENTAL -- moved above		
 					##don't use information from trimmed reads!!
 					next if ($trimmed);
 					
 					##don't use information from redundant reads!!
-					next if ($redundancy > 1);
-					
-					
+					next if ($redundancy > 1);				
 					
 					my $quality;
 					if ($indel < $insert_count) 
@@ -478,9 +467,9 @@ sub identify_mutations
 						$quality = $a->qscore->[$p->qpos+$insert_count];
 					}
 					
-					##### this is for polymorphism prediction
+					##### this is for polymorphism prediction and making strings
 					push @$pdata, { base => $base, quality => $quality, strand => $strand, fastq_file_index => $fastq_file_index };
-				
+								
 					##### deal with base calls
 					foreach my $hypothetical_base (@base_list)
 					{				
@@ -502,7 +491,17 @@ sub identify_mutations
 						$pr_base_hash->{$hypothetical_base} += $log10_correct_rates->[$fastq_file_index]->{$quality}->{$base_key};
 						$pr_not_base_hash->{$hypothetical_base} += $log10_error_rates->[$fastq_file_index]->{$quality}->{$base_key};
 					}
-				} #end ALIGNMENT
+				} #end FOREACH READ
+					
+				## PER POSITION/INSERT COUNT
+					
+				#sum up coverage observations
+				$this_position_coverage->{unique}->{total} = $this_position_coverage->{unique}->{-1} + $this_position_coverage->{unique}->{+1};
+				$this_position_coverage->{redundant}->{total} = $this_position_coverage->{redundant}->{-1} + $this_position_coverage->{redundant}->{+1};
+				$this_position_coverage->{raw_redundant}->{total} = $this_position_coverage->{raw_redundant}->{-1} + $this_position_coverage->{raw_redundant}->{+1};
+				$this_position_coverage->{total} = $this_position_coverage->{unique}->{total} + $this_position_coverage->{redundant}->{total};
+				
+				$s->{coverage}->{unique_total}++ if ($this_position_unique_only_coverage && ($insert_count == 0));
 					
 				#we are trying to find the base with the most support;		
 				#calculate ratios of each base to all other bases
@@ -526,7 +525,6 @@ sub identify_mutations
 
 				#otherwise correct to an e-value based on genome size
 				#could correct only to number of unique positions???
-				
 				if (defined $pr_call)
 				{
 					$e_value_call = $pr_call - $log10_ref_length;
@@ -552,7 +550,8 @@ sub identify_mutations
 					$line .= "\t$base\t" . "\t($bot_cov/$top_cov)";
 				}
 				print MUT "$line\n" if (defined $snps_all_tab_file_name);
-			 
+			
+				my ($base_string, $quality_string, $strand_string) = _pdata_to_strings(@$pdata);
 			
 				###
 				## DELETION DELETION DELETION
@@ -627,16 +626,16 @@ sub identify_mutations
 					$mut->{insert_start} = $insert_count;
 					$mut->{insert_end} = $insert_count;
 					$mut->{frequency} = 1; ## this is not a polymorphism
+					$mut->{bases} = $base_string;
+					$mut->{qualities} = $quality_string;
+					$mut->{strands} = $strand_string;
 
-					if ($e_value_call >= $settings->{mutation_log10_e_value_cutoff})
-					{
-						push @mutations, $mut;
-					}
-					else
+					if ($e_value_call < $settings->{mutation_log10_e_value_cutoff})
 					{
 						$mut->{marginal} = 1;
-						push @marginal_mutations, $mut;
+						push @mutations, $mut;
 					}
+					push @mutations, $mut
 					
 					#print Dumper($mut);
 				}
@@ -670,7 +669,15 @@ sub identify_mutations
 					$mut->{best_coverage_string} = $best_cov->{-1} . "/" . $best_cov->{1};
 					$mut->{insert_start} = $insert_count;
 					$mut->{insert_end} = $insert_count;					
-#					print Dumper($mut);
+					$mut->{bases} = $base_string;
+					$mut->{qualities} = $quality_string;
+					$mut->{strands} = $strand_string;
+					
+					$mut->{marginal} = 1 if ($mut->{log10_e_value} < $settings->{polymorphism_log10_e_value_cutoff});
+					$mut->{marginal} = 1 if ($mut->{fisher_strand_p_value} < $settings->{polymorphism_fisher_strand_p_value_cutoff});
+					$mut->{marginal} = 1 if ($mut->{frequency} < $settings->{polymorphism_frequency_cutoff});
+				 	$mut->{marginal} = 1 if ($mut->{frequency} > 1-$settings->{polymorphism_frequency_cutoff});		
+
 					push @mutations, $mut;
 				}
 			} continue {
@@ -679,10 +686,6 @@ sub identify_mutations
 		}; 
 
 		$bam->pileup($seq_id, $pileup_function);
-
-		#for testing
-		#$bam->pileup("$seq_id:1893000-1894000" ,$pileup_function);
-        #$bam->pileup("$seq_id:1-100000", $pileup_function);
 
 		###
 		## Need to clean up deletions and unknowns that occur at the end
@@ -699,7 +702,6 @@ sub identify_mutations
 		close COV;
 		close MUT;	
 		
-		push @mutations, @marginal_mutations;
 		remove_deletions_overlapping_mutations(\@deletions, \@mutations);
 
 		#a hash reference of hash references of list references
@@ -975,6 +977,19 @@ sub _calculate_log10_likelihood
 	}	
 	$log10_likelihood /= log(10);
 	return $log10_likelihood;
+}
+
+sub _pdata_to_strings
+{
+	my @pdata = @_;
+	
+	@pdata = sort { ($a->{base} cmp $b->{base}) || -($a->{quality} <=> $b->{quality})  } @pdata;
+	
+	my $base_string = join '', map ($_->{base}, @pdata);
+	my $quality_string = join '', map ( (chr($_->{quality}+33)), @pdata);
+	my $strand_string = join '', map ( (($_->{strand}) == -1) ? 1 : 0, @pdata);
+
+	return ($base_string, $quality_string, $strand_string);
 }
 
 sub median {
