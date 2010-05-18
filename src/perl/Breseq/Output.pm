@@ -317,8 +317,8 @@ sub html_snp_table_string
 			"pos", 
 			"mut", 
 			"score", 
-			"cov", 
-			"tot_cov", 
+#			"cov", 
+#			"tot_cov", 
 			"gene position", 
 			"codon change", 
 			"aa change", 
@@ -395,17 +395,18 @@ sub html_snp_table_string
 		if ($c->{polymorphism})
 		{
 						
-			my $display_frequency = sprintf "%.4f", 1-$c->{frequency};
+			my $display_frequency = sprintf "%4.2f", (1-$c->{frequency})*100;
 			my $display_fisher_p_value = sprintf "%.1E", $c->{fisher_strand_p_value};
 			
 			$output_str.= td(make_nonbreaking($c->{seq_id}));
 			$output_str.= td({-align=>"right"}, $c->{gene_shifted_start});
 			$output_str.= td(
 				[
-					code("$c->{ref_seq}&rarr;$c->{new_seq}") . "&nbsp;(FR=$display_frequency, SFET=$display_fisher_p_value)", 
+					code("$c->{ref_seq}&rarr;$c->{new_seq}") . "&nbsp;(\%$display_frequency)",
+#					code("$c->{ref_seq}&rarr;$c->{new_seq}") . "&nbsp;(FR=$display_frequency), SFET=$display_fisher_p_value)", 					 
 					$display_quality, 
-					$best_coverage_string,
-					$total_coverage_string,
+#					$best_coverage_string,
+#					$total_coverage_string,
 					$position, 
 					code($codon_change), 
 					code($aa_change), 
@@ -423,8 +424,8 @@ sub html_snp_table_string
 				[
 					code("$c->{ref_seq}&rarr;$c->{new_seq}"), 
 					$display_quality, 
-					$best_coverage_string,
-					$total_coverage_string,
+#					$best_coverage_string,
+#					$total_coverage_string,
 					$position, 
 					code($codon_change), 
 					code($aa_change), 
