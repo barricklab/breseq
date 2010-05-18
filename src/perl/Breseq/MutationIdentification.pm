@@ -353,8 +353,6 @@ sub identify_mutations
 					$pos_info->{$base}->{unique_cov}->{-1} = 0;
 					$pos_info->{$base}->{unique_trimmed_cov}->{1} = 0;
 					$pos_info->{$base}->{unique_trimmed_cov}->{-1} = 0;
-					$pos_info->{$base}->{redundant_cov}->{1} = 0;
-					$pos_info->{$base}->{redundant_cov}->{-1} = 0;
 					$pos_info->{$base}->{mutation_cov}->{1} = 0;
 					$pos_info->{$base}->{mutation_cov}->{-1} = 0;
 				}
@@ -380,12 +378,18 @@ sub identify_mutations
 				{
 					my $a = $p->alignment;
 									
-					##this setup gives expected behavior from indel!
-					my $indel = $p->indel;
-					$indel = 0 if ($indel < 0);
-					$indel = -1 if ($p->is_del);
+					## This setup gives expected behavior from indel!
+					my $indel = $p->indel;       ## insertions relative to the reference have the 
+												 ## number of this inserted base
+					$indel = 0 if ($indel < 0);  ## substitute such that
+					$indel = -1 if ($p->is_del); ## deletions relative to reference have -1 as indel
 
-					## handle trimming
+					my $redundancy = $a->aux_get('X1');
+					my $fastq_file_index = $a->aux_get('X2');
+					my $strand = $a->reversed ? -1 : +1;
+
+					## Handle trimming
+					## Note that trimming INCLUDES the unaligned bases on each end
 					my $trimmed = 0;
 					my $trim_left = $a->aux_get('XL');  
 					my $trim_right = $a->aux_get('XR');
@@ -393,29 +397,24 @@ sub identify_mutations
 					$trimmed = 1 if ((defined $trim_left) && ($p->qpos+1 <= $trim_left));
 					$trimmed = 1 if ((defined $trim_right) && ($a->query->length-$p->qpos <= $trim_right));
 
-					## EXPERIMENTAL -- moved from below		
-					##don't use information from trimmed reads!!
-#					next if ($trimmed);
-					
 					##also trimmed if up to next position and this is an indel.
-	#				if ($indel != 0)
-	#				{
-	#					$trimmed = 1 if ((defined $trim_left) && ($p->qpos+1 <= $trim_left+1));
-	#					$trimmed = 1 if ((defined $trim_right) && ($a->query->length-$p->qpos <= $trim_right+1));
-	#				}
+					if ($indel != 0)
+					{
+						#remember that qpos is 0-indexed
+						$trimmed = 1 if ((defined $trim_left) && ($p->qpos+1 <= $trim_left)); #so this is position <1
+						$trimmed = 1 if ((defined $trim_right) && ($a->query->length-($p->qpos+1)+1 <= $trim_right)); #this is position+1
+					}
 					
-					my $redundancy = $a->aux_get('X1');
-					my $fastq_file_index = $a->aux_get('X2');
-					my $strand = $a->reversed ? -1 : +1;
+					## These are the start and end coordinates of the aligned part of the read
+					my ($q_start, $q_end) = Breseq::Shared::alignment_query_start_end($a, {no_reverse=>1});
 					
-					### Optionally, ony count reads that completely match
+					### Optionally, only count reads that completely match
 					my $complete_match = 1;
 					if ($settings->{require_complete_match})
 					{
-						my ($q_start, $q_end) = Breseq::Shared::alignment_query_start_end($a, {no_reverse=>1});
 						$complete_match = ($q_start == 1) && ($q_end == $a->l_qseq);
+						next if (!$complete_match);
 					}
-					next if ($settings->{require_complete_match} && !$complete_match);
 					### End complete match condition
 					
 					my $base = ($indel < $insert_count) ? '.' : substr($a->qseq,$p->qpos + $insert_count,1);
@@ -431,7 +430,6 @@ sub identify_mutations
 						
 						$this_position_coverage->{unique}->{$strand}++;
 						$pos_info->{$base}->{unique_cov}->{$strand}++;
-						$pos_info->{$base}->{unique_trimmed_cov}->{$strand}++ if (!$trimmed);
 
 						if ($indel > $insert_count)
 						{
@@ -443,7 +441,6 @@ sub identify_mutations
 						$this_position_unique_only_coverage = 0;
 						$this_position_coverage->{redundant}->{$strand} += 1/$redundancy;			
 						$this_position_coverage->{raw_redundant}->{$strand}++;			
-						$pos_info->{$base}->{redundant_cov}->{$strand}++;
 					}
 	
 					## EXPERIMENTAL -- moved above		
@@ -456,9 +453,13 @@ sub identify_mutations
 					my $quality;
 					if ($indel < $insert_count) 
 					{
+						## We would really like for this to not count any of the insertions unless
+						## the read makes it out of the inserted region (this will be the case if it was aligned)
 						##no information about gap if next position is end of alignment
-						next ALIGNMENT if ($p->qpos+$indel+1 >= $a->query->end);
-					
+						## THIS SHOULD NEVER BE TRUE
+						#next ALIGNMENT if ($p->qpos+$indel+1 >= $q_end);
+						die if ($p->qpos+$indel+1 >= $q_end);
+
 						my $average_quality = POSIX::floor(($a->qscore->[$p->qpos+$indel] + $a->qscore->[$p->qpos+$indel])/2);
 						$quality = $average_quality;
 					}
@@ -466,6 +467,9 @@ sub identify_mutations
 					{
 						$quality = $a->qscore->[$p->qpos+$insert_count];
 					}
+
+					## this is the coverage for SNP counts, tabulate AFTER skipping trimmed reads
+					$pos_info->{$base}->{unique_trimmed_cov}->{$strand}++;
 					
 					##### this is for polymorphism prediction and making strings
 					push @$pdata, { base => $base, quality => $quality, strand => $strand, fastq_file_index => $fastq_file_index };
@@ -509,8 +513,9 @@ sub identify_mutations
 				my $pr_call;
 				foreach my $test_base (keys %$pr_base_hash)
 				{			
+					##obsolete code
 					# 'P' is a special key for evidence against indels
-					next if ($test_base eq 'P');
+					###next if ($test_base eq 'P');
 
 					my $this_pr_call = $pr_base_hash->{$test_base} - $pr_not_base_hash->{$test_base};
 					if ( (!defined $pr_call) || ($this_pr_call > $pr_call) )
@@ -610,7 +615,7 @@ sub identify_mutations
 				{
 					
 					#only once we are here can we be sure there is a $best_base!
-					my $best_cov = $pos_info->{$best_base}->{unique_cov};
+					my $best_cov = $pos_info->{$best_base}->{unique_trimmed_cov};
 					$best_cov->{1} = 0 if (!defined $best_cov->{1});
 					$best_cov->{-1} = 0 if (!defined $best_cov->{-1});
 
@@ -641,7 +646,7 @@ sub identify_mutations
 				}
 				if ($polymorphism_predicted)
 				{
-					my $best_cov = $pos_info->{$best_base}->{unique_cov};
+					my $best_cov = $pos_info->{$best_base}->{unique_trimmed_cov};
 					$best_cov->{1} = 0 if (!defined $best_cov->{1});
 					$best_cov->{-1} = 0 if (!defined $best_cov->{-1});
 

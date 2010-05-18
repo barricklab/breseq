@@ -148,14 +148,14 @@
 			<key>caret</key>
 			<dict>
 				<key>column</key>
-				<integer>73</integer>
+				<integer>64</integer>
 				<key>line</key>
-				<integer>500</integer>
+				<integer>400</integer>
 			</dict>
 			<key>firstVisibleColumn</key>
 			<integer>0</integer>
 			<key>firstVisibleLine</key>
-			<integer>452</integer>
+			<integer>375</integer>
 		</dict>
 		<key>Breseq/Output.pm</key>
 		<dict>
@@ -305,6 +305,6 @@
 	<key>showFileHierarchyDrawer</key>
 	<true/>
 	<key>windowFrame</key>
-	<string>{{308, 84}, {1011, 775}}</string>
+	<string>{{451, 131}, {881, 747}}</string>
 </dict>
 </plist>
