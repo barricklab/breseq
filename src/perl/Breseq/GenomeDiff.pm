@@ -4,13 +4,34 @@
 
 =head1 NAME
 
-MummerDelta.pm
+GenomeDiff.pm
 
 =head1 SYNOPSIS
 
-Module for reading and writing MUMmer delta files.
+Module for reading and writing Genome Diff (.gd) files that describe 
+evidence for mutations and predicted mutations.
 
 =head1 DESCRIPTION
+
+=head1 FORMAT
+
+Genome Diff files are tab delimitted. The first column defines the type of entry on a given line.
+The next few columns are type-nonspecific (id, reference, start, end, parent, child) data, followed by
+an arbitrary number of columns of more detailed data in a key=value format.
+
+=head1 ENTRY TYPES
+
+=head2 Within read evidence (code:WR)
+
+=back
+
+=head2 Missing coverage evidence (MC)
+
+=back
+
+=head2 New junction (NJ) evidence
+
+=back
 
 =head1 AUTHOR
 
@@ -19,7 +40,7 @@ Jeffrey Barrick
 
 =head1 COPYRIGHT
 
-Copyright 2008.  All rights reserved.
+Copyright 2010.  All rights reserved.
 
 =cut
 
@@ -40,9 +61,9 @@ use Data::Dumper;
 =head2 new
 
  Title   : new
- Usage   : $diff = Intergenic::454Diff->new( -file_name => 'sequence.HCDiff.txt' );
- Function: Creates a diff object and initializes it from a file.
- Returns : a new 454Diff object
+ Usage   : $gd = Intergenic::454Diff->new( -file_name => 'evolved.gd' );
+ Function: Creates a GenomeDiff object, loading it from a file if a file_name is provided
+ Returns : new GenomeDiff object
 
 =cut
 
