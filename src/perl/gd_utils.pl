@@ -380,7 +380,14 @@ sub do_annotate
 
 	foreach my $c (@composite_list)
 	{
-	 	my $html_alignment_file_name = "$c->{seq_id}_$c->{start}_$c->{end}_alignment.html";
+	 	my $html_alignment_file_name = 
+			"$c->{seq_id}"
+			. "_$c->{start}" 
+			. ((defined $c->{insert_start}) ?  ".$c->{insert_start}" : '')
+			. "_$c->{end}"
+			. ((defined $c->{insert_end}) ?  ".$c->{insert_end}" : '')
+			. "_alignment.html";
+			
 	 	$c->{link} = "$settings->{local_alignment_path}/$html_alignment_file_name";
 	 	$c->{file_name} = "$settings->{alignment_path}/$html_alignment_file_name";
 		$c->{bam_path} = $reference_bam_file_name;

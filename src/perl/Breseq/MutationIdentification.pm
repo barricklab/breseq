@@ -456,9 +456,9 @@ sub identify_mutations
 						## We would really like for this to not count any of the insertions unless
 						## the read makes it out of the inserted region (this will be the case if it was aligned)
 						##no information about gap if next position is end of alignment
-						## THIS SHOULD NEVER BE TRUE
-						#next ALIGNMENT if ($p->qpos+$indel+1 >= $q_end);
-						die if ($p->qpos+$indel+1 >= $q_end);
+						## THIS SHOULD NEVER BE TRUE, but it is sometimes...
+						next ALIGNMENT if ($p->qpos+$indel+1 >= $q_end);
+						#die if ($p->qpos+$indel+1 >= $q_end);
 
 						my $average_quality = POSIX::floor(($a->qscore->[$p->qpos+$indel] + $a->qscore->[$p->qpos+$indel])/2);
 						$quality = $average_quality;

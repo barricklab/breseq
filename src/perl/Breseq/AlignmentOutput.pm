@@ -516,9 +516,10 @@ sub create_alignment
 		##also update any positions of interest for gaps
 		for (my $insert_count=0; $insert_count<=$max_indel; $insert_count++)
 		{	
-			if ( (($insert_start <= $insert_count) && ($pos == $start)) 
+			if (   (($insert_start <= $insert_count) && ($insert_count <= $insert_end) && ($pos == $start) && ($pos == $end))
+				|| (($insert_start <= $insert_count) && ($pos == $start) && ($pos != $end)) 
 				|| (($pos < $end) && ($pos > $start)) 
-				|| (($insert_end <= $insert_count) && ($pos == $end)) )
+				|| (($insert_end <= $insert_count) && ($pos == $end) && ($pos != $start)) )
 			{ 
 				$aligned_annotation->{aligned_bases} .= '|'; 
 			}	

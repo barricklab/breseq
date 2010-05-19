@@ -340,13 +340,17 @@ sub correct_alignments
 	my @rejected_keys = ();
 	my %junction_test_info;
 	
+	## This keeps track of what overlap only reads we have already written as reference reads so
+	## they don't appear multiple times. Better record keeping might obviate the need for this.
+	my %written_overlap_only_reads;
+	
 	## first deal with ones with unique matches
 	my @sorted_keys = sort {-(scalar @{$matched_junction{$a}} <=> scalar @{$matched_junction{$b}})} keys %matched_junction;
 			
 	my @new_keys;
 	foreach my $key (@sorted_keys)
 	{
-		my ($failed, $has_non_overlap_only) = _test_junction($key, \%matched_junction, \%degenerate_matches, \%junction_test_info, $minimum_best_score, $minimum_best_score_difference, $reference_fai, $ref_seq_info, $RREF, $reference_header, $RCJ, $candidate_junction_header);
+		my ($failed, $has_non_overlap_only) = _test_junction($key, \%matched_junction, \%degenerate_matches, \%junction_test_info, $minimum_best_score, $minimum_best_score_difference, $reference_fai, $ref_seq_info, $RREF, $reference_header, $RCJ, $candidate_junction_header, \%written_overlap_only_reads);
 
 		if (!$failed && !$has_non_overlap_only)
 		{
@@ -874,7 +878,7 @@ sub _ambiguous_end_offsets_from_sequence
 
 sub _test_junction
 {
-	my ($key, $matched_junction_ref, $degenerate_matches_ref, $junction_test_info_ref, $minimum_best_score, $minimum_best_score_difference, $reference_fai, $ref_seq_info, $RREF, $reference_header, $RCJ, $candidate_junction_header) = @_;
+	my ($key, $matched_junction_ref, $degenerate_matches_ref, $junction_test_info_ref, $minimum_best_score, $minimum_best_score_difference, $reference_fai, $ref_seq_info, $RREF, $reference_header, $RCJ, $candidate_junction_header, $written_overlap_only_reads) = @_;
 	
 	my $test_info;
 	my @unique_matches = ();
@@ -1078,9 +1082,15 @@ sub _test_junction
 		
 		## Write matches to reference sequences if we failed
 		if ($failed)
-		{						
+		{		
 			my $this_reference_al = $junction_read->{reference_alignments};
-			_write_reference_matches($minimum_best_score, $minimum_best_score_difference, $reference_fai, $ref_seq_info, $RREF, $reference_header, $fastq_file_index, @$this_reference_al);
+			my $read_name = $this_reference_al->[0]->qname;
+			
+			if (!$junction_read->{dominant_alignment_is_overlap_only} || !$written_overlap_only_reads->{$read_name})
+			{
+				_write_reference_matches($minimum_best_score, $minimum_best_score_difference, $reference_fai, $ref_seq_info, $RREF, $reference_header, $fastq_file_index, @$this_reference_al);
+				$written_overlap_only_reads->{$read_name} = 1;
+			}
 		}
 		
 		## REGARDLESS: write matches to the candidate junction SAM file 
@@ -1267,7 +1277,7 @@ sub _junction_to_hybrid_list_item
 			$item->{overlap} = 0;			
 		}
 		
-		print STDERR Dumper($item);
+		#print STDERR Dumper($item);
 	}
 	
 	### Note: Other adjustments to overlap can happen at the later annotation stage
