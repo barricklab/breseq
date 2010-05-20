@@ -23,13 +23,20 @@ an arbitrary number of columns of more detailed data in a key=value format.
 
 =head2 Within read evidence (code:WR)
 
+Fixed columns: entry_type, entry_id, seq_id, start, end, ref_seq, new_seq, 
+
 =back
 
 =head2 Missing coverage evidence (MC)
 
+Fixed columns: entry_type, entry_id, seq_id, start, end 
+
 =back
 
 =head2 New junction (NJ) evidence
+
+Fixed columns: entry_type, entry_id, seq_id_1, position_1, direction_1, seq_id_2, position_2, direction_2, overlap
+
 
 =back
 
