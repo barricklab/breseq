@@ -323,17 +323,19 @@ sub union
 {
 	my ($list) = @_;
 	
-	my $new_gd = GenomeDiff->new();
+	my $new_gd = Breseq::GenomeDiff->new();
 	$new_gd->{'SAMPLE'}->{merged} = join ",", map {$_->{SAMPLE}->{strain}} @$list;
+	
+	print Dumper($list);
 	
 	my $snp_hash;
 	foreach my $gd (@$list)
 	{
-		foreach my $snp (@{$gd->{SNPS}})
+		foreach my $snp (@{$gd->{mutations}})
 		{
-			if (!$new_gd->has_mut($snp))
+			if (!$new_gd->has_mutation($snp))
 			{
-				push @{$new_gd->{SNPS}}, $snp;
+				push @{$new_gd->{mutations}}, $snp;
 			}
 		}
 	}	
@@ -345,16 +347,16 @@ sub intersection
 {
 	my ($list) = @_;
 	
-	my $union_gd = GenomeDiff::union($list);
+	my $union_gd = Breseq::GenomeDiff::union($list);
 	
-	my $new_gd = GenomeDiff->new();
+	my $new_gd = Breseq::GenomeDiff->new();
 	$new_gd->{'SAMPLE'}->{intersection } = join ",", map {$_->{SAMPLE}->{strain}} @$list;
 	
 	SNP: foreach my $test_snp (@{$union_gd->{mutations}})
 	{
 		foreach my $gd (@$list)
 		{
-			next SNP if (!$gd->has_mututation($test_snp));
+			next SNP if (!$gd->has_mutation($test_snp));
 		}
 		push @{$new_gd->{mutations}}, $test_snp;
 	}
@@ -366,16 +368,16 @@ sub subtract
 {
 	my ($list_1, $list_2) = @_;
 	
-	my $union1_gd = GenomeDiff::union($list_1);
-	my $union2_gd = GenomeDiff::union($list_2);
+	my $union1_gd = Breseq::GenomeDiff::union($list_1);
+	my $union2_gd = Breseq::GenomeDiff::union($list_2);
 
-	my $new_gd = GenomeDiff->new();
+	my $new_gd = Breseq::GenomeDiff->new();
 	$new_gd->{'SAMPLE'}->{subtract} = join( ",", map {$_->{SAMPLE}->{strain}} @$list_1) . "-" . join( ",", map {$_->{SAMPLE}->{strain}} @$list_2);
-	
-	SNP: foreach my $test_snp (@{$union1_gd->{SNPS}})
+		
+	SNP: foreach my $test_snp (@{$union1_gd->{mutations}})
 	{
-		next SNP if ($union2_gd->has_mut($test_snp));
-		push @{$new_gd->{SNPS}}, $test_snp;
+		next SNP if ($union2_gd->has_mutation($test_snp));
+		push @{$new_gd->{mutations}}, $test_snp;
 	}
 	
 	return $new_gd;
