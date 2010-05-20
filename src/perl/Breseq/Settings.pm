@@ -93,7 +93,7 @@ sub new
 		'resume' => \$self->{resume_run},
 		'continue' => \$self->{continue_run},
 		'trim-reads' => \$self->{trim_reads},
-		
+		'perl-count-errors' => \$self->{perl_count_errors},
 	) or pod2usage(2);
 
 	pod2usage(1) if $help;
