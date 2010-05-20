@@ -515,20 +515,20 @@ sub do_subtract
 	my @gds1;
 	foreach my $gd1_file (@input1_gd_files)
 	{
-		my $gd1 = GenomeDiff->new(-FILE_NAME => $gd1_file);
+		my $gd1 = Breseq::GenomeDiff->new(-FILE_NAME => $gd1_file);
 		push @gds1, $gd1;
 	}
-
+	
 	my @gds2;
 	foreach my $gd2_file (@input2_gd_files)
 	{
-		my $gd2 = GenomeDiff->new(-FILE_NAME => $gd2_file);
+		my $gd2 = Breseq::GenomeDiff->new(-FILE_NAME => $gd2_file);
 		push @gds2, $gd2;
-	}
+	}	
 	
 	die if ((!@gds1) || (!@gds2));
 	
-	my $output_gd = GenomeDiff::subtract(\@gds1, \@gds2);
+	my $output_gd = Breseq::GenomeDiff::subtract(\@gds1, \@gds2);
 	$output_gd->write($output);
 }
 

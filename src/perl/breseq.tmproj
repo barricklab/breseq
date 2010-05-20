@@ -3,7 +3,7 @@
 <plist version="1.0">
 <dict>
 	<key>currentDocument</key>
-	<string>fastq_utils.pl</string>
+	<string>genbank_utils.pl</string>
 	<key>documents</key>
 	<array>
 		<dict>
@@ -28,21 +28,21 @@
 			<key>filename</key>
 			<string>fastq_utils.pl</string>
 			<key>lastUsed</key>
-			<date>2010-05-20T01:34:51Z</date>
-			<key>selected</key>
-			<true/>
+			<date>2010-05-20T12:27:28Z</date>
 		</dict>
 		<dict>
 			<key>filename</key>
 			<string>gd_utils.pl</string>
 			<key>lastUsed</key>
-			<date>2010-05-19T15:51:02Z</date>
+			<date>2010-05-20T16:03:08Z</date>
 		</dict>
 		<dict>
 			<key>filename</key>
 			<string>genbank_utils.pl</string>
 			<key>lastUsed</key>
-			<date>2010-05-12T01:15:12Z</date>
+			<date>2010-05-20T16:03:08Z</date>
+			<key>selected</key>
+			<true/>
 		</dict>
 		<dict>
 			<key>expanded</key>
@@ -64,14 +64,14 @@
 			<key>caret</key>
 			<dict>
 				<key>column</key>
-				<integer>37</integer>
+				<integer>3</integer>
 				<key>line</key>
-				<integer>1265</integer>
+				<integer>1088</integer>
 			</dict>
 			<key>firstVisibleColumn</key>
 			<integer>0</integer>
 			<key>firstVisibleLine</key>
-			<integer>1236</integer>
+			<integer>1057</integer>
 		</dict>
 		<key>Breseq/AlignmentOutput.pm</key>
 		<dict>
@@ -134,14 +134,14 @@
 			<key>caret</key>
 			<dict>
 				<key>column</key>
-				<integer>75</integer>
+				<integer>1</integer>
 				<key>line</key>
-				<integer>19</integer>
+				<integer>342</integer>
 			</dict>
 			<key>firstVisibleColumn</key>
 			<integer>0</integer>
 			<key>firstVisibleLine</key>
-			<integer>0</integer>
+			<integer>313</integer>
 		</dict>
 		<key>Breseq/MutationIdentification.pm</key>
 		<dict>
@@ -248,60 +248,14 @@
 			<key>caret</key>
 			<dict>
 				<key>column</key>
-				<integer>23</integer>
+				<integer>2</integer>
 				<key>line</key>
-				<integer>206</integer>
+				<integer>297</integer>
 			</dict>
-			<key>columnSelection</key>
-			<false/>
 			<key>firstVisibleColumn</key>
 			<integer>0</integer>
 			<key>firstVisibleLine</key>
 			<integer>289</integer>
-			<key>selectFrom</key>
-			<dict>
-				<key>column</key>
-				<integer>17</integer>
-				<key>line</key>
-				<integer>206</integer>
-			</dict>
-			<key>selectTo</key>
-			<dict>
-				<key>column</key>
-				<integer>34</integer>
-				<key>line</key>
-				<integer>206</integer>
-			</dict>
-		</dict>
-		<key>gd_utils.pl</key>
-		<dict>
-			<key>caret</key>
-			<dict>
-				<key>column</key>
-				<integer>56</integer>
-				<key>line</key>
-				<integer>201</integer>
-			</dict>
-			<key>columnSelection</key>
-			<false/>
-			<key>firstVisibleColumn</key>
-			<integer>0</integer>
-			<key>firstVisibleLine</key>
-			<integer>180</integer>
-			<key>selectFrom</key>
-			<dict>
-				<key>column</key>
-				<integer>0</integer>
-				<key>line</key>
-				<integer>201</integer>
-			</dict>
-			<key>selectTo</key>
-			<dict>
-				<key>column</key>
-				<integer>0</integer>
-				<key>line</key>
-				<integer>202</integer>
-			</dict>
 		</dict>
 		<key>genbank_utils.pl</key>
 		<dict>
@@ -340,7 +294,6 @@
 		<string>sam2html.pl</string>
 		<string>Breseq/Output.pm</string>
 		<string>genbank_utils.pl</string>
-		<string>gd_utils.pl</string>
 		<string>Breseq/GenomeDiff.pm</string>
 		<string>Breseq/CandidateJunctions.pm</string>
 		<string>Breseq/ErrorCalibration.pm</string>
@@ -354,6 +307,6 @@
 	<key>showFileHierarchyDrawer</key>
 	<true/>
 	<key>windowFrame</key>
-	<string>{{206, 12}, {974, 753}}</string>
+	<string>{{4, 46}, {1035, 761}}</string>
 </dict>
 </plist>
