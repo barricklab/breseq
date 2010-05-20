@@ -62,7 +62,7 @@ sub count
 
 	## check to see if error_count++ is available:
 	my $errcountbin = $settings->{script_path} . "/../../bin/error_count";
-	if(-x $errcountbin && (!$settings->{perl_count_errors})) 
+	if(-x $errcountbin && (!$settings->{perl_error_count})) 
 	{
 		my $coverage_fn = $settings->file_name('unique_only_coverage_distribution_file_name', {'@'=>""});
 		my $outputdir = `dirname $coverage_fn`;
