@@ -1084,9 +1084,11 @@ sub _test_junction
 		if ($failed)
 		{		
 			my $this_reference_al = $junction_read->{reference_alignments};
-			my $read_name = $this_reference_al->[0]->qname;
+			my $read_name;
+			$read_name = $this_reference_al->[0]->qname if ((defined $this_reference_al) && (scalar @$this_reference_al > 0));
 			
-			if (!$junction_read->{dominant_alignment_is_overlap_only} || !$written_overlap_only_reads->{$read_name})
+			## hashing by read name here makes sure that we only write each read once in the reference file...
+			if (!$junction_read->{dominant_alignment_is_overlap_only} || ($read_name && !$written_overlap_only_reads->{$read_name}))
 			{
 				_write_reference_matches($minimum_best_score, $minimum_best_score_difference, $reference_fai, $ref_seq_info, $RREF, $reference_header, $fastq_file_index, @$this_reference_al);
 				$written_overlap_only_reads->{$read_name} = 1;

@@ -202,10 +202,9 @@ if ($command eq 'MERGE_PAIRED')
 	}
 }
 
-## This seems to convert the quality scores...
-## Not really sure...
 
-if ($command eq "QUALS_FASTQ")
+## handle separate FASTA and space separate quality score files 
+if ($command eq "QUALS_FASTA_MERGE")
 {
 	#Get options
 	use Getopt::Long;
@@ -220,7 +219,8 @@ if ($command eq "QUALS_FASTQ")
 	pod2usage(1) if $help;
 	pod2usage(-exitstatus => 0, -verbose => 2) if $man;
 	pod2usage(-exitstatus => 0, -verbose => 2) if (scalar @ARGV != 2);
-	my ( $input_1, $input_2 ) = @ARGV;
+	my ( $input_1, $input_2, $output ) = @ARGV;
+	$output = 'output.fastq' if (!defined $output);
 
 	# Solexa quality scores are -10 log10(P/(1-P))
 	# $Q = ord($q) - 64;
@@ -230,8 +230,10 @@ if ($command eq "QUALS_FASTQ")
 
 	#Open Input/output
 
-	open INPUT_1, "<$input_1";
-	open INPUT_2, "<$input_2";
+	open INPUT_1, "<$input_1" or die;
+	open INPUT_2, "<$input_2" or die;
+	open OUTPUT, ">$output" or die;
+	
 
 	#my $in_1 = Bio::SeqIO->new( -file => "<$input_1", -format => "fastq");
 	#my $in_2 = Bio::SeqIO->new( -file => "<$input_2", -format => "fastq");
@@ -277,29 +279,14 @@ if ($command eq "QUALS_FASTQ")
 		}
 
 		#output...
-		print "$read_name\n$sequence\n+\n";
+		print OUTPUT "$read_name\n$sequence\n+\n";
 	#	print +(phred_quality_to_char(0));
 		foreach my $quality (@quality_list)
 		{
-			print +(phred_quality_to_char($quality));
+			print OUTPUT +(phred_quality_to_char($quality));
 		}
-		print "\n";
-
-
-		##print in fastq format
-
-		#$seq_1 = $in_1->next_seq;
-		#$seq_2 = $in_2->next_seq;
-
-		#$out->write_seq($seq_1);
-		#$out->write_seq($seq_2);
+		print OUTPUT "\n";
 	}
-
-	#my $index_m1 = $index-1;
-	#system "cat $input_1\_$index_m1 $input_1\_$index > temp; mv temp > $input_1\_$index_m1";
-	#system "cat $input_2\_$index_m1 $input_2\_$index > temp; mv temp > $input_2\_$index_m1";
-
-
 
 	sub phred_to_solexa_quality
 	{
