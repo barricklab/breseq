@@ -277,7 +277,7 @@ sub identify_candidate_junctions
 	{
 		my $acj = Breseq::Shared::junction_name_split($a->{id});
 		my $bcj = Breseq::Shared::junction_name_split($b->{id});
-		return (($ref_seq_info->{seq_order}->{$acj->{interval_1}->{seq_id}} <=> $ref_seq_info->{seq_order}->{$bcj->{interval_1}->{seq_id}}) ||  ($acj->{interval_1}->{start} <=> $bcj->{interval_1}->{start})); 
+		return (($ref_seq_info->{seq_order}->{$acj->{side_1}->{seq_id}} <=> $ref_seq_info->{seq_order}->{$bcj->{side_1}->{seq_id}}) ||  ($acj->{side_1}->{position} <=> $bcj->{side_1}->{position})); 
 	}
 	
 	@combined_candidate_junctions = sort by_ref_seq_coord @combined_candidate_junctions;

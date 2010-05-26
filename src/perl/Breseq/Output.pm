@@ -553,7 +553,7 @@ sub html_junction_table_string
 		
 			$j1->{is_insertion}->{start} = ($uc1_strand == -1) ? $j2->{unique_interval}->{start} : $j1->{unique_interval}->{start};
 			$j1->{is_insertion}->{end} = ($uc1_strand == -1) ? $j1->{unique_interval}->{start} : $j2->{unique_interval}->{start};
-			$j1->{is_insertion}->{seq_id} = (defined $j1->{interval_1}->{is}) ? $j1->{interval_2}->{seq_id} : $j1->{interval_1}->{seq_id};
+			$j1->{is_insertion}->{seq_id} = (defined $j1->{side_1}->{is}) ? $j1->{side_2}->{seq_id} : $j1->{side_1}->{seq_id};
 			
 			$j1->{is_insertion}->{family} = $j1->{is_interval}->{is}->{gene};
 			$j1->{is_insertion}->{is_strand} = $is_strand;
@@ -594,7 +594,7 @@ sub html_junction_table_string
 	my $link = $force_link;
 	if (!defined $link && defined $list_ref->[0])
 	{
-		$link = ( (defined $list_ref->[0]->{interval_1}->{link}) && (defined $list_ref->[0]->{interval_2}->{link}));
+		$link = ( (defined $list_ref->[0]->{side_1}->{link}) && (defined $list_ref->[0]->{side_2}->{link}));
 	}
 	
 	if ($link)
@@ -654,7 +654,7 @@ sub html_junction_table_string
 			$body_countdown = 2;
 		}
 		
-		my $key = 'interval_1';			
+		my $key = 'side_1';			
 		if ($body_countdown > 0)
 		{
 			$output_str.= start_Tr({-class=> "is_insertion_body"});
@@ -668,7 +668,7 @@ sub html_junction_table_string
 		$redundant_annotate_key = 'junction_is' if ($c->{$key}->{redundant} == 1);
 		
 		$output_str.= td({-rowspan=>2}, a({-href=>"$c->{link}"}, "*")) if ($link); 
-		$output_str.= td({-rowspan=>1, -class=>"$redundant_annotate_key"}, a({-href=>"$c->{interval_1}->{link}"}, "?")) if ($link); 
+		$output_str.= td({-rowspan=>1, -class=>"$redundant_annotate_key"}, a({-href=>"$c->{side_1}->{link}"}, "?")) if ($link); 
 		$output_str.= td({-rowspan=>1, -class=>"$redundant_annotate_key"}, make_nonbreaking($c->{$key}->{seq_id}));			
 		$output_str.= td( {-align=>"center", -class=>"$redundant_annotate_key"}, ($c->{$key}->{strand} == +1) ? $c->{$key}->{start} . "&nbsp;=": "=&nbsp;" . $c->{$key}->{start} );
 		$output_str.= td( {-rowspan=>2, -align=>"center"}, $c->{overlap} );
@@ -690,7 +690,7 @@ sub html_junction_table_string
 		
 		$output_str.= end_Tr;
 
-		$key = 'interval_2';
+		$key = 'side_2';
 		if ($body_countdown > 0)
 		{
 			$output_str.= start_Tr({-class=> "is_insertion_body"});
@@ -703,7 +703,7 @@ sub html_junction_table_string
 		$redundant_annotate_key = 'junction_gene';
 		$redundant_annotate_key = 'junction_is' if ($c->{$key}->{redundant} == 1);
 		
-		$output_str.= td({-rowspan=>1, -class=>"$redundant_annotate_key"}, a({-href=>"$c->{interval_2}->{link}"}, "?")) if ($link); 
+		$output_str.= td({-rowspan=>1, -class=>"$redundant_annotate_key"}, a({-href=>"$c->{side_2}->{link}"}, "?")) if ($link); 
 		$output_str.= td({-rowspan=>1, -class=>"$redundant_annotate_key"}, make_nonbreaking($c->{$key}->{seq_id}));		
 		$output_str.= td( {-align=>"center", -class=>"$redundant_annotate_key"}, ($c->{$key}->{strand} == +1) ? $c->{$key}->{start} . "&nbsp;=": "=&nbsp;" . $c->{$key}->{start} );
 		## gene data
@@ -870,17 +870,17 @@ sub text_junction_table_string
 		#print Dumper($c);
 	
 		$output_str.= +join("\t",
-			$c->{interval_1}->{start}, 
-			(($c->{interval_1}->{strand} == +1) ? "+" : "-" ),
-			$c->{interval_2}->{start}, 
-			(($c->{interval_2}->{strand} == +1) ? "+" : "-" ),
+			$c->{side_1}->{start}, 
+			(($c->{side_1}->{strand} == +1) ? "+" : "-" ),
+			$c->{side_2}->{start}, 
+			(($c->{side_2}->{strand} == +1) ? "+" : "-" ),
 			$c->{overlap},
 			$c->{total_reads},
 			$c->{full_length_reads},
-			$c->{interval_1}->{gene},
-			$c->{interval_1}->{gene_product},
-			$c->{interval_2}->{gene},
-			$c->{interval_2}->{gene_product},
+			$c->{side_1}->{gene},
+			$c->{side_1}->{gene_product},
+			$c->{side_2}->{gene},
+			$c->{side_2}->{gene_product},
 		);
 		$output_str.= "\n";
 	}
@@ -921,37 +921,31 @@ sub text_alignment_file
 
 sub write_genome_diff
 {
-	my ($file_name, $settings, $snps_list_ref, $deletion_list_ref, $hybrid_list_ref, $unknown_list_ref, $unsorted) = @_;
+	my ($file_name, $settings, $wr_list_ref, $mc_list_ref, $jc_ref, $un_list_ref, $unsorted) = @_;
 	
 	## Create empty genome diff object.
 	## Add mutations to it and then write file.
 	my $gd = Breseq::GenomeDiff->new;
 
-	foreach my $snp (@$snps_list_ref)
+	foreach my $snp (@$wr_list_ref)
 	{
 		#print Dumper($snp);
+		my $start = $snp->{start};
+		$start .= "." . $snp->{insert_start} if ($snp->{insert_start});
+		my $end = $snp->{end};
+		$end .= "." . $snp->{insert_end} if ($snp->{insert_end});
 		
-		my $type = 'SNP';
-		
-		if ($snp->{ref_seq} eq '.')
-		{
-			$type = 'INS' 
-		}
-		elsif ($snp->{new_seq} eq '.')
-		{
-			$type = 'DEL';
-		}
-		
+		##temporary checks
+		die if ($snp->{start} != $snp->{end});
+		die if ($snp->{insert_start} != $snp->{insert_end});
+
 		my $item = { 
-			type => $type,
-			evidence => "read_alignment",
+			type => 'WR',
 			seq_id => $snp->{seq_id},
-			pos => $snp->{start},
-			insert_start => $snp->{insert_start},
-			insert_end => $snp->{insert_end},
+			position => $snp->{start},
+			insert_position => $snp->{insert_start},
 			ref_base => $snp->{ref_seq},
 			new_base => $snp->{new_seq},
-			freq => 1,
 			quality => $snp->{quality},
 			tot_cov => $snp->{total_coverage_string},
 			new_cov => $snp->{best_coverage_string},
@@ -968,43 +962,42 @@ sub write_genome_diff
 			$item->{log10_e_value} = $snp->{log10_e_value};
 			$item->{fisher_strand_p_value} = $snp->{fisher_strand_p_value};
 		}
-		$gd->add_mutation($item);
+		$gd->add($item);
 	}
 
-	foreach my $del (@$deletion_list_ref)
+	foreach my $del (@$mc_list_ref)
 	{
 		#print Dumper($del);
 		my $item = { 
-			type => 'DEL',
-			evidence => "missing_coverage",
+			type => 'MC',
 			seq_id => $del->{seq_id},
-			pos => "$del->{start}-$del->{end}",
-#			genes => $del->{genes},
+			start => $del->{start},
+			end => $del->{end},
 			left_unique_cov => $del->{left_unique_cov},
 			left_inside_unique_cov => $del->{left_inside_unique_cov},
 			right_unique_cov => $del->{right_unique_cov},
 			right_inside_unique_cov => $del->{right_inside_unique_cov},
 		};
-		$gd->add_mutation($item);
+		$gd->add($item);
 	}
 
-	foreach my $hyb (@$hybrid_list_ref)
+	foreach my $hyb (@$jc_ref)
 	{
 		my $item = { 
-			type => 'JCT',
+			type => 'JC',
 			evidence => "mosaic_read",
 			
-			side_1_seq_id => $hyb->{interval_1}->{seq_id},
-			side_1_pos => $hyb->{interval_1}->{start},
-			side_1_redundant => $hyb->{interval_1}->{redundant},
-			side_1_strand => $hyb->{interval_1}->{strand},
-			side_1_overlap => $hyb->{interval_1}->{overlap},
+			side_1_seq_id => $hyb->{side_1}->{seq_id},
+			side_1_position => $hyb->{side_1}->{start},
+			side_1_redundant => $hyb->{side_1}->{redundant},
+			side_1_strand => $hyb->{side_1}->{strand},
+			side_1_overlap => $hyb->{side_1}->{overlap},
 			
-			side_2_seq_id => $hyb->{interval_2}->{seq_id},
-			side_2_pos => $hyb->{interval_2}->{start},
-			side_2_redundant => $hyb->{interval_2}->{redundant},
-			side_2_strand => $hyb->{interval_2}->{strand},
-			side_2_overlap => $hyb->{interval_2}->{overlap},
+			side_2_seq_id => $hyb->{side_2}->{seq_id},
+			side_2_position => $hyb->{side_2}->{start},
+			side_2_redundant => $hyb->{side_2}->{redundant},
+			side_2_strand => $hyb->{side_2}->{strand},
+			side_2_overlap => $hyb->{side_2}->{overlap},
 			
 			key => $hyb->{key},
 			overlap => $hyb->{overlap},
@@ -1023,19 +1016,20 @@ sub write_genome_diff
 		
 		$item->{marginal} = 1 if ($hyb->{marginal});
 				
-		$gd->add_mutation($item);
+		$gd->add($item);
 	}
 	
-	foreach my $unk (@$unknown_list_ref)
+	foreach my $unk (@$un_list_ref)
 	{
 		#print Dumper($unk);
 		
 		my $item = { 
-			type => 'UNK',
+			type => 'UN',
 			seq_id => $unk->{seq_id},
-			pos => "$unk->{start}-$unk->{end}",
+			start => $unk->{start},
+			end => $unk->{end},
 		};
-		$gd->add_mutation($item);
+		$gd->add($item);
 	}
 	
 	$gd->write($file_name, $unsorted);
@@ -1050,51 +1044,71 @@ sub read_genome_diff
 	my $gd = Breseq::GenomeDiff->new(-file_name=>$file_name);
 
 	my $mutation_info;
-	@{$mutation_info->{mutations}} = grep {defined $_->{evidence} && $_->{evidence} eq 'read_alignment'} $gd->mutations;
+	@{$mutation_info->{mutations}} = grep {$_->{type} eq 'WR'} $gd->list;
 	
 	foreach my $mut (@{$mutation_info->{mutations}})
 	{
-		$mut->{start} = $mut->{pos},
-		$mut->{end} = $mut->{pos},
+		$mut->{insert_start} = $mut->{insert_position};
+		$mut->{insert_end} = $mut->{insert_position};
+		$mut->{start} = $mut->{position};
+		$mut->{end} = $mut->{position};
 		$mut->{ref_seq}	= $mut->{ref_base},
 		$mut->{new_seq} = $mut->{new_base},
 		$mut->{total_coverage_string} = $mut->{tot_cov},
 		$mut->{best_coverage_string} = $mut->{new_cov},
 	}
 	
-	@{$mutation_info->{deletions}} = grep {defined $_->{evidence} && $_->{evidence} eq 'missing_coverage'} $gd->mutations;	
-	@{$mutation_info->{unknowns}}  = grep {$_->{type} eq 'UNK'} $gd->mutations;
+	@{$mutation_info->{deletions}} = grep {$_->{type} eq 'MC'} $gd->list;	
+	@{$mutation_info->{unknowns}}  = grep {$_->{type} eq 'UN'} $gd->list;
 	
 	foreach my $mut (@{$mutation_info->{unknowns}}, @{$mutation_info->{deletions}})
 	{
-		($mut->{start}, $mut->{end}) = split /-/, $mut->{pos};
 		$mut->{size} = $mut->{end} - $mut->{start} + 1;
 	}
 	
-	@{$mutation_info->{hybrids}} = grep {$_->{type} eq 'JCT'} $gd->mutations;
-	foreach my $mut (@{$mutation_info->{hybrids}})
+	@{$mutation_info->{hybrids}} = grep {$_->{type} eq 'JC'} $gd->list;
+	foreach my $item (@{$mutation_info->{hybrids}})
 	{
-		$mut->{interval_1}->{start} = $mut->{side_1_pos};
-		$mut->{interval_1}->{end} = $mut->{side_1_pos};
-		$mut->{interval_1}->{strand} = $mut->{side_1_strand};
-		$mut->{interval_1}->{seq_id} = $mut->{side_1_seq_id};
-		$mut->{interval_1}->{redundant} = $mut->{side_1_redundant};
-		$mut->{interval_1}->{overlap} = $mut->{side_1_overlap};
+		$item->{side_1}->{start} = $item->{side_1_position};
+		$item->{side_1}->{end} = $item->{side_1_position};
+		$item->{side_1}->{strand} = $item->{side_1_strand};
+		$item->{side_1}->{seq_id} = $item->{side_1_seq_id};
+		$item->{side_1}->{redundant} = $item->{side_1_redundant};
+		$item->{side_1}->{overlap} = $item->{side_1_overlap};
 
-		$mut->{interval_2}->{start} = $mut->{side_2_pos};
-		$mut->{interval_2}->{end} = $mut->{side_2_pos};
-		$mut->{interval_2}->{strand} = $mut->{side_2_strand};
-		$mut->{interval_2}->{seq_id} = $mut->{side_2_seq_id};
-		$mut->{interval_2}->{redundant} = $mut->{side_2_redundant};
-		$mut->{interval_2}->{overlap} = $mut->{side_2_overlap};
+		$item->{side_2}->{start} = $item->{side_2_position};
+		$item->{side_2}->{end} = $item->{side_2_position};
+		$item->{side_2}->{strand} = $item->{side_2_strand};
+		$item->{side_2}->{seq_id} = $item->{side_2_seq_id};
+		$item->{side_2}->{redundant} = $item->{side_2_redundant};
+		$item->{side_2}->{overlap} = $item->{side_2_overlap};
 
-		$mut->{seq_id} = $mut->{key};
+		$item->{seq_id} = $item->{key};
 		
 		## regenerate the alignment overlap from the junction_key
-		my $scj = Breseq::Shared::junction_name_split($mut->{key});
-		$mut->{alignment_overlap} = $scj->{overlap};
-		$mut->{interval_1}->{alignment_pos} = $scj->{interval_1}->{start};
-		$mut->{interval_2}->{alignment_pos} = $scj->{interval_2}->{start};
+		my $scj = Breseq::Shared::junction_name_split($item->{key});
+		$item->{alignment_overlap} = $scj->{alignment_overlap};
+		$item->{side_1}->{alignment_pos} = $scj->{side_1}->{position};
+		$item->{side_2}->{alignment_pos} = $scj->{side_2}->{position};
+		
+		if ($item->{alignment_overlap} == 0)
+		{
+			$item->{start} = $item->{flanking_left};
+			$item->{end} = $item->{flanking_left}+1;			
+		}
+		elsif ($item->{alignment_overlap} > 0)
+		{
+			$item->{start} = $item->{flanking_left}+1;
+			$item->{end} = $item->{flanking_left}+$item->{alignment_overlap};
+		}
+		else ## ($item->{overlap} < 0)
+		{
+			$item->{start} = $item->{flanking_left}+1;
+			$item->{end} = $item->{flanking_left}-$item->{alignment_overlap};
+		}
+		
+		print Dumper($item);
+		
 	}		
 	return $mutation_info;
 }

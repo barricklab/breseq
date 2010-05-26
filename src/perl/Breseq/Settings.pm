@@ -29,7 +29,6 @@ Copyright 2008.  All rights reserved.
 
 package Breseq::Settings;
 use strict;
-use Bio::Root::Root;
 use Getopt::Long;
 use Data::Dumper;
 use Pod::Usage;
@@ -115,7 +114,7 @@ sub new_annotate
 {	
 	my($caller,@args) = @_;
 	my $class = ref($caller) || $caller;
-	my $self = new Bio::Root::Root($caller, @args);
+	my $self = {}; # = new Bio::Root::Root($caller, @args);
 	bless ($self, $class);
 
 	$self->initialize_1;
@@ -284,7 +283,7 @@ sub initialize_2
 	$self->{alignment_correction_path} = "$self->{base_output_path}/$self->{alignment_correction_path}" if ($self->{base_output_path});
 	$self->{resolved_reference_sam_file_name} = "$self->{alignment_correction_path}/reference.sam";
 	$self->{resolved_junction_sam_file_name} = "$self->{alignment_correction_path}/junction.sam";
-	$self->{predicted_junction_file_name} = "$self->{alignment_correction_path}/predicted_junctions.bin";
+	$self->{predicted_junction_file_name} = "$self->{alignment_correction_path}/predicted_junctions.gd";
 	$self->{unmatched_read_file_name} = "$self->{alignment_correction_path}/#.unmatched.fastq";
 	$self->{alignment_correction_summary_file_name} = "$self->{alignment_correction_path}/summary.bin";
 	$self->{alignment_correction_done_file_name} = "$self->{alignment_correction_path}/alignment_resolution.done";
@@ -319,9 +318,10 @@ sub initialize_2
 	$self->{mutation_identification_path} = "08_mutation_identification";
 	$self->{mutation_identification_path} = "$self->{base_output_path}/$self->{mutation_identification_path}" if ($self->{base_output_path});
 	$self->{predicted_mutation_file_name} = "$self->{mutation_identification_path}/@.predicted_mutations.bin";
+	$self->{predicted_mutation_genome_diff_file_name} = "$self->{mutation_identification_path}/predicted_mutations.gd";
 	$self->{complete_mutations_text_file_name} = "$self->{mutation_identification_path}/@.mutations.tab";
 	$self->{complete_coverage_text_file_name} = "$self->{mutation_identification_path}/@.coverage.tab";
-	$self->{mutation_identification_done_file_name} = "$self->{mutation_identification_path}/@.mutation_identification.done";
+	$self->{mutation_identification_done_file_name} = "$self->{mutation_identification_path}/mutation_identification.done";
 	$self->{cnv_coverage_tab_file_name} = "$self->{mutation_identification_path}/@.cnv_coverage.tab";
 
 	##### output #####
@@ -418,7 +418,7 @@ sub initialize_2
 
 			#index for keeping track of what file reads came from in alignment database
 			#max is 256 b/c stored as unsigned byte in alignment database
-			die "Maximum of 256 input files allowed." if ($fastq_file_index > 255);
+			$self->throw("Maximum of 256 input files allowed.") if ($fastq_file_index > 255);
 		}
 		
 		$read_structure->{base_name} = join ("-pair-", @{$read_structure->{base_names}});
@@ -470,7 +470,7 @@ sub compare_to_saved_settings
 	## warn if 
 }
 
-### Utility funtion to substitute specific details into a generic file name
+### Utility function to substitute specific details into a generic file name
 sub file_name
 {
 	my ($self, $file_name_key, $sub_hash)= @_;
@@ -598,5 +598,34 @@ sub log
 	close LOG;
 }
 
-return 1;
+sub check_installed
+{
+	my ($self) = @_;
+	
+	## absolutely required
+	$self->{installed}->{PM}->{Bio_Root} = (eval 'require Math::CDF');	
+	
+	$self->{installed}->{PM}->{Math_CDF} = (eval 'require Math::CDF');	
+	$self->{installed}->{SSAHA2} = (`which ssaha2`) ? 1 : 0;
+	
+	## optional
+	$self->{installed}->{R} = (`which R`) ? 1 : 0;
+	
+	## http://www.sanger.ac.uk/resources/software/ssaha2/
+}
 
+sub install_report 
+{
+	my ($self) = @_;
+
+	my $good_to_go = 1;
+	if (!$self->{installed}->{SSAHA2})
+	{
+		$good_to_go = 0;
+		print "Required executable \"ssaha2\" is not installed\nSee http://www.sanger.ac.uk/resources/software/ssaha2/\n";
+	}
+	
+	return $good_to_go;
+}
+
+return 1;

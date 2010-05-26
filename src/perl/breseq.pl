@@ -116,6 +116,7 @@ my $summary = {};
 ###    handles all GetOpt and filling in many other settings
 ### 
 my $settings = Breseq::Settings->new;
+$settings->check_installed();
 Breseq::Output::record_time("Start");
 
 ##
@@ -383,9 +384,7 @@ if (!-e $alignment_correction_done_file_name)
 {
 	print STDERR "Resolving alignments with candidate junctions and trimming ambiguous ends...\n";
 	$settings->create_path('alignment_correction_path');		
-	my $predicted_junctions_file_name = $settings->file_name('predicted_junction_file_name');
-	@hybrids = Breseq::AlignmentCorrection::correct_alignments($settings, $summary, $ref_seq_info);
-	Storable::store(\@hybrids, $predicted_junctions_file_name) or die "Can't store data in file $predicted_junctions_file_name!\n";
+	Breseq::AlignmentCorrection::correct_alignments($settings, $summary, $ref_seq_info);
 	my $alignment_correction_summary_file_name = $settings->file_name('alignment_correction_summary_file_name');	
 	Storable::store($summary->{alignment_correction}, $alignment_correction_summary_file_name) 
 		or die "Can't store data in file $alignment_correction_summary_file_name!\n";	
@@ -396,9 +395,6 @@ if (!-e $alignment_correction_done_file_name)
 else
 {
 	print STDERR "Resolving alignments to candidate junctions and trimming ambiguous ends already complete.\n";
-	my $predicted_junctions_file_name = $settings->file_name('predicted_junction_file_name');	
-	@hybrids = ();
-	@hybrids = @{Storable::retrieve($predicted_junctions_file_name)} if (!$settings->{no_junction_prediction});
 	my $alignment_correction_summary_file_name = $settings->file_name('alignment_correction_summary_file_name');	
 	$summary->{alignment_correction} = Storable::retrieve($alignment_correction_summary_file_name) if (-e $alignment_correction_summary_file_name);
 }	
@@ -696,7 +692,8 @@ if (!-e $error_rates_done_file_name)
 	$settings->create_path('output_path'); ##need output for plots	
 	print STDERR "Calibrating error rates...\n";
 	Breseq::ErrorCalibration::error_counts_to_error_rates($settings, $summary, $ref_seq_info);
-	Breseq::ErrorCalibration::analyze_unique_coverage_distributions($settings, $summary, $ref_seq_info);
+	$summary->{unique_coverage} = {};
+	Breseq::ErrorCalibration::analyze_unique_coverage_distributions($settings, $summary, $ref_seq_info) if (!$settings->{no_deletion_prediction});
 	
 	Storable::store($summary->{unique_coverage}, $error_rates_summary_file_name) or die "Can't store data in file $error_rates_summary_file_name!\n";
 	open DONE, ">$error_rates_done_file_name";
@@ -720,7 +717,8 @@ my @mutations;
 my @deletions;
 my @unknowns;
 
-if (!$settings->{no_mutation_prediction}) #could remove conditional?
+my $mutation_identification_done_file_name = $settings->file_name('mutation_identification_done_file_name');
+if (!-e $mutation_identification_done_file_name && !$settings->{no_mutation_prediction})
 {		
 	print STDERR "Collecting and evaluating within-read mutations...\n";
 	
@@ -735,11 +733,10 @@ if (!$settings->{no_mutation_prediction}) #could remove conditional?
 	# Predict SNPS, indels within reads, and large deletions
 	#   this function handles all file creation...
 	##
-	my $mutation_info =  Breseq::MutationIdentification::identify_mutations($settings, $summary, $ref_seq_info, $error_rates);
-
-	@mutations = @{$mutation_info->{mutations}};
-	@deletions = @{$mutation_info->{deletions}};
-	@unknowns = @{$mutation_info->{unknowns}};
+	Breseq::MutationIdentification::identify_mutations($settings, $summary, $ref_seq_info, $error_rates);
+	
+	open DONE, ">$mutation_identification_done_file_name";
+	close DONE;
 }
 
 
@@ -759,19 +756,36 @@ if (!-e $output_done_file_name)
 	## Ideally we would do this after step 7, then remove the offending read pieces from the BAM file
 	## before proceeding to SNP calling.
 	##
-	foreach my $hybrid (@hybrids)
+	
+	my $predicted_junctions_file_name = $settings->file_name('predicted_junction_file_name');	
+	my $hybrid_gd = Breseq::GenomeDiff->new( -in => $predicted_junctions_file_name );
+		
+	foreach my $hybrid ($hybrid_gd->list)
 	{
-		my $coverage_cutoff_1 = $settings->{unique_coverage}->{$hybrid->{interval_1}->{seq_id}}->{junction_coverage_cutoff};
-		my $coverage_cutoff_2 = $settings->{unique_coverage}->{$hybrid->{interval_2}->{seq_id}}->{junction_coverage_cutoff};
-		$hybrid->{marginal} = 1 if (($hybrid->{total_reads} < $coverage_cutoff_1) &&  ($hybrid->{total_reads} < $coverage_cutoff_2));
+		my $coverage_cutoff_1 = $settings->{unique_coverage}->{$hybrid->{side_1_seq_id}}->{junction_coverage_cutoff};
+		my $coverage_cutoff_2 = $settings->{unique_coverage}->{$hybrid->{side_2_seq_id}}->{junction_coverage_cutoff};
+		
+		if ( (!defined $coverage_cutoff_1 || ($hybrid->{total_reads} < $coverage_cutoff_1) ) 
+		  && (!defined $coverage_cutoff_2 || ($hybrid->{total_reads} < $coverage_cutoff_2) ) )
+		{
+			$hybrid->{marginal} = 1;
+		}
 	}
 	###	
 	
+	my $predicted_mutation_genome_diff_file_name = $settings->file_name('predicted_mutation_genome_diff_file_name');	
+	my $mutation_gd = Breseq::GenomeDiff->new( -in => $predicted_mutation_genome_diff_file_name);
+
+	## merge all of the evidence files into one...
 	my $full_genome_diff_file_name = $settings->file_name('full_genome_diff_file_name');
+	my $merged_gd = Breseq::GenomeDiff::merge($hybrid_gd, $mutation_gd);
+	$merged_gd->write($full_genome_diff_file_name);
+
 	my $filtered_genome_diff_file_name = $settings->file_name('filtered_genome_diff_file_name');
 	my $marginal_genome_diff_file_name = $settings->file_name('marginal_genome_diff_file_name');
 	
-	Breseq::Output::write_genome_diff($full_genome_diff_file_name, $settings, \@mutations, \@deletions, \@hybrids, \@unknowns);
+	#Breseq::Output::write_genome_diff($full_genome_diff_file_name, $settings, \@mutations, \@deletions, \@hybrids, \@unknowns);
+	
 	my $conditions = "marginal!=1";
 	Breseq::Shared::system("gd_utils.pl FILTER -i $full_genome_diff_file_name -o $filtered_genome_diff_file_name -r $marginal_genome_diff_file_name $conditions");
 

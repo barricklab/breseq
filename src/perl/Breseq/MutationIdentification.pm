@@ -34,6 +34,7 @@ use Math::CDF;
 use Bio::Root::Root;
 use Bio::DB::Sam;
 
+use Breseq::GenomeDiff;
 use Breseq::Shared;
 
 
@@ -42,8 +43,8 @@ use vars qw(@ISA);
 @ISA = qw( Bio::Root::Root );
 
 use Data::Dumper;
-use Storable;
 
+use Breseq::GenomeDiff;
 
 our @base_list = ('A', 'T', 'C', 'G', '.');
 
@@ -57,7 +58,7 @@ sub identify_mutations
 	my $bam = Bio::DB::Sam->new(-fasta => $reference_fasta_file_name, -bam => $reference_bam_file_name);
 	##my @seq_ids = $bam->seq_ids;
 	my @seq_ids = @{$ref_seq_info->{seq_ids}};
-	
+	our $gd = Breseq::GenomeDiff->new();
 	
 	## some local variable lookups for convenience
 	my $total_ref_length = 0;
@@ -68,7 +69,7 @@ sub identify_mutations
 	
 	my $log10_ref_length = log($total_ref_length) / log(10);	
 	our $s;
-	
+
 	### 
     ## Data Preparation
 	###
@@ -78,18 +79,17 @@ sub identify_mutations
 	
 	REFERENCE: foreach our $seq_id (@seq_ids)
 	{				
-		my $this_mutation_identification_done_file_name = $settings->file_name('mutation_identification_done_file_name', {'@'=>$seq_id});
-		my $this_predicted_mutation_file_name = $settings->file_name('predicted_mutation_file_name', {'@'=>$seq_id});	
+		my $this_predicted_mutation_file_name = $settings->file_name('predicted_mutation_file_name', {'@'=>$seq_id});
 		my $this_tiled_coverage_tab_file_name = $settings->file_name('tiled_coverage_text_file_name', {'@'=>$seq_id});	
 		
 		###
 		##  Already done with this reference sequence.
 		###
-		if (-e $this_mutation_identification_done_file_name)
-		{
-			print " REFERENCE: $seq_id :: Already Complete. \n";			
-			next REFERENCE;
-		}
+#		if (-e $this_mutation_identification_done_file_name)
+#		{
+#			print " REFERENCE: $seq_id :: Already Complete. \n";			
+#			next REFERENCE;
+#		}
 		
 		###
 		##  Handle predictions for this reference sequence.
@@ -110,12 +110,6 @@ sub identify_mutations
 		open MUT, ">$snps_all_tab_file_name" if (defined $snps_all_tab_file_name);
 		open COV, ">$coverage_tab_file_name" if (defined $coverage_tab_file_name);
 		print COV join("\t", 'unique_top_cov', 'unique_bot_cov', 'redundant_top_cov', 'redundant_bot_cov', 'raw_redundant_top_cov', 'raw_redundant_bot_cov', 'e_value', 'position') . "\n";
-
-		### hash reference that is returned, contains fields:
-		###  'mutations', 'unknowns', 'deletions'
-		our @mutations = ();
-		our @unknowns = ();
-		our @deletions = ();
 	
 		### DELETION PREDICTION: variables to keep track of during pileup
 		our $last_deletion_start_position = undef;
@@ -217,6 +211,7 @@ sub identify_mutations
 					}
 					
 					my $del = {
+						'type' => 'MC',
 						'seq_id' => $seq_id,
 						'start' => $last_deletion_start_position,
 						'end' => $pos-1,
@@ -231,8 +226,8 @@ sub identify_mutations
 					
 					$del->{'left_unique_cov'} = 'NA' if (!defined $del->{'left_unique_cov'});
 					$del->{'right_unique_cov'} = 'NA' if (!defined $del->{'right_unique_cov'});
-
-					push @deletions, $del;
+					
+					$gd->add($del);					
 				}
 
 				#reset the search
@@ -299,7 +294,7 @@ sub identify_mutations
 			
 		}
 		
-		
+
 		sub _update_unknown_intervals
 		{
 			my ($seq_id, $pos, $base_predicted, $this_position_unique_only_coverage) = @_;
@@ -319,8 +314,8 @@ sub identify_mutations
 				#end interval where we were unable to call mutations
 				if (defined $last_start_unknown_interval)
 				{
-					my $new_interval = { 'start'=> $last_start_unknown_interval, 'end'=> $pos-1, 'seq_id' => $seq_id };
-					push @unknowns, $new_interval;
+					my $new_interval = { 'type'=>'UN', 'start'=> $last_start_unknown_interval, 'end'=> $pos-1, 'seq_id' => $seq_id };
+					$gd->add($new_interval);
 					undef $last_start_unknown_interval;
 				#	print Dumper($new_interval); ##DEBUG
 				}
@@ -566,8 +561,11 @@ sub identify_mutations
 				#update information on deletions
 				if ($insert_count == 0)
 				{
-					_check_deletion_completion($pos, $this_position_coverage, $e_value_call);
-					_update_copy_number_variation($pos, $this_position_coverage, $ref_base); 							
+					if (!$settings->{no_deletion_prediction})
+					{
+						_check_deletion_completion($pos, $this_position_coverage, $e_value_call);
+						_update_copy_number_variation($pos, $this_position_coverage, $ref_base); 							
+					}
 				}
 				
 				###
@@ -611,80 +609,72 @@ sub identify_mutations
 				next INSERT_COUNT if (!$mutation_predicted && !$polymorphism_predicted);
 				## bail if we are predicting polymorphisms, but there wasn't one
 
-				if ($mutation_predicted)
+				my $mut;
+				if ($mutation_predicted || $polymorphism_predicted)
 				{
-					
 					#only once we are here can we be sure there is a $best_base!
 					my $best_cov = $pos_info->{$best_base}->{unique_trimmed_cov};
 					$best_cov->{1} = 0 if (!defined $best_cov->{1});
 					$best_cov->{-1} = 0 if (!defined $best_cov->{-1});
 
-					my $mut;
-					$mut->{start} = $pos;
-					$mut->{end} = $pos;
+					$mut->{type} = 'WR';
 					$mut->{seq_id} = $seq_id;
-					$mut->{ref_seq} = $ref_base;
-					$mut->{new_seq} = $best_base;		
+					$mut->{position} = $pos;
+					$mut->{insert_position} = $insert_count;
 					$mut->{quality} = $e_value_call;		
-					$mut->{total_coverage_string} = $total_cov->{-1} . "/" . $total_cov->{1};
-					$mut->{best_coverage_string} = $best_cov->{-1} . "/" . $best_cov->{1};
-					$mut->{insert_start} = $insert_count;
-					$mut->{insert_end} = $insert_count;
-					$mut->{frequency} = 1; ## this is not a polymorphism
+					$mut->{tot_cov} = $total_cov->{-1} . "/" . $total_cov->{1};
+					$mut->{new_cov} = $best_cov->{-1} . "/" . $best_cov->{1};
+					
 					$mut->{bases} = $base_string;
 					$mut->{qualities} = $quality_string;
 					$mut->{strands} = $strand_string;
-
-					if ($e_value_call < $settings->{mutation_log10_e_value_cutoff})
-					{
-						$mut->{marginal} = 1;
-						push @mutations, $mut;
-					}
-					push @mutations, $mut
-					
-					#print Dumper($mut);
+				}
+				if ($mutation_predicted)
+				{
+					$mut->{ref_base} = $ref_base;
+					$mut->{new_base} = $best_base;		
+					$mut->{frequency} = 1; ## this is not a polymorphism
+					$mut->{marginal} = 1 if ($e_value_call < $settings->{mutation_log10_e_value_cutoff})
 				}
 				if ($polymorphism_predicted)
-				{
-					my $best_cov = $pos_info->{$best_base}->{unique_trimmed_cov};
-					$best_cov->{1} = 0 if (!defined $best_cov->{1});
-					$best_cov->{-1} = 0 if (!defined $best_cov->{-1});
-
-					my $mut = $polymorphism;
-					$mut->{start} = $pos;
-					$mut->{end} = $pos;
-					$mut->{seq_id} = $seq_id;
+				{						
 					
-					$mut->{ref_seq} = $ref_base;
-					
-					### NOTE: This neglects the case where neither the first nor second base is the reference base! Should almost never happen					
-#					die if (($polymorphism->{first_base} ne $ref_base) && ($polymorphism->{second_base} ne $ref_base));
-					
-					if ($mut->{second_base} eq $ref_base)
+					$mut->{log10_e_value} = $polymorphism->{log10_e_value};
+					$mut->{fisher_strand_p_value} = $polymorphism->{fisher_strand_p_value};
+											
+					if ($polymorphism->{first_base} eq $ref_base)
 					{
-						($mut->{first_base}, $mut->{second_base}) = ($mut->{second_base}, $mut->{first_base});
-						$mut->{frequency} = 1-$mut->{frequency};
-					}						
-					
-					$mut->{new_seq} = $mut->{second_base};
-					#$mut->{polymorphism} = $polymorphism;
-					$mut->{polymorphism} = 1;
-					$mut->{quality} = $mut->{log10_e_value};		
-					$mut->{total_coverage_string} = $total_cov->{-1} . "/" . $total_cov->{1};
-					$mut->{best_coverage_string} = $best_cov->{-1} . "/" . $best_cov->{1};
-					$mut->{insert_start} = $insert_count;
-					$mut->{insert_end} = $insert_count;					
-					$mut->{bases} = $base_string;
-					$mut->{qualities} = $quality_string;
-					$mut->{strands} = $strand_string;
-					
+						$mut->{frequency} = $polymorphism->{frequency};
+						$mut->{ref_base} = $polymorphism->{first_base};
+						$mut->{new_base} = $polymorphism->{second_base};
+					}	
+					elsif ($mut->{second_base} eq $ref_base)
+					{
+						$mut->{frequency} = 1-$polymorphism->{frequency};
+						$mut->{ref_base} = $polymorphism->{second_base};
+						$mut->{new_base} = $polymorphism->{first_base};
+					}
+
+					### NOTE: This neglects the case where neither the first nor second base is the reference base! Should almost never happen					
+					# die if (($polymorphism->{first_base} ne $ref_base) && ($polymorphism->{second_base} ne $ref_base));
+					else
+					{
+						$mut->{frequency} = $polymorphism->{frequency};
+						$mut->{ref_base} = $polymorphism->{first_base};
+						$mut->{new_base} = $polymorphism->{second_base};
+						
+						$mut->{error} = "polymorphic_without_reference_base";
+					}
+										
+									
 					$mut->{marginal} = 1 if ($mut->{log10_e_value} < $settings->{polymorphism_log10_e_value_cutoff});
 					$mut->{marginal} = 1 if ($mut->{fisher_strand_p_value} < $settings->{polymorphism_fisher_strand_p_value_cutoff});
 					$mut->{marginal} = 1 if ($mut->{frequency} < $settings->{polymorphism_frequency_cutoff});
 				 	$mut->{marginal} = 1 if ($mut->{frequency} > 1-$settings->{polymorphism_frequency_cutoff});		
-
-					push @mutations, $mut;
 				}
+				
+				$gd->add($mut);
+				
 			} continue {
 				$insert_count++;
 			}#end INSERT COUNT	
@@ -696,50 +686,18 @@ sub identify_mutations
 		## Need to clean up deletions and unknowns that occur at the end
 		###
 		_check_deletion_completion($sequence_length+1); 		
-
-		## check for final items to add to unknown list
-		if (defined $last_start_unknown_interval)
-		{
-			push @unknowns, { 'start'=> $last_start_unknown_interval, 'end'=> $sequence_length, 'seq_id' => $seq_id };
-			#print Dumper(\@unknowns); ##DEBUG
-		}
+		_update_unknown_intervals($seq_id, $sequence_length+1, 1); 		
 		
 		close COV;
 		close MUT;	
-		
-		remove_deletions_overlapping_mutations(\@deletions, \@mutations);
 
-		#a hash reference of hash references of list references
-		my $new_read_mut_info = {
-			'mutations' => \@mutations, 
-			'unknowns' => \@unknowns, 
-			'deletions' => \@deletions, 
-			'summary' => $s,
-		};
-
-		Storable::store($new_read_mut_info, $this_predicted_mutation_file_name) or die "Can't store data in file $this_predicted_mutation_file_name!\n";
-		open DONE, ">$this_mutation_identification_done_file_name";
-		close DONE;
+# now this is handled after the evidence phase... 		
+#		remove_deletions_overlapping_mutations(\@deletions, \@mutations);
 	}
 	
-	## load all mutations together
-	
-	my @mutations;
-	my @deletions;
-	my @unknowns;
-	
-	REFERENCE: foreach my $seq_id (@seq_ids)
-	{				
-		my $this_predicted_mutation_file_name = $settings->file_name('predicted_mutation_file_name', {'@'=>$seq_id});	
-		my $mutation_info = Storable::retrieve($this_predicted_mutation_file_name) or die "Can't retrieve data in file $this_predicted_mutation_file_name!\n";
-		
-		$summary->{mutation_identification}->{$seq_id} = $mutation_info->{summary};
-		push @mutations, @{$mutation_info->{mutations}};
-		push @deletions, @{$mutation_info->{deletions}};
-		push @unknowns, @{$mutation_info->{unknowns}};
-	}
-		
-	return { 'mutations' => \@mutations, 'unknowns' => \@unknowns, 'deletions' => \@deletions };
+	##finally, write out the genome diff file
+	my $predicted_mutation_genome_diff_file_name = $settings->file_name('predicted_mutation_genome_diff_file_name');	
+	$gd->write($predicted_mutation_genome_diff_file_name);
 }
 
 sub remove_deletions_overlapping_mutations

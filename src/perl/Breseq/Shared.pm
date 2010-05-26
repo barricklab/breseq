@@ -174,7 +174,6 @@ sub tam_write_moved_alignment
 		$junction_side, 		# CJ: side of the junction (1 or 2) that we are writing
 		$junction_flanking, 	# CJ: number of bases before overlap in the candidate junction sequence 
 		$junction_overlap, 		# CJ: amount of overlap in the candidate junction sequence that we aligned to
-		$overlap_side,          # CJ: side we include the overlap on
 		$trim					# CJ: list with two items, indicating what the trim on each end is
 	) = @_;
 
@@ -490,157 +489,28 @@ sub junction_name_split
 	my @s = split /$junction_name_separator/, $_[0];
 	my $item;
 
-	$item->{interval_1}->{seq_id} 		= $s[0];
-	$item->{interval_1}->{start} 		= $s[1];
-	$item->{interval_1}->{end} 			= $s[1];
-	$item->{interval_1}->{strand} 		= $s[2];
-	$item->{interval_1}->{strand} = -1 if ($item->{interval_1}->{strand} == 0);
+	$item->{side_1}->{seq_id} 		= $s[0];
+	$item->{side_1}->{position} 	= $s[1];
+	$item->{side_1}->{strand} 		= $s[2];
+	$item->{side_1}->{strand} = -1 if ($item->{side_1}->{strand} == 0);
 
-	$item->{interval_2}->{seq_id} 		= $s[3];
-	$item->{interval_2}->{start} 		= $s[4];
-	$item->{interval_2}->{end} 			= $s[4];
-	$item->{interval_2}->{strand} 		= $s[5];
-	$item->{interval_2}->{strand} = -1 if ($item->{interval_2}->{strand} == 0);
+	$item->{side_2}->{seq_id} 		= $s[3];
+	$item->{side_2}->{position} 	= $s[4];
+	$item->{side_2}->{strand} 		= $s[5];
+	$item->{side_2}->{strand} = -1 if ($item->{side_2}->{strand} == 0);
 
-	$item->{overlap} 					= $s[6];
+	$item->{alignment_overlap} 			= $s[6];
 	$item->{unique_read_string} 		= $s[7];
 
 	$item->{flanking_left} 				= $s[8];
 	$item->{flanking_right} 			= $s[9];
 	
 	#redundant items are last, becuse they are created at the last minute
-	$item->{interval_1}->{redundant} 	= $s[10];
-	$item->{interval_2}->{redundant} 	= $s[11];	
+	$item->{side_1}->{redundant} 	= $s[10];
+	$item->{side_2}->{redundant} 	= $s[11];	
 	
 	return $item;
 }
-
-
-##UNUSED
-## moved here from ReferenceSequence.pm to avoid BioPerl requirement.
-sub process_reference_sequences
-{
-	my ($settings, $summary) = @_;
-	$summary->{sequence_conversion}->{total_reference_sequence_length} = 0;
-	my $ref_seq_info;
-	my $i = 0;
-	my $s;
-	
-	# get two pieces of information from $settings
-	my $reference_fasta_file_name = $settings->file_name('reference_fasta_file_name');
-	my @genbank_file_names = $settings->file_name('reference_genbank_file_names'); 
-
-	my @junction_only_genbank_file_names = $settings->file_name('junction_only_reference_genbank_file_names'); 
-	my %junction_only_hash;
-	foreach my $jo (@junction_only_genbank_file_names)
-	{
-		$junction_only_hash{$jo} = 1;
-	}
-	
-	print STDERR "Loading reference sequences...\n";
-
-	##open fasta file
-	open FASTA, ">$reference_fasta_file_name";
-
-	my %loaded_seq_ids;
-
-	foreach my $genbank_file_name (@genbank_file_names, @junction_only_genbank_file_names)
-	{
-		print STDERR "  Loading File::$genbank_file_name\n";
-		
-		my $junction_only = $junction_only_hash{$genbank_file_name};
-		
-		## open this GenBank file		
-		open GENBANK, "<$genbank_file_name";
-		
-		my $seq_id;
-		my $ref_seq = '';
-		my $specified_length = -1;
-		my $actual_length = 0;
-		my $seq_definition;
-		my $seq_version;
-		my $started_on_sequence = 0;
-		while ($_ = <GENBANK>)
-		{			
-			chomp $_;
-			
-			##end of a record
-			if ($_ =~ m/^\s*\/\/\s*$/)
-			{				
-				## error checking
-				($actual_length == $specified_length) or die "Error reading GenBank file entry: $seq_id\nLength in header ($specified_length) does not match length of sequence ($actual_length).\n";  
-				(!$loaded_seq_ids{$seq_id}) or die "Duplicate GenBank file entry: $seq_id\n";  
-				$loaded_seq_ids{$seq_id}++;
-				
-				$s->{$seq_id}->{length} = $actual_length;
-				$s->{$seq_id}->{definition} = (defined $seq_definition) ? $seq_definition : '';
-				
-				$s->{$seq_id}->{seq_id} = $seq_id;
-				$s->{$seq_id}->{version} = $seq_version;
-				
-				$s->{$seq_id}->{string} = $seq_id;
-				
-				
-				$summary->{sequence_conversion}->{total_reference_sequence_length} += $actual_length;
-				
-				## it would be nice to get rid of storing the whole genome in memory
-				$ref_seq_info->{ref_strings}->{$seq_id} = $ref_seq;
-				$ref_seq_info->{seq_order}->{$seq_id} = $i++;
-				
-				if (!$junction_only)
-				{
-					push @{$ref_seq_info->{seq_ids}}, $seq_id;
-				}
-				else
-				{
-					push @{$ref_seq_info->{junction_only_seq_ids}}, $seq_id;
-				}
-
-				### re-initialize to nothing for next sequence
-				undef $seq_id;
-				undef $seq_definition;
-				undef $seq_version;
-				$ref_seq = '';
-				$specified_length = -1;
-				$started_on_sequence = 0;
-				
-			}
-			elsif ($_ =~ m/\s*LOCUS\s+(\S+)\s+(\d+)\s+bp/)
-			{				
-				$seq_id = $1; 
-				$specified_length = $2;
-			}
-			elsif ($_ =~ m/\s*DEFINITION\s+(.+)$/)
-			{
-				$seq_definition = $1; 
-			}
-			elsif ($_ =~ m/\s*VERSION\s+(.+)$/)
-			{
-				$seq_version = $1; 
-			}			
-			elsif ($_ =~ m/\s*ORIGIN/)
-			{
-				print FASTA ">$seq_id\n";
-				$started_on_sequence = 1; 
-			}		
-			elsif ($started_on_sequence)
-			{
-				$_ =~ s/(\d|\s)//g;
-				$actual_length += length $_;
-				print FASTA "\U$_\n"; 
-				$ref_seq .= "\U$_";
-			}			
-		}
-	}
-	
-	## create SAM faidx
-	Breseq::Shared::system("samtools faidx $reference_fasta_file_name", 1);
-	
-	$summary->{sequence_conversion}->{reference_sequences} = $s;
-		
-	return $ref_seq_info;
-}
-
 
 
 return 1;

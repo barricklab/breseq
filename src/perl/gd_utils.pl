@@ -185,7 +185,7 @@ sub do_filter
 		return $accept;
 	}	
 		
-	my $removed_gd = $gd->filter_mutations(\&mutation_filter);
+	my $removed_gd = $gd->filter(\&mutation_filter);
 	$removed_gd->write($removed) if ($removed);	
 	$gd->write($output);
 }
@@ -211,7 +211,7 @@ sub do_annotate
 		push @mutations, @{$mutation_info->{mutations}};
 		push @deletions, @{$mutation_info->{deletions}};
 		push @unknowns, @{$mutation_info->{unknowns}};
-		push @hybrids, @{$mutation_info->{hybrids}};
+		push @hybrids, @{$mutation_info->{hybrids}};		
 	}	
 		
 	###
@@ -367,8 +367,8 @@ sub do_annotate
 	{
 		#print STDERR Dumper($hybrid);	
 		push @composite_list, $hybrid;	
-	 	push @composite_list, $hybrid->{interval_1};
-	 	push @composite_list, $hybrid->{interval_2};
+	 	push @composite_list, $hybrid->{side_1};
+	 	push @composite_list, $hybrid->{side_2};
 	}
 	
 	
@@ -405,13 +405,14 @@ sub do_annotate
 		$c->{fasta_path} = $junction_fasta_file_name;
 		
 		## rename junctions so they don't clobber normal alignments
-		my $html_alignment_file_name = "JCT_$c->{seq_id}_$c->{start}_$c->{end}_alignment.html";
+		my $html_alignment_file_name = "JCT_$c->{seq_id}_alignment.html";
 	 	$c->{link} = "$settings->{local_alignment_path}/$html_alignment_file_name";
 	 	$c->{file_name} = "$settings->{alignment_path}/$html_alignment_file_name";
 	
-		foreach my $int ('interval_1', 'interval_2')
+		foreach my $int ('side_1', 'side_2')
 		{
-			$html_alignment_file_name = "JCT_$c->{$int}->{seq_id}_$c->{$int}->{start}_$c->{$int}->{end}_alignment.html";
+			my $up_int = "\U$int";
+			$html_alignment_file_name = "JCT_$up_int\_$c->{seq_id}_alignment.html";
 			$c->{$int}->{link} = "$settings->{local_alignment_path}/$html_alignment_file_name";
 		 	$c->{$int}->{file_name} = "$settings->{alignment_path}/$html_alignment_file_name";
 		}

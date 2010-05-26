@@ -65,11 +65,46 @@ use Data::Dumper;
 
 @ISA = qw( Bio::Root::Root );
 
+# Format specification
+# 
+our $line_specification = {
+	## mutational event
+	'SNP' => ['position', 'ref_base', 'new_base'],
+	'SUB' => [''],
+	'DEL' => [''],
+	'INS' => [''],
+	'MOB' => [''],
+	'DUP' => [''],
+	'INV' => [''],
+	
+	## evidence
+	'WR' => ['seq_id', 'position', 'insert_position', 'ref_base', 'new_base'],
+	'MC' => ['seq_id', 'start', 'end'],
+	'JC' => ['side_1_seq_id', 'side_1_position', 'side_1_strand', 'side_2_seq_id', 'side_2_position', 'side_2_strand', 'overlap'],
+	'UN' => ['seq_id', 'start', 'end'],
+};
+
+our $tag_sort_fields = {
+	'SNP' => [1, 'seq_id', 'position'],
+	'INS' => [1],
+	'DEL' => [1],
+	'INS' => [1],
+	'MOB' => [1],
+	'DUP' => [1],
+	'INV' => [1],
+	'WR' => [2, 'seq_id', 'position'],
+	'MC' => [2, 'seq_id', 'start'],
+	'JC' => [2, 'side_1_seq_id', 'side_1_position'],
+	'UN' => [3, 'seq_id', 'start'],
+};
+
+
 =head2 new
 
  Title   : new
- Usage   : $gd = Intergenic::454Diff->new( -file_name => 'evolved.gd' );
- Function: Creates a GenomeDiff object, loading it from a file if a file_name is provided
+ Usage   : $gd = Breseq::GenomeDiff->new();
+           $gd = Breseq::GenomeDiff->new( -file => 'evolved.gd' );
+ Function: Creates a GenomeDiff object, loading it from a file if one is provided
  Returns : new GenomeDiff object
 
 =cut
@@ -80,10 +115,13 @@ sub new
 	my $class = ref($caller) || $caller;
 	my $self = new Bio::Root::Root($caller, @args);
 
-	#initialize
-	@{$self->{mutations}} = ();
+	# initialize
+	@{$self->{list}} = ();
+	$self->{unique_id_counter} = 0;
 
 	bless ($self, $class);
+	
+	# load from file if one of these options found...
 	$self->{file_name} = $self->Bio::Root::RootI::_rearrange([qw(FILE_NAME)], @args);
 	$self->{file_name} = $self->Bio::Root::RootI::_rearrange([qw(FILE)], @args) if (!defined $self->{file_name});
 	$self->{file_name} = $self->Bio::Root::RootI::_rearrange([qw(IN)], @args) if (!defined $self->{file_name});
@@ -92,55 +130,148 @@ sub new
 	return $self;
 }
 
-=head2 get_next
 
- Title   : get_next
- Usage   : $read = $delta_file->get_next;
- Function: get the next read from a delta file, loads all regions matched within the read
- Returns :
+# this should do some checking
+
+=head2 new
+
+ Title   : new
+ Usage   : $gd->add( {seq_id=>'', start=>456, end=>546 } );
+ Function: Adds a new item to a GenomeDiff from a hash. Auto-populates empty required fields.
+ Returns : 
 
 =cut
-
-sub hash_out
+sub add
 {
-	my ($self, $l, $key) = @_;
-	
-	my @list = split /[,|]\s+/, $l;
-	my $return_hash;
-	foreach my $item (@list)
+	my ($self, $item) = @_;
+	my @missing_required_columns = ();
+
+	$item->{id} = ++$self->{unique_id_counter} if (!defined $item->{id});
+
+	sub check_required_field
 	{
-		next if (!$item);
-		my ($item_key, $item_value) = split /=/, $item;
-		die "$item_key, $item_value" if (!defined $item_value);
-		$return_hash->{$item_key} = $item_value;
-		$self->{$key}->{$item_key} = $item_value if (defined $key);
+		my ($item, $field, $missing_ref) = @_;
+		push @$missing_ref, $field if (!defined $item->{$field});
 	}
 	
-	return $return_hash;
+	## check to be sure the item has required fields, or auto-populate them
+	$item->{type} = '' if (!defined $item->{type});
+	
+	my $spec = $line_specification->{$item->{type}};
+	if (!defined $spec)
+	{
+		$self->warn("Type \'$item->{type}\' is not recognized. Ignoring item.");
+		return;
+	}
+	
+	## check for required fields
+	foreach my $key (@$spec)
+	{
+		check_required_field($item, $key, \@missing_required_columns);
+	}
+
+	if (scalar @missing_required_columns > 0)
+	{
+		$self->warn("GenomeDiff::Ignoring item of type \'$item->{type}\' that is missing required field(s):" . join (',', @missing_required_columns));
+		return;
+	}
+
+	## these are all required columns
+	$item->{SORT_1} = $tag_sort_fields->{$item->{type}}->[0];
+	$item->{SORT_2} = $item->{$tag_sort_fields->{$item->{type}}->[1]};
+	$item->{SORT_3} = $item->{$tag_sort_fields->{$item->{type}}->[2]};
+	
+	push @{$self->{list}}, $item;
 }
 
-#convert hash to line
-sub hash_to_line
-{
-	my ($self, $hash) = @_;
-	my $line;
 
-	foreach my $key (sort keys %$hash)
+sub list
+{
+	my ($self) = @_;
+	return @{$self->{list}};
+}
+
+
+
+## Internal function for creating a hash from a line
+sub _line_to_item
+{
+	my ($self, $line) = @_;
+	
+	my @line_list = split /\t/, $line;
+	my $item = {};
+	$item->{type} = shift @line_list;
+	$item->{id} = shift @line_list;
+	
+	my $spec = $line_specification->{$item->{type}};
+	if (!defined $spec)
 	{
-		$line .= ", " if ($line);
-		$line .= $key . "=" . "$hash->{$key}"
+		$self->warn("Type \'$item->{type}\' is not recognized for line:\n$line");
+		return undef;
 	}
+	
+	foreach my $key (@$spec)
+	{
+		my $next = shift @line_list;
+		if (!defined $next)
+		{
+			$self->warn("Number of required items is less than expected for type \'$item->{type}\' line:\n$line");
+			return undef;
+		}
+		$item->{$key} = $next;
+	}
+
+	## Remainder of the line is comprised of non-required key value pairs
+	foreach my $key_value_pair (@line_list)
+	{
+		next if (!$key_value_pair);
+		my $matched = ($key_value_pair =~ m/^(.+)=(.+)$/);
+		if (!$matched)
+		{
+			$self->warn("Not a key value pair \'$key_value_pair\' line:\n$line");
+			next;
+		}		
+		
+		my ($item_key, $item_value) = ($1, $2);	
+		$item->{$item_key} = $item_value;
+	}
+	
+	$item->{SORT_1} = $item->{$tag_sort_fields->{$item->{type}}->[0]};
+	$item->{SORT_2} = $item->{$tag_sort_fields->{$item->{type}}->[1]};
+	$item->{SORT_3} = $item->{$tag_sort_fields->{$item->{type}}->[2]};
+
+	return $item;
+}
+
+## Internal function for creating a line from a hash
+sub _item_to_line
+{
+	my ($self, $item) = @_;
+	my $line = '';
+		
+	my $spec = $line_specification->{$item->{type}};
+	if (!defined $spec)
+	{
+		$self->warn("Type \'$item->{type}\' not found for item. Ignoring.");
+		return '';
+	}
+	
+	my %ignore;
+	foreach my $key ('type', 'id', @$spec)
+	{
+		$line .= "$item->{$key}\t";
+		$ignore{$key} = 1;
+	}
+	
+	my @keys = sort keys %$item;
+	@keys = grep { !$ignore{$_} } @keys;
+	@keys = grep { !($_=~ m/^SORT_/) } @keys;
+	
+	my @key_value_pairs = map { $_ . "=" . $item->{$_} } @keys;
+	$line .= join "\t", @key_value_pairs;
 	
 	return $line;
 }
-
-# this should do some checking
-sub add_mutation
-{
-	my ($self, $mut) = @_;
-	push @{$self->{mutations}}, $mut;
-}
-
 
 sub read
 {
@@ -155,25 +286,19 @@ sub read
 	$l =~ m/#=GENOME_DIFF\s+(\d+)/ or die "Could not match version line in file $self->{file_name}.";
 	$self->{version} = $1;
 
-	while ($l = <IN>)
+	## read header information
+	
+	## read data
+	$l = <IN>;
+	while ($l)
 	{
 		chomp $l;
-		if ($l =~ s/#=SAMPLE\w*//)
-		{
-			$self->hash_out($l, 'SAMPLE');
-		}
-		else
-		{
-			push @{$self->{'mutations'}}, $self->hash_out($l);
-		}
+		my $item = $self->_line_to_item($l);
+		push @{$self->{list}}, $item if ($item);
+	} continue {
+		$l = <IN>;
 	}
 	close IN;
-}
-
-sub mutations
-{
-	my ($self) = @_;
-	return @{$self->{'mutations'}};
 }
 
 =head2 write
@@ -193,22 +318,19 @@ sub write
 	open OUT, ">$file_name" or $self->throw("Could not write file: $file_name");
 	print OUT "#=GENOME_DIFF 1.0\n";
 	print OUT "#=SAMPLE " . $self->hash_to_line($self->{'SAMPLE'}) . "\n" if (defined $self->{'SAMPLE'});
-
-	sub by_seq_id_pos 
-	{ 		
-		my ($a_pos, $b_pos) = ($a->{pos}, $b->{pos});
-		$a_pos =~ s/-\d+$//;
-		$b_pos =~ s/-\d+$//;
-		
-		return (($a->{seq_id} cmp $b->{seq_id}) || ($a_pos <=> $b_pos));
+	
+	sub by_sort_fields
+	{ 			
+		return ($a->{SORT_1} <=> $b->{SORT_1}) || ($a->{SORT_2} cmp $b->{SORT_2}) || ($a->{SORT_3} <=> $b->{SORT_3});
 	}
+	
 
-# sorting broken
-#	@{$self->{mutations}} = sort by_seq_id_pos @{$self->{mutations}} if (!$no_sort);
+	@{$self->{list}} = sort by_sort_fields @{$self->{list}} if (!$no_sort);
 
-	foreach my $mut (@{$self->{mutations}})
-	{
-		print OUT $self->hash_to_line($mut) . "\n";
+	foreach my $item (@{$self->{list}})
+	{		
+		my $line = $self->_item_to_line($item);
+		print OUT "$line\n" if ($line);
 	}
 	
 	close OUT;
@@ -223,16 +345,16 @@ sub write
 
 =cut
 
-sub has_mutation
+sub exists
 {
-	my ($self, $test_mut) = @_;
+	my ($self, $test_item) = @_;
 
-	foreach my $mut (@{$self->{mutations}})
+	foreach my $item (@{$self->{list}})
 	{
-		if (	($mut->{type} eq $test_mut->{type})
-			 &&	($mut->{pos} == $test_mut->{pos})
-			 && ($mut->{new} eq $test_mut->{new})
-			 && ($mut->{ref} eq $test_mut->{ref}) )
+		if (	($item->{type} eq $test_item->{type})
+			 &&	($item->{pos} == $test_item->{pos})
+			 && ($item->{new} eq $test_item->{new})
+			 && ($item->{ref} eq $test_item->{ref}) )
 		{
 			return 1;
 		}
@@ -241,25 +363,25 @@ sub has_mutation
 	return 0;
 }
 
-sub filter_mutations
+sub filter
 {
 	my ($self, $filter_function) = @_;
-	
-	my @new_mutations = ();
+		
+	my @new_list = ();
 	my $removed_gd = Breseq::GenomeDiff->new();
 	
-	foreach my $mut ($self->mutations)
+	foreach my $item ($self->list)
 	{
-		if ($filter_function->($mut))
+		if ($filter_function->($item))
 		{
-			push @new_mutations, $mut;
+			push @new_list, $item;
 		}
 		else
 		{
-			$removed_gd->add_mutation($mut);
+			$removed_gd->add($item);
 		}
 	}
-	@{$self->{mutations}} = @new_mutations;
+	@{$self->{list}} = @new_list;
 	
 	return $removed_gd;
 }
@@ -319,26 +441,20 @@ sub last_common_ancestor
 
 =cut
 
-sub union
+sub merge
 {
-	my ($list) = @_;
+	my (@list) = @_;
 	
 	my $new_gd = Breseq::GenomeDiff->new();
-	$new_gd->{'SAMPLE'}->{merged} = join ",", map {$_->{SAMPLE}->{strain}} @$list;
-	
-	print Dumper($list);
-	
-	my $snp_hash;
-	foreach my $gd (@$list)
+#	$new_gd->{'SAMPLE'}->{merged} = join ",", map {$_->{SAMPLE}->{strain}} @$list;
+			
+	while (my $gd = shift @list)
 	{
-		foreach my $snp (@{$gd->{mutations}})
+		foreach my $item ($gd->list)
 		{
-			if (!$new_gd->has_mutation($snp))
-			{
-				push @{$new_gd->{mutations}}, $snp;
-			}
+			$new_gd->add($item);
 		}
-	}	
+	}
 	return $new_gd;
 }
 
@@ -352,13 +468,13 @@ sub intersection
 	my $new_gd = Breseq::GenomeDiff->new();
 	$new_gd->{'SAMPLE'}->{intersection } = join ",", map {$_->{SAMPLE}->{strain}} @$list;
 	
-	SNP: foreach my $test_snp (@{$union_gd->{mutations}})
+	SNP: foreach my $test_item (@{$union_gd->{list}})
 	{
 		foreach my $gd (@$list)
 		{
-			next SNP if (!$gd->has_mutation($test_snp));
+			next SNP if (!$gd->has_item($test_item));
 		}
-		push @{$new_gd->{mutations}}, $test_snp;
+		push @{$new_gd->{list}}, $test_item;
 	}
 	
 	return $new_gd;
@@ -374,10 +490,10 @@ sub subtract
 	my $new_gd = Breseq::GenomeDiff->new();
 	$new_gd->{'SAMPLE'}->{subtract} = join( ",", map {$_->{SAMPLE}->{strain}} @$list_1) . "-" . join( ",", map {$_->{SAMPLE}->{strain}} @$list_2);
 		
-	SNP: foreach my $test_snp (@{$union1_gd->{mutations}})
+	SNP: foreach my $test_item (@{$union1_gd->{list}})
 	{
-		next SNP if ($union2_gd->has_mutation($test_snp));
-		push @{$new_gd->{mutations}}, $test_snp;
+		next SNP if ($union2_gd->has_mutation($test_item));
+		push @{$new_gd->{list}}, $test_item;
 	}
 	
 	return $new_gd;

@@ -79,22 +79,14 @@ sub load_ref_seq_info
 		my $junction_only = $junction_only_hash{$genbank_file_name};
 
 		while (my $ref_seq = $ref_i->next_seq)
-		{
-			## optionally write out FASTA
-			if ($create_fasta)
-			{
-				$fasta_o->write_seq($ref_seq);
-			}
-			
+		{			
 			my $seq_id = $ref_seq->id;
 			print STDERR "    Sequence::$seq_id loaded.\n";
 			
 			$s->{$seq_id}->{seq_id} = $seq_id;
 			$s->{$seq_id}->{length} = $ref_seq->length;
 			$s->{$seq_id}->{definition} = $ref_seq->desc;
-			$s->{$seq_id}->{version} = $ref_seq->display_id;
-			$s->{$seq_id}->{string} = $seq_id;
-			
+			$s->{$seq_id}->{version} = $ref_seq->display_id;			
 			
 			$summary->{sequence_conversion}->{total_reference_sequence_length} += $ref_seq->length if (defined $summary);
 			
@@ -102,9 +94,20 @@ sub load_ref_seq_info
 			$ref_seq_info->{bioperl_ref_seqs}->{$seq_id} = $ref_seq;
 
 			##it is much faster to use substr to create the lists for nt comparisons than BioPerl trunc
+			
+			#load the reference sequence, uppercase it, and scrub degenerate bases to N's 
 			$ref_seq_info->{ref_strings}->{$seq_id} = $ref_seq->seq;
-			$ref_seq_info->{ref_strings}->{$seq_id} = "\U$ref_seq_info->{ref_strings}->{$seq_id}";
+			$ref_seq_info->{ref_strings}->{$seq_id} = uc($ref_seq_info->{ref_strings}->{$seq_id});
+			$ref_seq_info->{ref_strings}->{$seq_id} =~ s/[^ATCG]/N/g;
+			$ref_seq->seq($ref_seq_info->{ref_strings}->{$seq_id});						
 			$ref_seq_info->{seq_order}->{$seq_id} = $i++;
+			
+			## optionally write out FASTA -- AFTER scrubbing sequence
+			if ($create_fasta)
+			{
+				$fasta_o->write_seq($ref_seq);
+			}
+			
 			
 			if (!$junction_only)
 			{
@@ -196,7 +199,7 @@ sub annotate_mutations
 		my $seq_id = $c->{seq_id};
 		my $gene_list_ref = $ref_seq_info->{gene_lists}->{$seq_id};
 		my $is_list_ref = $ref_seq_info->{is_lists}->{$seq_id};
-		my $ref_seq = $ref_seq_info->{bioperl_ref_seqs}->{$seq_id};
+		my $ref_seq = $ref_seq_info->{bioperl_ref_seqs}->{$seq_id};		
 								
 		$c->{type} = "";
 		$c->{aa_position} = "";
@@ -528,23 +531,23 @@ sub annotate_rearrangements
 	our ($settings, $summary, $ref_seq_info, $rearrangements_ref) = @_;	
 	
 	foreach my $item (@$rearrangements_ref)
-	{			
+	{					
 		## This additional information is used for the complex reference line.
 		## Note that it is completely determined by the original candidate junction sequence 
 		## positions and overlap: alignment_pos and alignment_overlap.
 		my $alignment_reference_info_1 = { 
 			truncate_end => $item->{flanking_left}, 
-			ghost_end => $item->{interval_1}->{alignment_pos}, 
-			ghost_strand => $item->{interval_1}->{strand},
-			ghost_seq_id => $item->{interval_1}->{seq_id}
+			ghost_end => $item->{side_1}->{alignment_pos}, 
+			ghost_strand => $item->{side_1}->{strand},
+			ghost_seq_id => $item->{side_1}->{seq_id}
 		};
 		$alignment_reference_info_1->{truncate_end} += $item->{alignment_overlap} if ($item->{alignment_overlap} > 0);
 
 		my $alignment_reference_info_2 = { 
 			truncate_start => $item->{flanking_left}+1, 
-			ghost_start => $item->{interval_2}->{alignment_pos}, 
-			ghost_strand => $item->{interval_2}->{strand},
-			ghost_seq_id => $item->{interval_2}->{seq_id}
+			ghost_start => $item->{side_2}->{alignment_pos}, 
+			ghost_strand => $item->{side_2}->{strand},
+			ghost_seq_id => $item->{side_2}->{seq_id}
 		};
 		$alignment_reference_info_2->{truncate_start} -= $item->{alignment_overlap} if ($item->{alignment_overlap} < 0);
 		
@@ -553,7 +556,7 @@ sub annotate_rearrangements
 
 		#add gene information for each end
 		$item->{hybrid} = $item;
-		foreach my $key ('interval_1', 'interval_2')
+		foreach my $key ('side_1', 'side_2')
 		{			
 			##create circular reference to self so we can print table at the top of the alignment
 			$item->{$key}->{hybrid} = $item;
@@ -596,12 +599,11 @@ sub annotate_rearrangements
 				my $gene_start = ($gene->{strand} == +1) ? $gene->{start} : $gene->{end};	
 				$item->{$key}->{gene}->{position} = abs($item->{$key}->{start}-$gene_start) + 1;
 				$item->{$key}->{gene}->{interval} = ($gene->{strand} == +1) ? "$gene->{start}-$gene->{end}" : "$gene->{end}-$gene->{start}"; 
- 
 			}
 		
 			## Determine IS elements
 			## Is it within an IS or near the boundary of an IS in the direction leading up to the junction?			
-			if (my $is = Breseq::ReferenceSequence::find_closest_is_element($item->{$key}, $ref_seq_info->{is_lists}->{$item->{$key}->{seq_id}}, 200, $item->{$key}->{strand}))
+			if (my $is = Breseq::ReferenceSequence::find_closest_repeat_region($item->{$key}, $ref_seq_info->{is_lists}->{$item->{$key}->{seq_id}}, 200, $item->{$key}->{strand}))
 			{
 				$item->{$key}->{is}->{gene} = $is->{gene};
 				$item->{$key}->{is}->{interval} = ($is->{strand} == +1) ? "$is->{start}-$is->{end}" : "$is->{end}-$is->{start}"; 
@@ -616,11 +618,11 @@ sub annotate_rearrangements
 	{
 		sub by_hybrid
 		{
-			my $a_pos = (defined $a->{interval_1}->{is}) ? $a->{interval_2}->{start} : $a->{interval_1}->{start};
-			my $b_pos = (defined $b->{interval_1}->{is}) ? $b->{interval_2}->{start} : $b->{interval_1}->{start};
+			my $a_pos = (defined $a->{side_1}->{is}) ? $a->{side_2}->{start} : $a->{side_1}->{start};
+			my $b_pos = (defined $b->{side_1}->{is}) ? $b->{side_2}->{start} : $b->{side_1}->{start};
 	
-			my $a_seq_order = (defined $a->{interval_1}->{is}) ? $ref_seq_info->{seq_order}->{$a->{interval_2}->{seq_id}} : $ref_seq_info->{seq_order}->{$a->{interval_1}->{seq_id}};
-			my $b_seq_order = (defined $b->{interval_1}->{is}) ? $ref_seq_info->{seq_order}->{$b->{interval_2}->{seq_id}} : $ref_seq_info->{seq_order}->{$b->{interval_1}->{seq_id}};		
+			my $a_seq_order = (defined $a->{side_1}->{is}) ? $ref_seq_info->{seq_order}->{$a->{side_2}->{seq_id}} : $ref_seq_info->{seq_order}->{$a->{side_1}->{seq_id}};
+			my $b_seq_order = (defined $b->{side_1}->{is}) ? $ref_seq_info->{seq_order}->{$b->{side_2}->{seq_id}} : $ref_seq_info->{seq_order}->{$b->{side_1}->{seq_id}};		
 	
 			return (($a_seq_order <=> $b_seq_order) || ($a_pos <=> $b_pos));
 		}
@@ -648,58 +650,42 @@ sub annotate_rearrangements
 			$c->{is}->{end} = ($is_start < $is_end) ? $is_end : $is_start;
 		}
 		
-		add_is_coords_from_interval($j->{interval_1});
-		add_is_coords_from_interval($j->{interval_2});
+		add_is_coords_from_interval($j->{side_1});
+		add_is_coords_from_interval($j->{side_2});
 		
-		$j->{interval_1}->{read_side} = -1;
-		$j->{interval_2}->{read_side} = +1;
-		
-		## if we found an IS element, then essentially reset the junction to its initial
-		## coordinates and overlap... otherwise we already used up the overlap,
-		## potentially in the wrong direction...
-			
-		#if ((defined $j->{interval_1}->{is}) || (defined $j->{interval_2}->{is}))
-		#{
-		#	my $scj = Breseq::Shared::junction_name_split($j->{seq_id});
-		#	$j->{interval_1}->{start} = $scj->{interval_1}->{start};
-		#	$j->{interval_1}->{end}   = $scj->{interval_1}->{end};
-#
-#			$j->{interval_2}->{start} = $scj->{interval_2}->{start};
-#			$j->{interval_2}->{end}   = $scj->{interval_2}->{end};
-#
-#			$j->{overlap} = $scj->{overlap};
-#		}
-		
+		$j->{side_1}->{read_side} = -1;
+		$j->{side_2}->{read_side} = +1;
+				
 		## Determine which side of the junction is the IS and which is unique
 		## these point to the correct initial interval...
-		if (defined $j->{interval_1}->{is})
+		if (defined $j->{side_1}->{is})
 		{
-			if (abs($j->{interval_1}->{is}->{start} - $j->{interval_1}->{start}) <= 20)
+			if (abs($j->{side_1}->{is}->{start} - $j->{side_1}->{start}) <= 20)
 			{
-				$j->{is_interval} = $j->{interval_1};
+				$j->{is_interval} = $j->{side_1};
 				$j->{is_interval}->{is}->{side_key} = 'start';
 			}
-			elsif (abs($j->{interval_1}->{is}->{end} - $j->{interval_1}->{start}) <= 20 )
+			elsif (abs($j->{side_1}->{is}->{end} - $j->{side_1}->{start}) <= 20 )
 			{
-				$j->{is_interval} = $j->{interval_1};
+				$j->{is_interval} = $j->{side_1};
 				$j->{is_interval}->{is}->{side_key} = 'end';
 			}
-			$j->{unique_interval} = $j->{interval_2};
+			$j->{unique_interval} = $j->{side_2};
 		}
 		
-		if (!defined $j->{is} && defined $j->{interval_2}->{is})
+		if (!defined $j->{is} && defined $j->{side_2}->{is})
 		{
-			if (abs($j->{interval_2}->{is}->{start} - $j->{interval_2}->{start}) <= 20)
+			if (abs($j->{side_2}->{is}->{start} - $j->{side_2}->{start}) <= 20)
 			{
-				$j->{is_interval} = $j->{interval_2};
+				$j->{is_interval} = $j->{side_2};
 				$j->{is_interval}->{is}->{side_key} = 'start';
 			}
-			elsif (abs($j->{interval_2}->{is}->{end} - $j->{interval_2}->{start}) <= 20 )
+			elsif (abs($j->{side_2}->{is}->{end} - $j->{side_2}->{start}) <= 20 )
 			{
-				$j->{is_interval} = $j->{interval_2};
+				$j->{is_interval} = $j->{side_2};
 				$j->{is_interval}->{is}->{side_key} = 'end';
 			}
-			$j->{unique_interval} = $j->{interval_1};
+			$j->{unique_interval} = $j->{side_1};
 		}
 		
 		## Ah, we don't have an IS, we are done
@@ -763,7 +749,7 @@ sub find_nearby_genes
 	return ($prev_gene, $gene, $next_gene);
 }
 
-sub find_closest_is_element
+sub find_closest_repeat_region
 {
 	my ($c, $is_list_ref, $max_distance, $direction) = @_;
 

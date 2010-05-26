@@ -64,6 +64,8 @@ sub correct_alignments
 	my %degenerate_matches;
 	my $i = 0;
 	
+	our $gd = Breseq::GenomeDiff->new();
+	
 	my $resolved_reference_sam_file_name = $settings->file_name('resolved_reference_sam_file_name');
 	my $RREF;
 	open $RREF, ">$resolved_reference_sam_file_name" or die;
@@ -192,7 +194,7 @@ sub correct_alignments
 				
 				my $junction_id = $candidate_junction_header->target_name()->[$a->tid];
 				my $scj = Breseq::Shared::junction_name_split($junction_id);
-				my $overlap = $scj->{overlap};
+				my $overlap = $scj->{alignment_overlap};
 
 				## find the start and end coordinates of the overlap
 				my ($junction_start, $junction_end);
@@ -399,7 +401,9 @@ sub correct_alignments
  	foreach my $key (@sorted_keys)
  	{	  
 		print "$key\n" if ($verbose);
-		my $item = _junction_to_hybrid_list_item($key, $ref_seq_info, scalar @{$matched_junction{$key}}, $junction_test_info{$key});	
+		my $item = _junction_to_hybrid_list_item($key, $ref_seq_info, scalar @{$matched_junction{$key}}, $junction_test_info{$key});
+		$gd->add($item);
+			
 		push @hybrid_predictions, $item;
 		
 		## create matches from UNIQUE sides of each match to reference genome
@@ -412,12 +416,11 @@ sub correct_alignments
 			{
 				my $a = $match->{dominant_alignments}->[0];
 				my $fastq_file_index = $match->{fastq_file_index};
-				foreach my $side (1,2)
+				foreach my $side (1, 2)
 				{
-					my $side_key = 'interval_' . $side;
-	
+					my $side_key = 'side_' . $side;
                     ## Do not count for coverage if it is redundant!!
-					if (!$item->{$side_key}->{redundant})
+					if (!$item->{"$side_key\_redundant"})
 					{	
 						##write out match corresponding to this part to SAM file
 						
@@ -427,10 +430,10 @@ sub correct_alignments
 							$RREF, 
 							$a, 
 							$fastq_file_index, 
-							$item->{$side_key}->{seq_id}, 
-							$item->{$side_key}->{start}, 
-							$item->{$side_key}->{strand},
-							$item->{$side_key}->{overlap}, 
+							$item->{"$side_key\_seq_id"}, 
+							$item->{"$side_key\_position"}, 
+							$item->{"$side_key\_strand"},
+							$item->{"$side_key\_overlap"}, 
 							$side, 
 							$item->{flanking_left}, 
 							$item->{alignment_overlap}, 
@@ -449,11 +452,12 @@ sub correct_alignments
 		print "$key\n" if ($verbose);
 		my $item = _junction_to_hybrid_list_item($key, $ref_seq_info, scalar @{$matched_junction{$key}}, $junction_test_info{$key});
 		$item->{marginal}=1;
-		push @rejected_hybrid_predictions, $item;
+		$gd->add($item);
 	}
 	push @hybrid_predictions, @rejected_hybrid_predictions;
 
- 	return @hybrid_predictions;	
+	my $predicted_junctions_file_name = $settings->file_name('predicted_junction_file_name');
+	$gd->write($predicted_junctions_file_name);
 }
 
 sub _write_reference_matches
@@ -935,10 +939,10 @@ sub _test_junction
 		
 		my $junction_id = $candidate_junction_header->target_name()->[$a->tid];
 		my $scj = Breseq::Shared::junction_name_split($junction_id);
-		my $overlap = $scj->{overlap};
+		my $overlap = $scj->{alignment_overlap};
 		my $flanking_left = $scj->{flanking_left};
 
-		my $rev_key = ($a->reversed ? '1' : '0');
+		my $rev_key = ($a->reversed ? 1 : 0);
 
 		$count_per_strand->{$rev_key}++;
 
@@ -1113,47 +1117,18 @@ sub _junction_to_hybrid_list_item
 	my ($key, $ref_seq_info, $total_reads, $test_info) = @_;
 	
 	## split the key to an item with information about the junction
-	my $item = Breseq::Shared::junction_name_split($key);
-	$item->{key} = $key;
-	$item->{test_info} = $test_info;
+	my $jc = Breseq::Shared::junction_name_split($key);
+	$jc->{key} = $key;	
 	
 	## overlap may be adjusted below... this messes up making the alignment
 	## 'alignment_overlap' is the original one that applies to the candidate junction BAM file
 	## 'overlap' is a version where overlap has been resolved if possible for adding sides of the
 	##    alignment
-	$item->{alignment_overlap} = $item->{overlap};			
-				
-	##
-	## Create three intervals for making alignments and html output
-	##    it would be nice to flag whether we think the original junction is still there
-	##
- 	
-	## (1) The first alignment has information relative to the junction candidates
-	if ($item->{alignment_overlap} == 0)
-	{
-		$item->{start} = $item->{flanking_left};
-		$item->{end} = $item->{flanking_left}+1;			
-		$item->{mark} = '/';
-	}
-	elsif ($item->{alignment_overlap} > 0)
-	{
-		$item->{start} = $item->{flanking_left}+1;
-		$item->{end} = $item->{flanking_left}+$item->{alignment_overlap};
-		$item->{mark} = '|';
-	}
-	else ## ($item->{overlap} < 0)
-	{
-		$item->{start} = $item->{flanking_left}+1;
-		$item->{end} = $item->{flanking_left}-$item->{alignment_overlap};
-		$item->{mark} = '*';
-	}
-	$item->{seq_id} = $key;
+	$jc->{overlap} = $jc->{alignment_overlap};			
+	$jc->{total_reads} = $total_reads;
 	
-	## These are now automatically created from splitting the junction key
-	## (2) Alignment for the reference sequence that disagrees with the junction #1.
-	## (3) Alignment for the reference sequence that disagrees with the junction #2.
-
-	$item->{total_reads} = $total_reads;
+	$jc->{side_1}->{redundant} = 0;
+	$jc->{side_2}->{redundant} = 0;
 	
 	## Correct for overlapping IS elements
 	
@@ -1163,21 +1138,22 @@ sub _junction_to_hybrid_list_item
 	# For these the coordinates may have been offset incorrectly initially (because both sides of the junction may look unique)
 	# The goal is to offset through positive overlap to get as close as possible to the ends of the IS
 	###
-
-	foreach my $key ('interval_1', 'interval_2')
+	
+	my $is;
+	foreach my $side_key ('side_1', 'side_2')
 	{
 		## Determine IS elements
 		## Is it within an IS or near the boundary of an IS in the direction leading up to the junction?			
-		if (my $is = Breseq::ReferenceSequence::find_closest_is_element($item->{$key}, $ref_seq_info->{is_lists}->{$item->{$key}->{seq_id}}, 200, $item->{$key}->{strand}))
+		if (my $is = Breseq::ReferenceSequence::find_closest_repeat_region( { start => $jc->{$side_key}->{position}, end => $jc->{$side_key}->{position} } , $ref_seq_info->{is_lists}->{$jc->{$side_key}->{seq_id}}, 200, $jc->{$side_key}->{strand}))
 		{
-			$item->{$key}->{is}->{gene} = $is->{gene};
-			$item->{$key}->{is}->{interval} = ($is->{strand} == +1) ? "$is->{start}-$is->{end}" : "$is->{end}-$is->{start}"; 
-			$item->{$key}->{is}->{product} = $is->{product};
+			$jc->{$key}->{is}->{gene} = $is->{gene};
+			$jc->{$key}->{is}->{interval} = ($is->{strand} == +1) ? "$is->{start}-$is->{end}" : "$is->{end}-$is->{start}"; 
+			$jc->{$key}->{is}->{product} = $is->{product};
 		}
 	}
 	
 	## use of $j is historical due to a move of this part of the function from annotate_rearrangements
-	my $j = $item;
+	my $j = $jc;
 	sub add_is_coords_from_interval
 	{
 		my ($c) = @_;
@@ -1189,98 +1165,124 @@ sub _junction_to_hybrid_list_item
 		$c->{is}->{end} = ($is_start < $is_end) ? $is_end : $is_start;
 	}
 	
-	add_is_coords_from_interval($j->{interval_1});
-	add_is_coords_from_interval($j->{interval_2});
+	add_is_coords_from_interval($j->{side_1});
+	add_is_coords_from_interval($j->{side_2});
 	
-	$j->{interval_1}->{read_side} = -1;
-	$j->{interval_2}->{read_side} = +1;
+	$j->{side_1}->{read_side} = -1;
+	$j->{side_2}->{read_side} = +1;
 		
 	## Determine which side of the junction is the IS and which is unique
 	## these point to the correct initial interval...
-	if (defined $j->{interval_1}->{is} && !defined $j->{interval_2}->{is})
+	if (defined $j->{side_1}->{is} && !defined $j->{side_2}->{is})
 	{
-		if (abs($j->{interval_1}->{is}->{start} - $j->{interval_1}->{start}) <= 20)
+		if (abs($j->{side_1}->{is}->{start} - $j->{side_1}->{position}) <= 20)
 		{
-			$j->{is_interval} = $j->{interval_1};
-			$j->{is_interval}->{is}->{side_key} = 'start';
+			$j->{is_side} = $j->{side_1};
+			$j->{is_side}->{is}->{side_key} = 'start';
 		}
-		elsif (abs($j->{interval_1}->{is}->{end} - $j->{interval_1}->{start}) <= 20 )
+		elsif (abs($j->{side_1}->{is}->{end} - $j->{side_1}->{position}) <= 20 )
 		{
-			$j->{is_interval} = $j->{interval_1};
-			$j->{is_interval}->{is}->{side_key} = 'end';
+			$j->{is_side} = $j->{side_1};
+			$j->{is_side}->{is}->{side_key} = 'end';
 		}
-		$j->{unique_interval} = $j->{interval_2};
+		$j->{unique_side} = $j->{side_2};
 	}
 	
-	if (!defined $j->{interval_1}->{is} && defined $j->{interval_2}->{is})
+	if (!defined $j->{side_1}->{is} && defined $j->{side_2}->{is})
 	{
-		if (abs($j->{interval_2}->{is}->{start} - $j->{interval_2}->{start}) <= 20)
+		if (abs($j->{side_2}->{is}->{start} - $j->{side_2}->{position}) <= 20)
 		{
-			$j->{is_interval} = $j->{interval_2};
-			$j->{is_interval}->{is}->{side_key} = 'start';
+			$j->{is_side} = $j->{side_2};
+			$j->{is_side}->{is}->{side_key} = 'start';
 		}
-		elsif (abs($j->{interval_2}->{is}->{end} - $j->{interval_2}->{start}) <= 20 )
+		elsif (abs($j->{side_2}->{is}->{end} - $j->{side_2}->{position}) <= 20 )
 		{
-			$j->{is_interval} = $j->{interval_2};
-			$j->{is_interval}->{is}->{side_key} = 'end';
+			$j->{is_side} = $j->{side_2};
+			$j->{is_side}->{is}->{side_key} = 'end';
 		}
-		$j->{unique_interval} = $j->{interval_1};
+		$j->{unique_side} = $j->{side_1};
 	}
 	
 	## both were IS! -- define as redundant here
-	if (defined $j->{interval_1}->{is} && defined $j->{interval_2}->{is})
+	if (defined $j->{side_1}->{is} && defined $j->{side_2}->{is})
 	{
-		$j->{interval_1}->{redundant} = 1;
-		$j->{interval_2}->{redundant} = 1;
+		$j->{side_1}->{redundant} = 1;
+		$j->{side_2}->{redundant} = 1;
 	}
 	
 	#by default, overlap is included on both sides of the junction (possibly changed below)
-	$item->{interval_1}->{overlap} = 0;
-	$item->{interval_2}->{overlap} = 0;
+	$jc->{side_1}->{overlap} = 0;
+	$jc->{side_2}->{overlap} = 0;
 		
 	## Resolve redundant overlap
-	if ($item->{overlap} > 0)
+	if ($jc->{overlap} > 0)
 	{
-		$item->{interval_1}->{overlap} = $item->{overlap};
-		$item->{interval_2}->{overlap} = $item->{overlap};
+		$jc->{side_1}->{overlap} = $jc->{overlap};
+		$jc->{side_2}->{overlap} = $jc->{overlap};
 		
 		## If there was in IS, resolve overlap so it goes to the edge of the IS element
-		if (defined $j->{is_interval})
+		if (defined $j->{is_side})
 		{			
 			### first, adjust the repetitive sequence boundary to get as close to the IS as possible
-			my $move_dist = $j->{is_interval}->{strand} * ($j->{is_interval}->{is}->{$j->{is_interval}->{is}->{side_key}} - $j->{is_interval}->{start});
+			my $move_dist = $j->{is_side}->{strand} * ($j->{is_side}->{is}->{$j->{is_side}->{is}->{side_key}} - $j->{is_side}->{start});
 			$move_dist = 0 if ($move_dist < 0);
 			$move_dist = $j->{overlap} if ($move_dist > $j->{overlap});
-			$j->{is_interval}->{start} += $j->{is_interval}->{strand} * $move_dist;
+			$j->{is_side}->{position} += $j->{is_side}->{strand} * $move_dist;
 			$j->{overlap} -= $move_dist;
-			$j->{is_interval}->{overlap} -= $move_dist;
-			$j->{is_interval}->{end} = $j->{is_interval}->{start};
+			$j->{is_side}->{overlap} -= $move_dist;
 	
 			### second, adjust the unique sequence side with any remaining overlap
-			$j->{unique_interval}->{start} += $j->{unique_interval}->{strand} * $j->{overlap};	
-			$j->{unique_interval}->{end} = $j->{unique_interval}->{start};
-			$j->{unique_interval}->{overlap} -= $j->{overlap};
+			$j->{unique_side}->{position} += $j->{unique_side}->{strand} * $j->{overlap};	
+			$j->{unique_side}->{overlap} -= $j->{overlap};
 			
 			$j->{overlap} = 0;
-			$j->{is_interval}->{redundant} = 1;
+			$j->{is_side}->{redundant} = 1;
 		}
 	
 		### Should this be "elsif" or "if"?
 		### If there is no IS element and both sides are unique,
 		### then give overlap to first side. This gives proper support for junctions.
 		### and ensures we don't count this coverage twice.
-		elsif (!$item->{interval_1}->{redundant} && !$item->{interval_2}->{redundant})
+		elsif (!$jc->{side_1}->{redundant} && !$jc->{side_2}->{redundant})
 		{
-			my $strand_direction = ($item->{interval_2}->{strand} > 0) ? +1 : -1;
+			my $strand_direction = ($jc->{side_2}->{strand} > 0) ? +1 : -1;
 	
-			$item->{interval_2}->{start} += $item->{overlap} * $strand_direction;
-			$item->{interval_2}->{end} += $item->{overlap} * $strand_direction;
-			$item->{interval_2}->{overlap} = 0;
-			$item->{overlap} = 0;			
+			$jc->{side_2}->{position} += $jc->{overlap} * $strand_direction;
+			$jc->{side_2}->{overlap} = 0;
+			$jc->{overlap} = 0;			
 		}
 		
-		#print STDERR Dumper($item);
+		#print STDERR Dumper($jc);
 	}
+	
+	##flatten things to only what we want to keep
+	my $item = {
+		type => 'JC',
+		
+		side_1_seq_id => $jc->{side_1}->{seq_id},
+		side_1_position => $jc->{side_1}->{position},
+		side_1_redundant => $jc->{side_1}->{redundant},
+		side_1_strand => $jc->{side_1}->{strand},
+		side_1_overlap => $jc->{side_1}->{overlap},
+		
+		side_2_seq_id => $jc->{side_2}->{seq_id},
+		side_2_position => $jc->{side_2}->{position},
+		side_2_redundant => $jc->{side_2}->{redundant},
+		side_2_strand => $jc->{side_2}->{strand},
+		side_2_overlap => $jc->{side_2}->{overlap},
+		
+		key => $jc->{key},
+		alignment_overlap => $jc->{alignment_overlap},
+		overlap => $jc->{overlap},
+		total_reads => $jc->{total_reads},
+		flanking_left => $jc->{flanking_left},
+		flanking_right => $jc->{flanking_right},	
+	};
+
+	foreach my $key (keys %{$jc->{test_info}})
+	{		
+		$item->{$key} = $jc->{test_info}->{$key};
+	}	
 	
 	### Note: Other adjustments to overlap can happen at the later annotation stage
 	### and they will not affect coverage for calling deletions or mutations
