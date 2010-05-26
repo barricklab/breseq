@@ -1,0 +1,3 @@
+HEADER_SEARCH_PATHS = $(PROJECT_DIR)/samtools-0.1.7a $(PROJECT_DIR)/libbreseq/include /opt/local/include
+WARNING_CFLAGS = -Wall -Wno-unused-variable
+ARCHS=$(NATIVE_ARCH)
