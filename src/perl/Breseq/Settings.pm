@@ -351,10 +351,7 @@ sub initialize_2
 	$self->{output_calibration_path} = "$self->{output_path}/calibration";
 	$self->{unique_only_coverage_plot_file_name} = "$self->{output_calibration_path}/@.unique_coverage.pdf";
 	$self->{error_rates_plot_file_name} = "$self->{output_calibration_path}/#.error_rates.pdf";
-	## text output files
-#	$self->{mutations_text_file_name} = "$self->{output_path}/mutations.tab";
-#	$self->{deletions_text_file_name} = "$self->{output_path}/deletions.tab";
-#	$self->{unknowns_text_file_name} = "$self->{output_path}/unknowns.tab";
+	## text output files, to be replaced...
 	$self->{settings_text_file_name} = "$self->{output_path}/settings.tab";
 	$self->{summary_text_file_name} = "$self->{output_path}/summary.tab";
 	$self->{tiled_coverage_text_file_name} = "$self->{output_path}/@.tiled_coverage.tab";
