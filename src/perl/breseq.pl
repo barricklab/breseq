@@ -785,7 +785,7 @@ if (!-e $output_done_file_name)
 	my $marginal_genome_diff_file_name = $settings->file_name('marginal_genome_diff_file_name');
 		
 	my $conditions = "marginal!=1";
-	Breseq::Shared::system("gd_utils.pl FILTER -i $full_genome_diff_file_name -o $filtered_genome_diff_file_name -r $marginal_genome_diff_file_name $conditions");
+	Breseq::Shared::system("$FindBin::Bin/gd_utils.pl FILTER -i $full_genome_diff_file_name -o $filtered_genome_diff_file_name -r $marginal_genome_diff_file_name $conditions");
 
 
 	###
@@ -798,9 +798,9 @@ if (!-e $output_done_file_name)
 		my $marginal_html_file_name = $settings->file_name('marginal_html_file_name');
 		
 		my $res;
-		$res = Breseq::Shared::system("gd_utils.pl ANNOTATE -i $filtered_genome_diff_file_name $settings->{arguments} ");
+		$res = Breseq::Shared::system("$FindBin::Bin/gd_utils.pl ANNOTATE -i $filtered_genome_diff_file_name $settings->{arguments} ");
 		my $annotated_mutations = ($res == 0);
-		$res = Breseq::Shared::system("gd_utils.pl ANNOTATE -i $marginal_genome_diff_file_name --html-mutation-file=$marginal_html_file_name --marginal-mode $settings->{arguments} ");
+		$res = Breseq::Shared::system("$FindBin::Bin/gd_utils.pl ANNOTATE -i $marginal_genome_diff_file_name --html-mutation-file=$marginal_html_file_name --marginal-mode $settings->{arguments} ");
 		my $annotated_marginal = ($res == 0);
 
 		my $index_html_file_name = $settings->file_name('index_html_file_name');	
