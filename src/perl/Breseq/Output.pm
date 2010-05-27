@@ -785,41 +785,6 @@ sub html_alignment_file
 	close HTML;
 }
 
-
-sub save_text_mutation_file
-{
-	my ($file_name, $mutations_ref, $title) = @_;
-	open MUT, ">$file_name" or die "Could not open file: $file_name";
-	print MUT "# $title\n\n" if ($title);
-	print MUT text_mutation_table_string($mutations_ref);
-	close MUT;
-}
-
-sub text_mutation_table_string
-{
-	my ($mutations_ref) = @_;
-	my $output_str = '';
-	
-	$output_str.= +join("\t", ("seq_id", "start", "end", "ref", "change", "quality", "cov", "tot_cov", "type", "gene position", "codon change", "aa change", "gene", "description"));
-	$output_str.= "\n";
-	
-	#print STDERR Dumper($snps_list_ref);
-	foreach my $c (@$mutations_ref)
-	{	
-		my $position = $c->{gene_position};
-		$position .= " ($c->{aa_position})" if ($c->{aa_position});
-		
-		my $aa_change = ($c->{aa_ref_seq}) ? "$c->{aa_ref_seq}=>$c->{aa_new_seq}" : "-"; 
-		my $codon_change = ($c->{codon_ref_seq}) ? "$c->{codon_ref_seq}=>$c->{codon_new_seq}" : "-"; 
-
-		$output_str.= join("\t", $c->{seq_id}, $c->{start}, $c->{end}, $c->{ref_seq}, $c->{new_seq}, $c->{display_quality}, $c->{best_coverage_string}, $c->{total_coverage_string}, '');
-		$output_str.= join("\t", $c->{type}, $position, $codon_change, $aa_change, $c->{gene}, $c->{gene_product} );
-		$output_str.= "\n";
-	}
-	
-	return $output_str;
-}
-
 sub save_text_deletion_file
 {
 	my ($deletion_file_name, $deletions_ref) = @_;
@@ -832,60 +797,6 @@ sub save_text_deletion_file
 				$d->{right_inside_unique_cov}, $d->{right_unique_cov}, $d->{genes}) . "\n"; 
 	}
 	close DEL;
-}
-
-sub save_text_unknown_file
-{
-	my ($unknown_file_name, $unknowns_ref) = @_;
-
-	open UNK, ">$unknown_file_name" or die "Could not open: $unknown_file_name";;
-	print UNK join("\t", 'seq_id', 'start', 'end') . "\n";
-	foreach my $u (@$unknowns_ref)
-	{
-		print UNK join("\t", $u->{seq_id}, $u->{start}, $u->{end}) . "\n"; 
-	}
-	close UNK;
-}
-
-
-sub text_junction_table
-{
-	my ($file_name, $title, $list_ref) = @_;
-	open TEXT, ">$file_name" or die "Could not open file: $file_name";
-	print TEXT "# $title\n\n";
-	print TEXT text_junction_table_string($list_ref);
-	close TEXT;
-}
-
-sub text_junction_table_string
-{
-	my ($list_ref) = @_;
-	my $output_str = '';
-
-	$output_str.= +join("\t", ("position_1", "strand_1", "position_2", "strand_2", "overlap", "reads", "full_length_reads", "gene_1", "product_1", "gene_2", "product_2"));
-	$output_str.= "\n";
-
-	foreach my $c (@$list_ref)
-	{	
-		#print Dumper($c);
-	
-		$output_str.= +join("\t",
-			$c->{side_1}->{start}, 
-			(($c->{side_1}->{strand} == +1) ? "+" : "-" ),
-			$c->{side_2}->{start}, 
-			(($c->{side_2}->{strand} == +1) ? "+" : "-" ),
-			$c->{overlap},
-			$c->{total_reads},
-			$c->{full_length_reads},
-			$c->{side_1}->{gene},
-			$c->{side_1}->{gene_product},
-			$c->{side_2}->{gene},
-			$c->{side_2}->{gene_product},
-		);
-		$output_str.= "\n";
-	}
-	
-	return $output_str;
 }
 
 sub text_alignment_file
@@ -917,122 +828,6 @@ sub text_alignment_file
 		print TEXT "$line->{aligned_seq}  $line->{query}\n";
 	}
 	close TEXT;
-}
-
-sub write_genome_diff
-{
-	my ($file_name, $settings, $wr_list_ref, $mc_list_ref, $jc_ref, $un_list_ref, $unsorted) = @_;
-	
-	## Create empty genome diff object.
-	## Add mutations to it and then write file.
-	my $gd = Breseq::GenomeDiff->new;
-
-	foreach my $snp (@$wr_list_ref)
-	{
-		#print Dumper($snp);
-		my $start = $snp->{start};
-		$start .= "." . $snp->{insert_start} if ($snp->{insert_start});
-		my $end = $snp->{end};
-		$end .= "." . $snp->{insert_end} if ($snp->{insert_end});
-		
-		##temporary checks
-		die if ($snp->{start} != $snp->{end});
-		die if ($snp->{insert_start} != $snp->{insert_end});
-
-		my $item = { 
-			type => 'WR',
-			seq_id => $snp->{seq_id},
-			position => $snp->{start},
-			insert_position => $snp->{insert_start},
-			ref_base => $snp->{ref_seq},
-			new_base => $snp->{new_seq},
-			quality => $snp->{quality},
-			tot_cov => $snp->{total_coverage_string},
-			new_cov => $snp->{best_coverage_string},
-			frequency => $snp->{frequency},
-			bases => $snp->{bases},
-			qualities => $snp->{qualities},
-			strands => $snp->{strands},
-		};
-		$item->{marginal} = 1 if ($snp->{marginal});
-		$item->{polymorphism} = 1 if ($snp->{polymorphism});
-
-		if ($item->{polymorphism})
-		{
-			$item->{log10_e_value} = $snp->{log10_e_value};
-			$item->{fisher_strand_p_value} = $snp->{fisher_strand_p_value};
-		}
-		$gd->add($item);
-	}
-
-	foreach my $del (@$mc_list_ref)
-	{
-		#print Dumper($del);
-		my $item = { 
-			type => 'MC',
-			seq_id => $del->{seq_id},
-			start => $del->{start},
-			end => $del->{end},
-			left_unique_cov => $del->{left_unique_cov},
-			left_inside_unique_cov => $del->{left_inside_unique_cov},
-			right_unique_cov => $del->{right_unique_cov},
-			right_inside_unique_cov => $del->{right_inside_unique_cov},
-		};
-		$gd->add($item);
-	}
-
-	foreach my $hyb (@$jc_ref)
-	{
-		my $item = { 
-			type => 'JC',
-			evidence => "mosaic_read",
-			
-			side_1_seq_id => $hyb->{side_1}->{seq_id},
-			side_1_position => $hyb->{side_1}->{start},
-			side_1_redundant => $hyb->{side_1}->{redundant},
-			side_1_strand => $hyb->{side_1}->{strand},
-			side_1_overlap => $hyb->{side_1}->{overlap},
-			
-			side_2_seq_id => $hyb->{side_2}->{seq_id},
-			side_2_position => $hyb->{side_2}->{start},
-			side_2_redundant => $hyb->{side_2}->{redundant},
-			side_2_strand => $hyb->{side_2}->{strand},
-			side_2_overlap => $hyb->{side_2}->{overlap},
-			
-			key => $hyb->{key},
-			overlap => $hyb->{overlap},
-			total_reads => $hyb->{total_reads},
-			start => $hyb->{start},
-			end => $hyb->{end},
-			flanking_left => $hyb->{flanking_left},
-			flanking_right => $hyb->{flanking_right},
-		};
-		
-		my $test_info = $hyb->{test_info};
-		foreach my $key (keys %$test_info)
-		{		
-			$item->{$key} = $test_info->{$key};
-		};		
-		
-		$item->{marginal} = 1 if ($hyb->{marginal});
-				
-		$gd->add($item);
-	}
-	
-	foreach my $unk (@$un_list_ref)
-	{
-		#print Dumper($unk);
-		
-		my $item = { 
-			type => 'UN',
-			seq_id => $unk->{seq_id},
-			start => $unk->{start},
-			end => $unk->{end},
-		};
-		$gd->add($item);
-	}
-	
-	$gd->write($file_name, $unsorted);
 }
 
 sub read_genome_diff
@@ -1105,10 +900,7 @@ sub read_genome_diff
 		{
 			$item->{start} = $item->{flanking_left}+1;
 			$item->{end} = $item->{flanking_left}-$item->{alignment_overlap};
-		}
-		
-		print Dumper($item);
-		
+		}		
 	}		
 	return $mutation_info;
 }

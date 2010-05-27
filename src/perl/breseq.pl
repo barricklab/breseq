@@ -783,9 +783,7 @@ if (!-e $output_done_file_name)
 
 	my $filtered_genome_diff_file_name = $settings->file_name('filtered_genome_diff_file_name');
 	my $marginal_genome_diff_file_name = $settings->file_name('marginal_genome_diff_file_name');
-	
-	#Breseq::Output::write_genome_diff($full_genome_diff_file_name, $settings, \@mutations, \@deletions, \@hybrids, \@unknowns);
-	
+		
 	my $conditions = "marginal!=1";
 	Breseq::Shared::system("gd_utils.pl FILTER -i $full_genome_diff_file_name -o $filtered_genome_diff_file_name -r $marginal_genome_diff_file_name $conditions");
 

@@ -269,15 +269,6 @@ sub do_annotate
 	#print Dumper(\@deletions); ##DEUG		
 
 	##
-	# Write text output files
-	sub text_output {}
-	##
-	print STDERR "Creating text output files...\n";
-#	Breseq::Output::save_text_mutation_file($settings->file_name('mutations_text_file_name') , \@mutations);
-#	Breseq::Output::save_text_deletion_file($settings->file_name('deletions_text_file_name') , \@deletions);
-#	Breseq::Output::save_text_unknown_file($settings->file_name('unknowns_text_file_name') , \@unknowns);
-	
-	##
 	# Plot coverage of genome and large deletions
 	sub plot_coverage {}
 	##
@@ -426,7 +417,7 @@ sub do_annotate
 		print STDERR "Creating alignment HTML files...\n";
 		foreach my $c (@composite_list) # , @hybrids)
 		{			
-			print STDERR "Creating alignment file: $c->{link}\n";
+			print STDERR "Creating alignment file: $c->{link}\n" if ($settings->{verbose});
 			Breseq::Output::html_alignment_file($settings, $c);		
 		}
 	}
