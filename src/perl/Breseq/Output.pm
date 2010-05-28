@@ -839,7 +839,7 @@ sub read_genome_diff
 	my $gd = Breseq::GenomeDiff->new(-file_name=>$file_name);
 
 	my $mutation_info;
-	@{$mutation_info->{mutations}} = grep {$_->{type} eq 'WR'} $gd->list;
+	@{$mutation_info->{mutations}} = grep {$_->{type} eq 'RA'} $gd->list;
 	
 	foreach my $mut (@{$mutation_info->{mutations}})
 	{

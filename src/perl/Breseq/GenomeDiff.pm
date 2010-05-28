@@ -78,7 +78,7 @@ our $line_specification = {
 	'INV' => [''],
 	
 	## evidence
-	'WR' => ['seq_id', 'position', 'insert_position', 'ref_base', 'new_base'],
+	'RA' => ['seq_id', 'position', 'insert_position', 'ref_base', 'new_base'],
 	'MC' => ['seq_id', 'start', 'end'],
 	'JC' => ['side_1_seq_id', 'side_1_position', 'side_1_strand', 'side_2_seq_id', 'side_2_position', 'side_2_strand', 'overlap'],
 	'UN' => ['seq_id', 'start', 'end'],
@@ -92,7 +92,7 @@ our $tag_sort_fields = {
 	'MOB' => [1],
 	'DUP' => [1],
 	'INV' => [1],
-	'WR' => [2, 'seq_id', 'position'],
+	'RA' => [2, 'seq_id', 'position'],
 	'MC' => [2, 'seq_id', 'start'],
 	'JC' => [2, 'side_1_seq_id', 'side_1_position'],
 	'UN' => [3, 'seq_id', 'start'],
@@ -118,6 +118,7 @@ sub new
 	# initialize
 	@{$self->{list}} = ();
 	$self->{unique_id_counter} = 0;
+	$self->{unique_id_used} = {};
 
 	bless ($self, $class);
 	
@@ -131,11 +132,9 @@ sub new
 }
 
 
-# this should do some checking
+=head2 add
 
-=head2 new
-
- Title   : new
+ Title   : add
  Usage   : $gd->add( {seq_id=>'', start=>456, end=>546 } );
  Function: Adds a new item to a GenomeDiff from a hash. Auto-populates empty required fields.
  Returns : 
@@ -146,7 +145,19 @@ sub add
 	my ($self, $item) = @_;
 	my @missing_required_columns = ();
 
-	$item->{id} = ++$self->{unique_id_counter} if (!defined $item->{id});
+	## no ID, give it a new one
+	if ( !defined $item->{id} )
+	{
+		$item->{id} = $self->new_unique_id;
+	}
+	elsif ($self->used_unique_id( $item->{id}) )
+	{
+		$self->warn("Ignoring attempt to add item with an existing id: $item->{id}");
+		return;
+	}
+	
+	##mark ID as used
+	$self->{unique_id_used}->{$item->{id}} = 1;
 
 	sub check_required_field
 	{
@@ -185,10 +196,43 @@ sub add
 }
 
 
+## 
+sub used_unique_id
+{
+	my ($self, $id) = @_;
+	return $self->{unique_id_used}->{$id};
+}
+
+##
+sub new_unique_id
+{
+	my ($self) = @_;
+	my $assigned_id = ++$self->{unique_id_counter};
+	while ( $self->{unique_id_used}->{$assigned_id} )
+	{
+		$assigned_id = ++$self->{unique_id_counter};
+	}
+	return $assigned_id;
+}
+
+##
+sub mark_unique_id
+{
+	my ($self, $id) = @_;
+	$self->{unique_id_used}->{$id} = 1;
+}
+
+
 sub list
 {
 	my ($self) = @_;
 	return @{$self->{list}};
+}
+
+sub list_ref
+{
+	my ($self) = @_;
+	return $self->{list};
 }
 
 
@@ -279,24 +323,24 @@ sub read
 	
 	open IN, "<$file_name";
 
+	#read lines, skip comment lines, and blank lines
+	my @lines = <IN>;
+	chomp @lines;
+	@lines = grep {!/^\s*#[^=]/} @lines;
+	@lines = grep {!/^\s*$/} @lines;
+	
 	## read version from first line
-	my $l;
-	$l = <IN>;
-	chomp $l;
-	$l =~ m/#=GENOME_DIFF\s+(\d+)/ or die "Could not match version line in file $self->{file_name}.";
+	my $l = shift @lines;
+	$l =~ m/#=GENOME_DIFF\s+(\d+)/ or $self->throw("Could not match version line in file $self->{file_name}.");
 	$self->{version} = $1;
 
 	## read header information
 	
 	## read data
-	$l = <IN>;
-	while ($l)
+	while ($l = shift @lines)
 	{
-		chomp $l;
 		my $item = $self->_line_to_item($l);
 		push @{$self->{list}}, $item if ($item);
-	} continue {
-		$l = <IN>;
 	}
 	close IN;
 }
@@ -432,26 +476,35 @@ sub last_common_ancestor
 }
 
 
-=head2 find_common_mutations
+=head2 merge
 
- Title   : get_next
- Usage   : $read = $delta_file->get_next;
- Function: new genome diff object with only common mutations
- Returns :
+ Title   : merge
+ Usage   : $gd = Bio::Breseq::GenomeDiff::merge($gd1, $gd2, $gd3, ...);
+ Function: merge evidence and predictions from multiple GenomeDiffs into one
+ Returns : new GenomeDiff object with items from all input GenomeDiffs
 
 =cut
 
 sub merge
 {
+	use Storable qw(dclone);
 	my (@list) = @_;
 	
-	my $new_gd = Breseq::GenomeDiff->new();
-#	$new_gd->{'SAMPLE'}->{merged} = join ",", map {$_->{SAMPLE}->{strain}} @$list;
-			
+	my $new_gd = Breseq::GenomeDiff->new();			
 	while (my $gd = shift @list)
 	{
-		foreach my $item ($gd->list)
+		## deep copy the list, so we aren't changing the original items
+		my @item_list = @{ dclone($gd->list_ref) };
+		
+		foreach my $item (@item_list)
 		{
+			## first we need to check to be sure
+			## each id we are using isn't present in what we have added so far
+			if ($new_gd->used_unique_id($item->{id}))
+			{
+				$item->{id} = $new_gd->new_unique_id();
+			}
+			
 			$new_gd->add($item);
 		}
 	}

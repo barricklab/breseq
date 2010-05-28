@@ -617,7 +617,7 @@ sub identify_mutations
 					$best_cov->{1} = 0 if (!defined $best_cov->{1});
 					$best_cov->{-1} = 0 if (!defined $best_cov->{-1});
 
-					$mut->{type} = 'WR';
+					$mut->{type} = 'RA';
 					$mut->{seq_id} = $seq_id;
 					$mut->{position} = $pos;
 					$mut->{insert_position} = $insert_count;
