@@ -755,6 +755,8 @@ if (!-e $output_done_file_name)
 	##   (because we put their split alignments in the BAM file)
 	## Ideally we would do this after step 7, then remove the offending read pieces from the BAM file
 	## before proceeding to SNP calling.
+	## this could be done by reserving these pieces in a separate SAM file
+	## then merging them later? But full matches would also have to be kept separate...
 	##
 	
 	my $predicted_junctions_file_name = $settings->file_name('predicted_junction_file_name');	
@@ -776,10 +778,15 @@ if (!-e $output_done_file_name)
 	my $predicted_mutation_genome_diff_file_name = $settings->file_name('predicted_mutation_genome_diff_file_name');	
 	my $mutation_gd = Breseq::GenomeDiff->new( -in => $predicted_mutation_genome_diff_file_name);
 
-	## merge all of the evidence files into one...
+	## merge all of the evidence GenomeDiff files into one...
 	my $full_genome_diff_file_name = $settings->file_name('full_genome_diff_file_name');
 	my $merged_gd = Breseq::GenomeDiff::merge($hybrid_gd, $mutation_gd);
 	$merged_gd->write($full_genome_diff_file_name);
+	
+	## predict mutations from evidence in the GenomeDiff
+#	my $mp = Breseq::MutationPredictor->new();
+#	$mp->predict($merged_gd);
+
 
 	my $filtered_genome_diff_file_name = $settings->file_name('filtered_genome_diff_file_name');
 	my $marginal_genome_diff_file_name = $settings->file_name('marginal_genome_diff_file_name');
@@ -787,43 +794,30 @@ if (!-e $output_done_file_name)
 	my $conditions = "marginal!=1";
 	Breseq::Shared::system("$FindBin::Bin/gd_utils.pl FILTER -i $full_genome_diff_file_name -o $filtered_genome_diff_file_name -r $marginal_genome_diff_file_name $conditions");
 
-
-	###
-	## Below this point is optional and has heftier prerequisites
-	## for running, including R and BioPerl
-	## 
-	###
-	if (1)
-	{
-		my $marginal_html_file_name = $settings->file_name('marginal_html_file_name');
-		
-		my $res;
-		$res = Breseq::Shared::system("$FindBin::Bin/gd_utils.pl ANNOTATE -i $filtered_genome_diff_file_name $settings->{arguments} ");
-		my $annotated_mutations = ($res == 0);
-		$res = Breseq::Shared::system("$FindBin::Bin/gd_utils.pl ANNOTATE -i $marginal_genome_diff_file_name --html-mutation-file=$marginal_html_file_name --marginal-mode $settings->{arguments} ");
-		my $annotated_marginal = ($res == 0);
-
-		my $index_html_file_name = $settings->file_name('index_html_file_name');	
-		Breseq::Output::html_index($index_html_file_name, $settings, $summary, $ref_seq_info, $annotated_mutations, $annotated_marginal);
-
-		###
-		## Temporary debug output using Data::Dumper
-		###
-
-		my $summary_text_file_name = $settings->file_name('summary_text_file_name');
-		open SUM, ">$summary_text_file_name";
-		print SUM Dumper($summary);
-		close SUM;
+	my $marginal_html_file_name = $settings->file_name('marginal_html_file_name');
 	
-		my $settings_text_file_name = $settings->file_name('settings_text_file_name');
-		open SETTINGS, ">$settings_text_file_name";
-		print SETTINGS Dumper($settings);
-		close SETTINGS;
-		
-		###
-		## Temporary debug output using Data::Dumper
-		###
-	}
+	my $res;
+	$res = Breseq::Shared::system("$FindBin::Bin/gd_utils.pl ANNOTATE -i $filtered_genome_diff_file_name $settings->{arguments} ");
+	my $annotated_mutations = ($res == 0);
+	$res = Breseq::Shared::system("$FindBin::Bin/gd_utils.pl ANNOTATE -i $marginal_genome_diff_file_name --html-mutation-file=$marginal_html_file_name --marginal-mode $settings->{arguments} ");
+	my $annotated_marginal = ($res == 0);
+
+	my $index_html_file_name = $settings->file_name('index_html_file_name');	
+	Breseq::Output::html_index($index_html_file_name, $settings, $summary, $ref_seq_info, $annotated_mutations, $annotated_marginal);
+
+	###
+	## Temporary debug output using Data::Dumper
+	###
+
+	my $summary_text_file_name = $settings->file_name('summary_text_file_name');
+	open SUM, ">$summary_text_file_name";
+	print SUM Dumper($summary);
+	close SUM;
+
+	my $settings_text_file_name = $settings->file_name('settings_text_file_name');
+	open SETTINGS, ">$settings_text_file_name";
+	print SETTINGS Dumper($settings);
+	close SETTINGS;
 
 	## record the final time and print summary table
 	Breseq::Output::record_time("End");
