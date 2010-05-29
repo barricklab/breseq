@@ -1,0 +1,15 @@
+# set variables depending on perl's version
+_perl_list="add_funclist"
+
+add_funclist=
+if test -n "$perl"; then 
+  res=`$perl -e 'print "OK" if ($] >= 5.005);'`;
+  if test $? != 0; then
+    echo "###"
+    echo "### $perl seems to be broken"
+    echo "###"
+    perl=
+  fi
+  if test "$res" = OK; then add_funclist=../src/funclist; fi
+fi
+

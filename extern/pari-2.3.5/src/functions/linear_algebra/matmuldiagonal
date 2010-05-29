@@ -1,0 +1,8 @@
+Function: matmuldiagonal
+Section: linear_algebra
+C-Name: matmuldiagonal
+Prototype: GG
+Help: matmuldiagonal(x,d): product of matrix x by diagonal matrix whose
+ diagonal coefficients are those of the vector d, equivalent but faster than
+ x*matdiagonal(d)
+

@@ -1,0 +1,13 @@
+#!/bin/sh
+t=$1; shift; dflt=$1; shift
+
+for dir in $*; do
+  file=$dir/$t
+  if test -f $file; then
+    echo $file; exit 0
+  fi
+  if test -f $file.exe; then
+    echo $file.exe; exit 0
+  fi
+done
+echo $dflt; exit 1

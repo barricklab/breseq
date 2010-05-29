@@ -1,0 +1,7 @@
+Function: qfbpowraw
+Section: number_theoretical
+C-Name: powraw
+Prototype: GL
+Help: qfbpowraw(x,n): n-th power without reduction of the binary quadratic
+ form x
+

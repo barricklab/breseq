@@ -327,7 +327,8 @@ sub _alignments_to_candidate_junctions
 	A1: for (my $i=0; $i<scalar @$al_ref; $i++)
 	{		
 		my $a1 = $al_ref->[$i];
-		my ($a1_start, $a1_end) = Breseq::Shared::alignment_query_start_end($a1);			
+		my ($a1_start, $a1_end) = Breseq::Shared::alignment_query_start_end($a1);	
+						
 		next A1 if ($a1_start == 0); #this is only true if read has no matches
 		my $a1_length = $a1_end - $a1_start + 1;
 

@@ -1,0 +1,9 @@
+Function: divisors
+Section: number_theoretical
+C-Name: divisors
+Prototype: G
+Help: divisors(x): gives a vector formed by the divisors of x in increasing
+ order
+Description: 
+ (gen):vec	divisors($1)
+

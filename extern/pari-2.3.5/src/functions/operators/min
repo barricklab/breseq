@@ -1,0 +1,17 @@
+Function: min
+Section: operators
+C-Name: gmin
+Prototype: GG
+Help: min(x,y): minimum of x and y
+Description: 
+ (small, small):small	minss($1, $2)
+ (small, int):int	gminsg($1, $2)
+ (int, small):int	gmings($1, $2)
+ (int, int):int	gmin($1, $2)
+ (small, mp):mp	gminsg($1, $2)
+ (mp, small):mp	gmings($1, $2)
+ (mp, mp):mp	gmin($1, $2)
+ (small, gen):gen	gminsg($1, $2)
+ (gen, small):gen	gmings($1, $2)
+ (gen, gen):gen	gmin($1, $2)
+

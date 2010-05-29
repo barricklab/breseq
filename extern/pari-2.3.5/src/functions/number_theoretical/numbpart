@@ -1,0 +1,6 @@
+Function: numbpart
+Section: number_theoretical
+C-Name: numbpart
+Prototype: G
+Help: numbpart(x): number of partitions of x
+

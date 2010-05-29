@@ -1,0 +1,9 @@
+Function: precprime
+Section: number_theoretical
+C-Name: gprecprime
+Prototype: G
+Help: precprime(x): largest pseudoprime <= x, 0 if x<=1
+Description: 
+ (int):int	precprime($1)
+ (gen):gen	gprecprime($1)
+

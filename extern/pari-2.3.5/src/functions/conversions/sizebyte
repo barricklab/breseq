@@ -1,0 +1,7 @@
+Function: sizebyte
+Section: conversions
+C-Name: taille2
+Prototype: lG
+Help: sizebyte(x): number of bytes occupied by the complete tree of the
+ object x
+

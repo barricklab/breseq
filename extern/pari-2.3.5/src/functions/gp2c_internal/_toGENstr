@@ -1,0 +1,6 @@
+Function: _toGENstr
+Class: gp2c_internal
+Description: 
+ (str):genstr	   strtoGENstr($1)
+ (gen):genstr	   GENtoGENstr($1)
+

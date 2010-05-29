@@ -1,0 +1,7 @@
+Function: deriv
+Section: polynomials
+C-Name: deriv
+Prototype: GDn
+Help: deriv(x,{y}): derivative of x with respect to the main variable of y,
+ or to the main variable of x if y is omitted
+

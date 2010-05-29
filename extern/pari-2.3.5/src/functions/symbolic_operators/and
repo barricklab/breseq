@@ -1,0 +1,5 @@
+Function: _&&_
+Class: symbolic_operators
+Description: 
+ (bool, bool):bool:parens               $(1) && $(2)
+

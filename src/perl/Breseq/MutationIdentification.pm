@@ -204,28 +204,30 @@ sub identify_mutations
 					if (!defined $this_position_coverage)
 					{
 						$this_position_coverage = {
-							'unique' => {'1'=>'NA', '-1'=>'NA', 'total' => 'NA' },
-							'raw_redundant' => {'1'=>'NA', '-1'=>'NA', 'total' => 'NA' },
-							'redundant' => {'1'=>'NA', '-1'=>'NA', 'total' => 'NA' }
+							unique => {'1'=>'NA', '-1'=>'NA', 'total' => 'NA' },
+							raw_redundant => {'1'=>'NA', '-1'=>'NA', 'total' => 'NA' },
+							redundant => {'1'=>'NA', '-1'=>'NA', 'total' => 'NA' }
 						};
 					}
 					
 					my $del = {
-						'type' => 'MC',
-						'seq_id' => $seq_id,
-						'start' => $last_deletion_start_position,
-						'end' => $pos-1,
-						'size' => ($pos-1) - $last_deletion_start_position + 1, #end - start + 1
-						'left_unique_cov' => $left_side_coverage_item->{unique}->{total},
-						'left_inside_unique_cov' => $left_inside_coverage_item->{unique}->{total},
-						'right_inside_unique_cov' => $last_position_coverage->{unique}->{total},
-						'right_unique_cov' => $this_position_coverage->{unique}->{total},
+						type => 'MC',
+						seq_id => $seq_id,
+						start => $last_deletion_start_position,
+						end => $pos-1,
+						start_range => 0,
+						end_range => 0,
+			#			size => ($pos-1) - $last_deletion_start_position + 1, #end - start + 1
+						left_unique_cov => $left_side_coverage_item->{unique}->{total},
+						left_inside_unique_cov => $left_inside_coverage_item->{unique}->{total},
+						right_inside_unique_cov => $last_position_coverage->{unique}->{total},
+						right_unique_cov => $this_position_coverage->{unique}->{total},
 					};
-					$del->{'left_inside_unique_cov'} = 'NA' if (!defined $del->{'left_inside_unique_cov'});
-					$del->{'right_inside_unique_cov'} = 'NA' if (!defined $del->{'right_inside_unique_cov'});
+					$del->{left_inside_unique_cov} = 'NA' if (!defined $del->{left_inside_unique_cov});
+					$del->{right_inside_unique_cov} = 'NA' if (!defined $del->{right_inside_unique_cov});
 					
-					$del->{'left_unique_cov'} = 'NA' if (!defined $del->{'left_unique_cov'});
-					$del->{'right_unique_cov'} = 'NA' if (!defined $del->{'right_unique_cov'});
+					$del->{left_unique_cov} = 'NA' if (!defined $del->{left_unique_cov});
+					$del->{right_unique_cov} = 'NA' if (!defined $del->{right_unique_cov});
 					
 					$gd->add($del);					
 				}

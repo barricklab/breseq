@@ -1,0 +1,7 @@
+Function: quit
+Class: gp
+Section: programming
+C-Name: gp_quit
+Prototype: v
+Help: quit(): quits GP and return to the system
+

@@ -1,0 +1,7 @@
+Function: matimagecompl
+Section: linear_algebra
+C-Name: imagecompl
+Prototype: G
+Help: matimagecompl(x): vector of column indices not corresponding to the
+ indices given by the function matimage
+

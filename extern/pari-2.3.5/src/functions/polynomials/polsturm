@@ -1,0 +1,7 @@
+Function: polsturm
+Section: polynomials
+C-Name: sturmpart
+Prototype: lGDGDG
+Help: polsturm(x,{a},{b}): number of real roots of the polynomial x in the
+ interval]a,b] (which are respectively taken to be -oo or +oo when omitted)
+

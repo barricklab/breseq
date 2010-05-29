@@ -1,0 +1,7 @@
+Function: ellorder
+Section: elliptic_curves
+C-Name: orderell
+Prototype: GG
+Help: ellorder(e,p): order of the point p on the elliptic curve e over Q, 0
+ if non-torsion
+

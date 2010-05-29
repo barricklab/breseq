@@ -1,0 +1,9 @@
+Function: listinsert
+Section: linear_algebra
+C-Name: listinsert
+Prototype: GGL
+Help: listinsert(list,x,n): insert x at index n in list, shifting the
+ remaining elements to the right
+Description: 
+ (list, gen, small):gen	listinsert($1, $2, $3)
+

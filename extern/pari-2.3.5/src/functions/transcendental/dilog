@@ -1,0 +1,6 @@
+Function: dilog
+Section: transcendental
+C-Name: dilog
+Prototype: Gp
+Help: dilog(x): dilogarithm of x
+

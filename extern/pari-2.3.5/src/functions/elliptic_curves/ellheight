@@ -1,0 +1,9 @@
+Function: ellheight
+Section: elliptic_curves
+C-Name: ellheight0
+Prototype: GGD2,L,p
+Help: ellheight(e,x,{flag=2}): canonical height of point x on elliptic curve
+ E defined by the vector e. flag is optional and selects the algorithm used
+ to compute the archimedean local height. Its meaning is 0: use
+ theta-functions, 1: use Tate's method, 2: use Mestre's AGM
+

@@ -1,0 +1,29 @@
+*) Temporarily skip nfisincl() in tests - segfaults in 2.2.10 (CVS)...
+
+*) With 2.2.10 (CVS)
+   Failed Test Stat Wstat Total Fail  Failed  List of Failed
+   ------------------------------------------------------------------
+   t/intnum.t                50    9  18.00%  11 23-25 27 41-42 45 49
+
+ULONG test is not robust enough.
+
+ASMINLINE?  For -g?
+
+*) One scenario to have highremainder problem: cc=gcc, but cpp is not
+   gcc-based; thus  __GNUC__ is not defined when building kernel.o, and
+   wrong code is assembled (Solaris).
+
+     I tried
+       perl Makefile.PL cpp="gcc -E"
+       and
+       perl Makefile.PL CPP="gcc -E"
+     but the correct define for CPP did not make it into the important part of
+     libPARI/Makefile.  With CPP = gcc -E in makefile things build fine.
+
+*) Document in the code what happens when a Math::Pari object is free()ed which
+   from Perl-called-from-PARI-called-from-Perl, and the object was created
+   on stack before the call to PARI function.
+
+*) Apparently, fill_outvect() use of oldavma is good only if the data is
+   not on stack, or there is exactly one value on stack, and void return
+   value...

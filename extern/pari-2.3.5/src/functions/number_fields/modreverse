@@ -1,0 +1,6 @@
+Function: modreverse
+Section: number_fields
+C-Name: polymodrecip
+Prototype: G
+Help: modreverse(x): reverse polymod of the polymod x, if it exists
+

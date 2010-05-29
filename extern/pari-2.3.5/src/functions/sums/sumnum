@@ -1,0 +1,11 @@
+Function: sumnum
+Section: sums
+C-Name: sumnum0
+Prototype: V=GGEDGD0,L,p
+Help: sumnum(X=a,sig,expr,{tab},{flag=0}): numerical summation of expr from 
+ X = ceiling(a) to +infinity. sig is either a scalar or a two-component vector
+ coding the function's decrease rate at infinity. It is assumed that the
+ scalar part of sig is to the right of all poles of expr. If present, tab
+ must be initialized by sumnuminit. If flag is nonzero, assumes that
+ conj(expr(z)) = expr(conj(z)).
+

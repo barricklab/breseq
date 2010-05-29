@@ -1,0 +1,9 @@
+Function: plotinit
+Class: highlevel
+Section: graphic
+C-Name: initrect_gen
+Prototype: vLD0,G,D0,G,D0,L,
+Help: plotinit(w,{x=0},{y=0},{flag=0}): initialize rectwindow w to size x,y.
+ If flag!=0, x and y express fractions of the size of the current output
+ device. x=0 or y=0 means use the full size of the device
+

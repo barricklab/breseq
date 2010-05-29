@@ -1,0 +1,9 @@
+Function: random
+Section: conversions
+C-Name: genrand
+Prototype: DG
+Help: random({N=2^31}): random integer between 0 and N-1
+Description: 
+ (?int):int	genrand($1)
+ (real):void	$"incorrect type `real' in random"
+

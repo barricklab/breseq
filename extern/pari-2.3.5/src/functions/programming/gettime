@@ -1,0 +1,6 @@
+Function: gettime
+Section: programming
+C-Name: gettime
+Prototype: l
+Help: gettime(): time (in milliseconds) since last call to gettime
+

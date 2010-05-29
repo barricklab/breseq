@@ -1,0 +1,7 @@
+Function: rnfidealreltoabs
+Section: number_fields
+C-Name: rnfidealreltoabs
+Prototype: GG
+Help: rnfidealreltoabs(rnf,x): transforms the ideal x from relative to
+ absolute representation
+

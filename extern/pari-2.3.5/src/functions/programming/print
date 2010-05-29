@@ -1,0 +1,8 @@
+Function: print
+Section: programming
+C-Name: print
+Prototype: vs*
+Help: print(a): outputs a (in raw format) ending with newline
+Description:
+ (?gen,...):void  pariprintf("${2 format_string}\n"${2 format_args})
+

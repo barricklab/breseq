@@ -1,0 +1,7 @@
+Function: bnrclassno
+Section: number_fields
+C-Name: bnrclassno
+Prototype: GG
+Help: bnrclassno(bnf,x): ray class number of the module x for the big number
+ field bnf. Faster than bnrclass if only the ray class number is wanted
+

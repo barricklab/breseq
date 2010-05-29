@@ -1,0 +1,7 @@
+Function: ellan
+Section: elliptic_curves
+C-Name: anell
+Prototype: GL
+Help: ellan(e,n): computes the first n Fourier coefficients of the
+ L-function of the elliptic curve e (n<2^24 on a 32-bit machine)
+

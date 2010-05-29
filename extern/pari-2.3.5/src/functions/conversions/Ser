@@ -1,0 +1,7 @@
+Function: Ser
+Section: conversions
+C-Name: gtoser
+Prototype: GDn
+Help: Ser(x,{v=x}): convert x (usually a vector) into a power series with
+ variable v, starting with the constant coefficient
+

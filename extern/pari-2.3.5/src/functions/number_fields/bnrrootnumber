@@ -1,0 +1,9 @@
+Function: bnrrootnumber
+Section: number_fields
+C-Name: bnrrootnumber
+Prototype: GGD0,L,p
+Help: bnrrootnumber(bnr,chi,{flag=0}); returns the so-called Artin Root
+ Number, i.e. the constant W appearing in the functional equation of the
+ Hecke L-function associated to chi. Set flag = 1 if the character is known
+ to be primitive
+

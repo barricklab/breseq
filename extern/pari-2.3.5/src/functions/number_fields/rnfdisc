@@ -1,0 +1,8 @@
+Function: rnfdisc
+Section: number_fields
+C-Name: rnfdiscf
+Prototype: GG
+Help: rnfdisc(nf,pol): given a pol with coefficients in nf, gives a
+ 2-component vector [D,d], where D is the relative ideal discriminant, and d
+ is the relative discriminant in nf^*/nf*^2
+

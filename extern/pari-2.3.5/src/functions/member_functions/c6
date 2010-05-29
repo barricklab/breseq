@@ -1,0 +1,7 @@
+Function: _.c6
+Class: member_functions
+C-Name: member_c6
+Prototype: G
+Description: 
+ (ell):gen:copy        gel($1, 11)
+

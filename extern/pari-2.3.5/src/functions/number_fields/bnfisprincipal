@@ -1,0 +1,12 @@
+Function: bnfisprincipal
+Section: number_fields
+C-Name: isprincipalall
+Prototype: GGD1,L,
+Help: bnfisprincipal(bnf,x,{flag=1}): bnf being output by bnfinit (with
+ flag<=2), gives [v,alpha], where v is the vector of exponents on
+ the class group generators and alpha is the generator of the resulting
+ principal ideal. In particular x is principal if and only if v is the zero
+ vector. flag is optional, whose meaning is: 0: output only v; 1: default; 2:
+ output only v, precision being doubled until the result is obtained; 3: as 2
+ but output generators
+

@@ -1,0 +1,13 @@
+Function: issquare
+Section: number_theoretical
+C-Name: gissquarerem
+Prototype: GD&
+Help: issquare(x,{&n}): true(1) if x is a square, false(0) if not. If n is
+ given puts the exact square root there if it was computed
+Description: 
+ (int):bool	Z_issquare($1)
+ (mp):int	gissquare($1)
+ (gen):gen	gissquare($1)
+ (int, &int):bool	Z_issquarerem($1, &$2)
+ (gen, &gen):gen	gissquarerem($1, &$2)
+

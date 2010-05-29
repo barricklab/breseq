@@ -1,0 +1,6 @@
+Function: Strchr
+Section: conversions
+C-Name: Strchr
+Prototype: G
+Help: Strchr(x): converts x to a string, translating each integer into a character
+

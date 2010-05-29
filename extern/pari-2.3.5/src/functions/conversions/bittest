@@ -1,0 +1,11 @@
+Function: bittest
+Section: conversions
+C-Name: gbittest
+Prototype: GG
+Help: bittest(x,n): gives bit number n (coefficient of 2^n) of the integer x.
+ Negative numbers behave as if modulo big power of 2
+Description: 
+ (small, small):bool:parens     ($(1)>>$(2))&1
+ (int, small):bool              bittest($1, $2)
+ (gen, gen):gen                 gbittest($1, $2)
+

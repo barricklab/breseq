@@ -1,0 +1,6 @@
+Function: cos
+Section: transcendental
+C-Name: gcos
+Prototype: Gp
+Help: cos(x): cosine of x
+

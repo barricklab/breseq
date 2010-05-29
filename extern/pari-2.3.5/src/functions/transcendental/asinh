@@ -1,0 +1,6 @@
+Function: asinh
+Section: transcendental
+C-Name: gash
+Prototype: Gp
+Help: asinh(x): inverse hyperbolic sine of x
+

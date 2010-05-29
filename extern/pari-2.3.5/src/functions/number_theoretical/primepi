@@ -1,0 +1,8 @@
+Function: primepi
+Section: number_theoretical
+C-Name: primepi
+Prototype: G
+Help: primepi(x): the prime counting function pi(x) = #{p <= x, p prime}.
+Description: 
+ (gen):int	primepi($1)
+

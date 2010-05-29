@@ -1,0 +1,8 @@
+Function: plotclip
+Class: highlevel
+Section: graphic
+C-Name: rectclip
+Prototype: vL
+Help: plotclip(w): clip the contents of the rectwindow to the bounding box
+ (except strings)
+

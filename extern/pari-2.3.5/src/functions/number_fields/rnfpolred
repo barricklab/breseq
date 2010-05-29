@@ -1,0 +1,7 @@
+Function: rnfpolred
+Section: number_fields
+C-Name: rnfpolred
+Prototype: GGp
+Help: rnfpolred(nf,pol): given a pol with coefficients in nf, finds a list
+ of relative polynomials defining some subfields, hopefully simpler
+

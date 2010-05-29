@@ -1,0 +1,6 @@
+Function: elltaniyama
+Section: elliptic_curves
+C-Name: elltaniyama
+Prototype: GP
+Help: elltaniyama(e): modular parametrization of elliptic curve e
+

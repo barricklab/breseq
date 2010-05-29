@@ -1,0 +1,61 @@
+# $Id: typemap,v 1.1 1994/11/21 03:02:46 ilya Exp ilya $
+
+GEN	T_Pari
+GENCOL	T_PariCol
+GENMAT	T_PariMat
+bool	T_bool
+PariVar	T_PariVar
+PariExpr	T_PariExpr
+PariName	T_PariName
+
+################################
+
+INPUT
+
+T_Pari
+	$var = sv2pari($arg)
+T_PariCol
+	$var = sv2pari($arg);
+	if (typ($var) != T_VEC) croak("Not a vector when vector-column expected");
+	settyp($var, T_COL)
+T_PariMat
+	$var = sv2parimat($arg)
+T_bool
+	$var = SvTRUE($arg)
+T_PariVar
+	$var = bindVariable($arg)
+T_PariName
+	$var = findVariable($arg, 0)
+T_PariExpr
+	if (SvROK($arg) && SvTYPE(SvRV($arg)) == SVt_PVCV) {
+	  $var = ((char*)&(SvRV($arg)->sv_flags)) + LSB_in_U32;
+	} else $var = (char *)SvPV($arg,na)
+
+
+################################
+
+OUTPUT
+
+T_bool
+	$arg=$var? &sv_yes : &sv_no;
+
+##### We put an address into SvIV(SvRV). We also need to keep oldavma
+##### and previous SV on the Pari stack. If previous SV is NULL, the
+##### corresponding GEN is moved off the stack. If it is PariStack,
+##### then this SV is the first Perl value put on the stack.
+
+##### The result of sv_setref_pv is reference to PVMG. We put previous
+##### SV into xpv_pv, and offset of oldavma into xpv_cur.
+
+T_Pari
+	setSVpari($arg, $var, oldavma);
+T_PariCol
+	setSVpari($arg, $var, oldavma);
+T_PariMat
+	setSVpari($arg, $var, oldavma);
+T_PariVar
+	Not Supported;
+T_PariName
+	Not Supported;
+T_PariExpr
+	Not Supported;

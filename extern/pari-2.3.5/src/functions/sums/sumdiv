@@ -1,0 +1,7 @@
+Function: sumdiv
+Section: sums
+C-Name: divsum
+Prototype: GVE
+Help: sumdiv(n,X,expr): sum of expression expr, X running over the divisors
+ of n
+

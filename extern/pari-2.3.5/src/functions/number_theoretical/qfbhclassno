@@ -1,0 +1,6 @@
+Function: qfbhclassno
+Section: number_theoretical
+C-Name: hclassno
+Prototype: G
+Help: qfbhclassno(x): Hurwitz-Kronecker class number of x>0
+

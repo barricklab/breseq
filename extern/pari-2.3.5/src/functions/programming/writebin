@@ -1,0 +1,7 @@
+Function: writebin
+Section: programming
+C-Name: gpwritebin
+Prototype: vsDG
+Help: writebin(filename,{x}): write x as a binary object to file filename.
+ If x is omitted, write all session variables
+

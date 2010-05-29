@@ -1,0 +1,6 @@
+Function: for
+Section: programming
+C-Name: forpari
+Prototype: vV=GGI
+Help: for(X=a,b,seq): the sequence is evaluated, X going from a up to b
+

@@ -1,0 +1,6 @@
+Function: arg
+Section: transcendental
+C-Name: garg
+Prototype: Gp
+Help: arg(x): argument of x,such that -pi<arg(x)<=pi
+

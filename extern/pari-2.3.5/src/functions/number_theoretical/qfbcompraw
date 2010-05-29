@@ -1,0 +1,7 @@
+Function: qfbcompraw
+Section: number_theoretical
+C-Name: compraw
+Prototype: GG
+Help: qfbcompraw(x,y): Gaussian composition without reduction of the binary
+ quadratic forms x and y
+

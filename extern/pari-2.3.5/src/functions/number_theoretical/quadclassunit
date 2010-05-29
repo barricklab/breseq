@@ -1,0 +1,9 @@
+Function: quadclassunit
+Section: number_theoretical
+C-Name: quadclassunit0
+Prototype: GD0,L,DGp
+Help: quadclassunit(D,{flag=0},{tech=[]}): compute the structure of the
+ class group and the regulator of the quadratic field of discriminant D. If
+ flag is non-null (and D>0), compute the narrow class group. See manual for
+ the optional technical parameters
+

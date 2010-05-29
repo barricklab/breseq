@@ -145,16 +145,28 @@ sub tam_write_read_alignments
 			$cigar_string .= $c->[1] . $c->[0];
 		}
 		
-		my @ll;
-		push @ll, $a->qname;
-		push @ll, $a->flag;
-		push @ll, $header->target_name()->[$a->tid];
-		push @ll, $a->start;
-		push @ll, $a->qual, $cigar_string, ($a->proper_pair ? '=' : '*'), $a->mate_start, $a->isize, $a->qseq, $quality_score_string, $aux_tags;
-				
-		print $fh join("\t", @ll) . "\n";
+			my @ll;
+			push @ll, $a->qname;
+			push @ll, $a->flag;
+			push @ll, $header->target_name()->[$a->tid];
+			push @ll, $a->start;
+			push @ll, $a->qual, $cigar_string;
+
+			#something strange in new version... such that mate_start sometimes 
+			#returns 1 even though there is no mate
+			if (!$a->proper_pair)
+			{
+				push @ll, "*", 0, 0;
+			}
+			else
+			{
+				push @ll, "=", $a->mate_start, $a->isize;
+			}
+			push @ll, $a->qseq, $quality_score_string, $aux_tags;
+
+			print $fh join("\t", @ll) . "\n";
+		}
 	}
-}
 
 ## Project a read alignment from a candidate junction to the reference sequence
 ##  and write out the result in a TAM file.
@@ -456,22 +468,13 @@ sub tam_write_moved_alignment
 sub alignment_query_start_end
 {
 	my ($a, $options) = @_;
-	my $ca = $a->cigar_array;
-	
-	## The cigar array will be undefined if there was no match for this sequence
-	return (0,0) if (!defined $ca || (scalar @$ca < 1));
-	
-	my $start = 1;
-	$start += $ca->[0]->[1] if ($ca->[0]->[0] eq 'S');
-	my $end = $a->query->length;
-	$end -= $ca->[-1]->[1] if ($ca->[-1]->[0] eq 'S');
-	
+
+	my ($start, $end) = ($a->query->start, $a->query->end);
 	if ($a->reversed && !$options->{no_reverse})
 	{
-		($start, $end) = ($a->query->length - $start + 1, $a->query->length - $end + 1);
+		($start, $end) = ($a->l_qseq - $start + 1, $a->l_qseq - $end + 1);
 		($start, $end) = ($end, $start);
-	}
-	
+	}	
 	return ($start, $end);
 }
 

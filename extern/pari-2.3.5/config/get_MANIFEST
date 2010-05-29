@@ -1,0 +1,8 @@
+svn list -R -r COMMITTED | grep -v '/$'
+# generated files
+echo Odos/paricfg.h
+echo src/language/init.h
+echo src/language/members.h
+echo src/gp/gp_init.h
+echo src/gp/highlvl.h
+echo src/funclist

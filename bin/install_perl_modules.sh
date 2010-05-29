@@ -8,7 +8,7 @@ BIOSAMTOOLS="$CURRENTDIR/$THISDIR/../extern/Bio-SamTools-1.19"
 cd $BIOSAMTOOLS
 export SAMTOOLS=../../src/c/samtools-0.1.7a
 echo $SAMTOOLS
-perl Build.PL --install_base=../..
+perl Build.PL --install_base=../../src/perl/extern
 ./Build
 ./Build install
 
@@ -16,6 +16,6 @@ perl Build.PL --install_base=../..
 MATHCDF="$CURRENTDIR/$THISDIR/../extern/Math-CDF-0.1"
 echo $MATHCDF
 cd $MATHCDF
-perl Makefile.PL PREFIX=../..
+perl Makefile.PL PREFIX=../../src/perl/extern
 make
 make install

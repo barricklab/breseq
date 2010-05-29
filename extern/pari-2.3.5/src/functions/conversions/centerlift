@@ -1,0 +1,14 @@
+Function: centerlift
+Section: conversions
+C-Name: centerlift0
+Prototype: GDn
+Help: centerlift(x,{v}): centered lift of x. Same as lift except for
+ integermods
+Description: 
+ (pol):pol	centerlift($1)
+ (vec):vec	centerlift($1)
+ (gen):gen	centerlift($1)
+ (pol, var):pol	centerlift0($1, $2)
+ (vec, var):vec	centerlift0($1, $2)
+ (gen, var):gen	centerlift0($1, $2)
+

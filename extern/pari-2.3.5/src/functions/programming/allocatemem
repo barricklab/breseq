@@ -1,0 +1,7 @@
+Function: allocatemem
+Section: programming
+C-Name: allocatemem0
+Prototype: vD0,L,
+Help: allocatemem({s=0}): allocates a new stack of s bytes. doubles the
+ stack if s is omitted
+

@@ -1,0 +1,88 @@
+This is PARI/GP, version 2.3.x (*).
+
+PARI/GP Number Theory-oriented Computer Algebra System
+        Copyright (C) 2000-2006 The PARI Group, Bordeaux.
+
+==========================================================================
+
+To get started, run TeX on the file INSTALL.tex and have a look at the dvi
+(extracted verbatim from Appendix A of the user manual). If you are in a
+hurry, look at INSTALL.txt (ascii file). But a lot of information is missing
+there.
+
+Typing 'make doc' typesets separate user's manual for GP and libpari,
+a tutorial and reference card in directory doc.
+
+See the files NEW and COMPAT for new features and incompatible changes
+respectively between 2.3 and older versions. See CHANGES for (a terse
+description of) subsequent patches.
+
+The file README.DOS is specific to DOS, OS/2 and Windows 3.1 users.
+The file README.WIN is specific to Windows 3.2 (95/98/2000/NT) users.
+
+For the adventurous:
+* If you want to check up-to-date, but possibly unstable, development
+versions of PARI/GP or do development work yourself, see the file
+README-subversion.
+
+* Directory Odos/ contains information to compile binaries on DOS-based
+systems (DOS, OS/2, Win3.1, Win95/98/NT/CE).
+
+Afterwards, you're on your own.
+
+==========================================================================
+
+There are three mailing lists devoted to the PARI/GP package, run courtesy
+of Dan Bernstein, and most feedback should be directed to those. They are:
+
+-- pari-announce: to announce major version changes. You can't write to this
+one, but you should probably subscribe.
+
+-- pari-dev: for everything related to the development of PARI, including
+suggestions, technical questions, bug reports or patch submissions.
+
+-- pari-users: for everything else.
+
+To subscribe, send empty messages respectively to
+
+   pari-announce-subscribe@list.cr.yp.to
+   pari-users-subscribe@list.cr.yp.to
+   pari-dev-subscribe@list.cr.yp.to
+
+If you are not a member of any of those lists and don't want to become
+one, you can write to us at
+
+  pari@math.u-bordeaux.fr
+
+At the very least, we will forward your mail to the lists above and correct
+faulty behaviour, if necessary. But we cannot promise you will get an
+individual answer.
+
+Last but not least, PARI home page can be found at
+
+  http://pari.math.u-bordeaux.fr/
+
+  Thanks for your support, and have fun !
+
+========================================================================
+
+PARI/GP is free software; you can redistribute it and/or modify it under the
+terms of the GNU General Public License as published by the Free Software
+Foundation. It is distributed in the hope that it will be useful, but WITHOUT
+ANY WARRANTY WHATSOEVER.
+
+Check the License for details. You should have received a copy of it, along
+with the package; see the file 'COPYING'. If not, write to the Free Software
+Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
+
+
+(*) Version numbers have the shape: MAJOR.MINOR.patchlevel.status. The status
+increases through {alpha, beta, release}. New features are introduced during
+the `alpha' phase, tested during `beta', and declared stable when `release'
+is reached. The MAJOR version number (currently 2) won't change for a while.
+The MINOR version number (1) increases by 2 when a new status cycle starts (as
+soon as a `release' version is out) [odd numbers are reserved for `released'
+versions, even ones for alpha/beta phase]. The patchlevel goes up each time
+we feel an upgrade is necessary (improvement, bugfix, ...). `Release'
+versions may be updated with further patchlevels if sufficiently important
+bugs need to be fixed before the next cycle reaches completion.

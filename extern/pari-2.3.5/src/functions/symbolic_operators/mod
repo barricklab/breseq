@@ -1,0 +1,13 @@
+Function: _%_
+Class: symbolic_operators
+C-Name: gmod
+Prototype: GG
+Description: 
+ (small, small):small		smodss($1, $2)
+ (small, int):int		modsi($1, $2)
+ (int, small):small		smodis($1, $2)
+ (int, int):int	  	        modii($1, $2)
+ (gen, small):gen		gmodgs($1, $2)
+ (small, gen):gen		gmodsg($1, $2)
+ (gen, gen):gen	  	        gmod($1, $2)
+

@@ -1,0 +1,91 @@
+PARI/GP was originally written (1987) in the Laboratoire A2X, Universite
+Bordeaux 1 (France) by Christian Batut, Dominique Bernardi, Henri Cohen
+and Michel Olivier. It is maintained by Karim Belabas since 1995.
+
+A great number of people have contributed code through the successive
+stages which eventually resulted in the present version of PARI/GP.
+Even more people, too numerous to list, contributed by testing, reporting
+bugs or suggesting improvements, Igor Schein foremost among them.
+
+We would like to thank them all here.
+
+Major code contributors:
+
+  Bill Allombert
+  Christian Batut
+  Karim Belabas
+  Dominique Bernardi
+  Henri Cohen
+  Francisco Diaz y Diaz
+  Yves Eichenlaub
+  Xavier Gourdon
+  Louis Granboulan
+  Bruno Haible
+  Guillaume Hanrot
+  Pascal Letard
+  Gerhard Niklasch
+  Michel Olivier
+  Thomas Papanikolaou
+  Xavier Roblot
+  Denis Simon
+  Emmanuel Tollis
+  Ilya Zakharevitch
+
+Other contributors: (please, kindly remind us if you have been forgotten!)
+[ The 2 or 3 letter code refer to the CHANGES file ]
+
+   = Karim Belabas (maintainer)
+AM = Alex V. Myltsev
+AW = Aleksander Wittlin
+AS = Andy Stubbs
+BA = Bill Allombert
+BD = Bill Daly
+BG = Brian Gladman
+BH = Bruno Haible
+BK = Bruce Kaskel
+CB = Cliff Bergman
+CW = Carl Witty
+DB = Dominique Bernardi
+DCa= David Carlisle
+DC = Dan Christensen
+DE = Denis Excoffier
+DF = David Ford
+DS = Denis Simon
+GH = Guillaume Hanrot
+GN = Gerhard Niklasch
+GT = Glenn Thobe
+GTo= Gonzalo Tornaria
+HC = Henri Cohen
+HR = Harvey Rose
+IK = Iwao Kimura
+IS = Igor Schein
+ISo= Ignat Soroko
+IZ = Ilya Zakharevich
+JD = Jeroen Demeyer
+JJ = John Jones
+JS = Juhana Sadeharju
+KO = Kiyoshi Ohgishi
+KPN= Klaus-Peter Nischke
+LG = Louis Granboulan
+LGr= Loic Grenie
+MD = Mark Dickinson
+MH = Marije Huizing
+MS = Michael Stoll
+MSo= Michael Somos
+MW = Mark Watkins
+NS = Nils Skoruppa
+OR = Olivier Ramare
+OV = Oliver Voigt
+PC = Phil Carmody
+PM = Peter Montgomery
+PW = Paul van Wamelen
+RM = Richard Mathar
+RS = Ralf Stephan
+RR = Randall Rathbun
+SC = Sylvain Chevillard
+SG = Scott Garee
+TH = Teluhiko Hilano
+TP = Thomas Papanikolaou
+VL = Vincent Lefevre
+XR = Xavier Roblot
+YU = Yoshiaki Uchikawa

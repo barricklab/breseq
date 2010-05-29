@@ -1,0 +1,10 @@
+Function: install
+Class: highlevel
+Section: programming
+C-Name: gpinstall
+Prototype: vrrD"",r,D"",s,
+Help: install(name,code,{gpname},{lib}): load from dynamic library 'lib' the
+ function 'name'. Assign to it the name 'gpname' in this GP session, with
+ argument code 'code'. If 'lib' is omitted use 'libpari.so'. If 'gpname' is
+ omitted, use 'name'
+

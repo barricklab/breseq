@@ -1,0 +1,6 @@
+Function: matrank
+Section: linear_algebra
+C-Name: rank
+Prototype: lG
+Help: matrank(x): rank of the matrix x
+

@@ -1,0 +1,19 @@
+Function: default
+Section: programming
+C-Name: default0
+Prototype: D"",r,D"",s,D0,L,
+Help: default({opt},{v}): returns the current value of the current
+ default opt. If v is present, set opt to v first. If no argument is
+ given, print a list of all defaults as well as their values.
+Description:
+ ("realprecision"):small:prec              getrealprecision()
+ ("realprecision",small):small:prec        setrealprecision($2, &prec)
+ ("seriesprecision"):small                 precdl
+ ("seriesprecision",small):small:parens    precdl = $2
+ ("debug"):small                           DEBUGLEVEL
+ ("debug",small):small:parens              DEBUGLEVEL = $2
+ ("debugmem"):small                        DEBUGMEM
+ ("debugmem",small):small:parens           DEBUGMEM = $2
+ ("debugfiles"):small                      DEBUGFILES
+ ("debugfiles",small):small:parens         DEBUGFILES = $2
+

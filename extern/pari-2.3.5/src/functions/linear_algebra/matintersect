@@ -1,0 +1,7 @@
+Function: matintersect
+Section: linear_algebra
+C-Name: intersect
+Prototype: GG
+Help: matintersect(x,y): intersection of the vector spaces whose bases are
+ the columns of x and y
+

@@ -1,0 +1,7 @@
+Function: rnfeltup
+Section: number_fields
+C-Name: rnfelementup
+Prototype: GG
+Help: rnfeltup(rnf,x): expresses x (belonging to the base field) on the
+ relative field
+

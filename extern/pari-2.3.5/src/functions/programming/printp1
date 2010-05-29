@@ -1,0 +1,7 @@
+Function: printp1
+Section: programming
+C-Name: printp1
+Prototype: vs*
+Help: printp1(a): outputs a (in beautified format) without ending with
+ newline
+

@@ -1,0 +1,7 @@
+#!/bin/sh
+#
+# Strip escape sequences from PARI log file.
+
+for i in "$@"; do
+  sed -e 's/[^]*//g; s/\[[0-9;]*m//g' $i
+done

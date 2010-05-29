@@ -1,0 +1,7 @@
+Function: rnfbasistoalg
+Section: number_fields
+C-Name: rnfbasistoalg
+Prototype: GG
+Help: rnfbasistoalg(rnf,x): relative version of nfbasistoalg, where rnf is a
+ relative numberfield
+

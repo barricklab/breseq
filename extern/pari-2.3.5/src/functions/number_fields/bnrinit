@@ -1,0 +1,14 @@
+Function: bnrinit
+Section: number_fields
+C-Name: bnrinit0
+Prototype: GGD0,L,
+Help: bnrinit(bnf,ideal,{flag=0}): given a big number field as output by
+ bnfinit (only) and an ideal or a 2-component row vector formed by an ideal
+ and a list of R1 zeros or ones representing a module, initializes data
+ linked to the ray class group structure corresponding to this module. flag
+ is optional, and can be 0: default (same as bnrclass with flag = 1), 1:
+ compute also the generators (same as bnrclass with flag = 2). The fifth
+ component is the ray class group structure
+Description:
+ (gen,gen,?small):bnr       bnrinit0($1, $2, $3)
+

@@ -1,0 +1,12 @@
+\begingroup
+\catcode`\&=12
+\catcode`\_=12
+\catcode`\$=12
+\catcode`\#=12
+\catcode`\%=12
+\catcode`\^=13
+\catcode`\~=13
+\gdef\vers{@version@}
+\gdef\includedir{@includedir@}
+\gdef\libdir{@libdir@}
+\endgroup

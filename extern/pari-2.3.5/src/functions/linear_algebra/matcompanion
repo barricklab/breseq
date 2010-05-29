@@ -1,0 +1,6 @@
+Function: matcompanion
+Section: linear_algebra
+C-Name: assmat
+Prototype: G
+Help: matcompanion(x): companion matrix to polynomial x
+

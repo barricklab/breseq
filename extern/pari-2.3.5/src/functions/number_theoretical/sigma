@@ -1,0 +1,14 @@
+Function: sigma
+Section: number_theoretical
+C-Name: gsumdivk
+Prototype: GD1,L,
+Help: sigma(x,{k=1}): sum of the k-th powers of the divisors of x. k is
+ optional and if omitted is assumed to be equal to 1
+Description: 
+ (int, ?1):int	sumdiv($1)
+ (int, 0):int	numbdiv($1)
+ (gen, ?1):gen	gsumdiv($1)
+ (gen, 0):gen	gnumbdiv($1)
+ (int, small):int	sumdivk($1, $2)
+ (gen, small):gen	gsumdivk($1, $2)
+

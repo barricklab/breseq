@@ -1,0 +1,28 @@
+--- ./src/kernel/none/level0.h~	Fri Nov  3 13:00:26 2000
++++ ./src/kernel/none/level0.h	Mon Dec 27 13:44:46 2004
+@@ -50,8 +50,9 @@ ENDEXTERN
+ 
+ #else
+ 
+-ulong overflow;
+-ulong hiremainder;
++#define NEED_OVERFLOW_HIREMAINDER
++extern ulong overflow;
++extern ulong hiremainder;
+ 
+ INLINE long
+ addll(ulong x, ulong y)
+--- ./src/kernel/none/mp.c~	Tue Jan 29 05:46:23 2002
++++ ./src/kernel/none/mp.c	Mon Dec 27 13:46:30 2004
+@@ -22,6 +22,11 @@ Foundation, Inc., 59 Temple Place - Suit
+ /* version (#ifdef __M68K__) since they are defined in mp.s   */
+ #include "pari.h"
+ 
++#ifdef NEED_OVERFLOW_HIREMAINDER
++ulong overflow;
++ulong hiremainder;
++#endif
++
+ /* NOTE: arguments of "spec" routines (muliispec, addiispec, etc.) aren't
+  * GENs but pairs (long *a, long na) representing a list of digits (in basis
+  * BITS_IN_LONG) : a[0], ..., a[na-1]. [ In ordre to facilitate splitting: no

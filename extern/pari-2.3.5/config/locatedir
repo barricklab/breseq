@@ -1,0 +1,10 @@
+#!/bin/sh
+t=$1; shift;
+
+for dir in $*; do
+  file=$dir/$t
+  if test -d $file; then
+    echo $file; exit 0
+  fi
+done
+exit 1

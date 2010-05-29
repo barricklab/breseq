@@ -1,0 +1,7 @@
+Function: matindexrank
+Section: linear_algebra
+C-Name: indexrank
+Prototype: G
+Help: matindexrank(x): gives two extraction vectors (rows and columns) for
+ the matrix x such that the extracted matrix is square of maximal rank
+

@@ -1,0 +1,10 @@
+Function: polredabs
+Section: number_fields
+C-Name: polredabs0
+Prototype: GD0,L,
+Help: polredabs(x,{flag=0}): a smallest generating polynomial of the number
+ field for the T2 norm on the roots, with smallest index for the minimal T2
+ norm. flag is optional, whose binary digit mean 1: give the element whose
+ characteristic polynomial is the given polynomial. 4: give all polynomials
+ of minimal T2 norm (give only one of P(x) and P(-x)). 16: partial reduction
+

@@ -1,0 +1,3164 @@
+% $Id: usersch5.tex 7909 2006-05-10 09:05:27Z kb $
+% Copyright (c) 2000  The PARI Group
+%
+% This file is part of the PARI/GP documentation
+%
+% Permission is granted to copy, distribute and/or modify this document
+% under the terms of the GNU General Public License
+\chapter{Technical Reference Guide for Low-Level Functions}
+
+In this chapter, we describe all public low-level functions of the
+PARI library. These essentially include functions for handling all the PARI
+types. Higher level functions, such as arithmetic or transcendental
+functions, are described in Chapter~3 of the GP user's manual. A general
+introduction to the major concepts of PARI programming can be found in
+Chapter~4.
+
+Many other undocumented functions can be found throughout the source code.
+These private functions are more efficient than the library wrappers, but
+sloppier on argument checking and damage control. Use them at your own risk!
+
+\misctitle{Important advice}: generic routines eventually call lower level
+functions. Optimize your algorithms first, not overhead and conversion costs
+between PARI routines. For generic operations, use generic routines first,
+don't waste time looking for the most specialized one available unless you
+identify a genuine bottleneck. The PARI source code is part of the
+documentation; look for inspiration there.\smallskip
+
+We let \B\ abbreviate \tet{BITS_IN_LONG}. The type \kbd{long} denotes a
+\B-bit signed long integer. The type \tet{ulong} is defined as \kbd{unsigned
+long}. The word \emph{stack} always refer to the PARI stack, allocated
+through an initial \kbd{pari\_init} call. Refer to Chapters 1--2 and~4 for
+general background. \kbdsidx{BIL}
+
+\section{Initializing the library}
+
+The following functions enable you to start using the PARI functions
+in a program, and cleanup without exiting the whole program.
+
+\subsec{General purpose}
+
+\fun{void}{pari_init}{size\_t size, ulong maxprime} initialize the
+library, with a stack of \kbd{size} bytes and a prime table
+up to the maximum of \kbd{maxprime} and $2^{16}$. Unless otherwise
+mentionned, no PARI function will function properly before such an
+initialization.
+
+\fun{void}{pari_close}{void} stop using the library (assuming it was
+initialized with \kbd{pari\_init}) and frees all allocated objects.
+
+\subsec{Technical functions}
+
+\fun{void}{pari_init_opts}{size\_t size, ulong maxprime, ulong opts} as
+\kbd{pari\_init}, more flexible. \kbd{opts} is a mask of flags
+among the following:
+
+  \kbd{INIT\_JMPm}: install pari error handler. When an exception is
+raised, the program is terminated with \kbd{exit(1)}.
+
+  \kbd{INIT\_SIGm}: install pari signal handler.
+
+  \kbd{INIT\_DFTm}: initialize the \kbd{GP\_DATA} environment structure.
+This one \emph{must} be enabled once. If you close pari, then restart it,
+you need not reinitialize \kbd{GP\_DATA}; if you do not, then old values are
+restored.
+
+\fun{void}{pari_close_opts}{ulong init\_opts} as \kbd{pari\_close},
+for a library initialized with a mask of options using
+\kbd{pari\_init\_opts}. \kbd{opts} is a mask of flags among
+
+  \kbd{INIT\_SIGm}: restore \kbd{SIG\_DFL} default action for signals
+tampered with by pari signal handler.
+
+  \kbd{INIT\_DFTm}: frees the \kbd{GP\_DATA} environment structure.
+
+\fun{void}{pari_sig_init}{void (*f)(int)} install the signal handler \kbd{f}
+(see \kbd{signal(2)}): the signals \kbd{SIGBUS}, \kbd{SIGFPE}, \kbd{SIGINT},
+\kbd{SIGBREAK}, \kbd{SIGPIPE} and \kbd{SIGSEGV} are concerned.
+
+\subsec{Notions specific to the GP interpreter}
+
+An \kbd{entree} is the generic object associated to an identifier (a name)
+in GP's interpreter, be it a built-in or user function, or a variable. For
+a function, it has at least the following fields:
+
+  \kbd{char *name} : the name under which the interpreter knows us.
+
+  \kbd{ulong valence} : obsolete, set it to 1.
+
+  \kbd{void *value} :  a pointer to the C function to call.
+
+  \kbd{long menu} : an integer from 1 to 11 (to which group of function
+                    help do we belong).
+
+  \kbd{char *code} : the prototype code.
+
+  \kbd{char *help} : the help text for the function.
+
+A routine in GP is described to the analyzer by an \kbd{entree}
+structure. Built-in pari routines are grouped in \emph{modules}, which
+are arrays of \kbd{entree} structs, the last of which satisfy
+\kbd{name = NULL} (sentinel).
+
+There are currently six modules in GP: general functions
+(\tet{functions_basic}), gp-specific functions (\tet{functions_fp}),
+gp-specific highlevel functions (\tet{functions_highlevel}),
+member functions, and two modules of obsolete functions. The function 
+\kbd{pari\_init} initializes the interpreter and declares all symbols
+in \kbd{functions\_basic}. You may declare further functions on a case by
+case basis or as a whole module using
+
+\fun{void}{pari_add_function}{entree *ep} adds a single routine to the
+table of symbols in the interpreter. It assumes \kbd{pari\_init} has been
+called.
+
+\fun{void}{pari_add_module}{entree *mod} adds all the routines in module
+\kbd{mod} to the table of symbols in the interpreter. It assumes
+\kbd{pari\_init} has been called.
+
+\noindent For instance, gp implements a number of private routines, which
+it adds to the default set via the call
+\bprog
+  pari_add_module(functions_gp);
+  pari_add_module(functions_highlevel);
+@eprog
+
+\section{Handling \kbd{GEN}s}
+\noindent Almost all these functions are either macros or inlined. Unless
+mentioned otherwise, they do not evaluate their arguments twice. Most of them
+are specific to a set of types, although no consistency checks are made:
+e.g.~one may access the \kbd{sign} of a \typ{PADIC}, but the result is
+meaningless.
+
+\subsec{Length conversions}
+
+\fun{long}{ndec2nlong}{long x} converts a number of decimal digits to a number
+of words. Returns $ 1 + \kbd{floor}(x \times \B \log_2 10)$.
+
+\fun{long}{ndec2prec}{long x} converts a number of decimal digits to a number
+of codewords. This is equal to 2 + \kbd{ndec2nlong(x)}.
+
+\fun{long}{prec2ndec}{long x} converts a number of of codewords to a
+number of decimal digits.
+
+\fun{long}{nbits2nlong}{long x} converts a number of bits to a number of
+words. Returns the smallest word count containing $x$ bits, i.e $
+\kbd{ceil}(x / \B)$.
+
+\fun{long}{nbits2prec}{long x} converts a number of bits to a number of
+codewords. This is equal to 2 + \kbd{nbits2nlong(x)}.
+
+\fun{long}{nchar2nlong}{long x} converts a number of bytes to number of
+words. Returns the smallest word count containing $x$ bytes, i.e
+$\kbd{ceil}(x / \kbd{sizeof(long)})$.
+
+\fun{long}{bit_accuracy}{long x} converts a \typ{REAL} length into a number
+of significant bits. Returns $(x - 2)\B$. The macro \tet{bit_accuracy_mul(x,y)}
+computes the same thing multiplied by $y$.
+
+\subsec{Read type-dependent information}
+
+\fun{long}{typ}{GEN x} returns the type number of~\kbd{x}. The header files
+included through \kbd{pari.h} define symbolic constants for the \kbd{GEN}
+types: \typ{INT} etc. Never use their actual numerical values. E.g to determine
+whether \kbd{x} is a \typ{INT}, simply check
+\bprog
+  if (typ(x) == t_INT) { }
+@eprog\noindent
+The types are internally ordered and this simplifies the implementation of
+commutative binary operations (e.g addition, gcd). Avoid using the ordering
+directly, as it may change in the future; use type grouping macros
+instead (\secref{se:typegroup}).
+
+\fun{long}{lg}{GEN x} returns the length of~\kbd{x} in \B-bit words.
+
+\fun{long}{lgefint}{GEN x} returns the effective length of the \typ{INT} \kbd{x}
+in \B-bit words.
+
+\fun{long}{signe}{GEN x} returns the sign ($-1$, 0 or 1) of~\kbd{x}. Can be
+used for \typ{INT}, \typ{REAL}, \typ{POL} and \typ{SER} (for the last two
+types, only 0 or 1 are possible).
+
+\fun{long}{gsigne}{GEN x} same as \kbd{signe}, but also valid for \typ{FRAC}
+(and marginally less efficient for the other types). Raise a type error if
+\kbd{typ(x)} is not among those three.
+
+\fun{long}{expi}{GEN x} returns the binary exponent of the real number equal
+to the \typ{INT}~\kbd{x}. This is a special case of \kbd{gexpo}.
+
+\fun{long}{expo}{GEN x} returns the binary exponent of the
+\typ{REAL}~\kbd{x}.
+
+\fun{long}{gexpo}{GEN x} same as \kbd{expo}, but also valid when \kbd{x}
+is not a \typ{REAL} (returns the largest exponent found among the components
+of \kbd{x}). When \kbd{x} is an exact~0, this returns
+\hbox{\kbd{-HIGHEXPOBIT}}, which is lower than any valid exponent.
+
+\fun{long}{valp}{GEN x} returns the $p$-adic valuation (for
+a \typ{PADIC}) or $X$-adic valuation (for a \typ{SER}, taken with respect to
+the main variable) of~\kbd{x}.
+
+\fun{long}{precp}{GEN x} returns the precision of the \typ{PADIC}~\kbd{x}.
+
+\fun{long}{varn}{GEN x} returns the variable number of the
+\typ{POL} or \typ{SER}~\kbd{x} (between 0 and \kbd{MAXVARN}).
+
+\fun{long}{gvar}{GEN x} returns the main variable number when any variable
+at all occurs in the composite object~\kbd{x} (the smallest variable number
+which occurs), and \kbd{BIGINT} otherwise.
+
+\fun{long}{degpol}{GEN x} returns the degree of \typ{POL}~\kbd{x},
+\emph{assuming} its leading coefficient is non-zero (an exact $0$ is
+impossible, but an inexact $0$ is allowed). By convention the degree of an
+exact $0$ polynomial is $-1$. If the leading coefficient of \kbd{x} is $0$,
+the result is undefined.
+
+\fun{int}{precision}{GEN x} If \kbd{x} is of type \typ{REAL}, returns the
+precision of~\kbd{x} (the length of \kbd{x} in \B-bit words if \kbd{x} is not
+zero, and a reasonable quantity obtained from the exponent of \kbd{x} if
+\kbd{x} is numerically equal to zero). If \kbd{x} is of type \typ{COMPLEX},
+returns the minimum of the precisions of the real and imaginary part.
+Otherwise, returns~0 (which stands in fact for infinite precision).
+
+\fun{int}{gprecision}{GEN x} as \kbd{precision} for scalars; returns the
+lowest precision encountered among the components otherwise.
+
+\fun{long}{sizedigit}{GEN x} returns 0 if \kbd{x} is exactly~0. Otherwise,
+returns \kbd{\key{gexpo}(x)} multiplied by $\log_{10}(2)$. This gives a crude
+estimate for the maximal number of decimal digits of the components
+of~\kbd{x}.
+
+\subsec{Eval type-dependent information}.
+These routines convert type-dependant information to bitmask to fill the
+codewords of \kbd{GEN} objects (see \secref{se:impl}). E.g for a
+\typ{REAL}~\kbd{z}:
+\bprog
+  z[1] = evalsigne(-1) | evalexpo(2)
+@eprog
+Compatible components of a codeword for a given type can be OR-ed as above.
+
+\fun{ulong}{evaltyp}{long x} convert type~\kbd{x} to bitmask (first
+codeword of all \kbd{GEN}s)
+
+\fun{long}{evallg}{long x} convert length~\kbd{x} to bitmask (first
+codeword of all \kbd{GEN}s). Raise overflow error if \kbd{x} is so large that
+the corresponding length cannot be represented
+
+\fun{long}{_evallg}{long x} as \kbd{evallg} \emph{without} the overflow
+check.
+
+\fun{ulong}{evalvarn}{long x} convert variable number~\kbd{x} to bitmask
+(second codeword of \typ{POL} and \typ{SER})
+
+\fun{long}{evalsigne}{long x} convert sign~\kbd{x} (in $-1,0,1$) to bitmask
+(second codeword of \typ{INT}, \typ{REAL}, \typ{POL}, \typ{SER})
+
+\fun{long}{evalprecp}{long x} convert $p$-adic ($X$-adic) precision~\kbd{x}
+to bitmask (second codeword of \typ{PADIC}, \typ{SER})
+
+\fun{long}{evalvalp}{long x} convert $p$-adic ($X$-adic) valuation~\kbd{x} to
+bitmask (second codeword of \typ{PADIC}, \typ{SER}). Raise overflow error if
+\kbd{x} is so large that the corresponding valuation cannot be represented
+
+\fun{long}{_evalvalp}{long x} same as \kbd{evalvalp} \emph{without} the
+overflow check.
+
+\fun{long}{evalexpo}{long x} convert exponent~\kbd{x} to bitmask (second
+codeword of \typ{REAL}). Raise overflow error if \kbd{x} is so
+large that the corresponding exponent cannot be represented
+
+\fun{long}{_evalexpo}{long x} same as \kbd{evalexpo} \emph{without} the
+overflow check.
+
+\fun{long}{evallgefint}{long x} convert effective length~\kbd{x} to bitmask
+(second codeword \typ{INT}). This should be less or equal than the length
+of the \typ{INT}, hence there is no overflow check for the effective length.
+
+\fun{long}{evallgeflist}{long x} convert effective length~\kbd{x} to bitmask
+(second codeword \typ{LIST}). This should be less or equal than the length of
+the \typ{LIST}, hence there is no overflow check for the effective length.
+
+\subsec{Set type-dependent information}.
+Use these macros with extreme care since usually the corresponding
+information is set otherwise, and the components and further codeword fields
+(which are left unchanged) may not be compatible with the new information.
+
+\fun{void}{settyp}{GEN x, long s} sets the type number of~\kbd{x} to~\kbd{s}.
+
+\fun{void}{setlg}{GEN x, long s} sets the length of~\kbd{x} to~\kbd{s}. This
+is an efficient way of truncating vectors, matrices or polynomials.
+
+\fun{void}{setlgefint}{GEN x, long s} sets the effective length
+of the \typ{INT} \kbd{x} to~\kbd{s}. The number \kbd{s} must be less than or
+equal to the length of~\kbd{x}.
+
+\fun{void}{setsigne}{GEN x, long s} sets the sign of~\kbd{x} to~\kbd{s}.
+If \kbd{x} is a \typ{INT} or \typ{REAL}, \kbd{s} must be equal to $-1$, 0
+or~1, and if \kbd{x} is a \typ{POL} or \typ{SER}, \kbd{s} must be equal to 0
+or~1.
+
+\fun{void}{setexpo}{GEN x, long s} sets the binary exponent of the
+\typ{REAL}~\kbd{x} to \kbd{s}. The value \kbd{s} must be a 24-bit signed
+number.
+
+\fun{void}{setvalp}{GEN x, long s} sets the $p$-adic or $X$-adic valuation
+of~\kbd{x} to~\kbd{s}, if \kbd{x} is a \typ{PADIC} or a \typ{SER},
+respectively.
+
+\fun{void}{setprecp}{GEN x, long s} sets the $p$-adic precision of the
+\typ{PADIC}~\kbd{x} to~\kbd{s}.
+
+\fun{void}{setvarn}{GEN x, long s} sets the variable number of the \typ{POL}
+or \typ{SER}~\kbd{x} to~\kbd{s} (where $0\le \kbd{s}\le\kbd{MAXVARN}$).
+
+\subsec{Type groups}\label{se:typegroup}.
+In the following macros, \kbd{t} denotes the type of a \kbd{GEN}.
+Some of these macros may evaluate their argument twice. Always use them as in
+\bprog
+  long tx = typ(x);
+  if (is_intreal_t(tx)) { }
+@eprog
+
+\fun{int}{is_recursive_t}{long t} \kbd{true} iff \kbd{t} is a recursive
+type (the recursive types are \typ{INT}, \typ{REAL}, \typ{STR} or
+\typ{VECSMALL}).
+
+\fun{int}{is_intreal_t}{long t} \kbd{true} iff \kbd{t} is \typ{INT}
+or \typ{REAL}.
+
+\fun{int}{is_rational_t}{long t} \kbd{true} iff \kbd{t} is \typ{INT}
+or \typ{FRAC}.
+
+\fun{int}{is_vec_t}{long t} \kbd{true} iff \kbd{t} is \typ{VEC}
+or \typ{COL}.
+
+\fun{int}{is_matvec_t}{long t} \kbd{true} iff \kbd{t} is \typ{MAT}, \typ{VEC}
+or \typ{COL}.
+
+\fun{int}{is_scalar_t}{long t} \kbd{true} iff \kbd{t} is a scalar, i.e
+a \typ{INT},
+\typ{REAL},
+\typ{INTMOD},
+\typ{FRAC},
+\typ{COMPLEX},
+\typ{PADIC},
+\typ{QUAD},
+or
+\typ{POLMOD}.
+
+\fun{int}{is_extscalar_t}{long t} \kbd{true} iff \kbd{t} is a scalar (see
+\kbd{is\_scalar\_t}) or \kbd{t} is \typ{POL}.
+
+\fun{int}{is_const_t}{long t} \kbd{true} iff \kbd{t} is a scalar which is not
+\typ{POLMOD}.
+
+\subsec{Accessors and components}.\label{se:accessors}
+The first two functions return \kbd{GEN} components as copies on the stack:
+
+\fun{GEN}{compo}{GEN x, long n} creates a copy of the \kbd{n}-th true
+component (i.e.\ not counting the codewords) of the object~\kbd{x}.
+
+\fun{GEN}{truecoeff}{GEN x, long n} creates a copy of the coefficient of
+degree~\kbd{n} of~\kbd{x} if \kbd{x} is a scalar, \typ{POL} or \typ{SER},
+and otherwise of the \kbd{n}-th component of~\kbd{x}.
+\smallskip
+
+\noindent On the contrary, the following routines return the address of a
+\kbd{GEN} component. No copy is made on the stack:
+
+\fun{GEN}{constant_term}{GEN x} returns the address the constant term of
+\typ{POL}~\kbd{x}. By convention, a $0$ polynomial (whose \kbd{sign} is $0$)
+has \kbd{gen\_0} constant term.
+
+\fun{GEN}{leading_term}{GEN x} returns the address the leading term of
+\typ{POL}~\kbd{x}. This may be an inexact $0$.
+
+\fun{GEN}{gel}{GEN x, long i} returns the address of the
+\kbd{x[i]} entry of~\kbd{x}. (\kbd{el} stands for element.)
+
+\fun{GEN}{gcoeff}{GEN x, long i, long j} returns the address of the
+\kbd{x[i,j]} entry of \typ{MAT}~\kbd{x}, i.e.~the coefficient at row~\kbd{i}
+and column~\kbd{j}.
+
+\fun{GEN}{gmael}{GEN x, long i, long j} returns the address of the
+\kbd{x[i][j]} entry of~\kbd{x}. (\kbd{mael} stands for multidimensional array
+element.)
+
+\fun{GEN}{gmael2}{GEN A, long x1, long x2} is an alias for \kbd{gmael}.
+Similar macros \tet{gmael3}, \tet{gmael4}, \tet{gmael5} are available.
+
+\section{Handling the PARI stack}
+
+\subsec{Allocating memory on the stack}
+
+\fun{GEN}{cgetg}{long n, long t} allocates memory on the stack for
+an object of length \kbd{n} and type~\kbd{t}, and initializes its first
+codeword.
+
+\fun{GEN}{cgeti}{long n} allocates memory on the stack for a \typ{INT}
+of length~\kbd{n}, and initializes its first codeword. Identical to
+\kbd{cgetg(n,\typ{INT})}.
+
+\fun{GEN}{cgetr}{long n} allocates memory on the stack for a \typ{REAL}
+of length~\kbd{n}, and initializes its first codeword. Identical to
+\kbd{cgetg(n,\typ{REAL})}.
+
+\fun{GEN}{cgetc}{long n} allocates memory on the stack for a
+\typ{COMPLEX}, whose real and imaginary parts are \typ{REAL}s
+of length~\kbd{n}.
+
+\fun{GEN}{cgetp}{GEN x} creates space sufficient to hold the
+\typ{PADIC}~\kbd{x}, and sets the prime $p$ and the $p$-adic precision to
+those of~\kbd{x}, but does not copy (the $p$-adic unit or zero representative
+and the modulus of)~\kbd{x}.
+
+\fun{GEN}{new_chunk}{size\_t n} allocates a \kbd{GEN} with $n$ components,
+\emph{without} filling the required code words. This is the low-level
+constructor underlying \kbd{cgetg}, which calls \kbd{new\_chunk} then sets
+the first code word. It works by simply returning the address
+\kbd{((GEN)avma) - n}, after checking that it is larger than \kbd{(GEN)bot}.
+
+\fun{char*}{stackmalloc}{size\_t n} allocates memory on the stack for $n$
+chars (\emph{not} $n$ \kbd{GEN}s). This is faster than using \kbd{malloc},
+and easier to use in most situations when temporary storage is needed. In
+particular there is no need to \kbd{free} individually all variables thus
+allocated: a simple \kbd{avma = oldavma} might be enough. On the other hand,
+beware that this is not permanent independant storage, but part of the stack.
+
+\noindent Objects allocated through these last two functions cannot be
+\kbd{gerepile}'d. They are not valid \kbd{GEN}s since they have no PARI type.
+
+\subsec{Garbage collection}.
+See \secref{se:garbage} for a detailed explanation and many examples.
+
+\fun{void}{cgiv}{GEN x} frees object \kbd{x} if it is the last created on the
+stack (otherwise nothing happens).
+
+\fun{GEN}{gerepile}{pari\_sp p, pari\_sp q, GEN x} general garbage collector
+for the stack.
+
+\fun{void}{gerepileall}{pari\_sp av, int n, ...} cleans up the stack from
+\kbd{av} on (i.e from \kbd{avma} to \kbd{av}), preserving the \kbd{n} objects
+which follow in the argument list (of type \kbd{GEN*}). E.g:
+\kbd{gerepileall(av, 2, \&x, \&y)} preserves \kbd{x} and \kbd{y}.
+
+\fun{void}{gerepileallsp}{pari\_sp av, pari\_sp ltop, int n, ...}
+cleans up the stack between \kbd{av} and \kbd{ltop}, updating
+the \kbd{n} elements which follow \kbd{n} in the argument list (of type
+\kbd{GEN*}). Check that the elements of \kbd{g} have no component between
+\kbd{av} and \kbd{ltop}, and assumes that no garbage is present between
+\kbd{avma} and \kbd{ltop}. Analogous to (but faster than) \kbd{gerepileall}
+otherwise.
+
+\fun{GEN}{gerepilecopy}{pari\_sp av, GEN x} cleans up the stack  from
+\kbd{av} on, preserving the object \kbd{x}. Special case of \kbd{gerepileall}
+(case $\kbd{n} = 1$), except that the routine returns the preserved \kbd{GEN}
+instead of updating its adress through a pointer.
+
+\fun{void}{gerepilemany}{pari\_sp av, GEN* g[], int n} alternative interface
+to \kbd{gerepileall}
+
+\fun{void}{gerepilemanysp}{pari\_sp av, pari\_sp ltop, GEN* g[], int n}
+alternative interface to \kbd{gerepileallsp}.
+
+\fun{void}{gerepilecoeffs}{pari\_sp av, GEN x, int n} cleans up the stack
+from \kbd{av} on, preserving \kbd{x[0]}, \dots, \kbd{x[n-1]} (which are
+\kbd{GEN}s).
+
+\fun{void}{gerepilecoeffssp}{pari\_sp av, pari\_sp ltop, GEN x, int n}
+cleans up the stack from \kbd{av} to \kbd{ltop}, preserving \kbd{x[0]},
+\dots, \kbd{x[n-1]} (which are \kbd{GEN}s). Same assumptions as in
+\kbd{gerepilemanysp}, of which this is a variant. For instance
+\bprog
+  z = cgetg(3, t_COMPLEX);
+  av = avma; garbage(); ltop = avma;
+  z[1] = fun1();
+  z[2] = fun2();
+  gerepilecoeffssp(av, ltop, z + 1, 2);
+  return z;
+@eprog\noindent
+cleans up the garbage between \kbd{av} and \kbd{ltop}, and connects \kbd{z}
+and its two components. This is marginally more efficient than the standard
+\bprog
+  av = avma; garbage(); ltop = avma;
+  z = cgetg(3, t_COMPLEX);
+  z[1] = fun1();
+  z[2] = fun2(); return gerepile(av, ltop, z);
+@eprog\noindent
+
+\fun{GEN}{gerepileupto}{pari\_sp av, GEN q} analogous to (but faster than)
+\kbd{gerepilecopy}. Assumes that \kbd{q} is connected and that its root was
+created before any component.
+
+\fun{GEN}{gerepileuptoint}{pari\_sp av, GEN q} analogous to (but faster than)
+\kbd{gerepileupto}. Assumes further that \kbd{q} is a \typ{INT}. The
+length and effective length of the resulting \typ{INT} are equal.
+
+\fun{GEN}{gerepileuptoleaf}{pari\_sp av, GEN q} analogous to (but faster than)
+\kbd{gerepileupto}. Assumes further that \kbd{q} is a leaf, i.e a
+non-recursive type (\kbd{is\_recursive\_t(typ(q))} is non-zero). Contrary to
+\kbd{gerepileuptoint}, \kbd{gerepileuptoleaf} leaves length and effective
+length of a \typ{INT} unchanged.
+
+\fun{void}{stackdummy}{pari\_sp av, pari\_sp ltop} inhibits the memory area
+between \kbd{av} \emph{included} and \kbd{ltop} \emph{excluded} with respect to
+\kbd{gerepile}, in order to avoid a call to \kbd{gerepile(av, ltop,...)}.
+The stack space is not reclaimed though.
+
+More precisely, this routine assumes that \kbd{av} is recorded earlier
+than \kbd{ltop}, then marks the specified stack segment as a
+non-recursive type of the correct length. Thus gerepile will not inspect
+the zone, at most copy it. To be used in the following situation:
+\bprog
+  av0 = avma; z = cgetg(t_VEC, 3);
+  gel(z,1) = HUGE(); av = avma; garbage(); ltop = avma;
+  gel(z,2) = HUGE(); stackdummy(av, ltop);
+@eprog\noindent
+Compared to the orthodox
+\bprog
+  gel(z,2) = gerepile(av, ltop, gel(z,2));
+@eprog\noindent
+or even more wasteful
+\bprog
+  z = gerepilecopy(av0, z);
+@eprog\noindent
+we temporarily lose $(\kbd{av} - \kbd{ltop})$ words but save a costly
+\kbd{gerepile}. In principle, a garbage collection higher up the call
+chain should reclaim this later anyway.
+
+Without the \kbd{stackdummy}, if the $[\kbd{av}, \kbd{ltop}]$ zone is
+arbitrary (not even valid \kbd{GEN}s as could happen after direct
+truncation via \kbd{setlg}), we would leave dangerous data in the middle
+of~\kbd{z}, which would be a problem for a later
+\bprog
+  gerepile(..., ... , z);
+@eprog\noindent
+And even if it were made of valid \kbd{GEN}s, inhibiting the area makes sure
+\kbd{gerepile} will not inspect their components, saving time.
+
+Another natural use in low-level routines is to ``shorten'' an existing
+\kbd{GEN} \kbd{z} to its first $\kbd{l}-1$ components:
+\bprog
+  setlg(z, l);
+  stackdummy((pari_sp)(z + lg(z)), (pari_sp)(z + l));
+@eprog\noindent
+or to its last \kbd{l} components:
+\bprog
+  long L = lg(z) - l;
+  stackdummy((pari_sp)(z + L), (pari_sp)z);
+  z += L; setlg(z, L);
+@eprog
+
+\subsec{Copies and clones}
+
+\fun{GEN}{gclone}{GEN x} creates a new permanent copy of the object \kbd{x}
+on the heap. The \emph{clone bit} of the result is set.
+
+\fun{void}{gunclone}{GEN x} delete the clone~\kbd{x} (created by \kbd{gclone}).
+Fatal error if~\kbd{x} not a clone.
+
+\fun{GEN}{gcopy}{GEN x} creates a new copy of the object~\kbd{x} on the stack.
+
+\fun{int}{isonstack}{GEN x} \kbd{true} iff \kbd{x} belongs to the stack. This
+is a macro whose argument is evaluated several times.
+
+\fun{void}{copyifstack}{GEN x, GEN y} sets \kbd{y = gcopy(x)} if
+\kbd{x} belongs to the stack, and \kbd{y = x} otherwise. This macro evaluates
+its arguments once, contrary to
+\bprog
+  y = isonstack(x)? gcopy(x): x;
+@eprog
+
+\fun{void}{icopyifstack}{GEN x, GEN y} as \kbd{copyifstack} assuming \kbd{x}
+is a \typ{INT}.
+
+\fun{long}{taille}{GEN x} returns the total number of \B-bit words occupied
+by the tree representing~\kbd{x}.
+
+\fun{void}{traverseheap}{void(*f)(GEN, void *), void *data} this applies
+\kbd{f($x$, data)} to each object $x$ on the PARI heap, most recent
+first. Mostly for debugging purposes.
+
+\fun{GEN}{getheap}{} a simple wrapper around \kbd{traverseheap}. Returns  a
+two-component row vector giving the number of objects on the heap and the
+amount of memory they occupy in long words.
+
+\section{Level 0 kernel (operations on ulongs)}
+
+\subsec{Micro-kernel}.
+Level 0 operations simulate basic operations of the 68020 processor on which
+PARI was originally implemented. They need ``global'' \kbd{ulong} variables
+\kbd{overflow} (which will contain only 0 or 1) and \kbd{hiremainder} to
+function properly. However, for certain architectures these are replaced with
+local variables for efficiency; and the `functions' mentioned below are
+really chunks of inlined assembler code. So, a routine using one of these
+lowest-level functions where the description mentions either
+\kbd{hiremainder} or \kbd{overflow} must declare the corresponding
+\bprog
+  LOCAL_HIREMAINDER;
+  LOCAL_OVERFLOW;
+@eprog\noindent
+in a declaration block. Variables \kbd{hiremainder} and \kbd{overflow} then
+become available in the enclosing block. For instance a loop over the powers
+of an \kbd{ulong}~\kbd{p} protected from overflows could read
+\bprog
+ while (pk < lim)
+ {
+   LOCAL_HIREMAINDER;
+   ...
+   pk = mulll(pk, p); if (hiremainder) break;
+ }
+@eprog
+
+\fun{ulong}{addll}{ulong x, ulong y} adds \kbd{x} and \kbd{y}, returns the
+lower \B\ bits and puts the carry bit into \kbd{overflow}.
+
+\fun{ulong}{addllx}{ulong x, ulong y} adds \kbd{overflow} to the sum of the
+\kbd{x} and \kbd{y}, returns the lower \B\ bits and puts the carry bit into
+\kbd{overflow}.
+
+\fun{ulong}{subll}{ulong x, ulong y} subtracts \kbd{x} and \kbd{y}, returns
+the lower \B\ bits and put the carry (borrow) bit into \kbd{overflow}.
+
+\fun{ulong}{subllx}{ulong x, ulong y} subtracts \kbd{overflow} from the
+difference of \kbd{x} and \kbd{y}, returns the lower \B\ bits and puts the
+carry (borrow) bit into \kbd{overflow}.
+
+\fun{int}{bfffo}{ulong x} returns the number of leading zero bits in \kbd{x}.
+That is, the number of bit positions by which it would have to be shifted
+left until its leftmost bit first becomes equal to~1, which can be between 0
+and $\B-1$ for nonzero \kbd{x}. When \kbd{x} is~0, the result is undefined.
+
+\fun{ulong}{mulll}{ulong x, ulong y} multiplies \kbd{x} by \kbd{y}, returns
+the lower \B\ bits and stores the high-order \B\ bits into \kbd{hiremainder}.
+
+\fun{ulong}{addmul}{ulong x, ulong y} adds \kbd{hiremainder} to the product
+of \kbd{x} and \kbd{y}, returns the lower \B\ bits and stores the high-order
+\B\ bits into \kbd{hiremainder}.
+
+\fun{ulong}{divll}{ulong x, ulong y} returns the Euclidean quotient of
+(\kbd{hiremainder << \B})${}+{}$\kbd{x} by \kbd{y} and stores the remainder
+into \kbd{hiremainder}. An error occurs if the quotient cannot be represented
+by an \kbd{ulong}, i.e.~if initially $\kbd{hiremainder}\ge\kbd{y}$.
+
+\subsec{Modular kernel}.
+The following routines are not part of the level 0 kernel per se, but
+implement modular operations on words in terms of the above. They are written
+so that no overflow may occur. Let $m \geq 1$ be the modulus; all operands
+representing classes modulo $m$ are assumed to belong to $[0,m-1[$. The
+result may be wrong for a number of reasons otherwise: it may not be reduced,
+overflow can occur, etc.
+
+\fun{ulong}{Fl_add}{ulong x, ulong y, ulong m} returns the smallest
+positive representative of $x + y$ modulo $m$.
+
+\fun{ulong}{Fl_neg}{ulong x, ulong m} returns the smallest
+positive representative of $-x$ modulo $m$.
+
+\fun{ulong}{Fl_sub}{ulong x, ulong y, ulong m} returns the smallest
+positive representative of $x - y$ modulo $m$.
+
+\fun{long}{Fl_center}{ulong x, ulong m, ulong mo2} returns the representative
+in $]-m/2,m/2]$ of $x$ modulo $m$. Assume $0 \leq x < m$ and
+$\kbd{mo2} = m \kbd{>>} 1$.
+
+\fun{ulong}{Fl_mul}{ulong x, ulong y, ulong m} returns the smallest positive
+representative of $x y$ modulo $m$.
+
+\fun{ulong}{Fl_inv}{ulong x, ulong m} returns the smallest
+positive representative of $x^{-1}$ modulo $m$. If $x$ is not invertible
+mod~$m$, raise an exception.
+
+\fun{ulong}{Fl_div}{ulong x, ulong y, ulong m} returns the smallest
+positive representative of $x y^{-1}$ modulo $m$. If $y$ is not invertible
+mod $m$, raise an exception.
+
+\fun{ulong}{Fl_pow}{ulong x, ulong n, ulong m} returns the smallest
+positive representative of $x^n$ modulo $m$.
+
+\fun{ulong}{Fl_sqrt}{ulong x, ulong p} returns the square root of \kbd{x}
+modulo \kbd{p} (smallest positive representative). Assumes \kbd{p} to be
+prime, and \kbd{x} to be a square modulo \kbd{p}.
+
+\fun{ulong}{gener_Fl}{ulong p} returns a \idx{primitive root} modulo \kbd{p},
+assuming \kbd{p} is prime.
+
+\fun{ulong}{gener_Fl_local}{ulong p, GEN L}, see \kbd{gener\_Fp\_local},
+\kbd{L} is an \kbd{Flv}.
+
+\fun{long}{krouu}{ulong x, ulong y} returns the \idx{Kronecker symbol}
+$(x|y)$, i.e.$-1$, $0$ or $1$. Assumes \kbd{y} is non-zero. If \kbd{y} is an
+odd prime, this is the \idx{Legendre symbol}.
+
+\section{Level 1 kernel (operations on longs, integers and reals)}
+
+\misctitle{Note:} Many functions consist of an elementary operation,
+immediately followed by an assignment statement. They will be introduced as
+in the following example:
+
+\fun{GEN}{gadd[z]}{GEN x, GEN y[, GEN z]} followed by the explicit
+description of the function
+
+\kbd{GEN \key{gadd}(GEN x, GEN y)}
+
+\noindent which creates its result on the stack, returning a \kbd{GEN} pointer
+to it, and the parts in brackets indicate that there exists also a function
+
+\kbd{void \key{gaddz}(GEN x, GEN y, GEN z)}
+
+\noindent which assigns its result to the pre-existing object
+\kbd{z}, leaving the stack unchanged. All such functions are obtained using
+macros (see the file \kbd{paricom.h}), hence you can easily extend the list.
+These assignment variants are inefficient; don't use them.
+
+\subsec{Creation}
+
+\fun{GEN}{cgeti}{long n} allocates memory on the PARI stack for a \typ{INT}
+of length~\kbd{n}, and initializes its first codeword. Identical to
+\kbd{cgetg(n,\typ{INT})}.
+
+\fun{GEN}{cgetr}{long n} allocates memory on the PARI stack for a \typ{REAL}
+of length~\kbd{n}, and initializes its first codeword. Identical to
+\kbd{cgetg(n,\typ{REAL})}.
+
+\fun{GEN}{cgetc}{long n} allocates memory on the PARI stack for a
+\typ{COMPLEX}, whose real and imaginary parts are \typ{REAL}s
+of length~\kbd{n}.
+
+\fun{GEN}{real_1}{long prec} create a \typ{REAL} equal to $1$ to \kbd{prec}
+words of accuracy.
+
+\fun{GEN}{real_m1}{long prec} create a \typ{REAL} equal to $-1$ to \kbd{prec}
+words of accuracy.
+
+\fun{GEN}{real_0_bit}{long bit} create a \typ{REAL} equal to $0$ with
+exponent $-\kbd{bit}$.
+
+\fun{GEN}{real_0}{long prec} is a shorthand for
+\bprog
+  real_0_bit( -bit_accuracy(prec) )
+@eprog
+
+\fun{GEN}{int2n}{long n} creates a \typ{INT} equal to \kbd{1<<n} (i.e
+$2^n$ if $n \geq 0$, and $0$ otherwise).
+
+\fun{GEN}{int2u}{ulong n} creates a \typ{INT} equal to $2^n$.
+
+\fun{GEN}{real2n}{long n, long prec} create a \typ{REAL} equal to $2^n$
+to \kbd{prec} words of accuracy.
+
+\fun{GEN}{stroi}{char *s} convert the character string \kbd{s} to a
+\typ{INT}.
+
+\fun{GEN}{stror}{char *s, long prec} convert the character string \kbd{s}
+to a \typ{REAL} of precision \kbd{prec}.
+
+\subsec{Assignment}.
+In this section, the \kbd{z} argument in the \kbd{z}-functions must be of type
+\typ{INT} or~\typ{REAL}.
+
+\fun{void}{mpaff}{GEN x, GEN z} assigns \kbd{x} into~\kbd{z} (where \kbd{x}
+and \kbd{z} are \typ{INT} or \typ{REAL}).
+Assumes that $\kbd{lg(z)} > 2$.
+
+\fun{void}{affii}{GEN x, GEN z} assigns the \typ{INT} \kbd{x} into the
+\typ{INT}~\kbd{z}.
+
+\fun{void}{affir}{GEN x, GEN z} assigns the \typ{INT} \kbd{x} into the
+\typ{REAL}~\kbd{z}. Assumes that $\kbd{lg(z)} > 2$.
+
+\fun{void}{affiz}{GEN x, GEN z} assigns \typ{INT}~\kbd{x} into \typ{INT} or
+\typ{REAL}~\kbd{z}. Assumes that $\kbd{lg(z)} > 2$.
+
+\fun{void}{affsi}{long s, GEN z} assigns the \kbd{long}~\kbd{s} into the
+\typ{INT}~\kbd{z}. Assumes that $\kbd{lg(z)} > 2$.
+
+\fun{void}{affsr}{long s, GEN z} assigns the \kbd{long}~\kbd{s} into the
+\typ{REAL}~\kbd{z}. Assumes that $\kbd{lg(z)} > 2$.
+
+\fun{void}{affsz}{long s, GEN z} assigns the \kbd{long}~\kbd{s} into the
+\typ{INT} or \typ{REAL}~\kbd{z}. Assumes that $\kbd{lg(z)} > 2$.
+
+\fun{void}{affui}{ulong u, GEN z} assigns the \kbd{ulong}~\kbd{u} into the
+\typ{INT}~\kbd{z}. Assumes that $\kbd{lg(z)} > 2$.
+
+\fun{void}{affur}{ulong u, GEN z} assigns the \kbd{ulong}~\kbd{u} into the
+\typ{REAL}~\kbd{z}. Assumes that $\kbd{lg(z)} > 2$.
+
+\fun{void}{affrr}{GEN x, GEN z} assigns the \typ{REAL}~\kbd{x} into the
+\typ{REAL}~\kbd{z}.
+
+\noindent The function \kbd{affrs} and \kbd{affri} do not exist. So don't use
+them.
+
+\subsec{Copy}
+
+\fun{GEN}{icopy}{GEN x} copy relevant words of the \typ{INT}~\kbd{x} on the
+stack: the length and effective length of the copy are equal.
+
+\fun{GEN}{rcopy}{GEN x} copy the \typ{REAL}~\kbd{x} on the stack.
+
+\fun{GEN}{mpcopy}{GEN x} copy the \typ{INT} or \typ{REAL}~\kbd{x} on the
+stack. Contrary to \kbd{icopy}, \kbd{mpcopy} preserves the original length
+of a \typ{INT}.
+
+\subsec{Conversions}
+
+\fun{GEN}{itor}{GEN x, long prec} converts the \typ{INT}~\kbd{x} to a
+\typ{REAL} of length \kbd{prec} and return the latter.
+Assumes that $\kbd{prec} > 2$.
+
+\fun{long}{itos}{GEN x} converts the \typ{INT}~\kbd{x} to a \kbd{long} if
+possible, otherwise raise an exception.
+
+\fun{long}{itos_or_0}{GEN x} converts the \typ{INT}~\kbd{x} to a \kbd{long} if
+possible, otherwise return $0$.
+
+\fun{ulong}{itou}{GEN x} converts the \typ{INT}~\kbd{|x|} to an \kbd{ulong} if
+possible, otherwise raise an exception.
+
+\fun{long}{itou_or_0}{GEN x} converts the \typ{INT}~\kbd{|x|} to an
+\kbd{ulong} if possible, otherwise return $0$.
+
+\fun{GEN}{stoi}{long s} creates the \typ{INT} corresponding to the
+\kbd{long}~\kbd{s}.
+
+\fun{GEN}{stor}{long s, long prec} converts the \kbd{long}~\kbd{s} into a
+\typ{REAL} of length \kbd{prec} and return the latter. Assumes that
+$\kbd{prec} > 2$.
+
+\fun{GEN}{utoi}{ulong s} converts the \kbd{ulong}~\kbd{s} into a \typ{INT}
+and return the latter.
+
+\fun{GEN}{utoipos}{ulong s} converts the \emph{non-zero} \kbd{ulong}~\kbd{s}
+into a \typ{INT} and return the latter.
+
+\fun{GEN}{utoineg}{ulong s} converts the \emph{non-zero} \kbd{ulong}~\kbd{s}
+into a \typ{INT} and return the latter.
+
+\fun{GEN}{utor}{ulong s, long prec} converts the \kbd{ulong}~\kbd{s} into a
+\typ{REAL} of length \kbd{prec} and return the latter. Assumes that
+$\kbd{prec} > 2$.
+
+\fun{GEN}{rtor}{GEN x, long prec} converts the \typ{REAL}~\kbd{x} to a
+\typ{REAL} of length \kbd{prec} and return the latter. If
+$\kbd{prec} < \kbd{lg(x)}$, round properly. If $\kbd{prec} > \kbd{lg(x)}$,
+padd with zeroes. Assumes that $\kbd{prec} > 2$.
+
+\noindent The following function is also available as a special case of
+\tet{mkintn}:
+
+\fun{GEN}{u2toi}{ulong a, ulong b}
+
+Returns the \kbd{GEN} equal to $2^{32} a + b$, \emph{assuming} that
+$a,b < 2^{32}$. This does not depend on \kbd{sizeof(long)}: the behaviour is
+as above on both $32$ and $64$-bit machines.
+
+\subsec{Integer parts}
+
+\fun{GEN}{ceilr}{GEN x} smallest integer larger or equal
+to the \typ{REAL}~\kbd{x} (i.e.~the \kbd{ceil} function).
+
+\fun{GEN}{floorr}{GEN x} largest integer smaller or equal to the
+\typ{REAL}~\kbd{x} (i.e.~the \kbd{floor} function).
+
+\fun{GEN}{roundr}{GEN x} rounds the \typ{REAL} \kbd{x} to the nearest integer
+(towards~$+\infty$).
+
+\fun{GEN}{truncr}{GEN x} truncates the \typ{REAL}~\kbd{x} (not the same as
+\kbd{floorr} if \kbd{x} is and negative).
+
+\fun{GEN}{mpceil[z]}{GEN x[, GEN z]}
+as \kbd{ceilr} except that \kbd{x} may be a \typ{INT}.
+
+\fun{GEN}{ceil_safe}{GEN x}, \kbd{x} being a real number (not necessarily a
+\typ{REAL}) returns an integer which is larger than any possible incarnation
+of \kbd{x}. (Recall that a \typ{REAL} represents an interval of possible
+values.)
+
+\fun{GEN}{mpfloor[z]}{GEN x[, GEN z]}
+as \kbd{floorr} except that \kbd{x} may be a \typ{INT}.
+
+\fun{GEN}{mpround[z]}{GEN x[, GEN z]}
+as \kbd{roundr} except that \kbd{x} may be a \typ{INT}.
+
+\fun{GEN}{mptrunc[z]}{GEN x[, GEN z]}
+as \kbd{truncr} except that \kbd{x} may be a \typ{INT}.
+
+\fun{GEN}{diviiround}{GEN x, GEN y} if \kbd{x} and \kbd{y} are \typ{INT}s,
+returns the quotient $\kbd{x}/\kbd{y}$ of \kbd{x} and~\kbd{y}, rounded to
+the nearest integer. If $\kbd{x}/\kbd{y}$ falls exactly halfway between
+two consecutive integers, then it is rounded towards~$+\infty$ (as for
+\tet{roundr}).
+
+\subsec{Valuation and shift}
+
+\fun{long}{vals}{long s} 2-adic valuation of the \kbd{long}~\kbd{s}. Returns
+$-1$ if \kbd{s} is equal to 0.
+
+\fun{long}{vali}{GEN x} 2-adic valuation of the \typ{INT}~\kbd{x}. Returns $-1$
+if \kbd{x} is equal to 0.
+
+\fun{GEN}{mpshift[z]}{GEN x, long n[, GEN z]} shifts the~\typ{INT} or
+\typ{REAL} \kbd{x} by~\kbd{n}. If \kbd{n} is positive, this is a left shift,
+i.e.~multiplication by $2^{\kbd{n}}$. If \kbd{n} is negative, it is a right
+shift by~$-\kbd{n}$, which amounts to the truncation of the quotient of \kbd{x}
+by~$2^{-\kbd{n}}$.
+
+\fun{GEN}{shifti}{GEN x, long n} shifts the \typ{INT}~\kbd{x} by~\kbd{n}.
+
+\fun{GEN}{shiftr}{GEN x, long n} shifts the \typ{REAL}~\kbd{x} by~\kbd{n}.
+
+\fun{long}{Z_pvalrem}{GEN x, GEN p, GEN *r} applied to \typ{INT}s
+$\kbd{x}\neq 0$ and~\kbd{p}, $|\kbd{p}| > 1$, returns the highest
+exponent $e$ such that $\kbd{p}^{e}$ divides~\kbd{x}. The quotient
+$\kbd{x}/\kbd{p}^{e}$ is returned in~\kbd{*r}. In particular, if \kbd{p} is a
+prime, this returns the valuation at \kbd{p} of~\kbd{x}, and \kbd{*r} is
+the prime-to-\kbd{p} part of~\kbd{x}.
+
+\fun{long}{Z_pval}{GEN x, GEN p} as \kbd{Z\_pvalrem} but only returns the
+``valuation''.
+
+\fun{long}{Z_lvalrem}{GEN x, ulong p, GEN *r} as \kbd{Z\_pvalrem}, except
+that \kbd{p} is an \kbd{ulong} ($\kbd{p} > 1$).
+
+\fun{long}{Z_lval}{GEN x, ulong p} as \kbd{Z\_pval}, except
+that \kbd{p} is an \kbd{ulong} ($\kbd{p} > 1$).
+
+\fun{long}{u_lvalrem}{ulong x, ulong p, ulong *r} as \kbd{Z\_pvalrem},
+except the inputs/outputs are now \kbd{ulong}s.
+
+\fun{long}{u_pvalrem}{ulong x, GEN p, ulong *r} as \kbd{Z\_pvalrem},
+except \kbd{x} and \kbd{r} are now \kbd{ulong}s.
+
+\fun{long}{u_lval}{ulong x, ulong p} as \kbd{Z\_pval},
+except the inputs/outputs are now \kbd{ulong}s.
+
+\subsec{Factorization}
+
+\fun{GEN}{Z_factor}{GEN n} factors the \typ{INT} \kbd{n}. The ``primes''
+in the factorization are actually strong pseudoprimes.
+
+\fun{long}{Z_issquarefree}{GEN x} returns $1$ if the \typ{INT} \kbd{n}
+is square-free, and $0$ otherwise.
+
+\fun{long}{Z_issquare}{GEN n} returns $1$ if \typ{INT} \kbd{n} is
+a square, and $0$ otherwise. This is tested first modulo small prime
+powers, then \kbd{sqrtremi} is called.
+
+\fun{long}{Z_issquarerem}{GEN n, GEN *sqrtn} as \kbd{Z\_issquare}. If
+\kbd{n} is indeed a square, set \kbd{sqrtn} to its integer square root.
+
+\fun{int}{isprime}{GEN n}, returns $1$ if the \typ{INT} \kbd{n} is a
+(fully proven) prime number and $0$ otherwise.
+
+\fun{int}{uisprime}{ulong p}, returns $1$ if \kbd{p} is a prime number and
+$0$ otherwise.
+
+\fun{long}{Z_issquarerem}{GEN n, GEN *sqrtn} as \kbd{Z\_issquare}. If
+\kbd{n} is indeed a square, set \kbd{sqrtn} to its integer square root.
+
+\fun{long}{uissquarerem}{ulong n, ulong *sqrtn} as \kbd{Z\_issquarerem},
+for an \kbd{ulong} operand \kbd{n}.
+
+%\fun{GEN}{Z_factor_limit}{GEN n, GEN lim} as \kbd{Z\_factor}, but stop the
+%factorization process as soon as the unfactored part is smaller than \kbd{lim}.
+%The resulting factorisation matrix only contains the factors found. No other
+%assumptions can be made on the remaining factors.
+
+\subsec{Generic unary operators}. Let ``\op'' be a unary operation among
+
+\op=\key{neg}: negation ($-$\kbd{x}).
+
+
+\op=\key{abs}: absolute value ($|\kbd{x}|$).
+
+\noindent The names and prototypes of the low-level functions corresponding
+to \op\ are as follows. The result is of the same type as~\kbd{x}.
+
+\funno{GEN}{mp\op}{GEN x} creates the result of \op\ applied to the
+\typ{INT} or \typ{REAL}~\kbd{x}.
+
+\funno{GEN}{\op i}{GEN x} creates the result of \op\ applied to the
+\typ{INT}~\kbd{x}.
+
+\funno{GEN}{\op r}{GEN x} creates the result of \op\ applied to the
+\typ{REAL}~\kbd{x}.
+
+\funno{GEN}{mp\op z}{GEN x, GEN z} assigns the result of applying \op\ to the
+\typ{INT} or \typ{REAL}~\kbd{x} into the \typ{INT} or \typ{REAL}~\kbd{z}.
+
+\misctitle{Remark:} it has not been considered useful to include
+functions {\tt void \op sz(long,GEN)}, {\tt void \op iz(GEN,GEN)} and
+{\tt void \op rz(GEN, GEN)}.
+\smallskip
+
+\subsec{Comparison operators}
+
+\fun{int}{mpcmp}{GEN x, GEN y} compares the \typ{INT} or \typ{REAL}~\kbd{x}
+to the \typ{INT} or \typ{REAL}~\kbd{y}. The result is the sign of
+$\kbd{x}-\kbd{y}$.
+
+\fun{int}{cmpii}{GEN x, GEN y} compares the \typ{INT} \kbd{x} to the
+\typ{INT}~\kbd{y}.
+
+\fun{int}{cmpir}{GEN x, GEN y} compares the \typ{INT} \kbd{x} to the
+\typ{REAL}~\kbd{y}.
+
+\fun{int}{cmpis}{GEN x, long s} compares the \typ{INT}~\kbd{x} to the
+\kbd{long}~\kbd{s}.
+
+\fun{int}{cmpsi}{long s, GEN x} compares the \kbd{long}~\kbd{s} to the
+\typ{INT}~\kbd{x}.
+
+\fun{int}{cmpsr}{long s, GEN x} compares the \kbd{long}~\kbd{s} to the
+\typ{REAL}~\kbd{x}.
+
+\fun{int}{cmpri}{GEN x, GEN y} compares the \typ{REAL}~\kbd{x} to the
+\typ{INT}~\kbd{y}.
+
+\fun{int}{cmprr}{GEN x, GEN y} compares the \typ{REAL}~\kbd{x} to the
+\typ{REAL}~\kbd{y}.
+
+\fun{int}{cmprs}{GEN x, long s} compares the \typ{REAL}~\kbd{x} to the
+\kbd{long}~\kbd{s}.
+
+\fun{int}{equalii}{GEN x, GEN y} compares the \typ{INT}s \kbd{x} and~\kbd{y}.
+The result is $1$ if $\kbd{x} = \kbd{y}$, $0$ otherwise.
+
+\fun{int}{equalsi}{long s, GEN x}
+
+\fun{int}{equalis}{GEN x, long s} compare the \typ{INT} \kbd{x} and 
+the \kbd{long}~\kbd{s}. The result is $1$ if $\kbd{x} = \kbd{y}$, $0$ otherwise.
+
+\fun{int}{equalui}{ulong s, GEN x}
+
+\fun{int}{equaliu}{GEN x, ulong s} compare the \typ{INT} \kbd{x} and 
+the \kbd{ulong}~\kbd{s}. The result is $1$ if $|\kbd{x}| = \kbd{y}$, $0$
+otherwise.
+
+\fun{int}{absi_cmp}{GEN x, GEN y} compares the \typ{INT}s \kbd{x} and~\kbd{y}.
+The result is the sign of $|\kbd{x}| - |\kbd{y}|$.
+
+\fun{int}{absi_equal}{GEN x, GEN y} compares the \typ{INT}s \kbd{x}
+and~\kbd{y}. The result is $1$ if $|\kbd{x}| = |\kbd{y}|$, $0$ otherwise.
+
+\fun{int}{absr_cmp}{GEN x, GEN y} compares the \typ{REAL}s \kbd{x} and~\kbd{y}.
+The result is the sign of $|\kbd{x}| - |\kbd{y}|$.
+
+\subsec{Generic binary operators}. Let ``\op'' be a binary operation among
+
+\op=\key{add}: addition (\kbd{x + y}). The result is a \typ{REAL} unless both
+\kbd{x} and \kbd{y} are \typ{INT}s (or longs).
+
+\op=\key{sub}: subtraction (\kbd{x - y}). The result is a \typ{REAL} unless both
+\kbd{x} and \kbd{y} are \typ{INT} (or longs).
+
+\op=\key{mul}: multiplication (\kbd{x * y}). The result is a \typ{REAL}
+unless both \kbd{x} and \kbd{y} are \typ{INT}s (or longs), \emph{or} if
+\kbd{x} or \kbd{y} is an exact $0$.
+
+\op=\key{div}: division (\kbd{x / y}). In the case where \kbd{x} and \kbd{y}
+are both \typ{INT}s or longs, the result is the Euclidean quotient, where the
+remainder has the same sign as the dividend~\kbd{x}. It is the ordinary
+division otherwise. If one of \kbd{x} or \kbd{y} is a \typ{REAL}, the result
+is a \typ{REAL} unless \kbd{x} is an exact $0$. A division-by-$0$ error
+occurs if \kbd{y} is equal to $0$.
+
+\op=\key{rem}: remainder (``\kbd{x \% y}''). This operation is defined only
+when \kbd{x} and \kbd{y} are longs or \typ{INT}. The result is the Euclidean
+remainder corresponding to \kbd{div},~i.e. its sign is that of the
+dividend~\kbd{x}. The result is always a \typ{INT}.
+
+\op=\key{mod}: true remainder (\kbd{x \% y}). This operation is defined only
+when \kbd{x} and \kbd{y} are longs or \typ{INT}s. The result is the true
+Euclidean remainder, i.e.~non-negative and less than the absolute value
+of~\kbd{y}.
+
+\noindent The names and prototypes of the low-level functions corresponding
+to \op\ are as follows. In this section, the \kbd{z} argument in the
+\kbd{z}-functions must be of type \typ{INT} or~\typ{REAL}. \typ{INT} is only
+allowed when no `r' appears in the argument code (no \typ{REAL} operand is
+involved).
+
+\funno{GEN}{mp\op[z]}{GEN x, GEN y[, GEN z]} applies \op\ to
+the \typ{INT} or \typ{REAL} \kbd{x} and~\kbd{y}.
+
+\funno{GEN}{\op si[z]}{long s, GEN x[, GEN z]} applies \op\ to the
+\kbd{long}~\kbd{s} and the \typ{INT}~\kbd{x}.
+
+\funno{GEN}{\op sr[z]}{long s, GEN x[, GEN z]} applies \op\ to the
+\kbd{long}~\kbd{s} and the \typ{REAL}~\kbd{x}.
+
+\funno{GEN}{\op ss[z]}{long s, long t[, GEN z]} applies \op\ to the longs
+\kbd{s} and~\kbd{t}.
+
+\funno{GEN}{\op ii[z]}{GEN x, GEN y[, GEN z]} applies \op\ to the
+\typ{INT}s \kbd{x} and~\kbd{y}.
+
+\funno{GEN}{\op ir[z]}{GEN x, GEN y[, GEN z]} applies \op\ to the
+\typ{INT} \kbd{x} and the \typ{REAL}~\kbd{y}.
+
+\funno{GEN}{\op is[z]}{GEN x, long s[, GEN z]} applies \op\ to the
+\typ{INT}~\kbd{x} and the \kbd{long}~\kbd{s}.
+
+\funno{GEN}{\op ri[z]}{GEN x, GEN y[, GEN z]} applies \op\ to the
+\typ{REAL}~\kbd{x} and the \typ{INT}~\kbd{y}.
+
+\funno{GEN}{\op rr[z]}{GEN x, GEN y[, GEN z]} applies \op\ to the
+\typ{REAL}s~\kbd{x} and~\kbd{y}.
+
+\funno{GEN}{\op rs[z]}{GEN x, long s[, GEN z]} applies \op\ to the
+\typ{REAL}~\kbd{x} and the \kbd{long}~\kbd{s}.
+
+\noindent Some miscellaneous routines whose meaning should be clear from
+their names:
+
+\fun{GEN}{muluu}{ulong x, ulong y}
+
+\fun{GEN}{mului}{ulong x, GEN y}
+
+\fun{GEN}{muliu}{GEN x, ulong y}
+
+\fun{GEN}{sqri}{GEN x} squares the \typ{INT}~\kbd{x}
+
+\fun{GEN}{truedivii}{GEN x, GEN y} returns the true Euclidean quotient
+(with non-negative remainder less than $|y|$).
+
+\fun{GEN}{truedivis}{GEN x, long y} returns the true Euclidean quotient
+(with non-negative remainder less than $|y|$).
+
+\fun{GEN}{centermodii}{GEN x, GEN y, GEN y2}, given
+\typ{INT}s \kbd{x}, \kbd{y}, returns $z$ congruent to \kbd{x} modulo \kbd{y},
+such that $-\kbd{y}/2 \leq z < \kbd{y}/2$. Assumes that \kbd{y2 = shifti(y,
+-1)}. the representative of ssquares the \typ{INT}~\kbd{x}
+
+\subsec{Modulo to longs}. The following variants of \kbd{modii} do not
+clutter the stack:
+
+\fun{long}{smodis}{GEN x, long y} computes the true Euclidean
+remainder of the \typ{INT}~\kbd{x} by the \kbd{long}~\kbd{y}. This is the
+non-negative remainder, not the one whose sign is the sign of \kbd{x}
+as in the \kbd{div} functions.
+
+\fun{long}{smodsi}{long x, GEN y} computes the true Euclidean
+remainder of the \kbd{long}~\kbd{x} by a \typ{INT}~\kbd{y}.
+
+\fun{long}{smodss}{long x, long y} computes the true Euclidean
+remainder of the \kbd{long}~\kbd{x} by a \typ{long}~\kbd{y}.
+
+\fun{ulong}{umodiu}{GEN x, ulong y} computes the true Euclidean
+remainder of the \typ{INT}~\kbd{x} by the \kbd{ulong}~\kbd{y}.
+
+\fun{ulong}{umodui}{ulong x, GEN y} computes the true Euclidean
+remainder of the \kbd{ulong}~\kbd{x} by the \typ{INT}~\kbd{|y|}.
+
+The routine \tet{smodsi} does not exist, since it would not always be
+defined: for a \emph{negative} \kbd{x}, its result \kbd{x + |y|} would
+in general not fit into a \kbd{long}. Use either \kbd{umodui} or
+\kbd{modsi}.
+
+\subsec{Exact division and divisibility}
+
+\fun{void}{diviiexact}{GEN x, GEN y} returns the Euclidean quotient
+$\kbd{x} / \kbd{y}$, assuming $\kbd{y}$ divides $\kbd{x}$. Uses Jebelean
+algorithm (Jebelean-Krandick bidirectional exact division is not
+implemented).
+
+\fun{void}{diviuexact}{GEN x, ulong y} returns the Euclidean quotient
+$|\kbd{x}| / \kbd{y}$ (note the absolue value!), assuming $\kbd{y}$ divides
+$\kbd{x}$ and $\kbd{y}$ is non-zero.
+
+\fun{int}{dvdii}{GEN x, GEN y} if the \typ{INT}~\kbd{y} divides the
+\typ{INT}~\kbd{x}, returns 1 (true), otherwise returns 0 (false).
+
+\fun{int}{dvdiiz}{GEN x, GEN y, GEN z} if the \typ{INT}~\kbd{y} divides the
+\typ{INT}~\kbd{x}, assigns the quotient to the \typ{INT}~\kbd{z} and returns 1
+(true), otherwise returns 0 (false).
+
+\fun{int}{dvdisz}{GEN x, long y, GEN z} if the \typ{long}~\kbd{y} divides the
+\typ{INT}~\kbd{x}, assigns the quotient to the \typ{INT}~\kbd{z} and returns 1
+(true), otherwise returns 0 (false).
+
+\fun{int}{dvdiuz}{GEN x, ulong y, GEN z} if the \typ{ulong}~\kbd{y} divides
+the \typ{INT}~\kbd{x}, assigns the quotient $|\kbd{x}|/\kbd{y}$ to the
+\typ{INT}~\kbd{z} and returns 1 (true), otherwise returns 0 (false).
+
+\subsec{Division with remainder}. The following functions return two objects,
+unless specifically asked for only one of them~--- a quotient and a remainder.
+The quotient is returned and the remainder is returned through the variable
+whose address is passed as the \kbd{r} argument. The term \emph{true
+Euclidean remainder} refers to the non-negative one (\kbd{mod}), and
+\emph{Euclidean remainder} by itself to the one with the same sign as the
+dividend (\kbd{rem}). All \kbd{GEN}s, whether returned directly or through a
+pointer, are created on the stack.
+
+\fun{GEN}{dvmdii}{GEN x, GEN y, GEN *r} returns the Euclidean quotient of the
+\typ{INT}~\kbd{x} by a \typ{INT}~\kbd{y} and puts the remainder
+into~\kbd{*r}. If \kbd{r} is equal to \kbd{NULL}, the remainder is not
+created, and if \kbd{r} is equal to  \kbd{ONLY\_REM}, only the remainder is
+created and returned. In the generic case, the remainder is created after the
+quotient and can be disposed of individually with a \kbd{cgiv(r)}. The
+remainder is always of the sign of the dividend~\kbd{x}. If the remainder
+is $0$ set \kbd{r = gen\_0}.
+
+\fun{void}{dvmdiiz}{GEN x, GEN y, GEN z, GEN t} assigns the Euclidean
+quotient of the \typ{INT}s \kbd{x} and \kbd{y} into the \typ{INT} or
+\typ{REAL}~\kbd{z}, and the Euclidean remainder into the \typ{INT} or
+\typ{REAL}~\kbd{t}.
+
+\noindent Analogous routines \tet{dvmdis}\kbd{[z]}, \tet{dvmdsi}\kbd{[z]},
+\tet{dvmdss}\kbd{[z]} are available, where \kbd{s} denotes a \kbd{long}
+argument. But the following routines are in general more flexible:
+
+\fun{long}{sdivss_rem}{long s, long t, long *r} computes the Euclidean
+quotient and remainder of the longs \kbd{s} and~\kbd{t}. Puts the remainder
+into \kbd{*r}, and returns the quotient. The remainder is of the sign of the
+dividend~\kbd{s}, and has strictly smaller absolute value than~\kbd{t}.
+
+\fun{long}{sdivsi_rem}{long s, GEN x, long *r} computes the Euclidean
+quotient and remainder of the \kbd{long}~\kbd{s} by the \typ{INT}~\kbd{x}. As
+\kbd{sdivss\_rem} otherwise.
+
+\fun{long}{sdivsi}{long s, GEN x} as \kbd{sdivsi\_rem}, without
+remainder.
+
+\fun{GEN}{divis_rem}{GEN x, long s, long *r} computes the Euclidean quotient
+and remainder of the \typ{INT}~\kbd{x} by the \kbd{long}~\kbd{s}. As
+\kbd{sdivss\_rem} otherwise.
+
+\fun{GEN}{diviu_rem}{GEN x, ulong s, long *r} computes the Euclidean quotient
+and remainder of the \typ{INT}~\kbd{x} by the \kbd{ulong}~\kbd{s}. As
+\kbd{sdivss\_rem} otherwise.
+
+\fun{GEN}{divsi_rem}{long s, GEN y, long *r} computes the Euclidean quotient
+and remainder of the \typ{long}~\kbd{s} by the \kbd{GEN}~\kbd{y}. As
+\kbd{sdivss\_rem} otherwise.
+
+\fun{GEN}{divss_rem}{long x, long y, long *r} computes the Euclidean quotient
+and remainder of the \typ{long}~\kbd{x} by the \kbd{long}~\kbd{y}. As
+\kbd{sdivss\_rem} otherwise.
+\smallskip
+\fun{GEN}{truedvmdii}{GEN x, GEN y, GEN *r}, as \kbd{dvmdii} but with a
+non-negative remainder.
+
+\subsec{Square root and remainder}
+
+\fun{GEN}{sqrtremi}{GEN N, GEN *r}, returns the integer square root $S$ of
+the non-negative \typ{INT}~\kbd{N} (rounded towards 0) and puts the remainder
+$R$ into~\kbd{*r}. Precisely, $N = S^2 + R$ with $0\leq R \leq 2S$. If
+\kbd{r} is equal to \kbd{NULL}, the remainder is not created. In the generic
+case, the remainder is created after the quotient and can be disposed of
+individually with \kbd{cgiv(R)}. If the remainder is $0$ set \kbd{R = gen\_0}.
+
+Uses a divide and conquer algorithm (discrete variant of Newton iteration)
+due to Paul Zimmermann (``Karatsuba Square Root'', INRIA Research Report 3805
+(1999)).
+
+\fun{GEN}{sqrti}{GEN N}, returns the integer square root $S$ of
+the non-negative \typ{INT}~\kbd{N} (rounded towards 0). This is identical
+to \kbd{sqrtremi(N, NULL)}.
+
+\subsec{Pseudo-random integers}
+
+\fun{long}{random_bits}{long k} returns a random $0 \leq x < 2^k$. Assumes
+that $0 \leq k < 31$.
+
+\fun{long}{pari_rand31}{long k} as \kbd{random\_bits} with $k = 31$.
+
+\fun{GEN}{randomi}{GEN n} returns a random \typ{INT} between $0$ and $\kbd{n}
+- 1$. The result is pasted from successive calls to \kbd{pari\_rand31}.
+
+\subsec{Modular operations}. In this subsection, all \kbd{GEN}s are \typ{INT}.
+
+\fun{ulong}{Fp_powu}{GEN x, ulong n, GEN m} raises \kbd{x} to the \kbd{n}-th
+power modulo \kbd{p} (smallest non-negative residue).
+
+\fun{GEN}{Fp_pow}{GEN x, GEN n, GEN m} returns $\kbd{x}^\kbd{n}$
+modulo \kbd{p} (smallest non-negative residue).
+
+\fun{GEN}{Fp_inv}{GEN a, GEN m} returns an inverse of \kbd{a} modulo \kbd{m}
+(smallest non-negative residue). Raise an error if \kbd{a} is not invertible.
+
+\fun{GEN}{Fp_invsafe}{GEN a, GEN m} as \kbd{Fp\_inv}, but return
+\kbd{NULL} if \kbd{a} is not invertible.
+
+\fun{int}{invmod}{GEN a, GEN m, GEN *g},  return $1$ if \kbd{a}
+modulo \kbd{m} is invertible, else return $0$ and set
+$\kbd{g} = \gcd(\kbd{a},\kbd{m})$.
+
+\fun{GEN}{Fp_sqrt}{GEN x, GEN p} returns a square root of \kbd{x} modulo
+\kbd{p} (the smallest non-negative residue), where \kbd{x}, \kbd{p} are
+\typ{INT}s, and \kbd{p} is assumed to be prime. Return \kbd{NULL}
+if \kbd{x} is not a quadratic residue modulo \kbd{p}.
+
+\fun{GEN}{Fp_sqrtn}{GEN x, GEN n, GEN p, GEN *zn} returns an \kbd{n}-th
+root of $\kbd{x}$ modulo \kbd{p} (smallest non-negative residue), where
+\kbd{x}, \kbd{n}, \kbd{p} are \typ{INT}s, and \kbd{p} is assumed to be prime.
+Return \kbd{NULL} if \kbd{x} is not an \kbd{n}-th power residue. Otherwise,
+if \kbd{zn} is non-\kbd{NULL} set it to a primitive \kbd{n}-th root of $1$.
+
+\fun{long}{kross}{long x, long y} returns the \idx{Kronecker symbol} $(x|y)$,
+i.e.$-1$, $0$ or $1$. If \kbd{y} is an odd prime, this is the \idx{Legendre
+symbol}. (Contrary to \kbd{krouu}, \kbd{kross} also supports $\kbd{y} = 0$)
+
+\fun{long}{krois}{GEN x, long y} returns the \idx{Kronecker symbol} $(x|y)$
+of \typ{INT}~x and \kbd{long}~\kbd{y}. As \kbd{kross} otherwise.
+
+\fun{long}{krosi}{long x, GEN y} returns the \idx{Kronecker symbol} $(x|y)$
+of \kbd{long}~x and \typ{INT}~\kbd{y}. As \kbd{kross} otherwise.
+
+\fun{long}{kronecker}{GEN x, GEN y} returns the \idx{Kronecker symbol} $(x|y)$
+of \typ{INT}s~x and~\kbd{y}. As \kbd{kross} otherwise.
+
+\fun{GEN}{gener_Fp}{GEN p} returns a primitive root modulo \kbd{p}, assuming
+\kbd{p} is prime.
+
+\fun{GEN}{gener_Fp_local}{GEN p, GEN L}, \kbd{L} being a vector of
+primes dividing $p - 1$, returns an integer $x$ which is a generator of the
+$\ell$-Sylow of $\F_p^*$ for every $\ell$ in \kbd{L}. In other words,
+$x^{(p-1)/\ell} \neq 1$ for all such $\ell$. In particular, returns
+\kbd{Fp\_gener(p)} if \kbd{L} contains all primes dividing $p - 1$.
+
+\subsec{Miscellaneous functions}
+
+\fun{void}{addumului}{ulong a, ulong b, GEN x} return $a + b|X|$.
+
+\fun{long}{cgcd}{long x, long y}, returns the GCD of the \typ{long}s \kbd{x}
+and \kbd{y}.
+
+\fun{long}{cbezout}{long a,long b, long *u,long *v}, returns the GCD
+$d$ of \kbd{a} and \kbd{b} and sets \kbd{u}, \kbd{v} to the Bezout coefficients
+such that $\kbd{au} + \kbd{bv} = d$.
+
+\fun{GEN}{bezout}{GEN a,GEN b, GEN *u,GEN *v}, returns the GCD $d$ of
+\typ{INT}s \kbd{a} and \kbd{b} and sets \kbd{u}, \kbd{v} to the Bezout
+coefficients such that $\kbd{au} + \kbd{bv} = d$.
+
+\fun{GEN}{factoru}{ulong n}, returns the factorization of $n$. The result
+is a $2$-component vector $[P,E]$, where $P$ and $E$ are \typ{VECSMALL}
+containing the prime divisors of $n$, and the $v_p(n)$.
+
+\fun{GEN}{factoru_pow}{ulong n}, returns the factorization of $n$. The result
+is a $3$-component vector $[P,E,C]$, where $P$, $E$ and $C$ are
+\typ{VECSMALL} containing the prime divisors of $n$, the $v_p(n)$
+and the $p^{v_p(n)}$.
+
+\fun{GEN}{gcdii}{GEN x, GEN y}, returns the GCD of the \typ{INT}s \kbd{x} and
+\kbd{y}.
+
+\fun{GEN}{lcmii}{GEN x, GEN y}, returns the LCM of the \typ{INT}s \kbd{x} and
+\kbd{y}.
+
+\fun{long}{maxss}{long x, long y}, return the largest of \kbd{x} and \kbd{y}.
+
+\fun{long}{minss}{long x, long y}, return the smallest of \kbd{x} and \kbd{y}.
+
+\fun{GEN}{powuu}{ulong n, ulong k}, returns $n^k$.
+
+\fun{GEN}{powiu}{GEN n, ulong k}, assumes $n$ is a \typ{INT} and returns $n^k$.
+
+\fun{ulong}{upowuu}{ulong n, ulong k}, returns $n^k$ modulo $2^\B$. This is
+meant to be used for tiny $k$, where in fact $n^k$ fits into an \kbd{ulong}.
+
+\fun{void}{rdivii}{GEN x, GEN y, long prec}, assuming \kbd{x} and \kbd{y}
+are both of type \typ{INT}, return the quotient x/y as a \typ{REAL} of
+precision \kbd{prec}.
+
+\fun{void}{rdivis}{GEN x, long y, long prec}, assuming \kbd{x}
+is of type \typ{INT}, return the quotient x/y as a \typ{REAL} of
+precision \kbd{prec}.
+
+\fun{void}{rdivsi}{long x, GEN y, long prec}, assuming \kbd{y}
+is of type \typ{INT}, return the quotient x/y as a \typ{REAL} of
+precision \kbd{prec}.
+
+\fun{void}{rdivss}{long x, long y, long prec}, return the quotient x/y as a
+\typ{REAL} of precision \kbd{prec}.
+
+\section{Level 2 kernel (modular arithmetic)}
+
+\noindent These routines implement univariate polynomial arithmetic and
+linear algebra over finite fields, in fact over finite rings of the form
+$(\Z/p\Z)[X]/(T)$, where $p$ is not necessarily prime and $T\in(\Z/p\Z)[X]$ is
+possibly reducible; and finite extensions thereof. All this can be emulated
+with \typ{INTMOD} and \typ{POLMOD} coefficients and using generic routines,
+at a considerable loss of efficiency. Also, some specialized routines are
+available that have no obvious generic equivalent.
+
+\subsec{Naming scheme}. A function name is built in the following way:
+$A_1\kbd{\_}\dots\kbd{\_}A_n\var{fun}$ for an operation \var{fun} with $n$
+arguments of class $A_1$,\dots, $A_n$. A class name is given by a base ring
+followed by a number of code letters. Base rings are among
+
+  \kbd{Fl}: $\Z/l\Z$ where $l < 2^{\B}$ is not necessarily prime. Implemented
+            using \kbd{ulong}s
+
+  \kbd{Fp}: $\Z/p\Z$ where $p$ is a \typ{INT}, not necessarily prime.
+Implemented as \typ{INT}s $z$, preferably satisfying $0 \leq z < p$.
+More precisely, any \typ{INT} can be used as an \kbd{Fp}, but reduced
+inputs are treated more efficiently. Outputs from \kbd{Fp}xxx routines are
+reduced.
+
+  \kbd{Fq}: $\Z[X]/(p,T(X))$, $p$ a \typ{INT}, $T$ a \typ{POL} with \kbd{Fp}
+coefficients or \kbd{NULL} (in which case no reduction modulo \kbd{T} is
+performed). Implemented as \typ{POL}s $z$ with \kbd{Fp} coefficients,
+$\deg(z) < \deg \kbd{T}$.
+
+  \kbd{Z}:  the integers $\Z$, implemented as \typ{INT}s.
+
+  \kbd{z}:  the integers $\Z$, implemented using (signed) \kbd{long}s.
+
+  \kbd{Q}:  the rational numbers $\Q$, implemented as \typ{INT}s and
+\typ{FRAC}s.
+
+  \kbd{Rg}:  a commutative ring, whose elements can be
+\kbd{gadd}-ed, \kbd{gmul}-ed, etc.
+
+\noindent Possible letters are:
+
+  \kbd{X}: polynomial in $X$ (\typ{POL} in a fixed variable), e.g. \kbd{FpX}
+           means $\Z/p\Z[X]$
+
+  \kbd{Y}: polynomial in $Y\neq X$. E.g. \kbd{FpXY} means $((\Z/p\Z)[Y])[X]$
+
+  \kbd{V}: vector (\typ{VEC} or \typ{COL}), treated as a line vector
+  (independantly of the actual type). E.g. \kbd{ZV} means $\Z^k$ for some $k$.
+
+  \kbd{C}: vector (\typ{VEC} or \typ{COL}), treated as a column vector
+  (independantly of the actual type). The difference with \kbd{V} is purely
+  semantic.
+
+  \kbd{M}: matrix (\typ{MAT}). E.g. \kbd{QM} means a matrix with rational
+  entries
+
+  \kbd{Q}: representative (\typ{POL}) of a class in a polynomial quotient ring.
+  E.g.~an \kbd{FpXQ} belongs to $(\Z/p\Z)[X]/(T(X))$, \kbd{FpXQV} means a
+  vector of such elements, etc.
+
+  \kbd{x}, \kbd{m}, \kbd{v}, \kbd{c}, \kbd{q}: as their uppercase counterpart,
+  but coefficient arrays are implemented using \typ{VECSMALL}s, which
+  coefficient understood as \kbd{ulong}s.
+
+  \kbd{x} (and \kbd{q}) are implemented by a \typ{VECSMALL} whose first
+  coefficient is used as a code-word and the following are the coefficients
+  , similarly to a \typ{POL}. This is known as a 'POLSMALL'.
+  
+  \kbd{m} are implemented by a \typ{MAT} whose components (columns) are
+  \typ{VECSMALL}s. This is know as a 'MATSMALL'.
+
+  \kbd{v} and \kbd{c} are regular \typ{VECSMALL}s. Difference between the
+  two is purely semantic.
+
+\noindent Omitting the letter means the argument is a scalar in the base
+ring. Standard functions \var{fun} are
+
+  \kbd{add}: add
+
+  \kbd{sub}: subtract
+
+  \kbd{mul}: multiply
+
+  \kbd{sqr}: square
+
+  \kbd{div}: divide (Euclidean quotient)
+
+  \kbd{rem}: Euclidean remainder
+
+  \kbd{divrem}: return Euclidean quotient, store remainder in a pointer
+argument.
+
+  \kbd{gcd}: GCD
+
+  \kbd{extgcd}: return GCD, store Bezout coefficients in pointer arguments
+
+  \kbd{pow}: exponentiate
+
+  \kbd{compo}: composition
+
+\subsec{\kbd{ZX}, \kbd{ZV}, \kbd{ZM}}. A \kbd{ZV} (resp.~a~\kbd{ZM},
+resp.~a~\kbd{ZX}) is a \typ{VEC} or \typ{COL} (resp.~\typ{MAT},
+resp.~\typ{POL}) with \typ{INT} coefficients.
+
+\subsubsec{\kbd{ZV}}
+
+\fun{GEN}{ZV_add}{GEN x, GEN y} adds \kbd{x} and \kbd{y}.
+
+\fun{GEN}{ZV_sub}{GEN x, GEN y} subtracts \kbd{x} and \kbd{y}.
+
+\subsubsec{\kbd{ZX}}
+
+\fun{GEN}{ZX_renormalize}{GEN x, long l}, as \kbd{normalizepol}, where
+$\kbd{l} = \kbd{lg(x)}$, in place.
+
+\fun{GEN}{ZX_add}{GEN x,GEN y} adds \kbd{x} and \kbd{y}. 
+
+\fun{GEN}{ZX_sub}{GEN x,GEN y} subtracts \kbd{x} and \kbd{y}. 
+
+\fun{GEN}{ZX_neg}{GEN x,GEN p} returns $-\kbd{x}$.
+
+\fun{GEN}{ZX_Z_add}{GEN x,GEN y} adds the integer \kbd{y} to the polynomial \kbd{x}. 
+
+\fun{GEN}{ZX_Z_mul}{GEN x,GEN y} multiplies the polynomial \kbd{x} by the integer \kbd{y}. 
+
+\fun{GEN}{ZX_mul}{GEN x,GEN y} multiplies \kbd{x} and \kbd{y}. 
+
+\fun{GEN}{ZX_sqr}{GEN x,GEN p} returns $\kbd{x}^2$. 
+
+\fun{GEN}{ZX_caract}{GEN T, GEN A, long v} returns the characteristic
+polynomial of \kbd{Mod(A, T)}, where \kbd{T} is a \kbd{ZX}, \kbd{A}
+is a \kbd{ZX}. More generally, \kbd{A} is allowed to be a
+\kbd{QX}, hence possibly has rational coefficients, \emph{assuming}
+the result is a \kbd{ZX}, i.e.~the algebraic number \kbd{Mod(A,T)} is
+integral over \kbd{Z}.
+
+\fun{GEN}{ZX_disc}{GEN T} returns the discriminant of the \kbd{ZX}
+\kbd{T}.
+
+\fun{int}{ZX_is_squarefree}{GEN T} returns $1$ if the
+\kbd{ZX}~\kbd{T} is squarefree, $0$ otherwise.
+
+\fun{GEN}{ZX_resultant}{GEN A, GEN B} returns the resultant of the
+\kbd{ZX}~\kbd{A} and \kbd{B}.
+
+\fun{GEN}{ZX_QX_resultant}{GEN A, GEN B} returns the resultant of the
+\kbd{ZX}~\kbd{A} and the \kbd{QX}~\kbd{B}, \emph{assuming} the result 
+is an integer.
+
+\fun{GEN}{ZY_ZXY_resultant}{GEN A, GEN B}
+under the assumption that \kbd{A} in $\Z[Y]$, \kbd{B} in $\Q[Y][X]$, and
+$R = \text{Res}_Y(A, B) \in \Z[X]$, returns the resultant $R$.
+
+\fun{GEN}{ZY_ZXY_rnfequation}{GEN A, GEN B, long *lambda},
+assume \kbd{A} in $\Z[Y]$, \kbd{B} in $\Q[Y][X]$, and $R =
+\text{Res}_Y(A, B) \in \Z[X]$. If \kbd{lambda = NULL}, returns $R$
+as in \kbd{ZY\_ZXY\_resultant}. Otherwise, \kbd{lambda} must point to
+some integer, e.g. $0$ which is used as a seed. The function then finds a
+small $\lambda \in \Z$ (starting from \kbd{*lambda}) such that
+$R_\lambda(X) := \text{Res}_Y(A, B(X + \lambda Y))$ is squarefree, resets
+\kbd{*lambda} to the chosen value and returns $R_{\lambda}$.
+
+\fun{GEN}{ZM_inv}{GEN M, GEN d} if \kbd{M} is a \kbd{ZM} and \kbd{d}
+is a \typ{INT} such that $M' := \kbd{d}\kbd{M}^{-1}$ is integral,
+return $M'$. It is allowed to set \kbd{d = NULL}, in which case, the
+determinant of \kbd{M} is computed and used instead.
+
+\fun{GEN}{QM_inv}{GEN M, GEN d} as above, with \kbd{M} a \kbd{QM}. We
+still assume that $M'$ has integer coefficients.
+
+\subsec{\kbd{FpX}}. Let \kbd{p} an understood \typ{INT}, to be given in
+the function arguments; in practice \kbd{p} is not assumed to be prime, but
+be wary. An \kbd{Fp} object is a \typ{INT} belonging to $[0,
+\kbd{p}-1]$, an \kbd{FpX} is a \typ{POL} in a fixed variable whose
+coefficients are \kbd{Fp} objects. Unless mentionned otherwise, all outputs
+in this section are \kbd{FpX}s. All operations are understood to take place
+in $(\Z/\kbd{p}\Z)[X]$.
+
+\subsubsec{Basic operations}. In what follows \kbd{p} is always a \typ{INT},
+not necessarily prime.
+
+\fun{GEN}{Rg_to_Fp}{GEN z, GEN p}, \kbd{z} a scalar which can be mapped to
+$\Z/p\Z$: a \typ{INT}, a \typ{INTMOD} whose modulus is divisible by $p$,
+a \typ{FRAC} whose denominator is coprime to $p$, or a \typ{PADIC} with
+underlying prime $p$. Returns \kbd{lift(z * Mod(1,p))}, normalized.
+
+\fun{GEN}{RgX_to_FpX}{GEN z, GEN p}, \kbd{z} a \typ{POL}, returns the
+\kbd{FpX} obtained by applying \kbd{Rg\_to\_Fp} coefficientwise.
+
+\fun{GEN}{RgV_to_FpV}{GEN z, GEN p}, \kbd{z} a \typ{VEC} or \typ{COL},
+returns the \kbd{FpV} (as a \typ{VEC}) obtained by applying \kbd{Rg\_to\_Fp}
+coefficientwise.
+
+\fun{GEN}{RgC_to_FpC}{GEN z, GEN p}, \kbd{z} a \typ{VEC} or \typ{COL},
+returns the \kbd{FpC} (as a \typ{COL}) obtained by applying \kbd{Rg\_to\_Fp}
+coefficientwise.
+
+\fun{GEN}{FpX_to_mod}{GEN z, GEN p}, \kbd{z} a \kbd{ZX}. Returns \kbd{z *
+Mod(1,p)}, normalized. Hence the returned value has \typ{INTMOD}
+coefficients.
+
+\fun{GEN}{FpX_red}{GEN z, GEN p}, \kbd{z} a \kbd{ZX}, returns \kbd{lift(z *
+Mod(1,p))}, normalized.
+
+\fun{GEN}{FpXV_red}{GEN z, GEN p}, \kbd{z} a \typ{VEC} of \kbd{ZX}. Applies
+\kbd{FpX\_red} componentwise and returns the result (and we obtain a vector
+of \kbd{FpX}s).
+
+\noindent Now, except for \kbd{p}, the operands and outputs are all \kbd{FpX}
+objects. Results are undefined on other inputs.
+
+\fun{GEN}{FpX_add}{GEN x,GEN y, GEN p} adds \kbd{x} and \kbd{y}. 
+
+\fun{GEN}{FpX_neg}{GEN x,GEN p} returns $-\kbd{x}$.
+
+\fun{GEN}{FpX_renormalize}{GEN x, long l}, as \kbd{normalizepol}, where
+$\kbd{l} = \kbd{lg(x)}$, in place.
+
+\fun{GEN}{FpX_sub}{GEN x,GEN y,GEN p} subtracts \kbd{y} from \kbd{x}. 
+
+\fun{GEN}{FpX_mul}{GEN x,GEN y,GEN p} multiplies \kbd{x} and \kbd{y}. 
+
+\fun{GEN}{FpX_sqr}{GEN x,GEN p} returns $\kbd{x}^2$. 
+
+\fun{GEN}{FpX_divrem}{GEN x, GEN y, GEN p, GEN *pr} returns the quotient
+of \kbd{x} by \kbd{y}, and sets \kbd{pr} to the remainder.
+
+\fun{GEN}{FpX_div}{GEN x, GEN y, GEN p} returns the quotient of \kbd{x} by
+\kbd{y}.
+
+\fun{GEN}{FpX_div_by_X_x}{GEN A, GEN a, GEN p, GEN *r} returns the
+quotient of the \kbd{FpX}~\kbd{A} by $(X - \kbd{a})$, and sets \kbd{r} to the
+remainder $\kbd{A}(\kbd{a})$.
+
+\fun{GEN}{FpX_rem}{GEN x, GEN y, GEN p} returns the remainder \kbd{x} mod
+\kbd{y}
+
+\fun{GEN}{FpX_gcd}{GEN x, GEN y, GEN p} returns a (not necessarily monic)
+greatest common divisor of $x$  and $y$.
+
+\fun{GEN}{FpX_extgcd}{GEN x, GEN y, GEN p, GEN *u, GEN *v} returns
+$d = \text{GCD}(\kbd{x},\kbd{y})$, and sets \kbd{*u}, \kbd{*v} to the Bezout
+coefficients such that $\kbd{*ux} + \kbd{*vy} = d$.
+
+\fun{GEN}{FpX_center}{GEN z, GEN p} returns the polynomial whose coefficient
+belong to the symmetric residue system (clean version of \kbd{centermod},
+which assumes the coefficients already belong to $[0,\kbd{p}-1]$).
+
+\subsubsec{Miscellaneous operations}
+
+\fun{GEN}{FpX_normalize}{GEN z, GEN p} divides the \kbd{FpX}~\kbd{z} by its
+leading coefficient. If the latter is~$1$, \kbd{z} itself is returned, not a
+copy. If not, the inverse remains uncollected on the stack.
+
+
+\fun{GEN}{FpX_Fp_add}{GEN y, GEN x, GEN p} add the \kbd{Fp}~\kbd{x} to the
+\kbd{FpX}~\kbd{y}, possibly modifying the argument \kbd{y} (thus the
+operation uses constant time instead of linear linear). This function is
+not suitable for \kbd{gerepileupto} nor for \kbd{gerepile}.
+
+\fun{GEN}{FpX_Fp_mul}{GEN y, GEN x, GEN p} multiplies the \kbd{FpX}~\kbd{y}
+by the \kbd{Fp}~\kbd{x}.
+
+\fun{GEN}{FpX_rescale}{GEN P, GEN h, GEN p} returns $h^{\deg(P)} P(x/h)$.
+\kbd{P} is an \kbd{FpX} and \kbd{h} is a non-zero \kbd{Fp} (the routine would
+work with any non-zero \typ{INT} but is not efficient in this case).
+
+\fun{GEN}{FpX_eval}{GEN x, GEN y, GEN p} evaluates the \kbd{FpX}~\kbd{x}
+at the \kbd{Fp}~\kbd{y}. The result is an~\kbd{Fp}.
+
+\fun{GEN}{FpXV_FpC_mul}{GEN V, GEN W, GEN p} multiplies a line vector
+of\kbd{FpX} by a column vector of \kbd{Fp} (scalar product). The result is
+an~\kbd{FpX}.
+
+\fun{GEN}{FpXV_prod}{GEN V, GEN p}, \kbd{V} being a vector of \kbd{FpX},
+returns their product.
+
+\fun{GEN}{FpV_roots_to_pol}{GEN V, GEN p, long v}, \kbd{V} being a vector
+of \kbd{INT}s, returns the monic \kbd{FpX}
+$\prod_i (\kbd{pol\_x[v]} - \kbd{V[i]})$.
+
+\fun{GEN}{FpX_chinese_coprime}{GEN x,GEN y, GEN Tx,GEN Ty, GEN Tz, GEN p}
+returns an \kbd{FpX}, congruent to \kbd{x} mod \kbd{Tx} and to \kbd{y} mod
+\kbd{Ty}. Assumes \kbd{Tx} and \kbd{Ty} are coprime, and \kbd{Tz = Tx * Ty}
+or \kbd{NULL} (in which case it is computed within).
+
+\fun{GEN}{FpV_polint}{GEN x, GEN y, GEN p} returns the \kbd{FpX}
+interpolation polynomial with value \kbd{y[i]} at \kbd{x[i]}. Assumes lengths
+are the same, components are \typ{INT}s, and the \kbd{x[i]} are distinct
+modulo \kbd{p}.
+
+\fun{long}{FpX_is_squarefree}{GEN f, GEN p} returns $1$ if the
+\kbd{FpX}~\kbd{f} is squarefree, $0$ otherwise.
+
+\fun{long}{FpX_is_irred}{GEN f, GEN p} returns $1$ if the \kbd{FpX}~\kbd{f}
+is irreducible, $0$ otherwise. Assumes that \kbd{p} is prime. If~\kbd{f} has
+few factors, \kbd{FpX\_nbfact(f,p) == 1} is much faster.
+
+\fun{long}{FpX_is_totally_split}{GEN f, GEN p} returns $1$ if the
+\kbd{FpX}~\kbd{f} splits into a product of distinct linear factors, $0$
+otherwise. Assumes that \kbd{p} is prime.
+
+\fun{GEN}{FpX_factor}{GEN f, GEN p}, factors the \kbd{FpX}~\kbd{f}. Assumes
+that \kbd{p} is prime. The returned value \kbd{v} has two components:
+\kbd{v[1]} is a vector of distinct irreducible (\kbd{FpX}) factors, and
+\kbd{v[2]} is a \typ{VECSMALL} of corresponding exponents. The order
+of the factors is deterministic (the computation is not).
+
+\fun{long}{FpX_nbfact}{GEN f, GEN p}, assuming the \kbd{FpX}~f is squarefree,
+returns the number of its irreducible factors. Assumes that \kbd{p} is prime.
+
+\fun{long}{FpX_degfact}{GEN f, GEN p}, as \kbd{FpX\_factor}, but the
+degrees of the irreducible factors are returned instead of the factors
+themselves (as a \typ{VECSMALL}). Assumes that \kbd{p} is prime.
+
+\fun{long}{FpX_nbroots}{GEN f, GEN p} returns the number of distinct
+roots in \kbd{\Z/p\Z} of the \kbd{FpX}~\kbd{f}. Assumes that \kbd{p} is prime.
+
+\fun{GEN}{FpX_roots}{GEN f, GEN p} returns the roots in \kbd{\Z/p\Z} of
+the \kbd{FpX}~\kbd{f} (without multiplicity, as a vector of \kbd{Fp}s).
+Assumes that \kbd{p} is prime.
+
+\fun{GEN}{FpX_rand}{long d, long v, GEN p} returns a random \kbd{FpX}
+in variable \kbd{v}, of degree less than~\kbd{d}.
+
+\fun{GEN}{FpX_resultant}{GEN x, GEN y, GEN p} returns the resultant
+of \kbd{x} and \kbd{y}, both \kbd{FpX}. The result is a \typ{INT}
+belonging to $[0,p-1]$.
+
+\fun{GEN}{FpY_FpXY_resultant}{GEN a, GEN b, GEN p}, \kbd{a} a \typ{POL} of
+\typ{INT}s (say in variable $Y$), \kbd{b} a \typ{POL} (say in variable $X$)
+whose coefficients are either \typ{POL}s in $\Z[Y]$ or \typ{INT}s.
+Returns $\text{Res}_Y(a, b)$, which is an \kbd{FpX}. The function assumes
+that $Y$ has lower priority than $X$.
+
+\subsec{\kbd{FpXQ}, \kbd{Fq}}. Let \kbd{p} a \typ{INT} and \kbd{T} an
+\kbd{FpX} for \kbd{p}, both to be given in the function arguments; an \kbd{FpXQ}
+object is an \kbd{FpX} whose degree is strictly less than the degree of
+\kbd{T}. An \kbd{Fq} is either an \kbd{FpXQ} or an \kbd{Fp}. Both represent
+a class in $(\Z/\kbd{p}\Z)[X] / (T)$, in which all operations below take
+place. In addition, \kbd{Fq} routines also allow $\kbd{T} = \kbd{NULL}$, in
+which case no reduction mod \kbd{T} is performed on the result.
+
+For efficiency, the routines in this section may leave small unused objects
+behind on the stack (their output is still suitable for \kbd{gerepileupto}).
+Besides \kbd{T} and \kbd{p}, arguments are either \kbd{FpXQ} or \kbd{Fq}
+depending on the function name. (All \kbd{Fq} routines accept \kbd{FpXQ}s by
+definition, not the other way round.)
+
+\fun{GEN}{Rg_to_FpXQ}{GEN z, GEN T, GEN p}, \kbd{z} a \kbd{GEN} which can be
+mapped to $\F_p[X]/(T)$: anything \kbd{Rg\_to\_Fp} can be applied to,
+a \typ{POL} to which \kbd{RgX\_to\_FpX} can be applied to, a \typ{POLMOD}
+whose modulus is divisible by $T$ (once mapped to a \kbd{FpX}), a suitable
+\typ{RFRAC}. Returns \kbd{z} as an \kbd{FpXQ}, normalized.
+
+\fun{GEN}{RgX_to_FpXQX}{GEN z, GEN T, GEN p}, \kbd{z} a \typ{POL}, returns the
+\kbd{FpXQ} obtained by applying \kbd{Rg\_to\_FpXQ} coefficientwise.
+
+\fun{GEN}{RgX_to_FqX}{GEN z, GEN T, GEN p}, \kbd{z} a \typ{POL}, returns the
+\kbd{FpXQ} obtained by applying \kbd{Rg\_to\_FpXQ} coefficientwise and
+simplifying scalars to \typ{INT}s.
+
+\fun{GEN}{Fq_red}{GEN x, GEN T, GEN p}, \kbd{x} a \kbd{ZX} or \typ{INT},
+reduce it to an \kbd{Fq} ($\kbd{T} = \kbd{NULL}$ is allowed iff \kbd{x} is a
+\typ{INT}).
+
+\fun{GEN}{FqX_red}{GEN x, GEN T, GEN p}, \kbd{x} a \typ{POL}
+whose coefficients are \kbd{ZX}s or \typ{INT}s, reduce them to \kbd{Fq}s. (If
+$\kbd{T} = \kbd{NULL}$, as \kbd{FpXX\_red(x, p)}.)
+
+\fun{GEN}{FqV_red}{GEN x, GEN T, GEN p}, \kbd{x} a vector of \kbd{ZX}s or
+\typ{INT}s, reduce them to \kbd{Fq}s. (If $\kbd{T} = \kbd{NULL}$, only
+reduce components mod \kbd{p} to \kbd{FpX}s or \kbd{Fp}s.)
+
+\fun{GEN}{FpXQ_mul}{GEN y, GEN x, GEN T,GEN p}
+
+\fun{GEN}{FpXQ_sqr}{GEN y, GEN T, GEN p}
+
+\fun{GEN}{FpXQ_div}{GEN x, GEN y, GEN T,GEN p}
+
+\fun{GEN}{FpXQ_inv}{GEN x, GEN T, GEN p} computes the inverse of \kbd{x}
+
+\fun{GEN}{FpXQ_invsafe}{GEN x,GEN T,GEN p}, as \kbd{FpXQ\_inv}, returning
+\kbd{NULL} if \kbd{x} is not invertible.
+
+\fun{GEN}{FpXQ_pow}{GEN x, GEN n, GEN T, GEN p} computes $\kbd{x}^\kbd{n}$.
+
+\fun{GEN}{Fq_add}{GEN x, GEN y, GEN T/*unused*/, GEN p}
+
+\fun{GEN}{Fq_sub}{GEN x, GEN y, GEN T/*unused*/, GEN p}
+
+\fun{GEN}{Fq_mul}{GEN x, GEN y, GEN T, GEN p}
+
+\fun{GEN}{Fq_neg}{GEN x, GEN T, GEN p}
+
+\fun{GEN}{Fq_neg_inv}{GEN x, GEN T, GEN p} computes $-\kbd{x}^{-1}$
+
+\fun{GEN}{Fq_inv}{GEN x, GEN pol, GEN p} computes $\kbd{x}^{-1}$, raising an
+error if \kbd{x} is not invertible.
+
+\fun{GEN}{Fq_invsafe}{GEN x, GEN pol, GEN p} as \kbd{Fq\_inv}, but returns
+\kbd{NULL} if \kbd{x} is not invertible.
+
+\fun{GEN}{Fq_pow}{GEN x, GEN n, GEN pol, GEN p} returns $\kbd{x}^\kbd{n}$.
+
+\fun{GEN}{FpXQ_charpoly}{GEN x, GEN T, GEN p} returns the characteristic
+polynomial of \kbd{x}
+
+\fun{GEN}{FpXQ_minpoly}{GEN x, GEN T, GEN p} returns the minimal polynomial
+of \kbd{x}
+
+\fun{GEN}{FpXQ_powers}{GEN x, long n, GEN T, GEN p} returns $[\kbd{x}^0,
+\dots, \kbd{x}^\kbd{n}]$ as a \typ{VEC} of \kbd{FpXQ}s.
+
+\fun{GEN}{FpX_FpXQ_compo}{GEN f,GEN x,GEN T,GEN p} returns
+$\kbd{f}(\kbd{x})$.
+
+\fun{GEN}{FpX_FpXQV_compo}{GEN f,GEN V,GEN T,GEN p} returns
+$\kbd{f}(\kbd{x})$, assuming that \kbd{V} was computed by
+$\kbd{FpXQ\_powers}(\kbd{x}, n, \kbd{T}, \kbd{p})$.
+
+\subsec{\kbd{FpXX}}.
+Contrary to what the name implies, an \kbd{FpXQX} is a \typ{POL} whose
+coefficients are either \typ{INT}s or \typ{FpX}s. This reduce memory
+overhead at the expense of consistency.
+
+\fun{GEN}{FpXX_add}{GEN x, GEN y, GEN p} adds \kbd{x} and \kbd{y}. 
+
+\fun{GEN}{FpXX_red}{GEN z, GEN p}, \kbd{z} a \typ{POL} whose coefficients are
+either \kbd{ZX}s or \typ{INT}s. Returns the \typ{POL} equal to \kbd{z} with
+all components reduced modulo \kbd{p}.
+
+\fun{GEN}{FpXX_renormalize}{GEN x, long l}, as \kbd{normalizepol}, where
+$\kbd{l} = \kbd{lg(x)}$, in place.
+
+\subsec{\kbd{FpXQX}, \kbd{FqX}}.
+Contrary to what the name implies, an \kbd{FpXQX} is a \typ{POL} whose
+coefficients are \kbd{Fq}s. So the only difference between \kbd{FqX} and
+\kbd{FpXQX} routines is that $\kbd{T} = \kbd{NULL}$ is not allowed in the
+latter. (It was thought more useful to allow \typ{INT} components than to
+enforce strict consistency, which would not imply any efficiency gain.)
+
+\subsubsec{Basic operations}
+
+\fun{GEN}{FqX_mul}{GEN x, GEN y, GEN T, GEN p}
+
+\fun{GEN}{FqX_Fq_mul}{GEN P, GEN U, GEN T, GEN p} multiplies the
+\kbd{FqX}~\kbd{y} by the \kbd{Fq}~\kbd{x}.
+
+\fun{GEN}{FqX_normalize}{GEN z, GEN T, GEN p} divides the \kbd{FqX}~\kbd{z}
+by its leading term.
+
+\fun{GEN}{FqX_sqr}{GEN x, GEN T, GEN p}
+
+\fun{GEN}{FqX_divrem}{GEN x, GEN y, GEN T, GEN p, GEN *z}
+
+\fun{GEN}{FqX_div}{GEN x, GEN y, GEN T, GEN p}
+
+\fun{GEN}{FqX_rem}{GEN x, GEN y, GEN T, GEN p}
+
+\fun{GEN}{FqX_gcd}{GEN P, GEN Q, GEN T, GEN p}
+
+\fun{GEN}{FpXQX_red}{GEN z, GEN T, GEN p} \kbd{z} a \typ{POL} whose
+coefficients are \kbd{ZX}s or \typ{INT}s, reduce them to \kbd{FpXQ}s.
+
+\fun{GEN}{FpXQX_mul}{GEN x, GEN y, GEN T, GEN p}
+
+\fun{GEN}{FpXQX_sqr}{GEN x, GEN T, GEN p}
+
+\fun{GEN}{FpXQX_divrem}{GEN x, GEN y, GEN T, GEN p, GEN *pr}
+
+\fun{GEN}{FpXQX_gcd}{GEN x, GEN y, GEN T, GEN p}
+
+\fun{GEN}{FpXQX_extgcd}{GEN x, GEN y, GEN T, GEN p, GEN *ptu, GEN *ptv}
+
+\fun{GEN}{FpXQYQ_pow}{GEN x, GEN n, GEN S, GEN T, GEN p}, \kbd{x} and
+\kbd{T} being \kbd{FpXQX}s, returns $\kbd{x}^\kbd{n}$ modulo \kbd{S}.
+
+\fun{GEN}{FpXQXV_prod}{GEN V, GEN T, GEN p}, \kbd{V} being a vector of
+\kbd{FpXQX}, returns their product.
+
+\fun{GEN}{FqV_roots_to_pol}{GEN V, GEN T, GEN p, long v},
+\kbd{V} being a vector of \kbd{Fq}s, returns the monic \kbd{FqX}
+$\prod_i (\kbd{pol\_x[v]} - \kbd{V[i]})$.
+
+\subsubsec{Miscellaneous operations}
+
+\fun{GEN}{init_Fq}{GEN p, long n, long v} returns an irreducible polynomial
+of degree \kbd{n} over $\F_p$, in variable \kbd{v}.
+
+\fun{long}{FqX_is_squarefree}{GEN P, GEN T, GEN p}
+
+\fun{GEN}{FqX_factor}{GEN x, GEN T, GEN p} same output convention as
+\kbd{FpX\_factor}. Assumes \kbd{p} is prime and \kbd{T} irreducible
+in $\F_p[X]$.
+
+\fun{GEN}{FpX_factorff_irred}{GEN P, GEN T, GEN p}. Assumes \kbd{p} prime
+and \kbd{T} irreducible in $\F_p[X]$. \kbd{P} being an \emph{irreducible}
+\kbd{FpX}, factors it over the finite field $\F_p[Y]/(T(Y))$ and returns the
+vector of irreducible \kbd{FqX}s factors (the exponents, being all equal to
+$1$, are not included).
+
+\fun{GEN}{FpX_ffisom}{GEN P, GEN Q, GEN p}. Assumes \kbd{p} prime,
+\kbd{P}, \kbd{Q} are \kbd{ZX}s, both irreducible mod \kbd{p}, and
+$\deg(P) \mid \deg Q$. Outputs a monomorphism between $\F_p[X]/(P)$ and
+$\F_p[X]/(Q)$, as a polynomial $R$ such that $\kbd{Q} \mid \kbd{P}(R)$ in
+$\F_p[X]$. If \kbd{P} and \kbd{Q} have the same degree, it is of course an
+isomorphism.
+
+\fun{void}{FpX_ffintersect}{GEN P, GEN Q, long n, GEN p, GEN *SP,GEN *SQ, GEN
+MA,GEN MB}\hfil\break
+Assumes \kbd{p} is prime, \kbd{P}, \kbd{Q} are \kbd{ZX}s, both
+irreducible mod \kbd{p}, and \kbd{n} divides both the degree of \kbd{P} and
+\kbd{Q}. Compute \kbd{SP} and \kbd{SQ} such that the subfield of
+$\F_p[X]/(P)$ generated by \kbd{SP} and the subfield of $\F_p[X]/(Q)$
+generated by \kbd{SQ} are isomorphic of degree \kbd{n}. The polynomials
+\kbd{P} and \kbd{Q} do not need to be of the same variable. If \kbd{MA}
+(resp. \kbd{MB}) is not \kbd{NULL}, it must be the matrix of the Frobenius
+map in $\F_p[X]/(P)$ (resp.~$\F_p[X]/(Q)$).
+
+\fun{GEN}{FpXQ_ffisom_inv}{GEN S, GEN T, GEN p}. Assumes \kbd{p} is prime,
+\kbd{T} a \kbd{ZX}, which is irreducible modulo \kbd{p}, \kbd{S} a
+\kbd{ZX} representing an automorphism of $\F_q := \F_p[X]/(\kbd{T})$.
+($\kbd{S}(X)$ is the image of $X$ by the automorphism.) Returns the
+inverse automorphism of \kbd{S}, in the same format, i.e.~an \kbd{FpX}~$H$
+such that $H(\kbd{S}) \equiv X$ modulo $(\kbd{T}, \kbd{p})$.
+
+\fun{long}{FqX_nbfact}{GEN u, GEN T, GEN p}.
+Assumes \kbd{p} is prime and \kbd{T} irreducible in $\F_p[X]$.
+
+\fun{long}{FqX_nbroots}{GEN f, GEN T, GEN p}
+Assumes \kbd{p} is prime and \kbd{T} irreducible in $\F_p[X]$.
+
+
+\subsec{\kbd{FpV}, \kbd{FpM}, \kbd{FqM}}. A \kbd{ZV} (resp.~a~\kbd{ZM}) is a
+\typ{VEC} or \typ{COL} (resp.~\typ{MAT}) with \typ{INT} coefficients. An
+\kbd{FpV} or \kbd{FpM}, with respect to a given \typ{INT}~\kbd{p}, is the
+same with \kbd{Fp} coordinates; operations are understood over $\Z/p\Z$. An
+\kbd{FqM} is a matrix with \kbd{Fq} coefficients (with respect to given
+\kbd{T}, \kbd{p}), not necessarily reduced (i.e arbitrary \typ{INT}s and
+\kbd{ZX}s in the same variable as \kbd{T}).
+
+\subsubsec{Basic operations}
+
+\fun{GEN}{FpC_to_mod}{GEN z, GEN p}, \kbd{z} a \kbd{ZC}. Returns \kbd{Col(z) *
+Mod(1,p)}, hence a \typ{COL} with \typ{INTMOD} coefficients.
+
+\fun{GEN}{FpV_to_mod}{GEN z, GEN p}, \kbd{z} a \kbd{ZV}. Returns \kbd{Vec(z) *
+Mod(1,p)}, hence a \typ{VEC} with \typ{INTMOD} coefficients.
+
+\fun{GEN}{FpM_to_mod}{GEN z, GEN p}, \kbd{z} a \kbd{ZM}. Returns \kbd{z *
+Mod(1,p)}, hence with \typ{INTMOD} coefficients.
+
+\fun{GEN}{FpC_red}{GEN z, GEN p}, \kbd{z} a \kbd{ZC}. Returns \kbd{lift(Col(z) *
+Mod(1,p))}, hence a \typ{COL}.
+
+\fun{GEN}{FpV_red}{GEN z, GEN p}, \kbd{z} a \kbd{ZV}. Returns \kbd{lift(Vec(z) *
+Mod(1,p))}, hence a \typ{VEC}
+
+\fun{GEN}{FpM_red}{GEN z, GEN p}, \kbd{z} a \kbd{ZM}. Returns \kbd{lift(z *
+Mod(1,p))}, which is an \kbd{FpM}.
+
+\fun{GEN}{FpC_Fp_mul}{GEN x, GEN y, GEN p} multiplies the \kbd{ZC}~\kbd{x}
+(seen as a column vector) by the \typ{INT}~\kbd{y} and reduce modulo \kbd{p} to
+obtain an \kbd{FpC}.
+
+\fun{GEN}{FpC_FpV_mul}{GEN x, GEN y, GEN p} multiplies the \kbd{ZC}~\kbd{x}
+(seen as a column vector) by the \kbd{ZV}~\kbd{y} (seen as a row vector,
+assumed to have compatible dimensions), and reduce modulo \kbd{p} to obtain
+an \kbd{FpM}.
+
+\fun{GEN}{FpM_mul}{GEN x, GEN y, GEN p} multiplies the two \kbd{ZM}s~\kbd{x}
+and \kbd{y} (assumed to have compatible dimensions), and reduce modulo
+\kbd{p} to obtain an \kbd{FpM}.
+
+\fun{GEN}{FpM_FpC_mul}{GEN x, GEN y, GEN p} multiplies the \kbd{ZM}~\kbd{x}
+by the \kbd{ZC}~\kbd{y} (seen as a column vector, assumed to have compatible
+dimensions), and reduce modulo \kbd{p} to obtain an \kbd{FpC}.  
+
+\fun{GEN}{FpV_FpC_mul}{GEN x, GEN y, GEN p} multiplies the \kbd{ZV}~\kbd{x}
+(seen as a row vector) by the \kbd{ZC}~\kbd{y} (seen as a column vector,
+assumed to have compatible dimensions), and reduce modulo \kbd{p} to obtain
+an \kbd{Fp}.
+
+\subsubsec{\kbd{Fp}-linear algebra}. The implementations are not
+asymptotically efficient ($O(n^3)$ standard algorithms).
+
+\fun{GEN}{FpM_deplin}{GEN x, GEN p} returns a non-trivial kernel vector,
+or \kbd{NULL} if none exist.
+
+\fun{GEN}{FpM_gauss}{GEN a, GEN b, GEN p} as \kbd{gauss}
+
+\fun{GEN}{FpM_image}{GEN x, GEN p} as \kbd{image}
+
+\fun{GEN}{FpM_intersect}{GEN x, GEN y, GEN p} as \kbd{intersect}
+
+\fun{GEN}{FpM_inv}{GEN x, GEN p} returns the inverse of \kbd{x}, or
+\kbd{NULL} if \kbd{x} is not invertible.
+
+\fun{GEN}{FpM_invimage}{GEN m, GEN v, GEN p} as \kbd{inverseimage}
+
+\fun{GEN}{FpM_ker}{GEN x, GEN p} as \kbd{ker}
+
+\fun{long}{FpM_rank}{GEN x, GEN p} as \kbd{rank}
+
+\fun{GEN}{FpM_indexrank}{GEN x, GEN p} as \kbd{indexrank} but returns a
+\typ{VECSMALL}
+
+\fun{GEN}{FpM_suppl}{GEN x, GEN p} as \kbd{suppl}
+
+\subsubsec{\kbd{Fq}-linear algebra}
+
+\fun{GEN}{FqM_gauss}{GEN a, GEN b, GEN T, GEN p} as \kbd{gauss}
+
+\fun{GEN}{FqM_ker}{GEN x, GEN T, GEN p} as \kbd{ker}
+
+\fun{GEN}{FqM_suppl}{GEN x, GEN T, GEN p} as \kbd{suppl}
+
+\subsec{\kbd{Flx}} Let \kbd{p} an understood \kbd{ulong}, assumed to be
+prime, to be given the the function arguments; an \kbd{Fl} is an \kbd{ulong}
+belonging to $[0,\kbd{p}-1]$, an \kbd{Flx}~\kbd{z} is a \typ{VECSMALL}
+representing a polynomial with small integer coefficients. Specifically
+\kbd{z[0]} is the usual codeword, \kbd{z[1] = evalvarn($v$)} for some
+variable $v$, then the coefficients by increasing degree. An \kbd{FlxX} is a
+\typ{POL} whose coefficients are \kbd{Flx}s.
+
+\noindent In the following, an argument called \kbd{sv} is of the form
+\kbd{evalvarn}$(v)$ for some variable number~$v$.
+
+\subsubsec{Basic operations}
+
+\fun{ulong}{Rg_to_Fl}{GEN z, ulong p}, \kbd{z} which can be mapped to
+$\Z/p\Z$: a \typ{INT}, a \typ{INTMOD} whose modulus is divisible by $p$,
+a \typ{FRAC} whose denominator is coprime to $p$, or a \typ{PADIC} with
+underlying prime $p$. Returns \kbd{lift(z * Mod(1,p))}, normalized, as an
+\kbd{Fl}.
+
+\fun{GEN}{Flx_red}{GEN z, ulong p} converts from \kbd{zx} with
+non-negative coefficients to \kbd{Flx} (by reducing them mod \kbd{p}).
+
+\fun{GEN}{Flx_add}{GEN x, GEN y, ulong p}
+
+\fun{GEN}{Flx_neg}{GEN x, ulong p}
+
+\fun{GEN}{Flx_neg_inplace}{GEN x, ulong p}, same as \kbd{Flx\_neg}, in place
+(\kbd{x} is destroyed).
+
+\fun{GEN}{Flx_sub}{GEN x, GEN y, ulong p}
+
+\fun{GEN}{Flx_mul}{GEN x, GEN y, ulong p}
+
+\fun{GEN}{Flx_sqr}{GEN x, ulong p}
+
+\fun{GEN}{Flx_divrem}{GEN x, GEN y, ulong p, GEN *pr}
+
+\fun{GEN}{Flx_div}{GEN x, GEN y, ulong p}
+
+\fun{GEN}{Flx_rem}{GEN x, GEN y, ulong p}
+
+\fun{GEN}{Flx_deriv}{GEN z, ulong p}
+
+\fun{GEN}{Flx_gcd}{GEN a, GEN b, ulong p} returns a (not necessarily monic)
+greatest common divisor of $x$  and $y$.
+
+\fun{GEN}{Flx_gcd_i}{GEN a, GEN b, ulong p}, same as \kbd{Flx\_gcd} without
+collecting garbage.
+
+\fun{GEN}{Flx_extgcd}{GEN a, GEN b, ulong p, GEN *ptu, GEN *ptv}
+
+\fun{GEN}{Flx_pow}{GEN x, long n, ulong p}
+
+\subsubsec{Miscellaneous operations}
+
+\fun{GEN}{Flx_normalize}{GEN z, ulong p}, as \kbd{FpX\_normalize}.
+
+\fun{GEN}{Flx_Fl_mul}{GEN y, ulong x, ulong p}
+
+\fun{GEN}{Flx_recip}{GEN x}, returns the reciprocal polynomial
+
+\fun{ulong}{Flx_resultant}{GEN a, GEN b, ulong p}, returns the resultant
+of \kbd{a} and \kbd{b}
+
+\fun{ulong}{Flx_extresultant}{GEN a, GEN b, ulong p, GEN *ptU, GEN *ptV}
+returns the resultant and sets Bezout coefficients (if the resultant is 0,
+the latter are not set).
+
+\fun{GEN}{Flx_invmontgomery}{GEN T, ulong p}, returns the Montgomery inverse
+of \kbd{T}, i.e.~\kbd{truncate(x / polrecip(T)+O(x\pow n)}. Assumes
+$\kbd{T}(0) \neq 0$.
+
+\fun{GEN}{Flx_rem_montgomery}{GEN x, GEN mg, GEN T, ulong p}, returns
+\kbd{x} modulo \kbd{T}, where \kbd{mg} is the Montgomery inverse of \kbd{T}.
+
+\fun{GEN}{Flx_renormalize}{GEN x, long l}, as \kbd{FpX\_renormalize}, where
+$\kbd{l} = \kbd{lg(x)}$, in place.
+
+\fun{GEN}{Flx_shift}{GEN T, long n}, returns \kbd{T} multiplied by $\kbd{x}^n$.
+
+\fun{long}{Flx_valuation}{GEN x} returns the valuation of \kbd{x}, i.e. the
+multiplicity of the $0$ root.
+
+\fun{GEN}{FlxYqQ_pow}{GEN x, GEN n, GEN S, GEN T, ulong p}, as
+\kbd{FpXQYQ\_pow}.
+
+
+\fun{GEN}{Flx_div_by_X_x}{GEN A, ulong a, ulong p, ulong *rem}, returns the
+Euclidean quotient of the \kbd{Flx}~\kbd{A} by $X - \kbd{a}$, and sets
+\kbd{rem} to the remainder $ \kbd{A}(\kbd{a})$.
+
+\fun{ulong}{Flx_eval}{GEN x, ulong y, ulong p}, as \kbd{FpX\_eval}.
+
+\fun{GEN}{FlxV_Flc_mul}{GEN V, GEN W, ulong p}, as \kbd{FpXV\_FpC\_mul}.
+
+\fun{int}{Flx_is_squarefree}{GEN z, ulong p}
+
+\fun{long}{Flx_nbfact}{GEN z, ulong p}, as \kbd{FpX\_nbfact}.
+
+\fun{long}{Flx_nbroots}{GEN f, ulong p}, as \kbd{FpX\_nbroots}.
+
+\fun{GEN}{Flv_polint}{GEN x, GEN y, ulong p, long sv} as \kbd{FpV\_polint},
+returning an \kbd{Flx} in variable $v$.
+
+\fun{GEN}{Flv_roots_to_pol}{GEN a, ulong p, long sv} as
+\kbd{FpV\_roots\_to\_pol} returning an \kbd{Flx} in variable $v$.
+
+\subsec{\kbd{Flxq}}. See \kbd{FpXQ} operations.
+
+\fun{GEN}{Flxq_mul}{GEN y, GEN x, GEN pol, ulong p}
+
+\fun{GEN}{Flxq_sqr}{GEN y, GEN pol, ulong p}
+
+\fun{GEN}{Flxq_inv}{GEN x, GEN T, ulong p}
+
+\fun{GEN}{Flxq_invsafe}{GEN x, GEN T, ulong p}
+
+\fun{GEN}{Flxq_pow}{GEN x, GEN n, GEN pol, ulong p}
+
+\fun{GEN}{Flxq_powers}{GEN x, long l, GEN T, ulong p}
+
+\fun{GEN}{FlxqV_roots_to_pol}{GEN V, GEN T, ulong p, long v} as 
+\kbd{FqV\_roots\_to\_pol} returning an \kbd{FlxqX} in variable $v$.
+
+\subsec{\kbd{FlxX}}. See \kbd{FpXX} operations.
+
+\fun{GEN}{FlxX_add}{GEN P, GEN Q, ulong p}
+
+\fun{GEN}{FlxX_renormalize}{GEN x, long l}, as \kbd{normalizepol}, where
+$\kbd{l} = \kbd{lg(x)}$, in place.
+
+\fun{GEN}{FlxX_shift}{GEN a, long n}
+
+\subsec{\kbd{FlxqX}}. See \kbd{FpXQX} operations.
+
+\fun{GEN}{FlxqX_mul}{GEN x, GEN y, GEN T, ulong p}
+
+\fun{GEN}{FlxqX_Flxq_mul}{GEN P, GEN U, GEN T, ulong p}
+
+\fun{GEN}{FlxqX_normalize}{GEN z, GEN T, ulong p}
+
+\fun{GEN}{FlxqX_sqr}{GEN x, GEN T, ulong p}
+
+\fun{GEN}{FlxqX_divrem}{GEN x, GEN y, GEN T, ulong p, GEN *pr}
+
+\fun{GEN}{FlxqX_red}{GEN z, GEN T, ulong p}
+
+\fun{GEN}{FlxqXV_prod}{GEN V, GEN T, ulong p}
+
+\fun{GEN}{FlxqXQ_pow}{GEN x, GEN n, GEN S, GEN T, ulong p}
+
+\subsec{\kbd{Flv}, \kbd{Flm}}. See \kbd{FpV}, \kbd{FpM} operations.
+
+\fun{GEN}{Flm_Flc_mul}{GEN x, GEN y, ulong p}
+
+\fun{GEN}{Flm_deplin}{GEN x, ulong p}
+
+\fun{GEN}{Flm_gauss}{GEN a, GEN b, ulong p}
+ 
+\fun{GEN}{Flm_indexrank}{GEN x, ulong p}
+
+\fun{GEN}{Flm_inv}{GEN x, ulong p}
+
+\fun{GEN}{Flm_ker}{GEN x, ulong p}
+
+\fun{GEN}{Flm_ker_sp}{GEN x, ulong p, long deplin}, as \kbd{Flm\_ker}, in
+place (destroys~\kbd{x}).
+
+\fun{GEN}{Flm_mul}{GEN x, GEN y, ulong p}
+
+\subsec{\kbd{FlxqV}, \kbd{FlxqM}}. See \kbd{FqV}, \kbd{FqM} operations.
+
+\fun{GEN}{FlxqM_ker}{GEN x, GEN T, ulong p}
+
+\subsec{\kbd{QX}}.
+
+\fun{GEN}{QXQ_inv}{GEN A, GEN B} returns the inverse of \kbd{A} modulo \kbd{B}
+where \kbd{A} and \kbd{B} are \kbd{QX}s.
+
+\subsec{\kbd{RgX}}.
+
+\fun{GEN}{RgX_add}{GEN x,GEN y} adds \kbd{x} and \kbd{y}. 
+
+\fun{GEN}{RgX_sub}{GEN x,GEN y} subtracts \kbd{x} and \kbd{y}. 
+
+\fun{GEN}{RgX_neg}{GEN x,GEN p} returns $-\kbd{x}$.
+
+The functions above are currently implemented through the generic routines,
+but it might change in the future.
+
+\fun{GEN}{RgX_mul}{GEN x, GEN y} multiplies the two \typ{POL} (in the same
+variable) \kbd{x} and \kbd{y}. Uses Karatsuba algorithm.
+
+\fun{GEN}{RgX_mulspec}{GEN a, GEN b, long na, long nb}. Internal routine:
+\kbd{a} and \kbd{b} are arrays of coefficients representing polynomials
+$\sum_{i = 0}^{\kbd{na}} \kbd{a}[i] X^i$ and
+$\sum_{i = 0}^{\kbd{nb}} \kbd{b}[i] X^i$. Returns their product (as a true
+\kbd{GEN}).
+
+\fun{GEN}{RgX_sqr}{GEN x} squares the \typ{POL} \kbd{x}. Uses Karatsuba
+algorithm.
+
+\fun{GEN}{RgX_sqrspec}{GEN a, long na}. Internal routine:
+\kbd{a} is an array of coefficients representing polynomial
+$\sum_{i = 0}^{\kbd{na}} \kbd{a}[i] X^i$. Return its square (as a true
+\kbd{GEN}).
+
+\fun{GEN}{RgX_divrem}{GEN x, GEN y, GEN *r}
+
+\fun{GEN}{RgX_div}{GEN x, GEN y, GEN *r}
+
+\fun{GEN}{RgX_div_by_X_x}{GEN A, GEN a, GEN *r} returns the
+quotient of the \kbd{RgX}~\kbd{A} by $(X - \kbd{a})$, and sets \kbd{r} to the
+remainder $\kbd{A}(\kbd{a})$.
+
+\fun{GEN}{RgX_rem}{GEN x, GEN y, GEN *r}
+
+\fun{GEN}{RgX_mulXn}{GEN x, long n} returns $\kbd{x} * t^n$. This may
+be a \typ{FRAC} if $n < 0$ and the valuation of \kbd{x} is not large
+enough.
+
+\fun{GEN}{RgX_shift}{GEN x, long n} returns $\kbd{x} * t^n$ if $n\geq 0$,
+and $\kbd{x} \bs t^{-n}$ otherwise.
+
+\fun{GEN}{RgX_shift_shallow}{GEN x, long n} as \kbd{RgX\_shift}, but
+shallow (coefficients are not copied). This is not suitable for
+\kbd{gerepile} or \kbd{gerepileupto}.
+
+\fun{GEN}{RgX_extgcd}{GEN x, GEN y, GEN *u, GEN *v} returns
+$d = \text{GCD}(\kbd{x},\kbd{y})$, and sets \kbd{*u}, \kbd{*v} to the Bezout
+coefficients such that $\kbd{*ux} + \kbd{*vy} = d$.
+
+\fun{GEN}{RgXQ_mul}{GEN y, GEN x, GEN T}
+
+\fun{GEN}{RgXQ_norm}{GEN x, GEN T} returns the norm of \kbd{Mod(x, T)}.
+
+\fun{GEN}{RgXQ_sqr}{GEN x, GEN T}
+
+\fun{GEN}{RgXQ_powers}{GEN x, long n, GEN T, GEN p} returns $[\kbd{x}^0,
+\dots, \kbd{x}^\kbd{n}]$ as a \typ{VEC} of \kbd{RgXQ}s.
+
+\fun{GEN}{RgXQC_red}{GEN z, GEN T} \kbd{z} a vector whose
+coefficients are \kbd{RgX}s (arbitrary \kbd{GEN}s in fact), reduce them to
+\kbd{RgXQ}s (applying \kbd{grem} coefficientwise) in a \typ{COL}.
+
+\fun{GEN}{RgXQV_red}{GEN z, GEN T} \kbd{z} a \typ{POL} whose
+coefficients are \kbd{RgX}s (arbitrary \kbd{GEN}s in fact), reduce them to
+\kbd{RgXQ}s (applying \kbd{grem} coefficientwise) in a \typ{VEC}.
+
+\fun{GEN}{RgXQX_red}{GEN z, GEN T} \kbd{z} a \typ{POL} whose
+coefficients are \kbd{RgX}s (arbitrary \kbd{GEN}s in fact), reduce them to
+\kbd{RgXQ}s (applying \kbd{grem} coefficientwise).
+
+\fun{GEN}{RgXQX_mul}{GEN x, GEN y, GEN T}
+
+\fun{GEN}{RgX_Rg_mul}{GEN y, GEN x} multiplies the \kbd{RgX} \kbd{y}
+by the scalar \kbd{x}.
+
+\fun{GEN}{RgX_Rg_div}{GEN y, GEN x} divides the \kbd{RgX} \kbd{y}
+by the scalar \kbd{x}.
+
+\fun{GEN}{RgXQX_RgXQ_mul}{GEN x, GEN y, GEN T} multiplies the \kbd{RgXQX}
+\kbd{y} by the scalar (\kbd{RgXQ}) \kbd{x}.
+
+\fun{GEN}{RgXQX_sqr}{GEN x, GEN T}
+
+\fun{GEN}{RgXQX_divrem}{GEN x, GEN y, GEN T, GEN *pr}
+
+\fun{GEN}{RgXQX_div}{GEN x, GEN y, GEN T, GEN *r}
+
+\fun{GEN}{RgXQX_rem}{GEN x, GEN y, GEN T, GEN *r}
+
+\fun{GEN}{RgX_rescale}{GEN P, GEN h} returns $h^{\deg(P)} P(x/h)$.
+\kbd{P} is an \kbd{RgX} and \kbd{h} is non-zero. (Leaves small objects on the
+stack. Suitable but inefficient for \kbd{gerepileupto}.)
+
+\fun{GEN}{RgX_unscale}{GEN P, GEN h} returns $P(h x)$. (Leaves small objects
+on the stack. Suitable but inefficient for \kbd{gerepileupto}.)
+
+\fun{GEN}{RgXV_unscale}{GEN v, GEN h}
+
+\subsec{Conversions involving single precision objects}
+
+\subsubsec{To single precision}
+
+\fun{GEN}{ZX_to_Flx}{GEN x, ulong p} reduce \kbd{ZX}~\kbd{x} modulo \kbd{p}
+(yielding an \kbd{Flx}).
+
+\fun{GEN}{ZV_to_Flv}{GEN x, ulong p} reduce \kbd{ZV}~\kbd{x} modulo \kbd{p}
+(yielding an \kbd{Flv}).
+
+\fun{GEN}{ZXV_to_FlxV}{GEN v, ulong p}, as \kbd{ZX\_to\_Flx}, repeatedly
+called on the vector's coefficients.
+
+\fun{GEN}{ZXX_to_FlxX}{GEN B, ulong p, long v}, as \kbd{ZX\_to\_Flx},
+repeatedly called on the polynomial's coefficients.
+
+\fun{GEN}{ZXXV_to_FlxXV}{GEN V, ulong p, long v}, as \kbd{ZXX\_to\_FlxX},
+repeatedly called on the vector's coefficients.
+
+\fun{GEN}{ZM_to_Flm}{GEN x, ulong p} reduce \kbd{ZM}~\kbd{x} modulo \kbd{p}
+(yielding an \kbd{Flm}).
+
+\fun{GEN}{ZV_to_zv}{GEN z}, converts coefficients using \kbd{itos}
+
+\fun{GEN}{ZV_to_nv}{GEN z}, converts coefficients using \kbd{itou}
+
+\fun{GEN}{ZM_to_zm}{GEN z}, converts coefficients using \kbd{itos}
+
+\fun{GEN}{FqC_to_FlxC}{GEN x, GEN T, GEN p}, converts coefficients in \kbd{Fq}
+to coefficient in Flx, result being a column vector.
+
+\fun{GEN}{FqV_to_FlxV}{GEN x, GEN T, GEN p}, converts coefficients in \kbd{Fq}
+to coefficient in Flx, result being a line vector.
+
+\fun{GEN}{FqM_to_FlxM}{GEN x, GEN T, GEN p}, converts coefficients in \kbd{Fq}
+to coefficient in Flx.
+
+\subsubsec{From single precision}
+
+\fun{GEN}{Flx_to_ZX}{GEN z}, converts to \kbd{ZX} (\typ{POL} of non-negative
+\typ{INT}s in this case)
+
+\fun{GEN}{Flx_to_ZX_inplace}{GEN z}, same as \kbd{Flx\_to\_ZX}, in place
+(\kbd{z} is destroyed).
+
+\fun{GEN}{FlxX_to_ZXX}{GEN B}, converts an \kbd{FlxX} to a polynomial with
+\kbd{ZX} or \typ{INT} coefficients (repeated calls to \kbd{Flx\_to\_ZX}).
+
+\fun{GEN}{FlxC_to_ZXC}{GEN x}, converts a vector of \kbd{Flx} to a column
+vector of polynomials with \typ{INT} coefficients (repeated calls to
+\kbd{Flx\_to\_ZX}).
+
+\fun{GEN}{FlxM_to_ZXM}{GEN z}, converts a matrix of \kbd{Flx} to a matrix of
+polynomials with \typ{INT} coefficients (repeated calls to \kbd{Flx\_to\_ZX}).
+
+\fun{GEN}{zx_to_ZX}{GEN z}, as \kbd{Flx\_to\_ZX}, without assuming
+coefficients are non-negative.
+
+\fun{GEN}{Flc_to_ZC}{GEN z}, converts to \kbd{ZC} (\typ{COL} of non-negative
+\typ{INT}s in this case)
+
+\fun{GEN}{Flv_to_ZV}{GEN z}, converts to \kbd{ZV} (\typ{VEC} of non-negative
+\typ{INT}s in this case)
+
+\fun{GEN}{Flm_to_ZM}{GEN z}, converts to \kbd{ZM} (\typ{MAT} with
+non-negative \typ{INT}s coefficients in this case)
+
+\fun{GEN}{zc_to_ZC}{GEN z} as \kbd{Flc\_to\_ZC}, without assuming
+coefficients are non-negative.
+
+\fun{GEN}{zv_to_ZV}{GEN z} as \kbd{Flv\_to\_ZV}, without assuming
+coefficients are non-negative.
+
+\fun{GEN}{zm_to_ZM}{GEN z} as \kbd{Flm\_to\_ZM}, without assuming
+coefficients are non-negative.
+
+\subsubsec{Mixed precision linear algebra} Assumes dimensions are compatible.
+Multiply a multiprecision object by a single-precision one.
+
+\fun{GEN}{RgM_zc_mul}{GEN x, GEN y}
+
+\fun{GEN}{RgM_zm_mul}{GEN x, GEN y}
+
+\fun{GEN}{RgV_zc_mul}{GEN x, GEN y}
+
+\fun{GEN}{RgV_zm_mul}{GEN x, GEN y}
+
+\fun{GEN}{ZM_zc_mul}{GEN x, GEN y}
+
+\fun{GEN}{ZM_zm_mul}{GEN x, GEN y}
+
+\subsubsec{Miscellaneous}
+
+\fun{GEN}{zero_Flx}{long sv} returns a zero \kbd{Flx} in variable $v$.
+
+\fun{GEN}{zero_zx}{long sv} as \kbd{zero\_Flx}
+
+\fun{GEN}{polx_Flx}{long sv} returns the variable $v$ as degree~1~\kbd{Flx}.
+
+\fun{GEN}{polx_zx}{long sv} as \kbd{polx\_Flx}
+
+\fun{GEN}{Fl_to_Flx}{ulong x, long sv} converts a \kbd{unsigned long} to a scalar \kbd{Flx} in shifted variable $sv$.
+
+\fun{GEN}{Z_to_Flx}{GEN x, ulong p, long v} converts a \typ{INT} to a scalar
+polynomial in variable $v$.
+
+\fun{GEN}{Flx_to_Flv}{GEN x, long n} converts from \kbd{Flx} to \kbd{Flv}
+with \kbd{n} components (assumed larger than the number of coefficients of
+\kbd{x}).
+
+\fun{GEN}{zx_to_zv}{GEN x, long n} as \kbd{Flx\_to\_Flv}.
+
+\fun{GEN}{Flv_to_Flx}{GEN x, long sv} converts from vector (coefficient
+array) to (normalized) polynomial in variable $v$.
+
+\fun{GEN}{zv_to_zx}{GEN x, long n} as \kbd{Flv\_to\_Flx}.
+
+\fun{GEN}{matid_Flm}{long n} returns an \kbd{Flm} which is an $n \times n$
+identity matrix.
+
+\fun{GEN}{Flm_to_FlxV}{GEN x, long sv} converts the colums of
+\kbd{Flm}~\kbd{x} to an array of \kbd{Flx} (repeated calls to
+\kbd{Flv\_to\_Flx}).
+
+\fun{GEN}{zm_to_zxV}{GEN x, long n} as \kbd{Flm\_to\_FlxV}.
+
+\fun{GEN}{Flm_to_FlxX}{GEN x, long sv,long w} converts the colums of
+\kbd{Flm}~\kbd{x} to the coefficient of an \kbd{FlxX}, and normalize the
+result.
+
+\fun{GEN}{FlxV_to_Flm}{GEN v, long n} reverse \kbd{Flm\_to\_FlxV}, to obtain
+an \kbd{Flm} with \kbd{n} rows (repeated calls to \kbd{Flx\_to\_Flv}).
+
+\fun{GEN}{FlxX_to_Flm}{GEN v, long n} reverse \kbd{Flm\_to\_FlxX}, to obtain
+an \kbd{Flm} with \kbd{n} rows (repeated calls to \kbd{Flx\_to\_Flv}).
+
+\section{Operations on general PARI objects}
+
+\subsec{Assignment}
+
+\fun{void}{gaffsg}{long s, GEN x} assigns the \kbd{long}~\kbd{s} into the
+object~\kbd{x}.
+
+\fun{void}{gaffect}{GEN x, GEN y} assigns the object \kbd{x} into the
+object~\kbd{y}.
+
+\subsec{Conversions}
+
+\subsubsec{Scalars}
+
+\fun{double}{rtodbl}{GEN x} applied to a \typ{REAL}~\kbd{x}, converts \kbd{x}
+into a \kbd{double} if possible.
+
+\fun{GEN}{dbltor}{double x} converts the \kbd{double} \kbd{x} into a
+\typ{REAL}.
+
+\fun{double}{gtodouble}{GEN x} if \kbd{x} is a real number (not necessarily
+a~\typ{REAL}), converts \kbd{x} into a \kbd{double} if possible.
+
+\fun{long}{gtolong}{GEN x} if \kbd{x} is an integer (not necessarily
+a~\typ{INT}), converts \kbd{x} into a \kbd{long} if possible.
+
+\fun{GEN}{fractor}{GEN x, long l} applied to a \typ{FRAC}~\kbd{x}, converts
+\kbd{x} into a \typ{REAL} of length \kbd{prec}.
+
+\fun{GEN}{quadtoc}{GEN x, long l} applied to a \typ{QUAD}~\kbd{x}, converts
+\kbd{x} into a \typ{REAL} or \typ{COMPLEX} depending on the sign of the
+discriminant of~\kbd{x}, to precision \hbox{\kbd{l} \B-bit} words.% forbid
+line brk at hyphen here [GN]
+
+\fun{GEN}{ctofp}{GEN x, long prec} converts the \typ{COMPLEX}~\kbd{x} to a
+a complex whose real and imaginary parts are \typ{REAL} of length \kbd{prec},
+using \kbd{gtofp};
+
+\fun{GEN}{gtofp}{GEN x, long prec} converts the complex number~\kbd{x}
+(\typ{INT}, \typ{REAL}, \typ{FRAC}, \typ{QUAD} or \typ{COMPLEX}) to either
+a \typ{REAL} or \typ{COMPLEX} whose components are \typ{REAL} of length
+\kbd{prec}.
+
+\fun{GEN}{gcvtop}{GEN x, GEN p, long l} converts \kbd{x} into a \typ{PADIC}
+\kbd{p}-adic number of precision~\kbd{l}.
+
+\fun{GEN}{gprec}{GEN x, long l} returns a copy of $x$ whose precision is
+changed to $l$ digits. The precision change is done recursively on all
+components of $x$. Digits means \emph{decimal}, $p$-adic and $X$-adic digits
+for \typ{REAL}, \typ{SER}, \typ{PADIC} components, respectively.
+
+\fun{GEN}{gprec_w}{GEN x, long l} returns a shallow copy of $x$ whose
+\typ{REAL} components have their precision changed to $l$ \emph{words}. This
+is often more useful than \kbd{gprec}. Shallow copy means that unaffected
+components are not copied; in particular, this funciton is not suitable for
+\kbd{gerepileupto}.
+
+\fun{GEN}{gprec_wtrunc}{GEN x, long l} returns a shallow copy of $x$ whose
+\typ{REAL} components have their precision \emph{truncated} to $l$
+\emph{words}. Contrary to \kbd{gprec\_w}, this function may never increase
+the precision of~$x$. Shallow copy means that unaffected components are not
+copied; in particular, this funciton is not suitable for \kbd{gerepileupto}.
+
+\subsubsec{Modular objects}
+
+\fun{GEN}{gmodulo}{GEN x, GEN y} creates the object \kbd{\key{Mod}(x,y)} on
+the PARI stack, where \kbd{x} and \kbd{y} are either both \typ{INT}s, and the
+result is a \typ{INTMOD}, or \kbd{x} is a scalar or a \typ{POL} and \kbd{y} a
+\typ{POL}, and the result is a \typ{POLMOD}.
+
+\fun{GEN}{gmodulgs}{GEN x, long y} same as \key{gmodulo} except \kbd{y} is a
+\kbd{long}.
+
+\fun{GEN}{gmodulss}{long x, long y} same as \key{gmodulo} except both
+\kbd{x} and \kbd{y} are \kbd{long}s.
+
+\subsubsec{Between polynomials and coefficient arrays}
+
+\fun{GEN}{gtopoly}{GEN x, long v} converts or truncates the object~\kbd{x}
+into a \typ{POL} with main variable number~\kbd{v}. A common application
+would be the conversion of coefficient vectors (coefficients are given by
+decreasing degree). E.g.~\kbd{[2,3]} goes to \kbd{2*v + 3}
+
+\fun{GEN}{gtopolyrev}{GEN x, long v} converts or truncates the object~\kbd{x}
+into a \typ{POL} with main variable number~\kbd{v}, but vectors are converted
+in reverse order compared to \kbd{gtopoly} (coefficients are given by
+increasing degree). E.g.~\kbd{[2,3]} goes to \kbd{3*v + 2}. In other words
+the vector represents a polynomial in the basis $(1,v,v^2,v^3,\dots)$.
+
+\fun{GEN}{normalizepol}{GEN x} applied to an unnormalized \typ{POL}~\kbd{x}
+(with all coefficients correctly set except that \kbd{leading\_term(x)} might
+be zero), normalizes \kbd{x} correctly in place and returns~\kbd{x}. For
+internal use.
+
+The following routines do \emph{not} copy coefficients on the stack (they
+only move pointers around), hence are very fast but not suitable for
+\kbd{gerepile} calls. Recall that an \kbd{RgV} (resp.~an \kbd{RgX}, resp.~an
+\kbd{RgM}) is a \typ{VEC} or \typ{COL} (resp.~a \typ{POL}, resp.~a \typ{MAT})
+with arbitrary components. Similarly, an \kbd{RgXV} is a \typ{VEC} or
+\typ{COL} with \kbd{RgX} components, etc.
+
+\fun{GEN}{RgV_to_RgX}{GEN x, long v} converts the \kbd{RgV}~\kbd{x} to a
+(normalized) polynomial in variable~\kbd{v} (as \kbd{gtopolyrev}, without
+copy).
+
+\fun{GEN}{RgX_to_RgV}{GEN x, long N} converts the \typ{POL}~\kbd{x} to a
+\typ{COL}~\kbd{v} with \kbd{N} components. Other types than \typ{POL} are
+allowed for \kbd{x}, which is then considered as a constant polynomial.
+Coefficients of \kbd{x} are listed by increasing degree, so that \kbd{y[i]}
+is the coefficient of the term of degree $i-1$ in \kbd{x}.
+
+\fun{GEN}{RgM_to_RgXV}{GEN x, long v} converts the \kbd{RgM}~\kbd{x} to a
+\typ{VEC} of \kbd{RgX}, by repeated calls to \kbd{RgV\_to\_RgX}.
+
+\fun{GEN}{RgXV_to_RgM}{GEN v, long N} converts the vector of \kbd{RgX}~\kbd{v}
+to a~\typ{MAT} with \kbd{N}~rows, by repeated calls to \kbd{RgX\_to\_RgV}.
+
+\fun{GEN}{RgM_to_RgXX}{GEN x, long v,long w} converts the \kbd{RgM}~\kbd{x} into
+a \typ{POL} in variable~\kbd{v}, whose coefficients are \typ{POL}s in
+variable~\kbd{w}. This is a shortcut for
+\bprog
+  RgV_to_RgX( RgM_to_RgXV(x, w), v );
+@eprog\noindent
+There are no consistency checks with respect to variable
+priorities: the above is an invalid object if $\kbd{varncmp(v, w)} \geq 0$.
+
+\fun{GEN}{RgXX_to_RgM}{GEN x, long N} converts the \typ{POL}~\kbd{x} with
+\kbd{RgX} (or constant) coefficients to a matrix with \kbd{N} rows.
+
+\fun{GEN}{RgXY_swap}{GEN P, long n, long w} converts the bivariate polynomial
+$\kbd{P}(u,v)$ (a \typ{POL} with \typ{POL} coefficients) to
+$P(\kbd{pol\_x[w]},u)$, assuming \kbd{n} is an upper bound for
+$\deg_v(\kbd{P})$.
+
+\fun{GEN}{greffe}{GEN x, long l, int use\_stack} applied to a
+\typ{POL}~\kbd{x}, creates a \typ{SER} of length~\kbd{l} starting
+with~\kbd{x}, but without actually copying the coefficients, just the
+pointers. If \kbd{use\_stack} is $0$, this is created through malloc, and
+must be freed after use. Intended for internal use only.
+
+\fun{GEN}{gtoser}{GEN x, long v} converts the object~\kbd{x} into a \typ{SER}
+with main variable number~\kbd{v}.
+
+\fun{GEN}{gtocol}{GEN x} converts the object~\kbd{x} into a \typ{COL}
+
+\fun{GEN}{gtomat}{GEN x} converts the object~\kbd{x} into a \typ{MAT}.
+
+\fun{GEN}{gtovec}{GEN x} converts the object~\kbd{x} into a \typ{VEC}.
+
+\fun{GEN}{gtovecsmall}{GEN x} converts the object~\kbd{x} into a
+\typ{VECSMALL}.
+
+\fun{GEN}{normalize}{GEN x} applied to an unnormalized \typ{SER}~\kbd{x}
+(i.e.~type \typ{SER} with all coefficients correctly set except that \kbd{x[2]}
+might be zero), normalizes \kbd{x} correctly in place. Returns~\kbd{x}.
+For internal use.
+
+\subsec{Clean Constructors}\label{se:clean}
+
+\fun{GEN}{zeropadic}{GEN p, long n} creates a $0$ \typ{PADIC} equal to
+$O(\kbd{p}^\kbd{n})$.
+
+\fun{GEN}{zeroser}{long v, long n} creates a $0$ \typ{SER} in variable
+\kbd{v} equal to $O(X^\kbd{n})$.
+
+\fun{GEN}{scalarser}{GEN x, long v, long prec} creates a constant \typ{SER}
+in variable \kbd{v} and precision \kbd{prec}, whose constant coefficient is
+(a copy of) \kbd{x}, in other words $\kbd{x} + O(\kbd{v}^\kbd{prec})$.
+Assumes that \kbd{x} is non-zero.
+
+\fun{GEN}{zeropol}{long v} creates a $0$ \typ{POL} in variable \kbd{v}.
+
+\fun{GEN}{scalarpol}{GEN x, long v} creates a constant \typ{POL} in variable
+\kbd{v}, whose constant coefficient is (a copy of) \kbd{x}.
+
+
+\fun{GEN}{zerocol}{long n} creates a \typ{COL} with \kbd{n} components set to
+\kbd{gen\_0}.
+
+\fun{GEN}{zerovec}{long n} creates a \typ{VEC} with \kbd{n} components set to
+\kbd{gen\_0}.
+
+\fun{GEN}{col_ei}{long n, long i} creates a \typ{COL} with \kbd{n} components
+set to \kbd{gen\_0}, but the \kbd{i}-th one which us set to \kbd{gen\_1}
+(\kbd{i}-th vector in the canonical basis).
+
+\fun{GEN}{vec_ei}{long n, long i} creates a \typ{VEC} with \kbd{n} components
+set to \kbd{gen\_0}, but the \kbd{i}-th one which us set to \kbd{gen\_1}
+(\kbd{i}-th vector in the canonical basis).
+
+\fun{GEN}{zeromat}{long m, long n} creates a \typ{MAT} with \kbd{m} x \kbd{n}
+components set to \kbd{gen\_0}. Note that the result allocates a
+\emph{single} column, so modifying an entry in one column modifies it in
+all columns. To fully allocate a matrix initialized with zero entries,
+use \kbd{zeromatcopy}.
+
+\fun{GEN}{zeromatcopy}{long m, long n} creates a \typ{MAT} with \kbd{m} x
+\kbd{n} components set to \kbd{gen\_0}. Note that 
+
+\smallskip
+See also next section for analogs of the following functions:
+
+\fun{GEN}{mkcolcopy}{GEN x} creates a 1-dimensional \typ{COL} containing
+\kbd{x}.
+
+\fun{GEN}{mkmatcopy}{GEN x} creates a 1-by-1 \typ{MAT} containing \kbd{x}.
+
+\fun{GEN}{mkveccopy}{GEN x} creates a 1-dimensional \typ{VEC} containing
+\kbd{x}.
+
+\fun{GEN}{mkvec2copy}{GEN x, GEN y} creates a 2-dimensional \typ{VEC} equal
+to \kbd{[x,y]}.
+
+\fun{GEN}{mkvecs}{long x} creates a 1-dimensional \typ{VEC}
+containing \kbd{stoi(x)}.
+
+\fun{GEN}{mkvec2s}{long x, long y} creates a 2-dimensional \typ{VEC}
+containing \kbd{[stoi(x), stoi(y)]}.
+
+\fun{GEN}{mkvec3s}{long x, long y, long z} creates a 3-dimensional \typ{VEC}
+containing \kbd{[stoi(x), stoi(y), stoi(z)]}.
+
+
+\fun{GEN}{mkvecsmall}{long x} creates a 1-dimensional \typ{VECSMALL}
+containing \kbd{x}.
+
+\fun{GEN}{mkvecsmall2}{long x, long y} creates a 2-dimensional \typ{VECSMALL}
+containing \kbd{[x, y]}.
+
+\fun{GEN}{mkvecsmall3}{long x, long y, long z} creates a 3-dimensional
+\typ{VECSMALL} containing \kbd{[x, y, z]}.
+
+\subsec{Unclean Constructors}\label{se:unclean}
+
+Contrary to the policy of general PARI functions, the functions in this
+subsection do \emph{not} copy their arguments, nor do they produce an object
+a priori suitable for \tet{gerepileupto}. In particular, they are
+faster than their clean equivalent (which may not exist). \emph{If} you
+restrict their arguments to universal objects (e.g \kbd{gen\_0}),
+then the above warning does not apply.
+
+\fun{GEN}{mkcomplex}{GEN x, GEN y} creates the \typ{COMPLEX} $x + iy$.
+
+\fun{GEN}{mkfrac}{GEN x, GEN y} creates the \typ{FRAC} $x/y$. Assumes that
+$y > 1$ and $(x,y) = 1$.
+
+\fun{GEN}{mkrfrac}{GEN x, GEN y} creates the \typ{RFRAC} $x/y$. Assumes
+that $y$ is a \typ{POL}, $x$ a compatible type whose variable has lower
+or same priority, with $(x,y) = 1$.
+
+\fun{GEN}{mkcol}{GEN x} creates a 1-dimensional \typ{COL} containing \kbd{x}.
+
+\fun{GEN}{mkintmod}{GEN x, GEN y} creates the \typ{INTMOD} \kbd{Mod(x, y)}.
+The input must be \typ{INT}s satisfying $0 \leq x < y$.
+
+\fun{GEN}{mkpolmod}{GEN x, GEN y} creates the \typ{POLMOD} \kbd{Mod(x, y)}.
+The input must satisfy $\deg x < \deg y$ with respect to the main variable of
+the \typ{POL} $y$. $x$ may be a scalar.
+
+\fun{GEN}{mkmat}{GEN x} creates a 1-by-1 \typ{MAT} containing \kbd{x}.
+
+\fun{GEN}{mkvec}{GEN x} creates a 1-dimensional \typ{VEC} containing \kbd{x}.
+
+\fun{GEN}{mkvec2}{GEN x, GEN y} creates a 2-dimensional \typ{VEC} equal to
+\kbd{[x,y]}.
+
+\fun{GEN}{mkvec3}{GEN x, GEN y, GEN z} creates a 3-dimensional \typ{VEC}
+equal to \kbd{[x,y,z]}.
+
+\fun{GEN}{mkvec4}{GEN x, GEN y, GEN z, GEN t} creates a 4-dimensional \typ{VEC}
+equal to \kbd{[x,y,z,t]}.
+
+\smallskip
+
+\fun{GEN}{mkintn}{long n, ...} returns the non-negative \typ{INT} whose
+development in base $2^{32}$ is given by the following $n$ words
+(\kbd{unsigned long}). It is assumed that all such arguments are less than
+$2^{32}$ (the actual \kbd{sizeof(long)} is irrelevant, the behaviour is also
+as above on $64$-bit machines).
+\bprog
+  mkintn(3, a2, a1, a0);
+@eprog
+\noindent returns $a_2 2^{64} + a_1 2^{32} + a_0$.
+
+\fun{GEN}{mkpoln}{long n, ...} Returns the \typ{POL} whose $n$
+coefficients (\kbd{GEN}) follow, in order of decreasing degree.
+\bprog
+  mkpoln(3, gen_1, gen_2, gen_0);
+@eprog
+\noindent returns the polynomial $X^2 + 2X$ (in variable $0$, use
+\tet{setvarn} if you want other variable numbers). Beware that $n$ is the
+number of coefficients, hence \emph{one more} than the degree.
+
+\fun{GEN}{mkvecn}{long n, ...} returns the \typ{VEC} whose $n$
+coefficients (\kbd{GEN}) follow.
+
+\fun{GEN}{mkcoln}{long n, ...} returns the \typ{COL} whose $n$
+coefficients (\kbd{GEN}) follow.
+
+\subsec{Integer parts}
+
+\fun{GEN}{gfloor}{GEN x} creates the floor of~\kbd{x}, i.e.\ the (true)
+integral part.
+
+\fun{GEN}{gfrac}{GEN x} creates the fractional part of~\kbd{x}, i.e.\ \kbd{x}
+minus the floor of~\kbd{x}.
+
+\fun{GEN}{gceil}{GEN x} creates the ceiling of~\kbd{x}.
+
+\fun{GEN}{ground}{GEN x} rounds towards~$+\infty$ the components of \kbd{x}
+to the nearest integers.
+
+\fun{GEN}{grndtoi}{GEN x, long *e} same as \kbd{ground}, but in addition sets
+\kbd{*e} to the binary exponent of $x - \kbd{ground}(x)$. If this is
+positive, all significant bits are lost. This kind of situation raises an
+error message in \key{ground} but not in \key{grndtoi}.
+
+\fun{GEN}{gtrunc}{GEN x} truncates~\kbd{x}. This is the false integer part
+if \kbd{x} is a real number (i.e.~the unique integer closest to \kbd{x} among
+those between 0 and~\kbd{x}). If \kbd{x} is a \typ{SER}, it is truncated
+to a \typ{POL}; if \kbd{x} is a \typ{RFRAC}, this takes the polynomial part.
+
+\fun{GEN}{gcvtoi}{GEN x, long *e} same as \key{grndtoi} except that
+rounding is replaced by truncation.
+
+\subsec{Valuation and shift}
+
+\fun{GEN}{gshift[z]}{GEN x, long n[, GEN z]} yields the result of shifting
+(the components of) \kbd{x} left by \kbd{n} (if \kbd{n} is non-negative)
+or right by $-\kbd{n}$ (if \kbd{n} is negative). Applies only to \typ{INT}
+and vectors/matrices of such. For other types, it is simply multiplication
+by~$2^{\kbd{n}}$.
+
+\fun{GEN}{gmul2n[z]}{GEN x, long n[, GEN z]} yields the product of \kbd{x}
+and~$2^{\kbd{n}}$. This is different from \kbd{gshift} when \kbd{n} is negative
+and \kbd{x} is a \typ{INT}: \key{gshift} truncates, while \key{gmul2n}
+creates a fraction if necessary.
+
+\fun{long}{ggval}{GEN x, GEN p} returns the greatest exponent~$e$ such that
+$\kbd{p}^e$ divides~\kbd{x}, when this makes sense.
+
+\fun{long}{gval}{GEN x, long v} returns the highest power of the variable
+number \kbd{v} dividing the \typ{POL}~\kbd{x}.
+
+\fun{long}{polvaluation}{GEN P, GEN *z} returns the valuation $v$ of the
+\typ{POL}~\kbd{P} with respect to its main variable $X$. Check whether
+coefficients are $0$ using \kbd{gcmp0}. If \kbd{z} is non-\kbd{NULL}, set it
+to $\kbd{P} / X^v$.
+
+\fun{long}{polvaluation_inexact}{GEN P, GEN *z} as \kbd{polvaluation}
+but use \kbd{isexactzero} instead of \kbd{gcmp0}.
+
+\fun{long}{ZX_valuation}{GEN P, GEN *z} as \kbd{polvaluation}, but assumes
+\kbd{P} has \typ{INT} coefficients.
+
+\subsec{Comparison operators}
+
+\fun{int}{isexactzero}{GEN x} returns 1 (true) if \kbd{x} is exactly equal
+to~0, 0~(false) otherwise. Note that many PARI functions return a
+pointer to \kbd{gen\_0} when they are aware that the result they return is an
+exact zero, so it is almost always faster to test for pointer equality first,
+and call \kbd{isexactzero} (or \kbd{gcmp0}) only when the first test fails.
+
+\fun{int}{isinexact}{GEN x} returns 0 (false) if \kbd{x} has an inexact
+component, and 1 (true) otherwise.
+
+\fun{int}{isint}{GEN x, GEN *n} returns 0 (false) if \kbd{x} does not round
+to an integer. Otherwise, returns 1 (true) and set \kbd{n} to the rounded
+value.
+
+\fun{int}{issmall}{GEN x, long *n} returns 0 (false) if \kbd{x} does not
+round to a small integer (suitable for \kbd{itos}). Otherwise, returns 1
+(true) and set \kbd{n} to the rounded value.
+
+\fun{int}{gcmp0}{GEN x} returns 1 (true) if \kbd{x} is equal to~0, 0~(false)
+otherwise.
+
+\fun{int}{gcmp1}{GEN x} returns 1 (true) if \kbd{x} is equal to~1, 0~(false)
+otherwise.
+
+\fun{int}{gcmp_1}{GEN x} returns 1 (true) if \kbd{x} is equal to~$-1$,
+0~(false) otherwise.
+
+\fun{long}{gcmp}{GEN x, GEN y} comparison of \kbd{x} with \kbd{y} (returns
+the sign of $\kbd{x}-\kbd{y}$).
+
+\fun{long}{gcmpsg}{long s, GEN x} comparison of the \kbd{long}~\kbd{s}
+with~\kbd{x}.
+
+\fun{long}{gcmpgs}{GEN x, long s} comparison of \kbd{x} with the
+\kbd{long}~\kbd{s}.
+
+\fun{long}{lexcmp}{GEN x, GEN y} comparison of \kbd{x} with \kbd{y} for the
+lexicographic ordering.
+
+\fun{long}{gequal}{GEN x, GEN y} returns 1 (true) if \kbd{x} is equal
+to~\kbd{y}, 0~otherwise. A priori, this makes sense only if \kbd{x} and
+\kbd{y} have the same type. When the types are different, a \kbd{true} result
+means that \kbd{x - y} was successfully computed and found equal to $0$
+(by \kbd{gcmp0}). In particular
+\bprog
+  gequal(cgetg(1, t_VEC), gen_0)
+@eprog\noindent is true, and the relation is not transitive. E.g.~an empty
+\typ{COL} and an empty \typ{VEC} are not equal but are both equal to
+\kbd{gen\_0}.
+
+\fun{long}{gequalsg}{long s, GEN x} returns 1 (true) if the \kbd{long}~\kbd{s}
+is equal to~\kbd{x}, 0~otherwise.
+
+\fun{long}{gequalgs}{GEN x, long s} returns 1 (true) if \kbd{x} is equal to
+the \kbd{long}~\kbd{s}, 0~otherwise.
+
+\fun{long}{iscomplex}{GEN x} returns 1 (true) if \kbd{x} is a complex number
+(of component types embeddable into the reals) but is not itself real, 0~if
+\kbd{x} is a real (not necessarily of type \typ{REAL}), or raises an error if
+\kbd{x} is not embeddable into the complex numbers.
+
+\fun{long}{ismonome}{GEN x} returns 1 (true) if \kbd{x} is a non-zero
+monomial in its main variable, 0~otherwise.
+
+\subsec{Generic unary operators}
+
+\funno{GEN}{gneg[\key{z}]}{GEN x[, GEN z]} yields $-\kbd{x}$.
+
+\funno{GEN}{gabs[\key{z}]}{GEN x[, GEN z]} yields $|\kbd{x}|$.
+
+\fun{GEN}{gsqr}{GEN x} creates the square of~\kbd{x}.
+
+\fun{GEN}{ginv}{GEN x} creates the inverse of~\kbd{x}.
+
+\subsec{Divisibility, Euclidean division}
+
+\fun{GEN}{gdivexact}{GEN x, GEN y} returns the quotient $\kbd{x} / \kbd{y}$,
+assuming $\kbd{y}$ divides $\kbd{x}$.
+
+\fun{int}{gdvd}{GEN x, GEN y}  returns 1 (true) if \kbd{y} divides~\kbd{x},
+0~otherwise.
+
+\fun{GEN}{gdiventres}{GEN x, GEN y} creates a 2-component vertical
+vector whose components are the true Euclidean quotient and remainder
+of \kbd{x} and~\kbd{y}.
+
+\fun{GEN}{gdivent[z]}{GEN x, GEN y[, GEN z]} yields the true Euclidean
+quotient of \kbd{x} and the \typ{INT} or \typ{POL}~\kbd{y}.
+
+\fun{GEN}{gdiventsg[z]}{long s, GEN y[, GEN z]}, as \kbd{gdivent}
+except that \kbd{x} is a \kbd{long}.
+
+\fun{GEN}{gdiventgs[z]}{GEN x, long s[, GEN z]}, as \kbd{gdivent}
+except that \kbd{y} is a \kbd{long}.
+
+\fun{GEN}{gmod[z]}{GEN x, GEN y[, GEN z]} yields the true remainder of \kbd{x}
+modulo the \typ{INT} or \typ{POL}~\kbd{y}. A \typ{REAL} or \typ{FRAC} \kbd{y}
+is also allowed, in which case the remainder is the unique real $r$ such that
+$0 \leq r < |\kbd{y}|$ and $\kbd{y} = q\kbd{x} + r$ for some (in fact unique)
+integer $q$.
+
+\fun{GEN}{gmodsg[z]}{long s, GEN y[, GEN z]} as \kbd{gmod}, except \kbd{x} is
+a \kbd{long}.
+
+\fun{GEN}{gmodgs[z]}{GEN x, long s[, GEN z]} as \kbd{gmod}, except \kbd{y} is
+a \kbd{long}.
+
+\fun{GEN}{gdivmod}{GEN x, GEN y, GEN *r} If \kbd{r} is not equal to
+\kbd{NULL} or \kbd{ONLY\_REM}, creates the (false) Euclidean quotient of
+\kbd{x} and~\kbd{y}, and puts (the address of) the remainder into~\kbd{*r}.
+If \kbd{r} is equal to \kbd{NULL}, do not create the remainder, and if
+\kbd{r} is equal to \kbd{ONLY\_REM}, create and output only the remainder.
+The remainder is created after the quotient and can be disposed of
+individually with a \kbd{cgiv(r)}.
+
+\fun{GEN}{poldivrem}{GEN x, GEN y, GEN *r} same as \key{gdivmod} but
+specifically for \typ{POL}s~\kbd{x} and~\kbd{y}, not necessarily in the same
+variable. Either of \kbd{x} and \kbd{y} may also be scalars (treated as
+polynomials of degree $0$)
+
+\fun{GEN}{gdeuc}{GEN x, GEN y} creates the Euclidean quotient of the
+\typ{POL}s~\kbd{x} and~\kbd{y}. Either of \kbd{x} and \kbd{y} may also be
+scalars (treated as polynomials of degree $0$)
+
+\fun{GEN}{grem}{GEN x, GEN y} creates the Euclidean remainder of the
+\typ{POL}~\kbd{x} divided by the \typ{POL}~\kbd{y}.
+
+\fun{GEN}{gdivround}{GEN x, GEN y} if \kbd{x} and \kbd{y} are \typ{INT},
+as \kbd{diviiround}. Operate componentwise if \kbd{x} is
+a \typ{COL}, \typ{VEC} or \typ{MAT}. Otherwise as \key{gdivent}.
+
+\fun{GEN}{centermod_i}{GEN x, GEN y, GEN y2}, as \kbd{centermodii},
+componentwise.
+
+\fun{GEN}{centermod}{GEN x, GEN y}, as \kbd{centermod\_i}, except that
+\kbd{y2} is computed (and left on the stack for efficiency).
+
+\fun{GEN}{ginvmod}{GEN x, GEN y} creates the inverse of \kbd{x} modulo \kbd{y}
+when it exists. \kbd{y} must be of type \typ{INT} (in which case \kbd{x} is
+of type \typ{INT}) or \typ{POL} (in which case \kbd{x} is either a scalar
+type or a \typ{POL}).
+
+\subsec{GCD, content and primitive part}
+
+\fun{GEN}{subres}{GEN x, GEN y} creates the resultant of the \typ{POL}s
+\kbd{x} and~\kbd{y} computed using the subresultant algorithm. Either of
+\kbd{x} and \kbd{y} may also be scalars (treated as polynomials of degree
+$0$)
+
+\fun{GEN}{ggcd}{GEN x, GEN y} creates the GCD of \kbd{x} and~\kbd{y}.
+
+\fun{GEN}{glcm}{GEN x, GEN y} creates the LCM of \kbd{x} and~\kbd{y}.
+
+\fun{GEN}{gbezout}{GEN x,GEN y, GEN *u,GEN *v} creates the GCD of \kbd{x}
+and~\kbd{y}, and puts (the addresses of) objects $u$ and~$v$ such that
+$u\kbd{x}+v\kbd{y}=\gcd(\kbd{x},\kbd{y})$ into \kbd{*u} and~\kbd{*v}.
+
+\fun{GEN}{bezoutpol}{GEN a,GEN b, GEN *u,GEN *v}, returns the GCD $d$ of
+\typ{INT}s \kbd{a} and \kbd{b} and sets \kbd{u}, \kbd{v} to the Bezout
+coefficients such that $\kbd{au} + \kbd{bv} = d$.
+
+\fun{GEN}{content}{GEN x} creates the GCD of all the components of~\kbd{x}.
+
+\fun{GEN}{primitive_part}{GEN x, GEN *c}, sets \kbd{c} to \kbd{content(x)}
+and returns the primitive part \kbd{x} / \kbd{c}.
+
+\fun{GEN}{primpart}{GEN x} as \kbd{primitive\_part} but the content is lost.
+(For efficiency, the content remains on the stack.)
+
+\subsec{Generic binary operators}. Let ``\op'' be a binary operation among
+
+\op=\key{add}: addition (\kbd{x + y}).
+
+\op=\key{sub}: subtraction (\kbd{x - y}).
+
+\op=\key{mul}: multiplication (\kbd{x * y}).
+
+\op=\key{div}: division (\kbd{x / y}).
+
+\op=\key{max}: maximum (\kbd{max(x, y)})
+
+\op=\key{min}: minimum (\kbd{min(x, y)})
+
+\noindent The names and prototypes of the functions corresponding
+to \op\ are as follows:
+
+\funno{GEN}{g\op[z]}{GEN x, GEN y[, GEN z]}
+
+\funno{GEN}{g\op gs[z]}{GEN x, long s[, GEN z]}
+
+\funno{GEN}{g\op sg[z]}{long s, GEN y[, GEN z]}
+
+\fun{GEN}{gpow}{GEN x, GEN y, long l} creates $\kbd{x}^{\kbd{y}}$. If
+\kbd{y} is a \typ{INT}, return \kbd{powgi(x,y)} (the precision \kbd{l} is not
+taken into account). Otherwise, the result is $\exp(\kbd{y}*\log(\kbd{x}))$
+computed to precision~\kbd{l}.
+
+\fun{GEN}{gpowgs}{GEN x, long n} creates $\kbd{x}^{\kbd{n}}$ using
+binary powering.
+
+\fun{GEN}{powgi}{GEN x, GEN y} creates $\kbd{x}^{\kbd{y}}$, where \kbd{y} is a
+\typ{INT}, using left-shift binary powering.
+
+
+\fun{GEN}{gsubst}{GEN x, long v, GEN y} substitutes the object \kbd{y}
+into~\kbd{x} for the variable number~\kbd{v}.
+
+\subsec{Miscellaneous functions}
+
+\fun{const char*}{type_name}{long t} given a type number \kbd{t} this routine
+returns a string containing its symbolic name. E.g \kbd{type\_name(\typ{INT})}
+returns \kbd{"\typ{INT}"}. The return value is read-only.
+
+\section{Further type specific functions}
+
+\subsec{Vectors and Matrices}
+See~\secref{se:clean} and~\secref{se:unclean} for various useful constructors.
+Coefficients are accessed and set using \tet{gel}, \tet{gcoeff},
+see~\secref{se:accessors}. There are many internal functions to extract or
+manipulate subvectors or submatrices but, like the accessors above, none of
+them are suitable for \tet{gerepileupto}. Worse, there are no type
+verification, nor bound checking, so use at your own risk.
+
+\misctitle{Note.} In the function names below, $i$ stands for \emph{interval}
+and $p$ for \emph{permutation}.
+
+\fun{GEN}{shallowcopy}{GEN x} returns a \typ{GEN} whose components are the
+components of $x$ (no copy is made). The result may now be used to compute in
+place without destroying $x$. This is essentially equivalent to
+\bprog
+  GEN y = cgetg(lg(x), typ(x));
+  for (i = 1; i < lg(x); i++) y[i] = x[i];
+  return y;
+@eprog\noindent
+except that \typ{POLMOD} (resp.~\typ{MAT}) are treated specially since a
+dummy copy of the representative (resp.~all columns) is also made.
+
+\fun{GEN}{shallowtrans}{GEN x} returns the transpose of $x$, \emph{without}
+copying its components, i.~e.,~it returns a \kbd{GEN} whose components are
+(physically) the components of $x$. This is the internal function underlying
+\tet{gtrans}.
+
+\fun{GEN}{shallowconcat}{GEN x, GEN y} concatenate $x$ and $y$, \emph{without}
+copying compoents, i.~e.,~it returns a \kbd{GEN} whose components are 
+(physically) the comonents of $x$ and $y$.
+
+\fun{GEN}{vconcat}{GEN A, GEN B} concatenate vertically the two \typ{MAT} $A$
+and $B$ of compatible dimensions. A \kbd{NULL} pointer is accepted for an
+empty matrix. See \tet{shallowconcat}.
+
+\fun{GEN}{row}{GEN A, long i} return $A[i,]$, the $i$-th row of the \typ{MAT}
+$A$.
+
+\fun{GEN}{row_i}{GEN A, long i, long j1, long j2} return part of the $i$-th
+row of \typ{MAT} $A$: $A[i,j_1]$, $A[i,j_1+1]\dots,A[i,j_2]$. Assume $j_1
+\leq j_2$.
+
+\fun{GEN}{rowslice}{GEN A, long i1, long i2} return the \typ{MAT}
+formed by the $i_1$-th through $i_2$-th rows of \typ{MAT} $A$. Assume $i_1
+\leq i_2$.
+
+\fun{GEN}{rowpermute}{GEN A, GEN p}, $p$ being a \typ{VECSMALL}
+representing a list $[p_1,\dots,p_n]$ of rows of \typ{MAT} $A$, returns the
+matrix whose rows are $A[p_1,],\dots, A[p_n,]$.
+
+\fun{GEN}{rowslicepermute}{GEN A, GEN p, long x1, long x2}, short for
+\bprog
+  rowslice(rowpermute(A,p), x1, x2)
+@eprog\noindent
+(more efficient).
+
+\fun{GEN}{vecslice}{GEN A, long j1, long j2}, return $A[j_1], \dots,
+A[j_2]$. If $A$ is a \typ{MAT}, these correspond to \emph{columns} of $A$.
+The object returned has the same type as $A$ (\typ{VEC}, \typ{COL} or
+\typ{MAT}). Assume $j_1 \leq j_2$.
+
+\fun{GEN}{vecpermute}{GEN A, GEN p} $p$ is a \typ{VECSMALL} representing
+a list $[p_1,\dots,p_n]$ of indices. Returns a \kbd{GEN} which has the same
+type as $A$ (\typ{VEC}, \typ{COL} or \typ{MAT}), and whose components
+are $A[p_1],\dots,A[p_n]$. If $A$ is a \typ{MAT}, these are the
+\emph{columns} of $A$.
+
+\fun{GEN}{vecslicepermute}{GEN A, GEN p, long y1, long y2} short for 
+\bprog
+  vecslice(vecpermute(A,p), y1, y2)
+@eprog\noindent
+(more efficient).
+
+\subsec{Low-level vectors and columns functions}
+
+Theses functions handle \typ{VEC} as an abstract container type
+of \kbd{GEN}s. No specific meaning is attached to the content.
+
+They accept both \typ{VEC} and \typ{COL} as input, but \kbd{col} functions
+always return \typ{COL} and \kbd{vec} functions alway return \typ{VEC}.
+
+\misctitle{Note.} All the functions below are shallow.
+
+\fun{GEN}{const_col}{long n, long c} returns a \typ{COL} of \kbd{n} components
+equal to \kbd{c}.
+
+\fun{GEN}{const_vec}{long n, long c} returns a \typ{VEC} of \kbd{n} components
+equal to \kbd{c}.
+
+\fun{int}{vec_isconst}{GEN v} Returns 1 if all the components of \kbd{v} are
+equal, else returns 0.
+
+\fun{int}{vec_is1to1}{GEN v}  Returns 1 if the components of \kbd{v} are
+pair-wise distinct, i.e. if $i\mapsto v[i]$ is a 1-to-1 mapping, else returns
+0.
+
+\fun{GEN}{vec_shorten}{GEN v, long n} shortens the vector \kbd{v} to \kbd{n}
+components.
+
+\fun{GEN}{vec_lengthen}{GEN v, long n} lengthens the vector \kbd{v}
+to \kbd{n} components. The extra components are not initialised.
+
+\subsec{Function to handle \typ{VECSMALL}}
+
+Theses functions handle \typ{VECSMALL} as an abstract container type
+of small signed integers. No specific meaning is attached to the content.
+
+\fun{GEN}{const_vecsmall}{long n, long c} returns a \typ{VECSMALL}
+of \kbd{n} components equal to \kbd{c}.
+
+\fun{GEN}{vec_to_vecsmall}{GEN z} identical to \kbd{ZV\_to\_zv(z)}.
+
+\fun{GEN}{vecsmall_to_vec}{GEN z} identical to \kbd{zv\_to\_ZV(z)}.
+
+\fun{GEN}{vecsmall_to_col}{GEN z} identical to \kbd{zv\_to\_ZC(z)}.
+
+\fun{GEN}{vecsmall_copy}{GEN x} makes a copy of \kbd{x} on the stack.
+
+\fun{GEN}{vecsmall_shorten}{GEN v, long n} shortens the \typ{VECSMALL} \kbd{v}
+to \kbd{n} components.
+
+\fun{GEN}{vecsmall_lengthen}{GEN v, long n} lengthens the \typ{VECSMALL}
+\kbd{v} to \kbd{n} components. The extra components are not initialised.
+
+\fun{GEN}{vecsmall_indexsort}{GEN x} performs an indirect sort of the
+components of the \typ{VECSMALL} \kbd{x} and return a permutation stored in a
+\typ{VECSMALL}.
+
+\fun{void}{vecsmall_sort}{GEN v} sorts the \typ{VECSMALL} \kbd{v} in place.
+
+\fun{GEN}{vecsmall_uniq}{GEN v} given a sorted \typ{VECSMALL} \kbd{v}, return
+the vector of unique occurences.
+
+\fun{int}{vecsmall_lexcmp}{GEN x, GEN y} compares two \typ{VECSMALL} lexically
+
+\fun{int}{vecsmall_prefixcmp}{GEN x, GEN y} truncate the longest \typ{VECSMALL}
+to the length of the shortest and compares them lexicographically.
+
+\fun{GEN}{vecsmall_prepend}{GEN V, long s} prepend \kbd{s} to the \typ{VECSMALL} \kbd{V}.
+
+\fun{GEN}{vecsmall_append}{GEN V, long s} append \kbd{s} to the \typ{VECSMALL} \kbd{V}.
+
+\fun{GEN}{vecsmall_concat}{GEN u, GEN v} concat the \typ{VECSMALL} \kbd{u} and \kbd{v}.
+
+\fun{long}{vecsmall_coincidence}{GEN u, GEN v} returns the numbers of indices where \kbd{u} and \kbd{v} agree.
+
+\fun{long}{vecsmall_pack}{GEN v, long base, long mod} handles the
+\typ{VECSMALL} \kbd{v} as the digit of a number in base \kbd{base} and return
+this number modulo \kbd{mod}. This can be used as an hash function.
+
+\subsec{Functions to handle bits-vectors}
+Theses functions manipulate vectors of bits (stored in \typ{VECSMALL}).
+Bits are numbered from 0.
+
+\fun{GEN}{bitvec_alloc}{long n} allocates a bits-vector suitable for \kbd{n}
+bits.
+
+\fun{GEN}{bitvec_shorten}{GEN bitvec, long n} shortens a bits-vector
+\kbd{bitvec} to \kbd{n} bits.
+
+\fun{long}{bitvec_test}{GEN bitvec, long b} returns the bit of index \kbd{b} of
+\kbd{bitvec}.
+
+\fun{void}{bitvec_set}{GEN bitvec, long b} (in place) sets the bit of index
+\kbd{b} of \kbd{bitvec}.
+
+\fun{void}{bitvec_clear}{GEN bitvec, long b} (in place) clears the bit of index \kbd{b} of \kbd{bitvec}.
+
+\subsec{Functions to handle vectors of \typ{VECSMALL}}
+Theses functions manipulate vectors of \typ{VECSMALL} (vecvecsmall).
+
+\fun{GEN}{vecvecsmall_sort}{GEN x} sorts lexicographically the components of
+the vector \kbd{x}.
+
+\fun{GEN}{vecvecsmall_indexsort}{GEN x} performs an indirect lexicographic sorting of the components of the vector \kbd{x} and return a permutation stored in a \typ{VECSMALL}.
+
+\fun{long}{vecvecsmall_search}{GEN x, GEN y, long flag} \kbd{x} being a sorted
+vecvecsmall and \kbd{y} a \typ{VECSMALL}, search \kbd{y} inside \kbd{x}. \kbd{fla} has the same meaning as for \kbd{setsearch}.
+
+\vfill\eject

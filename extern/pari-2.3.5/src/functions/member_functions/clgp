@@ -1,0 +1,10 @@
+Function: _.clgp
+Class: member_functions
+C-Name: member_clgp
+Prototype: G
+Description: 
+ (bnf):clgp:copy:parens		$clgp:1
+ (bnr):clgp:copy:parens		$clgp:1
+ (clgp):clgp:parens		$1
+ (gen):clgp                     member_clgp($1)
+

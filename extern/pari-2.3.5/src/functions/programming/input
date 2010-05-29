@@ -1,0 +1,7 @@
+Function: input
+Class: gp
+Section: programming
+C-Name: input0
+Prototype: 
+Help: input(): read an expression from the input file or standard input
+

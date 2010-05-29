@@ -1,0 +1,7 @@
+Function: matsupplement
+Section: linear_algebra
+C-Name: suppl
+Prototype: G
+Help: matsupplement(x): supplement the columns of the matrix x to an
+ invertible matrix
+

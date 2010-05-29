@@ -1,0 +1,12 @@
+Function: nfbasis
+Section: number_fields
+C-Name: nfbasis0
+Prototype: GD0,L,DG
+Help: nfbasis(x,{flag=0},{p}): integral basis of the field Q[a], where a is
+ a root of the polynomial x, using the round 4 algorithm. Second and third
+ args are optional. Binary digits of flag mean 1: assume that no square of a
+ prime>primelimit divides the discriminant of x, 2: use round 2 algorithm
+ instead. If present, p provides the matrix of a partial factorization of the
+ discriminant of x, useful if one wants only an order maximal at certain
+ primes only
+

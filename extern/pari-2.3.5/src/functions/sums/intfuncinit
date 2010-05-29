@@ -1,0 +1,13 @@
+Function: intfuncinit
+Section: sums
+C-Name: intfuncinit0
+Prototype: V=GGED0,L,D0,L,p
+Help: intfuncinit(X=a,b,s,{flag=0},{m=0}): initialize tables for integrations 
+ from a to b using a weight s(X). Essential for integral transforms such
+ as intmellininv, intlaplaceinv and intfourier, since it avoids recomputing
+ all the time the same quantities. Must then be used with intmellininvshort
+ (for intmellininv) and directly with intnum and not with the corresponding 
+ integral transforms for the others. See help for intnum for coding of a 
+ and b, and m is as in intnuminit. If flag is nonzero, assumes that 
+ s(-X)=conj(s(X)), which is twice faster.
+

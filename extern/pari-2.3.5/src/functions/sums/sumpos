@@ -1,0 +1,8 @@
+Function: sumpos
+Section: sums
+C-Name: sumpos0
+Prototype: V=GED0,L,p
+Help: sumpos(X=a,expr,{flag=0}): sum of positive series expr, the formal
+ variable X starting at a. flag is optional, and can be 0: default, or 1:
+ uses a slightly different method using Zagier's polynomials
+
