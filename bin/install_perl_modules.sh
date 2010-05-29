@@ -19,3 +19,11 @@ cd $MATHCDF
 perl Makefile.PL PREFIX=../../src/perl/extern
 make
 make install
+
+## Math::Pari
+MATHPARI="$CURRENTDIR/$THISDIR/../extern/Math-Pari-2.01080604"
+echo $MATHPARI
+cd $MATHPARI
+perl Makefile.PL PREFIX=../../src/perl/extern
+make
+make install
