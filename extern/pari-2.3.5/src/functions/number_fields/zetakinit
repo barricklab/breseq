@@ -1,0 +1,7 @@
+Function: zetakinit
+Section: number_fields
+C-Name: initzeta
+Prototype: Gp
+Help: zetakinit(x): compute number field information necessary to use zetak,
+ where x is an irreducible polynomial
+

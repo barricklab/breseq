@@ -1,0 +1,22 @@
+Function: qflll
+Section: linear_algebra
+C-Name: qflll0
+Prototype: GD0,L,p
+Help: qflll(x,{flag=0}): LLL reduction of the vectors forming the matrix x
+ (gives the unimodular transformation matrix). The columns of x must be
+ linearly independent, unless specified otherwise below. flag is optional, 
+ and can be 0: default, 1: assumes x is integral, columns may be dependent, 2:
+ assumes x is integral, returns a partially reduced basis, 4: assumes x is 
+ integral, returns [K,I] where K is the integer kernel of x and I the LLL
+ reduced image, 5: same as 4 but x may have polynomial coefficients, 8: same
+ as 0 but x may have polynomial coefficients
+Description: 
+ (vec, ?0):vec:prec	lll($1, prec)
+ (vec, 1):vec	lllint($1)
+ (vec, 2):vec	lllintpartial($1)
+ (vec, 4):vec	lllkerim($1)
+ (vec, 5):vec	lllkerimgen($1)
+ (vec, 8):vec	lllgen($1)
+ (vec, #small):vec	$"Bad flag in qflll"
+ (vec, small):vec:prec	qflll0($1, $2, prec)
+

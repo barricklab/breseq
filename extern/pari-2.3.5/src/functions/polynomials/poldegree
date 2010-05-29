@@ -1,0 +1,12 @@
+Function: poldegree
+Section: polynomials
+C-Name: poldegree
+Prototype: lGDn
+Help: poldegree(x,{v}): degree of the polynomial or rational function x with
+ respect to main variable if v is omitted, with respect to v otherwise.
+ For scalar x, return 0 is x is non-zero and a negative number otherwise
+Description: 
+ (pol):small	        degpol($1)
+ (gen):small	        degree($1)
+ (gen, var):small	poldegree($1, $2)
+

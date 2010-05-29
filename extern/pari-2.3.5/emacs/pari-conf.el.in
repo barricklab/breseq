@@ -1,0 +1,14 @@
+;; $Id: pari-conf.el.in 5072 2003-11-20 18:49:46Z kb $
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+(provide 'pari-conf)
+;; Set the following constants for your site:
+(defconst gp-version "@version@" "pari's version number")
+
+(defconst gp-file-name "@bindir@/gp"
+ "The file name of the gp executable file")
+
+(defconst gp-gphelp-dir "@bindir@/"
+  "The directory where gphelp is to be found")
+
+(defconst gp-pariemacs "@emacsdir/pariemacs.txt"
+  "The pariemacs file")

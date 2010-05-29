@@ -1,0 +1,7 @@
+Function: nfeltdivmodpr
+Section: number_fields
+C-Name: element_divmodpr
+Prototype: GGGG
+Help: nfeltdivmodpr(nf,a,b,pr): element a/b modulo pr in nf, where pr is in
+ modpr format (see nfmodprinit)
+

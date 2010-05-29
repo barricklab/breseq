@@ -1,0 +1,11 @@
+Function: -_
+Class: symbolic_operators
+C-Name: gneg
+Prototype: G
+Description: 
+ (small):small:parens		-$(1)
+ (int):int			negi($1)
+ (real):real			negr($1)
+ (mp):mp			mpneg($1)
+ (gen):gen			gneg($1)
+

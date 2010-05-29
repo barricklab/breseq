@@ -1,0 +1,11 @@
+Function: ispseudoprime
+Section: number_theoretical
+C-Name: gispseudoprime
+Prototype: GD0,L,
+Help: ispseudoprime(x,{n}): true(1) if x is a strong pseudoprime, false(0)
+ if not. If n is 0 or omitted, use BPSW test, otherwise use strong
+ Rabin-Miller test for n randomly chosen bases
+Description: 
+ (int):bool	ispsp($1)
+ (gen):gen	gispsp($1)
+

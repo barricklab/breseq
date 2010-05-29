@@ -1,0 +1,11 @@
+if test -n "$perl"; then
+  echo $rep | $perl -e "
+     @input=split(/\s/,<>); \$len = \$#input + 3;
+     \$len = ( \$len - \$len % 3) / 3;
+     for(\$i=0;\$i<\$len;\$i++) {
+       printf qq(      %-18s%-18s%-18s\n),
+         \$input[\$i], \$input[\$i+\$len], \$input[\$i+2*\$len];
+     }"
+else
+  echo $rep
+fi

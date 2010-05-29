@@ -1,0 +1,29 @@
+--- ./src/language/init.c-pre-interface	Fri Jan 11 15:05:20 2002
++++ ./src/language/init.c	Sat Apr 20 01:26:30 2002
+@@ -2046,7 +2046,7 @@ entree functions_basic[]={
+ {"dirmul",2,(void*)dirmul,4,"GG"},
+ {"dirzetak",2,(void*)dirzetak,6,"GG"},
+ {"divisors",18,(void*)divisors,4,"G"},
+-{"divrem",2,(void*)divrem,1,"GGDn"},
++{"divrem",99,(void*)divrem,1,"GGDn"},
+ {"eint1",99,(void*)veceint1,3,"GDGp"},
+ {"elladd",3,(void*)addell,5,"GGG"},
+ {"ellak",2,(void*)akell,5,"GG"},
+@@ -2124,7 +2124,7 @@ entree functions_basic[]={
+ {"idealfactor",2,(void*)idealfactor,6,"GG"},
+ {"idealhnf",99,(void*)idealhnf0,6,"GGDG"},
+ {"idealintersect",3,(void*)idealintersect,6,"GGG"},
+-{"idealinv",25,(void*)idealinv,6,"GG"},
++{"idealinv",2,(void*)idealinv,6,"GG"},
+ {"ideallist",99,(void*)ideallist0,6,"GLD4,L,"},
+ {"ideallistarch",99,(void*)ideallistarch0,6,"GGDGD0,L,"},
+ {"ideallog",3,(void*)zideallog,6,"GGG"},
+@@ -2132,7 +2132,7 @@ entree functions_basic[]={
+ {"idealmul",99,(void*)idealmul0,6,"GGGD0,L,p"},
+ {"idealnorm",2,(void*)idealnorm,6,"GG"},
+ {"idealpow",99,(void*)idealpow0,6,"GGGD0,L,p"},
+-{"idealprimedec",29,(void*)primedec,6,"GG"},
++{"idealprimedec",2,(void*)primedec,6,"GG"},
+ {"idealprincipal",2,(void*)principalideal,6,"GG"},
+ {"idealred",99,(void*)ideallllred,6,"GGDGp"},
+ {"idealstar",99,(void*)idealstar0,6,"GGD1,L,"},

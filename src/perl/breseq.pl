@@ -89,8 +89,13 @@ use FindBin;
 use lib $FindBin::Bin;
 $ENV{PATH} = "$ENV{PATH}:" . $FindBin::Bin;
 
-#### Path to Locally Installed Modules ####
-use lib $FindBin::Bin . "/../../lib/perl5";
+#### Paths to Locally Installed Modules ####
+use lib $FindBin::Bin . "/extern/lib/perl5";
+use lib $FindBin::Bin . "/extern/lib/perl5/site_perl";
+
+# This block can test to be sure the right location/version is being used...
+#use Bio::DB::Sam;
+#print "$Bio::DB::Sam::VERSION \n";
 
 #### Breseq Perl Modules ####
 use Breseq::AlignmentCorrection;
@@ -100,17 +105,13 @@ use Breseq::Settings;
 use Breseq::Shared;
 use Breseq::CandidateJunctions;
 use Breseq::MutationIdentification;
+use Breseq::MutationPredictor;
 use Breseq::ReferenceSequence;
 
 #### BioPerl Modules ####
 use Bio::SeqIO;
 
 #### Configuration Options ####
-
-our %unwanted_sequences = ( 
-	'UNWANTED::ILLUMINA_ADAPTOR_1'    => 'GATCGGAAGAGCTCGTATGCCGTCTTCTGCTTG',  #Solexa Adaptor sequence.
-	'UNWANTED::ILLUMINA_ADAPTOR_2'	  => 'ACACTCTTTCCCTACACGACGCTCTTCCGATCT'
-);                              
 
 ## Keep a summary of certain statistics. 
 my $summary = {};
@@ -763,8 +764,8 @@ if (!-e $output_done_file_name)
 	$merged_gd->write($merged_evidence_genome_diff_file_name);
 	
 	## predict mutations from evidence in the GenomeDiff
-	print STDERR "Predicting mutations from evidence...\n"
-	my $mp = Breseq::MutationPredictor->new();
+	print STDERR "Predicting mutations from evidence...\n";
+	my $mp = Breseq::MutationPredictor->new( -ref_seq_info => $ref_seq_info );
 	$mp->predict($merged_gd);
 	my $final_genome_diff_file_name = $settings->file_name('final_genome_diff_file_name');
 	$merged_gd->write($final_genome_diff_file_name);

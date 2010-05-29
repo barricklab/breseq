@@ -1,0 +1,8 @@
+Function: ideallog
+Section: number_fields
+C-Name: zideallog
+Prototype: GGG
+Help: ideallog(nf,x,bid): if bid is a big ideal, as given by
+ idealstar(nf,I,1) or idealstar(nf,I,2), gives the vector of exponents on the
+ generators bid[2][3] (even if these generators have not been computed)
+

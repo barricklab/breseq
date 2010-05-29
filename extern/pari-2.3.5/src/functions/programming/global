@@ -1,0 +1,4 @@
+Function: global
+Section: programming
+Help: global(x): declare x to be a global variable
+

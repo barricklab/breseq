@@ -1,0 +1,7 @@
+Function: rnfidealhnf
+Section: number_fields
+C-Name: rnfidealhermite
+Prototype: GG
+Help: rnfidealhnf(rnf,x): relative version of idealhnf, where rnf is a
+ relative numberfield
+

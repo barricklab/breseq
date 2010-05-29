@@ -1,0 +1,6 @@
+Function: printtex
+Section: programming
+C-Name: printtex
+Prototype: vs*
+Help: printtex(a): outputs a in TeX format
+

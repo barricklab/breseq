@@ -1,0 +1,6 @@
+Function: mathess
+Section: linear_algebra
+C-Name: hess
+Prototype: G
+Help: mathess(x): Hessenberg form of x
+

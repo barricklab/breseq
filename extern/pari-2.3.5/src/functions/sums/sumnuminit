@@ -1,0 +1,9 @@
+Function: sumnuminit
+Section: sums
+C-Name: sumnuminit
+Prototype: GD0,L,D1,L,p
+Help: sumnuminit(sig, {m=0}, {sgn=1}): initialize tables for numerical
+ summation. sgn is 1 (in fact >= 0), the default, for sumnum (ordinary sums) 
+ or -1 (in fact < 0) for sumnumalt (alternating sums). sig is as in sumnum and
+ m is as in intnuminit.
+

@@ -1,0 +1,113 @@
+/* $Id: gprc.dft 3766 2002-10-30 16:15:23Z karim $
+ * 
+ * SAMPLE GP INIT FILE.
+ *
+ * Customize (by uncommenting and modifying the relevant lines) and put in
+ * $HOME/.gprc (or $GPRC) or /etc/gprc. Syntax explained at the end. */
+
+\\ read "lib/gpalias"
+/* Read lib/gpalias BEFORE gp prompts you for commands.
+ * The file contains some standard abbreviations (correct the path first !) */
+
+\\ compatible = 0
+/* CAUTION: scripts written in the old (1.x) syntax WILL NOT WORK AS BEFORE.
+ * If compatible>1, the OLD functions are the ONLY ONES known to gp, save
+ * for default() itself */
+
+\\ path = ".:~:~/gpdir"
+/* List of directories where gp will look for scripts (separated by ':',
+ * use "\:" to insert a real ":"). The ~ notation may not be available on
+ * your system */
+
+prompt = "(%H:%M) \e[1mgp\e[m > "
+#if READL prompt = "(%H:%M) \e[1mgp\e[m > "
+#if EMACS prompt = "? "
+/* Set gp prompt. % is used for macros related to the time of day [back to
+ * the shell prompt, try "man strftime"]. Example: %H:%M = time of day in the
+ * form HH:MM. Characters can be escaped UNIX-style using '\', e.g \e = <ESC>
+ *
+ * Above, the first escape sequence sets a bold font, the second restores
+ * the original (so we get a bold "gp"), and we prefix by the time of day
+ *
+ * CAUTION1: If you have escape sequences in your prompt (as above) and use
+ * readline, you will get display bugs. With a recent enough readline, you
+ * can work around those by bracing non-visible characters between ^A/^B
+ * pairs (see manual), like this:
+ * 
+ * #if READL prompt = "(%H:%M) \e[1mgp\e[m > "
+ *                             ^^_____^^ brace the "set bold" sequence \e[1m
+ *
+ * CAUTION2: If you plan to use gp under emacs, do not tamper with the prompt
+ * variable UNLESS you also set correctly the gp-prompt-pattern regexp in
+ * your .emacs. For instance, if to use:
+ *
+ * #if EMACS prompt = "(%H:%M) gp > "
+ *
+ * add the following two lines in your .emacs (see emacs/pariemacs.txt)
+ *
+ * (setq gp-prompt-pattern
+ *  (concat "^([0-9][0-9]:[0-9][0-9]) gp > [\C-j\t ]*\\|" gp-prompt-pattern))
+ */
+
+\\ use an alternate prettyprinter
+prettyprinter = "/usr/local/bin/tex2mail -TeX -noindent -ragged -by_par"
+
+\\ clear background:
+\\   #ifnot EMACS colors = "9, 5, no, no, 4, 1, 2"
+\\ dark background:
+\\   #ifnot EMACS colors = "9, 1, no, no, 6, 1, 2"
+/* If your terminal supports color. These are suggested values that don't
+ * look too bad with the colormap provided with the distribution (under
+ * emacs you can customize colors using the Menu Bar). */
+
+\\ Extended help options (don't interact well with emacs):
+\\ Don't use TeX + xdvi, but outputs formatted help in GP window:
+\\   #ifnot EMACS help = "/usr/local/bin/gphelp -detex"
+\\ Same, using colors:
+\\   #ifnot EMACS help = "/usr/local/bin/gphelp -detex -ch 4 -cb 0 -cu 2"
+
+\\ Stack size : 10^7 Bytes.
+\\ parisize = 10M
+
+\\ Biggest precomputed prime (= prevprime(10^6))
+\\ primelimit = 1M
+
+\\ Set timer on
+\\ timer = 1
+
+\\ Set logfile name and enable logging.
+\\ Uncommenting the next two lines produces a different logfile each day:
+\\ logfile = "~/tmp/pari-%d.%m"
+\\ log = 1
+
+\\ Output for postscript-producing gp commands.
+\\ psfile = "~/tmp/pari.ps"
+
+\\ secure = 1
+/* Disable commands system() and extern(). These commands are dangerous
+ * since they allow scripts to execute arbitrary Unix commands */
+
+\\********************** FORMAT OF THIS FILE :    ***************************
+\\  Lines starting with '\\' and between '/*' '*/' pairs are comments
+\\  Blank lines are ignored
+\\  Line starting with #if BOOLEAN is read iff BOOLEAN is TRUE
+\\  Currently recognized booleans:
+\\    EMACS  are we running under Emacs?
+\\    READL  is readline available?
+\\    VERSION {<,>,<=,>=} a.b.c  does version number satisfy the inequality?
+\\
+\\  This file should be put in $HOME/.gprc or /etc/gprc and contains:
+\\  * references to gp scripts that are to be run BEFORE the first gp prompt.
+\\
+\\    Syntax: read "filename"  (quotes are mandatory. ~ syntax allowed)
+\\
+\\  * variable definitions (so-called "environment variables" in the sequel)
+\\
+\\   Definitions are overruled by command line switches. For instance
+\\     invoking gp -s 100 will set environment variable stacksize to 100 (not
+\\     a very bright thing to do by the way), regardless of what is in .gprc
+\\
+\\    Syntax: variable name = value
+\\
+\\  Environment variables which are not set here assume default values in gp.
+\\  Can be changed under GP using default(), or keyboard shortcuts (see ?\).

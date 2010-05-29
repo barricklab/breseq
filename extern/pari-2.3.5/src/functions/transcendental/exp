@@ -1,0 +1,10 @@
+Function: exp
+Section: transcendental
+C-Name: gexp
+Prototype: Gp
+Help: exp(x): exponential of x
+Description: 
+ (real):real	mpexp($1)
+ (mp):mp:prec	gexp($1, prec)
+ (gen):gen:prec	gexp($1, prec)
+

@@ -1,0 +1,6 @@
+Function: norml2
+Section: conversions
+C-Name: gnorml2
+Prototype: G
+Help: norml2(x): square of the L2-norm of the vector x
+

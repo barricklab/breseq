@@ -1,0 +1,9 @@
+Function: coredisc
+Section: number_theoretical
+C-Name: coredisc0
+Prototype: GD0,L,
+Help: coredisc(n,{flag=0}): discriminant of the quadratic field Q(sqrt(n)).
+ If (optional) flag is non-null, output a two-component row vector [d,f],
+ where d is the discriminant of the quadratic field Q(sqrt(n)) and n=df^2. f
+ may be a half integer
+

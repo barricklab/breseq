@@ -1,0 +1,7 @@
+Function: _.w
+Class: member_functions
+C-Name: member_w
+Prototype: G
+Description: 
+ (bell):gen:copy       gel($1, 18)
+

@@ -1,0 +1,8 @@
+Function: rnfcharpoly
+Section: number_fields
+C-Name: rnfcharpoly
+Prototype: GGGDn
+Help: rnfcharpoly(nf,T,alpha,{var=x}): characteristic polynomial of alpha
+ over nf, where alpha belongs to the algebra defined by T over nf. Returns a
+ polynomial in variable var (x by default)
+

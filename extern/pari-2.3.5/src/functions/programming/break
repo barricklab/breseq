@@ -1,0 +1,7 @@
+Function: break
+Section: programming
+C-Name: break0
+Prototype: D1,L,
+Help: break({n=1}): interrupt execution of current instruction sequence, and
+ exit from the n innermost enclosing loops
+

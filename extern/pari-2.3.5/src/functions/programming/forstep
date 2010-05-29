@@ -1,0 +1,7 @@
+Function: forstep
+Section: programming
+C-Name: forstep
+Prototype: vV=GGGI
+Help: forstep(X=a,b,s,seq): the sequence is evaluated, X going from a to b
+ in steps of s (can be a vector of steps)
+

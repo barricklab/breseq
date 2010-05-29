@@ -1,0 +1,32 @@
+!
+! Suggested default value for the color_xterm ressources for use under GP.
+! See the color_xterm man for the meaning of these
+!
+
+XTerm*highlightSelection:  true
+XTerm.VT100.eightBitInput:  true
+XTerm.VT100.eightBitOutput:  true
+XTerm.VT100.titeInhibit:  true
+XTerm.VT100.altScreenInhibit:  true
+
+XTerm.VT100*colorMode:  on
+XTerm.VT100*dynamicColors:  on
+
+XTerm*color0: black
+XTerm*color1: red3
+XTerm*color2: green3
+XTerm*color3: #e52d2d
+XTerm*color4: blue3
+XTerm*color5: magenta3
+XTerm*color6: cyan3
+XTerm*color7: gray90
+XTerm*color8: gray30
+XTerm*color9: red
+XTerm*color10: green
+XTerm*color11: yellow
+XTerm*color12: blue
+XTerm*color13: magenta
+XTerm*color14: cyan
+XTerm*color15: white
+XTerm*colorUL: yellow
+XTerm*colorBD: white

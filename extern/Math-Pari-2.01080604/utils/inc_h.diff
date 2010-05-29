@@ -1,0 +1,8 @@
+--- ./utils/inc.h	Tue Sep 25 07:17:18 2001
++++ ./utils/inc.h1	Thu Dec 10 16:44:36 2009
+@@ -12,4 +12,4 @@
+ #include <sys/resource.h>
+ 
+ int x;
+-int y = CLK_TCK * x;
++int y = CLK_TCK * x;

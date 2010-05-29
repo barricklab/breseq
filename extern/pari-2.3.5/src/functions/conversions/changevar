@@ -1,0 +1,6 @@
+Function: changevar
+Section: conversions
+C-Name: changevar
+Prototype: GG
+Help: changevar(x,y): change variables of x according to the vector y
+

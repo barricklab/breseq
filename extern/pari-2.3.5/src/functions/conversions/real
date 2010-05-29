@@ -1,0 +1,6 @@
+Function: real
+Section: conversions
+C-Name: greal
+Prototype: G
+Help: real(x): real part of x
+

@@ -1,0 +1,6 @@
+Function: agm
+Section: transcendental
+C-Name: agm
+Prototype: GGp
+Help: agm(x,y): arithmetic-geometric mean of x and y
+

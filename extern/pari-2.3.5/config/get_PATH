@@ -1,0 +1,46 @@
+if test -z "$OS2_SHELL"; then dir_sep=':' ; else dir_sep=';' ; fi
+
+# Proper PATH setting
+pth="\
+  /bin\
+  /usr/bin\
+  /usr/locateal/bin\
+  /usr/ucb\
+  /usr/locateal\
+  /usr/lbin\
+  /usr/5bin\
+  /etc\
+  /usr/etc\
+  /usr/gnu/bin\
+  /usr/new\
+  /usr/new/bin\
+  /usr/nbin\
+  /sys5.3/bin\
+  /sys5.3/usr/bin\
+  /bsd4.3/bin\
+  /bsd4.3/usr/ucb\
+  /bsd4.3/usr/bin\
+  /usr/bsd\
+  /bsd43/bin\
+  /opt/ansic/bin\
+  /usr/ccs/bin\
+  /usr/lib\
+  /usr/ucblib\
+  /lib\
+  /usr/ccs/lib\
+  /sbin\
+  /usr/sbin\
+  /usr/libexec\
+  /usr/openwin/bin\
+  /usr/local/bin\
+"
+# /usr/openwin/bin added for xmkmf
+
+for p in $pth
+do
+  case "$dir_sep$PATH$dir_sep" in
+    *$dir_sep$p$dir_sep*) ;;
+    *) test -d $p && PATH=$PATH$dir_sep$p ;;
+  esac
+done
+PATH=.$dir_sep$PATH; export PATH

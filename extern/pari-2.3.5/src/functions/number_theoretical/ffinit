@@ -1,0 +1,9 @@
+Function: ffinit
+Section: number_theoretical
+C-Name: ffinit
+Prototype: GLDn
+Help: ffinit(p,n,{v=x}): monic irreducible polynomial of degree n over
+ F_p[v]
+Description: 
+ (int, small, ?var):pol	ffinit($1, $2, $3)
+

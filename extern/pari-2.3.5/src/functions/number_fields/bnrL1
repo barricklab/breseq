@@ -1,0 +1,16 @@
+Function: bnrL1
+Section: number_fields
+C-Name: bnrL1
+Prototype: GDGD0,L,p
+Help: bnrL1(bnr, {subgroup}, {flag=0}): bnr being output by bnrinit(,,1) and
+ subgroup being a square matrix defining a congruence subgroup of bnr (the
+ trivial subgroup if omitted), for each character of bnr trivial on this
+ subgroup, compute L(1, chi) (or equivalently the first non-zero term c(chi)
+ of the expansion at s = 0). The binary digits of flag mean 1: if 0 then
+ compute the term c(chi) and return [r(chi), c(chi)] where r(chi) is the
+ order of L(s, chi) at s = 0, or if 1 then compute the value at s = 1 (and in
+ this case, only for non-trivial characters), 2: if 0 then compute the value
+ of the primitive L-function associated to chi, if 1 then compute the value
+ of the L-function L_S(s, chi) where S is the set of places dividing the
+ modulus of bnr (and the infinite places), 3: return also the characters
+

@@ -1,0 +1,6 @@
+Function: cosh
+Section: transcendental
+C-Name: gch
+Prototype: Gp
+Help: cosh(x): hyperbolic cosine of x
+

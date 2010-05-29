@@ -1,0 +1,10 @@
+Function: plothsizes
+Class: highlevel
+Section: graphic
+C-Name: plothsizes_flag
+Prototype: D0,L,
+Help: plothsizes({flag=0}): returns array of 6 elements: terminal width and
+ height, sizes for ticks in horizontal and vertical directions, width and
+ height of characters. If flag=0, sizes of ticks and characters are in
+ pixels, otherwise are fractions of the screen size
+

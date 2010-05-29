@@ -1,0 +1,7 @@
+Function: prod
+Section: sums
+C-Name: produit
+Prototype: V=GGEDG
+Help: prod(X=a,b,expr,{x=1}): x times the product (X runs from a to b) of
+ expression
+

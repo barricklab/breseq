@@ -43,7 +43,7 @@ do{ my $x = [
                              ],
          'dist_name' => 'Bio-SamTools',
          'has_config_data' => undef,
-         'install_base' => '../..',
+         'install_base' => '../../src/perl/extern',
          'module_name' => 'Bio::SamTools',
          'recursive_test_files' => undef,
          'libdoc_dirs' => [

@@ -1,0 +1,5 @@
+Function: while
+Section: programming
+Help: while(a,seq): while a is nonzero evaluate the expression sequence seq.
+ Otherwise 0
+

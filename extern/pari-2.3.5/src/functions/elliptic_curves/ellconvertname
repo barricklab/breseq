@@ -1,0 +1,8 @@
+Function: ellconvertname
+Section: elliptic_curves
+C-Name: ellconvertname
+Prototype: G
+Help: ellconvertname(name): convert an elliptic curve name (as found in
+ the elldata database) from a string to a triplet [conductor, isogeny class,
+ index]. It will also convert a triplet back to a curve name.
+

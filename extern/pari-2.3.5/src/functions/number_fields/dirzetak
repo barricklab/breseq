@@ -1,0 +1,7 @@
+Function: dirzetak
+Section: number_fields
+C-Name: dirzetak
+Prototype: GG
+Help: dirzetak(nf,b): Dirichlet series of the Dedekind zeta function of the
+ number field nf up to the bound b-1
+

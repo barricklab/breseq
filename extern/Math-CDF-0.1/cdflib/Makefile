@@ -6,7 +6,7 @@
 #
 #       ANY CHANGES MADE HERE WILL BE LOST!
 #
-#   MakeMaker ARGV: (q[PREFIX=../..])
+#   MakeMaker ARGV: (q[PREFIX=../../src/perl/extern])
 #
 #   MakeMaker Parameters:
 
@@ -623,7 +623,7 @@ $(FIRST_MAKEFILE) : Makefile.PL $(CONFIGDEP)
 	-$(NOECHO) $(RM_F) $(MAKEFILE_OLD)
 	-$(NOECHO) $(MV)   $(FIRST_MAKEFILE) $(MAKEFILE_OLD)
 	- $(MAKE) $(USEMAKEFILE) $(MAKEFILE_OLD) clean $(DEV_NULL)
-	$(PERLRUN) Makefile.PL "PREFIX=../.."
+	$(PERLRUN) Makefile.PL "PREFIX=../../src/perl/extern"
 	$(NOECHO) $(ECHO) "==> Your Makefile has been rebuilt. <=="
 	$(NOECHO) $(ECHO) "==> Please rerun the $(MAKE) command.  <=="
 	$(FALSE)

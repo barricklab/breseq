@@ -1,0 +1,6 @@
+Function: trace
+Section: linear_algebra
+C-Name: gtrace
+Prototype: G
+Help: trace(x): trace of x
+

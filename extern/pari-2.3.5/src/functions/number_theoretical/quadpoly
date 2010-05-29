@@ -1,0 +1,7 @@
+Function: quadpoly
+Section: number_theoretical
+C-Name: quadpoly0
+Prototype: GDn
+Help: quadpoly(D,{v=x}): quadratic polynomial corresponding to the
+ discriminant D, in variable v
+

@@ -1,0 +1,12 @@
+#!/bin/sh
+#
+# A simple-minded script to launch gp in an xterm. The application name is
+# set to "gp". You can use it to have specific X resources, to tell your
+# window manager to use the icon pari.xbm, etc.
+#
+# set correct paths below
+xterm="xterm"
+gp="/usr/local/bin/gp"
+
+$xterm -geometry 80x40 -sl 2000 -sb \
+       -name gp -title PARI/GP -rw -e $gp &

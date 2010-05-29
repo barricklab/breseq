@@ -1,0 +1,7 @@
+Function: nfhnfmod
+Section: number_fields
+C-Name: nfhermitemod
+Prototype: GGG
+Help: nfhnfmod(nf,x,detx): if x=[A,I], and detx is a multiple of the ideal
+ determinant of x, gives a pseudo-basis of the module sum A_jI_j
+

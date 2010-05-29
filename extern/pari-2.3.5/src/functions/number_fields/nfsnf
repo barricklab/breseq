@@ -1,0 +1,6 @@
+Function: nfsnf
+Section: number_fields
+C-Name: nfsmith
+Prototype: GG
+Help: nfsnf(nf,x): if x=[A,I,J], outputs [c_1,...c_n] Smith normal form of x
+

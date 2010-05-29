@@ -1,0 +1,7 @@
+Function: ellpointtoz
+Section: elliptic_curves
+C-Name: zell
+Prototype: GGp
+Help: ellpointtoz(e,P): lattice point z corresponding to the point P on the
+ elliptic curve e
+

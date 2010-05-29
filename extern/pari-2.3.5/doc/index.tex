@@ -1,0 +1,118 @@
+%%
+%% INDEX (Macros)
+%%
+\ifsecondpass\else
+  \condwrite\index{The End}
+  \immediate\condwrite\toc{Index\string\dotfill\the\pageno}
+  \ifPDF \writesecnumbers \fi
+  \expandafter\end % stop here the first time (don't process index)
+\fi
+
+\ifPDF
+% Add a bookmark entry for the index.   CHB
+  \putchapdest
+  \pdfoutline goto name {pdfchap@\the\pdfchapcntr} {Index}
+\fi
+
+\newdimen\fullhsize
+\fullhsize=\hsize
+\advance\hsize by -20pt
+\divide\hsize by 2
+
+\def\fullline{\hbox to\fullhsize}
+\let\lr=L\newbox\leftcolumn
+
+\headline={\hfil\bf Index\hfil\global\headline={\hfil}}
+
+\def\makeheadline{\vbox to 0pt{\vskip-22.5pt
+  \fullline{\vbox to8.5pt{}\the\headline}\vss}
+  \nointerlineskip}
+
+\def\makefootline{\baselineskip=24pt\fullline{\the\footline}}
+
+\output={\if L\lr   %cf. The TeXbook, p257
+  \global\setbox\leftcolumn=\columnbox\global\let\lr=R
+  \else\doubleformat\global\let\lr=L\fi
+  \ifnum\outputpenalty>-20000\else\dosupereject\fi}
+\def\doubleformat{\shipout\vbox
+  {\makeheadline
+  \fullline{\box\leftcolumn\hfil\columnbox}
+  \makefootline}
+  \advancepageno}
+\def\columnbox{\leftline{\pagebody}}
+
+\def\parse!#1#2!#3!#4!#5 {%
+  \uppercase{\def\theletter{#1}}%
+  \def\theword{#1#2}%
+  \def\thefont{#3}%
+  \def\thepage{#4}%
+  \def\thedest{#5}}
+
+\ifPDF
+%% This puts the hyperlink command in the index, linked to the page
+%% number. #1 is the usual page number, #2 the pdfcounter.  CHB
+  \def\indxjump#1#2{\pdfstartlink attr {/Border [ 0 0 0 ] /H /O}
+    goto name {pdf@#2}\pushcolor{\linkcolor}#1\popcolor\pdfendlink}
+\else
+  \def\indxjump#1#2{#1}
+\fi
+
+\def\theoldword{}
+\def\theoldletter{}
+\def\theoldpage{}
+\def\theend{The End }
+
+% more efficient to parse the glue specs once and keep them in registers
+% for later use.  These govern index lines with too many page numbers to
+% fit in one line
+%  b: indentation for 2nd and further lines / a: compensation for same,
+% and shrinkability for the normal word space
+\newbox\dbox \setbox\dbox=\hbox to 3truemm{\hss.\hss}
+\newskip\dfillskip \dfillskip=.5em plus .98\hsize
+\def\dotfill{\leaders\copy\dbox\hskip\dfillskip\relax}
+\newskip\interskipa \interskipa=-.4\hsize plus -1.5\hsize minus .11em
+\newskip\interskipb \interskipb= .4\hsize plus  1.5\hsize
+
+% cf. The TeXbook, p393:
+\def\interpage{,\penalty100\kern0.33em%normal space
+  \hskip\interskipa\vadjust{}\penalty10000 \hskip\interskipb\relax}
+
+\def\newword{\relax\endgraf%
+  {\csname\thefont\endcsname\theword}\dotfill\indxjump{\thepage}{\thedest}%
+  \let\theoldfont\thefont%
+  \let\theoldword\theword}
+
+%%
+%% INDEX
+%%
+\parskip=0pt plus 1pt
+\parindent=0pt
+\parfillskip=0pt
+
+\catcode`\_=11 % make _ an ordinary char (frequent in function names)
+
+\def\li#1{\hbox to\hsize{#1\hfil}}
+\li{\var{SomeWord} refers to PARI-GP concepts.}
+\li{\kbd{SomeWord} is a PARI-GP keyword.}
+\li{SomeWord is a generic index entry.}
+
+\checkfile{\jobname.std}
+\newif\ifmore
+\loop
+  \read\std to\theline
+  \ifx\theline\theend\morefalse\else\moretrue\fi
+\ifmore
+  \expandafter\parse\theline
+  \ifx \theletter \theoldletter \else \endgraf
+    \vskip 10pt plus 10pt\centerline{\bf\theletter}
+    \vskip  6pt plus  7pt
+  \fi
+  \ifx \theword \theoldword
+    \ifx \thefont \theoldfont
+      \ifx \thepage \theoldpage
+      \else \interpage \indxjump{\thepage}{\thedest}\fi
+    \else \newword \fi
+  \else \newword \fi
+  \let\theoldletter\theletter
+  \let\theoldpage\thepage
+\repeat%

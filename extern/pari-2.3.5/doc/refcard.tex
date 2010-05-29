@@ -1,0 +1,1031 @@
+% $Id: refcard.tex 8180 2006-10-03 23:14:50Z kb $
+% This file is intended to be processed by plain TeX (TeX82).
+% Reference Card for PARI-GP version 2.1
+
+% Copyright (c) 1997-2005 Karim Belabas.
+% Permission is granted to copy, distribute and/or modify this document
+% under the terms of the GNU General Public License
+
+% Based on an earlier version by Joseph H. Silverman who kindly let me
+% use his original file.
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% The original copyright notice read:
+%
+%% Copyright (c) 1993,1994 Joseph H. Silverman. May be freely distributed.
+%% Created Tuesday, July 27, 1993
+%% Thanks to Stephen Gildea for the multicolumn macro package
+%% which I modified from his GNU emacs reference card
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\def\TITLE{Pari/GP reference card}
+\def\versionnumber{2.20}% Version of this reference card
+\def\PARIversion{2.3.0}% Version of PARI described on this reference card
+\def\year{2006}
+\def\month{May}
+
+% ignore parimacro.tex's \magnification setting
+\let\oldmagnification\magnification
+\catcode`@=11
+\def\magnification{\count@}%
+\catcode`@=12
+\input parimacro.tex
+\let\magnification\oldmagnification
+\ifPDF
+  \input pdfmacs.tex
+  \pdfpagewidth=11.69in
+  \pdfpageheight=8.26in
+\fi
+%**start of header
+\newcount\columnsperpage
+% The final reference card has six columns, three on each side.
+% This file can be used to produce it in any of three ways:
+% 1 column per page
+%    produces six separate pages, each of which needs to be reduced to 80%.
+%    This gives the best resolution.
+% 2 columns per page
+%    produces three already-reduced pages.
+%    You will still need to cut and paste.
+% 3 columns per page
+%    produces two pages which must be printed sideways to make a
+%    ready-to-use 8.5 x 11 inch reference card.
+%    For this you need a dvi device driver that can print sideways.
+% [For 2 or 3 columns, you'll need 6 and 8 point fonts.]
+% Which mode to use is controlled by setting \columnsperpage above.
+%
+% Specify how many columns per page you want here:
+\columnsperpage=3
+
+% You shouldn't need to modify anything below this line.
+%
+% Author:
+%  Karim Belabas
+%  Universite Paris Sud
+%  Departement de Mathematiques (bat. 425)
+%  F-91405 Orsay
+%  email: Karim.Belabas@math.u-psud.fr
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% (original reference card by Joseph H. Silverman)
+% (original reference card macros due to Stephen Gildea)
+% Original Thanks and History:
+%
+%% Thanks:
+%%  I would like to thank Jim Delaney, Kevin Buzzard, Dan Lieman,
+%%  and Jaap Top for sending me corrections.
+%%
+%% History:
+%%  Version 1.0 - July 1993, first general distribution
+%%  Version 1.1 - April 1994, corrected six typos
+%%  Version 1.2 - January 1995, minor corrections and additions
+%%  Version 1.3 - January 1996, minor corrections and additions
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Version 2.0 - November 1997, general distribution for GP 2.0
+% Version 2.1 - January 1998, set nf,bnf,etc in a sensible font, updated default
+% Version 2.2 - March 1998, some new functions (modpr, bnrstark), updated
+%   concat, removed spurious tabs.
+% Version 2.3 - May 1998, added write1, corrected my email address.
+% Version 2.4 - July 1998, removed vecindexsort, added ellrootno, updated
+%   elllseries
+% Version 2.5 - October 1998, updated elliptic functions. Added quadray and
+% user member functions
+% Version 2.6 - December 1998, added local() keyword
+% Version 2.7 - February 1999, added some pointer '&' arguments. Removed
+%   rounderror
+% Version 2.8 - April 1999, removed \k, added \l filename
+% Version 2.9 - April 2000, added \o, updated control statements
+% Version 2.10 - June 2000, updated polinterpolate
+% Version 2.11 - November 2000, changed Copyright
+% From version 2.12 onward, History will be catered for by CVS.
+%% Thanks to Bill Allombert, Henri Cohen, Gerhard Niklasch, and Joe
+%% Silverman for many comments and corrections.
+
+\def\version{\month\ \year\ v\versionnumber}
+
+\def\shortcopyrightnotice{\vskip .5ex plus 2 fill
+  \centerline{\small \copyright\ \year\ Karim Belabas.
+  Permissions on back.  v\versionnumber}}
+
+\def\<#1>{$\langle${#1}$\rangle$}
+\def\copyrightnotice{\vskip 1ex plus 2 fill
+\begingroup\small
+\centerline{Based on an earlier version by Joseph H. Silverman}
+\centerline{\version. Copyright \copyright\ \year\ K. Belabas}
+\centerline{GP copyright by The PARI Group}
+
+Permission is granted to make and distribute copies of this card provided the
+copyright and this permission notice are preserved on all copies.
+
+Send comments and corrections to \<Karim.BELABAS@math.u-psud.fr>
+\endgroup}
+
+% make \bye not \outer so that the \def\bye in the \else clause below
+% can be scanned without complaint.
+\def\bye{\par\vfill\supereject\end}
+
+\newdimen\intercolumnskip
+\newbox\columna
+\newbox\columnb
+
+\def\ncolumns{\the\columnsperpage}
+
+\message{[\ncolumns\space
+  column\if 1\ncolumns\else s\fi\space per page]}
+
+\def\scaledmag#1{ scaled \magstep #1}
+
+% This multi-way format was designed by Stephen Gildea
+% October 1986.
+\if 1\ncolumns
+  \hsize 4in
+  \vsize 10in
+  \voffset -.7in
+  \font\titlefont=\fontname\tenbf \scaledmag3
+  \font\headingfont=\fontname\tenbf \scaledmag2
+  \font\smallfont=\fontname\sevenrm
+  \font\smallsy=\fontname\sevensy
+
+  \footline{\hss\folio}
+  \def\makefootline{\baselineskip10pt\hsize6.5in\line{\the\footline}}
+\else
+  \hsize 3.2in
+%  \vsize 7.95in
+  \vsize 7.90in
+  \hoffset -.75in
+%  \voffset -.745in
+  \voffset -.815in
+  \font\titlefont=cmbx10 \scaledmag2
+  \font\headingfont=cmbx10 \scaledmag1
+  \font\smallfont=cmr6
+  \font\smallsy=cmsy6
+  \font\eightrm=cmr8
+  \font\eightbf=cmbx8
+  \font\eightit=cmti8
+  \font\eighttt=cmtt8
+  \font\eightsy=cmsy8
+  \font\eightsl=cmsl8
+  \font\eighti=cmmi8
+  \font\eightex=cmex10 at 8pt
+  \textfont0=\eightrm
+  \textfont1=\eighti
+  \textfont2=\eightsy
+  \textfont3=\eightex
+  \def\rm{\fam0 \eightrm}
+  \def\bf{\eightbf}
+  \def\it{\eightit}
+  \def\tt{\eighttt}
+  \normalbaselineskip=.8\normalbaselineskip
+  \normallineskip=.8\normallineskip
+  \normallineskiplimit=.8\normallineskiplimit
+  \normalbaselines\rm %make definitions take effect
+
+  \if 2\ncolumns
+    \let\maxcolumn=b
+    \footline{\hss\rm\folio\hss}
+    \def\makefootline{\vskip 2in \hsize=6.86in\line{\the\footline}}
+  \else \if 3\ncolumns
+    \let\maxcolumn=c
+    \nopagenumbers
+  \else
+    \errhelp{You must set \columnsperpage equal to 1, 2, or 3.}
+    \errmessage{Illegal number of columns per page}
+  \fi\fi
+
+  \intercolumnskip=.46in
+  \def\abc{a}
+  \output={%
+      % This next line is useful when designing the layout.
+      %\immediate\write16{Column \folio\abc\space starts with \firstmark}
+      \if \maxcolumn\abc \multicolumnformat \global\def\abc{a}
+      \else\if a\abc
+        \global\setbox\columna\columnbox \global\def\abc{b}
+        %% in case we never use \columnb (two-column mode)
+        \global\setbox\columnb\hbox to -\intercolumnskip{}
+      \else
+        \global\setbox\columnb\columnbox \global\def\abc{c}\fi\fi}
+  \def\multicolumnformat{\shipout\vbox{\makeheadline
+      \hbox{\box\columna\hskip\intercolumnskip
+        \box\columnb\hskip\intercolumnskip\columnbox}
+      \makefootline}\advancepageno}
+  \def\columnbox{\leftline{\pagebody}}
+
+  \def\bye{\par\vfill\supereject
+    \if a\abc \else\null\vfill\eject\fi
+    \if a\abc \else\null\vfill\eject\fi
+    \end}
+\fi
+
+% we won't be using math mode much, so redefine some of the characters
+% we might want to talk about
+%\catcode`\^=12
+%\catcode`\_=12
+%\catcode`\~=12
+
+\chardef\\=`\\
+\chardef\{=`\{
+\chardef\}=`\}
+
+\hyphenation{}
+
+\parindent 0pt
+\parskip 0pt
+
+\def\small{\smallfont\textfont2=\smallsy\baselineskip=.8\baselineskip}
+
+\outer\def\newcolumn{\vfill\eject}
+
+\outer\def\title#1{{\titlefont\centerline{#1}}}
+
+\outer\def\section#1{\par\filbreak
+  \vskip 1.4ex plus .4ex minus .5ex
+  {\headingfont #1}\mark{#1}%
+  \vskip .7ex plus .3ex minus .5ex
+}
+
+\outer\def\subsec#1{\filbreak
+  \vskip 0.1ex plus 0.05ex
+  {\bf #1}
+  \vskip 0.04ex plus 0.05ex
+}
+
+\newdimen\keyindent
+\def\beginindentedkeys{\keyindent=1em}
+\def\endindentedkeys{\keyindent=0em}
+\def\begindoubleindentedkeys{\keyindent=2em}
+\def\enddoubleindentedkeys{\keyindent=1em}
+\endindentedkeys
+
+\def\kbd#1{{\tt#1}\null} %\null so not an abbrev even if period follows
+
+\def\key#1#2{\leavevmode\hbox to \hsize{\vtop
+  {\hsize=.75\hsize\rightskip=1em
+  \hskip\keyindent\relax#1}\kbd{#2}\hfil}}
+
+\newbox\libox
+\setbox\libox\hbox{\kbd{M-x }}
+\newdimen\liwidth
+\liwidth=\wd\libox
+
+\def\li#1#2{\leavevmode\hbox to \hsize{\hbox to .75\hsize
+  {\hskip\keyindent\relax#1\hfil}%
+  \hskip -\liwidth minus 1fil
+  \kbd{#2}\hfil}}
+
+\def\threecol#1#2#3{\hskip\keyindent\relax#1\hfil&\kbd{#2}\quad
+  &\kbd{#3}\quad\cr}
+
+\def\mod{\;\hbox{\rm mod}\;}
+\def\expr{\hbox{\it expr}}
+\def\seq{\hbox{\it seq}}
+\def\args{\hbox{\it args}}
+\def\file{\hbox{\it file}}
+\def\QQ{\hbox{\bf Q}}
+\def\ZZ{\hbox{\bf Z}}
+\def\RR{\hbox{\bf R}}
+\def\FF{\hbox{\bf F}}
+\def\CC{\hbox{\bf C}}
+\def\deg{\mathop{\rm deg}}
+\def\bs{\char'134}
+\def\pow{\^{}\hskip0pt}
+\def\til{\raise-0.3em\hbox{\~{}}}
+\def\typ#1{\kbd{t\_#1}}
+%**end of header
+
+\title{PARI-GP Reference Card}
+\centerline{(PARI-GP version \PARIversion)}
+Note: optional arguments are surrounded by braces $\{\}$.
+
+\section{Starting \& Stopping GP}
+\key{to enter GP, just type its name:}{gp}
+\key{to exit GP, type}{\\q {\rm or }quit}
+
+\section{Help}
+\li{describe function}{?{\it function}}
+\li{extended description}{??{\it keyword}}
+\li{list of relevant help topics}{???{\it pattern}}
+
+\section{Input/Output \& Defaults}
+\li{output previous line, the lines before}
+  {\%{\rm, }\%`{\rm, }\%``{\rm, etc.}}
+\key{output from line $n$}{\%$n$}
+\key{separate multiple statements on line}{;}
+\key{extend statement on additional lines}{\\}
+\key{extend statements on several lines}{\{$\seq_1$; $\seq_2$;\}}
+\key{comment}{/* $\dots$ */}
+\key{one-line comment, rest of line ignored}{\\\\ \dots}
+\li{set default $d$ to \var{val}} {default$(\{d\},\{\var{val}\},\fl)$}
+\li{mimic behaviour of GP 1.39} {default(compatible,3)}
+
+\section{Metacommands}
+\key{toggle timer on/off}{\#}
+\key{print time for last result}{\#\#}
+\key{print \%$n$ in raw format}{\\a $n$}
+\key{print \%$n$ in pretty format}{\\b $n$}
+\key{print defaults}{\\d}
+\key{set debug level to $n$}{\\g $n$}
+\key{set memory debug level to $n$}{\\gm $n$}
+\key{enable/disable logfile}{\\l $\{${\it filename}$\}$}
+\key{print \%$n$ in pretty matrix format}{\\m}
+\key{set output mode (raw, default, prettyprint)}{\\o $n$}
+\key{set $n$ significant digits}{\\p $n$}
+\key{set $n$ terms in series}{\\ps $n$}
+\key{quit GP}{\\q}
+\key{print the list of PARI types}{\\t}
+\key{print the list of user-defined functions}{\\u}
+\li{read file into GP}{\\r {\it filename}}
+\li{write \%$n$ to file}{\\w $n$ {\it filename}}
+
+\section{GP Within Emacs}
+\li{to enter GP from within Emacs:}{M-x gp{\rm,} C-u M-x gp}
+\li{word completion}{{\rm \<TAB>}}
+\li{help menu window}{M-\\c}
+\li{describe function}{M-?}
+\li{display \TeX'd PARI manual}{M-x gpman}
+\li{set prompt string}{M-\\p}
+\li{break line at column 100, insert \kbd{\\}}{M-\\\\}
+\li{PARI metacommand \kbd{\\}{\it letter}}{M-\\\hbox{\it letter}}
+
+\section{Reserved Variable Names}
+\li{$\pi=3.14159\cdots$}{Pi}
+\li{Euler's constant ${}=.57721\cdots$}{Euler}
+\li{square root of $-1$}{I}
+\li{big-oh notation}{O}
+
+% ****************************************
+% This goes at the bottom of page 1
+\shortcopyrightnotice
+\newcolumn
+
+\section{PARI Types \& Input Formats}
+\li{\typ{INT}. Integers}{$\pm n$}
+\li{\typ{REAL}. Real Numbers}{$\pm n.ddd$}
+\li{\typ{INTMOD}. Integers modulo $m$}{Mod$(n,m)$}
+\li{\typ{FRAC}. Rational Numbers}{$n/m$}
+\li{\typ{COMPLEX}. Complex Numbers}{$x +y\,*\;$I}
+\li{\typ{PADIC}. $p$-adic Numbers}{$x\;+\;$O$(p$\pow$k)$}
+\li{\typ{QUAD}. Quadratic Numbers}{$x + y\,*\;$quadgen$(D)$}
+\li{\typ{POLMOD}. Polynomials modulo $g$}{Mod$(f,g)$}
+\li{\typ{POL}. Polynomials}{$a*x$\pow$n+\cdots+b$}
+\li{\typ{SER}. Power Series}{$f\;+\;$O$(x$\pow$k)$}
+\li{\typ{QFI}/\typ{QFR}. Imag/Real bin.\ quad.\ forms}
+  {Qfb$(a,b,c,\{d\})$}
+\li{\typ{RFRAC}. Rational Functions}{$f/g$}
+\li{\typ{VEC}/\typ{COL}. Row/Column Vectors}
+  {[$x,y,z$]{\rm,} [$x,y,z$]\til}
+\li{\typ{MAT}. Matrices}{[$x,y$;$z,t$;$u,v$]}
+\li{\typ{LIST}. Lists}{List$($[$x,y,z$]$)$}
+\li{\typ{STR}. Strings}{"aaa"}
+
+\section{Standard Operators}
+\li{basic operations}{+{\rm,} - {\rm,} *{\rm,} /{\rm,} \pow}
+\li{\kbd{i=i+1}, \kbd{i=i-1}, \kbd{i=i*j}, \dots}
+  {i++{\rm,} i--{\rm,} i*=j{\rm,}\dots}
+\li{euclidean quotient, remainder}{$x$\bs/$y${\rm,} $x$\bs$y${\rm,}
+$x$\%$y${\rm,} divrem$(x,y)$}
+\li{shift $x$ left or right $n$ bits}{ $x$<<$n$, $x$>>$n$
+  {\rm or} shift$(x,n)$}
+\li{comparison operators}{<={\rm, }<{\rm, }>={\rm, }>{\rm, }=={\rm, }!=}
+\li{boolean operators (or, and, not)}{||{\rm, } \&\&{\rm ,} !}
+\li{sign of $x=-1,0,1$}{sign$(x)$}
+\li{maximum/minimum of $x$ and $y$}{max{\rm,} min$(x,y)$}
+\li{integer or real factorial of $x$}{$x$!~{\rm or} factorial$(x)$}
+\li{derivative of $f$ w.r.t. $x$}{$f$'}
+\section{Conversions}
+%
+\subsec{Change Objects}
+\li{to vector, matrix, set, list, string}
+  {Col{\rm/}Vec{\rm,}Mat{\rm,}Set{\rm,}List{\rm,}Str}
+\li{create PARI object $(x\mod y)$}{Mod$(x,y)$}
+\li{make $x$ a polynomial of $v$}{Pol$(x,\{v\})$}
+\li{as above, starting with constant term}{Polrev$(x,\{v\})$}
+\li{make $x$ a power series of $v$}{Ser$(x,\{v\})$}
+\li{PARI type of object $x$}{type$(x, \{t\})$}
+\li{object $x$ with precision $n$}{prec$(x,\{n\})$}
+\li{evaluate $f$ replacing vars by their value}{eval$(f)$}
+%
+\subsec{Select Pieces of an Object}
+\li{length of $x$}{\#$x$ {\rm or} length$(x)$}
+\li{$n$-th component of $x$}{component$(x,n)$}
+\li{$n$-th component of vector/list $x$}{$x$[$n$]}
+\li{$(m,n)$-th component of matrix $x$}{$x$[$m,n$]}
+\li{row $m$ or column $n$ of matrix $x$}{$x$[$m,$]{\rm,} $x$[$,n$]}
+\li{numerator of $x$}{numerator$(x)$}
+\li{lowest denominator of $x$}{denominator$(x)$}
+%
+\subsec{Conjugates and Lifts}
+\li{conjugate of a number $x$}{conj$(x)$}
+\li{conjugate vector of algebraic number $x$}{conjvec$(x)$}
+\li{norm of $x$, product with conjugate}{norm$(x)$}
+\li{square of $L^2$ norm of vector $x$}{norml2$(x)$}
+\li{lift of $x$ from Mods}{lift{\rm,} centerlift$(x)$}
+
+\section{Random Numbers}
+\li{random integer between $0$ and $N-1$}{random$(\{N\})$}
+\li{get random seed}{getrand$()$}
+\li{set random seed to $s$}{setrand$(s)$}
+
+\begingroup
+\outer\def\subsec#1{\filbreak
+  \vskip 0.05ex plus 0.05ex
+  {\bf #1}
+  \vskip 0.05ex plus 0.05ex
+}
+
+\section{Lists, Sets \& Sorting}
+\li{sort $x$ by $k$th component}{vecsort$(x,\{k\},\{fl=0\})$}
+  {\bf Sets} (= row vector of strings with strictly increasing entries)\hfill\break
+%
+\li{intersection of sets $x$ and $y$}{setintersect$(x,y)$}
+\li{set of elements in $x$ not belonging to $y$}{setminus$(x,y)$}
+\li{union of sets $x$ and $y$}{setunion$(x,y)$}
+\li{look if $y$ belongs to the set $x$}{setsearch$(x,y,\fl)$}
+%
+\subsec{Lists}
+\li{create empty list of maximal length $n$}{listcreate$(n)$}
+\li{delete all components of list $l$}{listkill$(l)$}
+\li{append $x$ to list $l$}{listput$(l,x,\{i\})$}
+\li{insert $x$ in list $l$ at position $i$}{listinsert$(l,x,i)$}
+\li{sort the list $l$}{listsort$(l,\fl)$}
+
+\section{Programming \& User Functions}
+\subsec{Control Statements {\rm ($X$: formal parameter in expression \seq)}}
+\li{eval.\ \seq\ for $a\le X\le b$}{for$(X\,$=$\;a,b,\seq)$}
+\li{eval.\ \seq\ for $X$ dividing $n$}{fordiv$(n,X,\seq)$}
+\li{eval.\ \seq\ for primes $a\le X\le b$}{forprime$(X\,$=$\;a,b,\seq)$}
+\li{eval.\ \seq\ for $a\le X\le b$ stepping $s$}{forstep$(X\,$=$\;a,b,s,\seq)$}
+\li{multivariable {\tt for}}{forvec$(X\,$=$\;v,\seq)$}
+\li{if $a\ne0$, evaluate $\seq_1$, else $\seq_2$}{if$(a,\{\seq_1\},\{\seq_2\})$}
+\li{evaluate \seq\ until $a\ne0$}{until$(a,\seq)$}
+\li{while $a\ne0$, evaluate \seq}{while$(a,\seq)$}
+\li{exit $n$ innermost enclosing loops}{break$(\{n\})$}
+\li{start new iteration of $n$th enclosing loop}{next$(\{n\})$}
+\li{return $x$ from current subroutine}{return$(x)$}
+\li{error recovery (try $\seq_1$)}{trap$(\{err\},\{\seq_2\},\{\seq_1\})$}
+%
+\subsec{Input/Output}
+\li{prettyprint args with/without newline}{printp$(),$ printp1$()$}
+\li{print args with/without newline}{print$(),$ print1$()$}
+\li{read a string from keyboard}{input$()$}
+\li{reorder priority of variables $x,y,z$}{reorder$(\{$[$x,y,z$]$\})$}
+\li{output \args\ in \TeX\ format}{printtex$(\args)$}
+\li{write \args\ to file}{write{\rm,} write1{\rm,} writetex$(\file,\args)$}
+\li{read file into GP}{read($\{\file\}$)}
+%
+\subsec{Interface with User and System}
+\li{allocates a new stack of $s$ bytes}{allocatemem$(\{s\})$}
+\li{execute system command $a$}{system$(a)$}
+\li{as above, feed result to GP}{extern$(a)$}
+\li{install function from library}{install$(f,code,\{\var{gpf\/}\},\{\var{lib}\})$}
+\li{alias \var{old}\ to \var{new}}{alias$(\var{new},\var{old})$}
+\li{new name of function $f$ in GP 2.0}{whatnow$(f)$}
+%
+\subsec{User Defined Functions}
+\leavevmode
+  {\tt name(formal vars) = local(local vars); \var{seq}}\hfill\break
+  {\tt struct.member = \var{seq}}\hfill\break
+\li{kill value of variable or function $x$}{kill$(x)$}
+\li{declare global variables}{global$(x,...)$}
+
+\section{Iterations, Sums \& Products}
+\li{numerical integration}{intnum$(X\,$=$\;a,b,\expr,\fl)$}
+\li{sum \expr\ over divisors of $n$}{sumdiv$(n,X,\expr)$}
+\li{sum $X=a$ to $X=b$, initialized at $x$}{sum$(X\,$=$\;a,b,\expr,\{x\})$}
+\li{sum of series \expr}{suminf$(X\,$=$\;a,\expr)$}
+\li{sum of alternating/positive series}{sumalt{\rm,} sumpos}
+\li{product $a\le X\le b$, initialized at $x$}{prod$(X\,$=$\;a,b,\expr,\{x\})$}
+\li{product over primes $a\le X\le b$}{prodeuler$(X\,$=$\;a,b,\expr)$}
+\li{infinite product $a\le X\le\infty$}{prodinf$(X\,$=$\;a,\expr)$}
+\li{real root of \expr\ between $a$ and $b$}{solve$(X\,$=$\;a,b,\expr)$}
+\endgroup
+
+% This goes at the top of page 4 (=1st column on back of reference card)
+
+\section{Vectors \& Matrices}
+%
+\li{dimensions of matrix $x$}{matsize$(x)$}
+\li{concatenation of $x$ and $y$}{concat$(x,\{y\})$}
+\li{extract components of $x$}{vecextract$(x,y,\{z\})$}
+\li{transpose of vector or matrix $x$}{mattranspose$(x)$ {\rm or} $x$\til}
+\li{adjoint of the matrix $x$}{matadjoint$(x)$}
+\li{eigenvectors of matrix $x$}{mateigen$(x)$}
+\li{characteristic polynomial of $x$}{charpoly$(x,\{v\},\fl)$}
+\li{minimal polynomial of $x$}{minpoly$(x,\{v\})$}
+\li{trace of matrix $x$}{trace$(x)$}
+%
+\subsec{Constructors \& Special Matrices}
+\li{row vec.\ of \expr\ eval'ed at $1\le i\le n$}{vector$(n,\{i\},\{\expr\})$}
+\li{col.\ vec.\ of \expr\ eval'ed at $1\le i\le n$}{vectorv$(n,\{i\},\{\expr\})$}
+\li{matrix $1\le i\le m$, $1\le j\le n$}{matrix$(m,n,\{i\},\{j\},\{\expr\})$}
+\li{diagonal matrix whose diag. is $x$}{matdiagonal$(x)$}
+\li{$n\times n$ identity matrix}{matid$(n)$}
+\li{Hessenberg form of square matrix $x$}{mathess$(x)$}
+\li{$n\times n$ Hilbert matrix $H_{ij}=(i+j-1)^{-1}$}{mathilbert$(n)$}
+\li{$n\times n$ Pascal triangle $P_{ij}={i\choose j}$}{matpascal$(n-1)$}
+\li{companion matrix to polynomial $x$}{matcompanion$(x)$}
+%
+\subsec{Gaussian elimination}
+\li{determinant of matrix $x$}{matdet$(x,\fl)$}
+\li{kernel of matrix $x$}{matker$(x,\fl)$}
+\li{intersection of column spaces of $x$ and $y$}{matintersect$(x,y)$}
+\li{solve $M*X = B$ ($M$ invertible)}{matsolve$(M,B)$}
+\li{as solve, modulo $D$ (col. vector)}{matsolvemod$(M,D,B)$}
+\li{one sol of $M*X = B$}{matinverseimage$(M,B)$}
+\li{basis for image of matrix $x$}{matimage$(x)$}
+\li{supplement columns of $x$ to get basis}{matsupplement$(x)$}
+\li{rows, cols to extract invertible matrix}{matindexrank$(x)$}
+\li{rank of the matrix $x$}{matrank$(x)$}
+
+\section{Lattices \& Quadratic Forms}
+\li{upper triangular Hermite Normal Form}{mathnf$(x)$}
+\li{HNF of $x$ where $d$ is a multiple of det$(x)$}{mathnfmod$(x,d)$}
+\li{elementary divisors of $x$}{matsnf$(x)$}
+\li{LLL-algorithm applied to columns of $x$}{qflll$(x,\fl)$}
+\li{like \kbd{qflll}, $x$ is Gram matrix of lattice}
+  {qflllgram$(x,\fl)$}
+\li{LLL-reduced basis for kernel of $x$}{matkerint$(x)$}
+\li{$\ZZ$-lattice $\longleftrightarrow$ $\QQ$-vector space}{matrixqz$(x,p)$}
+%
+\li{signature of quad form $^ty*x*y$}{qfsign$(x)$}
+\li{decomp into squares of $^ty*x*y$}{qfgaussred$(x)$}
+\li{find up to $m$ sols of $^ty*x*y\le b$}{qfminim$(x,b,m)$}
+\li{$v$, $v[i]:=$number of sols of $^ty*x*y = i$}{qfrep$(x,B,\fl)$}
+%\li{perfection rank of $x$}{qfperfection$(x)$}
+\li{eigenvals/eigenvecs for real symmetric $x$}{qfjacobi$(x)$}
+
+\section{Formal \& p-adic Series}
+\li{truncate power series or $p$-adic number}{truncate$(x)$}
+\li{valuation of $x$ at $p$}{valuation$(x,p)$}
+\subsec{Dirichlet and Power Series}
+\li{Taylor expansion around $0$ of $f$ w.r.t. $x$}{taylor$(f,x)$}
+\li{$\sum a_kb_kt^k$ from $\sum a_kt^k$ and $\sum b_kt^k$}{serconvol$(x,y)$}
+\li{$f=\sum a_k*t^k$ from $\sum (a_k/k!)*t^k$}{serlaplace$(f)$}
+\li{reverse power series $F$ so $F(f(x))=x$}{serreverse$(f)$}
+\li{Dirichlet series multiplication / division}{dirmul{\rm,} dirdiv$(x,y)$}
+\li{Dirichlet Euler product ($b$ terms)}{direuler$(p\,$=$\;a,b,\expr)$}
+\subsec{$p$-adic Functions}
+\li{Teichmuller character of $x$}{teichmuller$(x)$}
+\li{Newton polygon of $f$ for prime $p$}{newtonpoly$(f,p)$}
+
+\newcolumn
+\title{PARI-GP Reference Card}
+\centerline{(PARI-GP version \PARIversion)}
+
+\section{Polynomials \& Rational Functions}
+%
+\li{degree of $f$}{poldegree$(f)$}
+\li{coefficient of degree $n$ of $f$}{polcoeff$(f,n)$}
+\li{round coeffs of $f$ to nearest integer}{round$(f,\{$\&$e\})$}
+\li{gcd of coefficients of $f$}{content$(f)$}
+\li{replace $x$ by $y$ in $f$}{subst$(f,x,y)$}
+\li{discriminant of polynomial $f$}{poldisc$(f)$}
+%\li{elementary divisors of Z[a]/f'(a)Z[a]}{poldiscreduced$(f)$}
+\li{resultant of $f$ and $g$}{polresultant$(f,g,\fl)$}
+\li{as above, give $[u,v,d]$, $xu + yv = d$}{bezoutres$(x,y)$}
+\li{derivative of $f$ w.r.t. $x$}{deriv$(f,x)$}
+\li{formal integral of $f$ w.r.t. $x$}{intformal$(f,x)$}
+\li{reciprocal poly $x^{\deg f}f(1/x)$}{polrecip$(f)$}
+\li{interpol.~pol.~eval.~at $a$}{polinterpolate$(X,\{Y\},\{a\},\{$\&$e\})$}
+\li{initialize $t$ for Thue equation solver}{thueinit$(f)$}
+\li{solve Thue equation $f(x,y)=a$}{thue$(t,a,\{sol\})$}
+%
+\subsec{Roots and Factorization}
+\li{number of real roots of $f$, $a < x\le b$}{polsturm$(f,\{a\},\{b\})$}
+\li{complex roots of $f$}{polroots$(f)$}
+\li{symmetric powers of roots of $f$ up to $n$}{polsym$(f,n)$}
+\li{roots of $f \mod p$}{polrootsmod$(f,p,\fl)$}
+\li{factor $f$}{factor$(f,\{lim\})$}
+\li{factorization of $f\mod p$}{factormod$(f,p,\fl)$}
+\li{factorization of $f$ over $\FF_{p^a}$}{factorff$(f,p,a)$}
+\li{$p$-adic fact. of $f$ to prec. $r$}{factorpadic$(f,p,r,\fl)$}
+\li{$p$-adic roots of $f$ to prec. $r$}{polrootspadic$(f,p,r)$}
+\li{$p$-adic root of $f$ cong. to $a\mod p$}{padicappr$(f,a)$}
+\li{Newton polygon of $f$ for prime $p$}{newtonpoly$(f,p)$}
+%
+\subsec{Special Polynomials}
+\li{$n$th cyclotomic polynomial in var. $v$}{polcyclo$(n,\{v\})$}
+\li{$d$-th degree subfield of $\QQ(\zeta_n)$} {polsubcyclo$(n,d,\{v\})$}
+\li{$n$-th Legendre polynomial}{pollegendre$(n)$}
+\li{$n$-th Tchebicheff polynomial}{poltchebi$(n)$}
+\li{Zagier's polynomial of index $n$,$m$}{polzagier$(n,m)$}
+
+\section{Transcendental Functions}
+\li{real, imaginary part of $x$}{real$(x)$, imag$(x)$}
+\li{absolute value, argument of $x$}{abs$(x)$, arg$(x)$}
+\li{square/nth root of $x$}{sqrt$(x)$, sqrtn$(x,n,$\&$z)$}
+\li{trig functions}{sin, cos, tan, cotan}
+\li{inverse trig functions}{asin, acos, atan}
+\li{hyperbolic functions}{sinh, cosh, tanh}
+\li{inverse hyperbolic functions}{asinh, acosh, atanh}
+\li{exponential of $x$}{exp$(x)$}
+\li{natural log of $x$}{ln$(x)$ {\rm or} log$(x)$}
+%
+\li{gamma function $\Gamma(x)=\int_0^\infty e^{-t}t^{x-1}dt$}{gamma$(x)$}
+%\li{half-integer gamma function $\Gamma(n+1/2)$}{gammah$(n)$}
+\li{logarithm of gamma function}{lngamma$(x)$}
+\li{$\psi(x)=\Gamma'(x)/\Gamma(x)$}{psi$(x)$}
+\li{incomplete gamma function ($y=\Gamma(s)$)}{incgam$(s,x,\{y\})$}
+\li{exponential integral $\int_x^\infty e^{-t}/t\,dt$}{eint1$(x)$}
+\li{error function $2/\sqrt\pi\int_x^\infty e^{-t^2}dt$}{erfc$(x)$}
+\li{dilogarithm of $x$}{dilog$(x)$}
+\li{$m$th polylogarithm of $x$}{polylog$(m,x,\fl)$}
+\li{$U$-confluent hypergeometric function}{hyperu$(a,b,u)$}
+\li{$J$-Bessel function $J_{n+1/2}(x)$}{besseljh$(n,x)$}
+\li{$K$-Bessel function of index \var{nu}}{besselk$(\var{nu},x)$}
+
+\section{Elementary Arithmetic Functions}
+\li{vector of binary digits of $|x|$}{binary$(x)$}
+\li{give bit number $n$ of integer $x$}{bittest$(x,n)$}
+\li{ceiling of $x$}{ceil$(x)$}
+\li{floor of $x$}{floor$(x)$}
+\li{fractional part of $x$}{frac$(x)$}
+\li{round $x$ to nearest integer}{round$(x,\{$\&$e\})$}
+\li{truncate $x$}{truncate$(x,\{$\&$e\})$}
+\li{gcd/LCM of $x$ and $y$}{gcd$(x,y)$, lcm$(x,y)$}
+\li{gcd of entries of a vector/matrix}{content$(x)$}
+\par
+\subsec{Primes and Factorization}
+\li{add primes in $v$ to the prime table}{addprimes$(v)$}
+\li{the $n$th prime}{prime$(n)$}
+\li{vector of first $n$ primes}{primes$(n)$}
+\li{smallest prime $\ge x$}{nextprime$(x)$}
+\li{largest prime $\le x$}{precprime$(x)$}
+\li{factorization of $x$}{factor$(x,\{lim\})$}
+\li{reconstruct $x$ from its factorization}{factorback$(fa,\{nf\})$}
+\par
+\subsec{Divisors}
+\li{number of distinct prime divisors}{omega$(x)$}
+\li{number of prime divisors  with mult}{bigomega$(x)$}
+\li{number of divisors of $x$}{numdiv$(x)$}
+\li{row vector of divisors of $x$}{divisors$(x)$}
+\li{sum of ($k$-th powers of) divisors of $x$}{sigma$(x,\{k\})$}
+\par
+\subsec{Special Functions and Numbers}
+\li{binomial coefficient $x\choose y$}{binomial$(x,y)$}
+\li{Bernoulli number $B_n$ as real}{bernreal$(n)$}
+\li{Bernoulli vector $B_0,B_2,\ldots,B_{2n}$}{bernvec$(n)$}
+\li{$n$th Fibonacci number}{fibonacci$(n)$}
+\li{number of partitions of $n$}{numbpart$(n)$}
+\li{Euler $\phi$-function}{eulerphi$(x)$}
+\li{M\"obius $\mu$-function}{moebius$(x)$}
+\li{Hilbert symbol of $x$ and $y$ (at $p$)}{hilbert$(x,y,\{p\})$}
+\li{Kronecker-Legendre symbol $({x\over y})$}{kronecker$(x,y)$}
+\par
+\subsec{Miscellaneous}
+\li{integer or real factorial of $x$}{$x!$ {\rm or} fact$(x)$}
+\li{integer square root of $x$}{sqrtint$(x)$}
+\li{solve $z\equiv x$ and $z\equiv y$}{chinese$(x,y)$}
+\li{minimal $u,v$ so $xu+yv=\gcd(x,y)$}{bezout$(x,y)$}
+\li{multiplicative order of $x$ (intmod) (<=$o$)}{znorder$(x,\{o\})$}
+\li{primitive root mod prime power $q$}{znprimroot$(q)$}
+\li{structure of $(\ZZ/n\ZZ)^*$}{znstar$(n)$}
+\li{continued fraction of $x$}{contfrac$(x,\{b\},\{lmax\})$}
+\li{last convergent of continued fraction $x$}{contfracpnqn$(x)$}
+\li{best rational approximation to $x$}{bestappr$(x,k)$}
+
+\section{True-False Tests}
+\li{is $x$ the disc. of a quadratic field?}{isfundamental$(x)$}
+\li{is $x$ a prime?}{isprime$(x)$}
+\li{is $x$ a strong pseudo-prime?}{ispseudoprime$(x)$}
+\li{is $x$ square-free?}{issquarefree$(x)$}
+\li{is $x$ a square?}{Z\_issquare$(x,\{$\&$n\})$}
+\li{is \var{pol}\ irreducible?}{polisirreducible$(\var{pol})$}
+
+% This goes at the bottom of the second page (column 6)
+\copyrightnotice
+%
+
+%%%%%%%%%%% Extra Material (part II)
+%
+\newcolumn
+\title{PARI-GP Reference Card (2)}
+\centerline{(PARI-GP version \PARIversion)}
+
+\section{Elliptic Curves}
+%
+Elliptic curve initially given by $5$-tuple $E=$\kbd{[$a_1,a_2,a_3,a_4,a_6$]}.
+Points are \kbd{[x,y]}, the origin is \kbd{[0]}.
+\hfill\break
+\li{Initialize elliptic struct. $\var{ell}$, i.e create}{ellinit$(E,\fl)$}
+\leavevmode\strut\hskip1em
+$a_1,a_2,a_3,a_4,a_6,b_2,b_4,b_6,b_8,c_4,c_6,disc,j$. This data can be
+recovered by typing \kbd{\var{ell}.a1},$\dots$,\kbd{\var{ell}.j}.
+If $\var{fl}$ omitted, also
+\hfill\break
+\beginindentedkeys
+\li{$E$ defined over $\RR$}{}
+\begindoubleindentedkeys
+\key{$x$-coords. of points of order $2$}{\var{ell}.roots}
+\key{real and complex periods}{\var{ell}.omega}
+\key{associated quasi-periods}{\var{ell}.eta}
+\key{volume of complex lattice}{\var{ell}.area}
+\enddoubleindentedkeys
+\li{$E$ defined over $\QQ_p$, $|j|_p>1$}{}
+\begindoubleindentedkeys
+\key{$x$-coord. of unit $2$ torsion point}{\var{ell}.roots}
+\key{Tate's $[u^2, u, q]$}{\var{ell}.tate}
+\key{Mestre's $w$}{\var{ell}.w}
+\endindentedkeys
+\li{change curve $E$ using $v=$\kbd{[}$u,r,s,t$\kbd{]}}{ellchangecurve$(ell,v)$}
+\li{change point $z$ using $v=$\kbd{[}$u,r,s,t$\kbd{]}}{ellchangepoint$(z,v)$}
+\li{cond, min mod, Tamagawa num \kbd{[}$N,v,c$\kbd{]}}{ellglobalred$(ell)$}
+\li{Kodaira type of $p$ fiber of $E$}{elllocalred$(ell,p)$}
+\li{add points $z_1+z_2$}{elladd$(ell,z_1,z_2)$}
+\li{subtract points $z_1-z_2$}{ellsub$(ell,z_1,z_2)$}
+\li{compute $n\cdot z$}{ellpow$(ell,z,n)$}
+\li{check if $z$ is on $E$}{ellisoncurve$(ell,z)$}
+\li{order of torsion point $z$}{ellorder$(ell,z)$}
+\li{torsion subgroup with generators}{elltors$(ell)$}
+\li{$y$-coordinates of point(s) for $x$}{ellordinate$(ell,x)$}
+\li{canonical bilinear form taken at $z_1$, $z_2$}{ellbil$(ell,z_1,z_2)$}
+\li{canonical height of $z$}{ellheight$(ell,z,\fl)$}
+\li{height regulator matrix for pts in $x$}{ellheightmatrix$(ell,x)$}
+\li{$p$th coeff $a_p$ of $L$-function, $p$ prime}{ellap$(ell,p)$}
+\li{$k$th coeff $a_k$ of $L$-function}{ellak$(ell,k)$}
+\li{vector of first $n$ $a_k$'s in $L$-function}{ellan$(ell,n)$}
+\li{$L(E,s)$, set $A\approx1$}{elllseries$(ell,s,\{A\})$}
+\li{root number for $L(E,.)$ at $p$}{ellrootno$(ell,\{p\})$}
+\li{modular parametrization of $E$}{elltaniyama$(ell)$}
+\li{point $[\wp(z),\wp'(z)]$ corresp. to $z$}{ellztopoint$(ell,z)$}
+\li{complex $z$ such that $p=[\wp(z),\wp'(z)]$}{ellpointtoz$(ell,p)$}
+
+\section{Elliptic \& Modular Functions}
+%
+\li{arithmetic-geometric mean}{agm$(x,y)$}
+\li{elliptic $j$-function $1/q+744+\cdots$}{ellj$(x)$}
+\li{Weierstrass $\sigma$ function}{ellsigma$(ell,z,\fl)$}
+\li{Weierstrass $\wp$ function}{ellwp$(ell,\{z\},\fl)$}
+\li{Weierstrass $\zeta$ function}{ellzeta$(ell,z)$}
+\li{modified Dedekind $\eta$ func. $\prod(1-q^n)$}{eta$(x,\fl)$}
+\li{Jacobi sine theta function}{theta$(q,z)$}
+\li{k-th derivative at z=0 of \kbd{theta}$(q,z)$}{thetanullk$(q,k)$}
+\li{Weber's $f$ functions}{weber$(x,\fl)$}
+\li{Riemann's zeta $\zeta(s)=\sum n^{-s}$}{zeta$(s)$}
+%
+\shortcopyrightnotice
+\newcolumn
+
+\section{Graphic Functions}
+\li{crude graph of \expr\ between $a$ and $b$}{plot$(X\,$=$\;a,b,expr)$}
+\subsec{High-resolution plot {\rm (immediate plot)}}
+\li{plot \expr\ between $a$ and $b$}{ploth$(X\,$=$\;a,b,expr,\fl,\{n\})$}
+\li{plot points given by lists $lx$, $ly$}{plothraw$(lx,ly,\fl)$}
+\li{terminal dimensions}{plothsizes$()$}
+%
+\subsec{Rectwindow functions}
+\li{init window $w$, with size $x$,$y$}{plotinit$(w,x,y)$}
+\li{erase window $w$}{plotkill$(w)$}
+\li{copy $w$ to $w_2$ with offset $(dx,dy)$}{plotcopy$(w,w_2,dx,dy)$}
+\li{scale coordinates in $w$}{plotscale$(w,x_1,x_2,y_1,y_2)$}
+\li{\kbd{ploth} in $w$}{plotrecth$(w,X\,$=$\;a,b,expr,\fl,\{n\})$}
+\li{\kbd{plothraw} in $w$}{plotrecthraw$(w,data,\fl)$}
+\li{draw window $w_1$ at $(x_1,y_1)$, \dots} {plotdraw$($[[$w_1,x_1,y_1$]$,\dots$]$)$}
+%
+\subsec{Low-level Rectwindow Functions}
+%\li{}{plotlinetype$(w,)$}
+%\li{}{plotpointtype$(w,)$}
+%\li{}{plotterm$(w,)$}
+\li{set current drawing color in $w$ to $c$}{plotcolor$(w,c)$}
+\li{current position of cursor in $w$}{plotcursor$(w)$}
+%
+\li{write $s$ at cursor's position}{plotstring$(w,s)$}
+\li{move cursor to $(x,y)$}{plotmove$(w,x,y)$}
+\li{move cursor to $(x+dx,y+dy)$}{plotrmove$(w,dx,dy)$}
+\li{draw a box to $(x_2,y_2)$}{plotbox$(w,x_2,y_2)$}
+\li{draw a box to $(x+dx,y+dy)$}{plotrbox$(w,dx,dy)$}
+\li{draw polygon}{plotlines$(w,lx,ly,\fl)$}
+\li{draw points}{plotpoints$(w,lx,ly)$}
+\li{draw line to $(x+dx,y+dy)$}{plotrline$(w,dx,dy)$}
+\li{draw point $(x+dx,y+dy)$}{plotrpoint$(w,dx,dy)$}
+%
+\subsec{Postscript Functions}
+\li{as {\tt ploth}}{psploth$(X\,$=$\;a,b,expr,\fl,\{n\})$}
+\li{as {\tt plothraw}}{psplothraw$(lx,ly,\fl)$}
+\li{as {\tt plotdraw}}{psdraw$($[[$w_1,x_1,y_1$]$,\dots$]$)$}
+\newcolumn
+
+\section{Binary Quadratic Forms}
+%
+\li{create $ax^2+bxy+cy^2$ (distance $d$) }{Qfb$(a,b,c,\{d\})$}
+\li{reduce $x$ ($s =\sqrt{D}$, $l=\floor{s}$)}
+  {qfbred$(x,\fl,\{D\},\{l\},\{s\})$}
+\li{composition of forms}{$x$*$y$ {\rm or }qfbnucomp$(x,y,l)$}
+\li{$n$-th power of form}{$x$\pow$n$ {\rm or }qfbnupow$(x,n)$}
+\li{composition without reduction}{qfbcompraw$(x,y)$}
+\li{$n$-th power without reduction}{qfbpowraw$(x,n)$}
+\li{prime form of disc. $x$ above prime $p$}{qfbprimeform$(x,p)$}
+\li{class number of disc. $x$}{qfbclassno$(x)$}
+\li{Hurwitz class number of disc. $x$}{qfbhclassno$(x)$}
+
+\section{Quadratic Fields}
+%
+\li{quadratic number $\omega=\sqrt x$ or $(1+\sqrt x)/2$}{quadgen$(x)$}
+\li{minimal polynomial of $\omega$}{quadpoly$(x)$}
+\li{discriminant of $\QQ(\sqrt{D})$}{quaddisc$(x)$}
+\li{regulator of real quadratic field}{quadregulator$(x)$}
+\li{fundamental unit in real $\QQ(x)$}{quadunit$(x)$}
+\li{class group of $\QQ(\sqrt{D})$}{quadclassunit$(D,\fl,\{t\})$}
+\li{Hilbert class field of $\QQ(\sqrt{D})$}{quadhilbert$(D,\fl)$}
+\li{ray class field modulo $f$ of $\QQ(\sqrt{D})$}{quadray$(D,f,\fl)$}
+
+\section{General Number Fields: Initializations}
+A number field $K$ is given by a monic irreducible $f\in\ZZ[X]$.\hfill\break
+\li{init number field structure \var{nf}}{nfinit$(f,\fl)$}
+\subsec{nf members:}
+\beginindentedkeys
+\key{polynomial defining \var{nf}, $f(\theta)=0$}{\var{nf}.pol}
+\key{number of real/complex places}{\var{nf}.r1, \var{nf}.r2}
+\key{discriminant of \var{nf}}{\var{nf}.disc}
+\key{$T_2$ matrix}{\var{nf}.t2}
+\key{vector of roots of $f$}{\var{nf}.roots}
+\key{integral basis of $\ZZ_K$ as powers of $\theta$}{\var{nf}.zk}
+\key{different}{\var{nf}.diff}
+\key{codifferent}{\var{nf}.codiff}
+\endindentedkeys
+\li{recompute \var{nf}\ using current precision}{nfnewprec$(nf)$}
+\li{init relative \var{rnf}\ given by $g=0$ over $K$}{rnfinit$(\var{nf},g)$}
+%
+\li{init\var{bnf} structure}{bnfinit$(f,\fl)$}
+\subsec{bnf members: {\rm same as \var{nf}, plus}}
+\beginindentedkeys
+\key{underlying \var{nf}}{\var{bnf}.nf}
+\key{classgroup}{\var{bnf}.clgp}
+\key{regulator}{\var{bnf}.reg}
+\key{fundamental units}{\var{bnf}.fu}
+\key{torsion units}{\var{bnf}.tu}
+\key{$[tu,fu]$}{\var{bnf}.tufu}
+\endindentedkeys
+\li{compute a \var{bnf}\ from small \var{bnf}}{bnfmake$(\var{sbnf})$}
+%
+\li{add $S$-class group and units, yield \var{bnf} s}{bnfsunit$(\var{nf},S)$}
+\li{init class field structure \var{bnr}}{bnrinit$(\var{bnf},m,\fl)$}
+%
+\subsec{bnr members: {\rm same as \var{bnf}, plus}}
+\beginindentedkeys
+\key{underlying \var{bnf}}{\var{bnr}.bnf}
+\key{structure of $(\ZZ_K/m)^*$}{\var{bnr}.zkst}
+\endindentedkeys
+
+\section{Simple Arithmetic Invariants (nf)}
+Elements are rational numbers, polynomials, polmods, or column vectors (on
+integral basis \kbd{\var{nf}.zk}).\hfill\break
+\li{integral basis of field def. by $f=0$}{nfbasis$(f)$}
+\li{field discriminant of field $f=0$}{nfdisc$(f)$}
+\li{reverse polmod $a=A(X)\mod T(X)$}{modreverse$(a)$}
+\li{Galois group of field $f=0$, $\deg f\le 11$}{polgalois$(f)$}
+\li{smallest poly defining $f=0$}{polredabs$(f,\fl)$}
+\li{small polys defining subfields of $f=0$}{polred$(f,\fl,\{p\})$}
+\li{small polys defining suborders of $f=0$}{polredord$(f)$}
+\li{poly of degree $\le k$ with root $x\in\CC$}{algdep$(x,k)$}
+\li{small linear rel.\ on coords of vector $x$}{lindep$(x)$}
+\li{are fields $f=0$ and $g=0$ isomorphic?}{nfisisom$(f,g)$}
+\li{is field $f=0$ a subfield of $g=0$?}{nfisincl$(f,g)$}
+\li{compositum of $f=0$, $g=0$}{polcompositum$(f,g,\fl)$}
+%
+\li{basic element operations (prefix \kbd{nfelt}):}{}
+\leavevmode\strut\hskip1em
+$($\kbd{nfelt}$)$\kbd{mul}, \kbd{pow}, \kbd{div}, \kbd{diveuc},
+\kbd{mod}, \kbd{divrem}, \kbd{val}
+\hfill\break
+%
+\li{express $x$ on integer basis}{nfalgtobasis$(\var{nf},x)$}
+\li{express element\ $x$ as a polmod}{nfbasistoalg$(\var{nf},x)$}
+\li{quadratic Hilbert symbol (at $p$)}{nfhilbert$(\var{nf},a,b,\{p\})$}
+\li{roots of $g$ belonging to \var{nf}}{nfroots$(\{\var{nf}\},g)$}
+\li{factor $g$ in \var{nf}}{nffactor$(\var{nf},g)$}
+\li{factor $g$ mod prime $pr$ in \var{nf}}{nffactormod$(\var{nf},g,pr)$}
+\li{number of roots of unity in \var{nf}}{nfrootsof1$(\var{nf}\,)$}
+\li{conjugates of a root $\theta$ of \var{nf}}{nfgaloisconj$(\var{nf},\fl)$}
+\li{apply Galois automorphism $s$ to $x$}{nfgaloisapply$(\var{nf},s,x)$}
+\li{subfields (of degree $d$) of \var{nf}}{nfsubfields$(\var{nf},\{d\})$}
+%
+\subsec{Dedekind Zeta Function $\zeta_K$}
+\li{$\zeta_K$ as Dirichlet series, $N(I)<b$}{dirzetak$(\var{nf},b)$}
+\li{init \var{nfz}\ for field $f=0$}{zetakinit$(f)$}
+\li{compute $\zeta_K(s)$}{zetak$(\var{nfz},s,\fl)$}
+\li{Artin root number of $K$}{bnrrootnumber$(\var{bnr},\var{chi},\fl)$}
+
+\section{Class Groups \& Units (bnf, bnr)}
+\leavevmode
+$a_1,\{a_2\},\{a_3\}$ usually $bnr,subgp$ or $\var{bnf},module,\{subgp\}$
+\hfill\break
+%
+\li{remove GRH assumption from \var{bnf}}{bnfcertify$(\var{bnf})$}
+\li{expo.~of ideal $x$ on class gp}{bnfisprincipal$(\var{bnf},x,\fl)$}
+\li{expo.~of ideal $x$ on ray class gp}{bnrisprincipal$(\var{bnr},x,\fl)$}
+\li{expo.~of $x$ on fund.~units}{bnfisunit$(\var{bnf},x)$}
+\li{as above for $S$-units}{bnfissunit$(\var{bnfs},x)$}
+\li{fundamental units of \var{bnf}}{bnfunit$(\var{bnf})$}
+\li{signs of real embeddings of \kbd{\var{bnf}.fu}}{bnfsignunit$(\var{bnf})$}
+%
+\subsec{Class Field Theory}
+\li{ray class group structure for mod.~$m$}{bnrclass$(\var{bnf},m,\fl)$}
+\li{ray class number for mod.~$m$}{bnrclassno$(\var{bnf},m)$}
+\li{discriminant of class field ext}{bnrdisc$(a_1,\{a_2\},\{a_3\})$}
+\li{ray class numbers, $l$ list of mods}{bnrclassnolist$(\var{bnf},l)$}
+\li{discriminants of class fields}{bnrdisclist$(\var{bnf},l,\{arch\},\fl)$}
+\li{decode output from \kbd{bnrdisclist}}{bnfdecodemodule$(\var{nf},fa)$}
+\li{is modulus the conductor?}{bnrisconductor$(a_1,\{a_2\},\{a_3\})$}
+\li{conductor of character $chi$}{bnrconductorofchar$(\var{bnr},chi)$}
+\li{conductor of extension}{bnrconductor$(a_1,\{a_2\},\{a_3\},\fl)$}
+\li{conductor of extension def.\ by $g$}{rnfconductor$(\var{bnf},g)$}
+\li{Artin group of ext.\ def'd by $g$}{rnfnormgroup$(\var{bnr},g)$}
+\li{subgroups of \var{bnr}, index $<=b$}{subgrouplist$(\var{bnr},b,\fl)$}
+\li{rel.\ eq.\ for class field def'd by $sub$}{rnfkummer$(\var{bnr},sub,\{d\})$}
+\li{same, using Stark units (real field)}{bnrstark$(\var{bnr},sub,\fl)$}
+
+\newcolumn
+\title{PARI-GP Reference Card (2)}
+\centerline{(PARI-GP version \PARIversion)}
+
+\section{Ideals}
+Ideals are elements, primes, or matrix of generators in HNF.\hfill\break
+\li{is $id$ an ideal in \var{nf} ?}{nfisideal$(\var{nf},id)$}
+\li{is $x$ principal in \var{bnf} ?}{bnfisprincipal$(\var{bnf},x)$}
+\li{principal ideal generated by $x$}{idealprincipal$(\var{nf},x)$}
+\li{principal idele generated by $x$}{ideleprincipal$(\var{nf},x)$}
+\li{give {\tt [}$a,b${\tt ]}, s.t.~ $a\ZZ_K+b\ZZ_K = x$}{idealtwoelt$(\var{nf},x,\{a\})$}
+\li{put ideal $a$ ($a\ZZ_K+b\ZZ_K$) in HNF form}{idealhnf$(\var{nf},a,\{b\})$}
+\li{norm of ideal $x$}{idealnorm$(\var{nf},x)$}
+\li{minimum of ideal $x$ (direction $v$)}{idealmin$(\var{nf},x,v)$}
+\li{LLL-reduce the ideal $x$ (direction $v$)}{idealred$(\var{nf},x,\{v\})$}
+%
+\subsec{Ideal Operations}
+\li{add ideals $x$ and $y$}{idealadd$(\var{nf},x,y)$}
+\li{multiply ideals $x$ and $y$}{idealmul$(\var{nf},x,y,\fl)$}
+\li{intersection of ideals $x$ and $y$}{idealintersect$(\var{nf},x,y,\fl)$}
+\li{$n$-th power of ideal $x$}{idealpow$(\var{nf},x,n,\fl)$}
+\li{inverse of ideal $x$}{idealinv$(\var{nf},x)$}
+\li{divide ideal $x$ by $y$}{idealdiv$(\var{nf},x,y,\fl)$}
+\li{Find $(a,b)\in x\times y$, $a+b=1$}{idealaddtoone$(\var{nf},x,\{y\})$}
+%
+\subsec{Primes and Multiplicative Structure}
+\li{factor ideal $x$ in \var{nf}}{idealfactor$(\var{nf},x)$}
+\li{recover $x$ from its factorization in \var{nf}}{factorback$(x,nf)$}
+\li{decomposition of prime $p$ in \var{nf}}{idealprimedec$(\var{nf},p)$}
+\li{valuation of $x$ at prime ideal $pr$}{idealval$(\var{nf},x,pr)$}
+\li{weak approximation theorem in \var{nf}}{idealchinese$(\var{nf},x,y)$}
+\li{give $bid=$structure of $(\ZZ_K/id)^*$}{idealstar$(\var{nf},id,\fl)$}
+\li{discrete log of $x$ in $(\ZZ_K/bid)^*$}{ideallog$(\var{nf},x,bid)$}
+\li{\kbd{idealstar} of all ideals of norm $\le b$}{ideallist$(\var{nf},b,\fl)$}
+\li{add archimedean places}{ideallistarch$(\var{nf},b,\{ar\},\fl)$}
+\li{init \kbd{prmod} structure}{nfmodprinit$(\var{nf},pr)$}
+\li{kernel of matrix $M$ in $(\ZZ_K/pr)^*$}{nfkermodpr$(\var{nf},M,prmod)$}
+\li{solve $M x = B$ in $(\ZZ_K/pr)^*$}{nfsolvemodpr$(\var{nf},M,B,prmod)$}
+
+\section{Galois theory over $\QQ$}
+\li{initializes a Galois group structure}{galoisinit$(\var{pol},\{den\})$}
+\li{action of $p$ in nfgaloisconj form}{galoispermtopol$(G,\{p\})$}
+\li{identifies as abstract group}{galoisidentify$(G)$}
+\li{exports a group for GAP or MAGMA}{galoisexport$(G,\fl)$}
+\li{subgroups of the Galois group $G$}{galoissubgroups$(G)$}
+\li{subfields from subgroups of $G$}{galoissubfields$(G,\fl,\{v\})$}
+\li{fixed field}{galoisfixedfield$(G,\var{perm},\fl,\{v\})$}
+\li{is $G$ abelian?}{galoisisabelian$(G,\fl)$}
+\li{abelian number fields}{galoissubcyclo(N,H,\fl,\{v\})}
+
+\section{Relative Number Fields (rnf)}
+Extension $L/K$ is defined by $g\in K[x]$. We have $order\subset L$.
+\hfill\break
+%
+\li{absolute equation of $L$}{rnfequation$(\var{nf},g,\fl)$}
+\li{relative {\tt nfalgtobasis}}{rnfalgtobasis$(\var{rnf},x)$}
+\li{relative {\tt nfbasistoalg}}{rnfbasistoalg$(\var{rnf},x)$}
+\li{relative {\tt idealhnf}}{rnfidealhnf$(\var{rnf},x)$}
+\li{relative {\tt idealmul}}{rnfidealmul$(\var{rnf},x,y)$}
+\li{relative {\tt idealtwoelt}}{rnfidealtwoelt$(\var{rnf},x)$}
+%
+\subsec{Lifts and Push-downs}
+\li{absolute $\rightarrow$ relative repres.\ for $x$}
+  {rnfeltabstorel$(\var{rnf},x)$}
+\li{relative $\rightarrow$ absolute repres.\ for $x$}
+  {rnfeltreltoabs$(\var{rnf},x)$}
+\li{lift $x$ to the relative field}{rnfeltup$(\var{rnf},x)$}
+\li{push $x$ down to the base field}{rnfeltdown$(\var{rnf},x)$}
+\leavevmode idem for $x$ ideal:
+\kbd{$($rnfideal$)$reltoabs}, \kbd{abstorel}, \kbd{up}, \kbd{down}\hfill\break
+%
+%
+\subsec{Projective $\ZZ_K$-modules, maximal order}
+\li{relative {\tt polred}}{rnfpolred$(\var{nf},g)$}
+\li{relative {\tt polredabs}}{rnfpolredabs$(\var{nf},g)$}
+\li{characteristic poly.\ of $a$ mod $g$}{rnfcharpoly$(\var{nf},g,a,\{v\})$}
+\li{relative Dedekind criterion, prime $pr$}{rnfdedekind$(\var{nf},g,pr)$}
+\li{discriminant of relative extension}{rnfdisc$(\var{nf},g)$}
+\li{pseudo-basis of $\ZZ_L$}{rnfpseudobasis$(\var{nf},g)$}
+\li{relative HNF basis of $order$}{rnfhnfbasis$(\var{bnf},order)$}
+\li{reduced basis for $order$}{rnflllgram$(\var{nf},g,order)$}
+\li{determinant of pseudo-matrix $A$}{rnfdet$(\var{nf},A)$}
+\li{Steinitz class of $order$}{rnfsteinitz$(\var{nf},order)$}
+\li{is \var{order} a free $\ZZ_K$-module?}{rnfisfree$(\var{bnf},\var{order})$}
+\li{true basis of \var{order}, if it is free}{rnfbasis$(\var{bnf},\var{order})$}
+%
+\subsec{Norms}
+\li{absolute norm of ideal $x$}{rnfidealnormabs$(\var{rnf},x)$}
+\li{relative norm of ideal $x$}{rnfidealnormrel$(\var{rnf},x)$}
+\li{solutions of $N_{K/\QQ}(y)=x\in \ZZ$}{bnfisintnorm$(\var{bnf},x)$}
+\li{is $x\in\QQ$ a norm from $K$?}{bnfisnorm$(\var{bnf},x,\fl)$}
+\li{initialize $T$ for norm eq.~solver}{rnfisnorminit$(K,pol,\fl)$}
+\li{is $a\in K$ a norm from $L$?}{rnfisnorm$(T,a,\fl)$}
+\vfill
+\copyrightnotice
+\bye
+% Local variables:
+% compile-command: "tex PARIRefCard"
+% End:

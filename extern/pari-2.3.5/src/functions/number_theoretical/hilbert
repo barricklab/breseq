@@ -1,0 +1,13 @@
+Function: hilbert
+Section: number_theoretical
+C-Name: hil0
+Prototype: lGGDG
+Help: hilbert(x,y,{p}): Hilbert symbol at p of x,y.
+Doc: \idx{Hilbert symbol} of $x$ and $y$ modulo the prime $p$, $p=0$ meaning
+ the place at infinity (the result is undefined if $p\neq 0$ is not prime).
+ 
+ It is possible to omit $p$, in which case we take $p = 0$ if both $x$
+ and $y$ are rational, or one of them is a real number. And take $p = q$
+ if one of $x$, $y$ is a \typ{INTMOD} modulo $q$ or a $q$-adic. (Incompatible
+ types will raise an error.)
+

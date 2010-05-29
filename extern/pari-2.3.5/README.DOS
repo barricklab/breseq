@@ -1,0 +1,130 @@
+PARI/GP is developped and tested in the Unix world, but has been partly
+ported to DOS/Windows using the EMX/RSX runtime packages. The resulting
+binary GP.EXE should be usable on most DOS-based platforms, although it won't
+share the traditional look and feel of e.g native Windows programs. Binaries
+may or may not be available after each Unix release.
+
+Everything written in this file applies to DOS 3.0 or higher, OS/2 2.0 or
+higher, and Windows 3.1. An 80386 CPU or higher is required in any case.
+
+See README.WIN for more recent versions of Windows (95 or higher).
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+I: What's in there ?
+--------------------
+
+The DOS archive is divided in 4 parts: the first 2 (GPB, GPD) change each
+time an update is made, the last two (GPRT, GPRL) need only be downloaded
+once, if at all. The complete sources are distributed in the Unix version,
+but are not required unless you want to compile GP or the PARI library
+yourself.
+
+xxxx stands for a version number
+
+1) Binary (GPB): GPB_xxxx.ZIP
+  + GP.EXE binary, linked with GNU readline 
+  + various README files
+
+  GP.EXE is an EMX executable; it it doesn't start up, check EMX\EMXRT.DOC
+  (DOS, OS/2) or RSX\README.TXT (Windows). The runtime packages themselves
+  are in GPRT.ZIP. Note that GP.EXE is twice slower than a native Linux binary.
+
+2) Documentation and Examples (GPD): GPD_xxxx.ZIP, containing the directories
+  + DOC, containing
+     - user's manual, tutorial and reference card in TeX format You wil
+       need TeX to compile them (see www.CTAN.org for how to get TeX) The
+       same documents are available in PDF and PostScript format from
+
+         ftp://pari.math.u-bordeaux.fr/pub/pari/manuals/
+
+     - the script GPHELP (translates Pari documentation to plain text and
+       handles "apropos help"), which requires PERL (see www.CPAN.org for how
+       to get it). You may have to fix paths in the first lines of the script.
+       Set your GPRC file so that the 'help' default points to the place where
+       you deposit GPHELP (see MISC/GPRC.DOS).
+
+  + MISC, containing
+      - a sample GPRC file (GPRC.DOS). Copy it to C:\_GPRC (or \etc\GPRC) and
+        adapt it to your needs
+      - a sample alias file (GPALIAS).
+
+  + EXAMPLES, containing sample GP scripts
+
+
+3) EMX/RSX runtime package (GPRT): GPRT.ZIP
+  files you will need if the provided binary GP.EXE doesn't work as is.
+
+4) Readline (GPRL): GPRL.ZIP
+  source of the modified readline library (version 1.0) used to compile GP.EXE
+
+The files can be extracted using UNZIP or PKUNZIP -D (don't forget the -D).
+Depending on what you want to do, the files you need are (X = required, [X] =
+optional) 
+
+    To run GP |  To compile libpari | To compile GP
+              |                     |
+GPB      X    |                     |
+GPD     [X]   |                     |
+GPRT     X    |                     |
+GPRL          |                     |       X
+sources       |           X         |       X
+galdata [X]   |                     |
+
+'sources' refers to the generic Unix distribution archive (pari.tgz).
+'galdata' is the file galdata.tgz which can be found at the same place as
+pari.tgz. It is only needed to compute the Galois group of polynomials of
+degree 8 to 11 (higher degrees not implemented).
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+II: What do I do with it ?
+--------------------------
+  1) I only want to use GP.EXE
+
+* For DOS: install EMX.EXE from GPRT somewhere in your path.  If you have
+enough RAM (~ 2MB), you can run GP.EXE as is, but some functionalities
+(extended help, external commands) will only be available if you use the
+command line EMX -P GP.EXE. Put that in a GP.BAT file, or (preferably)
+fetch a decent shell (e.g. bash) and use an alias.
+
+* For Windows: install RSX.EXE from GPRT somewhere in your path.
+
+* For OS/2: untested. You may need EMX.DLL from GPRT.
+
+In all cases, if you want to use the polgalois function for polynomials of
+degree 8 to 11, fetch galdata.tgz and extract it in \pari\data (can't be
+customized without recompiling).
+
+  2) I want to build the PARI library for my own C programs
+
+You need the _complete_ EMX package (not the runtime files we provide) and a
+make utility (see EMX\README.DOC; dmake and GNU make are both ok). 
+
+Fetch the Unix source distribution (tar and basic shell utilities needed to
+extract it). Then, from the distribution top directory:
+
+  cd Odos
+  make lib
+
+  3) I also want to recompile GP.EXE
+
+You need the GPRL archive (extract it from the distribution top directory).
+
+  cd readline
+  dmake
+  cd ..
+  cd Odos
+  dmake
+
+  4) I want to run the benches
+
+Build GP.EXE first (or extract the binary from GPB and put it in the 'Odos'
+subdirectory), then type
+
+  cd Odos
+  ..\src\test\dotest 
+
+(decent shell and basic Unix tools needed: the djgpp ports of bash and GNU
+binutils work nicely, Ian Stewartson's tools are also ok). Make sure FILES
+is at least 50 in CONFIG.SYS. Bash and sh may run out of memory during the
+bench.

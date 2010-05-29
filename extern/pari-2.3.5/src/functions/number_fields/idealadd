@@ -1,0 +1,7 @@
+Function: idealadd
+Section: number_fields
+C-Name: idealadd
+Prototype: GGG
+Help: idealadd(nf,x,y): sum of two ideals x and y in the number field
+ defined by nf
+

@@ -1,0 +1,51 @@
+On OS/2 the build goes the same way as on Unix, e.g.,
+
+  sh Configure
+  make gp
+  make bench
+
+With the current implementation of install(), one can load the functions from
+the PARI library only if the GP executable is build for dynamic linking.
+
+By default, the build will go to an AOUT-type executables (to simplify
+the logic of Configure, and enable restricted binary compatibility with
+DOS/Windows).  Unfortunately, AOUT-type DLLs are very restricted; thus
+the build of dynamically linked target fails.
+
+To build with OMF-type target
+
+  cd Oos2-ix86
+  make _O=.obj _A=.lib CC_FLAVOR="-Zomf -Zcrtdll -Zstack 8192" RLLIBS=-lreadline_import DLLD_IGNORE= AR=emxomfar bench
+
+This build constructs a working DLL.  Both -Zomf and -Zcrtdll are crucial to
+have a functioning DLL (see EMX documentation for details).  -Zstack 8192
+forces the same C stack size as for AOUT build (and the same - 8M - as on many
+Unices, so you get fewer surprises when things work on Unix, but core on OS/2
+due only to shorter C stack).  (The standard Configure adds -Zsysv-signals
+option; in fact, this option is not needed - as checked with v2.3.5.)
+
+Use of the the readline-DLL (via the readline_import.lib library) is not only
+a convenience, but also statically linked readline library are often broken;
+sigh...
+
+To use the gnuplot-engine DLL gnpltdrw.DLL, one can give Configure the option
+--graphic=gnuplot-dynamic,gnpltdrw (requires linking with -Zcrtdll for graphics
+to work).  Add -DOLD_SET_FEEDBACK_RECTANGLE gcc option if gnpltdrw.DLL supports
+mousing, but is an old build, so it won't report this capability.
+
+Thus the build process may look like this:
+
+  sh Configure --graphic=gnuplot-dynamic,gnpltdrw
+  make gp
+  cd Oos2-ix86
+  make _O=.obj _A=.lib CC_FLAVOR="-Zomf -Zcrtdll -Zstack 8192 -DUSE_SET_FEEDBACK_RECTANGLE" RLLIBS=-lreadline_import DLLD_IGNORE= AR=emxomfar bench
+  cd ..
+
+The statically build PARI library is in a file named similar to libpari-2_2.a,
+the library for linking with the PARI DLL is named as pari-2_2.a (or
+pari-2_2.lib).
+
+As a debugging tool, the constructed DLL reports its build options via the
+standard OS/2 way:
+
+  bldlevel FULL_NAME_OF_THE_DLL

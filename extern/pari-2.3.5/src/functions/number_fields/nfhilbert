@@ -1,0 +1,8 @@
+Function: nfhilbert
+Section: number_fields
+C-Name: nfhilbert0
+Prototype: lGGGDG
+Help: nfhilbert(nf,a,b,{p}): if p is omitted, global Hilbert symbol (a,b) in
+ nf, that is 1 if X^2-aY^2-bZ^2 has a non-trivial solution (X,Y,Z) in nf, -1
+ otherwise. Otherwise compute the local symbol modulo the prime ideal p
+

@@ -1,0 +1,8 @@
+Function: _~
+Class: symbolic_operators
+C-Name: gtrans
+Prototype: G
+Description: 
+ (vec):vec			gtrans($1)
+ (gen):gen			gtrans($1)
+

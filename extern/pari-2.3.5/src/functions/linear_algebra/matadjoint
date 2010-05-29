@@ -1,0 +1,6 @@
+Function: matadjoint
+Section: linear_algebra
+C-Name: adj
+Prototype: G
+Help: matadjoint(x): adjoint matrix of x
+

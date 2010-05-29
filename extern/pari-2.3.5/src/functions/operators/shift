@@ -1,0 +1,7 @@
+Function: shift
+Section: operators
+C-Name: gshift
+Prototype: GL
+Help: shift(x,n): shift x left n bits if n>=0, right -n bits if
+ n<0.
+

@@ -1,0 +1,7 @@
+Function: next
+Section: programming
+C-Name: next0
+Prototype: D1,L,
+Help: next({n=1}): interrupt execution of current instruction sequence, and
+ start another iteration from the n-th innermost enclosing loops
+

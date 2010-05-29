@@ -68,11 +68,11 @@ use Data::Dumper;
 # Format specification
 # 
 our $line_specification = {
-	## mutational event
-	'SNP' => ['position', 'ref_base', 'new_base'],
-	'SUB' => [''],
-	'DEL' => [''],
-	'INS' => [''],
+	## mutations
+	'SNP' => ['seq_id', 'position', 'ref_seq', 'new_seq'],
+	'SUB' => ['seq_id', 'position', 'ref_seq', 'new_seq'],
+	'DEL' => ['seq_id', 'position', 'size', 'start_range', 'end_range'],
+	'INS' => ['seq_id', 'position', 'new_seq'],
 	'MOB' => [''],
 	'DUP' => [''],
 	'INV' => [''],
@@ -86,9 +86,9 @@ our $line_specification = {
 
 our $tag_sort_fields = {
 	'SNP' => [1, 'seq_id', 'position'],
-	'INS' => [1],
-	'DEL' => [1],
-	'INS' => [1],
+	'SUB' => [1, 'seq_id', 'position'],
+	'DEL' => [1, 'seq_id', 'position'],
+	'INS' => [1, 'seq_id', 'position'],
 	'MOB' => [1],
 	'DUP' => [1],
 	'INV' => [1],
@@ -225,8 +225,26 @@ sub mark_unique_id
 
 sub list
 {
-	my ($self) = @_;
-	return @{$self->{list}};
+	my ($self, @types) = @_;
+		
+	## return ALL
+	if (scalar @types == 0)
+	{
+		return @{$self->{list}};
+	}
+	## return only requested types
+	else
+	{
+		my %requested;
+		foreach my $type (@types)
+		{
+			$requested{$type} = 1;
+		}
+		my @return_list = grep { $requested{$_->{type}} } @{$self->{list}};
+		return @return_list;
+	}
+	
+	return undef;
 }
 
 sub list_ref
@@ -246,6 +264,8 @@ sub _line_to_item
 	my $item = {};
 	$item->{type} = shift @line_list;
 	$item->{id} = shift @line_list;
+	my $evidence_string = shift @line_list;
+	@{$item->{evidence}} = split /,/, $evidence_string;
 	
 	my $spec = $line_specification->{$item->{type}};
 	if (!defined $spec)
@@ -301,7 +321,18 @@ sub _item_to_line
 	}
 	
 	my %ignore;
-	foreach my $key ('type', 'id', @$spec)
+	foreach my $key ('type', 'id')
+	{
+		$line .= "$item->{$key}\t";
+		$ignore{$key} = 1;
+	}
+	
+	my $parent_string = '';
+	$parent_string = join(',', @{$item->{evidence}}) if (ref($item->{evidence}) eq 'ARRAY');
+	$ignore{evidence} = 1;
+	$line .= $parent_string . "\t";
+		
+	foreach my $key (@$spec)
 	{
 		$line .= "$item->{$key}\t";
 		$ignore{$key} = 1;

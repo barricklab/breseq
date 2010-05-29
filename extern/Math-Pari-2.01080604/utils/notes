@@ -1,0 +1,41 @@
+Most of these remarks are related to unknown versions of Math::Pari
+and/or GP/PARI.
+
+Need an additional field to ep_produce: where parsing ended.
+fmt_nb only a placeholder.
+NOEXP2 needs to be fixed.
+init_opts declared in gp/gp.h.
+wrong dependence for none/kernel0.o
+Need to use $(AS) on sparcs, alpha, hppa.
+
+changevalue() and installep() are statics.
+numvar() disappeared.
+l0asm.c, Gnuplot.h, plotport.c anal.h, init.c, anal.c edited.
+
+Add for -g:
+
+dummy$(OBJ_EXT): pariinl.h
+	$(CCCMD) $(CCCDLFLAGS) $(DEFINE) -o $@ pariinl.h
+
+pariinl.c: pariinl.h
+	$(CPP) -I. $(INC) -I../../src/kernel/ix86/ $(DEFINE) $(CPPMINUS) < ../../src/kernel/none/level0.c | perl -ne "s/%s+/%/g; print unless /^s*#/" > $@
+
+dummy$(OBJ_EXT): pariinl.c
+	$(CCCMD) $(CCCDLFLAGS) $(DEFINE) -o $@ pariinl.c
+
+install() installs at the head of the chain, but findentry() expects
+that the installed entry goes into the end of the chain.
+
+err_recover() was flush()ing before giving the caller the possibility to
+die().
+
+coinit() assumes that a long can be put in 9 chars ?!
+p-adic was outputting extra space.
+
+bruteall() was overwriting old sp.
+
+a) T_PariPtr (to process &) is not implemented.
+1) Lookup for autoloaded functions happens too early: after
+   functions_hash, but before gp_hash.  Say, `kill' wants to be autoloaded.
+2) default() uses a static.
+3) tests/analyz does not check answers...

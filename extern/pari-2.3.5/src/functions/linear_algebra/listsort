@@ -1,0 +1,7 @@
+Function: listsort
+Section: linear_algebra
+C-Name: listsort
+Prototype: GD0,L,
+Help: listsort(list,{flag=0}): sort list in place. If flag is non-zero,
+ suppress all but one occurence of each element in list
+

@@ -1,0 +1,6 @@
+Function: vecmin
+Section: operators
+C-Name: vecmin
+Prototype: G
+Help: vecmin(x): minimum of the elements of the vector/matrix x
+

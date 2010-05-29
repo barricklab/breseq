@@ -1,0 +1,7 @@
+Function: write1
+Section: programming
+C-Name: write1
+Prototype: vss*
+Help: write1(filename,a): write the string expression a (same output as
+ print1) to filename
+

@@ -1,0 +1,8 @@
+Function: nfsolvemodpr
+Section: number_fields
+C-Name: nfsolvemodpr
+Prototype: GGGG
+Help: nfsolvemodpr(nf,a,b,pr): solution of a*x=b in Z_K/pr, where a is a
+ matrix and b a column vector, and where pr is in modpr format (see
+ nfmodprinit)
+

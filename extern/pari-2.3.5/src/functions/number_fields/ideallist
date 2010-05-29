@@ -1,0 +1,9 @@
+Function: ideallist
+Section: number_fields
+C-Name: ideallist0
+Prototype: GLD4,L,
+Help: ideallist(nf,bound,{flag=4}): vector of vectors L of all idealstar of
+ all ideals of norm<=bound. If (optional) flag is present, its binary digits
+ are toggles meaning 1: give generators; 2: add units; 4: give only the
+ ideals and not the bid.
+

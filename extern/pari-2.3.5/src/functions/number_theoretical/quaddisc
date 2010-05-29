@@ -1,0 +1,6 @@
+Function: quaddisc
+Section: number_theoretical
+C-Name: quaddisc
+Prototype: G
+Help: quaddisc(x): discriminant of the quadratic field Q(sqrt(x))
+

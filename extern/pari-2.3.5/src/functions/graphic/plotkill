@@ -1,0 +1,7 @@
+Function: plotkill
+Class: highlevel
+Section: graphic
+C-Name: killrect
+Prototype: vL
+Help: plotkill(w): erase the rectwindow w
+

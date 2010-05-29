@@ -1,0 +1,7 @@
+Function: matbasistoalg
+Section: number_fields
+C-Name: matbasistoalg
+Prototype: GG
+Help: matbasistoalg(nf,x): nfbasistoalg applied to every element of the
+ matrix x
+

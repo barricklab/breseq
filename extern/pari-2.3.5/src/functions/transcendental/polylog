@@ -1,0 +1,8 @@
+Function: polylog
+Section: transcendental
+C-Name: polylog0
+Prototype: LGD0,L,p
+Help: polylog(m,x,{flag=0}): m-th polylogarithm of x. flag is optional, and
+ can be 0: default, 1: D_m~-modified m-th polylog of x, 2: D_m-modified m-th
+ polylog of x, 3: P_m-modified m-th polylog of x
+

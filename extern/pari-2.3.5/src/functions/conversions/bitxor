@@ -1,0 +1,10 @@
+Function: bitxor
+Section: conversions
+C-Name: gbitxor
+Prototype: GG
+Help: bitxor(x,y): bitwise "exclusive or" of two integers x and y.
+ Negative numbers behave as if modulo big power of 2
+Description: 
+ (small, small):small:parens	$(1)^$(2)
+ (gen, gen):int	gbitxor($1, $2)
+

@@ -1,0 +1,7 @@
+Function: matinverseimage
+Section: linear_algebra
+C-Name: inverseimage
+Prototype: GG
+Help: matinverseimage(x,y): an element of the inverse image of the vector y
+ by the matrix x if one exists, the empty vector otherwise
+

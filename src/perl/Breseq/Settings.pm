@@ -37,9 +37,16 @@ use FindBin;
 use vars qw(@ISA);
 @ISA = qw( Bio::Root::Root );
 
+
+
+our %unwanted_sequences = ( 
+	'UNWANTED::ILLUMINA_ADAPTOR_1'    => 'GATCGGAAGAGCTCGTATGCCGTCTTCTGCTTG',  #Solexa Adaptor sequence.
+	'UNWANTED::ILLUMINA_ADAPTOR_2'	  => 'ACACTCTTTCCCTACACGACGCTCTTCCGATCT'
+);                              
+
+
 ## Options for turning analysis off ##
 ## Mainly for development, long names only ##
-
 
 sub new
 {	

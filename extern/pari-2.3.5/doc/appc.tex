@@ -1,0 +1,113 @@
+% $Id: appc.tex 7522 2005-12-09 18:14:24Z kb $
+% Copyright (c) 2000  The PARI Group
+%
+% This file is part of the PARI/GP documentation
+%
+% Permission is granted to copy, distribute and/or modify this document
+% under the terms of the GNU General Public License
+\appendix{Summary of Available Constants}
+
+In this appendix we give the list of predefined constants available in the
+PARI library. All of them are in the \idx{heap} and \emph{not} on the PARI
+\idx{stack}. We start by recalling the \idx{universal object}s introduced in
+\secref{se:intro4}:
+%
+\bprog
+t_INT: gen_0, gen_1, gen_m1, gen_2
+t_FRAC: ghalf
+t_COMPLEX: gi
+t_POL: pol_1[..], pol_x[..]
+@eprog
+\noindent Only polynomials in the variables \kbd{0} and \kbd{MAXVARN} are
+defined initially. Use \kbd{fetch\_var()} (see \secref{se:fetch_var}) to
+create new ones.
+
+\noindent The other objects are not initialized by default:
+
+\tet{bern}(i). This is the $2i$-th Bernoulli number ($B_0=1$, $B_2=1/6$,
+$B_4=-1/30$, etc\dots). To initialize them, use the function:
+
+\fun{void}{mpbern}{long n, long prec}
+
+This creates the even numbered Bernoulli numbers up to $B_{2n-2}$ 
+\emph{as real numbers} of precision \kbd{prec}. They can then be used with
+the macro \kbd{bern(i)}. Note that this is not a function but simply an
+abbreviation, hence care must be taken that \kbd{i} is inside the right
+bounds (i.e. $0\le \kbd{i}\le n-1$) before using it, since no checking is
+done by PARI itself.
+
+\tet{geuler}. This is Euler's constant. It is initialized by the first call
+to \tet{mpeuler} (see \secref{se:euler}).
+
+\tet{gpi}. This is the number $\pi$.  It is initialized by the first call to
+\tet{mppi} (see \secref{se:pi}).
+
+The use of both \tet{geuler} and \tet{gpi} is deprecated since it is always
+possible that some library function increases the precision of the constant
+\emph{after} you've computed it, hence modifying the computation accuracy
+without your asking for it and increasing your running times for no good
+reason. You should always use \tet{mpeuler} and \tet{mppi} (note that only
+the first call will actually compute the constant, unless a higher precision
+is required).
+
+In addition, some single or double-precision real numbers (like \kbd{PI}) are
+predefined, and their list is in the file \kbd{paricom.h}.
+
+Finally, one has access to a table of (differences of) primes through the
+pointer \tet{diffptr}. This is used as follows: when
+
+\fun{void}{pari_init}{size\_t size, ulong maxprime}
+
+\noindent is called, this table is initialized with the successive
+differences of primes up to (just a little beyond) \kbd{maxprime}
+(see \secref{se:intro4}). The prime table will occupy roughly
+$\kbd{maxprime}/\log(\kbd{maxprime})$ bytes in memory, so be sensible when
+choosing \kbd{maxprime} (it is $500000$ by default under \kbd{gp}). In any case,
+the implementation requires that $\tet{maxprime} < 2^{\B} - 2048$, whatever
+memory is available.
+
+The largest prime computable using this table is available as the output of
+
+\fun{ulong}{maxprime}{}
+
+After the following initializations (the names $p$ and \var{ptr} are arbitrary of
+course)
+\bprog
+byteptr ptr = diffptr;
+ulong p = 0;
+@eprog
+\noindent calling the macro \tet{NEXT_PRIME_VIADIFF_CHECK(p, ptr)} repeatedly will
+assign the successive prime numbers to $p$. Overrunning the prime table boundary
+will raise the error \tet{primer1}, which will just print the error message:
+
+\kbd{*** not enough precomputed primes}
+
+\noindent and then abort the computations. The alternative macro
+\tet{NEXT_PRIME_VIADIFF} operates in the same way, but will omit that check, and
+is slightly faster. It should be used in the following way:
+%
+\bprog
+byteptr ptr = diffptr;
+ulong p = 0;
+
+if (maxprime() < goal) pari_err(primer1); /*@Ccom not enough primes */
+while (p <= goal) /*@Ccom run through all primes up to \kbd{goal} */
+{
+  NEXT_PRIME_VIADIFF(p, ptr);
+  ...
+}
+@eprog\noindent
+Here, we use the general error handling function \kbd{pari\_err} (see
+\secref{se:err}), with the codeword \kbd{primer1}, raising the ``not enough
+primes'' error.
+
+You can use the function \kbd{initprimes} from the file \kbd{arith2.c} to
+compute a new table on the fly and assign it to \kbd{diffptr} or to a
+similar variable of your own. Beware that before changing \kbd{diffptr},
+you should really free the (\kbd{malloc}ed) precomputed table first, and then
+all pointers into the old table will become invalid.
+
+PARI currently guarantees that the first 6547 primes, up to and including
+65557, are present in the table, even if you set \kbd{maxprime} to zero.
+in the \kbd{pari\_init} call.
+\vfill\eject
