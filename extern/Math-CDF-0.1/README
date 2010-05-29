@@ -1,0 +1,52 @@
+Math::CDF -- Generate probabilities and quantiles from several
+             statistical probability functions
+
+This module provides cumulative probabilities [P(X <= x)] and 
+quantiles [given p, returns x such that P(X <= x) = p] from several
+statistical probability distributions.
+
+This package provides a perl interface to DCDFLIB, a set of C functions
+written by Barry W. Brown, James Lovato and Kathy Russell of the 
+Department of Biomathematics at The University of Texas M.D. Anderson 
+Cancer Center in Houston, Texas. DCDFLIB code is included in this module
+distribution with permission of its authors.
+
+Please read the README for DCDFLIB provided in the /cdflib subdirectory
+of the Math::CDF distribution. In particular please notice in that 
+document that some DCDFLIB routines might not be properly included in
+commercial applications.
+
+
+How to Install
+--------------
+
+perl Makefile.PL
+make
+make test
+make install
+
+Before compiling you may need to edit the file cdflib/ipmpar.c and 
+uncomment the section of code corresponding to the platform you are 
+compiling on. By default this file is set up for computers that use 
+IEEE Arithmetic, which includes IBM PC, Macintosh and most Unix 
+workstations.
+
+
+Credit
+------
+
+Math::CDF was put together by Ed Callahan, callahan@envstat.com
+
+Environmental Statistics
+PO Box 563
+Fountain City, WI  54629
+
+
+DCDFLIB was written by Barry W. Brown (bwb@odin.mdacc.tmc.edu), 
+James Lovato and Kathy Russell
+
+Department of Biomathematics, Box 237
+The University of Texas, M.D. Anderson Cancer Center
+1515 Holcombe Boulevard
+Houston, TX  77030
+

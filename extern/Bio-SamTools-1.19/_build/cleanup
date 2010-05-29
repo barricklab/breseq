@@ -1,0 +1,8 @@
+do{ my $x = {
+       'lib/Bio/DB/Sam.o' => 1,
+       'lib/Bio/DB/Sam.c' => 1,
+       'blib/arch/auto/Bio/DB/Sam/Sam.bs' => 1,
+       'blib/arch/auto/Bio/DB/Sam/Sam.bundle' => 1,
+       'blib' => 1
+     };
+$x; }
