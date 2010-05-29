@@ -16,3 +16,4 @@ src/c/build
 man/*
 share/*
 lib/*
+Library/*
