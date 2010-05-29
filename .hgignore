@@ -13,3 +13,6 @@ src/c/build
 *.html
 *.tab
 *.swp
+man/*
+share/*
+lib/*
