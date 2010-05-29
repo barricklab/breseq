@@ -444,8 +444,11 @@ sub tam_write_moved_alignment
 	my $l = join("\t", @ll) . "\n";
 	print STDERR $l if ($verbose);
 
-	die "CIGAR length does not match calculated length" if ($cigar_length != $a->l_qseq);
-
+	if ($cigar_length != $a->l_qseq)
+	{
+		print Dumper($cigar_string, $cigar_length, $a->l_qseq);
+		die "CIGAR length does not match calculated length";
+	}
 	print $fh $l;	
 }
 

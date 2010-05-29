@@ -64,8 +64,6 @@ sub new
 		'junction-sequence|j=s' => \@{$self->{junction_only_reference_genbank_file_names}},		
 		'quality-style|q=s' => \$self->{quality_type},
 		'clean=s' => \$self->{clean},
-	## Options for what results are printed
-		'quality-cutoff|c=s' => \$self->{snp_log10_prob_cutoff},
 	## Options for snp error analysis
 		'require-complete-match' => \$self->{require_complete_match},
 		'require-no-indel-match' => \$self->{require_no_indel_match},
@@ -133,7 +131,7 @@ sub new_annotate
 		'quality-style|q=s' => \$self->{quality_type},
 		'clean=s' => \$self->{clean},
 	## Options for what results are printed
-		'quality-cutoff|c=s' => \$self->{snp_log10_prob_cutoff},
+		'snp-quality-cutoff|c=s' => \$self->{snp_log10_prob_cutoff},
 	## Options for snp error analysis
 		'require-complete-match' => \$self->{require_complete_match},
 		'require-no-indel-match' => \$self->{require_no_indel_match},
@@ -192,7 +190,7 @@ sub initialize_1
 	$self->{min_quality} = 0;
 	$self->{max_quality} = 0;
 	$self->{min_match_length} = 24;
-	$self->{run_name} = '';
+	$self->{run_name} = 'unnamed';
 	$self->{clean} = 0;
 	$self->{base_output_path} = '';
 	$self->{error_model_method} = 'FIT';
@@ -337,10 +335,9 @@ sub initialize_2
 	$self->{mutations_html_file_name} = "$self->{output_path}/mutations.html";
 	$self->{marginal_html_file_name} = "$self->{output_path}/marginal.html";
 	
-	$self->{full_genome_diff_file_name} = "$self->{output_path}/candidates.gd";
-	$self->{filtered_genome_diff_file_name} = "$self->{output_path}/mutations.gd";
-	$self->{marginal_genome_diff_file_name} = "$self->{output_path}/marginal.gd";
-	
+	$self->{final_genome_diff_file_name} = "$self->{output_path}/$self->{run_name}.gd";
+	$self->{merged_evidence_genome_diff_file_name} = "$self->{output_path}/merged.gd";
+
 	$self->{local_alignment_path} = "alignment";
 	$self->{alignment_path} = "$self->{output_path}/$self->{local_alignment_path}";
 	$self->{local_coverage_graph_path} = "coverage";

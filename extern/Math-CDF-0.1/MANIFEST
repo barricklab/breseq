@@ -1,0 +1,16 @@
+cdflib/Makefile.PL
+cdflib/dcdflib.c
+cdflib/ipmpar.c
+cdflib/cdflib.h
+cdflib/doc/dcdflib.fdoc
+cdflib/doc/dcdflib.chs
+cdflib/doc/README
+cdflib/doc/HOWTOGET
+cdflib/doc/dcdflib.h
+CDF.pm
+CDF.xs
+Changes
+Makefile.PL
+MANIFEST
+README
+test.pl

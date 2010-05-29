@@ -78,6 +78,7 @@ Copyright 2008-2009.  All rights reserved.
 
 our $VERSION = '0.00_02';
 
+
 #### Standard Perl Modules ####
 use strict;
 use Data::Dumper;
@@ -87,6 +88,9 @@ use POSIX qw(ceil floor);
 use FindBin;
 use lib $FindBin::Bin;
 $ENV{PATH} = "$ENV{PATH}:" . $FindBin::Bin;
+
+#### Path to Locally Installed Modules ####
+use lib $FindBin::Bin . "/../../lib/perl5";
 
 #### Breseq Perl Modules ####
 use Breseq::AlignmentCorrection;
@@ -569,9 +573,6 @@ sub tabulate_pairs_in_tam {}
 }
 
 
-
-
-
 =comment
 
 
@@ -734,6 +735,9 @@ if (!-e $mutation_identification_done_file_name && !$settings->{no_mutation_pred
 	#   this function handles all file creation...
 	##
 	Breseq::MutationIdentification::identify_mutations($settings, $summary, $ref_seq_info, $error_rates);
+
+	my $predicted_mutation_genome_diff_file_name = $settings->file_name('predicted_mutation_genome_diff_file_name');	
+	my $mutation_gd = Breseq::GenomeDiff->new( -in => $predicted_mutation_genome_diff_file_name);
 	
 	open DONE, ">$mutation_identification_done_file_name";
 	close DONE;
@@ -747,46 +751,25 @@ if (!-e $output_done_file_name)
 	## Output Genome Diff File
 	sub genome_diff_output {}
 	###
-	print STDERR "Creating genome diff file...\n";
-
-	## PROBLEM: We can't apply the coverage cutoff until AFTER we count errors
-	##   (because only then do we have the distribution to fit)
-	##   but we have to choose which junctions we believe BEFORE counting
-	##   (because we put their split alignments in the BAM file)
-	## Ideally we would do this after step 7, then remove the offending read pieces from the BAM file
-	## before proceeding to SNP calling.
-	## this could be done by reserving these pieces in a separate SAM file
-	## then merging them later? But full matches would also have to be kept separate...
-	##
-	
-	my $predicted_junctions_file_name = $settings->file_name('predicted_junction_file_name');	
-	my $hybrid_gd = Breseq::GenomeDiff->new( -in => $predicted_junctions_file_name );
-		
-	foreach my $hybrid ($hybrid_gd->list)
-	{
-		my $coverage_cutoff_1 = $settings->{unique_coverage}->{$hybrid->{side_1_seq_id}}->{junction_coverage_cutoff};
-		my $coverage_cutoff_2 = $settings->{unique_coverage}->{$hybrid->{side_2_seq_id}}->{junction_coverage_cutoff};
-		
-		if ( (!defined $coverage_cutoff_1 || ($hybrid->{total_reads} < $coverage_cutoff_1) ) 
-		  && (!defined $coverage_cutoff_2 || ($hybrid->{total_reads} < $coverage_cutoff_2) ) )
-		{
-			$hybrid->{marginal} = 1;
-		}
-	}
-	###	
-	
-	my $predicted_mutation_genome_diff_file_name = $settings->file_name('predicted_mutation_genome_diff_file_name');	
-	my $mutation_gd = Breseq::GenomeDiff->new( -in => $predicted_mutation_genome_diff_file_name);
+	print STDERR "Creating merged genome diff evidence file...\n";
 
 	## merge all of the evidence GenomeDiff files into one...
-	my $full_genome_diff_file_name = $settings->file_name('full_genome_diff_file_name');
+	my $predicted_junctions_file_name = $settings->file_name('predicted_junction_file_name');	
+	my $hybrid_gd = Breseq::GenomeDiff->new( -in => $predicted_junctions_file_name );
+	my $predicted_mutation_genome_diff_file_name = $settings->file_name('predicted_mutation_genome_diff_file_name');	
+	my $mutation_gd = Breseq::GenomeDiff->new( -in => $predicted_mutation_genome_diff_file_name);
+	my $merged_evidence_genome_diff_file_name = $settings->file_name('merged_evidence_genome_diff_file_name');
 	my $merged_gd = Breseq::GenomeDiff::merge($hybrid_gd, $mutation_gd);
-	$merged_gd->write($full_genome_diff_file_name);
+	$merged_gd->write($merged_evidence_genome_diff_file_name);
 	
 	## predict mutations from evidence in the GenomeDiff
-#	my $mp = Breseq::MutationPredictor->new();
-#	$mp->predict($merged_gd);
+	print STDERR "Predicting mutations from evidence...\n"
+	my $mp = Breseq::MutationPredictor->new();
+	$mp->predict($merged_gd);
+	my $final_genome_diff_file_name = $settings->file_name('final_genome_diff_file_name');
+	$merged_gd->write($final_genome_diff_file_name);
 
+=comment
 
 	my $filtered_genome_diff_file_name = $settings->file_name('filtered_genome_diff_file_name');
 	my $marginal_genome_diff_file_name = $settings->file_name('marginal_genome_diff_file_name');
@@ -804,6 +787,8 @@ if (!-e $output_done_file_name)
 
 	my $index_html_file_name = $settings->file_name('index_html_file_name');	
 	Breseq::Output::html_index($index_html_file_name, $settings, $summary, $ref_seq_info, $annotated_mutations, $annotated_marginal);
+
+=cut
 
 	###
 	## Temporary debug output using Data::Dumper
