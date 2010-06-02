@@ -12,6 +12,10 @@ Module for reading and writing fastq files more rapidly than BioPerl.
 
 =head1 DESCRIPTION
 
+=head1 TODO
+
+Read translation table from GenBank file
+
 =head1 AUTHOR
 
 Jeffrey Barrick
@@ -108,7 +112,6 @@ sub load_ref_seq_info
 				$fasta_o->write_seq($ref_seq);
 			}
 			
-			
 			if (!$junction_only)
 			{
 				push @{$ref_seq_info->{seq_ids}}, $seq_id;
@@ -121,22 +124,25 @@ sub load_ref_seq_info
 			##load the genbank record
 			my @Feature_List = $ref_seq->get_SeqFeatures();
 			my @gene_list;
-			my @is_list;
+			my @repeat_list;
 			
 			FEATURE: foreach my $Feature ( @Feature_List ) 
 			{ 	
 				if ($Feature->primary_tag eq 'repeat_region')
 				{	
-					my $is;
-					$is->{gene} = get_tag($Feature, "mobile_element");
-					$is->{gene} =~ s/insertion sequence:// if ($is->{gene});
-					$is->{gene} = "unknown" if (!$is->{gene});
-					$is->{product} = "repeat region";
-
-					$is->{start} = $Feature->start;
-					$is->{end} = $Feature->end;
-					$is->{strand} = $Feature->strand;
-					push @is_list, $is;
+					my $r;
+					$r->{name} = get_tag($Feature, "mobile_element");
+					$r->{name} =~ s/insertion sequence:// if ($r->{name});
+					
+					## don't add unnamed ones to list...
+					#$r->{name} = "unknown_repeat" if (!$r->{name});
+					next FEATURE if (!$r->{name});
+					
+					$r->{product} = "repeat region";
+					$r->{start} = $Feature->start;
+					$r->{end} = $Feature->end;
+					$r->{strand} = $Feature->strand;
+					push @repeat_list, $r;
 					next FEATURE;
 				}
 				
@@ -148,8 +154,8 @@ sub load_ref_seq_info
 				{
 					#Add information to last gene
 					my $gene;
-					$gene->{gene} = get_tag($Feature, "gene");
-					$gene->{gene} = get_tag($Feature, "locus_tag") if (!$gene->{gene});
+					$gene->{name} = get_tag($Feature, "gene");
+					$gene->{name} = get_tag($Feature, "locus_tag") if (!$gene->{name});
 					$gene->{start} = $Feature->start;
 					$gene->{end} = $Feature->end;
 					$gene->{strand} = $Feature->strand;
@@ -175,7 +181,7 @@ sub load_ref_seq_info
 			}
 			
 			$ref_seq_info->{gene_lists}->{$seq_id} = \@gene_list;
-			$ref_seq_info->{is_lists}->{$seq_id} = \@is_list;	
+			$ref_seq_info->{repeat_lists}->{$seq_id} = \@repeat_list;	
 		}
 	}
 			
@@ -188,289 +194,234 @@ sub load_ref_seq_info
 	return $ref_seq_info;
 }
 
+sub annotate_1_mutation
+{
+	my ($ref_seq_info, $mut, $start, $end, $repeat_override) = @_;
+
+	## this could be moved to the object
+	my $intergenic_seperator = "/";
+
+	## initialize everything, even though we don't always use it
+	$mut->{aa_position} = "";
+	$mut->{aa_ref_seq} = "";
+	$mut->{aa_new_seq} = "";
+	$mut->{codon_position} = "";
+	$mut->{codon_ref_seq} = "";
+	$mut->{codon_new_seq} = "";		
+	$mut->{gene_name} = "";
+	$mut->{gene_position} = "";
+	$mut->{gene_product} = "";
+
+	my $seq_id = $mut->{seq_id};
+	my $gene_list_ref = $ref_seq_info->{gene_lists}->{$seq_id};
+	my $repeat_list_ref = $ref_seq_info->{repeat_lists}->{$seq_id};
+	my $ref_seq = $ref_seq_info->{bioperl_ref_seqs}->{$seq_id};		
+
+	my $size = $end - $start + 1;
+
+	my ($prev_gene, $next_gene) = (undef, undef);
+	my @within_genes = ();
+	my @between_genes = ();
+	my @inside_left_genes = ();
+	my @inside_right_genes = ();
+		
+	my $repeat_region;
+	if ($repeat_override)
+	{
+		die if ($start != $end);
+		$repeat_region = get_overlapping_feature($repeat_list_ref, $start);
+		push @within_genes, $repeat_region if ($repeat_region);
+	}
+	
+	if (!$repeat_region)
+	{	
+		my ($within_genes_list_ref, $between_genes_list_ref, $inside_left_genes_list_ref, $inside_right_genes_list_ref);
+		($prev_gene, $next_gene, $within_genes_list_ref, $between_genes_list_ref, $inside_left_genes_list_ref, $inside_right_genes_list_ref) 
+			= find_nearby_genes($gene_list_ref, $start, $end);	
+			
+		@within_genes = @$within_genes_list_ref;
+		@between_genes = @$between_genes_list_ref;
+		@inside_left_genes = @$inside_left_genes_list_ref;
+		@inside_right_genes = @$inside_right_genes_list_ref;
+	}
+
+
+	## Mutation is noncoding
+	if (scalar(@within_genes) + scalar(@between_genes) == 0)
+	{			
+		$mut->{snp_type} = "IG";
+
+		$mut->{gene_name} .= (defined $prev_gene) ? $prev_gene->{name} : "&minus;";
+		$mut->{gene_name} .= $intergenic_seperator;
+		$mut->{gene_name} .= (defined $next_gene) ? $next_gene->{name} : "&minus;";
+
+		if (defined $prev_gene)
+		{
+			$mut->{gene_position} .= "intergenic&nbsp;(";
+			$mut->{gene_position} .= ($prev_gene->{strand} == +1) ? "+" : "-";
+			$mut->{gene_position} .= $start - $prev_gene->{end};
+		}
+		else
+		{
+			$mut->{gene_position} .= "intergenic&nbsp;(&minus;";
+		}
+		$mut->{gene_position} .= $intergenic_seperator;
+		if (defined $next_gene)
+		{
+			$mut->{gene_position} .= ($next_gene->{strand} == +1) ? "-" : "+";
+			$mut->{gene_position} .= $next_gene->{start} - $end;
+		}
+		else
+		{
+			$mut->{gene_position} .= "&minus;";
+		}
+		$mut->{gene_position} .= ")";
+
+		$mut->{gene_product} .= (defined $prev_gene) ? $prev_gene->{product} : "&minus;";
+		$mut->{gene_product} .= $intergenic_seperator;			
+		$mut->{gene_product} .= (defined $next_gene) ? $next_gene->{product} : "&minus;";
+
+		return $mut;
+	}
+	## Mutation is completely within genes
+	elsif (scalar @within_genes > 0)
+	{
+### TO DO: It can be within multiple genes, in which case we need to annotate
+### the change it causes in each reading frame UGH! YUCKY!				
+### FOR NOW: just take the first of the within genes...				
+		my $gene = $within_genes[0];
+		$mut->{gene_name} = $gene->{name};
+		$mut->{gene_product} = $gene->{product};
+
+		my $within_gene_start = ($gene->{strand} == +1) ? $gene->{start} : $gene->{end};	
+
+		if ($start == $end)
+		{
+			$mut->{gene_position} = abs($start-$within_gene_start) + 1; 
+		}
+		else
+		{
+			my $gene_start = abs($start-$within_gene_start) + 1; 
+			my $gene_end = abs($end-$within_gene_start) + 1; 
+			$mut->{gene_position} = ($gene_start < $gene_end) ? "$gene_start&minus;$gene_end" : "$gene_end&minus;$gene_start";
+		}
+
+		my $gene_nt_size = $gene->{end} - $gene->{start} + 1;
+
+		## ...but the gene is a pseudogene or an RNA gene
+		if ( (!$gene->{translation} || $gene->{pseudogene}) )
+		{
+			$mut->{snp_type} = "NC";
+			$mut->{gene_position} = "noncoding ($mut->{gene_position}/$gene_nt_size&nbsp;nt)";
+			return $mut;
+		}	
+
+		if ($mut->{type} ne 'SNP')
+		{					
+			$mut->{gene_position} = "coding&nbsp;($mut->{gene_position}/$gene_nt_size&nbsp;nt)";
+			return $mut;
+		}
+
+	    ## determine the old and new translation of this codon  
+   		$mut->{aa_position} = int(($mut->{gene_position}-1)/3) + 1;
+		$mut->{codon_position} = abs($start-$within_gene_start) % 3;
+
+		my $codon_seq = ($gene->{strand} == +1) ?
+			$ref_seq->trunc($gene->{start} + 3 * ($mut->{aa_position}-1),$gene->{start} + 3 * $mut->{aa_position} - 1) :
+			$ref_seq->trunc($gene->{end} - 3 * $mut->{aa_position}+1,$gene->{end} - 3 * ($mut->{aa_position}-1))->revcom;
+
+		$mut->{codon_ref_seq} = $codon_seq->seq();
+		$mut->{aa_ref_seq} = $codon_seq->translate( undef, undef, undef, 11 )->seq();
+
+		$mut->{codon_new_seq} = $codon_seq->seq();
+		#remember to revcom the change if gene is on opposite strand
+		substr($mut->{codon_new_seq}, $mut->{codon_position}, 1) = ($gene->{strand} == +1) ? $mut->{new_seq} : revcom($mut->{new_seq});
+		$codon_seq->seq($mut->{codon_new_seq});
+		$mut->{aa_new_seq} = $codon_seq->translate( undef, undef, undef, 11 )->seq();
+
+	    $mut->{snp_type} = ($mut->{aa_ref_seq} ne $mut->{aa_new_seq}) ? "NS" : "S";
+	}
+
+	##The mutation actually contains several genes
+	elsif (scalar @between_genes > 0)
+	{
+		my @gene_list = ( map({ "<i>[" . $_->{name} . "]</i>" } @inside_left_genes),
+						  map({ "<i>" . $_->{name} . "</i>" } @between_genes),
+						  map({ "<i>[" . $_->{name} ."]</i>" } @inside_right_genes) );
+
+		$mut->{gene_product} = join ("&minus", @gene_list);
+
+
+		if (scalar @gene_list == 1)
+		{
+			$mut->{gene_name} = $gene_list[0];
+		}
+		else
+		{
+			$mut->{gene_name} = $gene_list[0] . "&minus" . $gene_list[-1];
+		}
+	}
+	
+	return $mut;
+}
+
 sub annotate_mutations
 {
-	my ($settings, $summary, $ref_seq_info, $mutations_list_ref) = @_;
+	my ($ref_seq_info, $gd) = @_;
 
-	my $current_line;
-	SNP: foreach my $c (@$mutations_list_ref)
-	{			
-		#set up to work with this sequence
-		my $seq_id = $c->{seq_id};
-		my $gene_list_ref = $ref_seq_info->{gene_lists}->{$seq_id};
-		my $is_list_ref = $ref_seq_info->{is_lists}->{$seq_id};
-		my $ref_seq = $ref_seq_info->{bioperl_ref_seqs}->{$seq_id};		
-								
-		$c->{type} = "";
-		$c->{aa_position} = "";
-		$c->{aa_ref_seq} = "";
-		$c->{aa_new_seq} = "";
-		$c->{codon_position} = "";
-		$c->{codon_ref_seq} = "";
-		$c->{codon_new_seq} = "";		
-		$c->{gene} = "";
-		$c->{gene_position} = "";
-		$c->{gene_product} = "";
+	##keep track of other mutations that affect SNPs
+	##because we may double-hit a codon
 
-#		#save original start and end before we possibly shift them around
-		$c->{original_start} = $c->{start};
-		$c->{original_end} = $c->{end};
-		
-		if (defined $c->{quality})
-		{		
-			my @quality_list = split /,/, $c->{quality};
-			@quality_list = map { sprintf("%.1f", $_) } @quality_list;
-			$c->{display_quality} = join ",", @quality_list;
-		}
-		
-		## Create versions of each sequence that can be substituted into
-		## reading frames to determine alternate translations.
-		$c->{ref_rep_seq} = $c->{ref_seq};
-		$c->{ref_rep_seq} = '' if ($c->{ref_rep_seq} eq '.');
-		
-		$c->{new_rep_seq} = $c->{new_seq};
-		$c->{new_rep_seq} = '' if ($c->{new_rep_seq} eq '.');	
-			
-		## Determine whether the change is within a gene
-		my ($prev_gene, $gene, $next_gene) = find_nearby_genes($c, $gene_list_ref);		
-		
-		## The change is within a gene on the bottom strand
-		## For INDELS, move the change to be as late on the gene's strand as possible
-		## i.e. if we deleted a G in a run of GGGGGGG
-		## This may actually shift it out of the reading frame! 
-		## (Clean up for this possibility happens afterwards.)
-		
-		if ($gene && ($gene->{strand} == - 1)) 
-		{
-			## deletion 
-			if (length($c->{ref_rep_seq}) > length($c->{new_rep_seq}))
-			{
-				my $len = length($c->{ref_rep_seq}) - length($c->{new_rep_seq});
-				if ($c->{start}-$len >= 1)
-				{
-					my $test_shift_sequence = $ref_seq->trunc($c->{start}-$len, $c->{start}-1)->seq;
-					#print STDERR "$c->{start} $len $test_shift_sequence ?= $c->{ref_rep_seq} -> $c->{new_rep_seq}\n";
-
-					MOVE: while ( "$test_shift_sequence" eq $c->{ref_rep_seq})
-					{
-						if ($c->{start} - $len < 1)
-						{
-							last MOVE;
-						}
-						$c->{start} -= $len;
-						$c->{end} -= $len;
-						
-						$test_shift_sequence = $ref_seq->trunc($c->{start}-$len, $c->{start}-1)->seq;
-						#print STDERR "$c->{start} $len $test_shift_sequence ?= $c->{ref_rep_seq} -> $c->{new_rep_seq}\n";
-					}
-				}
-			}
-			## insertion
-			elsif (length($c->{new_rep_seq}) > length($c->{ref_rep_seq}))
-			{
-				my $len = length($c->{new_rep_seq}) - length($c->{ref_rep_seq});
-				if ($c->{start}-$len >= 1)
-				{
-					my $test_shift_sequence = $ref_seq->trunc($c->{start}-$len, $c->{start}-1)->seq;
-					#print STDERR "$c->{start} $len $test_shift_sequence ?= $c->{ref_rep_seq} -> $c->{new_rep_seq}\n";
-					MOVE: while ("$test_shift_sequence" eq $c->{new_rep_seq})
-					{
-						if ($c->{start} - $len < 1)
-						{
-							last MOVE;
-						}
-						$c->{start} -= $len;
-						$c->{end} -= $len;
-
-						$test_shift_sequence = $ref_seq->trunc($c->{start}-$len, $c->{start}-1)->seq;
-						#print STDERR "$c->{start} $len $test_shift_sequence ?= $c->{ref_rep_seq} -> $c->{new_rep_seq}\n";
-					}
-				}
-			}
-			
-			## redetermine the nearby genes (it may now be intergenic)
-			($prev_gene, $gene, $next_gene) = find_nearby_genes($c, $gene_list_ref);		
-		}		
-		
-		
-		
-		###
-		### Change is noncoding, $prev_gene and/or $next_gene will be defined
-		###
-		
-		if (!$gene)
-		{			
-			$c->{type} = "noncoding";
+#TODO: the proper way to do this is to create list of SNPs that have been hit
+# hashed by gene protein accession ID and AA position within gene
+# and have the annotation point to them (and back at them)
+# so that the codon will be correctly updated with all changes and we can notify the
+# changes that their SNP_type is not really SNP, but multiple hit SNP.
 	
-			$c->{gene} .= $prev_gene->{gene} if (defined $prev_gene);
-			$c->{gene} .= "/";
-			$c->{gene} .= $next_gene->{gene} if (defined $next_gene);
+	my $snp_hits_hash;
 	
-			if (defined $prev_gene)
-			{
-				$c->{gene_position} .= ($prev_gene->{strand} == +1) ? "+" : "-";
-				$c->{gene_position} .= ($c->{start} - $prev_gene->{end});
-			}
-			$c->{gene_position} .= "/";
-			if (defined $next_gene)
-			{
-				$c->{gene_position} .= ($next_gene->{strand} == +1) ? "-" : "+";
-				$c->{gene_position} .= ($next_gene->{start} - $c->{end});
-			}
-			
-			$c->{gene_product} .= $prev_gene->{product} if (defined $prev_gene);
-			$c->{gene_product} .= "/";			
-			$c->{gene_product} .= $next_gene->{product} if (defined $next_gene);
-
-			next SNP;
+	MUT: foreach my $mut ($gd->list)
+	{		
+		
+		if ($mut->{type} eq 'SNP')
+		{
+			annotate_1_mutation($ref_seq_info, $mut, $mut->{position}, $mut->{position});
 		}
-		
-		###
-		### Change is coding
-		###
-		
-		$c->{gene} = $gene->{gene};
-		$c->{gene_product} = $gene->{product};
-
-		#remember to revcom the changes if gene is on opposite strand
-		$c->{ref_rep_seq} = Breseq::Fastq::revcom($c->{ref_rep_seq}) if ($gene->{strand} == -1);		
-		$c->{new_rep_seq} = Breseq::Fastq::revcom($c->{new_rep_seq}) if ($gene->{strand} == -1);
-		
-		### Single base substitution -- SNP-type
-		if (($gene->{translation}) && (length($c->{ref_rep_seq}) == 1) && (length($c->{new_rep_seq}) == 1))
+		elsif ($mut->{type} eq 'SUB')
 		{
-		    ## determine the old and new translation of this codon  
-			my $gene_start = ($gene->{strand} == +1) ? $gene->{start} : $gene->{end};	
-			$c->{gene_position} = abs($c->{start}-$gene_start) + 1; 
-    		$c->{aa_position} = int(($c->{gene_position}-1)/3) + 1;
-			$c->{codon_position} = abs($c->{start}-$gene_start) % 3;
-	    	
-			my $codon_seq = ($gene->{strand} == +1) ?
-				$ref_seq->trunc($gene->{start} + 3 * ($c->{aa_position}-1),$gene->{start} + 3 * $c->{aa_position} - 1) :
-				$ref_seq->trunc($gene->{end} - 3 * $c->{aa_position}+1,$gene->{end} - 3 * ($c->{aa_position}-1))->revcom;
-					
-			$c->{codon_ref_seq} = $codon_seq->seq();
-			$c->{aa_ref_seq} = $codon_seq->translate( undef, undef, undef, 11 )->seq();
-			
-			$c->{codon_new_seq} = $codon_seq->seq();
-			substr($c->{codon_new_seq}, $c->{codon_position}, 1) = $c->{new_rep_seq};
-			$codon_seq->seq($c->{codon_new_seq});
-			$c->{aa_new_seq} = $codon_seq->translate( undef, undef, undef, 11 )->seq();
-		    
-		    $c->{type} = "substitution";
-		    $c->{snp_type} = ($c->{aa_ref_seq} ne $c->{aa_new_seq}) ? "nonsynonymous" : "synonymous";
-			
-			next SNP;
+			annotate_1_mutation($ref_seq_info, $mut, $mut->{position}, $mut->{position} + length($mut->{ref_seq}) - 1);
 		}
-	
-	
-		if (!$gene->{translation})
+		elsif ($mut->{type} eq 'DEL')
 		{
-			$c->{type} = "pseudogene";
+			annotate_1_mutation($ref_seq_info, $mut, $mut->{position}, $mut->{position} + $mut->{size} - 1);
 		}
-		
-		#Deletions, insertions, and frameshifts
-		
-		## Change in length does not result in frameshift, retranslate area
-		if (abs(length($c->{new_rep_seq}) - length($c->{ref_rep_seq})) % 3 == 0)
+		elsif ($mut->{type} eq 'INS')
 		{
-			$c->{type} = "in-frame indel";
-			
-			#need to round before and after sequences to whole codons
-		
-#			## Insertion of amino acids
-#			my ($ref_codon_seq, $new_codon_seq);		
-#			$c->{aa_position} = ($gene->{strand} == +1) ? int(($c->{start}-$gene->{start})/3) + 1 : int(($gene->{end}-$c->{end})/3) + 1;
-#			$c->{aa_position} = "";
-#			
-#			## translate to the inserted or deleted amino acid sequence
-#			$ref_codon_seq =  Bio::Seq->new( '-seq' => $c->{ref_rep_seq}) if (length $c->{ref_rep_seq} > 0);
-#			$new_codon_seq =  Bio::Seq->new( '-seq' => $c->{new_rep_seq}) if (length $c->new_rep_seq} > 0);
-#
-#			my ($ref_aa, $new_aa) = ('.','.');
-#			$c->{aa_ref_seq} = $ref_codon_seq->translate( undef, undef, undef, 11 )->seq if ($ref_codon_seq);
-#			$c->{aa_new_seq} = $new_codon_seq->translate( undef, undef, undef, 11 )->seq if ($new_codon_seq);
-#			
-#			$c->{type} = (length $new_rep_seq > length $ref_rep_seq) ? "insertion" : "deletion";
-#			
-#			
-#			
-			next SNP;
-		} 
-		## Change results in a frameshift
-		my ($codon_num, $ref_reading_frame, $new_reading_frame, $ref_orf_seq, $new_orf_seq);
-		$c->{type} = "frameshift";		
-		
-		my $gene_start = ($gene->{strand} == +1) ? $gene->{start} : $gene->{end};	
-		$c->{gene_position} = abs($c->{start}-$gene_start) + 1; 				
-						
-		if ($gene->{strand} == +1)
-		{
-			$c->{aa_position} = int(($c->{start}-$gene->{start})/3) + 1;
-			
-			$ref_reading_frame = $ref_seq->trunc($gene->{start}, $gene->{end});
-			$ref_orf_seq = $ref_reading_frame->seq();
-			$new_orf_seq = substr($ref_orf_seq, 0, $c->{start}-$gene->{start}+1) . $c->{new_rep_seq} 
-				. substr($ref_orf_seq, $c->{start}+length($c->{ref_rep_seq} )-$gene->{start}+1, $gene->{end}-($c->{start}+length($c->{ref_rep_seq} )));
-	
-			#extend the reading frame so we can find the new protein length (and eventually sequence)
-			if ($gene->{end}+1 <= $ref_seq->length)
-			{
-				my $safe_end = $gene->{end}+10000;
-				$safe_end = $ref_seq->length if ($safe_end > $ref_seq->length);
-				$new_orf_seq .=  $ref_seq->trunc($gene->{end}+1, $safe_end)->seq;
-			}
-						
-			##ok, finally have the new reading frame
-			$new_reading_frame = Bio::Seq->new( '-seq' => $new_orf_seq);
+			annotate_1_mutation($ref_seq_info, $mut, $mut->{position}, $mut->{position});
 		}
-		else #Reverse strand
-		###
-		### Add code to shift differences over so they show up as early in the reading frame as possible!!!
-		### Be sure that this works for insertions with length > 1 as well.
-		###
-		
+		elsif ($mut->{type} eq 'MOB')
 		{
-			$c->{aa_position} = int(($gene->{end}-$c->{end})/3) + 1;
+			annotate_1_mutation($ref_seq_info, $mut, $mut->{start}, $mut->{end});
+		}
+		elsif ($mut->{type} eq 'JC')
+		{
+			annotate_1_mutation($ref_seq_info, $mut->{_side_1}, $mut->{side_1_position}, $mut->{side_1_position}, 1);
+			annotate_1_mutation($ref_seq_info, $mut->{_side_2}, $mut->{side_2_position}, $mut->{side_2_position}, 1);
 			
-			$ref_reading_frame = $ref_seq->trunc($gene->{start}, $gene->{end});
-			$ref_orf_seq = $ref_reading_frame->seq();
-			$new_orf_seq = substr($ref_orf_seq, 0, $c->{start}-$gene->{start}+1) . $c->{new_rep_seq}
-				. substr($ref_orf_seq, $c->{start}+length($c->{ref_rep_seq})-$gene->{start}+1, $gene->{end}-($c->{start}+length($c->{ref_rep_seq})));
-
-			#extend the reading frame so we can find the new protein length (and eventually sequence)
-			if ($gene->{start}-1 >= 1)
-			{
-				my $safe_start = $gene->{start}-10000;
-				$safe_start = 1 if ($safe_start <= 1);
-				$new_orf_seq =  $ref_seq->trunc($safe_start, $gene->{start}-1)->seq . $new_orf_seq;
-			}
-			$new_reading_frame = Bio::Seq->new( '-seq' => $new_orf_seq);
-
-			$ref_reading_frame = $ref_reading_frame->revcom();
-			$new_reading_frame = $new_reading_frame->revcom();
-		}		
-		
-		## determine how the length of the ORF changes
-		my $ref_protein = $ref_reading_frame->translate( undef, undef, undef, 11 )->seq;
-	#	die "Did not find a stop codon in reference protein" if (! ($ref_protein =~ s/\*.+/\*/) );		
-		my $ref_length = length($ref_protein) - 1;
-
-		my $new_protein = $new_reading_frame->translate( undef, undef, undef, 11 )->seq;
-		die "Did not find a stop codon in new protein" if (! ($new_protein =~ s/\*.+/\*/) );		
-		my $new_length = length($new_protein) - 1;
-
-		$c->{aa_ref_seq} = substr $ref_protein, $c->{aa_position}-1, 1;
-		$c->{aa_new_seq} = substr $new_protein, $c->{aa_position}-1, 1; 	
-
-		$c->{codon_ref_seq} = substr $ref_reading_frame->seq, ($c->{aa_position}-1) * 3, 3;
-		$c->{codon_new_seq} = substr $new_reading_frame->seq, ($c->{aa_position}-1) * 3, 3; 
-	} continue {
-		$c->{gene_shifted_start} = $c->{start};
-		$c->{gene_shifted_end} = $c->{end};
-		$c->{start} = $c->{original_start};
-		$c->{end} = $c->{original_end};
+			print Dumper($mut);
+		}
+		elsif ($mut->{type} eq 'RA')
+		{
+			annotate_1_mutation($ref_seq_info, $mut, $mut->{position}, $mut->{position});
+		}
 	}
+}
+
+sub revcom
+{
+	my ($seq) = @_;
+	$seq =~ tr/ATCG/TAGC/;
+	return reverse $seq;
 }
 
 sub annotate_deletions
@@ -482,18 +433,18 @@ sub annotate_deletions
 		#set up to use correct reference sequence
 		my $seq_id = $deletion->{seq_id};
 		my $gene_list_ref = $ref_seq_info->{gene_lists}->{$seq_id};
-		my $is_list_ref = $ref_seq_info->{is_lists}->{$seq_id};
+		my $repeat_list_ref = $ref_seq_info->{repeat_lists}->{$seq_id};
 		
 		my $gene_string = '';
-		my $feature_start = get_overlapping_feature($deletion->{start}, $is_list_ref);
-		$feature_start = get_overlapping_feature($deletion->{start}, $gene_list_ref) if (!$feature_start);
+		my $feature_start = get_overlapping_feature($repeat_list_ref, $deletion->{start});
+		$feature_start = get_overlapping_feature($gene_list_ref, $deletion->{start}) if (!$feature_start);
 	
-		my $feature_end = get_overlapping_feature($deletion->{end}, $is_list_ref);
-		$feature_end = get_overlapping_feature($deletion->{end}, $gene_list_ref) if (!$feature_end);
+		my $feature_end = get_overlapping_feature($repeat_list_ref, $deletion->{end}, );
+		$feature_end = get_overlapping_feature($gene_list_ref, $deletion->{end}, ) if (!$feature_end);
 	
 		if ($feature_start)
 		{
-			$gene_string .= "[$feature_start->{gene}]";
+			$gene_string .= "[$feature_start->{name}]";
 		}
 	
 		my $start_bound = ($feature_start) ? $feature_start->{end}-25 : $deletion->{start};
@@ -506,7 +457,7 @@ sub annotate_deletions
 			if ($gene->{start} > $start_bound)
 			{
 				$gene_string .= " " if ($gene_string);
-				$gene_string .= "$gene->{gene}";
+				$gene_string .= "$gene->{name}";
 			}
 		}
 	
@@ -514,7 +465,7 @@ sub annotate_deletions
 		if ($feature_end && (!$feature_start || ($feature_start != $feature_end)))
 		{
 			$gene_string .= " " if ($gene_string);
-			$gene_string .= "[$feature_end->{gene}]";
+			$gene_string .= "[$feature_end->{name}]";
 		}
 	
 		##no genes found
@@ -562,50 +513,50 @@ sub annotate_rearrangements
 			$item->{$key}->{hybrid} = $item;
 			
 			my ($prev_gene, $gene, $next_gene) 
-				= Breseq::ReferenceSequence::find_nearby_genes($item->{$key}, $ref_seq_info->{gene_lists}->{$item->{$key}->{seq_id}});		
+				= Breseq::ReferenceSequence::find_nearby_genes($ref_seq_info->{gene_lists}->{$item->{$key}->{seq_id}}, $item->{$key}->{start});		
 
 			## noncoding
 			if (!$gene)
 			{
-				$item->{$key}->{gene}->{gene} .= ($prev_gene && $prev_gene->{gene}) ? $prev_gene->{gene} : '-';
-				$item->{$key}->{gene}->{gene} .= "/";
-				$item->{$key}->{gene}->{gene} .= ($next_gene && $next_gene->{gene}) ? $next_gene->{gene} : '-';
+				$item->{$key}->{name}->{name} .= ($prev_gene && $prev_gene->{name}) ? $prev_gene->{name} : '-';
+				$item->{$key}->{name}->{name} .= "/";
+				$item->{$key}->{name}->{name} .= ($next_gene && $next_gene->{name}) ? $next_gene->{name} : '-';
 	
 				if (defined $prev_gene)
 				{
-					$item->{$key}->{gene}->{position} .= ($prev_gene->{strand} == +1) ? "+" : "-";
-					$item->{$key}->{gene}->{position} .= ($item->{$key}->{start} - $prev_gene->{end});
+					$item->{$key}->{name}->{position} .= ($prev_gene->{strand} == +1) ? "+" : "-";
+					$item->{$key}->{name}->{position} .= ($item->{$key}->{start} - $prev_gene->{end});
 				}
-				$item->{$key}->{gene}->{gene_position} .= "/";
+				$item->{$key}->{name}->{gene_position} .= "/";
 				if (defined $next_gene)
 				{
-					$item->{$key}->{gene}->{position} .= ($next_gene->{strand} == +1) ? "-" : "+";
-					$item->{$key}->{gene}->{position} .= ($next_gene->{start} - $item->{$key}->{end});
+					$item->{$key}->{name}->{position} .= ($next_gene->{strand} == +1) ? "-" : "+";
+					$item->{$key}->{name}->{position} .= ($next_gene->{start} - $item->{$key}->{end});
 				}
 		
-				$item->{$key}->{gene}->{product} .= ($prev_gene && $prev_gene->{product}) ? $prev_gene->{product} : '-';
-				$item->{$key}->{gene}->{product} .= "/";			
-				$item->{$key}->{gene}->{product} .= ($next_gene && $next_gene->{product}) ? $next_gene->{product} : '-';
+				$item->{$key}->{name}->{product} .= ($prev_gene && $prev_gene->{product}) ? $prev_gene->{product} : '-';
+				$item->{$key}->{name}->{product} .= "/";			
+				$item->{$key}->{name}->{product} .= ($next_gene && $next_gene->{product}) ? $next_gene->{product} : '-';
 
-				$item->{$key}->{gene}->{interval} .= $prev_gene->{end}+1 if $prev_gene;
-				$item->{$key}->{gene}->{interval} .= "/"; 
-				$item->{$key}->{gene}->{interval} .= $next_gene->{start}-1 if $next_gene; 
+				$item->{$key}->{name}->{interval} .= $prev_gene->{end}+1 if $prev_gene;
+				$item->{$key}->{name}->{interval} .= "/"; 
+				$item->{$key}->{name}->{interval} .= $next_gene->{start}-1 if $next_gene; 
 			}
 			## coding
 			else
 			{
-				$item->{$key}->{gene}->{gene} = $gene->{gene};
-				$item->{$key}->{gene}->{product} = $gene->{product};
+				$item->{$key}->{name}->{name} = $gene->{name};
+				$item->{$key}->{name}->{product} = $gene->{product};
 				my $gene_start = ($gene->{strand} == +1) ? $gene->{start} : $gene->{end};	
-				$item->{$key}->{gene}->{position} = abs($item->{$key}->{start}-$gene_start) + 1;
-				$item->{$key}->{gene}->{interval} = ($gene->{strand} == +1) ? "$gene->{start}-$gene->{end}" : "$gene->{end}-$gene->{start}"; 
+				$item->{$key}->{name}->{position} = abs($item->{$key}->{start}-$gene_start) + 1;
+				$item->{$key}->{name}->{interval} = ($gene->{strand} == +1) ? "$gene->{start}-$gene->{end}" : "$gene->{end}-$gene->{start}"; 
 			}
 		
 			## Determine IS elements
 			## Is it within an IS or near the boundary of an IS in the direction leading up to the junction?			
-			if (my $is = Breseq::ReferenceSequence::find_closest_repeat_region($item->{$key}, $ref_seq_info->{is_lists}->{$item->{$key}->{seq_id}}, 200, $item->{$key}->{strand}))
+			if (my $is = Breseq::ReferenceSequence::find_closest_repeat_region($item->{$key}, $ref_seq_info->{repeat_lists}->{$item->{$key}->{seq_id}}, 200, $item->{$key}->{strand}))
 			{
-				$item->{$key}->{is}->{gene} = $is->{gene};
+				$item->{$key}->{is}->{name} = $is->{name};
 				$item->{$key}->{is}->{interval} = ($is->{strand} == +1) ? "$is->{start}-$is->{end}" : "$is->{end}-$is->{start}"; 
 				$item->{$key}->{is}->{product} = $is->{product};
 			}
@@ -715,7 +666,7 @@ sub annotate_rearrangements
 
 sub get_overlapping_feature
 {
-	my ($pos, $feature_list_ref) = @_;
+	my ($feature_list_ref, $pos) = @_;
 	foreach my $f (@$feature_list_ref)
 	{
 		return $f if ( ($pos >= $f->{start}) && ($pos <= $f->{end}) );
@@ -725,50 +676,73 @@ sub get_overlapping_feature
 
 sub find_nearby_genes
 {
-	my ($c, $gene_list_ref) = @_;
+	my ($gene_list_ref, $pos_1, $pos_2) = @_;
+	$pos_2 = $pos_1 if (!defined $pos_2);
 
-	my ($gene, $prev_gene, $next_gene);
+#	print "$pos_1, $pos_2\n";
+
+	my (@within_genes, @between_genes, @inside_left_genes, @inside_right_genes, $prev_gene, $next_gene);
 	GENE: for (my $i=0; $i < scalar @$gene_list_ref; $i++)
 	{
 		my $test_gene = $gene_list_ref->[$i];
-		#This change is within a gene
-		if ( ($test_gene->{start} <= $c->{start}) && ($test_gene->{end} >= $c->{end}) )
+
+		if ($test_gene->{end} < $pos_1)
+		{
+			$prev_gene = $test_gene;
+		}
+		
+		if (  ($test_gene->{start} <= $pos_1) && ($test_gene->{end} >= $pos_1) 
+		   && ($test_gene->{start} <= $pos_2) && ($test_gene->{end} >= $pos_2) )
+		{
+			push @within_genes, $test_gene;
+#			print "^ $test_gene->{name}\n";			
+		}
+		elsif ( ($test_gene->{start} <= $pos_1) && ($test_gene->{end} >= $pos_1) )
+		{
+			push @inside_left_genes, $test_gene;
+		}
+		elsif ( ($test_gene->{start} >= $pos_2) && ($test_gene->{end} <= $pos_2) )
+		{
+			push @inside_right_genes, $test_gene;
+		}
+		elsif ( ($test_gene->{start} >= $pos_1) && ($test_gene->{end} <= $pos_2) )
 		{	
-			$gene = $test_gene;
-			last GENE;
+			push @between_genes, $test_gene;
+#			print ">< $test_gene->{name}\n";
 		}
 		#We've passed the changes, so it is in the previous intergenic space
-		if ($test_gene->{start} > $c->{end})
+		if ($test_gene->{start} > $pos_2)
 		{
-			$prev_gene = $gene_list_ref->[$i-1] if ($i > 0);
 			$next_gene = $test_gene;
 			last GENE;
 		}
 	}
-	$prev_gene = $gene_list_ref->[-1] if (!$gene && !$prev_gene && !$next_gene);
-	return ($prev_gene, $gene, $next_gene);
+
+#	print "$prev_gene->{name} || $next_gene->{name}\n";
+
+	return ($prev_gene, $next_gene, \@within_genes, \@between_genes, \@inside_left_genes, \@inside_right_genes);
 }
 
 sub find_closest_repeat_region
 {
-	my ($c, $is_list_ref, $max_distance, $direction) = @_;
+	my ($position, $repeat_list_ref, $max_distance, $direction) = @_;
 
-	my $is;
+	my $is = undef;
 	my $best_distance;
-	IS: for (my $i=0; $i < scalar @$is_list_ref; $i++)
+	IS: for (my $i=0; $i < scalar @$repeat_list_ref; $i++)
 	{
-		my $test_is = $is_list_ref->[$i];
+		my $test_is = $repeat_list_ref->[$i];
 				
 		#count within the IS element as zero distance
 		#if this happens then we are immediately done
-		if ( ($test_is->{start} <= $c->{start}) && ($test_is->{end} >= $c->{end}) )
+		if ( ($test_is->{start} <= $position) && ($test_is->{end} >= $position) )
 		{	
 			return $test_is;
 		}
 		
 		#otherwise calculate the distance
 		#keep if less than max_distance, in the correct direction, and the best found so far 
-		my $test_distance = ($direction == -1) ? $c->{start} - $test_is->{end} : $test_is->{start} - $c->{end};
+		my $test_distance = ($direction == -1) ? $position - $test_is->{end} : $test_is->{start} - $position;
 		next if ($test_distance < 0); #wrong direction...
 		
 		if (($test_distance <= $max_distance) && ((!defined $is) || ($test_distance < $best_distance)) )

@@ -200,238 +200,64 @@ sub do_annotate
 	
 	## load information about reference sequences from GenBank files
 	my $ref_seq_info = Breseq::ReferenceSequence::load_ref_seq_info($settings);
-
-	#load all genome diff files
-	my (@mutations, @deletions, @unknowns, @hybrids);
 	
+	my $gd = Breseq::GenomeDiff->new();
 	foreach my $gd_file (@{$settings->{input_genome_diffs}})
 	{
-		my $mutation_info = Breseq::Output::read_genome_diff($gd_file);
-
-		push @mutations, @{$mutation_info->{mutations}};
-		push @deletions, @{$mutation_info->{deletions}};
-		push @unknowns, @{$mutation_info->{unknowns}};
-		push @hybrids, @{$mutation_info->{hybrids}};		
+		my $mutation_info = $gd->read($gd_file);		
 	}	
 		
-	###
-	## Gather together insertions and deletions that occur next to each other
-	## ...unless we are predicting polymorphisms
-	###
-
-	if (!$settings->{polymorphism_prediction})
-	{
-		my $lc;
-		for (my $i=0; $i<scalar @mutations; $i++)
-		{
-			my $c = $mutations[$i];	 
-
-			#if the same position and both are tandem insertion
-			if ($lc && ($lc->{start} == $c->{start}) && ($lc->{insert_end}+1 == $c->{insert_start}))
-			{
-				$lc->{insert_end} = $c->{insert_start};
-				$lc->{new_seq} .= $c->{new_seq};
-				$lc->{quality} .= ",$c->{quality}";
-				$lc->{total_coverage_string} .= ",$c->{total_coverage_string}";
-				$lc->{best_coverage_string} .= ",$c->{best_coverage_string}";
-				splice @mutations, $i, 1;
-				$i--;
-				next;
-			}
-
-			#if the positions are next to each other and both are deletions...
-			if ($lc && ($lc->{end}+1 == $c->{start}) && ($lc->{new_seq} eq '.') && ($c->{new_seq} eq '.') )
-			{
-				$lc->{end} = $c->{start};
-				$lc->{ref_seq} .= $c->{ref_seq};
-				$lc->{quality} .= ",$c->{quality}";
-				$lc->{total_coverage_string} .= ",$c->{total_coverage_string}";
-				$lc->{best_coverage_string} .= ",$c->{best_coverage_string}";
-				splice @mutations, $i, 1;
-				$i--;
-				next;
-			}
-
-			$lc = $c;
-		}
-	}
-	
 	##
-	# Annotate mutations and deletions
-	sub mutation_annotation {}	
+	# Annotate mutations
 	##
-	print STDERR "Annotating within-read mutations...\n";
-	Breseq::ReferenceSequence::annotate_mutations(undef, undef, $ref_seq_info, \@mutations);
-	#print Dumper(\@mutations); ##DEBUG
-
-	print STDERR "Annotating deletions...\n";
-	Breseq::ReferenceSequence::annotate_deletions(undef, undef, $ref_seq_info, \@deletions);
-	#print Dumper(\@deletions); ##DEUG		
+	print STDERR "Annotating mutations...\n";
+	Breseq::ReferenceSequence::annotate_mutations($ref_seq_info, $gd);
+	#print Dumper(\@mutations); ##DEBUG	
 
 	##
 	# Plot coverage of genome and large deletions
-	sub plot_coverage {}
 	##
 	print STDERR "Drawing coverage graphs...\n";
-	$settings->create_path('coverage_graph_path');
-	my $coverage_graph_path = $settings->file_name('coverage_graph_path');	
-	my $deletions_text_file_name = $settings->file_name('deletions_text_file_name');
-	Breseq::Output::save_text_deletion_file($deletions_text_file_name, \@deletions);
+	Breseq::Output::draw_coverage($settings, $ref_seq_info, $gd);
 	
-	foreach my $seq_id (@{$ref_seq_info->{seq_ids}})
-	{
-		my $this_plot_coverage_done_file_name = $settings->file_name('plot_coverage_done_file_name', {'@'=>$seq_id});
-
-		if (!-e $this_plot_coverage_done_file_name)
-		{
-			my $this_complete_coverage_text_file_name = $settings->file_name('complete_coverage_text_file_name', {'@'=>$seq_id});			
-			my $res = Breseq::Shared::system("graph_coverage.pl -t $coverage_graph_path -p $settings->{coverage_graph_path} -i $deletions_text_file_name -c $this_complete_coverage_text_file_name --seq_id=$seq_id");				
-			die if ($res);
-			open DONE, ">$this_plot_coverage_done_file_name";
-			close DONE;
-		}
-		else
-		{
-			print STDERR "Drawing coverage graphs already complete.\n";
-		}
-
-		#need to assign link names even if coverage was already drawn
-		my $i=1;
-		my @this_deletions = grep {$_->{seq_id} eq $seq_id} @deletions if ($seq_id);
-		foreach my $del (@this_deletions)
-		{
-			$del->{coverage_graph_link} = "$settings->{local_coverage_graph_path}/$seq_id\.$i\.pdf";
-			$i++;
-		}
-	}
-#	$settings->remove_path('deletions_text_file_name');
-
-	sub html_output {}
-
 	##
-	# Output SNPs
+	# Creare evidence files containing alignments and coverage plots
 	##
-
-	### make alignments first because we fill in a link field used by the summary file
-	my @composite_list;
-
-	### look, we have to invent intervals for the deletions so each has an upstream and downstream.
-	foreach my $deletion (@deletions)
-	{
-	 	#ok, this has a circular reference, which may possibly be a very bad thing.
-	 	$deletion->{upstream_interval} = { start => $deletion->{start}-1, end => $deletion->{start}-1, 
-	 		deletion => $deletion, seq_id => $deletion->{seq_id} };
-
-	 	$deletion->{downstream_interval} = { start => $deletion->{end}+1, end => $deletion->{end}+1, 
- 			deletion => $deletion, seq_id => $deletion->{seq_id} };
-		push @composite_list, $deletion->{upstream_interval};
-		push @composite_list, $deletion->{downstream_interval};
-	}	
-
-	push @composite_list, @mutations;
-
-	### look, we have to invent intervals for the non-rearranged versions of the hybrid reads as well.
-	### proper alignments can be made as part of the composite list
-
-	###
-	# Sort the junctions by unique coordinates or by their scores
-	###
-	
-	if ($settings->{sort_junctions_by_score})
-	{
-		#don't show junctions supported by only a few reads
-		@hybrids = grep {$_->{total_non_overlap_reads} > 2} @hybrids;
-		
-		#sort and truncate list
-		@hybrids = sort { -($a->{score} <=> $b->{score}) || ($a->{total_reads} <=> $a->{total_reads}) } @hybrids;
-		my $last = $settings->{max_junctions_to_print};
-		$last = scalar @hybrids if (scalar @hybrids < $last);
-		$#hybrids = $last-1;	
-	}
-
-	print STDERR "Annotating rearrangements...\n";
-	Breseq::ReferenceSequence::annotate_rearrangements($settings, undef, $ref_seq_info, \@hybrids);
-
-	#print Dumper(@hybrids);
-
-	foreach my $hybrid (@hybrids)
-	{
-		#print STDERR Dumper($hybrid);	
-		push @composite_list, $hybrid;	
-	 	push @composite_list, $hybrid->{side_1};
-	 	push @composite_list, $hybrid->{side_2};
-	}
-	
-	
-
-	# ### first name all the files/links, so backlinks work
-
-	my $reference_bam_file_name = $settings->file_name('reference_bam_file_name');
-	my $reference_fasta_file_name = $settings->file_name('reference_fasta_file_name');
-
-	foreach my $c (@composite_list)
-	{
-	 	my $html_alignment_file_name = 
-			"$c->{seq_id}"
-			. "_$c->{start}" 
-			. ((defined $c->{insert_start}) ?  ".$c->{insert_start}" : '')
-			. "_$c->{end}"
-			. ((defined $c->{insert_end}) ?  ".$c->{insert_end}" : '')
-			. "_alignment.html";
-			
-	 	$c->{link} = "$settings->{local_alignment_path}/$html_alignment_file_name";
-	 	$c->{file_name} = "$settings->{alignment_path}/$html_alignment_file_name";
-		$c->{bam_path} = $reference_bam_file_name;
-		$c->{fasta_path} = $reference_fasta_file_name;
-#		print Dumper($c);
-	}
-
-	## hybrids use different BAM files for making the alignments!!!
-	my $junction_bam_file_name = $settings->file_name('junction_bam_file_name');
-	my $junction_fasta_file_name = $settings->file_name('candidate_junction_fasta_file_name');
-
-	foreach my $c (@hybrids)
-	{	
-		$c->{bam_path} = $junction_bam_file_name;
-		$c->{fasta_path} = $junction_fasta_file_name;
-		
-		## rename junctions so they don't clobber normal alignments
-		my $html_alignment_file_name = "JCT_$c->{seq_id}_alignment.html";
-	 	$c->{link} = "$settings->{local_alignment_path}/$html_alignment_file_name";
-	 	$c->{file_name} = "$settings->{alignment_path}/$html_alignment_file_name";
-	
-		foreach my $int ('side_1', 'side_2')
-		{
-			my $up_int = "\U$int";
-			$html_alignment_file_name = "JCT_$up_int\_$c->{seq_id}_alignment.html";
-			$c->{$int}->{link} = "$settings->{local_alignment_path}/$html_alignment_file_name";
-		 	$c->{$int}->{file_name} = "$settings->{alignment_path}/$html_alignment_file_name";
-		}
-	}
-
-	### now create alignment files
 	if (!$settings->{no_alignment_generation})
 	{
-		$settings->create_path('alignment_path');
-
-		print STDERR "Creating alignment HTML files...\n";
-		foreach my $c (@composite_list) # , @hybrids)
-		{			
-			print STDERR "Creating alignment file: $c->{link}\n" if ($settings->{verbose});
-			Breseq::Output::html_alignment_file($settings, $c);		
-		}
+		Breseq::Output::create_evidence_files($settings, $gd);
 	}
 
+		###
+		# Sort the junctions by unique coordinates or by their scores
+		###
+
+=comment	
+		if ($settings->{sort_junctions_by_score})
+		{
+			#don't show junctions supported by only a few reads
+			@hybrids = grep {$_->{total_non_overlap_reads} > 2} @hybrids;
+
+			#sort and truncate list
+			@hybrids = sort { -($a->{score} <=> $b->{score}) || ($a->{total_reads} <=> $a->{total_reads}) } @hybrids;
+			my $last = $settings->{max_junctions_to_print};
+			$last = scalar @hybrids if (scalar @hybrids < $last);
+			$#hybrids = $last-1;	
+		}
+=cut
 
 	###
 	## HTML output
 	###	
 
-	print STDERR "Creating full HTML table...\n";	
-	my $mutation_file_name = $settings->file_name('mutations_html_file_name');
-	$mutation_file_name = $settings->{html_mutation_file} if ($settings->{html_mutation_file});
-	Breseq::Output::html_full_table($mutation_file_name, $settings, $ref_seq_info, \@mutations, \@deletions, \@hybrids);
-	
+	print STDERR "Creating index HTML table...\n";	
+
+	my $summary = {};
+	my $sequence_conversion_summary_file_name = $settings->file_name('sequence_conversion_summary_file_name');	
+	$summary->{sequence_conversion} = Storable::retrieve($sequence_conversion_summary_file_name);
+
+	my $index_html_file_name = $settings->file_name('index_html_file_name');	
+	Breseq::Output::html_index($index_html_file_name, $settings, $summary, $ref_seq_info, $gd);	
 }
 
 sub do_union

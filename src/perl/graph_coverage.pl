@@ -63,15 +63,18 @@ use Pod::Usage;
 my ($help, $man);
 my $verbose;
 my ($input_file, $coverage_file);
-my $output_deletions_file = 'deletions.pdf';
-my $output_overview_file = 'coverage.pdf';
-my $output_file = 'specific_coverage.pdf';
+my $output_deletions_file = 'deletions';
+my $output_overview_file = 'coverage';
+my $output_file = 'specific_coverage';
 my @specific_intervals;
 my $max_coverage;
 my $downsample;
 our $output_path;
 my $tmp_path = ".";
-my $pdf_options = "height=6, width=10";
+my $drawing_options = "height=450, width=900";
+#$drawing_options = "";
+
+my $drawing_format = 'png';
 my $seq_id;
 
 GetOptions(
@@ -86,8 +89,15 @@ GetOptions(
 	'seq_id=s' => \$seq_id,
 	'output-path|p=s' => \$output_path,
 	'tmp-path|t=s' => \$tmp_path,
+	'drawing-format=s' => \$drawing_format,
 	'verbose|v=s' => \$verbose,
 );
+
+$output_deletions_file .= ".$drawing_format";
+$output_overview_file .= ".$drawing_format";
+$output_file .= ".$drawing_format";
+
+
 pod2usage(1) if $help;
 pod2usage(-exitstatus => 0, -verbose => 2) if $man;
 pod2usage(1) if (!defined $coverage_file);
@@ -207,8 +217,9 @@ plot_coverage <- function(cov, del_start, del_end, my_title, genes)
 
 #	options(scipen = 15)
 
-	par(mar=c(8.1,4.1,4.1,2.1));
-	plot(0:10, 0:10, type="n", lty="solid", ylim=c(0, maxy), xlim=c(pos[start], pos[end]), lwd=2, xlab="Coordinate in Reference Genome", ylab="Read Coverage Depth", main=my_title )
+	par(mar=c(6.1,4.1,1.2,0.2));
+#	par(mar=c(8.1,4.1,4.1,2.1));
+	plot(0:10, 0:10, type="n", lty="solid", ylim=c(0, maxy), xlim=c(pos[start], pos[end]), lwd=2, xaxs="i", yaxs="i", xlab="Coordinate in Reference Genome", ylab="Read Coverage Depth") #, main=my_title )
 #	arrows(pos[del_start],maxy,pos[del_start], 0, length=0, col="black", lwd=3)
 #	arrows(pos[del_end],maxy,pos[del_end], 0, length=0, col="black", lwd=3)
 	rect(pos[start], 0, pos[del_start], maxy, col="grey80", lty=0)
@@ -227,8 +238,9 @@ plot_coverage <- function(cov, del_start, del_end, my_title, genes)
 plot_overview <- function(cov, start, end, my_title, genes)
 {
 	maxy=$max_unique_coverage;
-	par(mar=c(8.1,4.1,4.1,2.1));
-	plot(cov\$pos[start:end],cov\$redundant_top_cov[start:end]+cov\$redundant_bot_cov[start:end], type="s", col="red", lty="solid", lwd=1, ylim=c(0,maxy), xlab="Coordinate in Reference Genome", ylab="Read Coverage Depth", main=my_title )
+	par(mar=c(6.1,4.1,1.2,0.2));
+	#	par(mar=c(8.1,4.1,4.1,2.1));	
+	plot(cov\$pos[start:end],cov\$redundant_top_cov[start:end]+cov\$redundant_bot_cov[start:end], type="s", col="red", lty="solid", lwd=1, xaxs="i", yaxs="i", ylim=c(0,maxy), xlab="Coordinate in Reference Genome", ylab="Read Coverage Depth") #, main=my_title )
 	mtext(genes, side=1, col="blue", cex=0.7, outer=TRUE, line=-2)	
 	lines(cov\$pos[start:end],cov\$unique_top_cov[start:end]+cov\$unique_bot_cov[start:end], type="s", col="blue", lty="solid", lwd=1 )
 }
@@ -268,7 +280,7 @@ END
 	
 	if (!$output_path)
 	{
-		print R_SCRIPT "pdf(\"$output_deletions_file\", $pdf_options)\n";
+		print R_SCRIPT "$drawing_format(\"$output_deletions_file\", $drawing_options)\n";
 	}
 		
 	my $i=1;
@@ -279,10 +291,10 @@ END
 		$interval->{genes} = "" if (!defined $interval->{genes});
 		$interval->{genes} =~ s/(.{80,}?)\s+/$1\\n/g;
 		
-		my $deletion_title = "$output_path/$i\.pdf";
-		$deletion_title = "$output_path/$seq_id.$i\.pdf" if ($seq_id);
+		my $deletion_title = "$output_path/$i\.$drawing_format";
+		$deletion_title = "$output_path/$seq_id.$i\.$drawing_format" if ($seq_id);
 		
-		print R_SCRIPT "pdf(\"$deletion_title\")\n" if ($output_path);
+		print R_SCRIPT "$drawing_format(\"$deletion_title\", $drawing_options)\n" if ($output_path);
 		my $title = "Predicted Deletion $interval->{start}-$interval->{end}";
 		$title = "Predicted Deletion $seq_id:$interval->{start}-$interval->{end}" if ($seq_id);		
 		print R_SCRIPT "plot_coverage(cov,$interval->{start},$interval->{end}, \"$title\", \"$interval->{genes}\")\n";
@@ -317,14 +329,14 @@ cov <- downsample(cov, downsample_by)
 
 END
 
-		my $coverage_title = "$output_path/overview.pdf";
-		$coverage_title = "$output_path/$seq_id\.overview.pdf" if ($seq_id);
+		my $coverage_title = "$output_path/overview.$drawing_format";
+		$coverage_title = "$output_path/$seq_id\.overview.$drawing_format" if ($seq_id);
 
-		print R_SCRIPT "pdf(\"$coverage_title\", $pdf_options)\n" if ($output_path);
+		print R_SCRIPT "$drawing_format(\"$coverage_title\", $drawing_options)\n" if ($output_path);
 		print R_SCRIPT "plot_overview(cov,1,length(cov\$pos), \"Genome Overview\", \"\")\n";
 		print R_SCRIPT "dev.off()\n" if ($output_path);
 
-#		print R_SCRIPT "pdf(\"$output_path/cnv.pdf\", $pdf_options)\n" if ($output_path);
+#		print R_SCRIPT "$drawing_format(\"$output_path/cnv.$drawing_format\", $drawing_options)\n" if ($output_path);
 #		print R_SCRIPT "plot_cnv(pos100,cov100,1,dim(pos100)[1], \"Copy Number Predictions\", \"\")\n";
 #		print R_SCRIPT "dev.off()\n" if ($output_path);
 

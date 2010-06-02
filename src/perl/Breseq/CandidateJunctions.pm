@@ -304,7 +304,7 @@ sub _alignments_to_candidate_junctions
 	my $verbose = 0;
 
 	### TO DO:
-	### We don't want to predict a new junction from hits that are completely contained
+	### We don't want to predict a new junction candidates from hits that are completely contained
 	### in other perfect alignments. This can lead to problems later for repetitive regions.
 	### Furthermore, it's just a waste of time... 
 		

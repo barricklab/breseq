@@ -73,7 +73,7 @@ our $line_specification = {
 	'SUB' => ['seq_id', 'position', 'ref_seq', 'new_seq'],
 	'DEL' => ['seq_id', 'position', 'size', 'start_range', 'end_range'],
 	'INS' => ['seq_id', 'position', 'new_seq'],
-	'MOB' => [''],
+	'MOB' => ['seq_id', 'position', 'repeat_name', 'strand', 'duplication_size', 'gap_left', 'gap_right'],
 	'DUP' => [''],
 	'INV' => [''],
 	
@@ -89,7 +89,7 @@ our $tag_sort_fields = {
 	'SUB' => [1, 'seq_id', 'position'],
 	'DEL' => [1, 'seq_id', 'position'],
 	'INS' => [1, 'seq_id', 'position'],
-	'MOB' => [1],
+	'MOB' => [1, 'seq_id', 'position'],
 	'DUP' => [1],
 	'INV' => [1],
 	'RA' => [2, 'seq_id', 'position'],
@@ -247,13 +247,20 @@ sub list
 	return undef;
 }
 
-sub list_ref
+sub evidence_list
 {
-	my ($self) = @_;
-	return $self->{list};
+	my ($self, $item) = @_;	
+	$self->throw if (ref($item) ne 'HASH');
+	return () if (!defined $item->{evidence});
+	
+	my %evidence;
+	foreach my $evidence_id (@{$item->{evidence}})
+	{
+		$evidence{$evidence_id} = 1;
+	}
+	my @return_list = grep { $evidence{$_->{id}} } $self->list;
+	return @return_list;
 }
-
-
 
 ## Internal function for creating a hash from a line
 sub _line_to_item
@@ -300,6 +307,22 @@ sub _line_to_item
 		$item->{$item_key} = $item_value;
 	}
 	
+	### We do some extra convenience processing for junctions...
+	if ($item->{type} eq 'JC')
+	{
+		foreach my $side_key ('side_1', 'side_2')
+		{
+			foreach my $key ('seq_id', 'position', 'strand')
+			{
+				$item->{"_$side_key"}->{$key} = $item->{"$side_key\_$key"};
+			}
+			$item->{"_$side_key"}->{type} = 'NA';
+		}
+		
+		print Dumper($item);
+	}
+	
+	
 	$item->{SORT_1} = $item->{$tag_sort_fields->{$item->{type}}->[0]};
 	$item->{SORT_2} = $item->{$tag_sort_fields->{$item->{type}}->[1]};
 	$item->{SORT_3} = $item->{$tag_sort_fields->{$item->{type}}->[2]};
@@ -339,6 +362,10 @@ sub _item_to_line
 	}
 	
 	my @keys = sort keys %$item;
+	
+	#various things we don't want to print
+	@keys = grep { !(ref($_) eq 'HASH') } @keys;
+	@keys = grep { !($_=~ m/^_/) } @keys;
 	@keys = grep { !$ignore{$_} } @keys;
 	@keys = grep { !($_=~ m/^SORT_/) } @keys;
 	
@@ -438,6 +465,30 @@ sub exists
 	return 0;
 }
 
+##splice items used as evidence by any mutations out of input list
+sub filter_used_as_evidence
+{
+	my ($self, @list) = @_;
+	
+	IN: for (my $i=0; $i<scalar @list; $i++)
+	{
+		my $in_item = $list[$i];
+		foreach my $test_item ($self->list)
+		{
+			foreach my $test_evidence_id (@{$test_item->{evidence}})
+			{
+				if ($test_evidence_id ==  $in_item->{id})
+				{
+					splice @list, $i, 1;
+					$i--;
+					next IN;
+				}
+			}
+		}
+	}
+	return @list;
+}
+
 sub filter
 {
 	my ($self, $filter_function) = @_;
@@ -525,8 +576,9 @@ sub merge
 	while (my $gd = shift @list)
 	{
 		## deep copy the list, so we aren't changing the original items
-		my @item_list = @{ dclone($gd->list_ref) };
-		
+		my @list = $gd->list;
+		my @item_list = @{dclone(\@list)};
+				
 		foreach my $item (@item_list)
 		{
 			## first we need to check to be sure
