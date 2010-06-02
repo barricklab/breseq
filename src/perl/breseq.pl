@@ -736,9 +736,6 @@ if (!-e $mutation_identification_done_file_name && !$settings->{no_mutation_pred
 	#   this function handles all file creation...
 	##
 	Breseq::MutationIdentification::identify_mutations($settings, $summary, $ref_seq_info, $error_rates);
-
-	my $predicted_mutation_genome_diff_file_name = $settings->file_name('predicted_mutation_genome_diff_file_name');	
-	my $mutation_gd = Breseq::GenomeDiff->new( -in => $predicted_mutation_genome_diff_file_name);
 	
 	open DONE, ">$mutation_identification_done_file_name";
 	close DONE;
@@ -755,41 +752,25 @@ if (!-e $output_done_file_name)
 	print STDERR "Creating merged genome diff evidence file...\n";
 
 	## merge all of the evidence GenomeDiff files into one...
-	my $predicted_junctions_file_name = $settings->file_name('predicted_junction_file_name');	
-	my $hybrid_gd = Breseq::GenomeDiff->new( -in => $predicted_junctions_file_name );
-	my $predicted_mutation_genome_diff_file_name = $settings->file_name('predicted_mutation_genome_diff_file_name');	
-	my $mutation_gd = Breseq::GenomeDiff->new( -in => $predicted_mutation_genome_diff_file_name);
-	my $merged_evidence_genome_diff_file_name = $settings->file_name('merged_evidence_genome_diff_file_name');
-	my $merged_gd = Breseq::GenomeDiff::merge($hybrid_gd, $mutation_gd);
-	$merged_gd->write($merged_evidence_genome_diff_file_name);
+	my $jc_genome_diff_file_name = $settings->file_name('jc_genome_diff_file_name');	
+	my $jc_gd = Breseq::GenomeDiff->new( -in => $jc_genome_diff_file_name );
+	my $ra_mc_genome_diff_file_name = $settings->file_name('ra_mc_genome_diff_file_name');	
+	my $ra_mc_gd = Breseq::GenomeDiff->new( -in => $ra_mc_genome_diff_file_name);
+	my $evidence_genome_diff_file_name = $settings->file_name('evidence_genome_diff_file_name');
+	my $evidence_gd = Breseq::GenomeDiff::merge($jc_gd, $ra_mc_gd);
+	$evidence_gd->write($evidence_genome_diff_file_name);
 	
 	## predict mutations from evidence in the GenomeDiff
 	print STDERR "Predicting mutations from evidence...\n";
 	my $mp = Breseq::MutationPredictor->new( -ref_seq_info => $ref_seq_info );
-	$mp->predict($merged_gd);
+	$mp->predict($ref_seq_info, $evidence_gd);
 	my $final_genome_diff_file_name = $settings->file_name('final_genome_diff_file_name');
-	$merged_gd->write($final_genome_diff_file_name);
+	$evidence_gd->write($final_genome_diff_file_name);
 
-=comment
+	Breseq::ReferenceSequence::annotate_mutations($ref_seq_info, $evidence_gd);
 
-	my $filtered_genome_diff_file_name = $settings->file_name('filtered_genome_diff_file_name');
-	my $marginal_genome_diff_file_name = $settings->file_name('marginal_genome_diff_file_name');
-		
-	my $conditions = "marginal!=1";
-	Breseq::Shared::system("$FindBin::Bin/gd_utils.pl FILTER -i $full_genome_diff_file_name -o $filtered_genome_diff_file_name -r $marginal_genome_diff_file_name $conditions");
-
-	my $marginal_html_file_name = $settings->file_name('marginal_html_file_name');
-	
-	my $res;
-	$res = Breseq::Shared::system("$FindBin::Bin/gd_utils.pl ANNOTATE -i $filtered_genome_diff_file_name $settings->{arguments} ");
-	my $annotated_mutations = ($res == 0);
-	$res = Breseq::Shared::system("$FindBin::Bin/gd_utils.pl ANNOTATE -i $marginal_genome_diff_file_name --html-mutation-file=$marginal_html_file_name --marginal-mode $settings->{arguments} ");
+	my $res = Breseq::Shared::system("$FindBin::Bin/gd_utils.pl ANNOTATE -i $final_genome_diff_file_name $settings->{arguments}");
 	my $annotated_marginal = ($res == 0);
-
-	my $index_html_file_name = $settings->file_name('index_html_file_name');	
-	Breseq::Output::html_index($index_html_file_name, $settings, $summary, $ref_seq_info, $annotated_mutations, $annotated_marginal);
-
-=cut
 
 	###
 	## Temporary debug output using Data::Dumper

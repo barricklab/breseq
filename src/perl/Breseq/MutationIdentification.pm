@@ -218,16 +218,16 @@ sub identify_mutations
 						start_range => 0,
 						end_range => 0,
 			#			size => ($pos-1) - $last_deletion_start_position + 1, #end - start + 1
-						left_unique_cov => $left_side_coverage_item->{unique}->{total},
-						left_inside_unique_cov => $left_inside_coverage_item->{unique}->{total},
-						right_inside_unique_cov => $last_position_coverage->{unique}->{total},
-						right_unique_cov => $this_position_coverage->{unique}->{total},
+						left_outside_cov => $left_side_coverage_item->{unique}->{total},
+						left_inside_cov => $left_inside_coverage_item->{unique}->{total},
+						right_inside_cov => $last_position_coverage->{unique}->{total},
+						right_outside_cov => $this_position_coverage->{unique}->{total},
 					};
-					$del->{left_inside_unique_cov} = 'NA' if (!defined $del->{left_inside_unique_cov});
-					$del->{right_inside_unique_cov} = 'NA' if (!defined $del->{right_inside_unique_cov});
+					$del->{left_inside_cov} = 'NA' if (!defined $del->{left_inside_cov});
+					$del->{right_inside_cov} = 'NA' if (!defined $del->{right_inside_cov});
 					
-					$del->{left_unique_cov} = 'NA' if (!defined $del->{left_unique_cov});
-					$del->{right_unique_cov} = 'NA' if (!defined $del->{right_unique_cov});
+					$del->{left_outside_cov} = 'NA' if (!defined $del->{left_outside_cov});
+					$del->{right_outside_cov} = 'NA' if (!defined $del->{right_outside_cov});
 					
 					$gd->add($del);					
 				}
@@ -698,8 +698,8 @@ sub identify_mutations
 	}
 	
 	##finally, write out the genome diff file
-	my $predicted_mutation_genome_diff_file_name = $settings->file_name('predicted_mutation_genome_diff_file_name');	
-	$gd->write($predicted_mutation_genome_diff_file_name);
+	my $ra_mc_genome_diff_file_name = $settings->file_name('ra_mc_genome_diff_file_name');	
+	$gd->write($ra_mc_genome_diff_file_name);
 }
 
 sub remove_deletions_overlapping_mutations

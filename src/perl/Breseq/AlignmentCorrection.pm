@@ -45,7 +45,7 @@ sub correct_alignments
 	my $verbose = 0;
 	my ($settings, $summary, $ref_seq_info) = @_;
 	my $gene_list_hash_ref = $ref_seq_info->{gene_lists};
-	my $is_list_hash_ref = $ref_seq_info->{is_lists};
+	my $repeat_list_hash_ref = $ref_seq_info->{repeat_lists};
 	my $flanking_length = $settings->{max_read_length};
 				
 	## for now we just use mapping qualities from ssaha2, but could load ref sequences this way
@@ -354,14 +354,17 @@ sub correct_alignments
 	{
 		my ($failed, $has_non_overlap_only) = _test_junction($key, \%matched_junction, \%degenerate_matches, \%junction_test_info, $minimum_best_score, $minimum_best_score_difference, $reference_fai, $ref_seq_info, $RREF, $reference_header, $RCJ, $candidate_junction_header, \%written_overlap_only_reads);
 
-		if (!$failed && !$has_non_overlap_only)
+		## only count matches that span overlap
+		if (!$has_non_overlap_only)
 		{
-			push @new_keys, $key; 
-		}
-#		else
-		elsif ($has_non_overlap_only)
-		{
-			push @rejected_keys, $key;
+			if (!$failed)
+			{
+				push @new_keys, $key; 
+			}
+			else
+			{
+				push @rejected_keys, $key;
+			}
 		}
 	}
 	
@@ -377,15 +380,23 @@ sub correct_alignments
 		next if (!defined $degenerate_matches{$key}); #they can be removed 
 		
 		my ($failed, $has_non_overlap_only) = _test_junction($key, \%matched_junction, \%degenerate_matches, \%junction_test_info, $minimum_best_score, $minimum_best_score_difference, $reference_fai, $ref_seq_info, $RREF, $reference_header, $RCJ, $candidate_junction_header);
-		if (!$failed && !$has_non_overlap_only)
+
+		if (!$failed)
 		{
 			@sorted_keys = sort {-(scalar keys %{$degenerate_matches{$a}} <=> scalar keys %{$degenerate_matches{$b}})} keys %degenerate_matches;
-			push @new_keys, $key;
 		}
-#		else
-		elsif ($has_non_overlap_only)
+		
+		## only count matches that span overlap
+		if (!$has_non_overlap_only)
 		{
-			push @rejected_keys, $key;
+			if (!$failed)
+			{
+				push @new_keys, $key;
+			}
+			else
+			{
+				push @rejected_keys, $key;
+			}
 		}
 	}
 	@sorted_keys = @new_keys;
@@ -456,8 +467,8 @@ sub correct_alignments
 	}
 	push @hybrid_predictions, @rejected_hybrid_predictions;
 
-	my $predicted_junctions_file_name = $settings->file_name('predicted_junction_file_name');
-	$gd->write($predicted_junctions_file_name);
+	my $jc_genome_diff_file_name = $settings->file_name('jc_genome_diff_file_name');
+	$gd->write($jc_genome_diff_file_name);
 }
 
 sub _write_reference_matches
@@ -1144,9 +1155,9 @@ sub _junction_to_hybrid_list_item
 	{
 		## Determine IS elements
 		## Is it within an IS or near the boundary of an IS in the direction leading up to the junction?			
-		if (my $is = Breseq::ReferenceSequence::find_closest_repeat_region( { start => $jc->{$side_key}->{position}, end => $jc->{$side_key}->{position} } , $ref_seq_info->{is_lists}->{$jc->{$side_key}->{seq_id}}, 200, $jc->{$side_key}->{strand}))
+		if (my $is = Breseq::ReferenceSequence::find_closest_repeat_region($jc->{$side_key}->{position}, $ref_seq_info->{repeat_lists}->{$jc->{$side_key}->{seq_id}}, 200, $jc->{$side_key}->{strand}))
 		{
-			$jc->{$key}->{is}->{gene} = $is->{gene};
+			$jc->{$key}->{is}->{name} = $is->{name};
 			$jc->{$key}->{is}->{interval} = ($is->{strand} == +1) ? "$is->{start}-$is->{end}" : "$is->{end}-$is->{start}"; 
 			$jc->{$key}->{is}->{product} = $is->{product};
 		}

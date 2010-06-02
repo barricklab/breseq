@@ -161,12 +161,12 @@ sub new_annotate
 		'polymorphism-fisher-strand-p-value-cutoff=s' => \$self->{polymorphism_fisher_strand_p_value_cutoff},
 		'no-unmatched-reads' => \$self->{no_unmatched_reads},
 		'maximum-candidate-junctions=s' => \$self->{maximum_candidate_junctions},
-		'input-genome-diff|i=s' => \@{$self->{input_genome_diffs}},	
 		'resume' => \$self->{resume_run},
 		'continue' => \$self->{continue_run},
-		'html-mutation-file=s' => \$self->{html_mutation_file},
-		'marginal-mode' => \$self->{marginal_mode},
 		'trim-reads' => \$self->{trim_reads},
+		
+	## This is the only different option	
+		'input-genome-diff|i=s' => \@{$self->{input_genome_diffs}},	
 	) or pod2usage(2);
 
 	pod2usage(1) if $help;
@@ -191,7 +191,7 @@ sub initialize_1
 	
 	## Set up default values for options
 	$self->{full_command_line} = "$0 @ARGV"; 
-	$self->{arguments} = "$0 @ARGV";	
+	$self->{arguments} = "@ARGV";	
 	$self->{quality_type} = '';					# quality score format
 	$self->{predicted_quality_type} = '';
 	$self->{min_quality} = 0;
@@ -235,7 +235,7 @@ sub initialize_2
 	my ($self) = @_;
 	
 	$self->{version} = '0.03';
-	$self->{byline} = "Version $self->{version} | Developed by Barrick JE and Knoester DB";
+	$self->{byline} = "<b><i>breseq</i></b> Version $self->{version} | Developed by Barrick JE and Knoester DB";
 	$self->{script_path} = $FindBin::Bin;
 
 	#neaten up some settings for later string comparisons
@@ -288,11 +288,11 @@ sub initialize_2
 	$self->{alignment_correction_path} = "$self->{base_output_path}/$self->{alignment_correction_path}" if ($self->{base_output_path});
 	$self->{resolved_reference_sam_file_name} = "$self->{alignment_correction_path}/reference.sam";
 	$self->{resolved_junction_sam_file_name} = "$self->{alignment_correction_path}/junction.sam";
-	$self->{predicted_junction_file_name} = "$self->{alignment_correction_path}/predicted_junctions.gd";
+	$self->{predicted_junction_file_name} = "$self->{alignment_correction_path}/jc_evidence.gd";
 	$self->{unmatched_read_file_name} = "$self->{alignment_correction_path}/#.unmatched.fastq";
 	$self->{alignment_correction_summary_file_name} = "$self->{alignment_correction_path}/summary.bin";
 	$self->{alignment_correction_done_file_name} = "$self->{alignment_correction_path}/alignment_resolution.done";
-	$self->{rejected_junction_genome_diff_file_name} = "$self->{alignment_correction_path}/rejected_junctions.gd";
+	$self->{jc_genome_diff_file_name} = "$self->{alignment_correction_path}/jc_evidence.gd";
 
 	##### index BAM #####
 	$self->{bam_path} = "06_bam";
@@ -323,7 +323,7 @@ sub initialize_2
 	$self->{mutation_identification_path} = "08_mutation_identification";
 	$self->{mutation_identification_path} = "$self->{base_output_path}/$self->{mutation_identification_path}" if ($self->{base_output_path});
 	$self->{predicted_mutation_file_name} = "$self->{mutation_identification_path}/@.predicted_mutations.bin";
-	$self->{predicted_mutation_genome_diff_file_name} = "$self->{mutation_identification_path}/predicted_mutations.gd";
+	$self->{ra_mc_genome_diff_file_name} = "$self->{mutation_identification_path}/ra_mc_evidence.gd";
 	$self->{complete_mutations_text_file_name} = "$self->{mutation_identification_path}/@.mutations.tab";
 	$self->{complete_coverage_text_file_name} = "$self->{mutation_identification_path}/@.coverage.tab";
 	$self->{mutation_identification_done_file_name} = "$self->{mutation_identification_path}/mutation_identification.done";
@@ -333,25 +333,17 @@ sub initialize_2
 	$self->{output_path} = "output";
 	$self->{output_path} = "$self->{base_output_path}/$self->{output_path}" if ($self->{base_output_path});
 	$self->{output_done_file_name} = "$self->{output_path}/output.done";
-	$self->{log_file_name} = "$self->{output_path}/log.txt";
-	$self->{junction_file_name} = "$self->{output_path}/new_junctions.tab";
-	$self->{snps_file_name} = "$self->{output_path}/snps.tab";
-	
+	$self->{log_file_name} = "$self->{output_path}/log.txt";	
 	$self->{index_html_file_name} = "$self->{output_path}/index.html";
 	$self->{summary_html_file_name} = "$self->{output_path}/summary.html";
-	$self->{mutations_html_file_name} = "$self->{output_path}/mutations.html";
-	$self->{marginal_html_file_name} = "$self->{output_path}/marginal.html";
-	
 	$self->{final_genome_diff_file_name} = "$self->{output_path}/$self->{run_name}.gd";
-	$self->{merged_evidence_genome_diff_file_name} = "$self->{output_path}/merged.gd";
-
-	$self->{local_alignment_path} = "alignment";
-	$self->{alignment_path} = "$self->{output_path}/$self->{local_alignment_path}";
-	$self->{local_coverage_graph_path} = "coverage";
+	$self->{evidence_genome_diff_file_name} = "$self->{output_path}/evidence.gd";
+	$self->{local_evidence_path} = "evidence";
+	$self->{evidence_path} = "$self->{output_path}/$self->{local_evidence_path}";
+	$self->{local_coverage_graph_path} = "evidence";
 	$self->{coverage_graph_path} = "$self->{output_path}/$self->{local_coverage_graph_path}";
 	$self->{deletions_text_file_name} = "$self->{coverage_graph_path}/deletions.tab";
 	$self->{coverage_plot_file_name} = "$self->{coverage_graph_path}/@.overview.pdf";
-	$self->{plot_coverage_done_file_name} = "$self->{coverage_graph_path}/@.plot_coverage.done";
 	$self->{output_calibration_path} = "$self->{output_path}/calibration";
 	$self->{unique_only_coverage_plot_file_name} = "$self->{output_calibration_path}/@.unique_coverage.pdf";
 	$self->{error_rates_plot_file_name} = "$self->{output_calibration_path}/#.error_rates.pdf";

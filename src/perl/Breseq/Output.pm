@@ -64,11 +64,27 @@ tr	{
 	text-decoration : underline;
 }
 
+.mutation_header_row {
+	background-color: rgb(0,130,0);
+}
+
+.read_alignment_header_row {
+	background-color: rgb(255,0,0);
+}
+
+.missing_coverage_header_row {
+	background-color: rgb(0,100,100);
+}
+
+.new_junction_header_row {
+	background-color: rgb(0,0,155);
+}
+
 .mutation_table_row_0	{
-	background-color: rgb(245,245,245);
+	background-color: rgb(255,255,255);
 }
 .mutation_table_row_1	{
-	background-color: rgb(215,215,215);
+	background-color: rgb(245,245,245);
 }	
 
 .polymorphism_table_row	{
@@ -79,14 +95,7 @@ tr	{
 	background-color: rgb(192,255,255);
 }
 
-.is_insertion_header	{
-	background-color: rgb(0,0,255);
-	color: rgb(255,255,255);
-}
-.is_insertion_body	{
-	background-color: rgb(192,192,255);
-}
-.junction_is	{
+.junction_repeat	{
 	background-color: rgb(255,165,0); /* orange */
 }
 .junction_gene	{
@@ -97,7 +106,7 @@ ENDOFSTYLE
 
 sub html_index
 {
-	my ($file_name, $settings, $summary, $ref_seq_info, $annotated_mutations, $annotated_marginal) = @_;
+	my ($file_name, $settings, $summary, $ref_seq_info, $gd) = @_;
 
 	#copy over the breseq_graphic
 	my $breseq_graphic_from_file_name = $settings->file_name('breseq_graphic_from_file_name');
@@ -118,8 +127,8 @@ sub html_index
 	print HTML  td(img({-src=>$settings->html_path('breseq_graphic_to_file_name')}));
 	print HTML start_td({-width => "100%"});
 	print HTML start_div({-style=>"font-size: 14pt;"});
-	print HTML b(a({-href=>$settings->html_path('mutations_html_file_name')}, 'mutation predictions')) . br if ($annotated_mutations);
-	print HTML b(a({-href=>$settings->html_path('marginal_html_file_name')}, 'marginal predictions')) . br if ($annotated_marginal);
+#	print HTML b(a({-href=>$settings->html_path('mutations_html_file_name')}, 'mutation predictions')) . br if ($annotated_mutations);
+#	print HTML b(a({-href=>$settings->html_path('marginal_html_file_name')}, 'marginal predictions')) . br if ($annotated_marginal);
 	print HTML b(a({-href=>$settings->html_path('log_file_name')}, 'command line log'));
 	print HTML end_div;
 
@@ -200,7 +209,21 @@ sub html_index
 	
 	print HTML end_table();		
 	
-	print HTML hr . $settings->{byline};	
+	my @muts = $gd->list('SNP', 'INS', 'DEL', 'SUB', 'MOB');
+	my $relative_path = $settings->file_name('local_evidence_path');
+	$relative_path .= "/" if ($relative_path);
+	print HTML p . html_mutation_table_string($gd, \@muts, $relative_path );
+	
+	my @ra = $gd->filter_used_as_evidence($gd->list('RA'));
+	print HTML p . html_read_alignment_table_string(\@ra, $relative_path, "Unassigned read alignment evidence...");
+
+	my @mc = $gd->filter_used_as_evidence($gd->list('MC'));
+	print HTML p . html_missing_coverage_table_string(\@mc, $relative_path, "Unassigned missing coverage evidence...");
+
+	my @jc = $gd->filter_used_as_evidence($gd->list('JC'));
+	print HTML p . html_new_junction_table_string(\@jc, $relative_path, "Unassigned new junction evidence...");	
+	
+	print HTML p . $settings->{byline};	
 	print HTML end_html;
 	close HTML;
 }
@@ -296,88 +319,251 @@ sub html_full_table
 	close HTML;
 }
 
-sub html_snp_table_string
+
+
+sub html_genome_diff_item_table_string
 {
-	my ($snps_list_ref, $force_link) = @_;
+	my ($gd, $list_ref) = @_;
+	
+	return '' if (!defined $list_ref) || (scalar @$list_ref) == 0;
+	my $first_item = $list_ref->[0];	
+				
+	##mutation
+	if (length($first_item->{type}) == 3)
+	{	
+		return html_mutation_table_string($gd, $list_ref);
+	}
+	
+	##evidence
+	else
+	{
+		if ($first_item->{type} eq 'MC')
+		{
+			return html_missing_coverage_table_string($list_ref);
+		}
+		elsif ($first_item->{type} eq 'RA')
+		{
+			return html_read_alignment_table_string($list_ref);
+		}
+		elsif ($first_item->{type} eq 'JC')
+		{
+			return html_new_junction_table_string($list_ref);
+		}
+	}
+}
+
+
+sub html_mutation_table_string
+{	
+		my ($gd, $list_ref, $relative_link) = @_;
+		$relative_link = '' if (!defined $relative_link);
+		my $output_str = '';
+
+		my $q = new CGI;
+		$output_str.= start_table({-border => 0, -cellspacing => 1, -cellpadding => 3});
+
+		#####################
+		#### HEADER LINE ####
+		#####################
+
+		my $header_text = "Predicted mutation";
+		$header_text .= "s" if (scalar @$list_ref > 1);
+
+		my $total_cols = 7;
+		$output_str.= Tr(th({-colspan => $total_cols, -align => "left", -class=>"mutation_header_row"}, $header_text));
+
+
+		$output_str.= start_Tr();
+
+		$output_str.= th(
+			[
+				"evidence",
+				"seq&nbsp;id",
+				"position",
+				"mutation", 
+				"annotation", 
+				"gene", 
+			]
+		);	
+		$output_str.= th({-width => "100%"}, "description"); 
+		$output_str.= end_Tr;
+
+		####################
+		#### ITEM LINES ####
+		####################
+
+		foreach my $mut (@$list_ref)
+		{	
+			
+			my $evidence_string = '';
+			my $already_added_RA;
+			EVIDENCE: foreach my $evidence_item ($gd->evidence_list($mut))
+			{					
+				if ($evidence_item->{type} eq 'RA')
+				{
+					next EVIDENCE if ($already_added_RA);
+					$already_added_RA = 1;
+				}
+				$evidence_string .= "&nbsp;" if ($evidence_string);
+				$evidence_string .= a({href => "$relative_link$evidence_item->{_evidence_file_name}" }, $evidence_item->{type});
+			}
+			
+			if ($mut->{type} eq 'SNP')
+			{
+				## additional formatting for some variables
+				my $aa_codon_change = '';
+				if (($mut->{snp_type} ne 'IG') && ($mut->{snp_type} ne 'NC'))
+				{
+					$aa_codon_change .= "$mut->{aa_ref_seq}$mut->{gene_position}$mut->{aa_new_seq}";
+					## add color and underlining  
+
+					my $codon_ref_seq = to_underline_red_codon($mut, 'codon_ref_seq');
+					my $codon_new_seq = to_underline_red_codon($mut, 'codon_new_seq');
+
+					sub to_underline_red_codon
+					{
+						my ($mut, $codon_key) = @_;			
+						return '' if (!defined $mut->{$codon_key} || !defined $mut->{codon_position} || $mut->{codon_position} eq '');
+
+						my $codon_string;
+						my @codon_ref_seq_list = split //, $mut->{$codon_key};
+						for (my $i=0; $i<scalar @codon_ref_seq_list; $i++)
+						{
+							if ($i == $mut->{codon_position})
+							{
+								$codon_string.= font({-class=>"mutation_in_codon"}, $codon_ref_seq_list[$i]);
+							}
+							else
+							{
+								$codon_string.= $codon_ref_seq_list[$i];
+							}	
+						}	
+						return $codon_string;
+					}
+
+					$aa_codon_change .= "&nbsp;($codon_ref_seq&rarr;$codon_new_seq)";
+				}
+				else # ($mut->{snp_type} eq 'NC')
+				{
+					$aa_codon_change .= $mut->{gene_position};
+				}
+	
+			#	if ($c->{polymorphism})
+			#	{
+			#		$output_str.= start_Tr({-class=>"polymorphism_table_row"});	
+			#	}
+				$output_str.= start_Tr;	
+				$output_str.= td({align=>"center"}, $evidence_string);
+				$output_str.= td({align=>"center"}, make_nonbreaking($mut->{seq_id}));
+				$output_str.= td({align=>"right"}, commify($mut->{position}));
+				$output_str.= td({align=>"center"}, "$mut->{ref_seq}&rarr;$mut->{new_seq}");
+				$output_str.= td({align=>"center"}, $aa_codon_change);
+				$output_str.= td({align=>"center"}, i(make_nonbreaking($mut->{gene_name})));
+				$output_str.= td({align=>"left"}, $mut->{gene_product});
+				$output_str.= end_Tr;	
+			}
+			elsif ($mut->{type} eq 'INS')
+			{
+				$output_str.= start_Tr;	
+				$output_str.= td({align=>"center"}, $evidence_string);
+				$output_str.= td({align=>"center"}, make_nonbreaking($mut->{seq_id}));
+				$output_str.= td({align=>"right"}, commify($mut->{position}));
+				$output_str.= td({align=>"center"}, "+$mut->{new_seq}");
+				$output_str.= td({align=>"center"}, $mut->{gene_position});
+				$output_str.= td({align=>"center"}, i(make_nonbreaking($mut->{gene_name})));
+				$output_str.= td({align=>"left"}, $mut->{gene_product});
+				$output_str.= end_Tr;
+			}
+			elsif ($mut->{type} eq 'DEL')
+			{
+				$output_str.= start_Tr;	
+				$output_str.= td({align=>"center"}, $evidence_string);
+				$output_str.= td({align=>"center"}, make_nonbreaking($mut->{seq_id}));
+				$output_str.= td({align=>"right"}, commify($mut->{position}));
+				$output_str.= td({align=>"center"}, "&Delta;$mut->{size} nt");
+				$output_str.= td({align=>"center"}, $mut->{gene_position});
+				$output_str.= td({align=>"center"}, i(make_nonbreaking($mut->{gene_name})));				
+				$output_str.= td({align=>"left"}, $mut->{gene_product});
+				$output_str.= end_Tr;
+			}
+			elsif ($mut->{type} eq 'SUB')
+			{
+				$output_str.= start_Tr;	
+				$output_str.= td({align=>"center"}, $evidence_string);
+				$output_str.= td({align=>"center"}, make_nonbreaking($mut->{seq_id}));
+				$output_str.= td({align=>"right"}, commify($mut->{position}));
+				$output_str.= td({align=>"center"}, "$mut->{ref_seq}&rarr;$mut->{new_seq}");
+				$output_str.= td({align=>"center"}, $mut->{gene_position});
+				$output_str.= td({align=>"center"}, i(make_nonbreaking($mut->{gene_name})));
+				$output_str.= td({align=>"left"}, $mut->{gene_product});
+				$output_str.= end_Tr;
+			}
+
+			elsif ($mut->{type} eq 'MOB')
+			{
+				$output_str.= start_Tr;	
+				$output_str.= td({align=>"center"}, $evidence_string);
+				$output_str.= td({align=>"center"}, make_nonbreaking($mut->{seq_id}));
+				$output_str.= td({align=>"right"}, commify($mut->{position}));
+				my $s;
+				$s .=  "+$mut->{gap_left}&nbsp;::&nbsp;" if ($mut->{gap_left} > 0);
+				$s .=  "&Delta;" . abs($mut->{gap_left}) . "&nbsp;::&nbsp;" if ($mut->{gap_left} < 0);
+				$s .= "$mut->{repeat_name}&nbsp;(";
+				$s .= (($mut->{strand}==+1) ? '+' : (($mut->{strand}==-1) ? '&minus;' : '0'));
+				$s .= ")";
+				$s .=  "&nbsp;::&nbsp;+$mut->{gap_right}" if ($mut->{gap_right} > 0);
+				$s .=  "&nbsp;::&nbsp;&Delta;" . abs($mut->{gap_right}) if ($mut->{gap_right} < 0);
+				$s .= "&nbsp;(+$mut->{duplication_size})&nbsp;bp";
+				$output_str.= td({align=>"center"}, $s);
+				$output_str.= td({align=>"center"}, $mut->{gene_position});
+				$output_str.= td({align=>"center"}, i(make_nonbreaking($mut->{gene_name})));
+				$output_str.= td({align=>"left"}, $mut->{gene_product});
+				$output_str.= end_Tr;
+				
+			}
+		}
+		$output_str.= end_table;	
+}
+
+sub html_read_alignment_table_string
+{
+	my ($list_ref, $relative_link, $title) = @_;
+	$relative_link = '' if (!$relative_link);
+	$title = "Read alignment evidence..." if (!$title);
+	
 	my $output_str = '';
 	
 	my $q = new CGI;
 	$output_str.= start_table({-border => 0, -cellspacing => 1, -cellpadding => 3});
-	$output_str.= start_Tr();
 	
-	my $link = $force_link;
-	$link = defined $snps_list_ref->[0] && defined $snps_list_ref->[0]->{link} if (!defined $link);
+	my $link = (defined $list_ref->[0]) && (defined $list_ref->[0]->{_evidence_file_name});
+	my $total_cols = $link ? 12 : 11;
+	$output_str.= Tr(th({-colspan => $total_cols, -align => "left", -class=>"read_alignment_header_row"}, $title));
+
+	$output_str.= start_Tr();
 	if ($link)
 	{
 		$output_str.= th("&nbsp;"); 
 	}
-	$output_str.= th(
-		[
-			"seq",
-			"pos", 
-			"mut", 
+	$output_str.= th("seq&nbsp;id");
+	$output_str.= th({colspan => 2}, "position");
+	
+	$output_str.= th( [
+			"change",
+			"frequency",
 			"score", 
-#			"cov", 
-#			"tot_cov", 
-			"gene position", 
-			"codon change", 
-			"aa change", 
-			"gene", 
+			"new&nbsp;cov", 
+			"total&nbsp;cov", 
+			"annotation", 
+			"genes", 
+			
 		]
 	);	
 	$output_str.= th({-width => "100%"}, "product"); 
 	$output_str.= end_Tr;
 	
-	foreach my $c (@$snps_list_ref)
-	{	
-		## additional formatting for some variables
-		my $position = '';
-		$position .= $c->{gene_position} if ($c->{gene_position});
-		$position .= "&nbsp;($c->{aa_position})" if ($c->{aa_position});
-		$position =~ s/-/&#8209;/g; #nonbreaking dash
-
-		my $aa_change = ($c->{aa_ref_seq}) ? "$c->{aa_ref_seq}&rarr;$c->{aa_new_seq}" : "-";
-		
-		## add color and underlining  
-		
-		my $codon_ref_seq = to_underline_red_codon($c, 'codon_ref_seq');
-		my $codon_new_seq = to_underline_red_codon($c, 'codon_new_seq');
-
-		sub to_underline_red_codon
-		{
-			my ($c, $codon_key) = @_;			
-			return '' if (!defined $c->{$codon_key} || !defined $c->{codon_position} || $c->{codon_position} eq '');
-			
-			my $codon_string;
-			my @codon_ref_seq_list = split //, $c->{$codon_key};
-			for (my $i=0; $i<scalar @codon_ref_seq_list; $i++)
-			{
-				if ($i == $c->{codon_position})
-				{
-					$codon_string.= font({-class=>"mutation_in_codon"}, $codon_ref_seq_list[$i]);
-				}
-				else
-				{
-					$codon_string.= $codon_ref_seq_list[$i];
-				}	
-			}	
-			return $codon_string;
-		}
-		
-		my $codon_change = ($codon_ref_seq) ? "$codon_ref_seq&rarr;$codon_new_seq" : "-"; 
-	
-		my $display_quality = '';
-		$display_quality = $c->{display_quality} if ($c->{display_quality});
-		$display_quality =~ s/,/<br>/g;
-
-		my $best_coverage_string = '';
-		$best_coverage_string = $c->{best_coverage_string} if ($c->{best_coverage_string});
-		$best_coverage_string =~ s/,/<br>/g;
-	
-		my $total_coverage_string = '';
-		$total_coverage_string = $c->{total_coverage_string} if ($c->{total_coverage_string});
-		$total_coverage_string =~ s/,/<br>/g;
-	
+	foreach my $c (@$list_ref)
+	{		
 		if ($c->{polymorphism})
 		{
 			$output_str.= start_Tr({-class=>"polymorphism_table_row"});	
@@ -389,80 +575,54 @@ sub html_snp_table_string
 		
 		if ($link)
 		{
-			$output_str.= td(a({-href=>"$c->{link}"}, '*')); 
+			$output_str.= td(a({-href=>"$c->{_evidence_file_name}"}, '*')); 
 		}
 		
-		if ($c->{polymorphism})
-		{
-						
-			my $display_frequency = sprintf "%4.2f", (1-$c->{frequency})*100;
-			my $display_fisher_p_value = sprintf "%.1E", $c->{fisher_strand_p_value};
+##			my $display_fisher_p_value = sprintf "%.1E", $c->{fisher_strand_p_value};
 			
-			$output_str.= td(make_nonbreaking($c->{seq_id}));
-			$output_str.= td({-align=>"right"}, $c->{gene_shifted_start});
-			$output_str.= td(
-				[
-					code("$c->{ref_seq}&rarr;$c->{new_seq}") . "&nbsp;(\%$display_frequency)",
-#					code("$c->{ref_seq}&rarr;$c->{new_seq}") . "&nbsp;(FR=$display_frequency), SFET=$display_fisher_p_value)", 					 
-					$display_quality, 
-#					$best_coverage_string,
-#					$total_coverage_string,
-					$position, 
-					code($codon_change), 
-					code($aa_change), 
-					i($c->{gene}), 
-					$c->{gene_product}
-		
-				]
-			);		
-		}
-		else
-		{
-			$output_str.= td(make_nonbreaking($c->{seq_id}));
-			$output_str.= td({-align=>"right"}, $c->{gene_shifted_start});
-			$output_str.= td(
-				[
-					code("$c->{ref_seq}&rarr;$c->{new_seq}"), 
-					$display_quality, 
-#					$best_coverage_string,
-#					$total_coverage_string,
-					$position, 
-					code($codon_change), 
-					code($aa_change), 
-					i($c->{gene}), 
-					$c->{gene_product}
-		
-				]
-			);
-		}
+		$output_str.= td({align => "center"}, make_nonbreaking($c->{seq_id}) );	
+		$output_str.= td({align => "right"}, commify($c->{position}) );	
+		$output_str.= td({align => "right"}, $c->{insert_position} );
+		$output_str.= td({align => "center"}, "$c->{ref_base}&rarr;$c->{new_base}" );	
+		$output_str.= td({align => "right"}, sprintf("%4.2f%%", $c->{frequency}*100) );	
+		$output_str.= td({align => "right"}, sprintf("%.1f", $c->{quality}) );	
+		$output_str.= td({align => "center"}, $c->{new_cov} );	
+		$output_str.= td({align => "center"}, $c->{tot_cov} );
+		$output_str.= td({align => "center"}, $c->{gene_position} );	
+		$output_str.= td({align => "center"}, i(make_nonbreaking($c->{gene_name})) );	
+		$output_str.= td({align => "left"}, $c->{gene_product} );	
+			
 		$output_str.= end_Tr;
 	}
 	
 	$output_str.= end_table;
 }
 
-sub html_deletion_table_string
+sub html_missing_coverage_table_string
 {
-	my ($list_ref, $force_link) = @_;
+	my ($list_ref, $relative_link, $title) = @_;
+	$relative_link = '' if (!$relative_link);
+	$title = "Missing coverage evidence..." if (!$title);
+	
 	my $output_str = '';
 	
 	my $q = new CGI;
-	$output_str.= start_table({-border => 0, -cellspacing => 1, -cellpadding => 3});
+	$output_str.= start_table({-border => 0, -cellspacing => 1, -cellpadding => 3, -width => "100%"});
+	
+	my $coverage_plots;
+	$coverage_plots = (defined $list_ref->[0]) && (defined $list_ref->[0]->{_evidence_file_name});
+	
+	my $link = (defined $list_ref->[0]) && (defined $list_ref->[0]->{_side_1_evidence_file_name}) && (defined $list_ref->[0]->{_side_2_evidence_file_name});
+
+	my $total_cols = $link ? 10 : 7;
+	$output_str.= Tr(th({-colspan => $total_cols, -align => "left", -class=>"missing_coverage_header_row"}, $title));
+
 	$output_str.= start_Tr();
-	
-	my $coverage_graphs;
-	$coverage_graphs = defined $list_ref->[0] && defined $list_ref->[0]->{coverage_graph_link};
-	
-	my $link = $force_link;
-	if (!defined $link && defined $list_ref->[0])
-	{
-		$link = (defined $list_ref->[0]->{upstream_interval}->{link}) && (defined $list_ref->[0]->{downstream_interval}->{link});
-	}
 	if ($link)
 	{
 		$output_str.= th("&nbsp;"); 
 		$output_str.= th("&nbsp;"); 
-		if ($coverage_graphs)
+		if ($coverage_plots)
 		{
 			$output_str.= th("&nbsp;");
 		}
@@ -470,13 +630,15 @@ sub html_deletion_table_string
 	
 	$output_str.= th(
 		[
-			"seq",
+			"seq&nbsp;id",
 			"start", 
 			"end", 
-			"size", 
+			"left&nbsp;outside&nbsp;cov",
+			"left&nbsp;inside&nbsp;cov",
+			"right&nbsp;inside&nbsp;cov",
+			"right&nbsp;outside&nbsp;cov",
 		]
 	);		
-	$output_str.= th({-width => "100%"}, "genes"); 
 	$output_str.= end_Tr;
 	
 	foreach my $c (@$list_ref)
@@ -490,250 +652,146 @@ sub html_deletion_table_string
 		
 		if ($link)
 		{
-			$output_str.= td(a({-href=>"$c->{upstream_interval}->{link}"}, '*')); 
-			$output_str.= td(a({-href=>"$c->{downstream_interval}->{link}"}, '*')); 
+			$output_str.= td(a({-href=>"$relative_link$c->{_side_1_evidence_file_name}"}, '*')); 
+			$output_str.= td(a({-href=>"$relative_link$c->{_side_2_evidence_file_name}"}, '*')); 
 			
-			if ($coverage_graphs)
+			if ($coverage_plots)
 			{
-				$output_str.= td(a({-href=>"$c->{coverage_graph_link}"}, '&divide;')); 
+				$output_str.= td(a({-href=>"$relative_link$c->{_evidence_file_name}"}, '&divide;')); 
 			}
 		}
 		
 		$output_str.= td(make_nonbreaking($c->{seq_id})); 
 		$output_str.= td({-align=>"right"}, $c->{start}); 
-		$output_str.= td({-align=>"right"}, $c->{end}); 
-		$output_str.= td({-align=>"right"}, $c->{size}); 
-		$output_str.= td(i($gene_string)); 
-			
+		$output_str.= td({-align=>"right"}, $c->{end}); 		
+		$output_str.= td({-align=>"right"}, $c->{left_outside_cov}); 
+		$output_str.= td({-align=>"right"}, $c->{left_inside_cov}); 
+		$output_str.= td({-align=>"right"}, $c->{right_inside_cov}); 
+		$output_str.= td({-align=>"right"}, $c->{right_outside_cov}); 			
 		$output_str.= end_Tr;
 	}
 	
 	$output_str.= end_table;
+	return $output_str;
 }
 
-sub html_junction_table_string
+sub html_new_junction_table_string
 {
-	our ($settings, $list_ref, $ref_seq_info, $force_link) = @_;
+	our ($list_ref, $relative_link, $title) = @_;
+	$relative_link = '' if (!$relative_link);
+	$title = "New junction evidence..." if (!$title);
+	
 	my $output_str = '';
-		
-	## only annotate IS elements for real reads...
-	if (!$settings->{marginal_mode})
-	{
-		for (my $i=0; $i<scalar @$list_ref - 1; $i++)
-		{
-			my $j1 = $list_ref->[$i];
-			my $j2 = $list_ref->[$i+1];		
-								
-			#must be same IS
-			next if (!defined $j1->{is_interval} || !defined $j2->{is_interval});
-			next if ($j1->{is_interval}->{is}->{gene} ne $j2->{is_interval}->{is}->{gene});
-				
-			#must have a non-negative overlap
-#			next if ($j1->{overlap} < 0);
-#			next if ($j2->{overlap} < 0);
 
-			## positive overlap should be resolved by now
-			die if ($j1->{overlap} > 0);
-			die if ($j2->{overlap} > 0);
-
-			#must be close together in real coords
-			next if (abs($j1->{unique_interval}->{start} - $j2->{unique_interval}->{start}) > 20);
-		
-			#the first unique coords are going into the IS element
-			my $uc1_strand = $j1->{unique_interval}->{strand};
-			my $uc2_strand = $j2->{unique_interval}->{strand};
-			next if ($uc1_strand != -$uc2_strand);
-		
-			my $is1_strand = - $j1->{is_interval}->{strand} * $j1->{is_interval}->{is}->{strand} * $j1->{unique_interval}->{strand};
-			my $is2_strand = - $j2->{is_interval}->{strand} * $j2->{is_interval}->{is}->{strand} * $j2->{unique_interval}->{strand};
-			my $is_strand = ($is1_strand == $is2_strand) ? $is2_strand : '0';
-		
-			### add additional information to the first match, which will 
-			### cause a new line to be drawn in the new junction table
-		
-			$j1->{is_insertion}->{start} = ($uc1_strand == -1) ? $j2->{unique_interval}->{start} : $j1->{unique_interval}->{start};
-			$j1->{is_insertion}->{end} = ($uc1_strand == -1) ? $j1->{unique_interval}->{start} : $j2->{unique_interval}->{start};
-			$j1->{is_insertion}->{seq_id} = (defined $j1->{side_1}->{is}) ? $j1->{side_2}->{seq_id} : $j1->{side_1}->{seq_id};
-			
-			$j1->{is_insertion}->{family} = $j1->{is_interval}->{is}->{gene};
-			$j1->{is_insertion}->{is_strand} = $is_strand;
-			$j1->{is_insertion}->{is_size} = abs($j1->{is_interval}->{is}->{end} - $j1->{is_interval}->{is}->{start} + 1);
-			$j1->{is_insertion}->{after_pos} = $j1->{is_insertion}->{start} - 1;
-			$j1->{is_insertion}->{dup_size} = abs($j1->{is_insertion}->{end} - $j1->{is_insertion}->{start}) + 1;
-		
-			#sometimes the ends of the IS are not quite flush		
-			if ($j1->{is_interval}->{strand} == -1)
-			{
-				$j1->{is_insertion}->{gap_left} = $j1->{is_interval}->{start} - $j1->{is_interval}->{is}->{end} + abs($j1->{overlap});
-			}
-			else
-			{
-				$j1->{is_insertion}->{gap_left} = $j1->{is_interval}->{is}->{start} - $j1->{is_interval}->{start} + abs($j1->{overlap});
-			}
-		
-			if ($j2->{is_interval}->{strand} == -1)
-			{
-				$j1->{is_insertion}->{gap_right} = $j2->{is_interval}->{start} - $j2->{is_interval}->{is}->{end} + abs($j2->{overlap});
-			}
-			else
-			{
-				$j1->{is_insertion}->{gap_right} = $j2->{is_interval}->{is}->{start} - $j2->{is_interval}->{start} + abs($j2->{overlap});
-			}
-			
-			if ($j1->{unique_interval}->{strand} *  $j1->{unique_interval}->{read_side} == +1)
-			{
-				($j1->{is_insertion}->{gap_right}, $j1->{is_insertion}->{gap_left}) = ($j1->{is_insertion}->{gap_left}, $j1->{is_insertion}->{gap_right});
-			}
-		}
-	}
+	my $test_item = $list_ref->[0];
+	my $link =  
+	       (defined $test_item) 
+		&& (defined $test_item->{_side_1_evidence_file_name}) 
+		&& (defined $test_item->{_side_2_evidence_file_name})
+		&& (defined $test_item->{_new_junction_evidence_file_name})
+	;
 	
 	my $q = new CGI;
 	$output_str.= start_table({-border => 0, -cellspacing => 1, -cellpadding => 3});
+
+	my $total_cols = $link ? 9 : 7;
+	$output_str.= Tr(th({-colspan => $total_cols, -align => "left", -class=>"new_junction_header_row"}, $title));
+		
+	#####################
+	#### HEADER LINE ####
+	#####################
+	
 	$output_str.= start_Tr();
-	
-	my $link = $force_link;
-	if (!defined $link && defined $list_ref->[0])
-	{
-		$link = ( (defined $list_ref->[0]->{side_1}->{link}) && (defined $list_ref->[0]->{side_2}->{link}));
-	}
-	
 	if ($link)
 	{
 		$output_str.= th({-colspan=>2}, "&nbsp;"); 
 	}
-	$output_str.= th({-colspan=>2}, "position"); 		
 	$output_str.= th(
 		[
+			"seq&nbsp;id",
+			"position",
 			"overlap",
 			"reads", 
+			"annotation",
 			"gene",
-			"coords",
 		]
 	);		
-	$output_str.= th({-colspan=>2, -width => "100%"}, "product"); 
+	$output_str.= th({-width => "100%"}, "product"); 
 	$output_str.= end_Tr;
+	
+	####################
+	#### ITEM LINES ####
+	####################
 	
 	## the rows in this table are linked (same background color for every two)
 	my $row_bg_color_index = 0;
-	
-	my $body_countdown = 0;
 	foreach my $c (@$list_ref)
 	{
-		#print STDERR "Hybrid\n";
-		#print STDERR Dumper($c);
-
-		## additional formatting for some variables
-	#	my $gene_string = $c->{gene_string};
-	#	$gene_string =~ s/ /&nbsp;/g;
 		
-		#special line for IS insertions
-		if ($c->{is_insertion})
-		{
-			my $isi = $c->{is_insertion};
-			
-			$output_str.= start_Tr({-class=> "is_insertion_header"});
-			$output_str.= td({-colspan=>1}, '') if ($link); 
-			$output_str.= td({-colspan=>1}, '');
-			$output_str.= td({-colspan=>1, -align=>"center"}, $isi->{seq_id});
-			$output_str.= td({-colspan=>1, -align=>"center"}, $isi->{after_pos});
-			$output_str.= td({-colspan=>1, -align=>"center"}, "+$isi->{dup_size} bp");
-			$output_str.= td({-colspan=>1}, '');
-			
-			my $s = '';
-			$s .=  "+$isi->{gap_left}&nbsp;bp&nbsp;::&nbsp;" if ($isi->{gap_left} > 0);
-			$s .=  "&Delta;" . abs($isi->{gap_left}) . "&nbsp;bp&nbsp;::&nbsp;" if ($isi->{gap_left} < 0);
-			$s .= "$isi->{family}&nbsp;(";
-			$s .= (($isi->{is_strand}==+1) ? '+' : (($isi->{is_strand}==-1) ? '&minus;' : '0'));
-			$s .= ")";
-			$s .=  "&nbsp;::&nbsp;+$isi->{gap_right}&nbsp;bp" if ($isi->{gap_right} > 0);
-			$s .=  "&nbsp;::&nbsp;&Delta;" . abs($isi->{gap_right}) . "&nbsp;bp" if ($isi->{gap_right} < 0);
-			$output_str.= td({-colspan=>2, -align=>"center"}, $s);
-			$output_str.= td({-colspan=>1, -align=>"center"}, '');			
-			$output_str.= end_Tr;
-			
-			$body_countdown = 2;
-		}
-		
+		### Side 1
 		my $key = 'side_1';			
-		if ($body_countdown > 0)
-		{
-			$output_str.= start_Tr({-class=> "is_insertion_body"});
-		}
-		else
-		{
-			$output_str.= start_Tr({-class=> "mutation_table_row_$row_bg_color_index"});
-		}
+		my $annotate_key = "junction_" . $c->{"_$key"}->{annotate_key};
+		
+		$output_str.= start_Tr({-class=> "mutation_table_row_$row_bg_color_index"});
+		$output_str.= td({-rowspan=>2}, a({-href=>"$relative_link$c->{_new_junction_evidence_file_name}"}, "*")) if ($link); 
+		{	
+			$output_str.= td({-rowspan=>1, -class=>"$annotate_key"}, a({-href=>"$relative_link$c->{_side_1_evidence_file_name}"}, "?")) if ($link); 
+			$output_str.= td({-rowspan=>1, -class=>"$annotate_key"}, make_nonbreaking($c->{"$key\_seq_id"}));			
+			$output_str.= td( {-align=>"center", -class=>"$annotate_key"}, ($c->{"$key\_strand"} == +1) ? $c->{"$key\_position"} . "&nbsp;=": "=&nbsp;" . $c->{"$key\_position"} );
+			$output_str.= td( {-rowspan=>2, -align=>"center"}, $c->{overlap} );
+			$output_str.= td( {-rowspan=>2, -align=>"center"}, $c->{total_reads} );
 
-		my $redundant_annotate_key = 'junction_gene';
-		$redundant_annotate_key = 'junction_is' if ($c->{$key}->{redundant} == 1);
-		
-		$output_str.= td({-rowspan=>2}, a({-href=>"$c->{link}"}, "*")) if ($link); 
-		$output_str.= td({-rowspan=>1, -class=>"$redundant_annotate_key"}, a({-href=>"$c->{side_1}->{link}"}, "?")) if ($link); 
-		$output_str.= td({-rowspan=>1, -class=>"$redundant_annotate_key"}, make_nonbreaking($c->{$key}->{seq_id}));			
-		$output_str.= td( {-align=>"center", -class=>"$redundant_annotate_key"}, ($c->{$key}->{strand} == +1) ? $c->{$key}->{start} . "&nbsp;=": "=&nbsp;" . $c->{$key}->{start} );
-		$output_str.= td( {-rowspan=>2, -align=>"center"}, $c->{overlap} );
-		$output_str.= td( {-rowspan=>2, -align=>"center"}, "$c->{total_reads}" );
-		## gene data
-		{
-			my $info = $c->{$key}->{$c->{$key}->{annotate_key}};				
-			my $gene_string = i($info->{gene});
-			$gene_string =~ s/-/&#8209;/g; #substitute nonbreaking dash		
-					
-			my $coord_string = $info->{interval};
-			$coord_string =~ s/-/&#8209;/g; #substitute nonbreaking dash		
-					
-			$output_str.= td( {-align=>"center", -class=>"junction_$c->{$key}->{annotate_key}"}, $gene_string );
-			$output_str.= td( {-align=>"center", -class=>"junction_$c->{$key}->{annotate_key}"}, $coord_string );
-			$output_str.= td( {-class=>"junction_$c->{$key}->{annotate_key}"}, $info->{product} );
+			$output_str.= td( {-align=>"center"}, $c->{"_$key"}->{gene_position} );
+			$output_str.= td( {-align=>"center"}, i(make_nonbreaking($c->{"_$key"}->{gene_name})) );
+			$output_str.= td( {}, $c->{"_$key"}->{gene_product} );
 		}
-		## /gene data
-		
 		$output_str.= end_Tr;
 
+		### Side 2
 		$key = 'side_2';
-		if ($body_countdown > 0)
-		{
-			$output_str.= start_Tr({-class=> "is_insertion_body"});
-		}
-		else
-		{
-			$output_str.= start_Tr({-class=> "mutation_table_row_$row_bg_color_index"});
-		}
+		$annotate_key = "junction_" . $c->{"_$key"}->{annotate_key};
 		
-		$redundant_annotate_key = 'junction_gene';
-		$redundant_annotate_key = 'junction_is' if ($c->{$key}->{redundant} == 1);
-		
-		$output_str.= td({-rowspan=>1, -class=>"$redundant_annotate_key"}, a({-href=>"$c->{side_2}->{link}"}, "?")) if ($link); 
-		$output_str.= td({-rowspan=>1, -class=>"$redundant_annotate_key"}, make_nonbreaking($c->{$key}->{seq_id}));		
-		$output_str.= td( {-align=>"center", -class=>"$redundant_annotate_key"}, ($c->{$key}->{strand} == +1) ? $c->{$key}->{start} . "&nbsp;=": "=&nbsp;" . $c->{$key}->{start} );
-		## gene data
+		$output_str.= start_Tr({-class=> "mutation_table_row_$row_bg_color_index"});		
 		{
-			my $info = $c->{$key}->{$c->{$key}->{annotate_key}};				
-			my $gene_string = i($info->{gene});
-			$gene_string =~ s/-/&#8209;/g; #substitute nonbreaking dash		
-					
-			my $coord_string = $info->{interval};
-			$coord_string =~ s/-/&#8209;/g; #substitute nonbreaking dash		
-					
-			$output_str.= td( {-align=>"center", -class=>"junction_$c->{$key}->{annotate_key}"}, $gene_string );
-			$output_str.= td( {-align=>"center", -class=>"junction_$c->{$key}->{annotate_key}"}, $coord_string );
-			$output_str.= td( {-class=>"junction_$c->{$key}->{annotate_key}"}, $info->{product} );
-		}
-		## /gene data
-			
+			$output_str.= td({-rowspan=>1, -class=>"$annotate_key"}, a({-href=>"$c->{_side_2_evidence_file_name}"}, "?")) if ($link); 
+			$output_str.= td({-rowspan=>1, -class=>"$annotate_key"}, make_nonbreaking($c->{"$key\_seq_id"}));		
+			$output_str.= td( {-align=>"center", -class=>"$annotate_key"}, ($c->{"$key\_strand"} == +1) ? $c->{"$key\_position"} . "&nbsp;=": "=&nbsp;" . $c->{"$key\_position"} );
+
+			$output_str.= td( {-align=>"center"}, $c->{"_$key"}->{gene_position} );
+			$output_str.= td( {-align=>"center"}, i(make_nonbreaking($c->{"_$key"}->{gene_name})) );
+			$output_str.= td( {}, $c->{"_$key"}->{gene_product} );
+		}			
 		$output_str.= end_Tr;
 		
 		$row_bg_color_index = ($row_bg_color_index+1)%2;
-		$body_countdown--;
 	}
 	
 	$output_str.= end_table;
 
 }
 
-sub html_alignment_file
+sub html_evidence_file_name
 {
-	my ($settings, $interval) = @_;
+	my ($interval) = @_;
+	
+	#set up the file name
+	my $html_evidence_file_name = 
+		"$interval->{prefix}"
+		. "_$interval->{seq_id}"
+		. "_$interval->{start}" 
+		. ((defined $interval->{insert_start}) ?  ".$interval->{insert_start}" : '')
+		. "_$interval->{end}"
+		. ((defined $interval->{insert_end}) ?  ".$interval->{insert_end}" : '')
+		. "_alignment.html";
+		
+	return $html_evidence_file_name;
+}
+
+sub html_evidence_file
+{
+	my ($settings, $gd, $interval) = @_;
+
+ 	$interval->{output_path} = $settings->file_name('evidence_path') . "/$interval->{file_name}";	
 	
 	my $title = '';
 	if (defined $interval->{deletion})
@@ -749,7 +807,7 @@ sub html_alignment_file
 		$title = "Mutation";
 	}
 	
-	open HTML, ">$interval->{file_name}" or die "Could not open file: $interval->{file_name}";
+	open HTML, ">$interval->{output_path}" or die "Could not open file: $interval->{output_path}";
 
 	
 	my $q = new CGI;
@@ -760,29 +818,299 @@ sub html_alignment_file
 			-head  => style({type => 'text/css'},$header_style_string),
 	    );
 
+	## print a table for the main item
+	## followed by auxiliary tables for each piece of evidence
 	
-	if (defined $interval->{deletion})
+	my $parent_item = $interval->{parent_item};
+				
+	print HTML html_genome_diff_item_table_string($gd, [$parent_item]) . p;
+	my @evidence_list = $gd->evidence_list($parent_item);
+	
+	foreach my $type ( 'RA', 'MC', 'JC' )
 	{
-		print HTML html_deletion_table_string([$interval->{deletion}], 0);
-	}
-	elsif (defined $interval->{hybrid})
-	{
-		print HTML html_junction_table_string($settings, [$interval->{hybrid}], undef, 0);
-	}
-	else
-	{
-		print HTML html_snp_table_string([$interval], 0);
+		my @this_evidence_list = grep {$_->{type} eq $type} @evidence_list;
+		next if (scalar @this_evidence_list == 0);
+		print HTML html_genome_diff_item_table_string($gd, \@this_evidence_list) . p;
 	}
 		
-	print HTML p;
-	my $ao = Breseq::AlignmentOutput->new;
+	if (defined $interval->{plot})
+	{
+		print HTML div({-align=>"center"}, img({-src=>$interval->{plot}}));
+	}
+	elsif ( (defined $interval->{bam_path}) && ($interval->{fasta_path}) )
+	{					
+		#construct the interval string		
+		my $s = '';
+		$s .= "$interval->{seq_id}:$interval->{start}";
+		$s .= ".$interval->{insert_start}" if (defined $interval->{insert_start});
+		$s .= "-$interval->{end}";
+		$s .= ".$interval->{insert_end}" if (defined $interval->{insert_end});
+		
+		my $ao = Breseq::AlignmentOutput->new;
+		print HTML $ao->html_alignment(
+			$interval->{bam_path}, 
+			$interval->{fasta_path}, 
+			$s, 
+			$interval
+		);
+	}
 	
-	$interval->{insert_start} = 0 if (!defined $interval->{insert_start});
-	$interval->{insert_end} = 0 if (!defined $interval->{insert_end});
-	print HTML $ao->html_alignment($interval->{bam_path}, $interval->{fasta_path}, "$interval->{seq_id}:$interval->{start}.$interval->{insert_start}-$interval->{end}.$interval->{insert_end}", $interval);	
-	
+		
+			
 	print HTML end_html;
 	close HTML;
+}
+
+
+sub create_evidence_files
+{
+	my ($settings, $gd) = @_;
+	
+	# gather everything together and then handle all at once
+	our @evidence_list;
+
+
+	sub add_evidence
+	{
+		my ($evidence_file_name_key, $evidence_item) = @_;		
+		$evidence_item->{file_name} = html_evidence_file_name($evidence_item);
+		$evidence_item->{item}->{$evidence_file_name_key} = $evidence_item->{file_name};		
+		push @evidence_list, $evidence_item;
+	}
+	
+	# Fasta and BAM files for making alignments.
+	my $reference_bam_file_name = $settings->file_name('reference_bam_file_name');
+	my $reference_fasta_file_name = $settings->file_name('reference_fasta_file_name');
+
+	## hybrids use different BAM files for making the alignments!!!
+	my $junction_bam_file_name = $settings->file_name('junction_bam_file_name');
+	my $junction_fasta_file_name = $settings->file_name('candidate_junction_fasta_file_name');
+
+	### We make alignments of two regions for deletions: upstream and downstream edges.
+	foreach my $item ( $gd->list('MC') )
+	{	
+		## this is a terrible way of finding our parents...
+		my $parent_item = $item;
+		TEST: foreach my $test_item ($gd->list('DEL'))
+		{
+			foreach my $test_evidence_id (@{$test_item->{evidence}})
+			{
+				if ($test_evidence_id == $item->{id})
+				{					
+					$parent_item = $test_item;
+					last TEST;
+				}
+			}
+		}
+		
+		
+		add_evidence( 
+			'_side_1_evidence_file_name',
+			{ 
+				bam_path 	=> $reference_bam_file_name,
+				fasta_path 	=> $reference_fasta_file_name,
+				seq_id 		=> $item->{seq_id}, 
+				start 		=> $item->{start}-1, 
+				end 		=> $item->{start}-1, 
+				parent_item => $parent_item,
+				item 		=> $item,
+				prefix 		=> 'MC_SIDE_1',
+			}
+		);
+		
+		add_evidence( 
+			'_side_2_evidence_file_name',
+			{
+				bam_path 	=> $reference_bam_file_name,
+				fasta_path 	=> $reference_fasta_file_name,
+				seq_id 		=> $item->{seq_id}, 
+				start		=> $item->{end}+1, 
+				end 		=> $item->{end}+1, 
+				parent_item => $parent_item,
+				item 		=> $item,
+				prefix 		=> 'MC_SIDE_2',			
+			}
+		);
+
+		add_evidence( 
+			'_evidence_file_name',
+			{
+				seq_id 		=> $item->{seq_id}, 
+				start		=> $item->{start}, 
+				end 		=> $item->{end}, 
+				parent_item => $parent_item,
+				item 		=> $item,
+				prefix 		=> 'MC_PLOT',	
+				plot		=> $item->{_coverage_plot_file_name},
+			}
+		);
+	}	
+
+	MUT: foreach my $item ( $gd->list('SNP', 'INS', 'DEL', 'SUB') )
+	{
+		#this reconstructs the proper columns to draw
+		my $start = $item->{position};
+		my $end = $start;
+		my $insert_start = undef;
+		my $insert_end = undef;
+
+		if ($item->{type} eq 'INS')
+		{
+			$insert_start = 1;
+			$insert_end = length($item->{new_seq});			
+		}
+		elsif ($item->{type} eq 'DEL')
+		{
+			my $has_ra_evidence;
+			foreach my $evidence_item ($gd->evidence_list($item))
+			{
+				$has_ra_evidence = 1 if ($evidence_item->{type} eq 'RA');
+			}
+			## only do deletions if they have within-read evidence
+			next MUT if (!$has_ra_evidence);
+
+			$end = $start + $item->{size} - 1;
+		}
+
+		##may be a problem here...
+		elsif ($item->{type} eq 'SUB')
+		{
+			$end = $start + length($item->{new_seq}) - 1;
+		}
+
+		add_evidence( 
+			'_evidence_file_name',
+			{
+				bam_path 		=> $reference_bam_file_name,
+				fasta_path 		=> $reference_fasta_file_name,
+				seq_id 			=> $item->{seq_id}, 
+				start 			=> $start, 
+				end 			=> $end, 
+				insert_start 	=> $insert_start, 
+				insert_end 		=> $insert_end,
+				parent_item 	=> $item, 
+				item 			=> $item, 
+				prefix 			=> $item->{type},	
+			}
+		);
+				
+		#add evidence to 'RA' items as well
+		foreach my $evidence_item ( $gd->evidence_list($item) )
+		{
+			next if ($evidence_item->{type} ne 'RA');
+			$evidence_item->{_evidence_file_name} = $item->{_evidence_file_name};
+		}
+	}
+
+	## This additional information is used for the complex reference line.
+	## Note that it is completely determined by the original candidate junction sequence 
+	## positions and overlap: alignment_pos and alignment_overlap.
+
+	foreach my $item ( $gd->list('JC') )
+	{		
+		
+		## this is a terrible way of finding our parents...
+		my $parent_item = $item;
+		TEST: foreach my $test_item ($gd->list('DEL','MOB'))
+		{
+			foreach my $test_evidence_id (@{$test_item->{evidence}})
+			{
+				if ($test_evidence_id == $item->{id})
+				{					
+					$parent_item = $test_item;
+					last TEST;
+				}
+			}
+		}
+		
+		## regenerate the alignment overlap from the junction_key
+		my ($start, $end);
+		if ($item->{alignment_overlap} == 0)
+		{
+			$start = $item->{flanking_left};
+			$end = $item->{flanking_left}+1;			
+		}
+		elsif ($item->{alignment_overlap} > 0)
+		{
+			$start = $item->{flanking_left}+1;
+			$end = $item->{flanking_left}+$item->{alignment_overlap};
+		}
+		else ## ($item->{overlap} < 0)
+		{
+			$start = $item->{flanking_left}+1;
+			$end = $item->{flanking_left}-$item->{alignment_overlap};
+		}
+
+		add_evidence( 
+			'_new_junction_evidence_file_name',
+			{
+				bam_path 	=> $junction_bam_file_name,
+				fasta_path 	=> $junction_fasta_file_name,
+				seq_id 		=> $item->{key}, 
+				start 		=> $start, 
+				end 		=> $end, 
+				parent_item => $parent_item,
+				item 		=> $item,
+				prefix 		=> 'JC',
+			#### extra information	
+				alignment_empty_change_line => 1,			
+				alignment_reference_info_list => [
+				 	{	
+						truncate_end 	=> $item->{flanking_left} + (($item->{alignment_overlap} > 0) ? $item->{alignment_overlap} : 0), 
+						ghost_end 		=> $item->{side_1_position}, 
+						ghost_strand 	=> $item->{side_1_strand},
+						ghost_seq_id	=> $item->{side_1_seq_id}
+					},
+					{	
+						truncate_start 	=> $item->{flanking_left}+1 - (($item->{alignment_overlap} < 0) ? $item->{alignment_overlap} : 0), 
+						ghost_start 	=> $item->{side_2_position}, 
+						ghost_strand 	=> $item->{side_2_strand},
+						ghost_seq_id 	=> $item->{side_2_seq_id}
+					}
+				],
+			}
+		);
+		## this is the flagship file that we show first when clicking on evidence from a mutation...
+		$item->{_evidence_file_name} = $item->{_new_junction_evidence_file_name};
+		
+		add_evidence( 
+			'_side_1_evidence_file_name',
+		 	{ 
+				bam_path 	=> $reference_bam_file_name,
+				fasta_path 	=> $reference_fasta_file_name,
+				seq_id 		=> $item->{side_1_seq_id}, 
+				start 		=> $item->{side_1_position}, 
+				end 		=> $item->{side_1_position}, 
+				parent_item => $parent_item,
+				item 		=> $item,
+				prefix 		=> 'JC_SIDE_1',			
+			}
+		);
+
+		add_evidence( 
+			'_side_2_evidence_file_name',
+			{
+				bam_path 	=> $reference_bam_file_name,
+				fasta_path 	=> $reference_fasta_file_name,
+				seq_id 		=> $item->{side_2_seq_id}, 
+				start 		=> $item->{side_2_position}, 
+				end 		=> $item->{side_2_position}, 
+				parent_item => $parent_item,
+				item 		=> $item, 
+				prefix 		=> 'JC_SIDE_2',
+			}
+		);
+	}
+
+	### now create evidence files
+	$settings->create_path('evidence_path');
+	print STDERR "Creating HTML evidence files...\n";
+	foreach my $e (@evidence_list)
+	{			
+		print STDERR "Creating evidence file: $e->{file_name}\n" if ($settings->{verbose});
+		Breseq::Output::html_evidence_file($settings, $gd, $e);		
+	}
+		
 }
 
 sub save_text_deletion_file
@@ -790,119 +1118,42 @@ sub save_text_deletion_file
 	my ($deletion_file_name, $deletions_ref) = @_;
 
 	open DEL, ">$deletion_file_name" or die "Could not open: $deletion_file_name";
-	print DEL join("\t", 'seq_id', 'start', 'end', 'size', 'left_cov', 'left_inside_cov', 'right_inside_cov', 'right_cov', 'genes') . "\n";
+	print DEL join("\t", 'seq_id', 'start', 'end') . "\n";
 	foreach my $d (@$deletions_ref)
 	{
-		print DEL join("\t", $d->{seq_id}, $d->{start}, $d->{end}, $d->{size}, $d->{left_unique_cov}, $d->{left_inside_unique_cov},
-				$d->{right_inside_unique_cov}, $d->{right_unique_cov}, $d->{genes}) . "\n"; 
+		print DEL join("\t", $d->{seq_id}, $d->{start}, $d->{end}) . "\n"; 
 	}
 	close DEL;
 }
 
-sub text_alignment_file
+
+sub draw_coverage
 {
-	my ($file_name, $title, $interval, $ref_seq) = @_;
-	open TEXT, ">$file_name" or die "Could not open file: $file_name" or die "Could not open file: $file_name";
+	my ($settings, $ref_seq_info, $gd) = @_;
+	my @mc = $gd->list('MC');
+	my $drawing_format = 'png';
 	
-	if (defined $interval->{deletion})
-	{
-		### ADD deletion table at top of text alignment
-	}
-	elsif (defined $interval->{hybrid})
-	{
-		print TEXT text_junction_table_string([$interval->{hybrid}]);
-	}
-	else
-	{
-		print TEXT text_snp_table_string([$interval]);
-	}
-	
-	##interval must have all reads loaded in preparation for producing alignment
-	my $alignment = AlignmentMaker::text_alignment($interval, $ref_seq);
-	
-	print TEXT 	"$alignment->{aligned_ref_seq} reference\n" if (defined $alignment->{aligned_ref_seq});
-	print TEXT  "$alignment->{aligned_change_seq}\n" if (defined $alignment->{aligned_change_seq});
+	$settings->create_path('coverage_graph_path');
+	my $coverage_graph_path = $settings->file_name('coverage_graph_path');	
+	my $deletions_text_file_name = $settings->file_name('deletions_text_file_name');
+	Breseq::Output::save_text_deletion_file($deletions_text_file_name, \@mc);
 
-	for my $line (@{$alignment->{lines}})
+	foreach my $seq_id (@{$ref_seq_info->{seq_ids}})
 	{
-		print TEXT "$line->{aligned_seq}  $line->{query}\n";
-	}
-	close TEXT;
-}
-
-sub read_genome_diff
-{
-	my ($file_name) = @_;
-	
-	## Create empty genome diff object.
-	## Add mutations to it and then write file.
-	my $gd = Breseq::GenomeDiff->new(-file_name=>$file_name);
-
-	my $mutation_info;
-	@{$mutation_info->{mutations}} = grep {$_->{type} eq 'RA'} $gd->list;
-	
-	foreach my $mut (@{$mutation_info->{mutations}})
-	{
-		$mut->{insert_start} = $mut->{insert_position};
-		$mut->{insert_end} = $mut->{insert_position};
-		$mut->{start} = $mut->{position};
-		$mut->{end} = $mut->{position};
-		$mut->{ref_seq}	= $mut->{ref_base},
-		$mut->{new_seq} = $mut->{new_base},
-		$mut->{total_coverage_string} = $mut->{tot_cov},
-		$mut->{best_coverage_string} = $mut->{new_cov},
-	}
-	
-	@{$mutation_info->{deletions}} = grep {$_->{type} eq 'MC'} $gd->list;	
-	@{$mutation_info->{unknowns}}  = grep {$_->{type} eq 'UN'} $gd->list;
-	
-	foreach my $mut (@{$mutation_info->{unknowns}}, @{$mutation_info->{deletions}})
-	{
-		$mut->{size} = $mut->{end} - $mut->{start} + 1;
-	}
-	
-	@{$mutation_info->{hybrids}} = grep {$_->{type} eq 'JC'} $gd->list;
-	foreach my $item (@{$mutation_info->{hybrids}})
-	{
-		$item->{side_1}->{start} = $item->{side_1_position};
-		$item->{side_1}->{end} = $item->{side_1_position};
-		$item->{side_1}->{strand} = $item->{side_1_strand};
-		$item->{side_1}->{seq_id} = $item->{side_1_seq_id};
-		$item->{side_1}->{redundant} = $item->{side_1_redundant};
-		$item->{side_1}->{overlap} = $item->{side_1_overlap};
-
-		$item->{side_2}->{start} = $item->{side_2_position};
-		$item->{side_2}->{end} = $item->{side_2_position};
-		$item->{side_2}->{strand} = $item->{side_2_strand};
-		$item->{side_2}->{seq_id} = $item->{side_2_seq_id};
-		$item->{side_2}->{redundant} = $item->{side_2_redundant};
-		$item->{side_2}->{overlap} = $item->{side_2_overlap};
-
-		$item->{seq_id} = $item->{key};
+		my $this_complete_coverage_text_file_name = $settings->file_name('complete_coverage_text_file_name', {'@'=>$seq_id});			
+		my $res = Breseq::Shared::system("$FindBin::Bin/graph_coverage.pl --drawing-format $drawing_format -t $coverage_graph_path -p $settings->{coverage_graph_path} -i $deletions_text_file_name -c $this_complete_coverage_text_file_name --seq_id=$seq_id");				
+		die if ($res);
 		
-		## regenerate the alignment overlap from the junction_key
-		my $scj = Breseq::Shared::junction_name_split($item->{key});
-		$item->{alignment_overlap} = $scj->{alignment_overlap};
-		$item->{side_1}->{alignment_pos} = $scj->{side_1}->{position};
-		$item->{side_2}->{alignment_pos} = $scj->{side_2}->{position};
-		
-		if ($item->{alignment_overlap} == 0)
+		#need to assign link names that correspond to what the R script is doing
+		my $i=1;
+		my @this_deletions = grep {$_->{seq_id} eq $seq_id} @mc if ($seq_id);
+		foreach my $del (@this_deletions)
 		{
-			$item->{start} = $item->{flanking_left};
-			$item->{end} = $item->{flanking_left}+1;			
+			$del->{_coverage_plot_file_name} = "$seq_id\.$i\.$drawing_format";
+			$i++;
 		}
-		elsif ($item->{alignment_overlap} > 0)
-		{
-			$item->{start} = $item->{flanking_left}+1;
-			$item->{end} = $item->{flanking_left}+$item->{alignment_overlap};
-		}
-		else ## ($item->{overlap} < 0)
-		{
-			$item->{start} = $item->{flanking_left}+1;
-			$item->{end} = $item->{flanking_left}-$item->{alignment_overlap};
-		}		
-	}		
-	return $mutation_info;
+	}
+	$settings->remove_path('deletions_text_file_name');
 }
 
 our @execution_times;
