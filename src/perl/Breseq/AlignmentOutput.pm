@@ -329,7 +329,7 @@ sub create_alignment
 		$aligned_reference->{strand} = 0;
 	}
 	
-	## IMPROVEMENT
+	## TODO
 	## Need to ignore positions on the left and right that are only overlapped by
 	## Redundant reads. Currently Pileup will start and end on those coords.
 	## Since it doesn't know about redundancy marking.
@@ -670,8 +670,18 @@ sub create_alignment
 			my $len = $ar->{end} - $ar->{start} + 1;
 			$ar->{end} = $ar->{ghost_end};
 			$ar->{start} = $ar->{end} + $ar->{ghost_strand} * ($len - 1);
-		}	}
+		}	
+	}
 	
+	### Need to reverse the coords for some
+	foreach my $key (keys %$aligned_reads)
+	{		
+		my $aligned_read = $aligned_reads->{$key};		
+		if ($aligned_read->{strand} == -1)
+		{
+			($aligned_read->{start}, $aligned_read->{end}) = ($aligned_read->{length} - $aligned_read->{start} + 1, $aligned_read->{length} - $aligned_read->{end} + 1);
+		}
+	}
 			
 	return { aligned_reads => $aligned_reads, aligned_references => \@aligned_references, aligned_annotation => $aligned_annotation };
 }

@@ -318,8 +318,6 @@ sub _line_to_item
 			}
 			$item->{"_$side_key"}->{type} = 'NA';
 		}
-		
-		print Dumper($item);
 	}
 	
 	
@@ -510,6 +508,24 @@ sub filter
 	@{$self->{list}} = @new_list;
 	
 	return $removed_gd;
+}
+
+sub parent
+{
+	my ($self, $item) = @_;
+
+	TEST: foreach my $test_item ($self->list)
+	{
+		foreach my $test_evidence_id (@{$test_item->{evidence}})
+		{
+			if ($test_evidence_id == $item->{id})
+			{					
+				return $test_item;
+			}
+		}
+	}
+	
+	return undef;
 }
 
 =head2 find_common_mutations

@@ -462,7 +462,7 @@ sub correct_alignments
 	{
 		print "$key\n" if ($verbose);
 		my $item = _junction_to_hybrid_list_item($key, $ref_seq_info, scalar @{$matched_junction{$key}}, $junction_test_info{$key});
-		$item->{marginal}=1;
+		$item->{reject}="NJ";
 		$gd->add($item);
 	}
 	push @hybrid_predictions, @rejected_hybrid_predictions;
@@ -1287,7 +1287,7 @@ sub _junction_to_hybrid_list_item
 		overlap => $jc->{overlap},
 		total_reads => $jc->{total_reads},
 		flanking_left => $jc->{flanking_left},
-		flanking_right => $jc->{flanking_right},	
+		flanking_right => $jc->{flanking_right},
 	};
 
 	foreach my $key (keys %{$jc->{test_info}})
