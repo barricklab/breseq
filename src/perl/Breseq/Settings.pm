@@ -343,7 +343,7 @@ sub initialize_2
 	$self->{local_coverage_graph_path} = "evidence";
 	$self->{coverage_graph_path} = "$self->{output_path}/$self->{local_coverage_graph_path}";
 	$self->{deletions_text_file_name} = "$self->{coverage_graph_path}/deletions.tab";
-	$self->{coverage_plot_file_name} = "$self->{coverage_graph_path}/@.overview.pdf";
+	$self->{coverage_plot_file_name} = "$self->{coverage_graph_path}/@.overview.png";
 	$self->{output_calibration_path} = "$self->{output_path}/calibration";
 	$self->{unique_only_coverage_plot_file_name} = "$self->{output_calibration_path}/@.unique_coverage.pdf";
 	$self->{error_rates_plot_file_name} = "$self->{output_calibration_path}/#.error_rates.pdf";
@@ -352,8 +352,8 @@ sub initialize_2
 	$self->{summary_text_file_name} = "$self->{output_path}/summary.tab";
 	$self->{tiled_coverage_text_file_name} = "$self->{output_path}/@.tiled_coverage.tab";
 
-	$self->{breseq_graphic_from_file_name} = "$self->{script_path}/breseq.png";
-	$self->{breseq_graphic_to_file_name} = "$self->{output_path}/breseq.png";
+	$self->{breseq_small_graphic_from_file_name} = "$self->{script_path}/breseq_small.png";
+	$self->{breseq_small_graphic_to_file_name} = "$self->{output_path}/$self->{local_evidence_path}/breseq_small.png";
 
 	$self->{long_pairs_file_name} = "$self->{output_path}/long_pairs.tab";
 

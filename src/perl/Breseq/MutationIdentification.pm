@@ -83,15 +83,6 @@ sub identify_mutations
 		my $this_tiled_coverage_tab_file_name = $settings->file_name('tiled_coverage_text_file_name', {'@'=>$seq_id});	
 		
 		###
-		##  Already done with this reference sequence.
-		###
-#		if (-e $this_mutation_identification_done_file_name)
-#		{
-#			print " REFERENCE: $seq_id :: Already Complete. \n";			
-#			next REFERENCE;
-#		}
-		
-		###
 		##  Handle predictions for this reference sequence.
 		###
 		my $snps_all_tab_file_name = $settings->file_name('complete_mutations_text_file_name', {'@'=>$seq_id}); 
@@ -114,7 +105,7 @@ sub identify_mutations
 		### DELETION PREDICTION: variables to keep track of during pileup
 		our $last_deletion_start_position = undef;
 		our $this_deletion_reaches_seed_value = 0;
-		our $left_side_coverage_item = undef;
+		our $left_outside_coverage_item = undef
 		our $left_inside_coverage_item = undef;
 		our $last_position_coverage = undef;
 
@@ -142,25 +133,45 @@ sub identify_mutations
 		{
 			my ($pos, $this_position_coverage, $e_value_call) = @_;
 			
-			## when called at the end of a fragment, the position is 1+fragment length
-			## and 
-			
-			#we need to fill in positions with NO reads			
-			foreach (my $i=$last_position_coverage_printed+1; $i<$pos; $i++)
-			{
-				my $zero_coverage = { 
-					'unique' => {'1'=>0, '-1'=>0, 'total' => 0 },
-					'redundant' => {'1'=>0, '-1'=>0, 'total' => 0 }
-				};
+			## when called at the end of a fragment, the position is fragment length +1
+			## and $this_position_coverage is undefined
 				
+			# we need to fill in reference positions with NO reads aligned to them
+			# pileup won't be called at these positions
+			foreach (my $i = $last_position_coverage_printed + 1; $i < $pos; $i++)
+			{
 				if (!defined $last_deletion_start_position)
 				{
-					$last_deletion_start_position = $i;				
-					$left_side_coverage_item = $zero_coverage;
-					$left_inside_coverage_item = $last_position_coverage;
+					## special treatment for the beginning of a fragment
+					## the 
+					if ($last_position_coverage_printed == 0)
+					{
+						$left_outside_coverage_item =  {
+							unique => {'1'=>'NA', '-1'=>'NA', 'total' => 'NA' },
+							redundant => {'1'=>'NA', '-1'=>'NA', 'total' => 'NA' }
+						};
+						$left_inside_coverage_item = { 
+							unique => {'1'=>0, '-1'=>0, 'total' => 0 },
+							redundant => {'1'=>0, '-1'=>0, 'total' => 0 }
+						};
+					}
+					## normal treatment is that coverage went to zero
+					else
+					{
+						$left_outside_coverage_item = { 
+							unique => {'1'=>0, '-1'=>0, 'total' => 0 },
+							redundant => {'1'=>0, '-1'=>0, 'total' => 0 }
+						};
+						$left_inside_coverage_item = $last_position_coverage;	
+					}
+					$last_deletion_start_position = $last_position_coverage_printed+1;			
 				}
 				$this_deletion_reaches_seed_value = 1;
-				
+				$last_position_coverage = { 
+					unique => {'1'=>0, '-1'=>0, 'total' => 0 },
+					redundant => {'1'=>0, '-1'=>0, 'total' => 0 }
+				};
+
 				print COV join("\t", 0, 0, 0, 0, 0, 0, 'NA', $i) . "\n";
 			}
 			$last_position_coverage_printed = $pos;
@@ -181,8 +192,8 @@ sub identify_mutations
 					if (!defined $last_deletion_start_position)
 					{
 						$last_deletion_start_position = $pos;				
-						$left_side_coverage_item = $this_position_coverage;
-						$left_inside_coverage_item = $last_position_coverage;
+						$left_outside_coverage_item = $last_position_coverage;
+						$left_inside_coverage_item = $this_position_coverage;
 					}
 				}
 				
@@ -205,7 +216,6 @@ sub identify_mutations
 					{
 						$this_position_coverage = {
 							unique => {'1'=>'NA', '-1'=>'NA', 'total' => 'NA' },
-							raw_redundant => {'1'=>'NA', '-1'=>'NA', 'total' => 'NA' },
 							redundant => {'1'=>'NA', '-1'=>'NA', 'total' => 'NA' }
 						};
 					}
@@ -218,7 +228,7 @@ sub identify_mutations
 						start_range => 0,
 						end_range => 0,
 			#			size => ($pos-1) - $last_deletion_start_position + 1, #end - start + 1
-						left_outside_cov => $left_side_coverage_item->{unique}->{total},
+						left_outside_cov => $left_outside_coverage_item->{unique}->{total},
 						left_inside_cov => $left_inside_coverage_item->{unique}->{total},
 						right_inside_cov => $last_position_coverage->{unique}->{total},
 						right_outside_cov => $this_position_coverage->{unique}->{total},
@@ -636,23 +646,24 @@ sub identify_mutations
 					$mut->{ref_base} = $ref_base;
 					$mut->{new_base} = $best_base;		
 					$mut->{frequency} = 1; ## this is not a polymorphism
-					$mut->{marginal} = 1 if ($e_value_call < $settings->{mutation_log10_e_value_cutoff})
+					$mut->{reject} = "LR" if ($e_value_call < $settings->{mutation_log10_e_value_cutoff})
 				}
 				if ($polymorphism_predicted)
-				{						
-					
+				{											
 					$mut->{log10_e_value} = $polymorphism->{log10_e_value};
 					$mut->{fisher_strand_p_value} = $polymorphism->{fisher_strand_p_value};
-											
+					
+					# the frequency returned is the probability of the FIRST base
+					# we want to quote the probability of the second base (the change from the reference).
 					if ($polymorphism->{first_base} eq $ref_base)
 					{
-						$mut->{frequency} = $polymorphism->{frequency};
+						$mut->{frequency} = 1-$polymorphism->{frequency};
 						$mut->{ref_base} = $polymorphism->{first_base};
 						$mut->{new_base} = $polymorphism->{second_base};
 					}	
-					elsif ($mut->{second_base} eq $ref_base)
+					elsif ($polymorphism->{second_base} eq $ref_base)
 					{
-						$mut->{frequency} = 1-$polymorphism->{frequency};
+						$mut->{frequency} = $polymorphism->{frequency};
 						$mut->{ref_base} = $polymorphism->{second_base};
 						$mut->{new_base} = $polymorphism->{first_base};
 					}
@@ -669,10 +680,10 @@ sub identify_mutations
 					}
 										
 									
-					$mut->{marginal} = 1 if ($mut->{log10_e_value} < $settings->{polymorphism_log10_e_value_cutoff});
-					$mut->{marginal} = 1 if ($mut->{fisher_strand_p_value} < $settings->{polymorphism_fisher_strand_p_value_cutoff});
-					$mut->{marginal} = 1 if ($mut->{frequency} < $settings->{polymorphism_frequency_cutoff});
-				 	$mut->{marginal} = 1 if ($mut->{frequency} > 1-$settings->{polymorphism_frequency_cutoff});		
+					$mut->{reject} = "LR" if ($mut->{log10_e_value} < $settings->{polymorphism_log10_e_value_cutoff});
+					$mut->{reject} = "FET_STRAND" if ($mut->{fisher_strand_p_value} < $settings->{polymorphism_fisher_strand_p_value_cutoff});
+					$mut->{reject} = "FREQ" if ($mut->{frequency} < $settings->{polymorphism_frequency_cutoff});
+				 	$mut->{reject} = "FREQ" if ($mut->{frequency} > 1-$settings->{polymorphism_frequency_cutoff});						
 				}
 				
 				$gd->add($mut);
@@ -682,7 +693,9 @@ sub identify_mutations
 			}#end INSERT COUNT	
 		}; 
 
-		$bam->pileup($seq_id, $pileup_function);
+		#for testing
+		#$bam->pileup("$seq_id:1-200", $pileup_function);
+		$bam->pileup("$seq_id", $pileup_function);
 
 		###
 		## Need to clean up deletions and unknowns that occur at the end
@@ -860,32 +873,6 @@ sub _predict_polymorphism
 	
 	eval "use Math::GSL::CDF";
 	my $chi_squared_pr = Math::GSL::CDF::gsl_cdf_chisq_Q($likelihood_ratio_test_value, 1);
-
-	print STDERR "$num_not_ref_base/$total $max_likelihood_fr_first_base // $log10_likelihood_given_ref_base->{$first_base} / $log10_likelihood_of_two_base_model = $likelihood_ratio_test_value $chi_squared_pr\n" if ($verbose);
-	
-	# my $print_p_cutoff = 1;
-	# if ($chi_squared_pr <= $print_p_cutoff)
-	# {	
-	# 	print join("\t", 
-	# 		'POLY', $ref_base, $first_base, $second_base, 
-	# 		$base_counts->{'A'}, $base_counts->{'T'}, $base_counts->{'C'}, $base_counts->{'G'}, 
-	# 		$mismatches, $total, $first_base_median_quality, $second_base_median_quality, 
-	# 		$first_base_strand_hash->{-1}, $first_base_strand_hash->{1}, $second_base_strand_hash->{-1}, $second_base_strand_hash->{1},
-	# 		$max_likelihood_fr_first_base, $chi_squared_pr,
-	# 		join(",", @first_base_qualities), join(",", @second_base_qualities)
-	# 	) . "\n";
-	# }
-	# if ($first_base ne $ref_base)
-	# {
-	# 	print join("\t", 
-	# 		'MUT', $ref_base, $first_base, $second_base, 
-	# 		$base_counts->{'A'}, $base_counts->{'T'}, $base_counts->{'C'}, $base_counts->{'G'}, 
-	# 		$mismatches, $total, $first_base_median_quality, $second_base_median_quality, 
-	# 		$first_base_strand_hash->{-1}, $first_base_strand_hash->{1}, $second_base_strand_hash->{-1}, $second_base_strand_hash->{1},
-	# 		$max_likelihood_fr_first_base, $chi_squared_pr,
-	# 		join(",", @first_base_qualities), join(",", @second_base_qualities)
-	# 	) . "\n";		
-	# }
 	
 	$polymorphism = {
 		'frequency' => $max_likelihood_fr_first_base,

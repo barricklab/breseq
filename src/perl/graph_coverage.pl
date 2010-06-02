@@ -222,8 +222,8 @@ plot_coverage <- function(cov, del_start, del_end, my_title, genes)
 	plot(0:10, 0:10, type="n", lty="solid", ylim=c(0, maxy), xlim=c(pos[start], pos[end]), lwd=2, xaxs="i", yaxs="i", xlab="Coordinate in Reference Genome", ylab="Read Coverage Depth") #, main=my_title )
 #	arrows(pos[del_start],maxy,pos[del_start], 0, length=0, col="black", lwd=3)
 #	arrows(pos[del_end],maxy,pos[del_end], 0, length=0, col="black", lwd=3)
-	rect(pos[start], 0, pos[del_start], maxy, col="grey80", lty=0)
-	rect(pos[del_end], 0, pos[end], maxy, col="grey80", lty=0)
+	rect(pos[start], 0, pos[del_start], maxy, col="grey85", lty=0)
+	rect(pos[del_end]+1, 0, pos[end], maxy, col="grey85", lty=0)
 
 	lines(pos[start:end],cov\$redundant_top_cov[start:end]+cov\$redundant_bot_cov[start:end], type="s", col="red", lty="solid", lwd=2 )
 	lines(pos[start:end],cov\$redundant_top_cov[start:end], type="s", col="yellow", lty="solid")
@@ -240,7 +240,7 @@ plot_overview <- function(cov, start, end, my_title, genes)
 	maxy=$max_unique_coverage;
 	par(mar=c(6.1,4.1,1.2,0.2));
 	#	par(mar=c(8.1,4.1,4.1,2.1));	
-	plot(cov\$pos[start:end],cov\$redundant_top_cov[start:end]+cov\$redundant_bot_cov[start:end], type="s", col="red", lty="solid", lwd=1, xaxs="i", yaxs="i", ylim=c(0,maxy), xlab="Coordinate in Reference Genome", ylab="Read Coverage Depth") #, main=my_title )
+	plot(cov\$pos[start:end],cov\$redundant_top_cov[start:end]+cov\$redundant_bot_cov[start:end], type="s", col="red", lty="solid", lwd=1, xaxs="i", yaxs="i", ylim=c(0,maxy), xlab="coordinate in reference sequence", ylab="read coverage depth") #, main=my_title )
 	mtext(genes, side=1, col="blue", cex=0.7, outer=TRUE, line=-2)	
 	lines(cov\$pos[start:end],cov\$unique_top_cov[start:end]+cov\$unique_bot_cov[start:end], type="s", col="blue", lty="solid", lwd=1 )
 }

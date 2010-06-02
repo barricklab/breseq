@@ -105,7 +105,7 @@ sub predict
 	
 	foreach my $item (@ra)
 	{
-		next if ($item->{marginal});
+		next if ($item->{reject});
 		
 		my $same = 0;
 		if (defined $mut)
@@ -184,7 +184,7 @@ sub predict
 	##
 	foreach my $mc_item (@mc)
 	{
-		next if ($mc_item->{marginal});
+		next if ($mc_item->{reject});
 
 		my $mut = { 
 			type => 'DEL',
@@ -249,12 +249,11 @@ sub predict
 				200, 
 				$j->{"$side_key\_strand"}
 			);
-			$j->{"_$side_key"}->{annotate_key} = ((defined $j->{"_$side_key\_is"}) || ($j->{"$side_key\_redundant"})) ? 'repeat' : 'gene';				
+			$j->{"$side_key\_annotate_key"} = ((defined $j->{"_$side_key\_is"}) || ($j->{"$side_key\_redundant"})) ? 'repeat' : 'gene';				
 		}
-		
+				
 		$j->{_side_1_read_side} = -1;
 		$j->{_side_2_read_side} = +1;
-				
 				
 		## Determine which side of the junction is the IS and which is unique
 		## these point to the correct initial interval...
@@ -401,6 +400,22 @@ sub predict
 
 	
 
+	##RA that overlap deletions should not be shown
+	my @del = $gd->list('DEL');	
+	RA: foreach my $ra_item (@ra)
+	{
+		DEL: foreach my $del_item (@del)
+		{
+			next DEL if ($ra_item->{seq_id} ne $del_item->{seq_id});
+			
+			## there might be a problem here with insert_position > 0
+			if ( ($ra_item->{position} >= $del_item->{position}) && ($ra_item->{position} <= $del_item->{position} + $del_item->{size} - 1) )
+			{
+				$ra_item->{deleted} = 1;
+				next RA;
+			}
+		}
+	}
 	
 	## first, extract SNPs and order them
 	
@@ -415,7 +430,7 @@ sub predict
 	## then merging them later? But full matches would also have to be kept separate...
 	##
 
-=comment	
+=comment
 	foreach my $hybrid ($hybrid_gd->list)
 	{
 		my $coverage_cutoff_1 = $settings->{unique_coverage}->{$hybrid->{side_1_seq_id}}->{junction_coverage_cutoff};
@@ -424,7 +439,7 @@ sub predict
 		if ( (!defined $coverage_cutoff_1 || ($hybrid->{total_reads} < $coverage_cutoff_1) ) 
 		  && (!defined $coverage_cutoff_2 || ($hybrid->{total_reads} < $coverage_cutoff_2) ) )
 		{
-			$hybrid->{marginal} = 1;
+			$hybrid->{reject} = "COV";
 		}
 	}
 =cut

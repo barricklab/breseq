@@ -108,34 +108,15 @@ sub html_index
 {
 	my ($file_name, $settings, $summary, $ref_seq_info, $gd) = @_;
 
-	#copy over the breseq_graphic
-	my $breseq_graphic_from_file_name = $settings->file_name('breseq_graphic_from_file_name');
-	my $breseq_graphic_to_file_name = $settings->file_name('breseq_graphic_to_file_name');
-	system("cp $breseq_graphic_from_file_name $breseq_graphic_to_file_name");
-
 	open HTML, ">$file_name" or die "Could not open file: $file_name";    
 
     print HTML start_html(
 			-title => "BRESEQ :: Index" . ($settings->{run_name} ? " :: $settings->{run_name}" : ''), 
 			-head  => style({type => 'text/css'}, $header_style_string),
 	);
-
-
-	print HTML p;
-	print HTML start_table({-width => "100%", -border => 0, -cellspacing => 0, -cellpadding => 3});
-	print HTML start_Tr;
-	print HTML  td(img({-src=>$settings->html_path('breseq_graphic_to_file_name')}));
-	print HTML start_td({-width => "100%"});
-	print HTML start_div({-style=>"font-size: 14pt;"});
-#	print HTML b(a({-href=>$settings->html_path('mutations_html_file_name')}, 'mutation predictions')) . br if ($annotated_mutations);
-#	print HTML b(a({-href=>$settings->html_path('marginal_html_file_name')}, 'marginal predictions')) . br if ($annotated_marginal);
-	print HTML b(a({-href=>$settings->html_path('log_file_name')}, 'command line log'));
-	print HTML end_div;
-
-	print HTML end_td . end_Tr . end_table;
-
+	
 	## Write fastq read file information
-	print HTML p;
+	print HTML breseq_header_string($settings) . p;
     print HTML start_table({-border => 0, -cellspacing => 1, -cellpadding => 5});
 	print HTML Tr(th(), th("fastq read file"), th("reads"), th("bases"), th("longest"));
 	my $total_bases = 0;
@@ -212,7 +193,7 @@ sub html_index
 	my @muts = $gd->list('SNP', 'INS', 'DEL', 'SUB', 'MOB');
 	my $relative_path = $settings->file_name('local_evidence_path');
 	$relative_path .= "/" if ($relative_path);
-	print HTML p . html_mutation_table_string($gd, \@muts, $relative_path );
+	print HTML p . html_mutation_table_string($gd, \@muts, $relative_path, 1 );
 	
 	my @ra = $gd->filter_used_as_evidence($gd->list('RA'));
 	print HTML p . html_read_alignment_table_string(\@ra, $relative_path, "Unassigned read alignment evidence...");
@@ -223,7 +204,6 @@ sub html_index
 	my @jc = $gd->filter_used_as_evidence($gd->list('JC'));
 	print HTML p . html_new_junction_table_string(\@jc, $relative_path, "Unassigned new junction evidence...");	
 	
-	print HTML p . $settings->{byline};	
 	print HTML end_html;
 	close HTML;
 }
@@ -296,29 +276,30 @@ sub html_summary_table
 	close HTML;
 }
 
-sub html_full_table
+sub breseq_header_string
 {
-	my ($file_name, $settings, $ref_seq_info, $snps_list_ref, $deletion_list_ref, $hybrid_list_ref) = @_;
-	open HTML, ">$file_name" or die "Could not open file: $file_name";
+	my ($settings) = @_;
+	my $output_string = '';
 	
-	print HTML 
-		start_html(
-			-title => "BRESEQ :: Predicted Mutations" . ($settings->{run_name} ?  " :: $settings->{run_name}" : ''), 
-			-head  => style({type => 'text/css'},$header_style_string),
-	    ),
-		h2("Within-Read Mutations"),
-		html_snp_table_string($snps_list_ref),
-		p,
-		h2("Missing-Coverage Deletions"),
-		html_deletion_table_string($deletion_list_ref),
-		p,
-		h2("Mosaic-Read Junctions"),
-		html_junction_table_string($settings, $hybrid_list_ref, $ref_seq_info),
-		end_html;
-
-	close HTML;
+	#copy over the breseq_graphic
+	my $breseq_graphic_from_file_name = $settings->file_name('breseq_small_graphic_from_file_name');
+	my $breseq_graphic_to_file_name = $settings->file_name('breseq_small_graphic_to_file_name');
+	
+	if (!-e $breseq_graphic_to_file_name)
+	{
+		system("cp $breseq_graphic_from_file_name $breseq_graphic_to_file_name");
+	}
+	
+	$output_string .= start_table({-width => "100%", -border => 0, -cellspacing => 0, -cellpadding => 3});
+	$output_string .= start_Tr;
+	$output_string .=  td(img({-src=>$settings->html_path('breseq_small_graphic_to_file_name')}));
+	$output_string .= start_td({-width => "100%"});
+	$output_string .= $settings->{byline};	
+	$output_string .= " | " . a({-href=>$settings->html_path('log_file_name')}, 'command line log');
+	$output_string .= end_td . end_Tr . end_table;
+	
+	return $output_string;
 }
-
 
 
 sub html_genome_diff_item_table_string
@@ -355,7 +336,7 @@ sub html_genome_diff_item_table_string
 
 sub html_mutation_table_string
 {	
-		my ($gd, $list_ref, $relative_link) = @_;
+		my ($gd, $list_ref, $relative_link, $legend_row) = @_;
 		$relative_link = '' if (!defined $relative_link);
 		my $output_str = '';
 
@@ -369,7 +350,7 @@ sub html_mutation_table_string
 		my $header_text = "Predicted mutation";
 		$header_text .= "s" if (scalar @$list_ref > 1);
 
-		my $total_cols = 7;
+		my $total_cols = 8;
 		$output_str.= Tr(th({-colspan => $total_cols, -align => "left", -class=>"mutation_header_row"}, $header_text));
 
 
@@ -380,7 +361,8 @@ sub html_mutation_table_string
 				"evidence",
 				"seq&nbsp;id",
 				"position",
-				"mutation", 
+				"mutation",
+				"frequency", 
 				"annotation", 
 				"gene", 
 			]
@@ -407,6 +389,18 @@ sub html_mutation_table_string
 				$evidence_string .= "&nbsp;" if ($evidence_string);
 				$evidence_string .= a({href => "$relative_link$evidence_item->{_evidence_file_name}" }, $evidence_item->{type});
 			}
+			
+			my $frequency_string = 'ND';
+			if (defined $mut->{frequency})
+			{
+				$frequency_string = sprintf("%4.1f%%", $mut->{frequency}*100);
+			}
+			
+			my $row_class = "normal_table_row";
+			if ((defined $mut->{frequency}) && ($mut->{frequency} != 1))
+			{
+				$row_class = "polymorphism_table_row";	
+			}			
 			
 			if ($mut->{type} eq 'SNP')
 			{
@@ -447,63 +441,63 @@ sub html_mutation_table_string
 				{
 					$aa_codon_change .= $mut->{gene_position};
 				}
-	
-			#	if ($c->{polymorphism})
-			#	{
-			#		$output_str.= start_Tr({-class=>"polymorphism_table_row"});	
-			#	}
-				$output_str.= start_Tr;	
+
+				$output_str.= start_Tr({-class=>$row_class});	
 				$output_str.= td({align=>"center"}, $evidence_string);
-				$output_str.= td({align=>"center"}, make_nonbreaking($mut->{seq_id}));
+				$output_str.= td({align=>"center"}, nonbreaking($mut->{seq_id}));
 				$output_str.= td({align=>"right"}, commify($mut->{position}));
 				$output_str.= td({align=>"center"}, "$mut->{ref_seq}&rarr;$mut->{new_seq}");
-				$output_str.= td({align=>"center"}, $aa_codon_change);
-				$output_str.= td({align=>"center"}, i(make_nonbreaking($mut->{gene_name})));
+				$output_str.= td({align=>"right"}, $frequency_string);
+				$output_str.= td({align=>"center"}, nonbreaking($aa_codon_change));
+				$output_str.= td({align=>"center"}, i(nonbreaking($mut->{gene_name})));
 				$output_str.= td({align=>"left"}, $mut->{gene_product});
 				$output_str.= end_Tr;	
 			}
 			elsif ($mut->{type} eq 'INS')
 			{
-				$output_str.= start_Tr;	
+				$output_str.= start_Tr({-class=>$row_class});	
 				$output_str.= td({align=>"center"}, $evidence_string);
-				$output_str.= td({align=>"center"}, make_nonbreaking($mut->{seq_id}));
+				$output_str.= td({align=>"center"}, nonbreaking($mut->{seq_id}));
 				$output_str.= td({align=>"right"}, commify($mut->{position}));
 				$output_str.= td({align=>"center"}, "+$mut->{new_seq}");
-				$output_str.= td({align=>"center"}, $mut->{gene_position});
-				$output_str.= td({align=>"center"}, i(make_nonbreaking($mut->{gene_name})));
+				$output_str.= td({align=>"right"}, $frequency_string);
+				$output_str.= td({align=>"center"}, nonbreaking($mut->{gene_position}));
+				$output_str.= td({align=>"center"}, i(nonbreaking($mut->{gene_name})));
 				$output_str.= td({align=>"left"}, $mut->{gene_product});
 				$output_str.= end_Tr;
 			}
 			elsif ($mut->{type} eq 'DEL')
 			{
-				$output_str.= start_Tr;	
+				$output_str.= start_Tr({-class=>$row_class});	
 				$output_str.= td({align=>"center"}, $evidence_string);
-				$output_str.= td({align=>"center"}, make_nonbreaking($mut->{seq_id}));
+				$output_str.= td({align=>"center"}, nonbreaking($mut->{seq_id}));
 				$output_str.= td({align=>"right"}, commify($mut->{position}));
 				$output_str.= td({align=>"center"}, "&Delta;$mut->{size} nt");
-				$output_str.= td({align=>"center"}, $mut->{gene_position});
-				$output_str.= td({align=>"center"}, i(make_nonbreaking($mut->{gene_name})));				
+				$output_str.= td({align=>"right"}, $frequency_string);
+				$output_str.= td({align=>"center"}, nonbreaking($mut->{gene_position}));
+				$output_str.= td({align=>"center"}, i(nonbreaking($mut->{gene_name})));				
 				$output_str.= td({align=>"left"}, $mut->{gene_product});
 				$output_str.= end_Tr;
 			}
 			elsif ($mut->{type} eq 'SUB')
 			{
-				$output_str.= start_Tr;	
+				$output_str.= start_Tr({-class=>$row_class});	
 				$output_str.= td({align=>"center"}, $evidence_string);
-				$output_str.= td({align=>"center"}, make_nonbreaking($mut->{seq_id}));
+				$output_str.= td({align=>"center"}, nonbreaking($mut->{seq_id}));
 				$output_str.= td({align=>"right"}, commify($mut->{position}));
 				$output_str.= td({align=>"center"}, "$mut->{ref_seq}&rarr;$mut->{new_seq}");
-				$output_str.= td({align=>"center"}, $mut->{gene_position});
-				$output_str.= td({align=>"center"}, i(make_nonbreaking($mut->{gene_name})));
+				$output_str.= td({align=>"right"}, $frequency_string);
+				$output_str.= td({align=>"center"}, nonbreaking($mut->{gene_position}));
+				$output_str.= td({align=>"center"}, i(nonbreaking($mut->{gene_name})));
 				$output_str.= td({align=>"left"}, $mut->{gene_product});
 				$output_str.= end_Tr;
 			}
 
 			elsif ($mut->{type} eq 'MOB')
 			{
-				$output_str.= start_Tr;	
+				$output_str.= start_Tr({-class=>$row_class});	
 				$output_str.= td({align=>"center"}, $evidence_string);
-				$output_str.= td({align=>"center"}, make_nonbreaking($mut->{seq_id}));
+				$output_str.= td({align=>"center"}, nonbreaking($mut->{seq_id}));
 				$output_str.= td({align=>"right"}, commify($mut->{position}));
 				my $s;
 				$s .=  "+$mut->{gap_left}&nbsp;::&nbsp;" if ($mut->{gap_left} > 0);
@@ -514,14 +508,23 @@ sub html_mutation_table_string
 				$s .=  "&nbsp;::&nbsp;+$mut->{gap_right}" if ($mut->{gap_right} > 0);
 				$s .=  "&nbsp;::&nbsp;&Delta;" . abs($mut->{gap_right}) if ($mut->{gap_right} < 0);
 				$s .= "&nbsp;(+$mut->{duplication_size})&nbsp;bp";
+				$output_str.= td({align=>"right"}, $frequency_string);
 				$output_str.= td({align=>"center"}, $s);
-				$output_str.= td({align=>"center"}, $mut->{gene_position});
-				$output_str.= td({align=>"center"}, i(make_nonbreaking($mut->{gene_name})));
+				$output_str.= td({align=>"center"}, nonbreaking($mut->{gene_position}));
+				$output_str.= td({align=>"center"}, i(nonbreaking($mut->{gene_name})));
 				$output_str.= td({align=>"left"}, $mut->{gene_product});
 				$output_str.= end_Tr;
 				
 			}
 		}
+		
+		if ($legend_row)
+		{
+			$output_str.= start_Tr();	
+			$output_str.= td({-colspan=>$total_cols}, b("Evidence codes: RA = read alignment, MC = missing coverage, JC = new junction"));
+			$output_str.= end_Tr;	
+		}
+		
 		$output_str.= end_table;	
 }
 
@@ -564,32 +567,34 @@ sub html_read_alignment_table_string
 	
 	foreach my $c (@$list_ref)
 	{		
-		if ($c->{polymorphism})
+		## don't print ones that overlap predicted deletions
+		next if ($c->{deleted});
+		
+		my $row_class = "normal_table_row";
+		if ((defined $c->{frequency}) && ($c->{frequency} != 1))
 		{
-			$output_str.= start_Tr({-class=>"polymorphism_table_row"});	
+			$row_class = "polymorphism_table_row";	
 		}
-		else
-		{		
-			$output_str.= start_Tr;	
-		}
+		$output_str.= start_Tr({-class=>$row_class});
 		
 		if ($link)
 		{
-			$output_str.= td(a({-href=>"$c->{_evidence_file_name}"}, '*')); 
+			$output_str.= td(a({-href=>"$relative_link$c->{_evidence_file_name}"}, '*')); 
 		}
 		
-##			my $display_fisher_p_value = sprintf "%.1E", $c->{fisher_strand_p_value};
-			
-		$output_str.= td({align => "center"}, make_nonbreaking($c->{seq_id}) );	
+		my $fisher_p_value = '';
+		$fisher_p_value = nonbreaking(sprintf("&nbsp;(%.1E)", $c->{fisher_strand_p_value})) if (defined $c->{fisher_strand_p_value});
+		
+		$output_str.= td({align => "center"}, nonbreaking($c->{seq_id}) );	
 		$output_str.= td({align => "right"}, commify($c->{position}) );	
 		$output_str.= td({align => "right"}, $c->{insert_position} );
 		$output_str.= td({align => "center"}, "$c->{ref_base}&rarr;$c->{new_base}" );	
-		$output_str.= td({align => "right"}, sprintf("%4.2f%%", $c->{frequency}*100) );	
-		$output_str.= td({align => "right"}, sprintf("%.1f", $c->{quality}) );	
+		$output_str.= td({align => "right"}, sprintf("%4.1f%%", $c->{frequency}*100) );
+		$output_str.= td({align => "right"}, sprintf("%.1f", $c->{quality}) . $fisher_p_value );	
 		$output_str.= td({align => "center"}, $c->{new_cov} );	
 		$output_str.= td({align => "center"}, $c->{tot_cov} );
-		$output_str.= td({align => "center"}, $c->{gene_position} );	
-		$output_str.= td({align => "center"}, i(make_nonbreaking($c->{gene_name})) );	
+		$output_str.= td({align => "center"}, nonbreaking($c->{gene_position}) );	
+		$output_str.= td({align => "center"}, i(nonbreaking($c->{gene_name})) );	
 		$output_str.= td({align => "left"}, $c->{gene_product} );	
 			
 		$output_str.= end_Tr;
@@ -661,7 +666,7 @@ sub html_missing_coverage_table_string
 			}
 		}
 		
-		$output_str.= td(make_nonbreaking($c->{seq_id})); 
+		$output_str.= td(nonbreaking($c->{seq_id})); 
 		$output_str.= td({-align=>"right"}, $c->{start}); 
 		$output_str.= td({-align=>"right"}, $c->{end}); 		
 		$output_str.= td({-align=>"right"}, $c->{left_outside_cov}); 
@@ -730,36 +735,36 @@ sub html_new_junction_table_string
 		
 		### Side 1
 		my $key = 'side_1';			
-		my $annotate_key = "junction_" . $c->{"_$key"}->{annotate_key};
+		my $annotate_key = "junction_" . $c->{"$key\_annotate_key"};
 		
 		$output_str.= start_Tr({-class=> "mutation_table_row_$row_bg_color_index"});
 		$output_str.= td({-rowspan=>2}, a({-href=>"$relative_link$c->{_new_junction_evidence_file_name}"}, "*")) if ($link); 
 		{	
-			$output_str.= td({-rowspan=>1, -class=>"$annotate_key"}, a({-href=>"$relative_link$c->{_side_1_evidence_file_name}"}, "?")) if ($link); 
-			$output_str.= td({-rowspan=>1, -class=>"$annotate_key"}, make_nonbreaking($c->{"$key\_seq_id"}));			
+			$output_str.= td({-rowspan=>1}, a({-href=>"$relative_link$c->{_side_1_evidence_file_name}"}, "?")) if ($link); 
+			$output_str.= td({-rowspan=>1, -class=>"$annotate_key"}, nonbreaking($c->{"$key\_seq_id"}));			
 			$output_str.= td( {-align=>"center", -class=>"$annotate_key"}, ($c->{"$key\_strand"} == +1) ? $c->{"$key\_position"} . "&nbsp;=": "=&nbsp;" . $c->{"$key\_position"} );
 			$output_str.= td( {-rowspan=>2, -align=>"center"}, $c->{overlap} );
 			$output_str.= td( {-rowspan=>2, -align=>"center"}, $c->{total_reads} );
 
-			$output_str.= td( {-align=>"center"}, $c->{"_$key"}->{gene_position} );
-			$output_str.= td( {-align=>"center"}, i(make_nonbreaking($c->{"_$key"}->{gene_name})) );
-			$output_str.= td( {}, $c->{"_$key"}->{gene_product} );
+			$output_str.= td( {-align=>"center", -class=>"$annotate_key"}, nonbreaking($c->{"_$key"}->{gene_position}) );
+			$output_str.= td( {-align=>"center", -class=>"$annotate_key"}, i(nonbreaking($c->{"_$key"}->{gene_name})) );
+			$output_str.= td( {-class=>"$annotate_key"}, $c->{"_$key"}->{gene_product} );
 		}
 		$output_str.= end_Tr;
 
 		### Side 2
 		$key = 'side_2';
-		$annotate_key = "junction_" . $c->{"_$key"}->{annotate_key};
+		$annotate_key = "junction_" . $c->{"$key\_annotate_key"};
 		
 		$output_str.= start_Tr({-class=> "mutation_table_row_$row_bg_color_index"});		
 		{
-			$output_str.= td({-rowspan=>1, -class=>"$annotate_key"}, a({-href=>"$c->{_side_2_evidence_file_name}"}, "?")) if ($link); 
-			$output_str.= td({-rowspan=>1, -class=>"$annotate_key"}, make_nonbreaking($c->{"$key\_seq_id"}));		
+			$output_str.= td({-rowspan=>1}, a({-href=>"$c->{_side_2_evidence_file_name}"}, "?")) if ($link); 
+			$output_str.= td({-rowspan=>1, -class=>"$annotate_key"}, nonbreaking($c->{"$key\_seq_id"}));		
 			$output_str.= td( {-align=>"center", -class=>"$annotate_key"}, ($c->{"$key\_strand"} == +1) ? $c->{"$key\_position"} . "&nbsp;=": "=&nbsp;" . $c->{"$key\_position"} );
 
-			$output_str.= td( {-align=>"center"}, $c->{"_$key"}->{gene_position} );
-			$output_str.= td( {-align=>"center"}, i(make_nonbreaking($c->{"_$key"}->{gene_name})) );
-			$output_str.= td( {}, $c->{"_$key"}->{gene_product} );
+			$output_str.= td( {-align=>"center", -class=>"$annotate_key"}, nonbreaking($c->{"_$key"}->{gene_position}) );
+			$output_str.= td( {-align=>"center", -class=>"$annotate_key"}, i(nonbreaking($c->{"_$key"}->{gene_name})) );
+			$output_str.= td( {-class=>"$annotate_key"}, $c->{"_$key"}->{gene_product} );
 		}			
 		$output_str.= end_Tr;
 		
@@ -889,20 +894,8 @@ sub create_evidence_files
 	### We make alignments of two regions for deletions: upstream and downstream edges.
 	foreach my $item ( $gd->list('MC') )
 	{	
-		## this is a terrible way of finding our parents...
-		my $parent_item = $item;
-		TEST: foreach my $test_item ($gd->list('DEL'))
-		{
-			foreach my $test_evidence_id (@{$test_item->{evidence}})
-			{
-				if ($test_evidence_id == $item->{id})
-				{					
-					$parent_item = $test_item;
-					last TEST;
-				}
-			}
-		}
-		
+		my $parent_item = $gd->parent($item);
+		$parent_item = $item if (!$parent_item);
 		
 		add_evidence( 
 			'_side_1_evidence_file_name',
@@ -1001,6 +994,34 @@ sub create_evidence_files
 			$evidence_item->{_evidence_file_name} = $item->{_evidence_file_name};
 		}
 	}
+	
+	
+	## Still create files for RA evidence that was not good enough to predict a mutation from
+
+	my @ra_list = $gd->list('RA');	
+	@ra_list = $gd->filter_used_as_evidence(@ra_list);
+	
+	RA: foreach my $item ( @ra_list )
+	{
+		next if ($item->{deleted});
+		
+		#this reconstructs the proper columns to draw
+		add_evidence( 
+			'_evidence_file_name',
+			{
+				bam_path 		=> $reference_bam_file_name,
+				fasta_path 		=> $reference_fasta_file_name,
+				seq_id 			=> $item->{seq_id}, 
+				start 			=> $item->{position}, 
+				end 			=> $item->{position}, 
+				insert_start 	=> $item->{insert_position}, 
+				insert_end 		=> $item->{insert_position},
+				parent_item 	=> $item, 
+				item 			=> $item, 
+				prefix 			=> $item->{type},	
+			}
+		);
+	}
 
 	## This additional information is used for the complex reference line.
 	## Note that it is completely determined by the original candidate junction sequence 
@@ -1008,20 +1029,8 @@ sub create_evidence_files
 
 	foreach my $item ( $gd->list('JC') )
 	{		
-		
-		## this is a terrible way of finding our parents...
-		my $parent_item = $item;
-		TEST: foreach my $test_item ($gd->list('DEL','MOB'))
-		{
-			foreach my $test_evidence_id (@{$test_item->{evidence}})
-			{
-				if ($test_evidence_id == $item->{id})
-				{					
-					$parent_item = $test_item;
-					last TEST;
-				}
-			}
-		}
+		my $parent_item = $gd->parent($item);
+		$parent_item = $item if (!$parent_item);
 		
 		## regenerate the alignment overlap from the junction_key
 		my ($start, $end);
@@ -1057,13 +1066,13 @@ sub create_evidence_files
 				alignment_reference_info_list => [
 				 	{	
 						truncate_end 	=> $item->{flanking_left} + (($item->{alignment_overlap} > 0) ? $item->{alignment_overlap} : 0), 
-						ghost_end 		=> $item->{side_1_position}, 
+						ghost_end 		=> $item->{side_1_position} + (($item->{alignment_overlap} > 0) ? $item->{side_1_strand} * abs($item->{alignment_overlap}) - $item->{side_1_overlap} : 0), 
 						ghost_strand 	=> $item->{side_1_strand},
 						ghost_seq_id	=> $item->{side_1_seq_id}
 					},
 					{	
 						truncate_start 	=> $item->{flanking_left}+1 - (($item->{alignment_overlap} < 0) ? $item->{alignment_overlap} : 0), 
-						ghost_start 	=> $item->{side_2_position}, 
+						ghost_start 	=> $item->{side_2_position} - (($item->{alignment_overlap} > 0) ? $item->{side_2_strand} * abs($item->{alignment_overlap}) - $item->{side_2_overlap} : 0), 
 						ghost_strand 	=> $item->{side_2_strand},
 						ghost_seq_id 	=> $item->{side_2_seq_id}
 					}
@@ -1233,10 +1242,11 @@ sub load_statistics
 	return retrieve($file_name);
 }
 
-sub make_nonbreaking
+sub nonbreaking
 {
 	my ($text) = @_;
-	$text =~ s/-/&#8209;/g; #substitute nonbreaking dash		
+	$text =~ s/-/&#8209;/g; #substitute nonbreaking dash
+	$text =~ s/ /&nbsp;/g; #substitute nonbreaking space
 	return $text;
 }
 
