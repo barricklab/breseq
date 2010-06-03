@@ -1,0 +1,7 @@
+Function: qfperfection
+Section: linear_algebra
+C-Name: perf
+Prototype: G
+Help: qfperfection(a): rank of matrix of xx~ for x minimal vectors of a gram
+ matrix a
+

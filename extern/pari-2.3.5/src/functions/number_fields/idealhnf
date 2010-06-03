@@ -1,0 +1,8 @@
+Function: idealhnf
+Section: number_fields
+C-Name: idealhnf0
+Prototype: GGDG
+Help: idealhnf(nf,a,{b}): hermite normal form of the ideal a in the number
+ field nf, whatever form a may have. If called as idealhnf(nf,a,b), the ideal
+ is given as aZ_K+bZ_K in the number field K defined by nf
+

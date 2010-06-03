@@ -1,0 +1,9 @@
+Function: rnfpseudobasis
+Section: number_fields
+C-Name: rnfpseudobasis
+Prototype: GG
+Help: rnfpseudobasis(nf,pol): given a pol with coefficients in nf, gives a
+ 4-component vector [A,I,D,d] where [A,I] is a pseudo basis of the maximal
+ order in HNF on the power basis, D is the relative ideal discriminant, and d
+ is the relative discriminant in nf^*/nf*^2
+

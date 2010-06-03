@@ -1,0 +1,7 @@
+Function: rnfidealtwoelt
+Section: number_fields
+C-Name: rnfidealtwoelement
+Prototype: GG
+Help: rnfidealtwoelt(rnf,x): relative version of idealtwoelt, where rnf
+ is a relative numberfield
+

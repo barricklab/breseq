@@ -1,0 +1,11 @@
+Function: bnfclassunit
+Section: number_fields
+C-Name: bnfclassunit0
+Prototype: GD0,L,DGp
+Help: bnfclassunit(P,{flag=0},{tech=[]}): compute the class group, regulator
+ of the number field defined by the polynomial P, and also the fundamental
+ units if they are not too large. flag and tech are both optional. flag can
+ be any of 0: default, 1: insist on having fundamental units, 2: do not
+ compute units. See manual for details about tech. P may also be a non-zero
+ integer, and is then considered as the discriminant of a quadratic order
+

@@ -1,0 +1,69 @@
+\\ A tres grande precision
+\p 2000
+\e
+gettime; abs(-0.01)
+agm(1,2)
+agm(1+O(7^5),8+O(7^5))
+4*arg(3+3*I)
+bernreal(12)
+bernvec(6)
+eta(q)
+gammah(10)
+Pi
+precision(Pi,20)
+sqr(1+O(2))
+sqrt(13+O(127^12))
+teichmuller(7+O(127^12))
+\\ A grande precision
+\p 500
+Euler
+acos(0.5)
+acosh(3)
+3*asin(sqrt(3)/2)
+asinh(0.5)
+3*atan(sqrt(3))
+atanh(0.5)
+besseljh(1,1)
+cos(1)
+cosh(1)
+exp(1)
+exp(1.123)
+incgam(4,1,6)
+incgamc(2,1)
+log(2)
+sin(Pi/6)
+sinh(1)
+sqr(tan(Pi/3))
+tanh(1)
+thetanullk(0.5,7)
+\\ A moyenne precision
+\p 210
+dilog(0.5)
+eint1(2)
+lngamma(10^50*I)
+polylog(5,0.5)
+polylog(-4,t)
+polylog(5,0.5,1)
+polylog(5,0.5,2)
+polylog(5,0.5,3)
+psi(1)
+round(prod(k=1,17,x-exp(2*I*Pi*k/17)), &e)
+e
+theta(0.5,3)
+weber(I)
+weber(I,1)
+weber(I,2)
+zeta(3)
+\\ A faible precision
+\p 38
+besselk(1+I,1)
+besselk(1+I,1,1)
+erfc(2)
+gamma(10.5)
+hyperu(1,1,1)
+incgam(2,1)
+zeta(0.5+14.1347251*I)
+\\
+getheap
+print("Total time spent: ",gettime);
+\q

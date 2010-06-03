@@ -1,0 +1,7 @@
+Function: Qfb
+Section: conversions
+C-Name: Qfb0
+Prototype: GGGDGp
+Help: Qfb(a,b,c,{D=0.}): binary quadratic form a*x^2+b*x*y+c*y^2. D is
+ optional (0.0 by default) and initializes Shanks's distance if b^2-4*a*c>0
+

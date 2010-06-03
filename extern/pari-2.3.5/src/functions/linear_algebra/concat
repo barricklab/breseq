@@ -1,0 +1,17 @@
+Function: concat
+Section: linear_algebra
+C-Name: concat
+Prototype: GDG
+Help: concat(x,{y}): concatenation of x and y, which can be scalars, vectors
+ or matrices, or lists (in this last case, both x and y have to be lists). If
+ y is omitted, x has to be a list or row vector and its elements are
+ concatenated
+Description: 
+ (mp,mp):vec           concat($1, $2)
+ (vec,mp):vec          concat($1, $2)
+ (mp,vec):vec          concat($1, $2)
+ (vec,vec):vec         concat($1, $2)
+ (genstr,gen):genstr   concat($1, $2)
+ (gen,genstr):genstr   concat($1, $2)
+ (gen,?gen):gen        concat($1, $2)
+

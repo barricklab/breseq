@@ -1,0 +1,242 @@
+#!/usr/bin/perl -w
+#
+# Please correct the above line to the actual location of perl on your
+# system, and the line below to the location of PARI manual, ch. 3.
+#
+# The manual file can compressed. Sometimes you need to change the
+# name of the compression program in the %compress = ... statement below.
+#
+
+# How to show a chunk of docs:
+# pod2man --lax a.pod  | nroff -man |
+# perl -p00e "s/\s*$/\n/;if (/^\S/) {$_=''} else {print qq'\n' if $next++}"|
+# less -s -+C
+
+$version = $1, shift @ARGV if @ARGV and $ARGV[0] =~ /^-v=(.*)$/;
+
+$parifile = shift || "f:/pari/doc/usersch3.tex.gz";
+# $parifile="/opt/src/pari-1.39/doc/usersch3.tex.gz";
+
+die "Usage: $0 [-v=version-of-pari] pari-chapter-filename\n"
+  unless -f $parifile;
+
+#%transl=(
+#	 '\\', '\backslash',
+#	 '^',  '\hat{}',
+#	 '!',  'fact',
+#	 '~',  'trans',
+#	 '_',  'conj',
+#	 '-',  '\+',
+#	 '%',  '\%',
+#	 'min',  'max',
+#	 'log',  'ln',
+#);
+%compress = ('.gz', 'gzip -cd',
+	   '.z', 'gzip -cd',
+	   '.Z', 'zcat',
+	  );
+
+#print $help;
+foreach $suffix (keys %compress) {
+  ($patt = $suffix) =~ s/(\W)/\\$1/;
+  if ($parifile =~ /$patt$/) {
+    $pipe = $compress{$suffix};
+    last;
+  }
+}
+if ($pipe) {
+  open(DOC,"$pipe $parifile |") || 
+    die "Cannot open pipe $pipe from $parifile: $!, stopped";
+} else {
+  open(DOC,$parifile) || die "Cannot find file $parifile: $!, stopped";
+}
+$/='';				# Paragraph mode
+# %table = qw(`a ? "a ? "u ? "o ? 'e ?);
+
+sub indexify ($) {
+  my $in = shift;
+  $in =~ s/(^|and\s+)(\w+)(\$?\()/$1\\ref{$2}$3/g;
+  $in;
+}
+
+while (<DOC>) {
+  # last if /\\subsec[\\{}ref]*[\\\${]$help[}\\\$]/o;
+  s/\\chapter\s*{(.*)}/\n\n=head1 NAME\n\nlibPARI - $1\n\n=head1 DESCRIPTION\n\n/;
+  s/\\section\s*{(.*)}/"\n\n=head1 " . indexify($1) . "\n\n"/e;
+  # Try to delimit by :
+  s/\\subsec(?:ref|idx|op)?\s*{(([^{}]+(?=[{}])|{[^{}]+})+)}([^\n:]*):\s*/"\n\n=head2 " . indexify("$1$3") . "\n\n"/e;
+  s/\\subsubsec(?:ref|idx|op)?\s*{(([^{}]+(?=[{}])|{[^{}]+})+)}([^\n:]*):\s*/"\n\n=item " . indexify("$1$3") . "\n\n"/e;
+  # Try to delimit by ' '
+  s/\\subsec(?:ref|idx|op)?\s*{(([^{}]+(?=[{}])|{[^{}]+})+)}(\S*)\s+/"\n\n=head2 " . indexify("$1$3") . "\n\n"/e;
+  s/\\subsec(?:ref|title|idx|op)?\s*{(([^{}]+(?=[{}])|{[^{}]*})+)}:?\s*/"\n\n=head2 " . indexify("$1") . "\n\n"/e;
+  &TeXprint;
+}
+if ($pipe) {
+  if ($^O eq 'os2') {
+    # Would get 'illegal seek' otherwise?
+    1 while <DOC>;
+  }
+  close(DOC) || die "Cannot close pipe `$pipe $parifile': $!, stopped";
+} else {
+  close(DOC) || die "Cannot close file $parifile: $!, stopped";
+}
+
+sub wrap_code {
+  my $in = shift;
+  $in =~ s/^(.)/  $1/mg;
+  $in
+}
+
+# sref is invisible reference
+# tec(a,b) is ref(a)tt(b)
+sub TeXprint_old {
+  # d?frac{}{} ???  bullet ???
+  s/\\\///g;
+  s/\\([% &|\#])/$1/g;
+  s/\\c?dots\b/.../g;
+  s/\\cdot\b/ . /g;
+  s/\\mid\b/ | /g;
+  s/(\\string)?\\_/_/g;
+  s/\\(hat\b|\^)({\\?\s*})?/^/g;
+  s/(^|[^\\])~/$1 /g;
+  s/\\,/ /g;
+  s/\\enspace(\b|(?=[\d_]))/ /g;
+  s/\\~(\{(\\\s*)?\})?/~/g;
+  s/\\tilde(\{\\\s+\})?/~/g;
+  s/\\hbox{}/ /g;
+  s/\\parskip.*/\n/g;		# Up to end of the line
+  s/\\(equiv|approx|simeq)(\b|(?=[\d_]))/ ~ /g;
+  s/\\neq(\b|(?=[\d_]))/!=/g;
+  s/([A-Z])\</$1 < /g;
+  s/\>/E<gt>/g;
+  s/\\leq?(\b|(?=[\d_]))/E<lt>=/g;
+  s/\\geq?(\b|(?=[\d_]))/E<gt>=/g;
+  s/\\\$/F<dollar>/g;
+  s/\$\\bf\b\s*([^\$]+)\$/C<B<$1>>/g;
+  s/\$+([^\$]+)\$+/C<$1>/g;
+  s/\\sref{\s*([^{}]*)}/X<$1>/g;
+  s/\\ref{\s*([^{}]*)}/X<$1>$1/g;
+  s/\\tec{\s*([^{}]*)}{\s*([^{}]*)}/X<$1>$1C<$2>/g;
+  s/\\text{\s*([^{}]*)}/$1/g;
+  s/\{\\text\s*([^{}])}/$1/g;
+  s/^{\\tt\s*\\obeylines\s*(([^{}]+(?=[{}])|{[^{}]*})+)}/wrap_code($1)/e;
+  s/{\\tt\b\s*([^{}]*)}/C<$1>/g;
+  s/{\\bf\b\s*(([^{}]+(?=[{}])|{[^{}]+})+)}/B<$1>/g;
+  s/\\Bbb\b\s*(\w)/B<I<$1>>/g;
+  s/\\Z(\b|(?=[\d_]))/B<I<Z>>/g;
+  s/\\teb{\s*([^{}]*)}/$1/g;
+  s/{\\(sl|it)\b\s*([^{}]*)}/I<$2>/g;
+  #s/\\(subsec(ref)?|smallskip|sl|sref[ a-z]*|bf|ref|Bbb|text|tt|\|)[ \t]*//g;
+  s/\\(backslash|bs)\s*(\b|(?=[\d_]))/\\/g;
+  s/\\(log|sin|cos|lim|tan|mod|sqrt|exp|ln|det)(\b|(?=[\d_]))/ F<$1> /g;
+  s/\\bmod\b/ mod /g;
+  s/\\TeX\{\}/TeX/g;
+  s/\\(small|big)skip(\b|(?=[\d_]))/\n\n/g;
+  s/\\pm(\b|(?=[\d_]))/F<+->/g;
+  s/\\(left|right)(\b|(?=[\d_]))//g;
+  s/\\(q?quad|vfill|eject|centerline)(\b|(?=[\d_]))/    /g;
+  s/\\obr(\b|(?=[\d_]))/\{/g;
+  s/\\cbr(\b|(?=[\d_]))/\}/g;
+  s/\\quo(\b|(?=[\d_]))/\"/g;
+  s/(^|\s)\{(\w+)\}/$1$2/g;
+  s/\\([{}])/$1/g;
+  s/'(\W)'/'C<$1>'/g;
+  s/\\(Alpha | Beta | Chi | Delta | Epsilon | Phi | Gamma
+       | Eta | Iota | vartheta | Kappa | Lambda | Mu | Nu | Omicron
+       | Pi | Theta | Rho | Sigma | Tau | Ypsilon | varsigma | Omega
+       | Xi | Psi | Zeta | alpha | beta | chi | delta | varepsilon | phi | gamma
+       | eta | iota | varphi | kappa | lambda | mu | nu | omicron
+       | pi | theta | rho | sigma | tau | ypsilon | varpi | omega
+       | xi | psi | zeta) (\b|(?=[\d_]|[A-Z]<))/F<$1>/xg;
+  s/\\vers(\{\}|\b|(?=[\d_]))/$version/ if defined $version;
+  print;
+}
+
+sub TeXprint {
+  # d?frac{}{} ???  bullet ???
+  s/\\title\s*\{[^{}]*\}(\s*\\centerline\s*\{[^{}]*\})?//;
+  s/([^\\])%.*$/$1/gm;
+  s/\\kbd\{/\{\\tt /g;
+  s/\\\///g;
+  s/\\([% &|\#\\])/$1/g;
+  s/\\[lc]?dots\b/.../g;
+  s/\\cdot\b/ . /g;
+  s/\\mid\b/ | /g;
+  s/(\\string)?\\_/_/g;
+  s/\\(hat\b|\^)({\\?\s*})?/^/g;
+  s/\\pow(?![a-zA-z])/^/g;
+  s/(^|[^\\])~/$1 /g;
+  s/\\[,;]/ /g;
+  s/\\ne(?![a-zA-Z])/ != /g;
+  s/\\enspace(\b|(?=[\d_]))/ /g;
+  s/\\~(\{(\\\s*)?\})?/~/g;
+  s/\\tilde(\{\\\s+\})?/~/g;
+  s/\\til(?![a-zA-Z])/~/g;
+  s/\\hbox{}/ /g;
+  s/\\parskip.*/\n/g;		# Up to end of the line
+  s/\\(equiv|approx|simeq)(\b|(?=[\d_]))/ ~ /g;
+  s/\\neq(\b|(?=[\d_]))/!=/g;
+  s/([A-Z])\</$1 < /g;
+  s/\>/E<gt>/g;
+  s/\\leq?(\b|(?=[\d_]))/E<lt>=/g;
+  s/\\geq?(\b|(?=[\d_]))/E<gt>=/g;
+  s/\\\$/F<dollar>/g;
+  s/\$\\bf\b\s*([^\$]+)\$/C<B<$1>>/g;
+  s/\$+([^\$]+)\$+/C<$1>/g;
+  s/\\s(?:ref|idx){\s*([^{}]*)}/X<$1>/g;
+  s/\\(?:ref|idx){\s*([^{}]*)}/X<$1>$1/g;
+  s/\\tec{\s*([^{}]*)}{\s*([^{}]*)}/X<$1>$1C<$2>/g;
+  s/\\text{\s*([^{}]*)}/$1/g;
+  s/\{\\text\s*([^{}])}/$1/g;
+  s/^{\\tt\s*\\obeylines\s*(([^{}]+(?=[{}])|{[^{}]*})+)}/wrap_code($1)/e;
+  s/{\\tt\b\s*((\\.|[^{}])*)}/C<$1>/g;
+  s/{\\bf\b\s*(([^{}]+(?=[{}])|{[^{}]+})+)}/B<$1>/g;
+  s/\\Bbb\b\s*(\w)/B<I<$1>>/g;
+  s/\\([NZQRC])\1(?![a-zA-Z])/B<I<$1>>/g;
+  s/\\Z(\b|(?=[\d_]))/B<I<Z>>/g;
+  s/\\teb{\s*([^{}]*)}/$1/g;
+  s/{\\(sl|it)\b\s*([^{}]*)}/I<$2>/g;
+  #s/\\(subsec(ref)?|smallskip|sl|sref[ a-z]*|bf|ref|Bbb|text|tt|\|)[ \t]*//g;
+  s/\\(backslash|bs)\s*(\b|(?=[\d_]|C\<))/\\/g;
+  s/\\(log|sin|cos|lim|tan|mod|sqrt|exp|ln|det)(\b|(?=[\d_]))/ F<$1> /g;
+  s/\\bmod\b/ mod /g;
+  s/\\TeX\{\}/TeX/g;
+  s/\\TeX(\W)/TeX$1/g;
+  s/\\((small|big)skip|newcolumn|(short)?copyrightnotice|hfill|break|par|leavevmode|strut|endgroup|bye)(\b|(?=[\d_]))[ \t]*/\n\n/g;
+  s/^[ \t]*\\hskip\s*\w+//gm;
+  s/\\pm(\b|(?=[\d_]))/F<+->/g;
+  s/\\(left|right)(\b|(?=[\d_]))//g;
+  s/\\(q?quad|vfill|eject|centerline)(\b|(?=[\d_]))/    /g;
+  s/\\obr(\b|(?=[\d_]))/\{/g;
+  s/\\cbr(\b|(?=[\d_]))/\}/g;
+  s/\\quo(\b|(?=[\d_]))/\"/g;
+  s/(^|\s)\{(\w+)\}/$1$2/g;
+  s/\\([{}])/$1/g;
+  s/'(\W)'/'C<$1>'/g;
+  s/\\(Alpha | Beta | Chi | Delta | Epsilon | Phi | Gamma
+       | Eta | Iota | vartheta | Kappa | Lambda | Mu | Nu | Omicron
+       | Pi | Theta | Rho | Sigma | Tau | Ypsilon | varsigma | Omega
+       | Xi | Psi | Zeta | alpha | beta | chi | delta | varepsilon | phi | gamma
+       | eta | iota | varphi | kappa | lambda | mu | nu | omicron
+       | pi | theta | rho | sigma | tau | ypsilon | varpi | omega
+       | xi | psi | zeta 
+       | expr | seq | args | gcd | sum | prod) (\b|(?=[\d_]|[A-Z]<))/F<$1>/xg;
+  s/\\vers(\{\}|\b|(?=[\d_]))/$version/ if defined $version;
+  # for refcard:
+  s/{\\rm\b\s*([^{}]*)}/$1/g;
+  s/\\key\b\s*{(.*)}{(.*)}[ \t]*\n/\n\n=item C<$2>\n\n$1\n\n/mg;
+  s/\\metax\b\s*{(.*)}\s*{\s*(\w+)(?=C\<)(.*)}[ \t]*\n/\n\n=item C<L<$2>$3>\n\n$1\n\n/mg;
+  s/\\metax\b\s*{(.*)}\s*{(.*)}[ \t]*\n/\n\n=item C<$2>\n\n$1\n\n/mg;
+  s/\\hbox(\b|(?=[A-Z]\<))//g;
+  # s/\\kbd\{([^{}]*)\}/\\$1/g;
+  s/C\<\{\}=/C\<=/g;
+  s/\\rightarrow(?![a-zA-Z])/C<--E<gt>>/g;
+  s/\\longleftrightarrow(?![a-zA-Z])/C<E<lt>-----E<gt>>/g;
+  s/\\begin(double)?indentedkeys/\n\n=over\n\n/g;
+  s/\\end(double)?indentedkeys/\n\n=back\n\n/g;
+  # begin/end group appear in very special context only
+  s/\\begingroup\W.*//s;		# Eat to the end
+  s/\n{3,}/\n\n/g;
+  print;
+}
+

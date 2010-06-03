@@ -1,0 +1,8 @@
+Function: bnfisunit
+Section: number_fields
+C-Name: isunit
+Prototype: GG
+Help: bnfisunit(bnf,x): bnf being output by bnfinit (with flag<=2), gives
+ the column vector of exponents of x on the fundamental units and the roots
+ of unity if x is a unit, the empty vector otherwise
+

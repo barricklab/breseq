@@ -1,0 +1,10 @@
+Function: variable
+Section: conversions
+C-Name: gpolvar
+Prototype: G
+Help: variable(x): main variable of object x. Gives p for p-adic x, error
+ for scalars
+Description: 
+ (pol):var:parens:copy	$var:1
+ (gen):gen	gpolvar($1)
+

@@ -1,0 +1,11 @@
+Function: qflllgram
+Section: linear_algebra
+C-Name: qflllgram0
+Prototype: GD0,L,p
+Help: qflllgram(x,{flag=0}): LLL reduction of the lattice whose gram matrix
+ is x (gives the unimodular transformation matrix). flag is optional and can
+ be 0: default,1: lllgramint algorithm for integer matrices, 4: lllgramkerim
+ giving the kernel and the LLL reduced image, 5: lllgramkerimgen same when
+ the matrix has polynomial coefficients, 8: lllgramgen, same as qflllgram
+ when the coefficients are polynomials
+

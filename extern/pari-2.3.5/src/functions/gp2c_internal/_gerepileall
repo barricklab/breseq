@@ -1,0 +1,6 @@
+Function: _gerepileall
+Class: gp2c_internal
+Description:
+ (pari_sp,gen):void:parens    $2 = gerepilecopy($1, $2)
+ (pari_sp,gen,...):void       gerepileall($1, ${nbarg 1 sub}, ${stdref 3 code})
+

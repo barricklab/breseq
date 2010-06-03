@@ -1,0 +1,6 @@
+Function: rnfidealnormabs
+Section: number_fields
+C-Name: rnfidealnormabs
+Prototype: GG
+Help: rnfidealnormabs(rnf,x): absolute norm of the ideal x
+

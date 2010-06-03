@@ -1,0 +1,232 @@
+==================================================================
+The short install procedure is described in README.  Here is the long one:
+
+This module was working OK with 5.003 (some time ago, newer versions
+of this module might have broken this...).
+
+If you have Net::FTP module installed and working (type
+
+	perl -MNet::FTP -le "print 'OK'"
+
+to check, and, say
+
+	perl -MCPAN -e 'install Net::FTP'
+
+to install it if you do not have it), then Makefile.PL may fetch and
+configure GP/PARI for you, so you can skip steps a,b,c,e in the
+description below.  [Sometimes Net::FTP requires setting PASSIVE_FTP
+environment variable.]
+
+With Net::FTP, building, testing, and testing is done in most cases with
+
+  perl Makefile.PL
+  make
+  make test
+  make install
+
+==================================================================
+Let me state the obvious: Math::Pari is a Perl module, so you need to
+have a "good enough" binary of Perl running on your machine.
+Compiling any Perl module involves a heavy usage of the Config module
+coming with Perl.  If your Perl is copied from another machine with an
+incompatible configuration, expect problems.  [Typical syndroms:
+glob failing; /usr/ucb/cc used instead of a real compiler, make trying
+to run `cl' you do not have etc.]
+
+==================================================================
+GP/PARI detects the type of the assembler files needed for your
+processor; Math::Pari copies this logic, but may not contain the
+latest updates/improvements.  If the detection-of-assembler is wrong, put
+machine=assembler_type to the Makefile.PL line, as in
+
+  perl Makefile.PL machine=hppa
+
+As the last resort, machine=none means using a portable-and-slow C code.
+
+I would like to hear about wrong assembler-detection.
+
+==================================================================
+The older versions of Math::Pari were using GP/PARI configuration
+scripts to generate the header file libPARI/paricfg.h needed for the
+compile of the library.  The newer version generate this file
+themselves.  If this new way fails, put the word Configure on the
+Makefile.PL command line to generate this file "the old way":
+
+  perl Makefile.PL Configure
+
+A typical syndrom is a compile error related to undefined CLK_TCK.  I
+would like to hear about these cases.  In the worst cases you may need
+to manually copy paricfg.h from a subdirectory of GP/PARI build
+directory to libPARI/paricfg.h.
+
+[libPARI/paricfg.h is not recreated when rerunning Makefile.PL without
+the Configure options.  If you need it to be recreated, rename this
+file before rerunning.]
+
+==================================================================
+If the problems with Math::Pari being unable to build persist, there is
+another way to build it: use a pre-build version of the PARI library.  Put
+the link options on the Makefile.PL command line like this:
+
+  perl Makefile.PL LIBPARI="-L/lib -lpari"
+
+This is a non-yet-supported way to build the library; try it only if anything
+else fails.
+
+	 Known problems:
+		spoofed version;
+		no graphing functions present;
+		bad free() at t/Pari.t line 265
+			(calling installed Perl function from PARI)
+		no PARI tests to convert;
+		no POD to create;
+		no check for ep codes;
+		no patching the source;
+	   [All but the first 3 of the problems can be avoided if one
+	    lets Makefile.PL download and patch PARI, then builds the library
+	    using the downloaded+patched version.]
+	 Possible problems:
+		different sizeof(long);
+		non-compatible threading model;
+		-lpari build with different non-compatible compiler;
+
+==================================================================
+Other recognized options:
+  force_download		Download PARI/GP even if a directory is found
+  paridir=PATH_TO_DIST_DIR	Use the directory with Pari distribution
+  pari_tgz=PATH_TO_TAR_GZ	To extract a local pari*.tar.gz and patch
+		(if needed) the resulting directory tree.
+  version23_ok=NUMBER		If 0 (default), will skip versions 2.3.* of
+		PARI in automatic search (N/A if `paridir' is given).
+
+==================================================================
+Here is the manual procedure which is somewhat similar to what
+Makefile.PL does.
+
+  a) Get the latest PARI distribution from
+	ftp://megrez.math.u-bordeaux.fr/pub/pari/unix/
+
+  b) uncompress the distribution; optionally run 'Configure' script
+	sh ./Configure
+
+     (Running 'Configure' is required only if you manually copy 'paricfg.h'.)
+
+  c) Math::Pari does not care whether you did `make' GP/PARI, but you can do
+     it nevertheless:
+	make test
+     in toplevel PARI directory;
+
+  d) uncompress the Math::Pari archive into a separate directory (for
+     best results make it a sibling of GP/PARI's root directory; kid
+     or parent should do as well);
+
+  e) _Optionally_ find the architecture of your processor (if it is not
+     known/supported and recognized automatically, the slower 'port' code
+     without assembler should be used).  Recognized "processors" are 
+
+	sun3 sparcv7 sparcv8micro sparcv8super alpha hppa i386 port
+
+     (many more for v2.3.0 and later) the current version should
+     autorecognize them in most situations;
+
+  f) do (assuming your architecture is hppa)
+
+	perl Makefile.PL 
+		or
+	perl Makefile.PL machine=hppa
+
+     You may also want to add Configure argument (see above).  At this
+     moment you may want to manually copy paricfg.h if all the rest fails...)
+
+     This step autogenerates many files, such as POD documentation of GP/PARI
+     and the module test suite, from the GP/PARI distribution.
+
+  g) then
+
+	make
+	make test
+
+  h) Now
+
+	make install
+
+     should make this extension available to the perl programs.
+
+x) Patches to some versions of GP/PARI may be needed (in `patches11',
+   or 'patch12', etc.  depending on the version of GP/PARI 2.*.*).
+   This may be done automatically during auto-download of GP/PARI.
+
+x) We skip "compatibility" tests, and do not support "compatibility" mode
+   (with very old versions of GP/PARI).
+
+x) dmake on Win32 is buggy.  The symptom is a message about not being
+   able to find the target 'all'.  The workaround is to run `dmake
+   -i'.  One must watch for errors (with "Ignored" in the error
+   message), since in this regime dmake won't stop on an error.
+
+=======================================================
+Here are the typical failure modes of the tests:
+
+  t/00_Pari.t:109	     A bug in REx engine on Perl 5.6.0
+				(now skipped under 5.6.0)
+  Segfault in t/nfields.t:21 Too short a stack for Perl process (very
+			     long REx is running to test whether this
+			     test succeeds).  Try something like this (csh)
+				limit stacksize 8192
+
+=======================================================
+Sometimes the server ftp://megrez.math.u-bordeaux.fr/pub/pari/unix/
+goes off line for a couple of days (mostly in August).  Then you can try
+downloading from some mirror: google, e.g., for pari-2.1.7.tgz.
+
+=======================================================
+KNOWN PROBLEMS:
+      Darwin and other systems where -fno-common gcc flag is used:
+        *) Remove the flag from libPARI/Makefile macro CCFLAGS;
+	*) rm libPARI/*.o
+	*) make
+      The symptom: _hiremainder _overflow are reported to be multiply defined.
+
+      Try applying the patch in patches/diff_2.1.6_no-common (we apply it
+		automatically on Darwin if auto-patching is used).
+
+=======================================================
+If you get problems with `overflow' and `hiremainder' symbols not defined:
+there may be (at least) two reasons:
+
+  a) Your Perl is not built on "this machine", so its %Config{} hash
+     does not reflect the real configuration of this machine;
+
+  b) Generation of kernel*.o files (or whatever the object file extension is
+     on your system) is wrong: either Math::Pari build process is out of sync
+     with the GP/PARI one, or Math::Pari::Build is just plain buggy.
+
+  c) Additinally, this is may be a problem with "an older version" of GP/PARI;
+     giving option
+	version23_ok=1
+     to Makefile.PL would allow it to search for newer versions of GP/PARI
+     (going to "fresh install directory" may be needed).
+
+If you are completely sure that "a", "c" are not applicable, you can do the
+following to help in fixing this problem:
+
+  a) Build GP/PARI (it is not necessary to install it); redirect the output
+     of build process to a file.  (You may need to set CC=cc_compiler_of_perl
+     in environment since GP/PARI may prefer gcc otherwise.)
+
+  b) Run `nm' on kernel*.o in libPARI and in the GP/PARI architecture-specific
+     directory (names of object files may differ slightly, as in digits
+     appended).  The intent of Math::Pari::Build is to have "the same
+     reports" generated.  At least `overflow' and `hiremainder' should
+     appear with same number of underscores (0 or 1) prepended, and with
+     the same "class type" letter before them.
+
+  c) If outputs of `nm' in "b" differ, you found a bug.  Inspect the
+     files with redirected output of build processes of Math::Pari, and find
+     how kernel*.o files were built (including how the intermediate files -
+     such as kernel1.s - are built).  Note the differences.
+
+If the information in "b" and "c" is enough for you to fix Math::Pari::Build,
+do so; please report your fix.  Otherwise just report the discrepancies of "b"
+and "c".   A lot of thanks!!!
+

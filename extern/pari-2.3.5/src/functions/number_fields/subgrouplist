@@ -1,0 +1,11 @@
+Function: subgrouplist
+Section: number_fields
+C-Name: subgrouplist0
+Prototype: GDGD0,L,
+Help: subgrouplist(bnr,{bound},{flag=0}): bnr being as output by bnrinit or
+ a list of cyclic components of a finite Abelian group G, outputs the list of
+ subgroups of G (of index bounded by bound, if not omitted), given as HNF
+ left divisors of the SNF matrix corresponding to G. If flag=0 (default) and
+ bnr is as output by bnrinit, gives only the subgroups for which the modulus
+ is the conductor
+

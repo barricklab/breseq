@@ -1,0 +1,10 @@
+Function: rnfnormgroup
+Section: number_fields
+C-Name: rnfnormgroup
+Prototype: GG
+Help: rnfnormgroup(bnr,polrel): norm group (or Artin or Takagi group)
+ corresponding to the Abelian extension of bnr.bnf defined by polrel, where
+ the module corresponding to bnr is assumed to be a multiple of the
+ conductor. The result is the HNF defining the norm group on the given
+ generators in bnr[5][3]
+

@@ -1,0 +1,9 @@
+Function: numdiv
+Section: number_theoretical
+C-Name: gnumbdiv
+Prototype: G
+Help: numdiv(x): number of divisors of x
+Description: 
+ (int):int	numbdiv($1)
+ (gen):gen	gnumbdiv($1)
+

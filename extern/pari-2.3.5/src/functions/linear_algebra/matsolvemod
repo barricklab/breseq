@@ -1,0 +1,8 @@
+Function: matsolvemod
+Section: linear_algebra
+C-Name: matsolvemod0
+Prototype: GGGD0,L,
+Help: matsolvemod(M,D,B,{flag=0}): one solution of system of congruences
+ MX=B mod D (M matrix, B and D column vectors). If (optional) flag is
+ non-null return all solutions
+

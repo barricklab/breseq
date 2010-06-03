@@ -1,0 +1,8 @@
+Function: rnfbasis
+Section: number_fields
+C-Name: rnfbasis
+Prototype: GG
+Help: rnfbasis(bnf,order): given an order as output by rnfpseudobasis or
+ rnfsteinitz, gives either a basis of the order if it is free, or an
+ n+1-element generating set
+

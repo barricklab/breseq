@@ -1,0 +1,8 @@
+Function: intfouriercos
+Section: sums
+C-Name: intfourcos0
+Prototype: V=GGGEDGp
+Help: intfouriercos(X=a,b,x,s,{tab}): numerical integration from a to b
+ of cos(2*Pi*x*X)*s(X) from a to b, where a, b, and tab are as in intnum.
+ This is the cosine-Fourier transform if a=-infty and b=+infty.
+

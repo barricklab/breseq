@@ -1,0 +1,7 @@
+Function: matpascal
+Section: linear_algebra
+C-Name: matqpascal
+Prototype: LDG
+Help: matpascal(n,{q}): Pascal triangle of order n if q is omited. q-Pascal
+ triangle otherwise
+

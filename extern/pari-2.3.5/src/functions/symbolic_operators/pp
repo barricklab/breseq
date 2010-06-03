@@ -1,0 +1,12 @@
+Function: _++
+Class: symbolic_operators
+Description: 
+ (*bptr):bptr				++$1
+ (*small):small				++$1
+ (*lg):lg				++$1
+ (*int):int:parens			 $1 = addis($1, 1)
+ (*real):real:parens			 $1 = addrs($1, 1)
+ (*mp):mp:parens			 $1 = mpadd($1, gen_1)
+ (*pol):pol:parens			 $1 = gaddgs($1, 1)
+ (*gen):gen:parens			 $1 = gaddgs($1, 1)
+

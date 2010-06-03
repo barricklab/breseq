@@ -1,0 +1,8 @@
+Function: rnflllgram
+Section: number_fields
+C-Name: rnflllgram
+Prototype: GGGp
+Help: rnflllgram(nf,pol,order): given a pol with coefficients in nf and an
+ order as output by rnfpseudobasis or similar, gives [[neworder],U], where
+ neworder is a reduced order and U is the unimodular transformation matrix
+

@@ -1,0 +1,7 @@
+inc.h: used to detect which functions are present.
+
+notes:	Most of these remarks are related to unknown versions of Math::Pari
+	and/or GP/PARI.
+
+The rest is obsolete scripts.
+

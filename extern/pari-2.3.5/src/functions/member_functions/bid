@@ -1,0 +1,7 @@
+Function: _.bid
+Class: member_functions
+C-Name: member_bid
+Prototype: G
+Description: 
+ (gen):gen                      member_bid($1)
+

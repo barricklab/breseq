@@ -1,0 +1,33 @@
+\\ $Id: gprc.dos 147 1999-11-03 18:43:04Z karim $
+\\
+\\  SAMPLE GP INIT FILE (for DOS boxes)
+\\
+\\  See gprc.dft for the general syntax and explanations
+\\  Customize, then copy to $HOME/_gprc (or $GPRC) or /etc/gprc
+
+\\ compatible = 0
+
+\\ read "lib/gpalias"
+
+\\ secure = 1
+
+\\ under DOS, directories are separated by ';', not ':'
+\\ path = ".;~;..;~/gpdir"
+
+\\ the readline we supply is old and doesn't have ^A / ^B
+prompt = "(%H:%M) \e[1mgp\e[m > "
+#if READL prompt = "(%H:%M) gp > "
+#if EMACS prompt = "? "
+
+#ifnot EMACS colors = "1, 5, no, no, 6, 1, 2"
+
+\\ #ifnot EMACS help = "/usr/local/bin/gphelp -detex -ch 4 -cb 0 -cu 2"
+
+\\ parisize = 10M
+\\ primelimit = 1M
+\\ timer = 1
+
+\\ logfile  = "~/tmp/pari-%d.%m"
+\\ log = 1
+
+\\ psfile = "~/tmp/pari.ps"

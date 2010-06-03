@@ -1,0 +1,10 @@
+Function: intnumromb
+Section: sums
+C-Name: intnumromb0
+Prototype: V=GGED0,L,p
+Help: intnumromb(X=a,b,s,{flag=0}): numerical integration of s (smooth in 
+ ]a,b[) from a to b with respect to X. flag is optional and mean 0: default. 
+ s can be evaluated exactly on [a,b]; 1: general function; 2: a or b can be 
+ plus or minus infinity (chosen suitably), but of same sign; 3: s has only 
+ limits at a or b
+

@@ -1,0 +1,6 @@
+Function: sin
+Section: transcendental
+C-Name: gsin
+Prototype: Gp
+Help: sin(x): sine of x
+

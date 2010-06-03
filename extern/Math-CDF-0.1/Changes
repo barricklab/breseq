@@ -1,0 +1,10 @@
+Revision history for Perl extension CDF.
+
+0.01  Mon Dec 27 09:33:32 1999
+	- original version; created by h2xs 1.19
+
+0.02  Sun Jan 9 15:00:00 2000
+	- fix "PL_sv_undef undeclared" error in Perl5 patchlevel 4 and before
+
+0.1   Sun Jan 16 21:00:00 2000
+	- first release

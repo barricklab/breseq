@@ -1,0 +1,7 @@
+Function: idealintersect
+Section: number_fields
+C-Name: idealintersect
+Prototype: GGG
+Help: idealintersect(nf,x,y): intersection of two ideals x and y in the
+ number field defined by nf
+

@@ -1,0 +1,7 @@
+Function: bernvec
+Section: transcendental
+C-Name: bernvec
+Prototype: L
+Help: bernvec(x): Vector of rational Bernoulli numbers B_0, B_2,...up to
+ B_(2x)
+

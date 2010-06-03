@@ -1,0 +1,11 @@
+Function: matrixqz
+Section: linear_algebra
+C-Name: matrixqz0
+Prototype: GG
+Help: matrixqz(x,p): if p>=0, transforms the rational or integral mxn (m>=n)
+ matrix x into an integral matrix with gcd of maximal determinants equal to 1
+ if p is equal to 0, not divisible by p otherwise. If p=-1, finds a basis of
+ the intersection with Z^n of the lattice spanned by the columns of x. If
+ p=-2, finds a basis of the intersection with Z^n of the Q-vector space
+ spanned by the columns of x
+

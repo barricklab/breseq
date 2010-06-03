@@ -1,0 +1,6 @@
+Function: serconvol
+Section: polynomials
+C-Name: convol
+Prototype: GG
+Help: serconvol(x,y): convolution (or Hadamard product) of two power series
+

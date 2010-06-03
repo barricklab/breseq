@@ -1,0 +1,11 @@
+This directory contains:
+
+color.dft: color ressources to use with color_xterm.
+gpflog   : a script to filter out escape sequences from a gp log file
+gpalias  : useful aliases to be read from the gprc
+gprc.dft : a sample gprc (generic)
+gprc.dos : a sample gprc for DOS (move it to C:\_GPRC, or to the file $GPRC)
+new.dic  : give new name/syntax for old functions
+pari.xpm : a nice icon drawn by Gerhard Niklasch
+tex2mail : an alternate prettyprinter ( for default(output, 3) or \o3 )
+xgp      : a simple script starting gp in a beefed-up xterm.

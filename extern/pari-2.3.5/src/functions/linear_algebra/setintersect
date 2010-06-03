@@ -1,0 +1,8 @@
+Function: setintersect
+Section: linear_algebra
+C-Name: setintersect
+Prototype: GG
+Help: setintersect(x,y): intersection of the sets x and y
+Description: 
+ (vec, vec):vec	setintersect($1, $2)
+

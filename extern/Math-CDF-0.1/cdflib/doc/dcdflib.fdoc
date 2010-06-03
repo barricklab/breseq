@@ -1,0 +1,1068 @@
+
+
+
+
+
+
+
+
+
+
+
+                                    DCDFLIB
+
+               Library of C Routines for Cumulative Distribution
+                 Functions, Inverses, and Other Parameters
+
+                                  Version 1.1
+
+                                (November, 1997)
+
+
+
+
+
+
+                       Full Documentation of Each Routine
+
+
+
+
+
+
+                            Compiled and Written by:
+
+                                 Barry W. Brown
+                                  James Lovato
+                                  Kathy Russell
+
+
+
+
+
+
+
+
+
+                     Department of Biomathematics, Box 237
+                     The University of Texas, M.D. Anderson Cancer Center
+                     1515 Holcombe Boulevard
+                     Houston, TX      77030
+
+
+ This work was supported by grant CA-16672 from the National Cancer Institute.
+
+/**********************************************************************
+
+      void cdfbet(int *which,double *p,double *q,double *x,double *y,
+	          double *a,double *b,int *status,double *bound)
+
+               Cumulative Distribution Function
+                         BETa Distribution
+
+
+                              Function
+
+
+     Calculates any one parameter of the beta distribution given
+     values for the others.
+
+
+                              Arguments
+
+
+     WHICH --> Integer indicating which of the next four argument
+               values is to be calculated from the others.
+               Legal range: 1..4
+               iwhich = 1 : Calculate P and Q from X,Y,A and B
+               iwhich = 2 : Calculate X and Y from P,Q,A and B
+               iwhich = 3 : Calculate A from P,Q,X,Y and B
+               iwhich = 4 : Calculate B from P,Q,X,Y and A
+
+     P <--> The integral from 0 to X of the chi-square
+            distribution.
+            Input range: [0, 1].
+
+     Q <--> 1-P.
+            Input range: [0, 1].
+            P + Q = 1.0.
+
+     X <--> Upper limit of integration of beta density.
+            Input range: [0,1].
+            Search range: [0,1]
+
+     Y <--> 1-X.
+            Input range: [0,1].
+            Search range: [0,1]
+            X + Y = 1.0.
+
+     A <--> The first parameter of the beta density.
+            Input range: (0, +infinity).
+            Search range: [1D-100,1D100]
+
+     B <--> The second parameter of the beta density.
+            Input range: (0, +infinity).
+            Search range: [1D-100,1D100]
+
+     STATUS <-- 0 if calculation completed correctly
+               -I if input parameter number I is out of range
+                1 if answer appears to be lower than lowest
+                  search bound
+                2 if answer appears to be higher than greatest
+                  search bound
+                3 if P + Q .ne. 1
+                4 if X + Y .ne. 1
+
+     BOUND <-- Undefined if STATUS is 0
+
+               Bound exceeded by parameter number I if STATUS
+               is negative.
+
+               Lower search bound if STATUS is 1.
+
+               Upper search bound if STATUS is 2.
+
+
+                              Method
+
+
+     Cumulative distribution function  (P)  is calculated directly by
+     code associated with the following reference.
+
+     DiDinato, A. R. and Morris,  A.   H.  Algorithm 708: Significant
+     Digit Computation of the Incomplete  Beta  Function Ratios.  ACM
+     Trans. Math.  Softw. 18 (1993), 360-373.
+
+     Computation of other parameters involve a seach for a value that
+     produces  the desired  value  of P.   The search relies  on  the
+     monotinicity of P with the other parameter.
+
+
+                              Note
+
+
+     The beta density is proportional to
+               t^(A-1) * (1-t)^(B-1)
+
+**********************************************************************/
+/**********************************************************************
+
+      void cdfbin(int *which,double *p,double *q,double *s,double *xn,
+	          double *pr,double *ompr,int *status,double *bound)
+
+               Cumulative Distribution Function
+                         BINomial distribution
+
+
+                              Function
+
+
+     Calculates any one parameter of the binomial
+     distribution given values for the others.
+
+
+                              Arguments
+
+
+     WHICH --> Integer indicating which of the next four argument
+               values is to be calculated from the others.
+               Legal range: 1..4
+               iwhich = 1 : Calculate P and Q from S,XN,PR and OMPR
+               iwhich = 2 : Calculate S from P,Q,XN,PR and OMPR
+               iwhich = 3 : Calculate XN from P,Q,S,PR and OMPR
+               iwhich = 4 : Calculate PR and OMPR from P,Q,S and XN
+
+     P <--> The cumulation from 0 to S of the binomial distribution.
+            (Probablility of S or fewer successes in XN trials each
+            with probability of success PR.)
+            Input range: [0,1].
+
+     Q <--> 1-P.
+            Input range: [0, 1].
+            P + Q = 1.0.
+
+     S <--> The number of successes observed.
+            Input range: [0, XN]
+            Search range: [0, XN]
+
+     XN  <--> The number of binomial trials.
+              Input range: (0, +infinity).
+              Search range: [1E-100, 1E100]
+
+     PR  <--> The probability of success in each binomial trial.
+              Input range: [0,1].
+              Search range: [0,1]
+
+     OMPR  <--> 1-PR
+              Input range: [0,1].
+              Search range: [0,1]
+              PR + OMPR = 1.0
+
+     STATUS <-- 0 if calculation completed correctly
+               -I if input parameter number I is out of range
+                1 if answer appears to be lower than lowest
+                  search bound
+                2 if answer appears to be higher than greatest
+                  search bound
+                3 if P + Q .ne. 1
+                4 if PR + OMPR .ne. 1
+
+     BOUND <-- Undefined if STATUS is 0
+
+               Bound exceeded by parameter number I if STATUS
+               is negative.
+
+               Lower search bound if STATUS is 1.
+
+               Upper search bound if STATUS is 2.
+
+
+                              Method
+
+
+     Formula  26.5.24    of   Abramowitz  and    Stegun,  Handbook   of
+     Mathematical   Functions (1966) is   used  to reduce the  binomial
+     distribution  to  the  cumulative incomplete    beta distribution.
+
+     Computation of other parameters involve a seach for a value that
+     produces  the desired  value  of P.   The search relies  on  the
+     monotinicity of P with the other parameter.
+
+
+**********************************************************************/
+/**********************************************************************
+
+      void cdfchi(int *which,double *p,double *q,double *x,double *df,
+	          int *status,double *bound)
+
+               Cumulative Distribution Function
+               CHI-Square distribution
+
+
+                              Function
+
+
+     Calculates any one parameter of the chi-square
+     distribution given values for the others.
+
+
+                              Arguments
+
+
+     WHICH --> Integer indicating which of the next three argument
+               values is to be calculated from the others.
+               Legal range: 1..3
+               iwhich = 1 : Calculate P and Q from X and DF
+               iwhich = 2 : Calculate X from P,Q and DF
+               iwhich = 3 : Calculate DF from P,Q and X
+
+     P <--> The integral from 0 to X of the chi-square
+            distribution.
+            Input range: [0, 1].
+
+     Q <--> 1-P.
+            Input range: (0, 1].
+            P + Q = 1.0.
+
+     X <--> Upper limit of integration of the non-central
+            chi-square distribution.
+            Input range: [0, +infinity).
+            Search range: [0,1E100]
+
+     DF <--> Degrees of freedom of the
+             chi-square distribution.
+             Input range: (0, +infinity).
+             Search range: [ 1E-100, 1E100]
+
+     STATUS <-- 0 if calculation completed correctly
+               -I if input parameter number I is out of range
+                1 if answer appears to be lower than lowest
+                  search bound
+                2 if answer appears to be higher than greatest
+                  search bound
+                3 if P + Q .ne. 1
+               10 indicates error returned from cumgam.  See
+                  references in cdfgam
+
+     BOUND <-- Undefined if STATUS is 0
+
+               Bound exceeded by parameter number I if STATUS
+               is negative.
+
+               Lower search bound if STATUS is 1.
+
+               Upper search bound if STATUS is 2.
+
+
+                              Method
+
+
+     Formula    26.4.19   of Abramowitz  and     Stegun, Handbook  of
+     Mathematical Functions   (1966) is used   to reduce the chisqure
+     distribution to the incomplete distribution.
+
+     Computation of other parameters involve a seach for a value that
+     produces  the desired  value  of P.   The search relies  on  the
+     monotinicity of P with the other parameter.
+
+**********************************************************************/
+/**********************************************************************
+
+      void cdfchn(int *which,double *p,double *q,double *x,double *df,
+	          double *pnonc,int *status,double *bound)
+
+               Cumulative Distribution Function
+               Non-central Chi-Square
+
+
+                              Function
+
+
+     Calculates any one parameter of the non-central chi-square
+     distribution given values for the others.
+
+
+                              Arguments
+
+
+     WHICH --> Integer indicating which of the next three argument
+               values is to be calculated from the others.
+               Input range: 1..4
+               iwhich = 1 : Calculate P and Q from X and DF
+               iwhich = 2 : Calculate X from P,DF and PNONC
+               iwhich = 3 : Calculate DF from P,X and PNONC
+               iwhich = 3 : Calculate PNONC from P,X and DF
+
+     P <--> The integral from 0 to X of the non-central chi-square
+            distribution.
+            Input range: [0, 1-1E-16).
+
+     Q <--> 1-P.
+            Q is not used by this subroutine and is only included
+            for similarity with other cdf* routines.
+
+     X <--> Upper limit of integration of the non-central
+            chi-square distribution.
+            Input range: [0, +infinity).
+            Search range: [0,1E100]
+
+     DF <--> Degrees of freedom of the non-central
+             chi-square distribution.
+             Input range: (0, +infinity).
+             Search range: [ 1E-100, 1E100]
+
+     PNONC <--> Non-centrality parameter of the non-central
+                chi-square distribution.
+                Input range: [0, +infinity).
+                Search range: [0,1E4]
+
+     STATUS <-- 0 if calculation completed correctly
+               -I if input parameter number I is out of range
+                1 if answer appears to be lower than lowest
+                  search bound
+                2 if answer appears to be higher than greatest
+                  search bound
+
+     BOUND <-- Undefined if STATUS is 0
+
+               Bound exceeded by parameter number I if STATUS
+               is negative.
+
+               Lower search bound if STATUS is 1.
+
+               Upper search bound if STATUS is 2.
+
+
+                              Method
+
+
+     Formula  26.4.25   of   Abramowitz   and   Stegun,  Handbook  of
+     Mathematical  Functions (1966) is used to compute the cumulative
+     distribution function.
+
+     Computation of other parameters involve a seach for a value that
+     produces  the desired  value  of P.   The search relies  on  the
+     monotinicity of P with the other parameter.
+
+
+                            WARNING
+
+     The computation time  required for this  routine is proportional
+     to the noncentrality  parameter  (PNONC).  Very large  values of
+     this parameter can consume immense  computer resources.  This is
+     why the search range is bounded by 10,000.
+
+**********************************************************************/
+/**********************************************************************
+
+      void cdff(int *which,double *p,double *q,double *f,double *dfn,
+	        double *dfd,int *status,double *bound)
+
+               Cumulative Distribution Function
+               F distribution
+
+
+                              Function
+
+
+     Calculates any one parameter of the F distribution
+     given values for the others.
+
+
+                              Arguments
+
+
+     WHICH --> Integer indicating which of the next four argument
+               values is to be calculated from the others.
+               Legal range: 1..4
+               iwhich = 1 : Calculate P and Q from F,DFN and DFD
+               iwhich = 2 : Calculate F from P,Q,DFN and DFD
+               iwhich = 3 : Calculate DFN from P,Q,F and DFD
+               iwhich = 4 : Calculate DFD from P,Q,F and DFN
+
+       P <--> The integral from 0 to F of the f-density.
+              Input range: [0,1].
+
+       Q <--> 1-P.
+              Input range: (0, 1].
+              P + Q = 1.0.
+
+       F <--> Upper limit of integration of the f-density.
+              Input range: [0, +infinity).
+              Search range: [0,1E100]
+
+     DFN < --> Degrees of freedom of the numerator sum of squares.
+               Input range: (0, +infinity).
+               Search range: [ 1E-100, 1E100]
+
+     DFD < --> Degrees of freedom of the denominator sum of squares.
+               Input range: (0, +infinity).
+               Search range: [ 1E-100, 1E100]
+
+     STATUS <-- 0 if calculation completed correctly
+               -I if input parameter number I is out of range
+                1 if answer appears to be lower than lowest
+                  search bound
+                2 if answer appears to be higher than greatest
+                  search bound
+                3 if P + Q .ne. 1
+
+     BOUND <-- Undefined if STATUS is 0
+
+               Bound exceeded by parameter number I if STATUS
+               is negative.
+
+               Lower search bound if STATUS is 1.
+
+               Upper search bound if STATUS is 2.
+
+
+                              Method
+
+
+     Formula   26.6.2   of   Abramowitz   and   Stegun,  Handbook  of
+     Mathematical  Functions (1966) is used to reduce the computation
+     of the  cumulative  distribution function for the  F  variate to
+     that of an incomplete beta.
+
+     Computation of other parameters involve a seach for a value that
+     produces  the desired  value  of P.   The search relies  on  the
+     monotinicity of P with the other parameter.
+
+                              WARNING
+
+     The value of the  cumulative  F distribution is  not necessarily
+     monotone in  either degrees of freedom.  There  thus may  be two
+     values  that  provide a given CDF  value.   This routine assumes
+     monotonicity and will find an arbitrary one of the two values.
+
+**********************************************************************/
+/**********************************************************************
+
+      void cdffnc(int *which,double *p,double *q,double *f,double *dfn,
+	          double *dfd,double *phonc,int *status,double *bound) 
+
+               Cumulative Distribution Function
+               Non-central F distribution
+
+
+                              Function
+
+
+     Calculates any one parameter of the Non-central F
+     distribution given values for the others.
+
+
+                              Arguments
+
+
+     WHICH --> Integer indicating which of the next five argument
+               values is to be calculated from the others.
+               Legal range: 1..5
+               iwhich = 1 : Calculate P and Q from F,DFN,DFD and PNONC
+               iwhich = 2 : Calculate F from P,Q,DFN,DFD and PNONC
+               iwhich = 3 : Calculate DFN from P,Q,F,DFD and PNONC
+               iwhich = 4 : Calculate DFD from P,Q,F,DFN and PNONC
+               iwhich = 5 : Calculate PNONC from P,Q,F,DFN and DFD
+
+       P <--> The integral from 0 to F of the non-central f-density.
+              Input range: [0,1-1E-16).
+
+       Q <--> 1-P.
+              Q is not used by this subroutine and is only included
+              for similarity with other cdf* routines.
+
+       F <--> Upper limit of integration of the non-central f-density.
+              Input range: [0, +infinity).
+              Search range: [0,1E100]
+
+     DFN < --> Degrees of freedom of the numerator sum of squares.
+               Input range: (0, +infinity).
+               Search range: [ 1E-100, 1E100]
+
+     DFD < --> Degrees of freedom of the denominator sum of squares.
+               Must be in range: (0, +infinity).
+               Input range: (0, +infinity).
+               Search range: [ 1E-100, 1E100]
+
+     PNONC <-> The non-centrality parameter
+               Input range: [0,infinity)
+               Search range: [0,1E4]
+
+     STATUS <-- 0 if calculation completed correctly
+               -I if input parameter number I is out of range
+                1 if answer appears to be lower than lowest
+                  search bound
+                2 if answer appears to be higher than greatest
+                  search bound
+                3 if P + Q .ne. 1
+
+     BOUND <-- Undefined if STATUS is 0
+
+               Bound exceeded by parameter number I if STATUS
+               is negative.
+
+               Lower search bound if STATUS is 1.
+
+               Upper search bound if STATUS is 2.
+
+
+                              Method
+
+
+     Formula  26.6.20   of   Abramowitz   and   Stegun,  Handbook  of
+     Mathematical  Functions (1966) is used to compute the cumulative
+     distribution function.
+
+     Computation of other parameters involve a seach for a value that
+     produces  the desired  value  of P.   The search relies  on  the
+     monotinicity of P with the other parameter.
+
+                            WARNING
+
+     The computation time  required for this  routine is proportional
+     to the noncentrality  parameter  (PNONC).  Very large  values of
+     this parameter can consume immense  computer resources.  This is
+     why the search range is bounded by 10,000.
+
+                              WARNING
+
+     The  value  of the  cumulative  noncentral F distribution is not
+     necessarily monotone in either degrees  of freedom.  There  thus
+     may be two values that provide a given  CDF value.  This routine
+     assumes monotonicity  and will find  an arbitrary one of the two
+     values.
+
+**********************************************************************/
+/**********************************************************************
+
+      void cdfgam(int *which,double *p,double *q,double *x,
+                  double *shape,double *scale,int *status,double *bound)
+
+               Cumulative Distribution Function
+                         GAMma Distribution
+
+
+                              Function
+
+
+     Calculates any one parameter of the gamma
+     distribution given values for the others.
+
+
+                              Arguments
+
+
+     WHICH --> Integer indicating which of the next four argument
+               values is to be calculated from the others.
+               Legal range: 1..4
+               iwhich = 1 : Calculate P and Q from X,SHAPE and SCALE
+               iwhich = 2 : Calculate X from P,Q,SHAPE and SCALE
+               iwhich = 3 : Calculate SHAPE from P,Q,X and SCALE
+               iwhich = 4 : Calculate SCALE from P,Q,X and SHAPE
+
+     P <--> The integral from 0 to X of the gamma density.
+            Input range: [0,1].
+
+     Q <--> 1-P.
+            Input range: (0, 1].
+            P + Q = 1.0.
+
+     X <--> The upper limit of integration of the gamma density.
+            Input range: [0, +infinity).
+            Search range: [0,1E100]
+
+     SHAPE <--> The shape parameter of the gamma density.
+                Input range: (0, +infinity).
+                Search range: [1E-100,1E100]
+
+     SCALE <--> The scale parameter of the gamma density.
+                Input range: (0, +infinity).
+                Search range: (1E-100,1E100]
+
+     STATUS <-- 0 if calculation completed correctly
+               -I if input parameter number I is out of range
+                1 if answer appears to be lower than lowest
+                  search bound
+                2 if answer appears to be higher than greatest
+                  search bound
+                3 if P + Q .ne. 1
+                10 if the gamma or inverse gamma routine cannot
+                   compute the answer.  Usually happens only for
+                   X and SHAPE very large (gt 1E10 or more)
+
+     BOUND <-- Undefined if STATUS is 0
+
+               Bound exceeded by parameter number I if STATUS
+               is negative.
+
+               Lower search bound if STATUS is 1.
+
+               Upper search bound if STATUS is 2.
+
+
+                              Method
+
+
+     Cumulative distribution function (P) is calculated directly by
+     the code associated with:
+
+     DiDinato, A. R. and Morris, A. H. Computation of the  incomplete
+     gamma function  ratios  and their  inverse.   ACM  Trans.  Math.
+     Softw. 12 (1986), 377-393.
+
+     Computation of other parameters involve a seach for a value that
+     produces  the desired  value  of P.   The search relies  on  the
+     monotinicity of P with the other parameter.
+
+
+                              Note
+
+
+
+     The gamma density is proportional to
+       T**(SHAPE - 1) * EXP(- SCALE * T)
+
+**********************************************************************/
+/**********************************************************************
+
+      void cdfnbn(int *which,double *p,double *q,double *s,double *xn,
+	          double *pr,double *ompr,int *status,double *bound)
+
+               Cumulative Distribution Function
+               Negative BiNomial distribution
+
+
+                              Function
+
+
+     Calculates any one parameter of the negative binomial
+     distribution given values for the others.
+
+     The  cumulative  negative   binomial  distribution  returns  the
+     probability that there  will be  F or fewer failures before  the
+     XNth success in binomial trials each of which has probability of
+     success PR.
+
+     The individual term of the negative binomial is the probability of
+     S failures before XN successes and is
+          Choose( S, XN+S-1 ) * PR^(XN) * (1-PR)^S
+
+
+                              Arguments
+
+
+     WHICH --> Integer indicating which of the next four argument
+               values is to be calculated from the others.
+               Legal range: 1..4
+               iwhich = 1 : Calculate P and Q from S,XN,PR and OMPR
+               iwhich = 2 : Calculate S from P,Q,XN,PR and OMPR
+               iwhich = 3 : Calculate XN from P,Q,S,PR and OMPR
+               iwhich = 4 : Calculate PR and OMPR from P,Q,S and XN
+
+     P <--> The cumulation from 0 to S of the  negative
+            binomial distribution.
+            Input range: [0,1].
+
+     Q <--> 1-P.
+            Input range: (0, 1].
+            P + Q = 1.0.
+
+     S <--> The upper limit of cumulation of the binomial distribution.
+            There are F or fewer failures before the XNth success.
+            Input range: [0, +infinity).
+            Search range: [0, 1E100]
+
+     XN  <--> The number of successes.
+              Input range: [0, +infinity).
+              Search range: [0, 1E100]
+
+     PR  <--> The probability of success in each binomial trial.
+              Input range: [0,1].
+              Search range: [0,1].
+
+     OMPR  <--> 1-PR
+              Input range: [0,1].
+              Search range: [0,1]
+              PR + OMPR = 1.0
+
+     STATUS <-- 0 if calculation completed correctly
+               -I if input parameter number I is out of range
+                1 if answer appears to be lower than lowest
+                  search bound
+                2 if answer appears to be higher than greatest
+                  search bound
+                3 if P + Q .ne. 1
+                4 if PR + OMPR .ne. 1
+
+     BOUND <-- Undefined if STATUS is 0
+
+               Bound exceeded by parameter number I if STATUS
+               is negative.
+
+               Lower search bound if STATUS is 1.
+
+               Upper search bound if STATUS is 2.
+
+
+                              Method
+
+
+     Formula   26.5.26   of   Abramowitz  and  Stegun,  Handbook   of
+     Mathematical Functions (1966) is used  to  reduce calculation of
+     the cumulative distribution  function to that of  an  incomplete
+     beta.
+
+     Computation of other parameters involve a seach for a value that
+     produces  the desired  value  of P.   The search relies  on  the
+     monotinicity of P with the other parameter.
+
+**********************************************************************/
+/**********************************************************************
+
+      void cdfnor(int *which,double *p,double *q,double *x,
+	          double *mean,double *sd,int *status,double *bound)
+
+               Cumulative Distribution Function
+               NORmal distribution
+
+
+                              Function
+
+
+     Calculates any one parameter of the normal
+     distribution given values for the others.
+
+
+                              Arguments
+
+
+     WHICH  --> Integer indicating  which of the  next  parameter
+     values is to be calculated using values  of the others.
+     Legal range: 1..4
+               iwhich = 1 : Calculate P and Q from X,MEAN and SD
+               iwhich = 2 : Calculate X from P,Q,MEAN and SD
+               iwhich = 3 : Calculate MEAN from P,Q,X and SD
+               iwhich = 4 : Calculate SD from P,Q,X and MEAN
+
+     P <--> The integral from -infinity to X of the normal density.
+            Input range: (0,1].
+
+     Q <--> 1-P.
+            Input range: (0, 1].
+            P + Q = 1.0.
+
+     X < --> Upper limit of integration of the normal-density.
+             Input range: ( -infinity, +infinity)
+
+     MEAN <--> The mean of the normal density.
+               Input range: (-infinity, +infinity)
+
+     SD <--> Standard Deviation of the normal density.
+             Input range: (0, +infinity).
+
+     STATUS <-- 0 if calculation completed correctly
+               -I if input parameter number I is out of range
+                1 if answer appears to be lower than lowest
+                  search bound
+                2 if answer appears to be higher than greatest
+                  search bound
+                3 if P + Q .ne. 1
+
+     BOUND <-- Undefined if STATUS is 0
+
+               Bound exceeded by parameter number I if STATUS
+               is negative.
+
+               Lower search bound if STATUS is 1.
+
+               Upper search bound if STATUS is 2.
+
+
+                              Method
+
+
+
+
+     A slightly modified version of ANORM from
+
+     Cody, W.D. (1993). "ALGORITHM 715: SPECFUN - A Portabel FORTRAN
+     Package of Special Function Routines and Test Drivers"
+     acm Transactions on Mathematical Software. 19, 22-32.
+
+     is used to calulate the  cumulative standard normal distribution.
+
+     The rational functions from pages  90-95  of Kennedy and Gentle,
+     Statistical  Computing,  Marcel  Dekker, NY,  1980 are  used  as
+     starting values to Newton's Iterations which compute the inverse
+     standard normal.  Therefore no  searches  are necessary for  any
+     parameter.
+
+     For X < -15, the asymptotic expansion for the normal is used  as
+     the starting value in finding the inverse standard normal.
+     This is formula 26.2.12 of Abramowitz and Stegun.
+
+
+                              Note
+
+
+      The normal density is proportional to
+      exp( - 0.5 * (( X - MEAN)/SD)**2)
+
+**********************************************************************/
+/**********************************************************************
+
+      void cdfpoi(int *which,double *p,double *q,double *s,
+	          double *xlam,int *status,double *bound)
+
+               Cumulative Distribution Function
+               POIsson distribution
+
+
+                              Function
+
+
+     Calculates any one parameter of the Poisson
+     distribution given values for the others.
+
+
+                              Arguments
+
+
+     WHICH --> Integer indicating which  argument
+               value is to be calculated from the others.
+               Legal range: 1..3
+               iwhich = 1 : Calculate P and Q from S and XLAM
+               iwhich = 2 : Calculate A from P,Q and XLAM
+               iwhich = 3 : Calculate XLAM from P,Q and S
+
+        P <--> The cumulation from 0 to S of the poisson density.
+               Input range: [0,1].
+
+        Q <--> 1-P.
+               Input range: (0, 1].
+               P + Q = 1.0.
+
+        S <--> Upper limit of cumulation of the Poisson.
+               Input range: [0, +infinity).
+               Search range: [0,1E100]
+
+     XLAM <--> Mean of the Poisson distribution.
+               Input range: [0, +infinity).
+               Search range: [0,1E100]
+
+     STATUS <-- 0 if calculation completed correctly
+               -I if input parameter number I is out of range
+                1 if answer appears to be lower than lowest
+                  search bound
+                2 if answer appears to be higher than greatest
+                  search bound
+                3 if P + Q .ne. 1
+
+     BOUND <-- Undefined if STATUS is 0
+
+               Bound exceeded by parameter number I if STATUS
+               is negative.
+
+               Lower search bound if STATUS is 1.
+
+               Upper search bound if STATUS is 2.
+
+
+                              Method
+
+
+     Formula   26.4.21  of   Abramowitz  and   Stegun,   Handbook  of
+     Mathematical Functions (1966) is used  to reduce the computation
+     of  the cumulative distribution function to that  of computing a
+     chi-square, hence an incomplete gamma function.
+
+     Cumulative  distribution function  (P) is  calculated  directly.
+     Computation of other parameters involve a seach for a value that
+     produces  the desired value of  P.   The  search relies  on  the
+     monotinicity of P with the other parameter.
+
+**********************************************************************/
+/**********************************************************************
+
+      void cdft(int *which,double *p,double *q,double *t,double *df,
+	        int *status,double *bound)
+
+               Cumulative Distribution Function
+                         T distribution
+
+
+                              Function
+
+
+     Calculates any one parameter of the t distribution given
+     values for the others.
+
+
+                              Arguments
+
+
+     WHICH --> Integer indicating which  argument
+               values is to be calculated from the others.
+               Legal range: 1..3
+               iwhich = 1 : Calculate P and Q from T and DF
+               iwhich = 2 : Calculate T from P,Q and DF
+               iwhich = 3 : Calculate DF from P,Q and T
+
+        P <--> The integral from -infinity to t of the t-density.
+               Input range: (0,1].
+
+        Q <--> 1-P.
+               Input range: (0, 1].
+               P + Q = 1.0.
+
+        T <--> Upper limit of integration of the t-density.
+               Input range: ( -infinity, +infinity).
+               Search range: [ -1E100, 1E100 ]
+
+        DF <--> Degrees of freedom of the t-distribution.
+                Input range: (0 , +infinity).
+                Search range: [1e-100, 1E10]
+
+     STATUS <-- 0 if calculation completed correctly
+               -I if input parameter number I is out of range
+                1 if answer appears to be lower than lowest
+                  search bound
+                2 if answer appears to be higher than greatest
+                  search bound
+                3 if P + Q .ne. 1
+
+     BOUND <-- Undefined if STATUS is 0
+
+               Bound exceeded by parameter number I if STATUS
+               is negative.
+
+               Lower search bound if STATUS is 1.
+
+               Upper search bound if STATUS is 2.
+
+
+                              Method
+
+
+     Formula  26.5.27  of   Abramowitz   and  Stegun,   Handbook   of
+     Mathematical Functions  (1966) is used to reduce the computation
+     of the cumulative distribution function to that of an incomplete
+     beta.
+
+     Computation of other parameters involve a seach for a value that
+     produces  the desired  value  of P.   The search relies  on  the
+     monotinicity of P with the other parameter.
+
+**********************************************************************/
+/**********************************************************************
+ 
+   void cdftnc(int *which,double *p,double *q,double *t,double *df,
+               double *pnonc,int *status,double *bound)
+
+                Cumulative Distribution Function
+                   Non-Central T distribution
+ 
+                                Function
+ 
+      Calculates any one parameter of the noncentral t distribution give
+      values for the others.
+ 
+                                Arguments
+ 
+      WHICH --> Integer indicating which  argument
+                values is to be calculated from the others.
+                Legal range: 1..3
+                iwhich = 1 : Calculate P and Q from T,DF,PNONC
+                iwhich = 2 : Calculate T from P,Q,DF,PNONC
+                iwhich = 3 : Calculate DF from P,Q,T
+                iwhich = 4 : Calculate PNONC from P,Q,DF,T
+ 
+         P <--> The integral from -infinity to t of the noncentral t-den
+               Input range: (0,1].
+ 
+         Q <--> 1-P.
+               Input range: (0, 1].
+                P + Q = 1.0.
+ 
+         T <--> Upper limit of integration of the noncentral t-density.
+                Input range: ( -infinity, +infinity).
+                Search range: [ -1E100, 1E100 ]
+ 
+         DF <--> Degrees of freedom of the noncentral t-distribution.
+                 Input range: (0 , +infinity).
+                 Search range: [1e-100, 1E10]
+ 
+      PNONC <--> Noncentrality parameter of the noncentral t-distributio
+                 Input range: [-infinity , +infinity).
+                 Search range: [-1e4, 1E4]
+ 
+      STATUS <-- 0 if calculation completed correctly
+                -I if input parameter number I is out of range
+                 1 if answer appears to be lower than lowest
+                   search bound
+                 2 if answer appears to be higher than greatest
+                   search bound
+                 3 if P + Q .ne. 1
+ 
+      BOUND <-- Undefined if STATUS is 0
+ 
+                Bound exceeded by parameter number I if STATUS
+                is negative.
+ 
+                Lower search bound if STATUS is 1.
+ 
+                Upper search bound if STATUS is 2.
+ 
+                                 Method
+ 
+      Upper tail    of  the  cumulative  noncentral t is calculated usin
+      formulae  from page 532  of Johnson, Kotz,  Balakrishnan, Coninuou
+      Univariate Distributions, Vol 2, 2nd Edition.  Wiley (1995)
+ 
+      Computation of other parameters involve a seach for a value that
+      produces  the desired  value  of P.   The search relies  on  the
+      monotinicity of P with the other parameter.
+ 
+**********************************************************************/
+

@@ -1,0 +1,7 @@
+Function: binomial
+Section: number_theoretical
+C-Name: binomial
+Prototype: GL
+Help: binomial(x,y): binomial coefficient x*(x-1)...*(x-y+1)/y! defined for
+ y in Z and any x
+

@@ -1,0 +1,17 @@
+Function: _+=_
+Class: symbolic_operators
+Description: 
+ (*small, small):small:parens		 $1 += $(2)
+ (*lg, small):lg:parens		         $1 += $(2)
+ (*int, small):int:parens		 $1 = addis($1, $2)
+ (*int, int):int:parens			 $1 = addii($1, $2)
+ (*real, small):real:parens		 $1 = addrs($1, $2)
+ (*real, int):real:parens		 $1 = addir($2, $1)
+ (*real, real):real:parens		 $1 = addrr($1, $2)
+ (*mp, mp):mp:parens			 $1 = mpadd($1, $2)
+ (*pol, small):gen:parens		 $1 = gaddgs($1, $2)
+ (*pol, gen):gen:parens			 $1 = gadd($1, $2)
+ (*vec, gen):gen:parens			 $1 = gadd($1, $2)
+ (*gen, small):gen:parens		 $1 = gaddgs($1, $2)
+ (*gen, gen):gen:parens			 $1 = gadd($1, $2)
+

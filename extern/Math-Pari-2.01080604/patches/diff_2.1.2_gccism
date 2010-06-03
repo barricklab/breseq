@@ -1,0 +1,19 @@
+--- pari-2.1.2/src/basemath/arith1.c~	Fri Oct 12 13:56:27 2001
++++ pari-2.1.2/src/basemath/arith1.c	Tue Oct 23 18:55:36 2001
+@@ -2265,7 +2265,15 @@ two_rank(GEN x)
+ }
+ 
+ #define MAXFORM 11
+-#define _low(x) ({GEN __x=(GEN)x; __x[lgefint(x)-1];})
++/* #define _low(x) ({GEN __x=(GEN)x; __x[lgefint(x)-1];}) */
++
++static long
++__low(GEN x)
++{
++    return x[lgefint(x)-1];
++}
++
++#define _low(x)		__low((GEN)(x))
+ 
+ /* h(x) for x<0 using Baby Step/Giant Step.
+  * Assumes G is not too far from being cyclic.

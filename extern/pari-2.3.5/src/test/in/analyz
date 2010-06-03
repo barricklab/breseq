@@ -1,0 +1,9 @@
+\p 38
+\e
+gettime; sum(x=0,50000,x);
+sum(x=1,1000,log(x));
+sum(x=1,25,sum(y=1,100,x/y),0.0);
+sum(x=1,100,sum(y=1,100,x/y,0.0));
+getheap
+print("Total time spent: ",gettime);
+\q

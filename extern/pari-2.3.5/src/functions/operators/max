@@ -1,0 +1,17 @@
+Function: max
+Section: operators
+C-Name: gmax
+Prototype: GG
+Help: max(x,y): maximum of x and y
+Description: 
+ (small, small):small	maxss($1, $2)
+ (small, int):int	gmaxsg($1, $2)
+ (int, small):int	gmaxgs($1, $2)
+ (int, int):int	gmax($1, $2)
+ (small, mp):mp	gmaxsg($1, $2)
+ (mp, small):mp	gmaxgs($1, $2)
+ (mp, mp):mp	gmax($1, $2)
+ (small, gen):gen	gmaxsg($1, $2)
+ (gen, small):gen	gmaxgs($1, $2)
+ (gen, gen):gen	gmax($1, $2)
+

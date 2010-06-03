@@ -1,0 +1,8 @@
+Function: rnfsteinitz
+Section: number_fields
+C-Name: rnfsteinitz
+Prototype: GG
+Help: rnfsteinitz(nf,order): given an order as output by rnfpseudobasis,
+ gives [A,I,D,d] where (A,I) is a pseudo basis where all the ideals except
+ perhaps the last are trivial
+

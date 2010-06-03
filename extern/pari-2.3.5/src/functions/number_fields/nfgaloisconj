@@ -1,0 +1,15 @@
+Function: nfgaloisconj
+Section: number_fields
+C-Name: galoisconj0
+Prototype: GD0,L,DGp
+Help: nfgaloisconj(nf,{flag=0},{den}): list of conjugates of a root of the
+ polynomial x=nf.pol in the same number field. flag is optional (set to 0 by
+ default), meaning 0: use combination of flag 4 and 1, always complete; 1:
+ use nfroots; 2 : use complex numbers, LLL on integral basis (not always
+ complete); 4: use Allombert's algorithm, complete if the field is Galois of
+ degree <= 35 (see manual for detail). nf can be simply a polynomial with
+ flag 0,2 and 4, meaning: 0: use combination of flag 4 and 2, not always
+ complete (but a warning is issued when the list is not proven complete); 2 &
+ 4: same meaning and restrictions. Note that only flag 4 can be applied to
+ fields of large degrees (approx. >= 20)
+

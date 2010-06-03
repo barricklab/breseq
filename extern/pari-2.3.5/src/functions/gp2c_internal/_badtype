@@ -1,0 +1,19 @@
+Function: _badtype
+Class: gp2c_internal
+Help: Code to check types. If not void, will be used as if(...).
+Description: 
+ (int):bool:parens              typ($1) != t_INT
+ (real):bool:parens             typ($1) != t_REAL
+ (mp):negbool                   is_intreal($1)
+ (vec):negbool                  is_matvec_t(typ($1))
+ (vecsmall):bool:parens         typ($1) != t_VECSMALL
+ (pol):bool:parens              typ($1) != t_POL
+ (*nf):void:parens              $1 = checknf($1)
+ (*bnf):void:parens             $1 = checkbnf($1)
+ (bnr):void                     checkbnr($1)
+ (prid):void                    checkprimeid($1)
+ (@clgp):bool:parens            lg($1) != 3 || typ($(1)[2]) != t_POLMOD
+ (ell):void                     checkell($1)
+ (bell):void                    checkbell($1)
+ (*gal):gal:parens              $1 = checkgal($1)
+

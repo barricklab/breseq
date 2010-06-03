@@ -1,0 +1,8 @@
+Function: forsubgroup
+Section: programming
+C-Name: forsubgroup
+Prototype: vV=GDGI
+Help: forsubgroup(H=G,{bound},seq): execute seq for each subgroup H of the
+ abelian group G (in SNF form), whose index is bounded by bound. H is given
+ as a left divisor of G in HNF form
+

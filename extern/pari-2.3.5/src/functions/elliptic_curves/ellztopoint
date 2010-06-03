@@ -1,0 +1,7 @@
+Function: ellztopoint
+Section: elliptic_curves
+C-Name: pointell
+Prototype: GGp
+Help: ellztopoint(e,z): coordinates of point P on the curve e corresponding
+ to the complex number z
+

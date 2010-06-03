@@ -1,0 +1,18 @@
+Function: version
+Class: gp
+Section: programming
+C-Name: pari_version
+Prototype:
+Help: version(): returns the PARI version as [major,minor,patch]
+ 'status'
+Doc: Returns the current version number as a \typ{VEC} with three integer
+ components: major version number, minor version number and patchlevel.
+ To check against a particular version number, you can use:
+ \bprog
+    if (lex(version(), [2,2,0]) >= 0,
+      \\ code to be executed if we are running 2.2.0 or more recent.
+    ,
+      \\ compatibility code
+    );
+ @eprog
+

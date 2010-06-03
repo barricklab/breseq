@@ -1,0 +1,7 @@
+Function: bnrclassnolist
+Section: number_fields
+C-Name: bnrclassnolist
+Prototype: GG
+Help: bnrclassnolist(bnf,list): if list is as output by ideallist or
+ similar, gives list of corresponding ray class numbers
+

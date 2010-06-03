@@ -1,0 +1,12 @@
+Function: addprimes
+Section: number_theoretical
+C-Name: addprimes
+Prototype: DG
+Help: addprimes({x=[]}): add primes in the vector x to the prime table to
+ be used in trial division. x may
+ also be a single integer. Composite "primes" are allowed,
+ and in that case you may later get a message "impossible inverse", which
+ will give you some factors. List the current extra primes if x is omitted. If
+ some primes are added which intersect non trivially the existing table entries,
+ suitable updating is done
+

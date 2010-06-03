@@ -1,0 +1,8 @@
+Function: _<<=_
+Class: symbolic_operators
+Description: 
+ (*small, small):small:parens		 $1 <<= $(2)
+ (*int, small):int:parens	         $1 = shifti($1, $2)
+ (*mp, small):mp:parens			 $1 = mpshift($1, $2)
+ (*gen, small):mp:parens	         $1 = gshift($1, $2)
+

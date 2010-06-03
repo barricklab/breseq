@@ -1,0 +1,14 @@
+Function: intmellininvshort
+Section: sums
+C-Name: intmellininvshort
+Prototype: GGGp
+Help: intmellininvshort(sig,x,tab): numerical integration on the 
+ line real(z) = sig (or sig[1]) of s(z)x^(-z)dz/(2*I*Pi), i.e. inverse Mellin
+ transform of s at x. sig is coded as follows: either it is real, and then
+ by default assume s(z) decreases like exp(-z). Or sig = [sigR, al], sigR is
+ the abcissa of integration, and al = 0 for slowly decreasing functions, or
+ al > 0 if s(z) decreases like exp(-al*z). Compulsory table tab has been 
+ precomputed using the command intfuncinit(t=[[-1],sig[2]],[[1],sig[2]],s) 
+ (with possibly its two optional additional parameters), where sig[2] = 1
+ if not given. Orders of magnitude faster than intmellininv.
+

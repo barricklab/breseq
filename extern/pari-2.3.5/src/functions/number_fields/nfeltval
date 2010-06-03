@@ -1,0 +1,7 @@
+Function: nfeltval
+Section: number_fields
+C-Name: element_val
+Prototype: lGGG
+Help: nfeltval(nf,a,pr): valuation of element a at the prime pr as output by
+ idealprimedec
+

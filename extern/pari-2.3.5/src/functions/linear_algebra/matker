@@ -1,0 +1,8 @@
+Function: matker
+Section: linear_algebra
+C-Name: matker0
+Prototype: GD0,L,
+Help: matker(x,{flag=0}): basis of the kernel of the matrix x. flag is
+ optional, and may be set to 0: default; non-zero: x is known to have
+ integral entries
+

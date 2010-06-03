@@ -1,0 +1,10 @@
+Function: rnfkummer
+Section: number_fields
+C-Name: rnfkummer
+Prototype: GDGD0,L,p
+Help: rnfkummer(bnr,{subgroup},{deg=0}): bnr being as output by bnrinit,
+ finds a relative equation for the class field corresponding to the module in
+ bnr and the given congruence subgroup (the ray class field if subgroup is
+ omitted). deg can be zero (default), or positive, and in this case the
+ output is the list of all relative equations of degree deg for the given bnr
+

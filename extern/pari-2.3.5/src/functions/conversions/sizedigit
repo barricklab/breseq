@@ -1,0 +1,7 @@
+Function: sizedigit
+Section: conversions
+C-Name: sizedigit
+Prototype: lG
+Help: sizedigit(x): maximum number of decimal digits minus one of (the
+ coefficients of) x
+

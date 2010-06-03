@@ -1,0 +1,6 @@
+Function: addhelp
+Section: programming
+C-Name: addhelp
+Prototype: vSs
+Help: addhelp(symbol,"message"): add/change help message for a symbol
+

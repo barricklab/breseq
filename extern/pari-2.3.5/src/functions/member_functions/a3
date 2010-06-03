@@ -1,0 +1,7 @@
+Function: _.a3
+Class: member_functions
+C-Name: member_a3
+Prototype: G
+Description:
+ (ell):gen:copy        gel($1, 3)
+

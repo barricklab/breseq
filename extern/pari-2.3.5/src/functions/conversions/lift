@@ -1,0 +1,15 @@
+Function: lift
+Section: conversions
+C-Name: lift0
+Prototype: GDn
+Help: lift(x,{v}): lifts every element of Z/nZ to Z or T[x]/PT[x] to T[x]
+ for a type T if v is omitted, otherwise lift only polymods with main
+ variable v. If v does not occur in x, lift only intmods
+Description: 
+ (pol):pol	lift($1)
+ (vec):vec	lift($1)
+ (gen):gen	lift($1)
+ (pol, var):pol	lift0($1, $2)
+ (vec, var):vec	lift0($1, $2)
+ (gen, var):gen	lift0($1, $2)
+

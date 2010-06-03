@@ -1,0 +1,7 @@
+Function: _!
+Class: symbolic_operators
+C-Name: mpfact
+Prototype: L
+Description: 
+ (small):int			mpfact($1)
+

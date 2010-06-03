@@ -1,0 +1,7 @@
+Function: Strtex
+Section: conversions
+C-Name: Strtex
+Prototype: s*
+Help: Strtex({str}*): translates its (string) arguments to TeX format and
+ returns the resulting string
+

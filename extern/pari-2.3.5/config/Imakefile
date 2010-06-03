@@ -1,0 +1,2 @@
+gp-X11:
+	@echo 'Xincroot="${INCROOT}"; usrlibdir="${USRLIBDIR}"; libdir="${LIBDIR}";extralib="${EXTRA_LIBRARIES}"'

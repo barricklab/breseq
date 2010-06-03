@@ -1,0 +1,34 @@
+# Target directory for object files
+pre=O
+objdir=$pre$osname-$arch;
+if test -n "$dfltobjdir"; then
+  if test "$dfltobjdir" = auto; then
+    case "$kernlvl0" in
+      $asmarch);;
+      sparcv8_micro)
+         if test "$arch" != sparcv9; then objdir=$objdir-$kernlvl0; fi ;;
+      *) objdir=$objdir-$kernlvl0 ;;
+    esac
+    if test -n "$with_gmp"; then objdir=$objdir-gmp; fi
+    dfltobjdir=
+  else
+    objdir="$dfltobjdir"
+  fi
+fi
+if test -z "$dfltobjdir"; then
+  case "$optimization" in
+    full)      objdir=$objdir;;
+    debugging) objdir=$objdir.dbg ;;
+    profiling) objdir=$objdir.prf ;;
+  esac
+fi
+
+if test "$fastread" != yes; then
+  cat << EOT
+==========================================================================
+This is the name of the directory where all the object files will be:
+EOT
+  echo $n ..."Enter dir name : $c"
+  dflt=$objdir; rep=; . ./myread
+  objdir=$ans
+fi

@@ -1,0 +1,57 @@
+\p 38
+\e
+gettime; apol=x^3+5*x+1
+changevar(x+y,[z,t])
+deriv((x+y)^5,y)
+((x+y)^5)'
+dz=vector(30,k,1);dd=vector(30,k,k==1);dm=dirdiv(dd,dz)
+direuler(s=1,40,1+s*X+s^2*X)
+dirmul(abs(dm),dz)
+zz=yy;yy=xx;eval(zz)
+factorpadic(apol,7,8)
+factorpadic(apol,7,8,1)
+intformal(sin(x))
+intformal((-x^2-2*a*x+8*a)/(x^4-14*x^3+(2*a+49)*x^2-14*a*x+a^2))
+newtonpoly(x^4+3*x^3+27*x^2+9*x+81,3)
+padicappr(apol,1+O(7^8))
+padicappr(x^3+5*x+1,Mod(x*(1+O(7^8)),x^2+x-1))
+Pol(sin(x))
+Pol([1,2,3,4,5])
+Polrev([1,2,3,4,5])
+polcoeff(sin(x),7)
+polcyclo(105)
+pcy=polcyclo(405)
+pcy * pcy
+poldegree(x^3/(x-1))
+poldisc(x^3+4*x+12)
+poldiscreduced(x^3+4*x+12)
+polinterpolate([0,2,3],[0,4,9],5)
+polisirreducible(x^5+3*x^3+5*x^2+15)
+pollegendre(10)
+zpol=0.3+pollegendre(10)
+polrecip(3*x^7-5*x^3+6*x-9)
+polresultant(x^3-1,x^3+1)
+polresultant(x^3-1.,x^3+1.,,1)
+polroots(x^5-5*x^2-5*x-5)
+polroots(x^4-1000000000000000000000,1)
+polrootsmod(x^16-1,41)
+polrootspadic(x^4+1,41,6)
+polsturm(zpol)
+polsturm(zpol,0.91,1)
+polsylvestermatrix(a2*x^2+a1*x+a0,b1*x+b0)
+polsym(x^17-1,17)
+poltchebi(10)
+polzagier(6,3)
+\\
+serconvol(sin(x),x*cos(x))
+serlaplace(x*exp(x*y)/(exp(x)-1))
+serreverse(tan(x))
+subst(sin(x),x,y)
+subst(sin(x),x,x+x^2)
+taylor(y/(x-y),y)
+\\ thueinit
+\\ thue
+variable(name^4-other)
+getheap
+print("Total time spent: ",gettime);
+\q

@@ -1,0 +1,6 @@
+Function: getstack
+Section: programming
+C-Name: getstack
+Prototype: l
+Help: getstack(): current value of stack pointer avma
+

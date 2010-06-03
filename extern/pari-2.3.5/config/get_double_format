@@ -1,0 +1,50 @@
+exe=$osname-$arch-endian$$
+if ($CC $CFLAGS $extraflag endian.c -o $exe 2>/dev/null); then
+  doubleformat=`$exe`;
+else
+  echo "***************************************************************"
+  echo "Cannot compile endian.c. Aborting. PLEASE REPORT!"
+fi
+rm -f $exe $exe$exe_suff
+case "$doubleformat" in
+  *IEEE*)
+    echo "***************************************************************"
+    echo "Your 'double' type does not follow the IEEE754 format. Aborting"
+    echo "PLEASE REPORT! (dbltor/rtodbl need to be fixed)"; exit 1;;
+  -) sizeof_long=8;;
+  *) sizeof_long=4;;
+esac
+echo "Given the previous choices, sizeof(long) is $sizeof_long chars."
+
+if test "$fastread" != yes; then
+cat << EOT
+If your hardware supports different size of longs (e.g SGI/MIPS), and you
+want to use a different word size than the above. You should probably have
+specified some exotic compilation flag CFLAG (e.g -o32,-n32).
+
+EOT
+
+  if test $doubleformat != "-"; then
+cat << EOT
+For 32-bit architecture, PARI needs to know the format of your 'double' type.
+PARI assumes doubles are stored in IEEE754 format [ (sign, exponent, mantissa
+high) on one word, (mantissa low) on another ]; assuming a
+  union { double d; ulong l[2]; } x;
+are the double exponent and sign stored on x.i[0] (0) or on x.i[1] (1) ?
+
+Using \$CC \$CFLAGS with
+  CC    =$CC
+  CFLAGS=$CFLAGS
+the answer is: $doubleformat.
+EOT
+  fi
+fi
+case $doubleformat in
+  0) _format='l[0], l[1]';;
+  1) _format='l[1], l[0]';;
+  -) _format='not needed (64bit)';;
+esac
+cat <<EOT
+The internal word representation of a double is $_format.
+==========================================================================
+EOT
