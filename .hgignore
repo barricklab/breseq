@@ -1,20 +1,27 @@
 syntax: glob
-bin/*
-tests/**/output
-tests/**/0*
+
 .DS_Store
 *.o
 *.a
 *.gz
-src/c/build
+*.tar
+*.tgz
 *.tab
 *.txt
 *.out
 *.html
 *.tab
 *.swp
-man/*
-share/*
-lib/*
 Library/*
-src/perl/extern/*
+
+
+syntax: regexp
+^bin/
+^lib/
+^man/
+^share/
+^tests/.+/output
+^tests/.+/0
+^src/perl/extern
+^src/c/build
+^src/c/error_count/bin
