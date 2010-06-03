@@ -83,6 +83,10 @@ use FindBin;
 use lib $FindBin::Bin;
 $ENV{PATH} = "$ENV{PATH}:" . $FindBin::Bin;
 
+#### Paths to Locally Installed Modules ####
+use lib $FindBin::Bin . "/extern/lib/perl5";
+use lib $FindBin::Bin . "/extern/lib/perl5/site_perl";
+
 use Breseq::GenomeDiff;
 
 ##First argument is always the command
