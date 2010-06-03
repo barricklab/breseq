@@ -358,11 +358,11 @@ sub correct_alignments
 		if (!$has_non_overlap_only)
 		{
 			if (!$failed)
-			{
+			{				
 				push @new_keys, $key; 
 			}
 			else
-			{
+			{				
 				push @rejected_keys, $key;
 			}
 		}
@@ -393,10 +393,12 @@ sub correct_alignments
 			{
 				push @new_keys, $key;
 			}
-			else
-			{
-				push @rejected_keys, $key;
-			}
+	# We don't want to count these b/c we left their results ready to be used by others (they have a count of zero reads)...
+	#		else
+	#		{
+	#			print "Failed with degenerate only: $key\n";
+	#			push @rejected_keys, $key;
+	#		}
 		}
 	}
 	@sorted_keys = @new_keys;
