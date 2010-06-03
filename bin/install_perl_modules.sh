@@ -4,6 +4,10 @@ THISDIR=`dirname ${BASH_SOURCE}`
 CURRENTDIR=`pwd`
 
 ## Bio::SamTools
+
+## we need this header file to be in the same directory as libbam.a to install
+cp lib/libbam.a src/c/samtools-0.1.7a
+
 BIOSAMTOOLS="$CURRENTDIR/$THISDIR/../extern/Bio-SamTools-1.19"
 cd $BIOSAMTOOLS
 export SAMTOOLS=../../src/c/samtools-0.1.7a
