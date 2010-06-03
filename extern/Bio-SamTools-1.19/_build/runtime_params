@@ -1,4 +1,0 @@
-do{ my $x = {
-       'install_base' => '../../src/perl/extern'
-     };
-$x; }
