@@ -1,6 +1,0 @@
-Function: qfsign
-Section: linear_algebra
-C-Name: signat
-Prototype: G
-Help: qfsign(x): signature of the symmetric matrix x
-

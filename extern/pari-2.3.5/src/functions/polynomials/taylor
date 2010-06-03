@@ -1,7 +1,0 @@
-Function: taylor
-Section: polynomials
-C-Name: tayl
-Prototype: GnP
-Help: taylor(x,y): taylor expansion of x with respect to the main variable
- of y
-

@@ -1,8 +1,0 @@
-Function: znstar
-Section: number_theoretical
-C-Name: znstar
-Prototype: G
-Help: znstar(n): 3-component vector v, giving the structure of (Z/nZ)^*.
- v[1] is the order (i.e. eulerphi(n)), v[2] is a vector of cyclic components,
- and v[3] is a vector giving the corresponding generators
-

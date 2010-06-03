@@ -1,9 +1,0 @@
-Function: sqrt
-Section: transcendental
-C-Name: gsqrt
-Prototype: Gp
-Help: sqrt(x): square root of x
-Description:
- (real):gen           sqrtr($1)
- (gen):gen:prec       gsqrt($1, prec)
-

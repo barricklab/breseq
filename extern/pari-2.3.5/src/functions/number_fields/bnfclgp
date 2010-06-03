@@ -1,8 +1,0 @@
-Function: bnfclgp
-Section: number_fields
-C-Name: classgrouponly
-Prototype: GDGp
-Help: bnfclgp(P,{tech=[]}): compute the class group of the number field
- defined by the polynomial P. If P is a non-zero integer, it is interpreted
- as a quadratic discriminant. See manual for details about tech
-

@@ -1,6 +1,0 @@
-Function: atanh
-Section: transcendental
-C-Name: gath
-Prototype: Gp
-Help: atanh(x): inverse hyperbolic tangent of x
-

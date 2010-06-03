@@ -1,7 +1,0 @@
-Function: nfeltmod
-Section: number_fields
-C-Name: nfmod
-Prototype: GGG
-Help: nfeltmod(nf,a,b): gives r such that r=a-bq is small with q algebraic
- integer
-

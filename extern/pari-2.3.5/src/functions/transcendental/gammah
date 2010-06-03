@@ -1,6 +1,0 @@
-Function: gammah
-Section: transcendental
-C-Name: ggamd
-Prototype: Gp
-Help: gammah(x): gamma of x+1/2 (x integer)
-

@@ -1,9 +1,0 @@
-Function: thue
-Section: polynomials
-C-Name: thue
-Prototype: GGDG
-Help: thue(tnf,a,{sol}): solve the equation P(x,y)=a, where tnf was created
- with thueinit(P), and sol, if present, contains the solutions of Norm(x)=a
- modulo units in the number field defined by P. If tnf was computed without
- assuming GRH (flag 1 in thueinit), the result is unconditional
-

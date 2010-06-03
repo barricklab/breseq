@@ -1,8 +1,0 @@
-Function: ellrootno
-Section: elliptic_curves
-C-Name: ellrootno
-Prototype: lGDG
-Help: ellrootno(e,{p=1}): root number for the L-function of the elliptic
- curve e. p can be 1 (default), global root number, or a prime p (including
- 0) for the local root number at p
-

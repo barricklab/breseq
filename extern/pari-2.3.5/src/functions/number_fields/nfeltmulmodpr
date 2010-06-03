@@ -1,7 +1,0 @@
-Function: nfeltmulmodpr
-Section: number_fields
-C-Name: element_mulmodpr
-Prototype: GGGG
-Help: nfeltmulmodpr(nf,a,b,pr): element a. b modulo pr in nf, where pr is in
- modpr format (see nfmodprinit)
-

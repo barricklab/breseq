@@ -1,6 +1,0 @@
-Function: padicprec
-Section: conversions
-C-Name: padicprec
-Prototype: lGG
-Help: padicprec(x,p): absolute p-adic precision of object x
-

@@ -1,6 +1,0 @@
-Function: alias
-Section: programming
-C-Name: alias0
-Prototype: vrr
-Help: alias("new","old"): new is now an alias for old
-

@@ -1,8 +1,0 @@
-Function: prodinf
-Section: sums
-C-Name: prodinf0
-Prototype: V=GED0,L,p
-Help: prodinf(X=a,expr,{flag=0}): infinite product (X goes from a to
- infinity) of real or complex expression. flag can be 0 (default) or 1, in
- which case compute the product of the 1+expr instead
-

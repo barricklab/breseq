@@ -1,6 +1,0 @@
-Function: acos
-Section: transcendental
-C-Name: gacos
-Prototype: Gp
-Help: acos(x): inverse cosine of x
-

@@ -1,8 +1,0 @@
-Function: divrem
-Section: operators
-C-Name: divrem
-Prototype: GGDn
-Help: divrem(x,y,{v}): euclidean division of x by y giving as a
- 2-dimensional column vector the quotient and the remainder, with respect to
- v (to main variable if v is omitted)
-

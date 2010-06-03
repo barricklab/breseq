@@ -1,9 +1,0 @@
-Function: component
-Section: conversions
-C-Name: compo
-Prototype: GL
-Help: component(x,s): the s'th component of the internal representation of
- x. For vectors or matrices, it is simpler to use x[]. For list objects such
- as nf, bnf, bnr or ell, it is much easier to use member functions starting
- with "."
-

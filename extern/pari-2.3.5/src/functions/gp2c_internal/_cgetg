@@ -1,6 +1,0 @@
-Function: _cgetg
-Class: gp2c_internal
-Description:
- (lg,#str):gen              cgetg($1, ${2 str_raw})
- (gen,lg,#str):gen          $1 = cgetg($2, ${3 str_raw})
-

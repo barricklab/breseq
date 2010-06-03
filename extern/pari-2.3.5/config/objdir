@@ -1,7 +1,0 @@
-#! /bin/sh
-
-tmp_host=`config/arch-osname`
-arch=`echo "$tmp_host" | sed -e 's/\(.*\)-.*/\1/'`
-osname=`echo "$tmp_host" | sed -e 's/.*-\(.*\)/\1/'`
-objdir=O$osname-$arch;
-echo $objdir

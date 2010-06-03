@@ -1,7 +1,0 @@
-Function: nfrootsof1
-Section: number_fields
-C-Name: rootsof1
-Prototype: G
-Help: nfrootsof1(nf): number of roots of unity and primitive root of unity
- in the number field nf
-

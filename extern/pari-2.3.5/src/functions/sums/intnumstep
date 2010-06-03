@@ -1,7 +1,0 @@
-Function: intnumstep
-Section: sums
-C-Name: intnumstep
-Prototype: lp
-Help: intnumstep(): gives the default value of m used by all intnum and sumnum 
- routines, such that the integration step is 1/2^m.
-

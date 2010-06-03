@@ -1,6 +1,0 @@
-Function: zeta
-Section: transcendental
-C-Name: gzeta
-Prototype: Gp
-Help: zeta(s): Riemann zeta function at s with s a complex or a p-adic number
-

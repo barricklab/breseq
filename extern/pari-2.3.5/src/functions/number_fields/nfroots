@@ -1,7 +1,0 @@
-Function: nfroots
-Section: number_fields
-C-Name: nfroots
-Prototype: DGG
-Help: nfroots({nf},pol): roots of polynomial pol belonging to nf (Q if
- omitted) without multiplicity
-

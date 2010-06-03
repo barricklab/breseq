@@ -1,9 +1,0 @@
-Function: ellchangecurve
-Section: elliptic_curves
-C-Name: coordch
-Prototype: GG
-Help: ellchangecurve(x,y): change data on elliptic curve according to
- y=[u,r,s,t]
-Description: 
- (gen, gen):ell	coordch($1, $2)
-

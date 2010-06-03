@@ -1,8 +1,0 @@
-Function: charpoly
-Section: linear_algebra
-C-Name: charpoly0
-Prototype: GDnD0,L,
-Help: charpoly(A,{v=x},{flag=0}): det(v*Id-A)=characteristic polynomial of
- the matrix or polmod A. flag is optional and may be set to 1 (use
- Lagrange interpolation) or 2 (use Hessenberg form), 0 being the default
-

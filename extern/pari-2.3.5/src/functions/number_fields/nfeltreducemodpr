@@ -1,7 +1,0 @@
-Function: nfeltreducemodpr
-Section: number_fields
-C-Name: nfreducemodpr
-Prototype: GGG
-Help: nfeltreducemodpr(nf,a,pr): element a modulo pr in nf, where pr is in
- modpr format (see nfmodprinit)
-

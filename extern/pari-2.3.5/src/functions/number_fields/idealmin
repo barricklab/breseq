@@ -1,7 +1,0 @@
-Function: idealmin
-Section: number_fields
-C-Name: minideal
-Prototype: GGDGp
-Help: idealmin(nf,ix,{vdir}): minimum of the ideal ix in the direction vdir
- in the number field nf
-

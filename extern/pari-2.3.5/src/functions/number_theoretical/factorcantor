@@ -1,7 +1,0 @@
-Function: factorcantor
-Section: number_theoretical
-C-Name: factcantor
-Prototype: GG
-Help: factorcantor(x,p): factorization mod p of the polynomial x using
- Cantor-Zassenhaus
-

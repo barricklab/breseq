@@ -1,7 +1,0 @@
-Function: ellchangepoint
-Section: elliptic_curves
-C-Name: pointch
-Prototype: GG
-Help: ellchangepoint(x,y): change data on point or vector of points x on an
- elliptic curve according to y=[u,r,s,t]
-

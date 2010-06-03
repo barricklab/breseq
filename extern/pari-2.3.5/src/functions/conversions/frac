@@ -1,6 +1,0 @@
-Function: frac
-Section: conversions
-C-Name: gfrac
-Prototype: G
-Help: frac(x): fractional part of x = x-floor(x)
-

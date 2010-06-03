@@ -1,9 +1,0 @@
-Function: moebius
-Section: number_theoretical
-C-Name: gmu
-Prototype: G
-Help: moebius(x): Moebius function of x
-Description: 
- (int):small	mu($1)
- (gen):gen	gmu($1)
-

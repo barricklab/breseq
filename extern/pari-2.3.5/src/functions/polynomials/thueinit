@@ -1,9 +1,0 @@
-Function: thueinit
-Section: polynomials
-C-Name: thueinit
-Prototype: GD0,L,p
-Help: thueinit(P,{flag=0}): initialize the tnf corresponding to P, that will
- be used to solve Thue equations P(x,y) = some-integer. If flag is non-zero,
- certify the result unconditionnaly. Otherwise, assume GRH (much faster of
- course)
-

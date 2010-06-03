@@ -1,7 +1,0 @@
-Function: bnfcertify
-Section: number_fields
-C-Name: certifybuchall
-Prototype: lG
-Help: bnfcertify(bnf): certify the correctness (i.e. remove the GRH) of the
- bnf data output by bnfclassunit or bnfinit
-

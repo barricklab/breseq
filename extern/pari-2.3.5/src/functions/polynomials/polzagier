@@ -1,6 +1,0 @@
-Function: polzagier
-Section: polynomials
-C-Name: polzag
-Prototype: LL
-Help: polzagier(n,m): Zagier's polynomials of index n,m
-

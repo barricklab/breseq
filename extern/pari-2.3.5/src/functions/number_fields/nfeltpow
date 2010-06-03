@@ -1,6 +1,0 @@
-Function: nfeltpow
-Section: number_fields
-C-Name: element_pow
-Prototype: GGG
-Help: nfeltpow(nf,a,k): element a^k in nf
-

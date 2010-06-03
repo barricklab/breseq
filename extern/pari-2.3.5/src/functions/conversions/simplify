@@ -1,6 +1,0 @@
-Function: simplify
-Section: conversions
-C-Name: simplify
-Prototype: G
-Help: simplify(x): simplify the object x as much as possible
-

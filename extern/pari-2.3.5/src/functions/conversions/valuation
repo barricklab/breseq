@@ -1,6 +1,0 @@
-Function: valuation
-Section: conversions
-C-Name: ggval
-Prototype: lGG
-Help: valuation(x,p): valuation of x with respect to p
-

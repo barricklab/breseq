@@ -1,8 +1,0 @@
-Function: listcreate
-Section: linear_algebra
-C-Name: listcreate
-Prototype: L
-Help: listcreate(n): creates an empty list of maximum length n
-Description: 
- (small):list	listcreate($1)
-

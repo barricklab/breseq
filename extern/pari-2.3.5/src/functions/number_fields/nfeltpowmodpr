@@ -1,7 +1,0 @@
-Function: nfeltpowmodpr
-Section: number_fields
-C-Name: element_powmodpr
-Prototype: GGGG
-Help: nfeltpowmodpr(nf,a,k,pr): element a^k modulo pr in nf, where pr is in
- modpr format (see nfmodprinit)
-

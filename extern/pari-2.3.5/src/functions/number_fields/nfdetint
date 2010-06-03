@@ -1,7 +1,0 @@
-Function: nfdetint
-Section: number_fields
-C-Name: nfdetint
-Prototype: GG
-Help: nfdetint(nf,x): multiple of the ideal determinant of the pseudo
- generating set x
-

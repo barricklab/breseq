@@ -1,6 +1,0 @@
-Function: serreverse
-Section: polynomials
-C-Name: recip
-Prototype: G
-Help: serreverse(x): reversion of the power series x
-

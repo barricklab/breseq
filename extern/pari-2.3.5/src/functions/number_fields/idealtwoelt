@@ -1,8 +1,0 @@
-Function: idealtwoelt
-Section: number_fields
-C-Name: ideal_two_elt0
-Prototype: GGDG
-Help: idealtwoelt(nf,x,{a}): two-element representation of an ideal x in the
- number field nf. If (optional) a is non-zero, first element will be equal to
- a
-

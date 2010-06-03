@@ -1,8 +1,0 @@
-Function: besselk
-Section: transcendental
-C-Name: kbessel0
-Prototype: GGD0,L,p
-Help: besselk(nu,x,{flag=0}): K-bessel function of index nu and argument x
- (x positive real of type real, nu of any scalar type). flag is optional, and
- may be set to 0: default; 1: use hyperu
-

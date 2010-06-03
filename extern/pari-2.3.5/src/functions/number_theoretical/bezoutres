@@ -1,7 +1,0 @@
-Function: bezoutres
-Section: number_theoretical
-C-Name: vecbezoutres
-Prototype: GG
-Help: bezoutres(x,y): gives a 3-dimensional row vector [u,v,d] such that
- d=resultant(x,y) and u*x+v*y=d, where x and y are polynomials
-

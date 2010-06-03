@@ -1,8 +1,0 @@
-Function: psplothraw
-Class: highlevel
-Section: graphic
-C-Name: postplothraw
-Prototype: GGD0,L,
-Help: psplothraw(listx,listy,{flag=0}): same as plothraw, except that the
- output is a postscript program in psfile (pari.ps by default)
-

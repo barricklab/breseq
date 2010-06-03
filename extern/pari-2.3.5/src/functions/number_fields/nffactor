@@ -1,6 +1,0 @@
-Function: nffactor
-Section: number_fields
-C-Name: nffactor
-Prototype: GG
-Help: nffactor(nf,x): factor polynomial x in number field nf
-

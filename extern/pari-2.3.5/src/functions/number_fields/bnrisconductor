@@ -1,9 +1,0 @@
-Function: bnrisconductor
-Section: number_fields
-C-Name: bnrisconductor
-Prototype: lGDGDG
-Help: bnrisconductor(a1,{a2},{a3}): returns 1 if the modulus is the
- conductor of the subfield of the ray class field given by a1,a2,a3 (see
- bnrdisc), and 0 otherwise. Slightly faster than bnrconductor if this is the
- only desired result
-

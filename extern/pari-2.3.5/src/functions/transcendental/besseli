@@ -1,6 +1,0 @@
-Function: besseli
-Section: transcendental
-C-Name: ibessel
-Prototype: GGp
-Help: besseli(nu,x): I-bessel function of index nu and argument x
-

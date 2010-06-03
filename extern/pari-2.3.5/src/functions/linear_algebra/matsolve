@@ -1,6 +1,0 @@
-Function: matsolve
-Section: linear_algebra
-C-Name: gauss
-Prototype: GG
-Help: matsolve(M,B): gaussian solution of MX=B (M matrix, B column vector)
-

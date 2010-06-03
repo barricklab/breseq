@@ -1,9 +1,0 @@
-Function: znprimroot
-Section: number_theoretical
-C-Name: ggener
-Prototype: G
-Help: znprimroot(n): returns a primitive root of n when it exists
-Description: 
- (int):gen	gener($1)
- (gen):gen	ggener($1)
-

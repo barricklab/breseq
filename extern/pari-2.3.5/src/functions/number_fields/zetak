@@ -1,9 +1,0 @@
-Function: zetak
-Section: number_fields
-C-Name: gzetakall
-Prototype: GGD0,L,p
-Help: zetak(nfz,s,{flag=0}): Dedekind zeta function of the number field nfz
- at s, where nfz is the vector computed by zetakinit (NOT by nfinit) flag is
- optional, and can be 0: default, compute zetak, or non-zero: compute the
- lambdak function, i.e. with the gamma factors
-

@@ -1,9 +1,0 @@
-Function: _.p
-Class: member_functions
-C-Name: member_p
-Prototype: G
-Description: 
- (gal):int:copy                 gmael($1, 2, 1)
- (prid):int:copy                gel($1, 1)
- (gen):int                      member_p($1)
-

@@ -1,7 +1,0 @@
-Function: bnfmake
-Section: number_fields
-C-Name: bnfmake
-Prototype: Gp
-Help: bnfmake(sbnf): transforms small sbnf as output by bnfinit with flag=3
- into a true big bnf
-

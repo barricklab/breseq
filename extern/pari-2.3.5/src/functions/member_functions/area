@@ -1,7 +1,0 @@
-Function: _.area
-Class: member_functions
-C-Name: member_area
-Prototype: G
-Description: 
- (bell):gen:copy        gel($1, 19)
-

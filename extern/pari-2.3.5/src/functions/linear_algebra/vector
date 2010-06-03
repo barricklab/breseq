@@ -1,7 +1,0 @@
-Function: vector
-Section: linear_algebra
-C-Name: vecteur
-Prototype: GDVDI
-Help: vector(n,{X},{expr=0}): row vector with n components of expression
- expr (X ranges from 1 to n). By default, fill with 0s
-

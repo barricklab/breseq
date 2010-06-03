@@ -1,7 +1,0 @@
-Function: _.j
-Class: member_functions
-C-Name: member_j
-Prototype: G
-Description: 
- (ell):gen:copy        gel($1, 13)
-
