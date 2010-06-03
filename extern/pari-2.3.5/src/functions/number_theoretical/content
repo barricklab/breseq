@@ -1,6 +1,0 @@
-Function: content
-Section: number_theoretical
-C-Name: content
-Prototype: G
-Help: content(x): gcd of all the components of x, when this makes sense
-

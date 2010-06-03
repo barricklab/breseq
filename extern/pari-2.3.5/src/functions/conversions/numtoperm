@@ -1,7 +1,0 @@
-Function: numtoperm
-Section: conversions
-C-Name: numtoperm
-Prototype: LG
-Help: numtoperm(n,k): permutation number k (mod n!) of n letters (n
- C-integer)
-

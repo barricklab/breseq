@@ -1,8 +1,0 @@
-Function: nfgaloisapply
-Section: number_fields
-C-Name: galoisapply
-Prototype: GGG
-Help: nfgaloisapply(nf,aut,x): Apply the Galois automorphism sigma
- (polynomial or polymod) to the object x (element or ideal) in the number
- field nf
-

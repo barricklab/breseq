@@ -1,7 +1,0 @@
-Function: _.c4
-Class: member_functions
-C-Name: member_c4
-Prototype: G
-Description: 
- (ell):gen:copy        gel($1, 10)
-

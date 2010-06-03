@@ -1,8 +1,0 @@
-Function: ellap
-Section: elliptic_curves
-C-Name: ellap0
-Prototype: GGD0,L,
-Help: ellap(e,p,{flag=0}): computes a_p for the elliptic curve e using
- Shanks-Mestre's method. flag is optional and can be set to 0 (default) or 1
- (use Jacobi symbols)
-

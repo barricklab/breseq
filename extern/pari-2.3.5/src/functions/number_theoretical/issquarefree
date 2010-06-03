@@ -1,9 +1,0 @@
-Function: issquarefree
-Section: number_theoretical
-C-Name: gissquarefree
-Prototype: G
-Help: issquarefree(x): true(1) if x is squarefree, false(0) if not
-Description: 
- (int):bool	issquarefree($1)
- (gen):gen	gissquarefree($1)
-

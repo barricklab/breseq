@@ -1,7 +1,0 @@
-Function: serlaplace
-Section: polynomials
-C-Name: laplace
-Prototype: G
-Help: serlaplace(x): replaces the power series sum of a_n*x^n/n! by sum of
- a_n*x^n. For the reverse operation, use serconvol(x,exp(X))
-

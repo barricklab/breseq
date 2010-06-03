@@ -1,6 +1,0 @@
-Function: nfeltdiveuc
-Section: number_fields
-C-Name: nfdiveuc
-Prototype: GGG
-Help: nfeltdiveuc(nf,a,b): gives algebraic integer q such that a-bq is small
-

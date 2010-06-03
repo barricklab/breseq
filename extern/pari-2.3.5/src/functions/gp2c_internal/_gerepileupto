@@ -1,9 +1,0 @@
-Function: _gerepileupto
-Class: gp2c_internal
-Description:
- (pari_sp, int):int               gerepileuptoint($1, $2)
- (pari_sp, mp):mp                 gerepileuptoleaf($1, $2)
- (pari_sp, vecsmall):vecsmall     gerepileuptoleaf($1, $2)
- (pari_sp, vec):vec               gerepileupto($1, $2)
- (pari_sp, gen):gen               gerepileupto($1, $2)
-

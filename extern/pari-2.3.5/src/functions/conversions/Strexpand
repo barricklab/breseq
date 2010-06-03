@@ -1,7 +1,0 @@
-Function: Strexpand
-Section: conversions
-C-Name: Strexpand
-Prototype: s*
-Help: Strexpand({str}*): concatenates its (string) argument into a single
- string, performing tilde expansion
-

@@ -1,9 +1,0 @@
-Function: qfrep
-Section: linear_algebra
-C-Name: qfrep0
-Prototype: GGD0,L,
-Help: qfrep(x,B,{flag=0}): vector of (half) the number of vectors of norms
- from 1 to B for the integral and definite quadratic form x. Binary digits of
- flag mean 1: count vectors of even norm from 1 to 2B, 2: return a t_VECSMALL
- instead of a t_VEC
-

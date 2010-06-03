@@ -1,7 +1,0 @@
-Function: ellbil
-Section: elliptic_curves
-C-Name: bilhell
-Prototype: GGGp
-Help: ellbil(e,z1,z2): canonical bilinear form for the points z1,z2 on the
- elliptic curve e. Either z1 or z2 can also be a vector/matrix of points
-

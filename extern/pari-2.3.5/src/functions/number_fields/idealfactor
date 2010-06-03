@@ -1,7 +1,0 @@
-Function: idealfactor
-Section: number_fields
-C-Name: idealfactor
-Prototype: GG
-Help: idealfactor(nf,x): factorization of the ideal x given in HNF into
- prime ideals in the number field nf
-

@@ -1,7 +1,0 @@
-Function: binary
-Section: conversions
-C-Name: binaire
-Prototype: G
-Help: binary(x): gives the vector formed by the binary digits of x (x
- integer)
-

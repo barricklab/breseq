@@ -1,6 +1,0 @@
-Function: permtonum
-Section: conversions
-C-Name: permtonum
-Prototype: G
-Help: permtonum(vect): ordinal (between 1 and n!) of permutation vect
-

@@ -1,8 +1,0 @@
-Function: mathnfmod
-Section: linear_algebra
-C-Name: hnfmod
-Prototype: GG
-Help: mathnfmod(x,d): (upper triangular) Hermite normal form of x, basis for
- the lattice formed by the columns of x, where d is a multiple of the
- non-zero determinant of this lattice
-

@@ -1,6 +1,0 @@
-Function: gamma
-Section: transcendental
-C-Name: ggamma
-Prototype: Gp
-Help: gamma(x): gamma function at x
-

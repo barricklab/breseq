@@ -1,8 +1,0 @@
-Function: plotrbox
-Class: highlevel
-Section: graphic
-C-Name: rectrbox
-Prototype: vLGG
-Help: plotrbox(w,dx,dy): if the cursor is at (x1,y1), draw a box with
- diagonal (x1,y1)-(x1+dx,y1+dy) in rectwindow w (cursor does not move)
-

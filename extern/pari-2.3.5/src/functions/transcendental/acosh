@@ -1,6 +1,0 @@
-Function: acosh
-Section: transcendental
-C-Name: gach
-Prototype: Gp
-Help: acosh(x): inverse hyperbolic cosine of x
-

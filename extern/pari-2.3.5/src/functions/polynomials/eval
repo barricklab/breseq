@@ -1,6 +1,0 @@
-Function: eval
-Section: polynomials
-C-Name: geval
-Prototype: G
-Help: eval(x): evaluation of x, replacing variables by their value
-

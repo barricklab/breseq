@@ -1,6 +1,0 @@
-Function: minpoly
-Section: linear_algebra
-C-Name: minpoly
-Prototype: GDn
-Help: minpoly(A,{v=x}): minimal polynomial of the matrix or polmod A.
-

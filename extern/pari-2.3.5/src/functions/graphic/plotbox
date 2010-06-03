@@ -1,8 +1,0 @@
-Function: plotbox
-Class: highlevel
-Section: graphic
-C-Name: rectbox
-Prototype: vLGG
-Help: plotbox(w,x2,y2): if the cursor is at position (x1,y1), draw a box
- with diagonal (x1,y1) and (x2,y2) in rectwindow w (cursor does not move)
-

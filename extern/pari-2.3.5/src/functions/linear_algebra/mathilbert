@@ -1,6 +1,0 @@
-Function: mathilbert
-Section: linear_algebra
-C-Name: mathilbert
-Prototype: L
-Help: mathilbert(n): Hilbert matrix of order n (n C-integer)
-

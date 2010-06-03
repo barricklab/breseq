@@ -1,7 +1,0 @@
-Function: matdiagonal
-Section: linear_algebra
-C-Name: diagonal
-Prototype: G
-Help: matdiagonal(x): creates the diagonal matrix whose diagonal entries are
- the entries of the vector x
-

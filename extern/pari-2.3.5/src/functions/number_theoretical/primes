@@ -1,6 +1,0 @@
-Function: primes
-Section: number_theoretical
-C-Name: primes
-Prototype: L
-Help: primes(n): returns the vector of the first n primes (n C-integer)
-

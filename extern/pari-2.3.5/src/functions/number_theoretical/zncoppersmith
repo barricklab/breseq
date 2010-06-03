@@ -1,9 +1,0 @@
-Function: zncoppersmith
-Class: basic
-Section: number_theoretical
-C-Name: zncoppersmith
-Prototype: GGGDG
-Help: zncoppersmith(P, N, X, {B=N}): finds all integers x0
- with |x0| <= X such that  gcd(N, P(x0)) > B. X should be smaller than
- exp((log B)^2 / (deg(P) log N)).
-

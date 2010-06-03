@@ -1,9 +1,0 @@
-Function: setsearch
-Section: linear_algebra
-C-Name: setsearch
-Prototype: lGGD0,L,
-Help: setsearch(x,y,{flag=0}): looks if y belongs to the set x. If flag is 0
- or omitted, returns 0 if it is not, otherwise returns the index j such that
- y==x[j]. If flag is non-zero, return 0 if y belongs to x, otherwise the
- index j where it should be inserted
-

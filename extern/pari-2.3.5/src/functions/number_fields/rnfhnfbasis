@@ -1,7 +1,0 @@
-Function: rnfhnfbasis
-Section: number_fields
-C-Name: rnfhnfbasis
-Prototype: GG
-Help: rnfhnfbasis(bnf,order): given an order as output by rnfpseudobasis,
- gives either a true HNF basis of the order if it exists, zero otherwise
-

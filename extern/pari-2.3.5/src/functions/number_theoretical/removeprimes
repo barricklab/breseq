@@ -1,8 +1,0 @@
-Function: removeprimes
-Section: number_theoretical
-C-Name: removeprimes
-Prototype: DG
-Help: removeprimes({x=[]}): remove primes in the vector x (with at most 100
- components) from the prime table. x can also be a single integer. List the
- current extra primes if x is omitted
-

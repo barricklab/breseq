@@ -1,9 +1,0 @@
-Function: plotcolor
-Class: highlevel
-Section: graphic
-C-Name: rectcolor
-Prototype: vLL
-Help: plotcolor(w,c): in rectwindow w, set default color to c. Possible
- values for c are 1=black, 2=blue, 3=sienna, 4=red, 5=cornsilk, 6=grey,
- 7=gainsborough
-

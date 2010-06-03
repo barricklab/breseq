@@ -1,7 +1,0 @@
-Function: ellisoncurve
-Section: elliptic_curves
-C-Name: ellisoncurve
-Prototype: GG
-Help: ellisoncurve(e,x): true(1) if x is on elliptic curve e, false(0) if
- not
-

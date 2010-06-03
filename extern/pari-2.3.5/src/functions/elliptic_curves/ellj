@@ -1,6 +1,0 @@
-Function: ellj
-Section: elliptic_curves
-C-Name: jell
-Prototype: Gp
-Help: ellj(x): elliptic j invariant of x
-

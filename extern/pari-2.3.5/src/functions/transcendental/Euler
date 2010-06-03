@@ -1,8 +1,0 @@
-Function: Euler
-Section: transcendental
-C-Name: mpeuler
-Prototype: p
-Help: Euler=Euler(): Euler's constant with current precision
-Description: 
- ():real:prec	mpeuler(prec)
-

@@ -1,7 +1,0 @@
-Function: fordiv
-Section: programming
-C-Name: fordiv
-Prototype: vGVI
-Help: fordiv(n,X,seq): the sequence is evaluated, X running over the
- divisors of n
-

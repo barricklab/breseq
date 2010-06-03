@@ -1,7 +1,0 @@
-Function: bnrconductorofchar
-Section: number_fields
-C-Name: bnrconductorofchar
-Prototype: GG
-Help: bnrconductorofchar(bnr,chi): conductor of the character chi on the ray
- class group bnr
-

@@ -1,6 +1,0 @@
-Function: polredord
-Section: number_fields
-C-Name: ordred
-Prototype: G
-Help: polredord(x): reduction of the polynomial x, staying in the same order
-

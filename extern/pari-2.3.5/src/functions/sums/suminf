@@ -1,7 +1,0 @@
-Function: suminf
-Section: sums
-C-Name: suminf0
-Prototype: V=GEp
-Help: suminf(X=a,expr): infinite sum (X goes from a to infinity) of real or
- complex expression expr
-

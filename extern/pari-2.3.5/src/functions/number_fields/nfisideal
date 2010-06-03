@@ -1,7 +1,0 @@
-Function: nfisideal
-Section: number_fields
-C-Name: isideal
-Prototype: lGG
-Help: nfisideal(nf,x): true(1) if x is an ideal in the number field nf,
- false(0) if not
-

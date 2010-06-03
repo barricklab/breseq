@@ -1,7 +1,0 @@
-Function: newtonpoly
-Section: number_fields
-C-Name: newtonpoly
-Prototype: GG
-Help: newtonpoly(x,p): Newton polygon of polynomial x with respect to the
- prime p
-

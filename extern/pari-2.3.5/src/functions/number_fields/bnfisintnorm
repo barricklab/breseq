@@ -1,9 +1,0 @@
-Function: bnfisintnorm
-Section: number_fields
-C-Name: bnfisintnorm
-Prototype: GG
-Help: bnfisintnorm(bnf,x): compute a complete system of solutions (modulo
- units of positive norm) of the absolute norm equation N(a)=x, where a
- belongs to the maximal order of big number field bnf (if bnf is not
- certified, this depends on GRH)
-

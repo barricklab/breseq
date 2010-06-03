@@ -1,7 +1,0 @@
-Function: bnfdecodemodule
-Section: number_fields
-C-Name: decodemodule
-Prototype: GG
-Help: bnfdecodemodule(nf,fa): given a coded module fa as in bnrdisclist,
- gives the true module
-

@@ -1,7 +1,0 @@
-Function: kill
-Section: programming
-C-Name: kill0
-Prototype: vS
-Help: kill(x): kills the present value of the variable or function x.
- Returns new value or 0
-

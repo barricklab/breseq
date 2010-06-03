@@ -1,9 +1,0 @@
-Function: +_
-Class: symbolic_operators
-Description: 
- (small):small:parens			$1
- (int):int:parens:copy			$1
- (real):real:parens:copy		$1
- (mp):mp:parens:copy			$1
- (gen):gen:parens:copy			$1
-

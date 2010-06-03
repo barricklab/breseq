@@ -1,7 +1,0 @@
-Function: qfjacobi
-Section: linear_algebra
-C-Name: jacobi
-Prototype: Gp
-Help: qfjacobi(x): eigenvalues and orthogonal matrix of eigenvectors of the
- real symmetric matrix x
-

@@ -1,9 +1,0 @@
-Function: idealprimedec
-Section: number_fields
-C-Name: primedec
-Prototype: GG
-Help: idealprimedec(nf,p): prime ideal decomposition of the prime number p
- in the number field nf as a vector of 5 component vectors [p,a,e,f,b]
- representing the prime ideals pZ_K+a. Z_K, e,f as usual, a as vector of
- components on the integral basis, b Lenstra's constant
-

@@ -1,8 +1,0 @@
-Function: rnfisfree
-Section: number_fields
-C-Name: rnfisfree
-Prototype: lGG
-Help: rnfisfree(bnf,order): given an order as output by rnfpseudobasis or
- rnfsteinitz, outputs true (1) or false (0) according to whether the order is
- free or not
-

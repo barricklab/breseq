@@ -1,7 +1,0 @@
-Function: intcirc
-Section: sums
-C-Name: intcirc0
-Prototype: V=GGEDGp
-Help: intcirc(X=a,R,s,{tab}): numerical integration of s on the circle 
- |z-a|=R, divided by 2*I*Pi. tab is as in intnum.
-

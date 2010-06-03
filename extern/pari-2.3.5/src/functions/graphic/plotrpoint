@@ -1,8 +1,0 @@
-Function: plotrpoint
-Class: highlevel
-Section: graphic
-C-Name: rectrpoint
-Prototype: vLGG
-Help: plotrpoint(w,dx,dy): draw a point (and move cursor) at position dx,dy
- relative to present position of the cursor in rectwindow w
-

@@ -1,7 +1,0 @@
-Function: matisdiagonal
-Section: linear_algebra
-C-Name: isdiagonal
-Prototype: lG
-Help: matisdiagonal(x): true(1) if x is a diagonal matrix, false(0)
- otherwise
-

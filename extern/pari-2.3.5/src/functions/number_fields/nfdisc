@@ -1,7 +1,0 @@
-Function: nfdisc
-Section: number_fields
-C-Name: nfdiscf0
-Prototype: GD0,L,DG
-Help: nfdisc(x,{flag=0},{p}): discriminant of the number field defined by
- the polynomial x using round 4. Optional args flag and p are as in nfbasis
-

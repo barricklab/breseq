@@ -1,7 +1,0 @@
-Function: bnfunit
-Section: number_fields
-C-Name: buchfu
-Prototype: G
-Help: bnfunit(bnf): compute the fundamental units of the number field bnf
- output by bnfinit when they have not yet been computed (i.e. with flag=2)
-

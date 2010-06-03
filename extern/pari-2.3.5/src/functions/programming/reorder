@@ -1,7 +1,0 @@
-Function: reorder
-Section: programming
-C-Name: reorder
-Prototype: DG
-Help: reorder({x=[]}): reorder the variables for output according to the
- vector x. If x is void or omitted, print the current list of variables
-
