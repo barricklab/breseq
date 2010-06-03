@@ -1,0 +1,113 @@
+Version 1.19
+    * Added Bio::DB::Bam::Alignment->mate_seq_id() method.	
+    * Added Bio::DB::Bam::Alignment->aux() method.	
+    * Added Bio::DB::Bam::Alignment->tam_line() method.
+    * Fixed Bio::DB::Bam::Alignment->cigar_str() method to return fields in correct order! (bad bug)	
+
+Version 1.18
+    * Made the BAMfile  $header->text() method read/write, allowing limited modification of
+      header fields.
+    * Fixed MD processing again to correctly handle insertions into the reference sequence.
+      
+Version 1.17
+    * Fixed bug in processing of MD tag that returned incorrect reference sequence when alignment
+      contains soft clips.
+    * Fixed processing of "A" tags so that they return the appropriate 1 character string rather than
+      undef.
+
+Version 1.16
+    * No longer attempt to build BAM index automatically if the .bai file is
+      either missing or out of date. Pass -autoindex=>1 to Bio::DB::Sam to
+      restore original behavior.
+
+Version 1.15
+    * If -fasta argument is not provided at new() time, methods will
+      attempt to use the MD tags to reconstruct reference sequence.
+
+Version 1.14
+    * A last minute typo broke the regression tests. This is now fixed.
+      Don't use version 1.13.
+
+Version 1.13
+    * Fixed another bug in padded_alignments(), which caused the source dna
+      sequence to be reported incorrectly for mismatches. Thanks to David Gacquer <dgacquer@ulb.ac.be>
+      for identifying all these bugs.
+ 
+Version 1.12
+    * Fixed the padded_alignments() method to correct "method not found"
+      bug introduced in version 1.11.
+
+Version 1.11
+    * Fixed the padded alignments returned for hard-clipped alignments.
+
+Version 1.10
+    * Added a new Bio::DB::Bam method for caching remote files' indices in the
+      temp directory. This is used by default by high-level API.
+    * Fixed bug in soft and hard clipping code; query endpoints should be
+      correct now.
+    * Fixed bug in get_all_tags() which was choking on "Z" style tags and giving
+      scrambled results.
+    * $feature->query now reports the DNA query in canonical (ref)
+      coordinates; only $feature->target reverse complements the query
+      DNA to give the data actually read; cigar string is always in
+      canonical coordinates
+
+Version 1.09
+    * Disabled checks for file readability when path is a remote BAM
+      index. This allows transparent access to BAM databases on
+      http/ftp servers.
+ 
+Version 1.08
+    * Implemented a clone() method for use immediately before or after
+      a fork() attempt.
+
+Version 1.07
+    * IMPORTANT API CHANGE 1: The feature strand now returns +1 or -1 to indicate 
+      whether the query was reverse complemented in the SAM file.
+    * IMPORTANT API CHANGE 2: The $feature->query object's dna() and seq() methods
+      now return the sequence as it was read, rather than the reverse
+      complemented version as represented in the SAM file. $feature->qseq() 
+      returns the reverse complemented version as before.
+
+Version 1.06
+    * Updated README to be more explicit about how to troubleshoot 
+      compile errors.
+    * Modifed so that Bio::DB::Sam will work with GBrowse 1.
+
+Version 1.05
+    * Bio::DB::Sam->seq_id() method no longer lower-cases reference names.
+    * Quashed enormous memory leak in the pileup() function.
+
+Version 1.04
+    * Updated example BAM file (ex1.bam) to be compatible with 1.06 version
+      of samtools.
+
+Version 1.03
+    * Fixed documentation on running with GBrowse.
+    * Fixed alignwrapper behavior so that GBrowse searches don't crash.
+  
+Version 1.02
+    * Fixed bug in parsing of unsigned integer tags that caused some tags to
+      be treated as signed integer.
+
+Version 1.01
+    * Fixed Build.PL to pick up correct location of bam header files.
+    * Eliminated several memory leaks that manifested when reading BAM files 
+      with lots of targets.
+    * Made -fasta argument optional when using high-level interface.
+
+Version 1.00
+    * initial release
+
+Tue Jun 23 23:47:28 BST 2009
+    * Many documentation improvements
+    * Improved performance of high-level interface for fetch() and pileup() functions.
+    * Added information to README about how to compile with samtools 0.1.4
+
+Thu May  7 09:47:02 EDT 2009
+    * See t/01sam.t for a demonstration of the API.
+    * Essentially all of the API is fleshed out, with the exception of the ability to generate
+      padded alignment itself.
+    * The $alignment->query() interface is the one to use for retrieving start, end and sequence
+      of the query sequence. The $alignment->target() interface flips the meaning of start and
+      end when the alignment is reversed, to accomodate old AceDB/GFF2 scripts.
