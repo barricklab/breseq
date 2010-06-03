@@ -348,7 +348,7 @@ sub create_alignment
 		{
 			my $aligned_read;
 			$aligned_read->{seq_id} = $a->display_name;
-			$aligned_read->{length} = $a->query->length;
+			$aligned_read->{length} = $a->l_qseq;
 			$aligned_read->{read_sequence} = $a->qseq;
 			$aligned_read->{qual_sequence} = $a->_qscore;
 			

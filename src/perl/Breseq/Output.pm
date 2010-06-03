@@ -758,7 +758,7 @@ sub html_new_junction_table_string
 		
 		$output_str.= start_Tr({-class=> "mutation_table_row_$row_bg_color_index"});		
 		{
-			$output_str.= td({-rowspan=>1}, a({-href=>"$c->{_side_2_evidence_file_name}"}, "?")) if ($link); 
+			$output_str.= td({-rowspan=>1}, a({-href=>"$relative_link$c->{_side_2_evidence_file_name}"}, "?")) if ($link); 
 			$output_str.= td({-rowspan=>1, -class=>"$annotate_key"}, nonbreaking($c->{"$key\_seq_id"}));		
 			$output_str.= td( {-align=>"center", -class=>"$annotate_key"}, ($c->{"$key\_strand"} == +1) ? $c->{"$key\_position"} . "&nbsp;=": "=&nbsp;" . $c->{"$key\_position"} );
 
