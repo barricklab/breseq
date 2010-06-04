@@ -65,6 +65,7 @@ use Data::Dumper;
 
 @ISA = qw( Bio::Root::Root );
 
+#
 # Format specification
 # 
 our $line_specification = {

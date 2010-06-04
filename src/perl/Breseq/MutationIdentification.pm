@@ -29,8 +29,6 @@ Copyright 2009.  All rights reserved.
 
 use strict;
 
-use Math::CDF;
-
 use Bio::Root::Root;
 use Bio::DB::Sam;
 
@@ -646,7 +644,7 @@ sub identify_mutations
 					$mut->{ref_base} = $ref_base;
 					$mut->{new_base} = $best_base;		
 					$mut->{frequency} = 1; ## this is not a polymorphism
-					$mut->{reject} = "LR" if ($e_value_call < $settings->{mutation_log10_e_value_cutoff})
+					$mut->{reject} = "EVALUE" if ($e_value_call < $settings->{mutation_log10_e_value_cutoff})
 				}
 				if ($polymorphism_predicted)
 				{											
@@ -655,17 +653,25 @@ sub identify_mutations
 					
 					# the frequency returned is the probability of the FIRST base
 					# we want to quote the probability of the second base (the change from the reference).
+					my $polymorphism_coverage_both_bases = 0;
 					if ($polymorphism->{first_base} eq $ref_base)
 					{
 						$mut->{frequency} = 1-$polymorphism->{frequency};
 						$mut->{ref_base} = $polymorphism->{first_base};
 						$mut->{new_base} = $polymorphism->{second_base};
+						$polymorphism_coverage_both_bases = 
+							($polymorphism->{first_base_strand_coverage}->{-1} > 0)
+						 && ($polymorphism->{first_base_strand_coverage}->{+1} > 0);
 					}	
 					elsif ($polymorphism->{second_base} eq $ref_base)
 					{
 						$mut->{frequency} = $polymorphism->{frequency};
 						$mut->{ref_base} = $polymorphism->{second_base};
 						$mut->{new_base} = $polymorphism->{first_base};
+						
+						$polymorphism_coverage_both_bases = 
+							($polymorphism->{second_base_strand_coverage}->{-1} > 0)
+						 && ($polymorphism->{second_base_strand_coverage}->{+1} > 0);					
 					}
 
 					### NOTE: This neglects the case where neither the first nor second base is the reference base! Should almost never happen					
@@ -678,9 +684,9 @@ sub identify_mutations
 						
 						$mut->{error} = "polymorphic_without_reference_base";
 					}
-										
-									
-					$mut->{reject} = "LR" if ($mut->{log10_e_value} < $settings->{polymorphism_log10_e_value_cutoff});
+					
+					$mut->{reject} = "EVALUE" if ($mut->{log10_e_value} < $settings->{polymorphism_log10_e_value_cutoff});
+					$mut->{reject} = "STRAND" if (!$polymorphism_coverage_both_bases);
 					$mut->{reject} = "FET_STRAND" if ($mut->{fisher_strand_p_value} < $settings->{polymorphism_fisher_strand_p_value_cutoff});
 					$mut->{reject} = "FREQ" if ($mut->{frequency} < $settings->{polymorphism_frequency_cutoff});
 				 	$mut->{reject} = "FREQ" if ($mut->{frequency} > 1-$settings->{polymorphism_frequency_cutoff});						
@@ -878,6 +884,8 @@ sub _predict_polymorphism
 		'frequency' => $max_likelihood_fr_first_base,
 		'first_base' => $first_base,
 		'second_base' => $second_base,
+		'first_base_strand_coverage' => $first_base_strand_hash, 
+		'second_base_strand_coverage' => $second_base_strand_hash, 
 		'p_value' => $chi_squared_pr,
 		'fisher_strand_p_value' => $fisher_strand_p_value,
 	};

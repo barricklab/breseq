@@ -32,7 +32,6 @@ use strict;
 package Breseq::ErrorCalibration;
 
 use Data::Dumper;
-use Math::CDF;
 
 ###
 # Global Variables
@@ -320,6 +319,24 @@ sub analyze_unique_coverage_distribution_file_using_R
 	my $unique_coverage_distribution_r_script_file_name = $settings->file_name('unique_coverage_distribution_r_script_file_name', {'@' => $seq_id});
 	open RSCRIPT, ">$unique_coverage_distribution_r_script_file_name" or die "Could not create file: $unique_coverage_distribution_r_script_file_name\n";
 
+	### Define various coverage thresholds...
+	my $sequence_length = $summary->{sequence_conversion}->{reference_sequences}->{$seq_id}->{length};
+
+	### DELETION PROPAGATION CUTOFF
+	## One-tailed test p=0.05, Bonferroni correction
+	# my $del_propagation_pr_cutoff = 0.05 / $sequence_length;
+	
+	## One-tailed test p=0.01, no Bonferroni correction
+	#my $del_propagation_pr_cutoff = 0.01;
+	
+	## We really want somewhere between these two, try this...
+	my $deletion_propagation_pr_cutoff = 0.05 / sqrt($sequence_length);
+
+	### NEW JUNCTION CUTOFF
+	## Arbitrary value that seems to work....
+	my $new_junction_pr_cutoff = 1/$sequence_length; # *0.05;
+	
+
 print RSCRIPT <<EOF;
 #load data
 X<-read.table("$unique_only_coverage_file_name", header=T)
@@ -458,13 +475,19 @@ lines(0:max(X\$coverage), fit_p, lwd=3, lty="22", col="black");
 #graph the negative binomial fit
 lines(0:max(X\$coverage), fit_nb, lwd=3, col="black");
 
+dev.off()
+
+
 #print out some statistics
 print(m)
 print(v)
 print(D)
 
-dev.off()
+deletion_propagation_coverage = qnbinom($deletion_propagation_pr_cutoff, size = nb_fit_size, mu = nb_fit_mu)
+print(deletion_propagation_coverage)
 
+new_junction_propagation = qnbinom($new_junction_pr_cutoff, size = nb_fit_size, mu = nb_fit_mu)
+print(new_junction_propagation)
 EOF
 
 	close RSCRIPT;
@@ -490,46 +513,8 @@ EOF
 	$summary->{unique_coverage}->{$seq_id}->{variance} = $lines[3];
 	$summary->{unique_coverage}->{$seq_id}->{dispersion} = $lines[4];
 
-	#calculate a coverage cutoff for deletions based on the fit distribution?
-	#this is the first coverage to give at least the requested probability
-	my $sequence_length = $summary->{sequence_conversion}->{reference_sequences}->{$seq_id}->{length};
-
-	{
-		## testing more stringent cutoff
-		
-		## One-tailed test p=0.05, Bonferroni correction
-		##my $pr_cutoff = 0.05 / $sequence_length;
-		
-		## One-tailed test p=0.01, no Bonferroni correction
-		#my $pr_cutoff = 0.01;
-		
-		## We really want somewhere between these two, try this...
-		my $pr_cutoff = 0.05 / sqrt($sequence_length);
-
-		my $i = 0;
-		while ( Math::CDF::pnbinom($i, $summary->{unique_coverage}->{$seq_id}->{nbinom_size_parameter}, $summary->{unique_coverage}->{$seq_id}->{nbinom_prob_parameter}) < $pr_cutoff ) 
-		{ 
-	#		print "prob $i: " . Math::CDF::pnbinom($i, $summary->{unique_coverage}->{$seq_id}->{nbinom_size_parameter}, $summary->{unique_coverage}->{$seq_id}->{nbinom_prob_parameter}) . "\n";
-			$i++; 
-		}
-	#	print "Chose: $i\n";
-		$summary->{unique_coverage}->{$seq_id}->{deletion_coverage_propagation_cutoff} = $i;	
-	}
-
-
-	{
-		## One-tailed test p=0.05, Bonferroni correction
-		my $pr_cutoff = 1/$sequence_length; # *0.05;
-		my $i = 0;
-		while ( Math::CDF::pnbinom($i, $summary->{unique_coverage}->{$seq_id}->{nbinom_size_parameter}, $summary->{unique_coverage}->{$seq_id}->{nbinom_prob_parameter}) < $pr_cutoff ) 
-		{ 
-	#		print "prob $i: " . Math::CDF::pnbinom($i, $summary->{unique_coverage}->{$seq_id}->{nbinom_size_parameter}, $summary->{unique_coverage}->{$seq_id}->{nbinom_prob_parameter}) . "\n";
-			$i++; 
-		}
-	#	print "Chose: $i\n";
-		$summary->{unique_coverage}->{$seq_id}->{junction_coverage_cutoff} = $i;
-	}
-
+	$summary->{unique_coverage}->{$seq_id}->{deletion_coverage_propagation_cutoff} = $lines[5];
+	$summary->{unique_coverage}->{$seq_id}->{junction_coverage_cutoff} = $lines[6];
 }
 
 sub save_error_file

@@ -596,9 +596,7 @@ sub check_installed
 	my ($self) = @_;
 	
 	## absolutely required
-	$self->{installed}->{PM}->{Bio_Root} = (eval 'require Math::CDF');	
-	
-	$self->{installed}->{PM}->{Math_CDF} = (eval 'require Math::CDF');	
+	$self->{installed}->{PM}->{Bio_Root} = (eval 'require Bio::Root');	
 	$self->{installed}->{SSAHA2} = (`which ssaha2`) ? 1 : 0;
 	
 	## optional

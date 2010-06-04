@@ -1000,19 +1000,21 @@ sub _test_junction
 
 	my $max_min_left = ($max_min_left_per_strand->{'0'} > $max_min_left_per_strand->{'1'}) ? $max_min_left_per_strand->{'0'} : $max_min_left_per_strand->{'1'};
 	my $max_min_right = ($max_min_right_per_strand->{'0'} > $max_min_right_per_strand->{'1'}) ? $max_min_right_per_strand->{'0'} : $max_min_right_per_strand->{'1'};
-	
-	use Math::CDF;	
-	## it is possible for the counts on each strand to be zero because all matches are overlap only
-	my $strand_p_value = Math::CDF::pbinom($count_per_strand->{0}, $count_per_strand->{0}+$count_per_strand->{1}, 0.5);
-	if (defined $strand_p_value)
-	{
-		$strand_p_value = 1-$strand_p_value if ($strand_p_value > 0.5);
-		$strand_p_value = sprintf "%.1e", $strand_p_value; #round immediately
-	}
-	else
-	{
-		$strand_p_value = 'NA';
-	}
+
+
+### We don't even use these currently....
+#	use Math::CDF;	
+#	## it is possible for the counts on each strand to be zero because all matches are overlap only
+#	my $strand_p_value = Math::CDF::pbinom($count_per_strand->{0}, $count_per_strand->{0}+$count_per_strand->{1}, 0.5);
+#	if (defined $strand_p_value)
+#	{
+#		$strand_p_value = 1-$strand_p_value if ($strand_p_value > 0.5);
+#		$strand_p_value = sprintf "%.1e", $strand_p_value; #round immediately
+#	}
+#	else
+#	{
+#		$strand_p_value = 'NA';
+#	}
 	
 	$test_info = {
 		max_left => $max_left,
@@ -1029,7 +1031,7 @@ sub _test_junction
 		max_min_left_plus =>$max_min_left_per_strand->{1},		
 		coverage_minus => $count_per_strand->{0},
 		coverage_plus => $count_per_strand->{1},
-		strand_p_value => $strand_p_value,
+#		strand_p_value => $strand_p_value, ## unused
 		total_non_overlap_reads => $total_non_overlap_reads,
 		score => $score,
 	};
