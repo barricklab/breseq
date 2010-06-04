@@ -3,7 +3,7 @@
 <plist version="1.0">
 <dict>
 	<key>currentDocument</key>
-	<string>Breseq/Settings.pm</string>
+	<string>Breseq/Output.pm</string>
 	<key>documents</key>
 	<array>
 		<dict>
@@ -62,44 +62,44 @@
 			<key>caret</key>
 			<dict>
 				<key>column</key>
-				<integer>21</integer>
+				<integer>25</integer>
 				<key>line</key>
-				<integer>464</integer>
-			</dict>
-			<key>firstVisibleColumn</key>
-			<integer>0</integer>
-			<key>firstVisibleLine</key>
-			<integer>430</integer>
-		</dict>
-		<key>Breseq/AlignmentOutput.pm</key>
-		<dict>
-			<key>caret</key>
-			<dict>
-				<key>column</key>
-				<integer>98</integer>
-				<key>line</key>
-				<integer>681</integer>
+				<integer>354</integer>
 			</dict>
 			<key>columnSelection</key>
 			<false/>
 			<key>firstVisibleColumn</key>
 			<integer>0</integer>
 			<key>firstVisibleLine</key>
-			<integer>655</integer>
+			<integer>339</integer>
 			<key>selectFrom</key>
 			<dict>
 				<key>column</key>
-				<integer>95</integer>
+				<integer>15</integer>
 				<key>line</key>
-				<integer>681</integer>
+				<integer>354</integer>
 			</dict>
 			<key>selectTo</key>
 			<dict>
 				<key>column</key>
-				<integer>100</integer>
+				<integer>36</integer>
 				<key>line</key>
-				<integer>681</integer>
+				<integer>354</integer>
 			</dict>
+		</dict>
+		<key>Breseq/AlignmentOutput.pm</key>
+		<dict>
+			<key>caret</key>
+			<dict>
+				<key>column</key>
+				<integer>39</integer>
+				<key>line</key>
+				<integer>350</integer>
+			</dict>
+			<key>firstVisibleColumn</key>
+			<integer>0</integer>
+			<key>firstVisibleLine</key>
+			<integer>325</integer>
 		</dict>
 		<key>Breseq/CandidateJunctions.pm</key>
 		<dict>
@@ -120,14 +120,14 @@
 			<key>caret</key>
 			<dict>
 				<key>column</key>
-				<integer>0</integer>
+				<integer>22</integer>
 				<key>line</key>
-				<integer>439</integer>
+				<integer>448</integer>
 			</dict>
 			<key>firstVisibleColumn</key>
 			<integer>0</integer>
 			<key>firstVisibleLine</key>
-			<integer>421</integer>
+			<integer>302</integer>
 		</dict>
 		<key>Breseq/Fastq.pm</key>
 		<dict>
@@ -190,30 +190,14 @@
 			<key>caret</key>
 			<dict>
 				<key>column</key>
-				<integer>45</integer>
+				<integer>60</integer>
 				<key>line</key>
-				<integer>160</integer>
+				<integer>760</integer>
 			</dict>
-			<key>columnSelection</key>
-			<false/>
 			<key>firstVisibleColumn</key>
 			<integer>0</integer>
 			<key>firstVisibleLine</key>
-			<integer>127</integer>
-			<key>selectFrom</key>
-			<dict>
-				<key>column</key>
-				<integer>38</integer>
-				<key>line</key>
-				<integer>160</integer>
-			</dict>
-			<key>selectTo</key>
-			<dict>
-				<key>column</key>
-				<integer>61</integer>
-				<key>line</key>
-				<integer>160</integer>
-			</dict>
+			<integer>731</integer>
 		</dict>
 		<key>Breseq/ReferenceSequence.pm</key>
 		<dict>
@@ -244,20 +228,6 @@
 				<key>line</key>
 				<integer>337</integer>
 			</dict>
-		</dict>
-		<key>Breseq/Settings.pm</key>
-		<dict>
-			<key>caret</key>
-			<dict>
-				<key>column</key>
-				<integer>80</integer>
-				<key>line</key>
-				<integer>345</integer>
-			</dict>
-			<key>firstVisibleColumn</key>
-			<integer>0</integer>
-			<key>firstVisibleLine</key>
-			<integer>320</integer>
 		</dict>
 		<key>Breseq/Shared.pm</key>
 		<dict>
@@ -372,7 +342,6 @@
 		<string>Breseq/CandidateJunctions.pm</string>
 		<string>gd_utils.pl</string>
 		<string>Breseq/ErrorCalibration.pm</string>
-		<string>Breseq/Settings.pm</string>
 		<string>Breseq/Shared.pm</string>
 		<string>Breseq/ReferenceSequence.pm</string>
 		<string>fastq_utils.pl</string>
@@ -382,6 +351,6 @@
 	<key>showFileHierarchyDrawer</key>
 	<true/>
 	<key>windowFrame</key>
-	<string>{{292, 44}, {1033, 834}}</string>
+	<string>{{396, 37}, {946, 781}}</string>
 </dict>
 </plist>

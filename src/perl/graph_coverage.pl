@@ -93,9 +93,23 @@ GetOptions(
 	'verbose|v=s' => \$verbose,
 );
 
-$output_deletions_file .= ".$drawing_format";
-$output_overview_file .= ".$drawing_format";
-$output_file .= ".$drawing_format";
+my $drawing_file_ending = $drawing_format;
+my $drawing_R_command = $drawing_format;
+my $drawing_options;
+if ($drawing_format eq 'pdf')
+{
+	$drawing_options = "height=5, width=8";
+}
+elsif ($drawing_format eq 'png')
+{
+	$drawing_options = "height=450, width=900, type = \"png16m\", units = \"px\", res = 72, pointsize=18, taa=4, gaa=2";
+	$drawing_file_ending = 'png';
+	$drawing_R_command = 'bitmap';
+}
+
+$output_deletions_file .= ".$drawing_file_ending";
+$output_overview_file .= ".$drawing_file_ending";
+$output_file .= ".$drawing_file_ending";
 
 
 pod2usage(1) if $help;
@@ -217,7 +231,7 @@ plot_coverage <- function(cov, del_start, del_end, my_title, genes)
 
 #	options(scipen = 15)
 
-	par(mar=c(6.1,4.1,1.2,0.2));
+	par(mar=c(5.1,4.1,1.2,0.5));
 #	par(mar=c(8.1,4.1,4.1,2.1));
 	plot(0:10, 0:10, type="n", lty="solid", ylim=c(0, maxy), xlim=c(pos[start], pos[end]), lwd=2, xaxs="i", yaxs="i", xlab="Coordinate in Reference Genome", ylab="Read Coverage Depth") #, main=my_title )
 #	arrows(pos[del_start],maxy,pos[del_start], 0, length=0, col="black", lwd=3)
@@ -238,7 +252,7 @@ plot_coverage <- function(cov, del_start, del_end, my_title, genes)
 plot_overview <- function(cov, start, end, my_title, genes)
 {
 	maxy=$max_unique_coverage;
-	par(mar=c(6.1,4.1,1.2,0.2));
+	par(mar=c(5.1,4.1,1.2,0.5));
 	#	par(mar=c(8.1,4.1,4.1,2.1));	
 	plot(cov\$pos[start:end],cov\$redundant_top_cov[start:end]+cov\$redundant_bot_cov[start:end], type="s", col="red", lty="solid", lwd=1, xaxs="i", yaxs="i", ylim=c(0,maxy), xlab="coordinate in reference sequence", ylab="read coverage depth") #, main=my_title )
 	mtext(genes, side=1, col="blue", cex=0.7, outer=TRUE, line=-2)	
@@ -280,7 +294,7 @@ END
 	
 	if (!$output_path)
 	{
-		print R_SCRIPT "$drawing_format(\"$output_deletions_file\", $drawing_options)\n";
+		print R_SCRIPT "$drawing_R_command(\"$output_deletions_file\", $drawing_options)\n";
 	}
 		
 	my $i=1;
@@ -291,10 +305,10 @@ END
 		$interval->{genes} = "" if (!defined $interval->{genes});
 		$interval->{genes} =~ s/(.{80,}?)\s+/$1\\n/g;
 		
-		my $deletion_title = "$output_path/$i\.$drawing_format";
-		$deletion_title = "$output_path/$seq_id.$i\.$drawing_format" if ($seq_id);
+		my $deletion_title = "$output_path/$i\.$drawing_file_ending";
+		$deletion_title = "$output_path/$seq_id.$i\.$drawing_file_ending" if ($seq_id);
 		
-		print R_SCRIPT "$drawing_format(\"$deletion_title\", $drawing_options)\n" if ($output_path);
+		print R_SCRIPT "$drawing_R_command(\"$deletion_title\", $drawing_options)\n" if ($output_path);
 		my $title = "Predicted Deletion $interval->{start}-$interval->{end}";
 		$title = "Predicted Deletion $seq_id:$interval->{start}-$interval->{end}" if ($seq_id);		
 		print R_SCRIPT "plot_coverage(cov,$interval->{start},$interval->{end}, \"$title\", \"$interval->{genes}\")\n";
@@ -329,10 +343,10 @@ cov <- downsample(cov, downsample_by)
 
 END
 
-		my $coverage_title = "$output_path/overview.$drawing_format";
-		$coverage_title = "$output_path/$seq_id\.overview.$drawing_format" if ($seq_id);
+		my $coverage_title = "$output_path/overview.$drawing_file_ending";
+		$coverage_title = "$output_path/$seq_id\.overview.$drawing_file_ending" if ($seq_id);
 
-		print R_SCRIPT "$drawing_format(\"$coverage_title\", $drawing_options)\n" if ($output_path);
+		print R_SCRIPT "$drawing_R_command(\"$coverage_title\", $drawing_options)\n" if ($output_path);
 		print R_SCRIPT "plot_overview(cov,1,length(cov\$pos), \"Genome Overview\", \"\")\n";
 		print R_SCRIPT "dev.off()\n" if ($output_path);
 
