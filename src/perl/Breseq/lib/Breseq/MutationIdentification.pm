@@ -852,12 +852,12 @@ sub _predict_polymorphism
 
 	my $likelihood_ratio_test_value = -2*log(10)*($log10_likelihood_given_ref_base->{$first_base} - $log10_likelihood_of_two_base_model);
 	my $chi_squared_pr = 'ND';
-	if ($settings->{installed}->{Math_GSL_CDF})
-	{
-		use Math::GSL::CDF;
-		$chi_squared_pr = Math::GSL::CDF::gsl_cdf_chisq_Q($likelihood_ratio_test_value, 1);
-	}
-	else ## this doesn't require installing GSL (but it is pure Perl, and thus slow)
+#	if ($settings->{installed}->{Math_GSL_CDF})
+#	{
+#		require 'Math::GSL::CDF';
+#		$chi_squared_pr = Math::GSL::CDF::gsl_cdf_chisq_Q($likelihood_ratio_test_value, 1);
+#	}
+#	else ## this doesn't require installing GSL (but it is pure Perl, and thus slow)
 	{
 		use Statistics::Distributions;
 		$Statistics::Distributions::SIGNIFICANT = 50; ## we need many more significant digits than the default 5
