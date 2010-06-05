@@ -48,6 +48,8 @@ clean :
 	
 	rm -rf $(STAGEDIR)
 	
+	tests/test.sh clean tests/	
+	
 install :
 	bjam install
 
@@ -61,4 +63,4 @@ install :
 	make install	
 	
 test:
-	./bin/test.sh test tests/
+	tests/test.sh test tests/
