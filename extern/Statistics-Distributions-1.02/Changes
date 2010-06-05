@@ -1,0 +1,29 @@
+Revision history for Perl extension Statistics::Distributions.
+
+1.02  Wed Oct  1 22:19:22 2003
+	- minor mistake in documentation corrected.
+1.01  Thu Mar 27 01:03:14 2003
+	- only cosmetics, final release as there were no more bug reports 
+	  for more than one year.
+	- copyright notice added
+0.07  Sat Jun 23 01:49:33 2001
+        - repaired bug in fprob which also led to errors (negative log)
+	  in fdistr
+	- repaired bug in tprob  
+0.06  Wed Feb 28 17:46:41 2001
+          thanks for changes to Matthias Trautner Kromann:
+	- repaired bug in tdistr (for p=.5 and p<0.5)
+	- use of local variables, simplification and nice formating
+0.05  Wed Sep 27 20:27:04 2000
+        - tprob and fprob (upper probability of t and F distribution) added
+	- removed bug from fdistr
+0.04  Wed Jun 28 18:12:40 2000
+	- chisqrprob (upper probability of chi-square distribution) added
+	- significant digits defined at the beginning	      
+0.03  Fri May 19 14:39:46 2000
+        - uprob (upper probability of u distribution) added
+0.02  Fri May 12 17:01:48 2000
+        - only cosmetic changes
+0.01  Tue May  2 17:37:48 2000
+	- original version; created by h2xs 1.19
+

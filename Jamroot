@@ -2,19 +2,19 @@ project breseq ;
 
 use-project /breseq : src/c/libbreseq ;
 use-project /error_count : src/c/error_count ;
-use-project /samtools : src/c/samtools-0.1.7a ;
+use-project /samtools : extern/samtools-0.1.7a ;
 
 alias all : /error_count//error_count /breseq//libbreseq ;
 build-project all ;
 
 alias install : install-bin install-lib ;
-explicit install install-bin install-lib ;
+explicit install install-bin install-lib install-libbam-for-perl ;
 
 install install-bin
     : /error_count//error_count
     : <install-dependencies>on
         <install-type>EXE
-        <location>bin
+        <location>stage/bin
     ;
 
 install install-lib
@@ -22,5 +22,12 @@ install install-lib
         /breseq//libbreseq
     : <install-dependencies>on
         <install-type>LIB
-        <location>lib
+        <location>stage/lib
+    ;
+
+install install-libbam-for-perl
+    : /samtools//libbam
+    : <install-dependencies>on
+        <install-type>LIB
+        <location>extern/samtools-0.1.7a
     ;

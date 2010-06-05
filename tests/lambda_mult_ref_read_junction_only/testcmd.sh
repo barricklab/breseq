@@ -1,7 +1,7 @@
 #!/bin/bash
 
 SELF=`dirname ${BASH_SOURCE}`
-. ${SELF}/../../etc/common.sh
+. ${SELF}/../common.sh
 
 testcmd() {
     ${BRESEQ} \
