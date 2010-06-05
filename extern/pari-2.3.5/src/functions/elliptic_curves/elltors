@@ -1,0 +1,8 @@
+Function: elltors
+Section: elliptic_curves
+C-Name: elltors0
+Prototype: GD0,L,
+Help: elltors(e,{flag=0}): torsion subgroup of elliptic curve e: order,
+ structure, generators. If flag = 0, use Doud's algorithm; if flag = 1, use
+ Lutz-Nagell
+

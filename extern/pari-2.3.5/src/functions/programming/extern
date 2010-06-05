@@ -1,0 +1,8 @@
+Function: extern
+Class: gp
+Section: programming
+C-Name: extern0
+Prototype: s
+Help: extern(cmd): execute shell command cmd, and feeds the result to GP (as
+ if loading from file)
+

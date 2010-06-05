@@ -1,0 +1,10 @@
+Function: trap
+Section: programming
+C-Name: trap0
+Prototype: D"",r,DIDI
+Help: trap({err}, {rec}, {seq}): try to execute seq, trapping error err (all
+ of them if err ommitted); sequence rec is executed if the error occurs and
+ is the result of the command. When seq is omitted, define rec as a default
+ handler for error err (a break loop will be started if rec omitted). If rec
+ is the empty string "" pop out the last default handler
+

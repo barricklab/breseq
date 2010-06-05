@@ -1,0 +1,37 @@
+% $Id: appb.tex 6453 2004-12-13 11:54:28Z kb $
+% Copyright (c) 2000  The PARI Group
+%
+% This file is part of the PARI/GP documentation
+%
+% Permission is granted to copy, distribute and/or modify this document
+% under the terms of the GNU General Public License
+\appendix{A Sample program and Makefile}
+
+We assume that you have installed the PARI library and include files as
+explained in Appendix A or in the installation guide. If you chose
+differently any of the directory names, change them accordingly in the
+Makefiles.
+
+If the program example that we have given is in the file \kbd{extgcd.c}, then
+a sample Makefile might look as follows. Note that the actual file {\tt
+examples/Makefile} is more elaborate and you should have a look at it if you
+intend to use {\tt install()} on custom made functions, see
+\secref{se:install}.
+
+\bprog
+CC = cc
+INCDIR = @includedir
+LIBDIR = @libdir
+CFLAGS = -O -I$(INCDIR) -L$(LIBDIR)
+
+all:  extgcd
+
+extgcd:  extgcd.c
+      $(CC) $(CFLAGS) -o extgcd extgcd.c -lpari -lm
+@eprog
+
+\noindent We then give the listing of the program \kbd{examples/extgcd.c}
+seen in detail in \secref{se:prog}.
+
+\bprogfile{../examples/extgcd.c}
+\vfill\eject

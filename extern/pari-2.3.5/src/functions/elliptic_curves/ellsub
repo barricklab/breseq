@@ -1,0 +1,7 @@
+Function: ellsub
+Section: elliptic_curves
+C-Name: subell
+Prototype: GGG
+Help: ellsub(e,z1,z2): difference of the points z1 and z2 on elliptic curve
+ e
+

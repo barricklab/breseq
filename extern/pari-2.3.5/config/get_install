@@ -1,0 +1,58 @@
+# Exported variables
+_install_list="prefix share_prefix bindir datadir emacsdir includedir libdir mandir sysdatadir "
+
+dflt=$prefix; rep=
+test "$fastread" = yes || cat <<EOT
+==========================================================================
+By default, gp will be installed in $dflt/bin, manual pages under
+  $dflt/man, etc..., with $dflt as prefix for all installation directories.
+  If you wish to have binaries under /bin but manual pages under
+  /usr/local/man, that's ok: you will be prompted separately for each of the
+  installation directories, the prefix being only used to set the defaults.
+  (You will be prompted before the actual installation is done.)
+The names of executables and libraries contain their version number $version.
+  A symbolic link to gp or libpari.[a/so] will point to the most recent
+  installation of GP/PARI.
+EOT
+echo $n "Installation prefix ? $c"
+. ./myread; prefix=$ans
+
+if test -z "$share_prefix"; then 
+  share_prefix=$prefix/share
+fi
+echo $n "...for architecture-independent files (share-prefix) ? $c"
+dflt=$share_prefix; . ./myread; share_prefix=$ans
+
+dfltman=$share_prefix/man/man1
+dfltemacs=$share_prefix/emacs/site-lisp/pari
+dfltdata=$share_prefix/pari
+
+echo "Installation directories for:"
+echo $n ..."executables (gp, gphelp) ? $c"
+dflt=${dfltbindir:-$prefix/bin}; . ./myread; bindir=$ans
+
+echo $n ..."libraries (libpari) ? $c"
+dflt=${dfltlibdir:-$prefix/lib}; . ./myread; libdir=$ans
+
+echo $n ..."include files ? $c"
+dflt=${dlftincludedir:-$prefix/include}; . ./myread; includedir=$ans
+
+echo $n ..."manual pages ? $c"
+dflt=${dfltmandir:-$dfltman}; . ./myread; mandir=$ans
+
+echo $n ..."emacs macros ? $c"
+dflt=${dfltemacsdir:-$dfltemacs}; . ./myread; emacsdir=$ans
+
+echo $n ..."other system-dependant data ? $c"
+dflt=${dfltsysdatadir:-$prefix/lib/pari}; . ./myread; sysdatadir=$ans
+
+echo $n ..."other system-independant data ? $c"
+dflt=${dfltdatadir:-$dfltdata}; . ./myread; datadir=$ans
+
+for i in prefix share_prefix bindir libdir includedir mandir emacsdir sysdatadir datadir ; do
+  eval "dflt=\"\$$i\""
+  case $dflt in 
+      /*) ;;
+       *) eval "$i='$TOP/$dflt'";;
+  esac
+done

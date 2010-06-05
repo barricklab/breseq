@@ -1,0 +1,7 @@
+Function: nffactormod
+Section: number_fields
+C-Name: nffactormod
+Prototype: GGG
+Help: nffactormod(nf,pol,pr): factorize polynomial pol modulo prime ideal pr
+ in number field nf
+

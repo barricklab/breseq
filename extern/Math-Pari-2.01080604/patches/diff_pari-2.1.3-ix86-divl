@@ -1,0 +1,11 @@
+--- ./src/kernel/ix86/level0.h-pre	Fri Nov  3 13:00:24 2000
++++ ./src/kernel/ix86/level0.h	Mon Apr  8 15:41:16 2002
+@@ -173,7 +173,7 @@ extern ulong hiremainder;
+ ({ ulong __value, __arg1 = (a), __arg2 = (b); \
+    __asm__ ("divl %4" \
+         : "=a" /* %eax */ (__value), "=d" /* %edx */ (hiremainder) \
+-        : "0" /* %eax */ (__arg1), "1" /* %edx */ (hiremainder), "g" (__arg2)); \
++        : "0" /* %eax */ (__arg1), "1" /* %edx */ (hiremainder), "mr" /* memory or general register */ (__arg2)); \
+    __value; \
+ })
+ 

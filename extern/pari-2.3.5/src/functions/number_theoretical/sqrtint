@@ -1,0 +1,8 @@
+Function: sqrtint
+Section: number_theoretical
+C-Name: racine
+Prototype: G
+Help: sqrtint(x): integer square root of x (x integer)
+Description: 
+ (gen):int racine($1)
+

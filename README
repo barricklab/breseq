@@ -1,2 +1,13 @@
 Please see the online documentation at:
 http://www.barricklab.org/twiki/bin/view/Lab/ToolsBacterialGenomeResequencing
+
+
+==== Installation Instructions ====
+
+== Mac OS 10.6 (Snow Leopard) ==
+
+sudo port install boost
+sudo port install boost-build
+sudo port install pari
+
+create the file "user-config.jam" in your home directory

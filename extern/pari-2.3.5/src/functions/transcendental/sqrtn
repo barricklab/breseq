@@ -1,0 +1,8 @@
+Function: sqrtn
+Section: transcendental
+C-Name: gsqrtn
+Prototype: GGD&p
+Help: sqrtn(x,n,{&z}): nth-root of x, n must be integer. If present, z is
+ set to a suitable root of unity to recover all solutions. If it was not
+ possible, z is set to zero
+

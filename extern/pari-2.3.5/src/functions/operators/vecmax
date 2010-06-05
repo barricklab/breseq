@@ -1,0 +1,6 @@
+Function: vecmax
+Section: operators
+C-Name: vecmax
+Prototype: G
+Help: vecmax(x): maximum of the elements of the vector/matrix x
+

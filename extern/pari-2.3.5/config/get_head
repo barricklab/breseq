@@ -1,0 +1,5 @@
+if (head -n 1 < /dev/null >/dev/null 2>&1); then
+  head='head -n'
+else
+  head='head -'
+fi

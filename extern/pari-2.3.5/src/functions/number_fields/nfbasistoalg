@@ -1,0 +1,7 @@
+Function: nfbasistoalg
+Section: number_fields
+C-Name: basistoalg
+Prototype: GG
+Help: nfbasistoalg(nf,x): transforms the column vector x on the integral
+ basis into an algebraic number
+

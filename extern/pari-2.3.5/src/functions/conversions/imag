@@ -1,0 +1,6 @@
+Function: imag
+Section: conversions
+C-Name: gimag
+Prototype: G
+Help: imag(x): imaginary part of x
+

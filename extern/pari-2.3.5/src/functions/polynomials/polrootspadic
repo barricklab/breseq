@@ -1,0 +1,6 @@
+Function: polrootspadic
+Section: polynomials
+C-Name: rootpadic
+Prototype: GGL
+Help: polrootspadic(x,p,r): p-adic roots of the polynomial x to precision r
+

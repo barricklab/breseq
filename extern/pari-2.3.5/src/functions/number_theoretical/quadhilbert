@@ -1,0 +1,10 @@
+Function: quadhilbert
+Section: number_theoretical
+C-Name: quadhilbert
+Prototype: GDGp
+Help: quadhilbert(D,{pq}): relative equation for the Hilbert class field
+ of the quadratic field of discriminant D (which can also be a bnf).
+ If D<0, pq (if supplied) is a 2-component vector [p,q], where p,q are the
+ prime numbers needed for Schertz's method. In that case, return 0 if [p,q]
+ not suitable.
+

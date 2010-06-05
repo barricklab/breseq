@@ -1,0 +1,14 @@
+Function: ploth
+Class: highlevel
+Section: graphic
+C-Name: ploth
+Prototype: V=GGIpD0,M,D0,L,\nParametric|1; Recursive|2; no_Rescale|4; no_X_axis|8; no_Y_axis|16; no_Frame|32; no_Lines|64; Points_too|128; Splines|256; no_X_ticks|512; no_Y_ticks|1024; Same_ticks|2048
+Help: ploth(X=a,b,expr,{flags=0},{n=0}): plot of expression expr, X goes
+ from a to b in high resolution. Both flags and n are optional. Binary digits
+ of flags mean: 1=Parametric, 2=Recursive, 4=no_Rescale, 8=no_X_axis,
+ 16=no_Y_axis, 32=no_Frame, 64=no_Lines (do not join points), 128=Points_too
+ (plot both lines and points), 256=Splines (use cubic splines),
+ 512=no_X_ticks, 1024= no_Y_ticks, 2048=Same_ticks (plot all ticks with the
+ same length). n specifies number of reference points on the graph (0=use
+ default value). Returns a vector for the bounding box
+

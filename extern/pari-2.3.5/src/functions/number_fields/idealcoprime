@@ -1,0 +1,7 @@
+Function: idealcoprime
+Section: number_fields
+C-Name: idealcoprime
+Prototype: GGG
+Help: idealcoprime(nf,x,y): gives an element b in nf such that b. x is an
+ integral ideal coprime to the integral ideal y
+

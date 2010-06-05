@@ -1,0 +1,8 @@
+Function: galoisisabelian
+Section: number_fields
+C-Name: galoisisabelian
+Prototype: GD0,L,
+Help: galoisisabelian(gal,{flag=0}): gal being as output by galoisinit,
+ return 0 if gal is not abelian, the HNF matrix of gal over gal.gen if
+ flag=0, 1 if flag is 1, and the SNF of gal is flag=2
+

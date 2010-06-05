@@ -1,0 +1,11 @@
+Function: vecextract
+Section: linear_algebra
+C-Name: extract0
+Prototype: GGDG
+Help: vecextract(x,y,{z}): extraction of the components of the matrix or
+ vector x according to y and z. If z is omitted, y designs columns, otherwise
+ y corresponds to rows and z to columns. y and z can be vectors (of indices),
+ strings (indicating ranges as in "1..10") or masks (integers whose binary
+ representation indicates the indices to extract, from left to right 1, 2, 4,
+ 8, etc.)
+

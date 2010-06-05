@@ -292,7 +292,8 @@ sub identify_candidate_junctions
 	}
 	
 	## create SAM faidx
-	Breseq::Shared::system("samtools faidx $candidate_junction_fasta_file_name") if (scalar @combined_candidate_junctions > 0);
+	my $samtools = $settings->ctool('samtools');
+	Breseq::Shared::system("$samtools faidx $candidate_junction_fasta_file_name") if (scalar @combined_candidate_junctions > 0);
 	
 	$summary->{candidate_junction} = $hcs;
 }

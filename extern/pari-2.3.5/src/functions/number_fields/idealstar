@@ -1,0 +1,14 @@
+Function: idealstar
+Section: number_fields
+C-Name: idealstar0
+Prototype: GGD1,L,
+Help: idealstar(nf,I,{flag=1}): gives the structure of (Z_K/I)^*. flag is
+ optional, and can be 0: simply gives the structure as a 3-component vector v
+ such that v[1] is the order (i.e. eulerphi(I)), v[2] is a vector of cyclic
+ components, and v[3] is a vector giving the corresponding generators. If
+ flag=1 (default), gives idealstarinit, i.e. a 6-component vector
+ [I,v,fa,f2,U,V] where v is as above without the generators, fa is the prime
+ ideal factorisation of I and f2, U and V are technical but essential to work
+ in (Z_K/I)^*. Finally if flag=2, same as with flag=1 except that the
+ generators are also given
+

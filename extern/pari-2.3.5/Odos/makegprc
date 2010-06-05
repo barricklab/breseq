@@ -1,0 +1,24 @@
+print "Creating a .gprc\n";
+$d = join(' ', @ARGV);
+$d =~ s,\\,/,g;
+$od= $d;
+$d =~ s/ /\\\\ /g;
+
+if (-f ".gprc") {
+  print "Renaming existing .gprc to .gprc.bak\n";
+  rename(".gprc", ".gprc.bak");
+
+}
+
+open(OUT, "> .gprc");
+print OUT << "EOT";
+  colors = \"boldfg\"
+  datadir = \"$od\"
+  help = \"$d/perl.exe $d/gphelp -cu 6\"
+  prettyprinter = \"$d/perl.exe $d/tex2mail -TeX -noindent -ragged -by_par\"
+  prompt = \"(%H:%M) gp > \"
+EOT
+;
+close(OUT);
+print "Done.\n";
+sleep(2);

@@ -1,0 +1,26 @@
+if test "$fastread" = yes; then
+  echo "[$dflt]"
+  ans=$dflt
+else
+  if test -n "$dflt"; then echo $n "[$dflt] $c"; fi
+  while :; do
+    read ans
+    case "$ans" in
+    '')
+      ans="$dflt"
+      break
+      ;;
+    !*)
+      ans=`echo "$ans"|cut -c2-`
+      break
+      ;;
+    *)
+      if test -z "$rep"; then break; fi
+      for i in $rep; do
+        if test "$i" = "$ans"; then break 2; fi
+      done
+      echo $n "***  Please try something else : [$rep] $c"
+      ;;
+    esac
+  done
+fi

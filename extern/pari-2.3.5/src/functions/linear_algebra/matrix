@@ -1,0 +1,8 @@
+Function: matrix
+Section: linear_algebra
+C-Name: matrice
+Prototype: GGDVDVDI
+Help: matrix(m,n,{X},{Y},{expr=0}): mXn matrix of expression expr, the row
+ variable X going from 1 to m and the column variable Y going from 1 to n. By
+ default, fill with 0s
+

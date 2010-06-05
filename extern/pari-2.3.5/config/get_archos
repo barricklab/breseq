@@ -1,0 +1,35 @@
+# Testing Architectures. Try uname to provide a default, then ask user.
+#
+if test -z "$target_host"; then 
+  target_host=`./arch-osname`
+fi
+arch=`echo "$target_host" | sed -e 's/\(.*\)-.*/\1/'`
+osname=`echo "$target_host" | sed -e 's/.*-\(.*\)/\1/'`
+
+if test "$fastread" != yes; then
+  cat << EOM
+==========================================================================
+Currently supported architectures:
+EOM
+  rep='none sparcv8_super sparcv8_micro sparcv9 ix86 i386 i486 i586 i686
+       alpha x86_64 arm fx2800 hppa ia64 mips m68k ppc s390'
+  . ./display
+  echo $n ..."Which of these apply, if any ? $c"
+  dflt=$arch; . ./myread; arch=$ans
+fi
+
+#
+#   Test OS, using the info uname provided.
+#
+if test "$fastread" != yes; then
+  cat << EOM
+==========================================================================
+I know of the following Operating Systems
+EOM
+  rep='os2 freebsd netbsd cygwin linux hpux aix osf1 solaris sunos nextstep concentrix irix';
+  . ./display
+  echo $n ..."Any of these apply ? $c"
+  dflt=$osname; . ./myread
+  osname=$ans
+fi
+

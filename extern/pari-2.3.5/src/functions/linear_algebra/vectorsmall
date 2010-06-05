@@ -1,0 +1,8 @@
+Function: vectorsmall
+Section: linear_algebra
+C-Name: vecteursmall
+Prototype: GDVDI
+Help: vectorsmall(n,{X},{expr=0}): VECSMALL with n components of expression
+ expr (X ranges from 1 to n) which must be small integers. By default, fill
+ with 0s
+

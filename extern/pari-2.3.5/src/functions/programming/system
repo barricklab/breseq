@@ -1,0 +1,8 @@
+Function: system
+Class: gp
+Section: programming
+C-Name: system0
+Prototype: vs
+Help: system(a): a being a string, execute the system command a (not valid
+ on every machine)
+

@@ -1,0 +1,9 @@
+Function: idealappr
+Section: number_fields
+C-Name: idealappr0
+Prototype: GGD0,L,
+Help: idealappr(nf,x,{flag=0}): x being a fractional ideal, gives an element
+ b such that v_p(b)=v_p(x) for all prime ideals p dividing x, and v_p(b)>=0
+ for all other p. If (optional) flag is non-null x must be a prime ideal
+ factorization with possibly zero exponents
+

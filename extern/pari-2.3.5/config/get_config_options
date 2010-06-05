@@ -1,0 +1,211 @@
+# Version number and patch level.
+. ./version
+patchlevel_verbose=
+if test -d CVS -a $status = development; then
+ status="$status CHANGES-"`$head 1 "$TOP/CHANGES" | awk '{print $4}'`
+ patchlevel_verbose="[ $status ]"
+fi
+
+version=$VersionMajor.$VersionMinor
+pari_release="$version.$patch"
+if test `expr $VersionMinor % 2` = 1; then
+  pari_release_verbose="$pari_release (STABLE)"
+else
+  pari_release_verbose="$pari_release (DEVELOPMENT VERSION)"
+fi
+echo "Configuring pari-$pari_release_verbose $patchlevel_verbose"
+
+# Processing Options
+dflt_conf_file=pari.cfg
+fastread=yes
+config_file=
+optimization=full
+target_host=
+which_graphic_lib=auto
+readline_enabledp=nil
+share_prefix=
+prefix=/usr/local
+test -n "$GP_INSTALL_PREFIX" && prefix=$GP_INSTALL_PREFIX
+
+while test $# -gt 0; do
+  case "$1" in
+  -l|--load) shift; initfile=$1;
+     cd "$TOP"
+     PATH=.:$PATH; export PATH
+     if test -z "$1";then
+       tmp_host=`$config_dir/arch-osname`
+       arch=`echo "$tmp_host" | sed -e 's/\(.*\)-.*/\1/'`
+       osname=`echo "$tmp_host" | sed -e 's/.*-\(.*\)/\1/'`
+       objdir=O$osname-$arch;
+       initfile=$objdir/$dflt_conf_file;
+     fi
+     if test -d "$initfile"; then
+       initfile="$initfile/pari.cfg"
+     fi
+     if test -r "$initfile"; then
+       . $initfile
+       if test ! -d $objdir; then mkdir $objdir; fi
+       . $config_dir/extract_files
+       exit 0
+     else
+       echo "Cannot read config file \"$initfile\"." >&2
+       exit 1
+     fi;;
+  -p|-prefix)   shift; prefix=$1;;
+  --prefix=*|--prefi=*|--pref=*|--pre=*|--pr=*|--p=*)
+               prefix=`echo "$1" | sed -e 's/[-a-z]*=//'`;;
+  --share-prefix=*)
+               share_prefix=`echo "$1" | sed -e 's/[-a-z]*=//'`;;
+  --bindir=*) dfltbindir=`echo "$1" | sed -e 's/[-a-z]*=//'`;;
+  --datadir=*) dfltdatadir=`echo "$1" | sed -e 's/[-a-z]*=//'`;;
+  --emacsdir=*) dfltemacsdir=`echo "$1" | sed -e 's/[-a-z]*=//'`;;
+  --includedir=*) dfltincludedir=`echo "$1" | sed -e 's/[-a-z]*=//'`;;
+  --libdir=*) dfltlibdir=`echo "$1" | sed -e 's/[-a-z]*=//'`;;
+  --mandir=*) dfltmandir=`echo "$1" | sed -e 's/[-a-z]*=//'`;;
+  --sysdatadir=*) dfltsysdatadir=`echo "$1" | sed -e 's/[-a-z]*=//'`;;
+  --time=*) timing_fun=`echo "$1" | sed -e 's/[-a-z]*=//'`;;
+  --host=*) target_host=`echo "$1" | sed -e 's/[-a-z]*=//'`;;
+  --kernel=*) kernel=`echo "$1" | sed -e 's/[-a-z]*=//'`;;
+  --builddir) dfltobjdir=auto;;
+  --builddir=*) dfltobjdir=`echo "$1" | sed -e 's/[-a-z]*=//'`;;
+  -a|-ask|--ask)     fastread=no;;
+  -g)          optimization=debugging;;
+  -pg)         optimization=profiling;;
+  -h|-help|--help|-\?)error=true;;
+  -v|-verbhelp|--verbhelp)error=verb;;
+  -s|--static) static=y;;
+  -graphic|--graphic) shift; which_graphic_lib=$1;;
+  --graphic=*|--graphi=*|--graph=*|--grap=*|--gra=*|--gr=*|--g=*)
+	       which_graphic_lib=`echo "$1" | sed -e 's/[-a-z]*=//'`;;
+
+  --without-readline|--with-readline=no) without_readline=yes ;;
+  --with-readline) with_readline=yes ;;
+  --with-readline=*)
+      with_readline=`echo "$1" | sed -e 's/[-a-z]*=//'` ;;
+  --with-readline-lib=*)
+      with_readline_lib=`echo "$1" | sed -e 's/[-a-z]*=//'` ;;
+  --with-readline-include=*)
+      with_readline_include=`echo "$1" | sed -e 's/[-a-z]*=//'` ;;
+
+  --without-gmp|--with-gmp=no) without_gmp=yes ;;
+  --with-gmp) with_gmp=yes ;;
+  --with-gmp=*)
+      with_gmp=`echo "$1" | sed -e 's/[-a-z]*=//'` ;;
+  --with-gmp-lib=*)
+      with_gmp_lib=`echo "$1" | sed -e 's/[-a-z]*=//'` ;;
+  --with-gmp-include=*)
+      with_gmp_include=`echo "$1" | sed -e 's/[-a-z]*=//'` ;;
+
+  --with-ncurses-lib=*|--with-ncurses=*)
+      with_ncurses_lib=`echo "$1" | sed -e 's/[-a-z]*=//'` ;;
+
+  --with-qt) with_qt=yes ;;
+  --with-qt=*)
+      with_qt=`echo "$1" | sed -e 's/[-a-z]*=//'` ;;
+
+  --with-fltk) with_fltk=yes ;;
+  --with-fltk=*)
+      with_fltk=`echo "$1" | sed -e 's/[-a-z]*=//'` ;;
+  *) echo "*** Unrecognized option $1." >&2; error=true;;
+  esac
+  shift
+done
+# Convert relative paths to absolute.
+# Variables that can be set interactively should not be listed here,
+# see get_install.
+for i in with_readline with_readline_lib with_readline_include \
+         with_gmp with_gmp_lib with_gmp_include \
+         with_ncurses_lib with_qt with_fltk ; do
+  eval "dflt=\"\$$i\""
+  case $dflt in 
+    ''|yes|/*) ;; 
+            *) eval "$i='$TOP/$dflt'";;
+  esac
+done
+# The behaviour of $prefix/lib --> '//lib' is implementation-dependent
+case "$prefix" in /) prefix=;; esac
+case "$share_prefix" in /) prefix=;; esac
+
+case "$error" in
+true) cat >&2 <<EOT
+Usage: Configure [-ask|-help|-g|-pg] [ --load <filename> ] [ --prefix=<dir> ]
+
+Options: some names can be abbreviated to one character (e.g -h = -help)
+-a, --ask        interactive configuration
+-h, --help       this message
+-l, --load       skip Configure and specify a default config file
+-s, --static     build static GP binary only
+-v, --verbhelp   a longer help message
+Build Options:
+  --host=<arch-osname>  target achitecture
+  --kernel=<kern>       kernel used
+  --graphic=<gr>        graphic library used (default X11) (none X11 Qt fltk)
+  --time=<fun>          timing function to use (getrusage times ftime)
+  --builddir=<dir>      directory where the object files will be created
+Additional developer options:
+  -g              creates debugging version (in Oxxx.dbg)
+  -pg             creates profiling version (in Oxxx.prf)
+
+Installation directories:
+  --prefix=<dir>        install files in <dir> (default $prefix)
+  --share-prefix=<dir>  as 'prefix', for architecture independent files
+  --bindir=<dir>        for binaries
+  --emacsdir=<dir>      for emacs macros
+  --includedir=<dir>    for C header files
+  --libdir=<dir>        for libraries
+  --mandir=<dir>        for manual pages
+  --sysdatadir=<dir>    for architecture-dependent data
+  --datadir=<dir>       for architecture-independent data 
+
+Optional libraries:
+  --without-readline          do not link with GNU readline
+  --with-readline[=DIR]       use GNU readline [prefix for readline files]
+  --with-readline-include=DIR specify location of readline headers
+  --with-readline-lib=DIR     specify location of readline libs
+  --with-ncurses-lib=DIR      specify location of ncurses lib (for readline)
+
+  --without-gmp               use the native kernel instead of GNU MP
+  --with-gmp[=DIR]            use the GMP kernel [prefix for gmp files]
+  --with-gmp-include=DIR      specify location of gmp headers
+  --with-gmp-lib=DIR          specify location of gmp libs
+
+  --with-qt[=DIR]        use the Qt graphical library [prefix for Qt dir.]
+  --with-fltk[=DIR]      use the FLTK graphical library [prefix for FLTK dir.]
+
+EOT
+exit 1
+;;
+verb) cat >&2 <<EOT
+Architecture, operating system and asm kernel.
+  Configure tries to detect what is the architecture of the machine (CPU type)
+  and what operating system it is running. Then, it decides whether an asm
+  kernel exists and should be used. You can override this with Configure -ask.
+Which compiler will be used ?
+  Depending on the machine (architecture and operating system) and on what is
+  found in the path, a compiler is automatically chosen. If you set the
+  environment variable CC before typing Configure, it will be used instead.
+  Typeset the installation help ('tex doc/INSTALL.tex') for more details.
+EOT
+exit 1
+;;
+esac
+
+test "$fastread" = yes || cat <<EOT
+==========================================================================
+             Beginning configuration questions for GP/PARI.
+
+You will be asked some questions about your system. Most of the time, a list
+of acceptable answers will be supplied as well as a default between brackets.
+Type a carriage return ('Enter') to accept these defaults.
+
+Though the present script strives to prevent any fatal mistake on your part,
+there is currently no easy way out if you make one. Your best bet is to press
+Ctrl-C, then start again.  Another possibility is to wait till the questions
+end, edit the file "Oxxx/$dflt_conf_file", then run
+
+      Configure --load Oxxx/$dflt_conf_file
+
+(which can be abbreviated to simply "Configure -l", provided your architecture
+is correctly detected)
+==========================================================================
+EOT

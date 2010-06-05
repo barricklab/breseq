@@ -1,0 +1,9 @@
+Function: nfisincl
+Section: number_fields
+C-Name: nfisincl
+Prototype: GG
+Help: nfisincl(x,y): tests whether the number field x is isomorphic to a
+ subfield of y (where x and y are either polynomials or number fields as
+ output by nfinit). Return 0 if not, and otherwise all the isomorphisms. If y
+ is a number field, a faster algorithm is used
+

@@ -1,0 +1,9 @@
+Function: Vecsmall
+Section: conversions
+C-Name: gtovecsmall
+Prototype: DG
+Help: Vecsmall({x=[]}): transforms the object x into a VECSMALL. Empty
+ vector if x is omitted
+Description:
+ (gen):vecsmall                gtovecsmall($1)
+

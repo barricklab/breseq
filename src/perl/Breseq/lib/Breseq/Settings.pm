@@ -237,7 +237,7 @@ sub initialize_2
 	
 	$self->{version} = $Breseq::VERSION;
 	$self->{byline} = "<b><i>breseq</i></b> Version $self->{version} | Developed by Barrick JE and Knoester DB";
-	$self->{script_path} = $FindBin::Bin;
+	$self->{bin_path} = $FindBin::Bin;
 
 	#neaten up some settings for later string comparisons
 	$self->{quality_type} = "\L$self->{quality_type}";
@@ -352,7 +352,7 @@ sub initialize_2
 	$self->{summary_text_file_name} = "$self->{output_path}/summary.tab";
 	$self->{tiled_coverage_text_file_name} = "$self->{output_path}/@.tiled_coverage.tab";
 
-	$self->{breseq_small_graphic_from_file_name} = "$self->{script_path}/breseq_small.png";
+	$self->{breseq_small_graphic_from_file_name} = "$self->{bin_path}/breseq_small.png";
 	$self->{breseq_small_graphic_to_file_name} = "$self->{output_path}/$self->{local_evidence_path}/breseq_small.png";
 
 	$self->{long_pairs_file_name} = "$self->{output_path}/long_pairs.tab";
@@ -594,26 +594,29 @@ sub log
 sub ctool
 {
 	my ($self, $tool_name) = @_;
-	return "$self->{script_path}/error_count" if ($self->{installed}->{$tool_name})
-	
-	 = (-e "$FindBin::Bin/error_count") ? 1 : 0;
-	return undef;
+		
+	if (!$self->{installed}->{$tool_name})
+	{
+		$self->throw("Executable \"$tool_name\" not found in breseq bin path.");
+	}
+	return "$self->{bin_path}/$tool_name";
 }
 
 sub installed
 {
 	my ($self) = @_;
 	
-	## C++ binaries
-	$self->{installed}->{error_count} = (-x "$self->{script_path}/error_count") ? "$self->{script_path}/error_count" : undef;
-	
+	## breseq C++ executables
+	$self->{installed}->{error_count} = (-x "$self->{bin_path}/error_count") ? 1 : 0;
+
 	## absolutely required
 	$self->{installed}->{SSAHA2} = (`which ssaha2`) ? 1 : 0;
 	$self->{installed}->{R} = (`which R`) ? 1 : 0;	
+	$self->{installed}->{samtools} = (-x "$self->{bin_path}/samtools") ? 1 : 0;
 	
 	## installed locally
 	$self->{installed}->{Statistics_Distributions} = (eval 'require Statistics::Distributions');	
-	$self->{installed}->{Bio_Root} = (eval 'require Bio::Root');	
+	$self->{installed}->{bioperl} = (eval 'require Bio::Root::Root');	
 	$self->{installed}->{Bio_DB_Sam} = (eval 'require Bio::DB::Sam');	
 
 	## optional
@@ -630,6 +633,7 @@ sub check_installed
 	$self->installed;
 
 	my $good_to_go = 1;
+	
 	if (!$self->{installed}->{SSAHA2})
 	{
 		$good_to_go = 0;
@@ -644,6 +648,27 @@ sub check_installed
 		print STDERR "---> See http://www.r-project.org/\n";
 	}
 	
+	if (!$self->{installed}->{samtools})
+	{
+		$good_to_go = 0;
+		print STDERR "---> ERROR Required executable \"samtools\" is not installed.\n";
+		print STDERR "---> This should have been installed by the breseq installer.\n";
+	}
+	
+	if (!$self->{installed}->{bioperl})
+	{
+		$good_to_go = 0;
+		print STDERR "---> ERROR Required \"Bioperl\" modules not installed.\n";
+		print STDERR "---> They should have been installed by the breseq installer.\n";
+	}
+
+	if (!$self->{installed}->{Bio_DB_Sam})
+	{
+		$good_to_go = 0;
+		print STDERR "---> ERROR Required Perl module \"Bio::DB::Sam\" not installed.\n";
+		print STDERR "---> This should have been installed by the breseq installer.\n";
+	}
+	
 	## Warning if using pure Perl implementation and module not installed
 	if ( ($self->{polymorphism_prediction} && !$self->{installed}->{Math_Pari}) )
 	{
@@ -651,7 +676,9 @@ sub check_installed
 		print STDERR "---> will not be used to check strand bias in polymorphism predictions.\n";
 	}
 	
-	return $good_to_go;
+	$self->throw if (!$good_to_go);
+	
+#	return $good_to_go;
 }
 
 return 1;

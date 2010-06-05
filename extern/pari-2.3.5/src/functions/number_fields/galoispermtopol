@@ -1,0 +1,8 @@
+Function: galoispermtopol
+Section: number_fields
+C-Name: galoispermtopol
+Prototype: GG
+Help: galoispermtopol(gal,perm): gal being a galois field as output by
+ galoisinit and perm a element of gal.group, return the polynomial defining
+ the corresponding Galois automorphism
+

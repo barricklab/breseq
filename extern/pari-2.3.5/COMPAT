@@ -1,0 +1,259 @@
+This file lists the incompatible changes between Version 2.x and older versions
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%% VERSION 2.2 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+* General:  [ use GP function names in description ]
+==========
+  - Default args for user defined functions now evaluated when function is
+    called (used to be: at definition time)
+    E.g f(x) = local(z = x); z. 
+    Before: f(2) -> x
+    Now:    f(2) -> 2
+  
+  - rnfisnorm() input format has changed. Older version was complicated and
+    only worked if rnfequation(bnf, p, 1)[3] == 0  [otherwise, crash].
+    Use rnfisnorminit() now.
+
+  - rnfidealreltoabs, rnfidealup: now return a Z-basis as a vector of
+    elements in the relative extension, instead of a meaningless HNF matrix
+    wrt an unknown basis. Was especially dangerous if the extension also existed
+    in nfinit form, since the HNF matrices were _not_ ideals wrt this nf
+    structure. [ also consistent with rnfeltreltoabs ]. Use the following
+    construction instead, referring to an explicit NF structure:
+
+      \\ return y = rnfidealup(rnf,...) as an ideal in HNF form associated to
+      \\ nf = nfinit(rnf.pol);
+      idealgentoHNF(nf, y) = mathnf( Mat( nfalgtobasis(nf, y) ) );
+
+  - the "bit accuracy component" for computations of principal ideal generators
+    (bnfisprincipal), units (bnfunit), and some of the bnf structures has
+    been removed.
+
+  - the "technical parameter" to bnfinit() has been shortened to 3 components
+    (the others were deprecated / useless): [c, c2, nrpid]. The output format
+    has changed (technical components).
+
+  - poldegree(0) now returns -VERYBIGINT, not -1. Before using d = poldegree(x),
+    always check for 0 first: either (x == 0) or (d >= 0) as you prefer. Never
+    check for  d == -1 or -2^31-1 which is not portable.
+
+  - ellheight now uses the standard normalization: twice the value it used to
+    return. The values returned by ellbil() and ellheightmatrix are
+    unaffected. In particular, ellheightmatrix() is the polar form of
+    elleight(), and ellbil now satisfies the proper identity
+    B(P, Q) = (h(P+Q)-h(P)-h(Q)) / 2
+
+  - ':' no longer allowed as a substitute for ';' if compatible = 0. Use GP2C
+    semantics [ x:int, v:vec ]. For the time being the type information is
+    discarded.
+
+  - log(x, {flag}): optional flag removed. Decide alone whether to use AGM.
+
+  - valuation(x, 1) used to return 1, valuation(x, -1) returned 0 if (x >= 0)
+    and 1 otherwise. Not anymore: error message.
+
+  - bnrdisclist has lost its 4th argument 'flag', and omitting the
+    archimedean component now means that all 2^r1 possible values are
+    substituted (formerly: indicate no ramification at infinity).
+
+  - 'buffersize' default has disappeared: it is adjusted internally whenever
+    needed. The -b xxx flag to gp is a no-op.
+
+  - the member function bnr.zkst is deprecated, use bnr.bid.clgp
+
+  - the member function bnr.futu is deprecated. Please don't use bnr.tufu
+    either.
+  - use \frac instead of \over in TeX output. Define
+      \def\frac#1#2{{#1\over#2}}
+    if you insist on using plain TeX and run into problems.
+  - automatic concatenation for strings: use longest match for expression.
+    print("a"[1]) is not valid since "a" is not a vector print("a", [1])
+    prints 'a[1]'.
+  - isprime() now guarantees primality, use ispseudoprime() for fast
+    pseudo-primality tests. 
+  - default() now always returns the value of the (possibly changed) default.
+    No need for a flag anymore.
+  - semantic of t_SER with inexact coefficients is now the same as for
+    t_POL: the sign is 0 iff all coefficients are zero. Either there are
+    no coefficients, or the leading coefficient is an inexact zero.
+  - No longer assume that part of an object is "permanent" when it is out
+    of the stack (was used by INTMOD/POLMOD/PADIC). Always copy it.
+    As a result, 'gmodulo' and 'forcecopy' become obsolete.
+    Rename gmodulcp -> gmodulo.
+
+* Specific to the PARI library:
+===============================
+Incompatible changes:
+---------------------
+  - gsize() renamed to sizedigit()  [conflict with gtk]
+  - hnfhavas removed (didn't work properly, hnflll provides an alternative)
+  - real zeroes are now coded on 2 words. Beware of constructs like
+    t = cgetg(lg(x), t_REAL); gaffect(y, t). If x = 0, so will be t.
+  - polgalois(): old format deprecated. New preferred format for result 
+    has 3rd component giving numbering among all transitive subgroups of S_n
+    [ was ad hoc up to 7, as described above for n >= 8 ]. Old format is
+    still the default, but will eventually change. Use
+    default(new_galois_format, 1) or, in library mode, set global variable
+    new_galois_format to 1 to enable the new format.
+  - The nf structure output by nfinit has changed: 
+    *) nf.zk is now T2-LLL-reduced, not in HNF wrt the power basis
+    *) the internal components of nf[5] have changed (MC and T2 not needed
+       anymore)
+  - polred & polredabs do not take a 'prec' argument anymore [was unused]
+  - gentimer / genmsgtimer / get_timer have been removed. They are superseded
+    by TIMER and msgTIMER which are fully reentrant and easier to use.
+  - (undocumented) macros buch[gen | genfu | init | iniftu]
+  - rnfisnorm() prototype has changed [ + need to call rnfisnorminit first ]
+  - incgam4 renamed to incgam0, incgam3 renamed to incgamc
+  - prototypes of buchall and smallbuchinit have changed (much simpler)
+  - co8() renamed to quadtoc()
+  - ker_mod_p() renamed to FpM_ker [ and supplemented with many analogous
+    modular routines ]
+  - nfreducemodpr2() removed, use an nfmodpr structure from nfmodprinit() or
+    zkmodprinit() instead
+  - smodsi() removed [ not well defined ]. Use either modsi() or umodui()
+  - Many error codes were removed. It is usually better to use only talker
+    outside libpari.           
+  - Macro BITS_IN_RANDOM has been removed. Used to be 32.
+  - mymyrand() has been removed, use pari_rand31() or pari_rand() instead
+  - diviiz(x,y,z), divisz, divsiz and divssz always assign the euclidean
+    quotient [ used to  depend on the type of z: if t_REAL computed exact
+    quotient ]. Use rdivii, rdivis, rdivsi, rdivss for analogous
+    functionality (no "z" variant);
+  - mpdivz(x,y,z) assigns the euclidean quotient when x,y are t_INT (used
+    to depend on the type of z)
+  - removed inconsistently named macros mpinv[sir]r [ were "z" functions ]
+  - removed useless routine shifts [ use shifti( stoi() ) ]
+  - library interface of functions intnum, prodeuler, suminf, sumalt,
+       sumalt2, sumpos, sumpos2, prodinf, prodinf1  [ use GEN
+       (*eval)(GEN,void*) everywhere instead of entree * ]
+  - changed the prototype of bnrdisclist0
+  - removed ideallistarch0, ideallistarchgen, ideallistunitarch,
+    ideallistunitarchgen. Just use ideallistarch.
+  - change the output of ideallist with technical (flag 2,3) [ with units ]:
+    instead of two vectors, output a vector of 2-component vectors.
+    change the input of all list routines (bnrclassnolist, bnrdisclist)
+    accordingly.
+  - rename gtrans_i -> shallowtrans, concatsp -> shallowconcat.
+  - pari_err(warner | warnmem | warnfile | warnprec,) no longer accepted. Use
+    pari_warn.
+
+Partially compatible changes:
+-----------------------------
+[ not mandatory for your program to work with 2.3, since compatibility macros
+support the old names but are likely to become mandatory in 2.4, so we
+advise you to update soon ]
+
+  - typecasting macros (e.g. ladd(), lmul() ...) are obsolete and
+    shouldn't be used in new programs. Use accessors gel() and friends.
+  - stack locations used to be of type long or ulong, now they have a
+    dedicated type pari_sp [ pari stack pointer ]
+  - in order to compare variable numbers, use the macro varncmp() instead of
+    < or > operators. 
+  - access to the prime numbers table is done via the macros            
+    NEXT_PRIME_VIADIFF or NEXT_PRIME_VIADIFF_CHECK.   
+  - direct access to the mantissa of t_INT is deprecated. Instead you should   
+    use the t_INT API (macros int_MSW, int_LSW, int_precW, int_nextW, int_W).
+    This will ensure your code is compatible with both native and GMP kernels.
+  - the macros lgef / setlgef / evallgef have been removed. t_POLs no longer
+    include an "effective length". One should use lg() for t_POLs as for
+    most other types. Don't use lgef() in new code.
+
+    lgef() and setlgef() are aliased to lg() and setlg(). They will break on
+    hackish code accessing directly the first component of t_POL objets, e.g
+      x = cgetg(20, t_POL);
+      x[1] = evalsigne(1) | evalvarn(0) | evallgef( 10 )  /* 10, not 20 */
+      ...
+      setlgef(x, 20); /* now create/use further coefficients */
+  - types t_FRACN, t_RFRACN and gred() have been removed (complicated, unused,
+    and very inefficient). There are now aliases to t_FRAC, t_RFRAC and gcopy
+    respectively for backward compatibility.
+  - renamed nfdivres -> nfdivrem, poldivres -> poldivrem
+  - renamed permute -> numtoperm, permuteInv -> pertonum
+  - renamed gzero -> gen_0, gun -> gen_1, gdeux -> gen_2, polx -> pol_x,
+    polun -> pol_1
+  - renamed gegal -> gequal, gegalgs -> gequalgs, gegalsg -> gequalsg,
+    egalii -> equalii
+  - renamed binome -> binomial, chinois -> chinese
+  - renamed apprgen9, apprgen -> padicappr, factmod9 -> factorff
+  - rename resss -> remss, ressi -> remsi, resis -> remis, resii -> remii,
+    gres -> grem
+  - rename divise -> dvdii, gdivise -> gdvd, mpdivis -> dvdiiz, mpdivisis
+    -> dvdisz
+  - rename mpent -> mpfloor
+  - rename isprincipalrayall -> bnrisprincipal, rayclassno -> bnrclassno
+    rayclassnolist -> bnrclassnolist
+  - rename globalreduction -> ellglobalred, localreduction -> elllocalred
+  - taniyama(e) is deprecated. Use elltaniyama(e, prec) instead of
+      old = precdl; precdl = prec; x = taniyama(e); precdl = old;
+  - rename lisexpr -> readexp, lisseq -> readseq
+  - rename flisexpr, flisseq -> gp_read_str
+  - rename lisGEN  -> gp_read_stream
+  - rename idmat -> matid
+  - rename coefs_to_col -> mkcoln, coefs_to_int -> mkintn
+           coefs_to_pol -> mkpoln, coefs_to_vec -> mkvecn
+  - rename wf -> weberf, wf1 -> weberf1, wf2 -> weberf2
+  - rename err -> pari_err, pariputsf -> pariprintf
+  - rename rnfhermitebasis -> rnfhnfbasis
+  - rename gcarreparfait -> gissquare, gcarrecomplet -> gissquarerem
+  - rename lseriesell -> elllseries
+  - gmodulo and forcecopy are obsolete. Use gmodulcp and gcopy.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%% VERSION 2.1 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+* The calculator GP:
+====================
+ - most function names have changed (see misc/new.dic or use whatnow under GP)
+ - lowercase / uppercase letters distinguished.
+ - the syntax \var = value is not recognized anymore. Use standard
+   metacommands instead.
+(setting the compatibility level "compatible" to 3, with "default" will give
+you those three back).
+
+ - strict parenthesis matching before executing the command
+(set strictmatch to 0 to get old behaviour)
+
+ - functions label / goto have been removed (use break/next/return instead).
+ - conjugation x_ has been removed. '_' can be freely used in identifiers.
+ - \k metacommand removed
+
+ - result history is now cyclic (older results are erased when the maximal
+   size "histsize" is reached).
+ - the Set() function turns objects into strings (so that set functions are
+   able to treat arbitrary objects). Use eval to turn them back to GENs.
+ - the type() function returns a string and not a number.
+ - sum(X=a,b,...,x) yields x if b<a. Analogous statement for prod.
+
+* The library PARI:
+===================
+ - use symbolic type names (t_INT, etc.). Don't use any explicit type number
+   in your programs since these are liable to change (they have not, but will).
+ - the codewords of GEN objects have a different internal structure. The
+   components should only be accessed through the documented macros. When
+   creating codeword x[1] for the GEN x, use the eval* macros (the set* ones
+   don't fill the codeword completely).
+ - the following constant names have changed ("pari" prepended): C1, C2, C3, K,
+   K1, K2, K4. The constant C31 has disappeared.
+ - prec and defaultpadicprecision are no longer global. The latter has
+   disapeared.
+ - char *pariversion not set anymore (use the macros PARIVERSION/PARIINFO)
+ - LONG_IS_32BIT is never defined (test whether LONG_IS_64BIT is defined
+   or not).
+ - gen2str() renamed to GENtostr().
+ - gitoascii() suppressed, use GENtostr().
+ - init() renamed to pari_init().
+ - the macro mant() has been suppressed.
+ - imprimer() suppressed. output() is now a function and can be used under
+   all debuggers.
+ - the prototypes and behaviour of gredsp() and normalize() have changed.
+   They are not documented anymore.
+ - the install() function has been modified (use codes instead of valence).
+ - gpuigs only has two arguments.
+ - integ now takes two arguments, like deriv.
+ - setrand, getrand, getstack, gettime, glength return a C long, and not a GEN.
+ - pari_randseed no longer global, use setrand/getrand
+ - gerepile(ltop,lbot,0) no longer returns ltop - lbot
+ - nf[5][7] stored in two element form (was Z-basis) for faster inversion
+ - t_POL and t_POLMOD can be freely mixed as long as main variables are the
+   same (result is the expected POLMOD)
+

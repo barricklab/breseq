@@ -1,0 +1,8 @@
+Function: polhensellift
+Section: polynomials
+C-Name: polhensellift
+Prototype: GGGL
+Help: polhensellift(x, y, p, e): lift the factorization y of x modulo p to a
+ factorization modulo p^e using Hensel lift. The factors in y must be
+ pairwise relatively prime modulo p
+

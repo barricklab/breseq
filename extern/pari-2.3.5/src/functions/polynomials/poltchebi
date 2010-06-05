@@ -1,0 +1,7 @@
+Function: poltchebi
+Section: polynomials
+C-Name: tchebi
+Prototype: LDn
+Help: poltchebi(n,{v=x}): Tchebitcheff polynomial of degree n (n C-integer),
+ in variable v
+

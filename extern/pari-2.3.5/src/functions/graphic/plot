@@ -1,0 +1,9 @@
+Function: plot
+Class: highlevel
+Section: graphic
+C-Name: plot
+Prototype: vV=GGIDGDGp
+Help: plot(X=a,b,expr,{ymin},{ymax}): crude plot of expression expr, X goes
+ from a to b, with Y ranging from ymin to ymax. If ymin (resp. ymax) is not
+ given, the minima (resp. the maxima) of the expression is used instead
+

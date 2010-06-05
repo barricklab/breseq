@@ -1,0 +1,11 @@
+Function: polresultant
+Section: polynomials
+C-Name: polresultant0
+Prototype: GGDnD0,L,
+Help: polresultant(x,y,{v},{flag=0}): resultant of the polynomials x and y,
+ with respect to the main variables of x and y if v is omitted, with respect
+ to the variable v otherwise. flag is optional, and can be 0: default,
+ assumes that the polynomials have exact entries (uses the subresultant
+ algorithm), 1 for arbitrary polynomials, using Sylvester's matrix, or 2:
+ using a Ducos's modified subresultant algorithm
+

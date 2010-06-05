@@ -1,0 +1,9 @@
+Function: galoisidentify
+Section: number_fields
+C-Name: galoisidentify
+Prototype: G
+Help: galoisidentify(gal): gal being a galois field as output by galoisinit,
+ output the isomorphism class of the underlying abstract group as a
+ two-components vector [o,i], where o is the group order, and i is the group
+ index in the GAP4 small group library
+

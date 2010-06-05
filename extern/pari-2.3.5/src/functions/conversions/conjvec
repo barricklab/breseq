@@ -1,0 +1,6 @@
+Function: conjvec
+Section: conversions
+C-Name: conjvec
+Prototype: Gp
+Help: conjvec(x): conjugate vector of the algebraic number x
+

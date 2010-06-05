@@ -1,0 +1,6 @@
+Function: tan
+Section: transcendental
+C-Name: gtan
+Prototype: Gp
+Help: tan(x): tangent of x
+

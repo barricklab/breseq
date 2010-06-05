@@ -1,0 +1,7 @@
+Function: solve
+Section: sums
+C-Name: zbrent0
+Prototype: V=GGEp
+Help: solve(X=a,b,expr): real root of expression expr (X between a and b),
+ where expr(a)*expr(b)<=0
+

@@ -1,0 +1,20 @@
+Function: _*_
+Class: symbolic_operators
+C-Name: gmul
+Prototype: GG
+Description: 
+ (small, small):small:parens	$(1)*$(2)
+ (int, small):int		mulis($1, $2)
+ (small, int):int		mulsi($1, $2)
+ (int, int):int	  	        mulii($1, $2)
+ (0, mp):small			($2, 0)/*for side effect*/
+ (#small, real):real		mulsr($1, $2)
+ (small, real):mp		mulsr($1, $2)
+ (real, small):mp		mulrs($1, $2)
+ (real, real):real	     	mulrr($1, $2)
+ (mp, mp):mp	     	        mpmul($1, $2)
+ (gen, small):gen		gmulgs($1, $2)
+ (small, gen):gen		gmulsg($1, $2)
+ (vecsmall, vecsmall):vecsmall	perm_mul($1, $2)
+ (gen, gen):gen	  	        gmul($1, $2)
+

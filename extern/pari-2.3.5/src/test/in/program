@@ -1,0 +1,53 @@
+\p 38
+\e
+gettime; alias(ln,log)
+ln(2)
+for(x=1,5,print(x!))
+fordiv(10,x,print(x))
+forprime(p=1,30,print(p))
+forstep(x=0,Pi,Pi/12,print(sin(x)))
+forvec(x=[[1,3],[-2,2]],print1([x[1],x[2]]," "));print(" ");
+getheap
+getrand
+getstack
+if(3<2,print("bof"),print("ok"));
+kill(y);print(x+y);reorder([x,y]);print(x+y);
+f(u)=u+1;
+print(f(5));kill(f);
+f=12
+g(u)=if(u,,return(17));u+2
+g(2)
+g(0)
+setrand(10)
+n=33;until(n==1,print1(n," ");if(n%2,n=3*n+1,n=n/2));print(1)
+m=5;while(m<20,print1(m," ");m=m+1);print()
+\\
+default(realprecision,28)
+default(seriesprecision,12)
+print((x-12*y)/(y+13*x));
+print([1,2;3,4])
+print1(x+y);print(x+y);
+print((x-12*y)/(y+13*x));
+print([1,2;3,4])
+print1(x+y);print1(" equals ");print(x+y);
+print1("give a value for s? ");s=input();print(1/(s^2+1))
+printtex((x+y)^3/(x-y)^2)
+for(i=1,100,for(j=1,25,if(i+j==32,break(2)));print(i))
+{
+  u=v=p=q=1;
+  for (k=1,400,
+    w=u+v; u=v; v=w;
+    p *= w; q=lcm(q,w);
+    if (k%50==0,
+      print(k" "log(p)/log(q))
+    )
+  );
+}
+/* added in 1.924.13 */
+install(addii,GG)
+addii(1,2)
+kill(addii)
+/* up to here */
+getheap
+print("Total time spent: ",gettime);
+\q

@@ -1,0 +1,9 @@
+Function: polinterpolate
+Section: polynomials
+C-Name: polint
+Prototype: GDGDGD&
+Help: polinterpolate(xa,{ya},{x},{&e}): polynomial interpolation at x
+ according to data vectors xa, ya (ie return P such that P(xa[i]) = ya[i] for
+ all i). If ya is omitter, return P such that P(i) = xa[i]. If present, e
+ will contain an error estimate on the returned value
+

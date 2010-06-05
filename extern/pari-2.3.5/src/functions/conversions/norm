@@ -1,0 +1,6 @@
+Function: norm
+Section: conversions
+C-Name: gnorm
+Prototype: G
+Help: norm(x): norm of x
+

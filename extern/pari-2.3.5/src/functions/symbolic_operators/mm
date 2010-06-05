@@ -1,0 +1,12 @@
+Function: _--
+Class: symbolic_operators
+Description: 
+ (*bptr):bptr				--$1
+ (*small):small				--$1
+ (*lg):lg				--$1
+ (*int):int:parens			 $1 = subis($1, 1)
+ (*real):real:parens			 $1 = subrs($1, 1)
+ (*mp):mp:parens			 $1 = mpsub($1, gen_1)
+ (*pol):pol:parens			 $1 = gsubgs($1, 1)
+ (*gen):gen:parens			 $1 = gsubgs($1, 1)
+

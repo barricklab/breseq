@@ -1,0 +1,6 @@
+Function: nfisisom
+Section: number_fields
+C-Name: nfisisom
+Prototype: GG
+Help: nfisisom(x,y): as nfisincl but tests whether x is isomorphic to y
+

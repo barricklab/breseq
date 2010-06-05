@@ -1,0 +1,7 @@
+Function: factorial
+Section: number_theoretical
+C-Name: mpfactr
+Prototype: Lp
+Help: factorial(x): factorial of x (x C-integer), the result being given as
+ a real number
+

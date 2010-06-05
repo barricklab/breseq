@@ -1,0 +1,9 @@
+Function: core
+Section: number_theoretical
+C-Name: core0
+Prototype: GD0,L,
+Help: core(n,{flag=0}): unique (positive of negative) squarefree integer d
+ dividing n such that n/d is a square. If (optional) flag is non-null, output
+ the two-component row vector [d,f], where d is the unique squarefree integer
+ dividing n such that n/d=f^2 is a square
+

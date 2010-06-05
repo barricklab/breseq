@@ -1,0 +1,7 @@
+Function: rnfidealabstorel
+Section: number_fields
+C-Name: rnfidealabstorel
+Prototype: GG
+Help: rnfidealabstorel(rnf,x): transforms the ideal x from absolute to
+ relative representation
+

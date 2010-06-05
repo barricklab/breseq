@@ -1,0 +1,7 @@
+Function: eint1
+Section: transcendental
+C-Name: veceint1
+Prototype: GDGp
+Help: eint1(x,{n}): exponential integral E1(x). If n is present, computes
+ the vector of the first n values of the exponential integral E1(n.x) (x > 0)
+

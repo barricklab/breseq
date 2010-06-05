@@ -1,0 +1,7 @@
+Function: ellak
+Section: elliptic_curves
+C-Name: akell
+Prototype: GG
+Help: ellak(e,n): computes the n-th Fourier coefficient of the L-function of
+ the elliptic curve e
+

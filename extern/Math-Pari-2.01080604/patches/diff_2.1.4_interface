@@ -1,0 +1,20 @@
+--- ./src/language/init.c-pre	Thu Sep 27 10:01:08 2001
++++ ./src/language/init.c	Tue Mar 18 20:58:44 2003
+@@ -1875,7 +1875,7 @@ entree functions_basic[]={
+ {"idealmul",99,(void*)idealmul0,6,"GGGD0,L,p"},
+ {"idealnorm",2,(void*)idealnorm,6,"GG"},
+ {"idealpow",99,(void*)idealpow0,6,"GGGD0,L,p"},
+-{"idealprimedec",29,(void*)primedec,6,"GG"},
++{"idealprimedec",2,(void*)primedec,6,"GG"},
+ {"idealprincipal",2,(void*)principalideal,6,"GG"},
+ {"idealred",99,(void*)ideallllred,6,"GGDGp"},
+ {"idealstar",99,(void*)idealstar0,6,"GGD1,L,"},
+@@ -2060,7 +2060,7 @@ entree functions_basic[]={
+ {"rnfbasis",2,(void*)rnfbasis,6,"GG"},
+ {"rnfbasistoalg",2,(void*)rnfbasistoalg,6,"GG"},
+ {"rnfcharpoly",99,(void*)rnfcharpoly,6,"GGGDn"},
+-{"rnfconductor",29,(void*)rnfconductor,6,"GGD0,L,p"},
++{"rnfconductor",99,(void*)rnfconductor,6,"GGD0,L,p"},
+ {"rnfdedekind",99,(void*)rnfdedekind,6,"GGG"},
+ {"rnfdet",99,(void*)rnfdet0,6,"GGDG"},
+ {"rnfdisc",2,(void*)rnfdiscf,6,"GG"},

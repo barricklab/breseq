@@ -1,0 +1,7 @@
+Function: substvec
+Section: polynomials
+C-Name: gsubstvec
+Prototype: GGG
+Help: substvec(x,v,w): in expression x, make a best effort to replace the
+ variables v1,...,vn by the expression w1,...,wn
+

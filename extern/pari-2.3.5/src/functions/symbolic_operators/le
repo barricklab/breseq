@@ -1,0 +1,18 @@
+Function: _<=_
+Class: symbolic_operators
+C-Name: gle
+Prototype: GG
+Description: 
+ (small, small):bool:parens		$(1) <= $(2)
+ (small, lg):bool:parens		$(1) < $(2)
+ (lg, lg):bool:parens			$(1) <= $(2)
+ (small, int):bool:parens		cmpsi($1, $2) <= 0
+ (int, lg):bool:parens			cmpis($1, $2) < 0
+ (int, small):bool:parens		cmpis($1, $2) <= 0
+ (int, int):bool:parens			cmpii($1, $2) <= 0
+ (mp, mp):bool:parens			mpcmp($1, $2) <= 0
+ (str, str):bool:parens			strcmp($1, $2) <= 0
+ (small, gen):bool:parens		gcmpsg($1, $2) <= 0
+ (gen, small):bool:parens		gcmpgs($1, $2) <= 0
+ (gen, gen):bool:parens			gcmp($1, $2) <= 0
+

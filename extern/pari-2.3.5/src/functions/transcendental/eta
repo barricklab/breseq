@@ -1,0 +1,8 @@
+Function: eta
+Section: transcendental
+C-Name: eta0
+Prototype: GD0,L,p
+Help: eta(x,{flag=0}): if flag=0, eta function without the q^(1/24),
+ otherwise eta of the complex number x in the upper half plane intelligently
+ computed using SL(2,Z) transformations
+

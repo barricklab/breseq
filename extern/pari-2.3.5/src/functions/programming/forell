@@ -1,0 +1,7 @@
+Function: forell
+Section: programming
+C-Name: forell
+Prototype: vVLLI
+Help: forell(E,a,b,seq): execute seq for each elliptic curves E of conductor
+ between a and b in the elldata database.
+

@@ -1,0 +1,7 @@
+Function: galoissubfields
+Section: number_fields
+C-Name: galoissubfields
+Prototype: GD0,L,Dn
+Help: galoissubfields(G,{flags=0},{v}):Output all the subfields of G. flags
+ have the same meaning as for galoisfixedfield
+

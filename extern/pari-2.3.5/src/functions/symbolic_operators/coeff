@@ -1,0 +1,20 @@
+Function: _[_,_]
+Class: symbolic_operators
+Description:
+ (mp,small):gen                 $"Scalar has no components"
+ (mp,small,small):gen           $"Scalar has no components"
+ (vecsmall,small):small         $(1)[$2]
+ (vecsmall,small,small):gen     $"Vecsmall are single-dimensional"
+ (list,small):gen:copy          gel($1, $lg:2)
+ (vec,small):gen:copy           gel($1, $2)
+ (vec,small,small):gen:copy     gcoeff($1, $2, $3)
+ (gen,small):gen:copy           gel($1, $2)
+ (gen,small,small):gen:copy     gcoeff($1, $2, $3)
+
+Function: _[_,]
+Class: symbolic_operators
+Description:
+ (mp,small):gen                 $"Scalar has no rows"
+ (vec,small):vec                rowcopy($1, $2)
+ (gen,small):vec                rowcopy($1, $2)
+

@@ -1,0 +1,8 @@
+Function: ellminimalmodel
+Section: elliptic_curves
+C-Name: ellminimalmodel
+Prototype: GD&
+Help: ellminimalmodel(e,{&v}): return the standard minimal integral model of
+ the rational elliptic curve e. Sets v to the corresponding change of
+ variables
+

@@ -1,0 +1,209 @@
+# $Id: CHANGES 12117 2010-02-03 23:47:45Z bill $
+Bug numbers refer to the BTS at http://pari.math.u-bordeaux.fr/Bugs/
+
+Done for version 2.3.5 (released 05/02/2010):
+[last column crossreferences current development release 2.4.3]
+  Fixed
+    1- was not handling nffactor(*huge degree* nf, *non-monic* t_POL) properly
+     --> wrong result and possible memory corruption [#870]              [F96]
+    2- quadclassunit(-3 or -4): incorrect format (extra component).
+BA  3- Fix detection of ppc64 running in 32bit mode.                     [F107]
+    4- wrong results in matsnf with t_POL entries [#901]                 [F110]
+       minpoly(matrix(4,4,i,j,i/j)) -> x^3 - 4*x^2 + x
+    5- bnfisintnorm(bnfinit(x^2-5), -180): result not reduced mod x^2-5 [#904]
+    6- Y;A; intformal(A,Y)                                               [F114]
+    7- typo in RgXQX_divrem: random results if the input contains
+       unexpected scalar types, as in [#908]
+    8- ispower broken due to insufficient precision [#916]                [F40]
+    9- [2;2]*[[1,0],[1,2]] -> SEGV
+   10- nffactor(): obscure "no factor" bug [when trial division found and
+       extracted *non monic* factors], [#930]                            [F127]
+BA 11- src/kernel/ix86/asm0.h had an incorrect #line entry.              [F122] 
+BA 12- COMPAT file was missing some functions renamed in 2.3:            [F128]
+       flisexpr, flisseq -> gp_read_str; lisGEN  -> gp_read_stream
+BA 13- nffactor could segfault. [#979]                                   [F135]
+BA 14- missing type check in subgrouplist [#616]                    [2.4.2-F39]
+BA 15- nfdisc --> "not a prime" error (help Round4 to recover when using
+       non-primes, instead of raising immediate errors) [#624]      [2-4-2-F41]
+BA 16- exp(0e1*I) --> SEGV [#630]                                   [2-4-2-F44]
+BA 17- detection of exp2 and log2 was broken with C++ compilers          [F143]
+BA 18- support for shared library on netbsd.                             [F144]
+IZ 19- [readline] 'foo)' + M-C-b -> infinite loop                        [F145]
+BA 20- factor(13533236897) -> I/O Warning [#1012]                        [F151]
+BA 21- usqrtsafe result could be off by one.                             [F152]
+BA 22- znprimroot(2) could segfault.
+BA 23- ellap could go in an infinite loop.
+IZ 24- [OS/2] Fix warning about string signedness.                       [F155]
+IZ 25- [OS/2] Fix symbol checking in Configure.                          [F156]
+BA 26- upowuu(2,31) returned a wrong result [#1031]                      [F157]
+IZ 27- [OS/2]: stack check present but not enabled                   [2.4.0-F6]
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+Done for version 2.3.4 (released 08/07/2008):
+[last column crossreferences current development release 2.4.3]
+  Fixed
+    1- factor(500501^36): impossible assignment I-->S                     [F21]
+    2- quadray(-7,6) [or other "impossible conductors"] --> oo loop [#725][F22]
+    3- mathnf(a,1) could have negative entries if non-trivial kernel[#741][F31]
+    4- duplicate factors in nffactor (easy cases) [#761]                  [F42]
+    5- wrong signs in bnfisintnorm e.g. [bnfinit(x^3+5), 5] -> x [#767]   [F45]
+    6- memory leak: local(x = VECTOR/MATRIX VALUE) in user functions  
+    7- acos(x^0) -> division by 0 [ instead of O(x^8), at \ps 16 ]  [2-4-2-F83]
+       Analogously, acosh(x^0), asin(x^0), asinh(I+O(x)) --> division by 0
+    8- zeta(0e1) --> SEGV [#627], exp(0e1*I) --> SEGV [#630]        [2-4-2-F44]
+       zeta(1-2^31 or 1-2^63) -> SEGV [#730]                        [F26]
+    9- bnr=bnrinit(bnfinit(y^2-229,1),5,1); rnfkummer(bnr,,3) --> oo loop [F30]
+   10- missing subfields in nfsubfields [#744]                            [F33]
+   11- infinite loop in nffactor [#751]                                   [F37]
+   12- eint1(10,10) completely wrong                                      [F39]
+   13- x/(x+2) * Mod(1,2) -> Mod(1, 2)*x/(x + 2)  [should be Mod(1,2)]    [F46]
+   14- substpol(x/(y^3*x+1),y^2,1) -> x/(y^3*x + 1) [should be x/(y*x+1)] [F47]
+   15- hilbert(1,1,1) --> oo loop [#770]                                  [F51]
+   16- nffactor(nfinit(y),x*y)                                [F50,F52,F53,F54]
+       nffactor(nfinit(y),x^2*y+1)
+       nffactor(nfinit(y),x^2*y)  --> errors or SEGV. [#769]
+       nffactor(y^2+1, x+1/2) --> x+1/2 [ not integral ]
+       nffactor(y^2+1,x*y+1) --> x*y + 1 [ not normalized, missing POLMOD ]
+       nffactor(y^2+1,x^2+2*y+1) --> x^2+2*y+1 [ missing POLMOD ]
+   17- p=x^4-x^3+x^2-x+1; tnf = thueinit(p); thue(tnf,1) -> missing solutions
+       (could occur whenever p has no real root) [#764]                   [F57]
+   18- missing GC in numtoperm()                                          [F58]
+   19- harmless uninitialized memory read in mulrrz_i()                   [F59]
+   20- minor inaccuracy in GMP kernel (affir)                             [F52]
+   21- matsolve([1;2;3],[1,2,4]~) --> [1]~  (should raise an error)       [F56]
+
+  Changed
+    1- delete CVS.txt, add README-subversion
+    2- delete TODO [ only relevant / up to date in the development branch ]
+
+  Added
+    1- GP function version() [ current version number ]                   [A20]
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+Done for version 2.3.3 (released 22/12/2007):
+[last column crossreferences current development release 2.4.2]
+  Fixed
+    1- remove hack in internal function 'readbin' that used the clone bit as
+    a special marker hence returned an invalid object, which could be
+    propagated to higher level public functions.                          [F4]
+BA  2- bitnegimply(1,2^65) returned a wrong result [#560]                 [F6]
+    3- nfeltreduce(nf,t_POLMOD,id) didn't work [#558]                     [F7]
+    4- segv in polrootspadic / repeated roots in FpX_root (only in deg 2) [F9]
+    5- numbpart inaccurate (and slow). E.g numbpart(52602) off by 1 [#557][F12]
+    6- remove type assumptions in mulcxI, mulcxmI: unsafe [#516]]         [F14]
+    7- (y/x)/(x^0/y) not correctly simplified                             [F16]
+    8- sumpos(x=1,1/x^2,1) had the wrong sign [#587]                      [F21]
+    9- default(compatible,3); default(compatible,1) --> case no longer    [F47]
+       taken into account (I = i) [#629]       
+   10- possible oo loop in _isprincipal [ precision was supposed to increase,
+       but could in fact remain the same ]                                [F81]
+   11- agm(-1, 1+1e-55) --> oo loop, agm(-1,1) --> wrong result           [F27]
+   12- read("a b.gz")   \\ filename contains a space                      [F34]
+       gzip: ./a.gz: No such file or directory
+   13- quadgen([]) --> incorrect object [#606]                            [F31]
+   14- hyperu(0,1,1) --> oo loop [#608]                                   [F32]
+   15- fix headers so that ulong is always defined                        [F33]
+   16- gclone didn't work on t_INTs with lg > lgefint                     [F37]
+   17- exp(2^200*I) --> catastrophic cancellation [cos/sin were OK] [#631][F45]
+   18- [Configure] don't rely on $CC exit status, check whether a non-0 size
+       executable is produced [ problems with tcc ]                       [F55]
+   19- wrong Prototype for subgrouplist [ extra 'p' ]                     [F56]
+   20- nf.codiff was only correct up to multiplication by some rational number
+       [cf #510 & 2.4.1-F7]                                               [F58]
+   21- typo in bnfisintnorm(): missed some solutions  [ couldn't find a unit
+       of norm -1 even though one exists ]                                [F74]
+   22- dilog(-1) [ more generally polylog of < 0 t_REALs ] should have
+       0 imaginary part                                                   [F84]
+   23- ix86, x86_64: missing earlyclobber constraint for addllx, subllx,  [F87]
+       divll
+   24- deriv(x/(x+1),y) --> invalid t_RFRAC with exact 0 numerator [#687] [F90]
+   25- factornf(x^5+(-a+2)*x^4-a*x^3+(3*a-6)*x^2+(5*a-10)*x+(2*a-5), a^2-5)
+       --> SEGV  [ not squarefree -> denominators creeping in ] [#708]   [F110]
+BA 26- fix compilation problem with g++-4.2 and GMP                       [F94]
+BA 27- missing GP2C descriptions for Pol and Polrev                      [F114]
+   28- typo in FpM_gauss_pivot: FpM_rank, FpM_image, FpM_suppl, FpM_indexrank
+       much slower than they should be. Same problem in FqM_gauss_pivot. [F113]
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+Done for version 2.3.2 (released 28/03/2006):
+[last column crossreferences current development release 2.4.1]
+  Fixed
+    1- [Cygwin] missing -L... -lgmp when compiling with gmp.              [F2]
+    2- ispower(522^3) -> 0 [ looked like a 7th power to is_357_power(), which
+       then forgot to test for cubes ] [#506]                             [F3]
+    3- when nf.disc < 0, nf.diff was an incorrect PARI ideal [#510]       [F6]
+    4- nf.codiff was only correct up to multiplication by some rational   [F7]
+       number (a divisor of nf.disc) [#510]                              
+    5- inaccuracy (>= 2ulp) in [cached] log(2) [#498]                     [F8]
+    6- exp, sinh, asinh, tanh, atanh were inaccurate near 0               [F9]
+    7- [GMP kernel] forvec(x=[[-1,0]],print(x)) --> error [#509]          [F10]
+       [ 'resetloop' failed when passing through '0' ]
+    8- nfbasistoalg(nfinit(y),x) created an invalid t_POLMOD              [F11]
+    9- incorrect result in ZX_resultant (accuracy loss computing bound)   [F12]
+   10- [Configure] gcc-specific flags were used on linux/freebsd/cygwin,
+       even when __gnuc__ was unset                                       [F14]
+   11- factor( pure power FqX ) --> SEGV                                  [F15]
+   12- [GMP kernel] polrootsmod(f, 4) --> wrong result [ low level t_INT  [F16]
+       manipulation not using the int_* macros ]
+   13- polrootspadic(f, 2, r) --> some roots would be found twice         [F17]
+       [ due to FpX_roots(f, 4) called ]  [#521]
+   14- ??sumalt doesn't compile: in GPHELP, treat \ref in verbatim        [F18]
+       mode[#518]
+   15- matinverseimage returned [;] when no pre-image exists. Conform to  [F19]
+       the docs: "an empty vector or matrix", depending on the input types.
+   16- 3.5 % 2 --> error [ should be 0.5 ]                                [F21]
+   17- sin(1/10^100) --> 0e-28 [ also affected cos,tan,cotan ]            [F22]
+   18- check that k >= 0 in thetanullk [#531]                             [F25]
+   19- isprime(-2,1) returned 1                                           [F26]
+   20- Fix 'Not enough precision in thue' error                           [F27]
+BA 21- [OS X] Fix kernel detection on x86_64-darwin                       [F28]
+BA 22- [Configure] spectacular failure to recognize gcc under some locales[F33]
+   23- polredabs(x^8+2*x^6-5*x^4+78*x^2+9) was incorrect [ missed
+       x^8+6*x^6-x^4+54*x^2+25 due to incorrect "skipfirst" ]             [F34]
+   24- typo in resmod2n (specific to GMP kernel) [#546]                   [F35]
+   25- nfmodprinit could create FpX's which were not reduced mod p        [F39]
+   26- O(x^3)^(1/2) was O(x^2) instead of O(x)                            [F40]
+   27- substpol(x^-2+O(x^-1),x^2,x) --> error [#555]                      [F42]
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+Done for version 2.3.1 (released 06/10/2006):
+[last column crossreferences current development release 2.4.0]
+  Fixed
+    1- typo in remiimul: wrong result in a "failsafe" branch (hardly ever
+       taken). May affect modular powering /Fp if p >> 10^1300 [#457]
+       Also affects the gmp kernel, for p >> 10^5800.                     [F1]
+    2- inconsistent return type in nffactormod [#460]                     [F3]
+    3- gammah(1+O(3^5)) --> incorrect type in ggamd.                      [F8]
+    4- invalid read in copy_leaf [ SEGV in some libc ]                    [F9]
+BA  5- ellheight short help was accidentally truncated.                   [F10]
+    6- substpol(1+O(x^(2*n)),x^2,x) --> 1+O(x) instead of 1+O(x^n) [#470] [F11]
+    7- [OS X] only use -no-cpp-precomp with Apple cc                      [F12]
+    8- divrem(x,x,y) --> [1/y*x, 0]                                       [F13]
+    9- typo in qflll: in rare cases (exact input+floating point computation+
+       precision increase in last-but-1 step), the returned base change is not
+       properly updated in last iteration --> basis not LLL-reduced       [F15]
+   10- (1+x)/(1-x)/(1+x)^2 not simplified [#472,#473]                 [F14,F16]
+   11- ispower(x^k, k) would answer 0 for some x and k in {3,5,7}  [#476] [F17]
+   12- content(t_MAT with exactly 1 col) gave a wrong result              [F18]
+   13- rare bug in red_montgomery (returning 0 with + sign, an incorrect object)
+       [ polrootspadic(x^11+x,11,10) --> corrupts gen_0 ]                 [F20]
+   14- qfbsolve(Qfb(1,2,10),5) --> [0,0; 0,0] instead of 0 [#479]         [F21]
+   15- ispower(0, n, &z) would not set z                                  [F22]
+   16- wrong result in conversion t_QUAD -> t_PADIC whenever disc = 1 (4) [F23]
+JJ 17- gaddgsz macro was wrong [#481]                                     [F24]
+   18- polsubcyclo(p^k, q) --> wrong result [ gener_Fl(p^k) can't handle
+       k > 1, use gener instead ] [#480]                                  [F25]
+SC 19- [GMP] mp_set_memory_functions was called with an incompatible realloc 
+       function. [#484]                                                   [F26]
+AM 20- [TeXmacs] typo in texmacs_output: x --> <bluex> [#491]             [F30]
+BA 21- bnrstark prototype code was non-standard.                          [F34]
+   22- rnfkummer(,,degree) often found too many fields [#482]             [F35]
+   23- missing GC in forvec(,,2)                                          [F37]
+   24- loss of accuracy in p-adic ellinit: wrong digits and spurious errors:
+       E.g i = 5; ellinit([1, -1, 1, -1, -14]*(1+O(17^i)))                [F36]
+   25- possible stack corruption in charpoly(,1)                          [F39]
+   26- Ser(x) raised an error [#499]                                      [F40]
+
+
+  Changed
+    1- remove CPP from Configure tests                                    [C3]

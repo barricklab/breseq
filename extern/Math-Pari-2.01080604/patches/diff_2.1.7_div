@@ -1,0 +1,15 @@
+This patch is intended to fix
+  Error: suffix or operands invalid for `div'
+(from <20091028221750.GA32213@pari.math.u-bordeaux.fr> on pari-dev list)
+
+--- ./src/kernel/ix86/level0.h.orig
++++ ./src/kernel/ix86/level0.h
+@@ -173,7 +173,7 @@
+ ({ ulong __value, __arg1 = (a), __arg2 = (b); \
+    __asm__ ("divl %4" \
+         : "=a" /* %eax */ (__value), "=d" /* %edx */ (hiremainder) \
+-        : "0" /* %eax */ (__arg1), "1" /* %edx */ (hiremainder), "g" (__arg2)); \
++        : "0" /* %eax */ (__arg1), "1" /* %edx */ (hiremainder), "mr" (__arg2)); \
+    __value; \
+ })
+ 

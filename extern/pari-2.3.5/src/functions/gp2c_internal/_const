@@ -1,0 +1,23 @@
+Function: _const_smallreal
+Class: gp2c_internal
+Description:
+ (0):real:prec       real_0(prec)
+ (1):real:prec       real_1(prec)
+ (-1):real:prec      real_m1(prec)
+ (small):real:prec   stor($1, prec)
+
+Function: _const_quote
+Class: gp2c_internal
+Description:
+ (str):var       fetch_user_var($1)
+
+Function: _const_expr
+Class: gp2c_internal
+Description:
+ (str):gen       readseq($1)
+
+Function: _const_real
+Class: gp2c_internal
+Description:
+ (str):real:prec       strtor($1, prec)
+

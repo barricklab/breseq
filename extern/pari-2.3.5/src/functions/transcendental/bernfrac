@@ -1,0 +1,6 @@
+Function: bernfrac
+Section: transcendental
+C-Name: bernfrac
+Prototype: L
+Help: bernfrac(x): Bernoulli number B_x, as a rational number
+

@@ -1,0 +1,12 @@
+Function: abs
+Section: transcendental
+C-Name: gabs
+Prototype: Gp
+Help: abs(x): absolute value (or modulus) of x
+Description: 
+ (small):small	labs($1)
+ (int):int	mpabs($1)
+ (real):real	mpabs($1)
+ (mp):mp	mpabs($1)
+ (gen):gen:prec	gabs($1, prec)
+

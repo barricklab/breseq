@@ -1,0 +1,7 @@
+Function: qfbprimeform
+Section: number_theoretical
+C-Name: primeform
+Prototype: GGp
+Help: qfbprimeform(x,p): returns the prime form of discriminant x, whose
+ first coefficient is p
+

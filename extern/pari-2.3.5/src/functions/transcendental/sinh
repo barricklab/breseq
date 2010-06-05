@@ -1,0 +1,6 @@
+Function: sinh
+Section: transcendental
+C-Name: gsh
+Prototype: Gp
+Help: sinh(x): hyperbolic sine of x
+

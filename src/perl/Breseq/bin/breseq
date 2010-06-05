@@ -425,11 +425,13 @@ if (!-e $bam_done_file_name)
 	my $junction_bam_prefix = $settings->file_name('junction_bam_prefix');	
 	my $junction_bam_file_name = $settings->file_name('junction_bam_file_name');
 
+	my $samtools = $settings->ctool('samtools');
+
 	if (!$settings->{no_junction_prediction})
 	{
-		Breseq::Shared::system("samtools import $candidate_junction_faidx_file_name $resolved_junction_sam_file_name $junction_bam_unsorted_file_name");
-		Breseq::Shared::system("samtools sort $junction_bam_unsorted_file_name $junction_bam_prefix");
-		Breseq::Shared::system("samtools index $junction_bam_file_name");
+		Breseq::Shared::system("$samtools import $candidate_junction_faidx_file_name $resolved_junction_sam_file_name $junction_bam_unsorted_file_name");
+		Breseq::Shared::system("$samtools sort $junction_bam_unsorted_file_name $junction_bam_prefix");
+		Breseq::Shared::system("$samtools index $junction_bam_file_name");
 	}
 	
 	my $resolved_reference_sam_file_name = $settings->file_name('resolved_reference_sam_file_name');
@@ -437,9 +439,9 @@ if (!-e $bam_done_file_name)
 	my $reference_bam_prefix = $settings->file_name('reference_bam_prefix');
 	my $reference_bam_file_name = $settings->file_name('reference_bam_file_name');
 	
-	Breseq::Shared::system("samtools import $reference_faidx_file_name $resolved_reference_sam_file_name $reference_bam_unsorted_file_name");
-	Breseq::Shared::system("samtools sort $reference_bam_unsorted_file_name $reference_bam_prefix");
-	Breseq::Shared::system("samtools index $reference_bam_file_name");
+	Breseq::Shared::system("$samtools import $reference_faidx_file_name $resolved_reference_sam_file_name $reference_bam_unsorted_file_name");
+	Breseq::Shared::system("$samtools sort $reference_bam_unsorted_file_name $reference_bam_prefix");
+	Breseq::Shared::system("$samtools index $reference_bam_file_name");
 		
 	#Might be better to check for existence of these output files manually, as samtools does not always return an error code.
 	

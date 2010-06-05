@@ -1,0 +1,6 @@
+Function: rnfidealnormrel
+Section: number_fields
+C-Name: rnfidealnormrel
+Prototype: GG
+Help: rnfidealnormrel(rnf,x): relative norm of the ideal x
+

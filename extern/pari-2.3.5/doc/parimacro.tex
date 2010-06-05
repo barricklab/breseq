@@ -1,0 +1,470 @@
+% $Id: parimacro.tex 8295 2007-02-13 22:26:56Z kb $
+% Copyright (c) 2000  The PARI Group
+%
+% This file is part of the PARI/GP documentation
+%
+% Permission is granted to copy, distribute and/or modify this document
+% under the terms of the GNU General Public License
+
+\catcode`\@=11
+%
+% GENERAL FORMATTING
+%
+\newif\ifGPHELP
+\newif\ifPDF
+\newread\std
+\def\checkfile#1{\def\@stdfile{#1}\openin\std=#1\relax}
+\long\def\@ifundef#1#2#3{\expandafter\ifx\csname
+  #1\endcsname\relax#2\else#3\fi}
+
+% do we come from gphelp ?
+\@ifundef{fromgphelp}{\GPHELPfalse}{\GPHELPtrue}
+\ifGPHELP %YES
+  \overfullrule=0pt
+  \magnification=\magstep1
+  \baselineskip=13pt
+\else     %NO
+  \magnification=\magstephalf
+  \ifx\pdfoutput\undefined
+     \PDFfalse
+  \else
+     \PDFtrue
+  \fi
+\fi
+
+% if paricfg.tex is there (Configure succeeded), input it, otherwise use
+% default values
+\checkfile{paricfg.tex}
+\ifeof\std
+  \checkfile{doc/paricfg.tex}
+\fi
+\ifeof\std
+  \ifGPHELP\else% OK for gphelp to use default values
+    \message{paricfg.tex not found. You should run Configure.}
+  \fi
+  \def\vers{2.0.x}
+  \def\includedir{/usr/local/include/pari}
+  \def\libdir{/usr/local/lib}
+\else
+  \input\@stdfile
+\fi
+
+\font\chaptertitlefont=cmr12 scaled \magstep1
+\font\chaptertitlebf=cmbx10 scaled \magstep2
+\font\sectiontitlebf=cmbx12
+\font\seventt=cmtt8 scaled 875
+\scriptfont\ttfam=\seventt % we should really set the \hyphenchar etc first
+\parskip=6pt plus 3pt minus 1.5pt
+%\overfullrule=0pt
+
+%%
+%% TABLE OF CONTENTS
+%%
+\newwrite\toc
+\def\tableofcontents{\begintitle
+\openin\std=\jobname.toc
+\ifeof\std
+\else
+  \begingroup
+  \centerline{\bf Table of Contents}\medskip
+  \parskip=0pt plus 1pt
+  \parindent=0pt
+  \catcode`\_=11 % make _ an ordinary char (frequent in function names)
+  \catcode`\@=11 % make @ an ordinary char (appears in \_ expansion)
+  \obeylines\input\jobname.toc
+  \endgroup
+\fi
+\openout\toc=\jobname.toc
+\endtitle}
+
+%%
+%% CROSS REFERENCING & INDEX
+%%
+\newif\ifsecondpass
+\newwrite\out
+\newwrite\aux
+\newwrite\index
+\ifGPHELP % disable crossreferences
+  \def\condwrite#1#2{}
+  \def\idx#1{#1}
+  \def\toindex#1{}
+  \def\tocwrite#1{}
+  \def\label#1{}
+  \def\gphelpref#1{[Label: {\tt #1}]}
+  \def\gphelpsecref#1{Section~\gphelpref{#1}}
+  \def\ref{\let\do=\gphelpref\doverb}
+  \def\secref{\let\do=\gphelpsecref\doverb}
+\else % none of the following is needed by gphelp
+  \def\typeout#1{\immediate\write\out{#1}}
+  \def\@namedef#1{\expandafter\def\csname#1\endcsname}
+  \def\newlabel#1#2{\@ifundef{r@#1}{}{\message{Label `#1' multiply
+    defined}}\global\@namedef{r@#1}{#2}}
+
+  \openin\std=\jobname.std
+  \ifeof\std
+    \secondpassfalse
+    \typeout{FIRST PASS}
+    \openout\index=\jobname.idx
+    \let\condwrite=\write
+  \else
+    \secondpasstrue
+    \typeout{SECOND PASS}
+    \let\immediate\relax
+    \def\condwrite#1#2{}
+  \fi
+
+%default font for index entry
+  \def\f@nt{rm}
+
+%% \toindex{#1} = put #1 in index; use font \f@nt, indicate \pageno.
+%% If PDF, associate the page to a unique integer (\pdfdestcntr).
+  \ifPDF
+    \def\toindex#1{\putdest
+      \immediate\condwrite\index{!#1!\f@nt!\the\pageno!\number\pdfdestcntr}}
+  \else
+    \def\toindex#1{%
+      \immediate\condwrite\index{!#1!\f@nt!\the\pageno!}}
+  \fi
+
+  \checkfile{\jobname.aux}
+  \ifeof\std
+    \message{No aux file.}
+  \else
+    \input\@stdfile% input aux file if present
+  \fi
+
+% \ref, \label. We need an auxiliary file written during first pass
+  \openout\aux=\jobname.aux
+
+  \ifx\inputlineno\undefined
+    \let\on@line\empty
+  \else
+    \def\on@line{ on input line \the\inputlineno}
+  \fi
+  \def\@errundef#1{\typeout{Reference `#1' on page \the\pageno \space
+    undefined\on@line}}
+
+  \def\@car#1#2\@nil{#1}
+  \def\@cdr#1#2\@nil{#2}
+
+  \def\@ref {\expandafter\@cdr\@temp \@nil\null}
+  \def\@cref{\expandafter\@car\@temp \@nil\null}
+
+  \def\label#1{\immediate\write\aux{\string
+    \newlabel{#1}{{\the\chapno}{\currentlabel}}}}
+  \def\ref#1{\@ifundef{r@#1}
+    {{\bf ??}\@errundef{#1}}
+    {\edef\@temp{\csname r@#1\endcsname}%
+      \def\lbl{\@ref}\def\chp{\@cref}%
+      \ifx\chp{\the\chapno}\lbl\else\chp.\lbl\fi}}
+  \def\secref#1{Section~\ref{#1}}
+\fi % end of non-gphelp section
+
+%%
+%% VERBATIM MODE
+%%
+% \doverb: setup verbatim mode for the first argument, and execute \do{\arg}
+\def\setupverb{\def\do##1{\catcode`##1=12}\dospecials
+  \catcode`\ =10% standard space
+  \catcode`\f=13% to break ugly ligatures as in nf{}init, use \EFF instead
+}
+% f won't produce any ligature if catcode 13, e.g in verbatim mode (cf above).
+{ \let\GDEF=\gdef \global\let\EFF=f \catcode`\f=13
+  \GDEFf{\EFF{}}}
+
+\begingroup
+\catcode`<=1\catcode`\{=12
+\catcode`>=2\catcode`\}=12
+\gdef\d@verb#1<% gobble #1 = {
+  \def\next##1}<\gdef\@verb<##1>\endgroup%
+  \do<\@verb>>% \@verb is the (verbatim) argument
+  \next>
+\gdef\d@verbb#1<% gobble #1 = {
+  \def\next##1}{##2}<\gdef\@verba<##1>\gdef\@verbb<##2>\endgroup%
+  \do<\@verba><\@verbb>>% \@verba, \@verbb are the two (verbatim) argument
+  \next>
+%
+\endgroup
+\def\doverb {\begingroup\setupverb\d@verb}
+\def\doverbb{\begingroup\setupverb\d@verbb}
+
+% argument (silently) goes to index
+\def\sidx{\gdef\f@nt{rm}\let\do=\toindex\doverb}   % \rm
+\def\kbdsidx{\gdef\f@nt{tt}\let\do=\toindex\doverb}% \tt
+\def\varsidx{\gdef\f@nt{it}\let\do=\toindex\doverb}% \tt
+
+% argument printed + sent to index
+\def\@idx#1{#1\toindex{#1}}
+\def\idx{\gdef\f@nt{rm}\let\do=\@idx\doverb}
+
+% to index + set up as key (keyword)
+\def\@keyidx#1{{\bf\@idx{#1}}}
+\def\teb{\gdef\f@nt{tt}\let\do=\@keyidx\doverb}
+
+% to index + set up as kbd (verbatim)
+\def\@kbdidx#1{{\tt\@idx{#1}}}
+\def\tet{\gdef\f@nt{tt}\let\do=\@kbdidx\doverb}
+
+% to index + set up as var (variable)
+\def\@kbdvar#1{{\it\@idx{#1}\/}}
+\def\tev{\gdef\f@nt{it}\let\do=\@kbdvar\doverb}
+
+\def\@syn#1#2{\gdef\f@nt{tt}\toindex{#1}The library syntax is $\key{#1}(#2)$}
+\def\@synT#1#2{\gdef\f@nt{tt}\toindex{#1}The library syntax is \key{#1}(#2)}
+\def\syn{\let\do=\@syn\doverb}
+\def\@synt#1#2{\@synT{#1}{{\tt#2}}}
+\def\synt{\let\do=\@synt\doverb}
+
+% function prototypes
+% types omitted in funs (for chap 3)
+\def\funno#1#2#3{\noindent{\tt#1 $\key{#2}$(#3)}} % no index
+\def\@funs#1#2{\gdef\f@nt{tt}\noindent\toindex{#1}$\key{#1}(#2)$}
+\def\@fun#1#2#3{\gdef\f@nt{tt}\toindex{#2}\funno{#1}{#2}{#3}}
+\def\fun{\let\do=\@fun\doverbb}
+\def\funs{\let\do=\@funs\doverb}  % simple fun (omit return type)
+
+%%
+%% SECTIONS
+%%
+\newcount\appno
+\newcount\chapno
+\newcount\secno
+\newcount\subsecno
+\newcount\subsubsecno
+
+\def\newpage{\hbox{}\vfill\eject}
+%Table of contents. cf TeXBook Exercise 21.10
+\def\tocwrite#1{{\let\the=0\edef\next{\condwrite\toc{#1}}\next}}
+\let\putchapdest\relax
+\let\sectionhook\relax
+
+\def\title#1#2{%
+  \ifodd\pageno\else\newpage\fi
+  \tocwrite{#1 #2\string\dotfill\the\pageno}
+  \ifGPHELP\else
+     \putchapdest
+     \centerline{\chaptertitlefont #1}\medskip
+  \fi
+  \centerline{\let\bf\chaptertitlebf \chaptertitlefont #2}\vskip1cm}
+\def\sectitle#1{%
+  \vskip 0pt plus 54pt\penalty-600% good break
+  \vskip 24pt plus -45pt minus 9pt%
+  \putchapdest%
+  \tocwrite{{%\sevenrm
+\hskip0.5cm#1\string\dotfill\the\pageno}}%
+  \leftline{\sectionhook{\sectiontitlebf #1}.}
+  \penalty10000 % impossible break
+  \smallskip}% whatever follows will add a \parskip
+
+\def\subsectitle#1{%
+  \vskip 0pt plus 45pt\penalty-300
+  \vskip 6pt plus -42pt minus 3pt
+  \tocwrite{{\sevenrm
+\hskip1cm#1\string\dotfill\the\pageno}}%
+  \sectionhook\noindent{\bf#1}}
+
+\def\subsubsectitle#1{% a \parskip is being added anyway by \noindent
+  \par\vskip 0pt plus 39pt\penalty-200
+  \vskip 0pt plus -37pt minus 1.5pt
+  \sectionhook\noindent{\bf#1}}
+
+\ifGPHELP
+  \let\maketitle\relax
+\else
+  \def\maketitle{%
+  \ifnum\chapno=0
+    \currentlabel. 
+  \else
+    \number\chapno.\currentlabel\ 
+  \fi}
+\fi
+
+\def\misctitle#1{\par\vskip 0pt plus 66pt\penalty-400
+  \vskip 3pt plus -64pt minus 1.5pt\noindent{\bf #1}}
+
+% Chapter headings occupy two lines in the manual (only one in
+% INSTALL.tex and gphelp-extracted bits).  Syntax requirement: After calling
+% \chapter{...} and possibly \label{...}  etc, an empty line _must_ follow
+% before the first paragraph of text or section heading begins. [GN]
+\def\chapter#1#2\par{
+  \secno=0\global\advance\chapno by 1
+  \title{Chapter \number\chapno:}{#1}#2\noindent\ignorespaces}
+\def\appendix#1\par{
+  \chapno=0
+  \secno=0\global\advance\appno by 1
+  \def\applet{\ifcase\appno\or A\or B\or C\or D\or E\or F\or G\fi}
+  \title{Appendix \applet:}{#1}\noindent\ignorespaces}
+\def\section#1{%
+  \subsecno=0\global\advance\secno by 1%
+  \gdef\currentlabel{\number\secno}%
+  \sectitle{\maketitle#1}}
+\def\subsec#1{
+  \subsubsecno=0\global\advance\subsecno by 1
+  \gdef\currentlabel{\number\secno.\number\subsecno}
+  \subsectitle{\maketitle#1}}
+\def\subsubsec#1{
+  \global\advance\subsubsecno by 1
+  \gdef\currentlabel{\number\secno.\number\subsecno.\number\subsubsecno}
+  \subsubsectitle{\maketitle#1}}
+
+\def\annotepar#1{\noindent\llap{#1:\ \ }}
+\def\unix{\annotepar{UNIX}}
+\def\emacs{\annotepar{EMACS}}
+
+\def\@secunix#1{\begingroup\def\sectionhook{\unix{}}\do{#1}\endgroup}
+\def\sectionunix#1{{\let\do=\section\@secunix{#1}}}
+\def\subsecunix#1{{\let\do=\subsec\@secunix{#1}}}
+\def\subsubsecunix#1{{\let\do=\subsubsec\@secunix{#1}}}
+\def\@subsecidxunix#1{{\let\do=\@subsecidx\@secunix{#1}}}
+\def\@subsubsecidxunix#1{{\let\do=\@subsubsecidx\@secunix{#1}}}
+
+\def\subseckbd#1{\subsec{\kbd{#1}}}
+\def\@subsecidx#1{\subsec{#1}\toindex{#1}}
+\def\subsecidx{\gdef\f@nt{tt}\let\do=\@subsecidx\doverb}
+\def\@subsubsecidx#1{\subsubsec{#1}\toindex{#1}}
+\def\subsubsecidx{\gdef\f@nt{tt}\let\do=\@subsubsecidx\doverb}
+
+\def\subsecidxunix{\gdef\f@nt{tt}\let\do=\@subsecidxunix\doverb}
+\def\subsubsecidxunix{\gdef\f@nt{tt}\let\do=\@subsubsecidxunix\doverb}
+
+%
+% General purpose
+%
+\def\begintitle{
+  \begingroup\nopagenumbers
+  \font\mine=cmb10 scaled 1893
+  \hbox{}
+}
+\def\authors{
+  \centerline{C. Batut, K. Belabas, D. Bernardi, H. Cohen, M. Olivier}
+  \vskip 1.truecm
+  \centerline{Laboratoire A2X, U.M.R. 9936 du C.N.R.S.}
+  \centerline{Universit\'e Bordeaux I, 351 Cours de la Lib\'eration}
+  \centerline{33405 TALENCE Cedex, FRANCE}
+  \centerline{\tt e-mail: pari@math.u-bordeaux.fr}
+  \vskip 1.5truecm
+  \centerline{\sectiontitlebf Home Page:}
+  \centerline{\kbd{http://pari.math.u-bordeaux.fr/}}
+  \vskip 2.truecm
+}
+
+\def\copyrightpage{
+\begintitle
+\vskip 14cm
+\noindent Copyright \copyright\ 2000--2006 The PARI Group
+\medskip\par
+\noindent Permission is granted to make and distribute verbatim copies of
+this manual provided the copyright notice and this permission notice are
+preserved on all copies.
+\medskip\par
+\noindent Permission is granted to copy and distribute modified versions, or
+translations, of this manual under the conditions for verbatim copying,
+provided also that the entire resulting derived work is distributed under the
+terms of a permission notice identical to this one.
+\bigskip\par
+\noindent PARI/GP is Copyright \copyright\ 2000--2006 The PARI Group
+\medskip\par
+\noindent PARI/GP is free software;  you can redistribute it and/or modify it
+under the terms of the GNU General Public License as published by the Free
+Software Foundation. It is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY WHATSOEVER.
+\endtitle
+}
+
+\def\endtitle{\newpage\endgroup}
+
+\newfam\euffam
+\font\teneuf=eufm10
+\textfont\euffam=\teneuf
+\def\goth#1{{\fam\euffam#1}}
+\def\kbd#1{{\tt #1}}
+\def\key#1{{\bf #1}}
+\def\emph#1{{\it #1\/}}
+\def\var#1{\hbox{\it #1\/}}
+\def\floor#1{\left\lfloor #1 \right\rfloor}
+\def\ceil#1{\left\lceil #1 \right\rceil}
+\def\round#1{\left\lfloor #1 \right\rceil}
+\def\fl{\var{f\kern0pt lag}}
+\def\Cl{\text{Cl}}
+\def\gcd{\text{gcd}}
+\def\Norm{\text{Norm}}
+\def\Id{\text{Id}}
+\def\disc{\text{disc}}
+\def\item{$\bullet$~}
+
+\def\bs{{\char'134}}
+\def\obr{{\char'173}}
+\def\cbr{{\char'175}}
+\def\pow{\^{}\hskip0pt}
+\def\til{\raise-0.3em\hbox{\~{}}}
+\def\b#1{{\tt \bs#1}}
+\def\mod{\,{\rm mod}\,}
+\def\text#1{{\rm#1}}
+\def\dfrac#1#2{{{#1}\over{#2}}}
+\def\binom#1#2{\pmatrix{{#1}\cr{#2}}}
+\def\Bbb#1{{\bf #1}}
+{\catcode`\_=11
+\gdef\typ#1{\kbd{t_#1}}}
+\def\Z{\Bbb Z}
+\def\Q{\Bbb Q}
+\def\F{\Bbb F}
+\def\R{\Bbb R}
+\def\C{\Bbb C}
+\def\dotfill{\leaders\hbox to 3truemm{\hfil.\hfil}\hfill}
+\def\B{\kbd{BIL}}
+\def\op{{\it op\/}}
+
+% verbatim mode, leave alone $ and _
+% @ made active: assume verbatim text doesn't contain it
+\newif\ifnopar
+{\catcode`\^=13\global\let^=\pow\obeyspaces\global\let \ }
+\def\ttverb{%
+  \nopartrue
+  \catcode`\\=12%
+  \catcode`\{=12%
+  \catcode`\}=12%
+  \catcode`\&=12%
+  \catcode`\#=12%
+  \catcode`\%=12%
+  \catcode`\^=13%
+  \catcode`\~=13\def~{{\til}}%
+  \catcode`\@=0%
+  \def\par{\futurelet\next\dopars}%
+  \def\dopars{%
+    \ifnopar \noparfalse%
+    \else% treat two consecutive \par specialy
+      \ifx\next\par \vskip4pt plus 1pt\nopartrue%
+      \else \leavevmode\endgraf\fi\fi}%
+  \obeyspaces\obeylines\tt}
+
+% back to normalcy
+\def\unverb{%
+  \catcode`\\=0%
+  \catcode`\{=1%
+  \catcode`\}=2%
+  \catcode`\$=3%
+  \catcode`\&=4%
+  \catcode`\#=6%
+  \catcode`\^=7%
+  \catcode`\_=8%
+  \catcode`\^^I=10}
+
+\def\bprogpart{\begingroup%
+  \vskip 0pt plus 1pt%
+  \leavevmode\parskip=0pt plus 1pt%
+  \interlinepenalty2000\clubpenalty9000\widowpenalty9000%
+  \ttverb}
+
+% complete verbatim (including _ and $)
+\def\bprogfile#1{\bprog\input#1\eprog}
+\def\bprog{\bprogpart\catcode`\_=12\catcode`\$=12}
+\def\eprog{\endgroup\par}
+{\obeylines
+  \gdef\com{\begingroup\unverb\comstart}
+  \gdef\comstart#1^^M{\it#1\endgroup
+} % newline after @endgroup is important
+}
+% comments
+\def\Ccom{\begingroup\unverb\Ccomstart}
+\def\Ccomstart#1*/{\rm#1\endgroup*/}
+\catcode`\@=12

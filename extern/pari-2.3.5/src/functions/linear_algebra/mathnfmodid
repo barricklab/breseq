@@ -1,0 +1,7 @@
+Function: mathnfmodid
+Section: linear_algebra
+C-Name: hnfmodid
+Prototype: GG
+Help: mathnfmodid(x,d): (upper triangular) Hermite normal form of x
+ concatenated with d times the identity matrix
+

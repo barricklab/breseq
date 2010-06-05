@@ -1,0 +1,7 @@
+Function: pollegendre
+Section: polynomials
+C-Name: legendre
+Prototype: LDn
+Help: pollegendre(n,{v=x}): legendre polynomial of degree n (n C-integer),
+ in variable v
+

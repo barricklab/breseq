@@ -1,0 +1,7 @@
+Function: idealval
+Section: number_fields
+C-Name: idealval
+Prototype: lGGG
+Help: idealval(nf,x,p): valuation at p given in idealprimedec format of the
+ ideal x in the number field nf
+

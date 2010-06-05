@@ -1,0 +1,50 @@
+
+              Announcement of the Pari-2.0.BETA release
+
+This message is to announce the beta release of version 2.0 of the
+PARI/GP system.
+
+For those who do not yet know, PARI/GP is a package which is aimed at
+efficient computations in number theory, but also contains a large number
+of other useful functions. It is somewhat related to a Computer Algebra
+System, but is not really one since it treats symbolic expressions as
+mathematical entities such as polynomials, series, matrices, etc..., and
+not as expressions per se. However it is often much faster than other
+CAS, and contains a huge number of specific functions not found
+elsewhere, essentially for use in number theory.
+
+In addition this package is free. It can be used in an interactive shell (GP)
+or as a C/C++ library (PARI). The source code (including documentation) can
+be found at
+
+  ftp://pari.math.u-bordeaux.fr/pub/pari/pari.tar.gz
+
+It should compile on most UNIX systems. In any case, we provide GP binaries
+for some major architectures/operating systems, including various brands of
+UNIXes, DOS, OS/2, Windows 3.1, Windows 95/NT both native (if you have to)
+and using Cygnus user tools (preferred), 680x0 and PowerPC Macintosh (*)...
+They can be found in the subdirectories of
+
+  ftp://pari.math.u-bordeaux.fr/pub/pari
+
+If you have more questions about PARI, you can visit
+
+  http://pari.home.ml.org
+
+or email us at
+
+  pari@math.u-bordeaux.fr
+
+    Enjoy!
+
+(*) This is not quite true at the time of this writing (pari-dev release).
+This will hopefully be completed before the official release.
+========================================================================
+
+From the README file:
+
+The `beta' status means that a substantial amount of testing has been done,
+but bugs might still be lurking in the code and the documentation might not
+be absolutely accurate. Apart from this word of caution, we believe this
+version is stable enough to be released for public use and for site-wide
+installations.

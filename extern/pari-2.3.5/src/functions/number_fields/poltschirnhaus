@@ -1,0 +1,7 @@
+Function: poltschirnhaus
+Section: number_fields
+C-Name: tschirnhaus
+Prototype: G
+Help: poltschirnhaus(x): random Tschirnhausen transformation of the
+ polynomial x
+

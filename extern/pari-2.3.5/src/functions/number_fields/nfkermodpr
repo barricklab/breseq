@@ -1,0 +1,7 @@
+Function: nfkermodpr
+Section: number_fields
+C-Name: nfkermodpr
+Prototype: GGG
+Help: nfkermodpr(nf,x,pr): kernel of the matrix x in Z_K/pr, where pr is in
+ modpr format (see nfmodprinit)
+

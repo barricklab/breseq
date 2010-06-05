@@ -1,0 +1,22 @@
+Function: _+_
+Class: symbolic_operators
+C-Name: gadd
+Prototype: GG
+Description: 
+ (lg, 1):small:parens		$(1)
+ (small, small):small:parens	$(1) + $(2)
+ (lg, small):lg:parens		$(1) + $(2)
+ (small, lg):lg:parens		$(1) + $(2)
+ (int, small):int		addis($1, $2)
+ (small, int):int		addsi($1, $2)
+ (int, int):int			addii($1, $2)
+ (real, small):real		addrs($1, $2)
+ (small, real):real		addsr($1, $2)
+ (real, real):real		addrr($1, $2)
+ (mp, real):real		mpadd($1, $2)
+ (real, mp):real		mpadd($1, $2)
+ (mp, mp):mp			mpadd($1, $2)
+ (gen, small):gen		gaddgs($1, $2)
+ (small, gen):gen		gaddsg($1, $2)
+ (gen, gen):gen			gadd($1, $2)
+

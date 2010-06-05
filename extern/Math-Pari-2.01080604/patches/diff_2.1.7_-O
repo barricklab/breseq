@@ -1,0 +1,11 @@
+--- ./src/headers/parisys.h~	Fri Oct 28 17:44:06 2005
++++ ./src/headers/parisys.h	Fri Oct 28 17:43:12 2005
+@@ -48,7 +48,7 @@
+ #  ifdef __GNUC__
+ #    define VOLATILE __volatile__
+ #    ifdef GCC_INLINE
+-#      ifndef __OPTIMIZE__
++#      ifdef __OPTIMIZE__NONE
+ #        error "no inlining without -O. Put back -O or remove -DGCC_INLINE"
+ #      else
+ #        define INLINE __inline__ static
