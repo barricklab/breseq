@@ -1,11 +1,12 @@
 breseq Development Roadmap
 
+COMPLETED
+  * C++ error_count
+  * Genomic Diff files now used as intermediates
+ 
 MAJOR GOALS
-Convert breseq pipeline to basic Perl (without any complex modules like BioPerl) and C++ command line tools. Output a genomic diff and summary files. Refactor visualization and annotation steps that require BioPerl and R to a final step that may be run independently.
 
-C++: count_errors
-replaces part of the code in ErrorCalibration.pm
-Input BAM and reference FAI. Output table of errors.
+Rewrite graph_coverage.pl to use BAM/FASTA files as input.
 
 C++: predict_mutations
 replaces code in MutationIdentification.pm
@@ -23,13 +24,3 @@ Replaces code in AlignmentCorrection.pm
 Input SAM to reference, SAM to candidate junctions, FASTQ files, and optionally -- repeat coordinates (so that junctions can be pushed to the end of IS).
 Output trimmed reads, junction_predictions, orphan read FASTQ.
 
-
-REFACTORING
-
-C++: rewrite negative binomial fitting to use GSL library (if available)
-or temporarily drop it and allow user specified cutoff.
-
-
-WEB INTERFACE
-
-This is all Titus...

@@ -5,6 +5,7 @@ SELF=`dirname ${BASH_SOURCE}`
 
 testcmd() {
     ${BRESEQ} \
+    	--polymorphism-prediction \
         -o ${SELF} \
         -r ${DATADIR}/lambda/lambda.gbk \
         ${DATADIR}/lambda/lambda_mixed_population.fastq
