@@ -189,7 +189,8 @@ sub load_ref_seq_info
 	$summary->{sequence_conversion}->{reference_sequences} = $s if (defined $summary);
 
 	## create SAM faidx
-	Breseq::Shared::system("samtools faidx $reference_fasta_file_name", 1) if ($create_fasta);
+	my $samtools = $settings->ctool('samtools');
+	Breseq::Shared::system("$samtools faidx $reference_fasta_file_name", 1) if ($create_fasta);
 			
 	return $ref_seq_info;
 }

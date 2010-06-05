@@ -1,0 +1,64 @@
+--- ./src/language/init.c.orig	2005-09-16 09:50:49.000000000 -0700
++++ ./src/language/init.c	2009-10-29 18:13:55.000000000 -0700
+@@ -394,6 +394,7 @@
+   for (i=0; i <= noer; i++) err_catch_array[i] = 0;
+ }
+ 
++static need_force_init_defaults = 0;
+ /* initialise les donnees de la bibliotheque PARI. Peut être précédée d'un
+  * appel à pari_addfunctions si on ajoute d'autres fonctions au pool de base.
+  */
+@@ -406,7 +407,9 @@
+ #ifdef STACK_CHECK
+   pari_init_stackcheck(&i);
+ #endif
+-  init_defaults(0);
++  init_defaults(need_force_init_defaults);
++  need_force_init_defaults = 0;
++
+   if (INIT_JMP && setjmp(environnement))
+   {
+     fprintferr("  ***   Error in the PARI system. End of program.\n");
+@@ -498,7 +501,7 @@
+   long i;
+   entree *ep,*ep1;
+ 
+-  while (delete_var()) /* empty */;
++  while (delete_var());				/* empty all but x */;
+   for (i = 0; i < functions_tblsz; i++)
+   {
+     for (ep = functions_hash[i]; ep; ep = ep1)
+@@ -511,17 +514,28 @@
+     }
+   }
+   free((void*)varentries); free((void*)ordvar); free((void*)polvar);
+-  free((void*)polx[MAXVARN]); free((void*)polx); free((void*)polun);
+-  free((void*)primetab);
+-  free((void*)universal_constants);
++  varentries = NULL; ordvar = NULL; polvar = NULL;
++#if 1
++  manage_var(100, (entree *)0);			/* now empty x too */
++#else
++  free((void*)polx[MAXVARN]);
++  polx[MAXVARN] = NULL;
++#endif
++  free((void*)polx); free((void*)polun);
++  polx = NULL; polun = NULL;
++  free((void*)primetab); primetab = NULL;
++  free((void*)universal_constants); universal_constants = NULL;
+ 
+   /* set first cell to 0 to inhibit recursion in all cases */
+   while (cur_bloc) { *cur_bloc=0; killbloc(cur_bloc); }
+   killallfiles(1);
+   free((void *)functions_hash);
++  functions_hash = NULL;
+   free((void *)bot); free((void *)diffptr);
+-  free(current_logfile);
+-  free(current_psfile);
++  bot = 0; diffptr = 0;
++  free(current_logfile);  current_logfile = NULL;
++  free(current_psfile);   current_psfile  = NULL;
++  need_force_init_defaults = 1;
+ 
+   if (gp_history_fun)
+     gp_history_fun(0,-1,NULL,NULL);

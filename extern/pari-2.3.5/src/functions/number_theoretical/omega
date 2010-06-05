@@ -1,0 +1,9 @@
+Function: omega
+Section: number_theoretical
+C-Name: gomega
+Prototype: G
+Help: omega(x): number of distinct prime divisors of x
+Description: 
+ (int):small	omega($1)
+ (gen):gen	gomega($1)
+

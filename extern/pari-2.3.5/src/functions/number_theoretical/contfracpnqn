@@ -1,0 +1,7 @@
+Function: contfracpnqn
+Section: number_theoretical
+C-Name: pnqn
+Prototype: G
+Help: contfracpnqn(x): [p_n,p_{n-1}; q_n,q_{n-1}] corresponding to the
+ continued fraction x
+

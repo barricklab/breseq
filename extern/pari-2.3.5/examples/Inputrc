@@ -1,0 +1,14 @@
+# initialization file used by the readline library
+# modify it then copy it to $HOME/.inputrc
+
+"\C-h": backward-delete-char
+"\e\C-h": backward-kill-word
+"\C-xd": dump-functions
+
+$if Pari-GP
+  set convert-meta on
+  set output-meta off
+  set show-all-if-ambiguous
+# toggle between normal-mode (electric parentheses) and copy-paste mode
+  "\C-q": "\M--2("
+$endif

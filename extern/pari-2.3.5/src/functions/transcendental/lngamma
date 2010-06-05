@@ -1,0 +1,6 @@
+Function: lngamma
+Section: transcendental
+C-Name: glngamma
+Prototype: Gp
+Help: lngamma(x): logarithm of the gamma function of x
+

@@ -1,0 +1,74 @@
+#! /bin/sh
+arch=none; osname=unknown
+myuname=`(uname -a) 2>/dev/null || arch 2>&1`
+if test -d /NextApps; then myuname=nextstep; fi
+if test -n "$myuname"; then
+  myuname=`echo $myuname | sed -e 's/^[^=]*=//' -e 's,/,,g' | \
+	  tr '[A-Z]' '[a-z]' | tr '\012' ' '`
+  set X $myuname; shift; osname=$1
+  case "$osname" in
+  irix*)    osname=irix;;
+  fx2800)   arch=fx2800; osname=concentrix;;
+  hp*)      osname=hpux; arch=`uname -m`
+            case $arch in
+		ia64) 		arch=ia64;;
+		9000/[34]*)	arch=m68k;;
+		9000/[678]*)	arch=hppa;;
+		*)		arch=hppa;;
+	    esac;;
+  os2)
+            arch=`uname -m`
+            if test -z "$arch"; then arch=ix86; fi
+            ;;
+  freebsd|netbsd|openbsd)
+            arch=`uname -m`
+            if test -z "$arch"; then arch=ix86; fi
+            case $arch in
+              amd64) arch=x86_64;;
+            esac;;
+  cygwin*)  arch=`uname -m`
+            if test -z "$arch"; then arch=ix86; fi
+            osname=cygwin;;
+  ultrix)   arch=mips;;
+  nextstep) arch=`file /bin/sh | sed 's/.*(for architecture \(.*\))/\1/'`;;
+  darwin*)  arch=`uname -p`
+            if test "$arch" = powerpc; then arch=ppc; fi ;;
+  osf1)     case "$5" in alpha) arch=alpha;; esac;;
+  linux)    arch=`uname -m`
+	    case $arch in
+		sparc64) arch=sparcv9;;
+		parisc*) arch=hppa;;
+		sparc) case "`cat /proc/cpuinfo`" in
+	    *SuperSparc*)   arch=sparcv8_super;;
+	    *TMS390Z5[05]*) arch=sparcv8_super;; # SuperSparc I or II
+	    *TMS390S1[05]*) arch=sparcv8_micro;; # MicroSparc I
+	    *MB86904*)      arch=sparcv8_micro;; # MicroSparc II
+	    *MB86907*)      arch=sparcv8_micro;; # TurboSparc
+	    *MB86934*)      arch=sparcv8_super;; # SparcLite
+	    *RT625*)        arch=sparcv8_super;; # HyperSparc
+	    *CY605*)        arch=sparcv8_super;;
+	    	       esac;;
+	    esac;;
+  sunos)    case "$3" in 5*) osname=solaris;; esac
+	    case "$5" in
+	    sun4|sun4[ce]) ;; #arch=sparcv7;;
+	    sun4[dm]) cpu="TI,|FMI,|Cypress,|Ross,"
+	      case "`(prtconf||devinfo)2>&- |egrep $cpu`" in
+	      *TI,TMS390Z5[05]*) arch=sparcv8_super;; # SuperSparc I or II
+	      *TI,TMS390S1[05]*) arch=sparcv8_micro;; # MicroSparc I
+	      *FMI,MB86904*)     arch=sparcv8_micro;; # MicroSparc II
+	      *FMI,MB86907*)     arch=sparcv8_micro;; # TurboSparc
+	      *FMI,MB86934*)     arch=sparcv8_super;; # SparcLite
+	      *Ross,RT625*)      arch=sparcv8_super;; # HyperSparc
+	      *Cypress,CY605*)   arch=sparcv8_super;;
+	      *)                 arch=sparcv8_super;; # ???
+	      esac;;
+	    sun4[uv])    arch=sparcv9;;
+            i*pc) arch=ix86;;
+	    esac;;
+  gnu*)     # Cover GNU/Hurd, GNU/kFreeBSD and other GNU userland
+            arch=`uname -m`; 
+            case $arch in i386-*) arch=i386;;esac;;
+  esac
+fi
+echo $arch-$osname

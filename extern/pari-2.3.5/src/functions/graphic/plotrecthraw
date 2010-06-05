@@ -1,0 +1,11 @@
+Function: plotrecthraw
+Class: highlevel
+Section: graphic
+C-Name: rectplothraw
+Prototype: LGD0,L,
+Help: plotrecthraw(w,data,{flags=0}): plot graph(s) for data in rectwindow
+ w, where data is a vector of vectors. If plot is parametric, length of data
+ should be even, and pairs of entries give curves to plot. If not, first
+ entry gives x-coordinate, and the other ones y-coordinates. Admits the same
+ optional flags as plotrecth, save that recursive plot is meaningless
+

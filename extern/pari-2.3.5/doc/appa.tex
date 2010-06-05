@@ -1,0 +1,537 @@
+% $Id: appa.tex 7897 2006-04-20 11:36:41Z kb $
+% Copyright (c) 2000  The PARI Group
+%
+% This file is part of the PARI/GP documentation
+%
+% Permission is granted to copy, distribute and/or modify this document
+% under the terms of the GNU General Public License
+\appendix{Installation Guide for the UNIX Versions}
+
+\def\tocwrite#1{}
+\section{Required tools}
+
+Compiling PARI requires an \kbd{ANSI C} or a \kbd{C++} compiler. If you do
+not have one, we suggest that you obtain the \kbd{gcc/g++} compiler. As for
+all GNU software mentioned afterwards, you can find the most convenient site
+to fetch \kbd{gcc} at the address
+
+\kbd{http://www.gnu.org/order/ftp.html}
+
+\noindent (On Mac OS X, this is also provided in the \kbd{Xcode} tool
+suite.) You can certainly compile PARI with a different compiler, but
+the PARI kernel takes advantage of optimizations provided by \kbd{gcc}.
+This results in at least 20\% speedup on most architectures.
+
+\misctitle{Optional packages.} The following programs and libraries are useful
+in conjunction with \kbd{gp}, but not mandatory. In any case, get them before
+proceeding if you want the functionalities they provide. All of them are free.
+
+  $\bullet$ GNU \kbd{MP} library. This provides an alternative multiprecision
+kernel, which is faster than PARI's native one, but unfortunately binary
+incompatible. To enable detection of GMP, use \kbd{Configure --with-gmp}.
+You should really do this if you only intend to use GP, and probably also if
+you will use libpari unless you have backwards compatibility requirements.
+
+  $\bullet$ GNU \kbd{readline} library. This provides line editing under GP,
+an automatic context-dependent completion, and an editable history of
+commands. Note that it is incompatible with SUN commandtools (yet another
+reason to dump Suntools for X Windows).
+
+  $\bullet$ GNU \kbd{gzip/gunzip/gzcat} package enables GP to read compressed
+data.
+
+  $\bullet$ GNU \kbd{emacs}. GP can be run in an Emacs buffer, with all the
+obvious advantages if you are familiar with this editor. Note that
+\kbd{readline} is still useful in this case since it provides a better
+automatic completion than is provided by Emacs GP-mode.
+
+  $\bullet$ \kbd{perl} provides extended online help (full text from this
+manual) about functions and concepts, which can be used under GP or
+independently (\kbd{http://www.perl.com} will direct you to the nearest
+\kbd{CPAN} archive site).
+
+  $\bullet$ A colour-capable \kbd{xterm}, which enables GP to use different
+(user configurable) colours for its output. All \kbd{xterm} programs which
+come with current X11 distributions satisfy this requirement.
+\section{Compiling the library and the GP calculator}
+
+\subsec{Basic configuration:} First, have a look at the \kbd{MACHINES} file
+to see if anything funny applies to your architecture or operating system.
+Then, type 
+
+\kbd{./Configure}
+
+\noindent in the toplevel directory. This attempts to configure PARI/GP
+without outside help. Note that if you want to install the end product in
+some nonstandard place, you can use the \kbd{--prefix} option, as in
+
+\kbd{./Configure --prefix=/an/exotic/directory}
+
+\noindent (the default prefix is \kbd{/usr/local}). For example, to build a
+package for a Linux distribution, you may want to use
+
+\kbd{./Configure --prefix=/usr}
+
+This phase extracts some files and creates a directory \kbd{O$xxx$} where the
+object files and executables will be built. The $xxx$ part depends on your
+architecture and operating system, thus you can build GP for several
+different machines from the same source tree (the builds are
+independent and can be done simultaneously).
+
+\misctitle{Technical note:} \kbd{Configure} accepts many other flags
+besides \kbd{--prefix}. See \kbd{Configure --help} for a complete list. In
+particular, there are sets of flags related to GNU MP (\kbd{--with-gmp*}) and
+GNU readline library (\kbd{--with-readline*}). Note that autodetection of GMP
+is \emph{disabled} by default, you probably want to enable it.
+
+Decide whether you agree with what \kbd{Configure} printed on your screen, in
+particular the architecture, compiler and optimization flags. Look for
+messages prepended by \kbd{\#\#\#}, which report genuine problems. If
+anything should have been found and was not, consider that \kbd{Configure}
+failed and follow the instructions in the next section. Look especially for
+the \kbd{gmp}, \kbd{readline} and \kbd{X11} libraries, and the \kbd{perl} and
+\kbd{gunzip} (or \kbd{zcat}) binaries.
+
+\subsec{Compilation:} To compile the GP binary and build the
+documentation, type
+
+\kbd{make all}
+
+\noindent To only compile the GP binary, type
+
+\kbd{make gp}
+
+\noindent in the toplevel directory. If your \kbd{make} program supports
+parallel make, you can speed up the process by going to the \kbd{O$xxx$}
+directory that \kbd{Configure} created and doing a parallel make here, for
+instance \kbd{make -j4} with GNU make. It should even work from the toplevel
+directory.
+
+\subsec{Basic tests:}
+
+To test the binary, type \kbd{make bench}. This will build a static
+executable (the default, built by \kbd{make gp} is probably dynamic) and
+run a series of comparative tests on those two. To test only the default
+binary, use \kbd{make dobench} which starts the bench immediately.
+
+The static binary should be slightly faster. In any case, this should not
+take more than a few seconds on modern machines. See the file
+\kbd{MACHINES} to get an idea of how much time comparable systems need.
+We would appreciate a short note in the same format in case your system is
+not listed and you nevertheless have a working GP executable.
+
+If a \kbd{[BUG]} message shows up, something went wrong. The testing utility
+directs you to files containing the differences between the test output and
+the expected results. Have a look and decide for yourself if something is
+amiss. If it looks like a bug in the Pari system, we would appreciate a
+report (see the last section).
+
+\section{Troubleshooting and fine tuning} 
+In case the default \kbd{Configure} run fails miserably, try
+
+\kbd{./Configure -a}
+
+\noindent (interactive mode) and answer all the questions (there are not that
+many). Of course, \kbd{Configure} still provides defaults for each answer
+but if you accept them all, it will fail just the same, so be wary. In any
+case, we would appreciate a bug report (see the last section).
+
+\subsec{Installation directories:} The precise default destinations are as
+follows: the \kbd{gp} binary, the scripts \kbd{gphelp} and \kbd{tex2mail} go
+to \kbd{\$prefix/bin}. The pari library goes to \kbd{\$prefix/lib} and
+include files to \kbd{\$prefix/include/pari}. Other system-dependant data go
+to \kbd{\$prefix/lib/pari}.
+
+Architecture independent files go to various subdirectories of
+\kbd{\$share\_prefix}, which defaults to \kbd{\$prefix/share}, and can be
+specified via the \kbd{--share-prefix} argument. Man pages go into
+\kbd{\$share\_prefix/man}, Emacs files into
+\kbd{\$share\_prefix/emacs/site-lisp/pari}, and other system-independant data
+to various subdirectories of \kbd{\$share\_prefix/pari}: documentation,
+sample GP scripts and C code, extra packages like \kbd{elldata} or
+\kbd{galdata}.
+
+\noindent You can also set directly \kbd{--bindir} (executables),
+\kbd{--libdir} (library), \kbd{--includedir} (include files), \kbd{--mandir}
+(manual pages), \kbd{--datadir} (other architecture-independent data), and
+finally \kbd{--sysdatadir} (other architecture-dependent data).
+
+\subsec{Environment variables:} \kbd{Configure} lets the following environment
+variable override the defaults if set:
+
+\kbd{AS}: Assembler.
+
+\kbd{CC}: C compiler.
+
+\kbd{DLLD}: Dynamic library linker.
+
+\kbd{LD}: Static linker.
+
+\noindent For instance, \kbd{Configure} may avoid \kbd{/bin/cc} on some
+architectures due to various problems which may have been fixed in your
+version of the compiler. You can try
+
+\kbd{env CC=cc Configure}
+
+\noindent and compare the benches. Also, if you insist on using a \kbd{C++}
+compiler and run into trouble with a fussy \kbd{g++}, try to use
+\kbd{g++ -fpermissive}.
+
+
+\noindent The contents of the following variables are \emph{appended} to the
+values computed by \kbd{Configure}:
+
+\kbd{CFLAGS}: Flags for \kbd{CC}.
+
+\kbd{CPPFLAGS}: Flags for \kbd{CC} (preprocessor).
+
+\kbd{LDFLAGS}: Flags for \kbd{LD}.
+
+\noindent The contents of the following variables are \emph{prepended} to
+the values computed by \kbd{Configure}:
+
+\kbd{C\_INCLUDE\_PATH} is prepended to the list of directories
+searched for include files. Note that adding \kbd{-I} flags to
+\kbd{CFLAGS} is not enough since \kbd{Configure} sometimes
+relies on finding the include files and parsing them, and it does not 
+parse \kbd{CFLAGS} at this time.
+
+\kbd{LIBRARY\_PATH} is prepended to the list of directories
+searched for libraries.
+
+\noindent You may disable inlining by adding \kbd{-DDISABLE\_INLINE} to
+\kbd{CFLAGS}, and prevent the use of the \kbd{volatile} keyword with
+\kbd{-DDISABLE\_VOLATILE}.
+
+\subsec{Debugging/profiling}: If you also want to debug the PARI library,
+
+\kbd{Configure -g}
+
+\noindent creates a directory \kbd{O$xxx$.dbg} containing a special
+\kbd{Makefile} ensuring that the GP and PARI library built there is
+suitable for debugging. If you want to
+profile GP or the library, using \kbd{gprof} for instance,
+
+\kbd{Configure -pg}
+
+\noindent will create an \kbd{O$xxx$.prf} directory where a suitable version
+of PARI can be built.
+
+The GP binary built above with \kbd{make all} or \kbd{make gp} is optimized.
+If you have run \kbd{Configure -g} or \kbd{-pg} and want to build a special
+purpose binary, you can \kbd{cd} to the \kbd{.dbg} or \kbd{.prf} directory
+and type \kbd{make gp} there. You can also invoke \kbd{make gp.dbg} or
+\kbd{make gp.prf} directly from the toplevel.
+
+\subsec{Multiprecision kernel:} The kernel can be fully specified via the
+\kbd{--kernel=\emph{fqkn}} switch. The PARI kernel is build from two kernels,
+called level 0 (L0, operation on words) and level 1 (L1, operation on
+multi-precision integer and real).
+
+\noindent Available kernels:
+
+L0: \kbd{auto}, \kbd{none} and
+\bprog
+  alpha hppa hppa64 ia64 ix86 x86_64 m68k ppc sparcv7
+  sparcv8_micro sparcv8_super
+@eprog
+
+L1: \kbd{auto}, \kbd{none} and \kbd{gmp}
+
+\noindent \kbd{auto} means to use the auto-detected value. L0=\kbd{none} means
+to use the portable C kernel (no assembler), L1=\kbd{none} means to use the
+PARI L1 kernel. 
+
+\noindent$\bullet$ A fully qualified kernel name \emph{fqkn} is of the form
+\kbd{$L_0$-$L_1$}.
+
+\noindent$\bullet$ A \emph{name} not containing a dash '\kbd{-}' is an alias.
+An alias stands for \kbd{\emph{name}-none}, but \kbd{gmp} stand for
+\kbd{auto-gmp}.
+
+\noindent$\bullet$ The default kernel is \kbd{auto-none}.
+
+\subsec{Problems related to readline:}
+\kbd{Configure} does not try very hard to find the \kbd{readline} library and
+include files. If they are not in a standard place, it will not find them.
+Nonetheless, it first searches the distribution toplevel for a \kbd{readline}
+directory. Thus, if you just want to give \kbd{readline} a try, as you
+probably should, you can get the source and compile it there (you do not need
+to install it). You can also use this feature together with a symbolic link,
+named \kbd{readline}, in the PARI toplevel directory if you have compiled the
+readline library somewhere else, without installing it to one of its standard
+locations. 
+
+You can also invoke \kbd{Configure} with one of the following arguments:
+
+   \kbd{--with-readline[=\emph{prefix to \kbd{lib/libreadline}.xx and
+\kbd{include/readline.h}}]}
+
+   \kbd{--with-readline-lib=\emph{path to \kbd{libreadline}.xx}}
+
+   \kbd{--with-readline-include=\emph{path to \kbd{readline.h}}}
+
+\misctitle{Technical note:} Configure can build GP on different architectures
+simultaneously from the same toplevel sources. Instead of the \kbd{readline}
+link alluded above, you can create \kbd{readline-{\sl osname}-{\sl arch}},
+using the same naming conventions as for the \kbd{O$xxx$} directory,
+e.g \kbd{readline-linux-i686}.
+
+\misctitle{Known problems:}
+
+$\bullet$ on Linux: Linux distributions have separate \kbd{readline} and
+\kbd{readline-devel} packages. You need both of them installed to
+compile gp with readline support. If only \kbd{readline} is installed,
+\kbd{Configure} will complain. \kbd{Configure} may also complain about a
+missing libncurses.so, in which case, you have to install the
+\kbd{ncurses-devel} package (some distributions let you install
+\kbd{readline-devel} without \kbd{ncurses-devel}, which is a bug in
+their package dependency handling).
+
+$\bullet$ on OS X.4: Tiger comes equipped with a fake \kbd{readline},
+which is not sufficient for our purpose. As a result, gp is built
+without readline support. Since \kbd{readline} is not trivial to install
+in this environment, a step by step solution can be found in the PARI
+FAQ, see
+\bprog
+  http://pari.math.u-bordeaux.fr/
+@eprog
+
+\subsec{Testing}
+
+\subsubsec{Known problems:} if \kbd{BUG} shows up in \kbd{make bench}
+
+$\bullet$ \kbd{program}: the GP function \kbd{install} may not be available on
+your platform, triggering an error message (``not yet available for this
+architecture''). Have a look at the \kbd{MACHINES} files to check if your
+system is known not to support it, or has never been tested yet.
+
+$\bullet$ If when running \kbd{gp-dyn}, you get a message of the form
+
+\kbd{ld.so: warning: libpari.so.$xxx$ has older revision than expected $xxx$}
+
+\noindent (possibly followed by more errors), you already have a dynamic PARI
+library installed \emph{and} a broken local configuration. Either remove the
+old library or unset the \kbd{LD\_LIBRARY\_PATH} environment variable. Try to
+disable this variable in any case if anything \emph{very} wrong occurs with
+the \kbd{gp-dyn} binary, like an Illegal Instruction on startup. It does not
+affect \kbd{gp-sta}.
+
+$\bullet$ Some implementations of the \kbd{diff} utility (on HPUX for
+instance) output \kbd{No differences encountered} or some similar
+message instead of the expected empty input. Thus producing a spurious
+\kbd{[BUG]} message.
+
+\subsubsec{Some more testing} [{\sl Optional\/}]
+
+You can test GP in compatibility mode with \kbd{make test-compat}. If you
+want to test the graphic routines, use \kbd{make test-ploth}. You will
+have to click on the mouse button after seeing each image. There will be
+eight of them, probably shown twice (try to resize at least one of them
+as a further test). More generaly, typing \kbd{make} without argument
+will print the list of available extra tests among all available targets.
+
+The \kbd{make bench} and \kbd{make test-compat} runs produce a Postscript
+file \kbd{pari.ps} in \kbd{O$xxx$} which you can send to a Postscript
+printer. The output should bear some similarity to the screen images.
+
+\subsubsec{Heavy-duty testing} [{\sl Optional\/}]
+There are a few extra tests which should be useful only for developpers.
+
+\kbd{make test-kernel} checks whether the low-level kernel seems to work,
+and provides simple diagnostics if it does not. Only useful if \kbd{make
+bench} fails horribly, e.g.~things like \kbd{1+1} do not work.
+
+\kbd{make test-all} runs all available test suites. Slow.
+
+\section{Installation} When everything looks fine, type
+
+\kbd{make install}
+
+\noindent You may have to do this with superuser privileges, depending on the
+target directories. (Tip for MacOS X beginners: use \kbd{sudo make install}.)
+In this case, it is advised to type \kbd{make all} first to avoid running
+unnecessary commands as \kbd{root}.
+
+Beware that, if you chose the same installation directory as before in the
+\kbd{Configure} process, this will wipe out any files from version 1.39.15
+and below that might already be there. Libraries and executable files from
+newer versions (starting with version 1.900) are not removed since they are
+only links to files bearing the version number (beware of that as well: if
+you are an avid \kbd{gp} fan, do not forget to delete the old pari libraries
+once in a while).
+
+This installs in the directories chosen at \kbd{Configure} time the default
+GP executable (probably \kbd{gp-dyn}) under the name \kbd{gp}, the default
+PARI library (probably \kbd{libpari.so}), the necessary include files, the
+manual pages, the documentation and help scripts and emacs macros.
+
+To save on disk space, you can manually \kbd{gzip} some of the documentation
+files if you wish: \kbd{usersch*.tex} and all \kbd{dvi} files (assuming your
+\kbd{xdvi} knows how to deal with compressed files); the online-help system
+can handle it.
+
+By default, if a dynamic library \kbd{libpari.so} could be built, the static
+library \kbd{libpari.a} will not be created. If you want it as well, you can
+use the target \kbd{make install-lib-sta}. You can install a statically
+linked \kbd{gp} with the target \kbd{make install-bin-sta}. As a rule,
+programs linked statically (with \kbd{libpari.a}) may be slightly faster
+(about 5\% gain), but use more disk space and take more time to compile.
+They are also harder to upgrade: you will have to recompile them all instead
+of just installing the new dynamic library. On the other hand, there is no
+risk of breaking them by installing a new pari library.
+
+\subsec{Extra packages:} The following optional packages endow PARI with some
+extra capabilities (only two packages for now!).
+
+$\bullet$ \kbd{elldata}: This package contains the elliptic curves in
+John Cremona's database. It is needed by the functions \kbd{ellidentify},
+\kbd{ellsearch} and can be used by \kbd{ellinit} to initialize a curve
+given by its standard code.
+
+$\bullet$ \kbd{galdata}: The default \kbd{polgalois} function can only
+compute Galois groups of polynomials of degree less or equal to 7. Install
+this package if you want to handle polynomials of degree bigger than 7 (and
+less than 11). \medskip
+
+To install package \emph{pack}, you need to fetch the separate archive:
+\emph{pack}\kbd{.tgz} which you can download from the \kbd{pari} server.
+Copy the archive in the PARI toplevel directory, then extract its
+contents; these will go to \kbd{data/\emph{pack}/}. Typing \kbd{make
+install} installs all such packages.
+
+\subsec{The \kbd{GPRC} file:} Copy the file \kbd{misc/gprc.dft} (or
+\kbd{gprc.dos} if you are using \kbd{GP.EXE}) to \kbd{\$HOME/.gprc}. Modify
+it to your liking. For instance, if you are not using an ANSI terminal,
+remove control characters from the \kbd{prompt} variable. You can also
+enable colors. 
+
+If desired, read \kbd{\$datadir/misc/gpalias}  from the \kbd{gprc}
+file, which provides some common shortcuts to lengthy names; fix the path in
+gprc first. (Unless you tampered with this via Configure, \kbd{datadir} is
+\kbd{\$prefix/share/pari}.) If you have superuser privileges and want to
+provide system-wide defaults, copy your customized \kbd{.gprc} file to
+\kbd{/etc/gprc}.
+
+In older versions, \kbd{gphelp} was hidden in pari lib directory and was not
+meant to be used from the shell prompt, but not anymore. If gp complains it
+cannot find \kbd{gphelp}, check whether your \kbd{.gprc} (or the system-wide
+\kbd{gprc}) does contain explicit paths. If so, correct them according to the
+current \kbd{misc/gprc.dft}.
+
+\section{Getting Started}
+
+\subsec{Printable Documentation:} Building gp with \kbd{make all} also builds
+its documentation. You can also type directly \kbd{make doc}. In any case,
+you need a working (plain) \TeX\ installation.
+
+After that, the \kbd{doc} directory contains various \kbd{dvi} files:
+\kbd{libpari.dvi} (manual for the PARI library), \kbd{users.dvi} (manual
+for the \kbd{gp} calculator), \kbd{tutorial.dvi} (a tutorial), and
+\kbd{refcard.dvi} (a reference card for GP). You can send these files to your
+favourite printer in the usual way, probably via \kbd{dvips}. The reference
+card is also provided as a \kbd{PostScript} document, which may be easier to
+print than its \kbd{dvi} equivalent (it is in Landscape orientation and
+assumes A4 paper size).
+
+\noindent If the \kbd{pdftex} package is part of your \TeX\ setup, you can
+produce these documents in PDF format, which may be more convenient for
+online browsing (the manual is complete with hyperlinks); type
+
+\kbd{make docpdf}
+
+\noindent All these documents are available online from PARI home page
+(see the last section).
+
+\subsec{C programming:} Once all libraries and include files are installed,
+you can link your C programs to the PARI library. A sample makefile
+\kbd{examples/Makefile} is provided to illustrate the use of the various
+libraries. Type \kbd{make all} in the \kbd{examples} directory to see how
+they perform on the \kbd{extgcd.c} program, which is commented in the
+manual. 
+
+This should produce a statically linked binary \kbd{extgcd-sta}
+(standalone), a dynamically linked binary \kbd{extgcd-dyn} (loads libpari
+at runtime) and a shared library \kbd{libextgcd}, which can be used from
+\kbd{gp} to \kbd{install} your new \kbd{extgcd} command.
+
+The standalone binary should be bulletproof, but the other two may fail
+for various reasons. If when running \kbd{extgcd-dyn}, you get a message
+of the form ``DLL not found'', then stick to statically linked binaries
+or look at your system documentation to see how to indicate at linking
+time where the required DLLs may be found! (E.g.~on Windows, you will
+need to move \kbd{libpari.dll} somewhere in your \kbd{PATH}.)
+
+\subsec{GP scripts:} Several complete sample GP programs are also given in
+the \kbd{examples} directory, for example Shanks's SQUFOF factoring method,
+the Pollard rho factoring method, the Lucas-Lehmer primality test for
+Mersenne numbers and a simple general class group and fundamental unit
+algorithm. See the file \kbd{examples/EXPLAIN} for some explanations.
+
+\subsec{EMACS:} If you want to use \kbd{gp} under GNU Emacs, read the file
+\kbd{emacs/pariemacs.txt}. If you are familiar with Emacs, we suggest that
+you do~so.
+
+\subsec{The PARI Community:} PARI's home page at the address
+\bprog
+  http://pari.math.u-bordeaux.fr/
+@eprog\noindent
+maintains an archive of mailing lists dedicated to PARI, documentation
+(including Frequently Asked Questions), a download area and our Bug Tracking
+System (BTS). Bug reports should be submitted online to the BTS, which may be
+accessed from the navigation bar on the home page or directly at
+\bprog
+  http://pari.math.u-bordeaux.fr/Bugs
+@eprog\noindent
+Further information can be found at that address but, to report a
+configuration problem, make sure to include the relevant \kbd{*.dif} files in
+the \kbd{O$xxx$} directory and the file \kbd{pari.cfg}.
+\smallskip
+
+There are three mailing lists devoted to PARI/GP (run courtesy of Dan
+Bernstein), and most feedback should be directed to those. They are:
+
+$\bullet$ \kbd{pari-announce}: to announce major version changes.
+You cannot write to this one, but you should probably subscribe.
+
+$\bullet$ \kbd{pari-dev}: for everything related to the development
+of PARI, including suggestions, technical questions, bug reports or patch
+submissions. (The BTS forwards the mail it receives to this list.)
+
+ $\bullet$ \kbd{pari-users}: for everything else.
+
+\noindent You may send an email to the last two without being subscribed.
+(You will have to confirm that your message is not unsollicited bulk email,
+aka \emph{Spam}.) To subscribe, send empty messages respectively to
+\def\@{@}
+\bprog
+  pari-announce-subscribe@@list.cr.yp.to
+     pari-users-subscribe@@list.cr.yp.to
+       pari-dev-subscribe@@list.cr.yp.to
+@eprog\noindent You can also write to us at the address
+\bprog
+  pari@@math.u-bordeaux.fr
+@eprog\noindent but we cannot promise you will get an individual answer.
+\smallskip
+
+If you have used PARI in the preparation of a paper, please cite it in the
+following form (BibTeX format):
+
+\bprog
+@@manual{PARI2,
+    organization = "{The PARI~Group}",
+    title        = "{PARI/GP, Version @vers}",
+    year         = 2006,
+    address      = "Bordeaux",
+    note         = "available from {\tt http://pari.math.u-bordeaux.fr/}"
+}
+@eprog
+\smallskip
+
+\noindent In any case, if you like this software, we would be indebted if you
+could send us an email message giving us some information about yourself and
+what you use PARI for.
+
+\medskip
+{\bf Good luck and enjoy!}
+\vfill\eject

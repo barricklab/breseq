@@ -1,0 +1,9 @@
+Function: sign
+Section: operators
+C-Name: gsigne
+Prototype: iG
+Help: sign(x): sign of x, of type integer, real or fraction
+Description:
+ (mp):small          signe($1)
+ (gen):small        gsigne($1)
+

@@ -1,0 +1,33 @@
+#! /bin/sh
+name=$1
+arch=$2
+lvl1=$3
+
+case "$name" in
+  *-*) 
+  kernlvl0=`echo "$name" | sed -e 's/\(.*\)-.*/\1/'`
+  kernlvl1=`echo "$name" | sed -e 's/.*-\(.*\)/\1/'` ;;
+  gmp) #Alias for auto-gmp
+  kernlvl0="$arch"; kernlvl1=gmp ;;
+  none) #Alias for none-none
+  kernlvl0=none; kernlvl1=none;;
+  *)
+  kernlvl0="$name"; kernlvl1=auto ;;
+esac
+
+if [ "$kernlvl0" = "auto" ]; then
+  kernlvl0="$arch";
+fi
+
+case "$kernlvl1" in
+  gmp|none) ;;
+  auto) kernlvl1=$lvl1;;
+  *) cat << EOM >& 2
+###
+### Level1 kernel = '$kernlvl1' unknown, using 'none'
+###
+EOM
+     kernlvl1=none ;;
+esac
+
+echo "$kernlvl0-$kernlvl1"

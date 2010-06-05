@@ -1,0 +1,243 @@
+.TH GPHELP 1 "25 June 1999"
+.SH NAME
+gphelp \- GP-PARI online help script
+.SH SYNOPSIS
+.BR gphelp
+[-to_pod
+.IR file ]
+[-raw]
+[-detex]
+[-k]
+[-ch
+.IR c1 ]
+[-cb
+.IR c2 ]
+[-cu
+.IR c3 ]
+[keyword [ @{1,2,3,4,5} ]] 
+[tutorial]
+[refcard]...
+
+.SH DESCRIPTION
+Invokes the PARI-GP online help script. By default,
+.I keyword
+is understood as a section heading (a GP function name), and 
+.B gphelp
+looks for it in Chapter 3 of PARI User's Manual. If it is found, the
+corresponding section is copied to a temporary file in /tmp (or 
+.BR $GPTMPDIR ),
+.B TeX
+is run then the corresponding section is displayed in a separate window, using 
+.B xdvi
+(or
+.BR $GPXDVI ).
+
+
+If more than one keyword is given on a single command line, the outputs are
+concatenated. If 
+.I keyword
+is omitted, open the whole manual
+.IR users.dvi .
+The keywords
+.I tutorial
+and
+.I refcard
+open the GP tutorial and reference card respectively.
+
+GP defaults, help sections (1 to 11) as well as some keywords (readline,
+bnf, ell, all operators...) are recognized and treated in a special way to
+make sure they match a section heading. For instance 
+.B &&
+is translated to
+.I "Comparison and boolean operators"
+which isn't that obvious to guess.
+Make sure to enclose
+.I keyword
+between quotes if it contains dangerous characters (e.g spaces). For
+instance, you need to type
+
+.RS
+gphelp -k "elliptic curves"
+.RE
+
+and not
+
+.RS
+gphelp -k elliptic curves
+.RE
+
+which would look for 
+"elliptic"
+then for 
+"curves"
+and output e.g.
+.B ploth
+among the relevant sections.
+
+.SH FULL SEARCH: @ MARKERS
+
+The pattern
+.BR @ x
+(where x is a chapter number between 1 and 5) at the end of 
+.I keyword
+conducts the search in the corresponding chapter instead of the default
+Chapter 3. If the number is omitted, search the whole manual. For instance
+.RS
+gphelp -k gerepile@4
+.RE
+will look for
+.B gerepile
+in Chapter 4 of users manual.
+.RS
+gphelp -k gerepile@
+.RE
+will search the whole manual. All chapters of the manual (usersch[1-5].tex)
+are assumed to be in 
+.B $GPDOCDIR
+.RI ( default value set by 
+Configure). You are allowed to gzip (or compress) them, this won't affect
+the search.
+
+.SH OPTIONS
+The following command line options are available:
+.TP
+.BI -cb,\ -color_bold\  c2
+color used for bold. See 
+.BR -color_help .
+
+.TP
+.BI -ch,\ -color_help\  c1
+color (between 1 and 16) used for general printing. Only
+significant in 
+.B detex
+mode.
+
+.TP
+.BI -cu,\ -color_underline\  c3
+color used for underline. See
+.BR -color_help .
+
+.TP
+.BI \-detex
+Use 
+.B detex
+mode. The TeX file is converted to readable screen output that is directly
+written to the terminal; don't use tex or xdvi.
+
+.TP
+.BI \-k
+Switch to 
+.B apropos
+mode. Only write to standard output the list of section headings in manual
+which contain
+.IR keyword .
+
+You can then choose an element in the list and use it as argument for 
+.B gphelp
+(surround it by quotes if it includes spaces), possibly followed by a
+trailing
+.B @
+marker (see above).
+
+.TP
+.BI \-raw
+use internal format for output (using @x markers). For debugging only.
+
+.TP
+.BI \-to_pod\  file
+try to convert 
+.I file
+from TeX to POD format. Will only work on some subset of PARI User's Manual
+(Chapter 3, reference card). This should be the only arguments on the
+command line.
+
+.SH ENVIRONMENT
+.TP
+COLUMNS
+number of columns available on screen (for
+.B detex
+mode)
+
+.TP
+DISPLAY
+where to launch the dvi previewer. If unset, 
+.B detex
+mode is assumed automatically.
+
+.TP
+GPDOCDIR
+directory where PARI help files are located. Default value set at Configure
+time.
+
+.TP
+GPTMPDIR
+directory where temporary files are written
+
+.TP
+GPXDVI
+.RS
+dvi previewer to use
+.RE
+
+.SH FILES
+.TP
+.I gp
+the gp calculator
+
+.TP
+.I gphelp
+the gphelp script
+
+.TP
+.I users.dvi
+PARI/GP User's Manual
+
+.TP
+.I tutorial.dvi
+PARI/GP tutorial
+
+.TP
+.I refcard.dvi
+GP reference card
+
+.TP
+.I refcard.ps
+GP reference card, printer ready
+
+.SH BUGS
+
+The search algorithm is rather crude and the data searched rather
+unstructured. Hence, searching outside of Chapter 3 may not yield useful
+results, except in
+.B apropos
+mode (sections may be truncated too soon for instance).
+
+Multiword search patterns have a tendency to fail due to various TeX
+constructs in the source.
+
+.SH AUTHORS
+Originally written by Ilya Zakharevitch for the Math::Pari perl package.
+Rewritten and expanded by Karim Belabas for the main PARI distribution.
+
+.SH SEE ALSO
+.IR gp (1),
+.IR gzip (1),
+.IR readline (1),
+.IR tex (1),
+.IR xdvi (1).
+
+.SH COPYING
+
+This program is  free  software;  you  can  redistribute  it
+and/or  modify  it under the terms of the GNU General Public
+License as published by the Free Software Foundation.
+
+This program is distributed in the hope that it will be useful, but WITHOUT
+ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
+FOR  A  PARTICULAR  PURPOSE.  See the GNU General Public License for more
+details.
+
+You should have received a copy of the  GNU  General  Public
+License  along  with this program; if not, write to the Free
+Software Foundation,  Inc.,  675  Mass  Ave,  Cambridge,  MA
+02139, USA.

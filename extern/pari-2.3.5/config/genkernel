@@ -1,0 +1,21 @@
+#! /bin/sh
+K=../src/kernel
+knone=$K/none
+for file in "$@"; do
+  echo "#ifndef ASMINLINE"
+  for i in `grep '^ASM' $file`; do
+    case $i in
+      ASM);;
+      *) cat $knone/$i.h;;
+    esac;
+  done
+  echo "#endif"
+  cat $file
+  for i in `grep '^NOASM' $file`; do
+    case $i in
+      NOASM);;
+      *) cat $knone/$i.h;;
+    esac;
+  done
+done
+exit 0

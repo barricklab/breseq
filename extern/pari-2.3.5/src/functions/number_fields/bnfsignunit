@@ -1,0 +1,7 @@
+Function: bnfsignunit
+Section: number_fields
+C-Name: signunits
+Prototype: G
+Help: bnfsignunit(bnf): matrix of signs of the real embeddings of the system
+ of fundamental units found by bnfinit
+

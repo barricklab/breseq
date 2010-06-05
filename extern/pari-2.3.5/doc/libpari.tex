@@ -1,0 +1,43 @@
+% $Id: libpari.tex 6453 2004-12-13 11:54:28Z kb $
+% Copyright (c) 2000  The PARI Group
+%
+% This file is part of the PARI/GP documentation
+%
+% Permission is granted to copy, distribute and/or modify this document
+% under the terms of the GNU General Public License
+
+% Compile with plain TeX
+%
+\def\TITLE{User's Guide to the PARI library}
+\input parimacro.tex
+\ifPDF % PDF output (from pdftex)
+  \input pdfmacs.tex
+\fi
+
+% START TYPESET
+\begintitle
+\vskip 2.5truecm
+\centerline{\mine User's Guide}
+\vskip 1.truecm
+\centerline{\mine to}
+\vskip 1.truecm
+\centerline{\mine the PARI library}
+\vskip 1.truecm
+\centerline{\sectiontitlebf (version \vers)}
+\vskip 1.truecm
+\authors
+\endtitle
+
+\copyrightpage
+\tableofcontents
+\openin\std=users.aux
+\ifeof\std
+\else
+  \input users.aux
+\fi
+\chapno=3
+{ \input usersch4 }
+{ \input usersch5 }
+{ \input appb }
+{ \input appc }
+\input index\end

@@ -8,6 +8,7 @@ BRESEQDIR=$(ROOTDIR)/src/perl/Breseq
 BIOSAMTOOLS=$(ROOTDIR)/extern/Bio-SamTools-1.19
 SAMTOOLSDIR=$(ROOTDIR)/extern/samtools-0.1.7a
 STATSDISTS=$(ROOTDIR)/extern/Statistics-Distributions-1.02
+PARIDIR=$(ROOTDIR)/extern/Math-Pari-2.01080604
 STAGEDIR=$(ROOTDIR)/stage
 	
 all :: make
@@ -33,6 +34,26 @@ make :
 	perl Makefile.PL INSTALL_BASE=$(STAGEDIR) ; \
 	make ; 
 	
+	## Math::PARI
+	cd $(PARIDIR) ; \
+	perl Makefile.PL INSTALL_BASE=$(STAGEDIR) ; \
+	make ; 
+	
+clean-breseq :
+	cd $(BRESEQDIR) ; \
+	./Build clean
+	
+make-breseq:
+	cd $(BRESEQDIR) ; \
+	perl Build.PL --install_base=$(STAGEDIR) ; \
+	./Build ; 
+
+install-breseq:
+	cd $(BRESEQDIR) ; \
+	./Build install
+	
+all-breseq :: clean-breseq make-breseq install-breseq
+	
 clean :
 	bjam clean
 	bjam clean install
@@ -44,6 +65,9 @@ clean :
 	./Build clean
 	
 	cd $(STATSDISTS) ; \
+	make clean
+	
+	cd $(PARIDIR) ; \
 	make clean
 	
 	rm -rf $(STAGEDIR)
@@ -62,5 +86,11 @@ install :
 	cd $(STATSDISTS) ; \
 	make install	
 	
+	cd $(PARIDIR) ; \
+	make install
+	
 test:
-	tests/test.sh test tests/
+	tests/test.sh test tests
+	
+clean-test:
+	tests/test.sh clean tests

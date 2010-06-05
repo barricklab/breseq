@@ -1,0 +1,7 @@
+Function: polisirreducible
+Section: polynomials
+C-Name: gisirreducible
+Prototype: G
+Help: polisirreducible(x): true(1) if x is an irreducible non-constant
+ polynomial, false(0) if x is reducible or constant
+

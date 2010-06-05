@@ -1,0 +1,7 @@
+LIBRARY '<DLL_BASE>' INITINSTANCE TERMINSTANCE
+; Can't put http://.../ in VENDOR, since it is split on :
+; One should be be glad that .../ is good enough
+DESCRIPTION '@#<VENDOR>:<VERSION>#@<DESCR>'
+CODE LOADONCALL
+DATA LOADONCALL NONSHARED MULTIPLE
+EXPORTS

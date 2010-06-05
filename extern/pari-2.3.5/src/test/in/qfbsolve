@@ -1,0 +1,24 @@
+gettime;
+qfbeval(V,v)=
+{
+  local(x,y);
+  V=Vec(V);x=v[1];y=v[2];
+  V[1]*x^2+V[2]*x*y+V[3]*y^2
+}
+
+bqfb(N=10000)=
+{
+  local(p,d,r,V,q,q2,Q,Q2);
+  for(i=1,N,
+    until(!issquare(d) && (d%4==0 || d%4==1),d=random(4000)-2000);
+    until(p==1 || kronecker(d,p)>=0,
+      p=random(1000)-100;
+      if(p<3,p=1,p=nextprime(p)));
+    q=qfbprimeform(d,p); V=Vec(q); q2=Qfb(V[3],V[2],V[1]);
+    until(Q!=0||Q2!=0,r=nextprime(random(30000));
+      Q=qfbsolve(q,r);Q2=qfbsolve(q2,r));
+    if(Q2==0||qfbeval(q2,Q2)!=r,print("qfbsolve(",q2,",",r,")!=",Q2);break);
+    if(Q==0||qfbeval(q,Q)!=r,print("qfbsolve(",q,",",r,")!=",Q);break))
+}
+bqfb();
+print("Total time spent: ",gettime);

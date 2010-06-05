@@ -1,0 +1,10 @@
+Function: lindep
+Section: linear_algebra
+C-Name: lindep0
+Prototype: GD0,L,p
+Help: lindep(x,{flag=0}): Z-linear dependencies between components of x.
+ flag is optional, and can be 0: default, PSLQ; -1: using Hastad et al; -2:
+ returns a non-trivial kernel vector (not integral in general); positive, and
+ in that case should be between 0.5 and 1.0 times the accuracy in decimal
+ digits of x, using a standard LLL
+

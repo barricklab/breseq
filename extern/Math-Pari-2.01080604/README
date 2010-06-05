@@ -1,0 +1,138 @@
+a) Math::Pari is the PERL interface to the PARI part of GP/PARI
+   (version 2.*).  The info about GP/PARI is on
+   http://www.parigp-home.de/
+   Integer part and the first 4 digits after the point in the version
+   of Math::Pari reflect the latest version of GP/PARI it was tested with.
+	(2.01080* still fully supports only 2.1.7, but mostly works with 2.3.*
+         too.)
+
+   The next paragraph is an excerpt from documentation inside Pari.pm:
+
+     Package Math::Pari is a Perl interface to famous library PARI for
+     numerical/scientific/number-theoretic calculations.  It allows
+     use of most PARI functions (>500) as Perl functions, and (almost)
+     seamless merging of PARI and Perl data.
+
+   The code is distributed with the same license as Perl (i.e., Artistic or
+   or GPL); however, it uses GP/PARI code, which is purely GPL.
+
+b) This module includes a part written in C; thus it is requires a *fully*
+   working Perl installation, including a C compiler which Perl knows about.
+   Since prebuild configurations are typically broken (in many subtle ways),
+   build is not supported unless your perl executable was build on your machine
+   (or otherwise you show that you know what you are talking about ;-).
+
+   Given this, in most cases, this module can be installed as all the others:
+
+     perl -MCPAN -e shell
+     CPAN> install Math::Pari
+
+   or
+
+     perl -MCPAN -e 'install Math::Pari'
+
+   or (if you manually downloaded the archive, and change version numbers):
+
+     tar -zxfv Math-Pari-2.001200.tar.gz
+     cd Math-Pari-2.001200
+     perl Makefile.PL && make && make test && make install
+
+   Possible complications are addressed in the file INSTALL:
+
+     x) Not having Net::FTP installed and working, and not having
+        GP/PARI build directory "nearby" (as parent, kid or sibling);
+
+     x) Failing compile or configuration: wrong assembler
+	architecture, wrong paricfg.h (CLK_TCK etc.);
+
+     x) the rest of it...
+
+   IMPORTANT REMARK: If you try to compile with a different
+   configuration, please run
+
+	make realclean
+
+   in between.  Otherwise significant problems may arise.  [A typical
+   symptom: the symbol overflow cannot be found.]
+
+c) How the tests work
+
+   Lowercase test scripts translate native GP/PARI tests from GP
+   syntax to Perl syntax.  You can get a better understanding of these
+   translations by running the tests manually, as in
+
+	perl t/all.t
+
+   after install, or
+
+	perl -Mblib t/all.t
+
+   before install.  Currently two subtests of t/nfields 'leak' PARI
+   warnings.  Until the test engine is taught to look-for/eat these
+   warnings, they *must* appear.
+
+d) Reporting bugs/problems	(REQUIRED!!!!!!!!!!!!!!!!!!!!!!!!!)
+
+ 0) I need to see the output of 
+
+     perl Makefile.PL
+     perl -V
+
+    and the relevant messages from the `make' step "near the failure point".
+
+ 1) Additionally, Math::Pari can be build in several way (see INSTALL);
+    unless you know what you are doing, please rebuild with
+
+     cp libPARI/paricfg.h libPARI/paricfg.h-no-configure
+     make realclean
+     perl Makefile.PL Configure
+
+    and retest the bug you found.  If this does not fix the bug, just mention
+    this in your bug report.  If this fixes the bug, please supply the result
+    of
+
+     diff -u libPARI/paricfg.h-no-configure libPARI/paricfg.h
+
+    too.
+
+ 2) Additionally, if this does not fix the bug, and your build is
+    architecture-specific (you saw a message similar to
+
+ ...I will use assembler build of type 'ix86'.
+
+    during `perl Makefile.PL'), please also do
+
+     make realclean
+     perl Makefile.PL machine=none
+
+    retest your problem, and report whether it fixed the bug.
+
+ 3) elliptic.t subtest 41 often fails on GP/PARI itself, so currently I
+    do not consider its failure to be a Math::Pari's bug.
+
+ 4) If build succeeds, but test not, you can get higher-granularity reports
+    from test files by running them as (in bash/DOSISH, and in tcsh syntax):
+      perl -Mblib t/55_intnum.t 2>&1 >  intnum-log
+      perl -Mblib t/55_intnum.t      >& intnum-log
+    Please inspect and include the generated log file in your report too.
+
+e) Documentation to this package is contained inside Pari.pm. After
+   installing it is accessible by standard means, like
+
+     perldoc Math::Pari
+     man Math::Pari
+
+   and possibly in other forms particular for your system.
+
+   A copy of documentation of the PARI library in POD format is
+   provided as well, access it as Math::libPARI:
+
+     perldoc Math::libPARI
+     man Math::libPARI
+
+   Since many POD converters are too stupid/buggy to process these
+   docs, an alternative Math::libPARI.dumb is provided; use as in
+
+     perldoc Math::libPARI.dumb
+
+   etc.

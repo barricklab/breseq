@@ -1,0 +1,141 @@
+% $Id: pdfmacs.tex 5633 2004-06-20 19:56:32Z kb $
+% Copyright (c) 2000  The PARI Group
+%
+% This file is part of the PARI/GP documentation
+%
+% Permission is granted to copy, distribute and/or modify this document
+% under the terms of the GNU General Public License
+
+%% Modifications to parimacro.tex to be run through pdftex instead of
+%% tex. Code now includes some pdf-specific code for hyperlinks.
+%%
+%% Cliff Bergman (cbergman@iastate.edu) Jan. 2000.
+%%
+%
+%% Set the document info
+\pdfoutput = 1
+\pdfinfo {
+  /Title    (\TITLE)
+  /Creator  (pdfTeX)
+  /Producer (PARI, pari@math.u-bordeaux.fr)
+  /Author   (C. Batut, K. Belabas, D. Bernardi, H. Cohen, M. Olivier)
+  /Subject  (Number Theory) }
+%
+\pdfcatalog {/PageMode /UseOutlines}
+%
+\catcode`\@=11
+%% Now we redefine several of the macros so as to provide hyperlinks.
+%
+%  Colors 
+%
+%% We use TeX's grouping mechanism to make \currentcolor into a  stack.
+%
+ \def\pushcolor#1{\bgroup\pdfsetcolor{#1}}
+ \def\popcolor{\egroup\pdfsetcolor{\currentcolor}}
+ \def\pdfsetcolor#1{\let\currentcolor=#1\pdfliteral{#1 k}}
+% %
+% %  Maybe somebody with a better eye would like to pick nicer ones. See
+% %  the file plain/misc/pdfcolor.tex in the pdftex distribution.
+% %
+ \def\Red{0 1 1 0}
+ \def\Blue{1 1 0 0}
+ \def\Green{1 0 1 0}
+ \def\Black{0 0 0 1}
+ \def\textcolor{\Black} 
+ \def\linkcolor{\Red}
+ \def\emacscolor{\Green}
+ \def\unixcolor{\Blue}
+ \let\currentcolor=\textcolor
+ \pdfsetcolor{\textcolor}
+%
+%% Bookmarks.  These turned out to be a pain.  In order to get nested
+%% bookmarks, Acrobat requires that each entry declare the number of
+%% subentries in advance.  We do this by counting the subentries (the
+%% main entries are the chapters, subentries are the sections) during
+%% the first pass and writing them to the aux file as a macro. Then the
+%% bookmark entry is created on the second pass.
+
+% These keep track of the number of sections in each chapter and appendix.
+\newtoks\numsectok    \numsectok={\or}      
+\newtoks\numsecapptok \numsecapptok={\or}
+
+% Append #1 to the token list given in #2, separated by \or.  #1 is
+%    expanded first (needed by \numsecs)
+\def\append#1#2{\toks0=\expandafter{#1 \or }%
+  \edef\act{\global\noexpand#2={\the#2 \the\toks0}}\act}
+
+\def\writesecnumbers{
+% Append the number of sections to the last appendix to the toks reg.
+  \append{\the\secno}\numsecapptok
+% Write the definitions of (\numsecs and \numsecapp) to the aux file.
+  \write\aux{
+    \def\string\numsecs\string##1{%
+      \string\ifcase \string##1 \the\numsectok 0 \string\else 0 \string\fi}
+    \def\string\numsecsapp\string##1{%
+      \string\ifcase \string##1 \the\numsecapptok 0 \string\else 0 \string\fi}}}
+%
+% Hyperlink destinations will simply be of the form: pdf@nnn, where nnn
+% is obtained from a new counter.
+\newcount\pdfdestcntr \pdfdestcntr=0
+% \putdest creates a pdf destination. Currently, the destination view
+% is 'xyz' which means no change from the existing zoom factor.
+\def\putdest{\global\advance\pdfdestcntr by 1%
+ \pdfdest name {pdf@\number\pdfdestcntr} xyz }
+
+%% It turns out that I also need a different counter for these
+%% destinations since they are only computed on the second pass.
+\newcount\pdfchapcntr \pdfchapcntr=0
+\def\putchapdest{\global\advance\pdfchapcntr by1%
+ \pdfdest name {pdfchap@\number\pdfchapcntr} fitbh }
+
+\def\chapter#1#2\par{
+  \ifnum\chapno=0 \else \append{\the\secno}\numsectok \fi
+  \secno=0\global\advance\chapno by 1
+  \title{Chapter \number\chapno:}{#1}#2\noindent\ignorespaces
+  \ifsecondpass
+   \pdfoutline goto name {pdfchap@\number\pdfchapcntr} count -\numsecs\chapno
+     {\number\chapno\ #1} 
+   \fi
+}
+\def\appendix#1{
+  \ifnum\appno=0 \append{\the\secno}\numsectok
+   \else \append{\the\secno}\numsecapptok \fi
+  \chapno=0
+  \global\secno=0\global\advance\appno by 1
+  \def\applet{\ifcase\appno\or A\or B\or C\or D\or E\or F\or G\fi}
+  \title{Appendix \applet:}{#1}\noindent\ignorespaces
+  \ifsecondpass
+   \pdfoutline goto name {pdfchap@\number\pdfchapcntr} 
+    count -\numsecsapp\appno {\applet\ #1} 
+   \fi}
+\def\section#1{
+  \subsecno=0\global\advance\secno by 1
+  \gdef\currentlabel{\number\secno}
+  \sectitle{\maketitle{#1}}
+  \ifsecondpass
+   \pdfoutline goto name {pdfchap@\number\pdfchapcntr}
+    {\number\chapno.\number\secno\ #1}
+  \fi
+}
+%
+%% FIXME: should use \[push|pop]color and not use explicitly \textcolor
+%% (cf install() in Chapter 3)
+\def\@restore{\endgraf \global\let\par\endgraf \pdfsetcolor{\textcolor}}
+\def\unix{\global\let\par\@restore\pdfsetcolor{\unixcolor}\annotepar{UNIX}}
+\def\emacs{\global\let\par\@restore\pdfsetcolor{\emacscolor}\annotepar{EMACS}}
+
+%% labels and symbolic cross-refs.  For this we use the parameter to
+%% build the symbolic pdf destination.
+\@ifundef{pdfstartlink}{\global\let\pdfstartlink\pdfannotlink}{}
+\def\label#1{\immediate\write\aux{\string
+   \newlabel{#1}{{\the\chapno}{\currentlabel}}}
+   \pdfdest name {pdf@lab#1} xyz}
+\def\ref#1{\@ifundef{r@#1}
+  {{\bf ??}\@errundef{#1}}
+  {\edef\@temp{\csname r@#1\endcsname}%
+    \def\lbl{\@ref}\def\chp{\@cref}%
+    \pdfjumpref{#1}{\ifx\chp{\the\chapno}\lbl\else\chp.\lbl\fi}}}
+\def\pdfjumpref#1#2{\pdfstartlink attr {/Border [ 0 0 0 ] /H /O}
+  goto name {pdf@lab#1}\pushcolor{\linkcolor}#2\popcolor\pdfendlink}
+
+\catcode`\@=12

@@ -8,3 +8,13 @@ lib libbam :
     :
     : <include>./
     ;
+    
+exe samtools :
+    bam_tview.c bam_maqcns.c bam_plcmd.c sam_view.c	bam_rmdup.c bam_rmdupse.c bam_mate.c bam_stat.c bam_color.c	bamtk.c kaln.c
+    /user-config//z
+    /user-config//m    
+    /user-config//curses
+    /samtools//libbam
+    : <include>./
+    	<cflags>-D_CURSES_LIB=1
+    ;

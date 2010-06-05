@@ -1,0 +1,6 @@
+Function: teichmuller
+Section: transcendental
+C-Name: teich
+Prototype: G
+Help: teichmuller(x): teichmuller character of p-adic number x
+

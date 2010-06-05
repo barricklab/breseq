@@ -1,0 +1,21 @@
+Function: forvec
+Section: programming
+C-Name: forvec
+Prototype: vV=GID0,L,
+Help: forvec(x=v,seq,{flag=0}): v being a vector of two-component vectors of
+ length n, the sequence is evaluated with x[i] going from v[i][1] to v[i][2]
+ for i=n,..,1 if flag is zero or omitted. If flag = 1 (resp. flag = 2),
+ restrict to increasing (resp. strictly increasing) sequences
+
+Function: _forvec_start
+Class: gp2c_internal
+Help: Initializes parameters for forvec_start.
+Description:
+ (gen, small, &gen, &func_GG):vec    forvec_start($1, $2, &$3, &$4)
+
+Function: _call_GG
+Class: gp2c_internal
+Help: Call a function with proto GG on two GENs
+Description:
+ (func_GG, gen, gen):gen         $(1)($2, $3)
+

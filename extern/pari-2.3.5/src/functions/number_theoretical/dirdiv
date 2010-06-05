@@ -1,0 +1,7 @@
+Function: dirdiv
+Section: number_theoretical
+C-Name: dirdiv
+Prototype: GG
+Help: dirdiv(x,y): division of the Dirichlet series x by the Dirichlet
+ series y
+

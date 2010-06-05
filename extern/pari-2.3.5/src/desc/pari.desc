@@ -1,0 +1,6398 @@
+Function: !_
+Class: symbolic_operators
+C-Name: gnot
+Prototype: G
+Description: 
+ (negbool):bool:parens		$1
+ (bool):negbool:parens		$1
+
+Function: +_
+Class: symbolic_operators
+Description: 
+ (small):small:parens			$1
+ (int):int:parens:copy			$1
+ (real):real:parens:copy		$1
+ (mp):mp:parens:copy			$1
+ (gen):gen:parens:copy			$1
+
+Function: -_
+Class: symbolic_operators
+C-Name: gneg
+Prototype: G
+Description: 
+ (small):small:parens		-$(1)
+ (int):int			negi($1)
+ (real):real			negr($1)
+ (mp):mp			mpneg($1)
+ (gen):gen			gneg($1)
+
+Function: Col
+Class: basic
+Section: conversions
+C-Name: gtocol
+Prototype: DG
+Help: Col({x=[]}): transforms the object x into a column vector.
+ Empty vector if x is omitted
+Description: 
+ ():vec	cgetg(1,t_COL)
+ (gen):vec	gtocol($1)
+
+Function: Euler
+Class: basic
+Section: transcendental
+C-Name: mpeuler
+Prototype: p
+Help: Euler=Euler(): Euler's constant with current precision
+Description: 
+ ():real:prec	mpeuler(prec)
+
+Function: I
+Class: basic
+Section: transcendental
+C-Name: geni
+Prototype: 
+Help: I=I(): square root of -1
+Description: 
+ ():gen	gi
+
+Function: List
+Class: basic
+Section: conversions
+C-Name: gtolist
+Prototype: DG
+Help: List({x=[]}): transforms the vector or list x into a list. Empty list
+ if x is omitted
+Description: 
+ (?gen):list	gtolist($1)
+
+Function: Mat
+Class: basic
+Section: conversions
+C-Name: gtomat
+Prototype: DG
+Help: Mat({x=[]}): transforms any GEN x into a matrix. Empty matrix if x is
+ omitted
+
+Function: Mod
+Class: basic
+Section: conversions
+C-Name: Mod0
+Prototype: GGD0,L,
+Help: Mod(x,y): creates 'x modulo y'.
+Description: 
+ (small, small):gen         gmodulss($1, $2)
+ (small, small, #small):gen gmodulss($1, $2)
+ (small, gen):gen           gmodulsg($1, $2)
+ (small, gen, #small):gen   gmodulsg($1, $2)
+ (gen, gen):gen             gmodulo($1, $2)
+ (gen, gen, #small):gen     gmodulo($1, $2)
+
+Function: O
+Class: basic
+Section: polynomials
+Help: O(a^b): p-adic or power series zero with precision given by b
+
+Function: O(_^_)
+Class: gp2c_internal
+Description: 
+ (gen):gen          ggrando($1, 1)
+ (1,small):gen      ggrando(gen_1, $2)
+ (int,small):gen    zeropadic($1, $2)
+ (gen,small):gen    ggrando($1, $2)
+ (var,small):gen    zeroser($1, $2)
+
+Function: Pi
+Class: basic
+Section: transcendental
+C-Name: mppi
+Prototype: p
+Help: Pi=Pi(): the constant pi, with current precision
+Description: 
+ ():real:prec	mppi(prec)
+
+Function: Pol
+Class: basic
+Section: conversions
+C-Name: gtopoly
+Prototype: GDn
+Help: Pol(x,{v=x}): convert x (usually a vector or a power series) into a
+ polynomial with variable v, starting with the leading coefficient
+Description: 
+ (gen,?var):pol  gtopoly($1, $2)
+
+Function: Polrev
+Class: basic
+Section: conversions
+C-Name: gtopolyrev
+Prototype: GDn
+Help: Polrev(x,{v=x}): convert x (usually a vector or a power series) into a
+ polynomial with variable v, starting with the constant term
+Description: 
+ (gen,?var):pol  gtopolyrev($1, $2)
+
+Function: Qfb
+Class: basic
+Section: conversions
+C-Name: Qfb0
+Prototype: GGGDGp
+Help: Qfb(a,b,c,{D=0.}): binary quadratic form a*x^2+b*x*y+c*y^2. D is
+ optional (0.0 by default) and initializes Shanks's distance if b^2-4*a*c>0
+
+Function: Ser
+Class: basic
+Section: conversions
+C-Name: gtoser
+Prototype: GDn
+Help: Ser(x,{v=x}): convert x (usually a vector) into a power series with
+ variable v, starting with the constant coefficient
+
+Function: Set
+Class: basic
+Section: conversions
+C-Name: gtoset
+Prototype: DG
+Help: Set({x=[]}): convert x into a set, i.e. a row vector with strictly
+ increasing coefficients. Empty set if x is omitted
+Description: 
+ ():vec	cgetg(1,t_VEC)
+ (gen):vec	gtoset($1)
+
+Function: Str
+Class: basic
+Section: conversions
+C-Name: Str
+Prototype: s*
+Help: Str({str}*): concatenates its (string) argument into a single string
+Description: 
+ (gen):genstr:copy:parens	$genstr:1
+
+Function: Strchr
+Class: basic
+Section: conversions
+C-Name: Strchr
+Prototype: G
+Help: Strchr(x): converts x to a string, translating each integer into a character
+
+Function: Strexpand
+Class: basic
+Section: conversions
+C-Name: Strexpand
+Prototype: s*
+Help: Strexpand({str}*): concatenates its (string) argument into a single
+ string, performing tilde expansion
+
+Function: Strtex
+Class: basic
+Section: conversions
+C-Name: Strtex
+Prototype: s*
+Help: Strtex({str}*): translates its (string) arguments to TeX format and
+ returns the resulting string
+
+Function: Vec
+Class: basic
+Section: conversions
+C-Name: gtovec
+Prototype: DG
+Help: Vec({x=[]}): transforms the object x into a vector.
+ Empty vector if x is omitted
+Description: 
+ ():vec	cgetg(1,t_VEC)
+ (gen):vec	gtovec($1)
+
+Function: Vecsmall
+Class: basic
+Section: conversions
+C-Name: gtovecsmall
+Prototype: DG
+Help: Vecsmall({x=[]}): transforms the object x into a VECSMALL. Empty
+ vector if x is omitted
+Description: 
+ (gen):vecsmall                gtovecsmall($1)
+
+Function: _!
+Class: symbolic_operators
+C-Name: mpfact
+Prototype: L
+Description: 
+ (small):int			mpfact($1)
+
+Function: _!=_
+Class: symbolic_operators
+C-Name: gne
+Prototype: GG
+Description: 
+ (small, small):bool:parens		$(1) != $(2)
+ (lg, lg):bool:parens			$(1) != $(2)
+ (small, int):bool:parens		cmpsi($1, $2) != 0
+ (int, small):bool:parens		cmpis($1, $2) != 0
+ (int, int):negbool			equalii($1, $2)
+ (real,real):bool                       cmprr($1, $2) != 0
+ (mp, mp):bool:parens			mpcmp($1, $2) != 0
+ (typ, typ):bool:parens			$(1) != $(2)
+ (typ, #str):bool:parens	 	$(1) != $(typ:2)
+ (#str, typ):bool:parens	 	$(typ:1) != $(2)
+ (str, str):bool                        strcmp($1, $2)
+ (typ, typ):bool:parens	                $(1) != $(2)
+ (small, gen):negbool                   gequalsg($1, $2)
+ (gen, small):negbool                   gequalgs($1, $2)
+ (gen, gen):negbool                     gequal($1, $2)
+
+Function: _%=_
+Class: symbolic_operators
+Description: 
+ (*small, small):small:parens            $1 = smodss($1, $2)
+ (*int, small):int:parens                $1 = modis($1, $2)
+ (*int, int):int:parens	                 $1 = modii($1, $2)
+ (*pol, gen):gen:parens	                 $1 = gmod($1, $2)
+ (*gen, small):gen:parens                $1 = gmodgs($1, $2)
+ (*gen, gen):gen:parens	                 $1 = gmod($1, $2)
+
+Function: _%_
+Class: symbolic_operators
+C-Name: gmod
+Prototype: GG
+Description: 
+ (small, small):small		smodss($1, $2)
+ (small, int):int		modsi($1, $2)
+ (int, small):small		smodis($1, $2)
+ (int, int):int	  	        modii($1, $2)
+ (gen, small):gen		gmodgs($1, $2)
+ (small, gen):gen		gmodsg($1, $2)
+ (gen, gen):gen	  	        gmod($1, $2)
+
+Function: _&&_
+Class: symbolic_operators
+Description: 
+ (bool, bool):bool:parens               $(1) && $(2)
+
+Function: _'
+Class: symbolic_operators
+C-Name: deriv
+Prototype: GDn
+Description: 
+ (gen):gen                      deriv($1,-1)
+
+Function: _*=_
+Class: symbolic_operators
+Description: 
+ (*small, small):small:parens		$1 *= $(2)
+ (*int, small):int:parens		 $1 = mulis($1, $2)
+ (*int, int):int:parens			 $1 = mulii($1, $2)
+ (*real, small):real:parens		 $1 = mulrs($1, $2)
+ (*real, int):real:parens		 $1 = mulri($1, $2)
+ (*real, real):real:parens		 $1 = mulrr($1, $2)
+ (*mp, mp):mp:parens			 $1 = mpmul($1, $2)
+ (*pol, small):gen:parens		 $1 = gmulgs($1, $2)
+ (*pol, gen):gen:parens			 $1 = gmul($1, $2)
+ (*vec, gen):gen:parens			 $1 = gmul($1, $2)
+ (*gen, small):gen:parens		 $1 = gmulgs($1, $2)
+ (*gen, gen):gen:parens			 $1 = gmul($1, $2)
+
+Function: _*_
+Class: symbolic_operators
+C-Name: gmul
+Prototype: GG
+Description: 
+ (small, small):small:parens	$(1)*$(2)
+ (int, small):int		mulis($1, $2)
+ (small, int):int		mulsi($1, $2)
+ (int, int):int	  	        mulii($1, $2)
+ (0, mp):small			($2, 0)/*for side effect*/
+ (#small, real):real		mulsr($1, $2)
+ (small, real):mp		mulsr($1, $2)
+ (real, small):mp		mulrs($1, $2)
+ (real, real):real	     	mulrr($1, $2)
+ (mp, mp):mp	     	        mpmul($1, $2)
+ (gen, small):gen		gmulgs($1, $2)
+ (small, gen):gen		gmulsg($1, $2)
+ (vecsmall, vecsmall):vecsmall	perm_mul($1, $2)
+ (gen, gen):gen	  	        gmul($1, $2)
+
+Function: _++
+Class: symbolic_operators
+Description: 
+ (*bptr):bptr				++$1
+ (*small):small				++$1
+ (*lg):lg				++$1
+ (*int):int:parens			 $1 = addis($1, 1)
+ (*real):real:parens			 $1 = addrs($1, 1)
+ (*mp):mp:parens			 $1 = mpadd($1, gen_1)
+ (*pol):pol:parens			 $1 = gaddgs($1, 1)
+ (*gen):gen:parens			 $1 = gaddgs($1, 1)
+
+Function: _+=_
+Class: symbolic_operators
+Description: 
+ (*small, small):small:parens		 $1 += $(2)
+ (*lg, small):lg:parens		         $1 += $(2)
+ (*int, small):int:parens		 $1 = addis($1, $2)
+ (*int, int):int:parens			 $1 = addii($1, $2)
+ (*real, small):real:parens		 $1 = addrs($1, $2)
+ (*real, int):real:parens		 $1 = addir($2, $1)
+ (*real, real):real:parens		 $1 = addrr($1, $2)
+ (*mp, mp):mp:parens			 $1 = mpadd($1, $2)
+ (*pol, small):gen:parens		 $1 = gaddgs($1, $2)
+ (*pol, gen):gen:parens			 $1 = gadd($1, $2)
+ (*vec, gen):gen:parens			 $1 = gadd($1, $2)
+ (*gen, small):gen:parens		 $1 = gaddgs($1, $2)
+ (*gen, gen):gen:parens			 $1 = gadd($1, $2)
+
+Function: _+_
+Class: symbolic_operators
+C-Name: gadd
+Prototype: GG
+Description: 
+ (lg, 1):small:parens		$(1)
+ (small, small):small:parens	$(1) + $(2)
+ (lg, small):lg:parens		$(1) + $(2)
+ (small, lg):lg:parens		$(1) + $(2)
+ (int, small):int		addis($1, $2)
+ (small, int):int		addsi($1, $2)
+ (int, int):int			addii($1, $2)
+ (real, small):real		addrs($1, $2)
+ (small, real):real		addsr($1, $2)
+ (real, real):real		addrr($1, $2)
+ (mp, real):real		mpadd($1, $2)
+ (real, mp):real		mpadd($1, $2)
+ (mp, mp):mp			mpadd($1, $2)
+ (gen, small):gen		gaddgs($1, $2)
+ (small, gen):gen		gaddsg($1, $2)
+ (gen, gen):gen			gadd($1, $2)
+
+Function: _--
+Class: symbolic_operators
+Description: 
+ (*bptr):bptr				--$1
+ (*small):small				--$1
+ (*lg):lg				--$1
+ (*int):int:parens			 $1 = subis($1, 1)
+ (*real):real:parens			 $1 = subrs($1, 1)
+ (*mp):mp:parens			 $1 = mpsub($1, gen_1)
+ (*pol):pol:parens			 $1 = gsubgs($1, 1)
+ (*gen):gen:parens			 $1 = gsubgs($1, 1)
+
+Function: _-=_
+Class: symbolic_operators
+Description: 
+ (*small, small):small:parens		 $1 -= $(2)
+ (*lg, small):lg:parens			 $1 -= $(2)
+ (*int, small):int:parens		 $1 = subis($1, $2)
+ (*int, int):int:parens			 $1 = subii($1, $2)
+ (*real, small):real:parens		 $1 = subrs($1, $2)
+ (*real, int):real:parens		 $1 = subri($1, $2)
+ (*real, real):real:parens		 $1 = subrr($1, $2)
+ (*mp, mp):mp:parens			 $1 = mpsub($1, $2)
+ (*pol, small):gen:parens		 $1 = gsubgs($1, $2)
+ (*pol, gen):gen:parens			 $1 = gsub($1, $2)
+ (*vec, gen):gen:parens			 $1 = gsub($1, $2)
+ (*gen, small):gen:parens		 $1 = gsubgs($1, $2)
+ (*gen, gen):gen:parens			 $1 = gsub($1, $2)
+
+Function: _-_
+Class: symbolic_operators
+C-Name: gsub
+Prototype: GG
+Description: 
+ (small, small):small:parens	$(1) - $(2)
+ (lg, small):lg:parens	        $(1) - $(2)
+ (int, small):int		subis($1, $2)
+ (small, int):int		subsi($1, $2)
+ (int, int):int	          	subii($1, $2)
+ (real, small):real		subrs($1, $2)
+ (small, real):real		subsr($1, $2)
+ (real, real):real		subrr($1, $2)
+ (mp, real):real		mpsub($1, $2)
+ (real, mp):real	     	mpsub($1, $2)
+ (mp, mp):mp	     	        mpsub($1, $2)
+ (gen, small):gen		gsubgs($1, $2)
+ (small, gen):gen		gsubsg($1, $2)
+ (gen, gen):gen	  	        gsub($1, $2)
+
+Function: _.a1
+Class: member_functions
+C-Name: member_a1
+Prototype: G
+Description: 
+ (ell):gen:copy        gel($1, 1)
+
+Function: _.a2
+Class: member_functions
+C-Name: member_a2
+Prototype: G
+Description: 
+ (ell):gen:copy        gel($1, 2)
+
+Function: _.a3
+Class: member_functions
+C-Name: member_a3
+Prototype: G
+Description: 
+ (ell):gen:copy        gel($1, 3)
+
+Function: _.a4
+Class: member_functions
+C-Name: member_a4
+Prototype: G
+Description: 
+ (ell):gen:copy        gel($1, 4)
+
+Function: _.a6
+Class: member_functions
+C-Name: member_a6
+Prototype: G
+Description: 
+ (ell):gen:copy         gel($1, 5)
+
+Function: _.area
+Class: member_functions
+C-Name: member_area
+Prototype: G
+Description: 
+ (bell):gen:copy        gel($1, 19)
+
+Function: _.b2
+Class: member_functions
+C-Name: member_b2
+Prototype: G
+Description: 
+ (ell):gen:copy         gel($1, 6)
+
+Function: _.b4
+Class: member_functions
+C-Name: member_b4
+Prototype: G
+Description: 
+ (ell):gen:copy        gel($1, 7)
+
+Function: _.b6
+Class: member_functions
+C-Name: member_b6
+Prototype: G
+Description: 
+ (ell):gen:copy	       gel($1, 8)
+
+Function: _.b8
+Class: member_functions
+C-Name: member_b8
+Prototype: G
+Description: 
+ (ell):gen:copy        gel($1, 9)
+
+Function: _.bid
+Class: member_functions
+C-Name: member_bid
+Prototype: G
+Description: 
+ (gen):gen                      member_bid($1)
+
+Function: _.bnf
+Class: member_functions
+C-Name: member_bnf
+Prototype: G
+Description: 
+ (bnf):bnf:parens		$1
+ (bnr):bnf:copy:parens		$bnf:1
+ (gen):bnf                      member_bnf($1)
+
+Function: _.c4
+Class: member_functions
+C-Name: member_c4
+Prototype: G
+Description: 
+ (ell):gen:copy        gel($1, 10)
+
+Function: _.c6
+Class: member_functions
+C-Name: member_c6
+Prototype: G
+Description: 
+ (ell):gen:copy        gel($1, 11)
+
+Function: _.clgp
+Class: member_functions
+C-Name: member_clgp
+Prototype: G
+Description: 
+ (bnf):clgp:copy:parens		$clgp:1
+ (bnr):clgp:copy:parens		$clgp:1
+ (clgp):clgp:parens		$1
+ (gen):clgp                     member_clgp($1)
+
+Function: _.codiff
+Class: member_functions
+C-Name: member_codiff
+Prototype: G
+
+Function: _.cyc
+Class: member_functions
+C-Name: member_cyc
+Prototype: G
+Description: 
+ (clgp):gen:copy                gel($1, 2)
+ (gen):gen                      member_cyc($1)
+
+Function: _.diff
+Class: member_functions
+C-Name: member_diff
+Prototype: G
+Description: 
+ (nf):gen:copy                  gmael($1, 5, 5)
+ (gen):gen                      member_diff($1)
+
+Function: _.disc
+Class: member_functions
+C-Name: member_disc
+Prototype: G
+Description: 
+ (nf):int:copy                  gel($1, 3)
+ (ell):gen:copy                 gel($1, 12)
+ (gen):gen                      member_disc($1)
+
+Function: _.e
+Class: member_functions
+C-Name: member_e
+Prototype: G
+Description: 
+ (prid):int:copy       gel($1, 3)
+
+Function: _.eta
+Class: member_functions
+C-Name: member_eta
+Prototype: G
+
+Function: _.f
+Class: member_functions
+C-Name: member_f
+Prototype: G
+Description: 
+ (prid):int:copy       gel($1, 4)
+
+Function: _.fu
+Class: member_functions
+C-Name: member_fu
+Prototype: G
+Description: 
+ (bnr):void		$"ray units not implemented"
+ (bnf):gen:copy         gmael($1, 8, 5)
+ (gen):gen:copy         gmael($1, 8, 5)
+
+Function: _.futu
+Class: member_functions
+C-Name: member_futu
+Prototype: G
+
+Function: _.gen
+Class: member_functions
+C-Name: member_gen
+Prototype: G
+Description: 
+ (gal):gen:copy        gel($1, 7)
+ (clgp):gen:copy       gel($1, 3)
+ (gen):gen             member_gen($1)
+
+Function: _.group
+Class: member_functions
+C-Name: member_group
+Prototype: G
+Description: 
+ (gal):gen:copy        gel($1, 6)
+
+Function: _.index
+Class: member_functions
+C-Name: member_index
+Prototype: G
+Description: 
+ (nf):int:copy                  gel($1, 4)
+ (gen):int                      member_index($1)
+
+Function: _.j
+Class: member_functions
+C-Name: member_j
+Prototype: G
+Description: 
+ (ell):gen:copy        gel($1, 13)
+
+Function: _.mod
+Class: member_functions
+C-Name: member_mod
+Prototype: G
+
+Function: _.nf
+Class: member_functions
+C-Name: member_nf
+Prototype: G
+Description: 
+ (nf):nf:parens		$1
+ (gen):nf               member_nf($1)
+
+Function: _.no
+Class: member_functions
+C-Name: member_no
+Prototype: G
+Description: 
+ (clgp):gen:copy                gel($1, 1)
+ (gen):gen                      member_no($1)
+
+Function: _.omega
+Class: member_functions
+C-Name: member_omega
+Prototype: G
+
+Function: _.orders
+Class: member_functions
+C-Name: member_orders
+Prototype: G
+Description: 
+ (gal):vecsmall:copy   gel($1, 8)
+
+Function: _.p
+Class: member_functions
+C-Name: member_p
+Prototype: G
+Description: 
+ (gal):int:copy                 gmael($1, 2, 1)
+ (prid):int:copy                gel($1, 1)
+ (gen):int                      member_p($1)
+
+Function: _.pol
+Class: member_functions
+C-Name: member_pol
+Prototype: G
+Description: 
+ (gal):gen:copy                 gel($1, 1)
+ (nf):gen:copyi                 gel($1, 1)
+ (gen):gen                      member_pol($1)
+
+Function: _.r1
+Class: member_functions
+C-Name: member_r1
+Prototype: G
+Description: 
+ (nf):int:copy                  gmael($1, 2, 1)
+ (gen):int                      member_r1($1)
+
+Function: _.r2
+Class: member_functions
+C-Name: member_r2
+Prototype: G
+Description: 
+ (nf):int:copy                  gmael($1, 2, 2)
+ (gen):int                      member_r2($1)
+
+Function: _.reg
+Class: member_functions
+C-Name: member_reg
+Prototype: G
+Description: 
+ (bnr):void		$"ray regulator not implemented"
+ (bnf):real:copy        gmael($1, 8, 2)
+ (gen):real:copy        gmael($1, 8, 2)
+
+Function: _.roots
+Class: member_functions
+C-Name: member_roots
+Prototype: G
+Description: 
+ (gal):gen:copy                 gel($1, 3)
+ (bell):gen:copy                gel($1, 14)
+ (nf):gen:copy                  gel($1, 6)
+ (gen):gen                      member_roots($1)
+
+Function: _.sign
+Class: member_functions
+C-Name: member_sign
+Prototype: G
+Description: 
+ (nf):vec:copy                  gel($1, 2)
+ (gen):vec                      member_sign($1)
+
+Function: _.t2
+Class: member_functions
+C-Name: member_t2
+Prototype: G
+Description: 
+ (gen):vec                      member_t2($1)
+
+Function: _.tate
+Class: member_functions
+C-Name: member_tate
+Prototype: G
+
+Function: _.tu
+Class: member_functions
+C-Name: member_tu
+Prototype: G
+Description: 
+ (bnr):void            $"ray units not implemented"
+ (bnf):gen:copy        gmael($1, 8, 4)
+ (gen):gen:copy        gmael($1, 8, 4)
+
+Function: _.tufu
+Class: member_functions
+C-Name: member_tufu
+Prototype: G
+
+Function: _.w
+Class: member_functions
+C-Name: member_w
+Prototype: G
+Description: 
+ (bell):gen:copy       gel($1, 18)
+
+Function: _.zk
+Class: member_functions
+C-Name: member_zk
+Prototype: G
+Description: 
+ (nf):gen:copy         gel($1, 17)
+
+Function: _.zkst
+Class: member_functions
+C-Name: member_zkst
+Prototype: G
+Description: 
+ (bnr):gen:copy        gel($1, 2)
+
+Function: _/=_
+Class: symbolic_operators
+Description: 
+ (*small, gen):void	        $"cannot divide small: use \= instead."
+ (*int, gen):void	        $"cannot divide int: use \= instead."
+ (*real, real):real:parens               $1 = divrr($1, $2)
+ (*real, small):real:parens              $1 = divrs($1, $2)
+ (*real, mp):real:parens                 $1 = mpdiv($1, $2)
+ (*mp, real):mp:parens	                 $1 = mpdiv($1, $2)
+ (*pol, gen):gen:parens	        	 $1 = gdiv($1, $2)
+ (*vec, gen):gen:parens	         	 $1 = gdiv($1, $2)
+ (*gen, small):gen:parens                $1 = gdivgs($1, $2)
+ (*gen, gen):gen:parens	  	         $1 = gdiv($1, $2)
+
+Function: _/_
+Class: symbolic_operators
+C-Name: gdiv
+Prototype: GG
+Description: 
+ (0, mp):small			($2, 0)/*for side effect*/
+ (#small, real):real		divsr($1, $2)
+ (small, real):mp		divsr($1, $2)
+ (real, small):real		divrs($1, $2)
+ (real, real):real		divrr($1, $2)
+ (real, mp):real		mpdiv($1, $2)
+ (mp, real):mp			mpdiv($1, $2)
+ (1, gen):gen			ginv($2)
+ (gen, small):gen		gdivgs($1, $2)
+ (small, gen):gen		gdivsg($1, $2)
+ (gen, gen):gen	  	        gdiv($1, $2)
+
+Function: _<<=_
+Class: symbolic_operators
+Description: 
+ (*small, small):small:parens		 $1 <<= $(2)
+ (*int, small):int:parens	         $1 = shifti($1, $2)
+ (*mp, small):mp:parens			 $1 = mpshift($1, $2)
+ (*gen, small):mp:parens	         $1 = gshift($1, $2)
+
+Function: _<<_
+Class: symbolic_operators
+C-Name: gshift
+Prototype: GL
+Description: 
+ (int, small):int		shifti($1, $2)
+ (mp, small):mp			mpshift($1, $2)
+ (gen, small):mp		gshift($1, $2)
+
+Function: _<=_
+Class: symbolic_operators
+C-Name: gle
+Prototype: GG
+Description: 
+ (small, small):bool:parens		$(1) <= $(2)
+ (small, lg):bool:parens		$(1) < $(2)
+ (lg, lg):bool:parens			$(1) <= $(2)
+ (small, int):bool:parens		cmpsi($1, $2) <= 0
+ (int, lg):bool:parens			cmpis($1, $2) < 0
+ (int, small):bool:parens		cmpis($1, $2) <= 0
+ (int, int):bool:parens			cmpii($1, $2) <= 0
+ (mp, mp):bool:parens			mpcmp($1, $2) <= 0
+ (str, str):bool:parens			strcmp($1, $2) <= 0
+ (small, gen):bool:parens		gcmpsg($1, $2) <= 0
+ (gen, small):bool:parens		gcmpgs($1, $2) <= 0
+ (gen, gen):bool:parens			gcmp($1, $2) <= 0
+
+Function: _<_
+Class: symbolic_operators
+C-Name: glt
+Prototype: GG
+Description: 
+ (small, small):bool:parens		$(1) < $(2)
+ (lg, lg):bool:parens			$(1) < $(2)
+ (lg, small):bool:parens		$(1) <= $(2)
+ (small, int):bool:parens		cmpsi($1, $2) < 0
+ (int, small):bool:parens		cmpis($1, $2) < 0
+ (int, int):bool:parens			cmpii($1, $2) < 0
+ (mp, mp):bool:parens			mpcmp($1, $2) < 0
+ (str, str):bool:parens	 		strcmp($1, $2) < 0
+ (small, gen):bool:parens		gcmpsg($1, $2) < 0
+ (gen, small):bool:parens		gcmpgs($1, $2) < 0
+ (gen, gen):bool:parens			gcmp($1, $2) < 0
+
+Function: _==_
+Class: symbolic_operators
+C-Name: geq
+Prototype: GG
+Description: 
+ (small, small):bool:parens             $(1) == $(2)
+ (lg, lg):bool:parens                   $(1) == $(2)
+ (small, int):bool:parens               cmpsi($1, $2) == 0
+ (mp, 0):bool                           !signe($1)
+ (@int, 1):bool:parens                  is_pm1($1) && signe($1)==1
+ (int, 1):bool                          gcmp1($1)
+ (@int, -1):bool:parens                 is_pm1($1) && signe($1)==-1
+ (int, -1):bool                         gcmp_1($1)
+ (int, small):bool:parens               cmpis($1, $2) == 0
+ (int, int):bool                        equalii($1, $2)
+ (gen, 0):bool                          gcmp0($1)
+ (gen, 1):bool                          gcmp1($1)
+ (gen, -1):bool                         gcmp_1($1)
+ (real,real):bool                       cmprr($1, $2) == 0
+ (mp, mp):bool:parens                   mpcmp($1, $2) == 0
+ (typ, typ):bool:parens                 $(1) == $(2)
+ (typ, #str):bool:parens                $(1) == $(typ:2)
+ (#str, typ):bool:parens                $(typ:1) == $(2)
+ (str, str):negbool                     strcmp($1, $2)
+ (small, gen):bool                      gequalsg($1, $2)
+ (gen, small):bool                      gequalgs($1, $2)
+ (gen, gen):bool                        gequal($1, $2)
+
+Function: _>=_
+Class: symbolic_operators
+C-Name: gge
+Prototype: GG
+Description: 
+ (small, small):bool:parens		$(1) >= $(2)
+ (lg, lg):bool:parens			$(1) >= $(2)
+ (lg, small):bool:parens		$(1) > $(2)
+ (small, int):bool:parens		cmpsi($1, $2) >= 0
+ (int, small):bool:parens		cmpis($1, $2) >= 0
+ (int, int):bool:parens			cmpii($1, $2) >= 0
+ (mp, mp):bool:parens			mpcmp($1, $2) >= 0
+ (str, str):bool:parens			strcmp($1, $2) >= 0
+ (small, gen):bool:parens		gcmpsg($1, $2) >= 0
+ (gen, small):bool:parens		gcmpgs($1, $2) >= 0
+ (gen, gen):bool:parens			gcmp($1, $2) >= 0
+
+Function: _>>=_
+Class: symbolic_operators
+Description: 
+ (*small, small):small:parens	        $1 >>= $(2)
+ (*int, small):int:parens	         $1 = shifti($1, -$(2))
+ (*mp, small):mp:parens	                 $1 = mpshift($1, -$(2))
+ (*gen, small):mp:parens	         $1 = gshift($1, -$(2))
+
+Function: _>>_
+Class: symbolic_operators
+Description: 
+ (small, small):small:parens	$(1)>>$(2)
+ (int, small):int		shifti($1, -$(2))
+ (mp, small):mp			mpshift($1, -$(2))
+ (gen, small):mp                gshift($1, -$(2))
+
+Function: _>_
+Class: symbolic_operators
+C-Name: ggt
+Prototype: GG
+Description: 
+ (small, small):bool:parens		$(1) > $(2)
+ (lg, lg):bool:parens			$(1) > $(2)
+ (small, lg):bool:parens		$(1) >= $(2)
+ (small, int):bool:parens		cmpsi($1, $2) > 0
+ (int, small):bool:parens		cmpis($1, $2) > 0
+ (int, int):bool:parens			cmpii($1, $2) > 0
+ (mp, mp):bool:parens			mpcmp($1, $2) > 0
+ (str, str):bool:parens			strcmp($1, $2) > 0
+ (small, gen):bool:parens		gcmpsg($1, $2) > 0
+ (gen, small):bool:parens		gcmpgs($1, $2) > 0
+ (gen, gen):bool:parens			gcmp($1, $2) > 0
+
+Function: _[_,]
+Class: symbolic_operators
+Description: 
+ (mp,small):gen                 $"Scalar has no rows"
+ (vec,small):vec                rowcopy($1, $2)
+ (gen,small):vec                rowcopy($1, $2)
+
+Function: _[_,_]
+Class: symbolic_operators
+Description: 
+ (mp,small):gen                 $"Scalar has no components"
+ (mp,small,small):gen           $"Scalar has no components"
+ (vecsmall,small):small         $(1)[$2]
+ (vecsmall,small,small):gen     $"Vecsmall are single-dimensional"
+ (list,small):gen:copy          gel($1, $lg:2)
+ (vec,small):gen:copy           gel($1, $2)
+ (vec,small,small):gen:copy     gcoeff($1, $2, $3)
+ (gen,small):gen:copy           gel($1, $2)
+ (gen,small,small):gen:copy     gcoeff($1, $2, $3)
+
+Function: _\/=_
+Class: symbolic_operators
+Description: 
+ (*int, int):int:parens			 $1 = gdivround($1, $2)
+ (*pol, gen):gen:parens			 $1 = gdivround($1, $2)
+ (*gen, gen):gen:parens			 $1 = gdivround($1, $2)
+
+Function: _\/_
+Class: symbolic_operators
+C-Name: gdivround
+Prototype: GG
+Description: 
+ (int, int):int			gdivround($1, $2)
+ (gen, gen):gen			gdivround($1, $2)
+
+Function: _\=_
+Class: symbolic_operators
+Description: 
+ (*small, small):small:parens		$1 /= $(2)
+ (*int, int):int:parens			 $1 = gdivent($1, $2)
+ (*pol, gen):gen:parens			 $1 = gdivent($1, $2)
+ (*gen, gen):gen:parens			 $1 = gdivent($1, $2)
+
+Function: _\_
+Class: symbolic_operators
+C-Name: gdivent
+Prototype: GG
+Description: 
+ (small, small):small:parens		$(1)/$(2)
+ (int, small):int			truedivis($1, $2)
+ (small, int):int			gdiventsg($1, $2)
+ (int, int):int				truedivii($1, $2)
+ (gen, small):gen			gdiventgs($1, $2)
+ (small, gen):gen			gdiventsg($1, $2)
+ (gen, gen):gen				gdivent($1, $2)
+
+Function: _^_
+Class: symbolic_operators
+C-Name: gpow
+Prototype: GGp
+Description: 
+ (int, 2):int	        sqri($1)
+ (int, 3):int	        gpowgs($1, 3)
+ (int, 4):int	        gpowgs($1, 4)
+ (int, 5):int	        gpowgs($1, 5)
+ (real, -1):real	ginv($1)
+ (mp, -1):mp	        ginv($1)
+ (gen, -1):gen	        ginv($1)
+ (real, 2):real	        gsqr($1)
+ (mp, 2):mp	        gsqr($1)
+ (gen, 2):gen	        gsqr($1)
+ (real, small):real	gpowgs($1, $2)
+ (gen, small):gen	gpowgs($1, $2)
+ (real, int):real	powgi($1, $2)
+ (gen, int):gen		powgi($1, $2)
+ (gen, gen):gen:prec	gpow($1, $2, prec)
+
+Function: __
+Class: symbolic_operators
+Description: 
+ (genstr, genstr):genstr	        concat($1, $2)
+ (genstr, gen):genstr		        concat($1, $2)
+ (gen, genstr):genstr		        concat($1, $2)
+ (gen, gen):genstr		        concat($genstr:1, $2)
+
+Function: _avma
+Class: gp2c_internal
+Description: 
+ ():pari_sp		avma
+
+Function: _badtype
+Class: gp2c_internal
+Help: Code to check types. If not void, will be used as if(...).
+Description: 
+ (int):bool:parens              typ($1) != t_INT
+ (real):bool:parens             typ($1) != t_REAL
+ (mp):negbool                   is_intreal($1)
+ (vec):negbool                  is_matvec_t(typ($1))
+ (vecsmall):bool:parens         typ($1) != t_VECSMALL
+ (pol):bool:parens              typ($1) != t_POL
+ (*nf):void:parens              $1 = checknf($1)
+ (*bnf):void:parens             $1 = checkbnf($1)
+ (bnr):void                     checkbnr($1)
+ (prid):void                    checkprimeid($1)
+ (@clgp):bool:parens            lg($1) != 3 || typ($(1)[2]) != t_POLMOD
+ (ell):void                     checkell($1)
+ (bell):void                    checkbell($1)
+ (*gal):gal:parens              $1 = checkgal($1)
+
+Function: _call_GG
+Class: gp2c_internal
+Help: Call a function with proto GG on two GENs
+Description: 
+ (func_GG, gen, gen):gen         $(1)($2, $3)
+
+Function: _cast
+Class: gp2c_internal
+Help: (type1):type2 : cast expression of type1 to type2
+Description: 
+ (void):bool           0
+ (#negbool):bool       ${1 value not}
+ (negbool):bool        !$(1)
+ (small_int):bool
+ (small):bool
+ (lg):bool:parens      $(1)!=1
+ (bptr):bool           *$(1)
+ (gen):bool            !gcmp0($1)
+ (real):bool           signe($1)
+ (int):bool            signe($1)
+ (mp):bool             signe($1)
+ (pol):bool            signe($1) 
+ 
+ (void):negbool        1
+ (#bool):negbool       ${1 value not}
+ (bool):negbool        !$(1)
+ (lg):negbool:parens   $(1)==1
+ (bptr):negbool        !*$(1)
+ (gen):negbool         gcmp0($1)
+ (int):negbool         !signe($1)
+ (real):negbool        !signe($1)
+ (mp):negbool          !signe($1)
+ (pol):negbool         !signe($1)
+ 
+ (bool):small_int
+ (typ):small_int 
+ (small):small_int 
+ 
+ (bool):small
+ (typ):small 
+ (small_int):small
+ (bptr):small           *$(1)
+ (int):small            itos($1)
+ (#lg):small:parens     ${1 value 1 sub}
+ (lg):small:parens      $(1)-1
+ 
+ (void):int             gen_0
+ (-1):int               gen_m1
+ (0):int                gen_0
+ (1):int                gen_1
+ (2):int                gen_2
+ (bool):int             stoi($1)
+ (small):int            stoi($1)
+ (mp):int
+ (gen):int
+ 
+ (mp):real
+ (gen):real
+ 
+ (int):mp
+ (real):mp
+ (gen):mp
+ 
+ (#bool):lg:parens             ${1 1 value add}
+ (bool):lg:parens              $(1)+1
+ (#small):lg:parens            ${1 1 value add}
+ (small):lg:parens             $(1)+1
+ 
+ (gen):vecsmall
+ 
+ (nf):vec
+ (bnf):vec
+ (bnr):vec
+ (ell):vec
+ (bell):vec
+ (clgp):vec
+ (prid):vec
+ (gal):vec
+ (gen):vec
+ 
+ (gen):list
+ 
+ (pol):var      varn($1)
+ (gen):var      gvar($1)
+ 
+ (var):pol      pol_x[$1]
+ (gen):pol
+ 
+ (int):gen
+ (mp):gen
+ (vecsmall):gen
+ (vec):gen
+ (list):gen
+ (pol):gen
+ (genstr):gen
+ 
+ (gen):genstr GENtoGENstr($1)
+ (str):genstr strtoGENstr($1)
+ 
+ (genstr):str GSTR($1)
+ (typ):str type_name($1)
+ 
+ (#str):typ  ${1 str_format}
+ 
+ (bnf):nf:parens       gel($1, 7)
+ (gen):nf
+ (bnr):bnf:parens      gel($1, 1)
+ (gen):bnf
+ (gen):bnr
+ (bnf):clgp:parens     gmael($1, 8, 1)
+ (bnr):clgp:parens     gel($1, 5)
+ (gen):clgp
+ (bell):ell
+ (gen):ell
+ (gen):bell
+ (gen):gal
+ (gen):prid
+
+Function: _cgetg
+Class: gp2c_internal
+Description: 
+ (lg,#str):gen              cgetg($1, ${2 str_raw})
+ (gen,lg,#str):gen          $1 = cgetg($2, ${3 str_raw})
+
+Function: _const_expr
+Class: gp2c_internal
+Description: 
+ (str):gen       readseq($1)
+
+Function: _const_quote
+Class: gp2c_internal
+Description: 
+ (str):var       fetch_user_var($1)
+
+Function: _const_real
+Class: gp2c_internal
+Description: 
+ (str):real:prec       strtor($1, prec)
+
+Function: _const_smallreal
+Class: gp2c_internal
+Description: 
+ (0):real:prec       real_0(prec)
+ (1):real:prec       real_1(prec)
+ (-1):real:prec      real_m1(prec)
+ (small):real:prec   stor($1, prec)
+
+Function: _decl_base
+Class: gp2c_internal
+Description: 
+ (C!void)          void
+ (C!long)          long
+ (C!int)           int
+ (C!GEN)           GEN
+ (C!char*)         char
+ (C!byteptr)       byteptr
+ (C!pari_sp)       pari_sp
+ (C!func_GG)       GEN
+
+Function: _decl_ext
+Class: gp2c_internal
+Description: 
+ (C!char*)         *$1
+ (C!func_GG)       (*$1)(GEN, GEN)
+
+Function: _default_check
+Class: gp2c_internal
+Help: Code to check for the default marker
+Description: 
+ (C!GEN):bool    !$(1)
+ (var):bool      $(1) == -1
+
+Function: _default_marker
+Class: gp2c_internal
+Help: Code for default value of GP function
+Description: 
+ (C!GEN)      NULL
+ (var)        -1
+ (small)      0
+ (str)        ""
+
+Function: _diffptr
+Class: gp2c_internal
+Help: Table of difference of primes.
+Description: 
+ ():bptr        diffptr
+
+Function: _err_primes
+Class: gp2c_internal
+Description: 
+ ():void  pari_err(primer1)
+
+Function: _err_type
+Class: gp2c_internal
+Description: 
+ (str):void  pari_err(typeer, $1)
+
+Function: _formatcode
+Class: gp2c_internal
+Description: 
+ (#small):void	                $1
+ (small):small	                %ld
+ (#str):void	                $%1
+ (str):str	                %s
+ (gen):gen	                %Z
+
+Function: _forprime_next
+Class: gp2c_internal
+Help: Compute the next prime from the diffptr table.
+Description: 
+ (*small,*bptr):void  NEXT_PRIME_VIADIFF($1, $2)
+
+Function: _forvec_start
+Class: gp2c_internal
+Help: Initializes parameters for forvec_start.
+Description: 
+ (gen, small, &gen, &func_GG):vec    forvec_start($1, $2, &$3, &$4)
+
+Function: _gerepileall
+Class: gp2c_internal
+Description: 
+ (pari_sp,gen):void:parens    $2 = gerepilecopy($1, $2)
+ (pari_sp,gen,...):void       gerepileall($1, ${nbarg 1 sub}, ${stdref 3 code})
+
+Function: _gerepileupto
+Class: gp2c_internal
+Description: 
+ (pari_sp, int):int               gerepileuptoint($1, $2)
+ (pari_sp, mp):mp                 gerepileuptoleaf($1, $2)
+ (pari_sp, vecsmall):vecsmall     gerepileuptoleaf($1, $2)
+ (pari_sp, vec):vec               gerepileupto($1, $2)
+ (pari_sp, gen):gen               gerepileupto($1, $2)
+
+Function: _low_stack_lim
+Class: gp2c_internal
+Description: 
+ (pari_sp,pari_sp):bool        low_stack($1, stack_lim($2, 1))
+
+Function: _maxprime
+Class: gp2c_internal
+Description: 
+ ():small		maxprime()
+
+Function: _proto_code
+Class: gp2c_internal
+Help: Code for argument of a function
+Description: 
+ (var)          n
+ (C!long)       L
+ (C!GEN)        G
+ (C!char*)      s
+
+Function: _proto_ret
+Class: gp2c_internal
+Help: Code for return value of functions
+Description: 
+ (C!void)       v
+ (C!int)        i
+ (C!long)       l
+ (C!GEN)
+
+Function: _stack_lim
+Class: gp2c_internal
+Description: 
+ (pari_sp,small):pari_sp       stack_lim($1, $2)
+
+Function: _toGENstr
+Class: gp2c_internal
+Description: 
+ (str):genstr	   strtoGENstr($1)
+ (gen):genstr	   GENtoGENstr($1)
+
+Function: _tovec
+Class: gp2c_internal
+Help: Create a vector holding the arguments (shallow)
+Description: 
+ (gen):vec               mkvec($1)
+ (gen,gen):vec           mkvec2($1, $2)
+ (gen,gen,gen):vec       mkvec3($1, $2, $3)
+ (gen,gen,gen,gen):vec   mkvec4($1, $2, $3, $4)
+ (gen,...):vec           mkvecn($#, $2)
+
+Function: _type_preorder
+Class: gp2c_internal
+Help: List of chains of type preorder
+Description: 
+ (empty, void, bool, small, int, mp, gen)
+ (empty, real, mp)
+ (empty, bptr, small)
+ (empty, bool, lg, small)
+ (empty, bool, small_int, small)
+ (empty, void, negbool, bool)
+ (empty, typ, str, genstr,gen)
+ (empty, vecsmall, gen)
+ (empty, vec, gen)
+ (empty, list, gen)
+ (empty, bnr, bnf, nf, vec)
+ (empty, bnr, bnf, clgp, vec)
+ (empty, bell, ell, vec)
+ (empty, prid, vec)
+ (empty, gal, vec)
+ (empty, var, pol, gen)
+
+Function: _typedef
+Class: gp2c_internal
+Description: 
+ (empty)        void
+ (void)         void
+ (negbool)      long
+ (bool)         long
+ (small_int)    int
+ (small)        long
+ (int)          GEN
+ (real)         GEN
+ (mp)           GEN
+ (lg)           long
+ (vecsmall)     GEN
+ (vec)          GEN
+ (list)         GEN
+ (var)          long
+ (pol)          GEN
+ (gen)          GEN
+ (genstr)       GEN
+ (str)          char*
+ (bptr)         byteptr
+ (func_GG)      func_GG
+ (pari_sp)      pari_sp
+ (typ)          long
+ (nf)           GEN
+ (bnf)          GEN
+ (bnr)          GEN
+ (ell)          GEN
+ (bell)         GEN
+ (clgp)         GEN
+ (prid)         GEN
+ (gal)          GEN
+
+Function: _||_
+Class: symbolic_operators
+Description: 
+ (bool, bool):bool:parens               $(1) || $(2)
+
+Function: _~
+Class: symbolic_operators
+C-Name: gtrans
+Prototype: G
+Description: 
+ (vec):vec			gtrans($1)
+ (gen):gen			gtrans($1)
+
+Function: abs
+Class: basic
+Section: transcendental
+C-Name: gabs
+Prototype: Gp
+Help: abs(x): absolute value (or modulus) of x
+Description: 
+ (small):small	labs($1)
+ (int):int	mpabs($1)
+ (real):real	mpabs($1)
+ (mp):mp	mpabs($1)
+ (gen):gen:prec	gabs($1, prec)
+
+Function: acos
+Class: basic
+Section: transcendental
+C-Name: gacos
+Prototype: Gp
+Help: acos(x): inverse cosine of x
+
+Function: acosh
+Class: basic
+Section: transcendental
+C-Name: gach
+Prototype: Gp
+Help: acosh(x): inverse hyperbolic cosine of x
+
+Function: addhelp
+Class: basic
+Section: programming
+C-Name: addhelp
+Prototype: vSs
+Help: addhelp(symbol,"message"): add/change help message for a symbol
+
+Function: addprimes
+Class: basic
+Section: number_theoretical
+C-Name: addprimes
+Prototype: DG
+Help: addprimes({x=[]}): add primes in the vector x to the prime table to
+ be used in trial division. x may
+ also be a single integer. Composite "primes" are allowed,
+ and in that case you may later get a message "impossible inverse", which
+ will give you some factors. List the current extra primes if x is omitted. If
+ some primes are added which intersect non trivially the existing table entries,
+ suitable updating is done
+
+Function: agm
+Class: basic
+Section: transcendental
+C-Name: agm
+Prototype: GGp
+Help: agm(x,y): arithmetic-geometric mean of x and y
+
+Function: algdep
+Class: basic
+Section: linear_algebra
+C-Name: algdep0
+Prototype: GLD0,L,p
+Help: algdep(x,n,{flag=0}): algebraic relations up to degree n of x, using
+ lindep([1,x,...,x^(n-1)], flag).
+
+Function: alias
+Class: basic
+Section: programming
+C-Name: alias0
+Prototype: vrr
+Help: alias("new","old"): new is now an alias for old
+
+Function: allocatemem
+Class: basic
+Section: programming
+C-Name: allocatemem0
+Prototype: vD0,L,
+Help: allocatemem({s=0}): allocates a new stack of s bytes. doubles the
+ stack if s is omitted
+
+Function: arg
+Class: basic
+Section: transcendental
+C-Name: garg
+Prototype: Gp
+Help: arg(x): argument of x,such that -pi<arg(x)<=pi
+
+Function: asin
+Class: basic
+Section: transcendental
+C-Name: gasin
+Prototype: Gp
+Help: asin(x): inverse sine of x
+
+Function: asinh
+Class: basic
+Section: transcendental
+C-Name: gash
+Prototype: Gp
+Help: asinh(x): inverse hyperbolic sine of x
+
+Function: atan
+Class: basic
+Section: transcendental
+C-Name: gatan
+Prototype: Gp
+Help: atan(x): inverse tangent of x
+
+Function: atanh
+Class: basic
+Section: transcendental
+C-Name: gath
+Prototype: Gp
+Help: atanh(x): inverse hyperbolic tangent of x
+
+Function: bernfrac
+Class: basic
+Section: transcendental
+C-Name: bernfrac
+Prototype: L
+Help: bernfrac(x): Bernoulli number B_x, as a rational number
+
+Function: bernreal
+Class: basic
+Section: transcendental
+C-Name: bernreal
+Prototype: Lp
+Help: bernreal(x): Bernoulli number B_x, as a real number with the current
+ precision
+
+Function: bernvec
+Class: basic
+Section: transcendental
+C-Name: bernvec
+Prototype: L
+Help: bernvec(x): Vector of rational Bernoulli numbers B_0, B_2,...up to
+ B_(2x)
+
+Function: besselh1
+Class: basic
+Section: transcendental
+C-Name: hbessel1
+Prototype: GGp
+Help: besselh1(nu,x): H^1-bessel function of index nu and argument x
+
+Function: besselh2
+Class: basic
+Section: transcendental
+C-Name: hbessel2
+Prototype: GGp
+Help: besselh2(nu,x): H^2-bessel function of index nu and argument x
+
+Function: besseli
+Class: basic
+Section: transcendental
+C-Name: ibessel
+Prototype: GGp
+Help: besseli(nu,x): I-bessel function of index nu and argument x
+
+Function: besselj
+Class: basic
+Section: transcendental
+C-Name: jbessel
+Prototype: GGp
+Help: besselj(nu,x): J-bessel function of index nu and argument x
+
+Function: besseljh
+Class: basic
+Section: transcendental
+C-Name: jbesselh
+Prototype: GGp
+Help: besseljh(n,x): J-bessel function of index n+1/2 and argument x, where
+ n is a non-negative integer
+
+Function: besselk
+Class: basic
+Section: transcendental
+C-Name: kbessel0
+Prototype: GGD0,L,p
+Help: besselk(nu,x,{flag=0}): K-bessel function of index nu and argument x
+ (x positive real of type real, nu of any scalar type). flag is optional, and
+ may be set to 0: default; 1: use hyperu
+
+Function: besseln
+Class: basic
+Section: transcendental
+C-Name: nbessel
+Prototype: GGp
+Help: besseln(nu,x): N-bessel function of index nu and argument x
+
+Function: bestappr
+Class: basic
+Section: number_theoretical
+C-Name: bestappr0
+Prototype: GGDG
+Help: bestappr(x,k): gives the best approximation to the real x with
+ denominator less or equal to k
+
+Function: bezout
+Class: basic
+Section: number_theoretical
+C-Name: vecbezout
+Prototype: GG
+Help: bezout(x,y): gives a 3-dimensional row vector [u,v,d] such that
+ d=gcd(x,y) and u*x+v*y=d
+
+Function: bezoutres
+Class: basic
+Section: number_theoretical
+C-Name: vecbezoutres
+Prototype: GG
+Help: bezoutres(x,y): gives a 3-dimensional row vector [u,v,d] such that
+ d=resultant(x,y) and u*x+v*y=d, where x and y are polynomials
+
+Function: bigomega
+Class: basic
+Section: number_theoretical
+C-Name: gbigomega
+Prototype: G
+Help: bigomega(x): number of prime divisors of x, counted with multiplicity
+Description: 
+ (int):small	bigomega($1)
+ (gen):gen	gbigomega($1)
+
+Function: binary
+Class: basic
+Section: conversions
+C-Name: binaire
+Prototype: G
+Help: binary(x): gives the vector formed by the binary digits of x (x
+ integer)
+
+Function: binomial
+Class: basic
+Section: number_theoretical
+C-Name: binomial
+Prototype: GL
+Help: binomial(x,y): binomial coefficient x*(x-1)...*(x-y+1)/y! defined for
+ y in Z and any x
+
+Function: bitand
+Class: basic
+Section: conversions
+C-Name: gbitand
+Prototype: GG
+Help: bitand(x,y): bitwise "and" of two integers x and y. Negative numbers
+ behave as if modulo big power of 2
+Description: 
+ (small, small):small:parens	$(1)&$(2)
+ (gen, gen):int	gbitand($1, $2)
+
+Function: bitneg
+Class: basic
+Section: conversions
+C-Name: gbitneg
+Prototype: GD-1,L,
+Help: bitneg(x,{n=-1}): bitwise negation of an integers x truncated to n
+ bits. n=-1 means represent infinite sequences of bit 1 as negative numbers.
+ Negative numbers behave as if modulo big power of 2
+
+Function: bitnegimply
+Class: basic
+Section: conversions
+C-Name: gbitnegimply
+Prototype: GG
+Help: bitnegimply(x,y): bitwise "negated imply" of two integers x and y,
+ in other words, x BITAND BITNEG(y). Negative numbers behave as if modulo big
+ power of 2
+Description: 
+ (small, small):small:parens	$(1)&~$(2)
+ (gen, gen):int	gbitnegimply($1, $2)
+
+Function: bitor
+Class: basic
+Section: conversions
+C-Name: gbitor
+Prototype: GG
+Help: bitor(x,y): bitwise "or" of two integers x and y. Negative numbers
+ behave as if modulo big power of 2
+Description: 
+ (small, small):small:parens	$(1)|$(2)
+ (gen, gen):int	gbitor($1, $2)
+
+Function: bittest
+Class: basic
+Section: conversions
+C-Name: gbittest
+Prototype: GG
+Help: bittest(x,n): gives bit number n (coefficient of 2^n) of the integer x.
+ Negative numbers behave as if modulo big power of 2
+Description: 
+ (small, small):bool:parens     ($(1)>>$(2))&1
+ (int, small):bool              bittest($1, $2)
+ (gen, gen):gen                 gbittest($1, $2)
+
+Function: bitxor
+Class: basic
+Section: conversions
+C-Name: gbitxor
+Prototype: GG
+Help: bitxor(x,y): bitwise "exclusive or" of two integers x and y.
+ Negative numbers behave as if modulo big power of 2
+Description: 
+ (small, small):small:parens	$(1)^$(2)
+ (gen, gen):int	gbitxor($1, $2)
+
+Function: bnfcertify
+Class: basic
+Section: number_fields
+C-Name: certifybuchall
+Prototype: lG
+Help: bnfcertify(bnf): certify the correctness (i.e. remove the GRH) of the
+ bnf data output by bnfclassunit or bnfinit
+
+Function: bnfclassunit
+Class: basic
+Section: number_fields
+C-Name: bnfclassunit0
+Prototype: GD0,L,DGp
+Help: bnfclassunit(P,{flag=0},{tech=[]}): compute the class group, regulator
+ of the number field defined by the polynomial P, and also the fundamental
+ units if they are not too large. flag and tech are both optional. flag can
+ be any of 0: default, 1: insist on having fundamental units, 2: do not
+ compute units. See manual for details about tech. P may also be a non-zero
+ integer, and is then considered as the discriminant of a quadratic order
+
+Function: bnfclgp
+Class: basic
+Section: number_fields
+C-Name: classgrouponly
+Prototype: GDGp
+Help: bnfclgp(P,{tech=[]}): compute the class group of the number field
+ defined by the polynomial P. If P is a non-zero integer, it is interpreted
+ as a quadratic discriminant. See manual for details about tech
+
+Function: bnfdecodemodule
+Class: basic
+Section: number_fields
+C-Name: decodemodule
+Prototype: GG
+Help: bnfdecodemodule(nf,fa): given a coded module fa as in bnrdisclist,
+ gives the true module
+
+Function: bnfinit
+Class: basic
+Section: number_fields
+C-Name: bnfinit0
+Prototype: GD0,L,DGp
+Help: bnfinit(P,{flag=0},{tech=[]}): compute the necessary data for future
+ use in ideal and unit group computations, including fundamental units if
+ they are not too large. flag and tech are both optional. flag can be any of
+ 0: default, 1: insist on having fundamental units, 2: do not compute units,
+ 3: small bnfinit, which can be converted to a big one using bnfmake. See
+ manual for details about tech
+Description: 
+ (gen):bnf:prec	bnfinit0($1, 0, NULL, prec)
+ (gen, 0):bnf:prec	bnfinit0($1, 0, NULL, prec)
+ (gen, 1):bnf:prec	bnfinit0($1, 1, NULL, prec)
+ (gen, 2):bnf:prec	bnfinit0($1, 2, NULL, prec)
+ (gen, 3):bnf:prec	bnfinit0($1, 3, NULL, prec)
+ (gen, ?small, ?gen):bnf:prec	bnfinit0($1, $2, $3, prec)
+
+Function: bnfisintnorm
+Class: basic
+Section: number_fields
+C-Name: bnfisintnorm
+Prototype: GG
+Help: bnfisintnorm(bnf,x): compute a complete system of solutions (modulo
+ units of positive norm) of the absolute norm equation N(a)=x, where a
+ belongs to the maximal order of big number field bnf (if bnf is not
+ certified, this depends on GRH)
+
+Function: bnfisnorm
+Class: basic
+Section: number_fields
+C-Name: bnfisnorm
+Prototype: GGD1,L,p
+Help: bnfisnorm(bnf,x,{flag=1}): Tries to tell whether x (in Q) is the norm
+ of some fractional y (in bnf). Returns a vector [a,b] where x=Norm(a)*b.
+ Looks for a solution which is a S-unit, with S a certain list of primes (in
+ bnf) containing (among others) all primes dividing x. If bnf is known to be
+ Galois, set flag=0 (in this case, x is a norm iff b=1). If flag is non zero
+ the program adds to S all the primes : dividing flag if flag<0, or less than
+ flag if flag>0. The answer is guaranteed (i.e x norm iff b=1) under GRH, if
+ S contains all primes less than 12.log(disc(Bnf))^2, where Bnf is the Galois
+ closure of bnf
+
+Function: bnfisprincipal
+Class: basic
+Section: number_fields
+C-Name: isprincipalall
+Prototype: GGD1,L,
+Help: bnfisprincipal(bnf,x,{flag=1}): bnf being output by bnfinit (with
+ flag<=2), gives [v,alpha], where v is the vector of exponents on
+ the class group generators and alpha is the generator of the resulting
+ principal ideal. In particular x is principal if and only if v is the zero
+ vector. flag is optional, whose meaning is: 0: output only v; 1: default; 2:
+ output only v, precision being doubled until the result is obtained; 3: as 2
+ but output generators
+
+Function: bnfissunit
+Class: basic
+Section: number_fields
+C-Name: bnfissunit
+Prototype: GGG
+Help: bnfissunit(bnf,sfu,x): bnf being output by bnfinit (with flag<=2), sfu
+ by bnfsunit, gives the column vector of exponents of x on the fundamental
+ S-units and the roots of unity if x is a unit, the empty vector otherwise
+
+Function: bnfisunit
+Class: basic
+Section: number_fields
+C-Name: isunit
+Prototype: GG
+Help: bnfisunit(bnf,x): bnf being output by bnfinit (with flag<=2), gives
+ the column vector of exponents of x on the fundamental units and the roots
+ of unity if x is a unit, the empty vector otherwise
+
+Function: bnfmake
+Class: basic
+Section: number_fields
+C-Name: bnfmake
+Prototype: Gp
+Help: bnfmake(sbnf): transforms small sbnf as output by bnfinit with flag=3
+ into a true big bnf
+
+Function: bnfnarrow
+Class: basic
+Section: number_fields
+C-Name: buchnarrow
+Prototype: G
+Help: bnfnarrow(bnf): given a big number field as output by bnfinit, gives
+ as a 3-component vector the structure of the narrow class group
+
+Function: bnfreg
+Class: basic
+Section: number_fields
+C-Name: regulator
+Prototype: GDGp
+Help: bnfreg(P,{tech=[]}): compute the regulator of the number field defined
+ by the polynomial P. If P is a non-zero integer, it is interpreted as a
+ quadratic discriminant. See manual for details about tech
+
+Function: bnfsignunit
+Class: basic
+Section: number_fields
+C-Name: signunits
+Prototype: G
+Help: bnfsignunit(bnf): matrix of signs of the real embeddings of the system
+ of fundamental units found by bnfinit
+
+Function: bnfsunit
+Class: basic
+Section: number_fields
+C-Name: bnfsunit
+Prototype: GGp
+Help: bnfsunit(bnf,S): compute the fundamental S-units of the number field
+ bnf output by bnfinit, S being a list of prime ideals. res[1] contains the
+ S-units, res[5] the S-classgroup. See manual for details
+
+Function: bnfunit
+Class: basic
+Section: number_fields
+C-Name: buchfu
+Prototype: G
+Help: bnfunit(bnf): compute the fundamental units of the number field bnf
+ output by bnfinit when they have not yet been computed (i.e. with flag=2)
+
+Function: bnrL1
+Class: basic
+Section: number_fields
+C-Name: bnrL1
+Prototype: GDGD0,L,p
+Help: bnrL1(bnr, {subgroup}, {flag=0}): bnr being output by bnrinit(,,1) and
+ subgroup being a square matrix defining a congruence subgroup of bnr (the
+ trivial subgroup if omitted), for each character of bnr trivial on this
+ subgroup, compute L(1, chi) (or equivalently the first non-zero term c(chi)
+ of the expansion at s = 0). The binary digits of flag mean 1: if 0 then
+ compute the term c(chi) and return [r(chi), c(chi)] where r(chi) is the
+ order of L(s, chi) at s = 0, or if 1 then compute the value at s = 1 (and in
+ this case, only for non-trivial characters), 2: if 0 then compute the value
+ of the primitive L-function associated to chi, if 1 then compute the value
+ of the L-function L_S(s, chi) where S is the set of places dividing the
+ modulus of bnr (and the infinite places), 3: return also the characters
+
+Function: bnrclass
+Class: basic
+Section: number_fields
+C-Name: bnrclass0
+Prototype: GGD0,L,
+Help: bnrclass(bnf,ideal,{flag=0}): given a big number field as output by
+ bnfinit (only) and an ideal or a 2-component row vector formed by an ideal
+ and a list of R1 zeros or ones representing a module, finds the ray class
+ group structure corresponding to this module. flag is optional, and can be
+ 0: default, 1: compute data necessary for working in the ray class group,
+ for example with functions such as bnrisprincipal or bnrdisc, without
+ computing the generators of the ray class group, or 2: with the generators.
+ When flag=1 or 2, the fifth component is the ray class group structure
+ obtained when flag=0
+
+Function: bnrclassno
+Class: basic
+Section: number_fields
+C-Name: bnrclassno
+Prototype: GG
+Help: bnrclassno(bnf,x): ray class number of the module x for the big number
+ field bnf. Faster than bnrclass if only the ray class number is wanted
+
+Function: bnrclassnolist
+Class: basic
+Section: number_fields
+C-Name: bnrclassnolist
+Prototype: GG
+Help: bnrclassnolist(bnf,list): if list is as output by ideallist or
+ similar, gives list of corresponding ray class numbers
+
+Function: bnrconductor
+Class: basic
+Section: number_fields
+C-Name: bnrconductor
+Prototype: GDGDGDG
+Help: bnrconductor(a1,{a2},{a3},{flag=0}): conductor f of the subfield of
+ the ray class field given by a1,a2,a3 (see bnrdisc). flag is optional and
+ can be 0: default, 1: returns [f, Cl_f, H], H subgroup of the ray class
+ group modulo f defining the extension, 2: returns [f, bnr(f), H]
+
+Function: bnrconductorofchar
+Class: basic
+Section: number_fields
+C-Name: bnrconductorofchar
+Prototype: GG
+Help: bnrconductorofchar(bnr,chi): conductor of the character chi on the ray
+ class group bnr
+
+Function: bnrdisc
+Class: basic
+Section: number_fields
+C-Name: bnrdisc0
+Prototype: GDGDGD0,L,
+Help: bnrdisc(a1,{a2},{a3},{flag=0}): absolute or relative [N,R1,discf] of
+ the field defined by a1,a2,a3. [a1,{a2},{a3}] is of type [bnr],
+ [bnr,subgroup], [bnf, module] or [bnf,module,subgroup], where bnf is as
+ output by bnfclassunit (with flag<=2), bnr by bnrclass (with flag>0), and
+ subgroup is the HNF matrix of a subgroup of the corresponding ray class
+ group (if omitted, the trivial subgroup). flag is optional whose binary
+ digits mean 1: give relative data; 2: return 0 if module is not the
+ conductor
+
+Function: bnrdisclist
+Class: basic
+Section: number_fields
+C-Name: bnrdisclist0
+Prototype: GGDG
+Help: bnrdisclist(bnf,bound,{arch}): gives list of discriminants of
+ ray class fields of all conductors up to norm bound, in a long vector
+ The ramified Archimedean places are given by arch; all possible values are
+ taken if arch is omitted. Supports the alternative syntax
+ bnrdisclist(bnf,list), where list is as output by ideallist or ideallistarch
+ (with units)
+
+Function: bnrinit
+Class: basic
+Section: number_fields
+C-Name: bnrinit0
+Prototype: GGD0,L,
+Help: bnrinit(bnf,ideal,{flag=0}): given a big number field as output by
+ bnfinit (only) and an ideal or a 2-component row vector formed by an ideal
+ and a list of R1 zeros or ones representing a module, initializes data
+ linked to the ray class group structure corresponding to this module. flag
+ is optional, and can be 0: default (same as bnrclass with flag = 1), 1:
+ compute also the generators (same as bnrclass with flag = 2). The fifth
+ component is the ray class group structure
+Description: 
+ (gen,gen,?small):bnr       bnrinit0($1, $2, $3)
+
+Function: bnrisconductor
+Class: basic
+Section: number_fields
+C-Name: bnrisconductor
+Prototype: lGDGDG
+Help: bnrisconductor(a1,{a2},{a3}): returns 1 if the modulus is the
+ conductor of the subfield of the ray class field given by a1,a2,a3 (see
+ bnrdisc), and 0 otherwise. Slightly faster than bnrconductor if this is the
+ only desired result
+
+Function: bnrisprincipal
+Class: basic
+Section: number_fields
+C-Name: bnrisprincipal
+Prototype: GGD1,L,
+Help: bnrisprincipal(bnr,x,{flag=1}): bnr being output by bnrinit, gives
+ [v,alpha], where v is the vector of exponents on the class group
+ generators and alpha is the generator of the resulting principal ideal. In
+ particular x is principal if and only if v is the zero vector. If (optional)
+ flag is set to 0, output only v
+
+Function: bnrrootnumber
+Class: basic
+Section: number_fields
+C-Name: bnrrootnumber
+Prototype: GGD0,L,p
+Help: bnrrootnumber(bnr,chi,{flag=0}); returns the so-called Artin Root
+ Number, i.e. the constant W appearing in the functional equation of the
+ Hecke L-function associated to chi. Set flag = 1 if the character is known
+ to be primitive
+
+Function: bnrstark
+Class: basic
+Section: number_fields
+C-Name: bnrstark
+Prototype: GDGp
+Help: bnrstark(bnr,{subgroup}): bnr being as output by
+ bnrinit(,,1), finds a relative equation for the class field corresponding to
+ the module in bnr and the given congruence subgroup (the trivial subgroup if
+ omitted) using Stark's units. The ground field and the class field must be
+ totally real.
+
+Function: break
+Class: basic
+Section: programming
+C-Name: break0
+Prototype: D1,L,
+Help: break({n=1}): interrupt execution of current instruction sequence, and
+ exit from the n innermost enclosing loops
+
+Function: ceil
+Class: basic
+Section: conversions
+C-Name: gceil
+Prototype: G
+Help: ceil(x): ceiling of x=smallest integer>=x
+Description: 
+ (small):small:parens   $1
+ (int):int:copy:parens  $1
+ (real):int             ceilr($1)
+ (mp):int               mpceil($1)
+ (gen):gen              gceil($1)
+
+Function: centerlift
+Class: basic
+Section: conversions
+C-Name: centerlift0
+Prototype: GDn
+Help: centerlift(x,{v}): centered lift of x. Same as lift except for
+ integermods
+Description: 
+ (pol):pol	centerlift($1)
+ (vec):vec	centerlift($1)
+ (gen):gen	centerlift($1)
+ (pol, var):pol	centerlift0($1, $2)
+ (vec, var):vec	centerlift0($1, $2)
+ (gen, var):gen	centerlift0($1, $2)
+
+Function: changevar
+Class: basic
+Section: conversions
+C-Name: changevar
+Prototype: GG
+Help: changevar(x,y): change variables of x according to the vector y
+
+Function: charpoly
+Class: basic
+Section: linear_algebra
+C-Name: charpoly0
+Prototype: GDnD0,L,
+Help: charpoly(A,{v=x},{flag=0}): det(v*Id-A)=characteristic polynomial of
+ the matrix or polmod A. flag is optional and may be set to 1 (use
+ Lagrange interpolation) or 2 (use Hessenberg form), 0 being the default
+
+Function: chinese
+Class: basic
+Section: number_theoretical
+C-Name: chinese
+Prototype: GDG
+Help: chinese(x,{y}): x,y being both intmods (or polmods) computes z in the
+ same residue classes as x and y
+Description: 
+ (gen):gen      chinese1($1)
+ (gen, gen):gen chinese($1, $2)
+
+Function: clone
+Class: gp2c
+Description: 
+ (small):small:parens		$1
+ (int):int			gclone($1)
+ (real):real			gclone($1)
+ (mp):mp			gclone($1)
+ (vecsmall):vecsmall		gclone($1)
+ (vec):vec			gclone($1)
+ (pol):pol			gclone($1)
+ (gen):gen			gclone($1)
+
+Function: component
+Class: basic
+Section: conversions
+C-Name: compo
+Prototype: GL
+Help: component(x,s): the s'th component of the internal representation of
+ x. For vectors or matrices, it is simpler to use x[]. For list objects such
+ as nf, bnf, bnr or ell, it is much easier to use member functions starting
+ with "."
+
+Function: concat
+Class: basic
+Section: linear_algebra
+C-Name: concat
+Prototype: GDG
+Help: concat(x,{y}): concatenation of x and y, which can be scalars, vectors
+ or matrices, or lists (in this last case, both x and y have to be lists). If
+ y is omitted, x has to be a list or row vector and its elements are
+ concatenated
+Description: 
+ (mp,mp):vec           concat($1, $2)
+ (vec,mp):vec          concat($1, $2)
+ (mp,vec):vec          concat($1, $2)
+ (vec,vec):vec         concat($1, $2)
+ (genstr,gen):genstr   concat($1, $2)
+ (gen,genstr):genstr   concat($1, $2)
+ (gen,?gen):gen        concat($1, $2)
+
+Function: conj
+Class: basic
+Section: conversions
+C-Name: gconj
+Prototype: G
+Help: conj(x): the algebraic conjugate of x
+
+Function: conjvec
+Class: basic
+Section: conversions
+C-Name: conjvec
+Prototype: Gp
+Help: conjvec(x): conjugate vector of the algebraic number x
+
+Function: content
+Class: basic
+Section: number_theoretical
+C-Name: content
+Prototype: G
+Help: content(x): gcd of all the components of x, when this makes sense
+
+Function: contfrac
+Class: basic
+Section: number_theoretical
+C-Name: contfrac0
+Prototype: GDGD0,L,
+Help: contfrac(x,{b},{lmax}): continued fraction expansion of x (x
+ rational,real or rational function). b and lmax are both optional, where b
+ is the vector of numerators of the continued fraction, and lmax is a bound
+ for the number of terms in the continued fraction expansion
+
+Function: contfracpnqn
+Class: basic
+Section: number_theoretical
+C-Name: pnqn
+Prototype: G
+Help: contfracpnqn(x): [p_n,p_{n-1}; q_n,q_{n-1}] corresponding to the
+ continued fraction x
+
+Function: copy
+Class: gp2c
+Description: 
+ (small):small:parens		$1
+ (int):int			icopy($1)
+ (real):real			gcopy($1)
+ (mp):mp			gcopy($1)
+ (vecsmall):vecsmall		gcopy($1)
+ (vec):vec			gcopy($1)
+ (pol):pol			gcopy($1)
+ (gen):gen			gcopy($1)
+
+Function: core
+Class: basic
+Section: number_theoretical
+C-Name: core0
+Prototype: GD0,L,
+Help: core(n,{flag=0}): unique (positive of negative) squarefree integer d
+ dividing n such that n/d is a square. If (optional) flag is non-null, output
+ the two-component row vector [d,f], where d is the unique squarefree integer
+ dividing n such that n/d=f^2 is a square
+
+Function: coredisc
+Class: basic
+Section: number_theoretical
+C-Name: coredisc0
+Prototype: GD0,L,
+Help: coredisc(n,{flag=0}): discriminant of the quadratic field Q(sqrt(n)).
+ If (optional) flag is non-null, output a two-component row vector [d,f],
+ where d is the discriminant of the quadratic field Q(sqrt(n)) and n=df^2. f
+ may be a half integer
+
+Function: cos
+Class: basic
+Section: transcendental
+C-Name: gcos
+Prototype: Gp
+Help: cos(x): cosine of x
+
+Function: cosh
+Class: basic
+Section: transcendental
+C-Name: gch
+Prototype: Gp
+Help: cosh(x): hyperbolic cosine of x
+
+Function: cotan
+Class: basic
+Section: transcendental
+C-Name: gcotan
+Prototype: Gp
+Help: cotan(x): cotangent of x
+
+Function: default
+Class: basic
+Section: programming
+C-Name: default0
+Prototype: D"",r,D"",s,D0,L,
+Help: default({opt},{v}): returns the current value of the current
+ default opt. If v is present, set opt to v first. If no argument is
+ given, print a list of all defaults as well as their values.
+Description: 
+ ("realprecision"):small:prec              getrealprecision()
+ ("realprecision",small):small:prec        setrealprecision($2, &prec)
+ ("seriesprecision"):small                 precdl
+ ("seriesprecision",small):small:parens    precdl = $2
+ ("debug"):small                           DEBUGLEVEL
+ ("debug",small):small:parens              DEBUGLEVEL = $2
+ ("debugmem"):small                        DEBUGMEM
+ ("debugmem",small):small:parens           DEBUGMEM = $2
+ ("debugfiles"):small                      DEBUGFILES
+ ("debugfiles",small):small:parens         DEBUGFILES = $2
+
+Function: denominator
+Class: basic
+Section: conversions
+C-Name: denom
+Prototype: G
+Help: denominator(x): denominator of x (or lowest common denominator in case
+ of an array)
+
+Function: deriv
+Class: basic
+Section: polynomials
+C-Name: deriv
+Prototype: GDn
+Help: deriv(x,{y}): derivative of x with respect to the main variable of y,
+ or to the main variable of x if y is omitted
+
+Function: dilog
+Class: basic
+Section: transcendental
+C-Name: dilog
+Prototype: Gp
+Help: dilog(x): dilogarithm of x
+
+Function: dirdiv
+Class: basic
+Section: number_theoretical
+C-Name: dirdiv
+Prototype: GG
+Help: dirdiv(x,y): division of the Dirichlet series x by the Dirichlet
+ series y
+
+Function: direuler
+Class: basic
+Section: number_theoretical
+C-Name: direuler0
+Prototype: V=GGEDG
+Help: direuler(p=a,b,expr,{c}): Dirichlet Euler product of expression expr
+ from p=a to p=b, limited to b terms. Expr should be a polynomial or rational
+ function in p and X, and X is understood to mean p^(-s). If c is present,
+ output only the first c terms
+
+Function: dirmul
+Class: basic
+Section: number_theoretical
+C-Name: dirmul
+Prototype: GG
+Help: dirmul(x,y): multiplication of the Dirichlet series x by the Dirichlet
+ series y
+
+Function: dirzetak
+Class: basic
+Section: number_fields
+C-Name: dirzetak
+Prototype: GG
+Help: dirzetak(nf,b): Dirichlet series of the Dedekind zeta function of the
+ number field nf up to the bound b-1
+
+Function: divisors
+Class: basic
+Section: number_theoretical
+C-Name: divisors
+Prototype: G
+Help: divisors(x): gives a vector formed by the divisors of x in increasing
+ order
+Description: 
+ (gen):vec	divisors($1)
+
+Function: divrem
+Class: basic
+Section: operators
+C-Name: divrem
+Prototype: GGDn
+Help: divrem(x,y,{v}): euclidean division of x by y giving as a
+ 2-dimensional column vector the quotient and the remainder, with respect to
+ v (to main variable if v is omitted)
+
+Function: eint1
+Class: basic
+Section: transcendental
+C-Name: veceint1
+Prototype: GDGp
+Help: eint1(x,{n}): exponential integral E1(x). If n is present, computes
+ the vector of the first n values of the exponential integral E1(n.x) (x > 0)
+
+Function: elladd
+Class: basic
+Section: elliptic_curves
+C-Name: addell
+Prototype: GGG
+Help: elladd(e,z1,z2): sum of the points z1 and z2 on elliptic curve e
+
+Function: ellak
+Class: basic
+Section: elliptic_curves
+C-Name: akell
+Prototype: GG
+Help: ellak(e,n): computes the n-th Fourier coefficient of the L-function of
+ the elliptic curve e
+
+Function: ellan
+Class: basic
+Section: elliptic_curves
+C-Name: anell
+Prototype: GL
+Help: ellan(e,n): computes the first n Fourier coefficients of the
+ L-function of the elliptic curve e (n<2^24 on a 32-bit machine)
+
+Function: ellap
+Class: basic
+Section: elliptic_curves
+C-Name: ellap0
+Prototype: GGD0,L,
+Help: ellap(e,p,{flag=0}): computes a_p for the elliptic curve e using
+ Shanks-Mestre's method. flag is optional and can be set to 0 (default) or 1
+ (use Jacobi symbols)
+
+Function: ellbil
+Class: basic
+Section: elliptic_curves
+C-Name: bilhell
+Prototype: GGGp
+Help: ellbil(e,z1,z2): canonical bilinear form for the points z1,z2 on the
+ elliptic curve e. Either z1 or z2 can also be a vector/matrix of points
+
+Function: ellchangecurve
+Class: basic
+Section: elliptic_curves
+C-Name: coordch
+Prototype: GG
+Help: ellchangecurve(x,y): change data on elliptic curve according to
+ y=[u,r,s,t]
+Description: 
+ (gen, gen):ell	coordch($1, $2)
+
+Function: ellchangepoint
+Class: basic
+Section: elliptic_curves
+C-Name: pointch
+Prototype: GG
+Help: ellchangepoint(x,y): change data on point or vector of points x on an
+ elliptic curve according to y=[u,r,s,t]
+
+Function: ellconvertname
+Class: basic
+Section: elliptic_curves
+C-Name: ellconvertname
+Prototype: G
+Help: ellconvertname(name): convert an elliptic curve name (as found in
+ the elldata database) from a string to a triplet [conductor, isogeny class,
+ index]. It will also convert a triplet back to a curve name.
+
+Function: elleisnum
+Class: basic
+Section: elliptic_curves
+C-Name: elleisnum
+Prototype: GLD0,L,p
+Help: elleisnum(om,k,{flag=0}): om=[om1,om2] being a 2-component vector
+ giving a basis of a lattice L and k an even positive integer, computes the
+ numerical value of the Eisenstein series of weight k. When flag is non-zero
+ and k=4 or 6, this gives g2 or g3 with the correct normalization
+
+Function: elleta
+Class: basic
+Section: elliptic_curves
+C-Name: elleta
+Prototype: Gp
+Help: elleta(om): om=[om1,om2], returns the two-component row vector
+ [eta1,eta2] of quasi-periods associated to [om1,om2]
+
+Function: ellgenerators
+Class: basic
+Section: elliptic_curves
+C-Name: ellgenerators
+Prototype: G
+Help: ellgenerators(E): if E is an elliptic curve as output by ellinit(),
+ return the generators of the Mordell-Weil group associated to the curve.
+ This function depends on the curve being referenced in the elldata database.
+
+Function: ellglobalred
+Class: basic
+Section: elliptic_curves
+C-Name: ellglobalred
+Prototype: G
+Help: ellglobalred(e): e being an elliptic curve, returns [N,[u,r,s,t],c],
+ where N is the conductor of e, [u,r,s,t] leads to the standard model for e,
+ and c is the product of the local Tamagawa numbers c_p
+Description: 
+ (gen):gen	ellglobalred($1)
+
+Function: ellheight
+Class: basic
+Section: elliptic_curves
+C-Name: ellheight0
+Prototype: GGD2,L,p
+Help: ellheight(e,x,{flag=2}): canonical height of point x on elliptic curve
+ E defined by the vector e. flag is optional and selects the algorithm used
+ to compute the archimedean local height. Its meaning is 0: use
+ theta-functions, 1: use Tate's method, 2: use Mestre's AGM
+
+Function: ellheightmatrix
+Class: basic
+Section: elliptic_curves
+C-Name: mathell
+Prototype: GGp
+Help: ellheightmatrix(e,x): gives the height matrix for vector of points x
+ on elliptic curve e using theta functions
+
+Function: ellidentify
+Class: basic
+Section: elliptic_curves
+C-Name: ellidentify
+Prototype: G
+Help: ellidentify(E): look up the elliptic curve E in the elldata database and
+ return [[N, M, ...], C] where N is the name of the curve in J. E. Cremona
+ database, M the minimal model and C the coordinates change (see
+ ellchangecurve).
+
+Function: ellinit
+Class: basic
+Section: elliptic_curves
+C-Name: ellinit0
+Prototype: GD0,L,p
+Help: ellinit(x,{flag=0}): x being the vector [a1,a2,a3,a4,a6] defining the
+ curve Y^2 + a1.XY + a3.Y = X^3 + a2.X^2 + a4.X + a6, gives the vector:
+ [a1,a2,a3,a4,a6,b2,b4,b6,b8,c4,c6,disc,j,[e1,e2,e3],w1,w2,eta1,eta2,area].
+ If the curve is defined over a p-adic field, the last six components are
+ replaced by root,u^2,u,q,w,0. If optional flag is 1, omit them altogether.
+ x can also be a string, in this case the coefficients of the curve with
+ matching name are looked in the elldata database if available.
+Description: 
+ (gen, ?0):bell:prec    initell($1, prec)
+ (gen, 1):ell           smallinitell($1)
+ (gen, small):ell:prec  ellinit0($1, $2, prec)
+
+Function: ellisoncurve
+Class: basic
+Section: elliptic_curves
+C-Name: ellisoncurve
+Prototype: GG
+Help: ellisoncurve(e,x): true(1) if x is on elliptic curve e, false(0) if
+ not
+
+Function: ellj
+Class: basic
+Section: elliptic_curves
+C-Name: jell
+Prototype: Gp
+Help: ellj(x): elliptic j invariant of x
+
+Function: elllocalred
+Class: basic
+Section: elliptic_curves
+C-Name: elllocalred
+Prototype: GG
+Help: elllocalred(e,p): e being an elliptic curve, returns
+ [f,kod,[u,r,s,t],c], where f is the conductor's exponent, kod is the Kodaira
+ type for e at p, [u,r,s,t] is the change of variable needed to make e
+ minimal at p, and c is the local Tamagawa number c_p
+
+Function: elllseries
+Class: basic
+Section: elliptic_curves
+C-Name: elllseries
+Prototype: GGDGp
+Help: elllseries(e,s,{A=1}): L-series at s of the elliptic curve e, where A
+ a cut-off point close to 1
+
+Function: ellminimalmodel
+Class: basic
+Section: elliptic_curves
+C-Name: ellminimalmodel
+Prototype: GD&
+Help: ellminimalmodel(e,{&v}): return the standard minimal integral model of
+ the rational elliptic curve e. Sets v to the corresponding change of
+ variables
+
+Function: ellorder
+Class: basic
+Section: elliptic_curves
+C-Name: orderell
+Prototype: GG
+Help: ellorder(e,p): order of the point p on the elliptic curve e over Q, 0
+ if non-torsion
+
+Function: ellordinate
+Class: basic
+Section: elliptic_curves
+C-Name: ordell
+Prototype: GGp
+Help: ellordinate(e,x): y-coordinates corresponding to x-ordinate x on
+ elliptic curve e
+
+Function: ellpointtoz
+Class: basic
+Section: elliptic_curves
+C-Name: zell
+Prototype: GGp
+Help: ellpointtoz(e,P): lattice point z corresponding to the point P on the
+ elliptic curve e
+
+Function: ellpow
+Class: basic
+Section: elliptic_curves
+C-Name: powell
+Prototype: GGG
+Help: ellpow(e,x,n): n times the point x on elliptic curve e (n in Z)
+
+Function: ellrootno
+Class: basic
+Section: elliptic_curves
+C-Name: ellrootno
+Prototype: lGDG
+Help: ellrootno(e,{p=1}): root number for the L-function of the elliptic
+ curve e. p can be 1 (default), global root number, or a prime p (including
+ 0) for the local root number at p
+
+Function: ellsearch
+Class: basic
+Section: elliptic_curves
+C-Name: ellsearch
+Prototype: G
+Help: ellsearch(N): if N is an integer, it is taken as a conductor else if N is
+ a string, it can be a curve name ("11a1"), a isogeny class ("11a") or a
+ conductor ("11"). Return all curves in the elldata database that match the 
+ property.
+
+Function: ellsigma
+Class: basic
+Section: elliptic_curves
+C-Name: ellsigma
+Prototype: GGD0,L,p
+Help: ellsigma(om,z,{flag=0}): om=[om1,om2], value of the Weierstrass sigma
+ function of the lattice generated by om at z if flag = 0 (default). If flag
+ = 1, arbitrary determination of the logarithm of sigma. If flag = 2 or 3,
+ same but using the product expansion instead of theta series
+
+Function: ellsub
+Class: basic
+Section: elliptic_curves
+C-Name: subell
+Prototype: GGG
+Help: ellsub(e,z1,z2): difference of the points z1 and z2 on elliptic curve
+ e
+
+Function: elltaniyama
+Class: basic
+Section: elliptic_curves
+C-Name: elltaniyama
+Prototype: GP
+Help: elltaniyama(e): modular parametrization of elliptic curve e
+
+Function: elltors
+Class: basic
+Section: elliptic_curves
+C-Name: elltors0
+Prototype: GD0,L,
+Help: elltors(e,{flag=0}): torsion subgroup of elliptic curve e: order,
+ structure, generators. If flag = 0, use Doud's algorithm; if flag = 1, use
+ Lutz-Nagell
+
+Function: ellwp
+Class: basic
+Section: elliptic_curves
+C-Name: ellwp0
+Prototype: GDGD0,L,pP
+Help: ellwp(e,{z=x},{flag=0}): Complex value of Weierstrass P function at z
+ on the lattice generated over Z by e=[om1,om2] (e as given by ellinit is
+ also accepted). Optional flag means 0 (default), compute only P(z), 1
+ compute [P(z),P'(z)], 2 consider om as an elliptic curve and compute P(z)
+ for that curve (identical to ellztopoint in that case). If z is omitted or
+ is a simple variable, return formal expansion in z
+
+Function: ellzeta
+Class: basic
+Section: elliptic_curves
+C-Name: ellzeta
+Prototype: GGp
+Help: ellzeta(om,z): om=[om1,om2], value of the Weierstrass zeta function of
+ the lattice generated by om at z
+
+Function: ellztopoint
+Class: basic
+Section: elliptic_curves
+C-Name: pointell
+Prototype: GGp
+Help: ellztopoint(e,z): coordinates of point P on the curve e corresponding
+ to the complex number z
+
+Function: erfc
+Class: basic
+Section: transcendental
+C-Name: gerfc
+Prototype: Gp
+Help: erfc(x): complementary error function
+
+Function: error
+Class: basic
+Section: programming
+C-Name: error0
+Prototype: vs*
+Help: error("msg"): abort script with error message msg
+Description: 
+ (?gen,...):void  pari_err(talker, "${2 format_string}"${2 format_args})
+
+Function: eta
+Class: basic
+Section: transcendental
+C-Name: eta0
+Prototype: GD0,L,p
+Help: eta(x,{flag=0}): if flag=0, eta function without the q^(1/24),
+ otherwise eta of the complex number x in the upper half plane intelligently
+ computed using SL(2,Z) transformations
+
+Function: eulerphi
+Class: basic
+Section: number_theoretical
+C-Name: gphi
+Prototype: G
+Help: eulerphi(x): Euler's totient function of x
+Description: 
+ (int):int	phi($1)
+ (gen):gen	gphi($1)
+
+Function: eval
+Class: basic
+Section: polynomials
+C-Name: geval
+Prototype: G
+Help: eval(x): evaluation of x, replacing variables by their value
+
+Function: exp
+Class: basic
+Section: transcendental
+C-Name: gexp
+Prototype: Gp
+Help: exp(x): exponential of x
+Description: 
+ (real):real	mpexp($1)
+ (mp):mp:prec	gexp($1, prec)
+ (gen):gen:prec	gexp($1, prec)
+
+Function: extern
+Class: gp
+Section: programming
+C-Name: extern0
+Prototype: s
+Help: extern(cmd): execute shell command cmd, and feeds the result to GP (as
+ if loading from file)
+
+Function: factor
+Class: basic
+Section: number_theoretical
+C-Name: factor0
+Prototype: GD-1,L,
+Help: factor(x,{lim}): factorization of x. lim is optional and can be set
+ whenever x is of (possibly recursive) rational type. If lim is set return
+ partial factorization, using primes up to lim (up to primelimit if lim=0)
+Description: 
+ (int, ?-1):gen        Z_factor($1)
+ (gen, ?-1):gen        factor($1)
+ (int, 0):gen          smallfact($1)
+ (gen, small):gen      factor0($1, $2)
+
+Function: factorback
+Class: basic
+Section: number_theoretical
+C-Name: factorback0
+Prototype: GDGDG
+Help: factorback(f,{e},{nf}): given a factorisation f, gives the factored
+ object back. If this is a prime ideal factorisation you must supply the
+ corresponding number field as last argument. If e is present, f has to be a
+ vector of the same length, and we return the product of the f[i]^e[i]
+
+Function: factorcantor
+Class: basic
+Section: number_theoretical
+C-Name: factcantor
+Prototype: GG
+Help: factorcantor(x,p): factorization mod p of the polynomial x using
+ Cantor-Zassenhaus
+
+Function: factorff
+Class: basic
+Section: number_theoretical
+C-Name: factorff
+Prototype: GGG
+Help: factorff(x,p,a): factorization of the polynomial x in the finite field
+ F_p[X]/a(X)F_p[X]
+
+Function: factorial
+Class: basic
+Section: number_theoretical
+C-Name: mpfactr
+Prototype: Lp
+Help: factorial(x): factorial of x (x C-integer), the result being given as
+ a real number
+
+Function: factorint
+Class: basic
+Section: number_theoretical
+C-Name: factorint
+Prototype: GD0,L,
+Help: factorint(x,{flag=0}): factor the integer x. flag is optional, whose
+ binary digits mean 1: avoid MPQS, 2: avoid first-stage ECM (may fall back on
+ it later), 4: avoid Pollard-Brent Rho and Shanks SQUFOF, 8: skip final ECM
+ (huge composites will be declared prime)
+
+Function: factormod
+Class: basic
+Section: number_theoretical
+C-Name: factormod0
+Prototype: GGD0,L,
+Help: factormod(x,p,{flag=0}): factorization mod p of the polynomial x using
+ Berlekamp. flag is optional, and can be 0: default or 1: simple factormod,
+ same except that only the degrees of the irreducible factors are given
+
+Function: factornf
+Class: basic
+Section: number_fields
+C-Name: polfnf
+Prototype: GG
+Help: factornf(x,t): factorization of the polynomial x over the number field
+ defined by the polynomial t
+
+Function: factorpadic
+Class: basic
+Section: polynomials
+C-Name: factorpadic0
+Prototype: GGLD0,L,
+Help: factorpadic(x,p,r,{flag=0}): p-adic factorization of the polynomial x
+ to precision r. flag is optional and may be set to 0 (use round 4) or 1 (use
+ Buchmann-Lenstra)
+
+Function: ffinit
+Class: basic
+Section: number_theoretical
+C-Name: ffinit
+Prototype: GLDn
+Help: ffinit(p,n,{v=x}): monic irreducible polynomial of degree n over
+ F_p[v]
+Description: 
+ (int, small, ?var):pol	ffinit($1, $2, $3)
+
+Function: fibonacci
+Class: basic
+Section: number_theoretical
+C-Name: fibo
+Prototype: L
+Help: fibonacci(x): fibonacci number of index x (x C-integer)
+
+Function: floor
+Class: basic
+Section: conversions
+C-Name: gfloor
+Prototype: G
+Help: floor(x): floor of x = largest integer<=x
+Description: 
+ (small):small:parens   $1
+ (int):int:copy:parens  $1
+ (real):int             floorr($1)
+ (mp):int               mpfloor($1)
+ (gen):gen              gfloor($1)
+
+Function: for
+Class: basic
+Section: programming
+C-Name: forpari
+Prototype: vV=GGI
+Help: for(X=a,b,seq): the sequence is evaluated, X going from a up to b
+
+Function: fordiv
+Class: basic
+Section: programming
+C-Name: fordiv
+Prototype: vGVI
+Help: fordiv(n,X,seq): the sequence is evaluated, X running over the
+ divisors of n
+
+Function: forell
+Class: basic
+Section: programming
+C-Name: forell
+Prototype: vVLLI
+Help: forell(E,a,b,seq): execute seq for each elliptic curves E of conductor
+ between a and b in the elldata database.
+
+Function: forprime
+Class: basic
+Section: programming
+C-Name: forprime
+Prototype: vV=GGI
+Help: forprime(X=a,b,seq): the sequence is evaluated, X running over the
+ primes between a and b
+
+Function: forstep
+Class: basic
+Section: programming
+C-Name: forstep
+Prototype: vV=GGGI
+Help: forstep(X=a,b,s,seq): the sequence is evaluated, X going from a to b
+ in steps of s (can be a vector of steps)
+
+Function: forsubgroup
+Class: basic
+Section: programming
+C-Name: forsubgroup
+Prototype: vV=GDGI
+Help: forsubgroup(H=G,{bound},seq): execute seq for each subgroup H of the
+ abelian group G (in SNF form), whose index is bounded by bound. H is given
+ as a left divisor of G in HNF form
+
+Function: forvec
+Class: basic
+Section: programming
+C-Name: forvec
+Prototype: vV=GID0,L,
+Help: forvec(x=v,seq,{flag=0}): v being a vector of two-component vectors of
+ length n, the sequence is evaluated with x[i] going from v[i][1] to v[i][2]
+ for i=n,..,1 if flag is zero or omitted. If flag = 1 (resp. flag = 2),
+ restrict to increasing (resp. strictly increasing) sequences
+
+Function: frac
+Class: basic
+Section: conversions
+C-Name: gfrac
+Prototype: G
+Help: frac(x): fractional part of x = x-floor(x)
+
+Function: galoisexport
+Class: basic
+Section: number_fields
+C-Name: galoisexport
+Prototype: GD0,L,
+Help: galoisexport(gal,{flag}): gal being a galois field as output by
+ galoisinit, output a string representing the underlying permutation group in
+ GAP notation (default) or Magma notation (flag = 1)
+
+Function: galoisfixedfield
+Class: basic
+Section: number_fields
+C-Name: galoisfixedfield
+Prototype: GGD0,L,Dn
+Help: galoisfixedfield(gal,perm,{flag},{v=y}): gal being a galois field as
+ output by galoisinit and perm an element of gal.group or a vector of such
+ elements, return [P,x] such that P is a polynomial defining the fixed field
+ of gal[1] by the subgroup generated by perm, and x is a root of P in gal
+ expressed as a polmod in gal.pol. If flag is 1 return only P. If flag is 2
+ return [P,x,F] where F is the factorization of gal.pol over the field
+ defined by P, where the variable v stands for a root of P
+Description: 
+ (gen, gen, ?small, ?var):vec	galoisfixedfield($1, $2, $3, $4)
+
+Function: galoisidentify
+Class: basic
+Section: number_fields
+C-Name: galoisidentify
+Prototype: G
+Help: galoisidentify(gal): gal being a galois field as output by galoisinit,
+ output the isomorphism class of the underlying abstract group as a
+ two-components vector [o,i], where o is the group order, and i is the group
+ index in the GAP4 small group library
+
+Function: galoisinit
+Class: basic
+Section: number_fields
+C-Name: galoisinit
+Prototype: GDG
+Help: galoisinit(pol,{den}): pol being a polynomial or a number field as
+ output by nfinit defining a Galois extension of Q, compute the Galois group
+ and all neccessary informations for computing fixed fields. den is optional
+ and has the same meaning as in nfgaloisconj(,4)(see manual)
+Description: 
+ (gen, ?int):gal        galoisinit($1, $2)
+
+Function: galoisisabelian
+Class: basic
+Section: number_fields
+C-Name: galoisisabelian
+Prototype: GD0,L,
+Help: galoisisabelian(gal,{flag=0}): gal being as output by galoisinit,
+ return 0 if gal is not abelian, the HNF matrix of gal over gal.gen if
+ flag=0, 1 if flag is 1, and the SNF of gal is flag=2
+
+Function: galoispermtopol
+Class: basic
+Section: number_fields
+C-Name: galoispermtopol
+Prototype: GG
+Help: galoispermtopol(gal,perm): gal being a galois field as output by
+ galoisinit and perm a element of gal.group, return the polynomial defining
+ the corresponding Galois automorphism
+
+Function: galoissubcyclo
+Class: basic
+Section: number_fields
+C-Name: galoissubcyclo
+Prototype: GDGD0,L,Dn
+Help: galoissubcyclo(N,H,{fl=0},{v}):Compute a polynomial (in variable v)
+ defining the subfield of Q(zeta_n) fixed by the subgroup H of (Z/nZ)*. N can
+ be an integer n, znstar(n) or bnrinit(bnfinit(y),[n,[1]],1). H can be given
+ by a generator, a set of generator given by a vector or a HNF matrix (see
+ manual). If flag is 1, output only the conductor of the abelian extension.
+ If flag is 2 output [pol,f] where pol is the polynomial and f the conductor.
+
+Function: galoissubfields
+Class: basic
+Section: number_fields
+C-Name: galoissubfields
+Prototype: GD0,L,Dn
+Help: galoissubfields(G,{flags=0},{v}):Output all the subfields of G. flags
+ have the same meaning as for galoisfixedfield
+
+Function: galoissubgroups
+Class: basic
+Section: number_fields
+C-Name: galoissubgroups
+Prototype: G
+Help: galoissubgroups(G):Output all the subgroups of G
+
+Function: gamma
+Class: basic
+Section: transcendental
+C-Name: ggamma
+Prototype: Gp
+Help: gamma(x): gamma function at x
+
+Function: gammah
+Class: basic
+Section: transcendental
+C-Name: ggamd
+Prototype: Gp
+Help: gammah(x): gamma of x+1/2 (x integer)
+
+Function: gcd
+Class: basic
+Section: number_theoretical
+C-Name: gcd0
+Prototype: GDGD0,L,
+Help: gcd(x,{y}): greatest common divisor of x and y.
+Description: 
+ (small, small, ?0):small	cgcd($1, $2)
+ (int, int, ?0):int	        gcdii($1, $2)
+ (gen, gen, ?0):gen	        ggcd($1, $2)
+ (gen, gen, 1):gen	        modulargcd($1, $2)
+ (gen, gen, 2):gen	        srgcd($1, $2)
+ (gen, ?gen, ?small):gen	gcd0($1, $2, $3)
+
+Function: getheap
+Class: basic
+Section: programming
+C-Name: getheap
+Prototype: 
+Help: getheap(): 2-component vector giving the current number of objects in
+ the heap and the space they occupy
+
+Function: getrand
+Class: basic
+Section: programming
+C-Name: getrand
+Prototype: l
+Help: getrand(): current value of random number seed
+
+Function: getstack
+Class: basic
+Section: programming
+C-Name: getstack
+Prototype: l
+Help: getstack(): current value of stack pointer avma
+
+Function: gettime
+Class: basic
+Section: programming
+C-Name: gettime
+Prototype: l
+Help: gettime(): time (in milliseconds) since last call to gettime
+
+Function: global
+Class: basic
+Section: programming
+Help: global(x): declare x to be a global variable
+
+Function: hilbert
+Class: basic
+Section: number_theoretical
+C-Name: hil0
+Prototype: lGGDG
+Help: hilbert(x,y,{p}): Hilbert symbol at p of x,y.
+Doc: \idx{Hilbert symbol} of $x$ and $y$ modulo the prime $p$, $p=0$ meaning
+ the place at infinity (the result is undefined if $p\neq 0$ is not prime).
+ 
+ It is possible to omit $p$, in which case we take $p = 0$ if both $x$
+ and $y$ are rational, or one of them is a real number. And take $p = q$
+ if one of $x$, $y$ is a \typ{INTMOD} modulo $q$ or a $q$-adic. (Incompatible
+ types will raise an error.)
+
+Function: hyperu
+Class: basic
+Section: transcendental
+C-Name: hyperu
+Prototype: GGGp
+Help: hyperu(a,b,x): U-confluent hypergeometric function
+
+Function: idealadd
+Class: basic
+Section: number_fields
+C-Name: idealadd
+Prototype: GGG
+Help: idealadd(nf,x,y): sum of two ideals x and y in the number field
+ defined by nf
+
+Function: idealaddtoone
+Class: basic
+Section: number_fields
+C-Name: idealaddtoone0
+Prototype: GGDG
+Help: idealaddtoone(nf,x,{y}): if y is omitted, when the sum of the ideals
+ in the number field K defined by nf and given in the vector x is equal to
+ Z_K, gives a vector of elements of the corresponding ideals who sum to 1.
+ Otherwise, x and y are ideals, and if they sum up to 1, find one element in
+ each of them such that the sum is 1
+
+Function: idealappr
+Class: basic
+Section: number_fields
+C-Name: idealappr0
+Prototype: GGD0,L,
+Help: idealappr(nf,x,{flag=0}): x being a fractional ideal, gives an element
+ b such that v_p(b)=v_p(x) for all prime ideals p dividing x, and v_p(b)>=0
+ for all other p. If (optional) flag is non-null x must be a prime ideal
+ factorization with possibly zero exponents
+
+Function: idealchinese
+Class: basic
+Section: number_fields
+C-Name: idealchinese
+Prototype: GGG
+Help: idealchinese(nf,x,y): x being a prime ideal factorization and y a
+ vector of elements, gives an element b such that v_p(b-y_p)>=v_p(x) for all
+ prime ideals p dividing x, and v_p(b)>=0 for all other p
+
+Function: idealcoprime
+Class: basic
+Section: number_fields
+C-Name: idealcoprime
+Prototype: GGG
+Help: idealcoprime(nf,x,y): gives an element b in nf such that b. x is an
+ integral ideal coprime to the integral ideal y
+
+Function: idealdiv
+Class: basic
+Section: number_fields
+C-Name: idealdiv0
+Prototype: GGGD0,L,
+Help: idealdiv(nf,x,y,{flag=0}): quotient x/y of two ideals x and y in HNF
+ in the number field nf. If (optional) flag is non-null, the quotient is
+ supposed to be an integral ideal (slightly faster)
+Description: 
+ (gen, gen, gen, ?0):gen	idealdiv($1, $2, $3)
+ (gen, gen, gen, 1):gen	idealdivexact($1, $2, $3)
+ (gen, gen, gen, #small):gen	$"invalid flag in idealdiv"
+ (gen, gen, gen, small):gen	idealdiv0($1, $2, $3, $4)
+
+Function: idealfactor
+Class: basic
+Section: number_fields
+C-Name: idealfactor
+Prototype: GG
+Help: idealfactor(nf,x): factorization of the ideal x given in HNF into
+ prime ideals in the number field nf
+
+Function: idealhnf
+Class: basic
+Section: number_fields
+C-Name: idealhnf0
+Prototype: GGDG
+Help: idealhnf(nf,a,{b}): hermite normal form of the ideal a in the number
+ field nf, whatever form a may have. If called as idealhnf(nf,a,b), the ideal
+ is given as aZ_K+bZ_K in the number field K defined by nf
+
+Function: idealintersect
+Class: basic
+Section: number_fields
+C-Name: idealintersect
+Prototype: GGG
+Help: idealintersect(nf,x,y): intersection of two ideals x and y in the
+ number field defined by nf
+
+Function: idealinv
+Class: basic
+Section: number_fields
+C-Name: idealinv
+Prototype: GG
+Help: idealinv(nf,x,{flag=0}): inverse of the ideal x in the number field
+ nf. If flag is omitted or set to 0, use the different. If flag is 1 do not
+ use it
+Description: 
+ (gen, gen):gen	idealinv($1, $2)
+
+Function: ideallist
+Class: basic
+Section: number_fields
+C-Name: ideallist0
+Prototype: GLD4,L,
+Help: ideallist(nf,bound,{flag=4}): vector of vectors L of all idealstar of
+ all ideals of norm<=bound. If (optional) flag is present, its binary digits
+ are toggles meaning 1: give generators; 2: add units; 4: give only the
+ ideals and not the bid.
+
+Function: ideallistarch
+Class: basic
+Section: number_fields
+C-Name: ideallistarch
+Prototype: GGG
+Help: ideallistarch(nf,list,arch): list is a vector of vectors of of bid's as
+ output by ideallist. Return a vector of vectors with the same number of
+ components as the original list. The leaves give information about
+ moduli whose finite part is as in original list, in the same order, and
+ archimedean part is now arch. The information contained is of the same kind
+ as was present in the input.
+
+Function: ideallog
+Class: basic
+Section: number_fields
+C-Name: zideallog
+Prototype: GGG
+Help: ideallog(nf,x,bid): if bid is a big ideal, as given by
+ idealstar(nf,I,1) or idealstar(nf,I,2), gives the vector of exponents on the
+ generators bid[2][3] (even if these generators have not been computed)
+
+Function: idealmin
+Class: basic
+Section: number_fields
+C-Name: minideal
+Prototype: GGDGp
+Help: idealmin(nf,ix,{vdir}): minimum of the ideal ix in the direction vdir
+ in the number field nf
+
+Function: idealmul
+Class: basic
+Section: number_fields
+C-Name: idealmul0
+Prototype: GGGD0,L,p
+Help: idealmul(nf,x,y,{flag=0}): product of the two ideals x and y in the
+ number field nf. If (optional) flag is non-nul, reduce the result
+Description: 
+ (gen, gen, gen, ?0):gen	idealmul($1, $2, $3)
+ (gen, gen, gen, 1):gen:prec	idealmulred($1, $2, $3, prec)
+ (gen, gen, gen, #small):gen	$"invalid flag in idealmul"
+ (gen, gen, gen, small):gen:prec	idealmul0($1, $2, $3, $4, prec)
+
+Function: idealnorm
+Class: basic
+Section: number_fields
+C-Name: idealnorm
+Prototype: GG
+Help: idealnorm(nf,x): norm of the ideal x in the number field nf
+
+Function: idealpow
+Class: basic
+Section: number_fields
+C-Name: idealpow0
+Prototype: GGGD0,L,p
+Help: idealpow(nf,x,n,{flag=0}): n-th power of the ideal x in HNF in the
+ number field nf If (optional) flag is non-null, reduce the result
+
+Function: idealprimedec
+Class: basic
+Section: number_fields
+C-Name: primedec
+Prototype: GG
+Help: idealprimedec(nf,p): prime ideal decomposition of the prime number p
+ in the number field nf as a vector of 5 component vectors [p,a,e,f,b]
+ representing the prime ideals pZ_K+a. Z_K, e,f as usual, a as vector of
+ components on the integral basis, b Lenstra's constant
+
+Function: idealprincipal
+Class: basic
+Section: number_fields
+C-Name: principalideal
+Prototype: GG
+Help: idealprincipal(nf,x): returns the principal ideal generated by the
+ algebraic number x in the number field nf
+
+Function: idealred
+Class: basic
+Section: number_fields
+C-Name: ideallllred
+Prototype: GGDGp
+Help: idealred(nf,x,{vdir=0}): LLL reduction of the ideal x in the number
+ field nf along direction vdir, in HNF
+
+Function: idealstar
+Class: basic
+Section: number_fields
+C-Name: idealstar0
+Prototype: GGD1,L,
+Help: idealstar(nf,I,{flag=1}): gives the structure of (Z_K/I)^*. flag is
+ optional, and can be 0: simply gives the structure as a 3-component vector v
+ such that v[1] is the order (i.e. eulerphi(I)), v[2] is a vector of cyclic
+ components, and v[3] is a vector giving the corresponding generators. If
+ flag=1 (default), gives idealstarinit, i.e. a 6-component vector
+ [I,v,fa,f2,U,V] where v is as above without the generators, fa is the prime
+ ideal factorisation of I and f2, U and V are technical but essential to work
+ in (Z_K/I)^*. Finally if flag=2, same as with flag=1 except that the
+ generators are also given
+
+Function: idealtwoelt
+Class: basic
+Section: number_fields
+C-Name: ideal_two_elt0
+Prototype: GGDG
+Help: idealtwoelt(nf,x,{a}): two-element representation of an ideal x in the
+ number field nf. If (optional) a is non-zero, first element will be equal to
+ a
+
+Function: idealval
+Class: basic
+Section: number_fields
+C-Name: idealval
+Prototype: lGGG
+Help: idealval(nf,x,p): valuation at p given in idealprimedec format of the
+ ideal x in the number field nf
+
+Function: ideleprincipal
+Class: basic
+Section: number_fields
+C-Name: principalidele
+Prototype: GGp
+Help: ideleprincipal(nf,x): returns the principal idele generated by the
+ algebraic number x in the number field nf
+
+Function: if
+Class: basic
+Section: programming
+Help: if(a,seq1,seq2): if a is nonzero, seq1 is evaluated, otherwise seq2.
+ seq1 and seq2 are optional, and if seq2 is omitted, the preceding comma can
+ be omitted also
+
+Function: imag
+Class: basic
+Section: conversions
+C-Name: gimag
+Prototype: G
+Help: imag(x): imaginary part of x
+
+Function: incgam
+Class: basic
+Section: transcendental
+C-Name: incgam0
+Prototype: GGDGp
+Help: incgam(s,x,{y}): incomplete gamma function. y is optional and is the
+ precomputed value of gamma(s)
+
+Function: incgamc
+Class: basic
+Section: transcendental
+C-Name: incgamc
+Prototype: GGp
+Help: incgamc(s,x): complementary incomplete gamma function
+
+Function: input
+Class: gp
+Section: programming
+C-Name: input0
+Prototype: 
+Help: input(): read an expression from the input file or standard input
+
+Function: install
+Class: highlevel
+Section: programming
+C-Name: gpinstall
+Prototype: vrrD"",r,D"",s,
+Help: install(name,code,{gpname},{lib}): load from dynamic library 'lib' the
+ function 'name'. Assign to it the name 'gpname' in this GP session, with
+ argument code 'code'. If 'lib' is omitted use 'libpari.so'. If 'gpname' is
+ omitted, use 'name'
+
+Function: intcirc
+Class: basic
+Section: sums
+C-Name: intcirc0
+Prototype: V=GGEDGp
+Help: intcirc(X=a,R,s,{tab}): numerical integration of s on the circle 
+ |z-a|=R, divided by 2*I*Pi. tab is as in intnum.
+
+Function: intformal
+Class: basic
+Section: polynomials
+C-Name: integ
+Prototype: GDn
+Help: intformal(x,{y}): formal integration of x with respect to the main
+ variable of y, or to the main variable of x if y is omitted
+
+Function: intfouriercos
+Class: basic
+Section: sums
+C-Name: intfourcos0
+Prototype: V=GGGEDGp
+Help: intfouriercos(X=a,b,x,s,{tab}): numerical integration from a to b
+ of cos(2*Pi*x*X)*s(X) from a to b, where a, b, and tab are as in intnum.
+ This is the cosine-Fourier transform if a=-infty and b=+infty.
+
+Function: intfourierexp
+Class: basic
+Section: sums
+C-Name: intfourexp0
+Prototype: V=GGGEDGp
+Help: intfourierexp(X=a,b,x,s,{tab}): numerical integration from a to b
+ of exp(-2*I*Pi*x*X)*s(X) from a to b, where a, b, and tab are as in intnum.
+ This is the ordinary Fourier transform if a=-infty and b=+infty. Note the
+ minus sign.
+
+Function: intfouriersin
+Class: basic
+Section: sums
+C-Name: intfoursin0
+Prototype: V=GGGEDGp
+Help: intfouriersin(X=a,b,x,s,{tab}): numerical integration from a to b
+ of sin(2*Pi*x*X)*s(X) from a to b, where a, b, and tab are as in intnum.
+ This is the sine-Fourier transform if a=-infty and b=+infty.
+
+Function: intfuncinit
+Class: basic
+Section: sums
+C-Name: intfuncinit0
+Prototype: V=GGED0,L,D0,L,p
+Help: intfuncinit(X=a,b,s,{flag=0},{m=0}): initialize tables for integrations 
+ from a to b using a weight s(X). Essential for integral transforms such
+ as intmellininv, intlaplaceinv and intfourier, since it avoids recomputing
+ all the time the same quantities. Must then be used with intmellininvshort
+ (for intmellininv) and directly with intnum and not with the corresponding 
+ integral transforms for the others. See help for intnum for coding of a 
+ and b, and m is as in intnuminit. If flag is nonzero, assumes that 
+ s(-X)=conj(s(X)), which is twice faster.
+
+Function: intlaplaceinv
+Class: basic
+Section: sums
+C-Name: intlaplaceinv0
+Prototype: V=GGEDGp
+Help: intlaplaceinv(X=sig,x,s,{tab}): numerical integration on the line
+ real(z) = sig of s(z)exp(xz)dz/(2*I*Pi), i.e. inverse Laplace transform of s
+ at x. tab is as in intnum.
+
+Function: intmellininv
+Class: basic
+Section: sums
+C-Name: intmellininv0
+Prototype: V=GGEDGp
+Help: intmellininv(X=sig,x,s,{tab}): numerical integration on the 
+ line real(z) = sig (or sig[1]) of s(z)x^(-z)dz/(2*I*Pi), i.e. inverse Mellin 
+ transform of s at x. sig is coded as follows: either it is real, and then
+ by default assume s(z) decreases like exp(-z). Or sig = [sigR, al], sigR is
+ the abcissa of integration, and al = 0 for slowly decreasing functions, or
+ al > 0 if s(z) decreases like exp(-al*z). tab is as in intnum. Use 
+ intmellininvshort if several values must be computed.
+
+Function: intmellininvshort
+Class: basic
+Section: sums
+C-Name: intmellininvshort
+Prototype: GGGp
+Help: intmellininvshort(sig,x,tab): numerical integration on the 
+ line real(z) = sig (or sig[1]) of s(z)x^(-z)dz/(2*I*Pi), i.e. inverse Mellin
+ transform of s at x. sig is coded as follows: either it is real, and then
+ by default assume s(z) decreases like exp(-z). Or sig = [sigR, al], sigR is
+ the abcissa of integration, and al = 0 for slowly decreasing functions, or
+ al > 0 if s(z) decreases like exp(-al*z). Compulsory table tab has been 
+ precomputed using the command intfuncinit(t=[[-1],sig[2]],[[1],sig[2]],s) 
+ (with possibly its two optional additional parameters), where sig[2] = 1
+ if not given. Orders of magnitude faster than intmellininv.
+
+Function: intnum
+Class: basic
+Section: sums
+C-Name: intnum0
+Prototype: V=GGEDGp
+Help: intnum(X=a,b,s,{tab}): numerical integration of s from a to b with 
+ respect to X. a (and similarly b) is coded as follows. It can be a scalar: f
+ is assumed to be C^infty at a. It can be a two component vector [a[1],a[2]],
+ where a[1] is the scalar, and a[2] is the singularity exponent (in ]-1,0]),
+ logs being neglected. It can be a one component vector [1] or [-1] meaning
+ +infty or -infty, slowly decreasing functions. It can be a two component
+ vector [[1], z] or [[-1], z], where [1] or [-1] indicates +infty or -infty
+ and z is coded as follows. If z is zero, slowly decreasing. If z is real
+ positive, exponentially decreasing, of the type exp(-zX). If z<-1, very
+ slowly decreasing like X^(-z). If z is complex nonreal, real part is ignored
+ and if z = r+I*s then if s>0, cosine oscillation exactly cos(sX), while if
+ s<0, sine oscillation exactly sin(sX). If f is exponentially decreasing times
+ oscillating function, you have a choice, but it is in general better to
+ choose the oscillating part. Finally tab is either 0 (let the program choose 
+ the integration step), a positive integer m (choose integration step
+ 1/2^m), or a table tab precomputed with intnuminit (depending on the type of
+ interval: compact, semi-compact or R, very slow, slow, exponential, or cosine
+ or sine-oscillating decrease).
+
+Function: intnuminit
+Class: basic
+Section: sums
+C-Name: intnuminit
+Prototype: GGD0,L,p
+Help: intnuminit(a,b,{m=0}): initialize tables for integrations from a to b.
+ See help for intnum for coding of a and b. Possible types: compact interval,
+ semi-compact (one extremity at + or - infinity) or R, and very slowly, slowly
+ or exponentially decreasing, or sine or cosine oscillating at infinities,
+
+Function: intnuminitgen
+Class: basic
+Section: sums
+C-Name: intnuminitgen0
+Prototype: VGGED0,L,D0,L,p
+Help: intnuminitgen(t,a,b,ph,{m=0},{flag=0}): initialize tables for 
+ integrations from a to b using abcissas ph(t) and weights ph'(t). Note that 
+ there is no equal sign after the variable name t since t always goes from 
+ -infty to +infty, but it is ph(t) which goes from a to b, and this is not 
+ checked. If flag = 1 or 2, multiply the reserved table length by 4^flag, to 
+ avoid corresponding error.
+
+Function: intnumromb
+Class: basic
+Section: sums
+C-Name: intnumromb0
+Prototype: V=GGED0,L,p
+Help: intnumromb(X=a,b,s,{flag=0}): numerical integration of s (smooth in 
+ ]a,b[) from a to b with respect to X. flag is optional and mean 0: default. 
+ s can be evaluated exactly on [a,b]; 1: general function; 2: a or b can be 
+ plus or minus infinity (chosen suitably), but of same sign; 3: s has only 
+ limits at a or b
+
+Function: intnumstep
+Class: basic
+Section: sums
+C-Name: intnumstep
+Prototype: lp
+Help: intnumstep(): gives the default value of m used by all intnum and sumnum 
+ routines, such that the integration step is 1/2^m.
+
+Function: isfundamental
+Class: basic
+Section: number_theoretical
+C-Name: gisfundamental
+Prototype: G
+Help: isfundamental(x): true(1) if x is a fundamental discriminant
+ (including 1), false(0) if not
+Description: 
+ (int):bool	isfundamental($1)
+ (gen):gen	gisfundamental($1)
+
+Function: ispower
+Class: basic
+Section: number_theoretical
+C-Name: ispower
+Prototype: lGDGD&
+Help: ispower(x,{k},{&n}): true (1) if x is a k-th power, false (0) if not.
+ If n is given and a k-th root was computed in the process, put that in n.
+ If k is omitted, return the maximal k >= 2 such that x = n^k is a
+ perfect power, or 0 if no such k exist.
+Description: 
+ (int):small       isanypower($1, NULL)
+ (int, &int):small isanypower($1, &$2)
+
+Function: isprime
+Class: basic
+Section: number_theoretical
+C-Name: gisprime
+Prototype: GD0,L,
+Help: isprime(x,{flag=0}): true(1) if x is a (proven) prime number, false(0)
+ if not. If flag is 0 or omitted, use a combination of algorithms. If flag is
+ 1, the primality is certified by the Pocklington-Lehmer Test. If flag is 2,
+ the primality is certified using the APRCL test.
+Description: 
+ (int, ?0):bool	isprime($1)
+ (int, 1):bool	plisprime($1, 0)
+ (int, 2):gen	plisprime($1, 1)
+ (gen, ?small):gen	gisprime($1, $2)
+
+Function: ispseudoprime
+Class: basic
+Section: number_theoretical
+C-Name: gispseudoprime
+Prototype: GD0,L,
+Help: ispseudoprime(x,{n}): true(1) if x is a strong pseudoprime, false(0)
+ if not. If n is 0 or omitted, use BPSW test, otherwise use strong
+ Rabin-Miller test for n randomly chosen bases
+Description: 
+ (int):bool	ispsp($1)
+ (gen):gen	gispsp($1)
+
+Function: issquare
+Class: basic
+Section: number_theoretical
+C-Name: gissquarerem
+Prototype: GD&
+Help: issquare(x,{&n}): true(1) if x is a square, false(0) if not. If n is
+ given puts the exact square root there if it was computed
+Description: 
+ (int):bool	Z_issquare($1)
+ (mp):int	gissquare($1)
+ (gen):gen	gissquare($1)
+ (int, &int):bool	Z_issquarerem($1, &$2)
+ (gen, &gen):gen	gissquarerem($1, &$2)
+
+Function: issquarefree
+Class: basic
+Section: number_theoretical
+C-Name: gissquarefree
+Prototype: G
+Help: issquarefree(x): true(1) if x is squarefree, false(0) if not
+Description: 
+ (int):bool	issquarefree($1)
+ (gen):gen	gissquarefree($1)
+
+Function: kill
+Class: basic
+Section: programming
+C-Name: kill0
+Prototype: vS
+Help: kill(x): kills the present value of the variable or function x.
+ Returns new value or 0
+
+Function: kronecker
+Class: basic
+Section: number_theoretical
+C-Name: gkronecker
+Prototype: GG
+Help: kronecker(x,y): kronecker symbol (x/y)
+Description: 
+ (small, small):small	kross($1, $2)
+ (int, small):small	krois($1, $2)
+ (small, int):small	krosi($1, $2)
+ (int, int):small	kronecker($1, $2)
+ (gen, small):gen	gkrogs($1, $2)
+ (gen, gen):gen	gkronecker($1, $2)
+
+Function: lcm
+Class: basic
+Section: number_theoretical
+C-Name: glcm0
+Prototype: GDG
+Help: lcm(x,{y}): least common multiple of x and y, i.e. x*y / gcd(x,y)
+Description: 
+ (int, int):int lcmii($1, $2)
+ (gen):gen      glcm0($1, NULL)
+ (gen, gen):gen glcm($1, $2)
+
+Function: length
+Class: basic
+Section: conversions
+C-Name: glength
+Prototype: lG
+Help: length(x): number of non code words in x, number of characters for a
+ string
+Description: 
+ (vecsmall):lg	lg($1)
+ (vec):lg	lg($1)
+ (pol):small	lgpol($1)
+ (gen):small	glength($1)
+
+Function: lex
+Class: basic
+Section: operators
+C-Name: lexcmp
+Prototype: iGG
+Help: lex(x,y): compare x and y lexicographically (1 if x>y, 0 if x=y, -1 if
+ x<y)
+
+Function: lift
+Class: basic
+Section: conversions
+C-Name: lift0
+Prototype: GDn
+Help: lift(x,{v}): lifts every element of Z/nZ to Z or T[x]/PT[x] to T[x]
+ for a type T if v is omitted, otherwise lift only polymods with main
+ variable v. If v does not occur in x, lift only intmods
+Description: 
+ (pol):pol	lift($1)
+ (vec):vec	lift($1)
+ (gen):gen	lift($1)
+ (pol, var):pol	lift0($1, $2)
+ (vec, var):vec	lift0($1, $2)
+ (gen, var):gen	lift0($1, $2)
+
+Function: lindep
+Class: basic
+Section: linear_algebra
+C-Name: lindep0
+Prototype: GD0,L,p
+Help: lindep(x,{flag=0}): Z-linear dependencies between components of x.
+ flag is optional, and can be 0: default, PSLQ; -1: using Hastad et al; -2:
+ returns a non-trivial kernel vector (not integral in general); positive, and
+ in that case should be between 0.5 and 1.0 times the accuracy in decimal
+ digits of x, using a standard LLL
+
+Function: listcreate
+Class: basic
+Section: linear_algebra
+C-Name: listcreate
+Prototype: L
+Help: listcreate(n): creates an empty list of maximum length n
+Description: 
+ (small):list	listcreate($1)
+
+Function: listinsert
+Class: basic
+Section: linear_algebra
+C-Name: listinsert
+Prototype: GGL
+Help: listinsert(list,x,n): insert x at index n in list, shifting the
+ remaining elements to the right
+Description: 
+ (list, gen, small):gen	listinsert($1, $2, $3)
+
+Function: listkill
+Class: basic
+Section: linear_algebra
+C-Name: listkill
+Prototype: vG
+Help: listkill(list): kills list
+
+Function: listput
+Class: basic
+Section: linear_algebra
+C-Name: listput
+Prototype: GGD0,L,
+Help: listput(list,x,{n}): sets n-th element of list equal to x. If n is
+ omitted or greater than the current list length, just append x
+Description: 
+ (list, gen, small):gen	listput($1, $2, $3)
+
+Function: listsort
+Class: basic
+Section: linear_algebra
+C-Name: listsort
+Prototype: GD0,L,
+Help: listsort(list,{flag=0}): sort list in place. If flag is non-zero,
+ suppress all but one occurence of each element in list
+
+Function: lngamma
+Class: basic
+Section: transcendental
+C-Name: glngamma
+Prototype: Gp
+Help: lngamma(x): logarithm of the gamma function of x
+
+Function: log
+Class: basic
+Section: transcendental
+C-Name: glog
+Prototype: Gp
+Help: log(x): natural logarithm of x.
+Description: 
+ (gen):gen:prec	glog($1, prec)
+
+Function: matadjoint
+Class: basic
+Section: linear_algebra
+C-Name: adj
+Prototype: G
+Help: matadjoint(x): adjoint matrix of x
+
+Function: matalgtobasis
+Class: basic
+Section: number_fields
+C-Name: matalgtobasis
+Prototype: GG
+Help: matalgtobasis(nf,x): nfalgtobasis applied to every element of the
+ matrix x
+
+Function: matbasistoalg
+Class: basic
+Section: number_fields
+C-Name: matbasistoalg
+Prototype: GG
+Help: matbasistoalg(nf,x): nfbasistoalg applied to every element of the
+ matrix x
+
+Function: matcompanion
+Class: basic
+Section: linear_algebra
+C-Name: assmat
+Prototype: G
+Help: matcompanion(x): companion matrix to polynomial x
+
+Function: matdet
+Class: basic
+Section: linear_algebra
+C-Name: det0
+Prototype: GD0,L,
+Help: matdet(x,{flag=0}): determinant of the matrix x using Gauss-Bareiss.
+ If (optional) flag is set to 1, use classical gaussian elimination (slightly
+ better for integer entries)
+Description: 
+ (gen, ?0):gen	det($1)
+ (gen, 1):gen	det2($1)
+ (gen, #small):gen	$"incorrect flag in matdet"
+ (gen, small):gen	det0($1, $2)
+
+Function: matdetint
+Class: basic
+Section: linear_algebra
+C-Name: detint
+Prototype: G
+Help: matdetint(x): some multiple of the determinant of the lattice
+ generated by the columns of x (0 if not of maximal rank). Useful with
+ mathnfmod
+
+Function: matdiagonal
+Class: basic
+Section: linear_algebra
+C-Name: diagonal
+Prototype: G
+Help: matdiagonal(x): creates the diagonal matrix whose diagonal entries are
+ the entries of the vector x
+
+Function: mateigen
+Class: basic
+Section: linear_algebra
+C-Name: eigen
+Prototype: Gp
+Help: mateigen(x): eigenvectors of the matrix x given as columns of a matrix
+
+Function: matfrobenius
+Class: basic
+Section: linear_algebra
+C-Name: matfrobenius
+Prototype: GD0,L,Dn
+Help: matfrobenius(M,{flag},{v=x}): Return the Frobenius form of the square
+ matrix M. If flag is 1, return only the elementary divisors as a vector of
+ polynomials in the variable v. If flag is 2, return a two-components vector
+ [F,B] where F is the Frobenius form and B is the basis change so that
+ M=B^-1*F*B.
+
+Function: mathess
+Class: basic
+Section: linear_algebra
+C-Name: hess
+Prototype: G
+Help: mathess(x): Hessenberg form of x
+
+Function: mathilbert
+Class: basic
+Section: linear_algebra
+C-Name: mathilbert
+Prototype: L
+Help: mathilbert(n): Hilbert matrix of order n (n C-integer)
+
+Function: mathnf
+Class: basic
+Section: linear_algebra
+C-Name: mathnf0
+Prototype: GD0,L,
+Help: mathnf(A,{flag=0}): (upper triangular) Hermite normal form of A, basis
+ for the lattice formed by the columns of A. flag is optional whose value
+ range from 0 to 4 (0 if omitted), meaning : 0: naive algorithm. 1: Use
+ Batut's algorithm. Output 2-component vector [H,U] such that H is the HNF of
+ A, and U is a unimodular matrix such that AU=H. 3: Use Batut's algorithm.
+ Output [H,U,P] where P is a permutation matrix such that P A U = H. 4:
+ as 1, using a heuristic variant of LLL reduction along the way
+
+Function: mathnfmod
+Class: basic
+Section: linear_algebra
+C-Name: hnfmod
+Prototype: GG
+Help: mathnfmod(x,d): (upper triangular) Hermite normal form of x, basis for
+ the lattice formed by the columns of x, where d is a multiple of the
+ non-zero determinant of this lattice
+
+Function: mathnfmodid
+Class: basic
+Section: linear_algebra
+C-Name: hnfmodid
+Prototype: GG
+Help: mathnfmodid(x,d): (upper triangular) Hermite normal form of x
+ concatenated with d times the identity matrix
+
+Function: matid
+Class: basic
+Section: linear_algebra
+C-Name: matid
+Prototype: L
+Help: matid(n): identity matrix of order n (n C-integer)
+Description: 
+ (small):vec    matid($1)
+
+Function: matimage
+Class: basic
+Section: linear_algebra
+C-Name: matimage0
+Prototype: GD0,L,
+Help: matimage(x,{flag=0}): basis of the image of the matrix x. flag is
+ optional and can be set to 0 or 1, corresponding to two different algorithms
+
+Function: matimagecompl
+Class: basic
+Section: linear_algebra
+C-Name: imagecompl
+Prototype: G
+Help: matimagecompl(x): vector of column indices not corresponding to the
+ indices given by the function matimage
+
+Function: matindexrank
+Class: basic
+Section: linear_algebra
+C-Name: indexrank
+Prototype: G
+Help: matindexrank(x): gives two extraction vectors (rows and columns) for
+ the matrix x such that the extracted matrix is square of maximal rank
+
+Function: matintersect
+Class: basic
+Section: linear_algebra
+C-Name: intersect
+Prototype: GG
+Help: matintersect(x,y): intersection of the vector spaces whose bases are
+ the columns of x and y
+
+Function: matinverseimage
+Class: basic
+Section: linear_algebra
+C-Name: inverseimage
+Prototype: GG
+Help: matinverseimage(x,y): an element of the inverse image of the vector y
+ by the matrix x if one exists, the empty vector otherwise
+
+Function: matisdiagonal
+Class: basic
+Section: linear_algebra
+C-Name: isdiagonal
+Prototype: lG
+Help: matisdiagonal(x): true(1) if x is a diagonal matrix, false(0)
+ otherwise
+
+Function: matker
+Class: basic
+Section: linear_algebra
+C-Name: matker0
+Prototype: GD0,L,
+Help: matker(x,{flag=0}): basis of the kernel of the matrix x. flag is
+ optional, and may be set to 0: default; non-zero: x is known to have
+ integral entries
+
+Function: matkerint
+Class: basic
+Section: linear_algebra
+C-Name: matkerint0
+Prototype: GD0,L,
+Help: matkerint(x,{flag=0}): LLL-reduced Z-basis of the kernel of the matrix
+ x with integral entries. flag is optional, and may be set to 0: default,
+ uses a modified LLL, 1: uses matrixqz
+
+Function: matmuldiagonal
+Class: basic
+Section: linear_algebra
+C-Name: matmuldiagonal
+Prototype: GG
+Help: matmuldiagonal(x,d): product of matrix x by diagonal matrix whose
+ diagonal coefficients are those of the vector d, equivalent but faster than
+ x*matdiagonal(d)
+
+Function: matmultodiagonal
+Class: basic
+Section: linear_algebra
+C-Name: matmultodiagonal
+Prototype: GG
+Help: matmultodiagonal(x,y): product of matrices x and y, knowing that the
+ result will be a diagonal matrix. Much faster than general multiplication in
+ that case
+
+Function: matpascal
+Class: basic
+Section: linear_algebra
+C-Name: matqpascal
+Prototype: LDG
+Help: matpascal(n,{q}): Pascal triangle of order n if q is omited. q-Pascal
+ triangle otherwise
+
+Function: matrank
+Class: basic
+Section: linear_algebra
+C-Name: rank
+Prototype: lG
+Help: matrank(x): rank of the matrix x
+
+Function: matrix
+Class: basic
+Section: linear_algebra
+C-Name: matrice
+Prototype: GGDVDVDI
+Help: matrix(m,n,{X},{Y},{expr=0}): mXn matrix of expression expr, the row
+ variable X going from 1 to m and the column variable Y going from 1 to n. By
+ default, fill with 0s
+
+Function: matrixqz
+Class: basic
+Section: linear_algebra
+C-Name: matrixqz0
+Prototype: GG
+Help: matrixqz(x,p): if p>=0, transforms the rational or integral mxn (m>=n)
+ matrix x into an integral matrix with gcd of maximal determinants equal to 1
+ if p is equal to 0, not divisible by p otherwise. If p=-1, finds a basis of
+ the intersection with Z^n of the lattice spanned by the columns of x. If
+ p=-2, finds a basis of the intersection with Z^n of the Q-vector space
+ spanned by the columns of x
+
+Function: matsize
+Class: basic
+Section: linear_algebra
+C-Name: matsize
+Prototype: G
+Help: matsize(x): number of rows and columns of the vector/matrix x as a
+ 2-vector
+
+Function: matsnf
+Class: basic
+Section: linear_algebra
+C-Name: matsnf0
+Prototype: GD0,L,
+Help: matsnf(x,{flag=0}): Smith normal form (i.e. elementary divisors) of
+ the matrix x, expressed as a vector d. Binary digits of flag mean 1: returns
+ [u,v,d] where d=u*x*v, otherwise only the diagonal d is returned, 2: allow
+ polynomial entries, otherwise assume x is integral, 4: removes all
+ information corresponding to entries equal to 1 in d
+
+Function: matsolve
+Class: basic
+Section: linear_algebra
+C-Name: gauss
+Prototype: GG
+Help: matsolve(M,B): gaussian solution of MX=B (M matrix, B column vector)
+
+Function: matsolvemod
+Class: basic
+Section: linear_algebra
+C-Name: matsolvemod0
+Prototype: GGGD0,L,
+Help: matsolvemod(M,D,B,{flag=0}): one solution of system of congruences
+ MX=B mod D (M matrix, B and D column vectors). If (optional) flag is
+ non-null return all solutions
+
+Function: matsupplement
+Class: basic
+Section: linear_algebra
+C-Name: suppl
+Prototype: G
+Help: matsupplement(x): supplement the columns of the matrix x to an
+ invertible matrix
+
+Function: mattranspose
+Class: basic
+Section: linear_algebra
+C-Name: gtrans
+Prototype: G
+Help: mattranspose(x): x~=transpose of x
+
+Function: max
+Class: basic
+Section: operators
+C-Name: gmax
+Prototype: GG
+Help: max(x,y): maximum of x and y
+Description: 
+ (small, small):small	maxss($1, $2)
+ (small, int):int	gmaxsg($1, $2)
+ (int, small):int	gmaxgs($1, $2)
+ (int, int):int	gmax($1, $2)
+ (small, mp):mp	gmaxsg($1, $2)
+ (mp, small):mp	gmaxgs($1, $2)
+ (mp, mp):mp	gmax($1, $2)
+ (small, gen):gen	gmaxsg($1, $2)
+ (gen, small):gen	gmaxgs($1, $2)
+ (gen, gen):gen	gmax($1, $2)
+
+Function: min
+Class: basic
+Section: operators
+C-Name: gmin
+Prototype: GG
+Help: min(x,y): minimum of x and y
+Description: 
+ (small, small):small	minss($1, $2)
+ (small, int):int	gminsg($1, $2)
+ (int, small):int	gmings($1, $2)
+ (int, int):int	gmin($1, $2)
+ (small, mp):mp	gminsg($1, $2)
+ (mp, small):mp	gmings($1, $2)
+ (mp, mp):mp	gmin($1, $2)
+ (small, gen):gen	gminsg($1, $2)
+ (gen, small):gen	gmings($1, $2)
+ (gen, gen):gen	gmin($1, $2)
+
+Function: minpoly
+Class: basic
+Section: linear_algebra
+C-Name: minpoly
+Prototype: GDn
+Help: minpoly(A,{v=x}): minimal polynomial of the matrix or polmod A.
+
+Function: modreverse
+Class: basic
+Section: number_fields
+C-Name: polymodrecip
+Prototype: G
+Help: modreverse(x): reverse polymod of the polymod x, if it exists
+
+Function: moebius
+Class: basic
+Section: number_theoretical
+C-Name: gmu
+Prototype: G
+Help: moebius(x): Moebius function of x
+Description: 
+ (int):small	mu($1)
+ (gen):gen	gmu($1)
+
+Function: newtonpoly
+Class: basic
+Section: number_fields
+C-Name: newtonpoly
+Prototype: GG
+Help: newtonpoly(x,p): Newton polygon of polynomial x with respect to the
+ prime p
+
+Function: next
+Class: basic
+Section: programming
+C-Name: next0
+Prototype: D1,L,
+Help: next({n=1}): interrupt execution of current instruction sequence, and
+ start another iteration from the n-th innermost enclosing loops
+
+Function: nextprime
+Class: basic
+Section: number_theoretical
+C-Name: gnextprime
+Prototype: G
+Help: nextprime(x): smallest pseudoprime >= x
+Description: 
+ (int):int	nextprime($1)
+ (gen):gen	gnextprime($1)
+
+Function: nfalgtobasis
+Class: basic
+Section: number_fields
+C-Name: algtobasis
+Prototype: GG
+Help: nfalgtobasis(nf,x): transforms the algebraic number x into a column
+ vector on the integral basis nf.zk
+
+Function: nfbasis
+Class: basic
+Section: number_fields
+C-Name: nfbasis0
+Prototype: GD0,L,DG
+Help: nfbasis(x,{flag=0},{p}): integral basis of the field Q[a], where a is
+ a root of the polynomial x, using the round 4 algorithm. Second and third
+ args are optional. Binary digits of flag mean 1: assume that no square of a
+ prime>primelimit divides the discriminant of x, 2: use round 2 algorithm
+ instead. If present, p provides the matrix of a partial factorization of the
+ discriminant of x, useful if one wants only an order maximal at certain
+ primes only
+
+Function: nfbasistoalg
+Class: basic
+Section: number_fields
+C-Name: basistoalg
+Prototype: GG
+Help: nfbasistoalg(nf,x): transforms the column vector x on the integral
+ basis into an algebraic number
+
+Function: nfdetint
+Class: basic
+Section: number_fields
+C-Name: nfdetint
+Prototype: GG
+Help: nfdetint(nf,x): multiple of the ideal determinant of the pseudo
+ generating set x
+
+Function: nfdisc
+Class: basic
+Section: number_fields
+C-Name: nfdiscf0
+Prototype: GD0,L,DG
+Help: nfdisc(x,{flag=0},{p}): discriminant of the number field defined by
+ the polynomial x using round 4. Optional args flag and p are as in nfbasis
+
+Function: nfeltdiv
+Class: basic
+Section: number_fields
+C-Name: element_div
+Prototype: GGG
+Help: nfeltdiv(nf,a,b): element a/b in nf
+
+Function: nfeltdiveuc
+Class: basic
+Section: number_fields
+C-Name: nfdiveuc
+Prototype: GGG
+Help: nfeltdiveuc(nf,a,b): gives algebraic integer q such that a-bq is small
+
+Function: nfeltdivmodpr
+Class: basic
+Section: number_fields
+C-Name: element_divmodpr
+Prototype: GGGG
+Help: nfeltdivmodpr(nf,a,b,pr): element a/b modulo pr in nf, where pr is in
+ modpr format (see nfmodprinit)
+
+Function: nfeltdivrem
+Class: basic
+Section: number_fields
+C-Name: nfdivrem
+Prototype: GGG
+Help: nfeltdivrem(nf,a,b): gives [q,r] such that r=a-bq is small
+
+Function: nfeltmod
+Class: basic
+Section: number_fields
+C-Name: nfmod
+Prototype: GGG
+Help: nfeltmod(nf,a,b): gives r such that r=a-bq is small with q algebraic
+ integer
+
+Function: nfeltmul
+Class: basic
+Section: number_fields
+C-Name: element_mul
+Prototype: GGG
+Help: nfeltmul(nf,a,b): element a. b in nf
+
+Function: nfeltmulmodpr
+Class: basic
+Section: number_fields
+C-Name: element_mulmodpr
+Prototype: GGGG
+Help: nfeltmulmodpr(nf,a,b,pr): element a. b modulo pr in nf, where pr is in
+ modpr format (see nfmodprinit)
+
+Function: nfeltpow
+Class: basic
+Section: number_fields
+C-Name: element_pow
+Prototype: GGG
+Help: nfeltpow(nf,a,k): element a^k in nf
+
+Function: nfeltpowmodpr
+Class: basic
+Section: number_fields
+C-Name: element_powmodpr
+Prototype: GGGG
+Help: nfeltpowmodpr(nf,a,k,pr): element a^k modulo pr in nf, where pr is in
+ modpr format (see nfmodprinit)
+
+Function: nfeltreduce
+Class: basic
+Section: number_fields
+C-Name: element_reduce
+Prototype: GGG
+Help: nfeltreduce(nf,a,id): gives r such that a-r is in the ideal id and r
+ is small
+
+Function: nfeltreducemodpr
+Class: basic
+Section: number_fields
+C-Name: nfreducemodpr
+Prototype: GGG
+Help: nfeltreducemodpr(nf,a,pr): element a modulo pr in nf, where pr is in
+ modpr format (see nfmodprinit)
+
+Function: nfeltval
+Class: basic
+Section: number_fields
+C-Name: element_val
+Prototype: lGGG
+Help: nfeltval(nf,a,pr): valuation of element a at the prime pr as output by
+ idealprimedec
+
+Function: nffactor
+Class: basic
+Section: number_fields
+C-Name: nffactor
+Prototype: GG
+Help: nffactor(nf,x): factor polynomial x in number field nf
+
+Function: nffactormod
+Class: basic
+Section: number_fields
+C-Name: nffactormod
+Prototype: GGG
+Help: nffactormod(nf,pol,pr): factorize polynomial pol modulo prime ideal pr
+ in number field nf
+
+Function: nfgaloisapply
+Class: basic
+Section: number_fields
+C-Name: galoisapply
+Prototype: GGG
+Help: nfgaloisapply(nf,aut,x): Apply the Galois automorphism sigma
+ (polynomial or polymod) to the object x (element or ideal) in the number
+ field nf
+
+Function: nfgaloisconj
+Class: basic
+Section: number_fields
+C-Name: galoisconj0
+Prototype: GD0,L,DGp
+Help: nfgaloisconj(nf,{flag=0},{den}): list of conjugates of a root of the
+ polynomial x=nf.pol in the same number field. flag is optional (set to 0 by
+ default), meaning 0: use combination of flag 4 and 1, always complete; 1:
+ use nfroots; 2 : use complex numbers, LLL on integral basis (not always
+ complete); 4: use Allombert's algorithm, complete if the field is Galois of
+ degree <= 35 (see manual for detail). nf can be simply a polynomial with
+ flag 0,2 and 4, meaning: 0: use combination of flag 4 and 2, not always
+ complete (but a warning is issued when the list is not proven complete); 2 &
+ 4: same meaning and restrictions. Note that only flag 4 can be applied to
+ fields of large degrees (approx. >= 20)
+
+Function: nfhilbert
+Class: basic
+Section: number_fields
+C-Name: nfhilbert0
+Prototype: lGGGDG
+Help: nfhilbert(nf,a,b,{p}): if p is omitted, global Hilbert symbol (a,b) in
+ nf, that is 1 if X^2-aY^2-bZ^2 has a non-trivial solution (X,Y,Z) in nf, -1
+ otherwise. Otherwise compute the local symbol modulo the prime ideal p
+
+Function: nfhnf
+Class: basic
+Section: number_fields
+C-Name: nfhermite
+Prototype: GG
+Help: nfhnf(nf,x): if x=[A,I], gives a pseudo-basis of the module sum A_jI_j
+
+Function: nfhnfmod
+Class: basic
+Section: number_fields
+C-Name: nfhermitemod
+Prototype: GGG
+Help: nfhnfmod(nf,x,detx): if x=[A,I], and detx is a multiple of the ideal
+ determinant of x, gives a pseudo-basis of the module sum A_jI_j
+
+Function: nfinit
+Class: basic
+Section: number_fields
+C-Name: nfinit0
+Prototype: GD0,L,p
+Help: nfinit(pol,{flag=0}): pol being a nonconstant irreducible polynomial,
+ gives the vector: [pol,[r1,r2],discf,index,[M,MC,T2,T,different] (see
+ manual),r1+r2 first roots, integral basis, matrix of power basis in terms of
+ integral basis, multiplication table of basis]. flag is optional and can be
+ set to 0: default; 1: do not compute different; 2: first use polred to find
+ a simpler polynomial; 3: outputs a two-element vector [nf,Mod(a,P)], where
+ nf is as in 2 and Mod(a,P) is a polymod equal to Mod(x,pol) and P=nf.pol; 4:
+ as 2 but use a partial polred; 5: is to 3 what 4 is to 2
+Description: 
+ (gen, ?0):nf:prec	nfinit0($1, 0, prec)
+ (gen, 1):nf:prec	nfinit0($1, 1, prec)
+ (gen, 2):nf:prec	nfinit0($1, 2, prec)
+ (gen, 3):gen:prec	nfinit0($1, 3, prec)
+ (gen, 4):nf:prec	nfinit0($1, 4, prec)
+ (gen, 5):gen:prec	nfinit0($1, 5, prec)
+ (gen, 6):nf:prec	nfinit0($1, 6, prec)
+ (gen, #small):void	$"incorrect flag in nfinit"
+ (gen, small):gen:prec	nfinit0($1, $2, prec)
+
+Function: nfisideal
+Class: basic
+Section: number_fields
+C-Name: isideal
+Prototype: lGG
+Help: nfisideal(nf,x): true(1) if x is an ideal in the number field nf,
+ false(0) if not
+
+Function: nfisincl
+Class: basic
+Section: number_fields
+C-Name: nfisincl
+Prototype: GG
+Help: nfisincl(x,y): tests whether the number field x is isomorphic to a
+ subfield of y (where x and y are either polynomials or number fields as
+ output by nfinit). Return 0 if not, and otherwise all the isomorphisms. If y
+ is a number field, a faster algorithm is used
+
+Function: nfisisom
+Class: basic
+Section: number_fields
+C-Name: nfisisom
+Prototype: GG
+Help: nfisisom(x,y): as nfisincl but tests whether x is isomorphic to y
+
+Function: nfkermodpr
+Class: basic
+Section: number_fields
+C-Name: nfkermodpr
+Prototype: GGG
+Help: nfkermodpr(nf,x,pr): kernel of the matrix x in Z_K/pr, where pr is in
+ modpr format (see nfmodprinit)
+
+Function: nfmodprinit
+Class: basic
+Section: number_fields
+C-Name: nfmodprinit
+Prototype: GG
+Help: nfmodprinit(nf,pr): transform the 5 element row vector pr representing
+ a prime ideal into modpr format necessary for all operations mod pr in the
+ number field nf (see manual for details about the format)
+
+Function: nfnewprec
+Class: basic
+Section: number_fields
+C-Name: nfnewprec
+Prototype: Gp
+Help: nfnewprec(nf): transform the number field data nf into new data using
+ the current (usually larger) precision
+
+Function: nfroots
+Class: basic
+Section: number_fields
+C-Name: nfroots
+Prototype: DGG
+Help: nfroots({nf},pol): roots of polynomial pol belonging to nf (Q if
+ omitted) without multiplicity
+
+Function: nfrootsof1
+Class: basic
+Section: number_fields
+C-Name: rootsof1
+Prototype: G
+Help: nfrootsof1(nf): number of roots of unity and primitive root of unity
+ in the number field nf
+
+Function: nfsnf
+Class: basic
+Section: number_fields
+C-Name: nfsmith
+Prototype: GG
+Help: nfsnf(nf,x): if x=[A,I,J], outputs [c_1,...c_n] Smith normal form of x
+
+Function: nfsolvemodpr
+Class: basic
+Section: number_fields
+C-Name: nfsolvemodpr
+Prototype: GGGG
+Help: nfsolvemodpr(nf,a,b,pr): solution of a*x=b in Z_K/pr, where a is a
+ matrix and b a column vector, and where pr is in modpr format (see
+ nfmodprinit)
+
+Function: nfsubfields
+Class: basic
+Section: number_fields
+C-Name: subfields0
+Prototype: GDG
+Help: nfsubfields(nf,{d=0}): find all subfields of degree d of number field
+ nf (all subfields if d is null or omitted). Result is a vector of subfields,
+ each being given by [g,h], where g is an absolute equation and h expresses
+ one of the roots of g in terms of the root x of the polynomial defining nf
+
+Function: norm
+Class: basic
+Section: conversions
+C-Name: gnorm
+Prototype: G
+Help: norm(x): norm of x
+
+Function: norml2
+Class: basic
+Section: conversions
+C-Name: gnorml2
+Prototype: G
+Help: norml2(x): square of the L2-norm of the vector x
+
+Function: numbpart
+Class: basic
+Section: number_theoretical
+C-Name: numbpart
+Prototype: G
+Help: numbpart(x): number of partitions of x
+
+Function: numdiv
+Class: basic
+Section: number_theoretical
+C-Name: gnumbdiv
+Prototype: G
+Help: numdiv(x): number of divisors of x
+Description: 
+ (int):int	numbdiv($1)
+ (gen):gen	gnumbdiv($1)
+
+Function: numerator
+Class: basic
+Section: conversions
+C-Name: numer
+Prototype: G
+Help: numerator(x): numerator of x
+
+Function: numtoperm
+Class: basic
+Section: conversions
+C-Name: numtoperm
+Prototype: LG
+Help: numtoperm(n,k): permutation number k (mod n!) of n letters (n
+ C-integer)
+
+Function: omega
+Class: basic
+Section: number_theoretical
+C-Name: gomega
+Prototype: G
+Help: omega(x): number of distinct prime divisors of x
+Description: 
+ (int):small	omega($1)
+ (gen):gen	gomega($1)
+
+Function: padicappr
+Class: basic
+Section: polynomials
+C-Name: padicappr
+Prototype: GG
+Help: padicappr(x,a): p-adic roots of the polynomial x congruent to a mod p
+
+Function: padicprec
+Class: basic
+Section: conversions
+C-Name: padicprec
+Prototype: lGG
+Help: padicprec(x,p): absolute p-adic precision of object x
+
+Function: permtonum
+Class: basic
+Section: conversions
+C-Name: permtonum
+Prototype: G
+Help: permtonum(vect): ordinal (between 1 and n!) of permutation vect
+
+Function: plot
+Class: highlevel
+Section: graphic
+C-Name: plot
+Prototype: vV=GGIDGDGp
+Help: plot(X=a,b,expr,{ymin},{ymax}): crude plot of expression expr, X goes
+ from a to b, with Y ranging from ymin to ymax. If ymin (resp. ymax) is not
+ given, the minima (resp. the maxima) of the expression is used instead
+
+Function: plotbox
+Class: highlevel
+Section: graphic
+C-Name: rectbox
+Prototype: vLGG
+Help: plotbox(w,x2,y2): if the cursor is at position (x1,y1), draw a box
+ with diagonal (x1,y1) and (x2,y2) in rectwindow w (cursor does not move)
+
+Function: plotclip
+Class: highlevel
+Section: graphic
+C-Name: rectclip
+Prototype: vL
+Help: plotclip(w): clip the contents of the rectwindow to the bounding box
+ (except strings)
+
+Function: plotcolor
+Class: highlevel
+Section: graphic
+C-Name: rectcolor
+Prototype: vLL
+Help: plotcolor(w,c): in rectwindow w, set default color to c. Possible
+ values for c are 1=black, 2=blue, 3=sienna, 4=red, 5=cornsilk, 6=grey,
+ 7=gainsborough
+
+Function: plotcopy
+Class: highlevel
+Section: graphic
+C-Name: rectcopy_gen
+Prototype: vLLGGD0,L,
+Help: plotcopy(sourcew,destw,dx,dy,{flag=0}): copy the contents of
+ rectwindow sourcew to rectwindow destw with offset (dx,dy). If flag's bit 1
+ is set, dx and dy express fractions of the size of the current output
+ device, otherwise dx and dy are in pixels. dx and dy are relative positions
+ of northwest corners if other bits of flag vanish, otherwise of: 2:
+ southwest, 4: southeast, 6: northeast corners
+
+Function: plotcursor
+Class: highlevel
+Section: graphic
+C-Name: rectcursor
+Prototype: L
+Help: plotcursor(w): current position of cursor in rectwindow w
+
+Function: plotdraw
+Class: highlevel
+Section: graphic
+C-Name: rectdraw_flag
+Prototype: vGD0,L,
+Help: plotdraw(list, {flag=0}): draw vector of rectwindows list at indicated
+ x,y positions; list is a vector w1,x1,y1,w2,x2,y2,etc. . If flag!=0, x1, y1
+ etc. express fractions of the size of the current output device
+
+Function: ploth
+Class: highlevel
+Section: graphic
+C-Name: ploth
+Prototype: V=GGIpD0,M,D0,L,\nParametric|1; Recursive|2; no_Rescale|4; no_X_axis|8; no_Y_axis|16; no_Frame|32; no_Lines|64; Points_too|128; Splines|256; no_X_ticks|512; no_Y_ticks|1024; Same_ticks|2048
+Help: ploth(X=a,b,expr,{flags=0},{n=0}): plot of expression expr, X goes
+ from a to b in high resolution. Both flags and n are optional. Binary digits
+ of flags mean: 1=Parametric, 2=Recursive, 4=no_Rescale, 8=no_X_axis,
+ 16=no_Y_axis, 32=no_Frame, 64=no_Lines (do not join points), 128=Points_too
+ (plot both lines and points), 256=Splines (use cubic splines),
+ 512=no_X_ticks, 1024= no_Y_ticks, 2048=Same_ticks (plot all ticks with the
+ same length). n specifies number of reference points on the graph (0=use
+ default value). Returns a vector for the bounding box
+
+Function: plothraw
+Class: highlevel
+Section: graphic
+C-Name: plothraw
+Prototype: GGD0,L,
+Help: plothraw(listx,listy,{flag=0}): plot in high resolution points whose x
+ (resp. y) coordinates are in listx (resp. listy). If flag is 1, join points,
+ other non-0 flags should be combinations of bits 8,16,32,64,128,256 meaning
+ the same as for ploth()
+
+Function: plothsizes
+Class: highlevel
+Section: graphic
+C-Name: plothsizes_flag
+Prototype: D0,L,
+Help: plothsizes({flag=0}): returns array of 6 elements: terminal width and
+ height, sizes for ticks in horizontal and vertical directions, width and
+ height of characters. If flag=0, sizes of ticks and characters are in
+ pixels, otherwise are fractions of the screen size
+
+Function: plotinit
+Class: highlevel
+Section: graphic
+C-Name: initrect_gen
+Prototype: vLD0,G,D0,G,D0,L,
+Help: plotinit(w,{x=0},{y=0},{flag=0}): initialize rectwindow w to size x,y.
+ If flag!=0, x and y express fractions of the size of the current output
+ device. x=0 or y=0 means use the full size of the device
+
+Function: plotkill
+Class: highlevel
+Section: graphic
+C-Name: killrect
+Prototype: vL
+Help: plotkill(w): erase the rectwindow w
+
+Function: plotlines
+Class: highlevel
+Section: graphic
+C-Name: rectlines
+Prototype: vLGGD0,L,
+Help: plotlines(w,listx,listy,{flag=0}): draws an open polygon in rectwindow
+ w where listx and listy contain the x (resp. y) coordinates of the vertices.
+ If listx and listy are both single values (i.e not vectors), draw the
+ corresponding line (and move cursor). If (optional) flag is non-zero, close
+ the polygon
+
+Function: plotlinetype
+Class: highlevel
+Section: graphic
+C-Name: rectlinetype
+Prototype: vLL
+Help: plotlinetype(w,type): change the type of following lines in rectwindow
+ w. type -2 corresponds to frames, -1 to axes, larger values may correspond
+ to something else. w=-1 changes highlevel plotting
+
+Function: plotmove
+Class: highlevel
+Section: graphic
+C-Name: rectmove
+Prototype: vLGG
+Help: plotmove(w,x,y): move cursor to position x,y in rectwindow w
+
+Function: plotpoints
+Class: highlevel
+Section: graphic
+C-Name: rectpoints
+Prototype: vLGG
+Help: plotpoints(w,listx,listy): draws in rectwindow w the points whose x
+ (resp y) coordinates are in listx (resp listy). If listx and listy are both
+ single values (i.e not vectors), draw the corresponding point (and move
+ cursor)
+
+Function: plotpointsize
+Class: highlevel
+Section: graphic
+C-Name: rectpointsize
+Prototype: vLG
+Help: plotpointsize(w,size): change the "size" of following points in
+ rectwindow w. w=-1 changes global value
+
+Function: plotpointtype
+Class: highlevel
+Section: graphic
+C-Name: rectpointtype
+Prototype: vLL
+Help: plotpointtype(w,type): change the type of following points in
+ rectwindow w. type -1 corresponds to a dot, larger values may correspond to
+ something else. w=-1 changes highlevel plotting
+
+Function: plotrbox
+Class: highlevel
+Section: graphic
+C-Name: rectrbox
+Prototype: vLGG
+Help: plotrbox(w,dx,dy): if the cursor is at (x1,y1), draw a box with
+ diagonal (x1,y1)-(x1+dx,y1+dy) in rectwindow w (cursor does not move)
+
+Function: plotrecth
+Class: highlevel
+Section: graphic
+C-Name: rectploth
+Prototype: LV=GGIpD0,L,D0,L,
+Help: plotrecth(w,X=xmin,xmax,expr,{flags=0},{n=0}): plot graph(s) for expr
+ in rectwindow w, where expr is scalar for a single non-parametric plot, and
+ a vector otherwise. If plotting is parametric, its length should be even and
+ pairs of entries give points coordinates. If not, all entries but the first
+ are y-coordinates. Both flags and n are optional. Binary digits of flags
+ mean: 1 parametric plot, 2 recursive plot, 4 do not rescale w, 8 omit
+ x-axis, 16 omit y-axis, 32 omit frame, 64 do not join points, 128 plot both
+ lines and points. n specifies the number of reference points on the graph
+ (0=use default value). Returns a vector for the bounding box
+
+Function: plotrecthraw
+Class: highlevel
+Section: graphic
+C-Name: rectplothraw
+Prototype: LGD0,L,
+Help: plotrecthraw(w,data,{flags=0}): plot graph(s) for data in rectwindow
+ w, where data is a vector of vectors. If plot is parametric, length of data
+ should be even, and pairs of entries give curves to plot. If not, first
+ entry gives x-coordinate, and the other ones y-coordinates. Admits the same
+ optional flags as plotrecth, save that recursive plot is meaningless
+
+Function: plotrline
+Class: highlevel
+Section: graphic
+C-Name: rectrline
+Prototype: vLGG
+Help: plotrline(w,dx,dy): if the cursor is at (x1,y1), draw a line from
+ (x1,y1) to (x1+dx,y1+dy) (and move the cursor) in the rectwindow w
+
+Function: plotrmove
+Class: highlevel
+Section: graphic
+C-Name: rectrmove
+Prototype: vLGG
+Help: plotrmove(w,dx,dy): move cursor to position (dx,dy) relative to the
+ present position in the rectwindow w
+
+Function: plotrpoint
+Class: highlevel
+Section: graphic
+C-Name: rectrpoint
+Prototype: vLGG
+Help: plotrpoint(w,dx,dy): draw a point (and move cursor) at position dx,dy
+ relative to present position of the cursor in rectwindow w
+
+Function: plotscale
+Class: highlevel
+Section: graphic
+C-Name: rectscale
+Prototype: vLGGGG
+Help: plotscale(w,x1,x2,y1,y2): scale the coordinates in rectwindow w so
+ that x goes from x1 to x2 and y from y1 to y2 (y2<y1 is allowed)
+
+Function: plotstring
+Class: highlevel
+Section: graphic
+C-Name: rectstring3
+Prototype: vLsD0,L,
+Help: plotstring(w,x,{flags=0}): draw in rectwindow w the string
+ corresponding to x. Bits 1 and 2 of flag regulate horizontal alignment: left
+ if 0, right if 2, center if 1. Bits 4 and 8 regulate vertical alignment:
+ bottom if 0, top if 8, v-center if 4. Can insert additional gap between
+ point and string: horizontal if bit 16 is set, vertical if bit 32 is set
+
+Function: polcoeff
+Class: basic
+Section: polynomials
+C-Name: polcoeff0
+Prototype: GLDn
+Help: polcoeff(x,s,{v}): coefficient of degree s of x, or the s-th component
+ for vectors or matrices (for which it is simpler to use x[]). With respect
+ to the main variable if v is omitted, with respect to the variable v
+ otherwise
+Description: 
+ (pol, 0):gen:copy      constant_term($1)
+ (gen, small, ?var):gen polcoeff0($1, $2, $3)
+
+Function: polcompositum
+Class: basic
+Section: number_fields
+C-Name: polcompositum0
+Prototype: GGD0,L,
+Help: polcompositum(pol1,pol2,{flag=0}): vector of all possible compositums
+ of the number fields defined by the polynomials pol1 and pol2. If (optional)
+ flag is set (i.e non-null), output for each compositum, not only the
+ compositum polynomial pol, but a vector [pol,al1,al2,k] where al1 (resp.
+ al2) is a root of pol1 (resp. pol2) expressed as a polynomial modulo pol,
+ and a small integer k such that al2+k*al1 is the chosen root of pol
+
+Function: polcyclo
+Class: basic
+Section: polynomials
+C-Name: cyclo
+Prototype: LDn
+Help: polcyclo(n,{v=x}): n-th cyclotomic polynomial (in variable v)
+
+Function: poldegree
+Class: basic
+Section: polynomials
+C-Name: poldegree
+Prototype: lGDn
+Help: poldegree(x,{v}): degree of the polynomial or rational function x with
+ respect to main variable if v is omitted, with respect to v otherwise.
+ For scalar x, return 0 is x is non-zero and a negative number otherwise
+Description: 
+ (pol):small	        degpol($1)
+ (gen):small	        degree($1)
+ (gen, var):small	poldegree($1, $2)
+
+Function: poldisc
+Class: basic
+Section: polynomials
+C-Name: poldisc0
+Prototype: GDn
+Help: poldisc(x,{v}): discriminant of the polynomial x, with respect to main
+ variable if v is omitted, with respect to v otherwise
+Description: 
+ (pol):gen	discsr($1)
+ (gen):gen	poldisc0($1, -1)
+ (gen, var):gen	poldisc0($1, $2)
+
+Function: poldiscreduced
+Class: basic
+Section: polynomials
+C-Name: reduceddiscsmith
+Prototype: G
+Help: poldiscreduced(f): vector of elementary divisors of Z[a]/f'(a)Z[a],
+ where a is a root of the polynomial f
+
+Function: polgalois
+Class: basic
+Section: number_fields
+C-Name: polgalois
+Prototype: Gp
+Help: polgalois(x): Galois group of the polynomial x (see manual for group
+ coding). Return [n, s, k, name] where n is the order, s the signature, k the
+ index and name is the GAP4 name of the transitive group.
+
+Function: polhensellift
+Class: basic
+Section: polynomials
+C-Name: polhensellift
+Prototype: GGGL
+Help: polhensellift(x, y, p, e): lift the factorization y of x modulo p to a
+ factorization modulo p^e using Hensel lift. The factors in y must be
+ pairwise relatively prime modulo p
+
+Function: polinterpolate
+Class: basic
+Section: polynomials
+C-Name: polint
+Prototype: GDGDGD&
+Help: polinterpolate(xa,{ya},{x},{&e}): polynomial interpolation at x
+ according to data vectors xa, ya (ie return P such that P(xa[i]) = ya[i] for
+ all i). If ya is omitter, return P such that P(i) = xa[i]. If present, e
+ will contain an error estimate on the returned value
+
+Function: polisirreducible
+Class: basic
+Section: polynomials
+C-Name: gisirreducible
+Prototype: G
+Help: polisirreducible(x): true(1) if x is an irreducible non-constant
+ polynomial, false(0) if x is reducible or constant
+
+Function: pollead
+Class: basic
+Section: polynomials
+C-Name: pollead
+Prototype: GDn
+Help: pollead(x,{v}): leading coefficient of polynomial or series x, or x
+ itself if x is a scalar. Error otherwise. With respect to the main variable
+ of x if v is omitted, with respect to the variable v otherwise
+Description: 
+ (pol):gen:copy         leading_term($1)
+ (gen):gen              pollead($1, -1)
+ (gen, var):gen         pollead($1, $2)
+
+Function: pollegendre
+Class: basic
+Section: polynomials
+C-Name: legendre
+Prototype: LDn
+Help: pollegendre(n,{v=x}): legendre polynomial of degree n (n C-integer),
+ in variable v
+
+Function: polrecip
+Class: basic
+Section: polynomials
+C-Name: polrecip
+Prototype: G
+Help: polrecip(x): reciprocal polynomial of x
+
+Function: polred
+Class: basic
+Section: number_fields
+C-Name: polred0
+Prototype: GD0,L,DG
+Help: polred(x,{flag=0},{p}): reduction of the polynomial x (gives minimal
+ polynomials only). Second and third args are optional. The following binary
+ digits of flag are significant 1: partial reduction, 2: gives also elements.
+ p, if present, contains the complete factorization matrix of the
+ discriminant
+
+Function: polredabs
+Class: basic
+Section: number_fields
+C-Name: polredabs0
+Prototype: GD0,L,
+Help: polredabs(x,{flag=0}): a smallest generating polynomial of the number
+ field for the T2 norm on the roots, with smallest index for the minimal T2
+ norm. flag is optional, whose binary digit mean 1: give the element whose
+ characteristic polynomial is the given polynomial. 4: give all polynomials
+ of minimal T2 norm (give only one of P(x) and P(-x)). 16: partial reduction
+
+Function: polredord
+Class: basic
+Section: number_fields
+C-Name: ordred
+Prototype: G
+Help: polredord(x): reduction of the polynomial x, staying in the same order
+
+Function: polresultant
+Class: basic
+Section: polynomials
+C-Name: polresultant0
+Prototype: GGDnD0,L,
+Help: polresultant(x,y,{v},{flag=0}): resultant of the polynomials x and y,
+ with respect to the main variables of x and y if v is omitted, with respect
+ to the variable v otherwise. flag is optional, and can be 0: default,
+ assumes that the polynomials have exact entries (uses the subresultant
+ algorithm), 1 for arbitrary polynomials, using Sylvester's matrix, or 2:
+ using a Ducos's modified subresultant algorithm
+
+Function: polroots
+Class: basic
+Section: polynomials
+C-Name: roots0
+Prototype: GD0,L,p
+Help: polroots(x,{flag=0}): complex roots of the polynomial x. flag is
+ optional, and can be 0: default, uses Schonhage's method modified by
+ Gourdon, or 1: uses a modified Newton method
+
+Function: polrootsmod
+Class: basic
+Section: polynomials
+C-Name: rootmod0
+Prototype: GGD0,L,
+Help: polrootsmod(x,p,{flag=0}): roots mod p of the polynomial x. flag is
+ optional, and can be 0: default, or 1: use a naive search, useful for small
+ p
+Description: 
+ (pol, int, ?0):vec	rootmod($1, $2)
+ (pol, int, 1):vec	rootmod2($1, $2)
+ (pol, int, #small):vec	$"Bad flag in polrootsmod"
+ (pol, int, small):vec	rootmod0($1, $2, $3)
+
+Function: polrootspadic
+Class: basic
+Section: polynomials
+C-Name: rootpadic
+Prototype: GGL
+Help: polrootspadic(x,p,r): p-adic roots of the polynomial x to precision r
+
+Function: polsturm
+Class: basic
+Section: polynomials
+C-Name: sturmpart
+Prototype: lGDGDG
+Help: polsturm(x,{a},{b}): number of real roots of the polynomial x in the
+ interval]a,b] (which are respectively taken to be -oo or +oo when omitted)
+
+Function: polsubcyclo
+Class: basic
+Section: polynomials
+C-Name: polsubcyclo
+Prototype: LLDn
+Help: polsubcyclo(n,d,{v=x}): finds an equation (in variable v) for the d-th
+ degree subfields of Q(zeta_n). Output is a polynomial or a vector of
+ polynomials is there are several such fields, or none.
+
+Function: polsylvestermatrix
+Class: basic
+Section: polynomials
+C-Name: sylvestermatrix
+Prototype: GG
+Help: polsylvestermatrix(x,y): forms the sylvester matrix associated to the
+ two polynomials x and y. Warning: the polynomial coefficients are in
+ columns, not in rows
+
+Function: polsym
+Class: basic
+Section: polynomials
+C-Name: polsym
+Prototype: GL
+Help: polsym(x,n): vector of symmetric powers of the roots of x up to n
+
+Function: poltchebi
+Class: basic
+Section: polynomials
+C-Name: tchebi
+Prototype: LDn
+Help: poltchebi(n,{v=x}): Tchebitcheff polynomial of degree n (n C-integer),
+ in variable v
+
+Function: poltschirnhaus
+Class: basic
+Section: number_fields
+C-Name: tschirnhaus
+Prototype: G
+Help: poltschirnhaus(x): random Tschirnhausen transformation of the
+ polynomial x
+
+Function: polylog
+Class: basic
+Section: transcendental
+C-Name: polylog0
+Prototype: LGD0,L,p
+Help: polylog(m,x,{flag=0}): m-th polylogarithm of x. flag is optional, and
+ can be 0: default, 1: D_m~-modified m-th polylog of x, 2: D_m-modified m-th
+ polylog of x, 3: P_m-modified m-th polylog of x
+
+Function: polzagier
+Class: basic
+Section: polynomials
+C-Name: polzag
+Prototype: LL
+Help: polzagier(n,m): Zagier's polynomials of index n,m
+
+Function: precision
+Class: basic
+Section: conversions
+C-Name: precision0
+Prototype: GD0,L,
+Help: precision(x,{n}): change the precision of x to be n (n C-integer). If
+ n is omitted, output real precision of object x
+
+Function: precprime
+Class: basic
+Section: number_theoretical
+C-Name: gprecprime
+Prototype: G
+Help: precprime(x): largest pseudoprime <= x, 0 if x<=1
+Description: 
+ (int):int	precprime($1)
+ (gen):gen	gprecprime($1)
+
+Function: prime
+Class: basic
+Section: number_theoretical
+C-Name: prime
+Prototype: L
+Help: prime(n): returns the n-th prime (n C-integer)
+
+Function: primepi
+Class: basic
+Section: number_theoretical
+C-Name: primepi
+Prototype: G
+Help: primepi(x): the prime counting function pi(x) = #{p <= x, p prime}.
+Description: 
+ (gen):int	primepi($1)
+
+Function: primes
+Class: basic
+Section: number_theoretical
+C-Name: primes
+Prototype: L
+Help: primes(n): returns the vector of the first n primes (n C-integer)
+
+Function: print
+Class: basic
+Section: programming
+C-Name: print
+Prototype: vs*
+Help: print(a): outputs a (in raw format) ending with newline
+Description: 
+ (?gen,...):void  pariprintf("${2 format_string}\n"${2 format_args})
+
+Function: print1
+Class: basic
+Section: programming
+C-Name: print1
+Prototype: vs*
+Help: print1(a): outputs a (in raw format) without ending with newline
+Description: 
+ (?gen,...):void  pariprintf("${2 format_string}"${2 format_args})
+
+Function: printp
+Class: basic
+Section: programming
+C-Name: printp
+Prototype: vs*
+Help: printp(a): outputs a (in beautified format) ending with newline
+
+Function: printp1
+Class: basic
+Section: programming
+C-Name: printp1
+Prototype: vs*
+Help: printp1(a): outputs a (in beautified format) without ending with
+ newline
+
+Function: printtex
+Class: basic
+Section: programming
+C-Name: printtex
+Prototype: vs*
+Help: printtex(a): outputs a in TeX format
+
+Function: prod
+Class: basic
+Section: sums
+C-Name: produit
+Prototype: V=GGEDG
+Help: prod(X=a,b,expr,{x=1}): x times the product (X runs from a to b) of
+ expression
+
+Function: prodeuler
+Class: basic
+Section: sums
+C-Name: prodeuler0
+Prototype: V=GGEp
+Help: prodeuler(X=a,b,expr): Euler product (X runs over the primes between a
+ and b) of real or complex expression
+
+Function: prodinf
+Class: basic
+Section: sums
+C-Name: prodinf0
+Prototype: V=GED0,L,p
+Help: prodinf(X=a,expr,{flag=0}): infinite product (X goes from a to
+ infinity) of real or complex expression. flag can be 0 (default) or 1, in
+ which case compute the product of the 1+expr instead
+
+Function: psdraw
+Class: highlevel
+Section: graphic
+C-Name: postdraw_flag
+Prototype: vGD0,L,
+Help: psdraw(list, {flag=0}): same as plotdraw, except that the output is a
+ postscript program in psfile (pari.ps by default), and flag!=0 scales the
+ plot from size of the current output device to the standard postscript
+ plotting size
+
+Function: psi
+Class: basic
+Section: transcendental
+C-Name: gpsi
+Prototype: Gp
+Help: psi(x): psi-function at x
+
+Function: psploth
+Class: highlevel
+Section: graphic
+C-Name: postploth
+Prototype: V=GGIpD0,L,D0,L,
+Help: psploth(X=a,b,expr,{flags=0},{n=0}): same as ploth, except that the
+ output is a postscript program in psfile (pari.ps by default)
+
+Function: psplothraw
+Class: highlevel
+Section: graphic
+C-Name: postplothraw
+Prototype: GGD0,L,
+Help: psplothraw(listx,listy,{flag=0}): same as plothraw, except that the
+ output is a postscript program in psfile (pari.ps by default)
+
+Function: qfbclassno
+Class: basic
+Section: number_theoretical
+C-Name: qfbclassno0
+Prototype: GD0,L,
+Help: qfbclassno(x,{flag=0}): class number of discriminant x using Shanks's
+ method by default. If (optional) flag is set to 1, use Euler products
+
+Function: qfbcompraw
+Class: basic
+Section: number_theoretical
+C-Name: compraw
+Prototype: GG
+Help: qfbcompraw(x,y): Gaussian composition without reduction of the binary
+ quadratic forms x and y
+
+Function: qfbhclassno
+Class: basic
+Section: number_theoretical
+C-Name: hclassno
+Prototype: G
+Help: qfbhclassno(x): Hurwitz-Kronecker class number of x>0
+
+Function: qfbnucomp
+Class: basic
+Section: number_theoretical
+C-Name: nucomp
+Prototype: GGG
+Help: qfbnucomp(x,y,l): composite of primitive positive definite quadratic
+ forms x and y using nucomp and nudupl, where l=[|D/4|^(1/4)] is precomputed
+
+Function: qfbnupow
+Class: basic
+Section: number_theoretical
+C-Name: nupow
+Prototype: GG
+Help: qfbnupow(x,n): n-th power of primitive positive definite quadratic
+ form x using nucomp and nudupl
+
+Function: qfbpowraw
+Class: basic
+Section: number_theoretical
+C-Name: powraw
+Prototype: GL
+Help: qfbpowraw(x,n): n-th power without reduction of the binary quadratic
+ form x
+
+Function: qfbprimeform
+Class: basic
+Section: number_theoretical
+C-Name: primeform
+Prototype: GGp
+Help: qfbprimeform(x,p): returns the prime form of discriminant x, whose
+ first coefficient is p
+
+Function: qfbred
+Class: basic
+Section: number_theoretical
+C-Name: qfbred0
+Prototype: GD0,L,DGDGDG
+Help: qfbred(x,{flag=0},{D},{isqrtD},{sqrtD}): reduction of the binary
+ quadratic form x. All other args. are optional. D, isqrtD and sqrtD, if
+ present, supply the values of the discriminant, floor(sqrt(D)) and sqrt(D)
+ respectively. If D<0, its value is not used and all references to Shanks's
+ distance hereafter are meaningless. flag can be any of 0: default, uses
+ Shanks's distance function d; 1: use d, do a single reduction step; 2: do
+ not use d; 3: do not use d, single reduction step.
+
+Function: qfbsolve
+Class: basic
+Section: number_theoretical
+C-Name: qfbsolve
+Prototype: GG
+Help: qfbsolve(Q,p): Return [x,y] so that Q(x,y)=p where Q is a binary
+ quadratic form and p a prime number, or 0 if there is no solution.
+
+Function: qfgaussred
+Class: basic
+Section: linear_algebra
+C-Name: sqred
+Prototype: G
+Help: qfgaussred(x): square reduction of the (symmetric) matrix x (returns a
+ square matrix whose i-th diagonal term is the coefficient of the i-th square
+ in which the coefficient of the i-th variable is 1)
+
+Function: qfjacobi
+Class: basic
+Section: linear_algebra
+C-Name: jacobi
+Prototype: Gp
+Help: qfjacobi(x): eigenvalues and orthogonal matrix of eigenvectors of the
+ real symmetric matrix x
+
+Function: qflll
+Class: basic
+Section: linear_algebra
+C-Name: qflll0
+Prototype: GD0,L,p
+Help: qflll(x,{flag=0}): LLL reduction of the vectors forming the matrix x
+ (gives the unimodular transformation matrix). The columns of x must be
+ linearly independent, unless specified otherwise below. flag is optional, 
+ and can be 0: default, 1: assumes x is integral, columns may be dependent, 2:
+ assumes x is integral, returns a partially reduced basis, 4: assumes x is 
+ integral, returns [K,I] where K is the integer kernel of x and I the LLL
+ reduced image, 5: same as 4 but x may have polynomial coefficients, 8: same
+ as 0 but x may have polynomial coefficients
+Description: 
+ (vec, ?0):vec:prec	lll($1, prec)
+ (vec, 1):vec	lllint($1)
+ (vec, 2):vec	lllintpartial($1)
+ (vec, 4):vec	lllkerim($1)
+ (vec, 5):vec	lllkerimgen($1)
+ (vec, 8):vec	lllgen($1)
+ (vec, #small):vec	$"Bad flag in qflll"
+ (vec, small):vec:prec	qflll0($1, $2, prec)
+
+Function: qflllgram
+Class: basic
+Section: linear_algebra
+C-Name: qflllgram0
+Prototype: GD0,L,p
+Help: qflllgram(x,{flag=0}): LLL reduction of the lattice whose gram matrix
+ is x (gives the unimodular transformation matrix). flag is optional and can
+ be 0: default,1: lllgramint algorithm for integer matrices, 4: lllgramkerim
+ giving the kernel and the LLL reduced image, 5: lllgramkerimgen same when
+ the matrix has polynomial coefficients, 8: lllgramgen, same as qflllgram
+ when the coefficients are polynomials
+
+Function: qfminim
+Class: basic
+Section: linear_algebra
+C-Name: qfminim0
+Prototype: GDGDGD0,L,p
+Help: qfminim(x,{bound},{maxnum},{flag=0}): number of vectors of square norm <=
+ bound, maximum norm and list of vectors for the integral and definite
+ quadratic form x; minimal non-zero vectors if bound=0. flag is optional, and
+ can be 0: default; 1: returns the first minimal vector found (ignore
+ maxnum); 2: as 0 but uses a more robust, slower implementation, valid for
+ non integral quadratic forms
+
+Function: qfperfection
+Class: basic
+Section: linear_algebra
+C-Name: perf
+Prototype: G
+Help: qfperfection(a): rank of matrix of xx~ for x minimal vectors of a gram
+ matrix a
+
+Function: qfrep
+Class: basic
+Section: linear_algebra
+C-Name: qfrep0
+Prototype: GGD0,L,
+Help: qfrep(x,B,{flag=0}): vector of (half) the number of vectors of norms
+ from 1 to B for the integral and definite quadratic form x. Binary digits of
+ flag mean 1: count vectors of even norm from 1 to 2B, 2: return a t_VECSMALL
+ instead of a t_VEC
+
+Function: qfsign
+Class: basic
+Section: linear_algebra
+C-Name: signat
+Prototype: G
+Help: qfsign(x): signature of the symmetric matrix x
+
+Function: quadclassunit
+Class: basic
+Section: number_theoretical
+C-Name: quadclassunit0
+Prototype: GD0,L,DGp
+Help: quadclassunit(D,{flag=0},{tech=[]}): compute the structure of the
+ class group and the regulator of the quadratic field of discriminant D. If
+ flag is non-null (and D>0), compute the narrow class group. See manual for
+ the optional technical parameters
+
+Function: quaddisc
+Class: basic
+Section: number_theoretical
+C-Name: quaddisc
+Prototype: G
+Help: quaddisc(x): discriminant of the quadratic field Q(sqrt(x))
+
+Function: quadgen
+Class: basic
+Section: number_theoretical
+C-Name: quadgen
+Prototype: G
+Help: quadgen(x): standard generator of quadratic order of discriminant x
+
+Function: quadhilbert
+Class: basic
+Section: number_theoretical
+C-Name: quadhilbert
+Prototype: GDGp
+Help: quadhilbert(D,{pq}): relative equation for the Hilbert class field
+ of the quadratic field of discriminant D (which can also be a bnf).
+ If D<0, pq (if supplied) is a 2-component vector [p,q], where p,q are the
+ prime numbers needed for Schertz's method. In that case, return 0 if [p,q]
+ not suitable.
+
+Function: quadpoly
+Class: basic
+Section: number_theoretical
+C-Name: quadpoly0
+Prototype: GDn
+Help: quadpoly(D,{v=x}): quadratic polynomial corresponding to the
+ discriminant D, in variable v
+
+Function: quadray
+Class: basic
+Section: number_theoretical
+C-Name: quadray
+Prototype: GGDGp
+Help: quadray(D,f,{lambda}): relative equation for the ray class field of
+ conductor f for the quadratic field of discriminant D (which can also be a
+ bnf). For D < 0, lambda (if supplied) is the technical element of bnf 
+ necessary for Schertz's method. In that case, return 0 if lambda is not
+ suitable.
+
+Function: quadregulator
+Class: basic
+Section: number_theoretical
+C-Name: gregula
+Prototype: Gp
+Help: quadregulator(x): regulator of the real quadratic field of
+ discriminant x
+Description: 
+ (int):mp:prec	regula($1, prec)
+ (gen):gen:prec	gregula($1, prec)
+
+Function: quadunit
+Class: basic
+Section: number_theoretical
+C-Name: gfundunit
+Prototype: Gp
+Help: quadunit(x): fundamental unit of the quadratic field of discriminant x
+ where x must be positive
+Description: 
+ (int):gen	fundunit($1)
+ (gen):gen	gfundunit($1)
+
+Function: quit
+Class: gp
+Section: programming
+C-Name: gp_quit
+Prototype: v
+Help: quit(): quits GP and return to the system
+
+Function: random
+Class: basic
+Section: conversions
+C-Name: genrand
+Prototype: DG
+Help: random({N=2^31}): random integer between 0 and N-1
+Description: 
+ (?int):int	genrand($1)
+ (real):void	$"incorrect type `real' in random"
+
+Function: read
+Class: gp
+Section: programming
+C-Name: read0
+Prototype: D"",s,
+Help: read({filename}): read from the input file filename. If filename is
+ omitted, reread last input file, be it from read() or \r
+Description: 
+ (str):gen      gp_read_file($1)
+
+Function: readvec
+Class: basic
+Section: programming
+C-Name: gp_readvec_file
+Prototype: D"",s,
+Help: readvec({filename}): create a vector whose components are the evaluation
+ of all the expressions found in the input file filename
+Description: 
+ (str):gen      gp_readvec_file($1)
+
+Function: real
+Class: basic
+Section: conversions
+C-Name: greal
+Prototype: G
+Help: real(x): real part of x
+
+Function: removeprimes
+Class: basic
+Section: number_theoretical
+C-Name: removeprimes
+Prototype: DG
+Help: removeprimes({x=[]}): remove primes in the vector x (with at most 100
+ components) from the prime table. x can also be a single integer. List the
+ current extra primes if x is omitted
+
+Function: reorder
+Class: basic
+Section: programming
+C-Name: reorder
+Prototype: DG
+Help: reorder({x=[]}): reorder the variables for output according to the
+ vector x. If x is void or omitted, print the current list of variables
+
+Function: return
+Class: basic
+Section: programming
+C-Name: return0
+Prototype: DG
+Help: return({x=0}): return from current subroutine with result x
+
+Function: rnfalgtobasis
+Class: basic
+Section: number_fields
+C-Name: rnfalgtobasis
+Prototype: GG
+Help: rnfalgtobasis(rnf,x): relative version of nfalgtobasis, where rnf is a
+ relative numberfield
+
+Function: rnfbasis
+Class: basic
+Section: number_fields
+C-Name: rnfbasis
+Prototype: GG
+Help: rnfbasis(bnf,order): given an order as output by rnfpseudobasis or
+ rnfsteinitz, gives either a basis of the order if it is free, or an
+ n+1-element generating set
+
+Function: rnfbasistoalg
+Class: basic
+Section: number_fields
+C-Name: rnfbasistoalg
+Prototype: GG
+Help: rnfbasistoalg(rnf,x): relative version of nfbasistoalg, where rnf is a
+ relative numberfield
+
+Function: rnfcharpoly
+Class: basic
+Section: number_fields
+C-Name: rnfcharpoly
+Prototype: GGGDn
+Help: rnfcharpoly(nf,T,alpha,{var=x}): characteristic polynomial of alpha
+ over nf, where alpha belongs to the algebra defined by T over nf. Returns a
+ polynomial in variable var (x by default)
+
+Function: rnfconductor
+Class: basic
+Section: number_fields
+C-Name: rnfconductor
+Prototype: GGD0,L,
+Help: rnfconductor(bnf,polrel,{flag=0}): conductor of the Abelian extension
+ of bnf defined by polrel. The result is [conductor,rayclassgroup,subgroup],
+ where conductor is the conductor itself, rayclassgroup the structure of the
+ corresponding full ray class group, and subgroup the HNF defining the norm
+ group (Artin or Takagi group) on the given generators rayclassgroup[3]. If
+ flag is non-zero, check that polrel indeed defines an Abelian extension
+
+Function: rnfdedekind
+Class: basic
+Section: number_fields
+C-Name: rnfdedekind
+Prototype: GGG
+Help: rnfdedekind(nf,T,pr): relative Dedekind criterion over nf, applied to
+ the order defined by a root of irreducible polynomial T, modulo the prime
+ ideal pr. Returns [flag,basis,val], where basis is a pseudo-basis of the
+ enlarged order, flag is 1 iff this order is pr-maximal, and val is the
+ valuation in pr of the order discriminant
+
+Function: rnfdet
+Class: basic
+Section: number_fields
+C-Name: rnfdet
+Prototype: GG
+Help: rnfdet(nf,order): given a pseudomatrix, compute its pseudodeterminant
+
+Function: rnfdisc
+Class: basic
+Section: number_fields
+C-Name: rnfdiscf
+Prototype: GG
+Help: rnfdisc(nf,pol): given a pol with coefficients in nf, gives a
+ 2-component vector [D,d], where D is the relative ideal discriminant, and d
+ is the relative discriminant in nf^*/nf*^2
+
+Function: rnfeltabstorel
+Class: basic
+Section: number_fields
+C-Name: rnfelementabstorel
+Prototype: GG
+Help: rnfeltabstorel(rnf,x): transforms the element x from absolute to
+ relative representation
+
+Function: rnfeltdown
+Class: basic
+Section: number_fields
+C-Name: rnfelementdown
+Prototype: GG
+Help: rnfeltdown(rnf,x): expresses x on the base field if possible; returns
+ an error otherwise
+
+Function: rnfeltreltoabs
+Class: basic
+Section: number_fields
+C-Name: rnfelementreltoabs
+Prototype: GG
+Help: rnfeltreltoabs(rnf,x): transforms the element x from relative to
+ absolute representation
+
+Function: rnfeltup
+Class: basic
+Section: number_fields
+C-Name: rnfelementup
+Prototype: GG
+Help: rnfeltup(rnf,x): expresses x (belonging to the base field) on the
+ relative field
+
+Function: rnfequation
+Class: basic
+Section: number_fields
+C-Name: rnfequation0
+Prototype: GGD0,L,
+Help: rnfequation(nf,pol,{flag=0}): given a pol with coefficients in nf,
+ gives the absolute equation apol of the number field defined by pol. flag is
+ optional, and can be 0: default, or non-zero, gives [apol,th], where th
+ expresses the root of nf.pol in terms of the root of apol
+
+Function: rnfhnfbasis
+Class: basic
+Section: number_fields
+C-Name: rnfhnfbasis
+Prototype: GG
+Help: rnfhnfbasis(bnf,order): given an order as output by rnfpseudobasis,
+ gives either a true HNF basis of the order if it exists, zero otherwise
+
+Function: rnfidealabstorel
+Class: basic
+Section: number_fields
+C-Name: rnfidealabstorel
+Prototype: GG
+Help: rnfidealabstorel(rnf,x): transforms the ideal x from absolute to
+ relative representation
+
+Function: rnfidealdown
+Class: basic
+Section: number_fields
+C-Name: rnfidealdown
+Prototype: GG
+Help: rnfidealdown(rnf,x): finds the intersection of the ideal x with the
+ base field
+
+Function: rnfidealhnf
+Class: basic
+Section: number_fields
+C-Name: rnfidealhermite
+Prototype: GG
+Help: rnfidealhnf(rnf,x): relative version of idealhnf, where rnf is a
+ relative numberfield
+
+Function: rnfidealmul
+Class: basic
+Section: number_fields
+C-Name: rnfidealmul
+Prototype: GGG
+Help: rnfidealmul(rnf,x,y): relative version of idealmul, where rnf is a
+ relative numberfield
+
+Function: rnfidealnormabs
+Class: basic
+Section: number_fields
+C-Name: rnfidealnormabs
+Prototype: GG
+Help: rnfidealnormabs(rnf,x): absolute norm of the ideal x
+
+Function: rnfidealnormrel
+Class: basic
+Section: number_fields
+C-Name: rnfidealnormrel
+Prototype: GG
+Help: rnfidealnormrel(rnf,x): relative norm of the ideal x
+
+Function: rnfidealreltoabs
+Class: basic
+Section: number_fields
+C-Name: rnfidealreltoabs
+Prototype: GG
+Help: rnfidealreltoabs(rnf,x): transforms the ideal x from relative to
+ absolute representation
+
+Function: rnfidealtwoelt
+Class: basic
+Section: number_fields
+C-Name: rnfidealtwoelement
+Prototype: GG
+Help: rnfidealtwoelt(rnf,x): relative version of idealtwoelt, where rnf
+ is a relative numberfield
+
+Function: rnfidealup
+Class: basic
+Section: number_fields
+C-Name: rnfidealup
+Prototype: GG
+Help: rnfidealup(rnf,x): lifts the ideal x (of the base field) to the
+ relative field
+
+Function: rnfinit
+Class: basic
+Section: number_fields
+C-Name: rnfinitalg
+Prototype: GGp
+Help: rnfinit(nf,pol): pol being a non constant irreducible polynomial
+ defined over the number field nf, initializes a vector of data necessary for
+ working in relative number fields (rnf functions). See manual for technical
+ details
+
+Function: rnfisfree
+Class: basic
+Section: number_fields
+C-Name: rnfisfree
+Prototype: lGG
+Help: rnfisfree(bnf,order): given an order as output by rnfpseudobasis or
+ rnfsteinitz, outputs true (1) or false (0) according to whether the order is
+ free or not
+
+Function: rnfisnorm
+Class: basic
+Section: number_fields
+C-Name: rnfisnorm
+Prototype: GGD0,L,
+Help: rnfisnorm(T,x,{flag=0}): T is as output by rnfisnorminit applied to
+ L/K. Tries to tell whether x is a norm from L/K. Returns a vector [a,b]
+ where x=Norm(a)*b. Looks for a solution which is a S-integer, with S a list
+ of places in K containing the ramified primes, generators of the class group
+ of ext, as well as those primes dividing x. If L/K is Galois, omit flag,
+ otherwise it is used to add more places to S: all the places above the
+ primes p <= flag (resp. p | flag) if flag > 0 (resp. flag < 0). The answer
+ is guaranteed (i.e x norm iff b=1) if L/K is Galois or, under GRH, if S
+ contains all primes less than 12.log(disc(M))^2, where M is the normal
+ closure of L/K
+
+Function: rnfisnorminit
+Class: basic
+Section: number_fields
+C-Name: rnfisnorminit
+Prototype: GGD2,L,
+Help: rnfisnorminit(pol,polrel,{flag=2}): let K be defined by a root of pol,
+ L/K the extension defined by polrel. Compute technical data needed by
+ rnfisnorm to solve norm equations Nx = a, for x in L, and a in K. If flag=0,
+ do not care whether L/K is Galois or not; if flag = 1, assume L/K is Galois;
+ if flag = 2, determine whether L/K is Galois
+
+Function: rnfkummer
+Class: basic
+Section: number_fields
+C-Name: rnfkummer
+Prototype: GDGD0,L,p
+Help: rnfkummer(bnr,{subgroup},{deg=0}): bnr being as output by bnrinit,
+ finds a relative equation for the class field corresponding to the module in
+ bnr and the given congruence subgroup (the ray class field if subgroup is
+ omitted). deg can be zero (default), or positive, and in this case the
+ output is the list of all relative equations of degree deg for the given bnr
+
+Function: rnflllgram
+Class: basic
+Section: number_fields
+C-Name: rnflllgram
+Prototype: GGGp
+Help: rnflllgram(nf,pol,order): given a pol with coefficients in nf and an
+ order as output by rnfpseudobasis or similar, gives [[neworder],U], where
+ neworder is a reduced order and U is the unimodular transformation matrix
+
+Function: rnfnormgroup
+Class: basic
+Section: number_fields
+C-Name: rnfnormgroup
+Prototype: GG
+Help: rnfnormgroup(bnr,polrel): norm group (or Artin or Takagi group)
+ corresponding to the Abelian extension of bnr.bnf defined by polrel, where
+ the module corresponding to bnr is assumed to be a multiple of the
+ conductor. The result is the HNF defining the norm group on the given
+ generators in bnr[5][3]
+
+Function: rnfpolred
+Class: basic
+Section: number_fields
+C-Name: rnfpolred
+Prototype: GGp
+Help: rnfpolred(nf,pol): given a pol with coefficients in nf, finds a list
+ of relative polynomials defining some subfields, hopefully simpler
+
+Function: rnfpolredabs
+Class: basic
+Section: number_fields
+C-Name: rnfpolredabs
+Prototype: GGD0,L,
+Help: rnfpolredabs(nf,pol,{flag=0}): given a pol with coefficients in nf,
+ finds a relative simpler polynomial defining the same field. Binary digits
+ of flag mean: 1: return also the element whose characteristic polynomial is
+ the given polynomial, 2: return an absolute polynomial, 16: partial
+ reduction
+
+Function: rnfpseudobasis
+Class: basic
+Section: number_fields
+C-Name: rnfpseudobasis
+Prototype: GG
+Help: rnfpseudobasis(nf,pol): given a pol with coefficients in nf, gives a
+ 4-component vector [A,I,D,d] where [A,I] is a pseudo basis of the maximal
+ order in HNF on the power basis, D is the relative ideal discriminant, and d
+ is the relative discriminant in nf^*/nf*^2
+
+Function: rnfsteinitz
+Class: basic
+Section: number_fields
+C-Name: rnfsteinitz
+Prototype: GG
+Help: rnfsteinitz(nf,order): given an order as output by rnfpseudobasis,
+ gives [A,I,D,d] where (A,I) is a pseudo basis where all the ideals except
+ perhaps the last are trivial
+
+Function: round
+Class: basic
+Section: conversions
+C-Name: round0
+Prototype: GD&
+Help: round(x,{&e}): take the nearest integer to all the coefficients of x.
+ If e is present, do not take into account loss of integer part precision,
+ and set e = error estimate in bits
+Description: 
+ (small):small:parens   $1
+ (int):int:copy:parens  $1
+ (real):int             roundr($1)
+ (mp):int               mpround($1)
+ (mp, &small):int       grndtoi($1, &$2)
+ (mp, &int):int         round0($1, &$2)
+ (gen):gen              ground($1)
+ (gen, &small):gen      grndtoi($1, &$2)
+ (gen, &int):gen        round0($1, &$2)
+
+Function: serconvol
+Class: basic
+Section: polynomials
+C-Name: convol
+Prototype: GG
+Help: serconvol(x,y): convolution (or Hadamard product) of two power series
+
+Function: serlaplace
+Class: basic
+Section: polynomials
+C-Name: laplace
+Prototype: G
+Help: serlaplace(x): replaces the power series sum of a_n*x^n/n! by sum of
+ a_n*x^n. For the reverse operation, use serconvol(x,exp(X))
+
+Function: serreverse
+Class: basic
+Section: polynomials
+C-Name: recip
+Prototype: G
+Help: serreverse(x): reversion of the power series x
+
+Function: setintersect
+Class: basic
+Section: linear_algebra
+C-Name: setintersect
+Prototype: GG
+Help: setintersect(x,y): intersection of the sets x and y
+Description: 
+ (vec, vec):vec	setintersect($1, $2)
+
+Function: setisset
+Class: basic
+Section: linear_algebra
+C-Name: setisset
+Prototype: lG
+Help: setisset(x): true(1) if x is a set (row vector with strictly
+ increasing entries), false(0) if not
+
+Function: setminus
+Class: basic
+Section: linear_algebra
+C-Name: setminus
+Prototype: GG
+Help: setminus(x,y): set of elements of x not belonging to y
+Description: 
+ (vec, vec):vec	setminus($1, $2)
+
+Function: setrand
+Class: basic
+Section: programming
+C-Name: setrand
+Prototype: lL
+Help: setrand(n): reset the seed of the random number generator to n
+
+Function: setsearch
+Class: basic
+Section: linear_algebra
+C-Name: setsearch
+Prototype: lGGD0,L,
+Help: setsearch(x,y,{flag=0}): looks if y belongs to the set x. If flag is 0
+ or omitted, returns 0 if it is not, otherwise returns the index j such that
+ y==x[j]. If flag is non-zero, return 0 if y belongs to x, otherwise the
+ index j where it should be inserted
+
+Function: setunion
+Class: basic
+Section: linear_algebra
+C-Name: setunion
+Prototype: GG
+Help: setunion(x,y): union of the sets x and y
+Description: 
+ (vec, vec):vec	setunion($1, $2)
+
+Function: shift
+Class: basic
+Section: operators
+C-Name: gshift
+Prototype: GL
+Help: shift(x,n): shift x left n bits if n>=0, right -n bits if
+ n<0.
+
+Function: shiftmul
+Class: basic
+Section: operators
+C-Name: gmul2n
+Prototype: GL
+Help: shiftmul(x,n): multiply x by 2^n (n>=0 or n<0)
+
+Function: sigma
+Class: basic
+Section: number_theoretical
+C-Name: gsumdivk
+Prototype: GD1,L,
+Help: sigma(x,{k=1}): sum of the k-th powers of the divisors of x. k is
+ optional and if omitted is assumed to be equal to 1
+Description: 
+ (int, ?1):int	sumdiv($1)
+ (int, 0):int	numbdiv($1)
+ (gen, ?1):gen	gsumdiv($1)
+ (gen, 0):gen	gnumbdiv($1)
+ (int, small):int	sumdivk($1, $2)
+ (gen, small):gen	gsumdivk($1, $2)
+
+Function: sign
+Class: basic
+Section: operators
+C-Name: gsigne
+Prototype: iG
+Help: sign(x): sign of x, of type integer, real or fraction
+Description: 
+ (mp):small          signe($1)
+ (gen):small        gsigne($1)
+
+Function: simplify
+Class: basic
+Section: conversions
+C-Name: simplify
+Prototype: G
+Help: simplify(x): simplify the object x as much as possible
+
+Function: sin
+Class: basic
+Section: transcendental
+C-Name: gsin
+Prototype: Gp
+Help: sin(x): sine of x
+
+Function: sinh
+Class: basic
+Section: transcendental
+C-Name: gsh
+Prototype: Gp
+Help: sinh(x): hyperbolic sine of x
+
+Function: sizebyte
+Class: basic
+Section: conversions
+C-Name: taille2
+Prototype: lG
+Help: sizebyte(x): number of bytes occupied by the complete tree of the
+ object x
+
+Function: sizedigit
+Class: basic
+Section: conversions
+C-Name: sizedigit
+Prototype: lG
+Help: sizedigit(x): maximum number of decimal digits minus one of (the
+ coefficients of) x
+
+Function: solve
+Class: basic
+Section: sums
+C-Name: zbrent0
+Prototype: V=GGEp
+Help: solve(X=a,b,expr): real root of expression expr (X between a and b),
+ where expr(a)*expr(b)<=0
+
+Function: sqr
+Class: basic
+Section: transcendental
+C-Name: gsqr
+Prototype: G
+Help: sqr(x): square of x. NOT identical to x*x
+Description: 
+ (int):int	sqri($1)
+ (mp):mp	gsqr($1)
+ (gen):gen	gsqr($1)
+
+Function: sqrt
+Class: basic
+Section: transcendental
+C-Name: gsqrt
+Prototype: Gp
+Help: sqrt(x): square root of x
+Description: 
+ (real):gen           sqrtr($1)
+ (gen):gen:prec       gsqrt($1, prec)
+
+Function: sqrtint
+Class: basic
+Section: number_theoretical
+C-Name: racine
+Prototype: G
+Help: sqrtint(x): integer square root of x (x integer)
+Description: 
+ (gen):int racine($1)
+
+Function: sqrtn
+Class: basic
+Section: transcendental
+C-Name: gsqrtn
+Prototype: GGD&p
+Help: sqrtn(x,n,{&z}): nth-root of x, n must be integer. If present, z is
+ set to a suitable root of unity to recover all solutions. If it was not
+ possible, z is set to zero
+
+Function: subgrouplist
+Class: basic
+Section: number_fields
+C-Name: subgrouplist0
+Prototype: GDGD0,L,
+Help: subgrouplist(bnr,{bound},{flag=0}): bnr being as output by bnrinit or
+ a list of cyclic components of a finite Abelian group G, outputs the list of
+ subgroups of G (of index bounded by bound, if not omitted), given as HNF
+ left divisors of the SNF matrix corresponding to G. If flag=0 (default) and
+ bnr is as output by bnrinit, gives only the subgroups for which the modulus
+ is the conductor
+
+Function: subst
+Class: basic
+Section: polynomials
+C-Name: gsubst
+Prototype: GnG
+Help: subst(x,y,z): in expression x, replace the variable y by the
+ expression z
+
+Function: substpol
+Class: basic
+Section: polynomials
+C-Name: gsubstpol
+Prototype: GGG
+Help: substpol(x,y,z): in expression x, replace the polynomial y by the
+ expression z, using remainder decomposition of x.
+
+Function: substvec
+Class: basic
+Section: polynomials
+C-Name: gsubstvec
+Prototype: GGG
+Help: substvec(x,v,w): in expression x, make a best effort to replace the
+ variables v1,...,vn by the expression w1,...,wn
+
+Function: sum
+Class: basic
+Section: sums
+C-Name: somme
+Prototype: V=GGEDG
+Help: sum(X=a,b,expr,{x=0}): x plus the sum (X goes from a to b) of
+ expression expr
+
+Function: sumalt
+Class: basic
+Section: sums
+C-Name: sumalt0
+Prototype: V=GED0,L,p
+Help: sumalt(X=a,expr,{flag=0}): Cohen-Villegas-Zagier's acceleration of
+ alternating series expr, X starting at a. flag is optional, and can be 0:
+ default, or 1: uses a slightly different method using Zagier's polynomials
+
+Function: sumdiv
+Class: basic
+Section: sums
+C-Name: divsum
+Prototype: GVE
+Help: sumdiv(n,X,expr): sum of expression expr, X running over the divisors
+ of n
+
+Function: suminf
+Class: basic
+Section: sums
+C-Name: suminf0
+Prototype: V=GEp
+Help: suminf(X=a,expr): infinite sum (X goes from a to infinity) of real or
+ complex expression expr
+
+Function: sumnum
+Class: basic
+Section: sums
+C-Name: sumnum0
+Prototype: V=GGEDGD0,L,p
+Help: sumnum(X=a,sig,expr,{tab},{flag=0}): numerical summation of expr from 
+ X = ceiling(a) to +infinity. sig is either a scalar or a two-component vector
+ coding the function's decrease rate at infinity. It is assumed that the
+ scalar part of sig is to the right of all poles of expr. If present, tab
+ must be initialized by sumnuminit. If flag is nonzero, assumes that
+ conj(expr(z)) = expr(conj(z)).
+
+Function: sumnumalt
+Class: basic
+Section: sums
+C-Name: sumnumalt0
+Prototype: V=GGEDGD0,L,p
+Help: sumnumalt(X=a,sig,s,{tab},{flag=0}): numerical summation of (-1)^X s
+ from X = ceiling(a) to +infinity. Note that the (-1)^X must not be included.
+ sig is either a scalar or a two-component vector coded as in intnum, and the 
+ scalar part is larger than all the real parts of the poles of s. Uses intnum,
+ hence tab is as in intnum. If flag is nonzero, assumes that the function to 
+ be summed satisfies conj(f(z))=f(conj(z)), and then up to twice faster.
+
+Function: sumnuminit
+Class: basic
+Section: sums
+C-Name: sumnuminit
+Prototype: GD0,L,D1,L,p
+Help: sumnuminit(sig, {m=0}, {sgn=1}): initialize tables for numerical
+ summation. sgn is 1 (in fact >= 0), the default, for sumnum (ordinary sums) 
+ or -1 (in fact < 0) for sumnumalt (alternating sums). sig is as in sumnum and
+ m is as in intnuminit.
+
+Function: sumpos
+Class: basic
+Section: sums
+C-Name: sumpos0
+Prototype: V=GED0,L,p
+Help: sumpos(X=a,expr,{flag=0}): sum of positive series expr, the formal
+ variable X starting at a. flag is optional, and can be 0: default, or 1:
+ uses a slightly different method using Zagier's polynomials
+
+Function: system
+Class: gp
+Section: programming
+C-Name: system0
+Prototype: vs
+Help: system(a): a being a string, execute the system command a (not valid
+ on every machine)
+
+Function: tan
+Class: basic
+Section: transcendental
+C-Name: gtan
+Prototype: Gp
+Help: tan(x): tangent of x
+
+Function: tanh
+Class: basic
+Section: transcendental
+C-Name: gth
+Prototype: Gp
+Help: tanh(x): hyperbolic tangent of x
+
+Function: taylor
+Class: basic
+Section: polynomials
+C-Name: tayl
+Prototype: GnP
+Help: taylor(x,y): taylor expansion of x with respect to the main variable
+ of y
+
+Function: teichmuller
+Class: basic
+Section: transcendental
+C-Name: teich
+Prototype: G
+Help: teichmuller(x): teichmuller character of p-adic number x
+
+Function: theta
+Class: basic
+Section: transcendental
+C-Name: theta
+Prototype: GGp
+Help: theta(q,z): Jacobi sine theta-function
+
+Function: thetanullk
+Class: basic
+Section: transcendental
+C-Name: thetanullk
+Prototype: GLp
+Help: thetanullk(q,k): k'th derivative at z=0 of theta(q,z)
+
+Function: thue
+Class: basic
+Section: polynomials
+C-Name: thue
+Prototype: GGDG
+Help: thue(tnf,a,{sol}): solve the equation P(x,y)=a, where tnf was created
+ with thueinit(P), and sol, if present, contains the solutions of Norm(x)=a
+ modulo units in the number field defined by P. If tnf was computed without
+ assuming GRH (flag 1 in thueinit), the result is unconditional
+
+Function: thueinit
+Class: basic
+Section: polynomials
+C-Name: thueinit
+Prototype: GD0,L,p
+Help: thueinit(P,{flag=0}): initialize the tnf corresponding to P, that will
+ be used to solve Thue equations P(x,y) = some-integer. If flag is non-zero,
+ certify the result unconditionnaly. Otherwise, assume GRH (much faster of
+ course)
+
+Function: trace
+Class: basic
+Section: linear_algebra
+C-Name: gtrace
+Prototype: G
+Help: trace(x): trace of x
+
+Function: trap
+Class: basic
+Section: programming
+C-Name: trap0
+Prototype: D"",r,DIDI
+Help: trap({err}, {rec}, {seq}): try to execute seq, trapping error err (all
+ of them if err ommitted); sequence rec is executed if the error occurs and
+ is the result of the command. When seq is omitted, define rec as a default
+ handler for error err (a break loop will be started if rec omitted). If rec
+ is the empty string "" pop out the last default handler
+
+Function: truncate
+Class: basic
+Section: conversions
+C-Name: trunc0
+Prototype: GD&
+Help: truncate(x,{&e}): truncation of x; when x is a power series,take away
+ the O(X^). If e is present, do not take into account loss of integer part
+ precision, and set e = error estimate in bits
+Description: 
+ (small):small:parens   $1
+ (int):int:copy:parens  $1
+ (real):int             truncr($1)
+ (mp):int               mptrunc($1)
+ (mp, &small):int       gcvtoi($1, &$2)
+ (mp, &int):int         trunc0($1, &$2)
+ (gen):gen              gtrunc($1)
+ (gen, &small):gen      gcvtoi($1, &$2)
+ (gen, &int):gen        trunc0($1, &$2)
+
+Function: type
+Class: basic
+Section: programming
+C-Name: type0
+Prototype: G
+Help: type(x): return the type of the GEN x.
+Description: 
+ (gen):typ              typ($1)
+
+Function: unclone
+Class: gp2c
+Description: 
+ (small):void   (void)0 /*unclone*/
+ (gen):void     gunclone($1)
+
+Function: until
+Class: basic
+Section: programming
+Help: until(a,seq): evaluate the expression sequence seq until a is nonzero
+
+Function: valuation
+Class: basic
+Section: conversions
+C-Name: ggval
+Prototype: lGG
+Help: valuation(x,p): valuation of x with respect to p
+
+Function: variable
+Class: basic
+Section: conversions
+C-Name: gpolvar
+Prototype: G
+Help: variable(x): main variable of object x. Gives p for p-adic x, error
+ for scalars
+Description: 
+ (pol):var:parens:copy	$var:1
+ (gen):gen	gpolvar($1)
+
+Function: vecextract
+Class: basic
+Section: linear_algebra
+C-Name: extract0
+Prototype: GGDG
+Help: vecextract(x,y,{z}): extraction of the components of the matrix or
+ vector x according to y and z. If z is omitted, y designs columns, otherwise
+ y corresponds to rows and z to columns. y and z can be vectors (of indices),
+ strings (indicating ranges as in "1..10") or masks (integers whose binary
+ representation indicates the indices to extract, from left to right 1, 2, 4,
+ 8, etc.)
+
+Function: vecmax
+Class: basic
+Section: operators
+C-Name: vecmax
+Prototype: G
+Help: vecmax(x): maximum of the elements of the vector/matrix x
+
+Function: vecmin
+Class: basic
+Section: operators
+C-Name: vecmin
+Prototype: G
+Help: vecmin(x): minimum of the elements of the vector/matrix x
+
+Function: vecsort
+Class: basic
+Section: linear_algebra
+C-Name: vecsort0
+Prototype: GDGD0,L,
+Help: vecsort(x,{k},{flag=0}): sorts the vector of vectors (or matrix) x in
+ ascending order, according to the value of its k-th component if k is not
+ omitted. Binary digits of flag (if present) mean: 1: indirect sorting,
+ return the permutation instead of the permuted vector, 2: sort using
+ lexicographic order, 4: use descending instead of ascending order
+Description: 
+ (vec):vec	sort($1)
+ (vec, gen):vec	vecsort0($1, $2, 0)
+ (vec, , 0):vec	sort($1)
+ (vec, , 1):vec	indexsort($1)
+ (vec, , 2):vec	lexsort($1)
+ (vec, , small):vec	vecsort0($1, NULL, $3)
+ (vec, gen, small):vec	vecsort0($1, $2, $3)
+
+Function: vector
+Class: basic
+Section: linear_algebra
+C-Name: vecteur
+Prototype: GDVDI
+Help: vector(n,{X},{expr=0}): row vector with n components of expression
+ expr (X ranges from 1 to n). By default, fill with 0s
+
+Function: vectorsmall
+Class: basic
+Section: linear_algebra
+C-Name: vecteursmall
+Prototype: GDVDI
+Help: vectorsmall(n,{X},{expr=0}): VECSMALL with n components of expression
+ expr (X ranges from 1 to n) which must be small integers. By default, fill
+ with 0s
+
+Function: vectorv
+Class: basic
+Section: linear_algebra
+C-Name: vvecteur
+Prototype: GDVDI
+Help: vectorv(n,{X},{expr=0}): column vector with n components of expression
+ expr (X ranges from 1 to n). By default, fill with 0s
+
+Function: version
+Class: gp
+Section: programming
+C-Name: pari_version
+Prototype: 
+Help: version(): returns the PARI version as [major,minor,patch]
+ 'status'
+Doc: Returns the current version number as a \typ{VEC} with three integer
+ components: major version number, minor version number and patchlevel.
+ To check against a particular version number, you can use:
+ \bprog
+ if (lex(version(), [2,2,0]) >= 0,
+ \\ code to be executed if we are running 2.2.0 or more recent.
+ ,
+ \\ compatibility code
+ );
+ @eprog
+
+Function: weber
+Class: basic
+Section: transcendental
+C-Name: weber0
+Prototype: GD0,L,p
+Help: weber(x,{flag=0}): One of Weber's f function of x. flag is optional,
+ and can be 0: default, function f(x)=exp(-i*Pi/24)*eta((x+1)/2)/eta(x) such
+ that (j=(f^24-16)^3/f^24), 1: function f1(x)=eta(x/2)/eta(x) such that
+ (j=(f1^24+16)^3/f2^24), 2: function f2(x)=sqrt(2)*eta(2*x)/eta(x) such that
+ (j=(f2^24+16)^3/f2^24)
+
+Function: whatnow
+Class: gp
+Section: programming
+C-Name: whatnow0
+Prototype: vr
+Help: whatnow(fun): if fun was present in GP version 1.39.15 or lower, gives
+ the new function name
+Description: 
+ (str):void             whatnow($1, 0)
+
+Function: while
+Class: basic
+Section: programming
+Help: while(a,seq): while a is nonzero evaluate the expression sequence seq.
+ Otherwise 0
+
+Function: write
+Class: basic
+Section: programming
+C-Name: write0
+Prototype: vss*
+Help: write(filename,a): write the string expression a (same output as
+ print) to filename
+
+Function: write1
+Class: basic
+Section: programming
+C-Name: write1
+Prototype: vss*
+Help: write1(filename,a): write the string expression a (same output as
+ print1) to filename
+
+Function: writebin
+Class: basic
+Section: programming
+C-Name: gpwritebin
+Prototype: vsDG
+Help: writebin(filename,{x}): write x as a binary object to file filename.
+ If x is omitted, write all session variables
+
+Function: writetex
+Class: basic
+Section: programming
+C-Name: writetex
+Prototype: vss*
+Help: writetex(filename,a): write the string expression a (same format as
+ print) to filename, in TeX format
+
+Function: zeta
+Class: basic
+Section: transcendental
+C-Name: gzeta
+Prototype: Gp
+Help: zeta(s): Riemann zeta function at s with s a complex or a p-adic number
+
+Function: zetak
+Class: basic
+Section: number_fields
+C-Name: gzetakall
+Prototype: GGD0,L,p
+Help: zetak(nfz,s,{flag=0}): Dedekind zeta function of the number field nfz
+ at s, where nfz is the vector computed by zetakinit (NOT by nfinit) flag is
+ optional, and can be 0: default, compute zetak, or non-zero: compute the
+ lambdak function, i.e. with the gamma factors
+
+Function: zetakinit
+Class: basic
+Section: number_fields
+C-Name: initzeta
+Prototype: Gp
+Help: zetakinit(x): compute number field information necessary to use zetak,
+ where x is an irreducible polynomial
+
+Function: zncoppersmith
+Class: basic
+Section: number_theoretical
+C-Name: zncoppersmith
+Prototype: GGGDG
+Help: zncoppersmith(P, N, X, {B=N}): finds all integers x0
+ with |x0| <= X such that  gcd(N, P(x0)) > B. X should be smaller than
+ exp((log B)^2 / (deg(P) log N)).
+
+Function: znlog
+Class: basic
+Section: number_theoretical
+C-Name: znlog
+Prototype: GG
+Help: znlog(x,g): g as output by znprimroot (modulo a prime). Return
+ smallest non-negative n such that g^n = x
+
+Function: znorder
+Class: basic
+Section: number_theoretical
+C-Name: znorder
+Prototype: GDG
+Help: znorder(x,{o}): order of the integermod x in (Z/nZ)*. Optional o is
+ assumed to be a multiple of the order.
+Description: 
+ (gen):int             order($1)
+ (gen,):int            order($1)
+ (gen,int):int         znorder($1, $2)
+
+Function: znprimroot
+Class: basic
+Section: number_theoretical
+C-Name: ggener
+Prototype: G
+Help: znprimroot(n): returns a primitive root of n when it exists
+Description: 
+ (int):gen	gener($1)
+ (gen):gen	ggener($1)
+
+Function: znstar
+Class: basic
+Section: number_theoretical
+C-Name: znstar
+Prototype: G
+Help: znstar(n): 3-component vector v, giving the structure of (Z/nZ)^*.
+ v[1] is the order (i.e. eulerphi(n)), v[2] is a vector of cyclic components,
+ and v[3] is a vector giving the corresponding generators
+

@@ -1,0 +1,6 @@
+Function: nfeltmul
+Section: number_fields
+C-Name: element_mul
+Prototype: GGG
+Help: nfeltmul(nf,a,b): element a. b in nf
+

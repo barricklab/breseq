@@ -1,0 +1,10 @@
+Function: whatnow
+Class: gp
+Section: programming
+C-Name: whatnow0
+Prototype: vr
+Help: whatnow(fun): if fun was present in GP version 1.39.15 or lower, gives
+ the new function name
+Description:
+ (str):void             whatnow($1, 0)
+

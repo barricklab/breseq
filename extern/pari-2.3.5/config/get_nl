@@ -1,0 +1,13 @@
+echo "Checking echo to see how to suppress newlines..."
+if (echo "hi\c"; echo " ") | grep c >/dev/null 2>&1 ; then
+  echo "...using -n."; n=-n; c=
+else
+  cat <<EOM
+...using \c
+EOM
+  n=; c='\c'
+fi
+if test "$fastread" != yes; then
+  echo $n ..."The star should be here-->$c"; echo '*'
+fi
+

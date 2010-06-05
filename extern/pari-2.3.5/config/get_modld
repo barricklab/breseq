@@ -1,0 +1,27 @@
+# Exported variables
+_modld_list='EXTRAMODLDFLAGS MODLD MODLDFLAGS modules_build'
+
+# EXTRADLLDFLAGS might refer to $LIBS
+__LIBS=$LIBS
+if test "$static" = n; then LIBS="$LIBS $LDDYN"; fi
+case $osname in
+cygwin) EXTRAMODLDFLAGS="-L$libdir -lpari.dll";;
+*)      EXTRAMODLDFLAGS=`eval echo $EXTRADLLDFLAGS`;;
+esac;
+LIBS=$__LIBS
+
+case $osname in
+darwin) MODLD=$CC;
+        MODLDFLAGS="-bundle -flat_namespace -undefined suppress \
+\$(CFLAGS) \$(DLCFLAGS)";;
+*)      MODLD="$DLLD";
+        MODLDFLAGS=`echo "$DLLDFLAGS" | \
+   sed -e 's/,*-[^ \t-]*[ \t,=]*\\$(LIBPARI_SONAME)//' \
+       -e 's/--out-implib=\$(LIBPARI_SO)\$(_A),\?//'`;;
+esac;
+
+modules_build=`echo "$CC -c -o %s.o $CFLAGS $DLCFLAGS -I$includedir %s.c \
+&& $MODLD -o %s.so $MODLDFLAGS %s.o $EXTRAMODLDFLAGS" | \
+               sed -e 's!\$(CFLAGS)'"!$CFLAGS!g" \
+                   -e 's!\$(DLCFLAGS)'"!$DLCFLAGS!g"`
+

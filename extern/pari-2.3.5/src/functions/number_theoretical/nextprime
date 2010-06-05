@@ -1,0 +1,9 @@
+Function: nextprime
+Section: number_theoretical
+C-Name: gnextprime
+Prototype: G
+Help: nextprime(x): smallest pseudoprime >= x
+Description: 
+ (int):int	nextprime($1)
+ (gen):gen	gnextprime($1)
+

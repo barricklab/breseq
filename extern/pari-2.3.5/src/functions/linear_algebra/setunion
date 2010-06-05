@@ -1,0 +1,8 @@
+Function: setunion
+Section: linear_algebra
+C-Name: setunion
+Prototype: GG
+Help: setunion(x,y): union of the sets x and y
+Description: 
+ (vec, vec):vec	setunion($1, $2)
+

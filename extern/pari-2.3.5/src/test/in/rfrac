@@ -1,0 +1,14 @@
+a=[a1,a2,a3,a4,a5,a6];
+prd(b)=prod(n=1,#b,a[n]^b[n])
+
+trap(,print(prd(u), "+", prd(v), "+", prd(w)))
+{doit(i)=
+  V = vector(i,n,[-1,1]);
+  forvec(u=V, A=prd(u);
+  forvec(v=V, B=A+prd(v);
+  forvec(w=V, B+prd(w))))}
+
+doit(4);
+
+print("Total time spent: ",gettime);
+\q

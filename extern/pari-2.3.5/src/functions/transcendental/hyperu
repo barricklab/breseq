@@ -1,0 +1,6 @@
+Function: hyperu
+Section: transcendental
+C-Name: hyperu
+Prototype: GGGp
+Help: hyperu(a,b,x): U-confluent hypergeometric function
+

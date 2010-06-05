@@ -1,0 +1,23 @@
+Function: nfinit
+Section: number_fields
+C-Name: nfinit0
+Prototype: GD0,L,p
+Help: nfinit(pol,{flag=0}): pol being a nonconstant irreducible polynomial,
+ gives the vector: [pol,[r1,r2],discf,index,[M,MC,T2,T,different] (see
+ manual),r1+r2 first roots, integral basis, matrix of power basis in terms of
+ integral basis, multiplication table of basis]. flag is optional and can be
+ set to 0: default; 1: do not compute different; 2: first use polred to find
+ a simpler polynomial; 3: outputs a two-element vector [nf,Mod(a,P)], where
+ nf is as in 2 and Mod(a,P) is a polymod equal to Mod(x,pol) and P=nf.pol; 4:
+ as 2 but use a partial polred; 5: is to 3 what 4 is to 2
+Description: 
+ (gen, ?0):nf:prec	nfinit0($1, 0, prec)
+ (gen, 1):nf:prec	nfinit0($1, 1, prec)
+ (gen, 2):nf:prec	nfinit0($1, 2, prec)
+ (gen, 3):gen:prec	nfinit0($1, 3, prec)
+ (gen, 4):nf:prec	nfinit0($1, 4, prec)
+ (gen, 5):gen:prec	nfinit0($1, 5, prec)
+ (gen, 6):nf:prec	nfinit0($1, 6, prec)
+ (gen, #small):void	$"incorrect flag in nfinit"
+ (gen, small):gen:prec	nfinit0($1, $2, prec)
+

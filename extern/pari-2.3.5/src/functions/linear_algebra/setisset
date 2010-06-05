@@ -1,0 +1,7 @@
+Function: setisset
+Section: linear_algebra
+C-Name: setisset
+Prototype: lG
+Help: setisset(x): true(1) if x is a set (row vector with strictly
+ increasing entries), false(0) if not
+

@@ -1,0 +1,9 @@
+Function: contfrac
+Section: number_theoretical
+C-Name: contfrac0
+Prototype: GDGD0,L,
+Help: contfrac(x,{b},{lmax}): continued fraction expansion of x (x
+ rational,real or rational function). b and lmax are both optional, where b
+ is the vector of numerators of the continued fraction, and lmax is a bound
+ for the number of terms in the continued fraction expansion
+

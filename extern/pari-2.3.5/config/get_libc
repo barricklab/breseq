@@ -1,0 +1,41 @@
+# Looking in libc for some functions.
+exe=$osname-$arch-tmp$$
+_has_list=
+echo Looking in C lib for some symbols...
+extra_flags=-lm
+list=exp2; . ./look
+list=log2; . ./look
+extra_flags=
+list=strftime; . ./look
+if test -n "$timing_fun"; then
+  list=$timing_fun
+else
+  case "$osname" in
+    *cygwin*) list='times ftime';; # getrusage based timer always returns 0
+    *) list='getrusage times ftime';;
+  esac;
+fi; . ./look
+list=sigaction; . ./look
+list=TIOCGWINSZ; . ./look
+list=getrlimit; . ./look
+list='stat opendir'; . ./look
+list=vsnprintf; . ./look
+
+# For install(). Do we need libdl.so?
+# on irix and osf1 -ldl not needed
+extra_flags=
+list=dlopen; . ./look
+if test "$has_dlopen" = no; then
+  echo "Try again, with -ldl this time..."
+  extra_flags=-ldl; . ./look
+  if test "$has_dlopen" = yes; then
+    LIBS="-ldl $LIBS"
+  fi
+fi
+if test "$has_dlopen" = no; then
+  case "$osname" in
+    os2|darwin)
+      echo "Will use builtin dlopen() support for $osname..."
+      has_dlopen=builtin
+  esac
+fi

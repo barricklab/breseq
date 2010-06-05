@@ -1,0 +1,28 @@
+if test -z "$DLLD" -o "$optimization" != full; then
+  static=y
+else
+  static=${static-n}
+fi
+if test "$fastread" != yes; then
+  if test -z "$DLLD"; then
+    cat <<EOT
+==========================================================================
+We cannot build a dynamic executable. We will build the static version.
+EOT
+  else
+    cat <<EOT
+==========================================================================
+By default, we try to build the shared library and gp is an executable
+  dynamically linked with it. Do you prefer to have the static archive
+  libpari.a and a statically linked executable (which is a bit faster,
+  but takes more disk place) ?
+You can always type "make all" in case you want both later.
+EOT
+  echo $n "Do you want static executable and library ? $c"
+  dflt=$static; rep='y n'; . ./myread; static=$ans
+  fi
+fi
+case "$static" in
+  y) echo "Default is static executable and archive library";;
+  n) echo "Default is dynamic executable and shared library";;
+esac

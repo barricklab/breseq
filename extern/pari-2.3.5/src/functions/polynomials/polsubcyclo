@@ -1,0 +1,8 @@
+Function: polsubcyclo
+Section: polynomials
+C-Name: polsubcyclo
+Prototype: LLDn
+Help: polsubcyclo(n,d,{v=x}): finds an equation (in variable v) for the d-th
+ degree subfields of Q(zeta_n). Output is a polynomial or a vector of
+ polynomials is there are several such fields, or none.
+

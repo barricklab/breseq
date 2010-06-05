@@ -1,0 +1,7 @@
+Function: qfbnucomp
+Section: number_theoretical
+C-Name: nucomp
+Prototype: GGG
+Help: qfbnucomp(x,y,l): composite of primitive positive definite quadratic
+ forms x and y using nucomp and nudupl, where l=[|D/4|^(1/4)] is precomputed
+

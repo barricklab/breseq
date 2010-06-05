@@ -1,0 +1,9 @@
+Function: Polrev
+Section: conversions
+C-Name: gtopolyrev
+Prototype: GDn
+Description:
+ (gen,?var):pol  gtopolyrev($1, $2)
+Help: Polrev(x,{v=x}): convert x (usually a vector or a power series) into a
+ polynomial with variable v, starting with the constant term
+

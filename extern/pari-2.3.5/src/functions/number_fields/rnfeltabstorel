@@ -1,0 +1,7 @@
+Function: rnfeltabstorel
+Section: number_fields
+C-Name: rnfelementabstorel
+Prototype: GG
+Help: rnfeltabstorel(rnf,x): transforms the element x from absolute to
+ relative representation
+

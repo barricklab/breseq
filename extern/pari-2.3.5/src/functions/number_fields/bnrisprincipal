@@ -1,0 +1,10 @@
+Function: bnrisprincipal
+Section: number_fields
+C-Name: bnrisprincipal
+Prototype: GGD1,L,
+Help: bnrisprincipal(bnr,x,{flag=1}): bnr being output by bnrinit, gives
+ [v,alpha], where v is the vector of exponents on the class group
+ generators and alpha is the generator of the resulting principal ideal. In
+ particular x is principal if and only if v is the zero vector. If (optional)
+ flag is set to 0, output only v
+

@@ -1,0 +1,9 @@
+Function: ellidentify
+Section: elliptic_curves
+C-Name: ellidentify
+Prototype: G
+Help: ellidentify(E): look up the elliptic curve E in the elldata database and
+ return [[N, M, ...], C] where N is the name of the curve in J. E. Cremona
+ database, M the minimal model and C the coordinates change (see
+ ellchangecurve). 
+

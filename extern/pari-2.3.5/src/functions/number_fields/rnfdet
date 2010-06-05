@@ -1,0 +1,6 @@
+Function: rnfdet
+Section: number_fields
+C-Name: rnfdet
+Prototype: GG
+Help: rnfdet(nf,order): given a pseudomatrix, compute its pseudodeterminant
+

@@ -1,0 +1,7 @@
+Function: plotmove
+Class: highlevel
+Section: graphic
+C-Name: rectmove
+Prototype: vLGG
+Help: plotmove(w,x,y): move cursor to position x,y in rectwindow w
+

@@ -1,0 +1,20 @@
+#! /bin/sh
+
+mode=755
+while test $# -gt 0; do
+  case "$1" in
+  -c);;
+  -m) shift; mode="$1";;
+  *) break;;
+  esac
+  shift
+done
+
+if test -d "$2"; then
+  file="$2/`basename "$1"`"
+else
+  file="$2"
+fi
+
+cp "$1" "$2";
+if test -f "$file"; then chmod "$mode" "$file"; fi

@@ -1,0 +1,15 @@
+Function: plotrecth
+Class: highlevel
+Section: graphic
+C-Name: rectploth
+Prototype: LV=GGIpD0,L,D0,L,
+Help: plotrecth(w,X=xmin,xmax,expr,{flags=0},{n=0}): plot graph(s) for expr
+ in rectwindow w, where expr is scalar for a single non-parametric plot, and
+ a vector otherwise. If plotting is parametric, its length should be even and
+ pairs of entries give points coordinates. If not, all entries but the first
+ are y-coordinates. Both flags and n are optional. Binary digits of flags
+ mean: 1 parametric plot, 2 recursive plot, 4 do not rescale w, 8 omit
+ x-axis, 16 omit y-axis, 32 omit frame, 64 do not join points, 128 plot both
+ lines and points. n specifies the number of reference points on the graph
+ (0=use default value). Returns a vector for the bounding box
+

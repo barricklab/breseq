@@ -1,0 +1,10 @@
+Function: lcm
+Section: number_theoretical
+C-Name: glcm0
+Prototype: GDG
+Help: lcm(x,{y}): least common multiple of x and y, i.e. x*y / gcd(x,y)
+Description: 
+ (int, int):int lcmii($1, $2)
+ (gen):gen      glcm0($1, NULL)
+ (gen, gen):gen glcm($1, $2)
+

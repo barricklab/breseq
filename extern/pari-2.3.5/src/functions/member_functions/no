@@ -1,0 +1,8 @@
+Function: _.no
+Class: member_functions
+C-Name: member_no
+Prototype: G
+Description: 
+ (clgp):gen:copy                gel($1, 1)
+ (gen):gen                      member_no($1)
+

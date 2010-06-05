@@ -1,0 +1,412 @@
+This file gives information about architectures/operating systems GP has been
+compiled on. If your configuration is not listed, it means that nobody sent us
+information about it. If indeed GP builds successfuly, we'd be grateful if you
+could notify us at the address
+
+  pari@math.u-bordeaux.fr
+
+Please include a line analogous to the ones below, so that we can
+accordingly expand the list.
+==============================================================================
+General notes: binaries should be compiled with native kernel (--without-gmp)
+- Arch
+ a star (*) in the first column means GP was built using portable kernel.
+
+- Bench, as output by `make bench'
+ 1) can vary with load, available memory, compiler version ...
+ 2) is not the actual time spent: bench "nfields" is weighted by 1/5.
+ 3) An ! present next to the timing means that install() did not work with
+ that configuration ([BUG] in 'program' bench)
+
+NOTE: bench timings in version 2.0.11 and 2.0.12 were not correct (given
+between parentheses). Add about 25% to running times for comparison with
+other versions.
+
+Clock frequency in MHz when known, in BM (BogoMIPS) otherwise.
+                                                       Bench
+Arch / proc:         OS:          Compiler:         sta:    dyn:  GP version:
+==============================================================================
+DEC/Alpha
+alpha21264c 1000MHz  OSF1-V5.1        cc             990    1165  2.2.3     IS
+alpha21264b  833MHz  OSF1-V5.1        cc            1867    2099  2.1.1     JC
+alpha21264   667Mhz  FreeBSD-4.0     gcc            2626!   2656  2.0.20    IS
+alpha21264   500MHz  OSF1-V4.0       gcc-2.8.1      3178    3436  2.1.0     JC
+alpha21264   500MHz  OSF1-V4.0       gcc-2.95.3     1885    1980  2.2.1     GH
+alpha21164a  600MHz  Linux-2.4.9     gcc.2.96       3746    3771  2.2.6
+alpha21164a  600MHz  Linux-2.2.13   egcs            4270    4350  2.0.19(26)IS
+alpha21164   600MHz  OSF1-V4.0D      cc             3996    4384  2.0.10    LG
+alpha21164   533Mhz  Linux 2.0.34    gcc           (4294)  (4385) 2.0.12    JC
+alpha21164   500Mhz  Linux-2.2.13   egcs-2.91.66    5167    5217  2.1.1
+alpha21164   500Mhz  Linux-2.2.13    gcc-2.95.3     4319    4253  2.2.2 (27)
+alpha21064   172Mhz  OSF1-3.0        cc            34104   35564  2.1.1
+------------------------------------------------------------------------------
+Sun/SPARC
+Sun-Fire V440 1593MHz*4 Solaris-10   gcc-4.0.3       655     658  2.3.0     SHo
+UltraSPARCIII+ 900MHz Solaris-9      gcc-3.4.1      1434    1442  2.2.8     IS
+UltraSPARCIII 750MHz Solaris-8       gcc-3.4.1      1685    1708  2.2.8     IS
+UltraSPARC-IIe 502MHz Solaris-8      gcc            3608    3646  2.1.4     HR
+UltraSPARCII 450MHz  Solaris-7       gcc-3.4.1      3007    3007  2.2.8     IS
+UltraSPARC60 450MHz  Solaris-7       gcc            3970    4010  2.0.19    IS
+UltraSPARC60 450MHz  Solaris-7        cc            5070    5210  2.0.19    IS
+UltraSPARC2i 440MHz  Solaris-8       gcc-2.95.2     3502    3486  2.2.4
+Ultra250     400MHz  Solaris-7       gcc            4510    4560  2.0.19    IS
+Ultra250     400MHz  Solaris-7        cc            5950    6090  2.0.19    IS
+UltraSPARC60 360MHz  Solaris-2.6     gcc            5034    5209  2.0.16    IS
+UltraSPARC60 360MHz  Solaris-2.6      cc            6329    6453  2.0.16    IS
+UltraSPARC2i 360MHz  Solaris-7      egcs            5816    6286  2.0.16(17)HS
+UltraSPARC2i 333MHz  Solaris-7       gcc            5666    6818  2.0.20(18)
+UltraSparcII 300MHz  Linux-2.4.18    gcc-3.2.3      6102    6184  2.1.5     BA
+UltraSPARC10 300MHz  Solaris-2.6     gcc           (5932)  (6102) 2.0.12    GN
+UltraSPARC   300MHz  Solaris-2.5     gcc            7643    7566  2.0.9     IS
+UltraSPARC2  296MHz  Solaris-2.5.1   gcc            6098    6277  2.0.16    IS
+UltraSPARC2  296MHz  Solaris-2.5.1    cc            7676    7869  2.0.16    IS
+UltraSPARC2i 270MHz  Solaris-7       gcc            9008    7860  2.0.16    IZ
+UltraSPARC2i 270MHz  Solaris-2.6      cc            9200    9970  2.0.10    LG
+UltraSPARC2  248MHz  Solaris-7        cc-5.0        9420    9692  2.0.18(13)GN
+UltraSPARC2  248MHz  Solaris-7      egcs            7218    7262  2.0.16    HS
+UltraSPARC   200MHz  Solaris-2.5.1   gcc            9226    9268  2.0.16    IS
+UltraSPARC   200MHz  Solaris-2.5.1    cc           11226   11755  2.0.16    IS
+UltraSPARC   167MHz  Solaris-2.6     gcc           10767   11218  2.0.16    IS
+UltraSPARC   167MHz  Solaris-2.6      cc           13677   13967  2.0.16    IS
+UltraSPARC   167MHz  Solaris-7       gcc-2.8.1      9106    9144  2.2.4
+UltraSPARC   167MHz  Solaris-2.5     g++           13474   13418  2.0.9 (7) LG
+UltraSPARC   167MHz  Solaris-2.5     CC            15778!  16400! 2.0.9     LG
+UltraSPARC   167MHz  Solaris-2.5     cc            16241   17048  2.0.9     LG
+UltraSPARC   143MHz  Solaris-2.5     gcc-2.95.3    11905   11723  2.2.1
+
+SuperSPARC2   75MHz  Solaris-2.5     gcc           16969   17013  2.0.10    LG
+SuperSPARC    50Mhz  Linux-2.2.14    gcc           41126   40854  2.0.18(20)BA
+SuperSPARC    40MHz  SunOS-4.1.3     gcc           31178   30456  2.0.19
+SuperSPARC    40Mhz  Solaris-2.5     gcc           31528   31576  2.0.16
+TurboSPARC   170MHz  Solaris-2.5     gcc           15907   16529  2.0.9     LG
+MicroSPARC2  110MHz  NextStep-v3     cc            37794!      -  2.0.9     LG
+MicroSPARC2  110MHz  SunOS-4.1.4     gcc           31476   32123  2.0.9     LG
+MicroSPARC2  110MHz  Solaris-2.5     gcc-2.7.2     24197   24107  2.2.2
+SPARCv7(SS2)  40MHz  SunOS-4.1.3     gcc          115212! 115364  2.0.9     LG
+SPARCv7(ELC)  33MHz  SunOS-4.1.1     gcc          139406!      -  2.0.8     GN
+SPARCv7(SS400)  ???  SunOS-4.1.4     gcc          107074  106494  2.0.16(19)DE
+SPARCv7(HWS210) ???  Linux-2.2.5     gcc           98488!      -  2.0.16(14)DE
+------------------------------------------------------------------------------
+Intel/x86_64 in 64bit mode
+AMD Opteron 2400MHz  Linux-2.6.12-1  gcc-4.0.1       198     204  2.2.11    PZ
+AMD Opteron 2000MHz  Linux-2.4.22    gcc-3.3.2       290     290  2.2.8     
+AMD Athlon 64 3000+  Linux-2.6.15    gcc-4.1.0       300     287  2.3.0     JB
+AMD Opteron 1333MHz  Linux-2.6.5     gcc-3.3         413     419  2.2.8     BA
+- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+Intel/x86
+AMD Opteron 1333MHz  Linux-2.6.5     gcc-3.3         536     539  2.2.8     BA
+AMD Athlon  XP2700+  Linux-2.6.20-1  gcc-4.1.1       350     339  2.3.2     HR
+AMD Athlon  XP2400+  Linux-2.4.21    gcc-3.2         428     398  2.2.5 (41)MH
+AMD Athlon  XP1800+  Linux-2.4.17    gcc-3.0.4       616     616  2.2.3 (30)PE
+AMD Athlon  MP1800+  Linux-2.4.9     gcc-2.96        696     688  2.2.3 (29)HC
+AMD Athlon  1250MHz  Linux-2.4.2     gcc-2.96        597     591  2.2.10a   HV  
+AMD Athlon  1200MHz  Linux-2.4.7     gcc-2.96       1002     992  2.1.2     CL
+AMD Athlon  1100MHz  Linux-2.4.2-2   gcc            1078    1076  2.1.1     DP
+AMD Duron   1200MHz  Linux-2.4.19    gcc-3.2         789     800  2.2.4     QL
+AMD Duron   1200MHz  Linux-2.4.19    gcc-2.95.3      834     851  2.2.4     QL
+AMD Duron   1000MHz  Linux-2.4.0    egcs            1364    1428  2.0.20    QL
+AMD Athlon   850MHz  Linux-2.2.17    gcc            1364    1342  2.1.0     JC
+AMD Duron    700MHz  Linux-2.4.0    egcs            2066    2138  2.0.20    QL
+AMD Athlon   500MHz  Linux-2.2.13    gcc            2736    2724  2.0.18    MS
+AMD K6-2     350Mhz  Linux-2.0.34   egcs           (4856)  (4756) 2.0.11    SH
+AMD K6-2     350Mhz  Linux-2.0.36    gcc            5154    4850  2.0.17
+AMD K6       266MHz  Linux-2.2.5    pgcc            5861    6001  2.0.16(16)IS
+AMD K6       233Mhz  Linux-2.2.14    gcc            6968    7158  2.0.18    QL
+IBM/Cyrix    200MHz  Linux-2.0.35    gcc           13190   13729  2.0.15    AP
+
+PentiumIV   3000MHz  Linux-2.6.11-1  gcc-3.4.3       291     296  2.2.11    PZ	
+PentiumM    1600MHz  Linux-2.6.8     gcc-3.3.4       461     460  2.2.8     JD  
+PentiumIV   2800MHz  Linux-2.4.18    gcc-3.2	     507     580  2.2.6	    IS	
+PentiumIV   2000MHz  Linux-2.4.20    gcc-3.3	     794     962  2.2.6 (42)ID
+PentiumIV   2000MHz  Linux-2.4.18    gcc-3.2	     849     835  2.1.5 (25)FU
+PentiumIV   1800MHz  WinXP + Cygwin  gcc-3.2        1384!      -  2.2.5 (38)DC
+PentiumIV   1695MHz  FreeBSD 4.6.2   gcc-2.95.3      904     918  2.2.5     MW
+PentiumIV   1600MHz  Linux-2.4.18-3  gcc-2.96        930     926  2.2.5
+PentiumIV   1400MHz  Linux-2.4.4-4   gcc-2.95.3     1318    1354  2.1.3     HG
+PentiumIII  1400MHz  FreeBSD-4.6.2   gcc-2.95.3      752     757  2.2.4(35) IS
+PentiumIII  1133MHz  Linux-2.4.18    gcc-2.96       1028    1055  2.2.4(36) IS
+PentiumIII  1000MHz  Linux-2.4.7-10  gcc-2.96       1128    1180  2.2.4
+PentiumIII   933MHz  Linux-2.2.15   egcs            1450    1485  2.0.20    IS
+PentiumIII   800MHz  Linux-2.2.14   egcs            1900    1882  2.0.20    CL
+PentiumIII   800MHz  Linux-2.2.19    gcc-2.96       1638    1624  2.1.2     OT
+PentiumIII   733MHz  Linux-2.2.14   egcs            2080    2090  2.0.19    IS
+PentiumIII   550MHz  Linux-2.5.56    gcc.3.2.1      1918    1984  2.2.5     MH
+PentiumIII   533MHz  Linux-2.2.14    gcc            2710    2730  2.0.19    IS
+PentiumIII   500MHz  Linux-2.2.12   egcs            3154    3176  2.0.18    HC
+PentiumII    450MHz  Linux-2.4.18    gcc-3.0.4      2348    2426  2.2.3 (31)PE
+PentiumII    450MHz  Linux-2.0.35    gcc            3220    3230  2.1.1     TT
+PentiumII    400MHz  Linux-2.3.99    gcc            3392    3410  2.0.20(25)GH
+PentiumII    400MHz  Linux-2.2.14    gcc            3886    3902  2.0.20    GH
+PentiumII    366MHz  Linux-2.2.16    gcc-2.95.2     4018    4118  2.1.3     HG
+PentiumII    350MHz  Linux-2.2.16    gcc-2.95.2     3760    3784  2.2.1
+PentiumII    350MHz  Win98         mingw-2.95.2     4412!      -  2.1.0 (22)
+PentiumII    350MHz  Win98 + Cygwin1 gcc-2.95.2-5   4026!      -  2.2.1
+PentiumII    350MHz  Win98 + RSX     gcc            9436!      -  2.0.20(24)
+PentiumII    350Mhz  Linux 2.0.36   pgcc-2.92.21   (3310)  (3340) 2.0.12(11)PE
+PentiumII    350Mhz  Linux 2.0.36   egcs-2.92.21   (3352)  (3402) 2.0.12(11)PE
+PentiumII    350Mhz  Linux 2.0.36    gcc           (3600)  (3610) 2.0.12    PE
+PentiumII    333Mhz  Linux-2.2.19    gcc-2.7        4446    4464  2.1.1     BA
+PentiumII    333Mhz  Linux-2.2.19    gcc-3.0.2      4104    4218  2.1.1     BA
+PentiumII    300MHz  NextStep-3.3    cc             5325!      -  2.0.10
+PentiumII    233MHz  FreeBSD-2.2.5   gcc           (6251)  (6114) 2.0.11
+PentiumII    233MHz  Linux-2.0.35    gcc           (7460)  (7586) 2.0.12    HG
+PentiumPro   200MHz  Linux-2.2.12   egcs 2.91.66    6036    6044  2.2.6
+Pentium      266Mhz  Linux-2.0.29    gcc           (7256)  (7044) 2.0.11
+Pentium      200MHz  Linux-2.2.10    gcc           12062   12340  2.0.18    MS
+Pentium      200Mhz  NextStep-3.3    cc            16035!      -  2.0.06    MS
+Pentium      166MHz  FreeBSD-2.2.5   gcc          (15159) (14481) 2.0.11
+Pentium      166MHz  Solaris-2.6     gcc          (13550) (13746) 2.0.12    GN
+Pentium      133MHz  Linux-1.2.8     gcc-2.7.2p   (15448!)     -  2.0.12    GN
+Pentium      133MHz  FreeBSD-2.2.5   gcc           15231   17259  2.0.10    KK
+486DX (Cyrix) 66MHz  Linux 2.2.18    gcc           59078   60600  2.1.1     CC
+486DX2        50MHz  Linux-2.0.33    gcc          213710  216224  2.0.9     LG
+486DX         50MHz  DOS-5 + EMX     gcc           77126!      -  2.0.20
+*i860         40MHz  Concentrix      cc           147989!      -  2.0.9     LG
+- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+Intel/ARM
+*StrongARM   110MHz  Linux-2.4.5     gcc-2.95.2    17162!      -  2.1.1     BA
+- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+Intel/ia64
+*Itanium II 1000MHz  Linux-2.4.19    gcc-3.0.4      1318    1478  2.1.5     BA
+*Itanium     800MHz  Linux-2.4.9     gcc-3.0.1      2557    2474  2.1.2 (28)BA
+ Itanium     733MHz  Linux-2.4.21    gcc-4.1.0      1405    1494  2.2.13    BA
+------------------------------------------------------------------------------
+Motorola
+ MC68060      50MHz  Linux-2.4.31    gcc-4.0.3     30010   30584  2.2.13(40)BA
+*MC68060      50MHz  Linux-2.4.26    gcc-3.3.3     49586   50296  2.2.8 (40)BA
+*MC68060      50MHz  Linux-2.2.20    gcc-2.95.4            74998  2.1.3 (37)BA
+*MC68040      25MHz  NextStep-v2     cc           250542!      -  2.0.9     LG
+ MC68030      25MHz  SunOS-4.0.3     gcc          683736! 685248  2.0.9 (4)
+*MC68030      25MHz  SunOS-4.0.3     gcc         1034136!1038368  2.0.9
+------------------------------------------------------------------------------
+IBM/POWER,PowerPC
+CoreDuo     2160MHz  MacOS X 10.4    gcc-4.0.1       376       -  2.3.0     LG
+PPC G5      2000MHz  MacOS X 10.4    gcc-4.0.1       461       -  2.3.0     LG
+PPC G4      1667MHz  MacOS X 10.4    gcc-3.3         543       -  2.3.0     LG
+*PPC G4      400MHz  MacOS X 10.2    gcc-3.1        5174!         2.1.4     MB
+*PowerMac3,3 500MHz  Linux-2.4.2     gcc            3742    3732  2.1.1     BA
+*PPC800(G3)  400MHz  Linux-2.4.3     gcc            4640    4624  2.2.0     GH
+*PPC750(G3)  400MHZ  Linux-2.4.24    gcc-2.95.4     3840    3872  2.1.5     SC
+*PPC???(G3)  350MHz  MacOS X 10.1    gcc-2.95.2     5722!         2.1.2     NI
+*PPC750(G3)  266MHz  Linux-2.2.6     gcc            6944    6924  2.0.18    DE
+*PPC604e     233MHz  AIX-4.2         cc            (8616!)     -  2.0.12(3) GN
+*PPC604      133MHz  AIX-4.2         cc            21528!      -  2.0.4 (3) GN
+*PPC601      100MHz  AIX-4.1         cc            21692!      -  2.0.4 (3) GN
+*PPC601       75MHz  Linux-2.1.24    gcc           51810   52702  2.0.9     EK
+*PPC601       66MHz  AIX-3.2.5       cc            66280!      -  2.0.4 (3) GN
+*POWER2       66MHz  AIX-4.2         cc            37592!      -  2.0.4 (3) GN
+------------------------------------------------------------------------------
+IBM/S390
+*S390         773BM  Linux-2.4.19    gcc-3.2.3      5272    5646  2.1.5 (39)BA
+*S390         630BM  Linux-2.4.17    gcc-2.95.4     6764    6574  2.1.3 (33)BA
+------------------------------------------------------------------------------
+SGI/MIPS
+*R5000       250MHz  Linux-2.4.20    gcc-3.2.3     10778   10664  2.2.6CVS  BA
+*R10000      196MHz  IRIX-6.4        cc             8461    9856  2.0.10(8) TP
+*R10000      196Mhz  IRIX-6.2        cc            15719   15581  2.0.13(12)BN
+*R4000        75MHz  Linux-2.4.19    gcc-2.95.4    37324   36098  2.1.5     BA
+*R4000     50/70MHz  IRIX-5.2        gcc           70764   70114  2.0.9 (1) TP
+*R4000     50/70MHz  IRIX-5.2        cc            81467   80176  2.0.9 (2) TP
+------------------------------------------------------------------------------
+HP/PA-RISC
+HPPA9000/785  552MHz HPUX-11.00     gcc-2.9         8284    8460  2.2.4(34) IS
+*HPPA8500     440MHz Linux-2.4.16   gcc-3.0.3       7558    7814  2.1.2     BA
+HPPA9000/778  134MHz HPUX-10.20      cc            18898!  29138! 2.0.19(9)
+*HPPA9000/778 134MHz HPUX-10.20      cc           (23666!)     -  2.0.12(10)
+HPPA9000/735  100MHz HPUX-10.20      cc           (25106!)(38898!)2.0.12(9)
+HPPA9000/735  100MHz HPUX-09-07      cc            25714!      -  2.0.16(15)IS
+HPPA9000/720     ??? HPUX-10.20      cc            66138!      -  2.0.9
+*HPPA9000/720    ??? HPUX-10.20      cc           101114! 119626  2.0.9
+HPPA9000/712   90MHz HPUX-10.20      cc           (26756!)(45196!) 2.0.12(9)
+*HPPA9000/712    ??? HPUX-10.10      gcc           66328!  71250! 2.0.5 (6)
+*HPPA7100LC    60MHz NextStep-v3     cc            62866!      -  2.0.10    LG
+*HPPA7000      50MHz HPUX-09.05      cc           113406! 152778! 2.0.9     LG
+------------------------------------------------------------------------------
+
+Notes:
+======
+(1) uncomment the last PLOTLIBS= in Makefile
+(2) same as above, compiled with cc -O2
+(3) AIX/POWER versions built with cc options including
+      -qarch=com -qtune=601 (any other tuning makes them slower GN)
+Addendum (IK): gcc 2.8.1 -O2 -DGCC_INLINE -mtune=604e produces a faster binary
+
+(4) Slightly different results in make bench (last decimal different in
+    3 tests, due to a different mulsr())
+(6) gcc -fPIC (otherwise /usr/bin/ld will not link the shared library)
+(7) the `program' bench fails on "install(addii)". But if the symbol addii
+    is declared within extern "C" {} in paridecl.h, it works.
+
+(8) use
+CC         = cc -64 -DLONG_IS_64BIT
+CFLAGS     = -O -OPT:Olimit=2170
+LD         = cc -64
+LDFLAGS    = -O -L/usr/lib64
+DLLD       = cc -64
+DLLDFLAGS  = -shared -elf -no_unresolved -all -L/usr/lib64
+CPP        = cc -64 -E -I.
+
+(9) * for gp-dyn: couldn't find a way to produce PIC code with either
+  -- HP as, version HP92453-03 UX.10.20.05 (DAVIS) PA-RISC 2.0 Assembler
+     (+z, +Z ignored)
+  -- gcc-2.8.1 + gas-2.6 (hppa1.1-hp-hpux9.01), using BFD version 2.6
+     (-fPIC -shared ignored)
+
+(bad) FIX: in o-hpux.hppa/Makefile, move kernel.o from OBJS to OBJSGP.
+Hence kernel.o has to be linked explicitly with all programs compiled with
+libpari.sl
+
+    * for gp-sta: remove +z from CFLAGS and LDFLAGS, final link only worked
+with the following command line (there has to be a better way...):
+
+cc dummy.c -c
+cc -o gp-sta -Wl,-a,archive -O dummy.o [... rest as produced by Configure]
+
+where dummy.c defines three dummy symbols (referenced in static libc):
+
+shl_findsym(){}
+ shl_unload(){}
+   shl_load(){}
+
+Whatever else I tried, linking failed:
+
+/usr/ccs/bin/ld: Data address is out of range for short load or store
+   Reference from:  kernel.o(0x8) [for all symbols defined in level0.s]
+
+(10) compiled without +z flags
+
+(11)
+CFLAGS (for egcs)= -O9 -malign-double -fschedule-insns2  -mpentium\
+-march=pentium -fomit-frame-pointer -fno-strength-reduce\
+-fno-inline-functions -fexpensive-optimizations
+CFLAGS (for pgcc)= -O9 -malign-double -mk6   -fomit-frame-pointer\
+-fno-strength-reduce -fno-inline-functions
+
+Libc: 5.4.46. egcs/pgcc compiled with Haifa scheduler
+Binutils: 2.9.1.0.4 or 2.9.1.0.15
+
+(12) used LD = cc -Wl,-rpath,my_exotic_DLL_path
+
+(13) use /opt/SUNWspro/bin/fpversion to get explicit recommended CFLAGS.
+     use -fsimple=1;  the Sun FD6U2 cc 5.3 defaults to -fsimple=2 at higher
+optimization levels, which is deadly to PARI.
+(these options must be given _after_ the -fast macro if -fast is used, or the
+-fast expansion will override them.)
+
+(14) use asmarch=sparcv7
+(15) Configure defaults to hpux-none. Use Configure -a and specify the
+hppa kernel. Remove +z from compiler flags
+(16) CFLAGS = -mk6 -march=i586 -O6
+(17) 256kb L2 Cache - Ultra U5
+(18) 2  MB L2 Cache - Ultra U10
+(19) replace err by pari_err in src/kernel/sparcv7/level0.S [in 2.0.16 or 17]
+(20) asmarch incorrectly defaulted to MicroSPARC (bypassed using Configure -a)
+(22) same machine as above, native binary compiled with mingw32-gcc-2.95.2
+     had to modify Odos/Makefile (to link with readline-4.0).
+     PROBLEMS:
+      * when started from the shell, on ^C GP quits! OK when started from GUI
+      * stdin redirection from the shell (gp < file) doesn't work (SEGV in gp).
+      * ANSI escape sequences are printed "as is" (so don't enable colors)
+(24) same machine as above, using the RSX compatibility package
+(25) Xeon
+(26) RedHat-7.0 + alpha has a broken glibc-2.1.x [issquare(8388609^2) = 0 !]
+     Updating to glibc-2.2 fixes the problem.
+(27) gcc-2.95.3 -O + new inline assembler [gcc-2.95.2 and gcc-2.95.3 -O3 both
+produce a broken binary]
+(28) gp-dyn: add -fPIC to CFLAGS [or linking fails].
+     gcc-2.96 fails
+(29) added -mcpu=athlon -march=athlon to CFLAGS (very minor speedup).
+     clock frequency for Athlon 1800+ = 1530MHz
+(30) cpu=Athlon XP1800+ Mandrake 8.1, Linux-2.4.17
+CFLAGS= -fbranch-probabilities -fstrict-aliasing  -falign-jumps
+-foptimize-sibling-calls -fssa -maccumulate-outgoing-args
+-minline-all-stringops
+-march=athlon   -O3 -DGCC_INLINE -Wall -Wno-implicit  -fomit-frame-pointer
+
+(31) cpu=Pentium II 450@463 (FSB a 103mhz),  Bi-Pro
+Linux-2.4.18-rc2 + patches
+CFLAGS= -fbranch-probabilities  -O3 -DGCC_INLINE -Wall -Wno-implicit
+-fstrict-aliasing -fssa   -foptimize-sibling-calls       -falign-jumps
+-march=pentiumpro -maccumulate-outgoing-args -minline-all-stringops
+-fomit-frame-pointer
+
+(32) gp-dyn: add -fPIC to CFLAGS [or linking fails].
+     Most gcc 2.95 ARM support lib have buggy (unsigned)%(unsigned)
+
+(33) LCDS System: 9672 G6 Model ZX7 (10 way processor, 32GB RAM)
+     DASD: Shark 2105-F20 (2.1 terabytes)
+
+(34) 64-bit executable
+
+(35) SMP, 512KB L2 cache
+
+(36) UP, 256KB L2 cache
+
+(37) http://db.debian.org/machines.cgi?host=crest
+     Build with gcc -fPIC.
+
+(38) Cygwin 1.3.20-1
+
+(39) http://db.debian.org/machines.cgi?host=raptor
+
+(40) same machine as (37) but without -fPIC.
+
+(41) 1 GB RAM, NForce2 chipset, 2.4.21pre7 kernel (Red Hat 8.0)
+CFLAGS = -O2 -s -DGCC_INLINE -Wall -fbranch-probabilities -mmmx -msse -m3dnow
+-ffast-math -fno-unsafe-math-optimizations -D__USE_ISOC99
+-D__USE_EXTERN_INLINES -fomit-frame-pointer -DBOTH_GNUPLOT_AND_X11
+
+-fno-unsafe-math-optimizations is mandatory with -ffast-math, in order to avoid
+bugs in nfields test.
+
+Used -fprofile-arcs for the first compilation parse, then -fbranch-probabilities
+to generate optimized executables. For this machine, many benchmarks are too
+short to provide accurate results (TIME=0 or 10).
+
+(42) gcc 3.3 version 20030226  -O3 failed to compile buch2.c with "internal
+compiler error". Works fine after compiling manually this file at -O2.
+
+(43) marie.medicis.polytechnique.fr
+
+=============================================================================
+Contributors:
+  AW = Aleksander Wittlin
+  AP = Andreas Piotrowski
+  BA = Bill Allombert
+  BN = Balasubramanian Narasimhan
+  CC = Christian Cornelssen
+  CL = Christian Labesse
+  DC = David Cleaver
+  DE = Denis Excoffier
+  DP = David Purdy
+  EK = Emmanuel Kowalski
+  FU = Frederic Udina
+  GH = Guillaume Hanrot
+  GN = Gerhard Niklasch
+  HC = Henri Cohen
+  HG = Herbert Gangl
+  HR = Herman te Riele
+  HS = Hans Schaechl
+  HV = Hugo van der Sanden
+  ID = Ingo Dittmer
+  IS = Igor Schein
+  JB = Johnatan Baker
+  JC = John Cremona
+  JD = Jeroen Demeyer
+  KK = Kimitoshi Kono
+  LG = Louis Granboulan
+  MB = Marco Bucci
+  MH = Mohammad Bahathir Hashim
+  MS = Michael Stoll
+  MW = Mariusz Wodzicki
+  NI = Nathaniel Irons
+  PE = Philippe Elbaz-Vincent
+  OT = Olivier Thibault
+  PZ = Paul Zimmermann
+  QL = Qing Liu
+  SC = Scott Chadde
+  SH = Steve Harding
+  SHo= Steve Holmes
+  TP = Thomas Papanikolaou
+  TT = Tibor I. Toth
+  XR = Xavier Roblot

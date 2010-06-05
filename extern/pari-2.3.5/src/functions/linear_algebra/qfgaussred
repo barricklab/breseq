@@ -1,0 +1,8 @@
+Function: qfgaussred
+Section: linear_algebra
+C-Name: sqred
+Prototype: G
+Help: qfgaussred(x): square reduction of the (symmetric) matrix x (returns a
+ square matrix whose i-th diagonal term is the coefficient of the i-th square
+ in which the coefficient of the i-th variable is 1)
+

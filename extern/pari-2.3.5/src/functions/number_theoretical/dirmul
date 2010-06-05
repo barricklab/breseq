@@ -1,0 +1,7 @@
+Function: dirmul
+Section: number_theoretical
+C-Name: dirmul
+Prototype: GG
+Help: dirmul(x,y): multiplication of the Dirichlet series x by the Dirichlet
+ series y
+

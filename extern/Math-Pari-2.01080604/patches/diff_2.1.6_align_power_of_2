@@ -1,0 +1,16 @@
+This patch (from http://mail-index.netbsd.org/pkgsrc-bugs/2007/09/06/msg024597.html)
+is intended to fix
+    kernel1.s: Assembler messages:
+    kernel1.s:18: Error: alignment not a power of 2
+
+--- ./src/kernel/ix86/l0asm.c.orig
++++ ./src/kernel/ix86/l0asm.c
+@@ -36,7 +36,7 @@
+    global variable `hiremainder'. */
+ 
+ /* This should ideally be determined at configure time. */
+-#if defined(__EMX__) || defined(__DJGCC__) || defined(__GO32__) || (defined(linux) && !defined(__ELF__)) || defined(__386BSD__) || defined(__NetBSD__) || (defined(__FreeBSD__) && !defined(__ELF__)) || defined(NeXT) || defined(__CYGWIN32__) || defined(__MINGW32__)
++#if defined(__EMX__) || defined(__DJGCC__) || defined(__GO32__) || (defined(linux) && !defined(__ELF__)) || defined(__386BSD__) || (defined(__NetBSD__) && !defined(__ELF__)) || (defined(__FreeBSD__) && !defined(__ELF__)) || defined(NeXT) || defined(__CYGWIN32__) || defined(__MINGW32__)
+ #  define ASM_UNDERSCORE
+ #endif
+ 

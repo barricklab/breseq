@@ -1,0 +1,10 @@
+Function: polred
+Section: number_fields
+C-Name: polred0
+Prototype: GD0,L,DG
+Help: polred(x,{flag=0},{p}): reduction of the polynomial x (gives minimal
+ polynomials only). Second and third args are optional. The following binary
+ digits of flag are significant 1: partial reduction, 2: gives also elements.
+ p, if present, contains the complete factorization matrix of the
+ discriminant
+

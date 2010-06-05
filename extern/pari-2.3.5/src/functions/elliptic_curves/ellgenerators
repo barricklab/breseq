@@ -1,0 +1,8 @@
+Function: ellgenerators
+Section: elliptic_curves
+C-Name: ellgenerators
+Prototype: G
+Help: ellgenerators(E): if E is an elliptic curve as output by ellinit(),
+ return the generators of the Mordell-Weil group associated to the curve.
+ This function depends on the curve being referenced in the elldata database.
+

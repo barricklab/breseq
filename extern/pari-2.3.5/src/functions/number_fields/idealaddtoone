@@ -1,0 +1,10 @@
+Function: idealaddtoone
+Section: number_fields
+C-Name: idealaddtoone0
+Prototype: GGDG
+Help: idealaddtoone(nf,x,{y}): if y is omitted, when the sum of the ideals
+ in the number field K defined by nf and given in the vector x is equal to
+ Z_K, gives a vector of elements of the corresponding ideals who sum to 1.
+ Otherwise, x and y are ideals, and if they sum up to 1, find one element in
+ each of them such that the sum is 1
+
