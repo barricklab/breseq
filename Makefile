@@ -10,7 +10,43 @@ SAMTOOLSDIR=$(ROOTDIR)/extern/samtools-0.1.7a
 STATSDISTS=$(ROOTDIR)/extern/Statistics-Distributions-1.02
 PARIDIR=$(ROOTDIR)/extern/Math-Pari-2.01080604
 STAGEDIR=$(ROOTDIR)/stage
+
+
+## breseq only
 	
+make-breseq:
+	cd $(BRESEQDIR) ; \
+	perl Build.PL --install_base=$(STAGEDIR) ; \
+	./Build ; 
+
+install-breseq:
+	cd $(BRESEQDIR) ; \
+	./Build install
+	
+clean-breseq :
+	cd $(BRESEQDIR) ; \
+	./Build clean
+	
+remake-breseq :: clean-breseq make-breseq install-breseq
+
+## compilation of pari is optional and slow
+## these are NOT included in main make/install/clean
+make-pari :
+	## Math::PARI
+	cd $(PARIDIR) ; \
+	perl Makefile.PL INSTALL_BASE=$(STAGEDIR) ; \
+	make ; 
+
+install-pari:
+	cd $(PARIDIR) ; \
+	make install
+	
+clean-pari :
+	cd $(PARIDIR) ; \
+	make clean
+
+
+## Main
 all :: make
 
 make :
@@ -33,27 +69,19 @@ make :
 	cd $(STATSDISTS) ; \
 	perl Makefile.PL INSTALL_BASE=$(STAGEDIR) ; \
 	make ; 
-	
-	## Math::PARI
-	cd $(PARIDIR) ; \
-	perl Makefile.PL INSTALL_BASE=$(STAGEDIR) ; \
-	make ; 
-	
-clean-breseq :
-	cd $(BRESEQDIR) ; \
-	./Build clean
-	
-make-breseq:
-	cd $(BRESEQDIR) ; \
-	perl Build.PL --install_base=$(STAGEDIR) ; \
-	./Build ; 
 
-install-breseq:
+install :
+	bjam install
+
 	cd $(BRESEQDIR) ; \
 	./Build install
-	
-all-breseq :: clean-breseq make-breseq install-breseq
-	
+
+	cd $(BIOSAMTOOLS) ; \
+	./Build install
+
+	cd $(STATSDISTS) ; \
+	make install
+
 clean :
 	bjam clean
 	bjam clean install
@@ -67,30 +95,17 @@ clean :
 	cd $(STATSDISTS) ; \
 	make clean
 	
-	cd $(PARIDIR) ; \
-	make clean
-	
 	rm -rf $(STAGEDIR)
 	
 	tests/test.sh clean tests/	
 	
-install :
-	bjam install
-
-	cd $(BRESEQDIR) ; \
-	./Build install
-
-	cd $(BIOSAMTOOLS) ; \
-	./Build install
-
-	cd $(STATSDISTS) ; \
-	make install	
 	
-	cd $(PARIDIR) ; \
-	make install
-	
+
+## tests
+
 test:
 	tests/test.sh test tests
 	
 clean-test:
 	tests/test.sh clean tests
+	

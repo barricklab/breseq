@@ -247,8 +247,8 @@ sub initialize_2
 	$self->{unmatched_reads} = ($self->{no_unmatched_reads}) ? 0 : 1;
 		
 	#######  SETUP FILE NAMES  #######
-	### '#' replaced with read fastq name or seq_id of reference sequence
-	### '=' replaced by split file index
+	### '#' replaced with read fastq name
+	### '@' replaced by seq_id of reference sequence
 
 	##### sequence conversion #####
 	$self->{sequence_conversion_path} = "01_sequence_conversion";
@@ -597,7 +597,7 @@ sub ctool
 		
 	if (!$self->{installed}->{$tool_name})
 	{
-		$self->throw("Executable \"$tool_name\" not found in breseq bin path.");
+		$self->throw("Executable \"$tool_name\" not found in breseq bin path\"$self->{bin_path}\".");
 	}
 	return "$self->{bin_path}/$tool_name";
 }
@@ -617,7 +617,9 @@ sub installed
 	## installed locally
 	$self->{installed}->{Statistics_Distributions} = (eval 'require Statistics::Distributions');	
 	$self->{installed}->{bioperl} = (eval 'require Bio::Root::Root');	
-	$self->{installed}->{Bio_DB_Sam} = (eval 'require Bio::DB::Sam');	
+	$self->{installed}->{Bio_DB_Sam} = (eval 'require Bio::DB::Sam');
+	$self->{installed}->{Statistics_Distributions} = (eval 'require Statistics::Distributions');	
+		
 
 	## optional
 	$self->{installed}->{Math_Pari} = (eval 'require Math::Pari');
