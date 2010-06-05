@@ -448,6 +448,8 @@ sub initialize_2
 		rmtree([$self->{mummer_path}, $self->{fasta_conversion_path}]);
 	}
 
+	$self->installed;
+
 	return $self;
 }
 
@@ -631,8 +633,6 @@ sub installed
 sub check_installed
 {
 	my ($self) = @_;
-
-	$self->installed;
 
 	my $good_to_go = 1;
 	
