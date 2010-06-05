@@ -617,7 +617,7 @@ sub installed
 	$self->{installed}->{Bio_DB_Sam} = (eval 'require Bio::DB::Sam');	
 
 	## optional
-#	$self->{installed}->{Math_Pari} = (eval 'require Math::Pari');
+	$self->{installed}->{Math_Pari} = (eval 'require Math::Pari');
 
 	## optional, being phased out, seems to make no difference compared to Statistics::Distributions
 	#$self->{installed}->{Math_GSL_CDF} = (eval 'require Math::GSL::CDF');	
