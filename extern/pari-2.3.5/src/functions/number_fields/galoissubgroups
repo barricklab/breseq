@@ -1,6 +1,0 @@
-Function: galoissubgroups
-Section: number_fields
-C-Name: galoissubgroups
-Prototype: G
-Help: galoissubgroups(G):Output all the subgroups of G
-

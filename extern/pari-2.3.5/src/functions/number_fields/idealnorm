@@ -1,6 +1,0 @@
-Function: idealnorm
-Section: number_fields
-C-Name: idealnorm
-Prototype: GG
-Help: idealnorm(nf,x): norm of the ideal x in the number field nf
-

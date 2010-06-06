@@ -832,10 +832,10 @@ sub _predict_polymorphism
 	}
 
 	### We will eventually remove this Perl prerequisite and use either invocations of R to do this
-	### or probably pull over the R code for the calculation into the re-written C version
+	### or pull over the R code for the calculation into the re-written C version
 
 	my $fisher_strand_p_value = 'ND';
-	if ($settings->{installed}->{Math_Pari})
+	if ($settings->{installed}->{Math_Pari} && $self->{installed}->{Statistics_Distributions})
 	{
 		require Statistics::FishersExactTest;
 		$fisher_strand_p_value = Statistics::FishersExactTest::fishers_exact($first_base_strand_hash->{1},$first_base_strand_hash->{-1},$second_base_strand_hash->{1},$second_base_strand_hash->{-1},1);

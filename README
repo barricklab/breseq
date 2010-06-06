@@ -4,6 +4,13 @@ http://www.barricklab.org/twiki/bin/view/Lab/ToolsBacterialGenomeResequencing
 
 ==== Installation Instructions ====
 
+== Perl Modules ==
+
+> sudo perl -MCPAN -e shell
+> install Math::Pari
+> install Statistics::Distributions
+> force install CJFIELDS/BioPerl-1.6.1.tar.gz
+
 == Mac OS 10.6 (Snow Leopard) ==
 
 sudo port install boost

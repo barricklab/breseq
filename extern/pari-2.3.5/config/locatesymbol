@@ -1,7 +1,0 @@
-try=`(nm $lib | grep $sym)2>/dev/null`
-if test -z "$try"; then
-  # stripped dynamic library ???
-  case "$lib" in
-  *.so*) try=`(strings $lib | grep $sym)2>/dev/null`;;
-  esac
-fi

@@ -1,6 +1,0 @@
-Function: return
-Section: programming
-C-Name: return0
-Prototype: DG
-Help: return({x=0}): return from current subroutine with result x
-

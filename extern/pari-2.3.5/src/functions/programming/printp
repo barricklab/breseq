@@ -1,6 +1,0 @@
-Function: printp
-Section: programming
-C-Name: printp
-Prototype: vs*
-Help: printp(a): outputs a (in beautified format) ending with newline
-

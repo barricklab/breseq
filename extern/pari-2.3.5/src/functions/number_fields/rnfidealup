@@ -1,7 +1,0 @@
-Function: rnfidealup
-Section: number_fields
-C-Name: rnfidealup
-Prototype: GG
-Help: rnfidealup(rnf,x): lifts the ideal x (of the base field) to the
- relative field
-

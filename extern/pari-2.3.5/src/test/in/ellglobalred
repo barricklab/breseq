@@ -1,9 +1,0 @@
-{
-  forell(E,1,9999,
-    N = ellconvertname(E[1])[1];
-    M = ellglobalred( ellinit(E[2], 1) )[1];
-    if (N != M, print(e," bad for N = ",N))
-  );
-}
-print("Total time spent: ",gettime);
-\q

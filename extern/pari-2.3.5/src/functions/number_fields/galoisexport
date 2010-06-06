@@ -1,8 +1,0 @@
-Function: galoisexport
-Section: number_fields
-C-Name: galoisexport
-Prototype: GD0,L,
-Help: galoisexport(gal,{flag}): gal being a galois field as output by
- galoisinit, output a string representing the underlying permutation group in
- GAP notation (default) or Magma notation (flag = 1)
-

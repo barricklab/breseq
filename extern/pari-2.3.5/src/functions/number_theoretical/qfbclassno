@@ -1,7 +1,0 @@
-Function: qfbclassno
-Section: number_theoretical
-C-Name: qfbclassno0
-Prototype: GD0,L,
-Help: qfbclassno(x,{flag=0}): class number of discriminant x using Shanks's
- method by default. If (optional) flag is set to 1, use Euler products
-

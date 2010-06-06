@@ -1,8 +1,0 @@
-Function: plotrmove
-Class: highlevel
-Section: graphic
-C-Name: rectrmove
-Prototype: vLGG
-Help: plotrmove(w,dx,dy): move cursor to position (dx,dy) relative to the
- present position in the rectwindow w
-

@@ -1,7 +1,0 @@
-Function: factorff
-Section: number_theoretical
-C-Name: factorff
-Prototype: GGG
-Help: factorff(x,p,a): factorization of the polynomial x in the finite field
- F_p[X]/a(X)F_p[X]
-

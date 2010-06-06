@@ -1,8 +1,0 @@
-Function: polgalois
-Section: number_fields
-C-Name: polgalois
-Prototype: Gp
-Help: polgalois(x): Galois group of the polynomial x (see manual for group
- coding). Return [n, s, k, name] where n is the order, s the signature, k the
- index and name is the GAP4 name of the transitive group.
-

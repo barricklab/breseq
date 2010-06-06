@@ -1,8 +1,0 @@
-Function: matkerint
-Section: linear_algebra
-C-Name: matkerint0
-Prototype: GD0,L,
-Help: matkerint(x,{flag=0}): LLL-reduced Z-basis of the kernel of the matrix
- x with integral entries. flag is optional, and may be set to 0: default,
- uses a modified LLL, 1: uses matrixqz
-

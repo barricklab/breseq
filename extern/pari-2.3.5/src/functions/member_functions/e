@@ -1,7 +1,0 @@
-Function: _.e
-Class: member_functions
-C-Name: member_e
-Prototype: G
-Description: 
- (prid):int:copy       gel($1, 3)
-

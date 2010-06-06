@@ -1,7 +1,0 @@
-Function: bezout
-Section: number_theoretical
-C-Name: vecbezout
-Prototype: GG
-Help: bezout(x,y): gives a 3-dimensional row vector [u,v,d] such that
- d=gcd(x,y) and u*x+v*y=d
-

@@ -1,6 +1,0 @@
-Function: conj
-Section: conversions
-C-Name: gconj
-Prototype: G
-Help: conj(x): the algebraic conjugate of x
-

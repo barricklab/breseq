@@ -1,8 +1,0 @@
-Function: bnfsunit
-Section: number_fields
-C-Name: bnfsunit
-Prototype: GGp
-Help: bnfsunit(bnf,S): compute the fundamental S-units of the number field
- bnf output by bnfinit, S being a list of prime ideals. res[1] contains the
- S-units, res[5] the S-classgroup. See manual for details
-

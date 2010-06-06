@@ -1,7 +1,0 @@
-Function: znlog
-Section: number_theoretical
-C-Name: znlog
-Prototype: GG
-Help: znlog(x,g): g as output by znprimroot (modulo a prime). Return
- smallest non-negative n such that g^n = x
-

@@ -1,7 +1,0 @@
-Function: algdep
-Section: linear_algebra
-C-Name: algdep0
-Prototype: GLD0,L,p
-Help: algdep(x,n,{flag=0}): algebraic relations up to degree n of x, using
- lindep([1,x,...,x^(n-1)], flag).
-

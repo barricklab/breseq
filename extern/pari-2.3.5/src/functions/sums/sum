@@ -1,7 +1,0 @@
-Function: sum
-Section: sums
-C-Name: somme
-Prototype: V=GGEDG
-Help: sum(X=a,b,expr,{x=0}): x plus the sum (X goes from a to b) of
- expression expr
-

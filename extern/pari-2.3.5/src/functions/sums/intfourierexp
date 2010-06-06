@@ -1,9 +1,0 @@
-Function: intfourierexp
-Section: sums
-C-Name: intfourexp0
-Prototype: V=GGGEDGp
-Help: intfourierexp(X=a,b,x,s,{tab}): numerical integration from a to b
- of exp(-2*I*Pi*x*X)*s(X) from a to b, where a, b, and tab are as in intnum.
- This is the ordinary Fourier transform if a=-infty and b=+infty. Note the
- minus sign.
-

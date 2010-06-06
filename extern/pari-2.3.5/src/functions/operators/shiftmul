@@ -1,6 +1,0 @@
-Function: shiftmul
-Section: operators
-C-Name: gmul2n
-Prototype: GL
-Help: shiftmul(x,n): multiply x by 2^n (n>=0 or n<0)
-

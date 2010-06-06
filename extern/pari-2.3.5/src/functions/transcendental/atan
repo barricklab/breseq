@@ -1,6 +1,0 @@
-Function: atan
-Section: transcendental
-C-Name: gatan
-Prototype: Gp
-Help: atan(x): inverse tangent of x
-

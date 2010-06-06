@@ -1,6 +1,0 @@
-Function: nfhnf
-Section: number_fields
-C-Name: nfhermite
-Prototype: GG
-Help: nfhnf(nf,x): if x=[A,I], gives a pseudo-basis of the module sum A_jI_j
-

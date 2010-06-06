@@ -1,8 +1,0 @@
-Function: matmultodiagonal
-Section: linear_algebra
-C-Name: matmultodiagonal
-Prototype: GG
-Help: matmultodiagonal(x,y): product of matrices x and y, knowing that the
- result will be a diagonal matrix. Much faster than general multiplication in
- that case
-

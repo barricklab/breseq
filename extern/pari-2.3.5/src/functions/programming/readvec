@@ -1,9 +1,0 @@
-Function: readvec
-Section: programming
-C-Name: gp_readvec_file
-Prototype: D"",s,
-Help: readvec({filename}): create a vector whose components are the evaluation
- of all the expressions found in the input file filename
-Description:
- (str):gen      gp_readvec_file($1)
-

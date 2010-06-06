@@ -1,7 +1,0 @@
-Function: besseljh
-Section: transcendental
-C-Name: jbesselh
-Prototype: GGp
-Help: besseljh(n,x): J-bessel function of index n+1/2 and argument x, where
- n is a non-negative integer
-

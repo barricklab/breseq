@@ -1,7 +1,0 @@
-#! /bin/sh
-t=$1; shift
-if test -n "$t"; then
-  echo "-Wl,$@" | sed -e 's/  */,/g'
-else
-  echo "$@"
-fi

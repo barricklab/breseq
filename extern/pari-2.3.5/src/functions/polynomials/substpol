@@ -1,7 +1,0 @@
-Function: substpol
-Section: polynomials
-C-Name: gsubstpol
-Prototype: GGG
-Help: substpol(x,y,z): in expression x, replace the polynomial y by the
- expression z, using remainder decomposition of x.
-

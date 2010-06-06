@@ -1,8 +1,0 @@
-Function: polsylvestermatrix
-Section: polynomials
-C-Name: sylvestermatrix
-Prototype: GG
-Help: polsylvestermatrix(x,y): forms the sylvester matrix associated to the
- two polynomials x and y. Warning: the polynomial coefficients are in
- columns, not in rows
-

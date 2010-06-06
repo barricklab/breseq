@@ -1,9 +1,0 @@
-Function: ellsearch
-Section: elliptic_curves
-C-Name: ellsearch
-Prototype: G
-Help: ellsearch(N): if N is an integer, it is taken as a conductor else if N is
- a string, it can be a curve name ("11a1"), a isogeny class ("11a") or a
- conductor ("11"). Return all curves in the elldata database that match the 
- property.
-

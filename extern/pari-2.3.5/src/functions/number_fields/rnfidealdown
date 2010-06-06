@@ -1,7 +1,0 @@
-Function: rnfidealdown
-Section: number_fields
-C-Name: rnfidealdown
-Prototype: GG
-Help: rnfidealdown(rnf,x): finds the intersection of the ideal x with the
- base field
-

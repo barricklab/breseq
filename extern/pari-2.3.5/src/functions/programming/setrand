@@ -1,6 +1,0 @@
-Function: setrand
-Section: programming
-C-Name: setrand
-Prototype: lL
-Help: setrand(n): reset the seed of the random number generator to n
-

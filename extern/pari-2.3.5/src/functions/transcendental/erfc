@@ -1,6 +1,0 @@
-Function: erfc
-Section: transcendental
-C-Name: gerfc
-Prototype: Gp
-Help: erfc(x): complementary error function
-

@@ -1,7 +1,0 @@
-Function: intformal
-Section: polynomials
-C-Name: integ
-Prototype: GDn
-Help: intformal(x,{y}): formal integration of x with respect to the main
- variable of y, or to the main variable of x if y is omitted
-

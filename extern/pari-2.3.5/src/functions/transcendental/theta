@@ -1,6 +1,0 @@
-Function: theta
-Section: transcendental
-C-Name: theta
-Prototype: GGp
-Help: theta(q,z): Jacobi sine theta-function
-

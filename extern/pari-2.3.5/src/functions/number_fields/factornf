@@ -1,7 +1,0 @@
-Function: factornf
-Section: number_fields
-C-Name: polfnf
-Prototype: GG
-Help: factornf(x,t): factorization of the polynomial x over the number field
- defined by the polynomial t
-

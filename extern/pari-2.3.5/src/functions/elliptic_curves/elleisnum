@@ -1,9 +1,0 @@
-Function: elleisnum
-Section: elliptic_curves
-C-Name: elleisnum
-Prototype: GLD0,L,p
-Help: elleisnum(om,k,{flag=0}): om=[om1,om2] being a 2-component vector
- giving a basis of a lattice L and k an even positive integer, computes the
- numerical value of the Eisenstein series of weight k. When flag is non-zero
- and k=4 or 6, this gives g2 or g3 with the correct normalization
-

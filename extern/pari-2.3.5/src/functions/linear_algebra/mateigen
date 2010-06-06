@@ -1,6 +1,0 @@
-Function: mateigen
-Section: linear_algebra
-C-Name: eigen
-Prototype: Gp
-Help: mateigen(x): eigenvectors of the matrix x given as columns of a matrix
-

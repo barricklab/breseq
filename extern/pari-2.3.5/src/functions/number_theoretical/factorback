@@ -1,9 +1,0 @@
-Function: factorback
-Section: number_theoretical
-C-Name: factorback0
-Prototype: GDGDG
-Help: factorback(f,{e},{nf}): given a factorisation f, gives the factored
- object back. If this is a prime ideal factorisation you must supply the
- corresponding number field as last argument. If e is present, f has to be a
- vector of the same length, and we return the product of the f[i]^e[i]
-

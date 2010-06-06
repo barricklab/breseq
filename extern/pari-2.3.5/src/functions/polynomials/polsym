@@ -1,6 +1,0 @@
-Function: polsym
-Section: polynomials
-C-Name: polsym
-Prototype: GL
-Help: polsym(x,n): vector of symmetric powers of the roots of x up to n
-

@@ -1,8 +1,0 @@
-Function: _.r2
-Class: member_functions
-C-Name: member_r2
-Prototype: G
-Description: 
- (nf):int:copy                  gmael($1, 2, 2)
- (gen):int                      member_r2($1)
-

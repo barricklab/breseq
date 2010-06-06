@@ -1,8 +1,0 @@
-Function: type
-Section: programming
-C-Name: type0
-Prototype: G
-Help: type(x): return the type of the GEN x.
-Description:
- (gen):typ              typ($1)
-

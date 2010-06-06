@@ -1,7 +1,0 @@
-Function: idealpow
-Section: number_fields
-C-Name: idealpow0
-Prototype: GGGD0,L,p
-Help: idealpow(nf,x,n,{flag=0}): n-th power of the ideal x in HNF in the
- number field nf If (optional) flag is non-null, reduce the result
-

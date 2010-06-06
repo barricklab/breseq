@@ -1,8 +1,0 @@
-Function: _.nf
-Class: member_functions
-C-Name: member_nf
-Prototype: G
-Description: 
- (nf):nf:parens		$1
- (gen):nf               member_nf($1)
-

@@ -1,9 +1,0 @@
-Function: _<<_
-Class: symbolic_operators
-C-Name: gshift
-Prototype: GL
-Description: 
- (int, small):int		shifti($1, $2)
- (mp, small):mp			mpshift($1, $2)
- (gen, small):mp		gshift($1, $2)
-
