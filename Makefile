@@ -3,7 +3,6 @@
 ## Handle boost builds
 
 ROOTDIR=$(PWD)
-
 BRESEQDIR=$(ROOTDIR)/src/perl/Breseq
 BIOSAMTOOLS=$(ROOTDIR)/extern/Bio-SamTools-1.19
 SAMTOOLSDIR=$(ROOTDIR)/extern/samtools-0.1.7a

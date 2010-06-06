@@ -837,7 +837,7 @@ sub _predict_polymorphism
 	my $fisher_strand_p_value = 'ND';
 	if ($settings->{installed}->{Math_Pari})
 	{
-		use Statistics::FishersExactTest;
+		require Statistics::FishersExactTest;
 		$fisher_strand_p_value = Statistics::FishersExactTest::fishers_exact($first_base_strand_hash->{1},$first_base_strand_hash->{-1},$second_base_strand_hash->{1},$second_base_strand_hash->{-1},1);
 		$fisher_strand_p_value = sprintf "%.1e", $fisher_strand_p_value; #round immediately
 	}
