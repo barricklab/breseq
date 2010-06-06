@@ -6,13 +6,17 @@ BIOSAMTOOLS=$(ROOTDIR)/extern/Bio-SamTools-1.19
 SAMTOOLSDIR=$(ROOTDIR)/extern/samtools-0.1.7a
 STAGEDIR=$(ROOTDIR)/stage
 
-BJAMFLAGS=--user-config=$(ROOTDIR)/user-config.jam
+LOCALUSERCONFIG=$(ROOTDIR)/user-config.jam
+BJAMFLAGS=$(shell if [ -e $(LOCALUSERCONFIG) ]; then echo --user-config=$(LOCALUSERCONFIG); fi )
+#echo "$(LOCALUSERCONFIG)"
+#test -e $(LOCALUSERCONFIG) && BJAMFLAGS=--user-config=$(LOCALUSERCONFIG)
 
 
 ## Main
-all :: make
+all : make
 
 make :
+	$(info $(BJAMFLAGS))
 
 	bjam $(BJAMFLAGS)
 	bjam $(BJAMFLAGS) install-libbam-for-perl
