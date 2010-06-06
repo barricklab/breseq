@@ -835,7 +835,7 @@ sub _predict_polymorphism
 	### or pull over the R code for the calculation into the re-written C version
 
 	my $fisher_strand_p_value = 'ND';
-	if ($settings->{installed}->{Math_Pari} && $self->{installed}->{Statistics_Distributions})
+	if ($settings->{installed}->{Math_Pari} && $settings->{installed}->{Statistics_Distributions})
 	{
 		require Statistics::FishersExactTest;
 		$fisher_strand_p_value = Statistics::FishersExactTest::fishers_exact($first_base_strand_hash->{1},$first_base_strand_hash->{-1},$second_base_strand_hash->{1},$second_base_strand_hash->{-1},1);

@@ -38,9 +38,6 @@ install :
 	cd $(BIOSAMTOOLS) ; \
 	./Build install
 
-	cd $(STATSDISTS) ; \
-	make install
-
 
 clean :
 	bjam $(BJAMFLAGS) clean

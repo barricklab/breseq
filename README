@@ -1,20 +1,42 @@
-Please see the online documentation at:
-http://www.barricklab.org/twiki/bin/view/Lab/ToolsBacterialGenomeResequencing
-
-
 ==== Installation Instructions ====
 
-== Perl Modules ==
+== Mac OS 10.5 or 10.6) ==
+
+In order to build _breseq_ from source, you will need several
+open source tools installed. The easiest way to get them is to
+install MacPorts [http://www.macports.org/]. Once you have this
+installed, open a new terminal window and issue the commands:
+
+> sudo port install coreutils
+> sudo port install R
+> sudo port install boost
+> sudo port install boost-build
+> sudo port install ghostscript
+
+You will also need several Perl modules that are available from CPAN.
+In a terminal window issue the following commands
 
 > sudo perl -MCPAN -e shell
-> install Math::Pari
-> install Statistics::Distributions
-> force install CJFIELDS/BioPerl-1.6.1.tar.gz
+cpan> install Math::Pari
+cpan> install Statistics::Distributions
+cpan> force install CJFIELDS/BioPerl-1.6.1.tar.gz
+cpan> quit
 
-== Mac OS 10.6 (Snow Leopard) ==
+Now, you need to tell boost-build about your computer. If you are on Mac
+OS 10.5 or 10.6 you should rename a copy of the file "darwin-user-config.jam" 
+to "user-config.jam"
 
-sudo port install boost
-sudo port install boost-build
-sudo port install pari
+To build _breseq_, open a new terminal window, cd to the root directory of 
+_breseq_ and use these commands:
 
-create the file "user-config.jam" in your home directory
+> make
+> make install
+> make test
+
+(Make test, will take quite some time. You don't need to let it do all of the tests.)
+
+Finally, add the _breseq_ "stage/bin" directory to your $PATH by adding a line like
+this to your "~/.profile" file:
+
+export PATH="$PATH:/Users/jbarrick/breseq/stage/bin"
+
