@@ -1,6 +1,0 @@
-Function: nfeltdivrem
-Section: number_fields
-C-Name: nfdivrem
-Prototype: GGG
-Help: nfeltdivrem(nf,a,b): gives [q,r] such that r=a-bq is small
-

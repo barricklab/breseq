@@ -1,8 +1,0 @@
-Function: factormod
-Section: number_theoretical
-C-Name: factormod0
-Prototype: GGD0,L,
-Help: factormod(x,p,{flag=0}): factorization mod p of the polynomial x using
- Berlekamp. flag is optional, and can be 0: default or 1: simple factormod,
- same except that only the degrees of the irreducible factors are given
-

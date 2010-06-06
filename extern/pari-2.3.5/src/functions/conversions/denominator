@@ -1,7 +1,0 @@
-Function: denominator
-Section: conversions
-C-Name: denom
-Prototype: G
-Help: denominator(x): denominator of x (or lowest common denominator in case
- of an array)
-

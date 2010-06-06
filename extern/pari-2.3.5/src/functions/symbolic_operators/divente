@@ -1,8 +1,0 @@
-Function: _\=_
-Class: symbolic_operators
-Description: 
- (*small, small):small:parens		$1 /= $(2)
- (*int, int):int:parens			 $1 = gdivent($1, $2)
- (*pol, gen):gen:parens			 $1 = gdivent($1, $2)
- (*gen, gen):gen:parens			 $1 = gdivent($1, $2)
-

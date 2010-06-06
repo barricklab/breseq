@@ -1,7 +1,0 @@
-Function: nfalgtobasis
-Section: number_fields
-C-Name: algtobasis
-Prototype: GG
-Help: nfalgtobasis(nf,x): transforms the algebraic number x into a column
- vector on the integral basis nf.zk
-

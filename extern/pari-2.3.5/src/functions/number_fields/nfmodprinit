@@ -1,8 +1,0 @@
-Function: nfmodprinit
-Section: number_fields
-C-Name: nfmodprinit
-Prototype: GG
-Help: nfmodprinit(nf,pr): transform the 5 element row vector pr representing
- a prime ideal into modpr format necessary for all operations mod pr in the
- number field nf (see manual for details about the format)
-

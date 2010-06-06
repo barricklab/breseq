@@ -1,9 +1,0 @@
-Function: intnuminit
-Section: sums
-C-Name: intnuminit
-Prototype: GGD0,L,p
-Help: intnuminit(a,b,{m=0}): initialize tables for integrations from a to b.
- See help for intnum for coding of a and b. Possible types: compact interval,
- semi-compact (one extremity at + or - infinity) or R, and very slowly, slowly
- or exponentially decreasing, or sine or cosine oscillating at infinities,
-

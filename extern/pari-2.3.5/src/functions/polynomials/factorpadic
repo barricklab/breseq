@@ -1,8 +1,0 @@
-Function: factorpadic
-Section: polynomials
-C-Name: factorpadic0
-Prototype: GGLD0,L,
-Help: factorpadic(x,p,r,{flag=0}): p-adic factorization of the polynomial x
- to precision r. flag is optional and may be set to 0 (use round 4) or 1 (use
- Buchmann-Lenstra)
-

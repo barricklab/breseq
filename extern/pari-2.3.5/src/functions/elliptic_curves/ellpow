@@ -1,6 +1,0 @@
-Function: ellpow
-Section: elliptic_curves
-C-Name: powell
-Prototype: GGG
-Help: ellpow(e,x,n): n times the point x on elliptic curve e (n in Z)
-

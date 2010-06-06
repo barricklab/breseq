@@ -1,8 +1,0 @@
-Function: log
-Section: transcendental
-C-Name: glog
-Prototype: Gp
-Help: log(x): natural logarithm of x.
-Description: 
- (gen):gen:prec	glog($1, prec)
-

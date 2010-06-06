@@ -1,9 +1,0 @@
-Function: eulerphi
-Section: number_theoretical
-C-Name: gphi
-Prototype: G
-Help: eulerphi(x): Euler's totient function of x
-Description: 
- (int):int	phi($1)
- (gen):gen	gphi($1)
-

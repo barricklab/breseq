@@ -1,9 +1,0 @@
-Function: rnfequation
-Section: number_fields
-C-Name: rnfequation0
-Prototype: GGD0,L,
-Help: rnfequation(nf,pol,{flag=0}): given a pol with coefficients in nf,
- gives the absolute equation apol of the number field defined by pol. flag is
- optional, and can be 0: default, or non-zero, gives [apol,th], where th
- expresses the root of nf.pol in terms of the root of apol
-

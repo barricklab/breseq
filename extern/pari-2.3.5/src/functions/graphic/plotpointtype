@@ -1,9 +1,0 @@
-Function: plotpointtype
-Class: highlevel
-Section: graphic
-C-Name: rectpointtype
-Prototype: vLL
-Help: plotpointtype(w,type): change the type of following points in
- rectwindow w. type -1 corresponds to a dot, larger values may correspond to
- something else. w=-1 changes highlevel plotting
-

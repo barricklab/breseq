@@ -1,7 +1,0 @@
-Function: elllseries
-Section: elliptic_curves
-C-Name: elllseries
-Prototype: GGDGp
-Help: elllseries(e,s,{A=1}): L-series at s of the elliptic curve e, where A
- a cut-off point close to 1
-

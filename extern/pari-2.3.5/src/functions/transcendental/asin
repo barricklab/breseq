@@ -1,6 +1,0 @@
-Function: asin
-Section: transcendental
-C-Name: gasin
-Prototype: Gp
-Help: asin(x): inverse sine of x
-

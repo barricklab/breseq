@@ -16,7 +16,7 @@ DATADIR=${COMMONDIR}/data
 # this is a find-compatible list of files that we'll hash:
 FILE_PATTERN='( -name *.tab -or -name *.html ) -and -not -name settings.tab -and -not -name summary.tab'
 # executable used to hash files:
-HASH=`which sha1sum`
+HASH=`which shasum`
 # name of file containing expected hash values:
 EXPECTED=expected.sha1
 # name of testexec file

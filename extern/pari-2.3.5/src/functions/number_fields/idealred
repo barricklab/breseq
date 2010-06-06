@@ -1,7 +1,0 @@
-Function: idealred
-Section: number_fields
-C-Name: ideallllred
-Prototype: GGDGp
-Help: idealred(nf,x,{vdir=0}): LLL reduction of the ideal x in the number
- field nf along direction vdir, in HNF
-

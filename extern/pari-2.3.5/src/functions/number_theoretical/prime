@@ -1,6 +1,0 @@
-Function: prime
-Section: number_theoretical
-C-Name: prime
-Prototype: L
-Help: prime(n): returns the n-th prime (n C-integer)
-

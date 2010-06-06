@@ -1,6 +1,0 @@
-Function: fibonacci
-Section: number_theoretical
-C-Name: fibo
-Prototype: L
-Help: fibonacci(x): fibonacci number of index x (x C-integer)
-

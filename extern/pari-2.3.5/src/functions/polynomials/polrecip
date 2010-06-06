@@ -1,6 +1,0 @@
-Function: polrecip
-Section: polynomials
-C-Name: polrecip
-Prototype: G
-Help: polrecip(x): reciprocal polynomial of x
-

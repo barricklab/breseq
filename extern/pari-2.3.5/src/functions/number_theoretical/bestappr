@@ -1,7 +1,0 @@
-Function: bestappr
-Section: number_theoretical
-C-Name: bestappr0
-Prototype: GGDG
-Help: bestappr(x,k): gives the best approximation to the real x with
- denominator less or equal to k
-

@@ -1,8 +1,0 @@
-Function: _\/_
-Class: symbolic_operators
-C-Name: gdivround
-Prototype: GG
-Description: 
- (int, int):int			gdivround($1, $2)
- (gen, gen):gen			gdivround($1, $2)
-

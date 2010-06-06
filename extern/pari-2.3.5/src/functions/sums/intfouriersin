@@ -1,8 +1,0 @@
-Function: intfouriersin
-Section: sums
-C-Name: intfoursin0
-Prototype: V=GGGEDGp
-Help: intfouriersin(X=a,b,x,s,{tab}): numerical integration from a to b
- of sin(2*Pi*x*X)*s(X) from a to b, where a, b, and tab are as in intnum.
- This is the sine-Fourier transform if a=-infty and b=+infty.
-

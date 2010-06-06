@@ -1,7 +1,0 @@
-Function: _.zkst
-Class: member_functions
-C-Name: member_zkst
-Prototype: G
-Description: 
- (bnr):gen:copy        gel($1, 2)
-

@@ -1,7 +1,0 @@
-Function: matalgtobasis
-Section: number_fields
-C-Name: matalgtobasis
-Prototype: GG
-Help: matalgtobasis(nf,x): nfalgtobasis applied to every element of the
- matrix x
-

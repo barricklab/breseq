@@ -1,6 +1,0 @@
-Function: numerator
-Section: conversions
-C-Name: numer
-Prototype: G
-Help: numerator(x): numerator of x
-

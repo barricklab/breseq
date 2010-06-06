@@ -1,8 +1,0 @@
-Function: polroots
-Section: polynomials
-C-Name: roots0
-Prototype: GD0,L,p
-Help: polroots(x,{flag=0}): complex roots of the polynomial x. flag is
- optional, and can be 0: default, uses Schonhage's method modified by
- Gourdon, or 1: uses a modified Newton method
-

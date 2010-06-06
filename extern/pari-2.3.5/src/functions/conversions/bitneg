@@ -1,8 +1,0 @@
-Function: bitneg
-Section: conversions
-C-Name: gbitneg
-Prototype: GD-1,L,
-Help: bitneg(x,{n=-1}): bitwise negation of an integers x truncated to n
- bits. n=-1 means represent infinite sequences of bit 1 as negative numbers.
- Negative numbers behave as if modulo big power of 2
-

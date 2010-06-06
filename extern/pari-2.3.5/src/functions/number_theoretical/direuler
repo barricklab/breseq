@@ -1,9 +1,0 @@
-Function: direuler
-Section: number_theoretical
-C-Name: direuler0
-Prototype: V=GGEDG
-Help: direuler(p=a,b,expr,{c}): Dirichlet Euler product of expression expr
- from p=a to p=b, limited to b terms. Expr should be a polynomial or rational
- function in p and X, and X is understood to mean p^(-s). If c is present,
- output only the first c terms
-

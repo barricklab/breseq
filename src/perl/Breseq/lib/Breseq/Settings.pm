@@ -620,7 +620,6 @@ sub installed
 	$self->{installed}->{Statistics_Distributions} = (eval 'require Statistics::Distributions');	
 	$self->{installed}->{bioperl} = (eval 'require Bio::Root::Root');	
 	$self->{installed}->{Bio_DB_Sam} = (eval 'require Bio::DB::Sam');
-	$self->{installed}->{Statistics_Distributions} = (eval 'require Statistics::Distributions');	
 		
 
 	## optional
@@ -676,6 +675,13 @@ sub check_installed
 	{
 		print STDERR "---> WARNING! Perl module MATH::Pari not installed. Fisher's Exact Test\n";
 		print STDERR "---> will not be used to check strand bias in polymorphism predictions.\n";
+	}
+	
+	if ( ($self->{polymorphism_prediction} && !$self->{installed}->{Statistics_Distributions}) )
+	{
+		print STDERR "---> WARNING! Perl module Statistics::Distributions not installed. Fisher's Exact\n";
+		print STDERR "---> Test will not be used to check strand bias in polymorphism predictions.\n";
+		print STDERR "---> This should have been installed by the breseq installer.\n";		
 	}
 	
 	$self->throw if (!$good_to_go);

@@ -1,6 +1,0 @@
-Function: psi
-Section: transcendental
-C-Name: gpsi
-Prototype: Gp
-Help: psi(x): psi-function at x
-

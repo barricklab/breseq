@@ -1,7 +1,0 @@
-Function: _.b8
-Class: member_functions
-C-Name: member_b8
-Prototype: G
-Description: 
- (ell):gen:copy        gel($1, 9)
-

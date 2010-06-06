@@ -1,8 +1,0 @@
-Function: idealchinese
-Section: number_fields
-C-Name: idealchinese
-Prototype: GGG
-Help: idealchinese(nf,x,y): x being a prime ideal factorization and y a
- vector of elements, gives an element b such that v_p(b-y_p)>=v_p(x) for all
- prime ideals p dividing x, and v_p(b)>=0 for all other p
-

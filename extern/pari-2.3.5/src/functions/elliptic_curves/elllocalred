@@ -1,9 +1,0 @@
-Function: elllocalred
-Section: elliptic_curves
-C-Name: elllocalred
-Prototype: GG
-Help: elllocalred(e,p): e being an elliptic curve, returns
- [f,kod,[u,r,s,t],c], where f is the conductor's exponent, kod is the Kodaira
- type for e at p, [u,r,s,t] is the change of variable needed to make e
- minimal at p, and c is the local Tamagawa number c_p
-

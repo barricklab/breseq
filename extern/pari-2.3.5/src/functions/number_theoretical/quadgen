@@ -1,6 +1,0 @@
-Function: quadgen
-Section: number_theoretical
-C-Name: quadgen
-Prototype: G
-Help: quadgen(x): standard generator of quadratic order of discriminant x
-

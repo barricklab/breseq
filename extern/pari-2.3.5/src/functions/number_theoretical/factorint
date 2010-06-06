@@ -1,9 +1,0 @@
-Function: factorint
-Section: number_theoretical
-C-Name: factorint
-Prototype: GD0,L,
-Help: factorint(x,{flag=0}): factor the integer x. flag is optional, whose
- binary digits mean 1: avoid MPQS, 2: avoid first-stage ECM (may fall back on
- it later), 4: avoid Pollard-Brent Rho and Shanks SQUFOF, 8: skip final ECM
- (huge composites will be declared prime)
-

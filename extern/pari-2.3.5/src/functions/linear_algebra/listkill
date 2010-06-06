@@ -1,6 +1,0 @@
-Function: listkill
-Section: linear_algebra
-C-Name: listkill
-Prototype: vG
-Help: listkill(list): kills list
-

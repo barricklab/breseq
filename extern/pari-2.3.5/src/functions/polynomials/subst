@@ -1,7 +1,0 @@
-Function: subst
-Section: polynomials
-C-Name: gsubst
-Prototype: GnG
-Help: subst(x,y,z): in expression x, replace the variable y by the
- expression z
-

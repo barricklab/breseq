@@ -1,9 +1,0 @@
-Function: bigomega
-Section: number_theoretical
-C-Name: gbigomega
-Prototype: G
-Help: bigomega(x): number of prime divisors of x, counted with multiplicity
-Description: 
- (int):small	bigomega($1)
- (gen):gen	gbigomega($1)
-

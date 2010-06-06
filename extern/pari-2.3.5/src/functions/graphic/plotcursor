@@ -1,7 +1,0 @@
-Function: plotcursor
-Class: highlevel
-Section: graphic
-C-Name: rectcursor
-Prototype: L
-Help: plotcursor(w): current position of cursor in rectwindow w
-

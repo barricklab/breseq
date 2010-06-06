@@ -1,7 +1,0 @@
-Function: poldiscreduced
-Section: polynomials
-C-Name: reduceddiscsmith
-Prototype: G
-Help: poldiscreduced(f): vector of elementary divisors of Z[a]/f'(a)Z[a],
- where a is a root of the polynomial f
-

@@ -1,9 +1,0 @@
-Function: bnrconductor
-Section: number_fields
-C-Name: bnrconductor
-Prototype: GDGDGDG
-Help: bnrconductor(a1,{a2},{a3},{flag=0}): conductor f of the subfield of
- the ray class field given by a1,a2,a3 (see bnrdisc). flag is optional and
- can be 0: default, 1: returns [f, Cl_f, H], H subgroup of the ray class
- group modulo f defining the extension, 2: returns [f, bnr(f), H]
-
