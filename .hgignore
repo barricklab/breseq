@@ -12,35 +12,34 @@ syntax: glob
 *.html
 *.tab
 *.swp
-Library/*
 
 ## These are for Perl modules in general
 _build
 blib
 
+## This is user/architecture specific
+user-config.jam
+
 
 syntax: regexp
+
 ^stage/
-^bin/
-^lib/
-^man/
-^share/
+
 ^tests/.+/output
 ^tests/.+/0
+
 ^src/c/build
 ^src/c/error_count/bin
 
+^extern/samtools-0.1.7a/samtools
+^extern/samtools-0.1.7a/misc
+^extern/samtools-0.1.7a/bin
 
-### We probably want to move these to directory specific .hgignore!
-^src/c/samtools-0.1.7a/samtools
-^src/c/samtools-0.1.7a/misc
-
-
-## Perl specific (mostly temporary Makefiles)
 ^extern/Bio-SamTools-1.19/lib/Bio/DB/Sam.c
 ^extern/Bio-SamTools-1.19/Build$
-^extern/Statistics-Distributions-1.02/Makefile$
-^extern/Statistics-Distributions-1.02/Makefile.old$
-^extern/Statistics-Distributions-1.02/pm_to_blib$
 ^src/perl/Breseq/Build$
+
+src/c/breseq.xcodeproj/.+\.mode1v3$
+src/c/breseq.xcodeproj/.+\.pbxuser$
+
 
