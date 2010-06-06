@@ -9,11 +9,78 @@ BIOSAMTOOLS=$(ROOTDIR)/extern/Bio-SamTools-1.19
 SAMTOOLSDIR=$(ROOTDIR)/extern/samtools-0.1.7a
 STATSDISTS=$(ROOTDIR)/extern/Statistics-Distributions-1.02
 PARIDIR=$(ROOTDIR)/extern/Math-Pari-2.01080604
+BIOPERLDIR=$(ROOTDIR)/extern/BioPerl-1.6.1
 STAGEDIR=$(ROOTDIR)/stage
 
 
-## breseq only
+## Main
+all :: make
+
+make :
+
+	bjam
+	bjam install-libbam-for-perl
+
+	## Breseq
+	cd $(BRESEQDIR) ; \
+	perl Build.PL --install_base=$(STAGEDIR) ; \
+	./Build ; 
+
+	## Bio::SamTools
+	cd $(BIOSAMTOOLS) ; \
+	export SAMTOOLS=$(ROOTDIR)/extern/samtools-0.1.7a ; \
+	perl Build.PL --install_base=$(STAGEDIR) ; \
+	./Build ; 
 	
+	## Statistics::Distributions
+	cd $(STATSDISTS) ; \
+	perl Makefile.PL INSTALL_BASE=$(STAGEDIR) ; \
+	make ; 
+	
+	## BioPerl
+	cd $(BIOPERLDIR) ; \
+	perl Makefile.PL INSTALL_BASE=$(STAGEDIR) ; \
+	make ; 
+	
+
+
+install :
+	bjam install
+
+	cd $(BRESEQDIR) ; \
+	./Build install
+
+	cd $(BIOSAMTOOLS) ; \
+	./Build install
+
+	cd $(STATSDISTS) ; \
+	make install
+
+	cd $(BIOPERLDIR) ; \
+	make install
+
+
+clean :
+	bjam clean
+	bjam clean install
+
+	cd $(BRESEQDIR) ; \
+	./Build clean
+	
+	cd $(BIOSAMTOOLS) ; \
+	./Build clean
+	
+	cd $(STATSDISTS) ; \
+	make clean
+
+	cd $(BIOPERLDIR) ; \
+	make clean	
+	
+	rm -rf $(STAGEDIR)
+	
+	tests/test.sh clean tests/	
+
+## breseq only	
 make-breseq:
 	cd $(BRESEQDIR) ; \
 	perl Build.PL --install_base=$(STAGEDIR) ; \
@@ -44,60 +111,6 @@ install-pari:
 clean-pari :
 	cd $(PARIDIR) ; \
 	make clean
-
-
-## Main
-all :: make
-
-make :
-
-	bjam
-	bjam install-libbam-for-perl
-
-	## Breseq
-	cd $(BRESEQDIR) ; \
-	perl Build.PL --install_base=$(STAGEDIR) ; \
-	./Build ; 
-
-	## Bio::SamTools
-	cd $(BIOSAMTOOLS) ; \
-	export SAMTOOLS=$(ROOTDIR)/extern/samtools-0.1.7a ; \
-	perl Build.PL --install_base=$(STAGEDIR) ; \
-	./Build ; 
-	
-	## Statistics::Distributions
-	cd $(STATSDISTS) ; \
-	perl Makefile.PL INSTALL_BASE=$(STAGEDIR) ; \
-	make ; 
-
-install :
-	bjam install
-
-	cd $(BRESEQDIR) ; \
-	./Build install
-
-	cd $(BIOSAMTOOLS) ; \
-	./Build install
-
-	cd $(STATSDISTS) ; \
-	make install
-
-clean :
-	bjam clean
-	bjam clean install
-
-	cd $(BRESEQDIR) ; \
-	./Build clean
-	
-	cd $(BIOSAMTOOLS) ; \
-	./Build clean
-	
-	cd $(STATSDISTS) ; \
-	make clean
-	
-	rm -rf $(STAGEDIR)
-	
-	tests/test.sh clean tests/	
 	
 	
 
