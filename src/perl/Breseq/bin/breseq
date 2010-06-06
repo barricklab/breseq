@@ -10,9 +10,9 @@ breseq
 
 =head1 SYNOPSIS
 
-Usage: breseq [-a] [-q solexa|phred] -r reference.gbk reads.fastq
+Usage: breseq -r reference.gbk reads.fastq
 
-Perform an analysis of bacterial resequencing data.
+Perform an analysis of microbial resequencing data.
 
 =head1 DESCRIPTION
 
@@ -34,7 +34,7 @@ Perform error analysis of SNPs. Do not predict mutations. Do not allow indels in
 
 =item B<--require-full-matches>
 
-Matche entire reads. DEFAULT = OFF
+Match entire reads. DEFAULT = OFF
 
 =item B<--max-mismatched-per-read>
 
