@@ -9,7 +9,6 @@ BIOSAMTOOLS=$(ROOTDIR)/extern/Bio-SamTools-1.19
 SAMTOOLSDIR=$(ROOTDIR)/extern/samtools-0.1.7a
 STATSDISTS=$(ROOTDIR)/extern/Statistics-Distributions-1.02
 PARIDIR=$(ROOTDIR)/extern/Math-Pari-2.01080604
-BIOPERLDIR=$(ROOTDIR)/extern/BioPerl-1.6.1
 STAGEDIR=$(ROOTDIR)/stage
 
 
@@ -36,12 +35,6 @@ make :
 	cd $(STATSDISTS) ; \
 	perl Makefile.PL INSTALL_BASE=$(STAGEDIR) ; \
 	make ; 
-	
-	## BioPerl
-	cd $(BIOPERLDIR) ; \
-	perl Makefile.PL INSTALL_BASE=$(STAGEDIR) ; \
-	make ; 
-	
 
 
 install :
@@ -54,9 +47,6 @@ install :
 	./Build install
 
 	cd $(STATSDISTS) ; \
-	make install
-
-	cd $(BIOPERLDIR) ; \
 	make install
 
 
@@ -72,9 +62,6 @@ clean :
 	
 	cd $(STATSDISTS) ; \
 	make clean
-
-	cd $(BIOPERLDIR) ; \
-	make clean	
 	
 	rm -rf $(STAGEDIR)
 	
