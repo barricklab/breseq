@@ -290,7 +290,8 @@ sub do_mutate
 		}
 		elsif ($mut->{type} eq 'INS')
 		{
-			substr $ref_seq_info->{ref_strings}->{$mut->{seq_id}}, $mut->{position}-1, 0, $mut->{new_seq};
+			##notice that this is AFTER the position
+			substr $ref_seq_info->{ref_strings}->{$mut->{seq_id}}, $mut->{position}, 0, $mut->{new_seq};
 		}
 		elsif ($mut->{type} eq 'DEL')
 		{	
@@ -299,7 +300,7 @@ sub do_mutate
 		elsif ($mut->{type} eq 'DUP')
 		{
 			my $dup = substr $ref_seq_info->{ref_strings}->{$mut->{seq_id}}, $mut->{position}-1, $mut->{size};
-			substr $ref_seq_info->{ref_strings}->{$mut->{seq_id}}, $mut->{position}-1, 0, $dup;
+			substr $ref_seq_info->{ref_strings}->{$mut->{seq_id}}, $mut->{position}-1 + $mut->{size}, 0, $dup;
 		}
 		elsif ($mut->{type} eq 'INV')
 		{

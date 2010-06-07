@@ -36,7 +36,7 @@ _breseq_ and use these commands:
 (Make test, will take quite some time. You don't need to let it do all of the tests.)
 
 Finally, add the _breseq_ "stage/bin" directory to your $PATH by adding a line like
-this to your "~/.profile" file:
+this to your "~/.profile" file. It MUST be an absolute path that begins with "/":
 
-export PATH="$PATH:/Users/jbarrick/breseq/stage/bin"
+export PATH="$PATH:/mnt/breseq/stage/bin"
 
