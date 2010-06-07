@@ -10,25 +10,29 @@ fastq_utils
 
 =head1 SYNOPSIS
 
-Usage: fastq_utils.pl seq_file_1 seq_file_2 output_file
+Usage: fastq_utils COMMAND arguments...
 
-No documentation. Sorry!
+Recognized commands: SIMULATE
 
 =head1 DESCRIPTION
 
+Perform various operations on fastq files.
+
+=head1 fastq_utils SIMULATE [-l 36 -c 50 -o output.fastq] input.fna
+
 =over
 
-=item B<-i> <file path> 
+=item B<-l|--read-length> int
 
-Input sequence file.
+Length of reads to generate.
 
-=item B<-1|--start> <int> 
+=item B<-c|--coverage> int
 
-Start coordinate.
+Average coverage to generate.
 
-=item B<-2|--end> <int> 
+=item B<-o|--output> file path DEFAULT output.fastq
 
-End coordinate.
+Name of FASTQ output file
 
 =back
 
@@ -52,6 +56,10 @@ use Data::Dumper;
 
 use FindBin;
 use lib $FindBin::Bin;
+
+#### Paths to Locally Installed Modules ####
+use lib $FindBin::Bin . "/../lib/perl5";
+use lib $FindBin::Bin . "/../lib/perl5/site_perl";
 
 my $command = shift @ARGV;
 $command = "\U$command";
@@ -364,7 +372,7 @@ sub do_simulate
 	pod2usage(1) if $help;
 	pod2usage(-exitstatus => 0, -verbose => 2) if $man;
 	my ( $input ) = @ARGV;
-	pod2usage(1) if (!$input);
+	die "USAGE: fastq_utils SIMULATE [-l 36 -c 50 -o output.fastq] input.fna\n" if (!$input);
 
 	my $ref_i = Bio::SeqIO->new( -file => "<$input");
 	my $ref_seq = $ref_i->next_seq;

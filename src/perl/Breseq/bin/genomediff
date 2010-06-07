@@ -6,48 +6,37 @@
 
 =head1 NAME
 
-gd_utils
+genome_diff
 
 =head1 SYNOPSIS
 
-Usage: gd_utils COMMAND [options]
+Usage: genome_diff COMMAND [options]
+
+Valid commands are: MUTATE, ANNOTATE
 
 =head1 DESCRIPTION
 
-Perform various operations on "genome diff" files.
+Perform various operations on "Genome Diff" files.
 
 =over
 
-=head1 COMMAND: FILTER
+=head1 genome_diff MUTATE -r reference.gbk -o output.fna input.gd
 
 =over
 
-=item B<-r|--reference> file path
+=item B<-r|--reference> file path REQUIRED
 
-Genbank file or files that will be used for annotating mutations.
+GenBank file or files that the GenomeDiff refers to. Option may be entered multiple times.
 
 =back
 
-=item B<-i|--input-path> directory path
+=item B<-i|--input-path> file path REQUIRED
 
-File containing columns that can be translated into the required information about SNP mutations. May
-provide multiple times to create multiple output files.
+Input GenomeDiff file.
 
-=item B<-g|--genome-info> file path
+=item B<-o|--genome-info> file path DEFAULT = "out.fna"
 
-Names or correspondance table. Connects filenames to the generation, line, and clone designation of a genome. 
-
-=item B<--output-file> genbank sequence id
-
-Tab-delimited output file. DEFAULT = 'output.tab'.
-
-=item B<--ignore-mutation> seq_id:position:ref_base>mut_base
-
-Ignore this SNP mutation when counting mutations. Any of '/', ':', '_', and '>' can be used to separate the items.
-
-=item B<--seq-id> genbank sequence id
-
-Force all mutations to be on this sequence id, regardless of other information. OPTIONAL.
+Output FASTA file.
 
 =back
 
@@ -101,6 +90,10 @@ if ("\U$command" eq 'FILTER')
 elsif ("\U$command" eq 'ANNOTATE')
 {
 	do_annotate();
+}
+elsif ("\U$command" eq 'MUTATE')
+{
+	do_mutate();
 }
 elsif ("\U$command" eq 'UNION')
 {
@@ -262,6 +255,78 @@ sub do_annotate
 
 	my $index_html_file_name = $settings->file_name('index_html_file_name');	
 	Breseq::Output::html_index($index_html_file_name, $settings, $summary, $ref_seq_info, $gd);	
+}
+
+sub do_mutate
+{
+	my ($help, $man, $verbose);
+	my $output_fasta = 'output.fna'; 
+	my @input_genbank_files;
+	my $input_genome_diff;
+	
+	GetOptions(
+		'help|?' => \$help, 'man' => \$man,
+		'verbose|v' => \$verbose,
+		'output|o=s' => \$output_fasta,
+		'input|r=s' => \@input_genbank_files,
+	) or pod2usage(2);
+	$input_genome_diff = shift @ARGV;
+	pod2usage(1) if $help;
+	pod2usage(-exitstatus => 0, -verbose => 2) if $man;	
+	
+	our $gd = Breseq::GenomeDiff->new(-FILE_NAME => $input_genome_diff);
+	
+	my $ref_seq_info = Breseq::ReferenceSequence::load_ref_seq_info_2(\@input_genbank_files);
+	
+	foreach my $mut ($gd->mutation_list)
+	{		
+		if ($mut->{type} eq 'SNP')
+		{
+			substr $ref_seq_info->{ref_strings}->{$mut->{seq_id}}, $mut->{position}-1, 1, $mut->{new_seq};
+		}
+		elsif ($mut->{type} eq 'SUB')
+		{
+			substr $ref_seq_info->{ref_strings}->{$mut->{seq_id}}, $mut->{position}-1, length($mut->{new_seq}), $mut->{new_seq};
+		}
+		elsif ($mut->{type} eq 'INS')
+		{
+			substr $ref_seq_info->{ref_strings}->{$mut->{seq_id}}, $mut->{position}-1, 0, $mut->{new_seq};
+		}
+		elsif ($mut->{type} eq 'DEL')
+		{	
+			substr $ref_seq_info->{ref_strings}->{$mut->{seq_id}}, $mut->{position}-1, $mut->{size}, '';
+		}		
+		elsif ($mut->{type} eq 'DUP')
+		{
+			my $dup = substr $ref_seq_info->{ref_strings}->{$mut->{seq_id}}, $mut->{position}-1, $mut->{size};
+			substr $ref_seq_info->{ref_strings}->{$mut->{seq_id}}, $mut->{position}-1, 0, $dup;
+		}
+		elsif ($mut->{type} eq 'INV')
+		{
+			die "INV: mutation type not handled yet\n";
+		}
+		elsif ($mut->{type} eq 'MOB')
+		{
+			die "MOB: does not handle gap_left or gap_right != 0 yet." if (($mut->{gap_left} != 0) || ($mut->{gap_left} != 0) );
+			my ($seq_string) = Breseq::ReferenceSequence::repeat_example($ref_seq_info, $mut->{repeat_name});			
+			$mut->{size} = length($seq_string) + $mut->{duplication_size}; ##used by shift_positions
+			my $duplicate_sequence = substr $ref_seq_info->{ref_strings}->{$mut->{seq_id}}, $mut->{position}-1, $mut->{duplication_size};
+			substr $ref_seq_info->{ref_strings}->{$mut->{seq_id}}, $mut->{position}-1, 0, $seq_string . $duplicate_sequence;
+		}
+		
+		$gd->shift_positions($mut);
+		
+	}
+	
+	my $out = Bio::SeqIO->new(-format=>'FASTA', -file => ">$output_fasta");
+	foreach my $seq_id (keys %{$ref_seq_info->{ref_strings}})
+	{
+		print "Writing Sequence: $seq_id\n";
+		my $s = Bio::Seq->new();
+		$s->seq($ref_seq_info->{ref_strings}->{$seq_id});
+		$s->display_id($seq_id);
+		$out->write_seq($s);
+	}
 }
 
 sub do_union

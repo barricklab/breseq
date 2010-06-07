@@ -95,6 +95,10 @@ tr	{
 	background-color: rgb(192,255,255);
 }
 
+.reject_table_row	{
+	background-color: rgb(200,200,200);
+}
+
 .junction_repeat	{
 	background-color: rgb(255,165,0); /* orange */
 }
@@ -111,7 +115,7 @@ sub html_index
 	open HTML, ">$file_name" or die "Could not open file: $file_name";    
 
     print HTML start_html(
-			-title => "BRESEQ :: Index" . ($settings->{run_name} ? " :: $settings->{run_name}" : ''), 
+			-title => "BRESEQ :: Index" . ($settings->{run_name} ne 'unnamed' ? " :: $settings->{run_name}" : ''), 
 			-head  => style({type => 'text/css'}, $header_style_string),
 	);
 	
@@ -320,15 +324,15 @@ sub html_genome_diff_item_table_string
 	{
 		if ($first_item->{type} eq 'MC')
 		{
-			return html_missing_coverage_table_string($list_ref);
+			return html_missing_coverage_table_string($list_ref, undef, undef, 1);
 		}
 		elsif ($first_item->{type} eq 'RA')
 		{
-			return html_read_alignment_table_string($list_ref);
+			return html_read_alignment_table_string($list_ref, undef, undef, 1);
 		}
 		elsif ($first_item->{type} eq 'JC')
 		{
-			return html_new_junction_table_string($list_ref);
+			return html_new_junction_table_string($list_ref, undef, undef, 1);
 		}
 	}
 }
@@ -508,8 +512,8 @@ sub html_mutation_table_string
 				$s .=  " :: +$mut->{gap_right}" if ($mut->{gap_right} > 0);
 				$s .=  " :: &Delta;" . abs($mut->{gap_right}) if ($mut->{gap_right} < 0);
 				$s .= " (+$mut->{duplication_size}) bp";
-				$output_str.= td({align=>"right"}, $frequency_string);
 				$output_str.= td({align=>"center"}, nonbreaking($s));
+				$output_str.= td({align=>"right"}, $frequency_string);
 				$output_str.= td({align=>"center"}, nonbreaking($mut->{gene_position}));
 				$output_str.= td({align=>"center"}, i(nonbreaking($mut->{gene_name})));
 				$output_str.= td({align=>"left"}, $mut->{gene_product});
@@ -530,7 +534,7 @@ sub html_mutation_table_string
 
 sub html_read_alignment_table_string
 {
-	my ($list_ref, $relative_link, $title) = @_;
+	my ($list_ref, $relative_link, $title, $show_reject_reason) = @_;
 	$relative_link = '' if (!$relative_link);
 	$title = "Read alignment evidence..." if (!$title);
 	
@@ -590,7 +594,7 @@ sub html_read_alignment_table_string
 		$output_str.= td({align => "right"}, $c->{insert_position} );
 		$output_str.= td({align => "center"}, "$c->{ref_base}&rarr;$c->{new_base}" );	
 		$output_str.= td({align => "right"}, sprintf("%4.1f%%", $c->{frequency}*100) );
-		$output_str.= td({align => "right"}, sprintf("%.1f", $c->{quality}) . $fisher_p_value );	
+		$output_str.= td({align => "right"}, sprintf("%.1f", $c->{quality}) );	# . $fisher_p_value
 		$output_str.= td({align => "center"}, $c->{new_cov} );	
 		$output_str.= td({align => "center"}, $c->{tot_cov} );
 		$output_str.= td({align => "center"}, nonbreaking($c->{gene_position}) );	
@@ -598,6 +602,11 @@ sub html_read_alignment_table_string
 		$output_str.= td({align => "left"}, $c->{gene_product} );	
 			
 		$output_str.= end_Tr;
+		
+		if ($show_reject_reason && $c->{reject})
+		{
+			$output_str.= Tr({-class=>'reject_table_row'}, td({-colspan => $total_cols}, "Rejected: " . decode_reject_reason($c)));
+		}
 	}
 	
 	$output_str.= end_table;
@@ -605,7 +614,7 @@ sub html_read_alignment_table_string
 
 sub html_missing_coverage_table_string
 {
-	my ($list_ref, $relative_link, $title) = @_;
+	my ($list_ref, $relative_link, $title, $show_reject_reason) = @_;
 	$relative_link = '' if (!$relative_link);
 	$title = "Missing coverage evidence..." if (!$title);
 	
@@ -674,6 +683,11 @@ sub html_missing_coverage_table_string
 		$output_str.= td({-align=>"right"}, $c->{right_inside_cov}); 
 		$output_str.= td({-align=>"right"}, $c->{right_outside_cov}); 			
 		$output_str.= end_Tr;
+		
+		if ($show_reject_reason && $c->{reject})
+		{
+			$output_str.= Tr({-class=>'reject_table_row'}, td({-colspan => $total_cols}, "Rejected: " . decode_reject_reason($c)));
+		}
 	}
 	
 	$output_str.= end_table;
@@ -682,7 +696,7 @@ sub html_missing_coverage_table_string
 
 sub html_new_junction_table_string
 {
-	our ($list_ref, $relative_link, $title) = @_;
+	our ($list_ref, $relative_link, $title, $show_reject_reason) = @_;
 	$relative_link = '' if (!$relative_link);
 	$title = "New junction evidence..." if (!$title);
 	
@@ -731,8 +745,7 @@ sub html_new_junction_table_string
 	## the rows in this table are linked (same background color for every two)
 	my $row_bg_color_index = 0;
 	foreach my $c (@$list_ref)
-	{
-		
+	{	
 		### Side 1
 		my $key = 'side_1';			
 		my $annotate_key = "junction_" . $c->{"$key\_annotate_key"};
@@ -768,6 +781,11 @@ sub html_new_junction_table_string
 		}			
 		$output_str.= end_Tr;
 		
+		if ($show_reject_reason && $c->{reject})
+		{
+			$output_str.= Tr({-class=>'reject_table_row'}, td({-colspan => $total_cols}, "Rejected: " . decode_reject_reason($c)));
+		}
+		
 		$row_bg_color_index = ($row_bg_color_index+1)%2;
 	}
 	
@@ -798,23 +816,10 @@ sub html_evidence_file
 
  	$interval->{output_path} = $settings->file_name('evidence_path') . "/$interval->{file_name}";	
 	
-	my $title = '';
-	if (defined $interval->{deletion})
-	{
-		$title = "Deletion";
-	}
-	elsif (defined $interval->{hybrid})
-	{
-		$title = "Hybrid";
-	}
-	else
-	{
-		$title = "Mutation";
-	}
+	my $title = 'BRESEQ :: Results' . ($settings->{run_name} ne 'unnamed' ? " :: $settings->{run_name}" : ''),
 	
 	open HTML, ">$interval->{output_path}" or die "Could not open file: $interval->{output_path}";
 
-	
 	my $q = new CGI;
 
 	print HTML
@@ -859,13 +864,42 @@ sub html_evidence_file
 			$interval
 		);
 	}
-	
-		
-			
 	print HTML end_html;
 	close HTML;
 }
 
+
+sub decode_reject_reason
+{
+	my ($c) = @_;
+	
+	if ($c->{reject} eq 'NJ')
+	{
+		return "Insufficient overlap of new junction by reads on both strands.";
+	}
+	elsif ($c->{reject} eq 'EVALUE')
+	{
+		return "E-value exceeds prediction threshold.";
+	}
+	elsif ($c->{reject} eq 'STRAND')
+	{
+		return "Prediction not supported by reads on both strands.";
+	}
+	elsif ($c->{reject} eq 'FET_STRAND')
+	{
+		my $fisher_strand_p_value = sprintf("%.2E", $c->{fisher_strand_p_value});
+		return "Prediction has biased strand distribution (Fisher's Exact Test P-value = $fisher_strand_p_value).";
+	}
+	elsif ($c->{reject} eq 'FREQ')
+	{
+		return "Prediction has frequency below cutoff threshold.";
+	}	
+	elsif ($c->{reject} eq 'COV')
+	{
+		return "Prediction has coverage below cutoff threshold.";
+	}
+	return '';
+}
 
 sub create_evidence_files
 {

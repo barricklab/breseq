@@ -771,7 +771,7 @@ if (!-e $output_done_file_name)
 
 	Breseq::ReferenceSequence::annotate_mutations($ref_seq_info, $evidence_gd);
 
-	my $res = Breseq::Shared::system("$FindBin::Bin/gd_utils ANNOTATE -i $final_genome_diff_file_name $settings->{arguments}");
+	my $res = Breseq::Shared::system("$FindBin::Bin/genomediff ANNOTATE -i $final_genome_diff_file_name $settings->{arguments}");
 	my $annotated_marginal = ($res == 0);
 
 	###

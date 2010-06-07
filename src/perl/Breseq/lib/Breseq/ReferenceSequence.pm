@@ -42,7 +42,6 @@ use Breseq::Shared;
 use Data::Dumper;
 
 
-##this is a version of the next subroutine that only loads the features for annotation
 sub load_ref_seq_info
 {
 	##summaryand create_fasta are optional
@@ -194,6 +193,105 @@ sub load_ref_seq_info
 			
 	return $ref_seq_info;
 }
+
+
+sub load_ref_seq_info_2
+{
+	my ($genbank_file_names_ref) = @_;
+			
+	print STDERR "Loading reference sequences...\n";
+	
+	my $ref_seq_info;	
+	foreach my $genbank_file_name (@$genbank_file_names_ref)
+	{
+		## open this GenBank file
+		my $ref_i = Bio::SeqIO->new( -file => "<$genbank_file_name");
+		print STDERR "  Loading File::$genbank_file_name\n";
+
+		while (my $ref_seq = $ref_i->next_seq)
+		{			
+			my $seq_id = $ref_seq->id;
+			print STDERR "    Sequence::$seq_id loaded.\n";			
+						
+			## it would be nice to get rid of storing the whole genome in memory
+			$ref_seq_info->{bioperl_ref_seqs}->{$seq_id} = $ref_seq;
+
+			##it is much faster to use substr to create the lists for nt comparisons than BioPerl trunc
+			
+			#load the reference sequence, uppercase it, and scrub degenerate bases to N's 
+			$ref_seq_info->{ref_strings}->{$seq_id} = $ref_seq->seq;
+			$ref_seq_info->{ref_strings}->{$seq_id} = uc($ref_seq_info->{ref_strings}->{$seq_id});
+			$ref_seq_info->{ref_strings}->{$seq_id} =~ s/[^ATCG]/N/g;
+			$ref_seq->seq($ref_seq_info->{ref_strings}->{$seq_id});						
+			
+			push @{$ref_seq_info->{seq_ids}}, $seq_id;
+				
+			##load the genbank record
+			my @Feature_List = $ref_seq->get_SeqFeatures();
+			my @gene_list;
+			my @repeat_list;
+			
+			FEATURE: foreach my $Feature ( @Feature_List ) 
+			{ 	
+				if ($Feature->primary_tag eq 'repeat_region')
+				{	
+					my $r;
+					$r->{name} = get_tag($Feature, "mobile_element");
+					$r->{name} =~ s/insertion sequence:// if ($r->{name});
+					
+					## don't add unnamed ones to list...
+					#$r->{name} = "unknown_repeat" if (!$r->{name});
+					next FEATURE if (!$r->{name});
+					
+					$r->{product} = "repeat region";
+					$r->{start} = $Feature->start;
+					$r->{end} = $Feature->end;
+					$r->{strand} = $Feature->strand;
+					push @repeat_list, $r;
+					next FEATURE;
+				}
+				
+				## add additional information to the last 
+				if (   ($Feature->primary_tag eq 'CDS') 
+					|| ($Feature->primary_tag eq 'tRNA') 
+					|| ($Feature->primary_tag eq 'rRNA') )
+
+				{
+					#Add information to last gene
+					my $gene;
+					$gene->{name} = get_tag($Feature, "gene");
+					$gene->{name} = get_tag($Feature, "locus_tag") if (!$gene->{name});
+					$gene->{start} = $Feature->start;
+					$gene->{end} = $Feature->end;
+					$gene->{strand} = $Feature->strand;
+					$gene->{product} = "";
+					$gene->{note} = get_tag($Feature, "note");
+						
+					$gene->{accession} = get_tag($Feature, "protein_id");
+					$gene->{translation} = get_tag($Feature, "translation");
+					$gene->{product} = get_tag($Feature, "product");
+					
+					#set a type for the feature
+					$gene->{type} = $Feature->primary_tag;
+					$gene->{type} = "protein" if ($gene->{type} eq 'CDS');
+					$gene->{pseudogene} = get_tag($Feature, "pseudo");
+					$gene->{type} = "pseudogene" if ($gene->{pseudogene});
+					
+					##assume if there is no translation that we have a pseudogene...
+					$gene->{type} = "pseudogene" if (($Feature->primary_tag eq 'CDS') && (!$gene->{translation}));
+					$gene->{index} = scalar @gene_list;
+					
+					push @gene_list, $gene;		
+				}
+			}
+			
+			$ref_seq_info->{gene_lists}->{$seq_id} = \@gene_list;
+			$ref_seq_info->{repeat_lists}->{$seq_id} = \@repeat_list;	
+		}
+	}			
+	return $ref_seq_info;
+}
+
 
 sub annotate_1_mutation
 {
@@ -513,6 +611,27 @@ sub find_closest_repeat_region
 	return $is;
 }
 
+sub repeat_example
+{
+	my ($ref_seq_info, $repeat_name, $strand) = @_;
+	
+	foreach my $seq_id (sort keys %{$ref_seq_info->{repeat_lists}})
+	{
+		foreach my $rep (@{$ref_seq_info->{repeat_lists}->{$seq_id}})
+		{			
+			if ($rep->{name} eq $repeat_name)
+			{
+				my $repeat_seq = substr $ref_seq_info->{ref_strings}->{$seq_id}, $rep->{start} - 1, $rep->{end} - $rep->{start} + 1;
+				if ($strand != $rep->{strand})
+				{
+					my $repeat_seq = revcom($repeat_seq);
+				}
+				return $repeat_seq;
+			}
+		}
+	}
+	
+}
 
 sub get_tag
 {
