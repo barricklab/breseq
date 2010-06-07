@@ -16,12 +16,12 @@ evidence for mutations and predicted mutations.
 =head1 FORMAT
 
 Genome Diff files are tab delimitted. The first column defines the type of entry on a given line.
-The next few columns are type-nonspecific (id, reference, start, end, parent, child) data, followed by
-an arbitrary number of columns of more detailed data in a key=value format.
+The second and third columns are type-nonspecific (id, parents), followed by type-specific
+columns, then an arbitrary number of columns of more detailed data in a key=value format.
 
 =head1 ENTRY TYPES
 
-=head2 Within read evidence (code:WR)
+=head2 Within read evidence (code:RA)
 
 Fixed columns: entry_type, entry_id, seq_id, start, end, ref_seq, new_seq, 
 
@@ -72,11 +72,12 @@ our $line_specification = {
 	## mutations
 	'SNP' => ['seq_id', 'position', 'ref_seq', 'new_seq'],
 	'SUB' => ['seq_id', 'position', 'ref_seq', 'new_seq'],
-	'DEL' => ['seq_id', 'position', 'size', 'start_range', 'end_range'],
+	'DEL' => ['seq_id', 'position', 'size'],
 	'INS' => ['seq_id', 'position', 'new_seq'],
 	'MOB' => ['seq_id', 'position', 'repeat_name', 'strand', 'duplication_size', 'gap_left', 'gap_right'],
-	'DUP' => [''],
-	'INV' => [''],
+#	'MOB' => ['seq_id', 'position', 'repeat_name', 'strand', 'duplication_size', 'del_left', 'del_right', 'ins_left', 'ins_right'],	
+	'DUP' => ['seq_id', 'position', 'size'],
+	'INV' => ['seq_id', 'position', 'size'],
 	
 	## evidence
 	'RA' => ['seq_id', 'position', 'insert_position', 'ref_base', 'new_base'],
@@ -91,8 +92,8 @@ our $tag_sort_fields = {
 	'DEL' => [1, 'seq_id', 'position'],
 	'INS' => [1, 'seq_id', 'position'],
 	'MOB' => [1, 'seq_id', 'position'],
-	'DUP' => [1],
-	'INV' => [1],
+	'DUP' => [1, 'seq_id', 'position'],
+	'INV' => [1, 'seq_id', 'position'],
 	'RA' => [2, 'seq_id', 'position'],
 	'MC' => [2, 'seq_id', 'start'],
 	'JC' => [2, 'side_1_seq_id', 'side_1_position'],
@@ -246,6 +247,12 @@ sub list
 	}
 	
 	return undef;
+}
+
+sub mutation_list
+{
+	my ($self) = @_;
+	return grep { length($_->{type}) == 3 } $self->list;		
 }
 
 sub evidence_list
@@ -652,16 +659,64 @@ sub subtract
 	return $new_gd;
 }
 
-=head2 find_subtract_mutations
+sub shift_positions
+{
+	my ($self, $mut) = @_;
+	
+	my $delta = mutation_size_change($mut);
+	my $offset = $mut->{position};
+	my $inversion = 0;
+	
+	foreach my $mut ($self->mutation_list)
+	{		
+		if ($inversion)
+		{
+			if (($mut->{position} > $offset) && ($mut->{position} < $offset + $delta))
+			{
+			}
+		}
+		else
+		{
+			if ($mut->{position} > $offset)
+			{
+				$mut->{position} += $delta;
+			}
+		}
+	}
+}
 
- Title   : get_next
- Usage   : $read = $delta_file->get_next;
- Function: get the next read from a delta file, loads all regions matched within the read
- Returns :
+sub mutation_size_change
+{
+	my ($item) = @_;
 
-=cut
+	if ($item->{type} eq 'SNP')
+	{
+		return 0;
+	}	
+	if ($item->{type} eq 'SUB')
+	{
+		return length($item->{new_seq}) - length->{ref_seq};
+	}
+	elsif ($item->{type} eq 'INS')
+	{
+		return length($item->{new_seq});
+	}
+	elsif ($item->{type} eq 'DEL')
+	{
+		return -$item->{size};
+	}
+	elsif ($item->{type} eq 'DUP')
+	{
+		return +$item->{size};
+	}
+	elsif ($item->{type} eq 'MOB')
+	{
+		return +$item->{size} + $item->{duplication_size} + $item->{gap_left} + $item->{gap_right};
+	}			
+	return 0;
+}
 
 
 
 
-return 1;
+1;

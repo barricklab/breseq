@@ -57,15 +57,17 @@ Copyright 2010.  All rights reserved.
 ###
 use strict;
 
+use Getopt::Long;
+use Pod::Usage;
 use File::Path;
 use FindBin;
 use lib $FindBin::Bin;
 use Data::Dumper;
 use POSIX;
 
-#Get options
-use Getopt::Long;
-use Pod::Usage;
+#### Paths to Locally Installed Modules ####
+use lib $FindBin::Bin . "/../lib/perl5";
+use lib $FindBin::Bin . "/../lib/perl5/site_perl";
 
 my $command = shift @ARGV;
 

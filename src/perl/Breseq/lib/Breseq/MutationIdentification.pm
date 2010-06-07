@@ -655,8 +655,8 @@ sub identify_mutations
 					$mut->{reject} = "EVALUE" if ($e_value_call < $settings->{mutation_log10_e_value_cutoff})
 				}
 				if ($polymorphism_predicted)
-				{											
-					$mut->{log10_e_value} = $polymorphism->{log10_e_value};
+				{	
+					$mut->{quality} = $polymorphism->{log10_e_value};		
 					$mut->{fisher_strand_p_value} = $polymorphism->{fisher_strand_p_value};
 					
 					# the frequency returned is the probability of the FIRST base
@@ -692,10 +692,8 @@ sub identify_mutations
 						
 						$mut->{error} = "polymorphic_without_reference_base";
 					}
-					
-					p_value
-					
-					$mut->{reject} = "EVALUE" if ($mut->{log10_e_value} < $settings->{polymorphism_log10_e_value_cutoff});
+										
+					$mut->{reject} = "EVALUE" if ($mut->{quality} < $settings->{polymorphism_log10_e_value_cutoff});
 					$mut->{reject} = "STRAND" if (!$polymorphism_coverage_both_bases);
 					if ($mut->{fisher_strand_p_value} ne 'ND')
 					{
