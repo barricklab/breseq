@@ -3,7 +3,7 @@
 <plist version="1.0">
 <dict>
 	<key>currentDocument</key>
-	<string>lib/Breseq/ReferenceSequence.pm</string>
+	<string>bin/genomediff</string>
 	<key>documents</key>
 	<array>
 		<dict>
@@ -36,30 +36,14 @@
 			<key>caret</key>
 			<dict>
 				<key>column</key>
-				<integer>16</integer>
+				<integer>55</integer>
 				<key>line</key>
-				<integer>83</integer>
+				<integer>773</integer>
 			</dict>
-			<key>columnSelection</key>
-			<false/>
 			<key>firstVisibleColumn</key>
 			<integer>0</integer>
 			<key>firstVisibleLine</key>
-			<integer>59</integer>
-			<key>selectFrom</key>
-			<dict>
-				<key>column</key>
-				<integer>10</integer>
-				<key>line</key>
-				<integer>83</integer>
-			</dict>
-			<key>selectTo</key>
-			<dict>
-				<key>column</key>
-				<integer>16</integer>
-				<key>line</key>
-				<integer>83</integer>
-			</dict>
+			<integer>749</integer>
 		</dict>
 		<key>bin/cnv_script.r</key>
 		<dict>
@@ -80,42 +64,42 @@
 			<key>caret</key>
 			<dict>
 				<key>column</key>
-				<integer>29</integer>
+				<integer>41</integer>
 				<key>line</key>
-				<integer>88</integer>
+				<integer>378</integer>
 			</dict>
 			<key>firstVisibleColumn</key>
 			<integer>0</integer>
 			<key>firstVisibleLine</key>
-			<integer>86</integer>
-		</dict>
-		<key>bin/gd_utils</key>
-		<dict>
-			<key>caret</key>
-			<dict>
-				<key>column</key>
-				<integer>25</integer>
-				<key>line</key>
-				<integer>323</integer>
-			</dict>
-			<key>firstVisibleColumn</key>
-			<integer>0</integer>
-			<key>firstVisibleLine</key>
-			<integer>292</integer>
+			<integer>343</integer>
 		</dict>
 		<key>bin/genbank_utils</key>
 		<dict>
 			<key>caret</key>
 			<dict>
 				<key>column</key>
-				<integer>1</integer>
+				<integer>28</integer>
 				<key>line</key>
-				<integer>175</integer>
+				<integer>319</integer>
 			</dict>
 			<key>firstVisibleColumn</key>
 			<integer>0</integer>
 			<key>firstVisibleLine</key>
-			<integer>147</integer>
+			<integer>276</integer>
+		</dict>
+		<key>bin/genomediff</key>
+		<dict>
+			<key>caret</key>
+			<dict>
+				<key>column</key>
+				<integer>68</integer>
+				<key>line</key>
+				<integer>301</integer>
+			</dict>
+			<key>firstVisibleColumn</key>
+			<integer>0</integer>
+			<key>firstVisibleLine</key>
+			<integer>280</integer>
 		</dict>
 		<key>bin/merge_coverage_files</key>
 		<dict>
@@ -284,29 +268,29 @@
 			<key>caret</key>
 			<dict>
 				<key>column</key>
-				<integer>5</integer>
+				<integer>12</integer>
 				<key>line</key>
-				<integer>397</integer>
+				<integer>813</integer>
 			</dict>
 			<key>columnSelection</key>
 			<false/>
 			<key>firstVisibleColumn</key>
 			<integer>0</integer>
 			<key>firstVisibleLine</key>
-			<integer>379</integer>
+			<integer>801</integer>
 			<key>selectFrom</key>
 			<dict>
 				<key>column</key>
-				<integer>0</integer>
+				<integer>8</integer>
 				<key>line</key>
-				<integer>397</integer>
+				<integer>813</integer>
 			</dict>
 			<key>selectTo</key>
 			<dict>
 				<key>column</key>
-				<integer>5</integer>
+				<integer>12</integer>
 				<key>line</key>
-				<integer>397</integer>
+				<integer>813</integer>
 			</dict>
 		</dict>
 		<key>lib/Breseq/GenomeDiff.pm</key>
@@ -314,14 +298,14 @@
 			<key>caret</key>
 			<dict>
 				<key>column</key>
-				<integer>13</integer>
+				<integer>60</integer>
 				<key>line</key>
-				<integer>691</integer>
+				<integer>697</integer>
 			</dict>
 			<key>firstVisibleColumn</key>
 			<integer>0</integer>
 			<key>firstVisibleLine</key>
-			<integer>649</integer>
+			<integer>672</integer>
 		</dict>
 		<key>lib/Breseq/MutationIdentification.pm</key>
 		<dict>
@@ -370,28 +354,44 @@
 			<key>caret</key>
 			<dict>
 				<key>column</key>
-				<integer>12</integer>
+				<integer>3</integer>
 				<key>line</key>
-				<integer>610</integer>
+				<integer>620</integer>
 			</dict>
 			<key>firstVisibleColumn</key>
 			<integer>0</integer>
 			<key>firstVisibleLine</key>
-			<integer>602</integer>
+			<integer>596</integer>
 		</dict>
 		<key>lib/Breseq/Settings.pm</key>
 		<dict>
 			<key>caret</key>
 			<dict>
 				<key>column</key>
-				<integer>25</integer>
+				<integer>17</integer>
 				<key>line</key>
-				<integer>676</integer>
+				<integer>137</integer>
 			</dict>
+			<key>columnSelection</key>
+			<false/>
 			<key>firstVisibleColumn</key>
 			<integer>0</integer>
 			<key>firstVisibleLine</key>
-			<integer>651</integer>
+			<integer>122</integer>
+			<key>selectFrom</key>
+			<dict>
+				<key>column</key>
+				<integer>0</integer>
+				<key>line</key>
+				<integer>137</integer>
+			</dict>
+			<key>selectTo</key>
+			<dict>
+				<key>column</key>
+				<integer>0</integer>
+				<key>line</key>
+				<integer>138</integer>
+			</dict>
 		</dict>
 	</dict>
 	<key>openDocuments</key>
@@ -404,10 +404,10 @@
 		<string>lib/Breseq.pm</string>
 		<string>lib/Breseq/ErrorCalibration.pm</string>
 		<string>bin/breseq</string>
+		<string>bin/genomediff</string>
 		<string>lib/Breseq/AlignmentOutput.pm</string>
 		<string>lib/Breseq/CandidateJunctions.pm</string>
 		<string>lib/Breseq/ReferenceSequence.pm</string>
-		<string>bin/gd_utils</string>
 		<string>lib/Breseq/GenomeDiff.pm</string>
 		<string>bin/genbank_utils</string>
 		<string>bin/merge_coverage_files</string>
@@ -419,6 +419,6 @@
 	<key>showFileHierarchyDrawer</key>
 	<true/>
 	<key>windowFrame</key>
-	<string>{{353, 45}, {956, 800}}</string>
+	<string>{{503, 24}, {784, 832}}</string>
 </dict>
 </plist>

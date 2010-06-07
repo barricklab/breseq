@@ -695,7 +695,7 @@ sub mutation_size_change
 	}	
 	if ($item->{type} eq 'SUB')
 	{
-		return length($item->{new_seq}) - length->{ref_seq};
+		return length($item->{new_seq}) - length($item->{ref_seq});
 	}
 	elsif ($item->{type} eq 'INS')
 	{

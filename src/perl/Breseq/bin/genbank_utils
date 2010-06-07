@@ -83,6 +83,10 @@ elsif ("\U$command" eq 'FASTA')
 {
 	do_convert_to_fasta();
 }
+elsif ("\U$command" eq 'SUBSEQUENCE')
+{
+	do_subsequence();
+}
 
 sub do_split
 {
@@ -166,6 +170,7 @@ sub do_mutate
 		'help|?' => \$help, 'man' => \$man,
 		'output|o=s' => \$output,
 	);
+	
 	pod2usage(1) if $help;
 	pod2usage(-exitstatus => 0, -verbose => 2) if $man;
 
@@ -190,6 +195,131 @@ sub do_mutate
 	$ref_seq->seq($seq);
 	$ref_o->write_seq($ref_seq);	
 }
+
+
+sub do_split
+{
+	use Bio::SeqIO;
+	my ($help, $man);
+	my $verbose;
+	my $input;
+	my $n = 2;
+
+	GetOptions(
+		'help|?' => \$help, 'man' => \$man,
+		'number|n=s' => \$n,
+	);
+	pod2usage(1) if $help;
+	pod2usage(-exitstatus => 0, -verbose => 2) if $man;
+
+	my $input = shift @ARGV;
+	
+	my $ref_i = Bio::SeqIO->new( -file => "<$input");
+	my $ref_seq = $ref_i->next_seq;
+	my @features = $ref_seq->get_SeqFeatures();
+
+	for (my $i=0; $i<$n; $i++) 
+	{
+		my $start = floor($i* $ref_seq->length / $n) + 1;
+		my $end = floor(($i+1)* $ref_seq->length / $n);
+
+		print "Fragment $i: start: $start end: $end\n";
+	
+		#this strips all features...
+		my $fragment = $ref_seq->trunc($start, $end);
+		$fragment->display_id($fragment->display_id . "-$i");
+		$fragment->accession($fragment->accession . "-$i");
+	
+		my $fragment_loc = Bio::Location::Simple->new(-start => $start, -end => $end, -strand => 0 );
+		foreach my $f (@features)
+		{
+		
+			if ($fragment_loc->overlaps($f->location))
+			{
+				#print $f->start . " " . $f->end . "\n";
+			
+				if ($f->location->start < $fragment_loc->start)
+				{
+					$f->location->start_pos_type('BEFORE');
+					$f->location->start($fragment_loc->start);
+				}
+			
+				if ($f->location->end > $fragment_loc->end)
+				{
+					$f->location->end_pos_type('AFTER');
+					$f->location->end($fragment_loc->end);
+				}			
+			
+				$f->location->start( $f->location->start + 1 - $fragment_loc->start );
+				$f->location->end( $f->location->end + 1 - $fragment_loc->start );
+						
+				$fragment->add_SeqFeature($f);
+			}
+		}
+	
+		my $output = $input;
+		$output =~ s/\.(.+?)$/-$i.$1/;
+	
+		my $ref_o = Bio::SeqIO->new( -file => ">$output", -format => "GenBank");
+		$ref_o->write_seq($fragment);
+	}
+}
+
+## Changes fasta file
+sub do_subsequence
+{
+	use Bio::SeqIO;
+	
+	my ($help, $man);
+	my $verbose;
+	my $output = "output.gbk";
+	my ($start, $end);
+	GetOptions(
+		'help|?' => \$help, 'man' => \$man,
+		'output|o=s' => \$output,
+		'start|1=s' => \$start, 
+		'end|2=s' => \$end, 		
+	);
+	pod2usage(1) if $help;
+	(defined $start && defined $end) or pod2usage(1);
+	pod2usage(-exitstatus => 0, -verbose => 2) if $man;
+	my $input = shift @ARGV;
+
+	my $ref_i = Bio::SeqIO->new( -format=> 'GENBANK', -file => "<$input");
+	my $ref_seq = $ref_i->next_seq;
+	my @features = $ref_seq->get_SeqFeatures();
+
+	my $fragment = $ref_seq->trunc($start, $end);
+	my $fragment_loc = Bio::Location::Simple->new(-start => $start, -end => $end, -strand => 0 );
+	foreach my $f (@features)
+	{
+		if ($fragment_loc->overlaps($f->location))
+		{
+			#print $f->start . " " . $f->end . "\n";
+		
+			if ($f->location->start < $fragment_loc->start)
+			{
+				$f->location->start_pos_type('BEFORE');
+				$f->location->start($fragment_loc->start);
+			}
+		
+			if ($f->location->end > $fragment_loc->end)
+			{
+				$f->location->end_pos_type('AFTER');
+				$f->location->end($fragment_loc->end);
+			}			
+		
+			$f->location->start( $f->location->start + 1 - $fragment_loc->start );
+			$f->location->end( $f->location->end + 1 - $fragment_loc->start );
+					
+			$fragment->add_SeqFeature($f);
+		}
+	}
+
+	my $ref_o = Bio::SeqIO->new(-format=> 'GENBANK', -file => ">$output");
+	$ref_o->write_seq($fragment);	
+}
+
 
 ## Changes fasta file
 sub do_convert_to_fasta
