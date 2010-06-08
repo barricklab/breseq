@@ -362,12 +362,14 @@ sub do_simulate
 	
 	my $base_error_rate = 0.001;
 	my $indel_error_rate = 0.0001;
+	my $start_number = 0;
 	
 	GetOptions(
 		'help|?' => \$help, 'man' => \$man,
 		'read-length|l=s' => \$read_length,
 		'coverage|c=s' => \$coverage,
 		'output|o=s' => \$output,
+		'start-number|n=s' => \$start_number,
 	) or pod2usage(2);
 	pod2usage(1) if $help;
 	pod2usage(-exitstatus => 0, -verbose => 2) if $man;
@@ -433,7 +435,7 @@ sub do_simulate
 		}
 		
 		my $read_seq;
-		$read_seq->{id} = "READ-$i";
+		$read_seq->{id} = "READ-" . ($start_number + $i);
 		$read_seq->{seq} = $seq;				
 		$read_seq->{qual_chars} = 'A' x int(length($read_seq->{seq})/2);
 		$read_seq->{qual_chars} .= 'B' x (length($seq) - length($read_seq->{qual_chars}));

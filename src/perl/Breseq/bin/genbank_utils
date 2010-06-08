@@ -87,6 +87,10 @@ elsif ("\U$command" eq 'SUBSEQUENCE')
 {
 	do_subsequence();
 }
+elsif ("\U$command" eq 'INTERVAL')
+{
+	do_interval();
+}
 
 sub do_split
 {

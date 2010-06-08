@@ -277,30 +277,36 @@ sub do_mutate
 	our $gd = Breseq::GenomeDiff->new(-FILE_NAME => $input_genome_diff);
 	
 	my $ref_seq_info = Breseq::ReferenceSequence::load_ref_seq_info_2(\@input_genbank_files);
+
+	my $new_ref_strings;
+	foreach my $seq_id (keys %{$ref_seq_info->{ref_strings}})
+	{
+		$new_ref_strings->{$seq_id} = $ref_seq_info->{ref_strings}->{$seq_id};
+	}
 	
 	foreach my $mut ($gd->mutation_list)
 	{		
 		if ($mut->{type} eq 'SNP')
 		{
-			substr $ref_seq_info->{ref_strings}->{$mut->{seq_id}}, $mut->{position}-1, 1, $mut->{new_seq};
+			substr $new_ref_strings->{$mut->{seq_id}}, $mut->{position}-1, 1, $mut->{new_seq};
 		}
 		elsif ($mut->{type} eq 'SUB')
 		{
-			substr $ref_seq_info->{ref_strings}->{$mut->{seq_id}}, $mut->{position}-1, length($mut->{new_seq}), $mut->{new_seq};
+			substr $new_ref_strings->{$mut->{seq_id}}, $mut->{position}-1, length($mut->{ref_seq}), $mut->{new_seq};
 		}
 		elsif ($mut->{type} eq 'INS')
 		{
 			##notice that this is AFTER the position
-			substr $ref_seq_info->{ref_strings}->{$mut->{seq_id}}, $mut->{position}, 0, $mut->{new_seq};
+			substr $new_ref_strings->{$mut->{seq_id}}, $mut->{position}, 0, $mut->{new_seq};
 		}
 		elsif ($mut->{type} eq 'DEL')
 		{	
-			substr $ref_seq_info->{ref_strings}->{$mut->{seq_id}}, $mut->{position}-1, $mut->{size}, '';
+			substr $new_ref_strings->{$mut->{seq_id}}, $mut->{position}-1, $mut->{size}, '';
 		}		
 		elsif ($mut->{type} eq 'DUP')
 		{
-			my $dup = substr $ref_seq_info->{ref_strings}->{$mut->{seq_id}}, $mut->{position}-1, $mut->{size};
-			substr $ref_seq_info->{ref_strings}->{$mut->{seq_id}}, $mut->{position}-1 + $mut->{size}, 0, $dup;
+			my $dup = substr $new_ref_strings->{$mut->{seq_id}}, $mut->{position}-1, $mut->{size};
+			substr $new_ref_strings->{$mut->{seq_id}}, $mut->{position}-1 + $mut->{size}, 0, $dup;
 		}
 		elsif ($mut->{type} eq 'INV')
 		{
@@ -309,10 +315,10 @@ sub do_mutate
 		elsif ($mut->{type} eq 'MOB')
 		{
 			die "MOB: does not handle gap_left or gap_right != 0 yet." if (($mut->{gap_left} != 0) || ($mut->{gap_left} != 0) );
-			my ($seq_string) = Breseq::ReferenceSequence::repeat_example($ref_seq_info, $mut->{repeat_name});			
+			my ($seq_string) = Breseq::ReferenceSequence::repeat_example($ref_seq_info, $mut->{repeat_name});	
 			$mut->{size} = length($seq_string) + $mut->{duplication_size}; ##used by shift_positions
-			my $duplicate_sequence = substr $ref_seq_info->{ref_strings}->{$mut->{seq_id}}, $mut->{position}-1, $mut->{duplication_size};
-			substr $ref_seq_info->{ref_strings}->{$mut->{seq_id}}, $mut->{position}-1, 0, $seq_string . $duplicate_sequence;
+			my $duplicate_sequence = substr $new_ref_strings->{$mut->{seq_id}}, $mut->{position}, $mut->{duplication_size};
+			substr $new_ref_strings->{$mut->{seq_id}}, $mut->{position}, 0, $duplicate_sequence . $seq_string;
 		}
 		
 		$gd->shift_positions($mut);
@@ -320,11 +326,11 @@ sub do_mutate
 	}
 	
 	my $out = Bio::SeqIO->new(-format=>'FASTA', -file => ">$output_fasta");
-	foreach my $seq_id (keys %{$ref_seq_info->{ref_strings}})
+	foreach my $seq_id (keys %{$new_ref_strings})
 	{
 		print "Writing Sequence: $seq_id\n";
 		my $s = Bio::Seq->new();
-		$s->seq($ref_seq_info->{ref_strings}->{$seq_id});
+		$s->seq($new_ref_strings->{$seq_id});
 		$s->display_id($seq_id);
 		$out->write_seq($s);
 	}

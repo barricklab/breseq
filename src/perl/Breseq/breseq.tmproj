@@ -3,7 +3,7 @@
 <plist version="1.0">
 <dict>
 	<key>currentDocument</key>
-	<string>bin/genomediff</string>
+	<string>lib/Breseq/MutationIdentification.pm</string>
 	<key>documents</key>
 	<array>
 		<dict>
@@ -36,14 +36,14 @@
 			<key>caret</key>
 			<dict>
 				<key>column</key>
-				<integer>55</integer>
+				<integer>0</integer>
 				<key>line</key>
-				<integer>773</integer>
+				<integer>79</integer>
 			</dict>
 			<key>firstVisibleColumn</key>
 			<integer>0</integer>
 			<key>firstVisibleLine</key>
-			<integer>749</integer>
+			<integer>69</integer>
 		</dict>
 		<key>bin/cnv_script.r</key>
 		<dict>
@@ -92,14 +92,30 @@
 			<key>caret</key>
 			<dict>
 				<key>column</key>
-				<integer>68</integer>
+				<integer>59</integer>
 				<key>line</key>
-				<integer>301</integer>
+				<integer>329</integer>
 			</dict>
+			<key>columnSelection</key>
+			<false/>
 			<key>firstVisibleColumn</key>
 			<integer>0</integer>
 			<key>firstVisibleLine</key>
-			<integer>280</integer>
+			<integer>304</integer>
+			<key>selectFrom</key>
+			<dict>
+				<key>column</key>
+				<integer>0</integer>
+				<key>line</key>
+				<integer>329</integer>
+			</dict>
+			<key>selectTo</key>
+			<dict>
+				<key>column</key>
+				<integer>0</integer>
+				<key>line</key>
+				<integer>330</integer>
+			</dict>
 		</dict>
 		<key>bin/merge_coverage_files</key>
 		<dict>
@@ -219,6 +235,20 @@
 			<key>firstVisibleLine</key>
 			<integer>0</integer>
 		</dict>
+		<key>lib/Breseq/AlignmentCorrection.pm</key>
+		<dict>
+			<key>caret</key>
+			<dict>
+				<key>column</key>
+				<integer>27</integer>
+				<key>line</key>
+				<integer>1008</integer>
+			</dict>
+			<key>firstVisibleColumn</key>
+			<integer>0</integer>
+			<key>firstVisibleLine</key>
+			<integer>965</integer>
+		</dict>
 		<key>lib/Breseq/AlignmentOutput.pm</key>
 		<dict>
 			<key>caret</key>
@@ -298,109 +328,93 @@
 			<key>caret</key>
 			<dict>
 				<key>column</key>
-				<integer>60</integer>
+				<integer>2</integer>
 				<key>line</key>
-				<integer>697</integer>
+				<integer>712</integer>
 			</dict>
 			<key>firstVisibleColumn</key>
 			<integer>0</integer>
 			<key>firstVisibleLine</key>
-			<integer>672</integer>
+			<integer>682</integer>
 		</dict>
 		<key>lib/Breseq/MutationIdentification.pm</key>
 		<dict>
 			<key>caret</key>
 			<dict>
 				<key>column</key>
-				<integer>59</integer>
+				<integer>22</integer>
 				<key>line</key>
-				<integer>692</integer>
+				<integer>681</integer>
 			</dict>
 			<key>firstVisibleColumn</key>
 			<integer>0</integer>
 			<key>firstVisibleLine</key>
 			<integer>668</integer>
 		</dict>
-		<key>lib/Breseq/MutationPredictor.pm</key>
-		<dict>
-			<key>caret</key>
-			<dict>
-				<key>column</key>
-				<integer>65</integer>
-				<key>line</key>
-				<integer>380</integer>
-			</dict>
-			<key>firstVisibleColumn</key>
-			<integer>0</integer>
-			<key>firstVisibleLine</key>
-			<integer>353</integer>
-		</dict>
 		<key>lib/Breseq/Output.pm</key>
 		<dict>
 			<key>caret</key>
 			<dict>
 				<key>column</key>
-				<integer>57</integer>
+				<integer>22</integer>
 				<key>line</key>
-				<integer>514</integer>
+				<integer>511</integer>
 			</dict>
 			<key>firstVisibleColumn</key>
 			<integer>0</integer>
 			<key>firstVisibleLine</key>
-			<integer>485</integer>
+			<integer>419</integer>
 		</dict>
 		<key>lib/Breseq/ReferenceSequence.pm</key>
 		<dict>
 			<key>caret</key>
 			<dict>
 				<key>column</key>
-				<integer>3</integer>
+				<integer>7</integer>
 				<key>line</key>
-				<integer>620</integer>
+				<integer>606</integer>
 			</dict>
 			<key>firstVisibleColumn</key>
 			<integer>0</integer>
 			<key>firstVisibleLine</key>
-			<integer>596</integer>
+			<integer>577</integer>
 		</dict>
 		<key>lib/Breseq/Settings.pm</key>
 		<dict>
 			<key>caret</key>
 			<dict>
 				<key>column</key>
-				<integer>17</integer>
+				<integer>41</integer>
 				<key>line</key>
-				<integer>137</integer>
+				<integer>149</integer>
 			</dict>
-			<key>columnSelection</key>
-			<false/>
 			<key>firstVisibleColumn</key>
 			<integer>0</integer>
 			<key>firstVisibleLine</key>
-			<integer>122</integer>
-			<key>selectFrom</key>
+			<integer>133</integer>
+		</dict>
+		<key>lib/Breseq/Shared.pm</key>
+		<dict>
+			<key>caret</key>
 			<dict>
 				<key>column</key>
-				<integer>0</integer>
+				<integer>4</integer>
 				<key>line</key>
-				<integer>137</integer>
+				<integer>159</integer>
 			</dict>
-			<key>selectTo</key>
-			<dict>
-				<key>column</key>
-				<integer>0</integer>
-				<key>line</key>
-				<integer>138</integer>
-			</dict>
+			<key>firstVisibleColumn</key>
+			<integer>0</integer>
+			<key>firstVisibleLine</key>
+			<integer>142</integer>
 		</dict>
 	</dict>
 	<key>openDocuments</key>
 	<array>
 		<string>bin/fastq_utils</string>
 		<string>lib/Breseq/Settings.pm</string>
+		<string>lib/Breseq/Shared.pm</string>
 		<string>bin/plot_coverage</string>
 		<string>lib/Breseq/MutationIdentification.pm</string>
-		<string>lib/Breseq/MutationPredictor.pm</string>
 		<string>lib/Breseq.pm</string>
 		<string>lib/Breseq/ErrorCalibration.pm</string>
 		<string>bin/breseq</string>
@@ -408,6 +422,7 @@
 		<string>lib/Breseq/AlignmentOutput.pm</string>
 		<string>lib/Breseq/CandidateJunctions.pm</string>
 		<string>lib/Breseq/ReferenceSequence.pm</string>
+		<string>lib/Breseq/AlignmentCorrection.pm</string>
 		<string>lib/Breseq/GenomeDiff.pm</string>
 		<string>bin/genbank_utils</string>
 		<string>bin/merge_coverage_files</string>
@@ -419,6 +434,6 @@
 	<key>showFileHierarchyDrawer</key>
 	<true/>
 	<key>windowFrame</key>
-	<string>{{503, 24}, {784, 832}}</string>
+	<string>{{559, 110}, {936, 668}}</string>
 </dict>
 </plist>

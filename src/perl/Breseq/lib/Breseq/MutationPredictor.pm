@@ -240,21 +240,22 @@ sub predict
 	
 	##infer IS element insertions from pairs of new junctions	
 	JC: foreach my $j (@jc)
-	{					
+	{
+		$j->{_side_1_read_side} = -1;
+		$j->{_side_2_read_side} = +1;					
+
 		foreach my $side_key ('side_1', 'side_2')
-		{			
+		{						
 			$j->{"_$side_key\_is"} = Breseq::ReferenceSequence::find_closest_repeat_region(
 				$j->{"$side_key\_position"}, 
 				$ref_seq_info->{repeat_lists}->{$j->{"$side_key\_seq_id"}}, 
-				200, 
+				50, 
 				$j->{"$side_key\_strand"}
 			);
+			
 			$j->{"$side_key\_annotate_key"} = ((defined $j->{"_$side_key\_is"}) || ($j->{"$side_key\_redundant"})) ? 'repeat' : 'gene';				
 		}
-				
-		$j->{_side_1_read_side} = -1;
-		$j->{_side_2_read_side} = +1;
-				
+						
 		## Determine which side of the junction is the IS and which is unique
 		## these point to the correct initial interval...
 		if (defined $j->{_side_1_is})
@@ -286,8 +287,8 @@ sub predict
 				$j->{_is_interval_closest_side_key} = 'end';
 				$j->{_unique_interval} = 'side_1';
 			}
-		}				
-		
+		}			
+				
 		## Ah, we don't have an IS, we are done
 		next JC if (!defined $j->{_is_interval});
 		
@@ -303,7 +304,7 @@ sub predict
 		$j->{overlap} -= $move_dist;
 		
 		### second, adjust the unique sequence side with any remaining overlap
-		$j->{"$j->{_unique_interval}\_position"} += $j->{"$j->{_unique_interval}\_strand"} * $j->{overlap};	
+		$j->{"$j->{_unique_interval}\_position"} += $j->{"$j->{_unique_interval}\_strand"} * $j->{overlap};						
 					
 		$j->{overlap} = 0;
 		
@@ -369,8 +370,8 @@ sub predict
 ### TODO check the size range for the element across the reference genome!!		
 		$mut->{size} = abs($j1->{"_$j1->{_is_interval}\_is"}->{end} - $j1->{"_$j1->{_is_interval}\_is"}->{start} + 1);
 		$mut->{position} = $mut->{start} - 1;
-		$mut->{duplication_size} = abs($mut->{end} - $mut->{start}) + 1;
-
+		$mut->{duplication_size} = $mut->{end} - $mut->{start} + 1;
+		
 		#sometimes the ends of the IS are not quite flush		
 		if ($j1->{"$j1->{_is_interval}\_strand"} == -1)
 		{
@@ -393,7 +394,7 @@ sub predict
 		if ($j1->{"$j1->{_unique_interval}\_strand"} *  $j1->{"_$j1->{_unique_interval}\_read_side"} == +1)
 		{
 			($mut->{gap_right}, $mut->{gap_left}) = ($mut->{gap_left}, $mut->{gap_right});
-		}
+		}		
 		
 		$gd->add($mut);
 	}

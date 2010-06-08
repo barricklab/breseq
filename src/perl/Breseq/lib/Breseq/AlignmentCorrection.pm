@@ -1161,9 +1161,9 @@ sub _junction_to_hybrid_list_item
 		## Is it within an IS or near the boundary of an IS in the direction leading up to the junction?			
 		if (my $is = Breseq::ReferenceSequence::find_closest_repeat_region($jc->{$side_key}->{position}, $ref_seq_info->{repeat_lists}->{$jc->{$side_key}->{seq_id}}, 200, $jc->{$side_key}->{strand}))
 		{
-			$jc->{$key}->{is}->{name} = $is->{name};
-			$jc->{$key}->{is}->{interval} = ($is->{strand} == +1) ? "$is->{start}-$is->{end}" : "$is->{end}-$is->{start}"; 
-			$jc->{$key}->{is}->{product} = $is->{product};
+			$jc->{$side_key}->{is}->{name} = $is->{name};
+			$jc->{$side_key}->{is}->{interval} = ($is->{strand} == +1) ? "$is->{start}-$is->{end}" : "$is->{end}-$is->{start}"; 
+			$jc->{$side_key}->{is}->{product} = $is->{product};
 		}
 	}
 	
@@ -1227,7 +1227,7 @@ sub _junction_to_hybrid_list_item
 	
 	#by default, overlap is included on both sides of the junction (possibly changed below)
 	$jc->{side_1}->{overlap} = 0;
-	$jc->{side_2}->{overlap} = 0;
+	$jc->{side_2}->{overlap} = 0;		
 		
 	## Resolve redundant overlap
 	if ($jc->{overlap} > 0)
@@ -1239,7 +1239,8 @@ sub _junction_to_hybrid_list_item
 		if (defined $j->{is_side})
 		{			
 			### first, adjust the repetitive sequence boundary to get as close to the IS as possible
-			my $move_dist = $j->{is_side}->{strand} * ($j->{is_side}->{is}->{$j->{is_side}->{is}->{side_key}} - $j->{is_side}->{start});
+			my $move_dist = $j->{is_side}->{strand} * ($j->{is_side}->{is}->{$j->{is_side}->{is}->{side_key}} - $j->{is_side}->{position});
+						
 			$move_dist = 0 if ($move_dist < 0);
 			$move_dist = $j->{overlap} if ($move_dist > $j->{overlap});
 			$j->{is_side}->{position} += $j->{is_side}->{strand} * $move_dist;
@@ -1266,8 +1267,6 @@ sub _junction_to_hybrid_list_item
 			$jc->{side_2}->{overlap} = 0;
 			$jc->{overlap} = 0;			
 		}
-		
-		#print STDERR Dumper($jc);
 	}
 	
 	##flatten things to only what we want to keep
