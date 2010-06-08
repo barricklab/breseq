@@ -42,6 +42,10 @@ use Data::Dumper;
 use FindBin;
 use lib $FindBin::Bin;
 
+#### Paths to Locally Installed Modules ####
+use lib $FindBin::Bin . "/../lib/perl5";
+use lib $FindBin::Bin . "/../lib/perl5/site_perl";
+
 use CGI qw/:standard/;
 
 use Breseq::AlignmentOutput;
