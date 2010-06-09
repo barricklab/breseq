@@ -276,6 +276,13 @@ sub _line_to_item
 	my ($self, $line) = @_;
 	
 	my @line_list = split /\t/, $line;
+	
+	##remove items at the end that are
+	while ( scalar(@line_list) && ($line_list[-1] =~ m/^\s+$/) )
+	{
+		pop @line_list;
+	}
+	
 	my $item = {};
 	$item->{type} = shift @line_list;
 	$item->{id} = shift @line_list;
@@ -304,6 +311,7 @@ sub _line_to_item
 	foreach my $key_value_pair (@line_list)
 	{
 		next if (!$key_value_pair);
+		next if ($key_value_pair =~ m/^\s*$/);
 		my $matched = ($key_value_pair =~ m/^(.+)=(.+)$/);
 		if (!$matched)
 		{
