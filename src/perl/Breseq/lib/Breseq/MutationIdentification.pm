@@ -621,38 +621,31 @@ sub identify_mutations
 				next INSERT_COUNT if (!$mutation_predicted && !$polymorphism_predicted);
 				## bail if we are predicting polymorphisms, but there wasn't one
 
-				my $mut;
-				if ($mutation_predicted || $polymorphism_predicted)
-				{
-					#only once we are here can we be sure there is a $best_base!
-					my $best_cov = $pos_info->{$best_base}->{unique_trimmed_cov};
-					$best_cov->{1} = 0 if (!defined $best_cov->{1});
-					$best_cov->{-1} = 0 if (!defined $best_cov->{-1});
 
-					$mut->{type} = 'RA';
-					$mut->{seq_id} = $seq_id;
-					$mut->{position} = $pos;
-					$mut->{insert_position} = $insert_count;
-					$mut->{quality} = $e_value_call;		
-					$mut->{tot_cov} = $total_cov->{-1} . "/" . $total_cov->{1};
-					$mut->{new_cov} = $best_cov->{-1} . "/" . $best_cov->{1};
-					
-					## code that prints out even more information
-					## slow because it sorts things, and not necessary
-					if (0)
-					{
-						my ($base_string, $quality_string, $strand_string) = _pdata_to_strings(@$pdata);
-						$mut->{bases} = $base_string;
-						$mut->{qualities} = $quality_string;
-						$mut->{strands} = $strand_string;
-					}
+				## Fields common to consensus mutations and polymorphisms
+				my $mut;				
+				$mut->{type} = 'RA';
+				$mut->{seq_id} = $seq_id;
+				$mut->{position} = $pos;
+				$mut->{insert_position} = $insert_count;
+				$mut->{quality} = $e_value_call;		
+				
+				## code that prints out even more information
+				## slow because it sorts things, and not necessary
+				if (0)
+				{
+					my ($base_string, $quality_string, $strand_string) = _pdata_to_strings(@$pdata);
+					$mut->{bases} = $base_string;
+					$mut->{qualities} = $quality_string;
+					$mut->{strands} = $strand_string;
 				}
+				
 				if ($mutation_predicted)
 				{
 					$mut->{ref_base} = $ref_base;
 					$mut->{new_base} = $best_base;		
 					$mut->{frequency} = 1; ## this is not a polymorphism
-					$mut->{reject} = "EVALUE" if ($e_value_call < $settings->{mutation_log10_e_value_cutoff})
+					$mut->{reject} = "EVALUE" if ($e_value_call < $settings->{mutation_log10_e_value_cutoff});					
 				}
 				if ($polymorphism_predicted)
 				{	
@@ -700,8 +693,19 @@ sub identify_mutations
 						$mut->{reject} = "FET_STRAND" if ($mut->{fisher_strand_p_value} < $settings->{polymorphism_fisher_strand_p_value_cutoff});
 					}
 					$mut->{reject} = "FREQ" if ($mut->{frequency} < $settings->{polymorphism_frequency_cutoff});
-				 	$mut->{reject} = "FREQ" if ($mut->{frequency} > 1-$settings->{polymorphism_frequency_cutoff});						
+				 	$mut->{reject} = "FREQ" if ($mut->{frequency} > 1-$settings->{polymorphism_frequency_cutoff});		
 				}
+				
+				
+				## More fields common to consensus mutations and polymorphisms
+				## ...now that ref_base and new_base are defined
+				my $ref_cov = $pos_info->{$mut->{ref_base}}->{unique_trimmed_cov};
+				$mut->{ref_cov} = $ref_cov->{-1} . "/" . $ref_cov->{1};
+				
+				my $new_cov = $pos_info->{$mut->{new_base}}->{unique_trimmed_cov};
+				$mut->{new_cov} = $new_cov->{-1} . "/" . $new_cov->{1};
+				
+				$mut->{tot_cov} = $total_cov->{-1} . "/" . $total_cov->{1};
 				
 				$gd->add($mut);
 				

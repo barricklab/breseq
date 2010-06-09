@@ -96,7 +96,11 @@ tr	{
 }
 
 .reject_table_row	{
-	background-color: rgb(200,200,200);
+	background-color: rgb(255,200,165);
+}
+
+.information_table_row	{
+	background-color: rgb(200,255,255);
 }
 
 .junction_repeat	{
@@ -544,7 +548,7 @@ sub html_read_alignment_table_string
 	$output_str.= start_table({-border => 0, -cellspacing => 1, -cellpadding => 3});
 	
 	my $link = (defined $list_ref->[0]) && (defined $list_ref->[0]->{_evidence_file_name});
-	my $total_cols = $link ? 12 : 11;
+	my $total_cols = $link ? 11 : 10;
 	$output_str.= Tr(th({-colspan => $total_cols, -align => "left", -class=>"read_alignment_header_row"}, $title));
 
 	$output_str.= start_Tr();
@@ -559,8 +563,7 @@ sub html_read_alignment_table_string
 			"change",
 			"freq",
 			"score", 
-			"new&nbsp;cov", 
-			"total&nbsp;cov", 
+			"cov", 
 			"annotation", 
 			"genes", 
 			
@@ -594,18 +597,32 @@ sub html_read_alignment_table_string
 		$output_str.= td({align => "right"}, $c->{insert_position} );
 		$output_str.= td({align => "center"}, "$c->{ref_base}&rarr;$c->{new_base}" );	
 		$output_str.= td({align => "right"}, sprintf("%4.1f%%", $c->{frequency}*100) );
-		$output_str.= td({align => "right"}, sprintf("%.1f", $c->{quality}) );	# . $fisher_p_value
-		$output_str.= td({align => "center"}, $c->{new_cov} );	
-		$output_str.= td({align => "center"}, $c->{tot_cov} );
+		$output_str.= td({align => "right"}, sprintf("%.1f", $c->{quality}) );	# . $fisher_p_value	
+		my ($top_cov, $bot_cov) = split /\//, $c->{tot_cov};	
+		$output_str.= td({align => "center"}, $top_cov + $bot_cov );
 		$output_str.= td({align => "center"}, nonbreaking($c->{gene_position}) );	
 		$output_str.= td({align => "center"}, i(nonbreaking($c->{gene_name})) );	
 		$output_str.= td({align => "left"}, $c->{gene_product} );	
 			
 		$output_str.= end_Tr;
 		
-		if ($show_reject_reason && $c->{reject})
+		if ($show_reject_reason) 
 		{
-			$output_str.= Tr({-class=>'reject_table_row'}, td({-colspan => $total_cols}, "Rejected: " . decode_reject_reason($c)));
+			if ($c->{reject})
+			{
+				$output_str.= Tr({-class=>'reject_table_row'}, td({-colspan => $total_cols}, "Rejected: " . decode_reject_reason($c)));
+			}
+			
+			if (defined $c->{fisher_strand_p_value})
+			{
+				my $fisher_strand_p_value = sprintf("%.2E", $c->{fisher_strand_p_value});
+				$output_str.= Tr({-class=>'information_table_row'}, td({-colspan => $total_cols}, 
+					"Strands of reads supporting (+/-):&nbsp;&nbsp;" 
+					. b("new") . " base ($c->{new_cov})&nbsp;&nbsp;" 
+					. b("ref") . " base ($c->{ref_cov})&nbsp;&nbsp;" 
+					. b("total") . " ($c->{tot_cov})"));
+				$output_str.= Tr({-class=>'information_table_row'}, td({-colspan => $total_cols}, "Fisher's exact test strand distribution " . i("p") . "-value = $fisher_strand_p_value"));
+			}
 		}
 	}
 	
@@ -887,8 +904,7 @@ sub decode_reject_reason
 	}
 	elsif ($c->{reject} eq 'FET_STRAND')
 	{
-		my $fisher_strand_p_value = sprintf("%.2E", $c->{fisher_strand_p_value});
-		return "Prediction has biased strand distribution (Fisher's Exact Test P-value = $fisher_strand_p_value).";
+		return "Prediction has biased strand distribution. Failed Fisher's exact test.";
 	}
 	elsif ($c->{reject} eq 'FREQ')
 	{
