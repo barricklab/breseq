@@ -43,6 +43,8 @@ use vars qw(@ISA);
 use Data::Dumper;
 
 use Breseq::GenomeDiff;
+use Statistics::Distributions;
+
 
 our @base_list = ('A', 'T', 'C', 'G', '.');
 
@@ -73,7 +75,16 @@ sub identify_mutations
 	###
 
 	my ($log10_correct_rates, $log10_error_rates) = Breseq::ErrorCalibration::log10_error_rates($error_rates);
-   
+ 
+	my $polymorphism_statistics_input_fh;
+	if ($settings->{polymorphism_prediction})
+	{
+		my $polymorphism_statistics_input_file_name = $settings->file_name('polymorphism_statistics_input_file_name');
+		open $polymorphism_statistics_input_fh, ">$polymorphism_statistics_input_file_name" or die "Could not open file: $polymorphism_statistics_input_file_name";
+		print $polymorphism_statistics_input_fh +join("\t",
+			'new_top_strand', 'new_bot_strand', 'ref_top_strand', 'ref_bot_strand',	'new_quals', 'ref_quals' 
+		) . "\n";
+	}
 	
 	REFERENCE: foreach our $seq_id (@seq_ids)
 	{				
@@ -650,7 +661,7 @@ sub identify_mutations
 				if ($polymorphism_predicted)
 				{	
 					$mut->{quality} = $polymorphism->{log10_e_value};		
-					$mut->{fisher_strand_p_value} = $polymorphism->{fisher_strand_p_value};
+					#$mut->{fisher_strand_p_value} = $polymorphism->{fisher_strand_p_value};
 					
 					# the frequency returned is the probability of the FIRST base
 					# we want to quote the probability of the second base (the change from the reference).
@@ -687,11 +698,38 @@ sub identify_mutations
 					}
 										
 					$mut->{reject} = "EVALUE" if ($mut->{quality} < $settings->{polymorphism_log10_e_value_cutoff});
-					$mut->{reject} = "STRAND" if (!$polymorphism_coverage_both_bases);
-					if ($mut->{fisher_strand_p_value} ne 'ND')
+					
+					###
+					## Print input file for R
+					###
+					my $ref_cov = $pos_info->{$mut->{ref_base}}->{unique_trimmed_cov};
+					my $new_cov = $pos_info->{$mut->{new_base}}->{unique_trimmed_cov};
+					
+					my @ref_base_qualities;
+					my @new_base_qualities;
+					foreach my $item (@$pdata)
 					{
-						$mut->{reject} = "FET_STRAND" if ($mut->{fisher_strand_p_value} < $settings->{polymorphism_fisher_strand_p_value_cutoff});
+						if ($item->{base} eq $mut->{ref_base})
+						{
+							push @ref_base_qualities, $item->{quality};
+						}
+						elsif ($item->{base} eq $mut->{new_base})
+						{
+							push @new_base_qualities, $item->{quality};
+						}
 					}
+					
+					my $ref_quality_string = join ',', @ref_base_qualities;
+					my $new_quality_string = join ',', @new_base_qualities;
+					
+					print $polymorphism_statistics_input_fh +join( "\t",
+						$new_cov->{1}, $new_cov->{-1}, $ref_cov->{1}, $ref_cov->{-1}, $new_quality_string, $ref_quality_string
+					) . "\n";
+					###
+					## End printing input file for R
+					###
+					
+					$mut->{reject} = "STRAND" if (!$polymorphism_coverage_both_bases);
 					$mut->{reject} = "FREQ" if ($mut->{frequency} < $settings->{polymorphism_frequency_cutoff});
 				 	$mut->{reject} = "FREQ" if ($mut->{frequency} > 1-$settings->{polymorphism_frequency_cutoff});		
 				}
@@ -727,6 +765,17 @@ sub identify_mutations
 		close COV;
 		close MUT;	
 	}
+	
+	
+	###
+	## Run R polymorphism statistics script
+	###
+	
+	if ($settings->{polymorphism_prediction})
+	{
+		close $polymorphism_statistics_input_fh;
+	}
+	
 	
 	##finally, write out the genome diff file
 	my $ra_mc_genome_diff_file_name = $settings->file_name('ra_mc_genome_diff_file_name');	
@@ -832,17 +881,6 @@ sub _predict_polymorphism
 			$second_base_strand_hash->{$item->{strand}}++;
 		}
 	}
-
-	### We will eventually remove this Perl prerequisite and use either invocations of R to do this
-	### or pull over the R code for the calculation into the re-written C version
-
-	my $fisher_strand_p_value = 'ND';
-	if ($settings->{installed}->{Math_Pari} && $settings->{installed}->{Statistics_Distributions})
-	{
-		require Statistics::FishersExactTest;
-		$fisher_strand_p_value = Statistics::FishersExactTest::fishers_exact($first_base_strand_hash->{1},$first_base_strand_hash->{-1},$second_base_strand_hash->{1},$second_base_strand_hash->{-1},1);
-		$fisher_strand_p_value = sprintf "%.1e", $fisher_strand_p_value; #round immediately
-	}
 	
 #	print STDERR Dumper(\@first_base_qualities) if ($verbose);
 #	print STDERR Dumper(\@second_base_qualities) if ($verbose);
@@ -854,17 +892,10 @@ sub _predict_polymorphism
 
 	my $likelihood_ratio_test_value = -2*log(10)*($log10_likelihood_given_ref_base->{$first_base} - $log10_likelihood_of_two_base_model);
 	my $chi_squared_pr = 'ND';
-#	if ($settings->{installed}->{Math_GSL_CDF})
-#	{
-#		require 'Math::GSL::CDF';
-#		$chi_squared_pr = Math::GSL::CDF::gsl_cdf_chisq_Q($likelihood_ratio_test_value, 1);
-#	}
-#	else ## this doesn't require installing GSL (but it is pure Perl, and thus slow)
-	{
-		use Statistics::Distributions;
-		$Statistics::Distributions::SIGNIFICANT = 50; ## we need many more significant digits than the default 5
-		$chi_squared_pr = Statistics::Distributions::chisqrprob(1, $likelihood_ratio_test_value);
-	}
+	
+	$Statistics::Distributions::SIGNIFICANT = 50; ## we need many more significant digits than the default 5
+	$chi_squared_pr = Statistics::Distributions::chisqrprob(1, $likelihood_ratio_test_value);
+	
 	$polymorphism = {
 		'frequency' => $max_likelihood_fr_first_base,
 		'first_base' => $first_base,
@@ -872,7 +903,7 @@ sub _predict_polymorphism
 		'first_base_strand_coverage' => $first_base_strand_hash, 
 		'second_base_strand_coverage' => $second_base_strand_hash, 
 		'p_value' => $chi_squared_pr,
-		'fisher_strand_p_value' => $fisher_strand_p_value,
+#		'fisher_strand_p_value' => $fisher_strand_p_value,
 	};
 	
 	return $polymorphism;
@@ -1047,6 +1078,54 @@ sub calculate_confidence_interval
 	}
 		
 	return ($ml, $lower, $upper);
+}
+
+sub polymorphism_statistics
+{
+	our ($settings, $summary) = @_;
+
+	my $polymorphism_statistics_input_file_name = $settings->file_name('polymorphism_statistics_input_file_name');
+	my $polymorphism_statistics_output_file_name = $settings->file_name('polymorphism_statistics_output_file_name');
+
+	### Load the older GenomeDiff and add new fields
+	my $ra_mc_genome_diff_file_name = $settings->file_name('ra_mc_genome_diff_file_name');
+	my $gd = Breseq::GenomeDiff->new(-in => $ra_mc_genome_diff_file_name);
+	
+	my $polymorphism_statistics_r_script_file_name = $settings->file_name('polymorphism_statistics_r_script_file_name');
+	my $polymorphism_statistics_r_script_log_file_name = $settings->file_name('polymorphism_statistics_r_script_log_file_name');
+	my $total_reference_length = $summary->{sequence_conversion}->{total_reference_sequence_length};
+	Breseq::Shared::system("R --vanilla total_length=$total_reference_length in_file=$polymorphism_statistics_input_file_name out_file=$polymorphism_statistics_output_file_name < $polymorphism_statistics_r_script_file_name > $polymorphism_statistics_r_script_log_file_name");
+	
+	## Read R file and add new results corresponding to all columns
+	open ROUT, "<$polymorphism_statistics_output_file_name" or die "Could not find file: $polymorphism_statistics_output_file_name";
+	my $header = <ROUT>;
+	chomp $header;
+	my @header_list = split /\t/, $header;
+	
+	foreach my $mut ($gd->list('RA'))
+	{
+		## lines only exist for polymorphisms
+		next if (($mut->{frequency} == 1) || ($mut->{frequency} == 0));
+
+		my $line = <ROUT>;
+		chomp $line;
+		my @line_list = split /\t/, $line;
+		
+		for (my $i=0; $i< scalar @header_list; $i++)
+		{
+			$mut->{$header_list[$i]} = $line_list[$i];
+			die "Incorrect number of items on line:\n$line" if (!defined $line_list[$i]);
+		}
+		
+		$mut->{reject} = "BIAS_P_VALUE" if ($mut->{bias_p_value} < $settings->{polymorphism_bias_p_value_cutoff});
+	}
+	
+	### Write out the file which now has much more data
+	my $polymorphism_statistics_ra_mc_genome_diff_file_name = $settings->file_name('polymorphism_statistics_ra_mc_genome_diff_file_name');
+	$gd->write($polymorphism_statistics_ra_mc_genome_diff_file_name);
+	
+	
+	
 }
 
 return 1;

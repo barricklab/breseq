@@ -91,7 +91,7 @@ sub new
 		'alignment-read-limit=s' => \$self->{alignment_read_limit},
 		'polymorphism-log10-e-value-cutoff=s' => \$self->{polymorphism_log10_e_value_cutoff},
 		'polymorphism-frequency-cutoff=s' =>  \$self->{polymorphism_frequency_cutoff},	
-		'polymorphism-fisher-strand-p-value-cutoff=s' => \$self->{polymorphism_fisher_strand_p_value_cutoff},
+		'polymorphism-p-value-cutoff=s' => \$self->{polymorphism_bias_p_value_cutoff},
 		'no-unmatched-reads' => \$self->{no_unmatched_reads},
 		'maximum-candidate-junctions=s' => \$self->{maximum_candidate_junctions},
 		'error-model=s' => \$self->{error_model_method},
@@ -159,7 +159,7 @@ sub new_annotate
 		'alignment-read-limit=s' => \$self->{alignment_read_limit},
 		'polymorphism-log10-e-value-cutoff=s' => \$self->{polymorphism_log10_e_value_cutoff},
 		'polymorphism-frequency-cutoff=s' =>  \$self->{polymorphism_frequency_cutoff},	
-		'polymorphism-fisher-strand-p-value-cutoff=s' => \$self->{polymorphism_fisher_strand_p_value_cutoff},
+		'polymorphism-p-value-cutoff=s' => \$self->{polymorphism_bias_p_value_cutoff},
 		'no-unmatched-reads' => \$self->{no_unmatched_reads},
 		'maximum-candidate-junctions=s' => \$self->{maximum_candidate_junctions},
 		'resume' => \$self->{resume_run},
@@ -226,7 +226,7 @@ sub initialize_1
 	#used by MutationIdentification.pm
 	$self->{polymorphism_log10_e_value_cutoff} = 2;
 	$self->{mutation_log10_e_value_cutoff} = 2;			# log10 of evidence required for SNP calls 
-	$self->{polymorphism_fisher_strand_p_value_cutoff} = 0.05;
+	$self->{polymorphism_bias_p_value_cutoff} = 0.05;
 	$self->{polymorphism_frequency_cutoff} = 0;   # cut off if < this or > 1-this
 }
 
@@ -238,6 +238,7 @@ sub initialize_2
 	$self->{version} = $Breseq::VERSION;
 	$self->{byline} = "<b><i>breseq</i></b> Version $self->{version} | Developed by Barrick JE and Knoester DB";
 	$self->{bin_path} = $FindBin::Bin;
+	$self->{lib_path} = "$self->{bin_path}/../lib/perl5/Breseq";
 
 	#neaten up some settings for later string comparisons
 	$self->{quality_type} = "\L$self->{quality_type}";
@@ -328,6 +329,13 @@ sub initialize_2
 	$self->{complete_coverage_text_file_name} = "$self->{mutation_identification_path}/@.coverage.tab";
 	$self->{mutation_identification_done_file_name} = "$self->{mutation_identification_path}/mutation_identification.done";
 	$self->{cnv_coverage_tab_file_name} = "$self->{mutation_identification_path}/@.cnv_coverage.tab";
+	
+	$self->{polymorphism_statistics_input_file_name} = "$self->{mutation_identification_path}/polymorphism_statistics_input.tab";
+	$self->{polymorphism_statistics_output_file_name} = "$self->{mutation_identification_path}/polymorphism_statistics_output.tab";
+	$self->{polymorphism_statistics_r_script_file_name} = "$self->{lib_path}/polymorphism_statistics.r";
+	$self->{polymorphism_statistics_r_script_log_file_name} = "$self->{mutation_identification_path}/polymorphism_statistics_output.log";
+	$self->{polymorphism_statistics_ra_mc_genome_diff_file_name} = "$self->{mutation_identification_path}/ra_mc_evidence_polymorphism_statistics.gd";
+	$self->{polymorphism_statistics_done_file_name} = "$self->{mutation_identification_path}/polymorphism_statistics.done";
 
 	##### output #####
 	$self->{output_path} = "output";
@@ -352,7 +360,7 @@ sub initialize_2
 	$self->{summary_text_file_name} = "$self->{output_path}/summary.tab";
 	$self->{tiled_coverage_text_file_name} = "$self->{output_path}/@.tiled_coverage.tab";
 
-	$self->{breseq_small_graphic_from_file_name} = "$self->{bin_path}/breseq_small.png";
+	$self->{breseq_small_graphic_from_file_name} = "$self->{lib_path}/breseq_small.png";
 	$self->{breseq_small_graphic_to_file_name} = "$self->{output_path}/$self->{local_evidence_path}/breseq_small.png";
 
 	$self->{long_pairs_file_name} = "$self->{output_path}/long_pairs.tab";
@@ -615,15 +623,15 @@ sub installed
 	$self->{installed}->{SSAHA2} = (`which ssaha2`) ? 1 : 0;
 	$self->{installed}->{R} = (`which R`) ? 1 : 0;	
 	$self->{installed}->{samtools} = (-x "$self->{bin_path}/samtools") ? 1 : 0;
-	
+	$self->{installed}->{bioperl} = (eval 'require Bio::Root::Root');	
+
 	## installed locally
 	$self->{installed}->{Statistics_Distributions} = (eval 'require Statistics::Distributions');	
-	$self->{installed}->{bioperl} = (eval 'require Bio::Root::Root');	
 	$self->{installed}->{Bio_DB_Sam} = (eval 'require Bio::DB::Sam');
 		
 
 	## optional
-	$self->{installed}->{Math_Pari} = (eval 'require Math::Pari');
+#	$self->{installed}->{Math_Pari} = (eval 'require Math::Pari');
 
 	## optional, being phased out, seems to make no difference compared to Statistics::Distributions
 	#$self->{installed}->{Math_GSL_CDF} = (eval 'require Math::GSL::CDF');	
@@ -668,13 +676,6 @@ sub check_installed
 		$good_to_go = 0;
 		print STDERR "---> ERROR Required Perl module \"Bio::DB::Sam\" not installed.\n";
 		print STDERR "---> This should have been installed by the breseq installer.\n";
-	}
-	
-	## Warning if using pure Perl implementation and module not installed
-	if ( ($self->{polymorphism_prediction} && !$self->{installed}->{Math_Pari}) )
-	{
-		print STDERR "---> WARNING! Perl module MATH::Pari not installed. Fisher's Exact Test\n";
-		print STDERR "---> will not be used to check strand bias in polymorphism predictions.\n";
 	}
 	
 	if ( ($self->{polymorphism_prediction} && !$self->{installed}->{Statistics_Distributions}) )

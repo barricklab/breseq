@@ -613,6 +613,12 @@ sub html_read_alignment_table_string
 				$output_str.= Tr({-class=>'reject_table_row'}, td({-colspan => $total_cols}, "Rejected: " . decode_reject_reason($c)));
 			}
 			
+			if (defined $c->{bias_p_value})
+			{
+				my $bias_p_value = sprintf("%.2E", $c->{bias_p_value});
+				$output_str.= Tr({-class=>'information_table_row'}, td({-colspan => $total_cols}, "Combined strand and quality bias " . i("p") . "-value = $bias_p_value"));
+			}
+			
 			if (defined $c->{fisher_strand_p_value})
 			{
 				my $fisher_strand_p_value = sprintf("%.2E", $c->{fisher_strand_p_value});
@@ -623,6 +629,13 @@ sub html_read_alignment_table_string
 					. b("total") . " ($c->{tot_cov})"));
 				$output_str.= Tr({-class=>'information_table_row'}, td({-colspan => $total_cols}, "Fisher's exact test strand distribution " . i("p") . "-value = $fisher_strand_p_value"));
 			}
+
+			if (defined $c->{ks_quality_p_value})
+			{
+				my $ks_quality_p_value = sprintf("%.2E", $c->{ks_quality_p_value});
+				$output_str.= Tr({-class=>'information_table_row'}, td({-colspan => $total_cols}, "Kolmogorov-Smirnov test that lower quality scores support polymorphism " . i("p") . "-value = $ks_quality_p_value"));
+			}
+
 		}
 	}
 	
@@ -902,10 +915,6 @@ sub decode_reject_reason
 	{
 		return "Prediction not supported by reads on both strands.";
 	}
-	elsif ($c->{reject} eq 'FET_STRAND')
-	{
-		return "Prediction has biased strand distribution. Failed Fisher's exact test.";
-	}
 	elsif ($c->{reject} eq 'FREQ')
 	{
 		return "Prediction has frequency below cutoff threshold.";
@@ -913,6 +922,10 @@ sub decode_reject_reason
 	elsif ($c->{reject} eq 'COV')
 	{
 		return "Prediction has coverage below cutoff threshold.";
+	}
+	elsif ($c->{reject} eq 'BIAS_P_VALUE')
+	{
+		return "Prediction has biased strand and/or quality scores supporting polymorphism.";
 	}
 	return '';
 }

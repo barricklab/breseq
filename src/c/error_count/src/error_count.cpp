@@ -134,7 +134,6 @@ int breseq::error_count_pileup::callback(uint32_t tid, uint32_t pos, int n, cons
 			//# (3) insertion in read relative to reference
 			//#     e.g. '.A' key for observing an A in a read at a position where the reference has no base
 			//#     how does one give a quality score? - 
-			//#     for reference observations: average the quality scores of the surrounding bases in the read (round down)
 			//#     for mutation observations: the quality score of the inserted base
 			//#     -- at the next position in the read
 			//#     -- only count if an indel = +1, meaning a single-base insertion

@@ -14,4 +14,8 @@ my $builder = Module::Build->new(
     create_makefile_pl => 'traditional',
 );
 
+## additional file types to copy within lib directory
+$builder->add_build_element('png');
+$builder->add_build_element('r');
+
 $builder->create_build_script();

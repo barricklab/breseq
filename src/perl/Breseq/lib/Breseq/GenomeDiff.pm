@@ -335,11 +335,6 @@ sub _line_to_item
 			$item->{"_$side_key"}->{type} = 'NA';
 		}
 	}
-	
-	
-	$item->{SORT_1} = $item->{$tag_sort_fields->{$item->{type}}->[0]};
-	$item->{SORT_2} = $item->{$tag_sort_fields->{$item->{type}}->[1]};
-	$item->{SORT_3} = $item->{$tag_sort_fields->{$item->{type}}->[2]};
 
 	return $item;
 }
@@ -435,8 +430,19 @@ sub write
 	print OUT "#=GENOME_DIFF 1.0\n";
 	print OUT "#=SAMPLE " . $self->hash_to_line($self->{'SAMPLE'}) . "\n" if (defined $self->{'SAMPLE'});
 	
+	
+	#fill in the sort fields
+	foreach my $item (	@{$self->{list}} )
+	{
+		$item->{SORT_1} = $tag_sort_fields->{$item->{type}}->[0];
+		$item->{SORT_2} = $item->{$tag_sort_fields->{$item->{type}}->[1]};
+		$item->{SORT_3} = $item->{$tag_sort_fields->{$item->{type}}->[2]};
+	}
 	sub by_sort_fields
 	{ 			
+		print Dumper($a) if (!defined $a->{SORT_1} || !defined $a->{SORT_2} || !defined $a->{SORT_3}); 
+		print Dumper($b) if (!defined $b->{SORT_1} || !defined $b->{SORT_2} || !defined $b->{SORT_3}); 
+
 		return ($a->{SORT_1} <=> $b->{SORT_1}) || ($a->{SORT_2} cmp $b->{SORT_2}) || ($a->{SORT_3} <=> $b->{SORT_3});
 	}
 	
