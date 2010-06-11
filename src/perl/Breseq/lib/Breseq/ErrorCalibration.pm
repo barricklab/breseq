@@ -612,7 +612,7 @@ sub load_error_file
 {
 	my ($file_name) = @_;
 	
-	open ERR, "<$file_name" or die "Could not open file: $file_name\n";
+	open ERR, "<$file_name" or die "Could not open file: $file_name";
 	my $header_line = <ERR>;
 	
 	chomp $header_line;

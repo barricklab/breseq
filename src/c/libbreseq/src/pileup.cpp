@@ -43,6 +43,7 @@ breseq::pileup_base::pileup_base(const std::string& bam, const std::string& fast
 	for(int i=0; i<_bam->header->n_targets; ++i) {
 		cerr << "  REFERENCE: " << _bam->header->target_name[i] << endl;
 		cerr << "  LENGTH: " << _bam->header->target_len[i] << endl;
+    cerr.flush();
 		boost::shared_ptr<reference_sequence> refseq(new reference_sequence(fasta, _bam->header->target_name[i]));
 		assert(static_cast<unsigned int>(refseq->_len) == _bam->header->target_len[i]);
 		_refs.push_back(refseq);
@@ -71,8 +72,10 @@ char* breseq::pileup_base::get_refseq(int target) {
 int first_level_callback(uint32_t tid, uint32_t pos, int n, const bam_pileup1_t *pile, void *data) {
 	breseq::pileup_base* p = reinterpret_cast<breseq::pileup_base*>(data);
 	
-	if((pos % 10000) == 0) {
-		std::cerr << "    POSITION:" << pos << std::endl;
+  // print position, correcting for 0-indexing versus 1-indexing
+	if(((pos+1) % 10000) == 0) {
+		std::cerr << "    POSITION:" << (pos+1) << std::endl;
+    std::cerr.flush();
 	}
 	
 	p->callback(tid,pos,n,pile);
