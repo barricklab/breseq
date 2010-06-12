@@ -44,7 +44,7 @@ for (i in 1:length(X$new_quals))
 	ref_quals_list <- strsplit(as.vector(X$ref_quals[i]), ",");
 	ref_quals <- as.numeric( ref_quals_list[[1]] )
 	options(warn=-1);
-	ks_test_p_value <- ks.test(new_quals, ref_quals, alternative = "less")
+	ks_test_p_value <- ks.test(ref_quals, new_quals, alternative = "less")
 	options(warn=0);
 	ks_test_p_value <- ks_test_p_value$p.value
 	Y$ks_quality_p_value[i] <- ks_test_p_value

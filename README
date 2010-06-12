@@ -13,11 +13,10 @@ installed, open a new terminal window and issue the commands:
 > sudo port install md5sha1sum
 > sudo port install ghostscript
 
-You will also need several Perl modules that are available from CPAN.
+You will also need some Perl modules that are available from CPAN.
 In a terminal window issue the following commands
 
 > sudo perl -MCPAN -e shell
-cpan> install Math::Pari
 cpan> install Statistics::Distributions
 cpan> force install CJFIELDS/BioPerl-1.6.1.tar.gz
 cpan> quit
