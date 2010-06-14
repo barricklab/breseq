@@ -228,6 +228,10 @@ sub initialize_1
 	$self->{mutation_log10_e_value_cutoff} = 2;			# log10 of evidence required for SNP calls 
 	$self->{polymorphism_bias_p_value_cutoff} = 0.05;
 	$self->{polymorphism_frequency_cutoff} = 0;   # cut off if < this or > 1-this
+	
+	#used by Output.pm
+	$self->{max_rejected_polymorphisms_to_show} = 100;
+	$self->{max_rejected_junctions_to_show} = 25;
 }
 
 ## called after getting options from command line

@@ -3,7 +3,7 @@
 <plist version="1.0">
 <dict>
 	<key>currentDocument</key>
-	<string>lib/Breseq/MutationIdentification.pm</string>
+	<string>lib/Breseq/Settings.pm</string>
 	<key>documents</key>
 	<array>
 		<dict>
@@ -36,14 +36,14 @@
 			<key>caret</key>
 			<dict>
 				<key>column</key>
-				<integer>16</integer>
+				<integer>37</integer>
 				<key>line</key>
-				<integer>751</integer>
+				<integer>781</integer>
 			</dict>
 			<key>firstVisibleColumn</key>
 			<integer>0</integer>
 			<key>firstVisibleLine</key>
-			<integer>716</integer>
+			<integer>764</integer>
 		</dict>
 		<key>bin/cnv_script.r</key>
 		<dict>
@@ -92,30 +92,14 @@
 			<key>caret</key>
 			<dict>
 				<key>column</key>
-				<integer>0</integer>
+				<integer>55</integer>
 				<key>line</key>
-				<integer>74</integer>
+				<integer>222</integer>
 			</dict>
-			<key>columnSelection</key>
-			<false/>
 			<key>firstVisibleColumn</key>
 			<integer>0</integer>
 			<key>firstVisibleLine</key>
-			<integer>39</integer>
-			<key>selectFrom</key>
-			<dict>
-				<key>column</key>
-				<integer>50</integer>
-				<key>line</key>
-				<integer>76</integer>
-			</dict>
-			<key>selectTo</key>
-			<dict>
-				<key>column</key>
-				<integer>0</integer>
-				<key>line</key>
-				<integer>74</integer>
-			</dict>
+			<integer>201</integer>
 		</dict>
 		<key>bin/merge_coverage_files</key>
 		<dict>
@@ -324,14 +308,14 @@
 			<key>caret</key>
 			<dict>
 				<key>column</key>
-				<integer>17</integer>
+				<integer>38</integer>
 				<key>line</key>
-				<integer>32</integer>
+				<integer>641</integer>
 			</dict>
 			<key>firstVisibleColumn</key>
 			<integer>0</integer>
 			<key>firstVisibleLine</key>
-			<integer>10</integer>
+			<integer>683</integer>
 		</dict>
 		<key>lib/Breseq/MutationPredictor.pm</key>
 		<dict>
@@ -368,14 +352,14 @@
 			<key>caret</key>
 			<dict>
 				<key>column</key>
-				<integer>2</integer>
+				<integer>21</integer>
 				<key>line</key>
-				<integer>916</integer>
+				<integer>773</integer>
 			</dict>
 			<key>firstVisibleColumn</key>
 			<integer>0</integer>
 			<key>firstVisibleLine</key>
-			<integer>889</integer>
+			<integer>756</integer>
 		</dict>
 		<key>lib/Breseq/ReferenceSequence.pm</key>
 		<dict>
@@ -396,14 +380,14 @@
 			<key>caret</key>
 			<dict>
 				<key>column</key>
-				<integer>0</integer>
+				<integer>50</integer>
 				<key>line</key>
-				<integer>642</integer>
+				<integer>232</integer>
 			</dict>
 			<key>firstVisibleColumn</key>
 			<integer>0</integer>
 			<key>firstVisibleLine</key>
-			<integer>621</integer>
+			<integer>204</integer>
 		</dict>
 		<key>lib/Breseq/Shared.pm</key>
 		<dict>
@@ -418,6 +402,20 @@
 			<integer>0</integer>
 			<key>firstVisibleLine</key>
 			<integer>142</integer>
+		</dict>
+		<key>lib/Breseq/polymorphism_statistics.r</key>
+		<dict>
+			<key>caret</key>
+			<dict>
+				<key>column</key>
+				<integer>9</integer>
+				<key>line</key>
+				<integer>26</integer>
+			</dict>
+			<key>firstVisibleColumn</key>
+			<integer>0</integer>
+			<key>firstVisibleLine</key>
+			<integer>0</integer>
 		</dict>
 		<key>lib/Statistics/FishersExactTest.pm</key>
 		<dict>
@@ -442,6 +440,7 @@
 		<string>lib/Breseq/Shared.pm</string>
 		<string>bin/plot_coverage</string>
 		<string>lib/Breseq/MutationIdentification.pm</string>
+		<string>lib/Breseq/polymorphism_statistics.r</string>
 		<string>lib/Breseq/MutationPredictor.pm</string>
 		<string>lib/Breseq.pm</string>
 		<string>lib/Breseq/ErrorCalibration.pm</string>
@@ -463,6 +462,6 @@
 	<key>showFileHierarchyDrawer</key>
 	<true/>
 	<key>windowFrame</key>
-	<string>{{124, 81}, {1013, 797}}</string>
+	<string>{{144, 71}, {891, 781}}</string>
 </dict>
 </plist>

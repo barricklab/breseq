@@ -203,7 +203,7 @@ sub html_index
 	$relative_path .= "/" if ($relative_path);
 	print HTML p . html_mutation_table_string($gd, \@muts, $relative_path, 1 );
 	
-	my @ra = $gd->filter_used_as_evidence($gd->list('RA'));
+	my @ra = $gd->filter_used_as_evidence($gd->list('RA'));	
 	print HTML p . html_read_alignment_table_string(\@ra, $relative_path, "Unassigned read alignment evidence...");
 
 	my @mc = $gd->filter_used_as_evidence($gd->list('MC'));
@@ -576,6 +576,8 @@ sub html_read_alignment_table_string
 	{		
 		## don't print ones that overlap predicted deletions
 		next if ($c->{deleted});
+		next if ($c->{no_show});
+		
 		
 		my $row_class = "normal_table_row";
 		if ((defined $c->{frequency}) && ($c->{frequency} != 1))
@@ -776,6 +778,8 @@ sub html_new_junction_table_string
 	my $row_bg_color_index = 0;
 	foreach my $c (@$list_ref)
 	{	
+		next if ($c->{no_show});
+		
 		### Side 1
 		my $key = 'side_1';			
 		my $annotate_key = "junction_" . $c->{"$key\_annotate_key"};
@@ -1066,6 +1070,7 @@ sub create_evidence_files
 	
 	RA: foreach my $item ( @ra_list )
 	{
+		next if ($item->{no_show});
 		next if ($item->{deleted});
 		
 		#this reconstructs the proper columns to draw
@@ -1091,7 +1096,9 @@ sub create_evidence_files
 	## positions and overlap: alignment_pos and alignment_overlap.
 
 	foreach my $item ( $gd->list('JC') )
-	{		
+	{	
+		next if ($item->{no_show});
+		
 		my $parent_item = $gd->parent($item);
 		$parent_item = $item if (!$parent_item);
 		

@@ -30,7 +30,7 @@ X<-read.table(in_file, sep="\t", header=T)
 Y<-data.frame(
 	ks_quality_p_value = 1:length(X$new_quals), 
 	fisher_strand_p_value = 1:length(X$new_quals), 
-	compound_p_value = 1:length(X$new_quals),
+	bias_p_value = 1:length(X$new_quals),
 	bias_e_value = 1:length(X$new_quals)
 );
 
