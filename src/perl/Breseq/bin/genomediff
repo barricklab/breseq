@@ -216,9 +216,27 @@ sub do_annotate
 	##
 	print STDERR "Drawing coverage plots...\n";
 	Breseq::Output::draw_coverage($settings, $ref_seq_info, $gd);
+
+	##
+	# Mark lowest RA evidence items as no-show, or we may be drawing way too many alignments
+	##
+	my @ra = $gd->filter_used_as_evidence($gd->list('RA'));	
+	@ra = grep { ($_->{frequency} != 0) && ($_->{frequency} != 1)  } @ra;
+	@ra = sort { -($a->{bias_p_value} <=> $b->{bias_p_value}) } @ra;
+	
+	for (my $i = $settings->{max_rejected_polymorphisms_to_show}; $i< scalar @ra; $i++)
+	{
+		$ra[$i]->{no_show} = 1;
+	}
 	
 	##
-	# Creare evidence files containing alignments and coverage plots
+	# Mark lowest scoring junctions as no-show
+	##
+	#$settings->{max_rejected_junctions_to_show}
+	
+	
+	##
+	# Create evidence files containing alignments and coverage plots
 	##
 	if (!$settings->{no_alignment_generation})
 	{
