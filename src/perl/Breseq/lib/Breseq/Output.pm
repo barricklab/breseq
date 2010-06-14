@@ -575,7 +575,8 @@ sub html_read_alignment_table_string
 	foreach my $c (@$list_ref)
 	{		
 		## don't print ones that overlap predicted deletions
-		next if ($c->{deleted});
+		## unless we are in the zoomed view to just this one
+		next if ($c->{deleted} && !$show_reject_reason);
 		next if ($c->{no_show});
 		
 		
