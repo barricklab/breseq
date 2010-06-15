@@ -204,6 +204,8 @@ sub html_index
 	print HTML p . html_mutation_table_string($gd, \@muts, $relative_path, 1 );
 	
 	my @ra = $gd->filter_used_as_evidence($gd->list('RA'));	
+	## don't print ones that overlap predicted deletions or were marked to not show
+	@ra = grep { !$_->{deleted} && !$_->{no_show} } @ra;
 	print HTML p . html_read_alignment_table_string(\@ra, $relative_path, "Unassigned read alignment evidence...");
 
 	my @mc = $gd->filter_used_as_evidence($gd->list('MC'));
@@ -573,13 +575,7 @@ sub html_read_alignment_table_string
 	$output_str.= end_Tr;
 	
 	foreach my $c (@$list_ref)
-	{		
-		## don't print ones that overlap predicted deletions
-		## unless we are in the zoomed view to just this one
-		next if ($c->{deleted} && !$show_reject_reason);
-		next if ($c->{no_show});
-		
-		
+	{			
 		my $row_class = "normal_table_row";
 		if ((defined $c->{frequency}) && ($c->{frequency} != 1))
 		{
@@ -1072,7 +1068,7 @@ sub create_evidence_files
 	RA: foreach my $item ( @ra_list )
 	{
 		next if ($item->{no_show});
-		next if ($item->{deleted});
+#		next if ($item->{deleted});
 		
 		#this reconstructs the proper columns to draw
 		add_evidence( 

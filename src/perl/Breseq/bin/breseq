@@ -139,17 +139,28 @@ if (!-e $sequence_conversion_done_file_name)
 	my $s;
 	$settings->create_path('sequence_conversion_path');
 	
+	## realistically, we first need to do some checks on the data
+	## 1) Are they using the correct quality scores. If not, tell them a command to run
+	## 2) Does their fastq have the entire sequence on one line?  If not, tell them a command to run
+	
 	## quality trimming the reads
-	## broken, and we need to guess or be given quality score format
 	if ($settings->{trim_reads})
 	{
-	 	print STDERR "  Trimming fastq reads for quality\n";
+	 	print STDERR "  Trimming fastq reads for quality\n";	
 	 	foreach my $read_file ($settings->read_files)
 		{
 			print STDERR "    READ FILE::$read_file\n";
 			my $fastq_file_name = $settings->read_file_to_original_fastq_file_name($read_file);	
-			my $trimmed_fastq_file_name = $settings->read_file_to_fastq_file_name($read_file);	
-			Breseq::Fastq::fastq_to_trimmed_fastq($fastq_file_name, $trimmed_fastq_file_name);
+			my $trimmed_fastq_file_name = $settings->read_file_to_fastq_file_name($read_file);
+			
+			if ($settings->{trim_read_ends})	
+			{
+				Breseq::Fastq::fastq_to_trimmed_fastq($fastq_file_name, $trimmed_fastq_file_name);
+			}
+			elsif ($settings->{trim_read_base_quality})	
+			{
+				Breseq::Fastq::base_quality_filter_fastq($fastq_file_name, $trimmed_fastq_file_name, $settings->{trim_read_base_quality});
+			}
 		}
 	}
 	
