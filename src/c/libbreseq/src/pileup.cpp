@@ -65,6 +65,49 @@ char* breseq::pileup_base::get_refseq(int target) {
 	return _refs[target]->_seq;
 }
 
+/*! Get the query start or end from the cigar string of an alignment
+*/
+
+int32_t breseq::pileup_base::query_start(const bam1_t*& a) {
+  
+  // traverse the cigar array
+  uint32_t* cigar = bam1_cigar(a); // cigar array for this alignment
+  int32_t pos = 1;
+
+  for(uint32_t j=0; j<=a->core.n_cigar; j++) {
+    uint32_t op = cigar[j] & BAM_CIGAR_MASK;
+    uint32_t len = cigar[j] >> BAM_CIGAR_SHIFT;
+
+    // if we encounter padding, or a gap in reference then we are done
+    if((op != BAM_CSOFT_CLIP) && (op != BAM_CHARD_CLIP) && (op != BAM_CREF_SKIP)) {
+        break;
+    }
+    
+    pos += len;
+  }
+  
+  return pos;
+}
+
+int32_t breseq::pileup_base::query_end(const bam1_t*& a) {
+  
+  // traverse the cigar array
+  uint32_t* cigar = bam1_cigar(a); // cigar array for this alignment
+  int32_t pos = bam_cigar2qlen(&a->core, cigar); // total length of the query
+
+  for(uint32_t j=(a->core.n_cigar-1); j>0; --j) {
+    uint32_t op = cigar[j] & BAM_CIGAR_MASK;
+    uint32_t len = cigar[j] >> BAM_CIGAR_SHIFT;
+    
+    // if we encounter padding, or a gap in reference then we are done
+    if((op != BAM_CSOFT_CLIP) && (op != BAM_CHARD_CLIP) && (op != BAM_CREF_SKIP)) {
+      break;
+    }
+    pos -= len;
+  }
+
+  return pos;
+}
 
 /*! First-level callback, used to re-route the callback from samtools to the virtual
  function defined in breseq::pileup.

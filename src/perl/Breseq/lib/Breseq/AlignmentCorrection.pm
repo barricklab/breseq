@@ -1293,15 +1293,16 @@ sub _junction_to_hybrid_list_item
 		flanking_right => $jc->{flanking_right},
 	};
 
-	foreach my $key (keys %{$jc->{test_info}})
+
+	## may want to take only selected of these fields...
+	foreach my $key (keys %$test_info)
 	{		
-		$item->{$key} = $jc->{test_info}->{$key};
+		$item->{$key} = $test_info->{$key};
 	}	
 	
 	### Note: Other adjustments to overlap can happen at the later annotation stage
 	### and they will not affect coverage for calling deletions or mutations
-	### because they will be in redundantly matched sides of junctions
-	### However, this can cause confusing alignments
+	### because they will be in REDUNDANTLY matched sides of junctions
 	return $item;
 }
 

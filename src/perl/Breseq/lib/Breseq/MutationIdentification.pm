@@ -422,13 +422,13 @@ sub identify_mutations
 					}
 					
 					## These are the start and end coordinates of the aligned part of the read
-					my ($q_start, $q_end) = Breseq::Shared::alignment_query_start_end($a, {no_reverse=>1});
+					my ($q_start, $q_end) = ($a->query->start-1, $a->query->end-1); #0-indexed
 					
 					### Optionally, only count reads that completely match
 					my $complete_match = 1;
 					if ($settings->{require_complete_match})
 					{
-						$complete_match = ($q_start == 1) && ($q_end == $a->l_qseq);
+						$complete_match = ($q_start+1 == 1) && ($q_end+1 == $a->l_qseq);
 						next if (!$complete_match);
 					}
 					### End complete match condition
@@ -466,18 +466,20 @@ sub identify_mutations
 					##don't use information from redundant reads!!
 					next if ($redundancy > 1);				
 					
+##			>> If it's a deletion, then we also want to use the previous or next quality depending on strand
+					
 					my $quality;
+					## Does this read go to the current insert count?
 					if ($indel < $insert_count) 
 					{
-						## We would really like for this to not count any of the insertions unless
-						## the read makes it out of the inserted region (this will be the case if it was aligned)
+						## No, then the quality we need to use is either the next 
+						
+						
 						##no information about gap if next position is end of alignment
-						## THIS SHOULD NEVER BE TRUE, but it is sometimes...
-						next ALIGNMENT if ($p->qpos+$indel+1 >= $q_end);
-						#die if ($p->qpos+$indel+1 >= $q_end);
-
-						my $average_quality = POSIX::floor(($a->qscore->[$p->qpos+$indel] + $a->qscore->[$p->qpos+$indel])/2);
-						$quality = $average_quality;
+						## THIS SHOULD NEVER BE TRUE, but it is sometimes... WHY?
+						die if ($p->qpos+$indel+1 >= $q_end);
+						
+						$quality = $a->qscore->[$p->qpos+$indel+1];
 					}
 					else
 					{
@@ -506,6 +508,7 @@ sub identify_mutations
 						
 						if (!defined $log10_correct_rates->[$fastq_file_index]->{$quality}->{$base_key})
 						{
+							print $a->qname . "\n";
 							print "$fastq_file_index $quality $base_key\n";
 							print Dumper($log10_correct_rates->[$fastq_file_index]);
 							die;
