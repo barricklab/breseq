@@ -3,7 +3,7 @@
 <plist version="1.0">
 <dict>
 	<key>currentDocument</key>
-	<string>lib/Breseq/Settings.pm</string>
+	<string>lib/Breseq/Output.pm</string>
 	<key>documents</key>
 	<array>
 		<dict>
@@ -222,14 +222,14 @@
 			<key>caret</key>
 			<dict>
 				<key>column</key>
-				<integer>57</integer>
+				<integer>31</integer>
 				<key>line</key>
-				<integer>471</integer>
+				<integer>473</integer>
 			</dict>
 			<key>firstVisibleColumn</key>
 			<integer>0</integer>
 			<key>firstVisibleLine</key>
-			<integer>440</integer>
+			<integer>533</integer>
 		</dict>
 		<key>lib/Breseq/CandidateJunctions.pm</key>
 		<dict>
@@ -308,14 +308,14 @@
 			<key>caret</key>
 			<dict>
 				<key>column</key>
-				<integer>38</integer>
+				<integer>12</integer>
 				<key>line</key>
-				<integer>641</integer>
+				<integer>488</integer>
 			</dict>
 			<key>firstVisibleColumn</key>
 			<integer>0</integer>
 			<key>firstVisibleLine</key>
-			<integer>683</integer>
+			<integer>460</integer>
 		</dict>
 		<key>lib/Breseq/MutationPredictor.pm</key>
 		<dict>
@@ -352,14 +352,14 @@
 			<key>caret</key>
 			<dict>
 				<key>column</key>
-				<integer>21</integer>
+				<integer>60</integer>
 				<key>line</key>
-				<integer>773</integer>
+				<integer>547</integer>
 			</dict>
 			<key>firstVisibleColumn</key>
 			<integer>0</integer>
 			<key>firstVisibleLine</key>
-			<integer>756</integer>
+			<integer>525</integer>
 		</dict>
 		<key>lib/Breseq/ReferenceSequence.pm</key>
 		<dict>
@@ -380,14 +380,14 @@
 			<key>caret</key>
 			<dict>
 				<key>column</key>
-				<integer>50</integer>
+				<integer>0</integer>
 				<key>line</key>
-				<integer>232</integer>
+				<integer>99</integer>
 			</dict>
 			<key>firstVisibleColumn</key>
 			<integer>0</integer>
 			<key>firstVisibleLine</key>
-			<integer>204</integer>
+			<integer>96</integer>
 		</dict>
 		<key>lib/Breseq/Shared.pm</key>
 		<dict>
@@ -462,6 +462,6 @@
 	<key>showFileHierarchyDrawer</key>
 	<true/>
 	<key>windowFrame</key>
-	<string>{{144, 71}, {891, 781}}</string>
+	<string>{{197, 103}, {873, 775}}</string>
 </dict>
 </plist>

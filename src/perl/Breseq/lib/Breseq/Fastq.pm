@@ -392,7 +392,98 @@ sub fastq_to_encoded_name_fastq
 	}
 }
 
+sub base_quality_filter_fastq
+{
+	my $verbose = 0;
+	my ($input, $output, $base_quality_cutoff) = @_;
+	my $minimum_read_Length = 25;
 
+	my $total_reads_processed = 0;
+	my $total_reads_removed = 0;
+	my $total_bases_kept = 0;
+	my $total_bases_removed = 0;
+	
+	open IN, "<$input" or die "Could not open input file $output";
+	open OUT, ">$output" or die "Could not open output file $output";
+
+	my $name = <IN>;
+	chomp $name;
+	my $read_index = 0;
+
+	my $chr_offset = 33; #breseq
+	my $base_chr_cutoff = $chr_offset + $base_quality_cutoff;
+
+	while ($name)
+	{
+		$read_index++;
+		$total_reads_processed++;
+		($name =~ m/^\@/) or die "Read FASTQ must have sequence on a single line"; #small sanity check
+
+		#then copy all of the other three lines normally
+		my $sequence = <IN>;
+		chomp $sequence;
+		my $second_accession = <IN>;
+		chomp $second_accession;
+		my $quality = <IN>;
+		chomp $quality;
+		my @quals = split //, $quality;
+		my $pos = $#quals;
+
+		my $original_read_length = length $sequence;
+
+		my $last_high_quality_base_pos_encountered = 0;
+		foreach (my $pos = 0; $pos < $original_read_length; $pos++)
+		{
+#			print "$pos " . ord($quals[$pos]) . "\n" if ($verbose);
+
+			#replace low scoring bases with N's
+			if (ord($quals[$pos]) < $base_chr_cutoff)
+			{
+				substr $sequence, $pos, 1, 'N';
+			}
+			else
+			{
+				$last_high_quality_base_pos_encountered = $pos;
+			}
+		}
+
+		my $high_quality_length = $last_high_quality_base_pos_encountered + 1;
+
+		print "$high_quality_length / $original_read_length\n" if ($verbose);
+
+		#read must still be 25 nt long
+		if ($high_quality_length >= $minimum_read_Length)
+		{
+			$total_bases_removed += $original_read_length - $high_quality_length;
+			$total_bases_kept += $high_quality_length;
+
+			print OUT "$name\n";
+			print OUT substr($sequence, 0, $high_quality_length) . "\n";
+			print OUT "+\n"; ##always truncate this line to save space
+			print OUT substr($quality, 0, $high_quality_length) . "\n";
+
+		}
+		else
+		{
+			$total_reads_removed++;
+			$total_bases_removed += $original_read_length;
+		}
+
+
+		$name = <IN>;
+		chomp $name if (defined $name);
+		### should keep track of some statistics about what was lost!
+	}
+
+	print "Total reads processed: $total_reads_processed\n";
+	print "Total reads removed: $total_reads_removed\n";
+	print "Total bases kept: $total_bases_kept\n";
+	print "Total bases removed: $total_bases_removed\n";
+
+	return ($total_reads_processed, $total_reads_removed, $total_bases_kept, $total_bases_removed);
+
+
+}
 
 
 ##

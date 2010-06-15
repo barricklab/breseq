@@ -483,6 +483,10 @@ sub identify_mutations
 					{
 						$quality = $a->qscore->[$p->qpos+$insert_count];
 					}
+					
+					## We may want to ignore all bases below a certain quality when calling mutations and polymorphisms
+					## This is the check for whether the base fails; it should be after coverage counting
+					next ALIGNMENT if ( $settings->{base_quality_cutoff} && ($quality < $settings->{base_quality_cutoff}) );
 
 					## this is the coverage for SNP counts, tabulate AFTER skipping trimmed reads
 					$pos_info->{$base}->{unique_trimmed_cov}->{$strand}++;

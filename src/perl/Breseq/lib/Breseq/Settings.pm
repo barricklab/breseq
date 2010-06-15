@@ -95,9 +95,9 @@ sub new
 		'no-unmatched-reads' => \$self->{no_unmatched_reads},
 		'maximum-candidate-junctions=s' => \$self->{maximum_candidate_junctions},
 		'error-model=s' => \$self->{error_model_method},
-		'resume' => \$self->{resume_run},
-		'continue' => \$self->{continue_run},
-		'trim-reads' => \$self->{trim_reads},
+		'trim-read-ends' => \$self->{trim_read_ends},
+		'trim-read-base-quality=s' => \$self->{trim_read_base_quality},
+		'base-quality-cutoff|b=s' => \$self->{base_quality_cutoff},
 		'perl-error-count' => \$self->{perl_error_count},
 	) or pod2usage(2);
 
@@ -162,9 +162,10 @@ sub new_annotate
 		'polymorphism-p-value-cutoff=s' => \$self->{polymorphism_bias_p_value_cutoff},
 		'no-unmatched-reads' => \$self->{no_unmatched_reads},
 		'maximum-candidate-junctions=s' => \$self->{maximum_candidate_junctions},
-		'resume' => \$self->{resume_run},
-		'continue' => \$self->{continue_run},
-		'trim-reads' => \$self->{trim_reads},
+		'trim-read-ends' => \$self->{trim_read_ends},
+		'trim-read-base-quality=s' => \$self->{trim_read_base_quality},
+		'base-quality-cutoff|b=s' => \$self->{base_quality_cutoff},
+		'perl-error-count' => \$self->{perl_error_count},
 		
 	## This is the only different option	
 		'input-genome-diff|i=s' => \@{$self->{input_genome_diffs}},	
@@ -250,7 +251,9 @@ sub initialize_2
 
 	#on by default
 	$self->{unmatched_reads} = ($self->{no_unmatched_reads}) ? 0 : 1;
-		
+	
+	$self->{trim_reads} = $self->{trim_read_ends} || $self->{trim_read_base_quality};
+	
 	#######  SETUP FILE NAMES  #######
 	### '#' replaced with read fastq name
 	### '@' replaced by seq_id of reference sequence
