@@ -51,6 +51,7 @@ our $minimum_error_probability = 1E-256;
 
 sub count
 {
+	my $verbose = 0;
 	my ($settings, $summary, $ref_seq_info) = @_;
 
 	## for this error method, we don't need to iterate through the sequence and count...
@@ -61,7 +62,7 @@ sub count
 
 	## check to see if error_count++ is available:
 	my $error_count = $settings->ctool('error_count');
-	if ($error_count) 
+	if ($error_count && !$settings->{perl_error_count}) 
 	{
 		my $coverage_fn = $settings->file_name('unique_only_coverage_distribution_file_name', {'@'=>""});
 		my $outputdir = `dirname $coverage_fn`;
@@ -91,8 +92,6 @@ sub count
 		## populated by pileup
 		my $unique_only_coverage = [];
 		my $ref_seq_string = $ref_seq_info->{ref_strings}->{$seq_id};
-		my $com_seq_string = $ref_seq_string;
-		$com_seq_string =~ tr/ATCG/TAGC/;
 				
         my $pileup_function = sub {
         	my ($seq_id,$pos,$pileup) = @_;
@@ -110,138 +109,140 @@ sub count
 				die "Position outside of reference sequence $pos > $ref_length\n";
 			}
 			
-			$ref_base[0] = substr $ref_seq_string, $pos-1, 1;
-			$ref_base[1] = substr $com_seq_string, $pos-1, 1;
        		#$ref_base[0] = $bam->segment($seq_id,$pos,$pos)->dna;
 			#$ref_base[1] = $bam->segment($seq_id,$pos,$pos)->seq->revcom->seq;
 
-			my $unique_only_position = 1;
+			my $has_redundant_reads = 0;
 			my $unique_coverage = 0;
          	ALIGNMENT: for my $p (@$pileup) 
 			{
 				my $a = $p->alignment;
 				
-				##this setup gives expected behavior from indel!
-				my $indel = $p->indel;
-				$indel = 0 if ($indel < 0);
-				$indel = -1 if ($p->is_del);
-								
-				my $redundancy = $a->aux_get('X1');
+				##
+				# We don't need to process deleted positions
+				# ... all information comes from adjacent positions
+				##
+				next if ($p->is_del);
 				
-				##
-				# Only count coverage if there is no gap at this position
-				##
-				if(!$p->is_del)
+				my $redundancy = $a->aux_get('X1');
+				if ($redundancy > 1)
 				{
-					if ($redundancy == 1)
-					{
-						$unique_coverage++;
-					}
-					else
-					{
-						$unique_only_position = 0;
-					}
+					$has_redundant_reads = 1;
+					next ALIGNMENT;
 				}
 				
-				##
-				# Do not process non-unique reads!
-				##
-				next if ($redundancy != 1);
 				
+				## this position has coverage b/c it is not deleted
+				$unique_coverage++;
+				
+				## gather information about this position in read
 				my $qseq = $a->qseq;
-				my $qpos = $p->qpos;
+				my $qpos = $p->qpos; #0-indexed
 				my $qscore = $a->qscore;
+				my $indel = $p->indel;
 				my $reversed = $a->reversed;
-				my $query_end = $a->query->end;
-				my $query_start = $a->query->start;
-
+				my $query_end = $a->query->end-1; #0-indexed
+				my $query_start = $a->query->start-1; #0-indexed
 				my $fastq_file_index = $a->aux_get('X2');
 				
+				print $a->qname . " " . $pos . " " . $qpos . " " . " " . $indel . " " . $reversed . " " . $query_start . " " . $query_end . "\n" if ($verbose);
+								
 				##
 				# In all that follows, be sure to keep track of strandedness of mutations!
 				##
 				
-				# (1) base substitutions
+
+				# (1) base substitution or match
 				#     e.g. 'AG' key for observing a G in read at a place where the reference has an A
 				#     IMPROVE by keeping track of flanking base context and scores?
 				#     this would, for example, penalize low scoring sequences more
-				
-				# (2) deletion in read relative to reference
-				#     e.g. 'A.' key for observing nothing in a read at a position where the reference has an A
-				#     how does one give a quality score? Use quality score of the next base in
-				#     the read, i.e. where the deleted base would have been in the read
-				#     PROBLEM what do we do about multiple base deletions?
-				
-				# (3) insertion in read relative to reference
-				#     e.g. '.A' key for observing an A in a read at a position where the reference has no base
-				#     how does one give a quality score? - 
-				#     for reference observations: average the quality scores of the surrounding bases in the read (round down)
-				#     for mutation observations: the quality score of the inserted base
-				
-				## For (2) and (3) train error model only on single base insertions or deletions.
-				
-				## taking into account neighborhood quality doesn't seem to improve calculations
-				# my $neighborhood_quality = 0;				
-				# my $start_neighborhood = $qpos - 2;
-				# $start_neighborhood = $query_start-1 if ($start_neighborhood < $query_start-1);
-				# my $end_neighborhood = $qpos + 2;
-				# $end_neighborhood = $query_end-1 if ($end_neighborhood > $query_end-1);
-				# foreach my $i ($start_neighborhood..$end_neighborhood) 
-				# {
-				# 	$neighborhood_quality += $qscore->[$i];
-				# }
-				# $neighborhood_quality = POSIX::floor(($neighborhood_quality / ($end_neighborhood - $start_neighborhood + 1)) / 10);
-									
-				# (1) base substitutions
-                if (!$p->is_del)
+
 				{
 					my $base  = substr($qseq, $qpos,1);
-					next if ($base =~ /[nN]/);
-					
-					my $quality = $qscore->[$qpos];
-					$base = Breseq::Fastq::revcom($base) if ($reversed);
-					my $key = $ref_base[$reversed] . $base; 
-					$error_hash->[$fastq_file_index]->{$quality}->{$key}++;
-					#$complex_error_hash->[$fastq_file_index]->{$neighborhood_quality}->{$quality}->{$key}++;
-					## also add an observation of a non-gap non-gap
-					if ($qpos+1 < $query_end)
-					{	
-						my $next_quality = $qscore->[$qpos+1];
-						my $avg_quality = POSIX::floor( ($quality + $next_quality) / 2);
-						$error_hash->[$fastq_file_index]->{$avg_quality}->{'..'}++;
-						#$complex_error_hash->[$fastq_file_index]->{$neighborhood_quality}->{$avg_quality}->{'..'}++;
-						
+
+					my $ref_base = substr $ref_seq_string, $pos-1, 1;
+
+					if (($base ne 'N') && ($ref_base ne 'N'))
+					{		
+						$base = Breseq::Fastq::revcom($base) if ($reversed);
+						$ref_base = Breseq::Fastq::revcom($ref_base) if ($reversed);
+						my $key = $ref_base . $base; 
+						$error_hash->[$fastq_file_index]->{$qscore->[$qpos]}->{$key}++;
+						print "$key $qscore->[$qpos]\n" if ($verbose);
 					}
 				}
 				
-				# (2) deletion in read relative to reference
-				#     -- only count if there is no indel after this posision
-				elsif ($p->indel == 0)
+				# the next base also matches 
+				# (1) base substitution or match
+				#     e.g. '..' key indicating an observation of a "non-gap, non-gap"
+				#     quality score is of the second non-gap in the pair
+				if ($indel == 0)
 				{
-					my $quality = $qscore->[$qpos+(1-$reversed)];
-					#print $a->qname . " " . $pos . " " . $ref_base[$a->reversed] . " " . $quality . "\n";
-					my $key = $ref_base[$reversed] . '.'; 
-					$error_hash->[$fastq_file_index]->{$quality}->{$key}++;	
-					#$complex_error_hash->[$fastq_file_index]->{$neighborhood_quality}->{$quality}->{$key}++;						
+					## don't count past last match position
+					if ($qpos < $query_end)
+					{	
+						my $mqpos = $qpos + 1 - $reversed;	
+						my $base  = substr($qseq, $mqpos,1);
+						
+						my $mrpos = $pos + 1 - $reversed;	
+						my $ref_base = substr $ref_seq_string, $mrpos-1, 1;
+						
+						if (($base ne 'N') && ($ref_base ne 'N'))
+						{
+							my $key = '.' . '.'; 
+							$error_hash->[$fastq_file_index]->{$qscore->[$mqpos]}->{$key}++;
+							print "$key $qscore->[$mqpos]\n" if ($verbose);						
+						}
+					}	
 				}
 				
-				# (3) insertion in read relative to reference
-				#     -- at the next position in the read
-				#     -- only count if an indel = +1, meaning a single-base insertion
-				if ($p->indel == +1)
+				# there is a deletion of EXACTLY one base in the read relative to the reference before the next read base
+				# (2) deletion in read relative to reference
+				#     e.g. 'A.' key for observing nothing in a read at a position where the reference has an A
+				#     quality score is of the next non-gap base in the read
+				elsif ($indel == -1)
 				{
-					my $base  = substr($qseq,$qpos+1,1);
-					next if ($base =~ /[nN]/);
-					my $quality = $a->qscore->[$qpos+1];
-					#print $a->qname . " " . $pos . " " . $ref_base[$a->reversed] . " " . $quality . "\n";
-					my $key = '.' . $base; 
-					$error_hash->[$fastq_file_index]->{$quality}->{$key}++;
-					#$complex_error_hash->[$fastq_file_index]->{$neighborhood_quality}->{$quality}->{$key}++;
-				}	
+					my $mqpos = $qpos + 1 - $reversed;
+					my $base  = substr($qseq, $mqpos,1);
+
+					## the reference base opposite the deletion is really the NEXT base
+					my $mrpos = $pos + 1;
+					my $ref_base = substr $ref_seq_string, $mrpos-1, 1;
+
+					if (($base ne 'N') && ($ref_base ne 'N'))
+					{
+						$ref_base = Breseq::Fastq::revcom($ref_base) if ($reversed);
+						my $key = $ref_base . '.'; 
+						$error_hash->[$fastq_file_index]->{$qscore->[$mqpos]}->{$key}++;
+						print "$key $qscore->[$mqpos]\n" if ($verbose);												
+					}
+				}
+				
+				# there is an insertion of EXACTLY one base in the read relative to the reference before the next reference base
+				# (3) insertion in read relative to reference
+				#     e.g. '.A' key for observing an A in a read at a position where the reference has no base
+				#     quality score is that of the observed inserted base
+				elsif ($indel == +1)
+				{
+					my $mqpos = $qpos + 1;
+				
+					if (($mqpos <= $query_end) && ($mqpos >= $query_start))
+					{
+						my $base  = substr($qseq, $mqpos,1);
+				
+						if ($base ne 'N')
+						{	
+							$base = Breseq::Fastq::revcom($base) if ($reversed);
+							my $key = '.' . $base; 
+							$error_hash->[$fastq_file_index]->{$qscore->[$mqpos]}->{$key}++;
+							print "$key $qscore->[$mqpos]\n" if ($verbose);												
+						}	
+					}
+				}
 			} #end ALIGNMENT
 
 			# record unique only coverage
-			$unique_only_coverage->[$unique_coverage]++ if ($unique_only_position);
+			$unique_only_coverage->[$unique_coverage]++ if (!$has_redundant_reads);
 		}; #end $pileup_function
 
         $bam->pileup($seq_id,$pileup_function);

@@ -43,6 +43,10 @@ namespace breseq {
 		//! Retrieve the reference sequence for the given target and fai index.
 		char* get_refseq(int target);//, int idx);
 		
+    //! Get the query start and end from the cigar string of an alignment, 1-indexed!
+    int32_t query_start(const bam1_t*& a);
+    int32_t query_end(const bam1_t*& a);
+
 		//! Run the pileup; will trigger callback for each alignment.
 		void pileup();
 		

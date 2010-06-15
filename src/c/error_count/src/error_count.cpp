@@ -42,6 +42,11 @@ int breseq::error_count_pileup::callback(uint32_t tid, uint32_t pos, int n, cons
 	for(int i=0; i<n; ++i) {
 		const bam_pileup1_t* p=&pile[i];
 		const bam1_t* a=pile[i].b;
+    
+    // skip deletions entirely, they are handled by adjacent matching positions
+    if(p->is_del) {
+      continue;
+    }
 		
 		// is this a redundant read?  if so, don't process it - we're all done.
 		// also, mark this position as having a redundant read so that we don't update the
@@ -52,103 +57,110 @@ int breseq::error_count_pileup::callback(uint32_t tid, uint32_t pos, int n, cons
 			continue;
 		}
 		
-		// track the number of non-deletion, non-redundant alignments:
-		if(!p->is_del) {
-			++unique_coverage;
-		}
+		// track the number of non-deletion, non-redundant alignments to this reference position:
+    ++unique_coverage;
 		
 		uint32_t reversed = bam1_strand(a); // are we on the reverse strand?
 		uint8_t* qseq = bam1_seq(a); // query sequence (read)
 		int32_t qpos = p->qpos; // position of the alignment in the query
-		// need to calculate the length of this query out to the last
-		// non-clip non-skip CIGAR operation.
-		uint32_t* cigar = bam1_cigar(a); // cigar array for this alignment
-		int32_t qlen = bam_cigar2qlen(&a->core, cigar); // total length of the query
-		for(uint32_t j=(a->core.n_cigar-1); j>0; --j) {
-			uint32_t op = cigar[j] & BAM_CIGAR_MASK;
-			uint32_t len = cigar[j] >> BAM_CIGAR_SHIFT;
-			if((op != BAM_CSOFT_CLIP) && (op != BAM_CHARD_CLIP) && (op != BAM_CREF_SKIP)) {
-				break;
-			}
-			qlen -= len;
-		}
+
+		int32_t qstart = query_start(a) - 1; //0-indexed
+		int32_t qend = query_end(a) - 1; //0-indexed  
+
 		uint8_t* qscore = bam1_qual(a); // quality score array
 		int32_t fastq_file_index=bam_aux2i(bam_aux_get(a,"X2")); // sequencer-generated read file that this alignment belongs to
 		
 		char* refseq = get_refseq(tid); // reference sequence for this target
-		char ref_base[] = {refseq[pos], reverse_base(refseq[pos]), 0}; // reference base & its complement
+
+    // Things to remember in the following:
+    // -->1 Reverse the base when the read is on the other strand
+    // -->2 Correct for which base is AFTER in error counts when on the other strand
+    // -->3 Observations that involve an N base in any way should not be counted
+
+    //# (1) base substitution or match
+    //#     e.g. 'AG' key for observing a G in read at a place where the reference has an A
+    //#     IMPROVE by keeping track of flanking base context and scores?
+    //#     this would, for example, penalize low scoring sequences more
+    {
+      uint8_t base = bam1_seqi(qseq,qpos);    
+      uint8_t ref_base = refseq[pos];
+      
+      if (!is_N(base) && !is_N(ref_base)) {
+        if(reversed) {
+          base = reverse_base(base);
+          ref_base = reverse_base(ref_base);
+        }
+        string key; key += static_cast<char>(ref_base); key += base2char(base);
+        uint8_t quality = qscore[qpos];
+        ++error_hash[fastq_file_index][quality][key];
+      }
+    }
+    
+    //# the next base also matches 
+    //# (1) base substitution or match
+    //#     e.g. '..' key indicating an observation of a "non-gap, non-gap"
+    //#     quality score is of the second non-gap in the pair
+    if (p->indel == 0) {
+      //## don't count past last match position
+      if (qpos < qend) {	
+        int32_t mqpos = qpos + 1 - reversed;
+        uint8_t base = bam1_seqi(qseq,mqpos);
+        
+        int32_t mrpos = pos + 1 - reversed;
+        uint8_t ref_base = refseq[mrpos];
+        
+        if (!is_N(base) && !is_N(ref_base)) {     
+          string key = ".."; 
+          uint8_t quality = qscore[mqpos];
+          ++error_hash[fastq_file_index][quality][key];
+        }
+      }	
+    }
+	
+    //# there is a deletion of EXACTLY one base in the read relative to the reference before the next read base
+    //# (2) deletion in read relative to reference
+    //#     e.g. 'A.' key for observing nothing in a read at a position where the reference has an A
+    //#     quality score is of the next non-gap base in the read
+    else if (p->indel == -1) {
+      //## count the quality of this or next base depending on reversed, and make sure it is not an N
+      int32_t mqpos = qpos + 1 - reversed;
+      uint8_t base = bam1_seqi(qseq,mqpos);   
+         
+      //## the reference base opposite the deletion is really the NEXT base
+      int32_t mrpos = pos + 1;
+      uint8_t ref_base = refseq[mrpos];      
+      
+      if (!is_N(base) && !is_N(ref_base)) {
+        if(reversed) {
+          ref_base = reverse_base(ref_base);
+        }
+        string key; key += static_cast<char>(ref_base); key += '.';
+        uint8_t quality = qscore[mqpos];
+        ++error_hash[fastq_file_index][quality][key];									
+      }
+    }
+    
+    //# there is an insertion of EXACTLY one base in the read relative to the reference before the next reference base
+    //# (3) insertion in read relative to reference
+    //#     e.g. '.A' key for observing an A in a read at a position where the reference has no base
+    //#     quality score is that of the observed inserted base
+    else if (p->indel == +1) {
+      int32_t mqpos = qpos + 1;
+    
+      if ((mqpos <= qend) && (mqpos >= qstart)) {
+        uint8_t base = bam1_seqi(qseq,mqpos);    
+
+        if (!is_N(base)) {
+          if(reversed) {
+            base = reverse_base(base);
+          }        
+          string key; key += '.'; key += base2char(base);
+          uint8_t quality = qscore[mqpos];
+          ++error_hash[fastq_file_index][quality][key];									
+        }	
+      }
+    }
 		
-		//In all that follows, be sure to keep track of strandedness of mutations!
-		if(!p->is_del) {
-			//# (1) base substitutions
-			//#     e.g. 'AG' key for observing a G in read at a place where the reference has an A
-			//#     IMPROVE by keeping track of flanking base context and scores?
-			//#     this would, for example, penalize low scoring sequences more
-			
-			uint8_t base = bam1_seqi(qseq,qpos);
-			
-			if(is_N(base)) {
-				continue;
-			}
-			
-			uint8_t quality = qscore[qpos];
-			
-			if(reversed) {
-				base = reverse_base(base);
-			}
-			
-			string key; key += static_cast<char>(ref_base[reversed]); key += base2char(base);
-			++error_hash[fastq_file_index][quality][key];
-			
-			// also add an observation of a non-gap non-gap			
-			if((qpos+1) < qlen) {
-				uint8_t next_quality = qscore[qpos+1];
-				uint8_t avg_quality = static_cast<uint8_t>(floor((quality+next_quality)/2.0));
-				++error_hash[fastq_file_index][avg_quality][".."];
-			}
-		} else if(p->indel == 0) {
-			//elsif ($p->indel == 0) {
-			//# (2) deletion in read relative to reference
-			//#     e.g. 'A.' key for observing nothing in a read at a position where the reference has an A
-			//#     how does one give a quality score? Use quality score of the next base in
-			//#     the read, i.e. where the deleted base would have been in the read
-			//#     PROBLEM what do we do about multiple base deletions?
-			//#     -- only count if there is no indel after this posision
-			// train error model only on single base insertions or deletions.
-			
-			uint8_t quality = qscore[qpos+(1-reversed)];
-			
-			string key; key += static_cast<char>(ref_base[reversed]); key += '.';
-			++error_hash[fastq_file_index][quality][key];
-			
-			//					if ($qpos-1 >$query_start)
-			//					{
-			//						my $next_quality = $qscore->[$qpos-1];
-			//						my $avg_quality = POSIX::floor( ($quality + $next_quality) / 2);
-			//						$error_hash->[$fastq_file_index]->{$avg_quality}->{'..'}--;
-			//					}			
-		} 
-		// an else here shouldn't change anything...
-		if(p->indel == 1) {			
-			//if ($p->indel == +1) {
-			//# (3) insertion in read relative to reference
-			//#     e.g. '.A' key for observing an A in a read at a position where the reference has no base
-			//#     how does one give a quality score? - 
-			//#     for mutation observations: the quality score of the inserted base
-			//#     -- at the next position in the read
-			//#     -- only count if an indel = +1, meaning a single-base insertion
-			// train error model only on single base insertions or deletions.
-			
-			uint8_t base = bam1_seqi(qseq,qpos+1);
-			
-			if(is_N(base)) {
-				continue;
-			}
-			
-			uint8_t quality = qscore[qpos+1];
-			string key; key += '.'; key += base2char(base);
-			++error_hash[fastq_file_index][quality][key];
-		}
 	}
 	
 	// NOTE: this can't move inside the for-loop; we're tracking information about
