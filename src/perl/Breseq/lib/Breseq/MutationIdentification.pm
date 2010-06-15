@@ -236,7 +236,6 @@ sub identify_mutations
 						end => $pos-1,
 						start_range => 0,
 						end_range => 0,
-			#			size => ($pos-1) - $last_deletion_start_position + 1, #end - start + 1
 						left_outside_cov => $left_outside_coverage_item->{unique}->{total},
 						left_inside_cov => $left_inside_coverage_item->{unique}->{total},
 						right_inside_cov => $last_position_coverage->{unique}->{total},
@@ -285,24 +284,6 @@ sub identify_mutations
 	
 				print CNV_COV "$cnv_tile_num\t$cnv_cumulative_coverage\t$cnv_encountered_redundant\t$GC\n";
 				
-				##reset values
-				##use Central Limit Theorem?
-				# my $var = $summary->{unique_coverage}->{$seq_id}->{variance} * $cnv_tile_size;
-				# my $mean = $summary->{unique_coverage}->{$seq_id}->{average} * $cnv_tile_size;
-				# my $z = ($cnv_cumulative_coverage-$mean)/sqrt($var);
-				# 
-				# ## calculate one tailed-probability of observed counts
-				# my $p_value = Math::CDF::pnorm($z);
-				# print "$cnv_tile_num $start_pos\-$end_pos COV: $cnv_cumulative_coverage MEAN: $mean VAR: $var PROB: $p_value Z: $z\n";
-				# 
-				# ## use Sum of Negative Binomials, which will have the same prob
-				# my $nb_mean = $summary->{unique_coverage}->{$seq_id}->{average} * $cnv_tile_size;
-				# my $nb_prob = $summary->{unique_coverage}->{$seq_id}->{nbinom_prob_parameter};
-				# my $nb_size = $summary->{unique_coverage}->{$seq_id}->{nbinom_size_parameter} * $cnv_tile_size;
-				# 
-				# my $nb_p_value = Math::CDF::pnbinom($cnv_cumulative_coverage, $nb_size, $nb_prob);				
-				# print "$cnv_tile_num $start_pos\-$end_pos COV: $cnv_cumulative_coverage MEAN: $nb_mean P: $nb_prob NBPROB: $nb_p_value\n";
-
 				$cnv_tile_num = $this_tile_num;
 				$cnv_cumulative_coverage = 0;
 				$cnv_encountered_redundant = 0;
@@ -360,6 +341,7 @@ sub identify_mutations
 				$next_insert_count_exists = 0;
 
 				my $ref_base = ($insert_count) ? '.' : $bam->segment($seqid,$pos,$pos)->dna;
+				## This works even with nonstandard reference bases.
 
 				# zero out the info about this position
 				my $pos_info;
@@ -400,45 +382,50 @@ sub identify_mutations
 					$indel = 0 if ($indel < 0);  ## substitute such that
 					$indel = -1 if ($p->is_del); ## deletions relative to reference have -1 as indel
 
+					my $qpos = $p->qpos;
 					my $redundancy = $a->aux_get('X1');
 					my $fastq_file_index = $a->aux_get('X2');
-					my $strand = $a->reversed ? -1 : +1;
+					my $reversed = $a->reversed;
+					my $strand = $reversed ? -1 : +1;
 
 					## Handle trimming
-					## Note that trimming INCLUDES the unaligned bases on each end
+					## Note that trimming INCLUDES the unaligned (padded) bases on each end
 					my $trimmed = 0;
-					my $trim_left = $a->aux_get('XL');  
-					my $trim_right = $a->aux_get('XR');
+					my $trim_left = $a->aux_get('XL');  #1-indexed
+					my $trim_right = $a->aux_get('XR');  #1-indexed
 					
 					$trimmed = 1 if ((defined $trim_left) && ($p->qpos+1 <= $trim_left));
 					$trimmed = 1 if ((defined $trim_right) && ($a->query->length-$p->qpos <= $trim_right));
 
-					##also trimmed if up to next position and this is an indel.
-					if ($indel != 0)
-					{
-						#remember that qpos is 0-indexed
-						$trimmed = 1 if ((defined $trim_left) && ($p->qpos+1 <= $trim_left)); #so this is position <1
-						$trimmed = 1 if ((defined $trim_right) && ($a->query->length-($p->qpos+1)+1 <= $trim_right)); #this is position+1
-					}
+
+## Not sure this is doing anything....
+#					##also trimmed if up to next position and this is an insertion.
+#					if ($indel != 0)
+#					{
+#						#remember that qpos is 0-indexed
+#						$trimmed = 1 if ((defined $trim_left) && ($p->qpos+1 <= $trim_left)); #so this is position <1
+#						$trimmed = 1 if ((defined $trim_right) && ($a->query->length-($p->qpos+1)+1 <= $trim_right)); #this is position+1
+#					}
 					
 					## These are the start and end coordinates of the aligned part of the read
 					my ($q_start, $q_end) = ($a->query->start-1, $a->query->end-1); #0-indexed
 					
-					### Optionally, only count reads that completely match
+					### Optionally, only count reads that completely match --->
 					my $complete_match = 1;
 					if ($settings->{require_complete_match})
 					{
 						$complete_match = ($q_start+1 == 1) && ($q_end+1 == $a->l_qseq);
 						next if (!$complete_match);
 					}
-					### End complete match condition
+					###<--- End complete match condition
 					
-					my $base = ($indel < $insert_count) ? '.' : substr($a->qseq,$p->qpos + $insert_count,1);
-					##don't use bases without qualities!!
-					next if ($base =~ /[nN]/);
+					
+					## What is the read base?
+					my $base = ($indel < $insert_count) ? '.' : substr($a->qseq,$qpos + $insert_count,1);
+					next ALIGNMENT if ($base eq 'N'); ## We don't want to use read N bases for anything 
 
-					##### update coverage if this is not a deletion in read relative to reference
-					### note that we count trimmed reads here, but not when looking for short indel mutations...	
+					##### Update coverage if this is not a deletion in read relative to reference
+					### Count trimmed reads here, but not when looking for short indel mutations...	
 					if ($redundancy == 1)
 					{
 						## this is only used when reporting coverage for within-read indels
@@ -459,31 +446,52 @@ sub identify_mutations
 						$this_position_coverage->{raw_redundant}->{$strand}++;			
 					}
 	
-					## EXPERIMENTAL -- moved above		
 					##don't use information from trimmed reads!!
-					next if ($trimmed);
+					next ALIGNMENT if ($trimmed);
 					
 					##don't use information from redundant reads!!
-					next if ($redundancy > 1);				
-					
-##			>> If it's a deletion, then we also want to use the previous or next quality depending on strand
-					
+					next ALIGNMENT if ($redundancy > 1);				
+										
 					my $quality;
-					## Does this read go to the current insert count?
-					if ($indel < $insert_count) 
+					
+					## Deletion in read relative to reference...
+					## Quality is of the NEXT base in the read, and check that it is not an N
+					## Note: This is only possible when $insert_count == 0
+					if ($indel == -1) 
 					{
-						## No, then the quality we need to use is either the next 
+						die if ($insert_count != 0);
+						my $mqpos = $qpos + 1 - $reversed;
+						my $check_base = substr($a->qseq,$mqpos,1);
 						
+						next ALIGNMENT if ($check_base eq 'N');
 						
-						##no information about gap if next position is end of alignment
-						## THIS SHOULD NEVER BE TRUE, but it is sometimes... WHY?
-						die if ($p->qpos+$indel+1 >= $q_end);
-						
-						$quality = $a->qscore->[$p->qpos+$indel+1];
+						$quality = $a->qscore->[$mqpos];
 					}
-					else
+					
+					## Substitution in read relative to reference...
+					## Quality is of the currnet base in the read, we have ALREADY checked that it is not an N					
+					elsif ($insert_count == 0)
 					{
-						$quality = $a->qscore->[$p->qpos+$insert_count];
+						$quality = $a->qscore->[$qpos];
+					}
+					
+					## Insertion in read relative to reference...
+					## Quality is of the NEXT base in the read, and check that it is not an N
+					## Note that it is possible this read base may be a '.' (supporting the non-insert call)
+					else ## if ($insert_count > 0) 
+					{
+						my $max_offset = $insert_count;
+						$max_offset = $indel if ($indel);
+						my $mqpos = $qpos + $max_offset + 1 - $reversed;
+						
+						## Check bounds: it's possible to go past the end of the read because
+						## this is the last base of this read, but other reads have inserted bases
+						next ALIGNMENT if ($mqpos > $q_end);
+												
+						my $check_base = substr($a->qseq,$mqpos,1);
+						next ALIGNMENT if ($check_base eq 'N');
+						
+						$quality = $a->qscore->[$mqpos];
 					}
 					
 					## We may want to ignore all bases below a certain quality when calling mutations and polymorphisms
@@ -508,9 +516,11 @@ sub identify_mutations
 						
 						if (!defined $log10_correct_rates->[$fastq_file_index]->{$quality}->{$base_key})
 						{
-							print $a->qname . "\n";
-							print "$fastq_file_index $quality $base_key\n";
-							print Dumper($log10_correct_rates->[$fastq_file_index]);
+							print "=== Error Rate not defined === \n";
+							print "  Fastq File Index: $fastq_file_index\n";
+							print "  Base Quality: $quality\n";
+							print "  Base Key: $base_key\n";
+							print "  Encountered in read: " . $a->qname . "\n";
 							die;
 						}
 
@@ -536,10 +546,6 @@ sub identify_mutations
 				my $pr_call;
 				foreach my $test_base (keys %$pr_base_hash)
 				{			
-					##obsolete code
-					# 'P' is a special key for evidence against indels
-					###next if ($test_base eq 'P');
-
 					my $this_pr_call = $pr_base_hash->{$test_base} - $pr_not_base_hash->{$test_base};
 					if ( (!defined $pr_call) || ($this_pr_call > $pr_call) )
 					{
@@ -639,7 +645,9 @@ sub identify_mutations
 				next INSERT_COUNT if (!$mutation_predicted && !$polymorphism_predicted);
 				## bail if we are predicting polymorphisms, but there wasn't one
 
-
+				### 
+				## Code from here to end of loop is all about adding to the genome diff.
+				###
 				## Fields common to consensus mutations and polymorphisms
 				my $mut;				
 				$mut->{type} = 'RA';
@@ -773,16 +781,10 @@ sub identify_mutations
 		close MUT;	
 	}
 	
-	
-	###
-	## Run R polymorphism statistics script
-	###
-	
 	if ($settings->{polymorphism_prediction})
 	{
 		close $polymorphism_statistics_input_fh;
 	}
-	
 	
 	##finally, write out the genome diff file
 	my $ra_mc_genome_diff_file_name = $settings->file_name('ra_mc_genome_diff_file_name');	
@@ -910,7 +912,6 @@ sub _predict_polymorphism
 		'first_base_strand_coverage' => $first_base_strand_hash, 
 		'second_base_strand_coverage' => $second_base_strand_hash, 
 		'p_value' => $chi_squared_pr,
-#		'fisher_strand_p_value' => $fisher_strand_p_value,
 	};
 	
 	return $polymorphism;
