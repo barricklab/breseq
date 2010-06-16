@@ -888,11 +888,13 @@ sub html_evidence_file
 		$s .= ".$interval->{insert_end}" if (defined $interval->{insert_end});
 		
 		my $ao = Breseq::AlignmentOutput->new;
+		my $options = {};
+		$interval->{quality_score_cutoff} = $settings->{base_quality_cutoff} if (defined $settings->{base_quality_cutoff});
 		print HTML $ao->html_alignment(
 			$interval->{bam_path}, 
 			$interval->{fasta_path}, 
 			$s, 
-			$interval
+			$interval,
 		);
 	}
 	print HTML end_html;

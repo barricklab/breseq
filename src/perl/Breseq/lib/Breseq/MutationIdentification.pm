@@ -456,20 +456,18 @@ sub identify_mutations
 					
 					## Deletion in read relative to reference...
 					## Quality is of the NEXT base in the read, and check that it is not an N
-					## Note: This is only possible when $insert_count == 0
-					if ($indel == -1) 
-					{
-						die if ($insert_count != 0);
+					## Note: This is for a deletion when $insert_count == 0 and against an insertion when $insert_count > 0
+					
+					if ($indel == -1)  
+					{					
 						my $mqpos = $qpos + 1 - $reversed;
 						my $check_base = substr($a->qseq,$mqpos,1);
-						
 						next ALIGNMENT if ($check_base eq 'N');
-						
 						$quality = $a->qscore->[$mqpos];
 					}
-					
+
 					## Substitution in read relative to reference...
-					## Quality is of the currnet base in the read, we have ALREADY checked that it is not an N					
+					## Quality is of the current base in the read, we have ALREADY checked that it is not an N					
 					elsif ($insert_count == 0)
 					{
 						$quality = $a->qscore->[$qpos];
@@ -479,9 +477,9 @@ sub identify_mutations
 					## Quality is of the NEXT base in the read, and check that it is not an N
 					## Note that it is possible this read base may be a '.' (supporting the non-insert call)
 					else ## if ($insert_count > 0) 
-					{
+					{		
 						my $max_offset = $insert_count;
-						$max_offset = $indel if ($indel);
+						$max_offset = $indel if ($indel < $max_offset);
 						my $mqpos = $qpos + $max_offset + 1 - $reversed;
 						
 						## Check bounds: it's possible to go past the end of the read because
