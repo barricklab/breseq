@@ -40,12 +40,14 @@ use Breseq::Fastq;
 use Breseq::Shared;
 use Data::Dumper;
 
+## "rgb(0,255,255)" = cyan
+
 our $base_colors_hash = {
-	'G' => [ "rgb(230,230,230)", "rgb(210,210,210)", "rgb(140,140,140)", "rgb(70,70,70)", "rgb(0,0,0)" ],
-	'C' => [ "rgb(160,160,255)", "rgb(120,120,255)", "rgb(60,60,255)", "rgb(0,0,255)", "rgb(0,0,150)" ],
-	'A' => [ "rgb(255,210,210)", "rgb(255,180,180)", "rgb(255,100,100)", "rgb(255,20,20)", "rgb(200,0,0)" ],
-	'T' => [ "rgb(210,255,210)", "rgb(180,255,180)", "rgb(100,255,100)", "rgb(20,255,20)", "rgb(0,200,0)" ],
-	'N' => [ "rgb(128,0,128)", "rgb(128,0,128)", "rgb(128,0,128)", "rgb(128,0,128)", "rgb(128,0,128)" ],
+	'G' => [ "rgb(255,255,0)", "rgb(230,230,230)", "rgb(210,210,210)", "rgb(140,140,140)", "rgb(70,70,70)", "rgb(0,0,0)" ],
+	'C' => [ "rgb(255,255,0)", "rgb(160,160,255)", "rgb(120,120,255)", "rgb(60,60,255)", "rgb(0,0,255)", "rgb(0,0,150)" ],
+	'A' => [ "rgb(255,255,0)", "rgb(255,210,210)", "rgb(255,180,180)", "rgb(255,100,100)", "rgb(255,20,20)", "rgb(200,0,0)" ],
+	'T' => [ "rgb(255,255,0)", "rgb(210,255,210)", "rgb(180,255,180)", "rgb(100,255,100)", "rgb(20,255,20)", "rgb(0,200,0)" ],
+	'N' => [ "rgb(128,0,128)", "rgb(128,0,128)", "rgb(128,0,128)", "rgb(128,0,128)", "rgb(128,0,128)", "rgb(128,0,128)" ],
 };
 
 sub new
@@ -60,11 +62,20 @@ sub new
 
 	$self->{header_style_string} = '';
 	$self->{header_style_string} .= "\.NC {color: rgb(0,0,0); background-color: rgb(255,255,255)}\n"; #no color
+	$self->{header_style_string} .= "\.UN {color: rgb(120,120,120); background-color: rgb(255,255,255)}\n"; #unaligned
 	foreach my $key (keys %$base_colors_hash)
 	{
 		for (my $i=0; $i<scalar @{$base_colors_hash->{$key}}; $i++)
 		{
-			$self->{header_style_string} .= "\.$key$i \{color: rgb(255,255,255); background-color: $base_colors_hash->{$key}->[$i]\}\n";
+			
+			if ($i>0)
+			{
+				$self->{header_style_string} .= "\.$key$i \{color: rgb(255,255,255); background-color: $base_colors_hash->{$key}->[$i]\}\n";
+			}
+			else
+			{
+				$self->{header_style_string} .= "\.$key$i \{color: rgb(120,120,120); background-color: $base_colors_hash->{$key}->[$i]\}\n";
+			}
 		}
 	}
 	
@@ -129,7 +140,7 @@ sub html_alignment
 	my @aligned_references = @{$alignment_info->{aligned_references}};
 	my $aligned_annotation = $alignment_info->{aligned_annotation};
 	
-	my $quality_range = $self->set_quality_range($aligned_reads);
+	my $quality_range = $self->set_quality_range($aligned_reads, $options);
 	
 	my @sorted_keys = sort { -($aligned_reads->{$a}->{aligned_bases} cmp $aligned_reads->{$b}->{aligned_bases}) } keys %$aligned_reads;
 	my $output = '';
@@ -164,9 +175,9 @@ sub html_alignment
 
 	## create legend information
 	
-	$output .= start_code . "Legend:&nbsp;" . end_code;
+	$output .= start_code . "Base quality scores:&nbsp;" . end_code;
 	$output .= $self->_html_alignment_line({aligned_bases => 'ATCG', => aligned_quals => pack('CCCC',0,0,0,0)}, 0,  $quality_range);
-	for (my $i=0; $i<scalar @{$quality_range->{qual_cutoffs}}; $i++)
+	for (my $i=((defined $options->{quality_score_cutoff}) ? 1 : 2); $i<scalar @{$quality_range->{qual_cutoffs}}; $i++)
 	{
 		my $c = $quality_range->{qual_cutoffs}->[$i];
 		$output .= start_code . "&nbsp;&lt;&nbsp;$c&nbsp;&le;&nbsp;" . end_code;
@@ -238,7 +249,7 @@ sub _html_alignment_line
 		$b = '&nbsp;' if ($b eq ' ');	
 		if (not defined $color)
 		{
-			$color = "NC";
+			$color = "UN";
 			#older version
 			#$color = "color: rgb(0,0,0); background-color: rgb(255,255,255)";
 		}
@@ -495,7 +506,7 @@ sub create_alignment
 			next if ($updated->{$key});
 			my $aligned_read = $aligned_reads->{$key};
 			$aligned_read->{aligned_bases} .= ' ' x ($max_indel+1);
-			$aligned_read->{aligned_quals} .= chr(255) x ($max_indel+1);
+			$aligned_read->{aligned_quals} .= chr(254) x ($max_indel+1);
 			
 			print $aligned_read->{aligned_bases} . " NOALIGN " . $key . " " . "\n" if ($verbose);
 		}
@@ -704,33 +715,46 @@ our @qual_cutoffs;
 
 sub set_quality_range
 {
-	my ($self, $aligned_reads) = @_;
+	my ($self, $aligned_reads, $options) = @_;
 	
 	my @qc;
 	my $total = 0;
+	my $quality_score_cutoff = 0;
+	$quality_score_cutoff = $options->{quality_score_cutoff} if (defined $options->{quality_score_cutoff});	
+	
 	foreach my $key (keys %$aligned_reads)
 	{
 		my $aligned_read = $aligned_reads->{$key};
 		foreach my $c (split (//, $aligned_read->{qual_sequence}))
 		{
-			$qc[ord($c)]++;
-			$total++;
+			if (ord($c) >= $quality_score_cutoff)
+			{
+				$qc[ord($c)]++;
+				$total++;
+			}
 		}
 	}
 	
-	my $current_cutoff_level = 0;
-	my @qual_to_color;
-	my @cutoff_levels;
-	my @cutoff_percentiles = (0.03, 0.1, 0.3, 0.9, 1.0);
 	
-	my $cumq = 0;
-	my $i = 0;
+	my @qual_to_color;
+	my @cutoff_percentiles = (0, 0.03, 0.1, 0.3, 0.9, 1.0);
+	my $current_cutoff_level = 0;
+	
+	##set up to this score to the zero level (which is a completely different color)
+	my $i;
+	for ($i=0; $i<$quality_score_cutoff; $i++)
+	{
+		$qual_to_color[$i] = $current_cutoff_level;
+	}
+	$current_cutoff_level++;
+	
+	my $cumq = 0;	
 	while ($i < scalar @qc)
 	{
 		$cumq += $qc[$i] / $total if (defined $qc[$i]);
 		
 		#this can increment by at most one per quality score
-		if ($cumq >= $cutoff_percentiles[$current_cutoff_level])
+		if ($cumq > $cutoff_percentiles[$current_cutoff_level])
 		{
 			$current_cutoff_level++;
 		}
@@ -738,15 +762,12 @@ sub set_quality_range
 		
 	} continue {
 		$i++;
-	}
-	
+	}	
+		
 	#last must be set to max
-	$qual_to_color[$i-1] = scalar(@cutoff_percentiles) - 1;
+	$qual_to_color[$i-1] = scalar(@cutoff_percentiles)-1;
 	#first must be set to min
-	for (my $i=0; $i<scalar @qc; $i++)
-	{
-		$qual_to_color[$i] = $i if ($qual_to_color[$i] > $i);
-	}
+	$qual_to_color[$quality_score_cutoff] = 1;	
 	
 	#redistribute such that there are no jumps in quality level
 	my $gap = 1;
@@ -754,7 +775,7 @@ sub set_quality_range
 	{
 		$gap = 0;
 		my $last = 0;
-		for (my $i=1; $i<scalar @qual_to_color; $i++)
+		for (my $i=0; $i<scalar @qual_to_color; $i++)
 		{
 			if ($qual_to_color[$i] > $last + 1)
 			{
@@ -763,19 +784,20 @@ sub set_quality_range
 			}
 			$last = $qual_to_color[$i];
 		}
-	}	
-	
+	}		
+		
+	##finally, this sets the cutoff levels
 	my $last = 0;
-	for (my $i=0; $i<scalar @qual_to_color; $i++)
+	my @cutoff_levels = ($quality_score_cutoff);
+	for (my $i=$quality_score_cutoff; $i<scalar @qual_to_color; $i++)
 	{
 		if ($qual_to_color[$i] > $last)
 		{
 			push @cutoff_levels, $i;
 			$last = $qual_to_color[$i];
 		}
-	}
-	
-	#print Dumper(\@qual_to_color);
+	}	
+
 	return {qual_to_color_index => \@qual_to_color, qual_cutoffs => \@cutoff_levels };
 }
 
