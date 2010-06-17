@@ -232,9 +232,13 @@ sub do_annotate
 	##
 	# Mark lowest scoring junctions as no-show
 	##
-	#$settings->{max_rejected_junctions_to_show}
-	
-	
+	my @jc = $gd->filter_used_as_evidence($gd->list('JC'));	
+	@jc = sort { -($a->{score} <=> $b->{score}) } @jc;
+	for (my $i = $settings->{max_rejected_junctions_to_show}; $i< scalar @jc; $i++)
+	{
+		$jc[$i]->{no_show} = 1;
+	}
+
 	##
 	# Create evidence files containing alignments and coverage plots
 	##

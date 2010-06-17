@@ -669,7 +669,8 @@ sub identify_mutations
 					$mut->{ref_base} = $ref_base;
 					$mut->{new_base} = $best_base;		
 					$mut->{frequency} = 1; ## this is not a polymorphism
-					$mut->{reject} = "EVALUE" if ($e_value_call < $settings->{mutation_log10_e_value_cutoff});					
+					
+					Breseq::GenomeDiff::add_reject_reason($mut, "EVALUE") if ($e_value_call < $settings->{mutation_log10_e_value_cutoff});					
 				}
 				if ($polymorphism_predicted)
 				{	
@@ -709,8 +710,8 @@ sub identify_mutations
 						
 						$mut->{error} = "polymorphic_without_reference_base";
 					}
-										
-					$mut->{reject} = "EVALUE" if ($mut->{quality} < $settings->{polymorphism_log10_e_value_cutoff});
+					
+					Breseq::GenomeDiff::add_reject_reason($mut, "EVALUE") if ($mut->{quality} < $settings->{polymorphism_log10_e_value_cutoff});
 					
 					###
 					## Print input file for R
@@ -742,9 +743,9 @@ sub identify_mutations
 					## End printing input file for R
 					###
 					
-					$mut->{reject} = "STRAND" if (!$polymorphism_coverage_both_bases);
-					$mut->{reject} = "FREQ" if ($mut->{frequency} < $settings->{polymorphism_frequency_cutoff});
-				 	$mut->{reject} = "FREQ" if ($mut->{frequency} > 1-$settings->{polymorphism_frequency_cutoff});		
+					Breseq::GenomeDiff::add_reject_reason($mut, "STRAND") if (!$polymorphism_coverage_both_bases);
+					Breseq::GenomeDiff::add_reject_reason($mut, "FREQ") if ($mut->{frequency} < $settings->{polymorphism_frequency_cutoff});
+					Breseq::GenomeDiff::add_reject_reason($mut, "FREQ") if ($mut->{frequency} > 1-$settings->{polymorphism_frequency_cutoff});		
 				}
 				
 				
@@ -1123,7 +1124,7 @@ sub polymorphism_statistics
 			die "Incorrect number of items on line:\n$line" if (!defined $line_list[$i]);
 		}
 		
-		$mut->{reject} = "BIAS_P_VALUE" if ($mut->{bias_p_value} < $settings->{polymorphism_bias_p_value_cutoff});
+		Breseq::GenomeDiff::add_reject_reason($mut, "BIAS_P_VALUE") if ($mut->{bias_p_value} < $settings->{polymorphism_bias_p_value_cutoff});
 	}
 	
 	### Write out the file which now has much more data

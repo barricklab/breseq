@@ -730,7 +730,18 @@ sub mutation_size_change
 	return 0;
 }
 
+sub add_reject_reason
+{
+	my ($item, $reject) = @_;
+	$item->{reject} .= "," if (defined ($item->{reject}));
+	$item->{reject} .= $reject; 
+}
 
+sub get_reject_reasons
+{
+	my ($item) = @_;
+	return () if (!defined $item->{reject});
+	return split /,/, $item->{reject};
+}
 
-
-1;
+return 1;

@@ -212,6 +212,7 @@ sub html_index
 	print HTML p . html_missing_coverage_table_string(\@mc, $relative_path, "Unassigned missing coverage evidence...");
 
 	my @jc = $gd->filter_used_as_evidence($gd->list('JC'));
+	@jc = grep { !$_->{no_show} } @jc;	
 	print HTML p . html_new_junction_table_string(\@jc, $relative_path, "Unassigned new junction evidence...");	
 	
 	print HTML end_html;
@@ -607,9 +608,9 @@ sub html_read_alignment_table_string
 		
 		if ($show_reject_reason) 
 		{
-			if ($c->{reject})
+			foreach my $reject (Breseq::GenomeDiff::get_reject_reasons($c))
 			{
-				$output_str.= Tr({-class=>'reject_table_row'}, td({-colspan => $total_cols}, "Rejected: " . decode_reject_reason($c)));
+				$output_str.= Tr({-class=>'reject_table_row'}, td({-colspan => $total_cols}, "Rejected: " . decode_reject_reason($reject)));
 			}
 			
 			if (defined $c->{bias_p_value})
@@ -713,9 +714,12 @@ sub html_missing_coverage_table_string
 		$output_str.= td({-align=>"right"}, $c->{right_outside_cov}); 			
 		$output_str.= end_Tr;
 		
-		if ($show_reject_reason && $c->{reject})
+		if ($show_reject_reason)
 		{
-			$output_str.= Tr({-class=>'reject_table_row'}, td({-colspan => $total_cols}, "Rejected: " . decode_reject_reason($c)));
+			foreach my $reject (Breseq::GenomeDiff::get_reject_reasons($c))
+			{
+				$output_str.= Tr({-class=>'reject_table_row'}, td({-colspan => $total_cols}, "Rejected: " . decode_reject_reason($reject)));
+			}
 		}
 	}
 	
@@ -742,7 +746,7 @@ sub html_new_junction_table_string
 	my $q = new CGI;
 	$output_str.= start_table({-border => 0, -cellspacing => 1, -cellpadding => 3});
 
-	my $total_cols = $link ? 9 : 7;
+	my $total_cols = $link ? 10 : 8;
 	$output_str.= Tr(th({-colspan => $total_cols, -align => "left", -class=>"new_junction_header_row"}, $title));
 		
 	#####################
@@ -760,6 +764,7 @@ sub html_new_junction_table_string
 			"position",
 			"overlap",
 			"reads", 
+			"score",
 			"annotation",
 			"gene",
 		]
@@ -774,9 +779,7 @@ sub html_new_junction_table_string
 	## the rows in this table are linked (same background color for every two)
 	my $row_bg_color_index = 0;
 	foreach my $c (@$list_ref)
-	{	
-		next if ($c->{no_show});
-		
+	{			
 		### Side 1
 		my $key = 'side_1';			
 		my $annotate_key = "junction_" . $c->{"$key\_annotate_key"};
@@ -789,7 +792,7 @@ sub html_new_junction_table_string
 			$output_str.= td( {-align=>"center", -class=>"$annotate_key"}, ($c->{"$key\_strand"} == +1) ? $c->{"$key\_position"} . "&nbsp;=": "=&nbsp;" . $c->{"$key\_position"} );
 			$output_str.= td( {-rowspan=>2, -align=>"center"}, $c->{overlap} );
 			$output_str.= td( {-rowspan=>2, -align=>"center"}, $c->{total_reads} );
-
+			$output_str.= td( {-rowspan=>2, -align=>"center"}, $c->{score} );
 			$output_str.= td( {-align=>"center", -class=>"$annotate_key"}, nonbreaking($c->{"_$key"}->{gene_position}) );
 			$output_str.= td( {-align=>"center", -class=>"$annotate_key"}, i(nonbreaking($c->{"_$key"}->{gene_name})) );
 			$output_str.= td( {-class=>"$annotate_key"}, $c->{"_$key"}->{gene_product} );
@@ -812,9 +815,12 @@ sub html_new_junction_table_string
 		}			
 		$output_str.= end_Tr;
 		
-		if ($show_reject_reason && $c->{reject})
+		if ($show_reject_reason)
 		{
-			$output_str.= Tr({-class=>'reject_table_row'}, td({-colspan => $total_cols}, "Rejected: " . decode_reject_reason($c)));
+			foreach my $reject (Breseq::GenomeDiff::get_reject_reasons($c))
+			{
+				$output_str.= Tr({-class=>'reject_table_row'}, td({-colspan => $total_cols}, "Rejected: " . decode_reject_reason($reject)));
+			}
 		}
 		
 		$row_bg_color_index = ($row_bg_color_index+1)%2;
@@ -904,29 +910,29 @@ sub html_evidence_file
 
 sub decode_reject_reason
 {
-	my ($c) = @_;
+	my ($reject) = @_;
 	
-	if ($c->{reject} eq 'NJ')
+	if ($reject eq 'NJ')
 	{
-		return "Insufficient overlap of new junction by reads on both strands.";
+		return "Insufficient overlap of new junction sides by reads on both strands.";
 	}
-	elsif ($c->{reject} eq 'EVALUE')
+	elsif ($reject eq 'EVALUE')
 	{
 		return "E-value exceeds prediction threshold.";
 	}
-	elsif ($c->{reject} eq 'STRAND')
+	elsif ($reject eq 'STRAND')
 	{
 		return "Prediction not supported by reads on both strands.";
 	}
-	elsif ($c->{reject} eq 'FREQ')
+	elsif ($reject eq 'FREQ')
 	{
 		return "Prediction has frequency below cutoff threshold.";
 	}	
-	elsif ($c->{reject} eq 'COV')
+	elsif ($reject eq 'COV')
 	{
 		return "Prediction has coverage below cutoff threshold.";
 	}
-	elsif ($c->{reject} eq 'BIAS_P_VALUE')
+	elsif ($reject eq 'BIAS_P_VALUE')
 	{
 		return "Prediction has biased strand and/or quality scores supporting polymorphism.";
 	}

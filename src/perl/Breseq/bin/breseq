@@ -789,7 +789,7 @@ if (!-e $output_done_file_name)
 	## predict mutations from evidence in the GenomeDiff
 	print STDERR "Predicting mutations from evidence...\n";
 	my $mp = Breseq::MutationPredictor->new( -ref_seq_info => $ref_seq_info );
-	$mp->predict($ref_seq_info, $evidence_gd);
+	$mp->predict($settings, $ref_seq_info, $evidence_gd);
 	my $final_genome_diff_file_name = $settings->file_name('final_genome_diff_file_name');
 	$evidence_gd->write($final_genome_diff_file_name);
 

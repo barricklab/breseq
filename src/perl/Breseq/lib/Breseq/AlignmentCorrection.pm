@@ -393,12 +393,6 @@ sub correct_alignments
 			{
 				push @new_keys, $key;
 			}
-	# We don't want to count these b/c we left their results ready to be used by others (they have a count of zero reads)...
-	#		else
-	#		{
-	#			print "Failed with degenerate only: $key\n";
-	#			push @rejected_keys, $key;
-	#		}
 		}
 	}
 	@sorted_keys = @new_keys;
@@ -464,7 +458,7 @@ sub correct_alignments
 	{
 		print "$key\n" if ($verbose);
 		my $item = _junction_to_hybrid_list_item($key, $ref_seq_info, scalar @{$matched_junction{$key}}, $junction_test_info{$key});
-		$item->{reject}="NJ";
+		Breseq::GenomeDiff::add_reject_reason($item, "NJ");
 		$gd->add($item);
 	}
 	push @hybrid_predictions, @rejected_hybrid_predictions;
@@ -924,7 +918,6 @@ sub _test_junction
 	## displaying ones where it doesn't as marginals looks really confusing
 	my $has_non_overlap_only = 1; 
 	
-	
 	### we also need to count degenerate matches b/c sometimes ambiguity unfairly penalizes real reads...
 	READ: foreach my $item (@unique_matches, @degenerate_matches)
 	{
@@ -968,9 +961,6 @@ sub _test_junction
 		$this_right += abs($overlap);
 		$this_right = $a->end - $this_right+1;
 
-#		print "  " . $a->start . "-" . $a->end . " " . $overlap . " " . $rev_key . "\n";
-#		print "  " . $item->{alignments}->[0]->qname . " LEFT: $this_left RIGHT: $this_right\n";
-
 		## Update:
 		### Score = the minimum unique match length on a side
 		### Max_Min = the maximum of the minimum length match sides
@@ -982,7 +972,6 @@ sub _test_junction
 		{
 			$score += $this_left;
 			$max_min_left_per_strand->{$rev_key} = $this_left if ($max_min_left_per_strand->{$rev_key} < $this_left);
-			
 		}
 		else
 		{
@@ -1001,20 +990,6 @@ sub _test_junction
 	my $max_min_left = ($max_min_left_per_strand->{'0'} > $max_min_left_per_strand->{'1'}) ? $max_min_left_per_strand->{'0'} : $max_min_left_per_strand->{'1'};
 	my $max_min_right = ($max_min_right_per_strand->{'0'} > $max_min_right_per_strand->{'1'}) ? $max_min_right_per_strand->{'0'} : $max_min_right_per_strand->{'1'};
 
-
-### We don't even use these currently....
-#	use Math::CDF;	
-#	## it is possible for the counts on each strand to be zero because all matches are overlap only
-#	my $strand_p_value = Math::CDF::pbinom($count_per_strand->{0}, $count_per_strand->{0}+$count_per_strand->{1}, 0.5);
-#	if (defined $strand_p_value)
-#	{
-#		$strand_p_value = 1-$strand_p_value if ($strand_p_value > 0.5);
-#		$strand_p_value = sprintf "%.1e", $strand_p_value; #round immediately
-#	}
-#	else
-#	{
-#		$strand_p_value = 'NA';
-#	}
 	
 	$test_info = {
 		max_left => $max_left,
@@ -1031,7 +1006,6 @@ sub _test_junction
 		max_min_left_plus =>$max_min_left_per_strand->{1},		
 		coverage_minus => $count_per_strand->{0},
 		coverage_plus => $count_per_strand->{1},
-#		strand_p_value => $strand_p_value, ## unused
 		total_non_overlap_reads => $total_non_overlap_reads,
 		score => $score,
 	};
