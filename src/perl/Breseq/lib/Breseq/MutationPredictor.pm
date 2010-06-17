@@ -76,7 +76,7 @@ sub new
 =cut
 sub predict
 {
-	our ($self, $ref_seq_info, $gd) = @_;
+	our ($self, $settings, $ref_seq_info, $gd) = @_;
 		
 	##first look at SNPs and small indels predicted by read alignments.
 	my @ra = $gd->list('RA');
@@ -418,7 +418,6 @@ sub predict
 		}
 	}
 	
-	## first, extract SNPs and order them
 	
 	
 	## PROBLEM: We can't apply the coverage cutoff until AFTER we count errors
@@ -431,19 +430,19 @@ sub predict
 	## then merging them later? But full matches would also have to be kept separate...
 	##
 
-=comment
-	foreach my $hybrid ($hybrid_gd->list)
-	{
-		my $coverage_cutoff_1 = $settings->{unique_coverage}->{$hybrid->{side_1_seq_id}}->{junction_coverage_cutoff};
-		my $coverage_cutoff_2 = $settings->{unique_coverage}->{$hybrid->{side_2_seq_id}}->{junction_coverage_cutoff};
+	## Remove remaining junctions that we didn't pair up with anything that are below a coverage cutoff.
+	@jc = $gd->filter_used_as_evidence($gd->list('JC'));	
+	foreach my $item (@jc)
+	{		
+		my $coverage_cutoff_1 = $settings->{unique_coverage}->{$item->{side_1_seq_id}}->{junction_coverage_cutoff};
+		my $coverage_cutoff_2 = $settings->{unique_coverage}->{$item->{side_2_seq_id}}->{junction_coverage_cutoff};
 		
-		if ( (!defined $coverage_cutoff_1 || ($hybrid->{total_reads} < $coverage_cutoff_1) ) 
-		  && (!defined $coverage_cutoff_2 || ($hybrid->{total_reads} < $coverage_cutoff_2) ) )
+		if ( (!defined $coverage_cutoff_1 || ($item->{total_reads} < $coverage_cutoff_1) ) 
+		  && (!defined $coverage_cutoff_2 || ($item->{total_reads} < $coverage_cutoff_2) ) )
 		{
-			$hybrid->{reject} = "COV";
+			Breseq::GenomeDiff::add_reject_reason($item, "COV");
 		}
 	}
-=cut
 	
 }
 
