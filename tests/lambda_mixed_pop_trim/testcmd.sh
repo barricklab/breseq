@@ -5,7 +5,7 @@ SELF=`dirname ${BASH_SOURCE}`
 
 testcmd() {
     ${BRESEQ} \
-    	--trim \
+    	--trim-read-ends \
         -o ${SELF} \
         -r ${DATADIR}/lambda/lambda.gbk \
         ${DATADIR}/lambda/lambda_mixed_population.fastq

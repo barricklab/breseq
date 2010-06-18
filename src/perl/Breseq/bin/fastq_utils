@@ -66,6 +66,31 @@ $command = "\U$command";
 
 my $output_gd;
 
+if ($command eq 'SOLEXA2SANGER')
+{
+	use Breseq::Fastq;
+	use Getopt::Long;
+	use Pod::Usage;
+	my ($help, $man);
+	my $num_seq_per_file;
+	GetOptions(
+		'help|?' => \$help, 'man' => \$man,
+	) or pod2usage(2);
+	pod2usage(1) if $help;
+	pod2usage(-exitstatus => 0, -verbose => 2) if $man;	
+
+	my ( $input, $output ) = @ARGV;
+
+	my $in_fastq = Breseq::Fastq->new( -file => "<$input", -format => 'solexa');
+	my $out_fastq = Breseq::Fastq->new( -file => ">$output", -format => 'sanger');
+	
+	while ($_ = $in_fastq->next_seq)
+	{	
+		$out_fastq->write_seq($_);
+	}	
+}
+
+
 if ($command eq 'SPLIT')
 {
 	use Breseq::Fastq;
@@ -332,7 +357,7 @@ if ($command eq "QUALS_FASTQ")
 	my ( $input_file, $output_file) = @ARGV;
 
 	print "Using quality score format: $quality_score_format\n";
-	my $in_fastq = Breseq::Fastq->new( -file => "<$input_file", -list_format => 1, -quality_format => $quality_score_format);
+	my $in_fastq = Breseq::Fastq->new( -file => "<$input_file", -list_format => 1, -format => $quality_score_format);
 	my $out_fastq = Breseq::Fastq->new( -file => ">$output_file");
 	
 	while (my $read_seq = $in_fastq->next_seq) 
