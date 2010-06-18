@@ -206,14 +206,32 @@ sub html_index
 	my @ra = $gd->filter_used_as_evidence($gd->list('RA'));	
 	## don't print ones that overlap predicted deletions or were marked to not show
 	@ra = grep { !$_->{deleted} && !$_->{no_show} } @ra;
-	print HTML p . html_read_alignment_table_string(\@ra, $relative_path, "Unassigned read alignment evidence...");
-
+	
+	if (scalar @ra > 0)
+	{
+		print HTML p . html_read_alignment_table_string(\@ra, $relative_path, "Rejected read alignment evidence...");
+	}
+	
 	my @mc = $gd->filter_used_as_evidence($gd->list('MC'));
-	print HTML p . html_missing_coverage_table_string(\@mc, $relative_path, "Unassigned missing coverage evidence...");
-
+	if (scalar @mc > 0)
+	{
+		print HTML p . html_missing_coverage_table_string(\@mc, $relative_path, "Unassigned missing coverage evidence...");
+	}
+	
 	my @jc = $gd->filter_used_as_evidence($gd->list('JC'));
 	@jc = grep { !$_->{no_show} } @jc;	
-	print HTML p . html_new_junction_table_string(\@jc, $relative_path, "Unassigned new junction evidence...");	
+
+	my @jcu = grep { !$_->{reject} } @jc;	
+	if (scalar @jcu > 0)
+	{
+		print HTML p . html_new_junction_table_string(\@jcu, $relative_path, "Unassigned new junction evidence...");	
+	}
+	
+	my @jcr = grep { $_->{reject} } @jc;
+	if (scalar @jcr > 0)
+	{	
+		print HTML p . html_new_junction_table_string(\@jcr, $relative_path, "Rejected new junction evidence...");	
+	}
 	
 	print HTML end_html;
 	close HTML;

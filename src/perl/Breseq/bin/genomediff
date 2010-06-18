@@ -219,7 +219,8 @@ sub do_annotate
 
 	##
 	# Mark lowest RA evidence items as no-show, or we may be drawing way too many alignments
-	##
+	##	
+	
 	my @ra = $gd->filter_used_as_evidence($gd->list('RA'));	
 	@ra = grep { ($_->{frequency} != 0) && ($_->{frequency} != 1)  } @ra;
 	@ra = sort { -($a->{bias_p_value} <=> $b->{bias_p_value}) } @ra;
@@ -229,10 +230,21 @@ sub do_annotate
 		$ra[$i]->{no_show} = 1;
 	}
 	
+	## require a certain amount of coverage
+	foreach my $item ($gd->filter_used_as_evidence($gd->list('RA')))
+	{
+		my ($top, $bot) = split /\//, $item->{tot_cov};
+		$item->{no_show} = 1 if ($top + $bot <= 2);
+	}
+	@ra = grep { !$_->{coverage} && !$_->{no_show} } @ra;
+	
+	
 	##
-	# Mark lowest scoring junctions as no-show
+	# Mark lowest scoring reject junctions as no-show
 	##
 	my @jc = $gd->filter_used_as_evidence($gd->list('JC'));	
+	@jc = grep { ($_->{reject} != 0) } @jc;
+	
 	@jc = sort { -($a->{score} <=> $b->{score}) } @jc;
 	for (my $i = $settings->{max_rejected_junctions_to_show}; $i< scalar @jc; $i++)
 	{

@@ -49,6 +49,20 @@ use Data::Dumper;
 
 =cut
 
+
+our $format_to_chr_offset = {
+	'sanger' => 33,
+	'solexa' => 64,
+	'illumina' => 64,
+};
+
+our $format_to_quality_type = {
+	'sanger' => 'phred',
+	'solexa' => 'solexa',
+	'illumina' => 'phred', 
+};
+
+
 sub new
 {
 	my($caller,@args) = @_;
@@ -56,24 +70,15 @@ sub new
 	my $self = new Bio::Root::Root($caller, @args);
 
 	bless ($self, $class);
-	($self->{file_name}, $self->{quality_format}) = $self->Bio::Root::RootI::_rearrange([qw(FILE QUALITY_FORMAT)], @args);
+	($self->{file_name}, $self->{format}) = $self->Bio::Root::RootI::_rearrange([qw(FILE FORMAT)], @args);
 	$self->{file_name} or $self->throw("Must provide -file parameter");
 	#$self->{dont_reverse} = $self->Bio::Root::RootI::_rearrange([qw(dont_reverse)], @args);	
 	
-	(defined $self->{quality_format}) or $self->{quality_format} = 'phred';
-
-	if ($self->{quality_format} eq 'phred')
-	{
-		$self->{chr_offset} = 33;
-	}
-	elsif ($self->{quality_format} eq 'solexa')
-	{
-		$self->{chr_offset} = 64;
-	}
-	else
-	{
-		die "invalid quality score format";
-	}
+	## assume sanger
+	(defined $self->{format}) or $self->{format} = 'sanger';
+	$self->{chr_offset} = $format_to_chr_offset->{$self->{format}};
+	$self->{quality_type} = $format_to_quality_type->{$self->{format}};
+	die "invalid format" if (!defined $self->{chr_offset});
 
 	$self->{list_format} = $self->Bio::Root::RootI::_rearrange([qw(LIST_FORMAT)], @args);
 	
@@ -135,7 +140,7 @@ sub next_seq
 	$self->{next_line} = readline $self->{fh};
 	chomp $self->{next_line};
 	$new_seq->{qual_chars} = $self->{next_line};
-	
+
 	#next line should be next sequence
 	$self->{next_line} = readline $self->{fh};
 	chomp $self->{next_line} if (defined $self->{next_line});
@@ -152,24 +157,55 @@ sub next_seq
 			die "chr out of range $q, fastq type may be incorrect" if ($q+$self->{chr_offset} > 255);
 			$new_seq->{qual_chars}.= chr($q+$self->{chr_offset});
 		}
-		
-#		foreach my $q (@qual_list)
-#		{
-#			if ($q <= 0)
-#			{
-#				print STDERR Dumper($new_seq);
-#				print STDERR "@qual_list\n";
-#				last;
-#			}
-#		}
 	}
 	
-	### finally, save the quality type with the sequence
-	$new_seq->{chr_offset} = $self->{chr_offset};
-	
+	### convert to sanger
+	if ($self->{format} ne 'sanger') 
+	{
+		my $new_quals = '';
+		foreach my $q (split //, $new_seq->{qual_chars})
+		{
+			##convert offset
+			$q = ord($q);
+			$q -= $self->{chr_offset};
+			
+			if ($self->{quality_type} ne 'phred')
+			{
+				$q = convert_quality_solexa_to_phred($q);
+			}
+			$q += 33;
+			$new_quals .= chr($q);
+		}
+		$new_seq->{qual_chars} = $new_quals;
+	}
+
 	return $new_seq;
 }
 
+
+our %solexa_to_phred_conversion_table;
+our $init_solexa_to_phred_conversion_table = 0;
+
+sub populate_solexa_to_phred_conversion_table
+{
+	my ($nothing) = @_;
+	
+	for (my $sq=-5; $sq<62; $sq++)
+	{
+		my $p = 10**(-$sq/10) / (1+10**(-$sq/10));
+		my $pq = -10 * log($p) / log(10);
+		$solexa_to_phred_conversion_table{$sq} = int($pq);
+	} 
+	$init_solexa_to_phred_conversion_table = 1;
+#	print STDERR Dumper(\%solexa_to_phred_conversion_table);
+}
+
+sub convert_quality_solexa_to_phred
+{
+	my ($sq) = @_;	
+	populate_solexa_to_phred_conversion_table() if (!$init_solexa_to_phred_conversion_table);
+	return $solexa_to_phred_conversion_table{$sq};
+}
 
 =head2 predict_qual_format
 
@@ -180,7 +216,7 @@ sub next_seq
 
 =cut
 
-sub predict_qual_format
+sub predict_format
 {
 	my ($self, $n, $verbose) = @_;
 
@@ -231,8 +267,8 @@ sub predict_qual_format
 	}
 	
 	##choose fairly conservative cutoffs
-	return ('phred', $min_qual, $max_qual, \@qual_cdf)  if ($average_qual < 50);
-	return ('solexa', $min_qual-31, $max_qual-31, \@qual_cdf) if ($average_qual > 50);
+	return ('sanger', $min_qual, $max_qual, \@qual_cdf)  if ($average_qual < 50);
+	return ('illumina', $min_qual-31, $max_qual-31, \@qual_cdf) if ($average_qual > 50);
 
 	#print STDERR "  Failure to auto-detect quality score format.\n  Specify one manually!\n";
 	#print Dumper(\%qual_found_hash);

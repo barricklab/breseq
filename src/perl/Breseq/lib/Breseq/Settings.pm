@@ -206,7 +206,6 @@ sub initialize_1
 	$self->{trim_reads} = 0;
 	
 	#used by CandidateJunctions.pm
-	$self->{minimum_reads_for_candidate_junction} = 1;
 	$self->{minimum_candidate_junctions} = 200;					# Minimum number of candidate junctions to keep
 	$self->{maximum_candidate_junctions} = 5000;				# Maximum number of candidate junctions to keep
 	$self->{maximum_candidate_junction_length_factor} = 0.1;		# Only keep CJ lengths adding up to this times genome size 
@@ -225,8 +224,8 @@ sub initialize_1
 	$self->{unwanted_prefix} = "UNWANTED:::";	# prefix on unwanted read names
 	
 	#used by MutationIdentification.pm
-	$self->{polymorphism_log10_e_value_cutoff} = 2;
 	$self->{mutation_log10_e_value_cutoff} = 2;			# log10 of evidence required for SNP calls 
+	$self->{polymorphism_log10_e_value_cutoff} = 2;
 	$self->{polymorphism_bias_p_value_cutoff} = 0.05;
 	$self->{polymorphism_frequency_cutoff} = 0;   # cut off if < this or > 1-this
 	
