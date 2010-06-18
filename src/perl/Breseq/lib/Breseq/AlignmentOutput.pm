@@ -400,7 +400,8 @@ sub create_alignment
 		my $alignment_spans_position;
 		ALIGNMENT: for my $p (@$pileup) 
 		{
-			$alignment_spans_position->{$p->alignment->display_name} = 1;
+			## alignment spans the position unless this is the first base...
+			$alignment_spans_position->{$p->alignment->display_name} = 1 if ($p->qpos > 0);
 			$max_indel = $p->indel if ($p->indel > $max_indel);
 		}
 		print "MAX INDEL: $max_indel\n" if ($verbose);
