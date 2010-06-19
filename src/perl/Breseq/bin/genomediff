@@ -239,11 +239,12 @@ sub do_annotate
 	@ra = grep { !$_->{coverage} && !$_->{no_show} } @ra;
 	
 	
-	##
+	##max_rejected_junctions_to_show
+	
 	# Mark lowest scoring reject junctions as no-show
 	##
 	my @jc = $gd->filter_used_as_evidence($gd->list('JC'));	
-	@jc = grep { ($_->{reject} != 0) } @jc;
+	@jc = grep { $_->{reject} } @jc;
 	
 	@jc = sort { -($a->{score} <=> $b->{score}) } @jc;
 	for (my $i = $settings->{max_rejected_junctions_to_show}; $i< scalar @jc; $i++)
@@ -307,7 +308,8 @@ sub do_mutate
 	$input_genome_diff = shift @ARGV;
 	pod2usage(1) if $help;
 	pod2usage(-exitstatus => 0, -verbose => 2) if $man;	
-	
+	pod2usage(-exitstatus => 0, -verbose => 2) if (!$input_genome_diff);	
+
 	our $gd = Breseq::GenomeDiff->new(-FILE_NAME => $input_genome_diff);
 	
 	my $ref_seq_info = Breseq::ReferenceSequence::load_ref_seq_info_2(\@input_genbank_files);

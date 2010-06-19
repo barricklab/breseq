@@ -197,7 +197,7 @@ sub identify_candidate_junctions
 	print STDERR sprintf ("  Maximum number to keep: %7d \n", $maximum_candidate_junctions);
 	print STDERR sprintf ("  Maximum length to keep: %7d bases\n", $cj_length_limit);
 	
-	print STDERR "    Initial: Number = " . $total_candidate_junction_number . ", Cumulative Length = " . $total_cumulative_cj_length . "\n";
+	print STDERR "    Initial: Number = " . $total_candidate_junction_number . ", Cumulative Length = " . $total_cumulative_cj_length . " bases\n";
 
 
 	if ((defined $settings->{maximum_candidate_junctions}) && (@combined_candidate_junctions > 0))
@@ -260,7 +260,7 @@ sub identify_candidate_junctions
 	}
 	
 	my $accepted_candidate_junction_number = scalar @combined_candidate_junctions;
-	print STDERR "    Accepted: Number = $accepted_candidate_junction_number, Score >= $lowest_accepted_score, Cumulative Length = $cumulative_cj_length\n";
+	print STDERR "    Accepted: Number = $accepted_candidate_junction_number, Score >= $lowest_accepted_score, Cumulative Length = $cumulative_cj_length bases\n";
 	
 	## Save summary statistics
 	$hcs->{total}->{number} = $total_candidate_junction_number;	

@@ -76,7 +76,7 @@ sub new
 =cut
 sub predict
 {
-	our ($self, $settings, $ref_seq_info, $gd) = @_;
+	our ($self, $settings, $summary, $ref_seq_info, $gd) = @_;
 		
 	##first look at SNPs and small indels predicted by read alignments.
 	my @ra = $gd->list('RA');
@@ -146,99 +146,9 @@ sub predict
 	push @muts, $mut if (defined $mut);
 	
 	
-	foreach my $mut (@muts)
-	{
-		#insertion
-		if ($mut->{ref_seq} =~ m/\./)
-		{			
-			$mut->{type} = 'INS';
-		}
-		#deletion
-		elsif ($mut->{new_seq} =~ m/\./)
-		{
-			$mut->{type} = 'DEL';
-			$mut->{size} = $mut->{end} - $mut->{start} + 1;
-			$mut->{start_range} = 0;
-			$mut->{end_range} = 0;
-		}
-		#block substitution
-		elsif ((length $mut->{ref_seq} > 1) || (length $mut->{new_seq} > 1))
-		{
-			$mut->{type} = 'SUB';
-		}
-		#snp
-		else
-		{
-			$mut->{type} = 'SNP';
-		}
-		
-		$gd->add($mut);
-	}	
 	
-	my @mc = $gd->list('MC');	
+	##add information about repeat_regions overlapping the sides of junctions	
 	my @jc = $gd->list('JC');
-	
-	## add deletions
-	## look for ones that are also supported by new junctions, and clean up those that end
-	## in repeat regions of the same kind.
-	##
-	foreach my $mc_item (@mc)
-	{
-		next if ($mc_item->{reject});
-
-		my $mut = { 
-			type => 'DEL',
-			seq_id => $mc_item->{seq_id},
-			position => $mc_item->{start},
-			size => $mc_item->{end} - $mc_item->{start} + 1,
-			start_range => $mc_item->{start_range},
-			end_range => $mc_item->{end_range},
-			evidence => [$mc_item->{id}],
-		};			
-		
-		## search for junctions that give the same (or similar...?) extents of deletion
-		my $exact_junction_found = 0;
-		JUNCTION: for (my $i=0; $i < scalar @jc; $i++)
-		{
-			my $jc_item = $jc[$i];
-			
-			next if ($jc_item->{side_1_seq_id} ne $mut->{seq_id});
-			next if ($jc_item->{side_2_seq_id} ne $mut->{seq_id});
-
-			if (  ($jc_item->{side_1_position} == $mut->{position}-1) && ($jc_item->{side_1_strand} == -1)
-			   && ($jc_item->{side_2_position} == $mut->{position}+$mut->{size}) && ($jc_item->{side_2_strand} == +1) )
-			{
-				push @{$mut->{evidence}}, $jc_item->{id};
-				splice @jc, $i, 1; 
-				$i--;
-				$exact_junction_found = 1;
-				last JUNCTION;
-			}
-		}
-		
-		if (!$exact_junction_found)
-		{
-			
-			sub within_repeat
-			{
-				my ($seq_id, $position) = @_;
-				foreach my $r (@{$self->{ref_seq_info}->{repeat_lists}->{$seq_id}})
-				{
-					return $r if ($r->{start} <= $position) && ($position <= $r->{end})
-				}
-				return undef;
-			}
-			
-			## Are we within two copies of the same repeat region??
-			my ($r1) = within_repeat($mut->{seq_id}, $mut->{position}); 
-			my ($r2) = within_repeat($mut->{seq_id}, $mut->{position} + $mut->{size}); 
-			
-			## Then we will adjust the coordinates to remove...
-		}				
-		$gd->add($mut);
-	}
-	
-	##infer IS element insertions from pairs of new junctions	
 	JC: foreach my $j (@jc)
 	{
 		$j->{_side_1_read_side} = -1;
@@ -255,7 +165,7 @@ sub predict
 			
 			$j->{"$side_key\_annotate_key"} = ((defined $j->{"_$side_key\_is"}) || ($j->{"$side_key\_redundant"})) ? 'repeat' : 'gene';				
 		}
-						
+		
 		## Determine which side of the junction is the IS and which is unique
 		## these point to the correct initial interval...
 		if (defined $j->{_side_1_is})
@@ -287,8 +197,201 @@ sub predict
 				$j->{_is_interval_closest_side_key} = 'end';
 				$j->{_unique_interval} = 'side_1';
 			}
-		}			
+		}
+	}
+	
+	foreach my $mut (@muts)
+	{
+		#insertion
+		if ($mut->{ref_seq} =~ m/\./)
+		{			
+			$mut->{type} = 'INS';
+		}
+		#deletion
+		elsif ($mut->{new_seq} =~ m/\./)
+		{
+			$mut->{type} = 'DEL';
+			$mut->{size} = $mut->{end} - $mut->{start} + 1;
+			$mut->{start_range} = 0;
+			$mut->{end_range} = 0;
+		}
+		#block substitution
+		elsif ((length $mut->{ref_seq} > 1) || (length $mut->{new_seq} > 1))
+		{
+			$mut->{type} = 'SUB';
+		}
+		#snp
+		else
+		{
+			$mut->{type} = 'SNP';
+		}
+		
+		$gd->add($mut);
+	}	
+	
+	my @mc = $gd->list('MC');	
+	
+	## add deletions
+	## look for ones that are also supported by new junctions, and clean up those that end
+	## in repeat regions of the same kind.
+	##
+	MC: foreach my $mc_item (@mc)
+	{
+		next if ($mc_item->{reject});
+
+		my $mut = { 
+			type => 'DEL',
+			seq_id => $mc_item->{seq_id},
+			position => $mc_item->{start},
+			size => $mc_item->{end} - $mc_item->{start} + 1,
+			evidence => [$mc_item->{id}],
+		};			
+
+
+		## Search for scenarios where>
+		##
+		## (1) junctions that give the exact same extents of deletion
+		## (2) there is a junction between unique sequence and a repeat element
+		## (3) there is is no junction, but both ends of the deletion are in repeat sequences
+
+		
+		JUNCTION: for (my $i=0; $i < scalar @jc; $i++)
+		{
+			my $jc_item = $jc[$i];
+			
+			next if ($jc_item->{side_1_seq_id} ne $mut->{seq_id});
+			next if ($jc_item->{side_2_seq_id} ne $mut->{seq_id});
+
+			if (  ($jc_item->{side_1_position} == $mut->{position}-1) && ($jc_item->{side_1_strand} == -1)
+			   && ($jc_item->{side_2_position} == $mut->{position}+$mut->{size}) && ($jc_item->{side_2_strand} == +1) )
+			{
+				push @{$mut->{evidence}}, $jc_item->{id};
+				splice @jc, $i, 1; 
+				$i--;
+				$gd->add($mut);
+				next MC;
+			}
+		}
+		
+		sub within_repeat
+		{
+			my ($seq_id, $position) = @_;
+			foreach my $r (@{$self->{ref_seq_info}->{repeat_lists}->{$seq_id}})
+			{
+				return $r if ($r->{start} <= $position) && ($position <= $r->{end})
+			}
+			return undef;
+		}
+		
+		## Are we within two copies of the same repeat region??
+		my $r1 = within_repeat($mut->{seq_id}, $mut->{position}); 
+		my $r2 = within_repeat($mut->{seq_id}, $mut->{position} + $mut->{size}); 
+		
+		## Then we will adjust the coordinates to remove...
+		if (defined $r1 && defined $r2 && ($r1->{name} eq $r2->{name}))
+		{
+			#there may be more evidence that one or the other is deleted...
+			my $r1_overlap_end = $mc_item->{start} + $mc_item->{start_range};
+			$r1_overlap_end = $r1->{end} if ($r1_overlap_end > $r1->{end});
+			my $r1_overlap = $r1_overlap_end - $mc_item->{start} + 1;
+			
+			my $r2_overlap_start = $mc_item->{end} - $mc_item->{end_range};
+			$r2_overlap_start = $r2->{start} if ($r2_overlap_start < $r1->{start});
+			my $r2_overlap = $mc_item->{end} - $r2_overlap_start + 1;				
+			
+			# it may be really close...defined by read length of genome in which case
+			my $slop_distance = $summary->{sequence_conversion}->{max_read_length};
+			
+			## prefer to delete the second copy
+			if ((abs($r1_overlap - $r2_overlap) <= $slop_distance) || ($r2_overlap > $r1_overlap ))
+			{
+				$mut->{position} = $r1->{end} + 1;
+				$mut->{size} = $r2->{end} - $r1->{end};
+			}
+			else #delete the first copy
+			{
+				$mut->{position} = $r1->{start};
+				$mut->{size} = $r2->{start} - $r1->{start};
+			}				
+			
+			## remember the name of the element
+			$mut->{between} = $r1->{name};
+			$gd->add($mut);	
+			next MC;			
+		}
+		
+		## Both sides were unique or redundant, nothing more we can do...
+		next MC if (!defined $r1 && !defined $r2);
+		next MC if (defined $r1 && defined $r2);
+		
+		## One of the two sides was defined as a repeat
+		my $r = (defined $r1) ? $r1 : $r2; 
+		my $redundant_deletion_side = (defined $r1) ? -1 : +1; 
+		my $needed_coord = (defined $r1) ?  $mut->{position}+$mut->{size} : $mut->{position} - 1;
 				
+		print Dumper($mut);
+		print Dumper($r);
+		
+
+		JUNCTION: for (my $i=0; $i < scalar @jc; $i++)
+		{
+			my $j = $jc[$i];
+
+
+			next JUNCTION if (!defined $j->{_is_interval});
+			
+			print Dumper($j);
+			
+			print "Check 1: " . $j->{"$j->{_unique_interval}_seq_id"} . " ne $mut->{seq_id}\n";
+			next JUNCTION if ($j->{"$j->{_unique_interval}_seq_id"} ne $mut->{seq_id});
+			print "Pass 1\n";
+
+			#check type of IS
+			print "Check 2: " . $r->{name} . " ne " .  $j->{"_$j->{_is_interval}_is"}->{name} . "\n";				
+			next JUNCTION if ( $r->{name} ne $j->{"_$j->{_is_interval}_is"}->{name} );
+			print "Pass 2\n";
+			
+			#check that IS is on the right strand
+			print "Check 3: " . $redundant_deletion_side . " * " . $r->{strand} . " != " .  $j->{"$j->{_unique_interval}\_strand"}  . " * " . $j->{"_$j->{_is_interval}_is"}->{strand} . " * " . $j->{"_$j->{_is_interval}_read_side"}  . "\n";								
+			next JUNCTION if ( $redundant_deletion_side * $r->{strand} !=  $j->{"$j->{_unique_interval}\_strand"} * $j->{"_$j->{_is_interval}_is"}->{strand} * $j->{"_$j->{_is_interval}_read_side"} );
+			print "Pass 3\n";
+
+			#check that the unique side matches coordinate
+			print "Check 4: " . $j->{"$j->{_unique_interval}\_position"} . " != " .  $needed_coord . "\n";				
+			next JUNCTION if ( $j->{"$j->{_unique_interval}\_position"} != $needed_coord );
+			print "Pass 4\n";
+
+			#check that the unique side is on the right strand	
+			print "Check 5: " . $redundant_deletion_side . " != " .  $j->{"$j->{_unique_interval}\_strand"} . " * " . $j->{"_$j->{_is_interval}_read_side"} . "\n";				
+			next JUNCTION if ( $redundant_deletion_side != $j->{"$j->{_unique_interval}\_strand"} * $j->{"_$j->{_is_interval}_read_side"} );
+			print "Pass 5\n";
+
+			## need to adjust the non-unique coords
+			if ($redundant_deletion_side == -1)
+			{
+				my $move_dist = $r->{end} + 1 - $mut->{position};
+				$mut->{position} += $move_dist;
+				$mut->{size} -= $move_dist;
+			}
+			else
+			{
+				my $move_dist = ($mut->{position} + $mut->{size} - 1) - ($r->{start}-1);
+				$mut->{size} -= $move_dist;
+			}
+
+			## OK, we're good!
+			push @{$mut->{evidence}}, $j->{id};
+			splice @jc, $i, 1; 
+			$i--;
+			$gd->add($mut);
+			next MC;
+		}
+						
+	}
+	
+	##infer IS element insertions from pairs of new junctions	
+	JC: foreach my $j (@jc)
+	{					
 		## Ah, we don't have an IS, we are done
 		next JC if (!defined $j->{_is_interval});
 		

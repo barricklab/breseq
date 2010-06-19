@@ -427,6 +427,10 @@ sub correct_alignments
 				{
 					my $side_key = 'side_' . $side;
                     ## Do not count for coverage if it is redundant!!
+
+					print Dumper($item);
+					print $side_key . " " . $item->{"$side_key\_redundant"} . "\n";
+					
 					if (!$item->{"$side_key\_redundant"})
 					{	
 						##write out match corresponding to this part to SAM file
@@ -1116,8 +1120,7 @@ sub _junction_to_hybrid_list_item
 	$jc->{overlap} = $jc->{alignment_overlap};			
 	$jc->{total_reads} = $total_reads;
 	
-	$jc->{side_1}->{redundant} = 0;
-	$jc->{side_2}->{redundant} = 0;
+	## Redundancy is loaded from the key, but we doubly enforce it when IS elements are involved.
 	
 	## Correct for overlapping IS elements
 	
@@ -1193,11 +1196,8 @@ sub _junction_to_hybrid_list_item
 	}
 	
 	## both were IS! -- define as redundant here
-	if (defined $j->{side_1}->{is} && defined $j->{side_2}->{is})
-	{
-		$j->{side_1}->{redundant} = 1;
-		$j->{side_2}->{redundant} = 1;
-	}
+	$j->{side_1}->{redundant} = 1 if (defined $j->{side_1}->{is});
+	$j->{side_2}->{redundant} = 1 if (defined $j->{side_2}->{is});
 	
 	#by default, overlap is included on both sides of the junction (possibly changed below)
 	$jc->{side_1}->{overlap} = 0;
@@ -1226,14 +1226,16 @@ sub _junction_to_hybrid_list_item
 			$j->{unique_side}->{overlap} -= $j->{overlap};
 			
 			$j->{overlap} = 0;
-			$j->{is_side}->{redundant} = 1;
 		}
 	
-		### Should this be "elsif" or "if"?
-		### If there is no IS element and both sides are unique,
-		### then give overlap to first side. This gives proper support for junctions.
+		### If there is no IS element and 
+		##    (1) both sides are unique
+		## OR (2) only the second side is redundant,
+		## OR (3) both sides are redundant
+		### then give overlap to first side. 
+		### This gives proper support for junctions.
 		### and ensures we don't count this coverage twice.
-		elsif (!$jc->{side_1}->{redundant} && !$jc->{side_2}->{redundant})
+		elsif ((!$jc->{side_1}->{redundant}) || ($jc->{side_1}->{redundant} && $jc->{side_2}->{redundant}) )
 		{
 			my $strand_direction = ($jc->{side_2}->{strand} > 0) ? +1 : -1;
 	
@@ -1241,8 +1243,17 @@ sub _junction_to_hybrid_list_item
 			$jc->{side_2}->{overlap} = 0;
 			$jc->{overlap} = 0;			
 		}
+		else  ## side_1 was redundant, give overlap to side_2
+		{
+			my $strand_direction = ($jc->{side_1}->{strand} > 0) ? -1 : +1;
+			$jc->{side_1}->{position} += $jc->{overlap} * $strand_direction;
+			$jc->{side_1}->{overlap} = 0;
+			$jc->{overlap} = 0;
+		}
+		
+		## If both sides were redundant, no adjustment because we are not going to count coverage
 	}
-	
+		
 	##flatten things to only what we want to keep
 	my $item = {
 		type => 'JC',

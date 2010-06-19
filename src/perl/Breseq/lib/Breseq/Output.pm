@@ -722,10 +722,15 @@ sub html_missing_coverage_table_string
 				$output_str.= td(a({-href=>"$relative_link$c->{_evidence_file_name}"}, '&divide;')); 
 			}
 		}
+
+		my $start_str = $c->{start};
+		$start_str .= "–" . ($c->{start} + $c->{start_range}) if ($c->{start_range} > 0);
+		my $end_str = $c->{end};
+		$end_str .= "–" . ($c->{end} - $c->{end_range}) if ($c->{end_range} > 0);
 		
 		$output_str.= td(nonbreaking($c->{seq_id})); 
-		$output_str.= td({-align=>"right"}, $c->{start}); 
-		$output_str.= td({-align=>"right"}, $c->{end}); 		
+		$output_str.= td({-align=>"right"}, nonbreaking($start_str)); 
+		$output_str.= td({-align=>"right"}, nonbreaking($end_str)); 		
 		$output_str.= td({-align=>"right"}, $c->{left_outside_cov}); 
 		$output_str.= td({-align=>"right"}, $c->{left_inside_cov}); 
 		$output_str.= td({-align=>"right"}, $c->{right_inside_cov}); 
@@ -1338,7 +1343,8 @@ sub load_statistics
 sub nonbreaking
 {
 	my ($text) = @_;
-	$text =~ s/-/&#8209;/g; #substitute nonbreaking dash
+	$text =~ s/-/&#8209;/g; #substitute nonbreaking hyphen
+	$text =~ s/–/&#8211;/g; #substitute nonbreaking en dash
 	$text =~ s/ /&nbsp;/g; #substitute nonbreaking space
 	return $text;
 }
