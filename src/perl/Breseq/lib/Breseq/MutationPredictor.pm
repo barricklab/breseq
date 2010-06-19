@@ -357,7 +357,7 @@ sub predict
 			print "Check 3: " . $redundant_deletion_side . " * " . $r->{strand} . " != " .  $j->{"$j->{_unique_interval}\_strand"}  . " * " . $j->{"_$j->{_is_interval}_is"}->{strand} . " * " . $j->{"_$j->{_is_interval}_read_side"}  . "\n" if ($verbose);							
 			next JUNCTION if ( $redundant_deletion_side * $r->{strand} !=  $j->{"$j->{_unique_interval}\_strand"} * $j->{"_$j->{_is_interval}_is"}->{strand} * $j->{"_$j->{_is_interval}_read_side"} );
 			print "Pass 3\n" if ($verbose);
-
+			
 			#check that the unique side matches coordinate
 			print "Check 4: " . $j->{"$j->{_unique_interval}\_position"} . " != " .  $needed_coord . "\n" if ($verbose);			
 			next JUNCTION if ( $j->{"$j->{_unique_interval}\_position"} != $needed_coord );

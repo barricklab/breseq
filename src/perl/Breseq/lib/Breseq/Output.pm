@@ -989,6 +989,8 @@ sub create_evidence_files
 	### We make alignments of two regions for deletions: upstream and downstream edges.
 	foreach my $item ( $gd->list('MC') )
 	{	
+		next if ($item->{no_show});
+		
 		my $parent_item = $gd->parent($item);
 		$parent_item = $item if (!$parent_item);
 		
@@ -1036,6 +1038,8 @@ sub create_evidence_files
 
 	MUT: foreach my $item ( $gd->list('SNP', 'INS', 'DEL', 'SUB') )
 	{
+		next if ($item->{no_show});
+		
 		#this reconstructs the proper columns to draw
 		my $start = $item->{position};
 		my $end = $start;
@@ -1099,7 +1103,6 @@ sub create_evidence_files
 	RA: foreach my $item ( @ra_list )
 	{
 		next if ($item->{no_show});
-#		next if ($item->{deleted});
 		
 		#this reconstructs the proper columns to draw
 		add_evidence( 
