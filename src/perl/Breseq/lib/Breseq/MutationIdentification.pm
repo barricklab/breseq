@@ -117,6 +117,11 @@ sub identify_mutations
 		our $left_outside_coverage_item = undef
 		our $left_inside_coverage_item = undef;
 		our $last_position_coverage = undef;
+		# additions to check whether we are within initial or end redundant positions
+		our $last_deletion_redundant_start_position = undef;
+		our $last_deletion_redundant_end_position = undef;	
+		our $redundant_reached_zero = 0;
+		
 
 		### COPY NUMBER VARIATION: variables to keep track of during pileup
 		our $cnv_tile_size = 100;
@@ -151,8 +156,7 @@ sub identify_mutations
 			{
 				if (!defined $last_deletion_start_position)
 				{
-					## special treatment for the beginning of a fragment
-					## the 
+					## special treatment for the beginning of a genome fragment
 					if ($last_position_coverage_printed == 0)
 					{
 						$left_outside_coverage_item =  {
@@ -173,9 +177,12 @@ sub identify_mutations
 						};
 						$left_inside_coverage_item = $last_position_coverage;	
 					}
-					$last_deletion_start_position = $last_position_coverage_printed+1;			
+					$last_deletion_start_position = $last_position_coverage_printed+1;
+					$last_deletion_redundant_start_position = $last_position_coverage_printed+1 if (!defined $last_deletion_redundant_start_position);
 				}
+				
 				$this_deletion_reaches_seed_value = 1;
+				$redundant_reached_zero = 1;
 				$last_position_coverage = { 
 					unique => {'1'=>0, '-1'=>0, 'total' => 0 },
 					redundant => {'1'=>0, '-1'=>0, 'total' => 0 }
@@ -186,30 +193,54 @@ sub identify_mutations
 			$last_position_coverage_printed = $pos;
 			
 			## called with an undef $this_position_coverage at the end of the genome
-			if ((defined $this_position_coverage) && (defined $e_value_call))
-			{				
+			if (defined $this_position_coverage)
+			{
+				# Print this information to the coverage file (used as input by R plotting script)
 				my $tu = $this_position_coverage->{unique};
 				my $tr = $this_position_coverage->{redundant};
 				my $trr = $this_position_coverage->{raw_redundant};
-						
-				#print this information
 				print COV join("\t", $tu->{-1}, $tu->{1}, $tr->{-1}, $tr->{1}, $trr->{-1}, $trr->{1}, $e_value_call, $pos) . "\n";
-			
+		
+				## UNIQUE COVERAGE
 				#start a new possible deletion if we fall below the propagation cutoff
 				if ($this_position_coverage->{unique}->{total} <= $deletion_propagation_cutoff)
 				{	
 					if (!defined $last_deletion_start_position)
 					{
-						$last_deletion_start_position = $pos;				
+						$last_deletion_start_position = $pos;
 						$left_outside_coverage_item = $last_position_coverage;
 						$left_inside_coverage_item = $this_position_coverage;
 					}
 				}
 				
-				##keep track of whether we've encountered the seed value
+				##keep track of whether we've encountered the seed value for the current deletion
 				if ($this_position_coverage->{total} <= $deletion_seed_cutoff)
 				{
 					$this_deletion_reaches_seed_value = 1;
+				}
+				
+				## REDUNDANT COVERAGE
+				## updated only if we are currently within a deletion
+				if (defined $last_deletion_start_position)
+				{					
+					if ($this_position_coverage->{redundant}->{total} == 0)
+					{
+						$redundant_reached_zero = 1; #switch from adjusting start to end
+						undef $last_deletion_redundant_end_position;
+					}
+					elsif ($this_position_coverage->{redundant}->{total} > 0)
+					{
+						## if there is any redundant coverage remember the start (until we find zero redundant coverage)
+						if (!$redundant_reached_zero)
+						{
+							$last_deletion_redundant_start_position = $pos;
+						}
+						## if we are working on the right side update the end position if it is not already defined.
+						else
+						{
+							$last_deletion_redundant_end_position = $pos if (!defined $last_deletion_redundant_end_position);
+						}
+					}
 				}
 			}
 			
@@ -229,13 +260,17 @@ sub identify_mutations
 						};
 					}
 					
+					my $last_deletion_end_position = $pos-1;
+					$last_deletion_redundant_end_position = $last_deletion_end_position	if (!defined $last_deletion_redundant_end_position);
+					$last_deletion_redundant_start_position = $last_deletion_start_position	if (!defined $last_deletion_redundant_start_position);
+
 					my $del = {
 						type => 'MC',
 						seq_id => $seq_id,
 						start => $last_deletion_start_position,
-						end => $pos-1,
-						start_range => 0,
-						end_range => 0,
+						end => $last_deletion_end_position,
+						start_range => $last_deletion_redundant_start_position - $last_deletion_start_position,
+						end_range => $last_deletion_end_position - $last_deletion_redundant_end_position,
 						left_outside_cov => $left_outside_coverage_item->{unique}->{total},
 						left_inside_cov => $left_inside_coverage_item->{unique}->{total},
 						right_inside_cov => $last_position_coverage->{unique}->{total},
@@ -252,7 +287,10 @@ sub identify_mutations
 
 				#reset the search
 				$this_deletion_reaches_seed_value = 0;
+				$redundant_reached_zero = 0;
 				undef $last_deletion_start_position;
+				undef $last_deletion_redundant_start_position;
+				undef $last_deletion_redundant_end_position;
 			}
 
 			$last_position_coverage = $this_position_coverage;
@@ -396,16 +434,6 @@ sub identify_mutations
 					
 					$trimmed = 1 if ((defined $trim_left) && ($p->qpos+1 <= $trim_left));
 					$trimmed = 1 if ((defined $trim_right) && ($a->query->length-$p->qpos <= $trim_right));
-
-
-## Not sure this is doing anything....
-#					##also trimmed if up to next position and this is an insertion.
-#					if ($indel != 0)
-#					{
-#						#remember that qpos is 0-indexed
-#						$trimmed = 1 if ((defined $trim_left) && ($p->qpos+1 <= $trim_left)); #so this is position <1
-#						$trimmed = 1 if ((defined $trim_right) && ($a->query->length-($p->qpos+1)+1 <= $trim_right)); #this is position+1
-#					}
 					
 					## These are the start and end coordinates of the aligned part of the read
 					my ($q_start, $q_end) = ($a->query->start-1, $a->query->end-1); #0-indexed

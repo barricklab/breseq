@@ -81,7 +81,7 @@ our $line_specification = {
 	
 	## evidence
 	'RA' => ['seq_id', 'position', 'insert_position', 'ref_base', 'new_base'],
-	'MC' => ['seq_id', 'start', 'end'],
+	'MC' => ['seq_id', 'start', 'end', 'start_range', 'end_range'],
 	'JC' => ['side_1_seq_id', 'side_1_position', 'side_1_strand', 'side_2_seq_id', 'side_2_position', 'side_2_strand', 'overlap'],
 	'UN' => ['seq_id', 'start', 'end'],
 };
