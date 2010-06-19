@@ -304,6 +304,12 @@ sub _line_to_item
 			$self->warn("Number of required items is less than expected for type \'$item->{type}\' line:\n$line");
 			return undef;
 		}
+		if ($next =~ m/=/) 
+		{
+			$self->warn("Unexpected key=value pair \'$next\' encountered for required item \'$key\' in type \'$item->{type}\' line:\n$line");
+#			return undef;
+		}
+		
 		$item->{$key} = $next;
 	}
 
