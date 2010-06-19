@@ -427,9 +427,6 @@ sub correct_alignments
 				{
 					my $side_key = 'side_' . $side;
                     ## Do not count for coverage if it is redundant!!
-
-					print Dumper($item);
-					print $side_key . " " . $item->{"$side_key\_redundant"} . "\n";
 					
 					if (!$item->{"$side_key\_redundant"})
 					{	
