@@ -512,6 +512,10 @@ sub annotate_mutations
 		{
 			annotate_1_mutation($ref_seq_info, $mut, $mut->{position}, $mut->{position});
 		}
+		elsif ($mut->{type} eq 'MC')
+		{
+			annotate_1_mutation($ref_seq_info, $mut, $mut->{start}, $mut->{end});
+		}
 	}
 }
 
