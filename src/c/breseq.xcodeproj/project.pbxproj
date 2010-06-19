@@ -1,0 +1,447 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 42;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		421ACF4A1170DFC300C2EB85 /* main.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 421ACF2B1170DEC400C2EB85 /* main.cpp */; };
+		421ACF581170E00A00C2EB85 /* libbam.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 421ACF571170E00A00C2EB85 /* libbam.a */; };
+		421ACF7E1170E5CA00C2EB85 /* libboost_program_options-mt.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 421ACF7D1170E5CA00C2EB85 /* libboost_program_options-mt.a */; };
+		421ACFA31170ED4B00C2EB85 /* error_count.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 421ACFA21170ED4B00C2EB85 /* error_count.cpp */; };
+		421ACFAD1170F05500C2EB85 /* libz.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 421ACFAC1170F05500C2EB85 /* libz.a */; };
+		42BA690F1189B819000B00B1 /* pileup.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 42BA69071189B7D1000B00B1 /* pileup.cpp */; };
+		42BA69101189B827000B00B1 /* libbreseq.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 42BA690C1189B7FD000B00B1 /* libbreseq.a */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXContainerItemProxy section */
+		421ACF601170E07C00C2EB85 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 421ACEB71170DB9600C2EB85 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 421ACF201170DC4400C2EB85;
+			remoteInfo = samtools;
+		};
+		42BA691B1189B877000B00B1 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 421ACEB71170DB9600C2EB85 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 42BA690B1189B7FD000B00B1;
+			remoteInfo = breseq;
+		};
+/* End PBXContainerItemProxy section */
+
+/* Begin PBXFileReference section */
+		421ACF2B1170DEC400C2EB85 /* main.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = main.cpp; sourceTree = "<group>"; };
+		421ACF2F1170DF1800C2EB85 /* error_count */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = error_count; sourceTree = BUILT_PRODUCTS_DIR; };
+		421ACF361170DF3F00C2EB85 /* debug.xcconfig */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.xcconfig; path = debug.xcconfig; sourceTree = "<group>"; };
+		421ACF571170E00A00C2EB85 /* libbam.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = libbam.a; path = "samtools-0.1.7a/libbam.a"; sourceTree = "<group>"; };
+		421ACF7D1170E5CA00C2EB85 /* libboost_program_options-mt.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = "libboost_program_options-mt.a"; path = "/opt/local/lib/libboost_program_options-mt.a"; sourceTree = "<absolute>"; };
+		421ACFA01170EC3200C2EB85 /* error_count.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = error_count.h; sourceTree = "<group>"; };
+		421ACFA21170ED4B00C2EB85 /* error_count.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = error_count.cpp; sourceTree = "<group>"; };
+		421ACFAC1170F05500C2EB85 /* libz.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = libz.a; path = /opt/local/lib/libz.a; sourceTree = "<absolute>"; };
+		42BA69041189B7D1000B00B1 /* common.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = common.h; sourceTree = "<group>"; };
+		42BA69051189B7D1000B00B1 /* pileup.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = pileup.h; sourceTree = "<group>"; };
+		42BA69071189B7D1000B00B1 /* pileup.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = pileup.cpp; sourceTree = "<group>"; };
+		42BA690C1189B7FD000B00B1 /* libbreseq.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; includeInIndex = 0; path = libbreseq.a; sourceTree = BUILT_PRODUCTS_DIR; };
+/* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		421ACF2D1170DF1800C2EB85 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				42BA69101189B827000B00B1 /* libbreseq.a in Frameworks */,
+				421ACF581170E00A00C2EB85 /* libbam.a in Frameworks */,
+				421ACF7E1170E5CA00C2EB85 /* libboost_program_options-mt.a in Frameworks */,
+				421ACFAD1170F05500C2EB85 /* libz.a in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		42BA690A1189B7FD000B00B1 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		421ACEB51170DB9600C2EB85 = {
+			isa = PBXGroup;
+			children = (
+				421ACF351170DF3F00C2EB85 /* etc */,
+				421ACF291170DEC400C2EB85 /* error_count */,
+				42BA69011189B7D1000B00B1 /* libbreseq */,
+				421ACF5F1170E06300C2EB85 /* lib */,
+				421ACF301170DF1800C2EB85 /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		421ACF291170DEC400C2EB85 /* error_count */ = {
+			isa = PBXGroup;
+			children = (
+				421ACF9F1170EC3200C2EB85 /* include */,
+				421ACF2A1170DEC400C2EB85 /* src */,
+			);
+			path = error_count;
+			sourceTree = "<group>";
+		};
+		421ACF2A1170DEC400C2EB85 /* src */ = {
+			isa = PBXGroup;
+			children = (
+				421ACFA21170ED4B00C2EB85 /* error_count.cpp */,
+				421ACF2B1170DEC400C2EB85 /* main.cpp */,
+			);
+			path = src;
+			sourceTree = "<group>";
+		};
+		421ACF301170DF1800C2EB85 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				421ACF2F1170DF1800C2EB85 /* error_count */,
+				42BA690C1189B7FD000B00B1 /* libbreseq.a */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		421ACF351170DF3F00C2EB85 /* etc */ = {
+			isa = PBXGroup;
+			children = (
+				421ACF361170DF3F00C2EB85 /* debug.xcconfig */,
+			);
+			path = etc;
+			sourceTree = "<group>";
+		};
+		421ACF5F1170E06300C2EB85 /* lib */ = {
+			isa = PBXGroup;
+			children = (
+				421ACFAC1170F05500C2EB85 /* libz.a */,
+				421ACF7D1170E5CA00C2EB85 /* libboost_program_options-mt.a */,
+				421ACF571170E00A00C2EB85 /* libbam.a */,
+			);
+			name = lib;
+			sourceTree = "<group>";
+		};
+		421ACF9F1170EC3200C2EB85 /* include */ = {
+			isa = PBXGroup;
+			children = (
+				421ACFA01170EC3200C2EB85 /* error_count.h */,
+			);
+			path = include;
+			sourceTree = "<group>";
+		};
+		42BA69011189B7D1000B00B1 /* libbreseq */ = {
+			isa = PBXGroup;
+			children = (
+				42BA69021189B7D1000B00B1 /* include */,
+				42BA69061189B7D1000B00B1 /* src */,
+			);
+			path = libbreseq;
+			sourceTree = "<group>";
+		};
+		42BA69021189B7D1000B00B1 /* include */ = {
+			isa = PBXGroup;
+			children = (
+				42BA69031189B7D1000B00B1 /* breseq */,
+			);
+			path = include;
+			sourceTree = "<group>";
+		};
+		42BA69031189B7D1000B00B1 /* breseq */ = {
+			isa = PBXGroup;
+			children = (
+				42BA69041189B7D1000B00B1 /* common.h */,
+				42BA69051189B7D1000B00B1 /* pileup.h */,
+			);
+			path = breseq;
+			sourceTree = "<group>";
+		};
+		42BA69061189B7D1000B00B1 /* src */ = {
+			isa = PBXGroup;
+			children = (
+				42BA69071189B7D1000B00B1 /* pileup.cpp */,
+			);
+			path = src;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXHeadersBuildPhase section */
+		42BA69081189B7FD000B00B1 /* Headers */ = {
+			isa = PBXHeadersBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXHeadersBuildPhase section */
+
+/* Begin PBXLegacyTarget section */
+		421ACF201170DC4400C2EB85 /* samtools */ = {
+			isa = PBXLegacyTarget;
+			buildArgumentsString = "$(ACTION)";
+			buildConfigurationList = 421ACF251170DC6C00C2EB85 /* Build configuration list for PBXLegacyTarget "samtools" */;
+			buildPhases = (
+			);
+			buildToolPath = /usr/bin/make;
+			buildWorkingDirectory = "$(PROJECT_DIR)/samtools-0.1.7a";
+			dependencies = (
+			);
+			name = samtools;
+			passBuildSettingsInEnvironment = 1;
+			productName = samtools;
+		};
+/* End PBXLegacyTarget section */
+
+/* Begin PBXNativeTarget section */
+		421ACF2E1170DF1800C2EB85 /* error_count */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 421ACF341170DF1800C2EB85 /* Build configuration list for PBXNativeTarget "error_count" */;
+			buildPhases = (
+				421ACF2C1170DF1800C2EB85 /* Sources */,
+				421ACF2D1170DF1800C2EB85 /* Frameworks */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				421ACF611170E07C00C2EB85 /* PBXTargetDependency */,
+				42BA691C1189B877000B00B1 /* PBXTargetDependency */,
+			);
+			name = error_count;
+			productName = error_count;
+			productReference = 421ACF2F1170DF1800C2EB85 /* error_count */;
+			productType = "com.apple.product-type.tool";
+		};
+		42BA690B1189B7FD000B00B1 /* breseq */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 42BA69191189B83D000B00B1 /* Build configuration list for PBXNativeTarget "breseq" */;
+			buildPhases = (
+				42BA69081189B7FD000B00B1 /* Headers */,
+				42BA69091189B7FD000B00B1 /* Sources */,
+				42BA690A1189B7FD000B00B1 /* Frameworks */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = breseq;
+			productName = breseq;
+			productReference = 42BA690C1189B7FD000B00B1 /* libbreseq.a */;
+			productType = "com.apple.product-type.library.static";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		421ACEB71170DB9600C2EB85 /* Project object */ = {
+			isa = PBXProject;
+			buildConfigurationList = 421ACEBA1170DB9600C2EB85 /* Build configuration list for PBXProject "breseq" */;
+			compatibilityVersion = "Xcode 2.4";
+			hasScannedForEncodings = 0;
+			mainGroup = 421ACEB51170DB9600C2EB85;
+			productRefGroup = 421ACF301170DF1800C2EB85 /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				421ACF201170DC4400C2EB85 /* samtools */,
+				421ACF2E1170DF1800C2EB85 /* error_count */,
+				42BA690B1189B7FD000B00B1 /* breseq */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXSourcesBuildPhase section */
+		421ACF2C1170DF1800C2EB85 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				421ACF4A1170DFC300C2EB85 /* main.cpp in Sources */,
+				421ACFA31170ED4B00C2EB85 /* error_count.cpp in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		42BA69091189B7FD000B00B1 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				42BA690F1189B819000B00B1 /* pileup.cpp in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		421ACF611170E07C00C2EB85 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 421ACF201170DC4400C2EB85 /* samtools */;
+			targetProxy = 421ACF601170E07C00C2EB85 /* PBXContainerItemProxy */;
+		};
+		42BA691C1189B877000B00B1 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 42BA690B1189B7FD000B00B1 /* breseq */;
+			targetProxy = 42BA691B1189B877000B00B1 /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
+
+/* Begin XCBuildConfiguration section */
+		421ACEB81170DB9600C2EB85 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				COPY_PHASE_STRIP = NO;
+			};
+			name = Debug;
+		};
+		421ACEB91170DB9600C2EB85 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				COPY_PHASE_STRIP = YES;
+			};
+			name = Release;
+		};
+		421ACF211170DC4400C2EB85 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				COPY_PHASE_STRIP = NO;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				PRODUCT_NAME = samtools;
+			};
+			name = Debug;
+		};
+		421ACF221170DC4400C2EB85 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				COPY_PHASE_STRIP = YES;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				GCC_ENABLE_FIX_AND_CONTINUE = NO;
+				PRODUCT_NAME = samtools;
+				ZERO_LINK = NO;
+			};
+			name = Release;
+		};
+		421ACF321170DF1800C2EB85 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = 421ACF361170DF3F00C2EB85 /* debug.xcconfig */;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ARCHS = "$(NATIVE_ARCH_ACTUAL)";
+				COPY_PHASE_STRIP = NO;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_ENABLE_FIX_AND_CONTINUE = YES;
+				GCC_MODEL_TUNING = G5;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				INSTALL_PATH = /usr/local/bin;
+				LIBRARY_SEARCH_PATHS = (
+					"$(inherited)",
+					"$(LIBRARY_SEARCH_PATHS_QUOTED_FOR_TARGET_1)",
+					/opt/local/lib,
+				);
+				LIBRARY_SEARCH_PATHS_QUOTED_FOR_TARGET_1 = "\"$(SRCROOT)/samtools-0.1.7a\"";
+				PREBINDING = NO;
+				PRODUCT_NAME = error_count;
+				USER_HEADER_SEARCH_PATHS = "$(PROJECT_DIR)/error_count/include";
+			};
+			name = Debug;
+		};
+		421ACF331170DF1800C2EB85 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ARCHS = "$(NATIVE_ARCH_ACTUAL)";
+				COPY_PHASE_STRIP = YES;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				GCC_ENABLE_FIX_AND_CONTINUE = NO;
+				GCC_MODEL_TUNING = G5;
+				INSTALL_PATH = /usr/local/bin;
+				LIBRARY_SEARCH_PATHS = (
+					"$(inherited)",
+					"$(LIBRARY_SEARCH_PATHS_QUOTED_FOR_TARGET_1)",
+					/opt/local/lib,
+				);
+				LIBRARY_SEARCH_PATHS_QUOTED_FOR_TARGET_1 = "\"$(SRCROOT)/samtools-0.1.7a\"";
+				PREBINDING = NO;
+				PRODUCT_NAME = error_count;
+				ZERO_LINK = NO;
+			};
+			name = Release;
+		};
+		42BA690D1189B7FE000B00B1 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = 421ACF361170DF3F00C2EB85 /* debug.xcconfig */;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ARCHS = "$(NATIVE_ARCH_ACTUAL)";
+				COPY_PHASE_STRIP = NO;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_ENABLE_FIX_AND_CONTINUE = YES;
+				GCC_MODEL_TUNING = G5;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				INSTALL_PATH = /usr/local/lib;
+				ONLY_ACTIVE_ARCH = NO;
+				PREBINDING = NO;
+				PRODUCT_NAME = breseq;
+			};
+			name = Debug;
+		};
+		42BA690E1189B7FE000B00B1 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ARCHS = "$(NATIVE_ARCH_ACTUAL)";
+				COPY_PHASE_STRIP = YES;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				GCC_ENABLE_FIX_AND_CONTINUE = NO;
+				GCC_MODEL_TUNING = G5;
+				INSTALL_PATH = /usr/local/lib;
+				PREBINDING = NO;
+				PRODUCT_NAME = breseq;
+				ZERO_LINK = NO;
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		421ACEBA1170DB9600C2EB85 /* Build configuration list for PBXProject "breseq" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				421ACEB81170DB9600C2EB85 /* Debug */,
+				421ACEB91170DB9600C2EB85 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		421ACF251170DC6C00C2EB85 /* Build configuration list for PBXLegacyTarget "samtools" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				421ACF211170DC4400C2EB85 /* Debug */,
+				421ACF221170DC4400C2EB85 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		421ACF341170DF1800C2EB85 /* Build configuration list for PBXNativeTarget "error_count" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				421ACF321170DF1800C2EB85 /* Debug */,
+				421ACF331170DF1800C2EB85 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		42BA69191189B83D000B00B1 /* Build configuration list for PBXNativeTarget "breseq" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				42BA690D1189B7FE000B00B1 /* Debug */,
+				42BA690E1189B7FE000B00B1 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+/* End XCConfigurationList section */
+	};
+	rootObject = 421ACEB71170DB9600C2EB85 /* Project object */;
+}

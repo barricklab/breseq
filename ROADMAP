@@ -1,0 +1,26 @@
+breseq Development Roadmap
+
+COMPLETED
+  * C++ error_count
+  * Genomic Diff files now used as intermediates
+ 
+MAJOR GOALS
+
+Rewrite graph_coverage.pl to use BAM/FASTA files as input.
+
+C++: predict_mutations
+replaces code in MutationIdentification.pm
+Input BAM and reference FAI. Output genomic diff of within-read mutations, deletions. 
+
+C++: predict_cnv
+new code that uses a fit background model (overdispersed Poisson) with positional probability offset for many genomes to predict CNV in window of new genome.
+
+C++: candidate_junctions
+replaces code in CandidateJunctions.pm
+Input SAM to reference. Output FASTA of candidate junctions.
+
+C++: resolve_alignments
+Replaces code in AlignmentCorrection.pm
+Input SAM to reference, SAM to candidate junctions, FASTQ files, and optionally -- repeat coordinates (so that junctions can be pushed to the end of IS).
+Output trimmed reads, junction_predictions, orphan read FASTQ.
+
