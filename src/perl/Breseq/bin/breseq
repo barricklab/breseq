@@ -689,7 +689,7 @@ if (!-e $error_counts_done_file_name)
 }
 else 
 {
-	print STDERR "Tabulating error counts complete.\n";
+	print STDERR "Tabulating error counts already complete.\n";
 }
 
 
@@ -714,7 +714,7 @@ if (!-e $error_rates_done_file_name)
 }
 else 
 {
-	print STDERR "Calibrating error model complete.\n";
+	print STDERR "Calibrating error model already complete.\n";
 }
 $summary->{unique_coverage} = Storable::retrieve($error_rates_summary_file_name);
 die "Can't retrieve data from file $error_rates_summary_file_name!\n" if (!$summary->{unique_coverage});
@@ -819,4 +819,8 @@ if (!-e $output_done_file_name)
 	my $output_done_file_name = $settings->file_name('output_done_file_name');	
 	open DONE, ">$output_done_file_name";
 	close DONE;
+}
+else
+{
+	print STDERR "Output already complete.\n";
 }

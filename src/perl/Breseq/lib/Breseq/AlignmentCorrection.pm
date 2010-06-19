@@ -1039,8 +1039,10 @@ sub _test_junction
 	### If we passed all the tests, or we were only testing degenerate junctions
 	### add degenerate matches and make them unavailable for other junctions	
 	### degenerate matches is a hash of junction_ids of read_names
-	if (!$failed) # || !scalar (@unique_matches == 0))
-	{
+
+## TESTING: If we delete only when not failing, then we end up adding them twice to junction file...
+##	if (!$failed) # || !scalar (@unique_matches == 0))
+##	{
 		if (defined $degenerate_matches_ref->{$key})
 		{
 			foreach my $read_name (keys %{$degenerate_matches_ref->{$key}})
@@ -1067,7 +1069,7 @@ sub _test_junction
 				push @{$matched_junction_ref->{$key}}, $degenerate_match;
 			}
 		}
-	}	
+#	}	
 	
 	## Write out the matches to the proper SAM file(s) depending on whether the junction succeeded or failed
 	foreach my $junction_read (@{$matched_junction_ref->{$key}})

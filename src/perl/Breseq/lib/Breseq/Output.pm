@@ -197,20 +197,19 @@ sub html_index
 	}
 	
 	print HTML end_table();		
+
+	###
+	## Mutation predictions
+	###
 	
 	my @muts = $gd->list('SNP', 'INS', 'DEL', 'SUB', 'MOB');
 	my $relative_path = $settings->file_name('local_evidence_path');
 	$relative_path .= "/" if ($relative_path);
 	print HTML p . html_mutation_table_string($gd, \@muts, $relative_path, 1 );
-	
-	my @ra = $gd->filter_used_as_evidence($gd->list('RA'));	
-	## don't print ones that overlap predicted deletions or were marked to not show
-	@ra = grep { !$_->{deleted} && !$_->{no_show} } @ra;
-	
-	if (scalar @ra > 0)
-	{
-		print HTML p . html_read_alignment_table_string(\@ra, $relative_path, "Rejected read alignment evidence...");
-	}
+
+	###
+	## Unassigned evidence
+	###
 	
 	my @mc = $gd->filter_used_as_evidence($gd->list('MC'));
 	if (scalar @mc > 0)
@@ -225,6 +224,19 @@ sub html_index
 	if (scalar @jcu > 0)
 	{
 		print HTML p . html_new_junction_table_string(\@jcu, $relative_path, "Unassigned new junction evidence...");	
+	}
+	
+	###
+	## Rejected evidence
+	###
+	
+	my @ra = $gd->filter_used_as_evidence($gd->list('RA'));	
+	## don't print ones that overlap predicted deletions or were marked to not show
+	@ra = grep { !$_->{deleted} && !$_->{no_show} } @ra;
+	
+	if (scalar @ra > 0)
+	{
+		print HTML p . html_read_alignment_table_string(\@ra, $relative_path, "Rejected read alignment evidence...");
 	}
 	
 	my @jcr = grep { $_->{reject} } @jc;
@@ -532,7 +544,7 @@ sub html_mutation_table_string
 				$s .=  "+$mut->{gap_left} :: " if ($mut->{gap_left} > 0);
 				$s .=  "&Delta;" . abs($mut->{gap_left}) . " :: " if ($mut->{gap_left} < 0);
 				$s .= "$mut->{repeat_name} (";
-				$s .= (($mut->{strand}==+1) ? '+' : (($mut->{strand}==-1) ? '&minus;' : '0'));
+				$s .= (($mut->{strand}==+1) ? '+' : (($mut->{strand}==-1) ? '&minus;' : '?'));
 				$s .= ")";
 				$s .=  " :: +$mut->{gap_right}" if ($mut->{gap_right} > 0);
 				$s .=  " :: &Delta;" . abs($mut->{gap_right}) if ($mut->{gap_right} < 0);
@@ -676,7 +688,7 @@ sub html_missing_coverage_table_string
 	
 	my $link = (defined $list_ref->[0]) && (defined $list_ref->[0]->{_side_1_evidence_file_name}) && (defined $list_ref->[0]->{_side_2_evidence_file_name});
 
-	my $total_cols = $link ? 10 : 7;
+	my $total_cols = $link ? 11 : 8;
 	$output_str.= Tr(th({-colspan => $total_cols, -align => "left", -class=>"missing_coverage_header_row"}, $title));
 
 	$output_str.= start_Tr();
@@ -695,12 +707,13 @@ sub html_missing_coverage_table_string
 			"seq&nbsp;id",
 			"start", 
 			"end", 
-			"left&nbsp;outside&nbsp;cov",
-			"left&nbsp;inside&nbsp;cov",
-			"right&nbsp;inside&nbsp;cov",
-			"right&nbsp;outside&nbsp;cov",
+			"size",
+			"&larr;cov",
+			"cov&rarr;",
+			"gene", 
 		]
-	);		
+	);	
+	$output_str.= th({-width => "100%"}, "description");
 	$output_str.= end_Tr;
 	
 	foreach my $c (@$list_ref)
@@ -727,14 +740,19 @@ sub html_missing_coverage_table_string
 		$start_str .= "–" . ($c->{start} + $c->{start_range}) if ($c->{start_range} > 0);
 		my $end_str = $c->{end};
 		$end_str .= "–" . ($c->{end} - $c->{end_range}) if ($c->{end_range} > 0);
-		
+
+		my $size_str = ($c->{end} - $c->{start} + 1);
+		$size_str = ($c->{end} - $c->{start} + 1 - $c->{end_range} - $c->{start_range}) . "–" . $size_str if (($c->{end_range} > 0) || ($c->{start_range} > 0));
+
+				
 		$output_str.= td(nonbreaking($c->{seq_id})); 
 		$output_str.= td({-align=>"right"}, nonbreaking($start_str)); 
-		$output_str.= td({-align=>"right"}, nonbreaking($end_str)); 		
-		$output_str.= td({-align=>"right"}, $c->{left_outside_cov}); 
-		$output_str.= td({-align=>"right"}, $c->{left_inside_cov}); 
-		$output_str.= td({-align=>"right"}, $c->{right_inside_cov}); 
-		$output_str.= td({-align=>"right"}, $c->{right_outside_cov}); 			
+		$output_str.= td({-align=>"right"}, nonbreaking($end_str)); 	
+		$output_str.= td({-align=>"right"}, nonbreaking($size_str)); 		
+		$output_str.= td({-align=>"center"}, nonbreaking("$c->{left_outside_cov} \[$c->{left_inside_cov}\]")); 
+		$output_str.= td({-align=>"center"}, nonbreaking("\[$c->{right_inside_cov}\] $c->{right_outside_cov}")); 
+		$output_str.= td({align=>"center"}, i(nonbreaking($c->{gene_name})));				
+		$output_str.= td({align=>"left"}, $c->{gene_product});		
 		$output_str.= end_Tr;
 		
 		if ($show_reject_reason)
