@@ -329,8 +329,10 @@ sub predict
 		my $redundant_deletion_side = (defined $r1) ? -1 : +1; 
 		my $needed_coord = (defined $r1) ?  $mut->{position}+$mut->{size} : $mut->{position} - 1;
 				
-		print Dumper($mut);
-		print Dumper($r);
+				
+		my $verbose = 0;		
+		print Dumper($mut) if ($verbose);
+		print Dumper($r) if ($verbose);
 		
 
 		JUNCTION: for (my $i=0; $i < scalar @jc; $i++)
@@ -340,31 +342,31 @@ sub predict
 
 			next JUNCTION if (!defined $j->{_is_interval});
 			
-			print Dumper($j);
+			print Dumper($j) if ($verbose);
 			
-			print "Check 1: " . $j->{"$j->{_unique_interval}_seq_id"} . " ne $mut->{seq_id}\n";
+			print "Check 1: " . $j->{"$j->{_unique_interval}_seq_id"} . " ne $mut->{seq_id}\n" if ($verbose);
 			next JUNCTION if ($j->{"$j->{_unique_interval}_seq_id"} ne $mut->{seq_id});
-			print "Pass 1\n";
+			print "Pass 1\n" if ($verbose);
 
 			#check type of IS
-			print "Check 2: " . $r->{name} . " ne " .  $j->{"_$j->{_is_interval}_is"}->{name} . "\n";				
+			print "Check 2: " . $r->{name} . " ne " .  $j->{"_$j->{_is_interval}_is"}->{name} . "\n" if ($verbose);			
 			next JUNCTION if ( $r->{name} ne $j->{"_$j->{_is_interval}_is"}->{name} );
-			print "Pass 2\n";
+			print "Pass 2\n" if ($verbose);
 			
 			#check that IS is on the right strand
-			print "Check 3: " . $redundant_deletion_side . " * " . $r->{strand} . " != " .  $j->{"$j->{_unique_interval}\_strand"}  . " * " . $j->{"_$j->{_is_interval}_is"}->{strand} . " * " . $j->{"_$j->{_is_interval}_read_side"}  . "\n";								
+			print "Check 3: " . $redundant_deletion_side . " * " . $r->{strand} . " != " .  $j->{"$j->{_unique_interval}\_strand"}  . " * " . $j->{"_$j->{_is_interval}_is"}->{strand} . " * " . $j->{"_$j->{_is_interval}_read_side"}  . "\n" if ($verbose);							
 			next JUNCTION if ( $redundant_deletion_side * $r->{strand} !=  $j->{"$j->{_unique_interval}\_strand"} * $j->{"_$j->{_is_interval}_is"}->{strand} * $j->{"_$j->{_is_interval}_read_side"} );
-			print "Pass 3\n";
+			print "Pass 3\n" if ($verbose);
 
 			#check that the unique side matches coordinate
-			print "Check 4: " . $j->{"$j->{_unique_interval}\_position"} . " != " .  $needed_coord . "\n";				
+			print "Check 4: " . $j->{"$j->{_unique_interval}\_position"} . " != " .  $needed_coord . "\n" if ($verbose);			
 			next JUNCTION if ( $j->{"$j->{_unique_interval}\_position"} != $needed_coord );
-			print "Pass 4\n";
+			print "Pass 4\n" if ($verbose);
 
 			#check that the unique side is on the right strand	
-			print "Check 5: " . $redundant_deletion_side . " != " .  $j->{"$j->{_unique_interval}\_strand"} . " * " . $j->{"_$j->{_is_interval}_read_side"} . "\n";				
+			print "Check 5: " . $redundant_deletion_side . " != " .  $j->{"$j->{_unique_interval}\_strand"} . " * " . $j->{"_$j->{_is_interval}_read_side"} . "\n" if ($verbose);				
 			next JUNCTION if ( $redundant_deletion_side != $j->{"$j->{_unique_interval}\_strand"} * $j->{"_$j->{_is_interval}_read_side"} );
-			print "Pass 5\n";
+			print "Pass 5\n" if ($verbose);
 
 			## need to adjust the non-unique coords
 			if ($redundant_deletion_side == -1)
