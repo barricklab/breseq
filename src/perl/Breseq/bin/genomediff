@@ -199,8 +199,9 @@ sub do_annotate
 	
 	my $settings = Breseq::Settings->new_annotate;
 	
-	## load information about reference sequences from GenBank files
-	my $ref_seq_info = Breseq::ReferenceSequence::load_ref_seq_info($settings);
+	my @genbank_file_names = $settings->file_name('reference_genbank_file_names'); 
+	my @junction_only_genbank_file_names = $settings->file_name('junction_only_reference_genbank_file_names'); 
+	my $ref_seq_info = Breseq::ReferenceSequence::load_ref_seq_info(\@genbank_file_names, \@junction_only_genbank_file_names);
 	
 	my $gd = Breseq::GenomeDiff->new();
 	foreach my $gd_file (@{$settings->{input_genome_diffs}})

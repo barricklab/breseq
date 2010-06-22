@@ -54,8 +54,7 @@ use Breseq::CoverageOutput;
 use Getopt::Long;
 use Pod::Usage;
 my ($help, $man, $verbose);
-my ($input_file, $start, $end);
-
+my $output_file;
 GetOptions(
 	'help|?' => \$help, 'man' => \$man,
 	'output|o=s' => \$output_file,
