@@ -88,8 +88,12 @@ if ("\U$command" eq 'FILTER')
 	do_filter();
 }
 elsif ("\U$command" eq 'ANNOTATE')
-{
+{ 
 	do_annotate();
+}
+elsif ("\U$command" eq 'COMPARE')
+{
+	do_compare();
 }
 elsif ("\U$command" eq 'MUTATE')
 {
@@ -292,6 +296,97 @@ sub do_annotate
 	Breseq::Output::html_index($index_html_file_name, $settings, $summary, $ref_seq_info, $gd);	
 }
 
+sub do_compare
+{
+	use Breseq::ReferenceSequence;
+	use Breseq::Output;
+	
+	my ($help, $man);
+	my $output = "compare.html";
+	my @reference_genbank_file_names;
+	GetOptions(
+		'help|?' => \$help, 'man' => \$man,
+	## Options for input and output files
+		'output|o=s' => \$output,	
+		'reference-sequence|r=s' => \@reference_genbank_file_names,
+	) or pod2usage(2);
+
+	pod2usage(1) if $help;
+	pod2usage(-exitstatus => 0, -verbose => 2) if $man;
+	pod2usage(1) if (scalar @ARGV == 0);
+	
+	my @gd_file_name_list = @ARGV;	
+				
+	## load information about reference sequences from GenBank files
+	my $ref_seq_info = Breseq::ReferenceSequence::load_ref_seq_info(\@reference_genbank_file_names);
+
+	my @gd_name_list;
+	my @gd_list; 
+	my @mut_lists;
+	foreach my $gd_file_name (@gd_file_name_list)
+	{
+		print "$gd_file_name\n";
+		
+		my $gd_name = $gd_file_name;
+		$gd_name =~ s/^.+\///;		
+		$gd_name =~ s/\.[^.]+$//;		
+		push @gd_name_list, $gd_name;
+		
+		my $gd = Breseq::GenomeDiff->new(-in=>$gd_file_name);
+		Breseq::ReferenceSequence::annotate_mutations($ref_seq_info, $gd, 1);
+		
+		my @mut_list = $gd->mutation_list(1);
+		push @mut_lists, \@mut_list;
+	}	
+	
+	my $composite_gd = Breseq::GenomeDiff->new();
+	my $next_mut;
+	while (1)
+	{
+		## find the next mutation by position
+		foreach my $mut_list (@mut_lists)
+		{
+			next if (scalar (@$mut_list) == 0);
+			my $test_mut = $mut_list->[0];
+			$next_mut = $test_mut if (!defined $next_mut || (Breseq::GenomeDiff::cmp_mutations($next_mut, $test_mut) > 0 ) );
+		}
+		last if (!defined $next_mut);
+
+		#compile frequencies across all files for this mutation
+		for (my $i=0; $i<scalar @mut_lists; $i++)
+		{
+			my $mut_list = $mut_lists[$i];
+			my $gd_name = $gd_name_list[$i];
+			my $test_mut = $mut_list->[0];
+			
+			my $this_freq = 0;
+			
+			if (defined $test_mut && Breseq::GenomeDiff::equivalent_mutations($test_mut, $next_mut))
+			{				
+				$this_freq = 'ND';
+				$this_freq = $test_mut->{frequency} if (defined $test_mut->{frequency});
+				
+				shift @$mut_list;
+			}
+			$next_mut->{"frequency_$gd_name"} = $this_freq;	
+		}
+		
+		delete $next_mut->{id};			
+		delete $next_mut->{frequency};
+				
+		$composite_gd->add($next_mut);
+		undef $next_mut;
+	}
+
+	$composite_gd->write("test");
+
+	##
+	# Annotate mutations
+	##
+	my $title = "Mutation Comparison";
+	Breseq::Output::html_compare($output, $title, $composite_gd, \@gd_name_list);
+}
+
 sub do_mutate
 {
 	my ($help, $man, $verbose);
@@ -312,7 +407,7 @@ sub do_mutate
 
 	our $gd = Breseq::GenomeDiff->new(-FILE_NAME => $input_genome_diff);
 	
-	my $ref_seq_info = Breseq::ReferenceSequence::load_ref_seq_info_2(\@input_genbank_files);
+	my $ref_seq_info = Breseq::ReferenceSequence::load_ref_seq_info(\@input_genbank_files);
 
 	my $new_ref_strings;
 	foreach my $seq_id (keys %{$ref_seq_info->{ref_strings}})

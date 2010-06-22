@@ -518,6 +518,42 @@ sub junction_name_split
 	return $item;
 }
 
+sub check_region
+{
+	my ($region, $bam) = @_;
+	
+	my ($seq_id, $start, $end);
+	my ($insert_start, $insert_end) = (0, 0);
+	#syntax that includes insert counts
+	# e.g. NC_001416:4566.1-4566.1
+	if ($region =~ m/(.+)\:(\d+)\.(\d+)-(\d+)\.(\d+)/)
+	{	
+		($seq_id, $start, $insert_start, $end, $insert_end) = ($1, $2, $3, $4, $5);
+	}
+	elsif ($region =~ m/(.+)\:(\d+)(\.\.|\-)(\d+)/)
+	{
+		($seq_id, $start, $end) = ($1, $2, $4);
+	}
+	else
+	{
+		($seq_id, $start, $end) = split /:|\.\.|\-/, $region;
+	}
+	my $reference_length = $bam->length($seq_id);
+	
+	($start, $end) = (1, $reference_length) if (!defined $start && !defined $end);
+	$end = $start if (!defined $end);
+	
+	##check the start and end for sanity....	
+	$start = 1 if ($start < 1); 
+	$end = $reference_length if ($end > $reference_length); 
+	
+	die "Problem parsing region: \'$region\'\n" if ($start > $end);
+
+	## return cleaned up region
+	$region = "$seq_id:$start-$end";	
+	return $region;
+}
+
 
 return 1;
 
