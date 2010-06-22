@@ -329,7 +329,6 @@ sub predict
 		my $redundant_deletion_side = (defined $r1) ? -1 : +1; 
 		my $needed_coord = (defined $r1) ?  $mut->{position}+$mut->{size} : $mut->{position} - 1;
 				
-				
 		my $verbose = 0;		
 		print Dumper($mut) if ($verbose);
 		print Dumper($r) if ($verbose);
@@ -354,8 +353,8 @@ sub predict
 			print "Pass 2\n" if ($verbose);
 			
 			#check that IS is on the right strand
-			print "Check 3: " . $redundant_deletion_side . " * " . $r->{strand} . " != " .  $j->{"$j->{_unique_interval}\_strand"}  . " * " . $j->{"_$j->{_is_interval}_is"}->{strand} . " * " . $j->{"_$j->{_is_interval}_read_side"}  . "\n" if ($verbose);							
-			next JUNCTION if ( $redundant_deletion_side * $r->{strand} !=  $j->{"$j->{_unique_interval}\_strand"} * $j->{"_$j->{_is_interval}_is"}->{strand} * $j->{"_$j->{_is_interval}_read_side"} );
+			print "Check 3: " . $redundant_deletion_side . " * " . $r->{strand} . " != " .  $j->{"$j->{_is_interval}\_strand"}  . " * " . $j->{"_$j->{_is_interval}_is"}->{strand} . "\n" if ($verbose);							
+			next JUNCTION if ( $redundant_deletion_side * $r->{strand} !=  $j->{"$j->{_is_interval}\_strand"} * $j->{"_$j->{_is_interval}_is"}->{strand} );
 			print "Pass 3\n" if ($verbose);
 			
 			#check that the unique side matches coordinate
@@ -365,7 +364,7 @@ sub predict
 
 			#check that the unique side is on the right strand	
 			print "Check 5: " . $redundant_deletion_side . " != " .  $j->{"$j->{_unique_interval}\_strand"} . " * " . $j->{"_$j->{_is_interval}_read_side"} . "\n" if ($verbose);				
-			next JUNCTION if ( $redundant_deletion_side != $j->{"$j->{_unique_interval}\_strand"} * $j->{"_$j->{_is_interval}_read_side"} );
+			next JUNCTION if ( -$redundant_deletion_side != $j->{"$j->{_unique_interval}\_strand"} * $j->{"_$j->{_unique_interval}_read_side"} );
 			print "Pass 5\n" if ($verbose);
 
 			## need to adjust the non-unique coords
@@ -382,6 +381,7 @@ sub predict
 			}
 
 			## OK, we're good!
+			$mut->{mediated} = $r->{name};
 			push @{$mut->{evidence}}, $j->{id};
 			splice @jc, $i, 1; 
 			$i--;

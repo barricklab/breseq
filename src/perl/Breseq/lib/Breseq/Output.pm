@@ -419,7 +419,7 @@ sub html_mutation_table_string
 		$output_str.= Tr(th({-colspan => $total_cols, -align => "left", -class=>"mutation_header_row"}, $header_text));
 		
 		$output_str.= start_Tr();
-		$output_str.= th({-width => "100%"}, "evidence") if (!defined $gd_name_list_ref); 
+		$output_str.= th("evidence") if (!defined $gd_name_list_ref); 
 		$output_str.= th(
 			[
 				"seq&nbsp;id",
@@ -567,7 +567,11 @@ sub html_mutation_table_string
 				$output_str.= td({align=>"right"}, commify($mut->{position}));
 				$output_str.= td({align=>"center"}, nonbreaking("&Delta;$mut->{size} nt"));
 				$output_str.= freq_cols(@freq_list);
-				$output_str.= td({align=>"center"}, nonbreaking($mut->{gene_position}));
+				my $annotation_str = '';
+				$annotation_str = "between $mut->{between}" if ($mut->{between});
+				$annotation_str = "$mut->{mediated}-mediated" if ($mut->{mediated});
+				$annotation_str = $mut->{gene_position} if (!$annotation_str); 
+				$output_str.= td({align=>"center"}, nonbreaking($annotation_str));
 				$output_str.= td({align=>"center"}, i(nonbreaking($mut->{gene_name})));				
 				$output_str.= td({align=>"left"}, $mut->{gene_product});
 				$output_str.= end_Tr;

@@ -131,7 +131,8 @@ sub load_ref_seq_info
 					my $r;
 					$r->{name} = get_tag($Feature, "mobile_element");
 					$r->{name} =~ s/insertion sequence:// if ($r->{name});
-					$r->{name} =~ s/IS\d+(\D+)// if ($r->{name}); #strip additional words
+					$r->{name} =~ s/(IS\d+)\D+/$1/ if ($r->{name}); #strip additional words
+					#print get_tag($Feature, "mobile_element") . " $r->{name}\n";
 
 					## don't add unnamed ones to list...
 					#$r->{name} = "unknown_repeat" if (!$r->{name});

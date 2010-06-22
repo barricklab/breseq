@@ -91,8 +91,6 @@ sub plot_coverage
 		$downsample = 1 if ($downsample < 1);
 	}
 	
-	print "$size $downsample\n";
-
 	my $tmp_coverage = "coverage.tab";
 	$self->tabulate_coverage($bam, $tmp_coverage, $seq_id, $start, $end, $downsample);
 	
