@@ -206,8 +206,15 @@ if (!-e $sequence_conversion_done_file_name)
 	# }
 		
 	## convert reference sequence to fasta and store other information so it can be reloaded quickly w/o bioperl
-	$ref_seq_info = Breseq::ReferenceSequence::load_ref_seq_info($settings, $summary, 1);
+	my @genbank_file_names = $settings->file_name('reference_genbank_file_names'); 
+	my @junction_only_genbank_file_names = $settings->file_name('junction_only_reference_genbank_file_names'); 
+	my $reference_fasta_file_name = $settings->file_name('reference_fasta_file_name');
+	$ref_seq_info = Breseq::ReferenceSequence::load_ref_seq_info(\@genbank_file_names, \@junction_only_genbank_file_names, $summary, $reference_fasta_file_name);
 	Storable::store($ref_seq_info, $ref_seq_info_file_name) or die "Can't store data in file $ref_seq_info_file_name!\n";
+
+	## create SAM faidx
+	my $samtools = $settings->ctool('samtools');
+	Breseq::Shared::system("$samtools faidx $reference_fasta_file_name", 1);
 	
 	## store summary information
 	Storable::store($summary->{sequence_conversion}, $sequence_converson_summary_file_name) or die "Can't store data in file $sequence_converson_summary_file_name!\n";
@@ -584,93 +591,6 @@ sub tabulate_pairs_in_tam {}
 	}
 }
 
-
-=comment
-
-
-sub tabulate_pairs {}
-
-{
-	my $reference_bam_file_name = $settings->file_name('reference_bam_file_name');
-
-	my $index = Bio::DB::Bam->index_open($reference_bam_file_name);
-	my $bam = Bio::DB::Bam->open($reference_bam_file_name);
-	my $header = $bam->header;
-	my $target_names = $header->target_name;
-	my @rs = $settings->read_structures;
-		
-	my @min_pair_dist;
-	my @max_pair_dist;
-	
-	my $i=0;
-	foreach my $rfi (@{$settings->{read_file_index_to_struct_index}})
-	{
-		$min_pair_dist[$i] = $rs[$rfi]->{min_pair_dist};
-		$max_pair_dist[$i] = $rs[$rfi]->{max_pair_dist};
-		$i++;
-	}
-		
-	my $save;
-	
-	my $on_alignment;
-	
-	my $long_pairs_file_name = $settings->file_name('long_pairs_file_name');
-	open LP, ">$long_pairs_file_name";
-	my $callback = sub {
-	    my $a = shift;
-	    my $start       = $a->start;
-	    my $end         = $a->end;
-	    my $seqid       = $target_names->[$a->tid];
-		
-		$on_alignment++;
-		print "$on_alignment\n" if ($on_alignment % 10000 == 0);
-		
-		if (!$a->munmapped)
-		{
-			my $mate_insert_size = abs($a->isize);
-		#	my $mate_end = $a->mate_end;
-			my $mate_start = $a->mate_start;
-			my $mate_reversed = ($a->mreversed + $a->reversed) % 2;
-	 		my $mreversed = $a->mreversed;
-	 		my $reversed = $a->reversed;
-	
-		    #print $a->qname," aligns to $seqid:$start..$end, $mate_start $mreversed $reversed\n";	
-	
-	
-			my $fastq_file_index = $a->aux_get('X2');
-			#print "$mate_insert_size $min_pair_dist[$fastq_file_index] $max_pair_dist[$fastq_file_index]\n";
-			#if (($mate_insert_size < $min_pair_dist[$fastq_file_index]) || ($mate_insert_size > $max_pair_dist[$fastq_file_index]))
-			
-			if ($mate_insert_size > $max_pair_dist[$fastq_file_index])
-			{
-				$save->{$mate_reversed}->{int($start/100)}->{int($mate_start/100)}++;
-			    #print $a->qname," aligns to $seqid:$start..$end, $mate_start $mate_reversed ($mreversed $reversed) $mate_insert_size\n";	
-			}
-		}
-	};
-	
-	for (my $i=0; $i<$header->n_targets; $i++)
-	{
-		$index->fetch($bam,$i,1,$header->target_len->[$i],$callback);
-	}
-	
-	
-	foreach my $key_reversed (sort {$a <=> $b} keys %$save)
-	{	
-		foreach my $key_1 (sort {$a <=> $b} keys %{$save->{$key_reversed}})
-		{
-			foreach my $key_2 (sort {$a <=> $b} keys %{$save->{$key_reversed}->{$key_1}})
-			{
-				print LP "$key_1\t$key_2\t$key_reversed\t$save->{$key_reversed}->{$key_1}->{$key_2}\n";
-			}
-		}
-	}
-	
-	
-	close LP;
-}
-
-=cut
 
 
 ##

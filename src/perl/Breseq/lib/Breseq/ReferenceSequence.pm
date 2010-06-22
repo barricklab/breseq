@@ -45,7 +45,7 @@ use Data::Dumper;
 sub load_ref_seq_info
 {
 	##summaryand create_fasta are optional
-	my ($settings, $summary, $create_fasta) = @_;
+	my ($genbank_file_names_ref, $junction_only_genbank_file_names_ref, $summary, $reference_fasta_file_name) = @_;
 			
 	print STDERR "Loading reference sequences...\n";
 
@@ -56,8 +56,11 @@ sub load_ref_seq_info
 	my $s;
 
 	# get two pieces of information from $settings
-	my @genbank_file_names = $settings->file_name('reference_genbank_file_names'); 
-	my @junction_only_genbank_file_names = $settings->file_name('junction_only_reference_genbank_file_names'); 
+	my @genbank_file_names = (); 
+	@genbank_file_names = @$genbank_file_names_ref if ($genbank_file_names_ref); 
+	
+	my @junction_only_genbank_file_names = ();
+	@junction_only_genbank_file_names = @$junction_only_genbank_file_names_ref if ($junction_only_genbank_file_names_ref); 
 
 	my %junction_only_hash;
 	foreach my $jo (@junction_only_genbank_file_names)
@@ -67,8 +70,7 @@ sub load_ref_seq_info
 	
 	## optionally create FASTA for writing to...
 	my $fasta_o;
-	my $reference_fasta_file_name = $settings->file_name('reference_fasta_file_name');
-	if ($create_fasta)
+	if ($reference_fasta_file_name)
 	{
 		$fasta_o = Bio::SeqIO->new( -format => "FASTA", -file => ">$reference_fasta_file_name");
 	}	
@@ -106,10 +108,7 @@ sub load_ref_seq_info
 			$ref_seq_info->{seq_order}->{$seq_id} = $i++;
 			
 			## optionally write out FASTA -- AFTER scrubbing sequence
-			if ($create_fasta)
-			{
-				$fasta_o->write_seq($ref_seq);
-			}
+			$fasta_o->write_seq($ref_seq) if ($reference_fasta_file_name);
 			
 			if (!$junction_only)
 			{
@@ -188,111 +187,8 @@ sub load_ref_seq_info
 	#save statistics if requested
 	$summary->{sequence_conversion}->{reference_sequences} = $s if (defined $summary);
 
-	## create SAM faidx
-	my $samtools = $settings->ctool('samtools');
-	Breseq::Shared::system("$samtools faidx $reference_fasta_file_name", 1) if ($create_fasta);
-			
 	return $ref_seq_info;
 }
-
-
-sub load_ref_seq_info_2
-{
-	my ($genbank_file_names_ref) = @_;
-			
-	print STDERR "Loading reference sequences...\n";
-	
-	my $ref_seq_info;	
-	foreach my $genbank_file_name (@$genbank_file_names_ref)
-	{
-		## open this GenBank file
-		my $ref_i = Bio::SeqIO->new( -file => "<$genbank_file_name");
-		print STDERR "  Loading File::$genbank_file_name\n";
-
-		while (my $ref_seq = $ref_i->next_seq)
-		{			
-			my $seq_id = $ref_seq->id;
-			print STDERR "    Sequence::$seq_id loaded.\n";			
-						
-			## it would be nice to get rid of storing the whole genome in memory
-			$ref_seq_info->{bioperl_ref_seqs}->{$seq_id} = $ref_seq;
-
-			##it is much faster to use substr to create the lists for nt comparisons than BioPerl trunc
-			
-			#load the reference sequence, uppercase it, and scrub degenerate bases to N's 
-			$ref_seq_info->{ref_strings}->{$seq_id} = $ref_seq->seq;
-			$ref_seq_info->{ref_strings}->{$seq_id} = uc($ref_seq_info->{ref_strings}->{$seq_id});
-			$ref_seq_info->{ref_strings}->{$seq_id} =~ s/[^ATCG]/N/g;
-			$ref_seq->seq($ref_seq_info->{ref_strings}->{$seq_id});						
-			
-			push @{$ref_seq_info->{seq_ids}}, $seq_id;
-				
-			##load the genbank record
-			my @Feature_List = $ref_seq->get_SeqFeatures();
-			my @gene_list;
-			my @repeat_list;
-			
-			FEATURE: foreach my $Feature ( @Feature_List ) 
-			{ 	
-				if ($Feature->primary_tag eq 'repeat_region')
-				{	
-					my $r;
-					$r->{name} = get_tag($Feature, "mobile_element");
-					$r->{name} =~ s/insertion sequence:// if ($r->{name});
-					
-					## don't add unnamed ones to list...
-					#$r->{name} = "unknown_repeat" if (!$r->{name});
-					next FEATURE if (!$r->{name});
-					
-					$r->{product} = "repeat region";
-					$r->{start} = $Feature->start;
-					$r->{end} = $Feature->end;
-					$r->{strand} = $Feature->strand;
-					push @repeat_list, $r;
-					next FEATURE;
-				}
-				
-				## add additional information to the last 
-				if (   ($Feature->primary_tag eq 'CDS') 
-					|| ($Feature->primary_tag eq 'tRNA') 
-					|| ($Feature->primary_tag eq 'rRNA') )
-
-				{
-					#Add information to last gene
-					my $gene;
-					$gene->{name} = get_tag($Feature, "gene");
-					$gene->{name} = get_tag($Feature, "locus_tag") if (!$gene->{name});
-					$gene->{start} = $Feature->start;
-					$gene->{end} = $Feature->end;
-					$gene->{strand} = $Feature->strand;
-					$gene->{product} = "";
-					$gene->{note} = get_tag($Feature, "note");
-						
-					$gene->{accession} = get_tag($Feature, "protein_id");
-					$gene->{translation} = get_tag($Feature, "translation");
-					$gene->{product} = get_tag($Feature, "product");
-					
-					#set a type for the feature
-					$gene->{type} = $Feature->primary_tag;
-					$gene->{type} = "protein" if ($gene->{type} eq 'CDS');
-					$gene->{pseudogene} = get_tag($Feature, "pseudo");
-					$gene->{type} = "pseudogene" if ($gene->{pseudogene});
-					
-					##assume if there is no translation that we have a pseudogene...
-					$gene->{type} = "pseudogene" if (($Feature->primary_tag eq 'CDS') && (!$gene->{translation}));
-					$gene->{index} = scalar @gene_list;
-					
-					push @gene_list, $gene;		
-				}
-			}
-			
-			$ref_seq_info->{gene_lists}->{$seq_id} = \@gene_list;
-			$ref_seq_info->{repeat_lists}->{$seq_id} = \@repeat_list;	
-		}
-	}			
-	return $ref_seq_info;
-}
-
 
 sub annotate_1_mutation
 {
@@ -346,7 +242,7 @@ sub annotate_1_mutation
 	}
 
 
-	## Mutation is noncoding
+	## Mutation is intergenic
 	if (scalar(@within_genes) + scalar(@between_genes) == 0)
 	{			
 		$mut->{snp_type} = "IG";
@@ -409,7 +305,13 @@ sub annotate_1_mutation
 		my $gene_nt_size = $gene->{end} - $gene->{start} + 1;
 
 		## ...but the gene is a pseudogene or an RNA gene
-		if ( (!$gene->{translation} || $gene->{pseudogene}) )
+		if ($gene->{pseudogene})
+		{			
+			$mut->{snp_type} = "NC";
+			$mut->{gene_position} = "pseudogene ($mut->{gene_position}/$gene_nt_size&nbsp;nt)";
+			return $mut;			
+		}
+		elsif (!$gene->{translation})
 		{
 			$mut->{snp_type} = "NC";
 			$mut->{gene_position} = "noncoding ($mut->{gene_position}/$gene_nt_size&nbsp;nt)";
@@ -467,7 +369,7 @@ sub annotate_1_mutation
 
 sub annotate_mutations
 {
-	my ($ref_seq_info, $gd) = @_;
+	my ($ref_seq_info, $gd, $only_muts) = @_;
 
 	##keep track of other mutations that affect SNPs
 	##because we may double-hit a codon
@@ -482,6 +384,7 @@ sub annotate_mutations
 	
 	MUT: foreach my $mut ($gd->list)
 	{		
+		next MUT if ($only_muts && (length($mut->{type}) != 3));
 		
 		if ($mut->{type} eq 'SNP')
 		{

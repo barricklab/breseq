@@ -100,6 +100,20 @@ our $tag_sort_fields = {
 	'UN' => [3, 'seq_id', 'start'],
 };
 
+our $type_sort_order = {
+	'SNP' => 2,
+	'SUB' => 4,
+	'DEL' => 1,
+	'INS' => 3,
+	'MOB' => 5,	
+	'DUP' => 6,
+	'INV' => 7,
+	'RA' => 8,
+	'MC' => 9,
+	'JC' => 10,
+	'UN' => 11,
+};
+
 
 =head2 new
 
@@ -249,10 +263,33 @@ sub list
 	return undef;
 }
 
+sub by_sort_fields
+{ 			
+	return cmp_mutations($a, $b);
+}
+
+sub cmp_mutations
+{ 		
+	my ($a, $b) = @_;
+		
+	print Dumper($a) if (!defined $a->{SORT_1} || !defined $a->{SORT_2} || !defined $a->{SORT_3} || !defined $a->{type}); 
+	print Dumper($b) if (!defined $b->{SORT_1} || !defined $b->{SORT_2} || !defined $b->{SORT_3} || !defined $b->{type}); 
+
+	return ($a->{SORT_1} <=> $b->{SORT_1}) 
+		|| ($a->{SORT_2} cmp $b->{SORT_2}) 
+		|| ($a->{SORT_3} <=> $b->{SORT_3})
+		|| ($type_sort_order->{$a->{type}} <=> $type_sort_order->{$b->{type}})
+	;
+}
+
 sub mutation_list
 {
-	my ($self) = @_;
-	return grep { length($_->{type}) == 3 } $self->list;		
+	my ($self, $sort) = @_;
+	my @mut_list = grep { length($_->{type}) == 3 } $self->list;
+	
+	@mut_list = sort by_sort_fields @mut_list if ($sort);
+	
+	return 	@mut_list;
 }
 
 sub evidence_list
@@ -412,8 +449,7 @@ sub read
 	## read data
 	while ($l = shift @lines)
 	{
-		my $item = $self->_line_to_item($l);
-		push @{$self->{list}}, $item if ($item);
+		$self->add($self->_line_to_item($l));
 	}
 	close IN;
 }
@@ -443,13 +479,6 @@ sub write
 		$item->{SORT_1} = $tag_sort_fields->{$item->{type}}->[0];
 		$item->{SORT_2} = $item->{$tag_sort_fields->{$item->{type}}->[1]};
 		$item->{SORT_3} = $item->{$tag_sort_fields->{$item->{type}}->[2]};
-	}
-	sub by_sort_fields
-	{ 			
-		print Dumper($a) if (!defined $a->{SORT_1} || !defined $a->{SORT_2} || !defined $a->{SORT_3}); 
-		print Dumper($b) if (!defined $b->{SORT_1} || !defined $b->{SORT_2} || !defined $b->{SORT_3}); 
-
-		return ($a->{SORT_1} <=> $b->{SORT_1}) || ($a->{SORT_2} cmp $b->{SORT_2}) || ($a->{SORT_3} <=> $b->{SORT_3});
 	}
 	
 
@@ -489,6 +518,21 @@ sub exists
 	}
 
 	return 0;
+}
+
+sub equivalent_mutations
+{
+	my ($m1, $m2) = @_;
+
+	return 0 if ($m1->{type} ne $m2->{type});
+	my $spec = $line_specification->{$m1->{type}};
+	foreach my $key (@$spec)
+	{
+	#	print "$key ($m1->{$key} ne $m2->{$key})\n";	
+		return 0 if ($m1->{$key} ne $m2->{$key});
+	}
+		
+	return 1;
 }
 
 ##splice items used as evidence by any mutations out of input list

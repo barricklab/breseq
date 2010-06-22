@@ -249,6 +249,25 @@ sub html_index
 	close HTML;
 }
 
+sub html_compare
+{
+	my ($file_name, $title, $gd, $gd_name_list_ref) = @_;
+
+	open HTML, ">$file_name" or die "Could not open file: $file_name";    
+
+    print HTML start_html(
+			-title => $title, 
+			-head  => style({type => 'text/css'}, $header_style_string),
+	);
+	
+	my @muts = $gd->mutation_list;
+	
+	print HTML html_mutation_table_string($gd, \@muts, undef, undef, $gd_name_list_ref);
+
+	print HTML end_html;
+	close HTML;
+}
+
 ## Note that we do not overwrite past summary tables
 ## Instead, we move them. This is in case the script was
 ## Run multiple times.
@@ -377,7 +396,7 @@ sub html_genome_diff_item_table_string
 
 sub html_mutation_table_string
 {	
-		my ($gd, $list_ref, $relative_link, $legend_row) = @_;
+		my ($gd, $list_ref, $relative_link, $legend_row, $gd_name_list_ref) = @_;
 		$relative_link = '' if (!defined $relative_link);
 		my $output_str = '';
 
@@ -391,19 +410,22 @@ sub html_mutation_table_string
 		my $header_text = "Predicted mutation";
 		$header_text .= "s" if (scalar @$list_ref > 1);
 
-		my $total_cols = 8;
+		
+		my @freq_header_list = ("freq");
+		@freq_header_list = @$gd_name_list_ref if (defined $gd_name_list_ref);
+		
+		my $total_cols = 6 + scalar @freq_header_list;
+		$total_cols += 1 if (!defined $gd_name_list_ref); ## evidence column 
 		$output_str.= Tr(th({-colspan => $total_cols, -align => "left", -class=>"mutation_header_row"}, $header_text));
-
-
+		
 		$output_str.= start_Tr();
-
+		$output_str.= th({-width => "100%"}, "evidence") if (!defined $gd_name_list_ref); 
 		$output_str.= th(
 			[
-				"evidence",
 				"seq&nbsp;id",
 				"position",
 				"mutation",
-				"freq", 
+				@freq_header_list, 
 				"annotation", 
 				"gene", 
 			]
@@ -419,29 +441,59 @@ sub html_mutation_table_string
 		{	
 			
 			my $evidence_string = '';
-			my $already_added_RA;
-			EVIDENCE: foreach my $evidence_item ($gd->evidence_list($mut))
-			{					
-				if ($evidence_item->{type} eq 'RA')
-				{
-					next EVIDENCE if ($already_added_RA);
-					$already_added_RA = 1;
+			if (!defined $gd_name_list_ref) 
+			{
+				my $already_added_RA;
+				EVIDENCE: foreach my $evidence_item ($gd->evidence_list($mut))
+				{					
+					if ($evidence_item->{type} eq 'RA')
+					{
+						next EVIDENCE if ($already_added_RA);
+						$already_added_RA = 1;
+					}
+					$evidence_string .= "&nbsp;" if ($evidence_string);
+					$evidence_string .= a({href => "$relative_link$evidence_item->{_evidence_file_name}" }, $evidence_item->{type});
 				}
-				$evidence_string .= "&nbsp;" if ($evidence_string);
-				$evidence_string .= a({href => "$relative_link$evidence_item->{_evidence_file_name}" }, $evidence_item->{type});
 			}
 			
-			my $frequency_string = 'ND';
-			if (defined $mut->{frequency})
+			sub freq_to_string
 			{
-				$frequency_string = sprintf("%4.1f%%", $mut->{frequency}*100);
+				my ($freq) = @_;
+				return 'ND' if (!defined $freq);
+				return '' if ($freq == 0);
+				my $frequency_string = sprintf("%4.1f%%", $freq*100);
+				$frequency_string = "100%" if ($freq == 1); # No "100.0%"
+				return $frequency_string;
+			}
+			
+			sub freq_cols
+			{
+				my @freq_list = @_;
+				my $output_str = '';
+				
+				foreach my $freq (@freq_list)
+				{
+					$output_str .= td({align=>"right"}, $freq);
+				}
+				return $output_str;
 			}
 			
 			my $row_class = "normal_table_row";
-			if ((defined $mut->{frequency}) && ($mut->{frequency} != 1))
+			my @freq_list;
+			if (!defined $gd_name_list_ref)
 			{
-				$row_class = "polymorphism_table_row";	
-			}			
+				if ((defined $mut->{frequency}) && ($mut->{frequency} != 1))
+				{
+					$row_class = "polymorphism_table_row";	
+				}			
+				push @freq_list, freq_to_string($mut->{frequency});
+			}
+			else
+			{
+				#"_freq_[name]" keys were made				
+				@freq_list = map { freq_to_string($mut->{"frequency_$_"})  } @$gd_name_list_ref;			
+			}
+			
 			
 			if ($mut->{type} eq 'SNP')
 			{
@@ -484,11 +536,11 @@ sub html_mutation_table_string
 				}
 
 				$output_str.= start_Tr({-class=>$row_class});	
-				$output_str.= td({align=>"center"}, $evidence_string);
+				$output_str.= td({align=>"center"}, $evidence_string) if (!defined $gd_name_list_ref);
 				$output_str.= td({align=>"center"}, nonbreaking($mut->{seq_id}));
 				$output_str.= td({align=>"right"}, commify($mut->{position}));
 				$output_str.= td({align=>"center"}, "$mut->{ref_seq}&rarr;$mut->{new_seq}");
-				$output_str.= td({align=>"right"}, $frequency_string);
+				$output_str.= freq_cols(@freq_list);
 				$output_str.= td({align=>"center"}, nonbreaking($aa_codon_change));
 				$output_str.= td({align=>"center"}, i(nonbreaking($mut->{gene_name})));
 				$output_str.= td({align=>"left"}, $mut->{gene_product});
@@ -497,11 +549,11 @@ sub html_mutation_table_string
 			elsif ($mut->{type} eq 'INS')
 			{
 				$output_str.= start_Tr({-class=>$row_class});	
-				$output_str.= td({align=>"center"}, $evidence_string);
+				$output_str.= td({align=>"center"}, $evidence_string) if (!defined $gd_name_list_ref);
 				$output_str.= td({align=>"center"}, nonbreaking($mut->{seq_id}));
 				$output_str.= td({align=>"right"}, commify($mut->{position}));
 				$output_str.= td({align=>"center"}, "+$mut->{new_seq}");
-				$output_str.= td({align=>"right"}, $frequency_string);
+				$output_str.= freq_cols(@freq_list);
 				$output_str.= td({align=>"center"}, nonbreaking($mut->{gene_position}));
 				$output_str.= td({align=>"center"}, i(nonbreaking($mut->{gene_name})));
 				$output_str.= td({align=>"left"}, $mut->{gene_product});
@@ -510,11 +562,11 @@ sub html_mutation_table_string
 			elsif ($mut->{type} eq 'DEL')
 			{
 				$output_str.= start_Tr({-class=>$row_class});	
-				$output_str.= td({align=>"center"}, $evidence_string);
+				$output_str.= td({align=>"center"}, $evidence_string) if (!defined $gd_name_list_ref);
 				$output_str.= td({align=>"center"}, nonbreaking($mut->{seq_id}));
 				$output_str.= td({align=>"right"}, commify($mut->{position}));
 				$output_str.= td({align=>"center"}, nonbreaking("&Delta;$mut->{size} nt"));
-				$output_str.= td({align=>"right"}, $frequency_string);
+				$output_str.= freq_cols(@freq_list);
 				$output_str.= td({align=>"center"}, nonbreaking($mut->{gene_position}));
 				$output_str.= td({align=>"center"}, i(nonbreaking($mut->{gene_name})));				
 				$output_str.= td({align=>"left"}, $mut->{gene_product});
@@ -523,11 +575,11 @@ sub html_mutation_table_string
 			elsif ($mut->{type} eq 'SUB')
 			{
 				$output_str.= start_Tr({-class=>$row_class});	
-				$output_str.= td({align=>"center"}, $evidence_string);
+				$output_str.= td({align=>"center"}, $evidence_string) if (!defined $gd_name_list_ref);
 				$output_str.= td({align=>"center"}, nonbreaking($mut->{seq_id}));
 				$output_str.= td({align=>"right"}, commify($mut->{position}));
 				$output_str.= td({align=>"center"}, "$mut->{ref_seq}&rarr;$mut->{new_seq}");
-				$output_str.= td({align=>"right"}, $frequency_string);
+				$output_str.= freq_cols(@freq_list);
 				$output_str.= td({align=>"center"}, nonbreaking($mut->{gene_position}));
 				$output_str.= td({align=>"center"}, i(nonbreaking($mut->{gene_name})));
 				$output_str.= td({align=>"left"}, $mut->{gene_product});
@@ -537,7 +589,7 @@ sub html_mutation_table_string
 			elsif ($mut->{type} eq 'MOB')
 			{
 				$output_str.= start_Tr({-class=>$row_class});	
-				$output_str.= td({align=>"center"}, $evidence_string);
+				$output_str.= td({align=>"center"}, $evidence_string) if (!defined $gd_name_list_ref);
 				$output_str.= td({align=>"center"}, nonbreaking($mut->{seq_id}));
 				$output_str.= td({align=>"right"}, commify($mut->{position}));
 				my $s;
@@ -550,7 +602,7 @@ sub html_mutation_table_string
 				$s .=  " :: &Delta;" . abs($mut->{gap_right}) if ($mut->{gap_right} < 0);
 				$s .= " (+$mut->{duplication_size}) bp";
 				$output_str.= td({align=>"center"}, nonbreaking($s));
-				$output_str.= td({align=>"right"}, $frequency_string);
+				$output_str.= freq_cols(@freq_list);
 				$output_str.= td({align=>"center"}, nonbreaking($mut->{gene_position}));
 				$output_str.= td({align=>"center"}, i(nonbreaking($mut->{gene_name})));
 				$output_str.= td({align=>"left"}, $mut->{gene_product});

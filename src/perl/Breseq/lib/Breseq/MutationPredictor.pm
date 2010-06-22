@@ -112,7 +112,7 @@ sub predict
 		{
 			$same = 1 if ($mut->{end} == $item->{position}) && ($mut->{insert_end} + 1 == $item->{insert_position});
 			$same = 1 if ($mut->{end} + 1 == $item->{position}) && ($item->{insert_position} == 0);
-			$same = 0 if ($item->{frequency} != 1); #don't join polymorphisms
+			$same = 0 if (($item->{frequency} != 1) || ($mut->{frequency} != 1)); #don't join polymorphisms
 			$same = 0 if ($mut->{seq_id} ne $item->{seq_id});
 		}
 		
