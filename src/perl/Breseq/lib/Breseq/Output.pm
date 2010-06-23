@@ -205,7 +205,7 @@ sub html_index
 	my @muts = $gd->list('SNP', 'INS', 'DEL', 'SUB', 'MOB');
 	my $relative_path = $settings->file_name('local_evidence_path');
 	$relative_path .= "/" if ($relative_path);
-	print HTML p . html_mutation_table_string($gd, \@muts, $relative_path, 1 );
+	print HTML p . html_mutation_table_string($gd, \@muts, $relative_path, undef, 1 );
 
 	###
 	## Unassigned evidence
@@ -251,7 +251,7 @@ sub html_index
 
 sub html_compare
 {
-	my ($file_name, $title, $gd, $gd_name_list_ref) = @_;
+	my ($file_name, $title, $gd, $one_ref_seq, $gd_name_list_ref) = @_;
 
 	open HTML, ">$file_name" or die "Could not open file: $file_name";    
 
@@ -262,7 +262,7 @@ sub html_compare
 	
 	my @muts = $gd->mutation_list;
 	
-	print HTML html_mutation_table_string($gd, \@muts, undef, undef, $gd_name_list_ref);
+	print HTML html_mutation_table_string($gd, \@muts, undef, undef, $one_ref_seq, $gd_name_list_ref);
 
 	print HTML end_html;
 	close HTML;
@@ -396,7 +396,7 @@ sub html_genome_diff_item_table_string
 
 sub html_mutation_table_string
 {	
-		my ($gd, $list_ref, $relative_link, $legend_row, $gd_name_list_ref) = @_;
+		my ($gd, $list_ref, $relative_link, $legend_row, $one_ref_seq, $gd_name_list_ref) = @_;
 		$relative_link = '' if (!defined $relative_link);
 		my $output_str = '';
 
@@ -414,15 +414,17 @@ sub html_mutation_table_string
 		my @freq_header_list = ("freq");
 		@freq_header_list = @$gd_name_list_ref if (defined $gd_name_list_ref);
 		
-		my $total_cols = 6 + scalar @freq_header_list;
+		my $total_cols = 5 + scalar @freq_header_list;
+		$total_cols += 1 if (!$one_ref_seq);
 		$total_cols += 1 if (!defined $gd_name_list_ref); ## evidence column 
 		$output_str.= Tr(th({-colspan => $total_cols, -align => "left", -class=>"mutation_header_row"}, $header_text));
 		
 		$output_str.= start_Tr();
 		$output_str.= th("evidence") if (!defined $gd_name_list_ref); 
+		$output_str.= th(nonbreaking("seq id")) if (!$one_ref_seq); 
+		
 		$output_str.= th(
 			[
-				"seq&nbsp;id",
 				"position",
 				"mutation",
 				@freq_header_list, 
@@ -537,7 +539,7 @@ sub html_mutation_table_string
 
 				$output_str.= start_Tr({-class=>$row_class});	
 				$output_str.= td({align=>"center"}, $evidence_string) if (!defined $gd_name_list_ref);
-				$output_str.= td({align=>"center"}, nonbreaking($mut->{seq_id}));
+				$output_str.= td({align=>"center"}, nonbreaking($mut->{seq_id})) if (!$one_ref_seq); 
 				$output_str.= td({align=>"right"}, commify($mut->{position}));
 				$output_str.= td({align=>"center"}, "$mut->{ref_seq}&rarr;$mut->{new_seq}");
 				$output_str.= freq_cols(@freq_list);
@@ -550,7 +552,7 @@ sub html_mutation_table_string
 			{
 				$output_str.= start_Tr({-class=>$row_class});	
 				$output_str.= td({align=>"center"}, $evidence_string) if (!defined $gd_name_list_ref);
-				$output_str.= td({align=>"center"}, nonbreaking($mut->{seq_id}));
+				$output_str.= td({align=>"center"}, nonbreaking($mut->{seq_id})) if (!$one_ref_seq); 
 				$output_str.= td({align=>"right"}, commify($mut->{position}));
 				$output_str.= td({align=>"center"}, "+$mut->{new_seq}");
 				$output_str.= freq_cols(@freq_list);
@@ -563,7 +565,7 @@ sub html_mutation_table_string
 			{
 				$output_str.= start_Tr({-class=>$row_class});	
 				$output_str.= td({align=>"center"}, $evidence_string) if (!defined $gd_name_list_ref);
-				$output_str.= td({align=>"center"}, nonbreaking($mut->{seq_id}));
+				$output_str.= td({align=>"center"}, nonbreaking($mut->{seq_id})) if (!$one_ref_seq); 
 				$output_str.= td({align=>"right"}, commify($mut->{position}));
 				$output_str.= td({align=>"center"}, nonbreaking("&Delta;$mut->{size} nt"));
 				$output_str.= freq_cols(@freq_list);
@@ -580,7 +582,7 @@ sub html_mutation_table_string
 			{
 				$output_str.= start_Tr({-class=>$row_class});	
 				$output_str.= td({align=>"center"}, $evidence_string) if (!defined $gd_name_list_ref);
-				$output_str.= td({align=>"center"}, nonbreaking($mut->{seq_id}));
+				$output_str.= td({align=>"center"}, nonbreaking($mut->{seq_id})) if (!$one_ref_seq); 
 				$output_str.= td({align=>"right"}, commify($mut->{position}));
 				$output_str.= td({align=>"center"}, "$mut->{ref_seq}&rarr;$mut->{new_seq}");
 				$output_str.= freq_cols(@freq_list);
@@ -594,7 +596,7 @@ sub html_mutation_table_string
 			{
 				$output_str.= start_Tr({-class=>$row_class});	
 				$output_str.= td({align=>"center"}, $evidence_string) if (!defined $gd_name_list_ref);
-				$output_str.= td({align=>"center"}, nonbreaking($mut->{seq_id}));
+				$output_str.= td({align=>"center"}, nonbreaking($mut->{seq_id})) if (!$one_ref_seq); 
 				$output_str.= td({align=>"right"}, commify($mut->{position}));
 				my $s;
 				$s .=  "+$mut->{gap_left} :: " if ($mut->{gap_left} > 0);

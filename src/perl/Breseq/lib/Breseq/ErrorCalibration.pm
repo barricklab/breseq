@@ -814,6 +814,7 @@ sub error_counts_to_error_rates_using_R
 	print RSCRIPT <<EOF;	
 library(nnet);
 X <- read.table("$input_file_name", header = TRUE, sep = "\t")
+X <- subset(X, quality>=$settings->{base_quality_cutoff});
 Y <- data.frame(quality=X\$quality)
 EOF
 
