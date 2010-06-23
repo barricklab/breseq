@@ -320,6 +320,7 @@ sub do_compare
 				
 	## load information about reference sequences from GenBank files
 	my $ref_seq_info = Breseq::ReferenceSequence::load_ref_seq_info(\@reference_genbank_file_names);
+	my $one_ref_seq = scalar keys %{$ref_seq_info->{gene_lists}} == 1;
 
 	my @gd_name_list;
 	my @gd_list; 
@@ -379,13 +380,13 @@ sub do_compare
 		undef $next_mut;
 	}
 
-	$composite_gd->write("test");
+#	$composite_gd->write("test");
 
 	##
 	# Annotate mutations
 	##
 	my $title = "Mutation Comparison";
-	Breseq::Output::html_compare($output, $title, $composite_gd, \@gd_name_list);
+	Breseq::Output::html_compare($output, $title, $composite_gd, $one_ref_seq, \@gd_name_list);
 }
 
 sub do_mutate
