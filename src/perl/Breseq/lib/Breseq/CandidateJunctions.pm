@@ -42,6 +42,8 @@ use Breseq::Fastq;
 use Data::Dumper;
 
 ### constants
+my $required_unique_length_per_side;
+my $maximum_inserted_junction_sequence_length;
 
 =head2 identify_candidate_junctions
 
@@ -56,6 +58,10 @@ sub identify_candidate_junctions
 {
 	my $verbose = 0;
 	our ($settings, $summary, $ref_seq_info) = @_;
+
+	#set up some options that are global to this module
+	$required_unique_length_per_side = $settings->{required_unique_length_per_side};
+	$maximum_inserted_junction_sequence_length = $settings->{maximum_inserted_junction_sequence_length};
 
 	#set up files and local variables from settings
 	my $ref_strings = $ref_seq_info->{ref_strings};
@@ -127,9 +133,10 @@ sub identify_candidate_junctions
 		
 	JUNCTION_SEQ: foreach my $junction_seq (keys %$candidate_junctions)
 	{	
+		## We may have already done the reverse complement
 		next if ($handled_seq->{$junction_seq});
 		
-		my @combined_candidate_junction_list = ();
+		my @combined_candidate_junction_list = ();  ## holds all junctions with the same seq
 		my $rc_junction_seq = Breseq::Fastq::revcom($junction_seq);
 				
 		JUNCTION_ID: foreach my $junction_id (keys %{$candidate_junctions->{$junction_seq}} )
@@ -155,14 +162,25 @@ sub identify_candidate_junctions
 			}
 			$handled_seq->{$rc_junction_seq}++;
 		}
-		@combined_candidate_junction_list = sort { -($a->{score} <=> $b->{score}) } @combined_candidate_junction_list;
 		
 		##save just the best one
-		push @combined_candidate_junctions, $combined_candidate_junction_list[0];
-		
+		@combined_candidate_junction_list = sort { -($a->{score} <=> $b->{score}) } @combined_candidate_junction_list;
+		my $best_candidate_junction = $combined_candidate_junction_list[0];
+
 		##make sure it isn't a duplicate junction id -- how is this even possible?
-		die "Duplicate junction id is being printed: $combined_candidate_junction_list[0]->{id}" if ($ids_to_print{$combined_candidate_junction_list[0]->{id}});
-		$ids_to_print{$combined_candidate_junction_list[0]->{id}}++;
+		if ($ids_to_print{$best_candidate_junction->{id}})
+		{
+			print STDERR "Attempt to create junction candidate with duplicate id: $combined_candidate_junction_list[0]->{id}\n"; 
+			print STDERR "==Existing junction==\n"; 
+			print STDERR Dumper($ids_to_print{$best_candidate_junction->{id}});
+			print STDERR "==New junction==\n"; 
+			print STDERR Dumper($best_candidate_junction);
+			
+			die if ($best_candidate_junction->{seq} ne $ids_to_print{$best_candidate_junction->{id}}->{seq});
+			next JUNCTION_SEQ;
+		}
+		$ids_to_print{$best_candidate_junction->{id}} = $best_candidate_junction;
+		push @combined_candidate_junctions, $best_candidate_junction;
 	}
 	
 	@combined_candidate_junctions = sort {-($a->{score} <=> $b->{score}) || (length($a->{seq}) <=> length($b->{seq}))} @combined_candidate_junctions;
@@ -298,6 +316,40 @@ sub identify_candidate_junctions
 	$summary->{candidate_junction} = $hcs;
 }
 
+sub _check_required_unique_length
+{
+	my ($a1_start, $a1_end, $a2_start, $a2_end) = @_;
+
+	my $a1_length = $a1_end - $a1_start + 1;
+	my $a2_length = $a2_end - $a2_start + 1;
+
+	my $union_start = ($a1_start < $a2_start) ? $a1_start : $a2_start;
+	my $union_end = ($a1_end > $a2_end) ? $a1_end : $a2_end;			
+	my $union_length = $union_end - $union_start + 1;
+
+	my $intersection_start = ($a1_start > $a2_start) ? $a1_start : $a2_start;
+	my $intersection_end = ($a1_end < $a2_end) ? $a1_end : $a2_end;  
+	my $intersection_length = $intersection_end - $intersection_start + 1;
+
+	$union_length += $intersection_length if ($intersection_length<0);
+	my $intersection_length_positive = ($intersection_length > 0) ? $intersection_length : 0;			
+	my $intersection_length_negative = ($intersection_length < 0) ? -$intersection_length : 0;
+
+	## require EACH side to not be entirely included in the other and ONE to have a certain amount of unique sequence
+	my $passed = 0;
+	$passed ||= (($a1_length >= $intersection_length_positive + $required_unique_length_per_side) && ($a2_length > $intersection_length_positive));
+	$passed ||= (($a1_length > $intersection_length_positive) && ($a2_length >= $intersection_length_positive + $required_unique_length_per_side));
+	## enforce a maximum negative overlap
+	$passed &&= ($intersection_length_negative <= $maximum_inserted_junction_sequence_length);
+		
+	## Add a score based on the current read. We want to favor junctions with reads that overlap each side quite a bit
+	## so we add the minimum that the read extends into each side of the candidate junction (not counting the overlap).
+	my $a1_unique_length = ($a1_length - $intersection_length_positive);
+	my $a2_unique_length = ($a2_length - $intersection_length_positive);
+	
+	return ($passed, $a1_unique_length, $a2_unique_length);
+}
+
 sub _alignments_to_candidate_junctions
 {
 	my ($settings, $summary, $ref_seq_info, $candidate_junctions, $fai, $header, @al) = @_;
@@ -331,39 +383,20 @@ sub _alignments_to_candidate_junctions
 		my ($a1_start, $a1_end) = Breseq::Shared::alignment_query_start_end($a1);	
 						
 		next A1 if ($a1_start == 0); #this is only true if read has no matches
-		my $a1_length = $a1_end - $a1_start + 1;
 
 		A2: for (my $j=$i+1; $j<scalar @$al_ref; $j++)
 		{
 			my $a2 = $al_ref->[$j];					
 			my ($a2_start, $a2_end) = Breseq::Shared::alignment_query_start_end($a2);
 			next A2 if ($a2_start == 0); #this is only true if read has no matches
-			my $a2_length = $a2_end - $a2_start + 1;
 			
 			#print join(" ", $a1_start, $a1_end, $a2_start, $a2_end) . "\n" if ($verbose);
 						
-			my $union_start = ($a1_start < $a2_start) ? $a1_start : $a2_start;
-			my $union_end = ($a1_end > $a2_end) ? $a1_end : $a2_end;			
-			my $union_length = $union_end - $union_start + 1;
-
-			my $intersection_start = ($a1_start > $a2_start) ? $a1_start : $a2_start;
-			my $intersection_end = ($a1_end < $a2_end) ? $a1_end : $a2_end;  
-			my $intersection_length = $intersection_end - $intersection_start + 1;
-		
-			#intersection can be a negative number
-			$union_length += $intersection_length if ($intersection_length<0);
-			my $intersection_length_nonzero = ($intersection_length > 0) ? $intersection_length : 0;			
-						
-			#print "$i $j $union_start-$union_end $union_length $intersection_start-$intersection_end $intersection_length\n" if ($verbose);		
-
 			## If the intersection is just one of the hits, then there is no point...
-			## At least one side should have this much unique sequence.
-			my $extra_length = 10;
+			## At least one side should have a certain amount of unique sequence.			
+			my ($passed, $a1_unique_length, $a2_unique_length) = _check_required_unique_length($a1_start, $a1_end, $a2_start, $a2_end);
 			
-			if ( (($a1_length >= $intersection_length_nonzero+$extra_length) && ($a2_length > $intersection_length_nonzero))
-			  || (($a1_length > $intersection_length_nonzero) && ($a2_length >= $intersection_length_nonzero+$extra_length)) )
-			# We used to make sure BOTH sides had at least this much extra length			
-			#if (($a1_length > $intersection_length_nonzero + $extra_length) && ($a2_length > $intersection_length_nonzero + $extra_length))
+			if ($passed)
 			{
 				my $r1 = $r_ref->[$i];
 				my $r2 = $r_ref->[$j]; 
@@ -371,9 +404,10 @@ sub _alignments_to_candidate_junctions
 				## we pass back and forth the redundancies in case they switch sides
 				my ($junction_seq_string, $side_1_ref_seq, $side_2_ref_seq, $junction_coord_1, $junction_coord_2, @junction_id_list);
 				
-				($junction_seq_string, $side_1_ref_seq, $side_2_ref_seq, $junction_coord_1, $junction_coord_2, $r1, $r2, @junction_id_list)
+				($passed, $junction_seq_string, $side_1_ref_seq, $side_2_ref_seq, $junction_coord_1, $junction_coord_2, $r1, $r2, @junction_id_list)
 					= _alignments_to_candidate_junction($settings, $summary, $ref_seq_info, $fai, $header, $a1, $a2, $r1, $r2);
-							
+				next A2 if (!$passed);
+				
 				# a value of zero gets added if they were unique, >0 if redundant b/c they matched same reference sequence
 				$redundant_junction_sides{$side_1_ref_seq}->{$junction_coord_1} += $r1-1;
 				$redundant_junction_sides{$side_2_ref_seq}->{$junction_coord_2} += $r2-1;
@@ -387,23 +421,17 @@ sub _alignments_to_candidate_junctions
 				$redundant_junction_sides{Breseq::Fastq::revcom($side_1_ref_seq)}->{$junction_coord_1} += $r1-1;
 				$redundant_junction_sides{Breseq::Fastq::revcom($side_2_ref_seq)}->{$junction_coord_2} += $r2-1;
 				
-				## Add a score based on the current read. We want to favor junctions with reads that overlap each side quite a bit
-				## so we add the minimum that the read extends into each side of the candidate junction (not counting the overlap).
-				my $a1_length_diff = ($a1_length - $intersection_length_nonzero);
-				my $a2_length_diff = ($a2_length - $intersection_length_nonzero);
+				my $score = ($a1_unique_length < $a2_unique_length) ? $a1_unique_length : $a2_unique_length;
 				
-				my $score = ($a1_length_diff < $a2_length_diff) ? $a1_length_diff : $a2_length_diff;
-				#print "score: $score\n";
-				
-				### Old score squared both sides (giving advantage to very uneven overlap on each side)
-				#$candidate_junctions->{$junction_seq_string}->{$junction_id} += ($a1_length - $union_length) ** 2 + ($a2_length - $union_length) ** 2);
-
 				push @junctions, { 'list' => \@junction_id_list, 'string' => $junction_seq_string, 'score' => $score, 'side_1_ref_seq' => $side_1_ref_seq, 'side_2_ref_seq' => $side_2_ref_seq};
 			}
 		}
 	}	
 	
+	## Done if everything already ruled out...
 	return if (scalar @junctions == 0);
+	
+	
 	print $al_ref->[0]->qname . "\n"  if ($verbose);
 	
 	
@@ -566,6 +594,8 @@ sub _unique_alignments_with_redundancy
  
 =cut
 
+## returns undef if fails in the middle
+
 sub _alignments_to_candidate_junction
 {
 	my ($settings, $summary, $ref_seq_info, $fai, $header, $a1, $a2, $redundancy_1, $redundancy_2) = @_;
@@ -643,6 +673,7 @@ sub _alignments_to_candidate_junction
 		my $ref_seq_matched_1 = substr $reference_sequence_string_hash_ref->{$hash_seq_id_1},  $r1_start-1, $r1_end - $r1_start + 1;
 		my $ref_seq_matched_2 = substr $reference_sequence_string_hash_ref->{$hash_seq_id_2},  $r2_start-1, $r2_end - $r2_start + 1;
 
+		print "==============> Initial Matches\n";
 		print "Alignment #1\n";
 		print "qpos: $q1_start-$q1_end rpos: $r1_start-$r1_end reversed: " . $q1->reversed . "\n"; 
 		print $q1->qseq . "\n" . $ref_seq_matched_1 . "\n";
@@ -652,6 +683,7 @@ sub _alignments_to_candidate_junction
 		print "qpos: $q2_start-$q2_end rpos: $r2_start-$r2_end reversed: " . $q2->reversed . "\n"; 
 		print $q2->qseq . "\n" . $ref_seq_matched_2 . "\n";
 		print Dumper($q2->cigar_array);
+		print "<==============\n";
 	}
 
 	##debug print information
@@ -693,6 +725,13 @@ sub _alignments_to_candidate_junction
 			}	
 		}
 		
+		## We need to re-check that they have the required amount of unique length if they moved
+		if (defined $q1_move || defined $q2_move)
+		{
+			my $passed = _check_required_unique_length($r1_start, $r1_end, $r2_start, $r2_end);
+			return (0) if (!$passed);
+		}
+		
 		#re-calculate the overlap
 		$overlap = -($q2_start - $q1_end - 1);
 		print "=== overlap corrected for mismatches $overlap\n" if ($verbose);
@@ -704,18 +743,21 @@ sub _alignments_to_candidate_junction
 	
 	if ($verbose)
 	{
-		my $ref_seq_m_1 = substr $reference_sequence_string_hash_ref->{$hash_seq_id_1},  $r1_start-1, $r1_end - $r1_start + 1;
-		my $ref_seq_m_2 = substr $reference_sequence_string_hash_ref->{$hash_seq_id_2},  $r2_start-1, $r2_end - $r2_start + 1;
 		
+		my $ref_seq_matched_1 = substr $reference_sequence_string_hash_ref->{$hash_seq_id_1},  $r1_start-1, $r1_end - $r1_start + 1;
+		my $ref_seq_matched_2 = substr $reference_sequence_string_hash_ref->{$hash_seq_id_2},  $r2_start-1, $r2_end - $r2_start + 1;
+				
+		print "==============> After Overlap Mismatch Correction\n";
 		print "Alignment #1\n";
 		print "qpos: $q1_start-$q1_end rpos: $r1_start-$r1_end reversed: " . $q1->reversed . "\n"; 
-		print $q1->qseq . "\n" . $ref_seq_m_1 . "\n";
+		print $q1->qseq . "\n" . $ref_seq_matched_1 . "\n";
 		print Dumper($q1->cigar_array);
 
 		print "Alignment #2\n";
 		print "qpos: $q2_start-$q2_end rpos: $r2_start-$r2_end reversed: " . $q2->reversed . "\n"; 
-		print $q2->qseq . "\n" . $ref_seq_m_2 . "\n";
+		print $q2->qseq . "\n" . $ref_seq_matched_2 . "\n";
 		print Dumper($q2->cigar_array);
+		print "<==============\n";
 	}
 	
 	
@@ -884,7 +926,7 @@ sub _alignments_to_candidate_junction
 	die "Junction sequence not found: $junction_id " . $q1->qname . " " . $a2->qname  if (!$junction_seq_string);
 	die "Incorrect length for $junction_seq_string: $junction_id " . $q1->qname . " " . $a2->qname if (length $junction_seq_string != $flanking_left + $flanking_right + abs($overlap));
 		
-	return ($junction_seq_string, $ref_seq_matched_1, $ref_seq_matched_2, $junction_coord_1, $junction_coord_2, $redundancy_1, $redundancy_2, @junction_id_list);
+	return (1, $junction_seq_string, $ref_seq_matched_1, $ref_seq_matched_2, $junction_coord_1, $junction_coord_2, $redundancy_1, $redundancy_2, @junction_id_list);
 }
 
 
@@ -902,27 +944,31 @@ sub _num_matches_from_end
 	my $verbose = 0;
 	my ($a, $refseq_str, $dir, $overlap) = @_;
 	
+	## Read
+	##start, end, length  of the matching sequence (in top strand coordinates)
+	my ($q_seq_start, $q_seq_end, $q_length) = ($a->query->start, $a->query->end,$a->query->length);			
 	my $reversed = $a->reversed;
-	my ($q_start, $q_end) = Breseq::Shared::alignment_query_start_end($a);
-	my $q_length = $q_end - $q_start + 1;
-	my ($q_seq_start, $q_seq_end) = ($q_start, $q_end);
-	($q_seq_start, $q_seq_end) = ($a->l_qseq - $q_seq_end + 1, $a->l_qseq - $q_seq_start + 1) if ($reversed);
+	## sequence of the matching part of the query (top genomic strand)
 	my $q_str = substr $a->qseq, $q_seq_start-1, $q_seq_end-$q_seq_start+1;
 	my @q_array = split //, $q_str;
 	
+	### Reference
+	## start, end, length of match in reference
 	my ($r_start, $r_end, $r_length) = ($a->start, $a->end, $a->length);
+	## sequence of match in reference (top genomic strand)
 	my $r_str = substr $refseq_str, $r_start-1, $r_length;
 	my @r_array = split //, $r_str;
 	
 	if ($verbose)
 	{
-		print "==== " . $a->qname . "\n";
+		print "====> Num Matches from End\n"; 
+		print $a->qname . "\n";
 		print "direction: $dir\n";
-		print $a->qseq . "\n";
-		print "$q_start-$q_end $q_seq_start-$q_seq_end $reversed\n";
-		print "$q_str\n";
-		print "$r_start-$r_end\n";
-		print "$r_str\n";
+		print "Read sequence: " . $a->qseq . "\n";
+		print "Read Match coords: $q_seq_start-$q_seq_end $reversed\n";
+		print "Read Match sequence: $q_str\n";
+		print "Reference Match coords: $r_start-$r_end\n";
+		print "Reference Match sequence: $r_str\n";
 	}
 	
 	$dir = -1 * $dir if ($reversed);
@@ -949,13 +995,13 @@ sub _num_matches_from_end
 		#handle indels
 		if ($cigar_array_ref->[0]->[0] eq 'I')
 		{
-			$r_pos++;
+			$q_pos++;
 			$ref_mismatch_pos = $r_pos;
 			$qry_mismatch_pos = $q_pos;
 		}
 		elsif ($cigar_array_ref->[0]->[0] eq 'D')
 		{
-			$q_pos++;
+			$r_pos++;
 			$ref_mismatch_pos = $r_pos;
 			$qry_mismatch_pos = $q_pos;
 		}
@@ -973,11 +1019,13 @@ sub _num_matches_from_end
 		print "$r_pos $q_pos\n" if ($verbose);		
 	}
 	
-	print "INTERESTING!!!\n" if ($verbose && $qry_mismatch_pos);
 	
 	## make 1 indexed...
 	$qry_mismatch_pos++ if (defined $qry_mismatch_pos);
 	$ref_mismatch_pos++ if (defined $ref_mismatch_pos);
+
+	print "Query Mismatch At = $qry_mismatch_pos | Overlap = $overlap\n" if ($verbose && $qry_mismatch_pos);
+	print "<====\n" if ($verbose);
 
 	return ($qry_mismatch_pos, $ref_mismatch_pos);
 }

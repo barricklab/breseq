@@ -549,6 +549,7 @@ sub _alignment_list_to_dominant_best
 
 sub _trim_ambiguous_ends
 {
+	#return ( {'L'=>0, 'R'=>0} ); TESTING
 	my $verbose = 0;
 	my ($a, $header, $fai, $ref_seq_info) = @_;
 	

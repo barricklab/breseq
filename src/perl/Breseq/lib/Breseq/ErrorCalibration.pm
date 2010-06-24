@@ -809,12 +809,14 @@ sub error_counts_to_error_rates_using_R
 	open RSCRIPT, ">$error_rates_r_script_file_name" or die "Could not create file: $error_rates_r_script_file_name\n";
 			
 	my @bases = ('A', 'C', 'T', 'G', '.');
+	my $base_quality_cutoff = $settings->{base_quality_cutoff};
+	$base_quality_cutoff = 0 if (!defined $base_quality_cutoff);
 	
 	my $regression_string = "X\$quality";
 	print RSCRIPT <<EOF;	
 library(nnet);
 X <- read.table("$input_file_name", header = TRUE, sep = "\t")
-X <- subset(X, quality>=$settings->{base_quality_cutoff});
+X <- subset(X, quality>=$base_quality_cutoff);
 Y <- data.frame(quality=X\$quality)
 EOF
 
