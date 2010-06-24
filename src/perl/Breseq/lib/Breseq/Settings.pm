@@ -206,10 +206,14 @@ sub initialize_1
 	$self->{trim_reads} = 0;
 	
 	#used by CandidateJunctions.pm
+	$self->{required_unique_length_per_side} = 10;				# Require at least one of the pair of matches supporting a junction to have this
+																# much of its match that is unique in the reference sequence.
+	$self->{maximum_inserted_junction_sequence_length} = 20;	# Ignore junctions with negative overlap (unique inserted sequence between reference 
+																# matches) greater than this length. Prevents evidence file names that are too long.
 	$self->{minimum_candidate_junctions} = 200;					# Minimum number of candidate junctions to keep
 	$self->{maximum_candidate_junctions} = 5000;				# Maximum number of candidate junctions to keep
-	$self->{maximum_candidate_junction_length_factor} = 0.1;		# Only keep CJ lengths adding up to this times genome size 
-	$self->{candidate_junction_read_limit} = undef;			# FOR TESTING: only process this many reads when creating candidate junctions
+	$self->{maximum_candidate_junction_length_factor} = 0.1;	# Only keep CJ lengths adding up to this factor times the total reference size 
+	$self->{candidate_junction_read_limit} = undef;		    	# FOR TESTING: only process this many reads when creating candidate junctions
 
 	#used by AlignmentCorrection.pm
 	$self->{add_split_junction_sides} = 1;

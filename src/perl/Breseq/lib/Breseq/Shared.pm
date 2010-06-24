@@ -432,7 +432,10 @@ sub tam_write_moved_alignment
 	#### Setup custom aux tags
 	####
 	my $aux_tags = 'AS:i:' . $a->aux_get('AS') . "\t" . 'X1:i:' . '1' . "\t" . "X2:i:$fastq_file_index";
-	$aux_tags .= "\t" . "XJ:i:1"; #this flag indicates this is a junction match (could also add which direction?)
+	
+	#this flag indicates this is a junction match and which side of the match is in the middle of the read across the junction
+	my $within_side = ($reference_strand == +1) ? $junction_side : ($junction_side + 1) % 2;
+	$aux_tags .= "\t" . "XJ:i:$within_side"; 
 
 	##handle putting the trims in the right places
 	##need to be aware if read is trimmed out of existence??
