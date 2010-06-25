@@ -367,12 +367,14 @@ for (i in trunc(m/4):length(X\$ma))
 #censor data on the right and left of the biggest maximum
 coverage_factor <- 0.25;
 
-i<-max_i
-while (i >= 1 && X\$ma[i] && X\$ma[i]>coverage_factor*max_n)
-{	
-	i <- i-1;
-}
-start_i = i;
+#i<-max_i
+#while (i >= 1 && X\$ma[i] && X\$ma[i]>coverage_factor*max_n)
+#{	
+#	i <- i-1;
+#}
+#start_i = i;
+
+start_i = floor(max_i/2);
 
 i<-length(X\$ma);
 #i<-max_i
@@ -427,8 +429,12 @@ nb_fit_size = nb_fit\$estimate[2];
 print(nb_fit_size);
 print(nb_fit_mu);
 
-fit_nb = dnbinom(0:max(X\$coverage), mu = nb_fit_mu, size=nb_fit_size)*total_total;
+#fit_nb = dnbinom(0:max(X\$coverage), mu = nb_fit_mu, size=nb_fit_size)*total_total;
 
+end_fract = pnbinom(end_i, mu = nb_fit_mu, size=nb_fit_size)
+start_fract = pnbinom(start_i, mu = nb_fit_mu, size=nb_fit_size)
+included_fract = end_fract-start_fract;
+fit_nb = dnbinom(0:max(X\$coverage), mu = nb_fit_mu, size=nb_fit_size)*inner_total/included_fract;
 
 f_p <- function(par) {
 
@@ -453,7 +459,7 @@ f_p <- function(par) {
 
 p_fit<-nlm(f_p, c(m))
 p_fit_lambda = nb_fit\$estimate[1];
-fit_p<-dpois(0:max(X\$coverage), lambda = p_fit_lambda)*total_total;
+fit_p<-dpois(0:max(X\$coverage), lambda = p_fit_lambda)*inner_total/included_fract;
 
 
 my_pch = 21
