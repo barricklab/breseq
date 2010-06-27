@@ -75,7 +75,6 @@ our $line_specification = {
 	'DEL' => ['seq_id', 'position', 'size'],
 	'INS' => ['seq_id', 'position', 'new_seq'],
 	'MOB' => ['seq_id', 'position', 'repeat_name', 'strand', 'duplication_size', 'gap_left', 'gap_right'],
-#	'MOB' => ['seq_id', 'position', 'repeat_name', 'strand', 'duplication_size', 'del_left', 'del_right', 'ins_left', 'ins_right'],	
 	'DUP' => ['seq_id', 'position', 'size'],
 	'INV' => ['seq_id', 'position', 'size'],
 	
@@ -275,6 +274,13 @@ sub cmp_mutations
 	print Dumper($a) if (!defined $a->{SORT_1} || !defined $a->{SORT_2} || !defined $a->{SORT_3} || !defined $a->{type}); 
 	print Dumper($b) if (!defined $b->{SORT_1} || !defined $b->{SORT_2} || !defined $b->{SORT_3} || !defined $b->{type}); 
 
+	## plus and minus should come before '?' so join them together correctly
+	my $additional_sort = 0;
+	if ( ($a->{type} eq 'MOB') && ($b->{type} eq 'MOB') )
+	{
+		$additional_sort = -1 if (($a->{strand} == 0) && ($b->{strand} != 0));
+	}
+	
 	return ($a->{SORT_1} <=> $b->{SORT_1}) 
 		|| ($a->{SORT_2} cmp $b->{SORT_2}) 
 		|| ($a->{SORT_3} <=> $b->{SORT_3})
@@ -431,11 +437,12 @@ sub read
 {
 	my ($self, $file_name) = @_;
 	
-	open IN, "<$file_name";
+	open IN, "<$file_name" or $self->throw("Could not open file for reading: $file_name");
 
 	#read lines, skip comment lines, and blank lines
 	my @lines = <IN>;
 	chomp @lines;
+		
 	@lines = grep {!/^\s*#[^=]/} @lines;
 	@lines = grep {!/^\s*$/} @lines;
 	
@@ -528,7 +535,15 @@ sub equivalent_mutations
 	my $spec = $line_specification->{$m1->{type}};
 	foreach my $key (@$spec)
 	{
-	#	print "$key ($m1->{$key} ne $m2->{$key})\n";	
+	#	print "$key ($m1->{$key} ne $m2->{$key})\n";
+		
+		if (($m1->{type} eq 'MOB') && ($key eq 'strand'))
+		{
+			#pass if  either is equal to '?' == 0
+			next if ($m1->{strand} == 0);
+			next if ($m2->{strand} == 0);
+		}
+
 		return 0 if ($m1->{$key} ne $m2->{$key});
 	}
 		
@@ -777,6 +792,47 @@ sub mutation_size_change
 	{
 		return +$item->{size} + $item->{duplication_size} + $item->{gap_left} + $item->{gap_right};
 	}			
+	return 0;
+}
+
+
+sub interval_un
+{
+	my ($gd, $start, $end) = @_;
+
+	my @un_list = $gd->list('UN');	
+	UNKNOWN: foreach my $un (@un_list) 
+	{					
+		return 1 if ( ($start >= $un->{start}) && ($end <= $un->{end}) );
+	}
+	return 0;
+}
+
+sub mutation_unknown
+{
+	my ($self, $mut) = @_;
+
+	if ($mut->{type} eq 'SNP')
+	{
+		return $self->interval_un($mut->{position}, $mut->{position});
+	}
+	
+	## should be updated to new unknown that includes linkage
+	if ($mut->{type} eq 'INS')
+	{
+		return $self->interval_un($mut->{position}, $mut->{position}+1);
+	}
+
+	if ($mut->{type} eq 'DEL')
+	{
+		return $self->interval_un($mut->{position}, $mut->{position}+$mut->{size}-1);
+	}
+	
+	if ($mut->{type} eq 'SUB')
+	{
+		return $self->interval_un($mut->{position}, $mut->{position}+length($mut->{ref_seq}-1));
+	}
+	
 	return 0;
 }
 

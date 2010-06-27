@@ -305,15 +305,18 @@ sub do_compare
 	my ($help, $man);
 	my $output = "compare.html";
 	my @reference_genbank_file_names;
+	my $phylip_input_file;
 	GetOptions(
 		'help|?' => \$help, 'man' => \$man,
 	## Options for input and output files
 		'output|o=s' => \$output,	
 		'reference-sequence|r=s' => \@reference_genbank_file_names,
+		'phylip-input-file|p=s' => \$phylip_input_file,
 	) or pod2usage(2);
 
 	pod2usage(1) if $help;
 	pod2usage(-exitstatus => 0, -verbose => 2) if $man;
+	pod2usage(1) if (scalar @reference_genbank_file_names == 0);
 	pod2usage(1) if (scalar @ARGV == 0);
 	
 	my @gd_file_name_list = @ARGV;	
@@ -324,7 +327,7 @@ sub do_compare
 
 	my @gd_name_list;
 	my @gd_list; 
-	my @mut_lists;
+	my @mut_lists; #altered during processing
 	foreach my $gd_file_name (@gd_file_name_list)
 	{
 		print "$gd_file_name\n";
@@ -335,6 +338,7 @@ sub do_compare
 		push @gd_name_list, $gd_name;
 		
 		my $gd = Breseq::GenomeDiff->new(-in=>$gd_file_name);
+		push @gd_list, $gd;
 		Breseq::ReferenceSequence::annotate_mutations($ref_seq_info, $gd, 1);
 		
 		my @mut_list = $gd->mutation_list(1);
@@ -359,17 +363,28 @@ sub do_compare
 		{
 			my $mut_list = $mut_lists[$i];
 			my $gd_name = $gd_name_list[$i];
+			my $gd = $gd_list[$i];
+			
 			my $test_mut = $mut_list->[0];
 			
 			my $this_freq = 0;
+			$next_mut->{"frequency_$gd_name"} = $this_freq;
+			next if (!defined $test_mut);
 			
-			if (defined $test_mut && Breseq::GenomeDiff::equivalent_mutations($test_mut, $next_mut))
+			if (Breseq::GenomeDiff::equivalent_mutations($test_mut, $next_mut))
 			{				
 				$this_freq = 'ND';
-				$this_freq = $test_mut->{frequency} if (defined $test_mut->{frequency});
-				
+				if (defined $test_mut->{frequency})
+				{
+					$this_freq = $test_mut->{frequency};
+				}
 				shift @$mut_list;
 			}
+			elsif ($gd->mutation_unknown($next_mut))
+			{
+				$this_freq = '?';
+			}			
+			
 			$next_mut->{"frequency_$gd_name"} = $this_freq;	
 		}
 		
@@ -387,6 +402,46 @@ sub do_compare
 	##
 	my $title = "Mutation Comparison";
 	Breseq::Output::html_compare($output, $title, $composite_gd, $one_ref_seq, \@gd_name_list);
+
+	##
+	# Input file for PHYLIP (dnapars program)
+	##
+	if ($phylip_input_file)
+	{
+		my @snps = $composite_gd->list('SNP');
+		
+		open PHYLIP, ">$phylip_input_file" or die "Could not open file: $phylip_input_file";
+		#first line is number of species, then number of sites
+		print PHYLIP +(scalar @gd_name_list) . " " . +(scalar @snps) . "\n";
+
+		foreach my $gd_name (@gd_name_list)
+		{			
+			my $snp_str;
+			foreach my $snp (@snps)
+			{
+				my $f = $snp->{"frequency_$gd_name"};
+				my $b = '?';
+				if ($f eq '?')
+				{
+					$b = 'N';
+				}
+				elsif ($f == 1)
+				{
+					$b = $snp->{new_seq};
+				}
+				elsif ($f == 0)
+				{
+					$b = $snp->{ref_seq};
+				}
+				$snp_str .= $b;
+			}
+			
+			printf PHYLIP "%-10.10s%s\n", $gd_name, $snp_str;
+		}
+		
+		close PHYLIP;
+	}
+	
 }
 
 sub do_mutate
