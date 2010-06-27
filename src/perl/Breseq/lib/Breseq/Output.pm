@@ -462,6 +462,8 @@ sub html_mutation_table_string
 			{
 				my ($freq) = @_;
 				return 'ND' if (!defined $freq);
+				return 'ND' if ($freq eq 'ND');
+				return '?' if ($freq eq '?');
 				return '' if ($freq == 0);
 				my $frequency_string = sprintf("%4.1f%%", $freq*100);
 				$frequency_string = "100%" if ($freq == 1); # No "100.0%"
@@ -599,14 +601,15 @@ sub html_mutation_table_string
 				$output_str.= td({align=>"center"}, nonbreaking($mut->{seq_id})) if (!$one_ref_seq); 
 				$output_str.= td({align=>"right"}, commify($mut->{position}));
 				my $s;
-				$s .=  "+$mut->{gap_left} :: " if ($mut->{gap_left} > 0);
+				$s .=  "+$mut->{gap_left} :: " if (!($mut->{gap_left} =~ m/^(-|0)/));
 				$s .=  "&Delta;" . abs($mut->{gap_left}) . " :: " if ($mut->{gap_left} < 0);
 				$s .= "$mut->{repeat_name} (";
 				$s .= (($mut->{strand}==+1) ? '+' : (($mut->{strand}==-1) ? '&minus;' : '?'));
 				$s .= ")";
-				$s .=  " :: +$mut->{gap_right}" if ($mut->{gap_right} > 0);
+				$s .=  " :: +$mut->{gap_right}" if (!($mut->{gap_right} =~ m/^(-|0)/));
 				$s .=  " :: &Delta;" . abs($mut->{gap_right}) if ($mut->{gap_right} < 0);
-				$s .= " (+$mut->{duplication_size}) bp";
+				my $dup_str = ($mut->{duplication_size} > 0) ? "+$mut->{duplication_size}" : "&Delta;" . abs($mut->{duplication_size});
+				$s .= " ($dup_str) bp";			
 				$output_str.= td({align=>"center"}, nonbreaking($s));
 				$output_str.= freq_cols(@freq_list);
 				$output_str.= td({align=>"center"}, nonbreaking($mut->{gene_position}));
@@ -1242,14 +1245,14 @@ sub create_evidence_files
 				alignment_empty_change_line => 1,			
 				alignment_reference_info_list => [
 				 	{	
-						truncate_end 	=> $item->{flanking_left} + (($item->{alignment_overlap} > 0) ? $item->{alignment_overlap} : 0), 
-						ghost_end 		=> $item->{side_1_position} + (($item->{alignment_overlap} > 0) ? $item->{side_1_strand} * abs($item->{alignment_overlap}) - $item->{side_1_overlap} : 0), 
+						truncate_end 	=> $item->{flanking_left} + $item->{side_1_overlap}, 
+						ghost_end 		=> $item->{side_1_position}, 
 						ghost_strand 	=> $item->{side_1_strand},
 						ghost_seq_id	=> $item->{side_1_seq_id}
 					},
 					{	
-						truncate_start 	=> $item->{flanking_left}+1 - (($item->{alignment_overlap} < 0) ? $item->{alignment_overlap} : 0), 
-						ghost_start 	=> $item->{side_2_position} - (($item->{alignment_overlap} > 0) ? $item->{side_2_strand} * abs($item->{alignment_overlap}) - $item->{side_2_overlap} : 0), 
+						truncate_start 	=> $item->{flanking_left} + 1 + abs($item->{alignment_overlap}) - $item->{side_2_overlap}, 
+						ghost_start 	=> $item->{side_2_position} , 
 						ghost_strand 	=> $item->{side_2_strand},
 						ghost_seq_id 	=> $item->{side_2_seq_id}
 					}

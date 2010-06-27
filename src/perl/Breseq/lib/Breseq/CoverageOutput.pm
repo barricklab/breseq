@@ -140,9 +140,7 @@ sub tabulate_coverage
 	
 	my $reference_length = $bam->length($seq_id);
 	$end = $reference_length if ($end > $reference_length);	
-	
-	#the pileup may not be called if there is no coverage
-	
+		
 	for (my $pos = $start; $pos <= $end; $pos += $downsample)
 	{
 		#initialize coverage observations
