@@ -337,7 +337,6 @@ sub predict
 		$j->{"$j->{_unique_interval}\_position"} += $j->{"$j->{_unique_interval}\_strand"} * $j->{overlap};						
 					
 		$j->{overlap} = 0;
-		
 	}
 	
 
@@ -707,9 +706,6 @@ sub predict
 			}	
 			
 			print "$mut->{gap_left} :: $mut->{gap_right}\n" if ($verbose);
-				
-				
-
 
 			$gd->add($mut);
 			next JC1;

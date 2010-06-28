@@ -821,7 +821,7 @@ sub identify_mutations
 
 sub _predict_polymorphism
 {
-	my $verbose = 1;
+	my $verbose = 0;
 	
 	my $polymorphism;
 	my ($settings, $info_list, $log10_correct_rates, $error_rates, $ref_base) = @_;
