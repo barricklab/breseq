@@ -205,7 +205,8 @@ sub html_index
 	my @muts = $gd->list('SNP', 'INS', 'DEL', 'SUB', 'MOB');
 	my $relative_path = $settings->file_name('local_evidence_path');
 	$relative_path .= "/" if ($relative_path);
-	print HTML p . html_mutation_table_string($gd, \@muts, $relative_path, undef, 1 );
+	my $one_ref_seq = scalar(keys %{$ref_seq_info->{ref_strings}}) == 1;
+	print HTML p . html_mutation_table_string($gd, \@muts, $relative_path, undef, $one_ref_seq );
 
 	###
 	## Unassigned evidence
