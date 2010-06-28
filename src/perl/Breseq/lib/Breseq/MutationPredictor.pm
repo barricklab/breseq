@@ -383,7 +383,7 @@ sub predict
 			$j++;
 		}
 		
-		#sort the $j2_list by regect reason and score
+		#sort the $j2_list by reject reason and score
 
 		sub by_reject_score
 		{
@@ -394,7 +394,7 @@ sub predict
 		}
 		@j2_list = sort by_reject_score @j2_list;
 
-		my $verbose = 0;
+		my $verbose = 1;
 
 		## We need to go through all with the same coordinate (or within a certain coordinate stretch?)
 		## because sometimes a failed junction will be in between the successful junctions
@@ -412,7 +412,6 @@ sub predict
 			## What strand is the IS on relative to the top strand of the genome
 			my $is1_strand = - $j1->{"$j1->{_is_interval}\_strand"} * $j1->{"_$j1->{_is_interval}\_is"}->{strand} * $j1->{"$j1->{_unique_interval}\_strand"};
 			my $is2_strand = - $j2->{"$j2->{_is_interval}\_strand"} * $j2->{"_$j2->{_is_interval}\_is"}->{strand} * $j2->{"$j2->{_unique_interval}\_strand"};
-			my $is_strand = ($is1_strand == $is2_strand) ? $is2_strand : '0';
 
 			## Remove these predictions from the list, $j2 first, so indices don't shift
 			splice @jc, $j2->{_delete_index}, 1; 
@@ -429,7 +428,6 @@ sub predict
 			$mut->{start} = ($uc1_strand == -1) ? $j2->{"$j2->{_unique_interval}\_position"} : $j1->{"$j1->{_unique_interval}\_position"};
 			$mut->{end} = ($uc1_strand == -1) ? $j1->{"$j1->{_unique_interval}\_position"} : $j2->{"$j2->{_unique_interval}\_position"};
 			$mut->{repeat_name} = $j1->{"_$j1->{_is_interval}\_is"}->{name};
-			$mut->{strand} = $is_strand;
 
 			print Dumper($j1, $j2) if ($verbose);	
 
@@ -584,18 +582,9 @@ sub predict
 			
 			my $j1_is_overlap_length = ($j1->{"_$j1->{_is_interval}\_read_side"} == -1) ? $j1->{max_left} : $j1->{max_right};
 			my $j2_is_overlap_length = ($j2->{"_$j2->{_is_interval}\_read_side"} == -1) ? $j2->{max_left} : $j2->{max_right};
-			my $max_is_overlap_length = ($j2_is_overlap_length > $j1_is_overlap_length) ? $j2_is_overlap_length : $j1_is_overlap_length;
 
 			print "J1 IS overlap length: $j1_is_overlap_length\n" if ($verbose);
 			print "J2 IS overlap length: $j2_is_overlap_length\n" if ($verbose);
-			print "Max overlap length: $max_is_overlap_length\n" if ($verbose);
-
-			$j1_is_overlap_length = $max_is_overlap_length - ($max_not_flush_length - $j1_not_flush_length);
-			$j2_is_overlap_length = $max_is_overlap_length - ($max_not_flush_length - $j2_not_flush_length);
-
-			print "J1 IS overlap length: $j1_is_overlap_length\n" if ($verbose);
-			print "J2 IS overlap length: $j2_is_overlap_length\n" if ($verbose);
-
 
 			my $j1_is_seq_matched = '';
 			if ($j1->{"$j1->{_is_interval}\_strand"} == -1)
@@ -635,18 +624,72 @@ sub predict
 				);
 			}
 			
+			## what are the actual sequences of this length at the end of the IS elements?
+				
+			my $j1_left_is_sequence = get_sequence (
+				$j1->{"$j1->{_is_interval}\_seq_id"},
+				$j1->{"_$j1->{_is_interval}\_is"}->{start},
+				$j1->{"_$j1->{_is_interval}\_is"}->{start} + $j1_is_overlap_length - 1
+			);
+
+			my $j1_right_is_sequence = get_sequence (
+				$j1->{"$j1->{_is_interval}\_seq_id"},
+				$j1->{"_$j1->{_is_interval}\_is"}->{end} - ($j1_is_overlap_length - 1),
+				$j1->{"_$j1->{_is_interval}\_is"}->{end}
+			);
+			$j1_right_is_sequence = Breseq::Fastq::revcom($j1_right_is_sequence);
+			
+			print "J1 LEFT : $j1_left_is_sequence\n" if ($verbose);
+			print "J1 RIGHT: $j1_right_is_sequence\n" if ($verbose);
+			
+			#believe the direction if the sequences are different
+			my $j1_is_ambiguous = ($j1_left_is_sequence eq $j1_right_is_sequence) ? 1 : 0;
+
+			
+				
+			my $j2_left_is_sequence = get_sequence (
+				$j2->{"$j2->{_is_interval}\_seq_id"},
+				$j2->{"_$j2->{_is_interval}\_is"}->{start},
+				$j2->{"_$j2->{_is_interval}\_is"}->{start} + $j2_is_overlap_length - 1
+			);
+
+			my $j2_right_is_sequence = get_sequence (
+				$j2->{"$j2->{_is_interval}\_seq_id"},
+				$j2->{"_$j2->{_is_interval}\_is"}->{end} - ($j2_is_overlap_length - 1),
+				$j2->{"_$j2->{_is_interval}\_is"}->{end}
+			);
+			$j2_right_is_sequence = Breseq::Fastq::revcom($j2_right_is_sequence);
+
+			#believe the direction if the sequences are different
+			my $j2_is_ambiguous = ($j2_left_is_sequence eq $j2_right_is_sequence) ? 1 : 0;
+
+			
+			print "J2 LEFT : $j2_left_is_sequence\n" if ($verbose);
+			print "J2 RIGHT: $j2_right_is_sequence\n" if ($verbose);
+				
+			
 			print "J1 IS matched length $j1_is_overlap_length: $j1_is_seq_matched\n" if ($verbose);
 			print "J2 IS matched length $j2_is_overlap_length: $j2_is_seq_matched\n" if ($verbose);
-			
-			## debug check
-			die if (length($j1_is_seq_matched) != length ($j2_is_seq_matched));
-			
+						
 			## if the matched IS element sequences are the same then the direction is AMBIGUOUS
-			if ($j1_is_seq_matched eq $j2_is_seq_matched)
+			my $is_strand = 0;
+			if ($j1_is_ambiguous && $j2_is_ambiguous)
 			{
-				$mut->{strand} = 0;
 				print "AMBIGUOUS strand for mobile element insertion\n" if ($verbose);
 			}
+			elsif ($j1_is_ambiguous)
+			{
+				$is_strand = $is2_strand;
+			}
+			elsif ($j2_is_ambiguous)
+			{
+				$is_strand = $is1_strand;
+			}
+			else #neither is ambiguous, hopefully the strands agree
+			{
+				$is_strand = $is1_strand if ($is1_strand == $is1_strand);
+			}
+			$mut->{strand} = $is_strand;
 			
 			####
 			#### We are still not checking for a case where one junction side extends far enough to uniquely define the

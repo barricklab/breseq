@@ -609,7 +609,7 @@ sub html_mutation_table_string
 				$s .= ")";
 				$s .=  " :: +$mut->{gap_right}" if (!($mut->{gap_right} =~ m/^(-|0)/));
 				$s .=  " :: &Delta;" . abs($mut->{gap_right}) if ($mut->{gap_right} < 0);
-				my $dup_str = ($mut->{duplication_size} > 0) ? "+$mut->{duplication_size}" : "&Delta;" . abs($mut->{duplication_size});
+				my $dup_str = ($mut->{duplication_size} >= 0) ? "+$mut->{duplication_size}" : "&Delta;" . abs($mut->{duplication_size});
 				$s .= " ($dup_str) bp";			
 				$output_str.= td({align=>"center"}, nonbreaking($s));
 				$output_str.= freq_cols(@freq_list);
