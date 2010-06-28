@@ -438,13 +438,14 @@ sub identify_mutations
 					## These are the start and end coordinates of the aligned part of the read
 					my ($q_start, $q_end) = ($a->query->start-1, $a->query->end-1); #0-indexed
 					
+					### This is now handled during AlignmentCorrection so error model is correct.
 					### Optionally, only count reads that completely match --->
-					my $complete_match = 1;
-					if ($settings->{require_complete_match})
-					{
-						$complete_match = ($q_start+1 == 1) && ($q_end+1 == $a->l_qseq);
-						next if (!$complete_match);
-					}
+					#my $complete_match = 1;
+					#if ($settings->{require_complete_match})
+					#{
+					#	$complete_match = ($q_start+1 == 1) && ($q_end+1 == $a->l_qseq);
+					#	next if (!$complete_match);
+					#}
 					###<--- End complete match condition
 					
 					
@@ -820,6 +821,8 @@ sub identify_mutations
 
 sub _predict_polymorphism
 {
+	my $verbose = 1;
+	
 	my $polymorphism;
 	my ($settings, $info_list, $log10_correct_rates, $error_rates, $ref_base) = @_;
 	# pdata is reference to list of observations
@@ -876,15 +879,14 @@ sub _predict_polymorphism
 
 		foreach my $item (@$info_list)
 		{
-			
 			my $log10_pr_ref_base_given_obs = $log10_correct_rates->[$item->{fastq_file_index}]->{$item->{quality}}->{$test_ref_base . $item->{base}};
 			die "ERROR: $item->{quality}, $test_ref_base$item->{base}" if (!defined $log10_pr_ref_base_given_obs);
 			$log10_likelihood_given_ref_base->{$test_ref_base}  += $log10_pr_ref_base_given_obs;
 		}
 	}	
 
-#	print Dumper($info_list);
-#	print Dumper($log10_likelihood_given_ref_base);
+#	print Dumper($info_list) if ($verbose);
+	print Dumper($log10_likelihood_given_ref_base) if ($verbose);
 	
 	#we want the one with the most bases or the largest log likelihood (less negative is better)			
 	my @bases_sorted_by_likelihood = sort { -($base_counts->{$a} <=> $base_counts->{$b}) || -($log10_likelihood_given_ref_base->{$a} <=> $log10_likelihood_given_ref_base->{$b}) } @base_list;
@@ -898,9 +900,7 @@ sub _predict_polymorphism
 	my @second_base_qualities;
 	my $first_base_strand_hash = { '1' => 0, '-1' => 0};
 	my $second_base_strand_hash = { '1' => 0, '-1' => 0};
-	
-	my $verbose = 0;
-	
+		
 	print STDERR "1st = $first_base\n" if ($verbose);
 	print STDERR "2nd = $second_base\n" if ($verbose);
 
@@ -920,18 +920,24 @@ sub _predict_polymorphism
 	
 #	print STDERR Dumper(\@first_base_qualities) if ($verbose);
 #	print STDERR Dumper(\@second_base_qualities) if ($verbose);
-	my $first_base_median_quality = median(\@first_base_qualities);
-	my $second_base_median_quality = median(\@second_base_qualities);
 
-	#use likelihood test to estimate probability of mixed model vs. one-base model
+	#use likelihood test to estimate probability of mixed model vs. one-base model	
 	my ($log10_likelihood_of_two_base_model, $max_likelihood_fr_first_base) = _find_best_log_likelihood($info_list, $error_rates, $first_base, $second_base);
 
+	print "Num First Base: " . (scalar @first_base_qualities) . " Num Second Base: " . (scalar @second_base_qualities) . "\n";
+	print "Log10 Likelihood Best Base Only = $log10_likelihood_given_ref_base->{$first_base}\n" if ($verbose);
+	print "Log10 Likelihood 2 Base Model= $log10_likelihood_of_two_base_model\n" if ($verbose);
+
+	## this is the natural logarithm of the ratio of the probabilities
 	my $likelihood_ratio_test_value = -2*log(10)*($log10_likelihood_given_ref_base->{$first_base} - $log10_likelihood_of_two_base_model);
 	my $chi_squared_pr = 'ND';
 	
 	$Statistics::Distributions::SIGNIFICANT = 50; ## we need many more significant digits than the default 5
 	$chi_squared_pr = Statistics::Distributions::chisqrprob(1, $likelihood_ratio_test_value);
 	
+	print "LR test value = $likelihood_ratio_test_value\n" if ($verbose);
+	print "Chi-squared Pr = $chi_squared_pr\n" if ($verbose);
+
 	$polymorphism = {
 		'frequency' => $max_likelihood_fr_first_base,
 		'first_base' => $first_base,
@@ -947,10 +953,10 @@ sub _predict_polymorphism
 sub _find_best_log_likelihood
 {
 	my $verbose = 0;
-	my ($info_list_ref, $error_rates, $first_base, $second_base) = @_;
+	my ($info_list, $error_rates, $first_base, $second_base) = @_;
 	
 	my $cur_pr_first_base = 1;
-	my $cur_log_pr = _calculate_log10_likelihood($info_list_ref, $error_rates, $first_base, $second_base, $cur_pr_first_base);
+	my $cur_log_pr = _calculate_log10_likelihood($info_list, $error_rates, $first_base, $second_base, $cur_pr_first_base);
 	my $last_log_pr = -9999;
 	my $last_pr_first_base = 1;
 
@@ -963,7 +969,7 @@ sub _find_best_log_likelihood
 		die if ($cur_pr_first_base < 0);
 
 		$cur_pr_first_base -= 0.001;
-		$cur_log_pr = _calculate_log10_likelihood($info_list_ref, $error_rates, $first_base, $second_base, $cur_pr_first_base);
+		$cur_log_pr = _calculate_log10_likelihood($info_list, $error_rates, $first_base, $second_base, $cur_pr_first_base);
 	}
 	
 	return ($last_log_pr, $last_pr_first_base);
@@ -971,10 +977,11 @@ sub _find_best_log_likelihood
 
 sub _calculate_log10_likelihood
 {
-	my ($info_list_ref, $error_rates, $first_base, $second_base, $pr_first_base) = @_;
+	my ($info_list, $error_rates, $first_base, $second_base, $pr_first_base) = @_;
 	
 	my $log10_likelihood = 0;	
-	foreach my $item (@$info_list_ref)
+	
+	foreach my $item (@$info_list)
 	{
 		my $pr_ref_base_given_obs 
 			= $pr_first_base * $error_rates->[$item->{fastq_file_index}]->{$item->{quality}}->{$first_base . $item->{base}}

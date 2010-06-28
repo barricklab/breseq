@@ -246,7 +246,7 @@ sub annotate_1_mutation
 	## Mutation is intergenic
 	if (scalar(@within_genes) + scalar(@between_genes) == 0)
 	{			
-		$mut->{snp_type} = "IG";
+		$mut->{snp_type} = "intergenic";
 
 		$mut->{gene_name} .= (defined $prev_gene) ? $prev_gene->{name} : "&minus;";
 		$mut->{gene_name} .= $intergenic_seperator;
@@ -308,13 +308,13 @@ sub annotate_1_mutation
 		## ...but the gene is a pseudogene or an RNA gene
 		if ($gene->{pseudogene})
 		{			
-			$mut->{snp_type} = "NC";
+			$mut->{snp_type} = "pseudogene";
 			$mut->{gene_position} = "pseudogene ($mut->{gene_position}/$gene_nt_size&nbsp;nt)";
 			return $mut;			
 		}
 		elsif (!$gene->{translation})
 		{
-			$mut->{snp_type} = "NC";
+			$mut->{snp_type} = "noncoding";
 			$mut->{gene_position} = "noncoding ($mut->{gene_position}/$gene_nt_size&nbsp;nt)";
 			return $mut;
 		}	
@@ -342,7 +342,7 @@ sub annotate_1_mutation
 		$codon_seq->seq($mut->{codon_new_seq});
 		$mut->{aa_new_seq} = $codon_seq->translate( undef, undef, undef, 11 )->seq();
 
-	    $mut->{snp_type} = ($mut->{aa_ref_seq} ne $mut->{aa_new_seq}) ? "NS" : "S";
+	    $mut->{snp_type} = ($mut->{aa_ref_seq} ne $mut->{aa_new_seq}) ? "nonsynonymous" : "synonymous";
 	}
 
 	##The mutation actually contains several genes

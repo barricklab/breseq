@@ -504,7 +504,7 @@ sub html_mutation_table_string
 			{
 				## additional formatting for some variables
 				my $aa_codon_change = '';
-				if (($mut->{snp_type} ne 'IG') && ($mut->{snp_type} ne 'NC'))
+				if (($mut->{snp_type} ne 'intergenic') && ($mut->{snp_type} ne 'noncoding') && ($mut->{snp_type} ne 'pseudogene'))
 				{
 					$aa_codon_change .= "$mut->{aa_ref_seq}$mut->{gene_position}$mut->{aa_new_seq}";
 					## add color and underlining  

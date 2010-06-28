@@ -145,28 +145,28 @@ sub tam_write_read_alignments
 			$cigar_string .= $c->[1] . $c->[0];
 		}
 		
-			my @ll;
-			push @ll, $a->qname;
-			push @ll, $a->flag;
-			push @ll, $header->target_name()->[$a->tid];
-			push @ll, $a->start;
-			push @ll, $a->qual, $cigar_string;
+		my @ll;
+		push @ll, $a->qname;
+		push @ll, $a->flag;
+		push @ll, $header->target_name()->[$a->tid];
+		push @ll, $a->start;
+		push @ll, $a->qual, $cigar_string;
 
-			#something strange in new version... such that mate_start sometimes 
-			#returns 1 even though there is no mate
-			if (!$a->proper_pair)
-			{
-				push @ll, "*", 0, 0;
-			}
-			else
-			{
-				push @ll, "=", $a->mate_start, $a->isize;
-			}
-			push @ll, $a->qseq, $quality_score_string, $aux_tags;
-
-			print $fh join("\t", @ll) . "\n";
+		#something strange in new version... such that mate_start sometimes 
+		#returns 1 even though there is no mate
+		if (!$a->proper_pair)
+		{
+			push @ll, "*", 0, 0;
 		}
+		else
+		{
+			push @ll, "=", $a->mate_start, $a->isize;
+		}
+		push @ll, $a->qseq, $quality_score_string, $aux_tags;
+
+		print $fh join("\t", @ll) . "\n";
 	}
+}
 
 ## Project a read alignment from a candidate junction to the reference sequence
 ##  and write out the result in a TAM file.
@@ -479,6 +479,62 @@ sub alignment_query_start_end
 		($start, $end) = ($end, $start);
 	}	
 	return ($start, $end);
+}
+
+## counts how many mismatches there are (including unmatched bases)
+sub alignment_mismatches
+{
+	my ($a, $header, $fai, $ref_seq_info) = @_;
+	my $mismatches = 0;
+	
+	my $seq_id = $header->target_name->[$a->tid];
+	
+	my $ref_string = substr $ref_seq_info->{ref_strings}->{$seq_id}, $a->start-1, $a->end - $a->start + 1;
+	my @ref_string_list = split //, $ref_string;
+	my $ref_pos = 0;
+	
+	my $read_string = substr $a->qseq, $a->query->start-1, $a->query->end - $a->query->start + 1;
+	my @read_string_list = split //, $read_string;
+	my $read_pos = 0;
+		
+	my $cigar_list = $a->cigar_array;
+#	my $cigar_string = '';
+	foreach my $c (@$cigar_list)
+	{
+		my $op = $c->[0];
+		my $len = $c->[1];
+		
+		## soft padding counts as a mismatch
+		if ($op eq 'S')
+		{
+			$mismatches += $len;
+		}
+		elsif ($op eq 'D')
+		{
+			$mismatches += $len;
+			$ref_pos+= $len;
+		}		
+		elsif ($op eq 'I')
+		{
+			$mismatches += $len;
+			$read_pos+=$len;
+		}		
+		elsif ($op eq 'M')
+		{			
+			for (my $i=0; $i<$len; $i++)
+			{
+				$mismatches++ if ($ref_string_list[$ref_pos] ne $read_string_list[$read_pos]);
+				#print "$read_pos $ref_pos\n";
+				
+				$read_pos++;
+				$ref_pos++;
+			}
+		}
+#		$cigar_string .= $len . $op;
+	}
+	
+#	print $a->qname . "\n$mismatches\n$cigar_string\n$ref_string\n$read_string\n" if ($mismatches);
+	return $mismatches;
 }
 
 our $junction_name_separator = '__';

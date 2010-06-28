@@ -284,6 +284,13 @@ sub write_seq
 	print {$self->{fh}} "\@$seq->{id}\n$seq->{seq}\n+\n$seq->{qual_chars}\n";
 }
 
+sub complement
+{
+	my ($seq) = @_;
+	$seq =~ tr/ATCG/TAGC/;
+	return $seq;
+}
+
 sub revcom
 {
 	my ($seq) = @_;
