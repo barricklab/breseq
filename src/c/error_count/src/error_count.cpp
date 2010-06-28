@@ -85,7 +85,7 @@ int breseq::error_count_pileup::callback(uint32_t tid, uint32_t pos, int n, cons
       uint8_t base = bam1_seqi(qseq,qpos);    
       uint8_t ref_base = refseq[pos];
       
-      if (!is_N(base) && !is_N(ref_base)) {
+      if (!is_N(base) && !is_char_N(ref_base)) {
         if(reversed) {
           base = reverse_base(base);
           ref_base = reverse_base(ref_base);
@@ -109,7 +109,7 @@ int breseq::error_count_pileup::callback(uint32_t tid, uint32_t pos, int n, cons
         int32_t mrpos = pos + 1 - reversed;
         uint8_t ref_base = refseq[mrpos];
         
-        if (!is_N(base) && !is_N(ref_base)) {     
+        if (!is_N(base) && !is_char_N(ref_base)) {     
           string key = ".."; 
           uint8_t quality = qscore[mqpos];
           ++error_hash[fastq_file_index][quality][key];
@@ -130,7 +130,7 @@ int breseq::error_count_pileup::callback(uint32_t tid, uint32_t pos, int n, cons
       int32_t mrpos = pos + 1;
       uint8_t ref_base = refseq[mrpos];      
       
-      if (!is_N(base) && !is_N(ref_base)) {
+      if (!is_N(base) && !is_char_N(ref_base)) {
         if(reversed) {
           ref_base = reverse_base(ref_base);
         }
