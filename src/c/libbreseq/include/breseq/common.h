@@ -8,6 +8,7 @@
 #define is_G(x) (x == 0x04)
 #define is_T(x) (x == 0x08)
 #define is_N(x) (x == 0x0f)
+#define is_char_N(x) (x == 'N')
 
 
 namespace breseq {
