@@ -95,6 +95,10 @@ elsif ("\U$command" eq 'COMPARE')
 {
 	do_compare();
 }
+elsif ("\U$command" eq 'COUNT')
+{
+	do_count();
+}
 elsif ("\U$command" eq 'MUTATE')
 {
 	do_mutate();
@@ -443,6 +447,102 @@ sub do_compare
 	}
 	
 }
+
+
+sub do_count
+{
+	use Breseq::ReferenceSequence;
+	use Breseq::Output;
+	
+	my ($help, $man);
+	my $output = "count.tab";
+	my @reference_genbank_file_names;
+	GetOptions(
+		'help|?' => \$help, 'man' => \$man,
+	## Options for input and output files
+		'output|o=s' => \$output,	
+		'reference-sequence|r=s' => \@reference_genbank_file_names,
+	) or pod2usage(2);
+
+	pod2usage(1) if $help;
+	pod2usage(-exitstatus => 0, -verbose => 2) if $man;
+	pod2usage(1) if (scalar @reference_genbank_file_names == 0);
+	pod2usage(1) if (scalar @ARGV == 0);
+	
+	my @gd_file_name_list = @ARGV;	
+				
+	## load information about reference sequences from GenBank files
+	my $ref_seq_info = Breseq::ReferenceSequence::load_ref_seq_info(\@reference_genbank_file_names);
+	my $one_ref_seq = scalar keys %{$ref_seq_info->{gene_lists}} == 1;
+
+	my @bases = ('A', 'T', 'C', 'G');
+	my @base_combinations;
+	my @base_headers;
+	foreach my $b1 (@bases)
+	{
+		foreach my $b2 (@bases)
+		{
+			next if ($b1 eq $b2);
+			next if ($b1 eq 'T');
+			next if ($b1 eq 'G');
+
+			push @base_combinations, "$b1$b2";
+			push @base_headers, $b1 . ":" . Breseq::Fastq::complement($b1) . "=>" . $b2 . ":" . Breseq::Fastq::complement($b2);
+		}
+	}
+	
+	my @snp_types = ( 'nonsynonymous', 'synonymous', 'noncoding', 'pseudogene', 'intergenic');
+	
+	open OUT, ">$output" or die "Count not open file: $output";
+	print OUT join ("\t", 'strain', @snp_types, @base_headers) . "\n";
+	
+	my @gd_name_list;
+	my @gd_list; 
+	my @mut_lists; #altered during processing
+	foreach my $gd_file_name (@gd_file_name_list)
+	{
+		print "$gd_file_name\n";
+		
+		my $gd_name = $gd_file_name;
+		$gd_name =~ s/^.+\///;		
+		$gd_name =~ s/\.[^.]+$//;		
+		
+		my $gd = Breseq::GenomeDiff->new(-in=>$gd_file_name);
+		Breseq::ReferenceSequence::annotate_mutations($ref_seq_info, $gd, 1);
+		
+		my @mut_list = $gd->mutation_list();
+
+		my $count;
+		foreach my $b (@base_combinations)
+		{
+			$count->{base}->{$b} = 0;
+		}
+		
+		foreach my $st (@snp_types)
+		{
+			$count->{type}->{$st} = 0;
+		}
+
+		foreach my $mut (@mut_list)
+		{
+			if ($mut->{type} eq 'SNP')
+			{
+				my $base_change = $mut->{ref_seq} . $mut->{new_seq};
+				if (($mut->{ref_seq} eq 'T') || ($mut->{ref_seq} eq 'G'))
+				{
+					$base_change = Breseq::Fastq::complement($base_change);
+				}
+				$count->{base}->{$base_change}++;
+				
+				$count->{type}->{$mut->{snp_type}}++;
+			}
+		}
+		
+		print OUT join("\t", $gd_name, map({$count->{type}->{$_} } @snp_types), map({ $count->{base}->{$_} } @base_combinations) ) . "\n";
+		#print Dumper ($count);
+	}	
+}
+
 
 sub do_mutate
 {

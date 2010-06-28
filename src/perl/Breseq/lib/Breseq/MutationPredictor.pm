@@ -77,105 +77,6 @@ sub new
 sub predict
 {
 	our ($self, $settings, $summary, $ref_seq_info, $gd) = @_;
-		
-	###
-	## Read Alignments => SNP, DEL, INS, SUB
-	###	
-		
-	##first look at SNPs and small indels predicted by read alignments.
-	my @ra = $gd->list('RA');
-
-	##be sure they are sorted by position
-	sub by_pos
-	{		
-	       ($a->{seq_id} cmp $b->{seq_id})
-		|| ($a->{position} <=> $b->{position}) 
-		|| ($a->{insert_position} <=> $b->{insert_position})
-	}
-	@ra = sort by_pos @ra;
-
-	###
-	## Gather together read alignment mutations that occur next to each other
-	## ...unless they are polymorphisms
-	###
-	
-	my $mut;
-	my @muts;
-	
-	foreach my $item (@ra)
-	{
-		next if ($item->{reject});
-		
-		my $same = 0;
-		if (defined $mut)
-		{
-			$same = 1 if ($mut->{end} == $item->{position}) && ($mut->{insert_end} + 1 == $item->{insert_position});
-			$same = 1 if ($mut->{end} + 1 == $item->{position}) && ($item->{insert_position} == 0);
-			$same = 0 if (($item->{frequency} != 1) || ($mut->{frequency} != 1)); #don't join polymorphisms
-			$same = 0 if ($mut->{seq_id} ne $item->{seq_id});
-		}
-		
-		if (!$same)
-		{
-			push @muts, $mut if (defined $mut);
-			my $new_mut = { 
-				seq_id => $item->{seq_id},
-				position => $item->{position},
-				start => $item->{position},
-				end => $item->{position},
-				insert_start => $item->{insert_position},
-				insert_end => $item->{insert_position},
-				ref_seq => $item->{ref_base},
-				new_seq => $item->{new_base},
-				evidence => [$item->{id}],
-				frequency => $item->{frequency}, 
-			};			
-			$mut = $new_mut;
-		}
-		else
-		{
-			$mut->{insert_end} = $item->{insert_position};
-			$mut->{end} = $item->{position};
-			$mut->{ref_seq} .= $item->{ref_base};
-			$mut->{new_seq} .= $item->{new_base};
-			push @{$mut->{evidence}}, $item->{id}; 
-		}
-	}	
-	##don't forget the last one
-	push @muts, $mut if (defined $mut);
-	
-	###
-	## Finally, convert these items into the fields needed for the various types of mutations
-	###
-	
-	foreach my $mut (@muts)
-	{
-		#insertion
-		if ($mut->{ref_seq} =~ m/\./)
-		{			
-			$mut->{type} = 'INS';
-		}
-		#deletion
-		elsif ($mut->{new_seq} =~ m/\./)
-		{
-			$mut->{type} = 'DEL';
-			$mut->{size} = $mut->{end} - $mut->{start} + 1;
-			$mut->{start_range} = 0;
-			$mut->{end_range} = 0;
-		}
-		#block substitution
-		elsif ((length $mut->{ref_seq} > 1) || (length $mut->{new_seq} > 1))
-		{
-			$mut->{type} = 'SUB';
-		}
-		#snp
-		else
-		{
-			$mut->{type} = 'SNP';
-		}
-		
-		$gd->add($mut);
-	}
 	
 	###
 	## Junctions => MOB, DEL
@@ -493,7 +394,7 @@ sub predict
 		}
 		@j2_list = sort by_reject_score @j2_list;
 
-		my $verbose = 1;
+		my $verbose = 0;
 
 		## We need to go through all with the same coordinate (or within a certain coordinate stretch?)
 		## because sometimes a failed junction will be in between the successful junctions
@@ -772,9 +673,13 @@ sub predict
 		}
 	}
 
-	
+
+	###
+	## Read Alignments => SNP, DEL, INS, SUB
+	###		
 
 	##RA that overlap deletions should not be shown
+	my @ra = $gd->list('RA');
 	my @del = $gd->list('DEL');	
 	RA: foreach my $ra_item (@ra)
 	{
@@ -791,6 +696,102 @@ sub predict
 		}
 	}
 	
+		
+	## look at SNPs and small indels predicted by read alignments.
+	##be sure they are sorted by position
+	sub by_pos
+	{		
+	       ($a->{seq_id} cmp $b->{seq_id})
+		|| ($a->{position} <=> $b->{position}) 
+		|| ($a->{insert_position} <=> $b->{insert_position})
+	}
+	@ra = sort by_pos @ra;
+
+	###
+	## Gather together read alignment mutations that occur next to each other
+	## ...unless they are polymorphisms
+	###
+	
+	my $mut;
+	my @muts;
+	
+	foreach my $item (@ra)
+	{
+		next if ($item->{reject});
+		next if ($item->{deleted}); 
+			## Sometimes a SNP might be called in a deleted area because the end was wrong, 
+			## but it was corrected using a junction. (This catches this case.)
+
+		my $same = 0;
+		if (defined $mut)
+		{
+			$same = 1 if ($mut->{end} == $item->{position}) && ($mut->{insert_end} + 1 == $item->{insert_position});
+			$same = 1 if ($mut->{end} + 1 == $item->{position}) && ($item->{insert_position} == 0);
+			$same = 0 if (($item->{frequency} != 1) || ($mut->{frequency} != 1)); #don't join polymorphisms
+			$same = 0 if ($mut->{seq_id} ne $item->{seq_id});
+		}
+		
+		if (!$same)
+		{
+			push @muts, $mut if (defined $mut);
+			my $new_mut = { 
+				seq_id => $item->{seq_id},
+				position => $item->{position},
+				start => $item->{position},
+				end => $item->{position},
+				insert_start => $item->{insert_position},
+				insert_end => $item->{insert_position},
+				ref_seq => $item->{ref_base},
+				new_seq => $item->{new_base},
+				evidence => [$item->{id}],
+				frequency => $item->{frequency}, 
+			};			
+			$mut = $new_mut;
+		}
+		else
+		{
+			$mut->{insert_end} = $item->{insert_position};
+			$mut->{end} = $item->{position};
+			$mut->{ref_seq} .= $item->{ref_base};
+			$mut->{new_seq} .= $item->{new_base};
+			push @{$mut->{evidence}}, $item->{id}; 
+		}
+	}	
+	##don't forget the last one
+	push @muts, $mut if (defined $mut);
+	
+	###
+	## Finally, convert these items into the fields needed for the various types of mutations
+	###
+	
+	foreach my $mut (@muts)
+	{
+		#insertion
+		if ($mut->{ref_seq} =~ m/\./)
+		{			
+			$mut->{type} = 'INS';
+		}
+		#deletion
+		elsif ($mut->{new_seq} =~ m/\./)
+		{
+			$mut->{type} = 'DEL';
+			$mut->{size} = $mut->{end} - $mut->{start} + 1;
+			$mut->{start_range} = 0;
+			$mut->{end_range} = 0;
+		}
+		#block substitution
+		elsif ((length $mut->{ref_seq} > 1) || (length $mut->{new_seq} > 1))
+		{
+			$mut->{type} = 'SUB';
+		}
+		#snp
+		else
+		{
+			$mut->{type} = 'SNP';
+		}
+		
+		$gd->add($mut);
+	}
 	
 	
 	## PROBLEM: We can't apply the coverage cutoff until AFTER we count errors

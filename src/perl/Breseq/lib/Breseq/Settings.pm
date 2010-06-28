@@ -98,6 +98,7 @@ sub new
 		'trim-read-ends' => \$self->{trim_read_ends},
 		'trim-read-base-quality=s' => \$self->{trim_read_base_quality},
 		'base-quality-cutoff|b=s' => \$self->{base_quality_cutoff},
+		'maximum-mismatches|m=s' => \$self->{maximum_read_mismatches},		
 		'perl-error-count' => \$self->{perl_error_count},
 	) or pod2usage(2);
 
@@ -165,6 +166,7 @@ sub new_annotate
 		'trim-read-ends' => \$self->{trim_read_ends},
 		'trim-read-base-quality=s' => \$self->{trim_read_base_quality},
 		'base-quality-cutoff|b=s' => \$self->{base_quality_cutoff},
+		'maximum-mismatches|m=s' => \$self->{maximum_read_mismatches},
 		'perl-error-count' => \$self->{perl_error_count},
 		
 	## This is the only different option	

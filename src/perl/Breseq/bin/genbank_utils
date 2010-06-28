@@ -83,6 +83,10 @@ elsif ("\U$command" eq 'FASTA')
 {
 	do_convert_to_fasta();
 }
+elsif ("\U$command" eq 'MASK_REPEATS')
+{
+	do_mask_repeat_regions();
+}
 elsif ("\U$command" eq 'SUBSEQUENCE')
 {
 	do_subsequence();
@@ -272,6 +276,53 @@ sub do_split
 		$ref_o->write_seq($fragment);
 	}
 }
+
+sub do_mask_repeat_regions
+{
+	use Bio::SeqIO;
+	use	Breseq::Shared;
+	
+	my ($help, $man);
+	my $verbose;
+	my $input;
+	my $output = "output.gbk";
+	GetOptions(
+		'help|?' => \$help, 'man' => \$man,
+		'output|o=s' => \$output, 		
+	);
+	pod2usage(1) if $help;
+	pod2usage(-exitstatus => 0, -verbose => 2) if $man;
+	
+	my $input = shift @ARGV;
+
+	my $ref_i = Bio::SeqIO->new( -file => "<$input");
+	my $ref_seq = $ref_i->next_seq;
+	my @features = $ref_seq->get_SeqFeatures();
+	
+	my $seq = $ref_seq->seq;
+	print +(length($seq)) . "\n";
+	
+	foreach my $f (@features)
+	{
+		if ($f->primary_tag eq 'repeat_region')
+		{
+			print $f->start . " " . $f->end . "\n";
+			my $len = $f->end-$f->start+1;
+			substr($seq, $f->start-1, $len) = 'N' x $len;
+		}
+	}
+	print +(length($seq)) . "\n";
+	
+	$ref_seq->seq($seq);
+	my $seq = $ref_seq->seq;
+	print "$seq\n";
+	print +(length($seq)) . "\n";
+
+	my $ref_o = Bio::SeqIO->new(-format=> 'GENBANK', -file => ">$output");
+	$ref_o->write_seq($ref_seq);	
+	
+}
+
 
 sub do_subsequence
 {

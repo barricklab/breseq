@@ -323,7 +323,7 @@ sub correct_alignments
 			### best match is to the reference, record in that SAM file.
 			if ($best_match_to_reference && (scalar @$this_reference_al > 0))
 			{
-				_write_reference_matches($minimum_best_score, $minimum_best_score_difference, $reference_fai, $ref_seq_info, $RREF, $reference_header, $fastq_file_index[$f], @$this_reference_al);
+				_write_reference_matches($settings, $minimum_best_score, $minimum_best_score_difference, $reference_fai, $ref_seq_info, $RREF, $reference_header, $fastq_file_index[$f], @$this_reference_al);
 			}
 
 		} continue {
@@ -352,7 +352,7 @@ sub correct_alignments
 	my @new_keys;
 	foreach my $key (@sorted_keys)
 	{
-		my ($failed, $has_non_overlap_only) = _test_junction($key, \%matched_junction, \%degenerate_matches, \%junction_test_info, $minimum_best_score, $minimum_best_score_difference, $reference_fai, $ref_seq_info, $RREF, $reference_header, $RCJ, $candidate_junction_header, \%written_overlap_only_reads);
+		my ($failed, $has_non_overlap_only) = _test_junction($settings, $key, \%matched_junction, \%degenerate_matches, \%junction_test_info, $minimum_best_score, $minimum_best_score_difference, $reference_fai, $ref_seq_info, $RREF, $reference_header, $RCJ, $candidate_junction_header, \%written_overlap_only_reads);
 
 		## only count matches that span overlap
 		if (!$has_non_overlap_only)
@@ -379,7 +379,7 @@ sub correct_alignments
 		
 		next if (!defined $degenerate_matches{$key}); #they can be removed 
 		
-		my ($failed, $has_non_overlap_only) = _test_junction($key, \%matched_junction, \%degenerate_matches, \%junction_test_info, $minimum_best_score, $minimum_best_score_difference, $reference_fai, $ref_seq_info, $RREF, $reference_header, $RCJ, $candidate_junction_header);
+		my ($failed, $has_non_overlap_only) = _test_junction($settings, $key, \%matched_junction, \%degenerate_matches, \%junction_test_info, $minimum_best_score, $minimum_best_score_difference, $reference_fai, $ref_seq_info, $RREF, $reference_header, $RCJ, $candidate_junction_header);
 
 		if (!$failed)
 		{
@@ -470,9 +470,36 @@ sub correct_alignments
 
 sub _write_reference_matches
 {
-	my ($minimum_best_score, $minimum_best_score_difference, $reference_fai, $ref_seq_info, $RREF, $reference_header, $fastq_file_index, @reference_al) = @_;
+	my ($settings, $minimum_best_score, $minimum_best_score_difference, $reference_fai, $ref_seq_info, $RREF, $reference_header, $fastq_file_index, @reference_al) = @_;
 	
 	@reference_al = _alignment_list_to_dominant_best($minimum_best_score, $minimum_best_score_difference, @reference_al);
+	
+	## handle requirements for matches here
+	ALIGNMENT: for (my $i=0; $i<scalar @reference_al; $i++)
+	{
+		my $a = $reference_al[$i];
+		my $accept = 1;
+		
+		if ($settings->{require_complete_match})
+		{
+			my ($q_start, $q_end) = ($a->query->start-1, $a->query->end-1); #0-indexed
+			my $complete_match = ($q_start+1 == 1) && ($q_end+1 == $a->l_qseq);
+			$accept &&= $complete_match;
+		}
+		if ($settings->{maximum_read_mismatches})
+		{
+			my $mismatches = Breseq::Shared::alignment_mismatches($a, $reference_header, $reference_fai, $ref_seq_info);
+			$accept &&= $mismatches <= $settings->{maximum_read_mismatches};
+		}
+		
+	#	print $a->qname . "\n$accept\n";
+			
+		if (!$accept)
+		{
+			splice @reference_al, $i, 1;
+			$i--;
+		}
+	}
 	
 	my @trims;
 	foreach my $a (@reference_al)
@@ -891,7 +918,7 @@ sub _ambiguous_end_offsets_from_sequence
 
 sub _test_junction
 {
-	my ($key, $matched_junction_ref, $degenerate_matches_ref, $junction_test_info_ref, $minimum_best_score, $minimum_best_score_difference, $reference_fai, $ref_seq_info, $RREF, $reference_header, $RCJ, $candidate_junction_header, $written_overlap_only_reads) = @_;
+	my ($settings, $key, $matched_junction_ref, $degenerate_matches_ref, $junction_test_info_ref, $minimum_best_score, $minimum_best_score_difference, $reference_fai, $ref_seq_info, $RREF, $reference_header, $RCJ, $candidate_junction_header, $written_overlap_only_reads) = @_;
 	
 	my $test_info;
 	my @unique_matches = ();
@@ -1087,7 +1114,7 @@ sub _test_junction
 			## hashing by read name here makes sure that we only write each read once in the reference file...
 			if (!$junction_read->{dominant_alignment_is_overlap_only} || ($read_name && !$written_overlap_only_reads->{$read_name}))
 			{
-				_write_reference_matches($minimum_best_score, $minimum_best_score_difference, $reference_fai, $ref_seq_info, $RREF, $reference_header, $fastq_file_index, @$this_reference_al);
+				_write_reference_matches($settings, $minimum_best_score, $minimum_best_score_difference, $reference_fai, $ref_seq_info, $RREF, $reference_header, $fastq_file_index, @$this_reference_al);
 				$written_overlap_only_reads->{$read_name} = 1;
 			}
 		}
