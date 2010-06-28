@@ -394,7 +394,7 @@ sub predict
 		}
 		@j2_list = sort by_reject_score @j2_list;
 
-		my $verbose = 1;
+		my $verbose = 0;
 
 		## We need to go through all with the same coordinate (or within a certain coordinate stretch?)
 		## because sometimes a failed junction will be in between the successful junctions
