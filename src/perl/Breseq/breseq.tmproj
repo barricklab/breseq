@@ -3,7 +3,7 @@
 <plist version="1.0">
 <dict>
 	<key>currentDocument</key>
-	<string>bin/breseq</string>
+	<string>lib/Breseq/MutationPredictor.pm</string>
 	<key>documents</key>
 	<array>
 		<dict>
@@ -36,30 +36,14 @@
 			<key>caret</key>
 			<dict>
 				<key>column</key>
-				<integer>82</integer>
+				<integer>29</integer>
 				<key>line</key>
-				<integer>209</integer>
+				<integer>212</integer>
 			</dict>
-			<key>columnSelection</key>
-			<false/>
 			<key>firstVisibleColumn</key>
 			<integer>0</integer>
 			<key>firstVisibleLine</key>
-			<integer>188</integer>
-			<key>selectFrom</key>
-			<dict>
-				<key>column</key>
-				<integer>62</integer>
-				<key>line</key>
-				<integer>209</integer>
-			</dict>
-			<key>selectTo</key>
-			<dict>
-				<key>column</key>
-				<integer>104</integer>
-				<key>line</key>
-				<integer>209</integer>
-			</dict>
+			<integer>186</integer>
 		</dict>
 		<key>bin/cnv_script.r</key>
 		<dict>
@@ -108,14 +92,14 @@
 			<key>caret</key>
 			<dict>
 				<key>column</key>
-				<integer>18</integer>
+				<integer>29</integer>
 				<key>line</key>
-				<integer>327</integer>
+				<integer>522</integer>
 			</dict>
 			<key>firstVisibleColumn</key>
 			<integer>0</integer>
 			<key>firstVisibleLine</key>
-			<integer>297</integer>
+			<integer>505</integer>
 		</dict>
 		<key>bin/merge_coverage_files</key>
 		<dict>
@@ -238,14 +222,14 @@
 			<key>caret</key>
 			<dict>
 				<key>column</key>
-				<integer>54</integer>
+				<integer>2</integer>
 				<key>line</key>
-				<integer>54</integer>
+				<integer>494</integer>
 			</dict>
 			<key>firstVisibleColumn</key>
 			<integer>0</integer>
 			<key>firstVisibleLine</key>
-			<integer>125</integer>
+			<integer>462</integer>
 		</dict>
 		<key>lib/Breseq/AlignmentOutput.pm</key>
 		<dict>
@@ -324,9 +308,9 @@
 			<key>caret</key>
 			<dict>
 				<key>column</key>
-				<integer>0</integer>
+				<integer>7</integer>
 				<key>line</key>
-				<integer>286</integer>
+				<integer>290</integer>
 			</dict>
 			<key>firstVisibleColumn</key>
 			<integer>0</integer>
@@ -338,87 +322,101 @@
 			<key>caret</key>
 			<dict>
 				<key>column</key>
-				<integer>37</integer>
+				<integer>13</integer>
 				<key>line</key>
-				<integer>73</integer>
+				<integer>292</integer>
 			</dict>
 			<key>columnSelection</key>
 			<false/>
 			<key>firstVisibleColumn</key>
 			<integer>0</integer>
 			<key>firstVisibleLine</key>
-			<integer>55</integer>
+			<integer>265</integer>
 			<key>selectFrom</key>
 			<dict>
 				<key>column</key>
-				<integer>34</integer>
+				<integer>0</integer>
 				<key>line</key>
-				<integer>73</integer>
+				<integer>292</integer>
 			</dict>
 			<key>selectTo</key>
 			<dict>
 				<key>column</key>
-				<integer>41</integer>
+				<integer>0</integer>
 				<key>line</key>
-				<integer>73</integer>
+				<integer>293</integer>
 			</dict>
+		</dict>
+		<key>lib/Breseq/MutationIdentification.pm</key>
+		<dict>
+			<key>caret</key>
+			<dict>
+				<key>column</key>
+				<integer>18</integer>
+				<key>line</key>
+				<integer>887</integer>
+			</dict>
+			<key>firstVisibleColumn</key>
+			<integer>0</integer>
+			<key>firstVisibleLine</key>
+			<integer>859</integer>
 		</dict>
 		<key>lib/Breseq/MutationPredictor.pm</key>
 		<dict>
 			<key>caret</key>
 			<dict>
 				<key>column</key>
-				<integer>17</integer>
+				<integer>41</integer>
 				<key>line</key>
-				<integer>495</integer>
+				<integer>716</integer>
 			</dict>
 			<key>firstVisibleColumn</key>
 			<integer>0</integer>
 			<key>firstVisibleLine</key>
-			<integer>472</integer>
+			<integer>747</integer>
 		</dict>
 		<key>lib/Breseq/Output.pm</key>
 		<dict>
 			<key>caret</key>
 			<dict>
 				<key>column</key>
-				<integer>0</integer>
+				<integer>40</integer>
 				<key>line</key>
-				<integer>547</integer>
+				<integer>614</integer>
 			</dict>
 			<key>firstVisibleColumn</key>
 			<integer>0</integer>
 			<key>firstVisibleLine</key>
-			<integer>523</integer>
+			<integer>579</integer>
 		</dict>
 		<key>lib/Breseq/ReferenceSequence.pm</key>
 		<dict>
 			<key>caret</key>
 			<dict>
 				<key>column</key>
-				<integer>14</integer>
+				<integer>29</integer>
 				<key>line</key>
-				<integer>128</integer>
+				<integer>248</integer>
 			</dict>
 			<key>columnSelection</key>
 			<false/>
 			<key>firstVisibleColumn</key>
 			<integer>0</integer>
 			<key>firstVisibleLine</key>
-			<integer>121</integer>
+			<integer>233</integer>
 			<key>selectFrom</key>
 			<dict>
 				<key>column</key>
-				<integer>0</integer>
+				<integer>22</integer>
 				<key>line</key>
-				<integer>128</integer>
+				<integer>248</integer>
 			</dict>
 			<key>selectTo</key>
 			<dict>
 				<key>column</key>
-				<integer>0</integer>
+				<integer>32</integer>
 				<key>line</key>
-				<integer>129</integer>
+				<integer>248</integer>
 			</dict>
 		</dict>
 		<key>lib/Breseq/Settings.pm</key>
@@ -426,28 +424,28 @@
 			<key>caret</key>
 			<dict>
 				<key>column</key>
-				<integer>0</integer>
+				<integer>20</integer>
 				<key>line</key>
-				<integer>241</integer>
+				<integer>143</integer>
 			</dict>
 			<key>firstVisibleColumn</key>
 			<integer>0</integer>
 			<key>firstVisibleLine</key>
-			<integer>451</integer>
+			<integer>127</integer>
 		</dict>
 		<key>lib/Breseq/Shared.pm</key>
 		<dict>
 			<key>caret</key>
 			<dict>
 				<key>column</key>
-				<integer>29</integer>
+				<integer>4</integer>
 				<key>line</key>
-				<integer>584</integer>
+				<integer>530</integer>
 			</dict>
 			<key>firstVisibleColumn</key>
 			<integer>0</integer>
 			<key>firstVisibleLine</key>
-			<integer>534</integer>
+			<integer>499</integer>
 		</dict>
 		<key>lib/Breseq/polymorphism_statistics.r</key>
 		<dict>
@@ -468,6 +466,7 @@
 	<array>
 		<string>bin/fastq_utils</string>
 		<string>lib/Breseq/Settings.pm</string>
+		<string>lib/Breseq/MutationIdentification.pm</string>
 		<string>lib/Breseq/Fastq.pm</string>
 		<string>lib/Breseq/Shared.pm</string>
 		<string>bin/plot_coverage</string>
@@ -494,6 +493,6 @@
 	<key>showFileHierarchyDrawer</key>
 	<true/>
 	<key>windowFrame</key>
-	<string>{{308, 3}, {954, 780}}</string>
+	<string>{{349, 56}, {998, 819}}</string>
 </dict>
 </plist>
