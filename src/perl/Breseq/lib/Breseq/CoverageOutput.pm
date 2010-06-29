@@ -97,7 +97,9 @@ sub plot_coverage
 	my $log_file_name = "r.log";
 	Breseq::Shared::system("R --vanilla in_file=$tmp_coverage out_file=$output < $self->{r_script} > $log_file_name");
 	
-	
+	#clean up
+	unlink $tmp_coverage;
+	unlink $log_file_name;
 }
 
 ## Rewrite this in C++ for speed!
