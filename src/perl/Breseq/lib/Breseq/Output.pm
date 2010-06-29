@@ -602,13 +602,25 @@ sub html_mutation_table_string
 				$output_str.= td({align=>"center"}, nonbreaking($mut->{seq_id})) if (!$one_ref_seq); 
 				$output_str.= td({align=>"right"}, commify($mut->{position}));
 				my $s;
-				$s .=  "+$mut->{gap_left} :: " if (!($mut->{gap_left} =~ m/^(-|0)/));
-				$s .=  "&Delta;" . abs($mut->{gap_left}) . " :: " if ($mut->{gap_left} < 0);
+
+				if ($mut->{gap_left} =~ m/^-/) {
+					$s .= "&Delta;" . abs($mut->{gap_left}) . " :: ";
+				}
+				elsif ($mut->{gap_left} ne '0') {
+					$s .= "+$mut->{gap_left} :: ";
+				}
+				
 				$s .= "$mut->{repeat_name} (";
 				$s .= (($mut->{strand}==+1) ? '+' : (($mut->{strand}==-1) ? '&minus;' : '?'));
 				$s .= ")";
-				$s .=  " :: +$mut->{gap_right}" if (!($mut->{gap_right} =~ m/^(-|0)/));
-				$s .=  " :: &Delta;" . abs($mut->{gap_right}) if ($mut->{gap_right} < 0);
+
+				if ($mut->{gap_right} =~ m/^-/) {
+					$s .= " :: &Delta;" . abs($mut->{gap_right}) . " ";
+				}
+				elsif ($mut->{gap_right} ne '0') {
+					$s .= " :: +$mut->{gap_right}";
+				}
+
 				my $dup_str = ($mut->{duplication_size} >= 0) ? "+$mut->{duplication_size}" : "&Delta;" . abs($mut->{duplication_size});
 				$s .= " ($dup_str) bp";			
 				$output_str.= td({align=>"center"}, nonbreaking($s));

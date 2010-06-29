@@ -424,14 +424,14 @@ sub predict
 				evidence => [ $j1->{id}, $j2->{id} ],
 			};
 
-			$mut->{start} = ($uc1_strand == -1) ? $j2->{"$j2->{_unique_interval}\_position"} : $j1->{"$j1->{_unique_interval}\_position"};
-			$mut->{end} = ($uc1_strand == -1) ? $j1->{"$j1->{_unique_interval}\_position"} : $j2->{"$j2->{_unique_interval}\_position"};
+			$mut->{_start} = ($uc1_strand == -1) ? $j2->{"$j2->{_unique_interval}\_position"} : $j1->{"$j1->{_unique_interval}\_position"};
+			$mut->{_end} = ($uc1_strand == -1) ? $j1->{"$j1->{_unique_interval}\_position"} : $j2->{"$j2->{_unique_interval}\_position"};
 			$mut->{repeat_name} = $j1->{"_$j1->{_is_interval}\_is"}->{name};
 
 			print Dumper($j1, $j2) if ($verbose);	
 
-			$mut->{position} = $mut->{start}; ## - 1; #position is the first duplicated base...
- 			$mut->{duplication_size} = $mut->{end} - $mut->{start} + 1;
+			$mut->{position} = $mut->{_start}; ## - 1; #position is the first duplicated base...
+ 			$mut->{duplication_size} = $mut->{_end} - $mut->{_start} + 1;
 				
 			## ok, we're actually missing a base of the reference...
 			if ($mut->{duplication_size} < 0)

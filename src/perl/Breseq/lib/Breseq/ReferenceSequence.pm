@@ -86,6 +86,9 @@ sub load_ref_seq_info
 		while (my $ref_seq = $ref_i->next_seq)
 		{			
 			my $seq_id = $ref_seq->id;
+			
+			die "Duplicate reference sequence id: $seq_id\n" if (defined $ref_seq_info->{ref_strings}->{$seq_id});
+			
 			print STDERR "    Sequence::$seq_id loaded.\n";
 			
 			$s->{$seq_id}->{seq_id} = $seq_id;
@@ -405,7 +408,7 @@ sub annotate_mutations
 		}
 		elsif ($mut->{type} eq 'MOB')
 		{
-			annotate_1_mutation($ref_seq_info, $mut, $mut->{start}, $mut->{end});
+			annotate_1_mutation($ref_seq_info, $mut, $mut->{position}, $mut->{position} + $mut->{duplication_size}-1);
 		}
 		elsif ($mut->{type} eq 'JC')
 		{

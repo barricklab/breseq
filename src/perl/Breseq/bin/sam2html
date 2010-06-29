@@ -76,7 +76,7 @@ print OUT start_html(-title => "sam2html");
 
 foreach my $region (@regions)
 {
-	my $ao =Breseq::AlignmentOutput->new;
+	my $ao = Breseq::AlignmentOutput->new;
 	print OUT $ao->html_alignment($bam_path, $fasta_path, $region, {'verbose'=>$verbose});
 }
 print OUT end_html;
