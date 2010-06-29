@@ -63,6 +63,12 @@ sub plot_coverage
 {
 	my ($self, $region, $output, $options) = @_;
 
+	## Set up defaults
+	$options = {} if (!defined $options);
+	$options->{pdf} = 0 if (!defined $options->{pdf});
+	$options->{resolution} = 600 if (!defined $options->{resolution});
+	$options->{total_only} = 0 if (!defined $options->{total_only});
+
 	## Workaround to avoid too many open files... bug in Bio::DB::Sam
 	my $bam_path = $self->{bam};
 	my $fasta_path = $self->{fasta};
@@ -79,12 +85,11 @@ sub plot_coverage
 	
 	$output = $region if (!defined $output);
 	$output =~ s/:/_/g;
-	$output .= ".png";
+	$output .= ($options->{pdf}) ? ".pdf" : ".png";
 	
 	## if no guidance provided about how much to downsample, aim for 1E2-1E3 total points.
 	my $downsample = $options->{downsample};
 	my $resolution = $options->{resolution};
-	$resolution = 1000 if (!defined $resolution);
 	if (!defined $downsample)
 	{
 		$downsample = int($size/$resolution);
@@ -95,7 +100,7 @@ sub plot_coverage
 	$self->tabulate_coverage($bam, $tmp_coverage, $seq_id, $start, $end, $downsample);
 	
 	my $log_file_name = "r.log";
-	Breseq::Shared::system("R --vanilla in_file=$tmp_coverage out_file=$output < $self->{r_script} > $log_file_name");
+	Breseq::Shared::system("R --vanilla in_file=$tmp_coverage out_file=$output pdf_output=$options->{pdf} total_only=$options->{total_only} < $self->{r_script} > $log_file_name");
 	
 	#clean up
 	unlink $tmp_coverage;
