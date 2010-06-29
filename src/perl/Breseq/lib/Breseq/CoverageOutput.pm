@@ -96,10 +96,10 @@ sub plot_coverage
 		$downsample = 1 if ($downsample < 1);
 	}
 	
-	my $tmp_coverage = "coverage.tab";
+	my $tmp_coverage = "$$.coverage.tab";
 	$self->tabulate_coverage($bam, $tmp_coverage, $seq_id, $start, $end, $downsample);
 	
-	my $log_file_name = "r.log";
+	my $log_file_name = "$$.r.log";
 	Breseq::Shared::system("R --vanilla in_file=$tmp_coverage out_file=$output pdf_output=$options->{pdf} total_only=$options->{total_only} < $self->{r_script} > $log_file_name");
 	
 	#clean up
