@@ -171,11 +171,11 @@ sub identify_mutations
 					## normal treatment is that coverage went to zero
 					else
 					{
-						$left_outside_coverage_item = { 
+						$left_inside_coverage_item = { 
 							unique => {'1'=>0, '-1'=>0, 'total' => 0 },
 							redundant => {'1'=>0, '-1'=>0, 'total' => 0 }
 						};
-						$left_inside_coverage_item = $last_position_coverage;	
+						$left_outside_coverage_item = $last_position_coverage;	
 					}
 					$last_deletion_start_position = $last_position_coverage_printed+1;
 					$last_deletion_redundant_start_position = $last_position_coverage_printed+1 if (!defined $last_deletion_redundant_start_position);
