@@ -345,7 +345,7 @@ sub do_compare
 		push @gd_list, $gd;
 		Breseq::ReferenceSequence::annotate_mutations($ref_seq_info, $gd, 1);
 		
-		my @mut_list = $gd->mutation_list(1);
+		my @mut_list = $gd->mutation_list(1);		
 		push @mut_lists, \@mut_list;
 	}	
 	
