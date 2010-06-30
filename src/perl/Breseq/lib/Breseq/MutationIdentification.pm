@@ -924,7 +924,7 @@ sub _predict_polymorphism
 	#use likelihood test to estimate probability of mixed model vs. one-base model	
 	my ($log10_likelihood_of_two_base_model, $max_likelihood_fr_first_base) = _find_best_log_likelihood($info_list, $error_rates, $first_base, $second_base);
 
-	print "Num First Base: " . (scalar @first_base_qualities) . " Num Second Base: " . (scalar @second_base_qualities) . "\n";
+	print "Num First Base: " . (scalar @first_base_qualities) . " Num Second Base: " . (scalar @second_base_qualities) . "\n" if ($verbose);
 	print "Log10 Likelihood Best Base Only = $log10_likelihood_given_ref_base->{$first_base}\n" if ($verbose);
 	print "Log10 Likelihood 2 Base Model= $log10_likelihood_of_two_base_model\n" if ($verbose);
 
