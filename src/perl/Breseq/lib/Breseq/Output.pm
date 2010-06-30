@@ -461,7 +461,10 @@ sub html_mutation_table_string
 			
 			sub freq_to_string
 			{
-				my ($freq) = @_;
+				my ($mut, $key) = @_;
+				$key = "frequency" if (!defined $key);
+				my $freq = $mut->{$key};
+				return 'H' if ($freq eq 'H');
 				return 'ND' if (!defined $freq);
 				return 'ND' if ($freq eq 'ND');
 				return '?' if ($freq eq '?');
@@ -491,12 +494,12 @@ sub html_mutation_table_string
 				{
 					$row_class = "polymorphism_table_row";	
 				}			
-				push @freq_list, freq_to_string($mut->{frequency});
+				push @freq_list, freq_to_string($mut);
 			}
 			else
 			{
 				#"_freq_[name]" keys were made				
-				@freq_list = map { freq_to_string($mut->{"frequency_$_"})  } @$gd_name_list_ref;			
+				@freq_list = map { freq_to_string($mut, "frequency_$_")  } @$gd_name_list_ref;			
 			}
 			
 			
@@ -594,6 +597,21 @@ sub html_mutation_table_string
 				$output_str.= td({align=>"left"}, $mut->{gene_product});
 				$output_str.= end_Tr;
 			}
+			
+			elsif ($mut->{type} eq 'CON')
+			{
+				
+				$output_str.= start_Tr({-class=>$row_class});	
+				$output_str.= td({align=>"center"}, $evidence_string) if (!defined $gd_name_list_ref);
+				$output_str.= td({align=>"center"}, nonbreaking($mut->{seq_id})) if (!$one_ref_seq); 
+				$output_str.= td({align=>"right"}, commify($mut->{position}));
+				$output_str.= td({align=>"center"}, nonbreaking("$mut->{size} nt&rarr;$mut->{region}"));
+				$output_str.= freq_cols(@freq_list);
+				$output_str.= td({align=>"center"}, nonbreaking($mut->{gene_position}));
+				$output_str.= td({align=>"center"}, i(nonbreaking($mut->{gene_name})));
+				$output_str.= td({align=>"left"}, $mut->{gene_product});
+				$output_str.= end_Tr;				
+			}
 
 			elsif ($mut->{type} eq 'MOB')
 			{
@@ -629,7 +647,6 @@ sub html_mutation_table_string
 				$output_str.= td({align=>"center"}, i(nonbreaking($mut->{gene_name})));
 				$output_str.= td({align=>"left"}, $mut->{gene_product});
 				$output_str.= end_Tr;
-				
 			}
 		}
 		
@@ -1285,7 +1302,7 @@ sub create_evidence_files
 				end 		=> $item->{side_1_position}, 
 				parent_item => $parent_item,
 				item 		=> $item,
-				prefix 		=> 'JC_SIDE_1',			
+				prefix 		=> 'JC_SIDE_1' . "_$item->{side_2_seq_id}_$item->{side_2_position}_$item->{side_2_position}",		## need to be unique
 			}
 		);
 
@@ -1299,7 +1316,7 @@ sub create_evidence_files
 				end 		=> $item->{side_2_position}, 
 				parent_item => $parent_item,
 				item 		=> $item, 
-				prefix 		=> 'JC_SIDE_2',
+				prefix 		=> 'JC_SIDE_2' . "_$item->{side_1_seq_id}_$item->{side_1_position}_$item->{side_1_position}",
 			}
 		);
 	}

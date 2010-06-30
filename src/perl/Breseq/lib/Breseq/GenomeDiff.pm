@@ -76,6 +76,7 @@ our $line_specification = {
 	'INS' => ['seq_id', 'position', 'new_seq'],
 	'MOB' => ['seq_id', 'position', 'repeat_name', 'strand', 'duplication_size', 'gap_left', 'gap_right'],
 	'DUP' => ['seq_id', 'position', 'size'],
+	'CON' => ['seq_id', 'position', 'size', 'region'],
 	'INV' => ['seq_id', 'position', 'size'],
 	
 	## evidence
@@ -93,6 +94,7 @@ our $tag_sort_fields = {
 	'MOB' => [1, 'seq_id', 'position'],
 	'DUP' => [1, 'seq_id', 'position'],
 	'INV' => [1, 'seq_id', 'position'],
+	'CON' => [1, 'seq_id', 'position'],
 	'RA' => [2, 'seq_id', 'position'],
 	'MC' => [2, 'seq_id', 'start'],
 	'JC' => [2, 'side_1_seq_id', 'side_1_position'],
@@ -107,6 +109,7 @@ our $type_sort_order = {
 	'MOB' => 5,	
 	'DUP' => 6,
 	'INV' => 7,
+	'CON' => 7,	
 	'RA' => 8,
 	'MC' => 9,
 	'JC' => 10,
@@ -160,12 +163,12 @@ sub add
 	my ($self, $item) = @_;
 	my @missing_required_columns = ();
 
-	## no ID, give it a new one
+	## no ID, give it a new one (need to re-assign id's later...)
 	if ( !defined $item->{id} )
 	{
 		$item->{id} = $self->new_unique_id;
 	}
-	elsif ($self->used_unique_id( $item->{id}) )
+	elsif ( $self->used_unique_id( $item->{id}) && !(($item->{id} eq '.') || ($item->{id} eq '+') || ($item->{id} eq '?')))
 	{
 		$self->warn("Ignoring attempt to add item with an existing id: $item->{id}");
 		return;
@@ -271,8 +274,8 @@ sub cmp_mutations
 { 		
 	my ($a, $b) = @_;
 		
-	print Dumper($a) if (!defined $a->{SORT_1} || !defined $a->{SORT_2} || !defined $a->{SORT_3} || !defined $a->{type}); 
-	print Dumper($b) if (!defined $b->{SORT_1} || !defined $b->{SORT_2} || !defined $b->{SORT_3} || !defined $b->{type}); 
+	print "Sort fields not defined for item:\n" . Dumper($a) if (!defined $a->{SORT_1} || !defined $a->{SORT_2} || !defined $a->{SORT_3} || !defined $a->{type}); 
+	print "Sort fields not defined for item:\n" . Dumper($b) if (!defined $b->{SORT_1} || !defined $b->{SORT_2} || !defined $b->{SORT_3} || !defined $b->{type}); 
 
 	## plus and minus should come before '?' so join them together correctly
 	my $additional_sort = 0;

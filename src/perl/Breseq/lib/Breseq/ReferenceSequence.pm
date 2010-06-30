@@ -406,6 +406,10 @@ sub annotate_mutations
 		{
 			annotate_1_mutation($ref_seq_info, $mut, $mut->{position}, $mut->{position});
 		}
+		elsif ($mut->{type} eq 'CON')
+		{
+			annotate_1_mutation($ref_seq_info, $mut, $mut->{position}, $mut->{position} + $mut->{size} - 1);
+		}
 		elsif ($mut->{type} eq 'MOB')
 		{
 			annotate_1_mutation($ref_seq_info, $mut, $mut->{position}, $mut->{position} + $mut->{duplication_size}-1);
@@ -470,7 +474,7 @@ sub find_nearby_genes
 		{
 			push @inside_left_genes, $test_gene;
 		}
-		elsif ( ($test_gene->{start} >= $pos_2) && ($test_gene->{end} <= $pos_2) )
+		elsif ( ($test_gene->{start} <= $pos_2) && ($test_gene->{end} >= $pos_2) )
 		{
 			push @inside_right_genes, $test_gene;
 		}

@@ -345,7 +345,8 @@ sub do_compare
 		push @gd_list, $gd;
 		Breseq::ReferenceSequence::annotate_mutations($ref_seq_info, $gd, 1);
 		
-		my @mut_list = $gd->mutation_list(1);		
+		my @mut_list = $gd->mutation_list(1);	
+		@mut_list = grep {!$_->{deleted}} @mut_list;
 		push @mut_lists, \@mut_list;
 	}	
 	
@@ -382,6 +383,7 @@ sub do_compare
 				{
 					$this_freq = $test_mut->{frequency};
 				}
+				$this_freq = 'H' if ($test_mut->{hidden}); ## mutation was hidden!
 				shift @$mut_list;
 			}
 			elsif ($gd->mutation_unknown($next_mut))
@@ -412,35 +414,35 @@ sub do_compare
 	##
 	if ($phylip_input_file)
 	{
-		my @snps = $composite_gd->list('SNP');
+		my @mutations = $composite_gd->mutation_list;
 		
 		open PHYLIP, ">$phylip_input_file" or die "Could not open file: $phylip_input_file";
 		#first line is number of species, then number of sites
-		print PHYLIP +(scalar @gd_name_list) . " " . +(scalar @snps) . "\n";
+		print PHYLIP +(scalar @gd_name_list) . " " . +(scalar @mutations) . "\n";
 
 		foreach my $gd_name (@gd_name_list)
 		{			
-			my $snp_str;
-			foreach my $snp (@snps)
+			my $mut_str;
+			foreach my $mut (@mutations)
 			{
-				my $f = $snp->{"frequency_$gd_name"};
+				my $f = $mut->{"frequency_$gd_name"};
 				my $b = '?';
 				if ($f eq '?')
 				{
 					$b = 'N';
 				}
-				elsif ($f == 1)
+				elsif (($f == 1) || ($f eq 'ND') || ($f eq 'H'))
 				{
-					$b = $snp->{new_seq};
+					$b = ($mut->{type} eq 'SNP') ? $mut->{new_seq} : 'T';
 				}
 				elsif ($f == 0)
 				{
-					$b = $snp->{ref_seq};
+					$b = ($mut->{type} eq 'SNP') ? $mut->{ref_seq} : 'A';
 				}
-				$snp_str .= $b;
+				$mut_str .= $b;				
 			}
 			
-			printf PHYLIP "%-10.10s%s\n", $gd_name, $snp_str;
+			printf PHYLIP "%-10.10s%s\n", $gd_name, $mut_str;
 		}
 		
 		close PHYLIP;
@@ -511,7 +513,8 @@ sub do_count
 		Breseq::ReferenceSequence::annotate_mutations($ref_seq_info, $gd, 1);
 		
 		my @mut_list = $gd->mutation_list();
-
+		@mut_list = grep {!$_->{deleted}} @mut_list;
+		
 		my $count;
 		foreach my $b (@base_combinations)
 		{
