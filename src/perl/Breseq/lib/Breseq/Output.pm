@@ -539,7 +539,7 @@ sub html_mutation_table_string
 				my $aa_codon_change = '';
 				if (($mut->{snp_type} ne 'intergenic') && ($mut->{snp_type} ne 'noncoding') && ($mut->{snp_type} ne 'pseudogene'))
 				{
-					$aa_codon_change .= "$mut->{aa_ref_seq}$mut->{gene_position}$mut->{aa_new_seq}";
+					$aa_codon_change .= "$mut->{aa_ref_seq}$mut->{aa_position}$mut->{aa_new_seq}";
 					## add color and underlining  
 
 					my $codon_ref_seq = to_underline_red_codon($mut, 'codon_ref_seq');
