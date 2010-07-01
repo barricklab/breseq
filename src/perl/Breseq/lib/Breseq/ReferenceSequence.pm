@@ -371,6 +371,13 @@ sub annotate_1_mutation
 	return $mut;
 }
 
+sub get_sequence
+{
+	my ($ref_seq_info, $seq_id, $start, $end) = @_;
+	#print "Get sequence: $seq_id:$start-$end\n" if ($verbose);
+	return substr $ref_seq_info->{ref_strings}->{$seq_id}, $start-1, $end-$start+1;
+}
+
 sub annotate_mutations
 {
 	my ($ref_seq_info, $gd, $only_muts) = @_;
@@ -392,11 +399,12 @@ sub annotate_mutations
 		
 		if ($mut->{type} eq 'SNP')
 		{
+			$mut->{_ref_seq} = get_sequence($ref_seq_info, $mut->{seq_id}, $mut->{position}, $mut->{position});
 			annotate_1_mutation($ref_seq_info, $mut, $mut->{position}, $mut->{position});
 		}
 		elsif ($mut->{type} eq 'SUB')
 		{
-			annotate_1_mutation($ref_seq_info, $mut, $mut->{position}, $mut->{position} + length($mut->{ref_seq}) - 1);
+			annotate_1_mutation($ref_seq_info, $mut, $mut->{position}, $mut->{position} + $mut->{size} - 1);
 		}
 		elsif ($mut->{type} eq 'DEL')
 		{

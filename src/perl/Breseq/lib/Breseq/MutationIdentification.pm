@@ -82,7 +82,7 @@ sub identify_mutations
 		my $polymorphism_statistics_input_file_name = $settings->file_name('polymorphism_statistics_input_file_name');
 		open $polymorphism_statistics_input_fh, ">$polymorphism_statistics_input_file_name" or die "Could not open file: $polymorphism_statistics_input_file_name";
 		print $polymorphism_statistics_input_fh +join("\t",
-			'new_top_strand', 'new_bot_strand', 'ref_top_strand', 'ref_bot_strand',	'new_quals', 'ref_quals' 
+			'log10_base_likelihood', 'new_top_strand', 'new_bot_strand', 'ref_top_strand', 'ref_bot_strand', 'new_quals', 'ref_quals'
 		) . "\n";
 	}
 	
@@ -740,6 +740,9 @@ sub identify_mutations
 						$mut->{error} = "polymorphic_without_reference_base";
 					}
 					
+					#round
+					$mut->{frequency} = sprintf "%.4f", $mut->{frequency};
+					
 					Breseq::GenomeDiff::add_reject_reason($mut, "EVALUE") if ($mut->{quality} < $settings->{polymorphism_log10_e_value_cutoff});
 					
 					###
@@ -766,13 +769,14 @@ sub identify_mutations
 					my $new_quality_string = join ',', @new_base_qualities;
 					
 					print $polymorphism_statistics_input_fh +join( "\t",
-						$new_cov->{1}, $new_cov->{-1}, $ref_cov->{1}, $ref_cov->{-1}, $new_quality_string, $ref_quality_string
+						$polymorphism->{log10_base_likelihood}, $new_cov->{1}, $new_cov->{-1}, $ref_cov->{1}, $ref_cov->{-1}, $new_quality_string, $ref_quality_string
 					) . "\n";
 					###
 					## End printing input file for R
 					###
 					
-					Breseq::GenomeDiff::add_reject_reason($mut, "STRAND") if (!$polymorphism_coverage_both_bases);
+					
+#					Breseq::GenomeDiff::add_reject_reason($mut, "STRAND") if (!$polymorphism_coverage_both_bases);
 					Breseq::GenomeDiff::add_reject_reason($mut, "FREQ") if ($mut->{frequency} < $settings->{polymorphism_frequency_cutoff});
 					Breseq::GenomeDiff::add_reject_reason($mut, "FREQ") if ($mut->{frequency} > 1-$settings->{polymorphism_frequency_cutoff});		
 				}
@@ -945,6 +949,7 @@ sub _predict_polymorphism
 		'first_base_strand_coverage' => $first_base_strand_hash, 
 		'second_base_strand_coverage' => $second_base_strand_hash, 
 		'p_value' => $chi_squared_pr,
+		'log10_base_likelihood' => $log10_likelihood_given_ref_base->{$first_base} - $log10_likelihood_of_two_base_model,
 	};
 	
 	return $polymorphism;
@@ -1124,7 +1129,24 @@ sub calculate_confidence_interval
 
 sub polymorphism_statistics
 {
-	our ($settings, $summary) = @_;
+	our ($settings, $summary, $ref_seq_info) = @_;
+
+	my $reference_fasta_file_name = $settings->file_name('reference_fasta_file_name');
+	my $reference_bam_file_name = $settings->file_name('reference_bam_file_name');
+	my $bam = Bio::DB::Sam->new(-fasta => $reference_fasta_file_name, -bam => $reference_bam_file_name);
+	##my @seq_ids = $bam->seq_ids;
+	my @seq_ids = @{$ref_seq_info->{seq_ids}};
+		
+	## some local variable lookups for convenience
+	my $total_ref_length = 0;
+	foreach my $seq_id (@seq_ids)
+	{
+		$total_ref_length+= $bam->length($seq_id);
+	}
+	
+	my $log10_ref_length = log($total_ref_length) / log(10);	
+
+
 
 	my $polymorphism_statistics_input_file_name = $settings->file_name('polymorphism_statistics_input_file_name');
 	my $polymorphism_statistics_output_file_name = $settings->file_name('polymorphism_statistics_output_file_name');
@@ -1144,10 +1166,16 @@ sub polymorphism_statistics
 	chomp $header;
 	my @header_list = split /\t/, $header;
 	
+	my $new_gd = Breseq::GenomeDiff->new();
 	foreach my $mut ($gd->list('RA'))
 	{
 		## lines only exist for polymorphisms
-		next if (($mut->{frequency} == 1) || ($mut->{frequency} == 0));
+		if (($mut->{frequency} == 1) || ($mut->{frequency} == 0))
+		{
+			$new_gd->add($mut);
+			next;
+		}
+		$mut->{old_quality} = $mut->{quality};
 
 		my $line = <ROUT>;
 		chomp $line;
@@ -1159,12 +1187,20 @@ sub polymorphism_statistics
 			die "Incorrect number of items on line:\n$line" if (!defined $line_list[$i]);
 		}
 		
-		Breseq::GenomeDiff::add_reject_reason($mut, "BIAS_P_VALUE") if ($mut->{bias_p_value} < $settings->{polymorphism_bias_p_value_cutoff});
+		# EXPERIMENTAL to not use bias_p_value		
+		if ($mut->{quality} ne 'Inf')
+		{
+			## replace with this quality (will always be worse than the one before)
+			$mut->{quality} = -(log ($mut->{quality}) / log(10)) - $log10_ref_length;
+			$new_gd->add($mut) if ($mut->{quality} > 2);
+		}	
+#		Breseq::GenomeDiff::add_reject_reason($mut, "BIAS_P_VALUE") if ($mut->{bias_p_value} < $settings->{polymorphism_bias_p_value_cutoff});
+		## END EXPERIMENTAL
 	}
 	
 	### Write out the file which now has much more data
 	my $polymorphism_statistics_ra_mc_genome_diff_file_name = $settings->file_name('polymorphism_statistics_ra_mc_genome_diff_file_name');
-	$gd->write($polymorphism_statistics_ra_mc_genome_diff_file_name);
+	$new_gd->write($polymorphism_statistics_ra_mc_genome_diff_file_name);
 	
 	
 	

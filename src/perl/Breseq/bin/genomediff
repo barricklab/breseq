@@ -95,9 +95,17 @@ elsif ("\U$command" eq 'COMPARE')
 {
 	do_compare();
 }
+elsif ("\U$command" eq 'COMPARE_POLYMORPHISMS')
+{
+	do_compare_polymorphisms();
+}
 elsif ("\U$command" eq 'COUNT')
 {
 	do_count();
+}
+elsif ("\U$command" eq 'ORPHAN_EVIDENCE')
+{
+	do_orphan_evidence();
 }
 elsif ("\U$command" eq 'MUTATE')
 {
@@ -310,6 +318,7 @@ sub do_compare
 	my $output = "compare.html";
 	my @reference_genbank_file_names;
 	my $phylip_input_file;
+	my $offending_polymorphisms;
 	GetOptions(
 		'help|?' => \$help, 'man' => \$man,
 	## Options for input and output files
@@ -378,7 +387,7 @@ sub do_compare
 			
 			if (Breseq::GenomeDiff::equivalent_mutations($test_mut, $next_mut))
 			{				
-				$this_freq = 'ND';
+				$this_freq = 1;
 				if (defined $test_mut->{frequency})
 				{
 					$this_freq = $test_mut->{frequency};
@@ -431,7 +440,7 @@ sub do_compare
 				{
 					$b = 'N';
 				}
-				elsif (($f == 1) || ($f eq 'ND') || ($f eq 'H'))
+				elsif (($f == 1) || ($f eq 'H'))
 				{
 					$b = ($mut->{type} eq 'SNP') ? $mut->{new_seq} : 'T';
 				}
@@ -447,6 +456,61 @@ sub do_compare
 		
 		close PHYLIP;
 	}
+}
+
+sub do_compare_polymorphisms
+{
+	use Breseq::ReferenceSequence;
+	use Breseq::Output;
+	
+	my ($help, $man);
+	my $output = "compare.html";
+	my @reference_genbank_file_names;
+	my $phylip_input_file;
+	my $offending_polymorphisms;
+	GetOptions(
+		'help|?' => \$help, 'man' => \$man,
+	## Options for input and output files
+		'output|o=s' => \$output,	
+		'reference-sequence|r=s' => \@reference_genbank_file_names,
+	) or pod2usage(2);
+
+	pod2usage(1) if $help;
+	pod2usage(-exitstatus => 0, -verbose => 2) if $man;
+	pod2usage(1) if (scalar @reference_genbank_file_names == 0);
+	pod2usage(1) if (scalar @ARGV == 0);
+	
+	open OUTPUT, ">$output";
+	
+	my @gd_file_name_list = @ARGV;	
+				
+	## load information about reference sequences from GenBank files
+	my $ref_seq_info = Breseq::ReferenceSequence::load_ref_seq_info(\@reference_genbank_file_names);
+	my $one_ref_seq = scalar keys %{$ref_seq_info->{gene_lists}} == 1;
+
+	my @gd_name_list;
+	my @gd_list; 
+	my @mut_lists; #altered during processing
+	foreach my $gd_file_name (@gd_file_name_list)
+	{
+		print "$gd_file_name\n";
+		
+		my $gd_name = $gd_file_name;
+		$gd_name =~ s/^.+\///;		
+		$gd_name =~ s/\.[^.]+$//;		
+		push @gd_name_list, $gd_name;
+		
+		my $gd = Breseq::GenomeDiff->new(-in=>$gd_file_name);
+		Breseq::ReferenceSequence::annotate_mutations($ref_seq_info, $gd);
+		
+		my @mut_list = $gd->list('RA');	
+		@mut_list = grep {$_->{frequency} != 0} @mut_list;
+		@mut_list = grep {$_->{frequency} != 1} @mut_list;
+
+		@mut_list = sort { (($a->{frequency}-0.5)**2 <=> ($b->{frequency}-0.5)**2) } @mut_list;
+		
+		Breseq::Output::html_compare_polymorphisms($output, "Title", \@mut_list);
+	}	
 	
 }
 
@@ -492,11 +556,30 @@ sub do_count
 			push @base_headers, $b1 . ":" . Breseq::Fastq::complement($b1) . "=>" . $b2 . ":" . Breseq::Fastq::complement($b2);
 		}
 	}
+
+	## how many repeat columns
+	my $mob_name_hash;
+	foreach my $gd_file_name (@gd_file_name_list)
+	{
+		print "$gd_file_name\n";
+		
+		my $gd_name = $gd_file_name;
+		$gd_name =~ s/^.+\///;		
+		$gd_name =~ s/\.[^.]+$//;		
+		
+		my $gd = Breseq::GenomeDiff->new(-in=>$gd_file_name);
+		foreach my $mut ($gd->list('MOB'))
+		{
+			$mob_name_hash->{$mut->{repeat_name}} = 1;
+		}
+	}
+	my @mod_name_list = sort keys %$mob_name_hash;
+	
 	
 	my @snp_types = ( 'nonsynonymous', 'synonymous', 'noncoding', 'pseudogene', 'intergenic');
 	
 	open OUT, ">$output" or die "Count not open file: $output";
-	print OUT join ("\t", 'strain', @snp_types, @base_headers) . "\n";
+	print OUT join ("\t", 'strain', @snp_types, @base_headers, 'deleted', @mod_name_list) . "\n";
 	
 	my @gd_name_list;
 	my @gd_list; 
@@ -525,13 +608,18 @@ sub do_count
 		{
 			$count->{type}->{$st} = 0;
 		}
-
+		foreach my $mob_name (@mod_name_list)
+		{
+			$count->{mob}->{$mob_name} = 0;
+		}
+		
+		my $total_deleted = 0;
 		foreach my $mut (@mut_list)
 		{
 			if ($mut->{type} eq 'SNP')
 			{
-				my $base_change = $mut->{ref_seq} . $mut->{new_seq};
-				if (($mut->{ref_seq} eq 'T') || ($mut->{ref_seq} eq 'G'))
+				my $base_change = $mut->{_ref_seq} . $mut->{new_seq};
+				if (($mut->{_ref_seq} eq 'T') || ($mut->{_ref_seq} eq 'G'))
 				{
 					$base_change = Breseq::Fastq::complement($base_change);
 				}
@@ -539,11 +627,61 @@ sub do_count
 				
 				$count->{type}->{$mut->{snp_type}}++;
 			}
+			
+			if ($mut->{type} eq 'DEL')
+			{
+				$total_deleted += $mut->{size};
+			}
+			
+			if ($mut->{type} eq 'MOB')
+			{
+				$count->{mob}->{$mut->{repeat_name}} ++;
+			}
+			
 		}
 		
-		print OUT join("\t", $gd_name, map({$count->{type}->{$_} } @snp_types), map({ $count->{base}->{$_} } @base_combinations) ) . "\n";
+		print OUT join("\t", $gd_name, map({$count->{type}->{$_} } @snp_types), map({ $count->{base}->{$_} } @base_combinations), $total_deleted, map({$count->{mob}->{$_}} @mod_name_list) ) . "\n";
 		#print Dumper ($count);
 	}	
+}
+
+sub do_orphan_evidence
+{
+	use Breseq::ReferenceSequence;
+	use Breseq::Output;
+	
+	my ($help, $man);
+	GetOptions(
+		'help|?' => \$help, 'man' => \$man,
+	## Options for input and output files
+	) or pod2usage(2);
+
+	pod2usage(1) if $help;
+	pod2usage(-exitstatus => 0, -verbose => 2) if $man;
+	pod2usage(1) if (scalar @ARGV == 0);
+	
+	my @gd_file_name_list = @ARGV;
+	
+	foreach my $gd_file_name (@gd_file_name_list)
+	{
+		print "\n>>>> $gd_file_name <<<<\n";
+		
+		my $gd_name = $gd_file_name;
+		$gd_name =~ s/^.+\///;		
+		$gd_name =~ s/\.[^.]+$//;		
+		
+		my $gd = Breseq::GenomeDiff->new(-in=>$gd_file_name);
+		my @evidence = $gd->evidence_list;
+		@evidence = $gd->filter_used_as_evidence(@evidence);
+		
+		foreach my $ev (@evidence)
+		{
+			next if ($ev->{type} eq 'UN');			
+			next if ($ev->{reject});
+			next if ($ev->{deleted});
+			print $gd->_item_to_line($ev) . "\n";
+		}
+	}
 }
 
 
@@ -583,7 +721,7 @@ sub do_mutate
 		}
 		elsif ($mut->{type} eq 'SUB')
 		{
-			substr $new_ref_strings->{$mut->{seq_id}}, $mut->{position}-1, length($mut->{ref_seq}), $mut->{new_seq};
+			substr $new_ref_strings->{$mut->{seq_id}}, $mut->{position}-1, $mut->{size}, $mut->{new_seq};
 		}
 		elsif ($mut->{type} eq 'INS')
 		{
@@ -605,7 +743,7 @@ sub do_mutate
 		}
 		elsif ($mut->{type} eq 'MOB')
 		{
-			die "MOB: does not handle gap_left or gap_right != 0 yet." if (($mut->{gap_left} != 0) || ($mut->{gap_left} != 0) );
+			die "MOB: does not handle ins_start, ins_end, del_start, del_end yet." if (($mut->{ins_start} != 0) || ($mut->{ins_end} != 0) || ($mut->{del_start} != 0) || ($mut->{del_end} != 0) );
 			my ($seq_string) = Breseq::ReferenceSequence::repeat_example($ref_seq_info, $mut->{repeat_name});	
 			$mut->{size} = length($seq_string) + $mut->{duplication_size}; ##used by shift_positions
 			my $duplicate_sequence = substr $new_ref_strings->{$mut->{seq_id}}, $mut->{position}, $mut->{duplication_size};
