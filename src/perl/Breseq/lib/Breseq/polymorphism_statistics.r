@@ -28,41 +28,71 @@ X<-read.table(in_file, sep="\t", header=T)
 
 ##allocate output data frame
 Y<-data.frame(
-	ks_quality_p_value = 1:length(X$new_quals), 
-	fisher_strand_p_value = 1:length(X$new_quals), 
-	bias_p_value = 1:length(X$new_quals),
-	bias_e_value = 1:length(X$new_quals)
+	log10_base_likelihood = 1:length(X$new_quals)
 );
 
 #print(Y)
 
-for (i in 1:length(X$new_quals))
+if (length(X$new_quals) > 0)
 {
-	#print (i);
-	new_quals_list <- strsplit(as.vector(X$new_quals[i]), ",");
-	new_quals <- as.numeric( new_quals_list[[1]] )
-	ref_quals_list <- strsplit(as.vector(X$ref_quals[i]), ",");
-	ref_quals <- as.numeric( ref_quals_list[[1]] )
-	options(warn=-1);
-	ks_test_p_value <- ks.test(ref_quals, new_quals, alternative = "less")
-	options(warn=0);
-	ks_test_p_value <- ks_test_p_value$p.value
-	Y$ks_quality_p_value[i] <- ks_test_p_value
+	for (i in 1:length(X$new_quals))
+	{
+		Y$log10_base_likelihood[i] = X$log10_base_likelihood[i]
+	
+		#print (i);
+		new_quals_list <- strsplit(as.vector(X$new_quals[i]), ",");
+		new_quals <- as.numeric( new_quals_list[[1]] )
+		ref_quals_list <- strsplit(as.vector(X$ref_quals[i]), ",");
+		ref_quals <- as.numeric( ref_quals_list[[1]] )
+		
+		max_qual = max(new_quals, ref_quals)
+		NQ = tabulate(new_quals, nbins=max_qual)
+		RQ = tabulate(ref_quals, nbins=max_qual)
+		TQ = NQ+RQ
+		
+		log10_qual_likelihood = log10(dmultinom(NQ, prob=TQ)) + log10(dmultinom(RQ, prob=TQ)) - log10(dmultinom(TQ, prob=TQ)) 
+		Y$log10_qual_likelihood[i] = -log10_qual_likelihood
+		
+		RS = c(X$ref_top_strand[i], X$ref_bot_strand[i])
+		NS = c(X$new_top_strand[i], X$new_bot_strand[i])
+		TS = RS+NS
+		
+		log10_strand_likelihood =  log10(dmultinom(RS, prob=TS)) + log10(dmultinom(NS, prob=TS)) - log10(dmultinom(TS, prob=TS))
+		Y$log10_strand_likelihood[i] = -log10_strand_likelihood
 
-	contingency_table <- matrix(data=c(X$new_top_strand[i], X$new_bot_strand[i], X$ref_top_strand[i], X$ref_bot_strand[i]), nrow=2, ncol=2)
-	#print(contingency_table)
+		#likelihoods are written as NULL model (one base) versus POLYMORPHISM model (mixed bases)
+		#log10_base_likelihood should be negative
+		#log10_qual_likelihood should be positive
+		#log10_strand_likelihood should be positive
+
+		#convert to natural logarithm and back to 
+		score_combined_log =  -2* ( Y$log10_base_likelihood[i]  + Y$log10_qual_likelihood[i] + Y$log10_strand_likelihood[i]) * log(10)
+		Y$quality[i] = -pchisq(score_combined_log, 1, lower.tail=T, log=T) / log(10)
+		
+
+		##below this is old
+		
+		options(warn=-1);
+		ks_test_p_value <- ks.test(ref_quals, new_quals, alternative = "less")
+		options(warn=0);
+		ks_test_p_value <- ks_test_p_value$p.value
+		Y$ks_quality_p_value[i] <- ks_test_p_value
+
+		contingency_table <- matrix(data=c(X$new_top_strand[i], X$new_bot_strand[i], X$ref_top_strand[i], X$ref_bot_strand[i]), nrow=2, ncol=2)
+		#print(contingency_table)
 	
-	fisher_test_p_value <- fisher.test( contingency_table, alternative="two.sided")
-	fisher_test_p_value <- fisher_test_p_value$p.value
-	#print(fisher_test_p_value)
+		fisher_test_p_value <- fisher.test( contingency_table, alternative="two.sided")
+		fisher_test_p_value <- fisher_test_p_value$p.value
+		#print(fisher_test_p_value)
 	
-	Y$fisher_strand_p_value[i] <- fisher_test_p_value
+		Y$fisher_strand_p_value[i] <- fisher_test_p_value
 	
-	# Fisher's method for combining p-values
-	combined_log = - 2* ( log(ks_test_p_value) + log(fisher_test_p_value) )
-	Y$bias_p_value[i] = pchisq(combined_log, 2*2, lower.tail=F)
+		# Fisher's method for combining p-values
+		combined_log = - 2* ( log(ks_test_p_value) + log(fisher_test_p_value) )
+		Y$bias_p_value[i] = pchisq(combined_log, 2*2, lower.tail=F)
 	
-	Y$bias_e_value[i] = Y$bias_p_value[i] * total_length
+		Y$bias_e_value[i] = Y$bias_p_value[i] * total_length
+	}
 }
 
 write.table(Y, out_file, sep="\t", row.names=F, quote=F)

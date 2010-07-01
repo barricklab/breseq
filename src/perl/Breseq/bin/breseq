@@ -678,7 +678,7 @@ if (!$settings->{no_mutation_prediction})
 	my $polymorphism_statistics_done_file_name = $settings->file_name('polymorphism_statistics_done_file_name');
 	if ($settings->{polymorphism_prediction} && !-e $polymorphism_statistics_done_file_name)
 	{
-		Breseq::MutationIdentification::polymorphism_statistics($settings, $summary);
+		Breseq::MutationIdentification::polymorphism_statistics($settings, $summary, $ref_seq_info);
 
 		open DONE, ">$polymorphism_statistics_done_file_name";
 		close DONE;

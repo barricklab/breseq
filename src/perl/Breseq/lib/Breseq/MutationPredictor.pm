@@ -348,8 +348,8 @@ sub predict
 		my $a_seq_order = (defined $a->{_side_1_is}) ? $ref_seq_info->{seq_order}->{$a->{_side_2}->{seq_id}} : $ref_seq_info->{seq_order}->{$a->{_side_1}->{seq_id}};
 		my $b_seq_order = (defined $b->{_side_1_is}) ? $ref_seq_info->{seq_order}->{$b->{_side_2}->{seq_id}} : $ref_seq_info->{seq_order}->{$b->{_side_1}->{seq_id}};		
 
-		my $a_reject_order = scalar Breseq::GenomeDiff::get_reject_reasons($a);
-		my $b_reject_order = scalar Breseq::GenomeDiff::get_reject_reasons($b);
+		my $a_reject_order = scalar Breseq::GenomeDiff::number_reject_reasons($a);
+		my $b_reject_order = scalar Breseq::GenomeDiff::number_reject_reasons($b);
 
 		## sort by seq_id, position, fewer reject reasons, then score (highest to lowest)
 		return (($a_seq_order <=> $b_seq_order) || ($a_pos <=> $b_pos) || ($a_reject_order <=> $b_reject_order) || -($a->{score} <=> $b->{score}));
@@ -386,8 +386,8 @@ sub predict
 
 		sub by_reject_score
 		{
-			my $a_reject_order = scalar Breseq::GenomeDiff::get_reject_reasons($a);
-			my $b_reject_order = scalar Breseq::GenomeDiff::get_reject_reasons($b);
+			my $a_reject_order = scalar Breseq::GenomeDiff::number_reject_reasons($a);
+			my $b_reject_order = scalar Breseq::GenomeDiff::number_reject_reasons($b);
 			## sort by seq_id, position, fewer reject reasons, then score (highest to lowest)
 			return (($a_reject_order <=> $b_reject_order) || -($a->{score} <=> $b->{score}));
 		}
@@ -453,15 +453,21 @@ sub predict
 				return substr $ref_seq_info->{ref_strings}->{$seq_id}, $start-1, $end-$start+1;
 			}
 		
-			## gap_left and gap_right also refer to the top strand of the genome
+			## _gap_left and _gap_right also refer to the top strand of the genome
+
+			$mut->{_ins_start} = '';
+			$mut->{_ins_end} = '';
+
+			$mut->{_del_start} = 0;
+			$mut->{_del_end} = 0;
 		
 			#sometimes the ends of the IS are not quite flush
 			my $j1_not_flush_seq = '';
 			if ($j1->{"$j1->{_is_interval}\_strand"} == -1)
 			{
-				$mut->{gap_left} = $j1->{"$j1->{_is_interval}\_position"} - $j1->{"_$j1->{_is_interval}\_is"}->{end} - $j1->{overlap};
+				$mut->{_gap_left} = $j1->{"$j1->{_is_interval}\_position"} - $j1->{"_$j1->{_is_interval}\_is"}->{end};
 				
-				if ($mut->{gap_left} > 0)
+				if ($mut->{_gap_left} > 0)
 				{
 					$j1_not_flush_seq = get_sequence (
 						$j1->{"$j1->{_is_interval}\_seq_id"}, 
@@ -472,8 +478,8 @@ sub predict
 			}
 			else
 			{
-				$mut->{gap_left} = $j1->{"_$j1->{_is_interval}\_is"}->{start} - $j1->{"$j1->{_is_interval}\_position"} - $j1->{overlap};
-				if ($mut->{gap_left} > 0)
+				$mut->{_gap_left} = $j1->{"_$j1->{_is_interval}\_is"}->{start} - $j1->{"$j1->{_is_interval}\_position"};
+				if ($mut->{_gap_left} > 0)
 				{
 					$j1_not_flush_seq = get_sequence (
 						$j1->{"$j1->{_is_interval}\_seq_id"}, 
@@ -483,7 +489,7 @@ sub predict
 				}
 			}
 
-			if ($mut->{gap_left} > 0)
+			if ($mut->{_gap_left} >= 0)
 			{
 				print "J1 NF:$j1_not_flush_seq U:$j1_unique_read_string\n" if ($verbose);
 				
@@ -494,19 +500,24 @@ sub predict
 				
 				if ($j1->{"_$j1->{_is_interval}\_read_side"} == -1)
 				{
-					$mut->{gap_left} = $j1_not_flush_seq . $j1_unique_read_string;
+					$mut->{_gap_left} = $j1_not_flush_seq . $j1_unique_read_string;
 				}
 				else
 				{
-					$mut->{gap_left} = $j1_unique_read_string . $j1_not_flush_seq;
+					$mut->{_gap_left} = $j1_unique_read_string . $j1_not_flush_seq;
 				}
+				$mut->{_ins_start} = $mut->{_gap_left};
+			}
+			elsif ($mut->{_gap_left} < 0)
+			{
+				$mut->{_del_start} = abs($mut->{_gap_left});
 			}
 
 			my $j2_not_flush_seq = '';
 			if ($j2->{"$j2->{_is_interval}\_strand"} == -1)
 			{
-				$mut->{gap_right} = $j2->{"$j2->{_is_interval}\_position"} - $j2->{"_$j2->{_is_interval}\_is"}->{end} - $j2->{overlap};
-				if ($mut->{gap_right} > 0)
+				$mut->{_gap_right} = $j2->{"$j2->{_is_interval}\_position"} - $j2->{"_$j2->{_is_interval}\_is"}->{end};
+				if ($mut->{_gap_right} > 0)
 				{
 					$j2_not_flush_seq= get_sequence (
 						$j1->{"$j2->{_is_interval}\_seq_id"}, 
@@ -517,8 +528,8 @@ sub predict
 			}
 			else
 			{
-				$mut->{gap_right} = $j2->{"_$j2->{_is_interval}\_is"}->{start} - $j2->{"$j2->{_is_interval}\_position"} - $j2->{overlap};
-				if ($mut->{gap_right} > 0)
+				$mut->{_gap_right} = $j2->{"_$j2->{_is_interval}\_is"}->{start} - $j2->{"$j2->{_is_interval}\_position"};
+				if ($mut->{_gap_right} > 0)
 				{
 					$j2_not_flush_seq = get_sequence (
 						$j1->{"$j2->{_is_interval}\_seq_id"}, 
@@ -529,7 +540,7 @@ sub predict
 			}
 			
 			
-			if ($mut->{gap_right} > 0)
+			if ($mut->{_gap_right} >= 0)
 			{
 				print "J2 NF:$j2_not_flush_seq U:$j2_unique_read_string\n" if ($verbose);
 				
@@ -540,29 +551,35 @@ sub predict
 				
 				if ($j2->{"_$j2->{_is_interval}\_read_side"} == -1)
 				{
-					$mut->{gap_right} = $j2_not_flush_seq . $j2_unique_read_string;
+					$mut->{_gap_right} = $j2_not_flush_seq . $j2_unique_read_string;
 				}
 				else
 				{
-					$mut->{gap_right} = $j2_unique_read_string . $j2_not_flush_seq;
+					$mut->{_gap_right} = $j2_unique_read_string . $j2_not_flush_seq;
 				}
+				$mut->{_ins_end} = $mut->{_gap_right};
+			}
+			elsif ($mut->{_gap_right} < 0)
+			{
+				$mut->{_del_end} = abs($mut->{_gap_right});
 			}
 
 			## At this point any added junction sequences are on the strand as you would see them in the alignment.
-			## we may need to reverse compement and change sides.
+			## we may need to reverse complement and change sides.
 
-			print "$mut->{gap_left} :: $mut->{gap_right}\n" if ($verbose);
+			print "$mut->{_gap_left} :: $mut->{_gap_right}\n" if ($verbose);
 
 			if ($j1->{"$j1->{_unique_interval}\_strand"} *  $j1->{"_$j1->{_unique_interval}\_read_side"} == -1)
 			{
 				print "RC left\n" if ($verbose);
-				$mut->{gap_left} = Breseq::Fastq::revcom($mut->{gap_left});
+				$mut->{_ins_start} = Breseq::Fastq::revcom($mut->{_ins_start});
+				
 			}
 
 			if ($j2->{"$j2->{_unique_interval}\_strand"} *  $j2->{"_$j2->{_unique_interval}\_read_side"} == -1)
 			{
 				print "RC right\n" if ($verbose);
-				$mut->{gap_right} = Breseq::Fastq::revcom($mut->{gap_right});
+				$mut->{_ins_end} = Breseq::Fastq::revcom($mut->{_ins_end});
 			}
 
 			#### Check for ambiguous insertion direction!
@@ -699,13 +716,20 @@ sub predict
 			#$j1 may be the left side, rather than the right side of the insertion, if so...
 			if ($uc1_strand == +1)
 			{
-				print "reverse right and left\n" if ($verbose);
-				#$mut->{gap_left} = Breseq::Fastq::revcom($mut->{gap_left});
-				#$mut->{gap_right} = Breseq::Fastq::revcom($mut->{gap_right});
-				($mut->{gap_right}, $mut->{gap_left}) = ($mut->{gap_left}, $mut->{gap_right});
+				print "reverse right and left\n" if ($verbose);				
+				($mut->{_ins_start}, $mut->{_ins_end}) = ($mut->{_ins_end}, $mut->{_ins_start});
+				($mut->{_del_start}, $mut->{_del_end}) = ($mut->{_del_end}, $mut->{_del_start});
+				
 			}	
 			
-			print "$mut->{gap_left} :: $mut->{gap_right}\n" if ($verbose);
+			## clean up unused keys
+			$mut->{del_start} = $mut->{_del_start} if ($mut->{_del_start});
+			$mut->{del_end} = $mut->{_del_end} if ($mut->{_del_end});
+
+			$mut->{ins_start} = $mut->{_ins_start} if ($mut->{_ins_start});
+			$mut->{ins_end} = $mut->{_ins_end} if ($mut->{_ins_end});
+
+			print "$mut->{_gap_left} :: $mut->{_gap_right}\n" if ($verbose);
 
 			$gd->add($mut);
 			next JC1;
@@ -809,25 +833,40 @@ sub predict
 		if ($mut->{ref_seq} =~ m/\./)
 		{			
 			$mut->{type} = 'INS';
+			
+			## unused fields
+			delete $mut->{ref_seq};
 		}
 		#deletion
 		elsif ($mut->{new_seq} =~ m/\./)
 		{
 			$mut->{type} = 'DEL';
 			$mut->{size} = $mut->{end} - $mut->{start} + 1;
-			$mut->{start_range} = 0;
-			$mut->{end_range} = 0;
+			
+			## unused fields
+			delete $mut->{new_seq};
+			delete $mut->{ref_seq};
 		}
 		#block substitution
 		elsif ((length $mut->{ref_seq} > 1) || (length $mut->{new_seq} > 1))
 		{
 			$mut->{type} = 'SUB';
+			$mut->{size} = length($mut->{ref_seq});
+			delete $mut->{ref_seq};
 		}
 		#snp
 		else
 		{
+			delete $mut->{ref_seq};
 			$mut->{type} = 'SNP';
 		}
+		
+		## we don't need these fields
+		delete $mut->{frequency} if ($mut->{frequency} == 1);
+		delete $mut->{start};		
+		delete $mut->{end};
+		delete $mut->{insert_start};
+		delete $mut->{insert_end};
 		
 		$gd->add($mut);
 	}

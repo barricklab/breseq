@@ -250,6 +250,20 @@ sub html_index
 	close HTML;
 }
 
+sub html_header
+{
+	my ($title) = @_;
+	return start_html(
+			-title => $title, 
+			-head  => style({type => 'text/css'}, $header_style_string),
+	);
+}
+
+sub html_footer
+{
+	return end_html;
+}
+
 sub html_compare
 {
 	my ($file_name, $title, $gd, $one_ref_seq, $gd_name_list_ref) = @_;
@@ -264,6 +278,23 @@ sub html_compare
 	my @muts = $gd->mutation_list;
 	
 	print HTML html_mutation_table_string($gd, \@muts, undef, undef, $one_ref_seq, $gd_name_list_ref);
+
+	print HTML end_html;
+	close HTML;
+}
+
+sub html_compare_polymorphisms
+{
+	my ($file_name, $title, $list_ref) = @_;
+
+	open HTML, ">$file_name" or die "Could not open file: $file_name";    
+
+    print HTML start_html(
+			-title => $title, 
+			-head  => style({type => 'text/css'}, $header_style_string),
+	);
+		
+	print HTML html_read_alignment_table_string($list_ref, undef, undef, 1);
 
 	print HTML end_html;
 	close HTML;
@@ -447,7 +478,7 @@ sub html_mutation_table_string
 			if (!defined $gd_name_list_ref) 
 			{
 				my $already_added_RA;
-				EVIDENCE: foreach my $evidence_item ($gd->evidence_list($mut))
+				EVIDENCE: foreach my $evidence_item ($gd->mutation_evidence_list($mut))
 				{					
 					if ($evidence_item->{type} eq 'RA')
 					{
@@ -465,8 +496,7 @@ sub html_mutation_table_string
 				$key = "frequency" if (!defined $key);
 				my $freq = $mut->{$key};
 				return 'H' if ($freq eq 'H');
-				return 'ND' if (!defined $freq);
-				return 'ND' if ($freq eq 'ND');
+				return 1 if (!defined $freq);
 				return '?' if ($freq eq '?');
 				return '' if ($freq == 0);
 				my $frequency_string = sprintf("%4.1f%%", $freq*100);
@@ -547,7 +577,7 @@ sub html_mutation_table_string
 				$output_str.= td({align=>"center"}, $evidence_string) if (!defined $gd_name_list_ref);
 				$output_str.= td({align=>"center"}, nonbreaking($mut->{seq_id})) if (!$one_ref_seq); 
 				$output_str.= td({align=>"right"}, commify($mut->{position}));
-				$output_str.= td({align=>"center"}, "$mut->{ref_seq}&rarr;$mut->{new_seq}");
+				$output_str.= td({align=>"center"}, "$mut->{_ref_seq}&rarr;$mut->{new_seq}");
 				$output_str.= freq_cols(@freq_list);
 				$output_str.= td({align=>"center"}, nonbreaking($aa_codon_change));
 				$output_str.= td({align=>"center"}, i(nonbreaking($mut->{gene_name})));
@@ -590,7 +620,7 @@ sub html_mutation_table_string
 				$output_str.= td({align=>"center"}, $evidence_string) if (!defined $gd_name_list_ref);
 				$output_str.= td({align=>"center"}, nonbreaking($mut->{seq_id})) if (!$one_ref_seq); 
 				$output_str.= td({align=>"right"}, commify($mut->{position}));
-				$output_str.= td({align=>"center"}, "$mut->{ref_seq}&rarr;$mut->{new_seq}");
+				$output_str.= td({align=>"center"}, nonbreaking("&Delta;$mut->{size} nt&rarr;$mut->{new_seq}"));
 				$output_str.= freq_cols(@freq_list);
 				$output_str.= td({align=>"center"}, nonbreaking($mut->{gene_position}));
 				$output_str.= td({align=>"center"}, i(nonbreaking($mut->{gene_name})));
@@ -621,23 +651,19 @@ sub html_mutation_table_string
 				$output_str.= td({align=>"right"}, commify($mut->{position}));
 				my $s;
 
-				if ($mut->{gap_left} =~ m/^-/) {
-					$s .= "&Delta;" . abs($mut->{gap_left}) . " :: ";
-				}
-				elsif ($mut->{gap_left} ne '0') {
-					$s .= "+$mut->{gap_left} :: ";
-				}
+				my $s_start = '';
+				$s_start .= "+" . $mut->{ins_start} if ($mut->{ins_start});
+				$s_start .= "&Delta;" . $mut->{del_start} if ($mut->{del_start});
+				$s.= $s_start . " :: " if ($s_start);
 				
 				$s .= "$mut->{repeat_name} (";
 				$s .= (($mut->{strand}==+1) ? '+' : (($mut->{strand}==-1) ? '&minus;' : '?'));
 				$s .= ")";
 
-				if ($mut->{gap_right} =~ m/^-/) {
-					$s .= " :: &Delta;" . abs($mut->{gap_right}) . " ";
-				}
-				elsif ($mut->{gap_right} ne '0') {
-					$s .= " :: +$mut->{gap_right}";
-				}
+				my $s_end = '';
+				$s_end .= "&Delta;" . $mut->{del_end} if ($mut->{del_end});
+				$s_end .= "+" . $mut->{ins_end} if ($mut->{ins_end});
+				$s.= " :: " . $s_end if ($s_end);
 
 				my $dup_str = ($mut->{duplication_size} >= 0) ? "+$mut->{duplication_size}" : "&Delta;" . abs($mut->{duplication_size});
 				$s .= " ($dup_str) bp";			
@@ -1003,7 +1029,7 @@ sub html_evidence_file
 	my $parent_item = $interval->{parent_item};
 				
 	print HTML html_genome_diff_item_table_string($gd, [$parent_item]) . p;
-	my @evidence_list = $gd->evidence_list($parent_item);
+	my @evidence_list = $gd->mutation_evidence_list($parent_item);
 	
 	foreach my $type ( 'RA', 'MC', 'JC' )
 	{
@@ -1163,7 +1189,7 @@ sub create_evidence_files
 		elsif ($item->{type} eq 'DEL')
 		{
 			my $has_ra_evidence;
-			foreach my $evidence_item ($gd->evidence_list($item))
+			foreach my $evidence_item ($gd->mutation_evidence_list($item))
 			{
 				$has_ra_evidence = 1 if ($evidence_item->{type} eq 'RA');
 			}
@@ -1196,7 +1222,7 @@ sub create_evidence_files
 		);
 				
 		#add evidence to 'RA' items as well
-		foreach my $evidence_item ( $gd->evidence_list($item) )
+		foreach my $evidence_item ( $gd->mutation_evidence_list($item) )
 		{
 			next if ($evidence_item->{type} ne 'RA');
 			$evidence_item->{_evidence_file_name} = $item->{_evidence_file_name};

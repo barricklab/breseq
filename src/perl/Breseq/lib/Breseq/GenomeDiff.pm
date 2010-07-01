@@ -70,11 +70,14 @@ use Data::Dumper;
 # 
 our $line_specification = {
 	## mutations
-	'SNP' => ['seq_id', 'position', 'ref_seq', 'new_seq'],
-	'SUB' => ['seq_id', 'position', 'ref_seq', 'new_seq'],
+	'SNP' => ['seq_id', 'position', 'new_seq'],
+	'SUB' => ['seq_id', 'position', 'size', 'new_seq'],
 	'DEL' => ['seq_id', 'position', 'size'],
 	'INS' => ['seq_id', 'position', 'new_seq'],
-	'MOB' => ['seq_id', 'position', 'repeat_name', 'strand', 'duplication_size', 'gap_left', 'gap_right'],
+	'MOB' => ['seq_id', 'position', 'repeat_name', 'strand', 'duplication_size'],	
+	##optional items 'del_start', 'del_end' (for deletions of repeat ends), 'ins_start', 'ins_end' (for additions of new sequence)
+	## replace 'gap_left' and 'gap_right'
+#	'MOB' => ['seq_id', 'position', 'repeat_name', 'strand', 'duplication_size', 'gap_left', 'gap_right'],
 	'DUP' => ['seq_id', 'position', 'size'],
 	'CON' => ['seq_id', 'position', 'size', 'region'],
 	'INV' => ['seq_id', 'position', 'size'],
@@ -301,19 +304,14 @@ sub mutation_list
 	return 	@mut_list;
 }
 
-sub evidence_list
+sub get_evidence_list
 {
-	my ($self, $item) = @_;	
-	$self->throw if (ref($item) ne 'HASH');
-	return () if (!defined $item->{evidence});
+	my ($self, $sort) = @_;
+	my @mut_list = grep { length($_->{type}) == 2 } $self->list;
 	
-	my %evidence;
-	foreach my $evidence_id (@{$item->{evidence}})
-	{
-		$evidence{$evidence_id} = 1;
-	}
-	my @return_list = grep { $evidence{$_->{id}} } $self->list;
-	return @return_list;
+	@mut_list = sort by_sort_fields @mut_list if ($sort);
+	
+	return 	@mut_list;
 }
 
 ## Internal function for creating a hash from a line
@@ -323,7 +321,7 @@ sub _line_to_item
 	
 	my @line_list = split /\t/, $line;
 	
-	##remove items at the end that are
+	##remove items at the end that are empty
 	while ( scalar(@line_list) && ($line_list[-1] =~ m/^\s+$/) )
 	{
 		pop @line_list;
@@ -341,6 +339,39 @@ sub _line_to_item
 		$self->warn("Type \'$item->{type}\' is not recognized for line:\n$line");
 		return undef;
 	}
+	
+	######## Temporary transition code for 'MOB'
+	if ($item->{type} eq 'MOB')
+	{
+		my @spec_items = grep {!($_ =~ m/=/)} @line_list;
+		
+		if (scalar(@spec_items) == scalar(@$spec) + 2)
+		{
+			my $gap_left = $line_list[5];
+			if ($gap_left =~ m/^-/)
+			{
+				$item->{del_start} = abs($gap_left);
+			}
+			else
+			{
+				$item->{ins_start} = $gap_left;
+			}
+
+			my $gap_right = $line_list[6];
+			if ($gap_right =~ m/^-/)
+			{
+				$item->{del_end} = abs($gap_left);
+			}
+			else
+			{
+				$item->{ins_end} = $gap_left;
+			}
+			
+			##remove these items
+			splice @line_list, 5, 2;
+		}
+	}
+	
 	
 	foreach my $key (@$spec)
 	{
@@ -777,7 +808,7 @@ sub mutation_size_change
 	}	
 	if ($item->{type} eq 'SUB')
 	{
-		return length($item->{new_seq}) - length($item->{ref_seq});
+		return length($item->{new_seq}) - $item->{size};
 	}
 	elsif ($item->{type} eq 'INS')
 	{
@@ -793,7 +824,12 @@ sub mutation_size_change
 	}
 	elsif ($item->{type} eq 'MOB')
 	{
-		return +$item->{size} + $item->{duplication_size} + $item->{gap_left} + $item->{gap_right};
+		my $size = +$item->{size} + $item->{duplication_size};
+		$size -= $item->{del_start} if ($item->{del_start});
+		$size -= $item->{del_end} if ($item->{del_end});	
+		$size += length($item->{ins_start}) if ($item->{ins_start});	
+		$size += length($item->{ins_end}) if ($item->{ins_end});	
+		return $size;
 	}			
 	return 0;
 }
@@ -809,6 +845,21 @@ sub interval_un
 		return 1 if ( ($start >= $un->{start}) && ($end <= $un->{end}) );
 	}
 	return 0;
+}
+
+sub mutation_evidence_list
+{
+	my ($self, $item) = @_;	
+	$self->throw if (ref($item) ne 'HASH');
+	return () if (!defined $item->{evidence});
+	
+	my %evidence;
+	foreach my $evidence_id (@{$item->{evidence}})
+	{
+		$evidence{$evidence_id} = 1;
+	}
+	my @return_list = grep { $evidence{$_->{id}} } $self->list;
+	return @return_list;
 }
 
 sub mutation_unknown
@@ -830,7 +881,7 @@ sub mutation_unknown
 	{
 		## only call unknowns if all support is RA
 		my $only_ra_evidence = 1;
-		foreach my $ev ($self->evidence_list($mut))
+		foreach my $ev ($self->mutation_evidence_list($mut))
 		{
 			$only_ra_evidence &&= $ev->{type} eq 'RA';
 		}
@@ -840,7 +891,7 @@ sub mutation_unknown
 	
 	if ($mut->{type} eq 'SUB')
 	{
-		return $self->interval_un($mut->{position}, $mut->{position}+length($mut->{ref_seq}-1));
+		return $self->interval_un($mut->{position}, $mut->{position}+$mut->{size}-1);
 	}
 	
 	return 0;
@@ -858,6 +909,13 @@ sub get_reject_reasons
 	my ($item) = @_;
 	return () if (!defined $item->{reject});
 	return split /,/, $item->{reject};
+}
+
+sub number_reject_reasons
+{
+	my ($item) = @_;
+	return 0 if (!defined $item->{reject});
+	return scalar get_reject_reasons($item);
 }
 
 return 1;
