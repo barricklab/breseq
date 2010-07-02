@@ -1054,6 +1054,8 @@ sub html_evidence_file
 		my $ao = Breseq::AlignmentOutput->new;
 		my $options = {};
 		$interval->{quality_score_cutoff} = $settings->{base_quality_cutoff} if (defined $settings->{base_quality_cutoff});
+		
+		print STDERR "Creating read alignment for region \'$s\'\n";
 		print HTML $ao->html_alignment(
 			$interval->{bam_path}, 
 			$interval->{fasta_path}, 
