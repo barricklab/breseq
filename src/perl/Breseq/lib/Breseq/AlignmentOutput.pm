@@ -340,7 +340,6 @@ sub create_alignment
 		$aligned_reference->{strand} = 0;
 	}
 	
-	## TODO
 	## Need to ignore positions on the left and right that are only overlapped by
 	## Redundant reads. Currently Pileup will start and end on those coords.
 	## Since it doesn't know about redundancy marking.
