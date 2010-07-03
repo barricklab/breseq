@@ -446,7 +446,11 @@ sub do_compare
 				}
 				elsif ($f == 0)
 				{
-					$b = ($mut->{type} eq 'SNP') ? $mut->{ref_seq} : 'A';
+					$b = ($mut->{type} eq 'SNP') ? $mut->{_ref_seq} : 'A';
+				}
+				else
+				{
+					die "Unknown frequency: $f\n";
 				}
 				$mut_str .= $b;				
 			}
@@ -479,9 +483,7 @@ sub do_compare_polymorphisms
 	pod2usage(-exitstatus => 0, -verbose => 2) if $man;
 	pod2usage(1) if (scalar @reference_genbank_file_names == 0);
 	pod2usage(1) if (scalar @ARGV == 0);
-	
-	open OUTPUT, ">$output";
-	
+		
 	my @gd_file_name_list = @ARGV;	
 				
 	## load information about reference sequences from GenBank files
