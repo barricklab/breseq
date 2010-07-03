@@ -34,6 +34,7 @@ use Bio::DB::Sam;
 
 use Breseq::GenomeDiff;
 use Breseq::Shared;
+use Breseq::ErrorCalibration;
 
 
 package Breseq::MutationIdentification;
@@ -1146,7 +1147,40 @@ sub polymorphism_statistics
 	
 	my $log10_ref_length = log($total_ref_length) / log(10);	
 
+	#for now, just average together all of the quality counts to get distribution
+	my $max_quality = 0;
+	my $error_counts_hash;
+	foreach my $read_file ($settings->read_files)
+	{
+		my $fastq_file_index = $settings->read_file_to_fastq_file_index($read_file);
+		my $this_error_counts_file_name = $settings->file_name('error_counts_file_name', {'#' => $read_file} );
+		
+		my $this_error_counts_hash = Breseq::ErrorCalibration::load_error_file($this_error_counts_file_name);
+		
+		foreach my $q (keys  %$this_error_counts_hash)
+		{
+			foreach my $b1 ('A', 'T', 'C', 'G')
+			{
+				foreach my $b2 ('A', 'T', 'C', 'G')
+				{
+					$error_counts_hash->{$q} += $this_error_counts_hash->{$q}->{"$b1$b2"};
+				}
+			}
+			$max_quality = $q if ($q > $max_quality);
+		}
+	}
 
+	my $genome_error_counts_file_name = $settings->file_name('genome_error_counts_file_name');
+
+	open GEC, ">$genome_error_counts_file_name";
+	my @counts;
+	for (my $i=1; $i<=$max_quality; $i++)
+	{
+		my $val = 0;
+		$val = $error_counts_hash->{$i} if (defined $error_counts_hash->{$i});
+		print GEC "$val\n";
+	}
+	close GEC;
 
 	my $polymorphism_statistics_input_file_name = $settings->file_name('polymorphism_statistics_input_file_name');
 	my $polymorphism_statistics_output_file_name = $settings->file_name('polymorphism_statistics_output_file_name');
@@ -1158,7 +1192,8 @@ sub polymorphism_statistics
 	my $polymorphism_statistics_r_script_file_name = $settings->file_name('polymorphism_statistics_r_script_file_name');
 	my $polymorphism_statistics_r_script_log_file_name = $settings->file_name('polymorphism_statistics_r_script_log_file_name');
 	my $total_reference_length = $summary->{sequence_conversion}->{total_reference_sequence_length};
-	Breseq::Shared::system("R --vanilla total_length=$total_reference_length in_file=$polymorphism_statistics_input_file_name out_file=$polymorphism_statistics_output_file_name < $polymorphism_statistics_r_script_file_name > $polymorphism_statistics_r_script_log_file_name");
+	
+	Breseq::Shared::system("R --vanilla total_length=$total_reference_length in_file=$polymorphism_statistics_input_file_name out_file=$polymorphism_statistics_output_file_name qual_file=$genome_error_counts_file_name < $polymorphism_statistics_r_script_file_name > $polymorphism_statistics_r_script_log_file_name");
 	
 	## Read R file and add new results corresponding to all columns
 	open ROUT, "<$polymorphism_statistics_output_file_name" or die "Could not find file: $polymorphism_statistics_output_file_name";
@@ -1187,7 +1222,8 @@ sub polymorphism_statistics
 			die "Incorrect number of items on line:\n$line" if (!defined $line_list[$i]);
 		}
 		
-		# EXPERIMENTAL to not use bias_p_value		
+		# EXPERIMENTAL to not use bias_p_value
+		$mut->{quality} = $mut->{quality_genome_model};		
 		if ($mut->{quality} ne 'Inf')
 		{
 			## replace with this quality (will always be worse than the one before)

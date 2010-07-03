@@ -341,6 +341,9 @@ sub initialize_2
 	$self->{complete_coverage_text_file_name} = "$self->{mutation_identification_path}/@.coverage.tab";
 	$self->{mutation_identification_done_file_name} = "$self->{mutation_identification_path}/mutation_identification.done";
 	$self->{cnv_coverage_tab_file_name} = "$self->{mutation_identification_path}/@.cnv_coverage.tab";
+
+	$self->{genome_error_counts_file_name} = "$self->{mutation_identification_path}/error_counts.tab";
+
 	
 	$self->{polymorphism_statistics_input_file_name} = "$self->{mutation_identification_path}/polymorphism_statistics_input.tab";
 	$self->{polymorphism_statistics_output_file_name} = "$self->{mutation_identification_path}/polymorphism_statistics_output.tab";
