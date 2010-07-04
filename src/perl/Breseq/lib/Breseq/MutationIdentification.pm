@@ -83,7 +83,7 @@ sub identify_mutations
 		my $polymorphism_statistics_input_file_name = $settings->file_name('polymorphism_statistics_input_file_name');
 		open $polymorphism_statistics_input_fh, ">$polymorphism_statistics_input_file_name" or die "Could not open file: $polymorphism_statistics_input_file_name";
 		print $polymorphism_statistics_input_fh +join("\t",
-			'log10_base_likelihood', 'new_top_strand', 'new_bot_strand', 'ref_top_strand', 'ref_bot_strand', 'new_quals', 'ref_quals'
+			'position', 'insert_position', 'frequency', 'log10_base_likelihood', 'new_top_strand', 'new_bot_strand', 'ref_top_strand', 'ref_bot_strand', 'new_quals', 'ref_quals'
 		) . "\n";
 	}
 	
@@ -683,7 +683,8 @@ sub identify_mutations
 				$mut->{position} = $pos;
 				$mut->{insert_position} = $insert_count;
 				$mut->{quality} = $e_value_call;		
-				
+				$mut->{snp_quality} = $e_value_call;		
+
 				## code that prints out even more information
 				## slow because it sorts things, and not necessary
 				if (0)
@@ -709,25 +710,17 @@ sub identify_mutations
 					
 					# the frequency returned is the probability of the FIRST base
 					# we want to quote the probability of the second base (the change from the reference).
-					my $polymorphism_coverage_both_bases = 0;
 					if ($polymorphism->{first_base} eq $ref_base)
 					{
 						$mut->{frequency} = 1-$polymorphism->{frequency};
 						$mut->{ref_base} = $polymorphism->{first_base};
 						$mut->{new_base} = $polymorphism->{second_base};
-						$polymorphism_coverage_both_bases = 
-							( ($polymorphism->{second_base_strand_coverage}->{-1} > 0)
-						   && ($polymorphism->{second_base_strand_coverage}->{+1} > 0) );
 					}	
 					elsif ($polymorphism->{second_base} eq $ref_base)
 					{
 						$mut->{frequency} = $polymorphism->{frequency};
 						$mut->{ref_base} = $polymorphism->{second_base};
 						$mut->{new_base} = $polymorphism->{first_base};
-						
-						$polymorphism_coverage_both_bases = 
-							( ($polymorphism->{first_base_strand_coverage}->{-1} > 0)
-						   && ($polymorphism->{first_base_strand_coverage}->{+1} > 0) );					
 					}
 
 					### NOTE: This neglects the case where neither the first nor second base is the reference base! Should almost never happen					
@@ -770,14 +763,13 @@ sub identify_mutations
 					my $new_quality_string = join ',', @new_base_qualities;
 					
 					print $polymorphism_statistics_input_fh +join( "\t",
-						$polymorphism->{log10_base_likelihood}, $new_cov->{1}, $new_cov->{-1}, $ref_cov->{1}, $ref_cov->{-1}, $new_quality_string, $ref_quality_string
+						$mut->{position}, $mut->{insert_position}, $mut->{frequency}, $polymorphism->{log10_base_likelihood}, $new_cov->{1}, $new_cov->{-1}, $ref_cov->{1}, $ref_cov->{-1}, $new_quality_string, $ref_quality_string
 					) . "\n";
 					###
 					## End printing input file for R
 					###
 					
 					
-#					Breseq::GenomeDiff::add_reject_reason($mut, "STRAND") if (!$polymorphism_coverage_both_bases);
 					Breseq::GenomeDiff::add_reject_reason($mut, "FREQ") if ($mut->{frequency} < $settings->{polymorphism_frequency_cutoff});
 					Breseq::GenomeDiff::add_reject_reason($mut, "FREQ") if ($mut->{frequency} > 1-$settings->{polymorphism_frequency_cutoff});		
 				}
@@ -1204,13 +1196,15 @@ sub polymorphism_statistics
 	my $new_gd = Breseq::GenomeDiff->new();
 	foreach my $mut ($gd->list('RA'))
 	{
+		
+		
 		## lines only exist for polymorphisms
 		if (($mut->{frequency} == 1) || ($mut->{frequency} == 0))
 		{
 			$new_gd->add($mut);
 			next;
 		}
-		$mut->{old_quality} = $mut->{quality};
+#		$mut->{old_quality} = $mut->{quality};
 
 		my $line = <ROUT>;
 		chomp $line;
@@ -1221,16 +1215,46 @@ sub polymorphism_statistics
 			$mut->{$header_list[$i]} = $line_list[$i];
 			die "Incorrect number of items on line:\n$line" if (!defined $line_list[$i]);
 		}
+
+#		print Dumper($mut);
+
 		
 		# EXPERIMENTAL to not use bias_p_value
-		$mut->{quality} = $mut->{quality_genome_model};		
-		if ($mut->{quality} ne 'Inf')
+##		$mut->{quality} = $mut->{quality_genome_model};		
+#		if ($mut->{quality} ne 'Inf')
+#		{
+#			$mut->{quality} = -(log ($mut->{quality}) / log(10)) - $log10_ref_length;
+#			$new_gd->add($mut) if ($mut->{quality} > 2);
+#		}	
+
+		my $polymorphism_coverage_limit_both_bases = $settings->{polymorphism_coverage_both_bases};
+		my $passed = 1;
+		my ($top,$bot) = split /\//, $mut->{ref_cov};
+		$passed &&= $top >= $polymorphism_coverage_limit_both_bases;
+		$passed &&= $bot >= $polymorphism_coverage_limit_both_bases;		
+		($top,$bot) = split /\//, $mut->{new_cov};
+		$passed &&= $top >= $polymorphism_coverage_limit_both_bases;
+		$passed &&= $bot >= $polymorphism_coverage_limit_both_bases;
+
+
+		Breseq::GenomeDiff::add_reject_reason($mut, "POLYMORPHISM_STRAND") if (!$passed);
+		Breseq::GenomeDiff::add_reject_reason($mut, "KS_QUALITY_P_VALUE_UNUSUAL_POLY") if ($mut->{ks_quality_p_value_unusual_poly} < $settings->{polymorphism_bias_p_value_cutoff});
+#		Breseq::GenomeDiff::add_reject_reason($mut, "KS_QUALITY_P_VALUE_UNUSUAL_NEW") if ($mut->{ks_quality_p_value_unusual_new} < $settings->{polymorphism_bias_p_value_cutoff});
+#		Breseq::GenomeDiff::add_reject_reason($mut, "KS_QUALITY_P_VALUE_UNUSUAL_REF") if ($mut->{ks_quality_p_value_unusual_ref} < $settings->{polymorphism_bias_p_value_cutoff});
+
+#		Breseq::GenomeDiff::add_reject_reason($mut, "KS_QUALITY_P_VALUE_UNUSUAL_ALL") if ($mut->{ks_quality_p_value_unusual_all} < $settings->{polymorphism_bias_p_value_cutoff});
+		Breseq::GenomeDiff::add_reject_reason($mut, "FISHER_STRAND_P_VALUE") if ($mut->{fisher_strand_p_value} < $settings->{polymorphism_bias_p_value_cutoff});
+
+		if ($mut->{reject} && ($mut->{snp_quality} > $settings->{mutation_log10_e_value_cutoff}) && ($mut->{frequency} > 0.5) )
 		{
-			## replace with this quality (will always be worse than the one before)
-			$mut->{quality} = -(log ($mut->{quality}) / log(10)) - $log10_ref_length;
-			$new_gd->add($mut) if ($mut->{quality} > 2);
-		}	
-#		Breseq::GenomeDiff::add_reject_reason($mut, "BIAS_P_VALUE") if ($mut->{bias_p_value} < $settings->{polymorphism_bias_p_value_cutoff});
+			print Dumper($mut);
+			$mut->{frequency} = 1;
+			delete $mut->{reject};
+		}
+
+		$new_gd->add($mut);
+
+
 		## END EXPERIMENTAL
 	}
 	
