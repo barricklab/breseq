@@ -760,11 +760,11 @@ sub html_read_alignment_table_string
 				$output_str.= Tr({-class=>'reject_table_row'}, td({-colspan => $total_cols}, "Rejected: " . decode_reject_reason($reject)));
 			}
 			
-			if (defined $c->{bias_p_value})
-			{
-				my $bias_p_value = sprintf("%.2E", $c->{bias_p_value});
-				$output_str.= Tr({-class=>'information_table_row'}, td({-colspan => $total_cols}, "Combined strand and quality bias " . i("p") . "-value = $bias_p_value"));
-			}
+#			if (defined $c->{bias_p_value})
+#			{
+#				my $bias_p_value = sprintf("%.2E", $c->{bias_p_value});
+#				$output_str.= Tr({-class=>'information_table_row'}, td({-colspan => $total_cols}, "Combined strand and quality bias " . i("p") . "-value = $bias_p_value"));
+#			}
 			
 			if (defined $c->{fisher_strand_p_value})
 			{
@@ -777,11 +777,37 @@ sub html_read_alignment_table_string
 				$output_str.= Tr({-class=>'information_table_row'}, td({-colspan => $total_cols}, "Fisher's exact test strand distribution " . i("p") . "-value = $fisher_strand_p_value"));
 			}
 
-			if (defined $c->{ks_quality_p_value})
+#			if (defined $c->{ks_quality_p_value})
+#			{
+#				my $ks_quality_p_value = sprintf("%.2E", $c->{ks_quality_p_value});
+#				$output_str.= Tr({-class=>'information_table_row'}, td({-colspan => $total_cols}, "Kolmogorov-Smirnov test that lower quality scores support polymorphism " . i("p") . "-value = $ks_quality_p_value"));
+#			}
+
+			if (defined $c->{ks_quality_p_value_unusual_poly})
 			{
-				my $ks_quality_p_value = sprintf("%.2E", $c->{ks_quality_p_value});
-				$output_str.= Tr({-class=>'information_table_row'}, td({-colspan => $total_cols}, "Kolmogorov-Smirnov test that lower quality scores support polymorphism " . i("p") . "-value = $ks_quality_p_value"));
+				my $ks_quality_p_value = sprintf("%.2E", $c->{ks_quality_p_value_unusual_poly});
+				$output_str.= Tr({-class=>'information_table_row'}, td({-colspan => $total_cols}, "Kolmogorov-Smirnov test of lower base quality scores supporting polymorphism  " . i("p") . "-value = $ks_quality_p_value"));
 			}
+
+
+			if (defined $c->{ks_quality_p_value_unusual_new})
+			{
+				my $ks_quality_p_value = sprintf("%.2E", $c->{ks_quality_p_value_unusual_new});
+				$output_str.= Tr({-class=>'information_table_row'}, td({-colspan => $total_cols}, "Kolmogorov-Smirnov test of lower quality scores supporting new bases " . i("p") . "-value = $ks_quality_p_value"));
+			}
+
+			if (defined $c->{ks_quality_p_value_unusual_ref})
+			{
+				my $ks_quality_p_value = sprintf("%.2E", $c->{ks_quality_p_value_unusual_ref});
+				$output_str.= Tr({-class=>'information_table_row'}, td({-colspan => $total_cols}, "Kolmogorov-Smirnov test of lower quality scores supporting ref bases " . i("p") . "-value = $ks_quality_p_value"));
+			}
+			
+			if (defined $c->{ks_quality_p_value_unusual_all})
+			{
+				my $ks_quality_p_value = sprintf("%.2E", $c->{ks_quality_p_value_unusual_all});
+				$output_str.= Tr({-class=>'information_table_row'}, td({-colspan => $total_cols}, "Kolmogorov-Smirnov test of lower quality scores supporting all bases " . i("p") . "-value = $ks_quality_p_value"));
+			}			
+			
 
 		}
 	}
@@ -1096,6 +1122,31 @@ sub decode_reject_reason
 	{
 		return "Prediction has biased strand and/or quality scores supporting polymorphism.";
 	}
+	elsif ($reject eq 'KS_QUALITY_P_VALUE_UNUSUAL_POLY')
+	{
+		return "Prediction has biased quality score distribution for polymorphism bases.";
+	}
+	elsif ($reject eq 'KS_QUALITY_P_VALUE_UNUSUAL_REF')
+	{
+		return "Prediction has biased quality score distribution for new bases.";
+	}
+	elsif ($reject eq 'KS_QUALITY_P_VALUE_UNUSUAL_NEW')
+	{
+		return "Prediction has biased quality score distribution for ref bases.";
+	}
+	elsif ($reject eq 'KS_QUALITY_P_VALUE_UNUSUAL_ALL')
+	{
+		return "Prediction has biased quality score distribution for all bases.";
+	}
+	elsif ($reject eq 'FISHER_STRAND_P_VALUE')
+	{
+		return "Prediction has biased read strand distribution supporting polymorphism.";
+	}	
+	elsif ($reject eq 'POLYMORPHISM_STRAND')
+	{
+		return "Polymorphism prediction not supported by minimum number of reads on both strands.";
+	}
+	
 	return '';
 }
 
