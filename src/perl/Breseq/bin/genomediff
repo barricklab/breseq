@@ -99,6 +99,10 @@ elsif ("\U$command" eq 'COMPARE_POLYMORPHISMS')
 {
 	do_compare_polymorphisms();
 }
+elsif ("\U$command" eq 'MUTATION_TREE')
+{ 
+	do_mutation_tree();
+}
 elsif ("\U$command" eq 'COUNT')
 {
 	do_count();
@@ -240,7 +244,7 @@ sub do_annotate
 	
 	my @ra = $gd->filter_used_as_evidence($gd->list('RA'));	
 	@ra = grep { ($_->{frequency} != 0) && ($_->{frequency} != 1)  } @ra;
-	@ra = sort { -($a->{bias_p_value} <=> $b->{bias_p_value}) } @ra;
+	@ra = sort { -($a->{quality} <=> $b->{quality}) } @ra;
 	
 	for (my $i = $settings->{max_rejected_polymorphisms_to_show}; $i< scalar @ra; $i++)
 	{
@@ -333,15 +337,72 @@ sub do_compare
 	pod2usage(1) if (scalar @ARGV == 0);
 	
 	my @gd_file_name_list = @ARGV;	
-				
+	my ($gd_name_list_ref, $composite_gd, $one_ref_seq) = _compile_compare_gd(\@reference_genbank_file_names, \@gd_file_name_list);
+
+#	$composite_gd->write("test");
+
+	##
+	# Annotate mutations
+	##
+	my $title = "Mutation Comparison";
+	Breseq::Output::html_compare($output, $title, $composite_gd, $one_ref_seq, $gd_name_list_ref);
+
+	##
+	# Input file for PHYLIP (dnapars program)
+	##
+	if ($phylip_input_file)
+	{
+		my @mutations = $composite_gd->mutation_list;
+		
+		open PHYLIP, ">$phylip_input_file" or die "Could not open file: $phylip_input_file";
+		#first line is number of species, then number of sites
+		print PHYLIP +(scalar @$gd_name_list_ref) . " " . +(scalar @mutations) . "\n";
+
+		foreach my $gd_name (@$gd_name_list_ref)
+		{			
+			my $mut_str;
+			foreach my $mut (@mutations)
+			{
+				my $f = $mut->{"frequency_$gd_name"};
+				my $b = '?';
+				if ($f eq '?')
+				{
+					$b = 'N';
+				}
+				elsif (($f == 1) || ($f eq 'H'))
+				{
+					$b = ($mut->{type} eq 'SNP') ? $mut->{new_seq} : 'T';
+				}
+				elsif ($f == 0)
+				{
+					$b = ($mut->{type} eq 'SNP') ? $mut->{_ref_seq} : 'A';
+				}
+				else
+				{
+					die "Unknown frequency: $f\n";
+				}
+				$mut_str .= $b;				
+			}
+			
+			printf PHYLIP "%-10.10s%s\n", $gd_name, $mut_str;
+		}
+		
+		close PHYLIP;
+	}
+}
+
+sub _compile_compare_gd
+{
+	my ($reference_genbank_file_names_ref, $gd_file_name_list_ref) = @_;
+	
 	## load information about reference sequences from GenBank files
-	my $ref_seq_info = Breseq::ReferenceSequence::load_ref_seq_info(\@reference_genbank_file_names);
+	my $ref_seq_info = Breseq::ReferenceSequence::load_ref_seq_info($reference_genbank_file_names_ref);
 	my $one_ref_seq = scalar keys %{$ref_seq_info->{gene_lists}} == 1;
 
 	my @gd_name_list;
 	my @gd_list; 
 	my @mut_lists; #altered during processing
-	foreach my $gd_file_name (@gd_file_name_list)
+	foreach my $gd_file_name (@$gd_file_name_list_ref)
 	{
 		print "$gd_file_name\n";
 		
@@ -392,7 +453,6 @@ sub do_compare
 				{
 					$this_freq = $test_mut->{frequency};
 				}
-				$this_freq = 'H' if ($test_mut->{hidden}); ## mutation was hidden!
 				shift @$mut_list;
 			}
 			elsif ($gd->mutation_unknown($next_mut))
@@ -409,56 +469,83 @@ sub do_compare
 		$composite_gd->add($next_mut);
 		undef $next_mut;
 	}
+	
+	
+	return (\@gd_name_list, $composite_gd, $one_ref_seq);
+}
 
-#	$composite_gd->write("test");
 
-	##
-	# Annotate mutations
-	##
-	my $title = "Mutation Comparison";
-	Breseq::Output::html_compare($output, $title, $composite_gd, $one_ref_seq, \@gd_name_list);
+sub freq_to_string
+{
+	my ($mut, $key) = @_;
+	$key = "frequency" if (!defined $key);
+	my $freq = $mut->{$key};
+	return 'H' if ($freq eq 'H');
+	$freq = 1 if (!defined $freq);
+	return '?' if ($freq eq '?');
+	return "0%" if ($freq == 0);
+	my $frequency_string = sprintf("%4.1f%%", $freq*100);
+	$frequency_string = "100%" if ($freq == 1); # No "100.0%"
+	return $frequency_string;
+}
 
-	##
-	# Input file for PHYLIP (dnapars program)
-	##
-	if ($phylip_input_file)
+#map all mutations onto a tree
+sub do_mutation_tree
+{
+	use Breseq::ReferenceSequence;
+	use Breseq::Output;
+	
+	my ($help, $man);
+	my $output_file_name = "tree";
+	my @reference_genbank_file_names;
+	my $offending_polymorphisms;
+	my $tree_file_name;
+	GetOptions(
+		'help|?' => \$help, 'man' => \$man,
+	## Options for input and output files
+		'output|o=s' => \$output_file_name,	
+		'reference-sequence|r=s' => \@reference_genbank_file_names,
+		'tree-file-name|t=s' => \$tree_file_name,
+	) or pod2usage(2);
+
+	pod2usage(1) if $help;
+	pod2usage(-exitstatus => 0, -verbose => 2) if $man;
+	pod2usage(1) if (scalar @reference_genbank_file_names == 0);
+	pod2usage(1) if (scalar @ARGV == 0);
+	
+	my @gd_file_name_list = @ARGV;	
+	my ($gd_name_list_ref, $composite_gd) = _compile_compare_gd(\@reference_genbank_file_names, \@gd_file_name_list);
+	
+	#make a file for every mutation with frequency mapped on
+	#just subtitute in frequency
+	open TREE, "<$tree_file_name";
+	my @tree_lines = <TREE>;
+	chomp @tree_lines;
+	my $tree_data = join "", @tree_lines;
+	close TREE;
+	
+	foreach my $mut ($composite_gd->mutation_list)
 	{
-		my @mutations = $composite_gd->mutation_list;
+		print Dumper($mut);
 		
-		open PHYLIP, ">$phylip_input_file" or die "Could not open file: $phylip_input_file";
-		#first line is number of species, then number of sites
-		print PHYLIP +(scalar @gd_name_list) . " " . +(scalar @mutations) . "\n";
-
-		foreach my $gd_name (@gd_name_list)
-		{			
-			my $mut_str;
-			foreach my $mut (@mutations)
-			{
-				my $f = $mut->{"frequency_$gd_name"};
-				my $b = '?';
-				if ($f eq '?')
-				{
-					$b = 'N';
-				}
-				elsif (($f == 1) || ($f eq 'H'))
-				{
-					$b = ($mut->{type} eq 'SNP') ? $mut->{new_seq} : 'T';
-				}
-				elsif ($f == 0)
-				{
-					$b = ($mut->{type} eq 'SNP') ? $mut->{_ref_seq} : 'A';
-				}
-				else
-				{
-					die "Unknown frequency: $f\n";
-				}
-				$mut_str .= $b;				
-			}
-			
-			printf PHYLIP "%-10.10s%s\n", $gd_name, $mut_str;
+		my $mutation_key = Breseq::GenomeDiff::mutation_key($mut);	
+		my $this_output_file_name = $output_file_name . "$mutation_key";
+		
+		print "Creating tree $this_output_file_name\n";
+		
+		my $this_tree_data = $tree_data;
+		
+		foreach my $gd_name (@$gd_name_list_ref)
+		{
+			#"_freq_[name]" keys were made							
+			my $replace_str = $gd_name . "=" .freq_to_string($mut, "frequency_$gd_name");
+			$this_tree_data	=~ s/([:,()])$gd_name([:,()])/$1$replace_str$2/;
 		}
 		
-		close PHYLIP;
+		
+		open OUTTREE, ">$this_output_file_name" or die "Could not open file: $this_output_file_name";
+		print OUTTREE $this_tree_data . "\n";
+		close OUTTREE;		
 	}
 }
 
@@ -574,6 +661,11 @@ sub do_count
 		{
 			$mob_name_hash->{$mut->{repeat_name}} = 1;
 		}
+		foreach my $mut ($gd->list('DEL'))
+		{
+			$mob_name_hash->{$mut->{mediated}} = 1 if ($mut->{mediated});
+		}
+		
 	}
 	my @mod_name_list = sort keys %$mob_name_hash;
 	
@@ -581,7 +673,7 @@ sub do_count
 	my @snp_types = ( 'nonsynonymous', 'synonymous', 'noncoding', 'pseudogene', 'intergenic');
 	
 	open OUT, ">$output" or die "Count not open file: $output";
-	print OUT join ("\t", 'strain', @snp_types, @base_headers, 'deleted', @mod_name_list) . "\n";
+	print OUT join ("\t", 'strain', 'total', @snp_types, @base_headers, 'deleted', @mod_name_list) . "\n";
 	
 	my @gd_name_list;
 	my @gd_list; 
@@ -633,16 +725,18 @@ sub do_count
 			if ($mut->{type} eq 'DEL')
 			{
 				$total_deleted += $mut->{size};
+				$count->{mob}->{$mut->{mediated}}++ if ($mut->{mediated});
+				
 			}
 			
 			if ($mut->{type} eq 'MOB')
 			{
-				$count->{mob}->{$mut->{repeat_name}} ++;
+				$count->{mob}->{$mut->{repeat_name}}++;
 			}
 			
 		}
 		
-		print OUT join("\t", $gd_name, map({$count->{type}->{$_} } @snp_types), map({ $count->{base}->{$_} } @base_combinations), $total_deleted, map({$count->{mob}->{$_}} @mod_name_list) ) . "\n";
+		print OUT join("\t", $gd_name, scalar(@mut_list),  map({$count->{type}->{$_} } @snp_types), map({ $count->{base}->{$_} } @base_combinations), $total_deleted, map({$count->{mob}->{$_}} @mod_name_list) ) . "\n";
 		#print Dumper ($count);
 	}	
 }

@@ -273,6 +273,7 @@ sub by_sort_fields
 	return cmp_mutations($a, $b);
 }
 
+
 sub cmp_mutations
 { 		
 	my ($a, $b) = @_;
@@ -465,6 +466,21 @@ sub _item_to_line
 	$line .= join "\t", @key_value_pairs;
 	
 	return $line;
+}
+
+
+sub mutation_key
+{
+	my ($mut) = @_;
+	
+	my $spec = $line_specification->{$mut->{type}};
+	if (!defined $spec)
+	{
+		die("Type \'$mut->{type}\' not found for item. Ignoring.");
+		return '';
+	}
+	
+	return join(",", map {$mut->{$_}} 'type', @$spec);
 }
 
 sub read
