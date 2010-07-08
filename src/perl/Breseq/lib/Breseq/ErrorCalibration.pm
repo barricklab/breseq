@@ -720,6 +720,11 @@ sub error_counts_to_error_rates
 			my $error_rates_hash;
 			$error_rates_hash = error_counts_to_error_rates_empirical($this_error_counts_file_name);
 			save_error_file($this_error_rates_file_name, $error_rates_hash);			
+			
+			my $plot_error_rates_r_script_file_name = $settings->file_name('plot_error_rates_r_script_file_name');
+			my $plot_error_rates_r_script_log_file_name = $settings->file_name('plot_error_rates_r_script_log_file_name', {'#' => $read_file});
+			my $error_rates_plot_file_name = $settings->file_name('error_rates_plot_file_name', {'#' => $read_file});
+			Breseq::Shared::system("R --vanilla in_file=$this_error_rates_file_name out_file=$error_rates_plot_file_name < $plot_error_rates_r_script_file_name > $plot_error_rates_r_script_log_file_name");
 		}
 		#(2) Calculate using log-linear model (assumes base quality calibration is correct!)
 		elsif ($settings->{error_model_method} eq 'FIT')
@@ -780,6 +785,7 @@ sub error_counts_to_error_rates_empirical
 	my ($this_error_counts_file_name) = @_;
 	my $error_counts_hash = load_error_file($this_error_counts_file_name);
 
+	my $prior = 1; #added to counts in every category	
 	my $error_rates_hash;
 	foreach my $q (sort keys %$error_counts_hash)
 	{
@@ -793,13 +799,13 @@ sub error_counts_to_error_rates_empirical
 			my $total_this_base = 0;
 			foreach my $b2 (@bases)
 			{
-				$total_this_base += $error_counts_hash->{$q}->{"$b1$b2"};
+				$total_this_base += $error_counts_hash->{$q}->{"$b1$b2"} + $prior;
 			}
 			
 			foreach my $b2 (@bases)
 			{
-				$error_rates_hash->{$q}->{"$b1$b2"} = $error_counts_hash->{$q}->{"$b1$b2"} / $total_this_base;
-				$error_rates_hash->{$q}->{"$b1$b2"} = $minimum_error_probability if ($error_rates_hash->{$q}->{"$b1$b2"} < $minimum_error_probability);
+				$error_rates_hash->{$q}->{"$b1$b2"} = ($error_counts_hash->{$q}->{"$b1$b2"} + $prior) / $total_this_base;
+#				$error_rates_hash->{$q}->{"$b1$b2"} = $minimum_error_probability if ($error_rates_hash->{$q}->{"$b1$b2"} < $minimum_error_probability);
 			}			
 		}
 	}

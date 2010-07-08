@@ -94,12 +94,12 @@ sub new
 		'polymorphism-p-value-cutoff=s' => \$self->{polymorphism_bias_p_value_cutoff},
 		'no-unmatched-reads' => \$self->{no_unmatched_reads},
 		'maximum-candidate-junctions=s' => \$self->{maximum_candidate_junctions},
-		'error-model=s' => \$self->{error_model_method},
 		'trim-read-ends' => \$self->{trim_read_ends},
 		'trim-read-base-quality=s' => \$self->{trim_read_base_quality},
 		'base-quality-cutoff|b=s' => \$self->{base_quality_cutoff},
 		'maximum-mismatches|m=s' => \$self->{maximum_read_mismatches},		
 		'perl-error-count' => \$self->{perl_error_count},
+		'error-model-method=s' => \$self->{error_model_method},		
 	) or pod2usage(2);
 
 	pod2usage(1) if $help;
@@ -168,7 +168,7 @@ sub new_annotate
 		'base-quality-cutoff|b=s' => \$self->{base_quality_cutoff},
 		'maximum-mismatches|m=s' => \$self->{maximum_read_mismatches},
 		'perl-error-count' => \$self->{perl_error_count},
-		
+		'error-model-method=s' => \$self->{error_model_method},
 	## This is the only different option	
 		'input-genome-diff|i=s' => \@{$self->{input_genome_diffs}},	
 	) or pod2usage(2);
@@ -232,9 +232,9 @@ sub initialize_1
 	#used by MutationIdentification.pm
 	$self->{mutation_log10_e_value_cutoff} = 2;			# log10 of evidence required for SNP calls 
 	$self->{polymorphism_log10_e_value_cutoff} = 2;
-	$self->{polymorphism_bias_p_value_cutoff} = 0.05;
+	$self->{polymorphism_bias_p_value_cutoff} = 0.01;
 	$self->{polymorphism_frequency_cutoff} = 0;   # cut off if < this or > 1-this
-	$self->{polymorphism_coverage_both_bases} = 2;
+	$self->{polymorphism_coverage_both_bases} = 0;  #require this much coverage on each strand
 	
 	#used by Output.pm
 	$self->{max_rejected_polymorphisms_to_show} = 100;
@@ -331,8 +331,9 @@ sub initialize_2
 	$self->{unique_only_coverage_distribution_file_name} = "$self->{error_calibration_path}/@.unique_only_coverage_distribution.tab";
 	$self->{error_rates_summary_file_name} = "$self->{error_calibration_path}/summary.bin";
 	$self->{unique_coverage_distribution_r_script_file_name} = "$self->{error_calibration_path}/coverage.@.r_script";
-	$self->{error_rates_r_script_file_name} = "$self->{error_calibration_path}/error_rates.#.r_script";
-	
+	$self->{plot_error_rates_r_script_file_name} = "$self->{lib_path}/plot_error_rate.r";
+	$self->{plot_error_rates_r_script_log_file_name} = "$self->{error_calibration_path}/#.plot_error_rate.log";
+
 	##### mutation identification #####
 	$self->{mutation_identification_path} = "08_mutation_identification";
 	$self->{mutation_identification_path} = "$self->{base_output_path}/$self->{mutation_identification_path}" if ($self->{base_output_path});
@@ -342,10 +343,7 @@ sub initialize_2
 	$self->{complete_coverage_text_file_name} = "$self->{mutation_identification_path}/@.coverage.tab";
 	$self->{mutation_identification_done_file_name} = "$self->{mutation_identification_path}/mutation_identification.done";
 	$self->{cnv_coverage_tab_file_name} = "$self->{mutation_identification_path}/@.cnv_coverage.tab";
-
 	$self->{genome_error_counts_file_name} = "$self->{mutation_identification_path}/error_counts.tab";
-
-	
 	$self->{polymorphism_statistics_input_file_name} = "$self->{mutation_identification_path}/polymorphism_statistics_input.tab";
 	$self->{polymorphism_statistics_output_file_name} = "$self->{mutation_identification_path}/polymorphism_statistics_output.tab";
 	$self->{polymorphism_statistics_r_script_file_name} = "$self->{lib_path}/polymorphism_statistics.r";
@@ -370,7 +368,8 @@ sub initialize_2
 	$self->{coverage_plot_file_name} = "$self->{coverage_plot_path}/@.overview.png";
 	$self->{output_calibration_path} = "$self->{output_path}/calibration";
 	$self->{unique_only_coverage_plot_file_name} = "$self->{output_calibration_path}/@.unique_coverage.pdf";
-	$self->{error_rates_plot_file_name} = "$self->{output_calibration_path}/#.error_rates.pdf";
+	$self->{error_rates_plot_file_name} = "$self->{output_calibration_path}/#.error_rates.pdf";	
+	
 	## text output files, to be replaced...
 	$self->{settings_text_file_name} = "$self->{output_path}/settings.tab";
 	$self->{summary_text_file_name} = "$self->{output_path}/summary.tab";
