@@ -38,7 +38,7 @@ qual_dist<-read.table(qual_file, sep="\t", header=F)
 print(qual_dist)
 qual_dist<-as.vector(qual_dist$V1);
 
-qual_dist = qual_dist / 100
+qual_dist = ceiling(qual_dist / 1000)
 
 print(qual_dist)
 
@@ -115,27 +115,28 @@ if (length(X$new_quals) > 0)
 	## This section estimates the actual strand distribution as the reference observations and the quality score distribution from the
 	## count across the entire genome for all bases added together (doesn't take into account that there may be more low G's than A's, for example)	
 
-		max_qual = length(qual_dist)
-		NQ = tabulate(new_quals, nbins=max_qual)
-		RQ = tabulate(ref_quals, nbins=max_qual)
-		TQ = NQ+RQ
-		EQ = RQ+1
+#		max_qual = length(qual_dist)
+#		NQ = tabulate(new_quals, nbins=max_qual)
+#		RQ = tabulate(ref_quals, nbins=max_qual)
+#		TQ = NQ+RQ
+#		EQ = RQ+1
 						
-		log10_qual_likelihood_genome_mode = log10(dmultinom(NQ, prob=EQ)) + log10(dmultinom(RQ, prob=EQ)) - log10(dmultinom(TQ, prob=TQ))
-		Y$log10_qual_likelihood_genome_model[i] = -log10_qual_likelihood_genome_mode
+#		log10_qual_likelihood_genome_mode = log10(dmultinom(NQ, prob=EQ)) + log10(dmultinom(RQ, prob=EQ)) - log10(dmultinom(TQ, prob=TQ))
+#		Y$log10_qual_likelihood_genome_model[i] = -log10_qual_likelihood_genome_mode
 
-		RS = c(X$ref_top_strand[i], X$ref_bot_strand[i])
-		NS = c(X$new_top_strand[i], X$new_bot_strand[i])
-		ES = RS+c(1,1)
-		TS = RS + NS
+#		RS = c(X$ref_top_strand[i], X$ref_bot_strand[i])
+#		NS = c(X$new_top_strand[i], X$new_bot_strand[i])
+#		TS = RS + NS
 		
-		log10_strand_likelihood_genome_mode =  log10(dmultinom(RS, prob=ES)) + log10(dmultinom(NS, prob=ES)) - log10(dmultinom(TS, prob=TS))
-		Y$log10_strand_likelihood_genome_model[i] = -log10_strand_likelihood_genome_mode
+#		log10_strand_likelihood_genome_mode =  log10(dmultinom(TS, prob=TS+1)) - log10(dmultinom(RS, prob=RS+1)) + log10(dmultinom(NS, prob=RS+1))
+#		Y$log10_strand_likelihood_genome_model[i] = -log10_strand_likelihood_genome_mode
 
-		#convert to natural logarithm and back to 
-		score_combined_log_genome_mode =  -2* ( Y$log10_base_likelihood[i]  + Y$log10_qual_likelihood_genome_model[i] + Y$log10_strand_likelihood_genome_model[i]) * log(10)
-		Y$quality_genome_model[i] = -pchisq(score_combined_log_genome_mode, 1, lower.tail=T, log=T) / log(10)
+#		#convert to natural logarithm and back to 
+#		score_combined_log_genome_mode =  -2 * ( Y$log10_base_likelihood[i] + Y$log10_strand_likelihood_genome_model[i]) * log(10)
 
+#		Y$quality_genome_model[i] = -pchisq(score_combined_log_genome_mode, 1, lower.tail=T, log=T) / log(10)
+#		score_combined_log_genome_mode =  -2 * ( Y$log10_base_likelihood[i]) * log(10)
+		
 
 	## KS test for unusual qualities -- Rewrite to use cumulative distribution! = faster and more accurate
 	all_quals = c(ref_quals,new_quals);
@@ -150,7 +151,8 @@ if (length(X$new_quals) > 0)
 	{
 		poly_quals = ref_quals;
 	}
-	
+
+##this one has been used	
 	ks_test_p_value_unusual <- ks.test(qual_dist_list, poly_quals, alternative = "less")
 	ks_test_p_value_unusual <- ks_test_p_value_unusual$p.value
 	Y$ks_quality_p_value_unusual_poly[i] <- ks_test_p_value_unusual

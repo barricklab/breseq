@@ -5,6 +5,7 @@ SELF=`dirname ${BASH_SOURCE}`
 
 testcmd() {
     ${BRESEQ} \
+    	--error-model-method=EMPIRICAL \
     	--polymorphism-prediction \
         -o ${SELF} \
         -r ${DATADIR}/lambda/lambda.gbk \
