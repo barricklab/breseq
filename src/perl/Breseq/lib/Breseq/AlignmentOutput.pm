@@ -60,6 +60,7 @@ sub new
 	bless ($self, $class);
 	($self->{maximum_to_align}) = $self->Bio::Root::RootI::_rearrange([qw(MAXIMUM_TO_ALIGN)], @args);
 	$self->{maximum_to_align} = 200 if (!defined $self->{maximum_to_align});
+	$self->{maximum_to_make_alignment} = 10000 if (!defined $self->{maximum_to_make_alignment});
 
 	$self->{header_style_string} = '';
 	$self->{header_style_string} .= "\.NC {color: rgb(0,0,0); background-color: rgb(255,255,255)}\n"; #no color
@@ -136,17 +137,16 @@ sub html_alignment
 	
 	my $alignment_info = $self->create_alignment($bam_path, $fasta_path, $region, $options);
 
+	my $output = '';	
 	return p . "No reads uniquely align to region." if (!defined $alignment_info);
+	$output .= p . "$alignment_info->{message}" if ($alignment_info->{message});
+	return $output if (!defined $alignment_info->{aligned_reads});
+
 	my $aligned_reads = $alignment_info->{aligned_reads};
 	my @aligned_references = @{$alignment_info->{aligned_references}};
 	my $aligned_annotation = $alignment_info->{aligned_annotation};
-	
 	my $quality_range = $self->set_quality_range($aligned_reads, $options);
-	
 	my @sorted_keys = sort { -($aligned_reads->{$a}->{aligned_bases} cmp $aligned_reads->{$b}->{aligned_bases}) } keys %$aligned_reads;
-	my $output = '';
-
-	$output .= p . "NOTE: Only $self->{maximum_to_align} of $alignment_info->{total_reads} total aligned reads shown." if ($alignment_info->{reads_removed});
 
 	$output .= style($self->{header_style_string});
 	$output .= start_table({-style=>"background-color: rgb(255,255,255)"}) . start_Tr() . start_td({-style=>"font-size:10pt"});
@@ -338,7 +338,7 @@ sub create_alignment
 	
 	my $unique_start;
 	my $unique_end;
-			
+		
 	## Retrieve all unique alignments overlapping position with "fetch"
 	## This lets us know how many slots we need to reserve for alignments.
 	my $fetch_function = sub {
@@ -369,9 +369,21 @@ sub create_alignment
 	my @read_keys = shuffle(keys %$aligned_reads);
 	my $total_reads = scalar @read_keys;
 	my $reads_removed = 0;
+	
+	### If there are WAY too many reads, such that a pileup would take forever,
+	### then bail.
+	if ($total_reads > $self->{maximum_to_make_alignment})
+	{
+		return { 
+			message => "Reads exceeded maximum to display alignment. $total_reads reads. (Limit = $self->{maximum_to_make_alignment})",
+		};
+	}
+	
+	my $message;
 	if ($total_reads > $self->{maximum_to_align})
 	{
-		$reads_removed = 1;
+		$message = "Only $self->{maximum_to_align} of $total_reads total aligned reads displayed.";
+		
 		my $new_aligned_reads;
 		for (my $i=0; $i<scalar $self->{maximum_to_align}; $i++)
 		{
@@ -547,6 +559,7 @@ sub create_alignment
 			}	
 		}
 	};
+	
 	$bam->pileup($region, $pileup_function);
 
     #### IF NOTHING ALIGNED, RETURN undef 
@@ -705,8 +718,7 @@ sub create_alignment
 		aligned_reads => $aligned_reads, 
 		aligned_references => \@aligned_references, 
 		aligned_annotation => $aligned_annotation, 
-		reads_removed => $reads_removed, 
-		total_reads => $total_reads,
+		message => $message, 
 	};
 }
 
