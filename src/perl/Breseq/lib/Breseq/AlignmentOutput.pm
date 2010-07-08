@@ -33,6 +33,7 @@ use vars qw(@ISA);
 use Bio::Root::Root;
 @ISA = qw( Bio::Root::RootI );
 
+use List::Util qw(shuffle);
 use CGI qw/:standard *table *Tr *code *td start_b end_b start_i end_i/;
 
 use Bio::DB::Sam;
@@ -58,7 +59,7 @@ sub new
 
 	bless ($self, $class);
 	($self->{maximum_to_align}) = $self->Bio::Root::RootI::_rearrange([qw(MAXIMUM_TO_ALIGN)], @args);
-	$self->{maximum_to_align} = 1000 if (!defined $self->{maximum_to_align});
+	$self->{maximum_to_align} = 200 if (!defined $self->{maximum_to_align});
 
 	$self->{header_style_string} = '';
 	$self->{header_style_string} .= "\.NC {color: rgb(0,0,0); background-color: rgb(255,255,255)}\n"; #no color
@@ -145,6 +146,8 @@ sub html_alignment
 	my @sorted_keys = sort { -($aligned_reads->{$a}->{aligned_bases} cmp $aligned_reads->{$b}->{aligned_bases}) } keys %$aligned_reads;
 	my $output = '';
 
+	$output .= p . "NOTE: Only $self->{maximum_to_align} of $alignment_info->{total_reads} total aligned reads shown." if ($alignment_info->{reads_removed});
+
 	$output .= style($self->{header_style_string});
 	$output .= start_table({-style=>"background-color: rgb(255,255,255)"}) . start_Tr() . start_td({-style=>"font-size:10pt"});
 	foreach my $aligned_reference (@aligned_references)
@@ -152,15 +155,6 @@ sub html_alignment
 		$output .= $self->_html_alignment_line($aligned_reference, 1) . br;
 	}
 	$output .= $self->_html_alignment_line($aligned_annotation, 0) . br;
-	
-	##if there are too many alignments remove randomly until we reach limit!
-	my $total_reads = scalar @sorted_keys;
-		
-	my $reads_removed = ($total_reads > $self->{maximum_to_align});
-	while (scalar @sorted_keys > $self->{maximum_to_align})
-	{
-		splice @sorted_keys, int(rand scalar @sorted_keys), 1;
-	}
 	
 	foreach my $key (@sorted_keys)
 	{
@@ -184,9 +178,7 @@ sub html_alignment
 		$output .= $self->_html_alignment_line({aligned_bases => 'ATCG', => aligned_quals => pack('CCCC',$c,$c,$c,$c)}, 0,  $quality_range);
 	}
 	
-	$output .= p . "NOTE: Only $self->{maximum_to_align} of $total_reads total aligned reads shown.", if ($reads_removed);
-	
-	$output .= end_table() . end_Tr() . end_td();
+	$output .= end_table() . end_Tr() . end_td();	
 		
 	return $output;
 }
@@ -367,11 +359,26 @@ sub create_alignment
 			
 			## keep track of the earliest and latest coords we see in UNIQUE alignments
 			$unique_start = $a->start if (!defined $unique_start || $unique_start > $a->start);
-			$unique_end   = $a->end   if (!defined $unique_end   || $unique_end   < $a->end  );
-			
+			$unique_end   = $a->end   if (!defined $unique_end   || $unique_end   < $a->end  );	
 		}
 	};
 	$bam->fetch($region, $fetch_function);	
+
+	## if there are too many reads aligned
+	## draw a random subset
+	my @read_keys = shuffle(keys %$aligned_reads);
+	my $total_reads = scalar @read_keys;
+	my $reads_removed = 0;
+	if ($total_reads > $self->{maximum_to_align})
+	{
+		$reads_removed = 1;
+		my $new_aligned_reads;
+		for (my $i=0; $i<scalar $self->{maximum_to_align}; $i++)
+		{
+			$new_aligned_reads->{$read_keys[$i]} = $aligned_reads->{$read_keys[$i]};
+		}
+		$aligned_reads = $new_aligned_reads;
+	}
 
 	#create the alignment via "pileup"
 	my $last_pos;
@@ -694,7 +701,13 @@ sub create_alignment
 		}
 	}
 			
-	return { aligned_reads => $aligned_reads, aligned_references => \@aligned_references, aligned_annotation => $aligned_annotation };
+	return { 
+		aligned_reads => $aligned_reads, 
+		aligned_references => \@aligned_references, 
+		aligned_annotation => $aligned_annotation, 
+		reads_removed => $reads_removed, 
+		total_reads => $total_reads,
+	};
 }
 
 
