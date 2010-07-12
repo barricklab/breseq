@@ -817,8 +817,8 @@ sub error_counts_to_error_rates_using_R
 {
 	my ($settings, $input_file_name, $output_file_name, $plot_file_name, $read_file) = @_;
 	
-	my $error_rates_r_script_file_name = $settings->file_name('error_rates_r_script_file_name', {'#' => $read_file});
-	open RSCRIPT, ">$error_rates_r_script_file_name" or die "Could not create file: $error_rates_r_script_file_name\n";
+	my $error_rates_fit_r_script_file_name = $settings->file_name('error_rates_fit_r_script_file_name', {'#' => $read_file});
+	open RSCRIPT, ">$error_rates_fit_r_script_file_name" or die "Could not create file: $error_rates_fit_r_script_file_name\n";
 			
 	my @bases = ('A', 'C', 'T', 'G', '.');
 	my $base_quality_cutoff = $settings->{base_quality_cutoff};
@@ -1018,7 +1018,7 @@ EOF
 	
 	close RSCRIPT;
 
-	Breseq::Shared::system("R --vanilla < $error_rates_r_script_file_name > $error_rates_r_script_file_name\.out");
+	Breseq::Shared::system("R --vanilla < $error_rates_fit_r_script_file_name > $error_rates_fit_r_script_file_name\.out");
 }
 
 sub assign_mapping_quality_to_matches

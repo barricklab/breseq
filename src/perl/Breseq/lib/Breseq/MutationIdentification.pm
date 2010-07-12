@@ -895,6 +895,9 @@ sub _predict_polymorphism
 	my $first_base = $bases_sorted_by_likelihood[0];
 	my $second_base = $bases_sorted_by_likelihood[1];
 
+	## we may not want to deal with indels
+	return undef if ($settings->{no_indel_polymorphisms} && (($first_base eq '.') || ($second_base eq '.')) );
+
 	my @first_base_qualities;
 	my @second_base_qualities;
 	my $first_base_strand_hash = { '1' => 0, '-1' => 0};
@@ -1201,7 +1204,7 @@ sub polymorphism_statistics
 	my @header_list = split /\t/, $header;
 	
 	my $new_gd = Breseq::GenomeDiff->new();
-	foreach my $mut ($gd->list('RA'))
+	foreach my $mut ($gd->list)
 	{
 		## lines only exist for RA evidence
 		if ($mut->{type} ne 'RA')
@@ -1209,7 +1212,6 @@ sub polymorphism_statistics
 			$new_gd->add($mut);
 			next;
 		}
-		
 		
 		## lines only exist for polymorphisms
 		if (($mut->{frequency} == 1) || ($mut->{frequency} == 0))
@@ -1274,8 +1276,6 @@ sub polymorphism_statistics
 	### Write out the file which now has much more data
 	my $polymorphism_statistics_ra_mc_genome_diff_file_name = $settings->file_name('polymorphism_statistics_ra_mc_genome_diff_file_name');
 	$new_gd->write($polymorphism_statistics_ra_mc_genome_diff_file_name);
-	
-	
 	
 }
 
