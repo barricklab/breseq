@@ -333,6 +333,7 @@ sub initialize_2
 	$self->{unique_coverage_distribution_r_script_file_name} = "$self->{error_calibration_path}/coverage.@.r_script";
 	$self->{plot_error_rates_r_script_file_name} = "$self->{lib_path}/plot_error_rate.r";
 	$self->{plot_error_rates_r_script_log_file_name} = "$self->{error_calibration_path}/#.plot_error_rate.log";
+	$self->{error_rates_r_script_file_name} = "$self->{lib_path}/plot_error_rate.r";
 
 	##### mutation identification #####
 	$self->{mutation_identification_path} = "08_mutation_identification";

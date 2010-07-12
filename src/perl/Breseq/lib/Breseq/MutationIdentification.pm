@@ -540,7 +540,7 @@ sub identify_mutations
 						##is the error rate defined?
 						my $base_key =  ($strand == +1) 
 							? $hypothetical_base . $base
-							: Breseq::Fastq::revcom($hypothetical_base) . Breseq::Fastq::revcom($base);
+							: Breseq::Fastq::complement($hypothetical_base . $base);
 						
 						if (!defined $log10_correct_rates->[$fastq_file_index]->{$quality}->{$base_key})
 						{
@@ -876,7 +876,9 @@ sub _predict_polymorphism
 
 		foreach my $item (@$info_list)
 		{
-			my $log10_pr_ref_base_given_obs = $log10_correct_rates->[$item->{fastq_file_index}]->{$item->{quality}}->{$test_ref_base . $item->{base}};
+			my $base_change_key = $test_ref_base . $item->{base};
+		 	$base_change_key = Breseq::Fastq::complement($base_change_key) if ($item->{strand} == -1); 
+			my $log10_pr_ref_base_given_obs = $log10_correct_rates->[$item->{fastq_file_index}]->{$item->{quality}}->{$base_change_key};
 			die "ERROR: $item->{quality}, $test_ref_base$item->{base}" if (!defined $log10_pr_ref_base_given_obs);
 			$log10_likelihood_given_ref_base->{$test_ref_base}  += $log10_pr_ref_base_given_obs;
 		}
@@ -981,9 +983,14 @@ sub _calculate_log10_likelihood
 	
 	foreach my $item (@$info_list)
 	{
+		my $base_change_key_1 = $first_base . $item->{base};
+	 	$base_change_key_1 = Breseq::Fastq::complement($base_change_key_1) if ($item->{strand} == -1); 
+		my $base_change_key_2 = $second_base . $item->{base};
+	 	$base_change_key_2 = Breseq::Fastq::complement($base_change_key_2) if ($item->{strand} == -1); 
+		
 		my $pr_ref_base_given_obs 
-			= $pr_first_base * $error_rates->[$item->{fastq_file_index}]->{$item->{quality}}->{$first_base . $item->{base}}
-			+ (1-$pr_first_base) * $error_rates->[$item->{fastq_file_index}]->{$item->{quality}}->{$second_base . $item->{base}};
+			= $pr_first_base * $error_rates->[$item->{fastq_file_index}]->{$item->{quality}}->{$base_change_key_1}
+			+ (1-$pr_first_base) * $error_rates->[$item->{fastq_file_index}]->{$item->{quality}}->{$base_change_key_2};
 		
 		print "Probability of error is zero.\n  Fastq File = $item->{fastq_file_index}\n"
 		  .  "  Quality = $item->{quality}\n  Error = $first_base$item->{base} $second_base$item->{base}\n"
@@ -1196,6 +1203,12 @@ sub polymorphism_statistics
 	my $new_gd = Breseq::GenomeDiff->new();
 	foreach my $mut ($gd->list('RA'))
 	{
+		## lines only exist for RA evidence
+		if ($mut->{type} ne 'RA')
+		{
+			$new_gd->add($mut);
+			next;
+		}
 		
 		
 		## lines only exist for polymorphisms

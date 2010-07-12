@@ -137,6 +137,7 @@ sub html_alignment
 	
 	my $alignment_info = $self->create_alignment($bam_path, $fasta_path, $region, $options);
 
+
 	my $output = '';	
 	return p . "No reads uniquely align to region." if (!defined $alignment_info);
 	$output .= p . "$alignment_info->{message}" if ($alignment_info->{message});
@@ -146,16 +147,18 @@ sub html_alignment
 	my @aligned_references = @{$alignment_info->{aligned_references}};
 	my $aligned_annotation = $alignment_info->{aligned_annotation};
 	my $quality_range = $self->set_quality_range($aligned_reads, $options);
+	
 	my @sorted_keys = sort { -($aligned_reads->{$a}->{aligned_bases} cmp $aligned_reads->{$b}->{aligned_bases}) } keys %$aligned_reads;
 
 	$output .= style($self->{header_style_string});
 	$output .= start_table({-style=>"background-color: rgb(255,255,255)"}) . start_Tr() . start_td({-style=>"font-size:10pt"});
+		
 	foreach my $aligned_reference (@aligned_references)
 	{
 		$output .= $self->_html_alignment_line($aligned_reference, 1) . br;
 	}
 	$output .= $self->_html_alignment_line($aligned_annotation, 0) . br;
-	
+		
 	foreach my $key (@sorted_keys)
 	{
 		$output .= $self->_html_alignment_line($aligned_reads->{$key}, 0, $quality_range) . br;
@@ -338,37 +341,57 @@ sub create_alignment
 	
 	my $unique_start;
 	my $unique_end;
-		
+	
+	my $total_reads = 0;
+	my $processed_reads = 0;
+
 	## Retrieve all unique alignments overlapping position with "fetch"
 	## This lets us know how many slots we need to reserve for alignments.
 	my $fetch_function = sub {
 		my ($a) = @_;
 		#print $a->display_name,' ',$a->cigar_str,"\n";
-		my $redundancy = $a->aux_get('X1');
-		
+		my $redundancy = $a->aux_get('X1');		
+				
+		return if ($total_reads > $self->{maximum_to_make_alignment});
 		if ($redundancy == 1)
 		{
+			$total_reads++;
+			return if ($total_reads > $self->{maximum_to_make_alignment});
+						
 			my $aligned_read;
 			$aligned_read->{seq_id} = $a->display_name;
 			$aligned_read->{length} = $a->l_qseq;
 			$aligned_read->{read_sequence} = $a->qseq;
 			$aligned_read->{qual_sequence} = $a->_qscore;
 			
+			##clear a spot if we're above the limit
+			my $odd_this_one = 1;
+			if ($total_reads > $self->{maximum_to_align})
+			{
+				my @read_keys = keys %$aligned_reads;
+				my $chosen = int(rand($self->{maximum_to_align}+1));
+				
+				##must be a chance of deleting the current one
+				if ($chosen != $self->{maximum_to_align})
+				{
+					delete $aligned_reads->{$read_keys[$chosen]};
+					$aligned_reads->{$a->display_name} = $aligned_read;
+				}
+				else
+				{
+					$odd_this_one = 0;
+				}
+			}
+
 			## save in the hash, creating a spot for each read we will be aligning
 			$aligned_reads->{$a->display_name} = $aligned_read;
-			
+
 			## keep track of the earliest and latest coords we see in UNIQUE alignments
 			$unique_start = $a->start if (!defined $unique_start || $unique_start > $a->start);
-			$unique_end   = $a->end   if (!defined $unique_end   || $unique_end   < $a->end  );	
+			$unique_end   = $a->end   if (!defined $unique_end   || $unique_end   < $a->end  );				
 		}
 	};
 	$bam->fetch($region, $fetch_function);	
-
-	## if there are too many reads aligned
-	## draw a random subset
-	my @read_keys = shuffle(keys %$aligned_reads);
-	my $total_reads = scalar @read_keys;
-	my $reads_removed = 0;
 	
 	### If there are WAY too many reads, such that a pileup would take forever,
 	### then bail.
@@ -383,15 +406,8 @@ sub create_alignment
 	if ($total_reads > $self->{maximum_to_align})
 	{
 		$message = "Only $self->{maximum_to_align} of $total_reads total aligned reads displayed.";
-		
-		my $new_aligned_reads;
-		for (my $i=0; $i<scalar $self->{maximum_to_align}; $i++)
-		{
-			$new_aligned_reads->{$read_keys[$i]} = $aligned_reads->{$read_keys[$i]};
-		}
-		$aligned_reads = $new_aligned_reads;
 	}
-
+	
 	#create the alignment via "pileup"
 	my $last_pos;
 	my $pileup_function = sub {
@@ -405,12 +421,12 @@ sub create_alignment
 		{
 			$aligned_reference->{start} = $pos if (!defined $aligned_reference->{start});
 			$aligned_reference->{end} = $pos;
-		}
+		}		
 		
 		## Cull the list to those we want to align
 		## Other alignments may overlap this position that DO NOT
 		## overlap the positions of interest. This removes them.
-		@$pileup = grep { defined $aligned_reads->{$_->alignment->display_name} } @$pileup;
+		@$pileup = grep { defined $aligned_reads->{$_->alignment->display_name} } @$pileup;		
 
 		## Find the maximum indel count
 		## We will add gaps to reads with an indel count lower than this.
@@ -638,9 +654,7 @@ sub create_alignment
 		
 	#	$ref_add_left .= $bam->segment($aligned_reference->{seq_id},$aligned_reference->{start}-$ref_extend_left,$aligned_reference->{start}-1)->dna;	
 	#	$ref_add_right .= $bam->segment($aligned_reference->{seq_id},$aligned_reference->{end}+1,$aligned_reference->{end}+$ref_extend_right)->dna;
-		
-		
-		
+			
 		$aligned_reference->{start} -= $ref_extend_left;
 		$aligned_reference->{end} += $ref_extend_right;
 		$aligned_reference->{aligned_bases} = $ref_add_left . $aligned_reference->{aligned_bases} . $ref_add_right;
@@ -712,7 +726,7 @@ sub create_alignment
 		{
 			($aligned_read->{start}, $aligned_read->{end}) = ($aligned_read->{length} - $aligned_read->{start} + 1, $aligned_read->{length} - $aligned_read->{end} + 1);
 		}
-	}
+	}			
 			
 	return { 
 		aligned_reads => $aligned_reads, 
@@ -760,7 +774,6 @@ sub set_quality_range
 		}
 	}
 	
-	
 	my @qual_to_color;
 	my @cutoff_percentiles = (0, 0.03, 0.1, 0.3, 0.9, 1.0);
 	my $current_cutoff_level = 0;
@@ -787,29 +800,36 @@ sub set_quality_range
 		
 	} continue {
 		$i++;
-	}	
+	}			
 		
 	#last must be set to max
 	$qual_to_color[$i-1] = scalar(@cutoff_percentiles)-1;
 	#first must be set to min
 	$qual_to_color[$quality_score_cutoff] = 1;	
 	
-	#redistribute such that there are no jumps in quality level
-	my $gap = 1;
-	while ($gap)
+	#if there are at least as many quality scores in existence as
+	#there are color levels to assign....
+	if ((scalar(@qual_to_color) > scalar(@cutoff_percentiles)-1))
 	{
-		$gap = 0;
-		my $last = 0;
-		for (my $i=0; $i<scalar @qual_to_color; $i++)
+		#...redistribute such that there are no jumps in quality level
+		my $gap = 1;
+		while ($gap)
 		{
-			if ($qual_to_color[$i] > $last + 1)
+			$gap = 0;
+			my $last = 0;
+			for (my $i=0; $i<scalar @qual_to_color; $i++)
 			{
-				$qual_to_color[$i-1]++;
-				$gap = 1;
+				if ($qual_to_color[$i] > $last + 1)
+				{
+					$qual_to_color[$i-1]++;
+					$gap = 1;
+				}
+				$last = $qual_to_color[$i];
 			}
-			$last = $qual_to_color[$i];
+		
+			print Dumper(@qual_to_color);
 		}
-	}		
+	}			
 		
 	##finally, this sets the cutoff levels
 	my $last = 0;
