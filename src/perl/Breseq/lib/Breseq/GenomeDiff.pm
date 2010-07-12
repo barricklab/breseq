@@ -895,13 +895,18 @@ sub mutation_unknown
 
 	if ($mut->{type} eq 'DEL')
 	{
+
+#doesn't work b/c evidence list may not be correct here
 		## only call unknowns if all support is RA
-		my $only_ra_evidence = 1;
-		foreach my $ev ($self->mutation_evidence_list($mut))
-		{
-			$only_ra_evidence &&= $ev->{type} eq 'RA';
-		}
-		return 0 if (!$only_ra_evidence);
+#		my $only_ra_evidence = 1;
+#		foreach my $ev ($self->mutation_evidence_list($mut))
+#		{
+#			print Dumper($ev);
+#			$only_ra_evidence &&= $ev->{type} eq 'RA';
+#		}
+#		print Dumper($mut);
+#		print "Only RA evidence? $only_ra_evidence\n";		
+#		return 0 if (!$only_ra_evidence);
 		return $self->interval_un($mut->{position}, $mut->{position}+$mut->{size}-1);
 	}
 	

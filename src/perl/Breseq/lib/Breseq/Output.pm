@@ -603,7 +603,7 @@ sub html_mutation_table_string
 				$output_str.= td({align=>"center"}, $evidence_string) if (!defined $gd_name_list_ref);
 				$output_str.= td({align=>"center"}, nonbreaking($mut->{seq_id})) if (!$one_ref_seq); 
 				$output_str.= td({align=>"right"}, commify($mut->{position}));
-				$output_str.= td({align=>"center"}, nonbreaking("&Delta;$mut->{size} nt"));
+				$output_str.= td({align=>"center"}, nonbreaking("&Delta;" . commify($mut->{size}) . " nt"));
 				$output_str.= freq_cols(@freq_list);
 				my $annotation_str = '';
 				$annotation_str = "between $mut->{between}" if ($mut->{between});
@@ -673,6 +673,22 @@ sub html_mutation_table_string
 				$output_str.= td({align=>"center"}, i(nonbreaking($mut->{gene_name})));
 				$output_str.= td({align=>"left"}, $mut->{gene_product});
 				$output_str.= end_Tr;
+			}
+			
+			
+			elsif ($mut->{type} eq 'INV')
+			{
+				
+				$output_str.= start_Tr({-class=>$row_class});	
+				$output_str.= td({align=>"center"}, $evidence_string) if (!defined $gd_name_list_ref);
+				$output_str.= td({align=>"center"}, nonbreaking($mut->{seq_id})) if (!$one_ref_seq); 
+				$output_str.= td({align=>"right"}, commify($mut->{position}));
+				$output_str.= td({align=>"center"}, nonbreaking(commify($mut->{size}) . " nt inversion"));
+				$output_str.= freq_cols(@freq_list);
+				$output_str.= td({align=>"center"}, "");
+				$output_str.= td({align=>"center"}, i(nonbreaking($mut->{gene_name_1})) . "&darr;" . i(nonbreaking($mut->{gene_name_2})) );
+				$output_str.= td({align=>"left"}, $mut->{gene_product_1} . "&darr;" . $mut->{gene_product_2});
+				$output_str.= end_Tr;				
 			}
 		}
 		

@@ -247,7 +247,7 @@ sub annotate_1_mutation
 
 
 	## Mutation is intergenic
-	if (scalar(@within_genes) + scalar(@between_genes) == 0)
+	if (scalar(@within_genes) + scalar(@between_genes) + scalar(@inside_left_genes) + scalar (@inside_right_genes)== 0)
 	{			
 		$mut->{snp_type} = "intergenic";
 
@@ -349,14 +349,14 @@ sub annotate_1_mutation
 	}
 
 	##The mutation actually contains several genes
-	elsif (scalar @between_genes > 0)
+	elsif (scalar @between_genes + scalar(@inside_left_genes) + scalar (@inside_right_genes) > 0)
 	{
+		
 		my @gene_list = ( map({ "<i>[" . $_->{name} . "]</i>" } @inside_left_genes),
 						  map({ "<i>" . $_->{name} . "</i>" } @between_genes),
 						  map({ "<i>[" . $_->{name} ."]</i>" } @inside_right_genes) );
 
 		$mut->{gene_product} = join (", ", @gene_list);
-
 
 		if (scalar @gene_list == 1)
 		{
@@ -365,7 +365,7 @@ sub annotate_1_mutation
 		else
 		{
 			$mut->{gene_name} = $gene_list[0] . "&minus" . $gene_list[-1];
-		}
+		}		
 	}
 	
 	return $mut;
@@ -421,6 +421,15 @@ sub annotate_mutations
 		elsif ($mut->{type} eq 'MOB')
 		{
 			annotate_1_mutation($ref_seq_info, $mut, $mut->{position}, $mut->{position} + $mut->{duplication_size}-1);
+		}
+		elsif ($mut->{type} eq 'INV')
+		{
+			annotate_1_mutation($ref_seq_info, $mut, $mut->{position}, $mut->{position});
+			($mut->{gene_name_1}, $mut->{gene_product_1})  = ($mut->{gene_name}, $mut->{gene_product});
+			annotate_1_mutation($ref_seq_info, $mut, $mut->{position} + $mut->{size}-1, $mut->{position} + $mut->{size}-1);
+			($mut->{gene_name_2}, $mut->{gene_product_2})  = ($mut->{gene_name}, $mut->{gene_product});
+			delete $mut->{gene_name};
+			delete $mut->{gene_product};
 		}
 		elsif ($mut->{type} eq 'JC')
 		{

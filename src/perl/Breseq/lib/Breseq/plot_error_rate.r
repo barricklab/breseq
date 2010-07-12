@@ -37,12 +37,12 @@ G_pch = 15;
 ._col = "orange"; 
 ._pch = 15;
 
-new_plot <- function()
+new_plot <- function(plot_title)
 {
 	#bottom, left, top, right
 	par(mar=c(5,5,3,3));
 	options(warn=-1)
-	plot(0, type="n", lty="solid", log="y", ylim=c(0.00000001, 1), xlim=c(min(X$quality), max(X$quality)), lwd=1, axes=F, xlab="", ylab="", las=1, cex.lab=1.2, cex.axis=1.2 )
+	plot(0, type="n", lty="solid", log="y", ylim=c(0.00000001, 1), xlim=c(min(X$quality), max(X$quality)), title=plot_title, lwd=1, axes=F, xlab="", ylab="", las=1, cex.lab=1.2, cex.axis=1.2 )
 	options(warn=1)
 	box()
 	#y-axis
@@ -53,7 +53,7 @@ new_plot <- function()
 	title(xlab="base quality score", mgp = c(3, 1, 0), cex.lab=1.2)
 }
 
-new_plot()
+new_plot("Reference Base: A")
 lines(Y$quality, Y$AC, col=C_col)
 points(X$quality, X$AC, pch=C_pch, col=C_col)
 
@@ -66,7 +66,9 @@ points(X$quality, X$AG, pch=G_pch, col=G_col)
 lines(Y$quality, Y$A., col=._col)
 points(X$quality, X$A., pch=._pch, col=._col)
 
-new_plot()
+legend("topright", c("AC","AT","AG","A."), border="black", horiz=T, fill=c(C_col,T_col,G_col,._col))
+
+new_plot("Reference Base: T")
 lines(Y$quality, Y$TA, col=A_col)
 points(X$quality, X$TA, pch=A_pch, col=A_col)
 
@@ -79,7 +81,10 @@ points(X$quality, X$TG, pch=G_pch, col=G_col)
 lines(Y$quality, Y$T., col=._col)
 points(X$quality, X$T., pch=._pch, col=._col)
 
-new_plot()
+legend("topright", c("TA","TC","TG","T."), border="black", horiz=T, fill=c(A_col,C_col,G_col,._col))
+
+
+new_plot("Reference Base: C")
 lines(Y$quality, Y$CA, col=A_col)
 points(X$quality, X$CA, pch=A_pch, col=A_col)
 
@@ -92,7 +97,10 @@ points(X$quality, X$CG, pch=G_pch, col=G_col)
 lines(Y$quality, Y$C., col=._col)
 points(X$quality, X$C., pch=._pch, col=._col)
 
-new_plot()
+legend("topright", c("CA","CT","CG","C."), border="black", horiz=T, fill=c(A_col,T_col,G_col,._col))
+
+
+new_plot("Reference Base: G")
 lines(Y$quality, Y$GA, col=A_col)
 points(X$quality, X$GA, pch=A_pch, col=A_col)
 
@@ -105,7 +113,10 @@ points(X$quality, X$GC, pch=C_pch, col=C_col)
 lines(Y$quality, Y$G., col=._col)
 points(X$quality, X$G., pch=._pch, col=._col)
 
-new_plot()
+legend("topright", c("GA","GT","GC","G."), border="black", horiz=T, fill=c(A_col,T_col,C_col,._col))
+
+
+new_plot("Reference Base: .")
 lines(Y$quality, Y$.A, col=A_col)
 points(X$quality, X$.A, pch=A_pch, col=A_col)
 
@@ -117,5 +128,8 @@ points(X$quality, X$.C, pch=C_pch, col=C_col)
 
 lines(Y$quality, Y$.G, col=G_col)
 points(X$quality, X$.G, pch=G_pch, col=G_col)
+
+legend("topright", c(".A",".T",".C",".G"), border="black", horiz=T, fill=c(A_col,T_col,C_col,G_col))
+
 
 dev.off()
