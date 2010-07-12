@@ -31,6 +31,7 @@ package Breseq::Output;
 use strict;
 use CGI qw/:standard *table *Tr *th *td *div/;
 use Data::Dumper;
+use File::Copy;
 
 require Exporter;
 our @ISA = qw( Exporter );
@@ -379,7 +380,7 @@ sub breseq_header_string
 	
 	if (!-e $breseq_graphic_to_file_name)
 	{
-		system("cp $breseq_graphic_from_file_name $breseq_graphic_to_file_name");
+		copy($breseq_graphic_from_file_name, $breseq_graphic_to_file_name);
 	}
 	
 	$output_string .= start_table({-width => "100%", -border => 0, -cellspacing => 0, -cellpadding => 3});

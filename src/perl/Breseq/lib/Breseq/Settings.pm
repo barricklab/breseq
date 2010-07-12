@@ -99,7 +99,9 @@ sub new
 		'base-quality-cutoff|b=s' => \$self->{base_quality_cutoff},
 		'maximum-mismatches|m=s' => \$self->{maximum_read_mismatches},		
 		'perl-error-count' => \$self->{perl_error_count},
-		'error-model-method=s' => \$self->{error_model_method},		
+		'error-model-method=s' => \$self->{error_model_method},
+		'no-indel-polymorphisms' => \$self->{no_indel_polymorphisms},	
+		'strict-polymorphism-prediction' => \$self->{strict_polymorphism_prediction},						
 	) or pod2usage(2);
 
 	pod2usage(1) if $help;
@@ -169,6 +171,8 @@ sub new_annotate
 		'maximum-mismatches|m=s' => \$self->{maximum_read_mismatches},
 		'perl-error-count' => \$self->{perl_error_count},
 		'error-model-method=s' => \$self->{error_model_method},
+		'no-indel-polymorphisms' => \$self->{no_indel_polymorphisms},
+		'strict-polymorphism-prediction' => \$self->{strict_polymorphism_prediction},										
 	## This is the only different option	
 		'input-genome-diff|i=s' => \@{$self->{input_genome_diffs}},	
 	) or pod2usage(2);
@@ -204,7 +208,7 @@ sub initialize_1
 	$self->{run_name} = 'unnamed';
 	$self->{clean} = 0;
 	$self->{base_output_path} = '';
-	$self->{error_model_method} = 'FIT';
+	$self->{error_model_method} = 'EMPIRICAL';
 	$self->{trim_reads} = 0;
 	
 	#used by CandidateJunctions.pm
@@ -232,9 +236,10 @@ sub initialize_1
 	#used by MutationIdentification.pm
 	$self->{mutation_log10_e_value_cutoff} = 2;			# log10 of evidence required for SNP calls 
 	$self->{polymorphism_log10_e_value_cutoff} = 2;
-	$self->{polymorphism_bias_p_value_cutoff} = 0.01;
+	$self->{polymorphism_bias_p_value_cutoff} = 0.05;
 	$self->{polymorphism_frequency_cutoff} = 0;   # cut off if < this or > 1-this
 	$self->{polymorphism_coverage_both_bases} = 0;  #require this much coverage on each strand
+	$self->{no_indel_polymorphisms} = 0;		
 	
 	#used by Output.pm
 	$self->{max_rejected_polymorphisms_to_show} = 100;
@@ -259,6 +264,15 @@ sub initialize_2
 	$self->{unmatched_reads} = ($self->{no_unmatched_reads}) ? 0 : 1;
 	
 	$self->{trim_reads} = $self->{trim_read_ends} || $self->{trim_read_base_quality};
+	
+	## block option
+	if ($self->{strict_polymorphism_prediction})
+	{
+		$self->{polymorphism_prediction} = 1;
+		$self->{maximum_read_mismatches} = 1;
+		$self->{require_complete_match} = 1;
+		$self->{no_indel_polymorphisms} = 1;
+	}
 	
 	#######  SETUP FILE NAMES  #######
 	### '#' replaced with read fastq name
@@ -332,6 +346,7 @@ sub initialize_2
 	$self->{error_rates_summary_file_name} = "$self->{error_calibration_path}/summary.bin";
 	$self->{unique_coverage_distribution_r_script_file_name} = "$self->{error_calibration_path}/coverage.@.r_script";
 	$self->{plot_error_rates_r_script_file_name} = "$self->{lib_path}/plot_error_rate.r";
+	$self->{plot_error_rates_fit_r_script_file_name} = "$self->{error_calibration_path}/fit.#.r_script";
 	$self->{plot_error_rates_r_script_log_file_name} = "$self->{error_calibration_path}/#.plot_error_rate.log";
 	$self->{error_rates_r_script_file_name} = "$self->{lib_path}/plot_error_rate.r";
 
@@ -691,14 +706,15 @@ sub check_installed
 	{
 		$good_to_go = 0;
 		print STDERR "---> ERROR Required Perl module \"Bio::DB::Sam\" not installed.\n";
-		print STDERR "---> This should have been installed by the breseq installer.\n";
+		print STDERR "---> This module should have been installed by the breseq installer.\n";
 	}
 	
 	if ( ($self->{polymorphism_prediction} && !$self->{installed}->{Statistics_Distributions}) )
 	{
-		print STDERR "---> WARNING! Perl module Statistics::Distributions not installed. Fisher's Exact\n";
-		print STDERR "---> Test will not be used to check strand bias in polymorphism predictions.\n";
-		print STDERR "---> This should have been installed by the breseq installer.\n";		
+		$good_to_go = 0;
+		print STDERR "---> WARNING! Perl module Statistics::Distributions not installed.\n";
+		print STDERR "---> Required for polymorphism prediction.\n";
+		print STDERR "---> This module should have been installed by the breseq installer.\n";		
 	}
 	
 	$self->throw if (!$good_to_go);

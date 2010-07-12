@@ -826,8 +826,6 @@ sub set_quality_range
 				}
 				$last = $qual_to_color[$i];
 			}
-		
-			print Dumper(@qual_to_color);
 		}
 	}			
 		
