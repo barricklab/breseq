@@ -64,14 +64,14 @@
 			<key>caret</key>
 			<dict>
 				<key>column</key>
-				<integer>0</integer>
+				<integer>1</integer>
 				<key>line</key>
-				<integer>82</integer>
+				<integer>85</integer>
 			</dict>
 			<key>firstVisibleColumn</key>
 			<integer>0</integer>
 			<key>firstVisibleLine</key>
-			<integer>61</integer>
+			<integer>58</integer>
 		</dict>
 		<key>bin/genbank_utils</key>
 		<dict>
@@ -284,9 +284,9 @@
 			<key>caret</key>
 			<dict>
 				<key>column</key>
-				<integer>33</integer>
+				<integer>5</integer>
 				<key>line</key>
-				<integer>836</integer>
+				<integer>822</integer>
 			</dict>
 			<key>firstVisibleColumn</key>
 			<integer>0</integer>
@@ -396,42 +396,14 @@
 			<key>caret</key>
 			<dict>
 				<key>column</key>
-				<integer>57</integer>
+				<integer>14</integer>
 				<key>line</key>
-				<integer>382</integer>
+				<integer>691</integer>
 			</dict>
 			<key>firstVisibleColumn</key>
 			<integer>0</integer>
 			<key>firstVisibleLine</key>
-			<integer>315</integer>
-		</dict>
-		<key>lib/Breseq/ReferenceSequence.pm</key>
-		<dict>
-			<key>caret</key>
-			<dict>
-				<key>column</key>
-				<integer>31</integer>
-				<key>line</key>
-				<integer>431</integer>
-			</dict>
-			<key>firstVisibleColumn</key>
-			<integer>0</integer>
-			<key>firstVisibleLine</key>
-			<integer>407</integer>
-		</dict>
-		<key>lib/Breseq/Settings.pm</key>
-		<dict>
-			<key>caret</key>
-			<dict>
-				<key>column</key>
-				<integer>43</integer>
-				<key>line</key>
-				<integer>268</integer>
-			</dict>
-			<key>firstVisibleColumn</key>
-			<integer>0</integer>
-			<key>firstVisibleLine</key>
-			<integer>232</integer>
+			<integer>666</integer>
 		</dict>
 		<key>lib/Breseq/Shared.pm</key>
 		<dict>
@@ -493,7 +465,6 @@
 	<key>openDocuments</key>
 	<array>
 		<string>bin/fastq_utils</string>
-		<string>lib/Breseq/Settings.pm</string>
 		<string>lib/Breseq/MutationIdentification.pm</string>
 		<string>lib/Breseq/Output.pm</string>
 		<string>lib/Breseq/Fastq.pm</string>
@@ -511,7 +482,6 @@
 		<string>bin/breseq</string>
 		<string>bin/genomediff</string>
 		<string>lib/Breseq/AlignmentOutput.pm</string>
-		<string>lib/Breseq/ReferenceSequence.pm</string>
 		<string>lib/Breseq/AlignmentCorrection.pm</string>
 		<string>lib/Breseq/CandidateJunctions.pm</string>
 		<string>bin/genbank_utils</string>
@@ -523,6 +493,6 @@
 	<key>showFileHierarchyDrawer</key>
 	<true/>
 	<key>windowFrame</key>
-	<string>{{238, 140}, {966, 725}}</string>
+	<string>{{452, 67}, {966, 725}}</string>
 </dict>
 </plist>

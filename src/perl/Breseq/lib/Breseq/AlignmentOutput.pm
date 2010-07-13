@@ -60,7 +60,7 @@ sub new
 	bless ($self, $class);
 	($self->{maximum_to_align}) = $self->Bio::Root::RootI::_rearrange([qw(MAXIMUM_TO_ALIGN)], @args);
 	$self->{maximum_to_align} = 200 if (!defined $self->{maximum_to_align});
-	$self->{maximum_to_make_alignment} = 10000 if (!defined $self->{maximum_to_make_alignment});
+	$self->{maximum_to_make_alignment} = 100000 if (!defined $self->{maximum_to_make_alignment});
 
 	$self->{header_style_string} = '';
 	$self->{header_style_string} .= "\.NC {color: rgb(0,0,0); background-color: rgb(255,255,255)}\n"; #no color
@@ -352,7 +352,6 @@ sub create_alignment
 		#print $a->display_name,' ',$a->cigar_str,"\n";
 		my $redundancy = $a->aux_get('X1');		
 				
-		return if ($total_reads > $self->{maximum_to_make_alignment});
 		if ($redundancy == 1)
 		{
 			$total_reads++;
