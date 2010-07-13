@@ -691,6 +691,20 @@ sub html_mutation_table_string
 				$output_str.= td({align=>"left"}, $mut->{gene_product_1} . "&darr;" . $mut->{gene_product_2});
 				$output_str.= end_Tr;				
 			}
+			
+			elsif ($mut->{type} eq 'DUP')
+			{
+				$output_str.= start_Tr({-class=>$row_class});	
+				$output_str.= td({align=>"center"}, $evidence_string) if (!defined $gd_name_list_ref);
+				$output_str.= td({align=>"center"}, nonbreaking($mut->{seq_id})) if (!$one_ref_seq); 
+				$output_str.= td({align=>"right"}, commify($mut->{position}));
+				$output_str.= td({align=>"center"}, nonbreaking(commify($mut->{size}) . " nt duplication"));
+				$output_str.= freq_cols(@freq_list);
+				$output_str.= td({align=>"center"}, "");
+				$output_str.= td({align=>"center"}, i(nonbreaking($mut->{gene_name})));
+				$output_str.= td({align=>"left"}, $mut->{gene_product});
+				$output_str.= end_Tr;				
+			}
 		}
 		
 		if ($legend_row)
