@@ -272,6 +272,7 @@ sub initialize_2
 		$self->{maximum_read_mismatches} = 1;
 		$self->{require_complete_match} = 1;
 		$self->{no_indel_polymorphisms} = 1;
+		$self->{polymorphism_log10_e_value_cutoff} = 5;
 	}
 	
 	#######  SETUP FILE NAMES  #######
