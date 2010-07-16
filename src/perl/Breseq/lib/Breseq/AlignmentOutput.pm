@@ -362,25 +362,26 @@ sub create_alignment
 			$aligned_read->{length} = $a->l_qseq;
 			$aligned_read->{read_sequence} = $a->qseq;
 			$aligned_read->{qual_sequence} = $a->_qscore;
-			
-			##clear a spot if we're above the limit
-			my $odd_this_one = 1;
-			if ($total_reads > $self->{maximum_to_align})
-			{
-				my @read_keys = keys %$aligned_reads;
-				my $chosen = int(rand($self->{maximum_to_align}+1));
-				
-				##must be a chance of deleting the current one
-				if ($chosen != $self->{maximum_to_align})
-				{
-					delete $aligned_reads->{$read_keys[$chosen]};
-					$aligned_reads->{$a->display_name} = $aligned_read;
-				}
-				else
-				{
-					$odd_this_one = 0;
-				}
-			}
+
+# this biases toward late alignments by how it re-assigns!!			
+#			##clear a spot if we're above the limit
+#			my $odd_this_one = 1;
+#			if ($total_reads > $self->{maximum_to_align})
+#			{
+#				my @read_keys = keys %$aligned_reads;
+#				my $chosen = int(rand($self->{maximum_to_align}+1));
+#				
+#				##must be a chance of deleting the current one
+#				if ($chosen != $self->{maximum_to_align})
+#				{
+#					delete $aligned_reads->{$read_keys[$chosen]};
+#					$aligned_reads->{$a->display_name} = $aligned_read;
+#				}
+#				else
+#				{
+#					$odd_this_one = 0;
+#				}
+#			}
 
 			## save in the hash, creating a spot for each read we will be aligning
 			$aligned_reads->{$a->display_name} = $aligned_read;
@@ -405,6 +406,14 @@ sub create_alignment
 	if ($total_reads > $self->{maximum_to_align})
 	{
 		$message = "Only $self->{maximum_to_align} of $total_reads total aligned reads displayed.";
+		my $new_aligned_reads;
+		my @new_keys = shuffle(keys %$aligned_reads);
+		foreach (my $i=0; $i<$self->{maximum_to_align}; $i++)
+		{
+			$new_aligned_reads->{$new_keys[$i]} = $aligned_reads->{$new_keys[$i]};
+		}
+		
+		$aligned_reads = $new_aligned_reads;
 	}
 	
 	#create the alignment via "pileup"

@@ -122,7 +122,7 @@ sub count
 				# We don't need to process deleted positions
 				# ... all information comes from adjacent positions
 				##
-				next if ($p->is_del);
+				next if ($p->is_del);	
 				
 				my $redundancy = $a->aux_get('X1');
 				if ($redundancy > 1)

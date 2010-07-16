@@ -639,6 +639,8 @@ sub identify_mutations
 				
 					if ($polymorphism)
 					{
+						#print "Position: $pos\n";
+						
 						$polymorphism->{log10_e_value} = 'ND'; 
 						if ($polymorphism->{p_value} ne 'ND')
 						{
@@ -778,12 +780,12 @@ sub identify_mutations
 				## More fields common to consensus mutations and polymorphisms
 				## ...now that ref_base and new_base are defined
 				my $ref_cov = $pos_info->{$mut->{ref_base}}->{unique_trimmed_cov};
-				$mut->{ref_cov} = $ref_cov->{-1} . "/" . $ref_cov->{1};
+				$mut->{ref_cov} = $ref_cov->{1} . "/" . $ref_cov->{-1};
 				
 				my $new_cov = $pos_info->{$mut->{new_base}}->{unique_trimmed_cov};
-				$mut->{new_cov} = $new_cov->{-1} . "/" . $new_cov->{1};
+				$mut->{new_cov} = $new_cov->{1} . "/" . $new_cov->{-1};
 				
-				$mut->{tot_cov} = $total_cov->{-1} . "/" . $total_cov->{1};
+				$mut->{tot_cov} = $total_cov->{1} . "/" . $total_cov->{-1};
 				
 				$gd->add($mut);
 				
@@ -885,7 +887,7 @@ sub _predict_polymorphism
 	}	
 
 #	print Dumper($info_list) if ($verbose);
-	print Dumper($log10_likelihood_given_ref_base) if ($verbose);
+#	print Dumper($log10_likelihood_given_ref_base) if ($verbose);
 	
 	#we want the one with the most bases or the largest log likelihood (less negative is better)			
 	my @bases_sorted_by_likelihood = sort { -($base_counts->{$a} <=> $base_counts->{$b}) || -($log10_likelihood_given_ref_base->{$a} <=> $log10_likelihood_given_ref_base->{$b}) } @base_list;
@@ -895,17 +897,25 @@ sub _predict_polymorphism
 	my $first_base = $bases_sorted_by_likelihood[0];
 	my $second_base = $bases_sorted_by_likelihood[1];
 
+	print "1st = $first_base\n" if ($verbose);
+	print "2nd = $second_base\n" if ($verbose);
+
 	## we may not want to deal with indels
 	return undef if ($settings->{no_indel_polymorphisms} && (($first_base eq '.') || ($second_base eq '.')) );
+
+	##Don't need to do this...
+	## from now on we ignore any observation that was not the first or second base!
+	##my $total_observation_num = scalar @$info_list;
+	##@$info_list = grep { ($_->{base} eq $first_base) || ($_->{base} eq $second_base) } @$info_list;
+	##my $top_two_observation_num = scalar @$info_list;
+	##print "Observations of the top two bases $top_two_observation_num / $total_observation_num total\n" if ($verbose);
 
 	my @first_base_qualities;
 	my @second_base_qualities;
 	my $first_base_strand_hash = { '1' => 0, '-1' => 0};
 	my $second_base_strand_hash = { '1' => 0, '-1' => 0};
-		
-	print STDERR "1st = $first_base\n" if ($verbose);
-	print STDERR "2nd = $second_base\n" if ($verbose);
-
+	my $total_strand_hash = { '1' => 0, '-1' => 0};
+	
 	foreach my $item (@$info_list)
 	{
 		if ($item->{base} eq $first_base)
@@ -918,27 +928,69 @@ sub _predict_polymorphism
 			push @second_base_qualities, $item->{quality};
 			$second_base_strand_hash->{$item->{strand}}++;
 		}
+		$total_strand_hash->{$item->{strand}}++;
 	}
-	
-#	print STDERR Dumper(\@first_base_qualities) if ($verbose);
-#	print STDERR Dumper(\@second_base_qualities) if ($verbose);
 
-	#use likelihood test to estimate probability of mixed model vs. one-base model	
-	my ($log10_likelihood_of_two_base_model, $max_likelihood_fr_first_base) = _find_best_log_likelihood($info_list, $error_rates, $first_base, $second_base);
+	##Likelihood of observing alignment if all sequenced bases were actually the first base
+	my $log10_likelihood_of_one_base_model = $log10_likelihood_given_ref_base->{$first_base};
 
-	print "Num First Base: " . (scalar @first_base_qualities) . " Num Second Base: " . (scalar @second_base_qualities) . "\n" if ($verbose);
-	print "Log10 Likelihood Best Base Only = $log10_likelihood_given_ref_base->{$first_base}\n" if ($verbose);
-	print "Log10 Likelihood 2 Base Model= $log10_likelihood_of_two_base_model\n" if ($verbose);
+	## Maximum likelihood of observing alignment if sequenced bases were a mixture of the top two bases
+	my ($log10_likelihood_of_two_base_model, $max_likelihood_fr_first_base) = _best_two_base_model_log10_likelihood($info_list, $error_rates, $first_base, $second_base);
+#	my $pr_first_base = ($first_base_strand_hash->{'-1'} + $first_base_strand_hash->{'1'}) / ($first_base_strand_hash->{'-1'} + $first_base_strand_hash->{'1'} + $second_base_strand_hash->{'-1'} + $second_base_strand_hash->{'1'});
+#	my ($log10_likelihood_of_two_base_model) = _calculate_two_base_model_log10_likelihood($info_list, $error_rates, $first_base, $second_base);
+
+## this requires evidence to reject two base model that is lacking when there are too few obs.
+#	my $strand_1_pr_first_base = ($first_base_strand_hash->{'-1'}) / ($first_base_strand_hash->{'-1'} + $second_base_strand_hash->{'-1'});
+#	my $strand_2_pr_first_base = ($first_base_strand_hash->{'1'}) / ($first_base_strand_hash->{'1'} + $second_base_strand_hash->{'1'});
+#	my ($log10_likelihood_of_two_base_strand_model) = _calculate_two_base_model_strand_log10_likelihood($info_list, $error_rates, $first_base, $second_base,$strand_1_pr_first_base, $strand_2_pr_first_base);
+
+	## Maximum likelihood of observing alignment if sequenced bases were actually the first base, except
+	## that on one strand there was a much higher chance of observing the second base
+	my $log10_likelihood_of_strand_bias_model;	
+
+	##test models on both strands
+	my $strand_biased_error_rate;
+	foreach my $s ('-1', '1')
+	{
+		my $strand_total = $total_strand_hash->{$s};
+		$strand_biased_error_rate->{$s} = 0;
+		next if ($strand_total == 0);
+		$strand_biased_error_rate = $second_base_strand_hash->{$s} / $strand_total;
+		
+		my $this_log10_likelihood_of_strand_bias_model = _calculate_strand_bias_model_log10_likelihood($info_list, $error_rates, $first_base, $second_base, $s, $strand_biased_error_rate);
+		$log10_likelihood_of_strand_bias_model = $this_log10_likelihood_of_strand_bias_model if (!defined $log10_likelihood_of_strand_bias_model || ($this_log10_likelihood_of_strand_bias_model > $log10_likelihood_of_strand_bias_model));
+	}
+
+	print "Num First Base (+/-): $first_base_strand_hash->{1}/$first_base_strand_hash->{-1}\n" if ($verbose);
+	print "Num Second Base (+/-): $second_base_strand_hash->{1}/$second_base_strand_hash->{-1}\n" if ($verbose);
+
+	print "== Best Base Model ==\n";
+	print "  Log10 Likelihood Best Base Only = $log10_likelihood_given_ref_base->{$first_base}\n" if ($verbose);
+
+	$Statistics::Distributions::SIGNIFICANT = 50; ## we need many more significant digits than the default 5
 
 	## this is the natural logarithm of the ratio of the probabilities
-	my $likelihood_ratio_test_value = -2*log(10)*($log10_likelihood_given_ref_base->{$first_base} - $log10_likelihood_of_two_base_model);
+	my $likelihood_ratio_test_value = -2*log(10)*($log10_likelihood_of_one_base_model - $log10_likelihood_of_two_base_model);
 	my $chi_squared_pr = 'ND';
-	
-	$Statistics::Distributions::SIGNIFICANT = 50; ## we need many more significant digits than the default 5
 	$chi_squared_pr = Statistics::Distributions::chisqrprob(1, $likelihood_ratio_test_value);
 	
-	print "LR test value = $likelihood_ratio_test_value\n" if ($verbose);
-	print "Chi-squared Pr = $chi_squared_pr\n" if ($verbose);
+	print "== 2 Base Model ==\n";
+	print "  Log10 Likelihood 2 Base Model = $log10_likelihood_of_two_base_model\n" if ($verbose);
+	print "  LR test value = $likelihood_ratio_test_value\n" if ($verbose);
+	print "  Chi-squared Pr = $chi_squared_pr\n" if ($verbose);
+
+	my $likelihood_ratio_test_value_strand_bias = -2*log(10)*($log10_likelihood_of_one_base_model - $log10_likelihood_of_strand_bias_model);
+	my $chi_squared_pr_strand_bias = 'ND';
+	$chi_squared_pr_strand_bias = Statistics::Distributions::chisqrprob(1, $likelihood_ratio_test_value);
+
+	print "== Strand Bias Model ==\n";
+	print "  Log10 Likelihood Strand Bias Model= $log10_likelihood_of_strand_bias_model\n" if ($verbose);
+	print "  LR test value = $likelihood_ratio_test_value_strand_bias\n" if ($verbose);
+	print "  Chi-squared Pr = $chi_squared_pr_strand_bias\n" if ($verbose);
+
+	## we need the two base model to beat the strand bias model by a fair bit
+	my $p_value_two_base_vs_strand_bias =  10**($log10_likelihood_of_strand_bias_model - $log10_likelihood_of_two_base_model);
+	print "==> P-value two-base model vs. strand bias model = $p_value_two_base_vs_strand_bias\n" if ($verbose);
 
 	$polymorphism = {
 		'frequency' => $max_likelihood_fr_first_base,
@@ -948,18 +1000,21 @@ sub _predict_polymorphism
 		'second_base_strand_coverage' => $second_base_strand_hash, 
 		'p_value' => $chi_squared_pr,
 		'log10_base_likelihood' => $log10_likelihood_given_ref_base->{$first_base} - $log10_likelihood_of_two_base_model,
+		'p_value_strand_bias' => $chi_squared_pr_strand_bias,
+		'log10_base_likelihood_strand_bias' => $log10_likelihood_of_one_base_model - $log10_likelihood_of_strand_bias_model,
+		'p_value_two_base_vs_strand_bias' => $p_value_two_base_vs_strand_bias,
 	};
 	
 	return $polymorphism;
 }
 
-sub _find_best_log_likelihood
+sub _best_two_base_model_log10_likelihood
 {
 	my $verbose = 0;
 	my ($info_list, $error_rates, $first_base, $second_base) = @_;
 	
 	my $cur_pr_first_base = 1;
-	my $cur_log_pr = _calculate_log10_likelihood($info_list, $error_rates, $first_base, $second_base, $cur_pr_first_base);
+	my $cur_log_pr = _calculate_two_base_model_log10_likelihood($info_list, $error_rates, $first_base, $second_base, $cur_pr_first_base);
 	my $last_log_pr = -9999;
 	my $last_pr_first_base = 1;
 
@@ -972,13 +1027,13 @@ sub _find_best_log_likelihood
 		die if ($cur_pr_first_base < 0);
 
 		$cur_pr_first_base -= 0.001;
-		$cur_log_pr = _calculate_log10_likelihood($info_list, $error_rates, $first_base, $second_base, $cur_pr_first_base);
+		$cur_log_pr = _calculate_two_base_model_log10_likelihood($info_list, $error_rates, $first_base, $second_base, $cur_pr_first_base);
 	}
 	
 	return ($last_log_pr, $last_pr_first_base);
 }
 
-sub _calculate_log10_likelihood
+sub _calculate_two_base_model_log10_likelihood
 {
 	my ($info_list, $error_rates, $first_base, $second_base, $pr_first_base) = @_;
 	
@@ -1004,6 +1059,79 @@ sub _calculate_log10_likelihood
 	$log10_likelihood /= log(10);
 	return $log10_likelihood;
 }
+
+
+sub _best_strand_bias_model_log10_likelihood
+{
+## STUB
+}
+
+sub _calculate_strand_bias_model_log10_likelihood
+{
+	## strand_biased_error_rate is the chance of being in a new category with error probability=1 that only exists on $bias_strand
+	my ($info_list, $error_rates, $first_base, $second_base, $bias_strand, $strand_biased_error_rate) = @_;
+	
+	my $log10_likelihood = 0;	
+		
+	foreach my $item (@$info_list)
+	{		
+		my $base_change_key = $first_base . $item->{base};
+	 	$base_change_key = Breseq::Fastq::complement($base_change_key) if ($item->{strand} == -1); 
+
+		my $strand_biased_change_key = $second_base . $item->{base};
+	 	$strand_biased_change_key = Breseq::Fastq::complement($strand_biased_change_key) if ($item->{strand} == -1); 
+		
+		my $pr_obs = 0;
+		if ($item->{strand} == $bias_strand)
+		{						
+			$pr_obs = $strand_biased_error_rate * $error_rates->[$item->{fastq_file_index}]->{$item->{quality}}->{$strand_biased_change_key}
+				+ (1-$strand_biased_error_rate) * $error_rates->[$item->{fastq_file_index}]->{$item->{quality}}->{$base_change_key};
+		}
+		else
+		{
+			$pr_obs = $error_rates->[$item->{fastq_file_index}]->{$item->{quality}}->{$base_change_key};
+		}
+		
+		print "Probability of error is zero.\n  Fastq File = $item->{fastq_file_index}\n"
+		  .  "  Quality = $item->{quality}\n  Error = $first_base$item->{base} $second_base$item->{base}\n"
+		  if ($pr_obs == 0);
+			
+		$log10_likelihood += log($pr_obs);		
+	}	
+	$log10_likelihood /= log(10);
+	return $log10_likelihood;
+}
+
+
+sub _calculate_two_base_strand_model_log10_likelihood
+{
+	my ($info_list, $error_rates, $first_base, $second_base, $strand_1_pr_first_base, $strand_2_pr_first_base) = @_;
+	
+	my $log10_likelihood = 0;	
+	
+	foreach my $item (@$info_list)
+	{
+		my $base_change_key_1 = $first_base . $item->{base};
+	 	$base_change_key_1 = Breseq::Fastq::complement($base_change_key_1) if ($item->{strand} == -1); 
+		my $base_change_key_2 = $second_base . $item->{base};
+	 	$base_change_key_2 = Breseq::Fastq::complement($base_change_key_2) if ($item->{strand} == -1); 
+		
+		my $pr_first_base = ($item->{strand} == -1) ? $strand_1_pr_first_base : $strand_2_pr_first_base;
+		
+		my $pr_ref_base_given_obs 
+			= $pr_first_base * $error_rates->[$item->{fastq_file_index}]->{$item->{quality}}->{$base_change_key_1}
+			+ (1-$pr_first_base) * $error_rates->[$item->{fastq_file_index}]->{$item->{quality}}->{$base_change_key_2};
+		
+		print "Probability of error is zero.\n  Fastq File = $item->{fastq_file_index}\n"
+		  .  "  Quality = $item->{quality}\n  Error = $first_base$item->{base} $second_base$item->{base}\n"
+		  if ($pr_ref_base_given_obs == 0);
+			
+		$log10_likelihood += log($pr_ref_base_given_obs);		
+	}	
+	$log10_likelihood /= log(10);
+	return $log10_likelihood;
+}
+
 
 sub _pdata_to_strings
 {

@@ -174,7 +174,11 @@ sub correct_alignments
 				}
 				next READ;
 			}
-						
+			
+			## handle requirements for matches here
+			@$this_candidate_junction_al = _test_read_match_requirements($settings, $candidate_junction_header, $candidate_junction_fai, $ref_seq_info, @$this_candidate_junction_al);
+			@$this_reference_al = _test_read_match_requirements($settings, $reference_header, $reference_fai, $ref_seq_info, @$this_reference_al);
+			
 			###			
 			## Matches to candidate junctions may not overlap the junction.
 			##
@@ -468,18 +472,15 @@ sub correct_alignments
 	$gd->write($jc_genome_diff_file_name);
 }
 
-sub _write_reference_matches
+sub _test_read_match_requirements
 {
-	my ($settings, $minimum_best_score, $minimum_best_score_difference, $reference_fai, $ref_seq_info, $RREF, $reference_header, $fastq_file_index, @reference_al) = @_;
-	
-	@reference_al = _alignment_list_to_dominant_best($minimum_best_score, $minimum_best_score_difference, @reference_al);
-	
-	## handle requirements for matches here
-	ALIGNMENT: for (my $i=0; $i<scalar @reference_al; $i++)
+	my ($settings, $reference_header, $reference_fai, $ref_seq_info, @al) = @_;
+	my @new_al;
+	ALIGNMENT: for (my $i=0; $i<scalar @al; $i++)
 	{
-		my $a = $reference_al[$i];
+		my $a = $al[$i];
 		my $accept = 1;
-		
+
 		if ($settings->{require_complete_match})
 		{
 			my ($q_start, $q_end) = ($a->query->start-1, $a->query->end-1); #0-indexed
@@ -491,15 +492,18 @@ sub _write_reference_matches
 			my $mismatches = Breseq::Shared::alignment_mismatches($a, $reference_header, $reference_fai, $ref_seq_info);
 			$accept &&= $mismatches <= $settings->{maximum_read_mismatches};
 		}
-		
-	#	print $a->qname . "\n$accept\n";
-			
-		if (!$accept)
-		{
-			splice @reference_al, $i, 1;
-			$i--;
-		}
+
+		push @new_al, $a if ($accept);
 	}
+	
+	return @new_al;
+}
+
+sub _write_reference_matches
+{
+	my ($settings, $minimum_best_score, $minimum_best_score_difference, $reference_fai, $ref_seq_info, $RREF, $reference_header, $fastq_file_index, @reference_al) = @_;
+	
+	@reference_al = _alignment_list_to_dominant_best($minimum_best_score, $minimum_best_score_difference, @reference_al);
 	
 	my @trims;
 	foreach my $a (@reference_al)
@@ -1060,7 +1064,8 @@ sub _test_junction
 	####         read overlapping it than the other. Use a sign test.
 	####
 	####   >>>>  But it's really not this simple since reads might be biased by the sequences they match???	
-	
+	####   >>>>  And mutations might interrupt matching on one side of the junction (but they would be
+	####		 no worse than the matches to the reference??
 	## to implement
 	
 	
@@ -1068,9 +1073,10 @@ sub _test_junction
 	### add degenerate matches and make them unavailable for other junctions	
 	### degenerate matches is a hash of junction_ids of read_names
 
+## PROBLEM
 ## TESTING: If we delete only when not failing, then we end up adding them twice to junction file...
-##	if (!$failed) # || !scalar (@unique_matches == 0))
-##	{
+	if (!$failed) # || !scalar (@unique_matches == 0))
+	{
 		if (defined $degenerate_matches_ref->{$key})
 		{
 			foreach my $read_name (keys %{$degenerate_matches_ref->{$key}})
@@ -1097,7 +1103,7 @@ sub _test_junction
 				push @{$matched_junction_ref->{$key}}, $degenerate_match;
 			}
 		}
-#	}	
+	}	
 	
 	## Write out the matches to the proper SAM file(s) depending on whether the junction succeeded or failed
 	foreach my $junction_read (@{$matched_junction_ref->{$key}})

@@ -34,23 +34,10 @@ use Breseq::Fastq;
 
 require Exporter;
 our @ISA = qw( Exporter );
-our @EXPORT = qw( 	@int_to_base 
-					%base_to_int 
-					poisson
-				);
+our @EXPORT = qw( 	 );
 
 use Data::Dumper;
 
-##
-# Global variables that are exported.
-##
-
-our %base_to_int = ( 'A'=>0, 'C'=>1, 'T'=>2, 'G'=>3, '.'=>4, 'N'=>5 );
-our @int_to_base = ('A','C','T','G','.','N');
-
-##
-# Global variables that are NOT exported.
-##	
 
 sub system
 {
@@ -619,6 +606,9 @@ sub check_region_1
 	my ($insert_start, $insert_end) = (0, 0);
 	#syntax that includes insert counts
 	# e.g. NC_001416:4566.1-4566.1
+	
+	#strip commas!
+	$region =~ s/,//g;
 	if ($region =~ m/(.+)\:(\d+)\.(\d+)-(\d+)\.(\d+)/)
 	{	
 		($seq_id, $start, $insert_start, $end, $insert_end) = ($1, $2, $3, $4, $5);
