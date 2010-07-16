@@ -75,7 +75,6 @@ sub new
 	## Options for snp error analysis
 		'require-complete-match' => \$self->{require_complete_match},
 		'require-no-indel-match' => \$self->{require_no_indel_match},
-		'require-unique-match' => \$self->{require_unique_match},
 		'require-max-mismatches=s' => \$self->{require_max_mismatches},
 		'do-not-trim-ambiguous-ends' => \$self->{do_not_trim_ambiguous_ends},
 		'polymorphism-prediction' => \$self->{polymorphism_prediction},		
@@ -147,7 +146,6 @@ sub new_annotate
 		'require-complete-match' => \$self->{require_complete_match},
 		'require-no-indel-match' => \$self->{require_no_indel_match},
 		'require-unique-match' => \$self->{require_unique_match},
-		'require-max-mismatches=s' => \$self->{require_max_mismatches},
 		'do-not-trim-ambiguous-ends' => \$self->{do_not_trim_ambiguous_ends},
 		'polymorphism-prediction' => \$self->{polymorphism_prediction},		
 	## Options for turning various analysis chunks off or on

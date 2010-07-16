@@ -496,8 +496,8 @@ sub html_mutation_table_string
 				my ($mut, $key) = @_;
 				$key = "frequency" if (!defined $key);
 				my $freq = $mut->{$key};
+				$freq = 1 if (!defined $freq);
 				return 'H' if ($freq eq 'H');
-				return 1 if (!defined $freq);
 				return '?' if ($freq eq '?');
 				return '' if ($freq == 0);
 				my $frequency_string = sprintf("%4.1f%%", $freq*100);
