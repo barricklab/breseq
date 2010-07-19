@@ -843,24 +843,8 @@ sub _predict_polymorphism
 	my $mismatches = 0;
 	foreach my $item (@$info_list)
 	{
-		if ($item->{base} ne $ref_base)
-		{
-			$mismatches++;
-			$num_not_ref_base++;
-		}
-		else
-		{
-			$num_ref_base++;
-		}	
-
-		if ($item->{strand} == 1)
-		{
-			$total_plus++;
-		}
-		else
-		{
-			$total_minus++;
-		}
+		($item->{base} ne $ref_base) ? $mismatches++ && $num_not_ref_base++ : $num_ref_base++;
+		($item->{strand} == 1) ? $total_plus++ : $total_minus++;
 
 		$base_counts->{$item->{base}}++;
 		$total++;
@@ -955,16 +939,16 @@ sub _predict_polymorphism
 		my $strand_total = $total_strand_hash->{$s};
 		$strand_biased_error_rate->{$s} = 0;
 		next if ($strand_total == 0);
-		$strand_biased_error_rate = $second_base_strand_hash->{$s} / $strand_total;
+		$strand_biased_error_rate->{$s} = $second_base_strand_hash->{$s} / $strand_total;
 		
-		my $this_log10_likelihood_of_strand_bias_model = _calculate_strand_bias_model_log10_likelihood($info_list, $error_rates, $first_base, $second_base, $s, $strand_biased_error_rate);
+		my $this_log10_likelihood_of_strand_bias_model = _calculate_strand_bias_model_log10_likelihood($info_list, $error_rates, $first_base, $second_base, $s, $strand_biased_error_rate->{$s});
 		$log10_likelihood_of_strand_bias_model = $this_log10_likelihood_of_strand_bias_model if (!defined $log10_likelihood_of_strand_bias_model || ($this_log10_likelihood_of_strand_bias_model > $log10_likelihood_of_strand_bias_model));
 	}
 
 	print "Num First Base (+/-): $first_base_strand_hash->{1}/$first_base_strand_hash->{-1}\n" if ($verbose);
 	print "Num Second Base (+/-): $second_base_strand_hash->{1}/$second_base_strand_hash->{-1}\n" if ($verbose);
 
-	print "== Best Base Model ==\n";
+	print "== Best Base Model ==\n" if ($verbose);
 	print "  Log10 Likelihood Best Base Only = $log10_likelihood_given_ref_base->{$first_base}\n" if ($verbose);
 
 	$Statistics::Distributions::SIGNIFICANT = 50; ## we need many more significant digits than the default 5
@@ -974,7 +958,7 @@ sub _predict_polymorphism
 	my $chi_squared_pr = 'ND';
 	$chi_squared_pr = Statistics::Distributions::chisqrprob(1, $likelihood_ratio_test_value);
 	
-	print "== 2 Base Model ==\n";
+	print "== 2 Base Model ==\n" if ($verbose);
 	print "  Log10 Likelihood 2 Base Model = $log10_likelihood_of_two_base_model\n" if ($verbose);
 	print "  LR test value = $likelihood_ratio_test_value\n" if ($verbose);
 	print "  Chi-squared Pr = $chi_squared_pr\n" if ($verbose);
@@ -983,7 +967,7 @@ sub _predict_polymorphism
 	my $chi_squared_pr_strand_bias = 'ND';
 	$chi_squared_pr_strand_bias = Statistics::Distributions::chisqrprob(1, $likelihood_ratio_test_value);
 
-	print "== Strand Bias Model ==\n";
+	print "== Strand Bias Model ==\n" if ($verbose);
 	print "  Log10 Likelihood Strand Bias Model= $log10_likelihood_of_strand_bias_model\n" if ($verbose);
 	print "  LR test value = $likelihood_ratio_test_value_strand_bias\n" if ($verbose);
 	print "  Chi-squared Pr = $chi_squared_pr_strand_bias\n" if ($verbose);
@@ -1070,7 +1054,7 @@ sub _calculate_strand_bias_model_log10_likelihood
 {
 	## strand_biased_error_rate is the chance of being in a new category with error probability=1 that only exists on $bias_strand
 	my ($info_list, $error_rates, $first_base, $second_base, $bias_strand, $strand_biased_error_rate) = @_;
-	
+		
 	my $log10_likelihood = 0;	
 		
 	foreach my $item (@$info_list)
@@ -1091,10 +1075,6 @@ sub _calculate_strand_bias_model_log10_likelihood
 		{
 			$pr_obs = $error_rates->[$item->{fastq_file_index}]->{$item->{quality}}->{$base_change_key};
 		}
-		
-		print "Probability of error is zero.\n  Fastq File = $item->{fastq_file_index}\n"
-		  .  "  Quality = $item->{quality}\n  Error = $first_base$item->{base} $second_base$item->{base}\n"
-		  if ($pr_obs == 0);
 			
 		$log10_likelihood += log($pr_obs);		
 	}	
