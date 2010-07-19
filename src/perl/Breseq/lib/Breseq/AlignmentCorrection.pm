@@ -318,6 +318,7 @@ sub correct_alignments
 						{	
 							my $junction_id = $candidate_junction_header->target_name()->[$a->tid];
 							my $read_name = $a->qname;
+							$item->{degenerate_count} = scalar @this_dominant_candidate_junction_al; #mark as degenerate
 							$degenerate_matches{$junction_id}->{$read_name} = $item;
 						}
 					}
@@ -922,16 +923,36 @@ sub _ambiguous_end_offsets_from_sequence
 
 sub _test_junction
 {
-	my ($settings, $key, $matched_junction_ref, $degenerate_matches_ref, $junction_test_info_ref, $minimum_best_score, $minimum_best_score_difference, $reference_fai, $ref_seq_info, $RREF, $reference_header, $RCJ, $candidate_junction_header, $written_overlap_only_reads) = @_;
-	
+	my ($settings, $junction_seq_id, $matched_junction_ref, $degenerate_matches_ref, $junction_test_info_ref, $minimum_best_score, $minimum_best_score_difference, $reference_fai, $ref_seq_info, $RREF, $reference_header, $RCJ, $candidate_junction_header, $written_overlap_only_reads) = @_;
+
+	## variable initialization
 	my $test_info;
-	my @unique_matches = ();
-	@unique_matches = @{$matched_junction_ref->{$key}} if (defined $matched_junction_ref->{$key});
-	my @degenerate_matches = ();
-	@degenerate_matches = map { $degenerate_matches_ref->{$key}->{$_} } sort keys %{$degenerate_matches_ref->{$key}} if (defined $degenerate_matches_ref->{$key});		
-		
 	my $failed = 0;
-#	print "Junction Candidate: $key Unique Matches: " . (scalar @unique_matches) . " Degenerate Matches: " . (scalar @degenerate_matches) . "\n";
+
+	## There are two kinds of matches to a candidate junction
+	## (1) Reads that uniquely map to one candidate junction (but any number of times to reference)
+	my @unique_matches = ();
+	@unique_matches = @{$matched_junction_ref->{$junction_seq_id}} if (defined $matched_junction_ref->{$junction_seq_id});
+	
+	## (2) Reads that uniquely map equally well to more than one candidate junction (and any number of times to reference)
+	my @degenerate_matches = ();
+	if (defined $degenerate_matches_ref->{$junction_seq_id})	
+	{
+		@degenerate_matches = map { $degenerate_matches_ref->{$junction_seq_id}->{$_} } sort keys %{$degenerate_matches_ref->{$junction_seq_id}};
+	}
+	
+	## FAI target id -- there is no easy way to get this short of loading the entire array and going through them...
+	## Debatable about whether we save more string comparisons by doing this here or each time
+	my $junction_tid = 0;
+	foreach my $test_junction_seq_id  (@{$candidate_junction_header->target_name})
+	{
+		last if ($junction_seq_id eq $test_junction_seq_id);
+		$junction_tid++;
+	}	
+	die if ($junction_tid >= $candidate_junction_header->n_targets);
+		
+		
+#	print "Junction Candidate: $junction_seq_id Unique Matches: " . (scalar @unique_matches) . " Degenerate Matches: " . (scalar @degenerate_matches) . "\n";
 
 	#### TEST 1: There should be a minimal number of reads supporting the junction
 #	my $minimum_number_of_reads_for_junction = 3;	
@@ -946,6 +967,11 @@ sub _test_junction
 	my $count_per_strand = { '0'=> 0, '1'=>0 };
 	my $total_non_overlap_reads = 0;
 	my $score = 0;
+	
+	## basic information about the junction
+	my $scj = Breseq::Shared::junction_name_split($junction_seq_id);
+	my $overlap = $scj->{alignment_overlap};
+	my $flanking_left = $scj->{flanking_left};
 	
 	## is there at least one read that isn't overlap only?
 	## displaying ones where it doesn't as marginals looks really confusing
@@ -967,22 +993,15 @@ sub _test_junction
 		my $a;
 		DOMINANT_ALIGNMENT: foreach my $candidate_a (@{$item->{dominant_alignments}})
 		{
-			my $junction_id = $candidate_junction_header->target_name()->[$candidate_a->tid];
-			if ($key eq $junction_id)
+			if ($candidate_a->tid == $junction_tid)
 			{
 				$a = $candidate_a;
 				last DOMINANT_ALIGNMENT;
 			}
 		}
 		die if (!defined $a);
-		
-		my $junction_id = $candidate_junction_header->target_name()->[$a->tid];
-		my $scj = Breseq::Shared::junction_name_split($junction_id);
-		my $overlap = $scj->{alignment_overlap};
-		my $flanking_left = $scj->{flanking_left};
 
 		my $rev_key = ($a->reversed ? 1 : 0);
-
 		$count_per_strand->{$rev_key}++;
 
 		##The left side goes exactly up to the flanking length
@@ -1044,6 +1063,9 @@ sub _test_junction
 	};
 		
 	## These parameters still need additional testing
+	## and, naturally, they have problems with scaling with the
+	## total number of reads...
+	
 	my $alignment_on_each_side_cutoff = 16; #14
 	my $alignment_on_each_side_cutoff_per_strand = 13; #9
 	my $alignment_on_each_side_min_cutoff = 5;
@@ -1075,66 +1097,90 @@ sub _test_junction
 
 ## PROBLEM
 ## TESTING: If we delete only when not failing, then we end up adding them twice to junction file...
-	if (!$failed) # || !scalar (@unique_matches == 0))
+
+	## DEGENERATE JUNCTION MATCHES
+	## ===========================
+	## Determine the fate of degenerate reads that map to this junction
+	## but also to others equally well...
+	
+	if (defined $degenerate_matches_ref->{$junction_seq_id})
 	{
-		if (defined $degenerate_matches_ref->{$key})
+		foreach my $read_name (keys %{$degenerate_matches_ref->{$junction_seq_id}})
 		{
-			foreach my $read_name (keys %{$degenerate_matches_ref->{$key}})
-			{
-				my $degenerate_match = $degenerate_matches_ref->{$key}->{$read_name};
-				my $matched_alignment;
+			my $degenerate_match = $degenerate_matches_ref->{$junction_seq_id}->{$read_name};
+			my $fastq_file_index = $degenerate_match->{fastq_file_index};
+			my $matched_alignment;
 			
-				#purge all references to this from the degenerate match hash
+			## Success for this candidate junction... 
+			## purge all references to this from the degenerate match hash
+			## so that they will not be counted for other junctions
+			if (!$failed)
+			{
+			
+				#Purge all references to this from the degenerate match hash
 				#so that they will not be counted for other junctions
 				foreach my $a (@{$degenerate_match->{dominant_alignments}})
 				{
-					my $junction_id = $candidate_junction_header->target_name()->[$a->tid];
-					$matched_alignment = $a if ($key eq $junction_id);
-					delete $degenerate_matches_ref->{$junction_id}->{$read_name};
+					my $test_junction_seq_id = $candidate_junction_header->target_name()->[$a->tid];
+					$matched_alignment = $a if ($a->tid eq $junction_tid); #this is the one for the current candidate junction
+					delete $degenerate_matches_ref->{$test_junction_seq_id}->{$read_name};
 					
-					if (scalar keys %{$degenerate_matches_ref->{$junction_id}} == 0)
+					if (scalar keys %{$degenerate_matches_ref->{$test_junction_seq_id}} == 0)
 					{
-						delete $degenerate_matches_ref->{$junction_id};
+						delete $degenerate_matches_ref->{$test_junction_seq_id};
 					}
 				}
-			
-				## add to the matched_junction
-				@{$degenerate_match->{dominant_alignments}} = ($matched_alignment);
-				push @{$matched_junction_ref->{$key}}, $degenerate_match;
 			}
+			
+			## Failure for this candidate junction...
+			## Remove just the degenerate hits to this candidate junction
+			## Once all have failed, then we need to add the reference alignments (if any)!
+			else
+			{
+				$degenerate_match->{degenerate_count}--;
+				
+				## This degenerate match missed on all opportunities,
+				## we should add it to the reference sequence
+				if ($degenerate_match->{degenerate_count} == 0)
+				{
+					my $this_reference_al = $degenerate_match->{reference_alignments};
+					_write_reference_matches($settings, $minimum_best_score, $minimum_best_score_difference, $reference_fai, $ref_seq_info, $RREF, $reference_header, $fastq_file_index, @$this_reference_al);					
+				}
+				
+				foreach my $a (@{$degenerate_match->{dominant_alignments}})
+				{
+					$matched_alignment = $a if ($a->tid eq $junction_tid); #this is the one for the current candidate junction
+				}
+				
+			}
+			
+			die if (!$matched_alignment);
+			
+			# Write alignment to SAM file for candidate junctions regardless of success...
+			Breseq::Shared::tam_write_read_alignments($RCJ, $candidate_junction_header, $fastq_file_index, [$matched_alignment]) if (!$has_non_overlap_only);
 		}
 	}	
 	
-	## Write out the matches to the proper SAM file(s) depending on whether the junction succeeded or failed
-	foreach my $junction_read (@{$matched_junction_ref->{$key}})
+
+	## UNIQUE JUNCTION MATCHES
+	## =======================	
+	READ: foreach my $item (@unique_matches)
 	{
-		my $fastq_file_index = $junction_read->{fastq_file_index};
+	## Write out the matches to the proper SAM file(s) depending on whether the junction succeeded or failed
+		my $fastq_file_index = $item->{fastq_file_index};
 		
-		## Write matches to reference sequences if we failed
+		## ONLY if we failed: write matches to reference sequences
 		if ($failed)
 		{		
-			my $this_reference_al = $junction_read->{reference_alignments};
-			my $read_name;
-			$read_name = $this_reference_al->[0]->qname if ((defined $this_reference_al) && (scalar @$this_reference_al > 0));
-			
-			## hashing by read name here makes sure that we only write each read once in the reference file...
-			if (!$junction_read->{dominant_alignment_is_overlap_only} || ($read_name && !$written_overlap_only_reads->{$read_name}))
-			{
-				_write_reference_matches($settings, $minimum_best_score, $minimum_best_score_difference, $reference_fai, $ref_seq_info, $RREF, $reference_header, $fastq_file_index, @$this_reference_al);
-				$written_overlap_only_reads->{$read_name} = 1;
-			}
+			my $this_reference_al = $item->{reference_alignments};
+			_write_reference_matches($settings, $minimum_best_score, $minimum_best_score_difference, $reference_fai, $ref_seq_info, $RREF, $reference_header, $fastq_file_index, @$this_reference_al);
 		}
 		
-		## REGARDLESS: write matches to the candidate junction SAM file 
-		if (!$has_non_overlap_only) 
-		{
-			my @this_dominant_candidate_junction_al = @{$junction_read->{dominant_alignments}}; 
-			Breseq::Shared::tam_write_read_alignments($RCJ, $candidate_junction_header, $fastq_file_index, \@this_dominant_candidate_junction_al);
-			$RCJ->flush();
-		}
+		## REGARDLESS of success: write matches to the candidate junction SAM file 
+		Breseq::Shared::tam_write_read_alignments($RCJ, $candidate_junction_header, $fastq_file_index, \@{$item->{dominant_alignments}})  if (!$has_non_overlap_only);;
 	}
 		
-	$junction_test_info_ref->{$key} = $test_info;
+	$junction_test_info_ref->{$junction_seq_id} = $test_info;
 	return ($failed, $has_non_overlap_only);
 }
 
