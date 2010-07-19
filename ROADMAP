@@ -7,6 +7,9 @@ COMPLETED
 MAJOR GOALS
 
 Rewrite graph_coverage.pl to use BAM/FASTA files as input.
+*Partially completed. New script is sam2cov*
+Need to rewrite tabulate_coverage into C++
+to be able to replace the current version completely.
 
 C++: predict_mutations
 replaces code in MutationIdentification.pm
@@ -24,3 +27,17 @@ Replaces code in AlignmentCorrection.pm
 Input SAM to reference, SAM to candidate junctions, FASTQ files, and optionally -- repeat coordinates (so that junctions can be pushed to the end of IS).
 Output trimmed reads, junction_predictions, orphan read FASTQ.
 
+error_count:
+Keep track of covariates like GATK to improve background probabilities.
+In particular we need this to be possible for indels, where polymorphism
+prediction has many problems.
+
+LINGERING PROBLEMS
+
+Junction prediction, problem with writing degenerate matches multiple times
+if they are only written/removed when a junction doesn't fail. But problem
+with citT/rnk junction having missing reads when they are removed. Specifically,
+in genomes ZDB564 and CZB154.
+
+Strand bias filtering seems to misbehave at very high coverage in these ways:
+Reasonable distributions across strands can be rejected. They may be a mixture of biased reads and actual ones from a polymorphism?

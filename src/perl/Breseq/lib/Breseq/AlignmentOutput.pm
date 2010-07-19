@@ -59,7 +59,7 @@ sub new
 
 	bless ($self, $class);
 	($self->{maximum_to_align}) = $self->Bio::Root::RootI::_rearrange([qw(MAXIMUM_TO_ALIGN)], @args);
-	$self->{maximum_to_align} = 200 if (!defined $self->{maximum_to_align});
+	$self->{maximum_to_align} = 1000 if (!defined $self->{maximum_to_align});
 	$self->{maximum_to_make_alignment} = 100000 if (!defined $self->{maximum_to_make_alignment});
 
 	$self->{header_style_string} = '';
