@@ -347,17 +347,13 @@ sub correct_alignments
 	my @rejected_keys = ();
 	my %junction_test_info;
 	
-	## This keeps track of what overlap only reads we have already written as reference reads so
-	## they don't appear multiple times. Better record keeping might obviate the need for this.
-	my %written_overlap_only_reads;
-	
 	## first deal with ones with unique matches
 	my @sorted_keys = sort {-(scalar @{$matched_junction{$a}} <=> scalar @{$matched_junction{$b}})} keys %matched_junction;
 			
 	my @new_keys;
 	foreach my $key (@sorted_keys)
 	{
-		my ($failed, $has_non_overlap_only) = _test_junction($settings, $key, \%matched_junction, \%degenerate_matches, \%junction_test_info, $minimum_best_score, $minimum_best_score_difference, $reference_fai, $ref_seq_info, $RREF, $reference_header, $RCJ, $candidate_junction_header, \%written_overlap_only_reads);
+		my ($failed, $has_non_overlap_only) = _test_junction($settings, $key, \%matched_junction, \%degenerate_matches, \%junction_test_info, $minimum_best_score, $minimum_best_score_difference, $reference_fai, $ref_seq_info, $RREF, $reference_header, $RCJ, $candidate_junction_header);
 
 		## only count matches that span overlap
 		if (!$has_non_overlap_only)
@@ -386,6 +382,7 @@ sub correct_alignments
 		
 		my ($failed, $has_non_overlap_only) = _test_junction($settings, $key, \%matched_junction, \%degenerate_matches, \%junction_test_info, $minimum_best_score, $minimum_best_score_difference, $reference_fai, $ref_seq_info, $RREF, $reference_header, $RCJ, $candidate_junction_header);
 
+		## if it succeeded, then it may have changed the order of the remaining ones by removing some reads...
 		if (!$failed)
 		{
 			@sorted_keys = sort {-(scalar keys %{$degenerate_matches{$a}} <=> scalar keys %{$degenerate_matches{$b}})} keys %degenerate_matches;
@@ -923,7 +920,7 @@ sub _ambiguous_end_offsets_from_sequence
 
 sub _test_junction
 {
-	my ($settings, $junction_seq_id, $matched_junction_ref, $degenerate_matches_ref, $junction_test_info_ref, $minimum_best_score, $minimum_best_score_difference, $reference_fai, $ref_seq_info, $RREF, $reference_header, $RCJ, $candidate_junction_header, $written_overlap_only_reads) = @_;
+	my ($settings, $junction_seq_id, $matched_junction_ref, $degenerate_matches_ref, $junction_test_info_ref, $minimum_best_score, $minimum_best_score_difference, $reference_fai, $ref_seq_info, $RREF, $reference_header, $RCJ, $candidate_junction_header) = @_;
 
 	## variable initialization
 	my $test_info;
@@ -1116,9 +1113,11 @@ sub _test_junction
 			## so that they will not be counted for other junctions
 			if (!$failed)
 			{
+				## We need to add this degenerately matched read to the other ones supporting this junction
+				push @{$matched_junction_ref->{$junction_seq_id}}, $degenerate_match;
 			
-				#Purge all references to this from the degenerate match hash
-				#so that they will not be counted for other junctions
+				# Purge all references to this from the degenerate match hash
+				# so that they will not be counted for other junctions
 				foreach my $a (@{$degenerate_match->{dominant_alignments}})
 				{
 					my $test_junction_seq_id = $candidate_junction_header->target_name()->[$a->tid];
@@ -1143,6 +1142,8 @@ sub _test_junction
 				## we should add it to the reference sequence
 				if ($degenerate_match->{degenerate_count} == 0)
 				{
+					print "degenerate count reached zero: $read_name\n";
+					
 					my $this_reference_al = $degenerate_match->{reference_alignments};
 					_write_reference_matches($settings, $minimum_best_score, $minimum_best_score_difference, $reference_fai, $ref_seq_info, $RREF, $reference_header, $fastq_file_index, @$this_reference_al);					
 				}
