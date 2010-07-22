@@ -82,7 +82,6 @@ sub tam_next_read_alignments
 	my $num_slurped = 0;
 	ALIGNMENT: while (1)
 	{
-		
 		$last_alignment = Bio::DB::Bam::Alignment->new();
 		my $bytes = $tam->read1($header, $last_alignment);
 		
@@ -634,6 +633,18 @@ sub check_region_1
 	## return cleaned up region
 	$region = "$seq_id:$start-$end";	
 	return $region;
+}
+
+sub add_score_to_distribution
+{
+	my ($distribution_list_ref, $score) = @_;
+	
+	#zero out new entries at the end of the list
+	for (my $i = scalar @$distribution_list_ref; $i< $score; $i++)
+	{
+		$distribution_list_ref->[$i] = 0;
+	}
+	$distribution_list_ref->[$score]++;
 }
 
 
