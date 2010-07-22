@@ -337,12 +337,15 @@ sub correct_alignments
 		}
 	
 		## save statistics
-		$summary->{alignment_correction}->{$read_file} = $s;
+		$summary->{alignment_correction}->{read_file}->{$read_file} = $s;
 	}	
 	
 	###			
 	## Determine which junctions are real, prefer ones with most matches
 	###
+	
+	my @accepted_score_distribution;
+	my @observed_score_distribution;
 	
 	my @rejected_keys = ();
 	my %junction_test_info;
@@ -354,6 +357,8 @@ sub correct_alignments
 	foreach my $key (@sorted_keys)
 	{
 		my ($failed, $has_non_overlap_only) = _test_junction($settings, $key, \%matched_junction, \%degenerate_matches, \%junction_test_info, $minimum_best_score, $minimum_best_score_difference, $reference_fai, $ref_seq_info, $RREF, $reference_header, $RCJ, $candidate_junction_header);
+		## save the score in the distribution
+		Breseq::Shared::add_score_to_distribution(\@observed_score_distribution, $junction_test_info{$key}->{score});
 
 		## only count matches that span overlap
 		if (!$has_non_overlap_only)
@@ -381,6 +386,8 @@ sub correct_alignments
 		next if (!defined $degenerate_matches{$key}); #they can be removed 
 		
 		my ($failed, $has_non_overlap_only) = _test_junction($settings, $key, \%matched_junction, \%degenerate_matches, \%junction_test_info, $minimum_best_score, $minimum_best_score_difference, $reference_fai, $ref_seq_info, $RREF, $reference_header, $RCJ, $candidate_junction_header);
+		## save the score in the distribution
+		Breseq::Shared::add_score_to_distribution(\@observed_score_distribution, $junction_test_info{$key}->{score});
 
 		## if it succeeded, then it may have changed the order of the remaining ones by removing some reads...
 		if (!$failed)
@@ -412,7 +419,10 @@ sub correct_alignments
 		print "$key\n" if ($verbose);
 		my $item = _junction_to_hybrid_list_item($key, $ref_seq_info, scalar @{$matched_junction{$key}}, $junction_test_info{$key});
 		$gd->add($item);
-			
+				
+		## save the score in the distribution
+		Breseq::Shared::add_score_to_distribution(\@accepted_score_distribution, $junction_test_info{$key}->{score});
+		
 		push @hybrid_predictions, $item;
 		
 		## create matches from UNIQUE sides of each match to reference genome
@@ -455,8 +465,11 @@ sub correct_alignments
 		}
 	}
 	
+	## save summary statistics
+	$summary->{alignment_correction}->{new_junctions}->{observed_score_distribution} = \@observed_score_distribution;
+	$summary->{alignment_correction}->{new_junctions}->{accepted_score_distribution} = \@accepted_score_distribution;
+	
 	my @rejected_hybrid_predictions = ();
-		
 	foreach my $key (@rejected_keys)
 	{
 		print "$key\n" if ($verbose);
@@ -467,7 +480,7 @@ sub correct_alignments
 	push @hybrid_predictions, @rejected_hybrid_predictions;
 
 	my $jc_genome_diff_file_name = $settings->file_name('jc_genome_diff_file_name');
-	$gd->write($jc_genome_diff_file_name);
+	$gd->write($jc_genome_diff_file_name);	
 }
 
 sub _test_read_match_requirements
@@ -963,6 +976,7 @@ sub _test_junction
 	my $max_min_right_per_strand = { '0'=> 0, '1'=>0 };	
 	my $count_per_strand = { '0'=> 0, '1'=>0 };
 	my $total_non_overlap_reads = 0;
+	my $count_per_coord_per_strand;
 	my $score = 0;
 	
 	## basic information about the junction
@@ -1000,6 +1014,11 @@ sub _test_junction
 
 		my $rev_key = ($a->reversed ? 1 : 0);
 		$count_per_strand->{$rev_key}++;
+
+		# The start coordinate is less likely to be misaligned due to errors
+		# than the end coordinate
+		my $begin_coord = $rev_key ? $a->end : $a->start;
+		$count_per_coord_per_strand->{"$begin_coord-$rev_key"}++;
 
 		##The left side goes exactly up to the flanking length
 		my $this_left = $flanking_left;
@@ -1056,7 +1075,8 @@ sub _test_junction
 		coverage_minus => $count_per_strand->{0},
 		coverage_plus => $count_per_strand->{1},
 		total_non_overlap_reads => $total_non_overlap_reads,
-		score => $score,
+		old_score => $score,
+		score => scalar keys %$count_per_coord_per_strand,
 	};
 		
 	## These parameters still need additional testing
@@ -1139,9 +1159,7 @@ sub _test_junction
 				## This degenerate match missed on all opportunities,
 				## we should add it to the reference sequence
 				if ($degenerate_match->{degenerate_count} == 0)
-				{
-					print "degenerate count reached zero: $read_name\n";
-					
+				{					
 					my $this_reference_al = $degenerate_match->{reference_alignments};
 					_write_reference_matches($settings, $minimum_best_score, $minimum_best_score_difference, $reference_fai, $ref_seq_info, $RREF, $reference_header, $fastq_file_index, @$this_reference_al);					
 				}

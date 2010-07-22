@@ -118,7 +118,25 @@ sub identify_candidate_junctions
 		
 		$hcs->{read_file}->{$read_file} = $s;
 	}		
-		
+	
+	###	
+	## Calculate score for each candidate junction now that we have the complete list of read match support
+	###		
+	
+	JUNCTION_SEQ: foreach my $junction_seq (sort keys %$candidate_junctions)
+	{
+		JUNCTION_ID: foreach my $junction_id (keys %{$candidate_junctions->{$junction_seq}} )
+		{
+			my $cj = $candidate_junctions->{$junction_seq}->{$junction_id};
+			$cj->{old_score} = $cj->{score};
+			$cj->{score} = scalar keys 	%{$cj->{read_begin_hash}};
+			
+			#print ">>>$junction_id\n";
+			#print Dumper($cj->{read_begin_hash});
+		}
+	}
+	
+	my @observed_score_distribution;
 		
 	###	
 	## Combine hash into a list, one item for each unique sequence (also joining reverse complements)
@@ -127,11 +145,9 @@ sub identify_candidate_junctions
 	my @combined_candidate_junctions;
 	my $handled_seq;
 	my %ids_to_print;
-	
-	## We should really sort the candidate junctions on something (seq_id then position?) so that we get 
-	## consistent results!!
 		
-	JUNCTION_SEQ: foreach my $junction_seq (keys %$candidate_junctions)
+	## Sort here is to get reproducible ordering.
+	JUNCTION_SEQ: foreach my $junction_seq (sort keys %$candidate_junctions)
 	{	
 		## We may have already done the reverse complement
 		next if ($handled_seq->{$junction_seq});
@@ -153,10 +169,8 @@ sub identify_candidate_junctions
 		{
 			JUNCTION_ID: foreach my $junction_id (keys %{$candidate_junctions->{$rc_junction_seq}} )
 			{
-				## add redundancy to the $junction_id
+				## add redundancy to the $junction_id (reversed)
 				my $cj = $candidate_junctions->{$junction_seq}->{$junction_id};
-				
-				### IS IT CORRECT TO REVERSE THE REDUNDANCY HERE???
 				$junction_id .= $Breseq::Shared::junction_name_separator . $cj->{r2} . $Breseq::Shared::junction_name_separator . $cj->{r1};
 				push @combined_candidate_junction_list, { id=>$junction_id, score=>$cj->{score}, seq=>$rc_junction_seq, rc_seq=>$junction_seq };
 			}
@@ -167,6 +181,9 @@ sub identify_candidate_junctions
 		@combined_candidate_junction_list = sort { -($a->{score} <=> $b->{score}) } @combined_candidate_junction_list;
 		my $best_candidate_junction = $combined_candidate_junction_list[0];
 
+		## save the score in the distribution
+		Breseq::Shared::add_score_to_distribution(\@observed_score_distribution, $best_candidate_junction->{score});
+		
 		##make sure it isn't a duplicate junction id -- how is this even possible?
 		if ($ids_to_print{$best_candidate_junction->{id}})
 		{
@@ -217,6 +234,7 @@ sub identify_candidate_junctions
 	
 	print STDERR "    Initial: Number = " . $total_candidate_junction_number . ", Cumulative Length = " . $total_cumulative_cj_length . " bases\n";
 
+	print Dumper(\@observed_score_distribution);
 
 	if ((defined $settings->{maximum_candidate_junctions}) && (@combined_candidate_junctions > 0))
 	{	
@@ -288,6 +306,8 @@ sub identify_candidate_junctions
 	$hcs->{accepted}->{length} = $cumulative_cj_length;
 	$hcs->{accepted}->{score_cutoff} = $lowest_accepted_score;
 	
+	$hcs->{score_distribution} = \@observed_score_distribution;
+	
 	###
 	## Print out the candidate junctions, sorted by the lower coordinate, higher coord, then number
 	###
@@ -355,18 +375,13 @@ sub _alignments_to_candidate_junctions
 	my ($settings, $summary, $ref_seq_info, $candidate_junctions, $fai, $header, @al) = @_;
 
 	my $verbose = 0;
-
-	### TO DO:
-	### We don't want to predict a new junction candidates from hits that are completely contained
-	### in other perfect alignments. This can lead to problems later for repetitive regions.
-	### Furthermore, it's just a waste of time... 
 		
 	### We are only concerned with combining intervals that are different in the reference they match
-	#print "Before removing same-reference alignments: " . (scalar @al) . "\n" if ($verbose);
+	### but we keep track of the redundancy with which each side matches the reference genome.
 	my ($al_ref, $r_ref) = _unique_alignments_with_redundancy($fai, $header, @al);
-	#print "After removing same-reference alignments: " . (scalar @al) . "\n" if ($verbose);
 
-	return if (scalar @$al_ref == 1);
+	### Must still have multiple matches to support a new junction.
+	return if (scalar @$al_ref <= 1);
 				
 	### Now is our chance to decide which groups of matches are compatible,
 	### to change their boundaries and to come up with a final list.		
@@ -376,22 +391,21 @@ sub _alignments_to_candidate_junctions
 	my %redundant_junction_sides;
 	my @junctions;	
 		
-	### Try adding together each pair of matches to make a longer match
+	### Try adding together each pair of matches to make a junction, by looking at read coordinates
 	A1: for (my $i=0; $i<scalar @$al_ref; $i++)
 	{		
 		my $a1 = $al_ref->[$i];
 		my ($a1_start, $a1_end) = Breseq::Shared::alignment_query_start_end($a1);	
-						
+
 		next A1 if ($a1_start == 0); #this is only true if read has no matches
 
 		A2: for (my $j=$i+1; $j<scalar @$al_ref; $j++)
 		{
 			my $a2 = $al_ref->[$j];					
 			my ($a2_start, $a2_end) = Breseq::Shared::alignment_query_start_end($a2);
+
 			next A2 if ($a2_start == 0); #this is only true if read has no matches
-			
-			#print join(" ", $a1_start, $a1_end, $a2_start, $a2_end) . "\n" if ($verbose);
-						
+									
 			## If the intersection is just one of the hits, then there is no point...
 			## At least one side should have a certain amount of unique sequence.			
 			my ($passed, $a1_unique_length, $a2_unique_length) = _check_required_unique_length($a1_start, $a1_end, $a2_start, $a2_end);
@@ -402,9 +416,9 @@ sub _alignments_to_candidate_junctions
 				my $r2 = $r_ref->[$j]; 
 				
 				## we pass back and forth the redundancies in case they switch sides
-				my ($junction_seq_string, $side_1_ref_seq, $side_2_ref_seq, $junction_coord_1, $junction_coord_2, @junction_id_list);
+				my ($junction_seq_string, $side_1_ref_seq, $side_2_ref_seq, $junction_coord_1, $junction_coord_2, $read_begin_coord, @junction_id_list);
 				
-				($passed, $junction_seq_string, $side_1_ref_seq, $side_2_ref_seq, $junction_coord_1, $junction_coord_2, $r1, $r2, @junction_id_list)
+				($passed, $junction_seq_string, $side_1_ref_seq, $side_2_ref_seq, $junction_coord_1, $junction_coord_2, $r1, $r2, $read_begin_coord, @junction_id_list)
 					= _alignments_to_candidate_junction($settings, $summary, $ref_seq_info, $fai, $header, $a1, $a2, $r1, $r2);
 				next A2 if (!$passed);
 				
@@ -422,8 +436,9 @@ sub _alignments_to_candidate_junctions
 				$redundant_junction_sides{Breseq::Fastq::revcom($side_2_ref_seq)}->{$junction_coord_2} += $r2-1;
 				
 				my $score = ($a1_unique_length < $a2_unique_length) ? $a1_unique_length : $a2_unique_length;
+				my $begin_length = 
 				
-				push @junctions, { 'list' => \@junction_id_list, 'string' => $junction_seq_string, 'score' => $score, 'side_1_ref_seq' => $side_1_ref_seq, 'side_2_ref_seq' => $side_2_ref_seq};
+				push @junctions, { 'list' => \@junction_id_list, 'string' => $junction_seq_string, 'score' => $score, 'read_begin_coord' => $read_begin_coord, 'side_1_ref_seq' => $side_1_ref_seq, 'side_2_ref_seq' => $side_2_ref_seq};
 			}
 		}
 	}	
@@ -446,7 +461,8 @@ sub _alignments_to_candidate_junctions
 		my @junction_id_list = @{$jct->{list}};
 		my $junction_seq_string = $jct->{string};
 		my $score = $jct->{score};
-		
+		my $read_begin_coord = $jct->{read_begin_coord};
+
 		my $side_1_ref_seq = $jct->{side_1_ref_seq};
 		my $side_2_ref_seq = $jct->{side_2_ref_seq};
 
@@ -487,6 +503,7 @@ sub _alignments_to_candidate_junctions
 		
 		## Update score of junction and the redundancy of each side
 		$cj->{score} += $score;
+		$cj->{read_begin_hash}->{$read_begin_coord}++;
 		
 		print "Totals: $total_r1, $total_r2\n" if ($verbose);
 		print "Redundancy (before): $cj->{r1} ($cj->{L1}) $cj->{r2} ($cj->{L2})\n" if ($verbose);		
@@ -513,8 +530,6 @@ sub _alignments_to_candidate_junctions
 			$cj->{r2} = ($total_r2 > 1) ? 1 : 0;;
 		}		
 		print "Redundancy (after): $cj->{r1} ($cj->{L1}) $cj->{r2} ($cj->{L2})\n" if ($verbose);		
-
-
 	}	
 	
 }
@@ -522,7 +537,7 @@ sub _alignments_to_candidate_junctions
 
 ### May dramatically help 454 data analysis, longer reads will lead to 
 ### more spurious candidate junctions.
-### experimental: this should pay attention to how many mismatches there are!@
+### experimental: this should pay attention to how many mismatches there are?
 sub _uncontained_alignments
 {
 	my (@al) = @_;
@@ -655,6 +670,9 @@ sub _alignments_to_candidate_junction
 	#positive if the middle sequence can match either side of the read
 	#negative if there is sequence in the read NOT matched on either side 
 	my $overlap = -($q2_start - $q1_end - 1);
+
+	#Keep track of the coordinate and strand that the start of the read matches 
+	my $read_begin_coord = $q1->start . "-" . $q1->reversed;
 
 	###
 	## OVERLAP MISMATCH CORRECTION
@@ -857,14 +875,6 @@ sub _alignments_to_candidate_junction
 		$ref_seq_matched_2 = substr $add_seq, -$ref_seq_matched_length_2, $ref_seq_matched_length_2;
 	}	
 	print "3: $junction_seq_string\n" if ($verbose);
-	
-	
-	#print "$read_id\n";
-	#print "$junction_id\n";
-	#print "$junction_seq_string\n";
-	
-#	my $hash_redundancy_1 = ($r1 > 1) ? 1 : 0;
-#	my $hash_redundancy_2 = ($r2 > 1) ? 1 : 0;
 
 	## create hash coords after this adjustment
 	if ($hash_strand_1 == 0)
@@ -926,7 +936,7 @@ sub _alignments_to_candidate_junction
 	die "Junction sequence not found: $junction_id " . $q1->qname . " " . $a2->qname  if (!$junction_seq_string);
 	die "Incorrect length for $junction_seq_string: $junction_id " . $q1->qname . " " . $a2->qname if (length $junction_seq_string != $flanking_left + $flanking_right + abs($overlap));
 		
-	return (1, $junction_seq_string, $ref_seq_matched_1, $ref_seq_matched_2, $junction_coord_1, $junction_coord_2, $redundancy_1, $redundancy_2, @junction_id_list);
+	return (1, $junction_seq_string, $ref_seq_matched_1, $ref_seq_matched_2, $junction_coord_1, $junction_coord_2, $redundancy_1, $redundancy_2, $read_begin_coord, @junction_id_list);
 }
 
 
