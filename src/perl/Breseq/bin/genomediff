@@ -828,9 +828,10 @@ sub do_mutate
 		{	
 			substr $new_ref_strings->{$mut->{seq_id}}, $mut->{position}-1, $mut->{size}, '';
 		}		
-		elsif ($mut->{type} eq 'DUP')
+		elsif ($mut->{type} eq 'AMP')
 		{
 			my $dup = substr $new_ref_strings->{$mut->{seq_id}}, $mut->{position}-1, $mut->{size};
+			$dup = $dup x ($mut->{new_copy_number} - 1);
 			substr $new_ref_strings->{$mut->{seq_id}}, $mut->{position}-1 + $mut->{size}, 0, $dup;
 		}
 		elsif ($mut->{type} eq 'INV')

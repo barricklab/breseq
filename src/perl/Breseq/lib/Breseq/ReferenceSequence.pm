@@ -431,7 +431,7 @@ sub annotate_mutations
 			delete $mut->{gene_name};
 			delete $mut->{gene_product};
 		}
-		elsif ($mut->{type} eq 'DUP')
+		elsif ($mut->{type} eq 'AMP')
 		{
 			annotate_1_mutation($ref_seq_info, $mut, $mut->{position}, $mut->{position} + $mut->{size} - 1);
 		}
