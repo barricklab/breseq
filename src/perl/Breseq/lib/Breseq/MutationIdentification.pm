@@ -122,7 +122,6 @@ sub identify_mutations
 		our $last_deletion_redundant_start_position = undef;
 		our $last_deletion_redundant_end_position = undef;	
 		our $redundant_reached_zero = 0;
-		
 
 		### COPY NUMBER VARIATION: variables to keep track of during pileup
 		our $cnv_tile_size = 100;

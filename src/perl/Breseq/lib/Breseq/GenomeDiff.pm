@@ -21,22 +21,104 @@ columns, then an arbitrary number of columns of more detailed data in a key=valu
 
 =head1 ENTRY TYPES
 
-=head2 Within read evidence (code:RA)
+=head2 MUTATIONAL EVENTS
+
+=head3 SNP :: single base substitution
+
+Single nucleotide polymorphism (SNP) type mutation. String operation is to substitute a single base.
+
+=back
+
+=head3 DEL :: deletion
+
+Deletion of any number of reference bases. String operation is to remove these bases.
+
+=back
+
+=head3 INS :: insertion
+
+Insertion of any number of new bases. String operation is to add these bases.
+
+=back
+
+=head3 SUB :: block substitution
+
+Insertion of any number of new bases. String operation is to add these bases.
+
+=back
+
+=head3 MOB :: insertion of mobile element
+
+Insertion of a new copy of an existing modile genetic element (such as an insertion sequence or transposon). String operation
+is to insert the sequence of the mobile genetic element, paying attention to its orientation, the possible duplication of reference 
+bases at the new insertion site, and insertions and deletions of several nucleotides associated with the new insertion.
+
+=back
+
+=head3 AMP :: gene amplification
+
+Duplication or higher order amplification of a genomic segment. String operation is to create new copies after the first copy.
+
+=back
+
+=head3 CON :: gene conversion
+
+Replacement of a stretch of bases with sequence from elsewhere in the reference genome, typically by a mechanism of homologous
+recombination between newarly identical repeat sequences, such as ribomal RNA copies. String operation is to substitute a length
+of bases with the other reference sequence.
+
+=back
+
+=head3 INV :: chromosomal inversion
+
+Inversion of the DNA between two points in the chromosome. String operation is to reverse complement the sequence between these boundaries.
+
+=back
+
+=back
+
+=head2 EVIDENCE
+
+=head3 RA :: within read alignment evidence
+
+Evidence from reads uniquely aligned to this reference position.
 
 Fixed columns: entry_type, entry_id, seq_id, start, end, ref_seq, new_seq, 
 
 =back
 
-=head2 Missing coverage evidence (MC)
+=head3 MC :: missing coverage evidence
 
 Fixed columns: entry_type, entry_id, seq_id, start, end 
 
+Evidence that coverage is missing from this region in the reference genome.
+
 =back
 
-=head2 New junction (NJ) evidence
+=head3 NJ :: new junction evidence
 
 Fixed columns: entry_type, entry_id, seq_id_1, position_1, direction_1, seq_id_2, position_2, direction_2, overlap
 
+Evidence of a new junction between regions that were not adjacent in the reference genome from reads that span the new boundary.
+
+=back
+
+=head3 UN :: within read alignment evidence
+
+Fixed columns: entry_type, entry_id, seq_id, start, end, ref_seq, new_seq, 
+
+Regions where there is missing evidence, due to not enough coverage from uniquely aligned reads to call a base.
+
+=back
+
+=back
+
+=head2 Specifying coordinates relative to the reference genome after complicated mutations
+
+Specify mutations in degenerate regions by giving them a subscript coord, i.e. 342.2 is the second copy of position 342 in the
+new genome. Alternately, we could specify mutation sets and have mutations within a set apply to local coordinates of the other mutation.
+This may be better for cases such as a new insertion sequence appearing (where the index is not obvious to assign or if there is insertion
+of a large stretch of new sequence.
 
 =back
 
@@ -75,10 +157,8 @@ our $line_specification = {
 	'DEL' => ['seq_id', 'position', 'size'],
 	'INS' => ['seq_id', 'position', 'new_seq'],
 	'MOB' => ['seq_id', 'position', 'repeat_name', 'strand', 'duplication_size'],	
-	##optional items 'del_start', 'del_end' (for deletions of repeat ends), 'ins_start', 'ins_end' (for additions of new sequence)
-	## replace 'gap_left' and 'gap_right'
-#	'MOB' => ['seq_id', 'position', 'repeat_name', 'strand', 'duplication_size', 'gap_left', 'gap_right'],
-	'DUP' => ['seq_id', 'position', 'size'],
+#	'DUP' => ['seq_id', 'position', 'size'], # Legacy ... right now translated internally into 'AMP' during reading
+	'AMP' => ['seq_id', 'position', 'size', 'new_copy_number'],
 	'CON' => ['seq_id', 'position', 'size', 'region'],
 	'INV' => ['seq_id', 'position', 'size'],
 	
@@ -95,7 +175,7 @@ our $tag_sort_fields = {
 	'DEL' => [1, 'seq_id', 'position'],
 	'INS' => [1, 'seq_id', 'position'],
 	'MOB' => [1, 'seq_id', 'position'],
-	'DUP' => [1, 'seq_id', 'position'],
+	'AMP' => [1, 'seq_id', 'position'],
 	'INV' => [1, 'seq_id', 'position'],
 	'CON' => [1, 'seq_id', 'position'],
 	'RA' => [2, 'seq_id', 'position'],
@@ -110,7 +190,7 @@ our $type_sort_order = {
 	'DEL' => 1,
 	'INS' => 3,
 	'MOB' => 5,	
-	'DUP' => 6,
+	'AMP' => 6,
 	'INV' => 7,
 	'CON' => 7,	
 	'RA' => 8,
@@ -339,6 +419,13 @@ sub _line_to_item
 	{
 		$self->warn("Type \'$item->{type}\' is not recognized for line:\n$line");
 		return undef;
+	}
+	
+	######## Temporary transition code for 'DUP' => AMP
+	if ($item->{type} eq 'DUP')
+	{
+		$item->{type} = 'AMP';
+		$item->{new_copy_number} = 2;
 	}
 	
 	######## Temporary transition code for 'MOB'
@@ -834,9 +921,9 @@ sub mutation_size_change
 	{
 		return -$item->{size};
 	}
-	elsif ($item->{type} eq 'DUP')
+	elsif ($item->{type} eq 'AMP')
 	{
-		return +$item->{size};
+		return +$item->{size} * ($item->{new_copy_number} - 1);
 	}
 	elsif ($item->{type} eq 'MOB')
 	{

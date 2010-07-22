@@ -1092,8 +1092,6 @@ sub _test_junction
 	### add degenerate matches and make them unavailable for other junctions	
 	### degenerate matches is a hash of junction_ids of read_names
 
-## PROBLEM
-## TESTING: If we delete only when not failing, then we end up adding them twice to junction file...
 
 	## DEGENERATE JUNCTION MATCHES
 	## ===========================
