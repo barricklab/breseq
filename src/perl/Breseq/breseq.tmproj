@@ -3,7 +3,7 @@
 <plist version="1.0">
 <dict>
 	<key>currentDocument</key>
-	<string>lib/Breseq/CandidateJunctions.pm</string>
+	<string>lib/Breseq/AlignmentOutput.pm</string>
 	<key>documents</key>
 	<array>
 		<dict>
@@ -330,30 +330,14 @@
 			<key>caret</key>
 			<dict>
 				<key>column</key>
-				<integer>59</integer>
+				<integer>107</integer>
 				<key>line</key>
-				<integer>308</integer>
+				<integer>186</integer>
 			</dict>
-			<key>columnSelection</key>
-			<false/>
 			<key>firstVisibleColumn</key>
 			<integer>0</integer>
 			<key>firstVisibleLine</key>
-			<integer>285</integer>
-			<key>selectFrom</key>
-			<dict>
-				<key>column</key>
-				<integer>31</integer>
-				<key>line</key>
-				<integer>308</integer>
-			</dict>
-			<key>selectTo</key>
-			<dict>
-				<key>column</key>
-				<integer>59</integer>
-				<key>line</key>
-				<integer>308</integer>
-			</dict>
+			<integer>161</integer>
 		</dict>
 		<key>lib/Breseq/CoverageOutput.pm</key>
 		<dict>
@@ -483,20 +467,6 @@
 			<key>firstVisibleLine</key>
 			<integer>412</integer>
 		</dict>
-		<key>lib/Breseq/Settings.pm</key>
-		<dict>
-			<key>caret</key>
-			<dict>
-				<key>column</key>
-				<integer>58</integer>
-				<key>line</key>
-				<integer>107</integer>
-			</dict>
-			<key>firstVisibleColumn</key>
-			<integer>0</integer>
-			<key>firstVisibleLine</key>
-			<integer>78</integer>
-		</dict>
 		<key>lib/Breseq/Shared.pm</key>
 		<dict>
 			<key>caret</key>
@@ -559,7 +529,6 @@
 		<string>bin/breseq</string>
 		<string>bin/genomediff</string>
 		<string>lib/Breseq/AlignmentOutput.pm</string>
-		<string>lib/Breseq/Settings.pm</string>
 		<string>lib/Breseq/AlignmentCorrection.pm</string>
 		<string>lib/Breseq.pm</string>
 		<string>lib/Breseq/CandidateJunctions.pm</string>
@@ -572,6 +541,6 @@
 	<key>showFileHierarchyDrawer</key>
 	<true/>
 	<key>windowFrame</key>
-	<string>{{609, 99}, {910, 779}}</string>
+	<string>{{357, 7}, {1030, 714}}</string>
 </dict>
 </plist>

@@ -1121,7 +1121,7 @@ sub _test_junction
 	if (defined $degenerate_matches_ref->{$junction_seq_id})
 	{
 		foreach my $read_name (keys %{$degenerate_matches_ref->{$junction_seq_id}})
-		{
+		{	
 			my $degenerate_match = $degenerate_matches_ref->{$junction_seq_id}->{$read_name};
 			my $fastq_file_index = $degenerate_match->{fastq_file_index};
 			my $matched_alignment;
@@ -1167,13 +1167,14 @@ sub _test_junction
 				foreach my $a (@{$degenerate_match->{dominant_alignments}})
 				{
 					$matched_alignment = $a if ($a->tid eq $junction_tid); #this is the one for the current candidate junction
-				}
+				}	
 				
+				##delete this junction so it will not be considered again when going through degenerate only
+				delete $degenerate_matches_ref->{$junction_seq_id}->{$read_name};
 			}
 			
-			die if (!$matched_alignment);
-			
 			# Write alignment to SAM file for candidate junctions regardless of success...
+			die if (!$matched_alignment);
 			Breseq::Shared::tam_write_read_alignments($RCJ, $candidate_junction_header, $fastq_file_index, [$matched_alignment]) if (!$has_non_overlap_only);
 		}
 	}	
