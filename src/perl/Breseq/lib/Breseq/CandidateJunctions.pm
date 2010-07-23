@@ -184,6 +184,8 @@ sub identify_candidate_junctions
 		## save the score in the distribution
 		Breseq::Shared::add_score_to_distribution(\@observed_score_distribution, $best_candidate_junction->{score});
 		
+		next JUNCTION_SEQ if ($best_candidate_junction->{score} < $settings->{minimum_candidate_junction_score});
+		
 		##make sure it isn't a duplicate junction id -- how is this even possible?
 		if ($ids_to_print{$best_candidate_junction->{id}})
 		{
