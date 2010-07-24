@@ -68,16 +68,6 @@ sub plot_coverage
 	$options->{pdf} = 0 if (!defined $options->{pdf});
 	$options->{resolution} = 600 if (!defined $options->{resolution});
 	$options->{total_only} = 0 if (!defined $options->{total_only});
-
-	## Workaround to avoid too many open files... bug in Bio::DB::Sam
-	my $bam_path = $self->{bam};
-	my $fasta_path = $self->{fasta};
-	
-	if (!defined $open_bam_files{$bam_path.$fasta_path})
-	{
-		$open_bam_files{$bam_path.$fasta_path} = Bio::DB::Sam->new(-bam =>$bam_path, -fasta=>$fasta_path);
-	}
-	my $bam = $open_bam_files{$bam_path.$fasta_path};
 	
 	$region = Breseq::Shared::check_region($region, $bam);
 	my ($seq_id, $start, $end) = split /[:-]/, $region;
@@ -97,7 +87,7 @@ sub plot_coverage
 	}
 	
 	my $tmp_coverage = "$$.coverage.tab";
-	$self->tabulate_coverage($bam, $tmp_coverage, $seq_id, $start, $end, $downsample);
+	tabulate_coverage($self->{bam}, $self->{fasta}, $tmp_coverage, $seq_id, $start, $end, $downsample);
 	
 	my $log_file_name = "$$.r.log";
 	Breseq::Shared::system("R --vanilla in_file=$tmp_coverage out_file=$output pdf_output=$options->{pdf} total_only=$options->{total_only} < $self->{r_script} > $log_file_name");
@@ -110,7 +100,14 @@ sub plot_coverage
 ## Rewrite this in C++ for speed!
 sub tabulate_coverage
 {
-	my ($self, $bam, $tmp_coverage, $seq_id, $start, $end, $downsample) = @_;
+	my ($bam_path, $fasta_path, $tmp_coverage, $seq_id, $start, $end, $downsample) = @_;
+	
+	## Workaround to avoid too many open files... bug in Bio::DB::Sam
+	if (!defined $open_bam_files{$bam_path.$fasta_path})
+	{
+		$open_bam_files{$bam_path.$fasta_path} = Bio::DB::Sam->new(-bam =>$bam_path, -fasta=>$fasta_path);
+	}
+	my $bam = $open_bam_files{$bam_path.$fasta_path};
 	
 	## Open file for output
 	open COV, ">$tmp_coverage";
