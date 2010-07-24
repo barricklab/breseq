@@ -58,6 +58,7 @@ my $output_file;
 my $pdf = 0;
 my $resolution = 600;
 my $total_only = 0;
+my $text_output;
 GetOptions(
 	'help|?' => \$help, 'man' => \$man,
 	'output|o=s' => \$output_file,
@@ -65,6 +66,7 @@ GetOptions(
 	'pdf' => \$pdf,
 	'resolution|r=s' => \$resolution,
 	'total-only|t' => \$total_only,
+	'text-output|x' => \$text_output,
 ) or pod2usage(2);
 pod2usage(1) if $help;
 pod2usage(-exitstatus => 0, -verbose => 2) if $man;
@@ -75,8 +77,49 @@ die "No regions defined.\n" if (scalar @regions == 0);
 die "No BAM file defined.\n" if (!$bam_path);
 die "No fasta file defined.\n" if (!$fasta_path);
 
-foreach my $region (@regions)
+## Make drawings
+if (!$text_output)
 {
-	my $co = Breseq::CoverageOutput->new(-fasta => $fasta_path, -bam => $bam_path);
-	$co->plot_coverage($region, undef, {verbose=>$verbose, resolution=>$resolution, pdf => $pdf, total_only => $total_only});
+	foreach my $region (@regions)
+	{
+		my $co = Breseq::CoverageOutput->new(-fasta => $fasta_path, -bam => $bam_path);
+		$co->plot_coverage($region, undef, {verbose=>$verbose, resolution=>$resolution, pdf => $pdf, total_only => $total_only});
+	}
 }
+##Tabulate coverage
+else {
+	my $tmp_coverage = "coverage.tab";
+	
+	foreach my $region (@regions)
+	{	
+		$region = Breseq::Shared::check_region($region, $bam);
+		my ($seq_id, $start, $end) = split /[:-]/, $region;
+		Breseq::CoverageOutput::tabulate_coverage($bam_path, $fasta_path, $tmp_coverage, $seq_id, $start, $end, 1) = @_;
+		
+		open COV, "<$tmp_coverage";
+		my @ll = <COV>;
+		chomp @ll;
+		shift @ll; #header
+		my $n = scalar @ll;
+		my $avg = 0;
+		my $variance = 0;
+		foreach my $l (@ll)
+		{
+			my @sl = split "\t", $l;
+			$avg += $sl[1] + $sl[2];
+		}
+		$avg /= $n;
+		
+		foreach my $l (@ll)
+		{
+			my @sl = split "\t", $l;
+			$variance += ($avg - ($sl[1] + $sl[2]))**2;
+		}
+		
+		close COV;
+		unlink $tmp_coverage;
+
+		print "$region\t$n\t$avg\t$variance\n";
+	}
+}
+
