@@ -55,6 +55,15 @@ sub new
 	($self->{fasta}, $self->{bam}) = $self->Bio::Root::RootI::_rearrange([qw(FASTA BAM)], @args);
 	$self->{r_script} = $FindBin::Bin . "/../lib/perl5/Breseq/plot_coverage.r";
 	
+	## Workaround to avoid too many open files... bug in Bio::DB::Sam
+	my $bam_path = $self->{bam};
+	my $fasta_path = $self->{fasta};
+	if (!defined $open_bam_files{$bam_path.$fasta_path})
+	{
+		$open_bam_files{$bam_path.$fasta_path} = Bio::DB::Sam->new(-bam =>$bam_path, -fasta=>$fasta_path);
+	}
+	$self->{bam} = $open_bam_files{$bam_path.$fasta_path};
+	
 	return $self; 
 }
 
@@ -69,7 +78,7 @@ sub plot_coverage
 	$options->{resolution} = 600 if (!defined $options->{resolution});
 	$options->{total_only} = 0 if (!defined $options->{total_only});
 	
-	$region = Breseq::Shared::check_region($region, $bam);
+	$region = Breseq::Shared::check_region($region, $self->{bam});
 	my ($seq_id, $start, $end) = split /[:-]/, $region;
 	my $size = $end - $start + 1;
 	
@@ -87,7 +96,7 @@ sub plot_coverage
 	}
 	
 	my $tmp_coverage = "$$.coverage.tab";
-	tabulate_coverage($self->{bam}, $self->{fasta}, $tmp_coverage, $seq_id, $start, $end, $downsample);
+	$self->tabulate_coverage($tmp_coverage, $region, {downsample => $downsample} );
 	
 	my $log_file_name = "$$.r.log";
 	Breseq::Shared::system("R --vanilla in_file=$tmp_coverage out_file=$output pdf_output=$options->{pdf} total_only=$options->{total_only} < $self->{r_script} > $log_file_name");
@@ -100,20 +109,19 @@ sub plot_coverage
 ## Rewrite this in C++ for speed!
 sub tabulate_coverage
 {
-	my ($bam_path, $fasta_path, $tmp_coverage, $seq_id, $start, $end, $downsample) = @_;
+	my ($self, $tmp_coverage, $region, $options) = @_;
+	my $downsample = $options->{downsample};
+	$downsample = 1 if (!defined $downsample);
+	my $bam = $self->{bam};
+		
+	$region = Breseq::Shared::check_region($region, $bam);
+	my ($seq_id, $start, $end) = split /[:-]/, $region;
 	
-	## Workaround to avoid too many open files... bug in Bio::DB::Sam
-	if (!defined $open_bam_files{$bam_path.$fasta_path})
-	{
-		$open_bam_files{$bam_path.$fasta_path} = Bio::DB::Sam->new(-bam =>$bam_path, -fasta=>$fasta_path);
-	}
-	my $bam = $open_bam_files{$bam_path.$fasta_path};
 	
 	## Open file for output
 	open COV, ">$tmp_coverage";
 	print COV join("\t", 'position', 'unique_top_cov', 'unique_bot_cov', 'redundant_top_cov', 'redundant_bot_cov') . "\n";
 	our $coverage;
-
 
 	###
 	##  Behold, the dreaded SLOW fetch function...
@@ -144,9 +152,9 @@ sub tabulate_coverage
 	
 	my $reference_length = $bam->length($seq_id);
 	$end = $reference_length if ($end > $reference_length);	
-		
+				
 	for (my $pos = $start; $pos <= $end; $pos += $downsample)
-	{
+	{		
 		#initialize coverage observations
 		$coverage->{unique} = {'-1' => 0, '1' => 0, 'total' => 0};
 		$coverage->{redundant} = {'-1' => 0, '1' => 0, 'total' => 0};

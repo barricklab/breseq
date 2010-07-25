@@ -272,12 +272,12 @@
 				<key>column</key>
 				<integer>14</integer>
 				<key>line</key>
-				<integer>1160</integer>
+				<integer>1162</integer>
 			</dict>
 			<key>firstVisibleColumn</key>
 			<integer>0</integer>
 			<key>firstVisibleLine</key>
-			<integer>1127</integer>
+			<integer>1130</integer>
 		</dict>
 		<key>lib/Breseq/AlignmentOutput.pm</key>
 		<dict>
@@ -509,6 +509,6 @@
 	<key>showFileHierarchyDrawer</key>
 	<true/>
 	<key>windowFrame</key>
-	<string>{{158, 53}, {1165, 818}}</string>
+	<string>{{347, 24}, {1165, 818}}</string>
 </dict>
 </plist>
