@@ -90,14 +90,15 @@ if (!$text_output)
 else {
 	my $tmp_coverage = "coverage.tab";
 	
+	my $co = Breseq::CoverageOutput->new(-fasta => $fasta_path, -bam => $bam_path);
+	
 	foreach my $region (@regions)
 	{	
-		$region = Breseq::Shared::check_region($region, $bam);
-		my ($seq_id, $start, $end) = split /[:-]/, $region;
-		Breseq::CoverageOutput::tabulate_coverage($bam_path, $fasta_path, $tmp_coverage, $seq_id, $start, $end, 1) = @_;
+		$co->tabulate_coverage($tmp_coverage, $region);
 		
-		open COV, "<$tmp_coverage";
+		open COV, "<$tmp_coverage" or die;
 		my @ll = <COV>;
+		
 		chomp @ll;
 		shift @ll; #header
 		my $n = scalar @ll;
@@ -116,10 +117,12 @@ else {
 			$variance += ($avg - ($sl[1] + $sl[2]))**2;
 		}
 		
+		my $ssd = (1/($n-1) * $variance)**0.5;
+		my $sem = $ssd / $n**0.5;
 		close COV;
 		unlink $tmp_coverage;
 
-		print "$region\t$n\t$avg\t$variance\n";
+		print "$region\t$n\t$avg\t$sem\n";
 	}
 }
 
