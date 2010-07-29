@@ -446,7 +446,7 @@ sub correct_alignments
 				my $side_key = 'side_' . $side;
                    ## Do not count for coverage if it is redundant!!
 				
-				next if (!$item->{"$side_key\_redundant"});
+				next if ($item->{"$side_key\_redundant"});
 				
 				## Write out match corresponding to this part to SAM file
 				## By trimming in the candidate junctions sequence, rather than on each half,
