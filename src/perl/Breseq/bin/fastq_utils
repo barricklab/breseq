@@ -134,6 +134,55 @@ if ($command eq 'SPLIT')
 }
 
 
+if ($command eq 'SAMPLE')
+{
+	use Breseq::Fastq;
+	use Getopt::Long;
+	use Pod::Usage;
+	my ($help, $man);
+	my ($probability, $fraction);
+	GetOptions(
+		'help|?' => \$help, 'man' => \$man,
+		'probability|p=s' => \$probability,
+		'fraction|f=s' => \$fraction,
+	) or pod2usage(2);
+	pod2usage(1) if $help;
+	pod2usage(-exitstatus => 0, -verbose => 2) if $man;	
+	$probability = $fraction if (!defined $probability);
+	die "Must provide probability of sampling read (-p)\n" if (!$probability);
+
+	my ( $input_file, $output_file ) = @ARGV;
+		
+	my $input_file_base = $input_file;
+	$input_file_base =~ s/\.(\S+?)$//;
+	my $input_file_suffix = $1 ? $1 : "";	
+	
+	if (!$output_file)
+	{
+		$output_file = $input_file_base . "-" . $probability;
+		$output_file .= "." . $input_file_suffix if ($input_file_suffix);
+	}
+	
+	my $total_read_num;
+	my $picked_read_num;
+		
+	my $in_fastq = Breseq::Fastq->new(-file => $input_file);
+	my $out_fastq = Breseq::Fastq->new(-file => ">" . $output_file);
+
+	while ($_ = $in_fastq->next_seq)
+	{	
+		$total_read_num++;	
+		
+		if (rand() <= $probability)
+		{
+			$picked_read_num++;		
+			$out_fastq->write_seq($_);
+		}
+	}
+
+	print STDERR "Probability: $probability Picked $picked_read_num/$total_read_num reads\n";
+}
+
 if ($command eq 'NUMBER_PAIRED')
 {
 	use Breseq::Fastq;
