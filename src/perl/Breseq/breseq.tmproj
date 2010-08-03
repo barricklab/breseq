@@ -298,29 +298,29 @@
 			<key>caret</key>
 			<dict>
 				<key>column</key>
-				<integer>16</integer>
+				<integer>8</integer>
 				<key>line</key>
-				<integer>300</integer>
+				<integer>862</integer>
 			</dict>
 			<key>columnSelection</key>
 			<false/>
 			<key>firstVisibleColumn</key>
 			<integer>0</integer>
 			<key>firstVisibleLine</key>
-			<integer>270</integer>
+			<integer>847</integer>
 			<key>selectFrom</key>
 			<dict>
 				<key>column</key>
-				<integer>0</integer>
+				<integer>15</integer>
 				<key>line</key>
-				<integer>300</integer>
+				<integer>862</integer>
 			</dict>
 			<key>selectTo</key>
 			<dict>
 				<key>column</key>
-				<integer>0</integer>
+				<integer>8</integer>
 				<key>line</key>
-				<integer>301</integer>
+				<integer>862</integer>
 			</dict>
 		</dict>
 		<key>lib/Breseq/CoverageOutput.pm</key>
@@ -456,14 +456,14 @@
 			<key>caret</key>
 			<dict>
 				<key>column</key>
-				<integer>46</integer>
+				<integer>51</integer>
 				<key>line</key>
-				<integer>212</integer>
+				<integer>225</integer>
 			</dict>
 			<key>firstVisibleColumn</key>
 			<integer>0</integer>
 			<key>firstVisibleLine</key>
-			<integer>186</integer>
+			<integer>105</integer>
 		</dict>
 		<key>lib/Breseq/Shared.pm</key>
 		<dict>
@@ -556,6 +556,6 @@
 	<key>showFileHierarchyDrawer</key>
 	<true/>
 	<key>windowFrame</key>
-	<string>{{276, 124}, {1101, 754}}</string>
+	<string>{{496, 59}, {877, 755}}</string>
 </dict>
 </plist>
