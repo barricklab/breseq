@@ -113,6 +113,7 @@ sub identify_candidate_junctions
 			print STDERR "    ALIGNED READ:$i\n" if ($i % 10000 == 0);
 
 			last ALIGNMENT_LIST if (defined $settings->{candidate_junction_read_limit} && ($i > $settings->{candidate_junction_read_limit}));
+			
 			_alignments_to_candidate_junctions($settings, $summary, $ref_seq_info, $candidate_junctions, $fai, $header, $al_ref);
 		}	
 		
@@ -129,10 +130,10 @@ sub identify_candidate_junctions
 		{
 			my $cj = $candidate_junctions->{$junction_seq}->{$junction_id};
 			$cj->{old_score} = $cj->{score};
-			$cj->{score} = scalar keys 	%{$cj->{read_begin_hash}};
+			$cj->{score} = scalar keys %{$cj->{read_begin_hash}};
 			
-			#print ">>>$junction_id\n";
-			#print Dumper($cj->{read_begin_hash});
+			print ">>>$junction_id\n" if ($verbose);
+			print Dumper($cj->{read_begin_hash}) if ($verbose);
 		}
 	}
 	
@@ -149,6 +150,8 @@ sub identify_candidate_junctions
 	## Sort here is to get reproducible ordering.
 	JUNCTION_SEQ: foreach my $junction_seq (sort keys %$candidate_junctions)
 	{	
+		print "Handling $junction_seq\n" if ($verbose);
+		
 		## We may have already done the reverse complement
 		next if ($handled_seq->{$junction_seq});
 		
@@ -194,12 +197,11 @@ sub identify_candidate_junctions
 		my $best_candidate_junction = $combined_candidate_junction_list[0];
 
 
-### It wins because there is more overlap!!!
+### It wins because there is more overlap -- giving it a higher score!!!
 #### DEBUGGING ####
 		my $best_item = Breseq::Shared::junction_name_split($best_candidate_junction->{id});
 		my $best_uc = ($best_item->{side_1}->{redundant} != 0) ? $best_item->{side_2}->{position} : $best_item->{side_1}->{position};
-		print "::::LIST::::\n" . Dumper(@combined_candidate_junction_list) if ($best_uc == 4524530);
-		
+		print "::::LIST::::\n" . Dumper(@combined_candidate_junction_list) if ($verbose);
 #### DEBUGGING ####		
 
 		## save the score in the distribution
@@ -257,7 +259,7 @@ sub identify_candidate_junctions
 	
 	print STDERR "    Initial: Number = " . $total_candidate_junction_number . ", Cumulative Length = " . $total_cumulative_cj_length . " bases\n";
 
-	print Dumper(\@observed_score_distribution);
+	print Dumper(\@observed_score_distribution) if ($verbose);
 
 	if ((defined $settings->{maximum_candidate_junctions}) && (@combined_candidate_junctions > 0))
 	{	
@@ -370,6 +372,13 @@ sub _alignments_to_candidate_junctions
 
 	my $verbose = 0;
 		
+	if ($verbose)
+	{
+		print "\n###########################\n";
+		print $al_ref->[0]->qname;
+		print "\n###########################\n";
+	}	
+		
 	### >>> This does not work -- see note at _unique_alignments_with_redundancy
 	### We are only concerned with combining intervals that are different in the reference they match
 	### but we keep track of the redundancy with which each side matches the reference genome.
@@ -442,12 +451,12 @@ sub _alignments_to_candidate_junctions
 	## Done if everything already ruled out...
 	return if (scalar @junctions == 0);
 	
-	
 	print $al_ref->[0]->qname . "\n"  if ($verbose);
 	
 	
 	#only now that we've looked through everything can we determine whether the reference sequence matched 
 	#on a side was unique, after correcting for overlap
+	print "REDUNDANT_JUNCTION SIDES:\n" if ($verbose);
 	print Dumper(\%redundant_junction_sides) if ($verbose);
 	
 	foreach my $jct (@junctions)
@@ -462,7 +471,7 @@ sub _alignments_to_candidate_junctions
 		my $side_1_ref_seq = $jct->{side_1_ref_seq};
 		my $side_2_ref_seq = $jct->{side_2_ref_seq};
 
-		## these are the total number of redundant matches to that side of the junction
+		# these are the total number of redundant matches to that side of the junction
 		# the only way to be unique is to have at most one coordinate corresponding to that sequence
 		# and not have that reference sequence redundantly matched (first combination of alignment coords)
 		my $total_r1 = 0;
@@ -583,6 +592,7 @@ sub _alignments_to_candidate_junction
 	my ($q2_start, $q2_end) = Breseq::Shared::alignment_query_start_end($q2);
 		
 	print "$q1_start, $q1_end, $q2_start, $q2_end\n" if ($verbose);
+	
 	# Reverse the coordinates to be consistently such that 1 refers to lowest...
 	if ($q2_start < $q1_start)
 	{
@@ -600,9 +610,6 @@ sub _alignments_to_candidate_junction
 	#positive if the middle sequence can match either side of the read
 	#negative if there is sequence in the read NOT matched on either side 
 	my $overlap = -($q2_start - $q1_end - 1);
-
-	#Keep track of the coordinate and strand that the start of the read matches 
-	my $read_begin_coord = $q1->start . "-" . $q1->reversed;
 
 	###
 	## OVERLAP MISMATCH CORRECTION
@@ -676,6 +683,7 @@ sub _alignments_to_candidate_junction
 		## We need to re-check that they have the required amount of unique length if they moved
 		if (defined $q1_move || defined $q2_move)
 		{
+			print "Rejecting alignment because there is not not enough overlap\n" if ($verbose);
 			my $passed = _check_required_unique_length($r1_start, $r1_end, $r2_start, $r2_end);
 			return (0) if (!$passed);
 		}
@@ -686,12 +694,16 @@ sub _alignments_to_candidate_junction
 	}
 	
 	## create hash coords AFTER overlap adjustment
-	my $hash_coord_1 =  ($hash_strand_1 == +1) ? $r1_start : $r1_end;
+	my $hash_coord_1 = ($hash_strand_1 == +1) ? $r1_start : $r1_end;
 	my $hash_coord_2 = ($hash_strand_2 == +1) ? $r2_start : $r2_end;
+	
+	## these are the positions of the beginning and end of the read, across the junction
+	## query 1 is the start of the read, which is qhy we hash by this coordinate
+	## (it is less likely to be shifted by a nucleotide or two by base errors)
+	my $read_begin_coord = ($hash_strand_1 == +1) ? $r1_end : $r1_start;	
 	
 	if ($verbose)
 	{
-		
 		my $ref_seq_matched_1 = substr $reference_sequence_string_hash_ref->{$hash_seq_id_1},  $r1_start-1, $r1_end - $r1_start + 1;
 		my $ref_seq_matched_2 = substr $reference_sequence_string_hash_ref->{$hash_seq_id_2},  $r2_start-1, $r2_end - $r2_start + 1;
 				
@@ -839,11 +851,11 @@ sub _alignments_to_candidate_junction
 		($redundancy_1, $redundancy_2) = ($redundancy_2, $redundancy_1);
 		($flanking_left, $flanking_right) = ($flanking_right, $flanking_left);
 		($ref_seq_matched_1, $ref_seq_matched_2) = ($ref_seq_matched_2, $ref_seq_matched_1);
-			
+					
 		$junction_seq_string = Breseq::Fastq::revcom($junction_seq_string);
 		$unique_read_seq_string = Breseq::Fastq::revcom($unique_read_seq_string);
 	}
-			
+				
 	my @junction_id_list = (
 		$hash_seq_id_1, 
 		$hash_coord_1, 
@@ -861,6 +873,7 @@ sub _alignments_to_candidate_junction
 	my $junction_coord_2 = join "::", $hash_seq_id_2, $hash_coord_2, $hash_strand_2;
 		
 	my $junction_id = Breseq::Shared::junction_name_join(@junction_id_list);
+	print "READ ID: " . $a1->qname . "\n" if ($verbose); 
 	print "JUNCTION ID: " . $junction_id . "\n" if ($verbose);
 	
 	die "Junction sequence not found: $junction_id " . $q1->qname . " " . $a2->qname  if (!$junction_seq_string);
