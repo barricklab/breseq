@@ -57,7 +57,7 @@ my $maximum_inserted_junction_sequence_length;
 
 sub identify_candidate_junctions
 {
-	my $verbose = 1;
+	my $verbose = 0;
 	our ($settings, $summary, $ref_seq_info) = @_;
 
 	#set up some options that are global to this module
@@ -573,7 +573,7 @@ sub _alignments_to_candidate_junctions
 {
 	my ($settings, $summary, $ref_seq_info, $candidate_junctions, $fai, $header, $al_ref) = @_;
 
-	my $verbose = 1;
+	my $verbose = 0;
 		
 	if ($verbose)
 	{
@@ -756,9 +756,7 @@ sub _alignments_to_candidate_junction
 {
 	my ($settings, $summary, $ref_seq_info, $fai, $header, $a1, $a2, $redundancy_1, $redundancy_2) = @_;
 		
-	my $verbose = 1;
-	#$verbose = $a1->qname eq "30K88AAXX_LenskiSet2:8:3:1374:1537";
-	#$verbose = ($a1->start == 1) || ($a2->start == 1);	
+	my $verbose = 0;
 		
 	## set up local settings
 	my $flanking_length = $settings->{max_read_length};
