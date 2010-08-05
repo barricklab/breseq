@@ -299,6 +299,10 @@ sub initialize_2
 	##### candidate junction #####
 	$self->{candidate_junction_path} = "03_candidate_junctions";
 	$self->{candidate_junction_path} = "$self->{base_output_path}/$self->{candidate_junction_path}" if ($self->{base_output_path});
+
+	$self->{preprocess_best_sam_file_name} = "$self->{candidate_junction_path}/#.best.sam";
+	$self->{preprocess_split_sam_file_name} = "$self->{candidate_junction_path}/#.split.sam";
+
 	$self->{candidate_junction_summary_file_name} = "$self->{candidate_junction_path}/candidate_junction_summary.bin";	
 	$self->{candidate_junction_fasta_file_name} = "$self->{candidate_junction_path}/candidate_junction.fasta";
 	$self->{candidate_junction_faidx_file_name} = "$self->{candidate_junction_path}/candidate_junction.fasta.fai";	

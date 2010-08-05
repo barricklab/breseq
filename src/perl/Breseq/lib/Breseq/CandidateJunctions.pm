@@ -38,6 +38,7 @@ use Bio::DB::Sam;
 
 use Breseq::Shared;
 use Breseq::Fastq;
+use Breseq::AlignmentCorrection;
 
 use Data::Dumper;
 
@@ -56,7 +57,7 @@ my $maximum_inserted_junction_sequence_length;
 
 sub identify_candidate_junctions
 {
-	my $verbose = 0;
+	my $verbose = 1;
 	our ($settings, $summary, $ref_seq_info) = @_;
 
 	#set up some options that are global to this module
@@ -98,8 +99,12 @@ sub identify_candidate_junctions
 #		$s->{reads_with_no_matches} = 0; #calculate as total minus number found
 		$s->{reads_with_ambiguous_hybrids} = 0;
 		
-		my $reference_sam_file_name = $settings->file_name('reference_sam_file_name', {'#'=>$read_file});
+		#my $reference_sam_file_name = $settings->file_name('reference_sam_file_name', {'#'=>$read_file});
+		##TESTING
+		my $reference_sam_file_name = $settings->file_name('preprocess_split_sam_file_name', {'#'=>$read_file});
+		
 		my $tam = Bio::DB::Tam->open($reference_sam_file_name) or die("Could not open reference same file: $reference_sam_file_name");		
+		
 		my $header = $tam->header_read2($reference_faidx_file_name) or die("Error reading reference fasta index file: $reference_faidx_file_name");		
 		my $last_alignment;
 		my $al_ref;
@@ -366,18 +371,209 @@ sub identify_candidate_junctions
 	$summary->{candidate_junction} = $hcs;
 }
 
-sub _split_indel_alignments
+sub preprocess_alignments
 {
-	my ($al_ref) = @_;	
-	return $al_ref;
+	my ($settings, $summary) = @_;	
+
+	BASE_FILE: foreach my $read_struct ($settings->read_structures)
+	{	
+		my $read_file = $read_struct->{base_name};	
+		print STDERR "  READ FILE::$read_file\n";
+
+		my $reference_sam_file_name = $settings->file_name('reference_sam_file_name', {'#'=>$read_file});
+		my $reference_faidx_file_name = $settings->file_name('reference_faidx_file_name');
+		
+		my $tam = Bio::DB::Tam->open($reference_sam_file_name) or die("Could not open reference same file: $reference_sam_file_name");		
+		my $header = $tam->header_read2($reference_faidx_file_name) or die("Error reading reference fasta index file: $reference_faidx_file_name");		
+
+		#includes all matches, and splits long indels
+		my $preprocess_split_sam_file_name = $settings->file_name('preprocess_split_sam_file_name', {'#'=>$read_file});
+		my $PSAM;
+		open $PSAM, ">$preprocess_split_sam_file_name" or die;
+
+		#includes best matches as they are
+		my $preprocess_best_sam_file_name = $settings->file_name('preprocess_best_sam_file_name', {'#'=>$read_file});
+		my $BSAM;
+		open $BSAM, ">$preprocess_best_sam_file_name" or die;
+
+		my $last_alignment;
+		my $al_ref;
+		my $i=0;
+		ALIGNMENT_LIST: while (1)
+		{		
+			($al_ref, $last_alignment) = Breseq::Shared::tam_next_read_alignments($tam, $header, $last_alignment);
+			last ALIGNMENT_LIST if (!$al_ref);
+
+			$i++;
+			print STDERR "    ALIGNED READ:$i\n" if ($i % 10000 == 0);
+
+			#last ALIGNMENT_LIST if (defined $settings->{candidate_junction_read_limit} && ($i > $settings->{candidate_junction_read_limit}));
+
+			_split_indel_alignments($settings, $summary, $header, $PSAM, $BSAM, $al_ref);
+		}	
+	}		
 }
 
+sub _split_indel_alignments
+{
+	my $min_indel_split_len = 2;
+	my ($settings, $summary, $header, $PSAM, $BSAM, $al_ref) = @_;
+	
+	#write original alignments
+	
+	#copy alignment list
+	my @al = @$al_ref;
+	my @untouched_al;
+	ALIGNMENT: foreach my $a (@$al_ref)
+	{
+		my $split = 0;
+		
+		my $cigar_list = $a->cigar_array;
+		my @care_cigar_list = grep { (($_->[0] eq 'D') || ($_->[0] eq 'I')) && ($_->[1] > $min_indel_split_len) } @$cigar_list;
+		
+		if (scalar @care_cigar_list == 0)
+		{
+			push @untouched_al, $a;
+			next ALIGNMENT;
+		}
+		
+		## handle the split
+		tam_write_split_alignment($PSAM, $header, $min_indel_split_len, $a);
+	}
+	
+	#write remaining original alignments
+	Breseq::Shared::tam_write_read_alignments($PSAM, $header, 0, \@untouched_al);
+	
+	#write alignments
+	@al = Breseq::AlignmentCorrection::_alignment_list_to_dominant_best(@$al_ref);
+	Breseq::Shared::tam_write_read_alignments($BSAM, $header, 0, \@al);
+}
+
+sub tam_write_split_alignment
+{
+	my ($fh, $header, $min_indel_split_len, $a) = @_;
+	print $a->qname . "\n";
+	
+	my $qseq = $a->qseq;
+	my $qual_string = join "", map chr($_+33), $a->qscore;
+	
+	my $rpos = $a->start;
+	my $qpos = $a->query->start;
+	my $rdir = ($a->reversed) ? -1 : +1;
+	
+	my $cigar_list = $a->cigar_array;
+	my $i=0;
+	my $op;
+	my $len;
+	while ($i < scalar @$cigar_list)
+	{
+		my $rstart = $rpos;
+		my $qstart = $qpos;
+		
+		my $cigar_string = '';
+		CIGAR: while ($i < scalar @$cigar_list)
+		{
+			
+			my $c = $cigar_list->[$i];
+			$op = $c->[0];
+			$len = $c->[1];
+		
+			print "$cigar_string\n"; 
+			print Dumper($c);
+			
+			if ($op eq 'S')
+			{
+				next CIGAR;
+			}
+		
+			elsif ($op eq 'I')
+			{
+				last CIGAR if ($len >= $min_indel_split_len);
+				$qpos += $len; 
+			}
+			
+			elsif ($op eq 'D')
+			{
+				last CIGAR if ($len >= $min_indel_split_len);
+				$rpos += $len; 		
+			}
+
+			elsif ($op eq 'M')
+			{
+				$qpos += $len; 
+				$rpos += $len; 		
+			}
+			
+			$cigar_string .= $len . $op;
+		} continue {
+			$i++;
+		}
+		
+		if ($qpos > $qstart)
+		{
+			#add padding to the sides of the 
+			my $left_padding = $qstart - 1;
+			my $right_padding = $a->l_qseq - $qpos + 1;
+			
+			$cigar_string = ( $left_padding ? $left_padding . 'S' : '' ) . $cigar_string . ( $right_padding ? $right_padding . 'S' : '' );
+
+			#print "Q: $qstart to " . ($qpos-1) . "\n";
+			my $aux_tags = '';
+			
+			my @ll = (
+				$a->qname,
+				$a->flag,
+				$header->target_name()->[$a->tid],
+				$rstart,
+				$a->qual,	
+				$cigar_string,
+				'*', 0, 0, #mate info
+				$qseq, 
+				$qual_string,
+#				$aux_tags
+			);
+			print $fh join("\t", @ll) . "\n";
+			print  join("\t", @ll) . "\n";
+		}
+		
+		#move up to the next match position
+		CIGAR: while ($i < scalar @$cigar_list)
+		{
+			my $c = $cigar_list->[$i];
+			$op = $c->[0];
+			$len = $c->[1];			
+
+			if ($op eq 'I')
+			{
+				$qpos += $len; 
+				$i++;
+			}
+
+			elsif ($op eq 'D')
+			{
+				$rpos += $len; 	
+				$i++;	
+			}
+			
+			elsif ($op eq 'S')
+			{
+				$qpos += $len; 	
+				$i++;	
+			}
+
+			else # 'M'
+			{
+				last CIGAR;
+			}
+		}
+	}
+}
 
 sub _alignments_to_candidate_junctions
 {
 	my ($settings, $summary, $ref_seq_info, $candidate_junctions, $fai, $header, $al_ref) = @_;
 
-	my $verbose = 0;
+	my $verbose = 1;
 		
 	if ($verbose)
 	{
@@ -448,7 +644,6 @@ sub _alignments_to_candidate_junctions
 				$redundant_junction_sides{Breseq::Fastq::revcom($side_2_ref_seq)}->{$junction_coord_2} += $r2-1;
 				
 				my $score = ($a1_unique_length < $a2_unique_length) ? $a1_unique_length : $a2_unique_length;
-				my $begin_length = 
 				
 				push @junctions, { 'list' => \@junction_id_list, 'string' => $junction_seq_string, 'score' => $score, 'read_begin_coord' => $read_begin_coord, 'side_1_ref_seq' => $side_1_ref_seq, 'side_2_ref_seq' => $side_2_ref_seq};
 			}
@@ -561,7 +756,7 @@ sub _alignments_to_candidate_junction
 {
 	my ($settings, $summary, $ref_seq_info, $fai, $header, $a1, $a2, $redundancy_1, $redundancy_2) = @_;
 		
-	my $verbose = 0;
+	my $verbose = 1;
 	#$verbose = $a1->qname eq "30K88AAXX_LenskiSet2:8:3:1374:1537";
 	#$verbose = ($a1->start == 1) || ($a2->start == 1);	
 		
