@@ -180,8 +180,8 @@ sub correct_alignments
 			## Matches to candidate junctions may not overlap the junction.
 			##
 			## Reduce this list to those that overlap ANY PART of the junction.
-			## Keep the ones that only match through the overlap, but do not propagate
-			## to the opposite side, separate because they are only additional
+			## Keep the ones that only match through the overlap but do not propagate
+			## to the opposite side separate, because they are only additional
 			## evidence for predicted junctions and NOT support for the new junction
 			## on their own. (They will also match the original reference genome equally well).
 			###
@@ -1057,9 +1057,8 @@ sub _test_junction
 		score => scalar keys %$count_per_coord_per_strand,
 	};
 
-=comment		
 
-	Old way, requiring certain overlap on each side
+	#Old way, requiring certain overlap on each side
 		
 	## These parameters still need additional testing
 	## and, naturally, they have problems with scaling with the
@@ -1081,11 +1080,16 @@ sub _test_junction
 				|| ($max_min_left < $alignment_on_each_side_min_cutoff)
 				|| ($max_min_right < $alignment_on_each_side_min_cutoff)
 	;
+
+=comment		
+	New way, but we need to have examined the coverage distribution to calibrate what scores to accept!
+	print Dumper($scj);
+	print Dumper($summary);
+	my $new_junction_accept_score_cutoff_1 = $summary->{unique_coverage}->{$scj->{side_1}->{seq_id}}->{new_junction_accept_score_cutoff};
+	my $new_junction_accept_score_cutoff_2 = $summary->{unique_coverage}->{$scj->{side_2}->{seq_id}}->{new_junction_accept_score_cutoff};
+	$failed = ( $test_info->{score} < $new_junction_accept_score_cutoff_1 ) && ( $test_info->{score} < $new_junction_accept_score_cutoff_2 );
 =cut
 
-	my $new_junction_accept_score_cutoff_1 = $summary->{unique_coverage}->{$scj->{side_1}->{seq_id}}->{new_junction_accept_score_cutoff};
-	my $new_junction_accept_score_cutoff_2 = $summary->{unique_coverage}->{$scj->{side_1}->{seq_id}}->{new_junction_accept_score_cutoff};
-	$failed = ( $test_info->{score} < $new_junction_accept_score_cutoff_1 ) && ( $test_info->{score} < $new_junction_accept_score_cutoff_2 );
 	
 	###	
 	### ADD -- NEED TO CORRECT OVERLAP AND ADJUST SCORE HERE, RATHER THAN LATER

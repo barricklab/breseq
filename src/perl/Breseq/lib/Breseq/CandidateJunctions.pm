@@ -108,7 +108,7 @@ sub identify_candidate_junctions
 		{		
 			($al_ref, $last_alignment) = Breseq::Shared::tam_next_read_alignments($tam, $header, $last_alignment);
 			last ALIGNMENT_LIST if (!$al_ref);
-					
+									
 			$i++;
 			print STDERR "    ALIGNED READ:$i\n" if ($i % 10000 == 0);
 
@@ -365,6 +365,13 @@ sub identify_candidate_junctions
 	
 	$summary->{candidate_junction} = $hcs;
 }
+
+sub _split_indel_alignments
+{
+	my ($al_ref) = @_;	
+	return $al_ref;
+}
+
 
 sub _alignments_to_candidate_junctions
 {
