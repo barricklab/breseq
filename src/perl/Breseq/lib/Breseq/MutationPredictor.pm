@@ -739,9 +739,7 @@ sub predict
 	###
 
 	JC: foreach my $j (@jc)
-	{					
-		print Dumper($j);
-				
+	{									
 		## must be on same sequence
 		next JC if ($j->{_side_1}->{seq_id} ne $j->{_side_2}->{seq_id});
 		my $seq_id = $j->{_side_1}->{seq_id};

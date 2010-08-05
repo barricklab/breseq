@@ -274,6 +274,15 @@ sub initialize_2
 		$self->{polymorphism_log10_e_value_cutoff} = 5;
 	}
 	
+	## problems if there are spaces b/c shell removes quotes before we know about them
+	## thus require run names to only use underscores (but when printing output, remove).
+	if ($self->{run_name} =~ m/\s/)
+	{
+		die("Option <--name|-n> must not contain whitespace characters. Please use underscores '_' in place of spaces.\n");
+	}
+	$self->{print_run_name} = $self->{run_name};
+	$self->{print_run_name} =~ s/_/ /g;
+	
 	#######  SETUP FILE NAMES  #######
 	### '#' replaced with read fastq name
 	### '@' replaced by seq_id of reference sequence
@@ -378,7 +387,7 @@ sub initialize_2
 	$self->{log_file_name} = "$self->{output_path}/log.txt";	
 	$self->{index_html_file_name} = "$self->{output_path}/index.html";
 	$self->{summary_html_file_name} = "$self->{output_path}/summary.html";
-	$self->{final_genome_diff_file_name} = "$self->{output_path}/$self->{run_name}.gd";
+	$self->{final_genome_diff_file_name} = "$self->{output_path}/$self->{run_name}.gd";	
 	$self->{evidence_genome_diff_file_name} = "$self->{output_path}/evidence.gd";
 	$self->{local_evidence_path} = "evidence";
 	$self->{evidence_path} = "$self->{output_path}/$self->{local_evidence_path}";

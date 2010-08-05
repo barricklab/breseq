@@ -120,7 +120,7 @@ sub html_index
 	open HTML, ">$file_name" or die "Could not open file: $file_name";    
 
     print HTML start_html(
-			-title => "BRESEQ :: Index" . ($settings->{run_name} ne 'unnamed' ? " :: $settings->{run_name}" : ''), 
+			-title => "BRESEQ :: Index" . ($settings->{print_run_name} ne 'unnamed' ? " :: $settings->{print_run_name}" : ''), 
 			-head  => style({type => 'text/css'}, $header_style_string),
 	);
 	
@@ -128,8 +128,7 @@ sub html_index
 	print HTML breseq_header_string($settings) . p;
     print HTML start_table({-border => 0, -cellspacing => 1, -cellpadding => 5});
 	print HTML Tr(th(), th("fastq read file"), th("reads"), th("bases"), th("longest"));
-	my $total_bases = 0;
-	my $total_reads = 0;
+
 	foreach my $read_file ($settings->read_files)
 	{
 		my $c = $summary->{sequence_conversion}->{reads}->{$read_file};
@@ -137,17 +136,15 @@ sub html_index
 			td(a({-href=>$settings->html_path('error_rates_plot_file_name', {'#'=>$read_file})}, "errors")),
 			td($read_file), 
 			td({-align=>"right"}, commify($c->{num_reads})), 
-			td({-align=>"right"},commify($c->{total_bases})), 
+			td({-align=>"right"},commify($c->{num_bases})), 
 			td($c->{max_read_length} . "&nbsp;bases"), 
 		);
-		$total_bases += $c->{total_bases};
-		$total_reads += $c->{num_reads};
 	}
 	print HTML Tr({-class=>"highlight_table_row"}, 
 		td(),
 		td(b("total")), 
-		td({-align=>"right"},b(commify($total_reads))), 
-		td({-align=>"right"},b(commify($total_bases))), 
+		td({-align=>"right"},b(commify($summary->{sequence_conversion}->{num_bases}))), 
+		td({-align=>"right"},b(commify($summary->{sequence_conversion}->{num_reads}))), 
 		td(b($summary->{sequence_conversion}->{max_read_length} . "&nbsp;bases")), 
 	);
 	print HTML end_table();
@@ -305,7 +302,7 @@ sub html_compare_polymorphisms
 ## Instead, we move them. This is in case the script was
 ## Run multiple times.
 
-sub html_summary_table
+sub html_statistics
 {
 	my ($file_name, $settings, $summary, $times) = @_;
 	
@@ -313,15 +310,9 @@ sub html_summary_table
 	open HTML, ">$file_name" or die "Could not open file: $file_name";    
     
     print HTML start_html(
-			-title => "BRESEQ :: Summary" . ($settings->{run_name} ? " :: $settings->{run_name}" : ''), 
+			-title => "BRESEQ :: Statistics" . ($settings->{print_run_name} ? " :: $settings->{print_run_name}" : ''), 
 			-head  => style({type => 'text/css'}, $header_style_string),
 	);
-    
-#   print HTML h1("Program Options");
-#	print HTML start_table({-width => "100%", -border => 1, -cellspacing => 0, -cellpadding => 3});
-#	print HTML Tr(th("Option"), th("Setting"));
-#	print HTML Tr(td("Fastq quality score style"), td($settings->{quality_type}));
-#	print HTML end_table();
 		
 	## Write times
 	print HTML p . h1("Execution Times");
@@ -333,37 +324,6 @@ sub html_summary_table
 	}
 	my $formatted_total_time = time2string($times->[-1]->{_time} - $times->[0]->{_time});
 	print HTML Tr({-class=>"highlight_table_row"}, td({-colspan=>2}, b("Total Execution Time")), td(b($formatted_total_time)));
-	print HTML end_table();
-
-	print HTML h1("Summary Statistics");
-
-    print HTML h2("Read Sequence Files");
-    print HTML start_table({-width => "100%", -border => 1, -cellspacing => 0, -cellpadding => 3});
-	print HTML Tr(th("File"), th("Reads"), th("Bases"), th("Max Read Length"));
-	my $total_bases = 0;
-	my $total_reads = 0;
-	foreach my $key (sort keys %{$summary->{sequence_conversion}->{reads}})
-	{
-		my $c = $summary->{sequence_conversion}->{reads}->{$key};
-		print HTML Tr(td($key), td($c->{num_reads}), td($c->{total_bases}), td($c->{max_read_length}));
-		$total_bases += $c->{total_bases};
-		$total_reads += $c->{num_reads};
-	}
-	print HTML Tr({-class=>"highlight_table_row"}, td(b("Total")), td(b($total_reads)), td(b($total_bases)), td(b($summary->{sequence_conversion}->{max_read_length})));
-	print HTML end_table();
-
-	## Write reference sequence information
-    print HTML h2("Reference Sequence Files");
-	print HTML start_table({-width => "100%", -border => 1, -cellspacing => 0, -cellpadding => 3});
-	print HTML Tr(th("Accession"), th("Length"), th("Description"));
-	my $total_length = 0;
-	foreach my $seq_id (sort keys %{$summary->{sequence_conversion}->{reference_sequences}})
-	{
-		my $c = $summary->{sequence_conversion}->{reference_sequences}->{$seq_id};
-		print HTML Tr(td($seq_id), td($c->{length}), td($c->{definition}));
-		$total_length+= $c->{length};
-	}	
-	print HTML Tr({-class=>"highlight_table_row"}, td(b("Total")), td(b($total_length)), td());
 	print HTML end_table();
 
 	close HTML;
@@ -604,7 +564,7 @@ sub html_mutation_table_string
 				$output_str.= td({align=>"center"}, $evidence_string) if (!defined $gd_name_list_ref);
 				$output_str.= td({align=>"center"}, nonbreaking($mut->{seq_id})) if (!$one_ref_seq); 
 				$output_str.= td({align=>"right"}, commify($mut->{position}));
-				$output_str.= td({align=>"center"}, nonbreaking("&Delta;" . commify($mut->{size}) . " nt"));
+				$output_str.= td({align=>"center"}, nonbreaking("&Delta;" . commify($mut->{size}) . " bp"));
 				$output_str.= freq_cols(@freq_list);
 				my $annotation_str = '';
 				$annotation_str = "between $mut->{between}" if ($mut->{between});
@@ -621,7 +581,7 @@ sub html_mutation_table_string
 				$output_str.= td({align=>"center"}, $evidence_string) if (!defined $gd_name_list_ref);
 				$output_str.= td({align=>"center"}, nonbreaking($mut->{seq_id})) if (!$one_ref_seq); 
 				$output_str.= td({align=>"right"}, commify($mut->{position}));
-				$output_str.= td({align=>"center"}, nonbreaking("&Delta;$mut->{size} nt&rarr;$mut->{new_seq}"));
+				$output_str.= td({align=>"center"}, nonbreaking("$mut->{size} bp&rarr;$mut->{new_seq}"));
 				$output_str.= freq_cols(@freq_list);
 				$output_str.= td({align=>"center"}, nonbreaking($mut->{gene_position}));
 				$output_str.= td({align=>"center"}, i(nonbreaking($mut->{gene_name})));
@@ -636,7 +596,7 @@ sub html_mutation_table_string
 				$output_str.= td({align=>"center"}, $evidence_string) if (!defined $gd_name_list_ref);
 				$output_str.= td({align=>"center"}, nonbreaking($mut->{seq_id})) if (!$one_ref_seq); 
 				$output_str.= td({align=>"right"}, commify($mut->{position}));
-				$output_str.= td({align=>"center"}, nonbreaking("$mut->{size} nt&rarr;$mut->{region}"));
+				$output_str.= td({align=>"center"}, nonbreaking("$mut->{size} bp&rarr;$mut->{region}"));
 				$output_str.= freq_cols(@freq_list);
 				$output_str.= td({align=>"center"}, nonbreaking($mut->{gene_position}));
 				$output_str.= td({align=>"center"}, i(nonbreaking($mut->{gene_name})));
@@ -684,7 +644,7 @@ sub html_mutation_table_string
 				$output_str.= td({align=>"center"}, $evidence_string) if (!defined $gd_name_list_ref);
 				$output_str.= td({align=>"center"}, nonbreaking($mut->{seq_id})) if (!$one_ref_seq); 
 				$output_str.= td({align=>"right"}, commify($mut->{position}));
-				$output_str.= td({align=>"center"}, nonbreaking(commify($mut->{size}) . " nt inversion"));
+				$output_str.= td({align=>"center"}, nonbreaking(commify($mut->{size}) . " bp inversion"));
 				$output_str.= freq_cols(@freq_list);
 				$output_str.= td({align=>"center"}, "");
 				$output_str.= td({align=>"center"}, i(nonbreaking($mut->{gene_name_1})) . "&darr;" . i(nonbreaking($mut->{gene_name_2})) );
@@ -698,7 +658,7 @@ sub html_mutation_table_string
 				$output_str.= td({align=>"center"}, $evidence_string) if (!defined $gd_name_list_ref);
 				$output_str.= td({align=>"center"}, nonbreaking($mut->{seq_id})) if (!$one_ref_seq); 
 				$output_str.= td({align=>"right"}, commify($mut->{position}));
-				$output_str.= td({align=>"center"}, nonbreaking(commify($mut->{size}) . " nt x $mut->{new_copy_number} amplification"));
+				$output_str.= td({align=>"center"}, nonbreaking(commify($mut->{size}) . " bp x $mut->{new_copy_number} amplification"));
 				$output_str.= freq_cols(@freq_list);
 				$output_str.= td({align=>"center"}, "");
 				$output_str.= td({align=>"center"}, i(nonbreaking($mut->{gene_name})));
@@ -1068,7 +1028,7 @@ sub html_evidence_file
 
  	$interval->{output_path} = $settings->file_name('evidence_path') . "/$interval->{file_name}";	
 	
-	my $title = 'BRESEQ :: Results' . ($settings->{run_name} ne 'unnamed' ? " :: $settings->{run_name}" : ''),
+	my $title = 'BRESEQ :: Results' . ($settings->{print_run_name} ne 'unnamed' ? " :: $settings->{print_run_name}" : ''),
 	
 	open HTML, ">$interval->{output_path}" or die "Could not open file: $interval->{output_path}";
 
