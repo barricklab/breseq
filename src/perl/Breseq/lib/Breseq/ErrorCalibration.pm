@@ -306,11 +306,12 @@ sub analyze_unique_coverage_distribution_file_using_R
 	my ($settings, $unique_only_coverage_file_name, $unique_only_coverage_plot_file_name, $seq_id, $summary) = @_;
 
 	##initialize summary information
-	$summary->{unique_coverage}->{$seq_id}->{nbinom_size_parameter} = 'NA';
-	$summary->{unique_coverage}->{$seq_id}->{nbinom_prob_parameter} = 'NA'; 
+	$summary->{unique_coverage}->{$seq_id}->{nbinom_size_parameter} = 'ND';
+	$summary->{unique_coverage}->{$seq_id}->{nbinom_mean_parameter} = 'ND';
+	$summary->{unique_coverage}->{$seq_id}->{nbinom_prob_parameter} = 'ND'; 
 	$summary->{unique_coverage}->{$seq_id}->{average} = 1;
-	$summary->{unique_coverage}->{$seq_id}->{variance} = 'NA';
-	$summary->{unique_coverage}->{$seq_id}->{dispersion} = 'NA';
+	$summary->{unique_coverage}->{$seq_id}->{variance} = 'ND';
+	$summary->{unique_coverage}->{$seq_id}->{dispersion} = 'ND';
 	$summary->{unique_coverage}->{$seq_id}->{deletion_coverage_propagation_cutoff} = 5;
 
 ## method to avoid R code...
@@ -333,11 +334,13 @@ sub analyze_unique_coverage_distribution_file_using_R
 	## We really want somewhere between these two, try this...
 	my $deletion_propagation_pr_cutoff = 0.05 / sqrt($sequence_length);
 
-	### NEW JUNCTION CUTOFF
-	## Arbitrary value that seems to work....
-	my $new_junction_pr_cutoff = 1/$sequence_length; # *0.05;
-	
+	### NEW JUNCTION COVERAGE CUTOFFS
 
+	## We really want somewhere between these two, try this...
+	my $new_junction_accept_pr_cutoff = 0.01;
+	my $new_junction_keep_pr_cutoff = 0.01 / sqrt($sequence_length);
+	my $new_junction_max_score = int(2 * $summary->{sequence_conversion}->{avg_read_length});
+	
 print RSCRIPT <<EOF;
 #load data
 X<-read.table("$unique_only_coverage_file_name", header=T)
@@ -493,8 +496,12 @@ print(D)
 deletion_propagation_coverage = qnbinom($deletion_propagation_pr_cutoff, size = nb_fit_size, mu = nb_fit_mu)
 print(deletion_propagation_coverage)
 
-new_junction_propagation = qnbinom($new_junction_pr_cutoff, size = nb_fit_size, mu = nb_fit_mu)
-print(new_junction_propagation)
+new_junction_accept_coverage_cutoff = qbinom($new_junction_accept_pr_cutoff, $new_junction_max_score, 1-pnbinom(0, size = nb_fit_size/$new_junction_max_score, mu = nb_fit_mu/$new_junction_max_score))
+print(new_junction_accept_coverage_cutoff)
+
+new_junction_keep_coverage_cutoff = qbinom($new_junction_keep_pr_cutoff, $new_junction_max_score, 1-pnbinom(0,size = nb_fit_size/$new_junction_max_score, mu = nb_fit_mu/$new_junction_max_score))
+print(new_junction_keep_coverage_cutoff)
+
 EOF
 
 	close RSCRIPT;
@@ -515,13 +522,16 @@ EOF
 	#Put these into summary
 	$summary->{unique_coverage}->{$seq_id}->{nbinom_size_parameter} = $lines[0];
 		#prob = size/(size + mu)
+	$summary->{unique_coverage}->{$seq_id}->{nbinom_mean_parameter} = $lines[1];
 	$summary->{unique_coverage}->{$seq_id}->{nbinom_prob_parameter} = $lines[0] / ($lines[0] + $lines[1]); 
 	$summary->{unique_coverage}->{$seq_id}->{average} = $lines[2];
 	$summary->{unique_coverage}->{$seq_id}->{variance} = $lines[3];
 	$summary->{unique_coverage}->{$seq_id}->{dispersion} = $lines[4];
 
 	$summary->{unique_coverage}->{$seq_id}->{deletion_coverage_propagation_cutoff} = $lines[5];
-	$summary->{unique_coverage}->{$seq_id}->{junction_coverage_cutoff} = $lines[6];
+	$summary->{unique_coverage}->{$seq_id}->{new_junction_accept_score_cutoff} = $lines[6];
+	$summary->{unique_coverage}->{$seq_id}->{new_junction_keep_score_cutoff} = $lines[6];
+	
 }
 
 sub save_error_file

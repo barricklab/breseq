@@ -55,7 +55,7 @@ use Getopt::Long;
 use Pod::Usage;
 my ($help, $man, $verbose);
 my ($input_file, $start, $end);
-my $output_file = 'output.html';
+my $output_file;
 
 GetOptions(
 	'help|?' => \$help, 'man' => \$man,
@@ -71,13 +71,29 @@ die "No regions defined.\n" if (scalar @regions == 0);
 die "No BAM file defined.\n" if (!$bam_path);
 die "No fasta file defined.\n" if (!$fasta_path);
 
-open OUT, ">$output_file";
-print OUT start_html(-title => "sam2html");
-
 foreach my $region (@regions)
 {
+	# default output file name
+	my $this_output_file = "$region.html";
+	if (defined $output_file)
+	{
+		#if there is just one region, use this file name straight up
+		$this_output_file = $output_file; 
+		
+		#if more than one region, add the region name to the output setting
+		if (scalar @regions > 1);
+		{
+			$this_output_file .= "/" if (-d $output_file);
+			$this_output_file =. "$region.html";
+		}
+	}
+	
+	
+	open OUT, ">$this_output_file";
+	print OUT start_html(-title => "sam2html");
 	my $ao = Breseq::AlignmentOutput->new;
 	print OUT $ao->html_alignment($bam_path, $fasta_path, $region, {'verbose'=>$verbose});
+	print OUT end_html;
+	close OUT;
 }
-print OUT end_html;
-close OUT;
+
