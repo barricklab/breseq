@@ -435,6 +435,10 @@ sub correct_alignments
 		{
 			my $a = $match->{dominant_alignments}->[0];
 			my $fastq_file_index = $match->{fastq_file_index};
+			
+			print ">>>>" . $a->qname . "\n" if ($verbose);
+			print ">>>>Alignment start-end: " . $a->start . "  " . $a->end . "\n" if ($verbose);
+			
 			foreach my $side (1, 2)
 			{
 				my $side_key = 'side_' . $side;
@@ -448,6 +452,7 @@ sub correct_alignments
 				my $trim = _trim_ambiguous_ends($a, $candidate_junction_header, $candidate_junction_fai);						
 				Breseq::Shared::tam_write_moved_alignment(
 					$RREF, 
+					$candidate_junction_header,
 					$a, 
 					$fastq_file_index, 
 					$item->{"$side_key\_seq_id"}, 
@@ -1130,6 +1135,19 @@ sub _test_junction
 					delete $degenerate_matches_ref->{$test_junction_seq_id}->{$read_name};
 					delete $degenerate_matches_ref->{$test_junction_seq_id} if (scalar keys %{$degenerate_matches_ref->{$test_junction_seq_id}} == 0);
 				}
+				
+				## Keep only the alignment
+##------>		## WE SHOULD ALSO UPDATE THE MAPPING SCORE!
+				my $a;
+				DOMINANT_ALIGNMENT: foreach my $candidate_a (@{$degenerate_match->{dominant_alignments}})
+				{
+					if ($candidate_a->tid == $junction_tid)
+					{
+						$a = $candidate_a;
+						last DOMINANT_ALIGNMENT;
+					}
+				}
+				@{$degenerate_match->{dominant_alignments}} = ($a);
 			}
 			
 			## Failure for this candidate junction...
@@ -1358,8 +1376,9 @@ sub _junction_to_hybrid_list_item
 		total_reads => $jc->{total_reads},
 		flanking_left => $jc->{flanking_left},
 		flanking_right => $jc->{flanking_right},
-	};
-
+		
+		unique_read_sequence => $jc->{unique_read_sequence},
+	};	
 
 	## may want to take only selected of these fields...
 	foreach my $key (keys %$test_info)

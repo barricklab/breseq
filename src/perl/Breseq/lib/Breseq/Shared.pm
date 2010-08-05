@@ -163,6 +163,7 @@ sub tam_write_moved_alignment
 {
 	my (
 		$fh, 					# File handle of TAM file we are writing to
+		$header,
 		$a, 					# CJ: SAM alignment object for the read to the candidate junction
 		$fastq_file_index, 		# which fastq file this read came from
 		$seq_id, 				# REFERENCE: sequence id
@@ -175,11 +176,12 @@ sub tam_write_moved_alignment
 		$trim					# CJ: list with two items, indicating what the trim on each end is
 	) = @_;
 
-	my $verbose = 0;
+	my $verbose = 1;
 	
 	if ($verbose)
 	{
 		print STDERR "qname                 = " . $a->qname . "\n";
+		print STDERR "rname                 = " . $header->target_name()->[$a->tid] . "\n";
 		print STDERR "seq_id                = $seq_id\n";
 		print STDERR "reference_pos	        = $reference_pos\n";
 		print STDERR "reference_strand      = $reference_strand\n";
@@ -549,7 +551,7 @@ sub junction_name_split
 	$item->{side_2}->{strand} = -1 if ($item->{side_2}->{strand} == 0);
 
 	$item->{alignment_overlap} 			= $s[6];
-	$item->{unique_read_string} 		= $s[7];
+	$item->{unique_read_sequence} 		= $s[7];
 
 	$item->{flanking_left} 				= $s[8];
 	$item->{flanking_right} 			= $s[9];

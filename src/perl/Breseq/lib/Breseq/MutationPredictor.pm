@@ -76,7 +76,16 @@ sub new
 =cut
 sub predict
 {
+	our $verbose = 0;
 	our ($self, $settings, $summary, $ref_seq_info, $gd) = @_;
+	
+	## Utility function
+	sub get_sequence
+	{
+		my ($seq_id, $start, $end) = @_;
+		print "Get sequence: $seq_id:$start-$end\n" if ($verbose);
+		return substr $ref_seq_info->{ref_strings}->{$seq_id}, $start-1, $end-$start+1;
+	}
 	
 	###
 	## Junctions => MOB, DEL
@@ -253,8 +262,6 @@ sub predict
 		my $unique_deletion_strand = -$redundant_deletion_side; 
 		my $needed_coord = (defined $r1) ?  $mut->{position}+$mut->{size} : $mut->{position} - 1;
 				
-		my $verbose = 0;				
-
 		JUNCTION: for (my $i=0; $i < scalar @jc; $i++)
 		{
 			my $j = $jc[$i];
@@ -393,8 +400,6 @@ sub predict
 		}
 		@j2_list = sort by_reject_score @j2_list;
 
-		our $verbose = 0;
-
 		## We need to go through all with the same coordinate (or within a certain coordinate stretch?)
 		## because sometimes a failed junction will be in between the successful junctions
 		JC2: foreach my $j2 (@j2_list)
@@ -441,17 +446,10 @@ sub predict
 			
 			## get any unique junction sequence
 			my $j1i = Breseq::Shared::junction_name_split($j1->{key});
-			my $j1_unique_read_string = $j1i->{unique_read_string};
+			my $j1_unique_read_sequence = $j1i->{unique_read_sequence};
 
 			my $j2i = Breseq::Shared::junction_name_split($j2->{key});
-			my $j2_unique_read_string = $j2i->{unique_read_string};
-				
-			sub get_sequence
-			{
-				my ($seq_id, $start, $end) = @_;
-				print "Get sequence: $seq_id:$start-$end\n" if ($verbose);
-				return substr $ref_seq_info->{ref_strings}->{$seq_id}, $start-1, $end-$start+1;
-			}
+			my $j2_unique_read_sequence = $j2i->{unique_read_sequence};
 		
 			## _gap_left and _gap_right also refer to the top strand of the genome
 
@@ -491,7 +489,7 @@ sub predict
 
 			if ($mut->{_gap_left} >= 0)
 			{
-				print "J1 NF:$j1_not_flush_seq U:$j1_unique_read_string\n" if ($verbose);
+				print "J1 NF:$j1_not_flush_seq U:$j1_unique_read_sequence\n" if ($verbose);
 				
 				if ($j1->{"_$j1->{_is_interval}\_read_side"} * $j1->{"$j1->{_is_interval}\_strand"} == -1)
 				{
@@ -500,11 +498,11 @@ sub predict
 				
 				if ($j1->{"_$j1->{_is_interval}\_read_side"} == -1)
 				{
-					$mut->{_gap_left} = $j1_not_flush_seq . $j1_unique_read_string;
+					$mut->{_gap_left} = $j1_not_flush_seq . $j1_unique_read_sequence;
 				}
 				else
 				{
-					$mut->{_gap_left} = $j1_unique_read_string . $j1_not_flush_seq;
+					$mut->{_gap_left} = $j1_unique_read_sequence . $j1_not_flush_seq;
 				}
 				$mut->{_ins_start} = $mut->{_gap_left};
 			}
@@ -542,7 +540,7 @@ sub predict
 			
 			if ($mut->{_gap_right} >= 0)
 			{
-				print "J2 NF:$j2_not_flush_seq U:$j2_unique_read_string\n" if ($verbose);
+				print "J2 NF:$j2_not_flush_seq U:$j2_unique_read_sequence\n" if ($verbose);
 				
 				if ($j2->{"_$j2->{_is_interval}\_read_side"} * $j2->{"$j2->{_is_interval}\_strand"} == -1)
 				{
@@ -551,11 +549,11 @@ sub predict
 				
 				if ($j2->{"_$j2->{_is_interval}\_read_side"} == -1)
 				{
-					$mut->{_gap_right} = $j2_not_flush_seq . $j2_unique_read_string;
+					$mut->{_gap_right} = $j2_not_flush_seq . $j2_unique_read_sequence;
 				}
 				else
 				{
-					$mut->{_gap_right} = $j2_unique_read_string . $j2_not_flush_seq;
+					$mut->{_gap_right} = $j2_unique_read_sequence . $j2_not_flush_seq;
 				}
 				$mut->{_ins_end} = $mut->{_gap_right};
 			}
@@ -735,11 +733,86 @@ sub predict
 			next JC1;
 		}
 	}
+	
+	###
+	## JC evidence => INS, SUB, AMP mutations
+	###
+
+	JC: foreach my $j (@jc)
+	{					
+		print Dumper($j);
+				
+		## must be on same sequence
+		next JC if ($j->{_side_1}->{seq_id} ne $j->{_side_2}->{seq_id});
+		my $seq_id = $j->{_side_1}->{seq_id};
+		
+		## must be in same orientation
+		next JC if ($j->{_side_1}->{strand} != -1);
+		next JC if ($j->{_side_2}->{strand} != +1);
+
+		## We can assume that the lower coordinate will be first since this is NOT a deletion
+		## (which would be handled above)
+		die if ($j->{overlap} > 0);
+		
+		## mutation will always be after this position
+		my $position = $j->{_side_1}->{position};
+		
+		## 'AMP'
+		if (!$j->{unique_read_sequence})
+		{	
+			my $mut = { 
+				type => 'AMP',
+				seq_id => $seq_id,
+				position => $position,
+				size => $j->{_side_1}->{position} - $j->{_side_2}->{position} + 1,
+				new_copy_number => 2,
+				evidence => [$j->{id}], 
+			};			
+			$gd->add($mut);
+		}
+		## 'SUB'
+		elsif ($j->{_side_1}->{position} >= $j->{_side_2}->{position})
+		{
+			my $ref_seq = '';
+			my $new_seq = $j->{unique_read_sequence};
+			if ($j->{_side_1}->{position} >= $j->{_side_2}->{position})
+			{
+				$new_seq = get_sequence (
+					$seq_id,
+					$j->{_side_2}->{position},
+					$j->{_side_1}->{position}
+				);
+			}
+			
+			my $mut = { 
+				type => 'SUB',
+				seq_id => $seq_id,
+				position => $position,
+				size => $j->{_side_1}->{position} - $j->{_side_2}->{position} + 1,
+				new_seq => $new_seq,
+				evidence => [$j->{id}], 
+			};
+			$gd->add($mut);
+		}
+		## 'INS'
+		elsif ($j->{_side_1}->{position} + 1 == $j->{_side_2}->{position})
+		{
+			my $mut = { 
+				type => 'INS',
+				seq_id => $seq_id,
+				position => $position,
+				new_seq => $j->{unique_read_sequence},
+				evidence => [$j->{id}], 
+			};
+			$gd->add($mut);
+		}
+	}
 
 
 	###
 	## Read Alignments => SNP, DEL, INS, SUB
 	###		
+
 
 	##RA that overlap deletions should not be shown
 	my @ra = $gd->list('RA');
