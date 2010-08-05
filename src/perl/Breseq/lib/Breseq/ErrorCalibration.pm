@@ -530,7 +530,7 @@ EOF
 
 	$summary->{unique_coverage}->{$seq_id}->{deletion_coverage_propagation_cutoff} = $lines[5];
 	$summary->{unique_coverage}->{$seq_id}->{new_junction_accept_score_cutoff} = $lines[6];
-	$summary->{unique_coverage}->{$seq_id}->{new_junction_keep_score_cutoff} = $lines[6];
+	$summary->{unique_coverage}->{$seq_id}->{new_junction_keep_score_cutoff} = $lines[7];
 	
 }
 
