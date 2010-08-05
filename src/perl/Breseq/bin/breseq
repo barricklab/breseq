@@ -304,7 +304,7 @@ else
 }
 
 ##
-# Identify candidate junctions reads
+# Identify candidate junctions from split read alignments
 sub identify_candidate_junctions {}
 ##
 
@@ -317,6 +317,9 @@ if (!$settings->{no_junction_prediction})
 	{
 		print STDERR "Identifying candidate junctions...\n";
 		$settings->create_path('candidate_junction_path');	
+		
+		Breseq::CandidateJunction::preprocess_alignments($settings, $summary);
+		
 		Breseq::CandidateJunction::identify_candidate_junctions($settings, $summary, $ref_seq_info);
 		Breseq::Output::record_time("Candidate junction identification");
 		open DONE, ">" . $settings->file_name('candidate_junction_done_file_name');
