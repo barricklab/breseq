@@ -518,7 +518,8 @@ sub _item_to_line
 	@keys = grep { !($_=~ m/^_/) } @keys;
 	@keys = grep { !$ignore{$_} } @keys;
 	@keys = grep { !($_=~ m/^SORT_/) } @keys;
-	
+	@keys = grep { $item->{$_} ne '' } @keys; #ignore empty values
+
 	my @key_value_pairs = map { $_ . "=" . $item->{$_} } @keys;
 	$line .= join "\t", @key_value_pairs;
 	
