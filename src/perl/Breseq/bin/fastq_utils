@@ -66,6 +66,30 @@ $command = "\U$command";
 
 my $output_gd;
 
+if ($command eq 'CLEAN')
+{
+	use Breseq::Fastq;
+	use Getopt::Long;
+	use Pod::Usage;
+	my ($help, $man);
+	my $num_seq_per_file;
+	GetOptions(
+		'help|?' => \$help, 'man' => \$man,
+	) or pod2usage(2);
+	pod2usage(1) if $help;
+	pod2usage(-exitstatus => 0, -verbose => 2) if $man;	
+
+	my ( $input, $output ) = @ARGV;
+
+	my $in_fastq = Breseq::Fastq->new( -file => "<$input");
+	my $out_fastq = Breseq::Fastq->new( -file => ">$output");
+	
+	while ($_ = $in_fastq->next_seq)
+	{	
+		$out_fastq->write_seq($_);
+	}	
+}
+
 if ($command eq 'SOLEXA2SANGER')
 {
 	use Breseq::Fastq;

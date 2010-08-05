@@ -168,26 +168,30 @@ if (!-e $sequence_conversion_done_file_name)
 	##and collect some information about the input read files at the same time
 	print STDERR "  Analyzing fastq read files...\n";
 	my $overall_max_read_length;
+	$s->{num_reads} = 0;
 	foreach my $read_file ($settings->read_files)
 	{
 		print STDERR "    READ FILE::$read_file\n";
 		my $max_read_length;
-		my $total_bases = 0;
+		my $num_bases = 0;
 		my $num_reads = 0;
 		my $fastq_file_name = $settings->read_file_to_fastq_file_name($read_file);	
 		my $in = Breseq::Fastq->new(-file => $fastq_file_name);
 		while (my $seq = $in->next_seq)
 		{
 			my $read_length = length $seq->{seq};
-			$total_bases += $read_length;
+			$num_bases += $read_length;
 			$num_reads++;
 			$max_read_length = $read_length if ((!defined $max_read_length) || ($read_length > $max_read_length));
 		}
-		$s->{reads}->{$read_file}->{total_bases} = $total_bases;
+		$s->{reads}->{$read_file}->{num_bases} = $num_bases;
 		$s->{reads}->{$read_file}->{num_reads} = $num_reads;
 		$s->{reads}->{$read_file}->{max_read_length} = $max_read_length;
 		$overall_max_read_length = $max_read_length if ((!defined $overall_max_read_length) || ($max_read_length > $overall_max_read_length));
+		$s->{num_reads} += $num_reads;
+		$s->{num_bases} += $num_bases;
 	}
+	$s->{avg_read_length} = $s->{num_bases} / $s->{num_reads};
 	$s->{max_read_length} = $overall_max_read_length;
 	$summary->{sequence_conversion} = $s;
 	

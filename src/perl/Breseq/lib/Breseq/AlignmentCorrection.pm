@@ -57,9 +57,6 @@ sub correct_alignments
 	$settings->{no_junction_prediction} = 1 if ( (!-e $candidate_junction_file_name) || (-s $candidate_junction_file_name == 0) );
 	my	$candidate_junction_fai = Bio::DB::Sam::Fai->load($candidate_junction_file_name) if (!$settings->{no_junction_prediction});		
 	
-	my $minimum_best_score = 0;
-	my $minimum_best_score_difference = 0;
-	
 	my %matched_junction;
 	my %degenerate_matches;
 	my $i = 0;
@@ -281,12 +278,12 @@ sub correct_alignments
 				## to certain parts of the reference also creates junctions 
 				if (@$this_candidate_junction_al && !$equal_match_to_reference)
 				{
-					@this_dominant_candidate_junction_al = _alignment_list_to_dominant_best($minimum_best_score, undef, @$this_candidate_junction_al);
+					@this_dominant_candidate_junction_al = _alignment_list_to_dominant_best(@$this_candidate_junction_al);
 				}
 				elsif (@$this_overlap_only_al)
 				{
 					$best_candidate_junction_is_overlap_only = 1;
-					@this_dominant_candidate_junction_al = _alignment_list_to_dominant_best($minimum_best_score, undef, @$this_overlap_only_al);
+					@this_dominant_candidate_junction_al = _alignment_list_to_dominant_best(@$this_overlap_only_al);
 				}
 				
 				$best_match_to_reference = 1 if (scalar @this_dominant_candidate_junction_al == 0);
@@ -328,7 +325,7 @@ sub correct_alignments
 			### best match is to the reference, record in that SAM file.
 			if ($best_match_to_reference && (scalar @$this_reference_al > 0))
 			{
-				_write_reference_matches($settings, $minimum_best_score, $minimum_best_score_difference, $reference_fai, $ref_seq_info, $RREF, $reference_header, $fastq_file_index[$f], @$this_reference_al);
+				_write_reference_matches($settings, $reference_fai, $ref_seq_info, $RREF, $reference_header, $fastq_file_index[$f], @$this_reference_al);
 			}
 
 		} continue {
@@ -356,11 +353,11 @@ sub correct_alignments
 	###
 	my @sorted_junction_ids = sort {-(scalar @{$matched_junction{$a}} <=> scalar @{$matched_junction{$b}})} keys %matched_junction;
 		
-	print "Degenerate matches before handling ones with unique matches: " . (scalar keys %degenerate_matches) . "\n";
+	#print "Degenerate matches before handling ones with unique matches: " . (scalar keys %degenerate_matches) . "\n";
 		
 	foreach my $key (@sorted_junction_ids)
 	{
-		my ($failed, $has_non_overlap_only) = _test_junction($settings, $key, \%matched_junction, \%degenerate_matches, \%junction_test_info, $minimum_best_score, $minimum_best_score_difference, $reference_fai, $ref_seq_info, $RREF, $reference_header, $RCJ, $candidate_junction_header);
+		my ($failed, $has_non_overlap_only) = _test_junction($settings, $summary, $key, \%matched_junction, \%degenerate_matches, \%junction_test_info, $reference_fai, $ref_seq_info, $RREF, $reference_header, $RCJ, $candidate_junction_header);
 		## save the score in the distribution
 		Breseq::Shared::add_score_to_distribution(\@observed_score_distribution, $junction_test_info{$key}->{score});
 
@@ -378,7 +375,7 @@ sub correct_alignments
 		}
 	}
 	
-	print "Degenerate matches after handling ones with unique matches: " . (scalar keys %degenerate_matches) . "\n";
+	#print "Degenerate matches after handling ones with unique matches: " . (scalar keys %degenerate_matches) . "\n";
 	
 	###
 	## Candidate junctions with ONLY degenerate matches
@@ -390,11 +387,8 @@ sub correct_alignments
 		my $key = shift @sorted_junction_ids;
 		
 		print "Trying degenerate $key...\n" if ($verbose);
-
-### Remove if no problems... now they are removed earlier so this should never happen		
-		###next if (!defined $degenerate_matches{$key}); #they can be removed 
 		
-		my ($failed, $has_non_overlap_only) = _test_junction($settings, $key, \%matched_junction, \%degenerate_matches, \%junction_test_info, $minimum_best_score, $minimum_best_score_difference, $reference_fai, $ref_seq_info, $RREF, $reference_header, $RCJ, $candidate_junction_header);
+		my ($failed, $has_non_overlap_only) = _test_junction($settings, $summary, $key, \%matched_junction, \%degenerate_matches, \%junction_test_info, $reference_fai, $ref_seq_info, $RREF, $reference_header, $RCJ, $candidate_junction_header);
 		## save the score in the distribution
 		Breseq::Shared::add_score_to_distribution(\@observed_score_distribution, $junction_test_info{$key}->{score});
 
@@ -515,9 +509,9 @@ sub _test_read_match_requirements
 
 sub _write_reference_matches
 {
-	my ($settings, $minimum_best_score, $minimum_best_score_difference, $reference_fai, $ref_seq_info, $RREF, $reference_header, $fastq_file_index, @reference_al) = @_;
+	my ($settings, $reference_fai, $ref_seq_info, $RREF, $reference_header, $fastq_file_index, @reference_al) = @_;
 	
-	@reference_al = _alignment_list_to_dominant_best($minimum_best_score, $minimum_best_score_difference, @reference_al);
+	@reference_al = _alignment_list_to_dominant_best(@reference_al);
 	
 	my @trims;
 	foreach my $a (@reference_al)
@@ -562,7 +556,11 @@ sub _alignment_list_to_dominant_best
 	###MOVE TO SETTINGS
 	my $minimum_match_length = 28; 
 	
-	my ($minimum_best_score, $minimum_best_score_difference, @al) = @_;
+	### These settings don't really matter
+	my $minimum_best_score = 0; 
+	my $minimum_best_score_difference = 0; 
+
+	my (@al) = @_;
 	return () if (scalar @al <= 0);
 	
 	## require a minimum length of the read to be mapped
@@ -588,7 +586,9 @@ sub _alignment_list_to_dominant_best
 		return () if ($second_best_score + $minimum_best_score_difference >= $best_score)
 	}
 	
-	return splice @al, 0, $last_best+1;
+	my @return_list = splice @al, 0, $last_best+1;	
+	
+	return @return_list;
 }
 
 
@@ -916,9 +916,9 @@ sub _ambiguous_end_offsets_from_sequence
 
 sub _test_junction
 {
-	my ($settings, $junction_seq_id, $matched_junction_ref, $degenerate_matches_ref, $junction_test_info_ref, $minimum_best_score, $minimum_best_score_difference, $reference_fai, $ref_seq_info, $RREF, $reference_header, $RCJ, $candidate_junction_header) = @_;
+	my ($settings, $summary, $junction_seq_id, $matched_junction_ref, $degenerate_matches_ref, $junction_test_info_ref, $reference_fai, $ref_seq_info, $RREF, $reference_header, $RCJ, $candidate_junction_header) = @_;
 
-	print "Testing $junction_seq_id\n";
+	#print "Testing $junction_seq_id\n";
 
 	## variable initialization
 	my $test_info;
@@ -947,12 +947,7 @@ sub _test_junction
 		
 #	print "Junction Candidate: $junction_seq_id Unique Matches: " . (scalar @unique_matches) . " Degenerate Matches: " . (scalar @degenerate_matches) . "\n";
 
-	#### TEST 1: There should be a minimal number of reads supporting the junction
-## There are more intelligent ways to do this.
-#	my $minimum_number_of_reads_for_junction = 3;	
-#	$failed = 1 if (scalar @unique_matches < $minimum_number_of_reads_for_junction);
-
-	#### TEST 2: Reads that goes a certain number of bp into the nonoverlap sequence on each side of the junction on each strand
+	#### TEST 1: Reads that go a certain number of bp into the nonoverlap sequence on each side of the junction on each strand
 	my $max_left_per_strand = { '0'=> 0, '1'=>0 };
 	my $max_right_per_strand = { '0'=> 0, '1'=>0 };
 	my $max_min_left_per_strand = { '0'=> 0, '1'=>0 };
@@ -1061,6 +1056,10 @@ sub _test_junction
 		old_score => $score,
 		score => scalar keys %$count_per_coord_per_strand,
 	};
+
+=comment		
+
+	Old way, requiring certain overlap on each side
 		
 	## These parameters still need additional testing
 	## and, naturally, they have problems with scaling with the
@@ -1069,7 +1068,8 @@ sub _test_junction
 	my $alignment_on_each_side_cutoff = 16; #14
 	my $alignment_on_each_side_cutoff_per_strand = 13; #9
 	my $alignment_on_each_side_min_cutoff = 5;
-		
+
+
 	$failed = 	   ($max_left < $alignment_on_each_side_cutoff) 
 				|| ($max_right < $alignment_on_each_side_cutoff)
 	       		|| ($max_left_per_strand->{'0'} < $alignment_on_each_side_cutoff_per_strand) 
@@ -1081,7 +1081,15 @@ sub _test_junction
 				|| ($max_min_left < $alignment_on_each_side_min_cutoff)
 				|| ($max_min_right < $alignment_on_each_side_min_cutoff)
 	;
+=cut
+
+	my $new_junction_accept_score_cutoff_1 = $summary->{unique_coverage}->{$scj->{side_1}->{seq_id}}->{new_junction_accept_score_cutoff};
+	my $new_junction_accept_score_cutoff_2 = $summary->{unique_coverage}->{$scj->{side_1}->{seq_id}}->{new_junction_accept_score_cutoff};
+	$failed = ( $test_info->{score} < $new_junction_accept_score_cutoff_1 ) && ( $test_info->{score} < $new_junction_accept_score_cutoff_2 );
 	
+	###	
+	### ADD -- NEED TO CORRECT OVERLAP AND ADJUST SCORE HERE, RATHER THAN LATER
+	###
 	
 	### If we passed all the tests, or we were only testing degenerate junctions
 	### add degenerate matches and make them unavailable for other junctions	
@@ -1132,7 +1140,7 @@ sub _test_junction
 				if ($degenerate_match->{degenerate_count} == 0)
 				{					
 					my $this_reference_al = $degenerate_match->{reference_alignments};
-					_write_reference_matches($settings, $minimum_best_score, $minimum_best_score_difference, $reference_fai, $ref_seq_info, $RREF, $reference_header, $fastq_file_index, @$this_reference_al);					
+					_write_reference_matches($settings, $reference_fai, $ref_seq_info, $RREF, $reference_header, $fastq_file_index, @$this_reference_al);					
 				}
 				
 				foreach my $a (@{$degenerate_match->{dominant_alignments}})
@@ -1163,7 +1171,7 @@ sub _test_junction
 		if ($failed)
 		{		
 			my $this_reference_al = $item->{reference_alignments};
-			_write_reference_matches($settings, $minimum_best_score, $minimum_best_score_difference, $reference_fai, $ref_seq_info, $RREF, $reference_header, $fastq_file_index, @$this_reference_al);
+			_write_reference_matches($settings, $reference_fai, $ref_seq_info, $RREF, $reference_header, $fastq_file_index, @$this_reference_al);
 		}
 		
 		## REGARDLESS of success: write matches to the candidate junction SAM file 

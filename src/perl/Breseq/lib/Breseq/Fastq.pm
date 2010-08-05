@@ -132,6 +132,7 @@ sub next_seq
 	$self->{next_line} = readline $self->{fh};
 	chomp $self->{next_line};
 	$new_seq->{seq} = "\U$self->{next_line}";
+	$new_seq->{seq} =~ s/\r//g; #clean sequence
 		
 	#next line is "+"
 	$self->{next_line} = readline $self->{fh};
@@ -140,7 +141,8 @@ sub next_seq
 	$self->{next_line} = readline $self->{fh};
 	chomp $self->{next_line};
 	$new_seq->{qual_chars} = $self->{next_line};
-
+	$new_seq->{qual_chars} =~ s/\r//g; #clean sequence
+	
 	#next line should be next sequence
 	$self->{next_line} = readline $self->{fh};
 	chomp $self->{next_line} if (defined $self->{next_line});
@@ -178,7 +180,7 @@ sub next_seq
 		}
 		$new_seq->{qual_chars} = $new_quals;
 	}
-
+	
 	return $new_seq;
 }
 
@@ -263,7 +265,6 @@ sub predict_format
 		$cdf += $pr;
 		$qual_cdf[$i-$min_qual] = $cdf;				
 		print STDERR "    $i: pr=" . sprintf("%.2f", $pr * 100) . "% cdf=" . sprintf("%.2f", $cdf * 100) . "%\n"  if ($verbose);
-		
 	}
 	
 	##choose fairly conservative cutoffs
