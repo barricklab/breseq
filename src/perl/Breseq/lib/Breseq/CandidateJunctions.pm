@@ -101,7 +101,7 @@ sub identify_candidate_junctions
 		
 		#my $reference_sam_file_name = $settings->file_name('reference_sam_file_name', {'#'=>$read_file});
 		##TESTING
-		my $reference_sam_file_name = $settings->file_name('preprocess_split_sam_file_name', {'#'=>$read_file});
+		my $reference_sam_file_name = $settings->file_name('preprocess_junction_split_sam_file_name', {'#'=>$read_file});
 		
 		my $tam = Bio::DB::Tam->open($reference_sam_file_name) or die("Could not open reference same file: $reference_sam_file_name");		
 		
@@ -375,6 +375,11 @@ sub preprocess_alignments
 {
 	my ($settings, $summary) = @_;	
 
+	#includes best matches as they are
+	my $preprocess_junction_best_sam_file_name = $settings->file_name('preprocess_junction_best_sam_file_name');
+	my $BSAM;
+	open $BSAM, ">$preprocess_junction_best_sam_file_name" or die "Could not open file $preprocess_junction_best_sam_file_name";
+
 	BASE_FILE: foreach my $read_struct ($settings->read_structures)
 	{	
 		my $read_file = $read_struct->{base_name};	
@@ -387,14 +392,9 @@ sub preprocess_alignments
 		my $header = $tam->header_read2($reference_faidx_file_name) or die("Error reading reference fasta index file: $reference_faidx_file_name");		
 
 		#includes all matches, and splits long indels
-		my $preprocess_split_sam_file_name = $settings->file_name('preprocess_split_sam_file_name', {'#'=>$read_file});
+		my $preprocess_junction_split_sam_file_name = $settings->file_name('preprocess_junction_split_sam_file_name', {'#'=>$read_file});
 		my $PSAM;
-		open $PSAM, ">$preprocess_split_sam_file_name" or die;
-
-		#includes best matches as they are
-		my $preprocess_best_sam_file_name = $settings->file_name('preprocess_best_sam_file_name', {'#'=>$read_file});
-		my $BSAM;
-		open $BSAM, ">$preprocess_best_sam_file_name" or die;
+		open $PSAM, ">$preprocess_junction_split_sam_file_name" or die;
 
 		my $last_alignment;
 		my $al_ref;
@@ -478,8 +478,8 @@ sub tam_write_split_alignment
 			$op = $c->[0];
 			$len = $c->[1];
 		
-			print "$cigar_string\n"; 
-			print Dumper($c);
+		#	print "$cigar_string\n"; 
+		#	print Dumper($c);
 			
 			if ($op eq 'S')
 			{
@@ -533,7 +533,7 @@ sub tam_write_split_alignment
 #				$aux_tags
 			);
 			print $fh join("\t", @ll) . "\n";
-			print  join("\t", @ll) . "\n";
+#			print  join("\t", @ll) . "\n";
 		}
 		
 		#move up to the next match position
