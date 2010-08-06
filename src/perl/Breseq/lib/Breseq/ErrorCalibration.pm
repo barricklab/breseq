@@ -52,19 +52,17 @@ our $minimum_error_probability = 1E-256;
 sub count
 {
 	my $verbose = 0;
-	my ($settings, $summary, $ref_seq_info) = @_;
+	my ($settings, $summary, $ref_seq_info, $fasta_key, $reference_key, $distribution_key, $error_counts_key) = @_;
 
-	## for this error method, we don't need to iterate through the sequence and count...
-	return if ($settings->{error_model_method} eq 'QUALITY');
-
-	my $reference_fasta_file_name = $settings->file_name('reference_fasta_file_name');
-	my $reference_bam_file_name = $settings->file_name('reference_bam_file_name');
+	my $reference_fasta_file_name = $settings->file_name($fasta_key);
+	my $reference_bam_file_name = $settings->file_name($reference_key);
 
 	## check to see if error_count++ is available:
 	my $error_count = $settings->ctool('error_count');
 	if ($error_count && !$settings->{perl_error_count}) 
 	{
-		my $coverage_fn = $settings->file_name('unique_only_coverage_distribution_file_name', {'@'=>""});
+		## deal with distribution or error count keys being undefined...
+		my $coverage_fn = $settings->file_name($distribution_key, {'@'=>""});
 		my $outputdir = `dirname $coverage_fn`;
 		chomp $outputdir; $outputdir .= '/';
 		my $readfiles = join(" --readfile ", $settings->read_files);
@@ -249,24 +247,22 @@ sub count
         #$bam->pileup("$seq_id:1-10000", $pileup_function);
 			
 		## save the unique only coverage distribution
-		my $this_unique_only_coverage_distribution_file_name = $settings->file_name('unique_only_coverage_distribution_file_name', {'@'=>$seq_id});
-		save_unique_coverage_distribution_file($this_unique_only_coverage_distribution_file_name, $unique_only_coverage);
+		if (defined $distribution_key)
+		{
+			my $this_unique_only_coverage_distribution_file_name = $settings->file_name($distribution_key, {'@'=>$seq_id});
+			save_unique_coverage_distribution_file($this_unique_only_coverage_distribution_file_name, $unique_only_coverage);
+		}
 	}
 	
-	foreach my $read_file ($settings->read_files)
+	if (defined $error_counts_key)
 	{
-		my $fastq_file_index = $settings->read_file_to_fastq_file_index($read_file);
-		my $this_error_counts_file_name = $settings->file_name('error_counts_file_name', {'#'=> $read_file});
-		save_error_file($this_error_counts_file_name, $error_hash->[$fastq_file_index]);
+		foreach my $read_file ($settings->read_files)
+		{
+			my $fastq_file_index = $settings->read_file_to_fastq_file_index($read_file);
+			my $this_error_counts_file_name = $settings->file_name($error_counts_key, {'#'=> $read_file});
+			save_error_file($this_error_counts_file_name, $error_hash->[$fastq_file_index]);
+		}
 	}
-	
-	# foreach my $read_file ($settings->read_files)
-	# {
-	# 	my $fastq_file_index = $settings->read_file_to_fastq_file_index($read_file);
-	# 	my $this_complex_error_counts_file_name = $settings->file_name('complex_error_counts_file_name', {'#'=> $read_file});
-	# 	save_complex_error_file($this_complex_error_counts_file_name, $complex_error_hash->[$fastq_file_index]);
-	# }
-	
 }
 
 
@@ -288,14 +284,11 @@ sub save_unique_coverage_distribution_file
 
 sub analyze_unique_coverage_distributions
 {
-	my ($settings, $summary, $ref_seq_info) = @_;
+	my ($settings, $summary, $ref_seq_info, $plot_key, $distribution_key, $script_key) = @_;
 
 	foreach my $seq_id (@{$ref_seq_info->{seq_ids}})
-	{
-		my $this_unique_only_coverage_plot_file_name = $settings->file_name('unique_only_coverage_plot_file_name', {'@'=>$seq_id});
-		my $this_unique_only_coverage_distribution_file_name = $settings->file_name('unique_only_coverage_distribution_file_name', {'@'=>$seq_id});
-		
-		analyze_unique_coverage_distribution_file_using_R($settings, $this_unique_only_coverage_distribution_file_name, $this_unique_only_coverage_plot_file_name, $seq_id, $summary);
+	{		
+		analyze_unique_coverage_distribution_file_using_R($settings, $seq_id, $summary, $plot_key, $distribution_key, $script_key);
 	}
 }
 
@@ -303,7 +296,7 @@ sub analyze_unique_coverage_distributions
 ## and adds this information to the $summary
 sub analyze_unique_coverage_distribution_file_using_R
 {
-	my ($settings, $unique_only_coverage_file_name, $unique_only_coverage_plot_file_name, $seq_id, $summary) = @_;
+	my ($settings, $seq_id, $summary, $plot_key, $distribution_key, $script_key) = @_;
 
 	##initialize summary information
 	$summary->{unique_coverage}->{$seq_id}->{nbinom_size_parameter} = 'ND';
@@ -314,11 +307,10 @@ sub analyze_unique_coverage_distribution_file_using_R
 	$summary->{unique_coverage}->{$seq_id}->{dispersion} = 'ND';
 	$summary->{unique_coverage}->{$seq_id}->{deletion_coverage_propagation_cutoff} = 5;
 
-## method to avoid R code...
-## we bail early if in QUALITY mode
-	return if ($settings->{error_model_method} eq 'QUALITY');
-
-	my $unique_coverage_distribution_r_script_file_name = $settings->file_name('unique_coverage_distribution_r_script_file_name', {'@' => $seq_id});
+	my $unique_only_coverage_plot_file_name = $settings->file_name($plot_key, {'@'=>$seq_id});
+	my $unique_only_coverage_distribution_file_name = $settings->file_name($distribution_key, {'@'=>$seq_id});
+	my $unique_coverage_distribution_r_script_file_name = $settings->file_name($script_key, {'@' => $seq_id});
+	
 	open RSCRIPT, ">$unique_coverage_distribution_r_script_file_name" or die "Could not create file: $unique_coverage_distribution_r_script_file_name\n";
 
 	### Define various coverage thresholds...
@@ -335,15 +327,17 @@ sub analyze_unique_coverage_distribution_file_using_R
 	my $deletion_propagation_pr_cutoff = 0.05 / sqrt($sequence_length);
 
 	### NEW JUNCTION COVERAGE CUTOFFS
+	## Arbitrary value that seems to work....
+	my $junction_coverage_pr_cutoff = 1/$sequence_length; # *0.05
 
 	## We really want somewhere between these two, try this...
-	my $new_junction_accept_pr_cutoff = 0.01;
-	my $new_junction_keep_pr_cutoff = 0.01 / sqrt($sequence_length);
-	my $new_junction_max_score = int(2 * $summary->{sequence_conversion}->{avg_read_length});
+	my $junction_accept_pr_cutoff = 0.01;
+	my $junction_keep_pr_cutoff = 0.01 / sqrt($sequence_length);
+	my $junction_max_score = int(2 * $summary->{sequence_conversion}->{avg_read_length});
 	
 print RSCRIPT <<EOF;
 #load data
-X<-read.table("$unique_only_coverage_file_name", header=T)
+X<-read.table("$unique_only_coverage_distribution_file_name", header=T)
 
 #create the distribution vector and fit
 Y<-rep(X\$coverage, X\$n)
@@ -496,11 +490,14 @@ print(D)
 deletion_propagation_coverage = qnbinom($deletion_propagation_pr_cutoff, size = nb_fit_size, mu = nb_fit_mu)
 print(deletion_propagation_coverage)
 
-new_junction_accept_coverage_cutoff = qbinom($new_junction_accept_pr_cutoff, $new_junction_max_score, 1-pnbinom(0, size = nb_fit_size/$new_junction_max_score, mu = nb_fit_mu/$new_junction_max_score))
-print(new_junction_accept_coverage_cutoff)
+junction_coverage_cutoff = qnbinom($junction_coverage_pr_cutoff, size = nb_fit_size, mu = nb_fit_mu)
+print(junction_coverage_cutoff)
 
-new_junction_keep_coverage_cutoff = qbinom($new_junction_keep_pr_cutoff, $new_junction_max_score, 1-pnbinom(0,size = nb_fit_size/$new_junction_max_score, mu = nb_fit_mu/$new_junction_max_score))
-print(new_junction_keep_coverage_cutoff)
+junction_accept_coverage_cutoff = qbinom($junction_accept_pr_cutoff, $junction_max_score, 1-pnbinom(0, size = nb_fit_size/$junction_max_score, mu = nb_fit_mu/$junction_max_score))
+print(junction_accept_coverage_cutoff)
+
+junction_keep_coverage_cutoff = qbinom($junction_keep_pr_cutoff, $junction_max_score, 1-pnbinom(0,size = nb_fit_size/$junction_max_score, mu = nb_fit_mu/$junction_max_score))
+print(junction_keep_coverage_cutoff)
 
 EOF
 
@@ -529,8 +526,9 @@ EOF
 	$summary->{unique_coverage}->{$seq_id}->{dispersion} = $lines[4];
 
 	$summary->{unique_coverage}->{$seq_id}->{deletion_coverage_propagation_cutoff} = $lines[5];
-	$summary->{unique_coverage}->{$seq_id}->{new_junction_accept_score_cutoff} = $lines[6];
-	$summary->{unique_coverage}->{$seq_id}->{new_junction_keep_score_cutoff} = $lines[7];
+	$summary->{unique_coverage}->{$seq_id}->{junction_coverage_cutoff} = $lines[6];
+	$summary->{unique_coverage}->{$seq_id}->{junction_accept_score_cutoff} = $lines[7];
+	$summary->{unique_coverage}->{$seq_id}->{junction_keep_score_cutoff} = $lines[8];
 	
 }
 

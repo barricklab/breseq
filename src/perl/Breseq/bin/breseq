@@ -311,14 +311,54 @@ sub identify_candidate_junctions {}
 
 if (!$settings->{no_junction_prediction})
 {
-	my $candidate_junction_summary_file_name = $settings->file_name('candidate_junction_summary_file_name');
+	$settings->create_path('candidate_junction_path');	
 	
+	my $preprocess_junction_done_file_name = $settings->file_name('preprocess_junction_done_file_name');
+	if (!-e $preprocess_junction_done_file_name)
+	{
+		Breseq::CandidateJunction::preprocess_alignments($settings, $summary);
+		
+		open DONE, ">$preprocess_junction_done_file_name";
+		close DONE;
+	}
+	
+	my $coverage_junction_done_file_name = $settings->file_name('coverage_junction_done_file_name');
+	my $coverage_junction_summary_file_name = $settings->file_name('coverage_junction_summary_file_name');
+	
+	if (!-e $coverage_junction_done_file_name)
+	{
+		my $reference_faidx_file_name = $settings->file_name('reference_faidx_file_name');
+		my $preprocess_junction_best_sam_file_name = $settings->file_name('preprocess_junction_best_sam_file_name');
+		my $coverage_junction_best_bam_file_name = $settings->file_name('coverage_junction_best_bam_file_name');
+		my $coverage_junction_best_bam_prefix = $settings->file_name('coverage_junction_best_bam_prefix');
+		my $coverage_junction_best_bam_unsorted_file_name = $settings->file_name('coverage_junction_best_bam_unsorted_file_name');
+
+		my $samtools = $settings->ctool('samtools');
+
+		Breseq::Shared::system("$samtools import $reference_faidx_file_name $preprocess_junction_best_sam_file_name $coverage_junction_best_bam_unsorted_file_name");
+		Breseq::Shared::system("$samtools sort $coverage_junction_best_bam_unsorted_file_name $coverage_junction_best_bam_prefix");
+		Breseq::Shared::system("$samtools index $coverage_junction_best_bam_file_name");
+		
+		Breseq::ErrorCalibration::count($settings, $summary, $ref_seq_info, 
+			'reference_fasta_file_name', 'coverage_junction_best_bam_file_name', 'coverage_junction_distribution_file_name');
+		
+		my $error_rates_summary_file_name = $settings->file_name('error_rates_summary_file_name');
+		Breseq::ErrorCalibration::analyze_unique_coverage_distributions($settings, $summary, $ref_seq_info, 
+			'coverage_junction_plot_file_name', 'coverage_junction_distribution_file_name', 'coverage_junction_script_file_name');
+
+		Storable::store($summary->{unique_coverage}, $coverage_junction_summary_file_name) or die "Can't store data in file $coverage_junction_summary_file_name!\n";
+		
+		open DONE, ">$coverage_junction_done_file_name";
+		close DONE;
+	}
+	$summary->{preprocess_coverage} = Storable::retrieve($coverage_junction_summary_file_name);
+	die "Can't retrieve data from file $coverage_junction_summary_file_name!\n" if (!$summary->{preprocess_coverage});
+	
+	
+	my $candidate_junction_summary_file_name = $settings->file_name('candidate_junction_summary_file_name');
 	if (!-e $settings->file_name('candidate_junction_done_file_name'))
 	{
 		print STDERR "Identifying candidate junctions...\n";
-		$settings->create_path('candidate_junction_path');	
-		
-		Breseq::CandidateJunction::preprocess_alignments($settings, $summary);
 		
 		Breseq::CandidateJunction::identify_candidate_junctions($settings, $summary, $ref_seq_info);
 		Breseq::Output::record_time("Candidate junction identification");
@@ -327,7 +367,6 @@ if (!$settings->{no_junction_prediction})
 
 		Storable::store($summary->{candidate_junction}, $candidate_junction_summary_file_name) 
 			or die "Can't store data in file $candidate_junction_summary_file_name!\n";
-
 	}
 	else
 	{
@@ -609,7 +648,14 @@ if (!-e $error_counts_done_file_name)
 {
 	$settings->create_path('error_calibration_path');
 	print STDERR "Tabulating error counts...\n";
-	Breseq::ErrorCalibration::count($settings, $summary, $ref_seq_info);
+	
+	my $reference_fasta_file_name = $settings->file_name('reference_fasta_file_name');
+	my $reference_bam_file_name = $settings->file_name('reference_bam_file_name');
+	
+	Breseq::ErrorCalibration::count($settings, $summary, $ref_seq_info,
+		'reference_fasta_file_name', 'reference_bam_file_name', 'unique_only_coverage_distribution_file_name', 'error_rates_file_name');
+	
+	
 	open DONE, ">$error_counts_done_file_name";
 	close DONE;
 }
@@ -632,7 +678,12 @@ if (!-e $error_rates_done_file_name)
 	print STDERR "Calibrating error rates...\n";
 	Breseq::ErrorCalibration::error_counts_to_error_rates($settings, $summary, $ref_seq_info);
 	$summary->{unique_coverage} = {};
-	Breseq::ErrorCalibration::analyze_unique_coverage_distributions($settings, $summary, $ref_seq_info) if (!$settings->{no_deletion_prediction});
+	
+	if (!$settings->{no_deletion_prediction})
+	{
+		Breseq::ErrorCalibration::analyze_unique_coverage_distributions($settings, $summary, $ref_seq_info,
+			'unique_only_coverage_plot_file_name', 'unique_only_coverage_distribution_file_name', 'unique_coverage_distribution_r_script_file_name');	
+	}
 	
 	Storable::store($summary->{unique_coverage}, $error_rates_summary_file_name) or die "Can't store data in file $error_rates_summary_file_name!\n";
 	open DONE, ">$error_rates_done_file_name";

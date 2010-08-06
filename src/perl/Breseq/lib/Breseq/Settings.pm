@@ -309,8 +309,18 @@ sub initialize_2
 	$self->{candidate_junction_path} = "03_candidate_junctions";
 	$self->{candidate_junction_path} = "$self->{base_output_path}/$self->{candidate_junction_path}" if ($self->{base_output_path});
 
-	$self->{preprocess_best_sam_file_name} = "$self->{candidate_junction_path}/#.best.sam";
-	$self->{preprocess_split_sam_file_name} = "$self->{candidate_junction_path}/#.split.sam";
+	$self->{preprocess_junction_best_sam_file_name} = "$self->{candidate_junction_path}/best.sam";
+	$self->{preprocess_junction_split_sam_file_name} = "$self->{candidate_junction_path}/#.split.sam";
+	$self->{preprocess_junction_done_file_name} = "$self->{candidate_junction_path}/preprocess_junction_alignment.done";
+
+	$self->{coverage_junction_best_bam_unsorted_file_name} = "$self->{candidate_junction_path}/best.unsorted.bam";
+	$self->{coverage_junction_best_bam_file_name} = "$self->{candidate_junction_path}/best.bam";
+	$self->{coverage_junction_best_bam_prefix} = "$self->{candidate_junction_path}/best";
+	$self->{coverage_junction_distribution_file_name} = "$self->{candidate_junction_path}/@.unique_only_coverage_distribution.tab";
+	$self->{coverage_junction_plot_file_name} = "$self->{candidate_junction_path}/@.coverage.pdf";
+	$self->{coverage_junction_script_file_name} = "$self->{candidate_junction_path}/@.coverage.r";
+	$self->{coverage_junction_summary_file_name} = "$self->{candidate_junction_path}/coverage.summary.bin";
+	$self->{coverage_junction_done_file_name} = "$self->{candidate_junction_path}/coverage_junction_alignment.done";
 
 	$self->{candidate_junction_summary_file_name} = "$self->{candidate_junction_path}/candidate_junction_summary.bin";	
 	$self->{candidate_junction_fasta_file_name} = "$self->{candidate_junction_path}/candidate_junction.fasta";
@@ -388,9 +398,9 @@ sub initialize_2
 	$self->{index_html_file_name} = "$self->{output_path}/index.html";
 	$self->{summary_html_file_name} = "$self->{output_path}/summary.html";
 	$self->{final_genome_diff_file_name} = "$self->{output_path}/$self->{run_name}.gd";	
-	$self->{evidence_genome_diff_file_name} = "$self->{output_path}/evidence.gd";
 	$self->{local_evidence_path} = "evidence";
 	$self->{evidence_path} = "$self->{output_path}/$self->{local_evidence_path}";
+	$self->{evidence_genome_diff_file_name} = "$self->{evidence_path}/evidence.gd";
 	$self->{local_coverage_plot_path} = "evidence";
 	$self->{coverage_plot_path} = "$self->{output_path}/$self->{local_coverage_plot_path}";
 	$self->{deletions_text_file_name} = "$self->{coverage_plot_path}/deletions.tab";

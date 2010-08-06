@@ -18,7 +18,9 @@ namespace breseq {
 	void error_count(const std::string& bam, 
 									 const std::string& fasta,
 									 const std::string& output_dir,
-									 const std::vector<std::string>& readfiles);
+									 const std::vector<std::string>& readfiles,
+                   const bool do_coverage,
+                   const bool do_errors);
 	
 	
 	/*! Error-counting class.
