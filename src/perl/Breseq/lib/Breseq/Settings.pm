@@ -210,7 +210,11 @@ sub initialize_1
 	$self->{trim_reads} = 0;
 	
 	#used by CandidateJunctions.pm
-	$self->{minimum_candidate_junction_score} = 2;				# Require at least this many start coordinate/strand unique reads to accept a CJ
+	$self->{no_junction_prediction} = undef;		# don't perform junction prediction steps
+	$self->{candidate_junction_score_method} = 'POS_HASH'; 	# Either POS_HASH, or MIN_OVERLAP
+	$self->{preprocess_junction_min_indel_split_length} = 2;	# Split the SAM entries on indels of this many bp or more before identifying CJ
+																# Undefined = OFF
+	$self->{minimum_candidate_junction_score} = 2;				# Require at least this many unique start coordinate/strand reads to accept a CJ
 	$self->{required_unique_length_per_side} = 10;				# Require at least one of the pair of matches supporting a junction to have this
 																# much of its match that is unique in the reference sequence.
 	$self->{maximum_inserted_junction_sequence_length} = 20;	# Ignore junctions with negative overlap (unique inserted sequence between reference 
@@ -221,14 +225,16 @@ sub initialize_1
 	$self->{candidate_junction_read_limit} = undef;		    	# FOR TESTING: only process this many reads when creating candidate junctions
 
 	#used by AlignmentCorrection.pm
-	$self->{add_split_junction_sides} = 1;
-
-	$self->{no_junction_prediction} = undef;		# don't perform junction prediction steps
+	$self->{add_split_junction_sides} = 1;			# Add the sides of passed junctions to the SAM file?
+	
+	
 	$self->{no_mutation_prediction} = undef;		# don't perform read mismatch/indel prediction steps
 	$self->{no_deletion_prediction} = undef;		# don't perform deletion prediction steps
 	$self->{no_alignment_generation} = undef;		# don't generate alignments
 	$self->{alignment_read_limit} = undef;			# only go through this many reads when creating alignments
 	$self->{correction_read_limit} = undef;			# only go through this many reads when correcting alignments
+	
+	## NOT IMPLEMENTED
 	$self->{no_filter_unwanted} = undef;			# don't filter out unwanted reads with adaptor matches
 	$self->{unwanted_prefix} = "UNWANTED:::";	# prefix on unwanted read names
 	

@@ -194,20 +194,6 @@ if (!-e $sequence_conversion_done_file_name)
 	$s->{avg_read_length} = $s->{num_bases} / $s->{num_reads};
 	$s->{max_read_length} = $overall_max_read_length;
 	$summary->{sequence_conversion} = $s;
-	
-
-	### The real way to do this is to add it to the FASTA file...
-	### Create UNWANTED fasta sequence file.
-	# if (!$settings->{no_filter_unwanted}) 
-	# {
-	# 	my $unwanted_sequences_fasta_file_name = $settings->file_name('unwanted_fasta_file_name');
-	# 	open UNWANTED, ">$unwanted_sequences_fasta_file_name" or die "Could not open file $unwanted_sequences_fasta_file_name\n"; 
-	# 	foreach my $key (keys %unwanted_sequences) 
-	# 	{
-	# 		print UNWANTED ">$settings->{unwanted_prefix}$key\n$unwanted_sequences{$key}\n";
-	# 	}
-	# 	close UNWANTED;
-	# }
 		
 	## convert reference sequence to fasta and store other information so it can be reloaded quickly w/o bioperl
 	my @genbank_file_names = $settings->file_name('reference_genbank_file_names'); 
@@ -312,48 +298,59 @@ sub identify_candidate_junctions {}
 if (!$settings->{no_junction_prediction})
 {
 	$settings->create_path('candidate_junction_path');	
-	
-	my $preprocess_junction_done_file_name = $settings->file_name('preprocess_junction_done_file_name');
-	if (!-e $preprocess_junction_done_file_name)
+
+	if ( (defined $settings->{preprocess_junction_min_indel_split_length}) || ($settings->{candidate_junction_score_method} eq 'POS_HASH')) 
 	{
-		Breseq::CandidateJunction::preprocess_alignments($settings, $summary);
+		my $preprocess_junction_done_file_name = $settings->file_name('preprocess_junction_done_file_name');
 		
-		open DONE, ">$preprocess_junction_done_file_name";
-		close DONE;
+	 	if (!-e $preprocess_junction_done_file_name) 
+		{
+			print STDERR "Preprocessing alignments for candidate junction identification.\n";
+			Breseq::CandidateJunction::preprocess_alignments($settings, $summary);
+	
+			open DONE, ">$preprocess_junction_done_file_name";
+			close DONE;
+		}
+		else 
+		{
+			print STDERR "Preprocessing alignments for candidate junction identification already complete.\n";
+		}
 	}
 	
-	my $coverage_junction_done_file_name = $settings->file_name('coverage_junction_done_file_name');
-	my $coverage_junction_summary_file_name = $settings->file_name('coverage_junction_summary_file_name');
-	
-	if (!-e $coverage_junction_done_file_name)
-	{
-		my $reference_faidx_file_name = $settings->file_name('reference_faidx_file_name');
-		my $preprocess_junction_best_sam_file_name = $settings->file_name('preprocess_junction_best_sam_file_name');
-		my $coverage_junction_best_bam_file_name = $settings->file_name('coverage_junction_best_bam_file_name');
-		my $coverage_junction_best_bam_prefix = $settings->file_name('coverage_junction_best_bam_prefix');
-		my $coverage_junction_best_bam_unsorted_file_name = $settings->file_name('coverage_junction_best_bam_unsorted_file_name');
-
-		my $samtools = $settings->ctool('samtools');
-
-		Breseq::Shared::system("$samtools import $reference_faidx_file_name $preprocess_junction_best_sam_file_name $coverage_junction_best_bam_unsorted_file_name");
-		Breseq::Shared::system("$samtools sort $coverage_junction_best_bam_unsorted_file_name $coverage_junction_best_bam_prefix");
-		Breseq::Shared::system("$samtools index $coverage_junction_best_bam_file_name");
+	if ($settings->{candidate_junction_score_method} eq 'POS_HASH')
+	{		
+		my $coverage_junction_done_file_name = $settings->file_name('coverage_junction_done_file_name');
+		my $coverage_junction_summary_file_name = $settings->file_name('coverage_junction_summary_file_name');
 		
-		Breseq::ErrorCalibration::count($settings, $summary, $ref_seq_info, 
-			'reference_fasta_file_name', 'coverage_junction_best_bam_file_name', 'coverage_junction_distribution_file_name');
-		
-		my $error_rates_summary_file_name = $settings->file_name('error_rates_summary_file_name');
-		Breseq::ErrorCalibration::analyze_unique_coverage_distributions($settings, $summary, $ref_seq_info, 
-			'coverage_junction_plot_file_name', 'coverage_junction_distribution_file_name', 'coverage_junction_script_file_name');
+		if (!-e $coverage_junction_done_file_name)
+		{
+			my $reference_faidx_file_name = $settings->file_name('reference_faidx_file_name');
+			my $preprocess_junction_best_sam_file_name = $settings->file_name('preprocess_junction_best_sam_file_name');
+			my $coverage_junction_best_bam_file_name = $settings->file_name('coverage_junction_best_bam_file_name');
+			my $coverage_junction_best_bam_prefix = $settings->file_name('coverage_junction_best_bam_prefix');
+			my $coverage_junction_best_bam_unsorted_file_name = $settings->file_name('coverage_junction_best_bam_unsorted_file_name');
 
-		Storable::store($summary->{unique_coverage}, $coverage_junction_summary_file_name) or die "Can't store data in file $coverage_junction_summary_file_name!\n";
+			my $samtools = $settings->ctool('samtools');
+
+			Breseq::Shared::system("$samtools import $reference_faidx_file_name $preprocess_junction_best_sam_file_name $coverage_junction_best_bam_unsorted_file_name");
+			Breseq::Shared::system("$samtools sort $coverage_junction_best_bam_unsorted_file_name $coverage_junction_best_bam_prefix");
+			Breseq::Shared::system("$samtools index $coverage_junction_best_bam_file_name");
 		
-		open DONE, ">$coverage_junction_done_file_name";
-		close DONE;
+			Breseq::ErrorCalibration::count($settings, $summary, $ref_seq_info, 
+				'reference_fasta_file_name', 'coverage_junction_best_bam_file_name', 'coverage_junction_distribution_file_name', 1);
+		
+			my $error_rates_summary_file_name = $settings->file_name('error_rates_summary_file_name');
+			Breseq::ErrorCalibration::analyze_unique_coverage_distributions($settings, $summary, $ref_seq_info, 
+				'coverage_junction_plot_file_name', 'coverage_junction_distribution_file_name', 'coverage_junction_script_file_name');
+
+			Storable::store($summary->{unique_coverage}, $coverage_junction_summary_file_name) or die "Can't store data in file $coverage_junction_summary_file_name!\n";
+		
+			open DONE, ">$coverage_junction_done_file_name";
+			close DONE;
+		}
+		$summary->{preprocess_coverage} = Storable::retrieve($coverage_junction_summary_file_name);
+		die "Can't retrieve data from file $coverage_junction_summary_file_name!\n" if (!$summary->{preprocess_coverage});
 	}
-	$summary->{preprocess_coverage} = Storable::retrieve($coverage_junction_summary_file_name);
-	die "Can't retrieve data from file $coverage_junction_summary_file_name!\n" if (!$summary->{preprocess_coverage});
-	
 	
 	my $candidate_junction_summary_file_name = $settings->file_name('candidate_junction_summary_file_name');
 	if (!-e $settings->file_name('candidate_junction_done_file_name'))
@@ -755,6 +752,7 @@ if (!-e $output_done_file_name)
 	print STDERR "Creating merged genome diff evidence file...\n";
 
 	## merge all of the evidence GenomeDiff files into one...
+	$settings->create_path('evidence_path');
 	my $jc_genome_diff_file_name = $settings->file_name('jc_genome_diff_file_name');	
 	my $jc_gd = Breseq::GenomeDiff->new( -in => $jc_genome_diff_file_name );
 	my $ra_mc_genome_diff_file_name = $settings->file_name('ra_mc_genome_diff_file_name');	

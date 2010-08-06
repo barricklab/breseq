@@ -44,7 +44,8 @@ sub system
 	my ($command, $silent, $continue) = @_;	
 	print STDERR "[system] $command\n" if (!$silent);
 	my $res = CORE::system $command;
-	die "$res" if ($res && !$continue);
+	print STDERR "Error: $!\nResult code: $res\n" if ($res);
+	die if ($res && !$continue);
 	return $res;
 }
 
