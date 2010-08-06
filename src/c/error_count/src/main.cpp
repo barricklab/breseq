@@ -23,8 +23,10 @@ int main(int argc, char* argv[]) {
 	("bam,b", po::value<string>(), "bam file containing sequences to be aligned")
 	("fasta,f", po::value<string>(), "FASTA file of reference sequence")
 	("output,o", po::value<string>(), "output directory")
-	("readfile,r", po::value<vector<string> >(), "names of readfiles (no extension)");
-
+	("readfile,r", po::value<vector<string> >(), "names of readfiles (no extension)")
+	("coverage", "generate unique coverage distribution output")
+  ("errors", "generate unique error count output");
+  
 	po::variables_map options;
 	po::store(po::parse_command_line(argc, argv, cmdline_options), options);
 	po::notify(options);
@@ -34,8 +36,9 @@ int main(int argc, char* argv[]) {
 		 || !options.count("bam")
 		 || !options.count("fasta")
 		 || !options.count("output")
-		 || !options.count("readfile")) {
-		cout << "Usage: error_count --bam <sequences.bam> --fasta <reference.fasta> --output <path> --readfile <filename>" << endl;
+		 || !options.count("readfile")
+     || (!options.count("coverage") || !options.count("errors")) ) {
+		cout << "Usage: error_count --bam <sequences.bam> --fasta <reference.fasta> --output <path> --readfile <filename> [--coverage] [--errors]" << endl;
 		cout << cmdline_options << endl;
 		return -1;
 	}
@@ -46,8 +49,8 @@ int main(int argc, char* argv[]) {
 												options["fasta"].as<string>(),
 												options["output"].as<string>(),
 												options["readfile"].as<vector<string> >(),
-                      true,   //  options.count("coverage"),
-                      true ); //  options.count("errors"));
+                        options.count("coverage"),
+                        options.count("errors"));
 	} catch(...) {
 		// failed; 
 		return -1;

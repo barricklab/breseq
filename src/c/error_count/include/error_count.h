@@ -33,6 +33,9 @@ namespace breseq {
 		typedef std::map<uint8_t,base_count_t> qual_map_t;
 		typedef std::map<int32_t,qual_map_t> fastq_map_t;
 		
+    bool m_do_coverage;
+    bool m_do_errors;
+    
 		//! Information that is tracked per-sequence.
 		struct sequence_info {
 			/*! Coverage count table.
@@ -47,7 +50,7 @@ namespace breseq {
 		
 		
 		//! Constructor.
-		error_count_pileup(const std::string& bam, const std::string& fasta);
+		error_count_pileup(const std::string& bam, const std::string& fasta, bool do_coverage, bool do_errors);
 		
 		//! Destructor.
 		virtual ~error_count_pileup();		

@@ -99,9 +99,9 @@ sub identify_candidate_junctions
 #		$s->{reads_with_no_matches} = 0; #calculate as total minus number found
 		$s->{reads_with_ambiguous_hybrids} = 0;
 		
-		#my $reference_sam_file_name = $settings->file_name('reference_sam_file_name', {'#'=>$read_file});
-		##TESTING
+		## Decide which input SAM file we are using...
 		my $reference_sam_file_name = $settings->file_name('preprocess_junction_split_sam_file_name', {'#'=>$read_file});
+		$reference_sam_file_name = $settings->file_name('reference_sam_file_name', {'#'=>$read_file}) if ($settings->{candidate_junction_score_method} eq 'POS_HASH');
 		
 		my $tam = Bio::DB::Tam->open($reference_sam_file_name) or die("Could not open reference same file: $reference_sam_file_name");		
 		
@@ -299,21 +299,6 @@ sub identify_candidate_junctions
 			CAND: while (($i < scalar @combined_candidate_junctions) && ($combined_candidate_junctions[$i]->{score} == $current_score))
 			{
 				my $c = $combined_candidate_junctions[$i];
-### TESTING ###									
-#				foreach my $dup (@duplicate_sequences)
-#				{
-#					#is this a subsequence of one already in the list?
-#					if ( ($dup =~ m/$c->{seq}/) || ($dup =~ m/$c->{rc_seq}/) || ($c->{seq} =~ m/$dup/) || ($c->{rc_seq} =~ m/$dup/) ) 
-### TESTING ###					
-#					{
-#						$num_duplicates++;
-#						print "Dup $dup\n$c->{seq}\n" if ($verbose);
-#						next CAND;
-#					}
-#				}
-#				push @duplicate_sequences, $c->{seq};
-### TESTING ###					
-
 				push @list_in_waiting, $c;
 				$add_cj_length += length $c->{seq};
 				
@@ -375,6 +360,9 @@ sub preprocess_alignments
 {
 	my ($settings, $summary) = @_;	
 
+	#get the cutoff for splitting alignments with indels
+	my $min_indel_split_len = $settings->{preprocess_junction_min_indel_split_length};
+
 	#includes best matches as they are
 	my $preprocess_junction_best_sam_file_name = $settings->file_name('preprocess_junction_best_sam_file_name');
 	my $BSAM;
@@ -406,24 +394,34 @@ sub preprocess_alignments
 
 			$i++;
 			print STDERR "    ALIGNED READ:$i\n" if ($i % 10000 == 0);
-
-			#last ALIGNMENT_LIST if (defined $settings->{candidate_junction_read_limit} && ($i > $settings->{candidate_junction_read_limit}));
-
-			_split_indel_alignments($settings, $summary, $header, $PSAM, $BSAM, $al_ref);
+			
+			## for testing...
+			last ALIGNMENT_LIST if (defined $settings->{candidate_junction_read_limit} && ($i > $settings->{candidate_junction_read_limit}));
+			
+			#write split alignments
+			if (defined $min_indel_split_len)
+			{
+				_split_indel_alignments($settings, $summary, $header, $PSAM, $min_indel_split_len, $al_ref);
+			}
+			
+			#write best alignments
+			if ($settings->{candidate_junction_score_method} eq 'POS_HASH')
+			{
+				@$al_ref = Breseq::AlignmentCorrection::_alignment_list_to_dominant_best(@$al_ref);
+				Breseq::Shared::tam_write_read_alignments($BSAM, $header, 0, $al_ref);
+			}
 		}	
 	}		
 }
 
 sub _split_indel_alignments
 {
-	my $min_indel_split_len = 2;
-	my ($settings, $summary, $header, $PSAM, $BSAM, $al_ref) = @_;
-	
-	#write original alignments
-	
+	my ($settings, $summary, $header, $PSAM, $min_indel_split_len, $al_ref) = @_;
+		
 	#copy alignment list
 	my @al = @$al_ref;
 	my @untouched_al;
+	
 	ALIGNMENT: foreach my $a (@$al_ref)
 	{
 		my $split = 0;
@@ -443,16 +441,12 @@ sub _split_indel_alignments
 	
 	#write remaining original alignments
 	Breseq::Shared::tam_write_read_alignments($PSAM, $header, 0, \@untouched_al);
-	
-	#write alignments
-	@al = Breseq::AlignmentCorrection::_alignment_list_to_dominant_best(@$al_ref);
-	Breseq::Shared::tam_write_read_alignments($BSAM, $header, 0, \@al);
 }
 
 sub tam_write_split_alignment
 {
 	my ($fh, $header, $min_indel_split_len, $a) = @_;
-	print $a->qname . "\n";
+	#print $a->qname . "\n";
 	
 	my $qseq = $a->qseq;
 	my $qual_string = join "", map chr($_+33), $a->qscore;

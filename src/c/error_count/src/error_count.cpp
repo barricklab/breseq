@@ -15,8 +15,8 @@
 
 /*! Constructor.
  */
-breseq::error_count_pileup::error_count_pileup(const std::string& bam, const std::string& fasta)
-: breseq::pileup_base(bam, fasta) {
+breseq::error_count_pileup::error_count_pileup(const std::string& bam, const std::string& fasta, bool do_coverage, bool do_errors)
+: breseq::pileup_base(bam, fasta), m_do_coverage(do_coverage), m_do_errors(do_errors) {
 	// reserve enough space for the sequence info:
 	_seq_info.resize(_bam->header->n_targets);
 }
@@ -60,6 +60,11 @@ int breseq::error_count_pileup::callback(uint32_t tid, uint32_t pos, int n, cons
 		// track the number of non-deletion, non-redundant alignments to this reference position:
     ++unique_coverage;
 		
+    // if we are only tracking coverage, go to the next alignment
+    if (!m_do_errors) {
+      continue;
+    }
+    
 		uint32_t reversed = bam1_strand(a); // are we on the reverse strand?
 		uint8_t* qseq = bam1_seq(a); // query sequence (read)
 		int32_t qpos = p->qpos; // position of the alignment in the query
@@ -240,7 +245,7 @@ void breseq::error_count(const std::string& bam,
 												 const std::vector<std::string>& readfiles,
                          const bool do_coverage,
                          const bool do_errors) {
-	error_count_pileup ecp(bam, fasta);
+	error_count_pileup ecp(bam, fasta, do_coverage, do_errors);
 	ecp.pileup();
 	if (do_coverage) ecp.print_coverage(output_dir);
 	if (do_errors) ecp.print_error(output_dir, readfiles);
