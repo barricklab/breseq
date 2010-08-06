@@ -237,9 +237,11 @@ void breseq::error_count_pileup::print_error(const std::string& output_dir, cons
 void breseq::error_count(const std::string& bam, 
 												 const std::string& fasta,
 												 const std::string& output_dir,
-												 const std::vector<std::string>& readfiles) {
+												 const std::vector<std::string>& readfiles,
+                         const bool do_coverage,
+                         const bool do_errors) {
 	error_count_pileup ecp(bam, fasta);
 	ecp.pileup();
-	ecp.print_coverage(output_dir);
-	ecp.print_error(output_dir, readfiles);
+	if (do_coverage) ecp.print_coverage(output_dir);
+	if (do_errors) ecp.print_error(output_dir, readfiles);
 }

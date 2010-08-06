@@ -24,7 +24,7 @@ int main(int argc, char* argv[]) {
 	("fasta,f", po::value<string>(), "FASTA file of reference sequence")
 	("output,o", po::value<string>(), "output directory")
 	("readfile,r", po::value<vector<string> >(), "names of readfiles (no extension)");
-	
+
 	po::variables_map options;
 	po::store(po::parse_command_line(argc, argv, cmdline_options), options);
 	po::notify(options);
@@ -46,8 +46,8 @@ int main(int argc, char* argv[]) {
 												options["fasta"].as<string>(),
 												options["output"].as<string>(),
 												options["readfile"].as<vector<string> >(),
-                        options.count("coverage"),
-                        options.count("errors"));
+                      true,   //  options.count("coverage"),
+                      true ); //  options.count("errors"));
 	} catch(...) {
 		// failed; 
 		return -1;
