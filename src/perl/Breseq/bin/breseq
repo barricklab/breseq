@@ -305,7 +305,7 @@ if (!$settings->{no_junction_prediction})
 		
 	 	if (!-e $preprocess_junction_done_file_name) 
 		{
-			print STDERR "Preprocessing alignments for candidate junction identification.\n";
+			print STDERR "Preprocessing alignments for candidate junction identification...\n";
 			Breseq::CandidateJunction::preprocess_alignments($settings, $summary);
 	
 			open DONE, ">$preprocess_junction_done_file_name";
@@ -322,7 +322,7 @@ if (!$settings->{no_junction_prediction})
 		my $coverage_junction_done_file_name = $settings->file_name('coverage_junction_done_file_name');
 		my $coverage_junction_summary_file_name = $settings->file_name('coverage_junction_summary_file_name');
 		
-		if (!-e $coverage_junction_done_file_name)
+		if ($settings->do_step('coverage_junction_done_file_name', "Preliminary analysis of coverage distribution"))
 		{
 			my $reference_faidx_file_name = $settings->file_name('reference_faidx_file_name');
 			my $preprocess_junction_best_sam_file_name = $settings->file_name('preprocess_junction_best_sam_file_name');
@@ -348,6 +348,7 @@ if (!$settings->{no_junction_prediction})
 			open DONE, ">$coverage_junction_done_file_name";
 			close DONE;
 		}
+		
 		$summary->{preprocess_coverage} = Storable::retrieve($coverage_junction_summary_file_name);
 		die "Can't retrieve data from file $coverage_junction_summary_file_name!\n" if (!$summary->{preprocess_coverage});
 	}
@@ -767,6 +768,7 @@ if (!-e $output_done_file_name)
 	$mp->predict($settings, $summary, $ref_seq_info, $evidence_gd);
 	my $final_genome_diff_file_name = $settings->file_name('final_genome_diff_file_name');
 	$evidence_gd->write($final_genome_diff_file_name);
+	unlink $evidence_genome_diff_file_name;
 
 	Breseq::ReferenceSequence::annotate_mutations($ref_seq_info, $evidence_gd);
 

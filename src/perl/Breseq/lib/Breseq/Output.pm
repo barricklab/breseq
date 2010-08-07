@@ -735,7 +735,15 @@ sub html_read_alignment_table_string
 		$output_str.= td({align => "right"}, $c->{insert_position} );
 		$output_str.= td({align => "center"}, "$c->{ref_base}&rarr;$c->{new_base}" );	
 		$output_str.= td({align => "right"}, sprintf("%4.1f%%", $c->{frequency}*100) );
-		$output_str.= td({align => "right"}, sprintf("%.1f", $c->{quality}) );	# . $fisher_p_value	
+		if ((defined $c->{frequency}) && ($c->{frequency} != 1))
+		{
+			## display extra score data for polymorphisms...
+			$output_str.= td({align => "right"}, nonbreaking(sprintf("%.1f&#124,%.1f&#124,%.1f", $c->{quality}, log($c->{fisher_strand_p_value})/log(10), log($c->{ks_quality_p_value})/log(10))) );	# . $fisher_p_value	
+		}
+		else
+		{
+			$output_str.= td({align => "right"}, nonbreaking(sprintf("%.1f", $c->{quality})) );
+		}
 		my ($top_cov, $bot_cov) = split /\//, $c->{tot_cov};	
 		$output_str.= td({align => "center"}, $top_cov + $bot_cov );
 		$output_str.= td({align => "center"}, nonbreaking($c->{gene_position}) );	
@@ -967,7 +975,7 @@ sub html_new_junction_table_string
 			$output_str.= td( {-align=>"center", -class=>"$annotate_key"}, ($c->{"$key\_strand"} == +1) ? $c->{"$key\_position"} . "&nbsp;=": "=&nbsp;" . $c->{"$key\_position"} );
 			$output_str.= td( {-rowspan=>2, -align=>"center"}, $c->{overlap} );
 			$output_str.= td( {-rowspan=>2, -align=>"center"}, $c->{total_reads} );
-			$output_str.= td( {-rowspan=>2, -align=>"center"}, $c->{score} );
+			$output_str.= td( {-rowspan=>2, -align=>"center"}, b($c->{pos_hash_score}) . br . $c->{min_overlap_score} );
 			$output_str.= td( {-align=>"center", -class=>"$annotate_key"}, nonbreaking($c->{"_$key"}->{gene_position}) );
 			$output_str.= td( {-align=>"center", -class=>"$annotate_key"}, i(nonbreaking($c->{"_$key"}->{gene_name})) );
 			$output_str.= td( {-class=>"$annotate_key"}, $c->{"_$key"}->{gene_product} );

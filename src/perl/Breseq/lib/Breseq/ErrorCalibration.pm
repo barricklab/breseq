@@ -330,8 +330,8 @@ sub analyze_unique_coverage_distribution_file_using_R
 	my $junction_coverage_pr_cutoff = 1/$sequence_length; # *0.05
 
 	## We really want somewhere between these two, try this...
-	my $junction_accept_pr_cutoff = 0.01;
-	my $junction_keep_pr_cutoff = 0.01 / sqrt($sequence_length);
+	my $junction_accept_pr_cutoff = 0.001;
+	my $junction_keep_pr_cutoff = 0.001 / sqrt($sequence_length);
 	my $junction_max_score = int(2 * $summary->{sequence_conversion}->{avg_read_length});
 	
 print RSCRIPT <<EOF;

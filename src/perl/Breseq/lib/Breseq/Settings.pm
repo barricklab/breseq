@@ -214,7 +214,10 @@ sub initialize_1
 	$self->{candidate_junction_score_method} = 'POS_HASH'; 	# Either POS_HASH, or MIN_OVERLAP
 	$self->{preprocess_junction_min_indel_split_length} = 2;	# Split the SAM entries on indels of this many bp or more before identifying CJ
 																# Undefined = OFF
-	$self->{minimum_candidate_junction_score} = 2;				# Require at least this many unique start coordinate/strand reads to accept a CJ
+	$self->{minimum_candidate_junction_pos_hash_score} = 0;		# Require at least this many unique start coordinate/strand reads to accept a CJ
+																# OFF by default, because a fixed number are taken
+	$self->{minimum_candidate_junction_min_overlap_score} = 0;	# Require at least this many unique start coordinate/strand reads to accept a CJ
+																# OFF by default, because a fixed number are taken
 	$self->{required_unique_length_per_side} = 10;				# Require at least one of the pair of matches supporting a junction to have this
 																# much of its match that is unique in the reference sequence.
 	$self->{maximum_inserted_junction_sequence_length} = 20;	# Ignore junctions with negative overlap (unique inserted sequence between reference 
@@ -403,7 +406,7 @@ sub initialize_2
 	$self->{log_file_name} = "$self->{output_path}/log.txt";	
 	$self->{index_html_file_name} = "$self->{output_path}/index.html";
 	$self->{summary_html_file_name} = "$self->{output_path}/summary.html";
-	$self->{final_genome_diff_file_name} = "$self->{output_path}/$self->{run_name}.gd";	
+	$self->{final_genome_diff_file_name} = "$self->{output_path}/output.gd";	
 	$self->{local_evidence_path} = "evidence";
 	$self->{evidence_path} = "$self->{output_path}/$self->{local_evidence_path}";
 	$self->{evidence_genome_diff_file_name} = "$self->{evidence_path}/evidence.gd";
@@ -749,6 +752,22 @@ sub check_installed
 	$self->throw if (!$good_to_go);
 	
 #	return $good_to_go;
+}
+
+
+sub do_step
+{
+	my ($self, $done_key, $message) = @_;
+	
+	my $done_file_name = $self->file_name($done_key);
+	if (!-e $done_file_name)
+	{
+		print STDERR ">>> $message\.\.\. <<<\n";
+		return 1;
+	}
+	
+	print STDERR "--- $message ALREADY DONE ---\n";
+	return 0;
 }
 
 return 1;
