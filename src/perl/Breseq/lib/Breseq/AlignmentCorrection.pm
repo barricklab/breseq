@@ -341,8 +341,11 @@ sub correct_alignments
 	## Determine which junctions are real, prefer ones with most matches
 	###
 	
-	my @accepted_score_distribution;
-	my @observed_score_distribution;
+	my @accepted_pos_hash_score_distribution;
+	my @observed_pos_hash_score_distribution;
+	
+	my @accepted_min_overlap_score_distribution;
+	my @observed_min_overlap_score_distribution;
 	
 	my @passed_junction_ids = (); #re
 	my @rejected_junction_ids = (); #re
@@ -359,7 +362,8 @@ sub correct_alignments
 	{
 		my ($failed, $has_non_overlap_only) = _test_junction($settings, $summary, $key, \%matched_junction, \%degenerate_matches, \%junction_test_info, $reference_fai, $ref_seq_info, $RREF, $reference_header, $RCJ, $candidate_junction_header);
 		## save the score in the distribution
-		Breseq::Shared::add_score_to_distribution(\@observed_score_distribution, $junction_test_info{$key}->{score});
+		Breseq::Shared::add_score_to_distribution(\@observed_pos_hash_score_distribution, $junction_test_info{$key}->{pos_hash_score});
+		Breseq::Shared::add_score_to_distribution(\@observed_min_overlap_score_distribution, $junction_test_info{$key}->{min_overlap_score});
 
 		## only count matches that span overlap
 		if (!$has_non_overlap_only)
@@ -390,7 +394,8 @@ sub correct_alignments
 		
 		my ($failed, $has_non_overlap_only) = _test_junction($settings, $summary, $key, \%matched_junction, \%degenerate_matches, \%junction_test_info, $reference_fai, $ref_seq_info, $RREF, $reference_header, $RCJ, $candidate_junction_header);
 		## save the score in the distribution
-		Breseq::Shared::add_score_to_distribution(\@observed_score_distribution, $junction_test_info{$key}->{score});
+		Breseq::Shared::add_score_to_distribution(\@observed_pos_hash_score_distribution, $junction_test_info{$key}->{pos_hash_score});
+		Breseq::Shared::add_score_to_distribution(\@observed_min_overlap_score_distribution, $junction_test_info{$key}->{min_overlap_score});
 
 		## if it succeeded, then it may have changed the order of the remaining ones by removing some reads...
 		if (!$failed)
@@ -423,7 +428,8 @@ sub correct_alignments
 		$gd->add($item);
 				
 		## save the score in the distribution
-		Breseq::Shared::add_score_to_distribution(\@accepted_score_distribution, $junction_test_info{$key}->{score});
+		Breseq::Shared::add_score_to_distribution(\@accepted_pos_hash_score_distribution, $junction_test_info{$key}->{pos_hash_score});
+		Breseq::Shared::add_score_to_distribution(\@accepted_min_overlap_score_distribution, $junction_test_info{$key}->{min_overlap_score});
 				
 		## Create matches from UNIQUE sides of each match to reference genome
 		## this fixes, for example appearing to not have any coverage at the origin of a circular DNA fragment
@@ -469,8 +475,11 @@ sub correct_alignments
 	}
 	
 	## Save summary statistics
-	$summary->{alignment_correction}->{new_junctions}->{observed_score_distribution} = \@observed_score_distribution;
-	$summary->{alignment_correction}->{new_junctions}->{accepted_score_distribution} = \@accepted_score_distribution;
+	$summary->{alignment_correction}->{new_junctions}->{observed_min_overlap_score_distribution} = \@observed_min_overlap_score_distribution;
+	$summary->{alignment_correction}->{new_junctions}->{accepted_min_overlap_score_distribution} = \@accepted_min_overlap_score_distribution;
+	
+	$summary->{alignment_correction}->{new_junctions}->{observed_pos_hash_score_distribution} = \@observed_pos_hash_score_distribution;
+	$summary->{alignment_correction}->{new_junctions}->{accepted_pos_hash_score_distribution} = \@accepted_pos_hash_score_distribution;
 	
 	my @rejected_hybrid_predictions = ();
 	foreach my $key (@rejected_junction_ids)
@@ -960,7 +969,7 @@ sub _test_junction
 	my $count_per_strand = { '0'=> 0, '1'=>0 };
 	my $total_non_overlap_reads = 0;
 	my $count_per_coord_per_strand;
-	my $score = 0;
+	my $min_overlap_score = 0;
 	
 	## basic information about the junction
 	my $scj = Breseq::Shared::junction_name_split($junction_seq_id);
@@ -1021,12 +1030,12 @@ sub _test_junction
 		###   more principled way of doing things... 
 		if ($this_left < $this_right)
 		{
-			$score += $this_left;
+			$min_overlap_score += $this_left;
 			$max_min_left_per_strand->{$rev_key} = $this_left if ($max_min_left_per_strand->{$rev_key} < $this_left);
 		}
 		else
 		{
-			$score += $this_right;
+			$min_overlap_score += $this_right;
 			$max_min_right_per_strand->{$rev_key} = $this_right if ($max_min_right_per_strand->{$rev_key} < $this_right);
 		}
 	
@@ -1058,8 +1067,8 @@ sub _test_junction
 		coverage_minus => $count_per_strand->{0},
 		coverage_plus => $count_per_strand->{1},
 		total_non_overlap_reads => $total_non_overlap_reads,
-		old_score => $score,
-		score => scalar keys %$count_per_coord_per_strand,
+		min_overlap_score => $min_overlap_score,
+		pos_hash_score => scalar keys %$count_per_coord_per_strand,
 	};
 
 
@@ -1092,7 +1101,7 @@ sub _test_junction
 #	New way, but we need to have examined the coverage distribution to calibrate what scores to accept!
 	my $junction_accept_score_cutoff_1 = $summary->{preprocess_coverage}->{$scj->{side_1}->{seq_id}}->{junction_accept_score_cutoff};
 	my $junction_accept_score_cutoff_2 = $summary->{preprocess_coverage}->{$scj->{side_2}->{seq_id}}->{junction_accept_score_cutoff};
-	$failed = ( $test_info->{score} < $junction_accept_score_cutoff_1 ) && ( $test_info->{score} < $junction_accept_score_cutoff_2 );
+	$failed = ( $test_info->{pos_hash_score} < $junction_accept_score_cutoff_1 ) && ( $test_info->{pos_hash_score} < $junction_accept_score_cutoff_2 );
 	
 	###	
 	### ADD -- NEED TO CORRECT OVERLAP AND ADJUST SCORE HERE, RATHER THAN LATER

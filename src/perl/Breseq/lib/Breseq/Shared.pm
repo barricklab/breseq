@@ -34,7 +34,7 @@ use Breseq::Fastq;
 
 require Exporter;
 our @ISA = qw( Exporter );
-our @EXPORT = qw( 	 );
+our @EXPORT = qw( do_step );
 
 use Data::Dumper;
 
@@ -651,7 +651,6 @@ sub add_score_to_distribution
 	}
 	$distribution_list_ref->[$score]++;
 }
-
 
 
 return 1;

@@ -126,7 +126,7 @@ sub identify_candidate_junctions
 	}		
 	
 	###	
-	## Calculate score for each candidate junction now that we have the complete list of read match support
+	## Calculate pos_hash score for each candidate junction now that we have the complete list of read match support
 	###		
 	
 	JUNCTION_SEQ: foreach my $junction_seq (sort keys %$candidate_junctions)
@@ -134,19 +134,19 @@ sub identify_candidate_junctions
 		JUNCTION_ID: foreach my $junction_id (keys %{$candidate_junctions->{$junction_seq}} )
 		{
 			my $cj = $candidate_junctions->{$junction_seq}->{$junction_id};
-			$cj->{old_score} = $cj->{score};
-			$cj->{score} = scalar keys %{$cj->{read_begin_hash}};
+			$cj->{pos_hash_score} = scalar keys %{$cj->{read_begin_hash}};
 			
 			print ">>>$junction_id\n" if ($verbose);
 			print Dumper($cj->{read_begin_hash}) if ($verbose);
 		}
 	}
-	
-	my @observed_score_distribution;
 		
 	###	
 	## Combine hash into a list, one item for each unique sequence (also joining reverse complements)
 	###		
+	
+	my @observed_pos_hash_score_distribution;
+	my @observed_min_overlap_score_distribution;
 	
 	my @combined_candidate_junctions;
 	my $handled_seq;
@@ -168,7 +168,7 @@ sub identify_candidate_junctions
 			## add redundancy to the $junction_id
 			my $cj = $candidate_junctions->{$junction_seq}->{$junction_id};
 			$junction_id .= $Breseq::Shared::junction_name_separator . $cj->{r1} . $Breseq::Shared::junction_name_separator . $cj->{r2};
-			push @combined_candidate_junction_list, { id=>$junction_id, score=>$cj->{score}, seq=>$junction_seq, rc_seq=>$rc_junction_seq };
+			push @combined_candidate_junction_list, { id=>$junction_id, pos_hash_score=>$cj->{pos_hash_score}, min_overlap_score=>$cj->{min_overlap_score}, seq=>$junction_seq, rc_seq=>$rc_junction_seq };
 		}
 		$handled_seq->{$junction_seq}++;
 		
@@ -180,7 +180,7 @@ sub identify_candidate_junctions
 				## add redundancy to the $junction_id (reversed)
 				my $cj = $candidate_junctions->{$junction_seq}->{$junction_id};
 				$junction_id .= $Breseq::Shared::junction_name_separator . $cj->{r2} . $Breseq::Shared::junction_name_separator . $cj->{r1};
-				push @combined_candidate_junction_list, { id=>$junction_id, score=>$cj->{score}, seq=>$rc_junction_seq, rc_seq=>$junction_seq };
+				push @combined_candidate_junction_list, { id=>$junction_id, pos_hash_score=>$cj->{pos_hash_score}, min_overlap_score=>$cj->{min_overlap_score}, seq=>$rc_junction_seq, rc_seq=>$junction_seq };
 			}
 			$handled_seq->{$rc_junction_seq}++;
 		}
@@ -196,25 +196,21 @@ sub identify_candidate_junctions
 			my $b_uc = ($b_item->{side_1}->{redundant} != 0) ? $b_item->{side_2}->{position} : $b_item->{side_1}->{position};
 			my $b_rc = ($b_item->{side_1}->{redundant} != 0) ? $b_item->{side_1}->{position} : $b_item->{side_2}->{position};
 			
-			return ( -($a->{score} <=> $b->{score}) || ($a_uc <=> $b_uc) || ($a_rc <=> $b_rc));
+			return ( -($a->{pos_hash_score} <=> $b->{pos_hash_score}) || -($a->{min_overlap_score} <=> $b->{min_overlap_score}) || ($a_uc <=> $b_uc) || ($a_rc <=> $b_rc));
 		}
 		@combined_candidate_junction_list = sort by_score_unique_coord @combined_candidate_junction_list;
-		my $best_candidate_junction = $combined_candidate_junction_list[0];
+		my $best_candidate_junction = $combined_candidate_junction_list[0];	
 
+		## Save the score in the distribution
+		Breseq::Shared::add_score_to_distribution(\@observed_pos_hash_score_distribution, $best_candidate_junction->{pos_hash_score});
+		Breseq::Shared::add_score_to_distribution(\@observed_min_overlap_score_distribution, $best_candidate_junction->{min_overlap_score});
 
-### It wins because there is more overlap -- giving it a higher score!!!
-#### DEBUGGING ####
-		my $best_item = Breseq::Shared::junction_name_split($best_candidate_junction->{id});
-		my $best_uc = ($best_item->{side_1}->{redundant} != 0) ? $best_item->{side_2}->{position} : $best_item->{side_1}->{position};
-		print "::::LIST::::\n" . Dumper(@combined_candidate_junction_list) if ($verbose);
-#### DEBUGGING ####		
+		## Check minimum requirements
+		next JUNCTION_SEQ if ($best_candidate_junction->{pos_hash_score} < $settings->{minimum_candidate_junction_pos_hash_score});
+		next JUNCTION_SEQ if ($best_candidate_junction->{min_overlap_score} < $settings->{minimum_candidate_junction_min_overlap_score});
 
-		## save the score in the distribution
-		Breseq::Shared::add_score_to_distribution(\@observed_score_distribution, $best_candidate_junction->{score});
-		
-		next JUNCTION_SEQ if ($best_candidate_junction->{score} < $settings->{minimum_candidate_junction_score});
-		
-		## Make sure it isn't a duplicate junction id -- this shouldn't happen.
+		## Make sure it isn't a duplicate junction id -- this should NEVER happen and causes downstream problem.
+		## <--- Begin sanity check
 		if ($ids_to_print{$best_candidate_junction->{id}})
 		{
 			print STDERR "Attempt to create junction candidate with duplicate id: $combined_candidate_junction_list[0]->{id}\n"; 
@@ -227,10 +223,12 @@ sub identify_candidate_junctions
 			next JUNCTION_SEQ;
 		}
 		$ids_to_print{$best_candidate_junction->{id}} = $best_candidate_junction;
+		## <--- End sanity check
+		
 		push @combined_candidate_junctions, $best_candidate_junction;
 	}
 	
-	@combined_candidate_junctions = sort {-($a->{score} <=> $b->{score}) || (length($a->{seq}) <=> length($b->{seq}))} @combined_candidate_junctions;
+	@combined_candidate_junctions = sort {-($a->{pos_hash_score} <=> $b->{pos_hash_score}) || -($a->{min_overlap_score} <=> $b->{min_overlap_score}) || (length($a->{seq}) <=> length($b->{seq}))} @combined_candidate_junctions;
 	print Dumper(@combined_candidate_junctions) if ($verbose);
 	
 	###
@@ -251,8 +249,9 @@ sub identify_candidate_junctions
 		
 	my @duplicate_sequences;
 	my $cumulative_cj_length = 0;
-	my $lowest_accepted_score = 'NA';
-	
+	my $lowest_accepted_pos_hash_score = 'NA';
+	my $lowest_accepted_min_overlap_score = 'NA';
+
 	## Right now we limit the candidate junctions to have a length no longer than the reference sequence.
 	my $cj_length_limit = int($summary->{sequence_conversion}->{total_reference_sequence_length} * $settings->{maximum_candidate_junction_length_factor});
 	my $maximum_candidate_junctions = $settings->{maximum_candidate_junctions};
@@ -264,8 +263,6 @@ sub identify_candidate_junctions
 	
 	print STDERR "    Initial: Number = " . $total_candidate_junction_number . ", Cumulative Length = " . $total_cumulative_cj_length . " bases\n";
 
-	print Dumper(\@observed_score_distribution) if ($verbose);
-
 	if ((defined $settings->{maximum_candidate_junctions}) && (@combined_candidate_junctions > 0))
 	{	
 		my @remaining_ids = ();
@@ -274,18 +271,20 @@ sub identify_candidate_junctions
 		my $num_duplicates = 0;
 	
 		my $i = 0;
-		my $current_score = $combined_candidate_junctions[$i]->{score};
-	
+		my $current_pos_hash_score = $combined_candidate_junctions[$i]->{pos_hash_score};
+		my $current_min_overlap_score = $combined_candidate_junctions[$i]->{min_overlap_score};
+
 		## Check to make sure that adding everything from the last iteration doesn't put us over any limits...
 		my $new_number = scalar(@remaining_ids) + scalar(@list_in_waiting);
 		my $new_length = $cumulative_cj_length + $add_cj_length;
 		while (	( $new_number <= $minimum_candidate_junctions ) || (($new_length <= $cj_length_limit) && ($new_number <= $maximum_candidate_junctions)) )
-		{			
+		{		
 			## OK, add everything from the last iteration
 			$cumulative_cj_length += $add_cj_length;
 			push @remaining_ids, @list_in_waiting;
-			$lowest_accepted_score = $current_score;
-			
+			$lowest_accepted_pos_hash_score = $current_pos_hash_score;
+			$lowest_accepted_min_overlap_score = $current_min_overlap_score;
+
 			## Zero out what we will add
 			$add_cj_length = 0;
 			@list_in_waiting = ();
@@ -294,9 +293,13 @@ sub identify_candidate_junctions
 			## Check to make sure we haven't exhausted the list
 			last if ($i >= scalar @combined_candidate_junctions);
 
-
-			$current_score = $combined_candidate_junctions[$i]->{score};
-			CAND: while (($i < scalar @combined_candidate_junctions) && ($combined_candidate_junctions[$i]->{score} == $current_score))
+			$current_pos_hash_score = $combined_candidate_junctions[$i]->{pos_hash_score};
+			$current_min_overlap_score = $combined_candidate_junctions[$i]->{min_overlap_score};
+			CANDIDATE: while ( 
+				    ($i < scalar @combined_candidate_junctions) 
+			     && ($combined_candidate_junctions[$i]->{pos_hash_score} == $current_pos_hash_score) 
+			     && ($combined_candidate_junctions[$i]->{min_overlap_score} == $current_min_overlap_score)
+				)
 			{
 				my $c = $combined_candidate_junctions[$i];
 				push @list_in_waiting, $c;
@@ -309,14 +312,14 @@ sub identify_candidate_junctions
 			$new_number = scalar(@remaining_ids) + scalar(@list_in_waiting);
 			$new_length = $cumulative_cj_length + $add_cj_length;
 			
-			print STDERR sprintf("      Testing Score %5d: Number = %4d, Length = %6d, Duplicate = %4d\n", $current_score, (scalar @list_in_waiting), $add_cj_length, $num_duplicates);
+			print STDERR sprintf("      Testing Pos Hash Score = %4d, Min Overlap Score = %4d, Num = %6d, Length = %6d\n", $current_pos_hash_score, $current_min_overlap_score, (scalar @list_in_waiting), $add_cj_length);
 			
 		}
 		@combined_candidate_junctions = @remaining_ids;
 	}
 	
 	my $accepted_candidate_junction_number = scalar @combined_candidate_junctions;
-	print STDERR "    Accepted: Number = $accepted_candidate_junction_number, Score >= $lowest_accepted_score, Cumulative Length = $cumulative_cj_length bases\n";
+	print STDERR "    Accepted: Number = $accepted_candidate_junction_number, Pos Hash Score >= $lowest_accepted_pos_hash_score, Min Overlap Score >= $lowest_accepted_min_overlap_score, Cumulative Length = $cumulative_cj_length bases\n";
 	
 	## Save summary statistics
 	$hcs->{total}->{number} = $total_candidate_junction_number;	
@@ -324,9 +327,11 @@ sub identify_candidate_junctions
 	
 	$hcs->{accepted}->{number} = $accepted_candidate_junction_number;	
 	$hcs->{accepted}->{length} = $cumulative_cj_length;
-	$hcs->{accepted}->{score_cutoff} = $lowest_accepted_score;
+	$hcs->{accepted}->{pos_hash_score_cutoff} = $lowest_accepted_pos_hash_score;
+	$hcs->{accepted}->{min_overlap_score_cutoff} = $lowest_accepted_min_overlap_score;
 	
-	$hcs->{score_distribution} = \@observed_score_distribution;
+	$hcs->{pos_hash_score_distribution} = \@observed_pos_hash_score_distribution;
+	$hcs->{min_overlap_score_distribution} = \@observed_min_overlap_score_distribution;
 	
 	###
 	## Print out the candidate junctions, sorted by the lower coordinate, higher coord, then number
@@ -637,9 +642,9 @@ sub _alignments_to_candidate_junctions
 				$redundant_junction_sides{Breseq::Fastq::revcom($side_1_ref_seq)}->{$junction_coord_1} += $r1-1;
 				$redundant_junction_sides{Breseq::Fastq::revcom($side_2_ref_seq)}->{$junction_coord_2} += $r2-1;
 				
-				my $score = ($a1_unique_length < $a2_unique_length) ? $a1_unique_length : $a2_unique_length;
+				my $min_overlap_score = ($a1_unique_length < $a2_unique_length) ? $a1_unique_length : $a2_unique_length;
 				
-				push @junctions, { 'list' => \@junction_id_list, 'string' => $junction_seq_string, 'score' => $score, 'read_begin_coord' => $read_begin_coord, 'side_1_ref_seq' => $side_1_ref_seq, 'side_2_ref_seq' => $side_2_ref_seq};
+				push @junctions, { 'list' => \@junction_id_list, 'string' => $junction_seq_string, 'min_overlap_score' => $min_overlap_score, 'read_begin_coord' => $read_begin_coord, 'side_1_ref_seq' => $side_1_ref_seq, 'side_2_ref_seq' => $side_2_ref_seq};
 			}
 		}
 	}	
@@ -648,7 +653,6 @@ sub _alignments_to_candidate_junctions
 	return if (scalar @junctions == 0);
 	
 	print $al_ref->[0]->qname . "\n"  if ($verbose);
-	
 	
 	#only now that we've looked through everything can we determine whether the reference sequence matched 
 	#on a side was unique, after correcting for overlap
@@ -661,7 +665,7 @@ sub _alignments_to_candidate_junctions
 		
 		my @junction_id_list = @{$jct->{list}};
 		my $junction_seq_string = $jct->{string};
-		my $score = $jct->{score};
+		my $min_overlap_score = $jct->{min_overlap_score};
 		my $read_begin_coord = $jct->{read_begin_coord};
 
 		my $side_1_ref_seq = $jct->{side_1_ref_seq};
@@ -703,7 +707,7 @@ sub _alignments_to_candidate_junctions
 		}
 		
 		## Update score of junction and the redundancy of each side
-		$cj->{score} += $score;
+		$cj->{min_overlap_score} += $min_overlap_score;
 		$cj->{read_begin_hash}->{$read_begin_coord}++;
 		
 		print "Totals: $total_r1, $total_r2\n" if ($verbose);

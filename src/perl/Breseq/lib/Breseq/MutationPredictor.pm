@@ -359,7 +359,13 @@ sub predict
 		my $b_reject_order = scalar Breseq::GenomeDiff::number_reject_reasons($b);
 
 		## sort by seq_id, position, fewer reject reasons, then score (highest to lowest)
-		return (($a_seq_order <=> $b_seq_order) || ($a_pos <=> $b_pos) || ($a_reject_order <=> $b_reject_order) || -($a->{score} <=> $b->{score}));
+		return (
+			($a_seq_order <=> $b_seq_order) 
+			|| ($a_pos <=> $b_pos) 
+			|| ($a_reject_order <=> $b_reject_order) 
+			|| -($a->{pos_hash_score} <=> $b->{pos_hash_score})
+			|| -($a->{min_overlap_score} <=> $b->{min_overlap_score})
+		);
 	}
 	@jc = sort by_hybrid @jc;
 	
