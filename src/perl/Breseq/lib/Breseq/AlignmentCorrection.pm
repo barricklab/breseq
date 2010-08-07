@@ -1072,13 +1072,11 @@ sub _test_junction
 	};
 
 
-	#Old way, requiring certain overlap on each side
+	#Old way, requiring certain overlap on each side on each strand
 		
 	## These parameters still need additional testing
 	## and, naturally, they have problems with scaling with the
 	## total number of reads...
-
-=comment		
 	
 	my $alignment_on_each_side_cutoff = 16; #14
 	my $alignment_on_each_side_cutoff_per_strand = 13; #9
@@ -1096,22 +1094,18 @@ sub _test_junction
 				|| ($max_min_left < $alignment_on_each_side_min_cutoff)
 				|| ($max_min_right < $alignment_on_each_side_min_cutoff)
 	;
-=cut
 
-#	New way, but we need to have examined the coverage distribution to calibrate what scores to accept!
+	## POS_HASH test
+	## New way, but we need to have examined the coverage distribution to calibrate what scores to accept!
+	
 	my $junction_accept_score_cutoff_1 = $summary->{preprocess_coverage}->{$scj->{side_1}->{seq_id}}->{junction_accept_score_cutoff};
 	my $junction_accept_score_cutoff_2 = $summary->{preprocess_coverage}->{$scj->{side_2}->{seq_id}}->{junction_accept_score_cutoff};
-	$failed = ( $test_info->{pos_hash_score} < $junction_accept_score_cutoff_1 ) && ( $test_info->{pos_hash_score} < $junction_accept_score_cutoff_2 );
+	$failed ||= ( $test_info->{pos_hash_score} < $junction_accept_score_cutoff_1 ) && ( $test_info->{pos_hash_score} < $junction_accept_score_cutoff_2 );
 	
 	###	
-	### ADD -- NEED TO CORRECT OVERLAP AND ADJUST SCORE HERE, RATHER THAN LATER
+	### ADD -- NEED TO CORRECT OVERLAP AND ADJUST NUMBER OF READS SUPPORTING HERE, RATHER THAN LATER
 	###
 	
-	### If we passed all the tests, or we were only testing degenerate junctions
-	### add degenerate matches and make them unavailable for other junctions	
-	### degenerate matches is a hash of junction_ids of read_names
-
-
 	## DEGENERATE JUNCTION MATCHES
 	## ===========================
 	## Determine the fate of degenerate reads that map to this junction
