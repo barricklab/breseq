@@ -254,7 +254,6 @@ if ($settings->do_step('reference_alignment_done_file_name', "Read alignment to 
 			
 			my $reference_sam_file_name = $settings->file_name('reference_sam_file_name', {'#'=>$read_struct->{base_name}});	
 			Breseq::Shared::system("ssaha2 -save $reference_hash_file_name -rtype solexa -ckmer 1  -skip 1 -cut 1000000000 -seeds 1 -output sam_soft -outfile $reference_sam_file_name -multi 1 -mthresh 9 -pair $min,$max $fastq_1 $fastq_2");
-			
 		}
 		
 		##reads are not paired
@@ -311,7 +310,7 @@ if (!$settings->{no_junction_prediction})
 			Breseq::Shared::system("$samtools index $coverage_junction_best_bam_file_name");
 		
 			Breseq::ErrorCalibration::count($settings, $summary, $ref_seq_info, 
-				'reference_fasta_file_name', 'coverage_junction_best_bam_file_name', 'coverage_junction_distribution_file_name', 1);
+				'reference_fasta_file_name', 'coverage_junction_best_bam_file_name', 'coverage_junction_distribution_file_name');
 		
 			my $error_rates_summary_file_name = $settings->file_name('error_rates_summary_file_name');
 			Breseq::ErrorCalibration::analyze_unique_coverage_distributions($settings, $summary, $ref_seq_info, 

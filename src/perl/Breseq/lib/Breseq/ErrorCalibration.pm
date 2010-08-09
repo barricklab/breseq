@@ -52,7 +52,7 @@ our $minimum_error_probability = 1E-256;
 sub count
 {
 	my $verbose = 0;
-	my ($settings, $summary, $ref_seq_info, $fasta_key, $reference_key, $distribution_key, $error_counts_key, $coverage_only) = @_;
+	my ($settings, $summary, $ref_seq_info, $fasta_key, $reference_key, $distribution_key, $error_counts_key) = @_;
 
 	my $reference_fasta_file_name = $settings->file_name($fasta_key);
 	my $reference_bam_file_name = $settings->file_name($reference_key);
@@ -67,7 +67,7 @@ sub count
 		chomp $outputdir; $outputdir .= '/';
 		my $readfiles = join(" --readfile ", $settings->read_files);
 		my $cmdline = "$error_count --bam $reference_bam_file_name --fasta $reference_fasta_file_name --output $outputdir --readfile $readfiles --coverage";
-		$cmdline .= " --errors" if (!$coverage_only);
+		$cmdline .= " --errors" if (defined $error_counts_key);
 		Breseq::Shared::system($cmdline);
 		return; # error_count++ worked, so we're all done here.
 	}
