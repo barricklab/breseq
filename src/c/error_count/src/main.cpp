@@ -37,10 +37,10 @@ int main(int argc, char* argv[]) {
 		 || !options.count("fasta")
 		 || !options.count("output")
 		 || !options.count("readfile")
-     || (!options.count("coverage") || !options.count("errors")) ) {
+     || (!options.count("coverage") && !options.count("errors")) ) {
 		cout << "Usage: error_count --bam <sequences.bam> --fasta <reference.fasta> --output <path> --readfile <filename> [--coverage] [--errors]" << endl;
 		cout << cmdline_options << endl;
-		return -1;
+		exit(0);
 	}
 	
 	// attempt to calculate error calibrations:
