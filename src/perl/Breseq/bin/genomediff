@@ -222,7 +222,7 @@ sub do_annotate
 	my $gd = Breseq::GenomeDiff->new();
 	foreach my $gd_file (@{$settings->{input_genome_diffs}})
 	{
-		my $mutation_info = $gd->read($gd_file);		
+		$gd->read($gd_file);		
 	}	
 		
 	##
@@ -243,6 +243,7 @@ sub do_annotate
 	##	
 
 	my @ra = $gd->filter_used_as_evidence($gd->list('RA'));		
+			
 	@ra = grep { ($_->{frequency} != 0) && ($_->{frequency} != 1) && (!$_->{no_show})  } @ra;
 	@ra = sort { -($a->{quality} <=> $b->{quality}) } @ra;
 	
