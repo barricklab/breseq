@@ -130,14 +130,12 @@ sub sequence_conversion {}
 
 my $ref_seq_info;
 my $sequence_converson_summary_file_name = $settings->file_name('sequence_conversion_summary_file_name');
-my $sequence_conversion_done_file_name = $settings->file_name('sequence_conversion_done_file_name');
 my $ref_seq_info_file_name = $settings->file_name('ref_seq_info_file_name');
-if (!-e $sequence_conversion_done_file_name) 
+$settings->create_path('sequence_conversion_path');
+
+if ($settings->do_step('sequence_conversion_done_file_name', "Read and reference sequence file input"))
 {
-	print STDERR "Read and reference sequence file input...\n";
-	
 	my $s;
-	$settings->create_path('sequence_conversion_path');
 	
 	## realistically, we first need to do some checks on the data
 	## 1) Are they using the correct quality scores. If not, tell them a command to run
@@ -208,14 +206,7 @@ if (!-e $sequence_conversion_done_file_name)
 	
 	## store summary information
 	Storable::store($summary->{sequence_conversion}, $sequence_converson_summary_file_name) or die "Can't store data in file $sequence_converson_summary_file_name!\n";
-	
-	open DONE, ">$sequence_conversion_done_file_name";
-	close DONE;
-	Breseq::Output::record_time("Sequence conversion");
-}
-else
-{
-	print STDERR "Read and reference sequence file input already complete.\n";
+	$settings->done_step('sequence_conversion_done_file_name');
 }
 
 #load this info
@@ -232,10 +223,8 @@ $settings->{total_reference_sequence_length} = $summary->{sequence_conversion}->
 sub alignment_to_reference {}
 ##
 
-my $reference_alignment_done_file_name = $settings->file_name('reference_alignment_done_file_name');
-if (!-e $reference_alignment_done_file_name) 
+if ($settings->do_step('reference_alignment_done_file_name', "Read alignment to reference genome"))
 {
-	print STDERR "Aligning reads to reference genome...\n";	
 	$settings->create_path('reference_alignment_path');
 
 #
@@ -244,7 +233,6 @@ if (!-e $reference_alignment_done_file_name)
 #
 #the lower seed value is important for finding split matches
 #nohup ssaha2 -save REL606_solexa -kmer 13 -skip 2 -seeds 1 -score 12 -cmatch 9 -ckmer 6 -output sam_soft -outfile JEB559_REL606_solexa_3.sam JEB559.fastq >&JEB559_REL606_solexa_3.out &
-
 
 	### create ssaha2 hash
 	my $reference_hash_file_name = $settings->file_name('reference_hash_file_name');
@@ -279,14 +267,7 @@ if (!-e $reference_alignment_done_file_name)
 			Breseq::Shared::system("ssaha2 -save $reference_hash_file_name -rtype solexa -ckmer 1 -skip 1 -cut 1000000000 -seeds 1 -output sam_soft -outfile $reference_sam_file_name $read_fastq_file");		
 		}
 	}
-
-	open DONE, ">$reference_alignment_done_file_name";
-	close DONE;
-	Breseq::Output::record_time("reference alignment");
-}
-else
-{
-	print STDERR "Reference alignment already exists.\n";
+	$settings->done_step('reference_alignment_done_file_name');
 }
 
 ##
@@ -307,15 +288,12 @@ if (!$settings->{no_junction_prediction})
 		{
 			print STDERR "Preprocessing alignments for candidate junction identification...\n";
 			Breseq::CandidateJunction::preprocess_alignments($settings, $summary);
-	
-			open DONE, ">$preprocess_junction_done_file_name";
-			close DONE;
+			$settings->done_step('preprocess_junction_done_file_name');
 		}
 	}
 	
 	if ($settings->{candidate_junction_score_method} eq 'POS_HASH')
 	{		
-		my $coverage_junction_done_file_name = $settings->file_name('coverage_junction_done_file_name');
 		my $coverage_junction_summary_file_name = $settings->file_name('coverage_junction_summary_file_name');
 		
 		if ($settings->do_step('coverage_junction_done_file_name', "Preliminary analysis of coverage distribution"))
@@ -340,41 +318,29 @@ if (!$settings->{no_junction_prediction})
 				'coverage_junction_plot_file_name', 'coverage_junction_distribution_file_name', 'coverage_junction_script_file_name');
 
 			Storable::store($summary->{unique_coverage}, $coverage_junction_summary_file_name) or die "Can't store data in file $coverage_junction_summary_file_name!\n";
-		
-			open DONE, ">$coverage_junction_done_file_name";
-			close DONE;
+			$settings->done_step('coverage_junction_done_file_name');
 		}
 		
 		$summary->{preprocess_coverage} = Storable::retrieve($coverage_junction_summary_file_name);
 		die "Can't retrieve data from file $coverage_junction_summary_file_name!\n" if (!$summary->{preprocess_coverage});
 	}
 	
-	my $candidate_junction_summary_file_name = $settings->file_name('candidate_junction_summary_file_name');
-	if (!-e $settings->file_name('candidate_junction_done_file_name'))
+	my $candidate_junction_summary_file_name = $settings->file_name('candidate_junction_summary_file_name');	
+	if ($settings->do_step('candidate_junction_summary_file_name', "Identifying candidate junctions"))
 	{
 		print STDERR "Identifying candidate junctions...\n";
 		
 		Breseq::CandidateJunction::identify_candidate_junctions($settings, $summary, $ref_seq_info);
 		Breseq::Output::record_time("Candidate junction identification");
-		open DONE, ">" . $settings->file_name('candidate_junction_done_file_name');
-		close DONE;
+		$settings->done_step('candidate_junction_done_file_name');
 
 		Storable::store($summary->{candidate_junction}, $candidate_junction_summary_file_name) 
 			or die "Can't store data in file $candidate_junction_summary_file_name!\n";
-	}
-	else
-	{
-		print STDERR "Identifying candidate junctions already complete.\n";
 	}
 	
 	#load this info
 	$summary->{candidate_junction} = Storable::retrieve($candidate_junction_summary_file_name);
 	die "Can't retrieve data from file $candidate_junction_summary_file_name!\n" if (!$summary->{candidate_junction});
-}
-else
-{
-	print STDERR "Skipping identifying candidate junctions.\n";
-}
 
 		
 ##
@@ -382,11 +348,8 @@ else
 sub candidate_junction_alignment {}
 ##
 
-if (!$settings->{no_junction_prediction})
-{
-	if (!-e $settings->file_name('candidate_junction_alignment_done_file_name'))
+	if ($settings->do_step('candidate_junction_alignment_done_file_name', "Candidate junction alignment"))
 	{
-		print STDERR "Finding matches to candidate junctions...\n";
 		$settings->create_path('candidate_junction_alignment_path');	
 
 		### create ssaha2 hash
@@ -418,19 +381,8 @@ if (!$settings->{no_junction_prediction})
 				close EMPTY;
 			}
 		}
-	
-	
-		open DONE, ">" . $settings->file_name('candidate_junction_alignment_done_file_name');
-		close DONE;
+		$settings->done_step('candidate_junction_alignment_done_file_name');
 	}
-	else
-	{
-		print STDERR "Finding matches to candidate junctions already complete.\n";
-	}
-}
-else
-{
-	print STDERR "Skipping candidate junction alignment.\n";
 }
 
 ##
@@ -439,25 +391,18 @@ sub alignment_correction {}
 ##
 
 my @hybrids;
-my $alignment_correction_done_file_name = $settings->file_name('alignment_correction_done_file_name');
-if (!-e $alignment_correction_done_file_name)
+my $alignment_correction_summary_file_name = $settings->file_name('alignment_correction_summary_file_name');	
+if ($settings->do_step('alignment_correction_done_file_name', "Resolving alignments with candidate junctions and trimming ambiguous ends"))
 {
-	print STDERR "Resolving alignments with candidate junctions and trimming ambiguous ends...\n";
 	$settings->create_path('alignment_correction_path');		
 	Breseq::AlignmentCorrection::correct_alignments($settings, $summary, $ref_seq_info);
 	my $alignment_correction_summary_file_name = $settings->file_name('alignment_correction_summary_file_name');	
 	Storable::store($summary->{alignment_correction}, $alignment_correction_summary_file_name) 
 		or die "Can't store data in file $alignment_correction_summary_file_name!\n";	
 	Breseq::Output::record_time("Resolve candidate junctions");
-	open DONE, ">$alignment_correction_done_file_name";
-	close DONE;
+	$settings->done_step('alignment_correction_done_file_name');
 }
-else
-{
-	print STDERR "Resolving alignments to candidate junctions and trimming ambiguous ends already complete.\n";
-	my $alignment_correction_summary_file_name = $settings->file_name('alignment_correction_summary_file_name');	
-	$summary->{alignment_correction} = Storable::retrieve($alignment_correction_summary_file_name) if (-e $alignment_correction_summary_file_name);
-}	
+$summary->{alignment_correction} = Storable::retrieve($alignment_correction_summary_file_name) if (-e $alignment_correction_summary_file_name);
 
 
 ##
@@ -465,11 +410,8 @@ else
 sub bam_creation {}
 ##
 
-my $bam_done_file_name = $settings->file_name('bam_done_file_name');
-if (!-e $bam_done_file_name)
-{
-	print STDERR "Creating BAM files...\n";
-	
+if ($settings->do_step('bam_done_file_name', "Creating BAM files"))
+{	
 	$settings->create_path('bam_path');		
 	
 	my $reference_faidx_file_name = $settings->file_name('reference_faidx_file_name');
@@ -498,21 +440,10 @@ if (!-e $bam_done_file_name)
 	Breseq::Shared::system("$samtools sort $reference_bam_unsorted_file_name $reference_bam_prefix");
 	Breseq::Shared::system("$samtools index $reference_bam_file_name");
 		
-	#Might be better to check for existence of these output files manually, as samtools does not always return an error code.
-	
-	Breseq::Output::record_time("BAM file creation");
-	open DONE, ">$bam_done_file_name";
-	close DONE;
+	$settings->done_step('bam_done_file_name');
 }
-else
-{
-	print STDERR "BAM file creation already complete.\n";
-}
-
-
 
 sub tabulate_pairs_in_tam {}
-
 {
 	my @rs = $settings->read_structures;
 		
@@ -638,10 +569,9 @@ sub error_count {}
 ##
 
 my $error_counts_done_file_name = $settings->file_name('error_counts_done_file_name');
-if (!-e $error_counts_done_file_name) 
+if ($settings->do_step('error_counts_done_file_name', "Tabulating error counts"))
 {
 	$settings->create_path('error_calibration_path');
-	print STDERR "Tabulating error counts...\n";
 	
 	my $reference_fasta_file_name = $settings->file_name('reference_fasta_file_name');
 	my $reference_bam_file_name = $settings->file_name('reference_bam_file_name');
@@ -649,13 +579,7 @@ if (!-e $error_counts_done_file_name)
 	Breseq::ErrorCalibration::count($settings, $summary, $ref_seq_info,
 		'reference_fasta_file_name', 'reference_bam_file_name', 'unique_only_coverage_distribution_file_name', 'error_rates_file_name');
 	
-	
-	open DONE, ">$error_counts_done_file_name";
-	close DONE;
-}
-else 
-{
-	print STDERR "Tabulating error counts already complete.\n";
+	$settings->done_step('error_counts_done_file_name');
 }
 
 
@@ -664,12 +588,11 @@ else
 sub error_rates {}
 ##
 
-my $error_rates_done_file_name = $settings->file_name('error_rates_done_file_name');
+$settings->create_path('output_path'); ##need output for plots	
 my $error_rates_summary_file_name = $settings->file_name('error_rates_summary_file_name');
-if (!-e $error_rates_done_file_name) 
+
+if ($settings->do_step('error_rates_done_file_name', "Calibrating error rates"))
 {
-	$settings->create_path('output_path'); ##need output for plots	
-	print STDERR "Calibrating error rates...\n";
 	Breseq::ErrorCalibration::error_counts_to_error_rates($settings, $summary, $ref_seq_info);
 	$summary->{unique_coverage} = {};
 	
@@ -680,12 +603,7 @@ if (!-e $error_rates_done_file_name)
 	}
 	
 	Storable::store($summary->{unique_coverage}, $error_rates_summary_file_name) or die "Can't store data in file $error_rates_summary_file_name!\n";
-	open DONE, ">$error_rates_done_file_name";
-	close DONE;
-}
-else 
-{
-	print STDERR "Calibrating error model already complete.\n";
+	$settings->done_step('error_rates_done_file_name');
 }
 $summary->{unique_coverage} = Storable::retrieve($error_rates_summary_file_name);
 die "Can't retrieve data from file $error_rates_summary_file_name!\n" if (!$summary->{unique_coverage});
@@ -701,46 +619,29 @@ my @mutations;
 my @deletions;
 my @unknowns;
 
-my $mutation_identification_done_file_name = $settings->file_name('mutation_identification_done_file_name');
-
 if (!$settings->{no_mutation_prediction})
 {
-	if (!-e $mutation_identification_done_file_name)
-	{		
-		print STDERR "Collecting and evaluating within-read mutations...\n";
+	$settings->create_path('mutation_identification_path');
 	
-		$settings->create_path('mutation_identification_path');
-	
-		##
-		# Load error rates
-		##
+	if ($settings->do_step('mutation_identification_done_file_name', "Read alignment mutations"))
+	{			
 		my $error_rates = Breseq::ErrorCalibration::load_error_rates($settings, $summary, $ref_seq_info);
-	
-		##
-		# Predict SNPS, indels within reads, and large deletions
-		#   this function handles all file creation...
-		##
 		Breseq::MutationIdentification::identify_mutations($settings, $summary, $ref_seq_info, $error_rates);
-	
-		open DONE, ">$mutation_identification_done_file_name";
-		close DONE;
+		$settings->done_step('mutation_identification_done_file_name');
 	}
 
 	my $polymorphism_statistics_done_file_name = $settings->file_name('polymorphism_statistics_done_file_name');
-	if ($settings->{polymorphism_prediction} && !-e $polymorphism_statistics_done_file_name)
+	if ($settings->{polymorphism_prediction} && $settings->do_step('polymorphism_statistics_done_file_name', "Polymorphism statistics"))
 	{
 		Breseq::MutationIdentification::polymorphism_statistics($settings, $summary, $ref_seq_info);
-
-		open DONE, ">$polymorphism_statistics_done_file_name";
-		close DONE;
+		$settings->done_step('polymorphism_statistics_done_file_name');
 	}
 }
 
 #rewire which GenomeDiff we get data from if we have the elaborated polymorphism_statistics version
 $settings->{ra_mc_genome_diff_file_name} = $settings->{polymorphism_statistics_ra_mc_genome_diff_file_name} if ($settings->{polymorphism_prediction});
 
-my $output_done_file_name = $settings->file_name('output_done_file_name');	
-if (!-e $output_done_file_name)
+if ($settings->do_step('output_done_file_name', "Output"))
 {
 	###
 	## Output Genome Diff File
@@ -756,7 +657,31 @@ if (!-e $output_done_file_name)
 	my $ra_mc_gd = Breseq::GenomeDiff->new( -in => $ra_mc_genome_diff_file_name);
 	my $evidence_genome_diff_file_name = $settings->file_name('evidence_genome_diff_file_name');
 	my $evidence_gd = Breseq::GenomeDiff::merge($jc_gd, $ra_mc_gd);
+	
+	## Filter predicted polymorphisms by frequency now...
+	foreach my $item ($evidence_gd->list('RA'))
+	{				
+		if (($item->{frequency} > 0) && ($item->{frequency} < 1))
+		{						
+			## things below the frequency we forget
+			if ($item->{frequency} < $settings->{polymorphism_frequency_cutoff})
+			{
+				Breseq::GenomeDiff::add_reject_reason($item, "CUTOFF");					
+				$item->{no_show} = 1;
+			}
+			## things above the frequency are now predictions of real mutations
+			elsif ($item->{frequency} > 1-$settings->{polymorphism_frequency_cutoff})
+			{
+				# predict a consensus mutation
+				$item->{frequency} = 1;
+				undef $item->{reject};
+				Breseq::GenomeDiff::add_reject_reason($item, "EVALUE") if ($item->{snp_quality} < $settings->{mutation_log10_e_value_cutoff});					
+			}			
+		}
+	}
+	
 	$evidence_gd->write($evidence_genome_diff_file_name);
+	
 	
 	## predict mutations from evidence in the GenomeDiff
 	print STDERR "Predicting mutations from evidence...\n";
@@ -765,8 +690,6 @@ if (!-e $output_done_file_name)
 	my $final_genome_diff_file_name = $settings->file_name('final_genome_diff_file_name');
 	$evidence_gd->write($final_genome_diff_file_name);
 	unlink $evidence_genome_diff_file_name;
-
-	Breseq::ReferenceSequence::annotate_mutations($ref_seq_info, $evidence_gd);
 
 	my $res = Breseq::Shared::system("$FindBin::Bin/genomediff ANNOTATE -i $final_genome_diff_file_name $settings->{arguments}");
 	my $annotated_marginal = ($res == 0);
@@ -789,11 +712,5 @@ if (!-e $output_done_file_name)
 	Breseq::Output::record_time("End");
 #	Breseq::Output::html_summary_table($settings->{summary_html_file_name}, $settings, $summary, \@Breseq::Output::execution_times);
 
-	my $output_done_file_name = $settings->file_name('output_done_file_name');	
-	open DONE, ">$output_done_file_name";
-	close DONE;
-}
-else
-{
-	print STDERR "Output already complete.\n";
+	$settings->done_step('output_done_file_name');	
 }

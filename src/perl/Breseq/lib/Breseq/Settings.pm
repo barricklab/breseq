@@ -762,12 +762,22 @@ sub do_step
 	my $done_file_name = $self->file_name($done_key);
 	if (!-e $done_file_name)
 	{
-		print STDERR ">>> $message\.\.\. <<<\n";
+		print STDERR "+++ NOW PROCESSING   $message\n";
 		return 1;
 	}
 	
-	print STDERR "--- $message ALREADY DONE ---\n";
+	print STDERR "--- ALREADY COMPLETE $message\n";
 	return 0;
+}
+
+sub done_step
+{
+	my ($self, $done_key, $message) = @_;
+	
+	my $done_file_name = $self->file_name($done_key);
+	
+	open DONE, ">$done_file_name";
+	close DONE;
 }
 
 return 1;

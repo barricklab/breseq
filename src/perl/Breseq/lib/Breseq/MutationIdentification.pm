@@ -770,7 +770,6 @@ sub identify_mutations
 					## End printing input file for R
 					###
 					
-					
 					Breseq::GenomeDiff::add_reject_reason($mut, "FREQ") if ($mut->{frequency} < $settings->{polymorphism_frequency_cutoff});
 					Breseq::GenomeDiff::add_reject_reason($mut, "FREQ") if ($mut->{frequency} > 1-$settings->{polymorphism_frequency_cutoff});		
 				}
@@ -1326,7 +1325,6 @@ sub polymorphism_statistics
 			$new_gd->add($mut);
 			next;
 		}
-#		$mut->{old_quality} = $mut->{quality};
 
 		my $line = <ROUT>;
 		chomp $line;
@@ -1375,7 +1373,6 @@ sub polymorphism_statistics
 		}
 
 		$new_gd->add($mut);
-
 
 		## END EXPERIMENTAL
 	}
