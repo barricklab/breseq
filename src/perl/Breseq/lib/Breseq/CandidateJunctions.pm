@@ -145,8 +145,8 @@ sub identify_candidate_junctions
 	## Combine hash into a list, one item for each unique sequence (also joining reverse complements)
 	###		
 	
-	my @observed_pos_hash_score_distribution;
-	my @observed_min_overlap_score_distribution;
+	my %observed_pos_hash_score_distribution;
+	my %observed_min_overlap_score_distribution;
 	
 	my @combined_candidate_junctions;
 	my $handled_seq;
@@ -202,8 +202,8 @@ sub identify_candidate_junctions
 		my $best_candidate_junction = $combined_candidate_junction_list[0];	
 
 		## Save the score in the distribution
-		Breseq::Shared::add_score_to_distribution(\@observed_pos_hash_score_distribution, $best_candidate_junction->{pos_hash_score});
-		Breseq::Shared::add_score_to_distribution(\@observed_min_overlap_score_distribution, $best_candidate_junction->{min_overlap_score});
+		Breseq::Shared::add_score_to_distribution(\%observed_pos_hash_score_distribution, $best_candidate_junction->{pos_hash_score});
+		Breseq::Shared::add_score_to_distribution(\%observed_min_overlap_score_distribution, $best_candidate_junction->{min_overlap_score});
 
 		## Check minimum requirements
 		next JUNCTION_SEQ if ($best_candidate_junction->{pos_hash_score} < $settings->{minimum_candidate_junction_pos_hash_score});
@@ -330,8 +330,8 @@ sub identify_candidate_junctions
 	$hcs->{accepted}->{pos_hash_score_cutoff} = $lowest_accepted_pos_hash_score;
 	$hcs->{accepted}->{min_overlap_score_cutoff} = $lowest_accepted_min_overlap_score;
 	
-	$hcs->{pos_hash_score_distribution} = \@observed_pos_hash_score_distribution;
-	$hcs->{min_overlap_score_distribution} = \@observed_min_overlap_score_distribution;
+	$hcs->{pos_hash_score_distribution} = \%observed_pos_hash_score_distribution;
+	$hcs->{min_overlap_score_distribution} = \%observed_min_overlap_score_distribution;
 	
 	###
 	## Print out the candidate junctions, sorted by the lower coordinate, higher coord, then number

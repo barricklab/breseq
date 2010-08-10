@@ -341,11 +341,11 @@ sub correct_alignments
 	## Determine which junctions are real, prefer ones with most matches
 	###
 	
-	my @accepted_pos_hash_score_distribution;
-	my @observed_pos_hash_score_distribution;
+	my %accepted_pos_hash_score_distribution;
+	my %observed_pos_hash_score_distribution;
 	
-	my @accepted_min_overlap_score_distribution;
-	my @observed_min_overlap_score_distribution;
+	my %accepted_min_overlap_score_distribution;
+	my %observed_min_overlap_score_distribution;
 	
 	my @passed_junction_ids = (); #re
 	my @rejected_junction_ids = (); #re
@@ -362,8 +362,8 @@ sub correct_alignments
 	{
 		my ($failed, $has_non_overlap_only) = _test_junction($settings, $summary, $key, \%matched_junction, \%degenerate_matches, \%junction_test_info, $reference_fai, $ref_seq_info, $RREF, $reference_header, $RCJ, $candidate_junction_header);
 		## save the score in the distribution
-		Breseq::Shared::add_score_to_distribution(\@observed_pos_hash_score_distribution, $junction_test_info{$key}->{pos_hash_score});
-		Breseq::Shared::add_score_to_distribution(\@observed_min_overlap_score_distribution, $junction_test_info{$key}->{min_overlap_score});
+		Breseq::Shared::add_score_to_distribution(\%observed_pos_hash_score_distribution, $junction_test_info{$key}->{pos_hash_score});
+		Breseq::Shared::add_score_to_distribution(\%observed_min_overlap_score_distribution, $junction_test_info{$key}->{min_overlap_score});
 
 		## only count matches that span overlap
 		if (!$has_non_overlap_only)
@@ -394,8 +394,8 @@ sub correct_alignments
 		
 		my ($failed, $has_non_overlap_only) = _test_junction($settings, $summary, $key, \%matched_junction, \%degenerate_matches, \%junction_test_info, $reference_fai, $ref_seq_info, $RREF, $reference_header, $RCJ, $candidate_junction_header);
 		## save the score in the distribution
-		Breseq::Shared::add_score_to_distribution(\@observed_pos_hash_score_distribution, $junction_test_info{$key}->{pos_hash_score});
-		Breseq::Shared::add_score_to_distribution(\@observed_min_overlap_score_distribution, $junction_test_info{$key}->{min_overlap_score});
+		Breseq::Shared::add_score_to_distribution(\%observed_pos_hash_score_distribution, $junction_test_info{$key}->{pos_hash_score});
+		Breseq::Shared::add_score_to_distribution(\%observed_min_overlap_score_distribution, $junction_test_info{$key}->{min_overlap_score});
 
 		## if it succeeded, then it may have changed the order of the remaining ones by removing some reads...
 		if (!$failed)
@@ -428,8 +428,8 @@ sub correct_alignments
 		$gd->add($item);
 				
 		## save the score in the distribution
-		Breseq::Shared::add_score_to_distribution(\@accepted_pos_hash_score_distribution, $junction_test_info{$key}->{pos_hash_score});
-		Breseq::Shared::add_score_to_distribution(\@accepted_min_overlap_score_distribution, $junction_test_info{$key}->{min_overlap_score});
+		Breseq::Shared::add_score_to_distribution(\%accepted_pos_hash_score_distribution, $junction_test_info{$key}->{pos_hash_score});
+		Breseq::Shared::add_score_to_distribution(\%accepted_min_overlap_score_distribution, $junction_test_info{$key}->{min_overlap_score});
 				
 		## Create matches from UNIQUE sides of each match to reference genome
 		## this fixes, for example appearing to not have any coverage at the origin of a circular DNA fragment
@@ -475,11 +475,11 @@ sub correct_alignments
 	}
 	
 	## Save summary statistics
-	$summary->{alignment_correction}->{new_junctions}->{observed_min_overlap_score_distribution} = \@observed_min_overlap_score_distribution;
-	$summary->{alignment_correction}->{new_junctions}->{accepted_min_overlap_score_distribution} = \@accepted_min_overlap_score_distribution;
+	$summary->{alignment_correction}->{new_junctions}->{observed_min_overlap_score_distribution} = \%observed_min_overlap_score_distribution;
+	$summary->{alignment_correction}->{new_junctions}->{accepted_min_overlap_score_distribution} = \%accepted_min_overlap_score_distribution;
 	
-	$summary->{alignment_correction}->{new_junctions}->{observed_pos_hash_score_distribution} = \@observed_pos_hash_score_distribution;
-	$summary->{alignment_correction}->{new_junctions}->{accepted_pos_hash_score_distribution} = \@accepted_pos_hash_score_distribution;
+	$summary->{alignment_correction}->{new_junctions}->{observed_pos_hash_score_distribution} = \%observed_pos_hash_score_distribution;
+	$summary->{alignment_correction}->{new_junctions}->{accepted_pos_hash_score_distribution} = \%accepted_pos_hash_score_distribution;
 	
 	my @rejected_hybrid_predictions = ();
 	foreach my $key (@rejected_junction_ids)

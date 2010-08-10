@@ -310,8 +310,11 @@ sub do_annotate
 	my $sequence_conversion_summary_file_name = $settings->file_name('sequence_conversion_summary_file_name');	
 	$summary->{sequence_conversion} = Storable::retrieve($sequence_conversion_summary_file_name);
 
-	my $index_html_file_name = $settings->file_name('index_html_file_name');	
+	my $index_html_file_name = $settings->file_name('index_html_file_name');		
 	Breseq::Output::html_index($index_html_file_name, $settings, $summary, $ref_seq_info, $gd);	
+	
+	my $marginal_html_file_name = $settings->file_name('marginal_html_file_name');	
+	Breseq::Output::html_marginal_predictions($marginal_html_file_name, $settings, $summary, $ref_seq_info, $gd);	
 }
 
 sub do_compare

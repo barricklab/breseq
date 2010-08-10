@@ -252,6 +252,8 @@ sub initialize_1
 	#used by Output.pm
 	$self->{max_rejected_polymorphisms_to_show} = 100;
 	$self->{max_rejected_junctions_to_show} = 25;
+	
+	 @{$self->{execution_times}} = ();
 }
 
 ## called after getting options from command line
@@ -406,6 +408,7 @@ sub initialize_2
 	$self->{log_file_name} = "$self->{output_path}/log.txt";	
 	$self->{index_html_file_name} = "$self->{output_path}/index.html";
 	$self->{summary_html_file_name} = "$self->{output_path}/summary.html";
+	$self->{marginal_html_file_name} = "$self->{output_path}/marginal.html";
 	$self->{final_genome_diff_file_name} = "$self->{output_path}/output.gd";	
 	$self->{local_evidence_path} = "evidence";
 	$self->{evidence_path} = "$self->{output_path}/$self->{local_evidence_path}";
@@ -760,24 +763,137 @@ sub do_step
 	my ($self, $done_key, $message) = @_;
 	
 	my $done_file_name = $self->file_name($done_key);
+	$self->{done_key_messages}->{$done_key} = $message;
 	if (!-e $done_file_name)
 	{
 		print STDERR "+++ NOW PROCESSING   $message\n";
+		$self->record_start_time($message);
 		return 1;
 	}
 	
 	print STDERR "--- ALREADY COMPLETE $message\n";
+	
+	my $time;
+	$time = Storable::retrieve($done_file_name) if (-s $done_file_name > 0);
+	if (!$time) 
+	{	
+		$time = {};
+		$self->warn("Can't retrieve time data from file $done_file_name");
+	}
+	push @{$self->{execution_times}}, $time;
+	
 	return 0;
 }
 
 sub done_step
 {
-	my ($self, $done_key, $message) = @_;
+	my ($self, $done_key) = @_;
 	
 	my $done_file_name = $self->file_name($done_key);
+	my $message = $self->{done_key_messages}->{$done_key};
+	$self->record_end_time($message);
 	
-	open DONE, ">$done_file_name";
-	close DONE;
+	## create the done file with timing information
+	Storable::store($self->{execution_times}->[-1], $done_file_name)
+		or $self->throw("Can't store time data in file $done_file_name");
 }
+
+sub record_start_time
+{
+	my ($self, $message) = @_;
+	
+	my $this_time = time;
+	my ($sec,$min,$hour,$mday,$mon,$year,$wday,$yday,$isdst) = localtime($this_time);	
+	my $formatted_time = sprintf "%04d-%02d-%02d %02d:%02d:%02d", $year+1900, $mon+1, $mday, $hour, $min, $sec;
+	my $new_time = { 
+		_time_start => $this_time,
+		_formatted_time_start => $formatted_time, 
+		_time_end => 0,
+		_formatted_time_end => '', 
+		_time_elapsed => 0,
+		_formatted_time_elapsed => '',
+		_message => $message,
+	 };
+	
+	push @{$self->{execution_times}}, $new_time;
+	return $formatted_time;
+}
+
+sub record_end_time
+{
+	my ($self, $message) = @_;
+	
+	my $i = 0;
+	while ($i < scalar @{$self->{execution_times}})
+	{
+		last if ($self->{execution_times}->[$i]->{_message} eq $message);
+		$i++;
+	}
+	
+	if ($i >= scalar @{$self->{execution_times}})
+	{
+		$self->warn("Did not find matching start time for:\n$message");
+	}
+	
+	my $ex_time = $self->{execution_times}->[$i];
+	$ex_time->{_message} = $message;
+
+	my $this_time = time;
+	$ex_time->{_time_end} = $this_time;
+	$ex_time->{_formatted_time_end} = time2string($this_time);
+
+	##if we had a previous time, calculate elapsed
+	if ($i < scalar @{$self->{execution_times}})
+	{
+		my $time_interval = $ex_time->{_time_end} - $ex_time->{_time_start};
+		$ex_time->{_time_elapsed} = $time_interval;
+		$ex_time->{_formatted_time_elapsed} = time2string($time_interval, 1);
+	}
+}
+
+sub time2string
+{
+	my ($this_time, $relative) = @_;
+	my $s = '';
+
+	## time is absolute
+	if (!$relative)
+	{
+		my ($sec,$min,$hour,$mday,$mon,$year,$wday,$yday,$isdst) = localtime($this_time);	
+		$s = sprintf "%04d-%02d-%02d %02d:%02d:%02d", $year+1900, $mon+1, $mday, $hour, $min, $sec;
+	}
+	
+	##time is an elapsed interval
+	else 
+	{
+		my $rem_time = $this_time;
+		my $sec = $rem_time % 60;
+		$rem_time = int($rem_time / 60);
+		$s = "$sec sec";
+		
+		if ($rem_time)
+		{
+			my $min = $rem_time % 60;
+			$rem_time = int($rem_time / 60);
+			$s = "$min min " . $s;
+		}
+		
+		if ($rem_time)
+		{
+			my $hours = int($rem_time / 24);
+			$rem_time = int($rem_time / 24);
+			$s = "$hours hr " . $s;
+		}
+		
+		if ($rem_time)
+		{
+			my $days = $rem_time;
+			$s = "$days days " . $s;
+		}
+	}
+	
+	return $s;
+}
+
 
 return 1;

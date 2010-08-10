@@ -120,12 +120,152 @@ sub html_index
 	open HTML, ">$file_name" or die "Could not open file: $file_name";    
 
     print HTML start_html(
-			-title => "BRESEQ :: Index" . ($settings->{print_run_name} ne 'unnamed' ? " :: $settings->{print_run_name}" : ''), 
+			-title => "BRESEQ :: Mutation Predictions" . ($settings->{print_run_name} ne 'unnamed' ? " :: $settings->{print_run_name}" : ''), 
+			-head  => style({type => 'text/css'}, $header_style_string),
+	);
+	print HTML breseq_header_string($settings) . p;
+
+	###
+	## Mutation predictions
+	###
+	
+	my @muts = $gd->list('SNP', 'INS', 'DEL', 'SUB', 'MOB', 'AMP');
+	my $relative_path = $settings->file_name('local_evidence_path');
+	$relative_path .= "/" if ($relative_path);
+	my $one_ref_seq = scalar(keys %{$ref_seq_info->{ref_strings}}) == 1;
+	print HTML p . html_mutation_table_string($gd, \@muts, $relative_path, undef, $one_ref_seq );
+
+	###
+	## Unassigned evidence
+	###
+	
+	my @mc = $gd->filter_used_as_evidence($gd->list('MC'));
+	if (scalar @mc > 0)
+	{
+		print HTML p . html_missing_coverage_table_string(\@mc, $relative_path, "Unassigned missing coverage evidence...");
+	}
+	
+	my @jc = $gd->filter_used_as_evidence($gd->list('JC'));
+	@jc = grep { !$_->{no_show} } @jc;	
+
+	my @jcu = grep { !$_->{reject} } @jc;	
+	if (scalar @jcu > 0)
+	{
+		print HTML p . html_new_junction_table_string(\@jcu, $relative_path, "Unassigned new junction evidence...");	
+	}
+	
+	print HTML end_html;
+	close HTML;
+}
+
+sub html_marginal_predictions
+{
+	my ($file_name, $settings, $summary, $ref_seq_info, $gd) = @_;
+
+	open HTML, ">$file_name" or die "Could not open file: $file_name";    
+
+    print HTML start_html(
+			-title => "BRESEQ :: Marginal Predictions" . ($settings->{print_run_name} ne 'unnamed' ? " :: $settings->{print_run_name}" : ''), 
+			-head  => style({type => 'text/css'}, $header_style_string),
+	);
+	print HTML breseq_header_string($settings) . p;
+	
+	my $relative_path = $settings->file_name('local_evidence_path');
+	$relative_path .= "/" if ($relative_path);
+	my $one_ref_seq = scalar(keys %{$ref_seq_info->{ref_strings}}) == 1;
+	
+	###
+	## Rejected evidence
+	###
+	
+	my @ra = $gd->filter_used_as_evidence($gd->list('RA'));	
+	## don't print ones that overlap predicted deletions or were marked to not show
+	@ra = grep { !$_->{deleted} && !$_->{no_show} } @ra;
+	
+	if (scalar @ra > 0)
+	{
+		print HTML p . html_read_alignment_table_string(\@ra, $relative_path, "Rejected read alignment evidence...");
+	}
+	
+	my @jc = $gd->filter_used_as_evidence($gd->list('JC'));
+	@jc = grep { !$_->{no_show} } @jc;
+	my @jcr = grep { $_->{reject} } @jc;
+	if (scalar @jcr > 0)
+	{	
+		print HTML p . html_new_junction_table_string(\@jcr, $relative_path, "Rejected new junction evidence...");	
+	}
+	
+	print HTML end_html;
+	close HTML;
+}
+
+sub html_header
+{
+	my ($title) = @_;
+	return start_html(
+			-title => $title, 
+			-head  => style({type => 'text/css'}, $header_style_string),
+	);
+}
+
+sub html_footer
+{
+	return end_html;
+}
+
+sub html_compare
+{
+	my ($file_name, $title, $gd, $one_ref_seq, $gd_name_list_ref) = @_;
+
+	open HTML, ">$file_name" or die "Could not open file: $file_name";    
+
+    print HTML start_html(
+			-title => $title, 
 			-head  => style({type => 'text/css'}, $header_style_string),
 	);
 	
+	my @muts = $gd->mutation_list;
+	
+	print HTML html_mutation_table_string($gd, \@muts, undef, undef, $one_ref_seq, $gd_name_list_ref);
+
+	print HTML end_html;
+	close HTML;
+}
+
+sub html_compare_polymorphisms
+{
+	my ($file_name, $title, $list_ref) = @_;
+
+	open HTML, ">$file_name" or die "Could not open file: $file_name";    
+
+    print HTML start_html(
+			-title => $title, 
+			-head  => style({type => 'text/css'}, $header_style_string),
+	);
+		
+	print HTML html_read_alignment_table_string($list_ref, undef, undef, 1);
+
+	print HTML end_html;
+	close HTML;
+}
+
+## Note that we should probably not overwrite past summary tables
+## Instead, we should concatenate them.
+
+sub html_statistics
+{
+	my ($file_name, $settings, $summary, $ref_seq_info) = @_;
+	
+	## Create the current file...
+	open HTML, ">$file_name" or die "Could not open file: $file_name";    
+    
+    print HTML start_html(
+			-title => "BRESEQ :: Summary Statistics" . ($settings->{print_run_name} ? " :: $settings->{print_run_name}" : ''), 
+			-head  => style({type => 'text/css'}, $header_style_string),
+	);
+	print HTML breseq_header_string($settings) . p;	
+	
 	## Write fastq read file information
-	print HTML breseq_header_string($settings) . p;
     print HTML start_table({-border => 0, -cellspacing => 1, -cellpadding => 5});
 	print HTML Tr(th(), th("fastq read file"), th("reads"), th("bases"), th("longest"));
 
@@ -195,135 +335,21 @@ sub html_index
 	}
 	
 	print HTML end_table();		
-
-	###
-	## Mutation predictions
-	###
-	
-	my @muts = $gd->list('SNP', 'INS', 'DEL', 'SUB', 'MOB');
-	my $relative_path = $settings->file_name('local_evidence_path');
-	$relative_path .= "/" if ($relative_path);
-	my $one_ref_seq = scalar(keys %{$ref_seq_info->{ref_strings}}) == 1;
-	print HTML p . html_mutation_table_string($gd, \@muts, $relative_path, undef, $one_ref_seq );
-
-	###
-	## Unassigned evidence
-	###
-	
-	my @mc = $gd->filter_used_as_evidence($gd->list('MC'));
-	if (scalar @mc > 0)
-	{
-		print HTML p . html_missing_coverage_table_string(\@mc, $relative_path, "Unassigned missing coverage evidence...");
-	}
-	
-	my @jc = $gd->filter_used_as_evidence($gd->list('JC'));
-	@jc = grep { !$_->{no_show} } @jc;	
-
-	my @jcu = grep { !$_->{reject} } @jc;	
-	if (scalar @jcu > 0)
-	{
-		print HTML p . html_new_junction_table_string(\@jcu, $relative_path, "Unassigned new junction evidence...");	
-	}
-	
-	###
-	## Rejected evidence
-	###
-	
-	my @ra = $gd->filter_used_as_evidence($gd->list('RA'));	
-	## don't print ones that overlap predicted deletions or were marked to not show
-	@ra = grep { !$_->{deleted} && !$_->{no_show} } @ra;
-	
-	if (scalar @ra > 0)
-	{
-		print HTML p . html_read_alignment_table_string(\@ra, $relative_path, "Rejected read alignment evidence...");
-	}
-	
-	my @jcr = grep { $_->{reject} } @jc;
-	if (scalar @jcr > 0)
-	{	
-		print HTML p . html_new_junction_table_string(\@jcr, $relative_path, "Rejected new junction evidence...");	
-	}
-	
-	print HTML end_html;
-	close HTML;
-}
-
-sub html_header
-{
-	my ($title) = @_;
-	return start_html(
-			-title => $title, 
-			-head  => style({type => 'text/css'}, $header_style_string),
-	);
-}
-
-sub html_footer
-{
-	return end_html;
-}
-
-sub html_compare
-{
-	my ($file_name, $title, $gd, $one_ref_seq, $gd_name_list_ref) = @_;
-
-	open HTML, ">$file_name" or die "Could not open file: $file_name";    
-
-    print HTML start_html(
-			-title => $title, 
-			-head  => style({type => 'text/css'}, $header_style_string),
-	);
-	
-	my @muts = $gd->mutation_list;
-	
-	print HTML html_mutation_table_string($gd, \@muts, undef, undef, $one_ref_seq, $gd_name_list_ref);
-
-	print HTML end_html;
-	close HTML;
-}
-
-sub html_compare_polymorphisms
-{
-	my ($file_name, $title, $list_ref) = @_;
-
-	open HTML, ">$file_name" or die "Could not open file: $file_name";    
-
-    print HTML start_html(
-			-title => $title, 
-			-head  => style({type => 'text/css'}, $header_style_string),
-	);
 		
-	print HTML html_read_alignment_table_string($list_ref, undef, undef, 1);
-
-	print HTML end_html;
-	close HTML;
-}
-
-## Note that we do not overwrite past summary tables
-## Instead, we move them. This is in case the script was
-## Run multiple times.
-
-sub html_statistics
-{
-	my ($file_name, $settings, $summary, $times) = @_;
-	
-	## Create the current file...
-	open HTML, ">$file_name" or die "Could not open file: $file_name";    
-    
-    print HTML start_html(
-			-title => "BRESEQ :: Statistics" . ($settings->{print_run_name} ? " :: $settings->{print_run_name}" : ''), 
-			-head  => style({type => 'text/css'}, $header_style_string),
-	);
 		
+	my @times = @{$settings->{execution_times}};
 	## Write times
 	print HTML p . h1("Execution Times");
 	print HTML start_table({-width => "100%", -border => 1, -cellspacing => 0, -cellpadding => 3});
-	print HTML Tr(th("Step"), th("Time"), th("Elapsed"));
-	foreach my $time (@$times)
+	print HTML Tr(th("Step"), th("Start"), th("End"), th("Elapsed"));
+	my $total_time_elapsed = 0;
+	foreach my $t (@times)
 	{
-		print HTML Tr(td($time->{_name}), td($time->{_formatted_time}), td($time->{_formatted_time_elapsed}));
+		next if (!defined $t->{_message});
+		print HTML Tr(td($t->{_message}), td($t->{_formatted_time_start}), td($t->{_formatted_time_end}), td($t->{_formatted_time_elapsed}));
+		$total_time_elapsed += $t->{_time_elapsed};
 	}
-	my $formatted_total_time = time2string($times->[-1]->{_time} - $times->[0]->{_time});
-	print HTML Tr({-class=>"highlight_table_row"}, td({-colspan=>2}, b("Total Execution Time")), td(b($formatted_total_time)));
+	print HTML Tr({-class=>"highlight_table_row"}, td({-colspan=>3}, b("Total")), td(b(Breseq::Settings::time2string($total_time_elapsed,1))));
 	print HTML end_table();
 
 	close HTML;
@@ -347,8 +373,17 @@ sub breseq_header_string
 	$output_string .= start_Tr;
 	$output_string .=  td(img({-src=>$settings->html_path('breseq_small_graphic_to_file_name')}));
 	$output_string .= start_td({-width => "100%"});
-	$output_string .= $settings->{byline};	
-	$output_string .= " | " . a({-href=>$settings->html_path('log_file_name')}, 'command line log');
+	$output_string .= $settings->{byline};
+	$output_string .= br;	
+	$output_string .= a({-href=>$settings->html_path('index_html_file_name')}, 'mutation predictions');
+	$output_string .= " | ";
+	$output_string .= a({-href=>$settings->html_path('marginal_html_file_name')}, 'marginal predictions');
+	$output_string .= " | ";
+	$output_string .= a({-href=>$settings->html_path('summary_html_file_name')}, 'summary statistics');
+	$output_string .= " | ";
+	$output_string .= a({-href=>$settings->html_path('final_genome_diff_file_name')}, 'genome diff');
+	$output_string .= " | ";
+	$output_string .= a({-href=>$settings->html_path('log_file_name')}, 'command line log');
 	$output_string .= end_td . end_Tr . end_table;
 	
 	return $output_string;
@@ -653,14 +688,14 @@ sub html_mutation_table_string
 			}
 			
 			elsif ($mut->{type} eq 'AMP')
-			{
+			{				
 				$output_str.= start_Tr({-class=>$row_class});	
 				$output_str.= td({align=>"center"}, $evidence_string) if (!defined $gd_name_list_ref);
 				$output_str.= td({align=>"center"}, nonbreaking($mut->{seq_id})) if (!$one_ref_seq); 
 				$output_str.= td({align=>"right"}, commify($mut->{position}));
-				$output_str.= td({align=>"center"}, nonbreaking(commify($mut->{size}) . " bp x $mut->{new_copy_number} amplification"));
+				$output_str.= td({align=>"center"}, nonbreaking(commify($mut->{size}) . " bp x $mut->{new_copy_number}"));
 				$output_str.= freq_cols(@freq_list);
-				$output_str.= td({align=>"center"}, "");
+				$output_str.= td({align=>"center"}, ($mut->{new_copy_number} == 2) ? "duplication" : "amplification");
 				$output_str.= td({align=>"center"}, i(nonbreaking($mut->{gene_name})));
 				$output_str.= td({align=>"left"}, $mut->{gene_product});
 				$output_str.= end_Tr;				
@@ -975,7 +1010,7 @@ sub html_new_junction_table_string
 			$output_str.= td( {-align=>"center", -class=>"$annotate_key"}, ($c->{"$key\_strand"} == +1) ? $c->{"$key\_position"} . "&nbsp;=": "=&nbsp;" . $c->{"$key\_position"} );
 			$output_str.= td( {-rowspan=>2, -align=>"center"}, $c->{overlap} );
 			$output_str.= td( {-rowspan=>2, -align=>"center"}, $c->{total_reads} );
-			$output_str.= td( {-rowspan=>2, -align=>"center"}, b("&rceil;" . $c->{pos_hash_score}) . br . $c->{min_overlap_score} );
+			$output_str.= td( {-rowspan=>2, -align=>"center"}, b("&lt;" . $c->{pos_hash_score} . "&gt;") . br . $c->{min_overlap_score} );
 			$output_str.= td( {-align=>"center", -class=>"$annotate_key"}, nonbreaking($c->{"_$key"}->{gene_position}) );
 			$output_str.= td( {-align=>"center", -class=>"$annotate_key"}, i(nonbreaking($c->{"_$key"}->{gene_name})) );
 			$output_str.= td( {-class=>"$annotate_key"}, $c->{"_$key"}->{gene_product} );
@@ -1223,6 +1258,8 @@ sub create_evidence_files
 		);
 	}	
 
+	#--> currently don't do this with 'AMP' because they are all junction evidence
+	
 	MUT: foreach my $item ( $gd->list('SNP', 'INS', 'DEL', 'SUB') )
 	{
 		next if ($item->{no_show});
@@ -1256,6 +1293,10 @@ sub create_evidence_files
 		{
 			$end = $start + length($item->{new_seq}) - 1;
 		}
+		#elsif ($item->{type} eq 'AMP')
+		#{
+		#	$end = $start + $item->{size};
+		#}
 
 		add_evidence( 
 			'_evidence_file_name',
