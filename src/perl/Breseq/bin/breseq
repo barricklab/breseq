@@ -121,7 +121,6 @@ my $summary = {};
 ### 
 my $settings = Breseq::Settings->new;
 $settings->check_installed();
-Breseq::Output::record_time("Start");
 
 ##
 # Convert the input reference GenBank into FASTA for alignment
@@ -325,7 +324,7 @@ if (!$settings->{no_junction_prediction})
 	}
 	
 	my $candidate_junction_summary_file_name = $settings->file_name('candidate_junction_summary_file_name');	
-	if ($settings->do_step('candidate_junction_summary_file_name', "Identifying candidate junctions"))
+	if ($settings->do_step('candidate_junction_done_file_name', "Identifying candidate junctions"))
 	{
 		print STDERR "Identifying candidate junctions...\n";
 		
@@ -367,17 +366,11 @@ sub candidate_junction_alignment {}
 		{		
 			my $candidate_junction_sam_file_name = $settings->file_name('candidate_junction_sam_file_name', {'#'=>$read_name});	
 			my $read_fastq_file = $settings->read_file_to_fastq_file_name($read_name);
-	#		Breseq::Shared::system("ssaha2 -save $candidate_junction_hash_file_name -disk 1 -rtype solexa -skip 1 -seeds 1 -output sam_soft -outfile $candidate_junction_sam_file_name $read_fastq_file");		
-	# Note: Added -best parameter to try to avoid too many matches to redundant junctions!
 
 			if (-e "$candidate_junction_hash_file_name.base")
 			{
 				Breseq::Shared::system("ssaha2 -save $candidate_junction_hash_file_name -best 1 -rtype solexa -skip 1 -seeds 1 -output sam_soft -outfile $candidate_junction_sam_file_name $read_fastq_file");		
-			}
-			else
-			{
-				open EMPTY, ">$candidate_junction_sam_file_name";
-				close EMPTY;
+				# Note: Added -best parameter to try to avoid too many matches to redundant junctions!
 			}
 		}
 		$settings->done_step('candidate_junction_alignment_done_file_name');
@@ -442,7 +435,10 @@ if ($settings->do_step('bam_done_file_name', "Creating BAM files"))
 	$settings->done_step('bam_done_file_name');
 }
 
-sub tabulate_pairs_in_tam {}
+##
+# Graph paired read outliers (experimental)
+sub paired_read_distances {}
+##
 {
 	my @rs = $settings->read_structures;
 		
@@ -691,7 +687,6 @@ if ($settings->do_step('output_done_file_name', "Output"))
 	unlink $evidence_genome_diff_file_name;
 
 	my $res = Breseq::Shared::system("$FindBin::Bin/genomediff ANNOTATE -i $final_genome_diff_file_name $settings->{arguments}");
-	my $annotated_marginal = ($res == 0);
 
 	###
 	## Temporary debug output using Data::Dumper
@@ -708,8 +703,9 @@ if ($settings->do_step('output_done_file_name', "Output"))
 	close SETTINGS;
 
 	## record the final time and print summary table
-	Breseq::Output::record_time("End");
-#	Breseq::Output::html_summary_table($settings->{summary_html_file_name}, $settings, $summary, \@Breseq::Output::execution_times);
+	$settings->record_end_time("Output");
+	
+	Breseq::Output::html_statistics($settings->{summary_html_file_name}, $settings, $summary, $ref_seq_info);
 
 	$settings->done_step('output_done_file_name');	
 }

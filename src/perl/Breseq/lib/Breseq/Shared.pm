@@ -34,7 +34,7 @@ use Breseq::Fastq;
 
 require Exporter;
 our @ISA = qw( Exporter );
-our @EXPORT = qw( do_step );
+our @EXPORT = qw( );
 
 use Data::Dumper;
 
@@ -642,14 +642,16 @@ sub check_region_1
 
 sub add_score_to_distribution
 {
-	my ($distribution_list_ref, $score) = @_;
-	
+	my ($distribution_hash_ref, $score) = @_;
+	$distribution_hash_ref->{$score}++;
+
+	## previous list code
 	#zero out new entries at the end of the list
-	for (my $i = scalar @$distribution_list_ref; $i< $score; $i++)
-	{
-		$distribution_list_ref->[$i] = 0;
-	}
-	$distribution_list_ref->[$score]++;
+	#for (my $i = scalar @$distribution_list_ref; $i< $score; $i++)
+	#{
+	#	$distribution_list_ref->[$i] = 0;
+	#}
+	#$distribution_list_ref->[$score]++;
 }
 
 

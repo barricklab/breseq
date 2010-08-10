@@ -320,6 +320,7 @@ sub predict
 						
 	}
 	
+	
 	###
 	## JC evidence => MOB mutations
 	###
@@ -664,8 +665,6 @@ sub predict
 			
 			#believe the direction if the sequences are different
 			my $j1_is_ambiguous = ($j1_left_is_sequence eq $j1_right_is_sequence) ? 1 : 0;
-
-			
 				
 			my $j2_left_is_sequence = get_sequence (
 				$j2->{"$j2->{_is_interval}\_seq_id"},
@@ -751,8 +750,8 @@ sub predict
 		my $seq_id = $j->{_side_1}->{seq_id};
 		
 		## must be in same orientation
-		next JC if ($j->{_side_1}->{strand} != -1);
-		next JC if ($j->{_side_2}->{strand} != +1);
+		next JC if ($j->{_side_1}->{strand} != +1);
+		next JC if ($j->{_side_2}->{strand} != -1);
 
 		## We can assume that the lower coordinate will be first since this is NOT a deletion
 		## (which would be handled above)
@@ -761,6 +760,14 @@ sub predict
 		## mutation will always be after this position
 		my $position = $j->{_side_1}->{position};
 		
+		## Special case of circular chromosome
+		if ( ($j->{_side_1}->{position} == 1) && ($j->{_side_2}->{position} == $summary->{sequence_conversion}->{reference_sequences}->{$seq_id}->{length} ) )
+		{
+			next;
+		}
+		##protection against misatakes
+		next if ($j->{_side_2}->{position} - $j->{_side_1}->{position} + 1 > 100000);		
+		
 		## 'AMP'
 		if (!$j->{unique_read_sequence})
 		{	
@@ -768,7 +775,7 @@ sub predict
 				type => 'AMP',
 				seq_id => $seq_id,
 				position => $position,
-				size => $j->{_side_1}->{position} - $j->{_side_2}->{position} + 1,
+				size => $j->{_side_2}->{position} - $j->{_side_1}->{position} + 1,
 				new_copy_number => 2,
 				evidence => [$j->{id}], 
 			};			
