@@ -433,7 +433,15 @@ sub identify_mutations
 					my $trim_right = $a->aux_get('XR');  #1-indexed
 					
 					$trimmed = 1 if ((defined $trim_left) && ($p->qpos+1 <= $trim_left));
-					$trimmed = 1 if ((defined $trim_right) && ($a->query->length-$p->qpos <= $trim_right));
+					
+					if ($insert_count == 0)
+					{
+						$trimmed = 1 if ((defined $trim_right) && ($a->query->length-$p->qpos <= $trim_right));
+					}
+					else
+					{
+						$trimmed = 1 if ((defined $trim_right) && ($a->query->length-$p->qpos < $trim_right));
+					}
 					
 					## These are the start and end coordinates of the aligned part of the read
 					my ($q_start, $q_end) = ($a->query->start-1, $a->query->end-1); #0-indexed
