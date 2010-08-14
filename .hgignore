@@ -38,6 +38,7 @@ syntax: regexp
 ^extern/Bio-SamTools-1.19/lib/Bio/DB/Sam.c
 ^extern/Bio-SamTools-1.19/Build$
 ^src/perl/Breseq/Build$
+^src/perl/Breseq/breseq.tmproj
 
 src/c/breseq.xcodeproj/.+\.mode1v3$
 src/c/breseq.xcodeproj/.+\.pbxuser$

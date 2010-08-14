@@ -420,7 +420,7 @@ sub identify_mutations
 					$indel = 0 if ($indel < 0);  ## substitute such that
 					$indel = -1 if ($p->is_del); ## deletions relative to reference have -1 as indel
 
-					my $qpos = $p->qpos;
+					my $qpos = $p->qpos;	#0-indexed
 					my $redundancy = $a->aux_get('X1');
 					my $fastq_file_index = $a->aux_get('X2');
 					my $reversed = $a->reversed;
@@ -433,15 +433,7 @@ sub identify_mutations
 					my $trim_right = $a->aux_get('XR');  #1-indexed
 					
 					$trimmed = 1 if ((defined $trim_left) && ($p->qpos+1 <= $trim_left));
-					
-					if ($insert_count == 0)
-					{
-						$trimmed = 1 if ((defined $trim_right) && ($a->query->length-$p->qpos <= $trim_right));
-					}
-					else
-					{
-						$trimmed = 1 if ((defined $trim_right) && ($a->query->length-$p->qpos < $trim_right));
-					}
+					$trimmed = 1 if ((defined $trim_right) && ($a->query->length-($p->qpos+1) <= $trim_right));
 					
 					## These are the start and end coordinates of the aligned part of the read
 					my ($q_start, $q_end) = ($a->query->start-1, $a->query->end-1); #0-indexed
