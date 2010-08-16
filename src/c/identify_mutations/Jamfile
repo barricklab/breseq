@@ -1,7 +1,8 @@
-project error_count ;
+project identify_mutations ;
 
-exe error_count :
+exe identify_mutations :
     [ glob-tree *.cpp ]
+    /breseq//libbreseq
     /samtools//libbam
     /user-config//boost_program_options
     : <include>./include

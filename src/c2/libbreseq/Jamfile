@@ -1,9 +1,0 @@
-project breseq ;
-
-lib libbreseq :
-    [ glob-tree *.cpp ]
-    /samtools//libbam
-    : <include>./include <link>static
-    :
-    : <include>./include
-    ;

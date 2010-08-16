@@ -23,6 +23,7 @@ namespace breseq {
 				case 'C': return 'G';
 				case 'G': return 'C';
 				case 'T': return 'A';
+				case '.': return '.';
 				default: assert(false);
 			}
 		} else {

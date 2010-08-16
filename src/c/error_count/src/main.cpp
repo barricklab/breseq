@@ -2,12 +2,9 @@
 #include <iostream>
 #include <string>
 #include <vector>
-#include "error_count.h"
+#include "breseq/error_count.h"
 
 /*! Calculate error calibrations from FASTA and BAM reference files.
- 
- Usage:
-	 error_count -fasta reference.fasta -bam reference.bam
  
  This file only does the command-line parsing bit; the real work is over in
  error_count.cpp.
@@ -26,7 +23,7 @@ int main(int argc, char* argv[]) {
 	("readfile,r", po::value<vector<string> >(), "names of readfiles (no extension)")
 	("coverage", "generate unique coverage distribution output")
   ("errors", "generate unique error count output");
-  
+	
 	po::variables_map options;
 	po::store(po::parse_command_line(argc, argv, cmdline_options), options);
 	po::notify(options);
@@ -37,10 +34,10 @@ int main(int argc, char* argv[]) {
 		 || !options.count("fasta")
 		 || !options.count("output")
 		 || !options.count("readfile")
-     || (!options.count("coverage") && !options.count("errors")) ) {
+		 || (!options.count("coverage") && !options.count("errors")) ) {
 		cout << "Usage: error_count --bam <sequences.bam> --fasta <reference.fasta> --output <path> --readfile <filename> [--coverage] [--errors]" << endl;
 		cout << cmdline_options << endl;
-		exit(0);
+		return -1;
 	}
 	
 	// attempt to calculate error calibrations:
@@ -48,8 +45,8 @@ int main(int argc, char* argv[]) {
 		breseq::error_count(options["bam"].as<string>(),
 												options["fasta"].as<string>(),
 												options["output"].as<string>(),
-												options["readfile"].as<vector<string> >(),
-                        options.count("coverage"),
+												options["readfiles"].as<vector<string> >(),
+												options.count("coverage"),
                         options.count("errors"));
 	} catch(...) {
 		// failed; 
