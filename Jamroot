@@ -2,9 +2,10 @@ project breseq ;
 
 use-project /breseq : src/c/libbreseq ;
 use-project /error_count : src/c/error_count ;
+use-project /identify_mutations : src/c/identify_mutations ;
 use-project /samtools : extern/samtools-0.1.7a ;
 
-alias all/ : /error_count//error_count /breseq//libbreseq /samtools//samtools ;
+alias all/ : /error_count//error_count /identify_mutations//identify_mutations /breseq//libbreseq /samtools//samtools ;
 build-project all/ ;
 
 alias install : install-bin install-lib ;
@@ -12,6 +13,7 @@ explicit install install-bin install-lib install-libbam-for-perl ;
 
 install install-bin
     : /error_count//error_count
+     /identify_mutations//identify_mutations
       /samtools//samtools
     : <install-dependencies>on
         <install-type>EXE

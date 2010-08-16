@@ -1,65 +1,42 @@
 #ifndef _BRESEQ_PILEUP_H_
 #define _BRESEQ_PILEUP_H_
 
-#include <boost/shared_ptr.hpp>
-#include <string>
-#include <map>
 #include <vector>
-#include <sam.h>
-#include <faidx.h>
+#include <bam.h>
+
+#include "breseq/alignment.h"
+#include "breseq/pileup_base.h"
 
 namespace breseq {
+	
+	// pre-decs:
+	class pileup_base;
 
-	//! Helper struct to manage a single reference sequence.
-	struct reference_sequence {
-	public:		
-		reference_sequence(const std::string& fasta_filename, const std::string& target);
-		~reference_sequence();
+	/*! Represents a pileup of alignments.
+	 */
+	class pileup : public std::vector<alignment> {
+	public:
+		//! Constructor for this pileup.
+		pileup(uint32_t tid, uint32_t pos, int n, const bam_pileup1_t *pile, pileup_base& pb);
 		
-		faidx_t* _ref; //!< FAI file handle.
-		char* _seq; //!< Reference sequence (ascii).
-		int _len; //<! Length of reference sequence.
+		//! Retrieve the target id for this pileup.
+		inline uint32_t target() const { return _tid; }
 		
-	private:
-		// not allowed:
-		reference_sequence(const reference_sequence& that);
-		reference_sequence& operator=(const reference_sequence& that);
+		//! Retrieve the name of this target.
+		inline const char* target_name() const { return _pb.target_name(_tid); }
+		
+		//! Retrieve the position of this pileup on the reference sequence (0-indexed).
+		inline uint32_t position() const { return _pos; }
+
+		//! Retrieve the reference sequence for this pileup.
+		char* reference_sequence() const;
+
+	protected:
+		uint32_t _tid; //!< Target id for this pileup.
+		uint32_t _pos; //!< Position of this pileup in the reference sequence.
+		pileup_base& _pb; //!< Pileup base class that built this pileup.
 	};
 	
-	
-	/*! Class to assist in developing pileup-related functionality.
-	 */
-	class pileup_base {
-	public:
-		//! Type for a list of reference sequences.
-		typedef std::vector<boost::shared_ptr<reference_sequence> > refseq_list_t;
-		
-		//! Constructor.
-		pileup_base(const std::string& bam, const std::string& fasta);
-
-		//! Destructor.
-		virtual ~pileup_base();
-		
-		//! Retrieve the reference sequence for the given target and fai index.
-		char* get_refseq(int target);//, int idx);
-		
-    //! Get the query start and end from the cigar string of an alignment, 1-indexed!
-    int32_t query_start(const bam1_t*& a);
-    int32_t query_end(const bam1_t*& a);
-
-		//! Run the pileup; will trigger callback for each alignment.
-		void pileup();
-		
-		//! Alignment callback.
-		virtual int callback(uint32_t tid, uint32_t pos, int n, const bam_pileup1_t *pile) = 0;
-		
-	protected:
-		friend int first_level_callback(uint32_t tid, uint32_t pos, int n, const bam_pileup1_t *pile, void *data);
-
-		samfile_t* _bam; //!< BAM file handle.
-		refseq_list_t _refs; //!< Reference sequences.
-	};	
-	
-} // breseq
+}
 
 #endif

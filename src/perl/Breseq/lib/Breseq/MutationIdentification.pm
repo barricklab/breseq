@@ -56,6 +56,44 @@ sub identify_mutations
 		
 	my $reference_fasta_file_name = $settings->file_name('reference_fasta_file_name');
 	my $reference_bam_file_name = $settings->file_name('reference_bam_file_name');
+		
+	## check to see if identify_mutations++ is available:
+	my $cident_mut = $settings->ctool('identify_mutations');
+	if(defined $cident_mut) {
+		my $coverage_fn = $settings->file_name('unique_only_coverage_distribution_file_name', {'@'=>""});
+		my $error_dir = `dirname $coverage_fn`;
+		chomp $error_dir; $error_dir .= '/';
+		my $this_predicted_mutation_file_name = $settings->file_name('predicted_mutation_file_name', {'@'=>""});
+		my $output_dir = `dirname $this_predicted_mutation_file_name`;
+		chomp $output_dir; $output_dir .= '/';
+		my $readfiles = join(" --readfile ", $settings->read_files);
+		my $cmdline = "$cident_mut --bam $reference_bam_file_name --fasta $reference_fasta_file_name --readfile $readfiles";
+		$cmdline .= " --error_dir $error_dir";
+		my $ra_mc_genome_diff_file_name = $settings->file_name('ra_mc_genome_diff_file_name');	
+		$cmdline .= " --genome_diff $ra_mc_genome_diff_file_name";
+		$cmdline .= " --output $output_dir";
+		if(defined $settings->{mutation_log10_e_value_cutoff}) {
+			$cmdline .= " --mutation_cutoff $settings->{mutation_log10_e_value_cutoff}"; # defaults to 2.0.
+		}
+		if(defined $settings->{deletion_propagation_cutoff}) {
+			$cmdline .= " --deletion_propagation_cutoff $settings->{deletion_propagation_cutoff}"; # defaults to 28.0.
+		}
+		if((defined $settings->{no_deletion_prediction}) && ($settings->{no_deletion_prediction})) {
+			$cmdline .= " --predict_deletions 0";
+		} else {
+			$cmdline .= " --predict_deletions 1"; # defaults TO predicting deletions.
+		}
+		if((defined $settings->{polymorphism_prediction}) && ($settings->{polymorphism_prediction})) {
+			$cmdline .= " --predict_polymorphisms 1";
+		} else {
+			$cmdline .= " --predict_polymorphisms 0"; # defaults to NOT predicting polymorphisms.
+		}
+		
+		print STDERR "Executing C tool: $cmdline\n";
+		system ($cmdline) == 0 or die $!;
+		return; # identify_mutations++ worked, so we're all done here.
+	}
+	
 	my $bam = Bio::DB::Sam->new(-fasta => $reference_fasta_file_name, -bam => $reference_bam_file_name);
 	##my @seq_ids = $bam->seq_ids;
 	my @seq_ids = @{$ref_seq_info->{seq_ids}};

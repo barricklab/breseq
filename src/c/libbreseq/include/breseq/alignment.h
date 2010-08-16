@@ -48,6 +48,12 @@ namespace breseq {
 		
 		//! Start and end coordinates of the aligned part of the read (1-indexed). @dk: verify indexing
 		std::pair<int32_t,int32_t> query_bounds() const;
+		
+		//! Starting coordinates of the aligned part of the read.  @dk: check indexing.
+		int32_t query_start() const;
+
+		//! Ending coordinates of the aligned part of the read. @dk: check indexing.
+		int32_t query_end() const;
 
 	protected:
 		const bam_pileup1_t* _p; //!< Pileup.
