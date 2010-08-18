@@ -1,0 +1,41 @@
+==== Installation Instructions ====
+
+== Mac OS 10.5 or 10.6) ==
+
+In order to build _breseq_ from source, you will need several
+open source tools installed. The easiest way to get them is to
+install MacPorts [http://www.macports.org/]. Once you have this
+installed, open a new terminal window and issue the commands:
+
+> sudo port install R
+> sudo port install boost
+> sudo port install boost-build
+> sudo port install md5sha1sum
+> sudo port install ghostscript
+
+You will also need some Perl modules that are available from CPAN.
+In a terminal window issue the following commands
+
+> sudo perl -MCPAN -e shell
+cpan> install Statistics::Distributions
+cpan> force install CJFIELDS/BioPerl-1.6.1.tar.gz
+cpan> quit
+
+Now, you need to tell boost-build about your computer. If you are on Mac
+OS 10.5 or 10.6 you should rename a copy of the file "darwin-user-config.jam" 
+to "user-config.jam"
+
+To build _breseq_, open a new terminal window, cd to the root directory of 
+_breseq_ and use these commands:
+
+> make
+> make install
+> make test
+
+(Make test, will take quite some time. You don't need to let it do all of the tests.)
+
+Finally, add the _breseq_ "stage/bin" directory to your $PATH by adding a line like
+this to your "~/.profile" file. It MUST be an absolute path that begins with "/":
+
+export PATH="$PATH:/mnt/breseq/stage/bin"
+

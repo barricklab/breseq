@@ -1,0 +1,21 @@
+using darwin ;
+
+import os ;
+local PORTS = "/opt/local/lib" ;
+local LIB = "/usr/lib" ;
+
+project user-config
+    : requirements
+        <include>/opt/local/include
+        <include>/usr/include
+    ;
+
+lib boost_filesystem : : <name>boost_filesystem <search>$(PORTS) ;
+lib boost_program_options : : <name>boost_program_options <search>$(PORTS) ;
+lib boost_signals : : <name>boost_signals <search>$(PORTS) ;
+lib boost_system : : <name>boost_system <search>$(PORTS) ;
+lib boost_thread : : <name>boost_thread <search>$(PORTS) ;
+
+lib z : : <name>z <search>$(LIB) ;
+lib m : : <name>m <search>$(LIB) ;
+lib curses : : <name>curses <search>$(LIB) ;
