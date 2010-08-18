@@ -21,8 +21,8 @@ int main(int argc, char* argv[]) {
 	("fasta,f", po::value<string>(), "FASTA file of reference sequence")
 	("output,o", po::value<string>(), "output directory")
 	("readfile,r", po::value<vector<string> >(), "names of readfiles (no extension)")
-	("coverage", po::value<bool>()->default_value(true), "generate unique coverage distribution output")
-  ("errors", po::value<bool>()->default_value(true), "generate unique error count output");
+	("coverage", po::value<int>()->default_value(false), "generate unique coverage distribution output")
+  ("errors", po::value<int>()->default_value(false), "generate unique error count output");
 	
 	po::variables_map options;
 	po::store(po::parse_command_line(argc, argv, cmdline_options), options);
@@ -45,9 +45,9 @@ int main(int argc, char* argv[]) {
 		breseq::error_count(options["bam"].as<string>(),
 												options["fasta"].as<string>(),
 												options["output"].as<string>(),
-												options["readfiles"].as<vector<string> >(),
-												options.count("coverage"),
-                        options.count("errors"));
+												options["readfile"].as<vector<string> >(),
+												options["coverage"].as<int>(),
+                        options["errors"].as<int>());
 	} catch(...) {
 		// failed; 
 		return -1;

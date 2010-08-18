@@ -66,8 +66,8 @@ sub count
 		my $outputdir = `dirname $coverage_fn`;
 		chomp $outputdir; $outputdir .= '/';
 		my $readfiles = join(" --readfile ", $settings->read_files);
-		my $cmdline = "$error_count --bam $reference_bam_file_name --fasta $reference_fasta_file_name --output $outputdir --readfile $readfiles --coverage";
-		$cmdline .= " --errors" if (defined $error_counts_key);
+		my $cmdline = "$error_count --bam $reference_bam_file_name --fasta $reference_fasta_file_name --output $outputdir --readfile $readfiles --coverage 1";
+		$cmdline .= " --errors 1" if (defined $error_counts_key);
 		Breseq::Shared::system($cmdline);
 		return; # error_count++ worked, so we're all done here.
 	}

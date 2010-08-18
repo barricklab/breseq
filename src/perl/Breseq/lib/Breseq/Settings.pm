@@ -684,6 +684,7 @@ sub installed
 	
 	## breseq C++ executables
 	$self->{installed}->{error_count} = (-x "$self->{bin_path}/error_count") ? 1 : 0;
+	$self->{installed}->{identify_mutations} = (-x "$self->{bin_path}/identify_mutations") ? 1 : 0;
 
 	## absolutely required
 	$self->{installed}->{SSAHA2} = (`which ssaha2`) ? 1 : 0;
