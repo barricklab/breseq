@@ -52,7 +52,7 @@ namespace breseq {
 		
 		
 		//! Constructor.
-		error_count_pileup(const std::string& bam, const std::string& fasta, bool do_coverage=false, bool do_errors=false);
+		error_count_pileup(const std::string& bam, const std::string& fasta, bool do_coverage=true, bool do_errors=true);
 		
 		//! Destructor.
 		virtual ~error_count_pileup();		
