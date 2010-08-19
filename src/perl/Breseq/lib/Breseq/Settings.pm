@@ -98,6 +98,7 @@ sub new
 		'base-quality-cutoff|b=s' => \$self->{base_quality_cutoff},
 		'maximum-mismatches|m=s' => \$self->{maximum_read_mismatches},		
 		'perl-error-count' => \$self->{perl_error_count},
+		'perl-identify-mutations' => \$self->{perl_identify_mutations},
 		'error-model-method=s' => \$self->{error_model_method},
 		'no-indel-polymorphisms' => \$self->{no_indel_polymorphisms},	
 		'strict-polymorphism-prediction' => \$self->{strict_polymorphism_prediction},						
@@ -168,6 +169,7 @@ sub new_annotate
 		'base-quality-cutoff|b=s' => \$self->{base_quality_cutoff},
 		'maximum-mismatches|m=s' => \$self->{maximum_read_mismatches},
 		'perl-error-count' => \$self->{perl_error_count},
+		'perl-identify-mutations' => \$self->{perl_identify_mutations},		
 		'error-model-method=s' => \$self->{error_model_method},
 		'no-indel-polymorphisms' => \$self->{no_indel_polymorphisms},
 		'strict-polymorphism-prediction' => \$self->{strict_polymorphism_prediction},										
@@ -669,11 +671,18 @@ sub log
 
 sub ctool
 {
-	my ($self, $tool_name) = @_;
+	my ($self, $tool_name, $allow_fail) = @_;
 		
 	if (!$self->{installed}->{$tool_name})
 	{
-		$self->throw("Executable \"$tool_name\" not found in breseq bin path\"$self->{bin_path}\".");
+		if ($allow_fail)
+		{
+			$self->warn("Executable \"$tool_name\" not found in breseq bin path\"$self->{bin_path}\".");
+		}
+		else
+		{
+			$self->throw("Executable \"$tool_name\" not found in breseq bin path\"$self->{bin_path}\".");
+		}
 	}
 	return "$self->{bin_path}/$tool_name";
 }
@@ -684,7 +693,8 @@ sub installed
 	
 	## breseq C++ executables
 	$self->{installed}->{error_count} = (-x "$self->{bin_path}/error_count") ? 1 : 0;
-
+	$self->{installed}->{identify_mutations} = (-x "$self->{bin_path}/identify_mutations") ? 1 : 0;
+	
 	## absolutely required
 	$self->{installed}->{SSAHA2} = (`which ssaha2`) ? 1 : 0;
 	$self->{installed}->{R} = (`which R`) ? 1 : 0;	

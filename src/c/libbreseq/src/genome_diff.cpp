@@ -202,7 +202,7 @@ void breseq::genome_diff::read(const std::string& filename) {
  */
 void breseq::genome_diff::write(const std::string& filename) {
 	std::ofstream ofs(filename.c_str());
-	ofs << "#=GENOME DIFF 1.0" << std::endl;
+	ofs << "#=GENOME_DIFF 1.0" << std::endl;
 	for(entry_list_t::iterator i=_entry_list.begin(); i!=_entry_list.end(); ++i) {
 		ofs << (**i) << std::endl;
 	}	
