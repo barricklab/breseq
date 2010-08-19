@@ -74,7 +74,11 @@ sub identify_mutations
 		$cmdline .= " --output $output_dir";
 		if(defined $settings->{mutation_log10_e_value_cutoff}) {
 			$cmdline .= " --mutation_cutoff $settings->{mutation_log10_e_value_cutoff}"; # defaults to 2.0.
-		}
+		}		
+		my $coverage_tab_file_name = $settings->file_name('complete_coverage_text_file_name', {'@'=>""});
+		my $coverage_dir = `dirname $coverage_tab_file_name`;
+		chomp $coverage_dir; $coverage_dir .= '/';
+		$cmdline .= " --coverage_dir $coverage_dir";
 		if(defined $settings->{deletion_propagation_cutoff}) {
 			$cmdline .= " --deletion_propagation_cutoff $settings->{deletion_propagation_cutoff}"; # defaults to 28.0.
 		}
@@ -88,9 +92,8 @@ sub identify_mutations
 		} else {
 			$cmdline .= " --predict_polymorphisms 0"; # defaults to NOT predicting polymorphisms.
 		}
-		
-		print STDERR "Executing C tool: $cmdline\n";
-		system ($cmdline) == 0 or die $!;
+
+		Breseq::Shared::system($cmdline);
 		return; # identify_mutations++ worked, so we're all done here.
 	}
 	

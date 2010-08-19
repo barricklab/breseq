@@ -3,6 +3,7 @@
 
 #include <string>
 #include <vector>
+#include <fstream>
 #include <boost/optional.hpp>
 
 #include "breseq/error_count.h"
@@ -24,6 +25,7 @@ namespace breseq {
 													const std::string& gd_file,
 													const std::string& output_dir,
 													const std::vector<std::string>& readfiles,
+													const std::string& coverage_dir,
 													double deletion_propagation_cutoff,
 													double mutation_cutoff,
 													bool predict_deletions,
@@ -142,6 +144,7 @@ namespace breseq {
 															const std::string& gd_file,
 															const std::string& output_dir,
 															const std::vector<std::string>& readfiles,
+															const std::string& coverage_dir,
 															double deletion_propagation_cutoff,
 															double mutation_cutoff,
 															bool predict_deletions,
@@ -170,10 +173,14 @@ namespace breseq {
 		double _mutation_cutoff; //!< log10 e-value cutoff value for mutation predictions.
 		bool _predict_deletions; //!< Whether to predict mutations.
 		bool _predict_polymorphisms; //!< Whether to predict polymorphisms.
+		const std::string _coverage_dir; //!< Directory in which to store coverage data.
 		double _log10_ref_length; //!< log10 of the total reference sequence.
 		std::vector<sequence_info> _seq_info; //!< information about each sequence.
 		fastq_map_t error_hash; //!< fastq_file_index -> quality map.
 		shared_info s; // summary stats
+		
+		// this is used to output coverage data:
+		std::ofstream _coverage_data;
 		
 		// these are state variables used by the deletion-prediction method.
 		boost::optional<uint32_t> _last_deletion_start_position;

@@ -3,13 +3,13 @@
 #include <map>
 #include <sstream>
 #include <string>
-#include <fstream>
 #include <vector>
 #include <bam.h>
 #include <sam.h>
 #include <faidx.h>
 #include <assert.h>
 #include <boost/tuple/tuple.hpp>
+#include <boost/algorithm/string.hpp>
 
 #include "breseq/common.h"
 #include "breseq/pileup.h"
@@ -24,12 +24,13 @@ void breseq::identify_mutations(const std::string& bam,
 																const std::string& gd_file,
 																const std::string& output_dir,
 																const std::vector<std::string>& readfiles,
+																const std::string& coverage_dir,
 																double deletion_propagation_cutoff,
 																double mutation_cutoff,
 																bool predict_deletions,
 																bool predict_polymorphisms) {
 	// do the mutation identification:
-	identify_mutations_pileup imp(bam, fasta, error_dir, gd_file, output_dir, readfiles, deletion_propagation_cutoff, mutation_cutoff, predict_deletions, predict_polymorphisms);
+	identify_mutations_pileup imp(bam, fasta, error_dir, gd_file, output_dir, readfiles, coverage_dir, deletion_propagation_cutoff, mutation_cutoff, predict_deletions, predict_polymorphisms);
 	imp.do_pileup();
 }
 
@@ -42,6 +43,7 @@ breseq::identify_mutations_pileup::identify_mutations_pileup(const std::string& 
 																														 const std::string& gd_file,
 																														 const std::string& output_dir,
 																														 const std::vector<std::string>& readfiles,
+																														 const std::string& coverage_dir,
 																														 double deletion_propagation_cutoff,
 																														 double mutation_cutoff,
 																														 bool predict_deletions,
@@ -54,6 +56,7 @@ breseq::identify_mutations_pileup::identify_mutations_pileup(const std::string& 
 , _mutation_cutoff(mutation_cutoff)
 , _predict_deletions(predict_deletions)
 , _predict_polymorphisms(predict_polymorphisms)
+, _coverage_dir(coverage_dir)
 , _log10_ref_length(0)
 , _this_deletion_reaches_seed_value(false)
 , _last_position_coverage_printed(0) {
@@ -111,6 +114,17 @@ void breseq::identify_mutations_pileup::callback(const breseq::pileup& p) {
 	//	my $next_insert_count_exists = 1;
 	int insert_count=-1;
 	bool next_insert_count_exists=true;
+	
+	// check to see if we already opened the coverage file:
+	if(!_coverage_data.is_open()) {
+		//		open COV, ">$coverage_tab_file_name" if (defined $coverage_tab_file_name);
+		//		print COV join("\t", 'unique_top_cov', 'unique_bot_cov', 'redundant_top_cov', 'redundant_bot_cov', 'raw_redundant_top_cov', 'raw_redundant_bot_cov', 'e_value', 'position') . "\n";
+		std::string filename(_coverage_dir);
+		filename += p.target_name();
+		filename += ".coverage.tab";
+		_coverage_data.open(filename.c_str());
+		_coverage_data << "unique_top_cov" << "\t" << "unique_bot_cov" << "\t" << "redundant_top_cov" << "\t" << "redundant_bot_cov" << "\t" << "raw_redundant_top_cov" << "\t" << "raw_redundant_bot_cov" << "\t" << "e_value" << "\t" << "position" << std::endl;
+	}	
 	
 	//INSERT_COUNT: while ($next_insert_count_exists)
 	while(next_insert_count_exists) {
@@ -686,6 +700,8 @@ void breseq::identify_mutations_pileup::at_end(uint32_t tid, uint32_t seqlen) {
 	//	my $ra_mc_genome_diff_file_name = $settings->file_name('ra_mc_genome_diff_file_name');	
 	//	$gd->write($ra_mc_genome_diff_file_name);
 	_gd.write();
+	
+	_coverage_data.close();
 }
 
 
@@ -746,7 +762,7 @@ void breseq::identify_mutations_pileup::check_deletion_completion(uint32_t posit
 		_last_position_coverage.reset(position_coverage());
 		
 		//print COV join("\t", 0, 0, 0, 0, 0, 0, 'NA', $i) . "\n"; 
-		//		std::cout << 0 << "\t" << 0 << "\t" << 0 << "\t" << 0 << "\t" << 0 << "\t" << 0 << "\t" << "NA\t" << i << "\t" << std::endl;
+		_coverage_data << 0 << "\t" << 0 << "\t" << 0 << "\t" << 0 << "\t" << 0 << "\t" << 0 << "\t" << "NA\t" << i << std::endl;
 	}
 	_last_position_coverage_printed = position;
 	
@@ -759,13 +775,13 @@ void breseq::identify_mutations_pileup::check_deletion_completion(uint32_t posit
 		
 		//#print this information
 		//print COV join("\t", $tu->{-1}, $tu->{1}, $tr->{-1}, $tr->{1}, $trr->{-1}, $trr->{1}, $e_value_call, $pos) . "\n";
-		//		std::cout << this_position_coverage->unique[0] << "\t"
-		//		<< this_position_coverage->unique[2] << "\t"
-		//		<< this_position_coverage->redundant[0] << "\t"
-		//		<< this_position_coverage->redundant[2] << "\t"
-		//		<< this_position_coverage->raw_redundant[0] << "\t"
-		//		<< this_position_coverage->raw_redundant[2] << "\t"
-		//		<< e_value_call << "\t" << position << std::endl;
+		_coverage_data << this_position_coverage->unique[0] << "\t"
+		<< this_position_coverage->unique[2] << "\t"
+		<< this_position_coverage->redundant[0] << "\t"
+		<< this_position_coverage->redundant[2] << "\t"
+		<< this_position_coverage->raw_redundant[0] << "\t"
+		<< this_position_coverage->raw_redundant[2] << "\t"
+		<< e_value_call << "\t" << position << std::endl;
 		
 		//#start a new possible deletion if we fall below the propagation cutoff
 		//if ($this_position_coverage->{unique}->{total} <= $deletion_propagation_cutoff)
