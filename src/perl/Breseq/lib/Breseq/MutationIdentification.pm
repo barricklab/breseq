@@ -58,7 +58,7 @@ sub identify_mutations
 	my $reference_bam_file_name = $settings->file_name('reference_bam_file_name');
 		
 	## check to see if identify_mutations++ is available:
-	my $cident_mut = $settings->ctool('identify_mutations');
+	my $cident_mut = $settings->ctool('identify_mutations', 1);
 	if(defined $cident_mut) {
 		my $coverage_fn = $settings->file_name('unique_only_coverage_distribution_file_name', {'@'=>""});
 		my $error_dir = `dirname $coverage_fn`;

@@ -45,13 +45,14 @@ int main(int argc, char* argv[]) {
 		breseq::error_count(options["bam"].as<string>(),
 												options["fasta"].as<string>(),
 												options["output"].as<string>(),
-												options["readfiles"].as<vector<string> >(),
+												options["readfile"].as<vector<string> >(),
 												options.count("coverage"),
                         options.count("errors"));
 	} catch(...) {
 		// failed; 
+    cout << "<<<Failed>>>" << endl;
 		return -1;
 	}
-	
+  
 	return 0;
 }
