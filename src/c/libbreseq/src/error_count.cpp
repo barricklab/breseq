@@ -253,9 +253,11 @@ void breseq::error_count_pileup::print_error(const std::string& output_dir, cons
 
 /*! Load error rates.
  */
-void breseq::error_count_pileup::load_error_rates(const std::string& input_dir, const std::vector<std::string>& readfiles) {
+breseq::error_count_results::error_count_results(const std::string& input_dir, const std::vector<std::string>& readfiles) {
 	using namespace std;
 	char bases[] = {'A', 'C', 'T', 'G', '.'}; // order is important!!! must match the header from the error rates file...
+	
+	_error_rates.resize(readfiles.size());
 	
 	// load the error rates:
 	for(std::size_t i=0; i<readfiles.size(); ++i) {
@@ -263,13 +265,13 @@ void breseq::error_count_pileup::load_error_rates(const std::string& input_dir, 
 		ifstream in(filename.c_str());
 		in.ignore(1024, '\n'); // get rid of header line.
 		
-		fastq_error_map_t::iterator fastq = _error_rates.insert(make_pair(i,error_map_t())).first;
+		error_map_t& emt = _error_rates[i];
 		
 		while(!in.eof()) {
 			int quality;
 			in >> quality;
 			
-			error_map_t::iterator em = fastq->second.insert(make_pair(static_cast<uint8_t>(quality),base_error_t())).first;
+			error_map_t::iterator em = emt.insert(make_pair(static_cast<uint8_t>(quality),base_error_t())).first;
 			
 			for(int i=0; i<5; ++i) {
 				for(int j=0; j<5; ++j) {
@@ -285,183 +287,12 @@ void breseq::error_count_pileup::load_error_rates(const std::string& input_dir, 
 		in.close();
 	}
 }
-	
-
-//{
-//	my ($error_rates) = @_;
-//	
-//## precalculate log10 probabilities and not probabilities 
-//## results in a significant speed-up of calculations	
-//	my $log10_correct_rates;
-//	my $log10_error_rates;
-//	my $log10_random_rates;
-//	foreach (my $i=0; $i<scalar @$error_rates; $i++)
-//	{
-//		foreach my $q (sort keys %{$error_rates->[$i]})
-//		{
-//			foreach my $base_1 (@base_list)
-//			{				
-//				foreach my $base_2 (@base_list)
-//				{
-//					my $c = $base_1 . $base_2;
-//					my $pr = $error_rates->[$i]->{$q}->{$c};	
-//					$pr = 1E-256 if ($pr == 0);
-//					my $one_minus_pr = 1-$pr;
-//					$one_minus_pr = 1E-256 if ($one_minus_pr == 0);
-//					
-//					$log10_correct_rates->[$i]->{$q}->{$c} = log($pr) / log(10);
-//					$log10_error_rates->[$i]->{$q}->{$c} = log($one_minus_pr) / log(10);
-//					$log10_random_rates->[$i]->{$q}->{$c} = log($pr/0.25) / log(10);
-//				}
-//			}
-//		}
-//	}
-//	
-//	return ($log10_correct_rates, $log10_error_rates, $log10_random_rates);
-//}
-
-
-
-
-
-
-
-//		
-//	for(std::size_t i=0; i<_seq_info.size(); ++i) {
-//		string filename(input_dir + _bam->header->target_name[i] + ".unique_only_coverage_distribution.tab");
-//		ifstream in(filename.c_str());		
-//		in.ignore(1024, '\n'); // get rid of header line.
-//		
-//		_seq_info[i].unique_only_coverage.push_back(0); // placeholder for zero'th position.
-//		std::size_t unused, coverage;
-//		
-//		while(!in.eof()) {
-//			uint8_t quality=0;
-//			in >> quality;
-//			base_error_t rates;
-//			
-//			for(std::size_t i=0; i<5; ++i) {
-//				for(std::size_t j=0; j<5; ++j) {
-//					double r=numeric_limits<double>::quiet_NaN();
-//					in >> r;
-//					string k; k+=bases[i]; k+= bases[j];
-//					rates[k] = r;
-//				}
-//			}
-//			_error_rates[quality] = rates;
-//		}
-//		
-//		in.close();
-//	}
-//	
-//	
-//	ifstream in(error_rates_file);
-//	in.ignore(1024,'\n'); // header line
-//
-//}			
-//
-//
-//	// load the coverage distribution:
-//	for(std::size_t i=0; i<_seq_info.size(); ++i) {
-//		string filename(input_dir + _bam->header->target_name[i] + ".unique_only_coverage_distribution.tab");
-//		ifstream in(filename.c_str());		
-//		in.ignore(1024, '\n'); // get rid of header line.
-//		
-//		_seq_info[i].unique_only_coverage.push_back(0); // placeholder for zero'th position.
-//		std::size_t unused, coverage;
-//		
-//		while(!in.eof()) {
-//			in >> unused >> coverage;
-//			_seq_info[i].unique_only_coverage.push_back(coverage);
-//		}
-//		
-//		in.close();
-//	}
-//	
-//	// load the error counts:
-//	for(std::size_t i=0; i<readfiles.size(); ++i) {
-//		string filename(input_dir + readfiles[i] + ".error_counts.tab");
-//		ifstream in(filename.c_str());
-//		in.ignore(1024, '\n'); // get rid of header line.
-//
-//		fastq_map_t::iterator fastq = error_hash.insert(make_pair(i,qual_map_t())).first;
-//		
-//		while(!in.eof()) {
-//			uint8_t quality;
-//			in >> quality;
-//			
-//			qual_map_t::iterator qm = fastq->second.insert(make_pair(quality,base_count_t())).first;
-//		
-//			for(int i=0; i<5; ++i) {
-//				for(int j=0; j<5; ++j) {
-//					string k; k += bases[i]; k += bases[j];
-//					int base_count;
-//					in >> base_count;
-//					qm->second[k] = base_count;
-//				}
-//			}
-//		}
-//		in.close();
-//	}
-//}
-
-//
-//
-//sub load_error_rates
-//{
-//	my ($settings, $summary, $ref_seq_info) = @_;
-//	my @seq_ids = @{$ref_seq_info->{seq_ids}};
-//	
-//	my @error_rates_list;
-//	foreach my $read_file ($settings->read_files)
-//	{
-//		my $fastq_file_index = $settings->read_file_to_fastq_file_index($read_file);
-//		my $this_error_rates_file_name = $settings->file_name('error_rates_file_name', {'#' => $read_file});
-//		$error_rates_list[$fastq_file_index] = load_error_file($this_error_rates_file_name);
-//	}
-//	return \@error_rates_list;
-//}
-//
-//sub log10_error_rates
-//{
-//	my ($error_rates) = @_;
-//	
-//## precalculate log10 probabilities and not probabilities 
-//## results in a significant speed-up of calculations	
-//	my $log10_correct_rates;
-//	my $log10_error_rates;
-//	my $log10_random_rates;
-//	foreach (my $i=0; $i<scalar @$error_rates; $i++)
-//	{
-//		foreach my $q (sort keys %{$error_rates->[$i]})
-//		{
-//			foreach my $base_1 (@base_list)
-//			{				
-//				foreach my $base_2 (@base_list)
-//				{
-//					my $c = $base_1 . $base_2;
-//					my $pr = $error_rates->[$i]->{$q}->{$c};	
-//					$pr = 1E-256 if ($pr == 0);
-//					my $one_minus_pr = 1-$pr;
-//					$one_minus_pr = 1E-256 if ($one_minus_pr == 0);
-//					
-//					$log10_correct_rates->[$i]->{$q}->{$c} = log($pr) / log(10);
-//					$log10_error_rates->[$i]->{$q}->{$c} = log($one_minus_pr) / log(10);
-//					$log10_random_rates->[$i]->{$q}->{$c} = log($pr/0.25) / log(10);
-//				}
-//			}
-//		}
-//	}
-//	
-//	return ($log10_correct_rates, $log10_error_rates, $log10_random_rates);
-//}
-
 
 /*! Return the error rate for the given base pair, quality, and FASTQ file index.
  */
-double breseq::error_count_pileup::log10_error_rates(int32_t fastq_file_index, uint8_t quality, const std::string& base_key) {
+double breseq::error_count_results::log10_error_rates(int32_t fastq_file_index, uint8_t quality, const std::string& base_key) {
 	//  fail if this doesn't exist?
-	assert(_error_rates.find(fastq_file_index)!=_error_rates.end());
+	assert((std::size_t)fastq_file_index<_error_rates.size());
 	assert(_error_rates[fastq_file_index].find(quality)!=_error_rates[fastq_file_index].end());
 	assert(_error_rates[fastq_file_index][quality].find(base_key)!=_error_rates[fastq_file_index][quality].end());
 	
@@ -471,11 +302,17 @@ double breseq::error_count_pileup::log10_error_rates(int32_t fastq_file_index, u
 
 /*! Return the correct rate for the given base pair, quality, and FASTQ file index.
  */
-double breseq::error_count_pileup::log10_correct_rates(int32_t fastq_file_index, uint8_t quality, const std::string& base_key) {
+double breseq::error_count_results::log10_correct_rates(int32_t fastq_file_index, uint8_t quality, const std::string& base_key) {
 		//  fail if this doesn't exist?
-	assert(_error_rates.find(fastq_file_index)!=_error_rates.end());
+	assert((std::size_t)fastq_file_index<_error_rates.size());
 	assert(_error_rates[fastq_file_index].find(quality)!=_error_rates[fastq_file_index].end());
 	assert(_error_rates[fastq_file_index][quality].find(base_key)!=_error_rates[fastq_file_index][quality].end());
 	
 	return _error_rates[fastq_file_index][quality][base_key].second;
+}
+
+/*! Return the pair of (correct,error) rates.
+ */
+const std::pair<double,double>& breseq::error_count_results::log10_rates(int32_t fastq_file_index, uint8_t quality, const std::string& base_key) {
+	return _error_rates[fastq_file_index][quality][base_key];
 }

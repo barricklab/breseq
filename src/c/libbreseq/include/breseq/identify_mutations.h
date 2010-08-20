@@ -166,7 +166,7 @@ namespace breseq {
 		//! Helper method to track unknowns.
 		void update_unknown_intervals(uint32_t position, uint32_t seq_id, bool base_predicted, bool this_position_unique_only_coverage);
 		
-		error_count_pileup _ecp; //!< Error count information.
+		error_count_results _ecr; //!< Error count results.
 		genome_diff _gd; //!< Genome diff.
 		double _deletion_seed_cutoff;
 		double _deletion_propagation_cutoff; //!< Coverage above which deletions are cutoff.

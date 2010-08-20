@@ -49,7 +49,7 @@ breseq::identify_mutations_pileup::identify_mutations_pileup(const std::string& 
 																														 bool predict_deletions,
 																														 bool predict_polymorphisms)
 : breseq::pileup_base(bam, fasta)
-, _ecp(bam, fasta)
+, _ecr(error_dir, readfiles)
 , _gd(gd_file)
 , _deletion_seed_cutoff(0)
 , _deletion_propagation_cutoff(deletion_propagation_cutoff)
@@ -60,9 +60,6 @@ breseq::identify_mutations_pileup::identify_mutations_pileup(const std::string& 
 , _log10_ref_length(0)
 , _this_deletion_reaches_seed_value(false)
 , _last_position_coverage_printed(0) {
-	
-	// load the error rates:
-	_ecp.load_error_rates(error_dir, readfiles);
 	
 	// reserve enough space for the sequence info:
 	_seq_info.resize(_bam->header->n_targets);
@@ -197,6 +194,19 @@ void breseq::identify_mutations_pileup::callback(const breseq::pileup& p) {
 			//			$indel = -1 if ($p->is_del); ## deletions relative to reference have -1 as indel
 			int indel = i->indel();
 			
+			//my $base = ($indel < $insert_count) ? '.' : substr($a->qseq,$p->qpos + $insert_count,1);		
+			uint8_t base='.';
+			if(indel >= insert_count) {
+				uint8_t* qseq = i->query_sequence();
+				base = bam1_seqi(qseq, i->query_position() + insert_count);
+			}
+			
+			//##don't use bases without qualities!!
+			//next if ($base =~ /[nN]/);
+			if(is_N(base)) {
+				continue;
+			}
+			
 			//			my $redundancy = $a->aux_get('X1');
 			int32_t redundancy = i->redundancy();
 			
@@ -217,11 +227,6 @@ void breseq::identify_mutations_pileup::callback(const breseq::pileup& p) {
 			//			
 			bool trimmed = i->is_trimmed();
 			
-			//## These are the start and end coordinates of the aligned part of the read
-			//			my ($q_start, $q_end) = Breseq::Shared::alignment_query_start_end($a, {no_reverse=>1});
-			int32_t q_start,q_end;
-			boost::tie(q_start,q_end) = i->query_bounds(); // @dk: 1-indexed!
-			
 			//std::cerr << q_start << " " << q_end << std::endl;			
 			
 			//### Optionally, only count reads that completely match
@@ -232,20 +237,6 @@ void breseq::identify_mutations_pileup::callback(const breseq::pileup& p) {
 			//				next if (!$complete_match);
 			//			}
 			//### End complete match condition
-			
-			//my $base = ($indel < $insert_count) ? '.' : substr($a->qseq,$p->qpos + $insert_count,1);		
-			uint8_t base='.';
-			if(indel >= insert_count) {
-				uint8_t* qseq = i->query_sequence();
-				base = bam1_seqi(qseq, i->query_position() + insert_count);
-			}
-			
-			//##don't use bases without qualities!!
-			//next if ($base =~ /[nN]/);
-			if(is_N(base)) {
-				continue;
-			}
-			
 			
 			//##### update coverage if this is not a deletion in read relative to reference
 			//### note that we count trimmed reads here, but not when looking for short indel mutations...	
@@ -285,6 +276,12 @@ void breseq::identify_mutations_pileup::callback(const breseq::pileup& p) {
 			if(trimmed || (redundancy > 1)) {
 				continue;
 			}
+			
+			
+			//## These are the start and end coordinates of the aligned part of the read
+			//			my ($q_start, $q_end) = Breseq::Shared::alignment_query_start_end($a, {no_reverse=>1});
+			int32_t q_start,q_end;
+			boost::tie(q_start,q_end) = i->query_bounds(); // @dk: 1-indexed!
 			
 			uint8_t quality=0;
 			if(indel < insert_count) {
@@ -348,10 +345,11 @@ void breseq::identify_mutations_pileup::callback(const breseq::pileup& p) {
 				//$pr_base_hash->{$hypothetical_base} += $log10_correct_rates->[$fastq_file_index]->{$quality}->{$base_key};
 				//$pr_not_base_hash->{$hypothetical_base} += $log10_error_rates->[$fastq_file_index]->{$quality}->{$base_key};
 				
-				//std::cerr << _ecp.log10_correct_rates(fastq_file_index, quality, base_key) << " " << _ecp.log10_error_rates(fastq_file_index, quality, base_key) << std::endl;
+				//std::cerr << _ecr.log10_correct_rates(fastq_file_index, quality, base_key) << " " << _ecr.log10_error_rates(fastq_file_index, quality, base_key) << std::endl;
 				
-				pr_base_hash[base_list[j]] += _ecp.log10_correct_rates(fastq_file_index, quality, base_key);
-				pr_not_base_hash[base_list[j]] += _ecp.log10_error_rates(fastq_file_index, quality, base_key);
+				std::pair<double,double> log10rates = _ecr.log10_rates(fastq_file_index, quality, base_key);
+				pr_base_hash[base_list[j]] += log10rates.second; //_ecr.log10_correct_rates(fastq_file_index, quality, base_key);
+				pr_not_base_hash[base_list[j]] += log10rates.first; //_ecr.log10_error_rates(fastq_file_index, quality, base_key);
 			}
 		} // end for-each read
 		

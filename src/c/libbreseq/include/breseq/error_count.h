@@ -34,10 +34,6 @@ namespace breseq {
 		typedef std::map<uint8_t,base_count_t> qual_map_t;
 		typedef std::map<int32_t,qual_map_t> fastq_map_t;
 		
-		typedef std::map<std::string,std::pair<double,double> > base_error_t; // basepair -> (error,correct) rates
-		typedef std::map<uint8_t,base_error_t> error_map_t;
-		typedef std::map<int32_t,error_map_t> fastq_error_map_t;
-		
 		//! Information that is tracked per-sequence.
 		struct sequence_info {
 			/*! Coverage count table.
@@ -66,21 +62,36 @@ namespace breseq {
 		//! Print error file.
 		void print_error(const std::string& output_dir, const std::vector<std::string>& readfiles);
 
-		//! Load error rates.
-		void load_error_rates(const std::string& input_dir, const std::vector<std::string>& readfiles);
+	protected:		
+		std::vector<sequence_info> _seq_info; //!< information about each sequence.
+		fastq_map_t _error_hash; //!< fastq_file_index -> quality map.
+		bool m_do_coverage;
+    bool m_do_errors;
+	};
+	
 
+	/*! Wrapper around the results of running error_count_pileup.
+	 */
+	class error_count_results {
+	public:
+		typedef std::map<std::string,std::pair<double,double> > base_error_t; // basepair -> (error,correct) rates
+		typedef std::map<uint8_t,base_error_t> error_map_t;
+		typedef std::vector<error_map_t> fastq_error_map_t;
+		
+		//! Constructor.
+		error_count_results(const std::string& input_dir, const std::vector<std::string>& readfiles);
+		
 		//! Return the correct rate for the given base pair, quality, and FASTQ file index.
 		double log10_correct_rates(int32_t fastq_file_index, uint8_t quality, const std::string& base_key);
 		
 		//! Return the error rate for the given base pair, quality, and FASTQ file index.
 		double log10_error_rates(int32_t fastq_file_index, uint8_t quality, const std::string& base_key);
+
+		//! Return the pair of (error,correct) rates.
+		const std::pair<double,double>& log10_rates(int32_t fastq_file_index, uint8_t quality, const std::string& base_key);
 		
-	protected:		
-		std::vector<sequence_info> _seq_info; //!< information about each sequence.
-		fastq_map_t _error_hash; //!< fastq_file_index -> quality map.
+	protected:
 		fastq_error_map_t _error_rates; //!< fastq_file_index -> quality -> error rate map.
-		bool m_do_coverage;
-    bool m_do_errors;
 	};
 	
 } // breseq
