@@ -1,0 +1,958 @@
+#!/usr/bin/env perl
+
+###
+# Pod Documentation
+###
+
+=head1 NAME
+
+genome_diff
+
+=head1 SYNOPSIS
+
+Usage: genome_diff COMMAND [options]
+
+Valid commands are: MUTATE, ANNOTATE
+
+=head1 DESCRIPTION
+
+Perform various operations on "Genome Diff" files.
+
+=over
+
+=head1 genome_diff MUTATE -r reference.gbk -o output.fna input.gd
+
+=over
+
+=item B<-r|--reference> file path REQUIRED
+
+GenBank file or files that the GenomeDiff refers to. Option may be entered multiple times.
+
+=back
+
+=item B<-i|--input-path> file path REQUIRED
+
+Input GenomeDiff file.
+
+=item B<-o|--genome-info> file path DEFAULT = "out.fna"
+
+Output FASTA file.
+
+=back
+
+=head1 AUTHOR
+
+Jeffrey Barrick <jbarrick@msu.edu>
+
+=head1 COPYRIGHT
+
+Copyright 2009.  All rights reserved.
+
+=cut
+
+###
+# End Pod Documentation
+###
+
+our $VERSION = '0';
+
+#### Standard Perl Modules ####
+use strict;
+use Data::Dumper;
+use File::Path;
+use Getopt::Long;
+use Pod::Usage;
+use POSIX qw(ceil floor);
+
+#### Bio Perl ####
+use Bio::SeqIO;
+
+#allows us to load modules and call other scripts in same directory
+use FindBin;
+use lib $FindBin::Bin;
+$ENV{PATH} = "$ENV{PATH}:" . $FindBin::Bin;
+
+#### Paths to Locally Installed Modules ####
+use lib $FindBin::Bin . "/../lib/perl5";
+use lib $FindBin::Bin . "/../lib/perl5/site_perl";
+
+use Breseq::GenomeDiff;
+
+##First argument is always the command
+my $command = shift @ARGV;
+
+#Could auto-complete abbreviated commands here...
+
+if ("\U$command" eq 'FILTER')
+{
+	do_filter();
+}
+elsif ("\U$command" eq 'ANNOTATE')
+{ 
+	do_annotate();
+}
+elsif ("\U$command" eq 'COMPARE')
+{
+	do_compare();
+}
+elsif ("\U$command" eq 'COMPARE_POLYMORPHISMS')
+{
+	do_compare_polymorphisms();
+}
+elsif ("\U$command" eq 'MUTATION_TREE')
+{ 
+	do_mutation_tree();
+}
+elsif ("\U$command" eq 'COUNT')
+{
+	do_count();
+}
+elsif ("\U$command" eq 'ORPHAN_EVIDENCE')
+{
+	do_orphan_evidence();
+}
+elsif ("\U$command" eq 'MUTATE')
+{
+	do_mutate();
+}
+elsif ("\U$command" eq 'UNION')
+{
+	do_union();
+}
+elsif ("\U$command" eq 'INTERSECTION')
+{
+	do_intersecton();
+}
+elsif ("\U$command" eq 'SUBTRACT')
+{
+	do_subtract();
+}
+else
+{
+	die "Unknown command";
+}
+
+
+sub do_filter
+{	
+	my ($help, $man, $verbose);
+	my $output = 'output.gd'; 
+	my $removed = 'removed.gd';
+	my $input = ();
+	
+	GetOptions(
+		'help|?' => \$help, 'man' => \$man,
+		'verbose|v' => \$verbose,
+		'output|o=s' => \$output,
+		'input|i=s' => \$input,
+		'removed|r=s' => \$removed,
+	) or pod2usage(2);
+	pod2usage(1) if $help;
+	pod2usage(-exitstatus => 0, -verbose => 2) if $man;
+
+	my @input_conditions = @ARGV;
+
+	our @conditions = ();
+	foreach my $ic (@input_conditions)
+	{		
+		my $c;
+	 	if (!($ic =~ m/^(.+?)\s*?(==|<=|>=|<|>|!=|\s+eq\s+|\s+ne\s+|\s+lt\s+|\s+gt\s+|\s+le\s+|\s+ge\s+)\s*?(.+)$/))
+		{
+			print STDERR "Could not interpret filter: $ic\n";
+			next;
+		}
+		
+		$c->{key} = $1;
+		$c->{value} = $3;
+		$c->{comparison} = $2;
+		push @conditions, $c;
+		
+		print STDERR "Condition: $c->{key} | $c->{comparison} | $c->{value}\n";
+		
+	}
+	
+	my $gd = Breseq::GenomeDiff->new(-FILE_NAME => $input);
+		
+	### screen out polymorphism predictions at this step
+	sub mutation_filter
+	{
+		my ($mut) = @_;
+		
+		
+		my $accept = 1;
+		
+		foreach my $c (@conditions)
+		{						
+			next if (!defined $mut->{$c->{key}});
+			
+			#print STDERR "return (\"$mut->{$c->{key}}\" $c->{comparison} \"$c->{value}\")\n";
+			
+			my $res = 1;
+			if ($c->{comparison} =~ m/(>)/)
+			{
+				$res = eval "return ($mut->{$c->{key}} $c->{comparison} $c->{value})";
+			}
+			else
+			{
+				$res = eval "return (\"$mut->{$c->{key}}\" $c->{comparison} \"$c->{value}\")";
+			}
+		 	$accept = ($accept && $res);
+		}
+		
+		return $accept;
+	}	
+		
+	my $removed_gd = $gd->filter(\&mutation_filter);
+	$removed_gd->write($removed) if ($removed);	
+	$gd->write($output);
+}
+
+sub do_annotate
+{	
+	use Breseq::Settings;
+	use Breseq::ReferenceSequence;
+	use Breseq::Output;
+	
+	my $settings = Breseq::Settings->new_annotate;
+	
+	my @genbank_file_names = $settings->file_name('reference_genbank_file_names'); 
+	my @junction_only_genbank_file_names = $settings->file_name('junction_only_reference_genbank_file_names'); 
+	my $ref_seq_info = Breseq::ReferenceSequence::load_ref_seq_info(\@genbank_file_names, \@junction_only_genbank_file_names);
+	
+	my $gd = Breseq::GenomeDiff->new();
+	foreach my $gd_file (@{$settings->{input_genome_diffs}})
+	{
+		$gd->read($gd_file);		
+	}	
+		
+	##
+	# Annotate mutations
+	##
+	print STDERR "Annotating mutations...\n";
+	Breseq::ReferenceSequence::annotate_mutations($ref_seq_info, $gd);
+	#print Dumper(\@mutations); ##DEBUG	
+
+	##
+	# Plot coverage of genome and large deletions
+	##
+	print STDERR "Drawing coverage plots...\n";
+	Breseq::Output::draw_coverage($settings, $ref_seq_info, $gd);
+
+	##
+	# Mark lowest RA evidence items as no-show, or we may be drawing way too many alignments
+	##	
+
+	my @ra = $gd->filter_used_as_evidence($gd->list('RA'));		
+			
+	@ra = grep { ($_->{frequency} != 0) && ($_->{frequency} != 1) && (!$_->{no_show})  } @ra;
+	@ra = sort { -($a->{quality} <=> $b->{quality}) } @ra;
+	
+	for (my $i = $settings->{max_rejected_polymorphisms_to_show}; $i< scalar @ra; $i++)
+	{
+		$ra[$i]->{no_show} = 1;
+	}
+	
+	## require a certain amount of coverage
+	foreach my $item ($gd->filter_used_as_evidence($gd->list('RA')))
+	{
+		my ($top, $bot) = split /\//, $item->{tot_cov};
+		$item->{no_show} = 1 if ($top + $bot <= 2);
+	}
+	@ra = grep { !$_->{coverage} && !$_->{no_show} } @ra;
+	
+	
+	##max_rejected_junctions_to_show
+	
+	# Mark lowest scoring reject junctions as no-show
+	##
+	my @jc = $gd->filter_used_as_evidence($gd->list('JC'));	
+	@jc = grep { $_->{reject} } @jc;
+	
+	@jc = sort { -($a->{score} <=> $b->{score}) } @jc;
+	for (my $i = $settings->{max_rejected_junctions_to_show}; $i< scalar @jc; $i++)
+	{
+		$jc[$i]->{no_show} = 1;
+	}
+
+	##
+	# Create evidence files containing alignments and coverage plots
+	##
+	if (!$settings->{no_alignment_generation})
+	{
+		Breseq::Output::create_evidence_files($settings, $gd);
+	}
+
+		###
+		# Sort the junctions by unique coordinates or by their scores
+		###
+
+=comment	
+		if ($settings->{sort_junctions_by_score})
+		{
+			#don't show junctions supported by only a few reads
+			@hybrids = grep {$_->{total_non_overlap_reads} > 2} @hybrids;
+
+			#sort and truncate list
+			@hybrids = sort { -($a->{score} <=> $b->{score}) || ($a->{total_reads} <=> $a->{total_reads}) } @hybrids;
+			my $last = $settings->{max_junctions_to_print};
+			$last = scalar @hybrids if (scalar @hybrids < $last);
+			$#hybrids = $last-1;	
+		}
+=cut
+
+	###
+	## HTML output
+	###	
+
+	print STDERR "Creating index HTML table...\n";	
+
+	my $summary = {};
+	my $sequence_conversion_summary_file_name = $settings->file_name('sequence_conversion_summary_file_name');	
+	$summary->{sequence_conversion} = Storable::retrieve($sequence_conversion_summary_file_name);
+
+	my $index_html_file_name = $settings->file_name('index_html_file_name');		
+	Breseq::Output::html_index($index_html_file_name, $settings, $summary, $ref_seq_info, $gd);	
+	
+	my $marginal_html_file_name = $settings->file_name('marginal_html_file_name');	
+	Breseq::Output::html_marginal_predictions($marginal_html_file_name, $settings, $summary, $ref_seq_info, $gd);	
+}
+
+sub do_compare
+{
+	use Breseq::ReferenceSequence;
+	use Breseq::Output;
+	
+	my ($help, $man);
+	my $output = "compare.html";
+	my @reference_genbank_file_names;
+	my $phylip_input_file;
+	my $offending_polymorphisms;
+	GetOptions(
+		'help|?' => \$help, 'man' => \$man,
+	## Options for input and output files
+		'output|o=s' => \$output,	
+		'reference-sequence|r=s' => \@reference_genbank_file_names,
+		'phylip-input-file|p=s' => \$phylip_input_file,
+	) or pod2usage(2);
+
+	pod2usage(1) if $help;
+	pod2usage(-exitstatus => 0, -verbose => 2) if $man;
+	pod2usage(1) if (scalar @reference_genbank_file_names == 0);
+	pod2usage(1) if (scalar @ARGV == 0);
+	
+	my @gd_file_name_list = @ARGV;	
+	my ($gd_name_list_ref, $composite_gd, $one_ref_seq) = _compile_compare_gd(\@reference_genbank_file_names, \@gd_file_name_list);
+
+#	$composite_gd->write("test");
+
+	##
+	# Annotate mutations
+	##
+	my $title = "Mutation Comparison";
+	Breseq::Output::html_compare($output, $title, $composite_gd, $one_ref_seq, $gd_name_list_ref);
+
+	##
+	# Input file for PHYLIP (dnapars program)
+	##
+	if ($phylip_input_file)
+	{
+		my @mutations = $composite_gd->mutation_list;
+		
+		open PHYLIP, ">$phylip_input_file" or die "Could not open file: $phylip_input_file";
+		#first line is number of species, then number of sites
+		print PHYLIP +(scalar @$gd_name_list_ref) . " " . +(scalar @mutations) . "\n";
+
+		foreach my $gd_name (@$gd_name_list_ref)
+		{			
+			my $mut_str;
+			foreach my $mut (@mutations)
+			{
+				my $f = $mut->{"frequency_$gd_name"};
+				my $b = '?';
+				if ($f eq '?')
+				{
+					$b = 'N';
+				}
+				elsif (($f == 1) || ($f eq 'H'))
+				{
+					$b = ($mut->{type} eq 'SNP') ? $mut->{new_seq} : 'T';
+				}
+				elsif ($f == 0)
+				{
+					$b = ($mut->{type} eq 'SNP') ? $mut->{_ref_seq} : 'A';
+				}
+				else
+				{
+					die "Unknown frequency: $f\n";
+				}
+				$mut_str .= $b;				
+			}
+			
+			printf PHYLIP "%-10.10s%s\n", $gd_name, $mut_str;
+		}
+		
+		close PHYLIP;
+	}
+}
+
+sub _compile_compare_gd
+{
+	my ($reference_genbank_file_names_ref, $gd_file_name_list_ref) = @_;
+	
+	## load information about reference sequences from GenBank files
+	my $ref_seq_info = Breseq::ReferenceSequence::load_ref_seq_info($reference_genbank_file_names_ref);
+	my $one_ref_seq = scalar keys %{$ref_seq_info->{gene_lists}} == 1;
+
+	my @gd_name_list;
+	my @gd_list; 
+	my @mut_lists; #altered during processing
+	foreach my $gd_file_name (@$gd_file_name_list_ref)
+	{
+		print "$gd_file_name\n";
+		
+		my $gd_name = $gd_file_name;
+		$gd_name =~ s/^.+\///;		
+		$gd_name =~ s/\.[^.]+$//;		
+		push @gd_name_list, $gd_name;
+		
+		my $gd = Breseq::GenomeDiff->new(-in=>$gd_file_name);
+		push @gd_list, $gd;
+		Breseq::ReferenceSequence::annotate_mutations($ref_seq_info, $gd, 1);
+		
+		my @mut_list = $gd->mutation_list(1);	
+		@mut_list = grep {!$_->{deleted}} @mut_list;
+		push @mut_lists, \@mut_list;
+	}	
+	
+	my $composite_gd = Breseq::GenomeDiff->new();
+	my $next_mut;
+	while (1)
+	{
+		## find the next mutation by position
+		foreach my $mut_list (@mut_lists)
+		{
+			next if (scalar (@$mut_list) == 0);
+			my $test_mut = $mut_list->[0];
+			$next_mut = $test_mut if (!defined $next_mut || (Breseq::GenomeDiff::cmp_mutations($next_mut, $test_mut) > 0 ) );
+		}
+		last if (!defined $next_mut);
+
+		#compile frequencies across all files for this mutation
+		for (my $i=0; $i<scalar @mut_lists; $i++)
+		{
+			my $mut_list = $mut_lists[$i];
+			my $gd_name = $gd_name_list[$i];
+			my $gd = $gd_list[$i];
+			
+			my $test_mut = $mut_list->[0];
+			
+			my $this_freq = 0;
+			$next_mut->{"frequency_$gd_name"} = $this_freq;
+			next if (!defined $test_mut);
+			
+			if (Breseq::GenomeDiff::equivalent_mutations($test_mut, $next_mut))
+			{				
+				$this_freq = 1;
+				if (defined $test_mut->{frequency})
+				{
+					$this_freq = $test_mut->{frequency};
+				}
+				shift @$mut_list;
+			}
+			elsif ($gd->mutation_unknown($next_mut))
+			{
+				$this_freq = '?';
+			}			
+			
+			$next_mut->{"frequency_$gd_name"} = $this_freq;	
+		}
+		
+		delete $next_mut->{id};			
+		delete $next_mut->{frequency};
+				
+		$composite_gd->add($next_mut);
+		undef $next_mut;
+	}
+	
+	
+	return (\@gd_name_list, $composite_gd, $one_ref_seq);
+}
+
+
+sub freq_to_string
+{
+	my ($mut, $key) = @_;
+	$key = "frequency" if (!defined $key);
+	my $freq = $mut->{$key};
+	return 'H' if ($freq eq 'H');
+	$freq = 1 if (!defined $freq);
+	return '?' if ($freq eq '?');
+	return "0%" if ($freq == 0);
+	my $frequency_string = sprintf("%4.1f%%", $freq*100);
+	$frequency_string = "100%" if ($freq == 1); # No "100.0%"
+	return $frequency_string;
+}
+
+#map all mutations onto a tree
+sub do_mutation_tree
+{
+	use Breseq::ReferenceSequence;
+	use Breseq::Output;
+	
+	my ($help, $man);
+	my $output_file_name = "tree";
+	my @reference_genbank_file_names;
+	my $offending_polymorphisms;
+	my $tree_file_name;
+	GetOptions(
+		'help|?' => \$help, 'man' => \$man,
+	## Options for input and output files
+		'output|o=s' => \$output_file_name,	
+		'reference-sequence|r=s' => \@reference_genbank_file_names,
+		'tree-file-name|t=s' => \$tree_file_name,
+	) or pod2usage(2);
+
+	pod2usage(1) if $help;
+	pod2usage(-exitstatus => 0, -verbose => 2) if $man;
+	pod2usage(1) if (scalar @reference_genbank_file_names == 0);
+	pod2usage(1) if (scalar @ARGV == 0);
+	
+	my @gd_file_name_list = @ARGV;	
+	my ($gd_name_list_ref, $composite_gd) = _compile_compare_gd(\@reference_genbank_file_names, \@gd_file_name_list);
+	
+	#make a file for every mutation with frequency mapped on
+	#just subtitute in frequency
+	open TREE, "<$tree_file_name";
+	my @tree_lines = <TREE>;
+	chomp @tree_lines;
+	my $tree_data = join "", @tree_lines;
+	close TREE;
+	
+	foreach my $mut ($composite_gd->mutation_list)
+	{
+		print Dumper($mut);
+		
+		my $mutation_key = Breseq::GenomeDiff::mutation_key($mut);	
+		my $this_output_file_name = $output_file_name . "$mutation_key";
+		
+		print "Creating tree $this_output_file_name\n";
+		
+		my $this_tree_data = $tree_data;
+		
+		foreach my $gd_name (@$gd_name_list_ref)
+		{
+			#"_freq_[name]" keys were made							
+			my $replace_str = $gd_name . "=" .freq_to_string($mut, "frequency_$gd_name");
+			$this_tree_data	=~ s/([:,()])$gd_name([:,()])/$1$replace_str$2/;
+		}
+		
+		
+		open OUTTREE, ">$this_output_file_name" or die "Could not open file: $this_output_file_name";
+		print OUTTREE $this_tree_data . "\n";
+		close OUTTREE;		
+	}
+}
+
+sub do_compare_polymorphisms
+{
+	use Breseq::ReferenceSequence;
+	use Breseq::Output;
+	
+	my ($help, $man);
+	my $output = "compare.html";
+	my @reference_genbank_file_names;
+	my $phylip_input_file;
+	my $offending_polymorphisms;
+	GetOptions(
+		'help|?' => \$help, 'man' => \$man,
+	## Options for input and output files
+		'output|o=s' => \$output,	
+		'reference-sequence|r=s' => \@reference_genbank_file_names,
+	) or pod2usage(2);
+
+	pod2usage(1) if $help;
+	pod2usage(-exitstatus => 0, -verbose => 2) if $man;
+	pod2usage(1) if (scalar @reference_genbank_file_names == 0);
+	pod2usage(1) if (scalar @ARGV == 0);
+		
+	my @gd_file_name_list = @ARGV;	
+				
+	## load information about reference sequences from GenBank files
+	my $ref_seq_info = Breseq::ReferenceSequence::load_ref_seq_info(\@reference_genbank_file_names);
+	my $one_ref_seq = scalar keys %{$ref_seq_info->{gene_lists}} == 1;
+
+	my @gd_name_list;
+	my @gd_list; 
+	my @mut_lists; #altered during processing
+	foreach my $gd_file_name (@gd_file_name_list)
+	{
+		print "$gd_file_name\n";
+		
+		my $gd_name = $gd_file_name;
+		$gd_name =~ s/^.+\///;		
+		$gd_name =~ s/\.[^.]+$//;		
+		push @gd_name_list, $gd_name;
+		
+		my $gd = Breseq::GenomeDiff->new(-in=>$gd_file_name);
+		Breseq::ReferenceSequence::annotate_mutations($ref_seq_info, $gd);
+		
+		my @mut_list = $gd->list('RA');	
+		@mut_list = grep {$_->{frequency} != 0} @mut_list;
+		@mut_list = grep {$_->{frequency} != 1} @mut_list;
+
+		@mut_list = sort { (($a->{frequency}-0.5)**2 <=> ($b->{frequency}-0.5)**2) } @mut_list;
+		
+		Breseq::Output::html_compare_polymorphisms($output, "Title", \@mut_list);
+	}	
+	
+}
+
+
+sub do_count
+{
+	use Breseq::ReferenceSequence;
+	use Breseq::Output;
+	
+	my ($help, $man);
+	my $output = "count.tab";
+	my @reference_genbank_file_names;
+	GetOptions(
+		'help|?' => \$help, 'man' => \$man,
+	## Options for input and output files
+		'output|o=s' => \$output,	
+		'reference-sequence|r=s' => \@reference_genbank_file_names,
+	) or pod2usage(2);
+
+	pod2usage(1) if $help;
+	pod2usage(-exitstatus => 0, -verbose => 2) if $man;
+	pod2usage(1) if (scalar @reference_genbank_file_names == 0);
+	pod2usage(1) if (scalar @ARGV == 0);
+	
+	my @gd_file_name_list = @ARGV;	
+				
+	## load information about reference sequences from GenBank files
+	my $ref_seq_info = Breseq::ReferenceSequence::load_ref_seq_info(\@reference_genbank_file_names);
+	my $one_ref_seq = scalar keys %{$ref_seq_info->{gene_lists}} == 1;
+
+	my @bases = ('A', 'T', 'C', 'G');
+	my @base_combinations;
+	my @base_headers;
+	foreach my $b1 (@bases)
+	{
+		foreach my $b2 (@bases)
+		{
+			next if ($b1 eq $b2);
+			next if ($b1 eq 'T');
+			next if ($b1 eq 'G');
+
+			push @base_combinations, "$b1$b2";
+			push @base_headers, $b1 . ":" . Breseq::Fastq::complement($b1) . "=>" . $b2 . ":" . Breseq::Fastq::complement($b2);
+		}
+	}
+
+	## how many repeat columns
+	my $mob_name_hash;
+	foreach my $gd_file_name (@gd_file_name_list)
+	{
+		print "$gd_file_name\n";
+		
+		my $gd_name = $gd_file_name;
+		$gd_name =~ s/^.+\///;		
+		$gd_name =~ s/\.[^.]+$//;		
+		
+		my $gd = Breseq::GenomeDiff->new(-in=>$gd_file_name);
+		foreach my $mut ($gd->list('MOB'))
+		{
+			$mob_name_hash->{$mut->{repeat_name}} = 1;
+		}
+		foreach my $mut ($gd->list('DEL'))
+		{
+			$mob_name_hash->{$mut->{mediated}} = 1 if ($mut->{mediated});
+		}
+		
+	}
+	my @mod_name_list = sort keys %$mob_name_hash;
+	
+	
+	my @snp_types = ( 'nonsynonymous', 'synonymous', 'noncoding', 'pseudogene', 'intergenic');
+	
+	open OUT, ">$output" or die "Count not open file: $output";
+	print OUT join ("\t", 'strain', 'total', @snp_types, @base_headers, 'deleted', @mod_name_list) . "\n";
+	
+	my @gd_name_list;
+	my @gd_list; 
+	my @mut_lists; #altered during processing
+	foreach my $gd_file_name (@gd_file_name_list)
+	{
+		print "$gd_file_name\n";
+		
+		my $gd_name = $gd_file_name;
+		$gd_name =~ s/^.+\///;		
+		$gd_name =~ s/\.[^.]+$//;		
+		
+		my $gd = Breseq::GenomeDiff->new(-in=>$gd_file_name);
+		Breseq::ReferenceSequence::annotate_mutations($ref_seq_info, $gd, 1);
+		
+		my @mut_list = $gd->mutation_list();
+		@mut_list = grep {!$_->{deleted}} @mut_list;
+		
+		my $count;
+		foreach my $b (@base_combinations)
+		{
+			$count->{base}->{$b} = 0;
+		}
+		
+		foreach my $st (@snp_types)
+		{
+			$count->{type}->{$st} = 0;
+		}
+		foreach my $mob_name (@mod_name_list)
+		{
+			$count->{mob}->{$mob_name} = 0;
+		}
+		
+		my $total_deleted = 0;
+		foreach my $mut (@mut_list)
+		{
+			if ($mut->{type} eq 'SNP')
+			{
+				my $base_change = $mut->{_ref_seq} . $mut->{new_seq};
+				if (($mut->{_ref_seq} eq 'T') || ($mut->{_ref_seq} eq 'G'))
+				{
+					$base_change = Breseq::Fastq::complement($base_change);
+				}
+				$count->{base}->{$base_change}++;
+				
+				$count->{type}->{$mut->{snp_type}}++;
+			}
+			
+			if ($mut->{type} eq 'DEL')
+			{
+				$total_deleted += $mut->{size};
+				$count->{mob}->{$mut->{mediated}}++ if ($mut->{mediated});
+				
+			}
+			
+			if ($mut->{type} eq 'MOB')
+			{
+				$count->{mob}->{$mut->{repeat_name}}++;
+			}
+			
+		}
+		
+		print OUT join("\t", $gd_name, scalar(@mut_list),  map({$count->{type}->{$_} } @snp_types), map({ $count->{base}->{$_} } @base_combinations), $total_deleted, map({$count->{mob}->{$_}} @mod_name_list) ) . "\n";
+		#print Dumper ($count);
+	}	
+}
+
+sub do_orphan_evidence
+{
+	use Breseq::ReferenceSequence;
+	use Breseq::Output;
+	
+	my ($help, $man);
+	GetOptions(
+		'help|?' => \$help, 'man' => \$man,
+	## Options for input and output files
+	) or pod2usage(2);
+
+	pod2usage(1) if $help;
+	pod2usage(-exitstatus => 0, -verbose => 2) if $man;
+	pod2usage(1) if (scalar @ARGV == 0);
+	
+	my @gd_file_name_list = @ARGV;
+	
+	foreach my $gd_file_name (@gd_file_name_list)
+	{
+		print "\n>>>> $gd_file_name <<<<\n";
+		
+		my $gd_name = $gd_file_name;
+		$gd_name =~ s/^.+\///;		
+		$gd_name =~ s/\.[^.]+$//;		
+		
+		my $gd = Breseq::GenomeDiff->new(-in=>$gd_file_name);
+		my @evidence = $gd->evidence_list;
+		@evidence = $gd->filter_used_as_evidence(@evidence);
+		
+		foreach my $ev (@evidence)
+		{
+			next if ($ev->{type} eq 'UN');			
+			next if ($ev->{reject});
+			next if ($ev->{deleted});
+			print $gd->_item_to_line($ev) . "\n";
+		}
+	}
+}
+
+
+sub do_mutate
+{
+	my ($help, $man, $verbose);
+	my $output_fasta = 'output.fna'; 
+	my @input_genbank_files;
+	my $input_genome_diff;
+	
+	GetOptions(
+		'help|?' => \$help, 'man' => \$man,
+		'verbose|v' => \$verbose,
+		'output|o=s' => \$output_fasta,
+		'input|r=s' => \@input_genbank_files,
+	) or pod2usage(2);
+	$input_genome_diff = shift @ARGV;
+	pod2usage(1) if $help;
+	pod2usage(-exitstatus => 0, -verbose => 2) if $man;	
+	pod2usage(-exitstatus => 0, -verbose => 2) if (!$input_genome_diff);	
+
+	our $gd = Breseq::GenomeDiff->new(-FILE_NAME => $input_genome_diff);
+	
+	my $ref_seq_info = Breseq::ReferenceSequence::load_ref_seq_info(\@input_genbank_files);
+
+	my $new_ref_strings;
+	foreach my $seq_id (keys %{$ref_seq_info->{ref_strings}})
+	{
+		$new_ref_strings->{$seq_id} = $ref_seq_info->{ref_strings}->{$seq_id};
+	}
+	
+	foreach my $mut ($gd->mutation_list)
+	{		
+		if ($mut->{type} eq 'SNP')
+		{
+			substr $new_ref_strings->{$mut->{seq_id}}, $mut->{position}-1, 1, $mut->{new_seq};
+		}
+		elsif ($mut->{type} eq 'SUB')
+		{
+			substr $new_ref_strings->{$mut->{seq_id}}, $mut->{position}-1, $mut->{size}, $mut->{new_seq};
+		}
+		elsif ($mut->{type} eq 'INS')
+		{
+			##notice that this is AFTER the position
+			substr $new_ref_strings->{$mut->{seq_id}}, $mut->{position}, 0, $mut->{new_seq};
+		}
+		elsif ($mut->{type} eq 'DEL')
+		{	
+			substr $new_ref_strings->{$mut->{seq_id}}, $mut->{position}-1, $mut->{size}, '';
+		}		
+		elsif ($mut->{type} eq 'AMP')
+		{
+			my $dup = substr $new_ref_strings->{$mut->{seq_id}}, $mut->{position}-1, $mut->{size};
+			$dup = $dup x ($mut->{new_copy_number} - 1);
+			substr $new_ref_strings->{$mut->{seq_id}}, $mut->{position}-1 + $mut->{size}, 0, $dup;
+		}
+		elsif ($mut->{type} eq 'INV')
+		{
+			die "INV: mutation type not handled yet\n";
+		}
+		elsif ($mut->{type} eq 'MOB')
+		{
+			die "MOB: does not handle ins_start, ins_end, del_start, del_end yet." if (($mut->{ins_start} != 0) || ($mut->{ins_end} != 0) || ($mut->{del_start} != 0) || ($mut->{del_end} != 0) );
+			my ($seq_string) = Breseq::ReferenceSequence::repeat_example($ref_seq_info, $mut->{repeat_name});	
+			$mut->{size} = length($seq_string) + $mut->{duplication_size}; ##used by shift_positions
+			my $duplicate_sequence = substr $new_ref_strings->{$mut->{seq_id}}, $mut->{position}, $mut->{duplication_size};
+			substr $new_ref_strings->{$mut->{seq_id}}, $mut->{position}, 0, $duplicate_sequence . $seq_string;
+		}
+		
+		$gd->shift_positions($mut);
+		
+	}
+	
+	my $out = Bio::SeqIO->new(-format=>'FASTA', -file => ">$output_fasta");
+	foreach my $seq_id (keys %{$new_ref_strings})
+	{
+		print "Writing Sequence: $seq_id\n";
+		my $s = Bio::Seq->new();
+		$s->seq($new_ref_strings->{$seq_id});
+		$s->display_id($seq_id);
+		$out->write_seq($s);
+	}
+}
+
+sub do_union
+{
+	my ($help, $man, $verbose);
+	my $output = 'output.gd'; 
+	my @input_gd_files = ();
+	
+	GetOptions(
+		'help|?' => \$help, 'man' => \$man,
+		'verbose|v' => \$verbose,
+		'output|o=s' => \$output,
+		'input|i=s' => \@input_gd_files,
+			
+	) or pod2usage(2);
+	pod2usage(1) if $help;
+	pod2usage(-exitstatus => 0, -verbose => 2) if $man;
+
+	my @gds;
+	foreach my $gd_file (@input_gd_files)
+	{
+		my $gd = GenomeDiff->new(-FILE_NAME => $gd_file);
+		push @gds, $gd;
+	}
+
+	my $output_gd = GenomeDiff::union(\@gds);
+	$output_gd->write($output);
+}
+
+sub do_intersection
+{	
+	my ($help, $man, $verbose);
+	my $output = 'output.gd'; 
+	my @input_gd_files = ();
+	
+	GetOptions(
+		'help|?' => \$help, 'man' => \$man,
+		'verbose|v' => \$verbose,
+		'output|o=s' => \$output,
+		'input|i=s' => \@input_gd_files,
+			
+	) or pod2usage(2);
+	pod2usage(1) if $help;
+	pod2usage(-exitstatus => 0, -verbose => 2) if $man;
+
+	my @gds;
+	foreach my $gd_file (@input_gd_files)
+	{
+		my $gd = GenomeDiff->new(-FILE_NAME => $gd_file);
+		push @gds, $gd;
+	}
+
+	my $output_gd = GenomeDiff::intersection(\@gds);
+	$output_gd->write($output);
+}
+
+sub do_subtract
+{
+	my ($help, $man, $verbose);
+	my @input1_gd_files = ();
+	my @input2_gd_files = ();
+	my $output = 'output.gd'; 
+	GetOptions(
+		'help|?' => \$help, 'man' => \$man,
+		'verbose|v' => \$verbose,
+		'output|o=s' => \$output,
+		'input1|1=s' => \@input1_gd_files,
+		'input2|2=s' => \@input2_gd_files,
+	) or pod2usage(2);
+	pod2usage(1) if $help;
+	pod2usage(-exitstatus => 0, -verbose => 2) if $man;
+	
+	my @gds1;
+	foreach my $gd1_file (@input1_gd_files)
+	{
+		my $gd1 = Breseq::GenomeDiff->new(-FILE_NAME => $gd1_file);
+		push @gds1, $gd1;
+	}
+	
+	my @gds2;
+	foreach my $gd2_file (@input2_gd_files)
+	{
+		my $gd2 = Breseq::GenomeDiff->new(-FILE_NAME => $gd2_file);
+		push @gds2, $gd2;
+	}	
+	
+	die if ((!@gds1) || (!@gds2));
+	
+	my $output_gd = Breseq::GenomeDiff::subtract(\@gds1, \@gds2);
+	$output_gd->write($output);
+}
+

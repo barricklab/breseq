@@ -1,0 +1,48 @@
+syntax: glob
+
+.DS_Store
+*.o
+*.a
+*.gz
+*.tar
+*.tgz
+*.tab
+*.txt
+*.out
+*.html
+*.tab
+*.swp
+
+## These are for Perl modules in general
+_build
+blib
+
+## This is user/architecture specific
+user-config.jam
+
+
+syntax: regexp
+
+^stage/
+
+^tests/.+/output
+^tests/.+/0
+
+^src/c/build
+^src/c/error_count/bin
+^src/c/identify_mutations/bin
+
+^extern/samtools-0.1.7a/samtools
+^extern/samtools-0.1.7a/misc
+^extern/samtools-0.1.7a/bin
+
+^extern/Bio-SamTools-1.19/lib/Bio/DB/Sam.c
+^extern/Bio-SamTools-1.19/Build$
+^src/perl/Breseq/Build$
+^src/perl/Breseq/breseq.tmproj
+
+src/c/breseq.xcodeproj/.+\.mode1v3$
+src/c/breseq.xcodeproj/.+\.pbxuser$
+
+src/c/breseq-10.5.xcodeproj/.+\.mode1v3$
+src/c/breseq-10.5.xcodeproj/.+\.pbxuser$
