@@ -47,11 +47,12 @@ int main(int argc, char* argv[]) {
 												options["output"].as<string>(),
 												options["readfile"].as<vector<string> >(),
 												options["coverage"].as<int>(),
-                        options["errors"].as<int>());
+                        						options["errors"].as<int>());
 	} catch(...) {
 		// failed; 
+    cout << "<<<Failed>>>" << endl;
 		return -1;
 	}
-	
+  
 	return 0;
 }
