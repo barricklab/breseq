@@ -770,12 +770,15 @@ sub predict
 		
 		## 'AMP'
 		if (!$j->{unique_read_sequence})
-		{	
+		{		
+			my $size = $j->{_side_2}->{position} - $j->{_side_1}->{position} + 1;
+			next if ($size < 0); #this is a deletion!
+					
 			my $mut = { 
 				type => 'AMP',
 				seq_id => $seq_id,
 				position => $position,
-				size => $j->{_side_2}->{position} - $j->{_side_1}->{position} + 1,
+				size => $size,
 				new_copy_number => 2,
 				evidence => [$j->{id}], 
 			};			

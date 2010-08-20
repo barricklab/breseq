@@ -58,8 +58,9 @@ sub identify_mutations
 	my $reference_bam_file_name = $settings->file_name('reference_bam_file_name');
 		
 	## check to see if identify_mutations++ is available:
-	my $cident_mut = $settings->ctool('identify_mutations');
-	if(defined $cident_mut) {
+	my $cident_mut = $settings->ctool('identify_mutations', 1);
+	if ( (!$settings->{perl_identify_mutations}) && (!$settings->{polymorphism_prediction}) && (defined $cident_mut) )
+	{
 		my $coverage_fn = $settings->file_name('unique_only_coverage_distribution_file_name', {'@'=>""});
 		my $error_dir = `dirname $coverage_fn`;
 		chomp $error_dir; $error_dir .= '/';

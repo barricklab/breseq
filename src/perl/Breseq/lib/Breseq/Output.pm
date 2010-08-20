@@ -1469,29 +1469,59 @@ sub draw_coverage
 {
 	my ($settings, $ref_seq_info, $gd) = @_;
 	my @mc = $gd->list('MC');
-	my $drawing_format = 'png';
-	
-	$settings->create_path('coverage_plot_path');
-	my $coverage_plot_path = $settings->file_name('coverage_plot_path');	
-	my $deletions_text_file_name = $settings->file_name('deletions_text_file_name');
-	Breseq::Output::save_text_deletion_file($deletions_text_file_name, \@mc);
 
-	foreach my $seq_id (@{$ref_seq_info->{seq_ids}})
+	if (1)
 	{
-		my $this_complete_coverage_text_file_name = $settings->file_name('complete_coverage_text_file_name', {'@'=>$seq_id});			
-		my $res = Breseq::Shared::system("$FindBin::Bin/plot_coverage --drawing-format $drawing_format -t $coverage_plot_path -p $settings->{coverage_plot_path} -i $deletions_text_file_name -c $this_complete_coverage_text_file_name --seq_id=$seq_id");				
-		die if ($res);
+		my $drawing_format = 'png';
+		$settings->create_path('coverage_plot_path');
+		my $coverage_plot_path = $settings->file_name('coverage_plot_path');	
+		my $deletions_text_file_name = $settings->file_name('deletions_text_file_name');
+		Breseq::Output::save_text_deletion_file($deletions_text_file_name, \@mc);
 		
-		#need to assign link names that correspond to what the R script is doing
-		my $i=1;
-		my @this_deletions = grep {$_->{seq_id} eq $seq_id} @mc if ($seq_id);
-		foreach my $del (@this_deletions)
+		foreach my $seq_id (@{$ref_seq_info->{seq_ids}})
 		{
-			$del->{_coverage_plot_file_name} = "$seq_id\.$i\.$drawing_format";
-			$i++;
+			my $this_complete_coverage_text_file_name = $settings->file_name('complete_coverage_text_file_name', {'@'=>$seq_id});			
+			my $res = Breseq::Shared::system("$FindBin::Bin/plot_coverage --drawing-format $drawing_format -t $coverage_plot_path -p $settings->{coverage_plot_path} -i $deletions_text_file_name -c $this_complete_coverage_text_file_name --seq_id=$seq_id");				
+			die if ($res);
+
+			#need to assign link names that correspond to what the R script is doing
+			my $i=1;
+			my @this_deletions = grep {$_->{seq_id} eq $seq_id} @mc if ($seq_id);
+			foreach my $del (@this_deletions)
+			{
+				$del->{_coverage_plot_file_name} = "$seq_id\.$i\.$drawing_format";
+				$i++;
+			}
 		}
+		$settings->remove_path('deletions_text_file_name');
 	}
-	$settings->remove_path('deletions_text_file_name');
+
+
+=comment
+	
+	else
+	{
+		
+		my $co = Breseq::CoverageOutput->new(-fasta => $fasta_path, -bam => $bam_path);
+
+		#make plot for every missing coverqge item
+		foreach my $item (@mc)
+		{
+			my $start = $item->{position} - int($item->{size}/10);
+			my $end = $item->{position} + ($item->{size} - 1 ) + int($item->{size}/10);
+			my $region = $item->{seq_id} . ":" . $start . "-" . $end;
+
+			my $output_filename = $item->{seq_id} . "_" . $item->{position} . "-" . ($item->{position} + $item->{size} - 1);
+
+			$co->plot_coverage($region, $output_filename, {verbose=>0, resolution=>undef, pdf => 0, total_only => $total_only});
+		}
+		
+		##plot the overview for each seq_id
+		
+	}
+
+=cut
+
 }
 
 our @execution_times;
