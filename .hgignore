@@ -16,6 +16,7 @@ syntax: glob
 ## These are for Perl modules in general
 _build
 blib
+MYMETA.yml
 
 ## This is user/architecture specific
 user-config.jam

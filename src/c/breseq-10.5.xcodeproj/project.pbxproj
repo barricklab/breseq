@@ -103,24 +103,6 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
-		4207D7ED121C804A00C4D41B /* AlignmentCorrection.pm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.script.perl; path = AlignmentCorrection.pm; sourceTree = "<group>"; };
-		4207D7EE121C804A00C4D41B /* AlignmentOutput.pm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.script.perl; path = AlignmentOutput.pm; sourceTree = "<group>"; };
-		4207D7EF121C804A00C4D41B /* breseq.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = breseq.png; sourceTree = "<group>"; };
-		4207D7F0121C804A00C4D41B /* breseq_small.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = breseq_small.png; sourceTree = "<group>"; };
-		4207D7F1121C804A00C4D41B /* CandidateJunctions.pm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.script.perl; path = CandidateJunctions.pm; sourceTree = "<group>"; };
-		4207D7F2121C804A00C4D41B /* CoverageOutput.pm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.script.perl; path = CoverageOutput.pm; sourceTree = "<group>"; };
-		4207D7F3121C804A00C4D41B /* ErrorCalibration.pm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.script.perl; path = ErrorCalibration.pm; sourceTree = "<group>"; };
-		4207D7F4121C804A00C4D41B /* Fastq.pm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.script.perl; path = Fastq.pm; sourceTree = "<group>"; };
-		4207D7F5121C804A00C4D41B /* GenomeDiff.pm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.script.perl; path = GenomeDiff.pm; sourceTree = "<group>"; };
-		4207D7F6121C804A00C4D41B /* MutationIdentification.pm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.script.perl; path = MutationIdentification.pm; sourceTree = "<group>"; };
-		4207D7F7121C804A00C4D41B /* MutationPredictor.pm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.script.perl; path = MutationPredictor.pm; sourceTree = "<group>"; };
-		4207D7F8121C804A00C4D41B /* Output.pm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.script.perl; path = Output.pm; sourceTree = "<group>"; };
-		4207D7F9121C804A00C4D41B /* plot_coverage.r */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.rez; path = plot_coverage.r; sourceTree = "<group>"; };
-		4207D7FA121C804A00C4D41B /* plot_error_rate.r */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.rez; path = plot_error_rate.r; sourceTree = "<group>"; };
-		4207D7FB121C804A00C4D41B /* polymorphism_statistics.r */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.rez; path = polymorphism_statistics.r; sourceTree = "<group>"; };
-		4207D7FC121C804A00C4D41B /* ReferenceSequence.pm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.script.perl; path = ReferenceSequence.pm; sourceTree = "<group>"; };
-		4207D7FD121C804A00C4D41B /* Settings.pm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.script.perl; path = Settings.pm; sourceTree = "<group>"; };
-		4207D7FE121C804A00C4D41B /* Shared.pm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.script.perl; path = Shared.pm; sourceTree = "<group>"; };
 		421ACF2B1170DEC400C2EB85 /* main.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = main.cpp; sourceTree = "<group>"; };
 		421ACF2F1170DF1800C2EB85 /* error_count */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = error_count; sourceTree = BUILT_PRODUCTS_DIR; };
 		421ACF361170DF3F00C2EB85 /* debug.xcconfig */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.xcconfig; path = debug.xcconfig; sourceTree = "<group>"; };
@@ -180,36 +162,9 @@
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
-		4207D7EC121C804A00C4D41B /* Breseq */ = {
-			isa = PBXGroup;
-			children = (
-				4207D7ED121C804A00C4D41B /* AlignmentCorrection.pm */,
-				4207D7EE121C804A00C4D41B /* AlignmentOutput.pm */,
-				4207D7EF121C804A00C4D41B /* breseq.png */,
-				4207D7F0121C804A00C4D41B /* breseq_small.png */,
-				4207D7F1121C804A00C4D41B /* CandidateJunctions.pm */,
-				4207D7F2121C804A00C4D41B /* CoverageOutput.pm */,
-				4207D7F3121C804A00C4D41B /* ErrorCalibration.pm */,
-				4207D7F4121C804A00C4D41B /* Fastq.pm */,
-				4207D7F5121C804A00C4D41B /* GenomeDiff.pm */,
-				4207D7F6121C804A00C4D41B /* MutationIdentification.pm */,
-				4207D7F7121C804A00C4D41B /* MutationPredictor.pm */,
-				4207D7F8121C804A00C4D41B /* Output.pm */,
-				4207D7F9121C804A00C4D41B /* plot_coverage.r */,
-				4207D7FA121C804A00C4D41B /* plot_error_rate.r */,
-				4207D7FB121C804A00C4D41B /* polymorphism_statistics.r */,
-				4207D7FC121C804A00C4D41B /* ReferenceSequence.pm */,
-				4207D7FD121C804A00C4D41B /* Settings.pm */,
-				4207D7FE121C804A00C4D41B /* Shared.pm */,
-			);
-			name = Breseq;
-			path = ../perl/Breseq/lib/Breseq;
-			sourceTree = SOURCE_ROOT;
-		};
 		421ACEB51170DB9600C2EB85 = {
 			isa = PBXGroup;
 			children = (
-				4207D7EC121C804A00C4D41B /* Breseq */,
 				421ACF351170DF3F00C2EB85 /* etc */,
 				421ACF291170DEC400C2EB85 /* error_count */,
 				42B6EDA611C69CA70075F8A3 /* identify_mutations */,
