@@ -238,7 +238,7 @@
 /* Begin PBXProject section */
 		421ACEB71170DB9600C2EB85 /* Project object */ = {
 			isa = PBXProject;
-			buildConfigurationList = 421ACEBA1170DB9600C2EB85 /* Build configuration list for PBXProject "breseq" */;
+			buildConfigurationList = 421ACEBA1170DB9600C2EB85 /* Build configuration list for PBXProject "breseq-10.6" */;
 			compatibilityVersion = "Xcode 2.4";
 			hasScannedForEncodings = 0;
 			mainGroup = 421ACEB51170DB9600C2EB85;
@@ -405,7 +405,7 @@
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
-		421ACEBA1170DB9600C2EB85 /* Build configuration list for PBXProject "breseq" */ = {
+		421ACEBA1170DB9600C2EB85 /* Build configuration list for PBXProject "breseq-10.6" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				421ACEB81170DB9600C2EB85 /* Debug */,

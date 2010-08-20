@@ -59,7 +59,7 @@ bool breseq::alignment::is_trimmed() const {
 	// is our query position in the right-side trimmed region?
 	uint8_t *auxr = bam_aux_get(_a,"XR");
 	if(auxr) {
-		if((query_length()-query_position()) <= bam_aux2i(auxr)) {
+		if((query_length()-(query_position()+1)) <= bam_aux2i(auxr)) {
 			return true;
 		}
 	}

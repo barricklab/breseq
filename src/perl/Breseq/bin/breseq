@@ -563,7 +563,6 @@ sub paired_read_distances {}
 sub error_count {}
 ##
 
-my $error_counts_done_file_name = $settings->file_name('error_counts_done_file_name');
 if ($settings->do_step('error_counts_done_file_name', "Tabulating error counts"))
 {
 	$settings->create_path('error_calibration_path');
@@ -572,7 +571,7 @@ if ($settings->do_step('error_counts_done_file_name', "Tabulating error counts")
 	my $reference_bam_file_name = $settings->file_name('reference_bam_file_name');
 	
 	Breseq::ErrorCalibration::count($settings, $summary, $ref_seq_info,
-		'reference_fasta_file_name', 'reference_bam_file_name', 'unique_only_coverage_distribution_file_name', 'error_rates_file_name');
+		'reference_fasta_file_name', 'reference_bam_file_name', 'unique_only_coverage_distribution_file_name', 'error_counts_file_name');
 	
 	$settings->done_step('error_counts_done_file_name');
 }

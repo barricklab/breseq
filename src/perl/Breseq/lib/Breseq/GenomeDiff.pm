@@ -585,7 +585,7 @@ sub write
 	## read version from first line
 	open OUT, ">$file_name" or $self->throw("Could not write file: $file_name");
 	print OUT "#=GENOME_DIFF 1.0\n";
-	print OUT "#=SAMPLE " . $self->hash_to_line($self->{'SAMPLE'}) . "\n" if (defined $self->{'SAMPLE'});
+#	print OUT "#=SAMPLE " . $self->hash_to_line($self->{'SAMPLE'}) . "\n" if (defined $self->{'SAMPLE'});
 	
 	
 	#fill in the sort fields
@@ -617,16 +617,13 @@ sub write
 
 =cut
 
-sub exists
+sub has_mutation
 {
 	my ($self, $test_item) = @_;
 
 	foreach my $item (@{$self->{list}})
 	{
-		if (	($item->{type} eq $test_item->{type})
-			 &&	($item->{pos} == $test_item->{pos})
-			 && ($item->{new} eq $test_item->{new})
-			 && ($item->{ref} eq $test_item->{ref}) )
+		if ( equivalent_mutations($item, $test_item) )
 		{
 			return 1;
 		}
@@ -831,8 +828,8 @@ sub subtract
 {
 	my ($list_1, $list_2) = @_;
 	
-	my $union1_gd = Breseq::GenomeDiff::union($list_1);
-	my $union2_gd = Breseq::GenomeDiff::union($list_2);
+	my $union1_gd = Breseq::GenomeDiff::merge(@$list_1);
+	my $union2_gd = Breseq::GenomeDiff::merge(@$list_2);
 
 	my $new_gd = Breseq::GenomeDiff->new();
 	$new_gd->{'SAMPLE'}->{subtract} = join( ",", map {$_->{SAMPLE}->{strain}} @$list_1) . "-" . join( ",", map {$_->{SAMPLE}->{strain}} @$list_2);
