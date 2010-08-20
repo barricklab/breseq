@@ -356,30 +356,14 @@
 			<key>caret</key>
 			<dict>
 				<key>column</key>
-				<integer>105</integer>
+				<integer>17</integer>
 				<key>line</key>
-				<integer>54</integer>
+				<integer>53</integer>
 			</dict>
-			<key>columnSelection</key>
-			<false/>
 			<key>firstVisibleColumn</key>
 			<integer>0</integer>
 			<key>firstVisibleLine</key>
 			<integer>40</integer>
-			<key>selectFrom</key>
-			<dict>
-				<key>column</key>
-				<integer>88</integer>
-				<key>line</key>
-				<integer>54</integer>
-			</dict>
-			<key>selectTo</key>
-			<dict>
-				<key>column</key>
-				<integer>105</integer>
-				<key>line</key>
-				<integer>54</integer>
-			</dict>
 		</dict>
 		<key>lib/Breseq/Fastq.pm</key>
 		<dict>
@@ -602,6 +586,6 @@
 	<key>showFileHierarchyDrawer</key>
 	<true/>
 	<key>windowFrame</key>
-	<string>{{277, 194}, {1041, 629}}</string>
+	<string>{{291, 202}, {1041, 629}}</string>
 </dict>
 </plist>
