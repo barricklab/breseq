@@ -891,8 +891,8 @@ sub predict
 				end => $item->{position},
 				insert_start => $item->{insert_position},
 				insert_end => $item->{insert_position},
-				ref_seq => $item->{ref_base},
-				new_seq => $item->{new_base},
+				ref_seq => ($item->{ref_base} ne '.') ? $item->{ref_base} : '',
+				new_seq => ($item->{new_base} ne '.') ? $item->{new_base} : '',
 				evidence => [$item->{id}],
 				frequency => $item->{frequency}, 
 			};			
@@ -902,8 +902,8 @@ sub predict
 		{
 			$mut->{insert_end} = $item->{insert_position};
 			$mut->{end} = $item->{position};
-			$mut->{ref_seq} .= $item->{ref_base};
-			$mut->{new_seq} .= $item->{new_base};
+			$mut->{ref_seq} .= $item->{ref_base} if ($item->{ref_base} ne '.');
+			$mut->{new_seq} .= $item->{new_base} if ($item->{new_base} ne '.');
 			push @{$mut->{evidence}}, $item->{id}; 
 		}
 	}	
@@ -917,7 +917,7 @@ sub predict
 	foreach my $mut (@muts)
 	{
 		#insertion
-		if ($mut->{ref_seq} =~ m/\./)
+		if (length $mut->{ref_seq} == 0)
 		{			
 			$mut->{type} = 'INS';
 			
@@ -925,7 +925,7 @@ sub predict
 			delete $mut->{ref_seq};
 		}
 		#deletion
-		elsif ($mut->{new_seq} =~ m/\./)
+		elsif (length $mut->{new_seq} == 0)
 		{
 			$mut->{type} = 'DEL';
 			$mut->{size} = $mut->{end} - $mut->{start} + 1;

@@ -2,6 +2,7 @@
 #define _BRESEQ_ALIGNMENT_H_
 
 #include <utility>
+#include <assert.h>
 #include <bam.h>
 
 namespace breseq {
@@ -30,7 +31,10 @@ namespace breseq {
 		
 		//! Retrieve the query sequence.
 		inline uint8_t* query_sequence() const { return bam1_seq(_a); }
-		
+    
+    //! Retrieve the base at a specified position in the read (0-indexed).
+		inline uint8_t query_base(const int32_t pos) const { assert((pos>=0) && (pos<query_length())); return bam1_seqi(query_sequence(), pos); }
+    
 		//! Retrieve the position of the alignment in the query.
 		inline int32_t query_position() const { return _p->qpos; }
 		
@@ -39,6 +43,9 @@ namespace breseq {
 		
 		//! Retrieve the quality score array.
 		inline uint8_t* quality_scores() const { return bam1_qual(_a); }
+
+		//! Retrieve the quality score of a single base (0-indexed).
+		inline uint8_t quality_base(const int32_t pos) const { assert((pos>=0) && (pos<query_length())); return bam1_qual(_a)[pos]; }
 		
 		//! Retrieve the index of the read file that contained this alignment.
 		int32_t fastq_file_index() const;

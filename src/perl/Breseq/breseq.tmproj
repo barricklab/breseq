@@ -3,7 +3,7 @@
 <plist version="1.0">
 <dict>
 	<key>currentDocument</key>
-	<string>lib/Breseq/ErrorCalibration.pm</string>
+	<string>lib/Breseq/MutationIdentification.pm</string>
 	<key>documents</key>
 	<array>
 		<dict>
@@ -356,14 +356,30 @@
 			<key>caret</key>
 			<dict>
 				<key>column</key>
-				<integer>17</integer>
+				<integer>2</integer>
 				<key>line</key>
-				<integer>53</integer>
+				<integer>70</integer>
 			</dict>
+			<key>columnSelection</key>
+			<false/>
 			<key>firstVisibleColumn</key>
 			<integer>0</integer>
 			<key>firstVisibleLine</key>
-			<integer>40</integer>
+			<integer>43</integer>
+			<key>selectFrom</key>
+			<dict>
+				<key>column</key>
+				<integer>24</integer>
+				<key>line</key>
+				<integer>70</integer>
+			</dict>
+			<key>selectTo</key>
+			<dict>
+				<key>column</key>
+				<integer>2</integer>
+				<key>line</key>
+				<integer>70</integer>
+			</dict>
 		</dict>
 		<key>lib/Breseq/Fastq.pm</key>
 		<dict>
@@ -414,14 +430,14 @@
 			<key>caret</key>
 			<dict>
 				<key>column</key>
-				<integer>86</integer>
+				<integer>5</integer>
 				<key>line</key>
-				<integer>61</integer>
+				<integer>477</integer>
 			</dict>
 			<key>firstVisibleColumn</key>
 			<integer>0</integer>
 			<key>firstVisibleLine</key>
-			<integer>40</integer>
+			<integer>459</integer>
 		</dict>
 		<key>lib/Breseq/MutationIdentification.pm.orig</key>
 		<dict>
@@ -586,6 +602,6 @@
 	<key>showFileHierarchyDrawer</key>
 	<true/>
 	<key>windowFrame</key>
-	<string>{{291, 202}, {1041, 629}}</string>
+	<string>{{566, 196}, {1041, 629}}</string>
 </dict>
 </plist>

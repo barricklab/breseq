@@ -197,8 +197,7 @@ void breseq::identify_mutations_pileup::callback(const breseq::pileup& p) {
 			//my $base = ($indel < $insert_count) ? '.' : substr($a->qseq,$p->qpos + $insert_count,1);		
 			uint8_t base='.';
 			if(indel >= insert_count) {
-				uint8_t* qseq = i->query_sequence();
-				base = bam1_seqi(qseq, i->query_position() + insert_count);
+        base = i->query_base(i->query_position() + insert_count);
 			}
 			
 			//##don't use bases without qualities!!
@@ -284,7 +283,63 @@ void breseq::identify_mutations_pileup::callback(const breseq::pileup& p) {
 			boost::tie(q_start,q_end) = i->query_bounds(); // @dk: 1-indexed!
 			
 			uint8_t quality=0;
-			if(indel < insert_count) {
+      
+      //## Deletion in read relative to reference...
+      //## Quality is of the NEXT base in the read, and check that it is not an N
+      //## Note: This is for a deletion when $insert_count == 0 and against an insertion when $insert_count > 0
+
+      if (indel == -1)
+      {			
+        int32_t mqpos = i->query_position() + 1 - i->strand(); 
+        uint8_t check_base = i->query_base(mqpos);
+        if (is_N(check_base)) continue;
+        quality = i->quality_base(mqpos);
+        //	my $mqpos = $qpos + 1 - $reversed;
+        //	my $check_base = substr($a->qseq,$mqpos,1);
+        //	next ALIGNMENT if ($check_base eq 'N');
+        //	$quality = $a->qscore->[$mqpos];
+      }
+
+      //## Substitution in read relative to reference...
+      //## Quality is of the current base in the read, we have ALREADY checked that it is not an N					
+      else if (insert_count == 0)
+      {
+        quality = i->quality_base(i->query_position());
+        //	$quality = $a->qscore->[$qpos];
+      }
+      
+      //## Insertion in read relative to reference...
+      //## Quality is of the NEXT base in the read, and check that it is not an N
+      //## Note that it is possible this read base may be a '.' (supporting the non-insert call)
+      else //if (insert_count > 0) 
+      {		
+        int32_t max_offset = insert_count;
+        if (indel < max_offset) max_offset = indel;
+        int32_t mqpos = i->query_position() + max_offset + 1 - i->strand(); 
+      
+        //my $max_offset = $insert_count;
+        //$max_offset = $indel if ($indel < $max_offset);
+        //my $mqpos = $qpos + $max_offset + 1 - $reversed;
+          
+        //## Check bounds: it's possible to go past the end of the read because
+        //## this is the last base of this read, but other reads have inserted bases
+      
+        if (mqpos >= q_end) continue;  // @JEB unlike Perl, this is comparing 0-indexed to 1-indexed
+        //next ALIGNMENT if ($mqpos > $q_end);
+      
+        uint8_t check_base = i->query_base(mqpos);
+        if (is_N(check_base)) continue;
+        //my $check_base = substr($a->qseq,$mqpos,1);
+        //next ALIGNMENT if ($check_base eq 'N');
+        
+        quality = i->quality_base(mqpos);
+        //$quality = $a->qscore->[$mqpos];
+      }
+
+/*  @JEB - this way of finding qual scores (for indels) was replaced by above.
+      
+      
+			if(insert_count == 0) {
 				//## We would really like for this to not count any of the insertions unless
 				//## the read makes it out of the inserted region (this will be the case if it was aligned)
 				//##no information about gap if next position is end of alignment
@@ -302,6 +357,8 @@ void breseq::identify_mutations_pileup::callback(const breseq::pileup& p) {
 				//$quality = $a->qscore->[$p->qpos+$insert_count];
 				quality = i->quality_scores()[i->query_position()+insert_count];
 			}
+
+*/
 			
 			//std::cerr << (unsigned int)quality << std::endl;
 			
