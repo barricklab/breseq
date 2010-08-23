@@ -12,6 +12,7 @@ syntax: glob
 *.html
 *.tab
 *.swp
+*.tmproj
 
 ## These are for Perl modules in general
 _build

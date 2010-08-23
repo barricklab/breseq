@@ -551,11 +551,11 @@ sub junction_name_split
 	$item->{side_2}->{strand} 		= $s[5];
 	$item->{side_2}->{strand} = -1 if ($item->{side_2}->{strand} == 0);
 
-	$item->{alignment_overlap} 			= $s[6];
-	$item->{unique_read_sequence} 		= $s[7];
+	$item->{alignment_overlap} 		= $s[6];
+	$item->{unique_read_sequence} 	= $s[7];
 
-	$item->{flanking_left} 				= $s[8];
-	$item->{flanking_right} 			= $s[9];
+	$item->{flanking_left} 			= $s[8];
+	$item->{flanking_right} 		= $s[9];
 	
 	#redundant items are last, becuse they are created at the last minute
 	$item->{side_1}->{redundant} 	= $s[10];

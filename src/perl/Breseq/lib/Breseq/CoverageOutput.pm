@@ -77,10 +77,18 @@ sub plot_coverage
 	$options->{pdf} = 0 if (!defined $options->{pdf});
 	$options->{resolution} = 600 if (!defined $options->{resolution});
 	$options->{total_only} = 0 if (!defined $options->{total_only});
+	$options->{shaded_flanking} = 0 if (!defined $options->{shaded_flanking}); #how much gray on each end
 	
 	$region = Breseq::Shared::check_region($region, $self->{bam});
 	my ($seq_id, $start, $end) = split /[:-]/, $region;
-	my $size = $end - $start + 1;
+	$self->throw("Invalid region $region") if (!$seq_id || !$start || !$end);
+		
+	## extend the region and re-check
+	my $extended_region = $seq_id . ":" . ($start - $options->{shaded_flanking}) . "-" . ($end + $options->{shaded_flanking});
+	$extended_region = Breseq::Shared::check_region($extended_region, $self->{bam});
+	my ($extended_seq_id, $extended_start, $extended_end) = split /[:-]/, $region;
+		
+	my $size = $extended_end - $extended_start + 1;
 	
 	$output = $region if (!defined $output);
 	$output =~ s/:/_/g;
@@ -96,10 +104,10 @@ sub plot_coverage
 	}
 	
 	my $tmp_coverage = "$$.coverage.tab";
-	$self->tabulate_coverage($tmp_coverage, $region, {downsample => $downsample} );
+	$self->tabulate_coverage($tmp_coverage, $extended_region, {downsample => $downsample} );
 	
 	my $log_file_name = "$$.r.log";
-	Breseq::Shared::system("R --vanilla in_file=$tmp_coverage out_file=$output pdf_output=$options->{pdf} total_only=$options->{total_only} < $self->{r_script} > $log_file_name");
+	Breseq::Shared::system("R --vanilla in_file=$tmp_coverage out_file=$output pdf_output=$options->{pdf} total_only=$options->{total_only} window_start=$start window_end=$end < $self->{r_script} > $log_file_name");
 	
 	#clean up
 	unlink $tmp_coverage;
