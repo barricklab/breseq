@@ -21,8 +21,11 @@ void breseq::error_count(const std::string& bam,
 												 const std::string& output_dir,
 												 const std::vector<std::string>& readfiles,
                          bool do_coverage,
-                         bool do_errors) {
-	error_count_pileup ecp(bam, fasta, do_coverage, do_errors);
+                         bool do_errors,
+                         uint8_t min_qual_score
+                        ) 
+{
+	error_count_pileup ecp(bam, fasta, do_coverage, do_errors, min_qual_score);
 	ecp.do_pileup();
 	if (do_coverage) ecp.print_coverage(output_dir);
 	if (do_errors) ecp.print_error(output_dir, readfiles);
@@ -31,8 +34,8 @@ void breseq::error_count(const std::string& bam,
 
 /*! Constructor.
  */
-breseq::error_count_pileup::error_count_pileup(const std::string& bam, const std::string& fasta, bool do_coverage, bool do_errors)
-: breseq::pileup_base(bam, fasta), m_do_coverage(do_coverage), m_do_errors(do_errors) {
+breseq::error_count_pileup::error_count_pileup(const std::string& bam, const std::string& fasta, bool do_coverage, bool do_errors, uint8_t min_qual_score)
+: breseq::pileup_base(bam, fasta), m_do_coverage(do_coverage), m_do_errors(do_errors), m_min_qual_score(min_qual_score) {
 	// reserve enough space for the sequence info:
 	_seq_info.resize(_bam->header->n_targets);
 }
@@ -237,6 +240,7 @@ void breseq::error_count_pileup::print_error(const std::string& output_dir, cons
 		
 		qual_map_t& qual_map=iter->second;
 		for(qual_map_t::reverse_iterator iter=qual_map.rbegin(); iter!=qual_map.rend(); ++iter) {
+      if (iter->first < m_min_qual_score) continue; // skip low quality scores
 			out << static_cast<unsigned int>(iter->first);
 			for(int i=0; i<5; ++i) {
 				for(int j=0; j<5; ++j) {

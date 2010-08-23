@@ -29,7 +29,8 @@ namespace breseq {
 													double deletion_propagation_cutoff,
 													double mutation_cutoff,
 													bool predict_deletions,
-													bool predict_polymorphisms);
+													bool predict_polymorphisms,
+                          uint8_t min_qual_score);
 	
 	
 	/*! Position information struct.
@@ -148,7 +149,8 @@ namespace breseq {
 															double deletion_propagation_cutoff,
 															double mutation_cutoff,
 															bool predict_deletions,
-															bool predict_polymorphisms);
+															bool predict_polymorphisms,
+                              uint8_t min_qual_score);
 				
 		//! Destructor.
 		virtual ~identify_mutations_pileup();		
@@ -178,6 +180,7 @@ namespace breseq {
 		std::vector<sequence_info> _seq_info; //!< information about each sequence.
 		fastq_map_t error_hash; //!< fastq_file_index -> quality map.
 		shared_info s; // summary stats
+    uint8_t _min_qual_score; //!< minimum quality score to count base for RA
 		
 		// this is used to output coverage data:
 		std::ofstream _coverage_data;

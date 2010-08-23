@@ -210,6 +210,8 @@ sub initialize_1
 	$self->{base_output_path} = '';
 	$self->{error_model_method} = 'EMPIRICAL';
 	$self->{trim_reads} = 0;
+	$self->{base_quality_cutoff} = 3;
+	## avoids problem with Illumina assigning 2 to bad ends of reads!
 	
 	#used by CandidateJunctions.pm
 	$self->{no_junction_prediction} = undef;		# don't perform junction prediction steps
