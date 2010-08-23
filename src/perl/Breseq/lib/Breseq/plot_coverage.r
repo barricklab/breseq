@@ -1,5 +1,14 @@
-## Args should be in_file=/path/to/input out_file=/path/to/output
+## Arguments:
+##   in_file=/path/to/input 
+##   out_file=/path/to/output 
+##   window_start=int
+##   window_end=int
+##   end_pos=int
+##   pdf_output=0 or 1
+##   total_only=0 or 1
 
+window_start = -1;
+window_end = -1;
 pdf_output = 0;
 total_only = 0;
 
@@ -22,6 +31,8 @@ for (e in commandArgs()) {
   }
 }
 
+window_start = as.numeric(window_start);
+window_end = as.numeric(window_end);
 
 X<-read.table(in_file, sep="\t", header=T)
 X$unique_tot_cov = X$unique_bot_cov + X$unique_top_cov;
@@ -29,6 +40,15 @@ X$redundant_tot_cov = X$redundant_bot_cov + X$redundant_top_cov;
 maxy=max(X$unique_tot_cov, X$redundant_tot_cov) + 5;
 start_pos = X$position[1];
 end_pos = X$position[length(X$position)];
+
+if (window_start == -1)
+{
+	window_start = start_pos;
+}
+if (window_end == -1)
+{
+	window_end = end_pos;
+}
 
 if (pdf_output == 0) {
 	bitmap(out_file, height=450, width=900, type = "png16m", units = "px", res = 72, pointsize=18, taa=4, gaa=2)
@@ -40,8 +60,8 @@ par(mar=c(5.1,4.1,1.2,2));
 plot(0:10, 0:10, type="n", lty="solid", ylim=c(0, maxy), xlim=c(start_pos, end_pos), lwd=2, xaxs="i", yaxs="i", xlab="Coordinate in Reference Genome", ylab="Read Coverage Depth")
 
 #### Need to add back the option to gray out the ends!
-#rect(pos[start], 0, pos[del_start], maxy, col="grey85", lty=0)
-#rect(pos[del_end]+1, 0, pos[end], maxy, col="grey85", lty=0)
+rect(start_pos, 0, window_start, maxy, col="grey85", lty=0)
+rect(window_end+1, 0, end_pos, maxy, col="grey85", lty=0)
 
 lines(X$position, X$redundant_tot_cov, type="s", col="red", lty="solid", lwd=1.5 )
 if (total_only == 0)
