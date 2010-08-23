@@ -38,6 +38,7 @@ our @ISA = qw( Exporter );
 our @EXPORT = qw();
 
 use Breseq::AlignmentOutput;
+use Breseq::CoverageOutput;
 use Breseq::GenomeDiff;
 
 ## these style definitions are included between the
@@ -81,11 +82,12 @@ tr	{
 	background-color: rgb(0,0,155);
 }
 
-.mutation_table_row_0	{
+.alternate_table_row_0	{
 	background-color: rgb(255,255,255);
 }
-.mutation_table_row_1	{
-	background-color: rgb(245,245,245);
+
+.alternate_table_row_1	{
+	background-color: rgb(230,230,245);
 }	
 
 .polymorphism_table_row	{
@@ -467,8 +469,10 @@ sub html_mutation_table_string
 		#### ITEM LINES ####
 		####################
 
+		my $row_num = 0;
 		foreach my $mut (@$list_ref)
 		{	
+			$row_num++;
 			
 			my $evidence_string = '';
 			if (!defined $gd_name_list_ref) 
@@ -525,7 +529,8 @@ sub html_mutation_table_string
 			else
 			{
 				#"_freq_[name]" keys were made				
-				@freq_list = map { freq_to_string($mut, "frequency_$_")  } @$gd_name_list_ref;			
+				@freq_list = map { freq_to_string($mut, "frequency_$_")  } @$gd_name_list_ref;	
+				$row_class = "alternate_table_row_" . ($row_num % 2);		
 			}
 			
 			
@@ -1469,10 +1474,10 @@ sub draw_coverage
 {
 	my ($settings, $ref_seq_info, $gd) = @_;
 	my @mc = $gd->list('MC');
+	my $drawing_format = 'png';
 
-	if (1)
+	if (0)
 	{
-		my $drawing_format = 'png';
 		$settings->create_path('coverage_plot_path');
 		my $coverage_plot_path = $settings->file_name('coverage_plot_path');	
 		my $deletions_text_file_name = $settings->file_name('deletions_text_file_name');
@@ -1494,33 +1499,42 @@ sub draw_coverage
 			}
 		}
 		$settings->remove_path('deletions_text_file_name');
-	}
-
-
-=comment
-	
+	}	
 	else
 	{
-		
+		my $fasta_path = $settings->file_name('reference_fasta_file_name');
+		my $bam_path = $settings->file_name('reference_bam_file_name');
 		my $co = Breseq::CoverageOutput->new(-fasta => $fasta_path, -bam => $bam_path);
+
+		my $evidence_path = $settings->file_name('evidence_path');
+
+		##plot the overview for each seq_id
+		foreach my $seq_id (@{$ref_seq_info->{seq_ids}})
+		{
+			my $region = $seq_id . ":" . "1" . "-" . ($ref_seq_info->{bioperl_ref_seqs}->{$seq_id}->length);
+			print STDERR "Creating coverage plot for region $region\n";
+			$co->plot_coverage($region, "$evidence_path/$seq_id\.overview", {verbose=>0, resolution=>undef, pdf => 0, total_only => 1, shaded_flanking => 0});
+		}
 
 		#make plot for every missing coverqge item
 		foreach my $item (@mc)
 		{
-			my $start = $item->{position} - int($item->{size}/10);
-			my $end = $item->{position} + ($item->{size} - 1 ) + int($item->{size}/10);
+			my $start = $item->{start} - $item->{start_range};
+			my $end = $item->{end} + $item->{end_range};
+			my $size = $end - $start + 1;
+			
+			my $shaded_flanking = int($size/10);
+			$shaded_flanking = 100 if ($shaded_flanking < 100);
 			my $region = $item->{seq_id} . ":" . $start . "-" . $end;
 
-			my $output_filename = $item->{seq_id} . "_" . $item->{position} . "-" . ($item->{position} + $item->{size} - 1);
-
-			$co->plot_coverage($region, $output_filename, {verbose=>0, resolution=>undef, pdf => 0, total_only => $total_only});
+			$item->{_coverage_plot_file_name} = "$item->{seq_id}\_$start\-$end";
+			print STDERR "Creating coverage plot for region $region\n";
+				
+			$co->plot_coverage($region, "$evidence_path/$item->{_coverage_plot_file_name}", {verbose=>0, resolution=>undef, pdf => 0, total_only => 0, shaded_flanking => $shaded_flanking});
+			$item->{_coverage_plot_file_name} .= ".$drawing_format";
 		}
-		
-		##plot the overview for each seq_id
-		
-	}
 
-=cut
+	}
 
 }
 
