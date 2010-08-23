@@ -21,7 +21,9 @@ namespace breseq {
 									 const std::string& output_dir,
 									 const std::vector<std::string>& readfiles,
 									 bool do_coverage,
-                   bool do_errors);
+                   bool do_errors,
+                   uint8_t min_qual_score
+        );
 	
 	
 	/*! Error-counting class.
@@ -48,7 +50,7 @@ namespace breseq {
 		
 		
 		//! Constructor.
-		error_count_pileup(const std::string& bam, const std::string& fasta, bool do_coverage=true, bool do_errors=true);
+		error_count_pileup(const std::string& bam, const std::string& fasta, bool do_coverage, bool do_errors, uint8_t min_qual_score);
 		
 		//! Destructor.
 		virtual ~error_count_pileup();		
@@ -67,6 +69,7 @@ namespace breseq {
 		fastq_map_t _error_hash; //!< fastq_file_index -> quality map.
 		bool m_do_coverage;
     bool m_do_errors;
+    uint8_t m_min_qual_score;
 	};
 	
 

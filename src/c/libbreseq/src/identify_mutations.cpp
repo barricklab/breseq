@@ -28,9 +28,10 @@ void breseq::identify_mutations(const std::string& bam,
 																double deletion_propagation_cutoff,
 																double mutation_cutoff,
 																bool predict_deletions,
-																bool predict_polymorphisms) {
+																bool predict_polymorphisms,
+                                uint8_t min_qual_score) {
 	// do the mutation identification:
-	identify_mutations_pileup imp(bam, fasta, error_dir, gd_file, output_dir, readfiles, coverage_dir, deletion_propagation_cutoff, mutation_cutoff, predict_deletions, predict_polymorphisms);
+	identify_mutations_pileup imp(bam, fasta, error_dir, gd_file, output_dir, readfiles, coverage_dir, deletion_propagation_cutoff, mutation_cutoff, predict_deletions, predict_polymorphisms, min_qual_score);
 	imp.do_pileup();
 }
 
@@ -47,10 +48,12 @@ breseq::identify_mutations_pileup::identify_mutations_pileup(const std::string& 
 																														 double deletion_propagation_cutoff,
 																														 double mutation_cutoff,
 																														 bool predict_deletions,
-																														 bool predict_polymorphisms)
+																														 bool predict_polymorphisms,
+                                                             uint8_t min_qual_score)
 : breseq::pileup_base(bam, fasta)
 , _ecr(error_dir, readfiles)
 , _gd(gd_file)
+, _min_qual_score(min_qual_score)
 , _deletion_seed_cutoff(0)
 , _deletion_propagation_cutoff(deletion_propagation_cutoff)
 , _mutation_cutoff(mutation_cutoff)
@@ -341,6 +344,11 @@ void breseq::identify_mutations_pileup::callback(const breseq::pileup& p) {
         quality = i->quality_base(mqpos);
         //$quality = $a->qscore->[$mqpos];
       }
+
+      //## We may want to ignore all bases below a certain quality when calling mutations and polymorphisms
+      //## This is the check for whether the base fails; it should be after coverage counting
+      //next ALIGNMENT if ( $settings->{base_quality_cutoff} && ($quality < $settings->{base_quality_cutoff}) );
+      if (quality < _min_qual_score) continue;
 
 /*  @JEB - this way of finding qual scores (for indels) was replaced by above.
       

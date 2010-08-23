@@ -21,9 +21,10 @@ int main(int argc, char* argv[]) {
 	("fasta,f", po::value<string>(), "FASTA file of reference sequence")
 	("output,o", po::value<string>(), "output directory")
 	("readfile,r", po::value<vector<string> >(), "names of readfiles (no extension)")
-	("coverage", po::value<int>()->default_value(false), "generate unique coverage distribution output")
-  ("errors", po::value<int>()->default_value(false), "generate unique error count output");
-	
+	("coverage", "generate unique coverage distribution output")
+  ("errors", "generate unique error count output")
+  ("minimum-quality-score", po::value<int>()->default_value(0), "ignore base quality scores lower than this");
+
 	po::variables_map options;
 	po::store(po::parse_command_line(argc, argv, cmdline_options), options);
 	po::notify(options);
@@ -35,7 +36,7 @@ int main(int argc, char* argv[]) {
 		 || !options.count("output")
 		 || !options.count("readfile")
 		 || (!options.count("coverage") && !options.count("errors")) ) {
-		cout << "Usage: error_count --bam <sequences.bam> --fasta <reference.fasta> --output <path> --readfile <filename> [--coverage] [--errors]" << endl;
+		cout << "Usage: error_count --bam <sequences.bam> --fasta <reference.fasta> --output <path> --readfile <filename> [--coverage] [--errors] [--minimum-quality-score 3]" << endl;
 		cout << cmdline_options << endl;
 		return -1;
 	}
@@ -46,8 +47,10 @@ int main(int argc, char* argv[]) {
 												options["fasta"].as<string>(),
 												options["output"].as<string>(),
 												options["readfile"].as<vector<string> >(),
-												options["coverage"].as<int>(),
-                        						options["errors"].as<int>());
+												options.count("coverage"),
+                        options.count("errors"),
+                        options["minimum-quality-score"].as<int>()
+                      );
 	} catch(...) {
 		// failed; 
     cout << "<<<Failed>>>" << endl;
