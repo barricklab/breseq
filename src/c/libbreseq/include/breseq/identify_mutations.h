@@ -170,6 +170,7 @@ namespace breseq {
 		
 		error_count_results _ecr; //!< Error count results.
 		genome_diff _gd; //!< Genome diff.
+    uint8_t _min_qual_score; //!< minimum quality score to count base for RA
 		double _deletion_seed_cutoff;
 		double _deletion_propagation_cutoff; //!< Coverage above which deletions are cutoff.
 		double _mutation_cutoff; //!< log10 e-value cutoff value for mutation predictions.
@@ -180,7 +181,6 @@ namespace breseq {
 		std::vector<sequence_info> _seq_info; //!< information about each sequence.
 		fastq_map_t error_hash; //!< fastq_file_index -> quality map.
 		shared_info s; // summary stats
-    uint8_t _min_qual_score; //!< minimum quality score to count base for RA
 		
 		// this is used to output coverage data:
 		std::ofstream _coverage_data;
@@ -192,7 +192,7 @@ namespace breseq {
 		boost::optional<position_coverage> _left_outside_coverage_item;
 		boost::optional<position_coverage> _left_inside_coverage_item;
 		boost::optional<position_coverage> _last_position_coverage;
-		
+    
 		// these are state variables used by the unknown prediction method.
 		boost::optional<uint32_t> _last_start_unknown_interval;
 	};
