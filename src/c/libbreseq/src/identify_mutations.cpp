@@ -192,7 +192,13 @@ void breseq::identify_mutations_pileup::callback(const breseq::pileup& p) {
 			//## number of this inserted base
 			//			$indel = 0 if ($indel < 0);  ## substitute such that
 			//			$indel = -1 if ($p->is_del); ## deletions relative to reference have -1 as indel
-			int indel = i->indel();
+			int indel=i->indel();
+			if(indel < 0) {
+				indel = 0;
+			}
+			if(i->is_del()) {
+				indel = -1;
+			}
 			
 			//my $base = ($indel < $insert_count) ? '.' : substr($a->qseq,$p->qpos + $insert_count,1);		
 			uint8_t base='.';
