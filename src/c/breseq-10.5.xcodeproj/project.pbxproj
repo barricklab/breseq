@@ -109,6 +109,24 @@
 		421ACF571170E00A00C2EB85 /* libbam.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = libbam.a; path = "../../extern/samtools-0.1.7a/libbam.a"; sourceTree = SOURCE_ROOT; };
 		421ACF7D1170E5CA00C2EB85 /* libboost_program_options-mt.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = "libboost_program_options-mt.a"; path = "/opt/local/lib/libboost_program_options-mt.a"; sourceTree = "<absolute>"; };
 		421ACFAC1170F05500C2EB85 /* libz.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = libz.a; path = /opt/local/lib/libz.a; sourceTree = "<absolute>"; };
+		4244619312259C87007BE367 /* AlignmentCorrection.pm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.script.perl; path = AlignmentCorrection.pm; sourceTree = "<group>"; };
+		4244619412259C87007BE367 /* AlignmentOutput.pm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.script.perl; path = AlignmentOutput.pm; sourceTree = "<group>"; };
+		4244619512259C87007BE367 /* breseq.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = breseq.png; sourceTree = "<group>"; };
+		4244619612259C87007BE367 /* breseq_small.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = breseq_small.png; sourceTree = "<group>"; };
+		4244619712259C87007BE367 /* CandidateJunctions.pm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.script.perl; path = CandidateJunctions.pm; sourceTree = "<group>"; };
+		4244619812259C87007BE367 /* CoverageOutput.pm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.script.perl; path = CoverageOutput.pm; sourceTree = "<group>"; };
+		4244619912259C87007BE367 /* ErrorCalibration.pm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.script.perl; path = ErrorCalibration.pm; sourceTree = "<group>"; };
+		4244619A12259C87007BE367 /* Fastq.pm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.script.perl; path = Fastq.pm; sourceTree = "<group>"; };
+		4244619B12259C87007BE367 /* GenomeDiff.pm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.script.perl; path = GenomeDiff.pm; sourceTree = "<group>"; };
+		4244619C12259C87007BE367 /* MutationIdentification.pm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.script.perl; path = MutationIdentification.pm; sourceTree = "<group>"; };
+		4244619D12259C87007BE367 /* MutationPredictor.pm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.script.perl; path = MutationPredictor.pm; sourceTree = "<group>"; };
+		4244619E12259C87007BE367 /* Output.pm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.script.perl; path = Output.pm; sourceTree = "<group>"; };
+		4244619F12259C87007BE367 /* plot_coverage.r */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.rez; path = plot_coverage.r; sourceTree = "<group>"; };
+		424461A012259C87007BE367 /* plot_error_rate.r */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.rez; path = plot_error_rate.r; sourceTree = "<group>"; };
+		424461A112259C87007BE367 /* polymorphism_statistics.r */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.rez; path = polymorphism_statistics.r; sourceTree = "<group>"; };
+		424461A212259C87007BE367 /* ReferenceSequence.pm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.script.perl; path = ReferenceSequence.pm; sourceTree = "<group>"; };
+		424461A312259C87007BE367 /* Settings.pm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.script.perl; path = Settings.pm; sourceTree = "<group>"; };
+		424461A412259C87007BE367 /* Shared.pm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.script.perl; path = Shared.pm; sourceTree = "<group>"; };
 		426DFDE911F4AE1E006ABE77 /* genome_diff.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = genome_diff.cpp; sourceTree = "<group>"; };
 		426DFDEB11F4AE33006ABE77 /* genome_diff.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = genome_diff.h; sourceTree = "<group>"; };
 		42B6ED8111C689230075F8A3 /* alignment.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = alignment.h; sourceTree = "<group>"; };
@@ -165,6 +183,7 @@
 		421ACEB51170DB9600C2EB85 = {
 			isa = PBXGroup;
 			children = (
+				4244619212259C87007BE367 /* Breseq */,
 				421ACF351170DF3F00C2EB85 /* etc */,
 				421ACF291170DEC400C2EB85 /* error_count */,
 				42B6EDA611C69CA70075F8A3 /* identify_mutations */,
@@ -218,6 +237,32 @@
 			);
 			name = lib;
 			sourceTree = "<group>";
+		};
+		4244619212259C87007BE367 /* Breseq */ = {
+			isa = PBXGroup;
+			children = (
+				4244619312259C87007BE367 /* AlignmentCorrection.pm */,
+				4244619412259C87007BE367 /* AlignmentOutput.pm */,
+				4244619512259C87007BE367 /* breseq.png */,
+				4244619612259C87007BE367 /* breseq_small.png */,
+				4244619712259C87007BE367 /* CandidateJunctions.pm */,
+				4244619812259C87007BE367 /* CoverageOutput.pm */,
+				4244619912259C87007BE367 /* ErrorCalibration.pm */,
+				4244619A12259C87007BE367 /* Fastq.pm */,
+				4244619B12259C87007BE367 /* GenomeDiff.pm */,
+				4244619C12259C87007BE367 /* MutationIdentification.pm */,
+				4244619D12259C87007BE367 /* MutationPredictor.pm */,
+				4244619E12259C87007BE367 /* Output.pm */,
+				4244619F12259C87007BE367 /* plot_coverage.r */,
+				424461A012259C87007BE367 /* plot_error_rate.r */,
+				424461A112259C87007BE367 /* polymorphism_statistics.r */,
+				424461A212259C87007BE367 /* ReferenceSequence.pm */,
+				424461A312259C87007BE367 /* Settings.pm */,
+				424461A412259C87007BE367 /* Shared.pm */,
+			);
+			name = Breseq;
+			path = ../perl/Breseq/lib/Breseq;
+			sourceTree = SOURCE_ROOT;
 		};
 		42B6EDA611C69CA70075F8A3 /* identify_mutations */ = {
 			isa = PBXGroup;

@@ -575,6 +575,8 @@ sub identify_mutations
 					##### this is for polymorphism prediction and making strings
 					push @$pdata, { base => $base, quality => $quality, strand => $strand, fastq_file_index => $fastq_file_index };
 								
+					#print STDERR "========\n$pos\n";
+					
 					##### deal with base calls
 					foreach my $hypothetical_base (@base_list)
 					{				
@@ -596,8 +598,11 @@ sub identify_mutations
 						}
 
 						##record evidence for and against this hypothetical base being the reference, given the observation
-						$pr_base_hash->{$hypothetical_base} += $log10_correct_rates->[$fastq_file_index]->{$quality}->{$base_key};
-						$pr_not_base_hash->{$hypothetical_base} += $log10_error_rates->[$fastq_file_index]->{$quality}->{$base_key};
+						my $pr = $log10_correct_rates->[$fastq_file_index]->{$quality}->{$base_key};
+						my $notpr = $log10_error_rates->[$fastq_file_index]->{$quality}->{$base_key};
+						#print STDERR "pr: $pr not: $notpr\n";
+						$pr_base_hash->{$hypothetical_base} += $pr;#$log10_correct_rates->[$fastq_file_index]->{$quality}->{$base_key};
+						$pr_not_base_hash->{$hypothetical_base} += $notpr;#$log10_error_rates->[$fastq_file_index]->{$quality}->{$base_key};
 					}
 				} #end FOREACH READ
 					

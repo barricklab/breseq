@@ -259,7 +259,7 @@ void breseq::error_count_pileup::print_error(const std::string& output_dir, cons
  */
 breseq::error_count_results::error_count_results(const std::string& input_dir, const std::vector<std::string>& readfiles) {
 	using namespace std;
-	char bases[] = {'A', 'C', 'T', 'G', '.'}; // order is important!!! must match the header from the error rates file...
+	char bases[] = {'A', 'T', 'C', 'G', '.'}; // order is important!!! must match the header from the error rates file...
 	
 	_error_rates.resize(readfiles.size());
 	
