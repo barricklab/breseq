@@ -389,6 +389,8 @@ void breseq::identify_mutations_pileup::callback(const breseq::pileup& p) {
 			//foreach my $hypothetical_base (@base_list)
 			//{				
 			
+			//std::cerr << "========" << std::endl << p.position()+1 << std::endl;
+			
 			for(std::size_t j=0; j<5; ++j) {
 				// base_list[j] == hypothetical base
 				//my $base_key =  ($strand == +1) ? $hypothetical_base . $base : Breseq::Fastq::revcom($hypothetical_base) . Breseq::Fastq::revcom($base);
@@ -419,6 +421,7 @@ void breseq::identify_mutations_pileup::callback(const breseq::pileup& p) {
 				//std::cerr << _ecr.log10_correct_rates(fastq_file_index, quality, base_key) << " " << _ecr.log10_error_rates(fastq_file_index, quality, base_key) << std::endl;
 				
 				std::pair<double,double> log10rates = _ecr.log10_rates(fastq_file_index, quality, base_key);
+				//std::cerr << "pr: " << log10rates.second << " not: " << log10rates.first << std::endl;
 				pr_base_hash[base_list[j]] += log10rates.second; //_ecr.log10_correct_rates(fastq_file_index, quality, base_key);
 				pr_not_base_hash[base_list[j]] += log10rates.first; //_ecr.log10_error_rates(fastq_file_index, quality, base_key);
 			}

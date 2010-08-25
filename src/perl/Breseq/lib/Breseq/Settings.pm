@@ -680,12 +680,14 @@ sub ctool
 		if ($allow_fail)
 		{
 			$self->warn("Executable \"$tool_name\" not found in breseq bin path\"$self->{bin_path}\".");
+			return undef; # couldn't find it, but it's not an error.
 		}
 		else
 		{
 			$self->throw("Executable \"$tool_name\" not found in breseq bin path\"$self->{bin_path}\".");
 		}
 	}
+
 	return "$self->{bin_path}/$tool_name";
 }
 
