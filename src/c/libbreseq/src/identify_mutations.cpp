@@ -743,15 +743,15 @@ void breseq::identify_mutations_pileup::callback(const breseq::pileup& p) {
 		//my $ref_cov = $pos_info->{$mut->{ref_base}}->{unique_trimmed_cov};
 		//$mut->{ref_cov} = $ref_cov->{-1} . "/" . $ref_cov->{1};
 		int* ref_cov = pos_info[boost::get<uint8_t>(mut[REF_BASE])].unique_trimmed_cov;
-		mut[REF_COV] = std::make_pair(ref_cov[0], ref_cov[2]);
+		mut[REF_COV] = std::make_pair(ref_cov[2], ref_cov[0]);
 		
 		//my $new_cov = $pos_info->{$mut->{new_base}}->{unique_trimmed_cov};
 		//$mut->{new_cov} = $new_cov->{-1} . "/" . $new_cov->{1};
 		int* new_cov = pos_info[boost::get<uint8_t>(mut[NEW_BASE])].unique_trimmed_cov;
-		mut[NEW_COV] = std::make_pair(new_cov[0], new_cov[2]);
+		mut[NEW_COV] = std::make_pair(new_cov[2], new_cov[0]);
 		
 		//$mut->{tot_cov} = $total_cov->{-1} . "/" . $total_cov->{1};
-		mut[TOT_COV] = std::make_pair(total_cov[0], total_cov[2]);
+		mut[TOT_COV] = std::make_pair(total_cov[2], total_cov[0]);
 		
 		//$gd->add($mut);
 		_gd.add(mut);
