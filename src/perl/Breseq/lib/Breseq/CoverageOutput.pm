@@ -169,6 +169,7 @@ sub tabulate_coverage
 #		$coverage->{raw_redundant} = {'-1' => 0, '1' => 0, 'total' => 0};
 				
 		my $fetch_region = $seq_id . ":" . $pos . "-" . $pos;
+#		print "$fetch_region\n";
 		$bam->fetch($fetch_region, $fetch_function);
 		
 		#sum up coverage observations
