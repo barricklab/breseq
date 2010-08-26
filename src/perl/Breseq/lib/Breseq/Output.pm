@@ -778,7 +778,9 @@ sub html_read_alignment_table_string
 		if ((defined $c->{frequency}) && ($c->{frequency} != 1))
 		{
 			## display extra score data for polymorphisms...
-			$output_str.= td({align => "right"}, nonbreaking(sprintf("%.1f,%.1f,%.1f", $c->{quality}, log($c->{fisher_strand_p_value})/log(10), log($c->{ks_quality_p_value})/log(10))) );	# . $fisher_p_value	
+			my $log_fisher = ($c->{fisher_strand_p_value} > 0) ? log($c->{fisher_strand_p_value})/log(10) : 999;
+			my $log_ks = ($c->{ks_quality_p_value} > 0) ? log($c->{ks_quality_p_value})/log(10) : 999;
+			$output_str.= td({align => "right"}, nonbreaking(sprintf("%.1f,%.1f,%.1f", $c->{quality}, $log_fisher, $log_ks)) );	# . $fisher_p_value	
 		}
 		else
 		{
@@ -1476,7 +1478,7 @@ sub draw_coverage
 	my @mc = $gd->list('MC');
 	my $drawing_format = 'png';
 
-	if (0)
+	if (1)
 	{
 		$settings->create_path('coverage_plot_path');
 		my $coverage_plot_path = $settings->file_name('coverage_plot_path');	
