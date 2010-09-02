@@ -608,6 +608,16 @@ sub _alignment_list_to_dominant_best
 
 sub _trim_ambiguous_ends
 {
+	#@JEB 100901
+	# calls to this routine are taking up ~7/8 = 87.5% of the time of alignment correction.
+	# basically, all of the time is in _ambiguous_end_offsets_from_expanded_sequence
+	# first thing would be to prevent so many substr calls and deal with character lists and indexes first
+	# co that we are not always copying new strings to memory for so many comparisons
+	# After that step, it would be easier to port to C++
+	# NOTE: For now we doubled the speed by dropping $expand_by from 36 to 18
+	
+	#return ( {'L'=>0, 'R'=>0} ); ## for testing speedup of skipping step
+	
 	my $verbose = 0;
 	my ($a, $header, $fai, $ref_seq_info) = @_;
 		
@@ -632,7 +642,7 @@ sub _trim_ambiguous_ends
 	}
 	
 	#create sequence snippets that we need to pay attention to ends of sequence
-	my $expand_by = 36;
+	my $expand_by = 18; #36
 	my $expand_left = ($a->start-1 < $expand_by) ? $a->start-1 : $expand_by;
 	my $expand_right = ($ref_seq_length - $a->end < $expand_by) ? $ref_seq_length-$a->end : $expand_by;
 	
@@ -666,12 +676,12 @@ sub _trim_ambiguous_ends
 	my $full_qry_string = $a->qseq;
 	
 	#take maximum of inset for query and reference
+#	my ($left_ref_inset, $right_ref_inset) = (0,0); ##TESTING	
 	my ($left_ref_inset, $right_ref_inset) = _ambiguous_end_offsets_from_sequence($ref_string);
 	
 	#add UNALIGNED bases at te end of reads
 	$left_ref_inset += $q_start - 1;
 	$right_ref_inset += $q_length - $q_end;
-	
 	
 	## save a little time if qry and ref sequences are identical.
 	my ($left_qry_inset, $right_qry_inset) = (0,0);
@@ -681,8 +691,11 @@ sub _trim_ambiguous_ends
 		#add UNALIGNED bases at the end of reads
 		$left_qry_inset += $q_start - 1;
 		$right_qry_inset += $q_length - $q_end;
-		
 	}
+	
+	
+#	my ($left_full_qry_inset, $right_full_qry_inset) = (0,0); ##TESTING
+#	my ($left_ref_expanded_inset, $right_ref_expanded_inset) = (0,0); ##TESTING
 	
 	my ($left_full_qry_inset, $right_full_qry_inset) = _ambiguous_end_offsets_from_sequence($full_qry_string);
 	my ($left_ref_expanded_inset, $right_ref_expanded_inset) 
@@ -702,7 +715,6 @@ sub _trim_ambiguous_ends
 		print "Expand: $expand_left, $expand_right\n";
 		print "Expanded Ref insets: $left_ref_expanded_inset, $right_ref_expanded_inset\n";		
 	}
-
 
 	$left_qry_inset = ($left_qry_inset > $left_full_qry_inset) ? $left_qry_inset : $left_full_qry_inset;
 	$right_qry_inset = ($right_qry_inset > $right_full_qry_inset) ? $right_qry_inset : $right_full_qry_inset;
@@ -733,6 +745,7 @@ sub _trim_ambiguous_ends
 
 sub _ambiguous_end_offsets_from_expanded_sequence
 {
+	my $verbose = 0;
 	my ($expand_left, $expand_right, $ref_string) = @_;
 	
 	my $left_inset = 0;
@@ -743,7 +756,7 @@ sub _ambiguous_end_offsets_from_expanded_sequence
 		#maximum size to check is $expand_by
 		my $test_left_inset = 0;
 		while ($test_left_inset < $expand_left)
-		{
+		{			
 			my $found_left_inset = $test_left_inset;
 			my $test_length = $expand_left-$test_left_inset;
 
@@ -762,6 +775,11 @@ sub _ambiguous_end_offsets_from_expanded_sequence
 					$found_left_inset += $test_length;
 					$test_interior_string = substr $ref_string, $found_left_inset+$test_length, $test_length;
 				}
+				
+				print "Complete:\n" if ($verbose);
+				print "left_inset $test_left_inset :: test_length $test_length\n" if ($verbose);
+				print "test_end: $test_end_string\ntest_interior: $test_interior_string\n" if ($verbose);
+				
 				$found_left_inset += $test_length if ($match_found);
 				$test_length--;
 			} 
@@ -778,6 +796,11 @@ sub _ambiguous_end_offsets_from_expanded_sequence
 					$found_left_inset += $test_partial_size;
 					last;
 				}
+				
+				print "Partial:\n" if ($verbose);
+				print "test_partial_size $test_partial_size :: test_length $test_length\n" if ($verbose);
+				print "test_end: $test_partial_end_string\ntest_interior: $test_interior_string\n" if ($verbose);
+				
 				$test_partial_size--;
 			}
 		
