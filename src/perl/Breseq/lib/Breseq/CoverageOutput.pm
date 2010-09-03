@@ -157,8 +157,9 @@ sub tabulate_coverage
 	}; 
 
 	$start = $downsample * int($start/$downsample);
-	$end = $downsample * int((($end-1)/$downsample) + 1);
+	$start = 1 if ($start < 1);
 	
+	$end = $downsample * int((($end-1)/$downsample) + 1);
 	my $reference_length = $bam->length($seq_id);
 	$end = $reference_length if ($end > $reference_length);	
 				
