@@ -1478,7 +1478,7 @@ sub draw_coverage
 	my @mc = $gd->list('MC');
 	my $drawing_format = 'png';
 
-	if (1)
+	if (0)
 	{
 		$settings->create_path('coverage_plot_path');
 		my $coverage_plot_path = $settings->file_name('coverage_plot_path');	
