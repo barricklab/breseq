@@ -128,6 +128,7 @@ sub tabulate_coverage
 	
 	## Open file for output
 	open COV, ">$tmp_coverage";
+	COV->autoflush(1);
 	print COV join("\t", 'position', 'unique_top_cov', 'unique_bot_cov', 'redundant_top_cov', 'redundant_bot_cov') . "\n";
 	our $coverage;
 
@@ -169,7 +170,7 @@ sub tabulate_coverage
 #		$coverage->{raw_redundant} = {'-1' => 0, '1' => 0, 'total' => 0};
 				
 		my $fetch_region = $seq_id . ":" . $pos . "-" . $pos;
-#		print "$fetch_region\n";
+		print "$fetch_region\n";
 		$bam->fetch($fetch_region, $fetch_function);
 		
 		#sum up coverage observations
