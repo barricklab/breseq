@@ -14,7 +14,8 @@ BRESEQ="perl -w ${COMMONDIR}/../stage/bin/breseq"
 # path to test data:
 DATADIR=${COMMONDIR}/data
 # this is a find-compatible list of files that we'll hash:
-FILE_PATTERN='( -name *.tab -or -name *.html ) -and -not -name settings.tab -and -not -name summary.tab'
+#FILE_PATTERN='( -name *.tab -or -name *.html ) -and -not -name settings.tab -and -not -name summary.tab'
+FILE_PATTERN='-name output.gd'
 # executable used to hash files:
 HASH=`which sha1sum`
 # name of file containing expected hash values:

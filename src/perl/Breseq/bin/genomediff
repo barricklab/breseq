@@ -127,6 +127,10 @@ elsif ("\U$command" eq 'SUBTRACT')
 {
 	do_subtract();
 }
+elsif ("\U$command" eq 'GENE_TABLE')
+{
+	do_mutated_gene_table();
+}
 else
 {
 	die "Unknown command";
@@ -954,5 +958,466 @@ sub do_subtract
 	
 	my $output_gd = Breseq::GenomeDiff::subtract(\@gds1, \@gds2);
 	$output_gd->write($output);
+}
+
+## Create a table of unambiguously mutated genes
+## 
+## Excludes synonymous SNPs, deletions impacting more than one gene,
+## inversions, duplications impacting more than one gene, intergenic mutations
+
+sub do_mutated_gene_table
+{
+	my ($help, $man, $verbose);
+	my $output = 'output.tab'; 
+	my @reference_genbank_file_names;
+	my @treatments = ();
+	my $ignore_transposons = 0; ## very primitive, ignores genes beginning in 'ins' 
+	my $num_replicates = 10000;
+	my @ignore_gene_list;
+	GetOptions(
+		'help|?' => \$help, 'man' => \$man,
+		'verbose|v' => \$verbose,
+		'output|o=s' => \$output,
+		'reference-sequence|r=s' => \@reference_genbank_file_names,
+		'treatment|t=s' => \@treatments,
+		'ignore-transposons' => \$ignore_transposons,
+		'ignore-gene=s' => \@ignore_gene_list,
+		'num-replicates|n=s' => \$num_replicates,
+	) or pod2usage(2);
+	pod2usage(1) if $help;
+	pod2usage(-exitstatus => 0, -verbose => 2) if $man;
+	pod2usage(1) if (scalar @reference_genbank_file_names == 0);
+	pod2usage(1) if (scalar @ARGV == 0);
+	
+	my @gd_file_name_list = @ARGV;
+	my @gd_name_list;
+	
+	
+	print "Ignoring genes: " . +join(",", @ignore_gene_list) . ".\n" if (scalar @ignore_gene_list > 0);
+	print "Ignoring transposons (ins*).\n" if ($ignore_transposons);
+
+	##Hash (gene) of hashes (gd_name)
+	my $gene_gd_hash;
+	my $gene_hash;
+	
+	die "Unequal number of GenomeDiff files and treatments\n" 
+		if ((scalar @treatments > 0) && (scalar @treatments != scalar @gd_file_name_list));
+	
+	my $ref_seq_info = Breseq::ReferenceSequence::load_ref_seq_info(\@reference_genbank_file_names);
+	
+	foreach my $gd_file_name (@gd_file_name_list)
+	{
+		my $gd_name = $gd_file_name;
+		$gd_name =~ s/^.+\///;		
+		$gd_name =~ s/\.[^.]+$//;
+		push @gd_name_list, $gd_name;
+		print STDERR "$gd_name\n";
+		
+		my $gd = Breseq::GenomeDiff->new(-in=>$gd_file_name);
+		Breseq::ReferenceSequence::annotate_mutations($ref_seq_info, $gd, 1);
+		
+		my @mutations = $gd->mutation_list;
+		MUT: foreach my $mut (@mutations)
+		{
+			#did it hit a single gene
+			next MUT if (scalar @{$mut->{gene_list}} != 1);
+			
+			my $gene_name = $mut->{gene_list}->[0];
+			next MUT if (($ignore_transposons) && ($gene_name =~ m/^ins/));
+			
+			foreach my $ignore_gene (@ignore_gene_list)
+			{
+				next MUT if ("\U$ignore_gene" eq "\U$gene_name");
+			}
+			
+			if (   (($mut->{type} eq 'SNP') && ($mut->{snp_type} eq 'nonsynonymous'))
+				|| ($mut->{type} eq 'DEL') || ($mut->{type} eq 'INS') || ($mut->{type} eq 'SUB') || ($mut->{type} eq 'AMP') || ($mut->{type} eq 'MOB') )
+			{
+				$gene_gd_hash->{$gene_name}->{$gd_name}++;
+			}			
+		}
+	}
+	
+	## Print output
+	open OUT, ">$output";
+	print OUT join("\t", ('', @gd_name_list)) . "\n";
+	my @gene_list = sort keys %$gene_gd_hash;
+	foreach my $gene_name (@gene_list)
+	{
+		print OUT "$gene_name\t";
+		print OUT join("\t", map { defined($gene_gd_hash->{$gene_name}->{$_}) ? 1 : 0 } @gd_name_list );
+		print OUT "\n";
+	}
+	
+	## done if treatments not included
+	return if (scalar @treatments == 0);
+	
+	my $treatment_hash = _treatment_list_to_hash(\@gd_name_list, \@treatments, 0);
+	my @treatment_names = sort keys %$treatment_hash;
+	
+	print OUT "\n";
+	print OUT +join("\t", ('', @treatment_names)) . "\n";
+	foreach my $gene_name (@gene_list)
+	{
+		print OUT "$gene_name";
+		foreach my $t (@treatment_names)
+		{
+			my $s = 0;
+			foreach my $gd_name (@{$treatment_hash->{$t}})
+			{
+				$s += (defined($gene_gd_hash->{$gene_name}->{$gd_name}) ? 1 : 0);
+			}
+			print OUT "\t$s";
+		}
+		print OUT "\n";
+	}
+	
+	OUT->autoflush(1);
+	close OUT;
+		
+	print ">>>Treatment ALL :: ALL\n";	
+	_calculate_in_similarity_significance($gene_gd_hash, \@gd_name_list, \@treatments, $num_replicates);
+	#_calculate_es_significance($gene_gd_hash, \@gd_name_list, \@treatments, $num_replicates);
+	die;
+	
+	for (my $i=0; $i<scalar @treatment_names; $i++)
+	{
+		for (my $j=$i+1; $j<scalar @treatment_names; $j++)
+		{
+			## create the subsetted data
+			my $_treatment_hash;
+			$_treatment_hash->{$treatment_names[$i]} = $treatment_hash->{$treatment_names[$i]};
+			$_treatment_hash->{$treatment_names[$j]} = $treatment_hash->{$treatment_names[$j]};
+			
+			my @_gd_name_list;
+			push @_gd_name_list, @{$_treatment_hash->{$treatment_names[$i]}};
+			push @_gd_name_list, @{$_treatment_hash->{$treatment_names[$j]}};
+			
+			my @_treatments;
+			foreach my $t (@{$_treatment_hash->{$treatment_names[$i]}})
+			{
+				push @_treatments, $treatment_names[$i];
+			}
+			foreach my $t (@{$_treatment_hash->{$treatment_names[$j]}})
+			{
+				push @_treatments, $treatment_names[$j];
+			}
+
+			#print Dumper(\@_gd_name_list, \@_treatments);
+			print ">>> Treatment $treatment_names[$i] :: $treatment_names[$j]\n";
+			
+			_calculate_in_similarity_significance($gene_gd_hash, \@_gd_name_list, \@_treatments, $num_replicates);
+			#_calculate_es_significance($gene_gd_hash, \@_gd_name_list, \@_treatments, $num_replicates);
+		}
+	}	
+	
+}
+
+sub _randomize_gene_gd_hash
+{
+	my ($gene_gd_hash) = @_;
+	#convert the hash to two lists
+	# (1) Each gene occurring as many times as it does
+	# (2) Each genome occurring as many times as it does
+	
+	TRY: while (1)
+	{
+		#strategy = randomly pick and then resolve multiple per genome problems
+		
+		my @gd_name_list;
+		my @gene_name_list;
+		foreach my $gene_name (sort keys %$gene_gd_hash)
+		{
+			foreach my $gd_name (sort keys %{$gene_gd_hash->{$gene_name}})
+			{
+				push @gd_name_list, $gd_name;
+				push @gene_name_list, $gene_name;
+			}
+		}
+		
+		#print Dumper(\@gd_name_list, \@gene_name_list);
+	
+		my $gd_gene_hash;
+		while (my $gene_name = shift @gene_name_list)
+		{
+			my $i = int rand scalar @gd_name_list;
+			my $gd_name = splice @gd_name_list, $i, 1;
+			$gd_gene_hash->{$gd_name}->{$gene_name}++;
+			
+		#	print Dumper($gd_gene_hash);
+			next TRY if ($gd_gene_hash->{$gd_name}->{$gene_name} > 1);
+		}
+#		print Dumper($gd_gene_hash);
+		
+		my $rgene_gd_hash;
+		foreach my $gd_name ( keys %$gd_gene_hash)
+		{
+			foreach my $gene_name (sort keys %{$gd_gene_hash->{$gd_name}})
+			{
+				$rgene_gd_hash->{$gene_name}->{$gd_name}++;
+			}
+		}
+		
+		#print Dumper($rgene_gd_hash);
+		
+		return $rgene_gd_hash;
+	}
+}
+
+sub _calculate_in_similarity_significance
+{
+	my ($gene_gd_hash, $gd_name_list_ref, $treatments_ref, $num_replicates) = @_;
+	my @gd_name_list = @$gd_name_list_ref;
+	my @treatments = @$treatments_ref;
+	
+	my $treatment_hash = _treatment_list_to_hash(\@gd_name_list, \@treatments, 0);
+	my $actual_es = _in_similarity($gene_gd_hash, $treatment_hash);
+	#print "Actual in_sim = $actual_es\n";
+	my $p = 0;
+	
+	#per-gene significance
+	my $p_gene_hash;
+	my $gene_actual_sim;
+	
+	my $p_gene_max_hash;
+	my $gene_actual_max;
+	
+	my @gene_list = sort keys %$gene_gd_hash;
+	foreach my $gene_name (@gene_list)
+	{
+		$p_gene_hash->{$gene_name} = 0;
+		$gene_actual_sim->{$gene_name} = _in_similarity( { $gene_name => $gene_gd_hash->{$gene_name} } , $treatment_hash);
+		$p_gene_max_hash->{$gene_name} = 0;
+		$gene_actual_max->{$gene_name} = _treatment_max( { $gene_name => $gene_gd_hash->{$gene_name} } , $treatment_hash);
+	}
+	
+	for (my $i=0; $i<$num_replicates; $i++)
+	{
+		print STDERR ($i+1) . "\n" if (($i+1) % 1000 == 0);
+	#	my $rtreatment_hash = _treatment_list_to_hash(\@gd_name_list, \@treatments, 1);
+		
+		my $rgene_gd_hash = _randomize_gene_gd_hash($gene_gd_hash);
+		
+		#print Dumper($rgene_gd_hash);
+		my $random_es = _in_similarity($rgene_gd_hash, $treatment_hash);
+		#print "$i\t$random_es\n";
+		$p++ if ($random_es > $actual_es);
+		$p+=0.5 if ($random_es == $actual_es);
+
+		foreach my $gene_name (@gene_list)
+		{
+			my $random_gene_sim = _in_similarity( { $gene_name => $rgene_gd_hash->{$gene_name} } , $treatment_hash);
+			$p_gene_hash->{$gene_name}++ if ($random_gene_sim > $gene_actual_sim->{$gene_name});
+			$p_gene_hash->{$gene_name}+= 0.5 if ($random_gene_sim == $gene_actual_sim->{$gene_name});
+			
+			my $random_gene_max = _treatment_max( { $gene_name => $rgene_gd_hash->{$gene_name} } , $treatment_hash);
+			$p_gene_max_hash->{$gene_name}++ if ($random_gene_max > $gene_actual_max->{$gene_name});
+			$p_gene_max_hash->{$gene_name}+= 0.5 if ($random_gene_max == $gene_actual_max->{$gene_name});
+			
+		}
+	}
+	
+	foreach my $gene_name (@gene_list)
+	{
+		$p_gene_hash->{$gene_name} /= $num_replicates;
+		$p_gene_max_hash->{$gene_name} /= $num_replicates;
+	}
+	$p/= $num_replicates;
+	
+		
+	print "*** Overall within treatment similarity P-value = $p ($num_replicates replicates)\n";	
+
+	print "Per-gene within treatments similarity P-values\n";
+	foreach my $gene_name (sort { $p_gene_hash->{$a} <=> $p_gene_hash->{$b} } keys %$p_gene_hash )
+	{
+		print "$gene_name $p_gene_hash->{$gene_name}\n";
+	}
+	
+	print "Per-gene max within any one treatment P-values\n";
+	foreach my $gene_name (sort { $p_gene_max_hash->{$a} <=> $p_gene_max_hash->{$b} } keys %$p_gene_max_hash )
+	{
+		print "$gene_name $p_gene_max_hash->{$gene_name}\n";
+	}
+	
+}
+
+#calculates the number of 
+sub _in_similarity
+{
+	my ($gene_gd_hash, $treatment_hash) = @_;
+		
+	my $sim = 0;
+	foreach my $gene_name (sort keys %$gene_gd_hash)
+	{
+		foreach my $t (keys %$treatment_hash)
+		{
+			my $count = 0;
+			
+			foreach my $gd_name (@{$treatment_hash->{$t}})
+			{			
+				$count++ if ($gene_gd_hash->{$gene_name}->{$gd_name});
+			}
+			
+			#count number of times gene occurs multiple times in same treatment
+			$sim += $count - 1 if ($count > 1);
+		}
+	}	
+	return $sim;
+}
+
+sub _treatment_max {
+	my ($gene_gd_hash, $treatment_hash) = @_;
+		
+	my $max = 0;
+	foreach my $gene_name (sort keys %$gene_gd_hash)
+	{
+		foreach my $t (keys %$treatment_hash)
+		{
+			my $count = 0;
+			
+			foreach my $gd_name (@{$treatment_hash->{$t}})
+			{			
+				$count++ if ($gene_gd_hash->{$gene_name}->{$gd_name});
+			}
+			
+			#count number of times gene occurs multiple times in same treatment
+			$max = $count if ($count > $max);
+		}
+	}	
+	return $max;
+}
+
+
+sub _calculate_es_significance
+{
+	my ($gene_gd_hash, $gd_name_list_ref, $treatments_ref, $num_replicates) = @_;
+	my @gd_name_list = @$gd_name_list_ref;
+	my @treatments = @$treatments_ref;
+	
+	my $treatment_hash = _treatment_list_to_hash(\@gd_name_list, \@treatments, 0);
+	my $actual_es = _calculate_es($gene_gd_hash, $treatment_hash);
+	#print "Actual ES = $actual_es\n";
+	my $p = 0;
+	for (my $i=0; $i<$num_replicates; $i++)
+	{
+		print STDERR ($i+1) . "\n" if (($i+1) % 1000 == 0);
+		my $rtreatment_hash = _treatment_list_to_hash(\@gd_name_list, \@treatments, 1);
+		my $random_es = _calculate_es($gene_gd_hash, $rtreatment_hash);
+		#print "$i\t$random_es\n";
+		$p++ if ($random_es >= $actual_es);
+	}
+	
+	$p/= $num_replicates;
+	print "P-value = $p ($num_replicates replicates)\n";
+}
+
+sub _calculate_es 
+{
+	my ($gene_gd_hash, $treatment_hash) = @_;
+	
+	#es = excess similarity
+	my $es = 0;
+	foreach my $t (sort keys %$treatment_hash)
+	{		
+		my $self_sim = _dice_similarity($gene_gd_hash, $treatment_hash->{$t}, $treatment_hash->{$t});
+		
+		my @outside_treatment_gd_list = ();
+		foreach my $ot (sort keys %$treatment_hash)
+		{
+			next if ($ot eq $t);
+			push @outside_treatment_gd_list, @{$treatment_hash->{$ot}};
+		}
+		#print Dumper(\@outside_treatment_gd_list);
+		my $other_sim = _dice_similarity($gene_gd_hash, $treatment_hash->{$t}, \@outside_treatment_gd_list);
+	#	print OUT "$t\t$self_sim\t$other_sim\n";
+		
+		$es += $self_sim - $other_sim;
+	}
+	
+	$es /= scalar keys %$treatment_hash;
+}
+
+#calculates the average within group similarity
+sub _dice_similarity
+{
+	my ($gene_gd_hash, $gd_name_list_ref_1, $gd_name_list_ref_2) = @_;
+
+	my $num_1 = scalar @$gd_name_list_ref_1;
+	my $num_2 = scalar @$gd_name_list_ref_2;
+	#print STDERR "Num1 $num_1 Num2 $num_2\n";
+	#print STDERR Dumper($gd_name_list_ref_1);
+	#print STDERR Dumper($gd_name_list_ref_2);
+	
+	#calculate similarity for each pair
+	my $sim = 0;
+	my $tot = 0;
+	for (my $i = 0; $i < scalar @$gd_name_list_ref_1; $i++)
+	{
+		my $gd_name_1 = $gd_name_list_ref_1->[$i];
+		for (my $j = 0; $j < scalar @$gd_name_list_ref_2; $j++)
+		{
+			my $gd_name_2 = $gd_name_list_ref_2->[$j];
+			#print STDERR "$gd_name_1 :: $gd_name_2\n";
+			next if ($gd_name_1 eq $gd_name_2); ## assures we do each unique pair only once
+			#print STDERR "Accepted\n";
+			my $int_count = 0;
+			my $a_count = 0;
+			my $b_count = 0;
+			
+			foreach my $gene_name (keys %$gene_gd_hash)
+			{
+				if ($gene_gd_hash->{$gene_name}->{$gd_name_1})
+				{
+					$a_count++;
+					if ($gene_gd_hash->{$gene_name}->{$gd_name_2})
+					{
+						$int_count++;
+					}
+				}
+				
+				if ($gene_gd_hash->{$gene_name}->{$gd_name_2})
+				{
+					$b_count++;
+				}
+			}		
+			my $this_sim = 2 * $int_count / ($a_count + $b_count);
+			
+			$tot++;
+			$sim+=$this_sim;
+		}
+	}
+	##normalize by number of pairs
+	
+	#print STDERR "RAWSIM $sim TOTAL $tot\n";
+	$sim /= $tot;
+
+	return $sim;
+}
+
+#randomize labels
+sub _treatment_list_to_hash
+{
+	my ($gd_name_list_ref, $treatment_list_ref, $randomize) = @_;
+	
+	my @treatments = @$treatment_list_ref;
+	if ($randomize)
+	{
+		my @rtreatments = ();
+		while (@treatments)
+		{
+			my $i = int rand scalar @treatments;
+			push @rtreatments, splice(@treatments, $i, 1);
+		}
+		@treatments = @rtreatments;
+	}
+	
+	my $treatment_hash;
+	for (my $i=0; $i< scalar @treatments; $i++)
+	{
+		my $t = $treatments[$i];
+		push @{$treatment_hash->{$t}}, $gd_name_list_ref->[$i];
+	}
+	
+	return $treatment_hash;
 }
 
