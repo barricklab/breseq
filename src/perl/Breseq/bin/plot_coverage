@@ -206,7 +206,7 @@ sub plot_coverage
 	print R_SCRIPT <<END;
 plot_coverage <- function(cov, del_start, del_end, my_title, genes)
 {
-	pos = c(1:dim(cov[1]));
+	pos = c(1:dim(cov)[1]);
 	
 	len<- del_end - del_start + 1;
 	offset = len / 5;
