@@ -211,6 +211,7 @@ sub annotate_1_mutation
 	$mut->{gene_name} = "";
 	$mut->{gene_position} = "";
 	$mut->{gene_product} = "";
+	@{$mut->{gene_list}} = (); #affected genes
 
 	my $seq_id = $mut->{seq_id};
 	my $gene_list_ref = $ref_seq_info->{gene_lists}->{$seq_id};
@@ -280,7 +281,7 @@ sub annotate_1_mutation
 		$mut->{gene_product} .= (defined $prev_gene) ? $prev_gene->{product} : "&minus;";
 		$mut->{gene_product} .= $intergenic_seperator;			
 		$mut->{gene_product} .= (defined $next_gene) ? $next_gene->{product} : "&minus;";
-
+				
 		return $mut;
 	}
 	## Mutation is completely within genes
@@ -292,6 +293,9 @@ sub annotate_1_mutation
 		my $gene = $within_genes[0];
 		$mut->{gene_name} = $gene->{name};
 		$mut->{gene_product} = $gene->{product};
+		
+		#added for gene table
+		@{$mut->{gene_list}} = ($gene->{name});
 
 		my $within_gene_start = ($gene->{strand} == +1) ? $gene->{start} : $gene->{end};	
 
@@ -355,6 +359,11 @@ sub annotate_1_mutation
 		my @gene_list = ( map({ "<i>[" . $_->{name} . "]</i>" } @inside_left_genes),
 						  map({ "<i>" . $_->{name} . "</i>" } @between_genes),
 						  map({ "<i>[" . $_->{name} ."]</i>" } @inside_right_genes) );
+
+		#added for gene table
+		@{$mut->{gene_list}} = ( map({ $_->{name} } @inside_left_genes),
+						  		 map({ $_->{name} } @between_genes),
+						  		 map({ $_->{name} } @inside_right_genes) );
 
 		$mut->{gene_product} = join (", ", @gene_list);
 
