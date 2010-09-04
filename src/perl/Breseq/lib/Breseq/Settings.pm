@@ -881,6 +881,8 @@ sub time2string
 	else 
 	{
 		my $rem_time = $this_time;
+		
+		
 		my $sec = $rem_time % 60;
 		$rem_time = int($rem_time / 60);
 		$s = "$sec sec";
@@ -894,7 +896,7 @@ sub time2string
 		
 		if ($rem_time)
 		{
-			my $hours = int($rem_time / 24);
+			my $hours = $rem_time % 24;
 			$rem_time = int($rem_time / 24);
 			$s = "$hours hr " . $s;
 		}
@@ -902,7 +904,15 @@ sub time2string
 		if ($rem_time)
 		{
 			my $days = $rem_time;
-			$s = "$days days " . $s;
+			
+			if ($days == 1)
+			{
+				$s = "$days day " . $s;
+			}
+			else
+			{
+				$s = "$days days " . $s;
+			}
 		}
 	}
 	

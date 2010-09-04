@@ -1076,8 +1076,8 @@ sub do_mutated_gene_table
 	close OUT;
 		
 	print ">>>Treatment ALL :: ALL\n";	
-	_calculate_in_similarity_significance($gene_gd_hash, \@gd_name_list, \@treatments, $num_replicates);
-	#_calculate_es_significance($gene_gd_hash, \@gd_name_list, \@treatments, $num_replicates);
+	#_calculate_in_similarity_significance($gene_gd_hash, \@gd_name_list, \@treatments, $num_replicates);
+	_calculate_es_significance($gene_gd_hash, \@gd_name_list, \@treatments, $num_replicates);
 	die;
 	
 	for (my $i=0; $i<scalar @treatment_names; $i++)
