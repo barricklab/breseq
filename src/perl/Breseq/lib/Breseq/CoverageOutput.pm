@@ -52,7 +52,8 @@ sub new
 	my $self = new Bio::Root::Root($caller, @args);
 
 	bless ($self, $class);
-	($self->{fasta}, $self->{bam}) = $self->Bio::Root::RootI::_rearrange([qw(FASTA BAM)], @args);
+	($self->{fasta}, $self->{bam}, $self->{path}) = $self->Bio::Root::RootI::_rearrange([qw(FASTA BAM PATH)], @args);
+	$self->{path} = '.' if (!defined $self->{path});
 	$self->{r_script} = $FindBin::Bin . "/../lib/perl5/Breseq/plot_coverage.r";
 	
 	## Workaround to avoid too many open files... bug in Bio::DB::Sam
@@ -103,10 +104,10 @@ sub plot_coverage
 		$downsample = 1 if ($downsample < 1);
 	}
 	
-	my $tmp_coverage = "$$.coverage.tab";
+	my $tmp_coverage = "$self->{path}/$$.coverage.tab";
 	$self->tabulate_coverage($tmp_coverage, $extended_region, {downsample => $downsample} );
 	
-	my $log_file_name = "$$.r.log";
+	my $log_file_name = "$self->{path}/$$.r.log";
 	Breseq::Shared::system("R --vanilla in_file=$tmp_coverage out_file=$output pdf_output=$options->{pdf} total_only=$options->{total_only} window_start=$start window_end=$end < $self->{r_script} > $log_file_name");
 	
 	#clean up
@@ -171,7 +172,7 @@ sub tabulate_coverage
 #		$coverage->{raw_redundant} = {'-1' => 0, '1' => 0, 'total' => 0};
 				
 		my $fetch_region = $seq_id . ":" . $pos . "-" . $pos;
-		print "$fetch_region\n";
+#		print "$fetch_region\n";
 		$bam->fetch($fetch_region, $fetch_function);
 		
 		#sum up coverage observations

@@ -54,25 +54,52 @@ do_check() {
         echo "Building expected values for test $1..."
         do_build $1
     fi
+
+#We need to check to see if all the output files even exist 
+#    for i in `find . ${FILE_PATTERN}`; do
+#   	echo "$i"
+#        if [[ ! -e $i ]]; then
+#        	echo ""
+#			echo "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
+#			echo "Failed check: $1"
+#        	echo "Did not find expected output file: $i"
+#			echo "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX" 
+#			echo ""
+#       	exit -1
+#       fi
+#    done
     pushd $1 > /dev/null
-    if ! ${HASH} --check ${EXPECTED} > /dev/null; then
+    
+    CHK=`${HASH} -s --check ${EXPECTED} 2>&1`
+    if [[ "$?" -ne 0 || $CHK ]]; then
         popd > /dev/null
         echo ""
         echo "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
-        echo "Failed check: $1"
+        echo "Failed check"
+    	${HASH} --check ${EXPECTED}
         echo "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX" 
         echo ""
         exit -1
     fi
+    
     popd > /dev/null
     echo ""
     echo "OOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOO"
-    echo "Passed check: $1"
+    echo "Passed check"
+    ${HASH} --check ${EXPECTED}
     echo "OOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOO"
     echo ""
     exit 0
 }
 
+do_breseq() {
+	testcmd
+	if [[ "$?" -ne 0 ]]; then
+	    echo "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
+        echo "Failed check"
+        echo "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX" 
+	fi
+}
 
 # verbose check of current hashes against expected values.
 # $1 == testdir
@@ -120,14 +147,14 @@ do_test() {
         ;;
         rebuild)
             do_clean $2
-            testcmd
+            do_breseq
             do_build $2
         ;;
         show)
             do_show $2
         ;;
         test)
-            testcmd
+        	do_breseq
             do_check $2
         ;;
         vcheck)

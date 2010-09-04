@@ -5,6 +5,8 @@ SELF=`dirname ${BASH_SOURCE}`
 
 testcmd() {
     ${BRESEQ} \
+    	--perl-identify-mutations \
+    	--perl-error-count \
         -o ${SELF} \
         -r ${DATADIR}/lambda/lambda.gbk \
         ${DATADIR}/lambda/lambda_mixed_population.fastq

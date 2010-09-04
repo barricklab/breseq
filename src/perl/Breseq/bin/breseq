@@ -115,6 +115,7 @@ use Bio::SeqIO;
 ## Keep a summary of certain statistics. 
 my $summary = {};
 
+
 ###
 ### Get options from the command line
 ###    handles all GetOpt and filling in many other settings

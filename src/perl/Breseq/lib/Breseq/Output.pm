@@ -285,8 +285,8 @@ sub html_statistics
 	print HTML Tr({-class=>"highlight_table_row"}, 
 		td(),
 		td(b("total")), 
-		td({-align=>"right"},b(commify($summary->{sequence_conversion}->{num_bases}))), 
 		td({-align=>"right"},b(commify($summary->{sequence_conversion}->{num_reads}))), 
+		td({-align=>"right"},b(commify($summary->{sequence_conversion}->{num_bases}))), 
 		td(b($summary->{sequence_conversion}->{max_read_length} . "&nbsp;bases")), 
 	);
 	print HTML end_table();
@@ -348,10 +348,15 @@ sub html_statistics
 	foreach my $t (@times)
 	{
 		next if (!defined $t->{_message});
-		print HTML Tr(td($t->{_message}), td($t->{_formatted_time_start}), td($t->{_formatted_time_end}), td($t->{_formatted_time_elapsed}));
+		print HTML Tr(
+			td($t->{_message}), 
+			td(nonbreaking($t->{_formatted_time_start})), 
+			td(nonbreaking($t->{_formatted_time_end})), 
+			td(nonbreaking($t->{_formatted_time_elapsed}))
+		);
 		$total_time_elapsed += $t->{_time_elapsed};
 	}
-	print HTML Tr({-class=>"highlight_table_row"}, td({-colspan=>3}, b("Total")), td(b(Breseq::Settings::time2string($total_time_elapsed,1))));
+	print HTML Tr({-class=>"highlight_table_row"}, td({-colspan=>3}, b("Total")), td(b(nonbreaking(Breseq::Settings::time2string($total_time_elapsed,1)))));
 	print HTML end_table();
 
 	close HTML;
@@ -1506,9 +1511,9 @@ sub draw_coverage
 	{
 		my $fasta_path = $settings->file_name('reference_fasta_file_name');
 		my $bam_path = $settings->file_name('reference_bam_file_name');
-		my $co = Breseq::CoverageOutput->new(-fasta => $fasta_path, -bam => $bam_path);
-
 		my $evidence_path = $settings->file_name('evidence_path');
+		
+		my $co = Breseq::CoverageOutput->new(-fasta => $fasta_path, -bam => $bam_path, -path => $evidence_path);
 
 		##plot the overview for each seq_id
 		foreach my $seq_id (@{$ref_seq_info->{seq_ids}})
