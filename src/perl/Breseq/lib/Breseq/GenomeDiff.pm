@@ -785,6 +785,7 @@ sub merge
 	{
 		## deep copy the list, so we aren't changing the original items
 		my @list = $gd->list;
+		@list = sort {$a->{id} <=> $b->{id}} @list;
 		my @item_list = @{dclone(\@list)};
 				
 		foreach my $item (@item_list)
