@@ -1207,13 +1207,10 @@ sub _calculate_in_similarity_significance
 		foreach my $gene_name (@gene_list)
 		{
 			my $random_gene_sim = _in_similarity( { $gene_name => $rgene_gd_hash->{$gene_name} } , $treatment_hash);
-			$p_gene_hash->{$gene_name}++ if ($random_gene_sim > $gene_actual_sim->{$gene_name});
-			$p_gene_hash->{$gene_name}+= 0.5 if ($random_gene_sim == $gene_actual_sim->{$gene_name});
+			$p_gene_hash->{$gene_name}++ if ($random_gene_sim >= $gene_actual_sim->{$gene_name});
 			
 			my $random_gene_max = _treatment_max( { $gene_name => $rgene_gd_hash->{$gene_name} } , $treatment_hash);
-			$p_gene_max_hash->{$gene_name}++ if ($random_gene_max > $gene_actual_max->{$gene_name});
-			$p_gene_max_hash->{$gene_name}+= 0.5 if ($random_gene_max == $gene_actual_max->{$gene_name});
-			
+			$p_gene_max_hash->{$gene_name}++ if ($random_gene_max >= $gene_actual_max->{$gene_name});			
 		}
 	}
 	
@@ -1295,15 +1292,18 @@ sub _calculate_es_significance
 	my @treatments = @$treatments_ref;
 	
 	my $treatment_hash = _treatment_list_to_hash(\@gd_name_list, \@treatments, 0);
-	my $actual_es = _calculate_es($gene_gd_hash, $treatment_hash);
-	#print "Actual ES = $actual_es\n";
+	my ($actual_es, $actual_within, $actual_other) = _calculate_es($gene_gd_hash, $treatment_hash);
+	print "Actual Excess Dice Similarity = $actual_es\n";
+	print "Actual Within Dice Similarity = $actual_within\n";
+	print "Actual Between Dice Similarity = $actual_other\n";
+
 	my $p = 0;
 	for (my $i=0; $i<$num_replicates; $i++)
 	{
 		print STDERR ($i+1) . "\n" if (($i+1) % 1000 == 0);
 		my $rtreatment_hash = _treatment_list_to_hash(\@gd_name_list, \@treatments, 1);
 		my $random_es = _calculate_es($gene_gd_hash, $rtreatment_hash);
-		#print "$i\t$random_es\n";
+		print "$i\t$random_es\n";
 		$p++ if ($random_es >= $actual_es);
 	}
 	
@@ -1315,11 +1315,12 @@ sub _calculate_es
 {
 	my ($gene_gd_hash, $treatment_hash) = @_;
 	
-	#es = excess similarity
-	my $es = 0;
+	my $self_sim = 0;
+	my $other_sim = 0;
+	
 	foreach my $t (sort keys %$treatment_hash)
 	{		
-		my $self_sim = _dice_similarity($gene_gd_hash, $treatment_hash->{$t}, $treatment_hash->{$t});
+		my $this_self_sim = _dice_similarity($gene_gd_hash, $treatment_hash->{$t}, $treatment_hash->{$t});
 		
 		my @outside_treatment_gd_list = ();
 		foreach my $ot (sort keys %$treatment_hash)
@@ -1328,13 +1329,21 @@ sub _calculate_es
 			push @outside_treatment_gd_list, @{$treatment_hash->{$ot}};
 		}
 		#print Dumper(\@outside_treatment_gd_list);
-		my $other_sim = _dice_similarity($gene_gd_hash, $treatment_hash->{$t}, \@outside_treatment_gd_list);
+		my $this_other_sim = _dice_similarity($gene_gd_hash, $treatment_hash->{$t}, \@outside_treatment_gd_list);
 	#	print OUT "$t\t$self_sim\t$other_sim\n";
 		
-		$es += $self_sim - $other_sim;
+		$self_sim += $this_self_sim;
+		$other_sim += $this_other_sim;
+		
 	}
+
+	$self_sim /= scalar keys %$treatment_hash;
+	$other_sim /= scalar keys %$treatment_hash;
 	
-	$es /= scalar keys %$treatment_hash;
+	#es = excess similarity
+	my $es = $self_sim - $other_sim;
+	
+	return ($es, $self_sim, $other_sim), 
 }
 
 #calculates the average within group similarity
