@@ -411,7 +411,6 @@ sub identify_mutations
 		###
 		my $pileup_function = sub {
 			my ($seqid,$pos,$pileup) = @_;
-	       	 
 			print STDERR "    POSITION:$pos\n" if ($pos % 10000 == 0);			
 
 			my $insert_count = 0;
@@ -842,7 +841,7 @@ sub identify_mutations
 		}; 
 
 		#for testing
-		#$bam->pileup("$seq_id:1-200", $pileup_function);
+#		$bam->pileup("$seq_id:17136-17136", $pileup_function);
 		$bam->pileup("$seq_id", $pileup_function);
 
 		###
@@ -1046,12 +1045,13 @@ sub _best_two_base_model_log10_likelihood
 	
 	my $cur_pr_first_base = 1;
 	my $cur_log_pr = _calculate_two_base_model_log10_likelihood($info_list, $error_rates, $first_base, $second_base, $cur_pr_first_base);
-	my $last_log_pr = -9999;
+	my $last_log_pr = $cur_log_pr;
 	my $last_pr_first_base = 1;
+
+	print "$cur_pr_first_base $cur_log_pr\n" if ($verbose);
 
 	while ($cur_log_pr >= $last_log_pr)
 	{
-		print "$cur_pr_first_base $cur_log_pr\n" if ($verbose);
 		
 		$last_log_pr = $cur_log_pr;
 		$last_pr_first_base = $cur_pr_first_base;
@@ -1059,6 +1059,7 @@ sub _best_two_base_model_log10_likelihood
 
 		$cur_pr_first_base -= 0.001;
 		$cur_log_pr = _calculate_two_base_model_log10_likelihood($info_list, $error_rates, $first_base, $second_base, $cur_pr_first_base);
+		print "$cur_pr_first_base $cur_log_pr\n" if ($verbose);
 	}
 	
 	return ($last_log_pr, $last_pr_first_base);
@@ -1405,12 +1406,12 @@ sub polymorphism_statistics
 		$passed &&= $top >= $polymorphism_coverage_limit_both_bases;
 		$passed &&= $bot >= $polymorphism_coverage_limit_both_bases;
 
-
 		Breseq::GenomeDiff::add_reject_reason($mut, "POLYMORPHISM_STRAND") if (!$passed);
-		Breseq::GenomeDiff::add_reject_reason($mut, "KS_QUALITY_P_VALUE_UNUSUAL_POLY") if ($mut->{ks_quality_p_value_unusual_poly} < $settings->{polymorphism_bias_p_value_cutoff});
+		Breseq::GenomeDiff::add_reject_reason($mut, "KS_QUALITY_P_VALUE") if ($mut->{ks_quality_p_value} < $settings->{polymorphism_bias_p_value_cutoff});
+		
+#		Breseq::GenomeDiff::add_reject_reason($mut, "KS_QUALITY_P_VALUE_UNUSUAL_POLY") if ($mut->{ks_quality_p_value_unusual_poly} < $settings->{polymorphism_bias_p_value_cutoff});
 #		Breseq::GenomeDiff::add_reject_reason($mut, "KS_QUALITY_P_VALUE_UNUSUAL_NEW") if ($mut->{ks_quality_p_value_unusual_new} < $settings->{polymorphism_bias_p_value_cutoff});
 #		Breseq::GenomeDiff::add_reject_reason($mut, "KS_QUALITY_P_VALUE_UNUSUAL_REF") if ($mut->{ks_quality_p_value_unusual_ref} < $settings->{polymorphism_bias_p_value_cutoff});
-
 #		Breseq::GenomeDiff::add_reject_reason($mut, "KS_QUALITY_P_VALUE_UNUSUAL_ALL") if ($mut->{ks_quality_p_value_unusual_all} < $settings->{polymorphism_bias_p_value_cutoff});
 		Breseq::GenomeDiff::add_reject_reason($mut, "FISHER_STRAND_P_VALUE") if ($mut->{fisher_strand_p_value} < $settings->{polymorphism_bias_p_value_cutoff});
 

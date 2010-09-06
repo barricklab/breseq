@@ -285,7 +285,6 @@ if (!$settings->{no_junction_prediction})
 		
 		if ($settings->do_step('preprocess_junction_done_file_name', "Preprocessing alignments for candidate junction identification"))
 		{
-			print STDERR "Preprocessing alignments for candidate junction identification...\n";
 			Breseq::CandidateJunction::preprocess_alignments($settings, $summary);
 			$settings->done_step('preprocess_junction_done_file_name');
 		}

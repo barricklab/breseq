@@ -152,10 +152,11 @@ if (length(X$new_quals) > 0)
 		poly_quals = ref_quals;
 	}
 
-##this one has been used	
-	ks_test_p_value_unusual <- ks.test(qual_dist_list, poly_quals, alternative = "less")
-	ks_test_p_value_unusual <- ks_test_p_value_unusual$p.value
-	Y$ks_quality_p_value_unusual_poly[i] <- ks_test_p_value_unusual
+## This one tests the quality scores predicting a polymorphism agains the overall distribution
+## at all positions in the genome	
+#	ks_test_p_value_unusual <- ks.test(qual_dist_list, poly_quals, alternative = "less")
+#	ks_test_p_value_unusual <- ks_test_p_value_unusual$p.value
+#	Y$ks_quality_p_value_unusual_poly[i] <- ks_test_p_value_unusual
 
 
 #	ks_test_p_value_unusual <- ks.test(qual_dist_list, ref_quals, alternative = "less")

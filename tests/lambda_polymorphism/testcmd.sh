@@ -8,7 +8,6 @@ testcmd() {
     	--polymorphism-prediction \
         -o ${SELF} \
         -r ${DATADIR}/lambda/lambda.gbk \
-        --polymorphism-frequency-cutoff=0.25 \
         ${DATADIR}/lambda/lambda_mixed_population.fastq
 }
 

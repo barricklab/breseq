@@ -823,16 +823,18 @@ sub html_read_alignment_table_string
 				$output_str.= Tr({-class=>'information_table_row'}, td({-colspan => $total_cols}, "Fisher's exact test strand distribution " . i("p") . "-value = $fisher_strand_p_value"));
 			}
 
-#			if (defined $c->{ks_quality_p_value})
-#			{
-#				my $ks_quality_p_value = sprintf("%.2E", $c->{ks_quality_p_value});
-#				$output_str.= Tr({-class=>'information_table_row'}, td({-colspan => $total_cols}, "Kolmogorov-Smirnov test that lower quality scores support polymorphism " . i("p") . "-value = $ks_quality_p_value"));
-#			}
+			if (defined $c->{ks_quality_p_value})
+			{
+			my $ks_quality_p_value = sprintf("%.2E", $c->{ks_quality_p_value});
+				$output_str.= Tr({-class=>'information_table_row'}, td({-colspan => $total_cols}, "Kolmogorov-Smirnov test that lower quality scores support polymorphism than reference " . i("p") . "-value = $ks_quality_p_value"));
+			}
 
+
+### Currently not calculated...
 			if (defined $c->{ks_quality_p_value_unusual_poly})
 			{
 				my $ks_quality_p_value = sprintf("%.2E", $c->{ks_quality_p_value_unusual_poly});
-				$output_str.= Tr({-class=>'information_table_row'}, td({-colspan => $total_cols}, "Kolmogorov-Smirnov test of lower base quality scores supporting polymorphism  " . i("p") . "-value = $ks_quality_p_value"));
+				$output_str.= Tr({-class=>'information_table_row'}, td({-colspan => $total_cols}, "Kolmogorov-Smirnov test of lower base quality scores supporting polymorphism than normal distribution " . i("p") . "-value = $ks_quality_p_value"));
 			}
 
 
@@ -853,7 +855,7 @@ sub html_read_alignment_table_string
 				my $ks_quality_p_value = sprintf("%.2E", $c->{ks_quality_p_value_unusual_all});
 				$output_str.= Tr({-class=>'information_table_row'}, td({-colspan => $total_cols}, "Kolmogorov-Smirnov test of lower quality scores supporting all bases " . i("p") . "-value = $ks_quality_p_value"));
 			}			
-			
+### ---->			
 
 		}
 	}
@@ -1167,6 +1169,10 @@ sub decode_reject_reason
 	elsif ($reject eq 'BIAS_P_VALUE')
 	{
 		return "Prediction has biased strand and/or quality scores supporting polymorphism.";
+	}
+	elsif ($reject eq 'KS_QUALITY_P_VALUE')
+	{
+		return "Prediction has significantly lower quality scores supporting polymorphism compared to reference.";
 	}
 	elsif ($reject eq 'KS_QUALITY_P_VALUE_UNUSUAL_POLY')
 	{
