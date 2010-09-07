@@ -144,13 +144,7 @@ namespace breseq {
 				_s = "NA";
 			} else {
 				ostringstream interpreter;
-				double fracpart=0.0, intpart=0.0;
-				fracpart = std::modf(v, &intpart);				
-				if(fracpart != 0.0) {
-					interpreter << fixed << setprecision(1) << v;
-				} else {
-					interpreter << static_cast<int>(intpart);
-				}
+				interpreter << fixed << setprecision(1) << v;
 				_s = interpreter.str();
 			}
 		}
