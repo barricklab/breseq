@@ -7,6 +7,7 @@
 #include <vector>
 #include <sstream>
 #include <iomanip>
+#include <cmath>
 #include <boost/variant.hpp>
 #include <boost/lexical_cast.hpp>
 #include <boost/shared_ptr.hpp>
@@ -139,9 +140,19 @@ namespace breseq {
 		//! Double-output.
 		void operator()(double& v) {
 			using namespace std;
-			ostringstream interpreter;
-			interpreter << fixed << setprecision(1) << v;
-			_s = interpreter.str();
+			if(std::isnan(v)) {
+				_s = "NA";
+			} else {
+				ostringstream interpreter;
+				double fracpart=0.0, intpart=0.0;
+				fracpart = std::modf(v, &intpart);				
+				if(fracpart != 0.0) {
+					interpreter << fixed << setprecision(1) << v;
+				} else {
+					interpreter << static_cast<int>(intpart);
+				}
+				_s = interpreter.str();
+			}
 		}
 		
 		//! Pairs are handled separately.
