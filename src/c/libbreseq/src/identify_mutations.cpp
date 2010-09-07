@@ -917,10 +917,35 @@ void breseq::identify_mutations_pileup::check_deletion_completion(uint32_t posit
 			del[END] = position - 1;
 			del[START_RANGE] = 0;
 			del[END_RANGE] = 0;
-			del[LEFT_OUTSIDE_COV] = _left_outside_coverage_item ? _left_outside_coverage_item->unique[1] : std::numeric_limits<double>::quiet_NaN();
-			del[LEFT_INSIDE_COV] = _left_inside_coverage_item ? _left_inside_coverage_item->unique[1] : std::numeric_limits<double>::quiet_NaN();
-			del[RIGHT_INSIDE_COV] = _last_position_coverage ? _last_position_coverage->unique[1] : std::numeric_limits<double>::quiet_NaN();
-			del[RIGHT_OUTSIDE_COV] = this_position_coverage ? this_position_coverage->unique[1] : std::numeric_limits<double>::quiet_NaN();
+			
+			if(!_left_outside_coverage_item || std::isnan(_left_outside_coverage_item->unique[1])) {
+				del[LEFT_OUTSIDE_COV] = std::numeric_limits<double>::quiet_NaN();
+			} else {
+				del[LEFT_OUTSIDE_COV] = static_cast<uint32_t>(_left_outside_coverage_item->unique[1]);
+			}
+
+			if(!_left_inside_coverage_item || std::isnan(_left_inside_coverage_item->unique[1])) {
+				del[LEFT_INSIDE_COV] = std::numeric_limits<double>::quiet_NaN();
+			} else {
+				del[LEFT_INSIDE_COV] = static_cast<uint32_t>(_left_inside_coverage_item->unique[1]);
+			}
+			
+			if(!_last_position_coverage || std::isnan(_last_position_coverage->unique[1])) {
+				del[RIGHT_INSIDE_COV] = std::numeric_limits<double>::quiet_NaN();
+			} else {
+				del[RIGHT_INSIDE_COV] = static_cast<uint32_t>(_last_position_coverage->unique[1]);
+			}
+			
+			if(!this_position_coverage || std::isnan(this_position_coverage->unique[1])) {
+				del[RIGHT_OUTSIDE_COV] = std::numeric_limits<double>::quiet_NaN();
+			} else {
+				del[RIGHT_OUTSIDE_COV] = static_cast<uint32_t>(this_position_coverage->unique[1]);
+			}
+			
+//			del[LEFT_OUTSIDE_COV] = _left_outside_coverage_item ? _left_outside_coverage_item->unique[1] : std::numeric_limits<double>::quiet_NaN();
+//			del[LEFT_INSIDE_COV] = _left_inside_coverage_item ? _left_inside_coverage_item->unique[1] : std::numeric_limits<double>::quiet_NaN();
+//			del[RIGHT_INSIDE_COV] = _last_position_coverage ? _last_position_coverage->unique[1] : std::numeric_limits<double>::quiet_NaN();
+//			del[RIGHT_OUTSIDE_COV] = this_position_coverage ? this_position_coverage->unique[1] : std::numeric_limits<double>::quiet_NaN();
 			
 			//			$del->{left_inside_cov} = 'NA' if (!defined $del->{left_inside_cov});
 			//			$del->{right_inside_cov} = 'NA' if (!defined $del->{right_inside_cov});
