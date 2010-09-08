@@ -15,7 +15,6 @@
 #include "breseq/pileup.h"
 #include "breseq/identify_mutations.h"
 
-
 /*! Convenience wrapper around the identify_mutations_pileup class.
  */
 void breseq::identify_mutations(const std::string& bam, 
@@ -30,6 +29,7 @@ void breseq::identify_mutations(const std::string& bam,
 																bool predict_deletions,
 																bool predict_polymorphisms,
                                 uint8_t min_qual_score) {
+                                                                                            
 	// do the mutation identification:
 	identify_mutations_pileup imp(bam, fasta, error_dir, gd_file, output_dir, readfiles, coverage_dir, deletion_propagation_cutoff, mutation_cutoff, predict_deletions, predict_polymorphisms, min_qual_score);
 	imp.do_pileup();
@@ -63,7 +63,7 @@ breseq::identify_mutations_pileup::identify_mutations_pileup(const std::string& 
 , _log10_ref_length(0)
 , _this_deletion_reaches_seed_value(false)
 , _last_position_coverage_printed(0) {
-	
+	  
 	// reserve enough space for the sequence info:
 	_seq_info.resize(_bam->header->n_targets);
 	
@@ -129,6 +129,7 @@ void breseq::identify_mutations_pileup::callback(const breseq::pileup& p) {
 	//INSERT_COUNT: while ($next_insert_count_exists)
 	while(next_insert_count_exists) {
 		++insert_count; // we're doing this here because the perl version uses a while-continue.
+    //cerr << "Position:" << p.position() << " Insert Count:" << insert_count << endl;
 		//		@dk: positions are 0-indexed here, while genome diff is 1-indexed; this will have to be fixed (maybe in the genome diff?).
 		//		if(insert_count) {
 		//			cerr << p.position() << " " << insert_count << endl;
@@ -222,7 +223,7 @@ void breseq::identify_mutations_pileup::callback(const breseq::pileup& p) {
 			int32_t fastq_file_index = i->fastq_file_index();
 			
 			//			my $strand = $a->reversed ? -1 : +1;
-			int strand = i->strand() ? -1 : 1;
+			int strand = i->strand();
 			
 			//## Handle trimming
 			//## Note that trimming INCLUDES the unaligned bases on each end
@@ -299,7 +300,7 @@ void breseq::identify_mutations_pileup::callback(const breseq::pileup& p) {
 
       if (indel == -1)
       {			
-        int32_t mqpos = i->query_position() + 1 - i->strand(); 
+        int32_t mqpos = i->query_position() + 1 - i->reversed(); 
         uint8_t check_base = i->query_base(mqpos);
         if (is_N(check_base)) continue;
         quality = i->quality_base(mqpos);
@@ -324,7 +325,7 @@ void breseq::identify_mutations_pileup::callback(const breseq::pileup& p) {
       {		
         int32_t max_offset = insert_count;
         if (indel < max_offset) max_offset = indel;
-        int32_t mqpos = i->query_position() + max_offset + 1 - i->strand(); 
+        int32_t mqpos = i->query_position() + max_offset + 1 - i->reversed(); 
       
         //my $max_offset = $insert_count;
         //$max_offset = $indel if ($indel < $max_offset);
@@ -348,33 +349,11 @@ void breseq::identify_mutations_pileup::callback(const breseq::pileup& p) {
       //## We may want to ignore all bases below a certain quality when calling mutations and polymorphisms
       //## This is the check for whether the base fails; it should be after coverage counting
       //next ALIGNMENT if ( $settings->{base_quality_cutoff} && ($quality < $settings->{base_quality_cutoff}) );
-      if (quality < _min_qual_score) continue;
 
-/*  @JEB - this way of finding qual scores (for indels) was replaced by above.
-      
-      
-			if(insert_count == 0) {
-				//## We would really like for this to not count any of the insertions unless
-				//## the read makes it out of the inserted region (this will be the case if it was aligned)
-				//##no information about gap if next position is end of alignment
-				//## THIS SHOULD NEVER BE TRUE, but it is sometimes...
-				//next ALIGNMENT if ($p->qpos+$indel+1 >= $q_end);
-				//#die if ($p->qpos+$indel+1 >= $q_end);
-				if((i->query_position()+indel+1) >= q_end) {
-					continue;
-				}
-				
-				//my $average_quality = POSIX::floor(($a->qscore->[$p->qpos+$indel] + $a->qscore->[$p->qpos+$indel])/2);
-				quality = i->quality_scores()[i->query_position()+indel];
-				
-			} else {
-				//$quality = $a->qscore->[$p->qpos+$insert_count];
-				quality = i->quality_scores()[i->query_position()+insert_count];
-			}
-
-*/
-			
-			//std::cerr << (unsigned int)quality << std::endl;
+      if (quality < _min_qual_score) {
+//        std::cerr << p.position() << " " << (unsigned int)quality << " " << std::endl;
+        continue;
+      }
 			
 			
 			//## this is the coverage for SNP counts, tabulate AFTER skipping trimmed reads
@@ -418,7 +397,7 @@ void breseq::identify_mutations_pileup::callback(const breseq::pileup& p) {
 				//$pr_base_hash->{$hypothetical_base} += $log10_correct_rates->[$fastq_file_index]->{$quality}->{$base_key};
 				//$pr_not_base_hash->{$hypothetical_base} += $log10_error_rates->[$fastq_file_index]->{$quality}->{$base_key};
 				
-				//std::cerr << _ecr.log10_correct_rates(fastq_file_index, quality, base_key) << " " << _ecr.log10_error_rates(fastq_file_index, quality, base_key) << std::endl;
+				//std::cerr << base2char(base) << " " << base_key << " " << (unsigned int)quality << " " << _ecr.log10_correct_rates(fastq_file_index, quality, base_key) << " " << _ecr.log10_error_rates(fastq_file_index, quality, base_key) << std::endl;
 				
 				std::pair<double,double> log10rates = _ecr.log10_rates(fastq_file_index, quality, base_key);
 				//std::cerr << "pr: " << log10rates.second << " not: " << log10rates.first << std::endl;

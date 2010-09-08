@@ -95,6 +95,11 @@ sub identify_mutations
 		} else {
 			$cmdline .= " --predict_polymorphisms 0"; # defaults to NOT predicting polymorphisms.
 		}
+		
+		if (defined $settings->{base_quality_cutoff})
+		{
+			$cmdline .= " --minimum-quality-score $settings->{base_quality_cutoff}";
+		}
 
 		Breseq::Shared::system($cmdline);
 		return; # identify_mutations++ worked, so we're all done here.
@@ -417,7 +422,7 @@ sub identify_mutations
 			my $next_insert_count_exists = 1;
 			INSERT_COUNT: while ($next_insert_count_exists)
 			{				
-				#print STDERR "$pos $insert_count\n" if ($insert_count > 0);
+				#print STDERR "POSITION:$pos INSERT COUNT:$insert_count\n";
 
 				$next_insert_count_exists = 0;
 
@@ -595,11 +600,12 @@ sub identify_mutations
 							print "  Encountered in read: " . $a->qname . "\n";
 							die;
 						}
+						
 
 						##record evidence for and against this hypothetical base being the reference, given the observation
 						my $pr = $log10_correct_rates->[$fastq_file_index]->{$quality}->{$base_key};
 						my $notpr = $log10_error_rates->[$fastq_file_index]->{$quality}->{$base_key};
-						#print STDERR "pr: $pr not: $notpr\n";
+						#print STDERR "$base $base_key $quality " . sprintf("%g %g", $pr, $notpr) . "\n";
 						$pr_base_hash->{$hypothetical_base} += $pr;#$log10_correct_rates->[$fastq_file_index]->{$quality}->{$base_key};
 						$pr_not_base_hash->{$hypothetical_base} += $notpr;#$log10_error_rates->[$fastq_file_index]->{$quality}->{$base_key};
 					}
@@ -622,6 +628,8 @@ sub identify_mutations
 				foreach my $test_base (keys %$pr_base_hash)
 				{			
 					my $this_pr_call = $pr_base_hash->{$test_base} - $pr_not_base_hash->{$test_base};
+					
+					#print STDERR "$test_base $this_pr_call $pr_base_hash->{$test_base} $pr_not_base_hash->{$test_base}\n";
 					if ( (!defined $pr_call) || ($this_pr_call > $pr_call) )
 					{
 						$pr_call = $this_pr_call;
@@ -732,7 +740,6 @@ sub identify_mutations
 				$mut->{position} = $pos;
 				$mut->{insert_position} = $insert_count;
 				$mut->{quality} = $e_value_call;		
-				$mut->{snp_quality} = $e_value_call;		
 
 				## code that prints out even more information
 				## slow because it sorts things, and not necessary
@@ -1415,7 +1422,7 @@ sub polymorphism_statistics
 #		Breseq::GenomeDiff::add_reject_reason($mut, "KS_QUALITY_P_VALUE_UNUSUAL_ALL") if ($mut->{ks_quality_p_value_unusual_all} < $settings->{polymorphism_bias_p_value_cutoff});
 		Breseq::GenomeDiff::add_reject_reason($mut, "FISHER_STRAND_P_VALUE") if ($mut->{fisher_strand_p_value} < $settings->{polymorphism_bias_p_value_cutoff});
 
-		if ($mut->{reject} && ($mut->{snp_quality} > $settings->{mutation_log10_e_value_cutoff}) && ($mut->{frequency} > 0.5) )
+		if ($mut->{reject} && ($mut->{quality} > $settings->{mutation_log10_e_value_cutoff}) && ($mut->{frequency} > 0.5) )
 		{
 			print Dumper($mut);
 			$mut->{frequency} = 1;

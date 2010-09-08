@@ -384,7 +384,7 @@ sub alignment_correction {}
 
 my @hybrids;
 my $alignment_correction_summary_file_name = $settings->file_name('alignment_correction_summary_file_name');	
-if ($settings->do_step('alignment_correction_done_file_name', "Resolving alignments with candidate junctions and trimming ambiguous ends"))
+if ($settings->do_step('alignment_correction_done_file_name', "Resolving alignments with candidate junctions and trimming read ends"))
 {
 	$settings->create_path('alignment_correction_path');		
 	Breseq::AlignmentCorrection::correct_alignments($settings, $summary, $ref_seq_info);
@@ -669,7 +669,7 @@ if ($settings->do_step('output_done_file_name', "Output"))
 				# predict a consensus mutation
 				$item->{frequency} = 1;
 				undef $item->{reject};
-				Breseq::GenomeDiff::add_reject_reason($item, "EVALUE") if ($item->{snp_quality} < $settings->{mutation_log10_e_value_cutoff});					
+				Breseq::GenomeDiff::add_reject_reason($item, "EVALUE") if ($item->{quality} < $settings->{mutation_log10_e_value_cutoff});					
 			}			
 		}
 	}

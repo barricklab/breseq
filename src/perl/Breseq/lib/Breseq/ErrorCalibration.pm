@@ -726,7 +726,7 @@ sub error_counts_to_error_rates
 		elsif ($settings->{error_model_method} eq 'EMPIRICAL')
 		{	
 			my $error_rates_hash;
-			$error_rates_hash = error_counts_to_error_rates_empirical($this_error_counts_file_name);
+			$error_rates_hash = error_counts_to_error_rates_empirical($settings, $this_error_counts_file_name);
 			save_error_file($this_error_rates_file_name, $error_rates_hash);			
 			
 			my $plot_error_rates_r_script_file_name = $settings->file_name('plot_error_rates_r_script_file_name');
@@ -790,13 +790,18 @@ sub error_rates_calculated_from_quality
 
 sub error_counts_to_error_rates_empirical
 {
-	my ($this_error_counts_file_name) = @_;
+	my ($settings, $this_error_counts_file_name) = @_;
 	my $error_counts_hash = load_error_file($this_error_counts_file_name);
+
+	my $base_quality_cutoff = $settings->{base_quality_cutoff};
+	$base_quality_cutoff = 0 if (!defined $base_quality_cutoff);
 
 	my $prior = 1; #added to counts in every category	
 	my $error_rates_hash;
 	foreach my $q (sort keys %$error_counts_hash)
 	{
+		next if ($q < $base_quality_cutoff);
+		
 		#find total with quality
 		my $total_bases_of_quality = 0;
 		my @quality_list = sort keys %{$error_counts_hash->{$q}};

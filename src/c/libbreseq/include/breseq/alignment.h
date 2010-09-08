@@ -26,9 +26,12 @@ namespace breseq {
 		//! Indel length; 0 for no indel, positive for ins and negative for del
 		inline int indel() const { return _p->indel; }
 
-		//! Which strand are we on?
-		inline uint32_t strand() const { return bam1_strand(_a); }
+		//! Is the read on the reverse strand?
+		inline uint32_t reversed() const { return bam1_strand(_a); }
 		
+    //! Which strand are we on?
+    inline uint32_t strand() const { return (bam1_strand(_a) ? -1 : +1); }
+    
 		//! Retrieve the query sequence.
 		inline uint8_t* query_sequence() const { return bam1_seq(_a); }
     

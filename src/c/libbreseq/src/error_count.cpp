@@ -88,13 +88,13 @@ void breseq::error_count_pileup::callback(const breseq::pileup& p) {
 		int32_t qstart = i->query_start() - 1; // @dk: 0-indexed, so subtract 1??  (should add)
 		int32_t qend = i->query_end() - 1;
 
-		int32_t qlen = i->query_length(); // length of this query
+//	int32_t qlen = i->query_length(); // length of this query
 		uint8_t* qscore = i->quality_scores(); // quality score array
 		int32_t fastq_file_index = i->fastq_file_index(); // sequencer-generated read file that this alignment belongs to
 		
 		uint32_t pos = p.position(); // position of this alignment on the reference sequence
 		char* refseq = p.reference_sequence(); // reference sequence for this target
-		char ref_base[] = {refseq[pos], reverse_base(refseq[pos]), 0}; // reference base & its complement
+//	char ref_base[] = {refseq[pos], reverse_base(refseq[pos]), 0}; // reference base & its complement
 		
 		// Things to remember in the following:
     // -->1 Reverse the base when the read is on the other strand
@@ -240,7 +240,6 @@ void breseq::error_count_pileup::print_error(const std::string& output_dir, cons
 		
 		qual_map_t& qual_map=iter->second;
 		for(qual_map_t::reverse_iterator iter=qual_map.rbegin(); iter!=qual_map.rend(); ++iter) {
-      if (iter->first < m_min_qual_score) continue; // skip low quality scores
 			out << static_cast<unsigned int>(iter->first);
 			for(int i=0; i<5; ++i) {
 				for(int j=0; j<5; ++j) {
@@ -275,6 +274,10 @@ breseq::error_count_results::error_count_results(const std::string& input_dir, c
 			int quality;
 			in >> quality;
 			
+      // @JEB: If we don't ignore trailing line after line ending of last line, 
+      // then we get bogus values written over the lowest quality score!
+      if (!in) break;
+      
 			error_map_t::iterator em = emt.insert(make_pair(static_cast<uint8_t>(quality),base_error_t())).first;
 			
 			for(int i=0; i<5; ++i) {
@@ -282,9 +285,14 @@ breseq::error_count_results::error_count_results(const std::string& input_dir, c
 					string k; k += bases[i]; k += bases[j];
 					double r;
 					in >> r;
-					double cor = (r==0.0 ? 1e-256 : log10(r));
-					double err = (r==1.0 ? 1e-256 : log10(1.0-r));
+          if (r == 0) r = 1e-256;
+          double one_minus_pr = 1.0-r;
+          if (one_minus_pr == 0) one_minus_pr = 1e-256;
+					double cor = log10(r);
+					double err = log10(one_minus_pr);
 					em->second[k] = make_pair(err,cor);
+          
+          //std::cerr << r << std::endl;
 				}
 			}
 		}

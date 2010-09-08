@@ -48,8 +48,8 @@ int main(int argc, char* argv[]) {
 		cout << "Usage: identify_mutations --bam <sequences.bam> --fasta <reference.fasta> --error_dir <path> --genome_diff <path> --output <path> --readfiles <filename> --coverage_dir <dirname> [--minimum-quality-score 3]" << endl;
 		cout << cmdline_options << endl;
 		return -1;
-	}
-	
+	}                       
+  
 	// attempt to calculate error calibrations:
 	try {
 		breseq::identify_mutations(options["bam"].as<string>(),
