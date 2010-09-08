@@ -32,7 +32,8 @@ namespace breseq {
 				case 0x1: return 0x8;
 				case 0x2: return 0x4;
 				case 0x4: return 0x2;
-				case 0x8: return 0x1;
+				case 0x8: return 0x1;        
+				case 0xf: return 0xf;
 				default: assert(false);
 			}		
 		}

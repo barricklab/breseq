@@ -69,7 +69,7 @@ namespace breseq {
 		fastq_map_t _error_hash; //!< fastq_file_index -> quality map.
 		bool m_do_coverage;
     bool m_do_errors;
-    uint8_t m_min_qual_score;
+    uint8_t m_min_qual_score; //! @JEB THIS IS CURRENTLY NOT USED (BUT WOULD BE IF WE CALCULATED RATES)
 	};
 	
 
