@@ -1532,8 +1532,8 @@ sub draw_coverage
 		#make plot for every missing coverqge item
 		foreach my $item (@mc)
 		{
-			my $start = $item->{start} - $item->{start_range};
-			my $end = $item->{end} + $item->{end_range};
+			my $start = $item->{start};
+			my $end = $item->{end};
 			my $size = $end - $start + 1;
 			
 			my $shaded_flanking = int($size/10);

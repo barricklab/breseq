@@ -352,8 +352,7 @@ sub do_subsequence
 	
 	foreach my $region (@regions)
 	{
-		$region = Breseq::Shared::check_region_1($region, $ref_seq->length);
-		my ($seq_id, $start, $end) = split /[:-]/, $region;
+		my ($seq_id, $start, $end) = Breseq::Shared::region_to_coords($region, $ref_seq->length);
 
 		my $strand = 1;
 		if ($start > $end)
@@ -442,8 +441,8 @@ sub do_sequence
 	my $ref_seq = $ref_i->next_seq;
 	foreach my $region (@regions)
 	{
-		$region = Breseq::Shared::check_region_1($region, $ref_seq->length);
-		my ($seq_id, $start, $end) = split /[:-]/, $region;
+		my ($seq_id, $start, $end, $insert_start, $insert_end);
+		($seq_id, $start, $end, $insert_start, $insert_end, $region)  = Breseq::Shared::region_to_coords($region, $ref_seq->length);
 
 		my $strand = 1;
 		if ($start > $end)

@@ -564,48 +564,11 @@ sub junction_name_split
 	return $item;
 }
 
-sub check_region
+sub region_to_coords
 {
 	my ($region, $bam) = @_;
 	die if (!defined $region || !defined $bam);
 	
-	my ($seq_id, $start, $end);
-	my ($insert_start, $insert_end) = (0, 0);
-	#syntax that includes insert counts
-	# e.g. NC_001416:4566.1-4566.1
-	if ($region =~ m/(.+)\:(\d+)\.(\d+)-(\d+)\.(\d+)/)
-	{	
-		($seq_id, $start, $insert_start, $end, $insert_end) = ($1, $2, $3, $4, $5);
-	}
-	elsif ($region =~ m/(.+)\:(\d+)(\.\.|\-)(\d+)/)
-	{
-		($seq_id, $start, $end) = ($1, $2, $4);
-	}
-	else
-	{
-		($seq_id, $start, $end) = split /:|\.\.|\-/, $region;
-	}
-	my $reference_length = $bam->length($seq_id);
-	(defined $reference_length) or die "Sequence $seq_id was not found.\n";
-		
-	($start, $end) = (1, $reference_length) if (!defined $start && !defined $end);
-	$end = $start if (!defined $end);
-	
-	##check the start and end for sanity....	
-	$start = 1 if ($start < 1); 
-	$end = $reference_length if ($end > $reference_length); 
-	
-#	die "Problem parsing region: \'$region\'\n" if ($start > $end);	
-	
-	## return cleaned up region
-	$region = "$seq_id:$start-$end";	
-	return $region;
-}
-
-sub check_region_1
-{
-	my ($region, $reference_length) = @_;
-
 	my ($seq_id, $start, $end);
 	my ($insert_start, $insert_end) = (0, 0);
 	#syntax that includes insert counts
@@ -625,6 +588,16 @@ sub check_region_1
 	{
 		($seq_id, $start, $end) = split /:|\.\.|\-/, $region;
 	}
+	
+	my $reference_length;
+	if (ref($bam) eq "LVALUE")
+	{
+		$reference_length = $bam;
+	}
+	else
+	{
+		$reference_length = $bam->length($seq_id);
+	}
 
 	($start, $end) = (1, $reference_length) if (!defined $start && !defined $end);
 	$end = $start if (!defined $end);
@@ -636,8 +609,8 @@ sub check_region_1
 #	die "Problem parsing region: \'$region\'\n" if ($start > $end);
 
 	## return cleaned up region
-	$region = "$seq_id:$start-$end";	
-	return $region;
+	$region = "$seq_id:$start-$end";
+	return ($seq_id, $start, $end, $insert_start, $insert_end, $region);
 }
 
 sub add_score_to_distribution
