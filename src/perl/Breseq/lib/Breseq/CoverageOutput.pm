@@ -80,15 +80,15 @@ sub plot_coverage
 	$options->{total_only} = 0 if (!defined $options->{total_only});
 	$options->{shaded_flanking} = 0 if (!defined $options->{shaded_flanking}); #how much gray on each end
 	
-	$region = Breseq::Shared::check_region($region, $self->{bam});
-	my ($seq_id, $start, $end) = split /[:-]/, $region;
+	my ($seq_id, $start, $end, $insert_start, $insert_end);
+	($seq_id, $start, $end, $insert_start, $insert_end, $region)  = Breseq::Shared::region_to_coords($region, $self->{bam});
 	$self->throw("Invalid region $region") if (!$seq_id || !$start || !$end);
 		
 	## extend the region and re-check
 	my $extended_region = $seq_id . ":" . ($start - $options->{shaded_flanking}) . "-" . ($end + $options->{shaded_flanking});
-	$extended_region = Breseq::Shared::check_region($extended_region, $self->{bam});
-	my ($extended_seq_id, $extended_start, $extended_end) = split /[:-]/, $region;
-		
+	my ($extended_seq_id, $extended_start, $extended_end, $extended_insert_start, $extended_insert_end);
+	($extended_seq_id, $extended_start, $extended_end, $extended_insert_start, $extended_insert_end, $extended_region)  = Breseq::Shared::region_to_coords($extended_region, $self->{bam});
+			
 	my $size = $extended_end - $extended_start + 1;
 	
 	$output = $region if (!defined $output);
@@ -123,9 +123,8 @@ sub tabulate_coverage
 	$downsample = 1 if (!defined $downsample);
 	my $bam = $self->{bam};
 		
-	$region = Breseq::Shared::check_region($region, $bam);
-	my ($seq_id, $start, $end) = split /[:-]/, $region;
-	
+	my ($seq_id, $start, $end, $insert_start, $insert_end);
+	($seq_id, $start, $end, $insert_start, $insert_end, $region) = Breseq::Shared::region_to_coords($region, $bam);
 	
 	## Open file for output
 	open COV, ">$tmp_coverage";
