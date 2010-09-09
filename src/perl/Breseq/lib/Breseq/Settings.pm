@@ -784,7 +784,7 @@ sub do_step
 	$self->{done_key_messages}->{$done_key} = $message;
 	if (!-e $done_file_name)
 	{
-		print STDERR "+++ NOW PROCESSING   $message\n";
+		print STDERR "+++   NOW PROCESSING $message\n";
 		$self->record_start_time($message);
 		return 1;
 	}
