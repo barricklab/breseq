@@ -101,7 +101,9 @@ sub new
 		'perl-identify-mutations' => \$self->{perl_identify_mutations},
 		'error-model-method=s' => \$self->{error_model_method},
 		'no-indel-polymorphisms' => \$self->{no_indel_polymorphisms},	
-		'strict-polymorphism-prediction' => \$self->{strict_polymorphism_prediction},						
+		'strict-polymorphism-prediction' => \$self->{strict_polymorphism_prediction},
+		'max-rejected-polymorphisms-to-show=s' => \$self->{max_rejected_polymorphisms_to_show},
+		'max-rejected-junctions-to-show=s' => \$self->{max_rejected_junctions_to_show},						
 	) or pod2usage(2);
 
 	pod2usage(1) if $help;
@@ -172,7 +174,9 @@ sub new_annotate
 		'perl-identify-mutations' => \$self->{perl_identify_mutations},		
 		'error-model-method=s' => \$self->{error_model_method},
 		'no-indel-polymorphisms' => \$self->{no_indel_polymorphisms},
-		'strict-polymorphism-prediction' => \$self->{strict_polymorphism_prediction},										
+		'strict-polymorphism-prediction' => \$self->{strict_polymorphism_prediction},
+		'max-rejected-polymorphisms-to-show=s' => \$self->{max_rejected_polymorphisms_to_show},
+		'max-rejected-junctions-to-show=s' => \$self->{max_rejected_junctions_to_show},
 	## This is the only different option	
 		'input-genome-diff|i=s' => \@{$self->{input_genome_diffs}},	
 	) or pod2usage(2);
