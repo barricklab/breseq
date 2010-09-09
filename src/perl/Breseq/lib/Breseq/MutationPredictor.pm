@@ -846,6 +846,24 @@ sub predict
 		}
 	}
 	
+	
+	##RA that overlap missing coverage should not be shown
+	##(not all MC gets converted to DEL)
+	my @mc = $gd->list('MC');	
+	RA: foreach my $ra_item (@ra)
+	{
+		DEL: foreach my $mc_item (@del)
+		{
+			next DEL if ($ra_item->{seq_id} ne $del_item->{seq_id});
+			
+			if ( ($ra_item->{position} >= $mc_item->{start}) && ($ra_item->{position} <= $mc_item->{end}) )
+			{
+				$ra_item->{deleted} = 1;
+				next RA;
+			}
+		}
+	}
+	
 		
 	## look at SNPs and small indels predicted by read alignments.
 	##be sure they are sorted by position
