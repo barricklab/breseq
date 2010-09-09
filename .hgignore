@@ -43,8 +43,8 @@ syntax: regexp
 ^src/perl/Breseq/Build$
 ^src/perl/Breseq/breseq.tmproj
 
-src/c/breseq.xcodeproj/.+\.mode1v3$
-src/c/breseq.xcodeproj/.+\.pbxuser$
+src/c/breseq.*\.xcodeproj/.+\.mode1v3$
+src/c/breseq.*\.xcodeproj/.+\.pbxuser$
 
 src/c/breseq-10.5.xcodeproj/.+\.mode1v3$
 src/c/breseq-10.5.xcodeproj/.+\.pbxuser$
