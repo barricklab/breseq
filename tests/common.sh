@@ -72,23 +72,23 @@ do_check() {
     
     CHK=`${HASH} -s --check ${EXPECTED} 2>&1`
     if [[ "$?" -ne 0 || $CHK ]]; then
-        popd > /dev/null
         echo ""
         echo "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
         echo "Failed check"
     	${HASH} --check ${EXPECTED}
         echo "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX" 
         echo ""
+        popd > /dev/null        
         exit -1
     fi
     
-    popd > /dev/null
     echo ""
     echo "OOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOO"
     echo "Passed check"
     ${HASH} --check ${EXPECTED}
     echo "OOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOO"
     echo ""
+    popd > /dev/null    
     exit 0
 }
 
