@@ -827,43 +827,44 @@ sub predict
 	## Read Alignments => SNP, DEL, INS, SUB
 	###		
 
-
-	##RA that overlap deletions should not be shown
 	my @ra = $gd->list('RA');
-	my @del = $gd->list('DEL');	
-	RA: foreach my $ra_item (@ra)
+
+	###
+	## Ignore RA that overlap DEL or MC
+	## They are due to low spurious coverage in deleted regions!
+	###
+	
 	{
-		DEL: foreach my $del_item (@del)
+		my @del = $gd->list('DEL');	
+		my @mc = $gd->list('MC');	
+		
+		RA: foreach my $ra_item (@ra)
 		{
-			next DEL if ($ra_item->{seq_id} ne $del_item->{seq_id});
-			
-			## there might be a problem here with insert_position > 0
-			if ( ($ra_item->{position} >= $del_item->{position}) && ($ra_item->{position} <= $del_item->{position} + $del_item->{size} - 1) )
+			DEL: foreach my $del_item (@del)
 			{
-				$ra_item->{deleted} = 1;
-				next RA;
+				next DEL if ($ra_item->{seq_id} ne $del_item->{seq_id});
+			
+				## there might be a problem here with insert_position > 0
+				if ( ($ra_item->{position} >= $del_item->{position}) && ($ra_item->{position} <= $del_item->{position} + $del_item->{size} - 1) )
+				{
+					$ra_item->{deleted} = 1;
+					next RA;
+				}
 			}
+			
+			MC: foreach my $mc_item (@mc)
+			{
+				next MC if ($ra_item->{seq_id} ne $mc_item->{seq_id});
+			
+				if ( ($ra_item->{position} >= $mc_item->{start}) && ($ra_item->{position} <= $mc_item->{end}) )
+				{
+					$ra_item->{deleted} = 1;
+					next RA;
+				}
+			}
+			
 		}
 	}
-	
-	
-	##RA that overlap missing coverage should not be shown
-	##(not all MC gets converted to DEL)
-	@mc = $gd->list('MC');	
-	RA: foreach my $ra_item (@ra)
-	{
-		DEL: foreach my $mc_item (@del)
-		{
-			next DEL if ($ra_item->{seq_id} ne $mc_item->{seq_id});
-			
-			if ( ($ra_item->{position} >= $mc_item->{start}) && ($ra_item->{position} <= $mc_item->{end}) )
-			{
-				$ra_item->{deleted} = 1;
-				next RA;
-			}
-		}
-	}
-	
 		
 	## look at SNPs and small indels predicted by read alignments.
 	##be sure they are sorted by position
