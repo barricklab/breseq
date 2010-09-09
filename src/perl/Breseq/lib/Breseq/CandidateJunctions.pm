@@ -178,7 +178,8 @@ sub identify_candidate_junctions
 			JUNCTION_ID: foreach my $junction_id (keys %{$candidate_junctions->{$rc_junction_seq}} )
 			{
 				## add redundancy to the $junction_id (reversed)
-				my $cj = $candidate_junctions->{$junction_seq}->{$junction_id};
+				my $cj = $candidate_junctions->{$rc_junction_seq}->{$junction_id};
+				
 				$junction_id .= $Breseq::Shared::junction_name_separator . $cj->{r2} . $Breseq::Shared::junction_name_separator . $cj->{r1};
 				push @combined_candidate_junction_list, { id=>$junction_id, pos_hash_score=>$cj->{pos_hash_score}, min_overlap_score=>$cj->{min_overlap_score}, seq=>$rc_junction_seq, rc_seq=>$junction_seq };
 			}

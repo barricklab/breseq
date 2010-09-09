@@ -97,7 +97,9 @@ do_breseq() {
 	if [[ "$?" -ne 0 ]]; then
 	    echo "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
         echo "Failed check"
+        echo "Non-zero error code returned."
         echo "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX" 
+        exit -1
 	fi
 }
 
