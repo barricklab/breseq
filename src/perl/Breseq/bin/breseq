@@ -64,7 +64,7 @@ Only align this many reads (the first in the input files) to predicted mutations
 
 =head1 AUTHOR
 
-Jeffrey Barrick <jbarrick@msu.edu>
+Jeffrey Barrick <jeffrey.e.barrick@gmail.com>
 
 =head1 COPYRIGHT
 
@@ -132,6 +132,7 @@ my $ref_seq_info;
 my $sequence_converson_summary_file_name = $settings->file_name('sequence_conversion_summary_file_name');
 my $ref_seq_info_file_name = $settings->file_name('ref_seq_info_file_name');
 $settings->create_path('sequence_conversion_path');
+$settings->create_path('data_path');
 
 if ($settings->do_step('sequence_conversion_done_file_name', "Read and reference sequence file input"))
 {

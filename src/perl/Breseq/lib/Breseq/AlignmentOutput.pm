@@ -33,22 +33,22 @@ use vars qw(@ISA);
 use Bio::Root::Root;
 @ISA = qw( Bio::Root::RootI );
 
+## CORE modules
 use List::Util qw(shuffle);
 use CGI qw/:standard *table *Tr *code *td start_b end_b start_i end_i/;
+use Data::Dumper;
 
+## breseq modules
 use Bio::DB::Sam;
 use Breseq::Fastq;
 use Breseq::Shared;
-use Data::Dumper;
-
-## "rgb(0,255,255)" = cyan
 
 our $base_colors_hash = {
-	'G' => [ "rgb(255,255,0)", "rgb(230,230,230)", "rgb(210,210,210)", "rgb(140,140,140)", "rgb(70,70,70)", "rgb(0,0,0)" ],
-	'C' => [ "rgb(255,255,0)", "rgb(160,160,255)", "rgb(120,120,255)", "rgb(60,60,255)", "rgb(0,0,255)", "rgb(0,0,150)" ],
-	'A' => [ "rgb(255,255,0)", "rgb(255,210,210)", "rgb(255,180,180)", "rgb(255,100,100)", "rgb(255,20,20)", "rgb(200,0,0)" ],
-	'T' => [ "rgb(255,255,0)", "rgb(210,255,210)", "rgb(180,255,180)", "rgb(100,255,100)", "rgb(20,255,20)", "rgb(0,200,0)" ],
-	'N' => [ "rgb(128,0,128)", "rgb(128,0,128)", "rgb(128,0,128)", "rgb(128,0,128)", "rgb(128,0,128)", "rgb(128,0,128)" ],
+	'G' => [ "rgb(255,255,0)", "rgb(230,230,230)", "rgb(210,210,210)", "rgb(140,140,140)", "rgb(70,70,70)",  "rgb(0,0,0)"     ],
+	'C' => [ "rgb(255,255,0)", "rgb(160,160,255)", "rgb(120,120,255)", "rgb(60,60,255)",   "rgb(0,0,255)",   "rgb(0,0,150)"   ],
+	'A' => [ "rgb(255,255,0)", "rgb(255,210,210)", "rgb(255,180,180)", "rgb(255,100,100)", "rgb(255,20,20)", "rgb(200,0,0)"   ],
+	'T' => [ "rgb(255,255,0)", "rgb(210,255,210)", "rgb(180,255,180)", "rgb(100,255,100)", "rgb(20,255,20)", "rgb(0,200,0)"   ],
+	'N' => [ "rgb(128,0,128)", "rgb(128,0,128)",   "rgb(128,0,128)",   "rgb(128,0,128)",   "rgb(128,0,128)", "rgb(128,0,128)" ],
 };
 
 sub new
@@ -57,10 +57,13 @@ sub new
 	my $class = ref($caller) || $caller;
 	my $self = new Bio::Root::Root($caller, @args);
 
+	#defaults
+	$self->{maximum_to_align} = 1000;
+	$self->{maximum_to_make_alignment} = 100000;
+
 	bless ($self, $class);
-	($self->{maximum_to_align}) = $self->Bio::Root::RootI::_rearrange([qw(MAXIMUM_TO_ALIGN)], @args);
-	$self->{maximum_to_align} = 1000 if (!defined $self->{maximum_to_align});
-	$self->{maximum_to_make_alignment} = 100000 if (!defined $self->{maximum_to_make_alignment});
+	($self->{maximum_to_align}, $self->{maximum_to_make_alignment} ) 
+		= $self->Bio::Root::RootI::_rearrange([qw(MAXIMUM_TO_ALIGN MAXIMUM_TO_MAKE_ALIGNMENT)], @args);
 
 	$self->{header_style_string} = '';
 	$self->{header_style_string} .= "\.NC {color: rgb(0,0,0); background-color: rgb(255,255,255)}\n"; #no color
@@ -355,33 +358,13 @@ sub create_alignment
 		if ($redundancy == 1)
 		{
 			$total_reads++;
-			return if ($total_reads > $self->{maximum_to_make_alignment});
+			return if ($self->{maximum_to_make_alignment} && ($total_reads > $self->{maximum_to_make_alignment}));
 						
 			my $aligned_read;
 			$aligned_read->{seq_id} = $a->display_name;
 			$aligned_read->{length} = $a->l_qseq;
 			$aligned_read->{read_sequence} = $a->qseq;
 			$aligned_read->{qual_sequence} = $a->_qscore;
-
-# this biases toward late alignments by how it re-assigns!!			
-#			##clear a spot if we're above the limit
-#			my $odd_this_one = 1;
-#			if ($total_reads > $self->{maximum_to_align})
-#			{
-#				my @read_keys = keys %$aligned_reads;
-#				my $chosen = int(rand($self->{maximum_to_align}+1));
-#				
-#				##must be a chance of deleting the current one
-#				if ($chosen != $self->{maximum_to_align})
-#				{
-#					delete $aligned_reads->{$read_keys[$chosen]};
-#					$aligned_reads->{$a->display_name} = $aligned_read;
-#				}
-#				else
-#				{
-#					$odd_this_one = 0;
-#				}
-#			}
 
 			## save in the hash, creating a spot for each read we will be aligning
 			$aligned_reads->{$a->display_name} = $aligned_read;
@@ -393,9 +376,8 @@ sub create_alignment
 	};
 	$bam->fetch($region, $fetch_function);	
 	
-	### If there are WAY too many reads, such that a pileup would take forever,
-	### then bail.
-	if ($total_reads > $self->{maximum_to_make_alignment})
+	### If there are WAY too many reads, such that a pileup might take forever, bail...
+	if (defined($self->{maximum_to_make_alignment}) && ($total_reads > $self->{maximum_to_make_alignment}))
 	{
 		return { 
 			message => "Reads exceeded maximum to display alignment. $total_reads reads. (Limit = $self->{maximum_to_make_alignment})",

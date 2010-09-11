@@ -95,7 +95,7 @@ of a large stretch of new sequence.
 =head1 AUTHOR
 
 Jeffrey Barrick
-<jbarrick@msu.edu>
+<jeffrey.e.barrick@gmail.com>
 
 =head1 COPYRIGHT
 

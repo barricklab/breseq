@@ -15,7 +15,7 @@ Various utility functions.
 =head1 AUTHOR
 
 Jeffrey Barrick
-<jbarrick@msu.edu>
+<jeffrey.e.barrick@gmail.com>
 
 =head1 COPYRIGHT
 
@@ -310,8 +310,6 @@ sub initialize_2
 	$self->{sequence_conversion_path} = "01_sequence_conversion";
 	$self->{sequence_conversion_path} = "$self->{base_output_path}/$self->{sequence_conversion_path}" if ($self->{base_output_path});
 	$self->{trimmed_fastq_file_name} = "$self->{sequence_conversion_path}/#.trimmed.fastq";
-	$self->{reference_fasta_file_name} = "$self->{sequence_conversion_path}/reference.fasta";
-	$self->{reference_faidx_file_name} = "$self->{sequence_conversion_path}/reference.fasta.fai";
     $self->{ref_seq_info_file_name} = "$self->{sequence_conversion_path}/ref_seq_info.bin";	
 	$self->{unwanted_fasta_file_name} = "$self->{sequence_conversion_path}/unwanted.fasta";
 	$self->{sequence_conversion_summary_file_name} = "$self->{sequence_conversion_path}/summary.bin";
@@ -368,8 +366,6 @@ sub initialize_2
 	$self->{bam_path} = "06_bam";
 	$self->{bam_path} = "$self->{base_output_path}/$self->{bam_path}" if ($self->{base_output_path});
 	$self->{reference_bam_unsorted_file_name} = "$self->{bam_path}/reference.unsorted.bam";
-	$self->{reference_bam_prefix} = "$self->{bam_path}/reference";
-	$self->{reference_bam_file_name} = "$self->{bam_path}/reference.bam";
 	$self->{junction_bam_unsorted_file_name} = "$self->{bam_path}/junction.unsorted.bam";
 	$self->{junction_bam_prefix} = "$self->{bam_path}/junction";
 	$self->{junction_bam_file_name} = "$self->{bam_path}/junction.bam";
@@ -409,7 +405,17 @@ sub initialize_2
 	$self->{polymorphism_statistics_ra_mc_genome_diff_file_name} = "$self->{mutation_identification_path}/ra_mc_evidence_polymorphism_statistics.gd";
 	$self->{polymorphism_statistics_done_file_name} = "$self->{mutation_identification_path}/polymorphism_statistics.done";
 
+	##### data #####
+	## things in this location are needed for running post-processing steps
+	$self->{data_path} = "data";
+	$self->{data_path} = "$self->{base_output_path}/$self->{data_path}" if ($self->{base_output_path});
+	$self->{reference_bam_prefix} = "$self->{data_path}/reference";
+	$self->{reference_bam_file_name} = "$self->{data_path}/reference.bam";
+	$self->{reference_fasta_file_name} = "$self->{data_path}/reference.fasta";
+	$self->{reference_faidx_file_name} = "$self->{data_path}/reference.fasta.fai";
+	
 	##### output #####
+	## things in this location are part of the user-readable output
 	$self->{output_path} = "output";
 	$self->{output_path} = "$self->{base_output_path}/$self->{output_path}" if ($self->{base_output_path});
 	$self->{output_done_file_name} = "$self->{output_path}/output.done";
