@@ -25,7 +25,7 @@ FASTA file of reference sequences. Defaults: reference.fasta, data/reference.fas
 =item B<-o> <path>, B<--output>=<file_path>
 
 Output path. If there are multiple regions, must be a directory path, and all output 
-files will be output with names region1.html, region2.html, ... If there is one region, 
+files will be output with names region1, region2, ... If there is one region, 
 the output file will be given this name if it is not the name of an already existing 
 directory. Default: current path.
 
@@ -39,16 +39,16 @@ is a valid identifier for one of the sequences in the FASTA file, and START and 
 
 In plot mode, create output plot in PDF format rather than PNG format.
 
-=item B<--r> <int>, B<--resolution> <int>
+=item B<-r> <int>, B<--resolution> <int>
 
 In plot mode, maximum mumber of reference positions to plot coverage for within the region. Default: 600.
 
-=item B<--1>, B<--total_only>
+=item B<-1>, B<--total_only>
 
 In plot mode, only outputs the total coverage of uniquely or degenerately mapped reads. (Does not include the coverage of
 each on each strand of the reference genome.)
 
-=item B<--t>, B<--table>
+=item B<-t>, B<--table>
 
 Table mode. Rather than a plot, outputs a tab-delimited table of the coverage in the specified region to the output file. 
 Also outputs the mean and standard error of the unique coverage within each region to STDOUT.
