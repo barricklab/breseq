@@ -127,7 +127,7 @@ do_vcheck() {
 # $1 == testdir
 #
 do_clean() {
-	rm -Rf $1/0* $1/output
+	rm -Rf $1/0* $1/output $1/data
 }
 
 
