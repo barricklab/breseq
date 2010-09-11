@@ -15,7 +15,7 @@ Module for reading and writing fastq files more rapidly than BioPerl.
 =head1 AUTHOR
 
 Jeffrey Barrick
-<jbarrick@msu.edu>
+<jeffrey.e.barrick@gmail.com>
 
 =head1 COPYRIGHT
 

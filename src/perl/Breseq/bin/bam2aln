@@ -1,0 +1,130 @@
+#!/usr/bin/env perl
+
+=head1 NAME
+
+bam2aln
+
+=head1 SYNOPSIS
+
+Usage: bam2aln [-b input.bam] [-f input.fasta] [-o output/path] region1 [region2 region3 ...]
+
+Creates HTML pileup files displaying reads aligned to each specified region.
+
+=head1 OPTIONS
+
+=over
+
+=item B<-b> <file_path>, B<--bam>=<file_path>>
+
+BAM database file of read alignments. Defaults: reference.bam, data/reference.bam.
+
+=item B<-f> <file_path>, B<--fasta>=<file_path>
+
+FASTA file of reference sequences. Defaults: reference.fasta, data/reference.fasta.
+
+=item B<-o> <path>, B<--output>=<file_path>
+
+Output path. If there are multiple regions, must be a directory path, and all output 
+files will be output with names region1.html, region2.html, ... If there is one region, 
+the output file will be given this name if it is not the name of an already existing 
+directory. Default: current path.
+
+=item B<-n> <int>, B<--max-reads>=<int>
+
+Maximum number of reads that will be aligned to a region. If there are more than 
+this many reads then the reads displayed are randomly chosen displayed and a warning 
+is added to the output. Default: 1000.
+
+=item region1 [region2 region3]
+
+Regions to create output for must be provided in the format FRAGMENT:START-END, where FRAGMENT 
+is a valid identifier for one of the sequences in the FASTA file, and START and END are 
+1-indexed coordinates of the beginning and end of the alignment. 
+A separate output file is created for each region.
+
+=back
+
+=head1 AUTHOR
+
+Jeffrey Barrick
+<jeffrey.e.barrick@gmail.com>
+
+=head1 COPYRIGHT
+
+Copyright 2010.  All rights reserved.
+
+=cut
+
+use strict;
+use Data::Dumper;
+
+use FindBin;
+use lib $FindBin::Bin;
+
+#### Paths to Locally Installed Modules ####
+use lib $FindBin::Bin . "/../lib/perl5";
+use lib $FindBin::Bin . "/../lib/perl5/site_perl";
+
+use CGI qw/:standard/;
+
+use Breseq::AlignmentOutput;
+
+#Get options
+use Getopt::Long;
+use Pod::Usage;
+
+my ($help, $man, $verbose);
+my ($bam_path, $fasta_path, $output_path);
+my $max_reads = 1000;
+GetOptions(
+	'help|?' => \$help, 'man' => \$man,
+	'bam|b=s' => \$bam_path,
+	'fasta|f=s' => \$fasta_path,
+	'output|o=s' => \$output_path,
+	'max-reads|n=s' => \$max_reads,
+	'verbose|v' => \$verbose,
+) or pod2usage(2);
+pod2usage(1) if $help;
+pod2usage(-exitstatus => 0, -verbose => 2) if $man;
+
+my (@regions) = @ARGV;
+
+#handle default paths
+$bam_path = 'reference.bam' if (!$bam_path && -e 'reference.bam');
+$bam_path = 'data/reference.bam' if (!$bam_path && -e 'data/reference.bam');
+
+$fasta_path = 'reference.fasta' if (!$fasta_path && -e 'reference.fasta');
+$fasta_path = 'data/reference.fasta' if (!$fasta_path && -e 'data/reference.fasta');
+
+die "No regions defined. For help try:\nbam2aln -?\n" if (scalar @regions == 0);
+die "No BAM file (-b) defined. For help try:\nbam2aln -?\n" if (!$bam_path);
+die "No FASTA file (-f) defined. For help try:\nbam2aln -?\n" if (!$fasta_path);
+
+my $ao = Breseq::AlignmentOutput->new(-maximum_to_align=>$max_reads, -maximum_to_make_alignment=>undef);
+
+foreach my $region (@regions)
+{
+	#figure out the output file name
+	my $this_output_file = "$region.html";
+	if (defined $output_path)
+	{
+		#if there is just one region, use this file name straight up if it is not a directory
+		if ((scalar @regions == 1) && (!-d $output_path))
+		{
+			$this_output_file = $output_path;
+		}
+		else
+		{
+			die "Output directory (-o) does not exist: $output_path\n" if (!-d $output_path);
+			$this_output_file = "$output_path/$region.html";
+		}
+	}
+	
+	#make the alignment
+	open OUT, ">$this_output_file";
+	print OUT start_html(-title => "bam2aln $region");
+	print OUT $ao->html_alignment($bam_path, $fasta_path, $region, {'verbose'=>$verbose});
+	print OUT end_html;
+	close OUT;
+}
+

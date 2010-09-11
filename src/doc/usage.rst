@@ -25,30 +25,34 @@ Options:
 Other tools
 ------------------
 
-:program:`bam2pileup`
+:program:`bam2aln`
 *********************
 
 Usage:
 
-   :program:`bam2pileup` -b input.bam -f input.fasta -o [output/path] region1 [region2, region3, ...]
+   :program:`bam2aln` [-b input.bam] [-f input.fasta] [-o output/path] region1 [region2 region3 ...]
 
-.. program:: bam2pileup
+.. program:: bam2aln
 
 Creates HTML pileup files displaying reads aligned to each specified region.
 
 Options:
 
-.. option:: -b <file_path>, --fasta <file_path> 
+.. option:: -b <file_path>, --bam=<file_path> 
 
-   BAM database file of read alignments. Defaults: ``output.bam``, ``data/output.bam``
+   BAM database file of read alignments. Defaults: ``reference.bam``, ``data/reference.bam``.
 
-.. option:: -f <file_path>, --fasta <file_path> 
+.. option:: -f <file_path>, --fasta=<file_path> 
 
-   FASTA file of reference sequences. Defaults: ``output.fasta``, ``data/output.fasta``
+   FASTA file of reference sequences. Defaults: ``reference.fasta``, ``data/reference.fasta``.
    
-.. option:: -o <directory_path>, --fasta <directory_path> 
+.. option:: -o <path>, --output=<path> 
 
-   Output path. If provided, all output files are created in this location. Default: current path.
+   Output path. If there are multiple regions, must be a directory path, and all output files will be output with names region1.html, region2.html, ... If there is one region, the output file will be given this name if it is not the name of an already existing directory. Default: current path.
+   
+.. option:: -n <int>, --max-reads=<int>
+
+   Maximum number of reads that will be aligned to a region. If there are more than this many reads then the reads displayed are randomly chosen displayed and a warning is added to the output. Default: 1000.
 
 .. option:: region1 [region2, region3, ...]
 
@@ -71,13 +75,13 @@ Options:
 
 .. option:: -b <file_path>, --fasta <file_path> 
 
-   BAM database file of read alignments. Defaults: ``output.bam``, ``data/output.bam``
+   BAM database file of read alignments. Defaults: ``reference.bam``, ``data/reference.bam``
 
 .. option:: -f <file_path>, --fasta <file_path> 
 
-   FASTA file of reference sequences. Defaults: ``output.fasta``, ``data/output.fasta``
+   FASTA file of reference sequences. Defaults: ``reference.fasta``, ``data/reference.fasta``
    
-.. option:: -o <directory_path>, --fasta <directory_path> 
+.. option:: -o <path>, --output <path> 
 
    Output path. If provided, all output files are created in this location. Default: current path.
 
