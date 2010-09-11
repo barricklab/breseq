@@ -83,8 +83,24 @@ Options:
    
 .. option:: -o <path>, --output <path> 
 
-   Output path. If provided, all output files are created in this location. Default: current path.
+   Output path. If there are multiple regions, must be a directory path, and all output files will be output with names region1, region2, ... If there is one region, the output file will be given this name if it is not the name of an already existing directory. Default: current path.
 
 .. option:: region1 [region2, region3, ...]
 
    Regions to create output for must be provided in the format ``FRAGMENT:START-END``, where ``FRAGMENT`` is a valid identifier for one of the sequences in the FASTA file, and ``START`` and ``END`` are 1-indexed coordinates of the beginning and end of the alignment. A separate output file is created for each region.
+   
+.. option:: --pdf
+
+   In plot mode, create output plot in PDF format rather than PNG format.
+
+.. option:: -r <int>, --resolution <int>
+
+   In plot mode, maximum mumber of reference positions to plot coverage for within the region. Default: 600.
+
+.. option:: -1, --total_only
+
+   In plot mode, only outputs the total coverage of uniquely or degenerately mapped reads. (Does not include the coverage of each on each strand of the reference genome.)
+
+.. option:: -t, --table
+
+   Table mode. Rather than a plot, outputs a tab-delimited table of the coverage in the specified region to the output file. Also outputs the mean and standard error of the unique coverage within each region to STDOUT.
