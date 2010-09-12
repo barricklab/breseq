@@ -10,7 +10,7 @@ Usage:
 
 .. program:: breseq
 
-Runs the :program:`breseq` pipeline for mutation prediction from short-read genome re-sequencing data.
+Runs the :program:`breseq` pipeline for mutation prediction from genome re-sequencing data.
 
 Options:
 
