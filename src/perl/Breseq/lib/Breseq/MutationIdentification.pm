@@ -60,7 +60,7 @@ sub identify_mutations
 	## check to see if identify_mutations++ is available:
 	my $cident_mut = $settings->ctool('identify_mutations', 1);
 	
-	## fall back to perl is requested or if predicting polymorphisms
+	## fall back to perl if requested or if predicting polymorphisms
 	if ( (!$settings->{perl_identify_mutations}) && (!$settings->{polymorphism_prediction}) && (defined $cident_mut) )
 	{
 		my $coverage_fn = $settings->file_name('unique_only_coverage_distribution_file_name', {'@'=>""});

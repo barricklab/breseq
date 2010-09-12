@@ -88,7 +88,8 @@ sub predict
 	}
 	
 	###
-	## Junctions => MOB, DEL
+	##  evidence JC + => MOB, DEL mutations
+	##  common code for dealing with junction predictions
 	###
 	
 	##For all that follows, we need information about repeat_regions overlapping the sides of junctions	
@@ -151,11 +152,9 @@ sub predict
 	}
 	
 	my @mc = $gd->list('MC');	
-	
-	## Add DEL when
-	
+		
 	###
-	## MC, JC evidence => DEL mutations
+	## evidence MC + JC => DEL mutation
 	###
 
 	## DEL prediction:
@@ -322,7 +321,7 @@ sub predict
 	
 	
 	###
-	## JC evidence => MOB mutations
+	## evidence JC + JC = MOB mutation
 	###
 	
 	JC: foreach my $j (@jc)
@@ -773,7 +772,8 @@ sub predict
 		{		
 			my $size = $j->{_side_2}->{position} - $j->{_side_1}->{position} + 1;
 			next if ($size < 0); #this is a deletion!
-					
+			next if ($size > 100); #spurious duplication, need extra evidence from coverage!
+
 			my $mut = { 
 				type => 'AMP',
 				seq_id => $seq_id,

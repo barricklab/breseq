@@ -39,12 +39,10 @@ use vars qw(@ISA);
 @ISA = qw( Bio::Root::Root );
 
 
-
 our %unwanted_sequences = ( 
 	'UNWANTED::ILLUMINA_ADAPTOR_1'    => 'GATCGGAAGAGCTCGTATGCCGTCTTCTGCTTG',  #Solexa Adaptor sequence.
 	'UNWANTED::ILLUMINA_ADAPTOR_2'	  => 'ACACTCTTTCCCTACACGACGCTCTTCCGATCT'
 );                              
-
 
 ## Options for turning analysis off ##
 ## Mainly for development, long names only ##
@@ -61,7 +59,6 @@ sub new
 	#keep this on by default
 	
 	my ($help, $man);
-	my ($resume_run, $continue_run);
 	GetOptions(
 		'help|?' => \$help, 'man' => \$man,
 		'verbose|v' => \$self->{verbose},
@@ -132,7 +129,6 @@ sub new_annotate
 	
 	#keep this on by default
 	my ($help, $man);
-	my ($resume_run, $continue_run);
 	GetOptions(
 		'help|?' => \$help, 'man' => \$man,
 		'verbose|v' => \$self->{verbose},
@@ -511,14 +507,6 @@ sub initialize_2
 	{
 		print STDERR "No reference sequences provided (-r).";
 		pod2usage(1);
-	}
-
-	## if the resume option is chosen, all values will be read from saved settings file
-	if ($self->{resume_run} || $self->{continue_run})
-	{
-		$self->load_from_file;
-		print "Resuming run that was interrupted with same settings\n".
-		return;
 	}
 	
 	$self->compare_to_saved_settings;

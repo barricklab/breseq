@@ -100,7 +100,7 @@ die "No regions defined. For help try:\nbam2aln -?\n" if (scalar @regions == 0);
 die "No BAM file (-b) defined. For help try:\nbam2aln -?\n" if (!$bam_path);
 die "No FASTA file (-f) defined. For help try:\nbam2aln -?\n" if (!$fasta_path);
 
-my $ao = Breseq::AlignmentOutput->new(-maximum_to_align=>$max_reads, -maximum_to_make_alignment=>undef);
+my $ao = Breseq::AlignmentOutput->new(-maximum_to_align=>$max_reads, -maximum_to_make_alignment=>0);
 
 foreach my $region (@regions)
 {

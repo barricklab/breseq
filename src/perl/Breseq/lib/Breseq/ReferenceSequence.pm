@@ -218,6 +218,8 @@ sub annotate_1_mutation
 	my $repeat_list_ref = $ref_seq_info->{repeat_lists}->{$seq_id};
 	my $ref_seq = $ref_seq_info->{bioperl_ref_seqs}->{$seq_id};		
 
+	die "Unknown seq_id in reference sequence info.\n" if ((!defined $gene_list_ref) || (!defined $repeat_list_ref) || (!defined $ref_seq));
+
 	my $size = $end - $start + 1;
 
 	my ($prev_gene, $next_gene) = (undef, undef);
@@ -252,19 +254,19 @@ sub annotate_1_mutation
 	{			
 		$mut->{snp_type} = "intergenic";
 
-		$mut->{gene_name} .= (defined $prev_gene) ? $prev_gene->{name} : "&minus;";
+		$mut->{gene_name} .= (defined $prev_gene) ? $prev_gene->{name} : "–";
 		$mut->{gene_name} .= $intergenic_seperator;
-		$mut->{gene_name} .= (defined $next_gene) ? $next_gene->{name} : "&minus;";
+		$mut->{gene_name} .= (defined $next_gene) ? $next_gene->{name} : "–";
 
 		if (defined $prev_gene)
 		{
-			$mut->{gene_position} .= "intergenic&nbsp;(";
+			$mut->{gene_position} .= "intergenic (";
 			$mut->{gene_position} .= ($prev_gene->{strand} == +1) ? "+" : "-";
 			$mut->{gene_position} .= $start - $prev_gene->{end};
 		}
 		else
 		{
-			$mut->{gene_position} .= "intergenic&nbsp;(&minus;";
+			$mut->{gene_position} .= "intergenic (–";
 		}
 		$mut->{gene_position} .= $intergenic_seperator;
 		if (defined $next_gene)
@@ -274,13 +276,13 @@ sub annotate_1_mutation
 		}
 		else
 		{
-			$mut->{gene_position} .= "&minus;";
+			$mut->{gene_position} .= "–";
 		}
 		$mut->{gene_position} .= ")";
 
-		$mut->{gene_product} .= (defined $prev_gene) ? $prev_gene->{product} : "&minus;";
+		$mut->{gene_product} .= (defined $prev_gene) ? $prev_gene->{product} : "–";
 		$mut->{gene_product} .= $intergenic_seperator;			
-		$mut->{gene_product} .= (defined $next_gene) ? $next_gene->{product} : "&minus;";
+		$mut->{gene_product} .= (defined $next_gene) ? $next_gene->{product} : "–";
 				
 		return $mut;
 	}
@@ -307,7 +309,7 @@ sub annotate_1_mutation
 		{
 			my $gene_start = abs($start-$within_gene_start) + 1; 
 			my $gene_end = abs($end-$within_gene_start) + 1; 
-			$mut->{gene_position} = ($gene_start < $gene_end) ? "$gene_start&minus;$gene_end" : "$gene_end&minus;$gene_start";
+			$mut->{gene_position} = ($gene_start < $gene_end) ? "$gene_start–$gene_end" : "$gene_end–$gene_start";
 		}
 
 		my $gene_nt_size = $gene->{end} - $gene->{start} + 1;
@@ -316,21 +318,26 @@ sub annotate_1_mutation
 		if ($gene->{pseudogene})
 		{			
 			$mut->{snp_type} = "pseudogene";
-			$mut->{gene_position} = "pseudogene ($mut->{gene_position}/$gene_nt_size&nbsp;nt)";
+			$mut->{gene_position} = "pseudogene ($mut->{gene_position}/$gene_nt_size nt)";
 			return $mut;			
 		}
 		elsif (!$gene->{translation})
 		{
 			$mut->{snp_type} = "noncoding";
-			$mut->{gene_position} = "noncoding ($mut->{gene_position}/$gene_nt_size&nbsp;nt)";
+			$mut->{gene_position} = "noncoding ($mut->{gene_position}/$gene_nt_size nt)";
 			return $mut;
 		}	
 
-		if ($mut->{type} ne 'SNP')
+		#only add gene information to SNPs and RA mutations that don't include indels...		
+		if (($mut->{type} ne 'SNP') && !(($mut->{type} eq 'RA') && ($mut->{ref_base} ne '.') && ($mut->{new_base} ne '.')))
 		{					
-			$mut->{gene_position} = "coding&nbsp;($mut->{gene_position}/$gene_nt_size&nbsp;nt)";
+			$mut->{gene_position} = "coding ($mut->{gene_position}/$gene_nt_size nt)";
 			return $mut;
 		}
+		
+		## this is for RA...
+		$mut->{ref_seq} = $mut->{ref_base} if (!defined $mut->{ref_seq});
+		$mut->{new_seq} = $mut->{new_base} if (!defined $mut->{new_seq});
 
 	    ## determine the old and new translation of this codon  
    		$mut->{aa_position} = int(($mut->{gene_position}-1)/3) + 1;
@@ -373,7 +380,7 @@ sub annotate_1_mutation
 		}
 		else
 		{
-			$mut->{gene_name} = $gene_list[0] . "&minus" . $gene_list[-1];
+			$mut->{gene_name} = $gene_list[0] . "–" . $gene_list[-1];
 		}		
 	}
 	
