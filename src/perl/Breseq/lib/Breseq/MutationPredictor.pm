@@ -739,7 +739,7 @@ sub predict
 	}
 	
 	###
-	## JC evidence => INS, SUB, AMP mutations
+	## evidence JC => INS, SUB, AMP mutations
 	###
 
 	JC: foreach my $j (@jc)
@@ -772,7 +772,7 @@ sub predict
 		{		
 			my $size = $j->{_side_2}->{position} - $j->{_side_1}->{position} + 1;
 			next if ($size < 0); #this is a deletion!
-			next if ($size > 100); #spurious duplication, need extra evidence from coverage!
+#			next if ($size > 100); #spurious duplication, need extra evidence from coverage!
 
 			my $mut = { 
 				type => 'AMP',
