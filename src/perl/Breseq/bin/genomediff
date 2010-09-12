@@ -60,6 +60,7 @@ our $VERSION = '0';
 use strict;
 use Data::Dumper;
 use File::Path;
+use List::Util qw(min);
 use Getopt::Long;
 use Pod::Usage;
 use POSIX qw(ceil floor);
@@ -130,6 +131,10 @@ elsif ("\U$command" eq 'SUBTRACT')
 elsif ("\U$command" eq 'GENE_TABLE')
 {
 	do_mutated_gene_table();
+}
+elsif ("\U$command" eq 'POLYMORPHISM')
+{
+	do_polymorphism_analysis();
 }
 else
 {
@@ -1430,3 +1435,95 @@ sub _treatment_list_to_hash
 	return $treatment_hash;
 }
 
+sub do_polymorphism_analysis
+{
+	my ($help, $man, $verbose);
+	my $output = 'output.tab'; 
+	my @reference_genbank_file_names;
+	GetOptions(
+		'help|?' => \$help, 'man' => \$man, 'verbose|v' => \$verbose,
+		'output|o=s' => \$output,
+		'reference-sequence|r=s' => \@reference_genbank_file_names,
+	) or pod2usage(2);
+	pod2usage(1) if $help;
+	pod2usage(-exitstatus => 0, -verbose => 2) if $man;
+	pod2usage(1) if (scalar @reference_genbank_file_names == 0);
+	pod2usage(1) if (scalar @ARGV == 0);
+
+	#doesn't really need to take multiple...
+	my @gd_file_name_list = @ARGV;
+	
+	my $ref_seq_info = Breseq::ReferenceSequence::load_ref_seq_info(\@reference_genbank_file_names);
+	
+	
+	open OUT, ">$output";
+	print OUT +join("\t", 
+		'seq_id', 
+		'position', 
+		'ref_base',
+		'new_base',
+		'frequency', 
+		'quality', 
+		'fisher_strand_p_value',
+		'ks_quality_p_value',
+		'min_cov',
+		'new_top',
+		'new_bot',
+		'ref_top',
+		'ref_bot',
+		'gene_position', 
+		'gene_name',
+		'aa_position',
+		'aa_ref_seq',
+		'aa_new_seq',
+		'codon_ref_seq',
+		'codon_new_seq',
+	) . "\n";
+		
+	foreach my $gd_file_name (@gd_file_name_list)
+	{
+		my $gd = Breseq::GenomeDiff->new(-in=>$gd_file_name);
+		Breseq::ReferenceSequence::annotate_mutations($ref_seq_info, $gd);
+		
+		my @mutations = $gd->list('RA');
+		@mutations = grep { ($_->{frequency} >= 0.01) && ($_->{frequency} <= 0.99) } @mutations;
+		
+		MUT: foreach my $p (@mutations)
+		{
+			($p->{new_top}, $p->{new_bot}) = split /\//, $p->{new_cov};
+			($p->{ref_top}, $p->{ref_bot}) = split /\//, $p->{ref_cov};
+			$p->{min_cov} = min($p->{new_top}, $p->{new_bot}, $p->{ref_top}, $p->{ref_bot});
+		}
+		
+		@mutations = sort { -($a->{min_cov} <=> $b->{min_cov}) } @mutations;
+		
+		MUT: foreach my $p (@mutations)
+		{
+			
+			print OUT +join("\t", 
+				$p->{seq_id}, 
+				$p->{position}, 
+				$p->{ref_base},
+				$p->{new_base},
+				$p->{frequency}, 
+				$p->{quality},
+				$p->{fisher_strand_p_value}, 
+				$p->{ks_quality_p_value}, 
+				$p->{min_cov},
+				$p->{new_top},
+				$p->{new_bot},
+				$p->{ref_top},
+				$p->{ref_bot},
+				$p->{gene_position}, 
+				$p->{gene_name},
+				$p->{aa_position},
+				$p->{aa_ref_seq},
+				$p->{aa_new_seq},
+				$p->{codon_ref_seq},
+				$p->{codon_new_seq},								
+			) . "\n";
+		}
+	}
+	close OUT;
+	
+}

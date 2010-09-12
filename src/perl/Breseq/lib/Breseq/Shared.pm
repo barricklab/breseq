@@ -588,7 +588,7 @@ sub region_to_coords
 	{
 		($seq_id, $start, $end) = split /:|\.\.|\-/, $region;
 	}
-	
+		
 	my $reference_length;
 	if (ref($bam) eq "LVALUE")
 	{
@@ -596,15 +596,18 @@ sub region_to_coords
 	}
 	else
 	{
-		$reference_length = $bam->length($seq_id);
+		$reference_length = $bam->length($seq_id);		
+		die "FATAL ERROR seq_id does not exist in provided BAM/FASTA files: $seq_id\n" if (!defined $reference_length);
 	}
-
+	
 	($start, $end) = (1, $reference_length) if (!defined $start && !defined $end);
 	$end = $start if (!defined $end);
 
 	##check the start and end for sanity....	
 	$start = 1 if ($start < 1); 
+	$end = 1 if ($end < 1); 
 	$end = $reference_length if ($end > $reference_length); 
+	$start = $reference_length if ($start > $reference_length); 
 
 #	die "Problem parsing region: \'$region\'\n" if ($start > $end);
 

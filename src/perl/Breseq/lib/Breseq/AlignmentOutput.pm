@@ -56,14 +56,14 @@ sub new
 	my($caller,@args) = @_;
 	my $class = ref($caller) || $caller;
 	my $self = new Bio::Root::Root($caller, @args);
-
-	#defaults
-	$self->{maximum_to_align} = 1000;
-	$self->{maximum_to_make_alignment} = 100000;
-
+	
 	bless ($self, $class);
 	($self->{maximum_to_align}, $self->{maximum_to_make_alignment} ) 
 		= $self->Bio::Root::RootI::_rearrange([qw(MAXIMUM_TO_ALIGN MAXIMUM_TO_MAKE_ALIGNMENT)], @args);
+
+	## setting these to '0' means there is no limit
+	$self->{maximum_to_align} = 1000 if (!defined $self->{maximum_to_align});
+	$self->{maximum_to_make_alignment} = 100000 if (!defined $self->{maximum_to_make_alignment});
 
 	$self->{header_style_string} = '';
 	$self->{header_style_string} .= "\.NC {color: rgb(0,0,0); background-color: rgb(255,255,255)}\n"; #no color
@@ -137,9 +137,8 @@ sub html_alignment
 {
 	my $verbose = 0;
 	my ($self, $bam_path, $fasta_path, $region, $options) = @_;
-	
+		
 	my $alignment_info = $self->create_alignment($bam_path, $fasta_path, $region, $options);
-
 
 	my $output = '';	
 	return p . "No reads uniquely align to region." if (!defined $alignment_info);
@@ -286,7 +285,7 @@ my %open_bam_files;
 sub create_alignment
 {
 	my ($self, $bam_path, $fasta_path, $region, $options) = @_;
-	my $verbose = $options->{'verbose'};
+	my $verbose = $options->{'verbose'};		
 		
 	## Start -- Workaround to avoid too many open files
 	if (!defined $open_bam_files{$bam_path.$fasta_path})
@@ -295,34 +294,12 @@ sub create_alignment
 	}
 	my $bam = $open_bam_files{$bam_path.$fasta_path};
 	## End -- Workaround to avoid too many open files
-
-	#$verbose = 1 if ($region eq "NC_001416‑1:4566-4566");
-	my ($seq_id, $start, $end);
-	my ($insert_start, $insert_end) = (0, 0);
-	#syntax that includes insert counts
-	# e.g. NC_001416:4566.1-4566.1
-	if ($region =~ m/(.+)\:(\d+)\.(\d+)-(\d+)\.(\d+)/)
-	{	
-		($seq_id, $start, $insert_start, $end, $insert_end) = ($1, $2, $3, $4, $5);
-	}
-	elsif ($region =~ m/(.+)\:(\d+)(\.\.|\-)(\d+)/)
-	{
-		($seq_id, $start, $end) = ($1, $2, $4);
-	}
-	else
-	{
-		($seq_id, $start, $end) = split /:|\.\.|\-/, $region;
-	}
-	my $reference_length = $bam->length($seq_id);
 	
-	##check the start and end for sanity....	
-	$start = 1 if ($start < 1); 
-	$end = $reference_length if ($end > $reference_length); 
-	return if ($start > $end);
+	my ($seq_id, $start, $end, $insert_start, $insert_end) = Breseq::Shared::region_to_coords($region, $bam);
 	$region = "$seq_id:$start-$end";
 	print "$bam_path  $fasta_path  $region\n" if ($verbose);
 
-
+	my $reference_length = $bam->length($seq_id);
 	my $aligned_reads;
 	my $aligned_annotation;	
 	
@@ -346,7 +323,7 @@ sub create_alignment
 	my $unique_end;
 	
 	my $total_reads = 0;
-	my $processed_reads = 0;
+	my $processed_reads = 0;	
 
 	## Retrieve all unique alignments overlapping position with "fetch"
 	## This lets us know how many slots we need to reserve for alignments.
@@ -357,8 +334,9 @@ sub create_alignment
 				
 		if ($redundancy == 1)
 		{
-			$total_reads++;
-			return if ($self->{maximum_to_make_alignment} && ($total_reads > $self->{maximum_to_make_alignment}));
+			$total_reads++;			
+			
+			return undef if ($self->{maximum_to_make_alignment} && ($total_reads > $self->{maximum_to_make_alignment}));
 						
 			my $aligned_read;
 			$aligned_read->{seq_id} = $a->display_name;
@@ -377,7 +355,7 @@ sub create_alignment
 	$bam->fetch($region, $fetch_function);	
 	
 	### If there are WAY too many reads, such that a pileup might take forever, bail...
-	if (defined($self->{maximum_to_make_alignment}) && ($total_reads > $self->{maximum_to_make_alignment}))
+	if ($self->{maximum_to_make_alignment} && ($total_reads > $self->{maximum_to_make_alignment}))
 	{
 		return { 
 			message => "Reads exceeded maximum to display alignment. $total_reads reads. (Limit = $self->{maximum_to_make_alignment})",
@@ -385,7 +363,7 @@ sub create_alignment
 	}
 	
 	my $message;
-	if ($total_reads > $self->{maximum_to_align})
+	if ($self->{maximum_to_align} && ($total_reads > $self->{maximum_to_align}))
 	{
 		$message = "Only $self->{maximum_to_align} of $total_reads total aligned reads displayed.";
 		my $new_aligned_reads;

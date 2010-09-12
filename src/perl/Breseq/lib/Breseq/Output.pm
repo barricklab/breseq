@@ -149,6 +149,7 @@ sub html_index
 	
 	my @jc = $gd->filter_used_as_evidence($gd->list('JC'));
 	@jc = grep { !$_->{no_show} } @jc;	
+	@jc = grep { !$_->{circular_chromosome} } @jc;	
 
 	my @jcu = grep { !$_->{reject} } @jc;	
 	if (scalar @jcu > 0)
@@ -576,7 +577,7 @@ sub html_mutation_table_string
 				}
 				else # ($mut->{snp_type} eq 'NC')
 				{
-					$aa_codon_change .= $mut->{gene_position};
+					$aa_codon_change .= nonbreaking($mut->{gene_position});
 				}
 
 				$output_str.= start_Tr({-class=>$row_class});	
@@ -587,7 +588,7 @@ sub html_mutation_table_string
 				$output_str.= freq_cols(@freq_list);
 				$output_str.= td({align=>"center"}, nonbreaking($aa_codon_change));
 				$output_str.= td({align=>"center"}, i(nonbreaking($mut->{gene_name})));
-				$output_str.= td({align=>"left"}, $mut->{gene_product});
+				$output_str.= td({align=>"left"}, htmlize($mut->{gene_product}));
 				$output_str.= end_Tr;	
 			}
 			elsif ($mut->{type} eq 'INS')
@@ -600,7 +601,7 @@ sub html_mutation_table_string
 				$output_str.= freq_cols(@freq_list);
 				$output_str.= td({align=>"center"}, nonbreaking($mut->{gene_position}));
 				$output_str.= td({align=>"center"}, i(nonbreaking($mut->{gene_name})));
-				$output_str.= td({align=>"left"}, $mut->{gene_product});
+				$output_str.= td({align=>"left"}, htmlize($mut->{gene_product}));
 				$output_str.= end_Tr;
 			}
 			elsif ($mut->{type} eq 'DEL')
@@ -614,10 +615,10 @@ sub html_mutation_table_string
 				my $annotation_str = '';
 				$annotation_str = "between $mut->{between}" if ($mut->{between});
 				$annotation_str = "$mut->{mediated}-mediated" if ($mut->{mediated});
-				$annotation_str = $mut->{gene_position} if (!$annotation_str); 
+				$annotation_str = nonbreaking($mut->{gene_position}) if (!$annotation_str); 
 				$output_str.= td({align=>"center"}, nonbreaking($annotation_str));
 				$output_str.= td({align=>"center"}, i(nonbreaking($mut->{gene_name})));				
-				$output_str.= td({align=>"left"}, $mut->{gene_product});
+				$output_str.= td({align=>"left"}, htmlize($mut->{gene_product}));
 				$output_str.= end_Tr;
 			}
 			elsif ($mut->{type} eq 'SUB')
@@ -630,7 +631,7 @@ sub html_mutation_table_string
 				$output_str.= freq_cols(@freq_list);
 				$output_str.= td({align=>"center"}, nonbreaking($mut->{gene_position}));
 				$output_str.= td({align=>"center"}, i(nonbreaking($mut->{gene_name})));
-				$output_str.= td({align=>"left"}, $mut->{gene_product});
+				$output_str.= td({align=>"left"}, htmlize($mut->{gene_product}));
 				$output_str.= end_Tr;
 			}
 			
@@ -645,7 +646,7 @@ sub html_mutation_table_string
 				$output_str.= freq_cols(@freq_list);
 				$output_str.= td({align=>"center"}, nonbreaking($mut->{gene_position}));
 				$output_str.= td({align=>"center"}, i(nonbreaking($mut->{gene_name})));
-				$output_str.= td({align=>"left"}, $mut->{gene_product});
+				$output_str.= td({align=>"left"}, htmlize($mut->{gene_product}));
 				$output_str.= end_Tr;				
 			}
 
@@ -677,7 +678,7 @@ sub html_mutation_table_string
 				$output_str.= freq_cols(@freq_list);
 				$output_str.= td({align=>"center"}, nonbreaking($mut->{gene_position}));
 				$output_str.= td({align=>"center"}, i(nonbreaking($mut->{gene_name})));
-				$output_str.= td({align=>"left"}, $mut->{gene_product});
+				$output_str.= td({align=>"left"}, htmlize($mut->{gene_product}));
 				$output_str.= end_Tr;
 			}
 			
@@ -693,7 +694,7 @@ sub html_mutation_table_string
 				$output_str.= freq_cols(@freq_list);
 				$output_str.= td({align=>"center"}, "");
 				$output_str.= td({align=>"center"}, i(nonbreaking($mut->{gene_name_1})) . "&darr;" . i(nonbreaking($mut->{gene_name_2})) );
-				$output_str.= td({align=>"left"}, $mut->{gene_product_1} . "&darr;" . $mut->{gene_product_2});
+				$output_str.= td({align=>"left"}, htmlize($mut->{gene_product_1}) . "&darr;" . htmlize($mut->{gene_product_2}));
 				$output_str.= end_Tr;				
 			}
 			
@@ -707,7 +708,7 @@ sub html_mutation_table_string
 				$output_str.= freq_cols(@freq_list);
 				$output_str.= td({align=>"center"}, ($mut->{new_copy_number} == 2) ? "duplication" : "amplification");
 				$output_str.= td({align=>"center"}, i(nonbreaking($mut->{gene_name})));
-				$output_str.= td({align=>"left"}, $mut->{gene_product});
+				$output_str.= td({align=>"left"}, htmlize($mut->{gene_product}));
 				$output_str.= end_Tr;				
 			}
 		}
@@ -795,7 +796,7 @@ sub html_read_alignment_table_string
 		$output_str.= td({align => "center"}, $top_cov + $bot_cov );
 		$output_str.= td({align => "center"}, nonbreaking($c->{gene_position}) );	
 		$output_str.= td({align => "center"}, i(nonbreaking($c->{gene_name})) );	
-		$output_str.= td({align => "left"}, $c->{gene_product} );	
+		$output_str.= td({align => "left"}, htmlize($c->{gene_product}) );	
 			
 		$output_str.= end_Tr;
 		
@@ -943,7 +944,7 @@ sub html_missing_coverage_table_string
 		$output_str.= td({-align=>"center"}, nonbreaking("$c->{left_outside_cov} \[$c->{left_inside_cov}\]")); 
 		$output_str.= td({-align=>"center"}, nonbreaking("\[$c->{right_inside_cov}\] $c->{right_outside_cov}")); 
 		$output_str.= td({align=>"center"}, i(nonbreaking($c->{gene_name})));				
-		$output_str.= td({align=>"left"}, $c->{gene_product});		
+		$output_str.= td({align=>"left"}, htmlize($c->{gene_product}));		
 		$output_str.= end_Tr;
 		
 		if ($show_reject_reason)
@@ -1027,7 +1028,7 @@ sub html_new_junction_table_string
 			$output_str.= td( {-rowspan=>2, -align=>"center"}, b("&lt;" . $c->{pos_hash_score} . "&gt;") . br . $c->{min_overlap_score} );
 			$output_str.= td( {-align=>"center", -class=>"$annotate_key"}, nonbreaking($c->{"_$key"}->{gene_position}) );
 			$output_str.= td( {-align=>"center", -class=>"$annotate_key"}, i(nonbreaking($c->{"_$key"}->{gene_name})) );
-			$output_str.= td( {-class=>"$annotate_key"}, $c->{"_$key"}->{gene_product} );
+			$output_str.= td( {-class=>"$annotate_key"}, htmlize($c->{"_$key"}->{gene_product}) );
 		}
 		$output_str.= end_Tr;
 
@@ -1043,7 +1044,7 @@ sub html_new_junction_table_string
 
 			$output_str.= td( {-align=>"center", -class=>"$annotate_key"}, nonbreaking($c->{"_$key"}->{gene_position}) );
 			$output_str.= td( {-align=>"center", -class=>"$annotate_key"}, i(nonbreaking($c->{"_$key"}->{gene_name})) );
-			$output_str.= td( {-class=>"$annotate_key"}, $c->{"_$key"}->{gene_product} );
+			$output_str.= td( {-class=>"$annotate_key"}, htmlize($c->{"_$key"}->{gene_product}) );
 		}			
 		$output_str.= end_Tr;
 		
@@ -1124,7 +1125,7 @@ sub html_evidence_file
 		$s .= ".$interval->{insert_start}" if (defined $interval->{insert_start});
 		$s .= "-$interval->{end}";
 		$s .= ".$interval->{insert_end}" if (defined $interval->{insert_end});
-		
+				
 		my $ao = Breseq::AlignmentOutput->new;
 		my $options = {};
 		$interval->{quality_score_cutoff} = $settings->{base_quality_cutoff} if (defined $settings->{base_quality_cutoff});
@@ -1634,6 +1635,13 @@ sub nonbreaking
 	$text =~ s/-/&#8209;/g; #substitute nonbreaking hyphen
 	$text =~ s/–/&#8211;/g; #substitute nonbreaking en dash
 	$text =~ s/ /&nbsp;/g; #substitute nonbreaking space
+	return $text;
+}
+
+sub htmlize
+{
+	my ($text) = @_;
+	$text =~ s/–/&#8211;/g; #substitute nonbreaking en dash
 	return $text;
 }
 
