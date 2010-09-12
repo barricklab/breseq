@@ -3,7 +3,7 @@
 <plist version="1.0">
 <dict>
 	<key>currentDocument</key>
-	<string>bin/bam2aln</string>
+	<string>bin/bam2cov</string>
 	<key>documents</key>
 	<array>
 		<dict>
@@ -36,28 +36,58 @@
 			<key>caret</key>
 			<dict>
 				<key>column</key>
-				<integer>1</integer>
+				<integer>0</integer>
 				<key>line</key>
-				<integer>92</integer>
+				<integer>106</integer>
+			</dict>
+			<key>columnSelection</key>
+			<false/>
+			<key>firstVisibleColumn</key>
+			<integer>0</integer>
+			<key>firstVisibleLine</key>
+			<integer>79</integer>
+			<key>selectFrom</key>
+			<dict>
+				<key>column</key>
+				<integer>2</integer>
+				<key>line</key>
+				<integer>120</integer>
+			</dict>
+			<key>selectTo</key>
+			<dict>
+				<key>column</key>
+				<integer>0</integer>
+				<key>line</key>
+				<integer>106</integer>
+			</dict>
+		</dict>
+		<key>bin/bam2cov</key>
+		<dict>
+			<key>caret</key>
+			<dict>
+				<key>column</key>
+				<integer>8</integer>
+				<key>line</key>
+				<integer>50</integer>
 			</dict>
 			<key>firstVisibleColumn</key>
 			<integer>0</integer>
 			<key>firstVisibleLine</key>
-			<integer>59</integer>
+			<integer>9</integer>
 		</dict>
 		<key>bin/breseq</key>
 		<dict>
 			<key>caret</key>
 			<dict>
 				<key>column</key>
-				<integer>31</integer>
+				<integer>30</integer>
 				<key>line</key>
-				<integer>34</integer>
+				<integer>144</integer>
 			</dict>
 			<key>firstVisibleColumn</key>
 			<integer>0</integer>
 			<key>firstVisibleLine</key>
-			<integer>16</integer>
+			<integer>115</integer>
 		</dict>
 		<key>bin/fastq_utils</key>
 		<dict>
@@ -134,14 +164,14 @@
 			<key>caret</key>
 			<dict>
 				<key>column</key>
-				<integer>0</integer>
+				<integer>24</integer>
 				<key>line</key>
-				<integer>34</integer>
+				<integer>390</integer>
 			</dict>
 			<key>firstVisibleColumn</key>
 			<integer>0</integer>
 			<key>firstVisibleLine</key>
-			<integer>19</integer>
+			<integer>22</integer>
 		</dict>
 		<key>lib/Breseq/CandidateJunctions.pm</key>
 		<dict>
@@ -162,30 +192,14 @@
 			<key>caret</key>
 			<dict>
 				<key>column</key>
-				<integer>13</integer>
+				<integer>1</integer>
 				<key>line</key>
-				<integer>71</integer>
+				<integer>66</integer>
 			</dict>
-			<key>columnSelection</key>
-			<false/>
 			<key>firstVisibleColumn</key>
 			<integer>0</integer>
 			<key>firstVisibleLine</key>
-			<integer>66</integer>
-			<key>selectFrom</key>
-			<dict>
-				<key>column</key>
-				<integer>4</integer>
-				<key>line</key>
-				<integer>71</integer>
-			</dict>
-			<key>selectTo</key>
-			<dict>
-				<key>column</key>
-				<integer>17</integer>
-				<key>line</key>
-				<integer>71</integer>
-			</dict>
+			<integer>97</integer>
 		</dict>
 		<key>lib/Breseq/ErrorCalibration.pm</key>
 		<dict>
@@ -285,6 +299,20 @@
 			<key>firstVisibleLine</key>
 			<integer>350</integer>
 		</dict>
+		<key>lib/Breseq/Settings.pm</key>
+		<dict>
+			<key>caret</key>
+			<dict>
+				<key>column</key>
+				<integer>60</integer>
+				<key>line</key>
+				<integer>412</integer>
+			</dict>
+			<key>firstVisibleColumn</key>
+			<integer>0</integer>
+			<key>firstVisibleLine</key>
+			<integer>378</integer>
+		</dict>
 		<key>lib/Breseq/Shared.pm</key>
 		<dict>
 			<key>caret</key>
@@ -364,11 +392,13 @@
 		<string>lib/Breseq/Output.pm</string>
 		<string>lib/Breseq/CandidateJunctions.pm</string>
 		<string>bin/bam2aln</string>
+		<string>bin/bam2cov</string>
+		<string>lib/Breseq/Settings.pm</string>
 		<string>bin/genbank_utils</string>
 	</array>
 	<key>showFileHierarchyDrawer</key>
 	<true/>
 	<key>windowFrame</key>
-	<string>{{358, 48}, {861, 830}}</string>
+	<string>{{566, 16}, {999, 862}}</string>
 </dict>
 </plist>
