@@ -204,6 +204,15 @@ if ($settings->do_step('sequence_conversion_done_file_name', "Read and reference
 	## create SAM faidx
 	my $samtools = $settings->ctool('samtools');
 	Breseq::Shared::system("$samtools faidx $reference_fasta_file_name", 1);
+
+	## calculate trim files
+	if (!$settings->{perl_calc_trims})
+	{
+		my $calc_trims = $settings->ctool('calc_trims');
+		my $output_path = $settings->file_name('sequence_conversion_path');
+		my $command = "$calc_trims -f $reference_fasta_file_name -o $output_path";
+		Breseq::Shared::system($command);
+	}
 	
 	## store summary information
 	Storable::store($summary->{sequence_conversion}, $sequence_converson_summary_file_name) or die "Can't store data in file $sequence_converson_summary_file_name!\n";
@@ -218,6 +227,28 @@ die "Can't retrieve data from file $sequence_converson_summary_file_name!\n" if 
 (defined $summary->{sequence_conversion}->{max_read_length}) or die "Can't retrieve max read length from file $sequence_converson_summary_file_name\n";
 $settings->{max_read_length} = $summary->{sequence_conversion}->{max_read_length};
 $settings->{total_reference_sequence_length} = $summary->{sequence_conversion}->{total_reference_sequence_length};
+
+#load trim data per refseq
+if (!$settings->{perl_calc_trims})
+{
+	foreach my $seq_id (sort keys %{$ref_seq_info->{ref_strings}})
+	{
+		my $trim_file_name = $settings->file_name('reference_trim_file_name', {'@'=>$seq_id});
+		open TRIM, "<$trim_file_name" or die "Could not open trims file: $trim_file_name\n";
+		$ref_seq_info->{trims}->{$seq_id} = '';
+		my $block;
+		my $block_size = 512;
+		while (read TRIM, $block, $block_size)
+		{
+			$ref_seq_info->{trims}->{$seq_id} .= $block;
+		}
+		(length($ref_seq_info->{trims}->{$seq_id}) > 0) or die "Error reading trims file: $trim_file_name\n";
+		close TRIM;
+	
+		#print "$seq_id " . length($ref_seq_info->{trims}->{$seq_id}) . "\n";
+		#print Dumper($ref_seq_info->{trims}->{$seq_id});
+	}
+}
 
 ##
 # Match all reads against the reference genome
@@ -586,7 +617,7 @@ sub error_rates {}
 $settings->create_path('output_path'); ##need output for plots	
 my $error_rates_summary_file_name = $settings->file_name('error_rates_summary_file_name');
 
-if ($settings->do_step('error_rates_done_file_name', "Calibrating error rates"))
+if ($settings->do_step('error_rates_done_file_name', "Re-calibrating base error rates"))
 {
 	Breseq::ErrorCalibration::error_counts_to_error_rates($settings, $summary, $ref_seq_info);
 	$summary->{unique_coverage} = {};

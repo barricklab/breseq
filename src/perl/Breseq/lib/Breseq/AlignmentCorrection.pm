@@ -530,7 +530,7 @@ sub _write_reference_matches
 	my @trims;
 	foreach my $a (@reference_al)
 	{
-	#	push @trims, _trim_ambiguous_ends($a, $reference_header, $reference_fai);
+	#	push @trims, _trim_ambiguous_ends($a, $reference_header, $reference_fai);	
 		push @trims, _trim_ambiguous_ends($a, $reference_header, $reference_fai, $ref_seq_info); #slightly faster than using fai	
 	}
 	
@@ -620,27 +620,35 @@ sub _trim_ambiguous_ends
 	
 	my $verbose = 0;
 	my ($a, $header, $fai, $ref_seq_info) = @_;
-		
-	# Has two keys: 'left' and 'right' which are how far to inset in REFERENCE coords.
-	my $trims;
 	
 	#which reference sequence?
 	my $seq_id = $header->target_name->[$a->tid];
-	my ($ref_strings, $ref_seq_length);
+	my $ref_seq_length = $header->target_len->[$a->tid];
+
+	## NEW version using trim file	
+	if ((defined $ref_seq_info) && (defined $ref_seq_info->{trims}))
+	{			
+			
+		my $left_trim = unpack "C", substr($ref_seq_info->{trims}->{$seq_id}, $a->start-1, 1);
+		$left_trim += $a->query->start - 1;
+		
+		my $right_trim = unpack "C", substr($ref_seq_info->{trims}->{$seq_id}, $a->end-1+$ref_seq_length, 1);
+		$left_trim += $a->l_qseq - $a->query->end;
+		
+		return ( {'L'=>$left_trim, 'R'=>$right_trim} );
+	}
+	
+	# Has two keys: 'left' and 'right' which are how far to inset in REFERENCE coords.
+	my $trims;
 	
 	## using $fai is more compatible, and must currently be used for junctions
 	## using $ref_seq_info is slightly quicker, and currently used for the reference sequence
+	my $ref_strings;
 	if (defined $ref_seq_info)
 	{		
 		$ref_strings = $ref_seq_info->{ref_strings};	
-		$ref_seq_length = length($ref_strings->{$seq_id});
 	}
-	## >>> transition to not using ref_seq_info
-	else
-	{
-		$ref_seq_length  = $header->target_len->[$a->tid];
-	}
-	
+		
 	#create sequence snippets that we need to pay attention to ends of sequence
 	my $expand_by = 18; #36
 	my $expand_left = ($a->start-1 < $expand_by) ? $a->start-1 : $expand_by;

@@ -96,6 +96,7 @@ sub new
 		'maximum-mismatches|m=s' => \$self->{maximum_read_mismatches},		
 		'perl-error-count' => \$self->{perl_error_count},
 		'perl-identify-mutations' => \$self->{perl_identify_mutations},
+		'perl-calc-trims' => \$self->{perl_calc_trims},
 		'error-model-method=s' => \$self->{error_model_method},
 		'no-indel-polymorphisms' => \$self->{no_indel_polymorphisms},	
 		'strict-polymorphism-prediction' => \$self->{strict_polymorphism_prediction},
@@ -167,7 +168,8 @@ sub new_annotate
 		'base-quality-cutoff|b=s' => \$self->{base_quality_cutoff},
 		'maximum-mismatches|m=s' => \$self->{maximum_read_mismatches},
 		'perl-error-count' => \$self->{perl_error_count},
-		'perl-identify-mutations' => \$self->{perl_identify_mutations},		
+		'perl-identify-mutations' => \$self->{perl_identify_mutations},	
+		'perl-calc-trims' => \$self->{perl_calc_trims},			
 		'error-model-method=s' => \$self->{error_model_method},
 		'no-indel-polymorphisms' => \$self->{no_indel_polymorphisms},
 		'strict-polymorphism-prediction' => \$self->{strict_polymorphism_prediction},
@@ -308,6 +310,7 @@ sub initialize_2
 	$self->{trimmed_fastq_file_name} = "$self->{sequence_conversion_path}/#.trimmed.fastq";
     $self->{ref_seq_info_file_name} = "$self->{sequence_conversion_path}/ref_seq_info.bin";	
 	$self->{unwanted_fasta_file_name} = "$self->{sequence_conversion_path}/unwanted.fasta";
+	$self->{reference_trim_file_name} = "$self->{sequence_conversion_path}/@.trims";
 	$self->{sequence_conversion_summary_file_name} = "$self->{sequence_conversion_path}/summary.bin";
 	$self->{sequence_conversion_done_file_name} = "$self->{sequence_conversion_path}/sequence_conversion.done";
 
@@ -696,6 +699,7 @@ sub installed
 	## breseq C++ executables
 	$self->{installed}->{error_count} = (-x "$self->{bin_path}/error_count") ? 1 : 0;
 	$self->{installed}->{identify_mutations} = (-x "$self->{bin_path}/identify_mutations") ? 1 : 0;
+	$self->{installed}->{calc_trims} = (-x "$self->{bin_path}/calc_trims") ? 1 : 0;
 
 	## absolutely required
 	$self->{installed}->{SSAHA2} = (`which ssaha2`) ? 1 : 0;

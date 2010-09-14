@@ -643,6 +643,12 @@ sub do_count
 	my $ref_seq_info = Breseq::ReferenceSequence::load_ref_seq_info(\@reference_genbank_file_names);
 	my $one_ref_seq = scalar keys %{$ref_seq_info->{gene_lists}} == 1;
 
+	my $total_bp = 0;
+	foreach my $seq_id (keys %{$ref_seq_info->{bioperl_ref_seqs}})
+	{
+		$total_bp += $ref_seq_info->{bioperl_ref_seqs}->{$seq_id}->length;
+	}
+
 	my @bases = ('A', 'T', 'C', 'G');
 	my @base_combinations;
 	my @base_headers;
@@ -686,7 +692,10 @@ sub do_count
 	my @snp_types = ( 'nonsynonymous', 'synonymous', 'noncoding', 'pseudogene', 'intergenic');
 	
 	open OUT, ">$output" or die "Count not open file: $output";
-	print OUT join ("\t", 'strain', 'total', @snp_types, @base_headers, 'deleted', @mod_name_list) . "\n";
+	print OUT join ("\t", 'strain', 'total', @snp_types, @base_headers, 'deleted', @mod_name_list, 'called_bp', 'total_bp') . "\n";
+	
+	
+	## count SNPs and examples of mobile element insertions
 	
 	my @gd_name_list;
 	my @gd_list; 
@@ -745,11 +754,19 @@ sub do_count
 			if ($mut->{type} eq 'MOB')
 			{
 				$count->{mob}->{$mut->{repeat_name}}++;
-			}
-			
+			}			
 		}
 		
-		print OUT join("\t", $gd_name, scalar(@mut_list),  map({$count->{type}->{$_} } @snp_types), map({ $count->{base}->{$_} } @base_combinations), $total_deleted, map({$count->{mob}->{$_}} @mod_name_list) ) . "\n";
+		##statistics for UN
+		my $un_bp = 0; 
+		foreach my $un ($gd->list('UN'))
+		{
+			$un_bp += $un->{end} - $un->{start} + 1;
+		}
+		
+		my $called_bp = $total_bp - $un_bp;
+		
+		print OUT join("\t", $gd_name, scalar(@mut_list),  map({$count->{type}->{$_} } @snp_types), map({ $count->{base}->{$_} } @base_combinations), $total_deleted, map({$count->{mob}->{$_}} @mod_name_list), $called_bp, $total_bp ) . "\n";
 		#print Dumper ($count);
 	}	
 }
