@@ -1,0 +1,10 @@
+project calc_trims ;
+
+exe calc_trims :
+    [ glob-tree *.cpp ]
+    /samtools//libbam
+    /user-config//boost_program_options
+    : <include>./include
+    :
+    : <include>./include
+    ;

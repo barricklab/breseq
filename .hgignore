@@ -33,6 +33,7 @@ syntax: regexp
 ^src/c/build
 ^src/c/error_count/bin
 ^src/c/identify_mutations/bin
+^src/c/calc_trims/bin
 
 ^extern/samtools-0.1.7a/samtools
 ^extern/samtools-0.1.7a/misc
