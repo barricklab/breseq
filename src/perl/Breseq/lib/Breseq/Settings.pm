@@ -248,11 +248,11 @@ sub initialize_1
 	$self->{unwanted_prefix} = "UNWANTED:::";	# prefix on unwanted read names
 	
 	#used by MutationIdentification.pm
-	$self->{mutation_log10_e_value_cutoff} = 2;			# log10 of evidence required for SNP calls 
+	$self->{mutation_log10_e_value_cutoff} = 2;		   # log10 of evidence required for SNP calls 
 	$self->{polymorphism_log10_e_value_cutoff} = 2;
 	$self->{polymorphism_bias_p_value_cutoff} = 0.05;
-	$self->{polymorphism_frequency_cutoff} = 0;   # cut off if < this or > 1-this
-	$self->{polymorphism_coverage_both_bases} = 0;  #require this much coverage on each strand
+	$self->{polymorphism_frequency_cutoff} = 0;        # cut off if < X or > 1-X
+	$self->{polymorphism_coverage_both_bases} = 0;     # require this much coverage on each strand
 	$self->{no_indel_polymorphisms} = 0;		
 	
 	#used by Output.pm

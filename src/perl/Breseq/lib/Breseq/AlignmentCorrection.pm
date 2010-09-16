@@ -624,19 +624,38 @@ sub _trim_ambiguous_ends
 	#which reference sequence?
 	my $seq_id = $header->target_name->[$a->tid];
 	my $ref_seq_length = $header->target_len->[$a->tid];
-
-	## NEW version using trim file	
+	
+	###############################################
+	## NEW version using preacalculated trim files	
+	###############################################
 	if ((defined $ref_seq_info) && (defined $ref_seq_info->{trims}))
 	{			
-			
-		my $left_trim = unpack "C", substr($ref_seq_info->{trims}->{$seq_id}, $a->start-1, 1);
-		$left_trim += $a->query->start - 1;
+		### To accelerate this code further we may want to have trims
+		### in array by target ID so translation to name and hash lookup
+		### can be skipped.
 		
-		my $right_trim = unpack "C", substr($ref_seq_info->{trims}->{$seq_id}, $a->end-1+$ref_seq_length, 1);
-		$left_trim += $a->l_qseq - $a->query->end;
+		my ($left_trim, $right_trim);
+
+		## These give identical results and seem to give identical speeds. 
+		## First one is more scalable if we want to allow trims >255		
+		$left_trim = vec($ref_seq_info->{trims}->{$seq_id}, $a->start-1, 8);
+		$right_trim = vec($ref_seq_info->{trims}->{$seq_id}, $a->end-1+$ref_seq_length, 8);
+		#$left_trim = unpack "C", substr($ref_seq_info->{trims}->{$seq_id}, $a->start-1, 1);
+		#$right_trim = unpack "C", substr($ref_seq_info->{trims}->{$seq_id}, $a->end-1+$ref_seq_length, 1);
+
+		$left_trim += $a->query->start - 1;
+		$right_trim += $a->l_qseq - $a->query->end;
+		
+		#print STDERR $a->query->name . "\n";
+		#print STDERR "start: " . ($a->start) . " end: " . ($a->end) . "\n";		
+		#print STDERR "left: " . $left_trim . " right: " . $right_trim . "\n";
 		
 		return ( {'L'=>$left_trim, 'R'=>$right_trim} );
 	}
+
+	###############################################
+	## OLD version using Perl string comparisons	
+	###############################################
 	
 	# Has two keys: 'left' and 'right' which are how far to inset in REFERENCE coords.
 	my $trims;

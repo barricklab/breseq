@@ -55,7 +55,7 @@ void calculate_trims_1 ( const string& _in_seq, const string& in_output_filename
         repeat_num++;
       }
     
-      //cerr << pos << " " << repeat_size << " " << repeat_num << endl;
+      //cerr << (pos+1) << " " << repeat_size << " " << repeat_num << endl;
       
       if (repeat_num > 1)
       {
@@ -77,13 +77,15 @@ void calculate_trims_1 ( const string& _in_seq, const string& in_output_filename
       if (pos + offset >= _in_seq.length()) break;
       
       uint8_t this_trim = offset + 1;
+   //   cerr << (pos+offset+1) << " " << this_trim << " " << right_trim[pos + offset] << endl;
       right_trim[pos + offset] = max(this_trim, right_trim[pos + offset]);
     }
  
     for (int32_t offset=add_max_trim_length; offset>=0; offset--)
     {
-      uint8_t this_trim = add_max_trim_length - offset;
-      left_trim[pos + offset] = max(this_trim, right_trim[pos + offset]);
+      uint8_t this_trim = add_max_trim_length - offset;      
+  //    cerr << (pos+offset+1) << " " << this_trim << " " << right_trim[pos + offset] << endl;
+      left_trim[pos + offset] = max(this_trim, left_trim[pos + offset]);
     }
     
     // debug
@@ -98,8 +100,8 @@ void calculate_trims_1 ( const string& _in_seq, const string& in_output_filename
   out << left_trim << right_trim;
   out.close();
 
-//  debugging...
-//  for (int32_t i=0; i<100; i++)
+//debugging...
+//  for (uint32_t i=0; i<_in_seq.length(); i++)
 //  {
 //    cerr << (i+1) << " " << (int)left_trim[i] << " " << (int)right_trim[i] << endl;
 //  }
@@ -114,7 +116,7 @@ void calculate_trims( const string& in_fasta, const string& in_output_path) {
   string fai_filename(in_fasta);
   fai_filename+=".fai";
   
-  cerr << fai_filename << endl;
+  //cerr << fai_filename << endl;
   
   bam_header_t* bam_header = sam_header_read2(fai_filename.c_str());
   assert(bam_header);
