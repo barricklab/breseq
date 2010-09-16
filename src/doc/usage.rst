@@ -12,15 +12,21 @@ Usage:
 
 Runs the :program:`breseq` pipeline for mutation prediction from genome re-sequencing data.
 
-Options:
+Required options:
 
 .. option:: -r <file_path>, --reference <file_path> 
 
-   Input reference genome sequence files in GenBank format. If there are multiple reference sequences stored in separate GenBank files (i.e., a bacterial genome and a plasmid),  this option can be supplied multiple times.
+   Input reference genome sequence files in GenBank format. If there are multiple reference sequences stored in separate GenBank files (i.e., a bacterial genome and a plasmid), this option can be supplied multiple times.
 
 .. option:: reads1.fastq [reads2.fastq, reads3.fastq...]  
 
    The remaining arguments at the command line are the FASTQ input files of reads. Any FASTQ quality score style (e.g., Sanger, Solexa, Illumina 1.5+) is accepted, :program:`breseq` internally re-calibrates the error rates. It does this for each FASTQ file separately, so data sets that were generated independently should be stored in separate input files.
+
+Expert options:
+
+.. option:: --base-quality-cutoff <int>
+
+   Ignore bases with a quality score lower than this value when calling mutations. This accommodates Illumina formats that use quality scores of 1 and 2 to flag bad data. These bases are still used for aligning to the reference genome and are shown highlighted in yellow in read alignment drawings. Default: 3
 
 Other tools
 ------------------

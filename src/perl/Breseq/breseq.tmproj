@@ -3,7 +3,7 @@
 <plist version="1.0">
 <dict>
 	<key>currentDocument</key>
-	<string>bin/genomediff</string>
+	<string>lib/Breseq/Settings.pm</string>
 	<key>documents</key>
 	<array>
 		<dict>
@@ -45,6 +45,20 @@
 			<key>firstVisibleLine</key>
 			<integer>78</integer>
 		</dict>
+		<key>bin/breseq</key>
+		<dict>
+			<key>caret</key>
+			<dict>
+				<key>column</key>
+				<integer>1</integer>
+				<key>line</key>
+				<integer>232</integer>
+			</dict>
+			<key>firstVisibleColumn</key>
+			<integer>0</integer>
+			<key>firstVisibleLine</key>
+			<integer>203</integer>
+		</dict>
 		<key>bin/genbank_utils</key>
 		<dict>
 			<key>caret</key>
@@ -64,14 +78,28 @@
 			<key>caret</key>
 			<dict>
 				<key>column</key>
-				<integer>27</integer>
+				<integer>17</integer>
 				<key>line</key>
-				<integer>766</integer>
+				<integer>760</integer>
 			</dict>
 			<key>firstVisibleColumn</key>
 			<integer>0</integer>
 			<key>firstVisibleLine</key>
-			<integer>736</integer>
+			<integer>740</integer>
+		</dict>
+		<key>lib/Breseq/AlignmentCorrection.pm</key>
+		<dict>
+			<key>caret</key>
+			<dict>
+				<key>column</key>
+				<integer>55</integer>
+				<key>line</key>
+				<integer>641</integer>
+			</dict>
+			<key>firstVisibleColumn</key>
+			<integer>0</integer>
+			<key>firstVisibleLine</key>
+			<integer>675</integer>
 		</dict>
 		<key>lib/Breseq/AlignmentOutput.pm</key>
 		<dict>
@@ -148,29 +176,29 @@
 			<key>caret</key>
 			<dict>
 				<key>column</key>
-				<integer>32</integer>
+				<integer>23</integer>
 				<key>line</key>
-				<integer>101</integer>
+				<integer>108</integer>
 			</dict>
 			<key>columnSelection</key>
 			<false/>
 			<key>firstVisibleColumn</key>
 			<integer>0</integer>
 			<key>firstVisibleLine</key>
-			<integer>93</integer>
+			<integer>86</integer>
 			<key>selectFrom</key>
 			<dict>
 				<key>column</key>
 				<integer>19</integer>
 				<key>line</key>
-				<integer>101</integer>
+				<integer>108</integer>
 			</dict>
 			<key>selectTo</key>
 			<dict>
 				<key>column</key>
-				<integer>35</integer>
+				<integer>30</integer>
 				<key>line</key>
-				<integer>101</integer>
+				<integer>108</integer>
 			</dict>
 		</dict>
 		<key>lib/Breseq/Settings.pm</key>
@@ -178,14 +206,30 @@
 			<key>caret</key>
 			<dict>
 				<key>column</key>
-				<integer>41</integer>
+				<integer>28</integer>
 				<key>line</key>
-				<integer>78</integer>
+				<integer>214</integer>
 			</dict>
+			<key>columnSelection</key>
+			<false/>
 			<key>firstVisibleColumn</key>
 			<integer>0</integer>
 			<key>firstVisibleLine</key>
-			<integer>71</integer>
+			<integer>190</integer>
+			<key>selectFrom</key>
+			<dict>
+				<key>column</key>
+				<integer>9</integer>
+				<key>line</key>
+				<integer>214</integer>
+			</dict>
+			<key>selectTo</key>
+			<dict>
+				<key>column</key>
+				<integer>28</integer>
+				<key>line</key>
+				<integer>214</integer>
+			</dict>
 		</dict>
 		<key>lib/Breseq/Shared.pm</key>
 		<dict>
@@ -220,6 +264,8 @@
 	<array>
 		<string>lib/Breseq/Output.pm</string>
 		<string>lib/Breseq/Settings.pm</string>
+		<string>bin/breseq</string>
+		<string>lib/Breseq/AlignmentCorrection.pm</string>
 		<string>lib/Breseq/AlignmentOutput.pm</string>
 		<string>lib/Breseq/Shared.pm</string>
 		<string>bin/bam2aln</string>
@@ -234,6 +280,6 @@
 	<key>showFileHierarchyDrawer</key>
 	<true/>
 	<key>windowFrame</key>
-	<string>{{214, 117}, {1171, 761}}</string>
+	<string>{{432, 44}, {886, 809}}</string>
 </dict>
 </plist>
