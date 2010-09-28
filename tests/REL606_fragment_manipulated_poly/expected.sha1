@@ -1,0 +1,7 @@
+6b6af119e703dc4ab8ecd3644ec2d04cc3e6e06f  ./07_error_calibration/REL606-5.unique_only_coverage_distribution.tab
+2813518bdad6105c5cb2691362587e0fa7f369cb  ./07_error_calibration/REL606.fragment.1.error_counts.tab
+d764d56e25ca31066958dbe2987723d72a85a532  ./07_error_calibration/REL606.fragment.1.error_rates.tab
+f682de32f08a97e39e29f9df45a00c894ad8918b  ./08_mutation_identification/polymorphism_statistics_input.tab
+382d616b2a7a9c4c5b89456b2a3c8714efe437f4  ./08_mutation_identification/REL606-5.cnv_coverage.tab
+5c42f1343982874ae2bb12de32496e1521ce5b19  ./08_mutation_identification/REL606-5.coverage.tab
+06bdcd7fcd104eb2526e2f1ced39d0f924d6d645  ./08_mutation_identification/REL606-5.mutations.tab

@@ -19,6 +19,9 @@ _build
 blib
 MYMETA.yml
 
+## For Bioperl
+.git
+
 ## This is user/architecture specific
 user-config.jam
 
