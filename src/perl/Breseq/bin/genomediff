@@ -65,9 +65,6 @@ use Getopt::Long;
 use Pod::Usage;
 use POSIX qw(ceil floor);
 
-#### Bio Perl ####
-use Bio::SeqIO;
-
 #allows us to load modules and call other scripts in same directory
 use FindBin;
 use lib $FindBin::Bin;
@@ -77,6 +74,10 @@ $ENV{PATH} = "$ENV{PATH}:" . $FindBin::Bin;
 use lib $FindBin::Bin . "/../lib/perl5";
 use lib $FindBin::Bin . "/../lib/perl5/site_perl";
 
+#### Bio Perl ####
+use Bio::SeqIO;
+
+#### breseq ####
 use Breseq::GenomeDiff;
 
 ##First argument is always the command
