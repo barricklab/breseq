@@ -4,6 +4,8 @@ ROOTDIR=$(PWD)
 BRESEQDIR=$(ROOTDIR)/src/perl/Breseq
 BIOSAMTOOLS=$(ROOTDIR)/extern/Bio-SamTools-1.19
 SAMTOOLSDIR=$(ROOTDIR)/extern/samtools-0.1.7a
+BIOPERL=$(ROOTDIR)/extern/bioperl-live
+
 STAGEDIR=$(ROOTDIR)/stage
 
 LOCALUSERCONFIG=$(ROOTDIR)/user-config.jam
@@ -25,7 +27,12 @@ make :
 	cd $(BRESEQDIR) ; \
 	perl Build.PL --install_base=$(STAGEDIR) ; \
 	./Build ; 
-
+	
+	## Bioperl
+	cd $(BIOPERL) ; \
+	perl Build.PL --accept --install_base=$(STAGEDIR) ; \
+	./Build ; 
+	
 	## Bio::SamTools
 	cd $(BIOSAMTOOLS) ; \
 	export SAMTOOLS=$(ROOTDIR)/extern/samtools-0.1.7a ; \
@@ -39,15 +46,20 @@ install :
 	cd $(BRESEQDIR) ; \
 	./Build install
 
+	cd $(BIOPERL) ; \
+	./Build install
+	
 	cd $(BIOSAMTOOLS) ; \
 	./Build install
-
-
+	
 clean :
 	bjam $(BJAMFLAGS) clean
 	bjam $(BJAMFLAGS) clean install
 
 	cd $(BRESEQDIR) ; \
+	./Build clean
+
+	cd $(BIOPERL) ; \
 	./Build clean
 	
 	cd $(BIOSAMTOOLS) ; \
