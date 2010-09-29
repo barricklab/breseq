@@ -85,8 +85,13 @@ sub plot_coverage
 	$self->throw("Invalid region $region") if (!$seq_id || !$start || !$end);
 		
 	## extend the region and re-check
-	my $extended_region = $seq_id . ":" . ($start - $options->{shaded_flanking}) . "-" . ($end + $options->{shaded_flanking});
-	my ($extended_seq_id, $extended_start, $extended_end, $extended_insert_start, $extended_insert_end);
+	my $extended_start = $start - $options->{shaded_flanking};
+	$extended_start = 0 if ($extended_start < 0);
+	my $extended_end = $end + $options->{shaded_flanking};
+	#call to region_to_coords will fix the end if it has been extended too far
+	
+	my $extended_region = "$seq_id:$extended_start-$extended_end";
+	my ($extended_seq_id, $extended_insert_start, $extended_insert_end);
 	($extended_seq_id, $extended_start, $extended_end, $extended_insert_start, $extended_insert_end, $extended_region)  = Breseq::Shared::region_to_coords($extended_region, $self->{bam});
 			
 	my $size = $extended_end - $extended_start + 1;

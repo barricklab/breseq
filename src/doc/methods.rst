@@ -1,7 +1,7 @@
 Methods
 ==============
 
-This section describes the algorithms used by :program:`breseq` in more detail for those who want to know how it predicts mutations.
+This section describes the algorithms used by :program:`breseq` in more detail.
 
 Read Alignment
 ----------------
@@ -10,54 +10,217 @@ By default :program:`breseq` uses :program:`SSAHA2` to map reads to the referenc
 
    ssaha2 -kmer 13 -skip 1 -seeds 1 -score 12 -cmatch 9 -ckmer 1 ...
 
-These parameters mean that only alignments to the reference genome with exact matches of at least 13 bp will be reported, and that attempts to extend these seed alignments that allow gaps and mismatches will use the cross_match algorithm with a word size of one base.
+These parameters mean that `only alignments to the reference genome with exact matches of at least 13 bp will be reported`, and that attempts to extend these seed alignments that allow gaps and mismatches will use the cross_match algorithm with a word size of one base. 
 
-Currently the distance contraints available in paired-end or mate-paired read data are not used during read alignment or as a source of evidence supporting mutational events. These data sets are treated as single-end read data.
+Currently the distance contraints available in paired-end or mate-paired libraries are not used during read alignment or as a source of evidence supporting mutations. These data sets are treated as single-end reads.
 
+:program:`breseq` keeps track of two kinds of read alignments:
+
+`unique read matches` 
+	Where a read aligns best to only one location in the reference sequence.
+`degenerate read matches`
+    Where a read aligns best to multiple, equivalent locations in the reference sequence.
+    
+For many calculations, :program:`breseq` is concerned with:
+
+`unique-only reference positions` 
+	Bases in the reference sequence that ``do not`` overlap any degenerate read matches. 
+
+.. _new-junction-evidence:   
+    
 New junction (NJ) evidence
 -----------------------------
 
 First :program:`breseq` searches for mosaic read alignments that may indicate new junctions between disjoint regions of the reference sequence. 
 
-In a pre-processing step, all read alignments with insertions or deletions of ≥2 bp are split into the separate sub-alignments because gaps larger than a single bp can be problematic for generating accurate and consistent alignments. Next, for each read that has multiple alignments to the reference, all combinations of these alignments are tested to find cases where: (1) there are at least 9 referent bases in the alignments that are not shared by both matches.
+Identifying candidate junctions
+*******************************
 
-In a pre-processing step, all read alignments with insertions or deletions of ≥2 nt are split into the separate sub-alignments. Then every read with multiple alignments to the reference sequence is examined for candidate junctions that it might support. These are compiled and the consensus best number are analyzed.
+In a pre-processing step, all read alignments with insertions or deletions of ≥2 bp are split into the separate sub-alignments. This step ensures that this type of mutation will be found by as new junction evidence, rather than read alignment evidence. This strategy tends to be more accurate because gaps larger than a single bp can be problematic for generating accurate and consistent read alignments, especially when there are indels involving simple sequence repeats. 
 
+Next, for each read that has multiple alignments to the reference, all pairs of these alignments are tested to find cases where: 
+
+#. Neither is completely contained within the other in read coordinates.
+#. One contains at least 10 read bases that do not overlap the other. 
+#. There are at most 20 bp unique to the read between matches to the reference.
+
+If a pair of alignments passes this test, :program:`breseq` generates the putative sequence of the new junction from the reference sequence and any intervening base pairs that are unique to the read. In cases where the two read alignments overlap because some of its sequence could be assigned to match either location in the reference genome, breseq attempts to assign as much of this overlap to the side of the read that maps uniquely to the reference genome as possible. It considers a location in the reference genome non-unique if it has degenerate reference matches. If ``repeat_region`` annotation exists in the reference genome, then program:`breseq` prefers to have junctions exactly overlap their boundaries as possible, because this represents the simplest mutation possible in cases of new transposon insertions.
+
+This candidate junction sequence includes as many flanking reference bases on each end as the longest read in the entire dataset. (So, if the dataset consists of 36-bp reads, and the two read alignments overlapped by five bases, the sequence for this candidate junction would be 36 x 2 - 5 = 67 bases.
+
+After processing all reads in this manner, :program:`breseq` combines all candidate junctions that match the same reference sequence and calculates a "position-hash" score. This score is a count of the number of `different` start positions in the reference sequence that are observed among the reads that support a candidate junction. This scoring scheme favors candidate junctions supported by reads that are evenly distributed on each strand of the reference genome and evenly distributed at different positions relative to the junction point. (Pathological candidates tend to be supported only by reads that barely overlap the junction and are all on one strand.)
+
+:program:`breseq` sorts all candidate junctions according to this score, breaking ties by favoring junctions with more reads, and retains the top-scoring candidate junctions until adding new candidates would cause their cumulative length to exceed 0.1x the total reference sequence length or thier number to exceed 5000.
+
+Scoring and accepting junctions
+*******************************
+
+New junctions may be supported by reads that do not overlap both sides sufficiently to seed alignments during mapping. To include these, :program:`breseq` performs a second :program:`SSAHA2` read-mapping step where it aligns all reads to the file of candidate junction sequences. Then, for each read, it determined whether its best alignment is to a junction candidate or to the reference sequence. A position-hash score is calculated again for each candidate junction by counting the number of different start positions that are observed among the reads that map to a candidate junction. Candidate junctions are accepted as evidence for a mutational event if their position-hash score exceeds a threshold calculated from the distribution of read coverage across reference sites that do not have any degenerate read matches.
+
+This score cutoff is calculated as follows (R-style pseudocode)::
+
+   max_junction_score = int(2 * avg_read_length);
+   pr_at_least_one = 1-pnbinom(0, size = nb_fit_size/max_junction_score, mu = nb_fit_mu/max_junction_score);
+   junction_accept_cutoff = qbinom(0.01, max_junction_score, pr_at_least_one);
+
+This calculation begins by fitting a censored negative-binomial (overdispersed Poisson) to the distribution of read coverage at unique-only reference positions as described under :ref:`read-coverage`. From this distribution :program:`breseq` calculates the chance that at least one read will start any given position, on a given strand, assuming that level of average coverage. The chance of observing a given position-hash score is then calculated according to the binomial distribution assuming 2 x read length trials, and this chance per trial of observing a read in this register. By default a cutoff of 0.01 is used to establish the cutoff for this test.
+
+For junctions that pass this scoring cutoff, the ends of reads aligning to the junction are re-added as split sub-alignments to the BAM alignment database, resolving ambiguous alignments, such that each read base aligns to only one reference nucleotide. These reads can be recognized in read alignment output because they are renamed with suffixes -M1 and -M2 for the two portions.
+
+.. _read-alignment-evidence:
 
 Read alignment (RA) evidence
 ------------------------------
 
+:program:`breseq` calls base substitution mutations
+
+
 Read end trimming
 *****************
 
-Alignments of the ends of short reads can be with respect. :program:`breseq` uses a conservative strategy that ignores possibly ambiguous.
+Alignments of of short reads can be ambiguous with respect to insertion and deletion mutations :ref:`ambiguous-end-figure`. :program:`breseq` uses a conservative strategy to ignores possibly ambiguous bases at the ends of reads when calling mutations within read alignments.
 
-Bayesian SNP caller
-********************
+It examines the reference sequence for perfect sequence repeats with lengths of 1-18 bases. Then for each position in the reference it determines how many bases must be trimmed from the end of a read beginning or ending at that position until the remaining bases are unambiguously aligned with respect to possible mutations causing changes in repeat sequences of these lengths. The minimum number of bases trimmed at each end of any read is 1, because one can never unambiguously know if another copy of that base was inserted by a mutation.
 
-Thus, :program:`breseq` will only find indels of 1 nt length and base substitutions by this method. 
+Here is an example, showing the logic of end trimming:
 
+.. figure:: images/end_trimming_example.png
+   :width: 450px
+   :align: center
+   
+   **End trimming.**
+
+This example shows the number of bases that will be trimmer from the left and right ends of a read if its match to the reference genome begins or ends on that base. (Note that the strand of the genome that the read matches makes no difference!)  The green, blue, and yellow highlight where the numbers come from for three case. 
+
+For green, a read with its left end aligned to this position is not informative with respect to how many AG copies there are in the sequenced genome. Therefore, it is only unambiguously aligned at the bases starting CAT-, and the first four bases will be trimmed. Similarly, a read with its right end aligned to the green position cannot tell how many TA copies there are. It will only be unambiguously aligned through -CTT, and it's last four bases will be trimmed.
+
+Trimming these ends enables more accurate mutation prediction because reads extending into these repeats from either side, but not completely crossing them, would otherwise indicate that there is evidence *against* an indel mutation in the repeat. 
+
+For example, consider this mutation, which involves insertion of a new AGC at a site where there are already two AGC copies:
+
+.. figure:: images/missed_mutation_no_trimming.png
+   :width: 600px
+   :align: center
+   
+   **Indel mutation prediction aided by end trimming.**
+	
+This image shows reads 1-6 aligned to the reference genome with and without end trimming (lowercase letters in reads). Two reads cross the entire AGCx2 repeat and show that a third AGC has been inserted.
+
+Without end trimming, two reads on the top strand that do not cross the new AGC insertion, contradict that there was any change to the sequence here when they are aligned to the reference. With end trimming, these bases are ignored because they are ambiguous with respect to possible insertions, like the event that happened, or deletion of one AGC copy.
+
+
+Base quality calibration
+************************
+
+
+
+
+Haploid Bayesian SNP caller
+***************************
+
+At each reference position, the 
+
+Calculated by the formula::
+
+   temp
+
+:math:`\sum\limits_{i=0} nE_n`
+
+Recall that :program:`breseq` will only find indels of 1 nt length and base substitutions as read alignment evidence, because all read alignments with gaps of ≥2 bases were split in a pre-processing step. Longer indels are identified from :ref:`new-junction-evidence`.
+
+.. _missing-coverage-evidence:
+
+
+Unknown base (UN) evidence
+--------------------------
+
+and comparisons between data sets.
 
 Missing coverage (MC) evidence
 ------------------------------
 
-Calibrated by fitting a negative binomial distribution to censored distribution.
+As :program:`breseq` traverses read alignments it predicts deletions as it encounters genomic regions missing and low coverage.
 
-*********
+.. _read-coverage:
 
+Coverage distribution model
+***************************
+
+If read sequences were randomly distributed across the entire reference sequence, then the number of positions with a given read coverage depth would follow a Poisson distribution. In practice, the actual read coverage depth distribution deviates from this idealized expectation in two ways:
+
+First, it is generally overdispersed relative to a Poisson distribution, e.g., there are more positions with higher and lower coverage than expected. This may represent a bias in the steps used to prepare a DNA fragment library or sequencing differences that cause more reads originating in certain regions of the genome to fail quality filtering steps. This overdispersion occurs even when re-sequencing a known genome. In fact, there is often a fingerprint of coverage bias where specific stretches consistently have higher or lower coverage than average across different instrument runs and DNA preparations.
+
+Second, there may be real mutations in the sequenced genome, such as large deletions or duplications. Deletions are more common. They will add weight to the number of positions where there was no observed coverage or very low coverage. Non-zero coverage commonly is present in practice because there may be a small amount of contaminating DNA from a different sample that does not have this deletion or some reads with errors may spuriously match to the deleted region. Duplications will add weight to the distribution tail at high coverage values. 
+
+:program:`breseq` fits a  negative-binomial distribution (an overdispersed Poisson distribution) to read coverage depth observed at unique-only reference positions. It uses left censored data to mitigate the effects of deleted regions on the overall fit, by finding the maximum of the distribution and ignores all data with coverage :math:`<` 0.25x this depth.
+
+In this example, circles represent the number of positions in the reference with a given read coverage depth. Data points that were censored during fitting are shown in red. The solid line is the least-squares best negative binomial fit to the data, and the dashed line is the best Poisson fit.
+
+Seed and extend algorithm
+*************************
+
+From the fit coverage distribution, :program:`breseq` calibrates how it will call deletions. Deletion predictions are initiated at every position with unique-only coverage of zero. They are extended in each direction and merged until unique coverage exceeds a threshold calculated from the overall coverage distribution for the reference sequence. This cutoff is the the minimum coverage that satisfies the following relationship:
+
+:math:`Pr( F(t) ) > 0.05\times\sqrt{L}`, 
+
+where *F* is the negative binomial cumulative distribution function with best-fit mean and size parameters, *t* is the threshold coverage, and *L* is the reference sequence length. 
+
+In some cases there is ambiguity concerning the size of missing coverage regions because they encompass or overlap regions with degenerate read matches. Even if a specific example of a repetitive region is deleted, there will still appear to be coverage because exact copies still exist elsewhere in the genome.
+
+:program:`breseq` assumes that any regions with degenerate coverage that occur wholly within a region of low unique coverage (defined as above) have been deleted with the flanking sequences. If a region of degenerate coverage overlaps one end of the missing region prediction, then that end is assigned a range of possible reference positions. They reflect the two extreme possibilities that (1) the entire contiguous repetitive region is missing and (2) the entire contiguous repetitive region is still there. To determine the latter boundary, the same extend algorithm and threshold used for unique-only coverage are applied to the degenerate coverage depth normalized to the number of matches each degenerate read had in the original genome.
+
+This example shows things....
+
+Missing coverage evidence is tallied in parallel with read alignment evidence as :program:`breseq` traverses the pileups of reads to the reference genome.
 
 Mutational event prediction
 ---------------------------
 
-Calibrated by fitting a negative binomial distribution to censored distribution.
+The previous sections describe **evidence** for mutations. :program:`breseq` next tries to predict biological **mutational events** from this evidence.
 
+Base substitutions
+******************
+
+``RA evidence = SNP or SUB mutation``
+
+Short insertions or deletions
+*****************************
+
+``RA or JC evidence = INS, DEL, or SUB mutation``
+
+Large deletions 
+*************************
+
+``MC+JC evidence = DEL mutation``
+
+Mobile element insertions
+*******************************
+
+``JC+JC evidence = MOB mutation``
+
+Duplications and amplification
+*********************************
+
+``JC evidence = AMP mutation``
+
+Chromosomal inversions
+**********************
+
+``JC+JC evidence = INV mutation``
+
+Orphan evidence
+*****************
+
+Evidence that is not assigned by any of the methods above is shown in a separate section of the output so that it can be manually examined.
 
 Limitations
 -----------
 
-:program:`breseq` cannot find some types of mutations:
+Even given perfect data, :program:`breseq` cannot find some types of mutations:
 
+`Novel sequences, not existing in reference sequences`
+   Because :program:`breseq` maps reads to the reference sequences, it will not find new sequences that have been inserted into the genome or new extrachromosomal DNA fragments such as plasmids. Reads that do not map to the reference genome are dumped to an output filesuitable for *de novo* assembly, so that they can be examined with other tools.
 `Mutations in repeat regions` 
-	In genomic regions where the only mapped reads also map equally well to other locations in the genome, it is not possible to call mutations. This is an inherent limitation of short-read data. These regions are reported as 'UN' evidence, so that the user can distinguish where in the genome there was not sufficient coverage of uniquely mapped reads to call mutations.
+   In genomic regions where the only mapped reads also map equally well to other locations in the genome, it is not possible to call mutations. This is an inherent limitation of short-read data. These regions are reported as 'UN' evidence, so that the user can distinguish where in the genome there was not sufficient coverage of uniquely mapped reads to call mutations.
 `Chromosomal inversions and rearrangements through repeat sequences`
    These types of mutations cannot be detected when they involve sequence repeats on the order of the read length. Reads that span repeats and uniquely align in the reference sequence on each end are necessary to detect them. :program:`breseq` does not use mate-paired or paired end information to identify these kinds of mutational events.

@@ -216,8 +216,8 @@ sub initialize_1
 	## avoids problem with Illumina assigning 2 to bad ends of reads!
 	
 	#used by CandidateJunctions.pm
-	$self->{no_junction_prediction} = undef;		# don't perform junction prediction steps
-	$self->{candidate_junction_score_method} = 'POS_HASH'; 	# Either POS_HASH, or MIN_OVERLAP
+	$self->{no_junction_prediction} = undef;					# don't perform junction prediction steps
+	$self->{candidate_junction_score_method} = 'POS_HASH'; 		# Either POS_HASH, or MIN_OVERLAP
 	$self->{preprocess_junction_min_indel_split_length} = 2;	# Split the SAM entries on indels of this many bp or more before identifying CJ
 																# Undefined = OFF
 	$self->{minimum_candidate_junction_pos_hash_score} = 0;		# Require at least this many unique start coordinate/strand reads to accept a CJ
