@@ -31,6 +31,7 @@ use strict;
 
 package Breseq::ErrorCalibration;
 
+use Breseq::CoverageDistribution;
 use Data::Dumper;
 
 ###
@@ -284,17 +285,77 @@ sub save_unique_coverage_distribution_file
 
 sub analyze_unique_coverage_distributions
 {
-	my ($settings, $summary, $ref_seq_info, $plot_key, $distribution_key, $script_key) = @_;
+	my ($settings, $summary, $ref_seq_info, $plot_key, $distribution_key) = @_;
 
 	foreach my $seq_id (@{$ref_seq_info->{seq_ids}})
 	{		
-		analyze_unique_coverage_distribution_file_using_R($settings, $seq_id, $summary, $plot_key, $distribution_key, $script_key);
+		analyze_unique_coverage_distribution_file_using_R($settings, $seq_id, $summary, $plot_key, $distribution_key);
 	}
+}
+
+sub analyze_unique_coverage_distribution_file_using_R
+{
+	my ($settings, $seq_id, $summary, $plot_key, $distribution_key) = @_;
+	
+	##initialize summary information
+	$summary->{unique_coverage}->{$seq_id}->{nbinom_size_parameter} = 'ND';
+	$summary->{unique_coverage}->{$seq_id}->{nbinom_mean_parameter} = 'ND';
+	$summary->{unique_coverage}->{$seq_id}->{nbinom_prob_parameter} = 'ND'; 
+	$summary->{unique_coverage}->{$seq_id}->{average} = 1;
+	$summary->{unique_coverage}->{$seq_id}->{variance} = 'ND';
+	$summary->{unique_coverage}->{$seq_id}->{dispersion} = 'ND';
+	$summary->{unique_coverage}->{$seq_id}->{deletion_coverage_propagation_cutoff} = 5;
+
+	my $unique_only_coverage_plot_file_name = $settings->file_name($plot_key, {'@'=>$seq_id});
+	my $unique_only_coverage_distribution_file_name = $settings->file_name($distribution_key, {'@'=>$seq_id});
+
+	### Define various coverage thresholds...
+	my $sequence_length = $summary->{sequence_conversion}->{reference_sequences}->{$seq_id}->{length};
+
+	### DELETION PROPAGATION CUTOFF
+	## One-tailed test p=0.05, Bonferroni correction
+	# my $del_propagation_pr_cutoff = 0.05 / $sequence_length;
+	
+	## One-tailed test p=0.01, no Bonferroni correction
+	#my $del_propagation_pr_cutoff = 0.01;
+	
+	## We really want somewhere between these two, try this...
+	my $deletion_propagation_pr_cutoff = 0.05 / sqrt($sequence_length);
+
+	### NEW JUNCTION COVERAGE CUTOFFS
+	## Arbitrary value that seems to work....
+	my $junction_coverage_pr_cutoff = 1/$sequence_length; # *0.05
+
+	## We really want somewhere between these two, try this...
+	my $junction_accept_pr_cutoff = 0.01;
+	my $junction_keep_pr_cutoff = 0.01 / sqrt($sequence_length);
+	my $junction_max_score = int(2 * $summary->{sequence_conversion}->{avg_read_length});
+	
+	my $dist = new Breseq::CoverageDistribution();
+	my @lines = $dist->fit($unique_only_coverage_distribution_file_name, $unique_only_coverage_plot_file_name,
+		$deletion_propagation_pr_cutoff, $junction_coverage_pr_cutoff, $junction_accept_pr_cutoff, $junction_keep_pr_cutoff, $junction_max_score);
+	
+	#First two lines are negative binomial parameters.
+	#Next three lines are average, standard deviation, and index of overdispersion
+
+	#Put these into summary
+	$summary->{unique_coverage}->{$seq_id}->{nbinom_size_parameter} = $lines[0];
+	$summary->{unique_coverage}->{$seq_id}->{nbinom_mean_parameter} = $lines[1]; 
+	#Calculated by formula, prob = size/(size + mu)
+	$summary->{unique_coverage}->{$seq_id}->{nbinom_prob_parameter} = $lines[0] / ($lines[0] + $lines[1]); 
+	$summary->{unique_coverage}->{$seq_id}->{average} = $lines[2];
+	$summary->{unique_coverage}->{$seq_id}->{variance} = $lines[3];
+	$summary->{unique_coverage}->{$seq_id}->{dispersion} = $lines[4];
+
+	$summary->{unique_coverage}->{$seq_id}->{deletion_coverage_propagation_cutoff} = $lines[5];
+	$summary->{unique_coverage}->{$seq_id}->{junction_coverage_cutoff} = $lines[6];
+	$summary->{unique_coverage}->{$seq_id}->{junction_accept_score_cutoff} = $lines[7];
+	$summary->{unique_coverage}->{$seq_id}->{junction_keep_score_cutoff} = $lines[8];
 }
 
 ## uses R to fit negative binomial distribution to coverage distribution
 ## and adds this information to the $summary
-sub analyze_unique_coverage_distribution_file_using_R
+sub _deprecated_analyze_unique_coverage_distribution_file_using_R
 {
 	my ($settings, $seq_id, $summary, $plot_key, $distribution_key, $script_key) = @_;
 
