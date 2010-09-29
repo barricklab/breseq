@@ -39,7 +39,6 @@ use Bio::DB::Sam;
 use Breseq::Fastq;
 use Breseq::Shared;
 use Data::Dumper;
-use FindBin;
 
 
 ## Workaround to avoid too many open files... bug in Bio::DB::Sam

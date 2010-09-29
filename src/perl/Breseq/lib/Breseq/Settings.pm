@@ -334,7 +334,6 @@ sub initialize_2
 	$self->{coverage_junction_best_bam_prefix} = "$self->{candidate_junction_path}/best";
 	$self->{coverage_junction_distribution_file_name} = "$self->{candidate_junction_path}/@.unique_only_coverage_distribution.tab";
 	$self->{coverage_junction_plot_file_name} = "$self->{candidate_junction_path}/@.coverage.pdf";
-	$self->{coverage_junction_script_file_name} = "$self->{candidate_junction_path}/@.coverage.r";
 	$self->{coverage_junction_summary_file_name} = "$self->{candidate_junction_path}/coverage.summary.bin";
 	$self->{coverage_junction_done_file_name} = "$self->{candidate_junction_path}/coverage_junction_alignment.done";
 
@@ -381,7 +380,6 @@ sub initialize_2
 	$self->{coverage_file_name} = "$self->{error_calibration_path}/@.coverage.tab";
 	$self->{unique_only_coverage_distribution_file_name} = "$self->{error_calibration_path}/@.unique_only_coverage_distribution.tab";
 	$self->{error_rates_summary_file_name} = "$self->{error_calibration_path}/summary.bin";
-	$self->{unique_coverage_distribution_r_script_file_name} = "$self->{error_calibration_path}/coverage.@.r_script";
 	$self->{plot_error_rates_r_script_file_name} = "$self->{lib_path}/plot_error_rate.r";
 	$self->{plot_error_rates_fit_r_script_file_name} = "$self->{error_calibration_path}/fit.#.r_script";
 	$self->{plot_error_rates_r_script_log_file_name} = "$self->{error_calibration_path}/#.plot_error_rate.log";

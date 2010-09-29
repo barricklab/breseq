@@ -348,7 +348,7 @@ if (!$settings->{no_junction_prediction})
 		
 			my $error_rates_summary_file_name = $settings->file_name('error_rates_summary_file_name');
 			Breseq::ErrorCalibration::analyze_unique_coverage_distributions($settings, $summary, $ref_seq_info, 
-				'coverage_junction_plot_file_name', 'coverage_junction_distribution_file_name', 'coverage_junction_script_file_name');
+				'coverage_junction_plot_file_name', 'coverage_junction_distribution_file_name');
 
 			Storable::store($summary->{unique_coverage}, $coverage_junction_summary_file_name) or die "Can't store data in file $coverage_junction_summary_file_name!\n";
 			$settings->done_step('coverage_junction_done_file_name');
@@ -628,7 +628,7 @@ if ($settings->do_step('error_rates_done_file_name', "Re-calibrating base error 
 	if (!$settings->{no_deletion_prediction})
 	{
 		Breseq::ErrorCalibration::analyze_unique_coverage_distributions($settings, $summary, $ref_seq_info,
-			'unique_only_coverage_plot_file_name', 'unique_only_coverage_distribution_file_name', 'unique_coverage_distribution_r_script_file_name');	
+			'unique_only_coverage_plot_file_name', 'unique_only_coverage_distribution_file_name');	
 	}
 	
 	Storable::store($summary->{unique_coverage}, $error_rates_summary_file_name) or die "Can't store data in file $error_rates_summary_file_name!\n";

@@ -98,9 +98,9 @@ remake-breseq :: clean-breseq make-breseq install-breseq
 ## tests
 
 test:
-	tests/test.sh test lambda_mult_ref_read
-	tests/test.sh test lambda_mixed_pop
-	tests/test.sh test REL606_fragment_manipulated
+	tests/lambda_mult_ref_read/testcmd.sh  test
+	tests/lambda_mixed_pop/testcmd.sh  test
+	tests/REL606_fragment_manipulated/testcmd.sh  test
 
 test-all:
 	tests/test.sh test tests
