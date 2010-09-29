@@ -40,6 +40,16 @@ make :
 	./Build ; 
 
 
+#utility to avoid everything else
+breseq :
+
+	cd $(BRESEQDIR) ; \
+	perl Build.PL --install_base=$(STAGEDIR) ; \
+	./Build
+
+	cd $(BRESEQDIR) ; \
+	./Build install
+
 install :
 	bjam $(BJAMFLAGS) install
 
@@ -88,8 +98,13 @@ remake-breseq :: clean-breseq make-breseq install-breseq
 ## tests
 
 test:
+	tests/test.sh test lambda_mult_ref_read
+	tests/test.sh test lambda_mixed_pop
+	tests/test.sh test REL606_fragment_manipulated
+
+test-all:
 	tests/test.sh test tests
-	
-clean-test:
+
+clean-tests:
 	tests/test.sh clean tests
 	

@@ -573,12 +573,12 @@ sub region_to_coords
 	my ($insert_start, $insert_end) = (0, 0);
 	#syntax that includes insert counts
 	# e.g. NC_001416:4566.1-4566.1
-	
+		
 	#strip commas!
 	$region =~ s/,//g;
 	if ($region =~ m/(.+)\:(\d+)\.(\d+)-(\d+)\.(\d+)/)
 	{	
-		($seq_id, $start, $insert_start, $end, $insert_end) = ($1, $2, $3, $4, $5);
+		($seq_id, $start, $insert_start, $end, $insert_end) = ($1, $2, $3, $4, $5);		
 	}
 	elsif ($region =~ m/(.+)\:(\d+)(\.\.|\-)(\d+)/)
 	{

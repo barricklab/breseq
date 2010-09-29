@@ -581,11 +581,6 @@ sub _alignments_to_candidate_junctions
 		print $al_ref->[0]->qname;
 		print "\n###########################\n";
 	}	
-		
-	### >>> This does not work -- see note at _unique_alignments_with_redundancy
-	### We are only concerned with combining intervals that are different in the reference they match
-	### but we keep track of the redundancy with which each side matches the reference genome.
-	#my ($al_ref, $r_ref) = _unique_alignments_with_redundancy($fai, $header, @al);
 
 	### Must still have multiple matches to support a new junction.
 	return if (scalar @$al_ref <= 1);
@@ -1214,82 +1209,6 @@ sub _num_matches_from_end
 
 	return ($qry_mismatch_pos, $ref_mismatch_pos);
 }
-
-
-### !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-### UNUSED
-### May dramatically help 454 data analysis, where longer reads will lead to 
-### more spurious candidate junctions?
-### experimental: this should pay attention to how many mismatches there are?
-sub _uncontained_alignments
-{
-	my (@al) = @_;
-	
-	## assumes longer alignments are given first
-	A1: for (my $i=0; $i<scalar @al; $i++)
-	{		
-		my $a1 = $al[$i];
-		my ($a1_start, $a1_end) = Breseq::Shared::alignment_query_start_end($a1);			
-		next A1 if ($a1_start == 0); #this is only true if read has no matches
-		my $a1_length = $a1_end - $a1_start + 1;
-
-		A2: for (my $j=$i+1; $j<scalar @al; $j++)
-		{
-			my $a2 = $al[$i];
-			my ($a2_start, $a2_end) = Breseq::Shared::alignment_query_start_end($a2);			
-			my $a2_length = $a2_end - $a2_start + 1;
-			
-			if ( ($a2_start >= $a1_start) && ($a2_start <= $a1_end ) && ($a1_length > $a2_length) )
-			{
-				splice @al, $j, 1;
-				$j--;
-			}
-		}
-	}
-
-	return @al;
-}
-
-
-
-### !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-### UNUSED because we need all candidates that have different sides
-### after expanding the junction sequence past what is matched by the reads here
-### because reads that overlap by fewer nt than necessary to seed a match
-### can resolve which junction is better supported
-
-## Combines alignments where reads match to exactly
-## the same reference sequence, so that there are
-## fewer pairs to consider when making candidate junction
-## sequences.
-sub _unique_alignments_with_redundancy
-{
-	my ($fai, $header, @al) = @_;
-	my @new_al;
-	my $matched_reference_sequence_hash;
-	my @redundancy;
-	foreach my $a (@al)
-	{
-		my $strand = 1 - 2 * $a->reversed;
-		my $interval = $header->target_name()->[$a->tid] . ":" . $a->start . "-" . $a->end;
-		my $dna = $fai->fetch($interval);
-		$dna = Breseq::Fastq::revcom($dna) if ($strand == -1);
-				
-		my $found = $matched_reference_sequence_hash->{$dna};
-		if ($found)
-		{
-			$redundancy[$found]++;
-			next;
-		}
-		
-		push @new_al, $a;
-		$matched_reference_sequence_hash->{$dna} = scalar(@redundancy);
-		push @redundancy, 1;
-	}
-	
-	return (\@new_al, \@redundancy);
-}
-
 
 return 1;
 
