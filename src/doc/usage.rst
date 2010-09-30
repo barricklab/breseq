@@ -105,7 +105,7 @@ Options:
 
 .. option:: -1, --total_only
 
-   In plot mode, only outputs the total coverage of uniquely or degenerately mapped reads. (Does not include the coverage of each on each strand of the reference genome.)
+   In plot mode, only outputs the total coverage of uniquely or degenerately mapped reads. (Does not include the coverage of each category on each strand of the reference genome.)
 
 .. option:: -t, --table
 

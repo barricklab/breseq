@@ -8,19 +8,21 @@ Installation
 
 :program:`breseq` requires several external packages and software programs to be installed.
 
-* GCC (C++ compiler) already installed on many systems
-* Perl (version 5.8 or higher) already installed on many systems
-* R Statistical Programming Language (version 2.10 or higher)
+* `GCC <http://gcc.gnu.org>`_ (or other C++ compiler) already installed on many systems
+* `Perl <http://www.perl.org>`_ (version 5.8 or higher) already installed on many systems
+* `SSAHA2 <http://www.sanger.ac.uk/resources/software/ssaha2/>`_ read mapping program
+* `R <http://www.r-project.org>`_ (version 2.10 or higher) statistical programming language 
 
 To install each missing dependency, use your system's package manager or visit the respective web pages linked above and follow the instructions for your platform.
 
 MacOSX Instructions
 ********************
 
-You must have administrator privileges to install :program:`breseq` using these instructions. We recommend that you use the package manager `MacPorts <http://www.macports.org/>`_.
+You must have administrator privileges to install :program:`breseq` using these instructions. We recommend that you install and use the package manager `MacPorts <http://www.macports.org/>`_ to simplfy some installation steps.
 
-* :program:`GCC`: Download and install the :program:`Developer tools` package from http://developer.apple.com/tools/. 
+* :program:`GCC`: download and install `Apple Developer tools <http://developer.apple.com/tools/>`_. 
 * :program:`Perl`: is already installed on MacOSX systems. 
+* :program:`SSAHA2`: Download and install the appropriate package from the `Sanger Center <http://www.sanger.ac.uk/resources/software/ssaha2/>`_.
 * :program:`R`: install with :program:`MacPorts` command: ``%% sudo port install R``
 
 2. Build :program:`breseq`
@@ -42,7 +44,7 @@ They include:
 * `BioPerl <http://www.bioperl.org>`_
 * `SAMtools <http://samtools.sourceforge.net>`_ 
 * `Bio::DB::Sam <http://search.cpan.org/~lds/Bio-SamTools/lib/Bio/DB/Sam.pm>`_ 
-* `Boost <http://www.boost.org>`
+* `Boost <http://www.boost.org>`_
 
 In order to not interfere with other versions of these tools that you may have installed, these files are not copied into their common system-wide paths. All of the files required for breseq to function are created and collected in the ``stage`` directory of the installation.
 

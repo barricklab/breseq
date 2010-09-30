@@ -3,7 +3,7 @@
 <plist version="1.0">
 <dict>
 	<key>currentDocument</key>
-	<string>lib/Breseq/ErrorCalibration.pm</string>
+	<string>lib/Breseq/GenomeDiff.pm</string>
 	<key>documents</key>
 	<array>
 		<dict>
@@ -50,14 +50,14 @@
 			<key>caret</key>
 			<dict>
 				<key>column</key>
-				<integer>54</integer>
+				<integer>52</integer>
 				<key>line</key>
-				<integer>198</integer>
+				<integer>634</integer>
 			</dict>
 			<key>firstVisibleColumn</key>
 			<integer>0</integer>
 			<key>firstVisibleLine</key>
-			<integer>186</integer>
+			<integer>610</integer>
 		</dict>
 		<key>bin/fastq_utils</key>
 		<dict>
@@ -159,77 +159,135 @@
 			<key>firstVisibleLine</key>
 			<integer>87</integer>
 		</dict>
-		<key>lib/Breseq/ErrorCalibration.pm</key>
+		<key>lib/Breseq/CoverageDistribution.pm</key>
 		<dict>
 			<key>caret</key>
 			<dict>
 				<key>column</key>
-				<integer>38</integer>
+				<integer>55</integer>
 				<key>line</key>
-				<integer>326</integer>
+				<integer>77</integer>
+			</dict>
+			<key>firstVisibleColumn</key>
+			<integer>0</integer>
+			<key>firstVisibleLine</key>
+			<integer>47</integer>
+		</dict>
+		<key>lib/Breseq/CoverageOutput.pm</key>
+		<dict>
+			<key>caret</key>
+			<dict>
+				<key>column</key>
+				<integer>26</integer>
+				<key>line</key>
+				<integer>113</integer>
 			</dict>
 			<key>columnSelection</key>
 			<false/>
 			<key>firstVisibleColumn</key>
 			<integer>0</integer>
 			<key>firstVisibleLine</key>
-			<integer>310</integer>
+			<integer>84</integer>
 			<key>selectFrom</key>
 			<dict>
 				<key>column</key>
-				<integer>67</integer>
+				<integer>0</integer>
 				<key>line</key>
-				<integer>326</integer>
+				<integer>113</integer>
 			</dict>
 			<key>selectTo</key>
 			<dict>
 				<key>column</key>
-				<integer>38</integer>
+				<integer>0</integer>
 				<key>line</key>
-				<integer>326</integer>
+				<integer>114</integer>
 			</dict>
+		</dict>
+		<key>lib/Breseq/ErrorCalibration.pm</key>
+		<dict>
+			<key>caret</key>
+			<dict>
+				<key>column</key>
+				<integer>0</integer>
+				<key>line</key>
+				<integer>353</integer>
+			</dict>
+			<key>firstVisibleColumn</key>
+			<integer>0</integer>
+			<key>firstVisibleLine</key>
+			<integer>315</integer>
+		</dict>
+		<key>lib/Breseq/Fastq.pm</key>
+		<dict>
+			<key>caret</key>
+			<dict>
+				<key>column</key>
+				<integer>0</integer>
+				<key>line</key>
+				<integer>0</integer>
+			</dict>
+			<key>firstVisibleColumn</key>
+			<integer>0</integer>
+			<key>firstVisibleLine</key>
+			<integer>11</integer>
 		</dict>
 		<key>lib/Breseq/GenomeDiff.pm</key>
 		<dict>
 			<key>caret</key>
 			<dict>
 				<key>column</key>
-				<integer>12</integer>
+				<integer>20</integer>
 				<key>line</key>
-				<integer>134</integer>
+				<integer>135</integer>
 			</dict>
+			<key>columnSelection</key>
+			<false/>
 			<key>firstVisibleColumn</key>
 			<integer>0</integer>
 			<key>firstVisibleLine</key>
-			<integer>113</integer>
+			<integer>116</integer>
+			<key>selectFrom</key>
+			<dict>
+				<key>column</key>
+				<integer>73</integer>
+				<key>line</key>
+				<integer>135</integer>
+			</dict>
+			<key>selectTo</key>
+			<dict>
+				<key>column</key>
+				<integer>20</integer>
+				<key>line</key>
+				<integer>135</integer>
+			</dict>
 		</dict>
 		<key>lib/Breseq/MutationIdentification.pm</key>
 		<dict>
 			<key>caret</key>
 			<dict>
 				<key>column</key>
-				<integer>56</integer>
+				<integer>41</integer>
 				<key>line</key>
-				<integer>593</integer>
+				<integer>604</integer>
 			</dict>
 			<key>firstVisibleColumn</key>
 			<integer>0</integer>
 			<key>firstVisibleLine</key>
-			<integer>564</integer>
+			<integer>574</integer>
 		</dict>
 		<key>lib/Breseq/MutationPredictor.pm</key>
 		<dict>
 			<key>caret</key>
 			<dict>
 				<key>column</key>
-				<integer>1</integer>
+				<integer>2</integer>
 				<key>line</key>
-				<integer>774</integer>
+				<integer>768</integer>
 			</dict>
 			<key>firstVisibleColumn</key>
 			<integer>0</integer>
 			<key>firstVisibleLine</key>
-			<integer>746</integer>
+			<integer>754</integer>
 		</dict>
 		<key>lib/Breseq/Output.pm</key>
 		<dict>
@@ -280,28 +338,102 @@
 			<key>caret</key>
 			<dict>
 				<key>column</key>
-				<integer>20</integer>
+				<integer>0</integer>
 				<key>line</key>
-				<integer>210</integer>
+				<integer>382</integer>
 			</dict>
 			<key>firstVisibleColumn</key>
 			<integer>0</integer>
 			<key>firstVisibleLine</key>
-			<integer>365</integer>
+			<integer>345</integer>
 		</dict>
 		<key>lib/Breseq/Shared.pm</key>
 		<dict>
 			<key>caret</key>
 			<dict>
 				<key>column</key>
-				<integer>38</integer>
+				<integer>20</integer>
 				<key>line</key>
-				<integer>609</integer>
+				<integer>36</integer>
+			</dict>
+			<key>columnSelection</key>
+			<false/>
+			<key>firstVisibleColumn</key>
+			<integer>0</integer>
+			<key>firstVisibleLine</key>
+			<integer>13</integer>
+			<key>selectFrom</key>
+			<dict>
+				<key>column</key>
+				<integer>0</integer>
+				<key>line</key>
+				<integer>34</integer>
+			</dict>
+			<key>selectTo</key>
+			<dict>
+				<key>column</key>
+				<integer>20</integer>
+				<key>line</key>
+				<integer>36</integer>
+			</dict>
+		</dict>
+		<key>lib/Breseq/coverage_distribution.r</key>
+		<dict>
+			<key>caret</key>
+			<dict>
+				<key>column</key>
+				<integer>83</integer>
+				<key>line</key>
+				<integer>225</integer>
 			</dict>
 			<key>firstVisibleColumn</key>
 			<integer>0</integer>
 			<key>firstVisibleLine</key>
-			<integer>571</integer>
+			<integer>193</integer>
+		</dict>
+		<key>lib/Breseq/plot_coverage.r</key>
+		<dict>
+			<key>caret</key>
+			<dict>
+				<key>column</key>
+				<integer>0</integer>
+				<key>line</key>
+				<integer>52</integer>
+			</dict>
+			<key>columnSelection</key>
+			<false/>
+			<key>firstVisibleColumn</key>
+			<integer>0</integer>
+			<key>firstVisibleLine</key>
+			<integer>32</integer>
+			<key>selectFrom</key>
+			<dict>
+				<key>column</key>
+				<integer>1</integer>
+				<key>line</key>
+				<integer>56</integer>
+			</dict>
+			<key>selectTo</key>
+			<dict>
+				<key>column</key>
+				<integer>0</integer>
+				<key>line</key>
+				<integer>52</integer>
+			</dict>
+		</dict>
+		<key>lib/Breseq/plot_error_rate.r</key>
+		<dict>
+			<key>caret</key>
+			<dict>
+				<key>column</key>
+				<integer>186</integer>
+				<key>line</key>
+				<integer>50</integer>
+			</dict>
+			<key>firstVisibleColumn</key>
+			<integer>0</integer>
+			<key>firstVisibleLine</key>
+			<integer>22</integer>
 		</dict>
 		<key>lib/Breseq/polymorphism_statistics.r</key>
 		<dict>
@@ -325,9 +457,15 @@
 		<string>bin/breseq</string>
 		<string>lib/Breseq/AlignmentCorrection.pm</string>
 		<string>lib/Breseq/ErrorCalibration.pm</string>
+		<string>lib/Breseq/coverage_distribution.r</string>
+		<string>lib/Breseq/CoverageDistribution.pm</string>
+		<string>lib/Breseq/plot_coverage.r</string>
+		<string>lib/Breseq/plot_error_rate.r</string>
+		<string>lib/Breseq/Fastq.pm</string>
 		<string>lib/Breseq/CandidateJunctions.pm</string>
 		<string>lib/Breseq/AlignmentOutput.pm</string>
 		<string>lib/Breseq/Shared.pm</string>
+		<string>lib/Breseq/CoverageOutput.pm</string>
 		<string>lib/Breseq/ReferenceSequence.pm</string>
 		<string>lib/Breseq/MutationIdentification.pm</string>
 		<string>lib/Breseq/MutationPredictor.pm</string>
@@ -341,6 +479,6 @@
 	<key>showFileHierarchyDrawer</key>
 	<true/>
 	<key>windowFrame</key>
-	<string>{{246, 233}, {838, 584}}</string>
+	<string>{{296, 27}, {975, 783}}</string>
 </dict>
 </plist>
