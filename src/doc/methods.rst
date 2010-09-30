@@ -109,32 +109,38 @@ This image shows reads 1-6 aligned to the reference genome with and without end 
 Without end trimming, two reads on the top strand that do not cross the new AGC insertion, contradict that there was any change to the sequence here when they are aligned to the reference. With end trimming, these bases are ignored because they are ambiguous with respect to possible insertions, like the event that happened, or deletion of one AGC copy.
 
 
-Base quality calibration
-************************
+Base quality re-calibration
+***************************
 
+In the FASTQ input files, each read base has been assigned a quality score by the built-in pipeline for a given sequencing technology. Base quality re-calibration using covariates such as identity of the reference base, identity of the mismatch base, base position within the read, and neighboring base identities can significantly improve these error rate estimates[McKenna2010]_.
 
+:program:`breseq` uses an empirical error model that is trained by assuming that nearly all of the disagreements between mapped reads and the reference genome are due to sequencing errors and not bona fide differences in the sample from the reference genomes. It simply counts the number of times that each base or a single-base gap is observed in a read opposite each base or a single-base gap. These counts are further binned by the quality score of the read base. (The quality score of the next aligned base in the read is used for single-base deletions). A pseudocount of 1 is added to all categories to prevent zero observations. These error counts are converted to error rates by dividing the count in each cell by the sum across that quality score.
 
+This plot shows a typical empirical error model fit to Illumina Genome Analyzer data. Note that :program:`breseq` is agnostic about exactly what quality score scheme is used by the input FASTQ. The X-axis assumes that `Sanger FASTQ format <http://en.wikipedia.org/wiki/FASTQ_format>`_ was used when converting ASCII characters to numbers, but it will not affect the results if input quality score format used a different offset, e.g. `Solexa FASTQ format <http://en.wikipedia.org/wiki/FASTQ_format>`_.
 
 Haploid Bayesian SNP caller
 ***************************
 
-At each reference position, the 
+At each alignment position, :program:`breseq` calculates the Bayesian posterior probability of possible sample bases given the observed read bases. Specifically, it uses a haploid model with five possible base states (A, T, C, G, and a gap), assumes a uniform prior probability of each state, and uses the empirical error model derived during base quality re-calibration to update the prior with each read base observation. 
 
-Calculated by the formula::
+Thus, at a given alignment position, the log10 ratio of the posterior probability that the sample has a certain base state b\ :sub:`x` versus the probability that the sample has a different base is: 
 
-   temp
+:math:`L(b_x) = \sum\limits_{i=1}^{n}\{\log_{10}[E(b_x, b_i, q_i)] - log_{10}[1 - E(b_x, b_i, q_i)]\}`
 
-:math:`\sum\limits_{i=0} nE_n`
+Where there are *n* reads aligned to this position, b\ :sub:`i` is the base observed in the *i*\ th read, q\ :sub:`i` is the quality of this base, and *E* is the probability of observing this read base given its quality score at a reference position with base b\ :sub:`x` according to the empirical error model.
+
+|breseq| determines the base with the highest *L*\ , and records read alignment evidence if this base is different from the reference base. This evidence is assigned *L* as a new quality score for the alignment column and this base prediction.
 
 Recall that :program:`breseq` will only find indels of 1 nt length and base substitutions as read alignment evidence, because all read alignments with gaps of ≥2 bases were split in a pre-processing step. Longer indels are identified from :ref:`new-junction-evidence`.
 
-.. _missing-coverage-evidence:
-
+.. _unknown-base-evidence:
 
 Unknown base (UN) evidence
 --------------------------
 
-and comparisons between data sets.
+When there is insufficient evidence to call a base at a reference position, :program"`breseq` reports this base as "unknown". Contiguous stretches of unknown bases are output and shown in the results. Explicitly marking bases as unknown is useful when analyzing many similar genomes; it allows one to ascertain when a mutation found in certain data sets may have been missed in others due to low coverage and/or poor data quality in some data sets.
+
+.. _missing-coverage-evidence:
 
 Missing coverage (MC) evidence
 ------------------------------
@@ -150,28 +156,26 @@ If read sequences were randomly distributed across the entire reference sequence
 
 First, it is generally overdispersed relative to a Poisson distribution, e.g., there are more positions with higher and lower coverage than expected. This may represent a bias in the steps used to prepare a DNA fragment library or sequencing differences that cause more reads originating in certain regions of the genome to fail quality filtering steps. This overdispersion occurs even when re-sequencing a known genome. In fact, there is often a fingerprint of coverage bias where specific stretches consistently have higher or lower coverage than average across different instrument runs and DNA preparations.
 
-Second, there may be real mutations in the sequenced genome, such as large deletions or duplications. Deletions are more common. They will add weight to the number of positions where there was no observed coverage or very low coverage. Non-zero coverage commonly is present in practice because there may be a small amount of contaminating DNA from a different sample that does not have this deletion or some reads with errors may spuriously match to the deleted region. Duplications will add weight to the distribution tail at high coverage values. 
+Second, there may be real mutations in the sequenced genome that affect the observed coverage distribution, such as large deletions and duplications. Deletions will add weight to low end of the distribution because they cause reference positions to have zero or very low coverage. Non-zero coverage commonly is present in practice because there may be a small amount of contaminating DNA from a different sample that does not have this deletion or a small number of reads with errors may spuriously map to the deleted region. Duplications and amplifications will add weight to the distribution at higher coverage values. Deletions tend to be more common that amplifications during laboratory evolution.
 
-:program:`breseq` fits a  negative-binomial distribution (an overdispersed Poisson distribution) to read coverage depth observed at unique-only reference positions. It uses left censored data to mitigate the effects of deleted regions on the overall fit, by finding the maximum of the distribution and ignores all data with coverage :math:`<` 0.25x this depth.
+:program:`breseq` fits a  negative-binomial distribution (an overdispersed Poisson distribution) to the read coverage depth observed at unique-only reference positions. It uses left censored data to mitigate the effects of deleted regions on the overall fit. The threshold for censoring is determined by by first finding the read-depth with the maximum representaton in the distribution after moving-average smoothing with a window size of 5. Positions with coverage less than half this maximum read-depth are ignored during fitting.
 
 In this example, circles represent the number of positions in the reference with a given read coverage depth. Data points that were censored during fitting are shown in red. The solid line is the least-squares best negative binomial fit to the data, and the dashed line is the best Poisson fit.
 
 Seed and extend algorithm
 *************************
 
-From the fit coverage distribution, :program:`breseq` calibrates how it will call deletions. Deletion predictions are initiated at every position with unique-only coverage of zero. They are extended in each direction and merged until unique coverage exceeds a threshold calculated from the overall coverage distribution for the reference sequence. This cutoff is the the minimum coverage that satisfies the following relationship:
+From the fit coverage distribution, :program:`breseq` calibrates how it will call deletions. Deletion predictions are initiated at every position with unique-only coverage of zero. They are extended in each direction and merged until unique coverage exceeds a threshold calculated from the overall coverage distribution for the reference sequence. This cutoff is the the minimum threshold coverage *t* that satisfies the following relationship:
 
-:math:`Pr( F(t) ) > 0.05\times\sqrt{L}`, 
+:math:`F(t) > 0.05\times\sqrt{L}`, 
 
-where *F* is the negative binomial cumulative distribution function with best-fit mean and size parameters, *t* is the threshold coverage, and *L* is the reference sequence length. 
+where *F* is the negative binomial cumulative distribution function with best-fit mean and size parameters and *L* is the reference sequence length. 
 
 In some cases there is ambiguity concerning the size of missing coverage regions because they encompass or overlap regions with degenerate read matches. Even if a specific example of a repetitive region is deleted, there will still appear to be coverage because exact copies still exist elsewhere in the genome.
 
 :program:`breseq` assumes that any regions with degenerate coverage that occur wholly within a region of low unique coverage (defined as above) have been deleted with the flanking sequences. If a region of degenerate coverage overlaps one end of the missing region prediction, then that end is assigned a range of possible reference positions. They reflect the two extreme possibilities that (1) the entire contiguous repetitive region is missing and (2) the entire contiguous repetitive region is still there. To determine the latter boundary, the same extend algorithm and threshold used for unique-only coverage are applied to the degenerate coverage depth normalized to the number of matches each degenerate read had in the original genome.
 
 This example shows things....
-
-Missing coverage evidence is tallied in parallel with read alignment evidence as :program:`breseq` traverses the pileups of reads to the reference genome.
 
 Mutational event prediction
 ---------------------------
@@ -183,44 +187,62 @@ Base substitutions
 
 ``RA evidence = SNP or SUB mutation``
 
-Short insertions or deletions
-*****************************
+
+When the quality score of RA evidence is greater than a cutoff of log10 the total reference sequence length + 6, a base substitution mutation is called. When only single base is affected, |breseq| calls a SNP mutation. When multiple SNPS occur adjacent to each other or in conjunction with indels (see below), |breseq| calls a substitution (SUB) mutation.
+
+Short insertions and deletions
+*******************************
 
 ``RA or JC evidence = INS, DEL, or SUB mutation``
+
+For single-base insertions and deletions, RA evidence with gap characters is used to call mutations as in the case of base substitutions. For slightly longer insertions and deletions, for which missing coverage evidence may not exist, these events may be predicted solely on the basis of new junctions joining them.
 
 Large deletions 
 *************************
 
 ``MC+JC evidence = DEL mutation``
 
+Missing coverage typically indicates a large deletion event. When a junction also exists that will join the precise endpoints, |breseq| predicts a deletion mutation.
+
 Mobile element insertions
 *******************************
 
 ``JC+JC evidence = MOB mutation``
 
-Duplications and amplification
-*********************************
+When two junctions exist that would join positions close by in the reference sequence to the ends of an annotated ``repeat_region``, |breseq| predicts a mobile element insertion. It further tries to shift the ends of the junctions such that they align best with the ends of the mobile element. 
+
+Duplications
+*************
 
 ``JC evidence = AMP mutation``
 
+If new junction evidence connects a region of the genome to a region on the same strand upstream, then it typically indicates that the intervening bases have been duplicated. |breseq| currently does not predict copy number changes from coverage, so coverage should be manually examined to see if these mutations are real.
+
 Chromosomal inversions
-**********************
+*************************
 
 ``JC+JC evidence = INV mutation``
 
-Orphan evidence
-*****************
+If new junctions that reciprocally join two distance regions of a genome occur in unique sequences (see below), |breseq| predicts an inversion mutation.
 
-Evidence that is not assigned by any of the methods above is shown in a separate section of the output so that it can be manually examined.
+Orphan evidence
+******************
+
+Evidence that is not assigned by |breseq| to any of the methods above is shown in a separate section of the output so that it can be manually examined.
 
 Limitations
 -----------
 
-Even given perfect data, :program:`breseq` cannot find some types of mutations:
+Even given perfect data, |breseq| cannot find some types of mutations:
 
 `Novel sequences, not existing in reference sequences`
-   Because :program:`breseq` maps reads to the reference sequences, it will not find new sequences that have been inserted into the genome or new extrachromosomal DNA fragments such as plasmids. Reads that do not map to the reference genome are dumped to an output filesuitable for *de novo* assembly, so that they can be examined with other tools.
+   Because |breseq| maps reads to the reference sequences, it will not find new sequences that have been inserted into the genome or new extrachromosomal DNA fragments such as plasmids. Reads that do not map to the reference genome are dumped to an output filesuitable for *de novo* assembly, so that they can be examined with other tools.
 `Mutations in repeat regions` 
    In genomic regions where the only mapped reads also map equally well to other locations in the genome, it is not possible to call mutations. This is an inherent limitation of short-read data. These regions are reported as 'UN' evidence, so that the user can distinguish where in the genome there was not sufficient coverage of uniquely mapped reads to call mutations.
 `Chromosomal inversions and rearrangements through repeat sequences`
    These types of mutations cannot be detected when they involve sequence repeats on the order of the read length. Reads that span repeats and uniquely align in the reference sequence on each end are necessary to detect them. :program:`breseq` does not use mate-paired or paired end information to identify these kinds of mutational events.
+   
+References
+-----------
+
+.. [McKenna2010]  McKenna et al. (2010) The Genome Analysis Toolkit: A MapReduce framework for analyzing next-generation DNA sequencing data. *Genome Research*  **20**:1297-1303.

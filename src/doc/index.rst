@@ -16,7 +16,8 @@ Contents:
    Installation <installation>
    Usage <usage>  
    Methods <methods>   
-   Output <output>
+   HTML Output <html_output>
+   GenomeDiff Output <gd_output>
    License <license>
    Acknowledgments <acknowledgments>
 
