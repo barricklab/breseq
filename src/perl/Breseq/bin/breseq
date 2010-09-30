@@ -176,6 +176,22 @@ if ($settings->do_step('sequence_conversion_done_file_name', "Read and reference
 		my $num_reads = 0;
 		my $fastq_file_name = $settings->read_file_to_fastq_file_name($read_file);	
 		my $in = Breseq::Fastq->new(-file => $fastq_file_name);
+				
+		my $qual_format = $in->{format};
+		if (!$qual_format ne 'SANGER')
+		{
+			if (!$settings->{accept_any_quality_scores})
+			{
+				die "      Base quality scores appear to be $qual_format.\n"
+				  . "      Convert to SANGER format and try again or use the\n"
+				  . "      option --force-quality-scores if they are SANGER.\n";
+			}
+			else
+			{
+				print STDERR "    Warning: Base quality scores appear to be $qual_format rather than SANGER.\n";
+			}
+		}
+		
 		while (my $seq = $in->next_seq)
 		{
 			my $read_length = length $seq->{seq};

@@ -51,15 +51,19 @@ use Data::Dumper;
 
 
 our $format_to_chr_offset = {
-	'sanger' => 33,
-	'solexa' => 64,
-	'illumina' => 64,
+	'SANGER' => 33,
+	'SOLEXA' => 64,
+	'ILLUMINA_1.3+' => 64,
+	'ILLUMINA_1.5+' => 64,
+	'UNKNOWN' => 0,
 };
 
 our $format_to_quality_type = {
-	'sanger' => 'phred',
-	'solexa' => 'solexa',
-	'illumina' => 'phred', 
+	'SANGER' => 'phred',
+	'SOLEXA' => 'solexa',
+	'ILLUMINA_1.3+' => 'phred', 
+	'ILLUMINA_1.5+' => 'phred', 
+	'UNKNOWN' => 'none',
 };
 
 
@@ -70,27 +74,42 @@ sub new
 	my $self = new Bio::Root::Root($caller, @args);
 
 	bless ($self, $class);
-	($self->{file_name}, $self->{format}) = $self->Bio::Root::RootI::_rearrange([qw(FILE FORMAT)], @args);
+	($self->{file_name}, $self->{format}, $self->{list_format}, $self->{verbose}) = $self->Bio::Root::RootI::_rearrange([qw(FILE FORMAT LIST_FORMAT VERBOSE)], @args);
 	$self->{file_name} or $self->throw("Must provide -file parameter");
-	#$self->{dont_reverse} = $self->Bio::Root::RootI::_rearrange([qw(dont_reverse)], @args);	
+	#$self->{dont_reverse} = $self->Bio::Root::RootI::_rearrange([qw(dont_reverse)], @args);		
 	
-	## assume sanger
-	(defined $self->{format}) or $self->{format} = 'sanger';
-	$self->{chr_offset} = $format_to_chr_offset->{$self->{format}};
-	$self->{quality_type} = $format_to_quality_type->{$self->{format}};
-	die "invalid format" if (!defined $self->{chr_offset});
-
-	$self->{list_format} = $self->Bio::Root::RootI::_rearrange([qw(LIST_FORMAT)], @args);
+	$self->{write_mode} = ($self->{file_name} =~ m/^>/) ? 1 : 0;
+	
+	## If no quality score format is provided, predict the format
+	if ($self->{write_mode})
+	{
+		$self->throw("It is only possible to write in SANGER format.") if ((defined $self->{format}) && ($self->{format} ne 'SANGER'));
+		$self->set_format("SANGER");
+	}	
+	else #read_mode
+	{
+		if ($self->{format})
+		{
+			$self->set_format($self->{format});
+		}
+		else
+		{
+			$self->set_format('Unknown');
+			my $predicted_format = $self->predict_format();
+			$self->set_format($predicted_format);
+			print "Predicted base quality score format is: $self->{format}\n" if ($self->{verbose});
+		}
+	}
 	
 	#opening for writing
-	open $self->{fh}, "$self->{file_name}" or die "Could not open file $self->{file_name}";
 	if ($self->{file_name} =~ m/^>/)
 	{
+		open $self->{fh}, "$self->{file_name}" or $self->throw("Could not open file $self->{file_name}");
 	}
 	#opening for reading
 	else
 	{	
-		open $self->{fh}, "$self->{file_name}" or die "Could not open file $self->{file_name}";
+		open $self->{fh}, "$self->{file_name}" or $self->throw("Could not open file $self->{file_name}");
 		$self->{next_line} = readline $self->{fh};
 		chomp $self->{next_line} if ($self->{next_line});
 	}
@@ -113,6 +132,9 @@ sub next_seq
 	return undef if (!defined $self->{next_line});
 		
 	my $new_seq;
+	$new_seq->{format} = $self->{format};
+	$new_seq->{chr_offset} = $format_to_chr_offset->{$self->{format}};
+	$new_seq->{quality_type} = $format_to_quality_type->{$self->{format}};
 
 	#print STDERR "\@LINE:::  $self->{next_line}\n";
 
@@ -155,58 +177,24 @@ sub next_seq
 				
 		foreach my $q (@qual_list)
 		{
-			die "chr out of range $q, fastq type may be incorrect" if ($q+$self->{chr_offset} < 0);
-			die "chr out of range $q, fastq type may be incorrect" if ($q+$self->{chr_offset} > 255);
+			$self->throw("chr out of range $q, fastq type may be incorrect") if ($q+$self->{chr_offset} < 0);
+			$self->throw("chr out of range $q, fastq type may be incorrect") if ($q+$self->{chr_offset} > 255);
 			$new_seq->{qual_chars}.= chr($q+$self->{chr_offset});
 		}
-	}
-	
-	### convert to sanger
-	if ($self->{format} ne 'sanger') 
-	{
-		my $new_quals = '';
-		foreach my $q (split //, $new_seq->{qual_chars})
-		{
-			##convert offset
-			$q = ord($q);
-			$q -= $self->{chr_offset};
-			
-			if ($self->{quality_type} ne 'phred')
-			{
-				$q = convert_quality_solexa_to_phred($q);
-			}
-			$q += 33;
-			$new_quals .= chr($q);
-		}
-		$new_seq->{qual_chars} = $new_quals;
 	}
 	
 	return $new_seq;
 }
 
-
-our %solexa_to_phred_conversion_table;
-our $init_solexa_to_phred_conversion_table = 0;
-
-sub populate_solexa_to_phred_conversion_table
+sub set_format
 {
-	my ($nothing) = @_;
-	
-	for (my $sq=-5; $sq<62; $sq++)
-	{
-		my $p = 10**(-$sq/10) / (1+10**(-$sq/10));
-		my $pq = -10 * log($p) / log(10);
-		$solexa_to_phred_conversion_table{$sq} = int($pq);
-	} 
-	$init_solexa_to_phred_conversion_table = 1;
-#	print STDERR Dumper(\%solexa_to_phred_conversion_table);
-}
-
-sub convert_quality_solexa_to_phred
-{
-	my ($sq) = @_;	
-	populate_solexa_to_phred_conversion_table() if (!$init_solexa_to_phred_conversion_table);
-	return $solexa_to_phred_conversion_table{$sq};
+	my ($self, $format) = @_;
+	$format = "\U$format";
+	$self->{format} = $format;
+	$self->{quality_type} = $format_to_quality_type->{$format};
+	$self->throw("Invalid base quality score format: $format") if (!defined $self->{quality_type});
+	$self->{chr_offset} = $format_to_chr_offset->{$format};
+	$self->throw("Invalid base quality score format: $format") if (!defined $self->{chr_offset});
 }
 
 =head2 predict_qual_format
@@ -220,13 +208,25 @@ sub convert_quality_solexa_to_phred
 
 sub predict_format
 {
-	my ($self, $n, $verbose) = @_;
+	my ($self, $n) = @_;
+	
+	## no predicting the format in write mode
+	$self->throw if ($self->{write_mode});
+	$self->throw if ($self->{format} ne 'UNKNOWN');
+	
+	##default number of reads to peek at
+	$n = 10000 if (!defined $n);
 
 	my %qual_found_hash;
 	my $average_qual;
 	my $max_qual;
 	my $min_qual;
 	my $qual_num = 0;
+	
+	## reset the file to the beginning and setup for reading...
+	open ($self->{fh}, "$self->{file_name}") or $self->throw("Could not open file $self->{file_name}");
+	$self->{next_line} = readline $self->{fh};
+	chomp $self->{next_line} if ($self->{next_line});
 	for (my $i=0; $i<$n; $i++)
 	{
 		my $seq = $self->next_seq;
@@ -243,6 +243,10 @@ sub predict_format
 			$min_qual = $q if ((!defined $min_qual) || ($q < $min_qual));			
 		}
 	}
+	close $self->{fh};
+	
+	$qual_num or $self->throw("No sequences found in FASTQ file.");
+	
 	$average_qual /= $qual_num;
 	my @sorted_quals = sort {-($qual_found_hash{$a} <=> $qual_found_hash{$b})} keys (%qual_found_hash);
 	my $most_common_qual = $sorted_quals[0];	
@@ -251,9 +255,12 @@ sub predict_format
 	## RECALL: these have already been treated as if they were phred style with 33 offset ***
 	## So if we believe it is Solexa, we must return values that are further offset;
 	
-	print STDERR "  Average quality: $average_qual\n" if ($verbose);
-	print STDERR "  Most common quality: $most_common_qual\n" if ($verbose);
-	print STDERR "  Quality Score Distribution:\n"  if ($verbose);
+	print STDERR "Number of reads examined: $n\n" if ($self->{verbose});
+	print STDERR "Min quality: $min_qual\n" if ($self->{verbose});
+	print STDERR "Max quality: $max_qual\n" if ($self->{verbose});
+	print STDERR "Average quality: $average_qual\n" if ($self->{verbose});
+	print STDERR "Most common quality: $most_common_qual\n" if ($self->{verbose});
+	print STDERR "Raw base quality score distribution:\n"  if ($self->{verbose});
 	
 	## record the cumulative distribution of quality scores
 	my $cdf = 0;
@@ -264,25 +271,81 @@ sub predict_format
 		$pr /= $qual_num;
 		$cdf += $pr;
 		$qual_cdf[$i-$min_qual] = $cdf;				
-		print STDERR "    $i: pr=" . sprintf("%.2f", $pr * 100) . "% cdf=" . sprintf("%.2f", $cdf * 100) . "%\n"  if ($verbose);
+		print STDERR "  $i: pr=" . sprintf("%.2f", $pr * 100) . "% cdf=" . sprintf("%.2f", $cdf * 100) . "%\n"  if ($self->{verbose});
 	}
-	
-	##choose fairly conservative cutoffs
-	return ('sanger', $min_qual, $max_qual, \@qual_cdf)  if ($average_qual < 50);
-	return ('illumina', $min_qual-31, $max_qual-31, \@qual_cdf) if ($average_qual > 50);
 
-	#print STDERR "  Failure to auto-detect quality score format.\n  Specify one manually!\n";
-	#print Dumper(\%qual_found_hash);
-	#die "\n";
+#    From Wikipedia page description...	
+#	 S - Sanger        Phred+33,  raw reads typically (0, 40)
+#	 X - Solexa        Solexa+64, raw reads typically (-5, 40)
+#	 I - Illumina 1.3+ Phred+64,  raw reads typically (0, 40)
+#	 J - Illumina 1.5+ Phred+64,  raw reads typically (3, 40)
 	
-	return ('', 0, 0, undef);
+	if ($min_qual < 59)
+	{
+		return 'Sanger';
+	}
+	if ($min_qual < 64)
+	{
+		return 'Solexa';
+	}
+	if ($min_qual < 67)
+	{
+		return 'Illumina_1.3+';
+	}
+	return 'Illumina_1.5+';
 }
 
 
 sub write_seq
 {
 	my ($self, $seq) = @_;
+	convert_sanger($seq) if ($seq->{format} ne 'SANGER');
 	print {$self->{fh}} "\@$seq->{id}\n$seq->{seq}\n+\n$seq->{qual_chars}\n";
+}
+
+our %solexa_to_phred_conversion_table;
+our $init_solexa_to_phred_conversion_table = 0;
+
+sub populate_solexa_to_phred_conversion_table
+{
+	my ($nothing) = @_;
+	
+	for (my $sq=-5; $sq<62; $sq++)
+	{
+		my $p = 10**(-$sq/10) / (1+10**(-$sq/10));
+		my $pq = -10 * log($p) / log(10);
+		$solexa_to_phred_conversion_table{$sq} = sprintf("%.0f", $pq);
+	} 
+	$init_solexa_to_phred_conversion_table = 1;
+}
+
+sub convert_quality_solexa_to_phred
+{	
+	my ($sq) = @_;	
+	populate_solexa_to_phred_conversion_table() if (!$init_solexa_to_phred_conversion_table);
+	return $solexa_to_phred_conversion_table{$sq};
+}
+
+sub convert_sanger
+{
+	my ($seq) = @_;
+	
+	my $sanger_chr_offset = $format_to_chr_offset->{'SANGER'};
+	my $seq_chr_offset = $format_to_chr_offset->{$seq->{format}};
+	my $seq_quality_type = $format_to_quality_type->{$seq->{format}};
+		
+	my @qual_list = split //, $seq->{qual_chars};
+	my $new_qual_chars = '';
+	foreach my $q (@qual_list)
+	{		
+		my $nq =  unpack("C",$q);		
+		$nq = $nq - $seq_chr_offset;		
+		$nq = convert_quality_solexa_to_phred($nq) if ($seq_quality_type eq 'SOLEXA');		
+		$nq += $sanger_chr_offset;		
+		$new_qual_chars .= chr($nq);
+	}
+	$seq->{qual_chars} = $new_qual_chars;	
+	$seq->{format} = 'SANGER';
 }
 
 sub complement
@@ -299,9 +362,6 @@ sub revcom
 	return reverse $seq;
 }
 
-##only do conversion if explicitly asked to save time
-##correctly removes offsets for phred(+33) vs solexa (+64)
-##solexa scores will be adjusted at a later stage...
 sub quals
 {
 	my ($seq) = @_;
@@ -319,7 +379,7 @@ sub split_fastq_to_fasta
 	my ($input, $output, $options) = @_;
 	die if (!defined $options->{number_per_file});
 
-	open INPUT, "<$input";
+	open INPUT, "<$input" ;
 
 	my $line = <INPUT>;
 
@@ -345,7 +405,7 @@ sub split_fastq_to_fasta
 				$output_name .= "_$file_index";
 			}
 		}
-		open OUTPUT, ">$output_name" or die "Could not open $output_name\n";
+		open OUTPUT, ">$output_name" or die;
 		
 		while ($line)
 		{

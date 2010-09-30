@@ -20,13 +20,13 @@ Required options:
 
 .. option:: reads1.fastq [reads2.fastq, reads3.fastq...]  
 
-   The remaining arguments at the command line are the FASTQ input files of reads. Any FASTQ quality score style (e.g., Sanger, Solexa, Illumina 1.5+) is accepted, :program:`breseq` internally re-calibrates the error rates. It does this for each FASTQ file separately, so data sets that were generated independently should be stored in separate input files.
+   The remaining arguments at the command line are the FASTQ input files of reads. The FASTQ base quality scores must be in `SANGER format <http://en.wikipedia.org/wiki/FASTQ_format>`_. The included tool :program:`fastq_utils` can be used to convert from other common formats. |breseq| re-calibrates the error rates for each FASTQ file separately, so data sets that were generated independently should be stored in different input files.
 
 Expert options:
 
 .. option:: --base-quality-cutoff <int>
 
-   Ignore bases with a quality score lower than this value when calling mutations. This accommodates Illumina formats that use quality scores of 1 and 2 to flag bad data. These bases are still used for aligning to the reference genome and are shown highlighted in yellow in read alignment drawings. Default: 3
+   Ignore bases with a quality score lower than this value when calling mutations. This accommodates Illumina formats that use quality scores of 2 to flag bad data. These bases are still used for aligning to the reference genome and are shown highlighted in yellow in read alignment drawings. Default: 3
 
 Other tools
 ------------------
