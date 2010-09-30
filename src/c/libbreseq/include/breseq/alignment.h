@@ -38,7 +38,7 @@ namespace breseq {
     //! Retrieve the base at a specified position in the read (0-indexed).
 		inline uint8_t query_base(const int32_t pos) const { assert((pos>=0) && (pos<query_length())); return bam1_seqi(query_sequence(), pos); }
     
-		//! Retrieve the position of the alignment in the query.
+		//! Retrieve the position of the alignment in the query (0-indexed).
 		inline int32_t query_position() const { return _p->qpos; }
 		
 		//! Calculate the length of this query out to the last non-clip, non-skip.
@@ -56,13 +56,13 @@ namespace breseq {
 		//! Has this alignment been trimmed?
 		bool is_trimmed() const;
 		
-		//! Start and end coordinates of the aligned part of the read (1-indexed). @dk: verify indexing
+		//! Start and end coordinates of the aligned part of the read (1-indexed). ???
 		std::pair<int32_t,int32_t> query_bounds() const;
 		
-		//! Starting coordinates of the aligned part of the read.  @dk: check indexing.
+		//! Starting coordinates of the aligned part of the read (1-indexed). ???
 		int32_t query_start() const;
 
-		//! Ending coordinates of the aligned part of the read. @dk: check indexing.
+		//! Ending coordinates of the aligned part of the read (1-indexed). ???
 		int32_t query_end() const;
 
 	protected:

@@ -11,7 +11,7 @@ Rewrite graph_coverage.pl to use BAM/FASTA files as input.
 Need to rewrite tabulate_coverage into C++
 to be able to replace the current version completely.
 
-C++: predict_mutations
+C++: identify_mutations
 replaces code in MutationIdentification.pm
 Input BAM and reference FAI. Output genomic diff of within-read mutations, deletions. 
 
@@ -23,6 +23,7 @@ replaces code in CandidateJunctions.pm
 Input SAM to reference. Output FASTA of candidate junctions.
 
 C++: resolve_alignments
+*Partially completed through C++ calc_trims*
 Replaces code in AlignmentCorrection.pm
 Input SAM to reference, SAM to candidate junctions, FASTQ files, and optionally -- repeat coordinates (so that junctions can be pushed to the end of IS).
 Output trimmed reads, junction_predictions, orphan read FASTQ.

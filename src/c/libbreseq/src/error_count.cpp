@@ -81,20 +81,18 @@ void breseq::error_count_pileup::callback(const breseq::pileup& p) {
       continue;
     }		
 				
-		uint32_t reversed = i->strand(); // are we on the reverse strand?
+		uint32_t reversed = i->reversed(); // are we on the reverse strand?
 		uint8_t* qseq = i->query_sequence(); // query sequence (read)
 		int32_t qpos = i->query_position(); // position of the alignment in the query
 
-		int32_t qstart = i->query_start() - 1; // @dk: 0-indexed, so subtract 1??  (should add)
-		int32_t qend = i->query_end() - 1;
+		int32_t qstart = i->query_start() - 1; // @dk: want 0-indexed, so subtract 1
+		int32_t qend = i->query_end() - 1; // @dk: want 0-indexed, so subtract 1
 
-//	int32_t qlen = i->query_length(); // length of this query
 		uint8_t* qscore = i->quality_scores(); // quality score array
 		int32_t fastq_file_index = i->fastq_file_index(); // sequencer-generated read file that this alignment belongs to
 		
 		uint32_t pos = p.position(); // position of this alignment on the reference sequence
 		char* refseq = p.reference_sequence(); // reference sequence for this target
-//	char ref_base[] = {refseq[pos], reverse_base(refseq[pos]), 0}; // reference base & its complement
 		
 		// Things to remember in the following:
     // -->1 Reverse the base when the read is on the other strand
