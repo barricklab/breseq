@@ -31,6 +31,7 @@ do_build() {
     pushd $1 > /dev/null
     for i in `find . ${FILE_PATTERN}`; do
         ${HASH} $i
+        cp output/output.gd expected.gd
     done > ${EXPECTED}
     popd > /dev/null
 }
