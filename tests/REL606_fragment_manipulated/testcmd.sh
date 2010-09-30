@@ -5,6 +5,7 @@ SELF=`dirname ${BASH_SOURCE}`
 
 testcmd() {
     ${BRESEQ} \
+        --force-quality-scores \
         -o ${SELF} \
         -n REL606_fragment_manipulated \
         -r ${DATADIR}/REL606/REL606.fragment.gbk \
