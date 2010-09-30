@@ -101,7 +101,8 @@ sub new
 		'no-indel-polymorphisms' => \$self->{no_indel_polymorphisms},	
 		'strict-polymorphism-prediction' => \$self->{strict_polymorphism_prediction},
 		'max-rejected-polymorphisms-to-show=s' => \$self->{max_rejected_polymorphisms_to_show},
-		'max-rejected-junctions-to-show=s' => \$self->{max_rejected_junctions_to_show},						
+		'max-rejected-junctions-to-show=s' => \$self->{max_rejected_junctions_to_show},	
+		'force-quality-scores' => \$self->{accept_any_quality_scores},							
 	) or pod2usage(2);
 
 	pod2usage(1) if $help;
@@ -175,6 +176,7 @@ sub new_annotate
 		'strict-polymorphism-prediction' => \$self->{strict_polymorphism_prediction},
 		'max-rejected-polymorphisms-to-show=s' => \$self->{max_rejected_polymorphisms_to_show},
 		'max-rejected-junctions-to-show=s' => \$self->{max_rejected_junctions_to_show},
+		'force-quality-scores' => \$self->{accept_any_quality_scores},
 	## This is the only different option	
 		'input-genome-diff|i=s' => \@{$self->{input_genome_diffs}},	
 	) or pod2usage(2);

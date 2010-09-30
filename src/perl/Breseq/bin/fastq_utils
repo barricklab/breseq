@@ -90,7 +90,25 @@ if ($command eq 'CLEAN')
 	}	
 }
 
-if ($command eq 'SOLEXA2SANGER')
+if (($command eq 'QUALITY') || ($command eq 'FORMAT'))
+{
+	use Breseq::Fastq;
+	use Getopt::Long;
+	use Pod::Usage;
+	my ($help, $man);
+	my $num_seq_per_file;
+	GetOptions(
+		'help|?' => \$help, 'man' => \$man,
+	) or pod2usage(2);
+	pod2usage(1) if $help;
+	pod2usage(-exitstatus => 0, -verbose => 2) if $man;	
+
+	my ( $input ) = @ARGV;
+
+	my $in_fastq = Breseq::Fastq->new( -file => "<$input", -verbose => 1);
+}
+
+if (($command eq 'SANGER') || ($command eq 'CONVERT'))
 {
 	use Breseq::Fastq;
 	use Getopt::Long;
@@ -105,8 +123,10 @@ if ($command eq 'SOLEXA2SANGER')
 
 	my ( $input, $output ) = @ARGV;
 
-	my $in_fastq = Breseq::Fastq->new( -file => "<$input", -format => 'solexa');
-	my $out_fastq = Breseq::Fastq->new( -file => ">$output", -format => 'sanger');
+	my $in_fastq = Breseq::Fastq->new( -file => "<$input");
+	my $out_fastq = Breseq::Fastq->new( -file => ">$output", -format => 'SANGER');
+	
+	print STDERR "Converting from $in_fastq->{format} to SANGER...\n";
 	
 	while ($_ = $in_fastq->next_seq)
 	{	
