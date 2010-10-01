@@ -1149,7 +1149,7 @@ sub decode_reject_reason
 	
 	if ($reject eq 'NJ')
 	{
-		return "Insufficient overlap of new junction sides by reads on both strands.";
+		return "Position hash score below cutoff.";
 	}
 	elsif ($reject eq 'EVALUE')
 	{

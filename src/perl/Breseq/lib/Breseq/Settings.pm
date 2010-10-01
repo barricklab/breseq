@@ -237,7 +237,7 @@ sub initialize_1
 
 	#used by AlignmentCorrection.pm
 	$self->{add_split_junction_sides} = 1;			# Add the sides of passed junctions to the SAM file?
-	
+	$self->{required_match_length} = 28;			# Match must span this many bases in query to count as a match
 	
 	$self->{no_mutation_prediction} = undef;		# don't perform read mismatch/indel prediction steps
 	$self->{no_deletion_prediction} = undef;		# don't perform deletion prediction steps

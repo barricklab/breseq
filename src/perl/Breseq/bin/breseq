@@ -178,7 +178,7 @@ if ($settings->do_step('sequence_conversion_done_file_name', "Read and reference
 		my $in = Breseq::Fastq->new(-file => $fastq_file_name);
 				
 		my $qual_format = $in->{format};
-		if (!$qual_format ne 'SANGER')
+		if ($qual_format ne 'SANGER')
 		{
 			if (!$settings->{accept_any_quality_scores})
 			{
@@ -189,6 +189,7 @@ if ($settings->do_step('sequence_conversion_done_file_name', "Read and reference
 			else
 			{
 				print STDERR "    Warning: Base quality scores appear to be $qual_format rather than SANGER.\n";
+				$in->set_format('SANGER');
 			}
 		}
 		
@@ -336,7 +337,7 @@ if (!$settings->{no_junction_prediction})
 		
 		if ($settings->do_step('preprocess_junction_done_file_name', "Preprocessing alignments for candidate junction identification"))
 		{
-			Breseq::CandidateJunction::preprocess_alignments($settings, $summary);
+			Breseq::CandidateJunction::preprocess_alignments($settings, $summary, $ref_seq_info);
 			$settings->done_step('preprocess_junction_done_file_name');
 		}
 	}
@@ -435,7 +436,7 @@ sub alignment_correction {}
 
 my @hybrids;
 my $alignment_correction_summary_file_name = $settings->file_name('alignment_correction_summary_file_name');	
-if ($settings->do_step('alignment_correction_done_file_name', "Resolving alignments with candidate junctions and trimming read ends"))
+if ($settings->do_step('alignment_correction_done_file_name', "Resolving alignments with candidate junctions"))
 {
 	$settings->create_path('alignment_correction_path');		
 	Breseq::AlignmentCorrection::correct_alignments($settings, $summary, $ref_seq_info);

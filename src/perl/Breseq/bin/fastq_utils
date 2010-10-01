@@ -124,6 +124,8 @@ if (($command eq 'SANGER') || ($command eq 'CONVERT'))
 	my ( $input, $output ) = @ARGV;
 
 	my $in_fastq = Breseq::Fastq->new( -file => "<$input");
+	die "Input file appears to already be in SANGER format.\n" if ($in_fastq->{format} eq 'SANGER');
+	
 	my $out_fastq = Breseq::Fastq->new( -file => ">$output", -format => 'SANGER');
 	
 	print STDERR "Converting from $in_fastq->{format} to SANGER...\n";
