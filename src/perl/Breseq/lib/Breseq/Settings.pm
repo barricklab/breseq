@@ -226,7 +226,14 @@ sub initialize_1
 																# OFF by default, because a fixed number are taken
 	$self->{minimum_candidate_junction_min_overlap_score} = 0;	# Require at least this many unique start coordinate/strand reads to accept a CJ
 																# OFF by default, because a fixed number are taken
-	$self->{required_unique_length_per_side} = 10;				# Require at least one of the pair of matches supporting a junction to have this
+
+	$self->{required_both_unique_length_per_side} = 5;			# Require both of the pair of matches supporting a junction to have this
+																# much of their matches unique in the reference sequence.
+	$self->{required_one_unique_length_per_side} = 10;			# Require at least one of the pair of matches supporting a junction to have this
+																# much of its match that is unique in the reference sequence.
+
+
+#	$self->{required_unique_length_per_side} = 10;				# Require at least one of the pair of matches supporting a junction to have this
 																# much of its match that is unique in the reference sequence.
 	$self->{maximum_inserted_junction_sequence_length} = 20;	# Ignore junctions with negative overlap (unique inserted sequence between reference 
 																# matches) greater than this length. Prevents evidence file names that are too long.
