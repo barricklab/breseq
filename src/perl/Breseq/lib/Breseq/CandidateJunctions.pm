@@ -362,9 +362,18 @@ sub identify_candidate_junctions
 	$summary->{candidate_junction} = $hcs;
 }
 
+=head2 preprocess_alignments
+
+ Title   :	preprocess_alignments
+ Usage   :	preprocess_alignments( $settings, $summary );
+ Function:	
+ Returns : 
+ 
+=cut
+
 sub preprocess_alignments
 {
-	my ($settings, $summary) = @_;	
+	my ($settings, $summary, $ref_seq_info) = @_;	
 
 	#get the cutoff for splitting alignments with indels
 	my $min_indel_split_len = $settings->{preprocess_junction_min_indel_split_length};
@@ -373,6 +382,9 @@ sub preprocess_alignments
 	my $preprocess_junction_best_sam_file_name = $settings->file_name('preprocess_junction_best_sam_file_name');
 	my $BSAM;
 	open $BSAM, ">$preprocess_junction_best_sam_file_name" or die "Could not open file $preprocess_junction_best_sam_file_name";
+	
+	my $reference_faidx_file_name = $settings->file_name('reference_fasta_file_name');
+	my $reference_fai = Bio::DB::Sam::Fai->load($reference_faidx_file_name);
 
 	BASE_FILE: foreach my $read_struct ($settings->read_structures)
 	{	
@@ -413,12 +425,20 @@ sub preprocess_alignments
 			#write best alignments
 			if ($settings->{candidate_junction_score_method} eq 'POS_HASH')
 			{
-				@$al_ref = Breseq::AlignmentCorrection::_alignment_list_to_dominant_best(@$al_ref);
+				@$al_ref = Breseq::AlignmentCorrection::_eligible_read_alignments($settings, $header, $reference_fai, $ref_seq_info, @$al_ref);
 				Breseq::Shared::tam_write_read_alignments($BSAM, $header, 0, $al_ref);
 			}
 		}	
 	}		
 }
+
+
+##
+## @JEB: Note that this may affect the order, which would have consequences
+## for the AlignmentCorrection step, which assumes highest scoring alignments are
+## first in the TAM file. So only USE the split alignment file for predicting
+## candidate junctions.
+##
 
 sub _split_indel_alignments
 {
