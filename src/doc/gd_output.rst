@@ -79,23 +79,222 @@ Line specification:
 MC: Missing coverage evidence
 """""""""""""""""""""""""""""
 
+Line specification:
+
+4. **seq_id** *<string>*
+
+   id of reference sequence fragment.
+
+5. **start** *<uint32>*
+
+   start position in reference sequence fragment.
+
+6. **end** *<uint32>*
+
+   end position in reference sequence of region.
+   
+7. **start_range** *<uint32>*
+
+   number of bases to offset *after* the **start position** to define the upper limit of the range where the start of a deletion could be.
+   
+8. **end_range** *<uint32>*
+
+   number of bases to offset *before* the **end position** to define the lower limit of the range where the start of a deletion could be.
+   
+Essentially this is evidence of missing coverage between two positions in the ranges [start, start+start_range] [end-end_range, end].
+
+
 NJ: New junction evidence
 """""""""""""""""""""""""
+
+4. **side_1_seq_id** *<string>*
+
+   id of reference sequence fragment containing side 1 of the junction.
+
+5. **side_1_position** *<uint32>*
+
+   position of side 1 at the junction boundary.
+   
+6. **side_1_strand* *<1/-1>*
+
+   direction that side 1 continues matching the reference sequence
+
+7. **side_2_seq_id** *<string>*
+
+   id of reference sequence fragment containing side 2 of the junction.
+   
+8. **side_2_position** *<uint32>*
+
+   position of side 2 at the junction boundary.
+
+9. **side_2_strand** *<1/-1>*
+
+   direction that side 2 continues matching the reference sequence.
+
+9. **overlap** *<uint32>*
+   
+   Number of bases that the two sides of the new junction have in common.
+
 
 UN: Unknown base evidence
 """""""""""""""""""""""""
 
+Line specification:
 
+4. **seq_id** *<string>*
+
+   id of reference sequence fragment.
+
+5. **start** *<uint32>*
+
+   start position in reference sequence of region.
+
+6. **end** *<uint32>*
+
+   end position in reference sequence of region.
 
 Mutational Event Types
 ++++++++++++++++++++++
 
-RA
-""" 
+SNP: Base substitution mutation
+""""""""""""""""""""""""""""""""
 
-*Notes:*
+4. **seq_id** *<string>*
 
-:type: Evidence :: Missing coverage (RA)
-:spec: #. **type** (RA) 
-       #. **id**
-       #. **parent-id**
+   id of reference sequence fragment.
+
+5. **position** *<uint32>*
+
+   position in reference sequence fragment.
+
+6. **new_seq** *<char>*
+
+   new base at position
+
+SUB: Multiple base substitution mutation
+""""""""""""""""""""""""""""""""""""""""
+
+4. **seq_id** *<string>*
+
+   id of reference sequence fragment.
+
+5. **position** *<uint32>*
+
+   position in reference sequence fragment.
+
+6. **size** *<uint32>*
+
+   number of bases *after* the specified reference position to replace with **new_seq**
+
+7. **new_seq** *<string>*
+
+   new base at position
+
+
+DEL: Deletion mutation
+""""""""""""""""""""""
+
+4. **seq_id** *<string>*
+
+   id of reference sequence fragment.
+
+5. **position** *<uint32>*
+
+   position in reference sequence fragment.
+
+6. **size** *<uint32>*
+
+   number of bases deleted in reference
+
+
+INS: Insertion mutation
+"""""""""""""""""""""""
+
+4. **seq_id** *<string>*
+
+   id of reference sequence fragment.
+
+5. **position** *<uint32>*
+
+   position in reference sequence fragment.
+
+6. **new_seq** *<string>*
+
+   new base inserted *after* the specified rference position
+
+MOB: Mobile element insertion mutation
+""""""""""""""""""""""""""""""""""""""
+
+4. **seq_id** *<string>*
+
+   id of reference sequence fragment.
+
+5. **position** *<uint32>*
+
+   position in reference sequence fragment.
+
+6. **repeat_name** *<string>*
+
+   name of the mobile element. Should correspond to an annotated **repeat_region** in the reference.
+
+7. **strand** *<1/-1>*
+
+   strand of mobile element insertion.  
+
+8. **duplication_size** *<uint32>*
+
+   number of bases duplicated during insertion, beginning with the specified reference position.
+   
+
+AMP: Amplification mutation
+"""""""""""""""""""""""""""
+
+4. **seq_id** *<string>*
+
+   id of reference sequence fragment.
+
+5. **position** *<uint32>*
+
+   position in reference sequence fragment.
+
+6. **size** *<uint32>*
+
+   number of bases duplicated starting with the specified reference position.
+
+7. **new_copy_number** *<uint32>*
+
+   new number of copies of specified bases. 
+
+CON: Gene conversion mutation
+"""""""""""""""""""""""""""""
+
+4. **seq_id** *<string>*
+
+   id of reference sequence fragment.
+
+5. **position** *<uint32>*
+
+   position in reference sequence fragment that was the target of gene conversion from another genomic location.
+
+6. **size** *<uint32>*
+
+   number of bases to replace in the reference genome beginning at the specified position.
+
+7. **region** *<sequence:start-end>*
+
+   Region in the reference genome to use as a replacement.
+
+INV: Inversion mutation
+"""""""""""""""""""""""
+
+4. **seq_id** *<string>*
+
+   id of reference sequence fragment.
+
+5. **position** *<uint32>*
+
+   position in reference sequence fragment.
+
+6. **size** *<uint32>*
+
+   number of bases in inverted region beginning at the specified reference position.
