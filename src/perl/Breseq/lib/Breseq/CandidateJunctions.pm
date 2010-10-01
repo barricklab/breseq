@@ -43,7 +43,9 @@ use Breseq::AlignmentCorrection;
 use Data::Dumper;
 
 ### constants
-my $required_unique_length_per_side;
+#my $required_unique_length_per_side; OLD
+my $required_both_unique_length_per_side;
+my $required_one_unique_length_per_side;
 my $maximum_inserted_junction_sequence_length;
 
 =head2 identify_candidate_junctions
@@ -61,7 +63,13 @@ sub identify_candidate_junctions
 	our ($settings, $summary, $ref_seq_info) = @_;
 
 	#set up some options that are global to this module
-	$required_unique_length_per_side = $settings->{required_unique_length_per_side};
+	#$required_unique_length_per_side = $settings->{required_unique_length_per_side}; #OLD
+	
+	$required_both_unique_length_per_side = $settings->{required_both_unique_length_per_side};
+	$required_one_unique_length_per_side = $settings->{required_one_unique_length_per_side};
+
+	print "$required_both_unique_length_per_side $required_one_unique_length_per_side\n" if ($verbose);
+
 	$maximum_inserted_junction_sequence_length = $settings->{maximum_inserted_junction_sequence_length};
 
 	#set up files and local variables from settings
@@ -101,7 +109,7 @@ sub identify_candidate_junctions
 		
 		## Decide which input SAM file we are using...
 		my $reference_sam_file_name = $settings->file_name('preprocess_junction_split_sam_file_name', {'#'=>$read_file});
-		$reference_sam_file_name = $settings->file_name('reference_sam_file_name', {'#'=>$read_file}) if ($settings->{candidate_junction_score_method} eq 'POS_HASH');
+		$reference_sam_file_name = $settings->file_name('reference_sam_file_name', {'#'=>$read_file}) if ($settings->{candidate_junction_score_method} ne 'POS_HASH');
 		
 		my $tam = Bio::DB::Tam->open($reference_sam_file_name) or die("Could not open reference same file: $reference_sam_file_name");		
 		
@@ -115,7 +123,7 @@ sub identify_candidate_junctions
 			last ALIGNMENT_LIST if (!$al_ref);
 									
 			$i++;
-			print STDERR "    ALIGNED READ:$i\n" if ($i % 10000 == 0);
+			print STDERR "    ALIGNED READ:$i CANDIDATE JUNCTIONS:" . (scalar keys %$candidate_junctions) . "\n" if ($i % 10000 == 0);
 
 			last ALIGNMENT_LIST if (defined $settings->{candidate_junction_read_limit} && ($i > $settings->{candidate_junction_read_limit}));
 			
@@ -186,7 +194,7 @@ sub identify_candidate_junctions
 			$handled_seq->{$rc_junction_seq}++;
 		}
 		
-		## Sort by score, then unique coordinate, then redundant (or second unique) coordinate to get reliable ordering for output
+		## Sort by unique coordinate, then redundant (or second unique) coordinate to get reliable ordering for output
 		sub by_score_unique_coord
 		{
 			my $a_item = Breseq::Shared::junction_name_split($a->{id});
@@ -447,6 +455,7 @@ sub _split_indel_alignments
 	#copy alignment list
 	my @al = @$al_ref;
 	my @untouched_al;
+	my $alignments_written = 0;
 	
 	ALIGNMENT: foreach my $a (@$al_ref)
 	{
@@ -463,10 +472,14 @@ sub _split_indel_alignments
 		
 		## handle the split
 		tam_write_split_alignment($PSAM, $header, $min_indel_split_len, $a);
+		$alignments_written += 2;
 	}
 	
-	#write remaining original alignments
-	Breseq::Shared::tam_write_read_alignments($PSAM, $header, 0, \@untouched_al);
+	#write remaining original alignments -- if there is more than one alignment for this read
+	if ($alignments_written + scalar(@untouched_al) > 1)
+	{
+		Breseq::Shared::tam_write_read_alignments($PSAM, $header, 0, \@untouched_al);
+	}
 }
 
 sub tam_write_split_alignment
@@ -673,12 +686,9 @@ sub _alignments_to_candidate_junctions
 	#only now that we've looked through everything can we determine whether the reference sequence matched 
 	#on a side was unique, after correcting for overlap
 	print "REDUNDANT_JUNCTION SIDES:\n" if ($verbose);
-	print Dumper(\%redundant_junction_sides) if ($verbose);
 	
 	foreach my $jct (@junctions)
-	{	
-		print Dumper($jct) if ($verbose);
-		
+	{			
 		my @junction_id_list = @{$jct->{list}};
 		my $junction_seq_string = $jct->{string};
 		my $min_overlap_score = $jct->{min_overlap_score};
@@ -1116,10 +1126,20 @@ sub _check_required_unique_length
 	my $intersection_length_negative = ($intersection_length < 0) ? -$intersection_length : 0;
 
 	## require EACH side to not be entirely included in the other and ONE to have a certain amount of unique sequence
-	my $passed = 0;
-	$passed ||= (($a1_length >= $intersection_length_positive + $required_unique_length_per_side) && ($a2_length > $intersection_length_positive));
-	$passed ||= (($a1_length > $intersection_length_positive) && ($a2_length >= $intersection_length_positive + $required_unique_length_per_side));
-	## enforce a maximum negative overlap
+	my $passed = 1;
+	
+	## require both ends to extend a certain minimum length outside of the overlap
+	$passed &&= ($a1_length >= $intersection_length_positive + $required_both_unique_length_per_side);
+	$passed &&= ($a2_length > $intersection_length_positive + $required_both_unique_length_per_side);
+	
+	## require one end to extend a higher minimum length outside of the overlap
+	$passed &&= (($a1_length >= $intersection_length_positive + $required_one_unique_length_per_side)  || ($a2_length > $intersection_length_positive + $required_one_unique_length_per_side));
+	
+	#OLD
+	#$passed ||= (($a1_length >= $intersection_length_positive + $required_unique_length_per_side) || ($a2_length > $intersection_length_positive));
+	#$passed ||= (($a1_length > $intersection_length_positive) && ($a2_length >= $intersection_length_positive + $required_unique_length_per_side));
+	
+	# enforce a maximum negative overlap
 	$passed &&= ($intersection_length_negative <= $maximum_inserted_junction_sequence_length);
 		
 	## Add a score based on the current read. We want to favor junctions with reads that overlap each side quite a bit
