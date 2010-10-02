@@ -455,17 +455,26 @@ sub tam_write_moved_alignment
 }
 
 
+# returns start and end in coordinates of query
+# lowest query base first, regardless of which strand
+# it matched in the reference genome (i.e., reversed alignment).
 sub alignment_query_start_end
 {
-	my ($a, $options) = @_;
-
+	my ($a) = @_;
+	
 	my ($start, $end) = ($a->query->start, $a->query->end);
-	if ($a->reversed && !$options->{no_reverse})
+	if ($a->reversed)
 	{
 		($start, $end) = ($a->l_qseq - $start + 1, $a->l_qseq - $end + 1);
 		($start, $end) = ($end, $start);
-	}	
+	}
 	return ($start, $end);
+}
+
+sub alignment_query_start_end_ref_strand
+{
+	my ($a) = @_;
+	return ($a->query->start, $a->query->end);
 }
 
 ## counts how many mismatches there are (including unmatched bases)
