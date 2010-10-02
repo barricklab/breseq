@@ -216,6 +216,7 @@ sub predict_format
 	
 	##default number of reads to peek at
 	$n = 10000 if (!defined $n);
+	$n = 1000000000000 if ("\U$n" eq 'ALL');
 
 	my %qual_found_hash;
 	my $average_qual;
@@ -227,7 +228,9 @@ sub predict_format
 	open ($self->{fh}, "$self->{file_name}") or $self->throw("Could not open file $self->{file_name}");
 	$self->{next_line} = readline $self->{fh};
 	chomp $self->{next_line} if ($self->{next_line});
-	for (my $i=0; $i<$n; $i++)
+	
+	my $i;
+	for ($i=0; $i<$n; $i++)
 	{
 		my $seq = $self->next_seq;
 		last if (!$seq);
@@ -244,7 +247,7 @@ sub predict_format
 		}
 	}
 	close $self->{fh};
-	
+		
 	$qual_num or $self->throw("No sequences found in FASTQ file.");
 	
 	$average_qual /= $qual_num;
@@ -255,7 +258,7 @@ sub predict_format
 	## RECALL: these have already been treated as if they were phred style with 33 offset ***
 	## So if we believe it is Solexa, we must return values that are further offset;
 	
-	print STDERR "Number of reads examined: $n\n" if ($self->{verbose});
+	print STDERR "Number of reads examined: $i\n" if ($self->{verbose});
 	print STDERR "Min quality: $min_qual\n" if ($self->{verbose});
 	print STDERR "Max quality: $max_qual\n" if ($self->{verbose});
 	print STDERR "Average quality: $average_qual\n" if ($self->{verbose});

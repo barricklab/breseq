@@ -232,13 +232,16 @@ sub correct_alignments
 # THESE SCORES ARE NOT CONSISTENT ACROSS STRANDS DUE TO DIFFERENT INDEL MATCHES
 #				$best_reference_score = $ra->aux_get("AS");
 			}
-
+			
 			# if < 0, then the best match is to the reference
 			my $mapping_quality_difference = $best_candidate_junction_score - $best_reference_score;
 			
 			print " Mapping quality difference: $mapping_quality_difference\n" if ($verbose);
 			print " Final Reference alignments = "  . (scalar @$this_reference_al) . "\n" if ($verbose);
 			print " Final Candidate junction alignments = " . (scalar @$this_candidate_junction_al) . "\n" if ($verbose);
+
+
+			next READ if ( (scalar @$this_candidate_junction_al == 0) && (scalar @$this_reference_al == 0));
 
 			### The best match we found to the reference was no better than the best to the
 			### candidate junction. This read potentially supports the candidate junction.
@@ -540,7 +543,7 @@ sub _eligible_read_alignments
 	}
 	
 	my @return_list = splice @al, 0, $last_best+1;	
-	
+	 
 	return @return_list;
 }
 
@@ -709,7 +712,7 @@ sub _trim_ambiguous_ends
 		$ref_string = $fai->fetch( $seq_id . ':' . $a->start . '-' . $a->end );
 	}
 		
-	my ($q_start, $q_end) = Breseq::Shared::alignment_query_start_end($a, { 'no_reverse' => 1} );
+	my ($q_start, $q_end) = Breseq::Shared::alignment_query_start_end($a);
 	my $q_length = $a->l_qseq;
 	my $qry_string = substr $a->qseq, $q_start-1, $q_end - $q_start + 1;
 	my $full_qry_string = $a->qseq;

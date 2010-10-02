@@ -42,11 +42,12 @@ use Breseq::AlignmentCorrection;
 
 use Data::Dumper;
 
-### constants
+### constants loaded locally from settings for convenience
 #my $required_unique_length_per_side; OLD
 my $required_both_unique_length_per_side;
 my $required_one_unique_length_per_side;
 my $maximum_inserted_junction_sequence_length;
+my $required_match_length;
 
 =head2 identify_candidate_junctions
 
@@ -67,10 +68,8 @@ sub identify_candidate_junctions
 	
 	$required_both_unique_length_per_side = $settings->{required_both_unique_length_per_side};
 	$required_one_unique_length_per_side = $settings->{required_one_unique_length_per_side};
-
-	print "$required_both_unique_length_per_side $required_one_unique_length_per_side\n" if ($verbose);
-
 	$maximum_inserted_junction_sequence_length = $settings->{maximum_inserted_junction_sequence_length};
+ 	$required_match_length = $settings->{required_match_length};
 
 	#set up files and local variables from settings
 	my $ref_strings = $ref_seq_info->{ref_strings};
@@ -462,7 +461,7 @@ sub _split_indel_alignments
 		my $split = 0;
 		
 		my $cigar_list = $a->cigar_array;
-		my @care_cigar_list = grep { (($_->[0] eq 'D') || ($_->[0] eq 'I')) && ($_->[1] > $min_indel_split_len) } @$cigar_list;
+		my @care_cigar_list = grep { (($_->[0] eq 'D') || ($_->[0] eq 'I')) && ($_->[1] >= $min_indel_split_len) } @$cigar_list;
 		
 		if (scalar @care_cigar_list == 0)
 		{
@@ -475,11 +474,29 @@ sub _split_indel_alignments
 		$alignments_written += 2;
 	}
 	
+	## Don't write when it covers the entire read!
+	##
+	## @JEB POSSIBLE OPTIMIZATION
+	## We could actually be a little smarter than this and
+	## Not write when we know that this matches so much of the
+	## Read that it cannot be used in a pair to create a candidate junction
+	##
+	## Use $self->{required_both_unique_length_per_side} to rule them out.
+	## 
+	@untouched_al = grep {!_entire_read_matches($_)} @untouched_al;
+	
 	#write remaining original alignments -- if there is more than one alignment for this read
 	if ($alignments_written + scalar(@untouched_al) > 1)
 	{
 		Breseq::Shared::tam_write_read_alignments($PSAM, $header, 0, \@untouched_al);
 	}
+}
+
+sub _entire_read_matches
+{
+	my ($a) = @_;
+	my ($start, $end) = Breseq::Shared::alignment_query_start_end($a);
+	return (($start == 1) && ($end == $a->l_qseq));
 }
 
 sub tam_write_split_alignment
@@ -625,58 +642,125 @@ sub _alignments_to_candidate_junctions
 	### were used to construct a junction. We must mark redundant sides AFTER correcting for overlap.
 	my %redundant_junction_sides;
 	my @junctions;	
+	
+	print $al_ref->[0]->qname . "\n" if ($verbose);
+	print "Total matches: " . (scalar @$al_ref) . "\n" if ($verbose);
+	
+	my (@list1, @list2);
+#	@list1 = @$al_ref;
+#	@list2 = @$al_ref;
+
+	my $max_union_length = 0;
+
+	foreach my $a (@$al_ref)
+	{
+		my ($a_start, $a_end) = Breseq::Shared::alignment_query_start_end($a);
+		print "($a_start, $a_end)\n" if ($verbose);
+		my $length = ($a_end - $a_start + 1);
+		$max_union_length = $length if ($length > $max_union_length);
 		
+		if ($a_start == 1)
+		{
+			push @list1, $a;
+		}
+		else
+		{
+			push @list2, $a;
+		}
+	}
+	
+	## bail before next statement
+#	return if (scalar @list1 == 0);
+	
+	#The first match in this category is the longest
+#	our ($encompass_start, $encompass_end) = Breseq::Shared::alignment_query_start_end($list1[0]);
+#	print "  Encompass ($encompass_start, $encompass_end)\n";
+	print "  List1: " . (scalar @list1) . "\n" if ($verbose);
+	print "  List2: " . (scalar @list2) . "\n" if ($verbose);	
+#	@list2 = grep { !_dominated($_) } @list2;
+#	print "  List2 not dominated: " . (scalar @list2) . "\n";
+
+#	sub _dominated
+#	{
+#		my ($a) = @_;
+#		my ($a_start, $a_end) = Breseq::Shared::alignment_query_start_end($a);
+#		return ($a_end <= $encompass_end);
+#	}
+	
+	my @passed_pair_list;
+	
 	### Try adding together each pair of matches to make a junction, by looking at read coordinates
-	A1: for (my $i=0; $i<scalar @$al_ref; $i++)
+	A1: foreach my $a1 (@list1)
 	{		
-		my $a1 = $al_ref->[$i];
 		my ($a1_start, $a1_end) = Breseq::Shared::alignment_query_start_end($a1);	
 
-		next A1 if ($a1_start == 0); #this is only true if read has no matches
-
-		A2: for (my $j=$i+1; $j<scalar @$al_ref; $j++)
+		A2: foreach my $a2 (@list2)
 		{
-			my $a2 = $al_ref->[$j];					
 			my ($a2_start, $a2_end) = Breseq::Shared::alignment_query_start_end($a2);
-
-			next A2 if ($a2_start == 0); #this is only true if read has no matches
-									
-			## If the intersection is just one of the hits, then there is no point...
-			## At least one side should have a certain amount of unique sequence.			
-			my ($passed, $a1_unique_length, $a2_unique_length) = _check_required_unique_length($a1_start, $a1_end, $a2_start, $a2_end);
 			
-			if ($passed)
+			## if either end is the same, it is going to fail.
+			## Note: we already checked for the start, when we split into the two lists!
+
+			# don't allow it to succeed no matter what if both of these reads are encompassed by a longer read from list one
+			#next A2 if ($a2_end <= $encompass_end);
+
+			## Check a slew of guards to prevent predicting too many junctions to handle.
+			my ($passed, $a1_unique_length, $a2_unique_length, $union_length) = _check_read_pair_requirements($a1_start, $a1_end, $a2_start, $a2_end);
+			
+			if ($passed && ($union_length >= $max_union_length))
 			{
-				## start redundancy at 1
-				my $r1 = 1;
-				my $r2 = 1; 
+				#destroy any contained matches -- possibly leaving some leeway
+				if ($union_length > $max_union_length)
+				{
+					$max_union_length = $union_length;
+					@passed_pair_list = grep { $_->{union_length} >= $max_union_length} @passed_pair_list;
+				}
 				
-				## we pass back and forth the redundancies in case they switch sides
-				my ($junction_seq_string, $side_1_ref_seq, $side_2_ref_seq, $junction_coord_1, $junction_coord_2, $read_begin_coord, @junction_id_list);
-				
-				($passed, $junction_seq_string, $side_1_ref_seq, $side_2_ref_seq, $junction_coord_1, $junction_coord_2, $r1, $r2, $read_begin_coord, @junction_id_list)
-					= _alignments_to_candidate_junction($settings, $summary, $ref_seq_info, $fai, $header, $a1, $a2, $r1, $r2);
-				next A2 if (!$passed);
-								
-				# a value of zero gets added if they were unique, >0 if redundant b/c they matched same reference sequence
-				$redundant_junction_sides{$side_1_ref_seq}->{$junction_coord_1} += $r1-1;
-				$redundant_junction_sides{$side_2_ref_seq}->{$junction_coord_2} += $r2-1;
-				
-				# also add to the reverse complement, because we can't be sure of the strandedness
-				# (alternately we could reverse complement if the first base was an A or C, for example
-				## it seems like there could possibly be some cross-talk between sides of junctions here, that
-				## could snarl things up, but I'm not sure?
-				## TO DO: I'm too tired of this section to do it now, but the correct sequence strand could be 
-				## decided (keeping track of all the reversals) in _alignments_to_candidate_junction
-				$redundant_junction_sides{Breseq::Fastq::revcom($side_1_ref_seq)}->{$junction_coord_1} += $r1-1;
-				$redundant_junction_sides{Breseq::Fastq::revcom($side_2_ref_seq)}->{$junction_coord_2} += $r2-1;
-				
-				my $min_overlap_score = ($a1_unique_length < $a2_unique_length) ? $a1_unique_length : $a2_unique_length;
-				
-				push @junctions, { 'list' => \@junction_id_list, 'string' => $junction_seq_string, 'min_overlap_score' => $min_overlap_score, 'read_begin_coord' => $read_begin_coord, 'side_1_ref_seq' => $side_1_ref_seq, 'side_2_ref_seq' => $side_2_ref_seq};
+				push @passed_pair_list, { a1 => $a1, a2 => $a2, union_length => $union_length, a1_unique_length => $a1_unique_length, a2_unique_length => $a2_unique_length};				
 			}
+			
 		}
 	}	
+	
+	foreach my $pp (@passed_pair_list)
+	{		
+		## localize variables
+		my $a1 = $pp->{a1};
+		my $a2 = $pp->{a2};
+		my $a1_unique_length = $pp->{a1_unique_length};
+		my $a2_unique_length = $pp->{a2_unique_length};
+				
+		## start redundancy at 1
+		my $r1 = 1;
+		my $r2 = 1; 
+				
+		## we pass back and forth the redundancies in case they switch sides
+		my ($passed, $junction_seq_string, $side_1_ref_seq, $side_2_ref_seq, $junction_coord_1, $junction_coord_2, $read_begin_coord, @junction_id_list);
+		
+		($passed, $junction_seq_string, $side_1_ref_seq, $side_2_ref_seq, $junction_coord_1, $junction_coord_2, $r1, $r2, $read_begin_coord, @junction_id_list)
+			= _alignments_to_candidate_junction($settings, $summary, $ref_seq_info, $fai, $header, $a1, $a2, $r1, $r2);
+		next if (!$passed);
+						
+		# a value of zero gets added if they were unique, >0 if redundant b/c they matched same reference sequence
+		$redundant_junction_sides{$side_1_ref_seq}->{$junction_coord_1} += $r1-1;
+		$redundant_junction_sides{$side_2_ref_seq}->{$junction_coord_2} += $r2-1;
+		
+		# also add to the reverse complement, because we can't be sure of the strandedness
+		# (alternately we could reverse complement if the first base was an A or C, for example
+		## it seems like there could possibly be some cross-talk between sides of junctions here, that
+		## could snarl things up, but I'm not sure?
+		## TO DO: I'm too tired of this section to do it now, but the correct sequence strand could be 
+		## decided (keeping track of all the reversals) in _alignments_to_candidate_junction
+		$redundant_junction_sides{Breseq::Fastq::revcom($side_1_ref_seq)}->{$junction_coord_1} += $r1-1;
+		$redundant_junction_sides{Breseq::Fastq::revcom($side_2_ref_seq)}->{$junction_coord_2} += $r2-1;
+		
+		my $min_overlap_score = ($a1_unique_length < $a2_unique_length) ? $a1_unique_length : $a2_unique_length;
+		
+		push @junctions, { 'list' => \@junction_id_list, 'string' => $junction_seq_string, 'min_overlap_score' => $min_overlap_score, 'read_begin_coord' => $read_begin_coord, 'side_1_ref_seq' => $side_1_ref_seq, 'side_2_ref_seq' => $side_2_ref_seq};
+	}
+	
+	print "  Junctions: " . (scalar @junctions) . "\n" if ($verbose);
+#	print "JACKPOT!!!\n" if (scalar @junctions > 5);
 	
 	## Done if everything already ruled out...
 	return if (scalar @junctions == 0);
@@ -908,7 +992,7 @@ sub _alignments_to_candidate_junction
 		if (defined $q1_move || defined $q2_move)
 		{
 			print "Rejecting alignment because there is not not enough overlap\n" if ($verbose);
-			my $passed = _check_required_unique_length($r1_start, $r1_end, $r2_start, $r2_end);
+			my $passed = _check_read_pair_requirements($r1_start, $r1_end, $r2_start, $r2_end);
 			return (0) if (!$passed);
 		}
 		
@@ -1106,9 +1190,13 @@ sub _alignments_to_candidate_junction
 	return (1, $junction_seq_string, $ref_seq_matched_1, $ref_seq_matched_2, $junction_coord_1, $junction_coord_2, $redundancy_1, $redundancy_2, $read_begin_coord, @junction_id_list);
 }
 
-sub _check_required_unique_length
+sub _check_read_pair_requirements
 {
 	my ($a1_start, $a1_end, $a2_start, $a2_end) = @_;
+
+	## 0. Require one match to start at the beginning of the read
+	return 0 if (($a1_start != 1) && ($a2_start != 1));
+	#Already checked when two lists were constructed: TEST AND REMOVE
 
 	my $a1_length = $a1_end - $a1_start + 1;
 	my $a2_length = $a2_end - $a2_start + 1;
@@ -1125,29 +1213,34 @@ sub _check_required_unique_length
 	my $intersection_length_positive = ($intersection_length > 0) ? $intersection_length : 0;			
 	my $intersection_length_negative = ($intersection_length < 0) ? -$intersection_length : 0;
 
-	## require EACH side to not be entirely included in the other and ONE to have a certain amount of unique sequence
-	my $passed = 1;
+	###
+	## CHECKS
+	###
+
+	## 1. Require maximum negative overlap (inserted unique sequence length) to be less than some value
+	return 0 if ($intersection_length_negative > $maximum_inserted_junction_sequence_length);
+
+	## 2. Require both ends to extend a certain minimum length outside of the overlap
+	return 0 if ($a1_length < $intersection_length_positive + $required_both_unique_length_per_side);
+	return 0 if ($a2_length < $intersection_length_positive + $required_both_unique_length_per_side);
 	
-	## require both ends to extend a certain minimum length outside of the overlap
-	$passed &&= ($a1_length >= $intersection_length_positive + $required_both_unique_length_per_side);
-	$passed &&= ($a2_length > $intersection_length_positive + $required_both_unique_length_per_side);
-	
-	## require one end to extend a higher minimum length outside of the overlap
-	$passed &&= (($a1_length >= $intersection_length_positive + $required_one_unique_length_per_side)  || ($a2_length > $intersection_length_positive + $required_one_unique_length_per_side));
-	
-	#OLD
-	#$passed ||= (($a1_length >= $intersection_length_positive + $required_unique_length_per_side) || ($a2_length > $intersection_length_positive));
-	#$passed ||= (($a1_length > $intersection_length_positive) && ($a2_length >= $intersection_length_positive + $required_unique_length_per_side));
-	
-	# enforce a maximum negative overlap
-	$passed &&= ($intersection_length_negative <= $maximum_inserted_junction_sequence_length);
+	## 3. Require one end to extend a higher minimum length outside of the overlap
+	return 0 if (($a1_length < $intersection_length_positive + $required_one_unique_length_per_side) 
+			  && ($a2_length < $intersection_length_positive + $required_one_unique_length_per_side));
+
+	## 4. Require both matches together to cover a minimum part of the read.
+	return 0 if ($union_length < $required_match_length);
 		
 	## Add a score based on the current read. We want to favor junctions with reads that overlap each side quite a bit
 	## so we add the minimum that the read extends into each side of the candidate junction (not counting the overlap).
 	my $a1_unique_length = ($a1_length - $intersection_length_positive);
 	my $a2_unique_length = ($a2_length - $intersection_length_positive);
 	
-	return ($passed, $a1_unique_length, $a2_unique_length);
+	#print "=== Match1: $a1_start-$a1_end   Match2: $a2_start-$a2_end\n";
+	#print "    Union: $union_length   Intersection: $intersection_length\n";
+	#print "    Unique1: $a1_unique_length   Unique2: $a2_unique_length\n";
+
+	return (1, $a1_unique_length, $a2_unique_length, $union_length);
 }
 
 ## find the maximum number of positions one can go from the end without finding a mismatch
