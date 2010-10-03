@@ -371,7 +371,6 @@ sub initialize_2
 	$self->{resolved_reference_sam_file_name} = "$self->{alignment_correction_path}/reference.sam";
 	$self->{resolved_junction_sam_file_name} = "$self->{alignment_correction_path}/junction.sam";
 	$self->{predicted_junction_file_name} = "$self->{alignment_correction_path}/jc_evidence.gd";
-	$self->{unmatched_read_file_name} = "$self->{alignment_correction_path}/#.unmatched.fastq";
 	$self->{alignment_correction_summary_file_name} = "$self->{alignment_correction_path}/summary.bin";
 	$self->{alignment_correction_done_file_name} = "$self->{alignment_correction_path}/alignment_resolution.done";
 	$self->{jc_genome_diff_file_name} = "$self->{alignment_correction_path}/jc_evidence.gd";
@@ -426,6 +425,7 @@ sub initialize_2
 	$self->{reference_bam_file_name} = "$self->{data_path}/reference.bam";
 	$self->{reference_fasta_file_name} = "$self->{data_path}/reference.fasta";
 	$self->{reference_faidx_file_name} = "$self->{data_path}/reference.fasta.fai";
+	$self->{unmatched_read_file_name} = "$self->{data_path}/#.unmatched.fastq";
 	
 	##### output #####
 	## things in this location are part of the user-readable output

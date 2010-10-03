@@ -47,19 +47,49 @@ sub correct_alignments
 	my $gene_list_hash_ref = $ref_seq_info->{gene_lists};
 	my $repeat_list_hash_ref = $ref_seq_info->{repeat_lists};
 	my $flanking_length = $settings->{max_read_length};
-				
-	## for now we just use mapping qualities from ssaha2, but could load ref sequences this way
-	my $reference_faidx_file_name = $settings->file_name('reference_fasta_file_name');
-	my $reference_fai = Bio::DB::Sam::Fai->load($reference_faidx_file_name);
-		
-	my $candidate_junction_file_name = $settings->file_name('candidate_junction_fasta_file_name');
-	## if there were no candidate junctions (file is empty) then we seg fault if we try to use samtools on it...
-	$settings->{no_junction_prediction} = 1 if ( (!-e $candidate_junction_file_name) || (-s $candidate_junction_file_name == 0) );
-	my	$candidate_junction_fai = Bio::DB::Sam::Fai->load($candidate_junction_file_name) if (!$settings->{no_junction_prediction});		
+
+	####
+	##	Reference sequences
+	####		
+	my $reference_fasta_file_name = $settings->file_name('reference_fasta_file_name');
+	my $reference_faidx_file_name = $settings->file_name('reference_faidx_file_name');
+	my $reference_fai = Bio::DB::Sam::Fai->load($reference_fasta_file_name);
+	my $reference_header; # can't be loade duntil there is a TAM file, but needs to be re-used outside loop
 	
-	my %matched_junction;
-	my %degenerate_matches;
-	my $i = 0;
+	####
+	##	Junction sequences
+	####
+	my $junction_fasta_file_name = $settings->file_name('candidate_junction_fasta_file_name');
+	my $junction_faidx_file_name = $settings->file_name('candidate_junction_faidx_file_name');
+	my $junction_fai;
+	my $junction_header; # can't be loaded until there is a TAM file, but needs to be re-used outside loop
+	my $junction_info;
+	
+	## if there were no candidate junctions (file is empty) then we seg fault if we try to use samtools on it...
+	$settings->{no_junction_prediction} = 1 if ( (!-e $junction_faidx_file_name) || (-s $junction_fasta_file_name == 0) );
+	if (!$settings->{no_junction_prediction})
+	{
+		$junction_fai = Bio::DB::Sam::Fai->load($junction_fasta_file_name);	
+
+		## Load header once at the beginning (but have to peek at TAM file to do this).
+		my @read_structures = $settings->read_structures;
+		my $read_file = $read_structures[0]->{base_name};
+		my $junction_sam_file_name = $settings->file_name('candidate_junction_sam_file_name', {'#'=>$read_file});
+		my $junction_tam = Bio::DB::Tam->open($junction_sam_file_name) or die " Could not open junction SAM file\n";
+		$junction_header = $junction_tam->header_read2($junction_faidx_file_name) or die("Error reading reference fasta index file: $junction_faidx_file_name");				
+
+		## Preload all of the information about junctions
+		## so that we only have to split the names once	
+		my $junction_ids = $junction_header->target_name;
+		for (my $i=0; $i< $junction_header->n_targets; $i++)
+		{
+			$junction_info->[$i] = Breseq::Shared::junction_name_split($junction_ids->[$i]);
+		}		
+	}
+
+	####
+	##	Output files
+	####
 	
 	our $gd = Breseq::GenomeDiff->new();
 	
@@ -70,9 +100,12 @@ sub correct_alignments
 	my $resolved_junction_sam_file_name = $settings->file_name('resolved_junction_sam_file_name');
 	my $RCJ;
 	open $RCJ, ">$resolved_junction_sam_file_name" or die;
+
 	
-	my $reference_header;
-	my $candidate_junction_header;
+	my %matched_junction;
+	my %degenerate_matches;
+	my $reads_processed = 0;
+	
 	foreach my $read_struct ($settings->read_structures)
 	{	
 		my $read_file = $read_struct->{base_name};	
@@ -107,29 +140,27 @@ sub correct_alignments
 
 		my $reference_sam_file_name = $settings->file_name('reference_sam_file_name', {'#'=>$read_file});
 		my $reference_tam = Bio::DB::Tam->open($reference_sam_file_name) or die "Could not open $reference_sam_file_name";
-		my $reference_faidx_file_name = $settings->file_name('reference_faidx_file_name');
 		$reference_header = $reference_tam->header_read2($reference_faidx_file_name) or throw("Error reading reference fasta index file: $reference_faidx_file_name");		
+		
+		my $junction_tam;
+		if (!$settings->{no_junction_prediction})
+		{
+			my $junction_sam_file_name = $settings->file_name('candidate_junction_sam_file_name', {'#'=>$read_file});
+			$junction_tam = Bio::DB::Tam->open($junction_sam_file_name) or die " Could not open junction SAM file\n";
+##			$junction_header = $junction_tam->header_read2($junction_faidx_file_name) or die("Error reading reference fasta index file: $junction_faidx_file_name");				
+		}
+		
 		my $reference_al;
 		my $last_reference_alignment;
 		
-		
-		my $candidate_junction_tam;
-		if (!$settings->{no_junction_prediction})
-		{
-			my $candidate_junction_sam_file_name = $settings->file_name('candidate_junction_sam_file_name', {'#'=>$read_file});
-			$candidate_junction_tam = Bio::DB::Tam->open($candidate_junction_sam_file_name) or die " Could not open candidate junction SAM file\n";
-			my $candidate_junction_faidx_file_name = $settings->file_name('candidate_junction_faidx_file_name');
-			$candidate_junction_header = $candidate_junction_tam->header_read2($candidate_junction_faidx_file_name) or die("Error reading reference fasta index file: $candidate_junction_faidx_file_name");			
-		}
-		
-		my $candidate_junction_al;
-		my $last_candidate_junction_alignment;		
+		my $junction_al;
+		my $last_junction_alignment;		
 				
 		#proceed through all of the alignments
 		if (!$settings->{no_junction_prediction})
 		{
-			($candidate_junction_al, $last_candidate_junction_alignment) 
-				= Breseq::Shared::tam_next_read_alignments($candidate_junction_tam, $candidate_junction_header, $last_candidate_junction_alignment);		
+			($junction_al, $last_junction_alignment) 
+				= Breseq::Shared::tam_next_read_alignments($junction_tam, $junction_header, $last_junction_alignment);		
 		}
 		
 		($reference_al, $last_reference_alignment) 
@@ -141,21 +172,21 @@ sub correct_alignments
 		my $f = 0;
 		READ: while (my $seq = $in_fastq[$f]->next_seq)
 		{			
-			$i++;
-			last if ($settings->{alignment_read_limit} && ($i > $settings->{alignment_read_limit}));
-			print STDERR "    READS:$i\n" if ($i % 10000 == 0);
+			$reads_processed++;
+			last if ($settings->{alignment_read_limit} && ($reads_processed > $settings->{alignment_read_limit}));
+			print STDERR "    READS:$reads_processed\n" if ($reads_processed % 10000 == 0);
 			
 			print "===> Read: $seq->{id}\n" if ($verbose);
 			
 			## Does this read have eligible candidate junction matches?
-			my $this_candidate_junction_al = [];
-			if (($candidate_junction_al) && ($candidate_junction_al->[0]->qname =~ m/^$seq->{id}/))
+			my $this_junction_al = [];
+			if (($junction_al) && ($junction_al->[0]->qname =~ m/^$seq->{id}/))
 			{
-				$this_candidate_junction_al = $candidate_junction_al;
-				($candidate_junction_al, $last_candidate_junction_alignment) 
-					= Breseq::Shared::tam_next_read_alignments($candidate_junction_tam, $candidate_junction_header, $last_candidate_junction_alignment);
+				$this_junction_al = $junction_al;
+				($junction_al, $last_junction_alignment) 
+					= Breseq::Shared::tam_next_read_alignments($junction_tam, $junction_header, $last_junction_alignment);
 			
-				@$this_candidate_junction_al = _eligible_read_alignments($settings, $reference_header, $reference_fai, $ref_seq_info, @$this_candidate_junction_al);
+				@$this_junction_al = _eligible_read_alignments($settings, $reference_header, $reference_fai, $ref_seq_info, @$this_junction_al);
 			}
 			
 			## Does this read have eligible reference sequence matches?
@@ -171,7 +202,7 @@ sub correct_alignments
 		
 			## Nothing to be done if there were no eligible matches to either
 			## Record in the unmatched FASTQ data file
-			if ((@$this_candidate_junction_al == 0) && (@$this_reference_al == 0))
+			if ((@$this_junction_al == 0) && (@$this_reference_al == 0))
 			{
 				$s->{unmatched_reads}++;
 				## if not, then write to unmatched read file
@@ -183,7 +214,7 @@ sub correct_alignments
 			}
 
 			print " Before Overlap Reference alignments = "  . (scalar @$this_reference_al) . "\n" if ($verbose);
-			print " Before Overlap Candidate junction alignments = " . (scalar @$this_candidate_junction_al) . "\n" if ($verbose);
+			print " Before Overlap Junction alignments = " . (scalar @$this_junction_al) . "\n" if ($verbose);
 			
 							
 			###			
@@ -195,7 +226,7 @@ sub correct_alignments
 			## their own. (They will also match the original reference genome equally well).
 			###
 
-			@$this_candidate_junction_al = grep {_alignment_overlaps_junction($candidate_junction_header, $_) } @$this_candidate_junction_al;
+			@$this_junction_al = grep {_alignment_overlaps_junction($junction_info, $_) } @$this_junction_al;
 
 			###			
 			## Determine if the read has a better match to a candidate junction
@@ -213,13 +244,13 @@ sub correct_alignments
 			## --> Keep an item that is not used during scoring
 			###
 			
-			my $best_candidate_junction_score = 0;
+			my $best_junction_score = 0;
 			my $best_reference_score = 0;
 
-			if (@$this_candidate_junction_al)
+			if (@$this_junction_al)
 			{
 				# This is the length of the match on the query -- NOT the length of the query
-				$best_candidate_junction_score = $this_candidate_junction_al->[0]->query->length;
+				$best_junction_score = $this_junction_al->[0]->query->length;
 # THESE SCORES ARE NOT CONSISTENT ACROSS STRANDS DUE TO DIFFERENT INDEL MATCHES
 #				$best_candidate_junction_score = $ca->aux_get("AS");
 			}
@@ -233,14 +264,14 @@ sub correct_alignments
 			}
 			
 			# if < 0, then the best match is to the reference
-			my $mapping_quality_difference = $best_candidate_junction_score - $best_reference_score;
+			my $mapping_quality_difference = $best_junction_score - $best_reference_score;
 			
 			print " Mapping quality difference: $mapping_quality_difference\n" if ($verbose);
 			print " Final Reference alignments = "  . (scalar @$this_reference_al) . "\n" if ($verbose);
-			print " Final Candidate junction alignments = " . (scalar @$this_candidate_junction_al) . "\n" if ($verbose);
+			print " Final Candidate junction alignments = " . (scalar @$this_junction_al) . "\n" if ($verbose);
 
 
-			next READ if ( (scalar @$this_candidate_junction_al == 0) && (scalar @$this_reference_al == 0));
+			next READ if ( (scalar @$this_junction_al == 0) && (scalar @$this_reference_al == 0));
 
 			### The best match we found to the reference was no better than the best to the
 			### candidate junction. This read potentially supports the candidate junction.
@@ -261,21 +292,21 @@ sub correct_alignments
 				
 				my $item = {
 					reference_alignments => $this_reference_al, 					# reference sequence alignments
-					junction_alignments => $this_candidate_junction_al, 			#the BEST candidate junction alignments
+					junction_alignments => $this_junction_al, 						#the BEST candidate junction alignments
 					fastq_file_index => $fastq_file_index[$f],						#index of the fastq file this read came from
 					mapping_quality_difference => $mapping_quality_difference,
 				};
 				#print Dumper($item) if ($verbose);
 
-				my $a = $this_candidate_junction_al->[0];
-				my $junction_id = $candidate_junction_header->target_name()->[$a->tid];
+				my $a = $this_junction_al->[0];
+				my $junction_id = $junction_header->target_name()->[$a->tid];
 				
 				###
 				## Just one best hit to candidate junctions, that is better than every match to the reference
 				## #
-				if ((scalar @$this_candidate_junction_al == 1) && (scalar $mapping_quality_difference > 0))
+				if ((scalar @$this_junction_al == 1) && (scalar $mapping_quality_difference > 0))
 				{
-					my $junction_id = $candidate_junction_header->target_name()->[$a->tid];
+					my $junction_id = $junction_header->target_name()->[$a->tid];
 					#print "$junction_id\n";
 					push @{$matched_junction{$junction_id}}, $item;
 				}	
@@ -285,9 +316,9 @@ sub correct_alignments
 				###
 				else
 				{					
-					foreach my $a (@$this_candidate_junction_al)
+					foreach my $a (@$this_junction_al)
 					{	
-						$item->{degenerate_count} = scalar @$this_candidate_junction_al; #mark as degenerate
+						$item->{degenerate_count} = scalar @$this_junction_al; #mark as degenerate
 						$degenerate_matches{$junction_id}->{$seq->{id}} = $item;
 					}
 				}
@@ -325,7 +356,7 @@ sub correct_alignments
 		
 	foreach my $key (@sorted_junction_ids)
 	{
-		my ($failed, $has_non_overlap_only) = _test_junction($settings, $summary, $key, \%matched_junction, \%degenerate_matches, \%junction_test_info, $reference_fai, $ref_seq_info, $RREF, $reference_header, $RCJ, $candidate_junction_header);
+		my ($failed, $has_non_overlap_only) = _test_junction($settings, $summary, $key, \%matched_junction, \%degenerate_matches, \%junction_test_info, $reference_fai, $ref_seq_info, $RREF, $reference_header, $RCJ, $junction_header);
 		## save the score in the distribution
 		Breseq::Shared::add_score_to_distribution(\%observed_pos_hash_score_distribution, $junction_test_info{$key}->{pos_hash_score});
 		Breseq::Shared::add_score_to_distribution(\%observed_min_overlap_score_distribution, $junction_test_info{$key}->{min_overlap_score});
@@ -357,7 +388,7 @@ sub correct_alignments
 		
 		print "Trying degenerate $key...\n" if ($verbose);
 		
-		my ($failed, $has_non_overlap_only) = _test_junction($settings, $summary, $key, \%matched_junction, \%degenerate_matches, \%junction_test_info, $reference_fai, $ref_seq_info, $RREF, $reference_header, $RCJ, $candidate_junction_header);
+		my ($failed, $has_non_overlap_only) = _test_junction($settings, $summary, $key, \%matched_junction, \%degenerate_matches, \%junction_test_info, $reference_fai, $ref_seq_info, $RREF, $reference_header, $RCJ, $junction_header);
 		## save the score in the distribution
 		Breseq::Shared::add_score_to_distribution(\%observed_pos_hash_score_distribution, $junction_test_info{$key}->{pos_hash_score});
 		Breseq::Shared::add_score_to_distribution(\%observed_min_overlap_score_distribution, $junction_test_info{$key}->{min_overlap_score});
@@ -420,10 +451,10 @@ sub correct_alignments
 				## Write out match corresponding to this part to SAM file
 				## By trimming in the candidate junctions sequence, rather than on each half,
 				## this is done properly.						
-				my $trim = _trim_ambiguous_ends($a, $candidate_junction_header, $candidate_junction_fai);						
+				my $trim = _trim_ambiguous_ends($a, $junction_header, $junction_fai);						
 				Breseq::Shared::tam_write_moved_alignment(
 					$RREF, 
-					$candidate_junction_header,
+					$junction_header,
 					$a, 
 					$fastq_file_index, 
 					$item->{"$side_key\_seq_id"}, 
@@ -557,16 +588,13 @@ sub _test_read_alignment_requirements
  
 =cut
 
-# @JEB v1> Hash all of the split junction information by tid, saves name every time here...
-
 sub _alignment_overlaps_junction
 {
-	my ($candidate_junction_header, $a) = @_;
+	my ($junction_info, $a) = @_;
 		
-	my $junction_id = $candidate_junction_header->target_name()->[$a->tid];
-	my $scj = Breseq::Shared::junction_name_split($junction_id);
-	my $overlap = $scj->{alignment_overlap};
-	my $flanking_left = $scj->{flanking_left};
+	my $this_junction_info = $junction_info->[$a->tid];
+	my $overlap = $this_junction_info->{alignment_overlap};
+	my $flanking_left = $this_junction_info->{flanking_left};
 
 	## find the start and end coordinates of the overlap
 	my ($junction_start, $junction_end);
@@ -761,22 +789,21 @@ sub _test_junction
 	## and, naturally, they have problems with scaling with the
 	## total number of reads...
 	
-#	my $alignment_on_each_side_cutoff = 16; #14
-#	my $alignment_on_each_side_cutoff_per_strand = 13; #9
-#	my $alignment_on_each_side_min_cutoff = 5;
+	my $alignment_on_each_side_cutoff = 14; #16
+	my $alignment_on_each_side_cutoff_per_strand = 9; #13
+	my $alignment_on_each_side_min_cutoff = 3;
 
-
-#	$failed = 	   ($max_left < $alignment_on_each_side_cutoff) 
-#				|| ($max_right < $alignment_on_each_side_cutoff)
-#	       		|| ($max_left_per_strand->{'0'} < $alignment_on_each_side_cutoff_per_strand) 
-#				|| ($max_left_per_strand->{'1'} < $alignment_on_each_side_cutoff_per_strand)
-#	       		|| ($max_right_per_strand->{'0'} < $alignment_on_each_side_cutoff_per_strand) 
-#				|| ($max_right_per_strand->{'1'} < $alignment_on_each_side_cutoff_per_strand)
-#	       		|| ($max_right_per_strand->{'0'} < $alignment_on_each_side_cutoff_per_strand) 
-#				|| ($max_right_per_strand->{'1'} < $alignment_on_each_side_cutoff_per_strand)
-#				|| ($max_min_left < $alignment_on_each_side_min_cutoff)
-#				|| ($max_min_right < $alignment_on_each_side_min_cutoff)
-#	;
+	$failed = 	   ($max_left < $alignment_on_each_side_cutoff) 
+				|| ($max_right < $alignment_on_each_side_cutoff)
+	       		|| ($max_left_per_strand->{'0'} < $alignment_on_each_side_cutoff_per_strand) 
+				|| ($max_left_per_strand->{'1'} < $alignment_on_each_side_cutoff_per_strand)
+	       		|| ($max_right_per_strand->{'0'} < $alignment_on_each_side_cutoff_per_strand) 
+				|| ($max_right_per_strand->{'1'} < $alignment_on_each_side_cutoff_per_strand)
+	       		|| ($max_right_per_strand->{'0'} < $alignment_on_each_side_cutoff_per_strand) 
+				|| ($max_right_per_strand->{'1'} < $alignment_on_each_side_cutoff_per_strand)
+				|| ($max_min_left < $alignment_on_each_side_min_cutoff)
+				|| ($max_min_right < $alignment_on_each_side_min_cutoff)
+	;
 
 	## POS_HASH test
 	## New way, but we need to have examined the coverage distribution to calibrate what scores to accept!
