@@ -48,6 +48,7 @@ my $required_both_unique_length_per_side;
 my $required_one_unique_length_per_side;
 my $maximum_inserted_junction_sequence_length;
 my $required_match_length;
+my $required_extra_pair_total_length;
 
 =head2 identify_candidate_junctions
 
@@ -70,6 +71,7 @@ sub identify_candidate_junctions
 	$required_one_unique_length_per_side = $settings->{required_one_unique_length_per_side};
 	$maximum_inserted_junction_sequence_length = $settings->{maximum_inserted_junction_sequence_length};
  	$required_match_length = $settings->{required_match_length};
+	$required_extra_pair_total_length = $settings->{required_extra_pair_total_length};
 
 	#set up files and local variables from settings
 	my $ref_strings = $ref_seq_info->{ref_strings};
@@ -647,9 +649,9 @@ sub _alignments_to_candidate_junctions
 	print "Total matches: " . (scalar @$al_ref) . "\n" if ($verbose);
 	
 	my (@list1, @list2);
-#	@list1 = @$al_ref;
-#	@list2 = @$al_ref;
 
+  	## Try only pairs where one match starts at the beginning of the read >>>
+	## This saves a number of comparisons and gets rid of a lot of bad matches. 
 	my $max_union_length = 0;
 
 	foreach my $a (@$al_ref)
@@ -668,6 +670,13 @@ sub _alignments_to_candidate_junctions
 			push @list2, $a;
 		}
 	}
+
+	## Alternately try all pairs
+	#	@list1 = @$al_ref;
+	#	@list2 = @$al_ref;
+	
+	## Pairs must CLEAR the maximum length of any one alignment by a certain amount
+	$max_union_length += $required_extra_pair_total_length;
 	
 	## bail before next statement
 #	return if (scalar @list1 == 0);

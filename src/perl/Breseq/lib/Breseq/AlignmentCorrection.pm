@@ -190,13 +190,12 @@ sub correct_alignments
 			## Matches to candidate junctions MUST overlap the junction.
 			##
 			## Reduce this list to those that overlap ANY PART of the junction.
-			## Ones that extend only into the overlap region, are marked {overlap_only}
-			## They are only additional evidence for predicted junctions and NOT support  
-			## for a new junction on their own. (They will also match the original  
-			## reference genome equally well).
+			## Alignmets that extend only into the overlap region, are only additional
+			##  evidence for predicted junctions and NOT support for a new junction on 
+			## their own. (They will also match the original reference genome equally well).
 			###
 
-			@$this_candidate_junction_al = _test_and_mark_junction_overlap($candidate_junction_header, @$this_candidate_junction_al);
+			@$this_candidate_junction_al = grep {_alignment_overlaps_junction($candidate_junction_header, $_) } @$this_candidate_junction_al;
 
 			###			
 			## Determine if the read has a better match to a candidate junction
@@ -219,16 +218,16 @@ sub correct_alignments
 
 			if (@$this_candidate_junction_al)
 			{
-				my $ca = $this_candidate_junction_al->[0];
-				$best_candidate_junction_score = _alignment_length_on_query($ca, $seq);
+				# This is the length of the match on the query -- NOT the length of the query
+				$best_candidate_junction_score = $this_candidate_junction_al->[0]->query->length;
 # THESE SCORES ARE NOT CONSISTENT ACROSS STRANDS DUE TO DIFFERENT INDEL MATCHES
 #				$best_candidate_junction_score = $ca->aux_get("AS");
 			}
 			
 			if (@$this_reference_al)
 			{
-				my $ra = $this_reference_al->[0];
-				$best_reference_score = _alignment_length_on_query($ra, $seq);
+				# This is the length of the match on the query -- NOT the length of the query
+				$best_reference_score = $this_reference_al->[0]->query->length;
 # THESE SCORES ARE NOT CONSISTENT ACROSS STRANDS DUE TO DIFFERENT INDEL MATCHES
 #				$best_reference_score = $ra->aux_get("AS");
 			}
@@ -461,45 +460,6 @@ sub correct_alignments
 }
 
 
-=head2 _read_alignment_passes_requirements
-
- Title   : _test_read_alignment_requirements
- Usage   : _test_read_alignment_requirements( );
- Function: Tests an individual read alignment for required match lengths
-           and number of mismatches
- Returns : 
- 
-=cut
-
-sub _test_read_alignment_requirements
-{
-	my ($settings, $reference_header, $reference_fai, $ref_seq_info, $a) = @_;
-
-	my $accept = 1;
-
-	return 0 if ($a->unmapped);
-
-	if ($settings->{required_match_length})
-	{
-		my $alignment_length_on_query = _alignment_length_on_query($a);
-		return 0 if ($alignment_length_on_query < $settings->{required_match_length});
-	}
-
-	if ($settings->{require_complete_match})
-	{
-		my ($q_start, $q_end) = ($a->query->start-1, $a->query->end-1); #0-indexed
-		my $complete_match = ($q_start+1 == 1) && ($q_end+1 == $a->l_qseq);
-		return 0 if (!$complete_match);
-	}
-	if ($settings->{maximum_read_mismatches})
-	{
-		my $mismatches = Breseq::Shared::alignment_mismatches($a, $reference_header, $reference_fai, $ref_seq_info);
-		return 0 if ($mismatches > $settings->{maximum_read_mismatches});
-	}		
-	
-	return 1;
-}
-
 =head2 _eligible_alignments
 
  Title   : _eligible_alignments
@@ -547,39 +507,79 @@ sub _eligible_read_alignments
 	return @return_list;
 }
 
-sub _test_and_mark_junction_overlap
+
+=head2 _read_alignment_passes_requirements
+
+ Title   : _test_read_alignment_requirements
+ Usage   : _test_read_alignment_requirements( );
+ Function: Tests an individual read alignment for required match lengths
+           and number of mismatches
+ Returns : 
+ 
+=cut
+
+sub _test_read_alignment_requirements
 {
-	my ($candidate_junction_header, @al) = @_;
-	
-	my @junction_al;
-	
-	foreach my $a (@al)
-	{		
-		my $junction_id = $candidate_junction_header->target_name()->[$a->tid];
-		my $scj = Breseq::Shared::junction_name_split($junction_id);
-		my $overlap = $scj->{alignment_overlap};
-		my $flanking_left = $scj->{flanking_left};
+	my ($settings, $reference_header, $reference_fai, $ref_seq_info, $a) = @_;
 
-		## find the start and end coordinates of the overlap
-		my ($junction_start, $junction_end);
-		
-		$junction_start = $flanking_left + 1;
-		$junction_end = $flanking_left + abs($overlap);
+	my $accept = 1;
 
-		## If it didn't overlap the junction at all, remove it
-		next if ( ($a->start > $junction_end) || ($a->end < $junction_start) );
-		
-		## Testing, in this case it should have an equal reference match...
-		## Remember if it overlaps ONLY the overlap part of the junction
-		#if ( ($overlap > 0) && ($a->end <= $junction_end) || ($a->start >= $junction_start) )
-		#{						
-		#	$a->{overlap_only} = 1;
-		#}
-		
-		push @junction_al, $a;			
+	return 0 if ($a->unmapped);
+
+	if ($settings->{required_match_length})
+	{
+		my $alignment_length_on_query = $a->query->length; ##this is the length of the alignment on the read
+		return 0 if ($alignment_length_on_query < $settings->{required_match_length});
 	}
+
+	if ($settings->{require_complete_match})
+	{
+		my ($q_start, $q_end) = ($a->query->start-1, $a->query->end-1); #0-indexed
+		my $complete_match = ($q_start+1 == 1) && ($q_end+1 == $a->l_qseq);
+		return 0 if (!$complete_match);
+	}
+	if ($settings->{maximum_read_mismatches})
+	{
+		my $mismatches = Breseq::Shared::alignment_mismatches($a, $reference_header, $reference_fai, $ref_seq_info);
+		return 0 if ($mismatches > $settings->{maximum_read_mismatches});
+	}		
 	
-	return (@junction_al);
+	return 1;
+}
+
+=head2 _alignment_overlaps_junction
+
+ Title   : _test_read_alignment_requirements
+ Usage   : _test_read_alignment_requirements( );
+ Function: Tests an individual read alignment for required match lengths
+           and number of mismatches
+ Returns : 
+ 
+=cut
+
+# @JEB v1> Hash all of the split junction information by tid, saves name every time here...
+
+sub _alignment_overlaps_junction
+{
+	my ($candidate_junction_header, $a) = @_;
+		
+	my $junction_id = $candidate_junction_header->target_name()->[$a->tid];
+	my $scj = Breseq::Shared::junction_name_split($junction_id);
+	my $overlap = $scj->{alignment_overlap};
+	my $flanking_left = $scj->{flanking_left};
+
+	## find the start and end coordinates of the overlap
+	my ($junction_start, $junction_end);
+	
+	$junction_start = $flanking_left + 1;
+	$junction_end = $flanking_left + abs($overlap);
+
+	## If it didn't overlap the junction at all
+	## Check coordinates in the "reference" junction sequence
+	return 0 if ($a->start > $junction_end);
+	return 0 if ($a->end < $junction_start);
+
+	return 1;
 }
 
 
@@ -598,37 +598,484 @@ sub _write_reference_matches
 	Breseq::Shared::tam_write_read_alignments($RREF, $reference_header, $fastq_file_index, \@reference_al, \@trims);
 }
 
-sub _alignment_begins_with_match_in_read
+sub _test_junction
 {
-	my ($a) = @_;
-	return 0 if ($a->unmapped);
+	my $verbose = 0;
 	
-	my $ca = $a->cigar_array;
-	return ($ca->[-1]->[0] eq 'M') if ($a->reversed);
-	return ($ca->[0]->[0] eq 'M');
+	my ($settings, $summary, $junction_seq_id, $matched_junction_ref, $degenerate_matches_ref, $junction_test_info_ref, $reference_fai, $ref_seq_info, $RREF, $reference_header, $RCJ, $candidate_junction_header) = @_;
+
+	#print "Testing $junction_seq_id\n";
+
+	## variable initialization
+	my $test_info;
+	my $failed = 0;
+
+	## There are two kinds of matches to a candidate junction:
+	## (1) Reads that uniquely map to one candidate junction (but any number of times to reference)
+	my @unique_matches = ();
+	@unique_matches = @{$matched_junction_ref->{$junction_seq_id}} if (defined $matched_junction_ref->{$junction_seq_id});
+	
+	## (2) Reads that uniquely map equally well to more than one candidate junction (and any number of times to reference)
+	my	@degenerate_matches = ();
+	@degenerate_matches = map { $degenerate_matches_ref->{$junction_seq_id}->{$_} } sort keys %{$degenerate_matches_ref->{$junction_seq_id}}
+		if (defined $degenerate_matches_ref->{$junction_seq_id});
+	
+	## FAI target id -- there is no easy way to get this short of loading the entire array and going through them...
+	## Debatable about whether we save more string comparisons by doing this here or each time
+	
+	## @JEB v1> hash by tid rather than alignment junction names!!
+	my $junction_tid = 0;
+	foreach my $test_junction_seq_id  (@{$candidate_junction_header->target_name})
+	{
+		last if ($junction_seq_id eq $test_junction_seq_id);
+		$junction_tid++;
+	}	
+	die if ($junction_tid >= $candidate_junction_header->n_targets);
+		
+		
+	print "Testing Junction Candidate: $junction_seq_id\n" if ($verbose);
+	print "Unique Matches: " . (scalar @unique_matches) . " Degenerate Matches: " . (scalar @degenerate_matches) . "\n" if ($verbose);
+
+	#### TEST 1: Reads that go a certain number of bp into the nonoverlap sequence on each side of the junction on each strand
+	my $max_left_per_strand = { '0'=> 0, '1'=>0 };
+	my $max_right_per_strand = { '0'=> 0, '1'=>0 };
+	my $max_min_left_per_strand = { '0'=> 0, '1'=>0 };
+	my $max_min_right_per_strand = { '0'=> 0, '1'=>0 };	
+	my $count_per_strand = { '0'=> 0, '1'=>0 };
+	my $total_non_overlap_reads = 0;
+	my $count_per_coord_per_strand;
+	my $min_overlap_score = 0;
+	
+	## basic information about the junction
+	my $scj = Breseq::Shared::junction_name_split($junction_seq_id);
+	my $overlap = $scj->{alignment_overlap};
+	my $flanking_left = $scj->{flanking_left};
+	
+	## Is there at least one read that isn't overlap only?
+	## displaying ones where it doesn't as marginals looks really confusing
+	my $has_non_overlap_only = 1; 
+	## @JEB v1> Rename to $has_non_overlap_alignment to give right sense!!
+	
+	### We also need to count degenerate matches b/c sometimes ambiguity unfairly penalizes real reads...
+	READ: foreach my $item (@unique_matches, @degenerate_matches)
+	{
+		##!!> Matches that don't extend through the overlap region will have the same quality 
+		##!!> as a reference match and, therefore, no difference in mapping quality
+		##!!> do not count these toward scoring!
+		next READ if ($item->{mapping_quality_difference} == 0);
+		
+		$total_non_overlap_reads++;
+		$has_non_overlap_only = 0;
+		
+		#If there were no degenerate matches, then we could just take the
+		#one and only match in the 'junction_alignments' array
+		#my $a = $item->{junction_alignments}->[0]; 
+		
+		## as it is, we must be sure we are looking at the one that matches
+		my $a;
+		ALIGNMENT: foreach my $candidate_a (@{$item->{junction_alignments}})
+		{
+			if ($candidate_a->tid == $junction_tid)
+			{
+				$a = $candidate_a;
+				last ALIGNMENT;
+			}
+		}
+		die if (!defined $a);
+
+		my $rev_key = ($a->reversed ? 1 : 0);
+		$count_per_strand->{$rev_key}++;
+
+		# The start coordinate is less likely to be misaligned due to errors
+		# than the end coordinate
+		my $begin_coord = $rev_key ? $a->end : $a->start;
+		$count_per_coord_per_strand->{"$begin_coord-$rev_key"}++;
+
+		print "  " . $item->{junction_alignments}->[0]->qname . " $begin_coord-$rev_key\n" if ($verbose);
+		
+
+		##The left side goes exactly up to the flanking length
+		my $this_left = $flanking_left;
+		$this_left = $this_left - $a->start+1;
+
+		#The right side starts after moving past any overlap (negative or positive)
+		my $this_right = $flanking_left+1;
+		$this_right += abs($overlap);
+		$this_right = $a->end - $this_right+1;
+
+		## Update:
+		### Score = the minimum unique match length on a side
+		### Max_Min = the maximum of the minimum length match sides
+		### Max = the maximum match on a side
+		### Note that the max and min filtering is really a kind of poor man's KS test
+		###   if we implemented that with a certain coverage cutoff it would be a
+		###   more principled way of doing things... 
+		if ($this_left < $this_right)
+		{
+			$min_overlap_score += $this_left;
+			$max_min_left_per_strand->{$rev_key} = $this_left if ($max_min_left_per_strand->{$rev_key} < $this_left);
+		}
+		else
+		{
+			$min_overlap_score += $this_right;
+			$max_min_right_per_strand->{$rev_key} = $this_right if ($max_min_right_per_strand->{$rev_key} < $this_right);
+		}
+	
+		$max_left_per_strand->{$rev_key} = $this_left if ($max_left_per_strand->{$rev_key} < $this_left);
+		$max_right_per_strand->{$rev_key} = $this_right if ($max_right_per_strand->{$rev_key} < $this_right);
+		
+	}				
+	
+	my $max_left = ($max_left_per_strand->{'0'} > $max_left_per_strand->{'1'}) ? $max_left_per_strand->{'0'} : $max_left_per_strand->{'1'};
+	my $max_right = ($max_right_per_strand->{'0'} > $max_right_per_strand->{'1'}) ? $max_right_per_strand->{'0'} : $max_right_per_strand->{'1'};
+
+	my $max_min_left = ($max_min_left_per_strand->{'0'} > $max_min_left_per_strand->{'1'}) ? $max_min_left_per_strand->{'0'} : $max_min_left_per_strand->{'1'};
+	my $max_min_right = ($max_min_right_per_strand->{'0'} > $max_min_right_per_strand->{'1'}) ? $max_min_right_per_strand->{'0'} : $max_min_right_per_strand->{'1'};
+
+	
+	$test_info = {
+		max_left => $max_left,
+		max_left_minus => $max_left_per_strand->{0},
+		max_left_plus => $max_left_per_strand->{1},
+		max_right => $max_right,
+		max_right_minus => $max_right_per_strand->{0},
+		max_right_plus =>$max_right_per_strand->{1},
+		max_min_right => $max_min_right,
+		max_min_right_minus => $max_min_right_per_strand->{0},
+		max_min_right_plus =>$max_min_right_per_strand->{1},		
+		max_min_left => $max_min_left,
+		max_min_left_minus => $max_min_left_per_strand->{0},
+		max_min_left_plus =>$max_min_left_per_strand->{1},		
+		coverage_minus => $count_per_strand->{0},
+		coverage_plus => $count_per_strand->{1},
+		total_non_overlap_reads => $total_non_overlap_reads,
+		min_overlap_score => $min_overlap_score,
+		pos_hash_score => scalar keys %$count_per_coord_per_strand,
+	};
+
+
+	## Old way, requiring certain overlap on each side on each strand
+	## @JEB !> Best results may be to combine these methods
+		
+	## These parameters still need additional testing
+	## and, naturally, they have problems with scaling with the
+	## total number of reads...
+	
+#	my $alignment_on_each_side_cutoff = 16; #14
+#	my $alignment_on_each_side_cutoff_per_strand = 13; #9
+#	my $alignment_on_each_side_min_cutoff = 5;
+
+
+#	$failed = 	   ($max_left < $alignment_on_each_side_cutoff) 
+#				|| ($max_right < $alignment_on_each_side_cutoff)
+#	       		|| ($max_left_per_strand->{'0'} < $alignment_on_each_side_cutoff_per_strand) 
+#				|| ($max_left_per_strand->{'1'} < $alignment_on_each_side_cutoff_per_strand)
+#	       		|| ($max_right_per_strand->{'0'} < $alignment_on_each_side_cutoff_per_strand) 
+#				|| ($max_right_per_strand->{'1'} < $alignment_on_each_side_cutoff_per_strand)
+#	       		|| ($max_right_per_strand->{'0'} < $alignment_on_each_side_cutoff_per_strand) 
+#				|| ($max_right_per_strand->{'1'} < $alignment_on_each_side_cutoff_per_strand)
+#				|| ($max_min_left < $alignment_on_each_side_min_cutoff)
+#				|| ($max_min_right < $alignment_on_each_side_min_cutoff)
+#	;
+
+	## POS_HASH test
+	## New way, but we need to have examined the coverage distribution to calibrate what scores to accept!
+	my $junction_accept_score_cutoff_1 = $summary->{preprocess_coverage}->{$scj->{side_1}->{seq_id}}->{junction_accept_score_cutoff};
+	my $junction_accept_score_cutoff_2 = $summary->{preprocess_coverage}->{$scj->{side_2}->{seq_id}}->{junction_accept_score_cutoff};
+	$failed ||= ( $test_info->{pos_hash_score} < $junction_accept_score_cutoff_1 ) && ( $test_info->{pos_hash_score} < $junction_accept_score_cutoff_2 );
+	
+	print Dumper($test_info) if ($verbose);
+	print ($failed ? "Failed\n" : "Passed\n") if ($verbose);
+	
+	###	
+	### ADD -- NEED TO CORRECT OVERLAP AND ADJUST NUMBER OF READS SUPPORTING HERE, RATHER THAN LATER
+	###
+	
+	## DEGENERATE JUNCTION MATCHES
+	## ===========================
+	## Determine the fate of degenerate reads that map to this junction
+	
+	if (defined $degenerate_matches_ref->{$junction_seq_id})
+	{
+		foreach my $read_name (keys %{$degenerate_matches_ref->{$junction_seq_id}})
+		{	
+			my $degenerate_match = $degenerate_matches_ref->{$junction_seq_id}->{$read_name};
+			my $fastq_file_index = $degenerate_match->{fastq_file_index};
+			my $matched_alignment;
+			
+			## Success for this candidate junction... 
+			## purge all references to this from the degenerate match hash
+			## so that they will not be counted for other junctions
+			if (!$failed)
+			{
+				## We need to add this degenerately matched read to the other ones supporting this junction
+				push @{$matched_junction_ref->{$junction_seq_id}}, $degenerate_match;
+			
+				# Purge all references to this read from the degenerate match hash
+				# so that it cannot be counted for any other junction
+				foreach my $a (@{$degenerate_match->{junction_alignments}})
+				{
+					my $test_junction_seq_id = $candidate_junction_header->target_name()->[$a->tid];
+					$matched_alignment = $a if ($a->tid eq $junction_tid); #this is the one for the current candidate junction
+
+					delete $degenerate_matches_ref->{$test_junction_seq_id}->{$read_name};
+					delete $degenerate_matches_ref->{$test_junction_seq_id} if (scalar keys %{$degenerate_matches_ref->{$test_junction_seq_id}} == 0);
+				}
+				
+				## Keep only the alignment
+##------>		## WE SHOULD ALSO UPDATE THE MAPPING SCORE!
+				my $a;
+				DOMINANT_ALIGNMENT: foreach my $candidate_a (@{$degenerate_match->{junction_alignments}})
+				{
+					if ($candidate_a->tid == $junction_tid)
+					{
+						$a = $candidate_a;
+						last DOMINANT_ALIGNMENT;
+					}
+				}
+				@{$degenerate_match->{junction_alignments}} = ($a);
+			}
+			
+			## Failure for this candidate junction...
+			## Remove just the degenerate hits to this candidate junction
+			## Once all have failed, then we need to add the reference alignments (if any)!
+			else
+			{
+				$degenerate_match->{degenerate_count}--;
+				
+				## This degenerate match missed on all opportunities,
+				## we should add it to the reference sequence
+				if ($degenerate_match->{degenerate_count} == 0)
+				{					
+					my $this_reference_al = $degenerate_match->{reference_alignments};
+					_write_reference_matches($settings, $reference_fai, $ref_seq_info, $RREF, $reference_header, $fastq_file_index, @$this_reference_al);					
+				}
+				
+				foreach my $a (@{$degenerate_match->{junction_alignments}})
+				{
+					$matched_alignment = $a if ($a->tid eq $junction_tid); #this is the one for the current candidate junction
+				}	
+			}
+						
+			# Write alignment to SAM file for candidate junctions regardless of success...
+			die if (!$matched_alignment);
+			Breseq::Shared::tam_write_read_alignments($RCJ, $candidate_junction_header, $fastq_file_index, [$matched_alignment]) if (!$has_non_overlap_only);
+		}
+		
+		## We are completely done with degenerate matches to this junction id.
+		## Deleting them here means that we will never go through this loop with them again
+		## and is necessary for not doubly writing them.
+		delete $degenerate_matches_ref->{$junction_seq_id};
+	}		
+
+	## UNIQUE JUNCTION MATCHES
+	## =======================	
+	READ: foreach my $item (@unique_matches)
+	{
+		## Write out the matches to the proper SAM file(s) depending on whether the junction succeeded or failed
+		my $fastq_file_index = $item->{fastq_file_index};
+		
+		## ONLY if we failed: write matches to reference sequences
+		if ($failed)
+		{		
+			my $this_reference_al = $item->{reference_alignments};
+			_write_reference_matches($settings, $reference_fai, $ref_seq_info, $RREF, $reference_header, $fastq_file_index, @$this_reference_al);
+		}
+		
+		## REGARDLESS of success: write matches to the candidate junction SAM file 
+		Breseq::Shared::tam_write_read_alignments($RCJ, $candidate_junction_header, $fastq_file_index, $item->{junction_alignments})  if (!$has_non_overlap_only);
+	}	
+	
+	# Save the test info about this junction.
+	$junction_test_info_ref->{$junction_seq_id} = $test_info;
+	return ($failed, $has_non_overlap_only);
 }
 
-###
-# @JEB TODO - Should really trim away ends as long as bases are below $settings->{base_quality_cutoff}
-##
-sub _alignment_length_on_query
+sub _junction_to_hybrid_list_item
 {
-	my ($a) = @_;
+	my ($key, $ref_seq_info, $total_reads, $test_info) = @_;
 	
-	return 0 if ($a->unmapped);
+	## split the key to an item with information about the junction
+	my $jc = Breseq::Shared::junction_name_split($key);
+	$jc->{key} = $key;	
 	
-	my $ca = $a->cigar_array;	
-	my $start = 1;
-	$start += $ca->[0]->[1] if ($ca->[0]->[0] eq 'S');
+	## overlap may be adjusted below... this messes up making the alignment
+	## 'alignment_overlap' is the original one that applies to the candidate junction BAM file
+	## 'overlap' is a version where overlap has been resolved if possible for adding sides of the
+	##    alignment
+	$jc->{overlap} = $jc->{alignment_overlap};			
+	$jc->{total_reads} = $total_reads;
 	
-	my $end = $a->query->length;
-	$end -= $ca->[-1]->[1] if ($ca->[-1]->[0] eq 'S');
+	## Redundancy is loaded from the key, but we doubly enforce it when IS elements are involved.
 	
-	($start, $end) = ($a->query->length - $start + 1, $a->query->length - $end + 1) if ($a->reversed);
-	($start, $end) = ($end, $start) if ($a->reversed);
+	## Correct for overlapping IS elements
 	
+	###
+	# IS insertion overlap correction
+	#
+	# For these the coordinates may have been offset incorrectly initially (because both sides of the junction may look unique)
+	# The goal is to offset through positive overlap to get as close as possible to the ends of the IS
+	###
 	
-	return ($end-$start+1);
+	my $is;
+	foreach my $side_key ('side_1', 'side_2')
+	{
+		## Determine IS elements
+		## Is it within an IS or near the boundary of an IS in the direction leading up to the junction?			
+		if (my $is = Breseq::ReferenceSequence::find_closest_repeat_region($jc->{$side_key}->{position}, $ref_seq_info->{repeat_lists}->{$jc->{$side_key}->{seq_id}}, 200, $jc->{$side_key}->{strand}))
+		{
+			$jc->{$side_key}->{is}->{name} = $is->{name};
+			$jc->{$side_key}->{is}->{interval} = ($is->{strand} == +1) ? "$is->{start}-$is->{end}" : "$is->{end}-$is->{start}"; 
+			$jc->{$side_key}->{is}->{product} = $is->{product};
+		}
+	}
+	
+	## use of $j is historical due to a move of this part of the function from annotate_rearrangements
+	my $j = $jc;
+	sub _add_is_coords_from_interval
+	{
+		my ($c) = @_;
+		return if (!defined $c->{is}); 
+		
+		my ($is_start, $is_end) = split /-/, $c->{is}->{interval};
+		$c->{is}->{strand} = ($is_start < $is_end) ? +1 : -1; 
+		$c->{is}->{start} = ($is_start < $is_end) ? $is_start : $is_end; 
+		$c->{is}->{end} = ($is_start < $is_end) ? $is_end : $is_start;
+	}
+	
+	_add_is_coords_from_interval($j->{side_1});
+	_add_is_coords_from_interval($j->{side_2});
+	
+	$j->{side_1}->{read_side} = -1;
+	$j->{side_2}->{read_side} = +1;
+		
+	## Determine which side of the junction is the IS and which is unique
+	## these point to the correct initial interval...
+	if (defined $j->{side_1}->{is} && !defined $j->{side_2}->{is})
+	{
+		if (abs($j->{side_1}->{is}->{start} - $j->{side_1}->{position}) <= 20)
+		{
+			$j->{is_side} = $j->{side_1};
+			$j->{is_side}->{is}->{side_key} = 'start';
+		}
+		elsif (abs($j->{side_1}->{is}->{end} - $j->{side_1}->{position}) <= 20 )
+		{
+			$j->{is_side} = $j->{side_1};
+			$j->{is_side}->{is}->{side_key} = 'end';
+		}
+		$j->{unique_side} = $j->{side_2};
+	}
+	
+	if (!defined $j->{side_1}->{is} && defined $j->{side_2}->{is})
+	{
+		if (abs($j->{side_2}->{is}->{start} - $j->{side_2}->{position}) <= 20)
+		{
+			$j->{is_side} = $j->{side_2};
+			$j->{is_side}->{is}->{side_key} = 'start';
+		}
+		elsif (abs($j->{side_2}->{is}->{end} - $j->{side_2}->{position}) <= 20 )
+		{
+			$j->{is_side} = $j->{side_2};
+			$j->{is_side}->{is}->{side_key} = 'end';
+		}
+		$j->{unique_side} = $j->{side_1};
+	}
+	
+	## both were IS! -- define as redundant here
+	$j->{side_1}->{redundant} = 1 if (defined $j->{side_1}->{is});
+	$j->{side_2}->{redundant} = 1 if (defined $j->{side_2}->{is});
+	
+	#by default, overlap is included on both sides of the junction (possibly changed below)
+	$jc->{side_1}->{overlap} = 0;
+	$jc->{side_2}->{overlap} = 0;		
+		
+	## Resolve redundant overlap
+	if ($jc->{overlap} > 0)
+	{
+		$jc->{side_1}->{overlap} = $jc->{overlap};
+		$jc->{side_2}->{overlap} = $jc->{overlap};
+		
+		## If there was in IS, resolve overlap so it goes to the edge of the IS element
+		if (defined $j->{is_side})
+		{			
+			### first, adjust the repetitive sequence boundary to get as close to the IS as possible
+			my $move_dist = $j->{is_side}->{strand} * ($j->{is_side}->{is}->{$j->{is_side}->{is}->{side_key}} - $j->{is_side}->{position});
+						
+			$move_dist = 0 if ($move_dist < 0);
+			$move_dist = $j->{overlap} if ($move_dist > $j->{overlap});
+			$j->{is_side}->{position} += $j->{is_side}->{strand} * $move_dist;
+			$j->{overlap} -= $move_dist;
+			$j->{is_side}->{overlap} -= $move_dist;
+	
+			### second, adjust the unique sequence side with any remaining overlap
+			$j->{unique_side}->{position} += $j->{unique_side}->{strand} * $j->{overlap};	
+			$j->{unique_side}->{overlap} -= $j->{overlap};
+			
+			$j->{overlap} = 0;
+		}
+	
+		### If there is no IS element and 
+		##    (1) both sides are unique
+		## OR (2) only the second side is redundant,
+		## OR (3) both sides are redundant
+		### then give overlap to first side. 
+		### This gives proper support for junctions.
+		### and ensures we don't count this coverage twice.
+		elsif ((!$jc->{side_1}->{redundant}) || ($jc->{side_1}->{redundant} && $jc->{side_2}->{redundant}) )
+		{
+			my $strand_direction = ($jc->{side_2}->{strand} > 0) ? +1 : -1;
+	
+			$jc->{side_2}->{position} += $jc->{overlap} * $strand_direction;
+			$jc->{side_2}->{overlap} = 0;
+			$jc->{overlap} = 0;			
+		}
+		else  ## side_1 was redundant, give overlap to side_2
+		{
+			my $strand_direction = ($jc->{side_1}->{strand} > 0) ? -1 : +1;
+			$jc->{side_1}->{position} += $jc->{overlap} * $strand_direction;
+			$jc->{side_1}->{overlap} = 0;
+			$jc->{overlap} = 0;
+		}
+		
+		## If both sides were redundant, no adjustment because we are not going to count coverage
+	}
+		
+	##flatten things to only what we want to keep
+	my $item = {
+		type => 'JC',
+		
+		side_1_seq_id => $jc->{side_1}->{seq_id},
+		side_1_position => $jc->{side_1}->{position},
+		side_1_redundant => $jc->{side_1}->{redundant},
+		side_1_strand => $jc->{side_1}->{strand},
+		side_1_overlap => $jc->{side_1}->{overlap},
+		
+		side_2_seq_id => $jc->{side_2}->{seq_id},
+		side_2_position => $jc->{side_2}->{position},
+		side_2_redundant => $jc->{side_2}->{redundant},
+		side_2_strand => $jc->{side_2}->{strand},
+		side_2_overlap => $jc->{side_2}->{overlap},
+		
+		key => $jc->{key},
+		alignment_overlap => $jc->{alignment_overlap},
+		overlap => $jc->{overlap},
+		total_reads => $jc->{total_reads},
+		flanking_left => $jc->{flanking_left},
+		flanking_right => $jc->{flanking_right},
+		
+		unique_read_sequence => $jc->{unique_read_sequence},
+	};	
+
+	## may want to take only selected of these fields...
+	foreach my $key (keys %$test_info)
+	{		
+		$item->{$key} = $test_info->{$key};
+	}	
+	
+	### Note: Other adjustments to overlap can happen at the later annotation stage
+	### and they will not affect coverage for calling deletions or mutations
+	### because they will be in REDUNDANTLY matched sides of junctions
+	return $item;
 }
 
 sub _trim_ambiguous_ends
@@ -992,483 +1439,6 @@ sub _ambiguous_end_offsets_from_sequence
 	return ($left_inset, $right_inset);
 }
 
-
-sub _test_junction
-{
-	my $verbose = 0;
-	
-	my ($settings, $summary, $junction_seq_id, $matched_junction_ref, $degenerate_matches_ref, $junction_test_info_ref, $reference_fai, $ref_seq_info, $RREF, $reference_header, $RCJ, $candidate_junction_header) = @_;
-
-	#print "Testing $junction_seq_id\n";
-
-	## variable initialization
-	my $test_info;
-	my $failed = 0;
-
-	## There are two kinds of matches to a candidate junction:
-	## (1) Reads that uniquely map to one candidate junction (but any number of times to reference)
-	my @unique_matches = ();
-	@unique_matches = @{$matched_junction_ref->{$junction_seq_id}} if (defined $matched_junction_ref->{$junction_seq_id});
-	
-	## (2) Reads that uniquely map equally well to more than one candidate junction (and any number of times to reference)
-	my	@degenerate_matches = ();
-	@degenerate_matches = map { $degenerate_matches_ref->{$junction_seq_id}->{$_} } sort keys %{$degenerate_matches_ref->{$junction_seq_id}}
-		if (defined $degenerate_matches_ref->{$junction_seq_id});
-	
-	## FAI target id -- there is no easy way to get this short of loading the entire array and going through them...
-	## Debatable about whether we save more string comparisons by doing this here or each time
-	my $junction_tid = 0;
-	foreach my $test_junction_seq_id  (@{$candidate_junction_header->target_name})
-	{
-		last if ($junction_seq_id eq $test_junction_seq_id);
-		$junction_tid++;
-	}	
-	die if ($junction_tid >= $candidate_junction_header->n_targets);
-		
-		
-	print "Testing Junction Candidate: $junction_seq_id\n" if ($verbose);
-	print "Unique Matches: " . (scalar @unique_matches) . " Degenerate Matches: " . (scalar @degenerate_matches) . "\n" if ($verbose);
-
-	#### TEST 1: Reads that go a certain number of bp into the nonoverlap sequence on each side of the junction on each strand
-	my $max_left_per_strand = { '0'=> 0, '1'=>0 };
-	my $max_right_per_strand = { '0'=> 0, '1'=>0 };
-	my $max_min_left_per_strand = { '0'=> 0, '1'=>0 };
-	my $max_min_right_per_strand = { '0'=> 0, '1'=>0 };	
-	my $count_per_strand = { '0'=> 0, '1'=>0 };
-	my $total_non_overlap_reads = 0;
-	my $count_per_coord_per_strand;
-	my $min_overlap_score = 0;
-	
-	## basic information about the junction
-	my $scj = Breseq::Shared::junction_name_split($junction_seq_id);
-	my $overlap = $scj->{alignment_overlap};
-	my $flanking_left = $scj->{flanking_left};
-	
-	## Is there at least one read that isn't overlap only?
-	## displaying ones where it doesn't as marginals looks really confusing
-	my $has_non_overlap_only = 1; 
-	
-	### We also need to count degenerate matches b/c sometimes ambiguity unfairly penalizes real reads...
-	READ: foreach my $item (@unique_matches, @degenerate_matches)
-	{
-		##!!> Matches that don't extend through the overlap region will have the same quality 
-		##!!> as a reference match and, therefore, no difference in mapping quality
-		##!!> do not count these toward scoring!
-		next READ if ($item->{mapping_quality_difference} == 0);
-		
-		$total_non_overlap_reads++;
-		$has_non_overlap_only = 0;
-		
-		#If there were no degenerate matches, then we could just take the
-		#one and only match in the 'junction_alignments' array
-		#my $a = $item->{junction_alignments}->[0]; 
-		
-		## as it is, we must be sure we are looking at the one that matches
-		my $a;
-		ALIGNMENT: foreach my $candidate_a (@{$item->{junction_alignments}})
-		{
-			if ($candidate_a->tid == $junction_tid)
-			{
-				$a = $candidate_a;
-				last ALIGNMENT;
-			}
-		}
-		die if (!defined $a);
-
-		my $rev_key = ($a->reversed ? 1 : 0);
-		$count_per_strand->{$rev_key}++;
-
-		# The start coordinate is less likely to be misaligned due to errors
-		# than the end coordinate
-		my $begin_coord = $rev_key ? $a->end : $a->start;
-		$count_per_coord_per_strand->{"$begin_coord-$rev_key"}++;
-
-		print "  " . $item->{junction_alignments}->[0]->qname . " $begin_coord-$rev_key\n" if ($verbose);
-		
-
-		##The left side goes exactly up to the flanking length
-		my $this_left = $flanking_left;
-		$this_left = $this_left - $a->start+1;
-
-		#The right side starts after moving past any overlap (negative or positive)
-		my $this_right = $flanking_left+1;
-		$this_right += abs($overlap);
-		$this_right = $a->end - $this_right+1;
-
-		## Update:
-		### Score = the minimum unique match length on a side
-		### Max_Min = the maximum of the minimum length match sides
-		### Max = the maximum match on a side
-		### Note that the max and min filtering is really a kind of poor man's KS test
-		###   if we implemented that with a certain coverage cutoff it would be a
-		###   more principled way of doing things... 
-		if ($this_left < $this_right)
-		{
-			$min_overlap_score += $this_left;
-			$max_min_left_per_strand->{$rev_key} = $this_left if ($max_min_left_per_strand->{$rev_key} < $this_left);
-		}
-		else
-		{
-			$min_overlap_score += $this_right;
-			$max_min_right_per_strand->{$rev_key} = $this_right if ($max_min_right_per_strand->{$rev_key} < $this_right);
-		}
-	
-		$max_left_per_strand->{$rev_key} = $this_left if ($max_left_per_strand->{$rev_key} < $this_left);
-		$max_right_per_strand->{$rev_key} = $this_right if ($max_right_per_strand->{$rev_key} < $this_right);
-		
-	}				
-	
-	my $max_left = ($max_left_per_strand->{'0'} > $max_left_per_strand->{'1'}) ? $max_left_per_strand->{'0'} : $max_left_per_strand->{'1'};
-	my $max_right = ($max_right_per_strand->{'0'} > $max_right_per_strand->{'1'}) ? $max_right_per_strand->{'0'} : $max_right_per_strand->{'1'};
-
-	my $max_min_left = ($max_min_left_per_strand->{'0'} > $max_min_left_per_strand->{'1'}) ? $max_min_left_per_strand->{'0'} : $max_min_left_per_strand->{'1'};
-	my $max_min_right = ($max_min_right_per_strand->{'0'} > $max_min_right_per_strand->{'1'}) ? $max_min_right_per_strand->{'0'} : $max_min_right_per_strand->{'1'};
-
-	
-	$test_info = {
-		max_left => $max_left,
-		max_left_minus => $max_left_per_strand->{0},
-		max_left_plus => $max_left_per_strand->{1},
-		max_right => $max_right,
-		max_right_minus => $max_right_per_strand->{0},
-		max_right_plus =>$max_right_per_strand->{1},
-		max_min_right => $max_min_right,
-		max_min_right_minus => $max_min_right_per_strand->{0},
-		max_min_right_plus =>$max_min_right_per_strand->{1},		
-		max_min_left => $max_min_left,
-		max_min_left_minus => $max_min_left_per_strand->{0},
-		max_min_left_plus =>$max_min_left_per_strand->{1},		
-		coverage_minus => $count_per_strand->{0},
-		coverage_plus => $count_per_strand->{1},
-		total_non_overlap_reads => $total_non_overlap_reads,
-		min_overlap_score => $min_overlap_score,
-		pos_hash_score => scalar keys %$count_per_coord_per_strand,
-	};
-
-
-	#Old way, requiring certain overlap on each side on each strand
-		
-	## These parameters still need additional testing
-	## and, naturally, they have problems with scaling with the
-	## total number of reads...
-	
-#	my $alignment_on_each_side_cutoff = 16; #14
-#	my $alignment_on_each_side_cutoff_per_strand = 13; #9
-#	my $alignment_on_each_side_min_cutoff = 5;
-
-
-#	$failed = 	   ($max_left < $alignment_on_each_side_cutoff) 
-#				|| ($max_right < $alignment_on_each_side_cutoff)
-#	       		|| ($max_left_per_strand->{'0'} < $alignment_on_each_side_cutoff_per_strand) 
-#				|| ($max_left_per_strand->{'1'} < $alignment_on_each_side_cutoff_per_strand)
-#	       		|| ($max_right_per_strand->{'0'} < $alignment_on_each_side_cutoff_per_strand) 
-#				|| ($max_right_per_strand->{'1'} < $alignment_on_each_side_cutoff_per_strand)
-#	       		|| ($max_right_per_strand->{'0'} < $alignment_on_each_side_cutoff_per_strand) 
-#				|| ($max_right_per_strand->{'1'} < $alignment_on_each_side_cutoff_per_strand)
-#				|| ($max_min_left < $alignment_on_each_side_min_cutoff)
-#				|| ($max_min_right < $alignment_on_each_side_min_cutoff)
-#	;
-
-	## POS_HASH test
-	## New way, but we need to have examined the coverage distribution to calibrate what scores to accept!
-	
-	my $junction_accept_score_cutoff_1 = $summary->{preprocess_coverage}->{$scj->{side_1}->{seq_id}}->{junction_accept_score_cutoff};
-	my $junction_accept_score_cutoff_2 = $summary->{preprocess_coverage}->{$scj->{side_2}->{seq_id}}->{junction_accept_score_cutoff};
-	$failed ||= ( $test_info->{pos_hash_score} < $junction_accept_score_cutoff_1 ) && ( $test_info->{pos_hash_score} < $junction_accept_score_cutoff_2 );
-	
-	print Dumper($test_info) if ($verbose);
-	print ($failed ? "Failed\n" : "Passed\n") if ($verbose);
-	
-	###	
-	### ADD -- NEED TO CORRECT OVERLAP AND ADJUST NUMBER OF READS SUPPORTING HERE, RATHER THAN LATER
-	###
-	
-	## DEGENERATE JUNCTION MATCHES
-	## ===========================
-	## Determine the fate of degenerate reads that map to this junction
-	
-	if (defined $degenerate_matches_ref->{$junction_seq_id})
-	{
-		foreach my $read_name (keys %{$degenerate_matches_ref->{$junction_seq_id}})
-		{	
-			my $degenerate_match = $degenerate_matches_ref->{$junction_seq_id}->{$read_name};
-			my $fastq_file_index = $degenerate_match->{fastq_file_index};
-			my $matched_alignment;
-			
-			## Success for this candidate junction... 
-			## purge all references to this from the degenerate match hash
-			## so that they will not be counted for other junctions
-			if (!$failed)
-			{
-				## We need to add this degenerately matched read to the other ones supporting this junction
-				push @{$matched_junction_ref->{$junction_seq_id}}, $degenerate_match;
-			
-				# Purge all references to this read from the degenerate match hash
-				# so that it cannot be counted for any other junction
-				foreach my $a (@{$degenerate_match->{junction_alignments}})
-				{
-					my $test_junction_seq_id = $candidate_junction_header->target_name()->[$a->tid];
-					$matched_alignment = $a if ($a->tid eq $junction_tid); #this is the one for the current candidate junction
-
-					delete $degenerate_matches_ref->{$test_junction_seq_id}->{$read_name};
-					delete $degenerate_matches_ref->{$test_junction_seq_id} if (scalar keys %{$degenerate_matches_ref->{$test_junction_seq_id}} == 0);
-				}
-				
-				## Keep only the alignment
-##------>		## WE SHOULD ALSO UPDATE THE MAPPING SCORE!
-				my $a;
-				DOMINANT_ALIGNMENT: foreach my $candidate_a (@{$degenerate_match->{junction_alignments}})
-				{
-					if ($candidate_a->tid == $junction_tid)
-					{
-						$a = $candidate_a;
-						last DOMINANT_ALIGNMENT;
-					}
-				}
-				@{$degenerate_match->{junction_alignments}} = ($a);
-			}
-			
-			## Failure for this candidate junction...
-			## Remove just the degenerate hits to this candidate junction
-			## Once all have failed, then we need to add the reference alignments (if any)!
-			else
-			{
-				$degenerate_match->{degenerate_count}--;
-				
-				## This degenerate match missed on all opportunities,
-				## we should add it to the reference sequence
-				if ($degenerate_match->{degenerate_count} == 0)
-				{					
-					my $this_reference_al = $degenerate_match->{reference_alignments};
-					_write_reference_matches($settings, $reference_fai, $ref_seq_info, $RREF, $reference_header, $fastq_file_index, @$this_reference_al);					
-				}
-				
-				foreach my $a (@{$degenerate_match->{junction_alignments}})
-				{
-					$matched_alignment = $a if ($a->tid eq $junction_tid); #this is the one for the current candidate junction
-				}	
-			}
-						
-			# Write alignment to SAM file for candidate junctions regardless of success...
-			die if (!$matched_alignment);
-			Breseq::Shared::tam_write_read_alignments($RCJ, $candidate_junction_header, $fastq_file_index, [$matched_alignment]) if (!$has_non_overlap_only);
-		}
-		
-		## We are completely done with degenerate matches to this junction id.
-		## Deleting them here means that we will never go through this loop with them again
-		## and is necessary for not doubly writing them.
-		delete $degenerate_matches_ref->{$junction_seq_id};
-	}		
-
-	## UNIQUE JUNCTION MATCHES
-	## =======================	
-	READ: foreach my $item (@unique_matches)
-	{
-		## Write out the matches to the proper SAM file(s) depending on whether the junction succeeded or failed
-		my $fastq_file_index = $item->{fastq_file_index};
-		
-		## ONLY if we failed: write matches to reference sequences
-		if ($failed)
-		{		
-			my $this_reference_al = $item->{reference_alignments};
-			_write_reference_matches($settings, $reference_fai, $ref_seq_info, $RREF, $reference_header, $fastq_file_index, @$this_reference_al);
-		}
-		
-		## REGARDLESS of success: write matches to the candidate junction SAM file 
-		Breseq::Shared::tam_write_read_alignments($RCJ, $candidate_junction_header, $fastq_file_index, $item->{junction_alignments})  if (!$has_non_overlap_only);
-	}	
-	
-	# Save the test info about this junction.
-	$junction_test_info_ref->{$junction_seq_id} = $test_info;
-	return ($failed, $has_non_overlap_only);
-}
-
-sub _junction_to_hybrid_list_item
-{
-	my ($key, $ref_seq_info, $total_reads, $test_info) = @_;
-	
-	## split the key to an item with information about the junction
-	my $jc = Breseq::Shared::junction_name_split($key);
-	$jc->{key} = $key;	
-	
-	## overlap may be adjusted below... this messes up making the alignment
-	## 'alignment_overlap' is the original one that applies to the candidate junction BAM file
-	## 'overlap' is a version where overlap has been resolved if possible for adding sides of the
-	##    alignment
-	$jc->{overlap} = $jc->{alignment_overlap};			
-	$jc->{total_reads} = $total_reads;
-	
-	## Redundancy is loaded from the key, but we doubly enforce it when IS elements are involved.
-	
-	## Correct for overlapping IS elements
-	
-	###
-	# IS insertion overlap correction
-	#
-	# For these the coordinates may have been offset incorrectly initially (because both sides of the junction may look unique)
-	# The goal is to offset through positive overlap to get as close as possible to the ends of the IS
-	###
-	
-	my $is;
-	foreach my $side_key ('side_1', 'side_2')
-	{
-		## Determine IS elements
-		## Is it within an IS or near the boundary of an IS in the direction leading up to the junction?			
-		if (my $is = Breseq::ReferenceSequence::find_closest_repeat_region($jc->{$side_key}->{position}, $ref_seq_info->{repeat_lists}->{$jc->{$side_key}->{seq_id}}, 200, $jc->{$side_key}->{strand}))
-		{
-			$jc->{$side_key}->{is}->{name} = $is->{name};
-			$jc->{$side_key}->{is}->{interval} = ($is->{strand} == +1) ? "$is->{start}-$is->{end}" : "$is->{end}-$is->{start}"; 
-			$jc->{$side_key}->{is}->{product} = $is->{product};
-		}
-	}
-	
-	## use of $j is historical due to a move of this part of the function from annotate_rearrangements
-	my $j = $jc;
-	sub add_is_coords_from_interval
-	{
-		my ($c) = @_;
-		return if (!defined $c->{is}); 
-		
-		my ($is_start, $is_end) = split /-/, $c->{is}->{interval};
-		$c->{is}->{strand} = ($is_start < $is_end) ? +1 : -1; 
-		$c->{is}->{start} = ($is_start < $is_end) ? $is_start : $is_end; 
-		$c->{is}->{end} = ($is_start < $is_end) ? $is_end : $is_start;
-	}
-	
-	add_is_coords_from_interval($j->{side_1});
-	add_is_coords_from_interval($j->{side_2});
-	
-	$j->{side_1}->{read_side} = -1;
-	$j->{side_2}->{read_side} = +1;
-		
-	## Determine which side of the junction is the IS and which is unique
-	## these point to the correct initial interval...
-	if (defined $j->{side_1}->{is} && !defined $j->{side_2}->{is})
-	{
-		if (abs($j->{side_1}->{is}->{start} - $j->{side_1}->{position}) <= 20)
-		{
-			$j->{is_side} = $j->{side_1};
-			$j->{is_side}->{is}->{side_key} = 'start';
-		}
-		elsif (abs($j->{side_1}->{is}->{end} - $j->{side_1}->{position}) <= 20 )
-		{
-			$j->{is_side} = $j->{side_1};
-			$j->{is_side}->{is}->{side_key} = 'end';
-		}
-		$j->{unique_side} = $j->{side_2};
-	}
-	
-	if (!defined $j->{side_1}->{is} && defined $j->{side_2}->{is})
-	{
-		if (abs($j->{side_2}->{is}->{start} - $j->{side_2}->{position}) <= 20)
-		{
-			$j->{is_side} = $j->{side_2};
-			$j->{is_side}->{is}->{side_key} = 'start';
-		}
-		elsif (abs($j->{side_2}->{is}->{end} - $j->{side_2}->{position}) <= 20 )
-		{
-			$j->{is_side} = $j->{side_2};
-			$j->{is_side}->{is}->{side_key} = 'end';
-		}
-		$j->{unique_side} = $j->{side_1};
-	}
-	
-	## both were IS! -- define as redundant here
-	$j->{side_1}->{redundant} = 1 if (defined $j->{side_1}->{is});
-	$j->{side_2}->{redundant} = 1 if (defined $j->{side_2}->{is});
-	
-	#by default, overlap is included on both sides of the junction (possibly changed below)
-	$jc->{side_1}->{overlap} = 0;
-	$jc->{side_2}->{overlap} = 0;		
-		
-	## Resolve redundant overlap
-	if ($jc->{overlap} > 0)
-	{
-		$jc->{side_1}->{overlap} = $jc->{overlap};
-		$jc->{side_2}->{overlap} = $jc->{overlap};
-		
-		## If there was in IS, resolve overlap so it goes to the edge of the IS element
-		if (defined $j->{is_side})
-		{			
-			### first, adjust the repetitive sequence boundary to get as close to the IS as possible
-			my $move_dist = $j->{is_side}->{strand} * ($j->{is_side}->{is}->{$j->{is_side}->{is}->{side_key}} - $j->{is_side}->{position});
-						
-			$move_dist = 0 if ($move_dist < 0);
-			$move_dist = $j->{overlap} if ($move_dist > $j->{overlap});
-			$j->{is_side}->{position} += $j->{is_side}->{strand} * $move_dist;
-			$j->{overlap} -= $move_dist;
-			$j->{is_side}->{overlap} -= $move_dist;
-	
-			### second, adjust the unique sequence side with any remaining overlap
-			$j->{unique_side}->{position} += $j->{unique_side}->{strand} * $j->{overlap};	
-			$j->{unique_side}->{overlap} -= $j->{overlap};
-			
-			$j->{overlap} = 0;
-		}
-	
-		### If there is no IS element and 
-		##    (1) both sides are unique
-		## OR (2) only the second side is redundant,
-		## OR (3) both sides are redundant
-		### then give overlap to first side. 
-		### This gives proper support for junctions.
-		### and ensures we don't count this coverage twice.
-		elsif ((!$jc->{side_1}->{redundant}) || ($jc->{side_1}->{redundant} && $jc->{side_2}->{redundant}) )
-		{
-			my $strand_direction = ($jc->{side_2}->{strand} > 0) ? +1 : -1;
-	
-			$jc->{side_2}->{position} += $jc->{overlap} * $strand_direction;
-			$jc->{side_2}->{overlap} = 0;
-			$jc->{overlap} = 0;			
-		}
-		else  ## side_1 was redundant, give overlap to side_2
-		{
-			my $strand_direction = ($jc->{side_1}->{strand} > 0) ? -1 : +1;
-			$jc->{side_1}->{position} += $jc->{overlap} * $strand_direction;
-			$jc->{side_1}->{overlap} = 0;
-			$jc->{overlap} = 0;
-		}
-		
-		## If both sides were redundant, no adjustment because we are not going to count coverage
-	}
-		
-	##flatten things to only what we want to keep
-	my $item = {
-		type => 'JC',
-		
-		side_1_seq_id => $jc->{side_1}->{seq_id},
-		side_1_position => $jc->{side_1}->{position},
-		side_1_redundant => $jc->{side_1}->{redundant},
-		side_1_strand => $jc->{side_1}->{strand},
-		side_1_overlap => $jc->{side_1}->{overlap},
-		
-		side_2_seq_id => $jc->{side_2}->{seq_id},
-		side_2_position => $jc->{side_2}->{position},
-		side_2_redundant => $jc->{side_2}->{redundant},
-		side_2_strand => $jc->{side_2}->{strand},
-		side_2_overlap => $jc->{side_2}->{overlap},
-		
-		key => $jc->{key},
-		alignment_overlap => $jc->{alignment_overlap},
-		overlap => $jc->{overlap},
-		total_reads => $jc->{total_reads},
-		flanking_left => $jc->{flanking_left},
-		flanking_right => $jc->{flanking_right},
-		
-		unique_read_sequence => $jc->{unique_read_sequence},
-	};	
-
-	## may want to take only selected of these fields...
-	foreach my $key (keys %$test_info)
-	{		
-		$item->{$key} = $test_info->{$key};
-	}	
-	
-	### Note: Other adjustments to overlap can happen at the later annotation stage
-	### and they will not affect coverage for calling deletions or mutations
-	### because they will be in REDUNDANTLY matched sides of junctions
-	return $item;
-}
 
 
 return 1;

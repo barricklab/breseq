@@ -599,7 +599,8 @@ sub region_to_coords
 	}
 		
 	my $reference_length;
-	if (ref($bam) eq "LVALUE")
+	
+	if (ref(\$bam) eq "SCALAR")
 	{
 		$reference_length = $bam;
 	}
