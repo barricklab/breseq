@@ -217,20 +217,27 @@ sub initialize_1
 	$self->{base_quality_cutoff} = 3;
 	## avoids problem with Illumina assigning 2 to bad ends of reads!
 	
-	#used by CandidateJunctions.pm
+	###
+	#   CandidateJunctions.pm
+	###
 	$self->{no_junction_prediction} = undef;					# don't perform junction prediction steps
 	$self->{candidate_junction_score_method} = 'POS_HASH'; 		# Either POS_HASH, or MIN_OVERLAP
 	$self->{preprocess_junction_min_indel_split_length} = 3;	# Split the SAM entries on indels of this many bp or more before identifying CJ
 																# Undefined = OFF
+																
+	#### Scoring to decide which pairs of alignments to the same read to consider
+	$self->{required_extra_pair_total_length} = 2;				# The union of the pairs must exceed the best of any single match by this length
+	$self->{required_both_unique_length_per_side} = 5;			# Require both of the pair of matches supporting a junction to have this
+																	# much of their matches unique in the reference sequence.
+	$self->{required_one_unique_length_per_side} = 10;			# Require at least one of the pair of matches supporting a junction to have this
+																	# much of its match that is unique in the reference sequence.
+
+		#### Scoring section to choose which ones from list to take
 	$self->{minimum_candidate_junction_pos_hash_score} = 0;		# Require at least this many unique start coordinate/strand reads to accept a CJ
 																# OFF by default, because a fixed number are taken
 	$self->{minimum_candidate_junction_min_overlap_score} = 0;	# Require at least this many unique start coordinate/strand reads to accept a CJ
 																# OFF by default, because a fixed number are taken
 
-	$self->{required_both_unique_length_per_side} = 5;			# Require both of the pair of matches supporting a junction to have this
-																# much of their matches unique in the reference sequence.
-	$self->{required_one_unique_length_per_side} = 10;			# Require at least one of the pair of matches supporting a junction to have this
-																# much of its match that is unique in the reference sequence.
 
 
 #	$self->{required_unique_length_per_side} = 10;				# Require at least one of the pair of matches supporting a junction to have this
