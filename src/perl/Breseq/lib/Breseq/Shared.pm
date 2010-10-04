@@ -480,20 +480,32 @@ sub alignment_query_start_end_ref_strand
 ## counts how many mismatches there are (including unmatched bases)
 sub alignment_mismatches
 {
+	my $verbose = 0;
 	my ($a, $header, $fai, $ref_seq_info) = @_;
 	my $mismatches = 0;
 	
 	my $seq_id = $header->target_name->[$a->tid];
-	
-	my $ref_string = substr $ref_seq_info->{ref_strings}->{$seq_id}, $a->start-1, $a->end - $a->start + 1;
+
+	my $ref_string;
+	if (defined $ref_seq_info)
+	{
+		$ref_string = substr $ref_seq_info->{ref_strings}->{$seq_id}, $a->start-1, $a->end - $a->start + 1;
+	}
+	else
+	{
+		my $region = $seq_id . ':' . ($a->start) . '-' . ($a->end);
+		$ref_string = $fai->fetch($region);
+	}
 	my @ref_string_list = split //, $ref_string;
 	my $ref_pos = 0;
 	
 	my $read_string = substr $a->qseq, $a->query->start-1, $a->query->end - $a->query->start + 1;
 	my @read_string_list = split //, $read_string;
 	my $read_pos = 0;
-		
+
 	my $cigar_list = $a->cigar_array;
+	print $a->qname . "\n" if ($verbose);
+	print Dumper($cigar_list) if ($verbose);
 #	my $cigar_string = '';
 	foreach my $c (@$cigar_list)
 	{
@@ -519,6 +531,8 @@ sub alignment_mismatches
 		{			
 			for (my $i=0; $i<$len; $i++)
 			{
+				print "REF: $ref_pos  $ref_string_list[$ref_pos]\n" if ($verbose);
+				print "READ: $read_pos $read_string_list[$read_pos]\n" if ($verbose);
 				$mismatches++ if ($ref_string_list[$ref_pos] ne $read_string_list[$read_pos]);
 				#print "$read_pos $ref_pos\n";
 				

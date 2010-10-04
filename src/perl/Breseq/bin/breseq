@@ -548,7 +548,7 @@ sub paired_read_distances {}
 			
 			#print $a->qname . "\n";		
 				
-			if (!$a->munmapped)
+			if (!$a->unmapped)
 			{
 				my $mate_insert_size = abs($a->isize);
 				my $mate_end = $a->mate_end;

@@ -188,8 +188,21 @@ sub correct_alignments
 				$this_junction_al = $junction_al;
 				($junction_al, $last_junction_alignment) 
 					= Breseq::Shared::tam_next_read_alignments($junction_tam, $junction_header, $last_junction_alignment);
+
+				###			
+				## Matches to candidate junctions MUST overlap the junction.
+				##
+				## Reduce this list to those that overlap ANY PART of the junction.
+				## Alignments that extend only into the overlap region, are only additional
+				##  evidence for predicted junctions and NOT support for a new junction on 
+				## their own. (They will also match the original reference genome equally well).
+				###
+
+				@$this_junction_al = grep {_alignment_overlaps_junction($junction_info, $_) } @$this_junction_al;
 			
-				($best_junction_score, @$this_junction_al) = _eligible_read_alignments($settings, $reference_header, $reference_fai, $ref_seq_info, @$this_junction_al);
+				($best_junction_score, @$this_junction_al) = _eligible_read_alignments($settings, $junction_header, $junction_fai, undef, @$this_junction_al);
+
+				print " Best junction score: $best_junction_score\n" if ($verbose);
 			}
 			
 			## Does this read have eligible reference sequence matches?
@@ -201,6 +214,7 @@ sub correct_alignments
 					= Breseq::Shared::tam_next_read_alignments($reference_tam, $reference_header, $last_reference_alignment);
 					
 				($best_reference_score, @$this_reference_al) = _eligible_read_alignments($settings, $reference_header, $reference_fai, $ref_seq_info, @$this_reference_al);	
+				print " Best reference score: $best_reference_score\n" if ($verbose);
 			}		
 		
 			## Nothing to be done if there were no eligible matches to either
@@ -218,19 +232,7 @@ sub correct_alignments
 
 			print " Before Overlap Reference alignments = "  . (scalar @$this_reference_al) . "\n" if ($verbose);
 			print " Before Overlap Junction alignments = " . (scalar @$this_junction_al) . "\n" if ($verbose);
-			
-							
-			###			
-			## Matches to candidate junctions MUST overlap the junction.
-			##
-			## Reduce this list to those that overlap ANY PART of the junction.
-			## Alignments that extend only into the overlap region, are only additional
-			##  evidence for predicted junctions and NOT support for a new junction on 
-			## their own. (They will also match the original reference genome equally well).
-			###
 
-			## @JEB v1> Does this need to be moved to before eligible_reads call?
-			@$this_junction_al = grep {_alignment_overlaps_junction($junction_info, $_) } @$this_junction_al;
 
 			###			
 			## Determine if the read has a better match to a candidate junction
@@ -270,7 +272,10 @@ sub correct_alignments
 			
 			# if < 0, then the best match is to the reference
 			my $mapping_quality_difference = $best_junction_score - $best_reference_score;
-			
+
+			print " Best junction score: $best_junction_score\n" if ($verbose);
+			print " Best reference score: $best_reference_score\n" if ($verbose);
+
 			print " Mapping quality difference: $mapping_quality_difference\n" if ($verbose);
 			print " Final Reference alignments = "  . (scalar @$this_reference_al) . "\n" if ($verbose);
 			print " Final Candidate junction alignments = " . (scalar @$this_junction_al) . "\n" if ($verbose);
@@ -513,11 +518,14 @@ sub _eligible_read_alignments
 	### but the code below works if they are set
 	
 	my ($settings, $reference_header, $reference_fai, $ref_seq_info, @al) = @_;
-	return () if (scalar @al <= 0);
+	return (0) if (scalar @al <= 0);
 		
 	## require a minimum length of the read to be mapped
  	@al = grep { _test_read_alignment_requirements($settings, $reference_header, $reference_fai, $ref_seq_info, $_) } @al;
-	return () if (scalar @al == 0);
+	return (0) if (scalar @al == 0);
+
+ 	@al = grep { !$_->unmapped } @al;
+	return (0) if (scalar @al == 0);
 			
 	## @JEB v1> Unfortunately sometimes better matches don't get better alignment scores!
 	## example is 30K88AAXX_LenskiSet2:1:37:1775:92 in RJW1129
@@ -543,7 +551,7 @@ sub _eligible_read_alignments
 	my $best_score = $mismatch_hash{$al[0]};
 
 	## no scores meet minimum
-	return () if (defined $minimum_best_score && ($best_score < $minimum_best_score));
+	return (0) if (defined $minimum_best_score && ($best_score < $minimum_best_score));
 	
 	while (($last_best+1 < scalar @al) && ($mismatch_hash{$al[$last_best+1]} == $best_score))
 	{
@@ -568,7 +576,7 @@ sub _eligible_read_alignments
 #	}
 
 	#Note that the score we return is higher for matches so we negative this value...
-	return (-$best_score, @return_list);
+	return ($return_list[0]->l_qseq-$best_score, @return_list);
 }
 
 
