@@ -3,7 +3,7 @@
 <plist version="1.0">
 <dict>
 	<key>currentDocument</key>
-	<string>lib/Breseq/Settings.pm</string>
+	<string>bin/breseq</string>
 	<key>documents</key>
 	<array>
 		<dict>
@@ -64,14 +64,14 @@
 			<key>caret</key>
 			<dict>
 				<key>column</key>
-				<integer>0</integer>
+				<integer>44</integer>
 				<key>line</key>
-				<integer>453</integer>
+				<integer>484</integer>
 			</dict>
 			<key>firstVisibleColumn</key>
 			<integer>0</integer>
 			<key>firstVisibleLine</key>
-			<integer>447</integer>
+			<integer>453</integer>
 		</dict>
 		<key>bin/fastq_utils</key>
 		<dict>
@@ -120,14 +120,14 @@
 			<key>caret</key>
 			<dict>
 				<key>column</key>
-				<integer>39</integer>
+				<integer>16</integer>
 				<key>line</key>
-				<integer>198</integer>
+				<integer>44</integer>
 			</dict>
 			<key>firstVisibleColumn</key>
 			<integer>0</integer>
 			<key>firstVisibleLine</key>
-			<integer>236</integer>
+			<integer>23</integer>
 		</dict>
 		<key>lib/Breseq/AlignmentOutput.pm</key>
 		<dict>
@@ -148,14 +148,30 @@
 			<key>caret</key>
 			<dict>
 				<key>column</key>
-				<integer>76</integer>
+				<integer>35</integer>
 				<key>line</key>
-				<integer>653</integer>
+				<integer>483</integer>
 			</dict>
+			<key>columnSelection</key>
+			<false/>
 			<key>firstVisibleColumn</key>
 			<integer>0</integer>
 			<key>firstVisibleLine</key>
-			<integer>638</integer>
+			<integer>458</integer>
+			<key>selectFrom</key>
+			<dict>
+				<key>column</key>
+				<integer>0</integer>
+				<key>line</key>
+				<integer>483</integer>
+			</dict>
+			<key>selectTo</key>
+			<dict>
+				<key>column</key>
+				<integer>0</integer>
+				<key>line</key>
+				<integer>484</integer>
+			</dict>
 		</dict>
 		<key>lib/Breseq/CoverageDistribution.pm</key>
 		<dict>
@@ -350,14 +366,14 @@
 			<key>caret</key>
 			<dict>
 				<key>column</key>
-				<integer>4</integer>
+				<integer>1</integer>
 				<key>line</key>
-				<integer>520</integer>
+				<integer>485</integer>
 			</dict>
 			<key>firstVisibleColumn</key>
 			<integer>0</integer>
 			<key>firstVisibleLine</key>
-			<integer>483</integer>
+			<integer>468</integer>
 		</dict>
 		<key>lib/Breseq/coverage_distribution.r</key>
 		<dict>
@@ -462,6 +478,6 @@
 	<key>showFileHierarchyDrawer</key>
 	<true/>
 	<key>windowFrame</key>
-	<string>{{302, 119}, {1038, 759}}</string>
+	<string>{{431, 130}, {947, 748}}</string>
 </dict>
 </plist>
