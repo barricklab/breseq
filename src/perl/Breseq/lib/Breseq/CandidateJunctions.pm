@@ -434,7 +434,8 @@ sub preprocess_alignments
 			#write best alignments
 			if ($settings->{candidate_junction_score_method} eq 'POS_HASH')
 			{
-				@$al_ref = Breseq::AlignmentCorrection::_eligible_read_alignments($settings, $header, $reference_fai, $ref_seq_info, @$al_ref);
+				my $best_score;
+				($best_score, @$al_ref) = Breseq::AlignmentCorrection::_eligible_read_alignments($settings, $header, $reference_fai, $ref_seq_info, @$al_ref);
 				Breseq::Shared::tam_write_read_alignments($BSAM, $header, 0, $al_ref);
 			}
 		}	
@@ -452,7 +453,7 @@ sub preprocess_alignments
 sub _split_indel_alignments
 {
 	my ($settings, $summary, $header, $PSAM, $min_indel_split_len, $al_ref) = @_;
-		
+				
 	#copy alignment list
 	my @al = @$al_ref;
 	my @untouched_al;
