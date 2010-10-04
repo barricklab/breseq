@@ -483,7 +483,10 @@ if ($settings->do_step('bam_done_file_name', "Creating BAM files"))
 	Breseq::Shared::system("$samtools import $reference_faidx_file_name $resolved_reference_sam_file_name $reference_bam_unsorted_file_name");
 	Breseq::Shared::system("$samtools sort $reference_bam_unsorted_file_name $reference_bam_prefix");
 	Breseq::Shared::system("$samtools index $reference_bam_file_name");
-		
+	
+	## delete unneeded files
+	unlink $reference_bam_unsorted_file_name;
+	
 	$settings->done_step('bam_done_file_name');
 }
 

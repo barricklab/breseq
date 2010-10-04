@@ -308,14 +308,13 @@ sub correct_alignments
 				};
 				#print Dumper($item) if ($verbose);
 
-				my $a = $this_junction_al->[0];
-				my $junction_id = $junction_header->target_name()->[$a->tid];
 				
 				###
 				## Just one best hit to candidate junctions, that is better than every match to the reference
 				## #
 				if ((scalar @$this_junction_al == 1) && (scalar $mapping_quality_difference > 0))
 				{
+					my $a = $this_junction_al->[0];
 					my $junction_id = $junction_header->target_name()->[$a->tid];
 					#print "$junction_id\n";
 					push @{$matched_junction{$junction_id}}, $item;
@@ -329,6 +328,7 @@ sub correct_alignments
 					foreach my $a (@$this_junction_al)
 					{	
 						$item->{degenerate_count} = scalar @$this_junction_al; #mark as degenerate
+						my $junction_id = $junction_header->target_name()->[$a->tid];
 						$degenerate_matches{$junction_id}->{$seq->{id}} = $item;
 					}
 				}
@@ -362,7 +362,7 @@ sub correct_alignments
 	###
 	my @sorted_junction_ids = sort {-(scalar @{$matched_junction{$a}} <=> scalar @{$matched_junction{$b}})} keys %matched_junction;
 		
-	#print "Degenerate matches before handling ones with unique matches: " . (scalar keys %degenerate_matches) . "\n";
+	print "Degenerate matches before handling ones with unique matches: " . (scalar keys %degenerate_matches) . "\n" if ($verbose);
 		
 	foreach my $key (@sorted_junction_ids)
 	{
@@ -385,7 +385,7 @@ sub correct_alignments
 		}
 	}
 	
-	#print "Degenerate matches after handling ones with unique matches: " . (scalar keys %degenerate_matches) . "\n";
+	print "Degenerate matches after handling ones with unique matches: " . (scalar keys %degenerate_matches) . "\n" if ($verbose);
 	
 	###
 	## Candidate junctions with ONLY degenerate matches
@@ -512,6 +512,8 @@ sub correct_alignments
 
 sub _eligible_read_alignments
 {	
+	my $verbose = 0;
+	
 	### These settings are currently not used
 	my $minimum_best_score = 0; 
 	my $minimum_best_score_difference = 0; 
@@ -540,11 +542,13 @@ sub _eligible_read_alignments
 	}
 	@al = sort { $mismatch_hash{$a} <=> $mismatch_hash{$b} } @al;
 
-## DEBUG
-#	foreach my $a (@al)
-#	{
-#		print $a->start . "-" . $a->end . " " . $mismatch_hash{$a} . "\n";
-#	}
+	if ($verbose)
+	{
+		foreach my $a (@al)
+		{
+			print $a->start . "-" . $a->end . " " . ($a->l_qseq-$mismatch_hash{$a}) . "\n";
+		}
+	}
 	
 	## how many reads share the best score?
 	my $last_best = 0;
@@ -568,13 +572,14 @@ sub _eligible_read_alignments
 	
 	my @return_list = splice @al, 0, $last_best+1;	
 
-## DEBUG
-#	print "$last_best\n";
-#	foreach my $a (@return_list)
-#	{
-#		print $a->start . "-" . $a->end . "\n";
-#	}
-
+	if ($verbose)
+	{
+		print "$last_best\n";
+		foreach my $a (@return_list)
+		{
+			print $a->start . "-" . $a->end . "\n";
+		}
+	}
 	#Note that the score we return is higher for matches so we negative this value...
 	return ($return_list[0]->l_qseq-$best_score, @return_list);
 }
@@ -673,7 +678,7 @@ sub _test_junction
 	
 	my ($settings, $summary, $junction_seq_id, $matched_junction_ref, $degenerate_matches_ref, $junction_test_info_ref, $reference_fai, $ref_seq_info, $RREF, $reference_header, $RCJ, $candidate_junction_header) = @_;
 
-	#print "Testing $junction_seq_id\n";
+	print "Testing $junction_seq_id\n" if ($verbose);
 
 	## variable initialization
 	my $test_info;
@@ -910,6 +915,8 @@ sub _test_junction
 			else
 			{
 				$degenerate_match->{degenerate_count}--;
+			
+				print "New Degenerate match count: $degenerate_match->{degenerate_count}\n" if ($verbose);
 				
 				## This degenerate match missed on all opportunities,
 				## we should add it to the reference sequence
