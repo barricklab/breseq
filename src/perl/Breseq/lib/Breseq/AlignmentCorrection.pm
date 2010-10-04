@@ -177,6 +177,9 @@ sub correct_alignments
 			print STDERR "    READS:$reads_processed\n" if ($reads_processed % 10000 == 0);
 			
 			print "===> Read: $seq->{id}\n" if ($verbose);
+
+			my $best_junction_score = 0;
+			my $best_reference_score = 0;
 			
 			## Does this read have eligible candidate junction matches?
 			my $this_junction_al = [];
@@ -186,7 +189,7 @@ sub correct_alignments
 				($junction_al, $last_junction_alignment) 
 					= Breseq::Shared::tam_next_read_alignments($junction_tam, $junction_header, $last_junction_alignment);
 			
-				@$this_junction_al = _eligible_read_alignments($settings, $reference_header, $reference_fai, $ref_seq_info, @$this_junction_al);
+				($best_junction_score, @$this_junction_al) = _eligible_read_alignments($settings, $reference_header, $reference_fai, $ref_seq_info, @$this_junction_al);
 			}
 			
 			## Does this read have eligible reference sequence matches?
@@ -197,7 +200,7 @@ sub correct_alignments
 				($reference_al, $last_reference_alignment) 
 					= Breseq::Shared::tam_next_read_alignments($reference_tam, $reference_header, $last_reference_alignment);
 					
-				@$this_reference_al = _eligible_read_alignments($settings, $reference_header, $reference_fai, $ref_seq_info, @$this_reference_al);	
+				($best_reference_score, @$this_reference_al) = _eligible_read_alignments($settings, $reference_header, $reference_fai, $ref_seq_info, @$this_reference_al);	
 			}		
 		
 			## Nothing to be done if there were no eligible matches to either
@@ -221,11 +224,12 @@ sub correct_alignments
 			## Matches to candidate junctions MUST overlap the junction.
 			##
 			## Reduce this list to those that overlap ANY PART of the junction.
-			## Alignmets that extend only into the overlap region, are only additional
+			## Alignments that extend only into the overlap region, are only additional
 			##  evidence for predicted junctions and NOT support for a new junction on 
 			## their own. (They will also match the original reference genome equally well).
 			###
 
+			## @JEB v1> Does this need to be moved to before eligible_reads call?
 			@$this_junction_al = grep {_alignment_overlaps_junction($junction_info, $_) } @$this_junction_al;
 
 			###			
@@ -243,25 +247,26 @@ sub correct_alignments
 			##      and goes into the overlap part of a junction condidate
 			## --> Keep an item that is not used during scoring
 			###
-			
-			my $best_junction_score = 0;
-			my $best_reference_score = 0;
-
-			if (@$this_junction_al)
-			{
-				# This is the length of the match on the query -- NOT the length of the query
-				$best_junction_score = $this_junction_al->[0]->query->length;
+	
+# Moved to above		
+#			my $best_junction_score = 0;
+#			my $best_reference_score = 0;
+#
+#			if (@$this_junction_al)
+#			{
+#				# This is the length of the match on the query -- NOT the length of the query
+#				$best_junction_score = $this_junction_al->[0]->query->length;
 # THESE SCORES ARE NOT CONSISTENT ACROSS STRANDS DUE TO DIFFERENT INDEL MATCHES
 #				$best_candidate_junction_score = $ca->aux_get("AS");
-			}
-			
-			if (@$this_reference_al)
-			{
-				# This is the length of the match on the query -- NOT the length of the query
-				$best_reference_score = $this_reference_al->[0]->query->length;
+#			}
+#			
+#			if (@$this_reference_al)
+#			{
+#				# This is the length of the match on the query -- NOT the length of the query
+#				$best_reference_score = $this_reference_al->[0]->query->length;
 # THESE SCORES ARE NOT CONSISTENT ACROSS STRANDS DUE TO DIFFERENT INDEL MATCHES
 #				$best_reference_score = $ra->aux_get("AS");
-			}
+#			}
 			
 			# if < 0, then the best match is to the reference
 			my $mapping_quality_difference = $best_junction_score - $best_reference_score;
@@ -509,33 +514,61 @@ sub _eligible_read_alignments
 	
 	my ($settings, $reference_header, $reference_fai, $ref_seq_info, @al) = @_;
 	return () if (scalar @al <= 0);
-	
+		
 	## require a minimum length of the read to be mapped
  	@al = grep { _test_read_alignment_requirements($settings, $reference_header, $reference_fai, $ref_seq_info, $_) } @al;
 	return () if (scalar @al == 0);
+			
+	## @JEB v1> Unfortunately sometimes better matches don't get better alignment scores!
+	## example is 30K88AAXX_LenskiSet2:1:37:1775:92 in RJW1129
+	## Here a read with an extra match at the end doesn't get a higher score!!!
 	
-	my $best_score = $al[0]->aux_get("AS");
-	
-	## no scores meet minimum
-	return () if (defined $minimum_best_score && ($best_score < $minimum_best_score));
+	#This sucks, but we need to re-sort matches and check scores ourselves...
+	#for now just count mismatches (which include soft padding!)
+	my %mismatch_hash;
+	foreach my $a (@al)
+	{
+		$mismatch_hash{$a} = Breseq::Shared::alignment_mismatches($a, $reference_header, $reference_fai, $ref_seq_info);
+	}
+	@al = sort { $mismatch_hash{$a} <=> $mismatch_hash{$b} } @al;
+
+## DEBUG
+#	foreach my $a (@al)
+#	{
+#		print $a->start . "-" . $a->end . " " . $mismatch_hash{$a} . "\n";
+#	}
 	
 	## how many reads share the best score?
 	my $last_best = 0;
-	while (($last_best+1 < scalar @al) && ($al[$last_best+1]->aux_get("AS") == $best_score))
+	my $best_score = $mismatch_hash{$al[0]};
+
+	## no scores meet minimum
+	return () if (defined $minimum_best_score && ($best_score < $minimum_best_score));
+	
+	while (($last_best+1 < scalar @al) && ($mismatch_hash{$al[$last_best+1]} == $best_score))
 	{
 		$last_best++;
 	}
 	
+	#broken
 	## no scores meet minimum difference between best and next best
-	if (defined $minimum_best_score_difference && (scalar @al > $last_best+1))
-	{
-		my $second_best_score = $al[$last_best+1]->aux_get("AS");
-		return () if ($second_best_score + $minimum_best_score_difference >= $best_score)
-	}
+	#if (defined $minimum_best_score_difference && (scalar @al > $last_best+1))
+	#{
+	#	my $second_best_score = $al[$last_best+1]->aux_get("AS");
+	#	return () if ($second_best_score + $minimum_best_score_difference >= $best_score)
+	#}
 	
 	my @return_list = splice @al, 0, $last_best+1;	
-	 
-	return @return_list;
+
+## DEBUG
+#	print "$last_best\n";
+#	foreach my $a (@return_list)
+#	{
+#		print $a->start . "-" . $a->end . "\n";
+#	}
+
+	#Note that the score we return is higher for matches so we negative this value...
+	return (-$best_score, @return_list);
 }
 
 
