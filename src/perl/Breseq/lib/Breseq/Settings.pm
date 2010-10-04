@@ -214,8 +214,7 @@ sub initialize_1
 	$self->{base_output_path} = '';
 	$self->{error_model_method} = 'EMPIRICAL';
 	$self->{trim_reads} = 0;
-	$self->{base_quality_cutoff} = 3;
-	## avoids problem with Illumina assigning 2 to bad ends of reads!
+	$self->{base_quality_cutoff} = 3;			# avoids problem with Illumina assigning 2 to bad ends of reads!
 	
 	###
 	#   CandidateJunctions.pm
@@ -227,6 +226,7 @@ sub initialize_1
 																
 	#### Scoring to decide which pairs of alignments to the same read to consider
 	$self->{required_extra_pair_total_length} = 2;				# The union of the pairs must exceed the best of any single match by this length
+																# Setting this does penalize some *real* new junctions, so be careful!
 	$self->{required_both_unique_length_per_side} = 5;			# Require both of the pair of matches supporting a junction to have this
 																	# much of their matches unique in the reference sequence.
 	$self->{required_one_unique_length_per_side} = 10;			# Require at least one of the pair of matches supporting a junction to have this
