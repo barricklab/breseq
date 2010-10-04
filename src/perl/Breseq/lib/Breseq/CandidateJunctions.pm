@@ -61,7 +61,7 @@ my $required_extra_pair_total_length;
 
 sub identify_candidate_junctions
 {
-	my $verbose = 0;
+	my $verbose = 1;
 	our ($settings, $summary, $ref_seq_info) = @_;
 
 	#set up some options that are global to this module
@@ -626,7 +626,7 @@ sub _alignments_to_candidate_junctions
 {
 	my ($settings, $summary, $ref_seq_info, $candidate_junctions, $fai, $header, $al_ref) = @_;
 
-	my $verbose = 0;
+	my $verbose = 1;
 		
 	if ($verbose)
 	{
@@ -679,23 +679,9 @@ sub _alignments_to_candidate_junctions
 	## Pairs must CLEAR the maximum length of any one alignment by a certain amount
 	$max_union_length += $required_extra_pair_total_length;
 	
-	## bail before next statement
-#	return if (scalar @list1 == 0);
-	
 	#The first match in this category is the longest
-#	our ($encompass_start, $encompass_end) = Breseq::Shared::alignment_query_start_end($list1[0]);
-#	print "  Encompass ($encompass_start, $encompass_end)\n";
 	print "  List1: " . (scalar @list1) . "\n" if ($verbose);
 	print "  List2: " . (scalar @list2) . "\n" if ($verbose);	
-#	@list2 = grep { !_dominated($_) } @list2;
-#	print "  List2 not dominated: " . (scalar @list2) . "\n";
-
-#	sub _dominated
-#	{
-#		my ($a) = @_;
-#		my ($a_start, $a_end) = Breseq::Shared::alignment_query_start_end($a);
-#		return ($a_end <= $encompass_end);
-#	}
 	
 	my @passed_pair_list;
 	
@@ -778,9 +764,7 @@ sub _alignments_to_candidate_junctions
 	print $al_ref->[0]->qname . "\n"  if ($verbose);
 	
 	#only now that we've looked through everything can we determine whether the reference sequence matched 
-	#on a side was unique, after correcting for overlap
-	print "REDUNDANT_JUNCTION SIDES:\n" if ($verbose);
-	
+	#on a side was unique, after correcting for overlap	
 	foreach my $jct (@junctions)
 	{			
 		my @junction_id_list = @{$jct->{list}};
@@ -1002,7 +986,7 @@ sub _alignments_to_candidate_junction
 		if (defined $q1_move || defined $q2_move)
 		{
 			print "Rejecting alignment because there is not not enough overlap\n" if ($verbose);
-			my $passed = _check_read_pair_requirements($r1_start, $r1_end, $r2_start, $r2_end);
+			my $passed = _check_read_pair_requirements($q1_start, $q1_end, $q2_start, $q2_end);
 			return (0) if (!$passed);
 		}
 		
@@ -1202,7 +1186,10 @@ sub _alignments_to_candidate_junction
 
 sub _check_read_pair_requirements
 {
+	my $verbose = 1;
 	my ($a1_start, $a1_end, $a2_start, $a2_end) = @_;
+
+	print "=== Match1: $a1_start-$a1_end   Match2: $a2_start-$a2_end\n" if ($verbose);
 
 	## 0. Require one match to start at the beginning of the read
 	return 0 if (($a1_start != 1) && ($a2_start != 1));
@@ -1227,6 +1214,8 @@ sub _check_read_pair_requirements
 	## CHECKS
 	###
 
+	print "    Union: $union_length   Intersection: $intersection_length\n" if ($verbose);
+
 	## 1. Require maximum negative overlap (inserted unique sequence length) to be less than some value
 	return 0 if ($intersection_length_negative > $maximum_inserted_junction_sequence_length);
 
@@ -1246,9 +1235,7 @@ sub _check_read_pair_requirements
 	my $a1_unique_length = ($a1_length - $intersection_length_positive);
 	my $a2_unique_length = ($a2_length - $intersection_length_positive);
 	
-	#print "=== Match1: $a1_start-$a1_end   Match2: $a2_start-$a2_end\n";
-	#print "    Union: $union_length   Intersection: $intersection_length\n";
-	#print "    Unique1: $a1_unique_length   Unique2: $a2_unique_length\n";
+	print "    Unique1: $a1_unique_length   Unique2: $a2_unique_length\n" if ($verbose);
 
 	return (1, $a1_unique_length, $a2_unique_length, $union_length);
 }
