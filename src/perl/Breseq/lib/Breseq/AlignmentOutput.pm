@@ -332,7 +332,7 @@ sub create_alignment
 		#print $a->display_name,' ',$a->cigar_str,"\n";
 		my $redundancy = $a->aux_get('X1');		
 				
-		if ($redundancy == 1)
+		if ((!defined $redundancy) || ($redundancy == 1))
 		{
 			$total_reads++;			
 			
