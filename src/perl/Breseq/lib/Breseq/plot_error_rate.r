@@ -24,6 +24,7 @@ for (e in commandArgs()) {
 X<-read.table(in_file, sep="\t", header=T)
 Y<-X
 
+log10_min_error_rate = floor(log10(min(X)));
 min_error_rate = 10**floor(log10(min(X)));
 
 pdf(out_file, height=6, width=9)
@@ -47,9 +48,18 @@ new_plot <- function(plot_title)
 	plot(0, type="n", lty="solid", log="y", ylim=c(min_error_rate, 1), xlim=c(min(X$quality), max(X$quality)), main=plot_title, lwd=1, axes=F, xlab="", ylab="", las=1, cex.lab=1.2, cex.axis=1.2, cex.main=1.2 )
 	options(warn=1)
 	box()
+
 	#y-axis
-	axis(2, cex.lab=1.2, las=1, cex.axis=1.2, yaxs="i", at = c(0.0000000001, 0.000000001, 0.00000001, 0.0000001, 0.000001, 0.00001, 0.0001, 0.001, 0.01, 0.1, 1), label = c(expression(10^-10), expression(10^-9), expression(10^-8), expression(10^-7), expression(10^-6), expression(10^-5), expression(10^-4), expression(10^-3), expression(10^-2), expression(10^-1), expression(1)))
+	
+	my_tick_at = c(0.0000000001, 0.000000001, 0.00000001, 0.0000001, 0.000001, 0.00001, 0.0001, 0.001, 0.01, 0.1, 1)
+	my_tick_at = my_tick_at[(11+log10_min_error_rate):11];
+
+	my_tick_labels = c(expression(10^-10), expression(10^-9), expression(10^-8), expression(10^-7), expression(10^-6), expression(10^-5), expression(10^-4), expression(10^-3), expression(10^-2), expression(10^-1), expression(1))
+	my_tick_labels = my_tick_labels[(11+log10_min_error_rate):11];
+
+	axis(2, cex.lab=1.2, las=1, cex.axis=1.2, yaxs="i", at = my_tick_at, label = my_tick_labels)
 	title(ylab="Error rate", mgp = c(3.5, 1, 0), cex.lab=1.2)
+	
 	#x-axis
 	axis(1, cex.lab=1.2, cex.axis=1.2, xaxs="i")
 	title(xlab="Base quality score", mgp = c(3, 1, 0), cex.lab=1.2)
