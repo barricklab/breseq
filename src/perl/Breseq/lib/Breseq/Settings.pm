@@ -54,7 +54,7 @@ sub new
 	my $self = new Bio::Root::Root($caller, @args);
 	bless ($self, $class);
 
-	$self->initialize_1;
+	$self->pre_option_initialize;
 	
 	#keep this on by default
 	
@@ -109,7 +109,7 @@ sub new
 	pod2usage(-exitstatus => 0, -verbose => 2) if $man;
 	pod2usage(-exitstatus => 0, -verbose => 2) if (scalar @ARGV == 0);
 	
-	$self->initialize_2;
+	$self->post_option_initialize;
 	
 	my ($sec,$min,$hour,$mday,$mon,$year,$wday,$yday,$isdst)=localtime(time);
 	my $time_stamp = sprintf "%4d-%02d-%02d %02d:%02d:%02d",$year+1900,$mon+1,$mday,$hour,$min,$sec;
@@ -119,82 +119,8 @@ sub new
 	return $self;
 }
 
-
-sub new_annotate
-{	
-	my($caller,@args) = @_;
-	my $class = ref($caller) || $caller;
-	my $self = {}; # = new Bio::Root::Root($caller, @args);
-	bless ($self, $class);
-
-	$self->initialize_1;
-	
-	#keep this on by default
-	my ($help, $man);
-	GetOptions(
-		'help|?' => \$help, 'man' => \$man,
-		'verbose|v' => \$self->{verbose},
-	## Options for input and output files
-		'name|n=s' => \$self->{run_name},	
-		'output-path|o=s' => \$self->{base_output_path},	
-		'reference-sequence|r=s' => \@{$self->{reference_genbank_file_names}},
-		'junction-sequence|j=s' => \@{$self->{junction_only_reference_genbank_file_names}},
-		'quality-style|q=s' => \$self->{quality_type},
-		'clean=s' => \$self->{clean},
-	## Options for what results are printed
-		'snp-quality-cutoff|c=s' => \$self->{snp_log10_prob_cutoff},
-	## Options for snp error analysis
-		'require-complete-match' => \$self->{require_complete_match},
-		'require-no-indel-match' => \$self->{require_no_indel_match},
-		'require-unique-match' => \$self->{require_unique_match},
-		'do-not-trim-ambiguous-ends' => \$self->{do_not_trim_ambiguous_ends},
-		'polymorphism-prediction' => \$self->{polymorphism_prediction},		
-	## Options for turning various analysis chunks off or on
-		'no-junction-prediction' => \$self->{no_junction_prediction},
-		'no-mismatch-prediction' => \$self->{no_mutation_prediction},
-		'no-deletion-prediction' => \$self->{no_deletion_prediction},
-		'no-alignment-generation' => \$self->{no_alignment_generation},
-		'no-filter-unwanted' => \$self->{no_filter_unwanted},
-		'copy-number-variation' => \$self->{copy_number_variation},		
-		'read-limit|l=s' => \$self->{read_limit},
-		'candidate-junction-read-limit=s' => \$self->{candidate_junction_read_limit},
-		'alignment-read-limit=s' => \$self->{alignment_read_limit},
-		'polymorphism-log10-e-value-cutoff=s' => \$self->{polymorphism_log10_e_value_cutoff},
-		'polymorphism-frequency-cutoff=s' =>  \$self->{polymorphism_frequency_cutoff},	
-		'polymorphism-p-value-cutoff=s' => \$self->{polymorphism_bias_p_value_cutoff},
-		'no-unmatched-reads' => \$self->{no_unmatched_reads},
-		'maximum-candidate-junctions=s' => \$self->{maximum_candidate_junctions},
-		'trim-read-ends' => \$self->{trim_read_ends},
-		'trim-read-base-quality=s' => \$self->{trim_read_base_quality},
-		'base-quality-cutoff|b=s' => \$self->{base_quality_cutoff},
-		'maximum-mismatches|m=s' => \$self->{maximum_read_mismatches},
-		'perl-error-count' => \$self->{perl_error_count},
-		'perl-identify-mutations' => \$self->{perl_identify_mutations},	
-		'perl-calc-trims' => \$self->{perl_calc_trims},			
-		'error-model-method=s' => \$self->{error_model_method},
-		'no-indel-polymorphisms' => \$self->{no_indel_polymorphisms},
-		'strict-polymorphism-prediction' => \$self->{strict_polymorphism_prediction},
-		'max-rejected-polymorphisms-to-show=s' => \$self->{max_rejected_polymorphisms_to_show},
-		'max-rejected-junctions-to-show=s' => \$self->{max_rejected_junctions_to_show},
-		'force-quality-scores' => \$self->{accept_any_quality_scores},
-	## This is the only different option	
-		'input-genome-diff|i=s' => \@{$self->{input_genome_diffs}},	
-	) or pod2usage(2);
-
-	pod2usage(1) if $help;
-	pod2usage(-exitstatus => 0, -verbose => 2) if $man;
-	pod2usage(-exitstatus => 0, -verbose => 2) if (scalar @ARGV == 0);
-	
-	$self->{max_junctions_to_print} = 100  if ($self->{marginal_mode});
-	$self->{sort_junctions_by_score} = 1  if ($self->{marginal_mode});
-		
-	$self->initialize_2;
-		
-	return $self;
-}
-
 ## called before getting options from command line
-sub initialize_1
+sub pre_option_initialize
 {
 	my ($self) = @_;
 
@@ -274,12 +200,13 @@ sub initialize_1
 	#used by Output.pm
 	$self->{max_rejected_polymorphisms_to_show} = 100;
 	$self->{max_rejected_junctions_to_show} = 25;
-	
+	$self->{hide_circular_genome_junctions} = 1;		
+		
 	 @{$self->{execution_times}} = ();
 }
 
 ## called after getting options from command line
-sub initialize_2
+sub post_option_initialize
 {
 	my ($self) = @_;
 	

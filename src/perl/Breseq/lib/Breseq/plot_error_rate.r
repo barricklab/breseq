@@ -61,7 +61,7 @@ new_plot <- function(plot_title)
 	title(ylab="Error rate", mgp = c(3.5, 1, 0), cex.lab=1.2)
 	
 	#x-axis
-	axis(1, cex.lab=1.2, cex.axis=1.2, xaxs="i")
+	axis(1, cex.lab=1.2, cex.axis=1.2, xaxs="i", at=c(0,5,10,15,20,25,30,35,40))
 	title(xlab="Base quality score", mgp = c(3, 1, 0), cex.lab=1.2)
 }
 

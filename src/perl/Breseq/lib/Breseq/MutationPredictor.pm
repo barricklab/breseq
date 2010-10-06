@@ -88,14 +88,11 @@ sub predict
 	}
 	
 	###
-	##  evidence JC + => MOB, DEL mutations
-	##  common code for dealing with junction predictions
+	##  Preprocessing of JC evidence
 	###
 	
 	##For all that follows, we need information about repeat_regions overlapping the sides of junctions	
 	my @jc = $gd->list('JC');
-	@jc = grep { !$_->{reject} } @jc; 
-	## Don't count rejected ones, this can be relaxed, but it makes MOB prediction much more complicated and prone to errors.
 	
 	JC: foreach my $j (@jc)
 	{
@@ -150,6 +147,9 @@ sub predict
 			}
 		}
 	}
+	@jc = grep { !$_->{reject} } @jc; 
+	## Don't count rejected ones, this can be relaxed, but it makes MOB prediction much more complicated and prone to errors.
+
 	
 	my @mc = $gd->list('MC');	
 		
@@ -762,9 +762,10 @@ sub predict
 		## Special case of circular chromosome
 		if ( ($j->{_side_1}->{position} == 1) && ($j->{_side_2}->{position} == $summary->{sequence_conversion}->{reference_sequences}->{$seq_id}->{length} ) )
 		{
+			$j->{circular_chromosome} = 1;
 			next;
 		}
-		##protection against misatakes
+		##protection against mistakes
 		next if ($j->{_side_2}->{position} - $j->{_side_1}->{position} + 1 > 100000);		
 		
 		## 'AMP'

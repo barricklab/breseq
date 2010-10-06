@@ -44,9 +44,9 @@ Data lines describe either a mutation or evidence from an analysis that can pote
    
    ids of evidence that support this mutation. May be set to '.' or left blank.
 
-Valid *mutation* types are: SNP, INS, DEL, SUB, MOB, INV, AMP.
+Valid *mutation* types are: SNP, SUB, DEL, INS, MOB, AMP, CON, INV.
 
-Valid *evidence* types are: RA, MC, JC.
+Valid *evidence* types are: RA, MC, JC, UN.
 
 Evidence Types
 ++++++++++++++++++++++

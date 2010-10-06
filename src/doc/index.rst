@@ -13,12 +13,12 @@ Contents:
    :maxdepth: 2
 
    Introduction <introduction>
+   License <license>
    Installation <installation>
    Usage <usage>  
    Methods <methods>   
    HTML Output <html_output>
    GenomeDiff Output <gd_output>
-   License <license>
    Acknowledgments <acknowledgments>
 
 .. Indices and tables

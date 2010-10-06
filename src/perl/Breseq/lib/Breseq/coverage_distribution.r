@@ -186,8 +186,7 @@ if (pdf_output == 0) {
 	pdf(plot_file, height=6, width=7)
 }
 
-par(mar=c(6,6,3,3));
-par(mgp = c(4, 1, 0))
+par(mar=c(5.5,7.5,3,1.5));
 
 max_y = 0
 if (plot_poisson) {
@@ -196,11 +195,23 @@ if (plot_poisson) {
 	max_y = max(X$n, fit_nb)
 }
 
-plot(0:10, 0:10, type="n", lty="solid", ylim=c(0, max_y)*1.05, xlim=c(0, graph_end_i), lwd=1, xaxs="i", yaxs="i", axes=F, las=1, main="Coverage Distribution at Unique-Only Positions", xlab="Number of reference positions", ylab="Coverage depth (reads)", cex.lab=1.2, cex.axis=1.2 )
+plot(0:10, 0:10, type="n", lty="solid", ylim=c(0, max_y)*1.05, xlim=c(0, graph_end_i), lwd=1, xaxs="i", yaxs="i", axes=F, las=1, main="Coverage Distribution at Unique-Only Positions", xlab="Number of reference positions", ylab="", cex.lab=1.2, cex.axis=1.2)
+
+mtext(side = 2, text = "Coverage depth (reads)", line = 5.5, cex=1.2)
+
+sciNotation <- function(x, digits = 1) {
+    if (length(x) > 1) {
+        return(append(sciNotation(x[1]), sciNotation(x[-1])))     
+	} 
+    if (!x) return(0) 
+
+	exponent <- floor(log10(x)) 
+    base <- round(x / 10^exponent, digits)     
+	as.expression(substitute(base %*% 10^exponent, list(base = base, exponent = exponent))) 
+}
 
 #axis(2, cex.lab=1.2, las=1, cex.axis=1.2, labels=T, at=(0:6)*50000)
-
-axis(2, cex.lab=1.2, las=1, cex.axis=1.2, labels=T)
+axis(2, cex.lab=1.2, las=1, cex.axis=1.2, at = axTicks(2), labels = sciNotation(axTicks(2), 1))
 axis(1, cex.lab=1.2, cex.axis=1.2, labels=T)
 box()
 

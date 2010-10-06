@@ -48,9 +48,9 @@ copyright = u'2010, Jeffrey E. Barrick and contributors'
 # built documents.
 #
 # The short X.Y version.
-version = '1.0'
+version = '0.9'
 # The full version, including alpha/beta/rc tags.
-release = '1.0'
+release = '0.9'
 
 rst_prolog = """
 .. |breseq| replace:: :program:`breseq`
