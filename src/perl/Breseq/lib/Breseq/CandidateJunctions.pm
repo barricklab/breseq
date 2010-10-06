@@ -61,7 +61,7 @@ my $required_extra_pair_total_length;
 
 sub identify_candidate_junctions
 {
-	my $verbose = 1;
+	my $verbose = 0;
 	our ($settings, $summary, $ref_seq_info) = @_;
 
 	#set up some options that are global to this module
@@ -626,7 +626,7 @@ sub _alignments_to_candidate_junctions
 {
 	my ($settings, $summary, $ref_seq_info, $candidate_junctions, $fai, $header, $al_ref) = @_;
 
-	my $verbose = 1;
+	my $verbose = 0;
 		
 	if ($verbose)
 	{
@@ -1186,7 +1186,7 @@ sub _alignments_to_candidate_junction
 
 sub _check_read_pair_requirements
 {
-	my $verbose = 1;
+	my $verbose = 0;
 	my ($a1_start, $a1_end, $a2_start, $a2_end) = @_;
 
 	print "=== Match1: $a1_start-$a1_end   Match2: $a2_start-$a2_end\n" if ($verbose);
