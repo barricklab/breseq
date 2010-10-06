@@ -740,7 +740,82 @@ if ($settings->do_step('output_done_file_name', "Output"))
 	$evidence_gd->write($final_genome_diff_file_name);
 	unlink $evidence_genome_diff_file_name;
 
-	my $res = Breseq::Shared::system("$FindBin::Bin/genomediff ANNOTATE -i $final_genome_diff_file_name $settings->{arguments}");
+	sub mutation_annotation {}
+	
+	my @genbank_file_names = $settings->file_name('reference_genbank_file_names'); 
+	my @junction_only_genbank_file_names = $settings->file_name('junction_only_reference_genbank_file_names'); 
+
+	my $gd = $evidence_gd;
+
+	##
+	# Annotate mutations
+	##
+	print STDERR "Annotating mutations...\n";
+	Breseq::ReferenceSequence::annotate_mutations($ref_seq_info, $gd);
+
+	##
+	# Plot coverage of genome and large deletions
+	##
+	print STDERR "Drawing coverage plots...\n";
+	Breseq::Output::draw_coverage($settings, $ref_seq_info, $gd);
+
+	##
+	# Mark lowest RA evidence items as no-show, or we may be drawing way too many alignments
+	##	
+
+	my @ra = $gd->filter_used_as_evidence($gd->list('RA'));		
+
+	@ra = grep { ($_->{frequency} != 0) && ($_->{frequency} != 1) && (!$_->{no_show})  } @ra;
+	@ra = sort { -($a->{quality} <=> $b->{quality}) } @ra;
+
+	for (my $i = $settings->{max_rejected_polymorphisms_to_show}; $i< scalar @ra; $i++)
+	{
+		$ra[$i]->{no_show} = 1;
+	}
+
+	## require a certain amount of coverage
+	foreach my $item ($gd->filter_used_as_evidence($gd->list('RA')))
+	{
+		my ($top, $bot) = split /\//, $item->{tot_cov};
+		$item->{no_show} = 1 if ($top + $bot <= 2);
+	}
+	@ra = grep { !$_->{coverage} && !$_->{no_show} } @ra;
+
+	##
+	# Mark lowest scoring reject junctions as no-show
+	##
+	my @jc = $gd->filter_used_as_evidence($gd->list('JC'));	
+	@jc = grep { $_->{reject} } @jc;
+
+	@jc = sort { -($a->{pos_hash_score} <=> $b->{pos_hash_score}) || -($a->{min_overlap_score} <=> $b->{min_overlap_score})  || ($a->{total_reads} <=> $a->{total_reads}) } @jc;
+	for (my $i = $settings->{max_rejected_junctions_to_show}; $i< scalar @jc; $i++)
+	{
+		$jc[$i]->{no_show} = 1;
+	}
+
+	##
+	# Create evidence files containing alignments and coverage plots
+	##
+	if (!$settings->{no_alignment_generation})
+	{
+		Breseq::Output::create_evidence_files($settings, $gd);
+	}
+
+	###
+	## HTML output
+	###	
+
+	print STDERR "Creating index HTML table...\n";	
+
+	my $summary = {};
+	my $sequence_conversion_summary_file_name = $settings->file_name('sequence_conversion_summary_file_name');	
+	$summary->{sequence_conversion} = Storable::retrieve($sequence_conversion_summary_file_name);
+
+	my $index_html_file_name = $settings->file_name('index_html_file_name');		
+	Breseq::Output::html_index($index_html_file_name, $settings, $summary, $ref_seq_info, $gd);	
+
+	my $marginal_html_file_name = $settings->file_name('marginal_html_file_name');	
+	Breseq::Output::html_marginal_predictions($marginal_html_file_name, $settings, $summary, $ref_seq_info, $gd);	
 
 	###
 	## Temporary debug output using Data::Dumper

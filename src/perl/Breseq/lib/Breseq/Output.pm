@@ -149,7 +149,7 @@ sub html_index
 	
 	my @jc = $gd->filter_used_as_evidence($gd->list('JC'));
 	@jc = grep { !$_->{no_show} } @jc;	
-	@jc = grep { !$_->{circular_chromosome} } @jc;	
+	@jc = grep { !$_->{circular_chromosome} } @jc if ($settings->{hide_circular_genome_junctions}); #don't show junctions for circular chromosomes	
 
 	my @jcu = grep { !$_->{reject} } @jc;	
 	if (scalar @jcu > 0)
@@ -178,7 +178,7 @@ sub html_marginal_predictions
 	my $one_ref_seq = scalar(keys %{$ref_seq_info->{ref_strings}}) == 1;
 	
 	###
-	## Rejected evidence
+	## Marginal evidence
 	###
 	
 	my @ra = $gd->filter_used_as_evidence($gd->list('RA'));	
@@ -187,15 +187,17 @@ sub html_marginal_predictions
 	
 	if (scalar @ra > 0)
 	{
-		print HTML p . html_read_alignment_table_string(\@ra, $relative_path, "Rejected read alignment evidence...");
+		print HTML p . html_read_alignment_table_string(\@ra, $relative_path, "Marginal read alignment evidence...");
 	}
 	
 	my @jc = $gd->filter_used_as_evidence($gd->list('JC'));
 	@jc = grep { !$_->{no_show} } @jc;
-	my @jcr = grep { $_->{reject} } @jc;
-	if (scalar @jcr > 0)
+	@jc = grep { $_->{reject} } @jc;
+	if (scalar @jc > 0)
 	{	
-		print HTML p . html_new_junction_table_string(\@jcr, $relative_path, "Rejected new junction evidence...");	
+		## sort by score, not by position (the default order)...
+		@jc = sort { -($a->{pos_hash_score} <=> $b->{pos_hash_score}) || -($a->{min_overlap_score} <=> $b->{min_overlap_score})  || ($a->{total_reads} <=> $a->{total_reads}) } @jc;
+		print HTML p . html_new_junction_table_string(\@jc, $relative_path, "Marginal new junction evidence...");	
 	}
 	
 	print HTML end_html;

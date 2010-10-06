@@ -20,7 +20,7 @@ Required options:
 
 .. option:: reads1.fastq [reads2.fastq, reads3.fastq...]  
 
-   The remaining arguments at the command line are the FASTQ input files of reads. The FASTQ base quality scores must be in `SANGER format <http://en.wikipedia.org/wiki/FASTQ_format>`_. The included tool :program:`fastq_utils` can be used to convert from other common formats. |breseq| re-calibrates the error rates for each FASTQ file separately, so data sets that were generated independently should be stored in different input files.
+   The remaining arguments at the command line are the FASTQ input files of reads. The FASTQ base quality scores must be in `SANGER format <http://en.wikipedia.org/wiki/FASTQ_format>`_. |breseq| re-calibrates the error rates for each FASTQ file separately, so data sets that were generated independently should be stored in different input files.
 
 Expert options:
 
