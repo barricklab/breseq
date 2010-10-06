@@ -51,12 +51,15 @@ if (window_end == -1)
 }
 
 if (pdf_output == 0) {
-	bitmap(out_file, height=450, width=900, type = "png16m", units = "px", res = 72, pointsize=18, taa=4, gaa=2)
+	bitmap(out_file, height=500, width=900, type = "png16m", units = "px", res = 72, pointsize=18, taa=4, gaa=2)
 } else {
 	pdf(out_file, height=5, width=8)
 }
 
-par(mar=c(5.1,4.1,1.2,2));
+### We use a blank graph for the legend!!
+par(mar=c(4.1,5.1,1.1,1.1));
+layout(matrix(c(1,2), 2, 1, byrow = TRUE), heights=c(5,0.65))
+
 plot(0:10, 0:10, type="n", lty="solid", ylim=c(0, maxy), xlim=c(start_pos, end_pos), lwd=2, xaxs="i", yaxs="i", xlab="Coordinate in Reference Genome", ylab="Read Coverage Depth")
 
 #### Need to add back the option to gray out the ends!
@@ -76,4 +79,17 @@ if (total_only == 0)
 	lines(X$position, X$unique_top_cov, type="s", col="cyan", lty="solid", lwd=0.7)
 	lines(X$position, X$unique_bot_cov, type="s", col="purple", lty="solid", lwd=0.7)
 }
+
+## draw a legend
+par(mar=c(0.5,3,0.1,0.5));
+barplot(0,0, axes=FALSE)
+
+if (total_only == 0) {
+	legend( "bottom" , cex=0.85, c("unique total", "unique top", "unique bottom ", "repeat total", "repeat top","repeat bottom"), pch=-1, horiz=T, col="black", fill=c("blue", "cyan", "purple", "red", "yellow", "orange"), bty="n")
+} else {
+	legend( "bottom" , cex=0.85, c("unique total", "repeat total"), pch=-1, horiz=T, col="black", fill=c("blue", "red"), bty="n")
+}
+
+
+
 dev.off()
