@@ -509,15 +509,17 @@ void breseq::identify_mutations_pileup::callback(const breseq::pileup& p) {
 		//		print MUT "$line\n" if (defined $snps_all_tab_file_name);
 		
 		int total_cov[3]={0,0,0}; // triple, same as above
-		ostringstream line;
-		line << position << " " << insert_count << " " << ref_base << " " << e_value_call;
+    
+    // Don't need to print, but is nice for debug
+		//ostringstream line;
+		//line << position << " " << insert_count << " " << ref_base << " " << e_value_call;
 		
 		for(std::size_t j=0; j<5; ++j) {
 			double top_cov = pos_info[base_list[j]].unique_trimmed_cov[2];
 			double bot_cov = pos_info[base_list[j]].unique_trimmed_cov[0];
-			total_cov[2] += top_cov;
-			total_cov[0] += bot_cov;
-			line << " " << base_list[j] << " (" << bot_cov << "/" << top_cov << ")";
+			total_cov[2] += round(top_cov);
+			total_cov[0] += round(bot_cov);
+		//	line << " " << base_list[j] << " (" << bot_cov << "/" << top_cov << ")";
 		}
 		//std::cerr << line.str() << endl; // @dk print to file
 		
