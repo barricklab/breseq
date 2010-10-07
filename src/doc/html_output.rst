@@ -6,7 +6,11 @@ HTML output
 index.html
 ***************
 
-This is the main results page. It shows predicted mutational events in the main table at the top, and, if applicable, orphan evidence in accessory tables below.
+This is the main results page. It shows predicted mutational events in the main table at the top, and, 
+
+Clickin on 
+
+If applicable, "orphan" evidence is displayed in accessory tables below. For these, clicking the link on the left brings up.
 
 marginal.html
 ***************
