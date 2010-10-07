@@ -24,7 +24,7 @@ void breseq::identify_mutations(const std::string& bam,
 																const std::string& output_dir,
 																const std::vector<std::string>& readfiles,
 																const std::string& coverage_dir,
-																double deletion_propagation_cutoff,
+																const std::vector<double>& deletion_propagation_cutoff,
 																double mutation_cutoff,
 																bool predict_deletions,
 																bool predict_polymorphisms,
@@ -45,7 +45,7 @@ breseq::identify_mutations_pileup::identify_mutations_pileup(const std::string& 
 																														 const std::string& output_dir,
 																														 const std::vector<std::string>& readfiles,
 																														 const std::string& coverage_dir,
-																														 double deletion_propagation_cutoff,
+																														 const std::vector<double>& deletion_propagation_cutoff,
 																														 double mutation_cutoff,
 																														 bool predict_deletions,
 																														 bool predict_polymorphisms,
@@ -61,9 +61,12 @@ breseq::identify_mutations_pileup::identify_mutations_pileup(const std::string& 
 , _predict_polymorphisms(predict_polymorphisms)
 , _coverage_dir(coverage_dir)
 , _log10_ref_length(0)
+, _on_deletion_seq_id(boost::none)
 , _this_deletion_reaches_seed_value(false)
 , _last_position_coverage_printed(0) {
 	  
+  assert(_bam->header->n_targets == (int32_t)_deletion_propagation_cutoff.size());
+    
 	// reserve enough space for the sequence info:
 	_seq_info.resize(_bam->header->n_targets);
 	
@@ -102,7 +105,8 @@ breseq::identify_mutations_pileup::~identify_mutations_pileup() {
 void breseq::identify_mutations_pileup::callback(const breseq::pileup& p) {
 	using namespace std;
 	assert(p.target() < _seq_info.size());
-	
+  _this_deletion_propagation_cutoff = _deletion_propagation_cutoff[p.target()];
+
 	//	our @base_list = ('A', 'T', 'C', 'G', '.');
 	static uint8_t base_list[] = {'A', 'T', 'C', 'G', '.'};
 	
@@ -112,6 +116,9 @@ void breseq::identify_mutations_pileup::callback(const breseq::pileup& p) {
 	//	
 	//	my $insert_count = 0;
 	//	my $next_insert_count_exists = 1;
+  
+  // @JEB Use 1-indexing throughout!!
+  uint32_t position = p.position()+1;
 	int insert_count=-1;
 	bool next_insert_count_exists=true;
 	
@@ -129,10 +136,10 @@ void breseq::identify_mutations_pileup::callback(const breseq::pileup& p) {
 	//INSERT_COUNT: while ($next_insert_count_exists)
 	while(next_insert_count_exists) {
 		++insert_count; // we're doing this here because the perl version uses a while-continue.
-    //cerr << "Position:" << p.position() << " Insert Count:" << insert_count << endl;
+    //cerr << "Position:" << position << " Insert Count:" << insert_count << endl;
 		//		@dk: positions are 0-indexed here, while genome diff is 1-indexed; this will have to be fixed (maybe in the genome diff?).
 		//		if(insert_count) {
-		//			cerr << p.position() << " " << insert_count << endl;
+		//			cerr << position << " " << insert_count << endl;
 		//		}
 		
 		//	$next_insert_count_exists = 0;
@@ -141,7 +148,7 @@ void breseq::identify_mutations_pileup::callback(const breseq::pileup& p) {
 		//	my $ref_base = ($insert_count) ? '.' : $bam->segment($seqid,$pos,$pos)->dna;
 		uint8_t ref_base = '.';
 		if(!insert_count) {
-			ref_base = p.reference_sequence()[p.position()];
+			ref_base = p.reference_sequence()[position-1]; //reference_sequence is 1-indexed
 		}
 		
 		//# zero out the info about this position
@@ -351,7 +358,7 @@ void breseq::identify_mutations_pileup::callback(const breseq::pileup& p) {
       //next ALIGNMENT if ( $settings->{base_quality_cutoff} && ($quality < $settings->{base_quality_cutoff}) );
 
       if (quality < _min_qual_score) {
-//        std::cerr << p.position() << " " << (unsigned int)quality << " " << std::endl;
+//        std::cerr << position << " " << (unsigned int)quality << " " << std::endl;
         continue;
       }
 			
@@ -368,7 +375,7 @@ void breseq::identify_mutations_pileup::callback(const breseq::pileup& p) {
 			//foreach my $hypothetical_base (@base_list)
 			//{				
 			
-			//std::cerr << "========" << std::endl << p.position()+1 << std::endl;
+			//std::cerr << "========" << std::endl << position+1 << std::endl;
 			
 			for(std::size_t j=0; j<5; ++j) {
 				// base_list[j] == hypothetical base
@@ -475,10 +482,6 @@ void breseq::identify_mutations_pileup::callback(const breseq::pileup& p) {
 //			std::cerr << pr_call << " " << e_value_call << std::endl;
 		}
 		
-		// @dk: it *appears* as though there is a precision discrepancy between c++ and perl on the value of e_value_call.
-		// it only shows up after a few values, specifically when one of the error rates has an e-05.
-		
-		
 		//##did we predict a base at this position?
 		//		my $base_predicted = ($e_value_call ne 'NA' && ($e_value_call >= $settings->{mutation_log10_e_value_cutoff}));
 		bool base_predicted=false;
@@ -486,7 +489,7 @@ void breseq::identify_mutations_pileup::callback(const breseq::pileup& p) {
 			base_predicted = true;
 		}
 		
-		//std::cerr << p.position() << " e:" << e_value_call << " b:" << base_predicted << std::endl;
+		//std::cerr << position << " e:" << e_value_call << " b:" << base_predicted << std::endl;
 		
 		//##print out SNP call information
 		//		my $total_cov;
@@ -507,7 +510,7 @@ void breseq::identify_mutations_pileup::callback(const breseq::pileup& p) {
 		
 		int total_cov[3]={0,0,0}; // triple, same as above
 		ostringstream line;
-		line << p.position() << " " << insert_count << " " << ref_base << " " << e_value_call;
+		line << position << " " << insert_count << " " << ref_base << " " << e_value_call;
 		
 		for(std::size_t j=0; j<5; ++j) {
 			double top_cov = pos_info[base_list[j]].unique_trimmed_cov[2];
@@ -537,7 +540,8 @@ void breseq::identify_mutations_pileup::callback(const breseq::pileup& p) {
 		//		}			
 		if(insert_count == 0) {
 			if(_predict_deletions) {
-				check_deletion_completion(p.position(), p.target(), &this_position_coverage, e_value_call);
+        // @JEB: note change in call so position sent to check_deletion_completion is 1-based
+				check_deletion_completion(position, p.target(), &this_position_coverage, e_value_call);
 				// @dk: skip update_copy_number_variation(pos, this_position_coverage, ref_base);
 			}
 		}
@@ -576,7 +580,7 @@ void breseq::identify_mutations_pileup::callback(const breseq::pileup& p) {
 		//		if ($insert_count == 0)
 		if(insert_count == 0) {
 			//			_update_unknown_intervals($seq_id, $pos, $base_predicted, $this_position_unique_only_coverage);
-			update_unknown_intervals(p.position(), p.target(), base_predicted, this_position_unique_only_coverage);
+			update_unknown_intervals(position, p.target(), base_predicted, this_position_unique_only_coverage);
 		}
 		
 		
@@ -601,7 +605,7 @@ void breseq::identify_mutations_pileup::callback(const breseq::pileup& p) {
 		}
 		//## bail if we are predicting polymorphisms, but there wasn't one
 		
-		//std::cerr << p.position() << " " << e_value_call << " " << mutation_predicted << " " << polymorphism_predicted << " " << base2char(best_base) << " " << base2char(ref_base) << std::endl;
+		//std::cerr << position << " " << e_value_call << " " << mutation_predicted << " " << polymorphism_predicted << " " << base2char(best_base) << " " << base2char(ref_base) << std::endl;
 		
 
 		
@@ -614,7 +618,7 @@ void breseq::identify_mutations_pileup::callback(const breseq::pileup& p) {
 		//$mut->{quality} = $e_value_call;		
 		ra mut(boost::lexical_cast<std::string>(_gd.new_id()), "");
 		mut[SEQ_ID] = p.target_name();
-		mut[POSITION] = p.position();
+		mut[POSITION] = position;
 		mut[INSERT_POSITION] = insert_count;
 		mut[QUALITY] = e_value_call;
 		
@@ -745,8 +749,9 @@ void breseq::identify_mutations_pileup::at_end(uint32_t tid, uint32_t seqlen) {
 	//	_check_deletion_completion($sequence_length+1); 		
 	//	_update_unknown_intervals($seq_id, $sequence_length+1, 1);
 
-	check_deletion_completion(seqlen, tid, 0, std::numeric_limits<double>::quiet_NaN());
-	update_unknown_intervals(seqlen, tid, true, false);
+  // @JEB changed check_deletion_completion to 1-based
+	check_deletion_completion(seqlen+1, tid, 0, std::numeric_limits<double>::quiet_NaN());
+	update_unknown_intervals(seqlen+1, tid, true, false);
 
 	//	my $ra_mc_genome_diff_file_name = $settings->file_name('ra_mc_genome_diff_file_name');	
 	//	$gd->write($ra_mc_genome_diff_file_name);
@@ -762,11 +767,20 @@ void breseq::identify_mutations_pileup::at_end(uint32_t tid, uint32_t seqlen) {
  //## when called at the end of a fragment, the position is fragment length +1
  //## and $this_position_coverage is undefined
  
+ @JEB This function expects 1-indexed positions!!!
+ 
  */
 void breseq::identify_mutations_pileup::check_deletion_completion(uint32_t position, uint32_t seq_id, const position_coverage* this_position_coverage, double e_value_call) {
 
 	//std::cerr << position << " " << e_value_call << std::endl;
 		
+  // reset if we hit a new fragment  
+  if (seq_id != _on_deletion_seq_id)
+  {
+    _last_position_coverage_printed = 0;
+    _on_deletion_seq_id = seq_id;
+  }  
+    
 	//# we need to fill in reference positions with NO reads aligned to them
 	//# pileup won't be called at these positions
 	//foreach (my $i = $last_position_coverage_printed + 1; $i < $pos; $i++)
@@ -774,7 +788,7 @@ void breseq::identify_mutations_pileup::check_deletion_completion(uint32_t posit
 	//std::cerr << _last_position_coverage_printed << " " << position << std::endl;
 
 	for(uint32_t i=_last_position_coverage_printed+1; i<position; ++i) {
-		if(!_last_deletion_start_position) {
+		if(_last_deletion_start_position == boost::none) {
 			//## special treatment for the beginning of a fragment
 			if(_last_position_coverage_printed == 0) {
 				//$left_outside_coverage_item =  {
@@ -785,60 +799,62 @@ void breseq::identify_mutations_pileup::check_deletion_completion(uint32_t posit
 				//redundant => {'1'=>0, '-1'=>0, 'total' => 0 }				//};
 				_left_outside_coverage_item.reset(position_coverage(std::numeric_limits<double>::quiet_NaN()));
 				_left_inside_coverage_item.reset(position_coverage());				
-				_last_deletion_start_position = _last_position_coverage_printed;
 			} else {
 				//## normal treatment is that coverage went to zero
 				//$left_outside_coverage_item = { 
 				//unique => {'1'=>0, '-1'=>0, 'total' => 0 },
 				//redundant => {'1'=>0, '-1'=>0, 'total' => 0 }				//};
-				_left_outside_coverage_item.reset(position_coverage());
+				_left_inside_coverage_item.reset(position_coverage());
 				
 				//$left_inside_coverage_item = $last_position_coverage;	
-				_left_inside_coverage_item = _last_position_coverage;
-				_last_deletion_start_position = _last_position_coverage_printed+1;
+				_left_outside_coverage_item = _last_position_coverage;
 			}
 			
 			// moved into the ifs above, to handle the special case of the fragment beginning.
 			// had to do this because of the change in 0-1 indexing.
-			//$last_deletion_start_position = $last_position_coverage_printed+1;			
-			//_last_deletion_start_position = _last_position_coverage_printed+1;
-			//std::cerr << _last_deletion_start_position << std::endl;
-		}
+			// $last_deletion_start_position = $last_position_coverage_printed+1;			
+			_last_deletion_start_position = _last_position_coverage_printed+1;
+      if (_last_deletion_redundant_start_position == boost::none) {
+        _last_deletion_redundant_start_position = _last_position_coverage_printed+1;
+      }
+    }
 		
 		//$this_deletion_reaches_seed_value = 1;
 		_this_deletion_reaches_seed_value = true;
+    _this_deletion_redundant_reached_zero = true;
 		//$last_position_coverage = { 
 		//unique => {'1'=>0, '-1'=>0, 'total' => 0 },
 		//redundant => {'1'=>0, '-1'=>0, 'total' => 0 }		//};
 		_last_position_coverage.reset(position_coverage());
 		
 		//print COV join("\t", 0, 0, 0, 0, 0, 0, 'NA', $i) . "\n"; 
-		_coverage_data << 0 << "\t" << 0 << "\t" << 0 << "\t" << 0 << "\t" << 0 << "\t" << 0 << "\t" << "NA\t" << i << std::endl;
+		//_coverage_data << 0 << "\t" << 0 << "\t" << 0 << "\t" << 0 << "\t" << 0 << "\t" << 0 << "\t" << "NA\t" << i << std::endl;
 	}
 	_last_position_coverage_printed = position;
 	
 	//## called with an undef $this_position_coverage at the end of the genome
 	//if ((defined $this_position_coverage) && (defined $e_value_call))
-	if(this_position_coverage && !std::isnan(e_value_call)) {
+	if(this_position_coverage) {
 		//my $tu = $this_position_coverage->{unique};
 		//my $tr = $this_position_coverage->{redundant};
 		//my $trr = $this_position_coverage->{raw_redundant};
 		
 		//#print this information
 		//print COV join("\t", $tu->{-1}, $tu->{1}, $tr->{-1}, $tr->{1}, $trr->{-1}, $trr->{1}, $e_value_call, $pos) . "\n";
-		_coverage_data << this_position_coverage->unique[0] << "\t"
-		<< this_position_coverage->unique[2] << "\t"
-		<< this_position_coverage->redundant[0] << "\t"
-		<< this_position_coverage->redundant[2] << "\t"
-		<< this_position_coverage->raw_redundant[0] << "\t"
-		<< this_position_coverage->raw_redundant[2] << "\t"
-		<< e_value_call << "\t" << position << std::endl;
+		//_coverage_data << this_position_coverage->unique[0] << "\t"
+		//<< this_position_coverage->unique[2] << "\t"
+		//<< this_position_coverage->redundant[0] << "\t"
+		//<< this_position_coverage->redundant[2] << "\t"
+		//<< this_position_coverage->raw_redundant[0] << "\t"
+		//<< this_position_coverage->raw_redundant[2] << "\t"
+		//<< e_value_call << "\t" << position << std::endl;
 		
+    //## UNIQUE COVERAGE
 		//#start a new possible deletion if we fall below the propagation cutoff
 		//if ($this_position_coverage->{unique}->{total} <= $deletion_propagation_cutoff)
-		if(this_position_coverage->unique[1] <= _deletion_propagation_cutoff) {
+		if(this_position_coverage->unique[1] <= _this_deletion_propagation_cutoff) {
 			//if (!defined $last_deletion_start_position)
-			if(!_last_deletion_start_position) {
+			if(_last_deletion_start_position == boost::none) {
 				//$last_deletion_start_position = $pos;
 				_last_deletion_start_position = position;
 				//$left_outside_coverage_item = $last_position_coverage;
@@ -854,13 +870,52 @@ void breseq::identify_mutations_pileup::check_deletion_completion(uint32_t posit
 			//			$this_deletion_reaches_seed_value = 1;
 			_this_deletion_reaches_seed_value = true;
 		}
+    
+    //## REDUNDANT COVERAGE
+    //## updated only if we are currently within a deletion
+    if (_last_deletion_start_position != boost::none) {
+    //if (defined $last_deletion_start_position)
+    //{					
+      if (this_position_coverage->redundant[1] == 0) {
+      //if ($this_position_coverage->{redundant}->{total} == 0)
+      //{
+          _this_deletion_redundant_reached_zero = true;
+        //$redundant_reached_zero = 1; #switch from adjusting start to end
+          _last_deletion_redundant_end_position = boost::none;
+        //undef $last_deletion_redundant_end_position;
+        }
+      //}
+      //elsif ($this_position_coverage->{redundant}->{total} > 0)
+        else if (this_position_coverage->redundant[1] > 0) {
+      //{
+        //## if there is any redundant coverage remember the start (until we find zero redundant coverage)
+        //if (!$redundant_reached_zero)
+          if (!_this_deletion_redundant_reached_zero) {
+            _last_deletion_redundant_start_position = position;
+          }
+          else {
+            if (_last_deletion_redundant_end_position == boost::none) _last_deletion_redundant_end_position = position;
+          }
+        //{
+          //$last_deletion_redundant_start_position = $pos;
+        //}
+        //## if we are working on the right side update the end position if it is not already defined.
+        //else
+        //{
+          //$last_deletion_redundant_end_position = $pos if (!defined $last_deletion_redundant_end_position);
+        //}
+      //}
+    //}
+        }
+    }
+    
 	}
 	
 	//##if we are above the propagation cutoff then record the current deletion
 	//	if ( (defined $last_deletion_start_position) && ((!defined $this_position_coverage) 
 	//																									 || ($this_position_coverage->{unique}->{total} > $deletion_propagation_cutoff)) )
-	if(_last_deletion_start_position 
-		 && (!this_position_coverage || (this_position_coverage->unique[1] > _deletion_propagation_cutoff))) {
+	if(_last_deletion_start_position != boost::none
+		 && (!this_position_coverage || (this_position_coverage->unique[1] > _this_deletion_propagation_cutoff))) {
 		
 		//		if ($this_deletion_reaches_seed_value)
 		if(_this_deletion_reaches_seed_value) {
@@ -876,14 +931,23 @@ void breseq::identify_mutations_pileup::check_deletion_completion(uint32_t posit
 			} else {
 				tmp.reset(*this_position_coverage);
 			}
+
+      _last_deletion_end_position = position-1;
+      //my $last_deletion_end_position = $pos-1;
+      if (_last_deletion_redundant_end_position == boost::none) _last_deletion_redundant_end_position = _last_deletion_end_position;
+      if (_last_deletion_redundant_start_position == boost::none) _last_deletion_redundant_start_position = _last_deletion_start_position;
+
+      //$last_deletion_redundant_end_position = $last_deletion_end_position	if (!defined $last_deletion_redundant_end_position);
+      //$last_deletion_redundant_start_position = $last_deletion_start_position	if (!defined $last_deletion_redundant_start_position);
+
 			
 			//			my $del = {
 			//				type => 'MC',
 			//				seq_id => $seq_id,
 			//				start => $last_deletion_start_position,
 			//				end => $pos-1,
-			//				start_range => 0,
-			//				end_range => 0,
+			//        start_range => $last_deletion_redundant_start_position - $last_deletion_start_position,
+			//        end_range => $last_deletion_end_position - $last_deletion_redundant_end_position,
 			//#			size => ($pos-1) - $last_deletion_start_position + 1, #end - start + 1
 			//				left_outside_cov => $left_outside_coverage_item->{unique}->{total},
 			//				left_inside_cov => $left_inside_coverage_item->{unique}->{total},
@@ -893,9 +957,9 @@ void breseq::identify_mutations_pileup::check_deletion_completion(uint32_t posit
 			mc del(boost::lexical_cast<std::string>(_gd.new_id()), "");
 			del[SEQ_ID] = target_name(seq_id);
 			del[START] = *_last_deletion_start_position;
-			del[END] = position - 1;
-			del[START_RANGE] = 0;
-			del[END_RANGE] = 0;
+			del[END] = *_last_deletion_end_position;
+			del[START_RANGE] = *_last_deletion_redundant_start_position - *_last_deletion_start_position;
+			del[END_RANGE] = *_last_deletion_end_position - *_last_deletion_redundant_end_position;
 			
 			if(!_left_outside_coverage_item || std::isnan(_left_outside_coverage_item->unique[1])) {
 				del[LEFT_OUTSIDE_COV] = std::numeric_limits<double>::quiet_NaN();
@@ -941,7 +1005,11 @@ void breseq::identify_mutations_pileup::check_deletion_completion(uint32_t posit
 		//		$this_deletion_reaches_seed_value = 0;
 		_this_deletion_reaches_seed_value = false;
 		//		undef $last_deletion_start_position;
+    _this_deletion_redundant_reached_zero = false;
 		_last_deletion_start_position = boost::none;
+    _last_deletion_end_position = boost::none;
+		_last_deletion_redundant_start_position = boost::none;
+    _last_deletion_redundant_end_position = boost::none;
 	}
 	
 	//	$last_position_coverage = $this_position_coverage;

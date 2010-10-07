@@ -28,14 +28,6 @@ int32_t breseq::alignment::redundancy() const {
 int32_t breseq::alignment::query_length() const {
 	uint32_t* cigar = bam1_cigar(_a); // cigar array for this alignment
 	int32_t qlen = bam_cigar2qlen(&_a->core, cigar); // total length of the query
-	for(uint32_t j=(_a->core.n_cigar-1); j>0; --j) {
-		uint32_t op = cigar[j] & BAM_CIGAR_MASK;
-		uint32_t len = cigar[j] >> BAM_CIGAR_SHIFT;
-		if((op != BAM_CSOFT_CLIP) && (op != BAM_CHARD_CLIP) && (op != BAM_CREF_SKIP)) {
-			break;
-		}
-		qlen -= len;
-	}
 	return qlen;
 }
 

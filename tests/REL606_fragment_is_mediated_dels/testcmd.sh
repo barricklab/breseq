@@ -5,6 +5,7 @@ SELF=`dirname ${BASH_SOURCE}`
 
 testcmd() {
     ${BRESEQ} \
+        --force-quality-scores \
         -o ${SELF} \
         -r ${DATADIR}/REL606/REL606.fragment.gbk \
         ${DATADIR}/REL606/REL606.fragment.3.fastq

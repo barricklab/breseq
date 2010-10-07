@@ -26,7 +26,7 @@ namespace breseq {
 													const std::string& output_dir,
 													const std::vector<std::string>& readfiles,
 													const std::string& coverage_dir,
-													double deletion_propagation_cutoff,
+                          const std::vector<double>& deletion_propagation_cutoff,
 													double mutation_cutoff,
 													bool predict_deletions,
 													bool predict_polymorphisms,
@@ -146,7 +146,7 @@ namespace breseq {
 															const std::string& output_dir,
 															const std::vector<std::string>& readfiles,
 															const std::string& coverage_dir,
-															double deletion_propagation_cutoff,
+															const std::vector<double>& deletion_propagation_cutoff,
 															double mutation_cutoff,
 															bool predict_deletions,
 															bool predict_polymorphisms,
@@ -172,7 +172,7 @@ namespace breseq {
 		genome_diff _gd; //!< Genome diff.
     uint8_t _min_qual_score; //!< minimum quality score to count base for RA
 		double _deletion_seed_cutoff;
-		double _deletion_propagation_cutoff; //!< Coverage above which deletions are cutoff.
+		std::vector<double> _deletion_propagation_cutoff; //!< Coverage above which deletions are cutoff.
 		double _mutation_cutoff; //!< log10 e-value cutoff value for mutation predictions.
 		bool _predict_deletions; //!< Whether to predict mutations.
 		bool _predict_polymorphisms; //!< Whether to predict polymorphisms.
@@ -186,8 +186,14 @@ namespace breseq {
 		std::ofstream _coverage_data;
 		
 		// these are state variables used by the deletion-prediction method.
+    boost::optional<uint32_t> _on_deletion_seq_id;
+		uint32_t _this_deletion_propagation_cutoff;
 		boost::optional<uint32_t> _last_deletion_start_position;
+		boost::optional<uint32_t> _last_deletion_end_position;
+		boost::optional<uint32_t> _last_deletion_redundant_start_position;
+    boost::optional<uint32_t> _last_deletion_redundant_end_position;
 		bool _this_deletion_reaches_seed_value;
+    bool _this_deletion_redundant_reached_zero;
 		uint32_t _last_position_coverage_printed;
 		boost::optional<position_coverage> _left_outside_coverage_item;
 		boost::optional<position_coverage> _left_inside_coverage_item;
