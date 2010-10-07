@@ -18,6 +18,8 @@ which isn't necessary.
 
 
 // Note: this doesn't quite get the ends of the genome right when repeats overlap there
+// The "easy" way to do this correctly is to paste some sequence from each end of circular fragments on the other end
+// and then correct everything for these offsets.
 bool repeat_match ( const string& _in_seq, const uint32_t pos, const uint32_t repeat_size, const uint32_t repeat_num ) {
 
   const uint32_t base_offset = repeat_size * repeat_num;
@@ -37,6 +39,8 @@ void calculate_trims_1 ( const string& _in_seq, const string& in_output_filename
 
   // use one structure to avoid byte alignment issues when writing
   uint8_t * trim = new unsigned char[2*_in_seq.length()];
+  memset( trim, 0, 2*_in_seq.length() );
+  
   const uint32_t left_trim_offset = 0;
   const uint32_t right_trim_offset = _in_seq.length();
   
@@ -77,17 +81,19 @@ void calculate_trims_1 ( const string& _in_seq, const string& in_output_filename
     // update relevant trims
     for (int32_t offset=0; offset<add_max_trim_length; offset++)
     {
-      if (pos + offset >= _in_seq.length()) break;
+      if (pos + offset >= _in_seq.length()) continue;
       
       uint8_t this_trim = offset + 1;
-   //   cerr << (pos+offset+1) << " " << this_trim << " " << right_trim[pos + offset] << endl;
+      //cerr << (right_trim_offset + pos + offset) << " " << (int)(this_trim) << " " << (int)(trim[right_trim_offset + pos + offset]) << endl;
       trim[right_trim_offset + pos + offset] = max(this_trim, trim[right_trim_offset + pos + offset]);
     }
  
     for (int32_t offset=add_max_trim_length; offset>=0; offset--)
     {
+      if (pos + offset >= _in_seq.length()) continue;
+
       uint8_t this_trim = add_max_trim_length - offset;      
-  //    cerr << (pos+offset+1) << " " << this_trim << " " << right_trim[pos + offset] << endl;
+      //cerr << (left_trim_offset + pos + offset) << " " << (int)(this_trim) << " " << int(trim[left_trim_offset + pos + offset]) << endl;
       trim[left_trim_offset + pos + offset] = max(this_trim, trim[left_trim_offset + pos + offset]);
     }
     
@@ -99,8 +105,8 @@ void calculate_trims_1 ( const string& _in_seq, const string& in_output_filename
   // Write out the trims to abinary file
   
   //cerr << in_output_filename << endl;
-  ofstream out(in_output_filename.c_str(), ios::binary);
-  out << trim;
+  ofstream out(in_output_filename.c_str(), ios::out | ios::binary);
+  out.write(reinterpret_cast<char *>(trim), 2*_in_seq.length());
   out.close();
 
 //debugging...
