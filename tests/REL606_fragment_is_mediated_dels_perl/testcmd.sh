@@ -5,8 +5,8 @@ SELF=`dirname ${BASH_SOURCE}`
 
 testcmd() {
     ${BRESEQ} \
+         --force-quality-scores \
         --perl-identify-mutations \
-    	--perl-error-count \
         -o ${SELF} \
         -r ${DATADIR}/REL606/REL606.fragment.gbk \
         ${DATADIR}/REL606/REL606.fragment.3.fastq

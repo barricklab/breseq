@@ -82,9 +82,14 @@ sub identify_mutations
 		my $coverage_dir = `dirname $coverage_tab_file_name`;
 		chomp $coverage_dir; $coverage_dir .= '/';
 		$cmdline .= " --coverage_dir $coverage_dir";
-		if(defined $settings->{deletion_propagation_cutoff}) {
-			$cmdline .= " --deletion_propagation_cutoff $settings->{deletion_propagation_cutoff}"; # defaults to 28.0.
+		
+		## It is important that these are in consistent order with the fasta file!!
+		foreach my $seq_id ( @{$ref_seq_info->{seq_ids}})
+		{
+			my $deletion_propagation_cutoff = $settings->{unique_coverage}->{$seq_id}->{deletion_coverage_propagation_cutoff};
+			$cmdline .= " --deletion_propagation_cutoff $deletion_propagation_cutoff";
 		}
+
 		if((defined $settings->{no_deletion_prediction}) && ($settings->{no_deletion_prediction})) {
 			$cmdline .= " --predict_deletions 0";
 		} else {
@@ -481,7 +486,7 @@ sub identify_mutations
 					my $trim_right = $a->aux_get('XR');  #1-indexed
 					
 					$trimmed = 1 if ((defined $trim_left) && ($p->qpos+1 <= $trim_left));
-					$trimmed = 1 if ((defined $trim_right) && ($a->query->length-($p->qpos+1) <= $trim_right));
+					$trimmed = 1 if ((defined $trim_right) && ($a->l_qseq-($p->qpos+1) <= $trim_right));
 					
 					## These are the start and end coordinates of the aligned part of the read
 					my ($q_start, $q_end) = ($a->query->start-1, $a->query->end-1); #0-indexed

@@ -353,6 +353,12 @@ sub create_alignment
 		}
 	};
 	$bam->fetch($region, $fetch_function);	
+
+	### There are not uniquely aligned reads...
+	if (!defined $unique_start || !defined $unique_end)
+	{
+		return;
+	}
 	
 	### If there are WAY too many reads, such that a pileup might take forever, bail...
 	if ($self->{maximum_to_make_alignment} && ($total_reads > $self->{maximum_to_make_alignment}))
@@ -488,7 +494,7 @@ sub create_alignment
 						#$base = chr(ord($base)+128) if ((defined $trim_left) && ($p->qpos+1 <= $trim_left));
 					  
 						my $trim_right = $a->aux_get('XR');	
-						$base = "\L$base" if ((defined $trim_right) && ($a->query->length-$p->qpos <= $trim_right));
+						$base = "\L$base" if ((defined $trim_right) && ($a->l_qseq-$p->qpos <= $trim_right));
 						## alternate coloring scheme					
 						#$base = chr(ord($base)+128) if ((defined $trim_right) && ($a->query->length-$p->qpos <= $trim_right));						
 					}

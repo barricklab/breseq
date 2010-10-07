@@ -26,7 +26,7 @@ int main(int argc, char* argv[]) {
 	("output,o", po::value<string>(), "output directory")
 	("coverage_dir", po::value<string>(), "directory for coverage files")
 	("mutation_cutoff,c", po::value<double>()->default_value(2.0), "mutation cutoff (log10 e-value)")
-	("deletion_propagation_cutoff,u", po::value<double>()->default_value(28.0), "number after which to cutoff deletions")	
+	("deletion_propagation_cutoff,u", po::value<vector<double> >(), "number after which to cutoff deletions")	
 	("predict_deletions,d", po::value<bool>()->default_value(true), "whether to predict deletions")
 	("predict_polymorphisms,p", po::value<bool>()->default_value(false), "whether to predict polymorphisms")
   ("minimum-quality-score", po::value<int>()->default_value(0), "ignore base quality scores lower than this");
@@ -44,6 +44,7 @@ int main(int argc, char* argv[]) {
 		 || !options.count("output")
 		 || !options.count("readfiles")
 		 || !options.count("coverage_dir")
+		 || !options.count("deletion_propagation_cutoff")     
 		 ) {
 		cout << "Usage: identify_mutations --bam <sequences.bam> --fasta <reference.fasta> --error_dir <path> --genome_diff <path> --output <path> --readfiles <filename> --coverage_dir <dirname> [--minimum-quality-score 3]" << endl;
 		cout << cmdline_options << endl;
@@ -59,7 +60,7 @@ int main(int argc, char* argv[]) {
 															 options["output"].as<string>(),
 															 options["readfiles"].as<vector<string> >(),
 															 options["coverage_dir"].as<string>(),
-															 options["deletion_propagation_cutoff"].as<double>(),
+															 options["deletion_propagation_cutoff"].as<vector<double> >(),
 															 options["mutation_cutoff"].as<double>(),
 															 options["predict_deletions"].as<bool>(),
 															 options["predict_polymorphisms"].as<bool>(),

@@ -43,6 +43,8 @@ syntax: regexp
 ^extern/samtools-0.1.7a/misc
 ^extern/samtools-0.1.7a/bin
 
+^extern/bioperl-live/Build$
+
 ^extern/Bio-SamTools-1.19/lib/Bio/DB/Sam.c
 ^extern/Bio-SamTools-1.19/Build$
 ^src/perl/Breseq/Build$

@@ -80,8 +80,9 @@ int breseq::first_level_callback(uint32_t tid, uint32_t pos, int n, const bam_pi
 	// update _last_tid to the current tag (this is effectively a lag):
 	pb->_last_tid = tid;
 	
-	if((pos % 10000) == 0) {
-		std::cerr << "    POSITION:" << pos << std::endl;
+  // Print progress (1-indexed position)
+	if(((pos+1) % 10000) == 0) {
+		std::cerr << "    POSITION:" << (pos+1) << std::endl;
 	}
 	
 	pileup p(tid,pos,n,pile,*pb);

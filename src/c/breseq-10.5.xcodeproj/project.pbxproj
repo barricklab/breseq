@@ -414,7 +414,14 @@
 			isa = PBXProject;
 			buildConfigurationList = 421ACEBA1170DB9600C2EB85 /* Build configuration list for PBXProject "breseq-10.5" */;
 			compatibilityVersion = "Xcode 2.4";
+			developmentRegion = English;
 			hasScannedForEncodings = 0;
+			knownRegions = (
+				English,
+				Japanese,
+				French,
+				German,
+			);
 			mainGroup = 421ACEB51170DB9600C2EB85;
 			productRefGroup = 421ACF301170DF1800C2EB85 /* Products */;
 			projectDirPath = "";

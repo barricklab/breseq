@@ -76,13 +76,6 @@ breseq::START_RANGE,
 breseq::END_RANGE,
 0}; // required trailing null.
 
-// These fields require a modification for 0- vs. 1-indexing before IO.
-static const char* s_requires_index_mod[] = {
-breseq::POSITION,
-breseq::START,
-breseq::END,
-0}; // required trailing null.
-
 
 /*! Constructor.
  */
@@ -102,24 +95,10 @@ void breseq::diff_entry::marshal(field_list_t& s) {
 	
 	// copy all fields:
 	map_t cp=_fields;
-	
-	// @dk: this is a weird one - position-related fields need to be altered due to
-	// differences in indexing base (0- vs. 1-indexing).
-	const char* f=s_requires_index_mod[0];
-	for(std::size_t i=0; ; ++i) {
-		f = s_requires_index_mod[i];
-		if(f == 0) { break; }
-		
-		map_t::iterator iter=cp.find(f);
-		if(iter != cp.end()) {
-			iter->second = boost::get<uint32_t>(iter->second) + 1;
-		}
-	}	
-	
 
 	// marshal specified fields in-order, removing them from the copy after they've 
 	// been printed:
-	f=s_field_order[0];
+	const char* f=s_field_order[0];
 	for(std::size_t i=0; ; ++i) {
 		f = s_field_order[i];
 		if(f == 0) { break; }
