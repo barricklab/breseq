@@ -4,6 +4,7 @@
 #include <string>
 #include <vector>
 #include <fstream>
+#include <cmath>
 #include <boost/optional.hpp>
 
 #include "breseq/error_count.h"
@@ -81,7 +82,7 @@ namespace breseq {
 			unique[1] = unique[0]+unique[2];
 			redundant[1] = redundant[0]+redundant[2];
 			raw_redundant[1] = raw_redundant[0]+raw_redundant[2];
-			total = unique[1] + redundant[1];
+			total = round(unique[1] + redundant[1]);
 		}
 		
 		double unique[3];
@@ -187,7 +188,7 @@ namespace breseq {
 		
 		// these are state variables used by the deletion-prediction method.
     boost::optional<uint32_t> _on_deletion_seq_id;
-		uint32_t _this_deletion_propagation_cutoff;
+		double _this_deletion_propagation_cutoff;
 		boost::optional<uint32_t> _last_deletion_start_position;
 		boost::optional<uint32_t> _last_deletion_end_position;
 		boost::optional<uint32_t> _last_deletion_redundant_start_position;
