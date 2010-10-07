@@ -35,8 +35,11 @@ void calculate_trims_1 ( const string& _in_seq, const string& in_output_filename
 
   //cerr << _in_seq.length() << endl;
 
-  uint8_t * left_trim = new unsigned char[_in_seq.length()];
-  uint8_t * right_trim = new unsigned char[_in_seq.length()];
+  // use one structure to avoid byte alignment issues when writing
+  uint8_t * trim = new unsigned char[2*_in_seq.length()];
+  const uint32_t left_trim_offset = 0;
+  const uint32_t right_trim_offset = _in_seq.length();
+  
   uint32_t max_repeat_length = 18;
 
   for (unsigned int pos=0; pos<_in_seq.length(); pos++)
@@ -78,14 +81,14 @@ void calculate_trims_1 ( const string& _in_seq, const string& in_output_filename
       
       uint8_t this_trim = offset + 1;
    //   cerr << (pos+offset+1) << " " << this_trim << " " << right_trim[pos + offset] << endl;
-      right_trim[pos + offset] = max(this_trim, right_trim[pos + offset]);
+      trim[right_trim_offset + pos + offset] = max(this_trim, trim[right_trim_offset + pos + offset]);
     }
  
     for (int32_t offset=add_max_trim_length; offset>=0; offset--)
     {
       uint8_t this_trim = add_max_trim_length - offset;      
   //    cerr << (pos+offset+1) << " " << this_trim << " " << right_trim[pos + offset] << endl;
-      left_trim[pos + offset] = max(this_trim, left_trim[pos + offset]);
+      trim[left_trim_offset + pos + offset] = max(this_trim, trim[left_trim_offset + pos + offset]);
     }
     
     // debug
@@ -97,7 +100,7 @@ void calculate_trims_1 ( const string& _in_seq, const string& in_output_filename
   
   //cerr << in_output_filename << endl;
   ofstream out(in_output_filename.c_str(), ios::binary);
-  out << left_trim << right_trim;
+  out << trim;
   out.close();
 
 //debugging...
@@ -106,8 +109,7 @@ void calculate_trims_1 ( const string& _in_seq, const string& in_output_filename
 //    cerr << (i+1) << " " << (int)left_trim[i] << " " << (int)right_trim[i] << endl;
 //  }
       
-  delete[] left_trim;
-  delete[] right_trim;
+  delete[] trim;
 }
 
 void calculate_trims( const string& in_fasta, const string& in_output_path) {

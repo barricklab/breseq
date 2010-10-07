@@ -89,10 +89,6 @@ if ("\U$command" eq 'FILTER')
 {
 	do_filter();
 }
-elsif ("\U$command" eq 'ANNOTATE')
-{ 
-	do_annotate();
-}
 elsif ("\U$command" eq 'COMPARE')
 {
 	do_compare();
@@ -215,114 +211,6 @@ sub do_filter
 	my $removed_gd = $gd->filter(\&mutation_filter);
 	$removed_gd->write($removed) if ($removed);	
 	$gd->write($output);
-}
-
-sub do_annotate
-{	
-	use Breseq::Settings;
-	use Breseq::ReferenceSequence;
-	use Breseq::Output;
-	
-	my $settings = Breseq::Settings->new_annotate;
-	
-	my @genbank_file_names = $settings->file_name('reference_genbank_file_names'); 
-	my @junction_only_genbank_file_names = $settings->file_name('junction_only_reference_genbank_file_names'); 
-	my $ref_seq_info = Breseq::ReferenceSequence::load_ref_seq_info(\@genbank_file_names, \@junction_only_genbank_file_names);
-	
-	my $gd = Breseq::GenomeDiff->new();
-	foreach my $gd_file (@{$settings->{input_genome_diffs}})
-	{
-		$gd->read($gd_file);		
-	}	
-		
-	##
-	# Annotate mutations
-	##
-	print STDERR "Annotating mutations...\n";
-	Breseq::ReferenceSequence::annotate_mutations($ref_seq_info, $gd);
-	#print Dumper(\@mutations); ##DEBUG	
-
-	##
-	# Plot coverage of genome and large deletions
-	##
-	print STDERR "Drawing coverage plots...\n";
-	Breseq::Output::draw_coverage($settings, $ref_seq_info, $gd);
-
-	##
-	# Mark lowest RA evidence items as no-show, or we may be drawing way too many alignments
-	##	
-
-	my @ra = $gd->filter_used_as_evidence($gd->list('RA'));		
-			
-	@ra = grep { ($_->{frequency} != 0) && ($_->{frequency} != 1) && (!$_->{no_show})  } @ra;
-	@ra = sort { -($a->{quality} <=> $b->{quality}) } @ra;
-	
-	for (my $i = $settings->{max_rejected_polymorphisms_to_show}; $i< scalar @ra; $i++)
-	{
-		$ra[$i]->{no_show} = 1;
-	}
-	
-	## require a certain amount of coverage
-	foreach my $item ($gd->filter_used_as_evidence($gd->list('RA')))
-	{
-		my ($top, $bot) = split /\//, $item->{tot_cov};
-		$item->{no_show} = 1 if ($top + $bot <= 2);
-	}
-	@ra = grep { !$_->{coverage} && !$_->{no_show} } @ra;
-	
-	
-	##max_rejected_junctions_to_show
-	
-	# Mark lowest scoring reject junctions as no-show
-	##
-	my @jc = $gd->filter_used_as_evidence($gd->list('JC'));	
-	@jc = grep { $_->{reject} } @jc;
-	
-	@jc = sort { -($a->{score} <=> $b->{score}) } @jc;
-	for (my $i = $settings->{max_rejected_junctions_to_show}; $i< scalar @jc; $i++)
-	{
-		$jc[$i]->{no_show} = 1;
-	}
-
-	##
-	# Create evidence files containing alignments and coverage plots
-	##
-	if (!$settings->{no_alignment_generation})
-	{
-		Breseq::Output::create_evidence_files($settings, $gd);
-	}
-
-		###
-		# Sort the junctions by unique coordinates or by their scores
-		###
-
-		if ($settings->{sort_junctions_by_score})
-		{
-			#don't show junctions supported by only a few reads
-			#@hybrids = grep {$_->{total_non_overlap_reads} > 2} @hybrids;
-
-			#sort and truncate list
-			@hybrids = sort { -($a->{score} <=> $b->{score}) || ($a->{total_reads} <=> $a->{total_reads}) } @hybrids;
-			my $last = $settings->{max_junctions_to_print};
-			$last = scalar @hybrids if (scalar @hybrids < $last);
-			$#hybrids = $last-1;	
-		}
-
-	###
-	## HTML output
-	###	
-
-	print STDERR "Creating index HTML table...\n";	
-
-	my $summary = {};
-	my $sequence_conversion_summary_file_name = $settings->file_name('sequence_conversion_summary_file_name');	
-	$summary->{sequence_conversion} = Storable::retrieve($sequence_conversion_summary_file_name);
-
-	my $index_html_file_name = $settings->file_name('index_html_file_name');		
-	Breseq::Output::html_index($index_html_file_name, $settings, $summary, $ref_seq_info, $gd);	
-	
-	my $marginal_html_file_name = $settings->file_name('marginal_html_file_name');	
-	Breseq::Output::html_marginal_predictions($marginal_html_file_name, $settings, $summary, $ref_seq_info, $gd);	
 }
 
 sub do_compare
