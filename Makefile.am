@@ -1,6 +1,6 @@
 ACLOCAL_AMFLAGS = -I aux_build/m4
 
-SUBDIRS = extern/samtools-0.1.7a src/new-c
+SUBDIRS = extern/samtools-0.1.7a src/c
 
 ROOTDIR=$(PWD)
 BRESEQDIR=$(ROOTDIR)/src/perl/Breseq
