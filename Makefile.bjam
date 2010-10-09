@@ -50,6 +50,7 @@ breseq :
 	cd $(BRESEQDIR) ; \
 	./Build install
 
+.PHONY : install
 install :
 	bjam $(BJAMFLAGS) install
 
@@ -89,7 +90,7 @@ install-breseq:
 	cd $(BRESEQDIR) ; \
 	./Build install
 	
-clean-breseq :
+clean-breseq:
 	cd $(BRESEQDIR) ; \
 	./Build clean
 	

@@ -89,7 +89,7 @@ test:
 	tests/lambda_mult_ref_read/testcmd.sh  test
 	tests/lambda_mixed_pop/testcmd.sh  test
 	tests/REL606_fragment_manipulated/testcmd.sh  test
-
+	
 test-all:
 	tests/test.sh test tests
 
