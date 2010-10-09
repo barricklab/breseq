@@ -33,6 +33,8 @@ calc_trims
 error_count
 identify_mutations
 Makefile
+autoscan.log
+configure.scan
 
 ## These are for Perl modules in general
 _build

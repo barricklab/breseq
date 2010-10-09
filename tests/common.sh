@@ -18,21 +18,22 @@ DATADIR=${COMMONDIR}/data
 FILE_PATTERN='-name output.gd'
 # executable used to hash files:
 HASH=`which sha1sum`
+# executable used to diff files
+DIFF_BIN=`which diff`
 # name of file containing expected hash values:
-EXPECTED=expected.sha1
+EXPECTED=expected.gd
 # name of testexec file
 TESTEXEC=testcmd.sh
-
 
 # build the list of hashes
 # $1 == testdir
 #
 do_build() {
     pushd $1 > /dev/null
-    for i in `find . ${FILE_PATTERN}`; do
-        ${HASH} $i
-        cp output/output.gd expected.gd
-    done > ${EXPECTED}
+#    for i in `find . ${FILE_PATTERN}`; do
+#       ${HASH} $i
+#    done > ${EXPECTED}
+    cp output/output.gd expected.gd
     popd > /dev/null
 }
 
@@ -71,12 +72,15 @@ do_check() {
 #    done
     pushd $1 > /dev/null
     
-    CHK=`${HASH} -s --check ${EXPECTED} 2>&1`
-    if [[ "$?" -ne 0 || $CHK ]]; then
+#   CHK=`${HASH} -s --check ${EXPECTED} 2>&1`
+	CHK=`${DIFF_BIN} output/output.gd expected.gd`
+ 	if [[ "$?" -ne 0 || $CHK ]]; then
         echo ""
         echo "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
         echo "Failed check"
-    	${HASH} --check ${EXPECTED}
+    	#${HASH} --check ${EXPECTED}
+    	echo "${DIFF_BIN} output/output.gd expected.gd"
+    	${DIFF_BIN} output/output.gd expected.gd
         echo "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX" 
         echo ""
         popd > /dev/null        
@@ -86,7 +90,7 @@ do_check() {
     echo ""
     echo "OOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOO"
     echo "Passed check"
-    ${HASH} --check ${EXPECTED}
+    #${HASH} --check ${EXPECTED}
     echo "OOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOO"
     echo ""
     popd > /dev/null    
