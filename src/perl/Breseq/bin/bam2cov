@@ -79,6 +79,8 @@ use lib $FindBin::Bin;
 use lib $FindBin::Bin . "/../lib/perl5";
 use lib $FindBin::Bin . "/../lib/perl5/site_perl";
 
+use Bio::DB::Sam;
+
 ## breseq modules
 use Breseq::CoverageOutput;
 
@@ -90,6 +92,7 @@ my ($bam_path, $fasta_path, $output_path);
 my $pdf = 0;
 my $resolution = 600;
 my $total_only = 0;
+my $tile;
 my ($table_mode);
 GetOptions(
 	'help|?' => \$help, 'man' => \$man, 'verbose|v' => \$verbose,
@@ -100,6 +103,7 @@ GetOptions(
 	'resolution|r=s' => \$resolution,
 	'table|t' => \$table_mode,
 	'total-only|1' => \$total_only,
+	'tile=s' => \$tile, 
 ) or pod2usage(2);
 pod2usage(1) if $help;
 pod2usage(-exitstatus => 0, -verbose => 2) if $man;
@@ -113,11 +117,34 @@ $bam_path = 'data/reference.bam' if (!$bam_path && -e 'data/reference.bam');
 $fasta_path = 'reference.fasta' if (!$fasta_path && -e 'reference.fasta');
 $fasta_path = 'data/reference.fasta' if (!$fasta_path && -e 'data/reference.fasta');
 
-die "No regions defined.\n" if (scalar @regions == 0);
 die "No BAM file defined.\n" if (!$bam_path);
 die "No fasta file defined.\n" if (!$fasta_path);
 
 my $co = Breseq::CoverageOutput->new(-fasta => $fasta_path, -bam => $bam_path);
+
+### Create regions that tile the genome with this size
+if ($tile)
+{
+	my $bam = $co->{bam};
+	my @targets = $bam->seq_ids;
+	
+	foreach my $seq_id (@targets)
+	{
+		my $reference_length = $bam->length($seq_id);
+		my $start = 1;
+		while ($start < $reference_length)
+		{
+			## ends will be fixed later automatically for then they go too far
+			my $end = $start + $tile - 1;
+			my $region = "$seq_id:$start-$end";
+			push @regions, $region;
+			$start += $tile;
+		}
+	}
+}
+
+die "No regions defined.\n" if (scalar @regions == 0);
+
 
 print STDOUT "region\tbp\tavg\tSE\n" if ($table_mode);
 

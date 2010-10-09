@@ -53,7 +53,7 @@ if (window_end == -1)
 if (pdf_output == 0) {
 	bitmap(out_file, height=500, width=900, type = "png16m", units = "px", res = 72, pointsize=18, taa=4, gaa=2)
 } else {
-	pdf(out_file, height=5, width=8)
+	pdf(out_file, height=5, width=9)
 }
 
 ### We use a blank graph for the legend!!
