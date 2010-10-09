@@ -29,6 +29,9 @@ libtool
 aclocal.m4
 Makefile.in
 configure
+src/c/calc_trims
+src/c/error_count
+erc/c/identify_mutations
 
 ## These are for Perl modules in general
 _build

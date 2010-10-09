@@ -57,7 +57,7 @@ AC_FUNC_REALLOC
 AC_CHECK_FUNCS([bzero gethostbyaddr gethostbyname memmove memset pow select socket sqrt strchr strdup strerror strstr strtol])
 
 AC_CONFIG_FILES([extern/samtools-0.1.7a/Makefile
-				 src/new-c/Makefile
+				 src/c/Makefile
                  Makefile ])
 
                  
