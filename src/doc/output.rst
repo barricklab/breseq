@@ -80,12 +80,12 @@ GenomeDiff File
 *****************
 
 `output/output.gd`
-   |breseq| also outputs its evidence and mutation predictions in a computer-readable file in :ref:`genomediff-format`. These files can be used as input to certain anlysis programs that will compare and tabulate the results of analyzing multiple samples.
+   |breseq| also outputs its evidence and mutation predictions in a computer-readable :ref:`genomediff-format`. This file can be used as input to certain analysis programs that will compare multiple samples.
 
 Processed Data
 **************
 
-|breseq| outputs several files under that can be used by other tools to further analyze the final *processed* read data.
+|breseq| outputs several files that can be used by other tools to further analyze the final *processed* read data.
 
 `data/reference.bam, data/reference.bam.bai`
    The BAM (Binary SAM) formatted database of read alignments to the reference and its index. Along with the *reference.fasta\** files can be used with any :program:`SAMTools` compatible program.

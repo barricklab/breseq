@@ -102,7 +102,8 @@ sub new
 		'strict-polymorphism-prediction' => \$self->{strict_polymorphism_prediction},
 		'max-rejected-polymorphisms-to-show=s' => \$self->{max_rejected_polymorphisms_to_show},
 		'max-rejected-junctions-to-show=s' => \$self->{max_rejected_junctions_to_show},	
-		'force-quality-scores' => \$self->{accept_any_quality_scores},							
+		'force-quality-scores' => \$self->{accept_any_quality_scores},
+		'keep-all-intermediates' => \$self->{keep_all_intermediates},									
 	) or pod2usage(2);
 
 	pod2usage(1) if $help;

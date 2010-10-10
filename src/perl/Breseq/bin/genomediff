@@ -241,11 +241,13 @@ sub do_compare
 
 #	$composite_gd->write("test");
 
+	my $settings;
+
 	##
 	# Annotate mutations
 	##
 	my $title = "Mutation Comparison";
-	Breseq::Output::html_compare($output, $title, $composite_gd, $one_ref_seq, $gd_name_list_ref);
+	Breseq::Output::html_compare($settings, $output, $title, $composite_gd, $one_ref_seq, $gd_name_list_ref);
 
 	##
 	# Input file for PHYLIP (dnapars program)
@@ -459,6 +461,7 @@ sub do_compare_polymorphisms
 	my @reference_genbank_file_names;
 	my $phylip_input_file;
 	my $offending_polymorphisms;
+	my $settings;
 	GetOptions(
 		'help|?' => \$help, 'man' => \$man,
 	## Options for input and output files
@@ -498,7 +501,7 @@ sub do_compare_polymorphisms
 
 		@mut_list = sort { (($a->{frequency}-0.5)**2 <=> ($b->{frequency}-0.5)**2) } @mut_list;
 		
-		Breseq::Output::html_compare_polymorphisms($output, "Title", \@mut_list);
+		Breseq::Output::html_compare_polymorphisms($settings, $output, "Title", \@mut_list);
 	}	
 	
 }

@@ -135,7 +135,7 @@ sub html_index
 	my $relative_path = $settings->file_name('local_evidence_path');
 	$relative_path .= "/" if ($relative_path);
 	my $one_ref_seq = scalar(keys %{$ref_seq_info->{ref_strings}}) == 1;
-	print HTML p . html_mutation_table_string($gd, \@muts, $relative_path, undef, $one_ref_seq );
+	print HTML p . html_mutation_table_string($settings, $gd, \@muts, $relative_path, undef, $one_ref_seq);
 
 	###
 	## Unassigned evidence
@@ -220,7 +220,7 @@ sub html_footer
 
 sub html_compare
 {
-	my ($file_name, $title, $gd, $one_ref_seq, $gd_name_list_ref) = @_;
+	my ($settings, $file_name, $title, $gd, $one_ref_seq, $gd_name_list_ref) = @_;
 
 	open HTML, ">$file_name" or die "Could not open file: $file_name";    
 
@@ -231,7 +231,7 @@ sub html_compare
 	
 	my @muts = $gd->mutation_list;
 	
-	print HTML html_mutation_table_string($gd, \@muts, undef, undef, $one_ref_seq, $gd_name_list_ref);
+	print HTML html_mutation_table_string($settings, $gd, \@muts, undef, undef, $one_ref_seq, $gd_name_list_ref);
 
 	print HTML end_html;
 	close HTML;
@@ -239,7 +239,7 @@ sub html_compare
 
 sub html_compare_polymorphisms
 {
-	my ($file_name, $title, $list_ref) = @_;
+	my ($settings, $file_name, $title, $list_ref) = @_;
 
 	open HTML, ">$file_name" or die "Could not open file: $file_name";    
 
@@ -248,7 +248,7 @@ sub html_compare_polymorphisms
 			-head  => style({type => 'text/css'}, $header_style_string),
 	);
 		
-	print HTML html_read_alignment_table_string($list_ref, undef, undef, 1);
+	print HTML html_read_alignment_table_string($settings, $list_ref, undef, undef, 1);
 
 	print HTML end_html;
 	close HTML;
@@ -402,7 +402,7 @@ sub breseq_header_string
 
 sub html_genome_diff_item_table_string
 {
-	my ($gd, $list_ref) = @_;
+	my ($settings, $gd, $list_ref) = @_;
 	
 	return '' if (!defined $list_ref) || (scalar @$list_ref) == 0;
 	my $first_item = $list_ref->[0];	
@@ -410,7 +410,7 @@ sub html_genome_diff_item_table_string
 	##mutation
 	if (length($first_item->{type}) == 3)
 	{	
-		return html_mutation_table_string($gd, $list_ref);
+		return html_mutation_table_string($settings, $gd, $list_ref);
 	}
 	
 	##evidence
@@ -434,7 +434,7 @@ sub html_genome_diff_item_table_string
 
 sub html_mutation_table_string
 {	
-		my ($gd, $list_ref, $relative_link, $legend_row, $one_ref_seq, $gd_name_list_ref) = @_;
+		my ($settings, $gd, $list_ref, $relative_link, $legend_row, $one_ref_seq, $gd_name_list_ref) = @_;
 		$relative_link = '' if (!defined $relative_link);
 		my $output_str = '';
 
@@ -448,9 +448,19 @@ sub html_mutation_table_string
 		my $header_text = "Predicted mutation";
 		$header_text .= "s" if (scalar @$list_ref > 1);
 
-		
-		my @freq_header_list = ("freq");
-		@freq_header_list = @$gd_name_list_ref if (defined $gd_name_list_ref);
+		# There are three possibilities for the frequency column(s)
+		# (1) We don't want it at all. (Single genome no poly prediction)		
+		my @freq_header_list = ();
+		# (2) We want multiple columns because we are comparing genomes.
+		if (defined $gd_name_list_ref)
+		{
+			@freq_header_list = @$gd_name_list_ref;
+		}
+		# (3) We want a single column (polymorphism prediction)
+		elsif ($settings->{polymorphism_prediction})
+		{
+			@freq_header_list = ("freq");
+		}
 		
 		my $total_cols = 5 + scalar @freq_header_list;
 		$total_cols += 1 if (!$one_ref_seq);
@@ -525,8 +535,19 @@ sub html_mutation_table_string
 			}
 			
 			my $row_class = "normal_table_row";
-			my @freq_list;
-			if (!defined $gd_name_list_ref)
+			
+			# There are three possibilities for the frequency column(s)
+			# (1) We don't want it at all. (Single genome no poly prediction)		
+			my @freq_list = ();
+			# (2) We want multiple columns because we are comparing genomes.
+			if (defined $gd_name_list_ref)
+			{
+				#"_freq_[name]" keys were made within GenomeDiff structure				
+				@freq_list = map { freq_to_string($mut, "frequency_$_")  } @$gd_name_list_ref;	
+				$row_class = "alternate_table_row_" . ($row_num % 2);
+			}
+			# (3) We want a single column (polymorphism prediction)
+			elsif ($settings->{polymorphism_prediction})
 			{
 				if ((defined $mut->{frequency}) && ($mut->{frequency} != 1))
 				{
@@ -534,13 +555,6 @@ sub html_mutation_table_string
 				}			
 				push @freq_list, freq_to_string($mut);
 			}
-			else
-			{
-				#"_freq_[name]" keys were made				
-				@freq_list = map { freq_to_string($mut, "frequency_$_")  } @$gd_name_list_ref;	
-				$row_class = "alternate_table_row_" . ($row_num % 2);		
-			}
-			
 			
 			if ($mut->{type} eq 'SNP')
 			{
@@ -1105,14 +1119,14 @@ sub html_evidence_file
 	
 	my $parent_item = $interval->{parent_item};
 				
-	print HTML html_genome_diff_item_table_string($gd, [$parent_item]) . p;
+	print HTML html_genome_diff_item_table_string($settings, $gd, [$parent_item]) . p;
 	my @evidence_list = $gd->mutation_evidence_list($parent_item);
 	
 	foreach my $type ( 'RA', 'MC', 'JC' )
 	{
 		my @this_evidence_list = grep {$_->{type} eq $type} @evidence_list;
 		next if (scalar @this_evidence_list == 0);
-		print HTML html_genome_diff_item_table_string($gd, \@this_evidence_list) . p;
+		print HTML html_genome_diff_item_table_string($settings, $gd, \@this_evidence_list) . p;
 	}
 		
 	if (defined $interval->{plot})
