@@ -318,6 +318,17 @@ if ($settings->do_step('reference_alignment_done_file_name', "Read alignment to 
 			Breseq::Shared::system("ssaha2 -save $reference_hash_file_name -kmer 13 -skip 1 -seeds 1 -score 12 -cmatch 9 -ckmer 1 -output sam_soft -outfile $reference_sam_file_name $read_fastq_file");		
 		}
 	}
+	
+	### Delete the hash files immediately
+	if (!$settings->{keep_all_intermediates})
+	{
+		unlink "$reference_hash_file_name.base";
+		unlink "$reference_hash_file_name.body";
+		unlink "$reference_hash_file_name.head";
+		unlink "$reference_hash_file_name.name";
+		unlink "$reference_hash_file_name.size";			
+	}
+	
 	$settings->done_step('reference_alignment_done_file_name');
 }
 
@@ -425,6 +436,17 @@ sub candidate_junction_alignment {}
 				# Note: Added -best parameter to try to avoid too many matches to redundant junctions!
 			}
 		}
+		
+		### Delete the hash files immediately
+		if (!$settings->{keep_all_intermediates})
+		{
+			unlink "$candidate_junction_hash_file_name.base";
+			unlink "$candidate_junction_hash_file_name.body";
+			unlink "$candidate_junction_hash_file_name.head";
+			unlink "$candidate_junction_hash_file_name.name";
+			unlink "$candidate_junction_hash_file_name.size";			
+		}
+	
 		$settings->done_step('candidate_junction_alignment_done_file_name');
 	}
 }
