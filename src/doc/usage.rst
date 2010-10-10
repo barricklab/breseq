@@ -28,11 +28,9 @@ Expert options:
 
    Ignore bases with a quality score lower than this value when calling mutations. This accommodates Illumina formats that use quality scores of 2 to flag bad data. These bases are still used for aligning to the reference genome and are shown highlighted in yellow in read alignment drawings. Default: 3
 
-Other tools
-------------------
 
 :program:`bam2aln`
-*********************
+------------------
 
 Usage:
 
@@ -66,7 +64,7 @@ Options:
 
 
 :program:`bam2cov`
-******************
+------------------
 
 Usage:
 

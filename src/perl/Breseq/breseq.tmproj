@@ -3,7 +3,7 @@
 <plist version="1.0">
 <dict>
 	<key>currentDocument</key>
-	<string>bin/breseq</string>
+	<string>lib/Breseq/ErrorCalibration.pm</string>
 	<key>documents</key>
 	<array>
 		<dict>
@@ -31,20 +31,6 @@
 	<integer>204</integer>
 	<key>metaData</key>
 	<dict>
-		<key>bin/bam2aln</key>
-		<dict>
-			<key>caret</key>
-			<dict>
-				<key>column</key>
-				<integer>20</integer>
-				<key>line</key>
-				<integer>121</integer>
-			</dict>
-			<key>firstVisibleColumn</key>
-			<integer>0</integer>
-			<key>firstVisibleLine</key>
-			<integer>35</integer>
-		</dict>
 		<key>bin/bam2cov</key>
 		<dict>
 			<key>caret</key>
@@ -75,20 +61,6 @@
 				<integer>102</integer>
 			</dict>
 		</dict>
-		<key>bin/breseq</key>
-		<dict>
-			<key>caret</key>
-			<dict>
-				<key>column</key>
-				<integer>16</integer>
-				<key>line</key>
-				<integer>440</integer>
-			</dict>
-			<key>firstVisibleColumn</key>
-			<integer>0</integer>
-			<key>firstVisibleLine</key>
-			<integer>415</integer>
-		</dict>
 		<key>bin/fastq_utils</key>
 		<dict>
 			<key>caret</key>
@@ -108,14 +80,14 @@
 			<key>caret</key>
 			<dict>
 				<key>column</key>
-				<integer>44</integer>
+				<integer>50</integer>
 				<key>line</key>
-				<integer>348</integer>
+				<integer>535</integer>
 			</dict>
 			<key>firstVisibleColumn</key>
 			<integer>0</integer>
 			<key>firstVisibleLine</key>
-			<integer>323</integer>
+			<integer>517</integer>
 		</dict>
 		<key>bin/genomediff</key>
 		<dict>
@@ -130,20 +102,6 @@
 			<integer>0</integer>
 			<key>firstVisibleLine</key>
 			<integer>455</integer>
-		</dict>
-		<key>lib/Breseq/AlignmentCorrection.pm</key>
-		<dict>
-			<key>caret</key>
-			<dict>
-				<key>column</key>
-				<integer>0</integer>
-				<key>line</key>
-				<integer>15</integer>
-			</dict>
-			<key>firstVisibleColumn</key>
-			<integer>0</integer>
-			<key>firstVisibleLine</key>
-			<integer>35</integer>
 		</dict>
 		<key>lib/Breseq/AlignmentOutput.pm</key>
 		<dict>
@@ -289,20 +247,6 @@
 			<key>firstVisibleLine</key>
 			<integer>116</integer>
 		</dict>
-		<key>lib/Breseq/Output.pm</key>
-		<dict>
-			<key>caret</key>
-			<dict>
-				<key>column</key>
-				<integer>44</integer>
-				<key>line</key>
-				<integer>546</integer>
-			</dict>
-			<key>firstVisibleColumn</key>
-			<integer>0</integer>
-			<key>firstVisibleLine</key>
-			<integer>64</integer>
-		</dict>
 		<key>lib/Breseq/ReferenceSequence.pm</key>
 		<dict>
 			<key>caret</key>
@@ -316,36 +260,6 @@
 			<integer>0</integer>
 			<key>firstVisibleLine</key>
 			<integer>85</integer>
-		</dict>
-		<key>lib/Breseq/Settings.pm</key>
-		<dict>
-			<key>caret</key>
-			<dict>
-				<key>column</key>
-				<integer>31</integer>
-				<key>line</key>
-				<integer>105</integer>
-			</dict>
-			<key>columnSelection</key>
-			<false/>
-			<key>firstVisibleColumn</key>
-			<integer>0</integer>
-			<key>firstVisibleLine</key>
-			<integer>74</integer>
-			<key>selectFrom</key>
-			<dict>
-				<key>column</key>
-				<integer>62</integer>
-				<key>line</key>
-				<integer>105</integer>
-			</dict>
-			<key>selectTo</key>
-			<dict>
-				<key>column</key>
-				<integer>31</integer>
-				<key>line</key>
-				<integer>105</integer>
-			</dict>
 		</dict>
 		<key>lib/Breseq/Shared.pm</key>
 		<dict>
@@ -436,11 +350,6 @@
 	</dict>
 	<key>openDocuments</key>
 	<array>
-		<string>lib/Breseq/Output.pm</string>
-		<string>lib/Breseq/Settings.pm</string>
-		<string>bin/breseq</string>
-		<string>bin/bam2aln</string>
-		<string>lib/Breseq/AlignmentCorrection.pm</string>
 		<string>lib/Breseq/ErrorCalibration.pm</string>
 		<string>lib/Breseq/coverage_distribution.r</string>
 		<string>lib/Breseq/CoverageDistribution.pm</string>
@@ -463,6 +372,6 @@
 	<key>showFileHierarchyDrawer</key>
 	<true/>
 	<key>windowFrame</key>
-	<string>{{173, 22}, {659, 856}}</string>
+	<string>{{182, 15}, {1018, 863}}</string>
 </dict>
 </plist>

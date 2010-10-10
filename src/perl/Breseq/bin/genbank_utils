@@ -99,6 +99,10 @@ elsif ("\U$command" eq 'SEQUENCE')
 {
 	do_sequence();
 }
+elsif ("\U$command" eq 'CONVERT_GENOSCOPE')
+{
+	do_convert_genoscope();
+}
 
 sub do_split
 {
@@ -458,4 +462,117 @@ sub do_sequence
 		my $out_seq = $ref_seq->subseq($location);
 		print ">$region\n$out_seq\n";
 	}
+}
+
+sub do_convert_genoscope
+{
+	my ($help, $man, $verbose);
+	my ($table_file, $genbank_file, $output_file);
+	GetOptions(
+		'help|?' => \$help, 'man' => \$man,
+		'table-file|t=s' => \$table_file,
+		'genbank-file|i=s' => \$genbank_file,
+		'output-file|o=s' => \$output_file,
+		'verbose|v' => \$verbose,
+	);
+	pod2usage(1) if $help;
+	pod2usage(-exitstatus => 0, -verbose => 2) if $man;
+	pod2usage(1) if (!$table_file || !$genbank_file || !$output_file);
+
+	### Load table
+	open TABLE, "<$table_file" or die "Could not open $table_file\n";
+	my @table_lines = <TABLE>;
+	chomp @table_lines;
+	my $header_line = shift @table_lines;
+	my @header_items = split "\t", $header_line;
+	my @table_list;
+	foreach my $line (@table_lines)
+	{
+		my @line_items = split "\t", $line;
+		my $on = 0;
+		my $item;
+		while ($on < scalar @line_items)
+		{
+			$item->{$header_items[$on]} =$line_items[$on];
+			$on++;
+		}
+		$item->{original_line} = $line;
+		push @table_list, $item;
+	}
+
+	#print Dumper(\@table_list);
+
+	# Load Genbank sequence and remove annotation
+	my $in_genbank = Bio::SeqIO->new(-file => "$genbank_file", -format => "genbank");
+	my $seq = $in_genbank->next_seq;
+	
+	my @original_features = $seq->get_SeqFeatures;
+	@original_features = grep { $_->primary_tag eq 'source' } @original_features;
+	$seq->remove_SeqFeatures;
+	$seq->add_SeqFeature($original_features[0]);
+	
+	# Open file we will be writing to
+	my $out = Bio::SeqIO->new(-file => ">$output_file", -format => "genbank");
+
+	FEATURE: foreach my $item (@table_list) 
+	{
+		my $new_feature = new Bio::SeqFeature::Generic;
+		
+		##Same for anything
+		$new_feature->start($item->{Begin});
+		$new_feature->end($item->{End});
+		$new_feature->strand( ($item->{Frame} < 0) ? -1 : +1);		
+
+		$new_feature->primary_tag($item->{Type});
+		$new_feature->add_tag_value('gene', $item->{Gene});		
+		$new_feature->add_tag_value('locus_tag', $item->{Label});
+		
+		my @ec_numbers = split /,\s*/, $item->{ECnumber};
+		foreach my $ec_number (@ec_numbers)
+		{
+			$new_feature->add_tag_value('EC_number', $ec_number);
+		}
+		
+		$new_feature->add_tag_value('product', $item->{Product});
+		$new_feature->add_tag_value('note', "synonym: $item->{Synonyms}") if ($item->{Synonyms});
+		$new_feature->add_tag_value('comments', "$item->{Comments}") if ($item->{Comments});
+		
+		#extra processing for some types:
+
+		if (($item->{Type} eq 'CDS') || ($item->{Type} eq 'fCDS'))
+		{
+			$new_feature->primary_tag('CDS');
+			$new_feature->add_tag_value('pseudo', 1) if ($item->{Mutation} eq 'pseudo');
+			$new_feature->add_tag_value('transl_table', 11);
+			$seq->add_SeqFeature($new_feature);
+			
+			#in addition to the primary, add a gene tag right after it
+			$new_feature = new Bio::SeqFeature::Generic;
+		
+			$new_feature->start($item->{Begin});
+			$new_feature->end($item->{End});
+			$new_feature->strand( ($item->{Frame} < 0) ? -1 : +1);
+		
+			$new_feature->primary_tag('gene');
+			$new_feature->add_tag_value('gene', $item->{Gene});			
+			$new_feature->add_tag_value('locus_tag', $item->{Label});
+			$new_feature->add_tag_value('pseudo', 1) if ($item->{Mutation} eq 'pseudo');
+		}
+		
+		$seq->add_SeqFeature($new_feature);
+	}
+
+	$out->write_seq($seq);
+}
+
+sub GetTag
+{
+	my ($Feature, $Tag, $Allow_Array) = @_;	
+	$Allow_Array = 0 if (!defined $Allow_Array);
+	
+	return '' if (!$Feature->has_tag("$Tag"));
+	my @Tag_Values = $Feature->get_tag_values("$Tag");
+	return '' if (scalar @Tag_Values == 0);
+	return $Tag_Values[0] if (!$Allow_Array);
+	return @Tag_Values;
 }
