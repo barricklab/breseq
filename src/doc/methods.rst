@@ -65,7 +65,15 @@ A position-hash score is calculated again for each candidate junction by countin
 
 This calculation begins by fitting a censored negative-binomial (overdispersed Poisson) to the distribution of read coverage at unique-only reference positions as described under :ref:`read-coverage`. From this distribution |breseq| calculates the chance that at least one read will start any given position, on a given strand, assuming that coverage distribution. The chance of observing a given position-hash score is then calculated according to the binomial distribution assuming 2 x read length trials (for each strand), and this chance per trial of observing a read in this register. By default a tail probability of 0.01 is used to establish the cutoff for this test.
 
-If the junction passes, then reads that map equally elsewhere are assigned to it and removed from further consideration. If, after all junction candidates have been tested, a read remains unused, it is assigned to the reference genome.
+In addition to this score, several other criteria are used when deciding whether a predicted junction has sufficient support. The complete list is:
+
+#. Must have a pos-hash score greater than a calculated cutoff (as described above).
+#. Must be supported by reads mapping to both strands of the predicted junction.
+#. Must have a reads mapping to the predicted junction that extend at least 14 base pairs into each side of the reference.
+#. Must have reads mapping *to each strand* of the predicted junction that extend into each side of the junction at least 9 bp.
+#. Must have a reads mapping to the predicted junction where the side of the read with the smallest reference overlap extends at least 3 bp into the reference sequence on each side.
+
+If the junction meets all of these criteria, it will be reported as evidence. In this case, reads that map equally elsewhere are assigned to this junction and removed from further consideration. If, after all junction candidates have been tested, a read remains unused, it is assigned to the reference genome.
 
 For junctions that pass this scoring cutoff, the ends of reads aligning to the junction are re-added as split sub-alignments to the BAM alignment database, resolving ambiguously aligned bases, so that each read base is aligned to only one reference nucleotide. These split reads can be recognized in the output because they are renamed with suffixes -M1 and -M2 for the two portions.
 
@@ -205,7 +213,7 @@ In some cases there is ambiguity concerning the size of missing coverage regions
 
 This example shows a region of missing coverage (white background) that extends into a region of repeat coverage, making the left side end of the missing coverage ambiguous.
 
-Mutational event prediction
+Mutation prediction
 ---------------------------
 
 The previous sections describe **evidence** for mutations. |breseq| next tries to predict biological **mutational events** from this evidence.
@@ -263,7 +271,7 @@ Marginal evidence
 
 |breseq| displays some evidence that is below the established cutoffs on a separate results page.
 
-Methodological Limitations
+Limitations
 --------------------------
 
 Even given perfect data, |breseq| cannot find some types of mutations:

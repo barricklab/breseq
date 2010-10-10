@@ -845,8 +845,6 @@ sub _test_junction
 				|| ($max_left_per_strand->{'1'} < $alignment_on_each_side_cutoff_per_strand)
 	       		|| ($max_right_per_strand->{'0'} < $alignment_on_each_side_cutoff_per_strand) 
 				|| ($max_right_per_strand->{'1'} < $alignment_on_each_side_cutoff_per_strand)
-	       		|| ($max_right_per_strand->{'0'} < $alignment_on_each_side_cutoff_per_strand) 
-				|| ($max_right_per_strand->{'1'} < $alignment_on_each_side_cutoff_per_strand)
 				|| ($max_min_left < $alignment_on_each_side_min_cutoff)
 				|| ($max_min_right < $alignment_on_each_side_min_cutoff)
 	;
