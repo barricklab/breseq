@@ -29,12 +29,15 @@ libtool
 aclocal.m4
 Makefile.in
 configure
-calc_trims
-error_count
-identify_mutations
 Makefile
 autoscan.log
 configure.scan
+src/c/calc_trims
+src/c/error_count
+src/c/identify_mutations
+src/old-c/calc_trims/bin/darwin/debug/calc_trims
+src/old-c/error_count/bin/darwin/debug/error_count
+src/old-c/identify_mutations/bin/darwin/debug/identify_mutations
 
 ## These are for Perl modules in general
 _build

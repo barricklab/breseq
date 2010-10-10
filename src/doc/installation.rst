@@ -1,7 +1,7 @@
 Installation
 ==============
 
-:program:`breseq` is a command line tool implemented in Perl/C++/R. It should compile and function on a variety of Unix platforms, including MacOSX.
+:program:`breseq` is a command line tool implemented in Perl, C++, and R. It will compile and function on a variety of Unix platforms, including MacOSX.
 
 1. Install external dependencies
 ---------------------------------

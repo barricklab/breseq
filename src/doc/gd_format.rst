@@ -1,14 +1,13 @@
-:program:`GenomeDiff` output
+.. _genomediff-format:
+
+:program:`GenomeDiff` Format
 =============================
 
 |breseq| outputs its evidence and mutation predictions in a computer-readable :program:`GenomeDiff` text format. 
 
-An example of a :program:`genomediff` file::
+An example of a :program:`GenomeDiff` file::
 
    It begins with a header line. Subsequent lines beginning in # are comments or meta data.
-
-format specification
-********************
 
 Version line
 +++++++++++++++
@@ -115,7 +114,7 @@ NJ: New junction evidence
 
    position of side 1 at the junction boundary.
    
-6. **side_1_strand* *<1/-1>*
+6. **side_1_strand** *<1/-1>*
 
    direction that side 1 continues matching the reference sequence
 
