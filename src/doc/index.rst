@@ -17,9 +17,15 @@ Contents:
    Installation <installation>
    Usage <usage>  
    Methods <methods>   
-   HTML Output <html_output>
-   GenomeDiff Output <gd_output>
+   Output <output>
    Acknowledgments <acknowledgments>
+
+Appendices:
+
+.. toctree::
+   :maxdepth: 1
+   
+   GenomeDiff Format <gd_format>
 
 .. Indices and tables
 .. ==================
