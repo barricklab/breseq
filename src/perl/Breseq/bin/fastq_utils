@@ -108,8 +108,9 @@ if (($command eq 'QUALITY') || ($command eq 'FORMAT'))
 	my ( $input ) = @ARGV;
 
 	my $in_fastq = Breseq::Fastq->new( -file => "<$input", -verbose => 1, -format=> 'UNKNOWN');
-	my $predicted_format = $in_fastq->predict_format($n);
-	print "Predicted base quality score format is: $predicted_format\n";
+	my ($predicted_format, $list_format) = $in_fastq->predict_format($n);
+	my $list_format_str = $list_format ? " (List Format)" : '';
+	print "Predicted base quality score format is: $predicted_format$list_format_str\n";
 }
 
 if (($command eq 'SANGER') || ($command eq 'CONVERT'))
@@ -120,9 +121,11 @@ if (($command eq 'SANGER') || ($command eq 'CONVERT'))
 	my ($help, $man);
 	my $num_seq_per_file;
 	my $format;
+	my $list_format = 0;
 	GetOptions(
 		'help|?' => \$help, 'man' => \$man,
 		'format|f=s' => \$format,
+		'list-format|l=s' => \$list_format,
 	) or pod2usage(2);
 	pod2usage(1) if $help;
 	pod2usage(-exitstatus => 0, -verbose => 2) if $man;	
@@ -131,7 +134,7 @@ if (($command eq 'SANGER') || ($command eq 'CONVERT'))
 
 	die "No input format provided (-f)\n" if (!defined $format);
 
-	my $in_fastq = Breseq::Fastq->new( -file => "<$input", -format => $format);
+	my $in_fastq = Breseq::Fastq->new( -file => "<$input", -format => $format, -list_format => $list_format);
 	die "Input file appears to already be in SANGER format.\n" if ($in_fastq->{format} eq 'SANGER');
 	
 	my $out_fastq = Breseq::Fastq->new( -file => ">$output", -format => 'SANGER');
