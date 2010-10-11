@@ -35,80 +35,114 @@ Column descriptions:
 `evidence`
 	Links to the types of evidence that support this particular prediction. See :ref:`evidence-display`.
 `seq id`	
-	The identifier for the sequence with the mutation.
+	The identifier for the sequence with the mutation. This column will not be shown for mutations if there is only one reference sequence.
 `position`
 	Position in the reference sequence of the mutation. Generally this is where the mutation begins when the mutation affects a range of positions.  
 `mutation`
 	Description of the mutation. Typically describes how nucleotides are added, substituted, or deleted. May also refer to a mobile element in the genome and how it is inserted at the specified position.
 `annotation`
-	Description of the mutation. For base substiturions inside genes, indicates the amino acid and codon changes. For other mutations inside genes, gives the coding nucleotides affected. For mutations in intergenic regions gives two relative positions (``+150/-119``) where the number is how many nucleotides from the mutation to the nearest neighboring genes, respectively, and +/- indicate whether the mutation is oriented upstream or downstream of each gene.
+	Description of the mutation. For base substitutions inside genes, describes the amino acid and codon changes. For other mutations inside genes, gives the coding nucleotides affected. For mutations in intergenic regions gives two relative positions (e.g., +150/-119) where the numbers are the distances from the mutation to the nearest neighboring genes before and after it in the genome, and the +/- signs indicate whether the mutation is oriented upstream or downstream of each of those genes.
 `gene`
-	Genes affected by the mutation. May be a single gene (``gene``), in an integenic region between genes (``gene1/gene2``), covering a range that completely encompasses several genes (``gene1-geneN``). Brackets around a gene ([gene]) mean that the mutations range ends within that gene.
+	Genes affected by the mutation. May be a single gene (``gene``), in an integenic region between genes (``gene1/gene2``), covering a range that completely encompasses several genes (``gene1-geneN``). Brackets around a [gene] mean that the mutations range ends within that gene.
 `description`
 	Descriptions of the genes affected by the mutation. Generally these correspond to the genes in the gene column, but if many genes are affected, this field is abbreviated to be a list of all the affected genes with brackets signifying that the mutation begins or ends within the specified gene.
 	
 All annotation information is taken from the input Genbank files. How informative descriptions of these changes are about how mutations affect genes is dependent on the quality of the reference sequences.
 
-SNP: Single-base substitution
-"""""""""""""""""""""""""""""
-
-.. figure:: images/mutation_header.png
+Single-base substitution (SNP)
+""""""""""""""""""""""""""""""
 
 .. figure:: images/snp_1.png
+   :width: 750px
+   
+Replacement of the reference T at positin 70,867 with a C inside the *araA* gene at positition 70,867 of the reference. This mutation changes the 92nd codon from GAC to GGC (the gene is encoded on the bottom strand of the reference sequence), causing an aspartic acid to glycine substitution in the encoded protein.  
+   
+.. figure:: images/snp_2.png
+   :width: 750px
 
-SUB: Multiple-base substitution
-"""""""""""""""""""""""""""""""
+Replacement of the reference T at position 1,298,712 with a G in the intergenic region between the *ychE* and *oppA* genes. The mutation is downstream of *ychE* by 674 bases (because this gene is before it in position and on the top strand of the reference) and upstream of *oppA* by 64 bases (because this gene is after it in position and on the top strand of the genome).
 
-.. figure:: images/mutation_header.png
+Multiple-base substitution (SUB)
+""""""""""""""""""""""""""""""""
 
 .. figure:: images/sub_1.png
+   :width: 750px
+   
+Replacement of two adjacent reference bases at positions 47,977 and 47,978 with AC in an intergenic region. This mutation is near the end of the genome so there is no gene after it. It is downstream of *lambdap79* by 33 bases (because this gene is before it in position and on the top reference strand).
 
-INS: Sequence insertion 
+Insertion (INS)
 """""""""""""""""""""""""""""
 
-.. figure:: images/mutation_header.png
+For insertion mutations, new bases are added after the *position*.
 
 .. figure:: images/ins_1.png
+   :width: 750px
+   
+Insertion of a G after reference position 3,893,551. This mutation is 6 nucleotides downstream of *kup* and 50 nucleotides upstream of *insJ-5*\ .
+   
+.. figure:: images/ins_2.png
+   :width: 750px
 
-DEL: Sequence deletion 
+Insertion of CC after reference position 3,290,071 inside the *gltB* gene. This mustation occurs after the 205th base of the 4554-base open reading frame of this gene.
+
+Deletion (DEL)
 """""""""""""""""""""""""""""
 
 For deletion rows, the *position* column gives the first missing reference base and the *mutation* column gives the size of the deletion. Thus, the deleted reference region extends from *position* to *position* + *size* -1.
 
-.. figure:: images/mutation_header.png
-
 .. figure:: images/del_1.png
-
-A single-base deletion at position 139 in an intergenic region at the end of the reference sequence. The deleted nucleotide is located 52 bp downstream of the end of the first gene *nu1* in the genome by. This mutation is supported by :ref:`read-alignment-display` evidence.
-
-.. figure:: images/mutation_header.png
+   :width: 750px
+   
+A 6,934-base deletion starting at position 3,894,997. The *annotation* column reports that it is IS150-mediated, because this repetitive element occurs on one margin of the deletion. This deletion begins before the *rbsD* gene and ends within the *yieO* gene. This mutation is supported by :ref:`new-junction-display` and :ref:`missing-coverage-display` evidence.
 
 .. figure:: images/del_2.png
+   :width: 750px
 
-A 5,996 bp deletion starting at position 2,338. This deletion begins within the *orf-314* gene and ends past the *ea59* gene. This mutation is supported by :ref:`new-junction-display` and :ref:`missing-coverage-display` evidence.
+A single-base deletion at position 1,332,148 in an intergenic region. The deleted nucleotide is located 131 bp downstream of the *topA* gene and 79 bp upstream of the *cysB* gene.
 
-MOB: Mobile element insertion
+Mobile element insertion (MOB)
+""""""""""""""""""""""""""""""
+
+Mobile element insertions can result in duplications of the target site. The provided *position* is the first of such possibly duplicated bases. The number of bases in parentheses in the *annotation*, e.g. (+7) bp, are duplicated, starting with the indicated *position*\ , so that they now occur before and after the new copy of the mobile element. Additional bases may be added or deleted as a result of the mobile element insertion at either end. These are indicated outside of double colons (::) on the affected side of the mobile element name in the in the *annotation*. The strand of the newly inserted mobile element is indicated in parentheses after its name.
+
+.. figure:: images/mob_1.png
+   :width: 750px
+
+Insertion of an IS3 element in the reverse orientation. Bases 3,571,196 through 3,571,198 are duplicated, so that they now occur on each margin of the newly inserted element. IN addition, the sequecne TCA was added directly after the IS3 element on the right margin. The duplicated bases are positions 397 through 399 of the 435-base *uspA* reading frame.
+
+.. figure:: images/mob_2.png
+   :width: 750px
+
+Insertion of an IS186 element in the forward orientation. Bases 4,524,522 through 4,524,527 are duplicated, so that they now occur on each margin of the newly inserted element. These bases are 494 through 499 of the 549-base *fimA* reading frame.
+
+.. figure:: images/mob_3.png
+   :width: 750px
+   
+Insertion of an IS186 element in the forward orientation. Bases 2,736,667 through 2,736,675 are duplicated, so that they now occur on each margin of the newly inserted element. Two bases of the mobile element on the left margin were lost, apparently during insertion. The duplicated bases are 818 through 826 of the 1425-base *ascB* reading frame.
+
+Sequence amplification (AMP)
 """""""""""""""""""""""""""""
 
-AMP: Sequence amplification
-"""""""""""""""""""""""""""""
+For duplications and other tandem amplifications, *position* indicates the first repeated base. 
 
-INV: Chromosomal inversion
-"""""""""""""""""""""""""""""
-
+.. figure:: images/amp_1.png
+   :width: 750px
+   
+Duplication of 8 bp inside the *pykF* gene. The bases 1,733,290 to 1,733,297 now appear twice at this location. This mutation would cause a frameshift.
+   
 .. _evidence-display:   
 
 Evidence Display
 ++++++++++++++++
 
-Note that clicking on any evidence link for a mutation prediction will bring up pages with tables showing all items of evidence that |breseq| used to predict the mutational event.
+Evidence is shown in tables with different fields from mutation predictions, that provide more detailed information about support for genomic changes. Clicking on any evidence link for a mutation prediction will also bring up pages with tables showing all items of evidence that |breseq| used to predict the mutational event.
 
 .. _new-junction-display:   
 
 New Junction (JC)
 """""""""""""""""""""""""""""
 
-Each JC row consists of two parts sub-rows, one describing one side of the junction in the reference sequence.
+Each JC row consists of two sub-rows, one describing one side of the junction in the reference sequence. If a sub-row is highlighted in orange, it means that side of the junction ambiguously maps to more than one place in the reference. The coordinate shown is an example of one site.
 
 Column descriptions: 
 
@@ -119,7 +153,7 @@ Column descriptions:
 `seq id`	
 	The identifiers for the sequences involved in the new junction.
 `position`
-	Positions in the reference sequence of the two sides of the new junction. Each position has an = before or after it that represents how the junction was constructed. If
+	Positions in the reference sequence of the two sides of the new junction. Each position has an = before or after it that represents how the junction was constructed. The reference sequence approaches that coordinate from the side with the = sign. The coordinates are juxtaposed with each other to make the new junction.
 `overlap`
     If positive, the number of bp in the junction that could map to either side in the reference sequence. Generally, positive overlap has been resolved to zero by assigning these base pairs to one side of the junction. If negative, the number of bp that are unique to reads mapping across the junction and represent insertions relative to the reference sequence.
 `reads`
@@ -129,7 +163,18 @@ Column descriptions:
 `annotation, gene, product`
 	Description of the mutation effects for each side of the junction. The format of these columns is the same as in :ref:`mutation-display`.
 
-Example: 
+Examples: 
+
+.. figure:: images/jc_1.png
+   :width: 750px
+
+This image shows the page from clicking on the * link for this junction. A partial alignment of reads to the new junction is shown. Notice the two joined pieces of the reference sequence at the top that they align to. This sequence is on the bottom strand of the reference if start is greater than end.
+   
+.. figure:: images/jc_2.png
+   :width: 750px   
+
+This image shows the page from clicking on one of the ? links for this junction. Notice that only a piece of the reads maps to this region and that it ends where these reads begin matching a disjoint region in the reference genome. Clearly the old junction is not supported by any reads in this sample and must no longer exist. Once again, only a partial alignment is shown.
+
 
 .. _read-alignment-display:
 
@@ -157,6 +202,11 @@ Column descriptions:
 
 Example: 
 
+.. figure:: images/ra_1.png
+   :width: 750px
+   
+Partial alignment of reads showing that most support a base substitution. The > and < for each named read indicate the strand (top and bottom, respectively).
+
 .. _missing-coverage-display:
 
 Missing coverage (MC)
@@ -180,6 +230,11 @@ Column descriptions:
 	Description of the mutation effects for each side of the junction. The format of these columns is the same as in :ref:`mutation-display`.
 
 Example: 
+
+.. figure:: images/mc_1.png
+   :width: 750px
+   
+Read coverage depth around the missing coverage. The white area shows the maximal boundaries.
 
 Processed Data
 **************
