@@ -84,7 +84,7 @@ sub new
 	if ($self->{write_mode})
 	{
 		$self->throw("It is only possible to write in SANGER format.") if ((defined $self->{format}) && ($self->{format} ne 'SANGER'));
-		$self->set_format("SANGER");
+		$self->throw("It is not possible to write in list format.") if ($self->{list_format});
 	}	
 	else #read_mode
 	{
@@ -95,9 +95,11 @@ sub new
 		else
 		{
 			$self->set_format('Unknown');
-			my $predicted_format = $self->predict_format();
+			my $predicted_format;
+			($predicted_format, $self->{list_format}) = $self->predict_format();
 			$self->set_format($predicted_format);
-			print "Predicted base quality score format is: $self->{format}\n" if ($self->{verbose});
+			my $list_format_str = $self->{list_format} ? " (List Format)" : '';
+			print "Predicted base quality score format is: $self->{format}$list_format_str\n" if ($self->{verbose});
 		}
 	}
 	
@@ -135,6 +137,7 @@ sub next_seq
 	$new_seq->{format} = $self->{format};
 	$new_seq->{chr_offset} = $format_to_chr_offset->{$self->{format}};
 	$new_seq->{quality_type} = $format_to_quality_type->{$self->{format}};
+	$new_seq->{list_format} = $self->{list_format};
 
 	#print STDERR "\@LINE:::  $self->{next_line}\n";
 
@@ -165,12 +168,18 @@ sub next_seq
 	$new_seq->{qual_chars} = $self->{next_line};
 	$new_seq->{qual_chars} =~ s/\r//g; #clean sequence
 	
+	# if there is space then we are in list mode
+	if ($new_seq->{qual_chars} =~ m/\s/)
+	{
+		$new_seq->{list_format} = 1;
+	}
+	
 	#next line should be next sequence
 	$self->{next_line} = readline $self->{fh};
 	chomp $self->{next_line} if (defined $self->{next_line});
 	
 	### if we are using list format we need to convert quals to ascii
-	if ($self->{list_format})
+	if ($new_seq->{list_format})
 	{
 		my @qual_list = split /\s+/, $new_seq->{qual_chars};
 		$new_seq->{qual_chars} = '';
@@ -179,6 +188,7 @@ sub next_seq
 		{
 			$self->throw("chr out of range $q, fastq type may be incorrect") if ($q+$self->{chr_offset} < 0);
 			$self->throw("chr out of range $q, fastq type may be incorrect") if ($q+$self->{chr_offset} > 255);
+			$self->{chr_offset} = 64; #we must do this to be safe
 			$new_seq->{qual_chars}.= chr($q+$self->{chr_offset});
 		}
 	}
@@ -229,12 +239,14 @@ sub predict_format
 	$self->{next_line} = readline $self->{fh};
 	chomp $self->{next_line} if ($self->{next_line});
 	
+	my $list_format = 0;
+	
 	my $i;
 	for ($i=0; $i<$n; $i++)
 	{
 		my $seq = $self->next_seq;
 		last if (!$seq);
-		
+				
 		my @quals = Breseq::Fastq::quals($seq);
 		foreach my $q (@quals)
 		{
@@ -245,6 +257,8 @@ sub predict_format
 			$max_qual = $q if ((!defined $max_qual) || ($q > $max_qual));
 			$min_qual = $q if ((!defined $min_qual) || ($q < $min_qual));			
 		}
+		
+		$list_format ||= $seq->{list_format};
 	}
 	close $self->{fh};
 		
@@ -285,17 +299,17 @@ sub predict_format
 	
 	if ($min_qual < 59)
 	{
-		return 'Sanger';
+		return ('Sanger', $list_format);
 	}
 	if ($min_qual < 64)
 	{
-		return 'Solexa';
+		return ('Solexa', $list_format);
 	}
 	if ($min_qual < 67)
 	{
-		return 'Illumina_1.3+';
+		return ('Illumina_1.3+', $list_format);
 	}
-	return 'Illumina_1.5+';
+	return ('Illumina_1.5+', $list_format);
 }
 
 

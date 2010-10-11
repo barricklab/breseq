@@ -507,9 +507,9 @@ sub do_convert_genoscope
 	my $seq = $in_genbank->next_seq;
 	
 	my @original_features = $seq->get_SeqFeatures;
-	@original_features = grep { $_->primary_tag eq 'source' } @original_features;
 	$seq->remove_SeqFeatures;
 	$seq->add_SeqFeature($original_features[0]);
+	my @repeats = grep { $_->primary_tag eq 'repeat_region' } @original_features;
 	
 	# Open file we will be writing to
 	my $out = Bio::SeqIO->new(-file => ">$output_file", -format => "genbank");
@@ -517,6 +517,13 @@ sub do_convert_genoscope
 	FEATURE: foreach my $item (@table_list) 
 	{
 		my $new_feature = new Bio::SeqFeature::Generic;
+		
+		#add the repeat at an appropriate position
+		if ((scalar @repeats > 0) && ($repeats[0]->start - 100 < $item->{Begin}))
+		{
+			my $this_repeat = shift @repeats;
+			$seq->add_SeqFeature($this_repeat);
+		}
 		
 		##Same for anything
 		$new_feature->start($item->{Begin});
