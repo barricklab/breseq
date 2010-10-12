@@ -348,6 +348,7 @@ if (!$settings->{no_junction_prediction})
 
 			Breseq::Shared::system("$samtools import $reference_faidx_file_name $preprocess_junction_best_sam_file_name $coverage_junction_best_bam_unsorted_file_name");
 			Breseq::Shared::system("$samtools sort $coverage_junction_best_bam_unsorted_file_name $coverage_junction_best_bam_prefix");
+			unlink $coverage_junction_best_bam_unsorted_file_name if (!$settings->{keep_all_intermediates});
 			Breseq::Shared::system("$samtools index $coverage_junction_best_bam_file_name");
 		
 			Breseq::ErrorCalibration::count($settings, $summary, $ref_seq_info, 
@@ -473,6 +474,7 @@ if ($settings->do_step('bam_done_file_name', "Creating BAM files"))
 	{
 		Breseq::Shared::system("$samtools import $candidate_junction_faidx_file_name $resolved_junction_sam_file_name $junction_bam_unsorted_file_name");
 		Breseq::Shared::system("$samtools sort $junction_bam_unsorted_file_name $junction_bam_prefix");
+		unlink $junction_bam_unsorted_file_name if (!$settings->{keep_all_intermediates});
 		Breseq::Shared::system("$samtools index $junction_bam_file_name");
 	}
 	
@@ -483,6 +485,7 @@ if ($settings->do_step('bam_done_file_name', "Creating BAM files"))
 	
 	Breseq::Shared::system("$samtools import $reference_faidx_file_name $resolved_reference_sam_file_name $reference_bam_unsorted_file_name");
 	Breseq::Shared::system("$samtools sort $reference_bam_unsorted_file_name $reference_bam_prefix");
+	unlink $reference_bam_unsorted_file_name if (!$settings->{keep_all_intermediates});
 	Breseq::Shared::system("$samtools index $reference_bam_file_name");
 	
 	## delete unneeded files
