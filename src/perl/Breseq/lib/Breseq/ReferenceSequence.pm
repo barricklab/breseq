@@ -164,7 +164,8 @@ sub load_ref_seq_info
 					$gene->{strand} = $Feature->strand;
 					$gene->{product} = "";
 					$gene->{note} = get_tag($Feature, "note");
-						
+					$gene->{cds} = 1 if ($Feature->primary_tag eq 'CDS');
+					
 					$gene->{accession} = get_tag($Feature, "protein_id");
 					$gene->{translation} = get_tag($Feature, "translation");
 					$gene->{product} = get_tag($Feature, "product");
@@ -315,14 +316,14 @@ sub annotate_1_mutation
 
 		my $gene_nt_size = $gene->{end} - $gene->{start} + 1;
 
-		## ...but the gene is a pseudogene or an RNA gene
+		## ...but the gene is a pseudogene or not a protein coding gene
 		if ($gene->{pseudogene})
 		{			
 			$mut->{snp_type} = "pseudogene";
 			$mut->{gene_position} = "pseudogene ($mut->{gene_position}/$gene_nt_size nt)";
 			return $mut;			
 		}
-		elsif (!$gene->{translation})
+		elsif (!$gene->{cds})
 		{
 			$mut->{snp_type} = "noncoding";
 			$mut->{gene_position} = "noncoding ($mut->{gene_position}/$gene_nt_size nt)";
