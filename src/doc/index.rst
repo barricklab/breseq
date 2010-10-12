@@ -13,11 +13,11 @@ Contents:
    :maxdepth: 2
 
    Introduction <introduction>
-   License <license>
    Installation <installation>
    Usage <usage>  
    Methods <methods>   
    Output <output>
+   References <references>
    Acknowledgments <acknowledgments>
 
 Appendices:
