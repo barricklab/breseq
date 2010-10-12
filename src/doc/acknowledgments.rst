@@ -21,5 +21,6 @@ Funding
 
 The following grants have supported development of |breseq|:
 
-#. National Science Foundation: Postdoctoral Fellowship in Biological Informatics [DBI-0630687 to J.E.B.]
-#. National Institutes of Health: Pathway to Independence Award [K99GM087550 to J.E.B.]
+#. National Institutes of Health (2009-2010). Pathway to Independence Award [K99GM087550 to J.E.B.]
+#. National Science Foundation (2007-2008). Postdoctoral Fellowship in Biological Informatics [DBI-0630687 to J.E.B.]
+
