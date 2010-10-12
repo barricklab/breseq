@@ -10,55 +10,36 @@ breseq
 
 =head1 SYNOPSIS
 
-Usage: breseq -r reference.gbk reads.fastq
+Usage: B<breseq> -r reference.gbk reads1.fastq [reads2.fastq, reads3.fastq...]
 
-Perform an analysis of microbial resequencing data.
+Run the B<breseq> pipeline for mutation prediction from genome re-sequencing data.
 
-=head1 DESCRIPTION
+=head1 REQUIRED OPTIONS
 
 =over
 
-=item B<-a>
+=item B<-r> <file_path>, B<--reference>=<file_path>
 
-Print additional intermediate files.
+Input reference genome sequence files in GenBank format. If there are multiple reference 
+sequences stored in separate GenBank files (e.g., a bacterial genome and a plasmid), this 
+option can be supplied multiple times.
 
-=item B<-q> solexa|phred
+=item B<reads1.fastq [reads2.fastq, reads3.fastq...]>  
 
-Style of quality scores in fastq file. Must be either "solexa" (default) or "phred".
-Generally, if the largest ASCII values you see are no greater than 70 (=F) then you have "phred" style scores.
-If you have "solexa" style scores, then you probably see lowercase letters (=a). 
+The remaining arguments at the command line are the FASTQ input files of reads. The FASTQ base 
+quality scores must be in `SANGER format. If you get an error and need to convert your quality 
+scores, see the B<fastq-utils> command. B<breseq> re-calibrates the error rates for each FASTQ file 
+separately, so data sets that were generated independently should be stored in different input files.
 
-=item B<--snp-error-analysis>
+=back
 
-Perform error analysis of SNPs. Do not predict mutations. Do not allow indels in read alignments. DEFAULT = OFF
+=head1 EXPERT OPTIONS
 
-=item B<--require-full-matches>
+=item B<--base-quality-cutoff>=<int>
 
-Match entire reads. DEFAULT = OFF
-
-=item B<--max-mismatched-per-read>
-
-Disregard reads with more than this number of mismatches. DEFAULT = OFF
-
-=item B<--no-mismatch-prediction>
-
-Do not perform mismatch prediction.
-
-=item B<--no-deletion-prediction>
-
-Do not perform deletion prediction.
-
-=item B<--no-junction-prediction>
-
-Do not perform junction prediction.
-
-=item B<--no-alignment-generation>
-
-Do not generate alignments of reads to predicted mutations.
-
-=item B<--alignment-read-limit> int
-
-Only align this many reads (the first in the input files) to predicted mutations. FOR TESTING.
+Ignore bases with a quality score lower than this value when calling mutations. This accommodates 
+Illumina formats that use quality scores of 2 to flag bad data. These bases are still used for aligning 
+to the reference genome and are shown highlighted in yellow when drawing alignments. Default: 3
 
 =back
 
@@ -75,8 +56,6 @@ Copyright 2008-2009.  All rights reserved.
 ###
 # End Pod Documentation
 ###
-
-our $VERSION = '0.00_02';
 
 #### Standard Perl Modules ####
 use strict;

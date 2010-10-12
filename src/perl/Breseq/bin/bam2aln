@@ -25,22 +25,22 @@ FASTA file of reference sequences. Defaults: reference.fasta, data/reference.fas
 =item B<-o> <path>, B<--output>=<file_path>
 
 Output path. If there are multiple regions, must be a directory path, and all output 
-files will be output with names region1.html, region2.html, ... If there is one region, 
-the output file will be given this name if it is not the name of an already existing 
+files will be output here with names region1.html, region2.html, ... If there is just one 
+region, the output file will be given this name if it is not the name of an already existing 
 directory. Default: current path.
 
 =item B<-n> <int>, B<--max-reads>=<int>
 
 Maximum number of reads that will be aligned to a region. If there are more than 
-this many reads then the reads displayed are randomly chosen displayed and a warning 
+this many reads, then the reads displayed are randomly chosen and a warning 
 is added to the output. Default: 1000.
 
 =item region1 [region2 region3]
 
-Regions to create output for must be provided in the format FRAGMENT:START-END, where FRAGMENT 
-is a valid identifier for one of the sequences in the FASTA file, and START and END are 
-1-indexed coordinates of the beginning and end of the alignment. 
-A separate output file is created for each region.
+Regions to create output for must be provided in the format B<FRAGMENT:START-END>, where B<FRAGMENT> 
+is a valid identifier for one of the sequences in the FASTA file, and B<START> and B<END> are 
+1-indexed coordinates of the beginning and end of the alignment. Any read overlapping these positions 
+will be shown. A separate output file is created for each region.
 
 =back
 

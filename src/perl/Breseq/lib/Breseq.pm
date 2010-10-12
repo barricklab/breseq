@@ -5,7 +5,7 @@ use strict;
 
 =head1 NAME
 
-Bio::Breseq - The great new Bio::Breseq!
+Bio::Breseq
 
 =head1 VERSION
 
@@ -13,7 +13,7 @@ Version 0.01
 
 =cut
 
-our $VERSION = '0.01';
+our $VERSION = '1.0';
 
 
 =head1 SYNOPSIS
@@ -37,16 +37,6 @@ if you don't export anything, such as for a purely object-oriented module.
 =head2 function1
 
 =cut
-
-sub function1 {
-}
-
-=head2 function2
-
-=cut
-
-sub function2 {
-}
 
 =head1 AUTHOR
 
