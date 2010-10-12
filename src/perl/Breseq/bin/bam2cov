@@ -8,7 +8,7 @@ bam2aln
 
 Usage: bam2cov [-b input.bam] [-f input.fasta] [-o output/path] region1 [region2 region3 ...]
 
-Creates a coverage table or image for the specified region.
+Creates a coverage plot or table for the specified region.
 
 =head1 OPTIONS
 
@@ -25,15 +25,15 @@ FASTA file of reference sequences. Defaults: reference.fasta, data/reference.fas
 =item B<-o> <path>, B<--output>=<file_path>
 
 Output path. If there are multiple regions, must be a directory path, and all output 
-files will be output with names region1, region2, ... If there is one region, 
+files will be output here with names region1, region2, ... If there is one region, 
 the output file will be given this name if it is not the name of an already existing 
 directory. Default: current path.
 
 =item region1 [region2 region3]
 
-Regions to create output for must be provided in the format FRAGMENT:START-END, where FRAGMENT 
-is a valid identifier for one of the sequences in the FASTA file, and START and END are 
-1-indexed coordinates of the beginning and end of the alignment. A separate output file is created for each region.
+Regions to create output for must be provided in the format B<FRAGMENT:START-END>, where B<FRAGMENT> 
+is a valid identifier for one of the sequences in the FASTA file, and B<START> and B<END> are 
+1-indexed coordinates of the beginning and end of the region. A separate output file is created for each region.
 
 =item B<--pdf>
 
@@ -45,12 +45,12 @@ In plot mode, maximum mumber of reference positions to plot coverage for within 
 
 =item B<-1>, B<--total_only>
 
-In plot mode, only outputs the total coverage of uniquely or degenerately mapped reads. (Does not include the coverage of
-each on each strand of the reference genome.)
+In plot mode, only output the total coverage of unique or repeat read mappings. (Does not break these down into 
+the coverage on each strand of the reference sequence.)
 
 =item B<-t>, B<--table>
 
-Table mode. Rather than a plot, outputs a tab-delimited table of the coverage in the specified region to the output file. 
+Table mode. Rather than a plot, output a tab-delimited table of the coverage in the specified region to the output file. 
 Also outputs the mean and standard error of the unique coverage within each region to STDOUT.
 
 =back

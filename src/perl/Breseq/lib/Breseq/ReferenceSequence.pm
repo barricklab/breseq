@@ -176,7 +176,8 @@ sub load_ref_seq_info
 					$gene->{type} = "pseudogene" if ($gene->{pseudogene});
 					
 					##assume if there is no translation that we have a pseudogene...
-					$gene->{type} = "pseudogene" if (($Feature->primary_tag eq 'CDS') && (!$gene->{translation}));
+#					$gene->{type} = "pseudogene" if (($Feature->primary_tag eq 'CDS') && (!$gene->{translation}));
+#   Don't do this!!
 					$gene->{index} = scalar @gene_list;
 					
 					push @gene_list, $gene;		

@@ -59,11 +59,11 @@ our $format_to_chr_offset = {
 };
 
 our $format_to_quality_type = {
-	'SANGER' => 'phred',
-	'SOLEXA' => 'solexa',
-	'ILLUMINA_1.3+' => 'phred', 
-	'ILLUMINA_1.5+' => 'phred', 
-	'UNKNOWN' => 'none',
+	'SANGER' => 'PHRED',
+	'SOLEXA' => 'SOLEXA',
+	'ILLUMINA_1.3+' => 'PHRED', 
+	'ILLUMINA_1.5+' => 'PHRED', 
+	'UNKNOWN' => 'NONE',
 };
 
 
@@ -102,7 +102,7 @@ sub new
 			print "Predicted base quality score format is: $self->{format}$list_format_str\n" if ($self->{verbose});
 		}
 	}
-	
+		
 	#opening for writing
 	if ($self->{file_name} =~ m/^>/)
 	{
@@ -230,8 +230,8 @@ sub predict_format
 
 	my %qual_found_hash;
 	my $average_qual;
-	my $max_qual;
-	my $min_qual;
+	my $max_qual = -1;
+	my $min_qual = 100000;
 	my $qual_num = 0;
 	
 	## reset the file to the beginning and setup for reading...
@@ -254,8 +254,8 @@ sub predict_format
 			$average_qual+=$q;
 			$qual_num++;
 			
-			$max_qual = $q if ((!defined $max_qual) || ($q > $max_qual));
-			$min_qual = $q if ((!defined $min_qual) || ($q < $min_qual));			
+			$max_qual = $q if ($q > $max_qual);
+			$min_qual = $q if ($q < $min_qual);			
 		}
 		
 		$list_format ||= $seq->{list_format};
@@ -350,6 +350,7 @@ sub convert_sanger
 	my $sanger_chr_offset = $format_to_chr_offset->{'SANGER'};
 	my $seq_chr_offset = $format_to_chr_offset->{$seq->{format}};
 	my $seq_quality_type = $format_to_quality_type->{$seq->{format}};
+	my $convert_to_sanger = ($seq_quality_type eq 'SOLEXA') ? 1 : 0;
 		
 	my @qual_list = split //, $seq->{qual_chars};
 	my $new_qual_chars = '';
@@ -357,7 +358,7 @@ sub convert_sanger
 	{		
 		my $nq =  unpack("C",$q);		
 		$nq = $nq - $seq_chr_offset;		
-		$nq = convert_quality_solexa_to_phred($nq) if ($seq_quality_type eq 'SOLEXA');		
+		$nq = convert_quality_solexa_to_phred($nq) if ($convert_to_sanger);		
 		$nq += $sanger_chr_offset;		
 		$new_qual_chars .= chr($nq);
 	}

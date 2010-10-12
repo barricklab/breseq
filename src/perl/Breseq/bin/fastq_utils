@@ -10,29 +10,50 @@ fastq_utils
 
 =head1 SYNOPSIS
 
-Usage: fastq_utils COMMAND arguments...
+Usage: fastq_utils COMMAND [arguments]
 
-Recognized commands: SIMULATE
+Performs various functions on FASTQ formatted files. Options depend on the COMMAND supplied.
 
-=head1 DESCRIPTION
+=head1 Command: FORMAT
 
-Perform various operations on fastq files.
+Usage: fastq_utils FORMAT [-n 1000|ALL] input.fastq
 
-=head1 fastq_utils SIMULATE [-l 36 -c 50 -o output.fastq] input.fna
+Examine reads in a FASTQ file to predict its base quality score format.
 
 =over
 
-=item B<-l|--read-length> int
+=item B<-n> <int>, B<-n> ALL, B<--num>=<int>, B<--num>=ALL 
 
-Length of reads to generate.
+Number of reads to examine when predicting the format. The keyword 'ALL' means to examine every read in input the file.
 
-=item B<-c|--coverage> int
+=item B<input.fastq>
 
-Average coverage to generate.
+FASTQ file to examine.
 
-=item B<-o|--output> file path DEFAULT output.fastq
+=back
 
-Name of FASTQ output file
+=head1 Command: SANGER
+
+Usage: fastq_utils SANGER -f from_format [-l] input.fastq output.fastq
+
+Convert a FASTQ file to SANGER format.
+
+=item B<-f> <format>, B<--format>=<format>
+
+Base quality score format of the input FASTQ file. Valid formats are: 
+SANGER, SOLEXA, ILLUMINA_1.3+, ILLUMINA_1.5+. If you are unsure of the format, use the FORMAT command.
+
+=item B<-l>, B<--list-format>
+
+In the input FASTQ file, quality score lines are white space separated numbers, rather than character strings. 
+
+=item B<input.fastq>
+
+Input FASTQ file in specified format.
+
+=item B<output.fastq>
+
+Output FASTQ file in SANGER format.
 
 =back
 
@@ -125,7 +146,7 @@ if (($command eq 'SANGER') || ($command eq 'CONVERT'))
 	GetOptions(
 		'help|?' => \$help, 'man' => \$man,
 		'format|f=s' => \$format,
-		'list-format|l=s' => \$list_format,
+		'list-format|l' => \$list_format,
 	) or pod2usage(2);
 	pod2usage(1) if $help;
 	pod2usage(-exitstatus => 0, -verbose => 2) if $man;	
@@ -138,8 +159,8 @@ if (($command eq 'SANGER') || ($command eq 'CONVERT'))
 	die "Input file appears to already be in SANGER format.\n" if ($in_fastq->{format} eq 'SANGER');
 	
 	my $out_fastq = Breseq::Fastq->new( -file => ">$output", -format => 'SANGER');
-	
-	print STDERR "Converting from $in_fastq->{format} to SANGER...\n";
+	my $list_format_str = $list_format ? " (List Format)" : '';
+	print STDERR "Converting from $in_fastq->{format}$list_format_str to SANGER...\n";
 	
 	while ($_ = $in_fastq->next_seq)
 	{	
