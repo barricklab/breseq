@@ -242,8 +242,8 @@ Processed Data
 |breseq| outputs several files that can be used by other tools to further analyze the final processed read data.
 
 `data/reference.bam, data/reference.bam.bai`
-   The BAM (Binary SAM) formatted database of read alignments to the reference and its index. Along with the *reference.fasta\** files can be used with any :program:`SAMTools` compatible program.
+   The BAM (Binary SAM) formatted database of read alignments to the reference and its index. Along with the *reference.fasta\** files can be used with any :program:`SAMtools` compatible program.
 `data/reference.fasta, data/reference.fasta.fai`
-   File of all reference sequences and the corresponding index. Along with the *reference.fasta\** files can be used with any :program:`SAMTools` compatible program.
+   File of all reference sequences and the corresponding index. Along with the *reference.fasta\** files can be used with any :program:`SAMtools` compatible program.
 `data/<read_file>.unmatched.fastq`
    These files contain reads from each original file that were not mapped to the reference sequences. This file can be used for de novo assembly to predict if there are novel sequences in the sample.

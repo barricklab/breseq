@@ -6,7 +6,13 @@ libbreseq_la_SOURCES = \
 	identify_mutations.cpp \
 	pileup.cpp \
 	pileup_base.cpp \
-	../../extern/samtools-0.1.7a/bam.h
+	breseq/alignment.h \
+	breseq/common.h \
+	breseq/error_count.h \
+	breseq/genome_diff.h \
+	breseq/identify_mutations.h \
+	breseq/pileup_base.h \
+	breseq/pileup.h 
 libbreseq_la_LIBADD = $(top_srcdir)/extern/samtools-0.1.7a/libbam.la
 libbreseq_la_LDFLAGS = -static
 libbreseq_la_CPPFLAGS = -I$(top_srcdir)/extern/samtools-0.1.7a 
