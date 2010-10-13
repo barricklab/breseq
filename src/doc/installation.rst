@@ -64,4 +64,4 @@ If you have other versions of SAMtools installed on your system, be careful abou
 Common installation problems
 ---------------------------------
 
-None known yet. If you have a problem, please contact breseq@barricklab.org.
+None known yet. If you have a problem, please contact jeffrey.e.barrick@gmail.com.
