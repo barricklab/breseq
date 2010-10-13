@@ -6,11 +6,12 @@ my $builder = Module::Build->new(
     module_name         => 'Breseq',
     license             => 'perl',
     dist_author         => q{Jeffrey E. Barrick <jeffrey@barricklab.org>},
+    dist_abstract		=> 'breseq program for genome re-sequencing data analysis',
     dist_version_from   => 'lib/Breseq.pm',
     build_requires => {
         'Test::More' => 0,
     },
-    add_to_cleanup      => [ 'Breseq-*' ],
+    add_to_cleanup      => [ 'Breseq-*', '_build' ],
     create_makefile_pl => 'traditional',
 );
 

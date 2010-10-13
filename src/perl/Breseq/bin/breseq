@@ -35,6 +35,8 @@ separately, so data sets that were generated independently should be stored in d
 
 =head1 EXPERT OPTIONS
 
+=over
+
 =item B<--base-quality-cutoff>=<int>
 
 Ignore bases with a quality score lower than this value when calling mutations. This accommodates 

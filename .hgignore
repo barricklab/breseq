@@ -43,13 +43,14 @@ src/old-c/identify_mutations/bin/darwin/debug/identify_mutations
 _build
 blib
 MYMETA.yml
+MANIFEST.SKIP
+Makefile.PL
 
 ## For Bioperl
 .git
 
 ## This is user/architecture specific
 user-config.jam
-
 
 syntax: regexp
 
@@ -72,8 +73,11 @@ syntax: regexp
 
 ^extern/Bio-SamTools-1.19/lib/Bio/DB/Sam.c
 ^extern/Bio-SamTools-1.19/Build$
+^extern/Bio-SamTools-1.19/Bio-SamTools-
 ^src/perl/Breseq/Build$
 ^src/perl/Breseq/breseq.tmproj
+^src/perl/Breseq/Breseq-
+^src/perl/Breseq/META.yml
 
 src/c/breseq.*\.xcodeproj/.+\.mode1v3$
 src/c/breseq.*\.xcodeproj/.+\.pbxuser$
