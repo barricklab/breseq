@@ -11,7 +11,7 @@ EXTRA_DIST = \
 	win32/zconf.h \
 	win32/zlib.h
 
-lib_LTLIBRARIES = libbam.la
+noinst_LTLIBRARIES = libbam.la
 libbam_la_SOURCES = \
 	bgzf.c \
 	kstring.c \
@@ -44,24 +44,19 @@ libbam_la_SOURCES = \
 	razf.h \
 	sam_header.h \
 	sam.h 
-libbam_la_CFLAGS = -fPIC -static
 
-bin_PROGRAMS = samtools
-samtools_SOURCES = \
-	bam_tview.c \
-	bam_maqcns.c \
-	bam_plcmd.c \
-	sam_view.c	\
-	bam_rmdup.c \
-	bam_rmdupse.c \
-	bam_mate.c \
-	bam_stat.c \
-	bam_color.c	\
-	bamtk.c \
-	kaln.c 
-samtools_CFLAGS = -D_CURSES_LIB=1
-samtools_LDADD = libbam.la
-
-include_HEADERS = bam.h
-
-
+#bin_PROGRAMS = samtools
+#samtools_SOURCES = \
+#	bam_tview.c \
+#	bam_maqcns.c \
+#	bam_plcmd.c \
+#	sam_view.c	\
+#	bam_rmdup.c \
+#	bam_rmdupse.c \
+#	bam_mate.c \
+#	bam_stat.c \
+#	bam_color.c	\
+#	bamtk.c \
+#	kaln.c 
+#samtools_CFLAGS = -D_CURSES_LIB=1
+#samtools_LDADD = libbam.la
