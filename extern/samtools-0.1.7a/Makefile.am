@@ -45,18 +45,18 @@ libbam_la_SOURCES = \
 	sam_header.h \
 	sam.h 
 
-#bin_PROGRAMS = samtools
-#samtools_SOURCES = \
-#	bam_tview.c \
-#	bam_maqcns.c \
-#	bam_plcmd.c \
-#	sam_view.c	\
-#	bam_rmdup.c \
-#	bam_rmdupse.c \
-#	bam_mate.c \
-#	bam_stat.c \
-#	bam_color.c	\
-#	bamtk.c \
-#	kaln.c 
-#samtools_CFLAGS = -D_CURSES_LIB=1
-#samtools_LDADD = libbam.la
+bin_PROGRAMS = breseq_samtools
+breseq_samtools_SOURCES = \
+	bam_tview.c \
+	bam_maqcns.c \
+	bam_plcmd.c \
+	sam_view.c	\
+	bam_rmdup.c \
+	bam_rmdupse.c \
+	bam_mate.c \
+	bam_stat.c \
+	bam_color.c	\
+	bamtk.c \
+	kaln.c 
+breseq_samtools_CFLAGS = -D_CURSES_LIB=1
+breseq_samtools_LDADD = libbam.la
