@@ -37,6 +37,8 @@ AC_FUNC_MALLOC
 AC_FUNC_REALLOC
 AC_CHECK_FUNCS([bzero gethostbyaddr gethostbyname memmove memset pow select socket sqrt strchr strdup strerror strstr strtol])
 
+AC_SEARCH_LIBS([wclear], [curses ncurses], [],
+    [AC_MSG_ERROR(["lib(n)curses is required."])])
 AC_SEARCH_LIBS([gzrewind], [z], [], [AC_MSG_ERROR(["libz is required."])])
 AC_SEARCH_LIBS([acosf], [m], [], [AC_MSG_ERROR(["libm is required."])])
 
