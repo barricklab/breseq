@@ -43,12 +43,12 @@ AC_SEARCH_LIBS([acosf], [m], [], [AC_MSG_ERROR(["libm is required."])])
 BOOST_REQUIRE([1.42])
 BOOST_PROGRAM_OPTIONS([s])
 
-AC_SUBST([LIBBAM], [src/c/samtools-0.1.7a])
+AC_SUBST([LIBBAM], [extern/samtools-0.1.7a])
 AC_SUBST([BRESEQ], [src/c/breseq-1.0])
 
 AC_CONFIG_FILES([
     Makefile
-    src/c/samtools-0.1.7a/Makefile
+    extern/samtools-0.1.7a/Makefile
     src/c/breseq-1.0/Makefile
 ])
 AC_OUTPUT
