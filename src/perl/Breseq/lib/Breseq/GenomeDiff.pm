@@ -4,7 +4,7 @@
 
 =head1 NAME
 
-GenomeDiff.pm
+Breseq::GenomeDiff.pm
 
 =head1 SYNOPSIS
 
@@ -94,12 +94,15 @@ of a large stretch of new sequence.
 
 =head1 AUTHOR
 
-Jeffrey Barrick
-<jeffrey.e.barrick@gmail.com>
+Jeffrey E. Barrick <jeffrey.e.barrick@gmail.com>
 
-=head1 COPYRIGHT
+=head1 LICENSE AND COPYRIGHT
 
-Copyright 2010.  All rights reserved.
+Copyright (c) 2010 Michigan State University
+
+breseq is free software; you can redistribute it and/or modify it under the terms the 
+GNU General Public License as published by the Free Software Foundation; either 
+version 1, or (at your option) any later version.
 
 =cut
 

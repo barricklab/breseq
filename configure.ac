@@ -6,6 +6,13 @@ AC_CONFIG_AUX_DIR(aux_build)
 AC_CONFIG_MACRO_DIR([aux_build/m4])
 AC_CONFIG_HEADERS([aux_build/config.h])
 AC_CONFIG_SRCDIR([])
+
+# As long as we have complicated dependencies,
+# install here and force user to add this to 
+# their path.
+
+AC_PREFIX_DEFAULT($PWD/breseq)
+
 LT_INIT
 AM_INIT_AUTOMAKE
 
@@ -17,7 +24,6 @@ AC_PROG_INSTALL
 AC_PROG_LN_S
 AC_PROG_MAKE_SET
 AC_PROG_MKDIR_P
-AC_PROG_RANLIB
 
 AC_CHECK_HEADERS([arpa/inet.h fcntl.h inttypes.h netdb.h stddef.h stdint.h stdlib.h string.h sys/socket.h unistd.h wchar.h])
 AC_HEADER_STDBOOL
@@ -38,7 +44,8 @@ AC_FUNC_REALLOC
 AC_CHECK_FUNCS([bzero gethostbyaddr gethostbyname memmove memset pow select socket sqrt strchr strdup strerror strstr strtol])
 
 AC_SEARCH_LIBS([wclear], [curses ncurses], [],
-    [AC_MSG_ERROR(["lib(n)curses is required."])])
+   [AC_MSG_ERROR(["lib(n)curses is required."])])
+
 AC_SEARCH_LIBS([gzrewind], [z], [], [AC_MSG_ERROR(["libz is required."])])
 AC_SEARCH_LIBS([acosf], [m], [], [AC_MSG_ERROR(["libm is required."])])
 
@@ -46,11 +53,11 @@ BOOST_REQUIRE([1.42])
 BOOST_PROGRAM_OPTIONS([s])
 
 AC_SUBST([LIBBAM], [extern/samtools-0.1.7a])
-AC_SUBST([BRESEQ], [src/c/breseq-1.0])
+AC_SUBST([BRESEQ], [src/c/breseq])
 
 AC_CONFIG_FILES([
-    Makefile
     extern/samtools-0.1.7a/Makefile
-    src/c/breseq-1.0/Makefile
+    src/c/breseq/Makefile
+    Makefile
 ])
 AC_OUTPUT

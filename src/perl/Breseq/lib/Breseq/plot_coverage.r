@@ -1,3 +1,23 @@
+###
+##
+## NAME
+##
+## plot_coverage.r
+##
+## AUTHOR
+##
+## Jeffrey E. Barrick <jeffrey.e.barrick@gmail.com>
+##
+## LICENSE AND COPYRIGHT
+##
+## Copyright (c) 2010 Michigan State University
+##
+## breseq is free software; you can redistribute it and/or modify it under the terms the 
+## GNU General Public License as published by the Free Software Foundation; either 
+## version 1, or (at your option) any later version.
+##
+###
+
 ## Arguments:
 ##   in_file=/path/to/input 
 ##   out_file=/path/to/output 
