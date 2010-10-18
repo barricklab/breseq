@@ -10,10 +10,10 @@ Several external packages and software programs need to be installed to compile 
 
 * `GCC <http://gcc.gnu.org>`_ (or other C++ compiler) already installed on some systems
 * `Perl <http://www.perl.org>`_ (version 5.8 or higher) already installed on most systems
-* `BioPerl <http://www.bioperl.org>`_
+* `BioPerl <http://www.bioperl.org>`_ (version 1.4 or higher)
 * `SSAHA2 <http://www.sanger.ac.uk/resources/software/ssaha2/>`_ read mapping program
 * `R <http://www.r-project.org>`_ (version 2.10 or higher) statistical programming language 
-* `Boost <http://www.boost.org>`_
+* `Boost <http://www.boost.org>`_ (version 1.42 or higher) C++ libraries
 
 To install each missing dependency, use your system's package manager or visit the respective web pages linked above and follow the instructions for your platform. More specific directions are available below for some platforms. You must make sure that the executables for |SSAHA2| and :program:`R` are in your environment's $PATH for |breseq| to function.
 

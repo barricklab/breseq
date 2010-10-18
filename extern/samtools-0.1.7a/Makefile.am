@@ -1,3 +1,27 @@
+###
+##
+## MODIFICATIONS
+##
+## This automake Makefile.ac is used to configure, compile, and install SAMtools for
+##   use by the breseq computational pipeline.
+## 
+## The original Makefile distributed with SAMtools has been renamed Makefile.orig
+##
+## AUTHORS
+##
+## Jeffrey E. Barrick <jeffrey.e.barrick@gmail.com>
+## David B. Knoester
+##
+## LICENSE AND COPYRIGHT
+##
+## Copyright (c) 2010 Michigan State University
+##
+## breseq is free software; you can redistribute it and/or modify it under the terms the 
+## GNU General Public License as published by the Free Software Foundation; either 
+## version 1, or (at your option) any later version. Or under any terms
+##
+###
+
 ## Remember to drag along the LICENSE, NEWS, unused headers, etc.
 EXTRA_DIST = \
 	AUTHORS \
