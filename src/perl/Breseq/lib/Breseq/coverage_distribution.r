@@ -4,9 +4,10 @@
 ##
 ## coverage_distribution.r
 ##
-## AUTHOR
+## AUTHORS
 ##
 ## Jeffrey E. Barrick <jeffrey.e.barrick@gmail.com>
+## David B. Knoester
 ##
 ## LICENSE AND COPYRIGHT
 ##
