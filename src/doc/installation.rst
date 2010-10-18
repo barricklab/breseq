@@ -1,67 +1,70 @@
 Installation
 ==============
 
-:program:`breseq` is a command line tool implemented in Perl, C++, and R. It will compile and function on a variety of Unix platforms, including MacOSX.
+|breseq| is a command line tool implemented in Perl, C++, and R. It will compile and function on a variety of Unix platforms, including MacOSX.
 
 1. Install external dependencies
 ---------------------------------
 
-:program:`breseq` requires several external packages and software programs to be installed.
+Several external packages and software programs need to be installed to compile and use |breseq|:
 
-* `GCC <http://gcc.gnu.org>`_ (or other C++ compiler) already installed on many systems
-* `Perl <http://www.perl.org>`_ (version 5.8 or higher) already installed on many systems
+* `GCC <http://gcc.gnu.org>`_ (or other C++ compiler) already installed on some systems
+* `Perl <http://www.perl.org>`_ (version 5.8 or higher) already installed on most systems
 * `BioPerl <http://www.bioperl.org>`_
 * `SSAHA2 <http://www.sanger.ac.uk/resources/software/ssaha2/>`_ read mapping program
 * `R <http://www.r-project.org>`_ (version 2.10 or higher) statistical programming language 
 * `Boost <http://www.boost.org>`_
 
-To install each missing dependency, use your system's package manager or visit the respective web pages linked above and follow the instructions for your platform.
+To install each missing dependency, use your system's package manager or visit the respective web pages linked above and follow the instructions for your platform. More specific directions are available below for some platforms. You must make sure that the executables for |SSAHA2| and :program:`R` are in your environment's $PATH for |breseq| to function.
 
-MacOSX Instructions
+MacOS X Instructions
 ********************
 
-You must have administrator privileges to install :program:`breseq` using these instructions. We recommend that you install and use the package manager `MacPorts <http://www.macports.org/>`_ to simplfy some installation steps.
+You will need administrator privileges to install |breseq| using these instructions. We recommend that you install and use the package manager `MacPorts <http://www.macports.org/>`_ to simplfy some installation steps.
 
-* :program:`GCC`: download and install `Apple Developer tools <http://developer.apple.com/tools/>`_. 
+* :program:`GCC`: download and install `Apple Developer tools <http://developer.apple.com/tools/>`_.
 * :program:`Perl`: is already installed on MacOSX systems. 
-* :program:`BioPerl`: download and install according to directions. 
-* :program:`SSAHA2`: Download and install the appropriate package from the `Sanger Center <http://www.sanger.ac.uk/resources/software/ssaha2/>`_.
-* :program:`R`: install with :program:`MacPorts` command: ``%% sudo port install R``
-* :program:`Boost`: install with :program:`MacPorts` command: ``%% sudo port install boost``
+* :program:`BioPerl`: download and install according to the directions at `BioPerl.org <http://www.bioperl.org>`_ 
+* :program:`SSAHA2`: download and install the MacOSX package from the `Sanger Center <http://www.sanger.ac.uk/resources/software/ssaha2/>`_.
+* :program:`R`: install with :program:`MacPorts` terminal command: ``sudo port install R``
+* :program:`Boost`: install with :program:`MacPorts` terminal command: ``sudo port install boost``
 
 2. Build :program:`breseq`
 ----------------------------
 
-Open a terminal window, navigate to the root of the source distribution and run these commands::
+Now, open a terminal window, change directory to the root of the |breseq| source distribution, and run these commands::
 
-  %% ./configure
-  %% make
-  %% make install
-  %% make test (`this step is optional`)
+  ./configure
+  make
+  make install
+  
+Optionally, you can test your |breseq| installation with this command::
 
-These commands compile and install not only :program:`breseq`, they also install several open-source tools developed by others that are included in the source package in the /extern directory for ease of installation.
+  make test
 
-They include:
+These commands compile and install not only |breseq|, but also some open-source code developed by others. These packages are included in the |breseq| source distribution under ``extern``:
 
 * `SAMtools <http://samtools.sourceforge.net>`_ 
 * `Bio::DB::Sam <http://search.cpan.org/~lds/Bio-SamTools/lib/Bio/DB/Sam.pm>`_ 
 
-In order to not interfere with other versions of these tools that you may have installed, these files are not copied into their common system-wide paths. All of the files required for breseq to function are created and collected in the *build* directory of the installation.
+In order to not interfere with other versions of these tools that you may have installed, these files are not copied into common system-wide paths. All of the files required for |breseq| to function will be in the newly created ``breseq`` directory within the source path after installation. After you have successfully built |breseq|, you can move the entirety of this directory to any location on your system and |breseq| will continue to function.
 
-3. Add :program:`breseq` to your $PATH
+3. Add |breseq| to your $PATH
 ----------------------------------------
 
-Breseq can now be run by invoking the executables located under ROOT/stage/bin. For convenience, you probably want to add this directory to your $PATH, so that you can invoke the commands without typing the full path.
+|breseq| can now be run by invoking the executables located under ``breseq/bin``. For convenience, you may want to add this directory to your environment's $PATH variable so that you can invoke |breseq| commands from a shell without typing the full path.
 
-For a bash shell, you can run the command::
+For a bash shell, you can do this by running the command::
 
-  echo "export PATH=\$PATH:BRESEQ_ROOT/build/bin" >> ~/.profile
+  echo "export PATH=\$PATH:[LOCATION]/breseq/bin" >> ~/.profile
   
-to do this, replacing [BRESEQ_ROOT] with the absolute path to the root of the :program:`breseq` source archive, e.g. "/Users/jbarrick/src/breseq".  
+replacing ``[LOCATION]`` with the absolute path to the root of the |breseq| source archive, for example, to make ``/Users/me/my_programs/breseq/bin``.  You will need to open a new shell after you do this for the change to take effect.
   
-If you have other versions of SAMtools installed on your system, be careful about the order of paths in your $PATH variable. If you include the :program:`breseq` path *last*, then it will not override your commands going to the version you are normally using.
+If you already have |SAMtools| installed on your system, be careful about the order of paths in your $PATH environmental variable. Include the |breseq| path *last*, so that you will not override your previously installed version.
 
 Common installation problems
 ---------------------------------
 
 None known yet. If you have a problem, please contact jeffrey.e.barrick@gmail.com.
+
+

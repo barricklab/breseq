@@ -1,6 +1,124 @@
-### Tests!
-EXTRA_DIST = tests
-
 ACLOCAL_AMFLAGS = -I aux_build/m4
 
 SUBDIRS = $(LIBBAM) $(BRESEQ)
+
+### Tests! -- only one test included for now in distribution.
+EXTRA_DIST = \
+	tests/common.sh \
+	tests/test.sh \
+	tests/lambda_mult_ref_read/expected.gd \
+	tests/lambda_mult_ref_read/testcmd.sh \
+	tests/data/lambda/lambda_mixed_population.1.fastq \
+	tests/data/lambda/lambda_mixed_population.2.fastq \
+	tests/data/lambda/lambda_mixed_population.3.fastq \
+	tests/data/lambda/lambda_mixed_population.4.fastq \
+	tests/data/lambda/lambda_mixed_population.5.fastq \
+	tests/data/lambda/lambda.1.gbk \
+	tests/data/lambda/lambda.2.gbk \
+	tests/data/lambda/lambda.3.gbk \
+	tests/data/lambda/lambda.4.gbk \
+	tests/data/lambda/lambda.5.gbk
+
+ROOTDIR=$(PWD)
+DOCDIR=$(ROOTDIR)/src/doc
+PERLBRESEQ=$(ROOTDIR)/src/perl/Breseq
+BIOSAMTOOLS=$(ROOTDIR)/extern/Bio-SamTools-1.19
+SAMTOOLSDIR=$(ROOTDIR)/$(LIBBAM)
+
+## Main hooks called after normal make steps
+
+all-local :
+
+## We should build Perl modules here (and not during install) because
+## otherwise a sudo make install creates superuser owned files in the
+## distribution, that are not removed by make clean.
+
+	echo $(SAMTOOLSDIR)
+
+	## Bio::SamTools
+	## Delayed until install because we need libbam.a, instead of libbam.la
+	cd $(BIOSAMTOOLS) ; \
+	export SAMTOOLS=$(SAMTOOLSDIR) ; \
+	perl Build.PL --install_base=$(prefix) ; \
+	./Build ;
+
+	## Breseq
+	cd $(PERLBRESEQ) ; \
+	perl Build.PL --install_base=$(prefix) ; \
+	./Build ;
+
+install-exec-local :
+
+	echo $(prefix)/lib
+
+	## Bio::SamTools
+	cd $(BIOSAMTOOLS) ; \
+	./Build install ;
+
+	## Breseq
+	cd $(PERLBRESEQ) ; \
+	./Build install;
+	
+clean-local :
+	
+	cd $(BIOSAMTOOLS) ; \
+	./Build clean
+		
+	cd $(PERLBRESEQ) ; \
+	./Build clean
+	
+	tests/test.sh clean tests/	
+	
+	rm -rf $(prefix)
+
+dist-hook:
+
+	cd $(DOCDIR) ; \
+	make html ;
+	
+	cp -r $(DOCDIR)/_build/html $(distdir)/documentation ;
+
+	cd $(BIOSAMTOOLS) ; \
+	./Build distdir ;
+	cp -r $(BIOSAMTOOLS)/Bio-SamTools-* $(distdir)/extern ; 
+
+	cd $(PERLBRESEQ) ; \
+	./Build distdir ; \
+	echo $(distdir)/src/perl/Breseq ;
+	
+	mkdir -p $(distdir)/src/perl
+	cp -r $(PERLBRESEQ)/Breseq-* $(distdir)/src/perl/Breseq ; 
+		
+## breseq only	
+make-breseq:
+	cd $(PERLBRESEQ) ; \
+	perl Build.PL --install_base=$(prefix) ; \
+	./Build ; 
+
+install-breseq:
+	cd $(PERLBRESEQ) ; \
+	./Build install
+	
+clean-breseq :
+	cd $(PERLBRESEQ) ; \
+	./Build clean
+	
+#utility to avoid everything else
+breseq :
+
+	cd $(PERLBRESEQ) ; \
+	perl Build.PL --install_base=$(prefix) ; \
+	./Build
+
+	cd $(PERLBRESEQ) ; \
+	./Build install
+	
+remake-breseq :: clean-breseq make-breseq install-breseq	
+
+## tests
+
+test:
+	tests/test.sh test tests
+
+clean-tests:
+	tests/test.sh clean tests

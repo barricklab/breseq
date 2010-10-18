@@ -35,9 +35,6 @@ configure.scan
 src/c/calc_trims
 src/c/error_count
 src/c/identify_mutations
-src/old-c/calc_trims/bin/darwin/debug/calc_trims
-src/old-c/error_count/bin/darwin/debug/error_count
-src/old-c/identify_mutations/bin/darwin/debug/identify_mutations
 
 ## These are for Perl modules in general
 _build
@@ -54,16 +51,15 @@ user-config.jam
 
 syntax: regexp
 
-^stage/
+^breseq/
 
 ^tests/.+/output
 ^tests/.+/0
 ^tests/.+/data
 
-^src/c/build
-^src/c/error_count/bin
-^src/c/identify_mutations/bin
-^src/c/calc_trims/bin
+^src/c/breseq/error_count
+^src/c/breseq/identify_mutations
+^src/c/breseq/calc_trims
 
 ^extern/samtools-0.1.7a/samtools
 ^extern/samtools-0.1.7a/misc

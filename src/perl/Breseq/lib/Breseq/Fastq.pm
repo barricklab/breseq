@@ -4,22 +4,23 @@
 
 =head1 NAME
 
-Breseq::Fastq.pm
+Breseq::Fastq
 
 =head1 SYNOPSIS
 
-Module for reading and writing fastq files more rapidly than BioPerl.
-
-=head1 DESCRIPTION
+Perl modules used internally by breseq.
 
 =head1 AUTHOR
 
-Jeffrey Barrick
-<jeffrey.e.barrick@gmail.com>
+Jeffrey E. Barrick <jeffrey.e.barrick@gmail.com>
 
-=head1 COPYRIGHT
+=head1 LICENSE AND COPYRIGHT
 
-Copyright 2009.  All rights reserved.
+Copyright (c) 2010 Michigan State University
+
+breseq is free software; you can redistribute it and/or modify it under the terms the 
+GNU General Public License as published by the Free Software Foundation; either 
+version 1, or (at your option) any later version.
 
 =cut
 
