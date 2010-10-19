@@ -25,12 +25,6 @@ AC_CONFIG_MACRO_DIR([aux_build/m4])
 AC_CONFIG_HEADERS([aux_build/config.h])
 AC_CONFIG_SRCDIR([])
 
-# As long as we have complicated dependencies,
-# install here and force user to add this to 
-# their path.
-
-AC_PREFIX_DEFAULT($PWD/breseq)
-
 LT_INIT
 AM_INIT_AUTOMAKE
 

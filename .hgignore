@@ -14,13 +14,14 @@ syntax: glob
 *.swp
 *.tmproj
 
-## These are for automake
+## These are for autoconf/automake/libtool
 *.deps
 *stamp-h1
 *.la
 *.lai
 *.lo
 *.orig
+*.libs
 aux_build
 autom4te.cache
 config.log

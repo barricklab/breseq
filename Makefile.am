@@ -53,11 +53,8 @@ all-local :
 	echo $(SAMTOOLSDIR)
 
 	## Bio::SamTools
-	
-	## Create a link to the libtools library
-	## so that Bio::SamTools can find it
-	## This seems likely to not be a stable way of doing
-	## things, but we have no alternative
+	## To be libtool compatible, we have to trick Bio::SamTools
+	## to get it to go ahead and install correctly...
 	ln -sf ${SAMTOOLSDIR}/.libs/libbam.a ${SAMTOOLSDIR}/libbam.a 
 	
 	cd $(BIOSAMTOOLS) ; \
@@ -92,8 +89,6 @@ clean-local :
 	
 	tests/test.sh clean tests/	
 	
-	rm -rf $(prefix)
-
 dist-hook:
 
 	cd $(DOCDIR) ; \
@@ -144,7 +139,7 @@ remake-breseq :: clean-breseq make-breseq install-breseq
 ## tests
 
 test:
-	tests/test.sh test tests
+	export PREFIX=$(prefix); tests/test.sh test tests
 
 clean-tests:
 	tests/test.sh clean tests
