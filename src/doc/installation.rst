@@ -17,10 +17,10 @@ Several external packages and software programs need to be installed to compile 
 
 To install each missing dependency, use your system's package manager or visit the respective web pages linked above and follow the instructions for your platform. More specific directions are available below for some platforms. You must make sure that the executables for |SSAHA2| and :program:`R` are in your environment's $PATH for |breseq| to function.
 
-MacOS X Instructions
+MacOSX Instructions
 ********************
 
-You will need administrator privileges to install |breseq| using these instructions. We recommend that you install and use the package manager `MacPorts <http://www.macports.org/>`_ to simplfy some installation steps.
+You will need administrator privileges to install |breseq| dependencies using these instructions. We recommend that you install and use the package manager `MacPorts <http://www.macports.org/>`_ to simplfy some installation steps.
 
 * :program:`GCC`: download and install `Apple Developer tools <http://developer.apple.com/tools/>`_.
 * :program:`Perl`: is already installed on MacOSX systems. 
@@ -32,35 +32,45 @@ You will need administrator privileges to install |breseq| using these instructi
 2. Build :program:`breseq`
 ----------------------------
 
-Now, open a terminal window, change directory to the root of the |breseq| source distribution, and run these commands::
+Now, open a terminal window, change directory to the root of the |breseq| source distribution. If you have admin privileges on your computer, you can run these commands to install |breseq|::
 
   ./configure
   make
-  make install
-  
-Optionally, you can test your |breseq| installation with this command::
+  sudo make install
 
-  make test
+If you do not have admin privileges on your computer, then see :ref:`installing-in-a-user-location`.
 
 These commands compile and install not only |breseq|, but also some open-source code developed by others. These packages are included in the |breseq| source distribution under ``extern``:
 
 * `SAMtools <http://samtools.sourceforge.net>`_ 
 * `Bio::DB::Sam <http://search.cpan.org/~lds/Bio-SamTools/lib/Bio/DB/Sam.pm>`_ 
 
-In order to not interfere with other versions of these tools that you may have installed, these files are not copied into common system-wide paths. All of the files required for |breseq| to function will be in the newly created ``breseq`` directory within the source path after installation. After you have successfully built |breseq|, you can move the entirety of this directory to any location on your system and |breseq| will continue to function.
+.. WARNING::
+   These commands will overwrite any other versions of :program:`SAMtools` or the Perl module :program:`Bio::DB::Sam` that you have in the default ./configure install locations. To avoid this, you can follow the instructions in :ref:`installing-in-a-user-location` to safely install |breseq| elsewhere.
 
-3. Add |breseq| to your $PATH
-----------------------------------------
+Finally, we recommend that you test that your |breseq| installation functions with this command::
 
-|breseq| can now be run by invoking the executables located under ``breseq/bin``. For convenience, you may want to add this directory to your environment's $PATH variable so that you can invoke |breseq| commands from a shell without typing the full path.
-
-For a bash shell, you can do this by running the command::
-
-  echo "export PATH=\$PATH:[LOCATION]/breseq/bin" >> ~/.profile
+  make test
   
-replacing ``[LOCATION]`` with the absolute path to the root of the |breseq| source archive, for example, to make ``/Users/me/my_programs/breseq/bin``.  You will need to open a new shell after you do this for the change to take effect.
-  
-If you already have |SAMtools| installed on your system, be careful about the order of paths in your $PATH environmental variable. Include the |breseq| path *last*, so that you will not override your previously installed version.
+This should take 5-10 minutes to run and report success at the end if everything is operating correctly.
+
+.. _installing-in-a-user-location:
+
+Installing in a user location
+*****************************
+
+If you do not have admin privileges on your computer, then you need to specify a location in your home directory to install in. We'll assume that you've chosen to install |breseq| in ``/mnt/home/me/local``, in which case you would use these commands::
+
+  ./configure --prefix=/mnt/home/me/local
+  make
+  make install
+
+Before you test or use this kind of installation, you will need to tell your shell that ``/mnt/home/me/local`` contains a usual UNIX grouping of program directories (with sub-directories like ``bin``, ``lib``, ``man``, etc). To do this you can use these commands, if you are using a bash shell::
+
+  echo "export PATH=\$PATH:/mnt/home/me/local/bin" >> ~/.profile
+  echo "export LD_LIBRARY_PATH=\$PATH:/mnt/home/me/local/lib" >> ~/.profile
+
+Now, you should be able to invoke |breseq| commands if you open a new terminal window.
 
 Common installation problems
 ---------------------------------

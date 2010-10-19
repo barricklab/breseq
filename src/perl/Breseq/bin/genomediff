@@ -10,33 +10,29 @@ genome_diff
 
 =head1 SYNOPSIS
 
-Usage: genome_diff COMMAND [options]
+Usage: genomediff COMMAND [options]
 
-Valid commands are: MUTATE, ANNOTATE
+Performs various functions on genomediff formatted files. Options depend on the COMMAND supplied.
 
-=head1 DESCRIPTION
+=head1 Command: COMPARE
 
-Perform various operations on "Genome Diff" files.
+Usage: genomediff COMPARE -r reference.gbk input1.gd [input2.gd ...]
 
-=over
-
-=head1 genome_diff MUTATE -r reference.gbk -o output.fna input.gd
+Create a table comparing mutations from different samples.
 
 =over
 
-=item B<-r|--reference> file path REQUIRED
+=item B<-r> <file_path>, -B<--reference> <file_path> REQUIRED
 
-GenBank file or files that the GenomeDiff refers to. Option may be entered multiple times.
+GenBank files for reference sequences. This option may be entered multiple times.
 
-=back
+=item B<-o> <file_path>, -B<--output> <file_path>
 
-=item B<-i|--input-path> file path REQUIRED
+Output HTML file containing the comparison table. Default: "compare.html".
 
-Input GenomeDiff file.
+=item B<input1.gd [input2.gd ...]>
 
-=item B<-o|--genome-info> file path DEFAULT = "out.fna"
-
-Output FASTA file.
+Input genomediff files, one for each sample.
 
 =back
 

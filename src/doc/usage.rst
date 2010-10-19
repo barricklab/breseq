@@ -162,3 +162,35 @@ Convert a FASTQ file to SANGER format.
 .. option:: output.fastq
 
    Output FASTQ file in SANGER format.
+   
+:program:`genomediff`
+-----------------------
+
+Usage:
+
+   :program:`genomediff` COMMAND [arguments]
+
+.. program:: genomediff
+
+Performs various functions on genomediff formatted files. Options depend on the COMMAND supplied.
+
+Command: COMPARE
+
+Usage:
+
+   :program:`genomediff` COMPARE -r reference.gbk input1.gd [input2.gd ...]
+
+Create a table comparing mutations from different samples.
+
+.. option:: -r <file_path>, --reference=<file_path>
+
+   GenBank files for reference sequences. This option may be entered multiple times.
+
+.. option:: -o <file_path>, --output=<file_path>
+
+   Output HTML file containing the comparison table. Default: "compare.html".
+
+.. option:: <input1.gd [input2.gd ...]>
+
+   Input genomediff files, one for each sample.
+   
