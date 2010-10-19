@@ -55,10 +55,10 @@ all-local :
 	## Bio::SamTools
 	## To be libtool compatible, we have to trick Bio::SamTools
 	## to get it to go ahead and install correctly...
-	ln -sf ${SAMTOOLSDIR}/.libs/libbam.a ${SAMTOOLSDIR}/libbam.a 
+	cp -f $(SAMTOOLSDIR)/*.h $(SAMTOOLSDIR)/.libs/
 	
 	cd $(BIOSAMTOOLS) ; \
-	export SAMTOOLS=$(SAMTOOLSDIR) ; \
+	export SAMTOOLS=$(SAMTOOLSDIR).libs ; \
 	perl Build.PL --install_base=$(prefix) ; \
 	./Build ;
 
