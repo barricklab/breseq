@@ -53,7 +53,13 @@ all-local :
 	echo $(SAMTOOLSDIR)
 
 	## Bio::SamTools
-	## Delayed until install because we need libbam.a, instead of libbam.la
+	
+	## Create a link to the libtools library
+	## so that Bio::SamTools can find it
+	## This seems likely to not be a stable way of doing
+	## things, but we have no alternative
+	ln -sf ${SAMTOOLSDIR}/.libs/libbam.a ${SAMTOOLSDIR}/libbam.a 
+	
 	cd $(BIOSAMTOOLS) ; \
 	export SAMTOOLS=$(SAMTOOLSDIR) ; \
 	perl Build.PL --install_base=$(prefix) ; \
