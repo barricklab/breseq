@@ -68,7 +68,7 @@ libbam_la_SOURCES = \
 	razf.h \
 	sam_header.h \
 	sam.h 
-libbam_la_LDFLAGS = -static
+libbam_la_LDFLAGS = -fPIC
 
 bin_PROGRAMS = samtools
 samtools_SOURCES = \
