@@ -51,7 +51,7 @@ user-config.jam
 
 syntax: regexp
 
-^breseq/
+^breseq
 
 ^tests/.+/output
 ^tests/.+/0
