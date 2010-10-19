@@ -58,7 +58,7 @@ all-local :
 	cp -f $(SAMTOOLSDIR)/*.h $(SAMTOOLSDIR)/.libs/
 	
 	cd $(BIOSAMTOOLS) ; \
-	export SAMTOOLS=$(SAMTOOLSDIR).libs ; \
+	export SAMTOOLS=$(SAMTOOLSDIR)/.libs ; \
 	perl Build.PL --install_base=$(prefix) ; \
 	./Build ;
 
