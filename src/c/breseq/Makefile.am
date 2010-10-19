@@ -17,7 +17,7 @@
 
 AM_CPPFLAGS = -I$(top_srcdir)/$(LIBBAM) $(BOOST_CPPFLAGS)
 AM_LDFLAGS = $(BOOST_PROGRAM_OPTIONS_LDFLAGS)
-LDADD = $(top_srcdir)/$(LIBBAM)/libbam.a \
+LDADD = $(top_srcdir)/$(LIBBAM)/libbam.la \
 	libbreseq.la \
 	$(BOOST_PROGRAM_OPTIONS_LIBS)
 
@@ -37,7 +37,6 @@ libbreseq_la_SOURCES = \
 	breseq/pileup_base.h \
 	breseq/pileup.h 
 libbreseq_la_LDFLAGS = -static
-
 
 bin_PROGRAMS = error_count identify_mutations calc_trims
 error_count_SOURCES = error_count_cmdline.cpp
