@@ -213,7 +213,8 @@ sub post_option_initialize
 	my ($self) = @_;
 	
 	$self->{version} = $Breseq::VERSION;
-	$self->{byline} = "<b><i>breseq</i></b> Version $self->{version} | Developed by Barrick JE and Knoester DB";
+	$self->{byline} = "<b><i>breseq</i></b>&nbsp;&nbsp;version $self->{version}";
+	$self->{website} = "http://barricklab.org/breseq";
 	$self->{bin_path} = $FindBin::Bin;
 	$self->{lib_path} = "$self->{bin_path}/../lib/perl5/Breseq";
 

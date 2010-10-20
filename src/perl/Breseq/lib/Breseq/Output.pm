@@ -382,7 +382,10 @@ sub breseq_header_string
 	
 	$output_string .= start_table({-width => "100%", -border => 0, -cellspacing => 0, -cellpadding => 3});
 	$output_string .= start_Tr;
-	$output_string .=  td(img({-src=>$settings->html_path('breseq_small_graphic_to_file_name')}));
+	$output_string .=  td(a({-href=>$settings->{website}}, 
+							  img({-src=>$settings->html_path('breseq_small_graphic_to_file_name')})
+							)
+						);
 	$output_string .= start_td({-width => "100%"});
 	$output_string .= $settings->{byline};
 	$output_string .= br;	
