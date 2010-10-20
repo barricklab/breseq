@@ -14,7 +14,7 @@ Jeff is beginning a position as an assistant professor in the department of Chem
 Testers
 ------------
 
-We thank Zachary Blount, Tim Cooper, J.P. Jerome, Ranno Nahku, Sébastien Wielgoss, and participants in Titus Brown's summer course in next-gen sequencing at the Kellogg Biological Station for providing feedback on |breseq| usage.
+We thank Zachary Blount, Tim Cooper, J.P. Jerome, Ranno Nahku, Sébastien Wielgoss, and participants in Titus Brown's 2010 summer course in next-gen sequencing at the Kellogg Biological Station for providing feedback on |breseq| usage.
 
 Funding
 -----------
@@ -23,4 +23,5 @@ The following grants have supported development of |breseq|:
 
 #. National Institutes of Health (2009-2010). Pathway to Independence Award [K99GM087550 to J.E.B.]
 #. National Science Foundation (2007-2008). Postdoctoral Fellowship in Biological Informatics [DBI-0630687 to J.E.B.]
+#. National Science Foundation (2010). BEACON Center at Michigan State University [DBI-0939454].
 
