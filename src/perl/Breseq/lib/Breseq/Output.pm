@@ -435,6 +435,51 @@ sub html_genome_diff_item_table_string
 	}
 }
 
+sub formatted_mutation_annotation
+{
+	my ($mut) = @_;
+
+	## additional formatting for some variables
+	my $formatted_annotated = '';
+	if (($mut->{snp_type} ne 'intergenic') && ($mut->{snp_type} ne 'noncoding') && ($mut->{snp_type} ne 'pseudogene'))
+	{
+		$formatted_annotated .= "$mut->{aa_ref_seq}$mut->{aa_position}$mut->{aa_new_seq}";
+		## add color and underlining  
+
+		my $codon_ref_seq = to_underline_red_codon($mut, 'codon_ref_seq');
+		my $codon_new_seq = to_underline_red_codon($mut, 'codon_new_seq');
+
+		sub to_underline_red_codon
+		{
+			my ($mut, $codon_key) = @_;			
+			return '' if (!defined $mut->{$codon_key} || !defined $mut->{codon_position} || $mut->{codon_position} eq '');
+
+			my $codon_string;
+			my @codon_ref_seq_list = split //, $mut->{$codon_key};
+			for (my $i=0; $i<scalar @codon_ref_seq_list; $i++)
+			{
+				if ($i == $mut->{codon_position})
+				{
+					$codon_string.= font({-class=>"mutation_in_codon"}, $codon_ref_seq_list[$i]);
+				}
+				else
+				{
+					$codon_string.= $codon_ref_seq_list[$i];
+				}	
+			}	
+			return $codon_string;
+		}
+
+		$formatted_annotated .= "&nbsp;($codon_ref_seq&rarr;$codon_new_seq)";
+	}
+	else # ($mut->{snp_type} eq 'NC')
+	{
+		$formatted_annotated .= nonbreaking($mut->{gene_position});
+	}
+
+	return $formatted_annotated;
+}
+
 
 sub html_mutation_table_string
 {	
@@ -562,51 +607,13 @@ sub html_mutation_table_string
 			
 			if ($mut->{type} eq 'SNP')
 			{
-				## additional formatting for some variables
-				my $aa_codon_change = '';
-				if (($mut->{snp_type} ne 'intergenic') && ($mut->{snp_type} ne 'noncoding') && ($mut->{snp_type} ne 'pseudogene'))
-				{
-					$aa_codon_change .= "$mut->{aa_ref_seq}$mut->{aa_position}$mut->{aa_new_seq}";
-					## add color and underlining  
-
-					my $codon_ref_seq = to_underline_red_codon($mut, 'codon_ref_seq');
-					my $codon_new_seq = to_underline_red_codon($mut, 'codon_new_seq');
-
-					sub to_underline_red_codon
-					{
-						my ($mut, $codon_key) = @_;			
-						return '' if (!defined $mut->{$codon_key} || !defined $mut->{codon_position} || $mut->{codon_position} eq '');
-
-						my $codon_string;
-						my @codon_ref_seq_list = split //, $mut->{$codon_key};
-						for (my $i=0; $i<scalar @codon_ref_seq_list; $i++)
-						{
-							if ($i == $mut->{codon_position})
-							{
-								$codon_string.= font({-class=>"mutation_in_codon"}, $codon_ref_seq_list[$i]);
-							}
-							else
-							{
-								$codon_string.= $codon_ref_seq_list[$i];
-							}	
-						}	
-						return $codon_string;
-					}
-
-					$aa_codon_change .= "&nbsp;($codon_ref_seq&rarr;$codon_new_seq)";
-				}
-				else # ($mut->{snp_type} eq 'NC')
-				{
-					$aa_codon_change .= nonbreaking($mut->{gene_position});
-				}
-
 				$output_str.= start_Tr({-class=>$row_class});	
 				$output_str.= td({align=>"center"}, $evidence_string) if (!defined $gd_name_list_ref);
 				$output_str.= td({align=>"center"}, nonbreaking($mut->{seq_id})) if (!$one_ref_seq); 
 				$output_str.= td({align=>"right"}, commify($mut->{position}));
 				$output_str.= td({align=>"center"}, "$mut->{_ref_seq}&rarr;$mut->{new_seq}");
 				$output_str.= freq_cols(@freq_list);
-				$output_str.= td({align=>"center"}, nonbreaking($aa_codon_change));
+				$output_str.= td({align=>"center"}, nonbreaking(formatted_mutation_annotation($mut)));
 				$output_str.= td({align=>"center"}, i(nonbreaking($mut->{gene_name})));
 				$output_str.= td({align=>"left"}, htmlize($mut->{gene_product}));
 				$output_str.= end_Tr;	
@@ -814,7 +821,7 @@ sub html_read_alignment_table_string
 		}
 		my ($top_cov, $bot_cov) = split /\//, $c->{tot_cov};	
 		$output_str.= td({align => "center"}, $top_cov + $bot_cov );
-		$output_str.= td({align => "center"}, nonbreaking($c->{gene_position}) );	
+		$output_str.= td({align => "center"}, nonbreaking(formatted_mutation_annotation($c)) );	
 		$output_str.= td({align => "center"}, i(nonbreaking($c->{gene_name})) );	
 		$output_str.= td({align => "left"}, htmlize($c->{gene_product}) );	
 			
