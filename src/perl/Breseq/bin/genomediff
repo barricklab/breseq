@@ -59,7 +59,6 @@ our $VERSION = '0';
 #### Standard Perl Modules ####
 use strict;
 use Data::Dumper;
-use File::Path;
 use List::Util qw(min);
 use Getopt::Long;
 use Pod::Usage;
