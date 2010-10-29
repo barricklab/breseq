@@ -68,7 +68,6 @@ If you do not have admin privileges on your computer, then you need to specify a
 Before you test or use this kind of installation, you will need to tell your shell that ``/mnt/home/me/local`` contains a usual UNIX grouping of program directories (with sub-directories like ``bin``, ``lib``, ``man``, etc). To do this you can use these commands, if you are using a bash shell::
 
   echo "export PATH=\$PATH:/mnt/home/me/local/bin" >> ~/.profile
-  echo "export LD_LIBRARY_PATH=\$PATH:/mnt/home/me/local/lib" >> ~/.profile
 
 Now, you should be able to invoke |breseq| commands if you open a new terminal window.
 

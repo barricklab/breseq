@@ -2,7 +2,7 @@
 ##
 ## MODIFICATIONS
 ##
-## This automake Makefile.ac is used to configure, compile, and install SAMtools for
+## This automake Makefile.am is used to configure, compile, and install SAMtools for
 ##   use by the breseq computational pipeline.
 ## 
 ## The original Makefile distributed with SAMtools has been renamed Makefile.orig

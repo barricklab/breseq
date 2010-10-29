@@ -1,5 +1,6 @@
 bin/bamToGBrowse.pl
 Build.PL
+Build.PL.orig
 Changes
 DISCLAIMER
 lib/Bio/DB/Bam/Alignment.pm
