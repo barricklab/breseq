@@ -59,12 +59,12 @@ all-local :
 	
 	cd $(BIOSAMTOOLS) ; \
 	export SAMTOOLS=$(SAMTOOLSDIR)/.libs ; \
-	perl Build.PL --install_base=$(prefix) ; \
+	perl Build.PL --install_base=$(prefix) --install_path bin=$(bindir) --install_path script=$(bindir) ; \
 	./Build ;
 
 	## Breseq
 	cd $(PERLBRESEQ) ; \
-	perl Build.PL --install_base=$(prefix) ; \
+	perl Build.PL --install_base=$(prefix) --install_path bin=$(bindir)  --install_path script=$(bindir) ; \
 	./Build ;
 
 install-exec-local :
@@ -139,7 +139,7 @@ remake-breseq :: clean-breseq make-breseq install-breseq
 ## tests
 
 test:
-	export PREFIX=$(prefix); tests/test.sh test tests
+	export TESTBINPREFIX=$(bindir); tests/test.sh test tests
 
 clean-tests:
 	tests/test.sh clean tests

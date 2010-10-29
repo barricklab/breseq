@@ -10,7 +10,7 @@
 # paths must either be relative to the location of this script or absolute.
 COMMONDIR=`dirname ${BASH_SOURCE}`
 # path to breseq:
-BRESEQ="perl -w ${PREFIX}/bin/breseq"
+BRESEQ="perl -w ${TESTBINPREFIX}/breseq"
 # path to test data:
 DATADIR=${COMMONDIR}/data
 # this is a find-compatible list of files that we'll hash:
