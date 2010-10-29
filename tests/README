@@ -1,0 +1,31 @@
+The "testcmd.sh" scripts in each of the subdirectories of tests/ contain
+the breseq command-lines.  New tests can be added by creating a new
+subdirectory under tests/, writing the testcmd.sh script, and generating
+the hashes.
+
+The main body of code that deals with the hashes is in etc/common.sh,
+while a script that operates on all tests is in bin/test.sh.
+
+There are a few different testing-related "actions": 
+
+build: generates the list of expected hashes. 
+
+check: calculate hashes of current data & compare to expected values. 
+
+clean: rm current data 
+
+rebuild: clean, run breseq, build 
+
+test: run breseq, check (since breseq is smart about not
+doing extra work, this should probably follow a clean)
+
+Tests can be run individually using the test's own testcmd.sh script:
+
+dk@hammer:breseq% ./tests/lambda_mixed_pop/testcmd.sh check 
+
+or en masse:
+
+dk@hammer:breseq% ./bin/test.sh rebuild tests
+
+On os x, you'll need to install sha1sum (from macports, "md5sha1sum";
+it's installed by default on most linuxes, including the hpc).
