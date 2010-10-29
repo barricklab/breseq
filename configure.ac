@@ -65,6 +65,7 @@ BOOST_REQUIRE([1.42])
 BOOST_PROGRAM_OPTIONS([s])
 
 AC_SUBST([LIBBAM], [extern/samtools-0.1.7a])
+AC_SUBST([BIOSAMTOOLS], [extern/Bio-SamTools-1.19/Makefile])
 AC_SUBST([BRESEQ], [src/c/breseq])
 
 AC_CONFIG_FILES([

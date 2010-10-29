@@ -52,16 +52,6 @@ all-local :
 
 	echo $(SAMTOOLSDIR)
 
-	## Bio::SamTools
-	## To be libtool compatible, we have to trick Bio::SamTools
-	## to get it to go ahead and install correctly...
-	cp -f $(SAMTOOLSDIR)/*.h $(SAMTOOLSDIR)/.libs/
-	
-	cd $(BIOSAMTOOLS) ; \
-	export SAMTOOLS=$(SAMTOOLSDIR)/.libs ; \
-	perl Build.PL --install_base=$(prefix) --install_path bin=$(bindir) --install_path script=$(bindir) ; \
-	./Build ;
-
 	## Breseq
 	cd $(PERLBRESEQ) ; \
 	perl Build.PL --install_base=$(prefix) --install_path bin=$(bindir)  --install_path script=$(bindir) ; \
@@ -71,10 +61,14 @@ install-exec-local :
 
 	echo $(prefix)/lib
 
-	## Bio::SamTools
+	## Bio::SamTools - compiled here because libbam must be in final location for static link to work!
 	cd $(BIOSAMTOOLS) ; \
+	export SAMTOOLSLIBRARY=$(libdir); \
+	export SAMTOOLSHEADERS=$(SAMTOOLSDIR); \
+	perl Build.PL --install_base=$(prefix) --install_path bin=$(bindir) --install_path script=$(bindir) ; \
+	./Build ; \
 	./Build install ;
-
+	
 	## Breseq
 	cd $(PERLBRESEQ) ; \
 	./Build install;
