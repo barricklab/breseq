@@ -646,6 +646,13 @@ sub installed
 	## absolutely required
 	$self->{installed}->{SSAHA2} = (`which ssaha2`) ? 1 : 0;
 	$self->{installed}->{R} = (`which R`) ? 1 : 0;	
+	if ($self->{installed}->{R}) 
+	{
+		my $R_version = `R --version`;
+		$R_version =~ m/R version (\d+)\.(\d+)\.(\d+)/;
+		$self->{installed_version}->{R} = $1 * 1000000 +  $2 * 1000 + $3;
+	}
+	
 	$self->{installed}->{samtools} = (-x "$self->{bin_path}/samtools") ? 1 : 0;
 	$self->{installed}->{bioperl} = (eval 'require Bio::Root::Root');	
 
@@ -677,9 +684,24 @@ sub check_installed
 	if (!$self->{installed}->{R})
 	{
 		$good_to_go = 0;
-		print STDERR "---> ERROR Required executable \"R\" is not installed.\n";
+		print STDERR "---> ERROR Required executable \"R version 2.10+\" is not installed.\n";
 		print STDERR "---> See http://www.r-project.org/\n";
 	}
+
+	##version 2.10.0
+	if ($self->{installed_version}->{R} < 2010000)
+	{
+		my $R_version = int($self->{installed_version}->{R}/1000000) 
+			. "." . int($self->{installed_version}->{R}%1000000/1000)
+			. "." . int($self->{installed_version}->{R}%1000);
+			
+		$good_to_go = 0;
+		print STDERR "---> ERROR Required executable \"R version 2.10.0+\" is not installed.\n";
+		print STDERR "---> Your version is $R_version\n";
+		print STDERR "---> See http://www.r-project.org/\n";
+	}
+	
+	
 	
 	if (!$self->{installed}->{samtools})
 	{
