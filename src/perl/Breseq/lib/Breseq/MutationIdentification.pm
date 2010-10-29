@@ -45,7 +45,6 @@ use vars qw(@ISA);
 use Data::Dumper;
 
 use Breseq::GenomeDiff;
-use Statistics::Distributions;
 
 
 our @base_list = ('A', 'T', 'C', 'G', '.');
@@ -1010,13 +1009,15 @@ sub _predict_polymorphism
 	print "== Best Base Model ==\n" if ($verbose);
 	print "  Log10 Likelihood Best Base Only = $log10_likelihood_given_ref_base->{$first_base}\n" if ($verbose);
 
+	##optional include
+	require Statistics::Distributions;
 	$Statistics::Distributions::SIGNIFICANT = 50; ## we need many more significant digits than the default 5
 
 	## this is the natural logarithm of the ratio of the probabilities
 	my $likelihood_ratio_test_value = -2*log(10)*($log10_likelihood_of_one_base_model - $log10_likelihood_of_two_base_model);
 	my $chi_squared_pr = 'ND';
 	$chi_squared_pr = Statistics::Distributions::chisqrprob(1, $likelihood_ratio_test_value);
-	
+
 	print "== 2 Base Model ==\n" if ($verbose);
 	print "  Log10 Likelihood 2 Base Model = $log10_likelihood_of_two_base_model\n" if ($verbose);
 	print "  LR test value = $likelihood_ratio_test_value\n" if ($verbose);
@@ -1047,7 +1048,7 @@ sub _predict_polymorphism
 		'log10_base_likelihood_strand_bias' => $log10_likelihood_of_one_base_model - $log10_likelihood_of_strand_bias_model,
 		'p_value_two_base_vs_strand_bias' => $p_value_two_base_vs_strand_bias,
 	};
-	
+		
 	return $polymorphism;
 }
 

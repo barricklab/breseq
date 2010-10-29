@@ -34,11 +34,11 @@ use Getopt::Long;
 use Data::Dumper;
 use Pod::Usage;
 use FindBin;
+use File::Path 2.06_05;
 use Breseq;
 
 use vars qw(@ISA);
 @ISA = qw( Bio::Root::Root );
-
 
 our %unwanted_sequences = ( 
 	'UNWANTED::ILLUMINA_ADAPTOR_1'    => 'GATCGGAAGAGCTCGTATGCCGTCTTCTGCTTG',  #Solexa Adaptor sequence.
@@ -535,19 +535,17 @@ sub html_path
 
 sub create_path
 {
-	use File::Path qw(make_path);
 	my ($self, $path_key) = @_;
 	my $path = $self->file_name($path_key);
-	(-e $path) or make_path($path) or $self->throw("Could not create path \'$path\'.");
+	(-e $path) or File::Path::make_path($path) or $self->throw("Could not create path \'$path\'.");
 	return $path;
 }
 
 sub remove_path
 {
-	use File::Path qw(remove_tree);
 	my ($self, $path_key) = @_;
 	my $path = $self->file_name($path_key);
-	(-e $path) and remove_tree($path) or $self->throw("Could not remove path \'$path\'.");
+	(-e $path) and File::Path::remove_tree($path) or $self->throw("Could not remove path \'$path\'.");
 	return $path;
 }
 
@@ -712,7 +710,7 @@ sub check_installed
 		print STDERR "---> This module should have been installed by the breseq installer.\n";		
 	}
 	
-	$self->throw if (!$good_to_go);
+	die "\n" if (!$good_to_go);
 	
 #	return $good_to_go;
 }

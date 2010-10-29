@@ -96,6 +96,7 @@ my $pdf = 0;
 my $resolution = 600;
 my $total_only = 0;
 my $tile;
+my $tile_overlap = 0;
 my ($table_mode);
 GetOptions(
 	'help|?' => \$help, 'man' => \$man, 'verbose|v' => \$verbose,
@@ -107,6 +108,7 @@ GetOptions(
 	'table|t' => \$table_mode,
 	'total-only|1' => \$total_only,
 	'tile=s' => \$tile, 
+	'tile-overlap=s' => \$tile_overlap,
 ) or pod2usage(2);
 pod2usage(1) if $help;
 pod2usage(-exitstatus => 0, -verbose => 2) if $man;
@@ -139,7 +141,14 @@ if ($tile)
 		{
 			## ends will be fixed later automatically for then they go too far
 			my $end = $start + $tile - 1;
-			my $region = "$seq_id:$start-$end";
+			
+			my $offset_start = $start - $tile_overlap;
+			$offset_start = 1 if ($offset_start < 1);
+			
+			my $offset_end = $end + $tile_overlap;
+			$offset_end = $reference_length if ($offset_end > $reference_length);
+			
+			my $region = "$seq_id:$offset_start-$offset_end";
 			push @regions, $region;
 			$start += $tile;
 		}

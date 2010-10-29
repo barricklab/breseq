@@ -62,7 +62,6 @@ use strict;
 
 use Getopt::Long;
 use Pod::Usage;
-use File::Path;
 use FindBin;
 use lib $FindBin::Bin;
 use Data::Dumper;
