@@ -56,7 +56,7 @@ my $build = Module::Build->new(
     dist_abstract      => 'Perl interface to SamTools library for DNA sequencing',
     license            => 'perl',
     include_dirs       => [$sam_include],
-    extra_linker_flags => ["-L$sam_lib",'-lbam','-lz', '-Wl,-rpath', "-Wl,$sam_lib"],
+    extra_linker_flags => ["-L$sam_lib",'-lbam','-lz'],
 
     extra_compiler_flags=>[
 
