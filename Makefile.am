@@ -50,6 +50,7 @@ all-local :
 ## otherwise a sudo make install creates superuser owned files in the
 ## distribution, that are not removed by make clean.
 
+	## Bio::SamTools
 	cd $(BIOSAMTOOLS) ; \
 	export SAMTOOLSLIBRARY=$(SAMTOOLSDIR)/.libs; \
 	export SAMTOOLSHEADERS=$(SAMTOOLSDIR); \
@@ -66,16 +67,17 @@ install-exec-local :
 
 	echo $(prefix)/lib
 
-#	## Bio::SamTools - compiled here because libbam must be in final location for static link to work!
-#	cd $(BIOSAMTOOLS) ; \
-#	export SAMTOOLSLIBRARY=$(libdir); \
-#	export SAMTOOLSHEADERS=$(SAMTOOLSDIR); \
-#	perl Build.PL --install_base=$(prefix) --install_path bin=$(bindir) --install_path script=$(bindir) ; \
-#	./Build ; \
-#	./Build install ;
+### Alternate way of doing things
+##	## Bio::SamTools - compiled here because libbam must be in final location for static link to work!
+##	cd $(BIOSAMTOOLS) ; \
+##	export SAMTOOLSLIBRARY=$(libdir); \
+##	export SAMTOOLSHEADERS=$(SAMTOOLSDIR); \
+##	perl Build.PL --install_base=$(prefix) --install_path bin=$(bindir) --install_path script=$(bindir) ; \
+##	./Build ; \
+##	./Build install ;
 
+	## Bio::SamTools
 	cd $(BIOSAMTOOLS) ; \
-	./Build ; \
 	./Build install ;
 	
 	## Breseq

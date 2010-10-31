@@ -98,7 +98,8 @@ points(X$quality, X$AG, pch=G_pch, col=G_col)
 lines(Y$quality, Y$A., col=._col)
 points(X$quality, X$A., pch=._pch, col=._col)
 
-legend("topright", cex=1.1, c("C","T","G","-"), title="Observed Base:", border="black", horiz=T, fill=c(C_col,T_col,G_col,._col), bty="n")
+## border="black" incompatible with earlier R versions!
+legend("topright", cex=1.1, c("C","T","G","-"), title="Observed Base:", horiz=T, fill=c(C_col,T_col,G_col,._col), bty="n")
 
 new_plot("Reference Base: T")
 lines(Y$quality, Y$TA, col=A_col)
@@ -113,7 +114,7 @@ points(X$quality, X$TG, pch=G_pch, col=G_col)
 lines(Y$quality, Y$T., col=._col)
 points(X$quality, X$T., pch=._pch, col=._col)
 
-legend("topright", cex=1.1, c("A","C","G","-"), title="Observed Base:", border="black", horiz=T, fill=c(A_col,C_col,G_col,._col), bty="n")
+legend("topright", cex=1.1, c("A","C","G","-"), title="Observed Base:", horiz=T, fill=c(A_col,C_col,G_col,._col), bty="n")
 
 
 new_plot("Reference Base: C")
@@ -129,7 +130,7 @@ points(X$quality, X$CG, pch=G_pch, col=G_col)
 lines(Y$quality, Y$C., col=._col)
 points(X$quality, X$C., pch=._pch, col=._col)
 
-legend("topright", cex=1.1, c("A","T","G","-"), title="Observed Base:", border="black", horiz=T, fill=c(A_col,T_col,G_col,._col), bty="n")
+legend("topright", cex=1.1, c("A","T","G","-"), title="Observed Base:", horiz=T, fill=c(A_col,T_col,G_col,._col), bty="n")
 
 
 new_plot("Reference Base: G")
@@ -145,7 +146,7 @@ points(X$quality, X$GC, pch=C_pch, col=C_col)
 lines(Y$quality, Y$G., col=._col)
 points(X$quality, X$G., pch=._pch, col=._col)
 
-legend("topright", cex=1.1, c("A","T","C","-"), title="Observed Base:", border="black", horiz=T, fill=c(A_col,T_col,C_col,._col), bty="n")
+legend("topright", cex=1.1, c("A","T","C","-"), title="Observed Base:", horiz=T, fill=c(A_col,T_col,C_col,._col), bty="n")
 
 
 new_plot("Reference Base: -")
@@ -161,7 +162,7 @@ points(X$quality, X$.C, pch=C_pch, col=C_col)
 lines(Y$quality, Y$.G, col=G_col)
 points(X$quality, X$.G, pch=G_pch, col=G_col)
 
-legend("topright", cex=1.1, c("A","T","C","G"), title="Observed Base:", border="black", horiz=T, fill=c(A_col,T_col,C_col,G_col), bty="n")
+legend("topright", cex=1.1, c("A","T","C","G"), title="Observed Base:", horiz=T, fill=c(A_col,T_col,C_col,G_col), bty="n")
 
 
 dev.off()
