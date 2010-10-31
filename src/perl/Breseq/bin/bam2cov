@@ -1,0 +1,222 @@
+#!/usr/bin/env perl
+
+=head1 NAME
+
+bam2aln
+
+=head1 SYNOPSIS
+
+Usage: bam2cov [-b input.bam] [-f input.fasta] [-o output/path] region1 [region2 region3 ...]
+
+Creates a coverage plot or table for the specified region.
+
+=head1 OPTIONS
+
+=over
+
+=item B<-b> <file_path>, B<--bam>=<file_path>>
+
+BAM database file of read alignments. Defaults: reference.bam, data/reference.bam.
+
+=item B<-f> <file_path>, B<--fasta>=<file_path>
+
+FASTA file of reference sequences. Defaults: reference.fasta, data/reference.fasta.
+
+=item B<-o> <path>, B<--output>=<file_path>
+
+Output path. If there are multiple regions, must be a directory path, and all output 
+files will be output here with names region1, region2, ... If there is one region, 
+the output file will be given this name if it is not the name of an already existing 
+directory. Default: current path.
+
+=item region1 [region2 region3]
+
+Regions to create output for must be provided in the format B<FRAGMENT:START-END>, where B<FRAGMENT> 
+is a valid identifier for one of the sequences in the FASTA file, and B<START> and B<END> are 
+1-indexed coordinates of the beginning and end of the region. A separate output file is created for each region.
+
+=item B<--pdf>
+
+In plot mode, create output plot in PDF format rather than PNG format.
+
+=item B<-r> <int>, B<--resolution> <int>
+
+In plot mode, maximum mumber of reference positions to plot coverage for within the region. Default: 600.
+
+=item B<-1>, B<--total_only>
+
+In plot mode, only output the total coverage of unique or repeat read mappings. (Does not break these down into 
+the coverage on each strand of the reference sequence.)
+
+=item B<-t>, B<--table>
+
+Table mode. Rather than a plot, output a tab-delimited table of the coverage in the specified region to the output file. 
+Also outputs the mean and standard error of the unique coverage within each region to STDOUT.
+
+=back
+
+=head1 AUTHOR
+
+Jeffrey E. Barrick <jeffrey.e.barrick@gmail.com>
+
+=head1 LICENSE
+
+Copyright (C) 2010 Michigan State University.
+
+This is free software; you can redistribute it and/or modify it under the terms the 
+GNU General Public License as published by the Free Software Foundation; either 
+version 1, or (at your option) any later version.
+
+=cut
+
+
+use strict;
+
+##CORE modules
+use Data::Dumper;
+use CGI qw/:standard/;
+use FindBin;
+
+#### Paths to Locally Installed Modules ####
+use lib $FindBin::Bin;
+use lib $FindBin::Bin . "/../lib/perl5";
+use lib $FindBin::Bin . "/../lib/perl5/site_perl";
+
+use Bio::DB::Sam;
+
+## breseq modules
+use Breseq::CoverageOutput;
+
+#Get options
+use Getopt::Long;
+use Pod::Usage;
+my ($help, $man, $verbose);
+my ($bam_path, $fasta_path, $output_path);
+my $pdf = 0;
+my $resolution = 600;
+my $total_only = 0;
+my $tile;
+my $tile_overlap = 0;
+my ($table_mode);
+GetOptions(
+	'help|?' => \$help, 'man' => \$man, 'verbose|v' => \$verbose,
+	'bam|b=s' => \$bam_path,
+	'fasta|f=s' => \$fasta_path,
+	'output|o=s' => \$output_path,
+	'pdf' => \$pdf,
+	'resolution|r=s' => \$resolution,
+	'table|t' => \$table_mode,
+	'total-only|1' => \$total_only,
+	'tile=s' => \$tile, 
+	'tile-overlap=s' => \$tile_overlap,
+) or pod2usage(2);
+pod2usage(1) if $help;
+pod2usage(-exitstatus => 0, -verbose => 2) if $man;
+
+my (@regions) = @ARGV;
+
+#handle default paths
+$bam_path = 'reference.bam' if (!$bam_path && -e 'reference.bam');
+$bam_path = 'data/reference.bam' if (!$bam_path && -e 'data/reference.bam');
+
+$fasta_path = 'reference.fasta' if (!$fasta_path && -e 'reference.fasta');
+$fasta_path = 'data/reference.fasta' if (!$fasta_path && -e 'data/reference.fasta');
+
+die "No BAM file defined.\n" if (!$bam_path);
+die "No fasta file defined.\n" if (!$fasta_path);
+
+my $co = Breseq::CoverageOutput->new(-fasta => $fasta_path, -bam => $bam_path);
+
+### Create regions that tile the genome with this size
+if ($tile)
+{
+	my $bam = $co->{bam};
+	my @targets = $bam->seq_ids;
+	
+	foreach my $seq_id (@targets)
+	{
+		my $reference_length = $bam->length($seq_id);
+		my $start = 1;
+		while ($start < $reference_length)
+		{
+			## ends will be fixed later automatically for then they go too far
+			my $end = $start + $tile - 1;
+			
+			my $offset_start = $start - $tile_overlap;
+			$offset_start = 1 if ($offset_start < 1);
+			
+			my $offset_end = $end + $tile_overlap;
+			$offset_end = $reference_length if ($offset_end > $reference_length);
+			
+			my $region = "$seq_id:$offset_start-$offset_end";
+			push @regions, $region;
+			$start += $tile;
+		}
+	}
+}
+
+die "No regions defined.\n" if (scalar @regions == 0);
+
+
+print STDOUT "region\tbp\tavg\tSE\n" if ($table_mode);
+
+foreach my $region (@regions)
+{
+
+	#figure out the output file name
+	my $this_output_file = "$region";
+	if (defined $output_path)
+	{
+		#if there is just one region, use this file name straight up if it is not a directory
+		if ((scalar @regions == 1) && (!-d $output_path))
+		{
+			$this_output_file = $output_path;
+		}
+		else
+		{
+			die "Output directory (-o) does not exist: $output_path\n" if (!-d $output_path);
+			$this_output_file = "$output_path/$region";
+		}
+	}
+
+	##Tabulate coverage
+	if ($table_mode)
+	{	
+		$this_output_file .= '.tab';
+			
+		$co->tabulate_coverage($this_output_file, $region);
+	
+		open COV, "<$this_output_file" or die;
+		my @ll = <COV>;
+	
+		chomp @ll;
+		shift @ll; #header
+		my $n = scalar @ll;
+		my $avg = 0;
+		my $variance = 0;
+		foreach my $l (@ll)
+		{
+			my @sl = split "\t", $l;
+			$avg += $sl[1] + $sl[2];
+		}
+		$avg /= $n;
+	
+		foreach my $l (@ll)
+		{
+			my @sl = split "\t", $l;
+			$variance += ($avg - ($sl[1] + $sl[2]))**2;
+		}
+	
+		my $ssd = (1/($n-1) * $variance)**0.5;
+		my $sem = $ssd / $n**0.5;
+		close COV;
+
+		print STDOUT "$region\t$n\t$avg\t$sem\n";
+	}
+
+	## Make drawings
+	else
+	{
+		$co->plot_coverage($region, $this_output_file, {verbose=>$verbose, resolution=>$resolution, pdf => $pdf, total_only => $total_only});
+	}
+}
