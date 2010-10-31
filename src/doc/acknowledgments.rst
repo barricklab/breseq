@@ -9,12 +9,12 @@ Developers
 
 |breseq| was initially developed at Michigan State University while Jeff was a postdoc with Dr. Richard Lenski and Dr. Charles Ofria, and while Dave was a graduate student in the lab of Dr. Philip McKinley.
 
-Jeff is beginning a position as an assistant professor in the department of Chemistry and Biochemistry at the University of Texas at Austin in January 2010. `Lab Website <http://barricklab.org>`_ 
+Jeff is beginning a position as an assistant professor in the department of Chemistry and Biochemistry at the University of Texas at Austin in January 2011. `Lab Website <http://barricklab.org>`_ 
 
 Testers
 ------------
 
-We thank Zachary Blount, Tim Cooper, J.P. Jerome, Ranno Nahku, Sébastien Wielgoss, and participants in Titus Brown's 2010 summer course in next-gen sequencing at the Kellogg Biological Station for providing feedback on |breseq| usage.
+We thank Zachary Blount, Tim Cooper, Tara Gianoulis, Dan Goodman, J.P. Jerome, Ranno Nahku, Sébastien Wielgoss, and participants in Titus Brown's 2010 summer course in next-gen sequencing at the Kellogg Biological Station for providing feedback on |breseq| usage.
 
 Funding
 -----------
