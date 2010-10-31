@@ -55,8 +55,7 @@ all-local :
 	export SAMTOOLSLIBRARY=$(SAMTOOLSDIR)/.libs; \
 	export SAMTOOLSHEADERS=$(SAMTOOLSDIR); \
 	perl Build.PL --install_base=$(prefix) --install_path bin=$(bindir) --install_path script=$(bindir) ; \
-	./Build ; \
-	./Build install ;
+	./Build ;
 
 	## Breseq
 	cd $(PERLBRESEQ) ; \
