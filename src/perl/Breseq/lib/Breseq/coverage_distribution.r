@@ -202,7 +202,8 @@ my_col = "black";
 my_col_censored = "red";
 
 if (pdf_output == 0) {
-	bitmap(plot_file, height=600, width=700, type = "png16m", units = "px", res = 72, pointsize=18, taa=4, gaa=2)
+	## units = "px", taa=4, gaa=2 NOT compatible with earlier R versions!
+	bitmap(plot_file, height=6, width=7, type = "png16m", res = 72, pointsize=18)
 } else {
 	pdf(plot_file, height=6, width=7)
 }

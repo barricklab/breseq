@@ -2,6 +2,8 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
+	<key>currentDocument</key>
+	<string>Breseq/bin/fastq_utils</string>
 	<key>documents</key>
 	<array>
 		<dict>
@@ -122,14 +124,14 @@
 			<key>caret</key>
 			<dict>
 				<key>column</key>
-				<integer>11</integer>
+				<integer>0</integer>
 				<key>line</key>
-				<integer>61</integer>
+				<integer>27</integer>
 			</dict>
 			<key>firstVisibleColumn</key>
 			<integer>0</integer>
 			<key>firstVisibleLine</key>
-			<integer>55</integer>
+			<integer>0</integer>
 		</dict>
 		<key>Breseq/bin/genbank_utils</key>
 		<dict>
@@ -364,14 +366,14 @@
 			<key>caret</key>
 			<dict>
 				<key>column</key>
-				<integer>16</integer>
+				<integer>41</integer>
 				<key>line</key>
-				<integer>6</integer>
+				<integer>708</integer>
 			</dict>
 			<key>firstVisibleColumn</key>
 			<integer>0</integer>
 			<key>firstVisibleLine</key>
-			<integer>0</integer>
+			<integer>672</integer>
 		</dict>
 		<key>Breseq/lib/Breseq/Shared.pm</key>
 		<dict>
@@ -408,58 +410,58 @@
 			<key>caret</key>
 			<dict>
 				<key>column</key>
-				<integer>0</integer>
+				<integer>26</integer>
 				<key>line</key>
-				<integer>0</integer>
+				<integer>210</integer>
 			</dict>
-			<key>columnSelection</key>
-			<false/>
 			<key>firstVisibleColumn</key>
 			<integer>0</integer>
 			<key>firstVisibleLine</key>
-			<integer>0</integer>
-			<key>selectFrom</key>
-			<dict>
-				<key>column</key>
-				<integer>3</integer>
-				<key>line</key>
-				<integer>18</integer>
-			</dict>
-			<key>selectTo</key>
-			<dict>
-				<key>column</key>
-				<integer>0</integer>
-				<key>line</key>
-				<integer>0</integer>
-			</dict>
+			<integer>179</integer>
 		</dict>
 		<key>Breseq/lib/Breseq/plot_coverage.r</key>
 		<dict>
 			<key>caret</key>
 			<dict>
 				<key>column</key>
-				<integer>16</integer>
+				<integer>11</integer>
 				<key>line</key>
-				<integer>4</integer>
+				<integer>74</integer>
 			</dict>
+			<key>columnSelection</key>
+			<false/>
 			<key>firstVisibleColumn</key>
 			<integer>0</integer>
 			<key>firstVisibleLine</key>
-			<integer>0</integer>
+			<integer>69</integer>
+			<key>selectFrom</key>
+			<dict>
+				<key>column</key>
+				<integer>4</integer>
+				<key>line</key>
+				<integer>74</integer>
+			</dict>
+			<key>selectTo</key>
+			<dict>
+				<key>column</key>
+				<integer>11</integer>
+				<key>line</key>
+				<integer>74</integer>
+			</dict>
 		</dict>
 		<key>Breseq/lib/Breseq/plot_error_rate.r</key>
 		<dict>
 			<key>caret</key>
 			<dict>
 				<key>column</key>
-				<integer>18</integer>
+				<integer>0</integer>
 				<key>line</key>
-				<integer>4</integer>
+				<integer>168</integer>
 			</dict>
 			<key>firstVisibleColumn</key>
 			<integer>0</integer>
 			<key>firstVisibleLine</key>
-			<integer>0</integer>
+			<integer>118</integer>
 		</dict>
 		<key>Breseq/lib/Breseq/polymorphism_statistics.r</key>
 		<dict>
@@ -504,9 +506,18 @@
 			<integer>13</integer>
 		</dict>
 	</dict>
+	<key>openDocuments</key>
+	<array>
+		<string>Breseq/lib/Breseq/Settings.pm</string>
+		<string>Breseq/bin/fastq_utils</string>
+		<string>Breseq/lib/Breseq/plot_error_rate.r</string>
+		<string>Breseq/lib/Breseq/plot_coverage.r</string>
+		<string>Breseq/lib/Breseq/coverage_distribution.r</string>
+		<string>Breseq/lib/Breseq/Shared.pm</string>
+	</array>
 	<key>showFileHierarchyDrawer</key>
 	<true/>
 	<key>windowFrame</key>
-	<string>{{610, 259}, {636, 619}}</string>
+	<string>{{302, 78}, {913, 800}}</string>
 </dict>
 </plist>

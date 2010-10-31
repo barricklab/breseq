@@ -34,6 +34,8 @@ FASTQ file to examine.
 
 =head1 Command: SANGER
 
+=over
+
 Usage: fastq_utils SANGER -f from_format [-l] input.fastq output.fastq
 
 Convert a FASTQ file to SANGER format.

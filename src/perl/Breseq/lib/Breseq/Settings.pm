@@ -35,6 +35,7 @@ use Data::Dumper;
 use Pod::Usage;
 use FindBin;
 use File::Path 2.06_05;
+
 use Breseq;
 
 use vars qw(@ISA);
@@ -649,20 +650,25 @@ sub installed
 	if ($self->{installed}->{R}) 
 	{
 		my $R_version = `R --version`;
-		$R_version =~ m/R version (\d+)\.(\d+)\.(\d+)/;
-		$self->{installed_version}->{R} = $1 * 1000000 +  $2 * 1000 + $3;
+		if ($R_version =~ m/R\s+(version\s+|)(\d+)\.(\d+)\.(\d+)/)
+		{
+			$self->{installed_version}->{R} = $2 * 1000000 +  $3 * 1000 + $4;
+		}
+		else
+		{
+			$self->{installed_version}->{R} = 0;
+		}
 	}
 	
+	$self->{installed}->{Statistics_Distributions} = (eval 'require Statistics::Distributions');	
 	$self->{installed}->{samtools} = (-x "$self->{bin_path}/samtools") ? 1 : 0;
 	$self->{installed}->{bioperl} = (eval 'require Bio::Root::Root');	
 
 	## installed locally
-	$self->{installed}->{Statistics_Distributions} = (eval 'require Statistics::Distributions');	
 	$self->{installed}->{Bio_DB_Sam} = (eval 'require Bio::DB::Sam');
-		
-
+	
 	## optional
-#	$self->{installed}->{Math_Pari} = (eval 'require Math::Pari');
+	#$self->{installed}->{Math_Pari} = (eval 'require Math::Pari');
 
 	## optional, being phased out, seems to make no difference compared to Statistics::Distributions
 	#$self->{installed}->{Math_GSL_CDF} = (eval 'require Math::GSL::CDF');	
@@ -677,59 +683,59 @@ sub check_installed
 	if (!$self->{installed}->{SSAHA2})
 	{
 		$good_to_go = 0;
-		print STDERR "---> ERROR Required executable \"ssaha2\" is not installed.\n";
-		print STDERR "---> See http://www.sanger.ac.uk/resources/software/ssaha2/\n";
+		print STDERR "---> ERROR Required executable \"ssaha2\" not found.\n";
+		print STDERR "---> See http://www.sanger.ac.uk/resources/software/ssaha2\n";
 	}
 
+	## R version 2.1 required
 	if (!$self->{installed}->{R})
 	{
 		$good_to_go = 0;
-		print STDERR "---> ERROR Required executable \"R version 2.10+\" is not installed.\n";
-		print STDERR "---> See http://www.r-project.org/\n";
+		print STDERR "---> ERROR Required executable \"R\" not found.\n";
+		print STDERR "---> See http://www.r-project.org\n";
 	}
-
-	##version 2.10.0
-	if ($self->{installed_version}->{R} < 2010000)
+	elsif ( (!defined $self->{installed_version}->{R}) || ($self->{installed_version}->{R} < 2001000) )
 	{
-		my $R_version = int($self->{installed_version}->{R}/1000000) 
-			. "." . int($self->{installed_version}->{R}%1000000/1000)
-			. "." . int($self->{installed_version}->{R}%1000);
-			
+		my $R_version = 'unknown';
+		if ($self->{installed_version}->{R})
+		{
+			$R_version = int($self->{installed_version}->{R}/1000000) 
+				. "." . int($self->{installed_version}->{R}%1000000/1000)
+				. "." . int($self->{installed_version}->{R}%1000);
+		}
+		
 		$good_to_go = 0;
-		print STDERR "---> ERROR Required executable \"R version 2.10.0+\" is not installed.\n";
+		print STDERR "---> ERROR Required executable \"R version 2.1.0 or later\" not found.\n";
 		print STDERR "---> Your version is $R_version\n";
-		print STDERR "---> See http://www.r-project.org/\n";
+		print STDERR "---> See http://www.r-project.org\n";
 	}
-	
-	
 	
 	if (!$self->{installed}->{samtools})
 	{
 		$good_to_go = 0;
-		print STDERR "---> ERROR Required executable \"samtools\" is not installed.\n";
+		print STDERR "---> ERROR Required executable \"samtools\" not found.\n";
 		print STDERR "---> This should have been installed by the breseq installer.\n";
 	}
 	
 	if (!$self->{installed}->{bioperl})
 	{
 		$good_to_go = 0;
-		print STDERR "---> ERROR Required \"Bioperl\" modules not installed.\n";
-		print STDERR "---> They should have been installed by the breseq installer.\n";
+		print STDERR "---> ERROR Required \"Bioperl\" modules not found.\n";
+		print STDERR "---> See http://www.bioperl.org\n";
 	}
 
 	if (!$self->{installed}->{Bio_DB_Sam})
 	{
 		$good_to_go = 0;
-		print STDERR "---> ERROR Required Perl module \"Bio::DB::Sam\" not installed.\n";
+		print STDERR "---> ERROR Required Perl module \"Bio::DB::Sam\" not found.\n";
 		print STDERR "---> This module should have been installed by the breseq installer.\n";
 	}
 	
 	if ( ($self->{polymorphism_prediction} && !$self->{installed}->{Statistics_Distributions}) )
 	{
 		$good_to_go = 0;
-		print STDERR "---> WARNING! Perl module Statistics::Distributions not installed.\n";
+		print STDERR "---> ERROR Perl module Statistics::Distributions not found.\n";
 		print STDERR "---> Required for polymorphism prediction.\n";
-		print STDERR "---> This module should have been installed by the breseq installer.\n";		
 	}
 	
 	die "\n" if (!$good_to_go);

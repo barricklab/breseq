@@ -71,9 +71,11 @@ if (window_end == -1)
 }
 
 if (pdf_output == 0) {
-	bitmap(out_file, height=500, width=900, type = "png16m", units = "px", res = 72, pointsize=18, taa=4, gaa=2)
+	## taa=4, gaa=2 options NOT compatible with earlier R versions!
+	## units = "px" NOT compatible with even earlier R versions!
+	bitmap(out_file, height=6, width=11, type = "png16m", res = 72, pointsize=16)
 } else {
-	pdf(out_file, height=5, width=9)
+	pdf(out_file, height=6, width=11)
 }
 
 ### We use a blank graph for the legend!!
@@ -105,7 +107,7 @@ par(mar=c(0.5,3,0.1,0.5));
 barplot(0,0, axes=FALSE)
 
 if (total_only == 0) {
-	legend( "bottom" , cex=0.85, c("unique total", "unique top", "unique bottom ", "repeat total", "repeat top","repeat bottom"), pch=-1, horiz=T, col="black", fill=c("blue", "cyan", "purple", "red", "yellow", "orange"), bty="n")
+	legend( "bottom" , cex=0.75, c("unique total", "unique top", "unique bottom ", "repeat total", "repeat top","repeat bottom"), pch=-1, horiz=T, col="black", fill=c("blue", "cyan", "purple", "red", "yellow", "orange"), bty="n")
 } else {
 	legend( "bottom" , cex=0.85, c("unique total", "repeat total"), pch=-1, horiz=T, col="black", fill=c("blue", "red"), bty="n")
 }
