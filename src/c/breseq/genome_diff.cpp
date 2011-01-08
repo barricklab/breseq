@@ -17,7 +17,10 @@ LICENSE AND COPYRIGHT
 
 #include "breseq/genome_diff.h"
 #include <boost/algorithm/string.hpp>
+#include <boost/assign/list_of.hpp>
 #include <fstream>
+
+using namespace breseq;
 
 // Common keywords used for diff entries:
 const char* breseq::TYPE="type";
@@ -42,10 +45,21 @@ const char* breseq::REJECT="reject";
 const char* breseq::REF_COV="ref_cov";
 const char* breseq::NEW_COV="new_cov";
 const char* breseq::TOT_COV="tot_cov";
+const char* breseq::ERROR="error";
 
 // Types of diff entries:
+const char* breseq::SNP="SNP";
+const char* breseq::SUB="SUB";
+const char* breseq::DEL="DEL";
+const char* breseq::INS="INS";
+const char* breseq::MOB="MOB";
+const char* breseq::AMP="AMP";
+const char* breseq::INV="INV";
+const char* breseq::CON="CON";
+
 const char* breseq::RA="RA";
 const char* breseq::MC="MC";
+const char* breseq::JC="JC";
 const char* breseq::UN="UN";
 
 //our $line_specification = {
@@ -137,6 +151,22 @@ void breseq::diff_entry::marshal(field_list_t& s) {
 	}
 }
 
+/*! Add reject reason to diff entry.
+ */
+void breseq::add_reject_reason(diff_entry& de, const std::string &reason) {
+
+  if (de._fields.find(REJECT) == de._fields.end()) {
+      de[REJECT] = reason;
+  }
+  // exists already, make comma separated list
+  else {
+    std::string& reject = boost::get<std::string>(de[REJECT]);
+    reject += ",";
+    reject +=reason; 
+  }
+
+}
+
 
 /*! Output operator for a diff entry.
  */
@@ -196,11 +226,100 @@ void breseq::genome_diff::read(const std::string& filename) {
 }
 
 
+std::map<std::string, sort_fields_item> diff_entry_sort_fields 
+  = boost::assign::map_list_of
+  (SNP, sort_fields_item(1, SEQ_ID, POSITION))
+  (SUB, sort_fields_item(1, SEQ_ID, POSITION))
+  (DEL, sort_fields_item(1, SEQ_ID, POSITION))
+  (INS, sort_fields_item(1, SEQ_ID, POSITION))
+  (MOB, sort_fields_item(1, SEQ_ID, POSITION))
+  (AMP, sort_fields_item(1, SEQ_ID, POSITION))
+  (INV, sort_fields_item(1, SEQ_ID, POSITION))
+  (CON, sort_fields_item(1, SEQ_ID, POSITION))
+  (RA,  sort_fields_item(2, SEQ_ID, POSITION))
+  (MC,  sort_fields_item(2, SEQ_ID, START))
+  (JC,  sort_fields_item(2, "side_1_seq_id", "side_1_position"))
+  (UN,  sort_fields_item(3, SEQ_ID, START))
+;
+
+
+std::map<std::string, uint8_t> sort_order
+  = boost::assign::map_list_of
+  (SNP, 2)
+  (SUB, 4)
+  (DEL, 1)
+  (INS, 3)
+  (MOB, 5)
+  (AMP, 6)
+  (INV, 7)
+  (CON, 8)
+  (RA,  9)
+  (MC,  10)
+  (JC,  11)
+  (UN,  12)
+;
+
+
+
+/*! Write this genome diff to a file.
+ */
+bool breseq::diff_entry_sort(boost::shared_ptr<diff_entry> a, boost::shared_ptr<diff_entry> b) {
+
+  std::string a_type = a->_type;
+  std::string b_type = b->_type;
+
+  sort_fields_item a_sort_fields = diff_entry_sort_fields[a_type];
+  sort_fields_item b_sort_fields = diff_entry_sort_fields[b_type];
+  
+  
+  if (a_sort_fields._f1 < b_sort_fields._f1) {
+    return true;
+  } else if (a_sort_fields._f1 > b_sort_fields._f1) {
+    return false;
+  }
+  
+  std::string a_sort_field_2 = boost::get<std::string>((*a)[a_sort_fields._f2]);
+  std::string b_sort_field_2 = boost::get<std::string>((*b)[b_sort_fields._f2]);;
+  
+  if (a_sort_field_2 < b_sort_field_2) {
+    return true;
+  } else if (a_sort_field_2 > b_sort_field_2) {
+    return false;
+  }  
+
+  uint32_t a_sort_field_3 = boost::get<uint32_t>((*a)[a_sort_fields._f3]);
+  uint32_t b_sort_field_3 = boost::get<uint32_t>((*b)[b_sort_fields._f3]);;
+  
+  if (a_sort_field_3 < b_sort_field_3) {
+    return true;
+  } else if (a_sort_field_3 > b_sort_field_3) {
+    return false;
+  }  
+
+
+  uint8_t a_sort_order = sort_order[a_type];
+  uint8_t b_sort_order = sort_order[b_type];
+
+  if (a_sort_order < b_sort_order) {
+    return true;
+  } else if (a_sort_order > b_sort_order) {
+    return false;
+  } 
+  
+  return false;
+}
+
+
+
 /*! Write this genome diff to a file.
  */
 void breseq::genome_diff::write(const std::string& filename) {
 	std::ofstream ofs(filename.c_str());
 	ofs << "#=GENOME_DIFF 1.0" << std::endl;
+  
+  // sort
+  std::sort(_entry_list.begin(), _entry_list.end(), diff_entry_sort);
+  
 	for(entry_list_t::iterator i=_entry_list.begin(); i!=_entry_list.end(); ++i) {
 		ofs << (**i) << std::endl;
 	}

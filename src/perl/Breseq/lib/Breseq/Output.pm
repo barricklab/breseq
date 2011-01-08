@@ -221,7 +221,7 @@ sub html_footer
 
 sub html_compare
 {
-	my ($settings, $file_name, $title, $gd, $one_ref_seq, $gd_name_list_ref) = @_;
+	my ($settings, $file_name, $title, $gd, $one_ref_seq, $gd_name_list_ref, $options) = @_;
 
 	open HTML, ">$file_name" or die "Could not open file: $file_name";    
 
@@ -232,7 +232,7 @@ sub html_compare
 	
 	my @muts = $gd->mutation_list;
 	
-	print HTML html_mutation_table_string($settings, $gd, \@muts, undef, undef, $one_ref_seq, $gd_name_list_ref, {repeat_header=>5});
+	print HTML html_mutation_table_string($settings, $gd, \@muts, undef, undef, $one_ref_seq, $gd_name_list_ref, $options);
 
 	print HTML end_html;
 	close HTML;
@@ -483,10 +483,13 @@ sub formatted_mutation_annotation
 
 sub html_mutation_table_string
 {	
-	# Recognized options are
+	# Recognized $settings are
+	# shade_frequencies => 1, instead of frequences, shade boxes
+	
+	# Recognized $options are
 	# repeat_header => 15 (which means repeat the header line after this many mutations)
 
-	my ($settings, $gd, $list_ref, $relative_link, $legend_row, $one_ref_seq, $gd_name_list_ref, $options) = @_;
+	our ($settings, $gd, $list_ref, $relative_link, $legend_row, $one_ref_seq, $gd_name_list_ref, $options) = @_;
 	$relative_link = '' if (!defined $relative_link);
 	my $output_str = '';
 
@@ -516,12 +519,12 @@ sub html_mutation_table_string
 	
 	my $total_cols = 5 + scalar @freq_header_list;
 	$total_cols += 1 if (!$one_ref_seq);
-	$total_cols += 1 if (!defined $gd_name_list_ref); ## evidence column 
+	$total_cols += 1 if (!$settings->{no_evidence});  ## evidence column 
 	$output_str.= Tr(th({-colspan => $total_cols, -align => "left", -class=>"mutation_header_row"}, $header_text));
 	
 	my $header_str = '';
 	$header_str.= start_Tr();
-	$header_str.= th("evidence") if (!defined $gd_name_list_ref); 
+	$header_str.= th("evidence") if (!$settings->{no_evidence}); 
 	$header_str.= th(nonbreaking("seq id")) if (!$one_ref_seq); 
 		
 	$header_str .= th(
@@ -548,10 +551,8 @@ sub html_mutation_table_string
 		$output_str.= $header_str if (($row_num != 0) && (defined $options->{repeat_header}) && ($row_num % $options->{repeat_header} == 0));
 		$row_num++;
 		
-		
-		
 		my $evidence_string = '';
-		if (!defined $gd_name_list_ref) 
+		if (!$settings->{no_evidence}) 
 		{
 			my $already_added_RA;
 			EVIDENCE: foreach my $evidence_item ($gd->mutation_evidence_list($mut))
@@ -568,15 +569,21 @@ sub html_mutation_table_string
 		
 		sub freq_to_string
 		{
-			my ($mut, $key) = @_;
-			$key = "frequency" if (!defined $key);
-			my $freq = $mut->{$key};
+			my ($freq) = @_;
+			
 			$freq = 1 if (!defined $freq);
 			return 'H' if ($freq eq 'H');
 			return '?' if ($freq eq '?');
 			return '' if ($freq == 0);
-			my $frequency_string = sprintf("%4.1f%%", $freq*100);
-			$frequency_string = "100%" if ($freq == 1); # No "100.0%"
+			my $frequency_string;
+			if ($freq == 1)
+			{
+				$frequency_string = "100%";
+			}
+			else
+			{ 
+				$frequency_string = sprintf("%4.1f%%", $freq*100);
+			}
 			return $frequency_string;
 		}
 		
@@ -587,7 +594,23 @@ sub html_mutation_table_string
 			
 			foreach my $freq (@freq_list)
 			{
-				$output_str .= td({align=>"right"}, $freq);
+				if ($settings->{shade_frequencies})
+				{
+					my $bgcolor;
+					$bgcolor = 'Blue' if ($freq == 1);
+					if (defined $bgcolor)
+					{
+						$output_str .= td({align=>"right", bgcolor=>$bgcolor}, '&nbsp;');
+					}
+					else
+					{
+						$output_str .= td({align=>"right"}, '&nbsp;');
+					}
+				}
+				else
+				{
+					$output_str .= td({align=>"right"}, freq_to_string($freq));
+				}
 			}
 			return $output_str;
 		}
@@ -601,23 +624,23 @@ sub html_mutation_table_string
 		if (defined $gd_name_list_ref)
 		{
 			#"_freq_[name]" keys were made within GenomeDiff structure				
-			@freq_list = map { freq_to_string($mut, "frequency_$_")  } @$gd_name_list_ref;	
+			@freq_list = map { $mut->{"frequency_$_"} } @$gd_name_list_ref;	
 			$row_class = "alternate_table_row_" . ($row_num % 2);
 		}
 		# (3) We want a single column (polymorphism prediction)
 		elsif ($settings->{polymorphism_prediction})
-		{
+		{			
 			if ((defined $mut->{frequency}) && ($mut->{frequency} != 1))
 			{
 				$row_class = "polymorphism_table_row";	
 			}			
-			push @freq_list, freq_to_string($mut);
+			push @freq_list, $mut->{frequency};
 		}
 		
 		if ($mut->{type} eq 'SNP')
 		{
 			$output_str.= start_Tr({-class=>$row_class});	
-			$output_str.= td({align=>"center"}, $evidence_string) if (!defined $gd_name_list_ref);
+			$output_str.= td({align=>"center"}, $evidence_string) if (!$settings->{no_evidence}); 
 			$output_str.= td({align=>"center"}, nonbreaking($mut->{seq_id})) if (!$one_ref_seq); 
 			$output_str.= td({align=>"right"}, commify($mut->{position}));
 			$output_str.= td({align=>"center"}, "$mut->{_ref_seq}&rarr;$mut->{new_seq}");
@@ -630,7 +653,7 @@ sub html_mutation_table_string
 		elsif ($mut->{type} eq 'INS')
 		{
 			$output_str.= start_Tr({-class=>$row_class});	
-			$output_str.= td({align=>"center"}, $evidence_string) if (!defined $gd_name_list_ref);
+			$output_str.= td({align=>"center"}, $evidence_string) if (!$settings->{no_evidence}); 
 			$output_str.= td({align=>"center"}, nonbreaking($mut->{seq_id})) if (!$one_ref_seq); 
 			$output_str.= td({align=>"right"}, commify($mut->{position}));
 			$output_str.= td({align=>"center"}, "+$mut->{new_seq}");
@@ -643,7 +666,7 @@ sub html_mutation_table_string
 		elsif ($mut->{type} eq 'DEL')
 		{
 			$output_str.= start_Tr({-class=>$row_class});	
-			$output_str.= td({align=>"center"}, $evidence_string) if (!defined $gd_name_list_ref);
+			$output_str.= td({align=>"center"}, $evidence_string) if (!$settings->{no_evidence}); 
 			$output_str.= td({align=>"center"}, nonbreaking($mut->{seq_id})) if (!$one_ref_seq); 
 			$output_str.= td({align=>"right"}, commify($mut->{position}));
 			$output_str.= td({align=>"center"}, nonbreaking("&Delta;" . commify($mut->{size}) . " bp"));
@@ -660,7 +683,7 @@ sub html_mutation_table_string
 		elsif ($mut->{type} eq 'SUB')
 		{
 			$output_str.= start_Tr({-class=>$row_class});	
-			$output_str.= td({align=>"center"}, $evidence_string) if (!defined $gd_name_list_ref);
+			$output_str.= td({align=>"center"}, $evidence_string) if (!$settings->{no_evidence}); 
 			$output_str.= td({align=>"center"}, nonbreaking($mut->{seq_id})) if (!$one_ref_seq); 
 			$output_str.= td({align=>"right"}, commify($mut->{position}));
 			$output_str.= td({align=>"center"}, nonbreaking("$mut->{size} bp&rarr;$mut->{new_seq}"));
@@ -675,7 +698,7 @@ sub html_mutation_table_string
 		{
 			
 			$output_str.= start_Tr({-class=>$row_class});	
-			$output_str.= td({align=>"center"}, $evidence_string) if (!defined $gd_name_list_ref);
+			$output_str.= td({align=>"center"}, $evidence_string) if (!$settings->{no_evidence}); 
 			$output_str.= td({align=>"center"}, nonbreaking($mut->{seq_id})) if (!$one_ref_seq); 
 			$output_str.= td({align=>"right"}, commify($mut->{position}));
 			$output_str.= td({align=>"center"}, nonbreaking("$mut->{size} bp&rarr;$mut->{region}"));
@@ -689,7 +712,7 @@ sub html_mutation_table_string
 		elsif ($mut->{type} eq 'MOB')
 		{
 			$output_str.= start_Tr({-class=>$row_class});	
-			$output_str.= td({align=>"center"}, $evidence_string) if (!defined $gd_name_list_ref);
+			$output_str.= td({align=>"center"}, $evidence_string) if (!$settings->{no_evidence}); 
 			$output_str.= td({align=>"center"}, nonbreaking($mut->{seq_id})) if (!$one_ref_seq); 
 			$output_str.= td({align=>"right"}, commify($mut->{position}));
 			my $s;
@@ -723,7 +746,7 @@ sub html_mutation_table_string
 		{
 			
 			$output_str.= start_Tr({-class=>$row_class});	
-			$output_str.= td({align=>"center"}, $evidence_string) if (!defined $gd_name_list_ref);
+			$output_str.= td({align=>"center"}, $evidence_string) if (!$settings->{no_evidence}); 
 			$output_str.= td({align=>"center"}, nonbreaking($mut->{seq_id})) if (!$one_ref_seq); 
 			$output_str.= td({align=>"right"}, commify($mut->{position}));
 			$output_str.= td({align=>"center"}, nonbreaking(commify($mut->{size}) . " bp inversion"));
@@ -737,7 +760,7 @@ sub html_mutation_table_string
 		elsif ($mut->{type} eq 'AMP')
 		{				
 			$output_str.= start_Tr({-class=>$row_class});	
-			$output_str.= td({align=>"center"}, $evidence_string) if (!defined $gd_name_list_ref);
+			$output_str.= td({align=>"center"}, $evidence_string) if (!$settings->{no_evidence}); 
 			$output_str.= td({align=>"center"}, nonbreaking($mut->{seq_id})) if (!$one_ref_seq); 
 			$output_str.= td({align=>"right"}, commify($mut->{position}));
 			$output_str.= td({align=>"center"}, nonbreaking(commify($mut->{size}) . " bp x $mut->{new_copy_number}"));

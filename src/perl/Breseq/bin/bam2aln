@@ -76,7 +76,7 @@ use Getopt::Long;
 use Pod::Usage;
 
 my ($help, $man, $verbose);
-my ($bam_path, $fasta_path, $output_path);
+my ($bam_path, $fasta_path, $output_path, $table_mode);
 my $max_reads = 1000;
 GetOptions(
 	'help|?' => \$help, 'man' => \$man,
@@ -84,6 +84,7 @@ GetOptions(
 	'fasta|f=s' => \$fasta_path,
 	'output|o=s' => \$output_path,
 	'max-reads|n=s' => \$max_reads,
+	'table_mode|t' => \$table_mode,
 	'verbose|v' => \$verbose,
 ) or pod2usage(2);
 pod2usage(1) if $help;
@@ -104,7 +105,7 @@ die "No FASTA file (-f) defined. For help try:\nbam2aln -?\n" if (!$fasta_path);
 
 my $ao = Breseq::AlignmentOutput->new(-maximum_to_align=>$max_reads, -maximum_to_make_alignment=>0);
 
-foreach my $region (@regions)
+REGION: foreach my $region (@regions)
 {
 	#figure out the output file name
 	my $this_output_file = "$region.html";
@@ -120,6 +121,13 @@ foreach my $region (@regions)
 			die "Output directory (-o) does not exist: $output_path\n" if (!-d $output_path);
 			$this_output_file = "$output_path/$region.html";
 		}
+	}
+	
+	if ($table_mode)
+	{
+		$this_output_file =~ s/\.html$/\.tab/;
+		$ao->position_table($this_output_file, $bam_path, $fasta_path, $region, {'verbose'=>$verbose});	
+		next REGION;
 	}
 	
 	#make the alignment

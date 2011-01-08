@@ -51,7 +51,7 @@ X<-read.table(in_file, sep="\t", header=T)
 
 ##allocate output data frame
 Y<-data.frame(
-	log10_base_likelihood = 1:length(X$new_quals)
+	log10_base_likelihood = 1:length(X$best_quals)
 );
 
 qual_dist<-read.table(qual_file, sep="\t", header=F)
@@ -93,24 +93,24 @@ qual_pr <- function(qual_cdf = qual_cdf)
 
 #print(Y)
 
-if (length(X$new_quals) > 0)
+if (length(X$best_quals) > 0)
 {
-	for (i in 1:length(X$new_quals))
+	for (i in 1:length(X$best_quals))
 	{
 		Y$log10_base_likelihood[i] = X$log10_base_likelihood[i]
 	
 		#print (i);
-		new_quals_list <- strsplit(as.vector(X$new_quals[i]), ",");
-		new_quals <- as.numeric( new_quals_list[[1]] )
-		ref_quals_list <- strsplit(as.vector(X$ref_quals[i]), ",");
-		ref_quals <- as.numeric( ref_quals_list[[1]] )
+		best_quals_list <- strsplit(as.vector(X$best_quals[i]), ",");
+		best_quals <- as.numeric( best_quals_list[[1]] )
+		second_best_quals_list <- strsplit(as.vector(X$second_best_quals[i]), ",");
+		second_best_quals <- as.numeric( second_best_quals_list[[1]] )
 
 
 	## This code estimates the actual strand and quality score distribution as the total observed.
 	
-		max_qual = max(new_quals, ref_quals)
-		NQ = tabulate(new_quals, nbins=max_qual)
-		RQ = tabulate(ref_quals, nbins=max_qual)
+		max_qual = max(best_quals, second_best_quals)
+		NQ = tabulate(best_quals, nbins=max_qual)
+		RQ = tabulate(second_best_quals, nbins=max_qual)
 		TQ = NQ+RQ
 		
 		log10_qual_likelihood = log10(dmultinom(NQ, prob=TQ)) + log10(dmultinom(RQ, prob=TQ)) - log10(dmultinom(TQ, prob=TQ)) 
@@ -136,8 +136,8 @@ if (length(X$new_quals) > 0)
 	## count across the entire genome for all bases added together (doesn't take into account that there may be more low G's than A's, for example)	
 
 #		max_qual = length(qual_dist)
-#		NQ = tabulate(new_quals, nbins=max_qual)
-#		RQ = tabulate(ref_quals, nbins=max_qual)
+#		NQ = tabulate(best_quals, nbins=max_qual)
+#		RQ = tabulate(second_best_quals, nbins=max_qual)
 #		TQ = NQ+RQ
 #		EQ = RQ+1
 						
@@ -159,17 +159,17 @@ if (length(X$new_quals) > 0)
 		
 
 	## KS test for unusual qualities -- Rewrite to use cumulative distribution! = faster and more accurate
-	all_quals = c(ref_quals,new_quals);
+	all_quals = c(second_best_quals,best_quals);
 
 	options(warn=-1);
 
 	if (X$frequency[i] < 0.5)
 	{
-		poly_quals = new_quals;
+		poly_quals = best_quals;
 	}
 	else
 	{
-		poly_quals = ref_quals;
+		poly_quals = second_best_quals;
 	}
 
 ## This one tests the quality scores predicting a polymorphism agains the overall distribution
@@ -179,11 +179,11 @@ if (length(X$new_quals) > 0)
 #	Y$ks_quality_p_value_unusual_poly[i] <- ks_test_p_value_unusual
 
 
-#	ks_test_p_value_unusual <- ks.test(qual_dist_list, ref_quals, alternative = "less")
+#	ks_test_p_value_unusual <- ks.test(qual_dist_list, second_best_quals, alternative = "less")
 #	ks_test_p_value_unusual <- ks_test_p_value_unusual$p.value
 #	Y$ks_quality_p_value_unusual_ref[i] <- ks_test_p_value_unusual
 	
-#	ks_test_p_value_unusual <- ks.test(qual_dist_list, new_quals, alternative = "less")
+#	ks_test_p_value_unusual <- ks.test(qual_dist_list, best_quals, alternative = "less")
 #	ks_test_p_value_unusual <- ks_test_p_value_unusual$p.value
 #	Y$ks_quality_p_value_unusual_new[i] <- ks_test_p_value_unusual
 
@@ -194,7 +194,7 @@ if (length(X$new_quals) > 0)
 	## Oldest code that calculates bias p-values
 	
 		options(warn=-1);
-		ks_test_p_value <- ks.test(ref_quals, new_quals, alternative = "less")
+		ks_test_p_value <- ks.test(second_best_quals, best_quals, alternative = "less")
 		options(warn=0);
 		ks_test_p_value <- ks_test_p_value$p.value
 		Y$ks_quality_p_value[i] <- ks_test_p_value

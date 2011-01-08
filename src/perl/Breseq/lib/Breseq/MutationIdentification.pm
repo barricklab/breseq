@@ -61,7 +61,7 @@ sub identify_mutations
 	my $cident_mut = $settings->ctool('identify_mutations', 1);
 	
 	## fall back to perl if requested or if predicting polymorphisms
-	if ( (!$settings->{perl_identify_mutations}) && (!$settings->{polymorphism_prediction}) && (defined $cident_mut) )
+	if ( (!$settings->{perl_identify_mutations}) && (defined $cident_mut) )
 	{
 		my $coverage_fn = $settings->file_name('unique_only_coverage_distribution_file_name', {'@'=>""});
 		my $error_dir = `dirname $coverage_fn`;
@@ -95,15 +95,17 @@ sub identify_mutations
 		} else {
 			$cmdline .= " --predict_deletions 1"; # defaults TO predicting deletions.
 		}
-		if((defined $settings->{polymorphism_prediction}) && ($settings->{polymorphism_prediction})) {
-			$cmdline .= " --predict_polymorphisms 1";
-		} else {
-			$cmdline .= " --predict_polymorphisms 0"; # defaults to NOT predicting polymorphisms.
-		}
 		
 		if (defined $settings->{base_quality_cutoff})
 		{
-			$cmdline .= " --minimum-quality-score $settings->{base_quality_cutoff}";
+			$cmdline .= " --minimum_quality_score $settings->{base_quality_cutoff}";
+		}
+		
+		if ($settings->{polymorphism_prediction})
+		{
+			$cmdline .= " --predict_polymorphisms 1";
+			$cmdline .= " --polymorphism_cutoff $settings->{polymorphism_log10_e_value_cutoff}";
+			$cmdline .= " --polymorphism_frequency_cutoff $settings->{polymorphism_frequency_cutoff}";			
 		}
 
 		Breseq::Shared::system($cmdline);
@@ -137,7 +139,7 @@ sub identify_mutations
 		my $polymorphism_statistics_input_file_name = $settings->file_name('polymorphism_statistics_input_file_name');
 		open $polymorphism_statistics_input_fh, ">$polymorphism_statistics_input_file_name" or die "Could not open file: $polymorphism_statistics_input_file_name";
 		print $polymorphism_statistics_input_fh +join("\t",
-			'position', 'insert_position', 'frequency', 'log10_base_likelihood', 'new_top_strand', 'new_bot_strand', 'ref_top_strand', 'ref_bot_strand', 'new_quals', 'ref_quals'
+			'position', 'insert_position', 'frequency', 'log10_base_likelihood', 'new_top_strand', 'new_bot_strand', 'ref_top_strand', 'ref_bot_strand', 'best_quals', 'second_best_quals'
 		) . "\n";
 	}
 	
