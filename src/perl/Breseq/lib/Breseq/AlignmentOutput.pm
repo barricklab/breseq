@@ -53,6 +53,9 @@ our $base_colors_hash = {
 	'N' => [ "rgb(128,0,128)", "rgb(128,0,128)",   "rgb(128,0,128)",   "rgb(128,0,128)",   "rgb(128,0,128)", "rgb(128,0,128)" ],
 };
 
+## Workaround to avoid too many open files
+my %open_bam_files;
+
 sub new
 {
 	my($caller,@args) = @_;
@@ -119,6 +122,75 @@ sub text_alignment
 		$output .= _text_alignment_line($aligned_reference);
 	}
 	return $output;	
+}
+
+sub position_table
+{
+	my ($self, $output_file, $bam_path, $fasta_path, $region, $options) = @_;	
+	## Start -- Workaround to avoid too many open files
+	if (!defined $open_bam_files{$bam_path.$fasta_path})
+	{
+		$open_bam_files{$bam_path.$fasta_path} = Bio::DB::Sam->new(-bam =>$bam_path, -fasta=>$fasta_path);
+	}
+	my $bam = $open_bam_files{$bam_path.$fasta_path};
+	## End -- Workaround to avoid too many open files
+	
+	our ($seq_id, $start, $end, $insert_start, $insert_end) = Breseq::Shared::region_to_coords($region, $bam);
+	$region = "$seq_id:$start-$end";
+	
+	our $output_fh;
+	open $output_fh, ">$output_file" or $self->throw("Could not open output file: $output_file\n");
+	
+	#create the alignment via "pileup"
+	my $pileup_function = sub {
+    	my ($seq_id,$pos,$pileup) = @_;
+
+		return if ($pos > $end) || ($pos < $start);
+
+		#get rid of redundant reads
+		@$pileup = grep { $_->alignment->aux_get('X1') == 1 } @$pileup;		
+		
+		## Find the maximum indel count
+		## We will add gaps to reads with an indel count lower than this.
+		my $max_indel = 0;
+		ALIGNMENT: foreach my $p (@$pileup) 
+		{
+			$max_indel = $p->indel if ($p->indel > $max_indel);
+		}
+		
+		for (my $i=0; $i<=$max_indel; $i++)
+		{
+			next if (($pos == $start) && ($i < $insert_start));
+			next if (($pos == $end) && ($i > $insert_end));
+			
+			print $output_fh "POSITION: $pos INSERT COUNT: $i\n";
+			print $output_fh +join("\t", "base", "quality", "left", "right") . "\n";
+			ALIGNMENT: foreach my $p (@$pileup) 
+			{
+				my $a = $p->alignment;
+				my $indel = $p->indel;
+		
+				my $left_flanking = $pos - $a->start;
+				my $right_flanking = $a->end - $pos;
+							
+				if ($i > $indel)
+				{
+					print $output_fh ".\t255\t$left_flanking\t$right_flanking\n";	
+				}
+				else
+				{
+					my $quality = $a->qscore->[$p->qpos+$i];
+					my $base  = substr($a->qseq, $p->qpos+$i,1);
+					print $output_fh "$base\t$quality\t$left_flanking\t$right_flanking\n";	
+				}
+			}
+		}			
+	};
+	
+	$bam->pileup($region, $pileup_function);
+		
+		
+		
 }
 
 sub _strand_char
@@ -279,10 +351,6 @@ sub _html_alignment_line
 	
 	return $output;
 }
-
-
-## Workaround to avoid too many open files
-my %open_bam_files;
 
 sub create_alignment
 {

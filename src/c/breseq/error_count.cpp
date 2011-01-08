@@ -276,7 +276,8 @@ breseq::error_count_results::error_count_results(const std::string& input_dir, c
 	char bases[] = {'A', 'T', 'C', 'G', '.'}; // order is important!!! must match the header from the error rates file...
 	
 	_error_rates.resize(readfiles.size());
-	
+	_log10_error_rates.resize(readfiles.size());
+
 	// load the error rates:
 	for(std::size_t i=0; i<readfiles.size(); ++i) {
 		string filename(input_dir + readfiles[i] + ".error_rates.tab");
@@ -284,7 +285,8 @@ breseq::error_count_results::error_count_results(const std::string& input_dir, c
 		in.ignore(1024, '\n'); // get rid of header line.
 		
 		error_map_t& emt = _error_rates[i];
-		
+		error_map_t& log10_emt = _log10_error_rates[i];
+
 		while(!in.eof()) {
 			int quality;
 			in >> quality;
@@ -294,7 +296,8 @@ breseq::error_count_results::error_count_results(const std::string& input_dir, c
       if (!in) break;
       
 			error_map_t::iterator em = emt.insert(make_pair(static_cast<uint8_t>(quality),base_error_t())).first;
-			
+			error_map_t::iterator log10_em = log10_emt.insert(make_pair(static_cast<uint8_t>(quality),base_error_t())).first;
+
 			for(int i=0; i<5; ++i) {
 				for(int j=0; j<5; ++j) {
 					string k; k += bases[i]; k += bases[j];
@@ -303,9 +306,14 @@ breseq::error_count_results::error_count_results(const std::string& input_dir, c
           if (r == 0) r = 1e-256;
           double one_minus_pr = 1.0-r;
           if (one_minus_pr == 0) one_minus_pr = 1e-256;
-					double cor = log10(r);
-					double err = log10(one_minus_pr);
-					em->second[k] = make_pair(err,cor);
+          
+          double cor = r;
+					double err = one_minus_pr;
+          em->second[k] = make_pair(err,cor);
+          
+					double log10_cor = log10(r);
+					double log10_err = log10(one_minus_pr);
+					log10_em->second[k] = make_pair(log10_err,log10_cor);
           
           //std::cerr << r << std::endl;
 				}
@@ -315,21 +323,32 @@ breseq::error_count_results::error_count_results(const std::string& input_dir, c
 	}
 }
 
-/*! Return the error rate for the given base pair, quality, and FASTQ file index.
+/*! Return the log10 error rate for the given base pair, quality, and FASTQ file index.
  */
 double breseq::error_count_results::log10_error_rates(int32_t fastq_file_index, uint8_t quality, const std::string& base_key) {
 	//  fail if this doesn't exist?
-	assert((std::size_t)fastq_file_index<_error_rates.size());
-	assert(_error_rates[fastq_file_index].find(quality)!=_error_rates[fastq_file_index].end());
-	assert(_error_rates[fastq_file_index][quality].find(base_key)!=_error_rates[fastq_file_index][quality].end());
+	assert((std::size_t)fastq_file_index<_log10_error_rates.size());
+	assert(_log10_error_rates[fastq_file_index].find(quality)!=_log10_error_rates[fastq_file_index].end());
+	assert(_log10_error_rates[fastq_file_index][quality].find(base_key)!=_log10_error_rates[fastq_file_index][quality].end());
 	
-	return _error_rates[fastq_file_index][quality][base_key].first;
+	return _log10_error_rates[fastq_file_index][quality][base_key].first;
 }
 
 
-/*! Return the correct rate for the given base pair, quality, and FASTQ file index.
+/*! Return the log10 correct rate for the given base pair, quality, and FASTQ file index.
  */
 double breseq::error_count_results::log10_correct_rates(int32_t fastq_file_index, uint8_t quality, const std::string& base_key) {
+		//  fail if this doesn't exist?
+	assert((std::size_t)fastq_file_index<_log10_error_rates.size());
+	assert(_log10_error_rates[fastq_file_index].find(quality)!=_log10_error_rates[fastq_file_index].end());
+	assert(_log10_error_rates[fastq_file_index][quality].find(base_key)!=_log10_error_rates[fastq_file_index][quality].end());
+	
+	return _log10_error_rates[fastq_file_index][quality][base_key].second;
+}
+
+/*! Return the log10 correct rate for the given base pair, quality, and FASTQ file index.
+ */
+double breseq::error_count_results::correct_rates(int32_t fastq_file_index, uint8_t quality, const std::string& base_key) {
 		//  fail if this doesn't exist?
 	assert((std::size_t)fastq_file_index<_error_rates.size());
 	assert(_error_rates[fastq_file_index].find(quality)!=_error_rates[fastq_file_index].end());
@@ -341,5 +360,5 @@ double breseq::error_count_results::log10_correct_rates(int32_t fastq_file_index
 /*! Return the pair of (correct,error) rates.
  */
 const std::pair<double,double>& breseq::error_count_results::log10_rates(int32_t fastq_file_index, uint8_t quality, const std::string& base_key) {
-	return _error_rates[fastq_file_index][quality][base_key];
+	return _log10_error_rates[fastq_file_index][quality][base_key];
 }

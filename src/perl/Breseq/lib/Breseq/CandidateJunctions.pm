@@ -44,7 +44,6 @@ use Breseq::AlignmentCorrection;
 use Data::Dumper;
 
 ### constants loaded locally from settings for convenience
-#my $required_unique_length_per_side; OLD
 my $required_both_unique_length_per_side;
 my $required_one_unique_length_per_side;
 my $maximum_inserted_junction_sequence_length;
@@ -65,9 +64,7 @@ sub identify_candidate_junctions
 	my $verbose = 0;
 	our ($settings, $summary, $ref_seq_info) = @_;
 
-	#set up some options that are global to this module
-	#$required_unique_length_per_side = $settings->{required_unique_length_per_side}; #OLD
-	
+	#set up some options that are global to this module	
 	$required_both_unique_length_per_side = $settings->{required_both_unique_length_per_side};
 	$required_one_unique_length_per_side = $settings->{required_one_unique_length_per_side};
 	$maximum_inserted_junction_sequence_length = $settings->{maximum_inserted_junction_sequence_length};

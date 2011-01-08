@@ -105,7 +105,8 @@ sub new
 		'max-rejected-polymorphisms-to-show=s' => \$self->{max_rejected_polymorphisms_to_show},
 		'max-rejected-junctions-to-show=s' => \$self->{max_rejected_junctions_to_show},	
 		'force-quality-scores' => \$self->{accept_any_quality_scores},
-		'keep-all-intermediates' => \$self->{keep_all_intermediates},									
+		'keep-all-intermediates' => \$self->{keep_all_intermediates},
+		'shade-frequencies' => \$self->{shade_frequencies},									
 	) or pod2usage(2);
 
 	pod2usage(1) if $help;
@@ -731,11 +732,11 @@ sub check_installed
 		print STDERR "---> This module should have been installed by the breseq installer.\n";
 	}
 	
-	if ( ($self->{polymorphism_prediction} && !$self->{installed}->{Statistics_Distributions}) )
+	if ( ($self->{perl_identify_mutations} && $self->{polymorphism_prediction} && !$self->{installed}->{Statistics_Distributions}) )
 	{
 		$good_to_go = 0;
 		print STDERR "---> ERROR Perl module Statistics::Distributions not found.\n";
-		print STDERR "---> Required for polymorphism prediction.\n";
+		print STDERR "---> Required for Perl polymorphism prediction.\n";
 	}
 	
 	die "\n" if (!$good_to_go);

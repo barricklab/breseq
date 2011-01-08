@@ -24,20 +24,30 @@
 /* End PBXAggregateTarget section */
 
 /* Begin PBXBuildFile section */
-		421ACF7E1170E5CA00C2EB85 /* libboost_program_options-mt.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 421ACF7D1170E5CA00C2EB85 /* libboost_program_options-mt.a */; };
-		4247E8091268E233006A6D78 /* alignment.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 4247E7801268E175006A6D78 /* alignment.cpp */; };
-		4247E80A1268E233006A6D78 /* error_count.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 4247E7A81268E175006A6D78 /* error_count.cpp */; };
-		4247E80B1268E233006A6D78 /* genome_diff.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 4247E7AA1268E175006A6D78 /* genome_diff.cpp */; };
-		4247E80C1268E233006A6D78 /* identify_mutations.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 4247E7AB1268E175006A6D78 /* identify_mutations.cpp */; };
-		4247E80D1268E233006A6D78 /* pileup.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 4247E7AF1268E175006A6D78 /* pileup.cpp */; };
-		4247E80E1268E233006A6D78 /* pileup_base.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 4247E7B01268E175006A6D78 /* pileup_base.cpp */; };
-		4247E8121268E9E8006A6D78 /* error_count_cmdline.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 4247E7A91268E175006A6D78 /* error_count_cmdline.cpp */; };
-		4247E8131268E9EE006A6D78 /* identify_mutations_cmdline.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 4247E7AC1268E175006A6D78 /* identify_mutations_cmdline.cpp */; };
 		4247E82C1268EC3E006A6D78 /* libz.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 421ACFAC1170F05500C2EB85 /* libz.a */; };
-		4247E82D1268EC3E006A6D78 /* libbam.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 421ACF571170E00A00C2EB85 /* libbam.a */; };
 		42B6ED6911C6879B0075F8A3 /* libbreseq.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 42BA690C1189B7FD000B00B1 /* libbreseq.a */; };
-		42B6EDC111C69CC70075F8A3 /* libbreseq.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 42BA690C1189B7FD000B00B1 /* libbreseq.a */; };
-		42B6EDC311C69CC70075F8A3 /* libboost_program_options-mt.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 421ACF7D1170E5CA00C2EB85 /* libboost_program_options-mt.a */; };
+		7087728812BC1660000F9B57 /* alignment.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 7087728712BC1660000F9B57 /* alignment.cpp */; };
+		7087728E12BC169C000F9B57 /* error_count.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 7087728912BC169C000F9B57 /* error_count.cpp */; };
+		7087728F12BC169C000F9B57 /* genome_diff.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 7087728A12BC169C000F9B57 /* genome_diff.cpp */; };
+		7087729012BC169C000F9B57 /* identify_mutations.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 7087728B12BC169C000F9B57 /* identify_mutations.cpp */; };
+		7087729112BC169C000F9B57 /* pileup_base.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 7087728C12BC169C000F9B57 /* pileup_base.cpp */; };
+		7087729212BC169C000F9B57 /* pileup.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 7087728D12BC169C000F9B57 /* pileup.cpp */; };
+		7087730512BC18E9000F9B57 /* libbam.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 7087730412BC18E9000F9B57 /* libbam.a */; };
+		7087731012BC19BA000F9B57 /* error_count_cmdline.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 7087730F12BC19BA000F9B57 /* error_count_cmdline.cpp */; };
+		7087731312BC19F4000F9B57 /* identify_mutations_cmdline.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 7087731112BC19C5000F9B57 /* identify_mutations_cmdline.cpp */; };
+		7087748212BC1C31000F9B57 /* alignment.h in Headers */ = {isa = PBXBuildFile; fileRef = 7087747512BC1C06000F9B57 /* alignment.h */; };
+		7087748312BC1C31000F9B57 /* common.h in Headers */ = {isa = PBXBuildFile; fileRef = 7087747612BC1C06000F9B57 /* common.h */; };
+		7087748412BC1C31000F9B57 /* error_count.h in Headers */ = {isa = PBXBuildFile; fileRef = 7087747712BC1C06000F9B57 /* error_count.h */; };
+		7087748512BC1C31000F9B57 /* genome_diff.h in Headers */ = {isa = PBXBuildFile; fileRef = 7087747812BC1C06000F9B57 /* genome_diff.h */; };
+		7087748612BC1C31000F9B57 /* identify_mutations.h in Headers */ = {isa = PBXBuildFile; fileRef = 7087747912BC1C06000F9B57 /* identify_mutations.h */; };
+		7087748712BC1C31000F9B57 /* pileup.h in Headers */ = {isa = PBXBuildFile; fileRef = 7087747A12BC1C06000F9B57 /* pileup.h */; };
+		7087748812BC1C31000F9B57 /* pileup_base.h in Headers */ = {isa = PBXBuildFile; fileRef = 7087747B12BC1C06000F9B57 /* pileup_base.h */; };
+		708774D712BC21B9000F9B57 /* libboost_program_options-mt.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 421ACF7D1170E5CA00C2EB85 /* libboost_program_options-mt.a */; };
+		708774D812BC21BA000F9B57 /* libboost_program_options-mt.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 421ACF7D1170E5CA00C2EB85 /* libboost_program_options-mt.a */; };
+		708774E012BC2260000F9B57 /* libbreseq.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 42BA690C1189B7FD000B00B1 /* libbreseq.a */; };
+		70A5BC1412BE6EBF005EFE9F /* libboost_program_options-mt.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 421ACF7D1170E5CA00C2EB85 /* libboost_program_options-mt.a */; };
+		70A5BC1512BE6EBF005EFE9F /* libbreseq.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 42BA690C1189B7FD000B00B1 /* libbreseq.a */; };
+		70A5BC2612BE6F21005EFE9F /* calc_trims_cmdline.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 70A5BC2512BE6F21005EFE9F /* calc_trims_cmdline.cpp */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -97,111 +107,128 @@
 			remoteGlobalIDString = 42BA690B1189B7FD000B00B1;
 			remoteInfo = breseq;
 		};
+		70A5BC0E12BE6EBF005EFE9F /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 421ACEB71170DB9600C2EB85 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 421ACF201170DC4400C2EB85;
+			remoteInfo = samtools;
+		};
+		70A5BC1012BE6EBF005EFE9F /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 421ACEB71170DB9600C2EB85 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 42BA690B1189B7FD000B00B1;
+			remoteInfo = breseq;
+		};
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
 		421ACF2F1170DF1800C2EB85 /* error_count */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = error_count; sourceTree = BUILT_PRODUCTS_DIR; };
-		421ACF571170E00A00C2EB85 /* libbam.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = libbam.a; path = "samtools-0.1.7a/.libs/libbam.a"; sourceTree = "<group>"; };
-		421ACF7D1170E5CA00C2EB85 /* libboost_program_options-mt.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = "libboost_program_options-mt.a"; path = "/opt/local/lib/libboost_program_options-mt.a"; sourceTree = "<absolute>"; };
+		421ACF7D1170E5CA00C2EB85 /* libboost_program_options-mt.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; name = "libboost_program_options-mt.a"; path = "/opt/local/lib/libboost_program_options-mt.a"; sourceTree = "<absolute>"; };
 		421ACFAC1170F05500C2EB85 /* libz.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = libz.a; path = /opt/local/lib/libz.a; sourceTree = "<absolute>"; };
-		4247E7801268E175006A6D78 /* alignment.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = alignment.cpp; sourceTree = "<group>"; };
-		4247E7821268E175006A6D78 /* alignment.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = alignment.h; sourceTree = "<group>"; };
-		4247E7831268E175006A6D78 /* common.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = common.h; sourceTree = "<group>"; };
-		4247E7841268E175006A6D78 /* error_count.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = error_count.h; sourceTree = "<group>"; };
-		4247E7851268E175006A6D78 /* genome_diff.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = genome_diff.h; sourceTree = "<group>"; };
-		4247E7861268E175006A6D78 /* identify_mutations.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = identify_mutations.h; sourceTree = "<group>"; };
-		4247E7871268E175006A6D78 /* pileup.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = pileup.h; sourceTree = "<group>"; };
-		4247E7881268E175006A6D78 /* pileup_base.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = pileup_base.h; sourceTree = "<group>"; };
-		4247E7A71268E175006A6D78 /* calc_trims_cmdline.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = calc_trims_cmdline.cpp; sourceTree = "<group>"; };
-		4247E7A81268E175006A6D78 /* error_count.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = error_count.cpp; sourceTree = "<group>"; };
-		4247E7A91268E175006A6D78 /* error_count_cmdline.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = error_count_cmdline.cpp; sourceTree = "<group>"; };
-		4247E7AA1268E175006A6D78 /* genome_diff.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = genome_diff.cpp; sourceTree = "<group>"; };
-		4247E7AB1268E175006A6D78 /* identify_mutations.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = identify_mutations.cpp; sourceTree = "<group>"; };
-		4247E7AC1268E175006A6D78 /* identify_mutations_cmdline.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = identify_mutations_cmdline.cpp; sourceTree = "<group>"; };
-		4247E7AF1268E175006A6D78 /* pileup.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = pileup.cpp; sourceTree = "<group>"; };
-		4247E7B01268E175006A6D78 /* pileup_base.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = pileup_base.cpp; sourceTree = "<group>"; };
-		4247E7B21268E175006A6D78 /* AUTHORS */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = AUTHORS; sourceTree = "<group>"; };
-		4247E7B31268E175006A6D78 /* bam.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = bam.c; sourceTree = "<group>"; };
-		4247E7B41268E175006A6D78 /* bam.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = bam.h; sourceTree = "<group>"; };
-		4247E7B51268E175006A6D78 /* bam_aux.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = bam_aux.c; sourceTree = "<group>"; };
-		4247E7B61268E175006A6D78 /* bam_color.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = bam_color.c; sourceTree = "<group>"; };
-		4247E7B71268E175006A6D78 /* bam_endian.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = bam_endian.h; sourceTree = "<group>"; };
-		4247E7B81268E175006A6D78 /* bam_import.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = bam_import.c; sourceTree = "<group>"; };
-		4247E7B91268E175006A6D78 /* bam_index.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = bam_index.c; sourceTree = "<group>"; };
-		4247E7BA1268E175006A6D78 /* bam_lpileup.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = bam_lpileup.c; sourceTree = "<group>"; };
-		4247E7BB1268E175006A6D78 /* bam_maqcns.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = bam_maqcns.c; sourceTree = "<group>"; };
-		4247E7BC1268E175006A6D78 /* bam_maqcns.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = bam_maqcns.h; sourceTree = "<group>"; };
-		4247E7BD1268E175006A6D78 /* bam_mate.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = bam_mate.c; sourceTree = "<group>"; };
-		4247E7BE1268E175006A6D78 /* bam_md.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = bam_md.c; sourceTree = "<group>"; };
-		4247E7BF1268E175006A6D78 /* bam_pileup.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = bam_pileup.c; sourceTree = "<group>"; };
-		4247E7C01268E175006A6D78 /* bam_plcmd.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = bam_plcmd.c; sourceTree = "<group>"; };
-		4247E7C11268E175006A6D78 /* bam_rmdup.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = bam_rmdup.c; sourceTree = "<group>"; };
-		4247E7C21268E175006A6D78 /* bam_rmdupse.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = bam_rmdupse.c; sourceTree = "<group>"; };
-		4247E7C31268E175006A6D78 /* bam_sort.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = bam_sort.c; sourceTree = "<group>"; };
-		4247E7C41268E175006A6D78 /* bam_stat.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = bam_stat.c; sourceTree = "<group>"; };
-		4247E7C51268E175006A6D78 /* bam_tview.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = bam_tview.c; sourceTree = "<group>"; };
-		4247E7C61268E175006A6D78 /* bamtk.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = bamtk.c; sourceTree = "<group>"; };
-		4247E7C71268E175006A6D78 /* bgzf.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = bgzf.c; sourceTree = "<group>"; };
-		4247E7C81268E175006A6D78 /* bgzf.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = bgzf.h; sourceTree = "<group>"; };
-		4247E7C91268E175006A6D78 /* bgzip.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = bgzip.c; sourceTree = "<group>"; };
-		4247E7CA1268E175006A6D78 /* ChangeLog */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = ChangeLog; sourceTree = "<group>"; };
-		4247E7CB1268E175006A6D78 /* COPYING */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = COPYING; sourceTree = "<group>"; };
-		4247E7CD1268E175006A6D78 /* 00README.txt */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = 00README.txt; sourceTree = "<group>"; };
-		4247E7CE1268E175006A6D78 /* calDepth.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = calDepth.c; sourceTree = "<group>"; };
-		4247E7CF1268E175006A6D78 /* ex1.fa */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = ex1.fa; sourceTree = "<group>"; };
-		4247E7D01268E175006A6D78 /* Makefile */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.make; path = Makefile; sourceTree = "<group>"; };
-		4247E7D11268E175006A6D78 /* faidx.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = faidx.c; sourceTree = "<group>"; };
-		4247E7D21268E175006A6D78 /* faidx.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = faidx.h; sourceTree = "<group>"; };
-		4247E7D31268E175006A6D78 /* glf.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = glf.c; sourceTree = "<group>"; };
-		4247E7D41268E175006A6D78 /* glf.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = glf.h; sourceTree = "<group>"; };
-		4247E7D51268E175006A6D78 /* INSTALL */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = INSTALL; sourceTree = "<group>"; };
-		4247E7D61268E175006A6D78 /* kaln.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = kaln.c; sourceTree = "<group>"; };
-		4247E7D71268E175006A6D78 /* kaln.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = kaln.h; sourceTree = "<group>"; };
-		4247E7D81268E175006A6D78 /* khash.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = khash.h; sourceTree = "<group>"; };
-		4247E7D91268E175006A6D78 /* klist.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = klist.h; sourceTree = "<group>"; };
-		4247E7DA1268E175006A6D78 /* knetfile.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = knetfile.c; sourceTree = "<group>"; };
-		4247E7DB1268E175006A6D78 /* knetfile.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = knetfile.h; sourceTree = "<group>"; };
-		4247E7DC1268E175006A6D78 /* kseq.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = kseq.h; sourceTree = "<group>"; };
-		4247E7DD1268E175006A6D78 /* ksort.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = ksort.h; sourceTree = "<group>"; };
-		4247E7DE1268E175006A6D78 /* kstring.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = kstring.c; sourceTree = "<group>"; };
-		4247E7DF1268E175006A6D78 /* kstring.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = kstring.h; sourceTree = "<group>"; };
-		4247E7E01268E175006A6D78 /* Makefile.am */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = Makefile.am; sourceTree = "<group>"; };
-		4247E7E11268E175006A6D78 /* Makefile.in */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = Makefile.in; sourceTree = "<group>"; };
-		4247E7E21268E175006A6D78 /* Makefile.mingw */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = Makefile.mingw; sourceTree = "<group>"; };
-		4247E7E41268E175006A6D78 /* blast2sam.pl */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.script.perl; path = blast2sam.pl; sourceTree = "<group>"; };
-		4247E7E51268E175006A6D78 /* bowtie2sam.pl */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.script.perl; path = bowtie2sam.pl; sourceTree = "<group>"; };
-		4247E7E61268E175006A6D78 /* export2sam.pl */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.script.perl; path = export2sam.pl; sourceTree = "<group>"; };
-		4247E7E71268E175006A6D78 /* interpolate_sam.pl */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.script.perl; path = interpolate_sam.pl; sourceTree = "<group>"; };
-		4247E7E81268E175006A6D78 /* Makefile */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.make; path = Makefile; sourceTree = "<group>"; };
-		4247E7E91268E175006A6D78 /* maq2sam.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = maq2sam.c; sourceTree = "<group>"; };
-		4247E7EA1268E175006A6D78 /* md5.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = md5.c; sourceTree = "<group>"; };
-		4247E7EB1268E175006A6D78 /* md5.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = md5.h; sourceTree = "<group>"; };
-		4247E7EC1268E175006A6D78 /* md5fa.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = md5fa.c; sourceTree = "<group>"; };
-		4247E7ED1268E176006A6D78 /* novo2sam.pl */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.script.perl; path = novo2sam.pl; sourceTree = "<group>"; };
-		4247E7EE1268E176006A6D78 /* psl2sam.pl */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.script.perl; path = psl2sam.pl; sourceTree = "<group>"; };
-		4247E7EF1268E176006A6D78 /* sam2vcf.pl */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.script.perl; path = sam2vcf.pl; sourceTree = "<group>"; };
-		4247E7F01268E176006A6D78 /* samtools.pl */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.script.perl; path = samtools.pl; sourceTree = "<group>"; };
-		4247E7F11268E176006A6D78 /* soap2sam.pl */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.script.perl; path = soap2sam.pl; sourceTree = "<group>"; };
-		4247E7F21268E176006A6D78 /* wgsim.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = wgsim.c; sourceTree = "<group>"; };
-		4247E7F31268E176006A6D78 /* wgsim_eval.pl */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.script.perl; path = wgsim_eval.pl; sourceTree = "<group>"; };
-		4247E7F41268E176006A6D78 /* zoom2sam.pl */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.script.perl; path = zoom2sam.pl; sourceTree = "<group>"; };
-		4247E7F51268E176006A6D78 /* NEWS */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = NEWS; sourceTree = "<group>"; };
-		4247E7F61268E176006A6D78 /* razf.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = razf.c; sourceTree = "<group>"; };
-		4247E7F71268E176006A6D78 /* razf.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = razf.h; sourceTree = "<group>"; };
-		4247E7F81268E176006A6D78 /* razip.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = razip.c; sourceTree = "<group>"; };
-		4247E7F91268E176006A6D78 /* sam.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = sam.c; sourceTree = "<group>"; };
-		4247E7FA1268E176006A6D78 /* sam.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = sam.h; sourceTree = "<group>"; };
-		4247E7FB1268E176006A6D78 /* sam_header.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = sam_header.c; sourceTree = "<group>"; };
-		4247E7FC1268E176006A6D78 /* sam_header.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = sam_header.h; sourceTree = "<group>"; };
-		4247E7FD1268E176006A6D78 /* sam_view.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = sam_view.c; sourceTree = "<group>"; };
-		4247E7FE1268E176006A6D78 /* samtools.1 */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.man; path = samtools.1; sourceTree = "<group>"; };
-		4247E7FF1268E176006A6D78 /* samtools.txt */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = samtools.txt; sourceTree = "<group>"; };
-		4247E8011268E176006A6D78 /* xcurses.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = xcurses.h; sourceTree = "<group>"; };
-		4247E8021268E176006A6D78 /* zconf.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = zconf.h; sourceTree = "<group>"; };
-		4247E8031268E176006A6D78 /* zlib.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = zlib.h; sourceTree = "<group>"; };
 		4247E8261268EB90006A6D78 /* debug.xcconfig */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.xcconfig; path = debug.xcconfig; sourceTree = "<group>"; };
 		42B6EDC811C69CC70075F8A3 /* identify_mutations */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = identify_mutations; sourceTree = BUILT_PRODUCTS_DIR; };
 		42BA690C1189B7FD000B00B1 /* libbreseq.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; includeInIndex = 0; path = libbreseq.a; sourceTree = BUILT_PRODUCTS_DIR; };
+		7087728712BC1660000F9B57 /* alignment.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = alignment.cpp; path = breseq/alignment.cpp; sourceTree = SOURCE_ROOT; };
+		7087728912BC169C000F9B57 /* error_count.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = error_count.cpp; path = breseq/error_count.cpp; sourceTree = SOURCE_ROOT; };
+		7087728A12BC169C000F9B57 /* genome_diff.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = genome_diff.cpp; path = breseq/genome_diff.cpp; sourceTree = SOURCE_ROOT; };
+		7087728B12BC169C000F9B57 /* identify_mutations.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = identify_mutations.cpp; path = breseq/identify_mutations.cpp; sourceTree = SOURCE_ROOT; };
+		7087728C12BC169C000F9B57 /* pileup_base.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = pileup_base.cpp; path = breseq/pileup_base.cpp; sourceTree = SOURCE_ROOT; };
+		7087728D12BC169C000F9B57 /* pileup.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = pileup.cpp; path = breseq/pileup.cpp; sourceTree = SOURCE_ROOT; };
+		7087729512BC1780000F9B57 /* AUTHORS */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; name = AUTHORS; path = "../../extern/samtools-0.1.7a/AUTHORS"; sourceTree = SOURCE_ROOT; };
+		7087729612BC1780000F9B57 /* bam_aux.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = bam_aux.c; path = "../../extern/samtools-0.1.7a/bam_aux.c"; sourceTree = SOURCE_ROOT; };
+		7087729712BC1780000F9B57 /* bam_color.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = bam_color.c; path = "../../extern/samtools-0.1.7a/bam_color.c"; sourceTree = SOURCE_ROOT; };
+		7087729812BC1780000F9B57 /* bam_endian.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = bam_endian.h; path = "../../extern/samtools-0.1.7a/bam_endian.h"; sourceTree = SOURCE_ROOT; };
+		7087729912BC1780000F9B57 /* bam_import.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = bam_import.c; path = "../../extern/samtools-0.1.7a/bam_import.c"; sourceTree = SOURCE_ROOT; };
+		7087729A12BC1780000F9B57 /* bam_index.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = bam_index.c; path = "../../extern/samtools-0.1.7a/bam_index.c"; sourceTree = SOURCE_ROOT; };
+		7087729B12BC1780000F9B57 /* bam_lpileup.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = bam_lpileup.c; path = "../../extern/samtools-0.1.7a/bam_lpileup.c"; sourceTree = SOURCE_ROOT; };
+		7087729C12BC1780000F9B57 /* bam_maqcns.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = bam_maqcns.c; path = "../../extern/samtools-0.1.7a/bam_maqcns.c"; sourceTree = SOURCE_ROOT; };
+		7087729D12BC1780000F9B57 /* bam_maqcns.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = bam_maqcns.h; path = "../../extern/samtools-0.1.7a/bam_maqcns.h"; sourceTree = SOURCE_ROOT; };
+		7087729E12BC1780000F9B57 /* bam_mate.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = bam_mate.c; path = "../../extern/samtools-0.1.7a/bam_mate.c"; sourceTree = SOURCE_ROOT; };
+		7087729F12BC1780000F9B57 /* bam_md.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = bam_md.c; path = "../../extern/samtools-0.1.7a/bam_md.c"; sourceTree = SOURCE_ROOT; };
+		708772A012BC1780000F9B57 /* bam_pileup.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = bam_pileup.c; path = "../../extern/samtools-0.1.7a/bam_pileup.c"; sourceTree = SOURCE_ROOT; };
+		708772A112BC1780000F9B57 /* bam_plcmd.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = bam_plcmd.c; path = "../../extern/samtools-0.1.7a/bam_plcmd.c"; sourceTree = SOURCE_ROOT; };
+		708772A212BC1780000F9B57 /* bam_rmdup.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = bam_rmdup.c; path = "../../extern/samtools-0.1.7a/bam_rmdup.c"; sourceTree = SOURCE_ROOT; };
+		708772A312BC1780000F9B57 /* bam_rmdupse.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = bam_rmdupse.c; path = "../../extern/samtools-0.1.7a/bam_rmdupse.c"; sourceTree = SOURCE_ROOT; };
+		708772A412BC1780000F9B57 /* bam_sort.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = bam_sort.c; path = "../../extern/samtools-0.1.7a/bam_sort.c"; sourceTree = SOURCE_ROOT; };
+		708772A512BC1780000F9B57 /* bam_stat.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = bam_stat.c; path = "../../extern/samtools-0.1.7a/bam_stat.c"; sourceTree = SOURCE_ROOT; };
+		708772A612BC1780000F9B57 /* bam_tview.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = bam_tview.c; path = "../../extern/samtools-0.1.7a/bam_tview.c"; sourceTree = SOURCE_ROOT; };
+		708772A712BC1780000F9B57 /* bam.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = bam.c; path = "../../extern/samtools-0.1.7a/bam.c"; sourceTree = SOURCE_ROOT; };
+		708772A812BC1780000F9B57 /* bam.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = bam.h; path = "../../extern/samtools-0.1.7a/bam.h"; sourceTree = SOURCE_ROOT; };
+		708772A912BC1780000F9B57 /* bamtk.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = bamtk.c; path = "../../extern/samtools-0.1.7a/bamtk.c"; sourceTree = SOURCE_ROOT; };
+		708772AA12BC1780000F9B57 /* bgzf.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = bgzf.c; path = "../../extern/samtools-0.1.7a/bgzf.c"; sourceTree = SOURCE_ROOT; };
+		708772AB12BC1780000F9B57 /* bgzf.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = bgzf.h; path = "../../extern/samtools-0.1.7a/bgzf.h"; sourceTree = SOURCE_ROOT; };
+		708772AC12BC1780000F9B57 /* bgzip.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = bgzip.c; path = "../../extern/samtools-0.1.7a/bgzip.c"; sourceTree = SOURCE_ROOT; };
+		708772AD12BC1780000F9B57 /* ChangeLog */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; name = ChangeLog; path = "../../extern/samtools-0.1.7a/ChangeLog"; sourceTree = SOURCE_ROOT; };
+		708772AE12BC1780000F9B57 /* COPYING */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; name = COPYING; path = "../../extern/samtools-0.1.7a/COPYING"; sourceTree = SOURCE_ROOT; };
+		708772B012BC1780000F9B57 /* 00README.txt */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = 00README.txt; sourceTree = "<group>"; };
+		708772B112BC1780000F9B57 /* calDepth.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = calDepth.c; sourceTree = "<group>"; };
+		708772B212BC1780000F9B57 /* ex1.fa */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = ex1.fa; sourceTree = "<group>"; };
+		708772B312BC1780000F9B57 /* Makefile */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.make; path = Makefile; sourceTree = "<group>"; };
+		708772B412BC1780000F9B57 /* faidx.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = faidx.c; path = "../../extern/samtools-0.1.7a/faidx.c"; sourceTree = SOURCE_ROOT; };
+		708772B512BC1780000F9B57 /* faidx.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = faidx.h; path = "../../extern/samtools-0.1.7a/faidx.h"; sourceTree = SOURCE_ROOT; };
+		708772B612BC1780000F9B57 /* glf.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = glf.c; path = "../../extern/samtools-0.1.7a/glf.c"; sourceTree = SOURCE_ROOT; };
+		708772B712BC1780000F9B57 /* glf.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = glf.h; path = "../../extern/samtools-0.1.7a/glf.h"; sourceTree = SOURCE_ROOT; };
+		708772B812BC1780000F9B57 /* INSTALL */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; name = INSTALL; path = "../../extern/samtools-0.1.7a/INSTALL"; sourceTree = SOURCE_ROOT; };
+		708772B912BC1780000F9B57 /* kaln.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = kaln.c; path = "../../extern/samtools-0.1.7a/kaln.c"; sourceTree = SOURCE_ROOT; };
+		708772BA12BC1780000F9B57 /* kaln.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = kaln.h; path = "../../extern/samtools-0.1.7a/kaln.h"; sourceTree = SOURCE_ROOT; };
+		708772BB12BC1780000F9B57 /* khash.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = khash.h; path = "../../extern/samtools-0.1.7a/khash.h"; sourceTree = SOURCE_ROOT; };
+		708772BC12BC1780000F9B57 /* klist.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = klist.h; path = "../../extern/samtools-0.1.7a/klist.h"; sourceTree = SOURCE_ROOT; };
+		708772BD12BC1780000F9B57 /* knetfile.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = knetfile.c; path = "../../extern/samtools-0.1.7a/knetfile.c"; sourceTree = SOURCE_ROOT; };
+		708772BE12BC1780000F9B57 /* knetfile.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = knetfile.h; path = "../../extern/samtools-0.1.7a/knetfile.h"; sourceTree = SOURCE_ROOT; };
+		708772BF12BC1780000F9B57 /* kseq.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = kseq.h; path = "../../extern/samtools-0.1.7a/kseq.h"; sourceTree = SOURCE_ROOT; };
+		708772C012BC1780000F9B57 /* ksort.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = ksort.h; path = "../../extern/samtools-0.1.7a/ksort.h"; sourceTree = SOURCE_ROOT; };
+		708772C112BC1780000F9B57 /* kstring.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = kstring.c; path = "../../extern/samtools-0.1.7a/kstring.c"; sourceTree = SOURCE_ROOT; };
+		708772C212BC1780000F9B57 /* kstring.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = kstring.h; path = "../../extern/samtools-0.1.7a/kstring.h"; sourceTree = SOURCE_ROOT; };
+		708772C312BC1780000F9B57 /* Makefile */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.make; name = Makefile; path = "../../extern/samtools-0.1.7a/Makefile"; sourceTree = SOURCE_ROOT; };
+		708772C412BC1780000F9B57 /* Makefile.am */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; name = Makefile.am; path = "../../extern/samtools-0.1.7a/Makefile.am"; sourceTree = SOURCE_ROOT; };
+		708772C512BC1780000F9B57 /* Makefile.in */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; name = Makefile.in; path = "../../extern/samtools-0.1.7a/Makefile.in"; sourceTree = SOURCE_ROOT; };
+		708772C612BC1780000F9B57 /* Makefile.mingw */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; name = Makefile.mingw; path = "../../extern/samtools-0.1.7a/Makefile.mingw"; sourceTree = SOURCE_ROOT; };
+		708772C712BC1780000F9B57 /* Makefile.orig */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; name = Makefile.orig; path = "../../extern/samtools-0.1.7a/Makefile.orig"; sourceTree = SOURCE_ROOT; };
+		708772C912BC1780000F9B57 /* blast2sam.pl */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.script.perl; path = blast2sam.pl; sourceTree = "<group>"; };
+		708772CA12BC1780000F9B57 /* bowtie2sam.pl */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.script.perl; path = bowtie2sam.pl; sourceTree = "<group>"; };
+		708772CB12BC1780000F9B57 /* export2sam.pl */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.script.perl; path = export2sam.pl; sourceTree = "<group>"; };
+		708772CC12BC1780000F9B57 /* interpolate_sam.pl */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.script.perl; path = interpolate_sam.pl; sourceTree = "<group>"; };
+		708772CD12BC1780000F9B57 /* Makefile */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.make; path = Makefile; sourceTree = "<group>"; };
+		708772CE12BC1780000F9B57 /* maq2sam.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = maq2sam.c; sourceTree = "<group>"; };
+		708772CF12BC1780000F9B57 /* md5.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = md5.c; sourceTree = "<group>"; };
+		708772D012BC1780000F9B57 /* md5.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = md5.h; sourceTree = "<group>"; };
+		708772D112BC1780000F9B57 /* md5fa.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = md5fa.c; sourceTree = "<group>"; };
+		708772D212BC1780000F9B57 /* novo2sam.pl */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.script.perl; path = novo2sam.pl; sourceTree = "<group>"; };
+		708772D312BC1780000F9B57 /* psl2sam.pl */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.script.perl; path = psl2sam.pl; sourceTree = "<group>"; };
+		708772D412BC1780000F9B57 /* sam2vcf.pl */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.script.perl; path = sam2vcf.pl; sourceTree = "<group>"; };
+		708772D512BC1780000F9B57 /* samtools.pl */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.script.perl; path = samtools.pl; sourceTree = "<group>"; };
+		708772D612BC1780000F9B57 /* soap2sam.pl */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.script.perl; path = soap2sam.pl; sourceTree = "<group>"; };
+		708772D712BC1780000F9B57 /* wgsim.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = wgsim.c; sourceTree = "<group>"; };
+		708772D812BC1780000F9B57 /* wgsim_eval.pl */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.script.perl; path = wgsim_eval.pl; sourceTree = "<group>"; };
+		708772D912BC1780000F9B57 /* zoom2sam.pl */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.script.perl; path = zoom2sam.pl; sourceTree = "<group>"; };
+		708772DA12BC1780000F9B57 /* NEWS */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; name = NEWS; path = "../../extern/samtools-0.1.7a/NEWS"; sourceTree = SOURCE_ROOT; };
+		708772DB12BC1780000F9B57 /* razf.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = razf.c; path = "../../extern/samtools-0.1.7a/razf.c"; sourceTree = SOURCE_ROOT; };
+		708772DC12BC1780000F9B57 /* razf.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = razf.h; path = "../../extern/samtools-0.1.7a/razf.h"; sourceTree = SOURCE_ROOT; };
+		708772DD12BC1780000F9B57 /* razip.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = razip.c; path = "../../extern/samtools-0.1.7a/razip.c"; sourceTree = SOURCE_ROOT; };
+		708772DE12BC1780000F9B57 /* sam_header.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = sam_header.c; path = "../../extern/samtools-0.1.7a/sam_header.c"; sourceTree = SOURCE_ROOT; };
+		708772DF12BC1780000F9B57 /* sam_header.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = sam_header.h; path = "../../extern/samtools-0.1.7a/sam_header.h"; sourceTree = SOURCE_ROOT; };
+		708772E012BC1780000F9B57 /* sam_view.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = sam_view.c; path = "../../extern/samtools-0.1.7a/sam_view.c"; sourceTree = SOURCE_ROOT; };
+		708772E112BC1780000F9B57 /* sam.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = sam.c; path = "../../extern/samtools-0.1.7a/sam.c"; sourceTree = SOURCE_ROOT; };
+		708772E212BC1780000F9B57 /* sam.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = sam.h; path = "../../extern/samtools-0.1.7a/sam.h"; sourceTree = SOURCE_ROOT; };
+		708772E312BC1780000F9B57 /* samtools.1 */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.man; name = samtools.1; path = "../../extern/samtools-0.1.7a/samtools.1"; sourceTree = SOURCE_ROOT; };
+		708772E412BC1780000F9B57 /* samtools.txt */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; name = samtools.txt; path = "../../extern/samtools-0.1.7a/samtools.txt"; sourceTree = SOURCE_ROOT; };
+		708772E612BC1780000F9B57 /* xcurses.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = xcurses.h; sourceTree = "<group>"; };
+		708772E712BC1780000F9B57 /* zconf.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = zconf.h; sourceTree = "<group>"; };
+		708772E812BC1780000F9B57 /* zlib.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = zlib.h; sourceTree = "<group>"; };
+		7087730412BC18E9000F9B57 /* libbam.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = libbam.a; path = "../../extern/samtools-0.1.7a/libbam.a"; sourceTree = SOURCE_ROOT; };
+		7087730F12BC19BA000F9B57 /* error_count_cmdline.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = error_count_cmdline.cpp; path = breseq/error_count_cmdline.cpp; sourceTree = SOURCE_ROOT; };
+		7087731112BC19C5000F9B57 /* identify_mutations_cmdline.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = identify_mutations_cmdline.cpp; path = breseq/identify_mutations_cmdline.cpp; sourceTree = SOURCE_ROOT; };
+		7087747512BC1C06000F9B57 /* alignment.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = alignment.h; path = breseq/breseq/alignment.h; sourceTree = SOURCE_ROOT; };
+		7087747612BC1C06000F9B57 /* common.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = common.h; path = breseq/breseq/common.h; sourceTree = SOURCE_ROOT; };
+		7087747712BC1C06000F9B57 /* error_count.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = error_count.h; path = breseq/breseq/error_count.h; sourceTree = SOURCE_ROOT; };
+		7087747812BC1C06000F9B57 /* genome_diff.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = genome_diff.h; path = breseq/breseq/genome_diff.h; sourceTree = SOURCE_ROOT; };
+		7087747912BC1C06000F9B57 /* identify_mutations.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = identify_mutations.h; path = breseq/breseq/identify_mutations.h; sourceTree = SOURCE_ROOT; };
+		7087747A12BC1C06000F9B57 /* pileup.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = pileup.h; path = breseq/breseq/pileup.h; sourceTree = SOURCE_ROOT; };
+		7087747B12BC1C06000F9B57 /* pileup_base.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = pileup_base.h; path = breseq/breseq/pileup_base.h; sourceTree = SOURCE_ROOT; };
+		70A5BC1912BE6EBF005EFE9F /* calc_trims */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = calc_trims; sourceTree = BUILT_PRODUCTS_DIR; };
+		70A5BC2512BE6F21005EFE9F /* calc_trims_cmdline.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = calc_trims_cmdline.cpp; path = breseq/calc_trims_cmdline.cpp; sourceTree = SOURCE_ROOT; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -209,8 +236,8 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				708774D812BC21BA000F9B57 /* libboost_program_options-mt.a in Frameworks */,
 				42B6ED6911C6879B0075F8A3 /* libbreseq.a in Frameworks */,
-				421ACF7E1170E5CA00C2EB85 /* libboost_program_options-mt.a in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -218,8 +245,8 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				42B6EDC111C69CC70075F8A3 /* libbreseq.a in Frameworks */,
-				42B6EDC311C69CC70075F8A3 /* libboost_program_options-mt.a in Frameworks */,
+				708774D712BC21B9000F9B57 /* libboost_program_options-mt.a in Frameworks */,
+				708774E012BC2260000F9B57 /* libbreseq.a in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -228,7 +255,16 @@
 			buildActionMask = 2147483647;
 			files = (
 				4247E82C1268EC3E006A6D78 /* libz.a in Frameworks */,
-				4247E82D1268EC3E006A6D78 /* libbam.a in Frameworks */,
+				7087730512BC18E9000F9B57 /* libbam.a in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		70A5BC1312BE6EBF005EFE9F /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				70A5BC1412BE6EBF005EFE9F /* libboost_program_options-mt.a in Frameworks */,
+				70A5BC1512BE6EBF005EFE9F /* libbreseq.a in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -239,7 +275,7 @@
 			isa = PBXGroup;
 			children = (
 				4247E8251268EB90006A6D78 /* etc */,
-				4247E77F1268E175006A6D78 /* breseq-1.0 */,
+				4247E77F1268E175006A6D78 /* breseq */,
 				4247E7B11268E175006A6D78 /* samtools-0.1.7a */,
 				421ACF5F1170E06300C2EB85 /* lib */,
 				421ACF301170DF1800C2EB85 /* Products */,
@@ -249,8 +285,9 @@
 		421ACF301170DF1800C2EB85 /* Products */ = {
 			isa = PBXGroup;
 			children = (
-				421ACF2F1170DF1800C2EB85 /* error_count */,
 				42BA690C1189B7FD000B00B1 /* libbreseq.a */,
+				70A5BC1912BE6EBF005EFE9F /* calc_trims */,
+				421ACF2F1170DF1800C2EB85 /* error_count */,
 				42B6EDC811C69CC70075F8A3 /* identify_mutations */,
 			);
 			name = Products;
@@ -259,152 +296,96 @@
 		421ACF5F1170E06300C2EB85 /* lib */ = {
 			isa = PBXGroup;
 			children = (
+				7087730412BC18E9000F9B57 /* libbam.a */,
 				421ACFAC1170F05500C2EB85 /* libz.a */,
 				421ACF7D1170E5CA00C2EB85 /* libboost_program_options-mt.a */,
-				421ACF571170E00A00C2EB85 /* libbam.a */,
 			);
 			name = lib;
 			sourceTree = "<group>";
 		};
-		4247E77F1268E175006A6D78 /* breseq-1.0 */ = {
+		4247E77F1268E175006A6D78 /* breseq */ = {
 			isa = PBXGroup;
 			children = (
-				4247E7811268E175006A6D78 /* breseq */,
-				4247E7801268E175006A6D78 /* alignment.cpp */,
-				4247E7A71268E175006A6D78 /* calc_trims_cmdline.cpp */,
-				4247E7A81268E175006A6D78 /* error_count.cpp */,
-				4247E7A91268E175006A6D78 /* error_count_cmdline.cpp */,
-				4247E7AA1268E175006A6D78 /* genome_diff.cpp */,
-				4247E7AB1268E175006A6D78 /* identify_mutations.cpp */,
-				4247E7AC1268E175006A6D78 /* identify_mutations_cmdline.cpp */,
-				4247E7AF1268E175006A6D78 /* pileup.cpp */,
-				4247E7B01268E175006A6D78 /* pileup_base.cpp */,
+				7087747412BC1C06000F9B57 /* breseq */,
+				70A5BC2512BE6F21005EFE9F /* calc_trims_cmdline.cpp */,
+				7087728912BC169C000F9B57 /* error_count.cpp */,
+				7087730F12BC19BA000F9B57 /* error_count_cmdline.cpp */,
+				7087728A12BC169C000F9B57 /* genome_diff.cpp */,
+				7087728B12BC169C000F9B57 /* identify_mutations.cpp */,
+				7087731112BC19C5000F9B57 /* identify_mutations_cmdline.cpp */,
+				7087728C12BC169C000F9B57 /* pileup_base.cpp */,
+				7087728D12BC169C000F9B57 /* pileup.cpp */,
+				7087728712BC1660000F9B57 /* alignment.cpp */,
 			);
+			name = breseq;
 			path = "breseq-1.0";
-			sourceTree = "<group>";
-		};
-		4247E7811268E175006A6D78 /* breseq */ = {
-			isa = PBXGroup;
-			children = (
-				4247E7821268E175006A6D78 /* alignment.h */,
-				4247E7831268E175006A6D78 /* common.h */,
-				4247E7841268E175006A6D78 /* error_count.h */,
-				4247E7851268E175006A6D78 /* genome_diff.h */,
-				4247E7861268E175006A6D78 /* identify_mutations.h */,
-				4247E7871268E175006A6D78 /* pileup.h */,
-				4247E7881268E175006A6D78 /* pileup_base.h */,
-			);
-			path = breseq;
 			sourceTree = "<group>";
 		};
 		4247E7B11268E175006A6D78 /* samtools-0.1.7a */ = {
 			isa = PBXGroup;
 			children = (
-				4247E7B21268E175006A6D78 /* AUTHORS */,
-				4247E7B31268E175006A6D78 /* bam.c */,
-				4247E7B41268E175006A6D78 /* bam.h */,
-				4247E7B51268E175006A6D78 /* bam_aux.c */,
-				4247E7B61268E175006A6D78 /* bam_color.c */,
-				4247E7B71268E175006A6D78 /* bam_endian.h */,
-				4247E7B81268E175006A6D78 /* bam_import.c */,
-				4247E7B91268E175006A6D78 /* bam_index.c */,
-				4247E7BA1268E175006A6D78 /* bam_lpileup.c */,
-				4247E7BB1268E175006A6D78 /* bam_maqcns.c */,
-				4247E7BC1268E175006A6D78 /* bam_maqcns.h */,
-				4247E7BD1268E175006A6D78 /* bam_mate.c */,
-				4247E7BE1268E175006A6D78 /* bam_md.c */,
-				4247E7BF1268E175006A6D78 /* bam_pileup.c */,
-				4247E7C01268E175006A6D78 /* bam_plcmd.c */,
-				4247E7C11268E175006A6D78 /* bam_rmdup.c */,
-				4247E7C21268E175006A6D78 /* bam_rmdupse.c */,
-				4247E7C31268E175006A6D78 /* bam_sort.c */,
-				4247E7C41268E175006A6D78 /* bam_stat.c */,
-				4247E7C51268E175006A6D78 /* bam_tview.c */,
-				4247E7C61268E175006A6D78 /* bamtk.c */,
-				4247E7C71268E175006A6D78 /* bgzf.c */,
-				4247E7C81268E175006A6D78 /* bgzf.h */,
-				4247E7C91268E175006A6D78 /* bgzip.c */,
-				4247E7CA1268E175006A6D78 /* ChangeLog */,
-				4247E7CB1268E175006A6D78 /* COPYING */,
-				4247E7CC1268E175006A6D78 /* examples */,
-				4247E7D11268E175006A6D78 /* faidx.c */,
-				4247E7D21268E175006A6D78 /* faidx.h */,
-				4247E7D31268E175006A6D78 /* glf.c */,
-				4247E7D41268E175006A6D78 /* glf.h */,
-				4247E7D51268E175006A6D78 /* INSTALL */,
-				4247E7D61268E175006A6D78 /* kaln.c */,
-				4247E7D71268E175006A6D78 /* kaln.h */,
-				4247E7D81268E175006A6D78 /* khash.h */,
-				4247E7D91268E175006A6D78 /* klist.h */,
-				4247E7DA1268E175006A6D78 /* knetfile.c */,
-				4247E7DB1268E175006A6D78 /* knetfile.h */,
-				4247E7DC1268E175006A6D78 /* kseq.h */,
-				4247E7DD1268E175006A6D78 /* ksort.h */,
-				4247E7DE1268E175006A6D78 /* kstring.c */,
-				4247E7DF1268E175006A6D78 /* kstring.h */,
-				4247E7E01268E175006A6D78 /* Makefile.am */,
-				4247E7E11268E175006A6D78 /* Makefile.in */,
-				4247E7E21268E175006A6D78 /* Makefile.mingw */,
-				4247E7E31268E175006A6D78 /* misc */,
-				4247E7F51268E176006A6D78 /* NEWS */,
-				4247E7F61268E176006A6D78 /* razf.c */,
-				4247E7F71268E176006A6D78 /* razf.h */,
-				4247E7F81268E176006A6D78 /* razip.c */,
-				4247E7F91268E176006A6D78 /* sam.c */,
-				4247E7FA1268E176006A6D78 /* sam.h */,
-				4247E7FB1268E176006A6D78 /* sam_header.c */,
-				4247E7FC1268E176006A6D78 /* sam_header.h */,
-				4247E7FD1268E176006A6D78 /* sam_view.c */,
-				4247E7FE1268E176006A6D78 /* samtools.1 */,
-				4247E7FF1268E176006A6D78 /* samtools.txt */,
-				4247E8001268E176006A6D78 /* win32 */,
+				7087729512BC1780000F9B57 /* AUTHORS */,
+				7087729612BC1780000F9B57 /* bam_aux.c */,
+				7087729712BC1780000F9B57 /* bam_color.c */,
+				7087729812BC1780000F9B57 /* bam_endian.h */,
+				7087729912BC1780000F9B57 /* bam_import.c */,
+				7087729A12BC1780000F9B57 /* bam_index.c */,
+				7087729B12BC1780000F9B57 /* bam_lpileup.c */,
+				7087729C12BC1780000F9B57 /* bam_maqcns.c */,
+				7087729D12BC1780000F9B57 /* bam_maqcns.h */,
+				7087729E12BC1780000F9B57 /* bam_mate.c */,
+				7087729F12BC1780000F9B57 /* bam_md.c */,
+				708772A012BC1780000F9B57 /* bam_pileup.c */,
+				708772A112BC1780000F9B57 /* bam_plcmd.c */,
+				708772A212BC1780000F9B57 /* bam_rmdup.c */,
+				708772A312BC1780000F9B57 /* bam_rmdupse.c */,
+				708772A412BC1780000F9B57 /* bam_sort.c */,
+				708772A512BC1780000F9B57 /* bam_stat.c */,
+				708772A612BC1780000F9B57 /* bam_tview.c */,
+				708772A712BC1780000F9B57 /* bam.c */,
+				708772A812BC1780000F9B57 /* bam.h */,
+				708772A912BC1780000F9B57 /* bamtk.c */,
+				708772AA12BC1780000F9B57 /* bgzf.c */,
+				708772AB12BC1780000F9B57 /* bgzf.h */,
+				708772AC12BC1780000F9B57 /* bgzip.c */,
+				708772AD12BC1780000F9B57 /* ChangeLog */,
+				708772AE12BC1780000F9B57 /* COPYING */,
+				708772AF12BC1780000F9B57 /* examples */,
+				708772B412BC1780000F9B57 /* faidx.c */,
+				708772B512BC1780000F9B57 /* faidx.h */,
+				708772B612BC1780000F9B57 /* glf.c */,
+				708772B712BC1780000F9B57 /* glf.h */,
+				708772B812BC1780000F9B57 /* INSTALL */,
+				708772B912BC1780000F9B57 /* kaln.c */,
+				708772BA12BC1780000F9B57 /* kaln.h */,
+				708772BB12BC1780000F9B57 /* khash.h */,
+				708772BC12BC1780000F9B57 /* klist.h */,
+				708772BD12BC1780000F9B57 /* knetfile.c */,
+				708772BE12BC1780000F9B57 /* knetfile.h */,
+				708772BF12BC1780000F9B57 /* kseq.h */,
+				708772C012BC1780000F9B57 /* ksort.h */,
+				708772C112BC1780000F9B57 /* kstring.c */,
+				708772C212BC1780000F9B57 /* kstring.h */,
+				708772C312BC1780000F9B57 /* Makefile */,
+				708772C412BC1780000F9B57 /* Makefile.am */,
+				708772C512BC1780000F9B57 /* Makefile.in */,
+				708772C612BC1780000F9B57 /* Makefile.mingw */,
+				708772C712BC1780000F9B57 /* Makefile.orig */,
+				708772C812BC1780000F9B57 /* misc */,
+				708772DA12BC1780000F9B57 /* NEWS */,
+				708772DB12BC1780000F9B57 /* razf.c */,
+				708772DC12BC1780000F9B57 /* razf.h */,
+				708772DD12BC1780000F9B57 /* razip.c */,
+				708772DE12BC1780000F9B57 /* sam_header.c */,
+				708772DF12BC1780000F9B57 /* sam_header.h */,
+				708772E012BC1780000F9B57 /* sam_view.c */,
+				708772E112BC1780000F9B57 /* sam.c */,
+				708772E212BC1780000F9B57 /* sam.h */,
+				708772E312BC1780000F9B57 /* samtools.1 */,
+				708772E412BC1780000F9B57 /* samtools.txt */,
+				708772E512BC1780000F9B57 /* win32 */,
 			);
 			path = "samtools-0.1.7a";
-			sourceTree = "<group>";
-		};
-		4247E7CC1268E175006A6D78 /* examples */ = {
-			isa = PBXGroup;
-			children = (
-				4247E7CD1268E175006A6D78 /* 00README.txt */,
-				4247E7CE1268E175006A6D78 /* calDepth.c */,
-				4247E7CF1268E175006A6D78 /* ex1.fa */,
-				4247E7D01268E175006A6D78 /* Makefile */,
-			);
-			path = examples;
-			sourceTree = "<group>";
-		};
-		4247E7E31268E175006A6D78 /* misc */ = {
-			isa = PBXGroup;
-			children = (
-				4247E7E41268E175006A6D78 /* blast2sam.pl */,
-				4247E7E51268E175006A6D78 /* bowtie2sam.pl */,
-				4247E7E61268E175006A6D78 /* export2sam.pl */,
-				4247E7E71268E175006A6D78 /* interpolate_sam.pl */,
-				4247E7E81268E175006A6D78 /* Makefile */,
-				4247E7E91268E175006A6D78 /* maq2sam.c */,
-				4247E7EA1268E175006A6D78 /* md5.c */,
-				4247E7EB1268E175006A6D78 /* md5.h */,
-				4247E7EC1268E175006A6D78 /* md5fa.c */,
-				4247E7ED1268E176006A6D78 /* novo2sam.pl */,
-				4247E7EE1268E176006A6D78 /* psl2sam.pl */,
-				4247E7EF1268E176006A6D78 /* sam2vcf.pl */,
-				4247E7F01268E176006A6D78 /* samtools.pl */,
-				4247E7F11268E176006A6D78 /* soap2sam.pl */,
-				4247E7F21268E176006A6D78 /* wgsim.c */,
-				4247E7F31268E176006A6D78 /* wgsim_eval.pl */,
-				4247E7F41268E176006A6D78 /* zoom2sam.pl */,
-			);
-			path = misc;
-			sourceTree = "<group>";
-		};
-		4247E8001268E176006A6D78 /* win32 */ = {
-			isa = PBXGroup;
-			children = (
-				4247E8011268E176006A6D78 /* xcurses.h */,
-				4247E8021268E176006A6D78 /* zconf.h */,
-				4247E8031268E176006A6D78 /* zlib.h */,
-			);
-			path = win32;
 			sourceTree = "<group>";
 		};
 		4247E8251268EB90006A6D78 /* etc */ = {
@@ -416,6 +397,69 @@
 			path = ../../etc;
 			sourceTree = SOURCE_ROOT;
 		};
+		708772AF12BC1780000F9B57 /* examples */ = {
+			isa = PBXGroup;
+			children = (
+				708772B012BC1780000F9B57 /* 00README.txt */,
+				708772B112BC1780000F9B57 /* calDepth.c */,
+				708772B212BC1780000F9B57 /* ex1.fa */,
+				708772B312BC1780000F9B57 /* Makefile */,
+			);
+			name = examples;
+			path = "../../extern/samtools-0.1.7a/examples";
+			sourceTree = SOURCE_ROOT;
+		};
+		708772C812BC1780000F9B57 /* misc */ = {
+			isa = PBXGroup;
+			children = (
+				708772C912BC1780000F9B57 /* blast2sam.pl */,
+				708772CA12BC1780000F9B57 /* bowtie2sam.pl */,
+				708772CB12BC1780000F9B57 /* export2sam.pl */,
+				708772CC12BC1780000F9B57 /* interpolate_sam.pl */,
+				708772CD12BC1780000F9B57 /* Makefile */,
+				708772CE12BC1780000F9B57 /* maq2sam.c */,
+				708772CF12BC1780000F9B57 /* md5.c */,
+				708772D012BC1780000F9B57 /* md5.h */,
+				708772D112BC1780000F9B57 /* md5fa.c */,
+				708772D212BC1780000F9B57 /* novo2sam.pl */,
+				708772D312BC1780000F9B57 /* psl2sam.pl */,
+				708772D412BC1780000F9B57 /* sam2vcf.pl */,
+				708772D512BC1780000F9B57 /* samtools.pl */,
+				708772D612BC1780000F9B57 /* soap2sam.pl */,
+				708772D712BC1780000F9B57 /* wgsim.c */,
+				708772D812BC1780000F9B57 /* wgsim_eval.pl */,
+				708772D912BC1780000F9B57 /* zoom2sam.pl */,
+			);
+			name = misc;
+			path = "../../extern/samtools-0.1.7a/misc";
+			sourceTree = SOURCE_ROOT;
+		};
+		708772E512BC1780000F9B57 /* win32 */ = {
+			isa = PBXGroup;
+			children = (
+				708772E612BC1780000F9B57 /* xcurses.h */,
+				708772E712BC1780000F9B57 /* zconf.h */,
+				708772E812BC1780000F9B57 /* zlib.h */,
+			);
+			name = win32;
+			path = "../../extern/samtools-0.1.7a/win32";
+			sourceTree = SOURCE_ROOT;
+		};
+		7087747412BC1C06000F9B57 /* breseq */ = {
+			isa = PBXGroup;
+			children = (
+				7087747512BC1C06000F9B57 /* alignment.h */,
+				7087747612BC1C06000F9B57 /* common.h */,
+				7087747712BC1C06000F9B57 /* error_count.h */,
+				7087747812BC1C06000F9B57 /* genome_diff.h */,
+				7087747912BC1C06000F9B57 /* identify_mutations.h */,
+				7087747A12BC1C06000F9B57 /* pileup.h */,
+				7087747B12BC1C06000F9B57 /* pileup_base.h */,
+			);
+			name = breseq;
+			path = breseq/breseq;
+			sourceTree = SOURCE_ROOT;
+		};
 /* End PBXGroup section */
 
 /* Begin PBXHeadersBuildPhase section */
@@ -423,6 +467,13 @@
 			isa = PBXHeadersBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				7087748212BC1C31000F9B57 /* alignment.h in Headers */,
+				7087748312BC1C31000F9B57 /* common.h in Headers */,
+				7087748412BC1C31000F9B57 /* error_count.h in Headers */,
+				7087748512BC1C31000F9B57 /* genome_diff.h in Headers */,
+				7087748612BC1C31000F9B57 /* identify_mutations.h in Headers */,
+				7087748712BC1C31000F9B57 /* pileup.h in Headers */,
+				7087748812BC1C31000F9B57 /* pileup_base.h in Headers */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -436,7 +487,7 @@
 			buildPhases = (
 			);
 			buildToolPath = /usr/bin/make;
-			buildWorkingDirectory = "$(PROJECT_DIR)/samtools-0.1.7a";
+			buildWorkingDirectory = "$(PROJECT_DIR)/../../extern/samtools-0.1.7a";
 			dependencies = (
 			);
 			name = samtools;
@@ -499,6 +550,24 @@
 			productReference = 42BA690C1189B7FD000B00B1 /* libbreseq.a */;
 			productType = "com.apple.product-type.library.static";
 		};
+		70A5BC0C12BE6EBF005EFE9F /* calc_trims */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 70A5BC1612BE6EBF005EFE9F /* Build configuration list for PBXNativeTarget "calc_trims" */;
+			buildPhases = (
+				70A5BC1112BE6EBF005EFE9F /* Sources */,
+				70A5BC1312BE6EBF005EFE9F /* Frameworks */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				70A5BC0D12BE6EBF005EFE9F /* PBXTargetDependency */,
+				70A5BC0F12BE6EBF005EFE9F /* PBXTargetDependency */,
+			);
+			name = calc_trims;
+			productName = error_count;
+			productReference = 70A5BC1912BE6EBF005EFE9F /* calc_trims */;
+			productType = "com.apple.product-type.tool";
+		};
 /* End PBXNativeTarget section */
 
 /* Begin PBXProject section */
@@ -524,6 +593,7 @@
 				42B6EDB811C69CC70075F8A3 /* identify_mutations */,
 				421ACF2E1170DF1800C2EB85 /* error_count */,
 				42BA690B1189B7FD000B00B1 /* breseq */,
+				70A5BC0C12BE6EBF005EFE9F /* calc_trims */,
 			);
 		};
 /* End PBXProject section */
@@ -533,7 +603,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				4247E8121268E9E8006A6D78 /* error_count_cmdline.cpp in Sources */,
+				7087731012BC19BA000F9B57 /* error_count_cmdline.cpp in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -541,7 +611,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				4247E8131268E9EE006A6D78 /* identify_mutations_cmdline.cpp in Sources */,
+				7087731312BC19F4000F9B57 /* identify_mutations_cmdline.cpp in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -549,12 +619,20 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				4247E8091268E233006A6D78 /* alignment.cpp in Sources */,
-				4247E80A1268E233006A6D78 /* error_count.cpp in Sources */,
-				4247E80B1268E233006A6D78 /* genome_diff.cpp in Sources */,
-				4247E80C1268E233006A6D78 /* identify_mutations.cpp in Sources */,
-				4247E80D1268E233006A6D78 /* pileup.cpp in Sources */,
-				4247E80E1268E233006A6D78 /* pileup_base.cpp in Sources */,
+				7087728812BC1660000F9B57 /* alignment.cpp in Sources */,
+				7087728E12BC169C000F9B57 /* error_count.cpp in Sources */,
+				7087728F12BC169C000F9B57 /* genome_diff.cpp in Sources */,
+				7087729012BC169C000F9B57 /* identify_mutations.cpp in Sources */,
+				7087729112BC169C000F9B57 /* pileup_base.cpp in Sources */,
+				7087729212BC169C000F9B57 /* pileup.cpp in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		70A5BC1112BE6EBF005EFE9F /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				70A5BC2612BE6F21005EFE9F /* calc_trims_cmdline.cpp in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -601,6 +679,16 @@
 			target = 42BA690B1189B7FD000B00B1 /* breseq */;
 			targetProxy = 42BA691B1189B877000B00B1 /* PBXContainerItemProxy */;
 		};
+		70A5BC0D12BE6EBF005EFE9F /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 421ACF201170DC4400C2EB85 /* samtools */;
+			targetProxy = 70A5BC0E12BE6EBF005EFE9F /* PBXContainerItemProxy */;
+		};
+		70A5BC0F12BE6EBF005EFE9F /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 42BA690B1189B7FD000B00B1 /* breseq */;
+			targetProxy = 70A5BC1012BE6EBF005EFE9F /* PBXContainerItemProxy */;
+		};
 /* End PBXTargetDependency section */
 
 /* Begin XCBuildConfiguration section */
@@ -644,15 +732,29 @@
 			baseConfigurationReference = 4247E8261268EB90006A6D78 /* debug.xcconfig */;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
+				ARCHS = "$(ARCHS_STANDARD_64_BIT_PRE_XCODE_3_1)";
+				ARCHS_STANDARD_64_BIT_PRE_XCODE_3_1 = x86_64;
 				COPY_PHASE_STRIP = NO;
 				GCC_DYNAMIC_NO_PIC = NO;
 				GCC_ENABLE_FIX_AND_CONTINUE = YES;
+				HEADER_SEARCH_PATHS = (
+					"$(HEADER_SEARCH_PATHS_QUOTED_FOR_TARGET_1)",
+					"$(HEADER_SEARCH_PATHS_QUOTED_FOR_TARGET_2)",
+				);
+				HEADER_SEARCH_PATHS_QUOTED_FOR_TARGET_1 = "\"$(SRCROOT)/\"/**";
+				HEADER_SEARCH_PATHS_QUOTED_FOR_TARGET_2 = "\"$(SRCROOT)/../../extern/samtools-0.1.7a\"/**";
 				INSTALL_PATH = /usr/local/bin;
 				LIBRARY_SEARCH_PATHS = (
 					"$(inherited)",
 					/opt/local/lib,
 					"$(LIBRARY_SEARCH_PATHS_QUOTED_FOR_TARGET_1)",
+					"$(LIBRARY_SEARCH_PATHS_QUOTED_FOR_TARGET_1)",
+					"$(LIBRARY_SEARCH_PATHS_QUOTED_FOR_TARGET_2)",
+					"$(LIBRARY_SEARCH_PATHS_QUOTED_FOR_TARGET_3)",
 				);
+				LIBRARY_SEARCH_PATHS_QUOTED_FOR_TARGET_1 = "\"$(SRCROOT)/.libs\"";
+				LIBRARY_SEARCH_PATHS_QUOTED_FOR_TARGET_2 = "\"$(SRCROOT)/breseq/.libs\"";
+				LIBRARY_SEARCH_PATHS_QUOTED_FOR_TARGET_3 = "\"$(SRCROOT)/build/Debug\"";
 				PREBINDING = NO;
 				PRODUCT_NAME = error_count;
 				USER_HEADER_SEARCH_PATHS = "$(PROJECT_DIR)/error_count/include";
@@ -663,20 +765,33 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
-				ARCHS = "$(NATIVE_ARCH_ACTUAL)";
+				ARCHS = "$(ARCHS_STANDARD_64_BIT_PRE_XCODE_3_1)";
+				ARCHS_STANDARD_64_BIT_PRE_XCODE_3_1 = x86_64;
 				COPY_PHASE_STRIP = YES;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
 				GCC_ENABLE_FIX_AND_CONTINUE = NO;
 				GCC_MODEL_TUNING = G5;
+				HEADER_SEARCH_PATHS = (
+					"$(HEADER_SEARCH_PATHS_QUOTED_FOR_TARGET_1)",
+					"$(HEADER_SEARCH_PATHS_QUOTED_FOR_TARGET_2)",
+				);
+				HEADER_SEARCH_PATHS_QUOTED_FOR_TARGET_1 = "\"$(SRCROOT)/\"/**";
+				HEADER_SEARCH_PATHS_QUOTED_FOR_TARGET_2 = "\"$(SRCROOT)/../../extern/samtools-0.1.7a\"/**";
 				INSTALL_PATH = /usr/local/bin;
 				LIBRARY_SEARCH_PATHS = (
 					"$(inherited)",
 					"$(LIBRARY_SEARCH_PATHS_QUOTED_FOR_TARGET_1)",
 					/opt/local/lib,
 					"$(LIBRARY_SEARCH_PATHS_QUOTED_FOR_TARGET_2)",
+					"$(LIBRARY_SEARCH_PATHS_QUOTED_FOR_TARGET_3)",
+					"$(LIBRARY_SEARCH_PATHS_QUOTED_FOR_TARGET_4)",
+					"$(LIBRARY_SEARCH_PATHS_QUOTED_FOR_TARGET_5)",
 				);
 				LIBRARY_SEARCH_PATHS_QUOTED_FOR_TARGET_1 = "\"$(SRCROOT)/samtools-0.1.7a\"";
 				LIBRARY_SEARCH_PATHS_QUOTED_FOR_TARGET_2 = "\"$(SRCROOT)/../../extern/samtools-0.1.7a\"";
+				LIBRARY_SEARCH_PATHS_QUOTED_FOR_TARGET_3 = "\"$(SRCROOT)/.libs\"";
+				LIBRARY_SEARCH_PATHS_QUOTED_FOR_TARGET_4 = "\"$(SRCROOT)/breseq/.libs\"";
+				LIBRARY_SEARCH_PATHS_QUOTED_FOR_TARGET_5 = "\"$(SRCROOT)/build/Debug\"";
 				PREBINDING = NO;
 				PRODUCT_NAME = error_count;
 				ZERO_LINK = NO;
@@ -709,20 +824,27 @@
 			baseConfigurationReference = 4247E8261268EB90006A6D78 /* debug.xcconfig */;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
+				ARCHS = "$(ARCHS_STANDARD_64_BIT_PRE_XCODE_3_1)";
+				ARCHS_STANDARD_64_BIT_PRE_XCODE_3_1 = x86_64;
 				COPY_PHASE_STRIP = NO;
 				GCC_DYNAMIC_NO_PIC = NO;
 				GCC_ENABLE_FIX_AND_CONTINUE = YES;
 				GCC_OPTIMIZATION_LEVEL = 0;
 				GCC_WARN_ABOUT_POINTER_SIGNEDNESS = YES;
+				HEADER_SEARCH_PATHS = (
+					"$(HEADER_SEARCH_PATHS_QUOTED_FOR_TARGET_1)",
+					"$(HEADER_SEARCH_PATHS_QUOTED_FOR_TARGET_2)",
+				);
+				HEADER_SEARCH_PATHS_QUOTED_FOR_TARGET_1 = "\"$(SRCROOT)/\"/**";
+				HEADER_SEARCH_PATHS_QUOTED_FOR_TARGET_2 = "\"$(SRCROOT)/../../extern/samtools-0.1.7a\"/**";
 				INSTALL_PATH = /usr/local/bin;
 				LIBRARY_SEARCH_PATHS = (
 					"$(inherited)",
 					/opt/local/lib,
-					"$(LIBRARY_SEARCH_PATHS_QUOTED_FOR_TARGET_1)",
 				);
 				PREBINDING = NO;
 				PRODUCT_NAME = identify_mutations;
-				USER_HEADER_SEARCH_PATHS = "$(PROJECT_DIR)/identify_mutations/include";
+				USER_HEADER_SEARCH_PATHS = "";
 			};
 			name = Debug;
 		};
@@ -730,22 +852,28 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
-				ARCHS = "$(NATIVE_ARCH_ACTUAL)";
+				ARCHS = "$(ARCHS_STANDARD_64_BIT_PRE_XCODE_3_1)";
+				ARCHS_STANDARD_64_BIT_PRE_XCODE_3_1 = x86_64;
 				COPY_PHASE_STRIP = YES;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
 				GCC_ENABLE_FIX_AND_CONTINUE = NO;
 				GCC_MODEL_TUNING = G5;
+				HEADER_SEARCH_PATHS = (
+					"$(HEADER_SEARCH_PATHS_QUOTED_FOR_TARGET_1)",
+					"$(HEADER_SEARCH_PATHS_QUOTED_FOR_TARGET_2)",
+				);
+				HEADER_SEARCH_PATHS_QUOTED_FOR_TARGET_1 = "\"$(SRCROOT)/\"/**";
+				HEADER_SEARCH_PATHS_QUOTED_FOR_TARGET_2 = "\"$(SRCROOT)/../../extern/samtools-0.1.7a\"/**";
 				INSTALL_PATH = /usr/local/bin;
 				LIBRARY_SEARCH_PATHS = (
 					"$(inherited)",
-					"$(LIBRARY_SEARCH_PATHS_QUOTED_FOR_TARGET_1)",
 					/opt/local/lib,
-					"$(LIBRARY_SEARCH_PATHS_QUOTED_FOR_TARGET_2)",
 				);
 				LIBRARY_SEARCH_PATHS_QUOTED_FOR_TARGET_1 = "\"$(SRCROOT)/samtools-0.1.7a\"";
 				LIBRARY_SEARCH_PATHS_QUOTED_FOR_TARGET_2 = "\"$(SRCROOT)/../../extern/samtools-0.1.7a\"";
 				PREBINDING = NO;
 				PRODUCT_NAME = error_count;
+				USER_HEADER_SEARCH_PATHS = "";
 				ZERO_LINK = NO;
 			};
 			name = Release;
@@ -754,12 +882,22 @@
 			isa = XCBuildConfiguration;
 			baseConfigurationReference = 4247E8261268EB90006A6D78 /* debug.xcconfig */;
 			buildSettings = {
+				ARCHS = "$(ARCHS_STANDARD_64_BIT_PRE_XCODE_3_1)";
+				ARCHS_STANDARD_64_BIT_PRE_XCODE_3_1 = x86_64;
 				LIBRARY_SEARCH_PATHS = (
 					"$(inherited)",
 					/opt/local/lib,
 					"$(LIBRARY_SEARCH_PATHS_QUOTED_FOR_TARGET_1)",
+					"$(LIBRARY_SEARCH_PATHS_QUOTED_FOR_TARGET_2)",
+					"$(LIBRARY_SEARCH_PATHS_QUOTED_FOR_TARGET_3)",
+					"$(LIBRARY_SEARCH_PATHS_QUOTED_FOR_TARGET_4)",
+					"$(LIBRARY_SEARCH_PATHS_QUOTED_FOR_TARGET_5)",
 				);
 				LIBRARY_SEARCH_PATHS_QUOTED_FOR_TARGET_1 = "\"$(SRCROOT)/samtools-0.1.7a/.libs\"";
+				LIBRARY_SEARCH_PATHS_QUOTED_FOR_TARGET_2 = "\"$(SRCROOT)/../../extern/samtools-0.1.7a\"";
+				LIBRARY_SEARCH_PATHS_QUOTED_FOR_TARGET_3 = "\"$(SRCROOT)/.libs\"";
+				LIBRARY_SEARCH_PATHS_QUOTED_FOR_TARGET_4 = "\"$(SRCROOT)/breseq/.libs\"";
+				LIBRARY_SEARCH_PATHS_QUOTED_FOR_TARGET_5 = "\"$(SRCROOT)/build/Debug\"";
 				PRODUCT_NAME = breseq;
 			};
 			name = Debug;
@@ -768,7 +906,8 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
-				ARCHS = "$(NATIVE_ARCH_ACTUAL)";
+				ARCHS = "$(ARCHS_STANDARD_64_BIT_PRE_XCODE_3_1)";
+				ARCHS_STANDARD_64_BIT_PRE_XCODE_3_1 = x86_64;
 				COPY_PHASE_STRIP = YES;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
 				GCC_ENABLE_FIX_AND_CONTINUE = NO;
@@ -778,10 +917,89 @@
 					"$(inherited)",
 					/opt/local/lib,
 					"$(LIBRARY_SEARCH_PATHS_QUOTED_FOR_TARGET_1)",
+					"$(LIBRARY_SEARCH_PATHS_QUOTED_FOR_TARGET_2)",
+					"$(LIBRARY_SEARCH_PATHS_QUOTED_FOR_TARGET_3)",
+					"$(LIBRARY_SEARCH_PATHS_QUOTED_FOR_TARGET_4)",
+					"$(LIBRARY_SEARCH_PATHS_QUOTED_FOR_TARGET_5)",
 				);
 				LIBRARY_SEARCH_PATHS_QUOTED_FOR_TARGET_1 = "\"$(SRCROOT)/samtools-0.1.7a/.libs\"";
+				LIBRARY_SEARCH_PATHS_QUOTED_FOR_TARGET_2 = "\"$(SRCROOT)/../../extern/samtools-0.1.7a\"";
+				LIBRARY_SEARCH_PATHS_QUOTED_FOR_TARGET_3 = "\"$(SRCROOT)/.libs\"";
+				LIBRARY_SEARCH_PATHS_QUOTED_FOR_TARGET_4 = "\"$(SRCROOT)/breseq/.libs\"";
+				LIBRARY_SEARCH_PATHS_QUOTED_FOR_TARGET_5 = "\"$(SRCROOT)/build/Debug\"";
 				PREBINDING = NO;
 				PRODUCT_NAME = breseq;
+				ZERO_LINK = NO;
+			};
+			name = Release;
+		};
+		70A5BC1712BE6EBF005EFE9F /* Debug */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = 4247E8261268EB90006A6D78 /* debug.xcconfig */;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ARCHS = "$(ARCHS_STANDARD_64_BIT_PRE_XCODE_3_1)";
+				ARCHS_STANDARD_64_BIT_PRE_XCODE_3_1 = x86_64;
+				COPY_PHASE_STRIP = NO;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_ENABLE_FIX_AND_CONTINUE = YES;
+				HEADER_SEARCH_PATHS = (
+					"$(HEADER_SEARCH_PATHS_QUOTED_FOR_TARGET_1)",
+					"$(HEADER_SEARCH_PATHS_QUOTED_FOR_TARGET_2)",
+				);
+				HEADER_SEARCH_PATHS_QUOTED_FOR_TARGET_1 = "\"$(SRCROOT)/\"/**";
+				HEADER_SEARCH_PATHS_QUOTED_FOR_TARGET_2 = "\"$(SRCROOT)/../../extern/samtools-0.1.7a\"/**";
+				INSTALL_PATH = /usr/local/bin;
+				LIBRARY_SEARCH_PATHS = (
+					"$(inherited)",
+					/opt/local/lib,
+					"$(LIBRARY_SEARCH_PATHS_QUOTED_FOR_TARGET_1)",
+					"$(LIBRARY_SEARCH_PATHS_QUOTED_FOR_TARGET_1)",
+					"$(LIBRARY_SEARCH_PATHS_QUOTED_FOR_TARGET_2)",
+					"$(LIBRARY_SEARCH_PATHS_QUOTED_FOR_TARGET_3)",
+				);
+				LIBRARY_SEARCH_PATHS_QUOTED_FOR_TARGET_1 = "\"$(SRCROOT)/.libs\"";
+				LIBRARY_SEARCH_PATHS_QUOTED_FOR_TARGET_2 = "\"$(SRCROOT)/breseq/.libs\"";
+				LIBRARY_SEARCH_PATHS_QUOTED_FOR_TARGET_3 = "\"$(SRCROOT)/build/Debug\"";
+				PREBINDING = NO;
+				PRODUCT_NAME = calc_trims;
+				USER_HEADER_SEARCH_PATHS = "$(PROJECT_DIR)/error_count/include";
+			};
+			name = Debug;
+		};
+		70A5BC1812BE6EBF005EFE9F /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ARCHS = "$(ARCHS_STANDARD_64_BIT_PRE_XCODE_3_1)";
+				ARCHS_STANDARD_64_BIT_PRE_XCODE_3_1 = x86_64;
+				COPY_PHASE_STRIP = YES;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				GCC_ENABLE_FIX_AND_CONTINUE = NO;
+				GCC_MODEL_TUNING = G5;
+				HEADER_SEARCH_PATHS = (
+					"$(HEADER_SEARCH_PATHS_QUOTED_FOR_TARGET_1)",
+					"$(HEADER_SEARCH_PATHS_QUOTED_FOR_TARGET_2)",
+				);
+				HEADER_SEARCH_PATHS_QUOTED_FOR_TARGET_1 = "\"$(SRCROOT)/\"/**";
+				HEADER_SEARCH_PATHS_QUOTED_FOR_TARGET_2 = "\"$(SRCROOT)/../../extern/samtools-0.1.7a\"/**";
+				INSTALL_PATH = /usr/local/bin;
+				LIBRARY_SEARCH_PATHS = (
+					"$(inherited)",
+					"$(LIBRARY_SEARCH_PATHS_QUOTED_FOR_TARGET_1)",
+					/opt/local/lib,
+					"$(LIBRARY_SEARCH_PATHS_QUOTED_FOR_TARGET_2)",
+					"$(LIBRARY_SEARCH_PATHS_QUOTED_FOR_TARGET_3)",
+					"$(LIBRARY_SEARCH_PATHS_QUOTED_FOR_TARGET_4)",
+					"$(LIBRARY_SEARCH_PATHS_QUOTED_FOR_TARGET_5)",
+				);
+				LIBRARY_SEARCH_PATHS_QUOTED_FOR_TARGET_1 = "\"$(SRCROOT)/samtools-0.1.7a\"";
+				LIBRARY_SEARCH_PATHS_QUOTED_FOR_TARGET_2 = "\"$(SRCROOT)/../../extern/samtools-0.1.7a\"";
+				LIBRARY_SEARCH_PATHS_QUOTED_FOR_TARGET_3 = "\"$(SRCROOT)/.libs\"";
+				LIBRARY_SEARCH_PATHS_QUOTED_FOR_TARGET_4 = "\"$(SRCROOT)/breseq/.libs\"";
+				LIBRARY_SEARCH_PATHS_QUOTED_FOR_TARGET_5 = "\"$(SRCROOT)/build/Debug\"";
+				PREBINDING = NO;
+				PRODUCT_NAME = calc_trims;
 				ZERO_LINK = NO;
 			};
 			name = Release;
@@ -839,6 +1057,15 @@
 			buildConfigurations = (
 				42BA690D1189B7FE000B00B1 /* Debug */,
 				42BA690E1189B7FE000B00B1 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		70A5BC1612BE6EBF005EFE9F /* Build configuration list for PBXNativeTarget "calc_trims" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				70A5BC1712BE6EBF005EFE9F /* Debug */,
+				70A5BC1812BE6EBF005EFE9F /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;

@@ -27,10 +27,12 @@ LICENSE AND COPYRIGHT
 #include <assert.h>
 #include <boost/tuple/tuple.hpp>
 #include <boost/algorithm/string.hpp>
+#include <boost/math/distributions.hpp>
 
 #include "breseq/common.h"
 #include "breseq/pileup.h"
 #include "breseq/identify_mutations.h"
+
 
 /*! Convenience wrapper around the identify_mutations_pileup class.
  */
@@ -45,17 +47,20 @@ void breseq::identify_mutations(const std::string& bam,
 																double mutation_cutoff,
 																bool predict_deletions,
 																bool predict_polymorphisms,
-                                uint8_t min_qual_score) {
+                                uint8_t min_qual_score,
+                                double polymorphism_cutoff,
+                                double polymorphism_frequency_cutoff ) {
                                                                                             
 	// do the mutation identification:
-	identify_mutations_pileup imp(bam, fasta, error_dir, gd_file, output_dir, readfiles, coverage_dir, deletion_propagation_cutoff, mutation_cutoff, predict_deletions, predict_polymorphisms, min_qual_score);
+	identify_mutations_pileup imp(bam, fasta, error_dir, gd_file, output_dir, readfiles, coverage_dir, deletion_propagation_cutoff, mutation_cutoff, predict_deletions, predict_polymorphisms, min_qual_score, polymorphism_cutoff, polymorphism_frequency_cutoff);
 	imp.do_pileup();
 }
 
 
 /*! Constructor.
  */
-breseq::identify_mutations_pileup::identify_mutations_pileup(const std::string& bam, 
+breseq::identify_mutations_pileup::identify_mutations_pileup(
+                                                             const std::string& bam, 
 																														 const std::string& fasta,
 																														 const std::string& error_dir,
 																														 const std::string& gd_file,
@@ -66,7 +71,10 @@ breseq::identify_mutations_pileup::identify_mutations_pileup(const std::string& 
 																														 double mutation_cutoff,
 																														 bool predict_deletions,
 																														 bool predict_polymorphisms,
-                                                             uint8_t min_qual_score)
+                                                             uint8_t min_qual_score,
+                                                             double polymorphism_cutoff,
+                                                             double polymorphism_frequency_cutoff 
+                                                            )
 : breseq::pileup_base(bam, fasta)
 , _ecr(error_dir, readfiles)
 , _gd(gd_file)
@@ -76,7 +84,10 @@ breseq::identify_mutations_pileup::identify_mutations_pileup(const std::string& 
 , _mutation_cutoff(mutation_cutoff)
 , _predict_deletions(predict_deletions)
 , _predict_polymorphisms(predict_polymorphisms)
+, _polymorphism_cutoff(polymorphism_cutoff)
+, _polymorphism_frequency_cutoff(polymorphism_frequency_cutoff)
 , _coverage_dir(coverage_dir)
+, _output_dir(output_dir)
 , _log10_ref_length(0)
 , _on_deletion_seq_id(boost::none)
 , _this_deletion_reaches_seed_value(false)
@@ -87,27 +98,15 @@ breseq::identify_mutations_pileup::identify_mutations_pileup(const std::string& 
 	// reserve enough space for the sequence info:
 	_seq_info.resize(_bam->header->n_targets);
 	
-	//	my $total_ref_length = 0;
-	//	foreach my $seq_id (@seq_ids)
-	//	{
-	//		$total_ref_length+= $bam->length($seq_id);
-	//	}
-	//	
-	//	my $log10_ref_length = log($total_ref_length) / log(10);	
+  // tally up the reference lengths from the bam file
 	for(int i=0; i<_bam->header->n_targets; ++i) {
 		_log10_ref_length += static_cast<double>(_bam->header->target_len[i]);
 	}
 	assert(_log10_ref_length != 0);
 	_log10_ref_length = log10(_log10_ref_length);
-	
-	//	my $snps_all_tab_file_name = $settings->file_name('complete_mutations_text_file_name', {'@'=>$seq_id}); 
-	//	my $coverage_tab_file_name = $settings->file_name('complete_coverage_text_file_name', {'@'=>$seq_id}); 
-	//	
-	//	open MUT, ">$snps_all_tab_file_name" if (defined $snps_all_tab_file_name);
-	//	open COV, ">$coverage_tab_file_name" if (defined $coverage_tab_file_name);
-	//	
-	//	my $cnv_coverage_tab_file_name = $settings->file_name('cnv_coverage_tab_file_name', {'@'=>$seq_id}); 
-	//	open CNV_COV, ">$cnv_coverage_tab_file_name" if (defined $cnv_coverage_tab_file_name);
+  
+  // are we printing detailed coverage information?
+  _print_coverage_data = (coverage_dir != "");
 }
 
 
@@ -123,24 +122,16 @@ void breseq::identify_mutations_pileup::callback(const breseq::pileup& p) {
 	using namespace std;
 	assert(p.target() < _seq_info.size());
   _this_deletion_propagation_cutoff = _deletion_propagation_cutoff[p.target()];
-
-	//	our @base_list = ('A', 'T', 'C', 'G', '.');
-	static uint8_t base_list[] = {'A', 'T', 'C', 'G', '.'};
-	
-	//	my ($seqid,$pos,$pileup) = @_;
-	//	
-	//	print STDERR "    POSITION:$pos\n" if ($pos % 10000 == 0);			
-	//	
-	//	my $insert_count = 0;
-	//	my $next_insert_count_exists = 1;
   
-  // @JEB Use 1-indexing throughout!!
+  // @JEB All breseq internal functons use 1-indexing!!
+  //   Convert immediately from 0-indexed used by SAM.
   uint32_t position = p.position()+1;
+  
 	int insert_count=-1;
 	bool next_insert_count_exists=true;
 	
 	// check to see if we already opened the coverage file:
-	if(!_coverage_data.is_open()) {
+	if(_print_coverage_data && !_coverage_data.is_open()) {
 		//		open COV, ">$coverage_tab_file_name" if (defined $coverage_tab_file_name);
 		//		print COV join("\t", 'unique_top_cov', 'unique_bot_cov', 'redundant_top_cov', 'redundant_bot_cov', 'raw_redundant_top_cov', 'raw_redundant_bot_cov', 'e_value', 'position') . "\n";
 		std::string filename(_coverage_dir);
@@ -149,77 +140,71 @@ void breseq::identify_mutations_pileup::callback(const breseq::pileup& p) {
 		_coverage_data.open(filename.c_str());
 		_coverage_data << "unique_top_cov" << "\t" << "unique_bot_cov" << "\t" << "redundant_top_cov" << "\t" << "redundant_bot_cov" << "\t" << "raw_redundant_top_cov" << "\t" << "raw_redundant_bot_cov" << "\t" << "e_value" << "\t" << "position" << std::endl;
 	}	
+  
+  // temporary file for debugging polymorphism prediction
+  if(_predict_polymorphisms && !_polymorphism_r_input_file.is_open()) {
+		std::string filename(_output_dir);
+		filename += "/polymorphism_statistics_input.tab";
+		_polymorphism_r_input_file.open(filename.c_str());
+		_polymorphism_r_input_file 
+      << "seq_id" << "\t"
+      << "position" << "\t" 
+      << "insert_position" << "\t" 
+      << "ref_base" << "\t" 
+      << "best_base" << "\t" 
+      << "second_best_base" << "\t" 
+      << "frequency" << "\t"
+      << "log10_base_likelihood" << "\t"
+      << "E-value" << "\t"
+      << "ref_top_strand" << "\t" 
+      << "ref_bot_strand" << "\t" 
+      << "new_top_strand" << "\t" 
+      << "new_bot_strand" << "\t"
+      << "best_quals" << "\t"
+      << "second_best_quals" << "\t"
+      << std::endl;
+  }
 	
-	//INSERT_COUNT: while ($next_insert_count_exists)
 	while(next_insert_count_exists) {
 		++insert_count; // we're doing this here because the perl version uses a while-continue.
-    //cerr << "Position:" << position << " Insert Count:" << insert_count << endl;
-		//		@dk: positions are 0-indexed here, while genome diff is 1-indexed; this will have to be fixed (maybe in the genome diff?).
-		//		if(insert_count) {
-		//			cerr << position << " " << insert_count << endl;
-		//		}
+    next_insert_count_exists = false;
 		
-		//	$next_insert_count_exists = 0;
-		next_insert_count_exists = false;
-		
-		//	my $ref_base = ($insert_count) ? '.' : $bam->segment($seqid,$pos,$pos)->dna;
 		uint8_t ref_base = '.';
 		if(!insert_count) {
 			ref_base = p.reference_sequence()[position-1]; //reference_sequence is 1-indexed
 		}
 		
-		//# zero out the info about this position
-		//	my $pos_info;
-		//	foreach my $base (@base_list)
-		//	{
-		//		$pos_info->{$base}->{unique_cov}->{1} = 0;
-		//		$pos_info->{$base}->{unique_cov}->{-1} = 0;
-		//		$pos_info->{$base}->{unique_trimmed_cov}->{1} = 0;
-		//		$pos_info->{$base}->{unique_trimmed_cov}->{-1} = 0;
-		//		$pos_info->{$base}->{mutation_cov}->{1} = 0;
-		//		$pos_info->{$base}->{mutation_cov}->{-1} = 0;
-		//	}
+		//## zero out the info about this position
 		map<uint8_t,position_info> pos_info;
 		for(std::size_t j=0; j<5; ++j) {
 			pos_info.insert(make_pair(base_list[j],position_info()));
 		}
 		
-		//	
 		//## keep track of coverage for deletion prediction
-		//	my $this_position_coverage;
-		//	$this_position_coverage->{unique} = {'-1' => 0, '1' => 0, 'total' => 0};
-		//	$this_position_coverage->{redundant} = {'-1' => 0, '1' => 0, 'total' => 0};
-		//	$this_position_coverage->{raw_redundant} = {'-1' => 0, '1' => 0, 'total' => 0};
-		//	$this_position_coverage->{total} = 0;
-		//	my $this_position_unique_only_coverage = 1;
 		position_coverage this_position_coverage;
 		bool this_position_unique_only_coverage=true;
 		
-		//## calculate the chance of observing alignment given each possible base was 100% of the population
-		//	my $pr_base_hash;
-		//	my $pr_not_base_hash;
-		map<uint8_t,double> pr_base_hash;
-		map<uint8_t,double> pr_not_base_hash;
-		
-		//## polymorphism prediction
-		//	my $pdata;
+    //## SNP caller
+    cDiscreteSNPCaller snp(1);
+        
+		//## polymorphism prediction data
 		vector<polymorphism_data> pdata;
-		
-		
-		///*		
-		//	ALIGNMENT: foreach my $p (@$pileup) 
-		//		{
-		
-		// for each alignment within this pileup:
+    
+		//## for each alignment within this pileup:
 		for(pileup::const_iterator i=p.begin(); i!=p.end(); ++i) {
-			//			my $a = $p->alignment;
-			//		*i;
 			
 			//## This setup gives expected behavior from indel!
-			//			my $indel = $p->indel;       ## insertions relative to the reference have the 
-			//## number of this inserted base
+			//			my $indel = $p->indel;       
 			//			$indel = 0 if ($indel < 0);  ## substitute such that
 			//			$indel = -1 if ($p->is_del); ## deletions relative to reference have -1 as indel
+      
+      //## insertions relative to the reference have the 
+			//## number of this inserted base
+      
+      //## After these substitutions...
+      //## Indel is -1 if the ref base is deleted in the read, zero
+      //## if the read base is aligned to a ref base, and positive
+      //## if the read base is an insertion relative to the ref base
 			int indel=i->indel();
 			if(indel < 0) {
 				indel = 0;
@@ -228,40 +213,20 @@ void breseq::identify_mutations_pileup::callback(const breseq::pileup& p) {
 				indel = -1;
 			}
 			
-			//my $base = ($indel < $insert_count) ? '.' : substr($a->qseq,$p->qpos + $insert_count,1);		
 			uint8_t base='.';
 			if(indel >= insert_count) {
         base = i->query_base(i->query_position() + insert_count);
 			}
-			
+      			
 			//##don't use bases without qualities!!
-			//next if ($base =~ /[nN]/);
-			if(is_N(base)) {
-				continue;
-			}
+			if(is_N(base)) continue;
 			
-			//			my $redundancy = $a->aux_get('X1');
+      //## gather information about the aligned base
 			int32_t redundancy = i->redundancy();
-			
-			//			my $fastq_file_index = $a->aux_get('X2');
 			int32_t fastq_file_index = i->fastq_file_index();
-			
-			//			my $strand = $a->reversed ? -1 : +1;
 			int strand = i->strand();
-			
-			//## Handle trimming
-			//## Note that trimming INCLUDES the unaligned bases on each end
-			//			my $trimmed = 0;
-			//			my $trim_left = $a->aux_get('XL');  
-			//			my $trim_right = $a->aux_get('XR');
-			//
-			//			$trimmed = 1 if ((defined $trim_left) && ($p->qpos+1 <= $trim_left));
-			//			$trimmed = 1 if ((defined $trim_right) && ($a->query->length-$p->qpos <= $trim_right));
-			//			
 			bool trimmed = i->is_trimmed();
-			
-			//std::cerr << q_start << " " << q_end << std::endl;			
-			
+						
 			//### Optionally, only count reads that completely match
 			//			my $complete_match = 1;
 			//			if ($settings->{require_complete_match})
@@ -275,37 +240,26 @@ void breseq::identify_mutations_pileup::callback(const breseq::pileup& p) {
 			//### note that we count trimmed reads here, but not when looking for short indel mutations...	
 			
 			if(redundancy == 1) {
-				//## this is only used when reporting coverage for within-read indels
-				//## NOT for calling deletions...		
-				//$this_position_coverage->{unique}->{$strand}++;
-				//$pos_info->{$base}->{unique_cov}->{$strand}++;
+				//## keep track of unique coverage	
 				++this_position_coverage.unique[1+strand];
 				++pos_info[base2char(base)].unique_cov[1+strand];
 				
-				//if ($indel > $insert_count)
-				//{
-				//$next_insert_count_exists = 1;
-				//}
+        //## we don't continue to consider further insertions relative
+        //## to the reference unless uniquely aligned reads have them 
 				if(indel > insert_count) {
 					next_insert_count_exists = true;
 				}
 				
-			} else {
-				//$this_position_unique_only_coverage = 0;
-				//$this_position_coverage->{redundant}->{$strand} += 1/$redundancy;			
-				//$this_position_coverage->{raw_redundant}->{$strand}++;			
+			} else {		
+        //## mark that this position has some non-unique coverage
 				this_position_unique_only_coverage = false;
+        //## keep track of redundant coverage
 				this_position_coverage.redundant[1+strand] += 1.0/redundancy;
 				++this_position_coverage.raw_redundant[1+strand];
 			}
 			
-			
-			//## EXPERIMENTAL -- moved above		
-			//##don't use information from trimmed reads!!
-			//			next if ($trimmed);
-			//			
-			//##don't use information from redundant reads!!
-			//next if ($redundancy > 1);				
+			//## don't use information from trimmed or redundant reads
+      //## to predict base substitutions and short indels!!
 			if(trimmed || (redundancy > 1)) {
 				continue;
 			}
@@ -328,10 +282,6 @@ void breseq::identify_mutations_pileup::callback(const breseq::pileup& p) {
         uint8_t check_base = i->query_base(mqpos);
         if (is_N(check_base)) continue;
         quality = i->quality_base(mqpos);
-        //	my $mqpos = $qpos + 1 - $reversed;
-        //	my $check_base = substr($a->qseq,$mqpos,1);
-        //	next ALIGNMENT if ($check_base eq 'N');
-        //	$quality = $a->qscore->[$mqpos];
       }
 
       //## Substitution in read relative to reference...
@@ -339,7 +289,6 @@ void breseq::identify_mutations_pileup::callback(const breseq::pileup& p) {
       else if (insert_count == 0)
       {
         quality = i->quality_base(i->query_position());
-        //	$quality = $a->qscore->[$qpos];
       }
       
       //## Insertion in read relative to reference...
@@ -350,11 +299,7 @@ void breseq::identify_mutations_pileup::callback(const breseq::pileup& p) {
         int32_t max_offset = insert_count;
         if (indel < max_offset) max_offset = indel;
         int32_t mqpos = i->query_position() + max_offset + 1 - i->reversed(); 
-      
-        //my $max_offset = $insert_count;
-        //$max_offset = $indel if ($indel < $max_offset);
-        //my $mqpos = $qpos + $max_offset + 1 - $reversed;
-          
+                
         //## Check bounds: it's possible to go past the end of the read because
         //## this is the last base of this read, but other reads have inserted bases
       
@@ -363,16 +308,12 @@ void breseq::identify_mutations_pileup::callback(const breseq::pileup& p) {
       
         uint8_t check_base = i->query_base(mqpos);
         if (is_N(check_base)) continue;
-        //my $check_base = substr($a->qseq,$mqpos,1);
-        //next ALIGNMENT if ($check_base eq 'N');
         
         quality = i->quality_base(mqpos);
-        //$quality = $a->qscore->[$mqpos];
       }
 
       //## We may want to ignore all bases below a certain quality when calling mutations and polymorphisms
       //## This is the check for whether the base fails; it should be after coverage counting
-      //next ALIGNMENT if ( $settings->{base_quality_cutoff} && ($quality < $settings->{base_quality_cutoff}) );
 
       if (quality < _min_qual_score) {
 //        std::cerr << position << " " << (unsigned int)quality << " " << std::endl;
@@ -381,133 +322,42 @@ void breseq::identify_mutations_pileup::callback(const breseq::pileup& p) {
 			
 			
 			//## this is the coverage for SNP counts, tabulate AFTER skipping trimmed reads
-			//$pos_info->{$base}->{unique_trimmed_cov}->{$strand}++;
 			++pos_info[base2char(base)].unique_trimmed_cov[1+strand];
 			
 			//##### this is for polymorphism prediction and making strings
-			//push @$pdata, { base => $base, quality => $quality, strand => $strand, fastq_file_index => $fastq_file_index };
 			pdata.push_back(polymorphism_data(base,quality,strand,fastq_file_index));
 			
 			//##### deal with base calls
-			//foreach my $hypothetical_base (@base_list)
-			//{				
-			
+      
 			//std::cerr << "========" << std::endl << position+1 << std::endl;
-			
-			for(std::size_t j=0; j<5; ++j) {
-				// base_list[j] == hypothetical base
-				//my $base_key =  ($strand == +1) ? $hypothetical_base . $base : Breseq::Fastq::revcom($hypothetical_base) . Breseq::Fastq::revcom($base);
-				string base_key;
-				if(strand == 1) {
-					base_key += base_list[j];
-					base_key += base2char(base);
-				} else {
-					base_key += reverse_base(base_list[j]); 
-					base_key += base2char(reverse_base(base));
-				}
-				
-				//##sanity checks
-				//
-				//##is the error rate defined?
-				//
-				//if (!defined $log10_correct_rates->[$fastq_file_index]->{$quality}->{$base_key})
-				//{
-				//print "$fastq_file_index $quality $base_key\n";
-				//print Dumper($log10_correct_rates->[$fastq_file_index]);
-				//die;
-				//}
-				
-				//##record evidence for and against this hypothetical base being the reference, given the observation
-				//$pr_base_hash->{$hypothetical_base} += $log10_correct_rates->[$fastq_file_index]->{$quality}->{$base_key};
-				//$pr_not_base_hash->{$hypothetical_base} += $log10_error_rates->[$fastq_file_index]->{$quality}->{$base_key};
-				
-				//std::cerr << base2char(base) << " " << base_key << " " << (unsigned int)quality << " " << _ecr.log10_correct_rates(fastq_file_index, quality, base_key) << " " << _ecr.log10_error_rates(fastq_file_index, quality, base_key) << std::endl;
-				
-				std::pair<double,double> log10rates = _ecr.log10_rates(fastq_file_index, quality, base_key);
-				//std::cerr << "pr: " << log10rates.second << " not: " << log10rates.first << std::endl;
-				pr_base_hash[base_list[j]] += log10rates.second; //_ecr.log10_correct_rates(fastq_file_index, quality, base_key);
-				pr_not_base_hash[base_list[j]] += log10rates.first; //_ecr.log10_error_rates(fastq_file_index, quality, base_key);
-			}
+      
+      snp.update(base, quality, strand == 1, fastq_file_index, _ecr);
+      
 		} // end for-each read
 		
+    
+    //#############################
 		//## PER POSITION/INSERT COUNT
-		//		
-		//#sum up coverage observations
-		//		$this_position_coverage->{unique}->{total} = $this_position_coverage->{unique}->{-1} + $this_position_coverage->{unique}->{+1};
-		//		$this_position_coverage->{redundant}->{total} = $this_position_coverage->{redundant}->{-1} + $this_position_coverage->{redundant}->{+1};
-		//		$this_position_coverage->{raw_redundant}->{total} = $this_position_coverage->{raw_redundant}->{-1} + $this_position_coverage->{raw_redundant}->{+1};
-		//		$this_position_coverage->{total} = $this_position_coverage->{unique}->{total} + $this_position_coverage->{redundant}->{total};
-		//		
+    //#############################
+    
+		//#sum up coverage observations	
 		this_position_coverage.sum();
-		
-		//		$s->{coverage}->{unique_total}++ if ($this_position_unique_only_coverage && ($insert_count == 0));
-		if(this_position_unique_only_coverage && (insert_count==0)) {
-			//		$s->{coverage}->{unique_total}++			
-			++s.coverage_unique_total; // @dk: this could be skipped for now?
-		}
-		
-		//		std::cerr << this_position_coverage.total << std::endl;
-		
-		//#we are trying to find the base with the most support;		
-		//#calculate ratios of each base to all other bases
-		//		my $best_base;
-		//		my $pr_call;
-		//		foreach my $test_base (keys %$pr_base_hash)
-		uint8_t best_base=0;
-		double pr_call=0; 
-		bool pr_call_defined=false;
-		for(map<uint8_t,double>::iterator i=pr_base_hash.begin(); i!=pr_base_hash.end(); ++i) {
-			uint8_t test_base=i->first;
-			
-			//		{			
-			//##obsolete code
-			//# 'P' is a special key for evidence against indels
-			//###next if ($test_base eq 'P');
-			//			
-			//			my $this_pr_call = $pr_base_hash->{$test_base} - $pr_not_base_hash->{$test_base};
-			//			if ( (!defined $pr_call) || ($this_pr_call > $pr_call) )
-			//			{
-			//				$pr_call = $this_pr_call;
-			//				$best_base = $test_base;
-			//			}
-			//		}
-			double this_pr_call = i->second - pr_not_base_hash[test_base];
-			//std::cerr << base2char(test_base) << " " << this_pr_call << " " << i->second << " " << pr_not_base_hash[test_base] << std::endl;
-			if((!pr_call_defined) || (this_pr_call > pr_call)) {
-				pr_call = this_pr_call; 
-				pr_call_defined = true;
-				best_base = test_base;
-				//std::cerr << base2char(test_base) << " " << pr_call << std::endl;
-			}
-		}
-		
-		//#for the case where there are no counts
-		//		my $e_value_call = 'NA';
-		double e_value_call=std::numeric_limits<double>::quiet_NaN();
-		
-		//#otherwise correct to an e-value based on genome size
-		//#could correct only to number of unique positions???
-		//		if (defined $pr_call)
-		//		{
-		//			$e_value_call = $pr_call - $log10_ref_length;
-		//			$e_value_call = sprintf "%.1f", $e_value_call; #round immediately
-		//		}
-		if(pr_call_defined) {
-			e_value_call = pr_call - _log10_ref_length;
-			// @dk: based on the code above, this value should be truncated, but based on comments above it's rounded...
-			e_value_call = 0.1 * round(e_value_call*10);
-//			std::cerr << pr_call << " " << e_value_call << std::endl;
-		}
-		
-		//##did we predict a base at this position?
-		//		my $base_predicted = ($e_value_call ne 'NA' && ($e_value_call >= $settings->{mutation_log10_e_value_cutoff}));
-		bool base_predicted=false;
-		if(!std::isnan(e_value_call) && (e_value_call >= _mutation_cutoff)) {
-			base_predicted = true;
-		}
-		
+				
+		//#we are trying to find the base with the most support
+
+    boost::tuple<uint8_t,double> snp_pred = snp.get_prediction();
+    uint8_t best_base = boost::get<0>(snp_pred);
+    double e_value_call = boost::get<1>(snp_pred) - _log10_ref_length;
+    
+    //Do we predict a base at this position?
+    bool base_predicted=false;
+    if(e_value_call >= _mutation_cutoff) {
+      base_predicted = true;
+    }
+    
 		//std::cerr << position << " e:" << e_value_call << " b:" << base_predicted << std::endl;
 		
+    //###########REMOVE---->
 		//##print out SNP call information
 		//		my $total_cov;
 		//		$total_cov->{1} = 0;
@@ -539,24 +389,15 @@ void breseq::identify_mutations_pileup::callback(const breseq::pileup& p) {
 		//	line << " " << base_list[j] << " (" << bot_cov << "/" << top_cov << ")";
 		}
 		//std::cerr << line.str() << endl; // @dk print to file
-		
-
+    //###########<--------REMOVE
 		
 		
 		//###
 		//## DELETION DELETION DELETION
 		//###
-		//		
-		//#print to coverage file
+		
+    
 		//#update information on deletions
-		//		if ($insert_count == 0)
-		//		{
-		//			if (!$settings->{no_deletion_prediction})
-		//			{
-		//				_check_deletion_completion($pos, $this_position_coverage, $e_value_call);
-		//				_update_copy_number_variation($pos, $this_position_coverage, $ref_base); 							
-		//			}
-		//		}			
 		if(insert_count == 0) {
 			if(_predict_deletions) {
         // @JEB: note change in call so position sent to check_deletion_completion is 1-based
@@ -568,27 +409,65 @@ void breseq::identify_mutations_pileup::callback(const breseq::pileup& p) {
 		//###
 		//## POLYMORPHISM POLYMORPHISM POLYMORPHISM
 		//###								
-		//		my $polymorphism_predicted = 0;
-		//		my $polymorphism;
-		//		if ($settings->{polymorphism_prediction})
+
 		bool polymorphism_predicted=false;
+    polymorphism_prediction ppred;
+    uint8_t second_best_base;
+  
 		if(_predict_polymorphisms) {
-			//			$polymorphism = _predict_polymorphism($settings, $pdata, $log10_correct_rates, $error_rates, $ref_base);
-			//			
-			//			if ($polymorphism)
-			//			{
-			//				$polymorphism->{log10_e_value} = 'ND'; 
-			//				if ($polymorphism->{p_value} ne 'ND')
-			//				{
-			//					$polymorphism->{log10_e_value} = ($polymorphism->{p_value} == 0) ? "999" : -log($total_ref_length * $polymorphism->{p_value})/log(10);						
-			//				}
-			//				if ($polymorphism->{log10_e_value} >= 2)
-			//				{
-			//					$polymorphism_predicted = 1;
-			//#print Dumper($polymorphism);
-			//				}
-			//				$base_predicted = 1 if ($polymorphism_predicted);
-			//			}					
+	
+        // Debug output
+        /* 
+        std::cerr << position;
+        for(std::size_t j=0; j<5; ++j) {
+            std::cerr << " " << base_list[j] << " " << (pos_info[base_list[j]].unique_trimmed_cov[0] + pos_info[base_list[j]].unique_trimmed_cov[2]);
+        }
+        std::cerr << std::endl;
+        */
+        
+        // Find the bases with the highest and second highest coverage
+        // We only predict polymorphisms involving these
+        uint8_t best_base_index;
+        int best_base_coverage = 0;
+        uint8_t second_best_base_index;
+        int second_best_base_coverage = 0;
+        
+        std::vector<double> snp_probs = snp.get_log10_probabilities();
+                
+        for (uint8_t i=0; i<base_list_size; i++) {
+          uint8_t this_base = base_list[i];
+          uint8_t this_base_index = i;
+          int this_base_coverage = pos_info[this_base].unique_trimmed_cov[0] + pos_info[this_base].unique_trimmed_cov[2];
+          
+          // if better coverage or tied in coverage and better probability
+          if ((this_base_coverage > best_base_coverage) ||
+            ((this_base_coverage == best_base_coverage) && (snp_probs[this_base_index] > snp_probs[best_base_index]))) {
+            second_best_base_index = best_base_index;
+            second_best_base_coverage = best_base_coverage;
+            best_base_index = this_base_index;
+            best_base_coverage = this_base_coverage;
+          }
+          else if ((this_base_coverage > second_best_base_coverage) 
+            || ((this_base_coverage == second_best_base_coverage) && (snp_probs[this_base_index] > snp_probs[second_best_base_index]))) {
+            second_best_base_index = this_base_index;
+            second_best_base_coverage = this_base_coverage;
+          }
+        }
+        
+        // Only try mixed SNP model if there is coverage for more than one base!
+        if (second_best_base_coverage) {
+          best_base = base_list[best_base_index];
+          second_best_base = base_list[second_best_base_index];
+
+          ppred = predict_polymorphism(best_base, second_best_base, pdata);
+          ppred.log10_e_value = -(log(ppred.p_value)/log(10)) - _log10_ref_length;
+   
+          if (ppred.log10_e_value >= 0.0) {
+            polymorphism_predicted = 1;
+          }
+          //std::cerr << ppred.frequency << " " << ppred.log10_base_likelihood << " " << ppred.p_value << std::endl;
+        }		
+      
 		}				
 		
 		
@@ -598,164 +477,168 @@ void breseq::identify_mutations_pileup::callback(const breseq::pileup& p) {
 		//###				
 		//		if ($insert_count == 0)
 		if(insert_count == 0) {
-			//			_update_unknown_intervals($seq_id, $pos, $base_predicted, $this_position_unique_only_coverage);
 			update_unknown_intervals(position, p.target(), base_predicted, this_position_unique_only_coverage);
 		}
 		
 		
 		//## evaluate whether to call an actual mutation!				
 		//### skip if there is not enough evidence for a call or if it agrees with the reference
-		//#	next if (!$base_predicted);	
-		//		next if (($e_value_call eq 'NA') || ($e_value_call < -$log10_ref_length));
 		if(std::isnan(e_value_call) || (e_value_call < -_log10_ref_length)) {
 			continue;
 		}
-		
+    
 		//std::cerr << e_value_call << std::endl;
 		
 		//## mutation and polymorphism are exclusive predictions.
-		// my $mutation_predicted = (!$polymorphism_predicted) && ($best_base ne $ref_base);
 		bool mutation_predicted = !polymorphism_predicted && (base2char(best_base) != base2char(ref_base));
 				
 		//## bail if it's just the reference base and we aren't interested in polymorphisms...
-		//		next INSERT_COUNT if (!$mutation_predicted && !$polymorphism_predicted);
 		if(!mutation_predicted && !polymorphism_predicted) {
-			continue;
+			continue; // goes to next insert count...
 		}
-		//## bail if we are predicting polymorphisms, but there wasn't one
-		
+    		
 		//std::cerr << position << " " << e_value_call << " " << mutation_predicted << " " << polymorphism_predicted << " " << base2char(best_base) << " " << base2char(ref_base) << std::endl;
-		
 
-		
-		//## Fields common to consensus mutations and polymorphisms
-		//my $mut;				
-		//$mut->{type} = 'RA';
-		//$mut->{seq_id} = $seq_id;
-		//$mut->{position} = $pos;
-		//$mut->{insert_position} = $insert_count;
-		//$mut->{quality} = $e_value_call;		
+    //## Create new base mutation for genome diff
 		ra mut(boost::lexical_cast<std::string>(_gd.new_id()), "");
+    
+		//## Fields common to consensus mutations and polymorphisms
 		mut[SEQ_ID] = p.target_name();
 		mut[POSITION] = position;
 		mut[INSERT_POSITION] = insert_count;
 		mut[QUALITY] = e_value_call;
-		
-		//
-		//## code that prints out even more information
-		//## slow because it sorts things, and not necessary
-		//if (0)
-		//{
-		//my ($base_string, $quality_string, $strand_string) = _pdata_to_strings(@$pdata);
-		//$mut->{bases} = $base_string;
-		//$mut->{qualities} = $quality_string;
-		//$mut->{strands} = $strand_string;
-		//}
-		
+      
+    // both should never be true!
+    assert( !(mutation_predicted && polymorphism_predicted) );
+    
+    //## Specific initializations for consensus mutations
 		if(mutation_predicted) {
-			//$mut->{ref_base} = $ref_base;
-			//$mut->{new_base} = $best_base;		
-			//$mut->{frequency} = 1; ## this is not a polymorphism
-			//$mut->{reject} = "EVALUE" if ($e_value_call < $settings->{mutation_log10_e_value_cutoff});
 			mut[REF_BASE] = ref_base;
 			mut[NEW_BASE] = best_base;
 			mut[FREQUENCY] = 1;
 			if(e_value_call < _mutation_cutoff) {
-				mut[REJECT] = "EVALUE";
+        breseq::add_reject_reason(mut, "EVALUE");
 			}
-		}
-		
-		
-		//if ($polymorphism_predicted)
-		if(polymorphism_predicted) {
-			//$mut->{quality} = $polymorphism->{log10_e_value};		
-			//#$mut->{fisher_strand_p_value} = $polymorphism->{fisher_strand_p_value};
-			
+    }
+    //## Specific initilizations for polymorphisms
+    else if (polymorphism_predicted) {
+ 
+      
+/// PROBLEM: We need to more robustly deal with cases of polymorphisms where neither of the two bases 
+///          involved if the reference base; Solve by adding two lines to genome diff.
+                
 			//# the frequency returned is the probability of the FIRST base
-			//# we want to quote the probability of the second base (the change from the reference).
-			//my $polymorphism_coverage_both_bases = 0;
-			//if ($polymorphism->{first_base} eq $ref_base)
-			//{
-			//$mut->{frequency} = 1-$polymorphism->{frequency};
-			//$mut->{ref_base} = $polymorphism->{first_base};
-			//$mut->{new_base} = $polymorphism->{second_base};
-			//$polymorphism_coverage_both_bases = 
-			//( ($polymorphism->{second_base_strand_coverage}->{-1} > 0)
-			//&& ($polymorphism->{second_base_strand_coverage}->{+1} > 0) );
-			//}	
-			//elsif ($polymorphism->{second_base} eq $ref_base)
-			//{
-			//$mut->{frequency} = $polymorphism->{frequency};
-			//$mut->{ref_base} = $polymorphism->{second_base};
-			//$mut->{new_base} = $polymorphism->{first_base};
-			//
-			//$polymorphism_coverage_both_bases = 
-			//( ($polymorphism->{first_base_strand_coverage}->{-1} > 0)
-			//&& ($polymorphism->{first_base_strand_coverage}->{+1} > 0) );					
-			//}
-			//### NOTE: This neglects the case where neither the first nor second base is the reference base! Should almost never happen					
-			//# die if (($polymorphism->{first_base} ne $ref_base) && ($polymorphism->{second_base} ne $ref_base));
-			//else
-			//{
-			//$mut->{frequency} = $polymorphism->{frequency};
-			//$mut->{ref_base} = $polymorphism->{first_base};
-			//$mut->{new_base} = $polymorphism->{second_base};
-			//
-			//$mut->{error} = "polymorphic_without_reference_base";
-			//}
+			//# we want to quote the probability of the second base (the change from the reference).      
+			if (best_base == ref_base) {
+        mut[REF_BASE] = best_base;
+        mut[NEW_BASE] = second_best_base;
+        mut[FREQUENCY] = formatted_double(1 - ppred.frequency, kPolymorphismFrequencyPrecision);
+      } else if (second_best_base == ref_base) {
+        mut[REF_BASE] = second_best_base;
+        mut[NEW_BASE] = best_base;
+        mut[FREQUENCY] = formatted_double(ppred.frequency, kPolymorphismFrequencyPrecision);  
+      //### NOTE: This neglects the case where neither the first nor second base is the reference base! Should almost never happen					    
+      } else {
+        std::cerr << "Warning: polymorphism between two bases not including reference base found at position " << position << std::endl;
+        mut[REF_BASE] = best_base;
+        mut[NEW_BASE] = second_best_base;
+        mut[FREQUENCY] = formatted_double(1 - ppred.frequency, kPolymorphismFrequencyPrecision);
+        mut[ERROR] = std::string("polymorphic_without_reference_base");
+      }
+      
+			mut[QUALITY] = formatted_double(ppred.log10_e_value, 14);
+			if (ppred.log10_e_value < _polymorphism_cutoff ) {
+        breseq::add_reject_reason(mut, "EVALUE");
+      } 
+
+      // Need to create lists of all quality scores for and against base for R output  
+      
+      if (ref_base != second_best_base) {
+        _polymorphism_r_input_file 
+          << p.target_name() << "\t"
+          << position << "\t"
+          << insert_count << "\t"
+          << ref_base << "\t"
+          << best_base << "\t"
+          << second_best_base << "\t"
+          << ppred.frequency << "\t"
+          << ppred.log10_base_likelihood << "\t"
+          << (0.1 * round(ppred.log10_e_value*10)) << "\t"
+          << pos_info[base2char(best_base)].unique_trimmed_cov[2] << "\t"
+          << pos_info[base2char(best_base)].unique_trimmed_cov[0] << "\t"
+          << pos_info[base2char(second_best_base)].unique_trimmed_cov[2] << "\t"
+          << pos_info[base2char(second_best_base)].unique_trimmed_cov[0] << "\t"
+        ;    
+      } else {
+        _polymorphism_r_input_file 
+          << p.target_name() << "\t"
+          << position << "\t"
+          << insert_count << "\t"
+          << ref_base << "\t"
+          << second_best_base << "\t"
+          << best_base << "\t"
+          << (1-ppred.frequency) << "\t"
+          << ppred.log10_base_likelihood << "\t"
+          << (0.1 * round(ppred.log10_e_value*10)) << "\t"
+          << pos_info[base2char(second_best_base)].unique_trimmed_cov[2] << "\t"
+          << pos_info[base2char(second_best_base)].unique_trimmed_cov[0] << "\t"
+          << pos_info[base2char(best_base)].unique_trimmed_cov[2] << "\t"
+          << pos_info[base2char(best_base)].unique_trimmed_cov[0] << "\t"
+        ;    
+      }
+
+      
+      std::string best_base_qualities;
+      std::string second_best_base_qualities;
+
+      for(std::vector<polymorphism_data>::iterator it=pdata.begin(); it<pdata.end(); ++it) {
+        
+        char it_base_chr = base2char(it->base);
+        
+        if (it_base_chr == best_base) {
+          if (best_base_qualities.length() > 0) {
+            best_base_qualities += ",";
+          }
+          std::stringstream convert_quality; 
+          convert_quality << (unsigned int)it->quality;
+          best_base_qualities += convert_quality.str();
+        }
+        
+        if (it_base_chr == second_best_base) {
+          if (second_best_base_qualities.length() > 0) {
+            second_best_base_qualities += ",";
+          }
+          std::stringstream convert_quality; 
+          convert_quality << (unsigned int)it->quality;
+          second_best_base_qualities += convert_quality.str();
+        }
+      }
+      
+      if (ref_base != second_best_base) {
+        _polymorphism_r_input_file << best_base_qualities << "\t";
+        _polymorphism_r_input_file << second_best_base_qualities << "\t";
+      } else {
+        _polymorphism_r_input_file << second_best_base_qualities << "\t";
+        _polymorphism_r_input_file << best_base_qualities << "\t";
+      }
+      
+      _polymorphism_r_input_file << std::endl;
 			
-			//$mut->{reject} = "EVALUE" if ($mut->{quality} < $settings->{polymorphism_log10_e_value_cutoff});
-			
-			//###
-			//## Print input file for R
-			//###
-			//my $ref_cov = $pos_info->{$mut->{ref_base}}->{unique_trimmed_cov};
-			//my $new_cov = $pos_info->{$mut->{new_base}}->{unique_trimmed_cov};
-			//
-			//my @ref_base_qualities;
-			//my @new_base_qualities;
-			//foreach my $item (@$pdata)
-			//{
-			//if ($item->{base} eq $mut->{ref_base})
-			//{
-			//push @ref_base_qualities, $item->{quality};
-			//}
-			//elsif ($item->{base} eq $mut->{new_base})
-			//{
-			//push @new_base_qualities, $item->{quality};
-			//}
-			//}
-			//my $ref_quality_string = join ',', @ref_base_qualities;
-			//my $new_quality_string = join ',', @new_base_qualities;
-			//
-			//print $polymorphism_statistics_input_fh +join( "\t",
-			//$new_cov->{1}, $new_cov->{-1}, $ref_cov->{1}, $ref_cov->{-1}, $new_quality_string, $ref_quality_string
-			//) . "\n";
-			//###
-			//## End printing input file for R
-			//###
-			
-			//$mut->{reject} = "STRAND" if (!$polymorphism_coverage_both_bases);
-			//$mut->{reject} = "FREQ" if ($mut->{frequency} < $settings->{polymorphism_frequency_cutoff});
-			//$mut->{reject} = "FREQ" if ($mut->{frequency} > 1-$settings->{polymorphism_frequency_cutoff});		
+      if ( (ppred.frequency < _polymorphism_frequency_cutoff) || (ppred.frequency > 1 -_polymorphism_frequency_cutoff) ) {
+        breseq::add_reject_reason(mut, "FREQ");
+      }
 		}
-		
+    
 		//## More fields common to consensus mutations and polymorphisms
 		//## ...now that ref_base and new_base are defined
-		//my $ref_cov = $pos_info->{$mut->{ref_base}}->{unique_trimmed_cov};
-		//$mut->{ref_cov} = $ref_cov->{-1} . "/" . $ref_cov->{1};
 		int* ref_cov = pos_info[boost::get<uint8_t>(mut[REF_BASE])].unique_trimmed_cov;
 		mut[REF_COV] = std::make_pair(ref_cov[2], ref_cov[0]);
 		
-		//my $new_cov = $pos_info->{$mut->{new_base}}->{unique_trimmed_cov};
-		//$mut->{new_cov} = $new_cov->{-1} . "/" . $new_cov->{1};
 		int* new_cov = pos_info[boost::get<uint8_t>(mut[NEW_BASE])].unique_trimmed_cov;
 		mut[NEW_COV] = std::make_pair(new_cov[2], new_cov[0]);
 		
-		//$mut->{tot_cov} = $total_cov->{-1} . "/" . $total_cov->{1};
 		mut[TOT_COV] = std::make_pair(total_cov[2], total_cov[0]);
 		
-		//$gd->add($mut);
 		_gd.add(mut);
 	}
 }
@@ -765,25 +648,24 @@ void breseq::identify_mutations_pileup::callback(const breseq::pileup& p) {
 /*! Called at the end of the pileup.
  */
 void breseq::identify_mutations_pileup::at_end(uint32_t tid, uint32_t seqlen) {
-	//	_check_deletion_completion($sequence_length+1); 		
-	//	_update_unknown_intervals($seq_id, $sequence_length+1, 1);
 
-  // @JEB changed check_deletion_completion to 1-based
+  // end "open" intervals
 	check_deletion_completion(seqlen+1, tid, 0, std::numeric_limits<double>::quiet_NaN());
 	update_unknown_intervals(seqlen+1, tid, true, false);
 
-	//	my $ra_mc_genome_diff_file_name = $settings->file_name('ra_mc_genome_diff_file_name');	
-	//	$gd->write($ra_mc_genome_diff_file_name);
+  // write genome diff file
 	_gd.write();
 	
+  // close open files
 	_coverage_data.close();
+  _polymorphism_r_input_file.close();
 }
 
 
 /*! Helper method to track information about putative deleted regions.
  
  Used at each pileup iteration and at the end.
- //## when called at the end of a fragment, the position is fragment length +1
+ //## when called at the end of a fragment, the position is fragment_length+1
  //## and $this_position_coverage is undefined
  
  @JEB This function expects 1-indexed positions!!!
@@ -802,83 +684,59 @@ void breseq::identify_mutations_pileup::check_deletion_completion(uint32_t posit
     
 	//# we need to fill in reference positions with NO reads aligned to them
 	//# pileup won't be called at these positions
-	//foreach (my $i = $last_position_coverage_printed + 1; $i < $pos; $i++)
-	//{
-	//std::cerr << _last_position_coverage_printed << " " << position << std::endl;
+  //std::cerr << _last_position_coverage_printed << " " << position << std::endl;
 
 	for(uint32_t i=_last_position_coverage_printed+1; i<position; ++i) {
 		if(_last_deletion_start_position == boost::none) {
 			//## special treatment for the beginning of a fragment
 			if(_last_position_coverage_printed == 0) {
-				//$left_outside_coverage_item =  {
-				//unique => {'1'=>'NA', '-1'=>'NA', 'total' => 'NA' },
-				//redundant => {'1'=>'NA', '-1'=>'NA', 'total' => 'NA' }				//};
-				//$left_inside_coverage_item = { 
-				//unique => {'1'=>0, '-1'=>0, 'total' => 0 },
-				//redundant => {'1'=>0, '-1'=>0, 'total' => 0 }				//};
 				_left_outside_coverage_item.reset(position_coverage(std::numeric_limits<double>::quiet_NaN()));
 				_left_inside_coverage_item.reset(position_coverage());				
 			} else {
 				//## normal treatment is that coverage went to zero
-				//$left_outside_coverage_item = { 
-				//unique => {'1'=>0, '-1'=>0, 'total' => 0 },
-				//redundant => {'1'=>0, '-1'=>0, 'total' => 0 }				//};
 				_left_inside_coverage_item.reset(position_coverage());
-				
-				//$left_inside_coverage_item = $last_position_coverage;	
-				_left_outside_coverage_item = _last_position_coverage;
+        _left_outside_coverage_item = _last_position_coverage;
 			}
 			
 			// moved into the ifs above, to handle the special case of the fragment beginning.
 			// had to do this because of the change in 0-1 indexing.
-			// $last_deletion_start_position = $last_position_coverage_printed+1;			
 			_last_deletion_start_position = _last_position_coverage_printed+1;
       if (_last_deletion_redundant_start_position == boost::none) {
         _last_deletion_redundant_start_position = _last_position_coverage_printed+1;
       }
     }
 		
-		//$this_deletion_reaches_seed_value = 1;
 		_this_deletion_reaches_seed_value = true;
     _this_deletion_redundant_reached_zero = true;
-		//$last_position_coverage = { 
-		//unique => {'1'=>0, '-1'=>0, 'total' => 0 },
-		//redundant => {'1'=>0, '-1'=>0, 'total' => 0 }		//};
 		_last_position_coverage.reset(position_coverage());
 		
-		//print COV join("\t", 0, 0, 0, 0, 0, 0, 'NA', $i) . "\n"; 
-		//_coverage_data << 0 << "\t" << 0 << "\t" << 0 << "\t" << 0 << "\t" << 0 << "\t" << 0 << "\t" << "NA\t" << i << std::endl;
+    // print to optional output file
+    if (_coverage_data.is_open()) {
+      _coverage_data << 0 << "\t" << 0 << "\t" << 0 << "\t" << 0 << "\t" << 0 << "\t" << 0 << "\t" << "NA\t" << i << std::endl;
+    }
 	}
 	_last_position_coverage_printed = position;
 	
 	//## called with an undef $this_position_coverage at the end of the genome
-	//if ((defined $this_position_coverage) && (defined $e_value_call))
 	if(this_position_coverage) {
-		//my $tu = $this_position_coverage->{unique};
-		//my $tr = $this_position_coverage->{redundant};
-		//my $trr = $this_position_coverage->{raw_redundant};
 		
-		//#print this information
-		//print COV join("\t", $tu->{-1}, $tu->{1}, $tr->{-1}, $tr->{1}, $trr->{-1}, $trr->{1}, $e_value_call, $pos) . "\n";
-		//_coverage_data << this_position_coverage->unique[0] << "\t"
-		//<< this_position_coverage->unique[2] << "\t"
-		//<< this_position_coverage->redundant[0] << "\t"
-		//<< this_position_coverage->redundant[2] << "\t"
-		//<< this_position_coverage->raw_redundant[0] << "\t"
-		//<< this_position_coverage->raw_redundant[2] << "\t"
-		//<< e_value_call << "\t" << position << std::endl;
-		
+    // print to optional output file
+    if (_coverage_data.is_open()) {
+      _coverage_data << this_position_coverage->unique[0] << "\t"
+      << this_position_coverage->unique[2] << "\t"
+      << this_position_coverage->redundant[0] << "\t"
+      << this_position_coverage->redundant[2] << "\t"
+      << this_position_coverage->raw_redundant[0] << "\t"
+      << this_position_coverage->raw_redundant[2] << "\t"
+      << e_value_call << "\t" << position << std::endl;
+    }
+    
     //## UNIQUE COVERAGE
 		//#start a new possible deletion if we fall below the propagation cutoff
-		//if ($this_position_coverage->{unique}->{total} <= $deletion_propagation_cutoff)
 		if(this_position_coverage->unique[1] <= _this_deletion_propagation_cutoff) {
-			//if (!defined $last_deletion_start_position)
 			if(_last_deletion_start_position == boost::none) {
-				//$last_deletion_start_position = $pos;
 				_last_deletion_start_position = position;
-				//$left_outside_coverage_item = $last_position_coverage;
 				_left_outside_coverage_item = _last_position_coverage;
-				//$left_inside_coverage_item = $this_position_coverage;
 				_left_inside_coverage_item = *this_position_coverage;
 			}
 		}
@@ -896,83 +754,40 @@ void breseq::identify_mutations_pileup::check_deletion_completion(uint32_t posit
     //if (defined $last_deletion_start_position)
     //{					
       if (this_position_coverage->redundant[1] == 0) {
-      //if ($this_position_coverage->{redundant}->{total} == 0)
-      //{
-          _this_deletion_redundant_reached_zero = true;
-        //$redundant_reached_zero = 1; #switch from adjusting start to end
-          _last_deletion_redundant_end_position = boost::none;
-        //undef $last_deletion_redundant_end_position;
+        _this_deletion_redundant_reached_zero = true;
+        _last_deletion_redundant_end_position = boost::none;
+      }
+      else if (this_position_coverage->redundant[1] > 0) {
+      //## if there is any redundant coverage remember the start (until we find zero redundant coverage)
+        if (!_this_deletion_redundant_reached_zero) {
+          _last_deletion_redundant_start_position = position;
         }
-      //}
-      //elsif ($this_position_coverage->{redundant}->{total} > 0)
-        else if (this_position_coverage->redundant[1] > 0) {
-      //{
-        //## if there is any redundant coverage remember the start (until we find zero redundant coverage)
-        //if (!$redundant_reached_zero)
-          if (!_this_deletion_redundant_reached_zero) {
-            _last_deletion_redundant_start_position = position;
-          }
-          else {
-            if (_last_deletion_redundant_end_position == boost::none) _last_deletion_redundant_end_position = position;
-          }
-        //{
-          //$last_deletion_redundant_start_position = $pos;
-        //}
-        //## if we are working on the right side update the end position if it is not already defined.
-        //else
-        //{
-          //$last_deletion_redundant_end_position = $pos if (!defined $last_deletion_redundant_end_position);
-        //}
-      //}
-    //}
+        else {
+          if (_last_deletion_redundant_end_position == boost::none) _last_deletion_redundant_end_position = position;
         }
+      }
     }
     
 	}
 	
 	//##if we are above the propagation cutoff then record the current deletion
-	//	if ( (defined $last_deletion_start_position) && ((!defined $this_position_coverage) 
-	//																									 || ($this_position_coverage->{unique}->{total} > $deletion_propagation_cutoff)) )
 	if(_last_deletion_start_position != boost::none
 		 && (!this_position_coverage || (this_position_coverage->unique[1] > _this_deletion_propagation_cutoff))) {
 		
-		//		if ($this_deletion_reaches_seed_value)
 		if(_this_deletion_reaches_seed_value) {
 			boost::optional<position_coverage> tmp;
 			
 			// ### for the end of the genome....
-			//			if (!defined $this_position_coverage)
 			if(!this_position_coverage) {
-				//				$this_position_coverage = {
-				//					unique => {'1'=>'NA', '-1'=>'NA', 'total' => 'NA' },
-				//					redundant => {'1'=>'NA', '-1'=>'NA', 'total' => 'NA' }				//				};
 				tmp.reset(position_coverage(std::numeric_limits<double>::quiet_NaN()));
 			} else {
 				tmp.reset(*this_position_coverage);
 			}
 
       _last_deletion_end_position = position-1;
-      //my $last_deletion_end_position = $pos-1;
       if (_last_deletion_redundant_end_position == boost::none) _last_deletion_redundant_end_position = _last_deletion_end_position;
       if (_last_deletion_redundant_start_position == boost::none) _last_deletion_redundant_start_position = _last_deletion_start_position;
 
-      //$last_deletion_redundant_end_position = $last_deletion_end_position	if (!defined $last_deletion_redundant_end_position);
-      //$last_deletion_redundant_start_position = $last_deletion_start_position	if (!defined $last_deletion_redundant_start_position);
-
-			
-			//			my $del = {
-			//				type => 'MC',
-			//				seq_id => $seq_id,
-			//				start => $last_deletion_start_position,
-			//				end => $pos-1,
-			//        start_range => $last_deletion_redundant_start_position - $last_deletion_start_position,
-			//        end_range => $last_deletion_end_position - $last_deletion_redundant_end_position,
-			//#			size => ($pos-1) - $last_deletion_start_position + 1, #end - start + 1
-			//				left_outside_cov => $left_outside_coverage_item->{unique}->{total},
-			//				left_inside_cov => $left_inside_coverage_item->{unique}->{total},
-			//				right_inside_cov => $last_position_coverage->{unique}->{total},
-			//				right_outside_cov => $this_position_coverage->{unique}->{total},
-			//			};
 			mc del(boost::lexical_cast<std::string>(_gd.new_id()), "");
 			del[SEQ_ID] = target_name(seq_id);
 			del[START] = *_last_deletion_start_position;
@@ -1003,27 +818,12 @@ void breseq::identify_mutations_pileup::check_deletion_completion(uint32_t posit
 			} else {
 				del[RIGHT_OUTSIDE_COV] = static_cast<uint32_t>(this_position_coverage->unique[1]);
 			}
-			
-//			del[LEFT_OUTSIDE_COV] = _left_outside_coverage_item ? _left_outside_coverage_item->unique[1] : std::numeric_limits<double>::quiet_NaN();
-//			del[LEFT_INSIDE_COV] = _left_inside_coverage_item ? _left_inside_coverage_item->unique[1] : std::numeric_limits<double>::quiet_NaN();
-//			del[RIGHT_INSIDE_COV] = _last_position_coverage ? _last_position_coverage->unique[1] : std::numeric_limits<double>::quiet_NaN();
-//			del[RIGHT_OUTSIDE_COV] = this_position_coverage ? this_position_coverage->unique[1] : std::numeric_limits<double>::quiet_NaN();
-			
-			//			$del->{left_inside_cov} = 'NA' if (!defined $del->{left_inside_cov});
-			//			$del->{right_inside_cov} = 'NA' if (!defined $del->{right_inside_cov});
-			//			
-			//			$del->{left_outside_cov} = 'NA' if (!defined $del->{left_outside_cov});
-			//			$del->{right_outside_cov} = 'NA' if (!defined $del->{right_outside_cov});
-			//			
-			//			$gd->add($del);					
-			
+						
 			_gd.add(del);
 		}
 		
 		//#reset the search
-		//		$this_deletion_reaches_seed_value = 0;
 		_this_deletion_reaches_seed_value = false;
-		//		undef $last_deletion_start_position;
     _this_deletion_redundant_reached_zero = false;
 		_last_deletion_start_position = boost::none;
     _last_deletion_end_position = boost::none;
@@ -1031,50 +831,40 @@ void breseq::identify_mutations_pileup::check_deletion_completion(uint32_t posit
     _last_deletion_redundant_end_position = boost::none;
 	}
 	
-	//	$last_position_coverage = $this_position_coverage;
 	if(this_position_coverage) {
 		_last_position_coverage = *this_position_coverage;
 	}
 }
 
 
-//
-//sub _update_unknown_intervals
-//{
-//	my ($seq_id, $pos, $base_predicted, $this_position_unique_only_coverage) = @_;
-//	
-
 /*! Helper method to track unknowns.
  */
-void breseq::identify_mutations_pileup::update_unknown_intervals(uint32_t position, uint32_t seq_id, bool base_predicted, bool this_position_unique_only_coverage) {
-	//std::cerr << position << " " << base_predicted << " " << this_position_unique_only_coverage << std::endl;
-	//if(_last_start_unknown_interval) {
-	//	std::cerr << *_last_start_unknown_interval << std::endl;
-	//} else {
-	//	std::cerr << "undef" << std::endl;
-	//}
+void breseq::identify_mutations_pileup::update_unknown_intervals(uint32_t position, uint32_t seq_id, bool base_predicted, bool this_position_unique_only_coverage) 
+{
+  //debug
+  /*
+	std::cerr << position << " " << base_predicted << " " << this_position_unique_only_coverage << std::endl;
+	if(_last_start_unknown_interval) {
+		std::cerr << *_last_start_unknown_interval << std::endl;
+	} else {
+		std::cerr << "undef" << std::endl;
+	}
+  */
 	
-	//	if (!$base_predicted)
 	if(!base_predicted) {
-		//		$s->{coverage}->{unique_uncalled}++ if (($this_position_unique_only_coverage));
 		if(this_position_unique_only_coverage) {
 			++s.coverage_unique_uncalled;
 		}
-		//		if (!defined $last_start_unknown_interval)
 		if(!_last_start_unknown_interval) {
-			//			$last_start_unknown_interval = $pos;
 			_last_start_unknown_interval = position;
 		}
 	}	else {
-		//		$s->{coverage}->{unique_called}++ if (($this_position_unique_only_coverage));
 		if(this_position_unique_only_coverage) {
 			++s.coverage_unique_called;
 		}
 			
 		//#end interval where we were unable to call mutations
-		//		if (defined $last_start_unknown_interval)
 		if(_last_start_unknown_interval) {
-			//			my $new_interval = { 'type'=>'UN', 'start'=> $last_start_unknown_interval, 'end'=> $pos-1, 'seq_id' => $seq_id };
 			un new_interval(boost::lexical_cast<std::string>(_gd.new_id()), "");
 			new_interval[SEQ_ID] = target_name(seq_id);
 			new_interval[START] = *_last_start_unknown_interval;
@@ -1082,7 +872,240 @@ void breseq::identify_mutations_pileup::update_unknown_intervals(uint32_t positi
 			_gd.add(new_interval);
 			
 			_last_start_unknown_interval = boost::none;
-			//#	print Dumper($new_interval); ##DEBUG
 		}
 	}
 }
+
+/*! Predict the significance of putative polymorphisms.
+ */
+breseq::polymorphism_prediction breseq::identify_mutations_pileup::predict_polymorphism (uint8_t best_base, uint8_t second_best_base, std::vector<polymorphism_data>& pdata ) {
+    
+  //#calculate the likelihood of observed reads given this position is 100% the best base  
+	double log10_likelihood_of_one_base_model = 0;
+  for(std::vector<polymorphism_data>::iterator it=pdata.begin(); it<pdata.end(); ++it) {
+  
+    std::string base_key;
+    if(it->strand == 1) {
+      base_key += best_base;
+      base_key += base2char(it->base);
+    } else {
+      base_key += reverse_base(best_base); 
+      base_key += base2char(reverse_base(it->base));
+    }
+    //## the first value is pr_base, second is pr_not_base
+    double log10_correct_pr = _ecr.log10_correct_rates(it->fastq_file_index, it->quality, base_key);
+    
+    log10_likelihood_of_one_base_model  += log10_correct_pr;
+  }
+
+	std::vector<uint8_t> best_base_qualities;
+	std::vector<uint8_t> second_best_base_qualities;
+	uint32_t best_base_strand_hash[] = {0, 0};
+	uint32_t second_best_base_strand_hash[] = {0, 0};
+  
+  for(std::vector<polymorphism_data>::iterator it=pdata.begin(); it<pdata.end(); ++it) {
+  
+  		if (it->base == best_base) {
+        best_base_qualities.push_back(it->quality);
+        best_base_strand_hash[it->strand]++;
+      }
+      else if (it->base == second_best_base) {
+        second_best_base_qualities.push_back(it->quality);
+        second_best_base_strand_hash[it->strand]++;
+      }
+  }
+  
+  
+	//## Maximum likelihood of observing alignment if sequenced bases were a mixture of the top two bases  
+  std::pair<double,double> best_two_base_model = best_two_base_model_log10_likelihood(best_base, second_best_base, pdata);
+  double max_likelihood_fr_first_base = best_two_base_model.first;
+  double log10_likelihood_of_two_base_model = best_two_base_model.second;
+    
+  //## Likelihood ratio test
+  double log10_likelihood_difference = log10_likelihood_of_one_base_model - log10_likelihood_of_two_base_model;
+
+  //debug output 
+  /*
+  std::cerr  << "ML Best Base Fraction: " << max_likelihood_fr_first_base << std::endl;
+  std::cerr  << " Log10 Likelihood (one base model): " << log10_likelihood_of_one_base_model << std::endl;
+  std::cerr  << " Log10 Likelihood (two base model): " << log10_likelihood_of_two_base_model << std::endl;
+  std::cerr  << " Log10 Likelihood (different): " << log10_likelihood_difference << std::endl;
+  */
+    
+  long double p_value = 1;
+  if (max_likelihood_fr_first_base != 1.0) {
+    double likelihood_ratio_test_value = -2*log(10)*log10_likelihood_difference;
+    boost::math::chi_squared myChiSquared(1.0L);
+    p_value = boost::math::pdf(myChiSquared, likelihood_ratio_test_value);
+  }
+
+  //debug output 
+  /*
+  std::cerr 
+    << " Log10 Likelihood Difference (one vs two base model): " << (log10_likelihood_of_one_base_model - log10_likelihood_of_two_base_model) 
+    << " P-value: " << p_value 
+    << std::endl;
+  */  
+  polymorphism_prediction p(max_likelihood_fr_first_base, log10_likelihood_of_one_base_model - log10_likelihood_of_two_base_model, p_value);
+		
+	return p;
+}
+
+
+/*! Find the best fraction for the best base at a polymorphic site.
+ */
+std::pair<double,double> breseq::identify_mutations_pileup::best_two_base_model_log10_likelihood(uint8_t best_base, uint8_t second_best_base, std::vector<polymorphism_data>& pdata) 
+{	
+	double cur_pr_first_base = 1;
+	double cur_log_pr = calculate_two_base_model_log10_likelihood(best_base, second_best_base, pdata, cur_pr_first_base);
+
+	double last_pr_first_base = 1;
+	double last_log_pr = cur_log_pr;
+
+	//print "$cur_pr_first_base $cur_log_pr\n" if ($verbose);
+
+	while (cur_log_pr >= last_log_pr)
+	{
+		last_log_pr = cur_log_pr;
+		last_pr_first_base = cur_pr_first_base;
+    if (cur_pr_first_base < 0) break;
+
+		cur_pr_first_base -= 0.001;
+		cur_log_pr = calculate_two_base_model_log10_likelihood(best_base, second_best_base, pdata, cur_pr_first_base);
+		//print "$cur_pr_first_base $cur_log_pr\n" if ($verbose);
+	}
+	
+	return std::make_pair(last_pr_first_base, last_log_pr);
+}
+
+/*! Calculate the likelihood of a mixture model of two bases leading to the observed read bases.
+ */
+double breseq::identify_mutations_pileup::calculate_two_base_model_log10_likelihood (uint8_t best_base, uint8_t second_best_base, std::vector<polymorphism_data>& pdata, double best_base_freq)
+{
+	double log10_likelihood = 0;	
+	
+  for(std::vector<polymorphism_data>::iterator it=pdata.begin(); it<pdata.end(); ++it) {
+  
+    std::string best_base_key;
+    std::string second_best_base_key;
+    
+    if(it->strand == 1) {
+      best_base_key += best_base;
+      best_base_key += base2char(it->base);
+      second_best_base_key += second_best_base;
+      second_best_base_key += base2char(it->base);
+    } else {
+      best_base_key += reverse_base(best_base); 
+      best_base_key += base2char(reverse_base(it->base));
+      second_best_base_key += reverse_base(second_best_base);
+      second_best_base_key += base2char(reverse_base(it->base));
+    }
+    //## the first value is pr_base, second is pr_not_base
+    double best_base_log10pr = _ecr.log10_correct_rates(it->fastq_file_index, it->quality, best_base_key);
+    double second_best_base_log10pr = _ecr.log10_correct_rates(it->fastq_file_index, it->quality, second_best_base_key);
+
+    //debug output
+    //std::cerr << "Base in Read: " << it->base << " Read Strand: " << it->strand << std::endl;
+    //std::cerr << "Best Base: " << best_base << " Key: " << best_base_key << " Chance of Observing: " << pow(10,best_base_log10pr) << std::endl;
+    //std::cerr << "Second Best Base: " << second_best_base << " Key: " << second_best_base_key << " Chance of Observing: " << pow(10,second_best_base_log10pr) << std::endl;
+
+    double pr_ref_base_given_obs = best_base_freq * pow(10, best_base_log10pr) + (1-best_base_freq) * pow(10, second_best_base_log10pr);
+
+    log10_likelihood += log(pr_ref_base_given_obs);		
+  }
+
+	log10_likelihood /= log(10);
+  
+  //debug output
+  /*
+  std::cerr << "Best Base: " << best_base << " Second Best Base: " << second_best_base << " Fraction Best Base: " << best_base_freq << " Log10 Likelihood " << log10_likelihood << std::endl;
+  */
+	return log10_likelihood;
+}
+
+breseq::cDiscreteSNPCaller::cDiscreteSNPCaller(uint8_t ploidy) 
+: _ploidy(ploidy) 
+{
+  assert(ploidy==1); // only the haploid version is implemented
+
+  double _log10_prior_probability = 0;
+
+  //create all of the states and initialize priors
+  for (int i=0; i<base_list_size; i++) {
+    _log10_priors.push_back(_log10_prior_probability);
+    _log10_probabilities.push_back(_log10_prior_probability);
+  }
+  _normalized = false;
+}
+
+// obs_base is a BAM style base when input
+void breseq::cDiscreteSNPCaller::update(uint8_t obs_base, uint8_t obs_quality, bool obs_top_strand, int32_t fastq_file_index, error_count_results &ecr)
+{
+  double probability_sum = 0.0;
+  
+  //update probabilities give observation using Bayes rule
+  for (int i=0; i<base_list_size; i++) {
+    std::string base_key;
+    if (obs_top_strand) {
+      base_key += base_list[i]; 
+      base_key += base2char(obs_base);    
+    } else {
+      base_key += reverse_base(base_list[i]); 
+      base_key += base2char(reverse_base(obs_base));
+    }
+    _log10_probabilities[i] += ecr.log10_correct_rates(fastq_file_index, obs_quality, base_key);
+  }
+  _normalized = false;
+}
+
+boost::tuple<uint8_t,double> breseq::cDiscreteSNPCaller::get_prediction()
+{
+  // which is the largest log probability?
+  std::vector<double>::iterator max = std::max_element(_log10_probabilities.begin(), _log10_probabilities.end());
+  double max_log10_probability = *max;
+  int max_index = std::distance(_log10_probabilities.begin(), max);
+  uint8_t best_base = base_list[max_index];
+
+  // we want to normalize the probabilities, but avoid floating point errors
+  if (!_normalized) {
+  
+    double total_offset_probability = 0;
+    for(std::vector<double>::iterator i=_log10_probabilities.begin(); i!=_log10_probabilities.end(); ++i) {
+      total_offset_probability += pow(10, *i - max_log10_probability);
+    }
+    double total_log10_offset_probability = log10(total_offset_probability) + max_log10_probability;
+    
+    for(std::vector<double>::iterator i=_log10_probabilities.begin(); i!=_log10_probabilities.end(); ++i) {
+      *i = *i - total_log10_offset_probability;
+    }    
+    _normalized = true;
+  }
+
+  // ignore the highest probability and combine all others to get the total error rate of this base call
+  double second_best_log10_error_probability = std::numeric_limits<double>::quiet_NaN();
+  std::vector<double>::iterator second_best;
+  for(std::vector<double>::iterator i=_log10_probabilities.begin(); i!=_log10_probabilities.end(); ++i) {
+    if (i != max) {
+      if (std::isnan(second_best_log10_error_probability) || (*i > second_best_log10_error_probability) ) {
+        second_best_log10_error_probability = *i;
+        second_best = i;
+      }
+    }
+  }
+  
+  double total_error_probability = 0.0;
+  for(std::vector<double>::iterator i=_log10_probabilities.begin(); i!=_log10_probabilities.end(); ++i) {
+    if ((i != max) ) {
+      total_error_probability += pow(10, *i - second_best_log10_error_probability);
+    }
+  }
+  double total_log10_error_probability = log10(total_error_probability) + second_best_log10_error_probability;
+
+  // this second best base isn't what we want for polymorphism prediction
+  // because the second best may have less coverage than the third best...
+  //int second_best_index = std::distance(_log10_probabilities.begin(), second_best);
+  //uint8_t second_best_base = base_list[second_best_index];
+  
+  return boost::make_tuple(best_base, -total_log10_error_probability);
+}
+
