@@ -29,6 +29,8 @@ LICENSE AND COPYRIGHT
 #include <boost/lexical_cast.hpp>
 #include <boost/shared_ptr.hpp>
 
+#include <stdint.h> // Added by Austin Meyer to facilitate compilation
+
 namespace breseq {
 
 	// Common keywords used for diff entries:
@@ -79,7 +81,7 @@ namespace breseq {
 	 */
 	struct diff_entry {
 		typedef std::string key_t; //!< Diff entry keys.
-		typedef boost::variant<char,uint8_t,uint32_t,int,double,std::string,std::pair<int,int> > value_t; //!< Diff entry values.
+		typedef boost::variant< char, uint8_t, uint32_t,int,double,std::string,std::pair<int,int> > value_t; //!< Diff entry values.
 		typedef std::map<key_t, value_t> map_t; //!< Diff entry key-value map.
 		
 		//! Constructor.
