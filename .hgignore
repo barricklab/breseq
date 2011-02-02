@@ -44,9 +44,6 @@ MYMETA.yml
 MANIFEST.SKIP
 Makefile.PL
 
-## For Bioperl
-.git
-
 ## This is user/architecture specific
 user-config.jam
 
@@ -75,6 +72,10 @@ syntax: regexp
 ^src/perl/Breseq/breseq.tmproj
 ^src/perl/Breseq/Breseq-
 ^src/perl/Breseq/META.yml
+
+## For Xcode
+
+^src/c/build
 
 src/c/breseq.*\.xcodeproj/.+\.mode1v3$
 src/c/breseq.*\.xcodeproj/.+\.pbxuser$

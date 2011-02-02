@@ -314,3 +314,41 @@ INV: Inversion mutation
 6. **size** *<uint32>*
 
    number of bases in inverted region beginning at the specified reference position.
+   
+Standard name=value pairs
+++++++++++++++++++++++++++
+
+Counting Mutations
+""""""""""""""""""
+
+These attributes control how molecular events in a a :program:`GenomeDiff` are counted for summary purposes. They are not generated automatically by |breseq|.
+
+* **between**\ =\ *<element_name>*
+
+   This mutation occurs between copies of this element. For example, a deletion caused by recombination between two copies of a mobile element.
+
+* **mediated**\ =\ *<element_name>*
+
+   This mutation was mediated by insertion of a new copy of this element and recombination with an existing copy, such that the number of this element did not net increase in the resulting genome.
+   
+* **adjacent**\ =\ *<element_name>*
+
+   This mutation
+   
+* **with**\ =\ *<mutatiion_id>*
+
+   This mutation should be counted as a **single** molecular event with the other specified mutation. For example, active mobile elements may lose and gain a few bases at their margins, and when this occurs the most parsimonious explanation is one round of recombination or excision and re-insertion.
+   
+
+Applying Mutations
+""""""""""""""""""
+
+These attributes control how mutations are applied when building a new reference genome from the original reference genome and a :program:`GenomeDiff` and when building phylogenetic trees between multiple samples. They are not generated automatically by |breseq|.
+   
+* **before**\ =\ *<mutation_id>* or **after**\ =\ *<mutation_id>*
+
+   Apply this mutation before or after another mutation. For example, did a base substitution occur before a region was duplicated, thus it is only in one copy or did it occur before the duplication, thus altering both copies? Did a base substitution happen before a deletion, hiding a mutation that should be included in any phylogenetic inference? The **before**. When neither of these attributes is present, mutations will be applied in the order in which they appear in the file.
+   
+* **within**\ =\ *<mutation_id>*\ , **within_position**\ =\ *<mutation_id>*\ ,  **within_copy**\ =\ *<mutation_id>*
+
+   This mutation happens inside of a different mutation. These options can specify, for example, that a base substitution happens in the second copy of a duplicated region. **within** and **within_position** must both be provided if one is supplied. If **within_copy** is not provided (because it is unknown), the mutation will be placed arbitrarily in the first copy. Note that the actual position of this mutation is still used for annotating its effects.

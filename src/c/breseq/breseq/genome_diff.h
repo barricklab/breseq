@@ -56,6 +56,7 @@ namespace breseq {
 	extern const char* REF_COV;
 	extern const char* NEW_COV;
 	extern const char* TOT_COV;
+	extern const char* ERROR;
 	
 	// Types of diff entries:
 	extern const char* RA;
@@ -65,7 +66,20 @@ namespace breseq {
 	//! Convenience typedef, used during diff entry marshalling.
 	typedef std::vector<std::string> field_list_t;
 
-	
+	//! Used to add types that will print with a specified precision
+  struct formatted_double {
+  
+		//! Constructor.
+    formatted_double(const double v, const uint8_t p=1)
+      : _value(v), _precision(p) {}
+
+    virtual ~formatted_double() { }
+
+    double  _value;     //actual value
+    uint8_t _precision; //number of digits past zero to print
+  };
+  
+  
 	/*! Genome diff entry type.
 	 
 	 Instead of trying to define (and maintain!) concrete classes for each different 
@@ -81,7 +95,7 @@ namespace breseq {
 	 */
 	struct diff_entry {
 		typedef std::string key_t; //!< Diff entry keys.
-		typedef boost::variant< char, uint8_t, uint32_t,int,double,std::string,std::pair<int,int> > value_t; //!< Diff entry values.
+		typedef boost::variant<char,uint8_t,uint32_t,int,double,formatted_double,std::string,std::pair<int,int> > value_t; //!< Diff entry values.
 		typedef std::map<key_t, value_t> map_t; //!< Diff entry key-value map.
 		
 		//! Constructor.
@@ -98,13 +112,15 @@ namespace breseq {
 		
 		//! Clone this entry.
 		virtual diff_entry* clone() const = 0;
-		
+    
 		map_t _fields; //!< Information about this diff entry.
 		std::string _type;
 		std::string _id;
 		std::string _parents;
 	};
 	
+  void add_reject_reason(diff_entry& de, const std::string &reason);
+
 	
 	//! Output operator for a diff entry.
 	std::ostream& operator<<(std::ostream& out, diff_entry& de);
@@ -155,15 +171,25 @@ namespace breseq {
 		void operator()(T& op) {
 			_s = boost::lexical_cast<std::string>(op);
 		}
+    
+		//! Formatted double output.
+    void operator()(formatted_double& v) {
+			if(std::isnan(v._value)) {
+				_s = "NA";
+			} else {
+				std::ostringstream interpreter;
+				interpreter << std::fixed << std::setprecision(v._precision) << v._value;
+				_s = interpreter.str();
+			}
+		}
 		
-		//! Double-output.
+		//! Double output.
 		void operator()(double& v) {
-			using namespace std;
 			if(std::isnan(v)) {
 				_s = "NA";
 			} else {
-				ostringstream interpreter;
-				interpreter << fixed << setprecision(1) << v;
+				std::ostringstream interpreter;
+				interpreter << std::fixed << std::setprecision(1) << v;
 				_s = interpreter.str();
 			}
 		}
@@ -178,7 +204,27 @@ namespace breseq {
 		
 		std::string _s;
 	};
+  
+  //! Genome Diff Sorting
+  //! For sorting by a number, then by fields to break ties
+  struct sort_fields_item {
+  
+		//! Constructor.
+    sort_fields_item() {_f1=0; _f2=""; _f3=""; };
+    
+    sort_fields_item(uint8_t f1, std::string f2, std::string f3) :
+      _f1(f1), _f2(f2), _f3(f3) {};
+      
+		//! Destructor.
+    virtual ~sort_fields_item() {};
+  
+    uint8_t _f1;
+    std::string _f2;
+    std::string _f3;
+  };
 	
+  //! Sort routine
+  bool diff_entry_sort(boost::shared_ptr<diff_entry> a, boost::shared_ptr<diff_entry> b);
 	
 	/*! Genome diff class.
 	 

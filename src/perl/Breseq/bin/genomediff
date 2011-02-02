@@ -88,6 +88,10 @@ if ("\U$command" eq 'FILTER')
 {
 	do_filter();
 }
+elsif ("\U$command" eq 'HTML')
+{
+	do_html();
+}
 elsif ("\U$command" eq 'COMPARE')
 {
 	do_compare();
@@ -131,6 +135,10 @@ elsif ("\U$command" eq 'GENE_TABLE')
 elsif ("\U$command" eq 'POLYMORPHISM')
 {
 	do_polymorphism_analysis();
+}
+elsif ("\U$command" eq 'STRIP-EVIDENCE')
+{
+	do_strip_evidence();
 }
 else
 {
@@ -212,6 +220,42 @@ sub do_filter
 	$gd->write($output);
 }
 
+sub do_html
+{
+	use Breseq::ReferenceSequence;
+	use Breseq::Output;
+	
+	my ($help, $man);
+	my $output = "output.html";
+	my @reference_genbank_file_names;
+	my $settings;
+	$settings->{no_evidence} = 1;
+	
+	GetOptions(
+		'help|?' => \$help, 'man' => \$man,
+	## Options for input and output files
+		'output|o=s' => \$output,	
+		'reference-sequence|r=s' => \@reference_genbank_file_names,		
+	) or pod2usage(2);
+	pod2usage(1) if (scalar @ARGV != 1);
+	my $gd_file_name = $ARGV[0];
+	
+	my $title = $gd_file_name;
+
+	$output =~ s/\.gd$//;
+	my $title = $output;
+	$title =~ s/^.+\///;
+	$output .= ".html";
+	
+	my $ref_seq_info = Breseq::ReferenceSequence::load_ref_seq_info(\@reference_genbank_file_names);
+	my $one_ref_seq = scalar keys %{$ref_seq_info->{gene_lists}} == 1;
+	
+	my $gd = Breseq::GenomeDiff->new(-in=>$gd_file_name);
+	Breseq::ReferenceSequence::annotate_mutations($ref_seq_info, $gd, 1);
+	
+	Breseq::Output::html_compare($settings, $output, $title, $gd, $one_ref_seq);
+}
+
 sub do_compare
 {
 	use Breseq::ReferenceSequence;
@@ -222,12 +266,21 @@ sub do_compare
 	my @reference_genbank_file_names;
 	my $phylip_input_file;
 	my $offending_polymorphisms;
+	my $ignore_ambiguous;
+	my $phylip_for_mix;
+	my $settings;
+	$settings->{no_evidence} = 1;
+	
 	GetOptions(
 		'help|?' => \$help, 'man' => \$man,
 	## Options for input and output files
 		'output|o=s' => \$output,	
 		'reference-sequence|r=s' => \@reference_genbank_file_names,
 		'phylip-input-file|p=s' => \$phylip_input_file,
+		'phylip-for-mix' => \$phylip_for_mix,
+		'--ignore-ambiguous' => \$ignore_ambiguous,
+		'shade-frequencies' => \$settings->{shade_frequencies},									
+		
 	) or pod2usage(2);
 
 	pod2usage(1) if $help;
@@ -238,14 +291,11 @@ sub do_compare
 	my @gd_file_name_list = @ARGV;	
 	my ($gd_name_list_ref, $composite_gd, $one_ref_seq) = _compile_compare_gd(\@reference_genbank_file_names, \@gd_file_name_list);
 
-#	$composite_gd->write("test");
-
-	my $settings;
-
 	##
 	# Annotate mutations
 	##
 	my $title = "Mutation Comparison";
+	my $options = { repeat_header => 5 };
 	Breseq::Output::html_compare($settings, $output, $title, $composite_gd, $one_ref_seq, $gd_name_list_ref);
 
 	##
@@ -254,6 +304,30 @@ sub do_compare
 	if ($phylip_input_file)
 	{
 		my @mutations = $composite_gd->mutation_list;
+
+		if ($ignore_ambiguous)
+		{
+			MUT: for (my $i=0; $i<scalar @mutations; $i++)
+			{
+				my $mut = $mutations[$i];
+				foreach my $gd_name (@$gd_name_list_ref)
+				{
+					my $f = $mut->{"frequency_$gd_name"};
+					if ($f eq '?')
+					{
+							$mut->{"frequency_$gd_name"} = ($mut->{type} eq 'SNP') ? $mut->{_ref_seq} : 'A';
+					}
+				}
+			} 
+		}
+		
+		open KEYFILE, ">$phylip_input_file.key" or die "Could not open file: $phylip_input_file.key";
+		MUT: for (my $i=0; $i<scalar @mutations; $i++)
+		{
+			my $mut = $mutations[$i];
+			print KEYFILE +join("\t", $i, $mut->{type}, $mut->{position}) . "\n"; 
+		}
+		close KEYFILE;
 		
 		open PHYLIP, ">$phylip_input_file" or die "Could not open file: $phylip_input_file";
 		#first line is number of species, then number of sites
@@ -268,15 +342,36 @@ sub do_compare
 				my $b = '?';
 				if ($f eq '?')
 				{
-					$b = 'N';
+					if ($phylip_for_mix)
+					{
+						$b = '?'; #ancestor
+					}
+					else
+					{
+						$b = 'N';
+					}
 				}
 				elsif (($f == 1) || ($f eq 'H'))
 				{
-					$b = ($mut->{type} eq 'SNP') ? $mut->{new_seq} : 'T';
+					if ($phylip_for_mix)
+					{
+						$b = '1';
+					}
+					else
+					{
+						$b = ($mut->{type} eq 'SNP') ? $mut->{new_seq} : 'T';
+					}
 				}
 				elsif ($f == 0)
 				{
-					$b = ($mut->{type} eq 'SNP') ? $mut->{_ref_seq} : 'A';
+					if ($phylip_for_mix)
+					{
+						$b = '0';
+					}
+					else
+					{
+						$b = ($mut->{type} eq 'SNP') ? $mut->{_ref_seq} : 'A';
+					}
 				}
 				else
 				{
@@ -513,12 +608,14 @@ sub do_count
 	
 	my ($help, $man);
 	my $output = "count.tab";
+	my $synonymous_count_file;
 	my @reference_genbank_file_names;
 	GetOptions(
 		'help|?' => \$help, 'man' => \$man,
 	## Options for input and output files
 		'output|o=s' => \$output,	
 		'reference-sequence|r=s' => \@reference_genbank_file_names,
+		'synonymous-count-file|s=s' => \$synonymous_count_file,
 	) or pod2usage(2);
 
 	pod2usage(1) if $help;
@@ -577,11 +674,61 @@ sub do_count
 	}
 	my @mod_name_list = sort keys %$mob_name_hash;
 	
+	my $main_seq_id = $ref_seq_info->{seq_ids}->[0];
+	my $main_seq_length = length $ref_seq_info->{ref_strings}->{$main_seq_id};
+	
+	my @scf;	
+	my @scf_sums;
+	my @scf_header_list;
+	
+	if ($synonymous_count_file)
+	{
+		require Tie::Array::Packed;
+		tie @scf, 'Tie::Array::Packed::UnsignedChar';
+		$#scf = $main_seq_length * 12;
+		
+		print "Loading synonymous count file...\n";
+		my $on_pos = 0;
+		open SCF, "<$synonymous_count_file";
+		my $header = <SCF>;
+		@scf_header_list = split /\t/, $header;
+		
+		my @line_list;
+		while (my $scf_item = <SCF>)
+		{
+			chomp $scf_item;
+			@line_list = split /\t/, $scf_item;
+			
+			for (my $i=0; $i<scalar @scf_header_list; $i++)
+			{
+				$scf[$on_pos * 12 + $i] = $line_list[$i];
+				$scf_sums[$i] += $line_list[$i];
+			}
+			
+			$on_pos++;
+#			print "$on_pos " . (scalar @scf) . "\n";
+		}
+		close SCF;
+		print Dumper(\@scf_sums);
+	}
 	
 	my @snp_types = ( 'nonsynonymous', 'synonymous', 'noncoding', 'pseudogene', 'intergenic');
 	
 	open OUT, ">$output" or die "Count not open file: $output";
-	print OUT join ("\t", 'strain', 'total', @snp_types, @base_headers, 'deleted', @mod_name_list, 'called_bp', 'total_bp') . "\n";
+	
+	my @column_headers = (
+		'strain', 
+		'total', 
+		@snp_types, 
+		@base_headers, 
+		'deleted', 
+		@mod_name_list, 
+		'called_bp', 
+		'total_bp',
+	);
+	push @column_headers, @scf_header_list if ($synonymous_count_file);
+	
+	print OUT join ("\t", @column_headers) . "\n";
 	
 	
 	## count SNPs and examples of mobile element insertions
@@ -648,14 +795,39 @@ sub do_count
 		
 		##statistics for UN
 		my $un_bp = 0; 
+		my @this_scf_sums = @scf_sums if ($synonymous_count_file);
 		foreach my $un ($gd->list('UN'))
 		{
 			$un_bp += $un->{end} - $un->{start} + 1;
+			if ($synonymous_count_file)
+			{
+				for (my $p = $un->{start}; $p <= $un->{end}; $p++)
+				{
+					for (my $i=0; $i<scalar @scf_header_list; $i++)
+					{	
+						##remember $scf is 0-indexed and GD are 1-indexed
+						$this_scf_sums[$i] -= $scf[ ($p-1) * 12 + $i];
+					}
+				}
+			}
 		}
 		
 		my $called_bp = $total_bp - $un_bp;
 		
-		print OUT join("\t", $gd_name, scalar(@mut_list),  map({$count->{type}->{$_} } @snp_types), map({ $count->{base}->{$_} } @base_combinations), $total_deleted, map({$count->{mob}->{$_}} @mod_name_list), $called_bp, $total_bp ) . "\n";
+		
+		my @this_columns = (
+			$gd_name, 
+			scalar(@mut_list),  
+			map({$count->{type}->{$_} } @snp_types), 
+			map({ $count->{base}->{$_} } @base_combinations), 
+			$total_deleted, 
+			map({$count->{mob}->{$_}} @mod_name_list), 
+			$called_bp, 
+			$total_bp
+		);
+		push @this_columns, @this_scf_sums if ($synonymous_count_file);
+		
+		print OUT join("\t", @this_columns) . "\n";
 		#print Dumper ($count);
 	}	
 }
@@ -686,7 +858,7 @@ sub do_orphan_evidence
 		$gd_name =~ s/\.[^.]+$//;		
 		
 		my $gd = Breseq::GenomeDiff->new(-in=>$gd_file_name);
-		my @evidence = $gd->evidence_list;
+		my @evidence = $gd->get_evidence_list;
 		@evidence = $gd->filter_used_as_evidence(@evidence);
 		
 		foreach my $ev (@evidence)
@@ -694,6 +866,7 @@ sub do_orphan_evidence
 			next if ($ev->{type} eq 'UN');			
 			next if ($ev->{reject});
 			next if ($ev->{deleted});
+			next if ($ev->{circular_chromosome});
 			print $gd->_item_to_line($ev) . "\n";
 		}
 	}
@@ -1432,4 +1605,36 @@ sub do_polymorphism_analysis
 	}
 	close OUT;
 	
+}
+
+## Removes all evidence that is not referenced by any mutation
+sub do_strip_evidence
+{
+	my ($help, $man, $verbose);
+	my $output_path; 
+	GetOptions(
+		'help|?' => \$help, 'man' => \$man, 'verbose|v' => \$verbose,
+		'output-path|o=s' => \$output_path,
+	) or pod2usage(2);
+	pod2usage(1) if $help;
+	pod2usage(-exitstatus => 0, -verbose => 2) if $man;
+	pod2usage(1) if (scalar @ARGV == 0);
+	pod2usage(1) if (!defined $output_path);
+
+	#doesn't really need to take multiple...
+	my @gd_file_name_list = @ARGV;
+		
+	foreach my $gd_file_name (@gd_file_name_list)
+	{
+		my $gd_name = $gd_file_name;
+		$gd_name =~ s/^.+\///;		
+		$gd_name =~ s/\.[^.]+$//;
+		print STDERR "$gd_name\n";
+		
+		my $gd = Breseq::GenomeDiff->new(-in=>$gd_file_name);
+		$gd->strip_evidence;
+		
+		my $output_file_name = "$output_path/$gd_name\.gd";
+		$gd->write($output_file_name);
+	}
 }

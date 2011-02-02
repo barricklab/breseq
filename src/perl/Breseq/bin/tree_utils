@@ -1,0 +1,1227 @@
+#!/usr/bin/env perl
+
+###
+# Pod Documentation
+###
+
+=head1 NAME
+
+fastq_utils
+
+=head1 SYNOPSIS
+
+Usage: fastq_utils COMMAND [arguments]
+
+Performs various functions on FASTQ formatted files. Options depend on the COMMAND supplied.
+
+=head1 Command: FORMAT
+
+Usage: fastq_utils FORMAT [-n 1000|ALL] input.fastq
+
+Examine reads in a FASTQ file to predict its base quality score format.
+
+=over
+
+=item B<-n> <int>, B<-n> ALL, B<--num>=<int>, B<--num>=ALL 
+
+Number of reads to examine when predicting the format. The keyword 'ALL' means to examine every read in input the file.
+
+=item B<input.fastq>
+
+FASTQ file to examine.
+
+=back
+
+=head1 Command: SANGER
+
+Usage: fastq_utils SANGER -f from_format [-l] input.fastq output.fastq
+
+Convert a FASTQ file to SANGER format.
+
+=item B<-f> <format>, B<--format>=<format>
+
+Base quality score format of the input FASTQ file. Valid formats are: 
+SANGER, SOLEXA, ILLUMINA_1.3+, ILLUMINA_1.5+. If you are unsure of the format, use the FORMAT command.
+
+=item B<-l>, B<--list-format>
+
+In the input FASTQ file, quality score lines are white space separated numbers, rather than character strings. 
+
+=item B<input.fastq>
+
+Input FASTQ file in specified format.
+
+=item B<output.fastq>
+
+Output FASTQ file in SANGER format.
+
+=back
+
+=head1 AUTHOR
+
+Jeffrey E. Barrick <jeffrey.e.barrick@gmail.com>
+
+=head1 LICENSE
+
+Copyright (C) 2010 Michigan State University.
+
+This is free software; you can redistribute it and/or modify it under the terms the 
+GNU General Public License as published by the Free Software Foundation; either 
+version 1, or (at your option) any later version.
+
+=cut
+
+###
+# End Pod Documentation
+###
+
+
+use strict;
+use Data::Dumper;
+
+use Getopt::Long;
+use Pod::Usage;
+
+use FindBin;
+use lib $FindBin::Bin;
+
+#### Paths to Locally Installed Modules ####
+use lib $FindBin::Bin . "/../lib/perl5";
+use lib $FindBin::Bin . "/../lib/perl5/site_perl";
+
+use Bio::TreeIO;
+use List::Util qw(max);
+
+my $command = shift @ARGV;
+$command = "\U$command";
+
+my $output_gd;
+
+##For fixing truncated PHYLIP names
+if ($command eq 'RENAME')
+{	
+	do_rename();
+}
+elsif ($command eq 'SCALE')
+{	
+	do_scale();
+}
+elsif ($command eq 'SCALE-PHYLIP')
+{	
+	do_scale_phylip();
+}
+elsif ($command eq 'ROOT-ANCESTOR')
+{
+	do_root_ancestor();
+}
+elsif ($command eq 'DO_CAMIN_SOKAL')
+{
+	do_Camin_Sokal();
+}
+elsif ($command eq 'DISCREPANCIES')
+{	
+	do_discrepancies();
+}
+elsif ($command eq 'ML-TIMING')
+{	
+	do_ml_timing();
+}
+elsif ($command eq 'ML-TIMING-2')
+{	
+	do_ml_timing_2();
+}
+elsif ($command eq 'ML-TIMING-3')
+{	
+	do_ml_timing_3();
+}
+elsif ($command eq 'ML-TIMING-4')
+{	
+	do_ml_timing_4();
+}
+elsif ($command eq 'ADD-BRANCH-LENGTHS')
+{
+	do_add_branch_lengths()
+}
+else
+{
+	die "Did not understand command: $command\n";
+}
+
+#########################################################################
+sub do_rename
+{
+	my ($help, $man);
+	my ($in_tree_file, $out_tree_file, $phylip_file);
+	GetOptions(
+		'help|?' => \$help, 'man' => \$man,
+		'in-tree-file|i=s' =>  \$in_tree_file,
+		'out-tree-file|o=s' =>  \$out_tree_file,
+		'phylip-file|p=s' =>  \$phylip_file,
+	) or pod2usage(2);
+	pod2usage(1) if $help;
+	pod2usage(-exitstatus => 0, -verbose => 2) if $man;	
+	pod2usage(1) if (!$phylip_file);
+
+	my @names = @ARGV;
+
+	# parse in newick/new hampshire format
+	my $tree_input = new Bio::TreeIO(-file => $in_tree_file, -format=> 'newick');
+	my $tree = $tree_input->next_tree;
+	
+	open PHY, "$phylip_file" or die "Could not open file:$phylip_file\n";
+	my @plines = <PHY>;
+	shift @plines; ##header
+	close PHY;
+
+	my $abb_to_name;
+	foreach my $phylip_name (@plines)
+	{
+		$phylip_name =~ m/(\S{1,10})/;
+		my $abb = $1;
+		
+		my $name = shift @names;
+		$name =~ s/\.[^.]+$//;
+		$abb_to_name->{$abb} = $name;
+	}
+	
+	print Dumper($abb_to_name);
+	
+	foreach my $node ($tree->get_nodes)
+	{
+		print "Node: " . $node->id . "\n";
+		$node->id($abb_to_name->{$node->id}) if ($node->id);
+		print "Node: " . $node->id . "\n";
+		
+	}
+
+	my $tree_output = new Bio::TreeIO(-file => ">$out_tree_file", -format =>'newick');
+	$tree_output->write_tree($tree);
+
+	print Dumper($abb_to_name);
+}
+
+sub do_scale
+{
+	my ($help, $man);
+	my ($in_tree_file, $out_tree_file, $n);
+	GetOptions(
+		'help|?' => \$help, 'man' => \$man,
+		'in-tree-file|i=s' =>  \$in_tree_file,
+		'out-tree-file|o=s' =>  \$out_tree_file,
+		'number|n=s' =>  \$n,
+	) or pod2usage(2);
+	pod2usage(1) if $help;
+	pod2usage(-exitstatus => 0, -verbose => 2) if $man;	
+	pod2usage(1) if (!$n);
+
+	# parse in newick/new hampshire format
+	my $tree_input = new Bio::TreeIO(-file => $in_tree_file, -format=> 'newick');
+	my $tree = $tree_input->next_tree;
+	
+	my $total_length = 0;
+	for my $node ( $tree->get_nodes ) 
+	{
+		$total_length += $node->branch_length;
+	}
+	
+	print "Total length = $total_length\n";
+	
+	for my $node ( $tree->get_nodes ) 
+	{
+		print $node->branch_length . "\n";
+		$node->branch_length( sprintf("%.2f", $node->branch_length * $n / $total_length) );
+		print $node->branch_length . "\n";
+		
+	}
+		
+	my $tree_output = new Bio::TreeIO(-file => ">$out_tree_file", -format =>'newick');
+	$tree_output->write_tree($tree);
+}
+
+sub do_scale_phylip
+{
+	my ($help, $man);
+	my ($in_tree_file, $out_tree_file, $phylip_file);
+	GetOptions(
+		'help|?' => \$help, 'man' => \$man,
+		'in-tree-file|i=s' =>  \$in_tree_file,
+		'out-tree-file|o=s' =>  \$out_tree_file,
+		'phylip-file|p=s' =>  \$phylip_file,
+	) or pod2usage(2);
+	pod2usage(1) if $help;
+	pod2usage(-exitstatus => 0, -verbose => 2) if $man;	
+	pod2usage(1) if (!$phylip_file);
+
+	# parse in newick/new hampshire format
+	my $tree_input = new Bio::TreeIO(-file => $in_tree_file, -format=> 'newick');
+	my $tree = $tree_input->next_tree;
+	
+	open PHY, "$phylip_file" or die "Could not open file:$phylip_file\n";
+	my @plines = <PHY>;
+	shift @plines; ##header
+	close PHY;
+	
+	my $example_line = shift @plines;
+	chomp $example_line;
+	my $l = length($example_line) - 10;
+	
+	print "Length = $l\n";
+	
+	for my $node ( $tree->get_nodes ) 
+	{
+		print $node->branch_length . "\n";
+		$node->branch_length( sprintf("%.2f", $node->branch_length * $l) );
+		print $node->branch_length . "\n";
+		
+	}
+		
+	my $tree_output = new Bio::TreeIO(-file => ">$out_tree_file", -format =>'newick');
+	$tree_output->write_tree($tree);
+}
+
+sub do_root_ancestor
+{
+	my ($help, $man);
+	my ($in_tree_file, $out_tree_file);
+	GetOptions(
+		'help|?' => \$help, 'man' => \$man,
+		'in-tree-file|i=s' =>  \$in_tree_file,
+		'out-tree-file|o=s' =>  \$out_tree_file,
+	) or pod2usage(2);
+	pod2usage(1) if $help;
+	pod2usage(-exitstatus => 0, -verbose => 2) if $man;	
+
+	# parse in newick/new hampshire format
+	my $tree_input = new Bio::TreeIO(-file => $in_tree_file, -format=> 'newick');
+	my $tree = $tree_input->next_tree;
+
+#http://www.bioperl.org/wiki/HOWTO:Trees
+
+	#remove the ancestor node and add this branch length to the other side
+ 	my $root = $tree->get_root_node;
+
+	my @desc = $root->each_Descendent;
+	die "Expected three nodes from root.\n" if (scalar $root->each_Descendent != 3);
+
+	my $found = 0;
+	my ($ancestor, $internal, $other);
+	foreach my $node ($root->each_Descendent)
+	{
+		if ($node->id =~ m/\|0K/)
+		{
+			$ancestor = $node;
+		}
+		elsif ($node->is_Leaf)
+		{
+			$other = $node;
+		}
+		else
+		{
+			$internal = $node;
+		}
+	}
+	die "Did not find ancestral node and internal node as children of root.\n" if (!$ancestor || !$internal);
+
+	$root->remove_all_Descendents();
+
+	my $new_node = Bio::Tree::Node->new();
+	$new_node->branch_length($ancestor->branch_length);
+	$new_node->add_Descendent($internal);
+	$new_node->add_Descendent($other);
+	$ancestor->branch_length(0);
+	
+	$root->add_Descendent($new_node);
+	$root->add_Descendent($ancestor);
+	
+	my $tree_output = new Bio::TreeIO(-file => ">$out_tree_file", -format =>'newick');
+	$tree_output->write_tree($tree);
+}
+
+sub do_ml_timing
+{
+	my ($help, $man);
+	my ($in_tree_file, $out_tree_file);
+	GetOptions(
+		'help|?' => \$help, 'man' => \$man,
+		'in-tree-file|i=s' =>  \$in_tree_file,
+		'out-tree-file|o=s' =>  \$out_tree_file,
+	) or pod2usage(2);
+	pod2usage(1) if $help;
+	pod2usage(-exitstatus => 0, -verbose => 2) if $man;	
+
+	# parse in newick/new hampshire format
+	my $tree_input = new Bio::TreeIO(-file => $in_tree_file, -format=> 'newick');
+	my $tree = $tree_input->next_tree;
+
+#http://www.bioperl.org/wiki/HOWTO:Trees
+
+	##first index and name internal nodes (which have empty id's)
+	my $index = 0;
+	for my $node ( $tree->get_nodes ) 
+	{
+		if (!$node->id || ($node->id eq 'anc') || ($node->id eq '0.00') )
+		{
+			$node->id(++$index);
+		}
+	}
+	my $num_internal_nodes = $index;
+
+	##now give names and timings to leafs..
+
+	#index starts at one and includes ALL nodes.
+	my $name_to_index;
+	my $index_to_name;
+
+	for my $node ( $tree->get_nodes ) 
+	{
+		#extract time from id
+		if ($node->id =~ m/\|(\d+)/) 
+		{
+			my $original_id = $node->id;
+			$node->id =~ m/\|(\d+)/;
+			$node->bootstrap($1);
+			$node->id(++$index);
+			$index_to_name->{$node->id} = $original_id;
+		}
+	}
+	my $total_nodes = $index;
+
+	#create a set of linear equations
+	#variables are the branch lengths (named by the ids of the nodes they connect). The root has an id of zero
+	#constraints are all branches leading to a leaf must add up to that generation number
+
+	my @equation_list; #hash of { @branch_names sum}
+	my $terms;
+
+	for my $node ( $tree->get_nodes ) 
+	{
+		next if (!$node->is_Leaf);
+
+		my $branch_hash;
+		my $on_node = $node;
+		my $muts = $on_node->branch_length;
+		while($on_node->ancestor)
+		{
+			my $id = $on_node->ancestor->id;
+			$id = '0' if (!$id);
+			my $term = $on_node->id . "_" . $id;
+			$branch_hash->{$term}++;
+			$terms->{$term}++;
+			$on_node = $on_node->ancestor;
+			$muts += $on_node->branch_length;
+		}
+
+		push @equation_list, { branch_hash => $branch_hash, sum => $node->bootstrap, muts => $muts };
+	}
+#	print "Number of branch lengths: " . scalar(keys %$terms) . "\n";
+
+	my $term_to_index;
+	my $term_index = 0;
+	my @sorted_term_list = sort keys %$terms;
+	foreach my $term (@sorted_term_list)
+	{
+		$term_to_index->{$term} = $term_index++;
+	}
+	print +join("\t", '', @sorted_term_list, 'gen', 'muts') . "\n";
+
+
+	for (my $i=0; $i < scalar @equation_list; $i++)
+	{
+		my $eq = $equation_list[$i];
+		my @line_items;
+		foreach my $term (@sorted_term_list)
+		{
+			my $val = 0;
+			$val = 1 if ($eq->{branch_hash}->{$term});
+			push @line_items, $val;
+		}
+		print +join("\t", ($i+1), @line_items, $eq->{sum}, $eq->{muts}) . "\n";
+	}
+
+	my $tree_output = new Bio::TreeIO(-file => ">$out_tree_file", -format =>'newick');
+	$tree_output->write_tree($tree);
+}
+
+
+##assuming tree rooted at ancestor, all events can only go forward...
+sub do_Camin_Sokal
+{
+	my ($help, $man);
+	my ($in_tree_file, $out_tree_file, $phylip_file);
+	GetOptions(
+		'help|?' => \$help, 'man' => \$man,
+		'in-tree-file|i=s' =>  \$in_tree_file,
+		'out-tree-file|o=s' =>  \$out_tree_file,
+		'phylip-file|p=s' =>  \$phylip_file,
+	) or pod2usage(2);
+	pod2usage(1) if $help;
+	pod2usage(-exitstatus => 0, -verbose => 2) if $man;	
+	pod2usage(1) if (!$phylip_file);
+	my @names = @ARGV;
+
+	## Load phylip file
+	open PHY, "$phylip_file" or die "Could not open file:$phylip_file\n";
+	my @plines = <PHY>;
+	shift @plines; ##header
+	close PHY;
+
+	my $phylip;
+	foreach my $phylip_name (@plines)
+	{
+		$phylip_name =~ m/(^\S{1,10})\s*(\S+)$/;
+		my $abb = $1;
+		my $muts = $2;
+		
+		my $name = shift @names;
+		$name =~ s/\.[^.]+$//;
+		
+		$phylip->{name_to_abb}->{$name} = $abb;
+		$phylip->{name_to_muts}->{$name} = $muts;
+		
+		$phylip->{abb_to_name}->{$abb} = $name;
+		$phylip->{abb_to_muts}->{$abb} = $muts;
+	}
+	print Dumper($phylip);
+	
+	my $ancestral_states = $phylip->{name_to_muts}->{"REL606|0K"};
+
+	## Load file naming mutations
+	@{$phylip->{mut_names}} = ();
+	open KEYFILE, "$phylip_file.key" or die "Could not open file:$phylip_file.key\n";
+	@{$phylip->{mut_names}}  = <KEYFILE>;
+	chomp @{$phylip->{mut_names}};
+	close KEYFILE;
+
+	my $tree_input = new Bio::TreeIO(-file => $in_tree_file, -format=> 'newick');
+	my $tree = $tree_input->next_tree;	
+
+	#reset all branch lengths
+	for my $node ( $tree->get_nodes ) 
+	{
+		$node->branch_length(0);
+	}
+	
+
+	for (my $i=0; $i<scalar @{$phylip->{mut_names}}; $i++)
+	{
+		my $mut_name = $phylip->{mut_names}->[$i];
+		print STDERR "Processing $i $mut_name\n";
+				
+		our $ancestral_state = substr($ancestral_states, $i, 1);
+		print "ANCESTRAL STATE $ancestral_state\n";
+				
+		my $root = $tree->get_root_node;
+		
+		##recursion to construct parsimonious states... 
+		sub CS_node_state
+		{
+			my ($node) = @_;
+			
+			if ($node->is_Leaf)
+			{
+				my $this_state = substr($phylip->{name_to_muts}->{$node->id}, $i, 1);
+				
+				die $node->id if (!defined $this_state);
+				
+				return $this_state;
+			}
+	
+			my @descendant_states;
+			my $descendant_state_string = '';
+			foreach my $descendant ($node->each_Descendent)
+			{
+				my ($descendant_state) = CS_node_state($descendant);
+				push @descendant_states, { state => $descendant_state, node => $descendant };
+				$descendant_state_string .= $descendant_state;
+			}
+						
+			#if all descendants share a state then give us that state
+			my $state;
+			foreach my $d (@descendant_states)
+			{
+				my $descendant_state = $d->{state};
+				print STDERR "Descendant state: $descendant_state\n";
+				if (!defined $state) 
+				{
+					$state = $descendant_state;
+				}
+				elsif ($state ne $descendant_state)
+				{
+					$state = $ancestral_state;
+				}
+			}
+			print "$descendant_state_string :: $state\n";
+			
+			
+			#if  they don't all share a state, then add distance to the branches to the ones that did
+			foreach my $d (@descendant_states)
+			{
+				my $descendant_state = $d->{state};
+				if ($descendant_state ne $state) 
+				{
+					my $descendant = $d->{node};
+					$descendant->branch_length($descendant->branch_length()+1);
+				}
+			}
+			return ($state);
+		}
+		
+		my ($state) = CS_node_state($root);
+	}
+	
+	my $tree_output = new Bio::TreeIO(-file => ">$out_tree_file", -format =>'newick');
+	$tree_output->write_tree($tree);
+}
+
+
+sub do_discrepancies
+{
+	my ($help, $man);
+	my ($in_tree_file, $out_tree_file, $phylip_file);
+	GetOptions(
+		'help|?' => \$help, 'man' => \$man,
+		'in-tree-file|i=s' =>  \$in_tree_file,
+		'out-tree-file|o=s' =>  \$out_tree_file,
+		'phylip-file|p=s' =>  \$phylip_file,
+	) or pod2usage(2);
+	pod2usage(1) if $help;
+	pod2usage(-exitstatus => 0, -verbose => 2) if $man;	
+	pod2usage(1) if (!$phylip_file);
+	my @names = @ARGV;
+
+	## Load phylip file
+	open PHY, "$phylip_file" or die "Could not open file:$phylip_file\n";
+	my @plines = <PHY>;
+	shift @plines; ##header
+	close PHY;
+
+	my $phylip;
+	foreach my $phylip_name (@plines)
+	{
+		$phylip_name =~ m/(^\S{1,10})\s*(\S+)$/;
+		my $abb = $1;
+		my $muts = $2;
+		
+		my $name = shift @names;
+		$name =~ s/\.[^.]+$//;
+		
+		$phylip->{name_to_abb}->{$name} = $abb;
+		$phylip->{name_to_muts}->{$name} = $muts;
+		
+		$phylip->{abb_to_name}->{$abb} = $name;
+		$phylip->{abb_to_muts}->{$abb} = $muts;
+	}
+
+	## Load file naming mutations
+	@{$phylip->{mut_names}} = ();
+	open KEYFILE, "$phylip_file.key" or die "Could not open file:$phylip_file.key\n";
+	@{$phylip->{mut_names}}  = <KEYFILE>;
+	chomp @{$phylip->{mut_names}};
+	close KEYFILE;
+
+	for (my $i=0; $i<scalar @{$phylip->{mut_names}}; $i++)
+	{
+		my $mut_name = $phylip->{mut_names}->[$i];
+		print STDERR "Processing $i $mut_name\n";
+		
+		# parse in newick/new hampshire format
+		my $tree_input = new Bio::TreeIO(-file => $in_tree_file, -format=> 'newick');
+		my $tree = $tree_input->next_tree;	
+		
+		#Look at all pairs of nodes
+		my $discrepant = 0;
+		
+		my $root = $tree->get_root_node;
+		
+		##recursion to construct parsimonious states... 
+		sub node_state
+		{
+			my ($node, $diffs) = @_;
+			
+			if ($node->is_Leaf)
+			{
+				return substr($phylip->{name_to_muts}->{$node->id}, $i, 1);
+			}
+	
+			my @descendant_states;
+			foreach my $descendant ($node->each_Descendent)
+			{
+				my ($descendant_state, $add_diffs) = node_state($descendant, 0);
+				push @descendant_states, $descendant_state;
+				$diffs += $add_diffs;
+			}
+			
+			#if all descendants share a state then give us that state
+			my $state;
+			foreach my $descendant_state (@descendant_states)
+			{
+				if ($descendant_state ne 'N') 
+				{
+					if (!defined $state) 
+					{
+						$state = $descendant_state;
+					}
+					elsif ($state ne $descendant_state)
+					{
+						$state = 'N';
+					}
+				}
+			}
+			
+			$diffs++ if ($state eq 'N');
+			
+			return ($state, $diffs);
+		}
+		
+		
+		my ($state, $diffs) = node_state($root, 0);
+		print "$i $diffs\n";
+		$discrepant = 1 if ($diffs > 1);
+		
+		#replace IDs
+		for my $node ( $tree->get_nodes ) 
+		{
+			next if (!$node->is_Leaf);		
+			my $new_id = substr($phylip->{name_to_muts}->{$node->id}, $i, 1) . "|" . $node->id;
+			$node->id($new_id);
+		}
+		
+		if ($discrepant)
+		{
+			print STDERR "Discrepant!\n";
+			my $tree_output = new Bio::TreeIO(-file => ">$out_tree_file.$i.$mut_name.$i.tre", -format =>'newick');
+			$tree_output->write_tree($tree);
+		}
+	}
+}
+
+sub do_ml_timing
+{
+	my ($help, $man);
+	my ($in_tree_file, $out_tree_file);
+	GetOptions(
+		'help|?' => \$help, 'man' => \$man,
+		'in-tree-file|i=s' =>  \$in_tree_file,
+		'out-tree-file|o=s' =>  \$out_tree_file,
+	) or pod2usage(2);
+	pod2usage(1) if $help;
+	pod2usage(-exitstatus => 0, -verbose => 2) if $man;	
+
+	# parse in newick/new hampshire format
+	my $tree_input = new Bio::TreeIO(-file => $in_tree_file, -format=> 'newick');
+	my $tree = $tree_input->next_tree;
+
+#http://www.bioperl.org/wiki/HOWTO:Trees
+
+	##first index and name internal nodes (which have empty id's)
+	my $index = 0;
+	for my $node ( $tree->get_nodes ) 
+	{
+		if (!$node->id || ($node->id eq 'anc') || ($node->id eq '0.00') )
+		{
+			$node->id(++$index);
+		}
+	}
+	my $num_internal_nodes = $index;
+
+	##now give names and timings to leafs..
+
+	#index starts at one and includes ALL nodes.
+	my $name_to_index;
+	my $index_to_name;
+
+	for my $node ( $tree->get_nodes ) 
+	{
+		#extract time from id
+		if ($node->id =~ m/\|(\d+)/) 
+		{
+			my $original_id = $node->id;
+			$node->id =~ m/\|([\d.]+)/;
+			$node->bootstrap($1);
+			$node->id(++$index);
+			$index_to_name->{$node->id} = $original_id;
+		}
+	}
+	my $total_nodes = $index;
+
+	#create a set of linear equations
+	#variables are the branch lengths (named by the ids of the nodes they connect). The root has an id of zero
+	#constraints are all branches leading to a leaf must add up to that generation number
+	#additional contraints ar the number of mutations in parsimonious ancestors at internal nodes
+	#but there are no constraints on generation for these
+
+	my @equation_list; #hash of { @branch_names sum}
+	my $terms;
+
+	for my $node ( $tree->get_nodes ) 
+	{
+		#no equation for root
+		next if (!defined $node->ancestor);
+		
+		my $branch_hash;
+		my $on_node = $node;
+		my $muts = $on_node->branch_length;
+		while($on_node->ancestor)
+		{
+			my $id = $on_node->ancestor->id;
+			$id = '0' if (!$id);
+			my $term = $on_node->id . "_" . $id;
+			$branch_hash->{$term}++;
+			$terms->{$term}++;
+			$on_node = $on_node->ancestor;
+			$muts += $on_node->branch_length;
+		}
+
+		my $new_equation = { branch_hash => $branch_hash, muts => $muts, sum => 'NA' };
+		## only leaf nodes have generation constraints
+		$new_equation->{sum} = $node->bootstrap if ($node->is_Leaf);
+		
+		push @equation_list, $new_equation;
+	}
+#	print "Number of branch lengths: " . scalar(keys %$terms) . "\n";
+
+	my $term_to_index;
+	my $term_index = 0;
+	my @sorted_term_list = sort keys %$terms;
+	foreach my $term (@sorted_term_list)
+	{
+		$term_to_index->{$term} = $term_index++;
+	}
+	print +join("\t", '', @sorted_term_list, 'gen', 'muts') . "\n";
+
+
+	for (my $i=0; $i < scalar @equation_list; $i++)
+	{
+		my $eq = $equation_list[$i];
+		my @line_items;
+		foreach my $term (@sorted_term_list)
+		{
+			my $val = 0;
+			$val = 1 if ($eq->{branch_hash}->{$term});
+			push @line_items, $val;
+		}
+		print +join("\t", ($i+1), @line_items, $eq->{sum}, $eq->{muts}) . "\n";
+	}
+
+	my $tree_output = new Bio::TreeIO(-file => ">$out_tree_file", -format =>'newick');
+	$tree_output->write_tree($tree);
+}
+
+sub do_ml_timing_2
+{
+	my ($help, $man);
+	my ($in_tree_file, $out_tree_file);
+	GetOptions(
+		'help|?' => \$help, 'man' => \$man,
+		'in-tree-file|i=s' =>  \$in_tree_file,
+		'out-tree-file|o=s' =>  \$out_tree_file,
+	) or pod2usage(2);
+	pod2usage(1) if $help;
+	pod2usage(-exitstatus => 0, -verbose => 2) if $man;	
+
+	# parse in newick/new hampshire format
+	my $tree_input = new Bio::TreeIO(-file => $in_tree_file, -format=> 'newick');
+	my $tree = $tree_input->next_tree;
+
+#http://www.bioperl.org/wiki/HOWTO:Trees
+
+	##first index and name internal nodes (which have empty id's)
+	my $index = 0;
+	for my $node ( $tree->get_nodes ) 
+	{
+		if (!$node->id || ($node->id eq 'anc') || ($node->id eq '0.00') )
+		{
+			$node->id(++$index);
+		}
+	}
+	my $num_internal_nodes = $index;
+
+	##now give names and timings to leafs..
+
+	#index starts at one and includes ALL nodes.
+	my $name_to_index;
+	my $index_to_name;
+
+	for my $node ( $tree->get_nodes ) 
+	{
+		#extract time from id
+		if ($node->id =~ m/\|(\d+)/) 
+		{
+			my $original_id = $node->id;
+			$node->id =~ m/\|([\d.]+)/;
+			$node->bootstrap($1);
+			$node->id(++$index);
+			$index_to_name->{$node->id} = $original_id;
+		}
+	}
+	my $total_nodes = $index;
+
+	my @equation_list; #hash of { @branch_names sum}
+	my $terms;
+	my $var_gen_counter = 0;
+	
+	for my $node ( $tree->get_nodes ) 
+	{
+		#no equation for root
+		next if (!defined $node->ancestor);
+		
+		my $branch_hash;
+		my $on_node = $node;
+		my $muts = $on_node->branch_length;
+		while($on_node->ancestor)
+		{
+			my $id = $on_node->ancestor->id;
+			$id = '0' if (!$id);
+			$on_node = $on_node->ancestor;
+			$muts += $on_node->branch_length;
+		}
+		
+		#leafs have known timing and muts
+		
+		my $fixed_gen = 'NA';
+		my $var_gen = 'NA';
+		if ($node->is_Leaf)
+		{
+			$fixed_gen = $node->bootstrap;
+		}
+		#branches had known muts only
+		else
+		{
+			$var_gen = ++$var_gen_counter;
+		}
+		
+		my $new_equation = { id => $node->id, muts => $muts, var_gen => $var_gen, fixed_gen => $fixed_gen};
+		
+		push @equation_list, $new_equation;
+	}
+#	print "Number of branch lengths: " . scalar(keys %$terms) . "\n";
+
+	my $term_to_index;
+	my $term_index = 0;
+	my @sorted_term_list = sort keys %$terms;
+	foreach my $term (@sorted_term_list)
+	{
+		$term_to_index->{$term} = $term_index++;
+	}
+	print +join("\t", 'id', 'muts', 'var_gen', 'fixed_gen') . "\n";
+	for (my $i=0; $i < scalar @equation_list; $i++)
+	{
+		my $eq = $equation_list[$i];
+		print +join("\t", $eq->{id}, $eq->{muts}, $eq->{var_gen}, $eq->{fixed_gen}) . "\n";
+	}
+
+	my $tree_output = new Bio::TreeIO(-file => ">$out_tree_file", -format =>'newick');
+	$tree_output->write_tree($tree);
+}
+
+sub do_ml_timing_3
+{
+	my ($help, $man);
+	my ($in_tree_file, $out_tree_file);
+	GetOptions(
+		'help|?' => \$help, 'man' => \$man,
+		'in-tree-file|i=s' =>  \$in_tree_file,
+		'out-tree-file|o=s' =>  \$out_tree_file,
+	) or pod2usage(2);
+	pod2usage(1) if $help;
+	pod2usage(-exitstatus => 0, -verbose => 2) if $man;	
+
+	# parse in newick/new hampshire format
+	my $tree_input = new Bio::TreeIO(-file => $in_tree_file, -format=> 'newick');
+	my $tree = $tree_input->next_tree;
+
+#http://www.bioperl.org/wiki/HOWTO:Trees
+
+	##first index and name internal nodes (which have empty id's)
+	my $index = 0;
+	for my $node ( $tree->get_nodes ) 
+	{
+		if (!$node->id || ($node->id eq 'anc') || ($node->id eq '0.00') )
+		{
+			$node->id(++$index);
+		}
+	}
+	my $num_internal_nodes = $index;
+
+	##now give names and timings to leafs..
+
+	#index starts at one and includes ALL nodes.
+	my $name_to_index;
+	my $index_to_name;
+
+	for my $node ( $tree->get_nodes ) 
+	{
+		#extract time from id
+		if ($node->id =~ m/\|(\d+)/) 
+		{
+			my $original_id = $node->id;
+			$node->id =~ m/\|([\d.]+)/;
+			$node->bootstrap($1);
+			$node->id(++$index);
+			$index_to_name->{$node->id} = $original_id;
+		}
+	}
+	my $total_nodes = $index;
+
+	#create a set of linear equations
+	#variables are the branch lengths (named by the ids of the nodes they connect). The root has an id of zero
+	#constraints are all branches leading to a leaf must add up to that generation number
+	#additional contraints ar the number of mutations in parsimonious ancestors at internal nodes
+	#but there are no constraints on generation for these
+
+	my @equation_list; #hash of { @branch_names sum}
+	my $terms;
+
+	for my $node ( $tree->get_nodes ) 
+	{
+		#no equation for root
+		next if (!defined $node->ancestor);
+		
+		my $branch_hash;
+		my $on_node = $node;
+		my $muts = $on_node->branch_length;
+
+		my $single_branch_hash;
+		my $single_term = $on_node->id . "_" . $on_node->ancestor->id;;
+		$single_branch_hash->{$single_term}++;
+		my $new_equation_2 = { branch_hash => $single_branch_hash, muts => $muts, sum => 'NA' };
+		push @equation_list, $new_equation_2;
+		
+		if ($node->is_Leaf)
+		{
+			while($on_node->ancestor)
+			{
+				my $id = $on_node->ancestor->id;
+				$id = '0' if (!$id);
+				my $term = $on_node->id . "_" . $id;
+				$branch_hash->{$term}++;
+				$terms->{$term}++;
+				$on_node = $on_node->ancestor;
+			}
+
+			my $new_equation = { branch_hash => $branch_hash, muts => 'NA', sum => $node->bootstrap  };
+			push @equation_list, $new_equation;
+		}
+	}
+	
+#	print "Number of branch lengths: " . scalar(keys %$terms) . "\n";
+
+	my $term_to_index;
+	my $term_index = 0;
+	my @sorted_term_list = sort keys %$terms;
+	foreach my $term (@sorted_term_list)
+	{
+		$term_to_index->{$term} = $term_index++;
+	}
+	print +join("\t", '', @sorted_term_list, 'gen', 'muts') . "\n";
+
+
+	for (my $i=0; $i < scalar @equation_list; $i++)
+	{
+		my $eq = $equation_list[$i];
+		my @line_items;
+		foreach my $term (@sorted_term_list)
+		{
+			my $val = 0;
+			$val = 1 if ($eq->{branch_hash}->{$term});
+			push @line_items, $val;
+		}
+		print +join("\t", ($i+1), @line_items, $eq->{sum}, $eq->{muts}) . "\n";
+	}
+
+	my $tree_output = new Bio::TreeIO(-file => ">$out_tree_file", -format =>'newick');
+	$tree_output->write_tree($tree);
+}
+
+sub do_ml_timing_4
+{
+	my ($help, $man);
+	my ($in_tree_file, $out_tree_file);
+	GetOptions(
+		'help|?' => \$help, 'man' => \$man,
+		'in-tree-file|i=s' =>  \$in_tree_file,
+		'out-tree-file|o=s' =>  \$out_tree_file,
+	) or pod2usage(2);
+	pod2usage(1) if $help;
+	pod2usage(-exitstatus => 0, -verbose => 2) if $man;	
+
+	# parse in newick/new hampshire format
+	my $tree_input = new Bio::TreeIO(-file => $in_tree_file, -format=> 'newick');
+	my $tree = $tree_input->next_tree;
+
+#http://www.bioperl.org/wiki/HOWTO:Trees
+
+	##first index and name internal nodes (which have empty id's)
+	my $index = 0;
+	for my $node ( $tree->get_nodes ) 
+	{
+		if (!$node->id || ($node->id eq 'anc') || ($node->id eq '0.00') )
+		{
+			$node->id(++$index);
+		}
+	}
+	my $num_internal_nodes = $index;
+
+	##now give names and timings to leafs..
+
+	#index starts at one and includes ALL nodes.
+	my $name_to_index;
+	my $index_to_name;
+
+	for my $node ( $tree->get_nodes ) 
+	{
+		#extract time from id
+		if ($node->id =~ m/\|(\d+)/) 
+		{
+			my $original_id = $node->id;
+			$node->id =~ m/\|([\d.]+)/;
+			$node->bootstrap($1);
+			$node->id(++$index);
+			$index_to_name->{$node->id} = $original_id;
+		}
+	}
+	my $total_nodes = $index;
+
+	#create a set of linear equations
+	#variables are the branch lengths (named by the ids of the nodes they connect). The root has an id of zero
+	#constraints are all branches leading to a leaf must add up to that generation number
+	#additional contraints ar the number of mutations in parsimonious ancestors at internal nodes
+	#but there are no constraints on generation for these
+
+	my @equation_list; #hash of { @branch_names sum}
+	my $terms;
+
+	my $on_branch_id = 0;
+	my $internal_branch_to_id;
+	for my $node ( $tree->get_nodes ) 
+	{
+		#no equation for root
+		next if (!defined $node->ancestor);
+		
+		if (!$node->is_Leaf)
+		{
+			my $branch_name = $node->id . "_" . $node->ancestor->id;
+			$internal_branch_to_id->{$branch_name} = ++$on_branch_id;
+		}
+	}
+	print STDERR Dumper($internal_branch_to_id);
+
+	for my $node ( $tree->get_nodes ) 
+	{
+		#no equation for root
+		next if (!defined $node->ancestor);
+		
+		my $branch_hash;
+		my $on_node = $node;
+		my $muts = $on_node->branch_length;
+
+		my $single_branch_hash;
+		my $single_term = $on_node->id . "_" . $on_node->ancestor->id;
+		
+		if ($node->is_Leaf)
+		{
+			next if ($node->bootstrap == 0);
+			# Leafs have a list of all branches EXCEPT the current one and
+			# the constraint on the branch length number of generations SUM
+			my @branch_list = ();
+			while($on_node->ancestor)
+			{
+				my $id = $on_node->ancestor->id;
+				$id = '0' if (!$id);
+				my $term = $on_node->id . "_" . $id;				
+				push @branch_list,  $internal_branch_to_id->{$term} if (defined $internal_branch_to_id->{$term});
+				$on_node = $on_node->ancestor;
+			}
+
+			my $new_equation = { name => $single_term,  branch_list => \@branch_list, muts => $muts, gen => $node->bootstrap  };
+			push @equation_list, $new_equation;
+		}
+		else
+		{
+			# Internal branches just have a number of mutations and one item in their branch list
+			my @branch_list = ( $internal_branch_to_id->{$single_term} );
+			my $new_equation = { name => $single_term, branch_list => \@branch_list, muts => $muts, gen => 'NA' };
+			push @equation_list, $new_equation;
+		}
+	}
+		
+#	print "Number of branch lengths: " . scalar(keys %$terms) . "\n";
+	print +join("\t", 'name', 'branches', 'gen', 'muts') . "\n";
+
+	for (my $i=0; $i < scalar @equation_list; $i++)
+	{
+		my $eq = $equation_list[$i];
+		print STDERR Dumper($eq);
+		print +join("\t", 
+			$eq->{name}, 
+			join(",", @{$eq->{branch_list}} ), 
+			$eq->{gen}, 
+			$eq->{muts}
+		) . "\n";
+	}
+
+	my $tree_output = new Bio::TreeIO(-file => ">$out_tree_file", -format =>'newick');
+	$tree_output->write_tree($tree);
+}
+
+
+sub do_add_branch_lengths
+{
+	my ($help, $man);
+	my ($in_tree_file, $in_branch_length_file, $in_guide_tree_file, $out_tree_file);
+	GetOptions(
+		'help|?' => \$help, 'man' => \$man,
+		'in-tree-file|i=s' =>  \$in_tree_file,
+		'in-branch-length-file|b=s' =>  \$in_branch_length_file,
+		'in-guide-tree-file|g=s' =>  \$in_guide_tree_file,
+		'out-tree-file|o=s' =>  \$out_tree_file,
+	) or pod2usage(2);
+	pod2usage(1) if $help;
+	pod2usage(-exitstatus => 0, -verbose => 2) if $man;	
+	my @names = @ARGV;
+
+	## Load BL file
+	open BL, "<$in_branch_length_file", or die "Could not open $in_branch_length_file";
+	my @bll = <BL>;
+	chomp @bll;
+	my $bl_hash; 
+	foreach my $bl (@bll)
+	{
+		my ($branch, $length) = split /\s+/, $bl;
+		$bl_hash->{$branch} = $length;
+	}
+	close BL;
+
+	print Dumper($bl_hash);
+
+	# parse in newick/new hampshire format
+	my $guide_tree_input = new Bio::TreeIO(-file => $in_guide_tree_file, -format=> 'newick');
+	my $guide_tree = $guide_tree_input->next_tree;
+
+	my $tree_input = new Bio::TreeIO(-file => $in_tree_file, -format=> 'newick');
+	my $tree = $tree_input->next_tree;
+
+	my @guide_nodes = $guide_tree->get_nodes;
+	my @nodes = $tree->get_nodes;
+	die if (scalar @nodes != scalar @guide_nodes);
+	
+	for (my $i=0; $i<scalar @nodes; $i++)
+	{
+		my $guide_node = $guide_nodes[$i];
+		my $node = $nodes[$i];
+
+		## construct the hash key
+		my $guide_node_ancestor = $guide_node->ancestor;
+		next if (!defined $guide_node_ancestor);
+		my $branch_hash_key =  $guide_node->id . "_" . $guide_node_ancestor->id;
+
+		print "$branch_hash_key $bl_hash->{$branch_hash_key}\n";
+
+		$node->branch_length($bl_hash->{$branch_hash_key});
+		
+	}
+	
+	my $tree_output = new Bio::TreeIO(-file => ">$out_tree_file", -format =>'newick');
+	$tree_output->write_tree($tree);
+}
+
