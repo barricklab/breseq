@@ -57,6 +57,17 @@ namespace breseq {
 	extern const char* NEW_COV;
 	extern const char* TOT_COV;
 	extern const char* ERROR;
+  
+  
+  // Types of diff entries:
+  extern const char* SNP;
+  extern const char* SUB;
+  extern const char* DEL;
+  extern const char* INS;
+  extern const char* MOB;
+  extern const char* AMP;
+  extern const char* INV;
+  extern const char* CON;
 	
 	// Types of diff entries:
 	extern const char* RA;
