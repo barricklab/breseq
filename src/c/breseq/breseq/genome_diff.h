@@ -72,6 +72,7 @@ namespace breseq {
 	// Types of diff entries:
 	extern const char* RA;
 	extern const char* MC;
+  extern const char* JC;
 	extern const char* UN;
 	
 	//! Convenience typedef, used during diff entry marshalling.
