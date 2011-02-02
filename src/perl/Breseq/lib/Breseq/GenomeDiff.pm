@@ -358,7 +358,7 @@ sub mutation_list
 	return 	@mut_list;
 }
 
-sub get_evidence_list
+sub evidence_list
 {
 	my ($self, $sort) = @_;
 	my @mut_list = grep { length($_->{type}) == 2 } $self->list;
@@ -997,5 +997,78 @@ sub number_reject_reasons
 	return 0 if (!defined $item->{reject});
 	return scalar get_reject_reasons($item);
 }
+
+## removes all evidence that is not referenced and renumbers
+sub strip_evidence
+{
+	my ($self) = @_;
+	
+	## keep all mutations
+	my @new_list = $self->mutation_list;
+	
+	print STDERR "Items before stripping evidence: " . (scalar $self->list) . "\n";
+	
+	## keep evidence only if a mutation refers to it... not very efficient way of doing this...
+	EVIDENCE: foreach my $item ($self->evidence_list)
+	{				
+		MUTATION: foreach my $mutation ($self->mutation_list)
+		{
+			foreach my $test_evidence_id (@{$mutation->{evidence}}) 
+			{				
+				if ($item->{id} == $test_evidence_id)
+				{
+					push @new_list, $item;
+					next EVIDENCE;
+				}
+			}
+		}
+	}
+	
+	@{$self->{list}} = @new_list;
+	print STDERR "Items after stripping evidence: " . (scalar $self->list) . "\n";
+
+	$self->renumber;
+}
+
+sub renumber
+{
+	my ($self) = @_;
+	
+	#determine what numbers are used
+	my $used_index_hash;
+	foreach my $item ($self->list)
+	{
+		 $used_index_hash->{$item->{id}} = $item;
+	}
+	
+	#re-assign contiguous numbers
+	my $on_id = 0;
+	my $renumber_hash;
+	foreach my $id (sort {$a <=> $b } keys %$used_index_hash)
+	{		
+		#how do we want to renumber this (and all references)?
+		$renumber_hash->{$id} = ++$on_id;
+	}
+		
+	EVIDENCE: foreach my $item ($self->list)
+	{		
+		#handle '+' entries by giving them numbers and marking as edited...
+		if ($item->{id} eq '+') {
+			$item->{id} = ++$on_id;
+			$item->{edit} = 1;
+		}
+		else {
+			$item->{id} = $renumber_hash->{$item->{id}};
+		}
+		
+		my @new_evidence;
+		foreach my $evidence_id (@{$item->{evidence}}) 
+		{
+			push @new_evidence, $renumber_hash->{$evidence_id};
+		}
+		@{$item->{evidence}} = @new_evidence;
+	}
+}
+
 
 return 1;

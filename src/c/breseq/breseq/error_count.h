@@ -103,7 +103,8 @@ namespace breseq {
 		
 		//! Return the correct rate for the given base pair, quality, and FASTQ file index.
 		double log10_correct_rates(int32_t fastq_file_index, uint8_t quality, const std::string& base_key);
-		
+		double correct_rates(int32_t fastq_file_index, uint8_t quality, const std::string& base_key);
+
 		//! Return the error rate for the given base pair, quality, and FASTQ file index.
 		double log10_error_rates(int32_t fastq_file_index, uint8_t quality, const std::string& base_key);
 
@@ -111,7 +112,9 @@ namespace breseq {
 		const std::pair<double,double>& log10_rates(int32_t fastq_file_index, uint8_t quality, const std::string& base_key);
 		
 	protected:
+		fastq_error_map_t _log10_error_rates; //!< fastq_file_index -> quality -> error rate map.
 		fastq_error_map_t _error_rates; //!< fastq_file_index -> quality -> error rate map.
+
 	};
 	
 } // breseq
