@@ -142,6 +142,9 @@ do_clean() {
 # testcmd == function that must be defined in the test command file.
 #
 do_test() {
+	echo "++++++++++++++++++++++++++++++++++++++++++++++++++++++++"
+	echo "TEST DIRECTORY:" $2
+	echo "++++++++++++++++++++++++++++++++++++++++++++++++++++++++"
 	case "$1" in
         build)
             do_build $2

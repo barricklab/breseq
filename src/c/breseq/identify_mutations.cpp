@@ -384,8 +384,8 @@ void breseq::identify_mutations_pileup::callback(const breseq::pileup& p) {
 		for(std::size_t j=0; j<5; ++j) {
 			double top_cov = pos_info[base_list[j]].unique_trimmed_cov[2];
 			double bot_cov = pos_info[base_list[j]].unique_trimmed_cov[0];
-			total_cov[2] += round(top_cov);
-			total_cov[0] += round(bot_cov);
+			total_cov[2] += (int)round(top_cov);
+			total_cov[0] += (int)round(bot_cov);
 		//	line << " " << base_list[j] << " (" << bot_cov << "/" << top_cov << ")";
 		}
 		//std::cerr << line.str() << endl; // @dk print to file
