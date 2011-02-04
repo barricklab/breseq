@@ -156,10 +156,11 @@ if (($command eq 'SANGER') || ($command eq 'CONVERT'))
 	) or pod2usage(2);
 	pod2usage(1) if $help;
 	pod2usage(-exitstatus => 0, -verbose => 2) if $man;	
-
 	my ( $input, $output ) = @ARGV;
 
 	die "No input format provided (-f)\n" if (!defined $format);
+	die "No input file name provided (ARG1)\n" if (!defined $input);
+	die "No input file name provided (ARG2)\n" if (!defined $output);
 
 	my $in_fastq = Breseq::Fastq->new( -file => "<$input", -format => $format, -list_format => $list_format);
 	die "Input file appears to already be in SANGER format.\n" if ($in_fastq->{format} eq 'SANGER');

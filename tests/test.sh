@@ -21,6 +21,7 @@ if [[ -e $2/${TESTEXEC} ]]; then
 	do_test $1 $2
 else
 	for i in `find $2 -name ${TESTEXEC}`; do
+		echo "TEST:" $i $1
         $i $1
 	done
 fi

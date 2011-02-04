@@ -3,7 +3,7 @@
 SELF=`dirname ${BASH_SOURCE}`
 . ${SELF}/../common.sh
 
-testcmd() {
+TESTCMD="\
     ${BRESEQ} \
         -o ${SELF} \
         -r ${DATADIR}/lambda/lambda.1.gbk \
@@ -15,7 +15,7 @@ testcmd() {
         ${DATADIR}/lambda/lambda_mixed_population.2.fastq \
         ${DATADIR}/lambda/lambda_mixed_population.3.fastq \
         ${DATADIR}/lambda/lambda_mixed_population.4.fastq \
-        ${DATADIR}/lambda/lambda_mixed_population.5.fastq
-}
+        ${DATADIR}/lambda/lambda_mixed_population.5.fastq \
+    "
 
 do_test $1 ${SELF}
