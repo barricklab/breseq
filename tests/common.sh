@@ -98,7 +98,9 @@ do_check() {
 }
 
 do_breseq() {
-	testcmd
+	echo "COMMAND:" $TESTCMD
+	echo "++++++++++++++++++++++++++++++++++++++++++++++++++++++++"
+	$TESTCMD
 	if [[ "$?" -ne 0 ]]; then
 	    echo "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
         echo "Failed check"
