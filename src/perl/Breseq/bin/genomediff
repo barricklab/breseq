@@ -270,6 +270,7 @@ sub do_compare
 	my $phylip_for_mix;
 	my $settings;
 	$settings->{no_evidence} = 1;
+	$settings->{no_header} = 1;
 	
 	GetOptions(
 		'help|?' => \$help, 'man' => \$man,
@@ -279,7 +280,8 @@ sub do_compare
 		'phylip-input-file|p=s' => \$phylip_input_file,
 		'phylip-for-mix' => \$phylip_for_mix,
 		'--ignore-ambiguous' => \$ignore_ambiguous,
-		'shade-frequencies' => \$settings->{shade_frequencies},									
+		'shade-frequencies' => \$settings->{shade_frequencies},	
+		'lenski-format' => 	\$settings->{lenski_format},							
 		
 	) or pod2usage(2);
 
@@ -295,8 +297,8 @@ sub do_compare
 	# Annotate mutations
 	##
 	my $title = "Mutation Comparison";
-	my $options = { repeat_header => 5 };
-	Breseq::Output::html_compare($settings, $output, $title, $composite_gd, $one_ref_seq, $gd_name_list_ref);
+	my $options = { repeat_header => 10 };
+	Breseq::Output::html_compare($settings, $output, $title, $composite_gd, $one_ref_seq, $gd_name_list_ref, $options);
 
 	##
 	# Input file for PHYLIP (dnapars program)

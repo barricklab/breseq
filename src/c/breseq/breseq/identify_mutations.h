@@ -278,7 +278,7 @@ namespace breseq {
       boost::tuple<uint8_t,double> get_prediction();
       
     protected:
-      
+      uint32_t _observations;
       std::vector<double> _log10_priors; 
       std::vector<double> _log10_probabilities;
       bool _normalized; 

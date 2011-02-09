@@ -831,9 +831,6 @@ sub identify_mutations
 					###
 					## End printing input file for R
 					###
-					
-					Breseq::GenomeDiff::add_reject_reason($mut, "FREQ") if ($mut->{frequency} < $settings->{polymorphism_frequency_cutoff});
-					Breseq::GenomeDiff::add_reject_reason($mut, "FREQ") if ($mut->{frequency} > 1-$settings->{polymorphism_frequency_cutoff});		
 				}
 				
 				
@@ -1401,19 +1398,19 @@ sub polymorphism_statistics
 			$mut->{$header_list[$i]} = $line_list[$i];
 			die "Incorrect number of items on line:\n$line" if (!defined $line_list[$i]);
 		}
-
-#		print Dumper($mut);
-
 		
-		# EXPERIMENTAL to not use bias_p_value
-##		$mut->{quality} = $mut->{quality_genome_model};		
-#		if ($mut->{quality} ne 'Inf')
-#		{
-#			$mut->{quality} = -(log ($mut->{quality}) / log(10)) - $log10_ref_length;
-#			$new_gd->add($mut) if ($mut->{quality} > 2);
-#		}	
+		## Evalue cutoff again (in case we are only running this part)
+		Breseq::GenomeDiff::add_reject_reason($mut, "EVALUE") if ($mut->{quality} < $settings->{polymorphism_log10_e_value_cutoff});
 
-		my $polymorphism_coverage_limit_both_bases = $settings->{polymorphism_coverage_both_bases};
+		## Frequency cutoff
+		if ( ($mut->{frequency} < $settings->{polymorphism_frequency_cutoff}   )
+		  || ($mut->{frequency} > 1-$settings->{polymorphism_frequency_cutoff} ) )
+		{
+			Breseq::GenomeDiff::add_reject_reason($mut, "POLYMORPHISM_FREQUENCY_CUTOFF");					
+		}
+
+		## Minimum coverage on both strands
+		my $polymorphism_coverage_limit_both_bases = $settings->{polymorphism_coverage_both_strands};
 		my $passed = 1;
 		my ($top,$bot) = split /\//, $mut->{ref_cov};
 		$passed &&= $top >= $polymorphism_coverage_limit_both_bases;
@@ -1424,18 +1421,47 @@ sub polymorphism_statistics
 
 		Breseq::GenomeDiff::add_reject_reason($mut, "POLYMORPHISM_STRAND") if (!$passed);
 		Breseq::GenomeDiff::add_reject_reason($mut, "KS_QUALITY_P_VALUE") if ($mut->{ks_quality_p_value} < $settings->{polymorphism_bias_p_value_cutoff});
-		
-#		Breseq::GenomeDiff::add_reject_reason($mut, "KS_QUALITY_P_VALUE_UNUSUAL_POLY") if ($mut->{ks_quality_p_value_unusual_poly} < $settings->{polymorphism_bias_p_value_cutoff});
-#		Breseq::GenomeDiff::add_reject_reason($mut, "KS_QUALITY_P_VALUE_UNUSUAL_NEW") if ($mut->{ks_quality_p_value_unusual_new} < $settings->{polymorphism_bias_p_value_cutoff});
-#		Breseq::GenomeDiff::add_reject_reason($mut, "KS_QUALITY_P_VALUE_UNUSUAL_REF") if ($mut->{ks_quality_p_value_unusual_ref} < $settings->{polymorphism_bias_p_value_cutoff});
-#		Breseq::GenomeDiff::add_reject_reason($mut, "KS_QUALITY_P_VALUE_UNUSUAL_ALL") if ($mut->{ks_quality_p_value_unusual_all} < $settings->{polymorphism_bias_p_value_cutoff});
 		Breseq::GenomeDiff::add_reject_reason($mut, "FISHER_STRAND_P_VALUE") if ($mut->{fisher_strand_p_value} < $settings->{polymorphism_bias_p_value_cutoff});
 
+		###### Optionally, ignore if in a homopolymer stretch
+		if (defined $settings->{polymorphism_reject_homopolymer_length})
+		{
+			my $test_length = 20;
+			my $seq_id = $mut->{seq_id};
+			my $end_pos = $mut->{position};
+			my $start_pos = $end_pos - $test_length + 1;
+			$start_pos = 1 if ($start_pos < 1);
+			my $length = $bam->length($seq_id);	
+	 		my $bases = $bam->segment($seq_id,$start_pos,$end_pos)->dna;
+	
+			#print Dumper($mut);
+			#print "$bases\n";
+	
+			my $same_base_length = 0;
+			my $first_base = substr($bases, $end_pos-$start_pos, 1);
+			for (my $i=$end_pos; $i>=$start_pos; $i--)
+			{
+				my $this_base = substr($bases, $i-$start_pos, 1);
+				last if ($first_base ne $this_base);
+				$same_base_length++;
+			}
+		
+			#print "$same_base_length\n";
+			if ($same_base_length >= $settings->{polymorphism_reject_homopolymer_length})
+			{
+				Breseq::GenomeDiff::add_reject_reason($mut, "HOMOPOLYMER_STRETCH");
+			}
+		}
+		
 		if ($mut->{reject} && ($mut->{quality} > $settings->{mutation_log10_e_value_cutoff}) && ($mut->{frequency} > 0.5) )
 		{
-			print Dumper($mut);
+			#print Dumper($mut);
 			$mut->{frequency} = 1;
 			delete $mut->{reject};
+			
+			## FIX -- need to re-evaluate whether it would have been accepted as a normal mutation 
+			## This is NOT the right quality being used here. Need a separate quality for consensus call and polymorphism call!
+			Breseq::GenomeDiff::add_reject_reason($mut, "EVALUE") if ($mut->{quality} < $settings->{mutation_log10_e_value_cutoff});
 		}
 
 		$new_gd->add($mut);
