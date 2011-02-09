@@ -482,7 +482,7 @@
 /* Begin PBXLegacyTarget section */
 		421ACF201170DC4400C2EB85 /* samtools */ = {
 			isa = PBXLegacyTarget;
-			buildArgumentsString = "$(ACTION)";
+			buildArgumentsString = "-f Makefile.Xcode $(ACTION)";
 			buildConfigurationList = 421ACF251170DC6C00C2EB85 /* Build configuration list for PBXLegacyTarget "samtools" */;
 			buildPhases = (
 			);

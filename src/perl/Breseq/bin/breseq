@@ -715,30 +715,7 @@ if ($settings->do_step('output_done_file_name', "Output"))
 	my $ra_mc_genome_diff_file_name = $settings->file_name('ra_mc_genome_diff_file_name');	
 	my $ra_mc_gd = Breseq::GenomeDiff->new( -in => $ra_mc_genome_diff_file_name);
 	my $evidence_genome_diff_file_name = $settings->file_name('evidence_genome_diff_file_name');
-	my $evidence_gd = Breseq::GenomeDiff::merge($jc_gd, $ra_mc_gd);
-	
-	## Filter predicted polymorphisms by frequency now...
-	foreach my $item ($evidence_gd->list('RA'))
-	{				
-		if (($item->{frequency} > 0) && ($item->{frequency} < 1))
-		{						
-			## things below the frequency we forget
-			if ($item->{frequency} < $settings->{polymorphism_frequency_cutoff})
-			{
-				Breseq::GenomeDiff::add_reject_reason($item, "CUTOFF");					
-				$item->{no_show} = 1;
-			}
-			## things above the frequency are now predictions of real mutations
-			elsif ($item->{frequency} > 1-$settings->{polymorphism_frequency_cutoff})
-			{
-				# predict a consensus mutation
-				$item->{frequency} = 1;
-				undef $item->{reject};
-				Breseq::GenomeDiff::add_reject_reason($item, "EVALUE") if ($item->{quality} < $settings->{mutation_log10_e_value_cutoff});					
-			}			
-		}
-	}
-	
+	my $evidence_gd = Breseq::GenomeDiff::merge($jc_gd, $ra_mc_gd);	
 	$evidence_gd->write($evidence_genome_diff_file_name);
 	
 	

@@ -192,19 +192,11 @@ void breseq::identify_mutations_pileup::callback(const breseq::pileup& p) {
     
 		//## for each alignment within this pileup:
 		for(pileup::const_iterator i=p.begin(); i!=p.end(); ++i) {
-			
-			//## This setup gives expected behavior from indel!
-			//			my $indel = $p->indel;       
-			//			$indel = 0 if ($indel < 0);  ## substitute such that
-			//			$indel = -1 if ($p->is_del); ## deletions relative to reference have -1 as indel
-      
-      //## insertions relative to the reference have the 
-			//## number of this inserted base
-      
+			      
       //## After these substitutions...
-      //## Indel is -1 if the ref base is deleted in the read, zero
-      //## if the read base is aligned to a ref base, and positive
-      //## if the read base is an insertion relative to the ref base
+      //## Indel is -1 if the ref base is deleted in the read,
+      //## Zero if the read base is aligned to a ref base, and
+      //## Positive if the read base is an insertion relative to the ref base
 			int indel=i->indel();
 			if(indel < 0) {
 				indel = 0;
@@ -356,25 +348,7 @@ void breseq::identify_mutations_pileup::callback(const breseq::pileup& p) {
     }
     
 		//std::cerr << position << " e:" << e_value_call << " b:" << base_predicted << std::endl;
-		
-    //###########REMOVE---->
-		//##print out SNP call information
-		//		my $total_cov;
-		//		$total_cov->{1} = 0;
-		//		$total_cov->{-1} = 0;
-		//		
-		//		$line = "$pos\t$insert_count\t$ref_base\t$e_value_call";
-		//		foreach my $base (@base_list)
-		//		{			
-		//			my $current_base_info = $pos_info->{$base};
-		//			my $top_cov = $current_base_info->{unique_trimmed_cov}->{1};
-		//			my $bot_cov = $current_base_info->{unique_trimmed_cov}->{-1};
-		//			$total_cov->{1} += $top_cov;
-		//			$total_cov->{-1} += $bot_cov;
-		//			$line .= "\t$base\t" . "\t($bot_cov/$top_cov)";
-		//		}
-		//		print MUT "$line\n" if (defined $snps_all_tab_file_name);
-		
+
 		int total_cov[3]={0,0,0}; // triple, same as above
     
     // Don't need to print, but is nice for debug
@@ -389,7 +363,6 @@ void breseq::identify_mutations_pileup::callback(const breseq::pileup& p) {
 		//	line << " " << base_list[j] << " (" << bot_cov << "/" << top_cov << ")";
 		}
 		//std::cerr << line.str() << endl; // @dk print to file
-    //###########<--------REMOVE
 		
 		
 		//###
@@ -1024,7 +997,7 @@ double breseq::identify_mutations_pileup::calculate_two_base_model_log10_likelih
 }
 
 breseq::cDiscreteSNPCaller::cDiscreteSNPCaller(uint8_t ploidy) 
-: _ploidy(ploidy) 
+: _observations(0), _ploidy(ploidy)
 {
   assert(ploidy==1); // only the haploid version is implemented
 
@@ -1056,10 +1029,18 @@ void breseq::cDiscreteSNPCaller::update(uint8_t obs_base, uint8_t obs_quality, b
     _log10_probabilities[i] += ecr.log10_correct_rates(fastq_file_index, obs_quality, base_key);
   }
   _normalized = false;
+  _observations++;
 }
 
 boost::tuple<uint8_t,double> breseq::cDiscreteSNPCaller::get_prediction()
 {
+  
+  if (_observations == 0) {
+    //Best base is 'N' and E-value is NAN
+    return boost::make_tuple('N', NAN);
+  }
+
+
   // which is the largest log probability?
   std::vector<double>::iterator max = std::max_element(_log10_probabilities.begin(), _log10_probabilities.end());
   double max_log10_probability = *max;
