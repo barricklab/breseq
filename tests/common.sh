@@ -10,7 +10,13 @@
 # paths must either be relative to the location of this script or absolute.
 COMMONDIR=`dirname ${BASH_SOURCE}`
 # path to breseq:
+if [ "$TESTBINPREFIX" == "" ]
+then
+	echo "Environmental variable \$TESTBINPREFIX not defined."
+	exit
+fi
 BRESEQ="perl -w ${TESTBINPREFIX}/breseq"
+
 # path to test data:
 DATADIR=${COMMONDIR}/data
 # this is a find-compatible list of files that we'll hash:
@@ -98,7 +104,8 @@ do_check() {
 }
 
 do_breseq() {
-	echo "COMMAND:" $TESTCMD
+	echo "BRESEQ COMMAND:" 
+	echo $TESTCMD
 	echo "++++++++++++++++++++++++++++++++++++++++++++++++++++++++"
 	$TESTCMD
 	if [[ "$?" -ne 0 ]]; then

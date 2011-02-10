@@ -4,7 +4,7 @@ SELF=`dirname ${BASH_SOURCE}`
 . ${SELF}/../common.sh
 
 TESTCMD="\
-    ${BRESEQ} \
+   		${BRESEQ} \
     	--strict-polymorphism-prediction \
         -o ${SELF} \
         -r ${DATADIR}/lambda/lambda.gbk \
