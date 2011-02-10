@@ -5,6 +5,7 @@ SELF=`dirname ${BASH_SOURCE}`
 
 TESTCMD="\
     ${BRESEQ} \
+    	-b 0
         -o ${SELF} \
         -r ${DATADIR}/REL606/REL606.fragment.gbk \
         ${DATADIR}/REL606/REL606.fragment.2.fastq \
