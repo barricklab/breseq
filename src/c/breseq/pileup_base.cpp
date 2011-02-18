@@ -109,8 +109,37 @@ int breseq::first_level_callback(uint32_t tid, uint32_t pos, int n, const bam_pi
 
 
 /*! Run the pileup.
- */
+ */ 
 void breseq::pileup_base::do_pileup() {
 	sampileup(_bam, BAM_DEF_MASK, first_level_callback, this);
 	at_end(*_last_tid, _bam->header->target_len[*_last_tid]);
 }
+
+
+/* Need to write a partial pileup function from lower-level routines...
+
+  bamFile bam_fp = bam_open(bam.c_str(), "r");
+  assert(bam_fp);
+
+  bam_index_t *bam_idx = bam_index_load(bam.c_str());
+  assert(bam_idx);
+
+  //bam_fetch(fp, idx, tid, beg, end, data, func)
+
+  bam_header_t * bam_header = bam_header_read(bam_fp);
+  assert(bam_header);
+  
+  int target_id, start_pos, end_pos;
+  bam_parse_region(bam_header, region.c_str(), &target_id, &start_pos, &end_pos); 
+  // should throw if target not found
+
+
+  int bam_fetch(bam_fp, bam_idx,target_id,start_pos,end_pos,
+      void *data,
+      bam_fetch_f func); 
+
+
+  delete bam_header;
+  delete bam_idx;
+*/
+

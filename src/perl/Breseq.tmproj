@@ -3,7 +3,7 @@
 <plist version="1.0">
 <dict>
 	<key>currentDocument</key>
-	<string>Breseq/lib/Breseq/Output.pm</string>
+	<string>Breseq/lib/Breseq/CoverageOutput.pm</string>
 	<key>documents</key>
 	<array>
 		<dict>
@@ -298,28 +298,28 @@
 			<key>caret</key>
 			<dict>
 				<key>column</key>
-				<integer>13</integer>
+				<integer>0</integer>
 				<key>line</key>
-				<integer>6</integer>
+				<integer>31</integer>
 			</dict>
 			<key>firstVisibleColumn</key>
 			<integer>0</integer>
 			<key>firstVisibleLine</key>
-			<integer>0</integer>
+			<integer>45</integer>
 		</dict>
 		<key>Breseq/lib/Breseq/CoverageOutput.pm</key>
 		<dict>
 			<key>caret</key>
 			<dict>
 				<key>column</key>
-				<integer>3</integer>
+				<integer>22</integer>
 				<key>line</key>
-				<integer>158</integer>
+				<integer>119</integer>
 			</dict>
 			<key>firstVisibleColumn</key>
 			<integer>0</integer>
 			<key>firstVisibleLine</key>
-			<integer>124</integer>
+			<integer>37</integer>
 		</dict>
 		<key>Breseq/lib/Breseq/Fastq.pm</key>
 		<dict>
@@ -591,12 +591,13 @@
 		<string>Breseq/lib/Breseq/plot_error_rate.r</string>
 		<string>Breseq/lib/Breseq/plot_coverage.r</string>
 		<string>Breseq/lib/Breseq/CoverageOutput.pm</string>
+		<string>Breseq/lib/Breseq/CoverageDistribution.pm</string>
 		<string>Breseq/lib/Breseq/coverage_distribution.r</string>
 		<string>Breseq/lib/Breseq/Shared.pm</string>
 	</array>
 	<key>showFileHierarchyDrawer</key>
 	<true/>
 	<key>windowFrame</key>
-	<string>{{2982, 557}, {853, 804}}</string>
+	<string>{{3010, 601}, {853, 804}}</string>
 </dict>
 </plist>

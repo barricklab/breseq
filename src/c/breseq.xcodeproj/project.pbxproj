@@ -48,6 +48,10 @@
 		70A5BC1412BE6EBF005EFE9F /* libboost_program_options-mt.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 421ACF7D1170E5CA00C2EB85 /* libboost_program_options-mt.a */; };
 		70A5BC1512BE6EBF005EFE9F /* libbreseq.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 42BA690C1189B7FD000B00B1 /* libbreseq.a */; };
 		70A5BC2612BE6F21005EFE9F /* calc_trims_cmdline.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 70A5BC2512BE6F21005EFE9F /* calc_trims_cmdline.cpp */; };
+		70F9FB67130C58D900D6E11D /* libboost_program_options-mt.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 421ACF7D1170E5CA00C2EB85 /* libboost_program_options-mt.a */; };
+		70F9FB68130C58D900D6E11D /* libbreseq.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 42BA690C1189B7FD000B00B1 /* libbreseq.a */; };
+		70F9FB80130C591500D6E11D /* tabulate_coverage_cmdline.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 70F9FB7F130C591500D6E11D /* tabulate_coverage_cmdline.cpp */; };
+		70F9FB86130C592700D6E11D /* tabulate_coverage.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 70F9FB85130C592700D6E11D /* tabulate_coverage.cpp */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -115,6 +119,20 @@
 			remoteInfo = samtools;
 		};
 		70A5BC1012BE6EBF005EFE9F /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 421ACEB71170DB9600C2EB85 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 42BA690B1189B7FD000B00B1;
+			remoteInfo = breseq;
+		};
+		70F9FB61130C58D900D6E11D /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 421ACEB71170DB9600C2EB85 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 421ACF201170DC4400C2EB85;
+			remoteInfo = samtools;
+		};
+		70F9FB63130C58D900D6E11D /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
 			containerPortal = 421ACEB71170DB9600C2EB85 /* Project object */;
 			proxyType = 1;
@@ -229,6 +247,10 @@
 		7087747B12BC1C06000F9B57 /* pileup_base.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = pileup_base.h; path = breseq/breseq/pileup_base.h; sourceTree = SOURCE_ROOT; };
 		70A5BC1912BE6EBF005EFE9F /* calc_trims */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = calc_trims; sourceTree = BUILT_PRODUCTS_DIR; };
 		70A5BC2512BE6F21005EFE9F /* calc_trims_cmdline.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = calc_trims_cmdline.cpp; path = breseq/calc_trims_cmdline.cpp; sourceTree = SOURCE_ROOT; };
+		70F9FB6C130C58D900D6E11D /* error_count */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = error_count; sourceTree = BUILT_PRODUCTS_DIR; };
+		70F9FB7F130C591500D6E11D /* tabulate_coverage_cmdline.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = tabulate_coverage_cmdline.cpp; path = breseq/tabulate_coverage_cmdline.cpp; sourceTree = SOURCE_ROOT; };
+		70F9FB85130C592700D6E11D /* tabulate_coverage.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = tabulate_coverage.cpp; path = breseq/tabulate_coverage.cpp; sourceTree = SOURCE_ROOT; };
+		70F9FB89130C828000D6E11D /* tabulate_coverage.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = tabulate_coverage.h; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -268,6 +290,15 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		70F9FB66130C58D900D6E11D /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				70F9FB67130C58D900D6E11D /* libboost_program_options-mt.a in Frameworks */,
+				70F9FB68130C58D900D6E11D /* libbreseq.a in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
@@ -289,6 +320,7 @@
 				70A5BC1912BE6EBF005EFE9F /* calc_trims */,
 				421ACF2F1170DF1800C2EB85 /* error_count */,
 				42B6EDC811C69CC70075F8A3 /* identify_mutations */,
+				70F9FB6C130C58D900D6E11D /* error_count */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -313,8 +345,10 @@
 				7087728A12BC169C000F9B57 /* genome_diff.cpp */,
 				7087728B12BC169C000F9B57 /* identify_mutations.cpp */,
 				7087731112BC19C5000F9B57 /* identify_mutations_cmdline.cpp */,
-				7087728C12BC169C000F9B57 /* pileup_base.cpp */,
 				7087728D12BC169C000F9B57 /* pileup.cpp */,
+				7087728C12BC169C000F9B57 /* pileup_base.cpp */,
+				70F9FB85130C592700D6E11D /* tabulate_coverage.cpp */,
+				70F9FB7F130C591500D6E11D /* tabulate_coverage_cmdline.cpp */,
 				7087728712BC1660000F9B57 /* alignment.cpp */,
 			);
 			name = breseq;
@@ -455,6 +489,7 @@
 				7087747912BC1C06000F9B57 /* identify_mutations.h */,
 				7087747A12BC1C06000F9B57 /* pileup.h */,
 				7087747B12BC1C06000F9B57 /* pileup_base.h */,
+				70F9FB89130C828000D6E11D /* tabulate_coverage.h */,
 			);
 			name = breseq;
 			path = breseq/breseq;
@@ -568,6 +603,24 @@
 			productReference = 70A5BC1912BE6EBF005EFE9F /* calc_trims */;
 			productType = "com.apple.product-type.tool";
 		};
+		70F9FB5F130C58D900D6E11D /* tabulate_coverage */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 70F9FB69130C58D900D6E11D /* Build configuration list for PBXNativeTarget "tabulate_coverage" */;
+			buildPhases = (
+				70F9FB64130C58D900D6E11D /* Sources */,
+				70F9FB66130C58D900D6E11D /* Frameworks */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				70F9FB60130C58D900D6E11D /* PBXTargetDependency */,
+				70F9FB62130C58D900D6E11D /* PBXTargetDependency */,
+			);
+			name = tabulate_coverage;
+			productName = error_count;
+			productReference = 70F9FB6C130C58D900D6E11D /* error_count */;
+			productType = "com.apple.product-type.tool";
+		};
 /* End PBXNativeTarget section */
 
 /* Begin PBXProject section */
@@ -594,6 +647,7 @@
 				421ACF2E1170DF1800C2EB85 /* error_count */,
 				42BA690B1189B7FD000B00B1 /* breseq */,
 				70A5BC0C12BE6EBF005EFE9F /* calc_trims */,
+				70F9FB5F130C58D900D6E11D /* tabulate_coverage */,
 			);
 		};
 /* End PBXProject section */
@@ -625,6 +679,7 @@
 				7087729012BC169C000F9B57 /* identify_mutations.cpp in Sources */,
 				7087729112BC169C000F9B57 /* pileup_base.cpp in Sources */,
 				7087729212BC169C000F9B57 /* pileup.cpp in Sources */,
+				70F9FB86130C592700D6E11D /* tabulate_coverage.cpp in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -633,6 +688,14 @@
 			buildActionMask = 2147483647;
 			files = (
 				70A5BC2612BE6F21005EFE9F /* calc_trims_cmdline.cpp in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		70F9FB64130C58D900D6E11D /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				70F9FB80130C591500D6E11D /* tabulate_coverage_cmdline.cpp in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -688,6 +751,16 @@
 			isa = PBXTargetDependency;
 			target = 42BA690B1189B7FD000B00B1 /* breseq */;
 			targetProxy = 70A5BC1012BE6EBF005EFE9F /* PBXContainerItemProxy */;
+		};
+		70F9FB60130C58D900D6E11D /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 421ACF201170DC4400C2EB85 /* samtools */;
+			targetProxy = 70F9FB61130C58D900D6E11D /* PBXContainerItemProxy */;
+		};
+		70F9FB62130C58D900D6E11D /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 42BA690B1189B7FD000B00B1 /* breseq */;
+			targetProxy = 70F9FB63130C58D900D6E11D /* PBXContainerItemProxy */;
 		};
 /* End PBXTargetDependency section */
 
@@ -1004,6 +1077,77 @@
 			};
 			name = Release;
 		};
+		70F9FB6A130C58D900D6E11D /* Debug */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = 4247E8261268EB90006A6D78 /* debug.xcconfig */;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ARCHS = "$(ARCHS_STANDARD_64_BIT_PRE_XCODE_3_1)";
+				ARCHS_STANDARD_64_BIT_PRE_XCODE_3_1 = x86_64;
+				COPY_PHASE_STRIP = NO;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_ENABLE_FIX_AND_CONTINUE = YES;
+				HEADER_SEARCH_PATHS = (
+					"$(HEADER_SEARCH_PATHS_QUOTED_FOR_TARGET_1)",
+					"$(HEADER_SEARCH_PATHS_QUOTED_FOR_TARGET_2)",
+				);
+				HEADER_SEARCH_PATHS_QUOTED_FOR_TARGET_1 = "\"$(SRCROOT)/\"/**";
+				HEADER_SEARCH_PATHS_QUOTED_FOR_TARGET_2 = "\"$(SRCROOT)/../../extern/samtools-0.1.7a\"/**";
+				INSTALL_PATH = /usr/local/bin;
+				LIBRARY_SEARCH_PATHS = (
+					"$(inherited)",
+					/opt/local/lib,
+					"$(LIBRARY_SEARCH_PATHS_QUOTED_FOR_TARGET_1)",
+					"$(LIBRARY_SEARCH_PATHS_QUOTED_FOR_TARGET_1)",
+					"$(LIBRARY_SEARCH_PATHS_QUOTED_FOR_TARGET_2)",
+					"$(LIBRARY_SEARCH_PATHS_QUOTED_FOR_TARGET_3)",
+				);
+				LIBRARY_SEARCH_PATHS_QUOTED_FOR_TARGET_1 = "\"$(SRCROOT)/.libs\"";
+				LIBRARY_SEARCH_PATHS_QUOTED_FOR_TARGET_2 = "\"$(SRCROOT)/breseq/.libs\"";
+				LIBRARY_SEARCH_PATHS_QUOTED_FOR_TARGET_3 = "\"$(SRCROOT)/build/Debug\"";
+				PREBINDING = NO;
+				PRODUCT_NAME = error_count;
+				USER_HEADER_SEARCH_PATHS = "$(PROJECT_DIR)/error_count/include";
+			};
+			name = Debug;
+		};
+		70F9FB6B130C58D900D6E11D /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ARCHS = "$(ARCHS_STANDARD_64_BIT_PRE_XCODE_3_1)";
+				ARCHS_STANDARD_64_BIT_PRE_XCODE_3_1 = x86_64;
+				COPY_PHASE_STRIP = YES;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				GCC_ENABLE_FIX_AND_CONTINUE = NO;
+				GCC_MODEL_TUNING = G5;
+				HEADER_SEARCH_PATHS = (
+					"$(HEADER_SEARCH_PATHS_QUOTED_FOR_TARGET_1)",
+					"$(HEADER_SEARCH_PATHS_QUOTED_FOR_TARGET_2)",
+				);
+				HEADER_SEARCH_PATHS_QUOTED_FOR_TARGET_1 = "\"$(SRCROOT)/\"/**";
+				HEADER_SEARCH_PATHS_QUOTED_FOR_TARGET_2 = "\"$(SRCROOT)/../../extern/samtools-0.1.7a\"/**";
+				INSTALL_PATH = /usr/local/bin;
+				LIBRARY_SEARCH_PATHS = (
+					"$(inherited)",
+					"$(LIBRARY_SEARCH_PATHS_QUOTED_FOR_TARGET_1)",
+					/opt/local/lib,
+					"$(LIBRARY_SEARCH_PATHS_QUOTED_FOR_TARGET_2)",
+					"$(LIBRARY_SEARCH_PATHS_QUOTED_FOR_TARGET_3)",
+					"$(LIBRARY_SEARCH_PATHS_QUOTED_FOR_TARGET_4)",
+					"$(LIBRARY_SEARCH_PATHS_QUOTED_FOR_TARGET_5)",
+				);
+				LIBRARY_SEARCH_PATHS_QUOTED_FOR_TARGET_1 = "\"$(SRCROOT)/samtools-0.1.7a\"";
+				LIBRARY_SEARCH_PATHS_QUOTED_FOR_TARGET_2 = "\"$(SRCROOT)/../../extern/samtools-0.1.7a\"";
+				LIBRARY_SEARCH_PATHS_QUOTED_FOR_TARGET_3 = "\"$(SRCROOT)/.libs\"";
+				LIBRARY_SEARCH_PATHS_QUOTED_FOR_TARGET_4 = "\"$(SRCROOT)/breseq/.libs\"";
+				LIBRARY_SEARCH_PATHS_QUOTED_FOR_TARGET_5 = "\"$(SRCROOT)/build/Debug\"";
+				PREBINDING = NO;
+				PRODUCT_NAME = error_count;
+				ZERO_LINK = NO;
+			};
+			name = Release;
+		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
@@ -1066,6 +1210,15 @@
 			buildConfigurations = (
 				70A5BC1712BE6EBF005EFE9F /* Debug */,
 				70A5BC1812BE6EBF005EFE9F /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		70F9FB69130C58D900D6E11D /* Build configuration list for PBXNativeTarget "tabulate_coverage" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				70F9FB6A130C58D900D6E11D /* Debug */,
+				70F9FB6B130C58D900D6E11D /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
