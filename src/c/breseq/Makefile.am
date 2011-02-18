@@ -27,20 +27,23 @@ libbreseq_la_SOURCES = \
 	error_count.cpp \
 	genome_diff.cpp \
 	identify_mutations.cpp \
-	pileup.cpp \
 	pileup_base.cpp \
+	pileup.cpp \
+	tabulate_coverage.cpp \
 	breseq/alignment.h \
 	breseq/common.h \
 	breseq/error_count.h \
 	breseq/genome_diff.h \
 	breseq/identify_mutations.h \
 	breseq/pileup_base.h \
-	breseq/pileup.h 
+	breseq/pileup.h \
+	breseq/tabulate_coverage.h 
 libbreseq_la_LDFLAGS = -static
 libbreseq_la_LIBADD = $(top_srcdir)/$(LIBBAM)/libbam.la
 
-bin_PROGRAMS = error_count identify_mutations calc_trims
+bin_PROGRAMS = error_count identify_mutations calc_trims tabulate_coverage
 
 error_count_SOURCES = error_count_cmdline.cpp
 identify_mutations_SOURCES = identify_mutations_cmdline.cpp
 calc_trims_SOURCES = calc_trims_cmdline.cpp
+tabulate_coverage_SOURCES = tabulate_coverage_cmdline.cpp

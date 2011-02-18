@@ -33,9 +33,6 @@ configure
 Makefile
 autoscan.log
 configure.scan
-src/c/calc_trims
-src/c/error_count
-src/c/identify_mutations
 
 ## These are for Perl modules in general
 _build
@@ -58,6 +55,7 @@ syntax: regexp
 ^src/c/breseq/error_count
 ^src/c/breseq/identify_mutations
 ^src/c/breseq/calc_trims
+^src/c/breseq/tabulate_coverage
 
 ^extern/samtools-0.1.7a/samtools
 ^extern/samtools-0.1.7a/misc
