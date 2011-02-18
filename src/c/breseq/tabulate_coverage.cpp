@@ -53,8 +53,12 @@ breseq::tabulate_coverage_pileup::tabulate_coverage_pileup(const std::string& ba
 
   _output_table.open(output.c_str());
   
-  _output_table << "position" << "\t" << "ref_base" << "\t" << "unique_top_cov" << "\t" << "unique_bot_cov" << "\t" 
-    << "redundant_top_cov" << "\t" << "redundant_bot_cov" << "\t" << "raw_redundant_top_cov" << "\t" << "raw_redundant_bot_cov" << std::endl;
+  _output_table << "position" << "\t" << "ref_base" << "\t" 
+    << "unique_top_cov" << "\t" << "unique_bot_cov" << "\t" 
+    << "redundant_top_cov" << "\t" << "redundant_bot_cov" << "\t" 
+    << "raw_redundant_top_cov" << "\t" << "raw_redundant_bot_cov" << "\t"
+    << "unique_top_begin" << "\t" << "unique_bot_begin"
+  << std::endl;
 }
 
 
@@ -69,6 +73,9 @@ void breseq::tabulate_coverage_pileup::callback(const breseq::pileup& p) {
 
   char* refseq = p.reference_sequence(); // reference sequence for this target
   uint32_t pos = p.position();
+  
+  // don't handle indels before first position
+  if (pos==0) return;
   
   // print positions not called because there were no reads
   for (uint32_t i=_last_position_processed+1; i<pos; i++) {
