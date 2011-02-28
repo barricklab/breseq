@@ -146,4 +146,4 @@ test:
 	export TESTBINPREFIX=$(bindir); tests/test.sh test tests
 
 clean-tests:
-	tests/test.sh clean tests
+	export TESTBINPREFIX=$(bindir); tests/test.sh clean tests

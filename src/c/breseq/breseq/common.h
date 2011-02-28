@@ -74,7 +74,43 @@ namespace breseq {
 			}		
 		}
 	}
-
+  
+  // indexes are used by the 
+  // error count table
+  inline uint8_t base2index(char base) {
+    if(base > 0x0f) {
+      // ascii
+      switch(base) {
+        case 'A': return 0;
+        case 'C': return 1;
+        case 'G': return 2;
+        case 'T': return 3;
+        case '.': return 4;
+        default: assert(false);
+      }
+    } else {
+      // sam-style 4-bit field
+      switch(base) {
+        case 0x1: return 0;
+        case 0x2: return 1;
+        case 0x4: return 2;
+        case 0x8: return 3;        
+        case 0xf: return 4;
+        default: assert(false);
+      }		
+    }
+  }
+  inline char index2basechar(uint8_t index) {
+    switch(index) {
+      case 0: return 'A';
+      case 1: return 'C';
+      case 2: return 'G';
+      case 3: return 'T';        
+      case 4: return '.';
+      default: assert(false);
+    }		
+  }
+  
 } // breseq
 
 #endif
