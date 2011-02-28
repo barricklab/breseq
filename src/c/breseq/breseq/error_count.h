@@ -22,6 +22,7 @@ LICENSE AND COPYRIGHT
 #include <vector>
 #include <bam.h>
 
+#include "breseq/alignment.h"
 #include "breseq/pileup_base.h"
 
 namespace breseq {
@@ -39,8 +40,45 @@ namespace breseq {
 									 const std::vector<std::string>& readfiles,
 									 bool do_coverage,
                    bool do_errors,
-                   uint8_t min_qual_score
+                   uint8_t min_qual_score,
+                   const std::string& covariates
         );
+
+	/*! Error table class.
+
+    This class is used to record observations by covariate and calibrate error rates.
+	 */
+  class cErrorTable {
+    private:
+      enum {k_ref_base, k_obs_base, k_quality, k_read_pos, k_read_set, k_num_covariates};
+      
+      typedef bool covariates_used_t[k_num_covariates];
+      typedef uint32_t covariates_max_t[k_num_covariates];
+      typedef uint32_t covariates_offset_t[k_num_covariates];
+
+    public:
+      cErrorTable(const std::string& colnames);
+      cErrorTable(cErrorTable& error_table, covariates_used_t covariates); // for creating summed sub-tables
+      ~cErrorTable() {};
+
+      void split(const std::string& s, char c, std::vector<std::string>& v);
+      void allocate_table();
+      void print_line(std::ostream& out, uint32_t i);
+      void print(const std::string& filename);
+      void record_alignment(const alignment& i, const uint32_t ref_pos, const char* ref_seq);
+      void record_observation(char ref_base, char obs_base, uint32_t quality, uint32_t read_pos, uint32_t read_set);
+      uint32_t covariates_to_index(char ref_base, char obs_base, uint32_t quality, uint32_t read_pos, uint32_t read_set);
+      void index_to_covariates(const uint32_t idx, char& ref_base, char& obs_base, uint32_t& quality, uint32_t& read_pos, uint32_t& read_set);
+      void recalibrate();
+      void calculate_odds_ratios(cErrorTable& total_table);
+      
+    protected:
+      std::string m_sep;  // column-separator character for output and input
+      covariates_used_t   m_covariate_used;   // list of covariates that are used by table
+      covariates_max_t    m_covariate_max;    // maximum value of each covariate
+      covariates_offset_t m_covariate_offset; // number to multiply this covariate by when constructing row numbers
+      std::vector<int>    m_count_table;      // table of counts
+  };
 	
 	
 	/*! Error-counting class.
@@ -67,7 +105,7 @@ namespace breseq {
 		
 		
 		//! Constructor.
-		error_count_pileup(const std::string& bam, const std::string& fasta, bool do_coverage, bool do_errors, uint8_t min_qual_score);
+		error_count_pileup(const std::string& bam, const std::string& fasta, bool do_coverage, bool do_errors, uint8_t min_qual_score, const std::string& covariates);
 		
 		//! Destructor.
 		virtual ~error_count_pileup();		
@@ -87,10 +125,12 @@ namespace breseq {
 		bool m_do_coverage;
     bool m_do_errors;
     uint8_t m_min_qual_score; //! @JEB THIS IS CURRENTLY NOT USED (BUT WOULD BE IF WE CALCULATED RATES)
+    bool m_use_CErrorTable;
+    cErrorTable m_error_table;
 	};
 	
 
-	/*! Wrapper around the results of running error_count_pileup.
+  /*! New handler for creating
 	 */
 	class error_count_results {
 	public:
@@ -116,6 +156,8 @@ namespace breseq {
 		fastq_error_map_t _error_rates; //!< fastq_file_index -> quality -> error rate map.
 
 	};
+  
+  
 	
 } // breseq
 

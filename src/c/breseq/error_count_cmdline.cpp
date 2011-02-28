@@ -40,7 +40,9 @@ int main(int argc, char* argv[]) {
 	("readfile,r", po::value<vector<string> >(), "names of readfiles (no extension)")
 	("coverage", "generate unique coverage distribution output")
   ("errors", "generate unique error count output")
-  ("minimum-quality-score", po::value<int>()->default_value(0), "ignore base quality scores lower than this");
+  ("minimum-quality-score", po::value<int>()->default_value(0), "ignore base quality scores lower than this")
+  ("covariates", po::value<string>()->default_value("base,obs,quality"), "covariates for error model")
+  ;
 
 	po::variables_map options;
 	po::store(po::parse_command_line(argc, argv, cmdline_options), options);
@@ -66,7 +68,8 @@ int main(int argc, char* argv[]) {
 												options["readfile"].as<vector<string> >(),
 												options.count("coverage"),
                         options.count("errors"),
-                        options["minimum-quality-score"].as<int>()
+                        options["minimum-quality-score"].as<int>(),
+                        options["covariates"].as<string>()
                       );
 	} catch(...) {
 		// failed; 
