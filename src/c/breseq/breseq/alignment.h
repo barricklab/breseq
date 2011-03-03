@@ -73,13 +73,14 @@ namespace breseq {
 		//! Has this alignment been trimmed?
 		bool is_trimmed() const;
 		
-		//! Start and end coordinates of the aligned part of the read (1-indexed). ???
+		//! Start and end coordinates of the aligned part of the read (1-indexed).
+    //! Start is always < End. reversed() tells you which strand the match was on.
 		std::pair<int32_t,int32_t> query_bounds() const;
 		
-		//! Starting coordinates of the aligned part of the read (1-indexed). ???
+		//! Starting coordinates of the aligned part of the read (1-indexed).
 		int32_t query_start() const;
 
-		//! Ending coordinates of the aligned part of the read (1-indexed). ???
+		//! Ending coordinates of the aligned part of the read (1-indexed).
 		int32_t query_end() const;
 
 	protected:
