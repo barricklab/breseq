@@ -50,7 +50,7 @@ namespace breseq {
 
 	protected:
 		uint32_t _tid; //!< Target id for this pileup.
-		uint32_t _pos; //!< Position of this pileup in the reference sequence.
+		uint32_t _pos; //!< Position of this pileup in the reference sequence. 0-indexed.
 		pileup_base& _pb; //!< Pileup base class that built this pileup.
 	};
 	
