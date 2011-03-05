@@ -26,7 +26,7 @@ You will need administrator privileges to install |breseq| dependencies using th
 * :program:`Perl`: is already installed on MacOSX systems. 
 * :program:`BioPerl`: download and install according to the directions at `BioPerl.org <http://www.bioperl.org>`_ 
 * :program:`SSAHA2`: download and install the MacOSX package from the `Sanger Center <http://www.sanger.ac.uk/resources/software/ssaha2/>`_.
-* :program:`R`: install with :program:`MacPorts` terminal command: ``sudo port install R``, or download an installer package from http://www.r-project.org\ .
+* :program:`R`: Either (1) Download an installer package from http://www.r-project.org\ . or (2) install with :program:`MacPorts` terminal command: ``sudo port install R ghostscript``.
 * :program:`Boost`: install with :program:`MacPorts` terminal command: ``sudo port install boost``
 
 2. Compile and install |breseq|
@@ -99,20 +99,6 @@ We'll assume that you've chosen to install |breseq| in ``/mnt/home/me/local``. O
 
 This will create a usual UNIX grouping of program directories (with sub-directories like ``bin``, ``lib``, ``man``, etc). 
 
-Look for messages during ``make install`` that will look something like this::
-
-   Libraries have been installed in:
-      /Users/me/lib
-
-   If you ever happen to want to link against installed libraries
-   in a given directory, LIBDIR, you must either use libtool, and
-   specify the full pathname of the library, or use the `-LLIBDIR'
-   flag during linking and do at least one of the following:
-      - add LIBDIR to the `DYLD_LIBRARY_PATH' environment variable
-        during execution
-
-You **must** modify your environment variable to include LIBDIR according to these instructions for breseq to function.
-
 After installation, if you want to be able to call |breseq| commands without specifying the entire path to them, you will need to add the newly created "bin" directory within the |breseq| source to your $PATH.
 
 For a :program:`bash` shell you can usually use a command like this::
@@ -127,18 +113,20 @@ Common installation problems
 Dependencies installed in custom locations
 ******************************************
 
-In general, you will need to be sure that your environment is set up correctly to find and use each dependency. This will likely be taken care of for you if you use a package manager or installer package. If you install some dependencies from source or in custom locations, and run into probles with |breseq| installation, be sure to check that:
+In general, you will need to be sure that your environment is set up correctly to find and use each dependency. This will likely be taken care of for you if you use a package manager or installer package. If you install some dependencies from source or in custom locations, and run into problems with |breseq| installation, be sure to check that:
 
 #. If :program:`Boost` is installed in a custom location with :program:`Boost Libraries` in ``/path/to/boost/lib`` and :program:`Boost Headers` in ``/path/to/boost/include``, then you may need to run the ``./configure`` step for |breseq| with the additional option:``--with-boost=/path/to/boost``.
 #. :program:`BioPerl` is in your $PERL5LIB.
 #. :program:`R` is in your $PATH.
-#. :program:`SSAHA` is in your $PATH.
+#. :program:`SSAHA2` is in your $PATH.
 
 .. NOTE::
    You may need to use absolute paths (i.e. ``/absolute/path``) rather than paths relative to your home directory (i.e ``~/path/relative/to/home``) for these settings.
 
 Missing Perl modules
 *********************
+
+Some  version of Perl do not have recent versions of required Perl Modules.
 
 If you get an error like this::
 
