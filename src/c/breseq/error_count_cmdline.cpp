@@ -41,7 +41,7 @@ int main(int argc, char* argv[]) {
 	("coverage", "generate unique coverage distribution output")
   ("errors", "generate unique error count output")
   ("minimum-quality-score", po::value<int>()->default_value(0), "ignore base quality scores lower than this")
-  ("covariates", po::value<string>()->default_value("base,obs,quality"), "covariates for error model")
+  ("covariates", po::value<string>()->default_value(""), "covariates for error model")
   ;
 
 	po::variables_map options;

@@ -3,7 +3,7 @@
 <plist version="1.0">
 <dict>
 	<key>currentDocument</key>
-	<string>Breseq/lib/Breseq/plot_coverage.r</string>
+	<string>Breseq/bin/bam2aln</string>
 	<key>documents</key>
 	<array>
 		<dict>
@@ -96,14 +96,14 @@
 			<key>caret</key>
 			<dict>
 				<key>column</key>
-				<integer>0</integer>
+				<integer>26</integer>
 				<key>line</key>
-				<integer>17</integer>
+				<integer>111</integer>
 			</dict>
 			<key>firstVisibleColumn</key>
 			<integer>0</integer>
 			<key>firstVisibleLine</key>
-			<integer>60</integer>
+			<integer>79</integer>
 		</dict>
 		<key>Breseq/bin/bam2cov</key>
 		<dict>
@@ -597,6 +597,6 @@
 	<key>showFileHierarchyDrawer</key>
 	<true/>
 	<key>windowFrame</key>
-	<string>{{306, 389}, {1147, 797}}</string>
+	<string>{{585, 151}, {795, 727}}</string>
 </dict>
 </plist>
