@@ -16,12 +16,12 @@
 ###
 
 AM_CPPFLAGS = -I$(top_srcdir)/$(LIBBAM) $(BOOST_CPPFLAGS)
-AM_LDFLAGS = $(BOOST_PROGRAM_OPTIONS_LDFLAGS)
-LDADD = $(top_srcdir)/$(LIBBAM)/libbam.la \
-	libbreseq.la \
-	$(BOOST_PROGRAM_OPTIONS_LIBS)
+AM_LDFLAGS = $(BOOST_PROGRAM_OPTIONS_LDFLAGS) -static
+LDADD = $(BOOST_PROGRAM_OPTIONS_LIBS) \
+		$(top_srcdir)/$(LIBBAM)/libbam.la \
+		libbreseq.la
 
-lib_LTLIBRARIES = libbreseq.la
+noinst_LTLIBRARIES = libbreseq.la
 libbreseq_la_SOURCES = \
 	alignment.cpp \
 	error_count.cpp \
@@ -44,6 +44,9 @@ libbreseq_la_LIBADD = $(top_srcdir)/$(LIBBAM)/libbam.la
 bin_PROGRAMS = error_count identify_mutations calc_trims tabulate_coverage
 
 error_count_SOURCES = error_count_cmdline.cpp
+
 identify_mutations_SOURCES = identify_mutations_cmdline.cpp
+
 calc_trims_SOURCES = calc_trims_cmdline.cpp
+
 tabulate_coverage_SOURCES = tabulate_coverage_cmdline.cpp

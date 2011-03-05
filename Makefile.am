@@ -83,16 +83,14 @@ install-exec-local :
 	cd $(PERLBRESEQ) ; \
 	./Build install;
 	
-clean-local :
+clean-local :: clean-tests
 	
 	cd $(BIOSAMTOOLS) ; \
 	./Build clean
 		
 	cd $(PERLBRESEQ) ; \
 	./Build clean
-	
-	tests/test.sh clean tests/	
-	
+		
 dist-hook:
 
 	cd $(DOCDIR) ; \
@@ -115,12 +113,12 @@ dist-hook:
 	rm -rf `find $(distdir) -name ".*"`
 		
 ## breseq only	
-make-breseq:
+make-breseq :
 	cd $(PERLBRESEQ) ; \
 	perl Build.PL --install_base=$(prefix) ; \
 	./Build ; 
 
-install-breseq:
+install-breseq :
 	cd $(PERLBRESEQ) ; \
 	./Build install
 	
