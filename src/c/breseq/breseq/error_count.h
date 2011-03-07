@@ -46,39 +46,45 @@ namespace breseq {
 
 	/*! Error table class.
 
-    This class is used to record observations by covariate and calibrate error rates.
-	 */
-  class cErrorTable {
+    This class is used to record observations by covariate and calibrate error rates
+    Templating allows us to use the same class for counts and error frequencies/odds
+	 */ 
+   
+  template <class entry_type> class cErrorTable : public std::vector<entry_type> {
     private:
-      enum {k_ref_base, k_obs_base, k_quality, k_read_pos, k_read_set, k_num_covariates};
-      
+                 
+      // These must be in the same order as the string constants in print()...
+      enum {k_read_set, k_ref_base, k_obs_base, k_quality, k_read_pos, k_num_covariates};
+            
+                    
       typedef bool covariates_used_t[k_num_covariates];
       typedef uint32_t covariates_max_t[k_num_covariates];
       typedef uint32_t covariates_offset_t[k_num_covariates];
 
     public:
       cErrorTable(const std::string& colnames);
-      cErrorTable(cErrorTable& error_table, covariates_used_t covariates); // for creating summed sub-tables
+      cErrorTable(covariates_used_t covariate_used, covariates_max_t covariate_max); // for creating empty table
+      cErrorTable(cErrorTable& error_table, covariates_used_t covariates, bool do_sum = false, uint32_t add_to_bins=0); // for creating summed sub-tables
       ~cErrorTable() {};
 
       void split(const std::string& s, char c, std::vector<std::string>& v);
-      void allocate_table();
+      void allocate_table(uint32_t add_to_bins=0);
       void print_line(std::ostream& out, uint32_t i);
       void print(const std::string& filename);
       void record_alignment(const alignment& i, const uint32_t ref_pos, const char* ref_seq);
       void record_observation(char ref_base, char obs_base, uint32_t quality, uint32_t read_pos, uint32_t read_set);
       uint32_t covariates_to_index(char ref_base, char obs_base, uint32_t quality, uint32_t read_pos, uint32_t read_set);
       void index_to_covariates(const uint32_t idx, char& ref_base, char& obs_base, uint32_t& quality, uint32_t& read_pos, uint32_t& read_set);
-      void recalibrate();
-      void calculate_odds_ratios(cErrorTable& total_table);
+      void print_empirical_error_rates(std::string output_file);
       
     protected:
       std::string m_sep;  // column-separator character for output and input
       covariates_used_t   m_covariate_used;   // list of covariates that are used by table
       covariates_max_t    m_covariate_max;    // maximum value of each covariate
       covariates_offset_t m_covariate_offset; // number to multiply this covariate by when constructing row numbers
-      std::vector<int>    m_count_table;      // table of counts
   };
+  
+  
 	
 	
 	/*! Error-counting class.
@@ -126,7 +132,7 @@ namespace breseq {
     bool m_do_errors;
     uint8_t m_min_qual_score; //! @JEB THIS IS CURRENTLY NOT USED (BUT WOULD BE IF WE CALCULATED RATES)
     bool m_use_CErrorTable;
-    cErrorTable m_error_table;
+    cErrorTable<uint32_t> m_error_table;
 	};
 	
 

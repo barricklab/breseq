@@ -27,21 +27,22 @@ LICENSE AND COPYRIGHT
  error_count.cpp.
  */
 int main(int argc, char* argv[]) {
-	using namespace std;
 	namespace po = boost::program_options;
 	
+  std::cout << "temp" << std::endl;
+  
 	// setup and parse configuration options:
 	po::options_description cmdline_options("Allowed options");
 	cmdline_options.add_options()
 	("help,h", "produce this help message")
-	("bam,b", po::value<string>(), "bam file containing sequences to be aligned")
-	("fasta,f", po::value<string>(), "FASTA file of reference sequence")
-	("output,o", po::value<string>(), "output directory")
-	("readfile,r", po::value<vector<string> >(), "names of readfiles (no extension)")
+	("bam,b", po::value<std::string>(), "bam file containing sequences to be aligned")
+	("fasta,f", po::value<std::string>(), "FASTA file of reference sequence")
+	("output,o", po::value<std::string>(), "output directory")
+	("readfile,r", po::value<std::vector<std::string> >(), "names of readfiles (no extension)")
 	("coverage", "generate unique coverage distribution output")
   ("errors", "generate unique error count output")
   ("minimum-quality-score", po::value<int>()->default_value(0), "ignore base quality scores lower than this")
-  ("covariates", po::value<string>()->default_value(""), "covariates for error model")
+  ("covariates", po::value<std::string>()->default_value(""), "covariates for error model")
   ;
 
 	po::variables_map options;
@@ -55,25 +56,25 @@ int main(int argc, char* argv[]) {
 		 || !options.count("output")
 		 || !options.count("readfile")
 		 || (!options.count("coverage") && !options.count("errors")) ) {
-		cout << "Usage: error_count --bam <sequences.bam> --fasta <reference.fasta> --output <path> --readfile <filename> [--coverage] [--errors] [--minimum-quality-score 3]" << endl;
-		cout << cmdline_options << endl;
+		std::cout << "Usage: error_count --bam <sequences.bam> --fasta <reference.fasta> --output <path> --readfile <filename> [--coverage] [--errors] [--minimum-quality-score 3]" << std::endl;
+		std::cout << cmdline_options << std::endl;
 		return -1;
 	}
 	
 	// attempt to calculate error calibrations:
 	try {
-		breseq::error_count(options["bam"].as<string>(),
-												options["fasta"].as<string>(),
-												options["output"].as<string>(),
-												options["readfile"].as<vector<string> >(),
+		breseq::error_count(options["bam"].as<std::string>(),
+												options["fasta"].as<std::string>(),
+												options["output"].as<std::string>(),
+												options["readfile"].as<std::vector<std::string> >(),
 												options.count("coverage"),
                         options.count("errors"),
                         options["minimum-quality-score"].as<int>(),
-                        options["covariates"].as<string>()
+                        options["covariates"].as<std::string>()
                       );
 	} catch(...) {
 		// failed; 
-    cout << "<<<Failed>>>" << endl;
+    std::cout << "<<<Failed>>>" << std::endl;
 		return -1;
 	}
   
