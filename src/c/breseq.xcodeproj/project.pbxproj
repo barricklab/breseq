@@ -13,12 +13,12 @@
 			buildPhases = (
 			);
 			dependencies = (
+				708330901325BA18003CF40A /* PBXTargetDependency */,
+				708FA5D5132578BD00864C40 /* PBXTargetDependency */,
+				708330921325BA1A003CF40A /* PBXTargetDependency */,
+				708330941325BA1D003CF40A /* PBXTargetDependency */,
 				422D462A1219DF08003FD94D /* PBXTargetDependency */,
 				422D46241219DF08003FD94D /* PBXTargetDependency */,
-				7099206613256CC4004FE26F /* PBXTargetDependency */,
-				7099206413256CC1004FE26F /* PBXTargetDependency */,
-				422D46261219DF08003FD94D /* PBXTargetDependency */,
-				422D46281219DF08003FD94D /* PBXTargetDependency */,
 			);
 			name = all;
 			productName = all;
@@ -27,7 +27,6 @@
 
 /* Begin PBXBuildFile section */
 		4247E82C1268EC3E006A6D78 /* libz.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 421ACFAC1170F05500C2EB85 /* libz.a */; };
-		42B6ED6911C6879B0075F8A3 /* libbreseq.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 42BA690C1189B7FD000B00B1 /* libbreseq.a */; };
 		7087728812BC1660000F9B57 /* alignment.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 7087728712BC1660000F9B57 /* alignment.cpp */; };
 		7087728E12BC169C000F9B57 /* error_count.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 7087728912BC169C000F9B57 /* error_count.cpp */; };
 		7087728F12BC169C000F9B57 /* genome_diff.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 7087728A12BC169C000F9B57 /* genome_diff.cpp */; };
@@ -46,12 +45,13 @@
 		7087748812BC1C31000F9B57 /* pileup_base.h in Headers */ = {isa = PBXBuildFile; fileRef = 7087747B12BC1C06000F9B57 /* pileup_base.h */; };
 		708774D712BC21B9000F9B57 /* libboost_program_options-mt.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 421ACF7D1170E5CA00C2EB85 /* libboost_program_options-mt.a */; };
 		708774D812BC21BA000F9B57 /* libboost_program_options-mt.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 421ACF7D1170E5CA00C2EB85 /* libboost_program_options-mt.a */; };
-		708774E012BC2260000F9B57 /* libbreseq.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 42BA690C1189B7FD000B00B1 /* libbreseq.a */; };
+		708FA5FA13257A6000864C40 /* libbreseq.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 708FA5DA132578BE00864C40 /* libbreseq.a */; };
+		708FA5FD13257A7D00864C40 /* libbreseq.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 708FA5DA132578BE00864C40 /* libbreseq.a */; };
+		708FA5FF13257A7F00864C40 /* libbreseq.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 708FA5DA132578BE00864C40 /* libbreseq.a */; };
+		708FA60013257A8000864C40 /* libbreseq.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 708FA5DA132578BE00864C40 /* libbreseq.a */; };
 		70A5BC1412BE6EBF005EFE9F /* libboost_program_options-mt.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 421ACF7D1170E5CA00C2EB85 /* libboost_program_options-mt.a */; };
-		70A5BC1512BE6EBF005EFE9F /* libbreseq.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 42BA690C1189B7FD000B00B1 /* libbreseq.a */; };
 		70A5BC2612BE6F21005EFE9F /* calc_trims_cmdline.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 70A5BC2512BE6F21005EFE9F /* calc_trims_cmdline.cpp */; };
 		70F9FB67130C58D900D6E11D /* libboost_program_options-mt.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 421ACF7D1170E5CA00C2EB85 /* libboost_program_options-mt.a */; };
-		70F9FB68130C58D900D6E11D /* libbreseq.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 42BA690C1189B7FD000B00B1 /* libbreseq.a */; };
 		70F9FB80130C591500D6E11D /* tabulate_coverage_cmdline.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 70F9FB7F130C591500D6E11D /* tabulate_coverage_cmdline.cpp */; };
 		70F9FB86130C592700D6E11D /* tabulate_coverage.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 70F9FB85130C592700D6E11D /* tabulate_coverage.cpp */; };
 /* End PBXBuildFile section */
@@ -70,20 +70,6 @@
 			proxyType = 1;
 			remoteGlobalIDString = 42BA690B1189B7FD000B00B1;
 			remoteInfo = breseq;
-		};
-		422D46251219DF08003FD94D /* PBXContainerItemProxy */ = {
-			isa = PBXContainerItemProxy;
-			containerPortal = 421ACEB71170DB9600C2EB85 /* Project object */;
-			proxyType = 1;
-			remoteGlobalIDString = 421ACF2E1170DF1800C2EB85;
-			remoteInfo = error_count;
-		};
-		422D46271219DF08003FD94D /* PBXContainerItemProxy */ = {
-			isa = PBXContainerItemProxy;
-			containerPortal = 421ACEB71170DB9600C2EB85 /* Project object */;
-			proxyType = 1;
-			remoteGlobalIDString = 42B6EDB811C69CC70075F8A3;
-			remoteInfo = identify_mutations;
 		};
 		422D46291219DF08003FD94D /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
@@ -113,19 +99,33 @@
 			remoteGlobalIDString = 42BA690B1189B7FD000B00B1;
 			remoteInfo = breseq;
 		};
-		7099206313256CC1004FE26F /* PBXContainerItemProxy */ = {
+		7083308F1325BA18003CF40A /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
 			containerPortal = 421ACEB71170DB9600C2EB85 /* Project object */;
 			proxyType = 1;
-			remoteGlobalIDString = 70A5BC0C12BE6EBF005EFE9F;
+			remoteGlobalIDString = 421ACF2E1170DF1800C2EB85 /* error_count */;
+			remoteInfo = error_count;
+		};
+		708330911325BA1A003CF40A /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 421ACEB71170DB9600C2EB85 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 70A5BC0C12BE6EBF005EFE9F /* calc_trims */;
 			remoteInfo = calc_trims;
 		};
-		7099206513256CC4004FE26F /* PBXContainerItemProxy */ = {
+		708330931325BA1D003CF40A /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
 			containerPortal = 421ACEB71170DB9600C2EB85 /* Project object */;
 			proxyType = 1;
-			remoteGlobalIDString = 70F9FB5F130C58D900D6E11D;
+			remoteGlobalIDString = 70F9FB5F130C58D900D6E11D /* tabulate_coverage */;
 			remoteInfo = tabulate_coverage;
+		};
+		708FA5D4132578BD00864C40 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 421ACEB71170DB9600C2EB85 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 42B6EDB811C69CC70075F8A3;
+			remoteInfo = identify_mutations;
 		};
 		70A5BC0E12BE6EBF005EFE9F /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
@@ -158,12 +158,9 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
-		421ACF2F1170DF1800C2EB85 /* error_count */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = error_count; sourceTree = BUILT_PRODUCTS_DIR; };
 		421ACF7D1170E5CA00C2EB85 /* libboost_program_options-mt.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; name = "libboost_program_options-mt.a"; path = "/opt/local/lib/libboost_program_options-mt.a"; sourceTree = "<absolute>"; };
 		421ACFAC1170F05500C2EB85 /* libz.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = libz.a; path = /opt/local/lib/libz.a; sourceTree = "<absolute>"; };
 		4247E8261268EB90006A6D78 /* debug.xcconfig */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.xcconfig; path = debug.xcconfig; sourceTree = "<group>"; };
-		42B6EDC811C69CC70075F8A3 /* error_count */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = error_count; sourceTree = BUILT_PRODUCTS_DIR; };
-		42BA690C1189B7FD000B00B1 /* libbreseq.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; includeInIndex = 0; path = libbreseq.a; sourceTree = BUILT_PRODUCTS_DIR; };
 		7087728712BC1660000F9B57 /* alignment.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = alignment.cpp; path = breseq/alignment.cpp; sourceTree = SOURCE_ROOT; };
 		7087728912BC169C000F9B57 /* error_count.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = error_count.cpp; path = breseq/error_count.cpp; sourceTree = SOURCE_ROOT; };
 		7087728A12BC169C000F9B57 /* genome_diff.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = genome_diff.cpp; path = breseq/genome_diff.cpp; sourceTree = SOURCE_ROOT; };
@@ -261,9 +258,12 @@
 		7087747912BC1C06000F9B57 /* identify_mutations.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = identify_mutations.h; path = breseq/breseq/identify_mutations.h; sourceTree = SOURCE_ROOT; };
 		7087747A12BC1C06000F9B57 /* pileup.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = pileup.h; path = breseq/breseq/pileup.h; sourceTree = SOURCE_ROOT; };
 		7087747B12BC1C06000F9B57 /* pileup_base.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = pileup_base.h; path = breseq/breseq/pileup_base.h; sourceTree = SOURCE_ROOT; };
-		70A5BC1912BE6EBF005EFE9F /* calc_trims */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = calc_trims; sourceTree = BUILT_PRODUCTS_DIR; };
+		708FA5D6132578BE00864C40 /* identify_mutations */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = identify_mutations; sourceTree = BUILT_PRODUCTS_DIR; };
+		708FA5D8132578BE00864C40 /* error_count */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = error_count; sourceTree = BUILT_PRODUCTS_DIR; };
+		708FA5DA132578BE00864C40 /* libbreseq.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; includeInIndex = 0; path = libbreseq.a; sourceTree = BUILT_PRODUCTS_DIR; };
+		708FA5DB132578BE00864C40 /* calc_trims */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = calc_trims; sourceTree = BUILT_PRODUCTS_DIR; };
+		708FA5DD132578BE00864C40 /* tabulate_coverage */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = tabulate_coverage; sourceTree = BUILT_PRODUCTS_DIR; };
 		70A5BC2512BE6F21005EFE9F /* calc_trims_cmdline.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = calc_trims_cmdline.cpp; path = breseq/calc_trims_cmdline.cpp; sourceTree = SOURCE_ROOT; };
-		70F9FB6C130C58D900D6E11D /* error_count */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = error_count; sourceTree = BUILT_PRODUCTS_DIR; };
 		70F9FB7F130C591500D6E11D /* tabulate_coverage_cmdline.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = tabulate_coverage_cmdline.cpp; path = breseq/tabulate_coverage_cmdline.cpp; sourceTree = SOURCE_ROOT; };
 		70F9FB85130C592700D6E11D /* tabulate_coverage.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = tabulate_coverage.cpp; path = breseq/tabulate_coverage.cpp; sourceTree = SOURCE_ROOT; };
 		70F9FB89130C828000D6E11D /* tabulate_coverage.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = tabulate_coverage.h; sourceTree = "<group>"; };
@@ -274,8 +274,8 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				708FA5FA13257A6000864C40 /* libbreseq.a in Frameworks */,
 				708774D812BC21BA000F9B57 /* libboost_program_options-mt.a in Frameworks */,
-				42B6ED6911C6879B0075F8A3 /* libbreseq.a in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -283,8 +283,8 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				708FA5FD13257A7D00864C40 /* libbreseq.a in Frameworks */,
 				708774D712BC21B9000F9B57 /* libboost_program_options-mt.a in Frameworks */,
-				708774E012BC2260000F9B57 /* libbreseq.a in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -301,8 +301,8 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				708FA5FF13257A7F00864C40 /* libbreseq.a in Frameworks */,
 				70A5BC1412BE6EBF005EFE9F /* libboost_program_options-mt.a in Frameworks */,
-				70A5BC1512BE6EBF005EFE9F /* libbreseq.a in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -310,8 +310,8 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				708FA60013257A8000864C40 /* libbreseq.a in Frameworks */,
 				70F9FB67130C58D900D6E11D /* libboost_program_options-mt.a in Frameworks */,
-				70F9FB68130C58D900D6E11D /* libbreseq.a in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -332,11 +332,11 @@
 		421ACF301170DF1800C2EB85 /* Products */ = {
 			isa = PBXGroup;
 			children = (
-				42BA690C1189B7FD000B00B1 /* libbreseq.a */,
-				70A5BC1912BE6EBF005EFE9F /* calc_trims */,
-				421ACF2F1170DF1800C2EB85 /* error_count */,
-				42B6EDC811C69CC70075F8A3 /* error_count */,
-				70F9FB6C130C58D900D6E11D /* error_count */,
+				708FA5D6132578BE00864C40 /* identify_mutations */,
+				708FA5D8132578BE00864C40 /* error_count */,
+				708FA5DA132578BE00864C40 /* libbreseq.a */,
+				708FA5DB132578BE00864C40 /* calc_trims */,
+				708FA5DD132578BE00864C40 /* tabulate_coverage */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -563,7 +563,7 @@
 			);
 			name = error_count;
 			productName = error_count;
-			productReference = 421ACF2F1170DF1800C2EB85 /* error_count */;
+			productReference = 708FA5D8132578BE00864C40 /* error_count */;
 			productType = "com.apple.product-type.tool";
 		};
 		42B6EDB811C69CC70075F8A3 /* identify_mutations */ = {
@@ -581,7 +581,7 @@
 			);
 			name = identify_mutations;
 			productName = error_count;
-			productReference = 42B6EDC811C69CC70075F8A3 /* error_count */;
+			productReference = 708FA5D6132578BE00864C40 /* identify_mutations */;
 			productType = "com.apple.product-type.tool";
 		};
 		42BA690B1189B7FD000B00B1 /* breseq */ = {
@@ -598,7 +598,7 @@
 			);
 			name = breseq;
 			productName = breseq;
-			productReference = 42BA690C1189B7FD000B00B1 /* libbreseq.a */;
+			productReference = 708FA5DA132578BE00864C40 /* libbreseq.a */;
 			productType = "com.apple.product-type.library.static";
 		};
 		70A5BC0C12BE6EBF005EFE9F /* calc_trims */ = {
@@ -616,7 +616,7 @@
 			);
 			name = calc_trims;
 			productName = error_count;
-			productReference = 70A5BC1912BE6EBF005EFE9F /* calc_trims */;
+			productReference = 708FA5DB132578BE00864C40 /* calc_trims */;
 			productType = "com.apple.product-type.tool";
 		};
 		70F9FB5F130C58D900D6E11D /* tabulate_coverage */ = {
@@ -634,7 +634,7 @@
 			);
 			name = tabulate_coverage;
 			productName = error_count;
-			productReference = 70F9FB6C130C58D900D6E11D /* error_count */;
+			productReference = 708FA5DD132578BE00864C40 /* tabulate_coverage */;
 			productType = "com.apple.product-type.tool";
 		};
 /* End PBXNativeTarget section */
@@ -728,16 +728,6 @@
 			target = 42BA690B1189B7FD000B00B1 /* breseq */;
 			targetProxy = 422D46231219DF08003FD94D /* PBXContainerItemProxy */;
 		};
-		422D46261219DF08003FD94D /* PBXTargetDependency */ = {
-			isa = PBXTargetDependency;
-			target = 421ACF2E1170DF1800C2EB85 /* error_count */;
-			targetProxy = 422D46251219DF08003FD94D /* PBXContainerItemProxy */;
-		};
-		422D46281219DF08003FD94D /* PBXTargetDependency */ = {
-			isa = PBXTargetDependency;
-			target = 42B6EDB811C69CC70075F8A3 /* identify_mutations */;
-			targetProxy = 422D46271219DF08003FD94D /* PBXContainerItemProxy */;
-		};
 		422D462A1219DF08003FD94D /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
 			target = 421ACF201170DC4400C2EB85 /* samtools */;
@@ -758,15 +748,25 @@
 			target = 42BA690B1189B7FD000B00B1 /* breseq */;
 			targetProxy = 42BA691B1189B877000B00B1 /* PBXContainerItemProxy */;
 		};
-		7099206413256CC1004FE26F /* PBXTargetDependency */ = {
+		708330901325BA18003CF40A /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 421ACF2E1170DF1800C2EB85 /* error_count */;
+			targetProxy = 7083308F1325BA18003CF40A /* PBXContainerItemProxy */;
+		};
+		708330921325BA1A003CF40A /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
 			target = 70A5BC0C12BE6EBF005EFE9F /* calc_trims */;
-			targetProxy = 7099206313256CC1004FE26F /* PBXContainerItemProxy */;
+			targetProxy = 708330911325BA1A003CF40A /* PBXContainerItemProxy */;
 		};
-		7099206613256CC4004FE26F /* PBXTargetDependency */ = {
+		708330941325BA1D003CF40A /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
 			target = 70F9FB5F130C58D900D6E11D /* tabulate_coverage */;
-			targetProxy = 7099206513256CC4004FE26F /* PBXContainerItemProxy */;
+			targetProxy = 708330931325BA1D003CF40A /* PBXContainerItemProxy */;
+		};
+		708FA5D5132578BD00864C40 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 42B6EDB811C69CC70075F8A3 /* identify_mutations */;
+			targetProxy = 708FA5D4132578BD00864C40 /* PBXContainerItemProxy */;
 		};
 		70A5BC0D12BE6EBF005EFE9F /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
@@ -831,8 +831,7 @@
 			baseConfigurationReference = 4247E8261268EB90006A6D78 /* debug.xcconfig */;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
-				ARCHS = "$(ARCHS_STANDARD_64_BIT_PRE_XCODE_3_1)";
-				ARCHS_STANDARD_64_BIT_PRE_XCODE_3_1 = x86_64;
+				ARCHS = "$(NATIVE_ARCH_ACTUAL)";
 				COPY_PHASE_STRIP = NO;
 				GCC_DYNAMIC_NO_PIC = NO;
 				GCC_ENABLE_FIX_AND_CONTINUE = YES;
@@ -847,6 +846,7 @@
 				LIBRARY_SEARCH_PATHS_QUOTED_FOR_TARGET_1 = "\"$(SRCROOT)/.libs\"";
 				LIBRARY_SEARCH_PATHS_QUOTED_FOR_TARGET_2 = "\"$(SRCROOT)/breseq/.libs\"";
 				LIBRARY_SEARCH_PATHS_QUOTED_FOR_TARGET_3 = "\"$(SRCROOT)/build/Debug\"";
+				ONLY_ACTIVE_ARCH = YES;
 				PREBINDING = NO;
 				PRODUCT_NAME = error_count;
 				USER_HEADER_SEARCH_PATHS = "";
@@ -857,13 +857,13 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
-				ARCHS = "$(ARCHS_STANDARD_64_BIT_PRE_XCODE_3_1)";
-				ARCHS_STANDARD_64_BIT_PRE_XCODE_3_1 = x86_64;
+				ARCHS = "$(NATIVE_ARCH_ACTUAL)";
 				COPY_PHASE_STRIP = YES;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
 				GCC_ENABLE_FIX_AND_CONTINUE = NO;
 				GCC_MODEL_TUNING = G5;
 				HEADER_SEARCH_PATHS = (
+					/opt/local/include,
 					"$(HEADER_SEARCH_PATHS_QUOTED_FOR_TARGET_1)",
 					"$(HEADER_SEARCH_PATHS_QUOTED_FOR_TARGET_2)",
 				);
@@ -885,6 +885,7 @@
 		422D46211219DEFF003FD94D /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				ARCHS = "$(NATIVE_ARCH_ACTUAL)";
 				COPY_PHASE_STRIP = NO;
 				GCC_DYNAMIC_NO_PIC = NO;
 				GCC_OPTIMIZATION_LEVEL = 0;
@@ -908,8 +909,7 @@
 			baseConfigurationReference = 4247E8261268EB90006A6D78 /* debug.xcconfig */;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
-				ARCHS = "$(ARCHS_STANDARD_64_BIT_PRE_XCODE_3_1)";
-				ARCHS_STANDARD_64_BIT_PRE_XCODE_3_1 = x86_64;
+				ARCHS = "$(NATIVE_ARCH_ACTUAL)";
 				COPY_PHASE_STRIP = NO;
 				GCC_DYNAMIC_NO_PIC = NO;
 				GCC_ENABLE_FIX_AND_CONTINUE = YES;
@@ -927,6 +927,7 @@
 					"$(inherited)",
 					/opt/local/lib,
 				);
+				ONLY_ACTIVE_ARCH = YES;
 				PREBINDING = NO;
 				PRODUCT_NAME = identify_mutations;
 				USER_HEADER_SEARCH_PATHS = "";
@@ -937,8 +938,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
-				ARCHS = "$(ARCHS_STANDARD_64_BIT_PRE_XCODE_3_1)";
-				ARCHS_STANDARD_64_BIT_PRE_XCODE_3_1 = x86_64;
+				ARCHS = "$(NATIVE_ARCH_ACTUAL)";
 				COPY_PHASE_STRIP = YES;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
 				GCC_ENABLE_FIX_AND_CONTINUE = NO;
@@ -958,7 +958,7 @@
 				LIBRARY_SEARCH_PATHS_QUOTED_FOR_TARGET_1 = "\"$(SRCROOT)/samtools-0.1.7a\"";
 				LIBRARY_SEARCH_PATHS_QUOTED_FOR_TARGET_2 = "\"$(SRCROOT)/../../extern/samtools-0.1.7a\"";
 				PREBINDING = NO;
-				PRODUCT_NAME = error_count;
+				PRODUCT_NAME = identify_mutations;
 				USER_HEADER_SEARCH_PATHS = "";
 				ZERO_LINK = NO;
 			};
@@ -968,8 +968,7 @@
 			isa = XCBuildConfiguration;
 			baseConfigurationReference = 4247E8261268EB90006A6D78 /* debug.xcconfig */;
 			buildSettings = {
-				ARCHS = "$(ARCHS_STANDARD_64_BIT_PRE_XCODE_3_1)";
-				ARCHS_STANDARD_64_BIT_PRE_XCODE_3_1 = x86_64;
+				ARCHS = "$(NATIVE_ARCH_ACTUAL)";
 				HEADER_SEARCH_PATHS = (
 					"../../extern/samtools-0.1.7a",
 					/opt/local/include,
@@ -983,6 +982,7 @@
 				LIBRARY_SEARCH_PATHS_QUOTED_FOR_TARGET_3 = "\"$(SRCROOT)/.libs\"";
 				LIBRARY_SEARCH_PATHS_QUOTED_FOR_TARGET_4 = "\"$(SRCROOT)/breseq/.libs\"";
 				LIBRARY_SEARCH_PATHS_QUOTED_FOR_TARGET_5 = "\"$(SRCROOT)/build/Debug\"";
+				ONLY_ACTIVE_ARCH = YES;
 				PRODUCT_NAME = breseq;
 			};
 			name = Debug;
@@ -991,8 +991,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
-				ARCHS = "$(ARCHS_STANDARD_64_BIT_PRE_XCODE_3_1)";
-				ARCHS_STANDARD_64_BIT_PRE_XCODE_3_1 = x86_64;
+				ARCHS = "$(NATIVE_ARCH_ACTUAL)";
 				COPY_PHASE_STRIP = YES;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
 				GCC_ENABLE_FIX_AND_CONTINUE = NO;
@@ -1022,8 +1021,7 @@
 			baseConfigurationReference = 4247E8261268EB90006A6D78 /* debug.xcconfig */;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
-				ARCHS = "$(ARCHS_STANDARD_64_BIT_PRE_XCODE_3_1)";
-				ARCHS_STANDARD_64_BIT_PRE_XCODE_3_1 = x86_64;
+				ARCHS = "$(NATIVE_ARCH_ACTUAL)";
 				COPY_PHASE_STRIP = NO;
 				GCC_DYNAMIC_NO_PIC = NO;
 				GCC_ENABLE_FIX_AND_CONTINUE = YES;
@@ -1039,6 +1037,7 @@
 				LIBRARY_SEARCH_PATHS_QUOTED_FOR_TARGET_1 = "\"$(SRCROOT)/.libs\"";
 				LIBRARY_SEARCH_PATHS_QUOTED_FOR_TARGET_2 = "\"$(SRCROOT)/breseq/.libs\"";
 				LIBRARY_SEARCH_PATHS_QUOTED_FOR_TARGET_3 = "\"$(SRCROOT)/build/Debug\"";
+				ONLY_ACTIVE_ARCH = YES;
 				PREBINDING = NO;
 				PRODUCT_NAME = calc_trims;
 				USER_HEADER_SEARCH_PATHS = "";
@@ -1049,8 +1048,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
-				ARCHS = "$(ARCHS_STANDARD_64_BIT_PRE_XCODE_3_1)";
-				ARCHS_STANDARD_64_BIT_PRE_XCODE_3_1 = x86_64;
+				ARCHS = "$(NATIVE_ARCH_ACTUAL)";
 				COPY_PHASE_STRIP = YES;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
 				GCC_ENABLE_FIX_AND_CONTINUE = NO;
@@ -1080,8 +1078,7 @@
 			baseConfigurationReference = 4247E8261268EB90006A6D78 /* debug.xcconfig */;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
-				ARCHS = "$(ARCHS_STANDARD_64_BIT_PRE_XCODE_3_1)";
-				ARCHS_STANDARD_64_BIT_PRE_XCODE_3_1 = x86_64;
+				ARCHS = "$(NATIVE_ARCH_ACTUAL)";
 				COPY_PHASE_STRIP = NO;
 				GCC_DYNAMIC_NO_PIC = NO;
 				GCC_ENABLE_FIX_AND_CONTINUE = YES;
@@ -1100,8 +1097,9 @@
 				LIBRARY_SEARCH_PATHS_QUOTED_FOR_TARGET_1 = "\"$(SRCROOT)/.libs\"";
 				LIBRARY_SEARCH_PATHS_QUOTED_FOR_TARGET_2 = "\"$(SRCROOT)/breseq/.libs\"";
 				LIBRARY_SEARCH_PATHS_QUOTED_FOR_TARGET_3 = "\"$(SRCROOT)/build/Debug\"";
+				ONLY_ACTIVE_ARCH = YES;
 				PREBINDING = NO;
-				PRODUCT_NAME = error_count;
+				PRODUCT_NAME = tabulate_coverage;
 				USER_HEADER_SEARCH_PATHS = "";
 			};
 			name = Debug;
@@ -1110,8 +1108,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
-				ARCHS = "$(ARCHS_STANDARD_64_BIT_PRE_XCODE_3_1)";
-				ARCHS_STANDARD_64_BIT_PRE_XCODE_3_1 = x86_64;
+				ARCHS = "$(NATIVE_ARCH_ACTUAL)";
 				COPY_PHASE_STRIP = YES;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
 				GCC_ENABLE_FIX_AND_CONTINUE = NO;
@@ -1134,7 +1131,7 @@
 				LIBRARY_SEARCH_PATHS_QUOTED_FOR_TARGET_4 = "\"$(SRCROOT)/breseq/.libs\"";
 				LIBRARY_SEARCH_PATHS_QUOTED_FOR_TARGET_5 = "\"$(SRCROOT)/build/Debug\"";
 				PREBINDING = NO;
-				PRODUCT_NAME = error_count;
+				PRODUCT_NAME = tabulate_coverage;
 				ZERO_LINK = NO;
 			};
 			name = Release;
