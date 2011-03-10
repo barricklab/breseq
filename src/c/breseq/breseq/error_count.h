@@ -49,36 +49,64 @@ namespace breseq {
     This class is used to record observations by covariate and calibrate error rates
     Templating allows us to use the same class for counts and error frequencies/odds
 	 */ 
-   
-  template <class entry_type> class cErrorTable : public std::vector<entry_type> {
+
+    
+  struct covariate_values_t {
+    uint8_t ref_base;  // as character: 'A', 'T', 'C', 'G', '.'
+    uint8_t obs_base;  // as character: 'A', 'T', 'C', 'G', '.'
+    uint8_t quality;
+    uint32_t read_pos;
+    uint32_t read_set;
+  };
+  
+ 
+ class cErrorTable {
     private:
-                 
-      // These must be in the same order as the string constants in print()...
+      static const char m_sep;   //* separator between entries within a line in files
+      static const std::string covariate_names[];
+      
+      // These must be in the same order as the covariate_names[] string constants...
       enum {k_read_set, k_ref_base, k_obs_base, k_quality, k_read_pos, k_num_covariates};
-            
-                    
+      
+      std::vector<uint32_t> m_count_table;
+      std::vector<double> m_log10_prob_table;
+
       typedef bool covariates_used_t[k_num_covariates];
       typedef uint32_t covariates_max_t[k_num_covariates];
       typedef uint32_t covariates_offset_t[k_num_covariates];
 
     public:
+      cErrorTable() {};
       cErrorTable(const std::string& colnames);
       cErrorTable(covariates_used_t covariate_used, covariates_max_t covariate_max); // for creating empty table
-      cErrorTable(cErrorTable& error_table, covariates_used_t covariates, bool do_sum = false, uint32_t add_to_bins=0); // for creating summed sub-tables
+      cErrorTable(cErrorTable& error_table, covariates_used_t covariates); // for creating summed sub-tables
       ~cErrorTable() {};
 
-      void split(const std::string& s, char c, std::vector<std::string>& v);
-      void allocate_table(uint32_t add_to_bins=0);
-      void print_line(std::ostream& out, uint32_t i);
-      void print(const std::string& filename);
-      void record_alignment(const alignment& i, const uint32_t ref_pos, const char* ref_seq);
-      void record_observation(char ref_base, char obs_base, uint32_t quality, uint32_t read_pos, uint32_t read_set);
-      uint32_t covariates_to_index(char ref_base, char obs_base, uint32_t quality, uint32_t read_pos, uint32_t read_set);
-      void index_to_covariates(const uint32_t idx, char& ref_base, char& obs_base, uint32_t& quality, uint32_t& read_pos, uint32_t& read_set);
-      void print_empirical_error_rates(std::string output_file);
+      //* Helper functions
+      void allocate_table();
+      uint32_t covariates_to_index(const covariate_values_t& cv);
+      void index_to_covariates(const uint32_t idx, covariate_values_t& cv);
+
+      void read_covariates(const std::string& colnames);
+      std::string print_covariates();
+      void split(const std::string& s, char c, std::vector<std::string>& v); // helper function
+
+      //* IO of tables
+      void read_log10_prob_table(const std::string& filename);
+      void write_log10_prob_table(const std::string& output_file);
+      
+      //* recording counts during error calibration     
+      void count_alignment_position(const alignment& i, const uint32_t ref_pos, const char* ref_seq);
+      void count_covariate(const covariate_values_t& cv);
+      void counts_to_log10_prob();
+      
+      //* determining error probabilities to use during
+      bool alignment_position_to_covariates(const alignment& a, int32_t insert_count, covariate_values_t& cv);
+      
+      //* accessors
+      double get_log10_prob(covariate_values_t& cv);
       
     protected:
-      std::string m_sep;  // column-separator character for output and input
       covariates_used_t   m_covariate_used;   // list of covariates that are used by table
       covariates_max_t    m_covariate_max;    // maximum value of each covariate
       covariates_offset_t m_covariate_offset; // number to multiply this covariate by when constructing row numbers
@@ -132,7 +160,7 @@ namespace breseq {
     bool m_do_errors;
     uint8_t m_min_qual_score; //! @JEB THIS IS CURRENTLY NOT USED (BUT WOULD BE IF WE CALCULATED RATES)
     bool m_use_CErrorTable;
-    cErrorTable<uint32_t> m_error_table;
+    cErrorTable m_error_table;
 	};
 	
 

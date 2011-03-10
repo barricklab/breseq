@@ -103,12 +103,12 @@ void breseq::tabulate_coverage_pileup::callback(const breseq::pileup& p) {
     bool this_is_first_base;
     if (!reversed) { 
       // top strand
-      first_base_matched = (i->query_start() == 1);
-      this_is_first_base = (i->query_position() == 0); 
+      first_base_matched = (i->query_start_1() == 1);
+      this_is_first_base = (i->query_position_1() == 1); 
     } else {
       // bottom strand
-      first_base_matched = (i->query_end() == i->query_length());
-      this_is_first_base = (i->query_position()+1 == i->query_length());       
+      first_base_matched = (i->query_end_1() == i->query_length());
+      this_is_first_base = (i->query_position_1() == i->query_length());       
     }
 
 // WHOA -- do we really want this....?    

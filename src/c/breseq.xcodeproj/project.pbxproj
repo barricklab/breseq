@@ -103,21 +103,21 @@
 			isa = PBXContainerItemProxy;
 			containerPortal = 421ACEB71170DB9600C2EB85 /* Project object */;
 			proxyType = 1;
-			remoteGlobalIDString = 421ACF2E1170DF1800C2EB85 /* error_count */;
+			remoteGlobalIDString = 421ACF2E1170DF1800C2EB85;
 			remoteInfo = error_count;
 		};
 		708330911325BA1A003CF40A /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
 			containerPortal = 421ACEB71170DB9600C2EB85 /* Project object */;
 			proxyType = 1;
-			remoteGlobalIDString = 70A5BC0C12BE6EBF005EFE9F /* calc_trims */;
+			remoteGlobalIDString = 70A5BC0C12BE6EBF005EFE9F;
 			remoteInfo = calc_trims;
 		};
 		708330931325BA1D003CF40A /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
 			containerPortal = 421ACEB71170DB9600C2EB85 /* Project object */;
 			proxyType = 1;
-			remoteGlobalIDString = 70F9FB5F130C58D900D6E11D /* tabulate_coverage */;
+			remoteGlobalIDString = 70F9FB5F130C58D900D6E11D;
 			remoteInfo = tabulate_coverage;
 		};
 		708FA5D4132578BD00864C40 /* PBXContainerItemProxy */ = {

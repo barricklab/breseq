@@ -25,12 +25,16 @@ LICENSE AND COPYRIGHT
 #include <sam.h>
 #include <faidx.h>
 #include <assert.h>
+#include <boost/tuple/tuple.hpp>
 
 #include "breseq/common.h"
 #include "breseq/pileup.h"
 #include "breseq/error_count.h"
 
 namespace breseq {
+
+const std::string cErrorTable::covariate_names[] = {"read_set", "ref_base", "obs_base", "quality", "read_pos"}; 
+const char cErrorTable::m_sep = '\t';
 
 /*! Count errors.
  */
@@ -104,17 +108,16 @@ void error_count_pileup::callback(const pileup& p) {
 
     // Newer implementation...
     if (m_use_CErrorTable) {
-      m_error_table.record_alignment(*i, p.position(), p.reference_sequence());
+      m_error_table.count_alignment_position(*i, p.position(), p.reference_sequence());
       continue;
     }
 
 				
 		uint32_t reversed = i->reversed(); // are we on the reverse strand?
 		uint8_t* qseq = i->query_sequence(); // query sequence (read)
-		int32_t qpos = i->query_position(); // position of the alignment in the query
-
-		int32_t qstart = i->query_start() - 1; // @dk: want 0-indexed, so subtract 1
-		int32_t qend = i->query_end() - 1; // @dk: want 0-indexed, so subtract 1
+		int32_t qpos = i->query_position_0(); // position of the alignment in the query
+		int32_t qstart = i->query_start_0(); // @dk: want 0-indexed, so subtract 1
+		int32_t qend = i->query_end_0(); // @dk: want 0-indexed, so subtract 1
 
 		uint8_t* qscore = i->quality_scores(); // quality score array
 		int32_t fastq_file_index = i->fastq_file_index(); // sequencer-generated read file that this alignment belongs to
@@ -131,7 +134,9 @@ void error_count_pileup::callback(const pileup& p) {
 			//#     e.g. 'AG' key for observing a G in read at a place where the reference has an A
 			//#     IMPROVE by keeping track of flanking base context and scores?
 			//#     this would, for example, penalize low scoring sequences more
-		{
+
+    //We already skipped deletions of *this* base so we know we have a (mis)match
+    {
       uint8_t base = bam1_seqi(qseq,qpos);    
       uint8_t ref_base = refseq[pos];
       
@@ -248,7 +253,10 @@ void error_count_pileup::print_coverage(const std::string& output_dir) {
 void error_count_pileup::print_error(const std::string& output_dir, const std::vector<std::string>& readfiles) {
 
   if (m_use_CErrorTable) {
-      m_error_table.print_empirical_error_rates(output_dir);
+      std::string output_file = output_dir;
+      output_file += "error_rates.tab"; 
+      m_error_table.counts_to_log10_prob();
+      m_error_table.write_log10_prob_table(output_file);
       return;
   }
     
@@ -385,70 +393,18 @@ const std::pair<double,double>& error_count_results::log10_rates(int32_t fastq_f
     This version of the initializer is for constructing the full
     table that will be used from command line arguments.
 */
-template <class entry_type> cErrorTable<entry_type>::cErrorTable (const std::string& colnames) : m_sep("\t")
+cErrorTable::cErrorTable (const std::string& colnames)
 {
-
-  for (int i=0; i<k_num_covariates; i++) {
-    m_covariate_used[i] = false;
-  }
-
-  std::vector<std::string> columns_to_use;
-  cErrorTable::split(colnames, ',', columns_to_use);
-
-  int current_offset = 1;
-
-  for(std::vector<std::string>::iterator i=columns_to_use.begin(); i!=columns_to_use.end(); ++i) {
-    std::vector<std::string> columns_parts;
-    cErrorTable::split(*i, '=', columns_parts);
-
-		if (columns_parts[0] == "ref") {
-      m_covariate_used[k_ref_base] = true;
-      m_covariate_max[k_ref_base] = 5;
-      m_covariate_offset[k_ref_base] = current_offset;
-      current_offset *= m_covariate_max[k_ref_base];
-    }
-		if (columns_parts[0] == "obs") {
-      m_covariate_used[k_obs_base] = true;
-      m_covariate_max[k_obs_base] = 5;
-      m_covariate_offset[k_obs_base] = current_offset;
-      current_offset *= m_covariate_max[k_obs_base];
-    }
-    if (columns_parts[0] == "quality") {
-      m_covariate_used[k_quality] = true;
-      m_covariate_max[k_quality] = atoi(columns_parts[1].c_str());
-      m_covariate_offset[k_quality] = current_offset;
-      current_offset *= m_covariate_max[k_quality];
-    }
-    if (columns_parts[0] == "read_set") {
-      m_covariate_used[k_read_set] = true;
-      m_covariate_max[k_read_set] = atoi(columns_parts[1].c_str());
-      m_covariate_offset[k_read_set] = current_offset;
-      current_offset *= m_covariate_max[k_read_set];
-    }
-    if (columns_parts[0] == "read_pos") {
-      m_covariate_used[k_read_pos] = true;
-      m_covariate_max[k_read_pos] = atoi(columns_parts[1].c_str());
-      m_covariate_offset[k_read_pos] = current_offset;
-      current_offset *= m_covariate_max[k_read_pos];
-    }
-    if (columns_parts[0] == "sep") {
-      m_sep = columns_parts[1];
-    }
-
-	}
-
+  if (colnames.length() == 0) return;
+  read_covariates(colnames);
   allocate_table();
 }
 
 /*  cErrorTable::cErrorTable()
 
-    This version of the initializer is for constructing sub-tables
-    that sum across various dimensions of the full table.
-    
-    The new list of covariates should be a subset of the ones used by 
-    the error_table that is provided.
+    Allocates an empty table
 */
-template <class entry_type> cErrorTable<entry_type>::cErrorTable(covariates_used_t covariate_used, covariates_max_t covariate_max) : m_sep("\t") {
+cErrorTable::cErrorTable(covariates_used_t covariate_used, covariates_max_t covariate_max) {
 
   int current_offset = 1;
 
@@ -474,7 +430,7 @@ template <class entry_type> cErrorTable<entry_type>::cErrorTable(covariates_used
     The new list of covariates should be a subset of the ones used by 
     the error_table that is provided.
 */
-template <class entry_type> cErrorTable<entry_type>::cErrorTable(cErrorTable& error_table, covariates_used_t covariates, bool do_sum, uint32_t add_to_bins) : m_sep("\t") {
+cErrorTable::cErrorTable(cErrorTable& error_table, covariates_used_t covariates) {
 
   int current_offset = 1;
 
@@ -496,20 +452,177 @@ template <class entry_type> cErrorTable<entry_type>::cErrorTable(cErrorTable& er
   
   allocate_table();
 
-  if (do_sum) {
-    char ref_base;
-    char obs_base; 
-    uint32_t quality; 
-    uint32_t read_pos; 
-    uint32_t read_set;
       
-    for (uint32_t i=0; i<error_table.size(); i++) {
+  for (uint32_t i=0; i<error_table.m_count_table.size(); i++) {
+  
+    covariate_values_t cv;
+    error_table.index_to_covariates(i, cv);
+    uint32_t j = covariates_to_index(cv);
+    m_count_table[j] += error_table.m_count_table[i];
+  }
+}
+
+/*  cErrorTable::allocate_table()
+
+    Resize the count table.
+*/
+void cErrorTable::allocate_table() {
+  int n = 1;
+  for (int i=0; i<k_num_covariates; i++) {
+    if (m_covariate_used[i]) n *= m_covariate_max[i];
+  }
+  m_count_table.resize(n);
+}
+
+/*  cErrorTable::covariates_to_index()
+
+    Find which line of the table corresponds to the given covariates.
+*/
+
+uint32_t cErrorTable::covariates_to_index(const covariate_values_t& cv) {
+
+  // Calculate the row index in which to record the observation
+
+  uint32_t i = 0;
+  if (m_covariate_used[k_read_set]) {
+    assert(cv.read_set < m_covariate_max[k_read_set]);
+    i += cv.read_set * m_covariate_offset[k_read_set];
+  }
+  if (m_covariate_used[k_read_pos]) {
+    assert(cv.read_pos < m_covariate_max[k_read_pos]);
+    i += cv.read_pos * m_covariate_offset[k_read_pos];
+  }
+  if (m_covariate_used[k_quality]) {
+    assert(cv.quality < m_covariate_max[k_quality]);
+    i += cv.quality * m_covariate_offset[k_quality];
+  }
+  if (m_covariate_used[k_obs_base]) {
+    i += base2index(cv.obs_base) * m_covariate_offset[k_obs_base];
+  }  
+  if (m_covariate_used[k_ref_base]) {
+    i += base2index(cv.ref_base) * m_covariate_offset[k_ref_base];
+  }
+  return i;
+}
+
+/*  cErrorTable::index_to_covariates()
+
+    Fill in values of covariates, given a table line index.
+    Note: will not change value if covariate is not used.
+*/
+
+void cErrorTable::index_to_covariates(const uint32_t idx, covariate_values_t& cv) {
+          
+  for (int i=0; i<k_num_covariates; i++) {
+    if (!m_covariate_used[i]) continue;
     
-      error_table.index_to_covariates(i, ref_base, obs_base, quality, read_pos, read_set);
-      uint32_t j = covariates_to_index(ref_base, obs_base, quality, read_pos, read_set);
-      (*this)[j] += error_table[i] + add_to_bins;
+    uint32_t j = (idx / m_covariate_offset[i]) % m_covariate_max[i];
+   
+    switch (i) {
+      case k_ref_base:
+        cv.ref_base = index2basechar(j);
+        break;
+
+      case k_obs_base:
+        cv.obs_base = index2basechar(j);
+        break;
+
+      case k_quality:
+        cv.quality = j;
+        break;
+
+      case k_read_pos:
+        cv.read_pos = j;
+        break;
+        
+      case k_read_set:
+        cv.read_set = j;
+        break;    
     }
   }
+}
+
+
+/*  cErrorTable::read_covariates()
+
+    Convert string representation to covariates
+*/
+void cErrorTable::read_covariates(const std::string& colnames) {
+
+  for (int i=0; i<k_num_covariates; i++) {
+    m_covariate_used[i] = false;
+  }
+
+  std::vector<std::string> columns_to_use;
+  cErrorTable::split(colnames, ',', columns_to_use);
+
+  // Turn on and assign max
+  for(std::vector<std::string>::iterator i=columns_to_use.begin(); i!=columns_to_use.end(); ++i) {
+    std::vector<std::string> columns_parts;
+    cErrorTable::split(*i, '=', columns_parts);
+
+		if (columns_parts[0] == "ref_base") {
+      m_covariate_used[k_ref_base] = true;
+      m_covariate_max[k_ref_base] = 5;
+    }
+		else if (columns_parts[0] == "obs_base") {
+      m_covariate_used[k_obs_base] = true;
+      m_covariate_max[k_obs_base] = 5;
+    }
+    else if (columns_parts[0] == "quality") {
+      m_covariate_used[k_quality] = true;
+      m_covariate_max[k_quality] = atoi(columns_parts[1].c_str()) + 1;
+    }
+    else if (columns_parts[0] == "read_set") {
+      m_covariate_used[k_read_set] = true;
+      m_covariate_max[k_read_set] = atoi(columns_parts[1].c_str());
+    }
+    else if (columns_parts[0] == "read_pos") {
+      m_covariate_used[k_read_pos] = true;
+      m_covariate_max[k_read_pos] = atoi(columns_parts[1].c_str());
+    }
+    else {
+      std::cerr << "Unrecognized covariate: " << columns_parts[0] << std::endl;
+      assert(1);
+    }
+	}
+  
+  // Then assign offsets, so they are in a consistent order...
+  int current_offset = 1;
+
+  for (int i=0; i<k_num_covariates; i++) {
+    if (m_covariate_used[i]) {
+      m_covariate_offset[i] = current_offset;
+      current_offset *= m_covariate_max[i];
+    }
+  }
+}
+
+
+/*  cErrorTable::print_covariates()
+
+    Convert covariates to string representation
+*/
+std::string cErrorTable::print_covariates() {
+
+  std::stringstream covariate_string;
+  
+  for (uint32_t i=0; i<k_num_covariates; i++) {
+    if (m_covariate_used[i]) {
+      if (covariate_string.str().length() > 0) covariate_string << ",";
+      
+      // special cases where there are always 5 choices
+      if ((i == k_ref_base) || (i == k_obs_base)) {
+        covariate_string << covariate_names[i];
+      }
+      else {
+        covariate_string << covariate_names[i];
+        covariate_string << "=";
+        covariate_string << m_covariate_max[i];
+      }
+    }
+  }
+  return covariate_string.str();
 }
 
 
@@ -517,7 +630,7 @@ template <class entry_type> cErrorTable<entry_type>::cErrorTable(cErrorTable& er
 
     Split the string into a vector on each occurrence of a character.
 */
-template <class entry_type> void cErrorTable<entry_type>::split(const std::string& s, char c, std::vector<std::string>& v) {
+void cErrorTable::split(const std::string& s, char c, std::vector<std::string>& v) {
   std::string::size_type i = 0;
   std::string::size_type j = s.find(c);
 
@@ -529,44 +642,38 @@ template <class entry_type> void cErrorTable<entry_type>::split(const std::strin
   if (j == std::string::npos) v.push_back(s.substr(i, s.length( )));
 }
 
-/*  cErrorTable::allocate_table()
 
-    Resize the count table.
+
+/*  cErrorTable::read_log10_prob_table()
+
+    Read table of log10 probabilities of observations
 */
-template <class entry_type> void cErrorTable<entry_type>::allocate_table (uint32_t add_to_bins) {
-  int n = 1;
-  for (int i=0; i<k_num_covariates; i++) {
-    if (m_covariate_used[i]) n *= m_covariate_max[i];
-  }
-  this->resize(n);
-  
-  for (int i=0; i<n; i++) {
-    (*this)[i] = add_to_bins;
-  }
-}
+void cErrorTable::read_log10_prob_table(const std::string& filename) {
 
-/*  cErrorTable::print_line()
-
-    Print out one line of the table of covariates and counts.
-*/
-template <class entry_type> void cErrorTable<entry_type>::print_line(std::ostream& out, const uint32_t idx) {
+  std::ifstream in(filename.c_str());
   
-  for (int i=0; i<k_num_covariates; i++) {
-    if (!m_covariate_used[i]) continue;
-    
-    uint32_t j = (idx / m_covariate_offset[i]) % m_covariate_max[i];
-   
-    if ( (i == k_ref_base) || (i == k_obs_base) ) {
-      char base = index2basechar(j);
-      out << base << m_sep;
-    }
-    else {
-      out << j << m_sep;
-    }
-  }
-      
-  out << (*this)[idx] << std::endl;
-    
+  std::string s;
+  
+  // First line contains the covariates  
+  getline(in, s);
+  read_covariates(s);
+  allocate_table();
+  m_log10_prob_table.resize(m_count_table.size());
+  
+  // Ignore the neader line, we expect order to be constant
+  getline(in, s);
+  
+  // We don't need the beginning of the line, since we know the
+  // order everything was printed in. That's just there to make it
+  // human readable
+  
+  // Read one line for each
+  for (uint32_t i=0; i< m_log10_prob_table.size(); i++) {
+    getline(in, s);
+    std::vector<std::string> split_line;
+    split(s, '\t', split_line);
+    m_log10_prob_table[i] = strtod(split_line.back().c_str(), NULL);
+  }           
 }
 
 
@@ -574,39 +681,59 @@ template <class entry_type> void cErrorTable<entry_type>::print_line(std::ostrea
 
     Print out a table of covariates and counts.
 */
-template <class entry_type> void cErrorTable<entry_type>::print(const std::string& filename) {
-
-  std::string covariate_names[] = {"read_set", "ref_base", "obs_base", "quality", "read_pos"}; 
+void cErrorTable::write_log10_prob_table(const std::string& filename) {
 
   std::ofstream out(filename.c_str());
+  
+  // First line contains the covariates
+  out << print_covariates() << std::endl;
   
   for (int i=0; i<k_num_covariates; i++) {
     if(m_covariate_used[i]) out << covariate_names[i] << m_sep;
   }
   out << "count" << std::endl;
 
-  for (uint32_t i=0; i<this->size(); i++) {
-    print_line(out, i);
+  for (uint32_t idx=0; idx<m_log10_prob_table.size(); idx++) {
+      
+      for (int i=0; i<k_num_covariates; i++) {
+        if (!m_covariate_used[i]) continue;
+        
+        uint32_t j = (idx / m_covariate_offset[i]) % m_covariate_max[i];
+       
+        if ( (i == k_ref_base) || (i == k_obs_base) ) {
+          char base = index2basechar(j);
+          out << base << m_sep;
+        }
+        else {
+          out << j << m_sep;
+        }
+    }
+        
+    out << m_log10_prob_table[idx] << std::endl;
   }
 }
 
 
-/*  cErrorTable::record_observation()
+/*  cErrorTable::count_alignment_position()
 
     Record all observations in an alignment to a column of the reference genome
     in the count table. This function is called by the pileup callback.
 */
-template <class entry_type> void cErrorTable<entry_type>::record_alignment(const alignment& i, const uint32_t ref_pos, const char* ref_seq) {
-
+void cErrorTable::count_alignment_position(const alignment& i, const uint32_t ref_pos, const char* ref_seq) {
+    
 		uint32_t reversed = i.reversed(); // are we on the reverse strand?
 		uint8_t* qseq = i.query_sequence(); // query sequence (read)
-		int32_t qpos = i.query_position(); // position of the alignment in the query, 0-indexed
-
-		int32_t qstart = i.query_start() - 1; // @dk: want 0-indexed, so subtract 1
-		int32_t qend = i.query_end() - 1; // @dk: want 0-indexed, so subtract 1
+		int32_t qpos = i.query_position_0(); // position of the alignment in the query, 0-indexed
+		int32_t qstart = i.query_start_0(); // @dk: want 0-indexed, so subtract 1
+		int32_t qend = i.query_end_0(); // @dk: want 0-indexed, so subtract 1
 
 		uint8_t* qscore = i.quality_scores(); // quality score array
 		int32_t fastq_file_index = i.fastq_file_index(); // sequencer-generated read file that this alignment belongs to
+
+    // We will fill in all covariates that are used
+    covariate_values_t cv;
+    cv.read_set = fastq_file_index;
+    cv.read_pos = qpos;
 		
 		// Things to remember in the following:
     // -->1 Reverse the base when the read is on the other strand
@@ -617,7 +744,9 @@ template <class entry_type> void cErrorTable<entry_type>::record_alignment(const
 			//#     e.g. 'AG' key for observing a G in read at a place where the reference has an A
 			//#     IMPROVE by keeping track of flanking base context and scores?
 			//#     this would, for example, penalize low scoring sequences more
-		{
+      
+    //We already skipped deletions of *this* base so we know we have a (mis)match
+    {
       uint8_t obs_base = bam1_seqi(qseq,qpos);    
       uint8_t ref_base = ref_seq[ref_pos];
       
@@ -626,8 +755,10 @@ template <class entry_type> void cErrorTable<entry_type>::record_alignment(const
           obs_base = reverse_base(obs_base);
           ref_base = reverse_base(ref_base);
         }
-        uint8_t quality = qscore[qpos];
-        record_observation(ref_base, obs_base, quality, qpos, fastq_file_index);
+        cv.quality = qscore[qpos];
+        cv.obs_base = obs_base;
+        cv.ref_base = ref_base;
+        count_covariate(cv);
       }
     }
 
@@ -645,8 +776,10 @@ template <class entry_type> void cErrorTable<entry_type>::record_alignment(const
         uint8_t ref_base = ref_seq[mrpos];
         
         if (!is_N(obs_base) && !is_char_N(ref_base)) {     
-          uint8_t quality = qscore[mqpos];
-          record_observation('.', '.', quality, qpos, fastq_file_index);
+          cv.quality = qscore[mqpos];
+          cv.obs_base = '.';
+          cv.ref_base = '.';
+          count_covariate(cv);
         }
       }	
     }
@@ -664,12 +797,15 @@ template <class entry_type> void cErrorTable<entry_type>::record_alignment(const
       int32_t mrpos = ref_pos + 1;
       uint8_t ref_base = ref_seq[mrpos];      
       
-      if (!is_N(obs_base) && !is_char_N(ref_base)) {
+      if (!is_N(cv.obs_base) && !is_char_N(ref_base)) {
         if(reversed) {
           ref_base = reverse_base(ref_base);
         }
-        uint8_t quality = qscore[mqpos];
-        record_observation(ref_base, '.', quality, qpos, fastq_file_index);
+        
+        cv.quality = qscore[mqpos];
+        cv.obs_base = '.';
+        cv.ref_base = ref_base;
+        count_covariate(cv);
       }
     }
 
@@ -688,130 +824,132 @@ template <class entry_type> void cErrorTable<entry_type>::record_alignment(const
           if(reversed) {
             obs_base = reverse_base(obs_base);
           }        
-          uint8_t quality = qscore[mqpos];
-          record_observation('.', obs_base, quality, qpos,fastq_file_index);
+          
+          cv.quality = qscore[mqpos];
+          cv.obs_base = obs_base;
+          cv.ref_base = '.';
+          
+          count_covariate(cv);
         }	
       }
     }
+    
+    
 }
 
-/*  cErrorTable::record_observation()
+/*  cErrorTable::count_covariate()
 
     Record an observation of the specified covariates in table.
 */
 
-template <class entry_type> void cErrorTable<entry_type>::record_observation(char ref_base, char obs_base, uint32_t quality, uint32_t read_pos, uint32_t read_set ) {
+void cErrorTable::count_covariate(const covariate_values_t& cv) {
 
-  uint32_t i=covariates_to_index(ref_base, obs_base, quality, read_pos, read_set); 
-  (*this)[i]++;
+  uint32_t i=covariates_to_index(cv); 
+  m_count_table[i]++;
 }
 
-/*  cErrorTable::covariates_to_index()
-
-    Find which line of the table corresponds to the given covariates.
-*/
-
-template <class entry_type> uint32_t cErrorTable<entry_type>::covariates_to_index(char ref_base, char obs_base, uint32_t quality, uint32_t read_pos, uint32_t read_set) {
-
-  // Calculate the row index in which to record the observation
-
-  uint32_t i = 0;
-  if (m_covariate_used[k_read_set]) {
-    assert(read_set < m_covariate_max[k_read_set]);
-    i += read_set * m_covariate_offset[k_read_set];
-  }
-  if (m_covariate_used[k_read_pos]) {
-    assert(read_pos < m_covariate_max[k_read_pos]);
-    i += read_pos * m_covariate_offset[k_read_pos];
-  }
-  if (m_covariate_used[k_quality]) {
-    assert(quality < m_covariate_max[k_quality]);
-    i += quality * m_covariate_offset[k_quality];
-  }
-  if (m_covariate_used[k_obs_base]) {
-    i += base2index(obs_base) * m_covariate_offset[k_obs_base];
-  }  
-  if (m_covariate_used[k_ref_base]) {
-    i += base2index(ref_base) * m_covariate_offset[k_ref_base];
-  }
-  return i;
-}
-
-/*  cErrorTable::index_to_covariates()
-
-    Fill in values of covariates, given a table line index.
-    Note: will not change value if covariate is not used.
-*/
-
-template <class entry_type> void cErrorTable<entry_type>::index_to_covariates(const uint32_t idx, char& ref_base, char& obs_base, uint32_t& quality, uint32_t& read_pos, uint32_t& read_set) {
-          
-  for (int i=0; i<k_num_covariates; i++) {
-    if (!m_covariate_used[i]) continue;
-    
-    uint32_t j = (idx / m_covariate_offset[i]) % m_covariate_max[i];
-   
-    switch (i) {
-      case k_ref_base:
-        ref_base = index2basechar(j);
-        break;
-
-      case k_obs_base:
-        obs_base = index2basechar(j);
-        break;
-
-      case k_quality:
-        quality = j;
-        break;
-
-      case k_read_pos:
-        read_pos = j;
-        break;
-        
-      case k_read_set:
-        read_set = j;
-        break;    
-    }
-  }
-}
 
 /*  cErrorTable::print_empirical_error_rates()
 
   Calculate empirical error rates using Yates correction (i.e., adding 1 to each bin)
 */
 
-template <class entry_type> void cErrorTable<entry_type>::print_empirical_error_rates(std::string output_file) {
+void cErrorTable::counts_to_log10_prob() {
 
   const uint32_t smoothing_factor = 1;
+
+  m_log10_prob_table.resize(m_count_table.size());
 
   // Creates new table that has summed across all occurences of observed base
   covariates_used_t covariates;
   memcpy(covariates, m_covariate_used, sizeof(covariates));
   covariates[k_obs_base] = false;
-  cErrorTable<uint32_t> sum_obs_base(*this, covariates, true, smoothing_factor);
-  sum_obs_base.print(std::string("sum_obs_base.tab"));
+  cErrorTable sum_error_table(*this, covariates);
   
-
-  // probability of being in each fixed category, updated by the new covariate we are testing as an odds ratio
-  cErrorTable<double> empirical_error_rates(m_covariate_used, m_covariate_max);
-
   // Now calculate the ratios of things to these
-
-  char ref_base;
-  char obs_base; 
-  uint32_t quality; 
-  uint32_t read_pos; 
-  uint32_t read_set;
-
-  for (uint32_t i=0; i<this->size(); i++) {
-    index_to_covariates(i, ref_base, obs_base, quality, read_pos, read_set);
+  for (uint32_t i=0; i<m_count_table.size(); i++) {
+    covariate_values_t cv;
+    index_to_covariates(i, cv);
     
-    uint32_t j = sum_obs_base.covariates_to_index(ref_base, obs_base, quality, read_pos, read_set);
+    uint32_t j = sum_error_table.covariates_to_index(cv);
+    m_log10_prob_table[i] = log10((double)(m_count_table[i]+smoothing_factor)) 
+      - log10((double)sum_error_table.m_count_table[j]+smoothing_factor*m_covariate_max[k_obs_base]);    
+  }
+}
 
-    empirical_error_rates[i] = ((double)((*this)[i]+smoothing_factor)) / ((double)sum_obs_base[j]) ;    
+/*  cErrorTable::alignment_position_to_covariates()
+
+  Extracts covariates from the alignment and insert index.
+  
+  Note: Does not fill in the ref_base covariate!
+*/
+
+bool cErrorTable::alignment_position_to_covariates(const alignment& a, int32_t insert_count, covariate_values_t& cv) {
+  
+  // -1 for deletion, otherwise 1-number of bases inserted at this position
+  int indel=a.on_base_indel();
+  uint8_t base_bam = a.on_base_bam(insert_count);
+        
+  //##don't use bases without qualities!!
+  if(is_N(base_bam)) return false;
+  
+  //## These are the start and end coordinates of the aligned part of the read
+  uint32_t q_start_0,q_end_0;
+  boost::tie(q_start_0,q_end_0) = a.query_bounds_0(); // @dk: 1-indexed!
+ 
+  //## (1) Mis(match) in read relative to reference...
+  //##       Quality is of the current base in the read, we have ALREADY checked that it is not an N					
+  //##       Don't need to do anything.
+  //  if (indel == 0)
+          
+  uint32_t q_pos_0 = a.query_position_0();
+  uint32_t quality = 0;
+  
+  //## (2) Deletion in read relative to reference...
+  //##       Quality is of the NEXT base in the read, and check that it is not an N
+  if (indel == -1)
+  {			
+    q_pos_0 += 1 - a.reversed(); 
+    uint8_t check_base = a.query_base_bam_0(q_pos_0);
+    if (is_N(check_base)) return false;
+  }
+  
+  //## (3) Insertion in read relative to reference...
+  //##       Quality is of the NEXT base in the read, and check that it is not an N
+  //##       Note that it is possible this read base may be a '.' (supporting the non-insert call)
+  else if (insert_count > 0) 
+  {		
+    // Offset as much as asked for by insert_count, but this particular read
+    // may nothave inserted bases at all of those positons, so cap at indel.
+    int32_t max_offset = insert_count;
+    if (indel < max_offset) max_offset = indel;
+    q_pos_0 += max_offset + 1 - a.reversed(); 
+            
+    //## Check bounds: it's possible to go past the end of the read because
+    //## this is the last base of this read, but other reads have inserted bases
+    if (q_pos_0 > q_end_0) return false;
+    uint8_t check_base = a.query_base_bam_0(q_pos_0);
+    if (is_N(check_base)) return false;
   }
 
-  empirical_error_rates.print(output_file);
+  //eventually include in above...
+  cv.obs_base = base_bam;
+  cv.quality = a.quality_base_0(q_pos_0);
+  cv.read_set = a.fastq_file_index();
+  cv.read_pos = q_pos_0;
+
+  return true;
 }
+
+double cErrorTable::get_log10_prob(covariate_values_t& cv) {
+
+  assert(m_log10_prob_table.size() > 0);
+  uint32_t i = covariates_to_index(cv);
+
+  assert(i < m_log10_prob_table.size());
+  return m_log10_prob_table[i];
+}
+
 
 } //namespace breseq
 

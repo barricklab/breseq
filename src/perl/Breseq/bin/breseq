@@ -68,6 +68,7 @@ use strict;
 use Data::Dumper;
 use Storable;
 use POSIX qw(ceil floor);
+use List::Util;
 
 use FindBin;
 use lib $FindBin::Bin;
@@ -152,6 +153,8 @@ if ($settings->do_step('sequence_conversion_done_file_name', "Read and reference
 	##and collect some information about the input read files at the same time
 	print STDERR "  Analyzing fastq read files...\n";
 	my $overall_max_read_length;
+	my $overall_max_qual = 0;
+	
 	$s->{num_reads} = 0;
 	foreach my $read_file ($settings->read_files)
 	{
@@ -184,6 +187,8 @@ if ($settings->do_step('sequence_conversion_done_file_name', "Read and reference
 			$num_bases += $read_length;
 			$num_reads++;
 			$max_read_length = $read_length if ((!defined $max_read_length) || ($read_length > $max_read_length));
+			
+			$overall_max_qual = List::Util::max($overall_max_qual, Breseq::Fastq::max_qual($seq));
 		}
 		$s->{reads}->{$read_file}->{num_bases} = $num_bases;
 		$s->{reads}->{$read_file}->{num_reads} = $num_reads;
@@ -194,6 +199,7 @@ if ($settings->do_step('sequence_conversion_done_file_name', "Read and reference
 	}
 	$s->{avg_read_length} = $s->{num_bases} / $s->{num_reads};
 	$s->{max_read_length} = $overall_max_read_length;
+	$s->{max_qual} = $overall_max_qual;	
 	$summary->{sequence_conversion} = $s;
 		
 	## convert reference sequence to fasta and store other information so it can be reloaded quickly w/o bioperl
@@ -621,13 +627,13 @@ sub paired_read_distances {}
 	}
 }
 
-
-
+	
 ##
 # Tabulate error counts and coverage distribution at unique only sites
 sub error_count {}
 ##
 
+## NEW mthod skips this step
 if ($settings->do_step('error_counts_done_file_name', "Tabulating error counts"))
 {
 	$settings->create_path('error_calibration_path');
@@ -635,8 +641,27 @@ if ($settings->do_step('error_counts_done_file_name', "Tabulating error counts")
 	my $reference_fasta_file_name = $settings->file_name('reference_fasta_file_name');
 	my $reference_bam_file_name = $settings->file_name('reference_bam_file_name');
 	
-	Breseq::ErrorCalibration::count($settings, $summary, $ref_seq_info,
+	if ($settings->{error_model_method} eq 'NEW') {
+		
+		my $error_count = $settings->ctool('error_count');
+		
+		## deal with distribution or error count keys being undefined...
+		my $coverage_fn = $settings->file_name('unique_only_coverage_distribution_file_name', {'@'=>""});
+		my $outputdir = `dirname $coverage_fn`;
+		chomp $outputdir; $outputdir .= '/';
+		my $readfiles = join(" --readfile ", $settings->read_files);
+		my $cmdline = "$error_count --bam $reference_bam_file_name --fasta $reference_fasta_file_name --output $outputdir --readfile $readfiles --coverage";
+		$cmdline .= " --errors";
+		$cmdline .= " --minimum-quality-score $settings->{base_quality_cutoff}" if ($settings->{base_quality_cutoff});
+		
+##----->##this line should be calculated
+		my $num_read_files = scalar keys %{$summary->{sequence_conversion}->{reads}};
+		$cmdline .= " --covariates=read_set=$num_read_files,obs_base,ref_base,quality=$summary->{sequence_conversion}->{max_qual}";
+		Breseq::Shared::system($cmdline);
+	} else {
+		Breseq::ErrorCalibration::count($settings, $summary, $ref_seq_info,
 		'reference_fasta_file_name', 'reference_bam_file_name', 'unique_only_coverage_distribution_file_name', 'error_counts_file_name');
+	}
 	
 	$settings->done_step('error_counts_done_file_name');
 }
@@ -652,9 +677,11 @@ my $error_rates_summary_file_name = $settings->file_name('error_rates_summary_fi
 
 if ($settings->do_step('error_rates_done_file_name', "Re-calibrating base error rates"))
 {
-	Breseq::ErrorCalibration::error_counts_to_error_rates($settings, $summary, $ref_seq_info);
-	$summary->{unique_coverage} = {};
+	if ($settings->{error_model_method} ne 'NEW') {
+		Breseq::ErrorCalibration::error_counts_to_error_rates($settings, $summary, $ref_seq_info);
+	}
 	
+	$summary->{unique_coverage} = {};
 	if (!$settings->{no_deletion_prediction})
 	{
 		Breseq::ErrorCalibration::analyze_unique_coverage_distributions($settings, $summary, $ref_seq_info,
@@ -684,7 +711,10 @@ if (!$settings->{no_mutation_prediction})
 	
 	if ($settings->do_step('mutation_identification_done_file_name', "Read alignment mutations"))
 	{			
-		my $error_rates = Breseq::ErrorCalibration::load_error_rates($settings, $summary, $ref_seq_info);
+		my $error_rates;
+		if ($settings->{error_model_method} ne 'NEW') {
+			$error_rates = Breseq::ErrorCalibration::load_error_rates($settings, $summary, $ref_seq_info);
+		}
 		Breseq::MutationIdentification::identify_mutations($settings, $summary, $ref_seq_info, $error_rates);
 		$settings->done_step('mutation_identification_done_file_name');
 	}
