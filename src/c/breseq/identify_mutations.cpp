@@ -32,6 +32,7 @@ LICENSE AND COPYRIGHT
 #include "breseq/common.h"
 #include "breseq/pileup.h"
 #include "breseq/identify_mutations.h"
+#include "breseq/error_count.h"
 
 
 /*! Convenience wrapper around the identify_mutations_pileup class.
@@ -49,10 +50,12 @@ void breseq::identify_mutations(const std::string& bam,
 																bool predict_polymorphisms,
                                 uint8_t min_qual_score,
                                 double polymorphism_cutoff,
-                                double polymorphism_frequency_cutoff ) {
+                                double polymorphism_frequency_cutoff,
+                                const std::string& error_table_file
+ ) {
                                                                                             
 	// do the mutation identification:
-	identify_mutations_pileup imp(bam, fasta, error_dir, gd_file, output_dir, readfiles, coverage_dir, deletion_propagation_cutoff, mutation_cutoff, predict_deletions, predict_polymorphisms, min_qual_score, polymorphism_cutoff, polymorphism_frequency_cutoff);
+	identify_mutations_pileup imp(bam, fasta, error_dir, gd_file, output_dir, readfiles, coverage_dir, deletion_propagation_cutoff, mutation_cutoff, predict_deletions, predict_polymorphisms, min_qual_score, polymorphism_cutoff, polymorphism_frequency_cutoff, error_table_file);
 	imp.do_pileup();
 }
 
@@ -73,7 +76,8 @@ breseq::identify_mutations_pileup::identify_mutations_pileup(
 																														 bool predict_polymorphisms,
                                                              uint8_t min_qual_score,
                                                              double polymorphism_cutoff,
-                                                             double polymorphism_frequency_cutoff 
+                                                             double polymorphism_frequency_cutoff,
+                                                             const std::string& error_table_file 
                                                             )
 : breseq::pileup_base(bam, fasta)
 , _ecr(error_dir, readfiles)
@@ -107,6 +111,13 @@ breseq::identify_mutations_pileup::identify_mutations_pileup(
   
   // are we printing detailed coverage information?
   _print_coverage_data = (coverage_dir != "");
+  
+  // use new error
+  m_use_cErrorTable = false;
+  if (error_table_file.length() > 0) {
+    m_use_cErrorTable = true;
+    m_error_table.read_log10_prob_table(error_table_file);
+  }
 }
 
 
@@ -192,139 +203,162 @@ void breseq::identify_mutations_pileup::callback(const breseq::pileup& p) {
     
 		//## for each alignment within this pileup:
 		for(pileup::const_iterator i=p.begin(); i!=p.end(); ++i) {
-			      
+
       //## After these substitutions...
       //## Indel is -1 if the ref base is deleted in the read,
       //## Zero if the read base is aligned to a ref base, and
       //## Positive if the read base is an insertion relative to the ref base
-			int indel=i->indel();
-			if(indel < 0) {
-				indel = 0;
-			}
-			if(i->is_del()) {
-				indel = -1;
-			}
-			
-			uint8_t base='.';
-			if(indel >= insert_count) {
-        base = i->query_base(i->query_position() + insert_count);
-			}
-      			
-			//##don't use bases without qualities!!
-			if(is_N(base)) continue;
-			
+      int indel=i->indel();
+      if(indel < 0) {
+        indel = 0;
+      }
+      if(i->is_del()) {
+        indel = -1;
+      }
+      
+      uint8_t base='.';
+      if(indel >= insert_count) {
+        base = i->query_base_bam_0(i->query_position_0() + insert_count);
+      }
+            
+      //##don't use bases without qualities!!
+      if(is_N(base)) continue;
+      
       //## gather information about the aligned base
-			int32_t redundancy = i->redundancy();
-			int32_t fastq_file_index = i->fastq_file_index();
-			int strand = i->strand();
-			bool trimmed = i->is_trimmed();
-						
-			//### Optionally, only count reads that completely match
-			//			my $complete_match = 1;
-			//			if ($settings->{require_complete_match})
-			//			{
-			//				$complete_match = ($q_start == 1) && ($q_end == $a->l_qseq);
-			//				next if (!$complete_match);
-			//			}
-			//### End complete match condition
-			
-			//##### update coverage if this is not a deletion in read relative to reference
-			//### note that we count trimmed reads here, but not when looking for short indel mutations...	
-			
-			if(redundancy == 1) {
-				//## keep track of unique coverage	
-				++this_position_coverage.unique[1+strand];
-				++pos_info[base2char(base)].unique_cov[1+strand];
-				
+      int32_t redundancy = i->redundancy();
+      int32_t fastq_file_index = i->fastq_file_index();
+      int strand = i->strand();
+      bool trimmed = i->is_trimmed();
+            
+      //### Optionally, only count reads that completely match
+      //			my $complete_match = 1;
+      //			if ($settings->{require_complete_match})
+      //			{
+      //				$complete_match = ($q_start == 1) && ($q_end == $a->l_qseq);
+      //				next if (!$complete_match);
+      //			}
+      //### End complete match condition
+      
+      //##### update coverage if this is not a deletion in read relative to reference
+      //### note that we count trimmed reads here, but not when looking for short indel mutations...	
+      
+      if(redundancy == 1) {
+        //## keep track of unique coverage	
+        ++this_position_coverage.unique[1+strand];
+        ++pos_info[base2char(base)].unique_cov[1+strand];
+        
         //## we don't continue to consider further insertions relative
         //## to the reference unless uniquely aligned reads have them 
-				if(indel > insert_count) {
-					next_insert_count_exists = true;
-				}
-				
-			} else {		
-        //## mark that this position has some non-unique coverage
-				this_position_unique_only_coverage = false;
-        //## keep track of redundant coverage
-				this_position_coverage.redundant[1+strand] += 1.0/redundancy;
-				++this_position_coverage.raw_redundant[1+strand];
-			}
-			
-			//## don't use information from trimmed or redundant reads
-      //## to predict base substitutions and short indels!!
-			if(trimmed || (redundancy > 1)) {
-				continue;
-			}
-			
-			
-			//## These are the start and end coordinates of the aligned part of the read
-			//			my ($q_start, $q_end) = Breseq::Shared::alignment_query_start_end($a, {no_reverse=>1});
-			int32_t q_start,q_end;
-			boost::tie(q_start,q_end) = i->query_bounds(); // @dk: 1-indexed!
-			
-			uint8_t quality=0;
-      
-      //## Deletion in read relative to reference...
-      //## Quality is of the NEXT base in the read, and check that it is not an N
-      //## Note: This is for a deletion when $insert_count == 0 and against an insertion when $insert_count > 0
-
-      if (indel == -1)
-      {			
-        int32_t mqpos = i->query_position() + 1 - i->reversed(); 
-        uint8_t check_base = i->query_base(mqpos);
-        if (is_N(check_base)) continue;
-        quality = i->quality_base(mqpos);
-      }
-
-      //## Substitution in read relative to reference...
-      //## Quality is of the current base in the read, we have ALREADY checked that it is not an N					
-      else if (insert_count == 0)
-      {
-        quality = i->quality_base(i->query_position());
-      }
-      
-      //## Insertion in read relative to reference...
-      //## Quality is of the NEXT base in the read, and check that it is not an N
-      //## Note that it is possible this read base may be a '.' (supporting the non-insert call)
-      else //if (insert_count > 0) 
-      {		
-        int32_t max_offset = insert_count;
-        if (indel < max_offset) max_offset = indel;
-        int32_t mqpos = i->query_position() + max_offset + 1 - i->reversed(); 
-                
-        //## Check bounds: it's possible to go past the end of the read because
-        //## this is the last base of this read, but other reads have inserted bases
-      
-        if (mqpos >= q_end) continue;  // @JEB unlike Perl, this is comparing 0-indexed to 1-indexed
-        //next ALIGNMENT if ($mqpos > $q_end);
-      
-        uint8_t check_base = i->query_base(mqpos);
-        if (is_N(check_base)) continue;
+        if(indel > insert_count) {
+          next_insert_count_exists = true;
+        }
         
-        quality = i->quality_base(mqpos);
+      } else {		
+        //## mark that this position has some non-unique coverage
+        this_position_unique_only_coverage = false;
+        //## keep track of redundant coverage
+        this_position_coverage.redundant[1+strand] += 1.0/redundancy;
+        ++this_position_coverage.raw_redundant[1+strand];
       }
-
-      //## We may want to ignore all bases below a certain quality when calling mutations and polymorphisms
-      //## This is the check for whether the base fails; it should be after coverage counting
-
-      if (quality < _min_qual_score) {
-//        std::cerr << position << " " << (unsigned int)quality << " " << std::endl;
+      
+      //## don't use information from trimmed or redundant reads
+      //## to predict base substitutions and short indels!!
+      if(trimmed || (redundancy > 1)) {
         continue;
       }
-			
-			
-			//## this is the coverage for SNP counts, tabulate AFTER skipping trimmed reads
-			++pos_info[base2char(base)].unique_trimmed_cov[1+strand];
-			
-			//##### this is for polymorphism prediction and making strings
-			pdata.push_back(polymorphism_data(base,quality,strand,fastq_file_index));
-			
+
+ 			
 			//##### deal with base calls
+      //std::cerr << "POSITION:" << position << std::endl;
       
-			//std::cerr << "========" << std::endl << position+1 << std::endl;
-      
-      snp.update(base, quality, strand == 1, fastq_file_index, _ecr);
-      
+      if (m_use_cErrorTable) {
+        covariate_values_t cv; 
+        bool is_ok = m_error_table.alignment_position_to_covariates(*i, insert_count, cv);
+        //cv.obs_base is still not a char here...
+        
+        if (is_ok)  {
+        
+          if (cv.quality < _min_qual_score) {
+            continue;
+          }
+  
+          //## this is the coverage for SNP counts, tabulate AFTER skipping trimmed reads
+          ++pos_info[base2char(cv.obs_base)].unique_trimmed_cov[1+strand];
+          
+          //##### this is for polymorphism prediction and making strings
+          pdata.push_back(polymorphism_data(cv.obs_base,cv.quality,i->strand(),cv.read_set));
+          
+          //std::cerr << " " << cv.obs_base << base2char(cv.obs_base) << std::endl;
+
+          cv.obs_base = base2char(cv.obs_base);
+          snp.update(cv, strand == 1, m_error_table);
+        }
+      }
+      else {        
+        
+        //## These are the start and end coordinates of the aligned part of the read
+        //			my ($q_start, $q_end) = Breseq::Shared::alignment_query_start_end($a, {no_reverse=>1});
+        int32_t q_start,q_end;
+        boost::tie(q_start,q_end) = i->query_bounds_1(); // @dk: 1-indexed!
+        
+        uint8_t quality=0;
+        
+        //## Deletion in read relative to reference...
+        //## Quality is of the NEXT base in the read, and check that it is not an N
+        //## Note: This is for a deletion when $insert_count == 0 and against an insertion when $insert_count > 0
+
+        if (indel == -1)
+        {			
+          int32_t mqpos = i->query_position_0() + 1 - i->reversed(); 
+          uint8_t check_base = i->query_base_bam_0(mqpos);
+          if (is_N(check_base)) continue;
+          quality = i->quality_base_0(mqpos);
+        }
+
+        //## Substitution in read relative to reference...
+        //## Quality is of the current base in the read, we have ALREADY checked that it is not an N					
+        else if (insert_count == 0)
+        {
+          quality = i->quality_base_0(i->query_position_0());
+        }
+        
+        //## Insertion in read relative to reference...
+        //## Quality is of the NEXT base in the read, and check that it is not an N
+        //## Note that it is possible this read base may be a '.' (supporting the non-insert call)
+        else //if (insert_count > 0) 
+        {		
+          int32_t max_offset = insert_count;
+          if (indel < max_offset) max_offset = indel;
+          int32_t mqpos = i->query_position_0() + max_offset + 1 - i->reversed(); 
+                  
+          //## Check bounds: it's possible to go past the end of the read because
+          //## this is the last base of this read, but other reads have inserted bases
+        
+          if (mqpos >= q_end) continue;  // @JEB unlike Perl, this is comparing 0-indexed to 1-indexed
+          //next ALIGNMENT if ($mqpos > $q_end);
+        
+          uint8_t check_base = i->query_base_bam_0(mqpos);
+          if (is_N(check_base)) continue;
+          
+          quality = i->quality_base_0(mqpos);
+        }
+
+        //## We may want to ignore all bases below a certain quality when calling mutations and polymorphisms
+        //## This is the check for whether the base fails; it should be after coverage counting
+       if (quality < _min_qual_score) {
+  //        std::cerr << position << " " << (unsigned int)quality << " " << std::endl;
+          continue;
+        }
+        
+        
+        //## this is the coverage for SNP counts, tabulate AFTER skipping trimmed reads
+        ++pos_info[base2char(base)].unique_trimmed_cov[1+strand];
+        
+        //##### this is for polymorphism prediction and making strings
+        pdata.push_back(polymorphism_data(base,quality,strand,fastq_file_index));
+
+        snp.update(base, quality, strand == 1, fastq_file_index, _ecr);
+      }
 		} // end for-each read
 		
     
@@ -1013,9 +1047,7 @@ breseq::cDiscreteSNPCaller::cDiscreteSNPCaller(uint8_t ploidy)
 
 // obs_base is a BAM style base when input
 void breseq::cDiscreteSNPCaller::update(uint8_t obs_base, uint8_t obs_quality, bool obs_top_strand, int32_t fastq_file_index, error_count_results &ecr)
-{
-  double probability_sum = 0.0;
-  
+{  
   //update probabilities give observation using Bayes rule
   for (int i=0; i<base_list_size; i++) {
     std::string base_key;
@@ -1027,10 +1059,34 @@ void breseq::cDiscreteSNPCaller::update(uint8_t obs_base, uint8_t obs_quality, b
       base_key += base2char(reverse_base(obs_base));
     }
     _log10_probabilities[i] += ecr.log10_correct_rates(fastq_file_index, obs_quality, base_key);
+    
+    //std::cerr << "  " << fastq_file_index << " " << base_key << " " << (int)obs_quality << " " << ecr.log10_correct_rates(fastq_file_index, obs_quality, base_key) << std::endl;
   }
   _normalized = false;
   _observations++;
 }
+
+void breseq::cDiscreteSNPCaller::update(covariate_values_t cv, bool obs_top_strand, cErrorTable& et) {
+
+  //update probabilities give observation using Bayes rule
+  if (!obs_top_strand) {
+    cv.obs_base = reverse_base(cv.obs_base); 
+  }
+
+  for (int i=0; i<base_list_size; i++) {
+    cv.ref_base = base_list[i];
+    if (!obs_top_strand) {
+      cv.ref_base = reverse_base(cv.ref_base);
+    }    
+    _log10_probabilities[i] += et.get_log10_prob(cv);
+    
+    //std::cerr << "  " << cv.read_set << " " << cv.ref_base << " " << cv.obs_base << " " << (int)cv.quality << " " << et.get_log10_prob(cv) << std::endl;
+  }
+  
+  _normalized = false;
+  _observations++;
+}
+
 
 boost::tuple<uint8_t,double> breseq::cDiscreteSNPCaller::get_prediction()
 {

@@ -42,9 +42,9 @@ int32_t breseq::alignment::redundancy() const {
 
 /*! Calculate the length of this query out to the last non-clip, non-skip.
  */
-int32_t breseq::alignment::query_length() const {
+uint32_t breseq::alignment::query_length() const {
 	uint32_t* cigar = bam1_cigar(_a); // cigar array for this alignment
-	int32_t qlen = bam_cigar2qlen(&_a->core, cigar); // total length of the query
+	uint32_t qlen = bam_cigar2qlen(&_a->core, cigar); // total length of the query
 	return qlen;
 }
 
@@ -60,7 +60,7 @@ bool breseq::alignment::is_trimmed() const {
 	// is our query position in the left-side trimmed region?
 	uint8_t *auxl = bam_aux_get(_a,"XL");
 	if(auxl) {
-		if((query_position()+1) <= bam_aux2i(auxl)) {
+		if((query_position_1()) <= (uint32_t)bam_aux2i(auxl)) {
 			return true;
 		}
 	}
@@ -68,7 +68,7 @@ bool breseq::alignment::is_trimmed() const {
 	// is our query position in the right-side trimmed region?
 	uint8_t *auxr = bam_aux_get(_a,"XR");
 	if(auxr) {
-		if((query_length()-(query_position()+1)) <= bam_aux2i(auxr)) {
+		if((query_length()-(query_position_1())) <= (uint32_t)bam_aux2i(auxr)) {
 			return true;
 		}
 	}
@@ -91,9 +91,16 @@ bool breseq::alignment::is_trimmed() const {
 //			}
 
 
+std::pair<int32_t,int32_t> breseq::alignment::query_bounds_0() const {
+  std::pair<int32_t,int32_t> qb = query_bounds_1();
+  qb.first--;
+  qb.second--;
+  return qb;
+}
+
 /*! Retrieve the start and end coordinates of the aligned part of the read.
  */
-std::pair<int32_t,int32_t> breseq::alignment::query_bounds() const {
+std::pair<int32_t,int32_t> breseq::alignment::query_bounds_1() const {
   uint32_t* cigar = bam1_cigar(_a); // cigar array for this alignment
 	int32_t start=1, end=bam_cigar2qlen(&_a->core,cigar);
 	
@@ -125,7 +132,7 @@ std::pair<int32_t,int32_t> breseq::alignment::query_bounds() const {
 
 /*! Get the query start or end from the cigar string of an alignment
  */
-int32_t breseq::alignment::query_start() const {
+int32_t breseq::alignment::query_start_1() const {
   // traverse the cigar array
   uint32_t* cigar = bam1_cigar(_a); // cigar array for this alignment
   int32_t pos = 1;
@@ -146,7 +153,7 @@ int32_t breseq::alignment::query_start() const {
 }
 
 
-int32_t breseq::alignment::query_end() const {
+int32_t breseq::alignment::query_end_1() const {
   // traverse the cigar array
   uint32_t* cigar = bam1_cigar(_a); // cigar array for this alignment
   int32_t pos = bam_cigar2qlen(&_a->core, cigar); // total length of the query

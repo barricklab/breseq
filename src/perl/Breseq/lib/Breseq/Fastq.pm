@@ -36,6 +36,7 @@ use vars qw(@ISA);
 @ISA = qw( Bio::Root::RootI );
 
 use Data::Dumper;
+use List::Util;
 
 ###
 # Global Variables
@@ -388,6 +389,12 @@ sub quals
 	@{$seq->{qual_list}} = split //, $seq->{qual_chars};
 	@{$seq->{qual_list}} = map { unpack("C",$_) - $seq->{chr_offset} } (@{$seq->{qual_list}}); 
 	return @{$seq->{qual_list}};
+}
+
+sub max_qual
+{
+	my ($seq) = @_;
+	return List::Util::max(quals($seq));
 }
 
 ##

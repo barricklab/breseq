@@ -39,6 +39,7 @@ int main(int argc, char* argv[]) {
 	("fasta,f", po::value<string>(), "FASTA file of reference sequence")
 	("readfiles,r", po::value<vector<string> >(), "names of readfiles (no extension)")
 	("error_dir,e", po::value<string>(), "Directory containing error rates files")
+	("error_table", po::value<string>()->default_value(""), "Error rates files")  
 	("genome_diff,g", po::value<string>(), "Genome diff file")
 	("output,o", po::value<string>(), "output directory")
 	("coverage_dir", po::value<string>()->default_value(string("")), "directory for coverage files")
@@ -86,7 +87,8 @@ int main(int argc, char* argv[]) {
                                  options["predict_polymorphisms"].as<bool>(),
                                  options["minimum_quality_score"].as<int>(),
                                  options["polymorphism_cutoff"].as<double>(),
-                                 options["polymorphism_frequency_cutoff"].as<double>()
+                                 options["polymorphism_frequency_cutoff"].as<double>(),
+                                 options["error_table"].as<string>()
                               );
 	} catch(...) {
 		// failed; 

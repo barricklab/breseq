@@ -107,6 +107,10 @@ sub identify_mutations
 			$cmdline .= " --polymorphism_cutoff $settings->{polymorphism_log10_e_value_cutoff}";
 			$cmdline .= " --polymorphism_frequency_cutoff $settings->{polymorphism_frequency_cutoff}";			
 		}
+		
+		if ($settings->{error_model_method} eq 'NEW') {
+			$cmdline .= " --error_table $error_dir/error_rates.tab";		
+		}
 
 		Breseq::Shared::system($cmdline);
 		return; # identify_mutations++ worked, so we're all done here.
