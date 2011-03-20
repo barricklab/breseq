@@ -875,12 +875,6 @@ sub html_read_alignment_table_string
 				$output_str.= Tr({-class=>'reject_table_row'}, td({-colspan => $total_cols}, "Rejected: " . decode_reject_reason($reject)));
 			}
 			
-#			if (defined $c->{bias_p_value})
-#			{
-#				my $bias_p_value = sprintf("%.2E", $c->{bias_p_value});
-#				$output_str.= Tr({-class=>'information_table_row'}, td({-colspan => $total_cols}, "Combined strand and quality bias " . i("p") . "-value = $bias_p_value"));
-#			}
-			
 			if (defined $c->{fisher_strand_p_value})
 			{
 				my $fisher_strand_p_value = sprintf("%.2E", $c->{fisher_strand_p_value});
@@ -1601,7 +1595,7 @@ sub draw_coverage
 		##plot the overview for each seq_id
 		foreach my $seq_id (@{$ref_seq_info->{seq_ids}})
 		{
-			my $region = $seq_id . ":" . "1" . "-" . ($ref_seq_info->{bioperl_ref_seqs}->{$seq_id}->length);
+			my $region = $seq_id . ":" . "1" . "-" . (length $ref_seq_info->{ref_strings}->{$seq_id});
 			print STDERR "Creating coverage plot for region $region\n";
 			$co->plot_coverage($region, "$evidence_path/$seq_id\.overview", {verbose=>0, resolution=>undef, pdf => 0, total_only => 1, shaded_flanking => 0});
 		}

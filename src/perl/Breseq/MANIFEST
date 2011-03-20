@@ -26,6 +26,7 @@ lib/Breseq/polymorphism_statistics.r
 lib/Breseq/ReferenceSequence.pm
 lib/Breseq/Settings.pm
 lib/Breseq/Shared.pm
+lib/Breseq/File/Path.pm
 lib/Breseq.pm
 LICENSE
 MANIFEST

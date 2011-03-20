@@ -38,6 +38,170 @@ use Breseq::Settings;
 use Breseq::Shared;
 use Data::Dumper;
 
+our $translation_table_11 = {
+	'TTT' => 'F', 
+	'TTC' => 'F',
+	'TTA' => 'L',
+	'TTG' => 'L',
+	
+	'TCT' => 'S',
+	'TCC' => 'S',
+	'TCA' => 'S',
+	'TCG' => 'S',
+	
+	'TAT' => 'Y',
+	'TAC' => 'Y',
+	'TAA' => '*',
+	'TAG' => '*',
+	
+	'TGT' => 'C',
+	'TGC' => 'C',
+	'TGA' => '*',
+	'TGG' => 'W',
+	
+	'CTT' => 'L',
+	'CTC' => 'L',
+	'CTA' => 'L',
+	'CTG' => 'L',
+	
+	'CCT' => 'P',
+	'CCC' => 'P',
+	'CCA' => 'P',
+	'CCG' => 'P',
+	
+	'CAT' => 'H',
+	'CAC' => 'H',
+	'CAA' => 'Q',
+	'CAG' => 'Q',
+	
+	'CGT' => 'R',
+	'CGC' => 'R',
+	'CGA' => 'R',
+	'CGG' => 'R',
+	
+	'ATT' => 'I',
+	'ATC' => 'I',
+	'ATA' => 'I',
+	'ATG' => 'M',		
+	
+	'ACT' => 'T',
+	'ACC' => 'T',
+	'ACA' => 'T',
+	'ACG' => 'T',
+	
+	'AAT' => 'N',
+	'AAC' => 'N',
+	'AAA' => 'K',
+	'AAG' => 'K',
+	
+	'AGT' => 'S',
+	'AGC' => 'S',
+	'AGA' => 'R',
+	'AGG' => 'R',
+	
+	'GTT' => 'V',
+	'GTC' => 'V',
+	'GTA' => 'V',
+	'GTG' => 'V',
+	
+	'GCT' => 'A',
+	'GCC' => 'A',
+	'GCA' => 'A',
+	'GCG' => 'A',
+		
+	'GAT' => 'D',
+	'GAC' => 'D',
+	'GAA' => 'E',
+	'GAG' => 'E',
+	
+	'GGT' => 'G',
+	'GGC' => 'G',
+	'GGA' => 'G',
+	'GGG' => 'G',
+};
+
+sub bridge_translate
+{
+	my ($seq) = @_;
+	die if (!defined $translation_table_11->{$seq});
+	return $translation_table_11->{$seq};
+}
+
+#load from c++ generated files
+sub bridge_load_ref_seq_info
+{
+	my ($summary, $reference_feature_table_file_name, $reference_fasta_file_name) = @_;
+	my $ref_seq_info;
+	my $seq_id;
+	my $s;
+	
+## FEATURE TABLE
+	open FEATURES, "$reference_feature_table_file_name" or die;
+	while (my $line = <FEATURES>) {
+		chomp $line;
+		if ($line =~ m/^>(\S+)/) {
+			$seq_id = $1;
+		
+			##next four lines are fields...
+			$line = <FEATURES>;
+			$s->{$seq_id}->{seq_id} = <FEATURES>;
+			chomp $s->{$seq_id}->{seq_id};
+			$s->{$seq_id}->{length} = <FEATURES>;
+			chomp $s->{$seq_id}->{length};
+			$s->{$seq_id}->{definition} = <FEATURES>;
+			chomp $s->{$seq_id}->{definition};
+			$s->{$seq_id}->{version} = <FEATURES>;
+			chomp $s->{$seq_id}->{version};
+		}		
+		else {
+			my $f;
+			( 	$f->{type}, 
+			#	$f->{accession},
+				$f->{name}, 
+				$f->{start}, 
+				$f->{end}, 
+				$f->{strand}, 
+				$f->{product},
+				$f->{pseudogene},
+				$f->{cds},
+				$f->{note}
+			) = split /\t/, $line;
+			
+			# push on proper list
+			if ($f->{type} eq 'repeat_region') {
+				push @{$ref_seq_info->{repeat_lists}->{$seq_id}}, $f;
+			} else {
+				push @{$ref_seq_info->{gene_lists}->{$seq_id}}, $f;
+			}
+		}
+	}
+
+
+## FASTA	
+	$summary->{sequence_conversion}->{total_reference_sequence_length} = 0 if (defined $summary);
+
+	open FASTA, "$reference_fasta_file_name" or die;
+	while (my $line = <FASTA>) {
+		chomp $line;
+		if ($line =~ m/^>(\S+)/) {
+			$seq_id = $1;
+			$ref_seq_info->{ref_strings}->{$seq_id} = '';
+		} else {
+			$ref_seq_info->{ref_strings}->{$seq_id} .= $line;
+		}		
+	}
+	
+	if (defined $summary) {
+		$summary->{sequence_conversion}->{total_reference_sequence_length} += length $ref_seq_info->{ref_strings}->{$seq_id};
+	}
+		
+	#save statistics if requested
+	$summary->{sequence_conversion}->{reference_sequences} = $s if (defined $summary);
+
+
+	return $ref_seq_info;
+}
+
 
 sub load_ref_seq_info
 {
@@ -163,8 +327,7 @@ sub load_ref_seq_info
 					$gene->{note} = get_tag($Feature, "note");
 					$gene->{cds} = 1 if ($Feature->primary_tag eq 'CDS');
 					
-					$gene->{accession} = get_tag($Feature, "protein_id");
-					$gene->{translation} = get_tag($Feature, "translation");
+					#$gene->{accession} = get_tag($Feature, "protein_id");
 					$gene->{product} = get_tag($Feature, "product");
 					
 					#set a type for the feature
@@ -172,12 +335,7 @@ sub load_ref_seq_info
 					$gene->{type} = "protein" if ($gene->{type} eq 'CDS');
 					$gene->{pseudogene} = get_tag($Feature, "pseudo");
 					$gene->{type} = "pseudogene" if ($gene->{pseudogene});
-					
-					##assume if there is no translation that we have a pseudogene...
-#					$gene->{type} = "pseudogene" if (($Feature->primary_tag eq 'CDS') && (!$gene->{translation}));
-#   Don't do this!!
-					$gene->{index} = scalar @gene_list;
-					
+									
 					push @gene_list, $gene;		
 				}
 			}
@@ -215,9 +373,9 @@ sub annotate_1_mutation
 	my $seq_id = $mut->{seq_id};
 	my $gene_list_ref = $ref_seq_info->{gene_lists}->{$seq_id};
 	my $repeat_list_ref = $ref_seq_info->{repeat_lists}->{$seq_id};
-	my $ref_seq = $ref_seq_info->{bioperl_ref_seqs}->{$seq_id};		
+	my $ref_string = $ref_seq_info->{ref_strings}->{$seq_id};		
 
-	die "Unknown seq_id in reference sequence info.\n" if ((!defined $gene_list_ref) || (!defined $repeat_list_ref) || (!defined $ref_seq));
+	die "Unknown seq_id in reference sequence info.\n" if ((!defined $gene_list_ref) || (!defined $repeat_list_ref) || (!defined $ref_string));
 
 	my $size = $end - $start + 1;
 
@@ -343,17 +501,23 @@ sub annotate_1_mutation
 		$mut->{codon_position} = abs($start-$within_gene_start) % 3;
 
 		my $codon_seq = ($gene->{strand} == +1) ?
-			$ref_seq->trunc($gene->{start} + 3 * ($mut->{aa_position}-1),$gene->{start} + 3 * $mut->{aa_position} - 1) :
-			$ref_seq->trunc($gene->{end} - 3 * $mut->{aa_position}+1,$gene->{end} - 3 * ($mut->{aa_position}-1))->revcom;
+		
+			substr($ref_string, $gene->{start} + 3 * ($mut->{aa_position}-1) - 1, 3) :
+			Breseq::Fastq::revcom(substr($ref_string, $gene->{end} - 3 * $mut->{aa_position}+1, 3));
+		
+			#$ref_seq->trunc($gene->{start} + 3 * ($mut->{aa_position}-1),$gene->{start} + 3 * $mut->{aa_position} - 1) :
+			#$ref_seq->trunc($gene->{end} - 3 * $mut->{aa_position}+1,$gene->{end} - 3 * ($mut->{aa_position}-1))->revcom;
 
-		$mut->{codon_ref_seq} = $codon_seq->seq();
-		$mut->{aa_ref_seq} = $codon_seq->translate( undef, undef, undef, 11 )->seq();
+		$mut->{codon_ref_seq} = $codon_seq;
+		$mut->{aa_ref_seq} = bridge_translate($mut->{codon_ref_seq});
+		#$mut->{aa_ref_seq} = $codon_seq->translate( undef, undef, undef, 11 )->seq();
 
-		$mut->{codon_new_seq} = $codon_seq->seq();
+		$mut->{codon_new_seq} = $codon_seq;
 		#remember to revcom the change if gene is on opposite strand
-		substr($mut->{codon_new_seq}, $mut->{codon_position}, 1) = ($gene->{strand} == +1) ? $mut->{new_seq} : revcom($mut->{new_seq});
-		$codon_seq->seq($mut->{codon_new_seq});
-		$mut->{aa_new_seq} = $codon_seq->translate( undef, undef, undef, 11 )->seq();
+		substr($mut->{codon_new_seq}, $mut->{codon_position}, 1) = ($gene->{strand} == +1) ? $mut->{new_seq} : Breseq::Fastq::revcom($mut->{new_seq});
+		$mut->{aa_new_seq} =  bridge_translate($mut->{codon_new_seq});
+		#$codon_seq->seq($mut->{codon_new_seq});
+		#$mut->{aa_new_seq} = $codon_seq->translate( undef, undef, undef, 11 )->seq();
 
 	    $mut->{snp_type} = ($mut->{aa_ref_seq} ne $mut->{aa_new_seq}) ? "nonsynonymous" : "synonymous";
 	}

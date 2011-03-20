@@ -56,6 +56,9 @@ namespace breseq {
   protected:
     std::ofstream _output_table;
     uint32_t _last_position_processed;
+    
+    
+    
 	};
   
   

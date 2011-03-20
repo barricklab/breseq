@@ -48,7 +48,7 @@ int main(int argc, char* argv[]) {
 	po::variables_map options;
 	po::store(po::parse_command_line(argc, argv, cmdline_options), options);
 	po::notify(options);
-	
+	  
 	// make sure that the config options are good:
 	if(options.count("help")
 		 || !options.count("bam")

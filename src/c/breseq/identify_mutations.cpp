@@ -134,9 +134,8 @@ void breseq::identify_mutations_pileup::callback(const breseq::pileup& p) {
 	assert(p.target() < _seq_info.size());
   _this_deletion_propagation_cutoff = _deletion_propagation_cutoff[p.target()];
   
-  // @JEB All breseq internal functons use 1-indexing!!
-  //   Convert immediately from 0-indexed used by SAM.
-  uint32_t position = p.position()+1;
+  uint32_t position = p.position_1();
+  //std::cout << position << std::endl;
   
 	int insert_count=-1;
 	bool next_insert_count_exists=true;
@@ -180,15 +179,15 @@ void breseq::identify_mutations_pileup::callback(const breseq::pileup& p) {
 		++insert_count; // we're doing this here because the perl version uses a while-continue.
     next_insert_count_exists = false;
 		
-		uint8_t ref_base = '.';
+		base_char ref_base_char = '.';
 		if(!insert_count) {
-			ref_base = p.reference_sequence()[position-1]; //reference_sequence is 1-indexed
+			ref_base_char = p.reference_base_char_1(position);
 		}
 		
 		//## zero out the info about this position
 		map<uint8_t,position_info> pos_info;
-		for(std::size_t j=0; j<5; ++j) {
-			pos_info.insert(make_pair(base_list[j],position_info()));
+		for(std::size_t j=0; j<base_list_size; ++j) {
+			pos_info.insert(make_pair(base_char_list[j],position_info()));
 		}
 		
 		//## keep track of coverage for deletion prediction
@@ -216,13 +215,13 @@ void breseq::identify_mutations_pileup::callback(const breseq::pileup& p) {
         indel = -1;
       }
       
-      uint8_t base='.';
+      base_bam read_base_bam='.';
       if(indel >= insert_count) {
-        base = i->query_base_bam_0(i->query_position_0() + insert_count);
+        read_base_bam = i->query_base_bam_0(i->query_position_0() + insert_count);
       }
             
       //##don't use bases without qualities!!
-      if(is_N(base)) continue;
+      if(_base_bam_is_N(read_base_bam)) continue;
       
       //## gather information about the aligned base
       int32_t redundancy = i->redundancy();
@@ -245,7 +244,7 @@ void breseq::identify_mutations_pileup::callback(const breseq::pileup& p) {
       if(redundancy == 1) {
         //## keep track of unique coverage	
         ++this_position_coverage.unique[1+strand];
-        ++pos_info[base2char(base)].unique_cov[1+strand];
+        ++pos_info[basebam2char(read_base_bam)].unique_cov[1+strand];
         
         //## we don't continue to consider further insertions relative
         //## to the reference unless uniquely aligned reads have them 
@@ -272,25 +271,26 @@ void breseq::identify_mutations_pileup::callback(const breseq::pileup& p) {
       //std::cerr << "POSITION:" << position << std::endl;
       
       if (m_use_cErrorTable) {
+      
         covariate_values_t cv; 
+
         bool is_ok = m_error_table.alignment_position_to_covariates(*i, insert_count, cv);
         //cv.obs_base is still not a char here...
         
         if (is_ok)  {
         
-          if (cv.quality < _min_qual_score) {
+          if (cv.quality() < _min_qual_score) {
             continue;
           }
   
           //## this is the coverage for SNP counts, tabulate AFTER skipping trimmed reads
-          ++pos_info[base2char(cv.obs_base)].unique_trimmed_cov[1+strand];
+          ++pos_info[baseindex2char(cv.obs_base())].unique_trimmed_cov[1+strand];
           
           //##### this is for polymorphism prediction and making strings
-          pdata.push_back(polymorphism_data(cv.obs_base,cv.quality,i->strand(),cv.read_set));
+          pdata.push_back(polymorphism_data(baseindex2char(cv.obs_base()),cv.quality(),i->strand(),cv.read_set(), cv));
           
-          //std::cerr << " " << cv.obs_base << base2char(cv.obs_base) << std::endl;
+          //std::cerr << " " << cv.obs_base() << " " << (char)ref_base << std::endl;
 
-          cv.obs_base = base2char(cv.obs_base);
           snp.update(cv, strand == 1, m_error_table);
         }
       }
@@ -310,8 +310,8 @@ void breseq::identify_mutations_pileup::callback(const breseq::pileup& p) {
         if (indel == -1)
         {			
           int32_t mqpos = i->query_position_0() + 1 - i->reversed(); 
-          uint8_t check_base = i->query_base_bam_0(mqpos);
-          if (is_N(check_base)) continue;
+          base_bam check_base_bam = i->query_base_bam_0(mqpos);
+          if (_base_bam_is_N(check_base_bam)) continue;
           quality = i->quality_base_0(mqpos);
         }
 
@@ -334,11 +334,11 @@ void breseq::identify_mutations_pileup::callback(const breseq::pileup& p) {
           //## Check bounds: it's possible to go past the end of the read because
           //## this is the last base of this read, but other reads have inserted bases
         
-          if (mqpos >= q_end) continue;  // @JEB unlike Perl, this is comparing 0-indexed to 1-indexed
+          if (mqpos >= q_end) continue;
           //next ALIGNMENT if ($mqpos > $q_end);
         
-          uint8_t check_base = i->query_base_bam_0(mqpos);
-          if (is_N(check_base)) continue;
+          base_bam check_base_bam = i->query_base_bam_0(mqpos);
+          if (_base_bam_is_N(check_base_bam)) continue;
           
           quality = i->quality_base_0(mqpos);
         }
@@ -352,12 +352,12 @@ void breseq::identify_mutations_pileup::callback(const breseq::pileup& p) {
         
         
         //## this is the coverage for SNP counts, tabulate AFTER skipping trimmed reads
-        ++pos_info[base2char(base)].unique_trimmed_cov[1+strand];
+        ++pos_info[basebam2char(read_base_bam)].unique_trimmed_cov[1+strand];
         
         //##### this is for polymorphism prediction and making strings
-        pdata.push_back(polymorphism_data(base,quality,strand,fastq_file_index));
+        pdata.push_back(polymorphism_data(basebam2char(read_base_bam),quality,strand,fastq_file_index));
 
-        snp.update(base, quality, strand == 1, fastq_file_index, _ecr);
+        snp.update(read_base_bam, quality, strand == 1, fastq_file_index, _ecr);
       }
 		} // end for-each read
 		
@@ -372,7 +372,7 @@ void breseq::identify_mutations_pileup::callback(const breseq::pileup& p) {
 		//#we are trying to find the base with the most support
 
     boost::tuple<uint8_t,double> snp_pred = snp.get_prediction();
-    uint8_t best_base = boost::get<0>(snp_pred);
+    base_char best_base_char = boost::get<0>(snp_pred);
     double e_value_call = boost::get<1>(snp_pred) - _log10_ref_length;
     
     //Do we predict a base at this position?
@@ -389,9 +389,9 @@ void breseq::identify_mutations_pileup::callback(const breseq::pileup& p) {
 		//ostringstream line;
 		//line << position << " " << insert_count << " " << ref_base << " " << e_value_call;
 		
-		for(std::size_t j=0; j<5; ++j) {
-			double top_cov = pos_info[base_list[j]].unique_trimmed_cov[2];
-			double bot_cov = pos_info[base_list[j]].unique_trimmed_cov[0];
+		for(std::size_t j=0; j<base_list_size; ++j) {
+			double top_cov = pos_info[base_char_list[j]].unique_trimmed_cov[2];
+			double bot_cov = pos_info[base_char_list[j]].unique_trimmed_cov[0];
 			total_cov[2] += (int)round(top_cov);
 			total_cov[0] += (int)round(bot_cov);
 		//	line << " " << base_list[j] << " (" << bot_cov << "/" << top_cov << ")";
@@ -419,7 +419,7 @@ void breseq::identify_mutations_pileup::callback(const breseq::pileup& p) {
 
 		bool polymorphism_predicted=false;
     polymorphism_prediction ppred;
-    uint8_t second_best_base;
+    base_char second_best_base_char;
   
 		if(_predict_polymorphisms) {
 	
@@ -434,17 +434,17 @@ void breseq::identify_mutations_pileup::callback(const breseq::pileup& p) {
         
         // Find the bases with the highest and second highest coverage
         // We only predict polymorphisms involving these
-        uint8_t best_base_index;
+        base_index best_base_index;
         int best_base_coverage = 0;
-        uint8_t second_best_base_index;
+        base_index second_best_base_index;
         int second_best_base_coverage = 0;
         
         std::vector<double> snp_probs = snp.get_log10_probabilities();
                 
         for (uint8_t i=0; i<base_list_size; i++) {
-          uint8_t this_base = base_list[i];
-          uint8_t this_base_index = i;
-          int this_base_coverage = pos_info[this_base].unique_trimmed_cov[0] + pos_info[this_base].unique_trimmed_cov[2];
+          base_char this_base_char = base_char_list[i];
+          base_index this_base_index = i;
+          int this_base_coverage = pos_info[this_base_char].unique_trimmed_cov[0] + pos_info[this_base_char].unique_trimmed_cov[2];
           
           // if better coverage or tied in coverage and better probability
           if ((this_base_coverage > best_base_coverage) ||
@@ -463,10 +463,10 @@ void breseq::identify_mutations_pileup::callback(const breseq::pileup& p) {
         
         // Only try mixed SNP model if there is coverage for more than one base!
         if (second_best_base_coverage) {
-          best_base = base_list[best_base_index];
-          second_best_base = base_list[second_best_base_index];
+          best_base_char = base_char_list[best_base_index];
+          second_best_base_char = base_char_list[second_best_base_index];
 
-          ppred = predict_polymorphism(best_base, second_best_base, pdata);
+          ppred = predict_polymorphism(best_base_char, second_best_base_char, pdata);
           ppred.log10_e_value = -(log(ppred.p_value)/log(10)) - _log10_ref_length;
    
           if (ppred.log10_e_value >= 0.0) {
@@ -497,7 +497,9 @@ void breseq::identify_mutations_pileup::callback(const breseq::pileup& p) {
 		//std::cerr << e_value_call << std::endl;
 		
 		//## mutation and polymorphism are exclusive predictions.
-		bool mutation_predicted = !polymorphism_predicted && (base2char(best_base) != base2char(ref_base));
+    
+    // ----> potential problem 
+		bool mutation_predicted = !polymorphism_predicted && (best_base_char != ref_base_char);
 				
 		//## bail if it's just the reference base and we aren't interested in polymorphisms...
 		if(!mutation_predicted && !polymorphism_predicted) {
@@ -520,8 +522,8 @@ void breseq::identify_mutations_pileup::callback(const breseq::pileup& p) {
     
     //## Specific initializations for consensus mutations
 		if(mutation_predicted) {
-			mut[REF_BASE] = ref_base;
-			mut[NEW_BASE] = best_base;
+			mut[REF_BASE] = ref_base_char;
+			mut[NEW_BASE] = best_base_char;
 			mut[FREQUENCY] = 1;
 			if(e_value_call < _mutation_cutoff) {
         breseq::add_reject_reason(mut, "EVALUE");
@@ -536,61 +538,61 @@ void breseq::identify_mutations_pileup::callback(const breseq::pileup& p) {
                 
 			//# the frequency returned is the probability of the FIRST base
 			//# we want to quote the probability of the second base (the change from the reference).      
-			if (best_base == ref_base) {
-        mut[REF_BASE] = best_base;
-        mut[NEW_BASE] = second_best_base;
+			if (best_base_char == ref_base_char) {
+        mut[REF_BASE] = best_base_char;
+        mut[NEW_BASE] = second_best_base_char;
         mut[FREQUENCY] = formatted_double(1 - ppred.frequency, kPolymorphismFrequencyPrecision);
-      } else if (second_best_base == ref_base) {
-        mut[REF_BASE] = second_best_base;
-        mut[NEW_BASE] = best_base;
+      } else if (second_best_base_char == ref_base_char) {
+        mut[REF_BASE] = second_best_base_char;
+        mut[NEW_BASE] = best_base_char;
         mut[FREQUENCY] = formatted_double(ppred.frequency, kPolymorphismFrequencyPrecision);  
       //### NOTE: This neglects the case where neither the first nor second base is the reference base! Should almost never happen					    
       } else {
         std::cerr << "Warning: polymorphism between two bases not including reference base found at position " << position << std::endl;
-        mut[REF_BASE] = best_base;
-        mut[NEW_BASE] = second_best_base;
+        mut[REF_BASE] = best_base_char;
+        mut[NEW_BASE] = second_best_base_char;
         mut[FREQUENCY] = formatted_double(1 - ppred.frequency, kPolymorphismFrequencyPrecision);
         mut[ERROR] = std::string("polymorphic_without_reference_base");
       }
       
-			mut[QUALITY] = formatted_double(ppred.log10_e_value, 14);
+			mut[QUALITY] = formatted_double(ppred.log10_e_value, kMutationQualityPrecision);
 			if (ppred.log10_e_value < _polymorphism_cutoff ) {
         breseq::add_reject_reason(mut, "EVALUE");
       } 
 
       // Need to create lists of all quality scores for and against base for R output  
       
-      if (ref_base != second_best_base) {
+      if (ref_base_char != second_best_base_char) {
         _polymorphism_r_input_file 
           << p.target_name() << "\t"
           << position << "\t"
           << insert_count << "\t"
-          << ref_base << "\t"
-          << best_base << "\t"
-          << second_best_base << "\t"
+          << ref_base_char << "\t"
+          << best_base_char << "\t"
+          << second_best_base_char << "\t"
           << ppred.frequency << "\t"
           << ppred.log10_base_likelihood << "\t"
           << (0.1 * round(ppred.log10_e_value*10)) << "\t"
-          << pos_info[base2char(best_base)].unique_trimmed_cov[2] << "\t"
-          << pos_info[base2char(best_base)].unique_trimmed_cov[0] << "\t"
-          << pos_info[base2char(second_best_base)].unique_trimmed_cov[2] << "\t"
-          << pos_info[base2char(second_best_base)].unique_trimmed_cov[0] << "\t"
+          << pos_info[best_base_char].unique_trimmed_cov[2] << "\t"
+          << pos_info[best_base_char].unique_trimmed_cov[0] << "\t"
+          << pos_info[second_best_base_char].unique_trimmed_cov[2] << "\t"
+          << pos_info[second_best_base_char].unique_trimmed_cov[0] << "\t"
         ;    
       } else {
         _polymorphism_r_input_file 
           << p.target_name() << "\t"
           << position << "\t"
           << insert_count << "\t"
-          << ref_base << "\t"
-          << second_best_base << "\t"
-          << best_base << "\t"
+          << ref_base_char << "\t"
+          << second_best_base_char << "\t"
+          << best_base_char << "\t"
           << (1-ppred.frequency) << "\t"
           << ppred.log10_base_likelihood << "\t"
           << (0.1 * round(ppred.log10_e_value*10)) << "\t"
-          << pos_info[base2char(second_best_base)].unique_trimmed_cov[2] << "\t"
-          << pos_info[base2char(second_best_base)].unique_trimmed_cov[0] << "\t"
-          << pos_info[base2char(best_base)].unique_trimmed_cov[2] << "\t"
-          << pos_info[base2char(best_base)].unique_trimmed_cov[0] << "\t"
+          << pos_info[second_best_base_char].unique_trimmed_cov[2] << "\t"
+          << pos_info[second_best_base_char].unique_trimmed_cov[0] << "\t"
+          << pos_info[best_base_char].unique_trimmed_cov[2] << "\t"
+          << pos_info[best_base_char].unique_trimmed_cov[0] << "\t"
         ;    
       }
 
@@ -599,29 +601,27 @@ void breseq::identify_mutations_pileup::callback(const breseq::pileup& p) {
       std::string second_best_base_qualities;
 
       for(std::vector<polymorphism_data>::iterator it=pdata.begin(); it<pdata.end(); ++it) {
-        
-        char it_base_chr = base2char(it->base);
-        
-        if (it_base_chr == best_base) {
+                
+        if (it->_base_char == best_base_char) {
           if (best_base_qualities.length() > 0) {
             best_base_qualities += ",";
           }
           std::stringstream convert_quality; 
-          convert_quality << (unsigned int)it->quality;
+          convert_quality << (unsigned int)it->_quality;
           best_base_qualities += convert_quality.str();
         }
         
-        if (it_base_chr == second_best_base) {
+        if (it->_base_char == second_best_base_char) {
           if (second_best_base_qualities.length() > 0) {
             second_best_base_qualities += ",";
           }
           std::stringstream convert_quality; 
-          convert_quality << (unsigned int)it->quality;
+          convert_quality << (unsigned int)it->_quality;
           second_best_base_qualities += convert_quality.str();
         }
       }
       
-      if (ref_base != second_best_base) {
+      if (ref_base_char != second_best_base_char) {
         _polymorphism_r_input_file << best_base_qualities << "\t";
         _polymorphism_r_input_file << second_best_base_qualities << "\t";
       } else {
@@ -638,10 +638,10 @@ void breseq::identify_mutations_pileup::callback(const breseq::pileup& p) {
     
 		//## More fields common to consensus mutations and polymorphisms
 		//## ...now that ref_base and new_base are defined
-		int* ref_cov = pos_info[boost::get<uint8_t>(mut[REF_BASE])].unique_trimmed_cov;
+		int* ref_cov = pos_info[boost::get<base_char>(mut[REF_BASE])].unique_trimmed_cov;
 		mut[REF_COV] = std::make_pair(ref_cov[2], ref_cov[0]);
 		
-		int* new_cov = pos_info[boost::get<uint8_t>(mut[NEW_BASE])].unique_trimmed_cov;
+		int* new_cov = pos_info[boost::get<base_char>(mut[NEW_BASE])].unique_trimmed_cov;
 		mut[NEW_COV] = std::make_pair(new_cov[2], new_cov[0]);
 		
 		mut[TOT_COV] = std::make_pair(total_cov[2], total_cov[0]);
@@ -885,22 +885,34 @@ void breseq::identify_mutations_pileup::update_unknown_intervals(uint32_t positi
 
 /*! Predict the significance of putative polymorphisms.
  */
-breseq::polymorphism_prediction breseq::identify_mutations_pileup::predict_polymorphism (uint8_t best_base, uint8_t second_best_base, std::vector<polymorphism_data>& pdata ) {
+breseq::polymorphism_prediction breseq::identify_mutations_pileup::predict_polymorphism (base_char best_base_char, base_char second_best_base_char, std::vector<polymorphism_data>& pdata ) {
     
   //#calculate the likelihood of observed reads given this position is 100% the best base  
 	double log10_likelihood_of_one_base_model = 0;
   for(std::vector<polymorphism_data>::iterator it=pdata.begin(); it<pdata.end(); ++it) {
   
-    std::string base_key;
-    if(it->strand == 1) {
-      base_key += best_base;
-      base_key += base2char(it->base);
+    double log10_correct_pr;
+    if (m_use_cErrorTable) {
+      covariate_values_t this_cv = it->_cv;
+      
+      if(it->_strand == 1) {
+        this_cv.ref_base() = basechar2index(best_base_char);
+      } else {
+        this_cv.ref_base() = basechar2index(complement_base_char(best_base_char)); 
+        this_cv.obs_base() = complement_base_index(this_cv.obs_base());
+      }
+      log10_correct_pr = m_error_table.get_log10_prob(this_cv);
     } else {
-      base_key += reverse_base(best_base); 
-      base_key += base2char(reverse_base(it->base));
+      std::string base_key;
+      if(it->_strand == 1) {
+        base_key += best_base_char;
+        base_key += it->_base_char;
+      } else {
+        base_key += complement_base_char(best_base_char); 
+        base_key += complement_base_char(it->_base_char);
+      }
+      log10_correct_pr = _ecr.log10_correct_rates(it->_fastq_file_index, it->_quality, base_key);
     }
-    //## the first value is pr_base, second is pr_not_base
-    double log10_correct_pr = _ecr.log10_correct_rates(it->fastq_file_index, it->quality, base_key);
     
     log10_likelihood_of_one_base_model  += log10_correct_pr;
   }
@@ -912,19 +924,19 @@ breseq::polymorphism_prediction breseq::identify_mutations_pileup::predict_polym
   
   for(std::vector<polymorphism_data>::iterator it=pdata.begin(); it<pdata.end(); ++it) {
   
-  		if (it->base == best_base) {
-        best_base_qualities.push_back(it->quality);
-        best_base_strand_hash[it->strand]++;
+  		if (it->_base_char == best_base_char) {
+        best_base_qualities.push_back(it->_quality);
+        best_base_strand_hash[it->_strand]++;
       }
-      else if (it->base == second_best_base) {
-        second_best_base_qualities.push_back(it->quality);
-        second_best_base_strand_hash[it->strand]++;
+      else if (it->_base_char == second_best_base_char) {
+        second_best_base_qualities.push_back(it->_quality);
+        second_best_base_strand_hash[it->_strand]++;
       }
   }
   
   
 	//## Maximum likelihood of observing alignment if sequenced bases were a mixture of the top two bases  
-  std::pair<double,double> best_two_base_model = best_two_base_model_log10_likelihood(best_base, second_best_base, pdata);
+  std::pair<double,double> best_two_base_model = best_two_base_model_log10_likelihood(best_base_char, second_best_base_char, pdata);
   double max_likelihood_fr_first_base = best_two_base_model.first;
   double log10_likelihood_of_two_base_model = best_two_base_model.second;
     
@@ -961,10 +973,10 @@ breseq::polymorphism_prediction breseq::identify_mutations_pileup::predict_polym
 
 /*! Find the best fraction for the best base at a polymorphic site.
  */
-std::pair<double,double> breseq::identify_mutations_pileup::best_two_base_model_log10_likelihood(uint8_t best_base, uint8_t second_best_base, std::vector<polymorphism_data>& pdata) 
+std::pair<double,double> breseq::identify_mutations_pileup::best_two_base_model_log10_likelihood(base_char best_base_char, base_char second_best_base_char, std::vector<polymorphism_data>& pdata) 
 {	
 	double cur_pr_first_base = 1;
-	double cur_log_pr = calculate_two_base_model_log10_likelihood(best_base, second_best_base, pdata, cur_pr_first_base);
+	double cur_log_pr = calculate_two_base_model_log10_likelihood(best_base_char, second_best_base_char, pdata, cur_pr_first_base);
 
 	double last_pr_first_base = 1;
 	double last_log_pr = cur_log_pr;
@@ -978,7 +990,7 @@ std::pair<double,double> breseq::identify_mutations_pileup::best_two_base_model_
     if (cur_pr_first_base < 0) break;
 
 		cur_pr_first_base -= 0.001;
-		cur_log_pr = calculate_two_base_model_log10_likelihood(best_base, second_best_base, pdata, cur_pr_first_base);
+		cur_log_pr = calculate_two_base_model_log10_likelihood(best_base_char, second_best_base_char, pdata, cur_pr_first_base);
 		//print "$cur_pr_first_base $cur_log_pr\n" if ($verbose);
 	}
 	
@@ -987,30 +999,56 @@ std::pair<double,double> breseq::identify_mutations_pileup::best_two_base_model_
 
 /*! Calculate the likelihood of a mixture model of two bases leading to the observed read bases.
  */
-double breseq::identify_mutations_pileup::calculate_two_base_model_log10_likelihood (uint8_t best_base, uint8_t second_best_base, std::vector<polymorphism_data>& pdata, double best_base_freq)
+double breseq::identify_mutations_pileup::calculate_two_base_model_log10_likelihood (base_char best_base_char, base_char second_best_base_char, const std::vector<polymorphism_data>& pdata, double best_base_freq)
 {
 	double log10_likelihood = 0;	
 	
-  for(std::vector<polymorphism_data>::iterator it=pdata.begin(); it<pdata.end(); ++it) {
+  for(std::vector<polymorphism_data>::const_iterator it=pdata.begin(); it<pdata.end(); ++it) {
   
-    std::string best_base_key;
-    std::string second_best_base_key;
-    
-    if(it->strand == 1) {
-      best_base_key += best_base;
-      best_base_key += base2char(it->base);
-      second_best_base_key += second_best_base;
-      second_best_base_key += base2char(it->base);
-    } else {
-      best_base_key += reverse_base(best_base); 
-      best_base_key += base2char(reverse_base(it->base));
-      second_best_base_key += reverse_base(second_best_base);
-      second_best_base_key += base2char(reverse_base(it->base));
-    }
     //## the first value is pr_base, second is pr_not_base
-    double best_base_log10pr = _ecr.log10_correct_rates(it->fastq_file_index, it->quality, best_base_key);
-    double second_best_base_log10pr = _ecr.log10_correct_rates(it->fastq_file_index, it->quality, second_best_base_key);
+    double best_base_log10pr;
+    double second_best_base_log10pr;
+    if (m_use_cErrorTable) {
+      covariate_values_t this_cv = it->_cv;
+      
+      if (it->_strand == -1) {
+        this_cv.obs_base() = complement_base_index(this_cv.obs_base());
+      }
+      
+      if(it->_strand == 1) {
+        this_cv.ref_base() = basechar2index(best_base_char);
+      } else {
+        this_cv.ref_base() = basechar2index(complement_base_char(best_base_char));
+      }
+      best_base_log10pr = m_error_table.get_log10_prob(this_cv);
+      
+      if(it->_strand == 1) {
+        this_cv.ref_base() = basechar2index(second_best_base_char);
+      } else {
+        this_cv.ref_base() = basechar2index(complement_base_char(second_best_base_char));
+      }
+      second_best_base_log10pr = m_error_table.get_log10_prob(this_cv);
 
+    } else {
+    
+      std::string best_base_key;
+      std::string second_best_base_key;
+      
+      if(it->_strand == 1) {
+        best_base_key += best_base_char;
+        best_base_key += it->_base_char;
+        second_best_base_key += second_best_base_char;
+        second_best_base_key += it->_base_char;
+      } else {
+        best_base_key += complement_base_char(best_base_char); 
+        best_base_key += complement_base_char(it->_base_char);
+        second_best_base_key += complement_base_char(second_best_base_char);
+        second_best_base_key += complement_base_char(it->_base_char);
+      }
+      best_base_log10pr = _ecr.log10_correct_rates(it->_fastq_file_index, it->_quality, best_base_key);
+      second_best_base_log10pr = _ecr.log10_correct_rates(it->_fastq_file_index, it->_quality, second_best_base_key);
+    }
+    
     //debug output
     //std::cerr << "Base in Read: " << it->base << " Read Strand: " << it->strand << std::endl;
     //std::cerr << "Best Base: " << best_base << " Key: " << best_base_key << " Chance of Observing: " << pow(10,best_base_log10pr) << std::endl;
@@ -1046,17 +1084,17 @@ breseq::cDiscreteSNPCaller::cDiscreteSNPCaller(uint8_t ploidy)
 }
 
 // obs_base is a BAM style base when input
-void breseq::cDiscreteSNPCaller::update(uint8_t obs_base, uint8_t obs_quality, bool obs_top_strand, int32_t fastq_file_index, error_count_results &ecr)
+void breseq::cDiscreteSNPCaller::update(base_bam obs_base_bam, uint8_t obs_quality, bool obs_top_strand, int32_t fastq_file_index, error_count_results &ecr)
 {  
   //update probabilities give observation using Bayes rule
   for (int i=0; i<base_list_size; i++) {
     std::string base_key;
     if (obs_top_strand) {
-      base_key += base_list[i]; 
-      base_key += base2char(obs_base);    
+      base_key += base_char_list[i]; 
+      base_key += basebam2char(obs_base_bam);    
     } else {
-      base_key += reverse_base(base_list[i]); 
-      base_key += base2char(reverse_base(obs_base));
+      base_key += complement_base_char(base_char_list[i]); 
+      base_key += basebam2char(complement_base_bam(obs_base_bam));
     }
     _log10_probabilities[i] += ecr.log10_correct_rates(fastq_file_index, obs_quality, base_key);
     
@@ -1066,21 +1104,23 @@ void breseq::cDiscreteSNPCaller::update(uint8_t obs_base, uint8_t obs_quality, b
   _observations++;
 }
 
-void breseq::cDiscreteSNPCaller::update(covariate_values_t cv, bool obs_top_strand, cErrorTable& et) {
+void breseq::cDiscreteSNPCaller::update(const covariate_values_t& cv, bool obs_top_strand, cErrorTable& et) {
 
+  covariate_values_t this_cv = cv;
   //update probabilities give observation using Bayes rule
   if (!obs_top_strand) {
-    cv.obs_base = reverse_base(cv.obs_base); 
+    this_cv.obs_base() = complement_base_index(this_cv.obs_base()); 
   }
 
   for (int i=0; i<base_list_size; i++) {
-    cv.ref_base = base_list[i];
+    this_cv.ref_base() = i;
     if (!obs_top_strand) {
-      cv.ref_base = reverse_base(cv.ref_base);
+      this_cv.ref_base() = complement_base_index(this_cv.ref_base());
     }    
-    _log10_probabilities[i] += et.get_log10_prob(cv);
+    _log10_probabilities[i] += et.get_log10_prob(this_cv);
     
-    //std::cerr << "  " << cv.read_set << " " << cv.ref_base << " " << cv.obs_base << " " << (int)cv.quality << " " << et.get_log10_prob(cv) << std::endl;
+    
+    //std::cout << " " << i << " " << obs_top_strand << " ? " << cv.obs_base() << " " << cv.ref_base()<< " " << et.get_log10_prob(cv) << std::endl;
   }
   
   _normalized = false;
@@ -1101,7 +1141,7 @@ boost::tuple<uint8_t,double> breseq::cDiscreteSNPCaller::get_prediction()
   std::vector<double>::iterator max = std::max_element(_log10_probabilities.begin(), _log10_probabilities.end());
   double max_log10_probability = *max;
   int max_index = std::distance(_log10_probabilities.begin(), max);
-  uint8_t best_base = base_list[max_index];
+  uint8_t best_base = base_char_list[max_index];
 
   // we want to normalize the probabilities, but avoid floating point errors
   if (!_normalized) {

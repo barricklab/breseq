@@ -35,7 +35,7 @@ namespace breseq {
 		bool is_redundant() const;
 
 		//! Number of redundancies at this alignment.
-		int32_t redundancy() const;
+		uint32_t redundancy() const;
 		
 		//! Is this alignment a deletion?
 		inline bool is_del() const { return _p->is_del; }
@@ -79,7 +79,7 @@ namespace breseq {
 		inline uint32_t query_position_0() const { return _p->qpos; }
 		inline uint32_t query_position_1() const { return _p->qpos+1; }
 
-		//! Calculate the length of this query out to the last non-clip, non-skip.
+		//! Calculate the total length of the query.
 		uint32_t query_length() const;
 		
 		//! Retrieve the quality score array.
@@ -91,7 +91,7 @@ namespace breseq {
 		inline uint8_t quality_base_1(const uint32_t pos) const { assert((pos>0) && (pos<=query_length())); return bam1_qual(_a)[pos-1]; }
 
 		//! Retrieve the index of the read file that contained this alignment.
-		int32_t fastq_file_index() const;
+		uint32_t fastq_file_index() const;
 		
 		//! Has this alignment been trimmed?
 		bool is_trimmed() const;
@@ -99,19 +99,23 @@ namespace breseq {
 		//! Start and end coordinates of the aligned part of the read. (was 1-indexed)
     //! Start is always < End. reversed() tells you which strand the match was on.
     //  Methods available for 0-indexed and 1-indexed coordinates.
-		std::pair<int32_t,int32_t> query_bounds_0() const;
-		std::pair<int32_t,int32_t> query_bounds_1() const;
+		std::pair<uint32_t,uint32_t> query_bounds_0() const;
+		std::pair<uint32_t,uint32_t> query_bounds_1() const;
 
 		//! Starting coordinates of the aligned part of the read (was 1-indexed).    
     //  Methods available for 0-indexed and 1-indexed coordinates.
-		int32_t query_start_0() const { return query_start_1()-1; };
-    int32_t query_start_1() const;
+		uint32_t query_start_0() const { return query_start_1()-1; };
+    uint32_t query_start_1() const;
 
 		//! Ending coordinates of the aligned part of the read (was 1-indexed).    
     //  Methods available for 0-indexed and 1-indexed coordinates.    
-    int32_t query_end_0() const { return query_end_1()-1; };
-		int32_t query_end_1() const;
-
+    uint32_t query_end_0() const { return query_end_1()-1; };
+		uint32_t query_end_1() const;
+    
+    //! Number of bases before this position (on read strand)
+    //  that are the same base.
+    uint32_t base_repeat_0(uint32_t q_pos_0) const;
+    
 	protected:
 		const bam_pileup1_t* _p; //!< Pileup.
 		const bam1_t* _a; //!< Alignment.

@@ -43,10 +43,22 @@ namespace breseq {
 		inline const char* target_name() const { return _pb.target_name(_tid); }
 		
 		//! Retrieve the position of this pileup on the reference sequence (0-indexed).
-		inline uint32_t position() const { return _pos; }
+		inline uint32_t position_0() const { return _pos; }
+
+		//! Retrieve the position of this pileup on the reference sequence (1-indexed).
+		inline uint32_t position_1() const { return _pos+1; }
 
 		//! Retrieve the reference sequence for this pileup.
 		char* reference_sequence() const;
+    
+    inline char reference_base_char_0(uint32_t pos0) const 
+      { return reference_sequence()[pos0]; } ;
+
+    inline char reference_base_char_1(uint32_t pos1) const 
+      { return reference_sequence()[pos1-1]; } ;
+      
+    //stub function for dealing properly with falling off the end of the genome
+    inline uint32_t wrap_position(int32_t) const { assert(false); return 0; } ;
 
 	protected:
 		uint32_t _tid; //!< Target id for this pileup.

@@ -35,7 +35,7 @@ bool breseq::alignment::is_redundant() const {
 
 /*! Number of redundancies at this alignment.
  */
-int32_t breseq::alignment::redundancy() const {
+uint32_t breseq::alignment::redundancy() const {
 	return bam_aux2i(bam_aux_get(_a,"X1"));
 }
 
@@ -51,7 +51,7 @@ uint32_t breseq::alignment::query_length() const {
 
 /*! Retrieve the index of the read file that contained this alignment
  */
-int32_t breseq::alignment::fastq_file_index() const {
+uint32_t breseq::alignment::fastq_file_index() const {
 	return bam_aux2i(bam_aux_get(_a,"X2"));
 }
 
@@ -91,7 +91,7 @@ bool breseq::alignment::is_trimmed() const {
 //			}
 
 
-std::pair<int32_t,int32_t> breseq::alignment::query_bounds_0() const {
+std::pair<uint32_t,uint32_t> breseq::alignment::query_bounds_0() const {
   std::pair<int32_t,int32_t> qb = query_bounds_1();
   qb.first--;
   qb.second--;
@@ -100,7 +100,7 @@ std::pair<int32_t,int32_t> breseq::alignment::query_bounds_0() const {
 
 /*! Retrieve the start and end coordinates of the aligned part of the read.
  */
-std::pair<int32_t,int32_t> breseq::alignment::query_bounds_1() const {
+std::pair<uint32_t,uint32_t> breseq::alignment::query_bounds_1() const {
   uint32_t* cigar = bam1_cigar(_a); // cigar array for this alignment
 	int32_t start=1, end=bam_cigar2qlen(&_a->core,cigar);
 	
@@ -132,7 +132,7 @@ std::pair<int32_t,int32_t> breseq::alignment::query_bounds_1() const {
 
 /*! Get the query start or end from the cigar string of an alignment
  */
-int32_t breseq::alignment::query_start_1() const {
+uint32_t breseq::alignment::query_start_1() const {
   // traverse the cigar array
   uint32_t* cigar = bam1_cigar(_a); // cigar array for this alignment
   int32_t pos = 1;
@@ -153,7 +153,7 @@ int32_t breseq::alignment::query_start_1() const {
 }
 
 
-int32_t breseq::alignment::query_end_1() const {
+uint32_t breseq::alignment::query_end_1() const {
   // traverse the cigar array
   uint32_t* cigar = bam1_cigar(_a); // cigar array for this alignment
   int32_t pos = bam_cigar2qlen(&_a->core, cigar); // total length of the query
@@ -171,3 +171,25 @@ int32_t breseq::alignment::query_end_1() const {
 	
   return pos;
 }
+
+uint32_t breseq::alignment::base_repeat_0(uint32_t q_pos_0) const {
+
+  uint8_t this_base_bam = query_base_bam_0(q_pos_0);
+  uint32_t base_repeat = 0;
+  if (!reversed()) {
+    while ( q_pos_0 < query_end_0()) {
+      q_pos_0++;
+      if (this_base_bam != query_base_bam_0(q_pos_0)) break;
+      base_repeat++;
+    }  
+  } else {
+    while (q_pos_0 > 0) {
+      q_pos_0--;
+      if (this_base_bam != query_base_bam_0(q_pos_0)) break;
+      base_repeat++;
+    }    
+  }
+  
+  return base_repeat;
+}
+

@@ -632,9 +632,10 @@ sub do_count
 	my $one_ref_seq = scalar keys %{$ref_seq_info->{gene_lists}} == 1;
 
 	my $total_bp = 0;
-	foreach my $seq_id (keys %{$ref_seq_info->{bioperl_ref_seqs}})
+	
+	foreach my $seq_id (keys %{$ref_seq_info->{ref_strings}})
 	{
-		$total_bp += $ref_seq_info->{bioperl_ref_seqs}->{$seq_id}->length;
+		$total_bp += length $ref_seq_info->{ref_strings}->{$seq_id};
 	}
 
 	my @bases = ('A', 'T', 'C', 'G');
