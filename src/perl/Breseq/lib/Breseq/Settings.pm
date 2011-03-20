@@ -34,7 +34,7 @@ use Getopt::Long;
 use Data::Dumper;
 use Pod::Usage;
 use FindBin;
-use File::Path v2.6.5;
+use Breseq::File::Path v2.6.5;
 
 use Breseq;
 
@@ -528,7 +528,7 @@ sub create_path
 {
 	my ($self, $path_key) = @_;
 	my $path = $self->file_name($path_key);
-	(-e $path) or File::Path::make_path($path) or $self->throw("Could not create path \'$path\'.");
+	(-e $path) or Breseq::File::Path::make_path($path) or $self->throw("Could not create path \'$path\'.");
 	return $path;
 }
 
@@ -536,7 +536,7 @@ sub remove_path
 {
 	my ($self, $path_key) = @_;
 	my $path = $self->file_name($path_key);
-	(-e $path) and File::Path::remove_tree($path) or $self->throw("Could not remove path \'$path\'.");
+	(-e $path) and Breseq::File::Path::remove_tree($path) or $self->throw("Could not remove path \'$path\'.");
 	return $path;
 }
 

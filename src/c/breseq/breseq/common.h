@@ -18,98 +18,130 @@ LICENSE AND COPYRIGHT
 #ifndef _BRESEQ_COMMON_H_
 #define _BRESEQ_COMMON_H_
 
-//1 for A, 2 for C, 4 for G,
-//8 for T and 15 for N.
-#define is_A(x) (x == 0x01)
-#define is_C(x) (x == 0x02)
-#define is_G(x) (x == 0x04)
-#define is_T(x) (x == 0x08)
-#define is_N(x) (x == 0x0f)
-#define is_char_N(x) (x == 'N')
+
+#define _base_bam_is_A(x) (x == 0x01)
+#define _base_bam_is_C(x) (x == 0x02)
+#define _base_bam_is_G(x) (x == 0x04)
+#define _base_bam_is_T(x) (x == 0x08)
+#define _base_bam_is_N(x) (x == 0x0f)
+#define _base_char_is_N(x) (x == 'N')
 
 
 namespace breseq {
 	
+  
+  // There are three ways to represent a base.
+  // We use typing to prevent coding errors when converting.
+  // 
+  // bam: SamTools representation, uses four bit codes 
+  //      A(0x1), C(0x2), G(0x4), T(0x8), N(0xf), .('.')
+  //      Note that we add '.' for convenience to this list.
+  typedef uint8_t base_bam;
+  
+  // char: Normal human-readable representation
+  //       'A', 'C', 'G', 'T', 'N', '.'
+  typedef char base_char;
+  
+  // index: Numbered starting at zero, used for array storage and lookups
+  //       A(0), C(1), G(2), T(3), .(4)  No 'N' bases allowed.
+  typedef uint8_t base_index;
+
+  /*! Definition of all single-base states that are considered */
+  static base_char base_char_list[] = {'A', 'C', 'G', 'T', '.'};
+  static uint8_t base_list_size = 5;
+
+  
 	/*! Reverse a base.
 	 */
-	inline uint8_t reverse_base(uint8_t base) {
-		if(base > 0x0f) {
-			// ascii
-			switch(base) {
-				case 'A': return 'T';
-				case 'C': return 'G';
-				case 'G': return 'C';
-				case 'T': return 'A';
-				case '.': return '.';
-				default: assert(false);
-			}
-		} else {
-			// sam-style 4-bit field
-			switch(base) {
-				case 0x1: return 0x8;
-				case 0x2: return 0x4;
-				case 0x4: return 0x2;
-				case 0x8: return 0x1;        
-				case 0xf: return 0xf;
-				default: assert(false);
-			}		
-		}
+	inline base_bam complement_base_bam(base_bam base) {
+    // sam-style 4-bit field
+    switch(base) {
+      case 0x1: return 0x8;
+      case 0x2: return 0x4;
+      case 0x4: return 0x2;
+      case 0x8: return 0x1;        
+      case 0xf: return 0xf;
+      case '.': return '.';
+      default: assert(false);
+    }		
 	}
+  
+  inline base_char complement_base_char(base_char base ) {
+    switch(base) {
+      case 'A': return 'T';
+      case 'C': return 'G';
+      case 'G': return 'C';
+      case 'T': return 'A';
+      case '.': return '.';
+      case 'N': return 'N';
+      default: assert(false);
+    }
+  }
+  
+  inline base_index complement_base_index(base_index base) {
+    // ascii
+    switch(base) {
+      case 0: return 3;
+      case 1: return 2;
+      case 2: return 1;
+      case 3: return 0;
+      case 4: return 4;
+      default: assert(false);
+    }
+  }
+
 	
 	/*! Convert a base to an ASCII character.
 	 */
-	inline char base2char(uint8_t base) {
-		if(base > 0x0f) {
-			// already in ascii format
-			return static_cast<char>(base);
-		} else {
-			// sam-style 4-bit field
-			switch(base) {
-				case 0x01: return 'A';
-				case 0x02: return 'C';
-				case 0x04: return 'G';
-				case 0x08: return 'T';
-				case 0x0f: return '.';
-				default: assert(false);
-			}		
-		}
+	inline char basebam2char(base_bam base) {
+    // sam-style 4-bit field
+    switch(base) {
+      case 0x01: return 'A';
+      case 0x02: return 'C';
+      case 0x04: return 'G';
+      case 0x08: return 'T';
+      case '.': return '.';
+      case 0x0f: assert(false); 
+      default: assert(false);
+    }		
 	}
-  
-  // indexes are used by the 
-  // error count table
-  inline uint8_t base2index(char base) {
-    if(base > 0x0f) {
-      // ascii
-      switch(base) {
-        case 'A': return 0;
-        case 'C': return 1;
-        case 'G': return 2;
-        case 'T': return 3;
-        case '.': return 4;
-        default: assert(false);
-      }
-    } else {
-      // sam-style 4-bit field
-      switch(base) {
-        case 0x1: return 0;
-        case 0x2: return 1;
-        case 0x4: return 2;
-        case 0x8: return 3;        
-        case 0xf: return 4;
-        default: assert(false);
-      }		
-    }
-  }
-  inline char index2basechar(uint8_t index) {
-    switch(index) {
+
+  inline char baseindex2char(base_index base) {
+    switch(base) {
       case 0: return 'A';
       case 1: return 'C';
       case 2: return 'G';
       case 3: return 'T';        
       case 4: return '.';
       default: assert(false);
-    }		
+    }
   }
+ 
+ 	/*! Convert a base to an index
+	 */
+	inline char basebam2index(base_bam base) {
+    switch(base) {
+      case 0x1: return 0;
+      case 0x2: return 1;
+      case 0x4: return 2;
+      case 0x8: return 3;  
+      case '.': return 4;        
+      case 0xf: assert(false);
+      default: assert(false);
+    }			
+	}
+  
+  inline char basechar2index(base_char base) {
+    switch(base) {
+      case 'A': return 0;
+      case 'C': return 1;
+      case 'G': return 2;
+      case 'T': return 3;
+      case '.': return 4;
+      default: assert(false);
+    }
+  }
+
   
 } // breseq
 

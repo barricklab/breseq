@@ -51,12 +51,51 @@ namespace breseq {
 	 */ 
 
     
-  struct covariate_values_t {
-    uint8_t ref_base;  // as character: 'A', 'T', 'C', 'G', '.'
-    uint8_t obs_base;  // as character: 'A', 'T', 'C', 'G', '.'
-    uint8_t quality;
-    uint32_t read_pos;
-    uint32_t read_set;
+  // These must be in the same order as the covariate_names[] string constants...
+  enum {k_read_set, k_ref_base, k_prev_base, k_obs_base, k_quality, k_read_pos, k_base_repeat, k_num_covariates};
+ 
+  // Range of each (where N is the unput value on command line):
+  //  k_read_set = [0..N-1]
+  //  k_ref_base = [0..4] (fixed)
+  //  k_prev_base = [0..4] (fixed) = previous base in *reference*
+  //  k_obs_base = [0..4] (fixed)
+  //  k_quality_base = [0..N]
+  //  k_read_pos = [0..N-1] = 0-index read position
+  //  k_base_repeat = [0..N]
+  
+  class covariate_values_t {
+    
+    private:
+      uint32_t m_covariates[k_num_covariates];
+    
+    public:
+      covariate_values_t() {};
+      
+      //Copy constructor
+      covariate_values_t(const covariate_values_t& cv) {
+        memcpy(&m_covariates, &(cv.m_covariates), sizeof(m_covariates));
+        //for (uint32_t i=0; i<k_num_covariates; i++) {
+        //  m_covariates[i] = cv[i];
+        //}
+      };
+    
+      uint32_t& operator[](uint32_t i) { return m_covariates[i]; };
+      const uint32_t operator[](uint32_t i) const { return m_covariates[i]; };
+
+      uint32_t& read_set() {return (*this)[k_read_set]; };
+      uint32_t& ref_base() {return (*this)[k_ref_base]; };
+      uint32_t& obs_base() {return (*this)[k_obs_base]; };
+      uint32_t& quality()  {return (*this)[k_quality]; };
+      uint32_t& read_pos() {return (*this)[k_read_pos]; };
+      uint32_t& base_repeat() {return (*this)[k_base_repeat]; };
+
+      uint32_t read_set() const {return (*this)[k_read_set]; };
+      uint32_t ref_base() const {return (*this)[k_ref_base]; };
+      uint32_t obs_base() const {return (*this)[k_obs_base]; };
+      uint32_t quality()  const {return (*this)[k_quality]; };
+      uint32_t read_pos() const {return (*this)[k_read_pos]; };
+      uint32_t base_repeat() const {return (*this)[k_base_repeat]; };
+
   };
   
  
@@ -65,21 +104,29 @@ namespace breseq {
       static const char m_sep;   //* separator between entries within a line in files
       static const std::string covariate_names[];
       
-      // These must be in the same order as the covariate_names[] string constants...
-      enum {k_read_set, k_ref_base, k_obs_base, k_quality, k_read_pos, k_num_covariates};
-      
-      std::vector<uint32_t> m_count_table;
+       
+      std::vector<double> m_count_table;
       std::vector<double> m_log10_prob_table;
 
       typedef bool covariates_used_t[k_num_covariates];
       typedef uint32_t covariates_max_t[k_num_covariates];
+      typedef bool covariates_enforce_max_t[k_num_covariates];
       typedef uint32_t covariates_offset_t[k_num_covariates];
 
     public:
+
+      //* does not allocate table or assign covariates
       cErrorTable() {};
+      
+      //* create table with covariates read from command line options
       cErrorTable(const std::string& colnames);
-      cErrorTable(covariates_used_t covariate_used, covariates_max_t covariate_max); // for creating empty table
-      cErrorTable(cErrorTable& error_table, covariates_used_t covariates); // for creating summed sub-tables
+      
+      //* create empty table
+      cErrorTable(covariates_used_t covariate_used, covariates_max_t covariate_max, covariates_enforce_max_t covariate_enforce_max); // for creating empty table
+
+      //* create summed sub-tables
+      cErrorTable(cErrorTable& error_table, covariates_used_t covariates); 
+      
       ~cErrorTable() {};
 
       //* Helper functions
@@ -94,9 +141,10 @@ namespace breseq {
       //* IO of tables
       void read_log10_prob_table(const std::string& filename);
       void write_log10_prob_table(const std::string& output_file);
+      void write_count_table(const std::string& filename);
       
       //* recording counts during error calibration     
-      void count_alignment_position(const alignment& i, const uint32_t ref_pos, const char* ref_seq);
+      void count_alignment_position(const alignment& i, const pileup& p);
       void count_covariate(const covariate_values_t& cv);
       void counts_to_log10_prob();
       
@@ -107,13 +155,11 @@ namespace breseq {
       double get_log10_prob(covariate_values_t& cv);
       
     protected:
-      covariates_used_t   m_covariate_used;   // list of covariates that are used by table
-      covariates_max_t    m_covariate_max;    // maximum value of each covariate
-      covariates_offset_t m_covariate_offset; // number to multiply this covariate by when constructing row numbers
+      covariates_used_t         m_covariate_used;         // list of covariates that are used by table
+      covariates_max_t          m_covariate_max;          // maximum value of each covariate
+      covariates_enforce_max_t  m_covariate_enforce_max;  // do not throw an error if max exceeded, reassign value to max
+      covariates_offset_t       m_covariate_offset;       // number to multiply this covariate by when constructing row numbers
   };
-  
-  
-	
 	
 	/*! Error-counting class.
 	 

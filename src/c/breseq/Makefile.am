@@ -24,6 +24,7 @@ LDADD = $(BOOST_PROGRAM_OPTIONS_LIBS) \
 noinst_LTLIBRARIES = libbreseq.la
 libbreseq_la_SOURCES = \
 	alignment.cpp \
+	annotated_sequence.cpp \
 	error_count.cpp \
 	genome_diff.cpp \
 	identify_mutations.cpp \
@@ -31,6 +32,7 @@ libbreseq_la_SOURCES = \
 	pileup.cpp \
 	tabulate_coverage.cpp \
 	breseq/alignment.h \
+	breseq/annotated_sequence.h \
 	breseq/common.h \
 	breseq/error_count.h \
 	breseq/genome_diff.h \
@@ -41,7 +43,7 @@ libbreseq_la_SOURCES = \
 libbreseq_la_LDFLAGS = -static
 libbreseq_la_LIBADD = $(top_srcdir)/$(LIBBAM)/libbam.la
 
-bin_PROGRAMS = error_count identify_mutations calc_trims tabulate_coverage
+bin_PROGRAMS = error_count identify_mutations calc_trims tabulate_coverage convert_genbank
 
 error_count_SOURCES = error_count_cmdline.cpp
 
@@ -50,3 +52,5 @@ identify_mutations_SOURCES = identify_mutations_cmdline.cpp
 calc_trims_SOURCES = calc_trims_cmdline.cpp
 
 tabulate_coverage_SOURCES = tabulate_coverage_cmdline.cpp
+
+convert_genbank_SOURCES = convert_genbank_cmdline.cpp

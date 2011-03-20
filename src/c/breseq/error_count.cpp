@@ -33,7 +33,15 @@ LICENSE AND COPYRIGHT
 
 namespace breseq {
 
-const std::string cErrorTable::covariate_names[] = {"read_set", "ref_base", "obs_base", "quality", "read_pos"}; 
+const std::string cErrorTable::covariate_names[] = {
+  "read_set", 
+  "ref_base", 
+  "prev_ref_base", 
+  "obs_base", 
+  "quality", 
+  "read_pos", 
+  "base_repeat"
+}; 
 const char cErrorTable::m_sep = '\t';
 
 /*! Count errors.
@@ -108,7 +116,7 @@ void error_count_pileup::callback(const pileup& p) {
 
     // Newer implementation...
     if (m_use_CErrorTable) {
-      m_error_table.count_alignment_position(*i, p.position(), p.reference_sequence());
+      m_error_table.count_alignment_position(*i, p);
       continue;
     }
 
@@ -122,7 +130,7 @@ void error_count_pileup::callback(const pileup& p) {
 		uint8_t* qscore = i->quality_scores(); // quality score array
 		int32_t fastq_file_index = i->fastq_file_index(); // sequencer-generated read file that this alignment belongs to
 		
-		uint32_t pos = p.position(); // position of this alignment on the reference sequence
+		uint32_t pos = p.position_0(); // position of this alignment on the reference sequence
 		char* refseq = p.reference_sequence(); // reference sequence for this target
 		
 		// Things to remember in the following:
@@ -137,15 +145,15 @@ void error_count_pileup::callback(const pileup& p) {
 
     //We already skipped deletions of *this* base so we know we have a (mis)match
     {
-      uint8_t base = bam1_seqi(qseq,qpos);    
-      uint8_t ref_base = refseq[pos];
+      base_bam read_base_bam = bam1_seqi(qseq,qpos);    
+      base_char ref_base_char = refseq[pos];
       
-      if (!is_N(base) && !is_char_N(ref_base)) {
+      if (!_base_bam_is_N(read_base_bam) && !_base_char_is_N(ref_base_char)) {
         if(reversed) {
-          base = reverse_base(base);
-          ref_base = reverse_base(ref_base);
+          read_base_bam = complement_base_bam(read_base_bam);
+          ref_base_char = complement_base_char(ref_base_char);
         }
-        string key; key += static_cast<char>(ref_base); key += base2char(base);
+        string key; key += static_cast<char>(ref_base_char); key += basebam2char(read_base_bam);
         uint8_t quality = qscore[qpos];
         ++_error_hash[fastq_file_index][quality][key];
       }
@@ -164,7 +172,7 @@ void error_count_pileup::callback(const pileup& p) {
         int32_t mrpos = pos + 1 - reversed;
         uint8_t ref_base = refseq[mrpos];
         
-        if (!is_N(base) && !is_char_N(ref_base)) {     
+        if (!_base_bam_is_N(base) && !_base_char_is_N(ref_base)) {     
           string key = ".."; 
           uint8_t quality = qscore[mqpos];
           ++_error_hash[fastq_file_index][quality][key];
@@ -179,17 +187,17 @@ void error_count_pileup::callback(const pileup& p) {
     else if (i->indel() == -1) {
       //## count the quality of this or next base depending on reversed, and make sure it is not an N
       int32_t mqpos = qpos + 1 - reversed;
-      uint8_t base = bam1_seqi(qseq,mqpos);   
+      base_bam read_base_bam = bam1_seqi(qseq,mqpos);   
 			
       //## the reference base opposite the deletion is really the NEXT base
       int32_t mrpos = pos + 1;
-      uint8_t ref_base = refseq[mrpos];      
+      base_char ref_base_char = refseq[mrpos];      
       
-      if (!is_N(base) && !is_char_N(ref_base)) {
+      if (!_base_bam_is_N(read_base_bam) && !_base_char_is_N(ref_base_char)) {
         if(reversed) {
-          ref_base = reverse_base(ref_base);
+          ref_base_char = complement_base_char(ref_base_char);
         }
-        string key; key += static_cast<char>(ref_base); key += '.';
+        string key; key += static_cast<char>(ref_base_char); key += '.';
         uint8_t quality = qscore[mqpos];
         ++_error_hash[fastq_file_index][quality][key];									
       }
@@ -204,13 +212,13 @@ void error_count_pileup::callback(const pileup& p) {
       int32_t mqpos = qpos + 1;
 			
       if ((mqpos <= qend) && (mqpos >= qstart)) {
-        uint8_t base = bam1_seqi(qseq,mqpos);    
+        uint8_t read_base_bam = bam1_seqi(qseq,mqpos);    
 				
-        if (!is_N(base)) {
+        if (!_base_bam_is_N(read_base_bam)) {
           if(reversed) {
-            base = reverse_base(base);
+            read_base_bam = complement_base_bam(read_base_bam);
           }        
-          string key; key += '.'; key += base2char(base);
+          string key; key += '.'; key += basebam2char(read_base_bam);
           uint8_t quality = qscore[mqpos];
           ++_error_hash[fastq_file_index][quality][key];									
         }	
@@ -253,8 +261,11 @@ void error_count_pileup::print_coverage(const std::string& output_dir) {
 void error_count_pileup::print_error(const std::string& output_dir, const std::vector<std::string>& readfiles) {
 
   if (m_use_CErrorTable) {
-      std::string output_file = output_dir;
-      output_file += "error_rates.tab"; 
+      std::string output_file;
+      output_file = output_dir + "error_counts.tab"; 
+      m_error_table.write_count_table(output_file);
+      
+      output_file = output_dir + "error_rates.tab"; 
       m_error_table.counts_to_log10_prob();
       m_error_table.write_log10_prob_table(output_file);
       return;
@@ -402,9 +413,9 @@ cErrorTable::cErrorTable (const std::string& colnames)
 
 /*  cErrorTable::cErrorTable()
 
-    Allocates an empty table
+    Allocates an empty table with the given covariates.
 */
-cErrorTable::cErrorTable(covariates_used_t covariate_used, covariates_max_t covariate_max) {
+cErrorTable::cErrorTable(covariates_used_t covariate_used, covariates_max_t covariate_max, covariates_enforce_max_t covariate_enforce_max) {
 
   int current_offset = 1;
 
@@ -412,6 +423,8 @@ cErrorTable::cErrorTable(covariates_used_t covariate_used, covariates_max_t cova
   
     m_covariate_used[i] = covariate_used[i];
     m_covariate_max[i] = covariate_max[i];
+    m_covariate_enforce_max[i] = covariate_enforce_max[i];
+    
     m_covariate_offset[i] = current_offset;
     
     if (m_covariate_used[i]) {
@@ -434,14 +447,17 @@ cErrorTable::cErrorTable(cErrorTable& error_table, covariates_used_t covariates)
 
   int current_offset = 1;
 
+  // Set up new covariates
   for (int i=0; i<k_num_covariates; i++) {
     if (covariates[i]) {
       m_covariate_used[i] = true;
       m_covariate_max[i] = error_table.m_covariate_max[i];
+      m_covariate_enforce_max[i] = error_table.m_covariate_enforce_max[i];    
       m_covariate_offset[i] = current_offset;
     } else {
       m_covariate_used[i] = false;
       m_covariate_max[i] = 0;
+      m_covariate_enforce_max[i] = false;
       m_covariate_offset[i] = 0;
     }
     
@@ -452,9 +468,8 @@ cErrorTable::cErrorTable(cErrorTable& error_table, covariates_used_t covariates)
   
   allocate_table();
 
-      
+  // Assign old data bins to new ones, combining different bin totals
   for (uint32_t i=0; i<error_table.m_count_table.size(); i++) {
-  
     covariate_values_t cv;
     error_table.index_to_covariates(i, cv);
     uint32_t j = covariates_to_index(cv);
@@ -482,27 +497,23 @@ void cErrorTable::allocate_table() {
 uint32_t cErrorTable::covariates_to_index(const covariate_values_t& cv) {
 
   // Calculate the row index in which to record the observation
-
-  uint32_t i = 0;
-  if (m_covariate_used[k_read_set]) {
-    assert(cv.read_set < m_covariate_max[k_read_set]);
-    i += cv.read_set * m_covariate_offset[k_read_set];
+  uint32_t idx = 0;
+  for (int i=0; i<k_num_covariates; i++) {
+    if (m_covariate_used[i]) {
+    
+      uint32_t val = cv[i];
+      if(val >= m_covariate_max[i]) {
+        if (m_covariate_enforce_max[i] == false) {
+          assert(false);
+        } else {
+          std::cout << "Adjusted down " << val << " to " << m_covariate_max[i]-1 << std::endl;
+          val = m_covariate_max[i]-1;
+        }
+      }
+      idx += val * m_covariate_offset[i];
+    }
   }
-  if (m_covariate_used[k_read_pos]) {
-    assert(cv.read_pos < m_covariate_max[k_read_pos]);
-    i += cv.read_pos * m_covariate_offset[k_read_pos];
-  }
-  if (m_covariate_used[k_quality]) {
-    assert(cv.quality < m_covariate_max[k_quality]);
-    i += cv.quality * m_covariate_offset[k_quality];
-  }
-  if (m_covariate_used[k_obs_base]) {
-    i += base2index(cv.obs_base) * m_covariate_offset[k_obs_base];
-  }  
-  if (m_covariate_used[k_ref_base]) {
-    i += base2index(cv.ref_base) * m_covariate_offset[k_ref_base];
-  }
-  return i;
+  return idx;
 }
 
 /*  cErrorTable::index_to_covariates()
@@ -518,27 +529,8 @@ void cErrorTable::index_to_covariates(const uint32_t idx, covariate_values_t& cv
     
     uint32_t j = (idx / m_covariate_offset[i]) % m_covariate_max[i];
    
-    switch (i) {
-      case k_ref_base:
-        cv.ref_base = index2basechar(j);
-        break;
-
-      case k_obs_base:
-        cv.obs_base = index2basechar(j);
-        break;
-
-      case k_quality:
-        cv.quality = j;
-        break;
-
-      case k_read_pos:
-        cv.read_pos = j;
-        break;
-        
-      case k_read_set:
-        cv.read_set = j;
-        break;    
-    }
+    // set the corresponding covariate
+    cv[i] = j;
   }
 }
 
@@ -549,8 +541,10 @@ void cErrorTable::index_to_covariates(const uint32_t idx, covariate_values_t& cv
 */
 void cErrorTable::read_covariates(const std::string& colnames) {
 
+  // set default values
   for (int i=0; i<k_num_covariates; i++) {
     m_covariate_used[i] = false;
+    m_covariate_enforce_max[i] = false;
   }
 
   std::vector<std::string> columns_to_use;
@@ -565,12 +559,17 @@ void cErrorTable::read_covariates(const std::string& colnames) {
       m_covariate_used[k_ref_base] = true;
       m_covariate_max[k_ref_base] = 5;
     }
+		else if (columns_parts[0] == "prev_base") {
+      m_covariate_used[k_prev_base] = true;
+      m_covariate_max[k_prev_base] = 5;
+    }
 		else if (columns_parts[0] == "obs_base") {
       m_covariate_used[k_obs_base] = true;
       m_covariate_max[k_obs_base] = 5;
     }
     else if (columns_parts[0] == "quality") {
       m_covariate_used[k_quality] = true;
+      // This is a bit lazy, we could assign a minimum quality offset to save empty bins...
       m_covariate_max[k_quality] = atoi(columns_parts[1].c_str()) + 1;
     }
     else if (columns_parts[0] == "read_set") {
@@ -580,6 +579,12 @@ void cErrorTable::read_covariates(const std::string& colnames) {
     else if (columns_parts[0] == "read_pos") {
       m_covariate_used[k_read_pos] = true;
       m_covariate_max[k_read_pos] = atoi(columns_parts[1].c_str());
+    }
+    else if (columns_parts[0] == "base_repeat") {
+      m_covariate_used[k_base_repeat] = true;
+      m_covariate_max[k_base_repeat] = atoi(columns_parts[1].c_str())+1;
+      // Base repeat will trypically have a cap, above which we combine all values
+      m_covariate_enforce_max[k_base_repeat] = true;
     }
     else {
       std::cerr << "Unrecognized covariate: " << columns_parts[0] << std::endl;
@@ -691,7 +696,7 @@ void cErrorTable::write_log10_prob_table(const std::string& filename) {
   for (int i=0; i<k_num_covariates; i++) {
     if(m_covariate_used[i]) out << covariate_names[i] << m_sep;
   }
-  out << "count" << std::endl;
+  out << "log10_probability" << std::endl;
 
   for (uint32_t idx=0; idx<m_log10_prob_table.size(); idx++) {
       
@@ -701,7 +706,7 @@ void cErrorTable::write_log10_prob_table(const std::string& filename) {
         uint32_t j = (idx / m_covariate_offset[i]) % m_covariate_max[i];
        
         if ( (i == k_ref_base) || (i == k_obs_base) ) {
-          char base = index2basechar(j);
+          char base = baseindex2char(j);
           out << base << m_sep;
         }
         else {
@@ -713,27 +718,66 @@ void cErrorTable::write_log10_prob_table(const std::string& filename) {
   }
 }
 
+/*  cErrorTable::print()
+
+    Print out a table of covariates and counts.
+*/
+void cErrorTable::write_count_table(const std::string& filename) {
+
+  std::ofstream out(filename.c_str());
+  
+  // First line contains the covariates
+  out << print_covariates() << std::endl;
+  
+  for (int i=0; i<k_num_covariates; i++) {
+    if(m_covariate_used[i]) out << covariate_names[i] << m_sep;
+  }
+  out << "count" << std::endl;
+
+  for (uint32_t idx=0; idx<m_count_table.size(); idx++) {
+      
+      for (int i=0; i<k_num_covariates; i++) {
+        if (!m_covariate_used[i]) continue;
+        
+        uint32_t j = (idx / m_covariate_offset[i]) % m_covariate_max[i];
+       
+        if ( (i == k_ref_base) || (i == k_obs_base) ) {
+          char base = baseindex2char(j);
+          out << base << m_sep;
+        }
+        else {
+          out << j << m_sep;
+        }
+    }
+        
+    out << m_count_table[idx] << std::endl;
+  }
+}
+
 
 /*  cErrorTable::count_alignment_position()
 
     Record all observations in an alignment to a column of the reference genome
     in the count table. This function is called by the pileup callback.
 */
-void cErrorTable::count_alignment_position(const alignment& i, const uint32_t ref_pos, const char* ref_seq) {
+void cErrorTable::count_alignment_position(const alignment& i, const pileup& p) {
+    
+    uint32_t ref_pos = p.position_0();
+    const char* ref_seq = p.reference_sequence();
     
 		uint32_t reversed = i.reversed(); // are we on the reverse strand?
 		uint8_t* qseq = i.query_sequence(); // query sequence (read)
-		int32_t qpos = i.query_position_0(); // position of the alignment in the query, 0-indexed
-		int32_t qstart = i.query_start_0(); // @dk: want 0-indexed, so subtract 1
-		int32_t qend = i.query_end_0(); // @dk: want 0-indexed, so subtract 1
+		int32_t q_pos_0 = i.query_position_0(); // 0-indexed
+		int32_t q_start_0 = i.query_start_0(); // 0-indexed
+		int32_t q_end_0 = i.query_end_0(); // 0-indexed
 
 		uint8_t* qscore = i.quality_scores(); // quality score array
 		int32_t fastq_file_index = i.fastq_file_index(); // sequencer-generated read file that this alignment belongs to
 
-    // We will fill in all covariates that are used
+    // Fill in all covariates that are used...
     covariate_values_t cv;
-    cv.read_set = fastq_file_index;
-    cv.read_pos = qpos;
+    cv.read_set() = fastq_file_index;
+    cv.read_pos() = q_pos_0;
 		
 		// Things to remember in the following:
     // -->1 Reverse the base when the read is on the other strand
@@ -747,17 +791,19 @@ void cErrorTable::count_alignment_position(const alignment& i, const uint32_t re
       
     //We already skipped deletions of *this* base so we know we have a (mis)match
     {
-      uint8_t obs_base = bam1_seqi(qseq,qpos);    
-      uint8_t ref_base = ref_seq[ref_pos];
+      uint8_t obs_base_bam = bam1_seqi(qseq,q_pos_0);    
+      uint8_t ref_base_char = ref_seq[ref_pos];
       
-      if (!is_N(obs_base) && !is_char_N(ref_base)) {
+      if (!_base_bam_is_N(obs_base_bam) && !_base_char_is_N(ref_base_char)) {
         if(reversed) {
-          obs_base = reverse_base(obs_base);
-          ref_base = reverse_base(ref_base);
+          obs_base_bam =complement_base_bam(obs_base_bam);
+          ref_base_char = complement_base_char(ref_base_char);
         }
-        cv.quality = qscore[qpos];
-        cv.obs_base = obs_base;
-        cv.ref_base = ref_base;
+        
+        cv.quality() = qscore[q_pos_0];
+        cv.obs_base() = basebam2index(obs_base_bam);
+        cv.ref_base() = basechar2index(ref_base_char);
+        if (m_covariate_used[k_base_repeat]) cv.base_repeat() = i.base_repeat_0(q_pos_0);
         count_covariate(cv);
       }
     }
@@ -768,17 +814,18 @@ void cErrorTable::count_alignment_position(const alignment& i, const uint32_t re
     //#     quality score is of the second non-gap in the pair
     if(i.indel() == 0) {
       //## don't count past last match position
-      if (qpos < qend) {	
-        int32_t mqpos = qpos + 1 - reversed;
-        uint8_t obs_base = bam1_seqi(qseq,mqpos);
+      if (q_pos_0 < q_end_0) {	
+        int32_t mqpos = q_pos_0 + 1 - reversed;
+        base_bam obs_base_bam = bam1_seqi(qseq,mqpos);
         
         int32_t mrpos = ref_pos + 1 - reversed;
-        uint8_t ref_base = ref_seq[mrpos];
+        base_char ref_base_char = ref_seq[mrpos];
         
-        if (!is_N(obs_base) && !is_char_N(ref_base)) {     
-          cv.quality = qscore[mqpos];
-          cv.obs_base = '.';
-          cv.ref_base = '.';
+        if (!_base_bam_is_N(obs_base_bam) && !_base_char_is_N(ref_base_char)) {     
+          cv.quality() = qscore[mqpos];
+          cv.obs_base() = basechar2index('.');
+          cv.ref_base() = basechar2index('.');
+          if (m_covariate_used[k_base_repeat]) cv.base_repeat() = i.base_repeat_0(mqpos);
           count_covariate(cv);
         }
       }	
@@ -790,21 +837,21 @@ void cErrorTable::count_alignment_position(const alignment& i, const uint32_t re
     //#     quality score is of the next non-gap base in the read
     else if (i.indel() == -1) {
       //## count the quality of this or next base depending on reversed, and make sure it is not an N
-      int32_t mqpos = qpos + 1 - reversed;
-      uint8_t obs_base = bam1_seqi(qseq,mqpos);   
+      int32_t mqpos = q_pos_0 + 1 - reversed;
+      base_char obs_base_bam = bam1_seqi(qseq,mqpos);   
 			
       //## the reference base opposite the deletion is really the NEXT base
       int32_t mrpos = ref_pos + 1;
-      uint8_t ref_base = ref_seq[mrpos];      
+      base_char ref_base_char = ref_seq[mrpos];      
       
-      if (!is_N(cv.obs_base) && !is_char_N(ref_base)) {
-        if(reversed) {
-          ref_base = reverse_base(ref_base);
-        }
+      if (!_base_bam_is_N(obs_base_bam) && !_base_char_is_N(ref_base_char)) {
         
-        cv.quality = qscore[mqpos];
-        cv.obs_base = '.';
-        cv.ref_base = ref_base;
+        if(reversed) ref_base_char = complement_base_char(ref_base_char);
+        
+        cv.quality() = qscore[mqpos];
+        cv.obs_base() = basechar2index('.');
+        cv.ref_base() = basechar2index(ref_base_char);
+        if (m_covariate_used[k_base_repeat]) cv.base_repeat() = i.base_repeat_0(mqpos);
         count_covariate(cv);
       }
     }
@@ -815,24 +862,25 @@ void cErrorTable::count_alignment_position(const alignment& i, const uint32_t re
     //#     e.g. '.A' key for observing an A in a read at a position where the reference has no base
     //#     quality score is that of the observed inserted base
     else if (i.indel() == +1) {
-      int32_t mqpos = qpos + 1;
+      int32_t mqpos = q_pos_0 + 1;
 			
-      if ((mqpos <= qend) && (mqpos >= qstart)) {
-        uint8_t obs_base = bam1_seqi(qseq,mqpos);    
+      if ((mqpos <= q_end_0) && (mqpos >= q_start_0)) {
+        base_bam obs_base_bam = bam1_seqi(qseq,mqpos);    
 				
-        if (!is_N(obs_base)) {
-          if(reversed) {
-            obs_base = reverse_base(obs_base);
-          }        
+        if (!_base_bam_is_N(obs_base_bam)) {
+        
+          if(reversed) obs_base_bam = complement_base_bam(obs_base_bam);       
           
-          cv.quality = qscore[mqpos];
-          cv.obs_base = obs_base;
-          cv.ref_base = '.';
+          cv.quality() = qscore[mqpos];
+          cv.obs_base() = basebam2index(obs_base_bam);
+          cv.ref_base() = basechar2index('.');
           
+          if (m_covariate_used[k_base_repeat]) cv.base_repeat() = i.base_repeat_0(mqpos);
           count_covariate(cv);
         }	
       }
     }
+    
     
     
 }
@@ -888,10 +936,10 @@ bool cErrorTable::alignment_position_to_covariates(const alignment& a, int32_t i
   
   // -1 for deletion, otherwise 1-number of bases inserted at this position
   int indel=a.on_base_indel();
-  uint8_t base_bam = a.on_base_bam(insert_count);
+  base_bam read_base_bam = a.on_base_bam(insert_count);
         
   //##don't use bases without qualities!!
-  if(is_N(base_bam)) return false;
+  if(_base_bam_is_N(read_base_bam)) return false;
   
   //## These are the start and end coordinates of the aligned part of the read
   uint32_t q_start_0,q_end_0;
@@ -910,8 +958,8 @@ bool cErrorTable::alignment_position_to_covariates(const alignment& a, int32_t i
   if (indel == -1)
   {			
     q_pos_0 += 1 - a.reversed(); 
-    uint8_t check_base = a.query_base_bam_0(q_pos_0);
-    if (is_N(check_base)) return false;
+    base_bam check_base_bam = a.query_base_bam_0(q_pos_0);
+    if (_base_bam_is_N(check_base_bam)) return false;
   }
   
   //## (3) Insertion in read relative to reference...
@@ -928,15 +976,17 @@ bool cErrorTable::alignment_position_to_covariates(const alignment& a, int32_t i
     //## Check bounds: it's possible to go past the end of the read because
     //## this is the last base of this read, but other reads have inserted bases
     if (q_pos_0 > q_end_0) return false;
-    uint8_t check_base = a.query_base_bam_0(q_pos_0);
-    if (is_N(check_base)) return false;
+    base_bam check_base_bam = a.query_base_bam_0(q_pos_0);
+    if (_base_bam_is_N(check_base_bam)) return false;
   }
 
   //eventually include in above...
-  cv.obs_base = base_bam;
-  cv.quality = a.quality_base_0(q_pos_0);
-  cv.read_set = a.fastq_file_index();
-  cv.read_pos = q_pos_0;
+  cv.obs_base() = basebam2index(read_base_bam);
+  cv.quality() = a.quality_base_0(q_pos_0);
+  cv.read_set() = a.fastq_file_index();
+  cv.read_pos() = q_pos_0;
+  
+  if (m_covariate_used[k_base_repeat]) cv.base_repeat() = a.base_repeat_0(q_pos_0);
 
   return true;
 }

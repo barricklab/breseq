@@ -74,6 +74,10 @@ namespace breseq {
 	extern const char* MC;
   extern const char* JC;
 	extern const char* UN;
+
+  //!  
+  static uint8_t kPolymorphismFrequencyPrecision = 4;
+  static uint8_t kMutationQualityPrecision = 14;
 	
 	//! Convenience typedef, used during diff entry marshalling.
 	typedef std::vector<std::string> field_list_t;

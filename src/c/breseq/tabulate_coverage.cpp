@@ -72,7 +72,7 @@ breseq::tabulate_coverage_pileup::~tabulate_coverage_pileup() {
 void breseq::tabulate_coverage_pileup::callback(const breseq::pileup& p) {
 
   char* refseq = p.reference_sequence(); // reference sequence for this target
-  uint32_t pos = p.position() + 1;
+  uint32_t pos = p.position_1();
   
   // don't handle indels before first position
   if (pos==0) return;
