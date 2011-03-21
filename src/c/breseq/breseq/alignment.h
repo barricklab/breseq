@@ -60,7 +60,7 @@ namespace breseq {
     inline uint32_t strand() const { return (bam1_strand(_a) ? -1 : +1); }
     
 		//! Retrieve the query sequence.
-		inline uint8_t* query_sequence() const { return bam1_seq(_a); }
+		inline uint8_t* query_bam_sequence() const { return bam1_seq(_a); }
     
     //! Retrieve the base at a specified insert count relative to the current position
     inline uint8_t on_base_bam(int32_t insert_count=0) const { 
@@ -71,8 +71,8 @@ namespace breseq {
     
     //! Retrieve the base at a specified position in the read (was 0-indexed)
     //  Methods available for 0-indexed and 1-indexed coordinates.
-		inline uint8_t query_base_bam_0(const uint32_t pos) const { assert((pos>=0) && (pos<query_length())); return bam1_seqi(query_sequence(), pos); }
-		inline uint8_t query_base_bam_1(const uint32_t pos) const { assert((pos>0) && (pos<=query_length())); return bam1_seqi(query_sequence(), pos-1); }
+		inline uint8_t query_base_bam_0(const uint32_t pos) const { assert((pos>=0) && (pos<query_length())); return bam1_seqi(query_bam_sequence(), pos); }
+		inline uint8_t query_base_bam_1(const uint32_t pos) const { assert((pos>0) && (pos<=query_length())); return bam1_seqi(query_bam_sequence(), pos-1); }
 
 		//! Retrieve the position of the alignment in the query (was 0-indexed).
     //  Methods available for 0-indexed and 1-indexed coordinates.

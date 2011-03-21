@@ -24,6 +24,7 @@ LICENSE AND COPYRIGHT
 #include <vector>
 #include <fstream>
 #include <cmath>
+#include <map>
 #include <boost/optional.hpp>
 
 #include "breseq/pileup_base.h"
@@ -41,7 +42,8 @@ namespace breseq {
 	class tabulate_coverage_pileup : public breseq::pileup_base {
 	public:		
 		//! Constructor.
-		tabulate_coverage_pileup(const std::string& bam, const std::string& fasta, const std::string& output);
+		tabulate_coverage_pileup(const std::string& bam, const std::string& fasta, const std::string& output,
+      const std::string& read_begin_output, const std::string& gc_output);
 		
 		//! Destructor.
 		virtual ~tabulate_coverage_pileup();		
@@ -54,10 +56,15 @@ namespace breseq {
 
 	
   protected:
-    std::ofstream _output_table;
-    uint32_t _last_position_processed;
+    std::ofstream m_output_table, m_read_begin_output, m_gc_output;
+    uint32_t m_last_position_processed;
     
+    std::map<std::string,uint32_t> m_read_begin_top_bins;
+    std::map<std::string,uint32_t> m_read_begin_bot_bins;
+    std::map<std::string,uint32_t> m_ref_begin_top_bins;
+    std::map<std::string,uint32_t> m_ref_begin_bot_bins;
     
+    std::vector<uint32_t> m_gc_content_bins;
     
 	};
   

@@ -122,7 +122,7 @@ void error_count_pileup::callback(const pileup& p) {
 
 				
 		uint32_t reversed = i->reversed(); // are we on the reverse strand?
-		uint8_t* qseq = i->query_sequence(); // query sequence (read)
+		uint8_t* qseq = i->query_bam_sequence(); // query sequence (read)
 		int32_t qpos = i->query_position_0(); // position of the alignment in the query
 		int32_t qstart = i->query_start_0(); // @dk: want 0-indexed, so subtract 1
 		int32_t qend = i->query_end_0(); // @dk: want 0-indexed, so subtract 1
@@ -766,7 +766,7 @@ void cErrorTable::count_alignment_position(const alignment& i, const pileup& p) 
     const char* ref_seq = p.reference_sequence();
     
 		uint32_t reversed = i.reversed(); // are we on the reverse strand?
-		uint8_t* qseq = i.query_sequence(); // query sequence (read)
+		uint8_t* qseq = i.query_bam_sequence(); // query sequence (read)
 		int32_t q_pos_0 = i.query_position_0(); // 0-indexed
 		int32_t q_start_0 = i.query_start_0(); // 0-indexed
 		int32_t q_end_0 = i.query_end_0(); // 0-indexed
