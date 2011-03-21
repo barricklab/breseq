@@ -52,11 +52,17 @@ syntax: regexp
 ^tests/.+/0
 ^tests/.+/data
 
-^src/c/breseq/error_count
-^src/c/breseq/identify_mutations
-^src/c/breseq/calc_trims
-^src/c/breseq/tabulate_coverage
-^src/c/breseq/convert_genbank
+^src/c/breseq/error_count/
+^src/c/breseq/identify_mutations/
+^src/c/breseq/calc_trims/
+^src/c/breseq/tabulate_coverage/
+^src/c/breseq/convert_genbank/
+
+^src/c/breseq/error_count$
+^src/c/breseq/identify_mutations$
+^src/c/breseq/calc_trims$
+^src/c/breseq/tabulate_coverage$
+^src/c/breseq/convert_genbank$
 
 ^extern/samtools-0.1.7a/samtools
 ^extern/samtools-0.1.7a/misc
