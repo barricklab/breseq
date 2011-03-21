@@ -38,6 +38,8 @@ namespace breseq {
 		
 		//! Retrieve the target id for this pileup.
 		inline uint32_t target() const { return _tid; }
+    
+    inline uint32_t target_length() const { return _pb.target_length(_tid); } 
 		
 		//! Retrieve the name of this target.
 		inline const char* target_name() const { return _pb.target_name(_tid); }

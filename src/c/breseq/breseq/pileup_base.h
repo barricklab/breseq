@@ -68,6 +68,11 @@ namespace breseq {
 
 		//! Retrieve the name of the given target.
 		const char* target_name(uint32_t target) const { return _bam->header->target_name[target]; }
+
+		//! Retrieve the name of the given target.
+		const uint32_t target_length(uint32_t target) const { return _refs[target]->_len; }
+
+    char reference_base_char_1(uint32_t target, uint32_t pos1) const  { return get_refseq(target)[pos1-1]; } ;
 		
 		//! Do the pileup; will trigger callback for each alignment.
 		void do_pileup();

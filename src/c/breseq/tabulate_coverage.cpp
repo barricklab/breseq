@@ -42,22 +42,31 @@ void breseq::tabulate_coverage( const std::string& bam,
                                 const uint32_t downsample )
 {
 
-  tabulate_coverage_pileup tcp(bam, fasta, output);
+  std::string output_gc(output);
+  output_gc += ".gc.tab";
+  std::string output_read_begin(output);
+  output_read_begin += ".read_begin.tab";
+
+  tabulate_coverage_pileup tcp(bam, fasta, output, output_read_begin, output_gc);
   tcp.do_pileup();
 }
 
 /*! Constructor.
  */
-breseq::tabulate_coverage_pileup::tabulate_coverage_pileup(const std::string& bam, const std::string& fasta, const std::string& output)
-: breseq::pileup_base(bam, fasta), _last_position_processed(0) {
+breseq::tabulate_coverage_pileup::tabulate_coverage_pileup(const std::string& bam, const std::string& fasta, const std::string& output,
+    const std::string& read_begin_output, const std::string& gc_output)
+: breseq::pileup_base(bam, fasta), m_last_position_processed(0) {
 
-  _output_table.open(output.c_str());
+  m_output_table.open(output.c_str());
+  m_read_begin_output.open(read_begin_output.c_str());
+  m_gc_output.open(gc_output.c_str());
   
-  _output_table << "position" << "\t" << "ref_base" << "\t" 
+  
+  m_output_table << "position" << "\t" << "ref_base" << "\t" 
     << "unique_top_cov" << "\t" << "unique_bot_cov" << "\t" 
     << "redundant_top_cov" << "\t" << "redundant_bot_cov" << "\t" 
     << "raw_redundant_top_cov" << "\t" << "raw_redundant_bot_cov" << "\t"
-    << "unique_top_begin" << "\t" << "unique_bot_begin"
+    << "unique_top_begin" << "\t" << "unique_bot_begin"    
   << std::endl;
 }
 
@@ -78,10 +87,31 @@ void breseq::tabulate_coverage_pileup::callback(const breseq::pileup& p) {
   if (pos==0) return;
   
   // print positions not called because there were no reads
-  for (uint32_t i=_last_position_processed+1; i<pos; i++) {
-    _output_table << i << "\t" << refseq[i-1] << "\t" << 0 << "\t" << 0 << "\t" 
+  for (uint32_t i=m_last_position_processed+1; i<pos; i++) {
+    m_output_table << i << "\t" << refseq[i-1] << "\t" << 0 << "\t" << 0 << "\t" 
       << 0 << "\t" << 0 << "\t" << 0 << "\t" << 0 << "\t" << 0 << "\t" << 0 << std::endl;
   }
+
+  // catches this position
+  for (uint32_t j=m_last_position_processed+1; j<=pos; j++) {
+    if (j>=3) {
+      std::string read_begin_s;
+      {
+        for (int i=1; i<=3; i++) {
+          read_begin_s += complement_base_char(p.reference_base_char_1(j-i+1));
+        }
+      }
+      m_ref_begin_bot_bins[read_begin_s]++;    
+    }
+    if (j<p.target_length()-3) {
+      std::string read_begin_s;
+        for (int i=1; i<=3; i++) {
+          read_begin_s += p.reference_base_char_1(j+i-1);
+        }        
+      m_ref_begin_top_bins[read_begin_s]++;    
+    }
+  }
+
   
   uint8_t ref_base = refseq[pos-1];
   uint32_t unique_cov[2] = {0,0};
@@ -90,26 +120,26 @@ void breseq::tabulate_coverage_pileup::callback(const breseq::pileup& p) {
   uint32_t unique_begin_reads[2] = {0,0};
   
 	// for each alignment within this pileup:
-	for(pileup::const_iterator i=p.begin(); i!=p.end(); ++i) {
+	for(pileup::const_iterator a=p.begin(); a!=p.end(); ++a) {
     
     // skip deletions entirely, they are handled by adjacent matching positions
-    if(i->is_del()) {
+    if(a->is_del()) {
       continue;
     }
 
-		uint32_t redundancy = i->redundancy();
-    uint32_t reversed = i->reversed();
+		uint32_t redundancy = a->redundancy();
+    uint32_t reversed = a->reversed();
     bool first_base_matched;
     bool this_is_first_base;
     if (!reversed) { 
       // top strand
-      first_base_matched = (i->query_start_1() == 1);
-      this_is_first_base = (i->query_position_1() == 1); 
+      first_base_matched = (a->query_start_1() == 1);
+      this_is_first_base = (a->query_position_1() == 1); 
     } else {
       // bottom strand
-      first_base_matched = (i->query_end_1() == i->query_length());
-      this_is_first_base = (i->query_position_1() == i->query_length());       
-    }
+      first_base_matched = (a->query_end_1() == a->query_length());
+      this_is_first_base = (a->query_position_1() == a->query_length());     
+}
 
 // WHOA -- do we really want this....?    
     if (!first_base_matched) {
@@ -121,7 +151,21 @@ void breseq::tabulate_coverage_pileup::callback(const breseq::pileup& p) {
 			unique_cov[reversed]++;
       if (this_is_first_base) {
         unique_begin_reads[reversed]++;
-      } 
+      }
+      
+      std::string read_begin_s;
+      if (!reversed) { 
+        for (int i=1; i<=3; i++) {
+          read_begin_s += basebam2char(a->query_base_bam_1(i));
+        }
+        m_read_begin_top_bins[read_begin_s]++;    
+      } else {
+        for (int i=1; i<=3; i++) {
+          read_begin_s += basebam2char(complement_base_bam(a->query_base_bam_1(a->query_length()-i+1)));
+        }
+        m_read_begin_bot_bins[read_begin_s]++;    
+      }
+
 		}
 		else
 		{
@@ -132,7 +176,7 @@ void breseq::tabulate_coverage_pileup::callback(const breseq::pileup& p) {
   
   
   //output
-  _output_table << pos << "\t" << ref_base << "\t" 
+  m_output_table << pos << "\t" << ref_base << "\t" 
     << unique_cov[0] << "\t" << unique_cov[1] << "\t" 
     << redundant_cov[0] << "\t" << redundant_cov[1] << "\t" 
     << raw_redundant_cov[0] << "\t" << raw_redundant_cov[1] << "\t"
@@ -140,7 +184,7 @@ void breseq::tabulate_coverage_pileup::callback(const breseq::pileup& p) {
     
   << std::endl;
  
-  _last_position_processed = pos;
+  m_last_position_processed = pos;
 }
 
 /*! Called at the end of the pileup.
@@ -151,12 +195,69 @@ void breseq::tabulate_coverage_pileup::at_end(uint32_t tid, uint32_t seqlen) {
   uint32_t pos = seqlen+1;
   
   // print positions not called because there were no reads
-  for (uint32_t i=_last_position_processed+1; i<pos; i++) {
-    _output_table << i << "\t" << refseq[i-1] << "\t" << 0 << "\t" << 0 << "\t" 
+  for (uint32_t i=m_last_position_processed+1; i<pos; i++) {
+    m_output_table << i << "\t" << refseq[i-1] << "\t" << 0 << "\t" << 0 << "\t" 
       << 0 << "\t" << 0 << "\t" << 0 << "\t" << 0 << "\t" << 0 << "\t" << 0 << std::endl;
   }
+
+  // catches this position
+  for (uint32_t j=m_last_position_processed+1; j<pos; j++) {
+    if (j>=3) {
+      std::string read_begin_s;
+      {
+        for (int i=1; i<=3; i++) {
+          read_begin_s += complement_base_char(reference_base_char_1(tid, j-i+1));
+        }
+      }
+      m_ref_begin_bot_bins[read_begin_s]++;    
+    }
+    if (j<target_length(tid)-3) {
+      std::string read_begin_s;
+        for (int i=1; i<=3; i++) {
+          read_begin_s += reference_base_char_1(tid, j+i-1);
+        }        
+      m_ref_begin_top_bins[read_begin_s]++;    
+    }
+  }
+
   
-  _last_position_processed = pos;
+  m_last_position_processed = pos;
+  
+  m_read_begin_output << "base_1\tbase_2\tbase_3\tread_top\tread_bot\tref_top\tref_bot" << std::endl;
+  for (int b1=0; b1<base_list_size-1; b1++) {
+    for (int b2=0; b2<base_list_size-1; b2++) {
+      for (int b3=0; b3<base_list_size-1; b3++) {
+      
+        std::string key_s;
+        key_s += base_char_list[b1];
+        key_s += base_char_list[b2];
+        key_s += base_char_list[b3];
+              
+        uint32_t read_begin_top_count=0;
+        if (m_read_begin_top_bins.find(key_s) != m_read_begin_top_bins.end()) {
+          read_begin_top_count = m_read_begin_top_bins[key_s]; 
+        }
+
+        uint32_t read_begin_bot_count=0;
+        if (m_read_begin_bot_bins.find(key_s) != m_read_begin_bot_bins.end()) {
+          read_begin_bot_count = m_read_begin_bot_bins[key_s]; 
+        }
+        
+        uint32_t ref_begin_top_count=0;
+        if (m_ref_begin_top_bins.find(key_s) != m_ref_begin_top_bins.end()) {
+          ref_begin_top_count = m_ref_begin_top_bins[key_s]; 
+        }
+        
+        uint32_t ref_begin_bot_count=0;
+        if (m_ref_begin_bot_bins.find(key_s) != m_ref_begin_bot_bins.end()) {
+          ref_begin_bot_count = m_ref_begin_bot_bins[key_s]; 
+        }
+          
+        m_read_begin_output << base_char_list[b1] << "\t" << base_char_list[b2] << "\t" << base_char_list[b3]
+          << "\t" << read_begin_top_count << "\t" << read_begin_bot_count << "\t" << ref_begin_top_count << "\t" << ref_begin_bot_count<< std::endl;
+      }
+    }
+  }
 }
 
 
