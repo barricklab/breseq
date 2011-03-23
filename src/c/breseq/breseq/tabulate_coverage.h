@@ -36,7 +36,9 @@ namespace breseq {
 													const std::string& fasta,
                           const std::string& output,
                           const std::string& region,
-                          const uint32_t downsample );
+                          const uint32_t downsample,
+                          const std::string& read_start_output,
+                          const std::string& gc_output  );
   
   
 	class tabulate_coverage_pileup : public breseq::pileup_base {
@@ -57,7 +59,6 @@ namespace breseq {
 	
   protected:
     std::ofstream m_output_table, m_read_begin_output, m_gc_output;
-    uint32_t m_last_position_processed;
     
     std::map<std::string,uint32_t> m_read_begin_top_bins;
     std::map<std::string,uint32_t> m_read_begin_bot_bins;

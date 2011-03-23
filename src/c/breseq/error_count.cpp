@@ -68,7 +68,7 @@ void error_count(const std::string& bam,
 error_count_pileup::error_count_pileup(const std::string& bam, const std::string& fasta, bool do_coverage, bool do_errors, uint8_t min_qual_score, const std::string& covariates)
 : pileup_base(bam, fasta), m_do_coverage(do_coverage), m_do_errors(do_errors), m_min_qual_score(min_qual_score), m_error_table(covariates) {
 	// reserve enough space for the sequence info:
-	_seq_info.resize(_bam->header->n_targets);
+	_seq_info.resize(m_bam->header->n_targets);
   m_use_CErrorTable = (covariates.length() > 0);
 }
 
@@ -244,7 +244,7 @@ void error_count_pileup::callback(const pileup& p) {
 void error_count_pileup::print_coverage(const std::string& output_dir) {
 	using namespace std;
 	for(std::size_t i=0; i<_seq_info.size(); ++i) {
-		string filename(output_dir + _bam->header->target_name[i] + ".unique_only_coverage_distribution.tab");
+		string filename(output_dir + m_bam->header->target_name[i] + ".unique_only_coverage_distribution.tab");
 		ofstream out(filename.c_str());					
 		
 		out << "coverage\tn" << endl;

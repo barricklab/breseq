@@ -1597,7 +1597,7 @@ sub draw_coverage
 		{
 			my $region = $seq_id . ":" . "1" . "-" . (length $ref_seq_info->{ref_strings}->{$seq_id});
 			print STDERR "Creating coverage plot for region $region\n";
-			$co->plot_coverage($region, "$evidence_path/$seq_id\.overview", {verbose=>0, resolution=>undef, pdf => 0, total_only => 1, shaded_flanking => 0});
+			$co->plot_coverage($region, "$evidence_path/$seq_id\.overview", {verbose=>0, resolution=>undef, pdf => 0, total_only => 1, shaded_flanking => 0, use_c_tabulate_coverage => 1});
 		}
 
 		#make plot for every missing coverqge item
@@ -1614,7 +1614,7 @@ sub draw_coverage
 			$item->{_coverage_plot_file_name} = "$item->{seq_id}\_$start\-$end";
 			print STDERR "Creating coverage plot for region $region\n";
 				
-			$co->plot_coverage($region, "$evidence_path/$item->{_coverage_plot_file_name}", {verbose=>0, resolution=>undef, pdf => 0, total_only => 0, shaded_flanking => $shaded_flanking});
+			$co->plot_coverage($region, "$evidence_path/$item->{_coverage_plot_file_name}", {verbose=>0, resolution=>undef, pdf => 0, total_only => 0, shaded_flanking => $shaded_flanking, use_c_tabulate_coverage => 1});
 			$item->{_coverage_plot_file_name} .= ".$drawing_format";
 		}
 

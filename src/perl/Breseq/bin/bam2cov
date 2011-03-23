@@ -153,6 +153,8 @@ if ($tile)
 			$start += $tile;
 		}
 	}
+	print STDERR Dumper(@regions);
+	
 }
 
 die "No regions defined.\n" if (scalar @regions == 0);
@@ -217,6 +219,6 @@ foreach my $region (@regions)
 	## Make drawings
 	else
 	{
-		$co->plot_coverage($region, $this_output_file, {verbose=>$verbose, resolution=>$resolution, pdf => $pdf, total_only => $total_only});
+		$co->plot_coverage($region, $this_output_file, {verbose=>$verbose, resolution=>$resolution, pdf => $pdf, total_only => $total_only, use_c_tabulate_coverage => 1});
 	}
 }

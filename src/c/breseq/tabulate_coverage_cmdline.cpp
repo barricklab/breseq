@@ -35,8 +35,10 @@ int main(int argc, char* argv[]) {
 	("bam,b", po::value<string>(), "bam file containing sequences to be aligned")
 	("fasta,f", po::value<string>(), "FASTA file of reference sequence")
 	("output,o", po::value<string>(), "name of output file")
-	("region,r", po::value<string>()->default_value("dummy:1-2"), "region to print (accession:start-end)")
+	("region,r", po::value<string>()->default_value(""), "region to print (accession:start-end)")
 	("downsample,d", po::value<int>()->default_value(1), "Only print information every this many positions")
+	("read_start_output,d", po::value<string>()->default_value(""), "Create additional data file binned by read start bases")
+	("gc_output,d", po::value<string>()->default_value(""), "Create additional data file binned by GC content of reads")
   ;
   
 	po::variables_map options;
@@ -62,7 +64,10 @@ int main(int argc, char* argv[]) {
                                  options["fasta"].as<string>(),
                                  options["output"].as<string>(),
                                  options["region"].as<string>(),
-                                 options["downsample"].as<int>()
+                                 options["downsample"].as<int>(),
+                                 options["read_start_output"].as<string>(),
+                                 options["gc_output"].as<string>()
+
                               );
 	} catch(...) {
 		// failed; 
