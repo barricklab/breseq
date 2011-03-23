@@ -39,9 +39,9 @@ namespace breseq {
 		reference_sequence(const std::string& fasta_filename, const std::string& target);
 		~reference_sequence();
 		
-		faidx_t* _ref; //!< FAI file handle.
-		char* _seq; //!< Reference sequence (ascii).
-		int _len; //<! Length of reference sequence.
+		faidx_t* m_ref; //!< FAI file handle.
+		char* m_seq; //!< Reference sequence (ascii).
+		int m_len; //<! Length of reference sequence.
 		
 	private:
 		// not allowed:
@@ -67,16 +67,22 @@ namespace breseq {
 		char* get_refseq(uint32_t target) const;
 
 		//! Retrieve the name of the given target.
-		const char* target_name(uint32_t target) const { return _bam->header->target_name[target]; }
+		const char* target_name(uint32_t target) const { return m_bam->header->target_name[target]; }
 
 		//! Retrieve the name of the given target.
-		const uint32_t target_length(uint32_t target) const { return _refs[target]->_len; }
+		const uint32_t target_length(uint32_t target) const { return m_refs[target]->m_len; }
 
     char reference_base_char_1(uint32_t target, uint32_t pos1) const  { return get_refseq(target)[pos1-1]; } ;
+
+    // handle this reference sequence position during pileup?
+    bool handle_position(uint32_t pos);
 		
 		//! Do the pileup; will trigger callback for each alignment.
 		void do_pileup();
-		
+    
+    //! Do the pileup, but only on specified region
+    void do_pileup(std::string region, bool clip = false, uint32_t downsample = 0);
+		 
 		//! Pileup callback.
 		virtual void callback(const pileup& p) = 0;
 
@@ -86,9 +92,20 @@ namespace breseq {
 	protected:
 		friend int first_level_callback(uint32_t tid, uint32_t pos, int n, const bam_pileup1_t *pile, void *data);
 
-		samfile_t* _bam; //!< BAM file handle.
-		refseq_list_t _refs; //!< Reference sequences.
-		boost::optional<uint32_t> _last_tid; //!< The "last target" for which the first-level-callback was called.
+		samfile_t* m_bam; //!< BAM file handle.
+    bam_header_t* m_bam_header;
+    bam_index_t* m_bam_index;    
+    bamFile m_bam_file; 
+    
+    uint32_t m_last_position_1;        // last position handled by pileup
+    uint32_t m_start_position_1;       // requested start, 0 = whole fragment
+    uint32_t m_end_position_1;         // requested end,   0 = whole fragment
+    uint32_t m_clip_start_position_1;  // clip columns handled starting here, 0 = off 
+    uint32_t m_clip_end_position_1;    // clip columns handled ending here,   0 = off 
+    uint32_t m_downsample;
+    
+		refseq_list_t m_refs; //!< Reference sequences.
+		boost::optional<uint32_t> m_last_tid; //!< The "last target" for which the first-level-callback was called.
 	};
 	
 } // breseq

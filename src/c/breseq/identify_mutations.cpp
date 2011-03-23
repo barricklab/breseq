@@ -97,14 +97,14 @@ breseq::identify_mutations_pileup::identify_mutations_pileup(
 , _this_deletion_reaches_seed_value(false)
 , _last_position_coverage_printed(0) {
 	  
-  assert(_bam->header->n_targets == (int32_t)_deletion_propagation_cutoff.size());
+  assert(m_bam->header->n_targets == (int32_t)_deletion_propagation_cutoff.size());
     
 	// reserve enough space for the sequence info:
-	_seq_info.resize(_bam->header->n_targets);
+	_seq_info.resize(m_bam->header->n_targets);
 	
   // tally up the reference lengths from the bam file
-	for(int i=0; i<_bam->header->n_targets; ++i) {
-		_log10_ref_length += static_cast<double>(_bam->header->target_len[i]);
+	for(int i=0; i<m_bam->header->n_targets; ++i) {
+		_log10_ref_length += static_cast<double>(m_bam->header->target_len[i]);
 	}
 	assert(_log10_ref_length != 0);
 	_log10_ref_length = log10(_log10_ref_length);

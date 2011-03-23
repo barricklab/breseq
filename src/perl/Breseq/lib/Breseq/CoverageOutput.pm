@@ -35,7 +35,7 @@ use vars qw(@ISA);
 use Bio::Root::Root;
 @ISA = qw( Bio::Root::RootI );
 
-use CGI qw/:standard *table *Tr *code *td start_b end_b start_i end_i/;
+use FindBin;
 
 use Bio::DB::Sam;
 use Breseq::Fastq;
@@ -66,6 +66,9 @@ sub new
 	}
 	$self->{bam} = $open_bam_files{$bam_path.$fasta_path};
 	
+	$self->{bam_path} = $bam_path;
+	$self->{fasta_path} = $fasta_path;
+	
 	return $self; 
 }
 
@@ -80,6 +83,8 @@ sub plot_coverage
 	$options->{resolution} = 600 if (!defined $options->{resolution});
 	$options->{total_only} = 0 if (!defined $options->{total_only});
 	$options->{shaded_flanking} = 0 if (!defined $options->{shaded_flanking}); #how much gray on each end
+	
+	#print STDERR Dumper($options);
 	
 	my ($seq_id, $start, $end, $insert_start, $insert_end);
 	($seq_id, $start, $end, $insert_start, $insert_end, $region)  = Breseq::Shared::region_to_coords($region, $self->{bam});
@@ -110,9 +115,20 @@ sub plot_coverage
 		$downsample = 1 if ($downsample < 1);
 	}
 	
-	my $tmp_coverage = "$self->{path}/$$.coverage.tab";
-	$self->tabulate_coverage($tmp_coverage, $extended_region, {downsample => $downsample} );
+#	print STDERR "Downsample: $downsample\n";
 	
+	my $tmp_coverage = "$self->{path}/$$.coverage.tab";
+	
+	if ($options->{use_c_tabulate_coverage}) {
+
+		my $bin_path = $FindBin::Bin;
+		my $cmdline = "$bin_path/tabulate_coverage --bam $self->{bam_path} --fasta $self->{fasta_path} --region $extended_region --output $tmp_coverage --downsample $downsample";
+		Breseq::Shared::system($cmdline);
+		
+	} else {
+		$self->tabulate_coverage($tmp_coverage, $extended_region, {downsample => $downsample} );
+	}
+
 	my $log_file_name = "$self->{path}/$$.r.log";
 	Breseq::Shared::system("R --vanilla in_file=$tmp_coverage out_file=$output pdf_output=$options->{pdf} total_only=$options->{total_only} window_start=$start window_end=$end < $self->{r_script} > $log_file_name");
 	
