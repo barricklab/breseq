@@ -140,7 +140,7 @@ void breseq::tabulate_coverage_pileup::callback(const breseq::pileup& p) {
       // bottom strand
       first_base_matched = (a->query_end_1() == a->query_length());
       this_is_first_base = (a->query_position_1() == a->query_length());     
-}
+    }
 
 // WHOA -- do we really want this....?    
     if (!first_base_matched) {
@@ -148,40 +148,50 @@ void breseq::tabulate_coverage_pileup::callback(const breseq::pileup& p) {
     }
     
 		if (redundancy == 1)
-		{	
+		{	    
 			unique_cov[reversed]++;
       if (this_is_first_base) {
         unique_begin_reads[reversed]++;
       }
       
-      std::string read_begin_s;
-      if (!reversed) { 
-        for (int i=1; i<=3; i++) {
-          base_bam bb = a->query_base_bam_1(i);
-          if ( !_base_bam_is_N(bb) ) {
-            read_begin_s += basebam2char(bb);
+      
+      if (this_is_first_base) {
+      
+        std::string read_begin_s;
+        if (!reversed) { 
+          for (int i=1; i<=3; i++) {
+            base_bam bb = a->query_base_bam_1(i);
+            if ( !_base_bam_is_N(bb) ) {
+              read_begin_s += basebam2char(bb);
+            }
           }
-        }
-        
-        // all must be not N
-        if (read_begin_s.length() == 3) {
-          m_read_begin_top_bins[read_begin_s]++;    
-        }
-      } else {
-        for (int i=1; i<=3; i++) {
-        
-          base_bam bb = a->query_base_bam_1(a->query_length()-i+1);
-          if ( !_base_bam_is_N(bb) ) {
-            read_begin_s += basebam2char(complement_base_bam(bb));
+          
+          // all must be not N
+          if (read_begin_s.length() == 3) {
+            m_read_begin_top_bins[read_begin_s]++;    
           }
-        }
-        
-        // all must be not N
-        if (read_begin_s.length() == 3) {
-          m_read_begin_bot_bins[read_begin_s]++;
+          
+        /*
+          std::cout << "Pos " << pos << " Top strand " << read_begin_s << "  " << a->query_char_sequence() << std::endl;
+         */
+        } else {
+          for (int i=1; i<=3; i++) {
+          
+            base_bam bb = a->query_base_bam_1(a->query_length()-i+1);
+            if ( !_base_bam_is_N(bb) ) {
+              read_begin_s += basebam2char(complement_base_bam(bb));
+            }
+          }
+          
+          // all must be not N
+          if (read_begin_s.length() == 3) {
+            m_read_begin_bot_bins[read_begin_s]++;
+          }
+        /*
+          std::cout << "Pos " << pos << " Bottom strand " << read_begin_s << "  " << a->query_char_sequence() << std::endl;
+         */
         }
       }
-
 		}
 		else
 		{

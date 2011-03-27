@@ -356,9 +356,6 @@ if ($command eq 'MERGE_PAIRED')
 	my $in_fastq_1 = Breseq::Fastq->new(-file => $input_1);
 	my $in_fastq_2 = Breseq::Fastq->new(-file => $input_2);
 	my $out_fastq = Breseq::Fastq->new(-file => ">$output");
-
-	my $line_1 = <INPUT_1>;
-	my $line_2 = <INPUT_2>;
 	
 	my $seq1;
 	my $seq2;
@@ -366,6 +363,41 @@ if ($command eq 'MERGE_PAIRED')
 	{
 		$out_fastq->write_seq($seq1);
 		$out_fastq->write_seq($seq2);
+	}
+}
+
+## Converts two paired FASTQ files to one
+## with the FASTQ entries interspersed.
+
+if ($command eq 'TRIM_ENDS')
+{
+	#Get options
+	use Getopt::Long;
+	use Pod::Usage;
+	my ($help, $man);
+	my ($input_file, $start, $end);
+	my $left = 0;
+	my $right = 0;
+	GetOptions(
+		'help|?' => \$help, 'man' => \$man,
+		'left=s' => \$left,
+		'right=s' => \$right,
+	) or pod2usage(2);
+	pod2usage(1) if $help;
+	pod2usage(-exitstatus => 0, -verbose => 2) if $man;
+	die "Must provide either --left or --right option.\n" if (($left == 0) && ($right == 0));
+
+	my ( $input, $output ) = @ARGV;
+
+	my $in_fastq = Breseq::Fastq->new(-file => $input);
+	my $out_fastq = Breseq::Fastq->new(-file => ">$output");
+	
+	my $seq;
+	while (($seq = $in_fastq->next_seq))
+	{
+		$seq->{seq} = substr($seq->{seq}, $left, length($seq->{seq}) - $left - $right);
+		$seq->{qual_chars} = substr($seq->{qual_chars}, $left, length($seq->{qual_chars}) - $left - $right);		
+		$out_fastq->write_seq($seq);
 	}
 }
 

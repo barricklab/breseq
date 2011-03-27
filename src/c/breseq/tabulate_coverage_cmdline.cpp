@@ -15,12 +15,20 @@ LICENSE AND COPYRIGHT
 
 *****************************************************************************/
 
-#include <boost/program_options.hpp>
 #include <iostream>
+#include <fstream>
 #include <string>
 #include <vector>
 
+#include <boost/program_options.hpp>
+
 #include "breseq/tabulate_coverage.h"
+
+bool file_exists(const char *filename)
+{
+  std::ifstream ifile(filename);
+  return ifile;
+}
 
 /*! Tabulate coverage.
  */
@@ -48,7 +56,7 @@ int main(int argc, char* argv[]) {
 	// make sure that the config options are good:
 	if(options.count("help")
 		 || !options.count("bam")
-		 || !options.count("fasta")   
+		 || !options.count("fasta")
 		 || !options.count("output")     
   ) {
 		cout << "Usage: tabulate_coverage --bam <sequences.bam> --fasta <reference.fasta> --output <coverage.tab> [--downsample <float> --detailed]" << endl;

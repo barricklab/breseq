@@ -116,6 +116,7 @@ This image shows reads 1-6 aligned to the reference genome with and without end 
 
 Without end trimming, two reads on the top strand that do not cross the new AGC insertion, contradict that there was any change to the sequence here when they are aligned to the reference. With end trimming, these bases are ignored because they are ambiguous with respect to possible insertions, like the event that happened, or deletion of one AGC copy.
 
+.. _base-quality-re-calibration:
 
 Base quality re-calibration
 ***************************
@@ -152,6 +153,80 @@ Where there are n reads aligned to this position, b\ :sub:`i` is the base observ
 |breseq| determines the base with the highest value of L, and records read alignment evidence if this base is different from the reference base. This evidence is assigned log10 L minus the log10 of the cumulative length of all reference sequences as a new quality score for this base prediction.
 
 Recall that |breseq| will only find indels of at most 2 bases as read alignment evidence, because all alignments with longer indels were split in a pre-processing step when predicting :ref:`new-junction-evidence`.
+
+.. _polymorphism-prediction:
+
+Polymorphism Prediction
+***************************
+
+When |breseq| is called with the :option:`breseq --polymorphism-prediction` option, it attempts to predict the frequencies of base substitution and short indel mutations that are present in only a fraction of the population (variants present in only a sub-population of individuals). 
+
+.. warning::
+   
+   Polymorphism prediction is an experimental feature. While it has proven useful for some studies [Barrick2009b]_, it has not been thoroughly tested, has some known shortcomings (see below), and continues to be actively developed.
+
+The prediction procedure uses the same empirical error model described above in :ref:`base-quality-re-calibration`. This error model does not capture some second-order sources of variation in error rates that can lead to substantial numbers of false-positive polymorphism predictions. For example: sequencing error hotspots at certain positions, in certain contexts, and on certain strands. |breseq| also does not  take into account read mapping qualities when weighing support for polymorphisms, which can lead to overconfidence in bases that result from misalignments. 
+
+Several additional |breseq| command-line options control steps that allow filtering out polymorphism predictions that pass the general statistical test for significance but display red-flag qualities indicative of biases. Top-scoring, but filtered, predictions are still displayed as "marginal predictions" in the |breseq| output, so that they can be manually examined.
+
+The full list of polymorphism prediction options:
+
+.. program:: breseq
+
+.. option:: --polymorphism-prediction
+
+   Enable polymorphism prediction. Default: OFF.
+
+.. option:: --polymorphism-log10-e-value-cutoff <float>
+
+   Negative log10 of the E-value cutoff for the likelihood ratio test used in polymorphism prediction as described below. Default: 2. (Meaning the E-value must be ≤ 0.01 for a prediction to pass.)
+
+.. option:: --polymorphism-coverage-both-strands <int>
+
+   Minimum coverage (in number of uniquely mapped reads) required on each strand of the reference genome for both the major and the minor mutational variants to predict a polymorphism. Default: 0.
+
+.. option:: --polymorphism-frequency-cutoff <double>
+
+   Minimum frequency for the minor variant to predict a polymorphism. Default: 0.
+
+.. option:: --polymorphism-bias-p-value-cutoff <double>
+
+   P-value cutoff employed for both strand and quality score tests described below. Default: 0.05.
+
+.. option:: --polymorphism-reject-homopolymer-length <int>
+
+  Ignore polymorphisms predicted at reference genome positions in homopolymer repeats of this length or greater. Default: OFF.
+
+.. option:: --max-rejected-polymorphisms-to-show <int>
+
+   Show this many of the top polymorphism predictions that pass the likelihood-ratio test for significance but fail a bias filtering step. Default: 20.
+
+Likelihood-ratio test for polymorphism
+""""""""""""""""""""""""""""""""""""""
+When polymorphism prediction is enabled |breseq| tests the hypothesis that reads aligned to each reference position (and base insertions relative to the reference) support a model that is a mixture of a major and minor mutational variant as opposed to a model that all disagreements with the reference sequence (or consensus change predicted as above) are due to sequencing errors. To do this, it calculates the chances of generating the observed alignment given the hypotheses that the sequenced sample consists of 100% of each of the four bases or a gap character and the per-base error model described above. Then it takes the base states giving the top and second highest probabilites and tests a mixture model that allows the major and minor variants to be present at any intermediate fraction in the sequenced population. |breseq| calculates the maximum likelihood percentage of each base state according to this model (at 0.1% resolution) and the chance of the data given this inferred reference distribution.
+
+|breseq| then tests the statistical support for the model having only one reference base in the sequenced sample versus the model with one additional free parameter consisting of the ML mixture of two reference bases using a likelihood-ratio test. That is, twice the natural logarithm of the probability of the mixture model divided by the probability of the one-base model is compared to a chi-squared distribution with 1 degree of freedom.
+
+As for the case of consensus mutation prediction from read alignment evidence, the p-value significance of the likelihood-ratio test is converted to an E-value by multiplying by the total number of reference positions.
+
+Strand bias
+"""""""""""""
+
+This bias test uses Fisher's Exact Test to calculate a two-sided p-value for the hypothesis that the top/bottom strand distribution of reads supporting the major base is not different from the top/bottom strand distribution of reads supporting the minor base. If the hypothesis is rejected when the p-value is compared to :option:`--polymorphism-bias-p-value-cutoff`, then this may indicate that there was a sequencing-error hotspot in reads on one strand that generated a false-positive polymorphism prediction. This type of error happens frequently in data we have examined.
+
+In practice, most problem predictions of this kind have zero or only a handful of reads on one strand and many reads on the other strand supporting the minor variant. This test can fail to reject false-positive predictions when there is low enough coverage of the minor variant that the test is not significant even if all of the reads supporting it are on one strand. In practice, this situation may be better dealt with by requiring there to be at least one read supporting the minor variant on each strand with :option:`--polymorphism-coverage-both-strands`.
+
+Conversely, if coverage is high there may be so many observations that a statistically significant bias is detected simply because library prep and sequencing is slightly more efficient on one strand due to the different sequence context, even when there is high coverage of all strand/base combinations. Use this option with caution in cases of very high coverage (>1000 reads).
+
+Quality score bias
+"""""""""""""""""""
+This bias test uses a one-sided Kolmogorov-Smirnov test to test whether base quality scores supporting the minor mutational variants are suspiciously lower than the base quality scores supporting the major variant. The p-value significance of rejecting the null hypothesis by this test is also compared to :option:`--polymorphism-bias-p-value-cutoff`.
+
+Homopolymer stretches
+""""""""""""""""""""""
+Currently, application of the error model in |breseq| on a per-column basis causes overprediction of indel polymorphisms in homopolymer stretches. Why is this the case? If there are 10 A's in a row in the reference genome, deleting any one A will cause what looks like the same mutation after the gap is aligned to the rightmost reference position possible. Therefore, the actual chance of observing a deleted A is ten times the value expected from the error model. This discrepancy can make a small number of reads aligned to this position with deletions achieve significance by the likelihood-ratio test. Similar logic applies in the case of base insertions.
+
+Currently, |breseq| cannot correct for these types of errors. In the interim, they can be filtered from the output by specifying the :option:`--polymorphism-reject-homopolymer-length` option. A value of 5 gives reasonable results for *E. coli*. Generally, these false predictions also have extremely low frequencies (<2%) for the minor indel variants. 
 
 .. _unknown-base-evidence:
 
