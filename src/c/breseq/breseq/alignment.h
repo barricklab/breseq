@@ -20,7 +20,11 @@ LICENSE AND COPYRIGHT
 
 #include <utility>
 #include <assert.h>
+#include <string>
+
 #include <bam.h>
+
+#include "common.h"
 
 namespace breseq {
 
@@ -59,9 +63,18 @@ namespace breseq {
     //  Returns -1 if read aligned to bottom strand, +1 if aligned to top strand
     inline uint32_t strand() const { return (bam1_strand(_a) ? -1 : +1); }
     
-		//! Retrieve the query sequence.
+		//! Retrieve the query sequence (always on top strand).
 		inline uint8_t* query_bam_sequence() const { return bam1_seq(_a); }
-    
+
+    //! Retrieve the query sequence (always on top strand).
+    std::string query_char_sequence() const { 
+      std::string s;
+      for (uint32_t p=0; p<query_length(); p++) {
+        s += basebam2char(query_base_bam_0(p));
+      }
+      return s;
+    }
+
     //! Retrieve the base at a specified insert count relative to the current position
     inline uint8_t on_base_bam(int32_t insert_count=0) const { 
       uint32_t pos0 = query_position_0() + insert_count;

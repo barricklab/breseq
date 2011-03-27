@@ -101,7 +101,7 @@ namespace breseq {
       case 0x04: return 'G';
       case 0x08: return 'T';
       case '.': return '.';
-      case 0x0f: assert(false); 
+      case 0x0f: return 'N'; // might want to assert here 
       default: assert(false);
     }		
 	}

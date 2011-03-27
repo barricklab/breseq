@@ -60,7 +60,7 @@ sub identify_mutations
 	## check to see if identify_mutations++ is available:
 	my $cident_mut = $settings->ctool('identify_mutations', 1);
 	
-	## fall back to perl if requested or if predicting polymorphisms
+	## fall back to perl if requested
 	if ( (!$settings->{perl_identify_mutations}) && (defined $cident_mut) )
 	{
 		my $coverage_fn = $settings->file_name('unique_only_coverage_distribution_file_name', {'@'=>""});
@@ -108,9 +108,7 @@ sub identify_mutations
 			$cmdline .= " --polymorphism_frequency_cutoff $settings->{polymorphism_frequency_cutoff}";			
 		}
 		
-		if ($settings->{error_model_method} eq 'NEW') {
-			$cmdline .= " --error_table $error_dir/error_rates.tab";		
-		}
+		$cmdline .= " --error_table $error_dir/error_rates.tab";		
 
 		Breseq::Shared::system($cmdline);
 		return; # identify_mutations++ worked, so we're all done here.

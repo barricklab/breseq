@@ -26,8 +26,11 @@ Expert options:
 
 .. option:: --base-quality-cutoff=<int>
 
-   Ignore bases with a quality score lower than this value when calling mutations. This accommodates Illumina formats that use quality scores of 2 to flag bad data. These bases are still used for aligning to the reference genome and are shown highlighted in yellow when drawing alignments. Default: 3
+   Ignore bases with a quality score lower than this value when calling mutations. This accommodates Illumina formats that use quality scores of 2 to flag bad data. These bases are still used for aligning to the reference genome and are shown highlighted in yellow when drawing alignments, but they do not contribute to read alignment evidence. Default: 3
 
+.. option:: --predict-polymorphisms
+
+   Identify and predict the frequencies of SNPs and small indels that are polymorphic (appear in only a subpopulation of reads). See :ref:`polymorphism-prediction` for additional options and note that this option is still experimental.
 
 :program:`bam2aln`
 ------------------

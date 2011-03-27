@@ -105,7 +105,6 @@ if (length(X$best_quals) > 0)
 		second_best_quals_list <- strsplit(as.vector(X$second_best_quals[i]), ",");
 		second_best_quals <- as.numeric( second_best_quals_list[[1]] )
 
-
 	## This code estimates the actual strand and quality score distribution as the total observed.
 	
 		max_qual = max(best_quals, second_best_quals)
@@ -158,19 +157,19 @@ if (length(X$best_quals) > 0)
 #		score_combined_log_genome_mode =  -2 * ( Y$log10_base_likelihood[i]) * log(10)
 		
 
-	## KS test for unusual qualities -- Rewrite to use cumulative distribution! = faster and more accurate
-	all_quals = c(second_best_quals,best_quals);
+		## KS test for unusual qualities -- Rewrite to use cumulative distribution! = faster and more accurate
+		all_quals = c(second_best_quals,best_quals);
 
-	options(warn=-1);
+		options(warn=-1);
 
-	if (X$frequency[i] < 0.5)
-	{
-		poly_quals = best_quals;
-	}
-	else
-	{
-		poly_quals = second_best_quals;
-	}
+		if (X$frequency[i] < 0.5)
+		{
+			poly_quals = best_quals;
+		}
+		else
+		{
+			poly_quals = second_best_quals;
+		}
 
 ## This one tests the quality scores predicting a polymorphism agains the overall distribution
 ## at all positions in the genome	
