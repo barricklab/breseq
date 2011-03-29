@@ -33,6 +33,10 @@ namespace breseq {
     
   }
   
+  void cFastqFile::check_if_file_opened() {
+    assert(m_file.is_open());
+  }
+  
   bool cFastqFile::read_sequence(cFastqSequence &sequence) {
     
     std::string line, longest_read("");

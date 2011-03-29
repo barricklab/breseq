@@ -59,10 +59,12 @@ int analyze_fastq(int argc, char* argv[]) {
   
 	// attempt to calculate error calibrations:
 	try {
-    cFastqSequence sequence;
     
+    
+    cFastqSequence sequence;
     cFastqFile fastqparse(options["input"].as<std::string>(), std::fstream::in);
     
+    fastqparse.check_if_file_opened();
     fastqparse.read_sequence(sequence);
     fastqparse.write_summary_file();
     

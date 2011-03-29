@@ -69,7 +69,7 @@ namespace breseq {
     
     cFastqFile(const std::string &file_name, std::ios_base::openmode mode); 
     
-      void open();
+      void check_if_file_opened();
     
       bool read_sequence(cFastqSequence &sequence);
       void write_sequence(cFastqSequence &sequence);
