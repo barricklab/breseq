@@ -555,7 +555,7 @@ void breseq::identify_mutations_pileup::callback(const breseq::pileup& p) {
         mut[ERROR] = std::string("polymorphic_without_reference_base");
       }
       
-			mut[QUALITY] = formatted_double(ppred.log10_e_value, kMutationQualityPrecision);
+			mut[POLYMORPHISM_QUALITY] = formatted_double(ppred.log10_e_value, kMutationQualityPrecision);
 			if (ppred.log10_e_value < _polymorphism_cutoff ) {
         breseq::add_reject_reason(mut, "EVALUE");
       } 

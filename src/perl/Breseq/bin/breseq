@@ -633,7 +633,6 @@ sub paired_read_distances {}
 sub error_count {}
 ##
 
-## NEW mthod skips this step
 if ($settings->do_step('error_counts_done_file_name', "Tabulating error counts"))
 {
 	$settings->create_path('error_calibration_path');
@@ -679,11 +678,15 @@ my $error_rates_summary_file_name = $settings->file_name('error_rates_summary_fi
 if ($settings->do_step('error_rates_done_file_name', "Re-calibrating base error rates"))
 {	
 	$summary->{unique_coverage} = {};
-	if (!$settings->{no_deletion_prediction})
-	{
+	if (!$settings->{no_deletion_prediction}) {
 		Breseq::ErrorCalibration::analyze_unique_coverage_distributions($settings, $summary, $ref_seq_info,
 			'unique_only_coverage_plot_file_name', 'unique_only_coverage_distribution_file_name');	
 	}
+	## this can be removed soon --->
+	if ($settings->{perl_identify_mutations}) {
+		Breseq::ErrorCalibration::error_counts_to_error_rates($settings, $summary, $ref_seq_info);
+	}
+	##<-----
 	
 	Storable::store($summary->{unique_coverage}, $error_rates_summary_file_name) or die "Can't store data in file $error_rates_summary_file_name!\n";
 	$settings->done_step('error_rates_done_file_name');
@@ -709,6 +712,11 @@ if (!$settings->{no_mutation_prediction})
 	if ($settings->do_step('mutation_identification_done_file_name', "Read alignment mutations"))
 	{			
 		my $error_rates;
+		
+		if ($settings->{perl_identify_mutations}) {
+		    $error_rates = Breseq::ErrorCalibration::load_error_rates($settings, $summary, $ref_seq_info);
+		}
+		
 		Breseq::MutationIdentification::identify_mutations($settings, $summary, $ref_seq_info, $error_rates);
 		$settings->done_step('mutation_identification_done_file_name');
 	}

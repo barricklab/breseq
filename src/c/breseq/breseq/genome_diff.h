@@ -49,6 +49,7 @@ namespace breseq {
 	extern const char* POSITION;
 	extern const char* INSERT_POSITION;
 	extern const char* QUALITY;
+  extern const char* POLYMORPHISM_QUALITY;
 	extern const char* REF_BASE;
 	extern const char* NEW_BASE;
 	extern const char* FREQUENCY;

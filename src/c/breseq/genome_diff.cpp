@@ -38,6 +38,7 @@ const char* breseq::RIGHT_OUTSIDE_COV="right_outside_cov";
 const char* breseq::POSITION="position";
 const char* breseq::INSERT_POSITION="insert_position";
 const char* breseq::QUALITY="quality";
+const char* breseq::POLYMORPHISM_QUALITY="polymorphism_quality";
 const char* breseq::REF_BASE="ref_base";
 const char* breseq::NEW_BASE="new_base";
 const char* breseq::FREQUENCY="frequency";
