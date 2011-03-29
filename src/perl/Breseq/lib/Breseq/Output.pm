@@ -829,8 +829,10 @@ sub html_read_alignment_table_string
 	
 	foreach my $c (@$list_ref)
 	{			
+		my $is_polymorphism = ((defined $c->{frequency}) && ($c->{frequency} != 1)) ? 1 : 0;
+		
 		my $row_class = "normal_table_row";
-		if ((defined $c->{frequency}) && ($c->{frequency} != 1))
+		if ($is_polymorphism)
 		{
 			$row_class = "polymorphism_table_row";	
 		}
@@ -849,12 +851,12 @@ sub html_read_alignment_table_string
 		$output_str.= td({align => "right"}, $c->{insert_position} );
 		$output_str.= td({align => "center"}, "$c->{ref_base}&rarr;$c->{new_base}" );	
 		$output_str.= td({align => "right"}, sprintf("%4.1f%%", $c->{frequency}*100) );
-		if ((defined $c->{frequency}) && ($c->{frequency} != 1))
+		if ($is_polymorphism)
 		{
 			## display extra score data for polymorphisms...
 			my $log_fisher = ($c->{fisher_strand_p_value} > 0) ? log($c->{fisher_strand_p_value})/log(10) : 999;
 			my $log_ks = ($c->{ks_quality_p_value} > 0) ? log($c->{ks_quality_p_value})/log(10) : 999;
-			$output_str.= td({align => "right"}, nonbreaking(sprintf("%.1f,%.1f,%.1f", $c->{quality}, $log_fisher, $log_ks)) );	# . $fisher_p_value	
+			$output_str.= td({align => "right"}, nonbreaking(sprintf("%.1f,%.1f,%.1f", $c->{polymorphism_quality}, $log_fisher, $log_ks)) );	# . $fisher_p_value	
 		}
 		else
 		{

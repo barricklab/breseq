@@ -1402,7 +1402,7 @@ sub polymorphism_statistics
 		}
 		
 		## Evalue cutoff again (in case we are only running this part)
-		Breseq::GenomeDiff::add_reject_reason($mut, "EVALUE") if ($mut->{quality} < $settings->{polymorphism_log10_e_value_cutoff});
+		Breseq::GenomeDiff::add_reject_reason($mut, "EVALUE") if ($mut->{polymorphism_quality} < $settings->{polymorphism_log10_e_value_cutoff});
 
 		## Frequency cutoff
 		if ( ($mut->{frequency} < $settings->{polymorphism_frequency_cutoff}   )
@@ -1455,7 +1455,7 @@ sub polymorphism_statistics
 			}
 		}
 		
-		if ($mut->{reject} && ($mut->{quality} > $settings->{mutation_log10_e_value_cutoff}) && ($mut->{frequency} > 0.5) )
+		if ($mut->{reject} && ($mut->{polymorphism_quality} > $settings->{mutation_log10_e_value_cutoff}) && ($mut->{frequency} > 0.5) )
 		{
 			#print Dumper($mut);
 			$mut->{frequency} = 1;
@@ -1463,7 +1463,7 @@ sub polymorphism_statistics
 			
 			## FIX -- need to re-evaluate whether it would have been accepted as a normal mutation 
 			## This is NOT the right quality being used here. Need a separate quality for consensus call and polymorphism call!
-			Breseq::GenomeDiff::add_reject_reason($mut, "EVALUE") if ($mut->{quality} < $settings->{mutation_log10_e_value_cutoff});
+			Breseq::GenomeDiff::add_reject_reason($mut, "EVALUE") if ($mut->{polymorphism_quality} < $settings->{mutation_log10_e_value_cutoff});
 		}
 
 		$new_gd->add($mut);
