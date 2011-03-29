@@ -1,13 +1,19 @@
-// @JEB might want to use this as a template for loading Genbank files quickly...
-//
-// This program was prepared by the Regents of the University of California at 
-// Los Alamos National Laboratory (the University) under contract No. W-7405-ENG-36 
-// with the U.S. Department of Energy (DOE). All rights in the program are reserved 
-// by the DOE and the University.  Permission is granted to the public to copy and 
-// use this software without charge, provided that this Notice and any statement of 
-// authorship are reproduced on all copies.  Neither the U.S. Government nor the 
-// University makes any warranty, express or implied, or assumes any liability or 
-// responsibility for the use of this software.
+/*****************************************************************************
+ 
+ AUTHORS
+ 
+ Jeffrey E. Barrick <jeffrey.e.barrick@gmail.com>
+ David B. Knoester
+ 
+ LICENSE AND COPYRIGHT
+ 
+ Copyright (c) 2010 Michigan State University
+ 
+ breseq is free software; you can redistribute it and/or modify it under the  
+ terms the GNU General Public License as published by the Free Software 
+ Foundation; either version 1, or (at your option) any later version.
+ 
+ *****************************************************************************/
 
 #include <iostream>
 #include <fstream>

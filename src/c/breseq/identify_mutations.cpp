@@ -534,7 +534,7 @@ void breseq::identify_mutations_pileup::callback(const breseq::pileup& p) {
  
       
 /// PROBLEM: We need to more robustly deal with cases of polymorphisms where neither of the two bases 
-///          involved if the reference base; Solve by adding two lines to genome diff.
+///          involved is the reference base; Solve by adding two lines to genome diff?
                 
 			//# the frequency returned is the probability of the FIRST base
 			//# we want to quote the probability of the second base (the change from the reference).      
@@ -546,7 +546,6 @@ void breseq::identify_mutations_pileup::callback(const breseq::pileup& p) {
         mut[REF_BASE] = second_best_base_char;
         mut[NEW_BASE] = best_base_char;
         mut[FREQUENCY] = formatted_double(ppred.frequency, kPolymorphismFrequencyPrecision);  
-      //### NOTE: This neglects the case where neither the first nor second base is the reference base! Should almost never happen					    
       } else {
         std::cerr << "Warning: polymorphism between two bases not including reference base found at position " << position << std::endl;
         mut[REF_BASE] = best_base_char;
@@ -560,6 +559,8 @@ void breseq::identify_mutations_pileup::callback(const breseq::pileup& p) {
         breseq::add_reject_reason(mut, "EVALUE");
       } 
 
+ /// <--- PROBLEM     
+      
       // Need to create lists of all quality scores for and against base for R output  
       
       if (ref_base_char != second_best_base_char) {
