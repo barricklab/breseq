@@ -27,6 +27,10 @@
 
 /* Begin PBXBuildFile section */
 		4247E82C1268EC3E006A6D78 /* libz.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 421ACFAC1170F05500C2EB85 /* libz.a */; };
+		702EABE7134217D400103019 /* libbreseq.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 708FA5DA132578BE00864C40 /* libbreseq.a */; };
+		702EABE8134217D400103019 /* libboost_program_options-mt.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 421ACF7D1170E5CA00C2EB85 /* libboost_program_options-mt.a */; };
+		702EABF513421A7200103019 /* fastq_utils_cmdline.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 702EABF413421A7200103019 /* fastq_utils_cmdline.cpp */; };
+		702EABF713421A8400103019 /* fastq.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 702EABF613421A8400103019 /* fastq.cpp */; };
 		7078B5C51332AFE800EF345A /* libbreseq.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 708FA5DA132578BE00864C40 /* libbreseq.a */; };
 		7078B5C61332AFE800EF345A /* libboost_program_options-mt.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 421ACF7D1170E5CA00C2EB85 /* libboost_program_options-mt.a */; };
 		7078B5D31332B05700EF345A /* convert_genbank_cmdline.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 7078B5D21332B05700EF345A /* convert_genbank_cmdline.cpp */; };
@@ -97,6 +101,20 @@
 			remoteInfo = breseq;
 		};
 		42BA691B1189B877000B00B1 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 421ACEB71170DB9600C2EB85 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 42BA690B1189B7FD000B00B1;
+			remoteInfo = breseq;
+		};
+		702EABE1134217D400103019 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 421ACEB71170DB9600C2EB85 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 421ACF201170DC4400C2EB85;
+			remoteInfo = samtools;
+		};
+		702EABE3134217D400103019 /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
 			containerPortal = 421ACEB71170DB9600C2EB85 /* Project object */;
 			proxyType = 1;
@@ -179,6 +197,10 @@
 		421ACF7D1170E5CA00C2EB85 /* libboost_program_options-mt.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; name = "libboost_program_options-mt.a"; path = "/opt/local/lib/libboost_program_options-mt.a"; sourceTree = "<absolute>"; };
 		421ACFAC1170F05500C2EB85 /* libz.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = libz.a; path = /opt/local/lib/libz.a; sourceTree = "<absolute>"; };
 		4247E8261268EB90006A6D78 /* debug.xcconfig */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.xcconfig; path = debug.xcconfig; sourceTree = "<group>"; };
+		702EABEC134217D500103019 /* fastq_utils++ */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = "fastq_utils++"; sourceTree = BUILT_PRODUCTS_DIR; };
+		702EABF313421A3400103019 /* fastq.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = fastq.h; sourceTree = "<group>"; };
+		702EABF413421A7200103019 /* fastq_utils_cmdline.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = fastq_utils_cmdline.cpp; path = breseq/fastq_utils_cmdline.cpp; sourceTree = SOURCE_ROOT; };
+		702EABF613421A8400103019 /* fastq.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = fastq.cpp; path = breseq/fastq.cpp; sourceTree = SOURCE_ROOT; };
 		7078B5CA1332AFE800EF345A /* convert_genbank */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = convert_genbank; sourceTree = BUILT_PRODUCTS_DIR; };
 		7078B5D21332B05700EF345A /* convert_genbank_cmdline.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = convert_genbank_cmdline.cpp; path = breseq/convert_genbank_cmdline.cpp; sourceTree = SOURCE_ROOT; };
 		7087728712BC1660000F9B57 /* alignment.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = alignment.cpp; path = breseq/alignment.cpp; sourceTree = SOURCE_ROOT; };
@@ -319,6 +341,15 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		702EABE6134217D400103019 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				702EABE7134217D400103019 /* libbreseq.a in Frameworks */,
+				702EABE8134217D400103019 /* libboost_program_options-mt.a in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		7078B5C41332AFE800EF345A /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
@@ -369,6 +400,7 @@
 				708FA5DB132578BE00864C40 /* calc_trims */,
 				708FA5DD132578BE00864C40 /* tabulate_coverage */,
 				7078B5CA1332AFE800EF345A /* convert_genbank */,
+				702EABEC134217D500103019 /* fastq_utils++ */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -392,6 +424,8 @@
 				70A5BC2512BE6F21005EFE9F /* calc_trims_cmdline.cpp */,
 				7087728912BC169C000F9B57 /* error_count.cpp */,
 				7087730F12BC19BA000F9B57 /* error_count_cmdline.cpp */,
+				702EABF613421A8400103019 /* fastq.cpp */,
+				702EABF413421A7200103019 /* fastq_utils_cmdline.cpp */,
 				7087728A12BC169C000F9B57 /* genome_diff.cpp */,
 				7087728B12BC169C000F9B57 /* identify_mutations.cpp */,
 				7087731112BC19C5000F9B57 /* identify_mutations_cmdline.cpp */,
@@ -536,6 +570,7 @@
 				70B5B10A13324DB500737DC1 /* annotated_sequence.h */,
 				7087747612BC1C06000F9B57 /* common.h */,
 				7087747712BC1C06000F9B57 /* error_count.h */,
+				702EABF313421A3400103019 /* fastq.h */,
 				7087747812BC1C06000F9B57 /* genome_diff.h */,
 				7087747912BC1C06000F9B57 /* identify_mutations.h */,
 				7087747A12BC1C06000F9B57 /* pileup.h */,
@@ -637,6 +672,24 @@
 			productReference = 708FA5DA132578BE00864C40 /* libbreseq.a */;
 			productType = "com.apple.product-type.library.static";
 		};
+		702EABDF134217D400103019 /* fastq_utils */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 702EABE9134217D400103019 /* Build configuration list for PBXNativeTarget "fastq_utils" */;
+			buildPhases = (
+				702EABE4134217D400103019 /* Sources */,
+				702EABE6134217D400103019 /* Frameworks */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				702EABE0134217D400103019 /* PBXTargetDependency */,
+				702EABE2134217D400103019 /* PBXTargetDependency */,
+			);
+			name = fastq_utils;
+			productName = error_count;
+			productReference = 702EABEC134217D500103019 /* fastq_utils++ */;
+			productType = "com.apple.product-type.tool";
+		};
 		7078B5BD1332AFE800EF345A /* convert_genbank */ = {
 			isa = PBXNativeTarget;
 			buildConfigurationList = 7078B5C71332AFE800EF345A /* Build configuration list for PBXNativeTarget "convert_genbank" */;
@@ -719,6 +772,7 @@
 				70A5BC0C12BE6EBF005EFE9F /* calc_trims */,
 				70F9FB5F130C58D900D6E11D /* tabulate_coverage */,
 				7078B5BD1332AFE800EF345A /* convert_genbank */,
+				702EABDF134217D400103019 /* fastq_utils */,
 			);
 		};
 /* End PBXProject section */
@@ -751,6 +805,15 @@
 				7087729212BC169C000F9B57 /* pileup.cpp in Sources */,
 				70F9FB86130C592700D6E11D /* tabulate_coverage.cpp in Sources */,
 				70B5B10013324D8300737DC1 /* annotated_sequence.cpp in Sources */,
+				702EABF713421A8400103019 /* fastq.cpp in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		702EABE4134217D400103019 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				702EABF513421A7200103019 /* fastq_utils_cmdline.cpp in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -810,6 +873,16 @@
 			isa = PBXTargetDependency;
 			target = 42BA690B1189B7FD000B00B1 /* breseq */;
 			targetProxy = 42BA691B1189B877000B00B1 /* PBXContainerItemProxy */;
+		};
+		702EABE0134217D400103019 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 421ACF201170DC4400C2EB85 /* samtools */;
+			targetProxy = 702EABE1134217D400103019 /* PBXContainerItemProxy */;
+		};
+		702EABE2134217D400103019 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 42BA690B1189B7FD000B00B1 /* breseq */;
+			targetProxy = 702EABE3134217D400103019 /* PBXContainerItemProxy */;
 		};
 		7078B5BE1332AFE800EF345A /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
@@ -1089,6 +1162,62 @@
 			};
 			name = Release;
 		};
+		702EABEA134217D400103019 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = 4247E8261268EB90006A6D78 /* debug.xcconfig */;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ARCHS = "$(NATIVE_ARCH_ACTUAL)";
+				COPY_PHASE_STRIP = NO;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_ENABLE_FIX_AND_CONTINUE = YES;
+				HEADER_SEARCH_PATHS = (
+					"$(HEADER_SEARCH_PATHS_QUOTED_FOR_TARGET_1)",
+					"$(HEADER_SEARCH_PATHS_QUOTED_FOR_TARGET_2)",
+				);
+				HEADER_SEARCH_PATHS_QUOTED_FOR_TARGET_1 = "\"$(SRCROOT)/\"/**";
+				HEADER_SEARCH_PATHS_QUOTED_FOR_TARGET_2 = "\"$(SRCROOT)/../../extern/samtools-0.1.7a\"/**";
+				INSTALL_PATH = /usr/local/bin;
+				LIBRARY_SEARCH_PATHS = /opt/local/lib;
+				LIBRARY_SEARCH_PATHS_QUOTED_FOR_TARGET_1 = "\"$(SRCROOT)/.libs\"";
+				LIBRARY_SEARCH_PATHS_QUOTED_FOR_TARGET_2 = "\"$(SRCROOT)/breseq/.libs\"";
+				LIBRARY_SEARCH_PATHS_QUOTED_FOR_TARGET_3 = "\"$(SRCROOT)/build/Debug\"";
+				ONLY_ACTIVE_ARCH = YES;
+				PREBINDING = NO;
+				PRODUCT_NAME = "fastq_utils++";
+				USER_HEADER_SEARCH_PATHS = "";
+			};
+			name = Debug;
+		};
+		702EABEB134217D400103019 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ARCHS = "$(NATIVE_ARCH_ACTUAL)";
+				COPY_PHASE_STRIP = YES;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				GCC_ENABLE_FIX_AND_CONTINUE = NO;
+				GCC_MODEL_TUNING = G5;
+				HEADER_SEARCH_PATHS = (
+					/opt/local/include,
+					"$(HEADER_SEARCH_PATHS_QUOTED_FOR_TARGET_1)",
+					"$(HEADER_SEARCH_PATHS_QUOTED_FOR_TARGET_2)",
+				);
+				HEADER_SEARCH_PATHS_QUOTED_FOR_TARGET_1 = "\"$(SRCROOT)/\"/**";
+				HEADER_SEARCH_PATHS_QUOTED_FOR_TARGET_2 = "\"$(SRCROOT)/../../extern/samtools-0.1.7a\"/**";
+				INSTALL_PATH = /usr/local/bin;
+				LIBRARY_SEARCH_PATHS = /opt/local/lib;
+				LIBRARY_SEARCH_PATHS_QUOTED_FOR_TARGET_1 = "\"$(SRCROOT)/samtools-0.1.7a\"";
+				LIBRARY_SEARCH_PATHS_QUOTED_FOR_TARGET_2 = "\"$(SRCROOT)/../../extern/samtools-0.1.7a\"";
+				LIBRARY_SEARCH_PATHS_QUOTED_FOR_TARGET_3 = "\"$(SRCROOT)/.libs\"";
+				LIBRARY_SEARCH_PATHS_QUOTED_FOR_TARGET_4 = "\"$(SRCROOT)/breseq/.libs\"";
+				LIBRARY_SEARCH_PATHS_QUOTED_FOR_TARGET_5 = "\"$(SRCROOT)/build/Debug\"";
+				PREBINDING = NO;
+				PRODUCT_NAME = "fastq_utils++";
+				ZERO_LINK = NO;
+			};
+			name = Release;
+		};
 		7078B5C81332AFE800EF345A /* Debug */ = {
 			isa = XCBuildConfiguration;
 			baseConfigurationReference = 4247E8261268EB90006A6D78 /* debug.xcconfig */;
@@ -1318,6 +1447,15 @@
 			buildConfigurations = (
 				42BA690D1189B7FE000B00B1 /* Debug */,
 				42BA690E1189B7FE000B00B1 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		702EABE9134217D400103019 /* Build configuration list for PBXNativeTarget "fastq_utils" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				702EABEA134217D400103019 /* Debug */,
+				702EABEB134217D400103019 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
