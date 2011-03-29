@@ -18,6 +18,7 @@ LICENSE AND COPYRIGHT
 #ifndef _FASTQ_H_
 #define _FASTQ_H_
 
+#include <iostream>
 #include <fstream>
 #include <string>
 #include <vector>
@@ -33,7 +34,6 @@ namespace breseq {
    */
    
   struct cFastqSequence {
-   
     public:
       std::string m_name;
       std::string m_sequence;
@@ -45,26 +45,29 @@ namespace breseq {
 	 */ 
   
   class cFastqFile {
-    
     protected:
-      //! The number of bases observed with each quality score
-      std::vector<uint32_t> m_quality_score_distribution;
       
       //! length of longest read
       int32_t    m_max_read_length;
 
-      //! length of longest read
+      //highest and lowest scores
       int32_t    m_min_quality_score;    
       int32_t    m_max_quality_score;
     
       //! total number of bases in file
       int64_t    m_total_base;
-      
+    
+      //! total number of reads in file
+      uint64_t   m_total_reads;
+    
       //! active fstream that was opened when constructed
       std::fstream     m_file;
+      std::string      m_filename;
+      std::ios_base::openmode m_mode;
     
     public:
-    cFastqFile(const std::string &file_name, std::ios_base::openmode mode);
+    
+    cFastqFile(const std::string &file_name, std::ios_base::openmode mode); 
     
       void open();
     
@@ -72,7 +75,7 @@ namespace breseq {
       void write_sequence(cFastqSequence &sequence);
     
       void write_quality_score_distribution_file(std::string filename);
-      void write_summary_file(std::string filename);
+      void write_summary_file();
   };
 	
 } // breseq namespace
