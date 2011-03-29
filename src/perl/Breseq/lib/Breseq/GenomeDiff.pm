@@ -140,6 +140,15 @@ our $line_specification = {
 	'MC' => ['seq_id', 'start', 'end', 'start_range', 'end_range'], #The deletion goes maximally from [start,start+start_tange] to [end-end_range, end]
 	'JC' => ['side_1_seq_id', 'side_1_position', 'side_1_strand', 'side_2_seq_id', 'side_2_position', 'side_2_strand', 'overlap'],
 	'UN' => ['seq_id', 'start', 'end'],
+	
+	## validation
+	'CURA' => ['expert'], 
+	'FPOS' => ['expert'],
+	'PHYL' => ['gd'], 
+	'TSEQ' => ['seq_id', 'primer_1_start', 'primer_1_end', 'primer_2_start', 'primer_2_end'], 
+	'PFLP' => ['seq_id', 'primer_1_start', 'primer_1_end', 'primer_2_start', 'primer_2_end'], 
+	'RFLP' => ['seq_id', 'primer_1_start', 'primer_1_end', 'primer_2_start', 'primer_2_end'], 
+	'PFGE' => ['seq_id', 'enzyme'],
 };
 
 our $tag_sort_fields = {
@@ -151,6 +160,15 @@ our $tag_sort_fields = {
 	'AMP' => [1, 'seq_id', 'position'],
 	'INV' => [1, 'seq_id', 'position'],
 	'CON' => [1, 'seq_id', 'position'],
+	
+	'CURA' => [1.5, 'expert', 'expert'], ##expects three levels of sort...
+	'FPOS' => [1.5, 'expert', 'expert'], ##expects three levels of sort...
+	'PHYL' => [1.5, 'gd', 'gd'],         ##expects three levels of sort...
+	'TSEQ' => [1.5, 'seq_id', 'primer_1_start', 'primer_1_end', 'primer_2_start', 'primer_2_end'], 
+	'PFLP' => [1.5, 'seq_id', 'primer_1_start', 'primer_1_end', 'primer_2_start', 'primer_2_end'], 
+	'RFLP' => [1.5, 'seq_id', 'primer_1_start', 'primer_1_end', 'primer_2_start', 'primer_2_end'], 
+	'PFGE' => [1.5, 'seq_id', 'enzyme'],
+	
 	'RA' => [2, 'seq_id', 'position'],
 	'MC' => [2, 'seq_id', 'start'],
 	'JC' => [2, 'side_1_seq_id', 'side_1_position'],
@@ -229,9 +247,6 @@ sub add
 		$self->warn("Ignoring attempt to add item with an existing id: $item->{id}");
 		return;
 	}
-	
-	##mark ID as used
-	$self->{unique_id_used}->{$item->{id}} = 1;
 
 	sub check_required_field
 	{
@@ -267,6 +282,7 @@ sub add
 	$item->{SORT_3} = $item->{$tag_sort_fields->{$item->{type}}->[2]};
 	
 	push @{$self->{list}}, $item;
+	$self->mark_unique_id($item->{id});
 }
 
 
@@ -361,7 +377,7 @@ sub mutation_list
 sub evidence_list
 {
 	my ($self, $sort) = @_;
-	my @mut_list = grep { length($_->{type}) == 2 } $self->list;
+	my @mut_list = grep { length($_->{type}) != 3 } $self->list;
 	
 	@mut_list = sort by_sort_fields @mut_list if ($sort);
 	
@@ -386,7 +402,7 @@ sub _line_to_item
 	$item->{id} = shift @line_list;
 	my $evidence_string = shift @line_list;
 	@{$item->{evidence}} = split /,/, $evidence_string;
-	
+		
 	my $spec = $line_specification->{$item->{type}};
 	if (!defined $spec)
 	{
@@ -493,6 +509,7 @@ sub _item_to_line
 	if (!defined $spec)
 	{
 		$self->warn("Type \'$item->{type}\' not found for item. Ignoring.");
+		print Dumper($item);
 		return '';
 	}
 	
@@ -556,10 +573,10 @@ sub read
 		
 	@lines = grep {!/^\s*#[^=]/} @lines;
 	@lines = grep {!/^\s*$/} @lines;
-	
+		
 	## read version from first line
 	my $l = shift @lines;
-	$l =~ m/#=GENOME_DIFF\s+(\d+)/ or $self->throw("Could not match version line in file $self->{file_name}.");
+	($l =~ m/#=GENOME_DIFF\s+(\d+)/) or ($l =~ m/#=GENOMEDIFF\s+(\d+)/)  or $self->throw("Could not match version line in file $self->{file_name}.");
 	$self->{version} = $1;
 
 	## read header information
@@ -567,7 +584,15 @@ sub read
 	## read data
 	while ($l = shift @lines)
 	{
-		$self->add($self->_line_to_item($l));
+		if ($l =~ m/^\s*#=(\S+)\s+(.+)/) {
+			#metadata line key value pair
+			push @{$self->{metadata}->{$1}}, $2;
+			push @{$self->{metadata_lines}}, $l;
+			
+		} elsif ($l =~ m/^\s+#=(.+)/) {
+		} else {
+			$self->add($self->_line_to_item($l));
+		}
 	}
 	close IN;
 }
@@ -590,6 +615,9 @@ sub write
 	print OUT "#=GENOME_DIFF 1.0\n";
 #	print OUT "#=SAMPLE " . $self->hash_to_line($self->{'SAMPLE'}) . "\n" if (defined $self->{'SAMPLE'});
 	
+	foreach my $metadata (@{$self->{metadata_lines}}) {
+		print OUT $metadata . "\n";
+	}
 	
 	#fill in the sort fields
 	foreach my $item (	@{$self->{list}} )
@@ -1041,14 +1069,19 @@ sub renumber
 		 $used_index_hash->{$item->{id}} = $item;
 	}
 	
-	#re-assign contiguous numbers
+	#re-assign contiguous numbers in same order that we display
 	my $on_id = 0;
 	my $renumber_hash;
-	foreach my $id (sort {$a <=> $b } keys %$used_index_hash)
-	{		
-		#how do we want to renumber this (and all references)?
-		$renumber_hash->{$id} = ++$on_id;
+	foreach my $item ($self->list)
+	{
+		$renumber_hash->{$item->{id}} = ++$on_id;
 	}
+	
+#	foreach my $id (sort {$a <=> $b } keys %$used_index_hash)
+#	{		
+#		#how do we want to renumber this (and all references)?
+#		$renumber_hash->{$id} = ++$on_id;
+#	}
 		
 	EVIDENCE: foreach my $item ($self->list)
 	{		
@@ -1067,7 +1100,7 @@ sub renumber
 			push @new_evidence, $renumber_hash->{$evidence_id};
 		}
 		@{$item->{evidence}} = @new_evidence;
-	}
+	}	
 }
 
 

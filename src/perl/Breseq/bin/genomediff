@@ -140,6 +140,10 @@ elsif ("\U$command" eq 'STRIP-EVIDENCE')
 {
 	do_strip_evidence();
 }
+elsif ("\U$command" eq 'VALIDATE')
+{
+	do_validate();
+}
 else
 {
 	die "Unknown command";
@@ -1612,6 +1616,38 @@ sub do_polymorphism_analysis
 
 ## Removes all evidence that is not referenced by any mutation
 sub do_strip_evidence
+{
+	my ($help, $man, $verbose);
+	my $output_path; 
+	GetOptions(
+		'help|?' => \$help, 'man' => \$man, 'verbose|v' => \$verbose,
+		'output-path|o=s' => \$output_path,
+	) or pod2usage(2);
+	pod2usage(1) if $help;
+	pod2usage(-exitstatus => 0, -verbose => 2) if $man;
+	pod2usage(1) if (scalar @ARGV == 0);
+	pod2usage(1) if (!defined $output_path);
+
+	#doesn't really need to take multiple...
+	my @gd_file_name_list = @ARGV;
+		
+	foreach my $gd_file_name (@gd_file_name_list)
+	{
+		my $gd_name = $gd_file_name;
+		$gd_name =~ s/^.+\///;		
+		$gd_name =~ s/\.[^.]+$//;
+		print STDERR "$gd_name\n";
+		
+		my $gd = Breseq::GenomeDiff->new(-in=>$gd_file_name);
+		$gd->strip_evidence;
+		
+		my $output_file_name = "$output_path/$gd_name\.gd";
+		$gd->write($output_file_name);
+	}
+}
+
+## Checks and optionally cleans up a genome diff file.
+sub do_validate
 {
 	my ($help, $man, $verbose);
 	my $output_path; 
