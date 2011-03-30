@@ -21,18 +21,14 @@
 namespace breseq {
 
   //constructor
-  cFastqFile::cFastqFile(const std::string &file_name, std::ios_base::openmode mode)
-  {
-    m_file.open(file_name.c_str(), mode);
-    m_filename          = file_name;
-    m_mode              = mode;
-    m_total_base        = 0;
-    m_max_quality_score = 0;
-    m_min_quality_score = INT_MAX;
-    m_max_read_length   = 0;
-    m_total_reads       = 0;
-    
-  }
+  cFastqFile::cFastqFile(const std::string &file_name, const std::string &out_file_name, std::ios_base::openmode mode) :
+    m_max_read_length(0),
+    m_min_quality_score(INT_MAX),
+    m_max_quality_score(0),
+    m_total_base(0), 
+    m_total_reads(0), 
+    m_file(file_name.c_str(), mode), 
+    m_outfile(out_file_name.c_str(), std::fstream::in) { }
   
   //check to make sure certain conditions about the data are fulfilled
   void cFastqFile::error_in_file_format(int count, int num_reads, int position) {

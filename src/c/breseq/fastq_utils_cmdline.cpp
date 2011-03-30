@@ -62,7 +62,7 @@ int analyze_fastq(int argc, char* argv[]) {
     
     
     cFastqSequence sequence;
-    cFastqFile fastqparse(options["input"].as<std::string>(), std::fstream::in);
+    cFastqFile fastqparse(options["input"].as<std::string>(), options["output"].as<std::string>(), std::fstream::in);
     
     fastqparse.check_if_file_opened();
     fastqparse.read_sequence(sequence);
