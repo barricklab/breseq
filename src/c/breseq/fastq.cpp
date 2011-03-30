@@ -20,6 +20,7 @@
 
 namespace breseq {
 
+  //constructor
   cFastqFile::cFastqFile(const std::string &file_name, std::ios_base::openmode mode)
   {
     m_file.open(file_name.c_str(), mode);
@@ -33,6 +34,7 @@ namespace breseq {
     
   }
   
+  //check to make sure certain conditions about the data are fulfilled
   void cFastqFile::error_in_file_format(int count, int num_reads, int position) {
     int n;
     char generic_output [50];
@@ -51,16 +53,21 @@ namespace breseq {
       case 2:
         fprintf(stderr, "\nThis should be a '+' and only a '+'. Either a line is missing of there is an unknown symbol here.\n");
         break;
+      case 3:
+        fprintf(stderr, "\nThe sequence and score lines are not the same length.\n");
+        break;
     }
     fprintf(stderr, "Now I'm quitting.\n");
-    exit(0);
+    exit(-1);
     
   }
+  
+  //make sure the file opened... if not it will fail
   void cFastqFile::check_if_file_opened() {
     assert(m_file.is_open());
   }
   
-  bool cFastqFile::read_sequence(cFastqSequence &sequence) {
+  void cFastqFile::read_sequence(cFastqSequence &sequence) {
     
     std::string line, longest_read("");
     uint8_t max_score(0), min_score(UINT8_MAX);
@@ -70,6 +77,7 @@ namespace breseq {
       while( getline( m_file, line )) {
         int count(0);
         
+        //parse the read to get the 4 read parameters
         while( count < 4 ) {
           switch (count) {
             case 0:
@@ -89,7 +97,6 @@ namespace breseq {
               break;
             default:
               error_in_file_format(count, num_reads, 0);
-              return false;
           }
           count++;
         }
@@ -109,13 +116,21 @@ namespace breseq {
           }
         
           if( sequence.m_blank != "+" ) error_in_file_format(count-2, num_reads, 0);
+          
+          if( sequence.m_sequence.size() != sequence.m_qualities.size() ) error_in_file_format(count-1, num_reads, 0);
         }
+        
+        //increment read number
         num_reads++;
         
+        //check sequence length
         if( sequence.m_sequence.size() > longest_read.size() ) longest_read = line;
         
+        //add current sequence length to number of bases
         num_bases += sequence.m_sequence.size();
         
+        //iterate through sequence grabbing the associated scores
+        //if the two are not the same length it should be caught in error checking
         for (uint32_t i=0; i<sequence.m_qualities.size(); i++) {
           int this_score(uint8_t(sequence.m_qualities[i]));
           if( this_score > max_score ) max_score = this_score;
@@ -125,13 +140,12 @@ namespace breseq {
       }  
 
     }
+    //final assignments
     m_total_reads = num_reads;
     m_total_base = num_bases;
     m_max_read_length = longest_read.size();
     m_min_quality_score = min_score-33;
     m_max_quality_score = max_score-33;
-    
-    return true;
   }
 
   void cFastqFile::write_sequence(cFastqSequence &sequence) {
