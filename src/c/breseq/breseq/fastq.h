@@ -74,7 +74,7 @@ namespace breseq {
       void error_in_file_format(int count, int num_reads, int position);
       void check_if_file_opened();
     
-      bool read_sequence(cFastqSequence &sequence);
+      void read_sequence(cFastqSequence &sequence);
       void write_sequence(cFastqSequence &sequence);
     
       void write_quality_score_distribution_file(std::string filename);
