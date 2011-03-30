@@ -33,6 +33,29 @@ namespace breseq {
     
   }
   
+  void cFastqFile::error_in_file_format(int count, int num_reads, int position) {
+    int n;
+    char generic_output [50];
+    std::sprintf(generic_output, "Your file is not formatted correctly at line: %d ", (4*num_reads)+count+1);
+    fprintf( stderr , "%s", generic_output);
+    switch (count) {
+      case 0:
+        fprintf(stderr, "\nThis line should be the name of the read and start with '@'. ");
+        fprintf(stderr, "\nEither a line is missing or there is no '@' in the read name.\n");
+        break;
+      case 1:
+        fprintf(stderr, "at position: %d", position+1);
+        fprintf(stderr, "\nThis should be a type of base ('A', 'T', 'G', 'C', or 'N')... it is not. ");
+        fprintf(stderr, "\nEither a line is missing or there is an unknown nucleotide type on this line.\n");
+        break;
+      case 2:
+        fprintf(stderr, "\nThis should be a '+' and only a '+'. Either a line is missing of there is an unknown symbol here.\n");
+        break;
+    }
+    fprintf(stderr, "Now I'm quitting.\n");
+    exit(0);
+    
+  }
   void cFastqFile::check_if_file_opened() {
     assert(m_file.is_open());
   }
@@ -45,7 +68,6 @@ namespace breseq {
     
     if ( m_file.is_open() ) {
       while( getline( m_file, line )) {
-        num_reads++;
         int count(0);
         
         while( count < 4 ) {
@@ -59,14 +81,37 @@ namespace breseq {
               getline(m_file, line);
               break;
             case 2:
+              sequence.m_blank = line;
               getline(m_file, line);
               break;
             case 3:
               sequence.m_qualities = line;
               break;
+            default:
+              error_in_file_format(count, num_reads, 0);
+              return false;
           }
           count++;
         }
+        
+        //Error Checking
+        {
+          if( sequence.m_name[0] != '@' ) error_in_file_format(count-4, num_reads, 0);
+        
+          for (uint32_t i=0; i<sequence.m_sequence.size(); i++) {
+            if(sequence.m_sequence[i] != 'A' && 
+               sequence.m_sequence[i] != 'T' && 
+               sequence.m_sequence[i] != 'G' && 
+               sequence.m_sequence[i] != 'C' && 
+               sequence.m_sequence[i] != 'N') {
+               error_in_file_format(count-3, num_reads, i);
+            }
+          }
+        
+          if( sequence.m_blank != "+" ) error_in_file_format(count-2, num_reads, 0);
+        }
+        num_reads++;
+        
         if( sequence.m_sequence.size() > longest_read.size() ) longest_read = line;
         
         num_bases += sequence.m_sequence.size();
