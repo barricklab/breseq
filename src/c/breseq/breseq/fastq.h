@@ -23,6 +23,7 @@ LICENSE AND COPYRIGHT
 #include <string>
 #include <vector>
 #include <assert.h>
+#include <stdio.h>
 
 namespace breseq {
 	
@@ -37,6 +38,7 @@ namespace breseq {
     public:
       std::string m_name;
       std::string m_sequence;
+      std::string m_blank;
       std::string m_qualities;
    };   
    
@@ -69,6 +71,7 @@ namespace breseq {
     
     cFastqFile(const std::string &file_name, std::ios_base::openmode mode); 
     
+      void error_in_file_format(int count, int num_reads, int position);
       void check_if_file_opened();
     
       bool read_sequence(cFastqSequence &sequence);
