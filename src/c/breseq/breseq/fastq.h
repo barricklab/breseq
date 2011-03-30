@@ -64,12 +64,11 @@ namespace breseq {
     
       //! active fstream that was opened when constructed
       std::fstream     m_file;
-      std::string      m_filename;
-      std::ios_base::openmode m_mode;
+      std::ofstream    m_outfile;
     
     public:
     
-    cFastqFile(const std::string &file_name, std::ios_base::openmode mode); 
+    cFastqFile(const std::string &file_name, const std::string &out_file_name, std::ios_base::openmode mode); 
     
       void error_in_file_format(int count, int num_reads, int position);
       void check_if_file_opened();
