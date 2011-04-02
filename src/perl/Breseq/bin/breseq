@@ -163,39 +163,42 @@ if ($settings->do_step('sequence_conversion_done_file_name', "Read and reference
 		my $num_bases = 0;
 		my $num_reads = 0;
 		my $fastq_file_name = $settings->read_file_to_fastq_file_name($read_file);	
-		my $in = Breseq::Fastq->new(-file => $fastq_file_name);
-				
-		my $qual_format = $in->{format};
-		if ($qual_format ne 'SANGER')
-		{
-			if (!$settings->{accept_any_quality_scores})
-			{
-				die "      Base quality scores appear to be $qual_format.\n"
+		my $command = "cfastq_utils analyze --input=$fastq_file_name";
+		my $output = Breseq::Shared::capture_system($command);
+		#print "$output\n";
+		
+		## Parse output
+		my $s_rf;
+		foreach my $line ( split(/\n/, $output) ) {
+			if ($line =~ m/^(\S+)\s+(\S+)$/) {
+				$s_rf->{$1} = $2;
+			}
+		}			
+		
+		die if (!defined $s_rf->{max_read_length});
+		die if (!defined $s_rf->{max_quality_score});
+		die if (!defined $s_rf->{num_reads});
+		die if (!defined $s_rf->{num_bases});
+		die if (!defined $s_rf->{qual_format});
+
+		## Check to be sure this file is in the correct format
+		if ($s_rf->{qual_format} ne 'SANGER') {
+			if (!$settings->{accept_any_quality_scores}) {
+				die "      Base quality scores appear to be $s_rf->{qual_format}.\n"
 				  . "      Convert to SANGER format and try again or use the\n"
 				  . "      option --force-quality-scores if they are SANGER.\n";
-			}
-			else
-			{
-				print STDERR "    Warning: Base quality scores appear to be $qual_format rather than SANGER.\n";
-				$in->set_format('SANGER');
+			} else {
+				print STDERR "    Warning: Base quality scores appear to be $s_rf->{qual_format} rather than SANGER.\n";
 			}
 		}
 		
-		while (my $seq = $in->next_seq)
-		{
-			my $read_length = length $seq->{seq};
-			$num_bases += $read_length;
-			$num_reads++;
-			$max_read_length = $read_length if ((!defined $max_read_length) || ($read_length > $max_read_length));
-			
-			$overall_max_qual = List::Util::max($overall_max_qual, Breseq::Fastq::max_qual($seq));
-		}
-		$s->{reads}->{$read_file}->{num_bases} = $num_bases;
-		$s->{reads}->{$read_file}->{num_reads} = $num_reads;
-		$s->{reads}->{$read_file}->{max_read_length} = $max_read_length;
-		$overall_max_read_length = $max_read_length if ((!defined $overall_max_read_length) || ($max_read_length > $overall_max_read_length));
-		$s->{num_reads} += $num_reads;
-		$s->{num_bases} += $num_bases;
+		## Record statistics
+		$overall_max_read_length = $s_rf->{max_read_length} if ((!defined $overall_max_read_length) || ($s_rf->{max_read_length} > $overall_max_read_length));
+		$overall_max_qual = $s_rf->{max_quality_score} if ((!defined $overall_max_qual) || ($s_rf->{max_quality_score} > $overall_max_qual));
+		$s->{num_reads} += $s_rf->{num_reads};
+		$s->{num_bases} += $s_rf->{num_bases};
+		
+		$s->{reads}->{$read_file} = $s_rf;
 	}
 	$s->{avg_read_length} = $s->{num_bases} / $s->{num_reads};
 	$s->{max_read_length} = $overall_max_read_length;
@@ -214,13 +217,9 @@ if ($settings->do_step('sequence_conversion_done_file_name', "Read and reference
 	Breseq::Shared::system("$samtools faidx $reference_fasta_file_name", 1);
 
 	## calculate trim files
-	if (!$settings->{perl_calc_trims})
-	{
-		my $calc_trims = $settings->ctool('calc_trims');
-		my $output_path = $settings->file_name('sequence_conversion_path');
-		my $command = "$calc_trims -f $reference_fasta_file_name -o $output_path";
-		Breseq::Shared::system($command);
-	}
+	my $output_path = $settings->file_name('sequence_conversion_path');
+	my $command = "calc_trims -f $reference_fasta_file_name -o $output_path";
+	Breseq::Shared::system($command);
 	
 	## store summary information
 	Storable::store($summary->{sequence_conversion}, $sequence_converson_summary_file_name) or die "Can't store data in file $sequence_converson_summary_file_name!\n";

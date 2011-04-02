@@ -50,6 +50,22 @@ sub system
 	return $res;
 }
 
+sub capture_system
+{
+	my ($command, $silent, $continue) = @_;	
+	print STDERR "[system] $command\n" if (!$silent);
+	$command .= " > $$.script_output";
+	my $res = CORE::system $command;
+	print STDERR "Error: $!\nResult code: $res\n" if ($res);
+	die if ($res && !$continue);
+	
+	open IN, "$$.script_output";
+	my @lines = <IN>;
+	close IN;
+	unlink("$$.script_output");
+	return join("", @lines);
+}
+
 sub poisson
 {
 	my ($x, $lambda) = @_;

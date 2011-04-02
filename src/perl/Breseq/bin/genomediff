@@ -1672,7 +1672,8 @@ sub do_validate
 		
 		my $gd = Breseq::GenomeDiff->new(-in=>$gd_file_name);
 		$gd->strip_evidence;
-		
+		$gd->strip_tags;
+
 		my $output_file_name = "$output_path/$gd_name\.gd";
 		$gd->write($output_file_name);
 	}

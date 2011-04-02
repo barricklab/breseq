@@ -1058,6 +1058,18 @@ sub strip_evidence
 	$self->renumber;
 }
 
+## removes certain tags for validation
+sub strip_tags
+{
+	my ($self) = @_;
+		
+	## keep evidence only if a mutation refers to it... not very efficient way of doing this...
+	LIST: foreach my $item ($self->list)
+	{				
+		delete  $item->{edit} if (defined $item->{edit});
+	}
+}
+
 sub renumber
 {
 	my ($self) = @_;

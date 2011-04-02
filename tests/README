@@ -1,23 +1,25 @@
 The "testcmd.sh" scripts in each of the subdirectories of tests/ contain
-the breseq command-lines.  New tests can be added by creating a new
-subdirectory under tests/, writing the testcmd.sh script, and generating
-the hashes.
+the breseq command-lines and GenomeDiff output files.  New tests can be 
+added by creating a new subdirectory under tests/, writing the testcmd.sh 
+script, and generating the GenomeDiff output file.
 
 The main body of code that deals with the hashes is in etc/common.sh,
 while a script that operates on all tests is in bin/test.sh.
 
 There are a few different testing-related "actions": 
 
-build: generates the list of expected hashes. 
+build: copies current output GenomeDiffs to expected GenomeDiffs.
+       Use only when you are sure the output should have changed!
 
-check: calculate hashes of current data & compare to expected values. 
+check: calculate GenomeDiff using current code & compare to expected values. 
 
 clean: rm current data 
 
-rebuild: clean, run breseq, build 
+rebuild: clean, run breseq, build expected GenomeDiffs
+         Use only when you are sure the output should have changed!
 
 test: run breseq, check (since breseq is smart about not
-doing extra work, this should probably follow a clean)
+      doing extra work, this should probably follow a clean)
 
 Tests can be run individually using the test's own testcmd.sh script:
 
@@ -27,5 +29,6 @@ or en masse:
 
 dk@hammer:breseq% ./bin/test.sh rebuild tests
 
-On os x, you'll need to install sha1sum (from macports, "md5sha1sum";
-it's installed by default on most linuxes, including the hpc).
+You will need to set the environmental variable $TESTBINPREFIX to the bin
+directory of where you have breseq installed to get this to work. This is
+done automatically within the build system: e.g. make test.

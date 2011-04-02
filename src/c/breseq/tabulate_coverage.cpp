@@ -50,6 +50,8 @@ void breseq::tabulate_coverage( const std::string& bam,
   } else {
     tcp.do_pileup(region, true, downsample);
   }
+  
+  // @JEB add option to use fetch rather than pileup when the region is very large and we are only sampling at <1/read_length
 }
 
 /*! Constructor.
@@ -284,81 +286,3 @@ void breseq::tabulate_coverage_pileup::at_end(uint32_t tid, uint32_t seqlen) {
     }
   }
 }
-
-
-
-/*
-sub tabulate_coverage
-{
-	my ($self, $tmp_coverage, $region, $options) = @_;
-	my $downsample = $options->{downsample};
-	$downsample = 1 if (!defined $downsample);
-	my $bam = $self->{bam};
-		
-	my ($seq_id, $start, $end, $insert_start, $insert_end);
-	($seq_id, $start, $end, $insert_start, $insert_end, $region) = Breseq::Shared::region_to_coords($region, $bam);
-	
-	## Open file for output
-	open COV, ">$tmp_coverage";
-	COV->autoflush(1);
-	print COV join("\t", 'position', 'unique_top_cov', 'unique_bot_cov', 'redundant_top_cov', 'redundant_bot_cov') . "\n";
-	our $coverage;
-
-	###
-	##  Behold, the dreaded SLOW fetch function...
-	###
-	
-	my $fetch_function = sub {
-		my ($a) = @_;
-  						
-		my $redundancy = $a->aux_get('X1');
-		my $reversed = $a->reversed;
-		my $strand = $reversed ? -1 : +1;
-		
-		##### Update coverage if this is not a deletion in read relative to reference
-		### Count trimmed reads here, but not when looking for short indel mutations...	
-		if ($redundancy == 1)
-		{	
-			$coverage->{unique}->{$strand}++;
-		}
-		else
-		{
-			$coverage->{redundant}->{$strand} += 1/$redundancy;			
-#			$this_position_coverage->{raw_redundant}->{$strand}++;			
-		}		
-	}; 
-
-	$start = $downsample * int($start/$downsample);
-	$start = 1 if ($start < 1);
-	
-	$end = $downsample * int((($end-1)/$downsample) + 1);
-	my $reference_length = $bam->length($seq_id);
-	$end = $reference_length if ($end > $reference_length);	
-				
-	for (my $pos = $start; $pos <= $end; $pos += $downsample)
-	{		
-		#initialize coverage observations
-		$coverage->{unique} = {'-1' => 0, '1' => 0, 'total' => 0};
-		$coverage->{redundant} = {'-1' => 0, '1' => 0, 'total' => 0};
-#		$coverage->{raw_redundant} = {'-1' => 0, '1' => 0, 'total' => 0};
-				
-		my $fetch_region = $seq_id . ":" . $pos . "-" . $pos;
-#		print "$fetch_region\n";
-		$bam->fetch($fetch_region, $fetch_function);
-		
-		#sum up coverage observations
-		$coverage->{unique}->{total} = $coverage->{unique}->{-1} + $coverage->{unique}->{+1};
-		$coverage->{redundant}->{total} = $coverage->{redundant}->{-1} + $coverage->{redundant}->{+1};
-#		$coverage->{raw_redundant}->{total} = $coverage->{raw_redundant}->{-1} + $coverage->{raw_redundant}->{+1};
-
-		my $tu = $coverage->{unique};
-		my $tr = $coverage->{redundant};
-#		my $trr = $this_position_coverage->{raw_redundant};
-		print COV join("\t", $pos, $tu->{-1}, $tu->{1}, $tr->{-1}, $tr->{1}) . "\n";
-	}
-	
-	close COV;
-}
-*/
-
-

@@ -63,6 +63,7 @@ syntax: regexp
 ^src/c/breseq/calc_trims$
 ^src/c/breseq/tabulate_coverage$
 ^src/c/breseq/convert_genbank$
+^src/c/breseq/cfastq_utils$
 
 ^extern/samtools-0.1.7a/samtools
 ^extern/samtools-0.1.7a/misc

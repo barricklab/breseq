@@ -20,15 +20,17 @@
 
 namespace breseq {
 
+  const uint8_t k_SANGER_quality_score_offset = 33;
+  
   //constructor
-  cFastqFile::cFastqFile(const std::string &file_name, const std::string &out_file_name, std::ios_base::openmode mode) :
+  cFastqFile::cFastqFile(const std::string &file_name, std::ios_base::openmode mode) :
     m_max_read_length(0),
     m_min_quality_score(INT_MAX),
     m_max_quality_score(0),
     m_total_base(0), 
     m_total_reads(0), 
-    m_file(file_name.c_str(), mode), 
-    m_outfile(out_file_name.c_str(), std::fstream::in) { }
+    m_file(file_name.c_str(), mode) 
+  { }
   
   //check to make sure certain conditions about the data are fulfilled
   void cFastqFile::error_in_file_format(int count, int num_reads, int position) {
@@ -140,8 +142,8 @@ namespace breseq {
     m_total_reads = num_reads;
     m_total_base = num_bases;
     m_max_read_length = longest_read.size();
-    m_min_quality_score = min_score-33;
-    m_max_quality_score = max_score-33;
+    m_min_quality_score = min_score-k_SANGER_quality_score_offset;
+    m_max_quality_score = max_score-k_SANGER_quality_score_offset;
   }
 
   void cFastqFile::write_sequence(cFastqSequence &sequence) {
@@ -150,16 +152,34 @@ namespace breseq {
   
   void cFastqFile::write_summary_file() {
     
+    // could move this out somewhere else...
+    std::string m_quality_format("SANGER");
+    
+    // Typical range: (-5, 40) + 64
+    if (m_min_quality_score >= 64 - k_SANGER_quality_score_offset + - 5) {
+      m_quality_format = "SOLEXA";
+    } 
+    // Typical range:  (0, 40) + 64
+    else if (m_min_quality_score >= 64 - k_SANGER_quality_score_offset + 0) {
+      m_quality_format = "Illumina 1.3+";
+    } 
+    // Typical range:  (3, 40) + 64
+    else if (m_min_quality_score >= 64 - k_SANGER_quality_score_offset + 3) {
+      m_quality_format = "Illumina 1.5+";
+    }
+        
     // Should have lines like: max_read_length 36
     //                         num_reads 1020200
     //                         min_quality_score 4
     //                         max_quality_score 40
     //                         num_bases 62646176
-    std::cout << "max_read_length "   << m_max_read_length   << std::endl;
-    std::cout << "num_reads "         << m_total_reads       << std::endl;
-    std::cout << "min_quality_score " << m_min_quality_score << std::endl;
-    std::cout << "max_quality_score " << m_max_quality_score << std::endl;
-    std::cout << "num_bases "         << m_total_base        << std::endl;
+    std::cout << "max_read_length "   << m_max_read_length    << std::endl;
+    std::cout << "num_reads "         << m_total_reads        << std::endl;
+    std::cout << "min_quality_score " << m_min_quality_score  << std::endl;
+    std::cout << "max_quality_score " << m_max_quality_score  << std::endl;
+    std::cout << "num_bases "         << m_total_base         << std::endl;
+    std::cout << "qual_format "       << m_quality_format     << std::endl;
+
   }
   
 } // breseq namespace

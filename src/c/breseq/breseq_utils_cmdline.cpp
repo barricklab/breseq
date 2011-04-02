@@ -15,31 +15,47 @@ LICENSE AND COPYRIGHT
 
 *****************************************************************************/
 
-#include <boost/program_options.hpp>
 #include <iostream>
 #include <string>
 #include <vector>
 
-#include "breseq/fastq.h"
+#include <boost/program_options.hpp>
+#include <boost/algorithm/string.hpp>
+
+#include "breseq/candidate_junctions.cpp"
 
 using namespace breseq;
 using namespace std;
 
 namespace po = boost::program_options;
 
-/*! analyze_fastq
+/*! 
  
- Extract information about 
+ Working to condense all internal breseq steps that can be called separately from perl into one binary...
+ Initially work to
  
  */
 
-int analyze_fastq(int argc, char* argv[]) {
+/* Perform an analysis of aligned reads to predict the best possible new candidate junctions.
+ */
+
+int do_candidate_junctions(int argc, char* argv[]) {
     
 	// setup and parse configuration options:
 	po::options_description cmdline_options("Allowed options");
 	cmdline_options.add_options()
 	("help,h", "produce this help message")
-	("input,i", po::value<string>(), "input FASTQ File")
+	("fasta,f", po::value<string>(), "reference sequences in FASTA format")
+  ("sam,s", po::value<string>(), "text SAM file of input alignments")
+  ("output,o", po::value<string>(), "output FASTA file of candidate junctions")
+
+// additional options  
+//  $required_both_unique_length_per_side = $settings->{required_both_unique_length_per_side};
+//	$required_one_unique_length_per_side = $settings->{required_one_unique_length_per_side};
+//	$maximum_inserted_junction_sequence_length = $settings->{maximum_inserted_junction_sequence_length};
+// 	$required_match_length = $settings->{required_match_length};
+//	$required_extra_pair_total_length = $settings->{required_extra_pair_total_length};
+  
 //  ("output,o", po::value<string>(),"out to file") // outputs to STDOUT for now
   ;
 
@@ -49,9 +65,12 @@ int analyze_fastq(int argc, char* argv[]) {
 	
 	// make sure that the config options are good:
 	if(options.count("help")
-		 || !options.count("input")
+		 || !options.count("fasta")
+		 || !options.count("sam")
+     || !options.count("output")
 		 ) {
-		cout << "Usage: fastq_utils --input input.fastq" << endl;
+		cout << "Usage: breseq_utils CANDIDATE_JUNCTIONS --fasta=reference.fasta " 
+         << " --sam=reference.sam --output=output.fasta" << endl;
 		cout << cmdline_options << endl;
 		return -1;
 	}                       
@@ -59,13 +78,10 @@ int analyze_fastq(int argc, char* argv[]) {
 	// attempt to calculate error calibrations:
 	try {
     
-    
-    cFastqSequence sequence;
-    cFastqFile fastqparse(options["input"].as<std::string>(), std::fstream::in);
-    
-    fastqparse.check_if_file_opened();
-    fastqparse.read_sequence(sequence);
-    fastqparse.write_summary_file();
+    // plain function
+    candidate_junctions(options["fasta"].as<string>(),
+                        options["sam"].as<string>(),
+                        options["output"].as<string>() );
     
   } catch(...) {
 		// failed; 
@@ -88,12 +104,14 @@ int main(int argc, char* argv[]) {
     subcommand = argv[1];
   } else {
     cout << "No [command] provided." << endl << endl;
-    cout << "Usage: fastq_utils [command] options ..." << endl;
+    cout << "Usage: breseq_utils [command] options ..." << endl;
 		return -1;
   }
   
-  if (subcommand == "analyze") {
-    return analyze_fastq(argc, argv);
+  boost::to_upper(subcommand);
+  
+  if (subcommand == "CANDIDATE_JUNCTIONS") {
+    return do_candidate_junctions(argc, argv);
   }
   
   cout << "Unrecognized command" << endl;

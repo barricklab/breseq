@@ -26,6 +26,7 @@ libbreseq_la_SOURCES = \
 	alignment.cpp \
 	annotated_sequence.cpp \
 	error_count.cpp \
+	fastq.cpp \
 	genome_diff.cpp \
 	identify_mutations.cpp \
 	pileup_base.cpp \
@@ -35,6 +36,7 @@ libbreseq_la_SOURCES = \
 	breseq/annotated_sequence.h \
 	breseq/common.h \
 	breseq/error_count.h \
+	breseq/fastq.h \
 	breseq/genome_diff.h \
 	breseq/identify_mutations.h \
 	breseq/pileup_base.h \
@@ -43,7 +45,7 @@ libbreseq_la_SOURCES = \
 libbreseq_la_LDFLAGS = -static
 libbreseq_la_LIBADD = $(top_srcdir)/$(LIBBAM)/libbam.la
 
-bin_PROGRAMS = error_count identify_mutations calc_trims tabulate_coverage convert_genbank
+bin_PROGRAMS = error_count identify_mutations calc_trims tabulate_coverage convert_genbank cfastq_utils
 
 error_count_SOURCES = error_count_cmdline.cpp
 
@@ -54,3 +56,6 @@ calc_trims_SOURCES = calc_trims_cmdline.cpp
 tabulate_coverage_SOURCES = tabulate_coverage_cmdline.cpp
 
 convert_genbank_SOURCES = convert_genbank_cmdline.cpp
+
+cfastq_utils_SOURCES = fastq_utils_cmdline.cpp
+

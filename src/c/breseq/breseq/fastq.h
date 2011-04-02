@@ -30,6 +30,7 @@ namespace breseq {
 	/*! Interface for loading and manipulating files in FASTQ format.
    */
   
+  extern const uint8_t k_SANGER_quality_score_offset;
   
   /*! Sequence class.
    */
@@ -64,11 +65,10 @@ namespace breseq {
     
       //! active fstream that was opened when constructed
       std::fstream     m_file;
-      std::ofstream    m_outfile;
     
     public:
     
-    cFastqFile(const std::string &file_name, const std::string &out_file_name, std::ios_base::openmode mode); 
+    cFastqFile(const std::string &file_name, std::ios_base::openmode mode); 
     
       void error_in_file_format(int count, int num_reads, int position);
       void check_if_file_opened();
@@ -76,7 +76,6 @@ namespace breseq {
       void read_sequence(cFastqSequence &sequence);
       void write_sequence(cFastqSequence &sequence);
     
-      void write_quality_score_distribution_file(std::string filename);
       void write_summary_file();
   };
 	
