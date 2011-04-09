@@ -1650,31 +1650,27 @@ sub do_strip_evidence
 sub do_validate
 {
 	my ($help, $man, $verbose);
-	my $output_path; 
+	my $output_file_name; 
 	GetOptions(
 		'help|?' => \$help, 'man' => \$man, 'verbose|v' => \$verbose,
-		'output-path|o=s' => \$output_path,
+		'output-path|o=s' => \$output_file_name,
 	) or pod2usage(2);
 	pod2usage(1) if $help;
 	pod2usage(-exitstatus => 0, -verbose => 2) if $man;
 	pod2usage(1) if (scalar @ARGV == 0);
-	pod2usage(1) if (!defined $output_path);
+	pod2usage(1) if (!defined $output_file_name);
 
 	#doesn't really need to take multiple...
-	my @gd_file_name_list = @ARGV;
+	my $gd_file_name = shift @ARGV;
 		
-	foreach my $gd_file_name (@gd_file_name_list)
-	{
-		my $gd_name = $gd_file_name;
-		$gd_name =~ s/^.+\///;		
-		$gd_name =~ s/\.[^.]+$//;
-		print STDERR "$gd_name\n";
-		
-		my $gd = Breseq::GenomeDiff->new(-in=>$gd_file_name);
-		$gd->strip_evidence;
-		$gd->strip_tags;
+	my $gd_name = $gd_file_name;
+	$gd_name =~ s/^.+\///;		
+	$gd_name =~ s/\.[^.]+$//;
+	print STDERR "$gd_name\n";
+	
+	my $gd = Breseq::GenomeDiff->new(-in=>$gd_file_name);
+	$gd->strip_evidence;
+	$gd->strip_tags;
 
-		my $output_file_name = "$output_path/$gd_name\.gd";
-		$gd->write($output_file_name);
-	}
+	$gd->write($output_file_name);
 }

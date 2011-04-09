@@ -127,6 +127,9 @@ sub text_alignment
 sub position_table
 {
 	my ($self, $output_file, $bam_path, $fasta_path, $region, $options) = @_;	
+	
+	my $minimum_quality = $options->{minimum_quality};
+	
 	## Start -- Workaround to avoid too many open files
 	if (!defined $open_bam_files{$bam_path.$fasta_path})
 	{
@@ -162,28 +165,67 @@ sub position_table
 		{
 			next if (($pos == $start) && ($i < $insert_start));
 			next if (($pos == $end) && ($i > $insert_end));
+		
+			my $base_hash;
+			my @base_list = ('A','T','C','G', '.');
+			foreach my $base (@base_list) {
+				$base_hash->{$base}->[0] = 0;
+				$base_hash->{$base}->[1] = 0;
+			}
 			
 			print $output_fh "POSITION: $pos INSERT COUNT: $i\n";
 			print $output_fh +join("\t", "base", "quality", "left", "right") . "\n";
 			ALIGNMENT: foreach my $p (@$pileup) 
-			{
+			{				
+				
 				my $a = $p->alignment;
 				my $indel = $p->indel;
 		
 				my $left_flanking = $pos - $a->start;
 				my $right_flanking = $a->end - $pos;
+				
+				my $reversed = $a->reversed;
+
+				my $trim_left = $a->aux_get('XL');  #1-indexed
+				my $trim_right = $a->aux_get('XR');  #1-indexed
+				
+				my $trimmed = 0;
+				$trimmed = 1 if ((defined $trim_left) && ($p->qpos+1 <= $trim_left));
+				$trimmed = 1 if ((defined $trim_right) && ($a->l_qseq-($p->qpos+1) <= $trim_right));
+
+				next ALIGNMENT if ($trimmed);
 							
 				if ($i > $indel)
 				{
-					print $output_fh ".\t255\t$left_flanking\t$right_flanking\n";	
+					my $quality = $a->qscore->[$p->qpos+$i-$a->reversed];
+					if ((defined $minimum_quality) && ($quality >=  $minimum_quality)) {
+						print $output_fh ".\t$quality\t$left_flanking\t$right_flanking\n";
+						$base_hash->{'.'}->[$reversed]++;
+					}
+					else {
+						print $output_fh ".\t$quality\t$left_flanking\t$right_flanking\tXXXX\n";
+					}
 				}
 				else
 				{
 					my $quality = $a->qscore->[$p->qpos+$i];
 					my $base  = substr($a->qseq, $p->qpos+$i,1);
-					print $output_fh "$base\t$quality\t$left_flanking\t$right_flanking\n";	
+					
+					if ((defined $minimum_quality) && ($quality >=  $minimum_quality)) {
+						print $output_fh "$base\t$quality\t$left_flanking\t$right_flanking\n";	
+						$base_hash->{$base}->[$reversed]++;	
+					}
+					else {
+						print $output_fh "$base\t$quality\t$left_flanking\t$right_flanking\tXXXX\n";	
+					}
 				}
 			}
+			
+			print $output_fh "DISTRIBUTION\n";
+			foreach my $base (@base_list) {
+				print $output_fh " Base:$base ($base_hash->{$base}->[0]\/$base_hash->{$base}->[1])";
+			}
+			print $output_fh "\n";	
 		}			
 	};
 	
