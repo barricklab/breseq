@@ -78,6 +78,7 @@ use Pod::Usage;
 my ($help, $man, $verbose);
 my ($bam_path, $fasta_path, $output_path, $table_mode);
 my $max_reads = 1000;
+my $minimum_quality = 0;
 GetOptions(
 	'help|?' => \$help, 'man' => \$man,
 	'bam|b=s' => \$bam_path,
@@ -85,6 +86,7 @@ GetOptions(
 	'output|o=s' => \$output_path,
 	'max-reads|n=s' => \$max_reads,
 	'table_mode|t' => \$table_mode,
+	'minimum_quality|m=s' => \$minimum_quality,
 	'verbose|v' => \$verbose,
 ) or pod2usage(2);
 pod2usage(1) if $help;
@@ -126,7 +128,7 @@ REGION: foreach my $region (@regions)
 	if ($table_mode)
 	{
 		$this_output_file =~ s/\.html$/\.tab/;
-		$ao->position_table($this_output_file, $bam_path, $fasta_path, $region, {'verbose'=>$verbose});	
+		$ao->position_table($this_output_file, $bam_path, $fasta_path, $region, {'verbose'=>$verbose, 'minimum_quality'=>$minimum_quality});	
 		next REGION;
 	}
 	
