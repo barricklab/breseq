@@ -57,7 +57,6 @@ namespace breseq {
     }
     fprintf(stderr, "Now I'm quitting.\n");
     exit(-1);
-    
   }
   
   //make sure the file opened... if not it will fail

@@ -21,7 +21,11 @@ if [[ -e $2/${TESTEXEC} ]]; then
 	do_test $1 $2
 else
 	for i in `find $2 -name ${TESTEXEC}`; do
-		echo "TEST:" $i $1
-        $i $1
+
+		# skip test directories that begin with an underscore!
+		if [[ ${i:${#TESTDIR}+1:1} != '_' ]]; then 
+			echo "TEST:" $i $1
+			$i $1
+		fi
 	done
 fi

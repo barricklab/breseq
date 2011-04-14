@@ -3,7 +3,7 @@
 <plist version="1.0">
 <dict>
 	<key>currentDocument</key>
-	<string>Breseq/Breseq-1.00/lib/Breseq/AlignmentCorrection.pm</string>
+	<string>Breseq/lib/Breseq/AlignmentOutput.pm</string>
 	<key>documents</key>
 	<array>
 		<dict>
@@ -21,36 +21,6 @@
 	<integer>270</integer>
 	<key>metaData</key>
 	<dict>
-		<key>Breseq/Breseq-1.00/lib/Breseq/AlignmentCorrection.pm</key>
-		<dict>
-			<key>caret</key>
-			<dict>
-				<key>column</key>
-				<integer>39</integer>
-				<key>line</key>
-				<integer>612</integer>
-			</dict>
-			<key>columnSelection</key>
-			<false/>
-			<key>firstVisibleColumn</key>
-			<integer>0</integer>
-			<key>firstVisibleLine</key>
-			<integer>591</integer>
-			<key>selectFrom</key>
-			<dict>
-				<key>column</key>
-				<integer>17</integer>
-				<key>line</key>
-				<integer>612</integer>
-			</dict>
-			<key>selectTo</key>
-			<dict>
-				<key>column</key>
-				<integer>39</integer>
-				<key>line</key>
-				<integer>612</integer>
-			</dict>
-		</dict>
 		<key>Breseq/Breseq-1.00/lib/Breseq/Settings.pm</key>
 		<dict>
 			<key>caret</key>
@@ -278,36 +248,6 @@
 			<integer>0</integer>
 			<key>firstVisibleLine</key>
 			<integer>0</integer>
-		</dict>
-		<key>Breseq/lib/Breseq/AlignmentCorrection.pm</key>
-		<dict>
-			<key>caret</key>
-			<dict>
-				<key>column</key>
-				<integer>74</integer>
-				<key>line</key>
-				<integer>203</integer>
-			</dict>
-			<key>columnSelection</key>
-			<false/>
-			<key>firstVisibleColumn</key>
-			<integer>0</integer>
-			<key>firstVisibleLine</key>
-			<integer>178</integer>
-			<key>selectFrom</key>
-			<dict>
-				<key>column</key>
-				<integer>49</integer>
-				<key>line</key>
-				<integer>203</integer>
-			</dict>
-			<key>selectTo</key>
-			<dict>
-				<key>column</key>
-				<integer>74</integer>
-				<key>line</key>
-				<integer>203</integer>
-			</dict>
 		</dict>
 		<key>Breseq/lib/Breseq/AlignmentOutput.pm</key>
 		<dict>
@@ -670,8 +610,6 @@
 		<string>Breseq/bin/bam2cov</string>
 		<string>Breseq/bin/bam2aln</string>
 		<string>Breseq/lib/Breseq/AlignmentOutput.pm</string>
-		<string>Breseq/lib/Breseq/AlignmentCorrection.pm</string>
-		<string>Breseq/Breseq-1.00/lib/Breseq/AlignmentCorrection.pm</string>
 		<string>Breseq/lib/Breseq/MutationIdentification.pm</string>
 		<string>Breseq/lib/Breseq/MutationPredictor.pm</string>
 		<string>Breseq/lib/Breseq/Output.pm</string>
@@ -692,6 +630,6 @@
 	<key>showFileHierarchyDrawer</key>
 	<true/>
 	<key>windowFrame</key>
-	<string>{{313, -305}, {802, 837}}</string>
+	<string>{{270, 41}, {802, 837}}</string>
 </dict>
 </plist>
