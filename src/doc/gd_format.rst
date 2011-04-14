@@ -1,11 +1,11 @@
-.. _genomediff-format:
+.. _genomediff-usage:
 
 :program:`GenomeDiff` Format
 =============================
 
-|breseq| outputs its evidence and mutation predictions in a computer-readable :program:`GenomeDiff` text format. 
+The |GD| file format describes mutational differences between a reference DNA sequence and a sample. It may also include evidence from computational analysis or experiments that supports mutations.
 
-An example of a portion of a :program:`GenomeDiff` file::
+An example of a portion of a |GD| file::
 
    #=GENOME_DIFF 1.0
    DEL	61	11	NC_001416	139	1	
@@ -29,19 +29,19 @@ Format specification
 Version line
 +++++++++++++++
 
-The first line of the file must define the version::
+The first line of the file must define that this is a |GD| file and the version of the file specification used::
    
    #=GENOME_DIFF 1.0
 
 Metadata lines
 +++++++++++++++
 
-Lines beginning in **#=<name> <value>** are interpreted as metadata. (Thus, the first line is assigning a metadata item named GENOME_DIFF a value of 1.0.) Names cannot include whitespace characters. Values may include whitespace characters. Lines with the same name are concatenated with single spaces added between them. 
+Lines beginning with **#=<name> <value>** are interpreted as metadata. (Thus, the first line is assigning a metadata item named GENOME_DIFF a value of 1.0.) Names cannot include whitespace characters. Values may include whitespace characters. Lines with the same name are concatenated with single spaces added between them. 
 
 Comment lines
 ++++++++++++++
 
-Subsequent lines beginning with whitespace and # are comments.
+Lines beginning with whitespace and # are comments. Comments may not occur at the end of a data line.
 
 Data lines
 ++++++++++++++++++++++
@@ -52,17 +52,204 @@ Data lines describe either a mutation or evidence from an analysis that can pote
 
    type of the entry on this line.
 
-2. **id** *<uint32>*
+2. **id or evidence-id** *<uint32>*
 
-   id of this item. May be set to '+' for manually edited entries.
+   For evidence and validation lines, the id of this item. For mutation lines, the ids of all evidence or validation items that support this mutation. May be set to '.' if a line was manually edited.
 
 3. **parent-ids** *<uint32>*
    
    ids of evidence that support this mutation. May be set to '.' or left blank.
 
-Valid *mutation* types are: SNP, SUB, DEL, INS, MOB, AMP, CON, INV.
+*mutation* types are 3 letters: SNP, SUB, DEL, INS, MOB, AMP, CON, INV.
 
-Valid *evidence* types are: RA, MC, JC, UN.
+*evidence* types are 2 letters: RA, MC, JC, UN.
+
+*validation* types are 4 letters: TSEQ, PFLP, RFLP, PFGE, PHYL, CURA.
+
+
+Mutational Event Types
+++++++++++++++++++++++
+
+SNP: Base substitution mutation
+""""""""""""""""""""""""""""""""
+4. **seq_id** *<string>*
+
+   id of reference sequence fragment containing mutation, evidence, or validation.
+
+5. **position** *<uint32>*
+
+   position in reference sequence fragment.
+
+6. **new_seq** *<char>*
+
+   new base at position
+
+SUB: Multiple base substitution mutation
+""""""""""""""""""""""""""""""""""""""""
+
+4. **seq_id** *<string>*
+
+   id of reference sequence fragment containing mutation, evidence, or validation.
+
+5. **position** *<uint32>*
+
+   position in reference sequence fragment.
+
+6. **size** *<uint32>*
+
+   number of bases *after* the specified reference position to replace with **new_seq**
+
+7. **new_seq** *<string>*
+
+   new base at position
+
+
+DEL: Deletion mutation
+""""""""""""""""""""""
+
+4. **seq_id** *<string>*
+
+   id of reference sequence fragment containing mutation, evidence, or validation.
+
+5. **position** *<uint32>*
+
+   position in reference sequence fragment.
+
+6. **size** *<uint32>*
+
+   number of bases deleted in reference
+
+
+INS: Insertion mutation
+"""""""""""""""""""""""
+
+4. **seq_id** *<string>*
+
+   id of reference sequence fragment containing mutation, evidence, or validation.
+
+5. **position** *<uint32>*
+
+   position in reference sequence fragment.
+
+6. **new_seq** *<string>*
+
+   new base inserted *after* the specified rference position
+
+MOB: Mobile element insertion mutation
+""""""""""""""""""""""""""""""""""""""
+
+4. **seq_id** *<string>*
+
+   id of reference sequence fragment containing mutation, evidence, or validation.
+
+5. **position** *<uint32>*
+
+   position in reference sequence fragment.
+
+6. **repeat_name** *<string>*
+
+   name of the mobile element. Should correspond to an annotated **repeat_region** in the reference.
+
+7. **strand** *<1/-1>*
+
+   strand of mobile element insertion.  
+
+8. **duplication_size** *<uint32>*
+
+   number of bases duplicated during insertion, beginning with the specified reference position.
+   
+
+AMP: Amplification mutation
+"""""""""""""""""""""""""""
+
+4. **seq_id** *<string>*
+
+   id of reference sequence fragment containing mutation, evidence, or validation.
+
+5. **position** *<uint32>*
+
+   position in reference sequence fragment.
+
+6. **size** *<uint32>*
+
+   number of bases duplicated starting with the specified reference position.
+
+7. **new_copy_number** *<uint32>*
+
+   new number of copies of specified bases. 
+
+CON: Gene conversion mutation
+"""""""""""""""""""""""""""""
+
+4. **seq_id** *<string>*
+
+   id of reference sequence fragment containing mutation, evidence, or validation.
+
+5. **position** *<uint32>*
+
+   position in reference sequence fragment that was the target of gene conversion from another genomic location.
+
+6. **size** *<uint32>*
+
+   number of bases to replace in the reference genome beginning at the specified position.
+
+7. **region** *<sequence:start-end>*
+
+   Region in the reference genome to use as a replacement.
+
+INV: Inversion mutation
+"""""""""""""""""""""""
+
+4. **seq_id** *<string>*
+
+   id of reference sequence fragment containing mutation, evidence, or validation.
+
+5. **position** *<uint32>*
+
+   position in reference sequence fragment.
+
+6. **size** *<uint32>*
+
+   number of bases in inverted region beginning at the specified reference position.
+   
+Standard name=value pairs
+++++++++++++++++++++++++++
+
+Counting Mutations
+""""""""""""""""""
+
+These attributes control how molecular events in a a :program:`GenomeDiff` are counted for summary purposes.
+
+* **between**\ =\ *<element_name>*
+
+   This mutation occurs between copies of this element. For example, a deletion caused by recombination between two copies of a mobile element.
+
+* **mediated**\ =\ *<element_name>*
+
+   This mutation was mediated by insertion of a new copy of this element and recombination with an existing copy, such that the number of this element did not net increase in the resulting genome.
+   
+* **adjacent**\ =\ *<element_name>*
+
+   This mutation
+   
+* **with**\ =\ *<mutatiion_id>*
+
+   This mutation should be counted as a **single** molecular event with the other specified mutation. For example, active mobile elements may lose and gain a few bases at their margins, and when this occurs the most parsimonious explanation is one round of recombination or excision and re-insertion.
+   
+
+Applying Mutations
+""""""""""""""""""
+
+These attributes control how mutations are applied when building a new reference genome from the original reference genome and a :program:`GenomeDiff` and when building phylogenetic trees between multiple samples. They are not generated automatically by |breseq|.
+   
+* **before**\ =\ *<mutation_id>* or **after**\ =\ *<mutation_id>*
+
+   Apply this mutation before or after another mutation. For example, did a base substitution occur before a region was duplicated, thus it is only in one copy or did it occur before the duplication, thus altering both copies? Did a base substitution happen before a deletion, hiding a mutation that should be included in any phylogenetic inference? The **before**. When neither of these attributes is present, mutations will be applied in the order in which they appear in the file.
+   
+* **within**\ =\ *<mutation_id>*\ , **within_position**\ =\ *<mutation_id>*\ ,  **within_copy**\ =\ *<mutation_id>*
+
+   This mutation happens inside of a different mutation. These options can specify, for example, that a base substitution happens in the second copy of a duplicated region. **within** and **within_position** must both be provided if one is supplied. If **within_copy** is not provided (because it is unknown), the mutation will be placed arbitrarily in the first copy. Note that the actual position of this mutation is still used for annotating its effects.
+
 
 Evidence Types
 ++++++++++++++++++++++
@@ -74,7 +261,7 @@ Line specification:
 
 4. **seq_id** *<string>*
 
-   id of reference sequence fragment.
+   id of reference sequence fragment containing mutation, evidence, or validation.
 
 5. **position** *<uint32>*
 
@@ -99,7 +286,7 @@ Line specification:
 
 4. **seq_id** *<string>*
 
-   id of reference sequence fragment.
+   id of reference sequence fragment containing mutation, evidence, or validation.
 
 5. **start** *<uint32>*
 
@@ -159,7 +346,7 @@ Line specification:
 
 4. **seq_id** *<string>*
 
-   id of reference sequence fragment.
+   id of reference sequence fragment containing mutation, evidence, or validation.
 
 5. **start** *<uint32>*
 
@@ -169,186 +356,144 @@ Line specification:
 
    end position in reference sequence of region.
 
-Mutational Event Types
+Validation Types
 ++++++++++++++++++++++
 
-SNP: Base substitution mutation
-""""""""""""""""""""""""""""""""
+These items indicate that mutations have been validated by further, targeted experiments.
+
+CURA: True-positive curated by an expert 
+""""""""""""""""""""""""""""""""""""""""""""""
+
+An expert has examined the data output from a prediction program and determined that this mutations is a true positive.
+
+Line specification:
+
+4. **expert** *<string>*
+
+   Name or initials of the person who predicted the mutation.
+
+FPOS: False-positive curated by an expert 
+""""""""""""""""""""""""""""""""""""""""""""""
+
+An expert has examined the raw read data and determined that this predicted mutation is a false positive.
+
+Line specification:
+
+4. **expert** *<string>*
+
+   Name or initials of the person who predicted the mutation.
+
+PHYL: Phylogenetic comparison
+""""""""""""""""""""""""""""""""""""""""""""""
+
+This validation was transferred from validation in another, related genome.
+
+Line specification:
+
+4. **gd** *<string>*
+
+   Name of the genome_diff file containing the evidence.
+
+TSEQ: Targeted re-sequencing
+"""""""""""""""""""""""""""""""""""
+
+Line specification:
 
 4. **seq_id** *<string>*
 
-   id of reference sequence fragment.
+   id of reference sequence fragment containing mutation, evidence, or validation.
 
-5. **position** *<uint32>*
+5. **primer1_start** *<uint32>*
 
-   position in reference sequence fragment.
+   position in reference sequence of the 5' end of primer 1.
 
-6. **new_seq** *<char>*
+6. **primer1_end** *<uint32>*
 
-   new base at position
+   position in reference sequence of the 3' end of primer 1.
 
-SUB: Multiple base substitution mutation
-""""""""""""""""""""""""""""""""""""""""
+7. **primer2_start** *<uint32>*
 
-4. **seq_id** *<string>*
+   position in reference sequence of the 5' end of primer 2.
+   
+8. **primer2_end** *<uint32>*
 
-   id of reference sequence fragment.
+   position in reference sequence of the 3' end of primer 2.
+   
+For primer 1, start < end. For primer 2, end < start.
 
-5. **position** *<uint32>*
-
-   position in reference sequence fragment.
-
-6. **size** *<uint32>*
-
-   number of bases *after* the specified reference position to replace with **new_seq**
-
-7. **new_seq** *<string>*
-
-   new base at position
-
-
-DEL: Deletion mutation
-""""""""""""""""""""""
-
-4. **seq_id** *<string>*
-
-   id of reference sequence fragment.
-
-5. **position** *<uint32>*
-
-   position in reference sequence fragment.
-
-6. **size** *<uint32>*
-
-   number of bases deleted in reference
-
-
-INS: Insertion mutation
-"""""""""""""""""""""""
-
-4. **seq_id** *<string>*
-
-   id of reference sequence fragment.
-
-5. **position** *<uint32>*
-
-   position in reference sequence fragment.
-
-6. **new_seq** *<string>*
-
-   new base inserted *after* the specified rference position
-
-MOB: Mobile element insertion mutation
+PFLP: PCR-fragment length polymorphism
 """"""""""""""""""""""""""""""""""""""
 
-4. **seq_id** *<string>*
-
-   id of reference sequence fragment.
-
-5. **position** *<uint32>*
-
-   position in reference sequence fragment.
-
-6. **repeat_name** *<string>*
-
-   name of the mobile element. Should correspond to an annotated **repeat_region** in the reference.
-
-7. **strand** *<1/-1>*
-
-   strand of mobile element insertion.  
-
-8. **duplication_size** *<uint32>*
-
-   number of bases duplicated during insertion, beginning with the specified reference position.
-   
-
-AMP: Amplification mutation
-"""""""""""""""""""""""""""
+Line specification:
 
 4. **seq_id** *<string>*
 
-   id of reference sequence fragment.
+   id of reference sequence fragment containing mutation, evidence, or validation.
 
-5. **position** *<uint32>*
+5. **primer1_start** *<uint32>*
 
-   position in reference sequence fragment.
+   position in reference sequence of the 5' end of primer 1.
 
-6. **size** *<uint32>*
+6. **primer1_end** *<uint32>*
 
-   number of bases duplicated starting with the specified reference position.
+   position in reference sequence of the 3' end of primer 1.
 
-7. **new_copy_number** *<uint32>*
+7. **primer2_start** *<uint32>*
 
-   new number of copies of specified bases. 
+   position in reference sequence of the 5' end of primer 2.
+   
+8. **primer2_end** *<uint32>*
 
-CON: Gene conversion mutation
-"""""""""""""""""""""""""""""
+   position in reference sequence of the 3' end of primer 2.
+   
+For primer 1, start < end. For primer 2, end < start.
+
+
+RFLP: Restriction fragment length polymorphism
+""""""""""""""""""""""""""""""""""""""""""""""
+
+Line specification:
 
 4. **seq_id** *<string>*
 
-   id of reference sequence fragment.
+   id of reference sequence fragment containing mutation, evidence, or validation.
 
-5. **position** *<uint32>*
+5. **primer1_start** *<uint32>*
 
-   position in reference sequence fragment that was the target of gene conversion from another genomic location.
+   position in reference sequence of the 5' end of primer 1.
 
-6. **size** *<uint32>*
+6. **primer1_end** *<uint32>*
 
-   number of bases to replace in the reference genome beginning at the specified position.
+   position in reference sequence of the 3' end of primer 1.
 
-7. **region** *<sequence:start-end>*
+7. **primer2_start** *<uint32>*
 
-   Region in the reference genome to use as a replacement.
+   position in reference sequence of the 5' end of primer 2.
+   
+8. **primer2_end** *<uint32>*
 
-INV: Inversion mutation
-"""""""""""""""""""""""
+   position in reference sequence of the 3' end of primer 2.
+
+9. **enzyme** *<string>*
+
+   Restriction enzyme used to distinguish reference from mutated allele.
+
+For primer 1, start < end. For primer 2, end < start.
+
+PFGE: Pulsed-field gel electrophoresis
+""""""""""""""""""""""""""""""""""""""
+
+Changes in fragment sizes of genomic DNA digested with restriction enzymes and separated by pulsed-field 
+
+Line specification:
 
 4. **seq_id** *<string>*
 
-   id of reference sequence fragment.
+   id of reference sequence fragment containing mutation, evidence, or validation.
 
-5. **position** *<uint32>*
+5. **restriction enzyme** *<string>*
 
-   position in reference sequence fragment.
+  Restriction enzyme used to digest genomic DNA and observe fragments.
 
-6. **size** *<uint32>*
 
-   number of bases in inverted region beginning at the specified reference position.
-   
-Standard name=value pairs
-++++++++++++++++++++++++++
 
-Counting Mutations
-""""""""""""""""""
-
-These attributes control how molecular events in a a :program:`GenomeDiff` are counted for summary purposes. They are not generated automatically by |breseq|.
-
-* **between**\ =\ *<element_name>*
-
-   This mutation occurs between copies of this element. For example, a deletion caused by recombination between two copies of a mobile element.
-
-* **mediated**\ =\ *<element_name>*
-
-   This mutation was mediated by insertion of a new copy of this element and recombination with an existing copy, such that the number of this element did not net increase in the resulting genome.
-   
-* **adjacent**\ =\ *<element_name>*
-
-   This mutation
-   
-* **with**\ =\ *<mutatiion_id>*
-
-   This mutation should be counted as a **single** molecular event with the other specified mutation. For example, active mobile elements may lose and gain a few bases at their margins, and when this occurs the most parsimonious explanation is one round of recombination or excision and re-insertion.
-   
-
-Applying Mutations
-""""""""""""""""""
-
-These attributes control how mutations are applied when building a new reference genome from the original reference genome and a :program:`GenomeDiff` and when building phylogenetic trees between multiple samples. They are not generated automatically by |breseq|.
-   
-* **before**\ =\ *<mutation_id>* or **after**\ =\ *<mutation_id>*
-
-   Apply this mutation before or after another mutation. For example, did a base substitution occur before a region was duplicated, thus it is only in one copy or did it occur before the duplication, thus altering both copies? Did a base substitution happen before a deletion, hiding a mutation that should be included in any phylogenetic inference? The **before**. When neither of these attributes is present, mutations will be applied in the order in which they appear in the file.
-   
-* **within**\ =\ *<mutation_id>*\ , **within_position**\ =\ *<mutation_id>*\ ,  **within_copy**\ =\ *<mutation_id>*
-
-   This mutation happens inside of a different mutation. These options can specify, for example, that a base substitution happens in the second copy of a duplicated region. **within** and **within_position** must both be provided if one is supplied. If **within_copy** is not provided (because it is unknown), the mutation will be placed arbitrarily in the first copy. Note that the actual position of this mutation is still used for annotating its effects.

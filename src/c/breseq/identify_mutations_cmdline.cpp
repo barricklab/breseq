@@ -54,7 +54,7 @@ int main(int argc, char* argv[]) {
 	po::variables_map options;
 	po::store(po::parse_command_line(argc, argv, cmdline_options), options);
 	po::notify(options);
-	
+  
 	// make sure that the config options are good:
 	if(options.count("help")
 		 || !options.count("bam")
@@ -64,7 +64,8 @@ int main(int argc, char* argv[]) {
 		 || !options.count("output")
 		 || !options.count("readfiles")
 		 || !options.count("coverage_dir")
-		 || !options.count("deletion_propagation_cutoff")     
+		 || !options.count("deletion_propagation_cutoff") 
+     
 		 ) {
 		cout << "Usage: identify_mutations --bam <sequences.bam> --fasta <reference.fasta> --error_dir <path> --genome_diff <path> --output <path> --readfiles <filename> --coverage_dir <dirname>" << endl;
 		cout << cmdline_options << endl;

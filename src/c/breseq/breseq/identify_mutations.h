@@ -54,7 +54,7 @@ namespace breseq {
                           double polymorphism_cutoff,
                           double polymorphism_frequency_cutoff,
                           const std::string& error_table_file
- );
+                          );
 	
 	
 	/*! Position information struct.

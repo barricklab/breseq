@@ -10,7 +10,7 @@
 Contents:
 
 .. toctree::
-   :maxdepth: 2
+   :maxdepth: 3
 
    Introduction <introduction>
    Installation <installation>
@@ -25,6 +25,7 @@ Appendices:
 .. toctree::
    :maxdepth: 1
    
+   GenomeDiff Utility <gd_usage>
    GenomeDiff Format <gd_format>
 
 Documentation last updated |today|\ .

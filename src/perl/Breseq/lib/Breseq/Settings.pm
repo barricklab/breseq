@@ -75,7 +75,7 @@ sub new
 	## Options for only using part of the data		
 		'read-limit|l=s' => \$self->{read_limit},
 		'candidate-junction-read-limit=s' => \$self->{candidate_junction_read_limit},
-		'alignment-read-limit=s' => \$self->{alignment_read_limit},
+		'alignment-read-limit=s' => \$self->{alignment_read_limit},		
 	## Options for input
 		'name|n=s' => \$self->{run_name},	
 		'output-path|o=s' => \$self->{base_output_path},	
@@ -91,6 +91,7 @@ sub new
 		'max-rejected-junctions-to-show=s' => \$self->{max_rejected_junctions_to_show},	
 	## Options for read aligment
 		'maximum-mismatches|m=s' => \$self->{maximum_read_mismatches},	
+		'required-match-length=s' => \$self->{required_match_length},
 	## Options for snp error analysis
 		'require-complete-match' => \$self->{require_complete_match},
 		'require-no-indel-match' => \$self->{require_no_indel_match},
@@ -143,7 +144,6 @@ sub pre_option_initialize
 	$self->{predicted_quality_type} = '';
 	$self->{min_quality} = 0;
 	$self->{max_quality} = 0;
-	$self->{min_match_length} = 24;
 	$self->{run_name} = 'unnamed';
 	$self->{clean} = 0;
 	$self->{base_output_path} = '';
