@@ -68,7 +68,7 @@ namespace breseq {
   void cFastqFile::read_sequence(cFastqSequence &sequence) {
     
     std::string line, longest_read("");
-    uint8_t max_score(0), min_score(UINT8_MAX);
+    uint8_t max_score(0), min_score(255);
     uint32_t num_reads(0), num_bases(0);
     
     if ( m_file.is_open() ) {
