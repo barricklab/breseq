@@ -12,29 +12,9 @@ genome_diff
 
 Usage: genomediff COMMAND [options]
 
-Performs various functions on genomediff formatted files. Options depend on the COMMAND supplied.
-
-=head1 Command: COMPARE
-
-Usage: genomediff COMPARE -r reference.gbk input1.gd [input2.gd ...]
-
-Create a table comparing mutations from different samples.
-
-=over
-
-=item B<-r> <file_path>, -B<--reference> <file_path> REQUIRED
-
-GenBank files for reference sequences. This option may be entered multiple times.
-
-=item B<-o> <file_path>, -B<--output> <file_path>
-
-Output HTML file containing the comparison table. Default: "compare.html".
-
-=item B<input1.gd [input2.gd ...]>
-
-Input genomediff files, one for each sample.
-
-=back
+Performs various functions on genomediff formatted files. Options depend on
+the command. Valid COMMANDs are: HTML, COMPARE, VALIDATE, SUBTRACT. See the HTML
+manual for options and usage.
 
 =head1 AUTHOR
 
@@ -42,7 +22,7 @@ Jeffrey E. Barrick <jeffrey.e.barrick@gmail.com>
 
 =head1 LICENSE
 
-Copyright (C) 2010 Michigan State University.
+Copyright (C) 2011 The University of Texas at Austion; 2010 Michigan State University.
 
 This is free software; you can redistribute it and/or modify it under the terms the 
 GNU General Public License as published by the Free Software Foundation; either 
@@ -146,7 +126,12 @@ elsif ("\U$command" eq 'VALIDATE')
 }
 else
 {
-	die "Unknown command";
+	if (!defined $command) {	
+		print STDERR "No COMMAND provided.\n";	
+	} else {
+		print STDERR "Unknown COMMAND: $command.\n";
+	}
+	pod2usage(-message => "Unknown COMMAND." -exitstatus => 1, -verbose => 1);
 }
 
 
@@ -230,7 +215,7 @@ sub do_html
 	use Breseq::Output;
 	
 	my ($help, $man);
-	my $output = "output.html";
+	my $output_file_name;
 	my @reference_genbank_file_names;
 	my $settings;
 	$settings->{no_evidence} = 1;
@@ -238,18 +223,31 @@ sub do_html
 	GetOptions(
 		'help|?' => \$help, 'man' => \$man,
 	## Options for input and output files
-		'output|o=s' => \$output,	
+		'output|o=s' => \$output_file_name,	
 		'reference-sequence|r=s' => \@reference_genbank_file_names,		
 	) or pod2usage(2);
-	pod2usage(1) if (scalar @ARGV != 1);
-	my $gd_file_name = $ARGV[0];
 	
+	pod2usage(1) if $help;
+	pod2usage(-exitstatus => 0, -verbose => 2) if $man;
+	pod2usage(1) if (scalar @ARGV == 0);
+	pod2usage(1) if (!defined $output_file_name);
+	
+	my $gd_file_name = shift @ARGV;
+	if (scalar @ARGV > 0) {
+		print STDERR "Multiple genomdiff args were provided. Only ONE is allowed for this command.\n"; 	
+		pod2usage(1);
+	}
+	
+	#title
 	my $title = $gd_file_name;
-
-	$output =~ s/\.gd$//;
-	my $title = $output;
+	$title =~ s/\.gd$//;
 	$title =~ s/^.+\///;
-	$output .= ".html";
+	
+	#output file name
+	if (!defined $output_file_name) {
+		$output_file_name = $gd_file_name;
+		$output_file_name =~ s/\.gd$/\.html/;
+	}
 	
 	my $ref_seq_info = Breseq::ReferenceSequence::load_ref_seq_info(\@reference_genbank_file_names);
 	my $one_ref_seq = scalar keys %{$ref_seq_info->{gene_lists}} == 1;
@@ -257,7 +255,7 @@ sub do_html
 	my $gd = Breseq::GenomeDiff->new(-in=>$gd_file_name);
 	Breseq::ReferenceSequence::annotate_mutations($ref_seq_info, $gd, 1);
 	
-	Breseq::Output::html_compare($settings, $output, $title, $gd, $one_ref_seq);
+	Breseq::Output::html_compare($settings, $output_file_name, $title, $gd, $one_ref_seq);
 }
 
 sub do_compare
@@ -696,7 +694,7 @@ sub do_count
 		
 		print "Loading synonymous count file...\n";
 		my $on_pos = 0;
-		open SCF, "<$synonymous_count_file";
+		open SCF, "<$synonymous_count_file" or die;
 		my $header = <SCF>;
 		@scf_header_list = split /\t/, $header;
 		
@@ -1020,17 +1018,19 @@ sub do_subtract
 	my ($help, $man, $verbose);
 	my @input1_gd_files = ();
 	my @input2_gd_files = ();
-	my $output = 'output.gd'; 
+	my $output_file_name = 'output.gd'; 
 	GetOptions(
 		'help|?' => \$help, 'man' => \$man,
 		'verbose|v' => \$verbose,
-		'output|o=s' => \$output,
+		'output|o=s' => \$output_file_name,
 		'input1|1=s' => \@input1_gd_files,
 		'input2|2=s' => \@input2_gd_files,
 	) or pod2usage(2);
 	pod2usage(1) if $help;
 	pod2usage(-exitstatus => 0, -verbose => 2) if $man;
-	
+	pod2usage(1) if (scalar @ARGV == 0);
+	pod2usage(1) if ((!@input1_gd_files) || (!@input2_gd_files));
+
 	my @gds1;
 	foreach my $gd1_file (@input1_gd_files)
 	{
@@ -1044,11 +1044,9 @@ sub do_subtract
 		my $gd2 = Breseq::GenomeDiff->new(-FILE_NAME => $gd2_file);
 		push @gds2, $gd2;
 	}	
-	
-	die if ((!@gds1) || (!@gds2));
-	
+		
 	my $output_gd = Breseq::GenomeDiff::subtract(\@gds1, \@gds2);
-	$output_gd->write($output);
+	$output_gd->write($output_file_name);
 }
 
 ## Create a table of unambiguously mutated genes
@@ -1662,11 +1660,21 @@ sub do_validate
 
 	#doesn't really need to take multiple...
 	my $gd_file_name = shift @ARGV;
+	if (scalar @ARGV > 0) {
+		print STDERR "Multiple genomdiff args were provided. Only ONE is allowed for this command.\n"; 	
+		pod2usage(1);
+	}
+	
+	#output file name
+	if (!defined $output_file_name) {
+		$output_file_name = $gd_file_name;
+		$output_file_name =~ s/\.gd$/\.validated\.gd/;
+	}
 		
 	my $gd_name = $gd_file_name;
 	$gd_name =~ s/^.+\///;		
 	$gd_name =~ s/\.[^.]+$//;
-	print STDERR "$gd_name\n";
+	#print STDERR "Validating $gd_name\n";
 	
 	my $gd = Breseq::GenomeDiff->new(-in=>$gd_file_name);
 	$gd->strip_evidence;

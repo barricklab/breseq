@@ -137,7 +137,7 @@ our $line_specification = {
 	
 	## evidence
 	'RA' => ['seq_id', 'position', 'insert_position', 'ref_base', 'new_base'],
-	'MC' => ['seq_id', 'start', 'end', 'start_range', 'end_range'], #The deletion goes maximally from [start,start+start_tange] to [end-end_range, end]
+	'MC' => ['seq_id', 'start', 'end', 'start_range', 'end_range'], #The deletion goes maximally from [start,start+start_range] to [end-end_range, end]
 	'JC' => ['side_1_seq_id', 'side_1_position', 'side_1_strand', 'side_2_seq_id', 'side_2_position', 'side_2_strand', 'overlap'],
 	'UN' => ['seq_id', 'start', 'end'],
 	

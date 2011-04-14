@@ -55,7 +55,22 @@ void breseq::identify_mutations(const std::string& bam,
  ) {
                                                                                             
 	// do the mutation identification:
-	identify_mutations_pileup imp(bam, fasta, error_dir, gd_file, output_dir, readfiles, coverage_dir, deletion_propagation_cutoff, mutation_cutoff, predict_deletions, predict_polymorphisms, min_qual_score, polymorphism_cutoff, polymorphism_frequency_cutoff, error_table_file);
+	identify_mutations_pileup imp(  bam, 
+                                  fasta, 
+                                  error_dir, 
+                                  gd_file, 
+                                  output_dir, 
+                                  readfiles, 
+                                  coverage_dir, 
+                                  deletion_propagation_cutoff, 
+                                  mutation_cutoff, 
+                                  predict_deletions, 
+                                  predict_polymorphisms, 
+                                  min_qual_score, 
+                                  polymorphism_cutoff, 
+                                  polymorphism_frequency_cutoff, 
+                                  error_table_file
+                              );
 	imp.do_pileup();
 }
 

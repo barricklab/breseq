@@ -28,9 +28,18 @@ Expert options:
 
    Ignore bases with a quality score lower than this value when calling mutations. This accommodates Illumina formats that use quality scores of 2 to flag bad data. These bases are still used for aligning to the reference genome and are shown highlighted in yellow when drawing alignments, but they do not contribute to read alignment evidence. Default: 3
 
+.. option:: --require-complete-match
+
+   Require the entire read to match for it to be counted as aligned.
+
+.. option:: --required-match-length  
+
+   Require at least this number of nucleotides in the read to match for it to be counted as aligned.
+   
 .. option:: --predict-polymorphisms
 
    Identify and predict the frequencies of SNPs and small indels that are polymorphic (appear in only a subpopulation of reads). See :ref:`polymorphism-prediction` for additional options and note that this option is still experimental.
+
 
 :program:`bam2aln`
 ------------------
@@ -112,7 +121,6 @@ Options:
 
    Table mode. Rather than a plot, output a tab-delimited table of the coverage in the specified region to the output file. Also outputs the mean and standard error of the unique coverage within each region to STDOUT.
    
-
 .. _fastq-utils:
 
 :program:`fastq_utils`
@@ -165,35 +173,3 @@ Convert a FASTQ file to SANGER format.
 .. option:: output.fastq
 
    Output FASTQ file in SANGER format.
-   
-:program:`genomediff`
------------------------
-
-Usage:
-
-   :program:`genomediff` COMMAND [arguments]
-
-.. program:: genomediff
-
-Performs various functions on genomediff formatted files. Options depend on the COMMAND supplied.
-
-Command: COMPARE
-
-Usage:
-
-   :program:`genomediff` COMPARE -r reference.gbk input1.gd [input2.gd ...]
-
-Create a table comparing mutations from different samples.
-
-.. option:: -r <file_path>, --reference=<file_path>
-
-   GenBank files for reference sequences. This option may be entered multiple times.
-
-.. option:: -o <file_path>, --output=<file_path>
-
-   Output HTML file containing the comparison table. Default: "compare.html".
-
-.. option:: <input1.gd [input2.gd ...]>
-
-   Input genomediff files, one for each sample.
-   
