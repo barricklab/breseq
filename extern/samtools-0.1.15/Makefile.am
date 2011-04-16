@@ -80,7 +80,8 @@ libbam_la_SOURCES = \
 	kprobaln.h \
 	bam_cat.h \
 	sam.h 
-libbam_la_LDFLAGS = -fPIC
+libbam_la_LDFLAGS = -fPIC 
+libbam_la_CFLAGS = -D_CURSES_LIB=1 -D_FILE_OFFSET_BITS=64 -D_LARGEFILE64_SOURCE -D_USE_KNETFILE
 
 bin_PROGRAMS = samtools
 samtools_SOURCES = \
@@ -103,9 +104,9 @@ samtools_SOURCES = \
 	bam2bcf.c \
 	bam2bcf_indel.c \
 	phase.c 
-samtools_CFLAGS = -D_CURSES_LIB=1
+samtools_CFLAGS = -D_CURSES_LIB=1 -D_FILE_OFFSET_BITS=64 -D_LARGEFILE64_SOURCE -D_USE_KNETFILE
 samtools_LDADD = libbam.la bcftools/libbcf.la
-samtools_LDFLAGS = -static
+samtools_LDFLAGS = -static 
 
 
 include_HEADERS = bam.h
