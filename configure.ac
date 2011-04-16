@@ -64,12 +64,14 @@ AC_SEARCH_LIBS([acosf], [m], [], [AC_MSG_ERROR(["libm is required."])])
 BOOST_REQUIRE([1.42])
 BOOST_PROGRAM_OPTIONS([s])
 
-AC_SUBST([LIBBAM], [extern/samtools-0.1.7a])
-AC_SUBST([BIOSAMTOOLS], [extern/Bio-SamTools-1.19/Makefile])
+AC_SUBST([LIBBCF], [extern/samtools-0.1.15/bcftools])
+AC_SUBST([LIBBAM], [extern/samtools-0.1.15])
+AC_SUBST([BIOSAMTOOLS], [extern/Bio-SamTools-1.28/Makefile])
 AC_SUBST([BRESEQ], [src/c/breseq])
 
 AC_CONFIG_FILES([
-    extern/samtools-0.1.7a/Makefile
+    extern/samtools-0.1.15/bcftools/Makefile
+    extern/samtools-0.1.15/Makefile
     src/c/breseq/Makefile
     Makefile
 ])
