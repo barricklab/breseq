@@ -39,7 +39,7 @@ EXTRA_DIST = \
 ROOTDIR=$(PWD)
 DOCDIR=$(ROOTDIR)/src/doc
 PERLBRESEQ=$(ROOTDIR)/src/perl/Breseq
-BIOSAMTOOLS=$(ROOTDIR)/extern/Bio-SamTools-1.19
+BIOSAMTOOLS=$(ROOTDIR)/extern/Bio-SamTools-1.28
 SAMTOOLSDIR=$(ROOTDIR)/$(LIBBAM)
 
 ## Main hooks called after normal make steps

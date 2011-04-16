@@ -30,7 +30,7 @@ libtool
 aclocal.m4
 Makefile.in
 configure
-Makefile
+
 autoscan.log
 configure.scan
 
@@ -45,6 +45,8 @@ Makefile.PL
 user-config.jam
 
 syntax: regexp
+
+Makefile$
 
 ^breseq
 
