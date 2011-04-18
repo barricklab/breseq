@@ -67,9 +67,13 @@ Makefile$
 ^src/c/breseq/convert_genbank$
 ^src/c/breseq/cfastq_utils$
 
+^package
+
+## samtools
 samtools$
 ^extern/samtools-.*/misc
 
+## Bio::DB::Samtools
 ^extern/Bio-SamTools-.*/lib/Bio/DB/Sam.c
 ^extern/Bio-SamTools-.*/Build$
 ^extern/Bio-SamTools-.*/Bio-SamTools-
@@ -77,8 +81,6 @@ samtools$
 ^src/perl/Breseq/breseq.tmproj
 ^src/perl/Breseq/Breseq-
 ^src/perl/Breseq/META.yml
-
-^package
 
 ## For Xcode
 
