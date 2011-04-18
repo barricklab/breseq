@@ -236,7 +236,6 @@
 /* Begin PBXFileReference section */
 		421ACF7D1170E5CA00C2EB85 /* libboost_program_options-mt.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; name = "libboost_program_options-mt.a"; path = "/opt/local/lib/libboost_program_options-mt.a"; sourceTree = "<absolute>"; };
 		421ACFAC1170F05500C2EB85 /* libz.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = libz.a; path = /opt/local/lib/libz.a; sourceTree = "<absolute>"; };
-		4247E8261268EB90006A6D78 /* debug.xcconfig */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.xcconfig; path = debug.xcconfig; sourceTree = "<group>"; };
 		702EABEC134217D500103019 /* fastq_utils++ */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = "fastq_utils++"; sourceTree = BUILT_PRODUCTS_DIR; };
 		702EABF413421A7200103019 /* fastq_utils_cmdline.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = fastq_utils_cmdline.cpp; path = breseq/fastq_utils_cmdline.cpp; sourceTree = SOURCE_ROOT; };
 		702EABF613421A8400103019 /* fastq.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = fastq.cpp; path = breseq/fastq.cpp; sourceTree = SOURCE_ROOT; };
@@ -250,87 +249,6 @@
 		7087728B12BC169C000F9B57 /* identify_mutations.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = identify_mutations.cpp; path = breseq/identify_mutations.cpp; sourceTree = SOURCE_ROOT; };
 		7087728C12BC169C000F9B57 /* pileup_base.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = pileup_base.cpp; path = breseq/pileup_base.cpp; sourceTree = SOURCE_ROOT; };
 		7087728D12BC169C000F9B57 /* pileup.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = pileup.cpp; path = breseq/pileup.cpp; sourceTree = SOURCE_ROOT; };
-		7087729512BC1780000F9B57 /* AUTHORS */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; name = AUTHORS; path = "../../extern/samtools-0.1.7a/AUTHORS"; sourceTree = SOURCE_ROOT; };
-		7087729612BC1780000F9B57 /* bam_aux.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = bam_aux.c; path = "../../extern/samtools-0.1.7a/bam_aux.c"; sourceTree = SOURCE_ROOT; };
-		7087729712BC1780000F9B57 /* bam_color.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = bam_color.c; path = "../../extern/samtools-0.1.7a/bam_color.c"; sourceTree = SOURCE_ROOT; };
-		7087729812BC1780000F9B57 /* bam_endian.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = bam_endian.h; path = "../../extern/samtools-0.1.7a/bam_endian.h"; sourceTree = SOURCE_ROOT; };
-		7087729912BC1780000F9B57 /* bam_import.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = bam_import.c; path = "../../extern/samtools-0.1.7a/bam_import.c"; sourceTree = SOURCE_ROOT; };
-		7087729A12BC1780000F9B57 /* bam_index.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = bam_index.c; path = "../../extern/samtools-0.1.7a/bam_index.c"; sourceTree = SOURCE_ROOT; };
-		7087729B12BC1780000F9B57 /* bam_lpileup.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = bam_lpileup.c; path = "../../extern/samtools-0.1.7a/bam_lpileup.c"; sourceTree = SOURCE_ROOT; };
-		7087729C12BC1780000F9B57 /* bam_maqcns.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = bam_maqcns.c; path = "../../extern/samtools-0.1.7a/bam_maqcns.c"; sourceTree = SOURCE_ROOT; };
-		7087729D12BC1780000F9B57 /* bam_maqcns.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = bam_maqcns.h; path = "../../extern/samtools-0.1.7a/bam_maqcns.h"; sourceTree = SOURCE_ROOT; };
-		7087729E12BC1780000F9B57 /* bam_mate.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = bam_mate.c; path = "../../extern/samtools-0.1.7a/bam_mate.c"; sourceTree = SOURCE_ROOT; };
-		7087729F12BC1780000F9B57 /* bam_md.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = bam_md.c; path = "../../extern/samtools-0.1.7a/bam_md.c"; sourceTree = SOURCE_ROOT; };
-		708772A012BC1780000F9B57 /* bam_pileup.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = bam_pileup.c; path = "../../extern/samtools-0.1.7a/bam_pileup.c"; sourceTree = SOURCE_ROOT; };
-		708772A112BC1780000F9B57 /* bam_plcmd.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = bam_plcmd.c; path = "../../extern/samtools-0.1.7a/bam_plcmd.c"; sourceTree = SOURCE_ROOT; };
-		708772A212BC1780000F9B57 /* bam_rmdup.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = bam_rmdup.c; path = "../../extern/samtools-0.1.7a/bam_rmdup.c"; sourceTree = SOURCE_ROOT; };
-		708772A312BC1780000F9B57 /* bam_rmdupse.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = bam_rmdupse.c; path = "../../extern/samtools-0.1.7a/bam_rmdupse.c"; sourceTree = SOURCE_ROOT; };
-		708772A412BC1780000F9B57 /* bam_sort.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = bam_sort.c; path = "../../extern/samtools-0.1.7a/bam_sort.c"; sourceTree = SOURCE_ROOT; };
-		708772A512BC1780000F9B57 /* bam_stat.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = bam_stat.c; path = "../../extern/samtools-0.1.7a/bam_stat.c"; sourceTree = SOURCE_ROOT; };
-		708772A612BC1780000F9B57 /* bam_tview.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = bam_tview.c; path = "../../extern/samtools-0.1.7a/bam_tview.c"; sourceTree = SOURCE_ROOT; };
-		708772A712BC1780000F9B57 /* bam.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = bam.c; path = "../../extern/samtools-0.1.7a/bam.c"; sourceTree = SOURCE_ROOT; };
-		708772A812BC1780000F9B57 /* bam.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = bam.h; path = "../../extern/samtools-0.1.7a/bam.h"; sourceTree = SOURCE_ROOT; };
-		708772A912BC1780000F9B57 /* bamtk.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = bamtk.c; path = "../../extern/samtools-0.1.7a/bamtk.c"; sourceTree = SOURCE_ROOT; };
-		708772AA12BC1780000F9B57 /* bgzf.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = bgzf.c; path = "../../extern/samtools-0.1.7a/bgzf.c"; sourceTree = SOURCE_ROOT; };
-		708772AB12BC1780000F9B57 /* bgzf.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = bgzf.h; path = "../../extern/samtools-0.1.7a/bgzf.h"; sourceTree = SOURCE_ROOT; };
-		708772AC12BC1780000F9B57 /* bgzip.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = bgzip.c; path = "../../extern/samtools-0.1.7a/bgzip.c"; sourceTree = SOURCE_ROOT; };
-		708772AD12BC1780000F9B57 /* ChangeLog */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; name = ChangeLog; path = "../../extern/samtools-0.1.7a/ChangeLog"; sourceTree = SOURCE_ROOT; };
-		708772AE12BC1780000F9B57 /* COPYING */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; name = COPYING; path = "../../extern/samtools-0.1.7a/COPYING"; sourceTree = SOURCE_ROOT; };
-		708772B012BC1780000F9B57 /* 00README.txt */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = 00README.txt; sourceTree = "<group>"; };
-		708772B112BC1780000F9B57 /* calDepth.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = calDepth.c; sourceTree = "<group>"; };
-		708772B212BC1780000F9B57 /* ex1.fa */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = ex1.fa; sourceTree = "<group>"; };
-		708772B312BC1780000F9B57 /* Makefile */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.make; path = Makefile; sourceTree = "<group>"; };
-		708772B412BC1780000F9B57 /* faidx.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = faidx.c; path = "../../extern/samtools-0.1.7a/faidx.c"; sourceTree = SOURCE_ROOT; };
-		708772B512BC1780000F9B57 /* faidx.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = faidx.h; path = "../../extern/samtools-0.1.7a/faidx.h"; sourceTree = SOURCE_ROOT; };
-		708772B612BC1780000F9B57 /* glf.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = glf.c; path = "../../extern/samtools-0.1.7a/glf.c"; sourceTree = SOURCE_ROOT; };
-		708772B712BC1780000F9B57 /* glf.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = glf.h; path = "../../extern/samtools-0.1.7a/glf.h"; sourceTree = SOURCE_ROOT; };
-		708772B812BC1780000F9B57 /* INSTALL */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; name = INSTALL; path = "../../extern/samtools-0.1.7a/INSTALL"; sourceTree = SOURCE_ROOT; };
-		708772B912BC1780000F9B57 /* kaln.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = kaln.c; path = "../../extern/samtools-0.1.7a/kaln.c"; sourceTree = SOURCE_ROOT; };
-		708772BA12BC1780000F9B57 /* kaln.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = kaln.h; path = "../../extern/samtools-0.1.7a/kaln.h"; sourceTree = SOURCE_ROOT; };
-		708772BB12BC1780000F9B57 /* khash.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = khash.h; path = "../../extern/samtools-0.1.7a/khash.h"; sourceTree = SOURCE_ROOT; };
-		708772BC12BC1780000F9B57 /* klist.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = klist.h; path = "../../extern/samtools-0.1.7a/klist.h"; sourceTree = SOURCE_ROOT; };
-		708772BD12BC1780000F9B57 /* knetfile.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = knetfile.c; path = "../../extern/samtools-0.1.7a/knetfile.c"; sourceTree = SOURCE_ROOT; };
-		708772BE12BC1780000F9B57 /* knetfile.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = knetfile.h; path = "../../extern/samtools-0.1.7a/knetfile.h"; sourceTree = SOURCE_ROOT; };
-		708772BF12BC1780000F9B57 /* kseq.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = kseq.h; path = "../../extern/samtools-0.1.7a/kseq.h"; sourceTree = SOURCE_ROOT; };
-		708772C012BC1780000F9B57 /* ksort.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = ksort.h; path = "../../extern/samtools-0.1.7a/ksort.h"; sourceTree = SOURCE_ROOT; };
-		708772C112BC1780000F9B57 /* kstring.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = kstring.c; path = "../../extern/samtools-0.1.7a/kstring.c"; sourceTree = SOURCE_ROOT; };
-		708772C212BC1780000F9B57 /* kstring.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = kstring.h; path = "../../extern/samtools-0.1.7a/kstring.h"; sourceTree = SOURCE_ROOT; };
-		708772C312BC1780000F9B57 /* Makefile */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.make; name = Makefile; path = "../../extern/samtools-0.1.7a/Makefile"; sourceTree = SOURCE_ROOT; };
-		708772C412BC1780000F9B57 /* Makefile.am */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; name = Makefile.am; path = "../../extern/samtools-0.1.7a/Makefile.am"; sourceTree = SOURCE_ROOT; };
-		708772C512BC1780000F9B57 /* Makefile.in */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; name = Makefile.in; path = "../../extern/samtools-0.1.7a/Makefile.in"; sourceTree = SOURCE_ROOT; };
-		708772C612BC1780000F9B57 /* Makefile.mingw */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; name = Makefile.mingw; path = "../../extern/samtools-0.1.7a/Makefile.mingw"; sourceTree = SOURCE_ROOT; };
-		708772C712BC1780000F9B57 /* Makefile.orig */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; name = Makefile.orig; path = "../../extern/samtools-0.1.7a/Makefile.orig"; sourceTree = SOURCE_ROOT; };
-		708772C912BC1780000F9B57 /* blast2sam.pl */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.script.perl; path = blast2sam.pl; sourceTree = "<group>"; };
-		708772CA12BC1780000F9B57 /* bowtie2sam.pl */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.script.perl; path = bowtie2sam.pl; sourceTree = "<group>"; };
-		708772CB12BC1780000F9B57 /* export2sam.pl */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.script.perl; path = export2sam.pl; sourceTree = "<group>"; };
-		708772CC12BC1780000F9B57 /* interpolate_sam.pl */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.script.perl; path = interpolate_sam.pl; sourceTree = "<group>"; };
-		708772CD12BC1780000F9B57 /* Makefile */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.make; path = Makefile; sourceTree = "<group>"; };
-		708772CE12BC1780000F9B57 /* maq2sam.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = maq2sam.c; sourceTree = "<group>"; };
-		708772CF12BC1780000F9B57 /* md5.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = md5.c; sourceTree = "<group>"; };
-		708772D012BC1780000F9B57 /* md5.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = md5.h; sourceTree = "<group>"; };
-		708772D112BC1780000F9B57 /* md5fa.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = md5fa.c; sourceTree = "<group>"; };
-		708772D212BC1780000F9B57 /* novo2sam.pl */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.script.perl; path = novo2sam.pl; sourceTree = "<group>"; };
-		708772D312BC1780000F9B57 /* psl2sam.pl */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.script.perl; path = psl2sam.pl; sourceTree = "<group>"; };
-		708772D412BC1780000F9B57 /* sam2vcf.pl */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.script.perl; path = sam2vcf.pl; sourceTree = "<group>"; };
-		708772D512BC1780000F9B57 /* samtools.pl */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.script.perl; path = samtools.pl; sourceTree = "<group>"; };
-		708772D612BC1780000F9B57 /* soap2sam.pl */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.script.perl; path = soap2sam.pl; sourceTree = "<group>"; };
-		708772D712BC1780000F9B57 /* wgsim.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = wgsim.c; sourceTree = "<group>"; };
-		708772D812BC1780000F9B57 /* wgsim_eval.pl */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.script.perl; path = wgsim_eval.pl; sourceTree = "<group>"; };
-		708772D912BC1780000F9B57 /* zoom2sam.pl */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.script.perl; path = zoom2sam.pl; sourceTree = "<group>"; };
-		708772DA12BC1780000F9B57 /* NEWS */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; name = NEWS; path = "../../extern/samtools-0.1.7a/NEWS"; sourceTree = SOURCE_ROOT; };
-		708772DB12BC1780000F9B57 /* razf.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = razf.c; path = "../../extern/samtools-0.1.7a/razf.c"; sourceTree = SOURCE_ROOT; };
-		708772DC12BC1780000F9B57 /* razf.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = razf.h; path = "../../extern/samtools-0.1.7a/razf.h"; sourceTree = SOURCE_ROOT; };
-		708772DD12BC1780000F9B57 /* razip.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = razip.c; path = "../../extern/samtools-0.1.7a/razip.c"; sourceTree = SOURCE_ROOT; };
-		708772DE12BC1780000F9B57 /* sam_header.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = sam_header.c; path = "../../extern/samtools-0.1.7a/sam_header.c"; sourceTree = SOURCE_ROOT; };
-		708772DF12BC1780000F9B57 /* sam_header.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = sam_header.h; path = "../../extern/samtools-0.1.7a/sam_header.h"; sourceTree = SOURCE_ROOT; };
-		708772E012BC1780000F9B57 /* sam_view.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = sam_view.c; path = "../../extern/samtools-0.1.7a/sam_view.c"; sourceTree = SOURCE_ROOT; };
-		708772E112BC1780000F9B57 /* sam.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = sam.c; path = "../../extern/samtools-0.1.7a/sam.c"; sourceTree = SOURCE_ROOT; };
-		708772E212BC1780000F9B57 /* sam.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = sam.h; path = "../../extern/samtools-0.1.7a/sam.h"; sourceTree = SOURCE_ROOT; };
-		708772E312BC1780000F9B57 /* samtools.1 */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.man; name = samtools.1; path = "../../extern/samtools-0.1.7a/samtools.1"; sourceTree = SOURCE_ROOT; };
-		708772E412BC1780000F9B57 /* samtools.txt */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; name = samtools.txt; path = "../../extern/samtools-0.1.7a/samtools.txt"; sourceTree = SOURCE_ROOT; };
-		708772E612BC1780000F9B57 /* xcurses.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = xcurses.h; sourceTree = "<group>"; };
-		708772E712BC1780000F9B57 /* zconf.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = zconf.h; sourceTree = "<group>"; };
-		708772E812BC1780000F9B57 /* zlib.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = zlib.h; sourceTree = "<group>"; };
 		7087730412BC18E9000F9B57 /* libbam.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = libbam.a; path = "../../extern/samtools-0.1.7a/libbam.a"; sourceTree = SOURCE_ROOT; };
 		7087730F12BC19BA000F9B57 /* error_count_cmdline.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = error_count_cmdline.cpp; path = breseq/error_count_cmdline.cpp; sourceTree = SOURCE_ROOT; };
 		7087731112BC19C5000F9B57 /* identify_mutations_cmdline.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = identify_mutations_cmdline.cpp; path = breseq/identify_mutations_cmdline.cpp; sourceTree = SOURCE_ROOT; };
@@ -354,6 +272,7 @@
 		70A8364C13477AAE0037F8DE /* alignment_output.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = alignment_output.cpp; path = breseq/alignment_output.cpp; sourceTree = SOURCE_ROOT; };
 		70A8365C13477F7B0037F8DE /* cbam2aln */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = cbam2aln; sourceTree = BUILT_PRODUCTS_DIR; };
 		70A8365E13477FAB0037F8DE /* bam2aln_cmd_line.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = bam2aln_cmd_line.cpp; path = breseq/bam2aln_cmd_line.cpp; sourceTree = SOURCE_ROOT; };
+		70A9AEA8135BA2FA006B6D79 /* Debug.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Debug.xcconfig; sourceTree = "<group>"; };
 		70B5B0FF13324D8300737DC1 /* annotated_sequence.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = annotated_sequence.cpp; path = breseq/annotated_sequence.cpp; sourceTree = SOURCE_ROOT; };
 		70B5B10A13324DB500737DC1 /* annotated_sequence.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = annotated_sequence.h; sourceTree = "<group>"; };
 		70F9FB7F130C591500D6E11D /* tabulate_coverage_cmdline.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = tabulate_coverage_cmdline.cpp; path = breseq/tabulate_coverage_cmdline.cpp; sourceTree = SOURCE_ROOT; };
@@ -449,9 +368,8 @@
 		421ACEB51170DB9600C2EB85 = {
 			isa = PBXGroup;
 			children = (
-				4247E8251268EB90006A6D78 /* etc */,
+				70A9AEA6135BA2DF006B6D79 /* config */,
 				4247E77F1268E175006A6D78 /* breseq */,
-				4247E7B11268E175006A6D78 /* samtools-0.1.7a */,
 				421ACF5F1170E06300C2EB85 /* lib */,
 				421ACF301170DF1800C2EB85 /* Products */,
 			);
@@ -511,130 +429,6 @@
 			path = "breseq-1.0";
 			sourceTree = "<group>";
 		};
-		4247E7B11268E175006A6D78 /* samtools-0.1.7a */ = {
-			isa = PBXGroup;
-			children = (
-				7087729512BC1780000F9B57 /* AUTHORS */,
-				7087729612BC1780000F9B57 /* bam_aux.c */,
-				7087729712BC1780000F9B57 /* bam_color.c */,
-				7087729812BC1780000F9B57 /* bam_endian.h */,
-				7087729912BC1780000F9B57 /* bam_import.c */,
-				7087729A12BC1780000F9B57 /* bam_index.c */,
-				7087729B12BC1780000F9B57 /* bam_lpileup.c */,
-				7087729C12BC1780000F9B57 /* bam_maqcns.c */,
-				7087729D12BC1780000F9B57 /* bam_maqcns.h */,
-				7087729E12BC1780000F9B57 /* bam_mate.c */,
-				7087729F12BC1780000F9B57 /* bam_md.c */,
-				708772A012BC1780000F9B57 /* bam_pileup.c */,
-				708772A112BC1780000F9B57 /* bam_plcmd.c */,
-				708772A212BC1780000F9B57 /* bam_rmdup.c */,
-				708772A312BC1780000F9B57 /* bam_rmdupse.c */,
-				708772A412BC1780000F9B57 /* bam_sort.c */,
-				708772A512BC1780000F9B57 /* bam_stat.c */,
-				708772A612BC1780000F9B57 /* bam_tview.c */,
-				708772A712BC1780000F9B57 /* bam.c */,
-				708772A812BC1780000F9B57 /* bam.h */,
-				708772A912BC1780000F9B57 /* bamtk.c */,
-				708772AA12BC1780000F9B57 /* bgzf.c */,
-				708772AB12BC1780000F9B57 /* bgzf.h */,
-				708772AC12BC1780000F9B57 /* bgzip.c */,
-				708772AD12BC1780000F9B57 /* ChangeLog */,
-				708772AE12BC1780000F9B57 /* COPYING */,
-				708772AF12BC1780000F9B57 /* examples */,
-				708772B412BC1780000F9B57 /* faidx.c */,
-				708772B512BC1780000F9B57 /* faidx.h */,
-				708772B612BC1780000F9B57 /* glf.c */,
-				708772B712BC1780000F9B57 /* glf.h */,
-				708772B812BC1780000F9B57 /* INSTALL */,
-				708772B912BC1780000F9B57 /* kaln.c */,
-				708772BA12BC1780000F9B57 /* kaln.h */,
-				708772BB12BC1780000F9B57 /* khash.h */,
-				708772BC12BC1780000F9B57 /* klist.h */,
-				708772BD12BC1780000F9B57 /* knetfile.c */,
-				708772BE12BC1780000F9B57 /* knetfile.h */,
-				708772BF12BC1780000F9B57 /* kseq.h */,
-				708772C012BC1780000F9B57 /* ksort.h */,
-				708772C112BC1780000F9B57 /* kstring.c */,
-				708772C212BC1780000F9B57 /* kstring.h */,
-				708772C312BC1780000F9B57 /* Makefile */,
-				708772C412BC1780000F9B57 /* Makefile.am */,
-				708772C512BC1780000F9B57 /* Makefile.in */,
-				708772C612BC1780000F9B57 /* Makefile.mingw */,
-				708772C712BC1780000F9B57 /* Makefile.orig */,
-				708772C812BC1780000F9B57 /* misc */,
-				708772DA12BC1780000F9B57 /* NEWS */,
-				708772DB12BC1780000F9B57 /* razf.c */,
-				708772DC12BC1780000F9B57 /* razf.h */,
-				708772DD12BC1780000F9B57 /* razip.c */,
-				708772DE12BC1780000F9B57 /* sam_header.c */,
-				708772DF12BC1780000F9B57 /* sam_header.h */,
-				708772E012BC1780000F9B57 /* sam_view.c */,
-				708772E112BC1780000F9B57 /* sam.c */,
-				708772E212BC1780000F9B57 /* sam.h */,
-				708772E312BC1780000F9B57 /* samtools.1 */,
-				708772E412BC1780000F9B57 /* samtools.txt */,
-				708772E512BC1780000F9B57 /* win32 */,
-			);
-			path = "samtools-0.1.7a";
-			sourceTree = "<group>";
-		};
-		4247E8251268EB90006A6D78 /* etc */ = {
-			isa = PBXGroup;
-			children = (
-				4247E8261268EB90006A6D78 /* debug.xcconfig */,
-			);
-			name = etc;
-			path = ../../etc;
-			sourceTree = SOURCE_ROOT;
-		};
-		708772AF12BC1780000F9B57 /* examples */ = {
-			isa = PBXGroup;
-			children = (
-				708772B012BC1780000F9B57 /* 00README.txt */,
-				708772B112BC1780000F9B57 /* calDepth.c */,
-				708772B212BC1780000F9B57 /* ex1.fa */,
-				708772B312BC1780000F9B57 /* Makefile */,
-			);
-			name = examples;
-			path = "../../extern/samtools-0.1.7a/examples";
-			sourceTree = SOURCE_ROOT;
-		};
-		708772C812BC1780000F9B57 /* misc */ = {
-			isa = PBXGroup;
-			children = (
-				708772C912BC1780000F9B57 /* blast2sam.pl */,
-				708772CA12BC1780000F9B57 /* bowtie2sam.pl */,
-				708772CB12BC1780000F9B57 /* export2sam.pl */,
-				708772CC12BC1780000F9B57 /* interpolate_sam.pl */,
-				708772CD12BC1780000F9B57 /* Makefile */,
-				708772CE12BC1780000F9B57 /* maq2sam.c */,
-				708772CF12BC1780000F9B57 /* md5.c */,
-				708772D012BC1780000F9B57 /* md5.h */,
-				708772D112BC1780000F9B57 /* md5fa.c */,
-				708772D212BC1780000F9B57 /* novo2sam.pl */,
-				708772D312BC1780000F9B57 /* psl2sam.pl */,
-				708772D412BC1780000F9B57 /* sam2vcf.pl */,
-				708772D512BC1780000F9B57 /* samtools.pl */,
-				708772D612BC1780000F9B57 /* soap2sam.pl */,
-				708772D712BC1780000F9B57 /* wgsim.c */,
-				708772D812BC1780000F9B57 /* wgsim_eval.pl */,
-				708772D912BC1780000F9B57 /* zoom2sam.pl */,
-			);
-			name = misc;
-			path = "../../extern/samtools-0.1.7a/misc";
-			sourceTree = SOURCE_ROOT;
-		};
-		708772E512BC1780000F9B57 /* win32 */ = {
-			isa = PBXGroup;
-			children = (
-				708772E612BC1780000F9B57 /* xcurses.h */,
-				708772E712BC1780000F9B57 /* zconf.h */,
-				708772E812BC1780000F9B57 /* zlib.h */,
-			);
-			name = win32;
-			path = "../../extern/samtools-0.1.7a/win32";
-			sourceTree = SOURCE_ROOT;
-		};
 		7087747412BC1C06000F9B57 /* breseq */ = {
 			isa = PBXGroup;
 			children = (
@@ -654,6 +448,14 @@
 			name = breseq;
 			path = breseq/breseq;
 			sourceTree = SOURCE_ROOT;
+		};
+		70A9AEA6135BA2DF006B6D79 /* config */ = {
+			isa = PBXGroup;
+			children = (
+				70A9AEA8135BA2FA006B6D79 /* Debug.xcconfig */,
+			);
+			path = config;
+			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
 
@@ -681,12 +483,12 @@
 /* Begin PBXLegacyTarget section */
 		421ACF201170DC4400C2EB85 /* samtools */ = {
 			isa = PBXLegacyTarget;
-			buildArgumentsString = "-f Makefile.Xcode $(ACTION)";
+			buildArgumentsString = "-f Makefile.XCode $(ACTION)";
 			buildConfigurationList = 421ACF251170DC6C00C2EB85 /* Build configuration list for PBXLegacyTarget "samtools" */;
 			buildPhases = (
 			);
 			buildToolPath = /usr/bin/make;
-			buildWorkingDirectory = "$(PROJECT_DIR)/../../extern/samtools-0.1.7a";
+			buildWorkingDirectory = "$(PROJECT_DIR)/../../extern/samtools-0.1.15";
 			dependencies = (
 			);
 			name = samtools;
@@ -1093,6 +895,7 @@
 /* Begin XCBuildConfiguration section */
 		421ACEB81170DB9600C2EB85 /* Debug */ = {
 			isa = XCBuildConfiguration;
+			baseConfigurationReference = 70A9AEA8135BA2FA006B6D79 /* Debug.xcconfig */;
 			buildSettings = {
 				COPY_PHASE_STRIP = NO;
 			};
@@ -1128,7 +931,6 @@
 		};
 		421ACF321170DF1800C2EB85 /* Debug */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReference = 4247E8261268EB90006A6D78 /* debug.xcconfig */;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
 				ARCHS = "$(NATIVE_ARCH_ACTUAL)";
@@ -1207,7 +1009,6 @@
 		};
 		42B6EDC611C69CC70075F8A3 /* Debug */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReference = 4247E8261268EB90006A6D78 /* debug.xcconfig */;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
 				ARCHS = "$(NATIVE_ARCH_ACTUAL)";
@@ -1220,9 +1021,10 @@
 					/opt/local/include,
 					"$(HEADER_SEARCH_PATHS_QUOTED_FOR_TARGET_1)",
 					"$(HEADER_SEARCH_PATHS_QUOTED_FOR_TARGET_2)",
+					"$(SRCROOT)/../../extern/samtools-0.1.15",
 				);
 				HEADER_SEARCH_PATHS_QUOTED_FOR_TARGET_1 = "\"$(SRCROOT)/\"/**";
-				HEADER_SEARCH_PATHS_QUOTED_FOR_TARGET_2 = "\"$(SRCROOT)/../../extern/samtools-0.1.7a\"/**";
+				HEADER_SEARCH_PATHS_QUOTED_FOR_TARGET_2 = "\"$(SRCROOT)/../../extern/samtools-0.1.15\"/**";
 				INSTALL_PATH = /usr/local/bin;
 				LIBRARY_SEARCH_PATHS = (
 					"$(inherited)",
@@ -1248,16 +1050,17 @@
 					/opt/local/include,
 					"$(HEADER_SEARCH_PATHS_QUOTED_FOR_TARGET_1)",
 					"$(HEADER_SEARCH_PATHS_QUOTED_FOR_TARGET_2)",
+					"$(SRCROOT)/../../extern/samtools-0.1.15",
 				);
 				HEADER_SEARCH_PATHS_QUOTED_FOR_TARGET_1 = "\"$(SRCROOT)/\"/**";
-				HEADER_SEARCH_PATHS_QUOTED_FOR_TARGET_2 = "\"$(SRCROOT)/../../extern/samtools-0.1.7a\"/**";
+				HEADER_SEARCH_PATHS_QUOTED_FOR_TARGET_2 = "\"$(SRCROOT)/../../extern/samtools-0.1.15\"/**";
 				INSTALL_PATH = /usr/local/bin;
 				LIBRARY_SEARCH_PATHS = (
 					"$(inherited)",
 					/opt/local/lib,
 				);
-				LIBRARY_SEARCH_PATHS_QUOTED_FOR_TARGET_1 = "\"$(SRCROOT)/samtools-0.1.7a\"";
-				LIBRARY_SEARCH_PATHS_QUOTED_FOR_TARGET_2 = "\"$(SRCROOT)/../../extern/samtools-0.1.7a\"";
+				LIBRARY_SEARCH_PATHS_QUOTED_FOR_TARGET_1 = "\"$(SRCROOT)/samtools-0.1.15\"";
+				LIBRARY_SEARCH_PATHS_QUOTED_FOR_TARGET_2 = "\"$(SRCROOT)/../../extern/samtools-0.15\"";
 				PREBINDING = NO;
 				PRODUCT_NAME = identify_mutations;
 				USER_HEADER_SEARCH_PATHS = "";
@@ -1267,18 +1070,17 @@
 		};
 		42BA690D1189B7FE000B00B1 /* Debug */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReference = 4247E8261268EB90006A6D78 /* debug.xcconfig */;
 			buildSettings = {
 				ARCHS = "$(NATIVE_ARCH_ACTUAL)";
 				HEADER_SEARCH_PATHS = (
-					"../../extern/samtools-0.1.7a",
+					"../../extern/samtools-0.1.15",
 					/opt/local/include,
 				);
 				LIBRARY_SEARCH_PATHS = (
-					"../../extern/samtools-0.1.7a",
+					"../../extern/samtools-0.1.15",
 					/opt/local/lib,
 				);
-				LIBRARY_SEARCH_PATHS_QUOTED_FOR_TARGET_1 = "\"$(SRCROOT)/samtools-0.1.7a/.libs\"";
+				LIBRARY_SEARCH_PATHS_QUOTED_FOR_TARGET_1 = "\"$(SRCROOT)/samtools-0.1.15/.libs\"";
 				LIBRARY_SEARCH_PATHS_QUOTED_FOR_TARGET_2 = "\"$(SRCROOT)/../../extern/samtools-0.1.7a\"";
 				LIBRARY_SEARCH_PATHS_QUOTED_FOR_TARGET_3 = "\"$(SRCROOT)/.libs\"";
 				LIBRARY_SEARCH_PATHS_QUOTED_FOR_TARGET_4 = "\"$(SRCROOT)/breseq/.libs\"";
@@ -1298,15 +1100,15 @@
 				GCC_ENABLE_FIX_AND_CONTINUE = NO;
 				GCC_MODEL_TUNING = G5;
 				HEADER_SEARCH_PATHS = (
-					"../../extern/samtools-0.1.7a",
+					"../../extern/samtools-0.1.15",
 					/opt/local/include,
 				);
 				INSTALL_PATH = /usr/local/lib;
 				LIBRARY_SEARCH_PATHS = (
-					"../../extern/samtools-0.1.7a",
+					"../../extern/samtools-0.1.15",
 					/opt/local/lib,
 				);
-				LIBRARY_SEARCH_PATHS_QUOTED_FOR_TARGET_1 = "\"$(SRCROOT)/samtools-0.1.7a/.libs\"";
+				LIBRARY_SEARCH_PATHS_QUOTED_FOR_TARGET_1 = "\"$(SRCROOT)/samtools-0.1.15/.libs\"";
 				LIBRARY_SEARCH_PATHS_QUOTED_FOR_TARGET_2 = "\"$(SRCROOT)/../../extern/samtools-0.1.7a\"";
 				LIBRARY_SEARCH_PATHS_QUOTED_FOR_TARGET_3 = "\"$(SRCROOT)/.libs\"";
 				LIBRARY_SEARCH_PATHS_QUOTED_FOR_TARGET_4 = "\"$(SRCROOT)/breseq/.libs\"";
@@ -1319,7 +1121,6 @@
 		};
 		702EABEA134217D400103019 /* Debug */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReference = 4247E8261268EB90006A6D78 /* debug.xcconfig */;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
 				ARCHS = "$(NATIVE_ARCH_ACTUAL)";
@@ -1377,7 +1178,6 @@
 		};
 		7078B5C81332AFE800EF345A /* Debug */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReference = 4247E8261268EB90006A6D78 /* debug.xcconfig */;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
 				ARCHS = "$(NATIVE_ARCH_ACTUAL)";
@@ -1434,7 +1234,6 @@
 		};
 		70A5BC1712BE6EBF005EFE9F /* Debug */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReference = 4247E8261268EB90006A6D78 /* debug.xcconfig */;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
 				ARCHS = "$(NATIVE_ARCH_ACTUAL)";
@@ -1491,7 +1290,6 @@
 		};
 		70A836401347793C0037F8DE /* Debug */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReference = 4247E8261268EB90006A6D78 /* debug.xcconfig */;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
 				ARCHS = "$(NATIVE_ARCH_ACTUAL)";
@@ -1549,7 +1347,6 @@
 		};
 		70A8365A13477F7B0037F8DE /* Debug */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReference = 4247E8261268EB90006A6D78 /* debug.xcconfig */;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
 				ARCHS = "$(NATIVE_ARCH_ACTUAL)";
@@ -1607,7 +1404,6 @@
 		};
 		70F9FB6A130C58D900D6E11D /* Debug */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReference = 4247E8261268EB90006A6D78 /* debug.xcconfig */;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
 				ARCHS = "$(NATIVE_ARCH_ACTUAL)";

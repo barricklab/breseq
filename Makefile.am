@@ -17,6 +17,10 @@
 
 ACLOCAL_AMFLAGS = -I aux_build/m4
 
+PACKAGEDIR = $(ROOTDIR)/package
+MACPACKAGEDIR = $(PACKAGEDIR)/macosx
+MACPACKAGEBUILDDIR = $(MACPACKAGEDIR)/build
+
 SUBDIRS = $(LIBBAM) $(BRESEQ)
 
 ### Tests! -- only one test included for now in distribution.
@@ -83,13 +87,11 @@ install-exec-local :
 	cd $(PERLBRESEQ) ; \
 	./Build install;
 	
-clean-local :: clean-tests
+clean-local :: clean-tests clean-breseq
 	
 	cd $(BIOSAMTOOLS) ; \
 	./Build clean
-		
-	cd $(PERLBRESEQ) ; \
-	./Build clean
+	
 		
 dist-hook:
 
@@ -137,6 +139,60 @@ breseq :
 	./Build install
 	
 remake-breseq :: clean-breseq make-breseq install-breseq	
+
+##
+
+macosx-pkg-download : 
+
+	mkdir -p $(PACKAGEDIR)
+	mkdir -p $(MACPACKAGEDIR)
+
+	cd $(MACPACKAGEDIR) ; \
+	curl -O http://cran.r-project.org/src/base/R-2/R-2.13.0.tar.gz ; \
+	tar -xvzf R-2.13.0.tar.gz ;
+
+	cd $(MACPACKAGEDIR) ; \
+	curl -O http://mirror.datapipe.net/CPAN/authors/id/C/CJ/CJFIELDS/BioPerl-1.6.900.tar.gz ; \
+	tar -xvzf BioPerl-1.6.900.tar.gz;
+	
+	cd $(MACPACKAGEDIR) ; \
+	curl -O ftp://ftp.sanger.ac.uk/pub4/resources/software/ssaha2/ssaha2_mac.tgz ; \
+	tar -xvzf ssaha2_mac.tgz;
+
+macosx-pkg-compile :
+
+	mkdir -p $(MACPACKAGEBUILDDIR)
+
+	## We have a problem that when building an XS module
+	## the architecture differs between the system Perl /usr/bin/perl
+	## and MacPorts Perl, so we rebuild using the system Perl here
+	cd $(BIOSAMTOOLS) ; \
+	export SAMTOOLSLIBRARY=$(SAMTOOLSDIR)/.libs; \
+	export SAMTOOLSHEADERS=$(SAMTOOLSDIR); \	
+	/usr/bin/perl Build.PL --install_base=$(MACPACKAGEBUILDDIR) --install_path bin=$(MACPACKAGEBUILDDIR)/bin --install_path script=$(MACPACKAGEBUILDDIR)/bin ; \
+	./Build clean; \
+	./Build ; \
+	./Build install ;
+
+	cd $(MACPACKAGEDIR)/R-2.13.0; \
+	./configure --prefix=$(MACPACKAGEBUILDDIR) G77=gfortran --without-aqua --disable-R-framework ; \
+	make ; \
+	make install ;
+
+	cd $(MACPACKAGEDIR)/BioPerl-1.6.900; \
+	perl Build.PL --accept --install_base=$(MACPACKAGEBUILDDIR) ; \
+	./Build install ;	
+	
+	cp $(MACPACKAGEDIR)/ssaha2*/ssaha2* $(MACPACKAGEBUILDDIR)/bin ;
+	
+	## Install outselves into this dir
+	./configure --prefix=$(MACPACKAGEBUILDDIR) ; \
+	make install ;
+
+	
+clean-pkg :
+
+	rm -rf package
 
 ## tests
 

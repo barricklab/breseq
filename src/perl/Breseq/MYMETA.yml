@@ -1,0 +1,54 @@
+---
+abstract: 'breseq program for genome re-sequencing data analysis'
+author:
+  - 'Jeffrey E. Barrick <jeffrey.e.barrick@gmail.com>'
+build_requires:
+  Test::More: 0
+configure_requires:
+  Module::Build: 0.36
+dynamic_config: 0
+generated_by: 'Module::Build version 0.3603'
+license: gpl
+meta-spec:
+  url: http://module-build.sourceforge.net/META-spec-v1.4.html
+  version: 1.4
+name: Breseq
+provides:
+  Breseq:
+    file: lib/Breseq.pm
+    version: 1.00
+  Breseq::AlignmentCorrection:
+    file: lib/Breseq/AlignmentCorrection.pm
+    version: 0.01
+  Breseq::AlignmentOutput:
+    file: lib/Breseq/AlignmentOutput.pm
+  Breseq::CandidateJunction:
+    file: lib/Breseq/CandidateJunctions.pm
+  Breseq::CoverageDistribution:
+    file: lib/Breseq/CoverageDistribution.pm
+  Breseq::CoverageOutput:
+    file: lib/Breseq/CoverageOutput.pm
+  Breseq::ErrorCalibration:
+    file: lib/Breseq/ErrorCalibration.pm
+  Breseq::Fastq:
+    file: lib/Breseq/Fastq.pm
+  Breseq::File::Path:
+    file: lib/Breseq/File/Path.pm
+    version: 2.07_02
+  Breseq::GenomeDiff:
+    file: lib/Breseq/GenomeDiff.pm
+  Breseq::MutationIdentification:
+    file: lib/Breseq/MutationIdentification.pm
+  Breseq::MutationPredictor:
+    file: lib/Breseq/MutationPredictor.pm
+  Breseq::Output:
+    file: lib/Breseq/Output.pm
+  Breseq::ReferenceSequence:
+    file: lib/Breseq/ReferenceSequence.pm
+  Breseq::Settings:
+    file: lib/Breseq/Settings.pm
+  Breseq::Shared:
+    file: lib/Breseq/Shared.pm
+resources:
+  license: http://opensource.org/licenses/gpl-license.php
+version: 1.00

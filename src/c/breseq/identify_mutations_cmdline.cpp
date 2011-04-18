@@ -49,7 +49,9 @@ int main(int argc, char* argv[]) {
 	("predict_deletions,d", po::value<bool>()->default_value(true), "whether to predict deletions")
 	("predict_polymorphisms,p", po::value<bool>()->default_value(false), "whether to predict polymorphisms")
   ("polymorphism_cutoff", po::value<double>()->default_value(2.0), "polymorphism cutoff (log10 e-value)") 
-  ("polymorphism_frequency_cutoff", po::value<double>()->default_value(0.0), "ignore polymorphism predictions below this frequency");
+  ("polymorphism_frequency_cutoff", po::value<double>()->default_value(0.0), "ignore polymorphism predictions below this frequency")
+  ("per_position_file", po::value<bool>()->default_value(false), "print out verbose per position file")
+  ;
 
 	po::variables_map options;
 	po::store(po::parse_command_line(argc, argv, cmdline_options), options);
@@ -89,7 +91,8 @@ int main(int argc, char* argv[]) {
                                  options["minimum_quality_score"].as<int>(),
                                  options["polymorphism_cutoff"].as<double>(),
                                  options["polymorphism_frequency_cutoff"].as<double>(),
-                                 options["error_table"].as<string>()
+                                 options["error_table"].as<string>(),
+                                 options["per_position_file"].as<bool>()
                               );
 	} catch(...) {
 		// failed; 

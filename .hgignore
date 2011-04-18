@@ -37,9 +37,9 @@ configure.scan
 ## These are for Perl modules in general
 _build
 blib
-MYMETA.yml
-MANIFEST.SKIP
-Makefile.PL
+#MYMETA.yml
+#MANIFEST.SKIP
+#Makefile.PL
 
 ## This is user/architecture specific
 user-config.jam
@@ -67,19 +67,18 @@ Makefile$
 ^src/c/breseq/convert_genbank$
 ^src/c/breseq/cfastq_utils$
 
-^extern/samtools-0.1.7a/samtools
-^extern/samtools-0.1.7a/misc
-^extern/samtools-0.1.7a/bin
+samtools$
+^extern/samtools-.*/misc
 
-^extern/bioperl-live/Build$
-
-^extern/Bio-SamTools-1.19/lib/Bio/DB/Sam.c
-^extern/Bio-SamTools-1.19/Build$
-^extern/Bio-SamTools-1.19/Bio-SamTools-
+^extern/Bio-SamTools-.*/lib/Bio/DB/Sam.c
+^extern/Bio-SamTools-.*/Build$
+^extern/Bio-SamTools-.*/Bio-SamTools-
 ^src/perl/Breseq/Build$
 ^src/perl/Breseq/breseq.tmproj
 ^src/perl/Breseq/Breseq-
 ^src/perl/Breseq/META.yml
+
+^package
 
 ## For Xcode
 
@@ -89,4 +88,6 @@ Makefile$
 .xcodeproj/.+\.pbxuser$
 .xcodeproj/project.xcworkspace.+$
 .xcodeproj/xcuserdata.+$
+
+
 

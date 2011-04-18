@@ -51,7 +51,8 @@ void breseq::identify_mutations(const std::string& bam,
                                 uint8_t min_qual_score,
                                 double polymorphism_cutoff,
                                 double polymorphism_frequency_cutoff,
-                                const std::string& error_table_file
+                                const std::string& error_table_file,
+                                bool print_per_position_file
  ) {
                                                                                             
 	// do the mutation identification:
@@ -69,7 +70,8 @@ void breseq::identify_mutations(const std::string& bam,
                                   min_qual_score, 
                                   polymorphism_cutoff, 
                                   polymorphism_frequency_cutoff, 
-                                  error_table_file
+                                  error_table_file,
+                                  print_per_position_file
                               );
 	imp.do_pileup();
 }
@@ -92,7 +94,8 @@ breseq::identify_mutations_pileup::identify_mutations_pileup(
                                                              uint8_t min_qual_score,
                                                              double polymorphism_cutoff,
                                                              double polymorphism_frequency_cutoff,
-                                                             const std::string& error_table_file 
+                                                             const std::string& error_table_file,
+                                                             bool print_per_position_file
                                                             )
 : breseq::pileup_base(bam, fasta)
 , _ecr(error_dir, readfiles)
@@ -110,7 +113,8 @@ breseq::identify_mutations_pileup::identify_mutations_pileup(
 , _log10_ref_length(0)
 , _on_deletion_seq_id(boost::none)
 , _this_deletion_reaches_seed_value(false)
-, _last_position_coverage_printed(0) {
+, _last_position_coverage_printed(0)
+, _print_per_position_file(print_per_position_file) {
 	  
   assert(m_bam->header->n_targets == (int32_t)_deletion_propagation_cutoff.size());
     
@@ -132,6 +136,12 @@ breseq::identify_mutations_pileup::identify_mutations_pileup(
   if (error_table_file.length() > 0) {
     m_use_cErrorTable = true;
     m_error_table.read_log10_prob_table(error_table_file);
+  }
+  
+  if (_print_per_position_file) {
+    std::string filename(_output_dir);
+		filename += "/full_identify_mutation.out";
+    _per_position_file.open(filename.c_str());
   }
 }
 
@@ -401,18 +411,25 @@ void breseq::identify_mutations_pileup::callback(const breseq::pileup& p) {
 		int total_cov[3]={0,0,0}; // triple, same as above
     
     // Don't need to print, but is nice for debug
-		//ostringstream line;
-		//line << position << " " << insert_count << " " << ref_base << " " << e_value_call;
-		
+		ostringstream line;
+		if (_print_per_position_file) {
+      line << position << " " << insert_count << " " << ref_base_char << " " << e_value_call;
+		}
+    
 		for(std::size_t j=0; j<base_list_size; ++j) {
 			double top_cov = pos_info[base_char_list[j]].unique_trimmed_cov[2];
 			double bot_cov = pos_info[base_char_list[j]].unique_trimmed_cov[0];
 			total_cov[2] += (int)round(top_cov);
 			total_cov[0] += (int)round(bot_cov);
-		//	line << " " << base_list[j] << " (" << bot_cov << "/" << top_cov << ")";
+      if (_print_per_position_file) {
+        line << " " << base_char_list[j] << " (" << bot_cov << "/" << top_cov << ")";
+      }
+    }
+    
+    // Debug: print additional information to file.
+    if (_print_per_position_file) {
+      _per_position_file << line.str() << endl;
 		}
-		//std::cerr << line.str() << endl; // @dk print to file
-		
 		
 		//###
 		//## DELETION DELETION DELETION
@@ -501,7 +518,6 @@ void breseq::identify_mutations_pileup::callback(const breseq::pileup& p) {
 		if(insert_count == 0) {
 			update_unknown_intervals(position, p.target(), base_predicted, this_position_unique_only_coverage);
 		}
-		
 		
 		//## evaluate whether to call an actual mutation!				
 		//### skip if there is not enough evidence for a call or if it agrees with the reference
