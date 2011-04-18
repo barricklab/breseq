@@ -3,7 +3,7 @@
 <plist version="1.0">
 <dict>
 	<key>currentDocument</key>
-	<string>Breseq/lib/Breseq/AlignmentOutput.pm</string>
+	<string>Breseq/lib/Breseq/Settings.pm</string>
 	<key>documents</key>
 	<array>
 		<dict>
@@ -21,36 +21,6 @@
 	<integer>270</integer>
 	<key>metaData</key>
 	<dict>
-		<key>Breseq/Breseq-1.00/lib/Breseq/Settings.pm</key>
-		<dict>
-			<key>caret</key>
-			<dict>
-				<key>column</key>
-				<integer>24</integer>
-				<key>line</key>
-				<integer>186</integer>
-			</dict>
-			<key>columnSelection</key>
-			<false/>
-			<key>firstVisibleColumn</key>
-			<integer>0</integer>
-			<key>firstVisibleLine</key>
-			<integer>154</integer>
-			<key>selectFrom</key>
-			<dict>
-				<key>column</key>
-				<integer>9</integer>
-				<key>line</key>
-				<integer>186</integer>
-			</dict>
-			<key>selectTo</key>
-			<dict>
-				<key>column</key>
-				<integer>30</integer>
-				<key>line</key>
-				<integer>186</integer>
-			</dict>
-		</dict>
 		<key>Breseq/Build.PL</key>
 		<dict>
 			<key>caret</key>
@@ -163,6 +133,20 @@
 			<key>firstVisibleLine</key>
 			<integer>73</integer>
 		</dict>
+		<key>Breseq/bin/breseq</key>
+		<dict>
+			<key>caret</key>
+			<dict>
+				<key>column</key>
+				<integer>32</integer>
+				<key>line</key>
+				<integer>24</integer>
+			</dict>
+			<key>firstVisibleColumn</key>
+			<integer>0</integer>
+			<key>firstVisibleLine</key>
+			<integer>57</integer>
+		</dict>
 		<key>Breseq/bin/fastq_utils</key>
 		<dict>
 			<key>caret</key>
@@ -254,14 +238,14 @@
 			<key>caret</key>
 			<dict>
 				<key>column</key>
-				<integer>20</integer>
+				<integer>15</integer>
 				<key>line</key>
-				<integer>191</integer>
+				<integer>37</integer>
 			</dict>
 			<key>firstVisibleColumn</key>
 			<integer>0</integer>
 			<key>firstVisibleLine</key>
-			<integer>172</integer>
+			<integer>22</integer>
 		</dict>
 		<key>Breseq/lib/Breseq/CandidateJunctions.pm</key>
 		<dict>
@@ -456,30 +440,14 @@
 			<key>caret</key>
 			<dict>
 				<key>column</key>
-				<integer>42</integer>
+				<integer>30</integer>
 				<key>line</key>
-				<integer>95</integer>
+				<integer>639</integer>
 			</dict>
-			<key>columnSelection</key>
-			<false/>
 			<key>firstVisibleColumn</key>
 			<integer>0</integer>
 			<key>firstVisibleLine</key>
-			<integer>70</integer>
-			<key>selectFrom</key>
-			<dict>
-				<key>column</key>
-				<integer>39</integer>
-				<key>line</key>
-				<integer>95</integer>
-			</dict>
-			<key>selectTo</key>
-			<dict>
-				<key>column</key>
-				<integer>61</integer>
-				<key>line</key>
-				<integer>95</integer>
-			</dict>
+			<integer>615</integer>
 		</dict>
 		<key>Breseq/lib/Breseq/Shared.pm</key>
 		<dict>
@@ -599,7 +567,6 @@
 	<key>openDocuments</key>
 	<array>
 		<string>Breseq/lib/Breseq/Settings.pm</string>
-		<string>Breseq/Breseq-1.00/lib/Breseq/Settings.pm</string>
 		<string>Breseq/lib/Breseq/File/Path.pm</string>
 		<string>Breseq/lib/Breseq/Fastq.pm</string>
 		<string>Breseq/bin/fastq_utils</string>
@@ -610,6 +577,7 @@
 		<string>Breseq/bin/bam2cov</string>
 		<string>Breseq/bin/bam2aln</string>
 		<string>Breseq/lib/Breseq/AlignmentOutput.pm</string>
+		<string>Breseq/bin/breseq</string>
 		<string>Breseq/lib/Breseq/MutationIdentification.pm</string>
 		<string>Breseq/lib/Breseq/MutationPredictor.pm</string>
 		<string>Breseq/lib/Breseq/Output.pm</string>
@@ -630,6 +598,6 @@
 	<key>showFileHierarchyDrawer</key>
 	<true/>
 	<key>windowFrame</key>
-	<string>{{244, 1}, {802, 837}}</string>
+	<string>{{77, 25}, {802, 837}}</string>
 </dict>
 </plist>

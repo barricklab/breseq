@@ -30,6 +30,8 @@ LICENSE AND COPYRIGHT
 #include "breseq/genome_diff.h"
 #include "breseq/pileup_base.h"
 
+using namespace std;
+
 namespace breseq {
 	      
 	/*! Calculate errors in the given BAM file based on reference FAI files.
@@ -53,7 +55,8 @@ namespace breseq {
                           uint8_t min_qual_score,
                           double polymorphism_cutoff,
                           double polymorphism_frequency_cutoff,
-                          const std::string& error_table_file
+                          const std::string& error_table_file,
+                          bool print_per_position_file
                           );
 	
 	
@@ -159,7 +162,7 @@ namespace breseq {
 		typedef std::map<std::string,int> base_count_t;
 		typedef std::map<uint8_t,base_count_t> qual_map_t;
     typedef std::map<int32_t,qual_map_t> fastq_map_t;
-		
+    
     //! Information that is tracked per-sequence.
 		struct sequence_info {
 			/*! Coverage count table.
@@ -196,7 +199,8 @@ namespace breseq {
                               uint8_t min_qual_score,
                               double polymorphism_cutoff,
                               double polymorphism_frequency_cutoff,
-                              const std::string& error_table_file
+                              const std::string& error_table_file,
+                              bool print_per_position_file
                             );
 				
 		//! Destructor.
@@ -270,9 +274,19 @@ namespace breseq {
 		boost::optional<position_coverage> _left_inside_coverage_item;
 		boost::optional<position_coverage> _last_position_coverage;
     
+    bool _print_per_position_file;
+    std::ofstream _per_position_file;
+    
 		// these are state variables used by the unknown prediction method.
 		boost::optional<uint32_t> _last_start_unknown_interval;
 	};
+
+  
+  /*! cDiscreteSNPCaller
+	 
+	 This class is used to predicting SNPs in a single-genome sample.
+   
+	 */
   
   class cDiscreteSNPCaller {
   	public:
