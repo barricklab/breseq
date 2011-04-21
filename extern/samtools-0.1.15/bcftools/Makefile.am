@@ -22,13 +22,9 @@
 ##
 ###
 
-## Remember to drag along the LICENSE, NEWS, unused headers, etc.
+AM_LDFLAGS = -static 
+
 noinst_LTLIBRARIES = libbcf.la
-
-
-
-##	call1.h \
-##	main.h \ 
 
 libbcf_la_SOURCES = \
 	bcf.c \
@@ -41,18 +37,7 @@ libbcf_la_SOURCES = \
 	fet.c \
 	bcf2qcall.c \
 	bcf.h \
-	vcf.h \
-	bcfutils.h \
-	prob1.h \
-	ld.h \
-	kfunc.h \
-	index.h \
-	fet.h \
-	bcf2qcall.h \
-	kstring.h \
-	bgzf.h \
-	knetfile.h \
-	bedidx.h
+	prob1.h
 libbcf_la_LDFLAGS = -fPIC
 libbcf_la_CPPFLAGS = -I$(top_srcdir)/$(LIBBAM)
 

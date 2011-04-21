@@ -75,8 +75,19 @@ use lib $FindBin::Bin;
 $ENV{PATH} = "$ENV{PATH}:" . $FindBin::Bin;
 
 #### Paths to Locally Installed Modules ####
+use Config;
 use lib $FindBin::Bin . "/../lib/perl5";
+use lib $FindBin::Bin . "/../lib/perl5/$Config{version}";
+use lib $FindBin::Bin . "/../lib/perl5/$Config{archname}";
+use lib $FindBin::Bin . "/../lib/perl5/site_perl/$Config{archname}/$Config{version}";
+
 use lib $FindBin::Bin . "/../lib/perl5/site_perl";
+use lib $FindBin::Bin . "/../lib/perl5/site_perl/$Config{archname}";
+use lib $FindBin::Bin . "/../lib/perl5/site_perl/$Config{archname}/$Config{version}";
+
+use lib $FindBin::Bin . "/../lib/perl5/vendor_perl";
+use lib $FindBin::Bin . "/../lib/perl5/vendor_perl/$Config{archname}";
+use lib $FindBin::Bin . "/../lib/perl5/vendor_perl/$Config{archname}/$Config{version}";
 
 # This block can test to be sure the right location/version is being used...
 #use Bio::DB::Sam;

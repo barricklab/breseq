@@ -20,14 +20,32 @@ To install each missing dependency, use your system's package manager or visit t
 MacOSX Instructions
 ********************
 
-You will need administrator privileges to install |breseq| dependencies using these instructions. We recommend that you install and use the package manager `MacPorts <http://www.macports.org/>`_ to simplfy some installation steps.
+You will need administrator privileges to install |breseq| dependencies using these instructions. We recommend that you install and use the package manager `MacPorts <http://www.macports.org/>`_ to simplify these installation steps. Using  :program:`MacPorts` will generally take longer than downloading and installing the packages in other ways, but it greatly simplifies the searching you might otherwise have to do to track down all the prerequisites.
 
-* :program:`GCC`: download and install `Apple Developer tools <http://developer.apple.com/tools/>`_.
+* :program:`GCC`: Download and install the `Apple Developer tools <http://developer.apple.com/tools/>`_. You can use either version 3 (which is free) or download version 4 from the App Store for a small price.
+* :program:`MacPorts`: This program is optional, but recommended for making the following installation steps easier. Download the  package for your operating system version and install according to the directions at `MacPorts.org <http://www.macports.org/>`_.
 * :program:`Perl`: is already installed on MacOSX systems. 
-* :program:`BioPerl`: download and install according to the directions at `BioPerl.org <http://www.bioperl.org>`_ 
-* :program:`SSAHA2`: download and install the MacOSX package from the `Sanger Center <http://www.sanger.ac.uk/resources/software/ssaha2/>`_.
-* :program:`R`: Either (1) Download an installer package from http://www.r-project.org\ . or (2) install with :program:`MacPorts` terminal command: ``sudo port install R ghostscript``.
-* :program:`Boost`: install with :program:`MacPorts` terminal command: ``sudo port install boost``
+* :program:`BioPerl`: Either (1) Download and install according to the directions at `BioPerl.org <http://www.bioperl.org>`_  OR (2) **Recommended:**  Download directly from the link at `CPAN <http://search.cpan.org/dist/BioPerl/>`_, change into the directory of the archive after unzipping, and execute these commands to install:
+
+>>> perl Build.PL --accept 
+>>> sudo ./Build install
+
+* :program:`SSAHA2`: download and install the MacOSX package from the `Sanger Center <http://www.sanger.ac.uk/resources/software/ssaha2/>`_. You will need to move the executables to where your system can use them. If you change into the ssaha2_v2.5.1_MacOS directory, you can use this command:
+
+>>> sudo cp ssaha2* /usr/local/bin
+
+You should now get a message like this, telling you that the system can find your :program:`SSAHA2`: executable, if you type this command in the terminal:
+
+>>> which ssaha2
+/users/local/bin/ssaha2
+
+* :program:`R`: Either (1) **Recommended:** Download an installer package from http://www.r-project.org/_. OR (2) Install with :program:`MacPorts` terminal command: 
+
+>>> sudo port install R ghostscript
+
+* :program:`Boost`: Either (1) Download and install according to the instructions at http://www.boost.org/_.  If you do this, be sure that you build at least the ``program_options`` compiled library. An install of only the header files will not work. OR (2) **Recommended:** Install with :program:`MacPorts` terminal command: 
+
+>>> sudo port install boost
 
 2. Compile and install |breseq|
 -------------------------------

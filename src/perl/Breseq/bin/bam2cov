@@ -78,9 +78,10 @@ use CGI qw/:standard/;
 use FindBin;
 
 #### Paths to Locally Installed Modules ####
-use lib $FindBin::Bin;
+use Config;
 use lib $FindBin::Bin . "/../lib/perl5";
 use lib $FindBin::Bin . "/../lib/perl5/site_perl";
+use lib $FindBin::Bin . "/../lib/perl5/$Config{archname}";
 
 use Bio::DB::Sam;
 
