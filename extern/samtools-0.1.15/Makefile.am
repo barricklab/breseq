@@ -24,6 +24,7 @@
 
 SUBDIRS = bcftools
 
+AM_LDFLAGS = -static 
 
 ## Remember to drag along the LICENSE, NEWS, unused headers, etc.
 EXTRA_DIST = \
@@ -32,6 +33,7 @@ EXTRA_DIST = \
 	COPYING \
 	INSTALL \
 	Makefile.original \
+	Makefile.XCode \
 	Makefile.mingw \
 	NEWS \
 	win32/xcurses.h \
@@ -64,8 +66,8 @@ libbam_la_SOURCES = \
 	bam_endian.h \
 	bam_maqcns.h \
 	bgzf.h \
+	errmod.h \
 	faidx.h \
-	bedidx.h \
 	glf.h \
 	kaln.h \
 	khash.h \
@@ -76,11 +78,11 @@ libbam_la_SOURCES = \
 	kstring.h \
 	razf.h \
 	sam_header.h \
-	bam_reheader.h \
+	sample.h \
+	bam2bcf.h \
 	kprobaln.h \
-	bam_cat.h \
 	sam.h 
-libbam_la_LDFLAGS = -fPIC 
+libbam_la_LDFLAGS = -fPIC
 libbam_la_CFLAGS = -D_CURSES_LIB=1 -D_FILE_OFFSET_BITS=64 -D_LARGEFILE64_SOURCE -D_USE_KNETFILE
 
 bin_PROGRAMS = samtools
@@ -106,7 +108,6 @@ samtools_SOURCES = \
 	phase.c 
 samtools_CFLAGS = -D_CURSES_LIB=1 -D_FILE_OFFSET_BITS=64 -D_LARGEFILE64_SOURCE -D_USE_KNETFILE
 samtools_LDADD = libbam.la bcftools/libbcf.la
-samtools_LDFLAGS = -static 
 
 
 include_HEADERS = bam.h

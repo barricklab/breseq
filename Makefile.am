@@ -81,11 +81,11 @@ install-exec-local :
 
 	## Bio::SamTools
 	cd $(BIOSAMTOOLS) ; \
-	./Build install ;
+	./Build install --destdir=${DESTDIR};
 	
 	## Breseq
 	cd $(PERLBRESEQ) ; \
-	./Build install;
+	./Build install --destdir=${DESTDIR};
 	
 clean-local :: clean-tests clean-breseq
 	
@@ -168,7 +168,7 @@ macosx-pkg-compile :
 	## and MacPorts Perl, so we rebuild using the system Perl here
 	cd $(BIOSAMTOOLS) ; \
 	export SAMTOOLSLIBRARY=$(SAMTOOLSDIR)/.libs; \
-	export SAMTOOLSHEADERS=$(SAMTOOLSDIR); \	
+	export SAMTOOLSHEADERS=$(SAMTOOLSDIR); \
 	/usr/bin/perl Build.PL --install_base=$(MACPACKAGEBUILDDIR) --install_path bin=$(MACPACKAGEBUILDDIR)/bin --install_path script=$(MACPACKAGEBUILDDIR)/bin ; \
 	./Build clean; \
 	./Build ; \

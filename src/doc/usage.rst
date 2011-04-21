@@ -40,7 +40,6 @@ Expert options:
 
    Identify and predict the frequencies of SNPs and small indels that are polymorphic (appear in only a subpopulation of reads). See :ref:`polymorphism-prediction` for additional options and note that this option is still experimental.
 
-
 :program:`bam2aln`
 ------------------
 

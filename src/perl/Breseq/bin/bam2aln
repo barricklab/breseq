@@ -66,8 +66,10 @@ use FindBin;
 use lib $FindBin::Bin;
 
 #### Paths to Locally Installed Modules ####
+use Config;
 use lib $FindBin::Bin . "/../lib/perl5";
 use lib $FindBin::Bin . "/../lib/perl5/site_perl";
+use lib $FindBin::Bin . "/../lib/perl5/$Config{archname}";
 
 use Breseq::AlignmentOutput;
 

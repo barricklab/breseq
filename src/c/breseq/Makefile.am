@@ -42,7 +42,6 @@ libbreseq_la_SOURCES = \
 	breseq/pileup_base.h \
 	breseq/pileup.h \
 	breseq/tabulate_coverage.h 
-libbreseq_la_LDFLAGS = -static
 libbreseq_la_LIBADD = $(top_srcdir)/$(LIBBAM)/libbam.la
 
 bin_PROGRAMS = error_count identify_mutations calc_trims tabulate_coverage convert_genbank cfastq_utils

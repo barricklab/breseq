@@ -1,3 +1,5 @@
+.. _output-format:
+
 Output
 ======
 

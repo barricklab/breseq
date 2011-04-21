@@ -19,7 +19,7 @@
 #                                               -*- Autoconf -*-
 # Process this file with autoconf to produce a configure script.
 AC_PREREQ([2.65])
-AC_INIT([breseq], [1.00rc7], [jeffrey.e.barrick@gmail.com], [breseq], [http://barricklab.org/breseq])
+AC_INIT([breseq], [0.0.1], [jeffrey.e.barrick@gmail.com], [breseq], [http://barricklab.org/breseq])
 AC_CONFIG_AUX_DIR(aux_build)
 AC_CONFIG_MACRO_DIR([aux_build/m4])
 AC_CONFIG_HEADERS([aux_build/config.h])
@@ -59,6 +59,7 @@ AC_SEARCH_LIBS([wclear], [curses ncurses], [],
    [AC_MSG_ERROR(["lib(n)curses is required."])])
 
 AC_SEARCH_LIBS([gzrewind], [z], [], [AC_MSG_ERROR(["libz is required."])])
+
 AC_SEARCH_LIBS([acosf], [m], [], [AC_MSG_ERROR(["libm is required."])])
 
 BOOST_REQUIRE([1.42])

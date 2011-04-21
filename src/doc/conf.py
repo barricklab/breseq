@@ -50,7 +50,7 @@ copyright = u'2011 Jeffrey E. Barrick and contributors'
 # The short X.Y version.
 version = '1.00'
 # The full version, including alpha/beta/rc tags.
-release = '1.00rc7'
+release = '1.00rc8'
 
 rst_prolog = """
 .. |breseq| replace:: :program:`breseq`
