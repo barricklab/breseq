@@ -39,11 +39,14 @@ You should now get a message like this, telling you that the system can find you
 >>> which ssaha2
 /users/local/bin/ssaha2
 
-* :program:`R`: Either (1) **Recommended:** Download an installer package from http://www.r-project.org/_. OR (2) Install with :program:`MacPorts` terminal command: 
+* :program:`R`: Install with :program:`MacPorts` terminal command: 
 
 >>> sudo port install R ghostscript
 
-* :program:`Boost`: Either (1) Download and install according to the instructions at http://www.boost.org/_.  If you do this, be sure that you build at least the ``program_options`` compiled library. An install of only the header files will not work. OR (2) **Recommended:** Install with :program:`MacPorts` terminal command: 
+.. note::
+   The installer package from http://www.r-project.org/. does not seem to install some utilities needed by |breseq| for graphing. 
+
+* :program:`Boost`: Either (1) Download and install according to the instructions at http://www.boost.org/.  If you do this, be sure that you build at least the ``program_options`` compiled library. An install of only the header files will not work. OR (2) **Recommended:** Install with :program:`MacPorts` terminal command: 
 
 >>> sudo port install boost
 
@@ -138,7 +141,7 @@ In general, you will need to be sure that your environment is set up correctly t
 #. :program:`R` is in your $PATH.
 #. :program:`SSAHA2` is in your $PATH.
 
-.. NOTE::
+.. note::
    You may need to use absolute paths (i.e. ``/absolute/path``) rather than paths relative to your home directory (i.e ``~/path/relative/to/home``) for these settings.
 
 Missing Perl modules
