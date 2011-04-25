@@ -42,6 +42,8 @@ EXTRA_DIST = \
 
 noinst_LTLIBRARIES = libbam.la
 
+## not including razf.c razf.h because they break with old zlibs...
+
 libbam_la_SOURCES = \
 	bgzf.c \
 	kstring.c \
@@ -76,7 +78,6 @@ libbam_la_SOURCES = \
 	kseq.h \
 	ksort.h \
 	kstring.h \
-	razf.h \
 	sam_header.h \
 	sample.h \
 	bam2bcf.h \
