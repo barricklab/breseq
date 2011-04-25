@@ -122,6 +122,21 @@ sub tam_next_read_alignments
 	return ($al_ref, $last_alignment);
 }
 
+
+#####
+##### New SSAHA2 output of secondary read flags filtered through Bio::DB::Sam
+##### causes these reads to come out *without* coordinates (as unmapped)???
+#####
+sub fix_flags {
+	
+	my ($flags) = @_;
+	#print "$flags\n";
+	## must be a better way to do this..., just want to set bit for 256 to zero
+	$flags = (($flags >> 9) << 9) + $flags % 128;
+	#print "$flags\n";
+	return $flags;
+}
+	
 sub tam_write_read_alignments
 {
 	my ($fh, $header, $fastq_file_index, $al, $trims) = @_;
@@ -150,8 +165,8 @@ sub tam_write_read_alignments
 		}
 		
 		my @ll;
-		push @ll, $a->qname;
-		push @ll, $a->flag;
+		push @ll, $a->qname;		
+		push @ll, fix_flags($a->flag);
 		push @ll, $header->target_name()->[$a->tid];
 		push @ll, $a->start;
 		push @ll, $a->qual, $cigar_string;
@@ -456,7 +471,8 @@ sub tam_write_moved_alignment
 	####
 	my @ll;
 	push @ll, $a->qname . "-M" . $junction_side;
-	push @ll, $flags;
+	push @ll, fix_flags($flags);
+	
 	push @ll, $seq_id;
 	push @ll, $reference_match_start;
 	push @ll, $a->qual, $cigar_string, ($a->proper_pair ? '=' : '*'), $a->mate_start, $a->isize, $seq, $quality_score_string, $aux_tags;	

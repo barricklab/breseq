@@ -690,8 +690,8 @@ sub do_count
 	
 	if ($synonymous_count_file)
 	{
-		require Tie::Array::Packed;
-		tie @scf, 'Tie::Array::Packed::UnsignedChar';
+		#require Tie::Array::Packed;
+		#tie @scf, 'Tie::Array::Packed::UnsignedChar';
 		$#scf = $main_seq_length * 12;
 		
 		print "Loading synonymous count file...\n";
@@ -1030,7 +1030,6 @@ sub do_subtract
 	) or pod2usage(2);
 	pod2usage(1) if $help;
 	pod2usage(-exitstatus => 0, -verbose => 2) if $man;
-	pod2usage(1) if (scalar @ARGV == 0);
 	pod2usage(1) if ((!@input1_gd_files) || (!@input2_gd_files));
 
 	my @gds1;
