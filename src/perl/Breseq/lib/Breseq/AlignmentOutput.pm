@@ -673,7 +673,7 @@ sub create_alignment
 	foreach my $key (keys %$aligned_reads)
 	{
 		my $aligned_read = $aligned_reads->{$key};
-		
+				
 		$aligned_read->{aligned_bases} =~ m/^(\s*)\S+(\s*)$/;
 		
 #		print "\"$aligned_read->{aligned_bases}\"\n";
