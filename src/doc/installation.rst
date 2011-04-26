@@ -147,7 +147,7 @@ In general, you will need to be sure that your environment is set up correctly t
 Missing Perl modules
 *********************
 
-Some  version of Perl do not have recent versions of required Perl Modules.
+Some version of Perl do not have recent versions of required Perl Modules.
 
 If you get an error like this::
 
