@@ -38,7 +38,7 @@ configure.scan
 _build
 blib
 #MYMETA.yml
-#MANIFEST.SKIP
+MANIFEST.SKIP
 #Makefile.PL
 
 ## This is user/architecture specific
