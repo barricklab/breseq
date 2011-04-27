@@ -109,11 +109,14 @@ namespace breseq {
         
         //Error Checking
         {
-          if( sequence.m_name[0] != '@' ) error_in_file_format(count-4, num_reads, 0);
           
+          //Need to see if there are extra whitespace characters in the sequence line
+          //It's too difficult to put it in the name line
           for (uint16_t i=0; i<sequence.m_sequence.size(); i++) {
             if( isspace(sequence.m_sequence[i]) ) error_in_file_format(count, num_reads, i);
           }
+          
+          if( sequence.m_name[0] != '@' ) error_in_file_format(count-4, num_reads, 0);
           
           for (uint32_t i=0; i<sequence.m_sequence.size(); i++) {
             if(sequence.m_sequence[i] != 'A' && 
@@ -125,6 +128,7 @@ namespace breseq {
             }
           }
         
+          //Only need to see if the first character is a +
           if( sequence.m_blank[0] != '+' ) error_in_file_format(count-2, num_reads, 0);
           
           if( sequence.m_sequence.size() != sequence.m_qualities.size() ) error_in_file_format(count-1, num_reads, 0);
