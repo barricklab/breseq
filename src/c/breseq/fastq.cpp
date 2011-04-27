@@ -33,9 +33,11 @@ namespace breseq {
   //check to make sure certain conditions about the data are fulfilled
   void cFastqFile::error_in_file_format(int count, int num_reads, int position) {
     int n;
-    char generic_output [50];
-    std::sprintf(generic_output, "Your file is not formatted correctly at line: %d ", (4*num_reads)+count+1);
-    fprintf( stderr , "%s", generic_output);
+
+    
+    if( count != 4 )
+      fprintf(stderr, "Your file is not formatted correctly in line: %d ", (4*num_reads)+count+1);
+
     switch (count) {
       case 0:
         fprintf(stderr, "\nThis line should be the name of the read and start with '@'. ");
@@ -52,8 +54,12 @@ namespace breseq {
       case 3:
         fprintf(stderr, "\nThe sequence and score lines are not the same length.\n");
         break;
+      case 4:
+        fprintf(stderr, "Your file is not formatted correctly in line: %d ", (4*num_reads)+count-2);
+        fprintf(stderr, "... at position %d you have an illegal whitespace character.  If it is at the end of a line, it is probably an extra \\r at the end of every line.\n", position+1);
+        break;
     }
-    fprintf(stderr, "Now I'm quitting.\n");
+    fprintf(stderr, "\nNow I'm quitting.\n\n");
     exit(-1);
     
   }
@@ -79,28 +85,32 @@ namespace breseq {
             case 0:
               sequence.m_name = line;
               getline(m_file, line);
-              break;
+              count++;
             case 1:
               sequence.m_sequence = line;
               getline(m_file, line);
-              break;
+              count++;
             case 2:
               sequence.m_blank = line;
               getline(m_file, line);
-              break;
+              count++;
             case 3:
               sequence.m_qualities = line;
+              count++;
               break;
             default:
               error_in_file_format(count, num_reads, 0);
           }
-          count++;
         }
         
         //Error Checking
         {
           if( sequence.m_name[0] != '@' ) error_in_file_format(count-4, num_reads, 0);
-        
+          
+          for (uint16_t i=0; i<sequence.m_sequence.size(); i++) {
+            if( isspace(sequence.m_sequence[i]) ) error_in_file_format(count, num_reads, i);
+          }
+          
           for (uint32_t i=0; i<sequence.m_sequence.size(); i++) {
             if(sequence.m_sequence[i] != 'A' && 
                sequence.m_sequence[i] != 'T' && 
@@ -111,7 +121,7 @@ namespace breseq {
             }
           }
         
-          if( sequence.m_blank != "+" ) error_in_file_format(count-2, num_reads, 0);
+          if( sequence.m_blank[0] != '+' ) error_in_file_format(count-2, num_reads, 0);
           
           if( sequence.m_sequence.size() != sequence.m_qualities.size() ) error_in_file_format(count-1, num_reads, 0);
         }
