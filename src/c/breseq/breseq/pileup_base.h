@@ -7,7 +7,8 @@ AUTHORS
 
 LICENSE AND COPYRIGHT
 
-  Copyright (c) 2010 Michigan State University
+  Copyright (c) 2008-2010 Michigan State University
+  Copyright (c) 2011 The University of Texas at Austin
 
   breseq is free software; you can redistribute it and/or modify it under the  
   terms the GNU General Public License as published by the Free Software 
@@ -20,12 +21,8 @@ LICENSE AND COPYRIGHT
 
 #include <boost/shared_ptr.hpp>
 #include <boost/optional.hpp>
-#include <string>
-#include <map>
-#include <vector>
-#include <sam.h>
-#include <faidx.h>
 
+#include "breseq/common.h"
 
 namespace breseq {
 	

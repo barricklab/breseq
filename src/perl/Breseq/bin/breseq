@@ -173,8 +173,9 @@ if ($settings->do_step('sequence_conversion_done_file_name', "Read and reference
 		my $max_read_length;
 		my $num_bases = 0;
 		my $num_reads = 0;
-		my $fastq_file_name = $settings->read_file_to_fastq_file_name($read_file);	
-		my $command = "cfastq_utils analyze --input=$fastq_file_name";
+		my $fastq_file_name = $settings->read_file_to_fastq_file_name($read_file);
+		my $cbreseq = $settings->ctool("cbreseq");
+		my $command = "$cbreseq ANALYZE_FASTQ --input=$fastq_file_name";
 		my $output = Breseq::Shared::capture_system($command);
 		#print "$output\n";
 		
@@ -229,7 +230,8 @@ if ($settings->do_step('sequence_conversion_done_file_name', "Read and reference
 
 	## calculate trim files
 	my $output_path = $settings->file_name('sequence_conversion_path');
-	my $command = "calc_trims -f $reference_fasta_file_name -o $output_path";
+	my $cbreseq = $settings->ctool("cbreseq");
+	my $command = "$cbreseq CALCULATE_TRIMS -f $reference_fasta_file_name -o $output_path";
 	Breseq::Shared::system($command);
 	
 	## store summary information
@@ -650,14 +652,14 @@ if ($settings->do_step('error_counts_done_file_name', "Tabulating error counts")
 	my $reference_fasta_file_name = $settings->file_name('reference_fasta_file_name');
 	my $reference_bam_file_name = $settings->file_name('reference_bam_file_name');
 			
-	my $error_count = $settings->ctool('error_count');
+	my $cbreseq = $settings->ctool('cbreseq');
 	
 	## deal with distribution or error count keys being undefined...
 	my $coverage_fn = $settings->file_name('unique_only_coverage_distribution_file_name', {'@'=>""});
 	my $outputdir = `dirname $coverage_fn`;
 	chomp $outputdir; $outputdir .= '/';
 	my $readfiles = join(" --readfile ", $settings->read_files);
-	my $cmdline = "$error_count --bam $reference_bam_file_name --fasta $reference_fasta_file_name --output $outputdir --readfile $readfiles --coverage";
+	my $cmdline = "$cbreseq ERROR_COUNT --bam $reference_bam_file_name --fasta $reference_fasta_file_name --output $outputdir --readfile $readfiles --coverage";
 	$cmdline .= " --errors";
 	$cmdline .= " --minimum-quality-score $settings->{base_quality_cutoff}" if ($settings->{base_quality_cutoff});
 	

@@ -7,7 +7,8 @@ AUTHORS
 
 LICENSE AND COPYRIGHT
 
-  Copyright (c) 2010 Michigan State University
+  Copyright (c) 2008-2010 Michigan State University
+  Copyright (c) 2011 The University of Texas at Austin
 
   breseq is free software; you can redistribute it and/or modify it under the  
   terms the GNU General Public License as published by the Free Software 
@@ -18,18 +19,13 @@ LICENSE AND COPYRIGHT
 #ifndef _BRESEQ_GENOME_DIFF_H_
 #define _BRESEQ_GENOME_DIFF_H_
 
-#include <map>
-#include <string>
-#include <utility>
-#include <vector>
-#include <sstream>
-#include <iomanip>
-#include <cmath>
 #include <boost/variant.hpp>
 #include <boost/lexical_cast.hpp>
 #include <boost/shared_ptr.hpp>
 
-#include <stdint.h> // Added by Austin Meyer to facilitate compilation
+#include "breseq/common.h"
+
+
 
 namespace breseq {
 

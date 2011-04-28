@@ -15,13 +15,6 @@
  
  *****************************************************************************/
 
-#include <iostream>
-#include <fstream>
-#include <string>
-#include <assert.h>
-#include <stdint.h>
-#include <stdlib.h>
-
 #include "breseq/annotated_sequence.h"
 
 namespace breseq {

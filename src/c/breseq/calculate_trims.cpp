@@ -7,7 +7,8 @@ AUTHORS
 
 LICENSE AND COPYRIGHT
 
-  Copyright (c) 2010 Michigan State University
+  Copyright (c) 2008-2010 Michigan State University
+  Copyright (c) 2011 The University of Texas at Austin
 
   breseq is free software; you can redistribute it and/or modify it under the  
   terms the GNU General Public License as published by the Free Software 
@@ -15,16 +16,12 @@ LICENSE AND COPYRIGHT
 
 *****************************************************************************/
 
-#include <boost/program_options.hpp>
-#include <iostream>
-#include <string>
-#include <vector>
-#include <fstream>
 
-#include <faidx.h>
-#include <bam.h>
+#include "breseq/calculate_trims.h"
 
 using namespace std;
+
+namespace breseq {
 
 /*
 calc_trims
@@ -177,48 +174,5 @@ void calculate_trims( const string& in_fasta, const string& in_output_path) {
   bam_header_destroy(bam_header);
 }
 
-
-
-/*! Identify mutations.
- 
- This file only does the command-line parsing bit; the real work is over in
- identify_mutations.cpp.
- */
-int main(int argc, char* argv[]) {
-	using namespace std;
-	namespace po = boost::program_options;
-	
-	// setup and parse configuration options:
-	po::options_description cmdline_options("Allowed options");
-	cmdline_options.add_options()
-	("help,h", "produce this help message")
-	("fasta,f", po::value<string>(), "FASTA file of reference sequence")
-	("output,o", po::value<string>(), "output directory")
-  ;
-  
-	po::variables_map options;
-	po::store(po::parse_command_line(argc, argv, cmdline_options), options);
-	po::notify(options);
-	
-	// make sure that the config options are good:
-	if(options.count("help")
-		 || !options.count("fasta")
-		 || !options.count("output")
-		 ) {
-		cout << "Usage: identify_mutations --bam <sequences.bam> --fasta <reference.fasta> --error_dir <path> --genome_diff <path> --output <path> --readfiles <filename> --coverage_dir <dirname> [--minimum-quality-score 3]" << endl;
-		cout << cmdline_options << endl;
-		return -1;
-	}                       
-  
-	// attempt to calculate error calibrations:
-	try {
-		calculate_trims(options["fasta"].as<string>(),options["output"].as<string>());
-		} catch(...) {
-		// failed; 
-		return -1;
-	}
-	
-	return 0;
-}
-
+} // breseq
 

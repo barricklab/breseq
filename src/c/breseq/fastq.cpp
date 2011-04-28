@@ -15,10 +15,6 @@
  
  *****************************************************************************/
 
-#include <stdint.h>
-#include <limits.h>
-#include <stdlib.h>
-
 #include "breseq/fastq.h"
 
 namespace breseq {

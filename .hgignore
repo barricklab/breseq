@@ -54,18 +54,8 @@ Makefile$
 ^tests/.+/0
 ^tests/.+/data
 
-^src/c/breseq/error_count/
-^src/c/breseq/identify_mutations/
-^src/c/breseq/calc_trims/
-^src/c/breseq/tabulate_coverage/
-^src/c/breseq/convert_genbank/
-
-^src/c/breseq/error_count$
-^src/c/breseq/identify_mutations$
-^src/c/breseq/calc_trims$
-^src/c/breseq/tabulate_coverage$
-^src/c/breseq/convert_genbank$
-^src/c/breseq/cfastq_utils$
+^src/c/breseq/cbreseq/
+^src/c/breseq/cbreseq$
 
 ^package
 

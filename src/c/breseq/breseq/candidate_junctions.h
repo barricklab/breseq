@@ -7,7 +7,8 @@ AUTHORS
 
 LICENSE AND COPYRIGHT
 
-  Copyright (c) 2010 Michigan State University
+  Copyright (c) 2008-2010 Michigan State University
+  Copyright (c) 2011 The University of Texas at Austin
 
   breseq is free software; you can redistribute it and/or modify it under the  
   terms the GNU General Public License as published by the Free Software 
@@ -15,15 +16,10 @@ LICENSE AND COPYRIGHT
 
 *****************************************************************************/
 
-#ifndef _CANDIDATE_JUNCTIONS_H_
-#define _CANDIDATE_JUNCTIONS_H_
+#ifndef _BRESEQ_CANDIDATE_JUNCTIONS_H_
+#define _BRESEQ_CANDIDATE_JUNCTIONS_H_
 
-#include <assert.h>
-#include <string>
-
-#include <bam.h>
-
-#include "common.h"
+#include "breseq/common.h"
 
 using namespace std;
 

@@ -58,10 +58,10 @@ sub identify_mutations
 	my $reference_bam_file_name = $settings->file_name('reference_bam_file_name');
 		
 	## check to see if identify_mutations++ is available:
-	my $cident_mut = $settings->ctool('identify_mutations', 1);
+	my $cbreseq = $settings->ctool('cbreseq', 1);
 	
 	## fall back to perl if requested
-	if ( (!$settings->{perl_identify_mutations}) && (defined $cident_mut) )
+	if ( (!$settings->{perl_identify_mutations}) && (defined $cbreseq) )
 	{
 		my $coverage_fn = $settings->file_name('unique_only_coverage_distribution_file_name', {'@'=>""});
 		my $error_dir = `dirname $coverage_fn`;
@@ -70,7 +70,7 @@ sub identify_mutations
 		my $output_dir = `dirname $this_predicted_mutation_file_name`;
 		chomp $output_dir; $output_dir .= '/';
 		my $readfiles = join(" --readfile ", $settings->read_files);
-		my $cmdline = "$cident_mut --bam $reference_bam_file_name --fasta $reference_fasta_file_name --readfile $readfiles";
+		my $cmdline = "$cbreseq IDENTIFY_MUTATIONS --bam $reference_bam_file_name --fasta $reference_fasta_file_name --readfile $readfiles";
 		$cmdline .= " --error_dir $error_dir";
 		my $ra_mc_genome_diff_file_name = $settings->file_name('ra_mc_genome_diff_file_name');	
 		$cmdline .= " --genome_diff $ra_mc_genome_diff_file_name";

@@ -118,11 +118,10 @@ sub plot_coverage
 #	print STDERR "Downsample: $downsample\n";
 	
 	my $tmp_coverage = "$self->{path}/$$.coverage.tab";
-	
 	if ($options->{use_c_tabulate_coverage}) {
 
 		my $bin_path = $FindBin::Bin;
-		my $cmdline = "$bin_path/tabulate_coverage --bam $self->{bam_path} --fasta $self->{fasta_path} --region $extended_region --output $tmp_coverage --downsample $downsample";
+		my $cmdline = "$bin_path/cbreseq TABULATE_COVERAGE --bam $self->{bam_path} --fasta $self->{fasta_path} --region $extended_region --output $tmp_coverage --downsample $downsample";
 		Breseq::Shared::system($cmdline);
 		
 	} else {
