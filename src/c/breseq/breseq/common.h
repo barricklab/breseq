@@ -7,7 +7,8 @@ AUTHORS
 
 LICENSE AND COPYRIGHT
 
-  Copyright (c) 2010 Michigan State University
+  Copyright (c) 2008-2010 Michigan State University
+  Copyright (c) 2011 The University of Texas at Austin
 
   breseq is free software; you can redistribute it and/or modify it under the  
   terms the GNU General Public License as published by the Free Software 
@@ -18,6 +19,32 @@ LICENSE AND COPYRIGHT
 #ifndef _BRESEQ_COMMON_H_
 #define _BRESEQ_COMMON_H_
 
+// System headers
+
+// C
+#include <assert.h>
+#include <limits.h>
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+
+// C++
+#include <cmath>
+#include <fstream>
+#include <iomanip>
+#include <iostream>
+#include <map>
+#include <sstream>
+#include <string>
+#include <utility>
+#include <vector>
+
+// Library specific headers
+#include <bam.h>
+#include <sam.h>
+#include <faidx.h>
+
+// Begin breseq specific --->
 
 #define _base_bam_is_A(x) (x == 0x01)
 #define _base_bam_is_C(x) (x == 0x02)

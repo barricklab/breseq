@@ -1,4 +1,5 @@
-HEADER_SEARCH_PATHS = $(PROJECT_DIR)/breseq-1.0 $(PROJECT_DIR)/samtools-0.1.15 /opt/local/include
+#include "Shared.xcconfig"
+
 WARNING_CFLAGS = -Wall -Wno-unused-variable
 ARCHS=$(NATIVE_ARCH)
 GCC_OPTIMIZATION_LEVEL=0

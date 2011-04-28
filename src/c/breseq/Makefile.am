@@ -25,6 +25,8 @@ noinst_LTLIBRARIES = libbreseq.la
 libbreseq_la_SOURCES = \
 	alignment.cpp \
 	annotated_sequence.cpp \
+	calculate_trims.cpp \
+	candidate_junctions.cpp \
 	error_count.cpp \
 	fastq.cpp \
 	genome_diff.cpp \
@@ -34,6 +36,8 @@ libbreseq_la_SOURCES = \
 	tabulate_coverage.cpp \
 	breseq/alignment.h \
 	breseq/annotated_sequence.h \
+	breseq/calculate_trims.h \
+	breseq/candidate_junctions.h \
 	breseq/common.h \
 	breseq/error_count.h \
 	breseq/fastq.h \
@@ -44,17 +48,6 @@ libbreseq_la_SOURCES = \
 	breseq/tabulate_coverage.h 
 libbreseq_la_LIBADD = $(top_srcdir)/$(LIBBAM)/libbam.la
 
-bin_PROGRAMS = error_count identify_mutations calc_trims tabulate_coverage convert_genbank cfastq_utils
+bin_PROGRAMS = cbreseq
 
-error_count_SOURCES = error_count_cmdline.cpp
-
-identify_mutations_SOURCES = identify_mutations_cmdline.cpp
-
-calc_trims_SOURCES = calc_trims_cmdline.cpp
-
-tabulate_coverage_SOURCES = tabulate_coverage_cmdline.cpp
-
-convert_genbank_SOURCES = convert_genbank_cmdline.cpp
-
-cfastq_utils_SOURCES = fastq_utils_cmdline.cpp
-
+cbreseq_SOURCES = breseq_cmdline.cpp

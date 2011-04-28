@@ -60,15 +60,15 @@ sub count
 	my $reference_bam_file_name = $settings->file_name($reference_key);
 
 	## check to see if error_count++ is available:
-	my $error_count = $settings->ctool('error_count');
-	if ($error_count && !$settings->{perl_error_count}) 
+	my $cbreseq = $settings->ctool('cbreseq');
+	if ($cbreseq && !$settings->{perl_error_count}) 
 	{
 		## deal with distribution or error count keys being undefined...
 		my $coverage_fn = $settings->file_name($distribution_key, {'@'=>""});
 		my $outputdir = `dirname $coverage_fn`;
 		chomp $outputdir; $outputdir .= '/';
 		my $readfiles = join(" --readfile ", $settings->read_files);
-		my $cmdline = "$error_count --bam $reference_bam_file_name --fasta $reference_fasta_file_name --output $outputdir --readfile $readfiles --coverage";
+		my $cmdline = "$cbreseq ERROR_COUNT --bam $reference_bam_file_name --fasta $reference_fasta_file_name --output $outputdir --readfile $readfiles --coverage";
 		$cmdline .= " --errors" if (defined $error_counts_key);
 		$cmdline .= " --minimum-quality-score $settings->{base_quality_cutoff}" if ($settings->{base_quality_cutoff});
 		Breseq::Shared::system($cmdline);

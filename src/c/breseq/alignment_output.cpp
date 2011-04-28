@@ -7,15 +7,14 @@ AUTHORS
 
 LICENSE AND COPYRIGHT
 
-  Copyright (c) 2010 Michigan State University
+  Copyright (c) 2008-2010 Michigan State University
+  Copyright (c) 2011 The University of Texas at Austin
 
   breseq is free software; you can redistribute it and/or modify it under the  
   terms the GNU General Public License as published by the Free Software 
   Foundation; either version 1, or (at your option) any later version.
 
 *****************************************************************************/
-
-#include <bam.h>
 
 #include "breseq/alignment_output.h"
 
