@@ -290,7 +290,7 @@
 /* Begin PBXLegacyTarget section */
 		421ACF201170DC4400C2EB85 /* samtools */ = {
 			isa = PBXLegacyTarget;
-			buildArgumentsString = "-f Makefile.XCode $(ACTION)";
+			buildArgumentsString = "-f Makefile.original lib";
 			buildConfigurationList = 421ACF251170DC6C00C2EB85 /* Build configuration list for PBXLegacyTarget "samtools" */;
 			buildPhases = (
 			);
@@ -466,7 +466,6 @@
 /* Begin XCBuildConfiguration section */
 		421ACEB81170DB9600C2EB85 /* Debug */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReference = 70B69E091369E51E0001B750 /* Debug.xcconfig */;
 			buildSettings = {
 				COPY_PHASE_STRIP = NO;
 				HEADER_SEARCH_PATHS = "$(value)";
@@ -476,7 +475,6 @@
 		};
 		421ACEB91170DB9600C2EB85 /* Release */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReference = 70B69E0A1369E51E0001B750 /* Release.xcconfig */;
 			buildSettings = {
 				COPY_PHASE_STRIP = YES;
 				HEADER_SEARCH_PATHS = "$(value)";
@@ -529,6 +527,7 @@
 		};
 		42B6EDC611C69CC70075F8A3 /* Debug */ = {
 			isa = XCBuildConfiguration;
+			baseConfigurationReference = 70B69E091369E51E0001B750 /* Debug.xcconfig */;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
 				ARCHS = "$(NATIVE_ARCH_ACTUAL)";
@@ -553,6 +552,7 @@
 		};
 		42B6EDC711C69CC70075F8A3 /* Release */ = {
 			isa = XCBuildConfiguration;
+			baseConfigurationReference = 70B69E0A1369E51E0001B750 /* Release.xcconfig */;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
 				ARCHS = "$(NATIVE_ARCH_ACTUAL)";
@@ -576,6 +576,7 @@
 		};
 		42BA690D1189B7FE000B00B1 /* Debug */ = {
 			isa = XCBuildConfiguration;
+			baseConfigurationReference = 70B69E091369E51E0001B750 /* Debug.xcconfig */;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
 				ARCHS = "$(NATIVE_ARCH_ACTUAL)";
@@ -602,6 +603,7 @@
 		};
 		42BA690E1189B7FE000B00B1 /* Release */ = {
 			isa = XCBuildConfiguration;
+			baseConfigurationReference = 70B69E0A1369E51E0001B750 /* Release.xcconfig */;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
 				ARCHS = "$(NATIVE_ARCH_ACTUAL)";
@@ -634,6 +636,7 @@
 		};
 		70A8365A13477F7B0037F8DE /* Debug */ = {
 			isa = XCBuildConfiguration;
+			baseConfigurationReference = 70B69E091369E51E0001B750 /* Debug.xcconfig */;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
 				ARCHS = "$(NATIVE_ARCH_ACTUAL)";
@@ -657,6 +660,7 @@
 		};
 		70A8365B13477F7B0037F8DE /* Release */ = {
 			isa = XCBuildConfiguration;
+			baseConfigurationReference = 70B69E0A1369E51E0001B750 /* Release.xcconfig */;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
 				ARCHS = "$(NATIVE_ARCH_ACTUAL)";
