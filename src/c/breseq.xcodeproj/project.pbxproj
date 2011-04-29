@@ -214,9 +214,9 @@
 		4247E77F1268E175006A6D78 /* breseq */ = {
 			isa = PBXGroup;
 			children = (
+				7087747412BC1C06000F9B57 /* breseq */,
 				70B69DE51369B8700001B750 /* breseq_cmdline.cpp */,
 				70A8365E13477FAB0037F8DE /* bam2aln_cmd_line.cpp */,
-				7087747412BC1C06000F9B57 /* breseq */,
 				7087728712BC1660000F9B57 /* alignment.cpp */,
 				70A8364C13477AAE0037F8DE /* alignment_output.cpp */,
 				70B5B0FF13324D8300737DC1 /* annotated_sequence.cpp */,
@@ -510,6 +510,8 @@
 				COPY_PHASE_STRIP = NO;
 				GCC_DYNAMIC_NO_PIC = NO;
 				GCC_OPTIMIZATION_LEVEL = 0;
+				HEADER_SEARCH_PATHS = "$(value)";
+				LIBRARY_SEARCH_PATHS = "$(value)";
 				PRODUCT_NAME = all;
 			};
 			name = Debug;
@@ -520,6 +522,8 @@
 				COPY_PHASE_STRIP = YES;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
 				GCC_ENABLE_FIX_AND_CONTINUE = NO;
+				HEADER_SEARCH_PATHS = "$(value)";
+				LIBRARY_SEARCH_PATHS = "$(value)";
 				PRODUCT_NAME = all;
 				ZERO_LINK = NO;
 			};
@@ -546,7 +550,7 @@
 				ONLY_ACTIVE_ARCH = YES;
 				PREBINDING = NO;
 				PRODUCT_NAME = cbreseq;
-				USER_HEADER_SEARCH_PATHS = "";
+				USER_HEADER_SEARCH_PATHS = /opt/local/include;
 			};
 			name = Debug;
 		};
@@ -569,7 +573,7 @@
 				LIBRARY_SEARCH_PATHS_QUOTED_FOR_TARGET_2 = "";
 				PREBINDING = NO;
 				PRODUCT_NAME = cbreseq;
-				USER_HEADER_SEARCH_PATHS = "";
+				USER_HEADER_SEARCH_PATHS = /opt/local/include;
 				ZERO_LINK = NO;
 			};
 			name = Release;
@@ -654,7 +658,7 @@
 				ONLY_ACTIVE_ARCH = YES;
 				PREBINDING = NO;
 				PRODUCT_NAME = cbam2aln;
-				USER_HEADER_SEARCH_PATHS = "";
+				USER_HEADER_SEARCH_PATHS = /opt/local/include;
 			};
 			name = Debug;
 		};
@@ -680,7 +684,7 @@
 				LIBRARY_SEARCH_PATHS_QUOTED_FOR_TARGET_5 = "\"$(SRCROOT)/build/Debug\"";
 				PREBINDING = NO;
 				PRODUCT_NAME = cbam2aln;
-				USER_HEADER_SEARCH_PATHS = "";
+				USER_HEADER_SEARCH_PATHS = /opt/local/include;
 				ZERO_LINK = NO;
 			};
 			name = Release;

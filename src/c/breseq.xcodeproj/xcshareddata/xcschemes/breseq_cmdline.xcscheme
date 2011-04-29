@@ -61,6 +61,14 @@
          </CommandLineArgument>
          <CommandLineArgument
             argument = "--bam /Users/jbarrick/src/breseq/tests/lambda_polymorphism_new_error/data/reference.bam --fasta /Users/jbarrick/src/breseq/tests/lambda_polymorphism_new_error/data/reference.fasta --readfile lambda_mixed_population --error_dir /Users/jbarrick/src/breseq/tests/lambda_polymorphism_new_error/07_error_calibration/ --genome_diff /Users/jbarrick/src/breseq/tests/lambda_polymorphism_new_error/08_mutation_identification/ra_mc_evidence.gd --output /Users/jbarrick/src/breseq/tests/lambda_polymorphism_new_error/08_mutation_identification/ --mutation_cutoff 2 --coverage_dir /Users/jbarrick/src/breseq/tests/lambda_polymorphism_new_error/08_mutation_identification/ --deletion_propagation_cutoff 31 --predict_deletions 1 --minimum_quality_score 3 --predict_polymorphisms 1 --polymorphism_cutoff 2 --polymorphism_frequency_cutoff 0 --error_table /Users/jbarrick/src/breseq/tests/lambda_polymorphism_new_error/07_error_calibration//error_rates.tab"
+            isEnabled = "NO">
+         </CommandLineArgument>
+         <CommandLineArgument
+            argument = "ANALYZE_FASTQ -i /Users/austin/Work/BarrickLab/breseq_bak/tests/data/lambda/IntetionallyScrewedUp_unix.fastq"
+            isEnabled = "NO">
+         </CommandLineArgument>
+         <CommandLineArgument
+            argument = "ANALYZE_FASTQ -i /Users/austin/Work/BarrickLab/breseq_bak/tests/data/lambda/IntetionallyScrewedUp_win.fastq"
             isEnabled = "YES">
          </CommandLineArgument>
       </CommandLineArguments>
