@@ -71,6 +71,10 @@
             argument = "ANALYZE_FASTQ -i /Users/austin/Work/BarrickLab/breseq_bak/tests/data/lambda/IntetionallyScrewedUp_win.fastq"
             isEnabled = "YES">
          </CommandLineArgument>
+         <CommandLineArgument
+            argument = "ANALYZE_FASTQ -i /Users/austin/Work/BarrickLab/breseq_bak/tests/data/lambda/fixed.fastq"
+            isEnabled = "NO">
+         </CommandLineArgument>
       </CommandLineArguments>
       <AdditionalOptions>
       </AdditionalOptions>
