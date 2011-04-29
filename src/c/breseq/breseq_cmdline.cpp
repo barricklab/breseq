@@ -68,7 +68,7 @@ int do_analyze_fastq(int argc, char* argv[]) {
 	if(options.count("help")
 		 || !options.count("input")
 		 ) {
-		cout << "Usage: fastq_utils --input input.fastq" << endl;
+		cout << "Usage: breseq ANALYZE_FASTQ --input input.fastq" << endl;
 		cout << cmdline_options << endl;
 		return -1;
 	}                       
@@ -130,7 +130,7 @@ int do_convert_genbank(int argc, char* argv[]) {
 		 || !options.count("input")
 		 || (!options.count("feature_table") && !options.count("fasta"))  
 		 ) {
-		cout << "Usage: convert_genbank --input <sequence.gbk> [--fasta <output.fasta> --feature_table <output.tab>]" << endl;
+		cout << "Usage: breseq CONVERT_GENBANK --input <sequence.gbk> [--fasta <output.fasta> --feature_table <output.tab>]" << endl;
 		cout << cmdline_options << endl;
 		return -1;
 	}                       
@@ -177,7 +177,7 @@ int do_calculate_trims(int argc, char* argv[]) {
 		 || !options.count("fasta")
 		 || !options.count("output")
 		 ) {
-		cout << "Usage: identify_mutations --bam <sequences.bam> --fasta <reference.fasta> --error_dir <path> --genome_diff <path> --output <path> --readfiles <filename> --coverage_dir <dirname> [--minimum-quality-score 3]" << endl;
+		cout << "Usage: breseq CALCULATE_TRIMS --bam <sequences.bam> --fasta <reference.fasta> --error_dir <path> --genome_diff <path> --output <path> --readfiles <filename> --coverage_dir <dirname> [--minimum-quality-score 3]" << endl;
 		cout << cmdline_options << endl;
 		return -1;
 	}                       
@@ -229,7 +229,7 @@ int do_error_count(int argc, char* argv[]) {
 		 || !options.count("output")
 		 || !options.count("readfile")
 		 || (!options.count("coverage") && !options.count("errors")) ) {
-		std::cout << "Usage: error_count --bam <sequences.bam> --fasta <reference.fasta> --output <path> --readfile <filename> [--coverage] [--errors] [--minimum-quality-score 3]" << std::endl;
+		std::cout << "Usage: breseq ERROR_COUNT --bam <sequences.bam> --fasta <reference.fasta> --output <path> --readfile <filename> [--coverage] [--errors] [--minimum-quality-score 3]" << std::endl;
 		std::cout << cmdline_options << std::endl;
 		return -1;
 	}
@@ -301,7 +301,7 @@ int do_identify_mutations(int argc, char* argv[]) {
 		 || !options.count("deletion_propagation_cutoff") 
      
 		 ) {
-		cout << "Usage: identify_mutations --bam <sequences.bam> --fasta <reference.fasta> --error_dir <path> --genome_diff <path> --output <path> --readfiles <filename> --coverage_dir <dirname>" << endl;
+		cout << "Usage: breseq IDENTIFY_MUTATIONS --bam <sequences.bam> --fasta <reference.fasta> --error_dir <path> --genome_diff <path> --output <path> --readfiles <filename> --coverage_dir <dirname>" << endl;
 		cout << cmdline_options << endl;
 		return -1;
 	}                       

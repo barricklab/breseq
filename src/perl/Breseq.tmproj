@@ -3,7 +3,7 @@
 <plist version="1.0">
 <dict>
 	<key>currentDocument</key>
-	<string>Breseq/lib/Breseq/AlignmentOutput.pm</string>
+	<string>Breseq/bin/bam2cov</string>
 	<key>documents</key>
 	<array>
 		<dict>
@@ -124,14 +124,14 @@
 			<key>caret</key>
 			<dict>
 				<key>column</key>
-				<integer>58</integer>
+				<integer>15</integer>
 				<key>line</key>
-				<integer>83</integer>
+				<integer>105</integer>
 			</dict>
 			<key>firstVisibleColumn</key>
 			<integer>0</integer>
 			<key>firstVisibleLine</key>
-			<integer>58</integer>
+			<integer>89</integer>
 		</dict>
 		<key>Breseq/bin/breseq</key>
 		<dict>
@@ -583,6 +583,6 @@
 	<key>showFileHierarchyDrawer</key>
 	<true/>
 	<key>windowFrame</key>
-	<string>{{550, 41}, {802, 837}}</string>
+	<string>{{473, 23}, {802, 837}}</string>
 </dict>
 </plist>

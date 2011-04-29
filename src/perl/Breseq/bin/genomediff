@@ -126,6 +126,10 @@ elsif ("\U$command" eq 'VALIDATE')
 {
 	do_validate();
 }
+elsif ("\U$command" eq 'CGVIEW')
+{
+	do_cgview();
+}
 else
 {
 	if (!defined $command) {	
@@ -1683,3 +1687,73 @@ sub do_validate
 
 	$gd->write($output_file_name);
 }
+
+
+sub do_cgview
+{
+	my ($help, $man, $verbose);
+	my $output_file_name; 
+	GetOptions(
+		'help|?' => \$help, 'man' => \$man, 'verbose|v' => \$verbose,
+		'output-path|o=s' => \$output_file_name,
+	) or pod2usage(2);
+	pod2usage(1) if $help;
+	pod2usage(-exitstatus => 0, -verbose => 2) if $man;
+	pod2usage(1) if (scalar @ARGV == 0);
+	pod2usage(1) if (!defined $output_file_name);
+
+	my $ignore_transposons = 1;
+
+	#doesn't really need to take multiple...
+	my $gd_file_name = shift @ARGV;
+	if (scalar @ARGV > 0) {
+		print STDERR "Multiple genomdiff args were provided. Only ONE is allowed for this command.\n"; 	
+		pod2usage(1);
+	}
+	
+	# default output file name
+	if (!defined $output_file_name) {
+		$output_file_name = $gd_file_name . ".cgview.xml";
+	}
+		
+	my $gd_name = $gd_file_name;
+	$gd_name =~ s/^.+\///;		
+	$gd_name =~ s/\.[^.]+$//;
+	
+	my $gd = Breseq::GenomeDiff->new(-in=>$gd_file_name);
+	
+	
+	print OUT <<END;
+<?xml version="1.0" encoding="ISO-8859-1"?>
+<!-- java -jar ~/bin/cgview/cgview.jar -f svg -i ara-1_v3.xml -o ara-1_v3.svg -->	
+cgview backboneRadius="90" sequenceLength="4629812" height="600" width="600" featureThickness="medium" showBorder="false" labelLineLength="x-small" labelFont="SansSerif,plain,8" labelLineThickness="xx-small" color="white" backboneThickness="0" labelPlacementQuality="best" featureSlotSpacing="2">
+  <featureSlot strand="direct">
+  <feature color="rgb(240,240,240)" proportionOfThickness="0.2" radiusAdjustment="0.5" showLabel="false"><featureRange start="1" stop="4629812" /></feature>
+END
+
+	my @mutations = $gd->mutation_list;
+	MUT: foreach my $mut (@mutations)
+	{
+		#did it hit a single gene
+		next if ($mut->{type} ne 'SNP');
+		
+		if ($ignore_transposons) {
+			foreach my $gene (@{$mut->{gene_list}) {
+				next MUT if ($gene =~  /^ins/);
+			}
+		}		
+				
+		print OUT <<LINE
+    <feature color="black" label="" showLabel="false"><featureRange start="$mut->{position}" stop="$mut->{position}" /></feature>
+LINE
+	}
+			
+	print OUT <<END
+  </featureSlot>
+</cgview>
+END
+
+
+
+}
+
