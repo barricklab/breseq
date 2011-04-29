@@ -23,6 +23,8 @@ LICENSE AND COPYRIGHT
 #include "breseq/pileup_base.h"
 #include "breseq/pileup.h"
 
+using namespace std;
+
 namespace breseq {
 
 /*! Constructor.
@@ -113,11 +115,13 @@ bool pileup_base::handle_position(uint32_t pos) {
  function defined in breseq::pileup_base.
  */
 int first_level_callback(uint32_t tid, uint32_t pos, int n, const bam_pileup1_t *pile, void *data) {
+  
 	pileup_base* pb = reinterpret_cast<pileup_base*>(data);
 		
 	// if _last_tid is initialized, and is different than tid, then we've changed targets.  
 	// call at_end() for the previous target:
 	if(pb->m_last_tid && (*pb->m_last_tid != tid)) {
+    pb->m_last_position_1 = 0;
 		pb->at_end(*pb->m_last_tid, pb->m_bam->header->target_len[*pb->m_last_tid]);
 	}
 
@@ -126,24 +130,31 @@ int first_level_callback(uint32_t tid, uint32_t pos, int n, const bam_pileup1_t 
   
 	uint32_t this_pos_1 = pos+1;
   
-  // check for clipping
-  if ( pb->handle_position(this_pos_1) ) {
-       
+  for (uint32_t on_pos_1 = pb->m_last_position_1+1; on_pos_1 <= this_pos_1; on_pos_1++) {
+    
     // Print progress (1-indexed position)
-    // This could be rewritten to be more efficient...
-    // It's also not quite right, because we woul dneed to split the guard up into two phases...
-    for (uint32_t on_pos = pb->m_last_position_1+1; on_pos <= this_pos_1; on_pos++) {
-      if((on_pos % 10000) == 0) {
-        std::cerr << "    POSITION:" << on_pos << std::endl;
+    if((on_pos_1 % 10000) == 0) {
+      std::cerr << "    POSITION:" << on_pos_1 << std::endl;
+    }
+    
+    // Check for clipping and downsampling
+    // Send empty pileup for skipped positions
+    if ( pb->handle_position(on_pos_1) ) {
+      
+      if (on_pos_1 == this_pos_1) {
+        pileup p(tid,on_pos_1-1,n,pile,*pb);
+        pb->callback(p);
+      } else {
+        pileup p(tid,on_pos_1-1,0,NULL,*pb);
+        pb->callback(p);
       }
     }
     
-    pileup p(tid,pos,n,pile,*pb);
-    pb->callback(p);
+    // always update last position because we had an alignment...at_end expects this behavior
+    pb->m_last_position_1 = on_pos_1;
+    
   }
-  // always update last position because we had an alignment...at_end expects this behavior
-  pb->m_last_position_1 = this_pos_1;
-  
+
 	return 0;
 }
 
