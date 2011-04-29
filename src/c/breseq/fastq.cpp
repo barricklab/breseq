@@ -56,8 +56,8 @@ namespace breseq {
         fprintf(stderr, "\nThe sequence and score lines are not the same length.\n");
         break;
       case 4:
-        fprintf(stderr, "Your file is not formatted correctly in line: %d ", (4*num_reads)+count-2);
-        fprintf(stderr, "... at position %d you have an illegal whitespace character.  If it is at the end of a line, it is probably an extra \\r at the end of every line.\n", position+1);
+        fprintf(stderr, "\nIt seems you have an extra \\r at the end of every line in your fastq file implying a dos formatted text file.  Here is a line that may fix the file:\n\n");
+        fprintf(stderr, "awk \'{ sub(\"\\r$\", \"\"); print }\' winfile.fastq > unixfile.fastq\n");
         break;
     }
     fprintf(stderr, "\nNow I'm quitting.\n\n");
@@ -109,7 +109,11 @@ namespace breseq {
           //Need to see if there are extra whitespace characters in the sequence line
           //It's too difficult to put it in the name line
           for (uint16_t i=0; i<sequence.m_sequence.size(); i++) {
-            if( isspace(sequence.m_sequence[i]) ) error_in_file_format(count, num_reads, i);
+            
+            //I did this cast to get rid of the warning for comparing a uint and a signed int
+            if( isspace(sequence.m_sequence[i]) && (uint16_t) sequence.m_sequence.size() == i+1) {
+              error_in_file_format(count, num_reads, i);
+            }
           }
           
           if( sequence.m_name[0] != '@' ) error_in_file_format(count-4, num_reads, 0);
