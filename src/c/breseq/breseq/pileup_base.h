@@ -75,9 +75,11 @@ namespace breseq {
     bool handle_position(uint32_t pos);
 		
 		//! Do the pileup; will trigger callback for each alignment.
+    //  Note that we call for all positions that have been skipped (with zero alignments)
+    //  which is unlike the default SAM behaviour.
 		void do_pileup();
     
-    //! Do the pileup, but only on specified region
+    //! Do the pileup, but only on specified region.
     void do_pileup(std::string region, bool clip = false, uint32_t downsample = 0);
 		 
 		//! Pileup callback.

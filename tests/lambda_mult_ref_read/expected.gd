@@ -85,7 +85,7 @@ RA	58		NC_001416-4	9176	0	G	A	frequency=1	new_cov=36/39	quality=214.0	ref_cov=0/
 RA	59		NC_001416-4	9177	0	T	C	frequency=1	new_cov=36/38	quality=203.4	ref_cov=0/0	tot_cov=36/39
 RA	60		NC_001416-4	9359	0	T	C	frequency=1	new_cov=35/38	quality=144.2	ref_cov=7/11	tot_cov=42/49
 MC	61		NC_001416-4	9650	9701	0	0	left_inside_cov=44	left_outside_cov=49	right_inside_cov=0	right_outside_cov=NA
-UN	14		NC_001416-0	3	8	
-UN	26		NC_001416-2	3041	4827	
+UN	14		NC_001416-0	1	8	
+UN	26		NC_001416-2	2338	4827	
 UN	37		NC_001416-2	4839	8333	
 UN	62		NC_001416-4	9696	9701	

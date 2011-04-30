@@ -652,14 +652,13 @@ sub has_mutation
 {
 	my ($self, $test_item) = @_;
 
-	foreach my $item (@{$self->{list}})
-	{
+	foreach my $item ($self->mutation_list)
+	{		
 		if ( equivalent_mutations($item, $test_item) )
 		{
 			return 1;
 		}
 	}
-
 	return 0;
 }
 
@@ -810,7 +809,7 @@ sub merge
 {
 	use Storable qw(dclone);
 	my (@list) = @_;
-	
+
 	my $new_gd = Breseq::GenomeDiff->new();			
 	while (my $gd = shift @list)
 	{
@@ -830,6 +829,7 @@ sub merge
 			
 			$new_gd->add($item);
 		}
+		
 	}
 	return $new_gd;
 }

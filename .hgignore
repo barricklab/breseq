@@ -37,7 +37,7 @@ configure.scan
 ## These are for Perl modules in general
 _build
 blib
-#MYMETA.yml
+MYMETA.yml
 MANIFEST.SKIP
 #Makefile.PL
 
