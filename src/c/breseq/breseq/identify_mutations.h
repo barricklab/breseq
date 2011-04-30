@@ -105,7 +105,7 @@ namespace breseq {
 			unique[1] = unique[0]+unique[2];
 			redundant[1] = redundant[0]+redundant[2];
 			raw_redundant[1] = raw_redundant[0]+raw_redundant[2];
-			total = round(unique[1]) + round(redundant[1]);
+			total = (int)round(unique[1]) + (int)round(redundant[1]);
 		}
 		
 		double unique[3];
