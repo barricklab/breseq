@@ -3,7 +3,7 @@
 <plist version="1.0">
 <dict>
 	<key>currentDocument</key>
-	<string>Breseq/bin/bam2cov</string>
+	<string>Breseq/lib/Breseq/GenomeDiff.pm</string>
 	<key>documents</key>
 	<array>
 		<dict>
@@ -182,12 +182,12 @@
 				<key>column</key>
 				<integer>0</integer>
 				<key>line</key>
-				<integer>1032</integer>
+				<integer>1029</integer>
 			</dict>
 			<key>firstVisibleColumn</key>
 			<integer>0</integer>
 			<key>firstVisibleLine</key>
-			<integer>993</integer>
+			<integer>1023</integer>
 		</dict>
 		<key>Breseq/lib/Breseq.pm</key>
 		<dict>
@@ -316,6 +316,20 @@
 			<integer>0</integer>
 			<key>firstVisibleLine</key>
 			<integer>10</integer>
+		</dict>
+		<key>Breseq/lib/Breseq/GenomeDiff.pm</key>
+		<dict>
+			<key>caret</key>
+			<dict>
+				<key>column</key>
+				<integer>2</integer>
+				<key>line</key>
+				<integer>660</integer>
+			</dict>
+			<key>firstVisibleColumn</key>
+			<integer>0</integer>
+			<key>firstVisibleLine</key>
+			<integer>633</integer>
 		</dict>
 		<key>Breseq/lib/Breseq/MutationIdentification.pm</key>
 		<dict>
@@ -569,6 +583,7 @@
 		<string>Breseq/lib/Breseq/ErrorCalibration.pm</string>
 		<string>Breseq/lib/Breseq/CandidateJunctions.pm</string>
 		<string>Breseq/bin/genomediff</string>
+		<string>Breseq/lib/Breseq/GenomeDiff.pm</string>
 		<string>Breseq/lib/Breseq/ReferenceSequence.pm</string>
 		<string>Breseq/lib/Breseq/polymorphism_statistics.r</string>
 		<string>Breseq/bin/genbank_utils</string>
@@ -583,6 +598,6 @@
 	<key>showFileHierarchyDrawer</key>
 	<true/>
 	<key>windowFrame</key>
-	<string>{{473, 23}, {802, 837}}</string>
+	<string>{{365, 21}, {930, 725}}</string>
 </dict>
 </plist>
