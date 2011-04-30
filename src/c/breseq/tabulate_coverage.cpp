@@ -33,6 +33,7 @@ LICENSE AND COPYRIGHT
 #include "breseq/common.h"
 #include "breseq/tabulate_coverage.h"
 
+using namespace std;
 
 /*! Convenience wrapper around the identify_mutations_pileup class.
  */
@@ -91,7 +92,7 @@ void breseq::tabulate_coverage_pileup::callback(const breseq::pileup& p) {
   if (pos==0) return;
   
   // print positions not called because there were no reads
-  for (uint32_t i=m_last_position_1+1; i<pos; i++) {
+  for (uint32_t i=m_last_position_1+1; i<pos; i++) {    
     m_output_table << i << "\t" << refseq[i-1] << "\t" << 0 << "\t" << 0 << "\t" 
       << 0 << "\t" << 0 << "\t" << 0 << "\t" << 0 << "\t" << 0 << "\t" << 0 << std::endl;
   }
