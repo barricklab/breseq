@@ -52,8 +52,17 @@ $ENV{PATH} = "$ENV{PATH}:" . $FindBin::Bin;
 #### Paths to Locally Installed Modules ####
 use Config;
 use lib $FindBin::Bin . "/../lib/perl5";
-use lib $FindBin::Bin . "/../lib/perl5/site_perl";
+use lib $FindBin::Bin . "/../lib/perl5/$Config{version}";
 use lib $FindBin::Bin . "/../lib/perl5/$Config{archname}";
+use lib $FindBin::Bin . "/../lib/perl5/site_perl/$Config{archname}/$Config{version}";
+
+use lib $FindBin::Bin . "/../lib/perl5/site_perl";
+use lib $FindBin::Bin . "/../lib/perl5/site_perl/$Config{archname}";
+use lib $FindBin::Bin . "/../lib/perl5/site_perl/$Config{archname}/$Config{version}";
+
+use lib $FindBin::Bin . "/../lib/perl5/vendor_perl";
+use lib $FindBin::Bin . "/../lib/perl5/vendor_perl/$Config{archname}";
+use lib $FindBin::Bin . "/../lib/perl5/vendor_perl/$Config{archname}/$Config{version}";
 
 #### Bio Perl ####
 use Bio::SeqIO;
@@ -61,91 +70,55 @@ use Bio::SeqIO;
 #### breseq ####
 use Breseq::GenomeDiff;
 
-##First argument is always the command
+##First argument is always the COMMAND
 my $command = shift @ARGV;
+$command = "\U$command";
 
-#Could auto-complete abbreviated commands here...
+# Would ne nice to auto-complete abbreviated commands here by making a hash of functions
+# where the keys are COMMANDs...
 
-if ("\U$command" eq 'FILTER')
-{
+if ($command eq 'FILTER') {
 	do_filter();
-}
-elsif ("\U$command" eq 'HTML')
-{
+} elsif ($command eq 'HTML') {
 	do_html();
-}
-elsif ("\U$command" eq 'COMPARE')
-{
+} elsif ($command eq 'COMPARE') {
 	do_compare();
-}
-elsif ("\U$command" eq 'COMPARE_POLYMORPHISMS')
-{
+} elsif ("\U$command" eq 'COMPARE_POLYMORPHISMS') {
 	do_compare_polymorphisms();
-}
-elsif ("\U$command" eq 'MUTATION_TREE')
-{ 
+} elsif ("\U$command" eq 'MUTATION_TREE') { 
 	do_mutation_tree();
-}
-elsif ("\U$command" eq 'COUNT')
-{
+} elsif ("\U$command" eq 'COUNT') {
 	do_count();
-}
-elsif ("\U$command" eq 'ORPHAN_EVIDENCE')
-{
+} elsif ("\U$command" eq 'ORPHAN_EVIDENCE') {
 	do_orphan_evidence();
-}
-elsif ("\U$command" eq 'MUTATE')
-{
+} elsif ( ("\U$command" eq 'MUTATE') ||  ("\U$command" eq 'APPLY') ) {
 	do_mutate();
-}
-elsif ("\U$command" eq 'MERGE')
-{
+} elsif ("\U$command" eq 'MERGE') {
 	do_merge();
-}
-elsif ("\U$command" eq 'UNION')
-{
+} elsif ("\U$command" eq 'UNION') {
 	do_merge();
-}
-elsif ("\U$command" eq 'INTERSECTION')
-{
+} elsif ("\U$command" eq 'INTERSECTION') {
 	do_intersecton();
-}
-elsif ("\U$command" eq 'SUBTRACT')
-{
+} elsif ("\U$command" eq 'SUBTRACT') {
 	do_subtract();
-}
-elsif ("\U$command" eq 'GENE_TABLE')
-{
+} elsif ("\U$command" eq 'GENE_TABLE') {
 	do_mutated_gene_table();
-}
-elsif ("\U$command" eq 'POLYMORPHISM')
-{
+} elsif ("\U$command" eq 'POLYMORPHISM') {
 	do_polymorphism_analysis();
-}
-elsif ("\U$command" eq 'STRIP-EVIDENCE')
-{
+} elsif ("\U$command" eq 'STRIP-EVIDENCE') {
 	do_strip_evidence();
-}
-elsif ("\U$command" eq 'VALIDATE')
-{
+} elsif ("\U$command" eq 'VALIDATE') {
 	do_validate();
-}
-elsif ("\U$command" eq 'CGVIEW')
-{
+} elsif ("\U$command" eq 'CGVIEW') {
 	do_cgview();
-}
-elsif ("\U$command" eq 'SNP_POSITIONS')
-{
+} elsif ("\U$command" eq 'SNP_POSITIONS') {
 	do_SNP_positions();
-}	
-else
-{
+} else {
 	if (!defined $command) {	
-		print STDERR "No COMMAND provided.\n";	
+		pod2usage(-message => "No COMMAND provided." -exitstatus => 1, -verbose => 1);
 	} else {
-		print STDERR "Unknown COMMAND: $command.\n";
+		pod2usage(-message => "Unknown COMMAND." -exitstatus => 1, -verbose => 1);
 	}
-	pod2usage(-message => "Unknown COMMAND." -exitstatus => 1, -verbose => 1);
 }
 
 
@@ -895,74 +868,31 @@ sub do_orphan_evidence
 sub do_mutate
 {
 	my ($help, $man, $verbose);
-	my $output_fasta = 'output.fna'; 
-	my @input_genbank_files;
+	my $output = 'output.gbk'; 
+	my @input_refseq_files;
 	my $input_genome_diff;
 	
 	GetOptions(
 		'help|?' => \$help, 'man' => \$man,
 		'verbose|v' => \$verbose,
-		'output|o=s' => \$output_fasta,
-		'input|r=s' => \@input_genbank_files,
+		'output|o=s' => \$output,
+		'input|r=s' => \@input_refseq_files,
 	) or pod2usage(2);
 	$input_genome_diff = shift @ARGV;
 	pod2usage(1) if $help;
 	pod2usage(-exitstatus => 0, -verbose => 2) if $man;	
-	pod2usage(-exitstatus => 0, -verbose => 2) if (!$input_genome_diff);	
+	print "Ignoring extra command line: @ARGV\n" if (scalar @ARGV > 0);	
+	pod2usage(-message => "No GenomeDiff file provided (\@ARGV)." -exitstatus => 0, -verbose => 2) if (!$input_genome_diff);	
+	pod2usage(-message => "No reference sequence files provided (-r|--input)." -exitstatus => 0, -verbose => 2) if (scalar @input_refseq_files == 0);	
 
 	our $gd = Breseq::GenomeDiff->new(-FILE_NAME => $input_genome_diff);
 	
-	my $ref_seq_info = Breseq::ReferenceSequence::load_ref_seq_info(\@input_genbank_files);
-
-	my $new_ref_strings;
-	foreach my $seq_id (keys %{$ref_seq_info->{ref_strings}})
-	{
-		$new_ref_strings->{$seq_id} = $ref_seq_info->{ref_strings}->{$seq_id};
-	}
+	## Read the sequences
+	#  Reference to hash of raw sequences as strings, keys are accessions
+	my $ref_seq_info = Breseq::ReferenceSequence::load_ref_seq_info(\@input_refseq_files);
+	my $new_ref_strings = $gd->apply_to_sequences($ref_seq_info);
 	
-	foreach my $mut ($gd->mutation_list)
-	{		
-		if ($mut->{type} eq 'SNP')
-		{
-			substr $new_ref_strings->{$mut->{seq_id}}, $mut->{position}-1, 1, $mut->{new_seq};
-		}
-		elsif ($mut->{type} eq 'SUB')
-		{
-			substr $new_ref_strings->{$mut->{seq_id}}, $mut->{position}-1, $mut->{size}, $mut->{new_seq};
-		}
-		elsif ($mut->{type} eq 'INS')
-		{
-			##notice that this is AFTER the position
-			substr $new_ref_strings->{$mut->{seq_id}}, $mut->{position}, 0, $mut->{new_seq};
-		}
-		elsif ($mut->{type} eq 'DEL')
-		{	
-			substr $new_ref_strings->{$mut->{seq_id}}, $mut->{position}-1, $mut->{size}, '';
-		}		
-		elsif ($mut->{type} eq 'AMP')
-		{
-			my $dup = substr $new_ref_strings->{$mut->{seq_id}}, $mut->{position}-1, $mut->{size};
-			$dup = $dup x ($mut->{new_copy_number} - 1);
-			substr $new_ref_strings->{$mut->{seq_id}}, $mut->{position}-1 + $mut->{size}, 0, $dup;
-		}
-		elsif ($mut->{type} eq 'INV')
-		{
-			die "INV: mutation type not handled yet\n";
-		}
-		elsif ($mut->{type} eq 'MOB')
-		{
-			die "MOB: does not handle ins_start, ins_end, del_start, del_end yet." if (($mut->{ins_start} != 0) || ($mut->{ins_end} != 0) || ($mut->{del_start} != 0) || ($mut->{del_end} != 0) );
-			my ($seq_string) = Breseq::ReferenceSequence::repeat_example($ref_seq_info, $mut->{repeat_name});	
-			$mut->{size} = length($seq_string) + $mut->{duplication_size}; ##used by shift_positions
-			my $duplicate_sequence = substr $new_ref_strings->{$mut->{seq_id}}, $mut->{position}, $mut->{duplication_size};
-			substr $new_ref_strings->{$mut->{seq_id}}, $mut->{position}, 0, $duplicate_sequence . $seq_string;
-		}
-		
-		$gd->shift_positions($mut);
-		
-	}
-	
-	my $out = Bio::SeqIO->new(-format=>'FASTA', -file => ">$output_fasta");
+	my $out = Bio::SeqIO->new(-format=>'GENBANK', -file => ">$output");
 	foreach my $seq_id (keys %{$new_ref_strings})
 	{
 		print "Writing Sequence: $seq_id\n";

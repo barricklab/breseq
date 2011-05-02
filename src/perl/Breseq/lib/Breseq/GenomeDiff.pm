@@ -875,18 +875,105 @@ sub subtract
 	return $new_gd;
 }
 
+## currently this destroys the genome diff's original format (maybe not the best thing to do)
+sub apply_to_sequences
+{
+	my ($self, $ref_seq_info) = @_;
+	my $verbose = 0;
+	
+	my $ref_strings = $ref_seq_info->{ref_strings};
+	my $new_ref_strings;
+	foreach my $seq_id (keys %$ref_strings)
+	{
+		$new_ref_strings->{$seq_id} = $ref_strings->{$seq_id};
+	}
+	
+	foreach my $mut ($self->mutation_list)
+	{		
+		die "Mutation on unknown reference sequence: $mut->{seq_id}\n" if (!defined $new_ref_strings->{$mut->{seq_id}});
+		
+		print Dumper($mut) if ($verbose);
+		if ($mut->{type} eq 'SNP')
+		{
+			substr $new_ref_strings->{$mut->{seq_id}}, $mut->{position}-1, 1, $mut->{new_seq};
+			print "SNP: " . (1) . " => " . length($mut->{new_seq}) . "\n" if ($verbose);
+			print +($mut->{position}-1) . " " . "+" . $mut->{new_seq} . "\n" if ($verbose);
+		}
+		elsif ($mut->{type} eq 'SUB')
+		{
+			substr $new_ref_strings->{$mut->{seq_id}}, $mut->{position}-1, $mut->{size}, $mut->{new_seq};
+			print "SUB: " . ($mut->{size}) . " => " . length($mut->{new_seq}) . "\n" if ($verbose);
+			print +($mut->{position}-1) . " " . "+" . $mut->{new_seq} . "\n" if ($verbose);
+		}
+		elsif ($mut->{type} eq 'INS')
+		{
+			##notice that this is AFTER the position
+			substr $new_ref_strings->{$mut->{seq_id}}, $mut->{position}, 0, $mut->{new_seq};
+			print "INS: " . (0) . " => " . length($mut->{new_seq}) . "\n" if ($verbose);
+			print +($mut->{position}-1) . " " . "+" . $mut->{new_seq} . "\n" if ($verbose);
+		}
+		elsif ($mut->{type} eq 'DEL')
+		{	
+			substr $new_ref_strings->{$mut->{seq_id}}, $mut->{position}-1, $mut->{size}, '';
+			print "DEL: " . ($mut->{size}) . " => " . (0) . "\n" if ($verbose);
+			print +($mut->{position}-1) . " " . "\n" if ($verbose);
+		}		
+		elsif ($mut->{type} eq 'AMP')
+		{
+			my $dup = substr $new_ref_strings->{$mut->{seq_id}}, $mut->{position}-1, $mut->{size};
+			$dup = $dup x ($mut->{new_copy_number} - 1);
+			substr $new_ref_strings->{$mut->{seq_id}}, $mut->{position}-1 + $mut->{size}, 0, $dup;
+			print "AMP: " . (0) . " => " . (length($dup)) . "\n" if ($verbose);
+			print +($mut->{position}-1) . " " . "+" . $dup . "\n" if ($verbose);
+		}
+		elsif ($mut->{type} eq 'INV')
+		{
+			die "INV: mutation type not handled yet\n";
+		}
+		elsif ($mut->{type} eq 'MOB')
+		{
+			die "MOB: does not handle ins_start, ins_end, del_start, del_end yet." if (($mut->{ins_start} != 0) || ($mut->{ins_end} != 0) || ($mut->{del_start} != 0) || ($mut->{del_end} != 0) );
+			
+			die "Unknown repeat strand" if ($mut->{strand} eq '?');
+			my $seq_string = Breseq::ReferenceSequence::repeat_example($ref_seq_info, $mut->{repeat_name}, $mut->{strand});
+			
+			## note that we are setting the size used by shift_positions
+			$mut->{repeat_size} = length($seq_string); ##used by shift_positions
+			my $duplicate_sequence = substr $new_ref_strings->{$mut->{seq_id}}, $mut->{position}-1, $mut->{duplication_size};
+			substr $new_ref_strings->{$mut->{seq_id}}, $mut->{position}-1, 0, $duplicate_sequence . $seq_string;
+			print "MOB: " . (0) . " => " . (length($duplicate_sequence . $seq_string)) . "\n" if ($verbose);
+			print +($mut->{position}) . " " . "+" . $duplicate_sequence . $seq_string . "\n" if ($verbose);
+		} 
+		else 
+		{
+			die "Can't handle mutation type: $mut->{type}\n";
+		}
+		
+		## we have to update all of the other positions
+		$self->shift_positions($mut);	
+	}
+	
+	return $new_ref_strings;
+}
+
 sub shift_positions
 {
 	my ($self, $mut) = @_;
+	my $verbose = 0;
 	
 	my $delta = mutation_size_change($mut);
+	die "Size change not defined for mutation." if (!defined $delta);
+	
 	my $offset = $mut->{position};
+	
+	print "$offset $delta\n"  if ($verbose);
 	my $inversion = 0;
 	
 	foreach my $mut ($self->mutation_list)
 	{		
 		if ($inversion)
 		{
+			die "shift_positions cannot handle inversions yet!";
 			if (($mut->{position} > $offset) && ($mut->{position} < $offset + $delta))
 			{
 			}
@@ -927,14 +1014,21 @@ sub mutation_size_change
 	}
 	elsif ($item->{type} eq 'MOB')
 	{
-		my $size = +$item->{size} + $item->{duplication_size};
+		my $size = +$item->{repeat_size} + $item->{duplication_size};
 		$size -= $item->{del_start} if ($item->{del_start});
 		$size -= $item->{del_end} if ($item->{del_end});	
 		$size += length($item->{ins_start}) if ($item->{ins_start});	
 		$size += length($item->{ins_end}) if ($item->{ins_end});	
 		return $size;
 	}			
-	return 0;
+	elsif ($item->{type} eq 'CON')
+	{	
+		my $size = $item->{size};
+		$item->{region} =~ m/^(.+):(.+)-(.+)$/ or die "Could not understand CON replacement region: $item->{region}";
+		my $new_size = $3 - $2 + 1;
+		return $item->{size} - $new_size;
+	}
+	return undef;
 }
 
 
