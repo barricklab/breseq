@@ -34,7 +34,7 @@ use Getopt::Long;
 use Data::Dumper;
 use Pod::Usage;
 use FindBin;
-use Breseq::File::Path v2.6.5;
+use Breseq::File::Path;
 
 use Breseq;
 

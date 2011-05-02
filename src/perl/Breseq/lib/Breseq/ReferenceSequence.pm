@@ -738,15 +738,13 @@ sub repeat_example
 			if ($rep->{name} eq $repeat_name)
 			{
 				my $repeat_seq = substr $ref_seq_info->{ref_strings}->{$seq_id}, $rep->{start} - 1, $rep->{end} - $rep->{start} + 1;
-				if ($strand != $rep->{strand})
-				{
-					my $repeat_seq = revcom($repeat_seq);
-				}
+				$repeat_seq = revcom($repeat_seq) if ($strand != $rep->{strand});
 				return $repeat_seq;
 			}
 		}
-	}
+	}	
 	
+	die "Unknown repeat type: $repeat_name";
 }
 
 sub get_tag
