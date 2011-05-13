@@ -247,7 +247,6 @@ sub load_ref_seq_info
 		while (my $ref_seq = $ref_i->next_seq)
 		{			
 			my $seq_id = $ref_seq->id;
-			
 			die "Duplicate reference sequence id: $seq_id\n" if (defined $ref_seq_info->{ref_strings}->{$seq_id});
 			
 			print STDERR "    Sequence::$seq_id loaded.\n";
@@ -480,8 +479,8 @@ sub annotate_1_mutation
 		}
 		elsif (!$gene->{cds})
 		{
-			$mut->{snp_type} = "noncoding";
-			$mut->{gene_position} = "noncoding ($mut->{gene_position}/$gene_nt_size nt)";
+			$mut->{snp_type} = "RNA";
+			$mut->{gene_position} = "RNA ($mut->{gene_position}/$gene_nt_size nt)";
 			return $mut;
 		}	
 
@@ -497,16 +496,19 @@ sub annotate_1_mutation
 		$mut->{new_seq} = $mut->{new_base} if (!defined $mut->{new_seq});
 
 	    ## determine the old and new translation of this codon  
-   		$mut->{aa_position} = int(($mut->{gene_position}-1)/3) + 1;
-		$mut->{codon_position} = abs($start-$within_gene_start) % 3;
+   		$mut->{aa_position} = int(($mut->{gene_position}-1)/3) + 1; ## 1 indexed
+		$mut->{codon_position} = abs($start-$within_gene_start) % 3 + 1; ## 1 indexed
 
 		my $codon_seq = ($gene->{strand} == +1) ?
 		
 			substr($ref_string, $gene->{start} + 3 * ($mut->{aa_position}-1) - 1, 3) :
-			Breseq::Fastq::revcom(substr($ref_string, $gene->{end} - 3 * $mut->{aa_position}+1, 3));
+			Breseq::Fastq::revcom(substr($ref_string, $gene->{end} - 3 * $mut->{aa_position}, 3));
 		
 			#$ref_seq->trunc($gene->{start} + 3 * ($mut->{aa_position}-1),$gene->{start} + 3 * $mut->{aa_position} - 1) :
 			#$ref_seq->trunc($gene->{end} - 3 * $mut->{aa_position}+1,$gene->{end} - 3 * ($mut->{aa_position}-1))->revcom;
+
+			print "$mut->{aa_position} $mut->{codon_position} $gene->{start} $gene->{end} $codon_seq\n";
+
 
 		$mut->{codon_ref_seq} = $codon_seq;
 		$mut->{aa_ref_seq} = bridge_translate($mut->{codon_ref_seq});
@@ -514,7 +516,7 @@ sub annotate_1_mutation
 
 		$mut->{codon_new_seq} = $codon_seq;
 		#remember to revcom the change if gene is on opposite strand
-		substr($mut->{codon_new_seq}, $mut->{codon_position}, 1) = ($gene->{strand} == +1) ? $mut->{new_seq} : Breseq::Fastq::revcom($mut->{new_seq});
+		substr($mut->{codon_new_seq}, $mut->{codon_position} - 1, 1) = ($gene->{strand} == +1) ? $mut->{new_seq} : Breseq::Fastq::revcom($mut->{new_seq});
 		$mut->{aa_new_seq} =  bridge_translate($mut->{codon_new_seq});
 		#$codon_seq->seq($mut->{codon_new_seq});
 		#$mut->{aa_new_seq} = $codon_seq->translate( undef, undef, undef, 11 )->seq();
@@ -523,12 +525,12 @@ sub annotate_1_mutation
 	}
 
 	##The mutation actually contains several genes
-	elsif (scalar @between_genes + scalar(@inside_left_genes) + scalar (@inside_right_genes) > 0)
+	elsif (scalar(@between_genes) + scalar(@inside_left_genes) + scalar (@inside_right_genes) > 0)
 	{
-		
 		my @gene_list = ( map({ "<i>[" . $_->{name} . "]</i>" } @inside_left_genes),
 						  map({ "<i>" . $_->{name} . "</i>" } @between_genes),
 						  map({ "<i>[" . $_->{name} ."]</i>" } @inside_right_genes) );
+
 
 		#added for gene table
 		@{$mut->{gene_list}} = ( map({ $_->{name} } @inside_left_genes),
@@ -701,6 +703,8 @@ sub find_closest_repeat_region
 	my ($position, $repeat_list_ref, $max_distance, $direction) = @_;
 
 	my $is = undef;
+	return $is if (!defined $repeat_list_ref);
+	
 	my $best_distance;
 	IS: for (my $i=0; $i < scalar @$repeat_list_ref; $i++)
 	{

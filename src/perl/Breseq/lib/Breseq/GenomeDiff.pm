@@ -944,6 +944,26 @@ sub apply_to_sequences
 			print "MOB: " . (0) . " => " . (length($duplicate_sequence . $seq_string)) . "\n" if ($verbose);
 			print +($mut->{position}) . " " . "+" . $duplicate_sequence . $seq_string . "\n" if ($verbose);
 		} 
+		elsif ($mut->{type} eq 'CON')
+		{
+			$mut->{region} =~ m/^(.+):(.+)-(.+)$/ or die "Could not understand CON replacement region: $mut->{region}";
+			my $start = $2;
+			my $end = $3;
+			my $seq_id = $1;
+			my $strand = ($start < $end) ? +1 : -1;
+			($start, $end) = ($end, $start) if ($strand == -1);
+			my $replace_string = substr $ref_strings->{$seq_id}, $start-1, $end-$start+1; #taken from original!!
+			$replace_string = Breseq::Fastq::revcom($replace_string) if ($strand == -1);
+			my $replaced = substr $new_ref_strings->{$mut->{seq_id}}, $mut->{position}-1, $mut->{size}, $replace_string;
+			
+			print ">> CON: Gene Conversion Mutation <<\n";
+			print "$mut->{region}\n";
+			print "$seq_id : $start - $end" . "\n";
+			print "Original Length: " . length($new_ref_strings->{$mut->{seq_id}}) . "\n";
+			print "Replace $replaced\n";
+			print "With $replace_string\n";
+			print "New Length: " . length($new_ref_strings->{$mut->{seq_id}}) . "\n";
+		}
 		else 
 		{
 			die "Can't handle mutation type: $mut->{type}\n";
