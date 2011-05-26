@@ -210,7 +210,6 @@ namespace breseq {
     else {
       m_something2sanger.resize(256);
       if( m_quality_format == "SOLEXA" ) {
-        //std::cout << "I'm Here 1" << std::endl;
         for (int qs = -5; qs<62; qs++) {
           float p = pow(10, (float) -qs/10) / (1+pow(10, (float) -qs/10));
           int pq = -10 * log(p) / log(10);
@@ -243,11 +242,16 @@ namespace breseq {
   void cFastqFile::convert_to_sanger(cFastqSequence &sequence) {
     
     std::string line;
+    
+    //m_file_convert is identical to m_file above
+    //it just needed its own stream because the other one gets used up
     if ( m_file_convert.is_open() && m_temp_file.is_open() ) {
       while( getline( m_file_convert, line )) {
         int count(0);
         
-        //parse the read to get the 4 read parameters
+        //parse the reads to convert the qualities to sanger format
+        //@agm I also edit line three of each read to be only a '+'
+        //     The values output should be scaled properly
         while( count < 4 ) {
           switch (count) {
             case 0:
@@ -271,16 +275,19 @@ namespace breseq {
           }
         }
       
+        //convert the quality scores to sanger format
         for (uint32_t i=0; i<sequence.m_qualities.size(); i++) {
           sequence.m_qualities[i] = (char) m_something2sanger[sequence.m_qualities[i]];
         }
         
+        //print the edited reads to a temp file
         m_temp_file << sequence.m_name << std::endl;
         m_temp_file << sequence.m_sequence << std::endl;
         m_temp_file << "+" << std::endl;
         m_temp_file << sequence.m_qualities << std::endl;
       }
     }
+    //adjust max and min quality scores according to allowed range
     m_max_quality_score = m_something2sanger[m_max_quality_score];
     m_min_quality_score = m_something2sanger[m_min_quality_score];
   }
