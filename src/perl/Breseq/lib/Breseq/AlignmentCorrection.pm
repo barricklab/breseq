@@ -92,7 +92,7 @@ sub correct_alignments
 	##	Output files
 	####
 	
-	our $gd = Breseq::GenomeDiff->new();
+	our $gd = GenomeDiff->new();
 	
 	my $resolved_reference_sam_file_name = $settings->file_name('resolved_reference_sam_file_name');
 	my $RREF;
@@ -493,7 +493,7 @@ sub correct_alignments
 	{
 		print "$key\n" if ($verbose);
 		my $item = _junction_to_hybrid_list_item($key, $ref_seq_info, scalar @{$matched_junction{$key}}, $junction_test_info{$key});
-		Breseq::GenomeDiff::add_reject_reason($item, "NJ");
+		GenomeDiff::add_reject_reason($item, "NJ");
 		$gd->add($item);
 	}
 

@@ -37,7 +37,7 @@ namespace breseq {
 
     
     if( count != 4 )
-      fprintf(stderr, "Your file is not formatted correctly in line: %d ", (4*num_reads)+count+1);
+      fprintf(stderr, "Your file is not formatted correctly at line: %d ", (4*num_reads)+count+1);
 
     switch (count) {
       case 0:
@@ -50,7 +50,7 @@ namespace breseq {
         fprintf(stderr, "\nEither a line is missing or there is an unknown nucleotide type on this line.\n");
         break;
       case 2:
-        fprintf(stderr, "\nThis should be a '+' and only a '+'. Either a line is missing of there is an unknown symbol here.\n");
+        fprintf(stderr, "\nThis line should begin with a '+'. Either a line is missing or there is an unknown symbol here.\n");
         break;
       case 3:
         fprintf(stderr, "\nThe sequence and score lines are not the same length.\n");

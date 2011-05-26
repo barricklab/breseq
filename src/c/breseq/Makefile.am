@@ -20,6 +20,7 @@ AM_LDFLAGS = $(BOOST_PROGRAM_OPTIONS_LDFLAGS) -static
 LDADD = $(BOOST_PROGRAM_OPTIONS_LIBS) \
 		$(top_srcdir)/$(LIBBAM)/libbam.la \
 		libbreseq.la
+LIBS = $(BOOST_PROGRAM_OPTIONS_LIBS)
 
 noinst_LTLIBRARIES = libbreseq.la
 libbreseq_la_SOURCES = \
