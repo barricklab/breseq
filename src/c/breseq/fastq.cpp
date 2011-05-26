@@ -197,7 +197,7 @@ namespace breseq {
     //                         max_quality_score 40
     //                         num_bases 62646176
     
-    std::cout << m_quality_format << std::endl;
+    //std::cout << m_quality_format << std::endl;
     if( m_quality_format == "SANGER" ) {
       std::cout << "max_read_length "   << m_max_read_length    << std::endl;
       std::cout << "num_reads "         << m_total_reads        << std::endl;
