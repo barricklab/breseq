@@ -43,6 +43,7 @@ EXTRA_DIST = \
 ROOTDIR=$(PWD)
 DOCDIR=$(ROOTDIR)/src/doc
 PERLBRESEQ=$(ROOTDIR)/src/perl/Breseq
+PERLGENOMEDIFF=$(ROOTDIR)/src/perl/GenomeDiff
 BIOSAMTOOLS=$(ROOTDIR)/extern/Bio-SamTools-1.28
 SAMTOOLSDIR=$(ROOTDIR)/$(LIBBAM)
 
@@ -59,6 +60,11 @@ all-local :
 	export SAMTOOLSLIBRARY=$(SAMTOOLSDIR)/.libs; \
 	export SAMTOOLSHEADERS=$(SAMTOOLSDIR); \
 	perl Build.PL --install_base=$(prefix) --install_path bin=$(bindir) --install_path script=$(bindir) ; \
+	./Build ;
+
+	## GenomeDiff
+	cd $(PERLGENOMEDIFF) ; \
+	perl Build.PL --install_base=$(prefix) --install_path bin=$(bindir)  --install_path script=$(bindir) ; \
 	./Build ;
 
 	## Breseq
@@ -82,6 +88,10 @@ install-exec-local :
 	## Bio::SamTools
 	cd $(BIOSAMTOOLS) ; \
 	./Build install --destdir=${DESTDIR};
+
+	## GenomeDiff
+	cd $(PERLGENOMEDIFF) ; \
+	./Build install --destdir=${DESTDIR};
 	
 	## Breseq
 	cd $(PERLBRESEQ) ; \
@@ -100,10 +110,20 @@ dist-hook:
 	
 	cp -r $(DOCDIR)/_build/html $(distdir)/documentation ;
 
+	##Bio::SamTools
 	cd $(BIOSAMTOOLS) ; \
 	./Build distdir ;
 	cp -r $(BIOSAMTOOLS)/Bio-SamTools-* $(distdir)/extern ; 
 
+	## GenomeDiff
+	cd $(PERLGENOMEDIFF) ; \
+	./Build distdir ; \
+	echo $(distdir)/src/perl/GenomeDiff ;
+	
+	mkdir -p $(distdir)/src/perl
+	cp -r $(PERLGENOMEDIFF)/GenomeDiff-* $(distdir)/src/perl/GenomeDiff ; 
+
+	## Breseq
 	cd $(PERLBRESEQ) ; \
 	./Build distdir ; \
 	echo $(distdir)/src/perl/Breseq ;

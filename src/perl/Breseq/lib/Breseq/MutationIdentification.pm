@@ -33,7 +33,7 @@ use strict;
 use Bio::Root::Root;
 use Bio::DB::Sam;
 
-use Breseq::GenomeDiff;
+use GenomeDiff;
 use Breseq::Shared;
 use Breseq::ErrorCalibration;
 
@@ -43,9 +43,6 @@ use vars qw(@ISA);
 @ISA = qw( Bio::Root::Root );
 
 use Data::Dumper;
-
-use Breseq::GenomeDiff;
-
 
 our @base_list = ('A', 'T', 'C', 'G', '.');
 
@@ -117,7 +114,7 @@ sub identify_mutations
 	my $bam = Bio::DB::Sam->new(-fasta => $reference_fasta_file_name, -bam => $reference_bam_file_name);
 	##my @seq_ids = $bam->seq_ids;
 	my @seq_ids = @{$ref_seq_info->{seq_ids}};
-	our $gd = Breseq::GenomeDiff->new();
+	our $gd = GenomeDiff->new();
 	
 	## some local variable lookups for convenience
 	my $total_ref_length = 0;
@@ -766,7 +763,7 @@ sub identify_mutations
 					$mut->{new_base} = $best_base;		
 					$mut->{frequency} = 1; ## this is not a polymorphism
 					
-					Breseq::GenomeDiff::add_reject_reason($mut, "EVALUE") if ($e_value_call < $settings->{mutation_log10_e_value_cutoff});					
+					GenomeDiff::add_reject_reason($mut, "EVALUE") if ($e_value_call < $settings->{mutation_log10_e_value_cutoff});					
 				}
 				if ($polymorphism_predicted)
 				{	
@@ -802,7 +799,7 @@ sub identify_mutations
 					#round
 					$mut->{frequency} = sprintf "%.4f", $mut->{frequency};
 					
-					Breseq::GenomeDiff::add_reject_reason($mut, "EVALUE") if ($mut->{quality} < $settings->{polymorphism_log10_e_value_cutoff});
+					GenomeDiff::add_reject_reason($mut, "EVALUE") if ($mut->{quality} < $settings->{polymorphism_log10_e_value_cutoff});
 					
 					###
 					## Print input file for R
@@ -1360,7 +1357,7 @@ sub polymorphism_statistics
 
 	### Load the older GenomeDiff and add new fields
 	my $ra_mc_genome_diff_file_name = $settings->file_name('ra_mc_genome_diff_file_name');
-	my $gd = Breseq::GenomeDiff->new(-in => $ra_mc_genome_diff_file_name);
+	my $gd = GenomeDiff->new(-in => $ra_mc_genome_diff_file_name);
 	
 	my $polymorphism_statistics_r_script_file_name = $settings->file_name('polymorphism_statistics_r_script_file_name');
 	my $polymorphism_statistics_r_script_log_file_name = $settings->file_name('polymorphism_statistics_r_script_log_file_name');
@@ -1374,7 +1371,7 @@ sub polymorphism_statistics
 	chomp $header;
 	my @header_list = split /\t/, $header;
 	
-	my $new_gd = Breseq::GenomeDiff->new();
+	my $new_gd = GenomeDiff->new();
 	foreach my $mut ($gd->list)
 	{
 		## lines only exist for RA evidence
@@ -1402,13 +1399,13 @@ sub polymorphism_statistics
 		}
 		
 		## Evalue cutoff again (in case we are only running this part)
-		Breseq::GenomeDiff::add_reject_reason($mut, "EVALUE") if ($mut->{polymorphism_quality} < $settings->{polymorphism_log10_e_value_cutoff});
+		GenomeDiff::add_reject_reason($mut, "EVALUE") if ($mut->{polymorphism_quality} < $settings->{polymorphism_log10_e_value_cutoff});
 
 		## Frequency cutoff
 		if ( ($mut->{frequency} < $settings->{polymorphism_frequency_cutoff}   )
 		  || ($mut->{frequency} > 1-$settings->{polymorphism_frequency_cutoff} ) )
 		{
-			Breseq::GenomeDiff::add_reject_reason($mut, "POLYMORPHISM_FREQUENCY_CUTOFF");					
+			GenomeDiff::add_reject_reason($mut, "POLYMORPHISM_FREQUENCY_CUTOFF");					
 		}
 
 		## Minimum coverage on both strands
@@ -1421,9 +1418,9 @@ sub polymorphism_statistics
 		$passed &&= $top >= $polymorphism_coverage_limit_both_bases;
 		$passed &&= $bot >= $polymorphism_coverage_limit_both_bases;
 
-		Breseq::GenomeDiff::add_reject_reason($mut, "POLYMORPHISM_STRAND") if (!$passed);
-		Breseq::GenomeDiff::add_reject_reason($mut, "KS_QUALITY_P_VALUE") if ($mut->{ks_quality_p_value} < $settings->{polymorphism_bias_p_value_cutoff});
-		Breseq::GenomeDiff::add_reject_reason($mut, "FISHER_STRAND_P_VALUE") if ($mut->{fisher_strand_p_value} < $settings->{polymorphism_bias_p_value_cutoff});
+		GenomeDiff::add_reject_reason($mut, "POLYMORPHISM_STRAND") if (!$passed);
+		GenomeDiff::add_reject_reason($mut, "KS_QUALITY_P_VALUE") if ($mut->{ks_quality_p_value} < $settings->{polymorphism_bias_p_value_cutoff});
+		GenomeDiff::add_reject_reason($mut, "FISHER_STRAND_P_VALUE") if ($mut->{fisher_strand_p_value} < $settings->{polymorphism_bias_p_value_cutoff});
 
 		###### Optionally, ignore if in a homopolymer stretch
 		if (defined $settings->{polymorphism_reject_homopolymer_length})
@@ -1451,7 +1448,7 @@ sub polymorphism_statistics
 			#print "$same_base_length\n";
 			if ($same_base_length >= $settings->{polymorphism_reject_homopolymer_length})
 			{
-				Breseq::GenomeDiff::add_reject_reason($mut, "HOMOPOLYMER_STRETCH");
+				GenomeDiff::add_reject_reason($mut, "HOMOPOLYMER_STRETCH");
 			}
 		}
 		
@@ -1463,7 +1460,7 @@ sub polymorphism_statistics
 			
 			## FIX -- need to re-evaluate whether it would have been accepted as a normal mutation 
 			## This is NOT the right quality being used here. Need a separate quality for consensus call and polymorphism call!
-			Breseq::GenomeDiff::add_reject_reason($mut, "EVALUE") if ($mut->{polymorphism_quality} < $settings->{mutation_log10_e_value_cutoff});
+			GenomeDiff::add_reject_reason($mut, "EVALUE") if ($mut->{polymorphism_quality} < $settings->{mutation_log10_e_value_cutoff});
 		}
 
 		$new_gd->add($mut);

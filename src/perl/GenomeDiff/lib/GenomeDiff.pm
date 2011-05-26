@@ -2,9 +2,11 @@
 # Pod Documentation
 ###
 
+our $VERSION = '0.01';
+
 =head1 NAME
 
-Breseq::GenomeDiff.pm
+GenomeDiff.pm
 
 =head1 SYNOPSIS
 
@@ -110,13 +112,12 @@ version 1, or (at your option) any later version.
 # End Pod Documentation
 ###
 
-package Breseq::GenomeDiff;
+package GenomeDiff;
 use vars qw(@ISA);
 use strict;
 
 use Bio::Root::Root;
 use Data::Dumper;
-
 
 @ISA = qw( Bio::Root::Root );
 
@@ -194,8 +195,8 @@ our $type_sort_order = {
 =head2 new
 
  Title   : new
- Usage   : $gd = Breseq::GenomeDiff->new();
-           $gd = Breseq::GenomeDiff->new( -file => 'evolved.gd' );
+ Usage   : $gd = GenomeDiff->new();
+           $gd = GenomeDiff->new( -file => 'evolved.gd' );
  Function: Creates a GenomeDiff object, loading it from a file if one is provided
  Returns : new GenomeDiff object
 
@@ -639,6 +640,38 @@ sub write
 	close OUT;
 }
 
+sub write_yaml
+{
+	my ($self, $file_name, $no_sort) = @_;
+	eval ('require YAML::XS');
+	
+	#eval ('require YAML::XS qw(Dump)');
+	#eval ('require YAML::XS qw(Dump)') or die "Module YAML::XS not found.";
+
+	open OUT, ">$file_name" or $self->throw("Could not write file: $file_name");
+
+
+	#fill in the sort fields
+	foreach my $item (	@{$self->{list}} )
+	{
+		$item->{SORT_1} = $tag_sort_fields->{$item->{type}}->[0];
+		$item->{SORT_2} = $item->{$tag_sort_fields->{$item->{type}}->[1]};
+		$item->{SORT_3} = $item->{$tag_sort_fields->{$item->{type}}->[2]};
+	}
+
+	my $data_to_write;
+	@{$data_to_write->{metadata}} = $self->{metadata_lines};
+	@{$data_to_write->{mutations}} = $self->mutation_list;
+	@{$data_to_write->{evidence}} = $self->evidence_list;
+
+	@{$data_to_write->{mutations}} = sort by_sort_fields @{$data_to_write->{mutations}} if (!$no_sort);
+	@{$data_to_write->{evidence}} = sort by_sort_fields @{$data_to_write->{evidence}} if (!$no_sort);
+	
+	print OUT YAML::XS::Dump($data_to_write);
+	close OUT;
+	
+}
+
 =head2 has_mutation
 
  Title   : has_mutation
@@ -714,7 +747,7 @@ sub filter
 	my ($self, $filter_function) = @_;
 		
 	my @new_list = ();
-	my $removed_gd = Breseq::GenomeDiff->new();
+	my $removed_gd = GenomeDiff->new();
 	
 	foreach my $item ($self->list)
 	{
@@ -799,7 +832,7 @@ sub last_common_ancestor
 =head2 merge
 
  Title   : merge
- Usage   : $gd = Bio::Breseq::GenomeDiff::merge($gd1, $gd2, $gd3, ...);
+ Usage   : $gd = Bio::GenomeDiff::merge($gd1, $gd2, $gd3, ...);
  Function: merge evidence and predictions from multiple GenomeDiffs into one
  Returns : new GenomeDiff object with items from all input GenomeDiffs
 
@@ -810,7 +843,7 @@ sub merge
 	use Storable qw(dclone);
 	my (@list) = @_;
 
-	my $new_gd = Breseq::GenomeDiff->new();			
+	my $new_gd = GenomeDiff->new();			
 	while (my $gd = shift @list)
 	{
 		## deep copy the list, so we aren't changing the original items
@@ -839,9 +872,9 @@ sub intersection
 {
 	my ($list) = @_;
 	
-	my $union_gd = Breseq::GenomeDiff::union($list);
+	my $union_gd = GenomeDiff::union($list);
 	
-	my $new_gd = Breseq::GenomeDiff->new();
+	my $new_gd = GenomeDiff->new();
 	$new_gd->{'SAMPLE'}->{intersection } = join ",", map {$_->{SAMPLE}->{strain}} @$list;
 	
 	SNP: foreach my $test_item (@{$union_gd->{list}})
@@ -860,10 +893,10 @@ sub subtract
 {
 	my ($list_1, $list_2) = @_;
 	
-	my $union1_gd = Breseq::GenomeDiff::merge(@$list_1);
-	my $union2_gd = Breseq::GenomeDiff::merge(@$list_2);
+	my $union1_gd = GenomeDiff::merge(@$list_1);
+	my $union2_gd = GenomeDiff::merge(@$list_2);
 
-	my $new_gd = Breseq::GenomeDiff->new();
+	my $new_gd = GenomeDiff->new();
 	$new_gd->{'SAMPLE'}->{subtract} = join( ",", map {$_->{SAMPLE}->{strain}} @$list_1) . "-" . join( ",", map {$_->{SAMPLE}->{strain}} @$list_2);
 		
 	SNP: foreach my $test_item (@{$union1_gd->{list}})

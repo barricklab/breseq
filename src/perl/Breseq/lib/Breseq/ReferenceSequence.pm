@@ -507,8 +507,8 @@ sub annotate_1_mutation
 			#$ref_seq->trunc($gene->{start} + 3 * ($mut->{aa_position}-1),$gene->{start} + 3 * $mut->{aa_position} - 1) :
 			#$ref_seq->trunc($gene->{end} - 3 * $mut->{aa_position}+1,$gene->{end} - 3 * ($mut->{aa_position}-1))->revcom;
 
-			print "$mut->{aa_position} $mut->{codon_position} $gene->{start} $gene->{end} $codon_seq\n";
-
+		##Debug
+		##print "$mut->{aa_position} $mut->{codon_position} $gene->{start} $gene->{end} $codon_seq\n";
 
 		$mut->{codon_ref_seq} = $codon_seq;
 		$mut->{aa_ref_seq} = bridge_translate($mut->{codon_ref_seq});

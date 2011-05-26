@@ -3,7 +3,6 @@ bin/bam2cov
 bin/breseq
 bin/fastq_utils
 bin/genbank_utils
-bin/genomediff
 Build.PL
 Changes
 lib/Breseq/AlignmentCorrection.pm
@@ -16,7 +15,6 @@ lib/Breseq/CoverageDistribution.pm
 lib/Breseq/CoverageOutput.pm
 lib/Breseq/ErrorCalibration.pm
 lib/Breseq/Fastq.pm
-lib/Breseq/GenomeDiff.pm
 lib/Breseq/MutationIdentification.pm
 lib/Breseq/MutationPredictor.pm
 lib/Breseq/Output.pm
@@ -36,4 +34,3 @@ t/manifest.t
 t/pod-coverage.t
 t/pod.t
 Makefile.PL
-META.yml
