@@ -77,6 +77,7 @@ namespace breseq {
   //make sure the file opened... if not it will fail
   void cFastqFile::check_if_file_opened() {
     assert(m_file.is_open());
+    assert(m_temp_file.is_open());
   }
   
   void cFastqFile::read_sequence(cFastqSequence &sequence) {
