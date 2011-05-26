@@ -69,11 +69,19 @@
          </CommandLineArgument>
          <CommandLineArgument
             argument = "ANALYZE_FASTQ -i /Users/austin/Work/BarrickLab/breseq_bak/tests/data/lambda/IntetionallyScrewedUp_win.fastq"
-            isEnabled = "YES">
+            isEnabled = "NO">
          </CommandLineArgument>
          <CommandLineArgument
-            argument = "ANALYZE_FASTQ -i /Users/austin/Work/BarrickLab/breseq_bak/tests/data/lambda/fixed.fastq"
+            argument = "ANALYZE_FASTQ -i /Users/austin/Work/BarrickLab/breseq_bak/tests/data/lambda/fixed.fastq -p /Users/austin/Work/BarrickLab/temp"
             isEnabled = "NO">
+         </CommandLineArgument>
+         <CommandLineArgument
+            argument = "ANALYZE_FASTQ -i /Users/austin/Desktop/breseq_working/s_1_sequence.txt -p /Users/austin/Work/BarrickLab/temp"
+            isEnabled = "NO">
+         </CommandLineArgument>
+         <CommandLineArgument
+            argument = "ANALYZE_FASTQ -i /Users/austin/Desktop/breseq_working/DJ480wt.txt -p /Users/austin/Work/BarrickLab/temp"
+            isEnabled = "YES">
          </CommandLineArgument>
       </CommandLineArguments>
       <AdditionalOptions>

@@ -20,23 +20,30 @@
 namespace breseq {
 
   const uint8_t k_SANGER_quality_score_offset = 33;
+  const uint8_t k_SOLEXA_quality_score_offset = 64;
+  const uint8_t k_ILLUMINA_13 = 64;
+  const uint8_t k_ILLUMINA_15 = 64;
   
   //constructor
-  cFastqFile::cFastqFile(const std::string &file_name, std::ios_base::openmode mode) :
+  cFastqFile::cFastqFile(const std::string &file_name, std::ios_base::openmode mode, const std::string &temp_path_name) :
     m_max_read_length(0),
     m_min_quality_score(INT_MAX),
     m_max_quality_score(0),
     m_total_base(0), 
-    m_total_reads(0), 
-    m_file(file_name.c_str(), mode) 
-  { }
+    m_total_reads(0),
+    m_temp_filename(temp_path_name + "/sanger_temp.fastq"),
+    m_quality_format("SANGER"),
+    m_file(file_name.c_str(), mode),
+    m_file_convert(file_name.c_str(), mode),
+    m_temp_file((m_temp_filename).c_str(), std::fstream::out),
+    m_something2sanger(0) { }
   
   //check to make sure certain conditions about the data are fulfilled
   void cFastqFile::error_in_file_format(int count, int num_reads, int position) {
     int n;
 
     
-    if( count != 4 )
+    if( count != 4 && count != 5)
       fprintf(stderr, "Your file is not formatted correctly in line: %d ", (4*num_reads)+count+1);
 
     switch (count) {
@@ -58,6 +65,9 @@ namespace breseq {
       case 4:
         fprintf(stderr, "\nIt seems you have an extra \\r at the end of every line in your fastq file implying a dos formatted text file.  Here is a line that may fix the file:\n\n");
         fprintf(stderr, "awk \'{ sub(\"\\r$\", \"\"); print }\' winfile.fastq > unixfile.fastq\n");
+        break;
+      case 5:
+        fprintf(stderr, "\nThere was an error while reformatting to Sanger.\n\n");
         break;
     }
     fprintf(stderr, "\nNow I'm quitting.\n\n");
@@ -166,21 +176,18 @@ namespace breseq {
     // don't need to implement in first stage
   }
   
-  void cFastqFile::write_summary_file() {
-    
-    // could move this out somewhere else...
-    std::string m_quality_format("SANGER");
-    
+  void cFastqFile::write_summary_file(cFastqSequence &sequence) {
+
     // Typical range: (-5, 40) + 64
-    if (m_min_quality_score >= 64 - k_SANGER_quality_score_offset + - 5) {
+    if (m_min_quality_score >= 64 - k_SANGER_quality_score_offset - 5) {
       m_quality_format = "SOLEXA";
     } 
     // Typical range:  (0, 40) + 64
-    else if (m_min_quality_score >= 64 - k_SANGER_quality_score_offset + 0) {
+    if (m_min_quality_score >= 64 - k_SANGER_quality_score_offset + 0) {
       m_quality_format = "Illumina 1.3+";
     } 
     // Typical range:  (3, 40) + 64
-    else if (m_min_quality_score >= 64 - k_SANGER_quality_score_offset + 3) {
+    if (m_min_quality_score >= 64 - k_SANGER_quality_score_offset + 3) {
       m_quality_format = "Illumina 1.5+";
     }
         
@@ -189,13 +196,92 @@ namespace breseq {
     //                         min_quality_score 4
     //                         max_quality_score 40
     //                         num_bases 62646176
-    std::cout << "max_read_length "   << m_max_read_length    << std::endl;
-    std::cout << "num_reads "         << m_total_reads        << std::endl;
-    std::cout << "min_quality_score " << m_min_quality_score  << std::endl;
-    std::cout << "max_quality_score " << m_max_quality_score  << std::endl;
-    std::cout << "num_bases "         << m_total_base         << std::endl;
-    std::cout << "qual_format "       << m_quality_format     << std::endl;
+    
+    std::cout << m_quality_format << std::endl;
+    if( m_quality_format == "SANGER" ) {
+      std::cout << "max_read_length "   << m_max_read_length    << std::endl;
+      std::cout << "num_reads "         << m_total_reads        << std::endl;
+      std::cout << "min_quality_score " << m_min_quality_score  << std::endl;
+      std::cout << "max_quality_score " << m_max_quality_score  << std::endl;
+      std::cout << "num_bases "         << m_total_base         << std::endl;
+      std::cout << "qual_format "       << m_quality_format     << std::endl;
+    }
+    else {
+      m_something2sanger.resize(256);
+      if( m_quality_format == "SOLEXA" ) {
+        //std::cout << "I'm Here 1" << std::endl;
+        for (int qs = -5; qs<62; qs++) {
+          float p = pow(10, (float) -qs/10) / (1+pow(10, (float) -qs/10));
+          int pq = -10 * log(p) / log(10);
+          m_something2sanger[qs+k_SOLEXA_quality_score_offset] = pq+k_SANGER_quality_score_offset;
+        }
+      }
+      if( m_quality_format == "Illumina 1.3+" ) {
+        for(int qs = 0; qs<40; qs++) {
+          m_something2sanger[qs+k_ILLUMINA_13] = qs+k_SANGER_quality_score_offset;
+        }
+      }
+      if( m_quality_format == "Illumina 1.5+" ) {
+        for(int qs = 0; qs<40; qs++) {
+          m_something2sanger[qs+k_ILLUMINA_15] = qs+k_SANGER_quality_score_offset;
+        }
+      }
+      
+      convert_to_sanger(sequence);
+      
+      std::cout << "max_read_length "   << m_max_read_length    << std::endl;
+      std::cout << "num_reads "         << m_total_reads        << std::endl;
+      std::cout << "min_quality_score " << m_min_quality_score  << std::endl;
+      std::cout << "max_quality_score " << m_max_quality_score  << std::endl;
+      std::cout << "num_bases "         << m_total_base         << std::endl;
+      std::cout << "qual_format "       << m_quality_format     << std::endl;
+    }
 
+  }
+  
+  void cFastqFile::convert_to_sanger(cFastqSequence &sequence) {
+    
+    std::string line;
+    if ( m_file_convert.is_open() && m_temp_file.is_open() ) {
+      while( getline( m_file_convert, line )) {
+        int count(0);
+        
+        //parse the read to get the 4 read parameters
+        while( count < 4 ) {
+          switch (count) {
+            case 0:
+              sequence.m_name = line;
+              getline(m_file_convert, line);
+              count++;
+            case 1:
+              sequence.m_sequence = line;
+              getline(m_file_convert, line);
+              count++;
+            case 2:
+              sequence.m_blank = line;
+              getline(m_file_convert, line);
+              count++;
+            case 3:
+              sequence.m_qualities = line;
+              count++;
+              break;
+            default:
+              error_in_file_format(count, 5, 0);
+          }
+        }
+      
+        for (uint32_t i=0; i<sequence.m_qualities.size(); i++) {
+          sequence.m_qualities[i] = (char) m_something2sanger[sequence.m_qualities[i]];
+        }
+        
+        m_temp_file << sequence.m_name << std::endl;
+        m_temp_file << sequence.m_sequence << std::endl;
+        m_temp_file << "+" << std::endl;
+        m_temp_file << sequence.m_qualities << std::endl;
+      }
+    }
+    m_max_quality_score = m_something2sanger[m_max_quality_score];
+    m_min_quality_score = m_something2sanger[m_min_quality_score];
   }
   
 } // breseq namespace

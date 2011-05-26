@@ -57,6 +57,7 @@ int do_analyze_fastq(int argc, char* argv[]) {
 	cmdline_options.add_options()
 	("help,h", "produce this help message")
 	("input,i", po::value<string>(), "input FASTQ File")
+  ("path_name,p", po::value<string>(), "path to temp file")
   //  ("output,o", po::value<string>(),"out to file") // outputs to STDOUT for now
   ;
   
@@ -67,19 +68,20 @@ int do_analyze_fastq(int argc, char* argv[]) {
 	// make sure that the config options are good:
 	if(options.count("help")
 		 || !options.count("input")
+     || !options.count("path_name")
 		 ) {
-		cout << "Usage: breseq ANALYZE_FASTQ --input input.fastq" << endl;
+		cout << "Usage: breseq ANALYZE_FASTQ --input input.fastq --path_name /path/to/temp" << endl;
 		cout << cmdline_options << endl;
 		return -1;
 	}                       
   
 	try {
     cFastqSequence sequence;
-    cFastqFile fastqparse(options["input"].as<std::string>(), std::fstream::in);
+    cFastqFile fastqparse(options["input"].as<std::string>(), std::fstream::in, options["path_name"].as<std::string>());
     
     fastqparse.check_if_file_opened();
     fastqparse.read_sequence(sequence);
-    fastqparse.write_summary_file();
+    fastqparse.write_summary_file(sequence);
     
   } catch(...) {
 		// failed; 

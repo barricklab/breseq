@@ -59,12 +59,20 @@ namespace breseq {
       //! total number of reads in file
       uint64_t   m_total_reads;
     
+      //! temporary file name for constructor
+      std::string   m_temp_filename;
+      std::string   m_quality_format;
+    
       //! active fstream that was opened when constructed
       std::fstream     m_file;
+      std::fstream     m_file_convert;
+      std::fstream     m_temp_file;
+    
+      std::vector<int>   m_something2sanger;
     
     public:
     
-    cFastqFile(const std::string &file_name, std::ios_base::openmode mode); 
+    cFastqFile(const std::string &file_name, std::ios_base::openmode mode, const std::string &temp_path_name); 
     
       void error_in_file_format(int count, int num_reads, int position);
       void check_if_file_opened();
@@ -72,7 +80,9 @@ namespace breseq {
       void read_sequence(cFastqSequence &sequence);
       void write_sequence(cFastqSequence &sequence);
     
-      void write_summary_file();
+      void write_summary_file(cFastqSequence &sequence);
+    
+      void convert_to_sanger(cFastqSequence &sequence);
   };
 	
 } // breseq namespace
