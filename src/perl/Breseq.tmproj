@@ -222,9 +222,9 @@
 			<key>caret</key>
 			<dict>
 				<key>column</key>
-				<integer>2</integer>
+				<integer>10</integer>
 				<key>line</key>
-				<integer>495</integer>
+				<integer>508</integer>
 			</dict>
 			<key>firstVisibleColumn</key>
 			<integer>0</integer>
@@ -266,14 +266,14 @@
 			<key>caret</key>
 			<dict>
 				<key>column</key>
-				<integer>79</integer>
+				<integer>0</integer>
 				<key>line</key>
-				<integer>1243</integer>
+				<integer>29</integer>
 			</dict>
 			<key>firstVisibleColumn</key>
 			<integer>0</integer>
 			<key>firstVisibleLine</key>
-			<integer>1213</integer>
+			<integer>9</integer>
 		</dict>
 		<key>Breseq/lib/Breseq/CoverageDistribution.pm</key>
 		<dict>
@@ -324,12 +324,12 @@
 				<key>column</key>
 				<integer>0</integer>
 				<key>line</key>
-				<integer>384</integer>
+				<integer>39</integer>
 			</dict>
 			<key>firstVisibleColumn</key>
 			<integer>0</integer>
 			<key>firstVisibleLine</key>
-			<integer>344</integer>
+			<integer>25</integer>
 		</dict>
 		<key>Breseq/lib/Breseq/File/Path.pm</key>
 		<dict>
@@ -406,29 +406,29 @@
 			<key>caret</key>
 			<dict>
 				<key>column</key>
-				<integer>50</integer>
+				<integer>45</integer>
 				<key>line</key>
-				<integer>650</integer>
+				<integer>164</integer>
 			</dict>
 			<key>columnSelection</key>
 			<false/>
 			<key>firstVisibleColumn</key>
 			<integer>0</integer>
 			<key>firstVisibleLine</key>
-			<integer>624</integer>
+			<integer>124</integer>
 			<key>selectFrom</key>
 			<dict>
 				<key>column</key>
-				<integer>92</integer>
+				<integer>9</integer>
 				<key>line</key>
-				<integer>650</integer>
+				<integer>164</integer>
 			</dict>
 			<key>selectTo</key>
 			<dict>
 				<key>column</key>
-				<integer>50</integer>
+				<integer>45</integer>
 				<key>line</key>
-				<integer>650</integer>
+				<integer>164</integer>
 			</dict>
 		</dict>
 		<key>Breseq/lib/Breseq/Shared.pm</key>
@@ -599,6 +599,6 @@
 	<key>showFileHierarchyDrawer</key>
 	<true/>
 	<key>windowFrame</key>
-	<string>{{-2004, -466}, {1790, 1242}}</string>
+	<string>{{-253, 0}, {1790, 878}}</string>
 </dict>
 </plist>
