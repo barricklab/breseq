@@ -193,6 +193,65 @@ int do_calculate_trims(int argc, char* argv[]) {
 	return 0;
 }
 
+/*! Candidate Junctions
+ 
+ Calculate how much to ignore on the end of reads due to ambiguous alignments
+ of those bases.
+ 
+ */
+int do_candidate_junctions(int argc, char* argv[]) {
+	using namespace std;
+	namespace po = boost::program_options;
+	
+	// setup and parse configuration options:
+	po::options_description cmdline_options("Allowed options");
+	cmdline_options.add_options()
+	("help,h", "produce this help message")
+	("fasta,f", po::value<string>(), "FASTA file of reference sequence")
+	("output,o", po::value<string>(), "output directory")
+  
+  //These options are almost always default values
+  ("required-both-unique-length-per-side,1", po::value<uint32> >(), 
+   "Only count reads where both matches extend this many bases outside of the overlap.")
+  ("required-one-unique-length-per-side,2", po::value<uint32> >(), 
+   "Only count reads where at least one match extends this many bases outside of the overlap.")
+  ("maximum-inserted-junction-sequence-length,3", po::value<uint32> >(), 
+   "Maximum number of bases allowed in the overlapping part of a candidate junction.")
+  ("required-match-length,4", po::value<uint32> >(), 
+   "At least this many bases in the read must match the reference genome for it to count.")
+  ("required-extra-pair-total-length,5", po::value<uint32> >(), 
+   "Each match pair must have at least this many bases not overlapping for it to count.")
+  ;
+  
+	po::variables_map options;
+	po::store(po::parse_command_line(argc, argv, cmdline_options), options);
+	po::notify(options);
+	
+	// make sure that the config options are good:
+	if(options.count("help")
+		 || !options.count("fasta")
+		 || !options.count("output")
+		 ) {
+		cout << "Usage: breseq CALCULATE_TRIMS --bam <sequences.bam> --fasta <reference.fasta> --error_dir <path> --genome_diff <path> --output <path> --readfiles <filename> --coverage_dir <dirname> [--minimum-quality-score 3]" << endl;
+		cout << cmdline_options << endl;
+		return -1;
+	}                       
+  
+	// attempt to calculate error calibrations:
+	try {
+		candidate_junctions cj(
+      options["fasta"].as<string>(),
+      options["output"].as<string>());
+    cj.identify_candidate_junctions();
+    
+  } catch(...) {
+		// failed; 
+		return -1;
+	}
+	
+	return 0;
+}
+
 
 /*! Error Count
  
