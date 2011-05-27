@@ -755,11 +755,11 @@ if ($settings->do_step('output_done_file_name', "Output"))
 	## merge all of the evidence GenomeDiff files into one...
 	$settings->create_path('evidence_path');
 	my $jc_genome_diff_file_name = $settings->file_name('jc_genome_diff_file_name');	
-	my $jc_gd = Breseq::GenomeDiff->new( -in => $jc_genome_diff_file_name );
+	my $jc_gd = GenomeDiff->new( -in => $jc_genome_diff_file_name );
 	my $ra_mc_genome_diff_file_name = $settings->file_name('ra_mc_genome_diff_file_name');	
-	my $ra_mc_gd = Breseq::GenomeDiff->new( -in => $ra_mc_genome_diff_file_name);
+	my $ra_mc_gd = GenomeDiff->new( -in => $ra_mc_genome_diff_file_name);
 	my $evidence_genome_diff_file_name = $settings->file_name('evidence_genome_diff_file_name');
-	my $evidence_gd = Breseq::GenomeDiff::merge($jc_gd, $ra_mc_gd);	
+	my $evidence_gd = GenomeDiff::merge($jc_gd, $ra_mc_gd);	
 	$evidence_gd->write($evidence_genome_diff_file_name);
 	
 	

@@ -41,11 +41,10 @@ namespace breseq {
   //check to make sure certain conditions about the data are fulfilled
   void cFastqFile::error_in_file_format(int count, int num_reads, int position) {
     int n;
-
     
     if( count != 4 && count != 5)
       fprintf(stderr, "Your file is not formatted correctly in line: %d ", (4*num_reads)+count+1);
-
+    
     switch (count) {
       case 0:
         fprintf(stderr, "\nThis line should be the name of the read and start with '@'. ");
@@ -57,7 +56,7 @@ namespace breseq {
         fprintf(stderr, "\nEither a line is missing or there is an unknown nucleotide type on this line.\n");
         break;
       case 2:
-        fprintf(stderr, "\nThis should be a '+' and only a '+'. Either a line is missing of there is an unknown symbol here.\n");
+        fprintf(stderr, "\nThis line should begin with a '+'. Either a line is missing or there is an unknown symbol here.\n");
         break;
       case 3:
         fprintf(stderr, "\nThe sequence and score lines are not the same length.\n");

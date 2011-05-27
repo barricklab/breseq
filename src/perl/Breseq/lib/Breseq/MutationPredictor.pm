@@ -42,8 +42,8 @@ use Data::Dumper;
 =head2 new
 
  Title   : new
- Usage   : $gd = Breseq::GenomeDiff->new();
-           $gd = Breseq::GenomeDiff->new( -file => 'evolved.gd' );
+ Usage   : $gd = GenomeDiff->new();
+           $gd = GenomeDiff->new( -file => 'evolved.gd' );
  Function: Creates a GenomeDiff object, loading it from a file if one is provided
  Returns : new GenomeDiff object
 
@@ -356,8 +356,8 @@ sub predict
 		my $a_seq_order = (defined $a->{_side_1_is}) ? $ref_seq_info->{seq_order}->{$a->{_side_2}->{seq_id}} : $ref_seq_info->{seq_order}->{$a->{_side_1}->{seq_id}};
 		my $b_seq_order = (defined $b->{_side_1_is}) ? $ref_seq_info->{seq_order}->{$b->{_side_2}->{seq_id}} : $ref_seq_info->{seq_order}->{$b->{_side_1}->{seq_id}};		
 
-		my $a_reject_order = scalar Breseq::GenomeDiff::number_reject_reasons($a);
-		my $b_reject_order = scalar Breseq::GenomeDiff::number_reject_reasons($b);
+		my $a_reject_order = scalar GenomeDiff::number_reject_reasons($a);
+		my $b_reject_order = scalar GenomeDiff::number_reject_reasons($b);
 
 		## sort by seq_id, position, fewer reject reasons, then score (highest to lowest)
 		return (
@@ -400,8 +400,8 @@ sub predict
 
 		sub by_reject_score
 		{
-			my $a_reject_order = scalar Breseq::GenomeDiff::number_reject_reasons($a);
-			my $b_reject_order = scalar Breseq::GenomeDiff::number_reject_reasons($b);
+			my $a_reject_order = scalar GenomeDiff::number_reject_reasons($a);
+			my $b_reject_order = scalar GenomeDiff::number_reject_reasons($b);
 			## sort by seq_id, position, fewer reject reasons, then score (highest to lowest)
 			return (($a_reject_order <=> $b_reject_order) || -($a->{score} <=> $b->{score}));
 		}
@@ -1000,7 +1000,7 @@ sub predict
 		if ( (!defined $coverage_cutoff_1 || ($item->{total_reads} < $coverage_cutoff_1) ) 
 		  && (!defined $coverage_cutoff_2 || ($item->{total_reads} < $coverage_cutoff_2) ) )
 		{
-			Breseq::GenomeDiff::add_reject_reason($item, "COV");
+			GenomeDiff::add_reject_reason($item, "COV");
 		}
 	}
 	

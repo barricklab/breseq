@@ -40,7 +40,7 @@ our @EXPORT = qw();
 
 use Breseq::AlignmentOutput;
 use Breseq::CoverageOutput;
-use Breseq::GenomeDiff;
+use GenomeDiff;
 
 ## these style definitions are included between the
 ## HEAD tags of every generated page
@@ -872,7 +872,7 @@ sub html_read_alignment_table_string
 		
 		if ($show_reject_reason) 
 		{
-			foreach my $reject (Breseq::GenomeDiff::get_reject_reasons($c))
+			foreach my $reject (GenomeDiff::get_reject_reasons($c))
 			{
 				$output_str.= Tr({-class=>'reject_table_row'}, td({-colspan => $total_cols}, "Rejected: " . decode_reject_reason($reject)));
 			}
@@ -1013,7 +1013,7 @@ sub html_missing_coverage_table_string
 		
 		if ($show_reject_reason)
 		{
-			foreach my $reject (Breseq::GenomeDiff::get_reject_reasons($c))
+			foreach my $reject (GenomeDiff::get_reject_reasons($c))
 			{
 				$output_str.= Tr({-class=>'reject_table_row'}, td({-colspan => $total_cols}, "Rejected: " . decode_reject_reason($reject)));
 			}
@@ -1114,7 +1114,7 @@ sub html_new_junction_table_string
 		
 		if ($show_reject_reason)
 		{
-			foreach my $reject (Breseq::GenomeDiff::get_reject_reasons($c))
+			foreach my $reject (GenomeDiff::get_reject_reasons($c))
 			{
 				$output_str.= Tr({-class=>'reject_table_row'}, td({-colspan => $total_cols}, "Rejected: " . decode_reject_reason($reject)));
 			}
