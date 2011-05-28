@@ -56,6 +56,7 @@ Makefile$
 
 ^src/c/breseq/cbreseq/
 ^src/c/breseq/cbreseq$
+^src/c/breseq/cbam2aln
 
 ^package
 

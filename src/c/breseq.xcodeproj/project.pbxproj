@@ -40,6 +40,7 @@
 		7087748712BC1C31000F9B57 /* pileup.h in Headers */ = {isa = PBXBuildFile; fileRef = 7087747A12BC1C06000F9B57 /* pileup.h */; };
 		7087748812BC1C31000F9B57 /* pileup_base.h in Headers */ = {isa = PBXBuildFile; fileRef = 7087747B12BC1C06000F9B57 /* pileup_base.h */; };
 		708774D712BC21B9000F9B57 /* libboost_program_options-mt.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 421ACF7D1170E5CA00C2EB85 /* libboost_program_options-mt.a */; };
+		708D62441390B1D5007FF13C /* resolve_alignments.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 708D62431390B1D5007FF13C /* resolve_alignments.cpp */; };
 		708FA5FD13257A7D00864C40 /* libbreseq.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 708FA5DA132578BE00864C40 /* libbreseq.a */; };
 		709794A9138ECAD300E48727 /* bam2aln_cmdline.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 709794A8138ECAD300E48727 /* bam2aln_cmdline.cpp */; };
 		70A8364713477A180037F8DE /* alignment_output.h in Headers */ = {isa = PBXBuildFile; fileRef = 70A8364613477A180037F8DE /* alignment_output.h */; };
@@ -127,6 +128,8 @@
 		7087747912BC1C06000F9B57 /* identify_mutations.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; lineEnding = 0; name = identify_mutations.h; path = breseq/breseq/identify_mutations.h; sourceTree = SOURCE_ROOT; xcLanguageSpecificationIdentifier = xcode.lang.objcpp; };
 		7087747A12BC1C06000F9B57 /* pileup.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; lineEnding = 0; name = pileup.h; path = breseq/breseq/pileup.h; sourceTree = SOURCE_ROOT; xcLanguageSpecificationIdentifier = xcode.lang.objcpp; };
 		7087747B12BC1C06000F9B57 /* pileup_base.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; lineEnding = 0; name = pileup_base.h; path = breseq/breseq/pileup_base.h; sourceTree = SOURCE_ROOT; xcLanguageSpecificationIdentifier = xcode.lang.objcpp; };
+		708D62411390B1C6007FF13C /* resolve_alignments.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = resolve_alignments.h; sourceTree = "<group>"; };
+		708D62431390B1D5007FF13C /* resolve_alignments.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = resolve_alignments.cpp; path = breseq/resolve_alignments.cpp; sourceTree = SOURCE_ROOT; };
 		708FA5D6132578BE00864C40 /* cbreseq */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = cbreseq; sourceTree = BUILT_PRODUCTS_DIR; };
 		708FA5DA132578BE00864C40 /* libbreseq.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; includeInIndex = 0; path = libbreseq.a; sourceTree = BUILT_PRODUCTS_DIR; };
 		709794A8138ECAD300E48727 /* bam2aln_cmdline.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = bam2aln_cmdline.cpp; path = breseq/bam2aln_cmdline.cpp; sourceTree = SOURCE_ROOT; };
@@ -228,6 +231,7 @@
 				7087728B12BC169C000F9B57 /* identify_mutations.cpp */,
 				7087728D12BC169C000F9B57 /* pileup.cpp */,
 				7087728C12BC169C000F9B57 /* pileup_base.cpp */,
+				708D62431390B1D5007FF13C /* resolve_alignments.cpp */,
 				70F9FB85130C592700D6E11D /* tabulate_coverage.cpp */,
 			);
 			name = breseq;
@@ -249,6 +253,7 @@
 				7087747912BC1C06000F9B57 /* identify_mutations.h */,
 				7087747A12BC1C06000F9B57 /* pileup.h */,
 				7087747B12BC1C06000F9B57 /* pileup_base.h */,
+				708D62411390B1C6007FF13C /* resolve_alignments.h */,
 				70F9FB89130C828000D6E11D /* tabulate_coverage.h */,
 			);
 			name = breseq;
@@ -412,6 +417,7 @@
 				70F9FB86130C592700D6E11D /* tabulate_coverage.cpp in Sources */,
 				707F211613478B7700ED2F3E /* candidate_junctions.cpp in Sources */,
 				70B69DF41369D8B20001B750 /* calculate_trims.cpp in Sources */,
+				708D62441390B1D5007FF13C /* resolve_alignments.cpp in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
