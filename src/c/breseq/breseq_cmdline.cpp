@@ -155,7 +155,6 @@ int do_convert_genbank(int argc, char* argv[]) {
  
  */
 int do_calculate_trims(int argc, char* argv[]) {
-	using namespace std;
 	namespace po = boost::program_options;
 	
 	// setup and parse configuration options:
@@ -198,7 +197,6 @@ int do_calculate_trims(int argc, char* argv[]) {
  
  */
 int do_candidate_junctions(int argc, char* argv[]) {
-	using namespace std;
 	namespace po = boost::program_options;
 	
 	// setup and parse configuration options:
@@ -245,6 +243,55 @@ int do_candidate_junctions(int argc, char* argv[]) {
 	
 	return 0;
 }
+
+/*!  Resolve alignments
+ 
+ Compare matches to candidate junctions and matches to reference sequence
+ to determine what junctions have support. Also splits mosaic matches.
+ 
+ */
+int do_resolve_alignments(int argc, char* argv[]) {
+	
+	// setup and parse configuration options:
+	po::options_description cmdline_options("Allowed options");
+	cmdline_options.add_options()
+	("help,h", "produce this help message")
+	("reference-fasta,f", po::value<string>(), "FASTA file of reference sequences")
+  ("reference-sam", po::value<string>(), "SAM file of read alignments to reference sequences")
+  ("junction-fasta,j", po::value<string>(), "FASTA file of candidate junction sequences")
+  ("junction-sam", po::value<string>(), "SAM file of read alignments to candidate junction sequences")
+  ("features,g", po::value<string>(), "feature table file for reference sequences")
+	("output,o", po::value<string>(), "output directory")
+  ("max-read-length,m", po::value<uint32_t>(), "number of flanking bases in candidate junctions")
+	("read-file,r", po::value<std::vector<std::string> >(), "names of readfiles (no extension)")
+  ;
+  
+	po::variables_map options;
+	po::store(po::parse_command_line(argc, argv, cmdline_options), options);
+	po::notify(options);
+	
+	// make sure that the config options are good:
+	if(options.count("help")
+		 || !options.count("fasta")
+		 || !options.count("output")
+		 ) {
+		cout << "Usage: breseq RESOLVE_ALIGNMENTS --fasta <reference.fasta> --features <features.tab> --max-read-length <int>  --error_dir <path> --genome_diff <path> --output <path> --readfiles <filename> --coverage_dir <dirname> [--minimum-quality-score 3]" << endl;
+		cout << cmdline_options << endl;
+		return -1;
+	}                       
+  
+	// attempt to calculate error calibrations:
+	try {
+    
+  } catch(...) {
+		// failed; 
+    
+		return -1;
+	}
+	
+	return 0;
+}
+
 
 
 /*! Error Count

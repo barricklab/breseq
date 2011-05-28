@@ -35,6 +35,7 @@ libbreseq_la_SOURCES = \
 	identify_mutations.cpp \
 	pileup_base.cpp \
 	pileup.cpp \
+	resolve_alignments.cpp \
 	tabulate_coverage.cpp \
 	breseq/alignment.h \
 	breseq/alignment_output.h \
@@ -48,6 +49,7 @@ libbreseq_la_SOURCES = \
 	breseq/identify_mutations.h \
 	breseq/pileup_base.h \
 	breseq/pileup.h \
+	breseq/resolve_alignments.h \
 	breseq/tabulate_coverage.h 
 libbreseq_la_LIBADD = $(top_srcdir)/$(LIBBAM)/libbam.la
 
