@@ -17,278 +17,319 @@
 
 #include "breseq/fastq.h"
 
-namespace breseq {
+using namespace std;
 
-  const uint8_t k_SANGER_quality_score_offset = 33;
-  const uint8_t k_SOLEXA_quality_score_offset = 64;
-  const uint8_t k_ILLUMINA_13 = 64;
-  const uint8_t k_ILLUMINA_15 = 64;
+namespace breseq {
+  
+  /*
+   analyze_fastq
+   
+   convert if necessary
+   print statistics about the fastq file
+
+   */
+  void analyze_fastq(const string &file_name, const string &convert_file_name) {
+    
+    // Set up maps between formats
+    map<string,uint8_t> format_to_chr_offset;
+    format_to_chr_offset["SANGER"] = 33;
+    format_to_chr_offset["SOLEXA"] = 64;
+    format_to_chr_offset["ILLUMINA_1.3+"] = 64;
+    
+    // Summary information that will be printed at the end
+    uint32_t max_read_length = 0;
+    uint8_t min_quality_score = 255;
+    uint8_t max_quality_score = 0;
+    uint32_t num_bases = 0; 
+    uint32_t num_reads = 0;
+    
+    // Process the input file, one sequence at a time
+    cFastqFile input_fastq_file(file_name.c_str(), fstream::in);
+    assert(input_fastq_file.is_open());
+
+    cFastqSequence on_sequence;
+    while (input_fastq_file.read_sequence(on_sequence)) {
+      
+      //increment read number
+      num_reads++;
+      
+      //check sequence length
+      if( on_sequence.m_sequence.size() > max_read_length ) max_read_length = on_sequence.m_sequence.size();
+
+      //add current sequence length to number of bases
+      num_bases += on_sequence.m_sequence.size();
+      
+      //iterate through sequence grabbing the associated scores
+      for (uint32_t i=0; i<on_sequence.m_qualities.size(); i++) {
+        int this_score(uint8_t(on_sequence.m_qualities[i]));
+        if( this_score > max_quality_score ) max_quality_score = this_score;
+        if( this_score < min_quality_score ) min_quality_score = this_score;
+      }
+    }
+    input_fastq_file.close();
+    
+    // Default is SANGER
+    string quality_format ="SANGER";
+    
+    // Typical range: (-5, 40) + 64
+    if (min_quality_score >= format_to_chr_offset["SOLEXA"] - 5) {
+      quality_format = "SOLEXA";
+    } 
+    // Typical range:  (0, 40) + 64
+    if (min_quality_score >= format_to_chr_offset["ILLUMINA_1.3+"]) {
+      quality_format = "ILLUMINA_1.3+";
+    } 
+    
+    //cerr << "min_quality_score "     << (int)min_quality_score  << endl;
+    //cerr << "max_quality_score "     << (int)max_quality_score  << endl;
+
+    string converted_fastq_name(file_name);
+    
+    //std::cout << m_quality_format << std::endl;
+    if(( quality_format != "SANGER" ) || (input_fastq_file.needs_conversion()) )  {
+      cerr << "  Converting/repairing FASTQ file..." << endl;
+      cerr << "  Original format: " << quality_format << " New format: SANGER"<< endl;
+
+      cFastqQualityConverter fqc(quality_format, "SANGER");
+      
+      // re-open input for another pass
+      input_fastq_file.open(file_name.c_str(), fstream::in);
+      
+      //open output converted file
+      cFastqFile output_fastq_file(convert_file_name.c_str(), fstream::out);
+
+      // recalculate min and max quality scores from table
+      cFastqSequence min_max_sequence;
+      min_max_sequence.m_qualities.append(1,min_quality_score);
+      min_max_sequence.m_qualities.append(1,max_quality_score);
+
+      fqc.convert_sequence(min_max_sequence);
+      min_quality_score = (uint8_t)min_max_sequence.m_qualities[0] - format_to_chr_offset["SANGER"];
+      max_quality_score = (uint8_t)min_max_sequence.m_qualities[1] - format_to_chr_offset["SANGER"];
+
+      while (input_fastq_file.read_sequence(on_sequence)) {
+        
+        // truncate second name name
+        on_sequence.m_name_plus = "+";
+        
+        // fastq quality convert
+        fqc.convert_sequence(on_sequence);
+        
+        // convert base qualities
+        output_fastq_file.write_sequence(on_sequence);
+        
+      }
+      input_fastq_file.close();
+      output_fastq_file.close();
+      
+    }
+    
+    // Output information to stdout
+    cout << "max_read_length "       << max_read_length         << endl;
+    cout << "num_reads "             << num_reads               << endl;
+    cout << "min_quality_score "     << (int)min_quality_score  << endl;
+    cout << "max_quality_score "     << (int)max_quality_score  << endl;
+    cout << "num_bases "             << num_bases               << endl;
+    cout << "original_qual_format "  << quality_format          << endl;
+    cout << "qual_format "           << "SANGER"                << endl;
+    cout << "converted_fastq_name "  << converted_fastq_name    << endl;
+  }
+
+  // constructor
+  cFastqQualityConverter::cFastqQualityConverter(const string &from_quality_type, const string &to_quality_type)
+  {
+    // Set up maps between formats
+    map<string,uint8_t> format_to_chr_offset;
+    format_to_chr_offset["SANGER"] = 33;
+    format_to_chr_offset["SOLEXA"] = 64;
+    format_to_chr_offset["ILLUMINA_1.3+"] = 64;
+    
+    map<string,string> format_to_quality_type;
+    format_to_quality_type["SANGER"] = "PHRED";
+    format_to_quality_type["SOLEXA"] = "SOLEXA";
+    format_to_quality_type["ILLUMINA_1.3+"] = "PHRED";
+    
+    this->resize(255);
+    for (uint16_t i = 0; i<=255; i++) {
+      (*this)[i] = 0;
+    }
+    
+    for (uint16_t from_chr = 0; from_chr<=255; from_chr++) {
+
+      int16_t from_quality = from_chr - format_to_chr_offset[from_quality_type];
+      
+      // Calculate the probability of error
+      double probability_of_error;
+      
+      if (format_to_quality_type[from_quality_type] == "SOLEXA") {
+        probability_of_error = 1 / (1+pow(10,(double)from_quality/10));
+      } else if (format_to_quality_type[from_quality_type] == "PHRED") {
+        probability_of_error = pow(10,-(double)from_quality/10);
+      } else {
+        cerr << "Unknown base quality score type: " << from_quality_type << endl;
+        exit(-1);
+      }
+      
+      //Convert back to quality score
+      int to_quality;
+            
+      if (format_to_quality_type[to_quality_type] == "SOLEXA") {
+        to_quality = round(-10 * log((1-probability_of_error)/probability_of_error) / log(10));
+      } else if (format_to_quality_type[to_quality_type] == "PHRED") {
+        double t_quality = round(-10 * log(probability_of_error) / log(10));
+
+        to_quality = round(t_quality);
+      } else {
+        cerr << "Unknown base quality score type: " << to_quality_type << endl;
+        exit(-1);
+      }
+      
+      int16_t to_chr = from_quality + format_to_chr_offset[to_quality_type];
+
+      
+      // May be out of range
+      if ((to_chr < 0) || (to_chr > 255)) continue;
+
+      (*this)[(uint8_t)from_chr] = (uint8_t)to_chr;
+      
+      // Debug
+      cerr << from_chr << " => " << to_chr << endl;
+    }     
+    
+  }
+
+  void cFastqQualityConverter::convert_sequence(cFastqSequence &seq) {
+    
+    for(uint32_t i=0; i < seq.m_qualities.size(); i++)
+    {
+      seq.m_qualities.replace(i,1,1,(*this)[seq.m_qualities[i]]);
+    }
+  }
   
   //constructor
-  cFastqFile::cFastqFile(const std::string &file_name, std::ios_base::openmode mode, const std::string &temp_path_name) :
-    m_max_read_length(0),
-    m_min_quality_score(INT_MAX),
-    m_max_quality_score(0),
-    m_total_base(0), 
-    m_total_reads(0),
-    m_temp_filename(temp_path_name + "/sanger_temp.fastq"),
-    m_quality_format("SANGER"),
-    m_file(file_name.c_str(), mode),
-    m_file_convert(file_name.c_str(), mode),
-    m_temp_file((m_temp_filename).c_str(), std::fstream::out),
-    m_something2sanger(0) { }
-  
-  //check to make sure certain conditions about the data are fulfilled
-  void cFastqFile::error_in_file_format(int count, int num_reads, int position) {
-    int n;
+  cFastqFile::cFastqFile(const std::string &file_name, std::ios_base::openmode mode) :
+    fstream(file_name.c_str(), mode), m_current_line(0), m_file_name(file_name), m_needs_conversion(false)
+  { }
+
+  // read one sequence record from the file
+  bool cFastqFile::read_sequence(cFastqSequence &sequence) {
     
-    if( count != 4 && count != 5)
-      fprintf(stderr, "Your file is not formatted correctly in line: %d ", (4*num_reads)+count+1);
+    // We're done, no error
+    if (this->eof()) return false;
     
-    switch (count) {
-      case 0:
-        fprintf(stderr, "\nThis line should be the name of the read and start with '@'. ");
-        fprintf(stderr, "\nEither a line is missing or there is no '@' in the read name.\n");
-        break;
-      case 1:
-        fprintf(stderr, "at position: %d", position+1);
-        fprintf(stderr, "\nThis should be a type of base ('A', 'T', 'G', 'C', or 'N')... it is not. ");
-        fprintf(stderr, "\nEither a line is missing or there is an unknown nucleotide type on this line.\n");
-        break;
-      case 2:
-        fprintf(stderr, "\nThis line should begin with a '+'. Either a line is missing or there is an unknown symbol here.\n");
-        break;
-      case 3:
-        fprintf(stderr, "\nThe sequence and score lines are not the same length.\n");
-        break;
-      case 4:
-        fprintf(stderr, "\nIt seems you have an extra \\r at the end of every line in your fastq file implying a dos formatted text file.  Here is a line that may fix the file:\n\n");
-        fprintf(stderr, "awk \'{ sub(\"\\r$\", \"\"); print }\' winfile.fastq > unixfile.fastq\n");
-        break;
-      case 5:
-        fprintf(stderr, "\nThere was an error while reformatting to Sanger.\n\n");
-        break;
-    }
-    fprintf(stderr, "\nNow I'm quitting.\n\n");
-    exit(-1);
-  }
-  
-  //make sure the file opened... if not it will fail
-  void cFastqFile::check_if_file_opened() {
-    assert(m_file.is_open());
-    assert(m_temp_file.is_open());
-  }
-  
-  void cFastqFile::read_sequence(cFastqSequence &sequence) {
+    uint32_t count = 0;
+    string line;
     
-    std::string line, longest_read("");
-    uint8_t max_score(0), min_score(255);
-    uint32_t num_reads(0), num_bases(0);
-    
-    if ( m_file.is_open() ) {
-      while( getline( m_file, line )) {
-        int count(0);
-        
-        //parse the read to get the 4 read parameters
-        while( count < 4 ) {
-          switch (count) {
-            case 0:
-              sequence.m_name = line;
-              getline(m_file, line);
-              count++;
-            case 1:
-              sequence.m_sequence = line;
-              getline(m_file, line);
-              count++;
-            case 2:
-              sequence.m_blank = line;
-              getline(m_file, line);
-              count++;
-            case 3:
-              sequence.m_qualities = line;
-              count++;
-              break;
-            default:
-              error_in_file_format(count, num_reads, 0);
-          }
+    // get the next four lines
+    while (count < 4) {
+      std::getline(*this, line);
+      m_current_line++;
+      
+      // Didn't get a first line, then we ended correctly
+      if (this->eof()) {
+        if (count == 0) {
+          return false;
+        } else {
+          fprintf(stderr, "Incomplete FASTQ sequence record found at end of file.\nFile %s\nLine: %d\n", m_file_name.c_str(), m_current_line-1);
+          exit(-1);
         }
-        
-        //Error Checking
-        {
-          
-          //Need to see if there are extra whitespace characters in the sequence line
-          //It's too difficult to put it in the name line
-          for (uint16_t i=0; i<sequence.m_sequence.size(); i++) {
-            
-            //I did this cast to get rid of the warning for comparing a uint and a signed int
-            if( isspace(sequence.m_sequence[i]) && (uint16_t) sequence.m_sequence.size() == i+1) {
-              error_in_file_format(count, num_reads, i);
-            }
+      }
+      
+      switch (count) {
+        case 0:
+          sequence.m_name = line;
+          if( sequence.m_name[0] != '@' ) {
+            fprintf(stderr, "FASTQ sequence record does not begin with @NAME line.\nFile %s\nLine: %d\n", m_file_name.c_str(), m_current_line);
+            exit(-1);
           }
+          break;
+        case 1:
+          sequence.m_sequence = line;
           
-          if( sequence.m_name[0] != '@' ) error_in_file_format(count-4, num_reads, 0);
+          // check for extraneous DOS ending
+          if( sequence.m_sequence[sequence.m_sequence.size()-1] == '\r') {
+            sequence.m_sequence.resize(sequence.m_sequence.size()-1);
+            m_needs_conversion = true;
+          }
           
           for (uint32_t i=0; i<sequence.m_sequence.size(); i++) {
+            
+            // convert to uppercase and require
+            // reformatting if this was necessary
+            switch (sequence.m_sequence[i]) {
+              case 'a':
+                sequence.m_sequence.replace(i,1,1,'A');
+                m_needs_conversion = true;
+                break;
+                
+              case 't':
+                sequence.m_sequence.replace(i,1,1,'T');
+                m_needs_conversion = true;
+                break;
+                
+              case 'c':
+                sequence.m_sequence.replace(i,1,1,'C');
+                m_needs_conversion = true;
+                break;
+                
+              case 'g':
+                sequence.m_sequence.replace(i,1,1,'G');
+                m_needs_conversion = true;
+                break;
+
+              case 'n':
+                sequence.m_sequence.replace(i,1,1,'N');
+                m_needs_conversion = true;
+                break;
+            }
+
+            
             if(sequence.m_sequence[i] != 'A' && 
                sequence.m_sequence[i] != 'T' && 
                sequence.m_sequence[i] != 'G' && 
                sequence.m_sequence[i] != 'C' && 
                sequence.m_sequence[i] != 'N') {
-               error_in_file_format(count-3, num_reads, i);
+              
+              fprintf(stderr, "FASTQ sequence character not allowed %c.\nSequence: %s\nFile %s\nLine: %d\n", 
+                      sequence.m_sequence[i], sequence.m_sequence.c_str(), m_file_name.c_str(), m_current_line);
+              exit(-1);
             }
           }
-        
-          //Only need to see if the first character is a +
-          if( sequence.m_blank[0] != '+' ) error_in_file_format(count-2, num_reads, 0);
           
-          if( sequence.m_sequence.size() != sequence.m_qualities.size() ) error_in_file_format(count-1, num_reads, 0);
-        }
-        
-        //increment read number
-        num_reads++;
-        
-        //check sequence length
-        if( sequence.m_sequence.size() > longest_read.size() ) longest_read = line;
-        
-        //add current sequence length to number of bases
-        num_bases += sequence.m_sequence.size();
-        
-        //iterate through sequence grabbing the associated scores
-        //if the two are not the same length it should be caught in error checking
-        for (uint32_t i=0; i<sequence.m_qualities.size(); i++) {
-          int this_score(uint8_t(sequence.m_qualities[i]));
-          if( this_score > max_score ) max_score = this_score;
-          if( this_score < min_score ) min_score = this_score;
-        }
-        
-      }  
-
-    }
-    //final assignments
-    m_total_reads = num_reads;
-    m_total_base = num_bases;
-    m_max_read_length = longest_read.size();
-    m_min_quality_score = min_score-k_SANGER_quality_score_offset;
-    m_max_quality_score = max_score-k_SANGER_quality_score_offset;
-  }
-
-  void cFastqFile::write_sequence(cFastqSequence &sequence) {
-    // don't need to implement in first stage
-  }
-  
-  void cFastqFile::write_summary_file(cFastqSequence &sequence) {
-
-    // Typical range: (-5, 40) + 64
-    if (m_min_quality_score >= 64 - k_SANGER_quality_score_offset - 5) {
-      m_quality_format = "SOLEXA";
-    } 
-    // Typical range:  (0, 40) + 64
-    if (m_min_quality_score >= 64 - k_SANGER_quality_score_offset + 0) {
-      m_quality_format = "Illumina 1.3+";
-    } 
-    // Typical range:  (3, 40) + 64
-    if (m_min_quality_score >= 64 - k_SANGER_quality_score_offset + 3) {
-      m_quality_format = "Illumina 1.5+";
-    }
-        
-    // Should have lines like: max_read_length 36
-    //                         num_reads 1020200
-    //                         min_quality_score 4
-    //                         max_quality_score 40
-    //                         num_bases 62646176
-    
-    //std::cout << m_quality_format << std::endl;
-    if( m_quality_format == "SANGER" ) {
-      std::cout << "max_read_length "   << m_max_read_length    << std::endl;
-      std::cout << "num_reads "         << m_total_reads        << std::endl;
-      std::cout << "min_quality_score " << m_min_quality_score  << std::endl;
-      std::cout << "max_quality_score " << m_max_quality_score  << std::endl;
-      std::cout << "num_bases "         << m_total_base         << std::endl;
-      std::cout << "qual_format "       << m_quality_format     << std::endl;
-    }
-    else {
-      m_something2sanger.resize(256);
-      if( m_quality_format == "SOLEXA" ) {
-        for (int qs = -5; qs<62; qs++) {
-          float p = pow(10, (float) -qs/10) / (1+pow(10, (float) -qs/10));
-          int pq = -10 * log(p) / log(10);
-          m_something2sanger[qs+k_SOLEXA_quality_score_offset] = pq+k_SANGER_quality_score_offset;
-        }
-      }
-      if( m_quality_format == "Illumina 1.3+" ) {
-        for(int qs = 0; qs<40; qs++) {
-          m_something2sanger[qs+k_ILLUMINA_13] = qs+k_SANGER_quality_score_offset;
-        }
-      }
-      if( m_quality_format == "Illumina 1.5+" ) {
-        for(int qs = 0; qs<40; qs++) {
-          m_something2sanger[qs+k_ILLUMINA_15] = qs+k_SANGER_quality_score_offset;
-        }
-      }
-      
-      convert_to_sanger(sequence);
-      
-      std::cout << "max_read_length "   << m_max_read_length    << std::endl;
-      std::cout << "num_reads "         << m_total_reads        << std::endl;
-      std::cout << "min_quality_score " << m_min_quality_score  << std::endl;
-      std::cout << "max_quality_score " << m_max_quality_score  << std::endl;
-      std::cout << "num_bases "         << m_total_base         << std::endl;
-      std::cout << "qual_format "       << m_quality_format     << std::endl;
-    }
-
-  }
-  
-  void cFastqFile::convert_to_sanger(cFastqSequence &sequence) {
-    
-    std::string line;
-    
-    //m_file_convert is identical to m_file above
-    //it just needed its own stream because the other one gets used up
-    if ( m_file_convert.is_open() && m_temp_file.is_open() ) {
-      while( getline( m_file_convert, line )) {
-        int count(0);
-        
-        //parse the reads to convert the qualities to sanger format
-        //@agm I also edit line three of each read to be only a '+'
-        //     The values output should be scaled properly
-        while( count < 4 ) {
-          switch (count) {
-            case 0:
-              sequence.m_name = line;
-              getline(m_file_convert, line);
-              count++;
-            case 1:
-              sequence.m_sequence = line;
-              getline(m_file_convert, line);
-              count++;
-            case 2:
-              sequence.m_blank = line;
-              getline(m_file_convert, line);
-              count++;
-            case 3:
-              sequence.m_qualities = line;
-              count++;
-              break;
-            default:
-              error_in_file_format(count, 5, 0);
+          break;
+        case 2:
+          sequence.m_name_plus = line;
+          
+          //Only need to see if the first character is a +
+          if( sequence.m_name_plus[0] != '+' ) {
+            fprintf(stderr, "FASTQ sequence record does not contain +NAME line.\nFile %s\nLine: %d\n", m_file_name.c_str(), m_current_line);
+            exit(-1);
           }
-        }
-      
-        //convert the quality scores to sanger format
-        for (uint32_t i=0; i<sequence.m_qualities.size(); i++) {
-          sequence.m_qualities[i] = (char) m_something2sanger[sequence.m_qualities[i]];
-        }
-        
-        //print the edited reads to a temp file
-        m_temp_file << sequence.m_name << std::endl;
-        m_temp_file << sequence.m_sequence << std::endl;
-        m_temp_file << "+" << std::endl;
-        m_temp_file << sequence.m_qualities << std::endl;
+          // Could optionally check to see if the name after the + was either absent or identical to the earlier name
+
+          break;
+        case 3:
+          sequence.m_qualities = line;
+          
+          if( sequence.m_sequence.size() != sequence.m_qualities.size() ) {
+            fprintf(stderr, "FASTQ sequence record has different SEQUENCE and QUALITY lengths.\nFile %s\nLine: %d\n", m_file_name.c_str(), m_current_line);
+            exit(-1);
+          }
+
+          break;
       }
-    }
-    //adjust max and min quality scores according to allowed range
-    m_max_quality_score = m_something2sanger[m_max_quality_score];
-    m_min_quality_score = m_something2sanger[m_min_quality_score];
+      
+      count++;
+  }
+    
+    return true;
+  }
+
+  void cFastqFile::write_sequence(const cFastqSequence &sequence) {
+    (*this) << sequence.m_name << std::endl;
+    (*this) << sequence.m_sequence << std::endl;
+    (*this) << sequence.m_name_plus << std::endl;
+    (*this) << sequence.m_qualities << std::endl;
   }
   
 } // breseq namespace

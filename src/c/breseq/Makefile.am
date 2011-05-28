@@ -25,6 +25,7 @@ LIBS = $(BOOST_PROGRAM_OPTIONS_LIBS)
 noinst_LTLIBRARIES = libbreseq.la
 libbreseq_la_SOURCES = \
 	alignment.cpp \
+	alignment_output.cpp \
 	annotated_sequence.cpp \
 	calculate_trims.cpp \
 	candidate_junctions.cpp \
@@ -36,6 +37,7 @@ libbreseq_la_SOURCES = \
 	pileup.cpp \
 	tabulate_coverage.cpp \
 	breseq/alignment.h \
+	breseq/alignment_output.h \
 	breseq/annotated_sequence.h \
 	breseq/calculate_trims.h \
 	breseq/candidate_junctions.h \
@@ -49,6 +51,7 @@ libbreseq_la_SOURCES = \
 	breseq/tabulate_coverage.h 
 libbreseq_la_LIBADD = $(top_srcdir)/$(LIBBAM)/libbam.la
 
-bin_PROGRAMS = cbreseq
+bin_PROGRAMS = cbreseq cbam2aln
 
 cbreseq_SOURCES = breseq_cmdline.cpp
+cbam2aln_SOURCES = bam2aln_cmdline.cpp

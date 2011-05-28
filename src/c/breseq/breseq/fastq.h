@@ -21,68 +21,63 @@ LICENSE AND COPYRIGHT
 
 #include "breseq/common.h"
 
+using namespace std;
+
 namespace breseq {
 	
 	/*! Interface for loading and manipulating files in FASTQ format.
    */
   
-  extern const uint8_t k_SANGER_quality_score_offset;
+  /*! analyze_fastq
+   
+      Main function for this analysis. Prints summary information
+      about fastq and converts file to SANGER format if necessary.
+   */  
+  void analyze_fastq(const string &file_name, const string &convert_file_name);
   
   /*! Sequence class.
    */
    
   struct cFastqSequence {
     public:
-      std::string m_name;
-      std::string m_sequence;
-      std::string m_blank;
-      std::string m_qualities;
-   };   
+      string m_name;      //@NAME
+      string m_sequence;  //sequence
+      string m_name_plus; //+NAME
+      string m_qualities; //quality score characters
+   }; 
+  
+  
+  /*! Quality score conversion class.
+   */
+  
+  struct cFastqQualityConverter : public vector<uint8_t> {
+  public:
+    cFastqQualityConverter(const string &from_quality, const string &to_quality);
+    ~cFastqQualityConverter() {};
+    
+    void convert_sequence(cFastqSequence &seq);
+  }; 
    
 
 	/*! File class.
 	 */ 
   
-  class cFastqFile {
-    protected:
+  class cFastqFile : public fstream {
+    
+  protected:
+    uint32_t  m_current_line;
+    string    m_file_name;
+    bool      m_needs_conversion;
+    
+  public:
+  
+    cFastqFile(const string &file_name, ios_base::openmode mode); 
+    ~cFastqFile() {};
       
-      //! length of longest read
-      int32_t    m_max_read_length;
-
-      //highest and lowest scores
-      int32_t    m_min_quality_score;    
-      int32_t    m_max_quality_score;
-    
-      //! total number of bases in file
-      int64_t    m_total_base;
-    
-      //! total number of reads in file
-      uint64_t   m_total_reads;
-    
-      //! temporary file name for constructor
-      std::string   m_temp_filename;
-      std::string   m_quality_format;
-    
-      //! active fstream that was opened when constructed
-      std::fstream     m_file;
-      std::fstream     m_file_convert;
-      std::fstream     m_temp_file;
-    
-      std::vector<int>   m_something2sanger;
-    
-    public:
-    
-    cFastqFile(const std::string &file_name, std::ios_base::openmode mode, const std::string &temp_path_name); 
-    
-      void error_in_file_format(int count, int num_reads, int position);
-      void check_if_file_opened();
-    
-      void read_sequence(cFastqSequence &sequence);
-      void write_sequence(cFastqSequence &sequence);
-    
-      void write_summary_file(cFastqSequence &sequence);
-    
-      void convert_to_sanger(cFastqSequence &sequence);
+    bool read_sequence(cFastqSequence &sequence);
+    void write_sequence(const cFastqSequence &sequence);
+  
+    bool needs_conversion() { return m_needs_conversion; }
   };
 	
 } // breseq namespace
