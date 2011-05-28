@@ -324,12 +324,12 @@
 				<key>column</key>
 				<integer>0</integer>
 				<key>line</key>
-				<integer>39</integer>
+				<integer>323</integer>
 			</dict>
 			<key>firstVisibleColumn</key>
 			<integer>0</integer>
 			<key>firstVisibleLine</key>
-			<integer>25</integer>
+			<integer>287</integer>
 		</dict>
 		<key>Breseq/lib/Breseq/File/Path.pm</key>
 		<dict>
@@ -599,6 +599,6 @@
 	<key>showFileHierarchyDrawer</key>
 	<true/>
 	<key>windowFrame</key>
-	<string>{{-253, 0}, {1790, 878}}</string>
+	<string>{{381, 71}, {859, 748}}</string>
 </dict>
 </plist>

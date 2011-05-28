@@ -134,34 +134,8 @@ $settings->create_path('data_path');
 if ($settings->do_step('sequence_conversion_done_file_name', "Read and reference sequence file input"))
 {
 	my $s;
-	
-	## realistically, we first need to do some checks on the data
-	## 1) Are they using the correct quality scores. If not, tell them a command to run
-	## 2) Does their fastq have the entire sequence on one line?  If not, tell them a command to run
-	
-	## quality trimming the reads
-	if ($settings->{trim_reads})
-	{
-	 	print STDERR "  Trimming fastq reads for quality\n";	
-	 	foreach my $read_file ($settings->read_files)
-		{
-			print STDERR "    READ FILE::$read_file\n";
-			my $fastq_file_name = $settings->read_file_to_original_fastq_file_name($read_file);	
-			my $trimmed_fastq_file_name = $settings->read_file_to_fastq_file_name($read_file);
-			
-			if ($settings->{trim_read_ends})	
-			{
-				Breseq::Fastq::fastq_to_trimmed_fastq($fastq_file_name, $trimmed_fastq_file_name);
-			}
-			elsif ($settings->{trim_read_base_quality})	
-			{
-				Breseq::Fastq::base_quality_filter_fastq($fastq_file_name, $trimmed_fastq_file_name, $settings->{trim_read_base_quality});
-			}
-		}
-	}
-	
-	##we need to know the maximum read length in each file before constructing junctions
-	##and collect some information about the input read files at the same time
+		
+	##Check the FASTQ format and collect some information about the input read files at the same time
 	print STDERR "  Analyzing fastq read files...\n";
 	my $overall_max_read_length;
 	my $overall_max_qual = 0;
@@ -175,7 +149,8 @@ if ($settings->do_step('sequence_conversion_done_file_name', "Read and reference
 		my $num_reads = 0;
 		my $fastq_file_name = $settings->read_file_to_fastq_file_name($read_file);
 		my $cbreseq = $settings->ctool("cbreseq");
-		my $command = "$cbreseq ANALYZE_FASTQ --input=$fastq_file_name";
+		my $convert_file_name =  $settings->file_name('converted_fastq_file_name', {'#'=>$read_file});
+		my $command = "$cbreseq ANALYZE_FASTQ --input=$fastq_file_name --convert=$convert_file_name";
 		my $output = Breseq::Shared::capture_system($command);
 		#print "$output\n";
 		
@@ -192,17 +167,11 @@ if ($settings->do_step('sequence_conversion_done_file_name', "Read and reference
 		die if (!defined $s_rf->{num_reads});
 		die if (!defined $s_rf->{num_bases});
 		die if (!defined $s_rf->{qual_format});
+		die if (!defined $s_rf->{original_qual_format});
+		die if (!defined $s_rf->{converted_fastq_name});
 
-		## Check to be sure this file is in the correct format
-		if ($s_rf->{qual_format} ne 'SANGER') {
-			if (!$settings->{accept_any_quality_scores}) {
-				die "      Base quality scores appear to be $s_rf->{qual_format}.\n"
-				  . "      Convert to SANGER format and try again or use the\n"
-				  . "      option --force-quality-scores if they are SANGER.\n";
-			} else {
-				print STDERR "    Warning: Base quality scores appear to be $s_rf->{qual_format} rather than SANGER.\n";
-			}
-		}
+		## Save the converted file name
+		$settings->{read_file_to_converted_fastq_file}->{$read_file} = $s_rf->{converted_fastq_name};
 		
 		## Record statistics
 		$overall_max_read_length = $s_rf->{max_read_length} if ((!defined $overall_max_read_length) || ($s_rf->{max_read_length} > $overall_max_read_length));
@@ -671,9 +640,10 @@ if ($settings->do_step('error_counts_done_file_name', "Tabulating error counts")
 ## We are doing it with and without covariates, because polymorphism prediction still requires
 ## the old output file(s) for looking at quality score distribution.
 ##	} else {
+	if ($settings->{polymorphism_prediction}) { 
 		Breseq::ErrorCalibration::count($settings, $summary, $ref_seq_info,
 		'reference_fasta_file_name', 'reference_bam_file_name', 'unique_only_coverage_distribution_file_name', 'error_counts_file_name');
-##	}
+	}
 	
 	$settings->done_step('error_counts_done_file_name');
 }

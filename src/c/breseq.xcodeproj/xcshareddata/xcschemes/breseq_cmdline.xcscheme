@@ -81,6 +81,10 @@
          </CommandLineArgument>
          <CommandLineArgument
             argument = "ANALYZE_FASTQ -i /Users/austin/Desktop/breseq_working/DJ480wt.txt -p /Users/austin/Work/BarrickLab/temp"
+            isEnabled = "NO">
+         </CommandLineArgument>
+         <CommandLineArgument
+            argument = "ANALYZE_FASTQ -i /Users/jbarrick/tmp/chelsea/tmp.fastq -p /Users/jbarrick/tmp/chelsea"
             isEnabled = "YES">
          </CommandLineArgument>
       </CommandLineArguments>

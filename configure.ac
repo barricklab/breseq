@@ -62,7 +62,7 @@ AC_SEARCH_LIBS([deflateSetHeader], [z], [], [AC_MSG_ERROR(["libz >=1.2.1.2 is re
 AC_SEARCH_LIBS([acosf], [m], [], [AC_MSG_ERROR(["libm is required."])])
 
 BOOST_REQUIRE([1.42])
-BOOST_PROGRAM_OPTIONS([s])
+BOOST_PROGRAM_OPTIONS()
 
 AC_SUBST([LIBBCF], [extern/samtools-0.1.15/bcftools])
 AC_SUBST([LIBBAM], [extern/samtools-0.1.15])

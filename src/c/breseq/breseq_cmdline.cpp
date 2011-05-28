@@ -56,8 +56,8 @@ int do_analyze_fastq(int argc, char* argv[]) {
 	po::options_description cmdline_options("Allowed options");
 	cmdline_options.add_options()
 	("help,h", "produce this help message")
-	("input,i", po::value<string>(), "input FASTQ File")
-  ("path_name,p", po::value<string>(), "path to temp file")
+	("input,i", po::value<string>(), "input FASTQ file")
+  ("convert,c", po::value<string>(), "converted FASTQ file (created only if necessary)")
   //  ("output,o", po::value<string>(),"out to file") // outputs to STDOUT for now
   ;
   
@@ -68,21 +68,17 @@ int do_analyze_fastq(int argc, char* argv[]) {
 	// make sure that the config options are good:
 	if(options.count("help")
 		 || !options.count("input")
-     || !options.count("path_name")
+     || !options.count("convert")
 		 ) {
-		cout << "Usage: breseq ANALYZE_FASTQ --input input.fastq --path_name /path/to/temp" << endl;
+		cout << "Usage: breseq ANALYZE_FASTQ --input input.fastq --convert converted.fastq" << endl;
 		cout << cmdline_options << endl;
 		return -1;
 	}                       
   
 	try {
-    cFastqSequence sequence;
-    cFastqFile fastqparse(options["input"].as<std::string>(), std::fstream::in, options["path_name"].as<std::string>());
     
-    fastqparse.check_if_file_opened();
-    fastqparse.read_sequence(sequence);
-    fastqparse.write_summary_file(sequence);
-    
+    analyze_fastq(options["input"].as<std::string>(), options["convert"].as<std::string>());
+        
   } catch(...) {
 		// failed; 
 		return -1;
@@ -213,15 +209,15 @@ int do_candidate_junctions(int argc, char* argv[]) {
 	("output,o", po::value<string>(), "output directory")
   
   //These options are almost always default values
-  ("required-both-unique-length-per-side,1", po::value<uint32> >(), 
+  ("required-both-unique-length-per-side,1", po::value<uint32_t>(), 
    "Only count reads where both matches extend this many bases outside of the overlap.")
-  ("required-one-unique-length-per-side,2", po::value<uint32> >(), 
+  ("required-one-unique-length-per-side,2", po::value<uint32_t>(), 
    "Only count reads where at least one match extends this many bases outside of the overlap.")
-  ("maximum-inserted-junction-sequence-length,3", po::value<uint32> >(), 
+  ("maximum-inserted-junction-sequence-length,3", po::value<uint32_t>(), 
    "Maximum number of bases allowed in the overlapping part of a candidate junction.")
-  ("required-match-length,4", po::value<uint32> >(), 
+  ("required-match-length,4", po::value<uint32_t>(), 
    "At least this many bases in the read must match the reference genome for it to count.")
-  ("required-extra-pair-total-length,5", po::value<uint32> >(), 
+  ("required-extra-pair-total-length,5", po::value<uint32_t>(), 
    "Each match pair must have at least this many bases not overlapping for it to count.")
   ;
   
@@ -241,10 +237,6 @@ int do_candidate_junctions(int argc, char* argv[]) {
   
 	// attempt to calculate error calibrations:
 	try {
-		candidate_junctions cj(
-      options["fasta"].as<string>(),
-      options["output"].as<string>());
-    cj.identify_candidate_junctions();
     
   } catch(...) {
 		// failed; 
@@ -402,7 +394,7 @@ int do_identify_mutations(int argc, char* argv[]) {
  
  */
 
-int do_candidate_junctions(int argc, char* argv[]) {
+int do_candidate_junction(int argc, char* argv[]) {
     
 	// setup and parse configuration options:
 	po::options_description cmdline_options("Allowed options");
@@ -411,15 +403,6 @@ int do_candidate_junctions(int argc, char* argv[]) {
 	("fasta,f", po::value<string>(), "reference sequences in FASTA format")
   ("sam,s", po::value<string>(), "text SAM file of input alignments")
   ("output,o", po::value<string>(), "output FASTA file of candidate junctions")
-
-// additional options  
-//  $required_both_unique_length_per_side = $settings->{required_both_unique_length_per_side};
-//	$required_one_unique_length_per_side = $settings->{required_one_unique_length_per_side};
-//	$maximum_inserted_junction_sequence_length = $settings->{maximum_inserted_junction_sequence_length};
-// 	$required_match_length = $settings->{required_match_length};
-//	$required_extra_pair_total_length = $settings->{required_extra_pair_total_length};
-  
-//  ("output,o", po::value<string>(),"out to file") // outputs to STDOUT for now
   ;
 
   po::variables_map options;
@@ -440,11 +423,6 @@ int do_candidate_junctions(int argc, char* argv[]) {
   
 	// attempt to calculate error calibrations:
 	try {
-    
-    // plain function
-    candidate_junctions(options["fasta"].as<string>(),
-                        options["sam"].as<string>(),
-                        options["output"].as<string>() );
     
   } catch(...) {
 		// failed; 

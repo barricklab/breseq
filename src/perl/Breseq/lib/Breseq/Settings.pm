@@ -81,9 +81,6 @@ sub new
 		'output-path|o=s' => \$self->{base_output_path},	
 		'reference-sequence|r=s' => \@{$self->{reference_genbank_file_names}},
 		'junction-sequence|j=s' => \@{$self->{junction_only_reference_genbank_file_names}},	
-		'force-quality-scores' => \$self->{accept_any_quality_scores},
-		'trim-read-ends' => \$self->{trim_read_ends},
-		'trim-read-base-quality=s' => \$self->{trim_read_base_quality},
 	## Options for output			
 		'keep-all-intermediates' => \$self->{keep_all_intermediates},
 		'shade-frequencies' => \$self->{shade_frequencies},
@@ -148,7 +145,6 @@ sub pre_option_initialize
 	$self->{clean} = 0;
 	$self->{base_output_path} = '';
 	$self->{error_model_method} = 'EMPIRICAL';
-	$self->{trim_reads} = 0;
 	$self->{base_quality_cutoff} = 3;			# avoids problem with Illumina assigning 2 to bad ends of reads!
 	
 	###
@@ -228,9 +224,7 @@ sub post_option_initialize
 
 	#on by default
 	$self->{unmatched_reads} = ($self->{no_unmatched_reads}) ? 0 : 1;
-	
-	$self->{trim_reads} = $self->{trim_read_ends} || $self->{trim_read_base_quality};
-	
+		
 	## block option
 	if ($self->{strict_polymorphism_prediction})
 	{
@@ -257,7 +251,7 @@ sub post_option_initialize
 	##### sequence conversion #####
 	$self->{sequence_conversion_path} = "01_sequence_conversion";
 	$self->{sequence_conversion_path} = "$self->{base_output_path}/$self->{sequence_conversion_path}" if ($self->{base_output_path});
-	$self->{trimmed_fastq_file_name} = "$self->{sequence_conversion_path}/#.trimmed.fastq";
+	$self->{converted_fastq_file_name} = "$self->{sequence_conversion_path}/#.converted.fastq";
     $self->{ref_seq_info_file_name} = "$self->{sequence_conversion_path}/ref_seq_info.bin";	
 	$self->{unwanted_fasta_file_name} = "$self->{sequence_conversion_path}/unwanted.fasta";
 	$self->{reference_trim_file_name} = "$self->{sequence_conversion_path}/@.trims";
@@ -442,7 +436,6 @@ sub post_option_initialize
 
 			$self->{read_file_to_fastq_file_index}->{$read_file} = $fastq_file_index; 
 			$self->{read_file_to_fastq_file}->{$read_file} = $read_fastq_file; 
-			$self->{read_file_to_trimmed_fastq_file}->{$read_file} = $self->file_name('trimmed_fastq_file_name', {'#' => $read_file});
 
 			#index for keeping track of what file reads came from in alignment database
 			#max is 256 b/c stored as unsigned byte in alignment database
@@ -551,16 +544,11 @@ sub read_file_to_fastq_file_index
 sub read_file_to_fastq_file_name
 {
 	my ($self, $read_file) = @_;
-	if ($self->{trim_reads})
-	{
-		$self->throw if (!defined $self->{read_file_to_trimmed_fastq_file}->{$read_file});
-		return $self->{read_file_to_trimmed_fastq_file}->{$read_file};
+	if (defined $self->{read_file_to_converted_fastq_file}->{$read_file}) {
+		return $self->{read_file_to_converted_fastq_file}->{$read_file};
 	}
-	else
-	{
-		$self->throw if (!defined $self->{read_file_to_fastq_file}->{$read_file});
-		return $self->{read_file_to_fastq_file}->{$read_file};
-	}
+	$self->throw if (!defined $self->{read_file_to_fastq_file}->{$read_file});
+	return $self->{read_file_to_fastq_file}->{$read_file};
 }
 
 # same as above but forces original fastq file name if trimming is on
