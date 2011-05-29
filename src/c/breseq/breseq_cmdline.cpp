@@ -30,19 +30,13 @@ LICENSE AND COPYRIGHT
 #include "breseq/error_count.h"
 #include "breseq/identify_mutations.h"
 #include "breseq/candidate_junctions.h"
+#include "breseq/resolve_alignments.h"
 #include "breseq/tabulate_coverage.h"
 
 
 using namespace breseq;
 using namespace std;
 namespace po = boost::program_options;
-
-// Utility function
-bool file_exists(const char *filename)
-{
-  std::ifstream ifile(filename);
-  return ifile;
-}
 
 /*! Analyze FASTQ
  
@@ -93,18 +87,18 @@ int do_analyze_fastq(int argc, char* argv[]) {
  */
 
 // Helper function
-void convert_genbank(std::string in, std::string fasta, std::string ft) {
+void convert_genbank(std::string in, string fasta, string ft) {
   
-  cAnnotatedSequence seq;
+  cReferenceSequences refseqs;
   
   // Load the GenBank file
-  LoadGenBankFile(in, seq);
+  LoadGenBankFile(refseqs, in);
   
   // Output sequence
-  seq.WriteFASTA(fasta);
+  refseqs.WriteFASTA(fasta);
   
   // Output feature table
-  seq.WriteFeatureTable(ft);
+  refseqs.WriteFeatureTable(ft);
 }
 
 
@@ -256,14 +250,16 @@ int do_resolve_alignments(int argc, char* argv[]) {
 	po::options_description cmdline_options("Allowed options");
 	cmdline_options.add_options()
 	("help,h", "produce this help message")
+  ("junction-prediction,p", po::value<bool>(), "whether to predict new junctions")
 	("reference-fasta,f", po::value<string>(), "FASTA file of reference sequences")
-  ("reference-sam", po::value<string>(), "SAM file of read alignments to reference sequences")
   ("junction-fasta,j", po::value<string>(), "FASTA file of candidate junction sequences")
-  ("junction-sam", po::value<string>(), "SAM file of read alignments to candidate junction sequences")
+  ("reference-sam-path", po::value<string>(), "path to SAM files of read alignments to reference sequences")
+  ("junction-sam-path", po::value<string>(), "path to SAM files of read alignments to candidate junction sequences")
+  ("resolved-path,o", po::value<string>(), "output path for resolved sam files")
   ("features,g", po::value<string>(), "feature table file for reference sequences")
-	("output,o", po::value<string>(), "output directory")
+	("read-file,r", po::value<vector<string> >(), "names of read files (no extension)")
   ("max-read-length,m", po::value<uint32_t>(), "number of flanking bases in candidate junctions")
-	("read-file,r", po::value<std::vector<std::string> >(), "names of readfiles (no extension)")
+
   ;
   
 	po::variables_map options;
@@ -282,6 +278,17 @@ int do_resolve_alignments(int argc, char* argv[]) {
   
 	// attempt to calculate error calibrations:
 	try {
+    resolve_alignments(
+      options["junction-prediction"].as<bool>(),
+      options["reference-fasta"].as<string>(),
+      options["junction-fasta"].as<string>(),
+      options["reference-sam-path"].as<string>(),
+      options["junction-sam-path"].as<string>(),
+      options["resolved-path"].as<string>(),
+      options["features"].as<string>(),
+      options["read-file"].as<vector<string> >(),
+      options["max-read-length"].as<uint32_t>()
+    );
     
   } catch(...) {
 		// failed; 
@@ -567,7 +574,9 @@ int main(int argc, char* argv[]) {
   return do_candidate_junctions(argc, argv); 
   } else if (command == "TABULATE_COVERAGE") {
     return do_tabulate_coverage(argc, argv); 
-  }
+  } else if (command == "RESOLVE_ALIGNMENTS") {
+  return do_resolve_alignments(argc, argv); 
+}
   
   // Command was not recognized. Should output valid commands.
   cout << "Unrecognized command" << endl;

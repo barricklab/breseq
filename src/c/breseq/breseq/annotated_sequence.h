@@ -19,22 +19,26 @@ LICENSE AND COPYRIGHT
 #ifndef _BRESEQ_ANNOTATED_SEQUENCE_H_
 #define _BRESEQ_ANNOTATED_SEQUENCE_H_
 
-#include "common.h"
+#include "breseq/common.h"
+
+#include "breseq/fasta.h"
+
+using namespace std;
 
 namespace breseq {
 	
 	/*! Interface for loading sequences and sequence features from GenBank files.
   */
   
-
+  
 	/*! Sequence Feature class.
 
 	 */ 
 
   // Currently everything is stored as strings...
-  typedef std::string sequence_feature_key_t;               //!< Diff entry keys.
-  typedef std::string sequence_feature_value_t;            //!< Diff entry values.
-  typedef std::map<sequence_feature_key_t, sequence_feature_value_t> sequence_feature_map_t; //!< Diff entry key-value map.
+  typedef string sequence_feature_key_t;
+  typedef string sequence_feature_value_t;
+  typedef map<sequence_feature_key_t, sequence_feature_value_t> sequence_feature_map_t; //!< Diff entry key-value map.
   
   class cSequenceFeature : public sequence_feature_map_t {
     
@@ -58,8 +62,8 @@ namespace breseq {
         return it->second;
       }
       
-      void ReadCoords(std::string& s);
-      void ReadTag(std::string& tag, std::string& s, std::ifstream& in);
+      void ReadCoords(string& s);
+      void ReadTag(string& tag, string& s, ifstream& in);
   };
 
 
@@ -70,37 +74,54 @@ namespace breseq {
     
     public:      
       uint32_t m_length;
-      std::string m_definition, m_version, m_seq_id;
+      string m_definition, m_version, m_seq_id;
     
-      std::string m_sequence;                             //!< Nucleotide sequence
-      std::vector<cSequenceFeature> m_features;  //!< List of sequence features
+      cFastaSequence m_fasta_sequence;            //!< Nucleotide sequence
+      vector<cSequenceFeature> m_features;  //!< List of sequence features
 
     public:
-      cAnnotatedSequence() {} ; //Constructor
-            
-      //!< Write a tab delimited feature 
-      void WriteFeatureTable(const std::string &file_name);
-      
-      //!< Write FASTA file       
-      void WriteFASTA(const std::string &file_name);
-
+      cAnnotatedSequence() {} ; //Constructor for empty object
   };
+  
+  /*! Reference Sequences
+   
+   Holds sequences and features for ALL reference sequences.
+	 */ 
+  
+  class cReferenceSequences : public vector<cAnnotatedSequence> {
+  protected:
+    map<string,int> m_seq_id_to_index; // for looking up sequences by seq_id
+    
+  public:
+    
+    cReferenceSequences() {};    
+    
+    //!< Write a tab delimited feature 
+    void WriteFeatureTable(const string &file_name);
+    
+    //!< Read a tab delimited feature 
+    void ReadFeatureTable(const string &file_name);
+    
+    //!< Write FASTA file       
+    void WriteFASTA(const string &file_name);
+  };  
+  
+  /*! Helper function for creating cReferenceSequences
+   */
+  
+  void LoadGenBankFile(cReferenceSequences& s, const string &in_file_name);
+  bool LoadGenBankFileHeader(ifstream& in, cReferenceSequences& s);
+  void LoadGenBankFileSequenceFeatures(ifstream& in, cAnnotatedSequence& s);
+  void LoadGenBankFileSequence(ifstream& in, cAnnotatedSequence& s);
+  
+  void LoadFeatureIndexedFastaFile(cReferenceSequences& s, const string &in_feature_file_name, const string &in_fasta_file_name);
 
-  /*! Functions for creating cAnnotatedSequences
-  */
-  
-  void LoadGenBankFile(const std::string &in_file, cAnnotatedSequence& s);
-  
   /*! Utility functions.
   */
     
-  std::string GetWord(std::string &s);
-  void RemoveLeadingWhitespace(std::string &s);
-  void RemoveLeadingTrailingWhitespace(std::string &s);
-  
-  void LoadGenBankFileHeader(std::ifstream& in, cAnnotatedSequence& s);
-  void LoadGenBankFileSequenceFeatures(std::ifstream& in, cAnnotatedSequence& s);
-  void LoadGenBankFileSequence(std::ifstream& in, cAnnotatedSequence& s);
+  std::string GetWord(string &s);
+  void RemoveLeadingWhitespace(string &s);
+  void RemoveLeadingTrailingWhitespace(string &s);
 	
 } // breseq namespace
 

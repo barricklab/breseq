@@ -19,7 +19,7 @@ LICENSE AND COPYRIGHT
 #ifndef _BRESEQ_ALIGNMENT_H_
 #define _BRESEQ_ALIGNMENT_H_
 
-#include "common.h"
+#include "breseq/common.h"
 
 namespace breseq {
 

@@ -19,14 +19,43 @@ LICENSE AND COPYRIGHT
 #ifndef _BRESEQ_RESOLVE_ALIGNMENTS_H_
 #define _BRESEQ_RESOLVE_ALIGNMENTS_H_
 
-#include "common.h"
+#include "breseq/common.h"
 
 using namespace std;
 
 namespace breseq {
-
-
-  void resolve_alignments();
+  
+  extern const string k_junction_name_separator;
+  
+  struct junction_info_side {
+    string    m_seq_id;
+    uint32_t  m_position;
+    int8_t   m_strand;
+    bool      m_redundant;
+  };
+  
+  struct junction_info {
+    junction_info_side  m_side_1;
+    junction_info_side  m_side_2;
+    uint32_t m_alignment_overlap;
+    string m_unique_read_sequence;
+    uint32_t m_flanking_left;
+    uint32_t m_flanking_right;    
+  };
+  
+  void junction_name_split(junction_info& ji, const string& junction_name);
+  
+  void resolve_alignments( 
+                          const bool junction_prediction,
+                          const string &reference_fasta,
+                          const string &junction_fasta,
+                          const string &reference_sam_path,
+                          const string &junction_sam_path,
+                          const string &resolved_path,
+                          const string &features_file,
+                          const vector<string> &read_files,
+                          const uint32_t max_read_length
+                          );
 	
 }
 
