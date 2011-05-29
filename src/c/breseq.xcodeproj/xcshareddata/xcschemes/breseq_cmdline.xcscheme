@@ -85,6 +85,10 @@
          </CommandLineArgument>
          <CommandLineArgument
             argument = "ANALYZE_FASTQ -i /Users/jbarrick/tmp/chelsea/tmp.fastq -p /Users/jbarrick/tmp/chelsea"
+            isEnabled = "NO">
+         </CommandLineArgument>
+         <CommandLineArgument
+            argument = "RESOLVE_ALIGNMENTS --junction-prediction 1 --reference-fasta  /Users/jbarrick/src/breseq/tests/lambda_polymorphism/data/reference.fasta --junction-fasta  /Users/jbarrick/src/breseq/tests/lambda_polymorphism/03_candidate_junctions/candidate_junction.fasta --reference-sam-path /Users/jbarrick/src/breseq/tests/lambda_polymorphism/02_reference_alignment --junction-sam-path /Users/jbarrick/src/breseq/tests/lambda_polymorphism/04_candidate_junction_alignment --resolved-path /Users/jbarrick/src/breseq/tests/lambda_polymorphism/05_alignment_correction --features /Users/jbarrick/src/breseq/tests/lambda_polymorphism/data/reference.gff --read-file lambda_mixed_population --max-read-length 36"
             isEnabled = "YES">
          </CommandLineArgument>
       </CommandLineArguments>

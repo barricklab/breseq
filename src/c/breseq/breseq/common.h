@@ -53,6 +53,7 @@ LICENSE AND COPYRIGHT
 #define _base_bam_is_N(x) (x == 0x0f)
 #define _base_char_is_N(x) (x == 'N')
 
+using namespace std;
 
 namespace breseq {
 	
@@ -169,6 +170,20 @@ namespace breseq {
     }
   }
 
+  // Utility function
+  inline bool file_exists(const char *filename)
+  {
+    ifstream ifile(filename);
+    return ifile;
+  }
+  
+  inline bool file_empty(const char *filename)
+  {
+    ifstream ifile(filename);
+    string test;
+    getline(ifile, test);
+    return !ifile.eof();
+  }
   
 } // breseq
 

@@ -26,7 +26,7 @@ LICENSE AND COPYRIGHT
 using namespace std;
 
 namespace breseq {
-
+  
 /*! Constructor.
  
  Open the FASTA and read the target reference sequence.

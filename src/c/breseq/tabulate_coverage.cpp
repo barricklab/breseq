@@ -16,21 +16,10 @@ LICENSE AND COPYRIGHT
 
 *****************************************************************************/
 
-#include <iostream>
-#include <cmath>
-#include <map>
-#include <sstream>
-#include <string>
-#include <vector>
-#include <bam.h>
-#include <sam.h>
-#include <faidx.h>
-#include <assert.h>
 #include <boost/tuple/tuple.hpp>
 #include <boost/algorithm/string.hpp>
 #include <boost/math/distributions.hpp>
 
-#include "breseq/common.h"
 #include "breseq/tabulate_coverage.h"
 
 using namespace std;

@@ -30,6 +30,7 @@ libbreseq_la_SOURCES = \
 	calculate_trims.cpp \
 	candidate_junctions.cpp \
 	error_count.cpp \
+	fasta.cpp \
 	fastq.cpp \
 	genome_diff.cpp \
 	identify_mutations.cpp \
@@ -44,6 +45,7 @@ libbreseq_la_SOURCES = \
 	breseq/candidate_junctions.h \
 	breseq/common.h \
 	breseq/error_count.h \
+	breseq/fasta.h \
 	breseq/fastq.h \
 	breseq/genome_diff.h \
 	breseq/identify_mutations.h \
