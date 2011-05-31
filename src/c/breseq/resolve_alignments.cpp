@@ -19,7 +19,9 @@ LICENSE AND COPYRIGHT
 #include "breseq/resolve_alignments.h"
 
 #include "breseq/annotated_sequence.h"
-
+#include "breseq/genome_diff.h"
+#include "breseq/fastq.h"
+#include "breseq/fasta.h"
 
 using namespace std;
 
@@ -102,40 +104,38 @@ namespace breseq {
                           const string &reference_sam_path,
                           const string &junction_sam_path,
                           const string &resolved_path,
+                          const string &data_path,
                           const string &features_file,
-                          const vector<string> &read_files,
+                          const cReadFiles &read_files,
                           const uint32_t max_read_length
                           ) 
   {
     
     int verbose = 0;
     
-//    my $verbose = 0;
-//    my ($settings, $summary, $ref_seq_info) = @_;
-//    my $gene_list_hash_ref = $ref_seq_info->{gene_lists};
-//    my $repeat_list_hash_ref = $ref_seq_info->{repeat_lists};
-//    my $flanking_length = $settings->{max_read_length};
+    // my $verbose = 0;
+    // my ($settings, $summary, $ref_seq_info) = @_;
+    // my $gene_list_hash_ref = $ref_seq_info->{gene_lists};
+    // my $repeat_list_hash_ref = $ref_seq_info->{repeat_lists};
+    // my $flanking_length = $settings->{max_read_length};
     
-    
-    
-//    
-//####
-//##	Reference sequences
-//####		
+    // ####
+    // ##	Reference sequences
+    // ####		
         
     // Load the reference sequence info
     cReferenceSequences refseqs;
     LoadFeatureIndexedFastaFile(refseqs, features_file, reference_fasta);    
     
-//    ####
-//    ##	Junction sequences
-//    ####
+    // ####
+    // ##	Junction sequences
+    // ####
     
     
     // clean up allocated objects
 
-// use to get sequences
-//    m_seq = fai_fetch(m_ref, target.c_str(), &m_len);
+    // use to get sequences
+    // m_seq = fai_fetch(m_ref, target.c_str(), &m_len);
 
     //## if there were no candidate junctions (file is empty) then we seg fault if we try to use samtools on it...
     //    $settings->{no_junction_prediction} = 1 if ( (!-e $junction_faidx_file_name) || (-s $junction_fasta_file_name == 0) );
@@ -144,92 +144,150 @@ namespace breseq {
     }
       
     vector<junction_info> junction_info_list;
-    
+
     if (junction_prediction) {
     }
-//    
-//    if (!$settings->{no_junction_prediction})
-//    {
-//      $junction_fai = Bio::DB::Sam::Fai->load($junction_fasta_file_name);	
-//      
-//## Load header once at the beginning (but have to peek at TAM file to do this).
-//      my @read_structures = $settings->read_structures;
-//      my $read_file = $read_structures[0]->{base_name};
-//      my $junction_sam_file_name = $settings->file_name('candidate_junction_sam_file_name', {'#'=>$read_file});
-//      my $junction_tam = Bio::DB::Tam->open($junction_sam_file_name) or die " Could not open junction SAM file\n";
-//      $junction_header = $junction_tam->header_read2($junction_faidx_file_name) or die("Error reading reference fasta index file: $junction_faidx_file_name");				
-//      
-//## Preload all of the information about junctions
-//## so that we only have to split the names once	
-//      my $junction_ids = $junction_header->target_name;
-//      for (my $i=0; $i< $junction_header->n_targets; $i++)
-//      {
-//        $junction_info->[$i] = Breseq::Shared::junction_name_split($junction_ids->[$i]);
-//      }		
-//    }
-//    
-//####
-//##	Output files
-//####
-//    
-//    our $gd = GenomeDiff->new();
-//    
-//    my $resolved_reference_sam_file_name = $settings->file_name('resolved_reference_sam_file_name');
-//    my $RREF;
-//    open $RREF, ">$resolved_reference_sam_file_name" or die;
-//    
-//    my $resolved_junction_sam_file_name = $settings->file_name('resolved_junction_sam_file_name');
-//    my $RCJ;
-//    open $RCJ, ">$resolved_junction_sam_file_name" or die;
-//    
-//    
-//    my %matched_junction;
-//    my %degenerate_matches;
-//    my $reads_processed = 0;
-//    
-//    foreach my $read_struct ($settings->read_structures)
-//    {	
-//      my $read_file = $read_struct->{base_name};	
-//      print STDERR "  READ FILE::$read_file\n";
-//      
-//## setup the summary
-//      my $s;
-//      $s->{unmatched_reads} = 0;
-//      
-//## Traverse the original fastq files to keep track of order
-//## b/c some matches may exist in only one or the other file
-//      
-//      my @in_fastq;
-//      my @fastq_file_name;
-//      my @fastq_file_index;
-//      my @out_unmatched_fastq;
-//      my $i=0;
-//      for (my $i=0; $i < scalar @{$read_struct->{base_names}}; $i++)
-//      {
-//        my $this_read_file = $read_struct->{base_names}->[$i];			
-//        $fastq_file_name[$i] = $settings->read_file_to_fastq_file_name($this_read_file);	
-//        $fastq_file_index[$i] = $settings->read_file_to_fastq_file_index($this_read_file);		
-//				
-//        $in_fastq[$i] = Breseq::Fastq->new(-file => $fastq_file_name[$i]);
-//        
-//        if ($settings->{unmatched_reads})
-//        {				
-//          my $unmatched_file_name = $settings->file_name('unmatched_read_file_name', {'#'=>$this_read_file});
-//          $out_unmatched_fastq[$i] = Breseq::Fastq->new(-file => ">$unmatched_file_name");
-//        }
-//      }		
-//      
-//      my $reference_sam_file_name = $settings->file_name('reference_sam_file_name', {'#'=>$read_file});
-//      my $reference_tam = Bio::DB::Tam->open($reference_sam_file_name) or die "Could not open $reference_sam_file_name";
-//      $reference_header = $reference_tam->header_read2($reference_faidx_file_name) or throw("Error reading reference fasta index file: $reference_faidx_file_name");		
-//      
-//      my $junction_tam;
-//      if (!$settings->{no_junction_prediction})
-//      {
-//        my $junction_sam_file_name = $settings->file_name('candidate_junction_sam_file_name', {'#'=>$read_file});
-//        $junction_tam = Bio::DB::Tam->open($junction_sam_file_name) or die " Could not open junction SAM file\n";
-//##			$junction_header = $junction_tam->header_read2($junction_faidx_file_name) or die("Error reading reference fasta index file: $junction_faidx_file_name");				
-//      }
+    //    if (!$settings->{no_junction_prediction})
+    //    {
+    //      $junction_fai = Bio::DB::Sam::Fai->load($junction_fasta_file_name);	
+    //      
+    //## Load header once at the beginning (but have to peek at TAM file to do this).
+    //      my @read_structures = $settings->read_structures;
+    //      my $read_file = $read_structures[0]->{base_name};
+    //      my $junction_sam_file_name = $settings->file_name('candidate_junction_sam_file_name', {'#'=>$read_file});
+    //      my $junction_tam = Bio::DB::Tam->open($junction_sam_file_name) or die " Could not open junction SAM file\n";
+    //      $junction_header = $junction_tam->header_read2($junction_faidx_file_name) or die("Error reading reference fasta index file: $junction_faidx_file_name");				
+    //      
+    //## Preload all of the information about junctions
+    //## so that we only have to split the names once	
+    //      my $junction_ids = $junction_header->target_name;
+    //      for (my $i=0; $i< $junction_header->n_targets; $i++)
+    //      {
+    //        $junction_info->[$i] = Breseq::Shared::junction_name_split($junction_ids->[$i]);
+    //      }		
+    //    }
+    
+    //####
+    //##	Output files
+    //####
+
+    // our $gd = GenomeDiff->new();
+    genome_diff gd;
+      
+    // my $resolved_reference_sam_file_name = $settings->file_name('resolved_reference_sam_file_name');
+    string resolved_reference_sam_file_name = resolved_path + "/reference.sam";
+    // my $RREF;
+    // open $RREF, ">$resolved_reference_sam_file_name" or die;
+    ifstream RREF(resolved_reference_sam_file_name.c_str(), ios_base::in);
+
+    // my $resolved_junction_sam_file_name = $settings->file_name('resolved_junction_sam_file_name');
+    string resolved_junction_sam_file_name = resolved_path + "/junction.sam";
+
+    // my $RCJ;
+    // open $RCJ, ">$resolved_junction_sam_file_name" or die;
+    ifstream RCJ(resolved_junction_sam_file_name.c_str(), ios_base::in);
+    
+    // my %matched_junction;
+    map<string,uint32_t> matched_junction;
+
+    // my %degenerate_matches;
+    map<string,uint32_t> degenerate_matches;
+        
+    // my $reads_processed = 0;
+    uint32_t reads_processed;
+    
+    // keep track of overall index of fastq files 
+    uint32_t on_fastq_file_index = 0;
+    
+    // foreach my $read_struct ($settings->read_structures)
+    for (vector<cReadFile>::const_iterator rf = read_files.begin(); rf < read_files.end(); rf++) {
+                    
+      //print STDERR "  READ FILE::$read_file\n";
+      fprintf(stderr, "  READ FILE::%s", rf->m_base_name.c_str());
+      cerr << endl;
+
+      // ## setup the summary
+      // my $s;
+      map<string,uint32_t> summary_info;
+
+      // $s->{unmatched_reads} = 0;
+      summary_info["unmatched_reads"] = 0;
+      
+      //## Traverse the original fastq files to keep track of order
+      //## b/c some matches may exist in only one or the other file  
+      
+      // my @in_fastq;
+      // $in_fastq[$i] = Breseq::Fastq->new(-file => $fastq_file_name[$i]);        
+
+      cFastqFile * in_fastq = new cFastqFile(rf->m_fastq_file_name, ios::out);
+      assert(in_fastq);
+      
+      // my @fastq_file_name;
+
+      // my @fastq_file_index;
+      
+      // my @out_unmatched_fastq;
+      cFastqFile * out_unmatched_fastq = NULL;
+            
+      // @JEB No longer looping
+      // for (my $i=0; $i < scalar @{$read_struct->{base_names}}; $i++)
+        
+      // my $this_read_file = $read_struct->{base_names}->[$i];        
+      // $fastq_file_name[$i] = $settings->read_file_to_fastq_file_name($this_read_file);	
+      // $fastq_file_index[$i] = $settings->read_file_to_fastq_file_index($this_read_file);	
+      
+      // if ($settings->{unmatched_reads})
+      if (true)
+      {				
+        // my $unmatched_file_name = $settings->file_name('unmatched_read_file_name', {'#'=>$this_read_file});
+        // $out_unmatched_fastq[$i] = Breseq::Fastq->new(-file => ">$unmatched_file_name");
+        
+        string this_unmatched_file_name = data_path + "/unmatched." + rf->m_base_name + ".fastq";
+        
+        out_unmatched_fastq = new cFastqFile(this_unmatched_file_name, ios::out);
+        assert(out_unmatched_fastq);
+      }
+      
+      if (in_fastq) delete in_fastq;
+      if (out_unmatched_fastq) delete in_fastq;
+        
+      // my $reference_sam_file_name = $settings->file_name('reference_sam_file_name', {'#'=>$read_file});
+      string reference_sam_file_name = reference_sam_path + "/" + rf->m_base_name + ".reference.sam";
+      
+      // my $reference_tam = Bio::DB::Tam->open($reference_sam_file_name) or die "Could not open $reference_sam_file_name";
+      tamFile reference_tam = sam_open(reference_sam_file_name.c_str());
+      assert(reference_tam);
+      
+      // $reference_header = $reference_tam->header_read2($reference_faidx_file_name) or throw("Error reading reference fasta index file: $reference_faidx_file_name");		
+      string reference_faidx_file_name = reference_fasta + ".fai";
+      bam_header_t *reference_header = sam_header_read2(reference_faidx_file_name.c_str()); 
+      assert(reference_header);
+      
+      // my $junction_tam;
+      tamFile junction_tam = NULL;
+      bam_header_t *junction_header = NULL;
+      
+      // if (!$settings->{no_junction_prediction})
+      if (junction_prediction)
+      {
+        // my $junction_sam_file_name = $settings->file_name('candidate_junction_sam_file_name', {'#'=>$read_file});
+        string junction_sam_file_name = junction_sam_path + "/" + rf->m_base_name + ".junction.sam";
+
+        // $junction_tam = Bio::DB::Tam->open($junction_sam_file_name) or die " Could not open junction SAM file\n";
+        junction_tam = sam_open(junction_sam_file_name.c_str());
+        assert(junction_tam);
+        
+        //## junction_header = $junction_tam->header_read2($junction_faidx_file_name) or die("Error reading reference fasta index file: $junction_faidx_file_name");				
+        string junction_faidx_file_name = junction_fasta + ".fai";
+        junction_header = sam_header_read2(junction_faidx_file_name.c_str()); 
+        assert(junction_header);
+      }
+      
+      // Clean up!! - per read_file
+      if (reference_tam) sam_close(reference_tam);
+
+      if (junction_tam) sam_close(junction_tam);
+      if (junction_header) bam_header_destroy(junction_header);
 //      
 //      my $reference_al;
 //      my $last_reference_alignment;
@@ -310,6 +368,7 @@ namespace breseq {
 //				}
 //				next READ;
 //			}
+    }
 //      
 //			print " Before Overlap Reference alignments = "  . (scalar @$this_reference_al) . "\n" if ($verbose);
 //			print " Before Overlap Junction alignments = " . (scalar @$this_junction_al) . "\n" if ($verbose);

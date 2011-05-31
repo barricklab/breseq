@@ -99,17 +99,24 @@ namespace breseq {
     //!< Write a tab delimited feature 
     void WriteFeatureTable(const string &file_name);
     
-    //!< Read a tab delimited feature 
+    //!< Read a tab delimited feature
     void ReadFeatureTable(const string &file_name);
     
     //!< Write FASTA file       
     void WriteFASTA(const string &file_name);
+    
+    //!< Read FASTA file       
+    void ReadFASTA(const std::string &file_name);
+    
+    //!< Convert 
+    uint32_t seq_id_to_index(const string& seq_id) { return m_seq_id_to_index[seq_id]; };
+
   };  
   
   /*! Helper function for creating cReferenceSequences
    */
   
-  void LoadGenBankFile(cReferenceSequences& s, const string &in_file_name);
+  void LoadGenBankFile(cReferenceSequences& s, const vector<string>& in_file_names);
   bool LoadGenBankFileHeader(ifstream& in, cReferenceSequences& s);
   void LoadGenBankFileSequenceFeatures(ifstream& in, cAnnotatedSequence& s);
   void LoadGenBankFileSequence(ifstream& in, cAnnotatedSequence& s);

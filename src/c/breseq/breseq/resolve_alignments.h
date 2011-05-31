@@ -20,6 +20,7 @@ LICENSE AND COPYRIGHT
 #define _BRESEQ_RESOLVE_ALIGNMENTS_H_
 
 #include "breseq/common.h"
+#include "breseq/settings.h"
 
 using namespace std;
 
@@ -52,8 +53,9 @@ namespace breseq {
                           const string &reference_sam_path,
                           const string &junction_sam_path,
                           const string &resolved_path,
+                          const string &data_path,
                           const string &features_file,
-                          const vector<string> &read_files,
+                          const cReadFiles &read_files,
                           const uint32_t max_read_length
                           );
 	

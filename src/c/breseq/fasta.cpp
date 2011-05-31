@@ -29,7 +29,11 @@ namespace breseq {
     , m_current_line_num(0)
     , m_bases_per_line(60)
   {
-    std::getline(*this, m_current_line);
+    assert(!(*this).fail());
+    
+    if (mode == ios_base::in) {
+      std::getline(*this, m_current_line);
+    }
   }
 
   // read one sequence record from the file

@@ -29,18 +29,14 @@ namespace breseq {
     for(vector<cAnnotatedSequence>::iterator it_as = this->begin(); it_as < this->end(); it_as++) {
 
       for (vector<cSequenceFeature>::iterator it = it_as->m_features.begin(); it < it_as->m_features.end(); it++) {
-        out << it_as->m_seq_id << endl;
-        out << (*it)["type"];
+        out << it_as->m_seq_id;
+        out << "\t" << (*it)["type"];
         out << "\t" << (*it)["accession"];
         out << "\t" << (*it)["name"];
         out << "\t" << (*it).m_start;
         out << "\t" << (*it).m_end;
-        out << "\t" << (*it).m_strand;
+        out << "\t" << (int)(*it).m_strand;
         out << "\t" << (*it)["product"];
-        out << "\t" << (*it)["pseudogene"];
-        out << "\t" << (*it)["cds"];
-        out << "\t" << (*it)["note"];
-        
         out << std::endl;
       }
       
@@ -49,48 +45,113 @@ namespace breseq {
 
   void cReferenceSequences::ReadFeatureTable(const string &file_name) {
 
-    /*
     ifstream infile(file_name.c_str());
-
-    getline(infile,m_seq_id);
-    getline(infile,m_definition);
-    getline(infile,m_version);
+    assert(!infile.fail());
     
-    string feature_line;
-    getline(infile,feature_line);
+    string line;
+    getline(infile,line);
+    
     while (!infile.eof())
     {
+      // split line on tabs
+      char * cstr = new char [line.size()+1];
+      strcpy (cstr, line.c_str());
       
-      // split to vector on tabs and read entries
+      cSequenceFeature feature;
+      string seq_id;
       
-      getline(infile,feature_line);
+      char * pch;
+      pch = strtok(cstr,"\t");
+      uint32_t on_token = 0;
+      while (pch != NULL)
+      {
+        //printf ("%s\n",pch);
+        
+        switch (on_token) {
+          case 0:
+            seq_id = pch;
+            break;
+          
+          case 1:
+            feature["type"] = pch;
+            break;
+            
+          case 2:
+            feature["accession"] = pch;
+            break;
+            
+          case 3:
+            feature["name"] = pch;
+            break;
+            
+          case 4:
+            feature.m_start = atoi(pch);
+            break;
+            
+          case 5:
+            feature.m_end = atoi(pch);
+            break;
+            
+          case 6:
+            feature.m_strand = atoi(pch);
+            break;
+            
+          case 7:
+            feature["product"] = pch;
+            break;
+        }
+        
+        pch = strtok (NULL, "\t");
+        on_token++;
+      }  
+      
+      delete[] cstr;
+      
+      uint32_t seq_idx = seq_id_to_index(seq_id);
+      (*this)[seq_idx].m_features.push_back(feature);
+            
+      getline(infile,line);
     }
-     */
 
   }
 
 
   void cReferenceSequences::WriteFASTA(const std::string &file_name) {
     
-    cFastaFile ff(file_name, ios::out);
+    cFastaFile ff(file_name, ios_base::out);
     for(vector<cAnnotatedSequence>::iterator it_as = this->begin(); it_as < this->end(); it_as++) {
       ff.write_sequence(it_as->m_fasta_sequence);
     }
   }
+  
+  void cReferenceSequences::ReadFASTA(const std::string &file_name) {
+
+    cFastaFile ff(file_name, ios_base::in);
+    cFastaSequence on_seq;
+    uint32_t on_seq_id = 0;
+    
+    while ( ff.read_sequence(on_seq) ) {
+      
+      cAnnotatedSequence new_seq;
+      new_seq.m_fasta_sequence = on_seq;
+      (*this).push_back(new_seq);
+      
+      m_seq_id_to_index[on_seq.m_name] = on_seq_id++;
+    }
+  }
 
 
-  void LoadGenBankFile(cReferenceSequences& rs, const std::string &in_file) {
+  void LoadGenBankFile(cReferenceSequences& rs, const vector<string>& in_file_names) {
     
-    uint32_t line_number = 1;
-    
-    std::string line;
-    
-    std::ifstream in(in_file.c_str(), ios_base::in);
-    assert(!in.fail()); 
-    
-    while (LoadGenBankFileHeader(in, rs)) {
-      LoadGenBankFileSequenceFeatures(in, rs.back());
-      LoadGenBankFileSequence(in, rs.back());
+    for (vector<string>::const_iterator it = in_file_names.begin(); it < in_file_names.end(); it++) {
+      
+      ifstream in(it->c_str(), ios_base::in);
+      assert(!in.fail()); 
+      
+      while (LoadGenBankFileHeader(in, rs)) {
+        LoadGenBankFileSequenceFeatures(in, rs.back());
+        LoadGenBankFileSequence(in, rs.back());
+      }
     }
   }
 
@@ -162,11 +223,17 @@ namespace breseq {
     //std::cerr << "whole: " << s << std::endl;
 
     m_strand = 1;
-    if (s.find("complement(") && (s[s.length()-1] == ')'))
-    {
+    
+    size_t start_complement = s.find("complement(");
+    
+    if (start_complement != string::npos) {
       //std::cerr << "before: " << s << std::endl;
       s.erase(0,11);
-      s.erase(s.length()-1,1);
+      
+      size_t end_complement = s.find(")");
+      assert(end_complement !=string::npos);
+      s.erase(end_complement);
+      
       //std::cerr << "after: " << s << std::endl;
       m_strand = -1;
     }
@@ -233,11 +300,11 @@ namespace breseq {
   void LoadGenBankFileSequenceFeatures(std::ifstream& in, cAnnotatedSequence& s) {
     //std::cout << "features" << std::endl;
     cSequenceFeature* current_feature=NULL;
-    std::vector<cSequenceFeature> all_features;
-    std::string line;
+    vector<cSequenceFeature> all_features;
+    string line;
     while (!in.eof()) {
-      std::getline(in, line);
-      std::string first_word = GetWord(line);
+      getline(in, line);
+      string first_word = GetWord(line);
 
       //std::cout << first_word << "::" << line << std::endl;
       
@@ -267,7 +334,7 @@ namespace breseq {
     }
     
     
-    for (std::vector<cSequenceFeature>::iterator it = all_features.begin(); it < all_features.end(); it++) {
+    for (vector<cSequenceFeature>::iterator it = all_features.begin(); it < all_features.end(); it++) {
     
       if ((*it)["type"] == "repeat_region") {
 
@@ -314,15 +381,13 @@ namespace breseq {
         //std::cerr << (*it).SafeGet("name") << " " << (*it).SafeGet("gene") << " " << (*it).SafeGet("locus_tag") << std::endl;
               
         if ((*it).SafeGet("type") == "CDS") {
-          (*it)["cds"] = "1";
           (*it)["type"] = "protein";
         }
         
-        (*it)["accession"] = (*it).SafeGet("protein_id");
+        (*it)["accession"] = (*it).SafeGet("locus_tag");
         
         if ((*it).SafeGet("pseudo") != "") {
           (*it)["type"] = "pseudogene";
-          (*it)["pseudogene"] = "1";
         }
         
         (*it)["index"] = s.m_features.size();
@@ -367,7 +432,8 @@ namespace breseq {
                                    const string &in_fasta_file_name
                                    ) 
   {
-    
+    s.ReadFASTA(in_fasta_file_name);
+    s.ReadFeatureTable(in_feature_file_name);
   }
 
 

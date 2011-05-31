@@ -192,6 +192,17 @@ if ($settings->do_step('sequence_conversion_done_file_name', "Read and reference
 	my $reference_fasta_file_name = $settings->file_name('reference_fasta_file_name');
 	$ref_seq_info = Breseq::ReferenceSequence::load_ref_seq_info(\@genbank_file_names, \@junction_only_genbank_file_names, $summary, $reference_fasta_file_name);
 	Storable::store($ref_seq_info, $ref_seq_info_file_name) or die "Can't store data in file $ref_seq_info_file_name!\n";
+	
+	## C++ version of reference sequence processing
+	{
+		my $reference_features_file_name = $settings->file_name('reference_features_file_name');
+		my $cbreseq = $settings->ctool("cbreseq");
+		my $command = "$cbreseq CONVERT_GENBANK --fasta $reference_fasta_file_name --features $reference_features_file_name";
+		foreach my $input (@genbank_file_names) {
+			$command .= " --input " . $input;
+		} 
+		Breseq::Shared::system($command);
+	}
 
 	## create SAM faidx
 	my $samtools = $settings->ctool('samtools');

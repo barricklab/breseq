@@ -32,6 +32,7 @@ LICENSE AND COPYRIGHT
 #include "breseq/candidate_junctions.h"
 #include "breseq/resolve_alignments.h"
 #include "breseq/tabulate_coverage.h"
+#include "breseq/settings.h"
 
 
 using namespace breseq;
@@ -83,11 +84,12 @@ int do_analyze_fastq(int argc, char* argv[]) {
 
 /*! Convert Genbank
  
- Create a tab-delimited file of information about genes from a 
+ Create a tab-delimited file of information about genes and a
+ FASTA sequence file from an input GenBank file.
  */
 
 // Helper function
-void convert_genbank(std::string in, string fasta, string ft) {
+void convert_genbank(const vector<string>& in, const string& fasta, const string& ft) {
   
   cReferenceSequences refseqs;
   
@@ -95,10 +97,10 @@ void convert_genbank(std::string in, string fasta, string ft) {
   LoadGenBankFile(refseqs, in);
   
   // Output sequence
-  refseqs.WriteFASTA(fasta);
+  if (fasta != "") refseqs.WriteFASTA(fasta);
   
   // Output feature table
-  refseqs.WriteFeatureTable(ft);
+  if (ft != "") refseqs.WriteFeatureTable(ft);
 }
 
 
@@ -108,9 +110,9 @@ int do_convert_genbank(int argc, char* argv[]) {
 	po::options_description cmdline_options("Allowed options");
 	cmdline_options.add_options()
 	("help,h", "produce this help message")
-	("input,i", po::value<string>(), "input Genbank Flat File")
-	("feature_table,i", po::value<string>(), "output feature table (optional)")
-	("fasta,f", po::value<string>(), "output FASTA sequence file (optional)")
+	("input,i", po::value<vector<string> >(), "input GenBank flatfile (multiple allowed)")
+	("features,g", po::value<string>()->default_value(""), "output feature table (optional)")
+	("fasta,f", po::value<string>()->default_value(""), "output FASTA sequence file (optional)")
   ;
   
 	po::variables_map options;
@@ -120,18 +122,19 @@ int do_convert_genbank(int argc, char* argv[]) {
 	// make sure that the config options are good:
 	if(options.count("help")
 		 || !options.count("input")
-		 || (!options.count("feature_table") && !options.count("fasta"))  
+		 || (!options.count("features") && !options.count("fasta"))  
 		 ) {
-		cout << "Usage: breseq CONVERT_GENBANK --input <sequence.gbk> [--fasta <output.fasta> --feature_table <output.tab>]" << endl;
+		cout << "Usage: breseq CONVERT_GENBANK --input <sequence.gbk> [--fasta <output.fasta> --features <output.tab>]" << endl;
 		cout << cmdline_options << endl;
 		return -1;
 	}                       
   
 	// attempt to calculate error calibrations:
 	try {
-		convert_genbank(  options["input"].as<string>(),
+		convert_genbank(  
+                    options["input"].as<vector<string> >(),
                     options["fasta"].as<string>(),
-                    options["feature_table"].as<string>()
+                    options["features"].as<string>()
                     );
   } catch(...) {
 		// failed; 
@@ -256,10 +259,10 @@ int do_resolve_alignments(int argc, char* argv[]) {
   ("reference-sam-path", po::value<string>(), "path to SAM files of read alignments to reference sequences")
   ("junction-sam-path", po::value<string>(), "path to SAM files of read alignments to candidate junction sequences")
   ("resolved-path,o", po::value<string>(), "output path for resolved sam files")
+  ("data-path,o", po::value<string>(), "data path")
   ("features,g", po::value<string>(), "feature table file for reference sequences")
-	("read-file,r", po::value<vector<string> >(), "names of read files (no extension)")
+	("read-file,r", po::value<vector<string> >(), "FASTQ read files (multiple allowed) ") 
   ("max-read-length,m", po::value<uint32_t>(), "number of flanking bases in candidate junctions")
-
   ;
   
 	po::variables_map options;
@@ -268,16 +271,27 @@ int do_resolve_alignments(int argc, char* argv[]) {
 	
 	// make sure that the config options are good:
 	if(options.count("help")
-		 || !options.count("fasta")
-		 || !options.count("output")
+		 || !options.count("junction-prediction")
+		 || !options.count("reference-fasta")
+     || !options.count("junction-fasta")
+		 || !options.count("reference-sam-path")
+		 || !options.count("junction-sam-path")
+		 || !options.count("resolved-path")
+     || !options.count("data-path")
+		 || !options.count("features")
+     || !options.count("read-file")
+		 || !options.count("max-read-length")
+
 		 ) {
-		cout << "Usage: breseq RESOLVE_ALIGNMENTS --fasta <reference.fasta> --features <features.tab> --max-read-length <int>  --error_dir <path> --genome_diff <path> --output <path> --readfiles <filename> --coverage_dir <dirname> [--minimum-quality-score 3]" << endl;
+		cout << "Usage: breseq RESOLVE_ALIGNMENTS ... " << endl;
 		cout << cmdline_options << endl;
 		return -1;
 	}                       
   
 	// attempt to calculate error calibrations:
 	try {
+    cReadFiles rf(options["read-file"].as<vector<string> >());
+    
     resolve_alignments(
       options["junction-prediction"].as<bool>(),
       options["reference-fasta"].as<string>(),
@@ -285,8 +299,9 @@ int do_resolve_alignments(int argc, char* argv[]) {
       options["reference-sam-path"].as<string>(),
       options["junction-sam-path"].as<string>(),
       options["resolved-path"].as<string>(),
+      options["data-path"].as<string>(),
       options["features"].as<string>(),
-      options["read-file"].as<vector<string> >(),
+      rf,
       options["max-read-length"].as<uint32_t>()
     );
     
