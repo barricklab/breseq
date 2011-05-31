@@ -88,8 +88,12 @@
             isEnabled = "NO">
          </CommandLineArgument>
          <CommandLineArgument
-            argument = "RESOLVE_ALIGNMENTS --junction-prediction 1 --reference-fasta  /Users/jbarrick/src/breseq/tests/lambda_polymorphism/data/reference.fasta --junction-fasta  /Users/jbarrick/src/breseq/tests/lambda_polymorphism/03_candidate_junctions/candidate_junction.fasta --reference-sam-path /Users/jbarrick/src/breseq/tests/lambda_polymorphism/02_reference_alignment --junction-sam-path /Users/jbarrick/src/breseq/tests/lambda_polymorphism/04_candidate_junction_alignment --resolved-path /Users/jbarrick/src/breseq/tests/lambda_polymorphism/05_alignment_correction --features /Users/jbarrick/src/breseq/tests/lambda_polymorphism/data/reference.gff --read-file lambda_mixed_population --max-read-length 36"
+            argument = "RESOLVE_ALIGNMENTS --junction-prediction 1 --reference-fasta  /Users/jbarrick/src/breseq/tests/lambda_mixed_pop/data/reference.fasta --junction-fasta  /Users/jbarrick/src/breseq/tests/lambda_mixed_pop/03_candidate_junctions/candidate_junction.fasta --reference-sam-path /Users/jbarrick/src/breseq/tests/lambda_mixed_pop/02_reference_alignment --junction-sam-path /Users/jbarrick/src/breseq/tests/lambda_mixed_pop/04_candidate_junction_alignment --resolved-path /Users/jbarrick/src/breseq/tests/lambda_mixed_pop/05_alignment_correction --data-path /Users/jbarrick/src/breseq/tests/lambda_mixed_pop/data --features /Users/jbarrick/src/breseq/tests/lambda_mixed_pop/data/reference.features.tab --read-file lambda_mixed_population --max-read-length 36"
             isEnabled = "YES">
+         </CommandLineArgument>
+         <CommandLineArgument
+            argument = "CONVERT_GENBANK --input /Users/jbarrick/db/lenski/REL606.gbk --fasta /Users/jbarrick/Desktop/test.fasta --features /Users/jbarrick/Desktop/features.tab"
+            isEnabled = "NO">
          </CommandLineArgument>
       </CommandLineArguments>
       <AdditionalOptions>

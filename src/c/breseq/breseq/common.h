@@ -27,6 +27,7 @@ LICENSE AND COPYRIGHT
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 
 // C++
 #include <cmath>
@@ -170,7 +171,7 @@ namespace breseq {
     }
   }
 
-  // Utility function
+  // Utility functions
   inline bool file_exists(const char *filename)
   {
     ifstream ifile(filename);
@@ -183,6 +184,30 @@ namespace breseq {
     string test;
     getline(ifile, test);
     return !ifile.eof();
+  }
+  
+  //!< Split a string on a delimiter into a vector
+  inline void
+  split( vector<string> & theStringVector,  /* Altered/returned value */
+        const  string  & theString,
+        const  string  & theDelimiter )
+  {
+    assert( theDelimiter.size() > 0 ); // My own ASSERT macro.
+    
+    size_t  start = 0, end = 0;
+    
+    while ( end != string::npos )
+    {
+      end = theString.find( theDelimiter, start );
+      
+      // If at end, use length=maxLength.  Else use length=end-start.
+      theStringVector.push_back( theString.substr( start,
+                                                  (end == string::npos) ? string::npos : end - start ) );
+      
+      // If at end, use start=maxSize.  Else use start=end+delimiter.
+      start = (   ( end > (string::npos - theDelimiter.size()) )
+               ?  string::npos  :  end + theDelimiter.size()    );
+    }
   }
   
 } // breseq
