@@ -463,28 +463,111 @@ int do_identify_mutations(int argc, char* argv[]) {
  
  */
 
-int do_candidate_junction(int argc, char* argv[]) {
-    
+int do_preprocess_alignments(int argc, char* argv[]) {
+
 	// setup and parse configuration options:
 	po::options_description cmdline_options("Allowed options");
 	cmdline_options.add_options()
-	("help,h", "produce this help message")
-	("fasta,f", po::value<string>(), "reference sequences in FASTA format")
-  ("sam,s", po::value<string>(), "text SAM file of input alignments")
-  ("output,o", po::value<string>(), "output FASTA file of candidate junctions")
-  ;
+		("help,h", "produce this help message")
+		("fasta,f", po::value<string>(), "reference sequences in FASTA format")
+		("sam,s", po::value<string>(), "text SAM file of input alignments")
+		("output,o", po::value<string>(), "output FASTA file of candidate junctions")
+	;
 
-  po::variables_map options;
+	po::variables_map options;
 	po::store(po::parse_command_line(argc, argv, cmdline_options), options);
 	po::notify(options);
-	
+
 	// make sure that the config options are good:
 	if(options.count("help")
 		 || !options.count("fasta")
 		 || !options.count("sam")
-     || !options.count("output")
+		 || !options.count("output")
 		 ) {
-		cout << "Usage: breseq_utils CANDIDATE_JUNCTIONS --fasta=reference.fasta " 
+		cout << "Usage: breseq_utils PREPROCESS_ALIGNMENTS --fasta=reference.fasta "
+         << " --sam=reference.sam --output=output.fasta" << endl;
+		cout << cmdline_options << endl;
+		return -1;
+	}
+
+	// attempt to calculate error calibrations:
+	try {
+
+    // plain function
+
+	CandidateJunction::Settings settings;
+	CandidateJunction::Summary summary;
+	/*struct CandidateJunction::RefSeqInfo refSeqInfo(
+		options["sam"].as<string>(),
+		options["fasta"].as<string>(),
+		options["output"].as<string>()
+	);*/
+
+	settings.candidate_junction_fasta_file_name = options["candidate_junction_fasta_file_name"].as<string>();
+	settings.candidate_junction_faidx_file_name = options["candidate_junction_faidx_file_name"].as<string>();
+	settings.candidate_junction_sam_file_name = options["candidate_junction_sam_file_name"].as<string>();
+	settings.candidate_junction_score_method = options["candidate_junction_score_method"].as<string>();
+
+	settings.jc_genome_diff_file_name = options["jc_genome_diff_file_name"].as<string>();
+	settings.preprocess_junction_split_sam_file_name = options["preprocess_junction_split_sam_file_name"].as<string>();
+	settings.preprocess_junction_best_sam_file_name = options["preprocess_junction_best_sam_file_name"].as<string>();
+	settings.reference_fasta_file_name = options["reference_fasta_file_name"].as<string>();
+	settings.reference_faidx_file_name = options["reference_faidx_file_name"].as<string>();
+	settings.reference_sam_file_name = options["reference_sam_file_name"].as<string>();
+	settings.resolved_reference_sam_file_name = options["resolved_reference_sam_file_name"].as<string>();
+	settings.resolved_junction_sam_file_name = options["resolved_junction_sam_file_name"].as<string>();
+	settings.unmatched_read_file_name = options["unmatched_read_file_name"].as<string>();
+
+	settings.no_junction_prediction = options["no_junction_prediction"].as<bool>();
+	settings.unmatched_reads = options["unmatched_reads"].as<bool>();
+	settings.add_split_junction_sides = options["add_split_junction_sides"].as<bool>();
+	settings.require_complete_match = options["require_complete_match"].as<bool>();
+
+	settings.alignment_read_limit = options["alignment_read_limit"].as<int>();
+	settings.candidate_junction_read_limit = options["candidate_junction_read_limit"].as<int>();
+	settings.max_read_length = options["max_read_length"].as<int>();
+	settings.maximum_read_mismatches = options["maximum_read_mismatches"].as<int>();
+	settings.required_match_length = options["required_match_length"].as<int>();
+
+	if (options.count("preprocess_junction_min_indel_split_length"))
+		settings.preprocess_junction_min_indel_split_length = options["preprocess_junction_min_indel_split_length"].as<int>();
+
+	cReferenceSequences ref_seq_info;
+	breseq::LoadFeatureIndexedFastaFile(ref_seq_info, "", options["fasta"].as<string>());
+	//ref_seq_info[0].m_fasta_sequence.m_sequence
+
+	CandidateJunction::preprocess_alignments(settings, summary, ref_seq_info);
+
+  } catch(...) {
+		// failed;
+		return -1;
+	}
+
+  return 0;
+}
+
+int do_identify_candidate_junctions(int argc, char* argv[]) {
+
+	// setup and parse configuration options:
+	po::options_description cmdline_options("Allowed options");
+	cmdline_options.add_options()
+		("help,h", "produce this help message")
+		("fasta,f", po::value<string>(), "reference sequences in FASTA format")
+		("sam,s", po::value<string>(), "text SAM file of input alignments")
+		("output,o", po::value<string>(), "output FASTA file of candidate junctions")
+	;
+
+  po::variables_map options;
+	po::store(po::parse_command_line(argc, argv, cmdline_options), options);
+	po::notify(options);
+
+	// make sure that the config options are good:
+	if(options.count("help")
+		 || !options.count("fasta")
+		 || !options.count("sam")
+		 || !options.count("output")
+		 ) {
+		cout << "Usage: breseq_utils IDENTIFY_CANDIDATE_JUNCTIONS --fasta=reference.fasta "
          << " --sam=reference.sam --output=output.fasta" << endl;
 		cout << cmdline_options << endl;
 		return -1;
@@ -492,6 +575,17 @@ int do_candidate_junction(int argc, char* argv[]) {
   
 	// attempt to calculate error calibrations:
 	try {
+    
+    // plain function
+
+	CandidateJunction::Settings settings;
+	CandidateJunction::Summary summary;
+
+	cReferenceSequences ref_seq_info;
+	breseq::LoadFeatureIndexedFastaFile(ref_seq_info, "", options["fasta"].as<string>());
+	//ref_seq_info[0].m_fasta_sequence.m_sequence
+
+	CandidateJunction::identify_candidate_junctions(settings, summary, ref_seq_info);
     
   } catch(...) {
 		// failed; 
@@ -585,8 +679,10 @@ int main(int argc, char* argv[]) {
     return do_error_count(argc, argv); 
   } else if (command == "IDENTIFY_MUTATIONS") {
     return do_identify_mutations(argc, argv);
-  } else if (command == "CANDIDATE_JUNCTIONS") {
-  return do_candidate_junctions(argc, argv); 
+  } else if (command == "PREPROCESS_ALIGNMENTS") {
+    return do_preprocess_alignments(argc, argv);
+  } else if (command == "IDENTIFY_CANDIDATE_JUNCTIONS") {
+    return do_identify_candidate_junctions(argc, argv);
   } else if (command == "TABULATE_COVERAGE") {
     return do_tabulate_coverage(argc, argv); 
   } else if (command == "RESOLVE_ALIGNMENTS") {
