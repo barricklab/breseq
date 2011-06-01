@@ -20,7 +20,6 @@ LICENSE AND COPYRIGHT
 #define _BRESEQ_CANDIDATE_JUNCTIONS_H_
 
 #include <list>
-#include <boost/optional.hpp>
 #include <boost/shared_ptr.hpp>
 #include <boost/variant.hpp>
 
@@ -124,7 +123,7 @@ namespace breseq {
 		CandidateJunction();
 
 		static void _alignments_to_candidate_junction(map_t settings, map_t summary, map_t ref_seq_info, map_t fai, map_t header, map_t a1, map_t a2, map_t redundancy_1, map_t redundancy_2);
-		static void _alignments_to_candidate_junctions(map_t settings, map_t summary, map_t ref_seq_info, map_t candidate_junctions, map_t fai, map_t header, map_t al_ref);
+		static void _alignments_to_candidate_junctions(Settings settings, Summary summary,  const cReferenceSequences& ref_seq_info, map_t candidate_junctions, faidx_t* fai, bam_header_t* header, vector<bam1_t*> al_ref);
 		static void _check_read_pair_requirements(map_t a1_start, map_t a1_end, map_t a2_start, map_t a2_end);
 		static void _entire_read_matches(map_t a);
 		static void _num_matches_from_end(map_t a, map_t refseq_str, map_t dir, map_t overlap);

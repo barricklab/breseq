@@ -44,6 +44,7 @@ LICENSE AND COPYRIGHT
 #include <bam.h>
 #include <sam.h>
 #include <faidx.h>
+#include <boost/optional.hpp>
 
 // Begin breseq specific --->
 
@@ -249,51 +250,17 @@ namespace breseq {
 		return al_ref;
 	}
 
-	inline void tam_write_read_alignments(ofstream& fh, bam_header_t* header, int fastq_file_index, vector<bam1_t*> al) // (optional) vector<trim> trims
+	inline uint32_t fix_flags(uint32_t flags)
 	{
-//		for (int i = 0; i < al.size(); i++)
-//		{
-//			bam1_t* a = al[i];
-//			//if (trims.size() > 0) trim = trims[i];
-//
-//			string aux_tags = "AS:i:" + a->aux_get('AS') + "\t" + "X1:i:" + al.size() + "\t" + "X2:i:$fastq_file_index";
-//			//if (trim != NULL) $aux_tags .= "\t" . "XL:i:$trim->{L}" . "\t" . "XR:i:$trim->{R}" if (defined $trim);
-//
-//			my @score_array = $a->qscore;
-//			my $quality_score_string = '';
-//			foreach my $s (@score_array)
-//			{
-//				$quality_score_string += chr($s+33);
-//			}
-//
-//			my $cigar_list = $a->cigar_array;
-//			my $cigar_string = '';
-//			foreach my $c (@$cigar_list)
-//			{
-//				$cigar_string += $c->[1] + $c->[0];
-//			}
-//
-//			vector<string> ll;
-//			ll.push_back($a->qname);
-//			ll.push_back(fix_flags($a->flag));
-//			ll.push_back($header->target_name()->[$a->tid]);
-//			ll.push_back($a->start);
-//			push @ll, $a->qual, $cigar_string;
-//
-//			//something strange in new version... such that mate_start sometimes
-//			//returns 1 even though there is no mate
-//			if (!$a->proper_pair)
-//			{
-//				push @ll, "*", 0, 0;
-//			}
-//			else
-//			{
-//				push @ll, "=", $a->mate_start, $a->isize;
-//			}
-//			push @ll, $a->qseq, $quality_score_string, $aux_tags;
-//
-//			fh << str_join(ll, "\t") << endl;
-//		}
+		flags = ((flags >> 9) << 9) + flags % 128;
+		return flags;
+	}
+
+	template <class T> inline string to_string (const T& t)
+	{
+		stringstream ss;
+		ss << t;
+		return ss.str();
 	}
 
 	inline string str_join(const vector<string>& vec,const string& sep)
@@ -312,6 +279,75 @@ namespace breseq {
 			tmp += sep + vec[i];
 
 		return tmp;
+	}
+
+	struct Trim
+	{
+		string L;
+		string R;
+	};
+
+	inline void tam_write_read_alignments(ofstream& fh, bam_header_t* header, int32_t fastq_file_index, vector<bam1_t*> al, boost::optional< vector<Trim> > trims)
+	{
+		for (int32_t i = 0; i < al.size(); i++)
+		{
+			bam1_t* a = al[i];
+
+			stringstream aux_tags_ss;
+			aux_tags_ss << "AS:i:" << bam_aux_get(a, "AS") << "\t" << "X1:i:" << al.size() << "\t" << "X2:i:" << fastq_file_index;
+
+			if (trims && trims.get().size() > i)
+			{
+				Trim trim = trims.get()[i];
+				aux_tags_ss << "\t" << "XL:i:" << trim.L << "\t" << "XR:i:" << trim.R;
+			}
+
+			string aux_tags = aux_tags_ss.str();
+
+			string* qscore = (string*)bam1_qual(a);
+			string quality_score_string = *qscore;
+			for (int32_t j = 0; j < quality_score_string.size(); j++)
+				quality_score_string[j] = quality_score_string[j] + 33;
+
+			uint32_t* cigar_list = bam1_cigar(a);
+			stringstream cigar_string_ss;
+			uint32_t cigar_list_size = a->core.n_cigar;
+
+			for (int32_t j = 0; j < cigar_list_size; j++) //foreach my $c (@$cigar_list)
+				cigar_string_ss << cigar_list[j]; //$cigar_string += $c->[1] + $c->[0];
+			string cigar_string = cigar_string_ss.str();
+
+			vector<string> ll;
+			ll.push_back(bam1_qname(a));
+			ll.push_back(to_string(fix_flags(a->core.flag)));
+			ll.push_back(header->target_name[a->core.tid]);
+			ll.push_back(to_string(a->core.pos));
+			ll.push_back(to_string(a->core.qual));
+			ll.push_back(cigar_string);
+
+			//something strange in new version... such that mate_start sometimes
+			//returns 1 even though there is no mate
+			if (a->core.flag & BAM_FPROPER_PAIR != 0)
+			{
+				ll.push_back("*");
+				ll.push_back(0);
+				ll.push_back(0);
+			}
+			else
+			{
+				ll.push_back("=");
+				ll.push_back(0);
+				int32_t mate_start = a->core.mpos + 1;
+				ll.push_back(to_string(mate_start));
+				ll.push_back(to_string(a->core.isize));
+			}
+
+			ll.push_back(to_string(*bam1_seq(a)));
+			ll.push_back(quality_score_string);
+			ll.push_back(aux_tags);
+
+			fh << str_join(ll, "\t") << endl;
+		}
 	}
 
 } // breseq

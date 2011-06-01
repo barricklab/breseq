@@ -29,7 +29,107 @@ namespace breseq {
 	CandidateJunction::CandidateJunction() {}
 
 	void CandidateJunction::_alignments_to_candidate_junction(map_t settings, map_t summary, map_t ref_seq_info, map_t fai, map_t header, map_t a1, map_t a2, map_t redundancy_1, map_t redundancy_2) {}
-	void CandidateJunction::_alignments_to_candidate_junctions(map_t settings, map_t summary, map_t ref_seq_info, map_t candidate_junctions, map_t fai, map_t header, map_t al_ref) {}
+
+	void CandidateJunction::_alignments_to_candidate_junctions(Settings settings, Summary summary,  const cReferenceSequences& ref_seq_info, map_t candidate_junctions, faidx_t* fai, bam_header_t* header, vector<bam1_t*> al_ref)
+	{
+		bool verbose = false;
+
+		if (verbose)
+		{
+			cout << endl << "###########################" << endl;
+			cout << bam1_qname(al_ref[0]);
+			cout << endl << "###########################" << endl;
+		}
+
+		// Must still have multiple matches to support a new junction.
+		if (al_ref.size() <= 1)
+			return;
+
+		// Now is our chance to decide which groups of matches are compatible,
+		// to change their boundaries and to come up with a final list.
+
+		// For keeping track of how many times unique reference sequences (ignoring overlap regions)
+		// were used to construct a junction. We must mark redundant sides AFTER correcting for overlap.
+//		my %redundant_junction_sides;
+//		my @junctions;
+
+		if (verbose)
+		{
+			cout << bam1_qname(al_ref[0]) << endl;
+			cout << "Total matches: " << al_ref.size() << endl;
+		}
+
+		vector<bam1_t*> list1, list2;
+
+	  	// Try only pairs where one match starts at the beginning of the read >>>
+		// This saves a number of comparisons and gets rid of a lot of bad matches.
+		uint32_t $max_union_length = 0;
+
+		for (int32_t i = 0; i < al_ref.size(); i++)
+		{
+			bam1_t* a = al_ref[i];
+//			my ($a_start, $a_end) = Breseq::Shared::alignment_query_start_end($a);
+//			print "($a_start, $a_end)\n" if ($verbose);
+//			my $length = ($a_end - $a_start + 1);
+//			$max_union_length = $length if ($length > $max_union_length);
+//
+//			if ($a_start == 1)
+//			{
+//				push @list1, $a;
+//			}
+//			else
+//			{
+//				push @list2, $a;
+//			}
+		}
+//
+//		## Alternately try all pairs
+//		#	@list1 = @$al_ref;
+//		#	@list2 = @$al_ref;
+//
+//		## Pairs must CLEAR the maximum length of any one alignment by a certain amount
+//		$max_union_length += $required_extra_pair_total_length;
+//
+//		#The first match in this category is the longest
+//		print "  List1: " . (scalar @list1) . "\n" if ($verbose);
+//		print "  List2: " . (scalar @list2) . "\n" if ($verbose);
+//
+//		my @passed_pair_list;
+//
+//		### Try adding together each pair of matches to make a junction, by looking at read coordinates
+//		A1: foreach my $a1 (@list1)
+//		{
+//			my ($a1_start, $a1_end) = Breseq::Shared::alignment_query_start_end($a1);
+//
+//			A2: foreach my $a2 (@list2)
+//			{
+//				my ($a2_start, $a2_end) = Breseq::Shared::alignment_query_start_end($a2);
+//
+//				## if either end is the same, it is going to fail.
+//				## Note: we already checked for the start, when we split into the two lists!
+//
+//				# don't allow it to succeed no matter what if both of these reads are encompassed by a longer read from list one
+//				#next A2 if ($a2_end <= $encompass_end);
+//
+//				## Check a slew of guards to prevent predicting too many junctions to handle.
+//				my ($passed, $a1_unique_length, $a2_unique_length, $union_length) = _check_read_pair_requirements($a1_start, $a1_end, $a2_start, $a2_end);
+//
+//				if ($passed && ($union_length >= $max_union_length))
+//				{
+//					#destroy any contained matches -- possibly leaving some leeway
+//					if ($union_length > $max_union_length)
+//					{
+//						$max_union_length = $union_length;
+//						@passed_pair_list = grep { $_->{union_length} >= $max_union_length} @passed_pair_list;
+//					}
+//
+//					push @passed_pair_list, { a1 => $a1, a2 => $a2, union_length => $union_length, a1_unique_length => $a1_unique_length, a2_unique_length => $a2_unique_length};
+//				}
+//
+//			}
+//		}
+	}
+
 	void CandidateJunction::_check_read_pair_requirements(map_t a1_start, map_t a1_end, map_t a2_start, map_t a2_end) {}
 	void CandidateJunction::_entire_read_matches(map_t a) {}
 	void CandidateJunction::_num_matches_from_end(map_t a, map_t refseq_str, map_t dir, map_t overlap) {}
@@ -48,7 +148,6 @@ namespace breseq {
 	 */
 	void CandidateJunction::preprocess_alignments(Settings settings, Summary summary, const cReferenceSequences& ref_seq_info)
 	{
-		string read_file = "???";
 		cout << "Preprocessing alignments." << endl;
 
 		// get the cutoff for splitting alignments with indels
@@ -65,7 +164,7 @@ namespace breseq {
 		for (int32_t index = 0; index < settings.read_structures.size(); index++)
 		{
 			Settings::ReadStructure read_struct = settings.read_structures[index];
-			cerr << "  READ FILE::" << read_file << endl;
+			cerr << "  READ FILE::" << read_struct.base_name << endl;
 
 			string reference_sam_file_name = settings.reference_sam_file_name;
 			string reference_faidx_file_name = settings.reference_faidx_file_name;
@@ -105,7 +204,7 @@ namespace breseq {
 				{
 					int32_t best_score;
 //					($best_score, @$al_ref) = Breseq::AlignmentCorrection::_eligible_read_alignments($settings, $header, $reference_fai, $ref_seq_info, @$al_ref);
-					tam_write_read_alignments(BSAM, header, 0, al_ref);
+					tam_write_read_alignments(BSAM, header, 0, al_ref, boost::optional<vector<Trim> >());
 				}
 			}
 			sam_close(tam);
@@ -118,7 +217,321 @@ namespace breseq {
 	 */
 	void CandidateJunction::identify_candidate_junctions(Settings settings, Summary summary, const cReferenceSequences& ref_seq_info)
 	{
-		cout << "Identifying candidate junctions." << endl;
+		int32_t verbose = 0;
+
+		// set up some options that are global to this module
+		/*
+		$required_both_unique_length_per_side = $settings->{required_both_unique_length_per_side};
+		$required_one_unique_length_per_side = $settings->{required_one_unique_length_per_side};
+		$maximum_inserted_junction_sequence_length = $settings->{maximum_inserted_junction_sequence_length};
+	 	$required_match_length = $settings->{required_match_length};
+		$required_extra_pair_total_length = $settings->{required_extra_pair_total_length};
+		*/
+
+		// set up files and local variables from settings
+		//my $ref_strings = ref_seq_info[*].m_fasta_sequence.m_sequence;
+
+		string reference_faidx_file_name = settings.reference_faidx_file_name;
+		faidx_t* fai = fai_load(settings.reference_fasta_file_name.c_str());
+
+		string candidate_junction_fasta_file_name = settings.candidate_junction_fasta_file_name;
+
+		cFastaFile out(candidate_junction_fasta_file_name, ios_base::out);
+
+		// hash by junction sequence concatenated with name of counts
+		map_t candidate_junctions;
+
+		// summary data for this step
+//		my $hcs;
+//
+//		my @read_files = $settings->read_files;
+		int32_t i = 0;
+
+		for (int32_t j = 0; j < settings.read_structures.size(); j++)
+		{
+			Settings::ReadStructure read_struct = settings.read_structures[j];
+
+			string read_file = read_struct.base_name;
+			cerr << "  READ FILE::" << read_file << endl;
+
+			// Zero out summary information
+			map<string, int32_t> s;
+			s["reads_with_unique_matches"] = 0;
+			s["reads_with_non_unique_matches"] = 0;
+			s["reads_with_redundant_matches"] = 0;
+			s["reads_with_possible_hybrid_matches"] = 0;
+			s["reads_with_more_multiple_matches"] = 0;
+			s["reads_with_only_unwanted_matches"] = 0;
+			s["reads_with_best_unwanted_matches"] = 0;
+			//s["reads_with_no_matches"] = 0; #calculate as total minus number found
+			s["reads_with_ambiguous_hybrids"] = 0;
+
+			// Decide which input SAM file we are using...
+			string reference_sam_file_name = settings.preprocess_junction_split_sam_file_name;
+			if (settings.candidate_junction_score_method.compare("POS_HASH") != 0)
+				reference_sam_file_name = settings.reference_sam_file_name;
+
+			tamFile tam = sam_open(reference_sam_file_name.c_str()); // or die("Could not open reference same file: $reference_sam_file_name");
+			bam_header_t* header = sam_header_read2(reference_faidx_file_name.c_str()); // or die("Error reading reference fasta index file: $reference_faidx_file_name");
+			bam1_t* last_alignment;
+			vector<bam1_t*> al_ref;
+
+			while (true)
+			{
+				// resolve_alignments.c
+				al_ref = tam_next_read_alignments(tam, header, last_alignment, false);
+
+				if (al_ref.size() == 0)
+					break;
+
+				if (++i % 10000 == 0)
+					cerr << "    ALIGNED READ:" << i << " CANDIDATE JUNCTIONS:" << candidate_junctions.size() << endl;
+
+				// for testing...
+				if (settings.candidate_junction_read_limit != 0 && i > settings.candidate_junction_read_limit)
+					break;
+
+				_alignments_to_candidate_junctions(settings, summary, ref_seq_info, candidate_junctions, fai, header, al_ref);
+			}
+//
+//			$hcs->{read_file}->{$read_file} = $s;
+		}
+
+		//
+		// Calculate pos_hash score for each candidate junction now that we have the complete list of read match support
+		//
+
+//		JUNCTION_SEQ: foreach my $junction_seq (sort keys %$candidate_junctions)
+//		{
+//			JUNCTION_ID: foreach my $junction_id (keys %{$candidate_junctions->{$junction_seq}} )
+//			{
+//				my $cj = $candidate_junctions->{$junction_seq}->{$junction_id};
+//				$cj->{pos_hash_score} = scalar keys %{$cj->{read_begin_hash}};
+//
+//				print ">>>$junction_id\n" if ($verbose);
+//				print Dumper($cj->{read_begin_hash}) if ($verbose);
+//			}
+//		}
+//
+		//
+		// Combine hash into a list, one item for each unique sequence (also joining reverse complements)
+		//
+//
+//		my %observed_pos_hash_score_distribution;
+//		my %observed_min_overlap_score_distribution;
+//
+//		my @combined_candidate_junctions;
+//		my $handled_seq;
+//		my %ids_to_print;
+//
+//		## Sort here is to get reproducible ordering.
+//		JUNCTION_SEQ: foreach my $junction_seq (sort keys %$candidate_junctions)
+//		{
+//			print "Handling $junction_seq\n" if ($verbose);
+//
+//			## We may have already done the reverse complement
+//			next if ($handled_seq->{$junction_seq});
+//
+//			my @combined_candidate_junction_list = ();  ## holds all junctions with the same seq
+//			my $rc_junction_seq = Breseq::Fastq::revcom($junction_seq);
+//
+//			JUNCTION_ID: foreach my $junction_id (keys %{$candidate_junctions->{$junction_seq}} )
+//			{
+//				## add redundancy to the $junction_id
+//				my $cj = $candidate_junctions->{$junction_seq}->{$junction_id};
+//				$junction_id .= $Breseq::Shared::junction_name_separator . $cj->{r1} . $Breseq::Shared::junction_name_separator . $cj->{r2};
+//				push @combined_candidate_junction_list, { id=>$junction_id, pos_hash_score=>$cj->{pos_hash_score}, min_overlap_score=>$cj->{min_overlap_score}, seq=>$junction_seq, rc_seq=>$rc_junction_seq };
+//			}
+//			$handled_seq->{$junction_seq}++;
+//
+//			## add the reverse complement
+//			if (defined $candidate_junctions->{$rc_junction_seq})
+//			{
+//				JUNCTION_ID: foreach my $junction_id (keys %{$candidate_junctions->{$rc_junction_seq}} )
+//				{
+//					## add redundancy to the $junction_id (reversed)
+//					my $cj = $candidate_junctions->{$rc_junction_seq}->{$junction_id};
+//
+//					$junction_id .= $Breseq::Shared::junction_name_separator . $cj->{r2} . $Breseq::Shared::junction_name_separator . $cj->{r1};
+//					push @combined_candidate_junction_list, { id=>$junction_id, pos_hash_score=>$cj->{pos_hash_score}, min_overlap_score=>$cj->{min_overlap_score}, seq=>$rc_junction_seq, rc_seq=>$junction_seq };
+//				}
+//				$handled_seq->{$rc_junction_seq}++;
+//			}
+//
+//			## Sort by unique coordinate, then redundant (or second unique) coordinate to get reliable ordering for output
+//			sub by_score_unique_coord
+//			{
+//				my $a_item = Breseq::Shared::junction_name_split($a->{id});
+//				my $a_uc = ($a_item->{side_1}->{redundant} != 0) ? $a_item->{side_2}->{position} : $a_item->{side_1}->{position};
+//				my $a_rc = ($a_item->{side_1}->{redundant} != 0) ? $a_item->{side_1}->{position} : $a_item->{side_2}->{position};
+//
+//				my $b_item = Breseq::Shared::junction_name_split($b->{id});
+//				my $b_uc = ($b_item->{side_1}->{redundant} != 0) ? $b_item->{side_2}->{position} : $b_item->{side_1}->{position};
+//				my $b_rc = ($b_item->{side_1}->{redundant} != 0) ? $b_item->{side_1}->{position} : $b_item->{side_2}->{position};
+//
+//				return ( -($a->{pos_hash_score} <=> $b->{pos_hash_score}) || -($a->{min_overlap_score} <=> $b->{min_overlap_score}) || ($a_uc <=> $b_uc) || ($a_rc <=> $b_rc));
+//			}
+//			@combined_candidate_junction_list = sort by_score_unique_coord @combined_candidate_junction_list;
+//			my $best_candidate_junction = $combined_candidate_junction_list[0];
+//
+//			## Save the score in the distribution
+//			Breseq::Shared::add_score_to_distribution(\%observed_pos_hash_score_distribution, $best_candidate_junction->{pos_hash_score});
+//			Breseq::Shared::add_score_to_distribution(\%observed_min_overlap_score_distribution, $best_candidate_junction->{min_overlap_score});
+//
+//			## Check minimum requirements
+//			next JUNCTION_SEQ if ($best_candidate_junction->{pos_hash_score} < $settings->{minimum_candidate_junction_pos_hash_score});
+//			next JUNCTION_SEQ if ($best_candidate_junction->{min_overlap_score} < $settings->{minimum_candidate_junction_min_overlap_score});
+//
+//			## Make sure it isn't a duplicate junction id -- this should NEVER happen and causes downstream problem.
+//			## <--- Begin sanity check
+//			if ($ids_to_print{$best_candidate_junction->{id}})
+//			{
+//				print STDERR "Attempt to create junction candidate with duplicate id: $combined_candidate_junction_list[0]->{id}\n";
+//				print STDERR "==Existing junction==\n";
+//				print STDERR Dumper($ids_to_print{$best_candidate_junction->{id}});
+//				print STDERR "==New junction==\n";
+//				print STDERR Dumper($best_candidate_junction);
+//
+//				die if ($best_candidate_junction->{seq} ne $ids_to_print{$best_candidate_junction->{id}}->{seq});
+//				next JUNCTION_SEQ;
+//			}
+//			$ids_to_print{$best_candidate_junction->{id}} = $best_candidate_junction;
+//			## <--- End sanity check
+//
+//			push @combined_candidate_junctions, $best_candidate_junction;
+//		}
+//
+//		@combined_candidate_junctions = sort {-($a->{pos_hash_score} <=> $b->{pos_hash_score}) || -($a->{min_overlap_score} <=> $b->{min_overlap_score}) || (length($a->{seq}) <=> length($b->{seq}))} @combined_candidate_junctions;
+//		print Dumper(@combined_candidate_junctions) if ($verbose);
+//
+//		###
+//		## Limit the number of candidate junctions that we print by:
+//		##   (1) A maximum number of candidate junctions
+//		##   (2) A maximum length of the sequences in candidate junctions
+//		###
+//
+		cerr << "  Taking top candidate junctions..." << endl;
+//
+//		## adding up the lengths might be too time-consuming to be worth it...
+//		my $total_cumulative_cj_length = 0;
+//		my $total_candidate_junction_number = scalar @combined_candidate_junctions;
+//		foreach my $c (@combined_candidate_junctions)
+//		{
+//			$total_cumulative_cj_length += length $c->{seq};
+//		}
+//
+//		my @duplicate_sequences;
+//		my $cumulative_cj_length = 0;
+//		my $lowest_accepted_pos_hash_score = 'NA';
+//		my $lowest_accepted_min_overlap_score = 'NA';
+//
+//		## Right now we limit the candidate junctions to have a length no longer than the reference sequence.
+//		my $cj_length_limit = int($summary->{sequence_conversion}->{total_reference_sequence_length} * $settings->{maximum_candidate_junction_length_factor});
+//		my $maximum_candidate_junctions = $settings->{maximum_candidate_junctions};
+//		my $minimum_candidate_junctions = $settings->{minimum_candidate_junctions};
+//
+//		print STDERR sprintf ("  Minimum number to keep: %7d \n", $minimum_candidate_junctions);
+//		print STDERR sprintf ("  Maximum number to keep: %7d \n", $maximum_candidate_junctions);
+//		print STDERR sprintf ("  Maximum length to keep: %7d bases\n", $cj_length_limit);
+//
+//		print STDERR "    Initial: Number = " . $total_candidate_junction_number . ", Cumulative Length = " . $total_cumulative_cj_length . " bases\n";
+//
+//		if ((defined $settings->{maximum_candidate_junctions}) && (@combined_candidate_junctions > 0))
+//		{
+//			my @remaining_ids = ();
+//			my @list_in_waiting = ();
+//			my $add_cj_length = 0;
+//			my $num_duplicates = 0;
+//
+//			my $i = 0;
+//			my $current_pos_hash_score = $combined_candidate_junctions[$i]->{pos_hash_score};
+//			my $current_min_overlap_score = $combined_candidate_junctions[$i]->{min_overlap_score};
+//
+//			## Check to make sure that adding everything from the last iteration doesn't put us over any limits...
+//			my $new_number = scalar(@remaining_ids) + scalar(@list_in_waiting);
+//			my $new_length = $cumulative_cj_length + $add_cj_length;
+//			while (	( $new_number <= $minimum_candidate_junctions ) || (($new_length <= $cj_length_limit) && ($new_number <= $maximum_candidate_junctions)) )
+//			{
+//				## OK, add everything from the last iteration
+//				$cumulative_cj_length += $add_cj_length;
+//				push @remaining_ids, @list_in_waiting;
+//				$lowest_accepted_pos_hash_score = $current_pos_hash_score;
+//				$lowest_accepted_min_overlap_score = $current_min_overlap_score;
+//
+//				## Zero out what we will add
+//				$add_cj_length = 0;
+//				@list_in_waiting = ();
+//				$num_duplicates = 0;
+//
+//				## Check to make sure we haven't exhausted the list
+//				last if ($i >= scalar @combined_candidate_junctions);
+//
+//				$current_pos_hash_score = $combined_candidate_junctions[$i]->{pos_hash_score};
+//				$current_min_overlap_score = $combined_candidate_junctions[$i]->{min_overlap_score};
+//				CANDIDATE: while (
+//					    ($i < scalar @combined_candidate_junctions)
+//				     && ($combined_candidate_junctions[$i]->{pos_hash_score} == $current_pos_hash_score)
+//				     && ($combined_candidate_junctions[$i]->{min_overlap_score} == $current_min_overlap_score)
+//					)
+//				{
+//					my $c = $combined_candidate_junctions[$i];
+//					push @list_in_waiting, $c;
+//					$add_cj_length += length $c->{seq};
+//
+//				} continue {
+//					$i++;
+//				}
+//
+//				$new_number = scalar(@remaining_ids) + scalar(@list_in_waiting);
+//				$new_length = $cumulative_cj_length + $add_cj_length;
+//
+//				print STDERR sprintf("      Testing Pos Hash Score = %4d, Min Overlap Score = %4d, Num = %6d, Length = %6d\n", $current_pos_hash_score, $current_min_overlap_score, (scalar @list_in_waiting), $add_cj_length);
+//
+//			}
+//			@combined_candidate_junctions = @remaining_ids;
+//		}
+//
+//		my $accepted_candidate_junction_number = scalar @combined_candidate_junctions;
+//		print STDERR "    Accepted: Number = $accepted_candidate_junction_number, Pos Hash Score >= $lowest_accepted_pos_hash_score, Min Overlap Score >= $lowest_accepted_min_overlap_score, Cumulative Length = $cumulative_cj_length bases\n";
+//
+//		## Save summary statistics
+//		$hcs->{total}->{number} = $total_candidate_junction_number;
+//		$hcs->{total}->{length} = $total_cumulative_cj_length;
+//
+//		$hcs->{accepted}->{number} = $accepted_candidate_junction_number;
+//		$hcs->{accepted}->{length} = $cumulative_cj_length;
+//		$hcs->{accepted}->{pos_hash_score_cutoff} = $lowest_accepted_pos_hash_score;
+//		$hcs->{accepted}->{min_overlap_score_cutoff} = $lowest_accepted_min_overlap_score;
+//
+//		$hcs->{pos_hash_score_distribution} = \%observed_pos_hash_score_distribution;
+//		$hcs->{min_overlap_score_distribution} = \%observed_min_overlap_score_distribution;
+//
+//		###
+//		## Print out the candidate junctions, sorted by the lower coordinate, higher coord, then number
+//		###
+//		sub by_ref_seq_coord
+//		{
+//			my $acj = Breseq::Shared::junction_name_split($a->{id});
+//			my $bcj = Breseq::Shared::junction_name_split($b->{id});
+//			return (($ref_seq_info->{seq_order}->{$acj->{side_1}->{seq_id}} <=> $ref_seq_info->{seq_order}->{$bcj->{side_1}->{seq_id}}) ||  ($acj->{side_1}->{position} <=> $bcj->{side_1}->{position}));
+//		}
+//
+//		@combined_candidate_junctions = sort by_ref_seq_coord @combined_candidate_junctions;
+//
+//		foreach my $junction (@combined_candidate_junctions)
+//		{
+//			#print Dumper($ids_to_print);
+//
+//			my $seq = Bio::Seq->new(
+//				-display_id => $junction->{id}, -seq => $junction->{seq});
+//			$out->write_seq($seq);
+//		}
+//
+//		## create SAM faidx
+//		my $samtools = $settings->ctool('samtools');
+//		Breseq::Shared::system("$samtools faidx $candidate_junction_fasta_file_name") if (scalar @combined_candidate_junctions > 0);
+//
+//		$summary->{candidate_junction} = $hcs;
 	}
   
 } // namespace breseq
