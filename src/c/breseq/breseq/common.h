@@ -209,7 +209,111 @@ namespace breseq {
                ?  string::npos  :  end + theDelimiter.size()    );
     }
   }
-  
+
+	inline vector<bam1_t*> tam_next_read_alignments(tamFile tam, bam_header_t* header, bam1_t* last_alignment, bool paired)
+	{
+		int num_to_slurp = (paired) ? 2 : 1;
+		string last_read_name;
+		vector<bam1_t*> al_ref;
+		if (last_alignment != NULL)
+		{
+			last_read_name = bam1_qname(last_alignment);
+			al_ref.push_back(last_alignment);
+			last_alignment = NULL;
+		}
+
+		int num_slurped = 0;
+		while (true)
+		{
+			last_alignment = new bam1_t();
+			int bytes = sam_read1(tam, header, last_alignment);
+
+			//returns bytes == -1 if EOF reached
+			if (bytes < 0)
+			{
+				last_alignment = NULL;
+				return al_ref;
+			}
+
+			string read_name = bam1_qname(last_alignment);
+
+			if (read_name != last_read_name && ++num_slurped == num_to_slurp)
+				break;
+
+			if (last_read_name.size() == 0)
+				last_read_name = read_name;
+
+			al_ref.push_back(last_alignment);
+		}
+
+		return al_ref;
+	}
+
+	inline void tam_write_read_alignments(ofstream& fh, bam_header_t* header, int fastq_file_index, vector<bam1_t*> al) // (optional) vector<trim> trims
+	{
+//		for (int i = 0; i < al.size(); i++)
+//		{
+//			bam1_t* a = al[i];
+//			//if (trims.size() > 0) trim = trims[i];
+//
+//			string aux_tags = "AS:i:" + a->aux_get('AS') + "\t" + "X1:i:" + al.size() + "\t" + "X2:i:$fastq_file_index";
+//			//if (trim != NULL) $aux_tags .= "\t" . "XL:i:$trim->{L}" . "\t" . "XR:i:$trim->{R}" if (defined $trim);
+//
+//			my @score_array = $a->qscore;
+//			my $quality_score_string = '';
+//			foreach my $s (@score_array)
+//			{
+//				$quality_score_string += chr($s+33);
+//			}
+//
+//			my $cigar_list = $a->cigar_array;
+//			my $cigar_string = '';
+//			foreach my $c (@$cigar_list)
+//			{
+//				$cigar_string += $c->[1] + $c->[0];
+//			}
+//
+//			vector<string> ll;
+//			ll.push_back($a->qname);
+//			ll.push_back(fix_flags($a->flag));
+//			ll.push_back($header->target_name()->[$a->tid]);
+//			ll.push_back($a->start);
+//			push @ll, $a->qual, $cigar_string;
+//
+//			//something strange in new version... such that mate_start sometimes
+//			//returns 1 even though there is no mate
+//			if (!$a->proper_pair)
+//			{
+//				push @ll, "*", 0, 0;
+//			}
+//			else
+//			{
+//				push @ll, "=", $a->mate_start, $a->isize;
+//			}
+//			push @ll, $a->qseq, $quality_score_string, $aux_tags;
+//
+//			fh << str_join(ll, "\t") << endl;
+//		}
+	}
+
+	inline string str_join(const vector<string>& vec,const string& sep)
+	{
+		if(vec.size()==0)
+			return "";
+
+		string::size_type size=sep.length()*vec.size();
+		for(unsigned int i=0;i<vec.size();i++)
+			size+=vec[i].size();
+
+		string tmp;
+		tmp.reserve(size);
+		tmp=vec[0];
+		for(unsigned int i=1;i<vec.size();i++)
+			tmp += sep + vec[i];
+
+		return tmp;
+	}
+
 } // breseq
 
 #endif

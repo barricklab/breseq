@@ -401,16 +401,16 @@ namespace breseq {
 
     s.m_fasta_sequence.m_name = s.m_seq_id;
     
-    std::string line;
+    string line;
     while (!in.eof()) {
-      std::getline(in, line);
-      std::string first_word = GetWord(line);
+      getline(in, line);
+      string first_word = GetWord(line);
       RemoveLeadingTrailingWhitespace(line);
       
-      //std::cout << first_word << "::" << line << std::endl;
+      //cout << first_word << "::" << line << std::endl;
 
       if (first_word == "//") break;
-      for(std::string::iterator i=line.begin(); i!=line.end(); ++i) {
+      for(string::iterator i=line.begin(); i!=line.end(); ++i) {
         if (*i == ' ') continue;
         *i = toupper(*i);
         
@@ -423,7 +423,7 @@ namespace breseq {
       }
     }
     
-    //std::cout << s.m_sequence << std::endl;
+    //cout << s.m_sequence << std::endl;
   }
   
   void LoadFeatureIndexedFastaFile(
@@ -433,7 +433,8 @@ namespace breseq {
                                    ) 
   {
     s.ReadFASTA(in_fasta_file_name);
-    s.ReadFeatureTable(in_feature_file_name);
+    if (in_feature_file_name.size() > 0)
+    	s.ReadFeatureTable(in_feature_file_name);
   }
 
 
