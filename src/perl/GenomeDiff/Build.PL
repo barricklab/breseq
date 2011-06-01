@@ -6,6 +6,7 @@ my $builder = Module::Build->new(
     module_name         => 'GenomeDiff',
     license             => 'gpl',
     dist_author         => q{Jeffrey E. Barrick <jeffrey.e.barrick@gmail.com>},
+    dist_abstract       => 'genome diff tools for anaylzing mutations',
     dist_version_from   => 'lib/GenomeDiff.pm',
     build_requires => {
         'Test::More' => 0,
