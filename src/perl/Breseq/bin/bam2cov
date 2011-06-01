@@ -140,7 +140,7 @@ if ($tile)
 		my $start = 1;
 		while ($start < $reference_length)
 		{
-			## ends will be fixed later automatically for then they go too far
+			## ends will be fixed later automatically for when they go too far
 			my $end = $start + $tile - 1;
 			
 			my $offset_start = $start - $tile_overlap;
