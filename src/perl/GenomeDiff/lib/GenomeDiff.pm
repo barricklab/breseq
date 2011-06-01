@@ -2,8 +2,6 @@
 # Pod Documentation
 ###
 
-our $VERSION = '0.01';
-
 =head1 NAME
 
 GenomeDiff.pm
@@ -120,6 +118,9 @@ use Bio::Root::Root;
 use Data::Dumper;
 
 @ISA = qw( Bio::Root::Root );
+
+our $VERSION = '1.00';
+
 
 #
 # Format specification

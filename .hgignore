@@ -68,15 +68,20 @@ samtools$
 ^extern/Bio-SamTools-.*/lib/Bio/DB/Sam.c
 ^extern/Bio-SamTools-.*/Build$
 ^extern/Bio-SamTools-.*/Bio-SamTools-
+
+## Perl Breseq
 ^src/perl/Breseq/Build$
-^src/perl/Breseq/breseq.tmproj
 ^src/perl/Breseq/Breseq-
 ^src/perl/Breseq/META.yml
+
+## Perl GenomeDiff
+^src/perl/GenomeDiff/Build$
+^src/perl/GenomeDiff/GenomeDiff-
+^src/perl/GenomeDiff/META.yml
 
 ## For Xcode
 
 ^src/c/build
-
 .xcodeproj/.+\.mode1v3$
 .xcodeproj/.+\.pbxuser$
 .xcodeproj/project.xcworkspace.+$
