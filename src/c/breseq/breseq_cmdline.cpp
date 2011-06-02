@@ -495,9 +495,9 @@ int do_preprocess_alignments(int argc, char* argv[]) {
 
     // plain function
 
-	CandidateJunction::Settings settings;
-	CandidateJunction::Summary summary;
-	/*struct CandidateJunction::RefSeqInfo refSeqInfo(
+	Settings settings;
+	Summary summary;
+	/*RefSeqInfo refSeqInfo(
 		options["sam"].as<string>(),
 		options["fasta"].as<string>(),
 		options["output"].as<string>()
@@ -528,13 +528,13 @@ int do_preprocess_alignments(int argc, char* argv[]) {
 	settings.max_read_length = options["max_read_length"].as<int>();
 	settings.maximum_read_mismatches = options["maximum_read_mismatches"].as<int>();
 	settings.required_match_length = options["required_match_length"].as<int>();
+	settings.required_extra_pair_total_length = options["required_extra_pair_total_length"].as<int>();
 
 	if (options.count("preprocess_junction_min_indel_split_length"))
 		settings.preprocess_junction_min_indel_split_length = options["preprocess_junction_min_indel_split_length"].as<int>();
 
 	cReferenceSequences ref_seq_info;
 	breseq::LoadFeatureIndexedFastaFile(ref_seq_info, "", options["fasta"].as<string>());
-	//ref_seq_info[0].m_fasta_sequence.m_sequence
 
 	CandidateJunction::preprocess_alignments(settings, summary, ref_seq_info);
 
@@ -578,12 +578,11 @@ int do_identify_candidate_junctions(int argc, char* argv[]) {
     
     // plain function
 
-	CandidateJunction::Settings settings;
-	CandidateJunction::Summary summary;
+	Settings settings;
+	Summary summary;
 
 	cReferenceSequences ref_seq_info;
 	breseq::LoadFeatureIndexedFastaFile(ref_seq_info, "", options["fasta"].as<string>());
-	//ref_seq_info[0].m_fasta_sequence.m_sequence
 
 	CandidateJunction::identify_candidate_junctions(settings, summary, ref_seq_info);
     

@@ -129,7 +129,9 @@ namespace breseq {
   std::string GetWord(string &s);
   void RemoveLeadingWhitespace(string &s);
   void RemoveLeadingTrailingWhitespace(string &s);
-	
+
+  uint32_t alignment_mismatches(bam1_t* a, bam_header_t* header, faidx_t* fai, boost::optional<const cReferenceSequences&> ref_seq_info);
+
 } // breseq namespace
 
 #endif

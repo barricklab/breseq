@@ -20,7 +20,9 @@ LICENSE AND COPYRIGHT
 #define _BRESEQ_RESOLVE_ALIGNMENTS_H_
 
 #include "breseq/common.h"
+
 #include "breseq/settings.h"
+#include "breseq/annotated_sequence.h"
 
 using namespace std;
 
@@ -46,6 +48,9 @@ namespace breseq {
   
   void junction_name_split(junction_info& ji, const string& junction_name);
   
+  int32_t _eligible_read_alignments(Settings settings, bam_header_t* reference_header, faidx_t* reference_fai, const cReferenceSequences& ref_seq_info, vector<bam1_t*> al);
+  bool _test_read_alignment_requirements(Settings settings, bam_header_t* reference_header, faidx_t* reference_fai, const cReferenceSequences& ref_seq_info, bam1_t* a);
+
   void resolve_alignments( 
                           const bool junction_prediction,
                           const string &reference_fasta,

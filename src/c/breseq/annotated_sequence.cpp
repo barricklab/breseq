@@ -437,6 +437,95 @@ namespace breseq {
     	s.ReadFeatureTable(in_feature_file_name);
   }
 
+	uint32_t alignment_mismatches(bam1_t* a, bam_header_t* header, faidx_t* fai, boost::optional<const cReferenceSequences&> ref_seq_info)
+	{
+		bool verbose = false;
+		uint32_t mismatches = 0;
+
+		string seq_id = header->target_name[a->core.tid];
+
+		int32_t a_start, a_end;
+		alignment_query_start_end(a, a_start, a_end);
+
+		string ref_string;
+		if (ref_seq_info)
+		{
+			cReferenceSequences ref_seq_info_value = ref_seq_info.get();
+			uint32_t index = ref_seq_info_value.seq_id_to_index(seq_id);
+			ref_string = ref_seq_info_value[index].m_fasta_sequence.m_sequence;
+			ref_string = ref_string.substr(a_start - 1, a_end - a_start + 1);
+		}
+		else
+		{
+			stringstream region_ss;
+			region_ss << seq_id << ':' << a_start << '-' << a_end;
+			string region = region_ss.str();
+			int len = 0;
+			ref_string = fai_fetch(fai, region.c_str(), &len);
+		}
+
+		vector<string> ref_string_list;
+		boost::split(ref_string_list, ref_string, boost::is_any_of("/"));
+		uint32_t ref_pos = 0;
+
+		string qseq = bama_qseq(a);
+		string read_string = qseq.substr(a_start - 1, a_end - a_start + 1);
+		vector<string> read_string_list;
+		boost::split(read_string_list, read_string, boost::is_any_of("/"));
+		uint32_t read_pos = 0;
+
+		uint32_t* cigar_list = bam1_cigar(a); // cigar array for this alignment
+
+		if (verbose)
+		{
+			cout << bam1_qname(a) << endl;
+			//cout << Dumper(cigar_list)
+		}
+		//#	my $cigar_string = '';
+
+		for (uint32_t i = 0; i<= a->core.n_cigar; i++)
+		{
+			char op = cigar_list[i] & BAM_CIGAR_MASK;
+			uint32_t len = cigar_list[i] >> BAM_CIGAR_SHIFT;
+
+			// soft padding counts as a mismatch
+			if (op == 'S')
+			{
+				mismatches += len;
+			}
+			else if (op == 'D')
+			{
+				mismatches += len;
+				ref_pos += len;
+			}
+			else if (op == 'I')
+			{
+				mismatches += len;
+				read_pos += len;
+			}
+			else if (op == 'M')
+			{
+				for (uint32_t j = 0; j < len; j++)
+				{
+					if (verbose)
+					{
+						cout << "REF: " << ref_pos << "  " << ref_string_list[ref_pos] << endl;
+						cout << "READ: " << read_pos << "  " << read_string_list[read_pos] << endl;
+					}
+					if (ref_string_list[ref_pos].compare(read_string_list[read_pos]) != 0);
+						mismatches++;
+					//#print "$read_pos $ref_pos\n";
+
+					read_pos++;
+					ref_pos++;
+				}
+			}
+			//#$cigar_string .= $len . $op;
+		}
+
+		//#	print $a->qname . "\n$mismatches\n$cigar_string\n$ref_string\n$read_string\n" if ($mismatches);
+		return mismatches;
+	}
 
 } // breseq namespace
 

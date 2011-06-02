@@ -18,7 +18,6 @@ LICENSE AND COPYRIGHT
 
 #include "breseq/resolve_alignments.h"
 
-#include "breseq/annotated_sequence.h"
 #include "breseq/genome_diff.h"
 #include "breseq/fastq.h"
 #include "breseq/fasta.h"
@@ -649,83 +648,86 @@ namespace breseq {
 //Title   : _eligible_alignments
 //Usage   : _eligible_alignments( );
 //Function:
-//Returns : 
+//Returns : Best score
 //
 //=cut
 //
-//sub _eligible_read_alignments
-//{	
-//my $verbose = 0;
-//
-//### These settings are currently not used
-//my $minimum_best_score = 0; 
-//my $minimum_best_score_difference = 0; 
-//### but the code below works if they are set
-//
-//my ($settings, $reference_header, $reference_fai, $ref_seq_info, @al) = @_;
-//return (0) if (scalar @al <= 0);
-//
-//## require a minimum length of the read to be mapped
-//@al = grep { _test_read_alignment_requirements($settings, $reference_header, $reference_fai, $ref_seq_info, $_) } @al;
-//return (0) if (scalar @al == 0);
-//
-//@al = grep { !$_->unmapped } @al;
-//return (0) if (scalar @al == 0);
-//
-//## @JEB v1> Unfortunately sometimes better matches don't get better alignment scores!
-//## example is 30K88AAXX_LenskiSet2:1:37:1775:92 in RJW1129
-//## Here a read with an extra match at the end doesn't get a higher score!!!
-//
-//#This sucks, but we need to re-sort matches and check scores ourselves...
-//#for now just count mismatches (which include soft padding!)
-//my %mismatch_hash;
-//foreach my $a (@al)
-//{
-//$mismatch_hash{$a} = Breseq::Shared::alignment_mismatches($a, $reference_header, $reference_fai, $ref_seq_info);
-//}
-//@al = sort { $mismatch_hash{$a} <=> $mismatch_hash{$b} } @al;
-//
-//if ($verbose)
-//{
-//foreach my $a (@al)
-//{
-//print $a->start . "-" . $a->end . " " . ($a->l_qseq-$mismatch_hash{$a}) . "\n";
-//}
-//}
-//
-//## how many reads share the best score?
-//my $last_best = 0;
-//my $best_score = $mismatch_hash{$al[0]};
-//
-//## no scores meet minimum
-//return (0) if (defined $minimum_best_score && ($best_score < $minimum_best_score));
-//
-//while (($last_best+1 < scalar @al) && ($mismatch_hash{$al[$last_best+1]} == $best_score))
-//{
-//$last_best++;
-//}
-//
-//#broken
-//## no scores meet minimum difference between best and next best
-//#if (defined $minimum_best_score_difference && (scalar @al > $last_best+1))
-//#{
-//#	my $second_best_score = $al[$last_best+1]->aux_get("AS");
-//#	return () if ($second_best_score + $minimum_best_score_difference >= $best_score)
-//#}
-//
-//my @return_list = splice @al, 0, $last_best+1;	
-//
-//if ($verbose)
-//{
-//print "$last_best\n";
-//foreach my $a (@return_list)
-//{
-//print $a->start . "-" . $a->end . "\n";
-//}
-//}
-//#Note that the score we return is higher for matches so we negative this value...
-//return ($return_list[0]->l_qseq-$best_score, @return_list);
-//}
+int32_t _eligible_read_alignments(Settings settings, bam_header_t* reference_header, faidx_t* reference_fai, const cReferenceSequences& ref_seq_info, vector<bam1_t*> al)
+{
+	bool verbose = false;
+
+	// These settings are currently not used
+	int32_t minimum_best_score = 0;
+	int32_t minimum_best_score_difference = 0;
+	// but the code below works if they are set
+
+	if (al.size() <= 0) return false;
+
+	// require a minimum length of the read to be mapped
+	for (vector<bam1_t*>::iterator it = al.end() - 1; it >= al.begin(); it--)
+		if (_test_read_alignment_requirements(settings, reference_header, reference_fai, ref_seq_info, (*it)))
+			al.erase(it);
+
+	if (al.size() <= 0) return false;
+
+	//@al = grep { !$_->unmapped } @al;
+	//return (0) if (scalar @al == 0);
+
+	// @JEB v1> Unfortunately sometimes better matches don't get better alignment scores!
+	// example is 30K88AAXX_LenskiSet2:1:37:1775:92 in RJW1129
+	// Here a read with an extra match at the end doesn't get a higher score!!!
+
+	// This sucks, but we need to re-sort matches and check scores ourselves...
+	// for now just count mismatches (which include soft padding!)
+	//my %mismatch_hash;
+	//foreach my $a (@al)
+	//{
+	//	$mismatch_hash{$a} = Breseq::Shared::alignment_mismatches($a, $reference_header, $reference_fai, $ref_seq_info);
+	//}
+	//@al = sort { $mismatch_hash{$a} <=> $mismatch_hash{$b} } @al;
+
+	//if ($verbose)
+	//{
+	//foreach my $a (@al)
+	//{
+	//print $a->start . "-" . $a->end . " " . ($a->l_qseq-$mismatch_hash{$a}) . "\n";
+	//}
+	//}
+
+	// how many reads share the best score?
+	//my $last_best = 0;
+	//my $best_score = $mismatch_hash{$al[0]};
+
+	// no scores meet minimum
+	//return (0) if (defined $minimum_best_score && ($best_score < $minimum_best_score));
+
+	//while (($last_best+1 < scalar @al) && ($mismatch_hash{$al[$last_best+1]} == $best_score))
+	//{
+	//$last_best++;
+	//}
+
+	//#broken
+	//## no scores meet minimum difference between best and next best
+	//#if (defined $minimum_best_score_difference && (scalar @al > $last_best+1))
+	//#{
+	//#	my $second_best_score = $al[$last_best+1]->aux_get("AS");
+	//#	return () if ($second_best_score + $minimum_best_score_difference >= $best_score)
+	//#}
+
+	//@al = splice @al, 0, $last_best+1;
+
+	//if ($verbose)
+	//{
+	//print "$last_best\n";
+	//foreach my $a (@al)
+	//{
+	//print $a->start . "-" . $a->end . "\n";
+	//}
+	//}
+
+	// Note that the score we return is higher for matches so we negative this value...
+	//return $al[0]->l_qseq-$best_score;
+}
 //
 //
 //=head2 _read_alignment_passes_requirements
@@ -738,35 +740,37 @@ namespace breseq {
 //
 //=cut
 //
-//sub _test_read_alignment_requirements
-//{
-//my ($settings, $reference_header, $reference_fai, $ref_seq_info, $a) = @_;
-//
-//my $accept = 1;
-//
-//return 0 if ($a->unmapped);
-//
-//if ($settings->{required_match_length})
-//{
-//my $alignment_length_on_query = $a->query->length; ##this is the length of the alignment on the read
-//return 0 if ($alignment_length_on_query < $settings->{required_match_length});
-//}
-//
-//if ($settings->{require_complete_match})
-//{
-//my ($q_start, $q_end) = ($a->query->start-1, $a->query->end-1); #0-indexed
-//my $complete_match = ($q_start+1 == 1) && ($q_end+1 == $a->l_qseq);
-//return 0 if (!$complete_match);
-//}
-//if ($settings->{maximum_read_mismatches})
-//{
-//my $mismatches = Breseq::Shared::alignment_mismatches($a, $reference_header, $reference_fai, $ref_seq_info);
-//return 0 if ($mismatches > $settings->{maximum_read_mismatches});
-//}		
-//
-//return 1;
-//}
-//
+bool _test_read_alignment_requirements(Settings settings, bam_header_t* reference_header, faidx_t* reference_fai, const cReferenceSequences& ref_seq_info, bam1_t* a)
+{
+	bool accept = true;
+
+	bool unmapped = ((a->core.flag & BAM_FUNMAP) != 0);
+	if (unmapped) return false;
+
+	if (settings.required_match_length > 0)
+	{
+		uint32_t* cigar = bam1_cigar(a); // cigar array for this alignment
+		uint32_t alignment_length_on_query = bam_cigar2qlen(&a->core, cigar); //this is the length of the alignment on the read
+		if (alignment_length_on_query < settings.required_match_length)
+			return false;
+	}
+
+	if (settings.require_complete_match)
+	{
+		int32_t q_start, q_end;
+		alignment_query_start_end(a, q_start, q_end);
+		bool complete_match = (q_start == 1) && (q_end == a->core.l_qseq);
+		if (!complete_match) return false;
+	}
+	if (settings.maximum_read_mismatches > 0)
+	{
+		int32_t mismatches = alignment_mismatches(a, reference_header, reference_fai, ref_seq_info);
+		if (mismatches > settings.maximum_read_mismatches) return false;
+	}
+
+	return true;
+}
+
 //=head2 _alignment_overlaps_junction
 //
 //Title   : _test_read_alignment_requirements
