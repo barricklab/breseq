@@ -34,6 +34,7 @@ LICENSE AND COPYRIGHT
 #include <fstream>
 #include <iomanip>
 #include <iostream>
+#include <list>
 #include <map>
 #include <sstream>
 #include <string>
@@ -45,6 +46,8 @@ LICENSE AND COPYRIGHT
 #include <sam.h>
 #include <faidx.h>
 #include <boost/optional.hpp>
+#include <boost/algorithm/string/split.hpp>
+#include <boost/algorithm/string/classification.hpp>
 
 // Begin breseq specific --->
 
@@ -81,6 +84,76 @@ namespace breseq {
   static uint8_t base_list_size = 5;
 
   
+	struct Settings
+	{
+		// Fields
+
+		string candidate_junction_score_method;
+
+		string candidate_junction_fasta_file_name;
+		string candidate_junction_faidx_file_name;
+		string candidate_junction_sam_file_name;
+		string jc_genome_diff_file_name;
+		string preprocess_junction_best_sam_file_name;
+		string preprocess_junction_split_sam_file_name;
+		string reference_fasta_file_name;
+		string reference_faidx_file_name;
+		string reference_sam_file_name;
+		string resolved_reference_sam_file_name;
+		string resolved_junction_sam_file_name;
+		string unmatched_read_file_name;
+
+		bool no_junction_prediction;
+		bool unmatched_reads;
+		bool add_split_junction_sides;
+		bool require_complete_match;
+
+		int32_t alignment_read_limit;
+		int32_t candidate_junction_read_limit;
+		int32_t max_read_length;
+		int32_t maximum_inserted_junction_sequence_length;
+		int32_t maximum_read_mismatches;
+		int32_t required_both_unique_length_per_side;
+		int32_t required_one_unique_length_per_side;
+		int32_t required_extra_pair_total_length;
+		int32_t required_match_length;
+
+		boost::optional<int32_t> preprocess_junction_min_indel_split_length;
+
+		struct ReadStructure
+		{
+			string base_name;
+		};
+		vector<ReadStructure> read_structures;
+	};
+
+	struct Summary
+	{
+		// Fields
+
+		struct AlignmentCorrection
+		{
+			string read_file;
+			struct NewJunction
+			{
+				int32_t observed_min_overlap_score_distribution;
+				int32_t accepted_min_overlap_score_distribution;
+				int32_t observed_pos_hash_score_distribution;
+				int32_t accepted_pos_hash_score_distribution;
+			};
+			list<NewJunction> new_junctions;
+
+		} alignment_correction;
+
+		struct PreprocessCoverage
+		{
+			int32_t junction_accept_score_cutoff_1;
+			int32_t junction_accept_score_cutoff_2;
+		} preprocess_coverage;
+	};
+
+
+
 	/*! Reverse a base.
 	 */
 	inline base_bam complement_base_bam(base_bam base) {
@@ -311,10 +384,13 @@ namespace breseq {
 
 			uint32_t* cigar_list = bam1_cigar(a);
 			stringstream cigar_string_ss;
-			uint32_t cigar_list_size = a->core.n_cigar;
 
-			for (int32_t j = 0; j < cigar_list_size; j++) //foreach my $c (@$cigar_list)
-				cigar_string_ss << cigar_list[j]; //$cigar_string += $c->[1] + $c->[0];
+			for (int32_t j = 0; j <= a->core.n_cigar; j++) //foreach my $c (@$cigar_list)
+			{
+				uint32_t op = cigar_list[i] & BAM_CIGAR_MASK;
+				uint32_t len = cigar_list[i] >> BAM_CIGAR_SHIFT;
+				cigar_string_ss << len << op; //$cigar_string += $c->[1] + $c->[0];
+			}
 			string cigar_string = cigar_string_ss.str();
 
 			vector<string> ll;
@@ -348,6 +424,47 @@ namespace breseq {
 
 			fh << str_join(ll, "\t") << endl;
 		}
+	}
+
+	// returns start and end in coordinates of query
+	//lowest query base first, regardless of which strand
+	// it matched in the reference genome (i.e., reversed alignment).
+	inline void alignment_query_start_end(bam1_t* a, int32_t& start, int32_t& end)
+	{
+		uint32_t* cigar = bam1_cigar(a); // cigar array for this alignment
+		start = 1;
+		end = bam_cigar2qlen(&a->core,cigar);
+
+		// start:
+		for(uint32_t i=0; i<= a->core.n_cigar; i++)
+		{
+		    uint32_t op = cigar[i] & BAM_CIGAR_MASK;
+		    uint32_t len = cigar[i] >> BAM_CIGAR_SHIFT;
+		    // if we encounter padding, or a gap in reference then we are done
+		    if((op != BAM_CSOFT_CLIP) && (op != BAM_CHARD_CLIP) && (op != BAM_CREF_SKIP)) {
+				break;
+		    }
+		    start += len;
+		}
+
+		// end:
+		for(uint32_t i=(a->core.n_cigar-1); i>0; --i)
+		{
+			uint32_t op = cigar[i] & BAM_CIGAR_MASK;
+			uint32_t len = cigar[i] >> BAM_CIGAR_SHIFT;
+			// if we encounter padding, or a gap in reference then we are done
+			if((op != BAM_CSOFT_CLIP) && (op != BAM_CHARD_CLIP) && (op != BAM_CREF_SKIP)) {
+			  break;
+			}
+			end -= len;
+		}
+	}
+
+	inline string bama_qseq(bam1_t* a)
+	{
+	    string seq(a->core.l_qseq, ' ');
+	    for (int32_t i = 0; i < a->core.l_qseq; i++)
+			seq[i] = bam_nt16_rev_table[bam1_seqi(bam1_seq(a),i)];
 	}
 
 } // breseq

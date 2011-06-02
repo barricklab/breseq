@@ -63,74 +63,153 @@ namespace breseq {
 
 	  	// Try only pairs where one match starts at the beginning of the read >>>
 		// This saves a number of comparisons and gets rid of a lot of bad matches.
-		uint32_t $max_union_length = 0;
+		int32_t max_union_length = 0;
 
 		for (int32_t i = 0; i < al_ref.size(); i++)
 		{
 			bam1_t* a = al_ref[i];
-//			my ($a_start, $a_end) = Breseq::Shared::alignment_query_start_end($a);
-//			print "($a_start, $a_end)\n" if ($verbose);
-//			my $length = ($a_end - $a_start + 1);
-//			$max_union_length = $length if ($length > $max_union_length);
-//
-//			if ($a_start == 1)
-//			{
-//				push @list1, $a;
-//			}
-//			else
-//			{
-//				push @list2, $a;
-//			}
+
+			int32_t a_start, a_end;
+			alignment_query_start_end(a, a_start, a_end);
+
+			if (verbose) cout << "(" << a_start << ", " << a_end << ")" << endl;
+
+			int32_t length = a_end - a_start + 1;
+			if (max_union_length < length)
+				max_union_length = length;
+
+			if (a_start == 1)
+				list1.push_back(a);
+			else
+				list2.push_back(a);
 		}
-//
-//		## Alternately try all pairs
-//		#	@list1 = @$al_ref;
-//		#	@list2 = @$al_ref;
-//
-//		## Pairs must CLEAR the maximum length of any one alignment by a certain amount
-//		$max_union_length += $required_extra_pair_total_length;
-//
-//		#The first match in this category is the longest
-//		print "  List1: " . (scalar @list1) . "\n" if ($verbose);
-//		print "  List2: " . (scalar @list2) . "\n" if ($verbose);
-//
-//		my @passed_pair_list;
-//
-//		### Try adding together each pair of matches to make a junction, by looking at read coordinates
-//		A1: foreach my $a1 (@list1)
-//		{
-//			my ($a1_start, $a1_end) = Breseq::Shared::alignment_query_start_end($a1);
-//
-//			A2: foreach my $a2 (@list2)
-//			{
-//				my ($a2_start, $a2_end) = Breseq::Shared::alignment_query_start_end($a2);
-//
-//				## if either end is the same, it is going to fail.
-//				## Note: we already checked for the start, when we split into the two lists!
-//
-//				# don't allow it to succeed no matter what if both of these reads are encompassed by a longer read from list one
-//				#next A2 if ($a2_end <= $encompass_end);
-//
-//				## Check a slew of guards to prevent predicting too many junctions to handle.
-//				my ($passed, $a1_unique_length, $a2_unique_length, $union_length) = _check_read_pair_requirements($a1_start, $a1_end, $a2_start, $a2_end);
-//
-//				if ($passed && ($union_length >= $max_union_length))
-//				{
-//					#destroy any contained matches -- possibly leaving some leeway
-//					if ($union_length > $max_union_length)
-//					{
-//						$max_union_length = $union_length;
-//						@passed_pair_list = grep { $_->{union_length} >= $max_union_length} @passed_pair_list;
-//					}
-//
-//					push @passed_pair_list, { a1 => $a1, a2 => $a2, union_length => $union_length, a1_unique_length => $a1_unique_length, a2_unique_length => $a2_unique_length};
-//				}
-//
-//			}
-//		}
+
+		// Alternately try all pairs
+		//	list1 = al_ref;
+		//	list2 = al_ref;
+
+		// Pairs must CLEAR the maximum length of any one alignment by a certain amount
+		max_union_length += settings.required_extra_pair_total_length;
+
+		// The first match in this category is the longest
+		if (verbose)
+		{
+			cout << "  List1: " << list1.size() << endl;
+			cout << "  List2: " << list2.size() << endl;
+		}
+
+		vector<PassedPair> passed_pair_list;
+
+		// Try adding together each pair of matches to make a junction, by looking at read coordinates
+		for (int32_t i = 0; i < list1.size(); i++)
+		{
+			bam1_t* a1 = list1[i];
+
+			int32_t a1_start, a1_end;
+			alignment_query_start_end(a1, a1_start, a1_end);
+
+			for (int32_t j = 0; j < list2.size(); j++)
+			{
+				bam1_t* a2 = list1[i];
+
+				int32_t a2_start, a2_end;
+				alignment_query_start_end(a2, a2_start, a2_end);
+
+				// if either end is the same, it is going to fail.
+				// Note: we already checked for the start, when we split into the two lists!
+
+				// don't allow it to succeed no matter what if both of these reads are encompassed by a longer read from list one
+				//#next A2 if ($a2_end <= $encompass_end);
+
+				// Check a slew of guards to prevent predicting too many junctions to handle.
+				int32_t a1_unique_length, a2_unique_length, union_length;
+				bool passed = _check_read_pair_requirements(settings, a1_start, a1_end, a2_start, a2_end, a1_unique_length, a2_unique_length, union_length);
+
+				if (passed && (union_length >= max_union_length))
+				{
+					//destroy any contained matches -- possibly leaving some leeway
+					if (union_length > max_union_length)
+					{
+						max_union_length = union_length;
+						for (vector<PassedPair>::iterator it = passed_pair_list.end() - 1; it >= passed_pair_list.begin(); it--)
+							if ((*it).union_length < max_union_length)
+								passed_pair_list.erase(it);
+					}
+
+					PassedPair passed_pair = { a1 = a1, a2 = a2, union_length = union_length, a1_unique_length = a1_unique_length, a2_unique_length = a2_unique_length };
+					passed_pair_list.push_back(passed_pair);
+				}
+
+			}
+		}
 	}
 
-	void CandidateJunction::_check_read_pair_requirements(map_t a1_start, map_t a1_end, map_t a2_start, map_t a2_end) {}
+	bool CandidateJunction::_check_read_pair_requirements(Settings settings, int32_t a1_start, int32_t a1_end, int32_t a2_start, int32_t a2_end, int32_t& a1_unique_length, int32_t& a2_unique_length, int32_t& union_length)
+	{
+		bool verbose = false;
+
+		if (verbose)
+			cout << "=== Match1: " << a1_start << "-" << a1_end << "   Match2: " << a2_start << "-" << a2_end << endl;
+
+		// 0. Require one match to start at the beginning of the read
+		if (a1_start != 1 && a2_start != 1)
+			return false;
+		// Already checked when two lists were constructed: TEST AND REMOVE
+
+		int32_t a1_length = a1_end - a1_start + 1;
+		int32_t a2_length = a2_end - a2_start + 1;
+
+		int32_t union_start = (a1_start < a2_start) ? a1_start : a2_start;
+		int32_t union_end = (a1_end > a2_end) ? a1_end : a2_end;
+		union_length = union_end - union_start + 1;
+
+		int32_t intersection_start = (a1_start > a2_start) ? a1_start : a2_start;
+		int32_t intersection_end = (a1_end < a2_end) ? a1_end : a2_end;
+		int32_t intersection_length = intersection_end - intersection_start + 1;
+
+		if (intersection_length < 0)
+			union_length += intersection_length;
+		int32_t intersection_length_positive = (intersection_length > 0) ? intersection_length : 0;
+		int32_t intersection_length_negative = (intersection_length < 0) ? -1 * intersection_length : 0;
+
+		//
+		// CHECKS
+		//
+
+		if (verbose)
+			cout << "    Union: " << union_length << "   Intersection: " << intersection_length << endl;
+
+		//// 1. Require maximum negative overlap (inserted unique sequence length) to be less than some value
+		if (intersection_length_negative > settings.maximum_inserted_junction_sequence_length)
+			return false;
+
+		//// 2. Require both ends to extend a certain minimum length outside of the overlap
+		if (a1_length < intersection_length_positive + settings.required_both_unique_length_per_side)
+			return false;
+
+		if (a2_length < intersection_length_positive + settings.required_both_unique_length_per_side);
+			return false;
+
+		//// 3. Require one end to extend a higher minimum length outside of the overlap
+		if ((a1_length < intersection_length_positive + settings.required_one_unique_length_per_side)
+				  && (a2_length < intersection_length_positive + settings.required_one_unique_length_per_side))
+			return false;
+
+		//// 4. Require both matches together to cover a minimum part of the read.
+		if (union_length < settings.required_match_length)
+			return false;
+
+		//// Add a score based on the current read. We want to favor junctions with reads that overlap each side quite a bit
+		//// so we add the minimum that the read extends into each side of the candidate junction (not counting the overlap).
+		a1_unique_length = (a1_length - intersection_length_positive);
+		a2_unique_length = (a2_length - intersection_length_positive);
+
+		if (verbose)
+			cout << "    Unique1: " << a1_unique_length << "   Unique2: " << a2_unique_length << endl;
+
+		return true;
+	}
+
 	void CandidateJunction::_entire_read_matches(map_t a) {}
 	void CandidateJunction::_num_matches_from_end(map_t a, map_t refseq_str, map_t dir, map_t overlap) {}
 	void CandidateJunction::_split_indel_alignments(Settings settings, Summary summary, bam_header_t* header, ofstream& PSAM, int32_t min_indel_split_len, vector<bam1_t*> al_ref) {}
@@ -139,10 +218,6 @@ namespace breseq {
 	void CandidateJunction::_tam_write_split_alignment(map_t fh, map_t header, map_t min_indel_split_len, map_t a) {}
 
 	// Public
-
-	CandidateJunction::Settings::Settings(){}
-
-	CandidateJunction::Summary::Summary(){}
 
 	/*! Preprocesses alignments
 	 */
@@ -202,8 +277,7 @@ namespace breseq {
 				// write best alignments
 				if (settings.candidate_junction_score_method.compare("POS_HASH") == 0)
 				{
-					int32_t best_score;
-//					($best_score, @$al_ref) = Breseq::AlignmentCorrection::_eligible_read_alignments($settings, $header, $reference_fai, $ref_seq_info, @$al_ref);
+					int32_t best_score = _eligible_read_alignments(settings, header, reference_fai, ref_seq_info, al_ref);
 					tam_write_read_alignments(BSAM, header, 0, al_ref, boost::optional<vector<Trim> >());
 				}
 			}
