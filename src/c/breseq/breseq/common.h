@@ -460,11 +460,32 @@ namespace breseq {
 		}
 	}
 
+	inline uint32_t alignment_query_length(bam1_t* a) {
+		uint32_t* cigar = bam1_cigar(a); // cigar array for this alignment
+		uint32_t qlen = bam_cigar2qlen(&a->core, cigar); // total length of the query
+		return qlen;
+	}
+
+	inline bool is_reversed(bam1_t* a)
+	{
+		return bam1_strand(a);
+	}
+
 	inline string bama_qseq(bam1_t* a)
 	{
 	    string seq(a->core.l_qseq, ' ');
 	    for (int32_t i = 0; i < a->core.l_qseq; i++)
 			seq[i] = bam_nt16_rev_table[bam1_seqi(bam1_seq(a),i)];
+	}
+
+	inline string reverse_complement(string seq)
+	{
+		char trade['Z'];
+		trade['A'] ='T'; trade['T'] = 'A'; trade['C'] = 'G'; trade['G'] = 'C';
+		string retval = seq;
+		for (int i = 0; i < seq.size(); i++)
+			retval[i] = trade[seq[seq.size() - 1 - i]];
+		return retval;
 	}
 
 } // breseq
