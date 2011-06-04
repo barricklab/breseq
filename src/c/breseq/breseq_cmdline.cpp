@@ -263,6 +263,8 @@ int do_resolve_alignments(int argc, char* argv[]) {
   ("features,g", po::value<string>(), "feature table file for reference sequences")
 	("read-file,r", po::value<vector<string> >(), "FASTQ read files (multiple allowed) ") 
   ("max-read-length,m", po::value<uint32_t>(), "number of flanking bases in candidate junctions")
+  ("alignment-read-limit", po::value<uint32_t>()->default_value(0), "maximum number of alignments to process. DEFAULT = 0 (OFF).")
+  
   ;
   
 	po::variables_map options;
@@ -302,7 +304,8 @@ int do_resolve_alignments(int argc, char* argv[]) {
       options["data-path"].as<string>(),
       options["features"].as<string>(),
       rf,
-      options["max-read-length"].as<uint32_t>()
+      options["max-read-length"].as<uint32_t>(),
+      options["alignment-read-limit"].as<uint32_t>()
     );
     
   } catch(...) {

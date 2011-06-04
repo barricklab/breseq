@@ -71,6 +71,7 @@ namespace breseq {
     
   public:
   
+    cFastqFile();
     cFastqFile(const string &file_name, ios_base::openmode mode); 
     ~cFastqFile() {};
       

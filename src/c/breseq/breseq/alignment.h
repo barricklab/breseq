@@ -29,6 +29,7 @@ namespace breseq {
 	public:
 		//! Constructor.
 		alignment(const bam_pileup1_t* p);
+		alignment(const bam1_t* a);
 
 		//! Does this alignment have any redundancies?
 		bool is_redundant() const;
@@ -50,6 +51,10 @@ namespace breseq {
       return on_indel; 
     }
 
+    //! Is the read aligned to the reverse strand? 
+    //  Returns 1 if read aligned to bottom strand, 0 if aligned to top strand
+		inline uint32_t reference_target_id() const { return _a->core.tid; }
+    
 		//! Is the read aligned to the reverse strand? 
     //  Returns 1 if read aligned to bottom strand, 0 if aligned to top strand
 		inline uint32_t reversed() const { return bam1_strand(_a); }
@@ -120,6 +125,14 @@ namespace breseq {
     uint32_t query_end_0() const { return query_end_1()-1; };
 		uint32_t query_end_1() const;
     
+    //! Starting and ending coordinates of the alignment part of the read
+    //  on the reference sequence
+    uint32_t reference_start_0() const {return _a->core.pos; } ;
+    uint32_t reference_start_1() const {return reference_start_0() + 1; };
+    
+    uint32_t reference_end_0() const;
+    uint32_t reference_end_1() const {return reference_end_0() + 1; };
+
     //! Number of bases before this position (on read strand)
     //  that are the same base.
     uint32_t base_repeat_0(uint32_t q_pos_0) const;

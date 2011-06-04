@@ -50,7 +50,8 @@ namespace breseq {
   
   int32_t _eligible_read_alignments(Settings settings, bam_header_t* reference_header, faidx_t* reference_fai, const cReferenceSequences& ref_seq_info, vector<bam1_t*> al);
   bool _test_read_alignment_requirements(Settings settings, bam_header_t* reference_header, faidx_t* reference_fai, const cReferenceSequences& ref_seq_info, bam1_t* a);
-
+  bool _alignment_overlaps_junction(const vector<junction_info>& junction_info_list, bam1_t* in_a);
+  
   void resolve_alignments( 
                           const bool junction_prediction,
                           const string &reference_fasta,
@@ -61,7 +62,8 @@ namespace breseq {
                           const string &data_path,
                           const string &features_file,
                           const cReadFiles &read_files,
-                          const uint32_t max_read_length
+                          const uint32_t max_read_length,
+                          const uint32_t alignment_read_limit
                           );
 	
 }
