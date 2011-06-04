@@ -42,7 +42,7 @@ namespace breseq {
       rf.m_base_name = rf.m_fastq_file_name;
       // - beginning path
       size_t pos = rf.m_base_name.rfind("/");
-      rf.m_base_name.erase(0,pos);
+      if (pos != string::npos) rf.m_base_name.erase(0,pos+1);
       // - trailing .fastq
       pos = rf.m_base_name.rfind(".fastq");
       if (pos == rf.m_base_name.size() - 6) {

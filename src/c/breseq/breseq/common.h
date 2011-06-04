@@ -284,7 +284,7 @@ namespace breseq {
     }
   }
 
-	inline vector<bam1_t*> tam_next_read_alignments(tamFile tam, bam_header_t* header, bam1_t* last_alignment, bool paired)
+	inline vector<bam1_t*> tam_next_read_alignments(tamFile tam, bam_header_t* header, bam1_t* last_alignment, bool paired = false)
 	{
 		int num_to_slurp = (paired) ? 2 : 1;
 		string last_read_name;
@@ -311,7 +311,7 @@ namespace breseq {
 
 			string read_name = bam1_qname(last_alignment);
 
-			if (read_name != last_read_name && ++num_slurped == num_to_slurp)
+			if ( (last_read_name.size() > 0) && (read_name != last_read_name) && (++num_slurped == num_to_slurp) )
 				break;
 
 			if (last_read_name.size() == 0)

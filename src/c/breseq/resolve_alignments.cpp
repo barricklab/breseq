@@ -21,6 +21,7 @@ LICENSE AND COPYRIGHT
 #include "breseq/genome_diff.h"
 #include "breseq/fastq.h"
 #include "breseq/fasta.h"
+#include "breseq/alignment.h"
 
 using namespace std;
 
@@ -95,6 +96,10 @@ namespace breseq {
     }
   }
   
+  
+  // Things to FIX
+  // 1) Memory allocation and deallocation
+  
   //#compare matches to candidate junctions with matches to original genome
   void resolve_alignments( 
                           bool junction_prediction,
@@ -106,11 +111,13 @@ namespace breseq {
                           const string &data_path,
                           const string &features_file,
                           const cReadFiles &read_files,
-                          const uint32_t max_read_length
+                          const uint32_t max_read_length,
+                          const uint32_t alignment_read_limit
                           ) 
   {
+    Settings settings;
     
-    int verbose = 0;
+    int verbose = 1;
     
     // my $verbose = 0;
     // my ($settings, $summary, $ref_seq_info) = @_;
@@ -139,32 +146,57 @@ namespace breseq {
     //## if there were no candidate junctions (file is empty) then we seg fault if we try to use samtools on it...
     //    $settings->{no_junction_prediction} = 1 if ( (!-e $junction_faidx_file_name) || (-s $junction_fasta_file_name == 0) );
     if (junction_prediction && !file_exists(junction_fasta.c_str()) && !file_empty(junction_fasta.c_str())) {
-      junction_prediction = 1;
+      junction_prediction = 0;
     }
       
     vector<junction_info> junction_info_list;
 
-    if (junction_prediction) {
-    }
     //    if (!$settings->{no_junction_prediction})
-    //    {
-    //      $junction_fai = Bio::DB::Sam::Fai->load($junction_fasta_file_name);	
-    //      
-    //## Load header once at the beginning (but have to peek at TAM file to do this).
-    //      my @read_structures = $settings->read_structures;
-    //      my $read_file = $read_structures[0]->{base_name};
-    //      my $junction_sam_file_name = $settings->file_name('candidate_junction_sam_file_name', {'#'=>$read_file});
-    //      my $junction_tam = Bio::DB::Tam->open($junction_sam_file_name) or die " Could not open junction SAM file\n";
-    //      $junction_header = $junction_tam->header_read2($junction_faidx_file_name) or die("Error reading reference fasta index file: $junction_faidx_file_name");				
-    //      
-    //## Preload all of the information about junctions
-    //## so that we only have to split the names once	
-    //      my $junction_ids = $junction_header->target_name;
-    //      for (my $i=0; $i< $junction_header->n_targets; $i++)
-    //      {
-    //        $junction_info->[$i] = Breseq::Shared::junction_name_split($junction_ids->[$i]);
-    //      }		
-    //    }
+    if (junction_prediction) {
+
+      // $junction_fai = Bio::DB::Sam::Fai->load($junction_fasta_file_name);	
+      ////faidx_t * junction_faidx = fai_load(junction_fasta.c_str());
+      ////assert(junction_faidx);
+
+      //      
+      //## Load header once at the beginning (but have to peek at TAM file to do this).
+      //      my @read_structures = $settings->read_structures;
+      //      my $read_file = $read_structures[0]->{base_name};
+      //      my $junction_sam_file_name = $settings->file_name('candidate_junction_sam_file_name', {'#'=>$read_file});
+
+      //      my $junction_sam_file_name = $settings->file_name('candidate_junction_sam_file_name', {'#'=>$read_file});
+
+      //      my $junction_tam = Bio::DB::Tam->open($junction_sam_file_name) or die " Could not open junction SAM file\n";
+      //      $junction_header = $junction_tam->header_read2($junction_faidx_file_name) or die("Error reading reference fasta index file: $junction_faidx_file_name");				
+      //      
+
+      tamFile junction_tam = NULL;
+      bam_header_t *junction_header = NULL;
+      
+      string junction_sam_file_name = junction_sam_path + "/" + read_files[0].m_base_name + ".candidate_junction.sam";
+
+      // $junction_tam = Bio::DB::Tam->open($junction_sam_file_name) or die " Could not open junction SAM file\n";
+      junction_tam = sam_open(junction_sam_file_name.c_str());
+      assert(junction_tam);
+      
+      //## junction_header = $junction_tam->header_read2($junction_faidx_file_name) or die("Error reading reference fasta index file: $junction_faidx_file_name");				
+      string junction_faidx_file_name = junction_fasta + ".fai";
+      junction_header = sam_header_read2(junction_faidx_file_name.c_str()); 
+
+      //## Preload all of the information about junctions
+      //## so that we only have to split the names once	
+      // my $junction_ids = $junction_header->target_name;
+      
+      // for (my $i=0; $i< $junction_header->n_targets; $i++)
+      for (int i=0; i<junction_header->n_targets; i++) {
+        // $junction_info->[$i] = Breseq::Shared::junction_name_split($junction_ids->[$i]);
+        junction_info ji;
+        junction_name_split(ji, junction_header->target_name[i]);
+        junction_info_list.push_back(ji);
+      }		
+      
+      bam_header_destroy(junction_header);
+    }
     
     //####
     //##	Output files
@@ -193,7 +225,7 @@ namespace breseq {
     map<string,uint32_t> degenerate_matches;
         
     // my $reads_processed = 0;
-    uint32_t reads_processed;
+    uint32_t reads_processed = 0;
     
     // keep track of overall index of fastq files 
     uint32_t on_fastq_file_index = 0;
@@ -218,15 +250,13 @@ namespace breseq {
       // my @in_fastq;
       // $in_fastq[$i] = Breseq::Fastq->new(-file => $fastq_file_name[$i]);        
 
-      cFastqFile * in_fastq = new cFastqFile(rf->m_fastq_file_name, ios::out);
-      assert(in_fastq);
+      cFastqFile in_fastq(rf->m_fastq_file_name.c_str(), ios::in);
       
       // my @fastq_file_name;
-
       // my @fastq_file_index;
       
       // my @out_unmatched_fastq;
-      cFastqFile * out_unmatched_fastq = NULL;
+      cFastqFile out_unmatched_fastq;
             
       // @JEB No longer looping
       // for (my $i=0; $i < scalar @{$read_struct->{base_names}}; $i++)
@@ -241,14 +271,11 @@ namespace breseq {
         // my $unmatched_file_name = $settings->file_name('unmatched_read_file_name', {'#'=>$this_read_file});
         // $out_unmatched_fastq[$i] = Breseq::Fastq->new(-file => ">$unmatched_file_name");
         
-        string this_unmatched_file_name = data_path + "/unmatched." + rf->m_base_name + ".fastq";
-        
-        out_unmatched_fastq = new cFastqFile(this_unmatched_file_name, ios::out);
-        assert(out_unmatched_fastq);
+        string this_unmatched_file_name = data_path + "/unmatched." + rf->m_base_name + ".fastq";        
+        out_unmatched_fastq.open(this_unmatched_file_name.c_str(), ios::out);
+        assert(!out_unmatched_fastq.fail());
       }
       
-      if (in_fastq) delete in_fastq;
-      if (out_unmatched_fastq) delete in_fastq;
         
       // my $reference_sam_file_name = $settings->file_name('reference_sam_file_name', {'#'=>$read_file});
       string reference_sam_file_name = reference_sam_path + "/" + rf->m_base_name + ".reference.sam";
@@ -270,7 +297,7 @@ namespace breseq {
       if (junction_prediction)
       {
         // my $junction_sam_file_name = $settings->file_name('candidate_junction_sam_file_name', {'#'=>$read_file});
-        string junction_sam_file_name = junction_sam_path + "/" + rf->m_base_name + ".junction.sam";
+        string junction_sam_file_name = junction_sam_path + "/" + rf->m_base_name + ".candidate_junction.sam";
 
         // $junction_tam = Bio::DB::Tam->open($junction_sam_file_name) or die " Could not open junction SAM file\n";
         junction_tam = sam_open(junction_sam_file_name.c_str());
@@ -282,97 +309,149 @@ namespace breseq {
         assert(junction_header);
       }
       
-      // Clean up!! - per read_file
-      if (reference_tam) sam_close(reference_tam);
+      
+      // @JEB-PORT Keeping "last" alignments doesn't seem necessary?
+  
+      // my $reference_al;
+      vector<bam1_t*> reference_alignments;
+      // my $last_reference_alignment;
+      bam1_t* last_reference_alignment = NULL;
+      
+      // my $junction_al;
+      vector<bam1_t*> junction_alignments;
+      // my $last_junction_alignment;
+      bam1_t* last_junction_alignment = NULL;
 
-      if (junction_tam) sam_close(junction_tam);
-      if (junction_header) bam_header_destroy(junction_header);
-//      
-//      my $reference_al;
-//      my $last_reference_alignment;
-//      
-//      my $junction_al;
-//      my $last_junction_alignment;		
-//      
-//#proceed through all of the alignments
-//      if (!$settings->{no_junction_prediction})
-//      {
-//        ($junction_al, $last_junction_alignment) 
-//				= Breseq::Shared::tam_next_read_alignments($junction_tam, $junction_header, $last_junction_alignment);		
-//      }
-//      
-//      ($reference_al, $last_reference_alignment) 
-//			= Breseq::Shared::tam_next_read_alignments($reference_tam, $reference_header, $last_reference_alignment);		
-//      
-//###
-//##  Test each read for its matches to the reference and candidate junctions
-//###
-//      my $f = 0;
-//		READ: while (my $seq = $in_fastq[$f]->next_seq)
-//		{			
-//			$reads_processed++;
-//			last if ($settings->{alignment_read_limit} && ($reads_processed > $settings->{alignment_read_limit}));
-//			print STDERR "    READS:$reads_processed\n" if ($reads_processed % 10000 == 0);
-//			
-//			print "===> Read: $seq->{id}\n" if ($verbose);
-//      
-//			my $best_junction_score = 0;
-//			my $best_reference_score = 0;
-//			
-//## Does this read have eligible candidate junction matches?
-//			my $this_junction_al = [];
-//			if (($junction_al) && ($junction_al->[0]->qname =~ m/^$seq->{id}/))
-//			{
-//				$this_junction_al = $junction_al;
-//				($junction_al, $last_junction_alignment) 
-//        = Breseq::Shared::tam_next_read_alignments($junction_tam, $junction_header, $last_junction_alignment);
-//        
-//###			
-//## Matches to candidate junctions MUST overlap the junction.
-//##
-//## Reduce this list to those that overlap ANY PART of the junction.
-//## Alignments that extend only into the overlap region, are only additional
-//##  evidence for predicted junctions and NOT support for a new junction on 
-//## their own. (They will also match the original reference genome equally well).
-//###
-//        
-//				@$this_junction_al = grep {_alignment_overlaps_junction($junction_info, $_) } @$this_junction_al;
-//        
-//				($best_junction_score, @$this_junction_al) = _eligible_read_alignments($settings, $junction_header, $junction_fai, undef, @$this_junction_al);
-//        
-//				print " Best junction score: $best_junction_score\n" if ($verbose);
-//			}
-//			
-//## Does this read have eligible reference sequence matches?
-//			my $this_reference_al = [];
-//			if (($reference_al) && ($reference_al->[0]->qname =~ m/^$seq->{id}/))
-//			{
-//				$this_reference_al = $reference_al;
-//				($reference_al, $last_reference_alignment) 
-//        = Breseq::Shared::tam_next_read_alignments($reference_tam, $reference_header, $last_reference_alignment);
-//        
-//				($best_reference_score, @$this_reference_al) = _eligible_read_alignments($settings, $reference_header, $reference_fai, $ref_seq_info, @$this_reference_al);	
-//				print " Best reference score: $best_reference_score\n" if ($verbose);
-//			}		
-//      
-//## Nothing to be done if there were no eligible matches to either
-//## Record in the unmatched FASTQ data file
-//			if ((@$this_junction_al == 0) && (@$this_reference_al == 0))
-//			{
-//				$s->{unmatched_reads}++;
-//## if not, then write to unmatched read file
-//				if ($settings->{unmatched_reads}) 
-//				{
-//					$out_unmatched_fastq[$f]->write_seq($seq);
-//				}
-//				next READ;
-//			}
-    }
-//      
-//			print " Before Overlap Reference alignments = "  . (scalar @$this_reference_al) . "\n" if ($verbose);
-//			print " Before Overlap Junction alignments = " . (scalar @$this_junction_al) . "\n" if ($verbose);
-//      
-//      
+      //#proceed through all of the alignments
+      // if (!$settings->{no_junction_prediction})
+      if (junction_prediction) {
+        
+        // ($junction_al, $last_junction_alignment) 
+        //   = Breseq::Shared::tam_next_read_alignments($junction_tam, $junction_header, $last_junction_alignment);		
+      
+        junction_alignments = tam_next_read_alignments(junction_tam, junction_header, last_junction_alignment);
+      }
+      
+      //      
+      // ($reference_al, $last_reference_alignment) 
+      // = Breseq::Shared::tam_next_read_alignments($reference_tam, $reference_header, $last_reference_alignment);		
+      //      
+      
+      reference_alignments = tam_next_read_alignments(reference_tam, reference_header, last_reference_alignment);
+
+      
+      //###
+      //##  Test each read for its matches to the reference and candidate junctions
+      //###
+      
+      // my $f = 0;
+      cFastqSequence seq;
+      // READ: while (my $seq = $in_fastq[$f]->next_seq)
+      
+      while (in_fastq.read_sequence(seq))
+      {			
+        // $reads_processed++;
+        reads_processed++;
+      
+        // last if ($settings->{alignment_read_limit} && ($reads_processed > $settings->{alignment_read_limit}));
+        // @JEB - PORT This is unsafe because memory dealloaction has not occurred.
+        if ((alignment_read_limit) && (reads_processed > alignment_read_limit)) break;
+
+      
+        // print STDERR "    READS:$reads_processed\n" if ($reads_processed % 10000 == 0);
+        if (reads_processed % 10000 == 0) fprintf(stderr, "    READS:%u\n", reads_processed);
+
+        //			print "===> Read: $seq->{id}\n" if ($verbose);
+        if (verbose) fprintf(stderr, "===> Read: %s\n", seq.m_name.c_str());
+
+        // my $best_junction_score = 0;
+        // my $best_reference_score = 0;
+        uint32_t best_junction_score = 0;
+        uint32_t best_reference_score = 0;
+			
+        //## Does this read have eligible candidate junction matches?
+        // my $this_junction_al = [];
+        vector<bam1_t*> this_junction_alignments;
+        
+        
+        // if (($junction_al) && ($junction_al->[0]->qname =~ m/^$seq->{id}/))
+        if ((junction_alignments.size() > 0) && (seq.m_name == bam1_qname(junction_alignments[0]))) {
+          
+          //				$this_junction_al = $junction_al;
+          //				($junction_al, $last_junction_alignment) 
+          //        = Breseq::Shared::tam_next_read_alignments($junction_tam, $junction_header, $last_junction_alignment);
+          //       
+
+          this_junction_alignments = junction_alignments;
+          junction_alignments = tam_next_read_alignments(junction_tam, junction_header, last_junction_alignment);
+
+      
+          //###			
+          //## Matches to candidate junctions MUST overlap the junction.
+          //##
+          //## Reduce this list to those that overlap ANY PART of the junction.
+          //## Alignments that extend only into the overlap region, are only additional
+          //##  evidence for predicted junctions and NOT support for a new junction on 
+          //## their own. (They will also match the original reference genome equally well).
+          //###
+          
+          // @$this_junction_al = grep {_alignment_overlaps_junction($junction_info, $_) } @$this_junction_al;
+          for (vector<bam1_t*>::iterator it=this_junction_alignments.begin(); it<this_junction_alignments.end(); it++) {
+            if (!_alignment_overlaps_junction(junction_info_list, *it)) {
+                this_junction_alignments.erase(it);
+            }
+          }  
+        
+          // ($best_junction_score, @$this_junction_al) = _eligible_read_alignments($settings, $junction_header, $junction_fai, undef, @$this_junction_al);
+//          best_reference_score = _eligible_read_alignments(settings, junction_header, junction_fai, refseqs, this_junction_alignments);
+
+          // print " Best junction score: $best_junction_score\n" if ($verbose);
+          if (verbose) fprintf(stderr, " Best junction score: %u\n", best_junction_score);
+        }
+          
+          
+        //## Does this read have eligible reference sequence matches?
+        // my $this_reference_al = [];
+        vector<bam1_t*> this_reference_alignments;
+        
+        // if (($reference_al) && ($reference_al->[0]->qname =~ m/^$seq->{id}/))
+        if ((junction_alignments.size() > 0) && (seq.m_name == bam1_qname(junction_alignments[0]))) {
+          
+          // $this_reference_al = $reference_al;
+          // ($reference_al, $last_reference_alignment) 
+          //    = Breseq::Shared::tam_next_read_alignments($reference_tam, $reference_header, $last_reference_alignment);
+
+          this_reference_alignments = reference_alignments;
+          reference_alignments = tam_next_read_alignments(reference_tam, reference_header, last_reference_alignment);
+
+          //($best_reference_score, @$this_reference_al) = _eligible_read_alignments($settings, $reference_header, $reference_fai, $ref_seq_info, @$this_reference_al);	
+//          best_reference_score = _eligible_read_alignments(settings, reference_header, reference_fai, refseqs, this_reference_alignments);
+          
+          // print " Best reference score: $best_reference_score\n" if ($verbose);
+          if (verbose) fprintf(stderr, " Best reference score: %u\n", best_reference_score);
+        }		
+      
+        //## Nothing to be done if there were no eligible matches to either
+        //## Record in the unmatched FASTQ data file
+        
+        // if ((@$this_junction_al == 0) && (@$this_reference_al == 0))
+        if ( (this_junction_alignments.size() == 0) && (this_reference_alignments.size() == 0) ) {
+          // $s->{unmatched_reads}++;
+          // $out_unmatched_fastq[$f]->write_seq($seq);
+          
+          summary_info["unmatched_reads"]++;
+          out_unmatched_fastq.write_sequence(seq);
+        }
+        
+			} // End loop through every read
+      
+      
+            
+      // print " Before Overlap Reference alignments = "  . (scalar @$this_reference_al) . "\n" if ($verbose);
+      // print " Before Overlap Junction alignments = " . (scalar @$this_junction_al) . "\n" if ($verbose);
+
+      
+  
 //###			
 //## Determine if the read has a better match to a candidate junction
 //## or to the reference sequence.
@@ -481,6 +560,10 @@ namespace breseq {
 //## save statistics
 //      $summary->{alignment_correction}->{read_file}->{$read_file} = $s;
 //    }	
+    
+  } // End of Read File loop
+    
+    
 //    
 //###			
 //## Determine which junctions are real, prefer ones with most matches
@@ -728,6 +811,7 @@ int32_t _eligible_read_alignments(Settings settings, bam_header_t* reference_hea
 	// Note that the score we return is higher for matches so we negative this value...
 	//return $al[0]->l_qseq-$best_score;
 }
+  
 //
 //
 //=head2 _read_alignment_passes_requirements
@@ -782,26 +866,40 @@ bool _test_read_alignment_requirements(Settings settings, bam_header_t* referenc
 //=cut
 //
 //sub _alignment_overlaps_junction
-//{
-//my ($junction_info, $a) = @_;
-//
-//my $this_junction_info = $junction_info->[$a->tid];
-//my $overlap = $this_junction_info->{alignment_overlap};
-//my $flanking_left = $this_junction_info->{flanking_left};
-//
-//## find the start and end coordinates of the overlap
-//my ($junction_start, $junction_end);
-//
-//$junction_start = $flanking_left + 1;
-//$junction_end = $flanking_left + abs($overlap);
-//
-//## If it didn't overlap the junction at all
-//## Check coordinates in the "reference" junction sequence
-//      return 0 if ($a->start > $junction_end);
-//      return 0 if ($a->end < $junction_start);
-//      
-//      return 1;
-//    }
+bool _alignment_overlaps_junction(const vector<junction_info>& junction_info_list, bam1_t* in_a)
+{
+  
+  alignment a(in_a);
+
+  //my ($junction_info, $a) = @_;
+  //my $this_junction_info = $junction_info->[$a->tid];
+  uint32_t tid = a.reference_target_id();
+  const junction_info& this_junction_info = junction_info_list[tid];
+  //my $overlap = $this_junction_info->{alignment_overlap};
+  int32_t overlap = this_junction_info.m_alignment_overlap;
+  
+  //my $flanking_left = $this_junction_info->{flanking_left};
+  //## find the start and end coordinates of the overlap
+  //my ($junction_start, $junction_end);
+  //
+  //$junction_start = $flanking_left + 1;
+  uint32_t junction_start = this_junction_info.m_flanking_left + 1;
+
+  //$junction_end = $flanking_left + abs($overlap);
+  uint32_t junction_end = this_junction_info.m_flanking_left + abs(overlap);
+
+
+  //## If it didn't overlap the junction at all
+  //## Check coordinates in the "reference" junction sequence
+  // return 0 if ($a->start > $junction_end);
+  if (a.reference_start_1() > junction_end) return false;
+  // return 0 if ($a->end < $junction_start);
+  if (a.reference_end_1() < junction_start) return false;
+  // return 1;
+  return true;
+}
+
+  
 //    
 //    
 //    sub _write_reference_matches

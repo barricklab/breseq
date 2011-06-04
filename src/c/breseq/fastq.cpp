@@ -207,6 +207,12 @@ namespace breseq {
   }
   
   //constructor
+  cFastqFile::cFastqFile() :
+    fstream(), m_current_line(0), m_file_name(""), m_needs_conversion(false)
+  {
+  }
+ 
+  
   cFastqFile::cFastqFile(const std::string &file_name, std::ios_base::openmode mode) :
     fstream(file_name.c_str(), mode), m_current_line(0), m_file_name(file_name), m_needs_conversion(false)
   { 

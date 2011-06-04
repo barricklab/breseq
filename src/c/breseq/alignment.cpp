@@ -18,32 +18,41 @@ LICENSE AND COPYRIGHT
 
 #include "breseq/alignment.h"
 
+namespace breseq {
 
 /*! Constructor.
  */
-breseq::alignment::alignment(const bam_pileup1_t* p)
+alignment::alignment(const bam_pileup1_t* p)
 : _p(p)
 , _a(p->b) {
+}
+  
+/*! Constructor.
+ only alignment!
+ */
+alignment::alignment(const bam1_t* a)
+: _a(a)
+{
 }
 
 
 /*! Does this alignment have any redundancies?
  */
-bool breseq::alignment::is_redundant() const {
+bool alignment::is_redundant() const {
 	return (redundancy() > 1);
 }
 
 
 /*! Number of redundancies at this alignment.
  */
-uint32_t breseq::alignment::redundancy() const {
+uint32_t alignment::redundancy() const {
 	return bam_aux2i(bam_aux_get(_a,"X1"));
 }
 
 
 /*! Calculate the length of this query out to the last non-clip, non-skip.
  */
-uint32_t breseq::alignment::query_length() const {
+uint32_t alignment::query_length() const {
 	uint32_t* cigar = bam1_cigar(_a); // cigar array for this alignment
 	uint32_t qlen = bam_cigar2qlen(&_a->core, cigar); // total length of the query
 	return qlen;
@@ -52,12 +61,12 @@ uint32_t breseq::alignment::query_length() const {
 
 /*! Retrieve the index of the read file that contained this alignment
  */
-uint32_t breseq::alignment::fastq_file_index() const {
+uint32_t alignment::fastq_file_index() const {
 	return bam_aux2i(bam_aux_get(_a,"X2"));
 }
 
 //! Has this alignment been trimmed?
-bool breseq::alignment::is_trimmed() const {
+bool alignment::is_trimmed() const {
 	// is our query position in the left-side trimmed region?
 	uint8_t *auxl = bam_aux_get(_a,"XL");
 	if(auxl) {
@@ -92,7 +101,7 @@ bool breseq::alignment::is_trimmed() const {
 //			}
 
 
-std::pair<uint32_t,uint32_t> breseq::alignment::query_bounds_0() const {
+std::pair<uint32_t,uint32_t> alignment::query_bounds_0() const {
   std::pair<int32_t,int32_t> qb = query_bounds_1();
   qb.first--;
   qb.second--;
@@ -101,7 +110,7 @@ std::pair<uint32_t,uint32_t> breseq::alignment::query_bounds_0() const {
 
 /*! Retrieve the start and end coordinates of the aligned part of the read.
  */
-std::pair<uint32_t,uint32_t> breseq::alignment::query_bounds_1() const {
+std::pair<uint32_t,uint32_t> alignment::query_bounds_1() const {
   uint32_t* cigar = bam1_cigar(_a); // cigar array for this alignment
 	int32_t start=1, end=bam_cigar2qlen(&_a->core,cigar);
 	
@@ -133,7 +142,7 @@ std::pair<uint32_t,uint32_t> breseq::alignment::query_bounds_1() const {
 
 /*! Get the query start or end from the cigar string of an alignment
  */
-uint32_t breseq::alignment::query_start_1() const {
+uint32_t alignment::query_start_1() const {
   // traverse the cigar array
   uint32_t* cigar = bam1_cigar(_a); // cigar array for this alignment
   int32_t pos = 1;
@@ -154,7 +163,7 @@ uint32_t breseq::alignment::query_start_1() const {
 }
 
 
-uint32_t breseq::alignment::query_end_1() const {
+uint32_t alignment::query_end_1() const {
   // traverse the cigar array
   uint32_t* cigar = bam1_cigar(_a); // cigar array for this alignment
   int32_t pos = bam_cigar2qlen(&_a->core, cigar); // total length of the query
@@ -172,8 +181,28 @@ uint32_t breseq::alignment::query_end_1() const {
 	
   return pos;
 }
+  
+uint32_t alignment::reference_end_0() const {
+  uint32_t pos = reference_start_0();
+  
+  uint32_t* cigar = bam1_cigar(_a); // cigar array for this alignment
+	
+  for(uint32_t j=(_a->core.n_cigar-1); j>0; --j) {
+    uint32_t op = cigar[j] & BAM_CIGAR_MASK;
+    uint32_t len = cigar[j] >> BAM_CIGAR_SHIFT;
+    
+    // if we encounter padding, or a gap in reference then we are done
+    if((op != BAM_CSOFT_CLIP) && (op != BAM_CHARD_CLIP) && (op != BAM_CREF_SKIP)) {
+      pos += len;
+    }
+  }
 
-uint32_t breseq::alignment::base_repeat_0(uint32_t q_pos_0) const {
+  return pos;
+}
+
+
+
+uint32_t alignment::base_repeat_0(uint32_t q_pos_0) const {
 
   uint8_t this_base_bam = query_base_bam_0(q_pos_0);
   uint32_t base_repeat = 0;
@@ -192,5 +221,7 @@ uint32_t breseq::alignment::base_repeat_0(uint32_t q_pos_0) const {
   }
   
   return base_repeat;
+}
+  
 }
 
