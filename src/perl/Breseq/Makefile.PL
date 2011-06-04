@@ -10,9 +10,7 @@ WriteMakefile
                            'bin/bam2cov',
                            'bin/breseq',
                            'bin/fastq_utils',
-                           'bin/genbank_utils',
-                           'bin/genomediff',
-                           'bin/tree_utils'
+                           'bin/genbank_utils'
                          ],
           'VERSION_FROM' => 'lib/Breseq.pm',
           'PREREQ_PM' => {

@@ -10,6 +10,7 @@ t/00-load.t
 t/manifest.t
 t/pod-coverage.t
 t/pod.t
-bin/reference_statistics
 bin/genomediff
 bin/tree_utils
+Makefile.PL
+META.yml
