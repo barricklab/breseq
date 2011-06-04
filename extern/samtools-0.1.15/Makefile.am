@@ -33,7 +33,6 @@ EXTRA_DIST = \
 	COPYING \
 	INSTALL \
 	Makefile.original \
-	Makefile.XCode \
 	Makefile.mingw \
 	NEWS \
 	win32/xcurses.h \

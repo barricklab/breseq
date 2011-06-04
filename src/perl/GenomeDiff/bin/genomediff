@@ -675,9 +675,7 @@ sub do_count
 	my $main_seq_id = $ref_seq_info->{seq_ids}->[0];
 	my $main_seq_length = length $ref_seq_info->{ref_strings}->{$main_seq_id};
 
-	
-#	my @scf_sums_header_list = ("protein.AT", "protein.GC", "pseudogene.AT", "pseudogene.GC", "RNA.AT", "RNA.GC", "intergenic.AT", "intergenic.GC");
-	
+		
 	my $bsf;
 	my $bs_totals;
 	if ($base_substitution_file)
@@ -761,7 +759,7 @@ sub do_count
 		}
 		
 		my $total_deleted = 0;
-		my $this_bs_counts;
+		my $this_bs_counts = [];
 		foreach my $mut (@mut_list)
 		{
 			if ($mut->{type} eq 'SNP')
@@ -829,13 +827,14 @@ sub do_count
 		if ($base_substitution_file) {			
 			for (my $i = 0; $i < scalar @$this_bs_totals; $i++) {
 				foreach my $bp_change (@GenomeDiff::BaseSubstitutionFile::bp_change_label_list, 'TOTAL') {
-					push @this_columns, (defined $this_bs_totals->[$i]->{$bp_change}) ? $this_bs_totals->[$i]->{$bp_change} : 0;
+					push @this_columns, (defined $this_bs_totals->[$i]->{$bp_change}) ? $this_bs_totals->[$i]->{$bp_change} : '0';
 				}
 			}
+			
 		
 			for (my $i = 0; $i < scalar @$this_bs_counts; $i++) {
 				foreach my $bp_change (@GenomeDiff::BaseSubstitutionFile::bp_change_label_list, 'TOTAL') {
-					push @this_columns, (defined $this_bs_counts->[$i]->{$bp_change}) ? $this_bs_counts->[$i]->{$bp_change} : 0;
+					push @this_columns, (defined $this_bs_counts->[$i]->{$bp_change}) ? $this_bs_counts->[$i]->{$bp_change} : '0';
 				}
 			}
 		}
@@ -1800,6 +1799,8 @@ sub do_base_substitution_file
 	pod2usage(1) if $help;
 	pod2usage(-exitstatus => 0, -verbose => 2) if $man;
 	pod2usage(1) if (scalar @ARGV == 0);
+	
+	(-d $output_path) or die "Output directory path ($output_path) does not exist\n";
 	
 	foreach my $input_file (@ARGV) {
 		my $in = Bio::SeqIO->new(-file => "<$input_file", -format => "genbank");

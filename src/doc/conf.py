@@ -50,7 +50,7 @@ copyright = u'2011 Jeffrey E. Barrick and contributors'
 # The short X.Y version.
 version = '1.00'
 # The full version, including alpha/beta/rc tags.
-release = '1.00rc8'
+release = os.environ.get("BRESEQ_VERSION")
 
 rst_prolog = """
 .. |breseq| replace:: :program:`breseq`
@@ -128,7 +128,7 @@ html_logo = "images/breseq.png"
 # Add any paths that contain custom static files (such as style sheets) here,
 # relative to this directory. They are copied after the builtin static files,
 # so a file named "default.css" will overwrite the builtin "default.css".
-html_static_path = ['_static']
+#html_static_path = ['_static']
 
 # If not '', a 'Last updated on:' timestamp is inserted at every page bottom,
 # using the given strftime format.
