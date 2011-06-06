@@ -170,9 +170,9 @@ namespace breseq {
   }
 
   void RemoveLeadingTrailingWhitespace(std::string &s) {
-    int found = s.find_first_not_of(" \t");
+    int found = s.find_first_not_of(" \t\n\r");
     s.erase(0,found);  
-    found = s.find_last_not_of(" \t");
+    found = s.find_last_not_of(" \t\n\r");
     s.erase(found+1,s.length());
   }
 
@@ -407,7 +407,7 @@ namespace breseq {
       string first_word = GetWord(line);
       RemoveLeadingTrailingWhitespace(line);
       
-      //cout << first_word << "::" << line << std::endl;
+      //cerr << first_word << "::" << line << std::endl;
 
       if (first_word == "//") break;
       for(string::iterator i=line.begin(); i!=line.end(); ++i) {
