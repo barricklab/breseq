@@ -1,0 +1,126 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Scheme
+   version = "1.3">
+   <BuildAction
+      parallelizeBuildables = "YES"
+      buildImplicitDependencies = "YES">
+      <BuildActionEntries>
+         <BuildActionEntry
+            buildForTesting = "YES"
+            buildForRunning = "YES"
+            buildForProfiling = "YES"
+            buildForArchiving = "YES"
+            buildForAnalyzing = "YES">
+            <BuildableReference
+               BuildableIdentifier = "primary"
+               BlueprintIdentifier = "42B6EDB811C69CC70075F8A3"
+               BuildableName = "cbreseq"
+               BlueprintName = "breseq_cmdline"
+               ReferencedContainer = "container:breseq.xcodeproj">
+            </BuildableReference>
+         </BuildActionEntry>
+      </BuildActionEntries>
+   </BuildAction>
+   <TestAction
+      selectedDebuggerIdentifier = "Xcode.DebuggerFoundation.Debugger.GDB"
+      selectedLauncherIdentifier = "Xcode.DebuggerFoundation.Launcher.GDB"
+      shouldUseLaunchSchemeArgsEnv = "YES"
+      buildConfiguration = "Debug">
+      <Testables>
+      </Testables>
+   </TestAction>
+   <LaunchAction
+      selectedDebuggerIdentifier = "Xcode.DebuggerFoundation.Debugger.GDB"
+      selectedLauncherIdentifier = "Xcode.DebuggerFoundation.Launcher.GDB"
+      displayScaleIsEnabled = "NO"
+      displayScale = "1.00"
+      launchStyle = "0"
+      useCustomWorkingDirectory = "NO"
+      buildConfiguration = "Debug">
+      <BuildableProductRunnable>
+         <BuildableReference
+            BuildableIdentifier = "primary"
+            BlueprintIdentifier = "42B6EDB811C69CC70075F8A3"
+            BuildableName = "cbreseq"
+            BlueprintName = "breseq_cmdline"
+            ReferencedContainer = "container:breseq.xcodeproj">
+         </BuildableReference>
+      </BuildableProductRunnable>
+      <CommandLineArguments>
+         <CommandLineArgument
+            argument = "--bam /Users/jbarrick/src/breseq/tests/lambda_mixed_pop_new_error/data/reference.bam --fasta /Users/jbarrick/src/breseq/tests/lambda_mixed_pop_new_error/data/reference.fasta --readfile lambda_mixed_population --error_dir /Users/jbarrick/src/breseq/tests/lambda_mixed_pop_new_error/07_error_calibration/ --genome_diff /Users/jbarrick/src/breseq/tests/lambda_mixed_pop_new_error/08_mutation_identification/ra_mc_evidence.gd --output /Users/jbarrick/src/breseq/tests/lambda_mixed_pop_new_error/08_mutation_identification/ --mutation_cutoff 2 --coverage_dir /Users/jbarrick/src/breseq/tests/lambda_mixed_pop_new_error/08_mutation_identification/ --deletion_propagation_cutoff 31 --predict_deletions 1 --minimum_quality_score 3 --error_table /Users/jbarrick/src/breseq/tests/lambda_mixed_pop_new_error/07_error_calibration//error_rates.tab"
+            isEnabled = "NO">
+         </CommandLineArgument>
+         <CommandLineArgument
+            argument = "--bam /Users/jbarrick/src/breseq/tests/lambda_mixed_pop/data/reference.bam --fasta /Users/jbarrick/src/breseq/tests/lambda_mixed_pop/data/reference.fasta --readfile lambda_mixed_population --error_dir /Users/jbarrick/src/breseq/tests/lambda_mixed_pop/07_error_calibration/ --genome_diff /Users/jbarrick/src/breseq/tests/lambda_mixed_pop/08_mutation_identification/ra_mc_evidence.gd --output /Users/jbarrick/src/breseq/tests/lambda_mixed_pop/08_mutation_identification/ --mutation_cutoff 2 --coverage_dir /Users/jbarrick/src/breseq/tests/lambda_mixed_pop/08_mutation_identification/ --deletion_propagation_cutoff 31 --predict_deletions 1 --minimum_quality_score 3"
+            isEnabled = "NO">
+         </CommandLineArgument>
+         <CommandLineArgument
+            argument = "--bam /Users/jbarrick/src/breseq/tests/lambda_polymorphism/data/reference.bam --fasta /Users/jbarrick/src/breseq/tests/lambda_polymorphism/data/reference.fasta --readfile lambda_mixed_population --error_dir /Users/jbarrick/src/breseq/tests/lambda_polymorphism/07_error_calibration/ --genome_diff /Users/jbarrick/src/breseq/tests/lambda_polymorphism/08_mutation_identification/ra_mc_evidence.gd --output /Users/jbarrick/src/breseq/tests/lambda_polymorphism/08_mutation_identification/ --mutation_cutoff 2 --coverage_dir /Users/jbarrick/src/breseq/tests/lambda_polymorphism/08_mutation_identification/ --deletion_propagation_cutoff 31 --predict_deletions 1 --minimum_quality_score 3 --predict_polymorphisms 1 --polymorphism_cutoff 2 --polymorphism_frequency_cutoff 0"
+            isEnabled = "NO">
+         </CommandLineArgument>
+         <CommandLineArgument
+            argument = "--bam /Users/jbarrick/src/breseq/tests/lambda_polymorphism_new_error/data/reference.bam --fasta /Users/jbarrick/src/breseq/tests/lambda_polymorphism_new_error/data/reference.fasta --readfile lambda_mixed_population --error_dir /Users/jbarrick/src/breseq/tests/lambda_polymorphism_new_error/07_error_calibration/ --genome_diff /Users/jbarrick/src/breseq/tests/lambda_polymorphism_new_error/08_mutation_identification/ra_mc_evidence.gd --output /Users/jbarrick/src/breseq/tests/lambda_polymorphism_new_error/08_mutation_identification/ --mutation_cutoff 2 --coverage_dir /Users/jbarrick/src/breseq/tests/lambda_polymorphism_new_error/08_mutation_identification/ --deletion_propagation_cutoff 31 --predict_deletions 1 --minimum_quality_score 3 --predict_polymorphisms 1 --polymorphism_cutoff 2 --polymorphism_frequency_cutoff 0 --error_table /Users/jbarrick/src/breseq/tests/lambda_polymorphism_new_error/07_error_calibration//error_rates.tab"
+            isEnabled = "NO">
+         </CommandLineArgument>
+         <CommandLineArgument
+            argument = "ANALYZE_FASTQ -i /Users/austin/Work/BarrickLab/breseq_bak/tests/data/lambda/IntetionallyScrewedUp_unix.fastq"
+            isEnabled = "NO">
+         </CommandLineArgument>
+         <CommandLineArgument
+            argument = "ANALYZE_FASTQ -i /Users/austin/Work/BarrickLab/breseq_bak/tests/data/lambda/IntetionallyScrewedUp_win.fastq"
+            isEnabled = "NO">
+         </CommandLineArgument>
+         <CommandLineArgument
+            argument = "ANALYZE_FASTQ -i /Users/austin/Work/BarrickLab/breseq_bak/tests/data/lambda/fixed.fastq -p /Users/austin/Work/BarrickLab/temp"
+            isEnabled = "NO">
+         </CommandLineArgument>
+         <CommandLineArgument
+            argument = "ANALYZE_FASTQ -i /Users/austin/Desktop/breseq_working/s_1_sequence.txt -p /Users/austin/Work/BarrickLab/temp"
+            isEnabled = "NO">
+         </CommandLineArgument>
+         <CommandLineArgument
+            argument = "ANALYZE_FASTQ -i /Users/austin/Desktop/breseq_working/DJ480wt.txt -p /Users/austin/Work/BarrickLab/temp"
+            isEnabled = "NO">
+         </CommandLineArgument>
+         <CommandLineArgument
+            argument = "ANALYZE_FASTQ -i /Users/jbarrick/tmp/chelsea/tmp.fastq -p /Users/jbarrick/tmp/chelsea"
+            isEnabled = "NO">
+         </CommandLineArgument>
+         <CommandLineArgument
+            argument = "RESOLVE_ALIGNMENTS --junction-prediction 1 --reference-fasta  /Users/jbarrick/src/breseq/tests/lambda_mixed_pop/data/reference.fasta --junction-fasta  /Users/jbarrick/src/breseq/tests/lambda_mixed_pop/03_candidate_junctions/candidate_junction.fasta --reference-sam-path /Users/jbarrick/src/breseq/tests/lambda_mixed_pop/02_reference_alignment --junction-sam-path /Users/jbarrick/src/breseq/tests/lambda_mixed_pop/04_candidate_junction_alignment --resolved-path /Users/jbarrick/src/breseq/tests/lambda_mixed_pop/05_alignment_correction --data-path /Users/jbarrick/src/breseq/tests/lambda_mixed_pop/data --features /Users/jbarrick/src/breseq/tests/lambda_mixed_pop/data/reference.features.tab --read-file /Users/jbarrick/src/breseq/tests/data/lambda/lambda_mixed_population.fastq --max-read-length 36"
+            isEnabled = "YES">
+         </CommandLineArgument>
+         <CommandLineArgument
+            argument = "CONVERT_GENBANK --input /Users/jbarrick/db/lenski/REL606.gbk --fasta /Users/jbarrick/Desktop/test.fasta --features /Users/jbarrick/Desktop/features.tab"
+            isEnabled = "NO">
+         </CommandLineArgument>
+      </CommandLineArguments>
+      <AdditionalOptions>
+      </AdditionalOptions>
+   </LaunchAction>
+   <ProfileAction
+      displayScaleIsEnabled = "NO"
+      displayScale = "1.00"
+      shouldUseLaunchSchemeArgsEnv = "YES"
+      savedToolIdentifier = ""
+      useCustomWorkingDirectory = "NO"
+      buildConfiguration = "Release">
+      <BuildableProductRunnable>
+         <BuildableReference
+            BuildableIdentifier = "primary"
+            BlueprintIdentifier = "42B6EDB811C69CC70075F8A3"
+            BuildableName = "cbreseq"
+            BlueprintName = "breseq_cmdline"
+            ReferencedContainer = "container:breseq.xcodeproj">
+         </BuildableReference>
+      </BuildableProductRunnable>
+   </ProfileAction>
+   <AnalyzeAction
+      buildConfiguration = "Debug">
+   </AnalyzeAction>
+   <ArchiveAction
+      buildConfiguration = "Release"
+      revealArchiveInOrganizer = "YES">
+   </ArchiveAction>
+</Scheme>
