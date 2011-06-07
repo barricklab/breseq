@@ -1,6 +1,8 @@
 syntax: glob
 
 .DS_Store
+.cproject
+.project
 *.o
 *.a
 *.gz
@@ -38,6 +40,7 @@ configure.scan
 _build
 blib
 MYMETA.yml
+MYMETA.json
 MANIFEST.SKIP
 #Makefile.PL
 
@@ -87,5 +90,7 @@ samtools$
 .xcodeproj/project.xcworkspace.+$
 .xcodeproj/xcuserdata.+$
 
-
-
+## For Various IDEs
+^nbproject/.+$
+^Debug/.+$
+^Release/.+$
