@@ -92,6 +92,9 @@ namespace breseq {
 	{
 		// Fields
 
+		map<string, bool> installed;
+		string bin_path;
+
 		string candidate_junction_score_method;
 
 		string candidate_junction_fasta_file_name;
@@ -114,6 +117,11 @@ namespace breseq {
 
 		int32_t alignment_read_limit;
 		int32_t candidate_junction_read_limit;
+		int32_t minimum_candidate_junction_pos_hash_score;
+		int32_t minimum_candidate_junction_min_overlap_score;
+		int32_t minimum_candidate_junctions;
+		int32_t maximum_candidate_junctions;
+		int32_t maximum_candidate_junction_length_factor;
 		int32_t max_read_length;
 		int32_t maximum_inserted_junction_sequence_length;
 		int32_t maximum_read_mismatches;
@@ -129,6 +137,38 @@ namespace breseq {
 			string base_name;
 		};
 		vector<ReadStructure> read_structures;
+
+		// Utility function to substitute specific details into a generic file name
+		static string file_name(string file_name_key)
+		{
+			return file_name_key;
+
+//			my ($self, $file_name_key, $sub_hash)= @_;
+//			my $file_name = $self->{$file_name_key};
+//			$file_name or $self->throw("Settings file \"$file_name_key\" not found.");
+//
+//			return $self->substitute_file_name($file_name, $sub_hash);
+		}
+
+		string ctool(string tool_name)
+		{
+//			my ($self, $tool_name, $allow_fail) = @_;
+//
+//			if (!$self->{installed}->{$tool_name})
+//			{
+//				if ($allow_fail)
+//				{
+//					$self->warn("Executable \"$tool_name\" not found in breseq bin path\"$self->{bin_path}\".");
+//					return undef; # couldn't find it, but it's not an error.
+//				}
+//				else
+//				{
+//					$self->throw("Executable \"$tool_name\" not found in breseq bin path\"$self->{bin_path}\".");
+//				}
+//			}
+
+			return bin_path + "/" + tool_name;
+		}
 	};
 
 	struct Summary
@@ -154,9 +194,34 @@ namespace breseq {
 			int32_t junction_accept_score_cutoff_1;
 			int32_t junction_accept_score_cutoff_2;
 		} preprocess_coverage;
+
+		struct CandidateJunctionSummaryData
+		{
+			struct Total
+			{
+				int32_t number;
+				int32_t length;
+			} total;
+
+			struct Accepted
+			{
+				int32_t number;
+				int32_t length;
+				int32_t pos_hash_score_cutoff;
+				int32_t min_overlap_score_cutoff;
+			} accepted;
+
+			map<int32_t, int32_t> pos_hash_score_distribution;
+			map<int32_t, int32_t> min_overlap_score_distribution;
+
+			map<string, map<string, int32_t> > read_file;
+		} candidate_junction;
+
+		struct SequenceConversion
+		{
+			int32_t total_reference_sequence_length;
+		} sequence_conversion;
 	};
-
-
 
 	/*! Reverse a base.
 	 */
@@ -571,6 +636,14 @@ namespace breseq {
 		}
 
 		return join(values, junction_name_separator);
+	}
+
+	inline void add_score_to_distribution(map<int32_t, int32_t> distribution_hash_ref, int32_t score)
+	{
+		if (distribution_hash_ref.count(score) == 0)
+			distribution_hash_ref[score] = 1; // Initialize value
+		else
+			distribution_hash_ref[score]++;
 	}
 
 } // breseq
