@@ -45,7 +45,11 @@ LICENSE AND COPYRIGHT
 #include <bam.h>
 #include <sam.h>
 #include <faidx.h>
+#include <boost/any.hpp>
+#include <boost/lexical_cast.hpp>
 #include <boost/optional.hpp>
+#include <boost/shared_ptr.hpp>
+#include <boost/variant.hpp>
 #include <boost/algorithm/string/split.hpp>
 #include <boost/algorithm/string/classification.hpp>
 
@@ -336,22 +340,27 @@ namespace breseq {
 		return ss.str();
 	}
 
-	inline string str_join(const vector<string>& vec,const string& sep)
+	inline string join(const vector<string>& values, const string& separator)
 	{
-		if(vec.size()==0)
+		if(values.size() == 0)
 			return "";
 
-		string::size_type size=sep.length()*vec.size();
-		for(unsigned int i=0;i<vec.size();i++)
-			size+=vec[i].size();
+		string::size_type size = separator.length() * values.size();
+		for(uint32_t i=0; i < values.size(); i++)
+			size += values[i].size();
 
-		string tmp;
-		tmp.reserve(size);
-		tmp=vec[0];
-		for(unsigned int i=1;i<vec.size();i++)
-			tmp += sep + vec[i];
+		string retval;
+		retval.reserve(size);
+		retval = values[0];
+		for(uint32_t i = 1; i < values.size(); i++)
+			retval += separator + values[i];
 
-		return tmp;
+		return retval;
+	}
+
+	inline string join(string values[], const string& separator)
+	{
+		return join(vector<string> (values, values + sizeof(values) / sizeof(*values)), separator);
 	}
 
 	struct Trim
@@ -422,7 +431,7 @@ namespace breseq {
 			ll.push_back(quality_score_string);
 			ll.push_back(aux_tags);
 
-			fh << str_join(ll, "\t") << endl;
+			fh << join(ll, "\t") << endl;
 		}
 	}
 
@@ -481,11 +490,87 @@ namespace breseq {
 	inline string reverse_complement(string seq)
 	{
 		char trade['Z'];
-		trade['A'] ='T'; trade['T'] = 'A'; trade['C'] = 'G'; trade['G'] = 'C';
+		trade['A'] = 'T'; trade['T'] = 'A'; trade['C'] = 'G'; trade['G'] = 'C';
 		string retval = seq;
 		for (int i = 0; i < seq.size(); i++)
 			retval[i] = trade[seq[seq.size() - 1 - i]];
 		return retval;
+	}
+
+	struct JunctionList
+	{
+		struct Side
+		{
+			string seq_id;
+			int32_t position;
+			bool strand;
+			int32_t redundant;
+		} side_1, side_2;
+
+		int32_t alignment_overlap;
+		string unique_read_sequence;
+		int32_t flanking_left;
+		int32_t flanking_right;
+	};
+
+	const string junction_name_separator = "__";
+
+	// Deserializes a JunctionList from a string
+	inline JunctionList junction_name_split(string junction_name)
+	{
+		vector<string> s;
+		split(s, junction_name, junction_name_separator);
+
+		JunctionList::Side side_1 = {
+			s[0],
+			boost::lexical_cast<int32_t>(s[1]),
+			boost::lexical_cast<bool>(s[2]),
+			boost::lexical_cast<int32_t>(s[10])
+		}, side_2 = {
+			s[3],
+			boost::lexical_cast<int32_t>(s[4]),
+			boost::lexical_cast<bool>(s[5]),
+			boost::lexical_cast<int32_t>(s[11])
+		};
+		JunctionList retval =
+		{
+			side_1,
+			side_2,
+			boost::lexical_cast<int32_t>(s[6]),
+			s[7],
+			boost::lexical_cast<int32_t>(s[8]),
+			boost::lexical_cast<int32_t>(s[9])
+		};
+
+		return retval;
+	}
+
+	// Serializes a JunctionList to a string
+	inline string junction_name_join(JunctionList item)
+	{
+		bool has_redundant = (item.side_1.redundant >= 0 && item.side_2.redundant >= 0);
+		vector<string> values(has_redundant ? 12 : 10);
+
+		values.push_back(item.side_1.seq_id);
+		values.push_back(boost::lexical_cast<string>(item.side_1.position));
+		values.push_back(boost::lexical_cast<string>(item.side_1.strand));
+
+		values.push_back(item.side_2.seq_id);
+		values.push_back(boost::lexical_cast<string>(item.side_2.position));
+		values.push_back(boost::lexical_cast<string>(item.side_2.strand));
+
+		values.push_back(boost::lexical_cast<string>(item.alignment_overlap));
+		values.push_back(boost::lexical_cast<string>(item.unique_read_sequence));
+		values.push_back(boost::lexical_cast<string>(item.flanking_left));
+		values.push_back(boost::lexical_cast<string>(item.flanking_right));
+
+		if (has_redundant)
+		{
+			values.push_back(boost::lexical_cast<string>(item.side_1.redundant));
+			values.push_back(boost::lexical_cast<string>(item.side_2.redundant));
+		}
+
+		return join(values, junction_name_separator);
 	}
 
 } // breseq

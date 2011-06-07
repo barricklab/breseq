@@ -539,7 +539,7 @@ int do_preprocess_alignments(int argc, char* argv[]) {
 	cReferenceSequences ref_seq_info;
 	breseq::LoadFeatureIndexedFastaFile(ref_seq_info, "", options["fasta"].as<string>());
 
-	CandidateJunction::preprocess_alignments(settings, summary, ref_seq_info);
+	CandidateJunctions::preprocess_alignments(settings, summary, ref_seq_info);
 
   } catch(...) {
 		// failed;
@@ -587,7 +587,7 @@ int do_identify_candidate_junctions(int argc, char* argv[]) {
 	cReferenceSequences ref_seq_info;
 	breseq::LoadFeatureIndexedFastaFile(ref_seq_info, "", options["fasta"].as<string>());
 
-	CandidateJunction::identify_candidate_junctions(settings, summary, ref_seq_info);
+	CandidateJunctions::identify_candidate_junctions(settings, summary, ref_seq_info);
     
   } catch(...) {
 		// failed; 
