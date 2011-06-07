@@ -26,9 +26,10 @@ namespace breseq {
 
 	// Private
 
-	CandidateJunction::CandidateJunction() {}
+	CandidateJunctions::CandidateJunctions() {}
 
-	bool CandidateJunction::_alignments_to_candidate_junction(Settings settings, Summary summary, const cReferenceSequences& ref_seq_info, faidx_t* fai, bam_header_t* header, bam1_t* a1, bam1_t* a2, int32_t redundancy_1, int32_t redundancy_2)
+	bool CandidateJunctions::_alignments_to_candidate_junction(Settings settings, Summary summary, const cReferenceSequences& ref_seq_info, faidx_t* fai, bam_header_t* header, bam1_t* a1, bam1_t* a2,
+															  int32_t& redundancy_1, int32_t& redundancy_2, string& junction_seq_string, string& ref_seq_matched_1, string& ref_seq_matched_2, string& junction_coord_1, string& junction_coord_2, int32_t& read_begin_coord, JunctionList& junction_id_list)
 	{
 		bool verbose = false;
 
@@ -74,21 +75,10 @@ namespace breseq {
 		// Reverse the coordinates to be consistently such that 1 refers to lowest...
 		if (q2_start < q1_start)
 		{
-			int32_t temp_int = q1_start;
-			q1_start = q2_start;
-			q2_start = temp_int;
-
-			temp_int = q1_end;
-			q1_end = q2_end;
-			q2_end = temp_int;
-
-			temp_int = redundancy_1;
-			redundancy_1 = redundancy_2;
-			redundancy_2 = temp_int;
-
-			bam1_t* temp_bam = q1;
-			q1 = q2;
-			q2 = temp_bam;
+			swap(q1_start, q2_start);
+			swap(q1_end, q2_end);
+			swap(redundancy_1, redundancy_2);
+			swap(q1, q2);
 		}
 
 		// create hash key and store information about the location of this hit
@@ -127,8 +117,8 @@ namespace breseq {
 
 		if (verbose)
 		{
-			string ref_seq_matched_1 = ref_seq_1.substr(r1_start - 1, r1_end - r1_start + 1);
-			string ref_seq_matched_2 = ref_seq_2.substr(r2_start - 1, r2_end - r2_start + 1);
+			ref_seq_matched_1 = ref_seq_1.substr(r1_start - 1, r1_end - r1_start + 1);
+			ref_seq_matched_2 = ref_seq_2.substr(r2_start - 1, r2_end - r2_start + 1);
 
 			cout << "==============> Initial Matches" << endl;
 			cout << "Alignment #1" << endl;
@@ -200,7 +190,7 @@ namespace breseq {
 		// these are the positions of the beginning and end of the read, across the junction
 		// query 1 is the start of the read, which is why we hash by this coordinate
 		// (it is less likely to be shifted by a nucleotide or two by base errors)
-		int32_t read_begin_coord = (hash_strand_1) ? r1_end : r1_start;
+		read_begin_coord = (hash_strand_1) ? r1_end : r1_start;
 
 		if (verbose)
 		{
@@ -228,12 +218,11 @@ namespace breseq {
 		// record what parts of the reference sequence were actually matched on each side
 		// this is to determine whether that side was redundant or unique in the reference
 
-		string ref_seq_matched_1, ref_seq_matched_2;
 		int32_t ref_seq_matched_length_1 = r1_end - r1_start + 1;
 		int32_t ref_seq_matched_length_2 = r2_end - r2_start + 1;
 
 		// create the sequence of the candidate junction
-		string junction_seq_string = "";
+		junction_seq_string = "";
 
 		// first end
 		int32_t flanking_left = flanking_length;
@@ -283,108 +272,113 @@ namespace breseq {
 		if (verbose) cout << "+U: " << unique_read_seq_string << endl;
 
 		// second end
-//		my $flanking_right = $flanking_length;
-//		if (hash_strand_2) //alignment is not reversed
-//		{
-//			// $end_pos is in 1-based coordinates
-//			my $end_pos = $hash_coord_2 + ($flanking_right - 1) + $overlap_offset;
-//			if ($end_pos > length $reference_sequence_string_hash_ref->{$hash_seq_id_2})
-//			{
-//				print "END POS 2: ($end_pos < length\n" if ($verbose);
-//				$flanking_right -= ($end_pos - length $reference_sequence_string_hash_ref->{$hash_seq_id_2});
-//				$end_pos = length $reference_sequence_string_hash_ref->{$hash_seq_id_2};
-//			}
-//			my $add_seq = substr $reference_sequence_string_hash_ref->{$hash_seq_id_2},  $end_pos - $flanking_right, $flanking_right;
-//			print "2F: $add_seq\n" if ($verbose);
-//			$junction_seq_string .= $add_seq;
-//
-//			$ref_seq_matched_2 = substr $add_seq, -$ref_seq_matched_length_2, $ref_seq_matched_length_2;
-//		}
-//		else // ($m_2->{hash_strand} * $m_2->{read_side} == -1)
-//		{
-//			// $start_pos is in 1-based coordinates
-//			my $start_pos = $hash_coord_2 - ($flanking_right - 1) - $overlap_offset;
-//			if ($start_pos < 1)
-//			{
-//				print "START POS 2: $start_pos < 0\n" if ($verbose);
-//				$flanking_right += ($start_pos-1);
-//				$start_pos = 1;
-//			}
-//			my $add_seq = substr $reference_sequence_string_hash_ref->{$hash_seq_id_2},  $start_pos-1, $flanking_right;
-//			add_seq = reverse_complement(add_seq);
-//			print "2R: $add_seq\n" if ($verbose);
-//			$junction_seq_string .= $add_seq;
-//
-//			$ref_seq_matched_2 = substr $add_seq, -$ref_seq_matched_length_2, $ref_seq_matched_length_2;
-//		}
-//		print "3: $junction_seq_string\n" if ($verbose);
-//
-//		// create hash coords after this adjustment
-//		if ($hash_strand_1 == 0)
-//		{
-//			$r1_end -= $overlap_offset;
-//		}
-//		else //reversed
-//		{
-//			$r1_start += $overlap_offset;
-//		}
-//
-//		if ($hash_strand_2 == 0)
-//		{
-//			$r2_end -= $overlap_offset;
-//		}
-//		else //reversed
-//		{
-//			$r2_start += $overlap_offset;
-//		}
-//
-//		//matched reference sequence
-//		$ref_seq_matched_1 = substr $reference_sequence_string_hash_ref->{$hash_seq_id_1},  $r1_start-1, $r1_end - $r1_start + 1;
-//		$ref_seq_matched_2 = substr $reference_sequence_string_hash_ref->{$hash_seq_id_2},  $r2_start-1, $r2_end - $r2_start + 1;
-//
-//
-//		//want to be sure that lowest ref coord is always first for consistency
-//		if ( ($hash_seq_id_2 lt $hash_seq_id_1) || (($hash_seq_id_1 eq $hash_seq_id_2) && ($hash_coord_2 < $hash_coord_1)) )
-//		{
-//			($hash_coord_1, $hash_coord_2) = ($hash_coord_2, $hash_coord_1);
-//			($hash_strand_1, $hash_strand_2) = ($hash_strand_2, $hash_strand_1);
-//			($hash_seq_id_1, $hash_seq_id_2) = ($hash_seq_id_2, $hash_seq_id_1);
-//			($redundancy_1, $redundancy_2) = ($redundancy_2, $redundancy_1);
-//			($flanking_left, $flanking_right) = ($flanking_right, $flanking_left);
-//			($ref_seq_matched_1, $ref_seq_matched_2) = ($ref_seq_matched_2, $ref_seq_matched_1);
-//
-//			$junction_seq_string = reverse_complement($junction_seq_string);
-//			$unique_read_seq_string = reverse_complement($unique_read_seq_string);
-//		}
-//
-//		my @junction_id_list = (
-//			$hash_seq_id_1,
-//			$hash_coord_1,
-//			$hash_strand_1,
-//			$hash_seq_id_2,
-//			$hash_coord_2,
-//			$hash_strand_2,
-//			$overlap,
-//			$unique_read_seq_string,
-//			$flanking_left,
-//			$flanking_right
-//		);
-//
-//		my $junction_coord_1 = join "::", $hash_seq_id_1, $hash_coord_1, $hash_strand_1;
-//		my $junction_coord_2 = join "::", $hash_seq_id_2, $hash_coord_2, $hash_strand_2;
-//
-//		my $junction_id = Breseq::Shared::junction_name_join(@junction_id_list);
-//		print "READ ID: " . $a1->qname . "\n" if ($verbose);
-//		print "JUNCTION ID: " . $junction_id . "\n" if ($verbose);
-//
-//		die "Junction sequence not found: $junction_id " . $q1->qname . " " . $a2->qname  if (!$junction_seq_string);
-//		die "Incorrect length for $junction_seq_string: $junction_id " . $q1->qname . " " . $a2->qname if (length $junction_seq_string != $flanking_left + $flanking_right + abs($overlap));
-//
-//		return (1, $junction_seq_string, $ref_seq_matched_1, $ref_seq_matched_2, $junction_coord_1, $junction_coord_2, $redundancy_1, $redundancy_2, $read_begin_coord, @junction_id_list);
+		int32_t flanking_right = flanking_length;
+		if (hash_strand_2) //alignment is not reversed
+		{
+			// end_pos is in 1-based coordinates
+			int32_t end_pos = hash_coord_2 + (flanking_right - 1) + overlap_offset;
+			if (end_pos > ref_seq_2.size())
+			{
+				if (verbose)
+					cout << "END POS 2: (" << end_pos << " < length" << endl;
+				flanking_right -= (end_pos - ref_seq_2.size());
+				end_pos = ref_seq_2.size();
+			}
+			string add_seq = ref_seq_2.substr(end_pos - flanking_right, flanking_right);
+			if (verbose) cout << "2F: " << add_seq << endl;
+			junction_seq_string += add_seq;
 
+			ref_seq_matched_2 = add_seq.substr(add_seq.size() - ref_seq_matched_length_2, ref_seq_matched_length_2);
+		}
+		else // ($m_2->{hash_strand} * $m_2->{read_side} == -1)
+		{
+			// start_pos is in 1-based coordinates
+			int32_t start_pos = hash_coord_2 - (flanking_right - 1) - overlap_offset;
+			if (start_pos < 1)
+			{
+				if (verbose) cout << "START POS 2: " << start_pos << " < 0" << endl;
+				flanking_right += start_pos - 1;
+				start_pos = 1;
+			}
+			string add_seq = ref_seq_2.substr(start_pos - 1, flanking_right);
+			add_seq = reverse_complement(add_seq);
+			if (verbose) cout << "2R: " << add_seq << endl;
+			junction_seq_string += add_seq;
+
+			ref_seq_matched_2 = add_seq.substr(add_seq.size() - ref_seq_matched_length_2, ref_seq_matched_length_2);
+		}
+
+		if (verbose) cout << "3: " << junction_seq_string << endl;
+
+		// create hash coords after this adjustment
+		if (!hash_strand_1)
+			r1_end -= overlap_offset;
+		else //reversed
+			r1_start += overlap_offset;
+
+		if (!hash_strand_2)
+			r2_end -= overlap_offset;
+		else //reversed
+			r2_start += overlap_offset;
+
+		// matched reference sequence
+		ref_seq_matched_1 = ref_seq_1.substr(r1_start - 1, r1_end - r1_start + 1);
+		ref_seq_matched_2 = ref_seq_2.substr(r2_start - 1, r2_end - r2_start + 1);
+
+		// want to be sure that lowest ref coord is always first for consistency
+		if ( hash_seq_id_1.compare(hash_seq_id_2) > 0 || (hash_seq_id_1.compare(hash_seq_id_2) == 0 && hash_coord_2 < hash_coord_1) )
+		{
+			swap(hash_coord_1, hash_coord_2);
+			swap(hash_strand_1, hash_strand_2);
+			swap(hash_seq_id_1, hash_seq_id_2);
+			swap(redundancy_1, redundancy_2);
+			swap(flanking_left, flanking_right);
+			swap(ref_seq_matched_1, ref_seq_matched_2);
+
+			junction_seq_string = reverse_complement(junction_seq_string);
+			unique_read_seq_string = reverse_complement(unique_read_seq_string);
+		}
+
+		JunctionList::Side side_1 = {
+			hash_seq_id_1,	// seq_id
+			hash_coord_1,	// position
+			hash_strand_1,	// strand
+			-1				// redundant: set to magic (uninitialized) value
+		}, side_2 = {
+			hash_seq_id_2,	// seq_id
+			hash_coord_2,	// position
+			hash_strand_2,	// strand
+			-1				// redundant: set to magic (uninitialized) value
+		};
+		JunctionList new_junction =
+		{
+			side_1,
+			side_2,
+			overlap, 				// alignment_overlap
+			unique_read_seq_string,	// unique_read_sequence
+			flanking_left,
+			flanking_right
+		}; junction_id_list = new_junction;
+
+		string join1[] = { hash_seq_id_1, boost::lexical_cast<string>(hash_coord_1), boost::lexical_cast<string>(hash_strand_1) };
+		junction_coord_1 = join(join1, "::");
+		string join2[] = { hash_seq_id_2, boost::lexical_cast<string>(hash_coord_2), boost::lexical_cast<string>(hash_strand_2) };
+		junction_coord_2 = join(join2, "::");
+
+		string junction_id = junction_name_join(junction_id_list);
+		if (verbose)
+		{
+			cout << "READ ID: " << bam1_qname(a1) << endl;
+			cout << "JUNCTION ID: " << junction_id << endl;
+		}
+
+		assert(junction_seq_string.size() > 0); // die "Junction sequence not found: $junction_id " . $q1->qname . " " . $a2->qname  if (!$junction_seq_string);
+		assert(junction_seq_string.size() != flanking_left + flanking_right + abs(overlap)); // die "Incorrect length for $junction_seq_string: $junction_id " . $q1->qname . " " . $a2->qname if (length $junction_seq_string != $flanking_left + $flanking_right + abs($overlap));
+
+		return true;
 	}
 
-	void CandidateJunction::_alignments_to_candidate_junctions(Settings settings, Summary summary,  const cReferenceSequences& ref_seq_info, map_t candidate_junctions, faidx_t* fai, bam_header_t* header, vector<bam1_t*> al_ref)
+	void CandidateJunctions::_alignments_to_candidate_junctions(Settings settings, Summary summary, const cReferenceSequences& ref_seq_info, map<string, map<string, CandidateJunction> >& candidate_junctions, faidx_t* fai, bam_header_t* header, vector<bam1_t*> al_ref)
 	{
 		bool verbose = false;
 
@@ -404,8 +398,8 @@ namespace breseq {
 
 		// For keeping track of how many times unique reference sequences (ignoring overlap regions)
 		// were used to construct a junction. We must mark redundant sides AFTER correcting for overlap.
-//		my %redundant_junction_sides;
-//		my @junctions;
+		map<string, map<string, int32_t> > redundant_junction_sides;
+		vector<JunctionListContainer> junctions;
 
 		if (verbose)
 		{
@@ -512,120 +506,141 @@ namespace breseq {
 			int32_t r2 = 1;
 
 			// we pass back and forth the redundancies in case they switch sides
-//			my ($passed, $junction_seq_string, $side_1_ref_seq, $side_2_ref_seq, $junction_coord_1, $junction_coord_2, $read_begin_coord, @junction_id_list);
-//
-//			($passed, $junction_seq_string, $side_1_ref_seq, $side_2_ref_seq, $junction_coord_1, $junction_coord_2, $r1, $r2, $read_begin_coord, @junction_id_list)
-//				= _alignments_to_candidate_junction($settings, $summary, $ref_seq_info, $fai, $header, $a1, $a2, $r1, $r2);
-//
-//			if (!passed) continue;
-//
-//			// a value of zero gets added if they were unique, >0 if redundant b/c they matched same reference sequence
-//			$redundant_junction_sides{$side_1_ref_seq}->{$junction_coord_1} += $r1-1;
-//			$redundant_junction_sides{$side_2_ref_seq}->{$junction_coord_2} += $r2-1;
-//
-//			// also add to the reverse complement, because we can't be sure of the strandedness
-//			// (alternately we could reverse complement if the first base was an A or C, for example
-//			// it seems like there could possibly be some cross-talk between sides of junctions here, that
-//			/// could snarl things up, but I'm not sure?
-//			/// TO DO: I'm too tired of this section to do it now, but the correct sequence strand could be
-//			/// decided (keeping track of all the reversals) in _alignments_to_candidate_junction
-//			$redundant_junction_sides{reverse_complement($side_1_ref_seq)}->{$junction_coord_1} += $r1-1;
-//			$redundant_junction_sides{reverse_complement($side_2_ref_seq)}->{$junction_coord_2} += $r2-1;
-//
-//			my $min_overlap_score = ($a1_unique_length < $a2_unique_length) ? $a1_unique_length : $a2_unique_length;
-//
-//			push @junctions, { 'list' => \@junction_id_list, 'string' => $junction_seq_string, 'min_overlap_score' => $min_overlap_score, 'read_begin_coord' => $read_begin_coord, 'side_1_ref_seq' => $side_1_ref_seq, 'side_2_ref_seq' => $side_2_ref_seq};
+			string junction_seq_string;
+			string side_1_ref_seq, side_2_ref_seq;
+			string junction_coord_1, junction_coord_2;
+			int32_t read_begin_coord;
+			JunctionList junction_id_list;
+
+			bool passed = _alignments_to_candidate_junction(settings, summary, ref_seq_info, fai, header, a1, a2,
+															r1, r2, junction_seq_string, side_1_ref_seq, side_2_ref_seq, junction_coord_1, junction_coord_2, read_begin_coord, junction_id_list);
+			if (!passed) continue;
+
+			// a value of zero gets added if they were unique, >0 if redundant b/c they matched same reference sequence
+			redundant_junction_sides[side_1_ref_seq][junction_coord_1] += r1 - 1;
+			redundant_junction_sides[side_2_ref_seq][junction_coord_2] += r2 - 1;
+
+			// also add to the reverse complement, because we can't be sure of the strandedness
+			// (alternately we could reverse complement if the first base was an A or C, for example
+			// it seems like there could possibly be some cross-talk between sides of junctions here, that
+			/// could snarl things up, but I'm not sure?
+			/// TO DO: I'm too tired of this section to do it now, but the correct sequence strand could be
+			/// decided (keeping track of all the reversals) in _alignments_to_candidate_junction
+			redundant_junction_sides[reverse_complement(side_1_ref_seq)][junction_coord_1] += r1 - 1;
+			redundant_junction_sides[reverse_complement(side_2_ref_seq)][junction_coord_2] += r2 - 1;
+
+			int32_t min_overlap_score = min(a1_unique_length, a2_unique_length);
+
+			JunctionListContainer junction =
+			{
+				junction_id_list,		// list
+				junction_seq_string,	// str
+				min_overlap_score,
+				read_begin_coord,
+				side_1_ref_seq,
+				side_2_ref_seq
+			};
+			junctions.push_back(junction);
 		}
 
-//		if (verbose)
-//			cout << "  Junctions: " << junctions.size() << endl;
-//		#	print "JACKPOT!!!\n" if (scalar @junctions > 5);
-//
-//		# Done if everything already ruled out...
-//		if (junctions.size() == 0) return;
-//
-//		if (verbose)
-//			cout << bam1_qname(al_ref[0]) << endl;
-//
+		if (verbose)
+			cout << "  Junctions: " << junctions.size() << endl;
+		//#	print "JACKPOT!!!\n" if (scalar @junctions > 5);
+
+		// Done if everything already ruled out...
+		if (junctions.size() == 0) return;
+
+		if (verbose)
+			cout << bam1_qname(al_ref[0]) << endl;
+
 		// only now that we've looked through everything can we determine whether the reference sequence matched
 		// on a side was unique, after correcting for overlap
-//		foreach my $jct (@junctions)
-//		{
-//			my @junction_id_list = @{$jct->{list}};
-//			my $junction_seq_string = $jct->{string};
-//			my $min_overlap_score = $jct->{min_overlap_score};
-//			my $read_begin_coord = $jct->{read_begin_coord};
-//
-//			my $side_1_ref_seq = $jct->{side_1_ref_seq};
-//			my $side_2_ref_seq = $jct->{side_2_ref_seq};
-//
-//			# these are the total number of redundant matches to that side of the junction
-//			# the only way to be unique is to have at most one coordinate corresponding to that sequence
-//			# and not have that reference sequence redundantly matched (first combination of alignment coords)
-//			my $total_r1 = 0;
-//			foreach my $key (keys %{$redundant_junction_sides{$side_1_ref_seq}})
-//			{
-//				$total_r1 += $redundant_junction_sides{$side_1_ref_seq}->{$key} + 1;
-//			}
-//
-//			my $total_r2 = 0;
-//			foreach my $key (keys %{$redundant_junction_sides{$side_2_ref_seq}})
-//			{
-//				$total_r2 += $redundant_junction_sides{$side_2_ref_seq}->{$key} + 1;
-//			}
-//
-//			my $junction_id = Breseq::Shared::junction_name_join(@junction_id_list);
-//			print "$junction_id\n" if ($verbose);
-//
-//			## initialize candidate junction if it didn't exist
-//			## they are redundant by default, until proven otherwise
-//			my $cj = $candidate_junctions->{$junction_seq_string}->{$junction_id};
-//
-//			if (!defined $cj)
-//			{
-//				##redundancies of each side
-//				$cj->{r1} = 1;
-//				$cj->{r2} = 1;
-//
-//				##maximum nonoverlapping match size on each side
-//				$cj->{L1} = 0;
-//				$cj->{L2} = 0;
-//
-//				$candidate_junctions->{$junction_seq_string}->{$junction_id} = $cj;
-//			}
-//
-//			## Update score of junction and the redundancy of each side
-//			$cj->{min_overlap_score} += $min_overlap_score;
-//			$cj->{read_begin_hash}->{$read_begin_coord}++;
-//
-//			print "Totals: $total_r1, $total_r2\n" if ($verbose);
-//			print "Redundancy (before): $cj->{r1} ($cj->{L1}) $cj->{r2} ($cj->{L2})\n" if ($verbose);
-//			my $side_1_ref_match_length = length $side_1_ref_seq;
-//			my $side_2_ref_match_length = length $side_2_ref_seq;
-//
-//			// Longer reads into a side trump the redundancy of shorter reads for two reasons
-//			//   (1) obviously, the longer the read, the better the chance it is unique
-//			//   (2) subtly, if the read barely has enough to match both sides of the junction,
-//			//       there are situations where you can predict uniqueness because a short match
-//			//       maps one place only with the overlap included, and the non-overlapping part is
-//			//       unique, but once you have a longer match, you see that the non-overlapping
-//			//       part was really redundant.
-//			if ($side_1_ref_match_length > $cj->{L1})
-//			{
-//				$cj->{L1} = $side_1_ref_match_length;
-//				$cj->{r1} = ($total_r1 > 1) ? 1 : 0;
-//			}
-//
-//			if ($side_2_ref_match_length > $cj->{L2})
-//			{
-//				$cj->{L2} = $side_1_ref_match_length;
-//				$cj->{r2} = ($total_r2 > 1) ? 1 : 0;;
-//			}
-//			print "Redundancy (after): $cj->{r1} ($cj->{L1}) $cj->{r2} ($cj->{L2})\n" if ($verbose);
-//		}
+		for (int32_t i = 0; i < junctions.size(); i++)
+		{
+			JunctionListContainer jct = junctions[i];
+			JunctionList junction_id_list = jct.list;
+			string junction_seq_string = jct.str;
+			int32_t min_overlap_score = jct.min_overlap_score;
+			int32_t read_begin_coord = jct.read_begin_coord;
+
+			string side_1_ref_seq = jct.side_1_ref_seq;
+			string side_2_ref_seq = jct.side_2_ref_seq;
+
+			// these are the total number of redundant matches to that side of the junction
+			// the only way to be unique is to have at most one coordinate corresponding to that sequence
+			// and not have that reference sequence redundantly matched (first combination of alignment coords)
+
+			uint32_t total_r1 = 0, total_r2 = 0;
+			map<string, int32_t>::iterator it;
+			map<string, int32_t> side = redundant_junction_sides[side_1_ref_seq];
+
+			for (it = side.begin(); it != side.end(); it++)
+				total_r1 += (*it).second + 1;
+
+			side = redundant_junction_sides[side_2_ref_seq];
+
+			for (it = side.begin(); it != side.end(); it++)
+				total_r2 += (*it).second + 1;
+
+			string junction_id = junction_name_join(junction_id_list);
+			if (verbose) cout << junction_id << endl;
+
+			// initialize candidate junction if it didn't exist
+			// they are redundant by default, until proven otherwise
+			CandidateJunction cj;
+
+			if (candidate_junctions.count(junction_seq_string) > 0 && candidate_junctions[junction_seq_string].count(junction_id) > 0)
+			{
+				cj = candidate_junctions[junction_seq_string][junction_id];
+			}
+			else
+			{
+				//redundancies of each side
+				cj.r1 = cj.r2 = 1;
+
+				//maximum nonoverlapping match size on each side
+				cj.L1 = cj.L2 = 0;
+			}
+
+			// Update score of junction and the redundancy of each side
+			cj.min_overlap_score += min_overlap_score;
+			cj.read_begin_hash[read_begin_coord]++;
+
+			if (verbose)
+			{
+				cout << "Totals: " << total_r1 << ", " << total_r2 << endl;
+				cout << "Redundancy (before): " << cj.r1 << " (" << cj.L1 << ") " << cj.r2 << " (" << cj.L2 << ")" << endl;
+			}
+			int32_t side_1_ref_match_length = side_1_ref_seq.size();
+			int32_t side_2_ref_match_length = side_2_ref_seq.size();
+
+			// Longer reads into a side trump the redundancy of shorter reads for two reasons
+			//   (1) obviously, the longer the read, the better the chance it is unique
+			//   (2) subtly, if the read barely has enough to match both sides of the junction,
+			//       there are situations where you can predict uniqueness because a short match
+			//       maps one place only with the overlap included, and the non-overlapping part is
+			//       unique, but once you have a longer match, you see that the non-overlapping
+			//       part was really redundant.
+			if (side_1_ref_match_length > cj.L1)
+			{
+				cj.L1 = side_1_ref_match_length;
+				cj.r1 = (total_r1 > 1) ? 1 : 0;
+			}
+
+			if (side_2_ref_match_length > cj.L2)
+			{
+				cj.L2 = side_1_ref_match_length; //TODO: Confirm this shouldn't be side_2
+				cj.r2 = (total_r1 > 1) ? 1 : 0;
+			}
+
+			if (verbose)
+				cout << "Redundancy (after): " << cj.r1 << " (" << cj.L1 << ") " << cj.r2 << " (" << cj.L2 << ")" << endl;
+
+			candidate_junctions[junction_seq_string][junction_id] = cj;
+		}
 	}
 
-	bool CandidateJunction::_check_read_pair_requirements(Settings settings, int32_t a1_start, int32_t a1_end, int32_t a2_start, int32_t a2_end, int32_t& a1_unique_length, int32_t& a2_unique_length, int32_t& union_length)
+	bool CandidateJunctions::_check_read_pair_requirements(Settings settings, int32_t a1_start, int32_t a1_end, int32_t a2_start, int32_t a2_end, int32_t& a1_unique_length, int32_t& a2_unique_length, int32_t& union_length)
 	{
 		bool verbose = false;
 
@@ -691,9 +706,9 @@ namespace breseq {
 		return true;
 	}
 
-	void CandidateJunction::_entire_read_matches(map_t a) {}
+	void CandidateJunctions::_entire_read_matches(map_t a) {}
 
-	void CandidateJunction::_num_matches_from_end(bam1_t* a, string refseq_str, bool dir, int32_t overlap, int32_t& qry_mismatch_pos, int32_t& ref_mismatch_pos)
+	void CandidateJunctions::_num_matches_from_end(bam1_t* a, string refseq_str, bool dir, int32_t overlap, int32_t& qry_mismatch_pos, int32_t& ref_mismatch_pos)
 	{
 		bool verbose = false;
 
@@ -812,16 +827,16 @@ namespace breseq {
 		}
 	}
 
-	void CandidateJunction::_split_indel_alignments(Settings settings, Summary summary, bam_header_t* header, ofstream& PSAM, int32_t min_indel_split_len, vector<bam1_t*> al_ref) {}
-	void CandidateJunction::_by_ref_seq_coord(map_t a, map_t b, map_t ref_seq_info) {}
-	void CandidateJunction::_by_score_unique_coord(map_t a, map_t b) {}
-	void CandidateJunction::_tam_write_split_alignment(map_t fh, map_t header, map_t min_indel_split_len, map_t a) {}
+	void CandidateJunctions::_split_indel_alignments(Settings settings, Summary summary, bam_header_t* header, ofstream& PSAM, int32_t min_indel_split_len, vector<bam1_t*> al_ref) {}
+	void CandidateJunctions::_by_ref_seq_coord(map_t a, map_t b, map_t ref_seq_info) {}
+	void CandidateJunctions::_by_score_unique_coord(map_t a, map_t b) {}
+	void CandidateJunctions::_tam_write_split_alignment(map_t fh, map_t header, map_t min_indel_split_len, map_t a) {}
 
 	// Public
 
 	/*! Preprocesses alignments
 	 */
-	void CandidateJunction::preprocess_alignments(Settings settings, Summary summary, const cReferenceSequences& ref_seq_info)
+	void CandidateJunctions::preprocess_alignments(Settings settings, Summary summary, const cReferenceSequences& ref_seq_info)
 	{
 		cout << "Preprocessing alignments." << endl;
 
@@ -889,7 +904,7 @@ namespace breseq {
 
 	/*! Predicts candidate junctions
 	 */
-	void CandidateJunction::identify_candidate_junctions(Settings settings, Summary summary, const cReferenceSequences& ref_seq_info)
+	void CandidateJunctions::identify_candidate_junctions(Settings settings, Summary summary, const cReferenceSequences& ref_seq_info)
 	{
 		int32_t verbose = 0;
 
@@ -913,12 +928,33 @@ namespace breseq {
 		cFastaFile out(candidate_junction_fasta_file_name, ios_base::out);
 
 		// hash by junction sequence concatenated with name of counts
-		map_t candidate_junctions;
+		map<string, map<string, CandidateJunction> > candidate_junctions;
 
 		// summary data for this step
-//		my $hcs;
-//
+		struct SummaryData
+		{
+			struct Total
+			{
+				int32_t number;
+				int32_t length;
+			} total;
+
+			struct Accepted
+			{
+				int32_t number;
+				int32_t length;
+				int32_t pos_hash_score_cutoff;
+				int32_t min_overlap_score_cutoff;
+			} accepted;
+
+			int32_t pos_hash_score_distribution;
+			int32_t min_overlap_score_distribution;
+
+			map<string, map<string, int32_t> > read_file;
+		} hcs;
+
 //		my @read_files = $settings->read_files;
+
 		int32_t i = 0;
 
 		for (int32_t j = 0; j < settings.read_structures.size(); j++)
@@ -967,26 +1003,30 @@ namespace breseq {
 
 				_alignments_to_candidate_junctions(settings, summary, ref_seq_info, candidate_junctions, fai, header, al_ref);
 			}
-//
-//			$hcs->{read_file}->{$read_file} = $s;
+
+			hcs.read_file[read_file] = s;
 		}
 
 		//
 		// Calculate pos_hash score for each candidate junction now that we have the complete list of read match support
 		//
+		for (map<string, map<string, CandidateJunction> >::iterator outer_it = candidate_junctions.begin(); outer_it != candidate_junctions.end(); outer_it++)
+		{
+			for (map<string, CandidateJunction>::iterator it = (*outer_it).second.begin(); it != (*outer_it).second.end(); it++)
+			{
+				string junction_id = (*it).first;
+				CandidateJunction cj = (*it).second;
+				cj.pos_hash_score = cj.read_begin_hash.size();
 
-//		JUNCTION_SEQ: foreach my $junction_seq (sort keys %$candidate_junctions)
-//		{
-//			JUNCTION_ID: foreach my $junction_id (keys %{$candidate_junctions->{$junction_seq}} )
-//			{
-//				my $cj = $candidate_junctions->{$junction_seq}->{$junction_id};
-//				$cj->{pos_hash_score} = scalar keys %{$cj->{read_begin_hash}};
-//
-//				print ">>>$junction_id\n" if ($verbose);
-//				print Dumper($cj->{read_begin_hash}) if ($verbose);
-//			}
-//		}
-//
+				if (verbose)
+				{
+					cout << ">>>" << junction_id << endl; // prints junction id
+					//print Dumper($cj->{read_begin_hash});
+				}
+
+			}
+		}
+
 		//
 		// Combine hash into a list, one item for each unique sequence (also joining reverse complements)
 		//
