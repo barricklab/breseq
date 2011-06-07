@@ -204,7 +204,7 @@ namespace breseq {
 		virtual ~identify_mutations_pileup();		
 		
 		//! Called for each alignment.
-		virtual void callback(const pileup& p);
+		virtual void pileup_callback(const pileup& p);
 		
 		//! Called at the end of the pileup.
 		virtual void at_end(uint32_t tid, uint32_t seqlen);

@@ -40,9 +40,12 @@ class alignment_output_pileup : public pileup_base {
     //! Destructor.
     virtual ~alignment_output_pileup();
 
-    //! Called for each alignment.
-    virtual void callback(const pileup& aligned_reference);
+    //! Called for each genome position.
+    virtual void pileup_callback(const pileup& aligned_reference);
 
+    //! Called for each aligned read.
+    virtual void fetch_callback(const alignment& a);
+  
     //! Called at end of fragment.
     //void at_end(uint32_t tid, uint32_t seqlen);
 };

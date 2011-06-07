@@ -82,7 +82,7 @@ error_count_pileup::~error_count_pileup() {
 
 /*! Called for each alignment.
  */
-void error_count_pileup::callback(const pileup& p) {
+void error_count_pileup::pileup_callback(const pileup& p) {
   
 	using namespace std;
 	assert(p.target() < _seq_info.size());
@@ -759,7 +759,7 @@ void cErrorTable::write_count_table(const std::string& filename) {
 /*  cErrorTable::count_alignment_position()
 
     Record all observations in an alignment to a column of the reference genome
-    in the count table. This function is called by the pileup callback.
+    in the count table. This function is called by the pileup_callback.
 */
 void cErrorTable::count_alignment_position(const alignment& i, const pileup& p) {
     

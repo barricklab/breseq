@@ -48,7 +48,7 @@ namespace breseq {
 		virtual ~tabulate_coverage_pileup();		
 		
 		//! Called for each alignment.
-		virtual void callback(const pileup& p);
+		virtual void pileup_callback(const pileup& p);
     
 		//! Called at end of fragment.
     void at_end(uint32_t tid, uint32_t seqlen);

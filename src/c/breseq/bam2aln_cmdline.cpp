@@ -53,19 +53,17 @@ int main(int argc, char* argv[]) {
 		cout << "Usage: bam2aln --bam=<reference.bam> --fasta=<reference.fasta> --region=<accession:start-end> "
          << "--output=<output.html> [--max-reads=1000]" << endl;
 		cout << cmdline_options << endl;
-		//!Debugger does not pass arguements, comment out for now
-		//return -1;
+		
+		return -1;
 	}
 
   // generate alignment!
 	try {
-		//! Debugger does not pass arguments, hardcode in arguements for now
 		alignment_output ao(options["bam"].as<string>(),
-																			options["fasta"].as<string>(),
-																			options["max-reads"].as<uint32_t>());
+                        options["fasta"].as<string>(),
+                        options["max-reads"].as<uint32_t>());
 
     string aln = ao.html_alignment(options["region"].as<string>());
-
 
     // add: write alignment to output file....
 

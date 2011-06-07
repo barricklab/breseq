@@ -114,7 +114,7 @@ bool pileup_base::handle_position(uint32_t pos) {
 /*! First-level callback, used to re-route the callback from samtools to the virtual
  function defined in breseq::pileup_base.
  */
-int first_level_callback(uint32_t tid, uint32_t pos, int n, const bam_pileup1_t *pile, void *data) {
+int first_level_pileup_callback(uint32_t tid, uint32_t pos, int n, const bam_pileup1_t *pile, void *data) {
   
 	pileup_base* pb = reinterpret_cast<pileup_base*>(data);
 		
@@ -143,10 +143,10 @@ int first_level_callback(uint32_t tid, uint32_t pos, int n, const bam_pileup1_t 
       
       if (on_pos_1 == this_pos_1) {
         pileup p(tid,on_pos_1-1,n,pile,*pb);
-        pb->callback(p);
+        pb->pileup_callback(p);
       } else {
         pileup p(tid,on_pos_1-1,0,NULL,*pb);
-        pb->callback(p);
+        pb->pileup_callback(p);
       }
     }
     
@@ -156,6 +156,18 @@ int first_level_callback(uint32_t tid, uint32_t pos, int n, const bam_pileup1_t 
   }
 
 	return 0;
+}
+
+/*! First-level callback, used to re-route the callback from samtools to the virtual
+ function defined in breseq::pileup_base.
+ */
+int first_level_fetch_callback(const bam1_t *b, void *data)
+{
+ 	pileup_base* pb = reinterpret_cast<pileup_base*>(data);
+  alignment a(b);
+  pb->fetch_callback(a);
+  
+  return 0;
 }
 
 
@@ -168,7 +180,7 @@ void pileup_base::do_pileup() {
   m_end_position_1 = 0;
   m_clip_start_position_1 = 0;
   m_clip_end_position_1 = 0;
-	sampileup(m_bam, BAM_DEF_MASK, first_level_callback, this);
+	sampileup(m_bam, BAM_DEF_MASK, first_level_pileup_callback, this);
 	at_end(*m_last_tid, m_bam->header->target_len[*m_last_tid]);
 }
 
@@ -213,13 +225,24 @@ void pileup_base::do_pileup(std::string region, bool clip, uint32_t downsample) 
   }
   
   bam_plbuf_t        *pileup;
-  pileup = bam_plbuf_init(first_level_callback,this);
+  pileup = bam_plbuf_init(first_level_pileup_callback,this);
   bam_fetch(m_bam_file,m_bam_index,target_id,start_pos,end_pos,(void*)pileup,add_pileup_line);
   bam_plbuf_push(NULL,pileup); // This clears out the clipped right regions... call before at_end!
   bam_plbuf_destroy(pileup);
   
   // Call at end with the last position we handled
   at_end(target_id, m_last_position_1);
+}
+
+  
+void pileup_base::do_fetch(std::string region) {
+  
+  int target_id, start_pos, end_pos;
+  bam_parse_region(m_bam_header, region.c_str(), &target_id, &start_pos, &end_pos); 
+  
+  // should throw if target not found!
+  
+  bam_fetch(m_bam_file,m_bam_index,target_id,start_pos,end_pos,this,first_level_fetch_callback);
 }
 
 

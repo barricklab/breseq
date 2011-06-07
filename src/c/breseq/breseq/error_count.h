@@ -189,7 +189,7 @@ namespace breseq {
 		virtual ~error_count_pileup();		
 		
 		//! Called for each alignment.
-		virtual void callback(const pileup& p);
+		virtual void pileup_callback(const pileup& p);
 		
 		//! Print coverage distribution.
 		void print_coverage(const std::string& output_dir);

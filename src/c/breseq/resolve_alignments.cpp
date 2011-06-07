@@ -372,7 +372,14 @@ namespace breseq {
         //## Does this read have eligible candidate junction matches?
         // my $this_junction_al = [];
         vector<bam1_t*> this_junction_alignments;
+
+        // print " Before Overlap Reference alignments = "  . (scalar @$this_reference_al) . "\n" if ($verbose);
+        if (verbose) fprintf(stderr, " Before Overlap Reference alignments = %u\n", (uint32_t)reference_alignments.size());
+
         
+        // print " Before Overlap Junction alignments = " . (scalar @$this_junction_al) . "\n" if ($verbose);
+        if (verbose) fprintf(stderr, " Before Overlap Junction alignments = %u\n", (uint32_t)junction_alignments.size());
+
         
         // if (($junction_al) && ($junction_al->[0]->qname =~ m/^$seq->{id}/))
         if ((junction_alignments.size() > 0) && (seq.m_name == bam1_qname(junction_alignments[0]))) {
@@ -384,6 +391,7 @@ namespace breseq {
 
           this_junction_alignments = junction_alignments;
           junction_alignments = tam_next_read_alignments(junction_tam, junction_header, last_junction_alignment);
+
 
       
           //###			
@@ -414,6 +422,7 @@ namespace breseq {
         // my $this_reference_al = [];
         vector<bam1_t*> this_reference_alignments;
         
+        
         // if (($reference_al) && ($reference_al->[0]->qname =~ m/^$seq->{id}/))
         if ((junction_alignments.size() > 0) && (seq.m_name == bam1_qname(junction_alignments[0]))) {
           
@@ -442,14 +451,11 @@ namespace breseq {
           summary_info["unmatched_reads"]++;
           out_unmatched_fastq.write_sequence(seq);
         }
+
         
-			} // End loop through every read
       
       
             
-      // print " Before Overlap Reference alignments = "  . (scalar @$this_reference_al) . "\n" if ($verbose);
-      // print " Before Overlap Junction alignments = " . (scalar @$this_junction_al) . "\n" if ($verbose);
-
       
   
 //###			
@@ -489,14 +495,20 @@ namespace breseq {
 //#			}
 //			
 //# if < 0, then the best match is to the reference
-//			my $mapping_quality_difference = $best_junction_score - $best_reference_score;
-//      
-//			print " Best junction score: $best_junction_score\n" if ($verbose);
-//			print " Best reference score: $best_reference_score\n" if ($verbose);
-//      
-//			print " Mapping quality difference: $mapping_quality_difference\n" if ($verbose);
-//			print " Final Reference alignments = "  . (scalar @$this_reference_al) . "\n" if ($verbose);
-//			print " Final Candidate junction alignments = " . (scalar @$this_junction_al) . "\n" if ($verbose);
+      // my $mapping_quality_difference = $best_junction_score - $best_reference_score;
+      int32_t mapping_quality_difference = best_junction_score - best_reference_score;
+
+      // print " Best junction score: $best_junction_score\n" if ($verbose);
+        if (verbose) fprintf(stderr, " Best junction score: %i\n", best_junction_score);
+        
+        // print " Best reference score: $best_reference_score\n" if ($verbose);
+        if (verbose) fprintf(stderr, " Best reference score: %i\n", best_reference_score);
+
+        // print " Mapping quality difference: $mapping_quality_difference\n" if ($verbose);
+        if (verbose) fprintf(stderr, " Mapping quality difference:  %i\n", best_reference_score);
+        
+      // print " Final Reference alignments = "  . (scalar @$this_reference_al) . "\n" if ($verbose);
+      // print " Final Candidate junction alignments = " . (scalar @$this_junction_al) . "\n" if ($verbose);
 //      
 //      
 //			next READ if ( (scalar @$this_junction_al == 0) && (scalar @$this_reference_al == 0));
@@ -551,16 +563,23 @@ namespace breseq {
 //					}
 //				}
 //			}
+        
+      } // End loop through every read
+
+        
 //      
 //		} continue {
 //			$f++;
 //			$f %= scalar @in_fastq;
 //		}
+        
+
 //      
 //## save statistics
 //      $summary->{alignment_correction}->{read_file}->{$read_file} = $s;
 //    }	
     
+
   } // End of Read File loop
     
     

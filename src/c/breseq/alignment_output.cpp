@@ -37,21 +37,29 @@ alignment_output::alignment_output(string bam, string fasta, uint32_t in_maximum
   , m_alignment_output_object(bam, fasta) { }
 
 string alignment_output::html_alignment(const string region) {
+  
+  string s;
+  
+  m_alignment_output_object.do_fetch(region);
   m_alignment_output_object.do_pileup(region);
 
+  return s;
 }
 
 
 
-/*! Called for each alignment. pileup& p comes from samtools
+/*! Called for each position. 
  */
-
-void alignment_output_pileup::callback(const pileup& p) {
-
-
+void alignment_output_pileup::pileup_callback(const pileup& p) {
 
 }
-	// tabula rasa
+
+/*! Called for each read alignment. 
+ */
+void alignment_output_pileup::fetch_callback(const alignment& a) {
+  
+  cerr << a.query_name() << endl;
+}
 
 } // namespace breseq
 
