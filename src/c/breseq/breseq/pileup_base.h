@@ -28,8 +28,10 @@ namespace breseq {
 	
 	// pre-decs
 	class pileup;
-	int first_level_callback(uint32_t tid, uint32_t pos, int n, const bam_pileup1_t *pile, void *data);
-	
+  class alignment;
+	int first_level_pileup_callback(uint32_t tid, uint32_t pos, int n, const bam_pileup1_t *pile, void *data);
+  int first_level_fetch_callback(bam1_t *b, void *data);
+
 	//! Helper struct to manage a single reference sequence.
 	struct reference_sequence {
 	public:		
@@ -74,7 +76,7 @@ namespace breseq {
     // handle this reference sequence position during pileup?
     bool handle_position(uint32_t pos);
 		
-		//! Do the pileup; will trigger callback for each alignment.
+		//! Do the pileup;  (Callback for each position, with information about read alignments there.)
     //  Note that we call for all positions that have been skipped (with zero alignments)
     //  which is unlike the default SAM behaviour.
 		void do_pileup();
@@ -82,14 +84,21 @@ namespace breseq {
     //! Do the pileup, but only on specified region.
     void do_pileup(std::string region, bool clip = false, uint32_t downsample = 0);
 		 
+    //! Do the fetch, (Callback for each read alignment to region.)
+    void do_fetch(std::string region);
+    
 		//! Pileup callback.
-		virtual void callback(const pileup& p) = 0;
+		virtual void pileup_callback(const pileup& p) { assert(false); };
 
+    //! Fetch callback.
+		virtual void fetch_callback(const alignment& a) { assert(false); };
+    
 		//! Called after the pileup has completed.
 		virtual void at_end(uint32_t tid, uint32_t seqlen) { }
 
 	protected:
-		friend int first_level_callback(uint32_t tid, uint32_t pos, int n, const bam_pileup1_t *pile, void *data);
+		friend int first_level_pileup_callback(uint32_t tid, uint32_t pos, int n, const bam_pileup1_t *pile, void *data);
+		friend int first_level_fetch_callback(const bam1_t *b, void *data);
 
 		samfile_t* m_bam; //!< BAM file handle.
     bam_header_t* m_bam_header;

@@ -155,7 +155,7 @@ breseq::identify_mutations_pileup::~identify_mutations_pileup() {
 
 /*! Called for each alignment.
  */
-void breseq::identify_mutations_pileup::callback(const breseq::pileup& p) {
+void breseq::identify_mutations_pileup::pileup_callback(const breseq::pileup& p) {
 	using namespace std;
 	assert(p.target() < _seq_info.size());
   _this_deletion_propagation_cutoff = _deletion_propagation_cutoff[p.target()];

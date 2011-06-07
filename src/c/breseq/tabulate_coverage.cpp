@@ -72,7 +72,7 @@ breseq::tabulate_coverage_pileup::~tabulate_coverage_pileup() {
 
 /*! Called for each alignment.
  */
-void breseq::tabulate_coverage_pileup::callback(const breseq::pileup& p) {
+void breseq::tabulate_coverage_pileup::pileup_callback(const breseq::pileup& p) {
 
   char* refseq = p.reference_sequence(); // reference sequence for this target
   uint32_t pos = p.position_1();
