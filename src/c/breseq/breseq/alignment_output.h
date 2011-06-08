@@ -35,39 +35,63 @@ namespace breseq {
 class alignment_output_pileup : public pileup_base {
   public:
     //! Constructor.
-    alignment_output_pileup(const std::string& bam, const std::string& fasta);
-
+    alignment_output_pileup(const string& bam, const string& fasta,
+                                                   const uint32_t maximum_to_align);
     //! Destructor.
     virtual ~alignment_output_pileup();
-
     //! Called for each genome position.
     virtual void pileup_callback(const pileup& aligned_reference);
-
     //! Called for each aligned read.
     virtual void fetch_callback(const alignment& a);
-  
+
+    //!Helper struct built by fetch callback
+    typedef struct {
+      string seq_id;
+      uint32_t length;
+      string read_sequence;
+      string qual_sequence;
+      string aligned_read_bases;
+    }struct_aligned_read;
+
+    map<string, struct_aligned_read> aligned_reads;
+    map<string, bool> alignment_spans_position;
+
+
+    typedef struct {
+        uint32_t start;
+        uint32_t end;
+    }struct_aligned_reference;
+
+    vector<struct_aligned_reference> aligned_references;
+
+    uint32_t unique_start;
+    uint32_t unique_end;
+    uint32_t total_reads;
+    uint32_t processed_reads;
+    uint32_t maximum_to_align;//TODO move to constructor
+    string aligned_ref_bases;
+
+    uint32_t last_pos;
+    uint32_t max_indel;
+
+    
     //! Called at end of fragment.
     //void at_end(uint32_t tid, uint32_t seqlen);
 };
 
 class alignment_output {
   private:
-    uint32_t  m_maximum_to_align;
-    alignment_output_pileup m_alignment_output_object;
-    string m_aligned_reference;
-    map<string, string> m_aligned_reads;
-
-
+    alignment_output_pileup m_alignment_output_pileup_object;
+   
   public:
     //! Constructor.
     alignment_output(string bam, string fasta, uint32_t in_maximum_to_align);
     //! Output an HTML alignment.
     string html_alignment(const string region);
+    void create_alignment(const string bam, const string fasta, const string region);
 
 
 };
-
-
 
 
 }//end namespace breseq
