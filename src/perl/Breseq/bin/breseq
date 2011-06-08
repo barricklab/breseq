@@ -648,13 +648,13 @@ if ($settings->do_step('error_counts_done_file_name', "Tabulating error counts")
 	$cmdline .= " --covariates=read_set=$num_read_files,obs_base,ref_base,quality=$summary->{sequence_conversion}->{max_qual}";
 ##		$cmdline .= " --covariates=read_set=$num_read_files,obs_base,ref_base,quality=$summary->{sequence_conversion}->{max_qual},base_repeat=5";
 	Breseq::Shared::system($cmdline);
-## We are doing it with and without covariates, because polymorphism prediction still requires
+## We are doing it with and without covariates, because polymorphism prediction and graphing still requires
 ## the old output file(s) for looking at quality score distribution.
 ##	} else {
-	if ($settings->{polymorphism_prediction}) { 
+##	if ($settings->{polymorphism_prediction}) { 
 		Breseq::ErrorCalibration::count($settings, $summary, $ref_seq_info,
 		'reference_fasta_file_name', 'reference_bam_file_name', 'unique_only_coverage_distribution_file_name', 'error_counts_file_name');
-	}
+#	}
 	
 	$settings->done_step('error_counts_done_file_name');
 }

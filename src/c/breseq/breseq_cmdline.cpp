@@ -472,9 +472,17 @@ int do_preprocess_alignments(int argc, char* argv[]) {
 	po::options_description cmdline_options("Allowed options");
 	cmdline_options.add_options()
 		("help,h", "produce this help message")
-		("fasta,f", po::value<string>(), "reference sequences in FASTA format")
-		("sam,s", po::value<string>(), "text SAM file of input alignments")
-		("output,o", po::value<string>(), "output FASTA file of candidate junctions")
+    ("data-path", po::value<string>(), "path of data")
+    ("reference-alignment-path", po::value<string>(), "path where input alignment")
+    ("candidate-junction-path", po::value<string>(), "path where candidate junction files will be created")
+    ("read-file,r", po::value<vector<string> >(), "FASTQ read files (multiple allowed) ") 
+
+    ("candidate-junction-score-method", po::value<string>()->default_value("POS_HASH"), "scoring method DEFAULT = POS_HASH")
+    ("min-indel-split-length", po::value<int32_t>()->default_value(-1), "nothing")
+    ("max-read-mismatches", po::value<int32_t>()->default_value(-1), "nothing")
+    ("require-complete-match", po::value<bool>()->default_value(false), "nothing")
+    ("required-match-length", po::value<int32_t>()->default_value(-1), "nothing")
+    ("candidate-junction-read-limit", po::value<int32_t>()->default_value(-1), "nothing") 
 	;
 
 	po::variables_map options;
@@ -483,9 +491,10 @@ int do_preprocess_alignments(int argc, char* argv[]) {
 
 	// make sure that the config options are good:
 	if(options.count("help")
-		 || !options.count("fasta")
-		 || !options.count("sam")
-		 || !options.count("output")
+		 || !options.count("data-path")
+     || !options.count("reference-alignment-path")
+     || !options.count("candidate-junction-path")
+     || !options.count("read-file")
 		 ) {
 		cout << "Usage: breseq_utils PREPROCESS_ALIGNMENTS --fasta=reference.fasta "
          << " --sam=reference.sam --output=output.fasta" << endl;
@@ -493,53 +502,47 @@ int do_preprocess_alignments(int argc, char* argv[]) {
 		return -1;
 	}
 
-	// attempt to calculate error calibrations:
 	try {
 
-    // plain function
-
+  Summary summary;
+    
+  // Set the things we need...
 	Settings settings;
-	Summary summary;
-	/*RefSeqInfo refSeqInfo(
-		options["sam"].as<string>(),
-		options["fasta"].as<string>(),
-		options["output"].as<string>()
-	);*/
+    
+  settings.read_structures.Init(options["read-file"].as<vector<string> >());
+ 
+	settings.candidate_junction_fasta_file_name = options["candidate-junction-path"].as<string>();
+  settings.candidate_junction_fasta_file_name += "/candidate_junctions.fasta";
+	settings.candidate_junction_faidx_file_name = settings.candidate_junction_fasta_file_name + ".fai";
+    
+	settings.candidate_junction_sam_file_name = options["candidate-junction-path"].as<string>();
+  settings.candidate_junction_sam_file_name += "/#.candidate_junction.sam";
+    
+	settings.candidate_junction_score_method = options["candidate-junction-score-method"].as<string>();
+    
+	settings.preprocess_junction_split_sam_file_name = options["candidate-junction-path"].as<string>();
+  settings.preprocess_junction_split_sam_file_name += "#.split.sam";
+    
+	settings.preprocess_junction_best_sam_file_name = options["candidate-junction-path"].as<string>();
+  settings.preprocess_junction_best_sam_file_name += "/best.sam";
+    
+	settings.reference_fasta_file_name = options["data-path"].as<string>();    
+  settings.reference_fasta_file_name += "/reference.fasta";
+  settings.reference_faidx_file_name = settings.reference_fasta_file_name + ".fai";
+    
+	settings.reference_sam_file_name = options["reference-alignment-path"].as<string>();
+  settings.reference_sam_file_name += "/#.reference.sam";
+    
+  settings.max_read_mismatches = options["max-read-mismatches"].as<int32_t>();
+  settings.require_complete_match = options["require-complete-match"].as<bool>();
+	settings.candidate_junction_read_limit = options["candidate-junction-read-limit"].as<int32_t>(); 
+	settings.required_match_length = options["required-match-length"].as<int32_t>();
+  settings.preprocess_junction_min_indel_split_length = options["min-indel-split-length"].as<int32_t>();
+ 
+	cReferenceSequences ref_seqs;
+	breseq::LoadFeatureIndexedFastaFile(ref_seqs, "", settings.reference_fasta_file_name);
 
-	settings.candidate_junction_fasta_file_name = options["candidate_junction_fasta_file_name"].as<string>();
-	settings.candidate_junction_faidx_file_name = options["candidate_junction_faidx_file_name"].as<string>();
-	settings.candidate_junction_sam_file_name = options["candidate_junction_sam_file_name"].as<string>();
-	settings.candidate_junction_score_method = options["candidate_junction_score_method"].as<string>();
-
-	settings.jc_genome_diff_file_name = options["jc_genome_diff_file_name"].as<string>();
-	settings.preprocess_junction_split_sam_file_name = options["preprocess_junction_split_sam_file_name"].as<string>();
-	settings.preprocess_junction_best_sam_file_name = options["preprocess_junction_best_sam_file_name"].as<string>();
-	settings.reference_fasta_file_name = options["reference_fasta_file_name"].as<string>();
-	settings.reference_faidx_file_name = options["reference_faidx_file_name"].as<string>();
-	settings.reference_sam_file_name = options["reference_sam_file_name"].as<string>();
-	settings.resolved_reference_sam_file_name = options["resolved_reference_sam_file_name"].as<string>();
-	settings.resolved_junction_sam_file_name = options["resolved_junction_sam_file_name"].as<string>();
-	settings.unmatched_read_file_name = options["unmatched_read_file_name"].as<string>();
-
-	settings.no_junction_prediction = options["no_junction_prediction"].as<bool>();
-	settings.unmatched_reads = options["unmatched_reads"].as<bool>();
-	settings.add_split_junction_sides = options["add_split_junction_sides"].as<bool>();
-	settings.require_complete_match = options["require_complete_match"].as<bool>();
-
-	settings.alignment_read_limit = options["alignment_read_limit"].as<int>();
-	settings.candidate_junction_read_limit = options["candidate_junction_read_limit"].as<int>();
-	settings.max_read_length = options["max_read_length"].as<int>();
-	settings.maximum_read_mismatches = options["maximum_read_mismatches"].as<int>();
-	settings.required_match_length = options["required_match_length"].as<int>();
-	settings.required_extra_pair_total_length = options["required_extra_pair_total_length"].as<int>();
-
-	if (options.count("preprocess_junction_min_indel_split_length"))
-		settings.preprocess_junction_min_indel_split_length = options["preprocess_junction_min_indel_split_length"].as<int>();
-
-	cReferenceSequences ref_seq_info;
-	breseq::LoadFeatureIndexedFastaFile(ref_seq_info, "", options["fasta"].as<string>());
-
-	CandidateJunctions::preprocess_alignments(settings, summary, ref_seq_info);
+	CandidateJunctions::preprocess_alignments(settings, summary, ref_seqs);
 
   } catch(...) {
 		// failed;

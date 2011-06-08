@@ -841,7 +841,7 @@ namespace breseq {
 		cout << "Preprocessing alignments." << endl;
 
 		// get the cutoff for splitting alignments with indels
-		boost::optional<int32_t> min_indel_split_len = settings.preprocess_junction_min_indel_split_length;
+		int32_t min_indel_split_len = settings.preprocess_junction_min_indel_split_length;
 
 		// includes best matches as they are
 		string preprocess_junction_best_sam_file_name = Settings::file_name(settings.preprocess_junction_best_sam_file_name);
@@ -851,10 +851,10 @@ namespace breseq {
 
 		string reference_faidx_file_name = Settings::file_name(settings.reference_fasta_file_name);
 		faidx_t* reference_fai = fai_load(reference_faidx_file_name.c_str());
-		for (int32_t index = 0; index < settings.read_structures.size(); index++)
+		for (uint32_t index = 0; index < settings.read_structures.size(); index++)
 		{
-			Settings::ReadStructure read_struct = settings.read_structures[index];
-			cerr << "  READ FILE::" << read_struct.base_name << endl;
+			cReadFile read_struct = settings.read_structures[index];
+			cerr << "  READ FILE::" << read_struct.m_base_name << endl;
 
 			string reference_sam_file_name = Settings::file_name(settings.reference_sam_file_name);
 			string reference_faidx_file_name = Settings::file_name(settings.reference_faidx_file_name);
@@ -886,8 +886,8 @@ namespace breseq {
 				if (settings.candidate_junction_read_limit != 0 && i > settings.candidate_junction_read_limit) break;
 
 				// write split alignments
-				if (min_indel_split_len)
-					_split_indel_alignments(settings, summary, header, PSAM, min_indel_split_len.get(), al_ref);
+				if (min_indel_split_len != -1)
+					_split_indel_alignments(settings, summary, header, PSAM, min_indel_split_len, al_ref);
 
 				// write best alignments
 				if (settings.candidate_junction_score_method.compare("POS_HASH") == 0)
@@ -937,11 +937,11 @@ namespace breseq {
 
 		int32_t i = 0;
 
-		for (int32_t j = 0; j < settings.read_structures.size(); j++)
+		for (uint32_t j = 0; j < settings.read_structures.size(); j++)
 		{
-			Settings::ReadStructure read_struct = settings.read_structures[j];
+			cReadFile read_struct = settings.read_structures[j];
 
-			string read_file = read_struct.base_name;
+			string read_file = read_struct.m_base_name;
 			cerr << "  READ FILE::" << read_file << endl;
 
 			// Zero out summary information
