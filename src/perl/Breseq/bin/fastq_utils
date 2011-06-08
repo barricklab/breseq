@@ -346,8 +346,10 @@ if ($command eq 'MERGE_PAIRED')
 	use Pod::Usage;
 	my ($help, $man);
 	my ($input_file, $start, $end);
+	my $number;
 	GetOptions(
 		'help|?' => \$help, 'man' => \$man,
+		'number|n' => \$number
 	) or pod2usage(2);
 	pod2usage(1) if $help;
 	pod2usage(-exitstatus => 0, -verbose => 2) if $man;
@@ -363,6 +365,12 @@ if ($command eq 'MERGE_PAIRED')
 	my $seq2;
 	while (($seq1 = $in_fastq_1->next_seq) && ($seq2 = $in_fastq_2->next_seq))
 	{
+		if ($number) {
+			$seq1->{id} .= '_1';
+			
+			$seq2->{id} =~ s/_F5-BC$//;
+			$seq2->{id} .= '_2';
+		}
 		$out_fastq->write_seq($seq1);
 		$out_fastq->write_seq($seq2);
 	}
