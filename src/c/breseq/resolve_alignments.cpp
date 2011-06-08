@@ -865,10 +865,10 @@ bool _test_read_alignment_requirements(Settings settings, bam_header_t* referenc
 		bool complete_match = (q_start == 1) && (q_end == a->core.l_qseq);
 		if (!complete_match) return false;
 	}
-	if (settings.maximum_read_mismatches > 0)
+	if (settings.max_read_mismatches > 0)
 	{
 		int32_t mismatches = alignment_mismatches(a, reference_header, reference_fai, ref_seq_info);
-		if (mismatches > settings.maximum_read_mismatches) return false;
+		if (mismatches > settings.max_read_mismatches) return false;
 	}
 
 	return true;

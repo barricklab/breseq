@@ -24,6 +24,14 @@ namespace breseq {
 
   cReadFiles::cReadFiles(const vector<string>& read_file_names) {
 
+    Init(read_file_names);
+  }
+  
+  void cReadFiles::Init(const vector<string>& read_file_names) {
+    
+    //clear any existing info
+    (*this).clear();
+    
     uint32_t on_id = 0;
     uint32_t on_error_group =0;
     uint32_t on_paired_end_group = 0;
@@ -32,11 +40,11 @@ namespace breseq {
       
       cReadFile rf;
       rf.m_fastq_file_name = *it;
-
+      
       rf.m_paired_end_group = on_paired_end_group++; 
       rf.m_error_group = on_error_group++;         
       rf.m_id = on_id++;
-
+      
       
       // create base name
       rf.m_base_name = rf.m_fastq_file_name;
@@ -52,8 +60,5 @@ namespace breseq {
       (*this).push_back(rf);
     }
   }
-  
-  cReadFiles::~cReadFiles() {};
-
   
 }
