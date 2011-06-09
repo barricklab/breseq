@@ -44,32 +44,46 @@ class alignment_output_pileup : public pileup_base {
     //! Called for each aligned read.
     virtual void fetch_callback(const alignment& a);
 
-    //!Helper struct built by fetch callback
+    //!Helper struct for aligned_reads
     typedef struct {
       string seq_id;
       uint32_t length;
       string read_sequence;
       string qual_sequence;
-      string aligned_read_bases;
+      string aligned_bases;
+      string aligned_quals;  
+      uint32_t reference_start;
+      uint32_t reference_end;
+      uint32_t start;
+      uint32_t end;
+      int32_t strand;
     }struct_aligned_read;
-
     map<string, struct_aligned_read> aligned_reads;
-    map<string, bool> alignment_spans_position;
+    map<string, bool> alignment_spans_position;//TODO change to vector, use .exist()
 
-
+    //!Helper struct for aligned_refs
     typedef struct {
-        uint32_t start;
-        uint32_t end;
+      uint32_t start;
+      uint32_t end;
+      string aligned_bases;
+      string aligned_quals;
     }struct_aligned_reference;
-
     vector<struct_aligned_reference> aligned_references;
+    
+    typedef struct {
+      string aligned_annotation_bases; 
+    }struct_aligned_annotation;
+    struct_aligned_annotation aligned_annotation;
 
     uint32_t unique_start;
     uint32_t unique_end;
     uint32_t total_reads;
     uint32_t processed_reads;
-    uint32_t maximum_to_align;//TODO move to constructor
-    string aligned_ref_bases;
+    uint32_t maximum_to_align;
+    map<string,bool> updated; //TODO change to vector, use .exist()
+    
+    
+    
 
     uint32_t last_pos;
     uint32_t max_indel;
