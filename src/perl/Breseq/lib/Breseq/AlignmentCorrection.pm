@@ -55,7 +55,7 @@ sub correct_alignments
 	my $reference_fasta_file_name = $settings->file_name('reference_fasta_file_name');
 	my $reference_faidx_file_name = $settings->file_name('reference_faidx_file_name');
 	my $reference_fai = Bio::DB::Sam::Fai->load($reference_fasta_file_name);
-	my $reference_header; # can't be loade duntil there is a TAM file, but needs to be re-used outside loop
+	my $reference_header; # can't be loaded until there is a TAM file, but needs to be re-used outside loop
 	
 	####
 	##	Junction sequences

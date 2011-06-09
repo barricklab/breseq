@@ -222,44 +222,6 @@ namespace breseq {
     }
   }
 
-	inline vector<bam1_t*> tam_next_read_alignments(tamFile tam, bam_header_t* header, bam1_t* last_alignment, bool paired = false)
-	{
-		int num_to_slurp = (paired) ? 2 : 1;
-		string last_read_name;
-		vector<bam1_t*> al_ref;
-		if (last_alignment != NULL)
-		{
-			last_read_name = bam1_qname(last_alignment);
-			al_ref.push_back(last_alignment);
-			last_alignment = NULL;
-		}
-
-		int num_slurped = 0;
-		while (true)
-		{
-			last_alignment = new bam1_t();
-			int bytes = sam_read1(tam, header, last_alignment);
-
-			//returns bytes == -1 if EOF reached
-			if (bytes < 0)
-			{
-				last_alignment = NULL;
-				return al_ref;
-			}
-
-			string read_name = bam1_qname(last_alignment);
-
-			if ( (last_read_name.size() > 0) && (read_name != last_read_name) && (++num_slurped == num_to_slurp) )
-				break;
-
-			if (last_read_name.size() == 0)
-				last_read_name = read_name;
-
-			al_ref.push_back(last_alignment);
-		}
-
-		return al_ref;
-	}
 
 	inline uint32_t fix_flags(uint32_t flags)
 	{
@@ -267,12 +229,13 @@ namespace breseq {
 		return flags;
 	}
 
-	template <class T> inline string to_string (const T& t)
+	// We need a broader strategy for replacing explicit casts from boost
+	/*template <class T> inline string to_string (const T& t)
 	{
 		stringstream ss;
 		ss << t;
 		return ss.str();
-	}
+	}*/
 
 	inline string join(const vector<string>& values, const string& separator)
 	{
@@ -302,124 +265,6 @@ namespace breseq {
 		string L;
 		string R;
 	};
-
-	inline void tam_write_read_alignments(ofstream& fh, bam_header_t* header, int32_t fastq_file_index, vector<bam1_t*> al, boost::optional< vector<Trim> > trims)
-	{
-		for (int32_t i = 0; i < al.size(); i++)
-		{
-			bam1_t* a = al[i];
-
-			stringstream aux_tags_ss;
-			aux_tags_ss << "AS:i:" << bam_aux_get(a, "AS") << "\t" << "X1:i:" << al.size() << "\t" << "X2:i:" << fastq_file_index;
-
-			if (trims && trims.get().size() > i)
-			{
-				Trim trim = trims.get()[i];
-				aux_tags_ss << "\t" << "XL:i:" << trim.L << "\t" << "XR:i:" << trim.R;
-			}
-
-			string aux_tags = aux_tags_ss.str();
-
-			string* qscore = (string*)bam1_qual(a);
-			string quality_score_string = *qscore;
-			for (int32_t j = 0; j < quality_score_string.size(); j++)
-				quality_score_string[j] = quality_score_string[j] + 33;
-
-			uint32_t* cigar_list = bam1_cigar(a);
-			stringstream cigar_string_ss;
-
-			for (int32_t j = 0; j <= a->core.n_cigar; j++) //foreach my $c (@$cigar_list)
-			{
-				uint32_t op = cigar_list[i] & BAM_CIGAR_MASK;
-				uint32_t len = cigar_list[i] >> BAM_CIGAR_SHIFT;
-				cigar_string_ss << len << op; //$cigar_string += $c->[1] + $c->[0];
-			}
-			string cigar_string = cigar_string_ss.str();
-
-			vector<string> ll;
-			ll.push_back(bam1_qname(a));
-			ll.push_back(to_string(fix_flags(a->core.flag)));
-			ll.push_back(header->target_name[a->core.tid]);
-			ll.push_back(to_string(a->core.pos));
-			ll.push_back(to_string(a->core.qual));
-			ll.push_back(cigar_string);
-
-			//something strange in new version... such that mate_start sometimes
-			//returns 1 even though there is no mate
-			if (a->core.flag & BAM_FPROPER_PAIR != 0)
-			{
-				ll.push_back("*");
-				ll.push_back(0);
-				ll.push_back(0);
-			}
-			else
-			{
-				ll.push_back("=");
-				ll.push_back(0);
-				int32_t mate_start = a->core.mpos + 1;
-				ll.push_back(to_string(mate_start));
-				ll.push_back(to_string(a->core.isize));
-			}
-
-			ll.push_back(to_string(*bam1_seq(a)));
-			ll.push_back(quality_score_string);
-			ll.push_back(aux_tags);
-
-			fh << join(ll, "\t") << endl;
-		}
-	}
-
-	// returns start and end in coordinates of query
-	//lowest query base first, regardless of which strand
-	// it matched in the reference genome (i.e., reversed alignment).
-	inline void alignment_query_start_end(bam1_t* a, int32_t& start, int32_t& end)
-	{
-		uint32_t* cigar = bam1_cigar(a); // cigar array for this alignment
-		start = 1;
-		end = bam_cigar2qlen(&a->core,cigar);
-
-		// start:
-		for(uint32_t i=0; i<= a->core.n_cigar; i++)
-		{
-		    uint32_t op = cigar[i] & BAM_CIGAR_MASK;
-		    uint32_t len = cigar[i] >> BAM_CIGAR_SHIFT;
-		    // if we encounter padding, or a gap in reference then we are done
-		    if((op != BAM_CSOFT_CLIP) && (op != BAM_CHARD_CLIP) && (op != BAM_CREF_SKIP)) {
-				break;
-		    }
-		    start += len;
-		}
-
-		// end:
-		for(uint32_t i=(a->core.n_cigar-1); i>0; --i)
-		{
-			uint32_t op = cigar[i] & BAM_CIGAR_MASK;
-			uint32_t len = cigar[i] >> BAM_CIGAR_SHIFT;
-			// if we encounter padding, or a gap in reference then we are done
-			if((op != BAM_CSOFT_CLIP) && (op != BAM_CHARD_CLIP) && (op != BAM_CREF_SKIP)) {
-			  break;
-			}
-			end -= len;
-		}
-	}
-
-	inline uint32_t alignment_query_length(bam1_t* a) {
-		uint32_t* cigar = bam1_cigar(a); // cigar array for this alignment
-		uint32_t qlen = bam_cigar2qlen(&a->core, cigar); // total length of the query
-		return qlen;
-	}
-
-	inline bool is_reversed(bam1_t* a)
-	{
-		return bam1_strand(a);
-	}
-
-	inline string bama_qseq(bam1_t* a)
-	{
-	    string seq(a->core.l_qseq, ' ');
-	    for (int32_t i = 0; i < a->core.l_qseq; i++)
-			seq[i] = bam_nt16_rev_table[bam1_seqi(bam1_seq(a),i)];
-	}
 
 	inline string reverse_complement(string seq)
 	{

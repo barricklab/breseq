@@ -19,7 +19,7 @@ LICENSE AND COPYRIGHT
 #ifndef _BRESEQ_ALIGNMENT_H_
 #define _BRESEQ_ALIGNMENT_H_
 
-#include "breseq/common.h"
+#include "common.h"
 
 namespace breseq {
 
@@ -36,7 +36,10 @@ class alignment {
 
     //! Number of redundancies at this alignment.
     uint32_t redundancy() const;
-		
+
+    static vector<alignment> tam_next_read_alignments(tamFile tam, bam_header_t* header, alignment* last_alignment, bool paired = false);
+	static void tam_write_read_alignments(ofstream& fh, bam_header_t* header, int32_t fastq_file_index, vector<alignment> al, vector<Trim>* trims = NULL);
+
     //! Is this alignment a deletion?
     inline bool is_del() const { return _p->is_del; }
       
@@ -60,11 +63,11 @@ class alignment {
 
     //! Is the read aligned to the reverse strand?
     //  Returns 1 if read aligned to bottom strand, 0 if aligned to top strand
-    inline uint32_t reversed() const { return bam1_strand(_a); }
+    inline bool reversed() const { return bam1_strand(_a); }
 		
     //! Which strand is the read aligned to?
     //  Returns -1 if read aligned to bottom strand, +1 if aligned to top strand
-    inline uint32_t strand() const { return (bam1_strand(_a) ? -1 : +1); }
+    inline int32_t strand() const { return (bam1_strand(_a) ? -1 : +1); }
     
     //! Retrieve the query sequence (always on top strand).
     inline uint8_t* query_bam_sequence() const { return bam1_seq(_a); }
@@ -116,7 +119,9 @@ class alignment {
     //! Start is always < End. reversed() tells you which strand the match was on.
     //  Methods available for 0-indexed and 1-indexed coordinates.
     std::pair<uint32_t,uint32_t> query_bounds_0() const;
+    void query_bounds_0(int32_t& start, int32_t& end) const;
     std::pair<uint32_t,uint32_t> query_bounds_1() const;
+    void query_bounds_1(int32_t& start, int32_t& end) const;
 
     //! Starting coordinates of the aligned part of the read (was 1-indexed).
     //  Methods available for 0-indexed and 1-indexed coordinates.
@@ -135,7 +140,12 @@ class alignment {
 
     uint32_t reference_end_0() const;
     uint32_t reference_end_1() const {return reference_end_0() + 1; };
-    
+
+
+	int32_t mate_start_0() const {return _a->core.mpos; } ;
+	int32_t mate_start_1() const {return mate_start_0() + 1; };
+
+
     //! Number of bases before this position (on read strand)
     //  that are the same base.
     uint32_t base_repeat_0(uint32_t q_pos_0) const;
@@ -148,6 +158,21 @@ class alignment {
       }
     }
     
+	inline string qseq() const {
+	    string seq(_a->core.l_qseq, ' ');
+	    for (int32_t i = 0; i < _a->core.l_qseq; i++)
+			seq[i] = bam_nt16_rev_table[bam1_seqi(bam1_seq(_a),i)];
+	    return seq;
+	}
+	inline int32_t qseq_length() const { return _a->core.l_qseq; }
+	inline int32_t isize() const { return _a->core.isize; }
+	inline uint8_t quality() const { return _a->core.qual; }
+	inline uint16_t flag() const { return _a->core.flag; }
+	inline uint32_t* cigar_array() const { return bam1_cigar(_a); }
+	inline uint32_t cigar_array_length() const { return _a->core.n_cigar; }
+	inline uint32_t cigar_query_length() const { return bam_cigar2qlen(&_a->core, cigar_array()); };
+	inline uint8_t* aux_get(const char tag[2]) const { return bam_aux_get(_a, tag); }
+
   protected:
     const bam_pileup1_t* _p; //!< Pileup.
     const bam1_t* _a; //!< Alignment.

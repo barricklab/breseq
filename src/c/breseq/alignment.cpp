@@ -35,7 +35,6 @@ alignment::alignment(const bam1_t* a)
 {
 }
 
-
 /*! Does this alignment have any redundancies?
  */
 bool alignment::is_redundant() const {
@@ -102,10 +101,15 @@ bool alignment::is_trimmed() const {
 
 
 std::pair<uint32_t,uint32_t> alignment::query_bounds_0() const {
-  std::pair<int32_t,int32_t> qb = query_bounds_1();
+  pair<int32_t,int32_t> qb = query_bounds_1();
   qb.first--;
   qb.second--;
   return qb;
+}
+void alignment::query_bounds_0(int32_t& start, int32_t& end) const {
+	pair<int32_t,int32_t> qb = query_bounds_0();
+	start = (int32_t)qb.first;
+	end = (int32_t)qb.second;
 }
 
 /*! Retrieve the start and end coordinates of the aligned part of the read.
@@ -138,7 +142,11 @@ std::pair<uint32_t,uint32_t> alignment::query_bounds_1() const {
 
 	return std::make_pair(start,end);
 }
-
+void alignment::query_bounds_1(int32_t& start, int32_t& end) const {
+	pair<uint32_t,uint32_t> qb = query_bounds_1();
+	start = (int32_t)qb.first;
+	end = (int32_t)qb.second;
+}
 
 /*! Get the query start or end from the cigar string of an alignment
  */
@@ -183,6 +191,8 @@ uint32_t alignment::query_end_1() const {
 }
   
 uint32_t alignment::reference_end_0() const {
+
+	//TODO: Can you just do "return bam_calend(&_a->core, bam1_cigar(_a));"?
   uint32_t pos = reference_start_0();
   
   uint32_t* cigar = bam1_cigar(_a); // cigar array for this alignment
@@ -222,6 +232,110 @@ uint32_t alignment::base_repeat_0(uint32_t q_pos_0) const {
   
   return base_repeat;
 }
-  
+
+
+vector<alignment> alignment::tam_next_read_alignments(tamFile tam, bam_header_t* header, alignment* last_alignment, bool paired)
+{
+	int num_to_slurp = (paired) ? 2 : 1;
+	string last_read_name;
+	vector<alignment> al_ref;
+	if (last_alignment != NULL)
+	{
+		last_read_name = last_alignment->query_name();
+		al_ref.push_back(*last_alignment);
+	}
+
+	int num_slurped = 0;
+	while (true)
+	{
+		bam1_t* last_alignment_bam;
+		int bytes = sam_read1(tam, header, last_alignment_bam);
+		last_alignment = new alignment(last_alignment_bam);
+
+		//returns bytes == -1 if EOF reached
+		if (bytes < 0)
+		{
+			last_alignment = NULL;
+			return al_ref;
+		}
+
+		string read_name = last_alignment->query_name();
+
+		if ( (last_read_name.size() > 0) && (read_name != last_read_name) && (++num_slurped == num_to_slurp) )
+			break;
+
+		if (last_read_name.size() == 0)
+			last_read_name = read_name;
+
+		al_ref.push_back(*last_alignment);
+	}
+
+	return al_ref;
+}
+
+void alignment::tam_write_read_alignments(ofstream& fh, bam_header_t* header, int32_t fastq_file_index, vector<alignment> al, vector<Trim>* trims)
+{
+	for (int32_t i = 0; i < al.size(); i++)
+	{
+		alignment a = al[i];
+
+		stringstream aux_tags_ss;
+		aux_tags_ss << "AS:i:" << a.aux_get("AS") << "\t" << "X1:i:" << al.size() << "\t" << "X2:i:" << fastq_file_index;
+
+		if (trims != NULL && trims->size() > i)
+		{
+			Trim trim = (*trims)[i];
+			aux_tags_ss << "\t" << "XL:i:" << trim.L << "\t" << "XR:i:" << trim.R;
+		}
+
+		string aux_tags = aux_tags_ss.str();
+
+		string* qscore = (string*)(a.quality_scores());
+		string quality_score_string = (qscore == NULL) ? "" : *qscore;
+		for (int32_t j = 0; j < quality_score_string.size(); j++)
+			quality_score_string[j] = quality_score_string[j] + 33;
+
+		uint32_t* cigar_list = a.cigar_array();
+		stringstream cigar_string_ss;
+
+		for (int32_t j = 0; j <= a.cigar_array_length(); j++) //foreach my $c (@$cigar_list)
+		{
+			uint32_t op = cigar_list[i] & BAM_CIGAR_MASK;
+			uint32_t len = cigar_list[i] >> BAM_CIGAR_SHIFT;
+			cigar_string_ss << len << op; //$cigar_string += $c->[1] + $c->[0];
+		}
+		string cigar_string = cigar_string_ss.str();
+
+		vector<string> ll;
+		ll.push_back(a.query_name());
+		ll.push_back(boost::lexical_cast<string>(fix_flags(a.flag())));
+		ll.push_back(header->target_name[a.reference_target_id()]);
+		ll.push_back(boost::lexical_cast<string>(a.reference_start_0()));
+		ll.push_back(boost::lexical_cast<string>(a.quality()));
+		ll.push_back(cigar_string);
+
+		//something strange in new version... such that mate_start sometimes
+		//returns 1 even though there is no mate
+		if (a.flag() & BAM_FPROPER_PAIR != 0)
+		{
+			ll.push_back("*");
+			ll.push_back(0);
+			ll.push_back(0);
+		}
+		else
+		{
+			ll.push_back("=");
+			ll.push_back(boost::lexical_cast<string>(a.mate_start_1()));
+			ll.push_back(boost::lexical_cast<string>(a.isize()));
+		}
+
+		ll.push_back(boost::lexical_cast<string>(*(a.query_bam_sequence())));
+		ll.push_back(quality_score_string);
+		ll.push_back(aux_tags);
+
+		fh << join(ll, "\t") << endl;
+	}
+}
+
 }
 
