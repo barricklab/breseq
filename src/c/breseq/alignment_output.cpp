@@ -28,7 +28,6 @@ using namespace std;
 namespace breseq {
 
 	bool verbose = true; //TODO Boost::options
-	bool debug = true;
 
 	alignment_output_pileup::alignment_output_pileup(const string& bam, const string& fasta, const uint32_t maximum_to_align)
 	: pileup_base(bam, fasta)
@@ -105,12 +104,7 @@ namespace breseq {
 		//
 			m_alignment_output_pileup_object.do_fetch(region);
 
-			if(debug)
-			{
-			  cout << "End do_fetch function, variables =";
-				cout << "unique_start: " << m_alignment_output_pileup_object.unique_start << "\t";
-				cout << "unique_end: " << m_alignment_output_pileup_object.unique_end << endl;
-			}
+			
 
 			if ((m_alignment_output_pileup_object.unique_start == 0) || (m_alignment_output_pileup_object.unique_end == 0))
 			{
@@ -118,7 +112,7 @@ namespace breseq {
 				return;
 			}
 
-      if (m_alignment_output_pileup_object.total_reads > m_alignment_output_pileup_object.maximum_to_align)
+	                if (m_alignment_output_pileup_object.total_reads > m_alignment_output_pileup_object.maximum_to_align)
 			{
 				cout << "Reads exceeded maximum to display alignment. ";
 				cout << m_alignment_output_pileup_object.total_reads << " reads. ";
@@ -146,7 +140,7 @@ namespace breseq {
 		// *
 		//
 		//	$bam->pileup($region, $pileup_function);
- 	m_alignment_output_pileup_object.do_pileup(region);
+		m_alignment_output_pileup_object.do_pileup(region);
 
 
 		//
@@ -292,7 +286,7 @@ namespace breseq {
 		//		}
 		//////	}
 		//
-		//	### Need to reverse the coords for some
+		//	## Need to reverse the coords for some
 		//	foreach my $key (keys %$aligned_reads)
 		//	{
 		//		my $aligned_read = $aligned_reads->{$key};
@@ -321,8 +315,7 @@ namespace breseq {
 		return s;
 	}
 
-	/*! Called for each position.
-	 */
+/*! Called for each position.*/
 void alignment_output_pileup::pileup_callback(const pileup& p) {
 		//	#create the alignment via "pileup"
 		//	my $last_pos;
@@ -374,18 +367,18 @@ void alignment_output_pileup::pileup_callback(const pileup& p) {
 		//		}
 		//		print "MAX INDEL: $max_indel\n" if ($verbose);
 		//
-	 max_indel = 0; //TODO move to Constructor
-	 for (pileup :: const_iterator itr_pileup = p.begin();
-	  		  itr_pileup != p.end() ; itr_pileup ++) {
-	   if (itr_pileup->indel() > max_indel)
-		 {
-		   max_indel = itr_pileup->indel();
-		 }
-		 alignment_spans_position[itr_pileup->query_name()]
-			 =itr_pileup->is_alignment_spanning_position();
-	 }
-   if (verbose) //TODO Boost::options
-	   cout << "MAX INDEL: " << max_indel << endl;
+		max_indel = 0; //TODO move to Constructor
+		for (pileup :: const_iterator itr_pileup = p.begin();
+				  itr_pileup != p.end() ; itr_pileup ++) {
+		  if (itr_pileup->indel() > max_indel)
+			{
+			  max_indel = itr_pileup->indel();
+			}
+			alignment_spans_position[itr_pileup->query_name()]
+				=itr_pileup->is_alignment_spanning_position();
+		}
+		if (verbose) //TODO Boost::options
+		  cout << "MAX INDEL: " << max_indel << endl;
 
 
 		//		## Reference only positions, with no aligned reads
@@ -422,19 +415,20 @@ void alignment_output_pileup::pileup_callback(const pileup& p) {
 		//				$last_pos++;
 		//			}
 		//		}
-	 if( ( last_pos != 0 ) && ( last_pos < pos) )
-	{
-		  last_pos++;
+		if( ( last_pos != 0 ) && ( last_pos < pos) )
+		{
+			  last_pos++;
 				while (last_pos < p.position_1())
 				{
 					for (map<string, struct_aligned_read>::const_iterator itr_reads = aligned_reads.begin(); //TODO typedef map
-								itr_reads != aligned_reads.end(); itr_reads++) {
+								itr_reads != aligned_reads.end(); itr_reads++) 
+					{
 					  aligned_reads[itr_reads->first].aligned_read_bases += ".";
 						//START //Unique
 					}
-				 	}
+				}
 		}
-	last_pos = pos;
+		last_pos = pos;
 
 
 
@@ -542,9 +536,8 @@ void alignment_output_pileup::pileup_callback(const pileup& p) {
 
 	}
 
-	/*! Called for each read alignment.
-	 */
-	void alignment_output_pileup::fetch_callback(const alignment& a) {
+/*! Called for each read alignment.*/
+void alignment_output_pileup::fetch_callback(const alignment& a) {
 
 		//
 		//	## Retrieve all unique alignments overlapping position with "fetch"
@@ -597,15 +590,7 @@ void alignment_output_pileup::pileup_callback(const pileup& p) {
 			{
 				unique_end = a.reference_end_1();
 			}
-			if(debug)
-			{
-				cout << "unique_start : " << unique_start;
-			  cout << "\t" << "unique_end: " << unique_end;
-				cout << "\t" << "seq_id: " << aligned_read.seq_id;
-				cout << "\t" << "query_start: " << a.query_start_1();
-				cout << "\t" << "query_end: " << a.query_end_1();
-				cout << endl;
-			}
+			
 			}
 	}
 
