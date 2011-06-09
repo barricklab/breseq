@@ -35,10 +35,9 @@ int main(int argc, char* argv[]) {
 	("help,h", "produce this help message")
 	("bam,b", po::value<string>(), "bam file containing sequences to be aligned")
 	("fasta,f", po::value<string>(), "FASTA file of reference sequence")
-  ("region,r", po::value<string>()->default_value(""), "region to print (accession:start-end)")
-  ("output,o", po::value<string>(), "name of output file")
-	("max-reads,n", po::value<uint32_t>()->default_value(1000), "maximum number of reads to show in alignment")
-  ;
+        ("region,r", po::value<string>()->default_value(""), "region to print (accession:start-end)")
+        ("output,o", po::value<string>(), "name of output file")
+	("max-reads,n", po::value<uint32_t>()->default_value(1000), "maximum number of reads to show in alignment");
 
 	po::variables_map options;
 	po::store(po::parse_command_line(argc, argv, cmdline_options), options);
@@ -48,12 +47,11 @@ int main(int argc, char* argv[]) {
 	if(options.count("help")
 		 || !options.count("bam")
 		 || !options.count("fasta")
-		 || !options.count("output")
-  ) {
-		cout << "Usage: bam2aln --bam=<reference.bam> --fasta=<reference.fasta> --region=<accession:start-end> "
-         << "--output=<output.html> [--max-reads=1000]" << endl;
+		 || !options.count("output")) {
+		cout << "Usage: bam2aln --bam=<reference.bam> --fasta=<reference.fasta> --region=<accession:start-end> ";
+		cout << "--output=<output.html> [--max-reads=1000]" << endl;
 		cout << cmdline_options << endl;
-		
+
 		return -1;
 	}
 
@@ -62,9 +60,13 @@ int main(int argc, char* argv[]) {
 		alignment_output ao(options["bam"].as<string>(),
                         options["fasta"].as<string>(),
                         options["max-reads"].as<uint32_t>());
+		ao.create_alignment(options["bam"].as<string>(),
+                        options["fasta"].as<string>(),
+			options["region"].as<string>());
 
-    string aln = ao.html_alignment(options["region"].as<string>());
-
+//		
+//																												  "/home/geoff/Dropbox/Research/breseq/tests/REL606_fragment_is_mediated_dels/data/reference.fasta",
+//																													"REL606-5:1-15");
     // add: write alignment to output file....
 
   } catch(...) {
