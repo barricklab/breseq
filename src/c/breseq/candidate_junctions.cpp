@@ -360,9 +360,9 @@ namespace breseq {
 			flanking_right
 		}; junction_id_list = new_junction;
 
-		string join1[] = { hash_seq_id_1, boost::lexical_cast<string>(hash_coord_1), boost::lexical_cast<string>(hash_strand_1) };
+		string join1[] = { hash_seq_id_1, to_string(hash_coord_1), to_string(hash_strand_1) };
 		junction_coord_1 = join(join1, "::");
-		string join2[] = { hash_seq_id_2, boost::lexical_cast<string>(hash_coord_2), boost::lexical_cast<string>(hash_strand_2) };
+		string join2[] = { hash_seq_id_2, to_string(hash_coord_2), to_string(hash_strand_2) };
 		junction_coord_2 = join(join2, "::");
 
 		string junction_id = junction_name_join(junction_id_list);
@@ -724,8 +724,7 @@ namespace breseq {
 		// sequence of the matching part of the query (top genomic strand)
 		string a_qseq = a.qseq();
 		string q_str = a_qseq.substr(q_seq_start - 1, q_seq_end - q_seq_start + 1);
-		vector<string> q_array;
-		boost::split(q_array, q_str, boost::is_any_of("/"));
+		vector<string> q_array = split(q_str, "/");
 
 		// Reference
 		// start, end, length of match in reference
@@ -735,8 +734,7 @@ namespace breseq {
 
 		// sequence of match in reference (top genomic strand)
 		string r_str = refseq_str.substr(r_start - 1, r_length);
-		vector<string> r_array;
-		boost::split(r_array, r_str, boost::is_any_of("/"));
+		vector<string> r_array = split(r_str, "/");
 
 		if (verbose)
 		{
@@ -1037,7 +1035,7 @@ namespace breseq {
 				// add redundancy to the junction_id
 				CandidateJunction cj = (*it).second;
 
-				junction_id += junction_name_separator + boost::lexical_cast<string>(cj.r1) + junction_name_separator + boost::lexical_cast<string>(cj.r2);
+				junction_id += junction_name_separator + to_string(cj.r1) + junction_name_separator + to_string(cj.r2);
 				CombinedCandidateJunction ccj = {
 					junction_id,			// id
 					cj.pos_hash_score,		// pos_hash_score
@@ -1058,7 +1056,7 @@ namespace breseq {
 					// add redundancy to the junction_id (reversed)
 					CandidateJunction cj = (*it).second;
 
-					junction_id += junction_name_separator + boost::lexical_cast<string>(cj.r2) + junction_name_separator + boost::lexical_cast<string>(cj.r1);
+					junction_id += junction_name_separator + to_string(cj.r2) + junction_name_separator + to_string(cj.r1);
 					CombinedCandidateJunction ccj = {
 						junction_id,			// id
 						cj.pos_hash_score,		// pos_hash_score

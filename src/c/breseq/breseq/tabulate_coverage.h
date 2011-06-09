@@ -23,9 +23,9 @@ LICENSE AND COPYRIGHT
 
 #include <boost/optional.hpp>
 
-#include "breseq/common.h"
-#include "breseq/pileup_base.h"
-#include "breseq/pileup.h"
+#include "common.h"
+#include "pileup_base.h"
+#include "pileup.h"
 
 namespace breseq {
 	  

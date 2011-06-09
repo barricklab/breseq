@@ -19,7 +19,7 @@ LICENSE AND COPYRIGHT
 #ifndef _BRESEQ_CALCULATE_TRIMS_H_
 #define _BRESEQ_CALCULATE_TRIMS_H_
 
-#include "breseq/common.h"
+#include "common.h"
 
 using namespace std;
 

@@ -20,7 +20,11 @@ LICENSE AND COPYRIGHT
 #ifndef _BRESEQ_SETTINGS_H_
 #define _BRESEQ_SETTINGS_H_
 
-#include "breseq/common.h"
+#include <map>
+#include <string>
+#include <vector>
+#include <list>
+#include <stdint.h>
 
 using namespace std;
 

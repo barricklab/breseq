@@ -317,10 +317,10 @@ void alignment::tam_write_read_alignments(ofstream& fh, bam_header_t* header, in
 
 		vector<string> ll;
 		ll.push_back(a.query_name());
-		ll.push_back(boost::lexical_cast<string>(fix_flags(a.flag())));
+		ll.push_back(to_string(fix_flags(a.flag())));
 		ll.push_back(header->target_name[a.reference_target_id()]);
-		ll.push_back(boost::lexical_cast<string>(a.reference_start_0()));
-		ll.push_back(boost::lexical_cast<string>(a.quality()));
+		ll.push_back(to_string(a.reference_start_0()));
+		ll.push_back(to_string(a.quality()));
 		ll.push_back(cigar_string);
 
 		//something strange in new version... such that mate_start sometimes
@@ -334,11 +334,11 @@ void alignment::tam_write_read_alignments(ofstream& fh, bam_header_t* header, in
 		else
 		{
 			ll.push_back("=");
-			ll.push_back(boost::lexical_cast<string>(a.mate_start_1()));
-			ll.push_back(boost::lexical_cast<string>(a.isize()));
+			ll.push_back(to_string(a.mate_start_1()));
+			ll.push_back(to_string(a.isize()));
 		}
 
-		ll.push_back(boost::lexical_cast<string>(*(a.query_bam_sequence())));
+		ll.push_back(to_string(*(a.query_bam_sequence())));
 		ll.push_back(quality_score_string);
 		ll.push_back(aux_tags);
 

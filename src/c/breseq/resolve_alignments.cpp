@@ -866,7 +866,7 @@ bool _test_read_alignment_requirements(Settings settings, bam_header_t* referenc
 	}
 	if (settings.max_read_mismatches > 0)
 	{
-		int32_t mismatches = alignment_mismatches(a, reference_header, reference_fai, ref_seq_info);
+		int32_t mismatches = alignment_mismatches(a, reference_header, reference_fai, &ref_seq_info);
 		if (mismatches > settings.max_read_mismatches) return false;
 	}
 

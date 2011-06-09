@@ -34,7 +34,7 @@ LICENSE AND COPYRIGHT
 
 namespace breseq {
 
-const std::string cErrorTable::covariate_names[] = {
+const string cErrorTable::covariate_names[] = {
   "read_set", 
   "ref_base", 
   "prev_ref_base", 
@@ -47,14 +47,14 @@ const char cErrorTable::m_sep = '\t';
 
 /*! Count errors.
  */
-void error_count(const std::string& bam, 
-												 const std::string& fasta,
-												 const std::string& output_dir,
-												 const std::vector<std::string>& readfiles,
+void error_count(const string& bam,
+												 const string& fasta,
+												 const string& output_dir,
+												 const vector<string>& readfiles,
                          bool do_coverage,
                          bool do_errors,
                          uint8_t min_qual_score,
-                         const std::string& covariates
+                         const string& covariates
                       ) 
 {
 	error_count_pileup ecp(bam, fasta, do_coverage, do_errors, min_qual_score, covariates);
@@ -66,7 +66,7 @@ void error_count(const std::string& bam,
 
 /*! Constructor.
  */
-error_count_pileup::error_count_pileup(const std::string& bam, const std::string& fasta, bool do_coverage, bool do_errors, uint8_t min_qual_score, const std::string& covariates)
+error_count_pileup::error_count_pileup(const string& bam, const string& fasta, bool do_coverage, bool do_errors, uint8_t min_qual_score, const string& covariates)
 : pileup_base(bam, fasta), m_do_coverage(do_coverage), m_do_errors(do_errors), m_min_qual_score(min_qual_score), m_error_table(covariates) {
 	// reserve enough space for the sequence info:
 	_seq_info.resize(m_bam->header->n_targets);
@@ -242,14 +242,14 @@ void error_count_pileup::pileup_callback(const pileup& p) {
 
 /*! Print coverage distribution.
  */
-void error_count_pileup::print_coverage(const std::string& output_dir) {
+void error_count_pileup::print_coverage(const string& output_dir) {
 	using namespace std;
-	for(std::size_t i=0; i<_seq_info.size(); ++i) {
+	for(size_t i=0; i<_seq_info.size(); ++i) {
 		string filename(output_dir + m_bam->header->target_name[i] + ".unique_only_coverage_distribution.tab");
 		ofstream out(filename.c_str());					
 		
 		out << "coverage\tn" << endl;
-		for(std::size_t j=1; j<_seq_info[i].unique_only_coverage.size(); ++j) {
+		for(size_t j=1; j<_seq_info[i].unique_only_coverage.size(); ++j) {
 			out << j << "\t" << _seq_info[i].unique_only_coverage[j] << endl;
 		}	
 		out.close();
@@ -259,10 +259,10 @@ void error_count_pileup::print_coverage(const std::string& output_dir) {
 
 /*! Print error file.
  */
-void error_count_pileup::print_error(const std::string& output_dir, const std::vector<std::string>& readfiles) {
+void error_count_pileup::print_error(const string& output_dir, const vector<string>& readfiles) {
 
   if (m_use_CErrorTable) {
-      std::string output_file;
+      string output_file;
       output_file = output_dir + "error_counts.tab"; 
       m_error_table.write_count_table(output_file);
       
@@ -308,7 +308,7 @@ void error_count_pileup::print_error(const std::string& output_dir, const std::v
 
 /*! Load error rates.
  */
-error_count_results::error_count_results(const std::string& input_dir, const std::vector<std::string>& readfiles) {
+error_count_results::error_count_results(const string& input_dir, const vector<string>& readfiles) {
 	using namespace std;
 	char bases[] = {'A', 'T', 'C', 'G', '.'}; // order is important!!! must match the header from the error rates file...
 	
@@ -316,7 +316,7 @@ error_count_results::error_count_results(const std::string& input_dir, const std
 	_log10_error_rates.resize(readfiles.size());
 
 	// load the error rates:
-	for(std::size_t i=0; i<readfiles.size(); ++i) {
+	for(size_t i=0; i<readfiles.size(); ++i) {
 		string filename(input_dir + readfiles[i] + ".error_rates.tab");
 		ifstream in(filename.c_str());
 		in.ignore(1024, '\n'); // get rid of header line.
@@ -352,7 +352,7 @@ error_count_results::error_count_results(const std::string& input_dir, const std
 					double log10_err = log10(one_minus_pr);
 					log10_em->second[k] = make_pair(log10_err,log10_cor);
           
-          //std::cerr << r << std::endl;
+          //cerr << r << endl;
 				}
 			}
 		}
@@ -362,9 +362,9 @@ error_count_results::error_count_results(const std::string& input_dir, const std
 
 /*! Return the log10 error rate for the given base pair, quality, and FASTQ file index.
  */
-double error_count_results::log10_error_rates(int32_t fastq_file_index, uint8_t quality, const std::string& base_key) {
+double error_count_results::log10_error_rates(int32_t fastq_file_index, uint8_t quality, const string& base_key) {
 	//  fail if this doesn't exist?
-	assert((std::size_t)fastq_file_index<_log10_error_rates.size());
+	assert((size_t)fastq_file_index<_log10_error_rates.size());
 	assert(_log10_error_rates[fastq_file_index].find(quality)!=_log10_error_rates[fastq_file_index].end());
 	assert(_log10_error_rates[fastq_file_index][quality].find(base_key)!=_log10_error_rates[fastq_file_index][quality].end());
 	
@@ -374,9 +374,9 @@ double error_count_results::log10_error_rates(int32_t fastq_file_index, uint8_t 
 
 /*! Return the log10 correct rate for the given base pair, quality, and FASTQ file index.
  */
-double error_count_results::log10_correct_rates(int32_t fastq_file_index, uint8_t quality, const std::string& base_key) {
+double error_count_results::log10_correct_rates(int32_t fastq_file_index, uint8_t quality, const string& base_key) {
 		//  fail if this doesn't exist?
-	assert((std::size_t)fastq_file_index<_log10_error_rates.size());
+	assert((size_t)fastq_file_index<_log10_error_rates.size());
 	assert(_log10_error_rates[fastq_file_index].find(quality)!=_log10_error_rates[fastq_file_index].end());
 	assert(_log10_error_rates[fastq_file_index][quality].find(base_key)!=_log10_error_rates[fastq_file_index][quality].end());
 	
@@ -385,9 +385,9 @@ double error_count_results::log10_correct_rates(int32_t fastq_file_index, uint8_
 
 /*! Return the log10 correct rate for the given base pair, quality, and FASTQ file index.
  */
-double error_count_results::correct_rates(int32_t fastq_file_index, uint8_t quality, const std::string& base_key) {
+double error_count_results::correct_rates(int32_t fastq_file_index, uint8_t quality, const string& base_key) {
 		//  fail if this doesn't exist?
-	assert((std::size_t)fastq_file_index<_error_rates.size());
+	assert((size_t)fastq_file_index<_error_rates.size());
 	assert(_error_rates[fastq_file_index].find(quality)!=_error_rates[fastq_file_index].end());
 	assert(_error_rates[fastq_file_index][quality].find(base_key)!=_error_rates[fastq_file_index][quality].end());
 	
@@ -396,7 +396,7 @@ double error_count_results::correct_rates(int32_t fastq_file_index, uint8_t qual
 
 /*! Return the pair of (correct,error) rates.
  */
-const std::pair<double,double>& error_count_results::log10_rates(int32_t fastq_file_index, uint8_t quality, const std::string& base_key) {
+const pair<double,double>& error_count_results::log10_rates(int32_t fastq_file_index, uint8_t quality, const string& base_key) {
 	return _log10_error_rates[fastq_file_index][quality][base_key];
 }
 
@@ -405,7 +405,7 @@ const std::pair<double,double>& error_count_results::log10_rates(int32_t fastq_f
     This version of the initializer is for constructing the full
     table that will be used from command line arguments.
 */
-cErrorTable::cErrorTable (const std::string& colnames)
+cErrorTable::cErrorTable (const string& colnames)
 {
   if (colnames.length() == 0) return;
   read_covariates(colnames);
@@ -507,7 +507,7 @@ uint32_t cErrorTable::covariates_to_index(const covariate_values_t& cv) {
         if (m_covariate_enforce_max[i] == false) {
           assert(false);
         } else {
-          std::cout << "Adjusted down " << val << " to " << m_covariate_max[i]-1 << std::endl;
+          cout << "Adjusted down " << val << " to " << m_covariate_max[i]-1 << endl;
           val = m_covariate_max[i]-1;
         }
       }
@@ -540,7 +540,7 @@ void cErrorTable::index_to_covariates(const uint32_t idx, covariate_values_t& cv
 
     Convert string representation to covariates
 */
-void cErrorTable::read_covariates(const std::string& colnames) {
+void cErrorTable::read_covariates(const string& colnames) {
 
   // set default values
   for (int i=0; i<k_num_covariates; i++) {
@@ -548,13 +548,11 @@ void cErrorTable::read_covariates(const std::string& colnames) {
     m_covariate_enforce_max[i] = false;
   }
 
-  std::vector<std::string> columns_to_use;
-  cErrorTable::split(colnames, ',', columns_to_use);
+  vector<string> columns_to_use = split(colnames, ",");
 
   // Turn on and assign max
-  for(std::vector<std::string>::iterator i=columns_to_use.begin(); i!=columns_to_use.end(); ++i) {
-    std::vector<std::string> columns_parts;
-    cErrorTable::split(*i, '=', columns_parts);
+  for(vector<string>::iterator i=columns_to_use.begin(); i!=columns_to_use.end(); ++i) {
+    vector<string> columns_parts = split(*i, "=");
 
 		if (columns_parts[0] == "ref_base") {
       m_covariate_used[k_ref_base] = true;
@@ -588,7 +586,7 @@ void cErrorTable::read_covariates(const std::string& colnames) {
       m_covariate_enforce_max[k_base_repeat] = true;
     }
     else {
-      std::cerr << "Unrecognized covariate: " << columns_parts[0] << std::endl;
+      cerr << "Unrecognized covariate: " << columns_parts[0] << endl;
       assert(1);
     }
 	}
@@ -609,9 +607,9 @@ void cErrorTable::read_covariates(const std::string& colnames) {
 
     Convert covariates to string representation
 */
-std::string cErrorTable::print_covariates() {
+string cErrorTable::print_covariates() {
 
-  std::stringstream covariate_string;
+  stringstream covariate_string;
   
   for (uint32_t i=0; i<k_num_covariates; i++) {
     if (m_covariate_used[i]) {
@@ -636,17 +634,17 @@ std::string cErrorTable::print_covariates() {
 
     Split the string into a vector on each occurrence of a character.
 */
-void cErrorTable::split(const std::string& s, char c, std::vector<std::string>& v) {
-  std::string::size_type i = 0;
-  std::string::size_type j = s.find(c);
+/*void cErrorTable::split(const string& s, char c, vector<string>& v) {
+  string::size_type i = 0;
+  string::size_type j = s.find(c);
 
-  while (j != std::string::npos) {
+  while (j != string::npos) {
       v.push_back(s.substr(i, j-i));
       i = ++j;
       j = s.find(c, j);
   }
-  if (j == std::string::npos) v.push_back(s.substr(i, s.length( )));
-}
+  if (j == string::npos) v.push_back(s.substr(i, s.length( )));
+}*/
 
 
 
@@ -654,11 +652,11 @@ void cErrorTable::split(const std::string& s, char c, std::vector<std::string>& 
 
     Read table of log10 probabilities of observations
 */
-void cErrorTable::read_log10_prob_table(const std::string& filename) {
+void cErrorTable::read_log10_prob_table(const string& filename) {
 
-  std::ifstream in(filename.c_str());
+  ifstream in(filename.c_str());
   
-  std::string s;
+  string s;
   
   // First line contains the covariates  
   getline(in, s);
@@ -676,8 +674,7 @@ void cErrorTable::read_log10_prob_table(const std::string& filename) {
   // Read one line for each
   for (uint32_t i=0; i< m_log10_prob_table.size(); i++) {
     getline(in, s);
-    std::vector<std::string> split_line;
-    split(s, '\t', split_line);
+    vector<string> split_line = split(s, "\t");
     m_log10_prob_table[i] = strtod(split_line.back().c_str(), NULL);
   }           
 }
@@ -687,17 +684,17 @@ void cErrorTable::read_log10_prob_table(const std::string& filename) {
 
     Print out a table of covariates and counts.
 */
-void cErrorTable::write_log10_prob_table(const std::string& filename) {
+void cErrorTable::write_log10_prob_table(const string& filename) {
 
-  std::ofstream out(filename.c_str());
+  ofstream out(filename.c_str());
   
   // First line contains the covariates
-  out << print_covariates() << std::endl;
+  out << print_covariates() << endl;
   
   for (int i=0; i<k_num_covariates; i++) {
     if(m_covariate_used[i]) out << covariate_names[i] << m_sep;
   }
-  out << "log10_probability" << std::endl;
+  out << "log10_probability" << endl;
 
   for (uint32_t idx=0; idx<m_log10_prob_table.size(); idx++) {
       
@@ -715,7 +712,7 @@ void cErrorTable::write_log10_prob_table(const std::string& filename) {
         }
     }
         
-    out << m_log10_prob_table[idx] << std::endl;
+    out << m_log10_prob_table[idx] << endl;
   }
 }
 
@@ -723,17 +720,17 @@ void cErrorTable::write_log10_prob_table(const std::string& filename) {
 
     Print out a table of covariates and counts.
 */
-void cErrorTable::write_count_table(const std::string& filename) {
+void cErrorTable::write_count_table(const string& filename) {
 
-  std::ofstream out(filename.c_str());
+  ofstream out(filename.c_str());
   
   // First line contains the covariates
-  out << print_covariates() << std::endl;
+  out << print_covariates() << endl;
   
   for (int i=0; i<k_num_covariates; i++) {
     if(m_covariate_used[i]) out << covariate_names[i] << m_sep;
   }
-  out << "count" << std::endl;
+  out << "count" << endl;
 
   for (uint32_t idx=0; idx<m_count_table.size(); idx++) {
       
@@ -751,7 +748,7 @@ void cErrorTable::write_count_table(const std::string& filename) {
         }
     }
         
-    out << m_count_table[idx] << std::endl;
+    out << m_count_table[idx] << endl;
   }
 }
 
@@ -943,8 +940,8 @@ bool cErrorTable::alignment_position_to_covariates(const alignment& a, int32_t i
   if(_base_bam_is_N(read_base_bam)) return false;
   
   //## These are the start and end coordinates of the aligned part of the read
-  uint32_t q_start_0,q_end_0;
-  boost::tie(q_start_0,q_end_0) = a.query_bounds_0(); // @dk: 1-indexed!
+  int32_t q_start_0,q_end_0;
+  a.query_bounds_0(q_start_0, q_end_0); // @dk: 1-indexed!
  
   //## (1) Mis(match) in read relative to reference...
   //##       Quality is of the current base in the read, we have ALREADY checked that it is not an N					
@@ -957,7 +954,7 @@ bool cErrorTable::alignment_position_to_covariates(const alignment& a, int32_t i
   //## (2) Deletion in read relative to reference...
   //##       Quality is of the NEXT base in the read, and check that it is not an N
   if (indel == -1)
-  {			
+  {
     q_pos_0 += 1 - a.reversed(); 
     base_bam check_base_bam = a.query_base_bam_0(q_pos_0);
     if (_base_bam_is_N(check_base_bam)) return false;
@@ -967,7 +964,7 @@ bool cErrorTable::alignment_position_to_covariates(const alignment& a, int32_t i
   //##       Quality is of the NEXT base in the read, and check that it is not an N
   //##       Note that it is possible this read base may be a '.' (supporting the non-insert call)
   else if (insert_count > 0) 
-  {		
+  {
     // Offset as much as asked for by insert_count, but this particular read
     // may nothave inserted bases at all of those positons, so cap at indel.
     int32_t max_offset = insert_count;

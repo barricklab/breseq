@@ -23,7 +23,7 @@ LICENSE AND COPYRIGHT
 #include <boost/lexical_cast.hpp>
 #include <boost/shared_ptr.hpp>
 
-#include "breseq/common.h"
+#include "common.h"
 
 
 
@@ -182,7 +182,7 @@ namespace breseq {
 		//! Default output.
 		template <typename T>
 		void operator()(T& op) {
-			_s = boost::lexical_cast<std::string>(op);
+			_s = to_string(op);
 		}
     
 		//! Formatted double output.
@@ -209,7 +209,7 @@ namespace breseq {
 		
 		//! Pairs are handled separately.
     void operator()(std::pair<int,int>& p) {
-			_s = boost::lexical_cast<std::string>(p.first) + "/" + boost::lexical_cast<std::string>(p.second);
+			_s = to_string(p.first) + "/" + to_string(p.second);
 		}
 		
 		//! Retrieve the string that was built during visitation.

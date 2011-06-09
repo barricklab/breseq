@@ -673,7 +673,7 @@ int main(int argc, char* argv[]) {
   }
   
   // Pass the command to the proper handler
-  boost::to_upper(command);
+  command = to_upper(command);
   if (command == "ANALYZE_FASTQ") {
     return do_analyze_fastq(argc, argv);
   } else if (command == "CONVERT_GENBANK") {
