@@ -197,7 +197,7 @@ uint32_t alignment::reference_end_0() const {
   
   uint32_t* cigar = bam1_cigar(_a); // cigar array for this alignment
 	
-  for(uint32_t j=(_a->core.n_cigar-1); j>0; --j) {
+  for(uint32_t j=0; j<_a->core.n_cigar; j++) {
     uint32_t op = cigar[j] & BAM_CIGAR_MASK;
     uint32_t len = cigar[j] >> BAM_CIGAR_SHIFT;
     
@@ -206,6 +206,7 @@ uint32_t alignment::reference_end_0() const {
       pos += len;
     }
   }
+  pos -= 1; // to get inclusive coords
 
   return pos;
 }
