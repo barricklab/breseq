@@ -72,8 +72,7 @@ bool alignment::is_trimmed() const {
 		if((query_position_1()) <= (uint32_t)bam_aux2i(auxl)) {
 			return true;
 		}
-	}
-	
+	}	
 	// is our query position in the right-side trimmed region?
 	uint8_t *auxr = bam_aux_get(_a,"XR");
 	if(auxr) {
@@ -84,7 +83,16 @@ bool alignment::is_trimmed() const {
 	
 	return false;
 }
-
+//! Return number of locations on left of sequence to be trimmed
+uint8_t alignment::trim_left() const {
+  uint8_t *auxl = bam_aux_get(_a,"XL");
+  return *auxl;
+}
+//! Return number of locations on right of sequence to be trimmed
+uint8_t alignment::trim_right() const {
+  uint8_t *auxr = bam_aux_get(_a,"XR");
+  return *auxr;
+}
 //			my $trimmed = 0;
 //			my $trim_left = $a->aux_get('XL');  
 //			my $trim_right = $a->aux_get('XR');

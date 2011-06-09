@@ -38,7 +38,7 @@ class alignment {
     uint32_t redundancy() const;
 
     static vector<alignment> tam_next_read_alignments(tamFile tam, bam_header_t* header, alignment* last_alignment, bool paired = false);
-	static void tam_write_read_alignments(ofstream& fh, bam_header_t* header, int32_t fastq_file_index, vector<alignment> al, vector<Trim>* trims = NULL);
+    static void tam_write_read_alignments(ofstream& fh, bam_header_t* header, int32_t fastq_file_index, vector<alignment> al, vector<Trim>* trims = NULL);
 
     //! Is this alignment a deletion?
     inline bool is_del() const { return _p->is_del; }
@@ -114,6 +114,11 @@ class alignment {
     
     //! Has this alignment been trimmed?
     bool is_trimmed() const;
+    
+    //! Return number of locations on left of sequence to be trimmed
+    uint8_t trim_left() const;
+    //! Return number of locations on right of sequence to be trimmed
+    uint8_t trim_right() const;
 
     //! Start and end coordinates of the aligned part of the read. (was 1-indexed)
     //! Start is always < End. reversed() tells you which strand the match was on.
@@ -141,7 +146,6 @@ class alignment {
     uint32_t reference_end_0() const;
     uint32_t reference_end_1() const {return reference_end_0() + 1; };
 
-
 	int32_t mate_start_0() const {return _a->core.mpos; } ;
 	int32_t mate_start_1() const {return mate_start_0() + 1; };
 
@@ -149,7 +153,8 @@ class alignment {
     //! Number of bases before this position (on read strand)
     //  that are the same base.
     uint32_t base_repeat_0(uint32_t q_pos_0) const;
-
+    
+    //! Is this alignment under the current position?
     bool is_alignment_spanning_position()  const {
       if((_p->qpos+1) > 0)  {
         return true;
