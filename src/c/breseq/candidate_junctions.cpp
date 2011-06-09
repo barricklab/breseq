@@ -28,7 +28,7 @@ namespace breseq {
 
 	CandidateJunctions::CandidateJunctions() {}
 
-	bool CandidateJunctions::_alignments_to_candidate_junction(Settings settings, Summary summary, const cReferenceSequences& ref_seq_info, faidx_t* fai, bam_header_t* header, bam1_t* a1, bam1_t* a2,
+	bool CandidateJunctions::_alignments_to_candidate_junction(Settings settings, Summary summary, const cReferenceSequences& ref_seq_info, faidx_t* fai, bam_header_t* header, alignment a1, alignment a2,
 															  int32_t& redundancy_1, int32_t& redundancy_2, string& junction_seq_string, string& ref_seq_matched_1, string& ref_seq_matched_2, string& junction_coord_1, string& junction_coord_2, int32_t& read_begin_coord, JunctionList& junction_id_list)
 	{
 		bool verbose = false;
@@ -59,15 +59,15 @@ namespace breseq {
 //		my %printed_keys;
 		int32_t i = 0;
 
-		string read_id = bam1_qname(a1);
+		string read_id = a1.query_name();
 
 		// First, sort matches by their order in the query
-		bam1_t* q1 = a1;
-		bam1_t* q2 = a2;
+		alignment q1 = a1;
+		alignment q2 = a2;
 		int32_t q1_start, q1_end;
 		int32_t q2_start, q2_end;
-		alignment_query_start_end(q1, q1_start, q1_end);
-		alignment_query_start_end(q2, q2_start, q2_end);
+		q1.query_bounds_0(q1_start, q1_end);
+		q2.query_bounds_0(q2_start, q2_end);
 
 		if (verbose)
 			cout << q1_start << ", " << q1_end << ", " << q2_start << ", " << q2_end << endl;
@@ -86,13 +86,13 @@ namespace breseq {
 		cReferenceSequences req_seq_info_copy = ref_seq_info;
 		uint32_t seq_id;
 
-		bool hash_strand_1 = is_reversed(q1);
-		string hash_seq_id_1 = header->target_name[q1->core.tid];
+		bool hash_strand_1 = q1.reversed();
+		string hash_seq_id_1 = header->target_name[q1.reference_target_id()];
 		seq_id = req_seq_info_copy.seq_id_to_index(hash_seq_id_1);
 		string ref_seq_1 = ref_seq_info[seq_id].m_fasta_sequence.m_sequence;
 
-		bool hash_strand_2 = !is_reversed(q2);
-		string hash_seq_id_2 = header->target_name[q2->core.tid];
+		bool hash_strand_2 = !q2.reversed();
+		string hash_seq_id_2 = header->target_name[q2.reference_target_id()];
 		seq_id = req_seq_info_copy.seq_id_to_index(hash_seq_id_2);
 		string ref_seq_2 = ref_seq_info[seq_id].m_fasta_sequence.m_sequence;
 
@@ -122,13 +122,13 @@ namespace breseq {
 
 			cout << "==============> Initial Matches" << endl;
 			cout << "Alignment #1" << endl;
-			cout << "qpos: " << q1_start << "-" << q1_end << " rpos: " << r1_start << "-" << r1_end << " reversed: " << is_reversed(q1) << endl;
-			cout << bama_qseq(q1) << endl << ref_seq_matched_1 << endl;
+			cout << "qpos: " << q1_start << "-" << q1_end << " rpos: " << r1_start << "-" << r1_end << " reversed: " << q1.reversed() << endl;
+			cout << q1.qseq() << endl << ref_seq_matched_1 << endl;
 //			print Dumper($q1->cigar_array);
 
 			cout << "Alignment #2" << endl;
-			cout << "qpos: " << q2_start << "-" << q2_end << " rpos: " << r2_start << "-" << r2_end << " reversed: " << is_reversed(q2) << endl;
-			cout << bama_qseq(q2) << endl << ref_seq_matched_2 << endl;
+			cout << "qpos: " << q2_start << "-" << q2_end << " rpos: " << r2_start << "-" << r2_end << " reversed: " << q2.reversed() << endl;
+			cout << q2.qseq() << endl << ref_seq_matched_2 << endl;
 //			print Dumper($q2->cigar_array);
 			cout << "<==============" << endl;
 
@@ -149,7 +149,7 @@ namespace breseq {
 					cout << "ALIGNMENT #1 OVERLAP MISMATCH: " << q1_move << ", " << r1_move << endl;
 				// change where it ENDS
 				q1_end -= q1_move;
-				if (is_reversed(q1))
+				if (q1.reversed())
 					r1_start += r1_move;
 				else
 					r1_end -= r1_move;
@@ -161,7 +161,7 @@ namespace breseq {
 					cout << "ALIGNMENT #2 OVERLAP MISMATCH: " << q2_move << ", " << r2_move << endl;
 				// change where it STARTS
 				q2_start += q2_move;
-				if (!is_reversed(q2))
+				if (!q2.reversed())
 					r2_start += r2_move;
 				else
 					r2_end -= r2_move;
@@ -199,13 +199,13 @@ namespace breseq {
 
 			cout << "==============> Initial Matches" << endl;
 			cout << "Alignment #1" << endl;
-			cout << "qpos: " << q1_start << "-" << q1_end << " rpos: " << r1_start << "-" << r1_end << " reversed: " << is_reversed(q1) << endl;
-			cout << bama_qseq(q1) << endl << ref_seq_matched_1 << endl;
+			cout << "qpos: " << q1_start << "-" << q1_end << " rpos: " << r1_start << "-" << r1_end << " reversed: " << q1.reversed() << endl;
+			cout << q1.qseq() << endl << ref_seq_matched_1 << endl;
 //			print Dumper($q1->cigar_array);
 
 			cout << "Alignment #2" << endl;
-			cout << "qpos: " << q2_start << "-" << q2_end << " rpos: " << r2_start << "-" << r2_end << " reversed: " << is_reversed(q2) << endl;
-			cout << bama_qseq(q2) << endl << ref_seq_matched_2 << endl;
+			cout << "qpos: " << q2_start << "-" << q2_end << " rpos: " << r2_start << "-" << r2_end << " reversed: " << q2.reversed() << endl;
+			cout << q2.qseq() << endl << ref_seq_matched_2 << endl;
 //			print Dumper($q2->cigar_array);
 			cout << "<==============" << endl;
 		}
@@ -266,7 +266,7 @@ namespace breseq {
 		// and NOT present in the reference genome
 		string unique_read_seq_string = "";
 		if (overlap < 0)
-			unique_read_seq_string = bama_qseq(q1).substr(q1_end, -1 * overlap);
+			unique_read_seq_string = q1.qseq().substr(q1_end, -1 * overlap);
 		junction_seq_string += unique_read_seq_string;
 
 		if (verbose) cout << "+U: " << unique_read_seq_string << endl;
@@ -368,7 +368,7 @@ namespace breseq {
 		string junction_id = junction_name_join(junction_id_list);
 		if (verbose)
 		{
-			cout << "READ ID: " << bam1_qname(a1) << endl;
+			cout << "READ ID: " << a1.query_name() << endl;
 			cout << "JUNCTION ID: " << junction_id << endl;
 		}
 
@@ -378,14 +378,14 @@ namespace breseq {
 		return true;
 	}
 
-	void CandidateJunctions::_alignments_to_candidate_junctions(Settings settings, Summary summary, const cReferenceSequences& ref_seq_info, map<string, map<string, CandidateJunction>, CandidateJunction::Sorter>& candidate_junctions, faidx_t* fai, bam_header_t* header, vector<bam1_t*> al_ref)
+	void CandidateJunctions::_alignments_to_candidate_junctions(Settings settings, Summary summary, const cReferenceSequences& ref_seq_info, map<string, map<string, CandidateJunction>, CandidateJunction::Sorter>& candidate_junctions, faidx_t* fai, bam_header_t* header, vector<alignment> al_ref)
 	{
 		bool verbose = false;
 
 		if (verbose)
 		{
 			cout << endl << "###########################" << endl;
-			cout << bam1_qname(al_ref[0]);
+			cout << al_ref[0].query_name();
 			cout << endl << "###########################" << endl;
 		}
 
@@ -403,11 +403,11 @@ namespace breseq {
 
 		if (verbose)
 		{
-			cout << bam1_qname(al_ref[0]) << endl;
+			cout << al_ref[0].query_name() << endl;
 			cout << "Total matches: " << al_ref.size() << endl;
 		}
 
-		vector<bam1_t*> list1, list2;
+		vector<alignment> list1, list2;
 
 	  	// Try only pairs where one match starts at the beginning of the read >>>
 		// This saves a number of comparisons and gets rid of a lot of bad matches.
@@ -415,10 +415,10 @@ namespace breseq {
 
 		for (int32_t i = 0; i < al_ref.size(); i++)
 		{
-			bam1_t* a = al_ref[i];
+			alignment a = al_ref[i];
 
 			int32_t a_start, a_end;
-			alignment_query_start_end(a, a_start, a_end);
+			a.query_bounds_0(a_start, a_end);
 
 			if (verbose) cout << "(" << a_start << ", " << a_end << ")" << endl;
 
@@ -451,17 +451,17 @@ namespace breseq {
 		// Try adding together each pair of matches to make a junction, by looking at read coordinates
 		for (int32_t i = 0; i < list1.size(); i++)
 		{
-			bam1_t* a1 = list1[i];
+			alignment a1 = list1[i];
 
 			int32_t a1_start, a1_end;
-			alignment_query_start_end(a1, a1_start, a1_end);
+			a1.query_bounds_0(a1_start, a1_end);
 
 			for (int32_t j = 0; j < list2.size(); j++)
 			{
-				bam1_t* a2 = list1[i];
+				alignment a2 = list1[i];
 
 				int32_t a2_start, a2_end;
-				alignment_query_start_end(a2, a2_start, a2_end);
+				a2.query_bounds_0(a2_start, a2_end);
 
 				// if either end is the same, it is going to fail.
 				// Note: we already checked for the start, when we split into the two lists!
@@ -496,8 +496,8 @@ namespace breseq {
 			PassedPair pp = passed_pair_list[i];
 
 			// localize variables
-			bam1_t* a1 = pp.a1;
-			bam1_t* a2 = pp.a2;
+			alignment a1 = pp.a1;
+			alignment a2 = pp.a2;
 			int32_t a1_unique_length = pp.a1_unique_length;
 			int32_t a2_unique_length = pp.a2_unique_length;
 
@@ -551,7 +551,7 @@ namespace breseq {
 		if (junctions.size() == 0) return;
 
 		if (verbose)
-			cout << bam1_qname(al_ref[0]) << endl;
+			cout << al_ref[0].query_name() << endl;
 
 		// only now that we've looked through everything can we determine whether the reference sequence matched
 		// on a side was unique, after correcting for overlap
@@ -708,7 +708,7 @@ namespace breseq {
 
 	void CandidateJunctions::_entire_read_matches(map_t a) {}
 
-	void CandidateJunctions::_num_matches_from_end(bam1_t* a, string refseq_str, bool dir, int32_t overlap, int32_t& qry_mismatch_pos, int32_t& ref_mismatch_pos)
+	void CandidateJunctions::_num_matches_from_end(alignment a, string refseq_str, bool dir, int32_t overlap, int32_t& qry_mismatch_pos, int32_t& ref_mismatch_pos)
 	{
 		bool verbose = false;
 
@@ -717,20 +717,20 @@ namespace breseq {
 		int32_t q2_start, q2_end;
 
 		int32_t q_seq_start, q_seq_end;
-		alignment_query_start_end(a, q_seq_start, q_seq_end);
-		int32_t q_length = alignment_query_length(a);
+		a.query_bounds_0(q_seq_start, q_seq_end);
+		int32_t q_length = a.query_length();
 
-		bool reversed = is_reversed(a);
+		bool reversed = a.reversed();
 		// sequence of the matching part of the query (top genomic strand)
-		string a_qseq = bama_qseq(a);
+		string a_qseq = a.qseq();
 		string q_str = a_qseq.substr(q_seq_start - 1, q_seq_end - q_seq_start + 1);
 		vector<string> q_array;
 		boost::split(q_array, q_str, boost::is_any_of("/"));
 
 		// Reference
 		// start, end, length of match in reference
-		int32_t r_start = a->core.pos + 1;
-		int32_t r_end = bam_calend(&a->core, bam1_cigar(a));
+		int32_t r_start = a.reference_start_1();
+		int32_t r_end = a.reference_end_0();
 		int32_t r_length = r_end - r_start + 1;
 
 		// sequence of match in reference (top genomic strand)
@@ -741,7 +741,7 @@ namespace breseq {
 		if (verbose)
 		{
 			cout << "====> Num Matches from End" << endl;
-			cout << bam1_qname(a) << endl;
+			cout << a.query_name() << endl;
 			cout << "direction: " << dir << endl;
 			cout << "Read sequence: " << a_qseq << endl;
 			cout << "Read Match coords: " << q_seq_start << "-" << q_seq_end << " " << reversed << endl;
@@ -757,9 +757,9 @@ namespace breseq {
 			reverse(r_array.begin(), r_array.end());
 		}
 
-		uint32_t* cigar_array = bam1_cigar(a);
+		uint32_t* cigar_array = a.cigar_array();
 		vector<uint32_t> cigar_array_ref;
-		for (int32_t i = 0; i <= a->core.n_cigar; i++)
+		for (int32_t i = 0; i <= a.cigar_array_length(); i++)
 			cigar_array_ref.push_back(cigar_array[i]);
 
 		char op_0 = cigar_array_ref[0] & BAM_CIGAR_MASK;
@@ -827,7 +827,7 @@ namespace breseq {
 		}
 	}
 
-	void CandidateJunctions::_split_indel_alignments(Settings settings, Summary summary, bam_header_t* header, ofstream& PSAM, int32_t min_indel_split_len, vector<bam1_t*> al_ref) {}
+	void CandidateJunctions::_split_indel_alignments(Settings settings, Summary summary, bam_header_t* header, ofstream& PSAM, int32_t min_indel_split_len, vector<alignment> al_ref) {}
 	void CandidateJunctions::_by_ref_seq_coord(map_t a, map_t b, map_t ref_seq_info) {}
 	void CandidateJunctions::_by_score_unique_coord(map_t a, map_t b) {}
 	void CandidateJunctions::_tam_write_split_alignment(map_t fh, map_t header, map_t min_indel_split_len, map_t a) {}
@@ -868,13 +868,13 @@ namespace breseq {
 			PSAM.open(preprocess_junction_split_sam_file_name.c_str());
 			assert(PSAM.is_open());
 
-			bam1_t* last_alignment;
-			vector<bam1_t*> al_ref;
+			alignment* last_alignment;
+			vector<alignment> al_ref;
 			int32_t i = 0;
 			while (true)
 			{
 				// resolve_alignments.c
-				al_ref = tam_next_read_alignments(tam, header, last_alignment, false);
+				al_ref = alignment::tam_next_read_alignments(tam, header, last_alignment, false);
 
 				if (al_ref.size() == 0)
 					break;
@@ -893,7 +893,7 @@ namespace breseq {
 				if (settings.candidate_junction_score_method.compare("POS_HASH") == 0)
 				{
 					int32_t best_score = _eligible_read_alignments(settings, header, reference_fai, ref_seq_info, al_ref);
-					tam_write_read_alignments(BSAM, header, 0, al_ref, boost::optional<vector<Trim> >());
+					alignment::tam_write_read_alignments(BSAM, header, 0, al_ref, NULL);
 				}
 			}
 			sam_close(tam);
@@ -963,13 +963,12 @@ namespace breseq {
 
 			tamFile tam = sam_open(reference_sam_file_name.c_str()); // or die("Could not open reference same file: $reference_sam_file_name");
 			bam_header_t* header = sam_header_read2(reference_faidx_file_name.c_str()); // or die("Error reading reference fasta index file: $reference_faidx_file_name");
-			bam1_t* last_alignment;
-			vector<bam1_t*> al_ref;
+			alignment* last_alignment;
+			vector<alignment> al_ref;
 
 			while (true)
 			{
-				// resolve_alignments.c
-				al_ref = tam_next_read_alignments(tam, header, last_alignment, false);
+				al_ref = alignment::tam_next_read_alignments(tam, header, last_alignment, false);
 
 				if (al_ref.size() == 0)
 					break;
@@ -1217,15 +1216,15 @@ namespace breseq {
 			CombinedCandidateJunction junction = combined_candidate_junctions[j];
 			//#print Dumper($ids_to_print);
 
-//			my $seq = Bio::Seq->new(
-//				-display_id => $junction->{id}, -seq => $junction->{seq});
-//			$out->write_seq($seq);
+			cFastaSequence seq = { junction.id, junction.seq };
+			out.write_sequence(seq);
 		}
+		out.close();
 
 		// create SAM faidx
 		string command = settings.ctool("samtools") + " faidx " + candidate_junction_fasta_file_name;
 		if (combined_candidate_junctions.size() > 0)
-			system(command.c_str()); // TODO: Discard the return value of system calls?
+			int discarded_return_value = system(command.c_str()); // TODO: Possibly check the return value of system calls
 
 		summary.candidate_junction = hcs;
 	}

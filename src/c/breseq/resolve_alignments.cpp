@@ -313,14 +313,14 @@ namespace breseq {
       // @JEB-PORT Keeping "last" alignments doesn't seem necessary?
   
       // my $reference_al;
-      vector<bam1_t*> reference_alignments;
+      vector<alignment> reference_alignments;
       // my $last_reference_alignment;
-      bam1_t* last_reference_alignment = NULL;
+      alignment* last_reference_alignment = NULL;
       
       // my $junction_al;
-      vector<bam1_t*> junction_alignments;
+      vector<alignment> junction_alignments;
       // my $last_junction_alignment;
-      bam1_t* last_junction_alignment = NULL;
+      alignment* last_junction_alignment = NULL;
 
       //#proceed through all of the alignments
       // if (!$settings->{no_junction_prediction})
@@ -329,7 +329,7 @@ namespace breseq {
         // ($junction_al, $last_junction_alignment) 
         //   = Breseq::Shared::tam_next_read_alignments($junction_tam, $junction_header, $last_junction_alignment);		
       
-        junction_alignments = tam_next_read_alignments(junction_tam, junction_header, last_junction_alignment);
+        junction_alignments = alignment::tam_next_read_alignments(junction_tam, junction_header, last_junction_alignment);
       }
       
       //      
@@ -337,7 +337,7 @@ namespace breseq {
       // = Breseq::Shared::tam_next_read_alignments($reference_tam, $reference_header, $last_reference_alignment);		
       //      
       
-      reference_alignments = tam_next_read_alignments(reference_tam, reference_header, last_reference_alignment);
+      reference_alignments = alignment::tam_next_read_alignments(reference_tam, reference_header, last_reference_alignment);
 
       
       //###
@@ -371,7 +371,7 @@ namespace breseq {
 			
         //## Does this read have eligible candidate junction matches?
         // my $this_junction_al = [];
-        vector<bam1_t*> this_junction_alignments;
+        vector<alignment> this_junction_alignments;
 
         // print " Before Overlap Reference alignments = "  . (scalar @$this_reference_al) . "\n" if ($verbose);
         if (verbose) fprintf(stderr, " Before Overlap Reference alignments = %u\n", (uint32_t)reference_alignments.size());
@@ -382,7 +382,7 @@ namespace breseq {
 
         
         // if (($junction_al) && ($junction_al->[0]->qname =~ m/^$seq->{id}/))
-        if ((junction_alignments.size() > 0) && (seq.m_name == bam1_qname(junction_alignments[0]))) {
+        if ((junction_alignments.size() > 0) && (seq.m_name == junction_alignments[0].query_name())) {
           
           //				$this_junction_al = $junction_al;
           //				($junction_al, $last_junction_alignment) 
@@ -390,8 +390,7 @@ namespace breseq {
           //       
 
           this_junction_alignments = junction_alignments;
-          junction_alignments = tam_next_read_alignments(junction_tam, junction_header, last_junction_alignment);
-
+          junction_alignments = alignment::tam_next_read_alignments(junction_tam, junction_header, last_junction_alignment);
 
       
           //###			
@@ -404,7 +403,7 @@ namespace breseq {
           //###
           
           // @$this_junction_al = grep {_alignment_overlaps_junction($junction_info, $_) } @$this_junction_al;
-          for (vector<bam1_t*>::iterator it=this_junction_alignments.begin(); it<this_junction_alignments.end(); it++) {
+          for (vector<alignment>::iterator it=this_junction_alignments.begin(); it<this_junction_alignments.end(); it++) {
             if (!_alignment_overlaps_junction(junction_info_list, *it)) {
                 this_junction_alignments.erase(it);
             }
@@ -420,18 +419,18 @@ namespace breseq {
           
         //## Does this read have eligible reference sequence matches?
         // my $this_reference_al = [];
-        vector<bam1_t*> this_reference_alignments;
+        vector<alignment> this_reference_alignments;
         
         
         // if (($reference_al) && ($reference_al->[0]->qname =~ m/^$seq->{id}/))
-        if ((junction_alignments.size() > 0) && (seq.m_name == bam1_qname(junction_alignments[0]))) {
+        if ((junction_alignments.size() > 0) && (seq.m_name == junction_alignments[0].query_name())) {
           
           // $this_reference_al = $reference_al;
           // ($reference_al, $last_reference_alignment) 
           //    = Breseq::Shared::tam_next_read_alignments($reference_tam, $reference_header, $last_reference_alignment);
 
           this_reference_alignments = reference_alignments;
-          reference_alignments = tam_next_read_alignments(reference_tam, reference_header, last_reference_alignment);
+          reference_alignments = alignment::tam_next_read_alignments(reference_tam, reference_header, last_reference_alignment);
 
           //($best_reference_score, @$this_reference_al) = _eligible_read_alignments($settings, $reference_header, $reference_fai, $ref_seq_info, @$this_reference_al);	
 //          best_reference_score = _eligible_read_alignments(settings, reference_header, reference_fai, refseqs, this_reference_alignments);
@@ -754,7 +753,7 @@ namespace breseq {
 //
 //=cut
 //
-int32_t _eligible_read_alignments(Settings settings, bam_header_t* reference_header, faidx_t* reference_fai, const cReferenceSequences& ref_seq_info, vector<bam1_t*> al)
+int32_t _eligible_read_alignments(Settings settings, bam_header_t* reference_header, faidx_t* reference_fai, const cReferenceSequences& ref_seq_info, vector<alignment> al)
 {
 	bool verbose = false;
 
@@ -766,7 +765,7 @@ int32_t _eligible_read_alignments(Settings settings, bam_header_t* reference_hea
 	if (al.size() <= 0) return false;
 
 	// require a minimum length of the read to be mapped
-	for (vector<bam1_t*>::iterator it = al.end() - 1; it >= al.begin(); it--)
+	for (vector<alignment>::iterator it = al.end() - 1; it >= al.begin(); it--)
 		if (_test_read_alignment_requirements(settings, reference_header, reference_fai, ref_seq_info, (*it)))
 			al.erase(it);
 
@@ -843,17 +842,17 @@ int32_t _eligible_read_alignments(Settings settings, bam_header_t* reference_hea
 //
 //=cut
 //
-bool _test_read_alignment_requirements(Settings settings, bam_header_t* reference_header, faidx_t* reference_fai, const cReferenceSequences& ref_seq_info, bam1_t* a)
+bool _test_read_alignment_requirements(Settings settings, bam_header_t* reference_header, faidx_t* reference_fai, const cReferenceSequences& ref_seq_info, alignment a)
 {
 	bool accept = true;
 
-	bool unmapped = ((a->core.flag & BAM_FUNMAP) != 0);
+	bool unmapped = ((a.flag() & BAM_FUNMAP) != 0);
 	if (unmapped) return false;
 
 	if (settings.required_match_length > 0)
 	{
-		uint32_t* cigar = bam1_cigar(a); // cigar array for this alignment
-		uint32_t alignment_length_on_query = bam_cigar2qlen(&a->core, cigar); //this is the length of the alignment on the read
+		//uint32_t* cigar = a.cigar_array(); // cigar array for this alignment
+		uint32_t alignment_length_on_query = a.cigar_query_length(); //this is the length of the alignment on the read
 		if (alignment_length_on_query < settings.required_match_length)
 			return false;
 	}
@@ -861,8 +860,8 @@ bool _test_read_alignment_requirements(Settings settings, bam_header_t* referenc
 	if (settings.require_complete_match)
 	{
 		int32_t q_start, q_end;
-		alignment_query_start_end(a, q_start, q_end);
-		bool complete_match = (q_start == 1) && (q_end == a->core.l_qseq);
+		a.query_bounds_0(q_start, q_end);
+		bool complete_match = (q_start == 1) && (q_end == a.qseq_length());
 		if (!complete_match) return false;
 	}
 	if (settings.max_read_mismatches > 0)
@@ -885,11 +884,8 @@ bool _test_read_alignment_requirements(Settings settings, bam_header_t* referenc
 //=cut
 //
 //sub _alignment_overlaps_junction
-bool _alignment_overlaps_junction(const vector<junction_info>& junction_info_list, bam1_t* in_a)
+bool _alignment_overlaps_junction(const vector<junction_info>& junction_info_list, alignment a)
 {
-  
-  alignment a(in_a);
-
   //my ($junction_info, $a) = @_;
   //my $this_junction_info = $junction_info->[$a->tid];
   uint32_t tid = a.reference_target_id();

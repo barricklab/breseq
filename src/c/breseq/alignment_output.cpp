@@ -17,7 +17,7 @@ LICENSE AND COPYRIGHT
  *****************************************************************************/
 
 #include "breseq/alignment_output.h"
-#include "backup/alignment_output.h"
+
 #include "breseq/common.h"
 #include "breseq/pileup.h"
 #include "assert.h"

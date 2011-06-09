@@ -22,6 +22,7 @@ LICENSE AND COPYRIGHT
 #include "breseq/common.h"
 
 #include "breseq/fasta.h"
+#include "breseq/alignment.h"
 
 using namespace std;
 
@@ -130,7 +131,7 @@ namespace breseq {
   void RemoveLeadingWhitespace(string &s);
   void RemoveLeadingTrailingWhitespace(string &s);
 
-  uint32_t alignment_mismatches(bam1_t* a, bam_header_t* header, faidx_t* fai, boost::optional<const cReferenceSequences&> ref_seq_info);
+  uint32_t alignment_mismatches(alignment a, bam_header_t* header, faidx_t* fai, boost::optional<const cReferenceSequences&> ref_seq_info);
 
 } // breseq namespace
 

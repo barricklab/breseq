@@ -437,15 +437,15 @@ namespace breseq {
     	s.ReadFeatureTable(in_feature_file_name);
   }
 
-	uint32_t alignment_mismatches(bam1_t* a, bam_header_t* header, faidx_t* fai, boost::optional<const cReferenceSequences&> ref_seq_info)
+	uint32_t alignment_mismatches(alignment a, bam_header_t* header, faidx_t* fai, boost::optional<const cReferenceSequences&> ref_seq_info)
 	{
 		bool verbose = false;
 		uint32_t mismatches = 0;
 
-		string seq_id = header->target_name[a->core.tid];
+		string seq_id = header->target_name[a.reference_target_id()];
 
 		int32_t a_start, a_end;
-		alignment_query_start_end(a, a_start, a_end);
+		a.query_bounds_0(a_start, a_end);
 
 		string ref_string;
 		if (ref_seq_info)
@@ -468,22 +468,22 @@ namespace breseq {
 		boost::split(ref_string_list, ref_string, boost::is_any_of("/"));
 		uint32_t ref_pos = 0;
 
-		string qseq = bama_qseq(a);
+		string qseq = a.qseq();
 		string read_string = qseq.substr(a_start - 1, a_end - a_start + 1);
 		vector<string> read_string_list;
 		boost::split(read_string_list, read_string, boost::is_any_of("/"));
 		uint32_t read_pos = 0;
 
-		uint32_t* cigar_list = bam1_cigar(a); // cigar array for this alignment
+		uint32_t* cigar_list = a.cigar_array(); // cigar array for this alignment
 
 		if (verbose)
 		{
-			cout << bam1_qname(a) << endl;
+			cout << a.query_name() << endl;
 			//cout << Dumper(cigar_list)
 		}
 		//#	my $cigar_string = '';
 
-		for (uint32_t i = 0; i<= a->core.n_cigar; i++)
+		for (uint32_t i = 0; i <= a.cigar_array_length(); i++)
 		{
 			char op = cigar_list[i] & BAM_CIGAR_MASK;
 			uint32_t len = cigar_list[i] >> BAM_CIGAR_SHIFT;
