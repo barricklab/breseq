@@ -20,8 +20,8 @@ LICENSE AND COPYRIGHT
 #define _BRESEQ_PILEUP_H_
 
 #include "common.h"
-#include "breseq/alignment.h"
-#include "breseq/pileup_base.h"
+#include "alignment.h"
+#include "pileup_base.h"
 
 namespace breseq {
 	

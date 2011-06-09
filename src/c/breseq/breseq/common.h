@@ -36,6 +36,7 @@ LICENSE AND COPYRIGHT
 #include <iostream>
 #include <list>
 #include <map>
+#include <memory>
 #include <sstream>
 #include <string>
 #include <utility>
@@ -56,7 +57,7 @@ LICENSE AND COPYRIGHT
 #include <boost/algorithm/string/classification.hpp>
 
 // Breseq
-#include "breseq/settings.h"
+#include "settings.h"
 
 // Begin breseq specific --->
 
@@ -197,31 +198,6 @@ namespace breseq {
     getline(ifile, test);
     return !ifile.eof();
   }
-  
-  //!< Split a string on a delimiter into a vector
-  inline void
-  split( vector<string> & theStringVector,  /* Altered/returned value */
-        const  string  & theString,
-        const  string  & theDelimiter )
-  {
-    assert( theDelimiter.size() > 0 ); // My own ASSERT macro.
-    
-    size_t  start = 0, end = 0;
-    
-    while ( end != string::npos )
-    {
-      end = theString.find( theDelimiter, start );
-      
-      // If at end, use length=maxLength.  Else use length=end-start.
-      theStringVector.push_back( theString.substr( start,
-                                                  (end == string::npos) ? string::npos : end - start ) );
-      
-      // If at end, use start=maxSize.  Else use start=end+delimiter.
-      start = (   ( end > (string::npos - theDelimiter.size()) )
-               ?  string::npos  :  end + theDelimiter.size()    );
-    }
-  }
-
 
 	inline uint32_t fix_flags(uint32_t flags)
 	{
@@ -229,13 +205,74 @@ namespace breseq {
 		return flags;
 	}
 
-	// We need a broader strategy for replacing explicit casts from boost
-	/*template <class T> inline string to_string (const T& t)
+	template <typename T, typename U> class make_map
+	{
+		private:
+
+		map<T, U> m_map;
+
+		public:
+
+		make_map(const T& key, const U& val) { m_map[key] = val; }
+
+		make_map<T, U>& operator()(const T& key, const U& val)
+		{
+			m_map[key] = val;
+			return *this;
+		}
+
+		operator map<T, U>() { return m_map; }
+	};
+
+	template <class T> inline string to_string (const T& t)
 	{
 		stringstream ss;
 		ss << t;
 		return ss.str();
-	}*/
+	}
+	template <class T> inline T from_string(const string &s)
+	{
+		T t;
+		istringstream iss(s);
+		iss >> boolalpha >> t;
+		return t;
+	}
+
+	inline string to_upper(const string& input)
+	{
+		string str = input;
+		transform(str.begin(), str.end(),str.begin(), ::toupper);
+	}
+  
+	//!< Split a string on a delimiter into a vector
+	inline vector<string> split(
+					const  string  & theString,
+					const  string  & theDelimiter
+	) {
+		assert(theDelimiter.size() > 0); // My own ASSERT macro.
+
+		size_t start = 0, end = 0;
+		vector<string> theStringVector;
+
+		while (end != string::npos)
+		{
+			end = theString.find( theDelimiter, start );
+
+			// If at end, use length=maxLength.  Else use length=end-start.
+			theStringVector.push_back(
+					theString.substr(
+						start,
+						(end == string::npos) ? string::npos : end - start
+					  )
+				  );
+
+			// If at end, use start=maxSize.  Else use start=end+delimiter.
+			start =
+					(end > (string::npos - theDelimiter.size()))
+					? string::npos
+					: end + theDelimiter.size();
+		}
+	}
 
 	inline string join(const vector<string>& values, const string& separator)
 	{
@@ -297,28 +334,27 @@ namespace breseq {
 	// Deserializes a JunctionList from a string
 	inline JunctionList junction_name_split(string junction_name)
 	{
-		vector<string> s;
-		split(s, junction_name, junction_name_separator);
+		vector<string> s = split(junction_name, junction_name_separator);
 
 		JunctionList::Side side_1 = {
 			s[0],
-			boost::lexical_cast<int32_t>(s[1]),
-			boost::lexical_cast<bool>(s[2]),
-			boost::lexical_cast<int32_t>(s[10])
+			from_string<int32_t>(s[1]),
+			from_string<bool>(s[2]),
+			from_string<int32_t>(s[10])
 		}, side_2 = {
 			s[3],
-			boost::lexical_cast<int32_t>(s[4]),
-			boost::lexical_cast<bool>(s[5]),
-			boost::lexical_cast<int32_t>(s[11])
+			from_string<int32_t>(s[4]),
+			from_string<bool>(s[5]),
+			from_string<int32_t>(s[11])
 		};
 		JunctionList retval =
 		{
 			side_1,
 			side_2,
-			boost::lexical_cast<int32_t>(s[6]),
+			from_string<int32_t>(s[6]),
 			s[7],
-			boost::lexical_cast<int32_t>(s[8]),
-			boost::lexical_cast<int32_t>(s[9])
+			from_string<int32_t>(s[8]),
+			from_string<int32_t>(s[9])
 		};
 
 		return retval;
@@ -331,22 +367,22 @@ namespace breseq {
 		vector<string> values(has_redundant ? 12 : 10);
 
 		values.push_back(item.side_1.seq_id);
-		values.push_back(boost::lexical_cast<string>(item.side_1.position));
-		values.push_back(boost::lexical_cast<string>(item.side_1.strand));
+		values.push_back(to_string(item.side_1.position));
+		values.push_back(to_string(item.side_1.strand));
 
 		values.push_back(item.side_2.seq_id);
-		values.push_back(boost::lexical_cast<string>(item.side_2.position));
-		values.push_back(boost::lexical_cast<string>(item.side_2.strand));
+		values.push_back(to_string(item.side_2.position));
+		values.push_back(to_string(item.side_2.strand));
 
-		values.push_back(boost::lexical_cast<string>(item.alignment_overlap));
-		values.push_back(boost::lexical_cast<string>(item.unique_read_sequence));
-		values.push_back(boost::lexical_cast<string>(item.flanking_left));
-		values.push_back(boost::lexical_cast<string>(item.flanking_right));
+		values.push_back(to_string(item.alignment_overlap));
+		values.push_back(to_string(item.unique_read_sequence));
+		values.push_back(to_string(item.flanking_left));
+		values.push_back(to_string(item.flanking_right));
 
 		if (has_redundant)
 		{
-			values.push_back(boost::lexical_cast<string>(item.side_1.redundant));
-			values.push_back(boost::lexical_cast<string>(item.side_2.redundant));
+			values.push_back(to_string(item.side_1.redundant));
+			values.push_back(to_string(item.side_2.redundant));
 		}
 
 		return join(values, junction_name_separator);

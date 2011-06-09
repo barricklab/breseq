@@ -19,9 +19,9 @@ LICENSE AND COPYRIGHT
 #ifndef _BRESEQ_ERROR_COUNT_H_
 #define _BRESEQ_ERROR_COUNT_H_
 
-#include "breseq/common.h"
-#include "breseq/alignment.h"
-#include "breseq/pileup_base.h"
+#include "common.h"
+#include "alignment.h"
+#include "pileup_base.h"
 
 namespace breseq {
 	
@@ -134,7 +134,7 @@ namespace breseq {
 
       void read_covariates(const std::string& colnames);
       std::string print_covariates();
-      void split(const std::string& s, char c, std::vector<std::string>& v); // helper function
+      //void split(const std::string& s, char c, std::vector<std::string>& v); // helper function
 
       //* IO of tables
       void read_log10_prob_table(const std::string& filename);

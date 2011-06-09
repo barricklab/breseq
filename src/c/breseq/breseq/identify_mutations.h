@@ -22,10 +22,10 @@ LICENSE AND COPYRIGHT
 #include <boost/optional.hpp>
 #include <boost/tuple/tuple.hpp>
 
-#include "breseq/common.h"
-#include "breseq/error_count.h"
-#include "breseq/genome_diff.h"
-#include "breseq/pileup_base.h"
+#include "common.h"
+#include "error_count.h"
+#include "genome_diff.h"
+#include "pileup_base.h"
 
 using namespace std;
 
@@ -38,21 +38,21 @@ namespace breseq {
 	 \param output_dir is the directory in which output files will be placed.
 	 \param readfiles is a list of read files that were used to build the bam (do not include filename extension)
 	 */
-	void identify_mutations(const std::string& bam,
-													const std::string& fasta,
-													const std::string& error_dir,
-													const std::string& gd_file,
-													const std::string& output_dir,
-													const std::vector<std::string>& readfiles,
-													const std::string& coverage_dir,
-                          const std::vector<double>& deletion_propagation_cutoff,
+	void identify_mutations(const string& bam,
+													const string& fasta,
+													const string& error_dir,
+													const string& gd_file,
+													const string& output_dir,
+													const vector<string>& readfiles,
+													const string& coverage_dir,
+                          const vector<double>& deletion_propagation_cutoff,
 													double mutation_cutoff,
 													bool predict_deletions,
 													bool predict_polymorphisms,
                           uint8_t min_qual_score,
                           double polymorphism_cutoff,
                           double polymorphism_frequency_cutoff,
-                          const std::string& error_table_file,
+                          const string& error_table_file,
                           bool print_per_position_file
                           );
 	
@@ -156,9 +156,9 @@ namespace breseq {
 	 */
 	class identify_mutations_pileup : public breseq::pileup_base {
 	public:
-		typedef std::map<std::string,int> base_count_t;
-		typedef std::map<uint8_t,base_count_t> qual_map_t;
-    typedef std::map<int32_t,qual_map_t> fastq_map_t;
+		typedef map<string,int> base_count_t;
+		typedef map<uint8_t,base_count_t> qual_map_t;
+    typedef map<int32_t,qual_map_t> fastq_map_t;
     
     //! Information that is tracked per-sequence.
 		struct sequence_info {
@@ -169,7 +169,7 @@ namespace breseq {
 			 i is the number of reads that do not indicate a deletion at p
 			 x is the number of positions that have no redundancies
 			 */
-			std::vector<int> unique_only_coverage;
+			vector<int> unique_only_coverage;
 		};
 		
 		struct shared_info {
@@ -182,21 +182,21 @@ namespace breseq {
 		
 		//! Constructor.
 		identify_mutations_pileup(
-                              const std::string& bam, 
-															const std::string& fasta,
-															const std::string& error_dir,
-															const std::string& gd_file,
-															const std::string& output_dir,
-															const std::vector<std::string>& readfiles,
-															const std::string& coverage_dir,
-															const std::vector<double>& deletion_propagation_cutoff,
+                              const string& bam,
+															const string& fasta,
+															const string& error_dir,
+															const string& gd_file,
+															const string& output_dir,
+															const vector<string>& readfiles,
+															const string& coverage_dir,
+															const vector<double>& deletion_propagation_cutoff,
 															double mutation_cutoff,
 															bool predict_deletions,
 															bool predict_polymorphisms,
                               uint8_t min_qual_score,
                               double polymorphism_cutoff,
                               double polymorphism_frequency_cutoff,
-                              const std::string& error_table_file,
+                              const string& error_table_file,
                               bool print_per_position_file
                             );
 				
@@ -217,27 +217,27 @@ namespace breseq {
 		void update_unknown_intervals(uint32_t position, uint32_t seq_id, bool base_predicted, bool this_position_unique_only_coverage);
 
 		//! Predict whether there is a significant polymorphism.
-    polymorphism_prediction predict_polymorphism (base_char best_base_char, base_char second_best_base_char, std::vector<polymorphism_data>& pdata );
+    polymorphism_prediction predict_polymorphism (base_char best_base_char, base_char second_best_base_char, vector<polymorphism_data>& pdata );
 
 		//! Find best mixture of two bases and likelihood of producing observed read bases.
-    std::pair<double,double> best_two_base_model_log10_likelihood(base_char best_base_char, base_char second_best_base_char, std::vector<polymorphism_data>& pdata); 
+    pair<double,double> best_two_base_model_log10_likelihood(base_char best_base_char, base_char second_best_base_char, vector<polymorphism_data>& pdata);
 
 		//! Calculate likelihood of a specific mixture of two bases producing observed read bases.
-    double calculate_two_base_model_log10_likelihood (base_char best_base_char, base_char second_best_base_char, const std::vector<polymorphism_data>& pdata, double best_base_freq);
+    double calculate_two_base_model_log10_likelihood (base_char best_base_char, base_char second_best_base_char, const vector<polymorphism_data>& pdata, double best_base_freq);
 		
     //! Settings passed at command line
 		error_count_results _ecr; //!< Error count results.
 		genome_diff _gd; //!< Genome diff.
     uint8_t _min_qual_score; //!< minimum quality score to count base for RA
 		double _deletion_seed_cutoff;
-		std::vector<double> _deletion_propagation_cutoff; //!< Coverage above which deletions are cutoff.
+		vector<double> _deletion_propagation_cutoff; //!< Coverage above which deletions are cutoff.
 		double _mutation_cutoff; //!< log10 e-value cutoff value for mutation predictions.
 		bool _predict_deletions; //!< Whether to predict mutations.
 		bool _predict_polymorphisms; //!< Whether to predict polymorphisms.
     double _polymorphism_cutoff; //!< log10 e-value cutoff for predicted polymorphisms.
     double _polymorphism_frequency_cutoff; //!< Frequency cutoff for predicted polymorphisms.
-		const std::string _coverage_dir; //!< Directory in which to store coverage data.
-    std::string _output_dir; //!< Directory containing output
+		const string _coverage_dir; //!< Directory in which to store coverage data.
+    string _output_dir; //!< Directory containing output
 
     //! Settings calculated during initialization
 		double _log10_ref_length; //!< log10 of the total reference sequence.
@@ -246,36 +246,36 @@ namespace breseq {
     bool m_use_cErrorTable;
     cErrorTable m_error_table;
     
-		std::vector<sequence_info> _seq_info; //!< information about each sequence.
+		vector<sequence_info> _seq_info; //!< information about each sequence.
 		fastq_map_t error_hash; //!< fastq_file_index -> quality map.
 		shared_info s; // summary stats
 		
 		// this is used to output detailed coverage data:
-    bool _print_coverage_data; //!< whether or not to print
-		std::ofstream _coverage_data;
+		bool _print_coverage_data; //!< whether or not to print
+		ofstream _coverage_data;
 
 		// this is used to output strand and quality information for R to process:
-		std::ofstream _polymorphism_r_input_file;
+		ofstream _polymorphism_r_input_file;
 		
 		// these are state variables used by the deletion-prediction method.
-    boost::optional<uint32_t> _on_deletion_seq_id;
+		uint32_t* _on_deletion_seq_id;
 		double _this_deletion_propagation_cutoff;
-		boost::optional<uint32_t> _last_deletion_start_position;
-		boost::optional<uint32_t> _last_deletion_end_position;
-		boost::optional<uint32_t> _last_deletion_redundant_start_position;
-    boost::optional<uint32_t> _last_deletion_redundant_end_position;
+		uint32_t* _last_deletion_start_position;
+		uint32_t* _last_deletion_end_position;
+		uint32_t* _last_deletion_redundant_start_position;
+		uint32_t* _last_deletion_redundant_end_position;
 		bool _this_deletion_reaches_seed_value;
-    bool _this_deletion_redundant_reached_zero;
+		bool _this_deletion_redundant_reached_zero;
 		uint32_t _last_position_coverage_printed;
-		boost::optional<position_coverage> _left_outside_coverage_item;
-		boost::optional<position_coverage> _left_inside_coverage_item;
-		boost::optional<position_coverage> _last_position_coverage;
+		position_coverage* _left_outside_coverage_item;
+		position_coverage* _left_inside_coverage_item;
+		position_coverage* _last_position_coverage;
     
-    bool _print_per_position_file;
-    std::ofstream _per_position_file;
+		bool _print_per_position_file;
+		ofstream _per_position_file;
     
 		// these are state variables used by the unknown prediction method.
-		boost::optional<uint32_t> _last_start_unknown_interval;
+		uint32_t* _last_start_unknown_interval;
 	};
 
   
@@ -293,13 +293,13 @@ namespace breseq {
       
       void update(base_bam obs_base_bam, uint8_t obs_quality, bool obs_top_strand, int32_t fastq_file_index, error_count_results &ecr);
       void update(const covariate_values_t& cv, bool obs_top_strand, cErrorTable& et);
-      std::vector<double> get_log10_probabilities() { return _log10_probabilities; };
-      boost::tuple<uint8_t,double> get_prediction();
+      vector<double> get_log10_probabilities() { return _log10_probabilities; };
+      pair<uint8_t,double> get_prediction();
       
     protected:
       uint32_t _observations;
-      std::vector<double> _log10_priors; 
-      std::vector<double> _log10_probabilities;
+      vector<double> _log10_priors;
+      vector<double> _log10_probabilities;
       bool _normalized; 
       
       uint8_t _ploidy;

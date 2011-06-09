@@ -19,10 +19,10 @@ LICENSE AND COPYRIGHT
 #ifndef _BRESEQ_CANDIDATE_JUNCTIONS_H_
 #define _BRESEQ_CANDIDATE_JUNCTIONS_H_
 
-#include "breseq/resolve_alignments.h"
-#include "breseq/alignment.h"
+#include "resolve_alignments.h"
+#include "alignment.h"
 
-#include "breseq/common.h"
+#include "common.h"
 
 using namespace std;
 

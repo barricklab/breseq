@@ -437,7 +437,7 @@ namespace breseq {
     	s.ReadFeatureTable(in_feature_file_name);
   }
 
-	uint32_t alignment_mismatches(alignment a, bam_header_t* header, faidx_t* fai, boost::optional<const cReferenceSequences&> ref_seq_info)
+	uint32_t alignment_mismatches(alignment a, bam_header_t* header, faidx_t* fai, const cReferenceSequences* ref_seq_info)
 	{
 		bool verbose = false;
 		uint32_t mismatches = 0;
@@ -448,9 +448,9 @@ namespace breseq {
 		a.query_bounds_0(a_start, a_end);
 
 		string ref_string;
-		if (ref_seq_info)
+		if (ref_seq_info != NULL)
 		{
-			cReferenceSequences ref_seq_info_value = ref_seq_info.get();
+			cReferenceSequences ref_seq_info_value = *ref_seq_info;
 			uint32_t index = ref_seq_info_value.seq_id_to_index(seq_id);
 			ref_string = ref_seq_info_value[index].m_fasta_sequence.m_sequence;
 			ref_string = ref_string.substr(a_start - 1, a_end - a_start + 1);
@@ -464,14 +464,12 @@ namespace breseq {
 			ref_string = fai_fetch(fai, region.c_str(), &len);
 		}
 
-		vector<string> ref_string_list;
-		boost::split(ref_string_list, ref_string, boost::is_any_of("/"));
+		vector<string> ref_string_list = split(ref_string, "/");
 		uint32_t ref_pos = 0;
 
 		string qseq = a.qseq();
 		string read_string = qseq.substr(a_start - 1, a_end - a_start + 1);
-		vector<string> read_string_list;
-		boost::split(read_string_list, read_string, boost::is_any_of("/"));
+		vector<string> read_string_list = split(read_string, "/");
 		uint32_t read_pos = 0;
 
 		uint32_t* cigar_list = a.cigar_array(); // cigar array for this alignment

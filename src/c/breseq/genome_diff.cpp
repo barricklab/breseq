@@ -112,7 +112,7 @@ breseq::END_RANGE,
 
 /*! Constructor.
  */
-breseq::diff_entry::diff_entry(const std::string& t, const std::string& id, const std::string& parents)
+breseq::diff_entry::diff_entry(const string& t, const string& id, const string& parents)
 : _type(t)
 , _id(id)
 , _parents(parents) {
@@ -132,7 +132,7 @@ void breseq::diff_entry::marshal(field_list_t& s) {
 	// marshal specified fields in-order, removing them from the copy after they've 
 	// been printed:
 	const char* f=s_field_order[0];
-	for(std::size_t i=0; ; ++i) {
+	for(size_t i=0; ; ++i) {
 		f = s_field_order[i];
 		if(f == 0) { break; }
 	
@@ -155,14 +155,14 @@ void breseq::diff_entry::marshal(field_list_t& s) {
 
 /*! Add reject reason to diff entry.
  */
-void breseq::add_reject_reason(diff_entry& de, const std::string &reason) {
+void breseq::add_reject_reason(diff_entry& de, const string &reason) {
 
   if (de._fields.find(REJECT) == de._fields.end()) {
       de[REJECT] = reason;
   }
   // exists already, make comma separated list
   else {
-    std::string& reject = boost::get<std::string>(de[REJECT]);
+    string& reject = boost::get<string>(de[REJECT]);
     reject += ",";
     reject +=reason; 
   }
@@ -172,29 +172,29 @@ void breseq::add_reject_reason(diff_entry& de, const std::string &reason) {
 
 /*! Output operator for a diff entry.
  */
-std::ostream& breseq::operator<<(std::ostream& out, breseq::diff_entry& de) {
+ostream& breseq::operator<<(ostream& out, breseq::diff_entry& de) {
 	field_list_t fields;
 	de.marshal(fields);
-	out << boost::join(fields, "\t");
+	out << join(fields, "\t");
 	return out;
 }
 
 
 /*!
  */
-breseq::ra::ra(const std::string& id, const std::string& parents) : diff_entry(RA, id, parents) {
+breseq::ra::ra(const string& id, const string& parents) : diff_entry(RA, id, parents) {
 }
 
 
 /*!
  */
-breseq::mc::mc(const std::string& id, const std::string& parents) : diff_entry(MC, id, parents) {
+breseq::mc::mc(const string& id, const string& parents) : diff_entry(MC, id, parents) {
 }
 
 
 /*!
  */
-breseq::un::un(const std::string& id, const std::string& parents) : diff_entry(UN, id, parents) {
+breseq::un::un(const string& id, const string& parents) : diff_entry(UN, id, parents) {
 }
 
 
@@ -208,7 +208,7 @@ void breseq::genome_diff::add(const diff_entry& v) {
 
 /*! Read a genome diff from the given file.
  */
-void breseq::genome_diff::read(const std::string& filename) {
+void breseq::genome_diff::read(const string& filename) {
 	using namespace std;
 	ifstream ifs(filename.c_str());
 	
@@ -228,8 +228,7 @@ void breseq::genome_diff::read(const std::string& filename) {
 }
 
 
-std::map<std::string, sort_fields_item> diff_entry_sort_fields 
-  = boost::assign::map_list_of
+map<string, sort_fields_item> diff_entry_sort_fields = make_map<string, sort_fields_item>
   (SNP, sort_fields_item(1, SEQ_ID, POSITION))
   (SUB, sort_fields_item(1, SEQ_ID, POSITION))
   (DEL, sort_fields_item(1, SEQ_ID, POSITION))
@@ -244,9 +243,7 @@ std::map<std::string, sort_fields_item> diff_entry_sort_fields
   (UN,  sort_fields_item(3, SEQ_ID, START))
 ;
 
-
-std::map<std::string, uint8_t> sort_order
-  = boost::assign::map_list_of
+map<string, uint8_t> sort_order = make_map<string, uint8_t>
   (SNP, 2)
   (SUB, 4)
   (DEL, 1)
@@ -262,13 +259,12 @@ std::map<std::string, uint8_t> sort_order
 ;
 
 
-
 /*! Write this genome diff to a file.
  */
 bool breseq::diff_entry_sort(boost::shared_ptr<diff_entry> a, boost::shared_ptr<diff_entry> b) {
 
-  std::string a_type = a->_type;
-  std::string b_type = b->_type;
+  string a_type = a->_type;
+  string b_type = b->_type;
 
   sort_fields_item a_sort_fields = diff_entry_sort_fields[a_type];
   sort_fields_item b_sort_fields = diff_entry_sort_fields[b_type];
@@ -280,8 +276,8 @@ bool breseq::diff_entry_sort(boost::shared_ptr<diff_entry> a, boost::shared_ptr<
     return false;
   }
   
-  std::string a_sort_field_2 = boost::get<std::string>((*a)[a_sort_fields._f2]);
-  std::string b_sort_field_2 = boost::get<std::string>((*b)[b_sort_fields._f2]);;
+  string a_sort_field_2 = boost::get<string>((*a)[a_sort_fields._f2]);
+  string b_sort_field_2 = boost::get<string>((*b)[b_sort_fields._f2]);;
   
   if (a_sort_field_2 < b_sort_field_2) {
     return true;
@@ -315,15 +311,15 @@ bool breseq::diff_entry_sort(boost::shared_ptr<diff_entry> a, boost::shared_ptr<
 
 /*! Write this genome diff to a file.
  */
-void breseq::genome_diff::write(const std::string& filename) {
-	std::ofstream ofs(filename.c_str());
-	ofs << "#=GENOME_DIFF 1.0" << std::endl;
+void breseq::genome_diff::write(const string& filename) {
+	ofstream ofs(filename.c_str());
+	ofs << "#=GENOME_DIFF 1.0" << endl;
   
   // sort
-  std::sort(_entry_list.begin(), _entry_list.end(), diff_entry_sort);
+  sort(_entry_list.begin(), _entry_list.end(), diff_entry_sort);
   
 	for(entry_list_t::iterator i=_entry_list.begin(); i!=_entry_list.end(); ++i) {
-		ofs << (**i) << std::endl;
+		ofs << (**i) << endl;
 	}
 	ofs.close();
 }

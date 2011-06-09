@@ -19,10 +19,9 @@ LICENSE AND COPYRIGHT
 #ifndef _BRESEQ_RESOLVE_ALIGNMENTS_H_
 #define _BRESEQ_RESOLVE_ALIGNMENTS_H_
 
-#include "breseq/common.h"
+#include "common.h"
 
-#include "breseq/settings.h"
-#include "breseq/annotated_sequence.h"
+#include "annotated_sequence.h"
 
 using namespace std;
 
