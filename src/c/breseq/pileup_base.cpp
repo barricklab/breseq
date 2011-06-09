@@ -241,8 +241,9 @@ void pileup_base::do_fetch(std::string region) {
   bam_parse_region(m_bam_header, region.c_str(), &target_id, &start_pos, &end_pos); 
   
   // should throw if target not found!
-  
+//	cout << this->unique_start << endl;
   bam_fetch(m_bam_file,m_bam_index,target_id,start_pos,end_pos,this,first_level_fetch_callback);
+	//cout << this->unique_start << endl;
 }
 
 
