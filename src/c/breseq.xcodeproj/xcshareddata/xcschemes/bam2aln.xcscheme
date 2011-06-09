@@ -49,6 +49,10 @@
       <CommandLineArguments>
          <CommandLineArgument
             argument = "--bam /Users/jbarrick/src/breseq/tests/lambda_mixed_pop/data/reference.bam --fasta /Users/jbarrick/src/breseq/tests/lambda_mixed_pop/data/reference.fasta --region NC_001416:12345-12345 --output /Users/jbarrick/Desktop/output.html"
+            isEnabled = "NO">
+         </CommandLineArgument>
+         <CommandLineArgument
+            argument = "--fasta=/Users/jbarrick/src/breseq/tests/REL606_fragment_is_mediated_dels/data/reference.fasta --bam=/Users/jbarrick/src/breseq/tests/REL606_fragment_is_mediated_dels/data/reference.bam --region=REL606-5:1-15 --output=&quot;Testing&quot;"
             isEnabled = "YES">
          </CommandLineArgument>
       </CommandLineArguments>

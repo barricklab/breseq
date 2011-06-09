@@ -582,6 +582,9 @@ void alignment_output_pileup::fetch_callback(const alignment& a) {
 
 			aligned_reads[aligned_read.seq_id] = aligned_read;
 
+      //debug
+      //cerr << "reference start-end: " << a.reference_start_1() << "-" << a.reference_end_1() << endl;
+      
 			if((unique_start == 0) || (unique_start > a.reference_start_1()))
 			{
 			  unique_start = a.reference_start_1();
