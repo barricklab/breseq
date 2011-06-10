@@ -322,10 +322,10 @@ sub post_option_initialize
 	$self->{coverage_file_name} = "$self->{error_calibration_path}/@.coverage.tab";
 	$self->{unique_only_coverage_distribution_file_name} = "$self->{error_calibration_path}/@.unique_only_coverage_distribution.tab";
 	$self->{error_rates_summary_file_name} = "$self->{error_calibration_path}/summary.bin";
+	$self->{error_rates_base_qual_error_prob_file_name} = "$self->{error_calibration_path}/base_qual_error_prob.tab";
 	$self->{plot_error_rates_r_script_file_name} = "$self->{lib_path}/plot_error_rate.r";
 	$self->{plot_error_rates_fit_r_script_file_name} = "$self->{error_calibration_path}/fit.#.r_script";
 	$self->{plot_error_rates_r_script_log_file_name} = "$self->{error_calibration_path}/#.plot_error_rate.log";
-	$self->{error_rates_r_script_file_name} = "$self->{lib_path}/plot_error_rate.r";
 
 	##### mutation identification #####
 	$self->{mutation_identification_path} = "08_mutation_identification";

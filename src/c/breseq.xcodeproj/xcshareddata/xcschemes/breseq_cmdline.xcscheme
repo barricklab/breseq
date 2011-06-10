@@ -97,6 +97,14 @@
          </CommandLineArgument>
          <CommandLineArgument
             argument = "PREPROCESS_ALIGNMENTS --data-path /Users/jbarrick/src/breseq/tests/lambda_mixed_pop/data --reference-alignment-path /Users/jbarrick/src/breseq/tests/lambda_mixed_pop/02_reference_alignment --candidate-junction-path /Users/jbarrick/src/breseq/tests/lambda_mixed_pop/03_candidate_junctions --read-file /Users/jbarrick/src/breseq/tests/data/lambda/lambda_mixed_population.fastq "
+            isEnabled = "NO">
+         </CommandLineArgument>
+         <CommandLineArgument
+            argument = "ERROR_COUNT --bam /Users/jbarrick/src/breseq/tests/lambda_mixed_pop/data/reference.bam --fasta /Users/jbarrick/src/breseq/tests/lambda_mixed_pop/data/reference.fasta --output /Users/jbarrick/src/breseq/tests/lambda_mixed_pop/07_error_calibration/ --readfile lambda_mixed_population --coverage --errors --minimum-quality-score 3 --covariates=read_set=1,obs_base,ref_base,quality=67"
+            isEnabled = "NO">
+         </CommandLineArgument>
+         <CommandLineArgument
+            argument = "ANALYZE_FASTQ --input=tests/REL606_fragment_is_mediated_dels/../data/REL606/REL606.fragment.3.fastq --convert=tests/REL606_fragment_is_mediated_dels/01_sequence_conversion/REL606.fragment.3.converted.fastq"
             isEnabled = "YES">
          </CommandLineArgument>
       </CommandLineArguments>

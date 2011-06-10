@@ -139,6 +139,7 @@ namespace breseq {
       //* IO of tables
       void read_log10_prob_table(const std::string& filename);
       void write_log10_prob_table(const std::string& output_file);
+      void write_base_qual_only_prob_table(const std::string& filename);
       void write_count_table(const std::string& filename);
       
       //* recording counts during error calibration     

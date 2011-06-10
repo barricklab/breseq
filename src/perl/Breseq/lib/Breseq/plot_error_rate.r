@@ -41,11 +41,14 @@ for (e in commandArgs()) {
 }
 
 
-X<-read.table(in_file, sep="\t", header=T)
-Y<-X
+## Old table file was quality and columns with error rates...
 
-log10_min_error_rate = floor(log10(min(X)));
-min_error_rate = 10**floor(log10(min(X)));
+X<-read.table(in_file, sep="\t", header=T)
+
+## calculate min probability after removing quality column
+Y<-X[-1]
+log10_min_error_rate = floor(log10(min(Y)));
+min_error_rate = 10**floor(log10(min(Y)));
 
 pdf(out_file, height=6, width=9)
 
@@ -86,80 +89,80 @@ new_plot <- function(plot_title)
 }
 
 new_plot("Reference Base: A")
-lines(Y$quality, Y$AC, col=C_col)
+lines(X$quality, X$AC, col=C_col)
 points(X$quality, X$AC, pch=C_pch, col=C_col)
 
-lines(Y$quality, Y$AT, col=T_col)
+lines(X$quality, X$AT, col=T_col)
 points(X$quality, X$AT, pch=T_pch, col=T_col)
 
-lines(Y$quality, Y$AG, col=G_col)
+lines(X$quality, X$AG, col=G_col)
 points(X$quality, X$AG, pch=G_pch, col=G_col)
 
-lines(Y$quality, Y$A., col=._col)
+lines(X$quality, X$A., col=._col)
 points(X$quality, X$A., pch=._pch, col=._col)
 
 ## border="black" incompatible with earlier R versions!
 legend("topright", cex=1.1, c("C","T","G","-"), title="Observed Base:", horiz=T, fill=c(C_col,T_col,G_col,._col), bty="n")
 
 new_plot("Reference Base: T")
-lines(Y$quality, Y$TA, col=A_col)
+lines(X$quality, X$TA, col=A_col)
 points(X$quality, X$TA, pch=A_pch, col=A_col)
 
-lines(Y$quality, Y$TC, col=C_col)
+lines(X$quality, X$TC, col=C_col)
 points(X$quality, X$TC, pch=C_pch, col=C_col)
 
-lines(Y$quality, Y$TG, col=G_col)
+lines(X$quality, X$TG, col=G_col)
 points(X$quality, X$TG, pch=G_pch, col=G_col)
 
-lines(Y$quality, Y$T., col=._col)
+lines(X$quality, X$T., col=._col)
 points(X$quality, X$T., pch=._pch, col=._col)
 
 legend("topright", cex=1.1, c("A","C","G","-"), title="Observed Base:", horiz=T, fill=c(A_col,C_col,G_col,._col), bty="n")
 
 
 new_plot("Reference Base: C")
-lines(Y$quality, Y$CA, col=A_col)
+lines(X$quality, X$CA, col=A_col)
 points(X$quality, X$CA, pch=A_pch, col=A_col)
 
-lines(Y$quality, Y$CT, col=T_col)
+lines(X$quality, X$CT, col=T_col)
 points(X$quality, X$CT, pch=T_pch, col=T_col)
 
-lines(Y$quality, Y$CG, col=G_col)
+lines(X$quality, X$CG, col=G_col)
 points(X$quality, X$CG, pch=G_pch, col=G_col)
 
-lines(Y$quality, Y$C., col=._col)
+lines(X$quality, X$C., col=._col)
 points(X$quality, X$C., pch=._pch, col=._col)
 
 legend("topright", cex=1.1, c("A","T","G","-"), title="Observed Base:", horiz=T, fill=c(A_col,T_col,G_col,._col), bty="n")
 
 
 new_plot("Reference Base: G")
-lines(Y$quality, Y$GA, col=A_col)
+lines(X$quality, X$GA, col=A_col)
 points(X$quality, X$GA, pch=A_pch, col=A_col)
 
-lines(Y$quality, Y$GT, col=T_col)
+lines(X$quality, X$GT, col=T_col)
 points(X$quality, X$GT, pch=T_pch, col=T_col)
 
-lines(Y$quality, Y$GC, col=C_col)
+lines(X$quality, X$GC, col=C_col)
 points(X$quality, X$GC, pch=C_pch, col=C_col)
 
-lines(Y$quality, Y$G., col=._col)
+lines(X$quality, X$G., col=._col)
 points(X$quality, X$G., pch=._pch, col=._col)
 
 legend("topright", cex=1.1, c("A","T","C","-"), title="Observed Base:", horiz=T, fill=c(A_col,T_col,C_col,._col), bty="n")
 
 
 new_plot("Reference Base: -")
-lines(Y$quality, Y$.A, col=A_col)
+lines(X$quality, X$.A, col=A_col)
 points(X$quality, X$.A, pch=A_pch, col=A_col)
 
-lines(Y$quality, Y$.T, col=T_col)
+lines(X$quality, X$.T, col=T_col)
 points(X$quality, X$.T, pch=T_pch, col=T_col)
 
-lines(Y$quality, Y$.C, col=C_col)
+lines(X$quality, X$.C, col=C_col)
 points(X$quality, X$.C, pch=C_pch, col=C_col)
 
-lines(Y$quality, Y$.G, col=G_col)
+lines(X$quality, X$.G, col=G_col)
 points(X$quality, X$.G, pch=G_pch, col=G_col)
 
 legend("topright", cex=1.1, c("A","T","C","G"), title="Observed Base:", horiz=T, fill=c(A_col,T_col,C_col,G_col), bty="n")

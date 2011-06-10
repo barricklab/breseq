@@ -652,8 +652,8 @@ if ($settings->do_step('error_counts_done_file_name', "Tabulating error counts")
 ## the old output file(s) for looking at quality score distribution.
 ##	} else {
 ##	if ($settings->{polymorphism_prediction}) { 
-		Breseq::ErrorCalibration::count($settings, $summary, $ref_seq_info,
-		'reference_fasta_file_name', 'reference_bam_file_name', 'unique_only_coverage_distribution_file_name', 'error_counts_file_name');
+##		Breseq::ErrorCalibration::count($settings, $summary, $ref_seq_info,
+##		'reference_fasta_file_name', 'reference_bam_file_name', 'unique_only_coverage_distribution_file_name', 'error_counts_file_name');
 #	}
 	
 	$settings->done_step('error_counts_done_file_name');
@@ -680,6 +680,14 @@ if ($settings->do_step('error_rates_done_file_name', "Re-calibrating base error 
 		Breseq::ErrorCalibration::error_counts_to_error_rates($settings, $summary, $ref_seq_info);
 	}
 	##<-----
+	
+	my $read_file = "temp";
+	my $error_rates_base_qual_error_prob_file_name = $settings->file_name('error_rates_base_qual_error_prob_file_name');
+	my $plot_error_rates_r_script_file_name = $settings->file_name('plot_error_rates_r_script_file_name');
+	my $plot_error_rates_r_script_log_file_name = $settings->file_name('plot_error_rates_r_script_log_file_name', {'#' => $read_file});
+	my $error_rates_plot_file_name = $settings->file_name('error_rates_plot_file_name', {'#' => $read_file});
+	Breseq::Shared::system("R --vanilla in_file=$error_rates_base_qual_error_prob_file_name out_file=$error_rates_plot_file_name < $plot_error_rates_r_script_file_name > $plot_error_rates_r_script_log_file_name");
+	
 	
 	Storable::store($summary->{unique_coverage}, $error_rates_summary_file_name) or die "Can't store data in file $error_rates_summary_file_name!\n";
 	$settings->done_step('error_rates_done_file_name');

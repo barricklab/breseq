@@ -1315,43 +1315,55 @@ sub polymorphism_statistics
 		$total_ref_length+= $bam->length($seq_id);
 	}
 	
-	my $log10_ref_length = log($total_ref_length) / log(10);	
+	my $log10_ref_length = log($total_ref_length) / log(10);
 
-	#for now, just average together all of the quality counts to get distribution
-	my $max_quality = 0;
-	my $error_counts_hash;
-	foreach my $read_file ($settings->read_files)
+##
+## Replacement for below
+##
+## ToDo: This should really make a different column for each input read set.
+##
+	my $coverage_fn = $settings->file_name('unique_only_coverage_distribution_file_name', {'@'=>""});
+	my $outputdir = `dirname $coverage_fn`;
+	chomp $outputdir; $outputdir .= '/';
+	my $count_file_name = $outputdir .= "error_counts.tab";
+
+
+	open COUNT, "<$count_file_name";
+	my $count_header_line = <COUNT>;
+	$count_header_line = <COUNT>;
+	chomp $count_header_line;
+	my @count_header_list = split /\t/, $count_header_line; 
+	my $quality_column;
+	my $count_column;
+	for (my $i=0; $i<scalar @count_header_list; $i++)
 	{
-		my $fastq_file_index = $settings->read_file_to_fastq_file_index($read_file);
-		my $this_error_counts_file_name = $settings->file_name('error_counts_file_name', {'#' => $read_file} );
-		
-		my $this_error_counts_hash = Breseq::ErrorCalibration::load_error_file($this_error_counts_file_name);
-		
-		foreach my $q (keys  %$this_error_counts_hash)
-		{
-			foreach my $b1 ('A', 'T', 'C', 'G')
-			{
-				foreach my $b2 ('A', 'T', 'C', 'G')
-				{
-					$error_counts_hash->{$q} += $this_error_counts_hash->{$q}->{"$b1$b2"};
-				}
-			}
-			$max_quality = $q if ($q > $max_quality);
-		}
+		  $quality_column = $i if ($count_header_list[$i] eq 'quality');
+		  $count_column = $i if ($count_header_list[$i] eq 'count');
 	}
+
+	print "$count_column $quality_column\n";
+
+	my @quality_count_list;
+	while (my $_ = <COUNT>)
+	{
+		chomp $_;
+		print "$_\n";
+		my @line_list = split /\t/, $_; 
+		$quality_count_list[$line_list[$quality_column]] += $line_list[$count_column];
+	}
+	close COUNT;
 
 	my $genome_error_counts_file_name = $settings->file_name('genome_error_counts_file_name');
 
 	open GEC, ">$genome_error_counts_file_name";
-	my @counts;
-	for (my $i=1; $i<=$max_quality; $i++)
+	for (my $i=1; $i<scalar @quality_count_list; $i++)
 	{
 		my $val = 0;
-		$val = $error_counts_hash->{$i} if (defined $error_counts_hash->{$i});
+		$val = $quality_count_list[$i] if (defined $quality_count_list[$i]);
 		print GEC "$val\n";
 	}
 	close GEC;
-
+	
 	my $polymorphism_statistics_input_file_name = $settings->file_name('polymorphism_statistics_input_file_name');
 	my $polymorphism_statistics_output_file_name = $settings->file_name('polymorphism_statistics_output_file_name');
 
