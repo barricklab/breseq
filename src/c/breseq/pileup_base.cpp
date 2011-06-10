@@ -57,7 +57,8 @@ reference_sequence::~reference_sequence() {
  */
 pileup_base::pileup_base(const std::string& bam, const std::string& fasta)
 : m_bam(0), m_bam_header(0), m_bam_index(0), m_bam_file(0), m_last_position_1(0), 
-m_start_position_1(0), m_end_position_1(0), m_clip_start_position_1(0), m_clip_end_position_1(0), m_downsample(0)
+m_start_position_1(0), m_end_position_1(0), m_clip_start_position_1(0), m_clip_end_position_1(0), m_downsample(0),
+m_last_tid(static_cast<uint32_t>(-1))
 {
 	using namespace std;
 	m_bam = samopen(bam.c_str(), "rb", 0);
@@ -120,13 +121,13 @@ int first_level_pileup_callback(uint32_t tid, uint32_t pos, int n, const bam_pil
 		
 	// if _last_tid is initialized, and is different than tid, then we've changed targets.  
 	// call at_end() for the previous target:
-	if(pb->m_last_tid != NULL && (*pb->m_last_tid != tid)) {
+	if((pb->m_last_tid != static_cast<uint32_t>(-1)) && (pb->m_last_tid != tid)) {
     pb->m_last_position_1 = 0;
-		pb->at_end(*pb->m_last_tid, pb->m_bam->header->target_len[*pb->m_last_tid]);
+		pb->at_end(pb->m_last_tid, pb->m_bam->header->target_len[pb->m_last_tid]);
 	}
 
 	// update _last_tid to the current tag (this is effectively a lag):
-	*pb->m_last_tid = tid;
+	pb->m_last_tid = tid;
   
 	uint32_t this_pos_1 = pos+1;
   
@@ -181,7 +182,7 @@ void pileup_base::do_pileup() {
   m_clip_start_position_1 = 0;
   m_clip_end_position_1 = 0;
 	sampileup(m_bam, BAM_DEF_MASK, first_level_pileup_callback, this);
-	at_end(*m_last_tid, m_bam->header->target_len[*m_last_tid]);
+	at_end(m_last_tid, m_bam->header->target_len[m_last_tid]);
 }
 
 
