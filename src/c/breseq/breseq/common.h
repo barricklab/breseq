@@ -242,6 +242,7 @@ namespace breseq {
 	{
 		string str = input;
 		transform(str.begin(), str.end(),str.begin(), ::toupper);
+    return str;
 	}
   
 	//!< Split a string on a delimiter into a vector

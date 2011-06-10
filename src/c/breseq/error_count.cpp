@@ -32,6 +32,8 @@ LICENSE AND COPYRIGHT
 #include "breseq/pileup.h"
 #include "breseq/error_count.h"
 
+using namespace std;
+
 namespace breseq {
 
 const string cErrorTable::covariate_names[] = {
@@ -269,6 +271,9 @@ void error_count_pileup::print_error(const string& output_dir, const vector<stri
       output_file = output_dir + "error_rates.tab"; 
       m_error_table.counts_to_log10_prob();
       m_error_table.write_log10_prob_table(output_file);
+    
+      output_file = output_dir + "base_qual_error_prob.tab"; 
+      m_error_table.write_base_qual_only_prob_table(output_file);
       return;
   }
     
@@ -680,7 +685,7 @@ void cErrorTable::read_log10_prob_table(const string& filename) {
 }
 
 
-/*  cErrorTable::print()
+/*  cErrorTable::write_log10_prob_table()
 
     Print out a table of covariates and counts.
 */
@@ -715,6 +720,90 @@ void cErrorTable::write_log10_prob_table(const string& filename) {
     out << m_log10_prob_table[idx] << endl;
   }
 }
+  
+  /*  cErrorTable::write_base_qual_only_prob_table()
+   
+   Write out an error table where only the base and quality covariates are used.
+   This is used as input to R for making a plot of error rates.
+   */
+  void cErrorTable::write_base_qual_only_prob_table(const std::string& filename) {
+        
+    // we know this is in order...
+    //enum {k_ref_base, k_prev_base, k_obs_base, k_quality, k_read_pos, k_base_repeat, k_num_covariates};
+    
+    // in order baseindex2char(obs_base) * baseindex2char(ref_base); * quality
+    vector<double> output_table;
+    output_table.resize(m_covariate_max[k_obs_base] * m_covariate_max[k_ref_base] * m_covariate_max[k_quality]);
+    
+    
+    for (uint32_t idx=0; idx<m_count_table.size(); idx++) {
+      
+      uint32_t add_index = 0;
+      
+      for (int i=0; i<k_num_covariates; i++) {
+        if (!m_covariate_used[i]) continue;
+        
+        uint32_t j = (idx / m_covariate_offset[i]) % m_covariate_max[i];
+        
+        if (i == k_ref_base) {
+          add_index += j;
+        } else if (i == k_obs_base) {
+          add_index += m_covariate_max[k_ref_base] * j;
+        } else if (i == k_quality) {
+          add_index += m_covariate_max[k_obs_base] * m_covariate_max[k_ref_base] * j;
+        }
+      }
+      
+      output_table[add_index] += m_count_table[idx];
+    }
+    
+    // Calculate probabilities within each set of m_covariate_max[k_ref_base]
+    double running_total = 0;
+    for (uint32_t i=0; i<output_table.size(); i++) {
+      
+      running_total += output_table[i];
+      if (i % m_covariate_max[k_ref_base] == m_covariate_max[k_ref_base] - 1) {
+        
+          for (uint32_t j=i-(m_covariate_max[k_ref_base]-1); j<=i; j++) {
+            if (running_total > 0) {
+              output_table[j] /= running_total;
+            }
+            if (output_table[j] == 0) {
+             output_table[j] = 1E-10; 
+            }
+          }
+          running_total = 0;
+      }
+    }
+    
+    
+    std::ofstream out(filename.c_str());
+    
+    // First line contains the headers: quality and then all possible base changes
+    out << "quality";
+    
+    for (uint32_t b1=0; b1< m_covariate_max[k_ref_base]; b1++) {
+      char base1 = baseindex2char(b1);
+
+      for (uint32_t b2=0; b2< m_covariate_max[k_obs_base]; b2++) {
+        char base2 = baseindex2char(b2);
+        out << "\t" << base1 << base2;
+      }
+    }
+    out << endl;
+     
+    for (uint32_t q=0; q< m_covariate_max[k_quality]; q++) {
+      out << q;
+      for (uint32_t b1=0; b1< m_covariate_max[k_ref_base]; b1++) {        
+        for (uint32_t b2=0; b2< m_covariate_max[k_obs_base]; b2++) {
+          uint32_t idx = q * m_covariate_max[k_obs_base] * m_covariate_max[k_ref_base] + b1 * m_covariate_max[k_ref_base] + b2;
+          out << "\t" << output_table[idx];
+        }
+      }
+      out << endl;
+    }
+  }
+
 
 /*  cErrorTable::print()
 
