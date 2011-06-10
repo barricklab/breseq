@@ -21,7 +21,7 @@ LICENSE AND COPYRIGHT
 #include "breseq/pileup.h"
 #include "assert.h"
 #include "boost/optional.hpp"
-#include <algorithm> //TODO only import needed algs
+
 
 using namespace std;
 
@@ -32,7 +32,13 @@ bool text = false; //TODO Boost::options
 
 alignment_output_pileup::alignment_output_pileup(const string& bam, const string& fasta, const uint32_t maximum_to_align)
         : pileup_base(bam, fasta)
-        , maximum_to_align(maximum_to_align) {
+        , maximum_to_align(maximum_to_align)
+	, unique_start(0)
+	, unique_end(0)
+	, total_reads(0)
+	, processed_reads(0)
+	, last_pos(0)
+	, max_indel(0) {
 }
 
 alignment_output_pileup::~alignment_output_pileup() {}
@@ -77,12 +83,6 @@ void alignment_output::create_alignment(const string bam, const string fasta, co
     //	my $total_reads = 0;
     //	my $processed_reads = 0;
     //
-    m_alignment_output_pileup_object.unique_start = 0; //TODO Move to constructor
-    m_alignment_output_pileup_object.unique_end = 0; //TODO Move to constructor
-    m_alignment_output_pileup_object.total_reads = 0; //TODO Move to constructor
-    m_alignment_output_pileup_object.processed_reads =0; //TODO Move to constructor
-    
-
     //*Call
     //* do fetch_callback
     //	$bam->fetch($region, $fetch_function);
@@ -105,8 +105,7 @@ void alignment_output::create_alignment(const string bam, const string fasta, co
     //
 
     m_alignment_output_pileup_object.do_fetch(region); 
-    //TEST that unique_end, unique_start and aligned_reads map compare to 
-    //perl bam2aln output
+    //TEST that unique_end, unique_start and aligned_reads map compare to perl bam2aln output
 
 
     if ((m_alignment_output_pileup_object.unique_start == 0) || (m_alignment_output_pileup_object.unique_end == 0))
@@ -335,7 +334,7 @@ void alignment_output_pileup::pileup_callback(const pileup& p) {
     //			$aligned_reference->{end} = $pos;
     //		}
     //
-    uint32_t last_pos = 0; // TODO move to constructor
+    
     uint32_t pos = p.position_1();
     if (verbose) //TODO Boost::options
         cout << "POSITION: " << pos << endl;
@@ -370,15 +369,13 @@ void alignment_output_pileup::pileup_callback(const pileup& p) {
     //		}
     //		print "MAX INDEL: $max_indel\n" if ($verbose);
     //
-    max_indel = 0; //TODO move to Constructor
     for (pileup :: const_iterator itr_pileup = p.begin();
             itr_pileup != p.end() ; itr_pileup ++) {
         if (itr_pileup->indel() > max_indel)
         {
             max_indel = itr_pileup->indel();
         }
-        alignment_spans_position[itr_pileup->query_name()]
-        =itr_pileup->is_alignment_spanning_position();
+        alignment_spans_position.push_back((*itr_pileup).query_name());
     }
     if (verbose) //TODO Boost::options
         cout << "MAX INDEL: " << max_indel << endl;
@@ -419,8 +416,8 @@ void alignment_output_pileup::pileup_callback(const pileup& p) {
 //         }
 //     }
 //     $last_pos = $pos;	
-    uint32_t start = m_start_position_1; //TODO move to constructo
-    uint32_t end = m_end_position_1; //TODO move to constructor
+    uint32_t start = m_start_position_1; //TODO move creation
+    uint32_t end = m_end_position_1; //TODO move creation
     
     if ( ( last_pos != 0 ) && ( last_pos < pos) )
     {
@@ -557,8 +554,8 @@ void alignment_output_pileup::pileup_callback(const pileup& p) {
 	} 
 	else 
 	{
-	  uint8_t quality = (*itr_pileup).quality_base_1((*itr_pileup).query_position_1()+index); //TODO move creation 
-	  char base = (*itr_pileup).query_char_sequence().substr((*itr_pileup).query_position_1()+index,1)[0];//TODO ASK casting string to char
+	  uint8_t quality = (*itr_pileup).quality_base_0((*itr_pileup).query_position_0()+index); //TODO move creation 
+	  char base = (*itr_pileup).query_char_sequence().substr((*itr_pileup).query_position_0()+index,1)[0];//TODO ASK casting string to char
 	
 	  
 	  if(!text) //TODO Boost::options
@@ -569,7 +566,7 @@ void alignment_output_pileup::pileup_callback(const pileup& p) {
 	   {
 	     base = tolower(base);
 	   }
-	   if((trim_right !=0) && (((*itr_pileup).query_length()-(*itr_pileup).query_position_1()) <= trim_right))
+	   if((trim_right !=0) && (((*itr_pileup).query_length()-(*itr_pileup).query_position_0()) <= trim_right))
 	   {
 	     base = tolower(base);
 	   }
