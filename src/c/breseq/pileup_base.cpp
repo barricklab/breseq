@@ -121,8 +121,8 @@ int first_level_pileup_callback(uint32_t tid, uint32_t pos, int n, const bam_pil
 		
 	// if _last_tid is initialized, and is different than tid, then we've changed targets.  
 	// call at_end() for the previous target:
-	if((pb->m_last_tid != static_cast<uint32_t>(-1)) && (pb->m_last_tid != tid)) {
-    pb->m_last_position_1 = 0;
+	if((pb->m_last_tid != UNDEFINED) && (pb->m_last_tid != tid)) {
+		pb->m_last_position_1 = 0;
 		pb->at_end(pb->m_last_tid, pb->m_bam->header->target_len[pb->m_last_tid]);
 	}
 
