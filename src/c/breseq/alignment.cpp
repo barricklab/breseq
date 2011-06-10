@@ -18,6 +18,9 @@ LICENSE AND COPYRIGHT
 
 #include "breseq/alignment.h"
 
+
+using namespace std;
+
 namespace breseq {
 
 /*! Constructor.
@@ -84,14 +87,28 @@ bool alignment::is_trimmed() const {
 	return false;
 }
 //! Return number of locations on left of sequence to be trimmed
-uint8_t alignment::trim_left() const {
+uint32_t alignment::trim_left() const {
   uint8_t *auxl = bam_aux_get(_a,"XL");
-  return *auxl;
+  if(auxl)
+  {
+    return (uint32_t)bam_aux2i(auxl); 
+  }
+  else
+  {
+    return 0;
+  }
 }
 //! Return number of locations on right of sequence to be trimmed
-uint8_t alignment::trim_right() const {
+uint32_t alignment::trim_right() const {
   uint8_t *auxr = bam_aux_get(_a,"XR");
-  return *auxr;
+  if(auxr)
+  {
+    return (uint32_t)bam_aux2i(auxr); 
+  }
+  else 
+  {
+    return 0;
+  }
 }
 //			my $trimmed = 0;
 //			my $trim_left = $a->aux_get('XL');  

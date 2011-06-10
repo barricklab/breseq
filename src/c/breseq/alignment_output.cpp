@@ -21,6 +21,7 @@ LICENSE AND COPYRIGHT
 #include "breseq/pileup.h"
 #include "assert.h"
 #include "boost/optional.hpp"
+#include <algorithm> //TODO only import needed algs
 
 using namespace std;
 
@@ -80,6 +81,7 @@ void alignment_output::create_alignment(const string bam, const string fasta, co
     m_alignment_output_pileup_object.unique_end = 0; //TODO Move to constructor
     m_alignment_output_pileup_object.total_reads = 0; //TODO Move to constructor
     m_alignment_output_pileup_object.processed_reads =0; //TODO Move to constructor
+    
 
     //*Call
     //* do fetch_callback
@@ -417,6 +419,8 @@ void alignment_output_pileup::pileup_callback(const pileup& p) {
 //         }
 //     }
 //     $last_pos = $pos;	
+    uint32_t start = m_start_position_1; //TODO move to constructo
+    uint32_t end = m_end_position_1; //TODO move to constructor
     
     if ( ( last_pos != 0 ) && ( last_pos < pos) )
     {
@@ -439,15 +443,15 @@ void alignment_output_pileup::pileup_callback(const pileup& p) {
                 aligned_references[index_aligned_reference].aligned_quals += char(255);
             }//TEST with multiple reference sequences
             //ANNOTATIONS: add gaps
-	    uint32_t start = m_start_position_1; //TODO move to constructor
-	    uint32_t end = m_end_position_1; //TODO move to constructor
-	    uint32_t insert_start = 0; //TODO create region parser insert start case;
+	    
+	    
+	    
 	    
 	    if((insert_start == 0) && (last_pos == start)
 	      || (last_pos > start) && (last_pos <= end)){
-	    aligned_annotation.aligned_annotation_bases += '|';		
+	    aligned_annotation.aligned_bases += '|';		
 	    } else {
-	    aligned_annotation.aligned_annotation_bases += ' ';	      
+	    aligned_annotation.aligned_bases += ' ';	      
 	    }
 	    last_pos++;	    
 	}
@@ -485,16 +489,17 @@ void alignment_output_pileup::pileup_callback(const pileup& p) {
     
     for (pileup :: const_iterator itr_pileup = p.begin();
             itr_pileup != p.end() ; itr_pileup ++) {
-      updated[(*itr_pileup).query_name()] = true; //TODO initialize map to false, what is size?
+      updated.push_back((*itr_pileup).query_name()); 
       
       bool indel = (*itr_pileup).indel(); //TODO move?
       
       struct_aligned_read aligned_read = aligned_reads[(*itr_pileup).query_name()]; //TODO ASK for more efficient method, pointer?
+            
       aligned_read.strand = (*itr_pileup).strand();
       aligned_read.reference_start = pos;
       aligned_read.reference_end = pos;
        
-      if (aligned_read.start = 0)
+      if (aligned_read.start == 0)
       {
         aligned_read.start = (*itr_pileup).query_position_1();
       }
@@ -553,12 +558,21 @@ void alignment_output_pileup::pileup_callback(const pileup& p) {
 	else 
 	{
 	  uint8_t quality = (*itr_pileup).quality_base_1((*itr_pileup).query_position_1()+index); //TODO move creation 
-	  string base = (*itr_pileup).query_char_sequence().substr((*itr_pileup).query_position_1()+index,1); 
-	  //TODO CHECK function declarations, cast base to char?
+	  char base = (*itr_pileup).query_char_sequence().substr((*itr_pileup).query_position_1()+index,1)[0];//TODO ASK casting string to char
+	
 	  
-	  if (!text) //TODO Boost::options
+	  if(!text) //TODO Boost::options
 	  {
-	    //START HERE
+	   uint8_t trim_left = (*itr_pileup).trim_left();
+	   uint8_t trim_right = (*itr_pileup).trim_right();
+	   if((trim_left != 0) && (p.position_1() <= trim_left))
+	   {
+	     base = tolower(base);
+	   }
+	   if((trim_right !=0) && (((*itr_pileup).query_length()-(*itr_pileup).query_position_1()) <= trim_right))
+	   {
+	     base = tolower(base);
+	   }
 	  }
 	  aligned_read.aligned_bases += base;
 	  aligned_read.aligned_quals += char(quality);
@@ -571,7 +585,7 @@ void alignment_output_pileup::pileup_callback(const pileup& p) {
 	}
 	
       }
-      
+     aligned_reads[(*itr_pileup).query_name()] = aligned_read; //TODO ASK bad coding 
     } 
     //END FIRST ALGINMENT LABEL LOOP
     
@@ -594,8 +608,8 @@ void alignment_output_pileup::pileup_callback(const pileup& p) {
 //     foreach my $aligned_reference (@aligned_references)
 //     {
 //         my $my_ref_base = $ref_base;
-//         $my_ref_base = '.' if ($aligned_reference-> {truncate_start} && ($last_pos < $aligned_reference-> {truncate_start}))
-//                            || ($aligned_reference-> {truncate_end} && ($last_pos > $aligned_reference-> {truncate_end}));
+////         $my_ref_base = '.' if ($aligned_reference-> {truncate_start} && ($last_pos < $aligned_reference-> {truncate_start}))
+////                            || ($aligned_reference-> {truncate_end} && ($last_pos > $aligned_reference-> {truncate_end}));
 // 
 //         $aligned_reference-> {aligned_bases} .= $my_ref_base;
 //         $aligned_reference-> {aligned_bases} .= '.' x ($max_indel) if ($max_indel > 0);
@@ -617,22 +631,62 @@ void alignment_output_pileup::pileup_callback(const pileup& p) {
 //             $aligned_annotation-> {aligned_bases} .= ' ';
 //         }
 //     }
+    //READS: handle those with no
     for (map<string, struct_aligned_read>::const_iterator itr_reads = aligned_reads.begin(); //TODO typedef map
                     itr_reads != aligned_reads.end(); itr_reads++) {
-      if(updated[(*itr_reads).first])
+      //Check if sequence id for current aligned read has been updated.
+      if(find(updated.begin(),updated.end(), (*itr_reads).first) != updated.end()) 
       {
 	continue;
       }
       
       struct_aligned_read aligned_read; //TODO make pointer? more efficient way?
-      aligned_read = aligned_reads[(*itr_reads).first];
+      aligned_read = aligned_reads[(*itr_reads).first]; 
+      aligned_read.aligned_bases.append(' ',max_indel+1);
+      aligned_read.aligned_quals.append(' ',max_indel+1); //BUG crashes with char(254)
       
-      if (max_indel > 0)
+      if(verbose)
       {
-	aligned_read.aligned_bases;
+	cout << aligned_read.aligned_bases << " NOALIGN " << (*itr_reads).first << endl; 
       }
     }
-
+    
+    //now handle the reference sequence
+    char ref_base = reference_base_char_1(p.target(),pos);
+    for(uint32_t index; index < aligned_references.size(); index ++) {
+      char my_ref_base = ref_base;
+      struct_aligned_reference aligned_reference;
+      aligned_reference = aligned_references[index];
+      aligned_reference.aligned_bases += my_ref_base;
+      if(max_indel >  0)
+      {
+	aligned_reference.aligned_bases.append('.',max_indel);
+      }
+      aligned_reference.aligned_quals.append(char(255), max_indel +1);
+    }
+    
+    insert_start = 0;
+    insert_end = 0;
+    //also update any positions of interest for gaps
+    for(uint32_t insert_count = 0; insert_count <= max_indel; insert_count++) {
+      if((insert_start <= insert_count) && (insert_count <= insert_end)
+	&& (pos == start)
+	|| ((insert_start <= insert_count) && (pos == start) && (pos != end))
+	|| ((pos < end && pos > start))
+	|| ((insert_end <= insert_count) && (pos == end) && (pos != start)))
+      {
+	aligned_annotation.aligned_bases += '|';
+      }
+      else
+      {
+	aligned_annotation.aligned_bases += ' ';
+      }
+    }
+    
+      
+      
+      
+    
 
 }
 //END create_alignment()
