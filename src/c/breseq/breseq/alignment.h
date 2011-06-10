@@ -54,7 +54,7 @@ class alignment {
       return on_indel;
     }
 
-     //! Is the read aligned to the reverse strand?
+    //! Is the read aligned to the reverse strand?
     //  Returns 1 if read aligned to bottom strand, 0 if aligned to top strand
     inline uint32_t reference_target_id() const { return _a->core.tid; }
 
@@ -116,9 +116,9 @@ class alignment {
     bool is_trimmed() const;
     
     //! Return number of locations on left of sequence to be trimmed
-    uint8_t trim_left() const;
+    uint32_t trim_left() const;
     //! Return number of locations on right of sequence to be trimmed
-    uint8_t trim_right() const;
+    uint32_t trim_right() const;
 
     //! Start and end coordinates of the aligned part of the read. (was 1-indexed)
     //! Start is always < End. reversed() tells you which strand the match was on.
