@@ -60,7 +60,7 @@ class alignment_output_pileup : public pileup_base {
     }struct_aligned_read;
     //! returns more information about aligned reads given a sequence id string.
     map<string, struct_aligned_read> aligned_reads; 
-    map<string, bool> alignment_spans_position;//TODO change to vector, use .exist()
+    vector<string> alignment_spans_position;//TODO change to vector, use .exist()
 
     //!Helper struct for aligned_refs
     typedef struct {
@@ -81,7 +81,7 @@ class alignment_output_pileup : public pileup_base {
     uint32_t total_reads;
     uint32_t processed_reads;
     uint32_t maximum_to_align;
-    vector<string> updated; //TODO change to vector, use .exist()
+    vector<string> updated; 
     
     uint32_t insert_start;
     uint32_t insert_end;
