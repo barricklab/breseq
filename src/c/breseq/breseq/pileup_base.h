@@ -124,7 +124,7 @@ class pileup_base {
     uint32_t m_downsample;
     
 	refseq_list_t m_refs; //!< Reference sequences.
-	uint32_t* m_last_tid; //!< The "last target" for which the first-level-callback was called.
+	uint32_t m_last_tid; //!< The "last target" for which the first-level-callback was called. -1 = none
 };
 
 } // breseq
