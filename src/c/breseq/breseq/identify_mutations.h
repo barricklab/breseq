@@ -258,12 +258,12 @@ namespace breseq {
 		ofstream _polymorphism_r_input_file;
 		
 		// these are state variables used by the deletion-prediction method.
-		uint32_t* _on_deletion_seq_id;
+		uint32_t _on_deletion_seq_id;
 		double _this_deletion_propagation_cutoff;
-		uint32_t* _last_deletion_start_position;
-		uint32_t* _last_deletion_end_position;
-		uint32_t* _last_deletion_redundant_start_position;
-		uint32_t* _last_deletion_redundant_end_position;
+		uint32_t _last_deletion_start_position;
+		uint32_t _last_deletion_end_position;
+		uint32_t _last_deletion_redundant_start_position;
+		uint32_t _last_deletion_redundant_end_position;
 		bool _this_deletion_reaches_seed_value;
 		bool _this_deletion_redundant_reached_zero;
 		uint32_t _last_position_coverage_printed;
@@ -275,7 +275,7 @@ namespace breseq {
 		ofstream _per_position_file;
     
 		// these are state variables used by the unknown prediction method.
-		uint32_t* _last_start_unknown_interval;
+		uint32_t _last_start_unknown_interval;
 	};
 
   

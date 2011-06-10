@@ -114,7 +114,7 @@ breseq::identify_mutations_pileup::identify_mutations_pileup(
 , _coverage_dir(coverage_dir)
 , _output_dir(output_dir)
 , _log10_ref_length(0)
-, _on_deletion_seq_id(NULL)
+, _on_deletion_seq_id(UNDEFINED)
 , _this_deletion_reaches_seed_value(false)
 , _last_position_coverage_printed(0)
 , _print_per_position_file(print_per_position_file) {
@@ -147,15 +147,16 @@ breseq::identify_mutations_pileup::identify_mutations_pileup(
     _per_position_file.open(filename.c_str());
   }
 
-	_on_deletion_seq_id = NULL;
-	_last_deletion_start_position = NULL;
-	_last_deletion_end_position = NULL;
-	_last_deletion_redundant_start_position = NULL;
-	_last_deletion_redundant_end_position = NULL;
+	_on_deletion_seq_id = UNDEFINED;
+	_last_deletion_start_position = UNDEFINED;
+	_last_deletion_end_position = UNDEFINED;
+	_last_deletion_redundant_start_position = UNDEFINED;
+	_last_deletion_redundant_end_position = UNDEFINED;
+	_last_start_unknown_interval = UNDEFINED;
+
 	_left_outside_coverage_item = NULL;
 	_left_inside_coverage_item = NULL;
 	_last_position_coverage = NULL;
-	_last_start_unknown_interval = NULL;
 }
 
 
@@ -163,15 +164,9 @@ breseq::identify_mutations_pileup::identify_mutations_pileup(
  */
 breseq::identify_mutations_pileup::~identify_mutations_pileup()
 {
-	if (_on_deletion_seq_id) delete _on_deletion_seq_id;
-	if (_last_deletion_start_position) delete _last_deletion_start_position;
-	if (_last_deletion_end_position) delete _last_deletion_end_position;
-	if (_last_deletion_redundant_start_position) delete _last_deletion_redundant_start_position;
-	if (_last_deletion_redundant_end_position) delete _last_deletion_redundant_end_position;
 	if (_left_outside_coverage_item) delete _left_outside_coverage_item;
 	if (_left_inside_coverage_item) delete _left_inside_coverage_item;
 	if (_last_position_coverage) delete _last_position_coverage;
-	if (_last_start_unknown_interval) delete _last_start_unknown_interval;
 }
 
 
@@ -738,10 +733,10 @@ void breseq::identify_mutations_pileup::check_deletion_completion(uint32_t posit
 	//cerr << position << " " << e_value_call << endl;
 		
   // reset if we hit a new fragment  
-  if (seq_id != *_on_deletion_seq_id)
+  if (seq_id != _on_deletion_seq_id)
   {
     _last_position_coverage_printed = 0;
-    *_on_deletion_seq_id = seq_id;
+    _on_deletion_seq_id = seq_id;
   }  
     
 	//# we need to fill in reference positions with NO reads aligned to them
@@ -749,7 +744,7 @@ void breseq::identify_mutations_pileup::check_deletion_completion(uint32_t posit
   //cerr << _last_position_coverage_printed << " " << position << endl;
 
 	for(uint32_t i=_last_position_coverage_printed+1; i<position; ++i) {
-		if(_last_deletion_start_position == NULL) {
+		if(_last_deletion_start_position == UNDEFINED) {
 			//## special treatment for the beginning of a fragment
 			if(_last_position_coverage_printed == 0) {
 				_left_outside_coverage_item = new position_coverage(numeric_limits<double>::quiet_NaN());
@@ -762,9 +757,9 @@ void breseq::identify_mutations_pileup::check_deletion_completion(uint32_t posit
 			
 			// moved into the ifs above, to handle the special case of the fragment beginning.
 			// had to do this because of the change in 0-1 indexing.
-			*_last_deletion_start_position = _last_position_coverage_printed+1;
-      if (_last_deletion_redundant_start_position == NULL) {
-        *_last_deletion_redundant_start_position = _last_position_coverage_printed+1;
+			_last_deletion_start_position = _last_position_coverage_printed+1;
+      if (_last_deletion_redundant_start_position == UNDEFINED) {
+        _last_deletion_redundant_start_position = _last_position_coverage_printed+1;
       }
     }
 		
@@ -796,8 +791,8 @@ void breseq::identify_mutations_pileup::check_deletion_completion(uint32_t posit
     //## UNIQUE COVERAGE
 		//#start a new possible deletion if we fall below the propagation cutoff
 		if(this_position_coverage->unique[1] <= _this_deletion_propagation_cutoff) {
-			if(_last_deletion_start_position == NULL) {
-				*_last_deletion_start_position = position;
+			if(_last_deletion_start_position == UNDEFINED) {
+				_last_deletion_start_position = position;
 				*_left_outside_coverage_item = *_last_position_coverage;
 				*_left_inside_coverage_item = *this_position_coverage;
 			}
@@ -812,20 +807,20 @@ void breseq::identify_mutations_pileup::check_deletion_completion(uint32_t posit
     
     //## REDUNDANT COVERAGE
     //## updated only if we are currently within a deletion
-    if (_last_deletion_start_position != NULL) {
+    if (_last_deletion_start_position != UNDEFINED) {
     //if (defined $last_deletion_start_position)
     //{					
       if (this_position_coverage->redundant[1] == 0) {
         _this_deletion_redundant_reached_zero = true;
-        delete _last_deletion_redundant_end_position;
+        _last_deletion_redundant_end_position = UNDEFINED;
       }
       else if (this_position_coverage->redundant[1] > 0) {
       //## if there is any redundant coverage remember the start (until we find zero redundant coverage)
         if (!_this_deletion_redundant_reached_zero) {
-          *_last_deletion_redundant_start_position = position;
+          _last_deletion_redundant_start_position = position;
         }
         else {
-          if (_last_deletion_redundant_end_position == NULL) *_last_deletion_redundant_end_position = position;
+          if (_last_deletion_redundant_end_position == UNDEFINED) _last_deletion_redundant_end_position = position;
         }
       }
     }
@@ -833,29 +828,27 @@ void breseq::identify_mutations_pileup::check_deletion_completion(uint32_t posit
 	}
 	
 	//##if we are above the propagation cutoff then record the current deletion
-	if(_last_deletion_start_position != NULL
+	if(_last_deletion_start_position != UNDEFINED
 		 && (this_position_coverage == NULL || (this_position_coverage->unique[1] > _this_deletion_propagation_cutoff))) {
 		
 		if(_this_deletion_reaches_seed_value) {
-			position_coverage* tmp;
+			position_coverage* tmp = new position_coverage(numeric_limits<double>::quiet_NaN());
 			
 			// ### for the end of the genome....
-			if(this_position_coverage == NULL) {
-				tmp = new position_coverage(numeric_limits<double>::quiet_NaN());
-			} else {
+			if(this_position_coverage != NULL) {
 				*tmp = *this_position_coverage;
 			}
 
-      *_last_deletion_end_position = position-1;
-      if (_last_deletion_redundant_end_position == NULL) *_last_deletion_redundant_end_position = *_last_deletion_end_position;
-      if (_last_deletion_redundant_start_position == NULL) *_last_deletion_redundant_start_position = *_last_deletion_start_position;
+      _last_deletion_end_position = position-1;
+      if (_last_deletion_redundant_end_position == UNDEFINED) _last_deletion_redundant_end_position = _last_deletion_end_position;
+      if (_last_deletion_redundant_start_position == UNDEFINED) _last_deletion_redundant_start_position = _last_deletion_start_position;
 
 			mc del(to_string(_gd.new_id()), "");
 			del[SEQ_ID] = target_name(seq_id);
-			del[START] = *_last_deletion_start_position;
-			del[END] = *_last_deletion_end_position;
-			del[START_RANGE] = *_last_deletion_redundant_start_position - *_last_deletion_start_position;
-			del[END_RANGE] = *_last_deletion_end_position - *_last_deletion_redundant_end_position;
+			del[START] = _last_deletion_start_position;
+			del[END] = _last_deletion_end_position;
+			del[START_RANGE] = _last_deletion_redundant_start_position - _last_deletion_start_position;
+			del[END_RANGE] = _last_deletion_end_position - _last_deletion_redundant_end_position;
 			
 			if(_left_outside_coverage_item == NULL || isnan(_left_outside_coverage_item->unique[1])) {
 				del[LEFT_OUTSIDE_COV] = numeric_limits<double>::quiet_NaN();
@@ -887,13 +880,14 @@ void breseq::identify_mutations_pileup::check_deletion_completion(uint32_t posit
 		//#reset the search
 		_this_deletion_reaches_seed_value = false;
 		_this_deletion_redundant_reached_zero = false;
-		delete _last_deletion_start_position;
-		delete _last_deletion_end_position;
-		delete _last_deletion_redundant_start_position;
-		delete _last_deletion_redundant_end_position;
+		_last_deletion_start_position = UNDEFINED;
+		_last_deletion_end_position = UNDEFINED;
+		_last_deletion_redundant_start_position = UNDEFINED;
+		_last_deletion_redundant_end_position = UNDEFINED;
 	}
 	
 	if(this_position_coverage != NULL) {
+		if (_last_position_coverage == NULL) _last_position_coverage = new position_coverage();
 		*_last_position_coverage = *this_position_coverage;
 	}
 }
@@ -906,7 +900,7 @@ void breseq::identify_mutations_pileup::update_unknown_intervals(uint32_t positi
   //debug
   /*
 	cerr << position << " " << base_predicted << " " << this_position_unique_only_coverage << endl;
-	if(_last_start_unknown_interval) {
+	if(_last_start_unknown_interval == DEFINED) {
 		cerr << *_last_start_unknown_interval << endl;
 	} else {
 		cerr << "undef" << endl;
@@ -917,8 +911,8 @@ void breseq::identify_mutations_pileup::update_unknown_intervals(uint32_t positi
 		if(this_position_unique_only_coverage) {
 			++s.coverage_unique_uncalled;
 		}
-		if(_last_start_unknown_interval == NULL) {
-			*_last_start_unknown_interval = position;
+		if(_last_start_unknown_interval == UNDEFINED) {
+			_last_start_unknown_interval = position;
 		}
 	}	else {
 		if(this_position_unique_only_coverage) {
@@ -926,14 +920,14 @@ void breseq::identify_mutations_pileup::update_unknown_intervals(uint32_t positi
 		}
 			
 		//#end interval where we were unable to call mutations
-		if(_last_start_unknown_interval != NULL) {
+		if(_last_start_unknown_interval != UNDEFINED) {
 			un new_interval(to_string(_gd.new_id()), "");
 			new_interval[SEQ_ID] = target_name(seq_id);
-			new_interval[START] = *_last_start_unknown_interval;
+			new_interval[START] = _last_start_unknown_interval;
 			new_interval[END] = position - 1;
 			_gd.add(new_interval);
 			
-			delete _last_start_unknown_interval;
+			_last_start_unknown_interval = UNDEFINED;
 		}
 	}
 }

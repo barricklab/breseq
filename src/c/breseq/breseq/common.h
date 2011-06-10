@@ -68,6 +68,9 @@ LICENSE AND COPYRIGHT
 #define _base_bam_is_N(x) (x == 0x0f)
 #define _base_char_is_N(x) (x == 'N')
 
+#define UNDEFINED UINT_MAX
+#define is_defined(x) (x != UINT_MAX)
+
 using namespace std;
 
 namespace breseq {
