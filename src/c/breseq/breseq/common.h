@@ -39,6 +39,7 @@ LICENSE AND COPYRIGHT
 #include <memory>
 #include <sstream>
 #include <string>
+#include <typeinfo>
 #include <utility>
 #include <vector>
 
@@ -227,13 +228,21 @@ namespace breseq {
 		operator map<T, U>() { return m_map; }
 	};
 
-	template <class T> inline string to_string (const T& t)
+	template <typename T> struct make_list : public vector<T> {
+	    make_list(const T& t) { (*this)(t); }
+	    make_list& operator()(const T& t) {
+	        this->push_back(t);
+	        return *this;
+	    }
+	};
+
+	template <typename T> inline string to_string (const T& t)
 	{
 		stringstream ss;
 		ss << t;
 		return ss.str();
 	}
-	template <class T> inline T from_string(const string &s)
+	template <typename T> inline T from_string(const string &s)
 	{
 		T t;
 		istringstream iss(s);
