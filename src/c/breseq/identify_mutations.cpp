@@ -927,8 +927,7 @@ breseq::polymorphism_prediction breseq::identify_mutations_pileup::predict_polym
   long double p_value = 1;
   if (max_likelihood_fr_first_base != 1.0) {
     double likelihood_ratio_test_value = -2*log(10)*log10_likelihood_difference;
-    boost::math::chi_squared myChiSquared(1.0L);
-    p_value = boost::math::pdf(myChiSquared, likelihood_ratio_test_value);
+    p_value = chisquaredistribution(1.0L, likelihood_ratio_test_value);
   }
 
   //debug output 

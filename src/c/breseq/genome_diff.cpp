@@ -196,7 +196,7 @@ breseq::un::un(const string& id, const string& parents) : diff_entry(UN, id, par
 /*! Add evidence to this genome diff.
  */
 void breseq::genome_diff::add(const diff_entry& v) {
-	boost::shared_ptr<diff_entry> de(v.clone());
+	shared_ptr<diff_entry> de(v.clone());
 	_entry_list.push_back(de); 
 }
 
@@ -256,7 +256,7 @@ map<string, uint8_t> sort_order = make_map<string, uint8_t>
 
 /*! Write this genome diff to a file.
  */
-bool breseq::diff_entry_sort(boost::shared_ptr<diff_entry> a, boost::shared_ptr<diff_entry> b) {
+bool breseq::diff_entry_sort(shared_ptr<diff_entry> a, shared_ptr<diff_entry> b) {
 
   string a_type = a->_type;
   string b_type = b->_type;
