@@ -583,20 +583,20 @@ void breseq::identify_mutations_pileup::pileup_callback(const breseq::pileup& p)
 			if (best_base_char == ref_base_char) {
         mut[REF_BASE] = best_base_char;
         mut[NEW_BASE] = second_best_base_char;
-        mut[FREQUENCY] = formatted_double(1 - ppred.frequency, kPolymorphismFrequencyPrecision);
+        mut[FREQUENCY] = formatted_double(1 - ppred.frequency, kPolymorphismFrequencyPrecision).to_string();
       } else if (second_best_base_char == ref_base_char) {
         mut[REF_BASE] = second_best_base_char;
         mut[NEW_BASE] = best_base_char;
-        mut[FREQUENCY] = formatted_double(ppred.frequency, kPolymorphismFrequencyPrecision);  
+        mut[FREQUENCY] = formatted_double(ppred.frequency, kPolymorphismFrequencyPrecision).to_string();
       } else {
         cerr << "Warning: polymorphism between two bases not including reference base found at position " << position << endl;
         mut[REF_BASE] = best_base_char;
         mut[NEW_BASE] = second_best_base_char;
-        mut[FREQUENCY] = formatted_double(1 - ppred.frequency, kPolymorphismFrequencyPrecision);
-        mut[ERROR] = string("polymorphic_without_reference_base");
+        mut[FREQUENCY] = formatted_double(1 - ppred.frequency, kPolymorphismFrequencyPrecision).to_string();
+        mut[ERROR] = "polymorphic_without_reference_base";
       }
       
-			mut[POLYMORPHISM_QUALITY] = formatted_double(ppred.log10_e_value, kMutationQualityPrecision);
+			mut[POLYMORPHISM_QUALITY] = formatted_double(ppred.log10_e_value, kMutationQualityPrecision).to_string();
 			if (ppred.log10_e_value < _polymorphism_cutoff ) {
         breseq::add_reject_reason(mut, "EVALUE");
       } 
@@ -681,13 +681,13 @@ void breseq::identify_mutations_pileup::pileup_callback(const breseq::pileup& p)
     
 		//## More fields common to consensus mutations and polymorphisms
 		//## ...now that ref_base and new_base are defined
-		int* ref_cov = pos_info[boost::get<base_char>(mut[REF_BASE])].unique_trimmed_cov;
-		mut[REF_COV] = make_pair(ref_cov[2], ref_cov[0]);
+		int* ref_cov = pos_info[from_string<base_char>(mut[REF_BASE])].unique_trimmed_cov;
+		mut[REF_COV] = to_string(make_pair(ref_cov[2], ref_cov[0]));
 		
-		int* new_cov = pos_info[boost::get<base_char>(mut[NEW_BASE])].unique_trimmed_cov;
-		mut[NEW_COV] = make_pair(new_cov[2], new_cov[0]);
+		int* new_cov = pos_info[from_string<base_char>(mut[NEW_BASE])].unique_trimmed_cov;
+		mut[NEW_COV] = to_string(make_pair(new_cov[2], new_cov[0]));
 		
-		mut[TOT_COV] = make_pair(total_cov[2], total_cov[0]);
+		mut[TOT_COV] = to_string(make_pair(total_cov[2], total_cov[0]));
 		
 		_gd.add(mut);
 	}
@@ -795,10 +795,10 @@ void breseq::identify_mutations_pileup::check_deletion_completion(uint32_t posit
 			del[START_RANGE] = _last_deletion_redundant_start_position - _last_deletion_start_position;
 			del[END_RANGE] = _last_deletion_end_position - _last_deletion_redundant_end_position;
 			
-      del[LEFT_OUTSIDE_COV] = formatted_double(_left_outside_coverage_item.unique[1], 0);      
-      del[LEFT_INSIDE_COV] = formatted_double(_left_inside_coverage_item.unique[1], 0);
-      del[RIGHT_INSIDE_COV] = formatted_double(_last_position_coverage.unique[1], 0);
-      del[RIGHT_OUTSIDE_COV] = formatted_double(this_position_coverage.unique[1], 0);
+      del[LEFT_OUTSIDE_COV] = formatted_double(_left_outside_coverage_item.unique[1], 0).to_string();
+      del[LEFT_INSIDE_COV] = formatted_double(_left_inside_coverage_item.unique[1], 0).to_string();
+      del[RIGHT_INSIDE_COV] = formatted_double(_last_position_coverage.unique[1], 0).to_string();
+      del[RIGHT_OUTSIDE_COV] = formatted_double(this_position_coverage.unique[1], 0).to_string();
       
 			_gd.add(del);
 		}
