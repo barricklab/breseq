@@ -19,9 +19,6 @@ LICENSE AND COPYRIGHT
 #ifndef _BRESEQ_PILEUP_BASE_H_
 #define _BRESEQ_PILEUP_BASE_H_
 
-#include <boost/shared_ptr.hpp>
-#include <boost/optional.hpp>
-
 #include "common.h"
 
 using namespace std;
@@ -55,7 +52,7 @@ struct reference_sequence {
 class pileup_base {
   public:
     //! Type for a list of reference sequences.
-    typedef vector<boost::shared_ptr<reference_sequence> > refseq_list_t;
+    typedef vector<shared_ptr<reference_sequence> > refseq_list_t;
 
     //! Constructor.
     pileup_base(const string& bam, const string& fasta);

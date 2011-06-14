@@ -191,7 +191,7 @@ namespace breseq {
   };
 	
   //! Sort routine
-  bool diff_entry_sort(boost::shared_ptr<diff_entry> a, boost::shared_ptr<diff_entry> b);
+  bool diff_entry_sort(shared_ptr<diff_entry> a, shared_ptr<diff_entry> b);
 	
 	/*! Genome diff class.
 	 
@@ -203,7 +203,7 @@ namespace breseq {
 	class genome_diff {
 	public:
 
-		typedef vector<boost::shared_ptr<diff_entry> > entry_list_t; //!< Type for a list of diff entries.
+		typedef vector<shared_ptr<diff_entry> > entry_list_t; //!< Type for a list of diff entries.
 		
 		//! Constructor.
 		genome_diff() : _current_id(0) { }

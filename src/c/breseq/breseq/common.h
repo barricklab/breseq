@@ -30,6 +30,7 @@ LICENSE AND COPYRIGHT
 #include <string.h>
 
 // C++
+#include <algorithm>
 #include <cmath>
 #include <fstream>
 #include <iomanip>
@@ -39,7 +40,6 @@ LICENSE AND COPYRIGHT
 #include <memory>
 #include <sstream>
 #include <string>
-#include <typeinfo>
 #include <utility>
 #include <vector>
 
@@ -47,9 +47,6 @@ LICENSE AND COPYRIGHT
 #include <bam.h>
 #include <sam.h>
 #include <faidx.h>
-
-// Boost
-#include <boost/shared_ptr.hpp>
 
 // Breseq
 #include "settings.h"
