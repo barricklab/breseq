@@ -28,7 +28,7 @@ using namespace std;
 
 namespace breseq {
 
-	typedef std::map<string, boost::any> map_t;
+	typedef std::map<string, string> map_t;
 
 	class CandidateJunctions
 	{

@@ -19,10 +19,6 @@ LICENSE AND COPYRIGHT
 #ifndef _BRESEQ_GENOME_DIFF_H_
 #define _BRESEQ_GENOME_DIFF_H_
 
-#include <boost/variant.hpp>
-#include <boost/lexical_cast.hpp>
-#include <boost/shared_ptr.hpp>
-
 #include "common.h"
 
 
@@ -77,7 +73,7 @@ namespace breseq {
   static uint8_t kMutationQualityPrecision = 14;
 	
 	//! Convenience typedef, used during diff entry marshalling.
-	typedef std::vector<std::string> field_list_t;
+	typedef vector<string> field_list_t;
 
 	//! Used to add types that will print with a specified precision
   struct formatted_double {
@@ -87,6 +83,10 @@ namespace breseq {
       : _value(v), _precision(p) {}
 
     virtual ~formatted_double() { }
+
+    string to_string() {
+    	return breseq::to_string(_value);
+    }
 
     double  _value;     //actual value
     uint8_t _precision; //number of digits past zero to print
@@ -100,19 +100,19 @@ namespace breseq {
 	 provide easy-to-use mechanisms to manipulate them.
 	 
 	 The key abstraction here is that a diff entry is a map of keys (strings) to
-	 values.  In this case, values are boost::variants (discriminated unions) that
-	 provide int, double, and string types.
+	 values.  In this case, values are strings that represent int, double, string,
+	 formatted_double and pair<,> types.
 	 
 	 For convenience, there are also factory methods on genome_diff that create diff
 	 entries that have been pre-populated according to their type.
 	 */
 	struct diff_entry {
-		typedef std::string key_t; //!< Diff entry keys.
-		typedef boost::variant<char,uint8_t,uint32_t,int,double,formatted_double,std::string,std::pair<int,int> > value_t; //!< Diff entry values.
-		typedef std::map<key_t, value_t> map_t; //!< Diff entry key-value map.
+		typedef string key_t; //!< Diff entry keys.
+		typedef string value_t; //!< Diff entry values.
+		typedef map<key_t, value_t> map_t; //!< Diff entry key-value map.
 		
 		//! Constructor.
-		diff_entry(const std::string& t, const std::string& id, const std::string& parents);
+		diff_entry(const string& t, const string& id, const string& parents);
 		
 		//! Destructor.
 		virtual ~diff_entry() { }
@@ -127,23 +127,23 @@ namespace breseq {
 		virtual diff_entry* clone() const = 0;
     
 		map_t _fields; //!< Information about this diff entry.
-		std::string _type;
-		std::string _id;
-		std::string _parents;
+		string _type;
+		string _id;
+		string _parents;
 	};
 	
-  void add_reject_reason(diff_entry& de, const std::string &reason);
+  void add_reject_reason(diff_entry& de, const string &reason);
 
 	
 	//! Output operator for a diff entry.
-	std::ostream& operator<<(std::ostream& out, diff_entry& de);
+	ostream& operator<<(ostream& out, diff_entry& de);
 	
 	
 	/*!
 	 */
 	struct ra : public diff_entry {
 		//! Constructor.
-		ra(const std::string& id, const std::string& parents);
+		ra(const string& id, const string& parents);
 
 		//! Clone this entry.
 		virtual diff_entry* clone() const { return new ra(*this); }
@@ -154,7 +154,7 @@ namespace breseq {
 	 */
 	struct mc : public diff_entry {
 		//! Constructor.
-		mc(const std::string& id, const std::string& parents);
+		mc(const string& id, const string& parents);
 	
 		//! Clone this entry.
 		virtual diff_entry* clone() const { return new mc(*this); }
@@ -165,59 +165,13 @@ namespace breseq {
 	 */
 	struct un : public diff_entry {
 		//! Constructor.
-		un(const std::string& id, const std::string& parents);
+		un(const string& id, const string& parents);
 
 		//! Clone this entry.
 		virtual diff_entry* clone() const { return new un(*this); }
 	};
-	
-	
-	/*! Visitor class to gather diff entries.
-	 */
-	struct string_visitor : public boost::static_visitor< > {
 
-		//! Constructor.
-		string_visitor() { }
-		
-		//! Default output.
-		template <typename T>
-		void operator()(T& op) {
-			_s = to_string(op);
-		}
-    
-		//! Formatted double output.
-    void operator()(formatted_double& v) {
-			if(std::isnan(v._value)) {
-				_s = "NA";
-			} else {
-				std::ostringstream interpreter;
-				interpreter << std::fixed << std::setprecision(v._precision) << v._value;
-				_s = interpreter.str();
-			}
-		}
-		
-		//! Double output.
-		void operator()(double& v) {
-			if(std::isnan(v)) {
-				_s = "NA";
-			} else {
-				std::ostringstream interpreter;
-				interpreter << std::fixed << std::setprecision(1) << v;
-				_s = interpreter.str();
-			}
-		}
-		
-		//! Pairs are handled separately.
-    void operator()(std::pair<int,int>& p) {
-			_s = to_string(p.first) + "/" + to_string(p.second);
-		}
-		
-		//! Retrieve the string that was built during visitation.
-		const std::string& str() { return _s; }
-		
-		std::string _s;
-	};
-  
+
   //! Genome Diff Sorting
   //! For sorting by a number, then by fields to break ties
   struct sort_fields_item {
@@ -225,15 +179,15 @@ namespace breseq {
 		//! Constructor.
     sort_fields_item() {_f1=0; _f2=""; _f3=""; };
     
-    sort_fields_item(uint8_t f1, std::string f2, std::string f3) :
+    sort_fields_item(uint8_t f1, string f2, string f3) :
       _f1(f1), _f2(f2), _f3(f3) {};
       
 		//! Destructor.
     virtual ~sort_fields_item() {};
   
     uint8_t _f1;
-    std::string _f2;
-    std::string _f3;
+    string _f2;
+    string _f3;
   };
 	
   //! Sort routine
@@ -249,13 +203,13 @@ namespace breseq {
 	class genome_diff {
 	public:
 
-		typedef std::vector<boost::shared_ptr<diff_entry> > entry_list_t; //!< Type for a list of diff entries.
+		typedef vector<boost::shared_ptr<diff_entry> > entry_list_t; //!< Type for a list of diff entries.
 		
 		//! Constructor.
 		genome_diff() : _current_id(0) { }
 		
 		//! Constructor that sets a default filename.
-		genome_diff(const std::string& filename) : _default_filename(filename), _current_id(0) { }
+		genome_diff(const string& filename) : _default_filename(filename), _current_id(0) { }
 		
 		//! Destructor.
 		~genome_diff() { }
@@ -273,13 +227,13 @@ namespace breseq {
 		void write() { write(_default_filename); }
 
 		//! Read a genome diff from a file.
-		void read(const std::string& filename);
+		void read(const string& filename);
 		
 		//! Write the genome diff to a file.
-		void write(const std::string& filename);
+		void write(const string& filename);
 
 	protected:		
-		const std::string _default_filename; //!< Default filename for this diff.
+		const string _default_filename; //!< Default filename for this diff.
 		entry_list_t _entry_list; //!< All diff entries.
 		unsigned int _current_id; //!< Smallest available id.
 	};
