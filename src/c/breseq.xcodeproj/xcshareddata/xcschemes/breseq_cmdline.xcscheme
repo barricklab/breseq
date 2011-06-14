@@ -110,6 +110,30 @@
          </CommandLineArgument>
          <CommandLineArgument
             argument = "ERROR_COUNT --bam /Users/jbarrick/src/breseq/tests/lambda_mixed_pop/03_candidate_junctions/best.bam --fasta /Users/jbarrick/src/breseq/tests/lambda_mixed_pop/data/reference.fasta --output /Users/jbarrick/src/breseq/tests/lambda_mixed_pop/03_candidate_junctions/ --readfile lambda_mixed_population --coverage --minimum-quality-score 3"
+            isEnabled = "NO">
+         </CommandLineArgument>
+         <CommandLineArgument
+            argument = "IDENTIFY_MUTATIONS --bam /Users/jbarrick/src/breseq/tests/lambda_mixed_pop/data/reference.bam --fasta /Users/jbarrick/src/breseq/tests/lambda_mixed_pop/data/reference.fasta --readfile lambda_mixed_population --error_dir /Users/jbarrick/src/breseq/tests/lambda_mixed_pop/07_error_calibration/ --genome_diff /Users/jbarrick/src/breseq/tests/lambda_mixed_pop/08_mutation_identification/ra_mc_evidence.gd --output /Users/jbarrick/src/breseq/tests/lambda_mixed_pop/08_mutation_identification/ --mutation_cutoff 2 --coverage_dir /Users/jbarrick/src/breseq/tests/lambda_mixed_pop/08_mutation_identification/ --deletion_propagation_cutoff 31 --predict_deletions 1 --minimum_quality_score 3 --error_table /Users/jbarrick/src/breseq/tests/lambda_mixed_pop/07_error_calibration//error_rates.tab"
+            isEnabled = "NO">
+         </CommandLineArgument>
+         <CommandLineArgument
+            argument = "TABULATE_COVERAGE --bam /Users/jbarrick/src/breseq/tests/lambda_mixed_pop/data/reference.bam --fasta /Users/jbarrick/src/breseq/tests/lambda_mixed_pop/data/reference.fasta --region NC_001416:1-48502 --output /Users/jbarrick/src/breseq/tests/lambda_mixed_pop/output/evidence/13274.coverage.tab --downsample 80"
+            isEnabled = "NO">
+         </CommandLineArgument>
+         <CommandLineArgument
+            argument = "TABULATE_COVERAGE --bam /Users/jbarrick/src/breseq/tests/lambda_mixed_pop/data/reference.bam --fasta /Users/jbarrick/src/breseq/tests/lambda_mixed_pop/data/reference.fasta --region NC_001416:1-48502 --output /Users/jbarrick/src/breseq/tests/lambda_mixed_pop/output/evidence/13274.coverage.tab --downsample 80"
+            isEnabled = "NO">
+         </CommandLineArgument>
+         <CommandLineArgument
+            argument = "ERROR_COUNT --bam /Users/jbarrick/src/breseq/tests/lambda_mult_ref_read/03_candidate_junctions/best.bam --fasta /Users/jbarrick/src/breseq/tests/lambda_mult_ref_read/data/reference.fasta --output /Users/jbarrick/src/breseq/tests/lambda_mult_ref_read/03_candidate_junctions/ --readfile lambda_mixed_population.1 --readfile lambda_mixed_population.2 --readfile lambda_mixed_population.3 --readfile lambda_mixed_population.4 --readfile lambda_mixed_population.5 --coverage --minimum-quality-score 3"
+            isEnabled = "NO">
+         </CommandLineArgument>
+         <CommandLineArgument
+            argument = "TABULATE_COVERAGE --bam /Users/jbarrick/src/breseq/tests/lambda_mult_ref_read/data/reference.bam --fasta /Users/jbarrick/src/breseq/tests/lambda_mult_ref_read/data/reference.fasta --region NC_001416-2:1051-1253 --output /Users/jbarrick/src/breseq/tests/lambda_mult_ref_read/output/evidence/16799.coverage.tab --downsample 1"
+            isEnabled = "NO">
+         </CommandLineArgument>
+         <CommandLineArgument
+            argument = "IDENTIFY_MUTATIONS --bam /Users/jbarrick/src/breseq/tests/lambda_mult_ref_read/data/reference.bam --fasta /Users/jbarrick/src/breseq/tests/lambda_mult_ref_read/data/reference.fasta --readfile lambda_mixed_population.1 --readfile lambda_mixed_population.2 --readfile lambda_mixed_population.3 --readfile lambda_mixed_population.4 --readfile lambda_mixed_population.5 --error_dir /Users/jbarrick/src/breseq/tests/lambda_mult_ref_read/07_error_calibration/ --genome_diff /Users/jbarrick/src/breseq/tests/lambda_mult_ref_read/08_mutation_identification/ra_mc_evidence.gd --output /Users/jbarrick/src/breseq/tests/lambda_mult_ref_read/08_mutation_identification/ --mutation_cutoff 2 --coverage_dir /Users/jbarrick/src/breseq/tests/lambda_mult_ref_read/08_mutation_identification/ --deletion_propagation_cutoff 37 --deletion_propagation_cutoff 32 --deletion_propagation_cutoff 36 --deletion_propagation_cutoff 57 --deletion_propagation_cutoff 44 --predict_deletions 1 --minimum_quality_score 3 --error_table /Users/jbarrick/src/breseq/tests/lambda_mult_ref_read/07_error_calibration//error_rates.tab"
             isEnabled = "YES">
          </CommandLineArgument>
       </CommandLineArguments>

@@ -33,21 +33,21 @@ namespace breseq {
 	class pileup : public std::vector<alignment> {
 	public:
 		//! Constructor for this pileup.
-		pileup(uint32_t tid, uint32_t pos, int n, const bam_pileup1_t *pile, pileup_base& pb);
+		pileup(uint32_t tid, uint32_t pos_1, int n, const bam_pileup1_t *pile, pileup_base& pb);
 		
 		//! Retrieve the target id for this pileup.
 		inline uint32_t target() const { return _tid; }
     
-                inline uint32_t target_length() const { return _pb.target_length(_tid); }
+    inline uint32_t target_length() const { return _pb.target_length(_tid); }
 		
 		//! Retrieve the name of this target.
 		inline const char* target_name() const { return _pb.target_name(_tid); }
 		
 		//! Retrieve the position of this pileup on the reference sequence (0-indexed).
-		inline uint32_t position_0() const { return _pos; }
+		inline uint32_t position_0() const { return _pos_1-1; }
 
 		//! Retrieve the position of this pileup on the reference sequence (1-indexed).
-		inline uint32_t position_1() const { return _pos+1; }
+		inline uint32_t position_1() const { return _pos_1; }
 
 		//! Retrieve the reference sequence for this pileup.
 		char* reference_sequence() const;
@@ -63,7 +63,7 @@ namespace breseq {
 
 	protected:
 		uint32_t _tid; //!< Target id for this pileup.
-		uint32_t _pos; //!< Position of this pileup in the reference sequence. 0-indexed.
+		uint32_t _pos_1; //!< Position of this pileup in the reference sequence. 1-indexed.
 		pileup_base& _pb; //!< Pileup base class that built this pileup.
 	};
 	

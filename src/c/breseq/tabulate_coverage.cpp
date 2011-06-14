@@ -207,16 +207,10 @@ void breseq::tabulate_coverage_pileup::pileup_callback(const breseq::pileup& p) 
 
 /*! Called at the end of the pileup.
  */
-void breseq::tabulate_coverage_pileup::at_end(uint32_t tid, uint32_t seqlen) {
+void breseq::tabulate_coverage_pileup::at_target_end(const uint32_t tid) {
 
   char* refseq = get_refseq(tid); // reference sequence for this target
-  uint32_t pos = seqlen+1;
-  
-  // print positions not called because there were no reads
-  for (uint32_t i=m_last_position_1+1; i<pos; i++) {
-    m_output_table << i << "\t" << refseq[i-1] << "\t" << 0 << "\t" << 0 << "\t" 
-      << 0 << "\t" << 0 << "\t" << 0 << "\t" << 0 << "\t" << 0 << "\t" << 0 << std::endl;
-  }
+  uint32_t pos = target_length(tid)+1;
 
   // catches this position
   for (uint32_t j=m_last_position_1+1; j<pos; j++) {

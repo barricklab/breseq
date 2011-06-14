@@ -276,6 +276,7 @@ namespace breseq {
 					? string::npos
 					: end + theDelimiter.size();
 		}
+    return theStringVector;
 	}
 
 	inline string join(const vector<string>& values, const string& separator)

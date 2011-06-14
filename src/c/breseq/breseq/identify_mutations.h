@@ -207,11 +207,11 @@ namespace breseq {
 		virtual void pileup_callback(const pileup& p);
 		
 		//! Called at the end of the pileup.
-		virtual void at_end(uint32_t tid, uint32_t seqlen);
+		virtual void at_target_end(const uint32_t tid);
 		
 	protected:
 		//! Helper method to track deletions.
-		void check_deletion_completion(uint32_t position, uint32_t seq_id, const position_coverage* this_position_coverage, double e_value_call);
+		void check_deletion_completion(uint32_t position, uint32_t seq_id, const position_coverage& this_position_coverage, double e_value_call);
 
 		//! Helper method to track unknowns.
 		void update_unknown_intervals(uint32_t position, uint32_t seq_id, bool base_predicted, bool this_position_unique_only_coverage);
@@ -267,9 +267,9 @@ namespace breseq {
 		bool _this_deletion_reaches_seed_value;
 		bool _this_deletion_redundant_reached_zero;
 		uint32_t _last_position_coverage_printed;
-		position_coverage* _left_outside_coverage_item;
-		position_coverage* _left_inside_coverage_item;
-		position_coverage* _last_position_coverage;
+		position_coverage _left_outside_coverage_item;
+		position_coverage _left_inside_coverage_item;
+		position_coverage _last_position_coverage;
     
 		bool _print_per_position_file;
 		ofstream _per_position_file;

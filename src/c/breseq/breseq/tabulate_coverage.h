@@ -51,7 +51,7 @@ namespace breseq {
 		virtual void pileup_callback(const pileup& p);
     
 		//! Called at end of fragment.
-    void at_end(uint32_t tid, uint32_t seqlen);
+    void at_target_end(const uint32_t tid);
 
 	
   protected:

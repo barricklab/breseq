@@ -71,7 +71,11 @@ class pileup_base {
         return m_bam->header->target_name[target];
     }
 
-    //! Retrieve the name of the given target.
+    const int32_t num_targets() const {
+      return m_bam->header->n_targets;
+    }
+  
+    //! Retrieve the length of the given target.
     const uint32_t target_length(uint32_t target) const {
         return m_refs[target]->m_len;
     }
@@ -81,7 +85,7 @@ class pileup_base {
     } ;
 
     // handle this reference sequence position during pileup?
-    bool handle_position(uint32_t pos);
+    bool handle_position(uint32_t pos_1);
 
     //! Do the pileup;  (Callback for each position, with information about read alignments there.)
     //  Note that we call for all positions that have been skipped (with zero alignments)
@@ -103,9 +107,12 @@ class pileup_base {
     virtual void fetch_callback(const alignment& a) {
         assert(false);
     };
-
-    //! Called after the pileup has completed.
-    virtual void at_end(uint32_t tid, uint32_t seqlen) { }
+  
+    //! Called before pileup starts a target.
+    virtual void at_target_start(uint32_t tid) { }
+  
+    //! Called after the pileup completed a target.
+    virtual void at_target_end(const uint32_t tid) { }
 
   protected:
     friend int first_level_pileup_callback(uint32_t tid, uint32_t pos, int n, const bam_pileup1_t *pile, void *data);
@@ -123,8 +130,8 @@ class pileup_base {
     uint32_t m_clip_end_position_1;    // clip columns handled ending here,   0 = off
     uint32_t m_downsample;
     
-	refseq_list_t m_refs; //!< Reference sequences.
-	uint32_t m_last_tid; //!< The "last target" for which the first-level-callback was called. -1 = none
+    refseq_list_t m_refs; //!< Reference sequences.
+    uint32_t m_last_tid; //!< The "last target" for which the first-level-callback was called. -1 = none
 };
 
 } // breseq
