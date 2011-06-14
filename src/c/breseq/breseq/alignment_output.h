@@ -86,15 +86,8 @@ class alignment_output_pileup : public pileup_base {
     uint32_t insert_start;
     uint32_t insert_end;
     
-    
-    
-
     uint32_t last_pos;
     uint32_t max_indel;
-
-    
-    //! Called at end of fragment.
-    //void at_end(uint32_t tid, uint32_t seqlen);
 };
 
 class alignment_output {

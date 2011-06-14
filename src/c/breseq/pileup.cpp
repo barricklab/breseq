@@ -23,9 +23,9 @@ LICENSE AND COPYRIGHT
 
 /*! Constructor.
  */
-breseq::pileup::pileup(uint32_t tid, uint32_t pos, int n, const bam_pileup1_t *pile, breseq::pileup_base& pb)
+breseq::pileup::pileup(uint32_t tid, uint32_t pos_1, int n, const bam_pileup1_t *pile, breseq::pileup_base& pb)
 : _tid(tid)
-, _pos(pos)
+, _pos_1(pos_1)
 , _pb(pb) {
 	
 	// build our alignment objects:

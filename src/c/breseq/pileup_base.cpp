@@ -102,11 +102,16 @@ char* pileup_base::get_refseq(uint32_t target) const {
 
 /*! Guards for whether to handle a position during pileup
  */
-bool pileup_base::handle_position(uint32_t pos) {
+bool pileup_base::handle_position(uint32_t pos_1) {
 
-  if ( m_clip_start_position_1 && (pos < m_clip_start_position_1) ) return false;
-  if ( m_clip_end_position_1   && (pos > m_clip_end_position_1  ) ) return false;
-  if ( m_downsample && ( (pos + m_start_position_1) % m_downsample != 0 ) ) return false;
+  // Print progress (1-indexed position)
+  if((pos_1 % 10000) == 0) {
+    std::cerr << "    POSITION:" << pos_1 << std::endl;
+  }
+  
+  if ( m_clip_start_position_1 && (pos_1 < m_clip_start_position_1) ) return false;
+  if ( m_clip_end_position_1   && (pos_1 > m_clip_end_position_1  ) ) return false;
+  if ( m_downsample && ( (pos_1 + m_start_position_1) % m_downsample != 0 ) ) return false;
 
 	return true;
 }
@@ -118,43 +123,67 @@ bool pileup_base::handle_position(uint32_t pos) {
 int first_level_pileup_callback(uint32_t tid, uint32_t pos, int n, const bam_pileup1_t *pile, void *data) {
   
 	pileup_base* pb = reinterpret_cast<pileup_base*>(data);
-		
-	// if _last_tid is initialized, and is different than tid, then we've changed targets.  
-	// call at_end() for the previous target:
-	if((pb->m_last_tid != UNDEFINED) && (pb->m_last_tid != tid)) {
-		pb->m_last_position_1 = 0;
-		pb->at_end(pb->m_last_tid, pb->m_bam->header->target_len[pb->m_last_tid]);
-	}
+  
+  /////////////////////////
+  // We've changed targets (and may have skipped a target entirely)
 
-	// update _last_tid to the current tag (this is effectively a lag):
-	pb->m_last_tid = tid;
+  // handle special case at the beginning
+  if (pb->m_last_tid == UNDEFINED) {
+    pb->m_last_tid = 0;
+    pb->at_target_start(pb->m_last_tid); 
+  }
+
   
-	uint32_t this_pos_1 = pos+1;
-  
-  for (uint32_t on_pos_1 = pb->m_last_position_1+1; on_pos_1 <= this_pos_1; on_pos_1++) {
+  while(pb->m_last_tid != tid) {
     
-    // Print progress (1-indexed position)
-    if((on_pos_1 % 10000) == 0) {
-      std::cerr << "    POSITION:" << on_pos_1 << std::endl;
-    }
-    
-    // Check for clipping and downsampling
-    // Send empty pileup for skipped positions
-    if ( pb->handle_position(on_pos_1) ) {
+    // 1) Finish all positions in the last target 
+    for (uint32_t on_pos_1 = pb->m_last_position_1+1; on_pos_1 <= pb->target_length(pb->m_last_tid); on_pos_1++) {
       
-      if (on_pos_1 == this_pos_1) {
-        pileup p(tid,on_pos_1-1,n,pile,*pb);
-        pb->pileup_callback(p);
-      } else {
-        pileup p(tid,on_pos_1-1,0,NULL,*pb);
+      // Missing positions
+      if ( pb->handle_position(on_pos_1) ) {
+        pileup p(tid,on_pos_1,0,NULL,*pb);
         pb->pileup_callback(p);
       }
+      
+      pb->m_last_position_1 = on_pos_1;
     }
     
-    // always update last position because we had an alignment...at_end expects this behavior
-    pb->m_last_position_1 = on_pos_1;
+    // 2) Finish the last target
+    if (tid > 0) pb->at_target_end(pb->m_last_tid);
     
+    // 3) Move to next target and reset position to zero
+    pb->m_last_tid++;
+    pb->m_last_position_1 = 0;
+    
+    // Start a new target if necessary
+    if (pb->m_last_position_1 == 0) {
+      pb->at_target_start(pb->m_last_tid); 
+    }
   }
+  
+  uint32_t this_pos_1 = pos+1;
+
+  //////////////////////////
+  // Handle missing positions between last handled and current on same target id
+  for (uint32_t on_pos_1 = pb->m_last_position_1+1; on_pos_1 <= this_pos_1-1; on_pos_1++) {
+    
+    // Missing positions
+    if ( pb->handle_position(on_pos_1) ) {
+      pileup p(tid,on_pos_1,0,NULL,*pb);
+      pb->pileup_callback(p);
+    }
+    pb->m_last_position_1 = on_pos_1;
+  }
+
+
+  //////////////////////////
+  // Handle current position
+        
+  if ( pb->handle_position(this_pos_1) ) {
+    pileup p(tid,this_pos_1,n,pile,*pb);
+    pb->pileup_callback(p);
+  } 
+  pb->m_last_position_1 = this_pos_1;
 
 	return 0;
 }
@@ -175,14 +204,42 @@ int first_level_fetch_callback(const bam1_t *b, void *data)
 /*! Run the pileup.
  */ 
 void pileup_base::do_pileup() {
-  m_last_position_1 = 0; // reset
+  
+  // Start the first target... 
+  m_last_position_1 = 0;
   m_downsample = 0;
   m_start_position_1 = 0;
   m_end_position_1 = 0;
   m_clip_start_position_1 = 0;
   m_clip_end_position_1 = 0;
+  m_last_tid = UNDEFINED;
+  
+  // Do the samtools pileup
 	sampileup(m_bam, BAM_DEF_MASK, first_level_pileup_callback, this);
-	at_end(m_last_tid, m_bam->header->target_len[m_last_tid]);
+  
+  //Handle positions after the last one handled by the pileup.
+  // => This includes target id's that might not have been handled at all...
+
+  
+  for (uint32_t tid = m_last_tid; tid < num_targets(); tid++) {
+  
+    // We need to start this target
+    if (m_last_position_1 == 0) {
+      at_target_start(m_last_tid);
+    }
+    
+    for (uint32_t on_pos_1 = m_last_position_1+1; on_pos_1 <= m_bam->header->target_len[tid]; on_pos_1++) {
+      if ( handle_position(on_pos_1) ) {
+        pileup p(tid,on_pos_1,0,NULL,*this);
+        pileup_callback(p);        m_last_position_1 = on_pos_1;
+      }
+    }
+    
+    // We finished this target
+    at_target_end(m_last_tid);
+    m_last_position_1 = 0;
+  }
+  // @JEB strictly speaking, should also handle any remaining fragments in list....
 }
 
 
@@ -201,7 +258,7 @@ int add_pileup_line (const bam1_t *b, void *data) {
     clip means we stop and end at the indicated alignment columns, even if reads extend past them
  */ 
 void pileup_base::do_pileup(std::string region, bool clip, uint32_t downsample) {
-
+  
   int target_id, start_pos, end_pos;
   bam_parse_region(m_bam_header, region.c_str(), &target_id, &start_pos, &end_pos); 
   // start_pos is one less than input??
@@ -214,6 +271,7 @@ void pileup_base::do_pileup(std::string region, bool clip, uint32_t downsample) 
   m_start_position_1 = start_pos;
   m_end_position_1 = end_pos;
 
+  m_last_tid = UNDEFINED;
   m_last_position_1 = 0; // reset
   m_clip_start_position_1 = 0; // reset
   m_clip_end_position_1 = 0; // reset
@@ -222,17 +280,27 @@ void pileup_base::do_pileup(std::string region, bool clip, uint32_t downsample) 
     m_clip_start_position_1 = start_pos;
     m_clip_end_position_1 = end_pos;
     assert(m_clip_start_position_1 > 0); // prevent underflow of unsigned
-    m_last_position_1 = m_clip_start_position_1-1; // So that nothing is done at start leading up to requested position
+
+    //@JEB test removal
+    //m_last_position_1 = m_clip_start_position_1-1; // So that nothing is done at start leading up to requested position
   }
   
-  bam_plbuf_t        *pileup;
-  pileup = bam_plbuf_init(first_level_pileup_callback,this);
-  bam_fetch(m_bam_file,m_bam_index,target_id,start_pos,end_pos,(void*)pileup,add_pileup_line);
-  bam_plbuf_push(NULL,pileup); // This clears out the clipped right regions... call before at_end!
-  bam_plbuf_destroy(pileup);
-  
-  // Call at end with the last position we handled
-  at_end(target_id, m_last_position_1);
+  bam_plbuf_t        *pileup_buff;
+  pileup_buff = bam_plbuf_init(first_level_pileup_callback,this);
+  bam_fetch(m_bam_file,m_bam_index,target_id,start_pos,end_pos,(void*)pileup_buff,add_pileup_line);
+  bam_plbuf_push(NULL,pileup_buff); // This clears out the clipped right regions... call before at_end!
+  bam_plbuf_destroy(pileup_buff);
+
+  // handle positions after the last one handled by the pileup
+  // unlike the case above, we only need to finish this target
+  for (uint32_t on_pos_1 = m_last_position_1+1; on_pos_1 <= m_end_position_1; on_pos_1++) {
+    if ( handle_position(on_pos_1) ) {
+      pileup p(m_last_tid,on_pos_1,0,NULL,*this);
+      pileup_callback(p);
+      m_last_position_1 = on_pos_1;
+    }
+  }
+  at_target_end(target_id);
 }
 
   

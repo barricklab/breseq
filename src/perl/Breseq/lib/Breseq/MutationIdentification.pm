@@ -1341,13 +1341,13 @@ sub polymorphism_statistics
 		  $count_column = $i if ($count_header_list[$i] eq 'count');
 	}
 
-	print "$count_column $quality_column\n";
+	#print "$count_column $quality_column\n";
 
 	my @quality_count_list;
 	while (my $_ = <COUNT>)
 	{
 		chomp $_;
-		print "$_\n";
+		#print "$_\n";
 		my @line_list = split /\t/, $_; 
 		$quality_count_list[$line_list[$quality_column]] += $line_list[$count_column];
 	}

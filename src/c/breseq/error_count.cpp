@@ -71,7 +71,7 @@ void error_count(const string& bam,
 error_count_pileup::error_count_pileup(const string& bam, const string& fasta, bool do_coverage, bool do_errors, uint8_t min_qual_score, const string& covariates)
 : pileup_base(bam, fasta), m_do_coverage(do_coverage), m_do_errors(do_errors), m_min_qual_score(min_qual_score), m_error_table(covariates) {
 	// reserve enough space for the sequence info:
-	_seq_info.resize(m_bam->header->n_targets);
+	_seq_info.resize(num_targets());
   m_use_CErrorTable = (covariates.length() > 0);
 }
 
@@ -90,6 +90,8 @@ void error_count_pileup::pileup_callback(const pileup& p) {
 	assert(p.target() < _seq_info.size());
 	sequence_info& info=_seq_info[p.target()];
 
+  //cerr << p.target() << " " << p.position_1() << endl;
+  
 	size_t unique_coverage=0; // number of non-deletion, non-redundant alignments at this position.
 	bool has_redundant_reads=false; // flag indicating whether this position has any redundant reads.
 
