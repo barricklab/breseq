@@ -200,7 +200,7 @@ namespace breseq {
 	};
 
   
-  
+
 } // breseq namespace
 
 #endif
