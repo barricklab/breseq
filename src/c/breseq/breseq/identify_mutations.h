@@ -19,10 +19,8 @@ LICENSE AND COPYRIGHT
 #ifndef _BRESEQ_IDENTIFY_MUTATIONS_H_
 #define _BRESEQ_IDENTIFY_MUTATIONS_H_
 
-#include <boost/optional.hpp>
-#include <boost/tuple/tuple.hpp>
-
 #include "common.h"
+#include "chisquare.h"
 #include "error_count.h"
 #include "genome_diff.h"
 #include "pileup_base.h"

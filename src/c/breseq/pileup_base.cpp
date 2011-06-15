@@ -68,7 +68,7 @@ m_last_tid(static_cast<uint32_t>(-1))
 	for(int i=0; i<m_bam->header->n_targets; ++i) {
 		cerr << "  REFERENCE: " << m_bam->header->target_name[i] << endl;
 		cerr << "  LENGTH: " << m_bam->header->target_len[i] << endl;
-		boost::shared_ptr<reference_sequence> refseq(new reference_sequence(fasta, m_bam->header->target_name[i]));
+		shared_ptr<reference_sequence> refseq(new reference_sequence(fasta, m_bam->header->target_name[i]));
 		assert(static_cast<unsigned int>(refseq->m_len) == m_bam->header->target_len[i]);
 		m_refs.push_back(refseq);
 	}
