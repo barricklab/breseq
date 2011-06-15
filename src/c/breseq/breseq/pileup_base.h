@@ -52,7 +52,7 @@ struct reference_sequence {
 class pileup_base {
   public:
     //! Type for a list of reference sequences.
-    typedef vector<shared_ptr<reference_sequence> > refseq_list_t;
+    typedef vector<reference_sequence*> refseq_list_t;
 
     //! Constructor.
     pileup_base(const string& bam, const string& fasta);
