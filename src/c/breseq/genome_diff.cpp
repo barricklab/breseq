@@ -19,7 +19,6 @@ LICENSE AND COPYRIGHT
 #include "breseq/genome_diff.h"
 #include <boost/algorithm/string.hpp>
 #include <boost/assign/list_of.hpp>
-#include <fstream>
 
 using namespace breseq;
 
@@ -138,18 +137,14 @@ void breseq::diff_entry::marshal(field_list_t& s) {
 	
 		map_t::iterator iter=cp.find(f);
 		if(iter != cp.end()) {
-			string_visitor v;
-			boost::apply_visitor(v,iter->second);
-			s.push_back(v.str());
+			s.push_back(iter->second);
 			cp.erase(iter);
 		}
 	}
 	
 	// marshal whatever's left:
 	for(map_t::iterator i=cp.begin(); i!=cp.end(); ++i) {
-		string_visitor v;
-		boost::apply_visitor(v,i->second);
-		s.push_back(i->first + "=" + v.str());
+		s.push_back(i->first + "=" + i->second);
 	}
 }
 
@@ -162,7 +157,7 @@ void breseq::add_reject_reason(diff_entry& de, const string &reason) {
   }
   // exists already, make comma separated list
   else {
-    string& reject = boost::get<string>(de[REJECT]);
+    string reject = de[REJECT];
     reject += ",";
     reject +=reason; 
   }
@@ -276,8 +271,8 @@ bool breseq::diff_entry_sort(boost::shared_ptr<diff_entry> a, boost::shared_ptr<
     return false;
   }
   
-  string a_sort_field_2 = boost::get<string>((*a)[a_sort_fields._f2]);
-  string b_sort_field_2 = boost::get<string>((*b)[b_sort_fields._f2]);;
+  string a_sort_field_2 = (*a)[a_sort_fields._f2];
+  string b_sort_field_2 = (*b)[b_sort_fields._f2];
   
   if (a_sort_field_2 < b_sort_field_2) {
     return true;
@@ -285,8 +280,8 @@ bool breseq::diff_entry_sort(boost::shared_ptr<diff_entry> a, boost::shared_ptr<
     return false;
   }  
 
-  uint32_t a_sort_field_3 = boost::get<uint32_t>((*a)[a_sort_fields._f3]);
-  uint32_t b_sort_field_3 = boost::get<uint32_t>((*b)[b_sort_fields._f3]);;
+  uint32_t a_sort_field_3 = from_string<uint32_t>((*a)[a_sort_fields._f3]);
+  uint32_t b_sort_field_3 = from_string<uint32_t>((*b)[b_sort_fields._f3]);;
   
   if (a_sort_field_3 < b_sort_field_3) {
     return true;

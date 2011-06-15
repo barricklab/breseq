@@ -555,9 +555,9 @@ void breseq::identify_mutations_pileup::pileup_callback(const breseq::pileup& p)
     
 		//## Fields common to consensus mutations and polymorphisms
 		mut[SEQ_ID] = p.target_name();
-		mut[POSITION] = position;
-		mut[INSERT_POSITION] = insert_count;
-		mut[QUALITY] = e_value_call;
+		mut[POSITION] = to_string<uint32_t>(position);
+		mut[INSERT_POSITION] = to_string<uint32_t>(insert_count);
+		mut[QUALITY] = formatted_double(e_value_call, 1).to_string();
       
     // both should never be true!
     assert( !(mutation_predicted && polymorphism_predicted) );
@@ -566,7 +566,7 @@ void breseq::identify_mutations_pileup::pileup_callback(const breseq::pileup& p)
 		if(mutation_predicted) {
 			mut[REF_BASE] = ref_base_char;
 			mut[NEW_BASE] = best_base_char;
-			mut[FREQUENCY] = 1;
+			mut[FREQUENCY] = "1";
 			if(e_value_call < _mutation_cutoff) {
         breseq::add_reject_reason(mut, "EVALUE");
 			}
@@ -583,20 +583,20 @@ void breseq::identify_mutations_pileup::pileup_callback(const breseq::pileup& p)
 			if (best_base_char == ref_base_char) {
         mut[REF_BASE] = best_base_char;
         mut[NEW_BASE] = second_best_base_char;
-        mut[FREQUENCY] = formatted_double(1 - ppred.frequency, kPolymorphismFrequencyPrecision);
+        mut[FREQUENCY] = formatted_double(1 - ppred.frequency, kPolymorphismFrequencyPrecision).to_string();
       } else if (second_best_base_char == ref_base_char) {
         mut[REF_BASE] = second_best_base_char;
         mut[NEW_BASE] = best_base_char;
-        mut[FREQUENCY] = formatted_double(ppred.frequency, kPolymorphismFrequencyPrecision);  
+        mut[FREQUENCY] = formatted_double(ppred.frequency, kPolymorphismFrequencyPrecision).to_string();
       } else {
         cerr << "Warning: polymorphism between two bases not including reference base found at position " << position << endl;
         mut[REF_BASE] = best_base_char;
         mut[NEW_BASE] = second_best_base_char;
-        mut[FREQUENCY] = formatted_double(1 - ppred.frequency, kPolymorphismFrequencyPrecision);
-        mut[ERROR] = string("polymorphic_without_reference_base");
+        mut[FREQUENCY] = formatted_double(1 - ppred.frequency, kPolymorphismFrequencyPrecision).to_string();
+        mut[ERROR] = "polymorphic_without_reference_base";
       }
       
-			mut[POLYMORPHISM_QUALITY] = formatted_double(ppred.log10_e_value, kMutationQualityPrecision);
+			mut[POLYMORPHISM_QUALITY] = formatted_double(ppred.log10_e_value, kMutationQualityPrecision).to_string();
 			if (ppred.log10_e_value < _polymorphism_cutoff ) {
         breseq::add_reject_reason(mut, "EVALUE");
       } 
@@ -681,13 +681,13 @@ void breseq::identify_mutations_pileup::pileup_callback(const breseq::pileup& p)
     
 		//## More fields common to consensus mutations and polymorphisms
 		//## ...now that ref_base and new_base are defined
-		int* ref_cov = pos_info[boost::get<base_char>(mut[REF_BASE])].unique_trimmed_cov;
-		mut[REF_COV] = make_pair(ref_cov[2], ref_cov[0]);
+		int* ref_cov = pos_info[from_string<base_char>(mut[REF_BASE])].unique_trimmed_cov;
+		mut[REF_COV] = to_string(make_pair(ref_cov[2], ref_cov[0]));
 		
-		int* new_cov = pos_info[boost::get<base_char>(mut[NEW_BASE])].unique_trimmed_cov;
-		mut[NEW_COV] = make_pair(new_cov[2], new_cov[0]);
+		int* new_cov = pos_info[from_string<base_char>(mut[NEW_BASE])].unique_trimmed_cov;
+		mut[NEW_COV] = to_string(make_pair(new_cov[2], new_cov[0]));
 		
-		mut[TOT_COV] = make_pair(total_cov[2], total_cov[0]);
+		mut[TOT_COV] = to_string(make_pair(total_cov[2], total_cov[0]));
 		
 		_gd.add(mut);
 	}
@@ -790,15 +790,15 @@ void breseq::identify_mutations_pileup::check_deletion_completion(uint32_t posit
 
 			mc del(to_string(_gd.new_id()), "");
 			del[SEQ_ID] = target_name(seq_id);
-			del[START] = _last_deletion_start_position;
-			del[END] = _last_deletion_end_position;
-			del[START_RANGE] = _last_deletion_redundant_start_position - _last_deletion_start_position;
-			del[END_RANGE] = _last_deletion_end_position - _last_deletion_redundant_end_position;
+			del[START] = to_string<uint32_t>(_last_deletion_start_position);
+			del[END] = to_string<uint32_t>(_last_deletion_end_position);
+			del[START_RANGE] = to_string<uint32_t>(_last_deletion_redundant_start_position - _last_deletion_start_position);
+			del[END_RANGE] = to_string<uint32_t>(_last_deletion_end_position - _last_deletion_redundant_end_position);
 			
-      del[LEFT_OUTSIDE_COV] = formatted_double(_left_outside_coverage_item.unique[1], 0);      
-      del[LEFT_INSIDE_COV] = formatted_double(_left_inside_coverage_item.unique[1], 0);
-      del[RIGHT_INSIDE_COV] = formatted_double(_last_position_coverage.unique[1], 0);
-      del[RIGHT_OUTSIDE_COV] = formatted_double(this_position_coverage.unique[1], 0);
+      del[LEFT_OUTSIDE_COV] = formatted_double(_left_outside_coverage_item.unique[1], 0).to_string();
+      del[LEFT_INSIDE_COV] = formatted_double(_left_inside_coverage_item.unique[1], 0).to_string();
+      del[RIGHT_INSIDE_COV] = formatted_double(_last_position_coverage.unique[1], 0).to_string();
+      del[RIGHT_OUTSIDE_COV] = formatted_double(this_position_coverage.unique[1], 0).to_string();
       
 			_gd.add(del);
 		}
@@ -847,8 +847,8 @@ void breseq::identify_mutations_pileup::update_unknown_intervals(uint32_t positi
 		if(_last_start_unknown_interval != UNDEFINED) {
 			un new_interval(to_string(_gd.new_id()), "");
 			new_interval[SEQ_ID] = target_name(seq_id);
-			new_interval[START] = _last_start_unknown_interval;
-			new_interval[END] = position - 1;
+			new_interval[START] = to_string<uint32_t>(_last_start_unknown_interval);
+			new_interval[END] = to_string<uint32_t>(position - 1);
 			_gd.add(new_interval);
 			
 			_last_start_unknown_interval = UNDEFINED;
