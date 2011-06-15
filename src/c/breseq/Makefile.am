@@ -27,8 +27,10 @@ libbreseq_la_SOURCES = \
 	alignment.cpp \
 	alignment_output.cpp \
 	annotated_sequence.cpp \
+	anyoption.cpp \
 	calculate_trims.cpp \
 	candidate_junctions.cpp \
+	chisquare.cpp \
 	error_count.cpp \
 	fasta.cpp \
 	fastq.cpp \
@@ -42,8 +44,10 @@ libbreseq_la_SOURCES = \
 	breseq/alignment.h \
 	breseq/alignment_output.h \
 	breseq/annotated_sequence.h \
+	breseq/anyoption.h \
 	breseq/calculate_trims.h \
 	breseq/candidate_junctions.h \
+	breseq/chisquare.h \
 	breseq/common.h \
 	breseq/error_count.h \
 	breseq/fasta.h \

@@ -23,6 +23,7 @@ LICENSE AND COPYRIGHT
 #include <boost/program_options.hpp>
 #include <boost/algorithm/string.hpp>
 
+#include "breseq/anyoption.h"
 #include "breseq/fastq.h"
 #include "breseq/alignment_output.h"
 #include "breseq/annotated_sequence.h"
