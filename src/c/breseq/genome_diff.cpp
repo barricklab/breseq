@@ -196,8 +196,7 @@ breseq::un::un(const string& id, const string& parents) : diff_entry(UN, id, par
 /*! Add evidence to this genome diff.
  */
 void breseq::genome_diff::add(const diff_entry& v) {
-	shared_ptr<diff_entry> de(v.clone());
-	_entry_list.push_back(de); 
+	_entry_list.push_back(v);
 }
 
 
@@ -256,10 +255,10 @@ map<string, uint8_t> sort_order = make_map<string, uint8_t>
 
 /*! Write this genome diff to a file.
  */
-bool breseq::diff_entry_sort(shared_ptr<diff_entry> a, shared_ptr<diff_entry> b) {
+bool breseq::diff_entry_sort(diff_entry a, diff_entry b) {
 
-  string a_type = a->_type;
-  string b_type = b->_type;
+  string a_type = a._type;
+  string b_type = b._type;
 
   sort_fields_item a_sort_fields = diff_entry_sort_fields[a_type];
   sort_fields_item b_sort_fields = diff_entry_sort_fields[b_type];
@@ -271,8 +270,8 @@ bool breseq::diff_entry_sort(shared_ptr<diff_entry> a, shared_ptr<diff_entry> b)
     return false;
   }
   
-  string a_sort_field_2 = (*a)[a_sort_fields._f2];
-  string b_sort_field_2 = (*b)[b_sort_fields._f2];
+  string a_sort_field_2 = a[a_sort_fields._f2];
+  string b_sort_field_2 = b[b_sort_fields._f2];
   
   if (a_sort_field_2 < b_sort_field_2) {
     return true;
@@ -280,8 +279,8 @@ bool breseq::diff_entry_sort(shared_ptr<diff_entry> a, shared_ptr<diff_entry> b)
     return false;
   }  
 
-  uint32_t a_sort_field_3 = from_string<uint32_t>((*a)[a_sort_fields._f3]);
-  uint32_t b_sort_field_3 = from_string<uint32_t>((*b)[b_sort_fields._f3]);;
+  uint32_t a_sort_field_3 = from_string<uint32_t>(a[a_sort_fields._f3]);
+  uint32_t b_sort_field_3 = from_string<uint32_t>(b[b_sort_fields._f3]);
   
   if (a_sort_field_3 < b_sort_field_3) {
     return true;
@@ -314,7 +313,7 @@ void breseq::genome_diff::write(const string& filename) {
   sort(_entry_list.begin(), _entry_list.end(), diff_entry_sort);
   
 	for(entry_list_t::iterator i=_entry_list.begin(); i!=_entry_list.end(); ++i) {
-		ofs << (**i) << endl;
+		ofs << (*i) << endl;
 	}
 	ofs.close();
 }

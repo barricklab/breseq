@@ -35,6 +35,7 @@ LICENSE AND COPYRIGHT
 #include <fstream>
 #include <iomanip>
 #include <iostream>
+#include <limits>
 #include <list>
 #include <map>
 #include <memory>

@@ -114,6 +114,9 @@ namespace breseq {
 		//! Constructor.
 		diff_entry(const string& t, const string& id, const string& parents);
 		
+		//! Copy constructor
+		//diff_entry(const diff_entry& rhs) : _fields(rhs._fields), _type(rhs._type), _id(rhs._id), _parents(rhs._parents) {}
+
 		//! Destructor.
 		virtual ~diff_entry() { }
 		
@@ -124,7 +127,7 @@ namespace breseq {
 		virtual void marshal(field_list_t& s);
 		
 		//! Clone this entry.
-		virtual diff_entry* clone() const = 0;
+		//virtual diff_entry* clone() const = 0;
     
 		map_t _fields; //!< Information about this diff entry.
 		string _type;
@@ -191,7 +194,7 @@ namespace breseq {
   };
 	
   //! Sort routine
-  bool diff_entry_sort(shared_ptr<diff_entry> a, shared_ptr<diff_entry> b);
+  bool diff_entry_sort(diff_entry a, diff_entry b);
 	
 	/*! Genome diff class.
 	 
@@ -203,7 +206,7 @@ namespace breseq {
 	class genome_diff {
 	public:
 
-		typedef vector<shared_ptr<diff_entry> > entry_list_t; //!< Type for a list of diff entries.
+		typedef vector<diff_entry> entry_list_t; //!< Type for a list of diff entries.
 		
 		//! Constructor.
 		genome_diff() : _current_id(0) { }
