@@ -49,13 +49,7 @@ LICENSE AND COPYRIGHT
 #include <faidx.h>
 
 // Boost
-#include <boost/any.hpp>
-#include <boost/lexical_cast.hpp>
-#include <boost/optional.hpp>
 #include <boost/shared_ptr.hpp>
-#include <boost/variant.hpp>
-#include <boost/algorithm/string/split.hpp>
-#include <boost/algorithm/string/classification.hpp>
 
 // Breseq
 #include "settings.h"
@@ -242,6 +236,21 @@ namespace breseq {
 		ss << t;
 		return ss.str();
 	}
+	inline string to_string (const pair<int,int>& t)
+	{
+		return to_string(t.first) + '/' + to_string(t.second);
+	}
+	inline string to_string (const double& t, const uint32_t precision=1)
+	{
+		if(isnan(t)) {
+			return "NA";
+		} else {
+			ostringstream interpreter;
+			interpreter << fixed << setprecision(precision) << t;
+			return interpreter.str();
+		}
+	}
+
 	template <typename T> inline T from_string(const string &s)
 	{
 		T t;
