@@ -57,6 +57,7 @@ class alignment_output_pileup : public pileup_base {
       uint32_t start;
       uint32_t end;
       int32_t strand;
+      bool    updated; //whether the read was updated at this pileup iteration already
     }struct_aligned_read;
     //! returns more information about aligned reads given a sequence id string.
     map<string, struct_aligned_read> aligned_reads; 
