@@ -463,7 +463,15 @@ void alignment_output_pileup::pileup_callback(const pileup& p) {
     last_pos = pos;
 
 
-
+  
+  // Reset "updated flag" @JEB
+  // This flag is set if the read was among those returned by the pileup
+  // if it is not set, we insert padding after the loop through the alignments!
+  
+  for (map<string, struct_aligned_read>::iterator itr_reads = aligned_reads.begin(); itr_reads != aligned_reads.end(); itr_reads++) {
+    struct_aligned_read& aligned_read(itr_reads->second); 
+    aligned_read.updated = false;
+  }
 
 // ## END adding reference only positions.
 // 
@@ -491,18 +499,18 @@ void alignment_output_pileup::pileup_callback(const pileup& p) {
 // 
     //BEGIN FIRST ALIGNMENT LABEL LOOP
     
-    vector<string> updated;
     
     for (pileup :: const_iterator itr_pileup = p.begin();
             itr_pileup != p.end() ; itr_pileup ++) {
-      updated.push_back((*itr_pileup).query_name()); 
     
       //this setup gives expected behavior for indels!
       bool indel = (*itr_pileup).indel(); 
       
-      //Which read are we on?
+      //Which read are we on?      
       struct_aligned_read aligned_read = aligned_reads[(*itr_pileup).query_name()]; 
             
+      aligned_read.updated = true;
+      
       aligned_read.strand = (*itr_pileup).strand();
       aligned_read.reference_start = pos;
       aligned_read.reference_end = pos;
@@ -598,6 +606,7 @@ void alignment_output_pileup::pileup_callback(const pileup& p) {
     //END FIRST ALGINMENT LABEL LOOP
     
     //TODO port Dumper(updated)?
+    // NO. That's just debug output. @JEB
 
 // 
 // ## READS: handle those with no
@@ -640,21 +649,24 @@ void alignment_output_pileup::pileup_callback(const pileup& p) {
 //         }
 //     }
     //READS: handle those with no
-    for (map<string, struct_aligned_read>::const_iterator itr_reads = aligned_reads.begin(); //TODO typedef map
+    // @JEB only use a const iterator when you don't want to change things
+    // We are updating the aligned reads.
+    for (map<string, struct_aligned_read>::iterator itr_reads = aligned_reads.begin(); //TODO typedef map
                     itr_reads != aligned_reads.end(); itr_reads++) {
-      //Check if sequence id for current aligned read has been updated.
-      
-      if(find(updated.begin(),updated.end(), (*itr_reads).first) != updated.end()) 
-      {
-	continue;
+
+      //TODO make pointer? more efficient way?
+      // @JEB this must be a pointer, otherwise you are making a copy, and then
+      // changing your copy (and not the original object).
+      struct_aligned_read& aligned_read((*itr_reads).second); 
+
+      //Check if sequence id for current aligned read has already been updated.
+      if (aligned_read.updated) {
+        continue;
       }
-      
-      struct_aligned_read aligned_read; //TODO make pointer? more efficient way?
-      aligned_read = aligned_reads[(*itr_reads).first]; 
       
       for (uint32_t index = 0; index < (max_indel + 1) ; index++)
       {
-	aligned_read.aligned_bases += ' ';
+        aligned_read.aligned_bases += ' ';
       }
       aligned_read.aligned_quals.append(' ',max_indel+1); //BUG crashes with char(254)
       if(verbose)
@@ -672,7 +684,7 @@ void alignment_output_pileup::pileup_callback(const pileup& p) {
       aligned_reference.aligned_bases += my_ref_base;
       if(max_indel >  0)
       {
-	aligned_reference.aligned_bases.append('.',max_indel);
+        aligned_reference.aligned_bases.append('.',max_indel);
       }
       aligned_reference.aligned_quals.append(char(255), max_indel +1);
     }
@@ -682,23 +694,18 @@ void alignment_output_pileup::pileup_callback(const pileup& p) {
     //also update any positions of interest for gaps
     for(uint32_t insert_count = 0; insert_count <= max_indel; insert_count++) {
       if((insert_start <= insert_count) && (insert_count <= insert_end)
-	&& (pos == start)
-	|| ((insert_start <= insert_count) && (pos == start) && (pos != end))
-	|| ((pos < end && pos > start))
-	|| ((insert_end <= insert_count) && (pos == end) && (pos != start)))
+        && (pos == start)
+        || ((insert_start <= insert_count) && (pos == start) && (pos != end))
+        || ((pos < end && pos > start))
+        || ((insert_end <= insert_count) && (pos == end) && (pos != start)))
       {
-	aligned_annotation.aligned_bases += '|';
+        aligned_annotation.aligned_bases += '|';
       }
       else
       {
-	aligned_annotation.aligned_bases += ' ';
+        aligned_annotation.aligned_bases += ' ';
       }
     }
-    
-      
-      
-      
-    
 
 }
 //END create_alignment()
