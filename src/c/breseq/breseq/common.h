@@ -263,6 +263,13 @@ namespace breseq {
 		transform(str.begin(), str.end(),str.begin(), ::toupper);
     return str;
 	}
+	
+	inline string to_lower(const string& input)
+    {
+        string str = input;
+        transform(str.begin(), str.end(),str.begin(), ::tolower);
+    return str;
+    }
   
 	//!< Split a string on a delimiter into a vector
 	inline vector<string> split(

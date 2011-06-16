@@ -39,7 +39,7 @@ struct reference_sequence {
     faidx_t* m_ref; //!< FAI file handle.
     char* m_seq; //!< Reference sequence (ascii).
     int m_len; //<! Length of reference sequence.
-
+// 
   private:
     // not allowed:
     reference_sequence(const reference_sequence& that);

@@ -29,14 +29,47 @@ using namespace std;
 
 namespace breseq {
 
-	/*! This class is a FACTORY for generating HTML alignments
-	 */
+/*! This class is a FACTORY for generating HTML alignments
+ */
 
+//! returns more information about aligned reads given a sequence id string.
+typedef struct {
+    string seq_id;
+    uint32_t length;
+    string read_sequence;
+    string qual_sequence;
+    string aligned_bases;
+    string aligned_quals;
+    uint32_t reference_start;
+    uint32_t reference_end;
+    uint32_t start;
+    uint32_t end;
+    int32_t strand;
+    bool    updated; //whether the read was updated at this pileup iteration already
+}struct_aligned_read;
+
+
+//!Helper struct for aligned_refs
+typedef struct {
+    uint32_t start;
+    uint32_t end;
+    string aligned_bases;
+    string aligned_quals;
+    uint32_t reference_length;
+    string reference_name;
+    char base;
+    
+}struct_aligned_reference;
+
+typedef struct {
+    string aligned_bases;
+}struct_aligned_annotation;
+    
 class alignment_output_pileup : public pileup_base {
-  public:
+public:
     //! Constructor.
     alignment_output_pileup(const string& bam, const string& fasta,
-                                                   const uint32_t maximum_to_align);
+                            const uint32_t maximum_to_align);
     //! Destructor.
     virtual ~alignment_output_pileup();
     //! Called for each genome position.
@@ -45,36 +78,15 @@ class alignment_output_pileup : public pileup_base {
     virtual void fetch_callback(const alignment& a);
 
     //!Helper struct for aligned_reads
-    typedef struct {
-      string seq_id;
-      uint32_t length;
-      string read_sequence;
-      string qual_sequence;
-      string aligned_bases;
-      string aligned_quals;  
-      uint32_t reference_start;
-      uint32_t reference_end;
-      uint32_t start;
-      uint32_t end;
-      int32_t strand;
-      bool    updated; //whether the read was updated at this pileup iteration already
-    }struct_aligned_read;
-    //! returns more information about aligned reads given a sequence id string.
-    map<string, struct_aligned_read> aligned_reads; 
-   
 
-    //!Helper struct for aligned_refs
-    typedef struct {
-      uint32_t start;
-      uint32_t end;
-      string aligned_bases;
-      string aligned_quals;
-    }struct_aligned_reference;
+
+    map<string, struct_aligned_read> aligned_reads;
+
+
+
     vector<struct_aligned_reference> aligned_references;
-    
-    typedef struct {
-      string aligned_bases; 
-    }struct_aligned_annotation;
+
+
     struct_aligned_annotation aligned_annotation;
 
     uint32_t unique_start;
@@ -82,20 +94,23 @@ class alignment_output_pileup : public pileup_base {
     uint32_t total_reads;
     uint32_t processed_reads;
     uint32_t maximum_to_align;
-    
-    
+
+
     uint32_t insert_start;
     uint32_t insert_end;
-    
+
     uint32_t last_pos;
     uint32_t max_indel;
+    
+    
+    char base;
 };
 
 class alignment_output {
-  private:
+private:
     alignment_output_pileup m_alignment_output_pileup_object;
-   
-  public:
+
+public:
     //! Constructor.
     alignment_output(string bam, string fasta, uint32_t in_maximum_to_align);
     //! Output an HTML alignment.
