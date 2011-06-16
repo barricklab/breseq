@@ -20,7 +20,7 @@ LICENSE AND COPYRIGHT
 #include "breseq/common.h"
 #include "breseq/pileup.h"
 #include "assert.h"
-#include "boost/optional.hpp"
+
 
 
 using namespace std;
@@ -37,8 +37,7 @@ alignment_output_pileup::alignment_output_pileup(const string& bam, const string
 	, unique_end(0)
 	, total_reads(0)
 	, processed_reads(0)
-	, last_pos(0)
-	, max_indel(0) {
+	, last_pos(0) {
 }
 
 alignment_output_pileup::~alignment_output_pileup() {}
@@ -103,7 +102,7 @@ void alignment_output::create_alignment(const string bam, const string fasta, co
     //		};
     //	}
     //
-
+        
     m_alignment_output_pileup_object.do_fetch(region); 
     //TEST that unique_end, unique_start and aligned_reads map compare to perl bam2aln output
 
@@ -142,6 +141,8 @@ void alignment_output::create_alignment(const string bam, const string fasta, co
     // *
     //
     //	$bam->pileup($region, $pileup_function);
+    
+    m_alignment_output_pileup_object.last_pos = 0;
     m_alignment_output_pileup_object.do_pileup(region);
 
 
@@ -312,7 +313,7 @@ string alignment_output::html_alignment(const string region) {
     string s;
 
 
-    //	m_alignment_output_object.do_pileup(region);
+    //	m_alignment_output_pileup_object.do_pileup(region);
 
     return s;
 }
@@ -320,7 +321,7 @@ string alignment_output::html_alignment(const string region) {
 /*! Called for each position.*/
 void alignment_output_pileup::pileup_callback(const pileup& p) {
     //	#create the alignment via "pileup"
-    //	my $last_pos;
+    //	my $last_pos; // Created before pileup callback in create_alignment
     //	my $pileup_function = sub {
     //    	my ($seq_id,$pos,$pileup) = @_;
     //		print "POSITION: $pos\n" if ($verbose);
@@ -335,6 +336,8 @@ void alignment_output_pileup::pileup_callback(const pileup& p) {
     //		}
     //
     
+    uint32_t start = m_start_position_1; 
+    uint32_t end = m_end_position_1;
     uint32_t pos = p.position_1();
     if (verbose) //TODO Boost::options
         cout << "POSITION: " << pos << endl;
@@ -369,6 +372,10 @@ void alignment_output_pileup::pileup_callback(const pileup& p) {
     //		}
     //		print "MAX INDEL: $max_indel\n" if ($verbose);
     //
+    
+    uint32_t max_indel =0;
+    vector<string> alignment_spans_position; 
+    
     for (pileup :: const_iterator itr_pileup = p.begin();
             itr_pileup != p.end() ; itr_pileup ++) {
         if (itr_pileup->indel() > max_indel)
@@ -416,9 +423,9 @@ void alignment_output_pileup::pileup_callback(const pileup& p) {
 //         }
 //     }
 //     $last_pos = $pos;	
-    uint32_t start = m_start_position_1; //TODO move creation
-    uint32_t end = m_end_position_1; //TODO move creation
+
     
+    //NOT NEEDED IN C++ PORT?    
     if ( ( last_pos != 0 ) && ( last_pos < pos) )
     {
         last_pos++;
@@ -484,13 +491,17 @@ void alignment_output_pileup::pileup_callback(const pileup& p) {
 // 
     //BEGIN FIRST ALIGNMENT LABEL LOOP
     
+    vector<string> updated;
+    
     for (pileup :: const_iterator itr_pileup = p.begin();
             itr_pileup != p.end() ; itr_pileup ++) {
       updated.push_back((*itr_pileup).query_name()); 
+    
+      //this setup gives expected behavior for indels!
+      bool indel = (*itr_pileup).indel(); 
       
-      bool indel = (*itr_pileup).indel(); //TODO move?
-      
-      struct_aligned_read aligned_read = aligned_reads[(*itr_pileup).query_name()]; //TODO ASK for more efficient method, pointer?
+      //Which read are we on?
+      struct_aligned_read aligned_read = aligned_reads[(*itr_pileup).query_name()]; 
             
       aligned_read.strand = (*itr_pileup).strand();
       aligned_read.reference_start = pos;
@@ -582,7 +593,7 @@ void alignment_output_pileup::pileup_callback(const pileup& p) {
 	}
 	
       }
-     aligned_reads[(*itr_pileup).query_name()] = aligned_read; //TODO ASK bad coding 
+    aligned_reads[(*itr_pileup).query_name()] = aligned_read; //TODO ASK bad coding 
     } 
     //END FIRST ALGINMENT LABEL LOOP
     
@@ -632,6 +643,7 @@ void alignment_output_pileup::pileup_callback(const pileup& p) {
     for (map<string, struct_aligned_read>::const_iterator itr_reads = aligned_reads.begin(); //TODO typedef map
                     itr_reads != aligned_reads.end(); itr_reads++) {
       //Check if sequence id for current aligned read has been updated.
+      
       if(find(updated.begin(),updated.end(), (*itr_reads).first) != updated.end()) 
       {
 	continue;
@@ -639,12 +651,15 @@ void alignment_output_pileup::pileup_callback(const pileup& p) {
       
       struct_aligned_read aligned_read; //TODO make pointer? more efficient way?
       aligned_read = aligned_reads[(*itr_reads).first]; 
-      aligned_read.aligned_bases.append(' ',max_indel+1);
-      aligned_read.aligned_quals.append(' ',max_indel+1); //BUG crashes with char(254)
       
+      for (uint32_t index = 0; index < (max_indel + 1) ; index++)
+      {
+	aligned_read.aligned_bases += ' ';
+      }
+      aligned_read.aligned_quals.append(' ',max_indel+1); //BUG crashes with char(254)
       if(verbose)
       {
-	cout << aligned_read.aligned_bases << " NOALIGN " << (*itr_reads).first << endl; 
+	cout << aligned_read.aligned_bases << "\t" << "\t" << " NOALIGN " << (*itr_reads).first << endl; 
       }
     }
     
