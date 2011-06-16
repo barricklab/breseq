@@ -31,6 +31,7 @@ LICENSE AND COPYRIGHT
 #include "breseq/pileup.h"
 #include "breseq/identify_mutations.h"
 #include "breseq/error_count.h"
+#include <boost/math/distributions/chi_squared.hpp>
 
 
 /*! Convenience wrapper around the identify_mutations_pileup class.
@@ -465,8 +466,8 @@ void breseq::identify_mutations_pileup::pileup_callback(const breseq::pileup& p)
 	
         // Debug output
         /* 
-        cerr << position;
-        for(size_t j=0; j<5; ++j) {
+        cerr << position << endl;  
+         for(size_t j=0; j<5; ++j) {
             cerr << " " << base_list[j] << " " << (pos_info[base_list[j]].unique_trimmed_cov[0] + pos_info[base_list[j]].unique_trimmed_cov[2]);
         }
         cerr << endl;
@@ -924,7 +925,13 @@ breseq::polymorphism_prediction breseq::identify_mutations_pileup::predict_polym
   long double p_value = 1;
   if (max_likelihood_fr_first_base != 1.0) {
     double likelihood_ratio_test_value = -2*log(10)*log10_likelihood_difference;
-    p_value = chisquaredistribution(1.0L, likelihood_ratio_test_value);
+    
+    //boost::math::chi_squared myChiSquared(1.0L);
+    //p_value = boost::math::pdf(myChiSquared, likelihood_ratio_test_value);
+    //cerr << "likelihood_ratio_test_value: " << likelihood_ratio_test_value << " p-value: " << p_value << endl;
+
+    p_value = pchisq(1.0L, likelihood_ratio_test_value);
+    //cerr << "likelihood_ratio_test_value: " << likelihood_ratio_test_value << " p-value: " << p_value << endl;
   }
 
   //debug output 
@@ -933,7 +940,8 @@ breseq::polymorphism_prediction breseq::identify_mutations_pileup::predict_polym
     << " Log10 Likelihood Difference (one vs two base model): " << (log10_likelihood_of_one_base_model - log10_likelihood_of_two_base_model) 
     << " P-value: " << p_value 
     << endl;
-  */  
+  */
+   
   polymorphism_prediction p(max_likelihood_fr_first_base, log10_likelihood_of_one_base_model - log10_likelihood_of_two_base_model, p_value);
 		
 	return p;
