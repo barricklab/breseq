@@ -1,10 +1,7 @@
 #ifndef _ANYOPTION_H
 #define _ANYOPTION_H
 
-#include <iostream>
-#include <fstream>
-#include <stdlib.h>
-#include <string>
+#include "common.h"
 
 #define COMMON_OPT 	1
 #define COMMAND_OPT 	2
@@ -22,10 +19,12 @@
 #define DEFAULT_MAXOPTS 	10
 #define MAX_LONG_PREFIX_LENGTH 	2
 
-#define DEFAULT_MAXUSAGE	3
 #define DEFAULT_MAXHELP         10
 
 #define TRUE_FLAG "true"
+
+#define TAKES_NO_ARGUMENT	((void*)NULL)
+#define USAGE_LEFT_COLUMN_WIDTH	35
 
 using namespace std;
 
@@ -36,6 +35,7 @@ namespace breseq {
 
 	public: /* the public interface */
 		AnyOption();
+		AnyOption(const string& usage_prefix);
 		AnyOption(int maxoptions );
 		AnyOption(int maxoptions , int maxcharoptions);
 		~AnyOption();
@@ -57,8 +57,8 @@ namespace breseq {
 			 * option file name  to use;
 		 */
 
-		void useCommandArgs( int _argc, char **_argv );
-		void useFiileName( const char *_filename );
+		void useCommandArgs( int _argc, char** _argv );
+		void useFilename( const char *_filename );
 
 		/*
 			 * turn off the POSIX style options
@@ -131,17 +131,17 @@ namespace breseq {
 		/*
 			 * process the specified options
 			 */
-		void processCommandArgs( int _argc, char **_argv );
-		void processCommandArgs( int _argc, char **_argv, int max_args );
+		void processCommandArgs( int _argc, char** _argv );
+		void processCommandArgs( int _argc, char** _argv, int max_args );
 		bool processFile( const char *_filename );
 
 		/*
 			 * get the value of the options
 		 * will return NULL if no value is set
 			 */
-		char *getValue( const char *_option );
-		bool  getFlag( const char *_option );
-		char *getValue( char _optchar );
+		string* getValue( const string option );
+		bool  getFlag( const string option );
+		string* getValue( char _optchar );
 		bool  getFlag( char _optchar );
 
 		/*
@@ -149,7 +149,7 @@ namespace breseq {
 		 */
 		void printUsage();
 		void printAutoUsage();
-		void addUsage( const char *line );
+		void addUsage( string line );
 		void printHelp();
 			/* print auto usage printing for unknown options or flag */
 		void autoUsagePrint(bool flag);
@@ -161,9 +161,86 @@ namespace breseq {
 		char* getArgv( int index );
 		bool  hasOptions();
 
+
+
+	private:
+		string word_wrap(string sentence, int width);
+		template<class T> void addOptionOrFlag(const string& option_name, const string& option_description, const T& option_default_value, bool has_argument, bool has_default_value)
+		{
+			if (has_default_value)
+				default_values[option_name] = to_string(option_default_value);
+			vector<string> option_name_split = split(option_name, ",");
+			string usage;
+			if (option_name_split.size() > 1)
+			{
+				if (has_argument)
+					this->setOption(option_name_split[0].c_str(), option_name_split[1][0]);
+				else
+					this->setFlag(option_name_split[0].c_str(), option_name_split[1][0]);
+				usage = "  -" + option_name_split[1] + " [ " + option_name_split[0] + " ]";
+			}
+			else
+			{
+				if (has_argument)
+					this->setOption(option_name_split[0].c_str());
+				else
+					this->setFlag(option_name_split[0].c_str());
+
+				string usage = "  [ " + option_name_split[0] + " ]";
+			}
+
+			if (has_argument) usage += " arg";
+			if (has_default_value)
+			{
+				string string_value = to_string(option_default_value);
+				if (string_value.size() > 0)
+					usage += " (=" + string_value + ")";
+				else
+					usage += " (optional)";
+			}
+
+			if (usage.size() < USAGE_LEFT_COLUMN_WIDTH)
+				usage += string(abs(USAGE_LEFT_COLUMN_WIDTH - usage.size()), ' ');
+
+			string wrapped_description = word_wrap(option_description, terminal_width - USAGE_LEFT_COLUMN_WIDTH);
+			string search_string = "\n";
+			string replace_string = search_string + string(USAGE_LEFT_COLUMN_WIDTH, ' ');
+			string::size_type pos = 0;
+			while ( (pos = wrapped_description.find(search_string, pos)) != string::npos ) {
+				wrapped_description.replace(pos, search_string.size(), replace_string);
+				pos += replace_string.size();
+			}
+			usage += wrapped_description;
+
+			addUsage(usage);
+		}
+
+	public:
+		AnyOption& operator()(const string& option_name, const string& option_description)
+		{
+			addOptionOrFlag(option_name, option_description, "", true, false);
+			return *this;
+		}
+		AnyOption& operator()(const string& option_name, const string& option_description, void* pass_null_if_option_takes_no_argument)
+		{
+			assert(pass_null_if_option_takes_no_argument == NULL);
+			addOptionOrFlag(option_name, option_description, "", false, false);
+			return *this;
+		}
+		template<class T> AnyOption& operator()(const string& option_name, const string& option_description, const T& option_default_value)
+		{
+			addOptionOrFlag(option_name, option_description, option_default_value, true, true);
+			return *this;
+		}
+
+		string operator[](const string& option_name);
+		bool count(const string& option_name);
+
+
+
 	private: /* the hidden data structure */
 		int argc;		/* commandline arg count  */
-		char **argv;  		/* commndline args */
+		char** argv;  		/* commndline args */
 		const char* filename; 	/* the option file */
 		char* appname; 	/* the application name from argv[0] */
 
@@ -174,7 +251,7 @@ namespace breseq {
 
 		/* option strings storage + indexing */
 		int max_options; 	/* maximum number of options */
-		const char **options; 	/* storage */
+		vector<string> options; 	/* storage */
 		int *optiontype; 	/* type - common, command, file */
 		int *optionindex;	/* index into value storage */
 		int option_counter; 	/* counter for added options  */
@@ -187,12 +264,11 @@ namespace breseq {
 		int optchar_counter; 	/* counter for added options  */
 
 		/* values */
-		char **values; 		/* common value storage */
+		map <int, string> values; 		/* common value storage */
 		int g_value_counter; 	/* globally updated value index LAME! */
 
 		/* help and usage */
-		const char **usage; 	/* usage */
-		int max_usage_lines;	/* max usage lines reseverd */
+		vector<string> usage; 	/* usage */
 		int usage_lines;	/* number of usage lines */
 
 		bool command_set;	/* if argc/argv were provided */
@@ -220,6 +296,13 @@ namespace breseq {
 		bool hasoptions;
 		bool autousage;
 
+
+
+		int terminal_width;
+		map<string, string> default_values;
+
+
+
 	private: /* the hidden utils */
 		void init();
 		void init(int maxopt, int maxcharopt );
@@ -232,17 +315,17 @@ namespace breseq {
 		bool doubleCharStorage();
 		bool doubleUsageStorage();
 
-		bool setValue( const char *option , char *value );
-		bool setFlagOn( const char *option );
-		bool setValue( char optchar , char *value);
+		bool setValue( const string option , string value );
+		bool setFlagOn( const string option );
+		bool setValue( char optchar , string value);
 		bool setFlagOn( char optchar );
 
-		void addOption( const char* option , int type );
+		void addOption( const string option , int type );
 		void addOption( char optchar , int type );
-		void addOptionError( const char *opt);
+		void addOptionError( const string opt);
 		void addOptionError( char opt);
-		bool findFlag( char* value );
-		void addUsageError( const char *line );
+		bool findFlag( int index );
+		void addUsageError( string line );
 		bool CommandSet();
 		bool FileSet();
 		bool POSIX();
@@ -258,14 +341,13 @@ namespace breseq {
 		bool consumeFile( char *buffer );
 		void processLine( char *theline, int length );
 		char *chomp( char *str );
-		void valuePairs( char *type, char *value );
-		void justValue( char *value );
+		void valuePairs( char *type, string value );
+		void justValue( char *type );
 
 		void printVerbose( const char *msg );
 		void printVerbose( char *msg );
 		void printVerbose( char ch );
 		void printVerbose( );
-
 
 	}; // class AnyOption
 

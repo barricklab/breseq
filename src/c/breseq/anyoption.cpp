@@ -59,6 +59,8 @@
  * leading to exception when mixing different options types
  */
 
+#include <sys/ioctl.h>
+
 #include "breseq/common.h"
 
 #include "breseq/anyoption.h"
@@ -68,6 +70,15 @@ namespace breseq {
 	AnyOption::AnyOption()
 	{
 		init();
+	}
+
+	AnyOption::AnyOption(const string& usage_prefix)
+	{
+		init();
+		setVerbose(); /* print warnings about unknown options */
+		autoUsagePrint(true); /* print usage for bad options */
+		addUsage(usage_prefix);
+		addUsage("Allowed options");
 	}
 
 	AnyOption::AnyOption(int maxopt)
@@ -95,10 +106,8 @@ namespace breseq {
 	void
 	AnyOption::init(int maxopt, int maxcharopt )
 	{
-
 		max_options 	= maxopt;
 		max_char_options = maxcharopt;
-		max_usage_lines	= DEFAULT_MAXUSAGE;
 		usage_lines	= 0 ;
 		argc 		= 0;
 		argv 		= NULL;
@@ -113,7 +122,6 @@ namespace breseq {
 		max_legal_args 	= 0 ;
 		command_set 	= false;
 		file_set 	= false;
-		values 		= NULL;
 		g_value_counter = 0;
 		mem_allocated 	= false;
 		command_set 	= false;
@@ -137,9 +145,12 @@ namespace breseq {
 		if( alloc() == false ){
 			cout << endl << "OPTIONS ERROR : Failed allocating memory" ;
 			cout << endl ;
-			cout << "Exiting." << endl ;
+			cout << "Exiting." << endl;
 			exit (0);
 		}
+
+		struct winsize ws;
+		terminal_width = (ioctl(0,TIOCGWINSZ,&ws)!=0) ? 80 : ws.ws_col;
 	}
 
 	bool
@@ -152,15 +163,14 @@ namespace breseq {
 			return true;
 
 		size = (max_options+1) * sizeof(const char*);
-		options = (const char**)malloc( size );
+		options.clear();
 		optiontype = (int*) malloc( (max_options+1)*sizeof(int) );
 		optionindex = (int*) malloc( (max_options+1)*sizeof(int) );
-		if( options == NULL || optiontype == NULL || optionindex == NULL )
+		if( optiontype == NULL || optionindex == NULL )
 			return false;
 		else
 			mem_allocated  = true;
 		for( i = 0 ; i < max_options ; i++ ){
-			options[i] = NULL;
 			optiontype[i] = 0 ;
 			optionindex[i] = -1 ;
 		}
@@ -180,33 +190,20 @@ namespace breseq {
 			optcharindex[i] = -1 ;
 		}
 
-		size = (max_usage_lines+1) * sizeof(const char*) ;
-		usage = (const char**) malloc( size );
-
-		if( usage == NULL  ){
-			mem_allocated = false;
-			return false;
-		}
-		for( i = 0 ; i < max_usage_lines ; i++ )
-			usage[i] = NULL;
-
 		return true;
 	}
 
 	bool
 	AnyOption::doubleOptStorage()
 	{
-		options = (const char**)realloc( options,
-				((2*max_options)+1) * sizeof( const char*) );
 		optiontype = (int*) realloc(  optiontype ,
 				((2 * max_options)+1)* sizeof(int) );
 		optionindex = (int*) realloc(  optionindex,
 				((2 * max_options)+1) * sizeof(int) );
-		if( options == NULL || optiontype == NULL || optionindex == NULL )
+		if( optiontype == NULL || optionindex == NULL )
 			return false;
 		/* init new storage */
 		for( int i = max_options ; i < 2*max_options ; i++ ){
-			options[i] = NULL;
 			optiontype[i] = 0 ;
 			optionindex[i] = -1 ;
 		}
@@ -237,33 +234,16 @@ namespace breseq {
 		return true;
 	}
 
-	bool
-	AnyOption::doubleUsageStorage()
-	{
-		usage = (const char**)realloc( usage,
-				((2*max_usage_lines)+1) * sizeof( const char*) );
-		if ( usage == NULL )
-			return false;
-		for( int i = max_usage_lines ; i < 2*max_usage_lines ; i++ )
-			usage[i] = NULL;
-		max_usage_lines = 2 * max_usage_lines ;
-		return true;
-
-	}
-
 
 	void
 	AnyOption::cleanup()
 	{
-		free (options);
 		free (optiontype);
 		free (optionindex);
 		free (optionchars);
 		free (optchartype);
 		free (optcharindex);
-		free (usage);
-		if( values != NULL )
-			free (values);
+
 		if( new_argv != NULL )
 			free (new_argv);
 	}
@@ -368,7 +348,7 @@ namespace breseq {
 	}
 
 	void
-	AnyOption::useCommandArgs( int _argc, char **_argv )
+	AnyOption::useCommandArgs( int _argc, char** _argv )
 	{
 		argc = _argc;
 		argv = _argv;
@@ -378,7 +358,7 @@ namespace breseq {
 	}
 
 	void
-	AnyOption::useFiileName( const char *_filename )
+	AnyOption::useFilename( const char *_filename )
 	{
 		filename = _filename;
 		file_set = true;
@@ -521,7 +501,7 @@ namespace breseq {
 	}
 
 	void
-	AnyOption::addOption( const char *opt, int type )
+	AnyOption::addOption( const string opt, int type )
 	{
 		if( option_counter >= max_options ){
 			if( doubleOptStorage() == false ){
@@ -529,7 +509,7 @@ namespace breseq {
 				return;
 			}
 		}
-		options[ option_counter ] = opt ;
+		options.push_back(opt);
 		optiontype[ option_counter ] =  type ;
 		optionindex[ option_counter ] = g_value_counter;
 		option_counter++;
@@ -560,7 +540,7 @@ namespace breseq {
 	}
 
 	void
-	AnyOption::addOptionError( const char *opt )
+	AnyOption::addOptionError( const string opt )
 	{
 		cout << endl ;
 		cout << "OPTIONS ERROR : Failed allocating extra memory " << endl ;
@@ -579,13 +559,6 @@ namespace breseq {
 		cout << "Exiting." << endl ;
 		cout << endl ;
 		exit(0);
-	}
-
-	void
-	AnyOption::processOptions()
-	{
-		if( ! valueStoreOK() )
-			return;
 	}
 
 	void
@@ -612,103 +585,129 @@ namespace breseq {
 	void
 	AnyOption::processCommandArgs()
 	{
-		if( ! ( valueStoreOK() && CommandSet() )  )
-		   return;
+		if (!CommandSet())
+			return;
 
-		if( max_legal_args == 0 )
+		if (max_legal_args == 0)
 			max_legal_args = argc;
-		new_argv = (int*) malloc( (max_legal_args+1) * sizeof(int) );
-		for( int i = 1 ; i < argc ; i++ ){/* ignore first argv */
-			if(  argv[i][0] == long_opt_prefix[0] &&
-						 argv[i][1] == long_opt_prefix[1] ) { /* long GNU option */
-				int match_at = parseGNU( argv[i]+2 ); /* skip -- */
-				if( match_at >= 0 && i < argc-1 ) /* found match */
-					setValue( options[match_at] , argv[++i] );
-			}else if(  argv[i][0] ==  opt_prefix_char ) { /* POSIX char */
-				if( POSIX() ){
-					char ch =  parsePOSIX( argv[i]+1 );/* skip - */
-					if( ch != '0' && i < argc-1 ) /* matching char */
-						setValue( ch ,  argv[++i] );
-				} else { /* treat it as GNU option with a - */
-					int match_at = parseGNU( argv[i]+1 ); /* skip - */
-					if( match_at >= 0 && i < argc-1 ) /* found match */
-						setValue( options[match_at] , argv[++i] );
+
+		new_argv = (int*) malloc((max_legal_args + 1) * sizeof(int));
+
+		/* ignore first argv */
+		for (int i = 1; i < argc; i++)
+		{
+			/* long GNU option */
+			if (argv[i][0] == long_opt_prefix[0] && argv[i][1] == long_opt_prefix[1])
+			{
+				int match_at = parseGNU(argv[i] + 2); /* skip -- */
+				if (match_at >= 0 && i < argc - 1) /* found match */
+					setValue(options[match_at], argv[++i]);
+			}
+			/* POSIX char */
+			else if (argv[i][0] == opt_prefix_char)
+			{
+				if (POSIX())
+				{
+					char ch = parsePOSIX(argv[i] + 1);/* skip - */
+					if (ch != '0' && i < argc - 1) /* matching char */
+						setValue(ch, argv[++i]);
 				}
-			}else { /* not option but an argument keep index */
-				if( new_argc < max_legal_args ){
-									new_argv[ new_argc ] = i ;
-									new_argc++;
-							}else{ /* ignore extra arguments */
-									printVerbose( "Ignoring extra argument: " );
-					printVerbose( argv[i] );
-					printVerbose( );
+				/* treat it as GNU option with a - */
+				else
+				{
+					int match_at = parseGNU(argv[i] + 1); /* skip - */
+					if (match_at >= 0 && i < argc - 1) /* found match */
+						setValue(options[match_at], argv[++i]);
+				}
+			}
+			/* not option but an argument keep index */
+			else
+			{
+				if (new_argc < max_legal_args)
+				{
+					new_argv[new_argc] = i;
+					new_argc++;
+				}
+				/* ignore extra arguments */
+				else
+				{
+					printVerbose("Ignoring extra argument: ");
+					printVerbose(argv[i]);
+					printVerbose();
 					printAutoUsage();
-							}
-				printVerbose( "Unknown command argument option : " );
-				printVerbose( argv[i] );
-				printVerbose( );
+				}
+				printVerbose("Unknown command argument option: ");
+				printVerbose(argv[i]);
+				printVerbose();
 				printAutoUsage();
 			}
 		}
 	}
 
 	char
-	AnyOption::parsePOSIX( char* arg )
+	AnyOption::parsePOSIX(char* arg)
 	{
-
-		for( unsigned int i = 0 ; i < strlen(arg) ; i++ ){
-			char ch = arg[i] ;
-			if( matchChar(ch) ) { /* keep matching flags till an option */
+		for (unsigned int i = 0; i < strlen(arg); i++)
+		{
+			char ch = arg[i];
+			if (matchChar(ch))
+			{ /* keep matching flags till an option */
 				/*if last char argv[++i] is the value */
-				if( i == strlen(arg)-1 ){
+				if (i == strlen(arg) - 1)
+				{
 					return ch;
-				}else{/* else the rest of arg is the value */
+				}
+				else
+				{/* else the rest of arg is the value */
 					i++; /* skip any '=' and ' ' */
-					while( arg[i] == whitespace
-							|| arg[i] == equalsign )
+					while (arg[i] == whitespace || arg[i] == equalsign)
 						i++;
-					setValue( ch , arg+i );
+					setValue(ch, arg + i);
 					return '0';
 				}
 			}
 		}
-		printVerbose( "Unknown command argument option : " );
-		printVerbose( arg );
-		printVerbose( );
-		printAutoUsage();
 		return '0';
 	}
 
 	int
-	AnyOption::parseGNU( char *arg )
+	AnyOption::parseGNU(char *arg)
 	{
 		int split_at = 0;
 		/* if has a '=' sign get value */
-		for( unsigned int i = 0 ; i < strlen(arg) ; i++ ){
-			if(arg[i] ==  equalsign ){
-				split_at = i ; /* store index */
+		for (unsigned int i = 0; i < strlen(arg); i++)
+		{
+			if (arg[i] == equalsign)
+			{
+				split_at = i; /* store index */
 				i = strlen(arg); /* get out of loop */
 			}
 		}
-		if( split_at > 0 ){ /* it is an option value pair */
-			char* tmp = (char*) malloc(  (split_at+1)*sizeof(char) );
-			for( int i = 0 ; i < split_at ; i++ )
+		if (split_at > 0)
+		{ /* it is an option value pair */
+			char* tmp = (char*) malloc((split_at + 1) * sizeof(char));
+			for (int i = 0; i < split_at; i++)
 				tmp[i] = arg[i];
 			tmp[split_at] = '\0';
 
-			if ( matchOpt( tmp ) >= 0 ){
-				setValue( options[matchOpt(tmp)] , arg+split_at+1 );
-				free (tmp);
-			}else{
-				printVerbose( "Unknown command argument option : " );
-				printVerbose( arg );
-				printVerbose( );
+			if (matchOpt(tmp) >= 0)
+			{
+				setValue(options[matchOpt(tmp)], arg + split_at + 1);
+				free(tmp);
+			}
+			else
+			{
+				printVerbose("Unknown command argument option : ");
+				printVerbose(arg);
+				printVerbose();
 				printAutoUsage();
-				free (tmp);
+				free(tmp);
 				return -1;
 			}
-		}else{ /* regular options with no '=' sign  */
-			return  matchOpt(arg);
+		}
+		else
+		{ /* regular options with no '=' sign  */
+			return matchOpt(arg);
 		}
 		return -1;
 	}
@@ -718,7 +717,7 @@ namespace breseq {
 	AnyOption::matchOpt( char *opt )
 	{
 		for( int i = 0 ; i < option_counter ; i++ ){
-			if( strcmp( options[i], opt ) == 0 ){
+			if( options[i].compare(opt) == 0 ){
 				if( optiontype[i] ==  COMMON_OPT ||
 					optiontype[i] ==  COMMAND_OPT )
 				{ /* found option return index */
@@ -760,147 +759,92 @@ namespace breseq {
 		return false;
 	}
 
-	bool
-	AnyOption::valueStoreOK( )
-	{
-		int size= 0;
-		if( !set ){
-			if( g_value_counter > 0 ){
-				size = g_value_counter * sizeof(char*);
-				values = (char**)malloc( size );
-				for( int i = 0 ; i < g_value_counter ; i++)
-					values[i] = NULL;
-				set = true;
-			}
-		}
-		return  set;
-	}
-
 	/*
 	 * public get methods
 	 */
-	char*
-	AnyOption::getValue( const char *option )
+	string*
+	AnyOption::getValue( const string option )
 	{
-		if( !valueStoreOK() )
-			return NULL;
+		for( int i = 0 ; i < option_counter ; i++ )
+			if( options[i].compare(option) == 0 )
+				return (values.count(optionindex[i]) > 0) ? &values[ optionindex[i] ] : NULL;
 
-		for( int i = 0 ; i < option_counter ; i++ ){
-			if( strcmp( options[i], option ) == 0 )
-				return values[ optionindex[i] ];
-		}
 		return NULL;
 	}
 
 	bool
-	AnyOption::getFlag( const char *option )
+	AnyOption::getFlag( const string option )
 	{
-		if( !valueStoreOK() )
-			return false;
-		for( int i = 0 ; i < option_counter ; i++ ){
-			if( strcmp( options[i], option ) == 0 )
-				return findFlag( values[ optionindex[i] ] );
-		}
+		for( int i = 0 ; i < option_counter ; i++ )
+			if( options[i].compare(option) == 0 )
+				return findFlag( optionindex[i] );
+
 		return false;
 	}
 
-	char*
+	string*
 	AnyOption::getValue( char option )
 	{
-		if( !valueStoreOK() )
-			return NULL;
-		for( int i = 0 ; i < optchar_counter ; i++ ){
+		for( int i = 0 ; i < optchar_counter ; i++ )
 			if( optionchars[i] == option )
-				return values[ optcharindex[i] ];
-		}
+				return (values.count(optcharindex[i]) > 0) ? &values[ optcharindex[i] ] : NULL;
+
 		return NULL;
 	}
 
 	bool
 	AnyOption::getFlag( char option )
 	{
-		if( !valueStoreOK() )
-			return false;
-		for( int i = 0 ; i < optchar_counter ; i++ ){
+		for( int i = 0 ; i < optchar_counter ; i++ )
 			if( optionchars[i] == option )
-				return findFlag( values[ optcharindex[i] ] ) ;
-		}
+				return findFlag( optcharindex[i] );
+
 		return false;
 	}
 
 	bool
-	AnyOption::findFlag( char* val )
+	AnyOption::findFlag( int index )
 	{
-		if( val == NULL )
-			return false;
-
-		if( strcmp( TRUE_FLAG , val ) == 0 )
-			return true;
-
-		return false;
+		return (values.count(index) && values[index].compare(TRUE_FLAG) == 0);
 	}
 
 	/*
 	 * private set methods
 	 */
 	bool
-	AnyOption::setValue( const char *option , char *value )
+	AnyOption::setValue( const string option , string value )
 	{
-		if( !valueStoreOK() )
-			return false;
-			for( int i = 0 ; i < option_counter ; i++ ){
-					if( strcmp( options[i], option ) == 0 ){
-							values[ optionindex[i] ] = (char*) malloc((strlen(value)+1)*sizeof(char));
-							strcpy( values[ optionindex[i] ], value );
+		for( int i = 0 ; i < option_counter ; i++ ){
+			if( options[i].compare(option) == 0 ){
+				values[ optionindex[i] ] = value;
 				return true;
 			}
-			}
-			return false;
+		}
+		return false;
 	}
 
 	bool
-	AnyOption::setFlagOn( const char *option )
+	AnyOption::setFlagOn( const string option )
 	{
-		if( !valueStoreOK() )
-			return false;
-			for( int i = 0 ; i < option_counter ; i++ ){
-					if( strcmp( options[i], option ) == 0 ){
-							values[ optionindex[i] ] = (char*) malloc((strlen(TRUE_FLAG)+1)*sizeof(char));
-							strcpy( values[ optionindex[i] ]  ,  TRUE_FLAG );
-				return true;
-			}
-			}
-			return false;
+		return setValue(option, TRUE_FLAG);
 	}
 
 	bool
-	AnyOption::setValue( char option , char *value )
+	AnyOption::setValue( char option , string value )
 	{
-		if( !valueStoreOK() )
-			return false;
-			for( int i = 0 ; i < optchar_counter ; i++ ){
-					if( optionchars[i] == option ){
-							values[ optcharindex[i] ] = (char*) malloc((strlen(value)+1)*sizeof(char));
-							strcpy( values[ optcharindex[i] ],  value );
+		for( int i = 0 ; i < optchar_counter ; i++ ){
+			if( optionchars[i] == option ){
+				values[ optcharindex[i] ] = value;
 				return true;
 			}
-			}
-			return false;
+		}
+		return false;
 	}
 
 	bool
 	AnyOption::setFlagOn( char option )
 	{
-		if( !valueStoreOK() )
-			return false;
-			for( int i = 0 ; i < optchar_counter ; i++ ){
-					if( optionchars[i] == option ){
-							values[ optcharindex[i] ] = (char*) malloc((strlen(TRUE_FLAG)+1)*sizeof(char));
-				strcpy( values[ optcharindex[i] ] , TRUE_FLAG );
-				return true;
-			}
-			}
-			return false;
+		return setValue(option, TRUE_FLAG);
 	}
 
 
@@ -924,7 +868,7 @@ namespace breseq {
 	bool
 	AnyOption::processFile()
 	{
-		if( ! (valueStoreOK() && FileSet())  )
+		if( !FileSet() )
 			return false;
 		return  ( consumeFile(readFile()) );
 	}
@@ -932,7 +876,7 @@ namespace breseq {
 	bool
 	AnyOption::processFile( const char *filename )
 	{
-		useFiileName(filename );
+		useFilename(filename );
 		return ( processFile() );
 	}
 
@@ -1049,31 +993,16 @@ namespace breseq {
 			free (pline);
 	}
 
-	/*
-	 * removes trailing and preceeding whitespaces from a string
-	 */
-	char*
-	AnyOption::chomp( char *str )
-	{
-			while( *str == whitespace )
-					str++;
-			char *end = str+strlen(str)-1;
-			while( *end == whitespace )
-					end--;
-			*(end+1) = nullterminate;
-			return str;
-	}
-
 	void
-	AnyOption::valuePairs( char *type, char *value )
+	AnyOption::valuePairs( char *type, string value )
 	{
-		if ( strlen(chomp(type)) == 1  ){ /* this is a char option */
+		if ( breseq::chomp(type).size() == 1  ){ /* this is a char option */
 			for( int i = 0 ; i < optchar_counter ; i++ ){
 				if(  optionchars[i] == type[0]  ){ /* match */
 					if( optchartype[i] == COMMON_OPT ||
 						optchartype[i] == FILE_OPT )
 					{
-						setValue( type[0] , chomp(value) );
+						setValue( type[0] , breseq::chomp(value) );
 						return;
 					}
 				}
@@ -1081,11 +1010,11 @@ namespace breseq {
 		}
 		/* if no char options matched */
 		for( int i = 0 ; i < option_counter ; i++ ){
-			if( strcmp( options[i], type ) == 0 ){ /* match */
+			if( options[i].compare(type) == 0 ){ /* match */
 				if( optiontype[i] == COMMON_OPT ||
 					optiontype[i] == FILE_OPT )
 				{
-					setValue( type , chomp(value) );
+					setValue( type , breseq::chomp(value) );
 					return;
 				}
 			}
@@ -1099,7 +1028,7 @@ namespace breseq {
 	AnyOption::justValue( char *type )
 	{
 
-		if ( strlen(chomp(type)) == 1  ){ /* this is a char option */
+		if ( breseq::chomp(type).size() == 1  ){ /* this is a char option */
 			for( int i = 0 ; i < optchar_counter ; i++ ){
 				if(  optionchars[i] == type[0]  ){ /* match */
 					if( optchartype[i] == COMMON_FLAG ||
@@ -1113,7 +1042,7 @@ namespace breseq {
 		}
 		/* if no char options matched */
 		for( int i = 0 ; i < option_counter ; i++ ){
-			if( strcmp( options[i], type ) == 0 ){ /* match */
+			if( options[i].compare(type) == 0 ){ /* match */
 				if( optiontype[i] == COMMON_FLAG ||
 					optiontype[i] == FILE_FLAG )
 				{
@@ -1153,20 +1082,14 @@ namespace breseq {
 
 
 	void
-	AnyOption::addUsage( const char *line )
+	AnyOption::addUsage( string line )
 	{
-		if( usage_lines >= max_usage_lines ){
-			if( doubleUsageStorage() == false ){
-				addUsageError( line );
-				exit(1);
-			}
-		}
-		usage[ usage_lines ] = line ;
+		usage.push_back(line);
 		usage_lines++;
 	}
 
 	void
-	AnyOption::addUsageError( const char *line )
+	AnyOption::addUsageError( string line )
 	{
 		cout << endl ;
 		cout << "OPTIONS ERROR : Failed allocating extra memory " << endl ;
@@ -1175,6 +1098,50 @@ namespace breseq {
 		cout << endl ;
 		exit(0);
 
+	}
+
+
+	string AnyOption::operator[](const string& option_name)
+	{
+		if (getFlag(option_name))
+			return TRUE_FLAG;
+		if (getValue(option_name) != NULL)
+			return *getValue(option_name);
+		else if (default_values.count(option_name))
+			return default_values[option_name];
+		else
+			return "";
+	}
+
+	bool AnyOption::count(const string& option_name)
+	{
+		return (getFlag(option_name) || getValue(option_name) != NULL);
+	}
+
+	string AnyOption::word_wrap(string sentence, int width)
+	{
+		string::iterator it = sentence.begin();
+		string::iterator last_space = sentence.begin();
+
+		while (it != sentence.end())
+		{
+			int accumulated_width = 0;
+
+			while (it != sentence.end() && accumulated_width++ < width)
+			{
+				if (*it == ' ') last_space = it;
+				it++;
+			}
+
+			if (it != sentence.end())
+			{
+				// Go back to letter after space
+				it = last_space + 1;
+				*last_space = '\n';
+			}
+		}
+
+		return sentence;
 	}
 
 } // namespace breseq
