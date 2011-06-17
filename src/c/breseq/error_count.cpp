@@ -1041,7 +1041,7 @@ bool cErrorTable::alignment_position_to_covariates(const alignment& a, int32_t i
   if(_base_bam_is_N(read_base_bam)) return false;
   
   //## These are the start and end coordinates of the aligned part of the read
-  int32_t q_start_0,q_end_0;
+  uint32_t q_start_0,q_end_0;
   a.query_bounds_0(q_start_0, q_end_0); // @dk: 1-indexed!
  
   //## (1) Mis(match) in read relative to reference...

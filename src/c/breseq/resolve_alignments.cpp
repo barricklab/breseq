@@ -309,9 +309,7 @@ namespace breseq {
         assert(junction_header);
       }
       
-      
-      // @JEB-PORT Keeping "last" alignments doesn't seem necessary?
-  
+        
       // my $reference_al;
       vector<alignment> reference_alignments;
       // my $last_reference_alignment;
@@ -328,16 +326,17 @@ namespace breseq {
         
         // ($junction_al, $last_junction_alignment) 
         //   = Breseq::Shared::tam_next_read_alignments($junction_tam, $junction_header, $last_junction_alignment);		
-      
-        junction_alignments = alignment::tam_next_read_alignments(junction_tam, junction_header, last_junction_alignment);
+  
+//@JEB: Rewrite to use tam_file
+//        junction_alignments = alignment::tam_next_read_alignments(junction_tam, junction_header, last_junction_alignment);
       }
       
       //      
       // ($reference_al, $last_reference_alignment) 
       // = Breseq::Shared::tam_next_read_alignments($reference_tam, $reference_header, $last_reference_alignment);		
       //      
-      
-      reference_alignments = alignment::tam_next_read_alignments(reference_tam, reference_header, last_reference_alignment);
+//@JEB: Rewrite to use tam_file      
+//      reference_alignments = alignment::tam_next_read_alignments(reference_tam, reference_header, last_reference_alignment);
 
       
       //###
@@ -390,7 +389,7 @@ namespace breseq {
           //       
 
           this_junction_alignments = junction_alignments;
-          junction_alignments = alignment::tam_next_read_alignments(junction_tam, junction_header, last_junction_alignment);
+//          junction_alignments = alignment::tam_next_read_alignments(junction_tam, junction_header, last_junction_alignment);
 
       
           //###			
@@ -430,7 +429,7 @@ namespace breseq {
           //    = Breseq::Shared::tam_next_read_alignments($reference_tam, $reference_header, $last_reference_alignment);
 
           this_reference_alignments = reference_alignments;
-          reference_alignments = alignment::tam_next_read_alignments(reference_tam, reference_header, last_reference_alignment);
+//          reference_alignments = alignment::tam_next_read_alignments(reference_tam, reference_header, last_reference_alignment);
 
           //($best_reference_score, @$this_reference_al) = _eligible_read_alignments($settings, $reference_header, $reference_fai, $ref_seq_info, @$this_reference_al);	
 //          best_reference_score = _eligible_read_alignments(settings, reference_header, reference_fai, refseqs, this_reference_alignments);
@@ -852,14 +851,14 @@ bool _test_read_alignment_requirements(Settings settings, bam_header_t* referenc
 	if (settings.required_match_length > 0)
 	{
 		//uint32_t* cigar = a.cigar_array(); // cigar array for this alignment
-		uint32_t alignment_length_on_query = a.cigar_query_length(); //this is the length of the alignment on the read
+		int32_t alignment_length_on_query = a.cigar_query_length(); //this is the length of the alignment on the read
 		if (alignment_length_on_query < settings.required_match_length)
 			return false;
 	}
 
 	if (settings.require_complete_match)
 	{
-		int32_t q_start, q_end;
+		uint32_t q_start, q_end;
 		a.query_bounds_0(q_start, q_end);
 		bool complete_match = (q_start == 1) && (q_end == a.qseq_length());
 		if (!complete_match) return false;

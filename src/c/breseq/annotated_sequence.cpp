@@ -444,7 +444,7 @@ namespace breseq {
 
 		string seq_id = header->target_name[a.reference_target_id()];
 
-		int32_t a_start, a_end;
+		uint32_t a_start, a_end;
 		a.query_bounds_0(a_start, a_end);
 
 		string ref_string;

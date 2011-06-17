@@ -68,7 +68,7 @@ class pileup_base {
         return m_bam->header->target_name[target];
     }
 
-    const int32_t num_targets() const {
+    const uint32_t num_targets() const {
       return m_bam->header->n_targets;
     }
   

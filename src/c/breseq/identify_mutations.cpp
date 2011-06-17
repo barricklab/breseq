@@ -332,7 +332,7 @@ void breseq::identify_mutations_pileup::pileup_callback(const breseq::pileup& p)
         
         //## These are the start and end coordinates of the aligned part of the read
         //			my ($q_start, $q_end) = Breseq::Shared::alignment_query_start_end($a, {no_reverse=>1});
-        int32_t q_start,q_end;
+        uint32_t q_start,q_end;
         i->query_bounds_1(q_start, q_end); // @dk: 1-indexed!
         
         uint8_t quality=0;
@@ -363,7 +363,7 @@ void breseq::identify_mutations_pileup::pileup_callback(const breseq::pileup& p)
         {		
           int32_t max_offset = insert_count;
           if (indel < max_offset) max_offset = indel;
-          int32_t mqpos = i->query_position_0() + max_offset + 1 - i->reversed(); 
+          uint32_t mqpos = i->query_position_0() + max_offset + 1 - i->reversed(); 
                   
           //## Check bounds: it's possible to go past the end of the read because
           //## this is the last base of this read, but other reads have inserted bases
