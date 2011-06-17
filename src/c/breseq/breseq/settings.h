@@ -95,8 +95,8 @@ namespace breseq {
 		bool add_split_junction_sides;
 		bool require_complete_match;
     
-		int32_t alignment_read_limit;
-		int32_t candidate_junction_read_limit;
+		uint32_t alignment_read_limit;
+		uint32_t candidate_junction_read_limit;
 		int32_t minimum_candidate_junction_pos_hash_score;
 		int32_t minimum_candidate_junction_min_overlap_score;
 		int32_t minimum_candidate_junctions;
@@ -115,18 +115,23 @@ namespace breseq {
 		cReadFiles read_structures;
     
 		// Utility function to substitute specific details into a generic file name
-		static string file_name(string file_name_key)
+		static string file_name(const string& file_name_key, const string& substitute = "", const string& with = "")
 		{
-			return file_name_key;
+      string s(file_name_key);
+        
+      if (substitute.size() > 0)
+      {
+        size_t pos = s.find(substitute);
+        if (pos != string::npos)
+        {
+          s.replace(pos, 1, with);
+        }
+      }
       
-      //			my ($self, $file_name_key, $sub_hash)= @_;
-      //			my $file_name = $self->{$file_name_key};
-      //			$file_name or $self->throw("Settings file \"$file_name_key\" not found.");
-      //
-      //			return $self->substitute_file_name($file_name, $sub_hash);
+			return s;
 		}
     
-		string ctool(string tool_name)
+    string ctool(string tool_name) const
 		{
       //			my ($self, $tool_name, $allow_fail) = @_;
       //

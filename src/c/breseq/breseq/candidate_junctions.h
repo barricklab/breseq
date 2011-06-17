@@ -59,8 +59,8 @@ namespace breseq {
 			bool hash_strand_2;
 			int32_t overlap;
 			string unique_read_seq_string;
-			int32_t flanking_left;
-			int32_t flanking_right;
+			uint32_t flanking_left;
+			uint32_t flanking_right;
 		};
 
 		struct PassedPair
@@ -74,11 +74,11 @@ namespace breseq {
 
 		/*! Preprocesses alignments
 		 */
-		static void preprocess_alignments(Settings settings, Summary summary, const cReferenceSequences& ref_seq_info);
+		static void preprocess_alignments(const Settings& settings, Summary& summary, const cReferenceSequences& ref_seq_info);
 
 		/*! Predicts candidate junctions
 		 */
-		static void identify_candidate_junctions(Settings settings, Summary summary, const cReferenceSequences& ref_seq_info);
+		static void identify_candidate_junctions(const Settings& settings, Summary& summary, const cReferenceSequences& ref_seq_info);
 
 		private:
 
@@ -151,11 +151,14 @@ namespace breseq {
 		static void _alignments_to_candidate_junctions(Settings settings, Summary summary,  const cReferenceSequences& ref_seq_info, map<string, map<string, CandidateJunction>, CandidateJunction::Sorter>& candidate_junctions, faidx_t* fai, bam_header_t* header, vector<alignment> al_ref);
 		static bool _check_read_pair_requirements(Settings settings, int32_t a1_start, int32_t a1_end, int32_t a2_start, int32_t a2_end, int32_t& a1_unique_length, int32_t& a2_unique_length, int32_t& union_length);
 		static void _entire_read_matches(map_t a);
+    
+    inline static bool _entire_read_matches(const alignment& a) 
+      { return ((a.query_start_1() == 1) && (a.query_end_1() == a.query_length())); }
+    
 		static void _num_matches_from_end(alignment a, string refseq_str, bool dir, int32_t overlap, int32_t& qry_mismatch_pos, int32_t& ref_mismatch_pos);
-		static void _split_indel_alignments(Settings settings, Summary summary, bam_header_t* header, ofstream& PSAM, int32_t min_indel_split_len, vector<alignment> al_ref);
+		static void _split_indel_alignments(const Settings& settings, Summary& summary, tam_file& PSAM, int32_t min_indel_split_len, alignment_list& alignments);
 		static void _by_ref_seq_coord(map_t a, map_t b, map_t ref_seq_info);
 		static void _by_score_unique_coord(map_t a, map_t b);
-		static void _tam_write_split_alignment(map_t fh, map_t header, map_t min_indel_split_len, map_t a);
 
 	}; // class CandidateJunction
 

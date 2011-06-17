@@ -3,7 +3,7 @@
 <plist version="1.0">
 <dict>
 	<key>currentDocument</key>
-	<string>Breseq/lib/Breseq/Settings.pm</string>
+	<string>Breseq/lib/Breseq/AlignmentOutput.pm</string>
 	<key>documents</key>
 	<array>
 		<dict>
@@ -294,59 +294,43 @@
 			<key>caret</key>
 			<dict>
 				<key>column</key>
-				<integer>26</integer>
+				<integer>3</integer>
 				<key>line</key>
-				<integer>570</integer>
+				<integer>576</integer>
 			</dict>
-			<key>columnSelection</key>
-			<false/>
 			<key>firstVisibleColumn</key>
 			<integer>0</integer>
 			<key>firstVisibleLine</key>
 			<integer>556</integer>
-			<key>selectFrom</key>
-			<dict>
-				<key>column</key>
-				<integer>0</integer>
-				<key>line</key>
-				<integer>570</integer>
-			</dict>
-			<key>selectTo</key>
-			<dict>
-				<key>column</key>
-				<integer>0</integer>
-				<key>line</key>
-				<integer>571</integer>
-			</dict>
 		</dict>
 		<key>Breseq/lib/Breseq/CandidateJunctions.pm</key>
 		<dict>
 			<key>caret</key>
 			<dict>
 				<key>column</key>
-				<integer>50</integer>
+				<integer>75</integer>
 				<key>line</key>
-				<integer>861</integer>
+				<integer>428</integer>
 			</dict>
 			<key>columnSelection</key>
 			<false/>
 			<key>firstVisibleColumn</key>
 			<integer>0</integer>
 			<key>firstVisibleLine</key>
-			<integer>828</integer>
+			<integer>395</integer>
 			<key>selectFrom</key>
 			<dict>
 				<key>column</key>
-				<integer>35</integer>
+				<integer>0</integer>
 				<key>line</key>
-				<integer>861</integer>
+				<integer>428</integer>
 			</dict>
 			<key>selectTo</key>
 			<dict>
 				<key>column</key>
-				<integer>50</integer>
+				<integer>0</integer>
 				<key>line</key>
-				<integer>861</integer>
+				<integer>429</integer>
 			</dict>
 		</dict>
 		<key>Breseq/lib/Breseq/CoverageDistribution.pm</key>
@@ -512,30 +496,14 @@
 			<key>caret</key>
 			<dict>
 				<key>column</key>
-				<integer>106</integer>
+				<integer>14</integer>
 				<key>line</key>
-				<integer>324</integer>
+				<integer>160</integer>
 			</dict>
-			<key>columnSelection</key>
-			<false/>
 			<key>firstVisibleColumn</key>
 			<integer>0</integer>
 			<key>firstVisibleLine</key>
-			<integer>299</integer>
-			<key>selectFrom</key>
-			<dict>
-				<key>column</key>
-				<integer>88</integer>
-				<key>line</key>
-				<integer>324</integer>
-			</dict>
-			<key>selectTo</key>
-			<dict>
-				<key>column</key>
-				<integer>108</integer>
-				<key>line</key>
-				<integer>324</integer>
-			</dict>
+			<integer>130</integer>
 		</dict>
 		<key>Breseq/lib/Breseq/Shared.pm</key>
 		<dict>
@@ -676,6 +644,6 @@
 	<key>showFileHierarchyDrawer</key>
 	<true/>
 	<key>windowFrame</key>
-	<string>{{333, 297}, {990, 561}}</string>
+	<string>{{369, 448}, {952, 430}}</string>
 </dict>
 </plist>

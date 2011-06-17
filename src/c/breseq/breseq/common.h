@@ -336,7 +336,7 @@ namespace breseq {
 		char trade['Z'];
 		trade['A'] = 'T'; trade['T'] = 'A'; trade['C'] = 'G'; trade['G'] = 'C';
 		string retval = seq;
-		for (int i = 0; i < seq.size(); i++)
+		for (uint32_t i = 0; i < seq.size(); i++)
 			retval[i] = trade[seq[seq.size() - 1 - i]];
 		return retval;
 	}

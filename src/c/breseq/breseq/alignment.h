@@ -31,14 +31,14 @@ class alignment {
     alignment(const bam_pileup1_t* p);
     alignment(const bam1_t* a);
 
+    ~alignment();
+  
+    
     //! Does this alignment have any redundancies?
     bool is_redundant() const;
 
     //! Number of redundancies at this alignment.
     uint32_t redundancy() const;
-
-    static vector<alignment> tam_next_read_alignments(tamFile tam, bam_header_t* header, alignment* last_alignment, bool paired = false);
-    static void tam_write_read_alignments(ofstream& fh, bam_header_t* header, int32_t fastq_file_index, vector<alignment> al, vector<Trim>* trims = NULL);
 
     //! Is this alignment a deletion?
     inline bool is_del() const { return _p->is_del; }
@@ -124,9 +124,9 @@ class alignment {
     //! Start is always < End. reversed() tells you which strand the match was on.
     //  Methods available for 0-indexed and 1-indexed coordinates.
     std::pair<uint32_t,uint32_t> query_bounds_0() const;
-    void query_bounds_0(int32_t& start, int32_t& end) const;
+    void query_bounds_0(uint32_t& start, uint32_t& end) const;
     std::pair<uint32_t,uint32_t> query_bounds_1() const;
-    void query_bounds_1(int32_t& start, int32_t& end) const;
+    void query_bounds_1(uint32_t& start, uint32_t& end) const;
 
     //! Starting coordinates of the aligned part of the read (was 1-indexed).
     //  Methods available for 0-indexed and 1-indexed coordinates.
@@ -177,10 +177,40 @@ class alignment {
 	inline uint32_t cigar_array_length() const { return _a->core.n_cigar; }
 	inline uint32_t cigar_query_length() const { return bam_cigar2qlen(&_a->core, cigar_array()); };
 	inline uint8_t* aux_get(const char tag[2]) const { return bam_aux_get(_a, tag); }
+  
+  inline uint32_t aux_get_i(const char tag[2]) const 
+  { 
+    uint8_t *auxl = aux_get(tag); 
+    return (uint32_t)bam_aux2i(auxl); 
+  } 
 
   protected:
     const bam_pileup1_t* _p; //!< Pileup.
     const bam1_t* _a; //!< Alignment.
+};
+  
+typedef vector<alignment> alignment_list;  
+  
+class tam_file {
+
+public:
+  tam_file(const string& tam_file_name, const string& fasta_file_name, ios_base::openmode mode);
+  ~tam_file();
+  
+  void open_read(const string& tam_file_name, const string& fasta_file_name);
+  void open_write(const string& tam_file_name, const string& fasta_file_name);
+  
+  bool read_alignments(alignment_list& alignments, bool paired = false);
+  void write_alignments(int32_t fastq_file_index, alignment_list& alignments, vector<Trim>* trims = NULL);
+  void write_split_alignment(uint32_t min_indel_split_len, alignment& a);
+  
+protected:
+  bam_header_t* bam_header;
+  tamFile input_tam;                // used for input
+  ofstream output_tam;              // used for output
+  vector<bam1_t*> loaded_alignments; // contains alignment* last_alignment
+  
+  void free_loaded_alignments();
 };
 	
 }

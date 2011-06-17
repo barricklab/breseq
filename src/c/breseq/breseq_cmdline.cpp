@@ -479,11 +479,11 @@ int do_preprocess_alignments(int argc, char* argv[]) {
     ("read-file,r", po::value<vector<string> >(), "FASTQ read files (multiple allowed) ") 
 
     ("candidate-junction-score-method", po::value<string>()->default_value("POS_HASH"), "scoring method DEFAULT = POS_HASH")
-    ("min-indel-split-length", po::value<int32_t>()->default_value(-1), "nothing")
-    ("max-read-mismatches", po::value<int32_t>()->default_value(-1), "nothing")
-    ("require-complete-match", po::value<bool>()->default_value(false), "nothing")
-    ("required-match-length", po::value<int32_t>()->default_value(-1), "nothing")
-    ("candidate-junction-read-limit", po::value<int32_t>()->default_value(-1), "nothing") 
+    ("min-indel-split-length", po::value<int32_t>()->default_value(3), "split indels this long in matches")
+    ("max-read-mismatches", po::value<int32_t>()->default_value(-1), "ignore reads with more than this number of mismatches")
+    ("require-complete-match", po::value<bool>()->default_value(false), "require the complete read to match (both end bases")
+    ("required-match-length", po::value<int32_t>()->default_value(-1), "require this length of sequence -- on the read -- to match")
+    ("candidate-junction-read-limit", po::value<int32_t>()->default_value(-1), "limit handled reads to this many") 
 	;
 
 	po::variables_map options;
@@ -539,7 +539,7 @@ int do_preprocess_alignments(int argc, char* argv[]) {
 	settings.candidate_junction_read_limit = options["candidate-junction-read-limit"].as<int32_t>(); 
 	settings.required_match_length = options["required-match-length"].as<int32_t>();
   settings.preprocess_junction_min_indel_split_length = options["min-indel-split-length"].as<int32_t>();
- 
+     
 	cReferenceSequences ref_seqs;
 	breseq::LoadFeatureIndexedFastaFile(ref_seqs, "", settings.reference_fasta_file_name);
 

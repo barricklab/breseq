@@ -64,8 +64,8 @@ namespace breseq {
 		// First, sort matches by their order in the query
 		alignment q1 = a1;
 		alignment q2 = a2;
-		int32_t q1_start, q1_end;
-		int32_t q2_start, q2_end;
+		uint32_t q1_start, q1_end;
+		uint32_t q2_start, q2_end;
 		q1.query_bounds_0(q1_start, q1_end);
 		q2.query_bounds_0(q2_start, q2_end);
 
@@ -246,7 +246,7 @@ namespace breseq {
 		else
 		{
 			// end_pos is in 1-based coordinates
-			int32_t end_pos = hash_coord_1 + (flanking_left - 1) + overlap_offset;
+			uint32_t end_pos = hash_coord_1 + (flanking_left - 1) + overlap_offset;
 			if (end_pos > ref_seq_1.size())
 			{
 				if (verbose) cout << "END POS 1: (" << end_pos << " < length" << endl;
@@ -276,7 +276,7 @@ namespace breseq {
 		if (hash_strand_2) //alignment is not reversed
 		{
 			// end_pos is in 1-based coordinates
-			int32_t end_pos = hash_coord_2 + (flanking_right - 1) + overlap_offset;
+			uint32_t end_pos = hash_coord_2 + (flanking_right - 1) + overlap_offset;
 			if (end_pos > ref_seq_2.size())
 			{
 				if (verbose)
@@ -373,7 +373,7 @@ namespace breseq {
 		}
 
 		assert(junction_seq_string.size() > 0); // die "Junction sequence not found: $junction_id " . $q1->qname . " " . $a2->qname  if (!$junction_seq_string);
-		assert(junction_seq_string.size() != flanking_left + flanking_right + abs(overlap)); // die "Incorrect length for $junction_seq_string: $junction_id " . $q1->qname . " " . $a2->qname if (length $junction_seq_string != $flanking_left + $flanking_right + abs($overlap));
+		assert(junction_seq_string.size() != flanking_left + flanking_right + static_cast<uint32_t>(abs(overlap))); // die "Incorrect length for $junction_seq_string: $junction_id " . $q1->qname . " " . $a2->qname if (length $junction_seq_string != $flanking_left + $flanking_right + abs($overlap));
 
 		return true;
 	}
@@ -413,11 +413,11 @@ namespace breseq {
 		// This saves a number of comparisons and gets rid of a lot of bad matches.
 		int32_t max_union_length = 0;
 
-		for (int32_t i = 0; i < al_ref.size(); i++)
+		for (uint32_t i = 0; i < al_ref.size(); i++)
 		{
 			alignment a = al_ref[i];
 
-			int32_t a_start, a_end;
+			uint32_t a_start, a_end;
 			a.query_bounds_0(a_start, a_end);
 
 			if (verbose) cout << "(" << a_start << ", " << a_end << ")" << endl;
@@ -449,18 +449,18 @@ namespace breseq {
 		vector<PassedPair> passed_pair_list;
 
 		// Try adding together each pair of matches to make a junction, by looking at read coordinates
-		for (int32_t i = 0; i < list1.size(); i++)
+		for (uint32_t i = 0; i < list1.size(); i++)
 		{
 			alignment a1 = list1[i];
 
-			int32_t a1_start, a1_end;
+			uint32_t a1_start, a1_end;
 			a1.query_bounds_0(a1_start, a1_end);
 
-			for (int32_t j = 0; j < list2.size(); j++)
+			for (uint32_t j = 0; j < list2.size(); j++)
 			{
 				alignment a2 = list1[i];
 
-				int32_t a2_start, a2_end;
+				uint32_t a2_start, a2_end;
 				a2.query_bounds_0(a2_start, a2_end);
 
 				// if either end is the same, it is going to fail.
@@ -491,7 +491,7 @@ namespace breseq {
 			}
 		}
 
-		for (int32_t i = 0; i < passed_pair_list.size(); i++)
+		for (uint32_t i = 0; i < passed_pair_list.size(); i++)
 		{
 			PassedPair pp = passed_pair_list[i];
 
@@ -555,7 +555,7 @@ namespace breseq {
 
 		// only now that we've looked through everything can we determine whether the reference sequence matched
 		// on a side was unique, after correcting for overlap
-		for (int32_t i = 0; i < junctions.size(); i++)
+		for (uint32_t i = 0; i < junctions.size(); i++)
 		{
 			JunctionListContainer jct = junctions[i];
 			JunctionList junction_id_list = jct.list;
@@ -683,7 +683,7 @@ namespace breseq {
 		if (a1_length < intersection_length_positive + settings.required_both_unique_length_per_side)
 			return false;
 
-		if (a2_length < intersection_length_positive + settings.required_both_unique_length_per_side);
+		if (a2_length < intersection_length_positive + settings.required_both_unique_length_per_side)
 			return false;
 
 		//// 3. Require one end to extend a higher minimum length outside of the overlap
@@ -706,8 +706,6 @@ namespace breseq {
 		return true;
 	}
 
-	void CandidateJunctions::_entire_read_matches(map_t a) {}
-
 	void CandidateJunctions::_num_matches_from_end(alignment a, string refseq_str, bool dir, int32_t overlap, int32_t& qry_mismatch_pos, int32_t& ref_mismatch_pos)
 	{
 		bool verbose = false;
@@ -716,7 +714,7 @@ namespace breseq {
 		// start, end, length  of the matching sequence (in top strand coordinates)
 		int32_t q2_start, q2_end;
 
-		int32_t q_seq_start, q_seq_end;
+		uint32_t q_seq_start, q_seq_end;
 		a.query_bounds_0(q_seq_start, q_seq_end);
 		int32_t q_length = a.query_length();
 
@@ -757,7 +755,7 @@ namespace breseq {
 
 		uint32_t* cigar_array = a.cigar_array();
 		vector<uint32_t> cigar_array_ref;
-		for (int32_t i = 0; i <= a.cigar_array_length(); i++)
+		for (uint32_t i = 0; i <= a.cigar_array_length(); i++)
 			cigar_array_ref.push_back(cigar_array[i]);
 
 		char op_0 = cigar_array_ref[0] & BAM_CIGAR_MASK;
@@ -825,16 +823,88 @@ namespace breseq {
 		}
 	}
 
-	void CandidateJunctions::_split_indel_alignments(Settings settings, Summary summary, bam_header_t* header, ofstream& PSAM, int32_t min_indel_split_len, vector<alignment> al_ref) {}
+  //##
+  //## @JEB: Note that this may affect the order, which would have consequences
+  //## for the AlignmentCorrection step, which assumes highest scoring alignments are
+  //## first in the TAM file. So only USE the split alignment file for predicting
+  //## candidate junctions.
+  //##
+  //    
+  //    sub _split_indel_alignments
+  //    {
+  //      my ($settings, $summary, $header, $PSAM, $min_indel_split_len, $al_ref) = @_;  
+  
+  void CandidateJunctions::_split_indel_alignments(const Settings& settings, Summary& summary, tam_file& PSAM, int32_t min_indel_split_len, alignment_list& alignments)
+  {
+    assert(min_indel_split_len >= 0);
+    
+    alignment_list untouched_alignments;
+    uint32_t alignments_written = 0;      
+
+    for(alignment_list::iterator it = alignments.begin(); it < alignments.end(); it++) 
+    {
+      uint32_t* cigar_list = it->cigar_array();
+      bool do_split = false;
+      for(uint32_t i=0; i<it->cigar_array_length(); i++)
+      {
+        uint32_t op = cigar_list[i] & BAM_CIGAR_MASK;
+        uint32_t len = cigar_list[i] >> BAM_CIGAR_SHIFT;
+        if (((op == BAM_CINS) || (op == BAM_CDEL)) && (len >= static_cast<uint32_t>(min_indel_split_len)))
+        {
+          do_split = true;
+        }
+      }
+      
+      if (do_split)
+      {
+        PSAM.write_split_alignment(min_indel_split_len, *it);
+        alignments_written += 2;
+      }
+      else
+      {
+        untouched_alignments.push_back(*it);
+      }
+      
+    }
+    //      
+    //## Don't write in possible junction file when it covers the entire read!
+    //##
+    //## @JEB POSSIBLE OPTIMIZATION
+    //## We could actually be a little smarter than this and
+    //## Not write when we know that this matches so much of the
+    //## Read that it cannot be used in a pair to create a candidate junction
+    //##
+    //## Use $self->{required_both_unique_length_per_side} to rule them out.
+    //## 
+    
+    for(alignment_list::iterator it = alignments.begin(); it < alignments.end(); it++) 
+    {
+      if (_entire_read_matches(*it))
+      {
+        untouched_alignments.erase(it);
+        it--;
+      }
+    }
+    
+    //#write remaining original alignments -- if there is more than one alignment for this read
+    //if ($alignments_written + scalar(@untouched_al) > 1)
+    
+    // Don't write if there is only one alignment to be written,
+    // it takes at least two to make a candidate junction.
+    if (alignments_written + untouched_alignments.size() > 1)
+    {
+      PSAM.write_alignments(0, untouched_alignments);
+    }
+  }
+
 	void CandidateJunctions::_by_ref_seq_coord(map_t a, map_t b, map_t ref_seq_info) {}
 	void CandidateJunctions::_by_score_unique_coord(map_t a, map_t b) {}
-	void CandidateJunctions::_tam_write_split_alignment(map_t fh, map_t header, map_t min_indel_split_len, map_t a) {}
 
 	// Public
 
 	/*! Preprocesses alignments
 	 */
-	void CandidateJunctions::preprocess_alignments(Settings settings, Summary summary, const cReferenceSequences& ref_seq_info)
+	void CandidateJunctions::preprocess_alignments(const Settings& settings, Summary& summary, const cReferenceSequences& ref_seq_info)
 	{
 		cout << "Preprocessing alignments." << endl;
 
@@ -842,10 +912,10 @@ namespace breseq {
 		int32_t min_indel_split_len = settings.preprocess_junction_min_indel_split_length;
 
 		// includes best matches as they are
-		string preprocess_junction_best_sam_file_name = Settings::file_name(settings.preprocess_junction_best_sam_file_name);
-		ofstream BSAM;
-		BSAM.open(preprocess_junction_best_sam_file_name.c_str());
-		assert(BSAM.is_open());
+		string preprocess_junction_best_sam_file_name = settings.preprocess_junction_best_sam_file_name;
+    string reference_fasta_file_name = settings.reference_fasta_file_name;
+    
+    tam_file BSAM(preprocess_junction_best_sam_file_name, reference_fasta_file_name, ios_base::out);
 
 		string reference_faidx_file_name = Settings::file_name(settings.reference_fasta_file_name);
 		faidx_t* reference_fai = fai_load(reference_faidx_file_name.c_str());
@@ -854,29 +924,17 @@ namespace breseq {
 			cReadFile read_struct = settings.read_structures[index];
 			cerr << "  READ FILE::" << read_struct.m_base_name << endl;
 
-			string reference_sam_file_name = Settings::file_name(settings.reference_sam_file_name);
-			string reference_faidx_file_name = Settings::file_name(settings.reference_faidx_file_name);
-
-			tamFile tam = sam_open(reference_sam_file_name.c_str()); // or die("Could not open reference same file: $reference_sam_file_name");
-			bam_header_t* header = sam_header_read2(reference_faidx_file_name.c_str()); // or die("Error reading reference fasta index file: $reference_faidx_file_name");
-
+			string reference_sam_file_name = Settings::file_name(settings.reference_sam_file_name, "#", read_struct.m_base_name);
+      tam_file tam(reference_sam_file_name, reference_fasta_file_name, ios_base::in);
+ 
 			// includes all matches, and splits long indels
-			string preprocess_junction_split_sam_file_name = Settings::file_name(settings.preprocess_junction_split_sam_file_name);
-			ofstream PSAM;
-			PSAM.open(preprocess_junction_split_sam_file_name.c_str());
-			assert(PSAM.is_open());
-
-			alignment* last_alignment;
-			vector<alignment> al_ref;
-			int32_t i = 0;
-			while (true)
+      string preprocess_junction_split_sam_file_name = Settings::file_name(settings.preprocess_junction_split_sam_file_name, "#", read_struct.m_base_name);
+      tam_file PSAM(preprocess_junction_split_sam_file_name, reference_fasta_file_name, ios_base::out);
+      
+			vector<alignment> alignments;
+			uint32_t i = 0;
+			while (tam.read_alignments(alignments, false))
 			{
-				// resolve_alignments.c
-				al_ref = alignment::tam_next_read_alignments(tam, header, last_alignment, false);
-
-				if (al_ref.size() == 0)
-					break;
-
 				if (++i % 10000 == 0)
 					cerr << "    ALIGNED READ:" << i << endl;
 
@@ -885,24 +943,22 @@ namespace breseq {
 
 				// write split alignments
 				if (min_indel_split_len != -1)
-					_split_indel_alignments(settings, summary, header, PSAM, min_indel_split_len, al_ref);
-
+        {
+					_split_indel_alignments(settings, summary, PSAM, min_indel_split_len, alignments);
+        }
+        
 				// write best alignments
-				if (settings.candidate_junction_score_method.compare("POS_HASH") == 0)
 				{
-					int32_t best_score = _eligible_read_alignments(settings, header, reference_fai, ref_seq_info, al_ref);
-					alignment::tam_write_read_alignments(BSAM, header, 0, al_ref, NULL);
+//@JEB==>here!          int32_t best_score = _eligible_read_alignments(settings, header, reference_fai, ref_seq_info, al_ref);
+          BSAM.write_alignments(0, alignments, NULL);
 				}
-			}
-			sam_close(tam);
-			PSAM.close();
 		}
-		BSAM.close();
-	}
+    }
+  }
 
 	/*! Predicts candidate junctions
 	 */
-	void CandidateJunctions::identify_candidate_junctions(Settings settings, Summary summary, const cReferenceSequences& ref_seq_info)
+	void CandidateJunctions::identify_candidate_junctions(const Settings& settings, Summary& summary, const cReferenceSequences& ref_seq_info)
 	{
 		int32_t verbose = 0;
 
@@ -920,6 +976,7 @@ namespace breseq {
 
 		string reference_faidx_file_name = Settings::file_name(settings.reference_faidx_file_name);
 		faidx_t* fai = fai_load(Settings::file_name(settings.reference_fasta_file_name).c_str());
+    string reference_fasta_file_name = settings.reference_fasta_file_name;
 
 		string candidate_junction_fasta_file_name = Settings::file_name(settings.candidate_junction_fasta_file_name);
 
@@ -933,7 +990,7 @@ namespace breseq {
 
 //		my @read_files = $settings->read_files;
 
-		int32_t i = 0;
+		uint32_t i = 0;
 
 		for (uint32_t j = 0; j < settings.read_structures.size(); j++)
 		{
@@ -959,16 +1016,12 @@ namespace breseq {
 			if (settings.candidate_junction_score_method.compare("POS_HASH") != 0)
 				reference_sam_file_name = Settings::file_name(settings.reference_sam_file_name);
 
-			tamFile tam = sam_open(reference_sam_file_name.c_str()); // or die("Could not open reference same file: $reference_sam_file_name");
-			bam_header_t* header = sam_header_read2(reference_faidx_file_name.c_str()); // or die("Error reading reference fasta index file: $reference_faidx_file_name");
-			alignment* last_alignment;
-			vector<alignment> al_ref;
+      tam_file tam(reference_sam_file_name, reference_fasta_file_name, ios_base::in);
+			vector<alignment> alignments;
 
-			while (true)
+			while (tam.read_alignments(alignments, false))
 			{
-				al_ref = alignment::tam_next_read_alignments(tam, header, last_alignment, false);
-
-				if (al_ref.size() == 0)
+				if (alignments.size() == 0)
 					break;
 
 				if (++i % 10000 == 0)
@@ -978,7 +1031,8 @@ namespace breseq {
 				if (settings.candidate_junction_read_limit != 0 && i > settings.candidate_junction_read_limit)
 					break;
 
-				_alignments_to_candidate_junctions(settings, summary, ref_seq_info, candidate_junctions, fai, header, al_ref);
+        // @JEB REWRITE
+//				_alignments_to_candidate_junctions(settings, summary, ref_seq_info, candidate_junctions, fai, header, alignments);
 			}
 
 			hcs.read_file[read_file] = s;
@@ -1115,7 +1169,7 @@ namespace breseq {
 		// adding up the lengths might be too time-consuming to be worth it...
 		int32_t total_cumulative_cj_length = 0;
 		int32_t total_candidate_junction_number = combined_candidate_junctions.size();
-		for (int32_t j = 0; j < combined_candidate_junctions.size(); j++)
+		for (uint32_t j = 0; j < combined_candidate_junctions.size(); j++)
 			total_cumulative_cj_length += combined_candidate_junctions[j].seq.size();
 
 		//my @duplicate_sequences;
@@ -1209,7 +1263,7 @@ namespace breseq {
 
 		sort(combined_candidate_junctions.begin(), combined_candidate_junctions.end(), CombinedCandidateJunction::sort_by_ref_seq_coord);
 
-		for (int32_t j; j < combined_candidate_junctions.size(); j++)
+		for (uint32_t j; j < combined_candidate_junctions.size(); j++)
 		{
 			CombinedCandidateJunction junction = combined_candidate_junctions[j];
 			//#print Dumper($ids_to_print);
