@@ -201,32 +201,116 @@ namespace breseq {
 		return flags;
 	}
 
-	template <typename T, typename U> class make_map
+	template <typename T, typename U> struct make_map : public map<T,U>
 	{
-		private:
-
-		map<T, U> m_map;
-
-		public:
-
-		make_map(const T& key, const U& val) { m_map[key] = val; }
-
+	public:
+		make_map(const T& key, const U& val) { (*this)(key, val); }
 		make_map<T, U>& operator()(const T& key, const U& val)
 		{
-			m_map[key] = val;
+			(*this)[key] = val;
 			return *this;
 		}
-
-		operator map<T, U>() { return m_map; }
 	};
 
-	template <typename T> struct make_list : public vector<T> {
+	template <typename T> struct make_list : public vector<T>
+	{
+	public:
 	    make_list(const T& t) { (*this)(t); }
 	    make_list& operator()(const T& t) {
 	        this->push_back(t);
 	        return *this;
 	    }
 	};
+
+
+	//!< Split a string on a delimiter into a vector
+	inline vector<string> split(
+					const  string  & theString,
+					const  string  & theDelimiter
+	) {
+		assert(theDelimiter.size() > 0); // My own ASSERT macro.
+
+		size_t start = 0, end = 0;
+		vector<string> theStringVector;
+
+		while (end != string::npos)
+		{
+			end = theString.find( theDelimiter, start );
+
+			// If at end, use length=maxLength.  Else use length=end-start.
+			theStringVector.push_back(
+					theString.substr(
+						start,
+						(end == string::npos) ? string::npos : end - start
+					  )
+				  );
+
+			// If at end, use start=maxSize.  Else use start=end+delimiter.
+			start =
+					(end > (string::npos - theDelimiter.size()))
+					? string::npos
+					: end + theDelimiter.size();
+		}
+		return theStringVector;
+	}
+
+	inline string join(const vector<string>& values, const string& separator)
+	{
+		if(values.size() == 0)
+			return "";
+
+		string::size_type size = separator.length() * values.size();
+		for(uint32_t i=0; i < values.size(); i++)
+			size += values[i].size();
+
+		string retval;
+		retval.reserve(size);
+		retval = values[0];
+		for(uint32_t i = 1; i < values.size(); i++)
+			retval += separator + values[i];
+
+		return retval;
+	}
+
+	inline string join(string values[], const string& separator)
+	{
+		return join(vector<string> (values, values + sizeof(values) / sizeof(*values)), separator);
+	}
+
+	inline string chomp(const string& str)
+	{
+		return str.substr(0, str.find_last_not_of("\n \t")-1);
+	}
+
+
+	inline ostream &operator << (ostream &stream, vector<string> lhs)
+	{
+		stream << join(lhs, ",");
+		return stream;
+	}
+	/*istream &operator >> (istream &stream, vector<string>& lhs)
+	{
+		string value;
+		stream >> value;
+		lhs = split(value, ",");
+		return stream;
+	}*/
+	template <typename T> inline istream &operator >> (istream &stream, vector<T>& rhs)
+	{
+		rhs.clear();
+		string value;
+		stream >> value;
+		vector<string> values = split(value, ",");
+		for (vector<string>::iterator it = values.begin(); it != values.end(); it++)
+		{
+			T t;
+			istringstream iss(*it);
+			iss >> boolalpha >> t;
+			rhs.push_back(t);
+		}
+		return stream;
+	}
+
 
 	template <typename T> inline string to_string (const T& t)
 	{
@@ -261,69 +345,16 @@ namespace breseq {
 	{
 		string str = input;
 		transform(str.begin(), str.end(),str.begin(), ::toupper);
-    return str;
+		return str;
 	}
 	
 	inline string to_lower(const string& input)
     {
         string str = input;
         transform(str.begin(), str.end(),str.begin(), ::tolower);
-    return str;
+        return str;
     }
-  
-	//!< Split a string on a delimiter into a vector
-	inline vector<string> split(
-					const  string  & theString,
-					const  string  & theDelimiter
-	) {
-		assert(theDelimiter.size() > 0); // My own ASSERT macro.
 
-		size_t start = 0, end = 0;
-		vector<string> theStringVector;
-
-		while (end != string::npos)
-		{
-			end = theString.find( theDelimiter, start );
-
-			// If at end, use length=maxLength.  Else use length=end-start.
-			theStringVector.push_back(
-					theString.substr(
-						start,
-						(end == string::npos) ? string::npos : end - start
-					  )
-				  );
-
-			// If at end, use start=maxSize.  Else use start=end+delimiter.
-			start =
-					(end > (string::npos - theDelimiter.size()))
-					? string::npos
-					: end + theDelimiter.size();
-		}
-    return theStringVector;
-	}
-
-	inline string join(const vector<string>& values, const string& separator)
-	{
-		if(values.size() == 0)
-			return "";
-
-		string::size_type size = separator.length() * values.size();
-		for(uint32_t i=0; i < values.size(); i++)
-			size += values[i].size();
-
-		string retval;
-		retval.reserve(size);
-		retval = values[0];
-		for(uint32_t i = 1; i < values.size(); i++)
-			retval += separator + values[i];
-
-		return retval;
-	}
-
-	inline string join(string values[], const string& separator)
-	{
-		return join(vector<string> (values, values + sizeof(values) / sizeof(*values)), separator);
-	}
 
 	struct Trim
 	{
