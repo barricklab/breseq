@@ -186,7 +186,7 @@ namespace breseq {
 				else
 					this->setFlag(option_name_split[0].c_str());
 
-				string usage = "  [ " + option_name_split[0] + " ]";
+        usage = "  [ " + option_name_split[0] + " ]";
 			}
 
 			if (has_argument) usage += " arg";
@@ -200,7 +200,7 @@ namespace breseq {
 			}
 
 			if (usage.size() < USAGE_LEFT_COLUMN_WIDTH)
-				usage += string(abs(USAGE_LEFT_COLUMN_WIDTH - usage.size()), ' ');
+				usage += string(abs(static_cast<int32_t>(USAGE_LEFT_COLUMN_WIDTH - usage.size())), ' ');
 
 			string wrapped_description = word_wrap(option_description, terminal_width - USAGE_LEFT_COLUMN_WIDTH);
 			string search_string = "\n";
@@ -227,6 +227,12 @@ namespace breseq {
 			addOptionOrFlag(option_name, option_description, "", false, false);
 			return *this;
 		}
+    AnyOption& operator()(const string& option_name, const string& option_description, const char* option_default_value)
+		{
+			addOptionOrFlag(option_name, option_description, string(option_default_value), true, true);
+			return *this;
+		}
+    
 		template<class T> AnyOption& operator()(const string& option_name, const string& option_description, const T& option_default_value)
 		{
 			addOptionOrFlag(option_name, option_description, option_default_value, true, true);

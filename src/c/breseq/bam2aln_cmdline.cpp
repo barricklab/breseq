@@ -16,53 +16,53 @@ LICENSE AND COPYRIGHT
 
 *****************************************************************************/
 
-#include <boost/program_options.hpp>
-
+#include "breseq/anyoption.h"
 #include "breseq/alignment_output.h"
 
 using namespace std;
 using namespace breseq;
-namespace po = boost::program_options;
 
 int main(int argc, char* argv[]) {
 //	cerr << "OUTPUT:    " << argv[0] << endl;
   // Options should eventually be the same as Perl bam2aln.
   // Concentrate first on HTML output.
 
-	// setup and parse configuration options:
-	po::options_description cmdline_options("Allowed options");
-	cmdline_options.add_options()
-	("help,h", "produce this help message")
-	("bam,b", po::value<string>(), "bam file containing sequences to be aligned")
-	("fasta,f", po::value<string>(), "FASTA file of reference sequence")
-        ("region,r", po::value<string>()->default_value(""), "region to print (accession:start-end)")
-        ("output,o", po::value<string>(), "name of output file")
-	("max-reads,n", po::value<uint32_t>()->default_value(1000), "maximum number of reads to show in alignment");
+  // setup and parse configuration options:
+	AnyOption options("Usage: bam2aln --bam=<reference.bam> --fasta=<reference.fasta> --region=<accession:start-end> --output=<output.html> [--max-reads=1000]");
+	options
+  ("help,h", "produce this help message", TAKES_NO_ARGUMENT)
+  ("bam,b", "bam file containing sequences to be aligned")
+	("fasta,f", "FASTA file of reference sequence")
+  ("output,o", "name of output file")
+  ("region,r", "region to print (accession:start-end)", "")
+  ("max-reads,n", "maximum number of reads to show in alignment", 1000)
+  .processCommandArgs(argc, argv);
 
-	po::variables_map options;
-	po::store(po::parse_command_line(argc, argv, cmdline_options), options);
-	po::notify(options);
+  //("output,o", "out to files") // outputs to STDOUT for now
 
+  
 	// make sure that the config options are good:
 	if(options.count("help")
 		 || !options.count("bam")
 		 || !options.count("fasta")
 		 || !options.count("output")) {
-		cout << "Usage: bam2aln --bam=<reference.bam> --fasta=<reference.fasta> --region=<accession:start-end> ";
-		cout << "--output=<output.html> [--max-reads=1000]" << endl;
-		cout << cmdline_options << endl;
-
+		options.printUsage();
 		return -1;
 	}
 
   // generate alignment!
 	try {
-		alignment_output ao(options["bam"].as<string>(),
-                        options["fasta"].as<string>(),
-                        options["max-reads"].as<uint32_t>());
-		ao.create_alignment(options["bam"].as<string>(),
-                        options["fasta"].as<string>(),
-			options["region"].as<string>());
+		alignment_output ao(
+                        options["bam"],
+                        options["fasta"],
+                        from_string<uint32_t>(options["max-reads"])
+                        );
+    
+		ao.create_alignment(
+                        options["bam"],
+                        options["fasta"],
+                        options["region"]
+                        );
 
 //		
 //																												  "/home/geoff/Dropbox/Research/breseq/tests/REL606_fragment_is_mediated_dels/data/reference.fasta",

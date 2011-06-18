@@ -88,6 +88,9 @@ class alignment {
       return query_base_bam_0(pos0); 
     };
     
+    //! Calculate the total length of the query.
+    inline uint32_t query_length() const { return _a->core.l_qseq; }
+  
     //! Retrieve the base at a specified position in the read (was 0-indexed)
     //  Methods available for 0-indexed and 1-indexed coordinates.
     inline uint8_t query_base_bam_0(const uint32_t pos) const { assert((pos>=0) && (pos<query_length())); return bam1_seqi(query_bam_sequence(), pos); }
@@ -97,9 +100,6 @@ class alignment {
     //  Methods available for 0-indexed and 1-indexed coordinates.
     inline uint32_t query_position_0() const { return _p->qpos; }
     inline uint32_t query_position_1() const { return _p->qpos+1; }
-
-    //! Calculate the total length of the query.
-    uint32_t query_length() const;
 	
     //! Retrieve the quality score array.
     inline uint8_t* quality_scores() const { return bam1_qual(_a); }
@@ -146,8 +146,11 @@ class alignment {
     uint32_t reference_end_0() const;
     uint32_t reference_end_1() const {return reference_end_0() + 1; };
 
-	int32_t mate_start_0() const {return _a->core.mpos; } ;
-	int32_t mate_start_1() const {return mate_start_0() + 1; };
+    int32_t mate_start_0() const {return _a->core.mpos; } ;
+    int32_t mate_start_1() const {return mate_start_0() + 1; };
+
+    inline  bool beginning_to_end_match() 
+    { return ((query_start_1() == 1) && (query_end_1() == query_length())); }
 
 
     //! Number of bases before this position (on read strand)
@@ -169,7 +172,6 @@ class alignment {
 			seq[i] = bam_nt16_rev_table[bam1_seqi(bam1_seq(_a),i)];
 	    return seq;
 	}
-	inline int32_t qseq_length() const { return _a->core.l_qseq; }
 	inline int32_t isize() const { return _a->core.isize; }
 	inline uint8_t quality() const { return _a->core.qual; }
 	inline uint16_t flag() const { return _a->core.flag; }

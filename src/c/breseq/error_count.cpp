@@ -26,7 +26,6 @@ LICENSE AND COPYRIGHT
 #include <sam.h>
 #include <faidx.h>
 #include <assert.h>
-#include <boost/tuple/tuple.hpp>
 
 #include "breseq/common.h"
 #include "breseq/pileup.h"

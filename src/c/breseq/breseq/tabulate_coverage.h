@@ -21,8 +21,6 @@ LICENSE AND COPYRIGHT
 #ifndef _BRESEQ_TABULATE_COVERAGE_H_
 #define _BRESEQ_TABULATE_COVERAGE_H_
 
-#include <boost/optional.hpp>
-
 #include "common.h"
 #include "pileup_base.h"
 #include "pileup.h"

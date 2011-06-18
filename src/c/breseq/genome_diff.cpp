@@ -17,8 +17,6 @@ LICENSE AND COPYRIGHT
 *****************************************************************************/
 
 #include "breseq/genome_diff.h"
-#include <boost/algorithm/string.hpp>
-#include <boost/assign/list_of.hpp>
 
 using namespace breseq;
 

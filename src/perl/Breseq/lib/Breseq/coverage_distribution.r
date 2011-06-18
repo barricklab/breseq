@@ -217,9 +217,9 @@ if (plot_poisson) {
 	max_y = max(X$n, fit_nb)
 }
 
-plot(0:10, 0:10, type="n", lty="solid", ylim=c(0, max_y)*1.05, xlim=c(0, graph_end_i), lwd=1, xaxs="i", yaxs="i", axes=F, las=1, main="Coverage Distribution at Unique-Only Positions", xlab="Number of reference positions", ylab="", cex.lab=1.2, cex.axis=1.2)
+plot(0:10, 0:10, type="n", lty="solid", ylim=c(0, max_y)*1.05, xlim=c(0, graph_end_i), lwd=1, xaxs="i", yaxs="i", axes=F, las=1, main="Coverage Distribution at Unique-Only Positions", xlab="Coverage depth (reads)", ylab="", cex.lab=1.2, cex.axis=1.2)
 
-mtext(side = 2, text = "Coverage depth (reads)", line = 5.5, cex=1.2)
+mtext(side = 2, text = "Number of reference positions", line = 5.5, cex=1.2)
 
 sciNotation <- function(x, digits = 1) {
     if (length(x) > 1) {

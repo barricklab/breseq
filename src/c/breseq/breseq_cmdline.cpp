@@ -20,9 +20,6 @@ LICENSE AND COPYRIGHT
 #include <string>
 #include <vector>
 
-#include <boost/program_options.hpp>
-#include <boost/algorithm/string.hpp>
-
 #include "breseq/anyoption.h"
 #include "breseq/fastq.h"
 #include "breseq/alignment_output.h"
@@ -145,7 +142,7 @@ int do_convert_genbank(int argc, char* argv[]) {
 int do_calculate_trims(int argc, char* argv[]) {
 	
 	// setup and parse configuration options:
-	AnyOption options("Usage: breseq CALCULATE_TRIMS --bam <sequences.bam> --fasta <reference.fasta> --error_dir <path> --genome_diff <path> --output <path> --readfiles <filename> --coverage_dir <dirname> [--minimum-quality-score 3]");
+	AnyOption options("Usage: breseq CALCULATE_TRIMS --bam <sequences.bam> --fasta <reference.fasta> --error_dir <path> --genome_diff <path> --output <path> --readfile <filename> --coverage_dir <dirname> [--minimum-quality-score 3]");
 	options
 		("help,h", "produce this help message", TAKES_NO_ARGUMENT)
 		("fasta,f", "FASTA file of reference sequence")
@@ -301,9 +298,7 @@ Calculate error calibrations from FASTA and BAM reference files.
  
  */
 int do_error_count(int argc, char* argv[]) {
-	
-  std::cout << "temp" << std::endl;
-  
+	  
 	// setup and parse configuration options:
 	AnyOption options("Usage: breseq ERROR_COUNT --bam <sequences.bam> --fasta <reference.fasta> --output <path> --readfile <filename> [--coverage] [--errors] [--minimum-quality-score 3]");
 	options
@@ -311,11 +306,11 @@ int do_error_count(int argc, char* argv[]) {
 		("bam,b", "bam file containing sequences to be aligned")
 		("fasta,f", "FASTA file of reference sequence")
 		("output,o", "output directory")
-		("readfiles,r", "names of readfiles (no extension)")
-		("coverage", "generate unique coverage distribution output")
-		("errors", "generate unique error count output")
-		("minimum-quality-score", "ignore base quality scores lower than this", 0)
-		("covariates", "covariates for error model", "")
+		("readfile,r", "name of readfile (no extension). may occur multiple times")
+		("coverage", "generate unique coverage distribution output", TAKES_NO_ARGUMENT)
+		("errors", "generate unique error count output", TAKES_NO_ARGUMENT)
+    ("covariates", "covariates for error model", "")
+    ("minimum-quality-score", "ignore base quality scores lower than this", 0)
 	.processCommandArgs(argc, argv);
   
 	// make sure that the config options are good:
@@ -337,7 +332,7 @@ int do_error_count(int argc, char* argv[]) {
 												from_string<vector<string> >(options["readfile"]),
 												options.count("coverage"),
                         options.count("errors"),
-                        from_string<int>(options["minimum-quality-score"]),
+                        from_string<uint32_t>(options["minimum-quality-score"]),
                         options["covariates"]
                         );
 	} catch(...) {
@@ -359,12 +354,12 @@ int do_error_count(int argc, char* argv[]) {
 int do_identify_mutations(int argc, char* argv[]) {
 	
 	// setup and parse configuration options:
-	AnyOption options("Usage: breseq IDENTIFY_MUTATIONS --bam <sequences.bam> --fasta <reference.fasta> --error_dir <path> --genome_diff <path> --output <path> --readfiles <filename> --coverage_dir <dirname>");
+	AnyOption options("Usage: breseq IDENTIFY_MUTATIONS --bam <sequences.bam> --fasta <reference.fasta> --error_dir <path> --genome_diff <path> --output <path> --readfile <filename> --coverage_dir <dirname>");
 	options
 		("help,h", "produce this help message", TAKES_NO_ARGUMENT)
 		("bam,b", "bam file containing sequences to be aligned")
 		("fasta,f", "FASTA file of reference sequence")
-		("readfiles,r", "names of readfiles (no extension)")
+		("readfile,r", "names of readfile (no extension)")
 		("error_dir,e", "Directory containing error rates files")
 		("error_table", "Error rates files", "")
 		("genome_diff,g", "Genome diff file")
@@ -373,11 +368,11 @@ int do_identify_mutations(int argc, char* argv[]) {
 		("mutation_cutoff,c", "mutation cutoff (log10 e-value)", 2.0L)
 		("deletion_propagation_cutoff,u", "number after which to cutoff deletions")
 		("minimum_quality_score", "ignore base quality scores lower than this", 0)
-		("predict_deletions,d", "whether to predict deletions", true)
-		("predict_polymorphisms,p", "whether to predict polymorphisms", false)
+		("predict_deletions,d", "whether to predict deletions", TAKES_NO_ARGUMENT)
+		("predict_polymorphisms,p", "whether to predict polymorphisms", TAKES_NO_ARGUMENT)
 		("polymorphism_cutoff", "polymorphism cutoff (log10 e-value)", 2.0L)
 		("polymorphism_frequency_cutoff", "ignore polymorphism predictions below this frequency", 0.0L)
-		("per_position_file", "print out verbose per position file", false)
+		("per_position_file", "print out verbose per position file", TAKES_NO_ARGUMENT)
 	.processCommandArgs(argc, argv);
 
 	// make sure that the config options are good:
@@ -387,7 +382,7 @@ int do_identify_mutations(int argc, char* argv[]) {
 		 || !options.count("error_dir")
 		 || !options.count("genome_diff")
 		 || !options.count("output")
-		 || !options.count("readfiles")
+		 || !options.count("readfile")
 		 || !options.count("coverage_dir")
 		 || !options.count("deletion_propagation_cutoff") 
      
@@ -404,17 +399,17 @@ int do_identify_mutations(int argc, char* argv[]) {
                          options["error_dir"],
                          options["genome_diff"],
                          options["output"],
-                         from_string<vector<string> >(options["readfiles"]),
+                         from_string<vector<string> >(options["readfile"]),
                          options["coverage_dir"],
                          from_string<vector<double> >(options["deletion_propagation_cutoff"]),
                          from_string<double>(options["mutation_cutoff"]),
-                         from_string<bool>(options["predict_deletions"]),
-                         from_string<bool>(options["predict_polymorphisms"]),
+                         options.count("predict_deletions"),
+                         options.count("predict_polymorphisms"),
                          from_string<int>(options["minimum_quality_score"]),
                          from_string<double>(options["polymorphism_cutoff"]),
                          from_string<double>(options["polymorphism_frequency_cutoff"]),
                          options["error_table"],
-                         from_string<bool>(options["per_position_file"])
+                         options.count("per_position_file")
                          );
 	} catch(...) {
 		// failed; 

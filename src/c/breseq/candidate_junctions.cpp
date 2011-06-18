@@ -879,7 +879,7 @@ namespace breseq {
     
     for(alignment_list::iterator it = alignments.begin(); it < alignments.end(); it++) 
     {
-      if (_entire_read_matches(*it))
+      if ((*it).beginning_to_end_match())
       {
         untouched_alignments.erase(it);
         it--;

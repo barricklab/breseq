@@ -633,22 +633,6 @@ sub do_count
 		$total_bp += length $ref_seq_info->{ref_strings}->{$seq_id};
 	}
 
-	my @bases = ('A', 'T', 'C', 'G');
-	my @base_combinations;
-	my @base_headers;
-	foreach my $b1 (@bases)
-	{
-		foreach my $b2 (@bases)
-		{
-			next if ($b1 eq $b2);
-			next if ($b1 eq 'T');
-			next if ($b1 eq 'G');
-
-			push @base_combinations, "$b1$b2";
-			push @base_headers, $b1 . ":" . Breseq::Fastq::complement($b1) . "=>" . $b2 . ":" . Breseq::Fastq::complement($b2);
-		}
-	}
-
 	## how many repeat columns
 	my $mob_name_hash;
 	foreach my $gd_file_name (@gd_file_name_list)
@@ -694,13 +678,12 @@ sub do_count
 		'strain', 
 		'total', 
 		@snp_types, 
-		@base_headers, 
 		'deleted', 
 		@mod_name_list, 
 		'called_bp', 
 		'total_bp',
 	);
-
+	
 	if ($base_substitution_file) {
 
 		foreach my $snp_type (@GenomeDiff::BaseSubstitutionFile::bsf_snp_types) {
@@ -710,7 +693,7 @@ sub do_count
 		}
 		foreach my $snp_type (@GenomeDiff::BaseSubstitutionFile::bsf_snp_types) {
 			foreach my $bp_change (@GenomeDiff::BaseSubstitutionFile::bp_change_label_list, 'TOTAL') {
-				push @column_headers, "COUNT.$snp_type\.$bp_change";
+				push @column_headers, "OBSERVED.$snp_type\.$bp_change";
 			}
 		}
 	}
@@ -744,11 +727,8 @@ sub do_count
 		@mut_list = grep {!$_->{deleted}} @mut_list;
 		
 		my $count;
-		foreach my $b (@base_combinations)
-		{
-			$count->{base}->{$b} = 0;
-		}
 		
+
 		foreach my $st (@snp_types)
 		{
 			$count->{type}->{$st} = 0;
@@ -765,16 +745,11 @@ sub do_count
 			if ($mut->{type} eq 'SNP')
 			{				
 				my $base_change = $mut->{_ref_seq} . "." . $mut->{new_seq};
-				if (($mut->{_ref_seq} eq 'T') || ($mut->{_ref_seq} eq 'G'))
-				{
-					$base_change = Breseq::Fastq::complement($base_change);
-				}
-				$count->{base}->{$base_change}++;				
+				my $bp_change = $GenomeDiff::BaseSubstitutionFile::base_to_bp_change->{$base_change};				
 				$count->{type}->{$mut->{snp_type}}++;				
 				
 				## SCF snp count	
 				if ($base_substitution_file) {
-					my $bp_change = $GenomeDiff::BaseSubstitutionFile::base_to_bp_change->{$base_change};
 					$this_bs_counts = $bsf->add_bp_change_to_totals($this_bs_counts, $mut->{position}, $bp_change);					
 				}
 			}
@@ -817,12 +792,12 @@ sub do_count
 			$gd_name, 
 			scalar(@mut_list),  
 			map({$count->{type}->{$_} } @snp_types), 
-			map({ $count->{base}->{$_} } @base_combinations), 
 			$total_deleted, 
 			map({$count->{mob}->{$_}} @mod_name_list), 
 			$called_bp, 
 			$total_bp
 		);
+		
 		
 		if ($base_substitution_file) {			
 			for (my $i = 0; $i < scalar @$this_bs_totals; $i++) {
