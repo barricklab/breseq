@@ -15,12 +15,11 @@
 ##
 ###
 
-AM_CPPFLAGS = -I$(top_srcdir)/$(LIBBAM) $(BOOST_CPPFLAGS)
-AM_LDFLAGS = $(BOOST_PROGRAM_OPTIONS_LDFLAGS) -static
-LDADD = $(BOOST_PROGRAM_OPTIONS_LIBS) \
-		$(top_srcdir)/$(LIBBAM)/libbam.la \
-		libbreseq.la
-LIBS = $(BOOST_PROGRAM_OPTIONS_LIBS)
+AM_CPPFLAGS = -I$(top_srcdir)/$(LIBBAM)
+AM_LDFLAGS = -static
+LDADD =   $(top_srcdir)/$(LIBBAM)/libbam.la \
+					libbreseq.la
+LIBS = 
 
 noinst_LTLIBRARIES = libbreseq.la
 libbreseq_la_SOURCES = \

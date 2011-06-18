@@ -333,14 +333,25 @@ namespace breseq {
 		}
 	}
 
-	template <typename T> inline T from_string(const string &s)
+  template <typename T> inline T from_string(const string &s)
 	{
 		T t;
 		istringstream iss(s);
 		iss >> boolalpha >> t;
 		return t;
 	}
-
+  
+  template <typename T> inline vector<T> vector_from_string(const string &s, const string& delimiter="\n")
+  {
+    vector<T> t;
+    vector<string> ss = split(s, delimiter);
+    for(vector<string>::const_iterator it=ss.begin(); it<ss.end(); it++)
+    {
+      t.push_back( from_string<T>(*it) );
+    }
+    return t;
+  }
+  
 	inline string to_upper(const string& input)
 	{
 		string str = input;

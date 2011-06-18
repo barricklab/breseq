@@ -119,8 +119,9 @@ int do_convert_genbank(int argc, char* argv[]) {
   
 	// attempt to calculate error calibrations:
 	try {
+        
 		convert_genbank(  
-                    from_string<vector<string> >(options["input"]),
+                    vector_from_string<string>(options["input"]),
                     options["fasta"],
                     options["features"]
                     );
@@ -265,7 +266,7 @@ int do_resolve_alignments(int argc, char* argv[]) {
   
 	// attempt to calculate error calibrations:
 	try {
-    cReadFiles rf(from_string<vector<string> >(options["read-file"]));
+    cReadFiles rf(vector_from_string<string>(options["read-file"]));
     
     resolve_alignments(
       from_string<bool>(options["junction-prediction"]),
@@ -329,7 +330,7 @@ int do_error_count(int argc, char* argv[]) {
 		breseq::error_count(options["bam"],
 												options["fasta"],
 												options["output"],
-												from_string<vector<string> >(options["readfile"]),
+												split(options["readfile"], "\n"),
 												options.count("coverage"),
                         options.count("errors"),
                         from_string<uint32_t>(options["minimum-quality-score"]),
@@ -399,9 +400,9 @@ int do_identify_mutations(int argc, char* argv[]) {
                          options["error_dir"],
                          options["genome_diff"],
                          options["output"],
-                         from_string<vector<string> >(options["readfile"]),
+                         split(options["readfile"], "\n"),
                          options["coverage_dir"],
-                         from_string<vector<double> >(options["deletion_propagation_cutoff"]),
+                         vector_from_string<double>(options["deletion_propagation_cutoff"]),
                          from_string<double>(options["mutation_cutoff"]),
                          options.count("predict_deletions"),
                          options.count("predict_polymorphisms"),
@@ -463,7 +464,7 @@ int do_preprocess_alignments(int argc, char* argv[]) {
   // Set the things we need...
 	Settings settings;
     
-  settings.read_structures.Init(from_string<vector<string> >(options["read-file"]));
+  settings.read_structures.Init(vector_from_string<string>(options["read-file"]));
  
 	settings.candidate_junction_fasta_file_name = options["candidate-junction-path"];
   settings.candidate_junction_fasta_file_name += "/candidate_junctions.fasta";

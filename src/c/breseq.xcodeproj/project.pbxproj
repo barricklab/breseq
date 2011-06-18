@@ -39,7 +39,6 @@
 		7087748612BC1C31000F9B57 /* identify_mutations.h in Headers */ = {isa = PBXBuildFile; fileRef = 7087747912BC1C06000F9B57 /* identify_mutations.h */; };
 		7087748712BC1C31000F9B57 /* pileup.h in Headers */ = {isa = PBXBuildFile; fileRef = 7087747A12BC1C06000F9B57 /* pileup.h */; };
 		7087748812BC1C31000F9B57 /* pileup_base.h in Headers */ = {isa = PBXBuildFile; fileRef = 7087747B12BC1C06000F9B57 /* pileup_base.h */; };
-		708774D712BC21B9000F9B57 /* libboost_program_options-mt.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 421ACF7D1170E5CA00C2EB85 /* libboost_program_options-mt.a */; };
 		708D62441390B1D5007FF13C /* resolve_alignments.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 708D62431390B1D5007FF13C /* resolve_alignments.cpp */; };
 		708FA5FD13257A7D00864C40 /* libbreseq.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 708FA5DA132578BE00864C40 /* libbreseq.a */; };
 		709794A9138ECAD300E48727 /* bam2aln_cmdline.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 709794A8138ECAD300E48727 /* bam2aln_cmdline.cpp */; };
@@ -47,7 +46,6 @@
 		70A8364913477A560037F8DE /* fastq.h in Headers */ = {isa = PBXBuildFile; fileRef = 70A8364813477A560037F8DE /* fastq.h */; };
 		70A8364D13477AAE0037F8DE /* alignment_output.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 70A8364C13477AAE0037F8DE /* alignment_output.cpp */; };
 		70A8365713477F7B0037F8DE /* libbreseq.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 708FA5DA132578BE00864C40 /* libbreseq.a */; };
-		70A8365813477F7B0037F8DE /* libboost_program_options-mt.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 421ACF7D1170E5CA00C2EB85 /* libboost_program_options-mt.a */; };
 		70B48C4B13A9918E00BF2BF0 /* anyoption.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 70B48C4A13A9918E00BF2BF0 /* anyoption.cpp */; };
 		70B48C4F13A991BE00BF2BF0 /* chisquare.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 70B48C4E13A991BE00BF2BF0 /* chisquare.cpp */; };
 		70B4AEB01391F72200B9638D /* fasta.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 70B4AEAF1391F72200B9638D /* fasta.cpp */; };
@@ -115,7 +113,6 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
-		421ACF7D1170E5CA00C2EB85 /* libboost_program_options-mt.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; name = "libboost_program_options-mt.a"; path = "/opt/local/lib/libboost_program_options-mt.a"; sourceTree = "<absolute>"; };
 		421ACFAC1170F05500C2EB85 /* libz.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = libz.a; path = /opt/local/lib/libz.a; sourceTree = "<absolute>"; };
 		702EABF613421A8400103019 /* fastq.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = fastq.cpp; path = breseq/fastq.cpp; sourceTree = SOURCE_ROOT; };
 		707F211313478B6500ED2F3E /* candidate_junctions.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; lineEnding = 0; path = candidate_junctions.h; sourceTree = "<group>"; xcLanguageSpecificationIdentifier = xcode.lang.objcpp; };
@@ -169,7 +166,6 @@
 			buildActionMask = 2147483647;
 			files = (
 				708FA5FD13257A7D00864C40 /* libbreseq.a in Frameworks */,
-				708774D712BC21B9000F9B57 /* libboost_program_options-mt.a in Frameworks */,
 				70B69E071369E2440001B750 /* libbam.a in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -188,7 +184,6 @@
 			buildActionMask = 2147483647;
 			files = (
 				70A8365713477F7B0037F8DE /* libbreseq.a in Frameworks */,
-				70A8365813477F7B0037F8DE /* libboost_program_options-mt.a in Frameworks */,
 				70B69E081369E2440001B750 /* libbam.a in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -221,7 +216,6 @@
 			children = (
 				70B69E051369E2440001B750 /* libbam.a */,
 				421ACFAC1170F05500C2EB85 /* libz.a */,
-				421ACF7D1170E5CA00C2EB85 /* libboost_program_options-mt.a */,
 			);
 			name = lib;
 			sourceTree = "<group>";
