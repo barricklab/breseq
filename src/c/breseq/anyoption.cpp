@@ -817,7 +817,8 @@ namespace breseq {
 	{
 		for( int i = 0 ; i < option_counter ; i++ ){
 			if( options[i].compare(option) == 0 ){
-				values[ optionindex[i] ] = value;
+        if (values[ optionindex[i] ].size() > 0) values[ optionindex[i] ]+= "\n";
+				values[ optionindex[i] ] += value;
 				return true;
 			}
 		}
@@ -835,7 +836,8 @@ namespace breseq {
 	{
 		for( int i = 0 ; i < optchar_counter ; i++ ){
 			if( optionchars[i] == option ){
-				values[ optcharindex[i] ] = value;
+        if (values[ optcharindex[i] ].size() > 0) values[ optcharindex[i] ]+= "\n";
+				values[ optcharindex[i] ] += value;
 				return true;
 			}
 		}
