@@ -88,9 +88,9 @@ sub identify_mutations
 		}
 
 		if((defined $settings->{no_deletion_prediction}) && ($settings->{no_deletion_prediction})) {
-			$cmdline .= " --predict_deletions 0";
+			$cmdline .= "";
 		} else {
-			$cmdline .= " --predict_deletions 1"; # defaults TO predicting deletions.
+			$cmdline .= " --predict_deletions"; # defaults TO predicting deletions.
 		}
 		
 		if (defined $settings->{base_quality_cutoff})
@@ -100,7 +100,7 @@ sub identify_mutations
 		
 		if ($settings->{polymorphism_prediction})
 		{
-			$cmdline .= " --predict_polymorphisms 1";
+			$cmdline .= " --predict_polymorphisms";
 			$cmdline .= " --polymorphism_cutoff $settings->{polymorphism_log10_e_value_cutoff}";
 			$cmdline .= " --polymorphism_frequency_cutoff $settings->{polymorphism_frequency_cutoff}";			
 		}

@@ -57,14 +57,16 @@ uint32_t alignment::redundancy() const {
 }
 
 
+
 /*! Calculate the length of this query out to the last non-clip, non-skip.
- */
+
+ Replaced with cigar_query_length()
 uint32_t alignment::query_length() const {
 	uint32_t* cigar = bam1_cigar(_a); // cigar array for this alignment
 	uint32_t qlen = bam_cigar2qlen(&_a->core, cigar); // total length of the query
 	return qlen;
 }
-
+*/
 
 /*! Retrieve the index of the read file that contained this alignment
  */

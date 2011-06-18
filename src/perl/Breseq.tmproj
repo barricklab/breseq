@@ -3,7 +3,7 @@
 <plist version="1.0">
 <dict>
 	<key>currentDocument</key>
-	<string>Breseq/lib/Breseq/AlignmentOutput.pm</string>
+	<string>Breseq/lib/Breseq/coverage_distribution.r</string>
 	<key>documents</key>
 	<array>
 		<dict>
@@ -308,30 +308,14 @@
 			<key>caret</key>
 			<dict>
 				<key>column</key>
-				<integer>75</integer>
+				<integer>2</integer>
 				<key>line</key>
-				<integer>428</integer>
+				<integer>490</integer>
 			</dict>
-			<key>columnSelection</key>
-			<false/>
 			<key>firstVisibleColumn</key>
 			<integer>0</integer>
 			<key>firstVisibleLine</key>
-			<integer>395</integer>
-			<key>selectFrom</key>
-			<dict>
-				<key>column</key>
-				<integer>0</integer>
-				<key>line</key>
-				<integer>428</integer>
-			</dict>
-			<key>selectTo</key>
-			<dict>
-				<key>column</key>
-				<integer>0</integer>
-				<key>line</key>
-				<integer>429</integer>
-			</dict>
+			<integer>464</integer>
 		</dict>
 		<key>Breseq/lib/Breseq/CoverageDistribution.pm</key>
 		<dict>
@@ -524,14 +508,14 @@
 			<key>caret</key>
 			<dict>
 				<key>column</key>
-				<integer>26</integer>
+				<integer>3</integer>
 				<key>line</key>
-				<integer>210</integer>
+				<integer>226</integer>
 			</dict>
 			<key>firstVisibleColumn</key>
 			<integer>0</integer>
 			<key>firstVisibleLine</key>
-			<integer>179</integer>
+			<integer>197</integer>
 		</dict>
 		<key>Breseq/lib/Breseq/plot_coverage.r</key>
 		<dict>
@@ -644,6 +628,6 @@
 	<key>showFileHierarchyDrawer</key>
 	<true/>
 	<key>windowFrame</key>
-	<string>{{369, 448}, {952, 430}}</string>
+	<string>{{363, 188}, {756, 690}}</string>
 </dict>
 </plist>

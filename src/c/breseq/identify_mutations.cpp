@@ -31,7 +31,6 @@ LICENSE AND COPYRIGHT
 #include "breseq/pileup.h"
 #include "breseq/identify_mutations.h"
 #include "breseq/error_count.h"
-#include <boost/math/distributions/chi_squared.hpp>
 
 
 /*! Convenience wrapper around the identify_mutations_pileup class.
@@ -926,10 +925,6 @@ breseq::polymorphism_prediction breseq::identify_mutations_pileup::predict_polym
   if (max_likelihood_fr_first_base != 1.0) {
     double likelihood_ratio_test_value = -2*log(10)*log10_likelihood_difference;
     
-    //boost::math::chi_squared myChiSquared(1.0L);
-    //p_value = boost::math::pdf(myChiSquared, likelihood_ratio_test_value);
-    //cerr << "likelihood_ratio_test_value: " << likelihood_ratio_test_value << " p-value: " << p_value << endl;
-
     p_value = pchisq(1.0L, likelihood_ratio_test_value);
     //cerr << "likelihood_ratio_test_value: " << likelihood_ratio_test_value << " p-value: " << p_value << endl;
   }

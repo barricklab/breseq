@@ -150,7 +150,8 @@ namespace breseq {
 		}
 
 		struct winsize ws;
-		terminal_width = (ioctl(0,TIOCGWINSZ,&ws)!=0) ? 80 : ws.ws_col;
+    ioctl(0,TIOCGWINSZ,&ws);
+		terminal_width = (ws.ws_col==0) ? 80 : ws.ws_col;
 	}
 
 	bool
@@ -1122,23 +1123,21 @@ namespace breseq {
 	{
 		string::iterator it = sentence.begin();
 		string::iterator last_space = sentence.begin();
-
+    
+    int accumulated_width = 0;
 		while (it != sentence.end())
 		{
-			int accumulated_width = 0;
+      accumulated_width++;
+      if (*it == ' ') last_space = it;
 
-			while (it != sentence.end() && accumulated_width++ < width)
-			{
-				if (*it == ' ') last_space = it;
-				it++;
-			}
-
-			if (it != sentence.end())
+			if (accumulated_width > width)
 			{
 				// Go back to letter after space
-				it = last_space + 1;
+				it = last_space;
 				*last_space = '\n';
+        accumulated_width = 0;
 			}
+      it++;
 		}
 
 		return sentence;

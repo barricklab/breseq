@@ -858,10 +858,7 @@ bool _test_read_alignment_requirements(Settings settings, bam_header_t* referenc
 
 	if (settings.require_complete_match)
 	{
-		uint32_t q_start, q_end;
-		a.query_bounds_0(q_start, q_end);
-		bool complete_match = (q_start == 1) && (q_end == a.qseq_length());
-		if (!complete_match) return false;
+    if (a.beginning_to_end_match()) return false;
 	}
 	if (settings.max_read_mismatches > 0)
 	{

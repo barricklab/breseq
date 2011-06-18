@@ -16,10 +16,6 @@ LICENSE AND COPYRIGHT
 
 *****************************************************************************/
 
-#include <boost/tuple/tuple.hpp>
-#include <boost/algorithm/string.hpp>
-#include <boost/math/distributions.hpp>
-
 #include "breseq/tabulate_coverage.h"
 
 using namespace std;

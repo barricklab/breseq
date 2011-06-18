@@ -90,7 +90,7 @@ our $base_to_bp_change = {
 	"C.G" => "CG.GC", "G.C" => "CG.GC",
 };
 
-our @bsf_snp_types = ( 'PROTEIN', 'RNA', 'PSEUDOGENE', 'INTERGENIC', 'NONSYNONYMOUS', 'SYNONYMOUS');
+our @bsf_snp_types = ( 'PROTEIN', 'RNA', 'PSEUDOGENE', 'INTERGENIC', 'NONSYNONYMOUS', 'SYNONYMOUS', 'TOTAL');
 
 our $k_nt_type_PROTEIN = 0;
 our $k_nt_type_RNA = 1;
@@ -661,6 +661,10 @@ sub change_position_1_totals
 	{
 		$totals->[$pos_info->{nt_type}]->{$bp_mutation} += $inc;
 		$totals->[$pos_info->{nt_type}]->{TOTAL} += $inc;
+		
+		##keep track of total in each category
+		$totals->[6]->{$bp_mutation} += $inc;
+		$totals->[6]->{TOTAL} += $inc;
 	}
 	
 	## extra things to keep track of for proteins
@@ -673,8 +677,6 @@ sub change_position_1_totals
 			$totals->[($pos_info->{bp_mutation_nonsynonymous}->[$j]) ? 4 : 5]->{TOTAL} += $inc;
 		}
 	}
-	
-	##keep track of total in each category
 	
 	#print Dumper($totals);
 	return $totals;
@@ -689,7 +691,10 @@ sub add_bp_change_to_totals
 	
 	$totals->[$pos_info->{nt_type}]->{$bp_change} += $inc;
 	$totals->[$pos_info->{nt_type}]->{TOTAL} += $inc;
-
+	
+	##keep track of total in each category
+	$totals->[6]->{$bp_change} += $inc;
+	$totals->[6]->{TOTAL} += $inc;
 
 	## extra things to keep track of for proteins
 	if ($pos_info->{nt_type} == 0)
