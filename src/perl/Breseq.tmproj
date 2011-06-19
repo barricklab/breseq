@@ -3,7 +3,7 @@
 <plist version="1.0">
 <dict>
 	<key>currentDocument</key>
-	<string>Breseq/lib/Breseq/coverage_distribution.r</string>
+	<string>Breseq/lib/Breseq/MutationIdentification.pm</string>
 	<key>documents</key>
 	<array>
 		<dict>
@@ -180,14 +180,30 @@
 			<key>caret</key>
 			<dict>
 				<key>column</key>
-				<integer>94</integer>
+				<integer>43</integer>
 				<key>line</key>
-				<integer>677</integer>
+				<integer>713</integer>
 			</dict>
+			<key>columnSelection</key>
+			<false/>
 			<key>firstVisibleColumn</key>
 			<integer>0</integer>
 			<key>firstVisibleLine</key>
-			<integer>652</integer>
+			<integer>690</integer>
+			<key>selectFrom</key>
+			<dict>
+				<key>column</key>
+				<integer>0</integer>
+				<key>line</key>
+				<integer>713</integer>
+			</dict>
+			<key>selectTo</key>
+			<dict>
+				<key>column</key>
+				<integer>0</integer>
+				<key>line</key>
+				<integer>714</integer>
+			</dict>
 		</dict>
 		<key>Breseq/bin/fastq_utils</key>
 		<dict>
@@ -424,14 +440,14 @@
 			<key>caret</key>
 			<dict>
 				<key>column</key>
-				<integer>2</integer>
+				<integer>46</integer>
 				<key>line</key>
-				<integer>1352</integer>
+				<integer>95</integer>
 			</dict>
 			<key>firstVisibleColumn</key>
 			<integer>0</integer>
 			<key>firstVisibleLine</key>
-			<integer>1326</integer>
+			<integer>66</integer>
 		</dict>
 		<key>Breseq/lib/Breseq/MutationPredictor.pm</key>
 		<dict>
@@ -508,14 +524,14 @@
 			<key>caret</key>
 			<dict>
 				<key>column</key>
-				<integer>3</integer>
+				<integer>46</integer>
 				<key>line</key>
-				<integer>226</integer>
+				<integer>219</integer>
 			</dict>
 			<key>firstVisibleColumn</key>
 			<integer>0</integer>
 			<key>firstVisibleLine</key>
-			<integer>197</integer>
+			<integer>42</integer>
 		</dict>
 		<key>Breseq/lib/Breseq/plot_coverage.r</key>
 		<dict>
@@ -628,6 +644,6 @@
 	<key>showFileHierarchyDrawer</key>
 	<true/>
 	<key>windowFrame</key>
-	<string>{{363, 188}, {756, 690}}</string>
+	<string>{{363, 115}, {853, 763}}</string>
 </dict>
 </plist>

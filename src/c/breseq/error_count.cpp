@@ -126,12 +126,12 @@ void error_count_pileup::pileup_callback(const pileup& p) {
 
 				
 		uint32_t reversed = i->reversed(); // are we on the reverse strand?
-		uint8_t* qseq = i->query_bam_sequence(); // query sequence (read)
+		uint8_t* qseq = i->read_bam_sequence(); // query sequence (read)
 		int32_t qpos = i->query_position_0(); // position of the alignment in the query
 		int32_t qstart = i->query_start_0(); // @dk: want 0-indexed, so subtract 1
 		int32_t qend = i->query_end_0(); // @dk: want 0-indexed, so subtract 1
 
-		uint8_t* qscore = i->quality_scores(); // quality score array
+		uint8_t* qscore = i->read_base_quality_sequence(); // quality score array
 		int32_t fastq_file_index = i->fastq_file_index(); // sequencer-generated read file that this alignment belongs to
 		
 		uint32_t pos = p.position_0(); // position of this alignment on the reference sequence
@@ -864,12 +864,12 @@ void cErrorTable::count_alignment_position(const alignment& i, const pileup& p) 
     const char* ref_seq = p.reference_sequence();
     
 		uint32_t reversed = i.reversed(); // are we on the reverse strand?
-		uint8_t* qseq = i.query_bam_sequence(); // query sequence (read)
+		uint8_t* qseq = i.read_bam_sequence(); // query sequence (read)
 		int32_t q_pos_0 = i.query_position_0(); // 0-indexed
 		int32_t q_start_0 = i.query_start_0(); // 0-indexed
 		int32_t q_end_0 = i.query_end_0(); // 0-indexed
 
-		uint8_t* qscore = i.quality_scores(); // quality score array
+		uint8_t* qscore = i.read_base_quality_sequence(); // quality score array
 		int32_t fastq_file_index = i.fastq_file_index(); // sequencer-generated read file that this alignment belongs to
 
     // Fill in all covariates that are used...
@@ -1056,7 +1056,7 @@ bool cErrorTable::alignment_position_to_covariates(const alignment& a, int32_t i
   if (indel == -1)
   {
     q_pos_0 += 1 - a.reversed(); 
-    base_bam check_base_bam = a.query_base_bam_0(q_pos_0);
+    base_bam check_base_bam = a.read_base_bam_0(q_pos_0);
     if (_base_bam_is_N(check_base_bam)) return false;
   }
   
@@ -1074,13 +1074,13 @@ bool cErrorTable::alignment_position_to_covariates(const alignment& a, int32_t i
     //## Check bounds: it's possible to go past the end of the read because
     //## this is the last base of this read, but other reads have inserted bases
     if (q_pos_0 > q_end_0) return false;
-    base_bam check_base_bam = a.query_base_bam_0(q_pos_0);
+    base_bam check_base_bam = a.read_base_bam_0(q_pos_0);
     if (_base_bam_is_N(check_base_bam)) return false;
   }
 
   //eventually include in above...
   cv.obs_base() = basebam2index(read_base_bam);
-  cv.quality() = a.quality_base_0(q_pos_0);
+  cv.quality() = a.read_base_quality_0(q_pos_0);
   cv.read_set() = a.fastq_file_index();
   cv.read_pos() = q_pos_0;
   

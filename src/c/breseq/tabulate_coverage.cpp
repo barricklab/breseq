@@ -127,8 +127,8 @@ void breseq::tabulate_coverage_pileup::pileup_callback(const breseq::pileup& p) 
       this_is_first_base = (a->query_position_1() == 1); 
     } else {
       // bottom strand
-      first_base_matched = (a->query_end_1() == a->query_length());
-      this_is_first_base = (a->query_position_1() == a->query_length());     
+      first_base_matched = (a->query_end_1() == a->read_length());
+      this_is_first_base = (a->query_position_1() == a->read_length());     
     }
 
 // WHOA -- do we really want this....?    
@@ -149,7 +149,7 @@ void breseq::tabulate_coverage_pileup::pileup_callback(const breseq::pileup& p) 
         std::string read_begin_s;
         if (!reversed) { 
           for (int i=1; i<=3; i++) {
-            base_bam bb = a->query_base_bam_1(i);
+            base_bam bb = a->read_base_bam_1(i);
             if ( !_base_bam_is_N(bb) ) {
               read_begin_s += basebam2char(bb);
             }
@@ -166,7 +166,7 @@ void breseq::tabulate_coverage_pileup::pileup_callback(const breseq::pileup& p) 
         } else {
           for (int i=1; i<=3; i++) {
           
-            base_bam bb = a->query_base_bam_1(a->query_length()-i+1);
+            base_bam bb = a->read_base_bam_1(a->read_length()-i+1);
             if ( !_base_bam_is_N(bb) ) {
               read_begin_s += basebam2char(complement_base_bam(bb));
             }

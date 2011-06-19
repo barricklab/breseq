@@ -549,7 +549,7 @@ void alignment_output_pileup::pileup_callback(const pileup& p) {
         {
             max_indel = itr_pileup->indel();
         }
-        alignment_spans_position.push_back((*itr_pileup).query_name());
+        alignment_spans_position.push_back((*itr_pileup).read_name());
     }
     if (verbose) //TODO Options
         cout << "MAX INDEL: " << max_indel << endl;
@@ -675,7 +675,7 @@ void alignment_output_pileup::pileup_callback(const pileup& p) {
         bool indel = (*itr_pileup).indel();
 
         //Which read are we on?
-        struct_aligned_read& aligned_read = (aligned_reads[(*itr_pileup).query_name()]);
+        struct_aligned_read& aligned_read = (aligned_reads[(*itr_pileup).read_name()]);
 
         aligned_read.updated = true;
 
@@ -741,8 +741,8 @@ void alignment_output_pileup::pileup_callback(const pileup& p) {
             }
             else
             {
-                uint8_t quality = (*itr_pileup).quality_base_0((*itr_pileup).query_position_0()+index); 
-                char base = (*itr_pileup).query_char_sequence().substr((*itr_pileup).query_position_0()+index,1)[0];//BUG gave random characters
+                uint8_t quality = (*itr_pileup).read_base_quality_0((*itr_pileup).query_position_0()+index); 
+                char base = (*itr_pileup).read_char_sequence().substr((*itr_pileup).query_position_0()+index,1)[0];//BUG gave random characters
 
 
                 if (!text) //TODO Options
@@ -753,7 +753,7 @@ void alignment_output_pileup::pileup_callback(const pileup& p) {
                     {
                         base = tolower(base);
                     }
-                    if ((trim_right !=0) && (((*itr_pileup).query_length()-(*itr_pileup).query_position_0()) <= trim_right))
+                    if ((trim_right !=0) && (((*itr_pileup).read_length()-(*itr_pileup).query_position_0()) <= trim_right))
                     {
                         base = tolower(base);
                     }
@@ -918,10 +918,10 @@ void alignment_output_pileup::fetch_callback(const alignment& a) {
             return;
 
         struct_aligned_read aligned_read;
-        aligned_read.seq_id = a.query_name();
-        aligned_read.length = a.query_length();
-        aligned_read.read_sequence = a.query_char_sequence();
-        aligned_read.qual_sequence = string((char*)a.quality_scores());
+        aligned_read.seq_id = a.read_name();
+        aligned_read.length = a.read_length();
+        aligned_read.read_sequence = a.read_char_sequence();
+        aligned_read.qual_sequence = string((char*)a.read_base_quality_sequence());
 
         aligned_reads[aligned_read.seq_id] = aligned_read;
 

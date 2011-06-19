@@ -250,7 +250,7 @@ void breseq::identify_mutations_pileup::pileup_callback(const breseq::pileup& p)
       
       base_bam read_base_bam='.';
       if(indel >= insert_count) {
-        read_base_bam = i->query_base_bam_0(i->query_position_0() + insert_count);
+        read_base_bam = i->read_base_bam_0(i->query_position_0() + insert_count);
       }
             
       //##don't use bases without qualities!!
@@ -343,16 +343,16 @@ void breseq::identify_mutations_pileup::pileup_callback(const breseq::pileup& p)
         if (indel == -1)
         {			
           int32_t mqpos = i->query_position_0() + 1 - i->reversed(); 
-          base_bam check_base_bam = i->query_base_bam_0(mqpos);
+          base_bam check_base_bam = i->read_base_bam_0(mqpos);
           if (_base_bam_is_N(check_base_bam)) continue;
-          quality = i->quality_base_0(mqpos);
+          quality = i->read_base_quality_0(mqpos);
         }
 
         //## Substitution in read relative to reference...
         //## Quality is of the current base in the read, we have ALREADY checked that it is not an N					
         else if (insert_count == 0)
         {
-          quality = i->quality_base_0(i->query_position_0());
+          quality = i->read_base_quality_0(i->query_position_0());
         }
         
         //## Insertion in read relative to reference...
@@ -370,10 +370,10 @@ void breseq::identify_mutations_pileup::pileup_callback(const breseq::pileup& p)
           if (mqpos >= q_end) continue;
           //next ALIGNMENT if ($mqpos > $q_end);
         
-          base_bam check_base_bam = i->query_base_bam_0(mqpos);
+          base_bam check_base_bam = i->read_base_bam_0(mqpos);
           if (_base_bam_is_N(check_base_bam)) continue;
           
-          quality = i->quality_base_0(mqpos);
+          quality = i->read_base_quality_0(mqpos);
         }
 
         //## We may want to ignore all bases below a certain quality when calling mutations and polymorphisms

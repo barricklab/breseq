@@ -224,15 +224,15 @@
 			isa = PBXGroup;
 			children = (
 				7087747412BC1C06000F9B57 /* breseq */,
-				70B48C4A13A9918E00BF2BF0 /* anyoption.cpp */,
 				709794A8138ECAD300E48727 /* bam2aln_cmdline.cpp */,
 				70B69DE51369B8700001B750 /* breseq_cmdline.cpp */,
-				70B48C4E13A991BE00BF2BF0 /* chisquare.cpp */,
+				70B48C4A13A9918E00BF2BF0 /* anyoption.cpp */,
 				7087728712BC1660000F9B57 /* alignment.cpp */,
 				70A8364C13477AAE0037F8DE /* alignment_output.cpp */,
 				70B5B0FF13324D8300737DC1 /* annotated_sequence.cpp */,
 				70B69DE91369D3510001B750 /* calculate_trims.cpp */,
 				707F211513478B7700ED2F3E /* candidate_junctions.cpp */,
+				70B48C4E13A991BE00BF2BF0 /* chisquare.cpp */,
 				7087728912BC169C000F9B57 /* error_count.cpp */,
 				70B4AEAF1391F72200B9638D /* fasta.cpp */,
 				702EABF613421A8400103019 /* fastq.cpp */,
@@ -574,7 +574,7 @@
 				ONLY_ACTIVE_ARCH = YES;
 				PREBINDING = NO;
 				PRODUCT_NAME = cbreseq;
-				USER_HEADER_SEARCH_PATHS = /opt/local/include;
+				USER_HEADER_SEARCH_PATHS = "";
 			};
 			name = Debug;
 		};
@@ -597,7 +597,7 @@
 				LIBRARY_SEARCH_PATHS_QUOTED_FOR_TARGET_2 = "";
 				PREBINDING = NO;
 				PRODUCT_NAME = cbreseq;
-				USER_HEADER_SEARCH_PATHS = /opt/local/include;
+				USER_HEADER_SEARCH_PATHS = "";
 				ZERO_LINK = NO;
 			};
 			name = Release;
@@ -608,22 +608,8 @@
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
 				ARCHS = "$(NATIVE_ARCH_ACTUAL)";
-				HEADER_SEARCH_PATHS = (
-					"../../extern/samtools-0.1.15",
-					/opt/local/include,
-					"$(SRCROOT)/breseq",
-				);
-				LIBRARY_SEARCH_PATHS = (
-					"../../extern/samtools-0.1.15",
-					/opt/local/lib,
-					"$(LIBRARY_SEARCH_PATHS_QUOTED_FOR_TARGET_6)",
-				);
-				LIBRARY_SEARCH_PATHS_QUOTED_FOR_TARGET_1 = "\"$(SRCROOT)/samtools-0.1.15/.libs\"";
-				LIBRARY_SEARCH_PATHS_QUOTED_FOR_TARGET_2 = "\"$(SRCROOT)/../../extern/samtools-0.1.15\"";
-				LIBRARY_SEARCH_PATHS_QUOTED_FOR_TARGET_3 = "\"$(SRCROOT)/.libs\"";
-				LIBRARY_SEARCH_PATHS_QUOTED_FOR_TARGET_4 = "\"$(SRCROOT)/breseq/.libs\"";
-				LIBRARY_SEARCH_PATHS_QUOTED_FOR_TARGET_5 = "\"$(SRCROOT)/build/Debug\"";
-				LIBRARY_SEARCH_PATHS_QUOTED_FOR_TARGET_6 = "\"$(SRCROOT)/../../extern/samtools-0.1.15\"";
+				HEADER_SEARCH_PATHS = "$(value)";
+				LIBRARY_SEARCH_PATHS = "$(value)";
 				ONLY_ACTIVE_ARCH = YES;
 				PRODUCT_NAME = breseq;
 			};
@@ -639,23 +625,9 @@
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
 				GCC_ENABLE_FIX_AND_CONTINUE = NO;
 				GCC_MODEL_TUNING = G5;
-				HEADER_SEARCH_PATHS = (
-					"../../extern/samtools-0.1.15",
-					/opt/local/include,
-					"$(SRCROOT)/breseq",
-				);
+				HEADER_SEARCH_PATHS = "$(value)";
 				INSTALL_PATH = /usr/local/lib;
-				LIBRARY_SEARCH_PATHS = (
-					"../../extern/samtools-0.1.15",
-					/opt/local/lib,
-					"$(LIBRARY_SEARCH_PATHS_QUOTED_FOR_TARGET_6)",
-				);
-				LIBRARY_SEARCH_PATHS_QUOTED_FOR_TARGET_1 = "\"$(SRCROOT)/samtools-0.1.15/.libs\"";
-				LIBRARY_SEARCH_PATHS_QUOTED_FOR_TARGET_2 = "\"$(SRCROOT)/../../extern/samtools-0.1.15\"";
-				LIBRARY_SEARCH_PATHS_QUOTED_FOR_TARGET_3 = "\"$(SRCROOT)/.libs\"";
-				LIBRARY_SEARCH_PATHS_QUOTED_FOR_TARGET_4 = "\"$(SRCROOT)/breseq/.libs\"";
-				LIBRARY_SEARCH_PATHS_QUOTED_FOR_TARGET_5 = "\"$(SRCROOT)/build/Debug\"";
-				LIBRARY_SEARCH_PATHS_QUOTED_FOR_TARGET_6 = "\"$(SRCROOT)/../../extern/samtools-0.1.15\"";
+				LIBRARY_SEARCH_PATHS = "$(value)";
 				PREBINDING = NO;
 				PRODUCT_NAME = breseq;
 				ZERO_LINK = NO;

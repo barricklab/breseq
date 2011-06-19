@@ -1,2 +1,2 @@
-HEADER_SEARCH_PATHS = $(SRCROOT)/breseq $(SRCROOT)/../../extern/samtools-0.1.15 /opt/local/include "$(SRCROOT)/"/**
+HEADER_SEARCH_PATHS = $(SRCROOT)/breseq $(SRCROOT)/../../extern/samtools-0.1.15 /opt/local/include
 LIBRARY_SEARCH_PATHS = $(SRCROOT)/../../extern/samtools-0.1.15 /opt/local/lib 

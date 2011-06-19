@@ -437,32 +437,17 @@ namespace breseq {
     	s.ReadFeatureTable(in_feature_file_name);
   }
 
-	uint32_t alignment_mismatches(alignment a, bam_header_t* header, faidx_t* fai, const cReferenceSequences* ref_seq_info)
+	uint32_t alignment_mismatches(alignment a, const cReferenceSequences& ref_seq_info)
 	{
 		bool verbose = false;
 		uint32_t mismatches = 0;
 
-		string seq_id = header->target_name[a.reference_target_id()];
-
 		uint32_t a_start, a_end;
 		a.query_bounds_0(a_start, a_end);
 
-		string ref_string;
-		if (ref_seq_info != NULL)
-		{
-			cReferenceSequences ref_seq_info_value = *ref_seq_info;
-			uint32_t index = ref_seq_info_value.seq_id_to_index(seq_id);
-			ref_string = ref_seq_info_value[index].m_fasta_sequence.m_sequence;
-			ref_string = ref_string.substr(a_start - 1, a_end - a_start + 1);
-		}
-		else
-		{
-			stringstream region_ss;
-			region_ss << seq_id << ':' << a_start << '-' << a_end;
-			string region = region_ss.str();
-			int len = 0;
-			ref_string = fai_fetch(fai, region.c_str(), &len);
-		}
+    uint32_t index = a.reference_target_id();
+    const string& const_ref_string = ref_seq_info[index].m_fasta_sequence.m_sequence;
+    string ref_string = const_ref_string.substr(a_start - 1, a_end - a_start + 1);
 
 		vector<string> ref_string_list = split(ref_string, "/");
 		uint32_t ref_pos = 0;
@@ -476,7 +461,7 @@ namespace breseq {
 
 		if (verbose)
 		{
-			cout << a.query_name() << endl;
+			cout << a.read_name() << endl;
 			//cout << Dumper(cigar_list)
 		}
 		//#	my $cigar_string = '';
