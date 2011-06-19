@@ -614,7 +614,7 @@ int main(int argc, char* argv[]) {
 
 		command = argv[1];
 		argv_new[0] = argv[0];
-		for (uint32_t i = 1; i < argc; i++)
+		for (int32_t i = 1; i < argc; i++)
 			argv_new[i] = argv[i + 1];
 
 	} else {

@@ -131,7 +131,7 @@ namespace breseq {
   void RemoveLeadingWhitespace(string &s);
   void RemoveLeadingTrailingWhitespace(string &s);
 
-  uint32_t alignment_mismatches(alignment a, bam_header_t* header, faidx_t* fai, const cReferenceSequences* ref_seq_info);
+  uint32_t alignment_mismatches(alignment a, const cReferenceSequences& ref_seq_info);
 
 } // breseq namespace
 

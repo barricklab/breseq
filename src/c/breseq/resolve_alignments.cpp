@@ -22,6 +22,7 @@ LICENSE AND COPYRIGHT
 #include "breseq/fastq.h"
 #include "breseq/fasta.h"
 #include "breseq/alignment.h"
+#include "breseq/annotated_sequence.h"
 
 using namespace std;
 
@@ -381,7 +382,7 @@ namespace breseq {
 
         
         // if (($junction_al) && ($junction_al->[0]->qname =~ m/^$seq->{id}/))
-        if ((junction_alignments.size() > 0) && (seq.m_name == junction_alignments[0].query_name())) {
+        if ((junction_alignments.size() > 0) && (seq.m_name == junction_alignments[0].read_name())) {
           
           //				$this_junction_al = $junction_al;
           //				($junction_al, $last_junction_alignment) 
@@ -422,7 +423,7 @@ namespace breseq {
         
         
         // if (($reference_al) && ($reference_al->[0]->qname =~ m/^$seq->{id}/))
-        if ((junction_alignments.size() > 0) && (seq.m_name == junction_alignments[0].query_name())) {
+        if ((junction_alignments.size() > 0) && (seq.m_name == junction_alignments[0].read_name())) {
           
           // $this_reference_al = $reference_al;
           // ($reference_al, $last_reference_alignment) 
@@ -752,26 +753,45 @@ namespace breseq {
 //
 //=cut
 //
-int32_t _eligible_read_alignments(Settings settings, bam_header_t* reference_header, faidx_t* reference_fai, const cReferenceSequences& ref_seq_info, vector<alignment> al)
+  
+class mismatch_map_class : public map<alignment*,double> {
+public:
+  inline bool operator() (vector<alignment>::iterator a1, vector<alignment>::iterator a2) { return (*this)[&(*a1)] < (*this)[&(*a2)]; } 
+} mismatch_map;
+
+
+bool sort_by_mismatches (alignment a1, alignment a2) { return mismatch_map[&a1] < mismatch_map[&a2]; }  
+  
+uint32_t _eligible_read_alignments(const Settings& settings, const cReferenceSequences& ref_seq_info, vector<alignment>& alignments)
 {
 	bool verbose = false;
 
 	// These settings are currently not used
-	int32_t minimum_best_score = 0;
-	int32_t minimum_best_score_difference = 0;
+	uint32_t minimum_best_score = 0;
+	uint32_t minimum_best_score_difference = 0;
 	// but the code below works if they are set
 
-	if (al.size() <= 0) return false;
+	if (alignments.size() <= 0) return false;
 
 	// require a minimum length of the read to be mapped
-	for (vector<alignment>::iterator it = al.end() - 1; it >= al.begin(); it--)
-		if (_test_read_alignment_requirements(settings, reference_header, reference_fai, ref_seq_info, (*it)))
-			al.erase(it);
+	for (vector<alignment>::iterator it = alignments.end() - 1; it >= alignments.begin(); it--)
+  {
+		if (_test_read_alignment_requirements(settings, ref_seq_info, (*it)))
+    {
+			alignments.erase(it);
+    }
+  }
+	if (alignments.size() == 0) return 0;
 
-	if (al.size() <= 0) return false;
-
-	//@al = grep { !$_->unmapped } @al;
-	//return (0) if (scalar @al == 0);
+  // require read to be mapped! -- @JEB maybe this should be checked sooner?
+	for (vector<alignment>::iterator it = alignments.end() - 1; it >= alignments.begin(); it--)
+  {
+    if (it->unmapped())
+    {
+      alignments.erase(it);
+    }
+  }
+  if (alignments.size() == 0) return 0;
 
 	// @JEB v1> Unfortunately sometimes better matches don't get better alignment scores!
 	// example is 30K88AAXX_LenskiSet2:1:37:1775:92 in RJW1129
@@ -780,31 +800,47 @@ int32_t _eligible_read_alignments(Settings settings, bam_header_t* reference_hea
 	// This sucks, but we need to re-sort matches and check scores ourselves...
 	// for now just count mismatches (which include soft padding!)
 	//my %mismatch_hash;
-	//foreach my $a (@al)
+
+  //foreach my $a (@al)
 	//{
 	//	$mismatch_hash{$a} = Breseq::Shared::alignment_mismatches($a, $reference_header, $reference_fai, $ref_seq_info);
 	//}
 	//@al = sort { $mismatch_hash{$a} <=> $mismatch_hash{$b} } @al;
+  
+  //@JEB This method of sorting may be slower than alternatives
+  //     Ideally, the scores should be hashes and only references should be sorted.
+  mismatch_map.clear();
+  for (vector<alignment>::iterator it = alignments.begin(); it < alignments.end(); it++)
+  {  
+    alignment* ap = &(*it); // we are saving the pointer value as the map key
+    mismatch_map[ap] = static_cast<double>(alignment_mismatches(*it, ref_seq_info));
+  }
+  sort(alignments.begin(), alignments.end(), sort_by_mismatches ); 
 
-	//if ($verbose)
-	//{
-	//foreach my $a (@al)
-	//{
-	//print $a->start . "-" . $a->end . " " . ($a->l_qseq-$mismatch_hash{$a}) . "\n";
-	//}
-	//}
+	if (verbose)
+	{
+    for (vector<alignment>::iterator it = alignments.begin(); it < alignments.end(); it++)
+    {
+      cerr << it->query_start_1() << "-" << it->query_end_1() << " ";
+      cerr << it->query_match_length()-mismatch_map[static_cast<alignment*>(&(*it))] << "\n";
+    }
+	}
 
 	// how many reads share the best score?
+  uint32_t last_best(0);
 	//my $last_best = 0;
+  uint32_t best_score = mismatch_map[&(alignments[0])];
 	//my $best_score = $mismatch_hash{$al[0]};
-
-	// no scores meet minimum
+	
+  // no scores meet minimum
+  if ((minimum_best_score > 0) && (best_score < minimum_best_score)) return 0; 
 	//return (0) if (defined $minimum_best_score && ($best_score < $minimum_best_score));
 
-	//while (($last_best+1 < scalar @al) && ($mismatch_hash{$al[$last_best+1]} == $best_score))
-	//{
-	//$last_best++;
-	//}
+  
+	while ((last_best+1 < alignments.size()) && (mismatch_map[&(alignments[last_best+1])] == best_score))
+	{
+    last_best++;
+	}
 
 	//#broken
 	//## no scores meet minimum difference between best and next best
@@ -815,18 +851,22 @@ int32_t _eligible_read_alignments(Settings settings, bam_header_t* reference_hea
 	//#}
 
 	//@al = splice @al, 0, $last_best+1;
+  
+  alignments.resize(last_best+1);
 
-	//if ($verbose)
-	//{
-	//print "$last_best\n";
-	//foreach my $a (@al)
-	//{
-	//print $a->start . "-" . $a->end . "\n";
-	//}
-	//}
+  
+	if (verbose)
+	{
+    cerr << last_best << endl;
+    for (vector<alignment>::iterator it = alignments.begin(); it < alignments.end(); it++)
+    {
+      cerr << it->query_start_1() << "-" << it->query_end_1() << endl;
+    }
+	}
 
 	// Note that the score we return is higher for matches so we negative this value...
 	//return $al[0]->l_qseq-$best_score;
+  return best_score;
 }
   
 //
@@ -841,7 +881,7 @@ int32_t _eligible_read_alignments(Settings settings, bam_header_t* reference_hea
 //
 //=cut
 //
-bool _test_read_alignment_requirements(Settings settings, bam_header_t* reference_header, faidx_t* reference_fai, const cReferenceSequences& ref_seq_info, alignment a)
+bool _test_read_alignment_requirements(const Settings& settings, const cReferenceSequences& ref_seq_info, const alignment& a)
 {
 	bool accept = true;
 
@@ -862,7 +902,7 @@ bool _test_read_alignment_requirements(Settings settings, bam_header_t* referenc
 	}
 	if (settings.max_read_mismatches > 0)
 	{
-		int32_t mismatches = alignment_mismatches(a, reference_header, reference_fai, &ref_seq_info);
+		int32_t mismatches = alignment_mismatches(a, ref_seq_info);
 		if (mismatches > settings.max_read_mismatches) return false;
 	}
 

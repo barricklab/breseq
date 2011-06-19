@@ -38,6 +38,11 @@ alignment::alignment(const bam1_t* a)
 {
 }
   
+alignment::alignment()
+: _p(NULL), _a(NULL) 
+{
+}
+  
 alignment::~alignment()
 {
 }
@@ -86,7 +91,7 @@ bool alignment::is_trimmed() const {
 	// is our query position in the right-side trimmed region?
 	uint8_t *auxr = bam_aux_get(_a,"XR");
 	if(auxr) {
-		if((query_length()-(query_position_1())) <= (uint32_t)bam_aux2i(auxr)) {
+		if((read_length()-(query_position_1())) <= (uint32_t)bam_aux2i(auxr)) {
 			return true;
 		}
 	}
@@ -247,18 +252,18 @@ uint32_t alignment::reference_end_0() const {
 
 uint32_t alignment::base_repeat_0(uint32_t q_pos_0) const {
 
-  uint8_t this_base_bam = query_base_bam_0(q_pos_0);
+  uint8_t this_base_bam = read_base_bam_0(q_pos_0);
   uint32_t base_repeat = 0;
   if (!reversed()) {
     while ( q_pos_0 < query_end_0()) {
       q_pos_0++;
-      if (this_base_bam != query_base_bam_0(q_pos_0)) break;
+      if (this_base_bam != read_base_bam_0(q_pos_0)) break;
       base_repeat++;
     }  
   } else {
     while (q_pos_0 > 0) {
       q_pos_0--;
-      if (this_base_bam != query_base_bam_0(q_pos_0)) break;
+      if (this_base_bam != read_base_bam_0(q_pos_0)) break;
       base_repeat++;
     }    
   }
@@ -325,7 +330,7 @@ bool tam_file::read_alignments(alignment_list& alignments, bool paired)
 	if (loaded_alignments.size() > 0)
 	{
     alignment last_alignment(loaded_alignments.back());
-		last_read_name = last_alignment.query_name();
+		last_read_name = last_alignment.read_name();
     
     loaded_alignments.resize(loaded_alignments.size()-1);
 		alignments.push_back(last_alignment);
@@ -343,7 +348,7 @@ bool tam_file::read_alignments(alignment_list& alignments, bool paired)
     
     alignment last_alignment(last_alignment_bam);
 
-		string read_name = last_alignment.query_name();
+		string read_name = last_alignment.read_name();
       
 		if (last_read_name.size() == 0)
     {
@@ -378,10 +383,10 @@ void tam_file::write_alignments(int32_t fastq_file_index, alignment_list& alignm
 
 		string aux_tags = aux_tags_ss.str();
 
-		uint8_t* qscore = a.quality_scores();
+		uint8_t* qscore = a.read_base_quality_sequence();
     stringstream quality_score_ss;
 
-		for (uint32_t j = 0; j < a.query_length(); j++)
+		for (uint32_t j = 0; j < a.read_length(); j++)
     {
 			quality_score_ss << static_cast<char>(*qscore + 33);
       qscore++;
@@ -401,7 +406,7 @@ void tam_file::write_alignments(int32_t fastq_file_index, alignment_list& alignm
 		string cigar_string = cigar_string_ss.str();
 
 		vector<string> ll;
-		ll.push_back(a.query_name());
+		ll.push_back(a.read_name());
 		ll.push_back(to_string(fix_flags(a.flag())));
 		ll.push_back(bam_header->target_name[a.reference_target_id()]);
 		ll.push_back(to_string(a.reference_start_1()));
@@ -423,7 +428,7 @@ void tam_file::write_alignments(int32_t fastq_file_index, alignment_list& alignm
 		}
 
     
-		ll.push_back(a.query_char_sequence());
+		ll.push_back(a.read_char_sequence());
 		ll.push_back(quality_score_string);
 		ll.push_back(aux_tags);
 

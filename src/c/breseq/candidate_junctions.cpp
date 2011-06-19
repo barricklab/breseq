@@ -59,7 +59,7 @@ namespace breseq {
 //		my %printed_keys;
 		int32_t i = 0;
 
-		string read_id = a1.query_name();
+		string read_id = a1.read_name();
 
 		// First, sort matches by their order in the query
 		alignment q1 = a1;
@@ -368,7 +368,7 @@ namespace breseq {
 		string junction_id = junction_name_join(junction_id_list);
 		if (verbose)
 		{
-			cout << "READ ID: " << a1.query_name() << endl;
+			cout << "READ ID: " << a1.read_name() << endl;
 			cout << "JUNCTION ID: " << junction_id << endl;
 		}
 
@@ -385,7 +385,7 @@ namespace breseq {
 		if (verbose)
 		{
 			cout << endl << "###########################" << endl;
-			cout << al_ref[0].query_name();
+			cout << al_ref[0].read_name();
 			cout << endl << "###########################" << endl;
 		}
 
@@ -403,7 +403,7 @@ namespace breseq {
 
 		if (verbose)
 		{
-			cout << al_ref[0].query_name() << endl;
+			cout << al_ref[0].read_name() << endl;
 			cout << "Total matches: " << al_ref.size() << endl;
 		}
 
@@ -551,7 +551,7 @@ namespace breseq {
 		if (junctions.size() == 0) return;
 
 		if (verbose)
-			cout << al_ref[0].query_name() << endl;
+			cout << al_ref[0].read_name() << endl;
 
 		// only now that we've looked through everything can we determine whether the reference sequence matched
 		// on a side was unique, after correcting for overlap
@@ -716,7 +716,7 @@ namespace breseq {
 
 		uint32_t q_seq_start, q_seq_end;
 		a.query_bounds_0(q_seq_start, q_seq_end);
-		int32_t q_length = a.query_length();
+		int32_t q_length = a.read_length();
 
 		bool reversed = a.reversed();
 		// sequence of the matching part of the query (top genomic strand)
@@ -737,7 +737,7 @@ namespace breseq {
 		if (verbose)
 		{
 			cout << "====> Num Matches from End" << endl;
-			cout << a.query_name() << endl;
+			cout << a.read_name() << endl;
 			cout << "direction: " << dir << endl;
 			cout << "Read sequence: " << a_qseq << endl;
 			cout << "Read Match coords: " << q_seq_start << "-" << q_seq_end << " " << reversed << endl;
@@ -949,7 +949,7 @@ namespace breseq {
         
 				// write best alignments
 				{
-//@JEB==>here!          int32_t best_score = _eligible_read_alignments(settings, header, reference_fai, ref_seq_info, al_ref);
+          int32_t best_score = _eligible_read_alignments(settings, ref_seq_info, alignments);
           BSAM.write_alignments(0, alignments, NULL);
 				}
 		}

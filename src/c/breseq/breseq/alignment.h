@@ -21,6 +21,8 @@ LICENSE AND COPYRIGHT
 
 #include "common.h"
 
+using namespace std;
+
 namespace breseq {
 
   /*! Represents a single alignment within a pileup.
@@ -30,7 +32,7 @@ class alignment {
     //! Constructor.
     alignment(const bam_pileup1_t* p);
     alignment(const bam1_t* a);
-
+    alignment();
     ~alignment();
   
     
@@ -58,8 +60,8 @@ class alignment {
     //  Returns 1 if read aligned to bottom strand, 0 if aligned to top strand
     inline uint32_t reference_target_id() const { return _a->core.tid; }
 
-    //!Retrieve name of query/read.
-    inline std::string query_name() const { return bam1_qname(_a);}
+    //!Retrieve name of read.
+    inline string read_name() const { return bam1_qname(_a);}
 
     //! Is the read aligned to the reverse strand?
     //  Returns 1 if read aligned to bottom strand, 0 if aligned to top strand
@@ -70,13 +72,13 @@ class alignment {
     inline int32_t strand() const { return (bam1_strand(_a) ? -1 : +1); }
     
     //! Retrieve the query sequence (always on top strand).
-    inline uint8_t* query_bam_sequence() const { return bam1_seq(_a); }
+    inline uint8_t* read_bam_sequence() const { return bam1_seq(_a); }
 
     //! Retrieve the query sequence (always on top strand).
-    std::string query_char_sequence() const { 
-      std::string s;
-      for (uint32_t p=0; p<query_length(); p++) {
-        s += basebam2char(query_base_bam_0(p));
+    string read_char_sequence() const { 
+      string s;
+      for (uint32_t p=0; p<read_length(); p++) {
+        s += basebam2char(read_base_bam_0(p));
       }
       return s;
     }
@@ -85,16 +87,16 @@ class alignment {
     inline uint8_t on_base_bam(int32_t insert_count=0) const { 
       uint32_t pos0 = query_position_0() + insert_count;
       if (on_base_indel() < insert_count) return '.'; // gap character
-      return query_base_bam_0(pos0); 
+      return read_base_bam_0(pos0); 
     };
     
-    //! Calculate the total length of the query.
-    inline uint32_t query_length() const { return _a->core.l_qseq; }
+    //! Calculate the total length of the read.
+    inline uint32_t read_length() const { return _a->core.l_qseq; }
   
     //! Retrieve the base at a specified position in the read (was 0-indexed)
     //  Methods available for 0-indexed and 1-indexed coordinates.
-    inline uint8_t query_base_bam_0(const uint32_t pos) const { assert((pos>=0) && (pos<query_length())); return bam1_seqi(query_bam_sequence(), pos); }
-    inline uint8_t query_base_bam_1(const uint32_t pos) const { assert((pos>0) && (pos<=query_length())); return bam1_seqi(query_bam_sequence(), pos-1); }
+    inline uint8_t read_base_bam_0(const uint32_t pos) const { assert((pos>=0) && (pos<read_length())); return bam1_seqi(read_bam_sequence(), pos); }
+    inline uint8_t read_base_bam_1(const uint32_t pos) const { assert((pos>0) && (pos<=read_length())); return bam1_seqi(read_bam_sequence(), pos-1); }
 
     //! Retrieve the position of the alignment in the query (was 0-indexed).
     //  Methods available for 0-indexed and 1-indexed coordinates.
@@ -102,12 +104,12 @@ class alignment {
     inline uint32_t query_position_1() const { return _p->qpos+1; }
 	
     //! Retrieve the quality score array.
-    inline uint8_t* quality_scores() const { return bam1_qual(_a); }
+    inline uint8_t* read_base_quality_sequence() const { return bam1_qual(_a); }
 
     //! Retrieve the quality score of a single base. (was 0-indexed)
     //  Methods available for 0-indexed and 1-indexed coordinates.
-    inline uint8_t quality_base_0(const uint32_t pos) const { assert((pos>=0) && (pos<query_length())); return bam1_qual(_a)[pos]; }
-    inline uint8_t quality_base_1(const uint32_t pos) const { assert((pos>0) && (pos<=query_length())); return bam1_qual(_a)[pos-1]; }
+    inline uint8_t read_base_quality_0(const uint32_t pos) const { assert((pos>=0) && (pos<read_length())); return bam1_qual(_a)[pos]; }
+    inline uint8_t read_base_quality_1(const uint32_t pos) const { assert((pos>0) && (pos<=read_length())); return bam1_qual(_a)[pos-1]; }
 
     //! Retrieve the index of the read file that contained this alignment.
     uint32_t fastq_file_index() const;
@@ -137,6 +139,8 @@ class alignment {
     //  Methods available for 0-indexed and 1-indexed coordinates.    
     uint32_t query_end_0() const { return query_end_1()-1; };
     uint32_t query_end_1() const;
+  
+    uint32_t query_match_length() const { return query_end_1() - query_start_1() + 1; };
 
     //! Starting and ending coordinates of the alignment part of the read
     //  on the reference sequence
@@ -146,11 +150,14 @@ class alignment {
     uint32_t reference_end_0() const;
     uint32_t reference_end_1() const {return reference_end_0() + 1; };
 
+    uint32_t reference_match_length() const { return reference_end_1() - reference_start_1() + 1; };
+
+  
     int32_t mate_start_0() const {return _a->core.mpos; } ;
     int32_t mate_start_1() const {return mate_start_0() + 1; };
 
-    inline  bool beginning_to_end_match() 
-    { return ((query_start_1() == 1) && (query_end_1() == query_length())); }
+    inline  bool beginning_to_end_match() const
+    { return ((query_start_1() == 1) && (query_end_1() == read_length())); }
 
 
     //! Number of bases before this position (on read strand)
@@ -179,6 +186,9 @@ class alignment {
 	inline uint32_t cigar_array_length() const { return _a->core.n_cigar; }
 	inline uint32_t cigar_query_length() const { return bam_cigar2qlen(&_a->core, cigar_array()); };
 	inline uint8_t* aux_get(const char tag[2]) const { return bam_aux_get(_a, tag); }
+  
+  //! Is this read unmapped?
+  inline bool unmapped() { return flag() & BAM_FUNMAP; }
   
   inline uint32_t aux_get_i(const char tag[2]) const 
   { 
