@@ -110,7 +110,8 @@ sub new
 		'perl-error-count' => \$self->{perl_error_count},
 		'perl-identify-mutations' => \$self->{perl_identify_mutations},
 		'perl-calc-trims' => \$self->{perl_calc_trims},
-		'strict-polymorphism-prediction' => \$self->{strict_polymorphism_prediction},					
+		'strict-polymorphism-prediction' => \$self->{strict_polymorphism_prediction},
+		'perl-preprocess-alignments' => \$self->{perl_preprocess_alignments},
 	) or pod2usage(2);
 
 	pod2usage(1) if $help;

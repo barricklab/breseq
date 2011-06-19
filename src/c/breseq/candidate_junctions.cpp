@@ -834,14 +834,14 @@ namespace breseq {
   //    {
   //      my ($settings, $summary, $header, $PSAM, $min_indel_split_len, $al_ref) = @_;  
   
-  void CandidateJunctions::_split_indel_alignments(const Settings& settings, Summary& summary, tam_file& PSAM, int32_t min_indel_split_len, alignment_list& alignments)
+  void CandidateJunctions::_split_indel_alignments(const Settings& settings, Summary& summary, tam_file& PSAM, int32_t min_indel_split_len, const alignment_list& alignments)
   {
     assert(min_indel_split_len >= 0);
     
     alignment_list untouched_alignments;
     uint32_t alignments_written = 0;      
 
-    for(alignment_list::iterator it = alignments.begin(); it < alignments.end(); it++) 
+    for(alignment_list::const_iterator it = alignments.begin(); it < alignments.end(); it++) 
     {
       uint32_t* cigar_list = it->cigar_array();
       bool do_split = false;
@@ -876,13 +876,12 @@ namespace breseq {
     //##
     //## Use $self->{required_both_unique_length_per_side} to rule them out.
     //## 
-    
-    for(alignment_list::iterator it = alignments.begin(); it < alignments.end(); it++) 
+        
+    for(alignment_list::iterator it = untouched_alignments.begin(); it < untouched_alignments.end(); it++) 
     {
       if ((*it).beginning_to_end_match())
       {
         untouched_alignments.erase(it);
-        it--;
       }
     }
     
@@ -952,7 +951,7 @@ namespace breseq {
           int32_t best_score = _eligible_read_alignments(settings, ref_seq_info, alignments);
           BSAM.write_alignments(0, alignments, NULL);
 				}
-		}
+      }
     }
   }
 

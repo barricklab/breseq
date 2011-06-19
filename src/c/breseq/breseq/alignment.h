@@ -172,7 +172,26 @@ class alignment {
         return false;
       }
     }
-    
+  
+    //! Operations on CIGAR match string
+    inline uint32_t* cigar_array() const { return bam1_cigar(_a); }
+    inline uint32_t cigar_array_length() const { return _a->core.n_cigar; }
+    inline uint32_t cigar_query_length() const { return bam_cigar2qlen(&_a->core, cigar_array()); };
+
+    string cigar_string() const {
+      uint32_t* cigar_list = cigar_array();
+      stringstream cigar_string_ss;
+      
+      for (uint32_t j = 0; j < cigar_array_length(); j++) //foreach my $c (@$cigar_list)
+      {
+        uint32_t op = cigar_list[j] & BAM_CIGAR_MASK;
+        uint32_t len = cigar_list[j] >> BAM_CIGAR_SHIFT;
+        cigar_string_ss << len << op_to_char[op]; //$cigar_string += $c->[1] + $c->[0];
+      }
+      return cigar_string_ss.str();
+    }
+  
+  
 	inline string qseq() const {
 	    string seq(_a->core.l_qseq, ' ');
 	    for (int32_t i = 0; i < _a->core.l_qseq; i++)
@@ -182,9 +201,6 @@ class alignment {
 	inline int32_t isize() const { return _a->core.isize; }
 	inline uint8_t quality() const { return _a->core.qual; }
 	inline uint16_t flag() const { return _a->core.flag; }
-	inline uint32_t* cigar_array() const { return bam1_cigar(_a); }
-	inline uint32_t cigar_array_length() const { return _a->core.n_cigar; }
-	inline uint32_t cigar_query_length() const { return bam_cigar2qlen(&_a->core, cigar_array()); };
 	inline uint8_t* aux_get(const char tag[2]) const { return bam_aux_get(_a, tag); }
   
   //! Is this read unmapped?
@@ -199,6 +215,8 @@ class alignment {
   protected:
     const bam_pileup1_t* _p; //!< Pileup.
     const bam1_t* _a; //!< Alignment.
+  
+    static const char op_to_char[10];
 };
   
 typedef vector<alignment> alignment_list;  
@@ -214,7 +232,7 @@ public:
   
   bool read_alignments(alignment_list& alignments, bool paired = false);
   void write_alignments(int32_t fastq_file_index, alignment_list& alignments, vector<Trim>* trims = NULL);
-  void write_split_alignment(uint32_t min_indel_split_len, alignment& a);
+  void write_split_alignment(uint32_t min_indel_split_len, const alignment& a);
   
 protected:
   bam_header_t* bam_header;

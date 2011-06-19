@@ -23,6 +23,8 @@ using namespace std;
 
 namespace breseq {
 
+const char alignment::op_to_char[10] = "MIDNSHP=X";
+  
 /*! Constructor.
  */
 alignment::alignment(const bam_pileup1_t* p)
@@ -369,7 +371,7 @@ void tam_file::write_alignments(int32_t fastq_file_index, alignment_list& alignm
 {
 	for (uint32_t i = 0; i < alignments.size(); i++)
 	{
-		alignment a = alignments[i];
+		alignment& a = alignments[i];
 
 		stringstream aux_tags_ss;
     
@@ -392,21 +394,12 @@ void tam_file::write_alignments(int32_t fastq_file_index, alignment_list& alignm
       qscore++;
     }
     string quality_score_string = quality_score_ss.str();
-
-		uint32_t* cigar_list = a.cigar_array();
-		stringstream cigar_string_ss;
-
-    const char op_to_char[10] = "MIDNSHP=X";
-		for (uint32_t j = 0; j < a.cigar_array_length(); j++) //foreach my $c (@$cigar_list)
-		{
-			uint32_t op = cigar_list[i] & BAM_CIGAR_MASK;
-			uint32_t len = cigar_list[i] >> BAM_CIGAR_SHIFT;
-			cigar_string_ss << len << op_to_char[op]; //$cigar_string += $c->[1] + $c->[0];
-		}
-		string cigar_string = cigar_string_ss.str();
+    
+		string cigar_string = a.cigar_string();
 
 		vector<string> ll;
 		ll.push_back(a.read_name());
+    //cerr << a.read_name() << endl;
 		ll.push_back(to_string(fix_flags(a.flag())));
 		ll.push_back(bam_header->target_name[a.reference_target_id()]);
 		ll.push_back(to_string(a.reference_start_1()));
@@ -436,7 +429,7 @@ void tam_file::write_alignments(int32_t fastq_file_index, alignment_list& alignm
 	}
 }
   
-void tam_file::write_split_alignment(uint32_t min_indel_split_len, alignment& a)
+void tam_file::write_split_alignment(uint32_t min_indel_split_len, const alignment& a)
 {
 
 

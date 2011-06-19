@@ -331,7 +331,26 @@ if (!$settings->{no_junction_prediction})
 		
 		if ($settings->do_step('preprocess_junction_done_file_name', "Preprocessing alignments for candidate junction identification"))
 		{
-			Breseq::CandidateJunction::preprocess_alignments($settings, $summary, $ref_seq_info);
+			if ($settings->{perl_preprocess_alignments})
+			{
+				Breseq::CandidateJunction::preprocess_alignments($settings, $summary, $ref_seq_info);
+			}
+			else
+			{
+				my $cbreseq = $settings->ctool('cbreseq');
+				my $readfiles = join(" --read-file ", $settings->read_files);
+				my $data_path = $settings->file_name("data_path");
+				my $reference_alignment_path = $settings->file_name("reference_alignment_path");
+				my $candidate_junction_path = $settings->file_name("candidate_junction_path");
+
+				my $cmdline = "$cbreseq PREPROCESS_ALIGNMENTS --data-path $data_path";
+				$cmdline .= " --reference-alignment-path $reference_alignment_path";
+				$cmdline .= " --candidate-junction-path $candidate_junction_path";
+				$cmdline .= " --read-file $readfiles";
+				
+				Breseq::Shared::system($cmdline);				
+			}
+			
 			$settings->done_step('preprocess_junction_done_file_name');
 		}
 	}
