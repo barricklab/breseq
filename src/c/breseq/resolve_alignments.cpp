@@ -765,7 +765,7 @@ bool sort_by_mismatches (alignment a1, alignment a2) { return mismatch_map[&a1] 
 uint32_t _eligible_read_alignments(const Settings& settings, const cReferenceSequences& ref_seq_info, vector<alignment>& alignments)
 {
 	bool verbose = false;
-
+  
 	// These settings are currently not used
 	uint32_t minimum_best_score = 0;
 	uint32_t minimum_best_score_difference = 0;
@@ -776,7 +776,7 @@ uint32_t _eligible_read_alignments(const Settings& settings, const cReferenceSeq
 	// require a minimum length of the read to be mapped
 	for (vector<alignment>::iterator it = alignments.end() - 1; it >= alignments.begin(); it--)
   {
-		if (_test_read_alignment_requirements(settings, ref_seq_info, (*it)))
+		if (!_test_read_alignment_requirements(settings, ref_seq_info, (*it)))
     {
 			alignments.erase(it);
     }
@@ -813,7 +813,8 @@ uint32_t _eligible_read_alignments(const Settings& settings, const cReferenceSeq
   for (vector<alignment>::iterator it = alignments.begin(); it < alignments.end(); it++)
   {  
     alignment* ap = &(*it); // we are saving the pointer value as the map key
-    mismatch_map[ap] = static_cast<double>(alignment_mismatches(*it, ref_seq_info));
+    uint32_t i = alignment_mismatches(*it, ref_seq_info);
+    mismatch_map[ap] = static_cast<double>(i);
   }
   sort(alignments.begin(), alignments.end(), sort_by_mismatches ); 
 
@@ -825,7 +826,8 @@ uint32_t _eligible_read_alignments(const Settings& settings, const cReferenceSeq
       cerr << it->query_match_length()-mismatch_map[static_cast<alignment*>(&(*it))] << "\n";
     }
 	}
-
+  
+  
 	// how many reads share the best score?
   uint32_t last_best(0);
 	//my $last_best = 0;
@@ -891,19 +893,27 @@ bool _test_read_alignment_requirements(const Settings& settings, const cReferenc
 	if (settings.required_match_length > 0)
 	{
 		//uint32_t* cigar = a.cigar_array(); // cigar array for this alignment
-		int32_t alignment_length_on_query = a.cigar_query_length(); //this is the length of the alignment on the read
+		int32_t alignment_length_on_query = a.query_match_length(); //this is the length of the alignment on the read
 		if (alignment_length_on_query < settings.required_match_length)
+    {
 			return false;
-	}
+    }
+  }
 
 	if (settings.require_complete_match)
 	{
-    if (a.beginning_to_end_match()) return false;
+    if (!a.beginning_to_end_match())
+    {
+      return false; 
+    }
 	}
 	if (settings.max_read_mismatches > 0)
 	{
 		int32_t mismatches = alignment_mismatches(a, ref_seq_info);
-		if (mismatches > settings.max_read_mismatches) return false;
+		if (mismatches > settings.max_read_mismatches)
+    {
+      return false; 
+    }
 	}
 
 	return true;

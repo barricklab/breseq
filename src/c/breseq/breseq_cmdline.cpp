@@ -441,8 +441,8 @@ int do_preprocess_alignments(int argc, char* argv[]) {
 		("candidate-junction-score-method", "scoring method", "POS_HASH")
 		("min-indel-split-length", "split indels this long in matches", 3)
 		("max-read-mismatches", "ignore reads with more than this number of mismatches", -1)
-		("require-complete-match", "require the complete read to match (both end bases", false)
-		("required-match-length", "require this length of sequence -- on the read -- to match", -1)
+		("require-complete-match", "require the complete read to match (both end bases", TAKES_NO_ARGUMENT)
+		("required-match-length", "require this length of sequence -- on the read -- to match", "28")
 		("candidate-junction-read-limit", "limit handled reads to this many", -1)
     .processCommandArgs(argc, argv);
 
@@ -476,7 +476,7 @@ int do_preprocess_alignments(int argc, char* argv[]) {
 	settings.candidate_junction_score_method = options["candidate-junction-score-method"];
     
 	settings.preprocess_junction_split_sam_file_name = options["candidate-junction-path"];
-  settings.preprocess_junction_split_sam_file_name += "#.split.sam";
+  settings.preprocess_junction_split_sam_file_name += "/#.split.sam";
     
 	settings.preprocess_junction_best_sam_file_name = options["candidate-junction-path"];
   settings.preprocess_junction_best_sam_file_name += "/best.sam";
@@ -489,7 +489,7 @@ int do_preprocess_alignments(int argc, char* argv[]) {
   settings.reference_sam_file_name += "/#.reference.sam";
     
   settings.max_read_mismatches = from_string<int32_t>(options["max-read-mismatches"]);
-  settings.require_complete_match = from_string<bool>(options["require-complete-match"]);
+  settings.require_complete_match = options.count("require-complete-match");
 	settings.candidate_junction_read_limit = from_string<int32_t>(options["candidate-junction-read-limit"]);
 	settings.required_match_length = from_string<int32_t>(options["required-match-length"]);
   settings.preprocess_junction_min_indel_split_length = from_string<int32_t>(options["min-indel-split-length"]);

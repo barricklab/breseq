@@ -442,19 +442,12 @@ namespace breseq {
 		bool verbose = false;
 		uint32_t mismatches = 0;
 
-		uint32_t a_start, a_end;
-		a.query_bounds_0(a_start, a_end);
-
     uint32_t index = a.reference_target_id();
     const string& const_ref_string = ref_seq_info[index].m_fasta_sequence.m_sequence;
-    string ref_string = const_ref_string.substr(a_start - 1, a_end - a_start + 1);
-
-		vector<string> ref_string_list = split(ref_string, "/");
+    string ref_string = const_ref_string.substr(a.reference_start_0(), a.reference_match_length());
 		uint32_t ref_pos = 0;
 
-		string qseq = a.qseq();
-		string read_string = qseq.substr(a_start - 1, a_end - a_start + 1);
-		vector<string> read_string_list = split(read_string, "/");
+		string read_string = a.read_char_sequence().substr(a.query_start_0(), a.query_match_length());
 		uint32_t read_pos = 0;
 
 		uint32_t* cigar_list = a.cigar_array(); // cigar array for this alignment
@@ -466,38 +459,40 @@ namespace breseq {
 		}
 		//#	my $cigar_string = '';
 
-		for (uint32_t i = 0; i <= a.cigar_array_length(); i++)
+		for (uint32_t i = 0; i < a.cigar_array_length(); i++)
 		{
 			char op = cigar_list[i] & BAM_CIGAR_MASK;
 			uint32_t len = cigar_list[i] >> BAM_CIGAR_SHIFT;
 
 			// soft padding counts as a mismatch
-			if (op == 'S')
+			if (op == BAM_CSOFT_CLIP)
 			{
 				mismatches += len;
 			}
-			else if (op == 'D')
+			else if (op == BAM_CDEL)
 			{
 				mismatches += len;
 				ref_pos += len;
 			}
-			else if (op == 'I')
+			else if (op == BAM_CINS)
 			{
 				mismatches += len;
 				read_pos += len;
 			}
-			else if (op == 'M')
+			else if (op == BAM_CMATCH)
 			{
 				for (uint32_t j = 0; j < len; j++)
 				{
 					if (verbose)
 					{
-						cout << "REF: " << ref_pos << "  " << ref_string_list[ref_pos] << endl;
-						cout << "READ: " << read_pos << "  " << read_string_list[read_pos] << endl;
+						cout << "REF: " << ref_pos << "  " << ref_string[ref_pos] << endl;
+						cout << "READ: " << read_pos << "  " << read_string[read_pos] << endl;
 					}
-					if (ref_string_list[ref_pos].compare(read_string_list[read_pos]) != 0);
+					if (ref_string[ref_pos] != read_string[read_pos])
+          {
 						mismatches++;
-					//#print "$read_pos $ref_pos\n";
+					}
+          //#print "$read_pos $ref_pos\n";
 
 					read_pos++;
 					ref_pos++;
