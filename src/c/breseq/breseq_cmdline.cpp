@@ -170,57 +170,6 @@ int do_calculate_trims(int argc, char* argv[]) {
 	return 0;
 }
 
-/*! Candidate Junctions
- 
- Calculate how much to ignore on the end of reads due to ambiguous alignments
- of those bases.
- 
- */
-int do_candidate_junctions(int argc, char* argv[]) {
-	
-	//TODO: Add correct usage and function call
-
-	// setup and parse configuration options:
-	AnyOption options("Usage: IDENTIFY_CANDIDATE_JUNCTIONS");
-	options
-		("help,h", "produce this help message", TAKES_NO_ARGUMENT)
-		("fasta,f", "FASTA file of reference sequence")
-		("output,o", "output directory")
-  
-		//These options are almost always default values
-		//TODO: Supply default values?
-		("required-both-unique-length-per-side,1",
-			"Only count reads where both matches extend this many bases outside of the overlap.")
-		("required-one-unique-length-per-side,2",
-			"Only count reads where at least one match extends this many bases outside of the overlap.")
-		("maximum-inserted-junction-sequence-length,3",
-			"Maximum number of bases allowed in the overlapping part of a candidate junction.")
-		("required-match-length,4",
-			"At least this many bases in the read must match the reference genome for it to count.")
-		("required-extra-pair-total-length,5",
-			"Each match pair must have at least this many bases not overlapping for it to count.")
-   .processCommandArgs(argc, argv);
-
-	// make sure that the config options are good:
-	if(options.count("help")
-		 || !options.count("fasta")
-		 || !options.count("output")
-		 ) {
-		options.printUsage();
-		return -1;
-	}                       
-  
-	// attempt to calculate error calibrations:
-	try {
-    
-  } catch(...) {
-		// failed; 
-		return -1;
-	}
-	
-	return 0;
-}
-
 /*!  Resolve alignments
  
  Compare matches to candidate junctions and matches to reference sequence
@@ -440,7 +389,7 @@ int do_preprocess_alignments(int argc, char* argv[]) {
 
 		("candidate-junction-score-method", "scoring method", "POS_HASH")
 		("min-indel-split-length", "split indels this long in matches", 3)
-		("max-read-mismatches", "ignore reads with more than this number of mismatches", -1)
+		("max-read-mismatches", "ignore reads with more than this number of mismatches", uint32_t(0))
 		("require-complete-match", "require the complete read to match (both end bases", TAKES_NO_ARGUMENT)
 		("required-match-length", "require this length of sequence -- on the read -- to match", "28")
 		("candidate-junction-read-limit", "limit handled reads to this many", -1)
@@ -513,33 +462,62 @@ int do_identify_candidate_junctions(int argc, char* argv[]) {
 	AnyOption options("Usage: breseq_utils IDENTIFY_CANDIDATE_JUNCTIONS --fasta=reference.fasta --sam=reference.sam --output=output.fasta");
 	options
 		("help,h", "produce this help message", TAKES_NO_ARGUMENT)
-		("fasta,f", "FASTA file of reference sequence")
-		("sam,s", "text SAM file of input alignments")
-		("output,o", "name of output file")
+    ("candidate-junction-path", "path where candidate junction files will be created")
+    ("data-path", "path of data")
+    ("read-file,r", "FASTQ read files (multiple allowed, comma-separated) ")
+
+    ("candidate-junction-read-limit", "limit handled reads to this many", uint32_t(0))
+    ("required-both-unique-length-per-side,1",
+     "Only count reads where both matches extend this many bases outside of the overlap.", 5)
+    ("required-one-unique-length-per-side,2",
+     "Only count reads where at least one match extends this many bases outside of the overlap.", 10)
+    ("maximum-inserted-junction-sequence-length,3",
+     "Maximum number of bases allowed in the overlapping part of a candidate junction.", 20)
+    ("required-match-length,4",
+     "At least this many bases in the read must match the reference genome for it to count.", 28)
+    ("required-extra-pair-total-length,5",
+     "Each match pair must have at least this many bases not overlapping for it to count.", 2)
 	.processCommandArgs(argc, argv);
+  
+  //These options are almost always default values
+  //TODO: Supply default values?
 
 	// make sure that the config options are good:
 	if(options.count("help")
-		 || !options.count("fasta")
-		 || !options.count("sam")
-		 || !options.count("output")
+		 || !options.count("data-path")
+     || !options.count("candidate-junction-path")
+     || !options.count("read-file")
 		 ) {
 		options.printUsage();
 		return -1;
 	}                       
   
-	// attempt to calculate error calibrations:
 	try {
     
     // plain function
 
-	Settings settings;
-	Summary summary;
+    Settings settings;
+      
+    // File settings
+    settings.read_structures.Init(vector_from_string<string>(options["read-file"]));
+    settings.preprocess_junction_split_sam_file_name = options["candidate-junction-path"] + "/#.split.sam";
+    settings.reference_fasta_file_name = options["data-path"] + "/reference.fasta";     
+    settings.candidate_junction_fasta_file_name = options["candidate-junction-path"] + "/candidate_junction.fasta";
 
-	cReferenceSequences ref_seq_info;
-	breseq::LoadFeatureIndexedFastaFile(ref_seq_info, "", options["fasta"]);
-
-	CandidateJunctions::identify_candidate_junctions(settings, summary, ref_seq_info);
+    // Other settings
+    settings.candidate_junction_read_limit = from_string<int32_t>(options["candidate-junction-read-limit"]);
+    settings.required_extra_pair_total_length = from_string<int32_t>(options["required-extra-pair-total-length"]);
+    settings.required_match_length  = from_string<int32_t>(options["required-match-length"]);
+    settings.maximum_inserted_junction_sequence_length = from_string<int32_t>(options["maximum-inserted-junction-sequence-length"]);
+    settings.required_one_unique_length_per_side = from_string<int32_t>(options["required-one-unique-length-per-side"]);
+    settings.required_both_unique_length_per_side = from_string<int32_t>(options["required-both-unique-length-per-side"]);
+    
+    Summary summary;
+      
+    cReferenceSequences ref_seq_info;
+    breseq::LoadFeatureIndexedFastaFile(ref_seq_info, "", options["data-path"]);
+        
+    CandidateJunctions::identify_candidate_junctions(settings, summary, ref_seq_info);
     
   } catch(...) {
 		// failed; 
