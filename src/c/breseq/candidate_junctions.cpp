@@ -28,7 +28,7 @@ namespace breseq {
 
 	CandidateJunctions::CandidateJunctions() {}
 
-	bool CandidateJunctions::_alignments_to_candidate_junction(Settings settings, Summary summary, const cReferenceSequences& ref_seq_info, faidx_t* fai, bam_header_t* header, alignment a1, alignment a2,
+	bool CandidateJunctions::_alignments_to_candidate_junction(Settings settings, Summary summary, const cReferenceSequences& ref_seq_info, alignment a1, alignment a2,
 															  int32_t& redundancy_1, int32_t& redundancy_2, string& junction_seq_string, string& ref_seq_matched_1, string& ref_seq_matched_2, string& junction_coord_1, string& junction_coord_2, int32_t& read_begin_coord, JunctionList& junction_id_list)
 	{
 		bool verbose = false;
@@ -87,12 +87,12 @@ namespace breseq {
 		uint32_t seq_id;
 
 		bool hash_strand_1 = q1.reversed();
-		string hash_seq_id_1 = header->target_name[q1.reference_target_id()];
+		string hash_seq_id_1 = ref_seq_info[q1.reference_target_id()].m_seq_id;
 		seq_id = req_seq_info_copy.seq_id_to_index(hash_seq_id_1);
 		string ref_seq_1 = ref_seq_info[seq_id].m_fasta_sequence.m_sequence;
 
 		bool hash_strand_2 = !q2.reversed();
-		string hash_seq_id_2 = header->target_name[q2.reference_target_id()];
+		string hash_seq_id_2 = ref_seq_info[q2.reference_target_id()].m_seq_id;
 		seq_id = req_seq_info_copy.seq_id_to_index(hash_seq_id_2);
 		string ref_seq_2 = ref_seq_info[seq_id].m_fasta_sequence.m_sequence;
 
@@ -378,7 +378,7 @@ namespace breseq {
 		return true;
 	}
 
-	void CandidateJunctions::_alignments_to_candidate_junctions(Settings settings, Summary summary, const cReferenceSequences& ref_seq_info, map<string, map<string, CandidateJunction>, CandidateJunction::Sorter>& candidate_junctions, faidx_t* fai, bam_header_t* header, vector<alignment> al_ref)
+	void CandidateJunctions::_alignments_to_candidate_junctions(Settings settings, Summary summary, const cReferenceSequences& ref_seq_info, map<string, map<string, CandidateJunction>, CandidateJunction::Sorter>& candidate_junctions, vector<alignment> al_ref)
 	{
 		bool verbose = false;
 
@@ -512,7 +512,7 @@ namespace breseq {
 			int32_t read_begin_coord;
 			JunctionList junction_id_list;
 
-			bool passed = _alignments_to_candidate_junction(settings, summary, ref_seq_info, fai, header, a1, a2,
+			bool passed = _alignments_to_candidate_junction(settings, summary, ref_seq_info, a1, a2,
 															r1, r2, junction_seq_string, side_1_ref_seq, side_2_ref_seq, junction_coord_1, junction_coord_2, read_begin_coord, junction_id_list);
 			if (!passed) continue;
 
@@ -896,9 +896,6 @@ namespace breseq {
     }
   }
 
-	void CandidateJunctions::_by_ref_seq_coord(map_t a, map_t b, map_t ref_seq_info) {}
-	void CandidateJunctions::_by_score_unique_coord(map_t a, map_t b) {}
-
 	// Public
 
 	/*! Preprocesses alignments
@@ -973,12 +970,7 @@ namespace breseq {
 		// set up files and local variables from settings
 		//my $ref_strings = ref_seq_info[*].m_fasta_sequence.m_sequence;
 
-		string reference_faidx_file_name = Settings::file_name(settings.reference_faidx_file_name);
-		faidx_t* fai = fai_load(Settings::file_name(settings.reference_fasta_file_name).c_str());
-    string reference_fasta_file_name = settings.reference_fasta_file_name;
-
 		string candidate_junction_fasta_file_name = Settings::file_name(settings.candidate_junction_fasta_file_name);
-
 		cFastaFile out(candidate_junction_fasta_file_name, ios_base::out);
 
 		// hash by junction sequence concatenated with name of counts
@@ -1011,11 +1003,12 @@ namespace breseq {
 			s["reads_with_ambiguous_hybrids"] = 0;
 
 			// Decide which input SAM file we are using...
+      
 			string reference_sam_file_name = Settings::file_name(settings.preprocess_junction_split_sam_file_name);
 			if (settings.candidate_junction_score_method.compare("POS_HASH") != 0)
 				reference_sam_file_name = Settings::file_name(settings.reference_sam_file_name);
 
-      tam_file tam(reference_sam_file_name, reference_fasta_file_name, ios_base::in);
+      tam_file tam(reference_sam_file_name, settings.reference_fasta_file_name, ios_base::in);
 			vector<alignment> alignments;
 
 			while (tam.read_alignments(alignments, false))
@@ -1030,8 +1023,7 @@ namespace breseq {
 				if (settings.candidate_junction_read_limit != 0 && i > settings.candidate_junction_read_limit)
 					break;
 
-        // @JEB REWRITE
-//				_alignments_to_candidate_junctions(settings, summary, ref_seq_info, candidate_junctions, fai, header, alignments);
+				_alignments_to_candidate_junctions(settings, summary, ref_seq_info, candidate_junctions, alignments);
 			}
 
 			hcs.read_file[read_file] = s;
