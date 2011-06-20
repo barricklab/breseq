@@ -64,7 +64,8 @@ typedef struct {
 typedef struct {
     string aligned_bases;
 }struct_aligned_annotation;
-    
+
+
 class alignment_output_pileup : public pileup_base {
 public:
     //! Constructor.
@@ -81,16 +82,11 @@ public:
 
 
     map<string, struct_aligned_read> aligned_reads;
-
-
-
     vector<struct_aligned_reference> aligned_references;
-
-
     struct_aligned_annotation aligned_annotation;
 
-    uint32_t unique_start;
-    uint32_t unique_end;
+    uint32_t unique_start; //used in create alignment and passed to fetch
+    uint32_t unique_end; //used in create alignment and passed to fetch
     uint32_t total_reads;
     uint32_t processed_reads;
     uint32_t maximum_to_align;
@@ -116,7 +112,32 @@ public:
     //! Output an HTML alignment.
     string html_alignment(const string region);
     void create_alignment(const string bam, const string fasta, const string region);
+    void set_quality_range();
+    
+    //Built by creat_alignment()
+    map<string, struct_aligned_read> m_aligned_reads; 
+    vector<struct_aligned_reference> m_aligned_references;
+    struct_aligned_annotation m_aligned_annotation;
+    
 
+private:
+  //!Helper struct for set_quality_range    
+  typedef struct {
+    vector<uint32_t> qual_to_color_index;
+    vector<uint32_t> qaul_cutoffs;
+  }struct_quality_range;
+  //Built by set_quality_range()
+  struct_quality_range m_quality_range;
+
+  string create_header_string();
+  
+  static bool sort_by_aligned_bases(const pair<string, struct_aligned_read> a, const pair<string,struct_aligned_read> b)
+  {
+    return (a.second.aligned_bases > b.second.aligned_bases);
+  }
+  
+    
+    
 
 };
 

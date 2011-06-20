@@ -147,13 +147,9 @@ void alignment_output::create_alignment(const string bam, const string fasta, co
     m_alignment_output_pileup_object.last_pos = 0;
     m_alignment_output_pileup_object.do_pileup(region);
 //do_pileup is needed to create the following
-    map<string, struct_aligned_read> m_aligned_reads;
+   
     m_aligned_reads = m_alignment_output_pileup_object.aligned_reads;
-
-    vector<struct_aligned_reference> m_aligned_references;
     m_aligned_references = m_alignment_output_pileup_object.aligned_references;
-
-    struct_aligned_annotation m_aligned_annotation;
     m_aligned_annotation = m_alignment_output_pileup_object.aligned_annotation;
 
 //
@@ -369,6 +365,16 @@ void alignment_output::create_alignment(const string bam, const string fasta, co
     //      my $left_pos =  length($1);
     //      my $right_pos = $left_pos + length($2);
     //
+      
+      /* EX: counting padding in reads.
+       *  string x = "  TTTA  ";
+       *              01234567  
+       *   int right = x.find_last_not_of(' ');
+       *   int left = x.find_first_not_of(' ');
+       *> left: 2
+       *> right: 5
+      */
+       
       uint32_t left_pos = aligned_read.aligned_bases.find_first_not_of(' ');
       uint32_t right_pos = aligned_read.aligned_bases.find_last_not_of(' ');
       
@@ -470,14 +476,81 @@ void alignment_output::create_alignment(const string bam, const string fasta, co
     //
 } //End create alignment
 
-string alignment_output::html_alignment(const string region) {
+string alignment_output::html_alignment(const string region) 
+{
+//sub html_alignment
+//{
+//my $verbose = 0;
+//my ($self, $bam_path, $fasta_path, $region, $options) = @_;
+//      
+//my $alignment_info = $self->create_alignment($bam_path, $fasta_path, $region, $options);
+// 
+//my $output = '';    
+//return p . "No reads uniquely align to region." if (!defined $alignment_info);
+//$output .= p . "$alignment_info->{message}" if ($alignment_info->{message});
+//return $output if (!defined $alignment_info->{aligned_reads});
+//
+//my $aligned_reads = $alignment_info->{aligned_reads};
+//my @aligned_references = @{$alignment_info->{aligned_references}};
+//my $aligned_annotation = $alignment_info->{aligned_annotation};
+//my $quality_range = $self->set_quality_range($aligned_reads, $options);
+//  
+  string output;
+  map<string,struct_aligned_read>& aligned_reads(m_aligned_reads);
+  vector<struct_aligned_reference>& aligned_references(m_aligned_references);
+  struct_aligned_annotation& aligned_annotation(m_aligned_annotation);
+  struct_quality_range& quality_range(m_quality_range);
+  //my @sorted_keys = sort { -($aligned_reads->{$a}->{aligned_bases} cmp $aligned_reads->{$b}->{aligned_bases}) } keys %$aligned_reads;
+  //TODO ASK create aligned_reads as a vector< pair<string,struct>> instead of map for sorting purposes???
+  vector< pair<string, struct_aligned_read> > sorted_aligned_reads;
+  {
+  for (map<string,struct_aligned_read>::iterator itr_read = aligned_reads.begin();
+       itr_read !=  aligned_reads.end(); itr_read++)
+  {
+    sorted_aligned_reads.push_back(make_pair((*itr_read).first, (*itr_read).second));
+  }
+  
+  }
+  sort(sorted_aligned_reads.begin(), sorted_aligned_reads.end(), sort_by_aligned_bases);
 
-    string s;
-
-
-    //  m_alignment_output_pileup_object.do_pileup(region);
-
-    return s;
+//  
+ 
+//$output .= style($self->{header_style_string});
+//$output .= start_table({-style=>"background-color: rgb(255,255,255)"}) . start_Tr() . start_td({-style=>"font-size:10pt"});
+//
+  
+//foreach my $aligned_reference (@aligned_references)
+//{
+//  $output .= $self->_html_alignment_line($aligned_reference, 1) . br;
+//}
+//$output .= $self->_html_alignment_line($aligned_annotation, 0) . br;
+//         
+//     foreach my $key (@sorted_keys)
+//     {
+//         $output .= $self->_html_alignment_line($aligned_reads->{$key}, 0, $quality_range) . br;
+//     }   
+//     $output .= $self->_html_alignment_line($aligned_annotation, 0) . br;
+//     foreach my $aligned_reference (@aligned_references)
+//     {
+//         $output .= $self->_html_alignment_line($aligned_reference, 1) . br;
+//     }
+//     $output .= br;
+// 
+//     ## create legend information
+//     
+//     $output .= start_code . "Base quality scores:&nbsp;" . end_code;
+//     $output .= $self->_html_alignment_line({aligned_bases => 'ATCG', => aligned_quals => pack('CCCC',0,0,0,0)}, 0,  $quality_range);
+//     for (my $i=((defined $options->{quality_score_cutoff}) ? 1 : 2); $i<scalar @{$quality_range->{qual_cutoffs}}; $i++)
+//     {
+//         my $c = $quality_range->{qual_cutoffs}->[$i];
+//         $output .= start_code . "&nbsp;&lt;&nbsp;$c&nbsp;&le;&nbsp;" . end_code;
+//         $output .= $self->_html_alignment_line({aligned_bases => 'ATCG', => aligned_quals => pack('CCCC',$c,$c,$c,$c)}, 0,  $quality_range);
+//     }
+//     
+//     $output .= end_table() . end_Tr() . end_td();   
+//         
+//     return $output;
+// }
 }
 
 /*! Called for each position.*/
@@ -938,7 +1011,272 @@ void alignment_output_pileup::fetch_callback(const alignment& a) {
 }
 
 
+void alignment_output::set_quality_range() {
+// sub set_quality_range
+// {
+//     my ($self, $aligned_reads, $options) = @_;
+  
+//     
+//     my @qc;
+//     my $total = 0;
+//     my $quality_score_cutoff = 0;
+//     $quality_score_cutoff = $options->{quality_score_cutoff} if (defined $options->{quality_score_cutoff}); 
+//
+  map<uint32_t, uint32_t> qc;
+  uint32_t total = 0;
+  uint32_t quality_score_cutoff = 0;
+  
+// foreach my $key (keys %$aligned_reads)
+// {
+  for (map<string, struct_aligned_read>::iterator itr_reads = m_aligned_reads.begin(); //TODO typedef map
+            itr_reads != m_aligned_reads.end(); itr_reads++)
+  { 
+// my $aligned_read = $aligned_reads->{$key};
+    struct_aligned_read& aligned_read = ((*itr_reads).second);
+//  foreach my $c (split (//, $aligned_read->{qual_sequence}))
+//  {
+    for(uint32_t index = 0; index < aligned_read.qual_sequence.length(); index ++) //TODO check if 1 indexed or not
+    {
+      uint32_t c = uint32_t(aligned_read.qual_sequence[index]);   
+//    if (ord($c) >= $quality_score_cutoff)
+//    {
+      if ( c >= quality_score_cutoff)
+      {
+//      $qc[ord($c)]++;
+//      $total++;
+        if(qc.find(c)!=qc.end())
+        {
+          qc[c]++;
+          total++;
+        }
+        else
+        {
+          qc[c] = 1;
+        }
+//    }
+      }
+//  }
+    }
+//}
+  }
+//     
+//my @qual_to_color;
+//my @cutoff_percentiles = (0, 0.03, 0.1, 0.3, 0.9, 1.0);
+//my $current_cutoff_level = 0;
+//     
+  vector<uint32_t> qual_to_color;
+  uint32_t cutoff_values[] = {0, 0.03, 0.1, 0.3, 0.9, 1.0};
+  vector<uint32_t> cutoff_percentiles (cutoff_values, cutoff_values 
+   + sizeof(cutoff_values) / sizeof(uint32_t) );
+  uint32_t current_cutoff_level = 0;
 
+
+//##set up to this score to the zero level (which is a completely different color)
+//my $i;
+//for ($i=0; $i<$quality_score_cutoff; $i++)
+//{
+//$qual_to_color[$i] = $current_cutoff_level;
+//}
+//     $current_cutoff_level++;
+  uint32_t index;
+  for (index = 0; index <  quality_score_cutoff; index++)
+  {
+    qual_to_color[index] = current_cutoff_level;
+  }
+  current_cutoff_level++;
+//     
+//my $cumq = 0;   
+//while ($i < scalar @qc)
+//{
+  uint32_t cumq = 0;
+  while (qc.find(index) != qc.end())
+  {
+//  $cumq += $qc[$i] / $total if (defined $qc[$i]);
+    //TODO ASK passes if defined by entering while loop?
+    cumq+= (qc[index] / total);
+//         
+// #this can increment by at most one per quality score
+//  if ($cumq > $cutoff_percentiles[$current_cutoff_level])
+//  {
+    if (cumq > cutoff_percentiles[current_cutoff_level])
+    {
+//    $current_cutoff_level++;
+//  }
+      current_cutoff_level++;
+    }
+// $qual_to_color[$i] = $current_cutoff_level;
+   qual_to_color[index] = current_cutoff_level;
+// } continue {
+//         $i++ 
+//     }      
+   index++; //TODO ASK
+  }  
+//#last must be set to max
+//$qual_to_color[$i-1] = scalar(@cutoff_percentiles)-1;
+  qual_to_color[index - 1] = cutoff_percentiles.size() - 1;
+//#first must be set to min
+//$qual_to_color[$quality_score_cutoff] = 1;  
+  qual_to_color[quality_score_cutoff] = 1;
+//     
+//#if there are at least as many quality scores in existence as
+//#there are color levels to assign....
+//if ((scalar(@qual_to_color) > scalar(@cutoff_percentiles)-1))
+//{
+  if (qual_to_color.size() > (cutoff_percentiles.size() - 1))
+  {     
+//  #...redistribute such that there are no jumps in quality level
+//  my $gap = 1;
+    uint32_t gap = 1;
+//  while ($gap)
+//  {
+    while(gap)
+    {
+//    $gap = 0;
+      gap = 0;
+//    my $last = 0;
+      uint32_t last = 0;
+//    for (my $i=0; $i<scalar @qual_to_color; $i++)
+//    {
+      for (uint32_t index = 0; index < qual_to_color.size(); index++)
+      {
+//      if ($qual_to_color[$i] > $last + 1)
+//      {
+        if (qual_to_color[index] > last + 1);
+        {
+//        $qual_to_color[$i-1]++;
+          qual_to_color[index - 1]++;
+//        $gap = 1;
+          gap = 1;
+
+//      }
+        }
+//      $last = $qual_to_color[$i]; 
+        last = qual_to_color[index];
+//    }
+      }
+//  }
+    }
+//}
+  }
+//         
+//##finally, this sets the cutoff levels
+//my $last = 0;
+  uint32_t last = 0;
+//my @cutoff_levels = ($quality_score_cutoff);
+  vector<uint32_t> cutoff_levels; cutoff_levels.clear();
+  cutoff_levels.push_back(quality_score_cutoff);
+//for (my $i=$quality_score_cutoff; $i<scalar @qual_to_color; $i++)
+//{
+  for (uint32_t index = quality_score_cutoff;
+       index < qual_to_color.size(); index++)
+  {         
+//  if ($qual_to_color[$i] > $last)
+//  {
+    if (qual_to_color[index] > last)
+    {
+//    push @cutoff_levels, $i;
+      cutoff_levels.push_back(index);
+//    $last = $qual_to_color[$i];
+      last = qual_to_color[index];
+//  }
+    }
+//}
+  }
+// 
+//  return {qual_to_color_index => \@qual_to_color, qual_cutoffs => \@cutoff_levels };
+// 
+  m_quality_range.qual_to_color_index = qual_to_color;
+  m_quality_range.qaul_cutoffs = cutoff_levels;
+// return 1
+}
+
+
+string alignment_output::create_header_string()
+{
+// our $base_colors_hash = {
+//     'G' => [ "rgb(255,255,0)", "rgb(230,230,230)", "rgb(210,210,210)", "rgb(140,140,140)", "rgb(70,70,70)",  "rgb(0,0,0)"     ],
+//     'C' => [ "rgb(255,255,0)", "rgb(160,160,255)", "rgb(120,120,255)", "rgb(60,60,255)",   "rgb(0,0,255)",   "rgb(0,0,150)"   ],
+//     'A' => [ "rgb(255,255,0)", "rgb(255,210,210)", "rgb(255,180,180)", "rgb(255,100,100)", "rgb(255,20,20)", "rgb(200,0,0)"   ],
+//     'T' => [ "rgb(255,255,0)", "rgb(210,255,210)", "rgb(180,255,180)", "rgb(100,255,100)", "rgb(20,255,20)", "rgb(0,200,0)"   ],
+//     'N' => [ "rgb(128,0,128)", "rgb(128,0,128)",   "rgb(128,0,128)",   "rgb(128,0,128)",   "rgb(128,0,128)", "rgb(128,0,128)" ],
+// };
+  map<char, vector<string> > base_color_hash;  
+  base_color_hash['G'].push_back("rgb(255,255,0)");
+  base_color_hash['G'].push_back("rgb(230,230,230)");  
+  base_color_hash['G'].push_back("rgb(210,210,210)");
+  base_color_hash['G'].push_back("rgb(140,140,140)");
+  base_color_hash['G'].push_back("rgb(70,70,70)");
+  base_color_hash['G'].push_back("rgb(0,0,0)");
+
+  base_color_hash['C'].push_back("rgb(255,255,0)");
+  base_color_hash['C'].push_back("rgb(160,160,255)");
+  base_color_hash['C'].push_back("rgb(120,120,255)");
+  base_color_hash['C'].push_back("rgb(60,60,255)");
+  base_color_hash['C'].push_back("rgb(0,0,255)");
+  base_color_hash['C'].push_back("rgb(0,0,150)");
+
+  base_color_hash['A'].push_back("rgb(255,255,0)");
+  base_color_hash['A'].push_back("rgb(255,210,210)");
+  base_color_hash['A'].push_back("rgb(255,180,180)");
+  base_color_hash['A'].push_back("rgb(255,100,100)");
+  base_color_hash['A'].push_back("rgb(255,20,20)");
+  base_color_hash['A'].push_back("rgb(200,0,0)");
+
+  base_color_hash['T'].push_back("rgb(255,255,0)");
+  base_color_hash['T'].push_back("rgb(210,255,210)");
+  base_color_hash['T'].push_back("rgb(180,255,180)");
+  base_color_hash['T'].push_back("rgb(100,255,100)");
+  base_color_hash['T'].push_back("rgb(20,255,20)");
+  base_color_hash['T'].push_back("rgb(0,200,0)");
+
+  base_color_hash['N'].push_back("rgb(128,0,128)");
+  base_color_hash['N'].push_back("rgb(128,0,128)");
+  base_color_hash['N'].push_back("rgb(128,0,128)");
+  base_color_hash['N'].push_back("rgb(128,0,128)");
+  base_color_hash['N'].push_back("rgb(128,0,128)");
+  base_color_hash['N'].push_back("rgb(128,0,128)");
+  
+//$self-> {header_style_string} = '';
+  string header_style_string; header_style_string.clear();
+//$self-> {header_style_string} .= "\.NC {color: rgb(0,0,0); background-color: rgb(255,255,255)}\n"; #no color
+//$self-> {header_style_string} .= "\.UN {color: rgb(120,120,120); background-color: rgb(255,255,255)}\n"; #unaligned
+  header_style_string += "\\.NC {color: rgb(0,0,0); background-color: rgb(255,255,255)}\n";
+  header_style_string += "\\.UN {color: rgb(120,120,120); background-color: rgb(255,255,255)}\n";
+//foreach my $key (keys %$base_colors_hash)
+//{
+  for (map<char, vector<string> >::iterator itr = base_color_hash.begin(); 
+       itr != base_color_hash.end(); itr++)
+  {
+//  for (my $i=0; $i<scalar @ {$base_colors_hash->{$key}}; $i++)
+//  {
+    for (uint32_t index = 0; index < base_color_hash[(*itr).first].size(); index ++)
+    {
+      if (index > 0)
+      {
+//    if ($i>0)
+//    {
+      
+//      $self-> {header_style_string} .= "\.$key$i \{color: rgb(255,255,255); background-color: $base_colors_hash->{$key}->[$i]\}\n";
+        header_style_string += "\\." + to_string((*itr).first) + "\\{color: rgb(255,255,255); background-color:" 
+         + (*itr).second[index] + "\\ \n";
+//    }
+      }
+//    else
+//    {
+      else
+      {
+//      $self-> {header_style_string} .= "\.$key$i \{color: rgb(120,120,120); background-color: $base_colors_hash->{$key}->[$i]\}\n";
+        header_style_string += "\\."+to_string((*itr).first) + "\\{color: rgb(120,120,120); background-color:" 
+         +(*itr).second[index] + "\\ \n";
+//    }
+      }
+//   }
+    }
+//}
+  }
+// 
+//     $self-> {no_color_index} = scalar(@ {$base_colors_hash->{'G'}}) - 1;
+  return header_style_string;
+}
 
 } // namespace breseq
-
