@@ -29,7 +29,7 @@ namespace breseq {
 	CandidateJunctions::CandidateJunctions() {}
 
 	bool CandidateJunctions::_alignments_to_candidate_junction(Settings settings, Summary summary, const cReferenceSequences& ref_seq_info, alignment a1, alignment a2,
-															  int32_t& redundancy_1, int32_t& redundancy_2, string& junction_seq_string, string& ref_seq_matched_1, string& ref_seq_matched_2, string& junction_coord_1, string& junction_coord_2, int32_t& read_begin_coord, JunctionList& junction_id_list)
+															  int32_t& redundancy_1, int32_t& redundancy_2, string& junction_seq_string, string& ref_seq_matched_1, string& ref_seq_matched_2, string& junction_coord_1, string& junction_coord_2, int32_t& read_begin_coord, JunctionInfo& junction_id_list)
 	{
 		bool verbose = false;
 
@@ -339,7 +339,7 @@ namespace breseq {
 			unique_read_seq_string = reverse_complement(unique_read_seq_string);
 		}
 
-		JunctionList::Side side_1 = {
+		JunctionInfo::Side side_1 = {
 			hash_seq_id_1,	// seq_id
 			hash_coord_1,	// position
 			hash_strand_1,	// strand
@@ -350,7 +350,7 @@ namespace breseq {
 			hash_strand_2,	// strand
 			-1				// redundant: set to magic (uninitialized) value
 		};
-		JunctionList new_junction =
+		JunctionInfo new_junction =
 		{
 			side_1,
 			side_2,
@@ -399,7 +399,7 @@ namespace breseq {
 		// For keeping track of how many times unique reference sequences (ignoring overlap regions)
 		// were used to construct a junction. We must mark redundant sides AFTER correcting for overlap.
 		map<string, map<string, int32_t> > redundant_junction_sides;
-		vector<JunctionListContainer> junctions;
+		vector<JunctionInfoContainer> junctions;
 
 		if (verbose)
 		{
@@ -510,7 +510,7 @@ namespace breseq {
 			string side_1_ref_seq, side_2_ref_seq;
 			string junction_coord_1, junction_coord_2;
 			int32_t read_begin_coord;
-			JunctionList junction_id_list;
+			JunctionInfo junction_id_list;
 
 			bool passed = _alignments_to_candidate_junction(settings, summary, ref_seq_info, a1, a2,
 															r1, r2, junction_seq_string, side_1_ref_seq, side_2_ref_seq, junction_coord_1, junction_coord_2, read_begin_coord, junction_id_list);
@@ -531,7 +531,7 @@ namespace breseq {
 
 			int32_t min_overlap_score = min(a1_unique_length, a2_unique_length);
 
-			JunctionListContainer junction =
+			JunctionInfoContainer junction =
 			{
 				junction_id_list,		// list
 				junction_seq_string,	// str
@@ -557,8 +557,8 @@ namespace breseq {
 		// on a side was unique, after correcting for overlap
 		for (uint32_t i = 0; i < junctions.size(); i++)
 		{
-			JunctionListContainer jct = junctions[i];
-			JunctionList junction_id_list = jct.list;
+			JunctionInfoContainer jct = junctions[i];
+			JunctionInfo junction_id_list = jct.list;
 			string junction_seq_string = jct.str;
 			int32_t min_overlap_score = jct.min_overlap_score;
 			int32_t read_begin_coord = jct.read_begin_coord;

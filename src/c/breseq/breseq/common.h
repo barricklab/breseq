@@ -300,7 +300,7 @@ namespace breseq {
 		rhs.clear();
 		string value;
 		stream >> value;
-		vector<string> values = split(value, ",");
+		vector<string> values = split(value, "\n");
 		for (vector<string>::iterator it = values.begin(); it != values.end(); it++)
 		{
 			T t;
@@ -333,25 +333,14 @@ namespace breseq {
 		}
 	}
 
-  template <typename T> inline T from_string(const string &s)
+	template <typename T> inline T from_string(const string &s)
 	{
 		T t;
 		istringstream iss(s);
 		iss >> boolalpha >> t;
 		return t;
 	}
-  
-  template <typename T> inline vector<T> vector_from_string(const string &s, const string& delimiter="\n")
-  {
-    vector<T> t;
-    vector<string> ss = split(s, delimiter);
-    for(vector<string>::const_iterator it=ss.begin(); it<ss.end(); it++)
-    {
-      t.push_back( from_string<T>(*it) );
-    }
-    return t;
-  }
-  
+
 	inline string to_upper(const string& input)
 	{
 		string str = input;
@@ -383,7 +372,7 @@ namespace breseq {
 		return retval;
 	}
 
-	struct JunctionList
+	struct JunctionInfo
 	{
 		struct Side
 		{
@@ -401,12 +390,12 @@ namespace breseq {
 
 	const string junction_name_separator = "__";
 
-	// Deserializes a JunctionList from a string
-	inline JunctionList junction_name_split(string junction_name)
+	// Deserializes a JunctionInfo from a string
+	inline JunctionInfo junction_name_split(string junction_name)
 	{
 		vector<string> s = split(junction_name, junction_name_separator);
 
-		JunctionList::Side side_1 = {
+		JunctionInfo::Side side_1 = {
 			s[0],
 			from_string<int32_t>(s[1]),
 			from_string<bool>(s[2]),
@@ -417,7 +406,7 @@ namespace breseq {
 			from_string<bool>(s[5]),
 			from_string<int32_t>(s[11])
 		};
-		JunctionList retval =
+		JunctionInfo retval =
 		{
 			side_1,
 			side_2,
@@ -430,8 +419,8 @@ namespace breseq {
 		return retval;
 	}
 
-	// Serializes a JunctionList to a string
-	inline string junction_name_join(JunctionList item)
+	// Serializes a JunctionInfo to a string
+	inline string junction_name_join(JunctionInfo item)
 	{
 		bool has_redundant = (item.side_1.redundant >= 0 && item.side_2.redundant >= 0);
 		vector<string> values(has_redundant ? 12 : 10);
