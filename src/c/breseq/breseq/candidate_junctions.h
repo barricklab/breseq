@@ -84,9 +84,9 @@ namespace breseq {
 
 		CandidateJunctions();
 
-		struct JunctionListContainer
+		struct JunctionInfoContainer
 		{
-			JunctionList list;
+			JunctionInfo list;
 			string str;
 			int32_t min_overlap_score;
 			int32_t read_begin_coord;
@@ -104,12 +104,12 @@ namespace breseq {
 			// Sort by unique coordinate, then redundant (or second unique) coordinate to get reliable ordering for output
 			static bool sort_by_score_unique_coord(const CombinedCandidateJunction& a, const CombinedCandidateJunction &b)
 			{
-				JunctionList a_item = junction_name_split(a.id);
+				JunctionInfo a_item = junction_name_split(a.id);
 				int32_t a_uc = a_item.side_1.position;
 				int32_t a_rc = a_item.side_2.position;
 				if (a_item.side_1.redundant != 0) swap(a_uc, a_rc);
 
-				JunctionList b_item = junction_name_split(b.id);
+				JunctionInfo b_item = junction_name_split(b.id);
 				int32_t b_uc = b_item.side_1.position;
 				int32_t b_rc = b_item.side_2.position;
 				if (b_item.side_1.redundant != 0) swap(b_uc, b_rc);
@@ -136,8 +136,8 @@ namespace breseq {
 
 			static bool sort_by_ref_seq_coord(const CombinedCandidateJunction& a, const CombinedCandidateJunction &b)
 			{
-				JunctionList acj = junction_name_split(a.id);
-				JunctionList bcj = junction_name_split(b.id);
+				JunctionInfo acj = junction_name_split(a.id);
+				JunctionInfo bcj = junction_name_split(b.id);
 				//TODO: Uncomment this code after supplying it with a ref_seq_info with a seq_order field
 				/*if (ref_seq_info.seq_order[acj.side_1.seq_id] != ref_seq_info.seq_order[bcj.side_1.seq_id])
 					return (ref_seq_info.seq_order[acj.side_1.seq_id] < ref_seq_info.seq_order[bcj.side_1.seq_id]);
@@ -147,7 +147,7 @@ namespace breseq {
 		};
 
 		static bool _alignments_to_candidate_junction(Settings settings, Summary summary, const cReferenceSequences& ref_seq_info, alignment a1, alignment a2,
-														int32_t& redundancy_1, int32_t& redundancy_2, string& junction_seq_string, string& ref_seq_matched_1, string& ref_seq_matched_2, string& junction_coord_1, string& junction_coord_2, int32_t& read_begin_coord, JunctionList& junction_id_list);
+														int32_t& redundancy_1, int32_t& redundancy_2, string& junction_seq_string, string& ref_seq_matched_1, string& ref_seq_matched_2, string& junction_coord_1, string& junction_coord_2, int32_t& read_begin_coord, JunctionInfo& junction_id_list);
 		static void _alignments_to_candidate_junctions(Settings settings, Summary summary,  const cReferenceSequences& ref_seq_info, map<string, map<string, CandidateJunction>, CandidateJunction::Sorter>& candidate_junctions, vector<alignment> al_ref);
 		static bool _check_read_pair_requirements(Settings settings, int32_t a1_start, int32_t a1_end, int32_t a2_start, int32_t a2_end, int32_t& a1_unique_length, int32_t& a2_unique_length, int32_t& union_length);
         

@@ -29,7 +29,7 @@ namespace breseq {
   
   extern const string k_junction_name_separator;
   
-  struct junction_info_side {
+  /*struct junction_info_side {
     string    m_seq_id;
     uint32_t  m_position;
     int8_t   m_strand;
@@ -43,13 +43,13 @@ namespace breseq {
     string m_unique_read_sequence;
     uint32_t m_flanking_left;
     uint32_t m_flanking_right;    
-  };
+  };*/
   
-  void junction_name_split(junction_info& ji, const string& junction_name);
+  void junction_name_split(JunctionInfo& ji, const string& junction_name);
   
   uint32_t _eligible_read_alignments(const Settings& settings, const cReferenceSequences& ref_seq_info, vector<alignment>& alignments);
   bool _test_read_alignment_requirements(const Settings& settings, const cReferenceSequences& ref_seq_info, const alignment& a);
-  bool _alignment_overlaps_junction(const vector<junction_info>& junction_info_list, alignment in_a);
+  bool _alignment_overlaps_junction(const vector<JunctionInfo>& junction_info_list, alignment in_a);
   
   void resolve_alignments( 
                           const bool junction_prediction,

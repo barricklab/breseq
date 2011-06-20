@@ -121,7 +121,7 @@ int do_convert_genbank(int argc, char* argv[]) {
 	try {
         
 		convert_genbank(  
-                    vector_from_string<string>(options["input"]),
+                    from_string<vector<string> >(options["input"]),
                     options["fasta"],
                     options["features"]
                     );
@@ -215,7 +215,7 @@ int do_resolve_alignments(int argc, char* argv[]) {
   
 	// attempt to calculate error calibrations:
 	try {
-    cReadFiles rf(vector_from_string<string>(options["read-file"]));
+    cReadFiles rf(from_string<vector<string> >(options["read-file"]));
     
     resolve_alignments(
       from_string<bool>(options["junction-prediction"]),
@@ -351,7 +351,7 @@ int do_identify_mutations(int argc, char* argv[]) {
                          options["output"],
                          split(options["readfile"], "\n"),
                          options["coverage_dir"],
-                         vector_from_string<double>(options["deletion_propagation_cutoff"]),
+                         from_string<vector<double> >(options["deletion_propagation_cutoff"]),
                          from_string<double>(options["mutation_cutoff"]),
                          options.count("predict_deletions"),
                          options.count("predict_polymorphisms"),
@@ -413,7 +413,7 @@ int do_preprocess_alignments(int argc, char* argv[]) {
   // Set the things we need...
 	Settings settings;
     
-  settings.read_structures.Init(vector_from_string<string>(options["read-file"]));
+  settings.read_structures.Init(from_string<vector<string> >(options["read-file"]));
  
 	settings.candidate_junction_fasta_file_name = options["candidate-junction-path"];
   settings.candidate_junction_fasta_file_name += "/candidate_junctions.fasta";
@@ -499,7 +499,7 @@ int do_identify_candidate_junctions(int argc, char* argv[]) {
     Settings settings;
       
     // File settings
-    settings.read_structures.Init(vector_from_string<string>(options["read-file"]));
+    settings.read_structures.Init(from_string<vector<string> >(options["read-file"]));
     settings.preprocess_junction_split_sam_file_name = options["candidate-junction-path"] + "/#.split.sam";
     settings.reference_fasta_file_name = options["data-path"] + "/reference.fasta";     
     settings.candidate_junction_fasta_file_name = options["candidate-junction-path"] + "/candidate_junction.fasta";

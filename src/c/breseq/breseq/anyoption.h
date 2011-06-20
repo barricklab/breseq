@@ -26,8 +26,6 @@
 #define TAKES_NO_ARGUMENT	((void*)NULL)
 #define USAGE_LEFT_COLUMN_WIDTH	35
 
-#define LIST_DELIMITER ",,|,,"
-
 using namespace std;
 
 namespace breseq {
