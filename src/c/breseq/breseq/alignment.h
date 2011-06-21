@@ -130,6 +130,10 @@ class alignment {
     std::pair<uint32_t,uint32_t> query_bounds_1() const;
     void query_bounds_1(uint32_t& start, uint32_t& end) const;
 
+    //! Reverse start and end coords if on opposite strand
+    std::pair<uint32_t,uint32_t> query_stranded_bounds_1() const;
+    void query_stranded_bounds_1(uint32_t& start, uint32_t& end) const;
+
     //! Starting coordinates of the aligned part of the read (was 1-indexed).
     //  Methods available for 0-indexed and 1-indexed coordinates.
     uint32_t query_start_0() const { return query_start_1()-1; };

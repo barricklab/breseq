@@ -468,15 +468,15 @@ int do_identify_candidate_junctions(int argc, char* argv[]) {
 
     ("candidate-junction-read-limit", "limit handled reads to this many", uint32_t(0))
     ("required-both-unique-length-per-side,1",
-     "Only count reads where both matches extend this many bases outside of the overlap.", 5)
+     "Only count reads where both matches extend this many bases outside of the overlap.", uint32_t(0))
     ("required-one-unique-length-per-side,2",
-     "Only count reads where at least one match extends this many bases outside of the overlap.", 10)
+     "Only count reads where at least one match extends this many bases outside of the overlap.", "10")
     ("maximum-inserted-junction-sequence-length,3",
-     "Maximum number of bases allowed in the overlapping part of a candidate junction.", 20)
+     "Maximum number of bases allowed in the overlapping part of a candidate junction.", "20")
     ("required-match-length,4",
-     "At least this many bases in the read must match the reference genome for it to count.", 28)
+     "At least this many bases in the read must match the reference genome for it to count.", "28")
     ("required-extra-pair-total-length,5",
-     "Each match pair must have at least this many bases not overlapping for it to count.", 2)
+     "Each match pair must have at least this many bases not overlapping for it to count.", "2")
 	.processCommandArgs(argc, argv);
   
   //These options are almost always default values
@@ -515,7 +515,7 @@ int do_identify_candidate_junctions(int argc, char* argv[]) {
     Summary summary;
       
     cReferenceSequences ref_seq_info;
-    breseq::LoadFeatureIndexedFastaFile(ref_seq_info, "", options["data-path"]);
+    breseq::LoadFeatureIndexedFastaFile(ref_seq_info, "", options["data-path"] + "/reference.fasta");
         
     CandidateJunctions::identify_candidate_junctions(settings, summary, ref_seq_info);
     

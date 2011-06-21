@@ -28,10 +28,10 @@ namespace breseq {
 
 	CandidateJunctions::CandidateJunctions() {}
 
-	bool CandidateJunctions::_alignments_to_candidate_junction(Settings settings, Summary summary, const cReferenceSequences& ref_seq_info, alignment a1, alignment a2,
+	bool CandidateJunctions::_alignments_to_candidate_junction(const Settings& settings, Summary& summary, const cReferenceSequences& ref_seq_info, alignment& a1, alignment& a2,
 															  int32_t& redundancy_1, int32_t& redundancy_2, string& junction_seq_string, string& ref_seq_matched_1, string& ref_seq_matched_2, string& junction_coord_1, string& junction_coord_2, int32_t& read_begin_coord, JunctionInfo& junction_id_list)
 	{
-		bool verbose = false;
+		bool verbose = true;
 
 		// set up local settings
 		int32_t flanking_length = settings.max_read_length;
@@ -66,8 +66,8 @@ namespace breseq {
 		alignment q2 = a2;
 		uint32_t q1_start, q1_end;
 		uint32_t q2_start, q2_end;
-		q1.query_bounds_0(q1_start, q1_end);
-		q2.query_bounds_0(q2_start, q2_end);
+		q1.query_stranded_bounds_1(q1_start, q1_end);
+		q2.query_stranded_bounds_1(q2_start, q2_end);
 
 		if (verbose)
 			cout << q1_start << ", " << q1_end << ", " << q2_start << ", " << q2_end << endl;
@@ -378,19 +378,19 @@ namespace breseq {
 		return true;
 	}
 
-	void CandidateJunctions::_alignments_to_candidate_junctions(Settings settings, Summary summary, const cReferenceSequences& ref_seq_info, map<string, map<string, CandidateJunction>, CandidateJunction::Sorter>& candidate_junctions, vector<alignment> al_ref)
+	void CandidateJunctions::_alignments_to_candidate_junctions(const Settings& settings, Summary& summary, const cReferenceSequences& ref_seq_info, map<string, map<string, CandidateJunction>, CandidateJunction::Sorter>& candidate_junctions, vector<alignment>& alignments)
 	{
-		bool verbose = false;
+		bool verbose = true;
 
 		if (verbose)
 		{
 			cout << endl << "###########################" << endl;
-			cout << al_ref[0].read_name();
+			cout << alignments[0].read_name();
 			cout << endl << "###########################" << endl;
 		}
 
 		// Must still have multiple matches to support a new junction.
-		if (al_ref.size() <= 1)
+		if (alignments.size() <= 1)
 			return;
 
 		// Now is our chance to decide which groups of matches are compatible,
@@ -403,8 +403,8 @@ namespace breseq {
 
 		if (verbose)
 		{
-			cout << al_ref[0].read_name() << endl;
-			cout << "Total matches: " << al_ref.size() << endl;
+			cout << alignments[0].read_name() << endl;
+			cout << "Total matches: " << alignments.size() << endl;
 		}
 
 		vector<alignment> list1, list2;
@@ -413,12 +413,12 @@ namespace breseq {
 		// This saves a number of comparisons and gets rid of a lot of bad matches.
 		int32_t max_union_length = 0;
 
-		for (uint32_t i = 0; i < al_ref.size(); i++)
+		for (uint32_t i = 0; i < alignments.size(); i++)
 		{
-			alignment a = al_ref[i];
+			alignment a = alignments[i];
 
 			uint32_t a_start, a_end;
-			a.query_bounds_0(a_start, a_end);
+      a.query_stranded_bounds_1(a_start, a_end);
 
 			if (verbose) cout << "(" << a_start << ", " << a_end << ")" << endl;
 
@@ -454,14 +454,14 @@ namespace breseq {
 			alignment a1 = list1[i];
 
 			uint32_t a1_start, a1_end;
-			a1.query_bounds_0(a1_start, a1_end);
+			a1.query_bounds_1(a1_start, a1_end);
 
 			for (uint32_t j = 0; j < list2.size(); j++)
 			{
-				alignment a2 = list1[i];
+				alignment a2 = list2[j];
 
 				uint32_t a2_start, a2_end;
-				a2.query_bounds_0(a2_start, a2_end);
+				a2.query_bounds_1(a2_start, a2_end);
 
 				// if either end is the same, it is going to fail.
 				// Note: we already checked for the start, when we split into the two lists!
@@ -490,6 +490,9 @@ namespace breseq {
 
 			}
 		}
+    
+    // Done if everything already ruled out...
+		//if (passed_pair_list.size() == 0) return;
 
 		for (uint32_t i = 0; i < passed_pair_list.size(); i++)
 		{
@@ -551,7 +554,7 @@ namespace breseq {
 		if (junctions.size() == 0) return;
 
 		if (verbose)
-			cout << al_ref[0].read_name() << endl;
+			cout << alignments[0].read_name() << endl;
 
 		// only now that we've looked through everything can we determine whether the reference sequence matched
 		// on a side was unique, after correcting for overlap
@@ -640,9 +643,9 @@ namespace breseq {
 		}
 	}
 
-	bool CandidateJunctions::_check_read_pair_requirements(Settings settings, int32_t a1_start, int32_t a1_end, int32_t a2_start, int32_t a2_end, int32_t& a1_unique_length, int32_t& a2_unique_length, int32_t& union_length)
+	bool CandidateJunctions::_check_read_pair_requirements(const Settings& settings, int32_t a1_start, int32_t a1_end, int32_t a2_start, int32_t a2_end, int32_t& a1_unique_length, int32_t& a2_unique_length, int32_t& union_length)
 	{
-		bool verbose = false;
+		bool verbose = true;
 
 		if (verbose)
 			cout << "=== Match1: " << a1_start << "-" << a1_end << "   Match2: " << a2_start << "-" << a2_end << endl;
@@ -1004,9 +1007,7 @@ namespace breseq {
 
 			// Decide which input SAM file we are using...
       
-			string reference_sam_file_name = Settings::file_name(settings.preprocess_junction_split_sam_file_name);
-			if (settings.candidate_junction_score_method.compare("POS_HASH") != 0)
-				reference_sam_file_name = Settings::file_name(settings.reference_sam_file_name);
+			string reference_sam_file_name = Settings::file_name(settings.preprocess_junction_split_sam_file_name, "#", settings.read_structures[j].m_base_name);
 
       tam_file tam(reference_sam_file_name, settings.reference_fasta_file_name, ios_base::in);
 			vector<alignment> alignments;
