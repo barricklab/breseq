@@ -397,8 +397,6 @@ if (!$settings->{no_junction_prediction})
 		if ($settings->{perl_identify_candidate_junctions})
 		{
 			Breseq::CandidateJunction::identify_candidate_junctions($settings, $summary, $ref_seq_info);
-			Breseq::Output::record_time("Candidate junction identification");
-			$settings->done_step('candidate_junction_done_file_name');
 		}
 		else
 		{
@@ -416,13 +414,23 @@ if (!$settings->{no_junction_prediction})
 			$cmdline .= " --reference-sequence-length $reference_sequence_length";
 			
 			Breseq::Shared::system($cmdline);	
-		
+			
+			my $samtools = $settings->ctool("samtools");
+			my $faidx_command = "$samtools faidx $candidate_junction_path/candidate_junction.fasta";
+			if (-s "$candidate_junction_path/candidate_junction.fasta" > 0)
+			{
+				Breseq::Shared::system($faidx_command);	
+			}
 			## @JEB Fix this -- no summary currently...
 			$summary->{candidate_junction} = {};
 		}
 		
 		Storable::store($summary->{candidate_junction}, $candidate_junction_summary_file_name) 
 			or die "Can't store data in file $candidate_junction_summary_file_name!\n";
+			
+		Breseq::Output::record_time("Candidate junction identification");
+			
+		$settings->done_step('candidate_junction_done_file_name');	
 	}
 	
 	#load this info

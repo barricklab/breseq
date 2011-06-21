@@ -11,6 +11,7 @@ TESTCMD="\
     ${DATADIR}/lambda/lambda_mixed_population.fastq \
     "
 
+##     --perl-identify-candidate-junctions \
 ##    --per_position_file \
 
 

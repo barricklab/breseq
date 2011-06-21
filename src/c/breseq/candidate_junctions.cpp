@@ -82,19 +82,13 @@ namespace breseq {
 		}
 
 		// create hash key and store information about the location of this hit
-
-		cReferenceSequences req_seq_info_copy = ref_seq_info;
-		uint32_t seq_id;
-
 		bool hash_strand_1 = q1.reversed();
 		string hash_seq_id_1 = ref_seq_info[q1.reference_target_id()].m_seq_id;
-		seq_id = req_seq_info_copy.seq_id_to_index(hash_seq_id_1);
-		string ref_seq_1 = ref_seq_info[seq_id].m_fasta_sequence.m_sequence;
+		const string& ref_seq_1(ref_seq_info[q1.reference_target_id()].m_fasta_sequence.m_sequence);
 
 		bool hash_strand_2 = !q2.reversed();
 		string hash_seq_id_2 = ref_seq_info[q2.reference_target_id()].m_seq_id;
-		seq_id = req_seq_info_copy.seq_id_to_index(hash_seq_id_2);
-		string ref_seq_2 = ref_seq_info[seq_id].m_fasta_sequence.m_sequence;
+		const string& ref_seq_2(ref_seq_info[q2.reference_target_id()].m_fasta_sequence.m_sequence);
 
 		// how much overlap is there between the two matches?
 		// positive if the middle sequence can match either side of the read
@@ -930,8 +924,6 @@ namespace breseq {
     
     tam_file BSAM(preprocess_junction_best_sam_file_name, reference_fasta_file_name, ios_base::out);
 
-		string reference_faidx_file_name = Settings::file_name(settings.reference_fasta_file_name);
-		faidx_t* reference_fai = fai_load(reference_faidx_file_name.c_str());
 		for (uint32_t index = 0; index < settings.read_structures.size(); index++)
 		{
 			cReadFile read_struct = settings.read_structures[index];
@@ -974,9 +966,6 @@ namespace breseq {
 	void CandidateJunctions::identify_candidate_junctions(const Settings& settings, Summary& summary, const cReferenceSequences& ref_seq_info)
 	{
 		bool verbose = false;
-
-		string candidate_junction_fasta_file_name = Settings::file_name(settings.candidate_junction_fasta_file_name);
-		cFastaFile out(candidate_junction_fasta_file_name, ios_base::out);
 
 		// hash by junction sequence concatenated with name of counts
 		map<string, map<string, CandidateJunction>, CandidateJunction::Sorter> candidate_junctions;
@@ -1271,20 +1260,22 @@ namespace breseq {
 
 		sort(combined_candidate_junctions.begin(), combined_candidate_junctions.end(), CombinedCandidateJunction::sort_by_ref_seq_coord);
 
-		for (uint32_t j; j < combined_candidate_junctions.size(); j++)
+    string candidate_junction_fasta_file_name = Settings::file_name(settings.candidate_junction_fasta_file_name);
+    cFastaFile out(candidate_junction_fasta_file_name, ios_base::out);
+
+		for (uint32_t j = 0; j < combined_candidate_junctions.size(); j++)
 		{
 			CombinedCandidateJunction junction = combined_candidate_junctions[j];
-			//#print Dumper($ids_to_print);
-
 			cFastaSequence seq = { junction.id, junction.seq };
 			out.write_sequence(seq);
 		}
 		out.close();
 
+    // clobbers file!
 		// create SAM faidx
-		string command = settings.ctool("samtools") + " faidx " + candidate_junction_fasta_file_name;
-		if (combined_candidate_junctions.size() > 0)
-			int discarded_return_value = system(command.c_str()); // TODO: Possibly check the return value of system calls
+		//string command = settings.ctool("samtools") + " faidx " + candidate_junction_fasta_file_name;
+		//if (combined_candidate_junctions.size() > 0)
+		//	int discarded_return_value = system(command.c_str()); // TODO: Possibly check the return value of system calls
 
 		summary.candidate_junction = hcs;
 	}

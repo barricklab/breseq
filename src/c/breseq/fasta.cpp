@@ -39,6 +39,10 @@ namespace breseq {
   // read one sequence record from the file
   bool cFastaFile::read_sequence(cFastaSequence &sequence) {
     
+    // clear sequence
+    sequence.m_name = "";
+    sequence.m_sequence = "";
+    
     // We're done, no error
     if (this->eof()) return false;
     
