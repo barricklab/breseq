@@ -30,7 +30,7 @@ namespace breseq {
 bool verbose = true; //TODO Options
 bool text = false; //TODO Options
 
-alignment_output_pileup::alignment_output_pileup(const string& bam, const string& fasta, const uint32_t maximum_to_align)
+alignment_output::Alignment_Output_Pileup::Alignment_Output_Pileup(const string& bam, const string& fasta, const uint32_t maximum_to_align)
         : pileup_base(bam, fasta)
         , maximum_to_align(maximum_to_align)
         , unique_start(0)
@@ -40,10 +40,11 @@ alignment_output_pileup::alignment_output_pileup(const string& bam, const string
         , last_pos(0) {
 }
 
-alignment_output_pileup::~alignment_output_pileup() {}
+alignment_output::Alignment_Output_Pileup::~Alignment_Output_Pileup() {}
 
 alignment_output::alignment_output(string bam, string fasta, uint32_t maximum_to_align)
-        : m_alignment_output_pileup_object(bam, fasta, maximum_to_align) {
+        : m_alignment_output_pileup(bam, fasta, maximum_to_align)
+        ,m_aligned_reads(m_alignment_output_pileup.aligned_reads){
 }
 
 void alignment_output::create_alignment(const string bam, const string fasta, const string region) {
@@ -105,21 +106,21 @@ void alignment_output::create_alignment(const string bam, const string fasta, co
     //  }
     //
 
-    m_alignment_output_pileup_object.do_fetch(region);
+    m_alignment_output_pileup.do_fetch(region);
     //TEST that unique_end, unique_start and aligned_reads map compare to perl bam2aln output
 
 
-    if ((m_alignment_output_pileup_object.unique_start == 0) || (m_alignment_output_pileup_object.unique_end == 0))
+    if ((m_alignment_output_pileup.unique_start == 0) || (m_alignment_output_pileup.unique_end == 0))
     {
         cout << "No unique start or end initialized" << endl;
         return;
     }
 
-    if (m_alignment_output_pileup_object.total_reads > m_alignment_output_pileup_object.maximum_to_align)
+    if (m_alignment_output_pileup.total_reads > m_alignment_output_pileup.maximum_to_align)
     {
         cout << "Reads exceeded maximum to display alignment. ";
-        cout << m_alignment_output_pileup_object.total_reads << " reads. ";
-        cout << "(Limit = " << m_alignment_output_pileup_object.maximum_to_align;
+        cout << m_alignment_output_pileup.total_reads << " reads. ";
+        cout << "(Limit = " << m_alignment_output_pileup.maximum_to_align;
         cout << ")" << endl;
         return;
     }
@@ -144,13 +145,13 @@ void alignment_output::create_alignment(const string bam, const string fasta, co
     //
     //  $bam->pileup($region, $pileup_function);
 
-    m_alignment_output_pileup_object.last_pos = 0;
-    m_alignment_output_pileup_object.do_pileup(region);
+    m_alignment_output_pileup.last_pos = 0;
+    m_alignment_output_pileup.do_pileup(region);
 //do_pileup is needed to create the following
    
-    m_aligned_reads = m_alignment_output_pileup_object.aligned_reads;
-    m_aligned_references = m_alignment_output_pileup_object.aligned_references;
-    m_aligned_annotation = m_alignment_output_pileup_object.aligned_annotation;
+    m_aligned_reads = m_alignment_output_pileup.aligned_reads;
+    m_aligned_references = m_alignment_output_pileup.aligned_references;
+    m_aligned_annotation = m_alignment_output_pileup.aligned_annotation;
 
 //
     //
@@ -183,10 +184,10 @@ void alignment_output::create_alignment(const string bam, const string fasta, co
     //      print "$aligned_read->{start} $aligned_read->{end}\n" if ($verbose);
     //
 
-    for (map<string, struct_aligned_read>::iterator itr_reads = m_aligned_reads.begin(); //TODO typedef map
+    for (map<string, Aligned_Read>::iterator itr_reads = m_aligned_reads.begin(); //TODO typedef map
             itr_reads != m_aligned_reads.end(); itr_reads++)
     {
-        struct_aligned_read& aligned_read = (m_aligned_reads[(*itr_reads).first]);
+        Aligned_Read& aligned_read = (m_aligned_reads[(*itr_reads).first]);
         //$aligned_read->{aligned_bases} =~ m/^(\s*)\S+(\s*)$/;
         uint32_t left_padding_length = aligned_read.aligned_bases.find_first_not_of(' ');
         uint32_t right_padding_length = (aligned_read.aligned_bases.length() - 1) 
@@ -194,7 +195,7 @@ void alignment_output::create_alignment(const string bam, const string fasta, co
  
         if (verbose)
         {
-            cout << aligned_read.start << " " << aligned_read.end << endl;
+            cout  << aligned_read.start << " " << aligned_read.end << " " << aligned_read.seq_id << endl;
         }
     //      my $extend_left =  ($aligned_read->{start}-1) - length($1);
     //      my $extend_right = ($aligned_read->{length}-$aligned_read->{end}) - length($2);
@@ -212,12 +213,6 @@ void alignment_output::create_alignment(const string bam, const string fasta, co
         if (extend_right > max_extend_right)
             max_extend_right = extend_right;
     }
-
-    if (verbose)
-    {
-        cout <<  "Extend: " << max_extend_left;
-        cout << " " << max_extend_right << endl;
-    }
     //
     //  #now add this much to every one
     //  foreach my $key (keys %$aligned_reads)
@@ -228,10 +223,10 @@ void alignment_output::create_alignment(const string bam, const string fasta, co
     //  }
     //
     //  print "Extend: $max_extend_left $max_extend_right\n" if ($verbose);
-    for (map<string, struct_aligned_read>::iterator itr_reads = m_aligned_reads.begin(); //TODO typedef map
+    for (map<string, Aligned_Read>::iterator itr_reads = m_aligned_reads.begin(); //TODO typedef map
             itr_reads != m_aligned_reads.end(); itr_reads++)
     {
-        struct_aligned_read& aligned_read((*itr_reads).second);
+        Aligned_Read& aligned_read((*itr_reads).second);
 
         aligned_read.aligned_bases.insert(0, max_extend_left, ' ');
         aligned_read.aligned_bases.append(' ', max_extend_right);
@@ -254,7 +249,7 @@ void alignment_output::create_alignment(const string bam, const string fasta, co
     for (uint32_t itr_aligned_reference = 0; itr_aligned_reference <
             m_aligned_references.size(); itr_aligned_reference++)
     {
-      struct_aligned_reference& aligned_reference 
+      Aligned_Reference& aligned_reference 
       = (m_aligned_references[itr_aligned_reference]);
       //      my $ref_extend_left = $max_extend_left;
       //      my $ref_add_left = '';
@@ -352,13 +347,13 @@ void alignment_output::create_alignment(const string bam, const string fasta, co
     //  #now go in and replace the empty space adjacent to each with the rest of the read sequence
     //  foreach my $key (keys %$aligned_reads)
     //  {
-    for (map<string, struct_aligned_read>::iterator itr_reads = m_aligned_reads.begin(); //TODO typedef map
+    for (map<string, Aligned_Read>::iterator itr_reads = m_aligned_reads.begin(); //TODO typedef map
             itr_reads != m_aligned_reads.end(); itr_reads++)
     {
     //      my $aligned_read = $aligned_reads->{$key};
     //
     //      $aligned_read->{aligned_bases} =~ m/^(\s*)(\S+)/;
-      struct_aligned_read& aligned_read((*itr_reads).second);
+      Aligned_Read& aligned_read((*itr_reads).second);
    
     // *
     // *  FIND LENGTH OF THE NON-SPACE PART OF READ
@@ -446,12 +441,12 @@ void alignment_output::create_alignment(const string bam, const string fasta, co
     //  ## Need to reverse the coords for some
     //  foreach my $key (keys %$aligned_reads)
     //  {
-    for (map<string, struct_aligned_read>::iterator itr_reads = m_aligned_reads.begin(); //TODO typedef map
+    for (map<string, Aligned_Read>::iterator itr_reads = m_aligned_reads.begin(); //TODO typedef map
                     itr_reads != m_aligned_reads.end(); itr_reads++)
     {
     //      my $aligned_read = $aligned_reads->{$key};
     
-      struct_aligned_read& aligned_read((*itr_reads).second);
+      Aligned_Read& aligned_read((*itr_reads).second);
       
     //      if ($aligned_read->{strand} == -1)
     //      {
@@ -496,15 +491,15 @@ string alignment_output::html_alignment(const string region)
 //my $quality_range = $self->set_quality_range($aligned_reads, $options);
 //  
   string output;
-  map<string,struct_aligned_read>& aligned_reads(m_aligned_reads);
-  vector<struct_aligned_reference>& aligned_references(m_aligned_references);
-  struct_aligned_annotation& aligned_annotation(m_aligned_annotation);
-  struct_quality_range& quality_range(m_quality_range);
+  map<string,Aligned_Read>& aligned_reads(m_aligned_reads);
+  vector<Aligned_Reference>& aligned_references(m_aligned_references);
+  Aligned_Annotation& aligned_annotation(m_aligned_annotation);
+  Quality_Range& quality_range(m_quality_range);
   //my @sorted_keys = sort { -($aligned_reads->{$a}->{aligned_bases} cmp $aligned_reads->{$b}->{aligned_bases}) } keys %$aligned_reads;
   //TODO ASK create aligned_reads as a vector< pair<string,struct>> instead of map for sorting purposes???
-  vector< pair<string, struct_aligned_read> > sorted_aligned_reads;
+  vector< pair<string, Aligned_Read> > sorted_aligned_reads;
   {
-  for (map<string,struct_aligned_read>::iterator itr_read = aligned_reads.begin();
+  for (map<string,Aligned_Read>::iterator itr_read = aligned_reads.begin();
        itr_read !=  aligned_reads.end(); itr_read++)
   {
     sorted_aligned_reads.push_back(make_pair((*itr_read).first, (*itr_read).second));
@@ -554,7 +549,7 @@ string alignment_output::html_alignment(const string region)
 }
 
 /*! Called for each position.*/
-void alignment_output_pileup::pileup_callback(const pileup& p) {
+void alignment_output::Alignment_Output_Pileup::pileup_callback(const pileup& p) {
     //  #create the alignment via "pileup"
     //  my $last_pos; // Created before pileup callback in create_alignment
     //  my $pileup_function = sub {
@@ -672,7 +667,7 @@ void alignment_output_pileup::pileup_callback(const pileup& p) {
         while (last_pos < p.position_1())
         {
             //READS: add gaps to all
-            for (map<string, struct_aligned_read>::const_iterator itr_reads = aligned_reads.begin(); //TODO typedef map
+            for (map<string, Aligned_Read>::const_iterator itr_reads = aligned_reads.begin(); //TODO typedef map
                     itr_reads != aligned_reads.end(); itr_reads++)
             {
                 aligned_reads[(*itr_reads).first].aligned_bases += '.';
@@ -708,9 +703,9 @@ void alignment_output_pileup::pileup_callback(const pileup& p) {
     // This flag is set if the read was among those returned by the pileup
     // if it is not set, we insert padding after the loop through the alignments!
 
-    for (map<string, struct_aligned_read>::iterator itr_reads = aligned_reads.begin(); itr_reads != aligned_reads.end(); itr_reads++) 
+    for (map<string, Aligned_Read>::iterator itr_reads = aligned_reads.begin(); itr_reads != aligned_reads.end(); itr_reads++) 
     {
-        struct_aligned_read& aligned_read(itr_reads->second);
+        Aligned_Read& aligned_read(itr_reads->second);
         aligned_read.updated = false;
     }
 
@@ -748,7 +743,7 @@ void alignment_output_pileup::pileup_callback(const pileup& p) {
         bool indel = (*itr_pileup).indel();
 
         //Which read are we on?
-        struct_aligned_read& aligned_read = (aligned_reads[(*itr_pileup).read_name()]);
+        Aligned_Read& aligned_read = (aligned_reads[(*itr_pileup).read_name()]);
 
         aligned_read.updated = true;
 
@@ -890,13 +885,13 @@ void alignment_output_pileup::pileup_callback(const pileup& p) {
     //READS: handle those with no
     // @JEB only use a const iterator when you don't want to change things
     // We are updating the aligned reads.
-    for (map<string, struct_aligned_read>::iterator itr_reads = aligned_reads.begin(); //TODO typedef map
+    for (map<string, Aligned_Read>::iterator itr_reads = aligned_reads.begin(); //TODO typedef map
             itr_reads != aligned_reads.end(); itr_reads++) {
 
         //make pointer? more efficient way?
         // @JEB this must be a pointer, otherwise you are making a copy, and then
         // changing your copy (and not the original object).
-        struct_aligned_read& aligned_read((*itr_reads).second);
+        Aligned_Read& aligned_read((*itr_reads).second);
 
         //Check if sequence id for current aligned read has already been updated.
         if (aligned_read.updated) {
@@ -918,7 +913,7 @@ void alignment_output_pileup::pileup_callback(const pileup& p) {
     char ref_base = reference_base_char_1(p.target(),pos);
     for (uint32_t itr = 0; itr < aligned_references.size(); itr ++) {
         char my_ref_base = ref_base;
-        struct_aligned_reference& aligned_reference(aligned_references[itr]); 
+        Aligned_Reference& aligned_reference(aligned_references[itr]); 
         
         aligned_reference.base = my_ref_base;
         aligned_reference.aligned_bases += my_ref_base;
@@ -953,7 +948,7 @@ void alignment_output_pileup::pileup_callback(const pileup& p) {
 //END create_alignment()
 
 /*! Called for each read alignment.*/
-void alignment_output_pileup::fetch_callback(const alignment& a) {
+void alignment_output::Alignment_Output_Pileup::fetch_callback(const alignment& a) {
 
 
 // ## Retrieve all unique alignments overlapping position with "fetch"
@@ -990,11 +985,12 @@ void alignment_output_pileup::fetch_callback(const alignment& a) {
         if (total_reads > maximum_to_align)
             return;
 
-        struct_aligned_read aligned_read;
+        Aligned_Read aligned_read;
         aligned_read.seq_id = a.read_name();
         aligned_read.length = a.read_length();
         aligned_read.read_sequence = a.read_char_sequence();
         aligned_read.qual_sequence = string((char*)a.read_base_quality_sequence());
+        aligned_read.start = 0; //TODO initialize all as underfined here?
 
         aligned_reads[aligned_read.seq_id] = aligned_read;
 
@@ -1028,11 +1024,11 @@ void alignment_output::set_quality_range() {
   
 // foreach my $key (keys %$aligned_reads)
 // {
-  for (map<string, struct_aligned_read>::iterator itr_reads = m_aligned_reads.begin(); //TODO typedef map
+  for (Aligned_Reads::iterator itr_reads = m_aligned_reads.begin(); //TODO typedef map
             itr_reads != m_aligned_reads.end(); itr_reads++)
   { 
 // my $aligned_read = $aligned_reads->{$key};
-    struct_aligned_read& aligned_read = ((*itr_reads).second);
+    Aligned_Read& aligned_read = ((*itr_reads).second);
 //  foreach my $c (split (//, $aligned_read->{qual_sequence}))
 //  {
     for(uint32_t index = 0; index < aligned_read.qual_sequence.length(); index ++) //TODO check if 1 indexed or not
