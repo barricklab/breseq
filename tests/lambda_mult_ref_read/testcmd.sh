@@ -17,5 +17,7 @@ TESTCMD="\
         ${DATADIR}/lambda/lambda_mixed_population.4.fastq \
         ${DATADIR}/lambda/lambda_mixed_population.5.fastq \
     "
+##				--perl-identify-candidate-junctions
+
 
 do_test $1 ${SELF}

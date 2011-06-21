@@ -253,6 +253,7 @@ uint32_t alignment::query_end_1() const {
 uint32_t alignment::reference_end_0() const {
 
 	//TODO: Can you just do "return bam_calend(&_a->core, bam1_cigar(_a));"?
+  // @JEB don't think so... but don't know.
   uint32_t pos = reference_start_0();
   
   uint32_t* cigar = bam1_cigar(_a); // cigar array for this alignment

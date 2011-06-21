@@ -78,7 +78,11 @@ class pileup_base {
     }
 
     char reference_base_char_1(uint32_t target, uint32_t pos1) const  {
-        return get_refseq(target)[pos1];
+        return get_refseq(target)[pos1-1];
+    } ;
+  
+    char reference_base_char_0(uint32_t target, uint32_t pos0) const  {
+      return get_refseq(target)[pos0];
     } ;
 
     // handle this reference sequence position during pileup?
