@@ -154,6 +154,16 @@ class alignment {
     uint32_t reference_end_0() const;
     uint32_t reference_end_1() const {return reference_end_0() + 1; };
 
+    std::pair<uint32_t,uint32_t> reference_bounds_0() const 
+      { return std::make_pair(reference_start_0(),reference_end_0()); };
+    void reference_bounds_0(uint32_t& start, uint32_t& end) const
+      { start = reference_start_0(); end = reference_end_0(); }
+    std::pair<uint32_t,uint32_t> reference_bounds_1() const
+      { return std::make_pair(reference_start_1(),reference_end_1()); };
+    void reference_bounds_1(uint32_t& start, uint32_t& end) const
+      { start = reference_start_1(); end = reference_end_1(); }
+
+  
     uint32_t reference_match_length() const { return reference_end_1() - reference_start_1() + 1; };
 
   
@@ -195,26 +205,32 @@ class alignment {
       return cigar_string_ss.str();
     }
   
+    inline vector<pair<uint8_t,uint8_t> > cigar_pair_array() const
+    {
+      vector<pair<uint8_t,uint8_t> > cigar_pair_list;
+      uint32_t* cigar_list = cigar_array();
+      for (uint32_t i=0; i<cigar_array_length(); i++)
+      {
+        uint32_t op = cigar_list[i] & BAM_CIGAR_MASK;
+        uint32_t len = cigar_list[i] >> BAM_CIGAR_SHIFT;
+        cigar_pair_list.push_back(make_pair(op, len));
+      }
+      return cigar_pair_list;
+    }
   
-	inline string qseq() const {
-	    string seq(_a->core.l_qseq, ' ');
-	    for (int32_t i = 0; i < _a->core.l_qseq; i++)
-			seq[i] = bam_nt16_rev_table[bam1_seqi(bam1_seq(_a),i)];
-	    return seq;
-	}
-	inline int32_t isize() const { return _a->core.isize; }
-	inline uint8_t quality() const { return _a->core.qual; }
-	inline uint16_t flag() const { return _a->core.flag; }
-	inline uint8_t* aux_get(const char tag[2]) const { return bam_aux_get(_a, tag); }
-  
-  //! Is this read unmapped?
-  inline bool unmapped() { return flag() & BAM_FUNMAP; }
-  
-  inline uint32_t aux_get_i(const char tag[2]) const 
-  { 
-    uint8_t *auxl = aux_get(tag); 
-    return (uint32_t)bam_aux2i(auxl); 
-  } 
+    inline int32_t isize() const { return _a->core.isize; }
+    inline uint8_t quality() const { return _a->core.qual; }
+    inline uint16_t flag() const { return _a->core.flag; }
+    inline uint8_t* aux_get(const char tag[2]) const { return bam_aux_get(_a, tag); }
+    
+    //! Is this read unmapped?
+    inline bool unmapped() { return flag() & BAM_FUNMAP; }
+    
+    inline uint32_t aux_get_i(const char tag[2]) const 
+    { 
+      uint8_t *auxl = aux_get(tag); 
+      return (uint32_t)bam_aux2i(auxl); 
+    } 
 
   protected:
     const bam_pileup1_t* _p; //!< Pileup.

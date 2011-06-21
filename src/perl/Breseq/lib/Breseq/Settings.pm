@@ -112,6 +112,7 @@ sub new
 		'perl-calc-trims' => \$self->{perl_calc_trims},
 		'strict-polymorphism-prediction' => \$self->{strict_polymorphism_prediction},
 		'perl-preprocess-alignments' => \$self->{perl_preprocess_alignments},
+		'perl-identify-candidate-junctions' => \$self->{perl_identify_candidate_junctions},
 	) or pod2usage(2);
 
 	pod2usage(1) if $help;

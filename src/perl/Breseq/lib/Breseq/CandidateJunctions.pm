@@ -624,7 +624,7 @@ sub _alignments_to_candidate_junctions
 {
 	my ($settings, $summary, $ref_seq_info, $candidate_junctions, $fai, $header, $al_ref) = @_;
 
-	my $verbose = 1;
+	my $verbose = 0;
 		
 	if ($verbose)
 	{
@@ -856,7 +856,7 @@ sub _alignments_to_candidate_junction
 {
 	my ($settings, $summary, $ref_seq_info, $fai, $header, $a1, $a2, $redundancy_1, $redundancy_2) = @_;
 		
-	my $verbose = 1;
+	my $verbose = 0;
 		
 	## set up local settings
 	my $flanking_length = $settings->{max_read_length};
@@ -1184,7 +1184,7 @@ sub _alignments_to_candidate_junction
 
 sub _check_read_pair_requirements
 {
-	my $verbose = 1;
+	my $verbose = 0;
 	my ($a1_start, $a1_end, $a2_start, $a2_end) = @_;
 
 	print "=== Match1: $a1_start-$a1_end   Match2: $a2_start-$a2_end\n" if ($verbose);

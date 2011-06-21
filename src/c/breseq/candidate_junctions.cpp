@@ -31,10 +31,10 @@ namespace breseq {
 	bool CandidateJunctions::_alignments_to_candidate_junction(const Settings& settings, Summary& summary, const cReferenceSequences& ref_seq_info, alignment& a1, alignment& a2,
 															  int32_t& redundancy_1, int32_t& redundancy_2, string& junction_seq_string, string& ref_seq_matched_1, string& ref_seq_matched_2, string& junction_coord_1, string& junction_coord_2, int32_t& read_begin_coord, JunctionInfo& junction_id_list)
 	{
-		bool verbose = true;
+		bool verbose = false;
 
 		// set up local settings
-		int32_t flanking_length = settings.max_read_length;
+		int32_t flanking_length = settings.maximum_read_length;
 //		my $reference_sequence_string_hash_ref = $ref_seq_info->{ref_strings};
 
 		// Method
@@ -110,10 +110,10 @@ namespace breseq {
 		// for where to extract this non-necessarily identical sequence!
 
 		// save these as variables, because we may have to adjust them
-		int32_t r1_start = q1_start;
-		int32_t r1_end = q1_end;
-		int32_t r2_start = q2_start;
-		int32_t r2_end = q2_end;
+		int32_t r1_start = a1.reference_start_1();
+		int32_t r1_end = a1.reference_end_1();
+		int32_t r2_start = a2.reference_start_1();
+		int32_t r2_end = a2.reference_end_1();
 
 		if (verbose)
 		{
@@ -123,12 +123,12 @@ namespace breseq {
 			cout << "==============> Initial Matches" << endl;
 			cout << "Alignment #1" << endl;
 			cout << "qpos: " << q1_start << "-" << q1_end << " rpos: " << r1_start << "-" << r1_end << " reversed: " << q1.reversed() << endl;
-			cout << q1.qseq() << endl << ref_seq_matched_1 << endl;
+			cout << q1.read_char_sequence() << endl << ref_seq_matched_1 << endl;
 //			print Dumper($q1->cigar_array);
 
 			cout << "Alignment #2" << endl;
 			cout << "qpos: " << q2_start << "-" << q2_end << " rpos: " << r2_start << "-" << r2_end << " reversed: " << q2.reversed() << endl;
-			cout << q2.qseq() << endl << ref_seq_matched_2 << endl;
+			cout << q2.read_char_sequence() << endl << ref_seq_matched_2 << endl;
 //			print Dumper($q2->cigar_array);
 			cout << "<==============" << endl;
 
@@ -200,12 +200,12 @@ namespace breseq {
 			cout << "==============> Initial Matches" << endl;
 			cout << "Alignment #1" << endl;
 			cout << "qpos: " << q1_start << "-" << q1_end << " rpos: " << r1_start << "-" << r1_end << " reversed: " << q1.reversed() << endl;
-			cout << q1.qseq() << endl << ref_seq_matched_1 << endl;
+			cout << q1.read_char_sequence() << endl << ref_seq_matched_1 << endl;
 //			print Dumper($q1->cigar_array);
 
 			cout << "Alignment #2" << endl;
 			cout << "qpos: " << q2_start << "-" << q2_end << " rpos: " << r2_start << "-" << r2_end << " reversed: " << q2.reversed() << endl;
-			cout << q2.qseq() << endl << ref_seq_matched_2 << endl;
+			cout << q2.read_char_sequence() << endl << ref_seq_matched_2 << endl;
 //			print Dumper($q2->cigar_array);
 			cout << "<==============" << endl;
 		}
@@ -266,7 +266,7 @@ namespace breseq {
 		// and NOT present in the reference genome
 		string unique_read_seq_string = "";
 		if (overlap < 0)
-			unique_read_seq_string = q1.qseq().substr(q1_end, -1 * overlap);
+			unique_read_seq_string = q1.read_char_sequence().substr(q1_end, -1 * overlap);
 		junction_seq_string += unique_read_seq_string;
 
 		if (verbose) cout << "+U: " << unique_read_seq_string << endl;
@@ -373,14 +373,14 @@ namespace breseq {
 		}
 
 		assert(junction_seq_string.size() > 0); // die "Junction sequence not found: $junction_id " . $q1->qname . " " . $a2->qname  if (!$junction_seq_string);
-		assert(junction_seq_string.size() != flanking_left + flanking_right + static_cast<uint32_t>(abs(overlap))); // die "Incorrect length for $junction_seq_string: $junction_id " . $q1->qname . " " . $a2->qname if (length $junction_seq_string != $flanking_left + $flanking_right + abs($overlap));
+		assert(junction_seq_string.size() == flanking_left + flanking_right + static_cast<uint32_t>(abs(overlap))); // die "Incorrect length for $junction_seq_string: $junction_id " . $q1->qname . " " . $a2->qname if (length $junction_seq_string != $flanking_left + $flanking_right + abs($overlap));
 
 		return true;
 	}
 
 	void CandidateJunctions::_alignments_to_candidate_junctions(const Settings& settings, Summary& summary, const cReferenceSequences& ref_seq_info, map<string, map<string, CandidateJunction>, CandidateJunction::Sorter>& candidate_junctions, vector<alignment>& alignments)
 	{
-		bool verbose = true;
+		bool verbose = false;
 
 		if (verbose)
 		{
@@ -454,14 +454,14 @@ namespace breseq {
 			alignment a1 = list1[i];
 
 			uint32_t a1_start, a1_end;
-			a1.query_bounds_1(a1_start, a1_end);
+			a1.query_stranded_bounds_1(a1_start, a1_end);
 
 			for (uint32_t j = 0; j < list2.size(); j++)
 			{
 				alignment a2 = list2[j];
 
 				uint32_t a2_start, a2_end;
-				a2.query_bounds_1(a2_start, a2_end);
+				a2.query_stranded_bounds_1(a2_start, a2_end);
 
 				// if either end is the same, it is going to fail.
 				// Note: we already checked for the start, when we split into the two lists!
@@ -479,10 +479,17 @@ namespace breseq {
 					if (union_length > max_union_length)
 					{
 						max_union_length = union_length;
-						for (vector<PassedPair>::iterator it = passed_pair_list.end() - 1; it >= passed_pair_list.begin(); it--)
-							if ((*it).union_length < max_union_length)
-								passed_pair_list.erase(it);
-					}
+            if (passed_pair_list.size() > 0)
+            {
+              for (vector<PassedPair>::iterator it = passed_pair_list.begin() - 1; it >= passed_pair_list.begin(); it--)
+              {
+                if ((*it).union_length < max_union_length)
+                {
+                  passed_pair_list.erase(it);
+                }
+              }
+            }
+          }
 
 					PassedPair passed_pair = { a1 = a1, a2 = a2, union_length = union_length, a1_unique_length = a1_unique_length, a2_unique_length = a2_unique_length };
 					passed_pair_list.push_back(passed_pair);
@@ -501,8 +508,8 @@ namespace breseq {
 			// localize variables
 			alignment a1 = pp.a1;
 			alignment a2 = pp.a2;
-			int32_t a1_unique_length = pp.a1_unique_length;
-			int32_t a2_unique_length = pp.a2_unique_length;
+			uint32_t a1_unique_length = pp.a1_unique_length;
+			uint32_t a2_unique_length = pp.a2_unique_length;
 
 			// start redundancy at 1
 			int32_t r1 = 1;
@@ -517,34 +524,35 @@ namespace breseq {
 
 			bool passed = _alignments_to_candidate_junction(settings, summary, ref_seq_info, a1, a2,
 															r1, r2, junction_seq_string, side_1_ref_seq, side_2_ref_seq, junction_coord_1, junction_coord_2, read_begin_coord, junction_id_list);
-			if (!passed) continue;
+			if (passed)
+      {
+        // a value of zero gets added if they were unique, >0 if redundant b/c they matched same reference sequence
+        redundant_junction_sides[side_1_ref_seq][junction_coord_1] += r1 - 1;
+        redundant_junction_sides[side_2_ref_seq][junction_coord_2] += r2 - 1;
 
-			// a value of zero gets added if they were unique, >0 if redundant b/c they matched same reference sequence
-			redundant_junction_sides[side_1_ref_seq][junction_coord_1] += r1 - 1;
-			redundant_junction_sides[side_2_ref_seq][junction_coord_2] += r2 - 1;
+        // also add to the reverse complement, because we can't be sure of the strandedness
+        // (alternately we could reverse complement if the first base was an A or C, for example
+        // it seems like there could possibly be some cross-talk between sides of junctions here, that
+        /// could snarl things up, but I'm not sure?
+        /// TO DO: I'm too tired of this section to do it now, but the correct sequence strand could be
+        /// decided (keeping track of all the reversals) in _alignments_to_candidate_junction
+        redundant_junction_sides[reverse_complement(side_1_ref_seq)][junction_coord_1] += r1 - 1;
+        redundant_junction_sides[reverse_complement(side_2_ref_seq)][junction_coord_2] += r2 - 1;
 
-			// also add to the reverse complement, because we can't be sure of the strandedness
-			// (alternately we could reverse complement if the first base was an A or C, for example
-			// it seems like there could possibly be some cross-talk between sides of junctions here, that
-			/// could snarl things up, but I'm not sure?
-			/// TO DO: I'm too tired of this section to do it now, but the correct sequence strand could be
-			/// decided (keeping track of all the reversals) in _alignments_to_candidate_junction
-			redundant_junction_sides[reverse_complement(side_1_ref_seq)][junction_coord_1] += r1 - 1;
-			redundant_junction_sides[reverse_complement(side_2_ref_seq)][junction_coord_2] += r2 - 1;
-
-			int32_t min_overlap_score = min(a1_unique_length, a2_unique_length);
-
-			JunctionInfoContainer junction =
-			{
-				junction_id_list,		// list
-				junction_seq_string,	// str
-				min_overlap_score,
-				read_begin_coord,
-				side_1_ref_seq,
-				side_2_ref_seq
-			};
-			junctions.push_back(junction);
-		}
+        uint32_t min_overlap_score = min(a1_unique_length, a2_unique_length);
+        
+        JunctionInfoContainer junction =
+        {
+          junction_id_list,		// list
+          junction_seq_string,	// str
+          min_overlap_score,
+          read_begin_coord,
+          side_1_ref_seq,
+          side_2_ref_seq
+        };
+        junctions.push_back(junction);
+      }
+    }
 
 		if (verbose)
 			cout << "  Junctions: " << junctions.size() << endl;
@@ -590,24 +598,36 @@ namespace breseq {
 
 			// initialize candidate junction if it didn't exist
 			// they are redundant by default, until proven otherwise
-			CandidateJunction cj;
 
-			if (candidate_junctions.count(junction_seq_string) > 0 && candidate_junctions[junction_seq_string].count(junction_id) > 0)
-			{
-				cj = candidate_junctions[junction_seq_string][junction_id];
-			}
-			else
-			{
-				//redundancies of each side
-				cj.r1 = cj.r2 = 1;
-
+      if ((candidate_junctions.count(junction_seq_string) == 0) || (candidate_junctions[junction_seq_string].count(junction_id) == 0)) {
+        
+        CandidateJunction new_cj;
+        //redundancies of each side
+				new_cj.r1 = new_cj.r2 = 1;
+        
 				//maximum nonoverlapping match size on each side
-				cj.L1 = cj.L2 = 0;
-			}
+				new_cj.L1 = new_cj.L2 = 0;
+        
+        new_cj.min_overlap_score = 0;
+        
+        candidate_junctions[junction_seq_string][junction_id] = new_cj;
+      }
+      
+      CandidateJunction& cj(candidate_junctions[junction_seq_string][junction_id]);
 
 			// Update score of junction and the redundancy of each side
 			cj.min_overlap_score += min_overlap_score;
-			cj.read_begin_hash[read_begin_coord]++;
+      
+      cj.read_begin_hash[read_begin_coord]++;
+      /*
+      if (cj.read_begin_hash.count(read_begin_coord) == 0) {
+        cj.read_begin_hash[read_begin_coord] = 0;
+      }
+      else
+      {
+        cj.read_begin_hash[read_begin_coord] = cj.read_begin_hash[read_begin_coord]+1;
+      }
+      */
 
 			if (verbose)
 			{
@@ -645,7 +665,7 @@ namespace breseq {
 
 	bool CandidateJunctions::_check_read_pair_requirements(const Settings& settings, int32_t a1_start, int32_t a1_end, int32_t a2_start, int32_t a2_end, int32_t& a1_unique_length, int32_t& a2_unique_length, int32_t& union_length)
 	{
-		bool verbose = true;
+		bool verbose = false;
 
 		if (verbose)
 			cout << "=== Match1: " << a1_start << "-" << a1_end << "   Match2: " << a2_start << "-" << a2_end << endl;
@@ -709,41 +729,37 @@ namespace breseq {
 		return true;
 	}
 
-	void CandidateJunctions::_num_matches_from_end(alignment a, string refseq_str, bool dir, int32_t overlap, int32_t& qry_mismatch_pos, int32_t& ref_mismatch_pos)
+	void CandidateJunctions::_num_matches_from_end(alignment& a, const string& refseq_str, bool dir, int32_t overlap, int32_t& qry_mismatch_pos, int32_t& ref_mismatch_pos)
 	{
 		bool verbose = false;
 
 		// Read
 		// start, end, length  of the matching sequence (in top strand coordinates)
-		int32_t q2_start, q2_end;
-
-		uint32_t q_seq_start, q_seq_end;
-		a.query_bounds_0(q_seq_start, q_seq_end);
-		int32_t q_length = a.read_length();
+		uint32_t q_start, q_end;
+		a.query_bounds_1(q_start, q_end);
+		uint32_t q_length = q_end - q_start + 1;
 
 		bool reversed = a.reversed();
+    
 		// sequence of the matching part of the query (top genomic strand)
-		string a_qseq = a.qseq();
-		string q_str = a_qseq.substr(q_seq_start - 1, q_seq_end - q_seq_start + 1);
-		vector<string> q_array = split(q_str, "/");
-
+		string q_str = a.read_char_sequence().substr(q_start - 1, q_length);
+    
 		// Reference
 		// start, end, length of match in reference
-		int32_t r_start = a.reference_start_1();
-		int32_t r_end = a.reference_end_0();
-		int32_t r_length = r_end - r_start + 1;
+		uint32_t r_start, r_end;
+    a.reference_bounds_1(r_start, r_end);
+		uint32_t r_length = r_end - r_start + 1;
 
 		// sequence of match in reference (top genomic strand)
 		string r_str = refseq_str.substr(r_start - 1, r_length);
-		vector<string> r_array = split(r_str, "/");
 
 		if (verbose)
 		{
 			cout << "====> Num Matches from End" << endl;
 			cout << a.read_name() << endl;
 			cout << "direction: " << dir << endl;
-			cout << "Read sequence: " << a_qseq << endl;
-			cout << "Read Match coords: " << q_seq_start << "-" << q_seq_end << " " << reversed << endl;
+			cout << "Read sequence: " << a.read_char_sequence() << endl;
+			cout << "Read Match coords: " << q_start << "-" << q_end << " " << reversed << endl;
 			cout << "Read Match sequence: " << q_str << endl;
 			cout << "Reference Match coords: " << r_start << "-" << r_end << endl;
 			cout << "Reference Match sequence: " << r_str << endl;
@@ -752,48 +768,46 @@ namespace breseq {
 		if (reversed) dir = !dir;
 		if (!dir)
 		{
-			reverse(q_array.begin(), q_array.end());
-			reverse(r_array.begin(), r_array.end());
+			q_str = reverse_string(q_str);
+			r_str = reverse_string(r_str);
 		}
 
-		uint32_t* cigar_array = a.cigar_array();
-		vector<uint32_t> cigar_array_ref;
-		for (uint32_t i = 0; i <= a.cigar_array_length(); i++)
-			cigar_array_ref.push_back(cigar_array[i]);
-
-		char op_0 = cigar_array_ref[0] & BAM_CIGAR_MASK;
-		char op_last = cigar_array_ref[cigar_array_ref.size()-1] & BAM_CIGAR_MASK;
+    vector<pair<uint8_t,uint8_t> > cigar_pair_array = a.cigar_pair_array();
+    
+		char op_0 = cigar_pair_array.front().first;
+		char op_last = cigar_pair_array.back().first;
 
 		//remove soft padding
-		if (op_0 == 'S') cigar_array_ref.erase(cigar_array_ref.begin());
-		if (op_last == 'S') cigar_array_ref.erase(cigar_array_ref.end());
-		if (!dir) reverse(cigar_array_ref.begin(), cigar_array_ref.end());
+		if (op_0 == 'S') cigar_pair_array.erase(cigar_pair_array.begin());
+		if (op_last == 'S') cigar_pair_array.erase(cigar_pair_array.end()-1);
+		if (!dir) reverse(cigar_pair_array.begin(), cigar_pair_array.end());
 
 		qry_mismatch_pos = -1;
 		ref_mismatch_pos = -1;
 
-		int32_t r_pos = 0;
-		int32_t q_pos = 0;
-		while ((q_pos < overlap) && (r_pos < r_length) && (q_pos < q_length))
+    uint32_t positive_overlap = (overlap > 0) ? static_cast<uint32_t>(overlap) : 0;
+		uint32_t r_pos = 0;
+		uint32_t q_pos = 0;
+    uint32_t len_0 = cigar_pair_array.front().second;
+		while ((q_pos < positive_overlap) && (r_pos < r_length) && (q_pos < q_length))
 		{
 			// get rid of previous items...
-			uint32_t len_0 = cigar_array_ref[0] >> BAM_CIGAR_SHIFT;
-			if (len_0 == 0) cigar_array_ref.erase(cigar_array_ref.begin());
-
-			len_0 = cigar_array_ref[0] >> BAM_CIGAR_SHIFT;
+      if (len_0 == 0) cigar_pair_array.erase(cigar_pair_array.begin());
+			
+      // subtract one from the length
+      len_0 = cigar_pair_array.front().second;
 			len_0--;
-			len_0 <<= BAM_CIGAR_SHIFT;
-			cigar_array_ref[0] &= (len_0 | BAM_CIGAR_MASK);
+      cigar_pair_array.front().second = len_0;
 
 			// handle indels
-			op_0 = cigar_array_ref[0] & BAM_CIGAR_MASK;
-			if (op_0 == 'I')
+			op_0 = cigar_pair_array.front().first;
+			if (op_0 == BAM_CINS)
 			{
 				q_pos++;
 				ref_mismatch_pos = r_pos;
 				qry_mismatch_pos = q_pos;
 			}
-			else if (op_0 == 'D')
+			else if (op_0 == BAM_CDEL)
 			{
 				r_pos++;
 				ref_mismatch_pos = r_pos;
@@ -801,7 +815,7 @@ namespace breseq {
 			}
 			else
 			{
-				if (q_array[q_pos] != r_array[r_pos])
+				if (q_str[q_pos] != r_str[r_pos])
 				{
 					ref_mismatch_pos = r_pos;
 					qry_mismatch_pos = q_pos;
@@ -821,7 +835,7 @@ namespace breseq {
 		if (verbose)
 		{
 			if (qry_mismatch_pos >= 0)
-				cout << "Query Mismatch At = " << qry_mismatch_pos << " | Overlap = " << overlap << endl;
+				cout << "Query Mismatch At = " << qry_mismatch_pos << "Reference Mismatch At = " << ref_mismatch_pos << " | Overlap = " << overlap << endl;
 			cout << "<====" << endl;
 		}
 	}
@@ -959,19 +973,7 @@ namespace breseq {
 	 */
 	void CandidateJunctions::identify_candidate_junctions(const Settings& settings, Summary& summary, const cReferenceSequences& ref_seq_info)
 	{
-		int32_t verbose = 0;
-
-		// set up some options that are global to this module
-		/*
-		$required_both_unique_length_per_side = $settings->{required_both_unique_length_per_side};
-		$required_one_unique_length_per_side = $settings->{required_one_unique_length_per_side};
-		$maximum_inserted_junction_sequence_length = $settings->{maximum_inserted_junction_sequence_length};
-	 	$required_match_length = $settings->{required_match_length};
-		$required_extra_pair_total_length = $settings->{required_extra_pair_total_length};
-		*/
-
-		// set up files and local variables from settings
-		//my $ref_strings = ref_seq_info[*].m_fasta_sequence.m_sequence;
+		bool verbose = false;
 
 		string candidate_junction_fasta_file_name = Settings::file_name(settings.candidate_junction_fasta_file_name);
 		cFastaFile out(candidate_junction_fasta_file_name, ios_base::out);
@@ -981,8 +983,6 @@ namespace breseq {
 
 		// summary data for this step
 		Summary::CandidateJunctionSummaryData hcs;
-
-//		my @read_files = $settings->read_files;
 
 		uint32_t i = 0;
 
@@ -1038,13 +1038,17 @@ namespace breseq {
 			for (map<string, CandidateJunction>::iterator it = (*outer_it).second.begin(); it != (*outer_it).second.end(); it++)
 			{
 				string junction_id = (*it).first;
-				CandidateJunction cj = (*it).second;
+				CandidateJunction& cj = (*it).second;
 				cj.pos_hash_score = cj.read_begin_hash.size();
-
+        
 				if (verbose)
 				{
-					cout << ">>>" << junction_id << endl; // prints junction id
-					//print Dumper($cj->{read_begin_hash});
+					cout << ">>>" << junction_id << " Pos Hash Score: " << cj.pos_hash_score << endl; // prints junction id
+          
+          for (map<uint32_t,uint32_t>::iterator rhbit=cj.read_begin_hash.begin(); rhbit != cj.read_begin_hash.end(); rhbit++)
+          {
+            cout << "   " << rhbit->first << " " << rhbit->second << endl;
+          }
 				}
 			}
 		}
@@ -1091,7 +1095,7 @@ namespace breseq {
 				};
 				combined_candidate_junction_list.push_back(ccj);
 			}
-			handled_seq[junction_seq] = 1;
+			handled_seq[junction_seq]++;
 
 			// add the reverse complement
 			if (candidate_junctions.count(rc_junction_seq) > 0)
@@ -1149,6 +1153,18 @@ namespace breseq {
 
 		sort(combined_candidate_junctions.begin(), combined_candidate_junctions.end(), CombinedCandidateJunction::sort_by_scores_and_seq_length);
 		//print Dumper(@combined_candidate_junctions) if ($verbose);
+    
+    if (verbose)
+    {
+      for (vector<CombinedCandidateJunction>::iterator it=combined_candidate_junctions.begin(); it < combined_candidate_junctions.end(); it++ )
+      {
+        cout << "ID: " << it->id << endl;
+        cout << "  pos_hash_score: " << it->pos_hash_score << endl;
+        cout << "  min_overlap_score: " << it->min_overlap_score << endl;
+        cout << "  seq: " << it->seq << endl;
+        cout << "  rc_seq: " << it->rc_seq << endl;
+      }
+    }
 
 		///
 		// Limit the number of candidate junctions that we print by:
@@ -1165,14 +1181,14 @@ namespace breseq {
 			total_cumulative_cj_length += combined_candidate_junctions[j].seq.size();
 
 		//my @duplicate_sequences;
-		int32_t cumulative_cj_length = 0;
-		int32_t lowest_accepted_pos_hash_score = -1;
-		int32_t lowest_accepted_min_overlap_score = -1;
+		uint32_t cumulative_cj_length = 0;
+		int32_t lowest_accepted_pos_hash_score = 0;
+		int32_t lowest_accepted_min_overlap_score = 0;
 
 		// Right now we limit the candidate junctions to have a length no longer than the reference sequence.
-		int32_t cj_length_limit = summary.sequence_conversion.total_reference_sequence_length * settings.maximum_candidate_junction_length_factor;
-		int32_t maximum_candidate_junctions = settings.maximum_candidate_junctions;
-		int32_t minimum_candidate_junctions = settings.minimum_candidate_junctions;
+		uint32_t cj_length_limit = summary.sequence_conversion.total_reference_sequence_length * settings.maximum_candidate_junction_length_factor;
+		uint32_t maximum_candidate_junctions = settings.maximum_candidate_junctions;
+		uint32_t minimum_candidate_junctions = settings.minimum_candidate_junctions;
 
 		fprintf(stderr, "  Minimum number to keep: %7d \n", minimum_candidate_junctions);
 		fprintf(stderr, "  Maximum number to keep: %7d \n", maximum_candidate_junctions);
@@ -1188,12 +1204,12 @@ namespace breseq {
 			int32_t num_duplicates = 0;
 
 			i = 0;
-			int32_t current_pos_hash_score = combined_candidate_junctions[i].pos_hash_score;
-			int32_t current_min_overlap_score = combined_candidate_junctions[i].min_overlap_score;
+			uint32_t current_pos_hash_score = combined_candidate_junctions[i].pos_hash_score;
+			uint32_t current_min_overlap_score = combined_candidate_junctions[i].min_overlap_score;
 
 			// Check to make sure that adding everything from the last iteration doesn't put us over any limits...
-			int32_t new_number = remaining_ids.size() + list_in_waiting.size();
-			int32_t new_length = cumulative_cj_length + add_cj_length;
+			uint32_t new_number = remaining_ids.size() + list_in_waiting.size();
+			uint32_t new_length = cumulative_cj_length + add_cj_length;
 			while (	( new_number <= minimum_candidate_junctions ) || ((new_length <= cj_length_limit) && (new_number <= maximum_candidate_junctions)) )
 			{
 				// OK, add everything from the last iteration
@@ -1205,9 +1221,9 @@ namespace breseq {
 				lowest_accepted_min_overlap_score = current_min_overlap_score;
 
 				// Zero out what we will add
-				int32_t add_cj_length = 0;
+				add_cj_length = 0;
 				list_in_waiting.clear();
-				int32_t num_duplicates = 0;
+				num_duplicates = 0;
 
 				// Check to make sure we haven't exhausted the list
 				if (i >= combined_candidate_junctions.size()) break;

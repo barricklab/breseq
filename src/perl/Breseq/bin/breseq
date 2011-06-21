@@ -394,10 +394,33 @@ if (!$settings->{no_junction_prediction})
 	{
 		print STDERR "Identifying candidate junctions...\n";
 		
-		Breseq::CandidateJunction::identify_candidate_junctions($settings, $summary, $ref_seq_info);
-		Breseq::Output::record_time("Candidate junction identification");
-		$settings->done_step('candidate_junction_done_file_name');
+		if ($settings->{perl_identify_candidate_junctions})
+		{
+			Breseq::CandidateJunction::identify_candidate_junctions($settings, $summary, $ref_seq_info);
+			Breseq::Output::record_time("Candidate junction identification");
+			$settings->done_step('candidate_junction_done_file_name');
+		}
+		else
+		{
+			my $cbreseq = $settings->ctool('cbreseq');
+			my $readfiles = join(" --read-file ", $settings->read_files);
+			my $data_path = $settings->file_name("data_path");
+			my $candidate_junction_path = $settings->file_name("candidate_junction_path");
 
+			my $cmdline = "$cbreseq IDENTIFY_CANDIDATE_JUNCTIONS --data-path $data_path";
+			$cmdline .= " --candidate-junction-path $candidate_junction_path";
+			$cmdline .= " --read-file $readfiles";
+			my $maximum_read_length = $summary->{sequence_conversion}->{max_read_length};
+			$cmdline .= " --maximum-read-length $maximum_read_length";
+			my $reference_sequence_length = $settings->{total_reference_sequence_length};
+			$cmdline .= " --reference-sequence-length $reference_sequence_length";
+			
+			Breseq::Shared::system($cmdline);	
+		
+			## @JEB Fix this -- no summary currently...
+			$summary->{candidate_junction} = {};
+		}
+		
 		Storable::store($summary->{candidate_junction}, $candidate_junction_summary_file_name) 
 			or die "Can't store data in file $candidate_junction_summary_file_name!\n";
 	}
