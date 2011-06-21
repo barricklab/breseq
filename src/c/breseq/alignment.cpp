@@ -186,6 +186,27 @@ void alignment::query_bounds_1(uint32_t& start, uint32_t& end) const {
 	start = (int32_t)qb.first;
 	end = (int32_t)qb.second;
 }
+  
+/*! Retrieve the start and end coordinates of the aligned part of the read.
+    switch start and end if on opposite reference strand
+ */
+std::pair<uint32_t,uint32_t> alignment::query_stranded_bounds_1() const {
+  
+  pair<uint32_t,uint32_t> qb = query_bounds_1();
+  uint32_t start = (int32_t)qb.first;
+  uint32_t end = (int32_t)qb.second;
+  
+  if (reversed()) {
+    return std::make_pair(read_length() - end + 1, read_length() - start + 1);
+  }
+  
+  return std::make_pair(start,end);
+}
+void alignment::query_stranded_bounds_1(uint32_t& start, uint32_t& end) const {
+  pair<uint32_t,uint32_t> qb = query_stranded_bounds_1();
+  start = (int32_t)qb.first;
+  end = (int32_t)qb.second;
+}
 
 /*! Get the query start or end from the cigar string of an alignment
  */

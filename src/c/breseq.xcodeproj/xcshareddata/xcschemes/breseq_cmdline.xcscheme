@@ -134,7 +134,7 @@
          </CommandLineArgument>
          <CommandLineArgument
             argument = "PREPROCESS_ALIGNMENTS --data-path /Users/jbarrick/src/breseq/tests/lambda_mixed_pop/data --reference-alignment-path /Users/jbarrick/src/breseq/tests/lambda_mixed_pop/02_reference_alignment --candidate-junction-path /Users/jbarrick/src/breseq/tests/lambda_mixed_pop/03_candidate_junctions --read-file /Users/jbarrick/src/breseq/tests/data/lambda/lambda_mixed_population.fastq "
-            isEnabled = "YES">
+            isEnabled = "NO">
          </CommandLineArgument>
          <CommandLineArgument
             argument = "IDENTIFY_MUTATIONS --bam /Users/jbarrick/src/breseq/tests/lambda_mixed_pop/data/reference.bam --fasta /Users/jbarrick/src/breseq/tests/lambda_mixed_pop/data/reference.fasta --readfile lambda_mixed_population --error_dir /Users/jbarrick/src/breseq/tests/lambda_mixed_pop/07_error_calibration/ --genome_diff /Users/jbarrick/src/breseq/tests/lambda_mixed_pop/08_mutation_identification/ra_mc_evidence.gd --output /Users/jbarrick/src/breseq/tests/lambda_mixed_pop/08_mutation_identification/ --mutation_cutoff 2 --coverage_dir /Users/jbarrick/src/breseq/tests/lambda_mixed_pop/08_mutation_identification/ --deletion_propagation_cutoff 31 --predict_deletions 1 --minimum_quality_score 3 --error_table /Users/jbarrick/src/breseq/tests/lambda_mixed_pop/07_error_calibration//error_rates.tab"
@@ -143,6 +143,10 @@
          <CommandLineArgument
             argument = "CONVERT_GENBANK --fasta /Users/jbarrick/src/breseq/tests/lambda_mult_ref_read/data/reference.fasta --features /Users/jbarrick/src/breseq/tests/lambda_mult_ref_read/data/reference.features.tab --input /Users/jbarrick/src/breseq/tests/lambda_mult_ref_read/../data/lambda/lambda.1.gbk --input /Users/jbarrick/src/breseq/tests/lambda_mult_ref_read/../data/lambda/lambda.2.gbk --input /Users/jbarrick/src/breseq/tests/lambda_mult_ref_read/../data/lambda/lambda.3.gbk --input /Users/jbarrick/src/breseq/tests/lambda_mult_ref_read/../data/lambda/lambda.4.gbk --input /Users/jbarrick/src/breseq/tests/lambda_mult_ref_read/../data/lambda/lambda.5.gbk"
             isEnabled = "NO">
+         </CommandLineArgument>
+         <CommandLineArgument
+            argument = "IDENTIFY_CANDIDATE_JUNCTIONS --candidate-junction-path /Users/jbarrick/src/breseq/tests/lambda_mixed_pop/03_candidate_junctions --read-file /Users/jbarrick/src/breseq/tests/data/lambda/lambda_mixed_population.fastq   --data-path /Users/jbarrick/src/breseq/tests/lambda_mixed_pop/data "
+            isEnabled = "YES">
          </CommandLineArgument>
       </CommandLineArguments>
       <AdditionalOptions>

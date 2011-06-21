@@ -1344,11 +1344,11 @@ sub polymorphism_statistics
 	#print "$count_column $quality_column\n";
 
 	my @quality_count_list;
-	while (my $_ = <COUNT>)
+	while (my $line = <COUNT>)
 	{
-		chomp $_;
+		chomp $line;
 		#print "$_\n";
-		my @line_list = split /\t/, $_; 
+		my @line_list = split /\t/, $line; 
 		$quality_count_list[$line_list[$quality_column]] += $line_list[$count_column];
 	}
 	close COUNT;
