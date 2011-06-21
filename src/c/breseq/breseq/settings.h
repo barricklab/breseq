@@ -101,8 +101,8 @@ namespace breseq {
 		int32_t minimum_candidate_junction_min_overlap_score;
 		int32_t minimum_candidate_junctions;
 		int32_t maximum_candidate_junctions;
-		int32_t maximum_candidate_junction_length_factor;
-		int32_t max_read_length;
+		double maximum_candidate_junction_length_factor;
+		int32_t maximum_read_length;
 		int32_t maximum_inserted_junction_sequence_length;
 		int32_t max_read_mismatches;
 		int32_t required_both_unique_length_per_side;
@@ -131,6 +131,7 @@ namespace breseq {
 			return s;
 		}
     
+    // assumes things are in our path for now
     string ctool(string tool_name) const
 		{
       //			my ($self, $tool_name, $allow_fail) = @_;
@@ -148,7 +149,7 @@ namespace breseq {
       //				}
       //			}
       
-			return bin_path + "/" + tool_name;
+			return  tool_name;
 		}
 	};
 

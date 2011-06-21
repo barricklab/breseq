@@ -299,14 +299,13 @@ namespace breseq {
 	{
 		rhs.clear();
 		string value;
-		stream >> value;
-		vector<string> values = split(value, "\n");
-		for (vector<string>::iterator it = values.begin(); it != values.end(); it++)
-		{
-			T t;
-			istringstream iss(*it);
-			iss >> boolalpha >> t;
-			rhs.push_back(t);
+    // the different values are separated by newlines "\n" in the string
+    // so they are read out correctly this way! @JEB
+    while (!stream.eof())
+    {
+      T t;
+      stream >> boolalpha >> t;
+      rhs.push_back(t);
 		}
 		return stream;
 	}
@@ -349,12 +348,21 @@ namespace breseq {
 	}
 	
 	inline string to_lower(const string& input)
-    {
-        string str = input;
-        transform(str.begin(), str.end(),str.begin(), ::tolower);
-        return str;
-    }
+  {
+      string str = input;
+      transform(str.begin(), str.end(),str.begin(), ::tolower);
+      return str;
+  }
 
+  inline string reverse_string(const string &in_string)
+  {
+    string rev_string("");
+    for(string::const_reverse_iterator rit=in_string.rbegin(); rit<in_string.rend(); rit++)
+    {
+      rev_string+=*rit;
+    }
+    return rev_string;
+  }
 
 	struct Trim
 	{
@@ -420,28 +428,31 @@ namespace breseq {
 	}
 
 	// Serializes a JunctionInfo to a string
-	inline string junction_name_join(JunctionInfo item)
+	inline string junction_name_join(const JunctionInfo& item)
 	{
 		bool has_redundant = (item.side_1.redundant >= 0 && item.side_2.redundant >= 0);
-		vector<string> values(has_redundant ? 12 : 10);
+    
+    // allocate vector of correct size
+		vector<string> values(has_redundant ? 12 : 10); 
 
-		values.push_back(item.side_1.seq_id);
-		values.push_back(to_string(item.side_1.position));
-		values.push_back(to_string(item.side_1.strand));
+    // place values in vector
+		values[0] = item.side_1.seq_id;
+		values[1] = to_string(item.side_1.position);
+		values[2] = to_string(item.side_1.strand);
 
-		values.push_back(item.side_2.seq_id);
-		values.push_back(to_string(item.side_2.position));
-		values.push_back(to_string(item.side_2.strand));
+		values[3] = item.side_2.seq_id;
+		values[4] = to_string(item.side_2.position);
+		values[5] = to_string(item.side_2.strand);
 
-		values.push_back(to_string(item.alignment_overlap));
-		values.push_back(to_string(item.unique_read_sequence));
-		values.push_back(to_string(item.flanking_left));
-		values.push_back(to_string(item.flanking_right));
+		values[6] = to_string(item.alignment_overlap);
+		values[7] = to_string(item.unique_read_sequence);
+		values[8] = to_string(item.flanking_left);
+		values[9] = to_string(item.flanking_right);
 
 		if (has_redundant)
 		{
-			values.push_back(to_string(item.side_1.redundant));
-			values.push_back(to_string(item.side_2.redundant));
+			values[10] = to_string(item.side_1.redundant);
+			values[11] = to_string(item.side_2.redundant);
 		}
 
 		return join(values, junction_name_separator);

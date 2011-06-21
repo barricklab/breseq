@@ -3,7 +3,7 @@
 <plist version="1.0">
 <dict>
 	<key>currentDocument</key>
-	<string>Breseq/lib/Breseq/ErrorCalibration.pm</string>
+	<string>Breseq/lib/Breseq/CandidateJunctions.pm</string>
 	<key>documents</key>
 	<array>
 		<dict>
@@ -302,6 +302,20 @@
 			<integer>0</integer>
 			<key>firstVisibleLine</key>
 			<integer>556</integer>
+		</dict>
+		<key>Breseq/lib/Breseq/CandidateJunctions.pm</key>
+		<dict>
+			<key>caret</key>
+			<dict>
+				<key>column</key>
+				<integer>0</integer>
+				<key>line</key>
+				<integer>854</integer>
+			</dict>
+			<key>firstVisibleColumn</key>
+			<integer>0</integer>
+			<key>firstVisibleLine</key>
+			<integer>1032</integer>
 		</dict>
 		<key>Breseq/lib/Breseq/CoverageDistribution.pm</key>
 		<dict>
@@ -628,6 +642,7 @@
 		<string>Breseq/lib/Breseq/Output.pm</string>
 		<string>Breseq/MYMETA.yml</string>
 		<string>Breseq/lib/Breseq/ErrorCalibration.pm</string>
+		<string>Breseq/lib/Breseq/CandidateJunctions.pm</string>
 		<string>Breseq/lib/Breseq/ReferenceSequence.pm</string>
 		<string>Breseq/lib/Breseq/polymorphism_statistics.r</string>
 		<string>Breseq/bin/genbank_utils</string>
@@ -645,6 +660,6 @@
 	<key>showFileHierarchyDrawer</key>
 	<true/>
 	<key>windowFrame</key>
-	<string>{{198, 167}, {793, 711}}</string>
+	<string>{{37, 87}, {793, 711}}</string>
 </dict>
 </plist>

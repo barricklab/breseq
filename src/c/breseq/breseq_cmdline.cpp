@@ -391,7 +391,7 @@ int do_preprocess_alignments(int argc, char* argv[]) {
 		("min-indel-split-length", "split indels this long in matches", 3)
 		("max-read-mismatches", "ignore reads with more than this number of mismatches", uint32_t(0))
 		("require-complete-match", "require the complete read to match (both end bases", TAKES_NO_ARGUMENT)
-		("required-match-length", "require this length of sequence -- on the read -- to match", "28")
+		("required-match-length", "require this length of sequence -- on the read -- to match", static_cast<uint32_t>(28))
 		("candidate-junction-read-limit", "limit handled reads to this many", -1)
     .processCommandArgs(argc, argv);
 
@@ -464,19 +464,31 @@ int do_identify_candidate_junctions(int argc, char* argv[]) {
 		("help,h", "produce this help message", TAKES_NO_ARGUMENT)
     ("candidate-junction-path", "path where candidate junction files will be created")
     ("data-path", "path of data")
-    ("read-file,r", "FASTQ read files (multiple allowed, comma-separated) ")
+    ("read-file,r", "FASTQ read files (multiple allowed, comma-separated)")
 
-    ("candidate-junction-read-limit", "limit handled reads to this many", uint32_t(0))
+    ("candidate-junction-read-limit", "limit handled reads to this many", static_cast<unsigned long>(0))
     ("required-both-unique-length-per-side,1",
-     "Only count reads where both matches extend this many bases outside of the overlap.", uint32_t(0))
+     "Only count reads where both matches extend this many bases outside of the overlap.", static_cast<unsigned long>(5))
     ("required-one-unique-length-per-side,2",
-     "Only count reads where at least one match extends this many bases outside of the overlap.", "10")
+     "Only count reads where at least one match extends this many bases outside of the overlap.", static_cast<unsigned long>(10))
     ("maximum-inserted-junction-sequence-length,3",
-     "Maximum number of bases allowed in the overlapping part of a candidate junction.", "20")
+     "Maximum number of bases allowed in the overlapping part of a candidate junction.", static_cast<unsigned long>(20))
     ("required-match-length,4",
-     "At least this many bases in the read must match the reference genome for it to count.", "28")
+     "At least this many bases in the read must match the reference genome for it to count.", static_cast<unsigned long>(28))
     ("required-extra-pair-total-length,5",
-     "Each match pair must have at least this many bases not overlapping for it to count.", "2")
+     "Each match pair must have at least this many bases not overlapping for it to count.", static_cast<unsigned long>(2))
+    ("maximum-read-length", "Length of the longest read.")
+
+    // Defaults should be moved to Settings constructor
+    ("maximum-candidate-junctions",
+     "Maximum number of candidate junction to create.", static_cast<unsigned long>(5000))
+    ("minimum-candidate-junctions",
+     "Minimum number of candidate junctions to create.", static_cast<unsigned long>(200))
+    // This should be in the summary...
+    ("reference-sequence-length",
+     "Total length of reference sequences.")  
+    ("maximum-candidate-junction-length-factor",
+     "Total length of candidate junction sequences must be no more than this times reference sequence length.", static_cast<double>(0.1))    
 	.processCommandArgs(argc, argv);
   
   //These options are almost always default values
@@ -487,6 +499,8 @@ int do_identify_candidate_junctions(int argc, char* argv[]) {
 		 || !options.count("data-path")
      || !options.count("candidate-junction-path")
      || !options.count("read-file")
+     || !options.count("maximum-read-length")
+     || !options.count("reference-sequence-length")
 		 ) {
 		options.printUsage();
 		return -1;
@@ -511,9 +525,16 @@ int do_identify_candidate_junctions(int argc, char* argv[]) {
     settings.maximum_inserted_junction_sequence_length = from_string<int32_t>(options["maximum-inserted-junction-sequence-length"]);
     settings.required_one_unique_length_per_side = from_string<int32_t>(options["required-one-unique-length-per-side"]);
     settings.required_both_unique_length_per_side = from_string<int32_t>(options["required-both-unique-length-per-side"]);
+    settings.maximum_read_length = from_string<int32_t>(options["maximum-read-length"]);
     
+    settings.maximum_candidate_junctions = from_string<int32_t>(options["maximum-candidate-junctions"]);
+    settings.minimum_candidate_junctions = from_string<int32_t>(options["minimum-candidate-junctions"]);
+    settings.maximum_candidate_junction_length_factor = from_string<double>(options["maximum-candidate-junction-length-factor"]);
+
+    // We should inherit the summary object from earlier steps
     Summary summary;
-      
+    summary.sequence_conversion.total_reference_sequence_length = from_string<int32_t>(options["reference-sequence-length"]);
+    
     cReferenceSequences ref_seq_info;
     breseq::LoadFeatureIndexedFastaFile(ref_seq_info, "", options["data-path"] + "/reference.fasta");
         

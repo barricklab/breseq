@@ -167,10 +167,20 @@ namespace breseq {
 		string word_wrap(string sentence, int width);
 		template<class T> void addOptionOrFlag(const string& option_name, const string& option_description, const T& option_default_value, bool has_argument, bool has_default_value)
 		{
-			if (has_default_value)
-				default_values[option_name] = to_string(option_default_value);
-			vector<string> option_name_split = split(option_name, ",");
-			string usage;
+      // split the name first 
+      vector<string> option_name_split = split(option_name, ",");
+
+      // assign default value to both long and short option name variants
+      if (has_default_value) 
+      {
+        for (vector<string>::iterator it=option_name_split.begin(); it<option_name_split.end(); it++) 
+        {
+          default_values[*it] = to_string(option_default_value);
+        }
+      }
+      
+      
+      string usage;
 			if (option_name_split.size() > 1)
 			{
 				if (has_argument)

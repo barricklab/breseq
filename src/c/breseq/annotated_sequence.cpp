@@ -134,8 +134,8 @@ namespace breseq {
       
       cAnnotatedSequence new_seq;
       new_seq.m_fasta_sequence = on_seq;
+      new_seq.m_seq_id = on_seq.m_name;
       (*this).push_back(new_seq);
-      
       m_seq_id_to_index[on_seq.m_name] = on_seq_id++;
     }
   }
