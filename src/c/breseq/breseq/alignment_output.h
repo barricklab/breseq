@@ -32,79 +32,84 @@ namespace breseq {
 /*! This class is a FACTORY for generating HTML alignments
  */
 
-//! returns more information about aligned reads given a sequence id string.
-typedef struct {
-    string seq_id;
-    uint32_t length;
-    string read_sequence;
-    string qual_sequence;
-    string aligned_bases;
-    string aligned_quals;
-    uint32_t reference_start;
-    uint32_t reference_end;
-    uint32_t start;
-    uint32_t end;
-    int32_t strand;
-    bool    updated; //whether the read was updated at this pileup iteration already
-}struct_aligned_read;
-
-
-//!Helper struct for aligned_refs
-typedef struct {
-    uint32_t start;
-    uint32_t end;
-    string aligned_bases;
-    string aligned_quals;
-    uint32_t reference_length;
-    string reference_name;
-    char base;
-    
-}struct_aligned_reference;
-
-typedef struct {
-    string aligned_bases;
-}struct_aligned_annotation;
-
-
-class alignment_output_pileup : public pileup_base {
-public:
-    //! Constructor.
-    alignment_output_pileup(const string& bam, const string& fasta,
-                            const uint32_t maximum_to_align);
-    //! Destructor.
-    virtual ~alignment_output_pileup();
-    //! Called for each genome position.
-    virtual void pileup_callback(const pileup& aligned_reference);
-    //! Called for each aligned read.
-    virtual void fetch_callback(const alignment& a);
-
-    //!Helper struct for aligned_reads
-
-
-    map<string, struct_aligned_read> aligned_reads;
-    vector<struct_aligned_reference> aligned_references;
-    struct_aligned_annotation aligned_annotation;
-
-    uint32_t unique_start; //used in create alignment and passed to fetch
-    uint32_t unique_end; //used in create alignment and passed to fetch
-    uint32_t total_reads;
-    uint32_t processed_reads;
-    uint32_t maximum_to_align;
-
-
-    uint32_t insert_start;
-    uint32_t insert_end;
-
-    uint32_t last_pos;
-    uint32_t max_indel;
-    
-    
-    char base;
-};
 
 class alignment_output {
+public:
+    //! returns more information about aligned reads given a sequence id string.
+    typedef struct {
+        string seq_id;
+        uint32_t length;
+        string read_sequence;
+        string qual_sequence;
+        string aligned_bases;
+        string aligned_quals;
+        uint32_t reference_start;
+        uint32_t reference_end;
+        uint32_t start;
+        uint32_t end;
+        int32_t strand;
+        bool updated; //whether the read was updated at this pileup iteration already
+    }Aligned_Read;
+
+    //! returns more information about an aligned references
+    typedef struct {
+        uint32_t start;
+        uint32_t end;
+        string aligned_bases;
+        string aligned_quals;
+        uint32_t reference_length;
+        string reference_name;
+        char base;
+    }Aligned_Reference;
+
+    typedef struct {
+        string aligned_bases;
+    }Aligned_Annotation;
+
+    typedef map<string, Aligned_Read> Aligned_Reads;
+    typedef vector<Aligned_Reference> Aligned_References;
+
 private:
-    alignment_output_pileup m_alignment_output_pileup_object;
+    //! Builds Aligned_Reads, Aligned_References and Aligned_Annotation
+    class Alignment_Output_Pileup : public pileup_base {
+    public:
+        //! Constructor.
+        Alignment_Output_Pileup(const string& bam, const string& fasta,
+                                const uint32_t maximum_to_align);
+        //! Destructor.
+        virtual ~Alignment_Output_Pileup();
+        //! Called for each genome position.
+        virtual void pileup_callback(const pileup& aligned_reference);
+        //! Called for each aligned read.
+        virtual void fetch_callback(const alignment& a);
+
+        Aligned_Reads aligned_reads;
+        Aligned_References aligned_references;
+        Aligned_Annotation aligned_annotation;
+        uint32_t unique_start; //used in create alignment and passed to fetch
+        uint32_t unique_end; //used in create alignment and passed to fetch
+        uint32_t total_reads;
+        uint32_t processed_reads;
+        uint32_t maximum_to_align;
+
+        uint32_t insert_start;
+        uint32_t insert_end;
+
+        uint32_t last_pos;
+        uint32_t max_indel;
+        char base;
+    };
+    //!Helper struct for set_quality_range
+    typedef struct {
+        vector<uint32_t> qual_to_color_index;
+        vector<uint32_t> qaul_cutoffs;
+    }Quality_Range;
+
+    Alignment_Output_Pileup m_alignment_output_pileup;
+    Aligned_Reads m_aligned_reads;
+    Aligned_References m_aligned_references;
+    Aligned_Annotation m_aligned_annotation;
+    Quality_Range m_quality_range;
 
 public:
     //! Constructor.
@@ -113,33 +118,17 @@ public:
     string html_alignment(const string region);
     void create_alignment(const string bam, const string fasta, const string region);
     void set_quality_range();
-    
-    //Built by creat_alignment()
-    map<string, struct_aligned_read> m_aligned_reads; 
-    vector<struct_aligned_reference> m_aligned_references;
-    struct_aligned_annotation m_aligned_annotation;
-    
-
 private:
-  //!Helper struct for set_quality_range    
-  typedef struct {
-    vector<uint32_t> qual_to_color_index;
-    vector<uint32_t> qaul_cutoffs;
-  }struct_quality_range;
-  //Built by set_quality_range()
-  struct_quality_range m_quality_range;
-
-  string create_header_string();
-  
-  static bool sort_by_aligned_bases(const pair<string, struct_aligned_read> a, const pair<string,struct_aligned_read> b)
-  {
-    return (a.second.aligned_bases > b.second.aligned_bases);
-  }
-  
-    
-    
-
+    string create_header_string();
+    static bool sort_by_aligned_bases(const pair<string, Aligned_Read> a, const pair<string,Aligned_Read> b)
+    {
+        return (a.second.aligned_bases > b.second.aligned_bases);
+    }
 };
+
+
+
+
 
 
 }//end namespace breseq
