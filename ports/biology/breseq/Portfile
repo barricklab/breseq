@@ -1,0 +1,30 @@
+# -*- coding: utf-8; mode: tcl; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*- vim:fenc=utf-8:ft=tcl:et:sw=4:ts=4:sts=4
+# $Id$
+PortSystem          1.0
+name                breseq
+version             0.0.1
+categories          biology
+platforms           darwin
+maintainers         Jeffrey Barrick \
+                    gmail.REMOVEme.com:jeffrey.e.barrick
+description         Breseq pipeline for genome re-sequencing data.
+long_description    Breseq pipeline for analyzing next-gen DNA sequencing data. \
+                    Intended for haploid organisms with smaller genome sizes \
+                    (mainly bacteria) includes functionality for predicting new \
+                    sequence junctions and the frequencies of point mutations in \
+                    mixed population samples. \
+homepage            http://barricklab.org/breseq
+license             GPL-3
+master_sites        http://barricklab.org/dist/
+checksums           md5     879dfa4e46c0a737432c21917fd69180
+depends_build       port:boost
+depends_lib         port:perl5 \
+					port:p5-bioperl \
+					port:ncurses \
+					port:zlib
+depends_run			port:ghostscript \
+                    port:R \
+                    port:perl5 \
+                    port:ssaha2
+
+
