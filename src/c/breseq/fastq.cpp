@@ -193,7 +193,7 @@ namespace breseq {
       (*this)[(uint8_t)from_chr] = (uint8_t)to_chr;
       
       // Debug
-      cerr << from_chr << " => " << to_chr << endl;
+      //cerr << from_chr << " => " << to_chr << endl;
     }     
     
   }
@@ -238,7 +238,11 @@ namespace breseq {
         if (count == 0) {
           return false;
         } else {
+          uint32_t last_valid_line = floor((m_current_line-1)/4.0) * 4;
           fprintf(stderr, "Incomplete FASTQ sequence record found at end of file.\nFile %s\nLine: %d\n", m_file_name.c_str(), m_current_line-1);
+          fprintf(stderr, "You may be able to repair this damage and salvage the reads before this point with the command:\n");
+          fprintf(stderr, "  head -n %u %s > new.fastq\n", last_valid_line, m_file_name.c_str());
+          fprintf(stderr, "Then use \"new.fastq\" as input.\n");
           exit(-1);
         }
       }
