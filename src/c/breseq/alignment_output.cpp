@@ -19,8 +19,6 @@
 #include "breseq/alignment_output.h"
 #include "breseq/common.h"
 #include "breseq/pileup.h"
-#include "assert.h"
-
 
 
 using namespace std;
@@ -33,11 +31,13 @@ bool text = false; //TODO Options
 
 alignment_output::Alignment_Output_Pileup::Alignment_Output_Pileup ( const string& bam, const string& fasta, const uint32_t maximum_to_align )
         : pileup_base ( bam, fasta )
-        , maximum_to_align ( maximum_to_align )
         , unique_start ( 0 )
         , unique_end ( 0 )
         , total_reads ( 0 )
         , processed_reads ( 0 )
+        , maximum_to_align ( maximum_to_align )
+        , insert_start ( 0 ) //these should be initialized by create alignment
+        , insert_end ( 0 ) //these should be initialized by create alignment
         , last_pos ( 0 )
 {
 }
@@ -174,8 +174,8 @@ void alignment_output::create_alignment ( const string bam, const string fasta, 
     //  my $max_extend_right = 0;
 
 
-    uint32_t max_extend_left = 0;
-    uint32_t max_extend_right = 0;
+    int32_t max_extend_left = 0;
+    int32_t max_extend_right = 0;
 
     //  foreach my $key (keys %$aligned_reads)
     //  {
@@ -193,10 +193,11 @@ void alignment_output::create_alignment ( const string bam, const string fasta, 
     {
         Aligned_Read& aligned_read = ( m_aligned_reads[ ( *itr_reads ).first] );
         //$aligned_read->{aligned_bases} =~ m/^(\s*)\S+(\s*)$/;
-        uint32_t left_padding_length = aligned_read.aligned_bases.find_first_not_of ( ' ' );
-        uint32_t right_padding_length = ( aligned_read.aligned_bases.length() - 1 )
+        size_t left_padding_length = aligned_read.aligned_bases.find_first_not_of ( ' ' );
+        size_t right_padding_length = ( aligned_read.aligned_bases.length() - 1 )
                                         - aligned_read.aligned_bases.find_last_not_of ( ' ' );
 
+      
         if ( verbose )
         {
             cout  << aligned_read.start << " " << aligned_read.end << " " << aligned_read.seq_id << endl;
@@ -209,8 +210,8 @@ void alignment_output::create_alignment ( const string bam, const string fasta, 
         //  }
         //
 
-        uint32_t extend_left = ( aligned_read.start - 1 ) - left_padding_length;
-        uint32_t extend_right = ( aligned_read.length - aligned_read.end ) - right_padding_length;
+        int32_t extend_left = ( aligned_read.start - 1 ) - left_padding_length;
+        int32_t extend_right = ( aligned_read.length - aligned_read.end ) - right_padding_length;
 
         if ( extend_left > max_extend_left )
             max_extend_left = extend_left;
@@ -563,34 +564,38 @@ void alignment_output::Alignment_Output_Pileup::pileup_callback ( const pileup& 
     //  #create the alignment via "pileup"
     //  my $pileup_function = sub {
     ///EX: region = REL606-5:1-15; 1 is start, 15 is end
-    uint32_t& start( m_start_position_1 );
-    uint32_t& end( m_end_position_1 );
+    uint32_t& start_1( m_start_position_1 );
+    uint32_t& end_1( m_end_position_1 );
 
 
-    //      my ($seq_id,$pos,$pileup) = @_;
-    uint32_t pos = p.position_1();
+    // my ($seq_id,$pos,$pileup) = @_;
+    uint32_t pos_1 = p.position_1();
 
-    //      print "POSITION: $pos\n" if ($verbose);
+    // print "POSITION: $pos\n" if ($verbose);
     if ( verbose ) //TODO Options
-        cout << "POSITION: " << pos << endl;
-    //
-    //      return if ($pos < $unique_start);
-    //      return if ($pos > $unique_end);
-    if ( ( pos < unique_start ) || ( pos > unique_end ) )
+        cout << "POSITION: " << pos_1 << endl;
+
+    // return if ($pos < $unique_start);
+    // return if ($pos > $unique_end);
+    if ( ( pos_1 < unique_start ) || ( pos_1 > unique_end ) )
         return;
     //
-    //      foreach my $aligned_reference (@aligned_references)
-    //      {
-    //          $aligned_reference->{start} = $pos if (!defined $aligned_reference->{start});
-    //          $aligned_reference->{end} = $pos;
-    //      }
+    // foreach my $aligned_reference (@aligned_references)
+    // {
+    //   $aligned_reference->{start} = $pos if (!defined $aligned_reference->{start});
+    //   $aligned_reference->{end} = $pos;
+    // }
     //
     for ( uint32_t index_aligned_reference;
             index_aligned_reference < aligned_references.size();
             index_aligned_reference++ )
     {
-        aligned_references[index_aligned_reference].start = pos; //TODO check if start is defined
-        aligned_references[index_aligned_reference].end =pos;
+      // @JEB: 0 counts as undefined since we use 1-indexed coords
+      if (aligned_references[index_aligned_reference].start == 0) 
+      {
+        aligned_references[index_aligned_reference].start = pos_1;  
+      }
+      aligned_references[index_aligned_reference].end =pos_1;
     }//TEST with multiple reference sequences
 
     ////      ## Cull the list to those we want to align
@@ -602,11 +607,10 @@ void alignment_output::Alignment_Output_Pileup::pileup_callback ( const pileup& 
     //      ## We will add gaps to reads with an indel count lower than this.
     //      my $max_indel = 0;
     //      my $alignment_spans_position;
-    uint32_t max_indel = 0;
+    int temp_max_indel = 0;
     vector<string> alignment_spans_position;
-    //
-    //      ALIGNMENT: for my $p (@$pileup)
-    //      {
+
+    // ALIGNMENT: for my $p (@$pileup)
     for ( pileup::const_iterator itr_pileup = p.begin();
             itr_pileup != p.end() ; itr_pileup ++ )
     {
@@ -614,13 +618,20 @@ void alignment_output::Alignment_Output_Pileup::pileup_callback ( const pileup& 
         //$alignment_spans_position->{$p->alignment->display_name} = 1 if ($p->qpos > 0);
         ///KNOWN qpos is zero indexed
         if (itr_pileup->query_position_0() > 0)
+        {
             alignment_spans_position.push_back ( itr_pileup->read_name() );
+        }
+          
         //$max_indel = $p->indel if ($p->indel > $max_indel);
-        if (itr_pileup->indel() > max_indel )
-            max_indel = itr_pileup->indel();
-        //}
+        if (itr_pileup->indel() > temp_max_indel )
+        {
+          temp_max_indel = itr_pileup->indel();
+        }
         //print "MAX INDEL: $max_indel\n" if ($verbose);
     }
+    assert(temp_max_indel >= 0);
+    uint32_t max_indel = static_cast<uint32_t>(temp_max_indel);
+  
     if ( verbose ) //TODO Options
         cout << "MAX INDEL: " << max_indel << endl;
 
@@ -716,95 +727,92 @@ void alignment_output::Alignment_Output_Pileup::pileup_callback ( const pileup& 
     //     for my $p (@$pileup)
     //     {
     //BEGIN FIRST ALIGNMENT LABEL LOOP
-    for ( pileup :: const_iterator itr_pileup = p.begin();
-            itr_pileup != p.end() ; itr_pileup ++ )
+    for ( pileup::const_iterator itr_pileup = p.begin(); itr_pileup != p.end(); itr_pileup++ )
     {
-        //         my $a = $p->alignment;
-        Aligned_Read& aligned_read = ( aligned_reads[itr_pileup->read_name() ] );
+        // my $a = $p->alignment;
+        Aligned_Read& aligned_read = aligned_reads[itr_pileup->read_name()];
+      
         //$updated-> {$a->display_name} = 1;
         aligned_read.updated = true;
         //
         // ##this setup gives expected behavior for indels!
         //my $indel = $p->indel;
-        //         $indel = 0 if ($indel < 0);
-        //         $indel = -1 if ($p->is_del);
+        // $indel = 0 if ($indel < 0);
+        // $indel = -1 if ($p->is_del);
         bool indel = itr_pileup->indel();
-        //
+
         // ## Which read are we on?
-        //         my $aligned_read = $aligned_reads-> {$a->display_name};
-        //         $aligned_read-> {strand} = ($a->reversed) ? -1 : +1;
+      
+        // my $aligned_read = $aligned_reads-> {$a->display_name};
+        // $aligned_read-> {strand} = ($a->reversed) ? -1 : +1;
         aligned_read.strand = itr_pileup->strand();
-        //         $aligned_read-> {reference_start} = $pos if (!defined $aligned_read-> {reference_start});
-        aligned_read.reference_start = pos;
-        //         $aligned_read-> {reference_end} = $pos;
-        aligned_read.reference_end = pos;
-        //
-        //         $aligned_read-> {start} = $p->qpos+1 if (!defined $aligned_read-> {start});
+      
+        // $aligned_read-> {reference_start} = $pos if (!defined $aligned_read-> {reference_start});
+        if (aligned_read.reference_start == 0) aligned_read.reference_start = pos_1;
+      
+        // $aligned_read-> {reference_end} = $pos;
+        aligned_read.reference_end = pos_1;
+      
+        // $aligned_read-> {start} = $p->qpos+1 if (!defined $aligned_read-> {start});
         if ( aligned_read.start == 0 )
+        {
           aligned_read.start = itr_pileup->query_position_1();
+        }
+          
         //         $aligned_read-> {end} = $p->qpos+1;
 				aligned_read.end = itr_pileup->query_position_1(); //BUG correctly initialized here for all but READ 4421-M1
 
-
         // ## READS: add aligned positions
-        //         for (my $i=0; $i<=$max_indel; $i++)
-        //         {
+        // for (my $i=0; $i<=$max_indel; $i++)
 				for ( uint32_t index = 0; index <= max_indel; index ++ )
         {
-        //             if ($i > $indel)
-        //             {
+          // if ($i > $indel)
 					if ( index > indel )
 					{
-        //                 print $p->indel . "\n" if ($verbose);
+            //print $p->indel . "\n" if ($verbose);
         		if ( verbose )
-          		cout << indel << endl;
-        //                 $aligned_read-> {aligned_bases} .= '.';
-							aligned_read.aligned_bases += ',';
-        //                 $aligned_read-> {aligned_quals} .= chr(255);
-         aligned_read.aligned_quals += char ( 255 );
-        //             }
+          	{
+              cout << indel << endl;
+            }
+            //$aligned_read-> {aligned_bases} .= '.';
+            aligned_read.aligned_bases += ',';
+            
+            // $aligned_read-> {aligned_quals} .= chr(255);
+            aligned_read.aligned_quals += char ( 255 );
 					}
-        //             else
-        //             {
+          // else
 					else
           {
-        //                 my $quality = $a->qscore->[$p->qpos+$i];
+            // my $quality = $a->qscore->[$p->qpos+$i];
         		uint8_t quality = itr_pileup->read_base_quality_0( itr_pileup->query_position_0() +index );
-				//                 my $base  = substr($a->qseq, $p->qpos+$i,1);
+            // my $base  = substr($a->qseq, $p->qpos+$i,1);
         		char base = itr_pileup->read_char_sequence().substr ( ( *itr_pileup ).query_position_0() +index,1 ) [0];
-				//
-        //                 if (!$options-> {text})
-        //                 {
+
+            // if (!$options-> {text})
 						if ( !text ) //TODO Options
             {
-        //                     my $trim_left = $a->aux_get('XL');
+              // my $trim_left = $a->aux_get('XL');
         			uint8_t trim_left = ( *itr_pileup ).trim_left();
-        //                     $base = "\L$base" if ((defined $trim_left) && ($p->qpos+1 <= $trim_left));
+              // $base = "\L$base" if ((defined $trim_left) && ($p->qpos+1 <= $trim_left));
 							if ( ( trim_left > 0 ) && ( itr_pileup->query_position_1() <= trim_left ) ) //BUG FIX trim_left >0
+              {
                 base = tolower ( base );           
-        // ## alternate coloring scheme
-        // #$base = chr(ord($base)+128) if ((defined $trim_left) && ($p->qpos+1 <= $trim_left));
-        //
-        //                     my $trim_right = $a->aux_get('XR');
+              }
+              
+              // my $trim_right = $a->aux_get('XR');
 						  uint8_t trim_right = ( *itr_pileup ).trim_right();
-        //                     $base = "\L$base" if ((defined $trim_right) && ($a->l_qseq-$p->qpos <= $trim_right));
+              // $base = "\L$base" if ((defined $trim_right) && ($a->l_qseq-$p->qpos <= $trim_right));
 							if ( ( trim_right !=0 ) && ( ( itr_pileup->read_length() - itr_pileup->query_position_0() ) <= trim_right ) )
+              {
               	base = tolower ( base );
-        // ## alternate coloring scheme
-        // #$base = chr(ord($base)+128) if ((defined $trim_right) && ($a->query->length-$p->qpos <= $trim_right));
-        //                 }
+              }
 						}
-        //
-        //                 $aligned_read-> {aligned_bases} .= $base;
+            // $aligned_read-> {aligned_bases} .= $base;
         	  aligned_read.aligned_bases += base;
-        //                 $aligned_read-> {aligned_quals} .= chr($quality);
+            // $aligned_read-> {aligned_quals} .= chr($quality);
 						aligned_read.aligned_quals += char ( quality );
-        //             }
 					}
-        //
-        //             print $aligned_read-> {aligned_bases} . " " .$aligned_read-> {seq_id} . " " . $p->indel . "\n" if ($verbose);
-        //         }
-        //     }
+          // print $aligned_read-> {aligned_bases} . " " .$aligned_read-> {seq_id} . " " . $p->indel . "\n" if ($verbose);
           if ( verbose )
           {
           	cout << aligned_read.aligned_bases << " ";
@@ -823,81 +831,84 @@ void alignment_output::Alignment_Output_Pileup::pileup_callback ( const pileup& 
 		for ( Aligned_Reads::iterator itr_read = aligned_reads.begin(); //TODO typedef map
             itr_read != aligned_reads.end(); itr_read++ )
     {    
-		//         my $aligned_read = $aligned_reads-> {$key};
+      // my $aligned_read = $aligned_reads-> {$key};
 			Aligned_Read& aligned_read (itr_read->second );
-    //         next if ($updated-> {$key});
-    	if ( aligned_read.updated )
-      	continue;
-    //         $aligned_read-> {aligned_bases} .= ' ' x ($max_indel+1);
-			for(int i = 0; i < (max_indel + 1); i++)
+      
+      // next if ($updated-> {$key});
+    	if ( aligned_read.updated ) continue;
+      
+      // $aligned_read-> {aligned_bases} .= ' ' x ($max_indel+1);
+			for(uint32_t i = 0; i < (max_indel + 1); i++)
+      {
 				aligned_read.aligned_bases += ' '; //BUG dont .append(' ', max_indel+1)
-    //         $aligned_read-> {aligned_quals} .= chr(254) x ($max_indel+1);
-    	for(int i = 0; i < (max_indel + 1); i++)
+      }
+      
+      // $aligned_read-> {aligned_quals} .= chr(254) x ($max_indel+1);
+    	for(uint32_t i = 0; i < (max_indel + 1); i++)
+      {
 				aligned_read.aligned_quals += char(254); //BUG dont .append(char(254), max_indel+1)
-    //
-    //         print $aligned_read-> {aligned_bases} . " NOALIGN " . $key . " " . "\n" if ($verbose);
-    //     }
+      }
+      // print $aligned_read-> {aligned_bases} . " NOALIGN " . $key . " " . "\n" if ($verbose);
      	if ( verbose )
         cout << aligned_read.aligned_bases << " NOALIGN " << itr_read->first << endl;
     }
     //
     // ##now handle the reference sequence
-    //     my $ref_base = $bam->segment($seq_id,$pos,$pos)->dna;
-    char ref_base = reference_base_char_1 ( p.target(),pos );
-    //     foreach my $aligned_reference (@aligned_references)
-    //     {
+    // my $ref_base = $bam->segment($seq_id,$pos,$pos)->dna;
+    char ref_base = p.reference_base_char_1(pos_1);
+
+    // foreach my $aligned_reference (@aligned_references)
 		for ( uint32_t itr = 0; itr < aligned_references.size(); itr ++ )
     {
-    //         my $my_ref_base = $ref_base;
+      // my $my_ref_base = $ref_base;
     	char my_ref_base = ref_base;
-    ////         $my_ref_base = '.' if ($aligned_reference-> {truncate_start} && ($last_pos < $aligned_reference-> {truncate_start}))
-    ////                            || ($aligned_reference-> {truncate_end} && ($last_pos > $aligned_reference-> {truncate_end}));
-    //
-			Aligned_Reference& aligned_reference ( aligned_references[itr] );							
-    //         $aligned_reference-> {aligned_bases} .= $my_ref_base;
+      //// $my_ref_base = '.' if ($aligned_reference-> {truncate_start} && ($last_pos < $aligned_reference-> {truncate_start}))
+      //// || ($aligned_reference-> {truncate_end} && ($last_pos > $aligned_reference-> {truncate_end}));
+      
+			Aligned_Reference& aligned_reference ( aligned_references[itr] );	
+      
+      // $aligned_reference-> {aligned_bases} .= $my_ref_base;
 			aligned_reference.aligned_bases += my_ref_base;
-		//         $aligned_reference-> {aligned_bases} .= '.' x ($max_indel) if ($max_indel > 0);
+      
+      // $aligned_reference-> {aligned_bases} .= '.' x ($max_indel) if ($max_indel > 0);
 			if ( max_indel >  0 )
       	aligned_reference.aligned_bases.append ( '.',max_indel );
-    //         $aligned_reference-> {aligned_quals} .= chr(255) x ($max_indel+1);
+        // $aligned_reference-> {aligned_quals} .= chr(255) x ($max_indel+1);
 				aligned_reference.aligned_quals.append ( char ( 255 ), max_indel +1 );
    
 				//TODO Need these for other uses, initialize here?
 				///aligned_reference.base = my_ref_base;
         ///aligned_reference.reference_length = p.target_length();
         ///aligned_reference.reference_name = p.target_name();
-		//     }
 		}
     //
+  
+    // @JEB these 
     ///For basic case these are 0, defined in the user defined Region
-    insert_start, insert_end = 0;
+  
     // ##also update any positions of interest for gaps
-    //     for (my $insert_count=0; $insert_count<=$max_indel; $insert_count++)
-    //     {
+  
+    // for (my $insert_count=0; $insert_count<=$max_indel; $insert_count++)
 	  for ( uint32_t insert_count = 0; insert_count <= max_indel; insert_count++ )
     {
-    //         if (   (($insert_start <= $insert_count) && ($insert_count <= $insert_end) && ($pos == $start) && ($pos == $end))
-    	if ( (( insert_start <= insert_count ) && ( insert_count <= insert_end ) && ( pos == start ) && ( pos == end ) )
-    	//                 || (($insert_start <= $insert_count) && ($pos == $start) && ($pos != $end))
-									|| ( ( insert_start <= insert_count ) && ( pos == start ) && ( pos != end ) )
-    	//                 || (($pos < $end) && ($pos > $start))
-			 						|| ( ( pos < end ) && ( pos > start ) )
-    	//                 || (($insert_end <= $insert_count) && ($pos == $end) && ($pos != $start)) )
-								  || ( ( insert_end <= insert_count ) && ( pos == end ) && ( pos != start ) ) )
-	  	//         {
+      // if (   (($insert_start <= $insert_count) && ($insert_count <= $insert_end) && ($pos == $start) && ($pos == $end))
+    	if ( (( insert_start <= insert_count ) && ( insert_count <= insert_end ) && ( pos_1 == start_1 ) && ( pos_1 == end_1 ) )
+          // || (($insert_start <= $insert_count) && ($pos == $start) && ($pos != $end))
+					|| ( ( insert_start <= insert_count ) && ( pos_1 == start_1 ) && ( pos_1 != end_1 ) )
+    	// || (($pos < $end) && ($pos > $start))
+			 		|| ( ( pos_1 < end_1 ) && ( pos_1 > start_1 ) )
+    	// || (($insert_end <= $insert_count) && ($pos == $end) && ($pos != $start)) )
+					|| ( ( insert_end <= insert_count ) && ( pos_1 == end_1 ) && ( pos_1 != start_1 ) ) )
 			{
-    	//             $aligned_annotation-> {aligned_bases} .= '|';
+        
+        // $aligned_annotation-> {aligned_bases} .= '|';
     		aligned_annotation.aligned_bases += '|';
-    	//         }
 			}
-    	//         else
-    	//         {
+    	// else
 	  	else
 			{		
-    	//             $aligned_annotation-> {aligned_bases} .= ' ';
+        //$aligned_annotation-> {aligned_bases} .= ' ';
     		aligned_annotation.aligned_bases += ' ';
-    	//         }
-    	//     }
      	}
     }
 
@@ -1095,7 +1106,7 @@ void alignment_output::set_quality_range()
             {
                 //      if ($qual_to_color[$i] > $last + 1)
                 //      {
-                if ( qual_to_color[index] > last + 1 );
+                if ( qual_to_color[index] > last + 1 )
                 {
                     //        $qual_to_color[$i-1]++;
                     qual_to_color[index - 1]++;
