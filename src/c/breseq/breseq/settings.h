@@ -97,8 +97,8 @@ namespace breseq {
     
 		uint32_t alignment_read_limit;
 		uint32_t candidate_junction_read_limit;
-		int32_t minimum_candidate_junction_pos_hash_score;
-		int32_t minimum_candidate_junction_min_overlap_score;
+		uint32_t minimum_candidate_junction_pos_hash_score;
+		uint32_t minimum_candidate_junction_min_overlap_score;
 		int32_t minimum_candidate_junctions;
 		int32_t maximum_candidate_junctions;
 		double maximum_candidate_junction_length_factor;
