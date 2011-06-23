@@ -386,7 +386,7 @@ bool tam_file::read_alignments(alignment_list& alignments, bool paired)
     alignments.push_back(last_alignment);
   }
 
-  return (alignments.size() > 0) ? true : false;
+  return (alignments.size() > 0);
 }
   
 void tam_file::write_alignments(int32_t fastq_file_index, alignment_list& alignments, vector<Trim>* trims)

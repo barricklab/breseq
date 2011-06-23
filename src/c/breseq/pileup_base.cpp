@@ -239,7 +239,8 @@ void pileup_base::do_pileup() {
     for (uint32_t on_pos_1 = m_last_position_1+1; on_pos_1 <= m_bam->header->target_len[tid]; on_pos_1++) {
       if ( handle_position(on_pos_1) ) {
         pileup p(tid,on_pos_1,0,NULL,*this);
-        pileup_callback(p);        m_last_position_1 = on_pos_1;
+        pileup_callback(p);        
+        m_last_position_1 = on_pos_1;
       }
     }
     
@@ -270,37 +271,37 @@ void pileup_base::do_pileup(std::string region, bool clip, uint32_t downsample) 
   int target_id, start_pos, end_pos;
   bam_parse_region(m_bam_header, region.c_str(), &target_id, &start_pos, &end_pos); 
   // start_pos is one less than input??
-  start_pos++;
   
   // should throw if target not found!
 
   m_downsample = downsample; // init
-
   m_start_position_1 = start_pos;
   m_end_position_1 = end_pos;
-
+  
   m_last_tid = UNDEFINED;
   m_last_position_1 = 0; // reset
   m_clip_start_position_1 = 0; // reset
   m_clip_end_position_1 = 0; // reset
 
   if (clip) {
-    m_clip_start_position_1 = start_pos;
+    m_clip_start_position_1 = start_pos+1; // bam_parse_region returns zero indexed start and one indexed end
     m_clip_end_position_1 = end_pos;
     assert(m_clip_start_position_1 > 0); // prevent underflow of unsigned
 
     //@JEB test removal
     //m_last_position_1 = m_clip_start_position_1-1; // So that nothing is done at start leading up to requested position
   }
-  
+    
   bam_plbuf_t        *pileup_buff;
   pileup_buff = bam_plbuf_init(first_level_pileup_callback,this);
   bam_fetch(m_bam_file,m_bam_index,target_id,start_pos,end_pos,(void*)pileup_buff,add_pileup_line);
   bam_plbuf_push(NULL,pileup_buff); // This clears out the clipped right regions... call before at_end!
   bam_plbuf_destroy(pileup_buff);
 
+  
   // handle positions after the last one handled by the pileup
   // unlike the case above, we only need to finish this target
+  
   for (uint32_t on_pos_1 = m_last_position_1+1; on_pos_1 <= m_end_position_1; on_pos_1++) {
     if ( handle_position(on_pos_1) ) {
       pileup p(m_last_tid,on_pos_1,0,NULL,*this);
@@ -308,7 +309,7 @@ void pileup_base::do_pileup(std::string region, bool clip, uint32_t downsample) 
       m_last_position_1 = on_pos_1;
     }
   }
-  at_target_end(target_id);
+  at_target_end(m_last_tid);
 }
 
   

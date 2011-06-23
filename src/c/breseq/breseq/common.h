@@ -372,13 +372,31 @@ namespace breseq {
 
 	inline string reverse_complement(string seq)
 	{
-		char trade['Z'];
-		trade['A'] = 'T'; trade['T'] = 'A'; trade['C'] = 'G'; trade['G'] = 'C';
+		char trade[static_cast<uint8_t>('Z')];
+		trade[static_cast<uint8_t>('A')] = 'T'; 
+    trade[static_cast<uint8_t>('T')] = 'A'; 
+    trade[static_cast<uint8_t>('C')] = 'G'; 
+    trade[static_cast<uint8_t>('G')] = 'C';
 		string retval = seq;
 		for (uint32_t i = 0; i < seq.size(); i++)
-			retval[i] = trade[seq[seq.size() - 1 - i]];
+			retval[i] = trade[static_cast<uint8_t>(seq[seq.size() - 1 - i])];
 		return retval;
 	}
+
+	struct CandidateJunction
+	{
+		int32_t r1;
+		int32_t r2;
+		int32_t L1;
+		int32_t L2;
+		int32_t min_overlap_score;
+		int32_t pos_hash_score;
+		map<uint32_t, uint32_t> read_begin_hash;
+
+		struct Sorter {
+			bool operator() (const string& lhs, const string& rhs) const { return (lhs < rhs); }
+		};
+	};
 
 	struct JunctionInfo
 	{

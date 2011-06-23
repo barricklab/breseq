@@ -253,9 +253,10 @@ public:
   bool read_alignments(alignment_list& alignments, bool paired = false);
   void write_alignments(int32_t fastq_file_index, alignment_list& alignments, vector<Trim>* trims = NULL);
   void write_split_alignment(uint32_t min_indel_split_len, const alignment& a);
+
+  bam_header_t* bam_header;
   
 protected:
-  bam_header_t* bam_header;
   tamFile input_tam;                // used for input
   ofstream output_tam;              // used for output
   vector<bam1_t*> loaded_alignments; // contains alignment* last_alignment
