@@ -81,6 +81,9 @@
             isEnabled = "NO">
          </CommandLineArgument>
          <CommandLineArgument
+<<<<<<< local
+            argument = "ANALYZE_FASTQ -i /Users/austin/Desktop/breseq_working/DJ480wt.txt"
+=======
             argument = "ANALYZE_FASTQ -i /Users/austin/Desktop/breseq_working/DJ480wt.txt -p /Users/austin/Work/BarrickLab/temp"
             isEnabled = "NO">
          </CommandLineArgument>
@@ -89,8 +92,14 @@
             isEnabled = "NO">
          </CommandLineArgument>
          <CommandLineArgument
+<<<<<<< local
+            argument = "RESOLVE_ALIGNMENTS --junction-prediction 1 --reference-fasta  /Users/jbarrick/src/breseq/tests/lambda_mixed_pop/data/reference.fasta --junction-fasta  /Users/jbarrick/src/breseq/tests/lambda_mixed_pop/03_candidate_junctions/candidate_junction.fasta --reference-sam-path /Users/jbarrick/src/breseq/tests/lambda_mixed_pop/02_reference_alignment --junction-sam-path /Users/jbarrick/src/breseq/tests/lambda_mixed_pop/04_candidate_junction_alignment --resolved-path /Users/jbarrick/src/breseq/tests/lambda_mixed_pop/05_alignment_correction --data-path /Users/jbarrick/src/breseq/tests/lambda_mixed_pop/data --features /Users/jbarrick/src/breseq/tests/lambda_mixed_pop/data/reference.features.tab --read-file lambda_mixed_population --max-read-length 36"
+>>>>>>> other
+            isEnabled = "YES">
+=======
             argument = "RESOLVE_ALIGNMENTS --junction-prediction 1 --reference-fasta  /Users/jbarrick/src/breseq/tests/lambda_mixed_pop/data/reference.fasta --junction-fasta  /Users/jbarrick/src/breseq/tests/lambda_mixed_pop/03_candidate_junctions/candidate_junction.fasta --reference-sam-path /Users/jbarrick/src/breseq/tests/lambda_mixed_pop/02_reference_alignment --junction-sam-path /Users/jbarrick/src/breseq/tests/lambda_mixed_pop/04_candidate_junction_alignment --resolved-path /Users/jbarrick/src/breseq/tests/lambda_mixed_pop/05_alignment_correction --data-path /Users/jbarrick/src/breseq/tests/lambda_mixed_pop/data --features /Users/jbarrick/src/breseq/tests/lambda_mixed_pop/data/reference.features.tab --read-file /Users/jbarrick/src/breseq/tests/data/lambda/lambda_mixed_population.fastq --max-read-length 36"
             isEnabled = "NO">
+>>>>>>> other
          </CommandLineArgument>
          <CommandLineArgument
             argument = "CONVERT_GENBANK --input /Users/jbarrick/db/lenski/REL606.gbk --fasta /Users/jbarrick/Desktop/test.fasta --features /Users/jbarrick/Desktop/features.tab"
