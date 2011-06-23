@@ -76,11 +76,11 @@ namespace breseq {
 
 	//## if there were no candidate junctions (file is empty) then we seg fault if we try to use samtools on it...
 	//    $settings->{no_junction_prediction} = 1 if ( (!-e $junction_faidx_file_name) || (-s $junction_fasta_file_name == 0) );
-	if (junction_prediction && !file_exists(junction_fasta.c_str())
-			&& !file_empty(junction_fasta.c_str()))
-	{
+	if (junction_prediction
+			&& !file_exists(junction_fasta.c_str())
+			&& !file_empty(junction_fasta.c_str())
+		)
 		junction_prediction = 0;
-	}
 
 	vector<JunctionInfo> junction_info_list;
 
@@ -482,7 +482,14 @@ namespace breseq {
 	// Candidate junctions with ONLY degenerate matches
 	///
 
-//    @sorted_junction_ids = sort {-(scalar keys %{$degenerate_matches{$a}} <=> scalar keys %{$degenerate_matches{$b}})} keys %degenerate_matches;
+	sorted_junction_ids.clear();
+	for (map<string, map<string, MatchedJunction> >::iterator it = degenerate_matches.begin(); it != degenerate_matches.end(); it++)
+	{
+		VectorSize info = { it->first, it->second.size() };
+		sorted_junction_ids.push_back(info);
+	}
+	sort(sorted_junction_ids.begin(), sorted_junction_ids.end(), VectorSize::sort_by_size);
+
 //    while (@sorted_junction_ids)
 //    {
 //      my $key = shift @sorted_junction_ids;
