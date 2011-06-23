@@ -163,7 +163,11 @@
          </CommandLineArgument>
          <CommandLineArgument
             argument = "IDENTIFY_CANDIDATE_JUNCTIONS --data-path /Users/jbarrick/src/breseq/tests/lambda_mult_ref_read/data --candidate-junction-path /Users/jbarrick/src/breseq/tests/lambda_mult_ref_read/03_candidate_junctions --read-file lambda_mixed_population.1 --read-file lambda_mixed_population.2 --read-file lambda_mixed_population.3 --read-file lambda_mixed_population.4 --read-file lambda_mixed_population.5 --maximum-read-length 35 --reference-sequence-length 48502"
-            isEnabled = "YES">
+            isEnabled = "NO">
+         </CommandLineArgument>
+         <CommandLineArgument
+            argument = "CONVERT_GENBANK --fasta /Users/jbarrick/tmp/camp_test/breseq/data/reference.fasta --features /Users/jbarrick/tmp/camp_test/breseq/data/reference.features.tab --input /Users/jbarrick/tmp/camp_test/NC_012660.1.gbk"
+            isEnabled = "NO">
          </CommandLineArgument>
       </CommandLineArguments>
       <AdditionalOptions>

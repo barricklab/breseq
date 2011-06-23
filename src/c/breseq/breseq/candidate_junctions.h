@@ -32,22 +32,7 @@ namespace breseq {
 
 	class CandidateJunctions
 	{
-		public:
-
-		struct CandidateJunction
-		{
-			int32_t r1;
-			int32_t r2;
-			int32_t L1;
-			int32_t L2;
-			int32_t min_overlap_score;
-			int32_t pos_hash_score;
-			map<uint32_t, uint32_t> read_begin_hash;
-
-			struct Sorter {
-				bool operator() (const string& a, const string& b) const { return (a < b); }
-			};
-		};
+	public:
 
 		struct Junction
 		{
@@ -80,7 +65,7 @@ namespace breseq {
 		 */
 		static void identify_candidate_junctions(const Settings& settings, Summary& summary, const cReferenceSequences& ref_seq_info);
 
-		private:
+	private:
 
 		CandidateJunctions();
 

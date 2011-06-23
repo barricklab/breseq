@@ -63,11 +63,10 @@ int main(int argc, char* argv[]) {
                         options["fasta"],
                         options["region"]
                         );
+    ao.set_quality_range();
+    string html_output(ao.html_alignment(options["region"]));
 
-//		
-//																												  "/home/geoff/Dropbox/Research/breseq/tests/REL606_fragment_is_mediated_dels/data/reference.fasta",
-//																													"REL606-5:1-15");
-    // add: write alignment to output file....
+
 
   } catch(...) {
 		// failed;

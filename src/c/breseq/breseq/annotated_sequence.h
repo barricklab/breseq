@@ -63,7 +63,7 @@ namespace breseq {
         return it->second;
       }
       
-      void ReadCoords(string& s);
+      void ReadCoords(string& s, ifstream& in);
       void ReadTag(string& tag, string& s, ifstream& in);
   };
 
@@ -112,6 +112,7 @@ namespace breseq {
     //!< Convert 
     uint32_t seq_id_to_index(const string& seq_id) { return m_seq_id_to_index[seq_id]; };
 
+    map<string,string> trims;
   };  
   
   /*! Helper function for creating cReferenceSequences
