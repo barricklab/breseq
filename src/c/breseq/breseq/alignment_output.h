@@ -36,8 +36,24 @@ namespace breseq
   {
   public:
     //! returns more information about aligned reads given a sequence id string.
-    typedef struct
+    struct Aligned_Read
     {
+      Aligned_Read() 
+        : seq_id("")
+        , length(0)
+        , read_sequence("")
+        , qual_sequence("")
+        , aligned_bases("")
+        , aligned_quals("")
+        , reference_start(0) 
+        , reference_end(0)  
+        , start(0)  
+        , end(0)  
+        , strand(0)  
+        , updated(false)
+      {}
+      
+      
       string seq_id;
       uint32_t length;
       string read_sequence;
@@ -50,11 +66,21 @@ namespace breseq
       uint32_t end;
       int32_t strand;
       bool updated; //whether the read was updated at this pileup iteration already
-    }Aligned_Read;
+    };
     
     //! returns more information about an aligned references
-    typedef struct
+    struct Aligned_Reference
     {
+      Aligned_Reference() 
+        : start(0)
+        , end(0)
+        , aligned_bases("")
+        , aligned_quals("")
+        , reference_length(0)
+        , reference_name("")
+        , base(0)  
+      {}
+      
       uint32_t start;
       uint32_t end;
       string aligned_bases;
@@ -62,7 +88,7 @@ namespace breseq
       uint32_t reference_length;
       string reference_name;
       char base;
-    }Aligned_Reference;
+    };
     
     typedef struct
     {

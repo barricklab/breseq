@@ -400,7 +400,7 @@ namespace breseq {
 				///
 				else
 				{
-					for (int32_t i = 0; i < this_junction_alignments.size(); i++)
+					for (uint32_t i = 0; i < this_junction_alignments.size(); i++)
 					{
 						alignment a = this_junction_alignments[i];
 						item.degenerate_count = this_junction_alignments.size(); // mark as degenerate
@@ -454,7 +454,7 @@ namespace breseq {
 
 	if (verbose) cout << "Degenerate matches before handling ones with unique matches: " << degenerate_matches.size() << endl;
 
-	for (int32_t i = 0; i < sorted_junction_ids.size(); i++)
+	for (uint32_t i = 0; i < sorted_junction_ids.size(); i++)
 	{
 		string key = sorted_junction_ids[i].junction_id;
 
@@ -821,7 +821,7 @@ void _write_reference_matches(const Settings& settings, cReferenceSequences& ref
 
 	vector<Trim> trims;
 
-	for (int32_t i; i < reference_alignments.size(); i++)
+	for (uint32_t i; i < reference_alignments.size(); i++)
 		trims.push_back(_trim_ambiguous_ends(reference_alignments[i], reference_tam, ref_seq_info));
 
 	reference_tam.write_alignments((int32_t)fastq_file_index, reference_alignments, &trims);
