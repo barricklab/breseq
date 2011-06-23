@@ -142,7 +142,7 @@
          </CommandLineArgument>
          <CommandLineArgument
             argument = "CONVERT_GENBANK --fasta /Users/jbarrick/src/breseq/tests/lambda_mult_ref_read/data/reference.fasta --features /Users/jbarrick/src/breseq/tests/lambda_mult_ref_read/data/reference.features.tab --input /Users/jbarrick/src/breseq/tests/lambda_mult_ref_read/../data/lambda/lambda.1.gbk --input /Users/jbarrick/src/breseq/tests/lambda_mult_ref_read/../data/lambda/lambda.2.gbk --input /Users/jbarrick/src/breseq/tests/lambda_mult_ref_read/../data/lambda/lambda.3.gbk --input /Users/jbarrick/src/breseq/tests/lambda_mult_ref_read/../data/lambda/lambda.4.gbk --input /Users/jbarrick/src/breseq/tests/lambda_mult_ref_read/../data/lambda/lambda.5.gbk"
-            isEnabled = "NO">
+            isEnabled = "YES">
          </CommandLineArgument>
          <CommandLineArgument
             argument = "IDENTIFY_CANDIDATE_JUNCTIONS --reference-sequence-length 48502 --maximum-read-length 35 --candidate-junction-path /Users/jbarrick/src/breseq/tests/lambda_mixed_pop/03_candidate_junctions --read-file /Users/jbarrick/src/breseq/tests/data/lambda/lambda_mixed_population.fastq   --data-path /Users/jbarrick/src/breseq/tests/lambda_mixed_pop/data "
@@ -154,7 +154,11 @@
          </CommandLineArgument>
          <CommandLineArgument
             argument = "IDENTIFY_CANDIDATE_JUNCTIONS --data-path /Users/jbarrick/src/breseq/tests/lambda_mult_ref_read/data --candidate-junction-path /Users/jbarrick/src/breseq/tests/lambda_mult_ref_read/03_candidate_junctions --read-file lambda_mixed_population.1 --read-file lambda_mixed_population.2 --read-file lambda_mixed_population.3 --read-file lambda_mixed_population.4 --read-file lambda_mixed_population.5 --maximum-read-length 35 --reference-sequence-length 48502"
-            isEnabled = "YES">
+            isEnabled = "NO">
+         </CommandLineArgument>
+         <CommandLineArgument
+            argument = "CONVERT_GENBANK --fasta /Users/jbarrick/tmp/camp_test/breseq/data/reference.fasta --features /Users/jbarrick/tmp/camp_test/breseq/data/reference.features.tab --input /Users/jbarrick/tmp/camp_test/NC_012660.1.gbk"
+            isEnabled = "NO">
          </CommandLineArgument>
       </CommandLineArguments>
       <AdditionalOptions>
