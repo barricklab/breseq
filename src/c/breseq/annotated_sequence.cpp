@@ -218,29 +218,71 @@ namespace breseq {
     return (found_LOCUS_line);
   }
 
-  void cSequenceFeature::ReadCoords(std::string& s) {
+  void cSequenceFeature::ReadCoords(string& s, ifstream& in) {
 
     //std::cerr << "whole: " << s << std::endl;
 
-    m_strand = 1;
+    // Read through all parentheses
+    int32_t parentheses_level = 0;
+    size_t parenthesis_pos = s.find_first_of("()");
     
-    size_t start_complement = s.find("complement(");
+    while(parenthesis_pos != string::npos) {
+      if (s.at(parenthesis_pos) == '(') {
+        parentheses_level++;
+      } else {
+        parentheses_level--;
+      }
+      parenthesis_pos = s.find_first_of("()", parenthesis_pos+1);
+    }
+    
+    string value = s;
+    
+    // Multiline
+    while ((parentheses_level > 0) && !in.eof()) {
+      std::getline(in, s);
+      RemoveLeadingTrailingWhitespace(s);
+      
+      size_t on_pos = s.find_first_of("()");
+      while(on_pos != string::npos) {
+        
+        if (s.at(on_pos) == '(') {
+          parentheses_level++;
+        } else {
+          parentheses_level--;
+        }
+        on_pos = s.find_first_of("()", on_pos+1);
+      }
+      value += s;
+    }
+    assert(parentheses_level == 0);    
+    
+    m_strand = 1;
+    size_t start_complement = value.find("complement(");
     
     if (start_complement != string::npos) {
       //std::cerr << "before: " << s << std::endl;
-      s.erase(0,11);
+      //value.erase(0,11);
       
-      size_t end_complement = s.find(")");
-      assert(end_complement !=string::npos);
-      s.erase(end_complement);
+      //size_t end_complement = value.find(")");
+      //assert(end_complement !=string::npos);
+      //value.erase(end_complement);
       
       //std::cerr << "after: " << s << std::endl;
       m_strand = -1;
     }
     
-    int pos = s.find("..");
-    std::string start_s = s.substr(0,pos);
-    std::string end_s = s.substr(pos+2,s.length());
+    size_t start_start_pos = value.find_first_of("1234567890");
+    assert(start_start_pos != string::npos);
+    size_t start_end_pos = value.find_first_not_of("1234567890", start_start_pos);
+    if (start_end_pos == string::npos) start_end_pos = value.size() ;
+    string start_s = value.substr(start_start_pos,start_end_pos-start_start_pos);
+    
+    size_t end_end_pos = value.find_last_of("1234567890");
+    assert(end_end_pos != string::npos);
+    size_t end_start_pos = value.find_last_not_of("1234567890", end_end_pos);
+    if (end_start_pos == string::npos) start_end_pos = -1;
+    
+    string end_s = value.substr(end_start_pos+1,end_end_pos+1 - (end_start_pos+1));
 
     m_start = atoi(start_s.c_str());
     m_end = atoi(end_s.c_str());
@@ -256,26 +298,26 @@ namespace breseq {
     s.erase(0,pos+1);
     
     // If there is a quote then we need to continue to the last quote
-    int first_quote_pos = s.find("\"");
-
-    if (first_quote_pos == -1) {
+    size_t first_quote_pos = s.find("\"");
+    
+    if (first_quote_pos == string::npos) {
       (*this)[tag] = s;
       return;
-    } 
+    }
     
     s.erase(0,first_quote_pos+1);
     
-    int second_quote_pos = s.find("\"");
+    size_t second_quote_pos = s.find("\"");
     
     // One liner
-    if (second_quote_pos != -1) {
+    if (second_quote_pos != string::npos) {
       s.erase(second_quote_pos,s.length());
       (*this)[tag] = s;
       return;
     }
 
     // If the value is quoted, we have to read additional lines until end quote  
-    std::string value = s;
+    string value = s;
     
     bool found_last_quote = false;
     while (!found_last_quote && !in.eof()) {
@@ -283,17 +325,16 @@ namespace breseq {
       RemoveLeadingTrailingWhitespace(s);
       
       second_quote_pos = s.find("\"");
-      if (second_quote_pos != -1) {
+      if (second_quote_pos != string::npos) {
         s.erase(second_quote_pos,s.length());
         found_last_quote = true;
       }
       
       if (tag != "translation") value += " ";
       value += s;
-    
     }
     assert(found_last_quote);
-    
+        
     (*this)[tag] = value;
   }
 
@@ -304,6 +345,8 @@ namespace breseq {
     string line;
     while (!in.eof()) {
       getline(in, line);
+      //debug
+      //cout << line << endl;
       string first_word = GetWord(line);
 
       //std::cout << first_word << "::" << line << std::endl;
@@ -321,7 +364,7 @@ namespace breseq {
           (*current_feature)["type"] = first_word;
           // parse the rest of the line
           std::string coord_s = GetWord(line);
-          current_feature->ReadCoords(coord_s);
+          current_feature->ReadCoords(coord_s, in);
         }
       }
       // Minor tag = information about current feature

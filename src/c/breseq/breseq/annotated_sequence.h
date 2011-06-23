@@ -63,7 +63,7 @@ namespace breseq {
         return it->second;
       }
       
-      void ReadCoords(string& s);
+      void ReadCoords(string& s, ifstream& in);
       void ReadTag(string& tag, string& s, ifstream& in);
   };
 

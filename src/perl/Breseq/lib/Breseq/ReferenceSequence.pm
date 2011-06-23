@@ -479,8 +479,8 @@ sub annotate_1_mutation
 		}
 		elsif (!$gene->{cds})
 		{
-			$mut->{snp_type} = "RNA";
-			$mut->{gene_position} = "RNA ($mut->{gene_position}/$gene_nt_size nt)";
+			$mut->{snp_type} = "noncoding";
+			$mut->{gene_position} = "noncoding ($mut->{gene_position}/$gene_nt_size nt)";
 			return $mut;
 		}	
 
