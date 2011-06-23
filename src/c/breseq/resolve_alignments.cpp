@@ -27,81 +27,11 @@ LICENSE AND COPYRIGHT
 using namespace std;
 
 namespace breseq {
-
-  /*const string k_junction_name_separator("__");
   
-  void junction_name_split(junction_info& ji, const string& junction_name) {
-    
-    size_t last_pos=0;
-    size_t next_pos = junction_name.find(k_junction_name_separator);
-    string item;
-    int item_num = 0;
-    while(next_pos != string::npos) {
-      item = junction_name.substr(last_pos, next_pos - last_pos - 1);
-      
-      switch (item_num) {
-        case 0:
-          ji.m_side_1.m_seq_id = item;
-          break;
-          
-        case 1:
-          ji.m_side_1.m_position = atoi(item.c_str());
-          break;      
-          
-        case 2:
-          ji.m_side_1.m_strand = atoi(item.c_str());
-           if (ji.m_side_1.m_strand == 0) ji.m_side_1.m_strand = -1;
-          break;
-          
-        case 3:
-          ji.m_side_2.m_seq_id = item;
-          break;
-          
-        case 4:
-          ji.m_side_2.m_position = atoi(item.c_str());
-          break;      
-          
-        case 5:
-          ji.m_side_2.m_strand = atoi(item.c_str());
-          if (ji.m_side_2.m_strand == 0) ji.m_side_2.m_strand = -1;
-          break;   
-          
-        case 6:
-          ji.m_alignment_overlap = atoi(item.c_str());
-          break;
-          
-        case 7:
-          ji.m_unique_read_sequence = item;
-          break;      
-        
-        case 8:
-          ji.m_flanking_left = atoi(item.c_str());
-          break;      
-          
-        case 9:
-          ji.m_flanking_right = atoi(item.c_str());
-          break;
-          
-        case 10:
-          ji.m_side_1.m_redundant = atoi(item.c_str());
-          break;
-          
-        case 11:
-          ji.m_side_2.m_redundant = atoi(item.c_str());
-          break;
-      }
-      
-      last_pos = next_pos + k_junction_name_separator.length();
-      next_pos = junction_name.find(k_junction_name_separator);
-
-    }
-  }*/
-  
-  
-  // Things to FIX
+  // TODO: Things to FIX
   // 1) Memory allocation and deallocation
   
-  //#compare matches to candidate junctions with matches to original genome
+  // Compares matches to candidate junctions with matches to original genome
   void resolve_alignments( 
                           bool junction_prediction,
                           const string &reference_fasta,
@@ -116,521 +46,450 @@ namespace breseq {
                           const uint32_t alignment_read_limit
                           ) 
   {
-    Settings settings;
+	Settings settings;
+
+	int verbose = 1;
+
+	// my $verbose = 0;
+	// my ($settings, $summary, $ref_seq_info) = @_;
+	// my $gene_list_hash_ref = $ref_seq_info->{gene_lists};
+	// my $repeat_list_hash_ref = $ref_seq_info->{repeat_lists};
+	// my $flanking_length = $settings->{max_read_length};
+
+	// ####
+	// ##	Reference sequences
+	// ####
+
+	// Load the reference sequence info
+	cReferenceSequences ref_seq_info;
+	LoadFeatureIndexedFastaFile(ref_seq_info, features_file, reference_fasta);
+
+	// ####
+	// ##	Junction sequences
+	// ####
+
+
+	// clean up allocated objects
+
+	// use to get sequences
+	// m_seq = fai_fetch(m_ref, target.c_str(), &m_len);
+
+	//## if there were no candidate junctions (file is empty) then we seg fault if we try to use samtools on it...
+	//    $settings->{no_junction_prediction} = 1 if ( (!-e $junction_faidx_file_name) || (-s $junction_fasta_file_name == 0) );
+	if (junction_prediction
+			&& !file_exists(junction_fasta.c_str())
+			&& !file_empty(junction_fasta.c_str())
+		)
+		junction_prediction = 0;
+
+	vector<JunctionInfo> junction_info_list;
+
+	tam_file* junction_tam = NULL;
+	tam_file* reference_tam = NULL;
+
+	//    if (!$settings->{no_junction_prediction})
+	if (junction_prediction)
+	{
+
+		// $junction_fai = Bio::DB::Sam::Fai->load($junction_fasta_file_name);
+		////faidx_t * junction_faidx = fai_load(junction_fasta.c_str());
+		////assert(junction_faidx);
+
+		//
+		//## Load header once at the beginning (but have to peek at TAM file to do this).
+		//      my @read_structures = $settings->read_structures;
+		//      my $read_file = $read_structures[0]->{base_name};
+		//      my $junction_sam_file_name = $settings->file_name('candidate_junction_sam_file_name', {'#'=>$read_file});
+		//      $junction_header = $junction_tam->header_read2($junction_faidx_file_name) or die("Error reading reference fasta index file: $junction_faidx_file_name");
+		//
+
+		string junction_sam_file_name = junction_sam_path + "/" + read_files[0].m_base_name + ".candidate_junction.sam";
+		junction_tam = new tam_file(junction_sam_file_name, junction_fasta, ios::in);
+
+		// $junction_tam = Bio::DB::Tam->open($junction_sam_file_name) or die " Could not open junction SAM file\n";
+		//junction_tam = sam_open(junction_sam_file_name.c_str());
+		assert(junction_tam);
+
+		//## junction_header = $junction_tam->header_read2($junction_faidx_file_name) or die("Error reading reference fasta index file: $junction_faidx_file_name");
+		//string junction_faidx_file_name = junction_fasta + ".fai";
+		//junction_header = sam_header_read2(junction_faidx_file_name.c_str());
+
+		//## Preload all of the information about junctions
+		//## so that we only have to split the names once
+		// my $junction_ids = $junction_header->target_name;
+
+		// for (my $i=0; $i< $junction_header->n_targets; $i++)
+		for (int i = 0; i < junction_tam->bam_header->n_targets; i++)
+		{
+			// $junction_info->[$i] = Breseq::Shared::junction_name_split($junction_ids->[$i]);
+			JunctionInfo ji = junction_name_split(
+					junction_tam->bam_header->target_name[i]);
+			junction_info_list.push_back(ji);
+		}
+
+		delete junction_tam;
+		//bam_header_destroy(junction_header);
+	}
+
+	//####
+	//##	Output files
+	//####
+
+	// our $gd = GenomeDiff->new();
+	genome_diff gd;
+
+	// my $resolved_reference_sam_file_name = $settings->file_name('resolved_reference_sam_file_name');
+	string resolved_reference_sam_file_name = resolved_path + "/reference.sam";
+	// my $RREF;
+	// open $RREF, ">$resolved_reference_sam_file_name" or die;
+	ifstream RREF(resolved_reference_sam_file_name.c_str(), ios_base::in);
+
+	// my $resolved_junction_sam_file_name = $settings->file_name('resolved_junction_sam_file_name');
+	string resolved_junction_sam_file_name = resolved_path + "/junction.sam";
+
+	// my $RCJ;
+	// open $RCJ, ">$resolved_junction_sam_file_name" or die;
+	ifstream RCJ(resolved_junction_sam_file_name.c_str(), ios_base::in);
+
+	map<string, vector<MatchedJunction> > matched_junction;
+
+	// my %degenerate_matches;
+	map<string, map<string, MatchedJunction> > degenerate_matches;
+
+	// my $reads_processed = 0;
+	uint32_t reads_processed = 0;
+
+	// keep track of overall index of fastq files
+	uint32_t on_fastq_file_index = 0;
+
+	// foreach my $read_struct ($settings->read_structures)
+	for (uint32_t fastq_file_index = 0; fastq_file_index < read_files.size(); fastq_file_index++)
+	{
+		cReadFile rf = read_files[fastq_file_index];
+		cerr << "  READ FILE:" << rf.m_base_name << endl;
+
+		map<string, uint32_t> summary_info;
+
+		summary_info["unmatched_reads"] = 0;
+
+		// Traverse the original fastq files to keep track of order
+		// b/c some matches may exist in only one or the other file
+
+		cFastqFile in_fastq(rf.m_fastq_file_name, ios::in);
+
+		// my @fastq_file_name;
+		// my @
+
+		// @JEB No longer looping
+		// for (my $i=0; $i < scalar @{$read_struct->{base_names}}; $i++)
+
+		// my $this_read_file = $read_struct->{base_names}->[$i];
+		// $fastq_file_name[$i] = $settings->read_file_to_fastq_file_name($this_read_file);
+		// $fastq_file_index[$i] = $settings->read_file_to_fastq_file_index($this_read_file);
+
+		// if ($settings->{unmatched_reads})
+		//if (true){
+			// my $unmatched_file_name = $settings->file_name('unmatched_read_file_name', {'#'=>$this_read_file});
+			// $out_unmatched_fastq[$i] = Breseq::Fastq->new(-file => ">$unmatched_file_name");
+
+			string this_unmatched_file_name = data_path + "/unmatched."
+					+ rf.m_base_name + ".fastq";
+			cFastqFile out_unmatched_fastq(this_unmatched_file_name, ios::out);
+			assert(!out_unmatched_fastq.fail());
+		//}
+
+		if (junction_tam != NULL) delete junction_tam;
+		if (reference_tam != NULL) delete reference_tam;
+
+		string reference_sam_file_name = reference_sam_path + "/"
+				+ rf.m_base_name + ".reference.sam";
+		reference_tam = new tam_file(reference_sam_file_name, reference_fasta, ios::in); //# or die "Could not open $reference_sam_file_name";
+
+		// if (!$settings->{no_junction_prediction})
+		if (junction_prediction)
+		{
+			// my $junction_sam_file_name = $settings->file_name('candidate_junction_sam_file_name', {'#'=>$read_file});
+			string junction_sam_file_name = junction_sam_path + "/" + rf.m_base_name + ".candidate_junction.sam";
+
+			junction_tam = new tam_file(junction_sam_file_name, junction_fasta, ios::in); // or die " Could not open junction SAM file\n";
+
+			//## junction_header = $junction_tam->header_read2($junction_faidx_file_name) or die("Error reading reference fasta index file: $junction_faidx_file_name");
+		}
+
+		vector<alignment> junction_alignments;
+
+		//#proceed through all of the alignments
+		// if (!$settings->{no_junction_prediction})
+		if (junction_prediction)
+			junction_tam->read_alignments(junction_alignments, false);
+
+		vector<alignment> reference_alignments;
+		reference_tam->read_alignments(reference_alignments, false);
+
+		///
+		//  Test each read for its matches to the reference and candidate junctions
+		///
+
+		//uint32_t f = 0;
+		cFastqSequence seq;
+		while (in_fastq.read_sequence(seq)) // READ
+		{
+			// $reads_processed++;
+			reads_processed++;
+
+			// last if ($settings->{alignment_read_limit} && ($reads_processed > $settings->{alignment_read_limit}));
+			// @JEB - PORT This is unsafe because memory dealloaction has not occurred.
+			if ((alignment_read_limit) && (reads_processed > alignment_read_limit))
+				break;
+
+			if (reads_processed % 10000 == 0)
+				cerr << "    READS:" << reads_processed << endl;
+
+			if (verbose)
+				cerr << "===> Read: " << seq.m_name << endl;
+
+			uint32_t best_junction_score = 0;
+			uint32_t best_reference_score = 0;
+
+			// Does this read have eligible candidate junction matches?
+			vector<alignment> this_junction_alignments;
+
+			if (verbose)
+			{
+				cerr << " Before Overlap Reference alignments = " << reference_alignments.size() << endl;
+				cerr << " Before Overlap Junction alignments = " << junction_alignments.size() << endl;
+			}
+
+			if ((junction_alignments.size() > 0) && (seq.m_name == junction_alignments[0].read_name()))
+			{
+
+				this_junction_alignments = junction_alignments;
+				junction_tam->read_alignments(junction_alignments, false);
+
+				///
+				// Matches to candidate junctions MUST overlap the junction.
+				//
+				// Reduce this list to those that overlap ANY PART of the junction.
+				// Alignments that extend only into the overlap region, are only additional
+				//  evidence for predicted junctions and NOT support for a new junction on
+				// their own. (They will also match the original reference genome equally well).
+				///
+
+				for (vector<alignment>::iterator it = this_junction_alignments.begin(); it < this_junction_alignments.end(); it++)
+					if (!_alignment_overlaps_junction(junction_info_list, *it))
+						this_junction_alignments.erase(it);
+
+				best_reference_score = _eligible_read_alignments(settings, ref_seq_info, this_junction_alignments);
+
+				if (verbose)
+					cerr << " Best junction score: " << best_junction_score
+							<< endl;
+			}
+
+			// Does this read have eligible reference sequence matches?
+			vector<alignment> this_reference_alignments;
+			if ((junction_alignments.size() > 0) && (seq.m_name == junction_alignments[0].read_name()))
+			{
+
+				this_reference_alignments = reference_alignments;
+				reference_tam->read_alignments(reference_alignments, false);
+
+				best_reference_score = _eligible_read_alignments(settings, ref_seq_info, this_reference_alignments);
+
+				if (verbose)
+					cerr << " Best reference score: " << best_reference_score << endl;
+			}
+
+			// Nothing to be done if there were no eligible matches to either
+			// Record in the unmatched FASTQ data file
+			if ((this_junction_alignments.size() == 0) && (this_reference_alignments.size() == 0))
+			{
+				summary_info["unmatched_reads"]++;
+				out_unmatched_fastq.write_sequence(seq);
+			}
+
+			///
+			// Determine if the read has a better match to a candidate junction
+			// or to the reference sequence.
+			///
+
+			/// There are three possible kinds of reads at this point
+			//
+			// 1: Read has a best match to the reference genome
+			// --> Write this match and we are done
+			// 2: Read has a best match (or multiple best matches) to junctions
+			// --> Keep an item that describes these matches
+			// 3: Read has an equivalent match to the reference genome
+			//      and goes into the overlap part of a junction condidate
+			// --> Keep an item that is not used during scoring
+			///
+
+			//#			if (@$this_junction_al)
+			//#			{
+			//#				# This is the length of the match on the query -- NOT the length of the query
+			//#				$best_junction_score = $this_junction_al->[0]->query->length;
+			//# THESE SCORES ARE NOT CONSISTENT ACROSS STRANDS DUE TO DIFFERENT INDEL MATCHES
+			//#				$best_candidate_junction_score = $ca->aux_get("AS");
+			//#			}
+			//#
+			//#			if (@$this_reference_al)
+			//#			{
+			//#				# This is the length of the match on the query -- NOT the length of the query
+			//#				$best_reference_score = $this_reference_al->[0]->query->length;
+			//# THESE SCORES ARE NOT CONSISTENT ACROSS STRANDS DUE TO DIFFERENT INDEL MATCHES
+			//#				$best_reference_score = $ra->aux_get("AS");
+			//#			}
+
+			// if < 0, then the best match is to the reference
+			int32_t mapping_quality_difference = best_junction_score - best_reference_score;
+
+			if (verbose)
+			{
+				cerr << " Best junction score: " << best_junction_score << endl;
+				cerr << " Best reference score: " << best_reference_score << endl;
+				cerr << " Mapping quality difference: " << best_reference_score << endl;
+				cerr << " Final Reference alignments = " << this_reference_alignments.size() << endl;
+				cerr << " Final Candidate junction alignments = " << this_junction_alignments.size() << endl;
+			}
+
+			if (this_junction_alignments.size() == 0 && this_reference_alignments.size() == 0)
+				continue;
+
+			///
+			// The best match we found to the reference was no better than the best to the
+			// candidate junction. This read potentially supports the candidate junction.
+			//
+			// ONLY allow EQUAL matches through if they match the overlap only, otherwise
+			// you can get predictions of new junctions with all reads supporting them
+			// actually mapping perfectly to the reference.
+			///
+
+			// best match is to the reference, record in that SAM file.
+			if (mapping_quality_difference < 0)
+			{
+				if (verbose)
+					cout << "Best alignment to reference.";
+				_write_reference_matches(settings, ref_seq_info, this_reference_alignments, *reference_tam, fastq_file_index);
+			}
+			else
+			{
+				if (verbose)
+					cout << "Best alignment is to candidate junction. MQD: " << mapping_quality_difference << endl;
+
+				MatchedJunction item = {
+					this_reference_alignments, // reference sequence alignments
+					this_junction_alignments, // the BEST candidate junction alignments
+					fastq_file_index, // index of the fastq file this read came from
+					mapping_quality_difference, 0 // degenerate count
+				};
+				//#print Dumper($item) if ($verbose);
+
+				///
+				// Just one best hit to candidate junctions, that is better than every match to the reference
+				///
+				if ((this_junction_alignments.size() == 1) && (mapping_quality_difference > 0))
+				{
+					alignment a = this_junction_alignments[0];
+					string junction_id = junction_tam->bam_header->target_name[a.reference_target_id()];
+					//#print "$junction_id\n";
+					matched_junction[junction_id].push_back(item);
+				}
+				///
+				// Multiple equivalent matches to junctions and refernece, ones with most hits later will win these matches
+				// If $mapping_quality_difference > 0, then they will count for scoring
+				///
+				else
+				{
+					for (int32_t i = 0; i < this_junction_alignments.size(); i++)
+					{
+						alignment a = this_junction_alignments[i];
+						item.degenerate_count = this_junction_alignments.size(); // mark as degenerate
+						string junction_id = junction_tam->bam_header->target_name[a.reference_target_id()];
+						//TODO: Verify correct porting of the following 1 line
+						degenerate_matches[junction_id][seq.m_sequence] = item;
+					}
+				}
+			} // READ
+
+			//TODO: Verify correct porting of the following 2 lines
+			//f++;
+			//f %= in_fastq.m_current_line;
+
+		} // End loop through every $read_struct
+
+		//
+		//## save statistics
+		//      $summary->{alignment_correction}->{read_file}->{$read_file} = $s;
+
+	} // End of Read File loop
+
+
+	///
+	// Determine which junctions are real, prefer ones with most matches
+	///
+
+	map<int32_t, int32_t> accepted_pos_hash_score_distribution;
+	map<int32_t, int32_t> observed_pos_hash_score_distribution;
+
+	map<int32_t, int32_t> accepted_min_overlap_score_distribution;
+	map<int32_t, int32_t> observed_min_overlap_score_distribution;
     
-    int verbose = 1;
-    
-    // my $verbose = 0;
-    // my ($settings, $summary, $ref_seq_info) = @_;
-    // my $gene_list_hash_ref = $ref_seq_info->{gene_lists};
-    // my $repeat_list_hash_ref = $ref_seq_info->{repeat_lists};
-    // my $flanking_length = $settings->{max_read_length};
-    
-    // ####
-    // ##	Reference sequences
-    // ####		
-        
-    // Load the reference sequence info
-    cReferenceSequences refseqs;
-    LoadFeatureIndexedFastaFile(refseqs, features_file, reference_fasta);    
-    
-    // ####
-    // ##	Junction sequences
-    // ####
-    
-    
-    // clean up allocated objects
+	vector<string> passed_junction_ids;
+	vector<string> rejected_junction_ids;
+	map<string, CandidateJunction> junction_test_info; // scoring information about junctions
 
-    // use to get sequences
-    // m_seq = fai_fetch(m_ref, target.c_str(), &m_len);
+	///
+	// Candidate junctions with unique matches
+	///
 
-    //## if there were no candidate junctions (file is empty) then we seg fault if we try to use samtools on it...
-    //    $settings->{no_junction_prediction} = 1 if ( (!-e $junction_faidx_file_name) || (-s $junction_fasta_file_name == 0) );
-    if (junction_prediction && !file_exists(junction_fasta.c_str()) && !file_empty(junction_fasta.c_str())) {
-      junction_prediction = 0;
-    }
-      
-    vector<JunctionInfo> junction_info_list;
+	//sort junction ids based on size of vector
 
-    //    if (!$settings->{no_junction_prediction})
-    if (junction_prediction) {
+	vector<VectorSize> sorted_junction_ids;
+	for (map<string, vector<MatchedJunction> >::iterator it = matched_junction.begin(); it != matched_junction.end(); it++)
+	{
+		VectorSize info = { it->first, it->second.size() };
+		sorted_junction_ids.push_back(info);
+	}
+	sort(sorted_junction_ids.begin(), sorted_junction_ids.end(), VectorSize::sort_by_size);
 
-      // $junction_fai = Bio::DB::Sam::Fai->load($junction_fasta_file_name);	
-      ////faidx_t * junction_faidx = fai_load(junction_fasta.c_str());
-      ////assert(junction_faidx);
+	if (verbose) cout << "Degenerate matches before handling ones with unique matches: " << degenerate_matches.size() << endl;
 
-      //      
-      //## Load header once at the beginning (but have to peek at TAM file to do this).
-      //      my @read_structures = $settings->read_structures;
-      //      my $read_file = $read_structures[0]->{base_name};
-      //      my $junction_sam_file_name = $settings->file_name('candidate_junction_sam_file_name', {'#'=>$read_file});
+	for (int32_t i = 0; i < sorted_junction_ids.size(); i++)
+	{
+		string key = sorted_junction_ids[i].junction_id;
 
-      //      my $junction_sam_file_name = $settings->file_name('candidate_junction_sam_file_name', {'#'=>$read_file});
+		bool has_non_overlap_only;
+		bool success = _test_junction(settings, /*summary,*/ key, matched_junction, degenerate_matches, junction_test_info, ref_seq_info, RREF, RCJ, *reference_tam, *junction_tam, has_non_overlap_only);
 
-      //      my $junction_tam = Bio::DB::Tam->open($junction_sam_file_name) or die " Could not open junction SAM file\n";
-      //      $junction_header = $junction_tam->header_read2($junction_faidx_file_name) or die("Error reading reference fasta index file: $junction_faidx_file_name");				
-      //      
+		// save the score in the distribution
+		add_score_to_distribution(observed_pos_hash_score_distribution, junction_test_info[key].pos_hash_score);
+		add_score_to_distribution(observed_min_overlap_score_distribution, junction_test_info[key].min_overlap_score);
 
-      tamFile junction_tam = NULL;
-      bam_header_t *junction_header = NULL;
-      
-      string junction_sam_file_name = junction_sam_path + "/" + read_files[0].m_base_name + ".candidate_junction.sam";
+		// only count matches that span overlap
+		if (!has_non_overlap_only)
+		{
+			if (success)
+				passed_junction_ids.push_back(key);
+			else
+				rejected_junction_ids.push_back(key);
+		}
+	}
 
-      // $junction_tam = Bio::DB::Tam->open($junction_sam_file_name) or die " Could not open junction SAM file\n";
-      junction_tam = sam_open(junction_sam_file_name.c_str());
-      assert(junction_tam);
-      
-      //## junction_header = $junction_tam->header_read2($junction_faidx_file_name) or die("Error reading reference fasta index file: $junction_faidx_file_name");				
-      string junction_faidx_file_name = junction_fasta + ".fai";
-      junction_header = sam_header_read2(junction_faidx_file_name.c_str()); 
+    if (verbose)
+    	cout << "Degenerate matches after handling ones with unique matches: " << degenerate_matches.size() << endl;
 
-      //## Preload all of the information about junctions
-      //## so that we only have to split the names once	
-      // my $junction_ids = $junction_header->target_name;
-      
-      // for (my $i=0; $i< $junction_header->n_targets; $i++)
-      for (int i=0; i<junction_header->n_targets; i++) {
-        // $junction_info->[$i] = Breseq::Shared::junction_name_split($junction_ids->[$i]);
-        JunctionInfo ji = junction_name_split(junction_header->target_name[i]);
-        junction_info_list.push_back(ji);
-      }		
-      
-      bam_header_destroy(junction_header);
-    }
-    
-    //####
-    //##	Output files
-    //####
+	///
+	// Candidate junctions with ONLY degenerate matches
+	///
 
-    // our $gd = GenomeDiff->new();
-    genome_diff gd;
-      
-    // my $resolved_reference_sam_file_name = $settings->file_name('resolved_reference_sam_file_name');
-    string resolved_reference_sam_file_name = resolved_path + "/reference.sam";
-    // my $RREF;
-    // open $RREF, ">$resolved_reference_sam_file_name" or die;
-    ifstream RREF(resolved_reference_sam_file_name.c_str(), ios_base::in);
+	sorted_junction_ids.clear();
+	for (map<string, map<string, MatchedJunction> >::iterator it = degenerate_matches.begin(); it != degenerate_matches.end(); it++)
+	{
+		VectorSize info = { it->first, it->second.size() };
+		sorted_junction_ids.push_back(info);
+	}
+	sort(sorted_junction_ids.begin(), sorted_junction_ids.end(), VectorSize::sort_by_size);
 
-    // my $resolved_junction_sam_file_name = $settings->file_name('resolved_junction_sam_file_name');
-    string resolved_junction_sam_file_name = resolved_path + "/junction.sam";
-
-    // my $RCJ;
-    // open $RCJ, ">$resolved_junction_sam_file_name" or die;
-    ifstream RCJ(resolved_junction_sam_file_name.c_str(), ios_base::in);
-    
-    // my %matched_junction;
-    map<string,uint32_t> matched_junction;
-
-    // my %degenerate_matches;
-    map<string,uint32_t> degenerate_matches;
-        
-    // my $reads_processed = 0;
-    uint32_t reads_processed = 0;
-    
-    // keep track of overall index of fastq files 
-    uint32_t on_fastq_file_index = 0;
-    
-    // foreach my $read_struct ($settings->read_structures)
-    for (vector<cReadFile>::const_iterator rf = read_files.begin(); rf < read_files.end(); rf++) {
-                    
-      //print STDERR "  READ FILE::$read_file\n";
-      fprintf(stderr, "  READ FILE::%s", rf->m_base_name.c_str());
-      cerr << endl;
-
-      // ## setup the summary
-      // my $s;
-      map<string,uint32_t> summary_info;
-
-      // $s->{unmatched_reads} = 0;
-      summary_info["unmatched_reads"] = 0;
-      
-      //## Traverse the original fastq files to keep track of order
-      //## b/c some matches may exist in only one or the other file  
-      
-      // my @in_fastq;
-      // $in_fastq[$i] = Breseq::Fastq->new(-file => $fastq_file_name[$i]);        
-
-      cFastqFile in_fastq(rf->m_fastq_file_name.c_str(), ios::in);
-      
-      // my @fastq_file_name;
-      // my @fastq_file_index;
-      
-      // my @out_unmatched_fastq;
-      cFastqFile out_unmatched_fastq;
-            
-      // @JEB No longer looping
-      // for (my $i=0; $i < scalar @{$read_struct->{base_names}}; $i++)
-        
-      // my $this_read_file = $read_struct->{base_names}->[$i];        
-      // $fastq_file_name[$i] = $settings->read_file_to_fastq_file_name($this_read_file);	
-      // $fastq_file_index[$i] = $settings->read_file_to_fastq_file_index($this_read_file);	
-      
-      // if ($settings->{unmatched_reads})
-      if (true)
-      {				
-        // my $unmatched_file_name = $settings->file_name('unmatched_read_file_name', {'#'=>$this_read_file});
-        // $out_unmatched_fastq[$i] = Breseq::Fastq->new(-file => ">$unmatched_file_name");
-        
-        string this_unmatched_file_name = data_path + "/unmatched." + rf->m_base_name + ".fastq";        
-        out_unmatched_fastq.open(this_unmatched_file_name.c_str(), ios::out);
-        assert(!out_unmatched_fastq.fail());
-      }
-      
-        
-      // my $reference_sam_file_name = $settings->file_name('reference_sam_file_name', {'#'=>$read_file});
-      string reference_sam_file_name = reference_sam_path + "/" + rf->m_base_name + ".reference.sam";
-      
-      // my $reference_tam = Bio::DB::Tam->open($reference_sam_file_name) or die "Could not open $reference_sam_file_name";
-      tamFile reference_tam = sam_open(reference_sam_file_name.c_str());
-      assert(reference_tam);
-      
-      // $reference_header = $reference_tam->header_read2($reference_faidx_file_name) or throw("Error reading reference fasta index file: $reference_faidx_file_name");		
-      string reference_faidx_file_name = reference_fasta + ".fai";
-      bam_header_t *reference_header = sam_header_read2(reference_faidx_file_name.c_str()); 
-      assert(reference_header);
-      
-      // my $junction_tam;
-      tamFile junction_tam = NULL;
-      bam_header_t *junction_header = NULL;
-      
-      // if (!$settings->{no_junction_prediction})
-      if (junction_prediction)
-      {
-        // my $junction_sam_file_name = $settings->file_name('candidate_junction_sam_file_name', {'#'=>$read_file});
-        string junction_sam_file_name = junction_sam_path + "/" + rf->m_base_name + ".candidate_junction.sam";
-
-        // $junction_tam = Bio::DB::Tam->open($junction_sam_file_name) or die " Could not open junction SAM file\n";
-        junction_tam = sam_open(junction_sam_file_name.c_str());
-        assert(junction_tam);
-        
-        //## junction_header = $junction_tam->header_read2($junction_faidx_file_name) or die("Error reading reference fasta index file: $junction_faidx_file_name");				
-        string junction_faidx_file_name = junction_fasta + ".fai";
-        junction_header = sam_header_read2(junction_faidx_file_name.c_str()); 
-        assert(junction_header);
-      }
-      
-        
-      // my $reference_al;
-      vector<alignment> reference_alignments;
-      // my $last_reference_alignment;
-      alignment* last_reference_alignment = NULL;
-      
-      // my $junction_al;
-      vector<alignment> junction_alignments;
-      // my $last_junction_alignment;
-      alignment* last_junction_alignment = NULL;
-
-      //#proceed through all of the alignments
-      // if (!$settings->{no_junction_prediction})
-      if (junction_prediction) {
-        
-        // ($junction_al, $last_junction_alignment) 
-        //   = Breseq::Shared::tam_next_read_alignments($junction_tam, $junction_header, $last_junction_alignment);		
-  
-//@JEB: Rewrite to use tam_file
-//        junction_alignments = alignment::tam_next_read_alignments(junction_tam, junction_header, last_junction_alignment);
-      }
-      
-      //      
-      // ($reference_al, $last_reference_alignment) 
-      // = Breseq::Shared::tam_next_read_alignments($reference_tam, $reference_header, $last_reference_alignment);		
-      //      
-//@JEB: Rewrite to use tam_file      
-//      reference_alignments = alignment::tam_next_read_alignments(reference_tam, reference_header, last_reference_alignment);
-
-      
-      //###
-      //##  Test each read for its matches to the reference and candidate junctions
-      //###
-      
-      // my $f = 0;
-      cFastqSequence seq;
-      // READ: while (my $seq = $in_fastq[$f]->next_seq)
-      
-      while (in_fastq.read_sequence(seq))
-      {			
-        // $reads_processed++;
-        reads_processed++;
-      
-        // last if ($settings->{alignment_read_limit} && ($reads_processed > $settings->{alignment_read_limit}));
-        // @JEB - PORT This is unsafe because memory dealloaction has not occurred.
-        if ((alignment_read_limit) && (reads_processed > alignment_read_limit)) break;
-
-      
-        // print STDERR "    READS:$reads_processed\n" if ($reads_processed % 10000 == 0);
-        if (reads_processed % 10000 == 0) fprintf(stderr, "    READS:%u\n", reads_processed);
-
-        //			print "===> Read: $seq->{id}\n" if ($verbose);
-        if (verbose) fprintf(stderr, "===> Read: %s\n", seq.m_name.c_str());
-
-        // my $best_junction_score = 0;
-        // my $best_reference_score = 0;
-        uint32_t best_junction_score = 0;
-        uint32_t best_reference_score = 0;
-			
-        //## Does this read have eligible candidate junction matches?
-        // my $this_junction_al = [];
-        vector<alignment> this_junction_alignments;
-
-        // print " Before Overlap Reference alignments = "  . (scalar @$this_reference_al) . "\n" if ($verbose);
-        if (verbose) fprintf(stderr, " Before Overlap Reference alignments = %u\n", (uint32_t)reference_alignments.size());
-
-        
-        // print " Before Overlap Junction alignments = " . (scalar @$this_junction_al) . "\n" if ($verbose);
-        if (verbose) fprintf(stderr, " Before Overlap Junction alignments = %u\n", (uint32_t)junction_alignments.size());
-
-        
-        // if (($junction_al) && ($junction_al->[0]->qname =~ m/^$seq->{id}/))
-        if ((junction_alignments.size() > 0) && (seq.m_name == junction_alignments[0].read_name())) {
-          
-          //				$this_junction_al = $junction_al;
-          //				($junction_al, $last_junction_alignment) 
-          //        = Breseq::Shared::tam_next_read_alignments($junction_tam, $junction_header, $last_junction_alignment);
-          //       
-
-          this_junction_alignments = junction_alignments;
-//          junction_alignments = alignment::tam_next_read_alignments(junction_tam, junction_header, last_junction_alignment);
-
-      
-          //###			
-          //## Matches to candidate junctions MUST overlap the junction.
-          //##
-          //## Reduce this list to those that overlap ANY PART of the junction.
-          //## Alignments that extend only into the overlap region, are only additional
-          //##  evidence for predicted junctions and NOT support for a new junction on 
-          //## their own. (They will also match the original reference genome equally well).
-          //###
-          
-          // @$this_junction_al = grep {_alignment_overlaps_junction($junction_info, $_) } @$this_junction_al;
-          for (vector<alignment>::iterator it=this_junction_alignments.begin(); it<this_junction_alignments.end(); it++) {
-            if (!_alignment_overlaps_junction(junction_info_list, *it)) {
-                this_junction_alignments.erase(it);
-            }
-          }  
-        
-          // ($best_junction_score, @$this_junction_al) = _eligible_read_alignments($settings, $junction_header, $junction_fai, undef, @$this_junction_al);
-//          best_reference_score = _eligible_read_alignments(settings, junction_header, junction_fai, refseqs, this_junction_alignments);
-
-          // print " Best junction score: $best_junction_score\n" if ($verbose);
-          if (verbose) fprintf(stderr, " Best junction score: %u\n", best_junction_score);
-        }
-          
-          
-        //## Does this read have eligible reference sequence matches?
-        // my $this_reference_al = [];
-        vector<alignment> this_reference_alignments;
-        
-        
-        // if (($reference_al) && ($reference_al->[0]->qname =~ m/^$seq->{id}/))
-        if ((junction_alignments.size() > 0) && (seq.m_name == junction_alignments[0].read_name())) {
-          
-          // $this_reference_al = $reference_al;
-          // ($reference_al, $last_reference_alignment) 
-          //    = Breseq::Shared::tam_next_read_alignments($reference_tam, $reference_header, $last_reference_alignment);
-
-          this_reference_alignments = reference_alignments;
-//          reference_alignments = alignment::tam_next_read_alignments(reference_tam, reference_header, last_reference_alignment);
-
-          //($best_reference_score, @$this_reference_al) = _eligible_read_alignments($settings, $reference_header, $reference_fai, $ref_seq_info, @$this_reference_al);	
-//          best_reference_score = _eligible_read_alignments(settings, reference_header, reference_fai, refseqs, this_reference_alignments);
-          
-          // print " Best reference score: $best_reference_score\n" if ($verbose);
-          if (verbose) fprintf(stderr, " Best reference score: %u\n", best_reference_score);
-        }		
-      
-        //## Nothing to be done if there were no eligible matches to either
-        //## Record in the unmatched FASTQ data file
-        
-        // if ((@$this_junction_al == 0) && (@$this_reference_al == 0))
-        if ( (this_junction_alignments.size() == 0) && (this_reference_alignments.size() == 0) ) {
-          // $s->{unmatched_reads}++;
-          // $out_unmatched_fastq[$f]->write_seq($seq);
-          
-          summary_info["unmatched_reads"]++;
-          out_unmatched_fastq.write_sequence(seq);
-        }
-
-        
-      
-      
-            
-      
-  
-//###			
-//## Determine if the read has a better match to a candidate junction
-//## or to the reference sequence.
-//###
-//      
-//### There are three possible kinds of reads at this point
-//##
-//## 1: Read has a best match to the reference genome
-//## --> Write this match and we are done
-//## 2: Read has a best match (or multiple best matches) to junctions
-//## --> Keep an item that describes these matches
-//## 3: Read has an equivalent match to the reference genome
-//##      and goes into the overlap part of a junction condidate
-//## --> Keep an item that is not used during scoring
-//###
-//      
-//# Moved to above		
-//#			my $best_junction_score = 0;
-//#			my $best_reference_score = 0;
-//#
-//#			if (@$this_junction_al)
-//#			{
-//#				# This is the length of the match on the query -- NOT the length of the query
-//#				$best_junction_score = $this_junction_al->[0]->query->length;
-//# THESE SCORES ARE NOT CONSISTENT ACROSS STRANDS DUE TO DIFFERENT INDEL MATCHES
-//#				$best_candidate_junction_score = $ca->aux_get("AS");
-//#			}
-//#			
-//#			if (@$this_reference_al)
-//#			{
-//#				# This is the length of the match on the query -- NOT the length of the query
-//#				$best_reference_score = $this_reference_al->[0]->query->length;
-//# THESE SCORES ARE NOT CONSISTENT ACROSS STRANDS DUE TO DIFFERENT INDEL MATCHES
-//#				$best_reference_score = $ra->aux_get("AS");
-//#			}
-//			
-//# if < 0, then the best match is to the reference
-      // my $mapping_quality_difference = $best_junction_score - $best_reference_score;
-      int32_t mapping_quality_difference = best_junction_score - best_reference_score;
-
-      // print " Best junction score: $best_junction_score\n" if ($verbose);
-        if (verbose) fprintf(stderr, " Best junction score: %i\n", best_junction_score);
-        
-        // print " Best reference score: $best_reference_score\n" if ($verbose);
-        if (verbose) fprintf(stderr, " Best reference score: %i\n", best_reference_score);
-
-        // print " Mapping quality difference: $mapping_quality_difference\n" if ($verbose);
-        if (verbose) fprintf(stderr, " Mapping quality difference:  %i\n", best_reference_score);
-        
-      // print " Final Reference alignments = "  . (scalar @$this_reference_al) . "\n" if ($verbose);
-      // print " Final Candidate junction alignments = " . (scalar @$this_junction_al) . "\n" if ($verbose);
-//      
-//      
-//			next READ if ( (scalar @$this_junction_al == 0) && (scalar @$this_reference_al == 0));
-//      
-//### The best match we found to the reference was no better than the best to the
-//### candidate junction. This read potentially supports the candidate junction.
-//###
-//### ONLY allow EQUAL matches through if they match the overlap only, otherwise
-//### you can get predictions of new junctions with all reads supporting them
-//### actually mapping perfectly to the reference.
-//			
-//### best match is to the reference, record in that SAM file.
-//			if ($mapping_quality_difference < 0)
-//			{
-//				print "Best alignment to reference.\n" if ($verbose);
-//				_write_reference_matches($settings, $reference_fai, $ref_seq_info, $RREF, $reference_header, $fastq_file_index[$f], @$this_reference_al);
-//			}
-//			else
-//			{	
-//				print "Best alignment is to candidate junction. MQD: $mapping_quality_difference\n" if ($verbose);
-//				
-//				my $item = {
-//					reference_alignments => $this_reference_al, 					# reference sequence alignments
-//					junction_alignments => $this_junction_al, 						#the BEST candidate junction alignments
-//					fastq_file_index => $fastq_file_index[$f],						#index of the fastq file this read came from
-//					mapping_quality_difference => $mapping_quality_difference,
-//				};
-//#print Dumper($item) if ($verbose);
-//        
-//				
-//###
-//## Just one best hit to candidate junctions, that is better than every match to the reference
-//## #
-//				if ((scalar @$this_junction_al == 1) && (scalar $mapping_quality_difference > 0))
-//				{
-//					my $a = $this_junction_al->[0];
-//					my $junction_id = $junction_header->target_name()->[$a->tid];
-//#print "$junction_id\n";
-//					push @{$matched_junction{$junction_id}}, $item;
-//				}	
-//###				
-//## Multiple equivalent matches to junctions and refernece, ones with most hits later will win these matches
-//## If $mapping_quality_difference > 0, then they will count for scoring
-//###
-//				else
-//				{					
-//					foreach my $a (@$this_junction_al)
-//					{	
-//						$item->{degenerate_count} = scalar @$this_junction_al; #mark as degenerate
-//						my $junction_id = $junction_header->target_name()->[$a->tid];
-//						$degenerate_matches{$junction_id}->{$seq->{id}} = $item;
-//					}
-//				}
-//			}
-        
-      } // End loop through every read
-
-        
-//      
-//		} continue {
-//			$f++;
-//			$f %= scalar @in_fastq;
-//		}
-        
-
-//      
-//## save statistics
-//      $summary->{alignment_correction}->{read_file}->{$read_file} = $s;
-//    }	
-    
-
-  } // End of Read File loop
-    
-    
-//    
-//###			
-//## Determine which junctions are real, prefer ones with most matches
-//###
-//    
-//    my %accepted_pos_hash_score_distribution;
-//    my %observed_pos_hash_score_distribution;
-//    
-//    my %accepted_min_overlap_score_distribution;
-//    my %observed_min_overlap_score_distribution;
-//    
-//    my @passed_junction_ids = (); 
-//    my @rejected_junction_ids = ();
-//    my %junction_test_info;	#scoring information about junctions
-//		
-//###
-//## Candidate junctions with unique matches
-//###
-//    my @sorted_junction_ids = sort {-(scalar @{$matched_junction{$a}} <=> scalar @{$matched_junction{$b}})} keys %matched_junction;
-//		
-//    print "Degenerate matches before handling ones with unique matches: " . (scalar keys %degenerate_matches) . "\n" if ($verbose);
-//		
-//    foreach my $key (@sorted_junction_ids)
-//    {
-//      my ($failed, $has_non_overlap_only) = _test_junction($settings, $summary, $key, \%matched_junction, \%degenerate_matches, \%junction_test_info, $reference_fai, $ref_seq_info, $RREF, $reference_header, $RCJ, $junction_header);
-//## save the score in the distribution
-//      Breseq::Shared::add_score_to_distribution(\%observed_pos_hash_score_distribution, $junction_test_info{$key}->{pos_hash_score});
-//      Breseq::Shared::add_score_to_distribution(\%observed_min_overlap_score_distribution, $junction_test_info{$key}->{min_overlap_score});
-//      
-//## only count matches that span overlap
-//      if (!$has_non_overlap_only)
-//      {
-//        if (!$failed)
-//        {				
-//          push @passed_junction_ids, $key; 
-//        }
-//        else
-//        {				
-//          push @rejected_junction_ids, $key;
-//        }
-//      }
-//    }
-//    
-//    print "Degenerate matches after handling ones with unique matches: " . (scalar keys %degenerate_matches) . "\n" if ($verbose);
-//    
-//###
-//## Candidate junctions with ONLY degenerate matches
-//##
-//###
-//    @sorted_junction_ids = sort {-(scalar keys %{$degenerate_matches{$a}} <=> scalar keys %{$degenerate_matches{$b}})} keys %degenerate_matches;
 //    while (@sorted_junction_ids)
 //    {
 //      my $key = shift @sorted_junction_ids;
@@ -739,8 +598,10 @@ namespace breseq {
 //$gd->write($jc_genome_diff_file_name);	
 //}
 //
-    
-  }
+
+	if (junction_tam != NULL) delete junction_tam;
+	if (reference_tam != NULL) delete reference_tam;
+}
     
 //
 //=head2 _eligible_alignments
@@ -959,59 +820,59 @@ bool _alignment_overlaps_junction(const vector<JunctionInfo>& junction_info_list
   return true;
 }
 
-//sub _write_reference_matches
-//{
-//	my ($settings, $reference_fai, $ref_seq_info, $RREF, $reference_header, $fastq_file_index, @reference_al) = @_;
-//	return if (scalar @reference_al == 0); #nice try, no alignments
-//
-//	my @trims;
-//	foreach my $a (@reference_al)
-//	{
-//	#	push @trims, _trim_ambiguous_ends($a, $reference_header, $reference_fai);
-//		push @trims, _trim_ambiguous_ends($a, $reference_header, $reference_fai, $ref_seq_info); #slightly faster than using fai
-//	}
-//
-//	Breseq::Shared::tam_write_read_alignments($RREF, $reference_header, $fastq_file_index, \@reference_al, \@trims);
-//}
-//
-//sub _test_junction
-//{
-//	my $verbose = 0;
-//
+
+void _write_reference_matches(const Settings& settings, cReferenceSequences& ref_seq_info, alignment_list& reference_alignments, tam_file& reference_tam, uint32_t fastq_file_index)
+{
+	// Nice try, no alignments
+	if (reference_alignments.size() == 0) return;
+
+	vector<Trim> trims;
+
+	for (int32_t i; i < reference_alignments.size(); i++)
+		trims.push_back(_trim_ambiguous_ends(reference_alignments[i], reference_tam, ref_seq_info));
+
+	reference_tam.write_alignments((int32_t)fastq_file_index, reference_alignments, &trims);
+}
+
+bool _test_junction(const Settings& settings, /*const map<string, uint32_t>& summary_info,*/ const string& junction_seq_id, map<string, vector<MatchedJunction> >& matched_junction_ref, map<string, map<string, MatchedJunction> >& degenerate_matches_ref, const map<string, CandidateJunction>& junction_test_info_ref, const cReferenceSequences& ref_seq_info, ifstream& RREF, ifstream& RCJ, tam_file& reference_tam, tam_file& junction_tam, bool& has_non_overlap_only)
+{
+	bool verbose = false;
 //	my ($settings, $summary, $junction_seq_id, $matched_junction_ref, $degenerate_matches_ref, $junction_test_info_ref, $reference_fai, $ref_seq_info, $RREF, $reference_header, $RCJ, $candidate_junction_header) = @_;
-//
-//	print "Testing $junction_seq_id\n" if ($verbose);
-//
-//	## variable initialization
+
+	if (verbose) cout << "Testing " << junction_seq_id << endl;
+
+	// variable initialization
 //	my $test_info;
-//	my $failed = 0;
-//
-//	## There are two kinds of matches to a candidate junction:
-//	## (1) Reads that uniquely map to one candidate junction (but any number of times to reference)
-//	my @unique_matches = ();
-//	@unique_matches = @{$matched_junction_ref->{$junction_seq_id}} if (defined $matched_junction_ref->{$junction_seq_id});
-//
-//	## (2) Reads that uniquely map equally well to more than one candidate junction (and any number of times to reference)
-//	my	@degenerate_matches = ();
-//	@degenerate_matches = map { $degenerate_matches_ref->{$junction_seq_id}->{$_} } sort keys %{$degenerate_matches_ref->{$junction_seq_id}}
-//		if (defined $degenerate_matches_ref->{$junction_seq_id});
-//
-//	## FAI target id -- there is no easy way to get this short of loading the entire array and going through them...
-//	## Debatable about whether we save more string comparisons by doing this here or each time
-//
-//	## @JEB v1> hash by tid rather than alignment junction names!!
-//	my $junction_tid = 0;
-//	foreach my $test_junction_seq_id  (@{$candidate_junction_header->target_name})
-//	{
-//		last if ($junction_seq_id eq $test_junction_seq_id);
-//		$junction_tid++;
-//	}
-//	die if ($junction_tid >= $candidate_junction_header->n_targets);
-//
-//
-//	print "Testing Junction Candidate: $junction_seq_id\n" if ($verbose);
-//	print "Unique Matches: " . (scalar @unique_matches) . " Degenerate Matches: " . (scalar @degenerate_matches) . "\n" if ($verbose);
-//
+	bool success = true;
+
+	// There are two kinds of matches to a candidate junction:
+
+	// (1) Reads that uniquely map to one candidate junction (but any number of times to reference)
+	vector<MatchedJunction> unique_matches;
+	if (matched_junction_ref.count(junction_seq_id))
+		unique_matches = matched_junction_ref[junction_seq_id];
+
+	// (2) Reads that uniquely map equally well to more than one candidate junction (and any number of times to reference)
+	map<string, MatchedJunction> degenerate_matches;
+	if (degenerate_matches_ref.count(junction_seq_id))
+			degenerate_matches = degenerate_matches_ref[junction_seq_id];
+
+	// FAI target id -- there is no easy way to get this short of loading the entire array and going through them...
+	// Debatable about whether we save more string comparisons by doing this here or each time
+
+	// @JEB v1> hash by tid rather than alignment junction names!!
+	int32_t junction_tid;
+	for (junction_tid = 0; junction_tid < junction_tam.bam_header->n_targets; junction_tid++)
+		if (junction_tam.bam_header->target_name[junction_tid] == junction_seq_id) break;
+
+	assert (junction_tid < junction_tam.bam_header->n_targets);
+
+	if (verbose)
+	{
+		cout << "Testing Junction Candidate: " << junction_seq_id << endl;
+		cout << "Unique Matches: " << unique_matches.size() << " Degenerate Matches: " << degenerate_matches.size() << endl;
+	}
+
 //	#### TEST 1: Reads that go a certain number of bp into the nonoverlap sequence on each side of the junction on each strand
 //	my $max_left_per_strand = { '0'=> 0, '1'=>0 };
 //	my $max_right_per_strand = { '0'=> 0, '1'=>0 };
@@ -1264,7 +1125,7 @@ bool _alignment_overlaps_junction(const vector<JunctionInfo>& junction_info_list
 //	# Save the test info about this junction.
 //	$junction_test_info_ref->{$junction_seq_id} = $test_info;
 //	return ($failed, $has_non_overlap_only);
-//}
+}
 //
 //sub _junction_to_hybrid_list_item
 //{
@@ -1453,160 +1314,155 @@ bool _alignment_overlaps_junction(const vector<JunctionInfo>& junction_info_list
 //	return $item;
 //}
 //
-//sub _trim_ambiguous_ends
-//{
-//	my $verbose = 0;
-//	my ($a, $header, $fai, $ref_seq_info) = @_;
-//
-//	#which reference sequence?
-//	my $seq_id = $header->target_name->[$a->tid];
-//	my $ref_seq_length = $header->target_len->[$a->tid];
-//
-//	###############################################
-//	## NEW version using preacalculated trim files
-//	###############################################
-//	if ((defined $ref_seq_info) && (defined $ref_seq_info->{trims}))
-//	{
-//		### To accelerate this code further we may want to have trims
-//		### in array by target ID so translation to name and hash lookup
-//		### can be skipped.
-//
-//		my ($left_trim, $right_trim);
-//
-//		## These give identical results and seem to give identical speeds.
-//		## First one is more scalable if we want to allow trims >255
-//		$left_trim = vec($ref_seq_info->{trims}->{$seq_id}, $a->start-1, 8);
-//		$right_trim = vec($ref_seq_info->{trims}->{$seq_id}, $a->end-1+$ref_seq_length, 8);
-//		#$left_trim = unpack "C", substr($ref_seq_info->{trims}->{$seq_id}, $a->start-1, 1);
-//		#$right_trim = unpack "C", substr($ref_seq_info->{trims}->{$seq_id}, $a->end-1+$ref_seq_length, 1);
-//
-//		$left_trim += $a->query->start - 1;
-//		$right_trim += $a->l_qseq - $a->query->end;
-//
-//		#print STDERR $a->query->name . "\n";
-//		#print STDERR "start: " . ($a->start) . " end: " . ($a->end) . "\n";
-//		#print STDERR "left: " . $left_trim . " right: " . $right_trim . "\n";
-//
-//		return ( {'L'=>$left_trim, 'R'=>$right_trim} );
+Trim _trim_ambiguous_ends(const alignment& a, const tam_file& tam, cReferenceSequences& ref_seq_info)
+{
+	bool verbose = false;
+
+	// which reference sequence?
+	uint32_t tid = a.reference_target_id();
+	string seq_id = tam.bam_header->target_name[tid];
+	int32_t ref_seq_length = tam.bam_header->target_len[tid];
+
+	///////////////////////////////////////////////
+	// NEW version using preacalculated trim files
+	///////////////////////////////////////////////
+	//if ((defined $ref_seq_info) && (defined $ref_seq_info->{trims}))
+	//{
+		//TODO: To accelerate this code further we may want to have trims
+		// in array by target ID so translation to name and hash lookup
+		// can be skipped.
+
+		uint32_t left_trim = ref_seq_info.trims[seq_id][a.reference_start_0()];
+		uint32_t right_trim = ref_seq_info.trims[seq_id][a.reference_end_0() + ref_seq_length];
+
+		left_trim += a.reference_start_0();
+		right_trim += a.read_length() - a.reference_end_1();
+
+		cerr << a.read_name() << endl;
+		cerr << "start: " << a.reference_start_1() << " end: " << a.reference_end_1() << endl;
+		cerr << "left: " << left_trim << " right: " << right_trim << endl;
+
+		Trim retval = { to_string(left_trim), to_string(right_trim) };
+		return retval;
 //	}
-//
-//	###############################################
-//	## OLD version using Perl string comparisons
-//	###############################################
-//
-//	# Has two keys: 'left' and 'right' which are how far to inset in REFERENCE coords.
-//	my $trims;
-//
-//	## using $fai is more compatible, and must currently be used for junctions
-//	## using $ref_seq_info is slightly quicker, and currently used for the reference sequence
-//	my $ref_strings;
-//	if (defined $ref_seq_info)
-//	{
-//		$ref_strings = $ref_seq_info->{ref_strings};
-//	}
-//
-//	#create sequence snippets that we need to pay attention to ends of sequence
-//	my $expand_by = 18; #36
-//	my $expand_left = ($a->start-1 < $expand_by) ? $a->start-1 : $expand_by;
-//	my $expand_right = ($ref_seq_length - $a->end < $expand_by) ? $ref_seq_length-$a->end : $expand_by;
-//
-//	my $expanded_ref_string = '';
-//	if (defined $ref_strings)
-//	{
-//		$expanded_ref_string = substr $ref_strings->{$seq_id}, $a->start-$expand_left-1, ($a->end+$expand_right) - ($a->start-$expand_left) + 1;
-//	}
-//	## >>> transition to not using ref_seq_info
-//	else
-//	{
-//		my $expanded_ref_range = $seq_id . ':' . ($a->start-$expand_left) . '-' . ($a->end+$expand_right);
-//		$expanded_ref_string = $fai->fetch($expanded_ref_range);
-//	}
-//
-//	my $ref_string;
-//	if (defined $ref_strings)
-//	{
-//		$ref_string = substr $ref_strings->{$seq_id}, $a->start-1, $a->end - $a->start + 1;
-//	}
-//	## >>> transition to not using ref_seq_info
-//	else
-//	{
-//		my $ref_range = $seq_id . ':' . $a->start . '..' . $a->end;
-//		$ref_string = $fai->fetch( $seq_id . ':' . $a->start . '-' . $a->end );
-//	}
-//
-//	my ($q_start, $q_end) = Breseq::Shared::alignment_query_start_end($a);
-//	my $q_length = $a->l_qseq;
-//	my $qry_string = substr $a->qseq, $q_start-1, $q_end - $q_start + 1;
-//	my $full_qry_string = $a->qseq;
-//
-//	#take maximum of inset for query and reference
-//#	my ($left_ref_inset, $right_ref_inset) = (0,0); ##TESTING
-//	my ($left_ref_inset, $right_ref_inset) = _ambiguous_end_offsets_from_sequence($ref_string);
-//
-//	#add UNALIGNED bases at te end of reads
-//	$left_ref_inset += $q_start - 1;
-//	$right_ref_inset += $q_length - $q_end;
-//
-//	## save a little time if qry and ref sequences are identical.
-//	my ($left_qry_inset, $right_qry_inset) = (0,0);
-//	if ($ref_string ne $qry_string)
-//	{
-//		($left_qry_inset, $right_qry_inset) = _ambiguous_end_offsets_from_sequence($qry_string);
-//		#add UNALIGNED bases at the end of reads
-//		$left_qry_inset += $q_start - 1;
-//		$right_qry_inset += $q_length - $q_end;
-//	}
-//
-//
-//#	my ($left_full_qry_inset, $right_full_qry_inset) = (0,0); ##TESTING
-//#	my ($left_ref_expanded_inset, $right_ref_expanded_inset) = (0,0); ##TESTING
-//
-//	my ($left_full_qry_inset, $right_full_qry_inset) = _ambiguous_end_offsets_from_sequence($full_qry_string);
-//	my ($left_ref_expanded_inset, $right_ref_expanded_inset)
-//		= _ambiguous_end_offsets_from_expanded_sequence($expand_left, $expand_right, $expanded_ref_string);
-//
-//	if ($verbose)
-//	{
-//		print "Whole Read: $ref_string\n";
-//		print "Qry Start, End: $q_start, $q_end\n";
-//		print "Ref: $ref_string\n";
-//		print "Ref insets: $left_ref_inset, $right_ref_inset\n";
-//		print "Qry: $qry_string\n";
-//		print "Qry insets: $left_qry_inset, $right_qry_inset\n";
-//		print "Full Qry: $full_qry_string\n";
-//		print "Full Qry insets: $left_full_qry_inset, $right_full_qry_inset\n";
-//		print "Expanded: $expanded_ref_string\n";
-//		print "Expand: $expand_left, $expand_right\n";
-//		print "Expanded Ref insets: $left_ref_expanded_inset, $right_ref_expanded_inset\n";
-//	}
-//
-//	$left_qry_inset = ($left_qry_inset > $left_full_qry_inset) ? $left_qry_inset : $left_full_qry_inset;
-//	$right_qry_inset = ($right_qry_inset > $right_full_qry_inset) ? $right_qry_inset : $right_full_qry_inset;
-//
-//	$left_ref_inset = ($left_ref_inset > $left_ref_expanded_inset) ? $left_ref_inset : $left_ref_expanded_inset;
-//	$right_ref_inset = ($right_ref_inset > $right_ref_expanded_inset) ? $right_ref_inset : $right_ref_expanded_inset;
-//
-//	##
-//	# Correct insets in the ref sequence to read coordinates, which must pay attention to gaps
-//	##
-//
-//	#if no gaps, then just need to take the greater one
-//	my $left_ref_count = ($left_ref_inset > $left_qry_inset) ? $left_ref_inset : $left_qry_inset;
-//	my $left_qry_count = $left_ref_count;
-//	my $right_ref_count = ($right_ref_inset > $right_qry_inset) ? $right_ref_inset : $right_qry_inset;
-//	my $right_qry_count = $right_ref_count;
-//
-//	if ($verbose)
-//	{
-//		print "Ref insets: $left_ref_inset, $right_ref_inset\n";
-//		print "Full Qry insets: $left_full_qry_inset, $right_full_qry_inset\n";
-//		print "Expanded Ref insets: $left_ref_expanded_inset, $right_ref_expanded_inset\n";
-//		print "Qry Count: $left_qry_count, $right_qry_count\n";
-//	}
-//
-//	return ( {'L'=>$left_qry_count, 'R'=>$right_qry_count} );
-//}
-//
+
+	//	###############################################
+	//	## OLD version using Perl string comparisons
+	//	###############################################
+	//
+	//	# Has two keys: 'left' and 'right' which are how far to inset in REFERENCE coords.
+	//	my $trims;
+	//
+	//	## using $fai is more compatible, and must currently be used for junctions
+	//	## using $ref_seq_info is slightly quicker, and currently used for the reference sequence
+	//	my $ref_strings;
+	//	if (defined $ref_seq_info)
+	//	{
+	//		$ref_strings = $ref_seq_info->{ref_strings};
+	//	}
+	//
+	//	#create sequence snippets that we need to pay attention to ends of sequence
+	//	my $expand_by = 18; #36
+	//	my $expand_left = ($a->start-1 < $expand_by) ? $a->start-1 : $expand_by;
+	//	my $expand_right = ($ref_seq_length - $a->end < $expand_by) ? $ref_seq_length-$a->end : $expand_by;
+	//
+	//	my $expanded_ref_string = '';
+	//	if (defined $ref_strings)
+	//	{
+	//		$expanded_ref_string = substr $ref_strings->{$seq_id}, $a->start-$expand_left-1, ($a->end+$expand_right) - ($a->start-$expand_left) + 1;
+	//	}
+	//	## >>> transition to not using ref_seq_info
+	//	else
+	//	{
+	//		my $expanded_ref_range = $seq_id . ':' . ($a->start-$expand_left) . '-' . ($a->end+$expand_right);
+	//		$expanded_ref_string = $fai->fetch($expanded_ref_range);
+	//	}
+	//
+	//	my $ref_string;
+	//	if (defined $ref_strings)
+	//	{
+	//		$ref_string = substr $ref_strings->{$seq_id}, $a->start-1, $a->end - $a->start + 1;
+	//	}
+	//	## >>> transition to not using ref_seq_info
+	//	else
+	//	{
+	//		my $ref_range = $seq_id . ':' . $a->start . '..' . $a->end;
+	//		$ref_string = $fai->fetch( $seq_id . ':' . $a->start . '-' . $a->end );
+	//	}
+	//
+	//	my ($q_start, $q_end) = Breseq::Shared::alignment_query_start_end($a);
+	//	my $q_length = $a->l_qseq;
+	//	my $qry_string = substr $a->qseq, $q_start-1, $q_end - $q_start + 1;
+	//	my $full_qry_string = $a->qseq;
+	//
+	//	#take maximum of inset for query and reference
+	//#	my ($left_ref_inset, $right_ref_inset) = (0,0); ##TESTING
+	//	my ($left_ref_inset, $right_ref_inset) = _ambiguous_end_offsets_from_sequence($ref_string);
+	//
+	//	#add UNALIGNED bases at te end of reads
+	//	$left_ref_inset += $q_start - 1;
+	//	$right_ref_inset += $q_length - $q_end;
+	//
+	//	## save a little time if qry and ref sequences are identical.
+	//	my ($left_qry_inset, $right_qry_inset) = (0,0);
+	//	if ($ref_string ne $qry_string)
+	//	{
+	//		($left_qry_inset, $right_qry_inset) = _ambiguous_end_offsets_from_sequence($qry_string);
+	//		#add UNALIGNED bases at the end of reads
+	//		$left_qry_inset += $q_start - 1;
+	//		$right_qry_inset += $q_length - $q_end;
+	//	}
+	//
+	//
+	//#	my ($left_full_qry_inset, $right_full_qry_inset) = (0,0); ##TESTING
+	//#	my ($left_ref_expanded_inset, $right_ref_expanded_inset) = (0,0); ##TESTING
+	//
+	//	my ($left_full_qry_inset, $right_full_qry_inset) = _ambiguous_end_offsets_from_sequence($full_qry_string);
+	//	my ($left_ref_expanded_inset, $right_ref_expanded_inset)
+	//		= _ambiguous_end_offsets_from_expanded_sequence($expand_left, $expand_right, $expanded_ref_string);
+	//
+	//	if ($verbose)
+	//	{
+	//		print "Whole Read: $ref_string\n";
+	//		print "Qry Start, End: $q_start, $q_end\n";
+	//		print "Ref: $ref_string\n";
+	//		print "Ref insets: $left_ref_inset, $right_ref_inset\n";
+	//		print "Qry: $qry_string\n";
+	//		print "Qry insets: $left_qry_inset, $right_qry_inset\n";
+	//		print "Full Qry: $full_qry_string\n";
+	//		print "Full Qry insets: $left_full_qry_inset, $right_full_qry_inset\n";
+	//		print "Expanded: $expanded_ref_string\n";
+	//		print "Expand: $expand_left, $expand_right\n";
+	//		print "Expanded Ref insets: $left_ref_expanded_inset, $right_ref_expanded_inset\n";
+	//	}
+	//
+	//	$left_qry_inset = ($left_qry_inset > $left_full_qry_inset) ? $left_qry_inset : $left_full_qry_inset;
+	//	$right_qry_inset = ($right_qry_inset > $right_full_qry_inset) ? $right_qry_inset : $right_full_qry_inset;
+	//
+	//	$left_ref_inset = ($left_ref_inset > $left_ref_expanded_inset) ? $left_ref_inset : $left_ref_expanded_inset;
+	//	$right_ref_inset = ($right_ref_inset > $right_ref_expanded_inset) ? $right_ref_inset : $right_ref_expanded_inset;
+	//
+	//	##
+	//	# Correct insets in the ref sequence to read coordinates, which must pay attention to gaps
+	//	##
+	//
+	//	#if no gaps, then just need to take the greater one
+	//	my $left_ref_count = ($left_ref_inset > $left_qry_inset) ? $left_ref_inset : $left_qry_inset;
+	//	my $left_qry_count = $left_ref_count;
+	//	my $right_ref_count = ($right_ref_inset > $right_qry_inset) ? $right_ref_inset : $right_qry_inset;
+	//	my $right_qry_count = $right_ref_count;
+	//
+	//	if ($verbose)
+	//	{
+	//		print "Ref insets: $left_ref_inset, $right_ref_inset\n";
+	//		print "Full Qry insets: $left_full_qry_inset, $right_full_qry_inset\n";
+	//		print "Expanded Ref insets: $left_ref_expanded_inset, $right_ref_expanded_inset\n";
+	//		print "Qry Count: $left_qry_count, $right_qry_count\n";
+	//	}
+	//
+	//	return ( {'L'=>$left_qry_count, 'R'=>$right_qry_count} );
+}
+
 //sub _ambiguous_end_offsets_from_expanded_sequence
 //{
 //	my $verbose = 0;
