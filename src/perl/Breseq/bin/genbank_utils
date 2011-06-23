@@ -1,0 +1,589 @@
+#!/usr/bin/env perl
+
+###
+# Pod Documentation
+###
+
+=head1 NAME
+
+genbank_utils
+
+=head1 SYNOPSIS
+
+Usage: genbank_utils SPLIT -i input.gbk -o output.gbk
+
+Perform various operations on GenBank files that preserve 
+
+=head1 DESCRIPTION
+
+=over
+
+=head1 COMMAND: SPLIT
+
+=over
+
+=item B<-i> <file path> 
+
+Input GanBank file. Output files will be named in the form <input>_#.
+
+=item B<-n> <integer>
+
+Number of equal files to split GenBank into.
+
+=back
+
+=back
+
+=head1 AUTHOR
+
+Jeffrey E. Barrick <jeffrey.e.barrick@gmail.com>
+
+=head1 LICENSE
+
+Copyright (C) 2010 Michigan State University.
+
+This is free software; you can redistribute it and/or modify it under the terms the 
+GNU General Public License as published by the Free Software Foundation; either 
+version 1, or (at your option) any later version.
+
+=cut
+
+##
+## Note that really we should use the average unique coverage as a poisson mean
+## and fit this form of generalized linear model to the observation in each file
+## simultaneously to get a per-position offset to the counts. Then we can calculate
+## a true expected 95% confidence interval. 
+##
+
+###
+# End Pod Documentation
+###
+use strict;
+
+use Getopt::Long;
+use Pod::Usage;
+use FindBin;
+use lib $FindBin::Bin;
+use Data::Dumper;
+use POSIX;
+
+#### Paths to Locally Installed Modules ####
+use Config;
+use lib $FindBin::Bin . "/../lib/perl5";
+use lib $FindBin::Bin . "/../lib/perl5/site_perl";
+use lib $FindBin::Bin . "/../lib/perl5/$Config{archname}";
+
+my $command = shift @ARGV;
+
+if ($command eq 'SPLIT')
+{
+	do_split();
+}
+elsif ("\U$command" eq 'MUTATE')
+{
+	do_mutate();
+}
+elsif ("\U$command" eq 'FASTA')
+{
+	do_convert_to_fasta();
+}
+elsif ("\U$command" eq 'MASK_REPEATS')
+{
+	do_mask_repeat_regions();
+}
+elsif ("\U$command" eq 'SUBSEQUENCE')
+{
+	do_subsequence();
+}
+elsif ("\U$command" eq 'INTERVAL')
+{
+	do_interval();
+}
+elsif ("\U$command" eq 'SEQUENCE')
+{
+	do_sequence();
+}
+elsif ("\U$command" eq 'CONVERT_GENOSCOPE')
+{
+	do_convert_genoscope();
+}
+
+sub do_split
+{
+	use Bio::SeqIO;
+	my ($help, $man);
+	my $verbose;
+	my $input;
+	my $n = 2;
+
+	GetOptions(
+		'help|?' => \$help, 'man' => \$man,
+		'number|n=s' => \$n,
+	);
+	pod2usage(1) if $help;
+	pod2usage(-exitstatus => 0, -verbose => 2) if $man;
+
+	my $input = shift @ARGV;
+	
+	my $ref_i = Bio::SeqIO->new( -file => "<$input");
+	my $ref_seq = $ref_i->next_seq;
+	my @features = $ref_seq->get_SeqFeatures();
+
+	for (my $i=0; $i<$n; $i++) 
+	{
+		my $start = floor($i* $ref_seq->length / $n) + 1;
+		my $end = floor(($i+1)* $ref_seq->length / $n);
+
+		print "Fragment $i: start: $start end: $end\n";
+	
+		#this strips all features...
+		my $fragment = $ref_seq->trunc($start, $end);
+		$fragment->display_id($fragment->display_id . "-$i");
+		$fragment->accession($fragment->accession . "-$i");
+	
+		my $fragment_loc = Bio::Location::Simple->new(-start => $start, -end => $end, -strand => 0 );
+		foreach my $f (@features)
+		{
+		
+			if ($fragment_loc->overlaps($f->location))
+			{
+				#print $f->start . " " . $f->end . "\n";
+			
+				if ($f->location->start < $fragment_loc->start)
+				{
+					$f->location->start_pos_type('BEFORE');
+					$f->location->start($fragment_loc->start);
+				}
+			
+				if ($f->location->end > $fragment_loc->end)
+				{
+					$f->location->end_pos_type('AFTER');
+					$f->location->end($fragment_loc->end);
+				}			
+			
+				$f->location->start( $f->location->start + 1 - $fragment_loc->start );
+				$f->location->end( $f->location->end + 1 - $fragment_loc->start );
+						
+				$fragment->add_SeqFeature($f);
+			}
+		}
+	
+	
+		my $output = $input;
+		$output =~ s/\.(.+?)$/-$i.$1/;
+	
+		my $ref_o = Bio::SeqIO->new( -file => ">$output", -format => "GenBank");
+		$ref_o->write_seq($fragment);
+	}
+}
+
+## Changes fasta file
+sub do_mutate
+{
+	use Bio::SeqIO;
+	
+	my ($help, $man);
+	my $verbose;
+	my $output = "output.fna";
+
+	GetOptions(
+		'help|?' => \$help, 'man' => \$man,
+		'output|o=s' => \$output,
+	);
+	
+	pod2usage(1) if $help;
+	pod2usage(-exitstatus => 0, -verbose => 2) if $man;
+
+	my $input = shift @ARGV;
+	my $change = shift @ARGV;
+
+	my $ref_i = Bio::SeqIO->new( -file => "<$input");
+	my $ref_seq = $ref_i->next_seq;
+	my $seq = $ref_seq->seq;
+	
+	my $ref_o = Bio::SeqIO->new( -file => ">$output");
+	
+	my ($pos, $len, $new) = split "-", $change;
+	
+	print "Position = $pos\n";
+	print "Length   = $len\n";
+	print "New      = $new\n";
+
+	$new =~ s/\.//g;
+	substr($seq, $pos-1, $len) = $new;
+	
+	$ref_seq->seq($seq);
+	$ref_o->write_seq($ref_seq);	
+}
+
+
+sub do_split
+{
+	use Bio::SeqIO;
+	my ($help, $man);
+	my $verbose;
+	my $input;
+	my $n = 2;
+
+	GetOptions(
+		'help|?' => \$help, 'man' => \$man,
+		'number|n=s' => \$n,
+	);
+	pod2usage(1) if $help;
+	pod2usage(-exitstatus => 0, -verbose => 2) if $man;
+
+	my $input = shift @ARGV;
+	
+	my $ref_i = Bio::SeqIO->new( -file => "<$input");
+	my $ref_seq = $ref_i->next_seq;
+	my @features = $ref_seq->get_SeqFeatures();
+
+	for (my $i=0; $i<$n; $i++) 
+	{
+		my $start = floor($i* $ref_seq->length / $n) + 1;
+		my $end = floor(($i+1)* $ref_seq->length / $n);
+
+		print "Fragment $i: start: $start end: $end\n";
+	
+		#this strips all features...
+		my $fragment = $ref_seq->trunc($start, $end);
+		$fragment->display_id($fragment->display_id . "-$i");
+		$fragment->accession($fragment->accession . "-$i");
+	
+		my $fragment_loc = Bio::Location::Simple->new(-start => $start, -end => $end, -strand => 0 );
+		foreach my $f (@features)
+		{
+		
+			if ($fragment_loc->overlaps($f->location))
+			{
+				#print $f->start . " " . $f->end . "\n";
+			
+				if ($f->location->start < $fragment_loc->start)
+				{
+					$f->location->start_pos_type('BEFORE');
+					$f->location->start($fragment_loc->start);
+				}
+			
+				if ($f->location->end > $fragment_loc->end)
+				{
+					$f->location->end_pos_type('AFTER');
+					$f->location->end($fragment_loc->end);
+				}			
+			
+				$f->location->start( $f->location->start + 1 - $fragment_loc->start );
+				$f->location->end( $f->location->end + 1 - $fragment_loc->start );
+						
+				$fragment->add_SeqFeature($f);
+			}
+		}
+	
+		my $output = $input;
+		$output =~ s/\.(.+?)$/-$i.$1/;
+	
+		my $ref_o = Bio::SeqIO->new( -file => ">$output", -format => "GenBank");
+		$ref_o->write_seq($fragment);
+	}
+}
+
+sub do_mask_repeat_regions
+{
+	use Bio::SeqIO;
+	use	Breseq::Shared;
+	
+	my ($help, $man);
+	my $verbose;
+	my $input;
+	my $output = "output.gbk";
+	GetOptions(
+		'help|?' => \$help, 'man' => \$man,
+		'output|o=s' => \$output, 		
+	);
+	pod2usage(1) if $help;
+	pod2usage(-exitstatus => 0, -verbose => 2) if $man;
+	
+	my $input = shift @ARGV;
+
+	my $ref_i = Bio::SeqIO->new( -file => "<$input");
+	my $ref_seq = $ref_i->next_seq;
+	my @features = $ref_seq->get_SeqFeatures();
+	
+	my $seq = $ref_seq->seq;
+	print +(length($seq)) . "\n";
+	
+	foreach my $f (@features)
+	{
+		if ($f->primary_tag eq 'repeat_region')
+		{
+			print $f->start . " " . $f->end . "\n";
+			my $len = $f->end-$f->start+1;
+			substr($seq, $f->start-1, $len) = 'N' x $len;
+		}
+	}
+	print +(length($seq)) . "\n";
+	
+	$ref_seq->seq($seq);
+	my $seq = $ref_seq->seq;
+	print "$seq\n";
+	print +(length($seq)) . "\n";
+
+	my $ref_o = Bio::SeqIO->new(-format=> 'GENBANK', -file => ">$output");
+	$ref_o->write_seq($ref_seq);	
+	
+}
+
+
+sub do_subsequence
+{
+	use Bio::SeqIO;
+	use	Breseq::Shared;
+	
+	my ($help, $man);
+	my $verbose;
+	my $input;
+	my $output = "output.gbk";
+	GetOptions(
+		'help|?' => \$help, 'man' => \$man,
+		'input|i=s' => \$input, 
+		'output|o=s' => \$output, 		
+	);
+	pod2usage(1) if $help;
+	(defined $input) or pod2usage(1);	
+	pod2usage(-exitstatus => 0, -verbose => 2) if $man;
+	
+	my @regions = @ARGV;
+
+	my $ref_i = Bio::SeqIO->new( -file => "<$input");
+	my $ref_seq = $ref_i->next_seq;
+	my @features = $ref_seq->get_SeqFeatures();
+
+	my $ref_o = Bio::SeqIO->new(-format=> 'GENBANK', -file => ">$output");
+	
+	foreach my $region (@regions)
+	{
+		my ($seq_id, $start, $end) = Breseq::Shared::region_to_coords($region, $ref_seq->length);
+
+		my $strand = 1;
+		if ($start > $end)
+		{
+			$strand = -1;
+			($start, $end) = ($end, $start);
+		}
+
+		my $fragment = $ref_seq->trunc($start, $end);
+		my $fragment_loc = Bio::Location::Simple->new(-start => $start, -end => $end, -strand => $strand );
+		foreach my $f (@features)
+		{
+			if ($fragment_loc->overlaps($f->location))
+			{
+				#print $f->start . " " . $f->end . "\n";
+		
+				if ($f->location->start < $fragment_loc->start)
+				{
+					$f->location->start_pos_type('BEFORE');
+					$f->location->start($fragment_loc->start);
+				}
+		
+				if ($f->location->end > $fragment_loc->end)
+				{
+					$f->location->end_pos_type('AFTER');
+					$f->location->end($fragment_loc->end);
+				}			
+		
+				$f->location->start( $f->location->start + 1 - $fragment_loc->start );
+				$f->location->end( $f->location->end + 1 - $fragment_loc->start );
+				$f->location->strand($f->location->strand * $strand);
+					
+				$fragment->add_SeqFeature($f);
+			}
+		}
+
+		$ref_o->write_seq($fragment);	
+	}
+}
+
+
+## Changes fasta file
+sub do_convert_to_fasta
+{
+	use Bio::SeqIO;
+	
+	my ($help, $man);
+	my $verbose;
+	my $output = "output.fna";
+
+	GetOptions(
+		'help|?' => \$help, 'man' => \$man,
+		'output|o=s' => \$output,
+	);
+	pod2usage(1) if $help;
+	pod2usage(-exitstatus => 0, -verbose => 2) if $man;
+
+	my $input = shift @ARGV;
+
+	my $ref_i = Bio::SeqIO->new( -file => "<$input");
+	my $ref_seq = $ref_i->next_seq;
+	
+	my $ref_o = Bio::SeqIO->new( -file => ">$output");
+	$ref_o->write_seq($ref_seq);	
+}
+
+sub do_sequence
+{
+	use Bio::SeqIO;
+	use	Breseq::Shared;
+	
+	my ($help, $man);
+	my $verbose;
+	my $input;
+	GetOptions(
+		'help|?' => \$help, 'man' => \$man,
+		'input|i=s' => \$input, 
+	);
+	pod2usage(1) if $help;
+	(defined $input) or pod2usage(1);
+	pod2usage(-exitstatus => 0, -verbose => 2) if $man;
+	
+	my @regions = @ARGV;
+
+	my $ref_i = Bio::SeqIO->new( -file => "<$input");
+	my $ref_seq = $ref_i->next_seq;
+	foreach my $region (@regions)
+	{
+		my ($seq_id, $start, $end, $insert_start, $insert_end);
+		($seq_id, $start, $end, $insert_start, $insert_end, $region)  = Breseq::Shared::region_to_coords($region, $ref_seq->length);
+
+		my $strand = 1;
+		if ($start > $end)
+		{
+			$strand = -1;
+			($start, $end) = ($end, $start);
+		}
+
+		my $location = Bio::Location::Simple->new(-start  => $start,
+		                                          -end   => $end,
+		                                          -strand => $strand);
+		# assume we already have a sequence object
+		my $out_seq = $ref_seq->subseq($location);
+		print ">$region\n$out_seq\n";
+	}
+}
+
+sub do_convert_genoscope
+{
+	my ($help, $man, $verbose);
+	my ($table_file, $genbank_file, $output_file);
+	GetOptions(
+		'help|?' => \$help, 'man' => \$man,
+		'table-file|t=s' => \$table_file,
+		'genbank-file|i=s' => \$genbank_file,
+		'output-file|o=s' => \$output_file,
+		'verbose|v' => \$verbose,
+	);
+	pod2usage(1) if $help;
+	pod2usage(-exitstatus => 0, -verbose => 2) if $man;
+	pod2usage(1) if (!$table_file || !$genbank_file || !$output_file);
+
+	### Load table
+	open TABLE, "<$table_file" or die "Could not open $table_file\n";
+	my @table_lines = <TABLE>;
+	chomp @table_lines;
+	my $header_line = shift @table_lines;
+	my @header_items = split "\t", $header_line;
+	my @table_list;
+	foreach my $line (@table_lines)
+	{
+		my @line_items = split "\t", $line;
+		my $on = 0;
+		my $item;
+		while ($on < scalar @line_items)
+		{
+			$item->{$header_items[$on]} =$line_items[$on];
+			$on++;
+		}
+		$item->{original_line} = $line;
+		push @table_list, $item;
+	}
+
+	#print Dumper(\@table_list);
+
+	# Load Genbank sequence and remove annotation
+	my $in_genbank = Bio::SeqIO->new(-file => "$genbank_file", -format => "genbank");
+	my $seq = $in_genbank->next_seq;
+	
+	my @original_features = $seq->get_SeqFeatures;
+	$seq->remove_SeqFeatures;
+	$seq->add_SeqFeature($original_features[0]);
+	my @repeats = grep { $_->primary_tag eq 'repeat_region' } @original_features;
+	
+	# Open file we will be writing to
+	my $out = Bio::SeqIO->new(-file => ">$output_file", -format => "genbank");
+
+	FEATURE: foreach my $item (@table_list) 
+	{
+		my $new_feature = new Bio::SeqFeature::Generic;
+		
+		#add the repeat at an appropriate position
+		if ((scalar @repeats > 0) && ($repeats[0]->start - 100 < $item->{Begin}))
+		{
+			my $this_repeat = shift @repeats;
+			$seq->add_SeqFeature($this_repeat);
+		}
+		
+		##Same for anything
+		$new_feature->start($item->{Begin});
+		$new_feature->end($item->{End});
+		$new_feature->strand( ($item->{Frame} < 0) ? -1 : +1);		
+
+		$new_feature->primary_tag($item->{Type});
+		$new_feature->add_tag_value('gene', $item->{Gene});		
+		$new_feature->add_tag_value('locus_tag', $item->{Label});
+		
+		my @ec_numbers = split /,\s*/, $item->{ECnumber};
+		foreach my $ec_number (@ec_numbers)
+		{
+			$new_feature->add_tag_value('EC_number', $ec_number);
+		}
+		
+		$new_feature->add_tag_value('product', $item->{Product});
+		$new_feature->add_tag_value('note', "synonym: $item->{Synonyms}") if ($item->{Synonyms});
+		$new_feature->add_tag_value('comments', "$item->{Comments}") if ($item->{Comments});
+		
+		#extra processing for some types:
+
+		if (($item->{Type} eq 'CDS') || ($item->{Type} eq 'fCDS'))
+		{
+			$new_feature->primary_tag('CDS');
+			$new_feature->add_tag_value('pseudo', 1) if ($item->{Mutation} eq 'pseudo');
+			$new_feature->add_tag_value('transl_table', 11);
+			$seq->add_SeqFeature($new_feature);
+			
+			#in addition to the primary, add a gene tag right after it
+			$new_feature = new Bio::SeqFeature::Generic;
+		
+			$new_feature->start($item->{Begin});
+			$new_feature->end($item->{End});
+			$new_feature->strand( ($item->{Frame} < 0) ? -1 : +1);
+		
+			$new_feature->primary_tag('gene');
+			$new_feature->add_tag_value('gene', $item->{Gene});			
+			$new_feature->add_tag_value('locus_tag', $item->{Label});
+			$new_feature->add_tag_value('pseudo', 1) if ($item->{Mutation} eq 'pseudo');
+		}
+		
+		$seq->add_SeqFeature($new_feature);
+	}
+
+	$out->write_seq($seq);
+}
+
+sub GetTag
+{
+	my ($Feature, $Tag, $Allow_Array) = @_;	
+	$Allow_Array = 0 if (!defined $Allow_Array);
+	
+	return '' if (!$Feature->has_tag("$Tag"));
+	my @Tag_Values = $Feature->get_tag_values("$Tag");
+	return '' if (scalar @Tag_Values == 0);
+	return $Tag_Values[0] if (!$Allow_Array);
+	return @Tag_Values;
+}
