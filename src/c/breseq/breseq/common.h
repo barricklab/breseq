@@ -223,6 +223,14 @@ namespace breseq {
 	};
 
 
+	template <class T, class U> inline vector<T> get_keys(map<T,U> input)
+	{
+		vector<T> retval;
+		for (class map<T,U>::iterator it = input.begin(); it != input.end(); it++)
+			retval.push_back(it->first);
+		return retval;
+	}
+
 	//!< Split a string on a delimiter into a vector
 	inline vector<string> split(
 					const  string  & theString,
@@ -392,6 +400,26 @@ namespace breseq {
 		int32_t min_overlap_score;
 		int32_t pos_hash_score;
 		map<uint32_t, uint32_t> read_begin_hash;
+
+		struct TestInfo {
+			uint32_t max_left;
+			uint32_t max_left_minus;
+			uint32_t max_left_plus;
+			uint32_t max_right;
+			uint32_t max_right_minus;
+			uint32_t max_right_plus;
+			uint32_t max_min_right;
+			uint32_t max_min_right_minus;
+			uint32_t max_min_right_plus;
+			uint32_t max_min_left;
+			uint32_t max_min_left_minus;
+			uint32_t max_min_left_plus;
+			uint32_t coverage_minus;
+			uint32_t coverage_plus;
+			uint32_t total_non_overlap_reads;
+			uint32_t min_overlap_score;
+			uint32_t pos_hash_score;
+		} test_info;
 
 		struct Sorter {
 			bool operator() (const string& lhs, const string& rhs) const { return (lhs < rhs); }
