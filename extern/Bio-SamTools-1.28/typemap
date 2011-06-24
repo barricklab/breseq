@@ -1,0 +1,10 @@
+TYPEMAP
+Bio::DB::Bam		T_PTROBJ
+Bio::DB::Bam::Header	T_PTROBJ
+Bio::DB::Bam::Alignment	T_PTROBJ
+Bio::DB::Bam::Index	T_PTROBJ
+Bio::DB::Sam::Fai       T_PTROBJ
+Bio::DB::Tam            T_PTROBJ
+Bio::DB::Bam::Pileup    T_PTROBJ
+
+
