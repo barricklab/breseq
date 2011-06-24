@@ -171,7 +171,7 @@ class alignment {
     int32_t mate_start_1() const {return mate_start_0() + 1; };
 
     inline  bool beginning_to_end_match() const
-    { return ((query_start_1() == 1) && (query_end_1() == read_length())); }
+    { return ((!unmapped()) && (query_start_1() == 1) && (query_end_1() == read_length())); }
 
 
     //! Number of bases before this position (on read strand)
@@ -224,7 +224,7 @@ class alignment {
     inline uint8_t* aux_get(const char tag[2]) const { return bam_aux_get(_a, tag); }
     
     //! Is this read unmapped?
-    inline bool unmapped() { return flag() & BAM_FUNMAP; }
+    inline bool unmapped() const { return flag() & BAM_FUNMAP; }
     
     inline uint32_t aux_get_i(const char tag[2]) const 
     { 

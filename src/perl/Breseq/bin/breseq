@@ -170,8 +170,9 @@ if ($settings->do_step('sequence_conversion_done_file_name', "Read and reference
 		die if (!defined $s_rf->{original_qual_format});
 		die if (!defined $s_rf->{converted_fastq_name});
 
-		## Save the converted file name
-		$settings->{read_file_to_converted_fastq_file}->{$read_file} = $s_rf->{converted_fastq_name};
+		## Save the converted file name -- have to save it in summary because only that 
+		## is reloaded if we skip this step.
+		$s->{converted_fastq_name}->{$read_file} = $s_rf->{converted_fastq_name};
 		
 		## Record statistics
 		$overall_max_read_length = $s_rf->{max_read_length} if ((!defined $overall_max_read_length) || ($s_rf->{max_read_length} > $overall_max_read_length));
@@ -219,13 +220,29 @@ if ($settings->do_step('sequence_conversion_done_file_name', "Read and reference
 	$settings->done_step('sequence_conversion_done_file_name');
 }
 
-#load this info
+
+#test this! -- load C++ info
+if (0) {
+	my $reference_features_file_name = $settings->file_name('reference_features_file_name');
+	my $reference_fasta_file_name = $settings->file_name('reference_fasta_file_name');
+	$ref_seq_info = ReferenceSequence::bridge_load_ref_seq_info($summary, $reference_features_file_name, $reference_fasta_file_name);
+}
+
 $ref_seq_info = Storable::retrieve($ref_seq_info_file_name);
 die "Can't retrieve data from file $ref_seq_info_file_name!\n" if (!$ref_seq_info);
 $summary->{sequence_conversion} = Storable::retrieve($sequence_converson_summary_file_name);
 die "Can't retrieve data from file $sequence_converson_summary_file_name!\n" if (!$summary->{sequence_conversion});
 (defined $summary->{sequence_conversion}->{max_read_length}) or die "Can't retrieve max read length from file $sequence_converson_summary_file_name\n";
+
+## reload certain information into $settings from $summary
+foreach my $read_file (keys %{$summary->{sequence_conversion}->{reads}})
+{
+	if (defined $summary->{sequence_conversion}->{reads}->{$read_file}->{converted_fastq_name}) {
+		$settings->{read_file_to_converted_fastq_file}->{$read_file} = $summary->{sequence_conversion}->{reads}->{$read_file}->{converted_fastq_name};
+	}
+}
 $settings->{max_read_length} = $summary->{sequence_conversion}->{max_read_length};
+$settings->{max_smalt_diff} = floor($settings->{max_read_length}/2);
 $settings->{total_reference_sequence_length} = $summary->{sequence_conversion}->{total_reference_sequence_length};
 
 #load trim data per refseq
@@ -269,14 +286,24 @@ if ($settings->do_step('reference_alignment_done_file_name', "Read alignment to 
 	### create ssaha2 hash
 	my $reference_hash_file_name = $settings->file_name('reference_hash_file_name');
 	my $reference_fasta_file_name = $settings->file_name('reference_fasta_file_name');
-	Breseq::Shared::system("ssaha2Build -rtype solexa -skip 1 -save $reference_hash_file_name $reference_fasta_file_name");		
 	
+	if (!$settings->{smalt}) 
+	{
+		Breseq::Shared::system("ssaha2Build -rtype solexa -skip 1 -save $reference_hash_file_name $reference_fasta_file_name");		
+	}
+	else
+	{
+		my $smalt = $settings->ctool("smalt");
+		Breseq::Shared::system("$smalt index -k 13 -s 1 $reference_hash_file_name $reference_fasta_file_name");		
+	}
 	### ssaha2 align reads to reference sequences
 	foreach my $read_struct ($settings->read_structures)
 	{		
 		##reads are paired
 		if (defined $read_struct->{min_pair_dist} && defined $read_struct->{max_pair_dist})
 		{
+			## JEB this is not working currently
+			die "Paired end mapping is broken.";
 			die if (scalar @{$read_struct->{read_fastq_list}} != 2);
 			
 			my $fastq_1 = $read_struct->{read_fastq_list}->[0];
@@ -285,7 +312,6 @@ if ($settings->do_step('reference_alignment_done_file_name', "Read alignment to 
 			my $max = $read_struct->{max_pair_dist};
 			
 			my $reference_sam_file_name = $settings->file_name('reference_sam_file_name', {'#'=>$read_struct->{base_name}});	
-#Test100925 Breseq::Shared::system("ssaha2 -save $reference_hash_file_name -rtype solexa -ckmer 1  -skip 1 -cut 1000000000 -seeds 1 -output sam_soft -outfile $reference_sam_file_name -multi 1 -mthresh 9 -pair $min,$max $fastq_1 $fastq_2");
 			Breseq::Shared::system("ssaha2 -save $reference_hash_file_name -kmer 13 -skip 1 -seeds 1 -score 12 -cmatch 9 -ckmer 1 -output sam_soft -outfile $reference_sam_file_name -multi 1 -mthresh 9 -pair $min,$max $fastq_1 $fastq_2");
 		}
 		
@@ -297,8 +323,15 @@ if ($settings->do_step('reference_alignment_done_file_name', "Read alignment to 
 			my $read_fastq_file = $settings->read_file_to_fastq_file_name($read_name);
 			my $reference_sam_file_name = $settings->file_name('reference_sam_file_name', {'#'=>$read_name});	
 			
-#Test100925 Breseq::Shared::system("ssaha2 -save $reference_hash_file_name -rtype solexa -ckmer 1 -skip 1 -cut 1000000000 -seeds 1 -output sam_soft -outfile $reference_sam_file_name $read_fastq_file");				
-			Breseq::Shared::system("ssaha2 -save $reference_hash_file_name -kmer 13 -skip 1 -seeds 1 -score 12 -cmatch 9 -ckmer 1 -output sam_soft -outfile $reference_sam_file_name $read_fastq_file");		
+			if (!$settings->{smalt}) 
+			{
+				Breseq::Shared::system("ssaha2 -save $reference_hash_file_name -kmer 13 -skip 1 -seeds 1 -score 12 -cmatch 9 -ckmer 1 -output sam_soft -outfile $reference_sam_file_name $read_fastq_file");		
+			}
+			else
+			{
+				my $smalt = $settings->ctool("smalt");
+				Breseq::Shared::system("$smalt map -d $settings->{max_smalt_diff} -m 12 -f samsoft -o $reference_sam_file_name $reference_hash_file_name $read_fastq_file");			
+			}
 		}
 	}
 	
@@ -453,7 +486,15 @@ sub candidate_junction_alignment {}
 
 		if (-s $candidate_junction_fasta_file_name > 0)
 		{
-			Breseq::Shared::system("ssaha2Build -rtype solexa -skip 1 -save $candidate_junction_hash_file_name $candidate_junction_fasta_file_name");		
+			if (!$settings->{smalt}) 
+			{
+				Breseq::Shared::system("ssaha2Build -rtype solexa -skip 1 -save $candidate_junction_hash_file_name $candidate_junction_fasta_file_name");		
+			}
+			else
+			{
+				my $smalt = $settings->ctool("smalt");
+				Breseq::Shared::system("$smalt index -k 13 -s 1 $candidate_junction_hash_file_name $candidate_junction_fasta_file_name");		
+			}
 		}
 		
 	
@@ -462,12 +503,19 @@ sub candidate_junction_alignment {}
 		foreach my $read_name ($settings->read_files)
 		{		
 			my $candidate_junction_sam_file_name = $settings->file_name('candidate_junction_sam_file_name', {'#'=>$read_name});	
+			
 			my $read_fastq_file = $settings->read_file_to_fastq_file_name($read_name);
-
-			if (-e "$candidate_junction_hash_file_name.base")
+			print "$read_fastq_file\n";
+			
+			if (!$settings->{smalt} && (-e "$candidate_junction_hash_file_name.base"))
 			{
 				Breseq::Shared::system("ssaha2 -save $candidate_junction_hash_file_name -best 1 -rtype solexa -skip 1 -seeds 1 -output sam_soft -outfile $candidate_junction_sam_file_name $read_fastq_file");		
 				# Note: Added -best parameter to try to avoid too many matches to redundant junctions!
+			}
+			elsif (-e "$candidate_junction_hash_file_name.sma")
+			{
+				my $smalt = $settings->ctool("smalt");
+				Breseq::Shared::system("$smalt map -d $settings->{max_smalt_diff} -m 12 -f samsoft -o $candidate_junction_sam_file_name $candidate_junction_hash_file_name $read_fastq_file");			
 			}
 		}
 		

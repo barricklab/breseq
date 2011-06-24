@@ -115,6 +115,15 @@ namespace breseq {
         // fastq quality convert
         fqc.convert_sequence(on_sequence);
         
+        // replace "/" characters
+        size_t pos = 0;
+        pos = on_sequence.m_name.find("/", pos);
+        while (pos != string::npos)
+        {
+          on_sequence.m_name.replace(pos, 1, "_");
+          pos = on_sequence.m_name.find("/", pos+1);
+        }
+        
         // convert base qualities
         output_fastq_file.write_sequence(on_sequence);
         
@@ -122,6 +131,7 @@ namespace breseq {
       input_fastq_file.close();
       output_fastq_file.close();
       
+      converted_fastq_name = convert_file_name;
     }
     
     // Output information to stdout
@@ -202,7 +212,8 @@ namespace breseq {
     
     for(uint32_t i=0; i < seq.m_qualities.size(); i++)
     {
-      seq.m_qualities.replace(i,1,1,(*this)[seq.m_qualities[i]]);
+      //seq.m_qualities.replace(i,1,1,(*this)[seq.m_qualities[i]]);
+      seq.m_qualities[i]= (*this)[seq.m_qualities[i]];
     }
   }
   
@@ -254,14 +265,20 @@ namespace breseq {
             fprintf(stderr, "FASTQ sequence record does not begin with @NAME line.\nFile %s\nLine: %d\n", m_file_name.c_str(), m_current_line);
             exit(-1);
           }
+          
+          if (m_current_line == 1) {
+            if (sequence.m_name.find("/") != string::npos) m_needs_conversion = true;
+          }
           break;
         case 1:
           sequence.m_sequence = line;
           
           // check for extraneous DOS ending
-          if( sequence.m_sequence[sequence.m_sequence.size()-1] == '\r') {
-            sequence.m_sequence.resize(sequence.m_sequence.size()-1);
-            m_needs_conversion = true;
+          if (m_current_line == 1) {
+            if( sequence.m_sequence[sequence.m_sequence.size()-1] == '\r') {
+              sequence.m_sequence.resize(sequence.m_sequence.size()-1);
+              m_needs_conversion = true;
+            }
           }
           
           for (uint32_t i=0; i<sequence.m_sequence.size(); i++) {
