@@ -151,8 +151,8 @@ class alignment {
     uint32_t reference_start_0() const {return _a->core.pos; } ;
     uint32_t reference_start_1() const {return reference_start_0() + 1; };
 
-    uint32_t reference_end_0() const;
-    uint32_t reference_end_1() const {return reference_end_0() + 1; };
+    uint32_t reference_end_0() const { return reference_end_1() - 1; };
+    uint32_t reference_end_1() const { return bam_calend(&_a->core, bam1_cigar(_a)); };
 
     std::pair<uint32_t,uint32_t> reference_bounds_0() const 
       { return std::make_pair(reference_start_0(),reference_end_0()); };

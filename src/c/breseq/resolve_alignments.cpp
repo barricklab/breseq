@@ -444,29 +444,23 @@ namespace breseq {
 
 	//sort junction ids based on size of vector
 
-	vector<VectorSize> sorted_junction_ids;
-	for (map<string, vector<MatchedJunction> >::iterator it = matched_junction.begin(); it != matched_junction.end(); it++)
-	{
-		VectorSize info = { it->first, it->second.size() };
-		sorted_junction_ids.push_back(info);
-	}
-	sort(sorted_junction_ids.begin(), sorted_junction_ids.end(), VectorSize::sort_by_size);
+	vector<string> sorted_junction_ids = get_sorted_junction_ids(matched_junction, get_keys(matched_junction));
 
 	if (verbose) cout << "Degenerate matches before handling ones with unique matches: " << degenerate_matches.size() << endl;
 
 	for (uint32_t i = 0; i < sorted_junction_ids.size(); i++)
 	{
-		string key = sorted_junction_ids[i].junction_id;
+		string key = sorted_junction_ids[i];
 
-		bool has_non_overlap_only;
-		bool success = _test_junction(settings, /*summary,*/ key, matched_junction, degenerate_matches, junction_test_info, ref_seq_info, RREF, RCJ, *reference_tam, *junction_tam, has_non_overlap_only);
+		bool has_non_overlap_alignment;
+		bool success = _test_junction(settings, /*summary,*/ key, matched_junction, degenerate_matches, junction_test_info, ref_seq_info, RREF, RCJ, *reference_tam, *junction_tam, has_non_overlap_alignment);
 
 		// save the score in the distribution
 		add_score_to_distribution(observed_pos_hash_score_distribution, junction_test_info[key].pos_hash_score);
 		add_score_to_distribution(observed_min_overlap_score_distribution, junction_test_info[key].min_overlap_score);
 
 		// only count matches that span overlap
-		if (!has_non_overlap_only)
+		if (!has_non_overlap_alignment)
 		{
 			if (success)
 				passed_junction_ids.push_back(key);
@@ -482,49 +476,39 @@ namespace breseq {
 	// Candidate junctions with ONLY degenerate matches
 	///
 
-	sorted_junction_ids.clear();
-	for (map<string, map<string, MatchedJunction> >::iterator it = degenerate_matches.begin(); it != degenerate_matches.end(); it++)
-	{
-		VectorSize info = { it->first, it->second.size() };
-		sorted_junction_ids.push_back(info);
-	}
-	sort(sorted_junction_ids.begin(), sorted_junction_ids.end(), VectorSize::sort_by_size);
+	sorted_junction_ids = get_sorted_junction_ids(degenerate_matches, get_keys(degenerate_matches));
 
-//    while (@sorted_junction_ids)
-//    {
-//      my $key = shift @sorted_junction_ids;
-//      
-//      print "Trying degenerate $key...\n" if ($verbose);
-//      
-//      my ($failed, $has_non_overlap_only) = _test_junction($settings, $summary, $key, \%matched_junction, \%degenerate_matches, \%junction_test_info, $reference_fai, $ref_seq_info, $RREF, $reference_header, $RCJ, $junction_header);
-//## save the score in the distribution
-//      Breseq::Shared::add_score_to_distribution(\%observed_pos_hash_score_distribution, $junction_test_info{$key}->{pos_hash_score});
-//      Breseq::Shared::add_score_to_distribution(\%observed_min_overlap_score_distribution, $junction_test_info{$key}->{min_overlap_score});
-//      
-//## if it succeeded, then it may have changed the order of the remaining ones by removing some reads...
-//      if (!$failed)
-//      {
-//        @sorted_junction_ids = sort {-(scalar keys %{$degenerate_matches{$a}} <=> scalar keys %{$degenerate_matches{$b}})} keys %degenerate_matches;
-//      }
-//      
-//## only count matches that span overlap
-//      if (!$has_non_overlap_only)
-//      {
-//        if (!$failed)
-//        {
-//          push @passed_junction_ids, $key;
-//        }
-//## Failed ones are not kept in the rejected list (but they could be?).
-//      }
-//    }
-//    
-//#print successful ones out
-//    print "Successful hybrids\n" if ($verbose);
-//    
-//#Re-sort
-//    @passed_junction_ids = sort {-(scalar @{$matched_junction{$a}} <=> scalar @{$matched_junction{$b}})} @passed_junction_ids;
-//    @rejected_junction_ids = sort {-(scalar @{$matched_junction{$a}} <=> scalar @{$matched_junction{$b}})} @rejected_junction_ids;
-//    
+	while(sorted_junction_ids.size() > 0)
+	{
+		string key = sorted_junction_ids[0];
+		sorted_junction_ids.erase(sorted_junction_ids.begin());
+
+		if (verbose) cout << "Trying degenerate " << key << endl;
+
+		bool has_non_overlap_alignment;
+		bool success = _test_junction(settings, /*summary,*/ key, matched_junction, degenerate_matches, junction_test_info, ref_seq_info, RREF, RCJ, *reference_tam, *junction_tam, has_non_overlap_alignment);
+
+		// save the score in the distribution
+		add_score_to_distribution(observed_pos_hash_score_distribution, junction_test_info[key].pos_hash_score);
+		add_score_to_distribution(observed_min_overlap_score_distribution, junction_test_info[key].min_overlap_score);
+
+		// if it succeeded, then it may have changed the order of the remaining ones by removing some reads...
+		if (success)
+			sorted_junction_ids = get_sorted_junction_ids(degenerate_matches, get_keys(degenerate_matches));
+
+		// only count matches that span overlap
+		if (!has_non_overlap_alignment)
+			if (success) // Failed ones are not kept in the rejected list (but they could be?)
+				passed_junction_ids.push_back(key);
+	}
+
+	// print successful ones out
+	if (verbose) cout << "Successful hybrids" << endl;
+
+	//Re-sort
+	passed_junction_ids = get_sorted_junction_ids(matched_junction, passed_junction_ids);
+	rejected_junction_ids = get_sorted_junction_ids(matched_junction, rejected_junction_ids);
+
 //    foreach my $key (@passed_junction_ids)
 //    {	  
 //      print "$key\n" if ($verbose);
@@ -546,8 +530,8 @@ namespace breseq {
 //my $a = $match->{junction_alignments}->[0];
 //my $fastq_file_index = $match->{fastq_file_index};
 //
-//print ">>>>" . $a->qname . "\n" if ($verbose);
-//print ">>>>Alignment start-end: " . $a->start . "  " . $a->end . "\n" if ($verbose);
+//print ">>>>" . $a->reference_name() . "\n" if ($verbose);
+//print ">>>>Alignment start-end: " . $a->reference_start_1() . "  " . $a->reference_end_1() . "\n" if ($verbose);
 //
 //foreach my $side (1, 2)
 //{
@@ -793,7 +777,7 @@ bool _test_read_alignment_requirements(const Settings& settings, const cReferenc
 bool _alignment_overlaps_junction(const vector<JunctionInfo>& junction_info_list, alignment a)
 {
   //my ($junction_info, $a) = @_;
-  //my $this_junction_info = $junction_info->[$a->tid];
+  //my $this_junction_info = $junction_info->[$a->reference_target_id()];
   uint32_t tid = a.reference_target_id();
   const JunctionInfo& this_junction_info = junction_info_list[tid];
   //my $overlap = $this_junction_info->{alignment_overlap};
@@ -834,16 +818,12 @@ void _write_reference_matches(const Settings& settings, cReferenceSequences& ref
 	reference_tam.write_alignments((int32_t)fastq_file_index, reference_alignments, &trims);
 }
 
-bool _test_junction(const Settings& settings, /*const map<string, uint32_t>& summary_info,*/ const string& junction_seq_id, map<string, vector<MatchedJunction> >& matched_junction_ref, map<string, map<string, MatchedJunction> >& degenerate_matches_ref, const map<string, CandidateJunction>& junction_test_info_ref, const cReferenceSequences& ref_seq_info, ifstream& RREF, ifstream& RCJ, tam_file& reference_tam, tam_file& junction_tam, bool& has_non_overlap_only)
+bool _test_junction(const Settings& settings, /*const map<string, uint32_t>& summary_info,*/ const string& junction_seq_id, map<string, vector<MatchedJunction> >& matched_junction_ref, map<string, map<string, MatchedJunction> >& degenerate_matches_ref, map<string, CandidateJunction>& junction_test_info_ref, cReferenceSequences& ref_seq_info, ifstream& RREF, ifstream& RCJ, tam_file& reference_tam, tam_file& junction_tam, bool& has_non_overlap_alignment)
 {
 	bool verbose = false;
 //	my ($settings, $summary, $junction_seq_id, $matched_junction_ref, $degenerate_matches_ref, $junction_test_info_ref, $reference_fai, $ref_seq_info, $RREF, $reference_header, $RCJ, $candidate_junction_header) = @_;
 
 	if (verbose) cout << "Testing " << junction_seq_id << endl;
-
-	// variable initialization
-//	my $test_info;
-	bool success = true;
 
 	// There are two kinds of matches to a candidate junction:
 
@@ -855,7 +835,7 @@ bool _test_junction(const Settings& settings, /*const map<string, uint32_t>& sum
 	// (2) Reads that uniquely map equally well to more than one candidate junction (and any number of times to reference)
 	map<string, MatchedJunction> degenerate_matches;
 	if (degenerate_matches_ref.count(junction_seq_id))
-			degenerate_matches = degenerate_matches_ref[junction_seq_id];
+		degenerate_matches = degenerate_matches_ref[junction_seq_id];
 
 	// FAI target id -- there is no easy way to get this short of loading the entire array and going through them...
 	// Debatable about whether we save more string comparisons by doing this here or each time
@@ -865,268 +845,291 @@ bool _test_junction(const Settings& settings, /*const map<string, uint32_t>& sum
 	for (junction_tid = 0; junction_tid < junction_tam.bam_header->n_targets; junction_tid++)
 		if (junction_tam.bam_header->target_name[junction_tid] == junction_seq_id) break;
 
-	assert (junction_tid < junction_tam.bam_header->n_targets);
+	assert(junction_tid < junction_tam.bam_header->n_targets);
 
-	if (verbose)
-	{
+	if (verbose) {
 		cout << "Testing Junction Candidate: " << junction_seq_id << endl;
 		cout << "Unique Matches: " << unique_matches.size() << " Degenerate Matches: " << degenerate_matches.size() << endl;
 	}
 
-//	#### TEST 1: Reads that go a certain number of bp into the nonoverlap sequence on each side of the junction on each strand
-//	my $max_left_per_strand = { '0'=> 0, '1'=>0 };
-//	my $max_right_per_strand = { '0'=> 0, '1'=>0 };
-//	my $max_min_left_per_strand = { '0'=> 0, '1'=>0 };
-//	my $max_min_right_per_strand = { '0'=> 0, '1'=>0 };
-//	my $count_per_strand = { '0'=> 0, '1'=>0 };
-//	my $total_non_overlap_reads = 0;
-//	my $count_per_coord_per_strand;
-//	my $min_overlap_score = 0;
-//
-//	## basic information about the junction
-//	my $scj = Breseq::Shared::junction_name_split($junction_seq_id);
-//	my $overlap = $scj->{alignment_overlap};
-//	my $flanking_left = $scj->{flanking_left};
-//
-//	## Is there at least one read that isn't overlap only?
-//	## displaying ones where it doesn't as marginals looks really confusing
-//	my $has_non_overlap_only = 1;
-//	## @JEB v1> Rename to $has_non_overlap_alignment to give right sense!!
-//
-//	### We also need to count degenerate matches b/c sometimes ambiguity unfairly penalizes real reads...
-//	READ: foreach my $item (@unique_matches, @degenerate_matches)
-//	{
-//		##!!> Matches that don't extend through the overlap region will have the same quality
-//		##!!> as a reference match and, therefore, no difference in mapping quality
-//		##!!> do not count these toward scoring!
-//		next READ if ($item->{mapping_quality_difference} == 0);
-//
-//		$total_non_overlap_reads++;
-//		$has_non_overlap_only = 0;
-//
-//		#If there were no degenerate matches, then we could just take the
-//		#one and only match in the 'junction_alignments' array
-//		#my $a = $item->{junction_alignments}->[0];
-//
-//		## as it is, we must be sure we are looking at the one that matches
-//		my $a;
-//		ALIGNMENT: foreach my $candidate_a (@{$item->{junction_alignments}})
-//		{
-//			if ($candidate_a->tid == $junction_tid)
-//			{
-//				$a = $candidate_a;
-//				last ALIGNMENT;
-//			}
-//		}
-//		die if (!defined $a);
-//
-//		my $rev_key = ($a->reversed ? 1 : 0);
-//		$count_per_strand->{$rev_key}++;
-//
-//		# The start coordinate is less likely to be misaligned due to errors
-//		# than the end coordinate
-//		my $begin_coord = $rev_key ? $a->end : $a->start;
-//		$count_per_coord_per_strand->{"$begin_coord-$rev_key"}++;
-//
-//		print "  " . $item->{junction_alignments}->[0]->qname . " $begin_coord-$rev_key\n" if ($verbose);
-//
-//
-//		##The left side goes exactly up to the flanking length
-//		my $this_left = $flanking_left;
-//		$this_left = $this_left - $a->start+1;
-//
-//		#The right side starts after moving past any overlap (negative or positive)
-//		my $this_right = $flanking_left+1;
-//		$this_right += abs($overlap);
-//		$this_right = $a->end - $this_right+1;
-//
-//		## Update:
-//		### Score = the minimum unique match length on a side
-//		### Max_Min = the maximum of the minimum length match sides
-//		### Max = the maximum match on a side
-//		### Note that the max and min filtering is really a kind of poor man's KS test
-//		###   if we implemented that with a certain coverage cutoff it would be a
-//		###   more principled way of doing things...
-//		if ($this_left < $this_right)
-//		{
-//			$min_overlap_score += $this_left;
-//			$max_min_left_per_strand->{$rev_key} = $this_left if ($max_min_left_per_strand->{$rev_key} < $this_left);
-//		}
-//		else
-//		{
-//			$min_overlap_score += $this_right;
-//			$max_min_right_per_strand->{$rev_key} = $this_right if ($max_min_right_per_strand->{$rev_key} < $this_right);
-//		}
-//
-//		$max_left_per_strand->{$rev_key} = $this_left if ($max_left_per_strand->{$rev_key} < $this_left);
-//		$max_right_per_strand->{$rev_key} = $this_right if ($max_right_per_strand->{$rev_key} < $this_right);
-//
-//	}
-//
-//	my $max_left = ($max_left_per_strand->{'0'} > $max_left_per_strand->{'1'}) ? $max_left_per_strand->{'0'} : $max_left_per_strand->{'1'};
-//	my $max_right = ($max_right_per_strand->{'0'} > $max_right_per_strand->{'1'}) ? $max_right_per_strand->{'0'} : $max_right_per_strand->{'1'};
-//
-//	my $max_min_left = ($max_min_left_per_strand->{'0'} > $max_min_left_per_strand->{'1'}) ? $max_min_left_per_strand->{'0'} : $max_min_left_per_strand->{'1'};
-//	my $max_min_right = ($max_min_right_per_strand->{'0'} > $max_min_right_per_strand->{'1'}) ? $max_min_right_per_strand->{'0'} : $max_min_right_per_strand->{'1'};
-//
-//
-//	$test_info = {
-//		max_left => $max_left,
-//		max_left_minus => $max_left_per_strand->{0},
-//		max_left_plus => $max_left_per_strand->{1},
-//		max_right => $max_right,
-//		max_right_minus => $max_right_per_strand->{0},
-//		max_right_plus =>$max_right_per_strand->{1},
-//		max_min_right => $max_min_right,
-//		max_min_right_minus => $max_min_right_per_strand->{0},
-//		max_min_right_plus =>$max_min_right_per_strand->{1},
-//		max_min_left => $max_min_left,
-//		max_min_left_minus => $max_min_left_per_strand->{0},
-//		max_min_left_plus =>$max_min_left_per_strand->{1},
-//		coverage_minus => $count_per_strand->{0},
-//		coverage_plus => $count_per_strand->{1},
-//		total_non_overlap_reads => $total_non_overlap_reads,
-//		min_overlap_score => $min_overlap_score,
-//		pos_hash_score => scalar keys %$count_per_coord_per_strand,
-//	};
-//
-//
-//	## Old way, requiring certain overlap on each side on each strand
-//	## @JEB !> Best results may be to combine these methods
-//
-//	## These parameters still need additional testing
-//	## and, naturally, they have problems with scaling with the
-//	## total number of reads...
-//
-//	my $alignment_on_each_side_cutoff = 14; #16
-//	my $alignment_on_each_side_cutoff_per_strand = 9; #13
-//	my $alignment_on_each_side_min_cutoff = 3;
-//
-//	$failed = 	   ($max_left < $alignment_on_each_side_cutoff)
-//				|| ($max_right < $alignment_on_each_side_cutoff)
-//	       		|| ($max_left_per_strand->{'0'} < $alignment_on_each_side_cutoff_per_strand)
-//				|| ($max_left_per_strand->{'1'} < $alignment_on_each_side_cutoff_per_strand)
-//	       		|| ($max_right_per_strand->{'0'} < $alignment_on_each_side_cutoff_per_strand)
-//				|| ($max_right_per_strand->{'1'} < $alignment_on_each_side_cutoff_per_strand)
-//				|| ($max_min_left < $alignment_on_each_side_min_cutoff)
-//				|| ($max_min_right < $alignment_on_each_side_min_cutoff)
-//	;
-//
-//	## POS_HASH test
-//	## New way, but we need to have examined the coverage distribution to calibrate what scores to accept!
-//	my $junction_accept_score_cutoff_1 = $summary->{preprocess_coverage}->{$scj->{side_1}->{seq_id}}->{junction_accept_score_cutoff};
-//	my $junction_accept_score_cutoff_2 = $summary->{preprocess_coverage}->{$scj->{side_2}->{seq_id}}->{junction_accept_score_cutoff};
-//	$failed ||= ( $test_info->{pos_hash_score} < $junction_accept_score_cutoff_1 ) && ( $test_info->{pos_hash_score} < $junction_accept_score_cutoff_2 );
-//
-//	print Dumper($test_info) if ($verbose);
-//	print ($failed ? "Failed\n" : "Passed\n") if ($verbose);
-//
-//	###
-//	### ADD -- NEED TO CORRECT OVERLAP AND ADJUST NUMBER OF READS SUPPORTING HERE, RATHER THAN LATER
-//	###
-//
-//	## DEGENERATE JUNCTION MATCHES
-//	## ===========================
-//	## Determine the fate of degenerate reads that map to this junction
-//
-//	if (defined $degenerate_matches_ref->{$junction_seq_id})
-//	{
-//		foreach my $read_name (keys %{$degenerate_matches_ref->{$junction_seq_id}})
-//		{
-//			my $degenerate_match = $degenerate_matches_ref->{$junction_seq_id}->{$read_name};
-//			my $fastq_file_index = $degenerate_match->{fastq_file_index};
-//			my $matched_alignment;
-//
-//			## Success for this candidate junction...
-//			## purge all references to this from the degenerate match hash
-//			## so that they will not be counted for other junctions
-//			if (!$failed)
-//			{
-//				## We need to add this degenerately matched read to the other ones supporting this junction
-//				push @{$matched_junction_ref->{$junction_seq_id}}, $degenerate_match;
-//
-//				# Purge all references to this read from the degenerate match hash
-//				# so that it cannot be counted for any other junction
-//				foreach my $a (@{$degenerate_match->{junction_alignments}})
-//				{
-//					my $test_junction_seq_id = $candidate_junction_header->target_name()->[$a->tid];
-//					$matched_alignment = $a if ($a->tid eq $junction_tid); #this is the one for the current candidate junction
-//
-//					delete $degenerate_matches_ref->{$test_junction_seq_id}->{$read_name};
-//					delete $degenerate_matches_ref->{$test_junction_seq_id} if (scalar keys %{$degenerate_matches_ref->{$test_junction_seq_id}} == 0);
-//				}
-//
-//				## Keep only the alignment
-//##------>		## WE SHOULD ALSO UPDATE THE MAPPING SCORE!
-//				my $a;
-//				DOMINANT_ALIGNMENT: foreach my $candidate_a (@{$degenerate_match->{junction_alignments}})
-//				{
-//					if ($candidate_a->tid == $junction_tid)
-//					{
-//						$a = $candidate_a;
-//						last DOMINANT_ALIGNMENT;
-//					}
-//				}
-//				@{$degenerate_match->{junction_alignments}} = ($a);
-//			}
-//
-//			## Failure for this candidate junction...
-//			## Remove just the degenerate hits to this candidate junction
-//			## Once all have failed, then we need to add the reference alignments (if any)!
-//			else
-//			{
-//				$degenerate_match->{degenerate_count}--;
-//
-//				print "New Degenerate match count: $degenerate_match->{degenerate_count}\n" if ($verbose);
-//
-//				## This degenerate match missed on all opportunities,
-//				## we should add it to the reference sequence
-//				if ($degenerate_match->{degenerate_count} == 0)
-//				{
-//					my $this_reference_al = $degenerate_match->{reference_alignments};
-//					_write_reference_matches($settings, $reference_fai, $ref_seq_info, $RREF, $reference_header, $fastq_file_index, @$this_reference_al);
-//				}
-//
-//				foreach my $a (@{$degenerate_match->{junction_alignments}})
-//				{
-//					$matched_alignment = $a if ($a->tid eq $junction_tid); #this is the one for the current candidate junction
-//				}
-//			}
-//
-//			# Write alignment to SAM file for candidate junctions regardless of success...
-//			die if (!$matched_alignment);
-//			Breseq::Shared::tam_write_read_alignments($RCJ, $candidate_junction_header, $fastq_file_index, [$matched_alignment]) if (!$has_non_overlap_only);
-//		}
-//
-//		## We are completely done with degenerate matches to this junction id.
-//		## Deleting them here means that we will never go through this loop with them again
-//		## and is necessary for not doubly writing them.
-//		delete $degenerate_matches_ref->{$junction_seq_id};
-//	}
-//
-//	## UNIQUE JUNCTION MATCHES
-//	## =======================
-//	READ: foreach my $item (@unique_matches)
-//	{
-//		## Write out the matches to the proper SAM file(s) depending on whether the junction succeeded or failed
-//		my $fastq_file_index = $item->{fastq_file_index};
-//
-//		## ONLY if we failed: write matches to reference sequences
-//		if ($failed)
-//		{
-//			my $this_reference_al = $item->{reference_alignments};
-//			_write_reference_matches($settings, $reference_fai, $ref_seq_info, $RREF, $reference_header, $fastq_file_index, @$this_reference_al);
-//		}
-//
-//		## REGARDLESS of success: write matches to the candidate junction SAM file
-//		Breseq::Shared::tam_write_read_alignments($RCJ, $candidate_junction_header, $fastq_file_index, $item->{junction_alignments})  if (!$has_non_overlap_only);
-//	}
-//
-//	# Save the test info about this junction.
-//	$junction_test_info_ref->{$junction_seq_id} = $test_info;
-//	return ($failed, $has_non_overlap_only);
+	//// TEST 1: Reads that go a certain number of bp into the nonoverlap sequence on each side of the junction on each strand
+	map<bool,uint32_t> max_left_per_strand = make_map<bool,uint32_t>(true,0)(false,0);
+	map<bool,uint32_t> max_right_per_strand = make_map<bool,uint32_t>(true,0)(false,0);
+	map<bool,uint32_t> max_min_left_per_strand = make_map<bool,uint32_t>(true,0)(false,0);
+	map<bool,uint32_t> max_min_right_per_strand = make_map<bool,uint32_t>(true,0)(false,0);
+	map<bool,uint32_t> count_per_strand = make_map<bool,uint32_t>(true,0)(false,0);
+	uint32_t total_non_overlap_reads = 0;
+	map<string,uint32_t> count_per_coord_per_strand;
+	uint32_t min_overlap_score = 0;
+
+	// basic information about the junction
+	JunctionInfo scj = junction_name_split(junction_seq_id);
+	int32_t overlap = scj.alignment_overlap;
+	int32_t flanking_left = scj.flanking_left;
+
+	// Is there at least one read that isn't overlap only?
+	// displaying ones where it doesn't as marginals looks really confusing
+	has_non_overlap_alignment = true;
+
+	// We also need to count degenerate matches b/c sometimes ambiguity unfairly penalizes real reads...
+	vector<MatchedJunction*> items;
+	for (vector<MatchedJunction>::iterator it = unique_matches.begin(); it != unique_matches.end(); it++)
+		items.push_back(&(*it));
+	for (map<string, MatchedJunction>::iterator it = degenerate_matches.begin(); it != degenerate_matches.end(); it++)
+		items.push_back(&(it->second));
+
+	for (int32_t i = 0; i < items.size(); i++) // READ (loops over unique_matches, degenerate_matches)
+	{
+		MatchedJunction* item = items[i];
+		//!!> Matches that don't extend through the overlap region will have the same quality
+		//!!> as a reference match and, therefore, no difference in mapping quality
+		//!!> do not count these toward scoring!
+		if (item->mapping_quality_difference == 0) continue;
+
+		total_non_overlap_reads++;
+		has_non_overlap_alignment = false;
+
+		//If there were no degenerate matches, then we could just take the
+		//one and only match in the 'junction_alignments' array
+		//#my $a = $item->{junction_alignments}->[0];
+
+		// as it is, we must be sure we are looking at the one that matches
+		alignment* a = NULL;
+		for (int32_t j = 0; j < item->junction_alignments.size(); j++) //ALIGNMENT
+		{
+			alignment* candidate_a = &(item->junction_alignments[j]);
+			if (candidate_a->reference_target_id() == junction_tid) {
+				a = candidate_a;
+				break;
+			}
+		}
+		assert(a != NULL);
+
+		bool rev_key = a->reversed();
+		count_per_strand[rev_key]++;
+
+		// The start coordinate is less likely to be misaligned due to errors
+		// than the end coordinate
+		uint32_t begin_coord = rev_key ? a->reference_end_1() : a->reference_start_1();
+		string strand_key = to_string(begin_coord) + "-" + (rev_key ? "1" : "0");
+		if (count_per_coord_per_strand.count(strand_key) == 0) count_per_coord_per_strand[strand_key] = 0;
+		count_per_coord_per_strand[strand_key]++;
+
+		if (verbose)
+			cout << "  " << item->junction_alignments[0].read_name() << ' ' << strand_key << endl;
+
+		// The left side goes exactly up to the flanking length
+		int32_t this_left = flanking_left;
+		this_left -= a->reference_start_1() + 1;
+
+		// The right side starts after moving past any overlap (negative or positive)
+		int32_t this_right = flanking_left + 1;
+		this_right += abs(overlap);
+		//TODO: Order of operations issue? If not, spaces on either side of plus sign would be more pleasant
+		this_right = a->reference_end_1() - this_right + 1;
+
+		// Update:
+		// Score = the minimum unique match length on a side
+		// Max_Min = the maximum of the minimum length match sides
+		// Max = the maximum match on a side
+		// Note that the max and min filtering is really a kind of poor man's KS test
+		//   if we implemented that with a certain coverage cutoff it would be a
+		//   more principled way of doing things...
+		if (this_left < this_right) {
+			min_overlap_score += this_left;
+			if (max_min_left_per_strand[rev_key] < this_left);
+				max_min_left_per_strand[rev_key] = this_left;
+		}
+		else
+		{
+			min_overlap_score += this_right;
+			if (max_min_right_per_strand[rev_key] < this_right)
+				max_min_right_per_strand[rev_key] = this_right;
+		}
+
+		if (max_left_per_strand[rev_key] < this_left)
+			max_left_per_strand[rev_key] = this_left;
+		if (max_right_per_strand[rev_key] < this_right)
+			max_right_per_strand[rev_key] = this_right;
+
+	}
+
+	uint32_t max_left = max(max_left_per_strand[false], max_left_per_strand[true]);
+	uint32_t max_right = max(max_right_per_strand[false], max_right_per_strand[true]);
+
+	uint32_t max_min_left = max(max_min_left_per_strand[false], max_min_left_per_strand[true]);
+	uint32_t max_min_right = max(max_min_right_per_strand[false], max_min_right_per_strand[true]);
+
+	// Save the test info about this junction.
+	CandidateJunction::TestInfo test_info = {
+		max_left,						//max_left
+		max_left_per_strand[false],		//max_left_minus
+		max_left_per_strand[true],		//max_left_plus
+		max_right,						//max_right
+		max_right_per_strand[false],	//max_right_minus
+		max_right_per_strand[true],		//max_right_plus
+		max_min_right,					//max_min_right
+		max_min_right_per_strand[false],//max_min_right_minus
+		max_min_right_per_strand[true],	//max_min_right_plus
+		max_min_left,					//max_min_left
+		max_min_left_per_strand[false],	//max_min_left_minus
+		max_min_left_per_strand[true],	//max_min_left_plus
+		count_per_strand[false],		//coverage_minus
+		count_per_strand[true],			//coverage_plus
+		total_non_overlap_reads			//total_non_overlap_reads
+	};
+	junction_test_info_ref[junction_seq_id].test_info = test_info;
+	junction_test_info_ref[junction_seq_id].min_overlap_score = min_overlap_score;
+	junction_test_info_ref[junction_seq_id].pos_hash_score = count_per_coord_per_strand.size();
+
+	// Old way, requiring certain overlap on each side on each strand
+	// @JEB !> Best results may be to combine these methods
+
+	// These parameters still need additional testing
+	// and, naturally, they have problems with scaling with the
+	// total number of reads...
+
+	uint32_t alignment_on_each_side_cutoff = 14; //16
+	uint32_t alignment_on_each_side_cutoff_per_strand = 9; //13
+	uint32_t alignment_on_each_side_min_cutoff = 3;
+
+	bool failed = (max_left < alignment_on_each_side_cutoff)
+				|| (max_right < alignment_on_each_side_cutoff)
+	       		|| (max_left_per_strand[false] < alignment_on_each_side_cutoff_per_strand)
+				|| (max_left_per_strand[true] < alignment_on_each_side_cutoff_per_strand)
+	       		|| (max_right_per_strand[false] < alignment_on_each_side_cutoff_per_strand)
+				|| (max_right_per_strand[true] < alignment_on_each_side_cutoff_per_strand)
+				|| (max_min_left < alignment_on_each_side_min_cutoff)
+				|| (max_min_right < alignment_on_each_side_min_cutoff)
+	;
+
+	// POS_HASH test
+	// New way, but we need to have examined the coverage distribution to calibrate what scores to accept!
+	// TODO: Reimpliment when summary structure exists
+	//	my $junction_accept_score_cutoff_1 = $summary->{preprocess_coverage}->{$scj->{side_1}->{seq_id}}->{junction_accept_score_cutoff};
+	//	my $junction_accept_score_cutoff_2 = $summary->{preprocess_coverage}->{$scj->{side_2}->{seq_id}}->{junction_accept_score_cutoff};
+	//	$failed ||= ( $test_info->{pos_hash_score} < $junction_accept_score_cutoff_1 ) && ( $test_info->{pos_hash_score} < $junction_accept_score_cutoff_2 );
+	//
+	//	print Dumper($test_info) if ($verbose);
+	//	print ($failed ? "Failed\n" : "Passed\n") if ($verbose);
+
+	// TODO:
+	// ADD -- NEED TO CORRECT OVERLAP AND ADJUST NUMBER OF READS SUPPORTING HERE, RATHER THAN LATER
+	//
+
+	// DEGENERATE JUNCTION MATCHES
+	// ===========================
+	// Determine the fate of degenerate reads that map to this junction
+
+	if (degenerate_matches_ref.count(junction_seq_id))
+	{
+		for (map<string, MatchedJunction>::iterator it = degenerate_matches_ref[junction_seq_id].begin(); it != degenerate_matches_ref[junction_seq_id].end(); it++)
+		{
+			MatchedJunction degenerate_match = it->second;
+			uint32_t fastq_file_index = degenerate_match.fastq_file_index;
+			alignment* matched_alignment = NULL;
+
+			// Success for this candidate junction...
+			// purge all references to this from the degenerate match hash
+			// so that they will not be counted for other junctions
+			if (!failed)
+			{
+				// We need to add this degenerately matched read to the other ones supporting this junction
+				matched_junction_ref[junction_seq_id].push_back(degenerate_match);
+
+				// Purge all references to this read from the degenerate match hash
+				// so that it cannot be counted for any other junction
+				for (int32_t i = 0; i < degenerate_match.junction_alignments.size(); i++)
+				{
+					alignment* a = &(degenerate_match.junction_alignments[i]);
+					string test_junction_seq_id = junction_tam.bam_header->target_name[a->reference_target_id()];
+					if (a->reference_target_id() == junction_tid) //this is the one for the current candidate junction
+						matched_alignment = a;
+
+					degenerate_matches_ref[test_junction_seq_id].erase(it);
+					if (degenerate_matches_ref[test_junction_seq_id].size() == 0)
+						degenerate_matches_ref.erase(test_junction_seq_id);
+				}
+
+				// Keep only the alignment
+//------>		// WE SHOULD ALSO UPDATE THE MAPPING SCORE!
+				alignment* a = NULL;
+				for (int32_t j = 0; j < degenerate_match.junction_alignments.size(); j++) //DOMINANT_ALIGNMENT
+				{
+					alignment* candidate_a = &(degenerate_match.junction_alignments[j]);
+					if (candidate_a->reference_target_id() == junction_tid) {
+						a = candidate_a;
+						break;
+					}
+				}
+				assert(a != NULL);
+				degenerate_match.junction_alignments.clear();
+				degenerate_match.junction_alignments.push_back(*a);
+			}
+
+			// Failure for this candidate junction...
+			// Remove just the degenerate hits to this candidate junction
+			// Once all have failed, then we need to add the reference alignments (if any)!
+			else
+			{
+				degenerate_match.degenerate_count--;
+
+				if (verbose) cout << "New Degenerate match count: " << degenerate_match.degenerate_count << endl;
+
+				// This degenerate match missed on all opportunities,
+				// we should add it to the reference sequence
+				if (degenerate_match.degenerate_count == 0)
+				{
+					vector<alignment> this_reference_al = degenerate_match.reference_alignments;
+					_write_reference_matches(settings, ref_seq_info, this_reference_al, reference_tam, fastq_file_index);
+				}
+
+				for (int32_t j = 0; j < degenerate_match.junction_alignments.size(); j++) //DOMINANT_ALIGNMENT
+				{
+					alignment* candidate_a = &(degenerate_match.junction_alignments[j]); //this is the one for the current candidate junction
+					if (candidate_a->reference_target_id() == junction_tid)
+						matched_alignment = candidate_a;
+						//TODO: No break here?
+				}
+			}
+
+			// Write alignment to SAM file for candidate junctions regardless of success...
+			assert(matched_alignment != NULL);
+			if (!has_non_overlap_alignment) {
+				alignment_list alignments = make_list<alignment>(*matched_alignment);
+				junction_tam.write_alignments(fastq_file_index, alignments, NULL);
+			}
+		}
+
+		// We are completely done with degenerate matches to this junction id.
+		// Deleting them here means that we will never go through this loop with them again
+		// and is necessary for not doubly writing them.
+		degenerate_matches_ref.erase(junction_seq_id);
+	}
+
+	// UNIQUE JUNCTION MATCHES
+	// =======================
+	for (int32_t i = 0; i< unique_matches.size(); i++)
+	{
+		MatchedJunction item = unique_matches[i];
+		// Write out the matches to the proper SAM file(s) depending on whether the junction succeeded or failed
+		uint32_t fastq_file_index = item.fastq_file_index;
+
+		// ONLY if we failed: write matches to reference sequences
+		if (failed)
+		{
+			vector<alignment> this_reference_al = item.reference_alignments;
+			_write_reference_matches(settings, ref_seq_info, this_reference_al, reference_tam, fastq_file_index);
+		}
+
+		// REGARDLESS of success: write matches to the candidate junction SAM file
+		if (!has_non_overlap_alignment)
+			junction_tam.write_alignments(fastq_file_index, item.junction_alignments, NULL);
+	}
+
+	return !failed;
 }
-//
+
 //sub _junction_to_hybrid_list_item
 //{
 //	my ($key, $ref_seq_info, $total_reads, $test_info) = @_;
@@ -1363,31 +1366,31 @@ Trim _trim_ambiguous_ends(const alignment& a, const tam_file& tam, cReferenceSeq
 	//
 	//	#create sequence snippets that we need to pay attention to ends of sequence
 	//	my $expand_by = 18; #36
-	//	my $expand_left = ($a->start-1 < $expand_by) ? $a->start-1 : $expand_by;
-	//	my $expand_right = ($ref_seq_length - $a->end < $expand_by) ? $ref_seq_length-$a->end : $expand_by;
+	//	my $expand_left = ($a->reference_start_0() < $expand_by) ? $a->reference_start_0() : $expand_by;
+	//	my $expand_right = ($ref_seq_length - $a->reference_end_1() < $expand_by) ? $ref_seq_length-$a->reference_end_1() : $expand_by;
 	//
 	//	my $expanded_ref_string = '';
 	//	if (defined $ref_strings)
 	//	{
-	//		$expanded_ref_string = substr $ref_strings->{$seq_id}, $a->start-$expand_left-1, ($a->end+$expand_right) - ($a->start-$expand_left) + 1;
+	//		$expanded_ref_string = substr $ref_strings->{$seq_id}, $a->reference_start_1()-$expand_left-1, ($a->reference_end_1()+$expand_right) - ($a->reference_start_1()-$expand_left) + 1;
 	//	}
 	//	## >>> transition to not using ref_seq_info
 	//	else
 	//	{
-	//		my $expanded_ref_range = $seq_id . ':' . ($a->start-$expand_left) . '-' . ($a->end+$expand_right);
+	//		my $expanded_ref_range = $seq_id . ':' . ($a->reference_start_1()-$expand_left) . '-' . ($a->reference_end_1()+$expand_right);
 	//		$expanded_ref_string = $fai->fetch($expanded_ref_range);
 	//	}
 	//
 	//	my $ref_string;
 	//	if (defined $ref_strings)
 	//	{
-	//		$ref_string = substr $ref_strings->{$seq_id}, $a->start-1, $a->end - $a->start + 1;
+	//		$ref_string = substr $ref_strings->{$seq_id}, $a->reference_start_0(), $a->reference_end_1() - $a->reference_start_1() + 1;
 	//	}
 	//	## >>> transition to not using ref_seq_info
 	//	else
 	//	{
-	//		my $ref_range = $seq_id . ':' . $a->start . '..' . $a->end;
-	//		$ref_string = $fai->fetch( $seq_id . ':' . $a->start . '-' . $a->end );
+	//		my $ref_range = $seq_id . ':' . $a->reference_start_1() . '..' . $a->reference_end_1();
+	//		$ref_string = $fai->fetch( $seq_id . ':' . $a->reference_start_1() . '-' . $a->reference_end_1() );
 	//	}
 	//
 	//	my ($q_start, $q_end) = Breseq::Shared::alignment_query_start_end($a);
@@ -1670,6 +1673,37 @@ Trim _trim_ambiguous_ends(const alignment& a, const tam_file& tam, cReferenceSeq
 //	return ($left_inset, $right_inset);
 //}
 
+	//sort junction ids based on size of vector contained in map
+	vector<string> get_sorted_junction_ids(map<string, vector<MatchedJunction> >& map, const vector<string>& keys)
+	{
+		vector<VectorSize> vector_sizes;
+		for (int32_t i = 0; i < keys.size(); i++)
+		{
+			VectorSize info = { keys[i], map[keys[i]].size() };
+			vector_sizes.push_back(info);
+		}
+		sort(vector_sizes.begin(), vector_sizes.end(), VectorSize::sort_by_size);
+		
+		vector<string> sorted_junction_ids;
+		for (int32_t i = 0; i < keys.size(); i++)
+			sorted_junction_ids.push_back(vector_sizes[i].junction_id);
+		return sorted_junction_ids;
+	}
+	vector<string> get_sorted_junction_ids(map<string, map<string, MatchedJunction> >& map, const vector<string>& keys)
+	{
+		vector<VectorSize> vector_sizes;
+		for (int32_t i = 0; i < keys.size(); i++)
+		{
+			VectorSize info = { keys[i], map[keys[i]].size() };
+			vector_sizes.push_back(info);
+		}
+		sort(vector_sizes.begin(), vector_sizes.end(), VectorSize::sort_by_size);
+
+		vector<string> sorted_junction_ids;
+		for (int32_t i = 0; i < keys.size(); i++)
+			sorted_junction_ids.push_back(vector_sizes[i].junction_id);
+		return sorted_junction_ids;
+	}
   
 } // namespace breseq
 
