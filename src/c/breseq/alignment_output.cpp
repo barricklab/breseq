@@ -511,11 +511,12 @@ string alignment_output::html_alignment ( const string& region )
     //my $quality_range = $self->set_quality_range($aligned_reads, $options);
     //
     
-    Aligned_Reads& aligned_reads ( m_aligned_reads );
-    Aligned_References& aligned_references ( m_aligned_references );
-    Aligned_Annotation& aligned_annotation ( m_aligned_annotation );
+    Aligned_Reads &aligned_reads ( m_aligned_reads );
+    Aligned_References &aligned_references ( m_aligned_references );
+    Aligned_Annotation &aligned_annotation ( m_aligned_annotation );
     set_quality_range();
-    Quality_Range& quality_range ( m_quality_range );
+    Quality_Range &quality_range ( m_quality_range );
+    
     //my @sorted_keys = sort { -($aligned_reads->{$a}->{aligned_bases} cmp $aligned_reads->{$b}->{aligned_bases}) } keys %$aligned_reads;
     Sorted_Keys sorted_keys;
     for (Aligned_Reads::iterator itr_read = aligned_reads.begin();
@@ -536,18 +537,16 @@ string alignment_output::html_alignment ( const string& region )
     output += "<table style=\"background-color: rgb(255,255,255)\">";
     output += "<tr><td style=\"font-size:10pt\"><code><font class=\"-5\">";
     
-    
     //foreach my $aligned_reference (@aligned_references)
     //{
-    for (Aligned_References::iterator itr_ref = aligned_references.begin();
-         itr_ref != aligned_references.end(); itr_ref++)
-    {}
-    //  $output .= $self->_html_alignment_line($aligned_reference, 1) . br; 
-    ///sets coords to 1
-     
+    for (uint index = 0; index < aligned_references.size(); index++)
+    {
+      //  $output .= $self->_html_alignment_line($aligned_reference, 1) . br; 
+      output += html_alignment_line( (Alignment_Base) m_aligned_references[index] , true ,false); 
     //}
+    }
     //$output .= $self->_html_alignment_line($aligned_annotation, 0) . br;
-    ///sets coords to 0
+    
     //
     //     foreach my $key (@sorted_keys)
     //     {
@@ -572,7 +571,7 @@ string alignment_output::html_alignment ( const string& region )
     //     }
     //
     //     $output .= end_table() . end_Tr() . end_td();
-    //
+    output += "</table></tr></td>";
     //     return $output;
     // }
     return output;
@@ -623,7 +622,7 @@ void alignment_output::Alignment_Output_Pileup::pileup_callback ( const pileup& 
 //TODO Must be better way to get this information then calling it in pileup...
         
    ///Single Reference case
-   struct Aligned_Reference& aligned_reference (aligned_references[0]);
+   Aligned_Reference& aligned_reference (aligned_references[0]);
    aligned_reference.reference_name = p.target_name();
    aligned_reference.reference_length = p.target_length();
    if(aligned_reference.start == 0)
@@ -1064,7 +1063,7 @@ void alignment_output::set_quality_range()
     //my @cutoff_percentiles = (0, 0.03, 0.1, 0.3, 0.9, 1.0);
     //my $current_cutoff_level = 0;
     //
-    map<uint,uint32_t> qual_to_color;
+    map<uint,uint8_t> qual_to_color;
     uint32_t cutoff_values[] = {0, 0.03, 0.1, 0.3, 0.9, 1.0};
     vector<uint32_t> cutoff_percentiles ( cutoff_values, cutoff_values
                                           + sizeof ( cutoff_values ) / sizeof ( uint32_t ) );
@@ -1282,265 +1281,164 @@ string alignment_output::create_header_string()
     return header_style_string;
 }
 
-string alignment_output::html_alignment_line(const string& aligned_bases, const bool& coords, const string& aligned_quals )
-{
 
-//   sub _html_alignment_line
-// {
-//   my ($self, $a, $coords, $quality_range) = @_;
-//   my $output;
+
+string alignment_output::html_alignment_line(alignment_output::Alignment_Base a, const bool &coords, const bool &use_quality_range)
+{
+// #my ($self, $a, $coords, $quality_range) = @_;
+// #   my $output;
   string output;
-//   $output .= start_code;
-  //TODO HUH?
-//   my @split_aligned_bases = split //, $a->{aligned_bases};
-  string split_aligned_bases(aligned_bases);
-//   my @split_aligned_quals;
-  string split_aligned_quals(aligned_quals);
-//   @split_aligned_quals = split //, $a->{aligned_quals} if ($a->{aligned_quals});
-  if(!aligned_quals.empty())
+// #   $output .= start_code;
+// #   
+// #   my @split_aligned_bases = split //, $a->{aligned_bases};
+  string split_aligned_bases = a.aligned_bases;
+// #   my @split_aligned_quals;
+  string split_aligned_quals = a.aligned_quals;
+// #   @split_aligned_quals = split //, $a->{aligned_quals} if ($a->{aligned_quals});
+  if (!a.aligned_quals.empty())
+    split_aligned_quals = a.aligned_quals;
+// #   if (@split_aligned_quals)
+// #   {
+  if (!split_aligned_quals.empty())
   {
-    string split_aligned_quals(aligned_quals);
-//   if (@split_aligned_quals)
-//   {
-///NOT NEEDED?
-//     if (scalar @split_aligned_bases != scalar @split_aligned_quals)
-//     {
-    if(split_aligned_bases.length() != split_aligned_quals.length())
+// #     
+// #     if (scalar @split_aligned_bases != scalar @split_aligned_quals)
+// #     {
+    if (split_aligned_bases.length() != split_aligned_quals.length())
     {
-//       print "@split_aligned_bases\n";
-      cout << split_aligned_bases;
-//       print "@split_aligned_quals\n";
-      cout << split_aligned_quals;
-//     # $self->throw("unequal aligned base and aligned quals");
-      cerr << "unequal aligned base and aligned quals";
-//     
-//     }
-//   }
+// #       print "@split_aligned_bases\n";
+      cout << split_aligned_bases << endl;;
+// #       print "@split_aligned_quals\n";
+      cout << split_aligned_quals << endl;
+// #     # $self->throw("unequal aligned base and aligned quals");
+      cerr << "unequal aligned base and aligned quals" <<endl;
+      cout << "Bases: " + split_aligned_bases.length() << endl;
+      cout << "Quals: " + split_aligned_bases.length() << endl;
+// #     }
+// #   }
     }
-  }
-//   
-//   my $last_color = '';
+  }   
+// #   my $last_color = '';
   string last_color = "";
-//   for (my $i=0; $i<scalar @split_aligned_bases; $i++)
-//   {
-  for (uint index = 0; index < split_aligned_bases.length(); index++)
-  {
-//     my $q = 255; 
-    uint8_t q = 255;
-//     $q = ord($split_aligned_quals[$i]) if (@split_aligned_quals);
-    if(!split_aligned_quals.empty())
-      q = (uint8_t) split_aligned_quals[index];
-//     my $b = $split_aligned_bases[$i]; 
-    char b = split_aligned_bases[index];               
-//     my $color;    
-    string color;
-//      ## no base quality provided -- assume BEST if not space
-//      if ($q != 254)
-//      {
-    if(q != 254)
+// #   for (my $i=0; $i<scalar @split_aligned_bases; $i++)
+// #   {
+    for(int index = 0; index < split_aligned_bases.length(); index++)
     {
-///       if (($q == 255) ||  (!defined $quality_range))
-//       {
-      if((q == 255)) 
-      {
-//         $color = ($b eq ' ') ? 'NC' : "\U$b" . $self->{no_color_index};
-        color = ((b == ' ') ? "NC" : ("\\U" + b + no_color_index));
-      }   }}
-//       }
-//       ##Note: no color for $q == 254
-      
-///       elsif ((defined $quality_range) && (!($b =~ m/[.-]/))) #($b =~ m/[NATCGnatcg]/))
-///      { 
-///         my $color_num = $quality_range->{qual_to_color_index}->[$q];
-///         #$color = $base_colors_hash->{"\U$b"}->[$color_num];
-///         $color = "\U$b" . $color_num;
-///       }
-//     }
-//     
-//     $b = '&nbsp;' if ($b eq ' '); 
-//     if (not defined $color)
-//     {
-//       $color = "UN";
-//       #older version
-//       #$color = "color: rgb(0,0,0); background-color: rgb(255,255,255)";
-//     }
-// 
-//     if ($color ne $last_color)
-//     {
-//       $output .= "</font>" if ($last_color);
-//       $output .= "<font class=\"$color\">";
-//       $last_color = $color;
-//     }
-//     $output .= $b;
-//     
-//   }
-//   $output .= "</font>" if ($last_color);
-//   $output .= "&nbsp;&nbsp;" . _html_strand_char($a->{strand})  if (defined $a->{strand});
+// #     my $q = 255;
+      uint8_t q = 255;
+// #     $q = ord($split_aligned_quals[$i]) if (@split_aligned_quals);
+      if(!split_aligned_quals.empty())
+        q = (uint8_t) split_aligned_quals[index]; 
+// #     my $b = $split_aligned_bases[$i];
+        string b = to_string(split_aligned_bases[index]);       
+// #     my $color;    
+        string color = "";
+// #     ## no base quality provided -- assume BEST if not space
+// #     if ($q != 254)
+// #     {
+        if (q != 254)
+        {
+// #       if (($q == 255) ||  (!defined $quality_range))
+// #       {
+          if ( (q == 255) || (!use_quality_range) )
+          {
+// #         $color = ($b eq ' ') ? 'NC' : "\U$b" . $self->{no_color_index};
+// #       }
+            color = to_upper(b) + (char)no_color_index;
+          }
+// #       ##Note: no color for $q == 254
+// # 
+// #       elsif ((defined $quality_range) && (!($b =~ m/[.-]/))) #($b =~ m/[NATCGnatcg]/))
+// #       {
+          if ( (use_quality_range) &&
+             ( (b.find(".") == string::npos) || (b.find("-") == string::npos) ) ) /// TODO correct REGEX?
+          {
+// #         my $color_num = $quality_range->{qual_to_color_index}->[$q];
+            uint8_t color_num = m_quality_range.qual_to_color_index[q];
+// #         #$color = $base_colors_hash->{"\U$b"}->[$color_num];
+// #         $color = "\U$b" . $color_num;
+            color = "\\U" + b + (char)color_num;
+// #       }
+// #     }
+          }
+        }     
+// #     $b = '&nbsp;' if ($b eq ' ');
+        if (b == " ")
+          b = "&nbsp";
+// #     if (not defined $color)
+// #     {
+        if (color.empty())
+        {
+// #       $color = "UN";
+          color = "UN";
+// #       #older version
+// #       #$color = "color: rgb(0,0,0); background-color: rgb(255,255,255)";
+// #     }
+        } 
+// #     if ($color ne $last_color)
+// #     {
+        if (color != last_color)
+        {
+// #       $output .= "</font>" if ($last_color);
+          if (!last_color.empty())
+            output += "</font>"; 
+// #       $output .= "<font class=\"$color\">";
+          output += "<font class=\"" + color + "\">"; 
+// #       $last_color = $color;
+          last_color = color;
+// #     }
+        }
+// #     $output .= $b;
+        output += b;
+// #   }
+    }
+// #   $output .= "</font>" if ($last_color);
+  if (!last_color.empty())
+    output += "</font>";
+// #   $output .= "&nbsp;&nbsp;" . _html_strand_char($a->{strand})  if (defined $a->{strand});
+  if (a.strand != 0)
+    output += "&nbsp;&nbsp;" + html_alignment_strand(a.strand); 
+// #   ##write the seq_id and coords in non-breaking html
+// #   if (defined $a->{seq_id})
+// #   {
+  if (!a.seq_id.empty())
+  {
+// #     my $seq_id = $a->{seq_id};
+    string seq_id = a.seq_id;
+// #     $seq_id =~ s/-/&#8209;/g;
+    ///TODO $seq_id =~ s/-/&#8209;/g;
+    
+    
+// #     $seq_id .= "/$a->{start}&#8209;$a->{end}" if (defined $coords);   
+    if(coords)
+    {
+      seq_id += "/" + a.start;
+      seq_id += "&#8209;"; ///TODO FIXED?
+      seq_id += a.end;   
+    }
+// #     $output .= "&nbsp;&nbsp;" . $seq_id;
+// #   }
+    output += "&nbsp;&nbsp;" + seq_id;
+  }   
+// #   $output .=  end_code;
+// #   
+// #   return $output;
+return output;
+}
+string alignment_output::html_alignment_strand(const uint32_t &strand)
+{
+//   my ($s) = @_;
+//   return '&lt;' if ($s == -1);
+  if (strand == -1)
+    return "&lt;";
+//   return '&gt;' if ($s == +1);
+  if (strand == 1)
+    return "&gt;";
+//   return '.';
+    return ".";
 //   
-//   
-//   ##write the seq_id and coords in non-breaking html
-//   if (defined $a->{seq_id})
-//   {
-//     my $seq_id = $a->{seq_id};
-//     $seq_id =~ s/-/&#8209;/g;
-//     $seq_id .= "/$a->{start}&#8209;$a->{end}" if (defined $coords);     
-//     $output .= "&nbsp;&nbsp;" . $seq_id; 
-//   }
-//   
-//   $output .=  end_code;
-//   
-//   return $output;
-//}
 }
 
-string alignment_output::html_alignment_line(alignment_output::Aligned_Read *aligned_read,
-                                             alignment_output::Aligned_Reference *aligned_reference,
-                                             const bool& coords)
-{
-//   ///@GRC Only want either read or reference defined;
-//   if((aligned_read == NULL) && (aligned_reference ==NULL))
-//     cerr << "html alignment line error";
-//   if(!aligned_read == NULL) ///NULL = 0?
-//     Aligned_Read *a = aligned_read;
-//   if(!aligned_reference == NULL)
-//     Aligned_Reference *a =aligned_reference; 
-//   
-// 
-//   string &split_aligned_bases = a->aligned_bases;
-//   string &split_aligned_quals = a->aligned_quals;
-//   
-// //   my ($self, $a, $coords, $quality_range) = @_;
-// //   my $output;
-//   string output;
-// //   $output .= start_code;
-// //TODO HUH?
-// //   my @split_aligned_bases = split //, $a->{aligned_bases};
-//   string split_aligned_bases;
-// //   my @split_aligned_quals;
-//   string split_aligned_quals;
-// ///@GRC Only want either read or reference defined;
-//   if(!aligned_read == NULL) ///NULL = 0?
-//   {
-//    split_aligned_bases = aligned_read->aligned_bases;
-//    split_aligned_quals = aligned_read->aligned_quals;
-//   }
-//   if(!aligned_reference == NULL)
-//   {
-//     split_aligned_bases = aligned_read->aligned_bases;
-//     split_aligned_quals = aligned_read->aligned_quals;
-//   }
-//     
-// //   @split_aligned_quals = split //, $a->{aligned_quals} if ($a->{aligned_quals});
-// /// if(!aligned_quals.empty())
-// /// {
-// //     string split_aligned_quals(aligned_quals);
-// // //   if (@split_aligned_quals)
-// // //   {
-// // ///NOT NEEDED?
-// // //     if (scalar @split_aligned_bases != scalar @split_aligned_quals)
-// // //     {
-// //     if(split_aligned_bases.length() != split_aligned_quals.length())
-// //     {
-// // //       print "@split_aligned_bases\n";
-// //       cout << split_aligned_bases;
-// // //       print "@split_aligned_quals\n";
-// //       cout << split_aligned_quals;
-// // //     # $self->throw("unequal aligned base and aligned quals");
-// //       cerr << "unequal aligned base and aligned quals";
-// // //     
-// // //     }
-// // //   }
-// //     }
-// ///   }
-// //   
-// //   my $last_color = '';
-//   string last_color = "";
-// //   for (my $i=0; $i<scalar @split_aligned_bases; $i++)
-// //   {
-//   for (uint index = 0; index < split_aligned_bases.length(); index++)
-//   {
-// //     my $q = 255; 
-//     uint8_t q = 255;
-// //     $q = ord($split_aligned_quals[$i]) if (@split_aligned_quals);
-//     if(!split_aligned_quals.empty())
-//       q = (uint8_t) split_aligned_quals[index];
-// //     my $b = $split_aligned_bases[$i]; 
-//     string b(to_string(split_aligned_bases[index]));               
-// //     my $color;    
-//     string color = "";
-// //      ## no base quality provided -- assume BEST if not space
-// //      if ($q != 254)
-// //      {
-//     if(q != 254)
-//     {
-// //       if (($q == 255)||  (!defined $quality_range))
-// //       {
-//       if((q == 255)) /// || (quality_range == NULL)
-//       {
-// //         $color = ($b eq ' ') ? 'NC' : "\U$b" . $self->{no_color_index};
-//         color = ((b == " ") ? "NC" : ("\\U" + b + to_string(no_color_index)));
-// //       }        
-//       }   
-// //       ##Note: no color for $q == 254
-// ///       elsif ((defined $quality_range) && (!($b =~ m/[.-]/))) #($b =~ m/[NATCGnatcg]/))
-// ///      { 
-// ///         my $color_num = $quality_range->{qual_to_color_index}->[$q];
-// ///         #$color = $base_colors_hash->{"\U$b"}->[$color_num];
-// ///         $color = "\U$b" . $color_num;
-// ///       }
-// //     }
-//     }
-// //     
-// //     $b = '&nbsp;' if ($b eq ' '); 
-//     if (b == " ")
-//       b = "&nbsp;";
-// //     if (not defined $color)
-// //     {
-// //       $color = "UN";
-// //       #older version
-// //       #$color = "color: rgb(0,0,0); background-color: rgb(255,255,255)";
-// //     }
-//     if(color.empty())
-//       color = "UN";
-// // 
-// //     if ($color ne $last_color)
-// //     {
-//     if(color != last_color)
-//     {
-// //       $output .= "</font>" if ($last_color);
-//       if(!last_color.empty())
-//         output += "</font>";
-// //       $output .= "<font class=\"$color\">";
-//         output += "<font class=\"" + color + "\">";
-// //       $last_color = $color;
-//         last_color = color;
-// //     }
-//     }
-// //     $output .= $b;
-//     output += b;
-// //     
-// //   }
-//   }
-// //   $output .= "</font>" if ($last_color);
-//   if(!last_color.empty())
-//     output += "</font>";
-// //   $output .= "&nbsp;&nbsp;" . _html_strand_char($a->{strand})  if (defined $a->{strand});
-//   ///@GRC Either read or ref
-//   if(
-// //   ##write the seq_id and coords in non-breaking html
-// //   if (defined $a->{seq_id})
-// //   {
-// //     my $seq_id = $a->{seq_id};
-// //     $seq_id =~ s/-/&#8209;/g;
-// //     $seq_id .= "/$a->{start}&#8209;$a->{end}" if (defined $coords);     
-// //     $output .= "&nbsp;&nbsp;" . $seq_id; 
-// //   }
-// //   
-// //   $output .=  end_code;
-// //   
-// //   return $output;
-// //}
-}
 } // namespace breseq
 
 
