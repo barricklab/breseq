@@ -510,17 +510,15 @@ string alignment_output::html_alignment ( const string& region )
     //my $aligned_annotation = $alignment_info->{aligned_annotation};
     //my $quality_range = $self->set_quality_range($aligned_reads, $options);
     //
+    /// all built by create_alignment and stored as member, m_ , variables.
     
-    Aligned_Reads &aligned_reads ( m_aligned_reads );
-    Aligned_References &aligned_references ( m_aligned_references );
-    Aligned_Annotation &aligned_annotation ( m_aligned_annotation );
     set_quality_range();
-    Quality_Range &quality_range ( m_quality_range );
+
     
     //my @sorted_keys = sort { -($aligned_reads->{$a}->{aligned_bases} cmp $aligned_reads->{$b}->{aligned_bases}) } keys %$aligned_reads;
     Sorted_Keys sorted_keys;
-    for (Aligned_Reads::iterator itr_read = aligned_reads.begin();
-            itr_read != aligned_reads.end(); itr_read++)
+    for (Aligned_Reads::iterator itr_read = m_aligned_reads.begin();
+            itr_read != m_aligned_reads.end(); itr_read++)
     {
         Sorted_Key sorted_key;
         sorted_key.seq_id = itr_read->first;
@@ -539,36 +537,65 @@ string alignment_output::html_alignment ( const string& region )
     
     //foreach my $aligned_reference (@aligned_references)
     //{
-    for (uint index = 0; index < aligned_references.size(); index++)
+    for (uint index = 0; index < m_aligned_references.size(); index++)
     {
       //  $output .= $self->_html_alignment_line($aligned_reference, 1) . br; 
-      output += html_alignment_line( (Alignment_Base) m_aligned_references[index] , true ,false); 
+      output += html_alignment_line( (Alignment_Base) m_aligned_references[index] , true ,false); ///TODO + .br
     //}
     }
     //$output .= $self->_html_alignment_line($aligned_annotation, 0) . br;
-    
+    output += html_alignment_line( (Alignment_Base) m_aligned_annotation, true, false ); ///TODO + .br
     //
     //     foreach my $key (@sorted_keys)
     //     {
+    for (Sorted_Keys::iterator itr_key = sorted_keys.begin();
+         itr_key != sorted_keys.end(); itr_key ++)
+    {
     //         $output .= $self->_html_alignment_line($aligned_reads->{$key}, 0, $quality_range) . br;
+      output += html_alignment_line( (Alignment_Base) m_aligned_reads[itr_key->seq_id], false, true); ///TODO + .br
     //     }
+    }
     //     $output .= $self->_html_alignment_line($aligned_annotation, 0) . br;
+    output += html_alignment_line( (Alignment_Base) m_aligned_annotation, false, false);      
     //     foreach my $aligned_reference (@aligned_references)
     //     {
+    for (uint index = 0; index < m_aligned_references.size(); index++)
+    {
     //         $output .= $self->_html_alignment_line($aligned_reference, 1) . br;
+      output += html_alignment_line( (Alignment_Base) m_aligned_references[index], true, false); ///TODO + .br
     //     }
+    }
     //     $output .= br;
+    ///TODO output += .br
     //
     //     ## create legend information
     //
     //     $output .= start_code . "Base quality scores:&nbsp;" . end_code;
+    ///TODO output += start_code;
+    output += "Base quality scores:&nbso:";
+    ///TODO output += end_code;
     //     $output .= $self->_html_alignment_line({aligned_bases => 'ATCG', => aligned_quals => pack('CCCC',0,0,0,0)}, 0,  $quality_range);
+    Alignment_Base temp_a;
+    temp_a.aligned_bases = "ATCG";
+    temp_a.aligned_quals = "CCCC0000";
+    output += html_alignment_line(temp_a, false, true);
     //     for (my $i=((defined $options->{quality_score_cutoff}) ? 1 : 2); $i<scalar @{$quality_range->{qual_cutoffs}}; $i++)
     //     {
+   for (uint8_t index = 2; index < m_quality_range.qaul_cutoffs.size(); index++) ///TODO user defined quality score cutoff
+   {
     //         my $c = $quality_range->{qual_cutoffs}->[$i];
+    char c = (char) m_quality_range.qaul_cutoffs.at(index);
     //         $output .= start_code . "&nbsp;&lt;&nbsp;$c&nbsp;&le;&nbsp;" . end_code;
+    ///TODO output += start_code;
+    output += "&nbsp;&lt;&nbsp;$c&nbsp;&le;&nbsp;";
+    ///TODO output += end_code;
     //         $output .= $self->_html_alignment_line({aligned_bases => 'ATCG', => aligned_quals => pack('CCCC',$c,$c,$c,$c)}, 0,  $quality_range);
+    temp_a.aligned_bases = "ATCG";
+    temp_a.aligned_quals = "CCCC";
+    temp_a.aligned_quals.append( c, 4);
+    output += html_alignment_line(temp_a, false, true);
     //     }
+   }
     //
     //     $output .= end_table() . end_Tr() . end_td();
     output += "</table></tr></td>";
@@ -1162,7 +1189,7 @@ void alignment_output::set_quality_range()
     //my $last = 0;
     uint32_t last = 0;
     //my @cutoff_levels = ($quality_score_cutoff);
-    vector<uint32_t> cutoff_levels;
+    vector<uint8_t> cutoff_levels;
     cutoff_levels.clear();
     cutoff_levels.push_back ( quality_score_cutoff );
     //for (my $i=$quality_score_cutoff; $i<scalar @qual_to_color; $i++)
@@ -1289,6 +1316,7 @@ string alignment_output::html_alignment_line(alignment_output::Alignment_Base a,
 // #   my $output;
   string output;
 // #   $output .= start_code;
+  ///TODO output += start_code
 // #   
 // #   my @split_aligned_bases = split //, $a->{aligned_bases};
   string split_aligned_bases = a.aligned_bases;
@@ -1312,8 +1340,8 @@ string alignment_output::html_alignment_line(alignment_output::Alignment_Base a,
       cout << split_aligned_quals << endl;
 // #     # $self->throw("unequal aligned base and aligned quals");
       cerr << "unequal aligned base and aligned quals" <<endl;
-      cout << "Bases: " + split_aligned_bases.length() << endl;
-      cout << "Quals: " + split_aligned_bases.length() << endl;
+      cerr << "Bases: " + split_aligned_bases.length() << endl;
+      cerr << "Quals: " + split_aligned_bases.length() << endl;
 // #     }
 // #   }
     }

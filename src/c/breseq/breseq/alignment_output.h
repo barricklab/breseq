@@ -101,7 +101,7 @@ namespace breseq
     typedef struct
     {
       map<uint, uint8_t> qual_to_color_index;
-      vector<uint32_t> qaul_cutoffs;
+      vector<uint8_t> qaul_cutoffs;
     }Quality_Range;
     
     typedef map<string, Aligned_Read> Aligned_Reads;
