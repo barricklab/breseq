@@ -113,7 +113,7 @@ sub new
 		'strict-polymorphism-prediction' => \$self->{strict_polymorphism_prediction},
 		'perl-preprocess-alignments' => \$self->{perl_preprocess_alignments},
 		'perl-identify-candidate-junctions' => \$self->{perl_identify_candidate_junctions},
-##		'smalt' => \$self->{smalt},
+		'smalt' => \$self->{smalt},
 		'no_ssaha2' => \$self->{no_ssaha2},
 		
 	) or pod2usage(2);
@@ -123,7 +123,7 @@ sub new
 	pod2usage(-exitstatus => 0, -verbose => 2) if (scalar @ARGV == 0);
 	
 	## default to using smalt
-	$self->{smalt} = 1 if (!$self->{no_ssaha2});
+	##$self->{smalt} = 1 if (!$self->{no_ssaha2});
 	
 	$self->post_option_initialize;
 	
