@@ -63,9 +63,8 @@ int main(int argc, char* argv[]) {
                         options["fasta"],
                         options["region"]
                         );
-   
    string html_output = ao.html_alignment(options["region"]);
-   //cout << html_output << endl;
+   cout << html_output << endl;
 
 
   } catch(...) {
