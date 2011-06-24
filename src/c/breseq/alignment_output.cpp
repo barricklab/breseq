@@ -52,7 +52,7 @@ alignment_output::alignment_output ( string bam, string fasta, uint32_t maximum_
 
 void alignment_output::create_alignment ( const string bam, const string fasta, const string region )
 {
-    //sub create_alignment
+  //sub create_alignment
     //{
     //  my ($self, $bam_path, $fasta_path, $region, $options) = @_;
     //  my $verbose = $options->{'verbose'};
@@ -65,8 +65,6 @@ void alignment_output::create_alignment ( const string bam, const string fasta, 
     //  my $aligned_reads;
     //  my $aligned_annotation;
     //
-
-
     //  my @aligned_references = ( {} );
     //  ////## More complex information about multiple reference sequence lines was provided
     //  ////if (defined $options->{alignment_reference_info_list})
@@ -78,6 +76,11 @@ void alignment_output::create_alignment ( const string bam, const string fasta, 
     //  ////    $aligned_reference->{seq_id} = $seq_id;
     //  ////    $aligned_reference->{strand} = 0;
     //  ////}
+    ///Single Reference case
+    struct Aligned_Reference aligned_reference;
+    m_alignment_output_pileup.aligned_references.push_back(aligned_reference);
+    //TEST with multiple reference sequences
+      
     //
     //  ## Need to ignore positions on the left and right that are only overlapped by
     //  ## Redundant reads. Currently Pileup will start and end on those coords.
@@ -156,7 +159,7 @@ void alignment_output::create_alignment ( const string bam, const string fasta, 
     m_aligned_reads = m_alignment_output_pileup.aligned_reads;
     m_aligned_references = m_alignment_output_pileup.aligned_references;
     m_aligned_annotation = m_alignment_output_pileup.aligned_annotation;
-    //NOTE "READ-4421-M1" at [74]
+    
     //
     //
     //    #### IF NOTHING ALIGNED, RETURN undef
@@ -164,11 +167,12 @@ void alignment_output::create_alignment ( const string bam, const string fasta, 
     //
 
 
-    if ( m_aligned_reads.empty() )
+    if ( m_aligned_reads.empty() || m_aligned_references.empty())
     {
-        cerr << "No aligned reads created in pileup function";
-        return;
+      cerr << "pileup function did not work as intended";
+      return;
     }
+   
     //  ##now add the unaligned portions of each
     //  my $max_extend_left = 0;
     //  my $max_extend_right = 0;
@@ -188,36 +192,37 @@ void alignment_output::create_alignment ( const string bam, const string fasta, 
     //      print "$aligned_read->{start} $aligned_read->{end}\n" if ($verbose);
     //
 
-    for ( Aligned_Reads::iterator itr_reads = m_aligned_reads.begin(); //TODO typedef map
-            itr_reads != m_aligned_reads.end(); itr_reads++ )
+    for ( Aligned_Reads::iterator itr_read = m_aligned_reads.begin(); //TODO typedef map
+            itr_read != m_aligned_reads.end(); itr_read++ )
     {
-        Aligned_Read& aligned_read = ( m_aligned_reads[ ( *itr_reads ).first] );
-        //$aligned_read->{aligned_bases} =~ m/^(\s*)\S+(\s*)$/;
-        size_t left_padding_length = aligned_read.aligned_bases.find_first_not_of ( ' ' );
-        size_t right_padding_length = ( aligned_read.aligned_bases.length() - 1 )
-                                        - aligned_read.aligned_bases.find_last_not_of ( ' ' );
-
+      Aligned_Read& aligned_read = ( m_aligned_reads[ ( *itr_read ).first] );
+      //$aligned_read->{aligned_bases} =~ m/^(\s*)\S+(\s*)$/;
+      size_t left_padding_length = aligned_read.aligned_bases.find_first_not_of ( ' ' );
+      size_t right_padding_length = ( aligned_read.aligned_bases.length() - 1 ) 
+      - aligned_read.aligned_bases.find_last_not_of ( ' ' );
+           
+      if ( verbose )
+      {
+        cout  << aligned_read.start << " " << aligned_read.end << " " << aligned_read.seq_id << endl;
+      }
+      //      my $extend_left =  ($aligned_read->{start}-1) - length($1);
+      //      my $extend_right = ($aligned_read->{length}-$aligned_read->{end}) - length($2);
+      //
+      //      $max_extend_left = $extend_left if ($extend_left > $max_extend_left);
+      //      $max_extend_right = $extend_right if ($extend_right > $max_extend_right);
+      //  }
+      //
       
-        if ( verbose )
-        {
-            cout  << aligned_read.start << " " << aligned_read.end << " " << aligned_read.seq_id << endl;
-        }
-        //      my $extend_left =  ($aligned_read->{start}-1) - length($1);
-        //      my $extend_right = ($aligned_read->{length}-$aligned_read->{end}) - length($2);
-        //
-        //      $max_extend_left = $extend_left if ($extend_left > $max_extend_left);
-        //      $max_extend_right = $extend_right if ($extend_right > $max_extend_right);
-        //  }
-        //
-
-        int32_t extend_left = ( aligned_read.start - 1 ) - left_padding_length;
-        int32_t extend_right = ( aligned_read.length - aligned_read.end ) - right_padding_length;
-
-        if ( extend_left > max_extend_left )
-            max_extend_left = extend_left;
-        if ( extend_right > max_extend_right )
-            max_extend_right = extend_right;
+      int32_t extend_left = ( aligned_read.start - 1 ) - left_padding_length;
+      int32_t extend_right = ( aligned_read.length - aligned_read.end ) - right_padding_length;
+            
+      if ( extend_left > max_extend_left )
+        max_extend_left = extend_left;
+      if ( extend_right > max_extend_right )
+        max_extend_right = extend_right;
+      
     }
+    
     //
     //  #now add this much to every one
     //  foreach my $key (keys %$aligned_reads)
@@ -228,18 +233,22 @@ void alignment_output::create_alignment ( const string bam, const string fasta, 
     //  }
     //
     //  print "Extend: $max_extend_left $max_extend_right\n" if ($verbose);
-    for ( map<string, Aligned_Read>::iterator itr_reads = m_aligned_reads.begin(); //TODO typedef map
-            itr_reads != m_aligned_reads.end(); itr_reads++ )
+ 
+    for (Aligned_Reads::iterator itr_read = m_aligned_reads.begin(); //TODO typedef map
+            itr_read != m_aligned_reads.end(); itr_read++ )
     {
-        Aligned_Read& aligned_read ( ( *itr_reads ).second );
+        Aligned_Read& aligned_read ( itr_read->second );
 
         aligned_read.aligned_bases.insert ( 0, max_extend_left, ' ' );
         aligned_read.aligned_bases.append ( ' ', max_extend_right );
-
+        
         aligned_read.aligned_quals.insert ( 0, max_extend_left, char ( 255 ) );
-        aligned_read.aligned_quals.append ( char ( 255 ), max_extend_right );
-    }
 
+        for(int i = 0; i < max_extend_right; i++)
+          aligned_read.aligned_quals += char(255); //BUG dont .append(char(255), max_extend_right
+    }
+    
+   
     if ( verbose )
     {
         cout << "Extend: " << max_extend_left;
@@ -305,7 +314,7 @@ void alignment_output::create_alignment ( const string bam, const string fasta, 
         //       }
         while ( pos < aligned_reference.start )
         {
-            char base = aligned_reference.base;
+            char base = aligned_reference.aligned_bases[pos]; //TODO correct?
             //TODO implement trucate start and end
             ref_add_left += base;
             pos++;
@@ -323,7 +332,7 @@ void alignment_output::create_alignment ( const string bam, const string fasta, 
         pos = aligned_reference.end + 1;
         while ( pos <= aligned_reference.end + ref_extend_right )
         {
-            char base = aligned_reference.base;
+            char base = aligned_reference.aligned_bases[pos]; //TODO correct?;
             ref_add_right += base;
             pos++;
         }
@@ -343,8 +352,10 @@ void alignment_output::create_alignment ( const string bam, const string fasta, 
         aligned_reference.aligned_bases.append ( ref_add_right );
 
         aligned_reference.aligned_quals.insert ( 0, max_extend_left, char ( 255 ) );
-        aligned_reference.aligned_quals.append ( char ( 255 ), max_extend_right );
+        for(int i = 0; i < max_extend_right ; i++)
+          aligned_reference.aligned_quals += char ( 255 ); //BUG dont .append(char(255),max_extend_right)
     }
+    
     //
     //  #extend annotation line
     //  $aligned_annotation->{aligned_bases} = (' ' x $max_extend_left) . $aligned_annotation->{aligned_bases} . (' ' x $max_extend_right);
@@ -354,13 +365,13 @@ void alignment_output::create_alignment ( const string bam, const string fasta, 
     //  #now go in and replace the empty space adjacent to each with the rest of the read sequence
     //  foreach my $key (keys %$aligned_reads)
     //  {
-    for ( map<string, Aligned_Read>::iterator itr_reads = m_aligned_reads.begin(); //TODO typedef map
-            itr_reads != m_aligned_reads.end(); itr_reads++ )
+    for ( Aligned_Reads::iterator itr_read = m_aligned_reads.begin(); //TODO typedef map
+            itr_read != m_aligned_reads.end(); itr_read++ )
     {
         //      my $aligned_read = $aligned_reads->{$key};
         //
         //      $aligned_read->{aligned_bases} =~ m/^(\s*)(\S+)/;
-        Aligned_Read& aligned_read ( ( *itr_reads ).second );
+        Aligned_Read& aligned_read ( ( *itr_read ).second );
 
         // *
         // *  FIND LENGTH OF THE NON-SPACE PART OF READ
@@ -397,7 +408,8 @@ void alignment_output::create_alignment ( const string bam, const string fasta, 
             //          substr($aligned_read->{aligned_quals}, $left_pos-length($add_seq), length($add_seq)) = $add_seq;
             //      }
             add_seq.clear();
-            add_seq.append ( char ( 254 ), aligned_read.start - 1 );
+            for(int i =0 ; i < (aligned_read.start -1); i++ )
+              add_seq += char(254);                     //BUG dont .append ( char ( 254 ), aligned_read.start - 1 );
             aligned_read.aligned_quals.replace ( ( left_pos - add_seq.length() ), add_seq.length(), add_seq );
         }
         //      if ($aligned_read->{end} < $aligned_read->{length})
@@ -448,12 +460,12 @@ void alignment_output::create_alignment ( const string bam, const string fasta, 
     //  ## Need to reverse the coords for some
     //  foreach my $key (keys %$aligned_reads)
     //  {
-    for ( map<string, Aligned_Read>::iterator itr_reads = m_aligned_reads.begin(); //TODO typedef map
-            itr_reads != m_aligned_reads.end(); itr_reads++ )
+    for ( map<string, Aligned_Read>::iterator itr_read = m_aligned_reads.begin(); //TODO typedef map
+            itr_read != m_aligned_reads.end(); itr_read++ )
     {
         //      my $aligned_read = $aligned_reads->{$key};
 
-        Aligned_Read& aligned_read ( ( *itr_reads ).second );
+        Aligned_Read& aligned_read ( ( *itr_read ).second );
 
         //      if ($aligned_read->{strand} == -1)
         //      {
@@ -488,6 +500,7 @@ string alignment_output::html_alignment ( const string& region )
     //my $alignment_info = $self->create_alignment($bam_path, $fasta_path, $region, $options);
     //
     //my $output = '';
+    string output = "";
     //return p . "No reads uniquely align to region." if (!defined $alignment_info);
     //$output .= p . "$alignment_info->{message}" if ($alignment_info->{message});
     //return $output if (!defined $alignment_info->{aligned_reads});
@@ -497,37 +510,43 @@ string alignment_output::html_alignment ( const string& region )
     //my $aligned_annotation = $alignment_info->{aligned_annotation};
     //my $quality_range = $self->set_quality_range($aligned_reads, $options);
     //
-    string output;
-    Aligned_Reads& aligned_reads ( m_aligned_reads );
-    Aligned_References& aligned_references ( m_aligned_references );
-    Aligned_Annotation& aligned_annotation ( m_aligned_annotation );
-    Quality_Range& quality_range ( m_quality_range );
+    
+    Aligned_Reads &aligned_reads ( m_aligned_reads );
+    Aligned_References &aligned_references ( m_aligned_references );
+    Aligned_Annotation &aligned_annotation ( m_aligned_annotation );
+    set_quality_range();
+    Quality_Range &quality_range ( m_quality_range );
+    
     //my @sorted_keys = sort { -($aligned_reads->{$a}->{aligned_bases} cmp $aligned_reads->{$b}->{aligned_bases}) } keys %$aligned_reads;
     Sorted_Keys sorted_keys;
     for (Aligned_Reads::iterator itr_read = aligned_reads.begin();
             itr_read != aligned_reads.end(); itr_read++)
     {
         Sorted_Key sorted_key;
-        sorted_key.seq_id = itr_read->second.seq_id;
+        sorted_key.seq_id = itr_read->first;
         sorted_key.aligned_bases_length = itr_read->second.aligned_bases.length();
         sorted_keys.push_back(sorted_key);
     }
-
     sort(sorted_keys.begin(),sorted_keys.end(),sort_by_aligned_bases_length);
-
+    //TEST did sorting work?
 
     //$output .= style($self->{header_style_string});
     //$output .= start_table({-style=>"background-color: rgb(255,255,255)"}) . start_Tr() . start_td({-style=>"font-size:10pt"});
     //
     output += "<style>"+create_header_string()+"</style>";
-    output += "<table style=""background-color: rgb(255,255,255)"">";
-    output += "<tr><td style=""font-size:10pt""><code><font class=""-5"">";
-
+    output += "<table style=\"background-color: rgb(255,255,255)\">";
+    output += "<tr><td style=\"font-size:10pt\"><code><font class=\"-5\">";
+    
     //foreach my $aligned_reference (@aligned_references)
     //{
-    //  $output .= $self->_html_alignment_line($aligned_reference, 1) . br;
+    for (uint index = 0; index < aligned_references.size(); index++)
+    {
+      //  $output .= $self->_html_alignment_line($aligned_reference, 1) . br; 
+      output += html_alignment_line( (Alignment_Base) m_aligned_references[index] , true ,false); 
     //}
+    }
     //$output .= $self->_html_alignment_line($aligned_annotation, 0) . br;
+    
     //
     //     foreach my $key (@sorted_keys)
     //     {
@@ -552,7 +571,7 @@ string alignment_output::html_alignment ( const string& region )
     //     }
     //
     //     $output .= end_table() . end_Tr() . end_td();
-    //
+    output += "</table></tr></td>";
     //     return $output;
     // }
     return output;
@@ -561,42 +580,55 @@ string alignment_output::html_alignment ( const string& region )
 /*! Called for each position.*/
 void alignment_output::Alignment_Output_Pileup::pileup_callback ( const pileup& p )
 {
-    //  #create the alignment via "pileup"
-    //  my $pileup_function = sub {
+  
+  //  #create the alignment via "pileup"
+  //  my $pileup_function = sub { 
     ///EX: region = REL606-5:1-15; 1 is start, 15 is end
     uint32_t& start_1( m_start_position_1 );
     uint32_t& end_1( m_end_position_1 );
-
-
+    
+    
     // my ($seq_id,$pos,$pileup) = @_;
     uint32_t pos_1 = p.position_1();
-
+    
     // print "POSITION: $pos\n" if ($verbose);
     if ( verbose ) //TODO Options
         cout << "POSITION: " << pos_1 << endl;
-
+    
     // return if ($pos < $unique_start);
-    // return if ($pos > $unique_end);
-    if ( ( pos_1 < unique_start ) || ( pos_1 > unique_end ) )
-        return;
-    //
-    // foreach my $aligned_reference (@aligned_references)
-    // {
-    //   $aligned_reference->{start} = $pos if (!defined $aligned_reference->{start});
-    //   $aligned_reference->{end} = $pos;
-    // }
-    //
-    for ( uint32_t index_aligned_reference;
-            index_aligned_reference < aligned_references.size();
-            index_aligned_reference++ )
-    {
-      // @JEB: 0 counts as undefined since we use 1-indexed coords
-      if (aligned_references[index_aligned_reference].start == 0) 
-      {
-        aligned_references[index_aligned_reference].start = pos_1;  
-      }
-      aligned_references[index_aligned_reference].end =pos_1;
-    }//TEST with multiple reference sequences
+        // return if ($pos > $unique_end);
+        if ( ( pos_1 < unique_start ) || ( pos_1 > unique_end ) )
+          return;
+        //
+        // foreach my $aligned_reference (@aligned_references)
+        // {
+        //   $aligned_reference->{start} = $pos if (!defined $aligned_reference->{start});
+        //   $aligned_reference->{end} = $pos;
+        // }
+        //
+        
+    ///For Multiple Reference case
+//     for ( uint32_t index_aligned_reference = 0;
+//          index_aligned_reference < aligned_references.size();
+//          index_aligned_reference++ )
+//          {
+//            //@JEB: 0 counts as undefined since we use 1-indexed coords
+//            if (aligned_references[index_aligned_reference].start == 0) 
+//            {
+//              aligned_references[index_aligned_reference].start = pos_1;  
+//            }
+//              aligned_references[index_aligned_reference].end =pos_1;
+//          }
+//TODO Must be better way to get this information then calling it in pileup...
+        
+   ///Single Reference case
+   Aligned_Reference& aligned_reference (aligned_references[0]);
+   aligned_reference.reference_name = p.target_name();
+   aligned_reference.reference_length = p.target_length();
+   if(aligned_reference.start == 0)
+     aligned_reference.start = pos_1;
+   aligned_reference.end = pos_1;
+   //TEST with multiple reference sequences
 
     ////      ## Cull the list to those we want to align
     ////      ## Other alignments may overlap this position that DO NOT
@@ -718,9 +750,9 @@ void alignment_output::Alignment_Output_Pileup::pileup_callback ( const pileup& 
 		/// Reset "updated flag" @JEB
     /// This flag is set if the read was among those returned by the pileup
     /// if it is not set, we insert padding after the loop through the alignments!
-    for (Aligned_Reads::iterator itr_reads = aligned_reads.begin(); itr_reads != aligned_reads.end(); itr_reads++ )
+    for (Aligned_Reads::iterator itr_read = aligned_reads.begin(); itr_read != aligned_reads.end(); itr_read++ )
     {
-        Aligned_Read& aligned_read ( itr_reads->second );
+        Aligned_Read& aligned_read ( itr_read->second );
         aligned_read.updated = false;
     }
     // ALIGNMENT:
@@ -858,14 +890,14 @@ void alignment_output::Alignment_Output_Pileup::pileup_callback ( const pileup& 
     char ref_base = p.reference_base_char_1(pos_1);
 
     // foreach my $aligned_reference (@aligned_references)
-		for ( uint32_t itr = 0; itr < aligned_references.size(); itr ++ )
+		for ( uint32_t index = 0; index < aligned_references.size(); index ++ )
     {
       // my $my_ref_base = $ref_base;
     	char my_ref_base = ref_base;
       //// $my_ref_base = '.' if ($aligned_reference-> {truncate_start} && ($last_pos < $aligned_reference-> {truncate_start}))
       //// || ($aligned_reference-> {truncate_end} && ($last_pos > $aligned_reference-> {truncate_end}));
       
-			Aligned_Reference& aligned_reference ( aligned_references[itr] );	
+			Aligned_Reference& aligned_reference ( aligned_references[index] );	
       
       // $aligned_reference-> {aligned_bases} .= $my_ref_base;
 			aligned_reference.aligned_bases += my_ref_base;
@@ -874,9 +906,10 @@ void alignment_output::Alignment_Output_Pileup::pileup_callback ( const pileup& 
 			if ( max_indel >  0 )
       	aligned_reference.aligned_bases.append ( '.',max_indel );
         // $aligned_reference-> {aligned_quals} .= chr(255) x ($max_indel+1);
-				aligned_reference.aligned_quals.append ( char ( 255 ), max_indel +1 );
+      for(int i = 0 ; i < (max_indel + 1); i++)
+				aligned_reference.aligned_quals += char(255); //BUG dont .append ( char ( 255 ), max_indel +1 );
    
-				//TODO Need these for other uses, initialize here?
+				///TODO assigned here for single reference case?
 				///aligned_reference.base = my_ref_base;
         ///aligned_reference.reference_length = p.target_length();
         ///aligned_reference.reference_name = p.target_name();
@@ -987,22 +1020,22 @@ void alignment_output::set_quality_range()
     //     my $quality_score_cutoff = 0;
     //     $quality_score_cutoff = $options->{quality_score_cutoff} if (defined $options->{quality_score_cutoff});
     //
-    map<uint32_t, uint32_t> qc;
+    map<uint8_t, uint> qc;
     uint32_t total = 0;
     uint32_t quality_score_cutoff = 0;
 
     // foreach my $key (keys %$aligned_reads)
     // {
-    for ( Aligned_Reads::iterator itr_reads = m_aligned_reads.begin(); //TODO typedef map
-            itr_reads != m_aligned_reads.end(); itr_reads++ )
+    for ( Aligned_Reads::iterator itr_read = m_aligned_reads.begin(); //TODO typedef map
+            itr_read != m_aligned_reads.end(); itr_read++ )
     {
         // my $aligned_read = $aligned_reads->{$key};
-        Aligned_Read& aligned_read = ( ( *itr_reads ).second );
-        //  foreach my $c (split (//, $aligned_read->{qual_sequence}))
+        Aligned_Read& aligned_read(itr_read->second );
+        //foreach my $c (split (//, $aligned_read->{qual_sequence}))
         //  {
         for ( uint32_t index = 0; index < aligned_read.qual_sequence.length(); index ++ ) //TODO check if 1 indexed or not
         {
-            uint32_t c = uint32_t ( aligned_read.qual_sequence[index] );
+            uint8_t c = (uint8_t)aligned_read.qual_sequence[index];
             //    if (ord($c) >= $quality_score_cutoff)
             //    {
             if ( c >= quality_score_cutoff )
@@ -1024,12 +1057,13 @@ void alignment_output::set_quality_range()
         }
         //}
     }
+    
     //
     //my @qual_to_color;
     //my @cutoff_percentiles = (0, 0.03, 0.1, 0.3, 0.9, 1.0);
     //my $current_cutoff_level = 0;
     //
-    vector<uint32_t> qual_to_color;
+    map<uint,uint8_t> qual_to_color;
     uint32_t cutoff_values[] = {0, 0.03, 0.1, 0.3, 0.9, 1.0};
     vector<uint32_t> cutoff_percentiles ( cutoff_values, cutoff_values
                                           + sizeof ( cutoff_values ) / sizeof ( uint32_t ) );
@@ -1054,7 +1088,7 @@ void alignment_output::set_quality_range()
     //while ($i < scalar @qc)
     //{
     uint32_t cumq = 0;
-    while ( qc.find ( index ) != qc.end() )
+    while ( index < qc.size() )
     {
         //  $cumq += $qc[$i] / $total if (defined $qc[$i]);
         //TODO ASK passes if defined by entering while loop?
@@ -1207,8 +1241,8 @@ string alignment_output::create_header_string()
     header_style_string.clear();
     //$self-> {header_style_string} .= "\.NC {color: rgb(0,0,0); background-color: rgb(255,255,255)}\n"; #no color
     //$self-> {header_style_string} .= "\.UN {color: rgb(120,120,120); background-color: rgb(255,255,255)}\n"; #unaligned
-    header_style_string += "\\.NC {color: rgb(0,0,0); background-color: rgb(255,255,255)}\n";
-    header_style_string += "\\.UN {color: rgb(120,120,120); background-color: rgb(255,255,255)}\n";
+    header_style_string += ".NC {color: rgb(0,0,0); background-color: rgb(255,255,255)}\n";
+    header_style_string += ".UN {color: rgb(120,120,120); background-color: rgb(255,255,255)}\n";
     //foreach my $key (keys %$base_colors_hash)
     //{
     for ( map<char, vector<string> >::iterator itr = base_color_hash.begin();
@@ -1224,8 +1258,8 @@ string alignment_output::create_header_string()
                 //    {
 
                 //      $self-> {header_style_string} .= "\.$key$i \{color: rgb(255,255,255); background-color: $base_colors_hash->{$key}->[$i]\}\n";
-                header_style_string += "\\." + to_string ( ( *itr ).first ) + "\\{color: rgb(255,255,255); background-color:"
-                                       + ( *itr ).second[index] + "\\ \n";
+                header_style_string += "." + to_string ( ( *itr ).first ) + "{color: rgb(255,255,255); background-color:"
+                                       + ( *itr ).second[index] + "\n";
                 //    }
             }
             //    else
@@ -1233,8 +1267,8 @@ string alignment_output::create_header_string()
             else
             {
                 //      $self-> {header_style_string} .= "\.$key$i \{color: rgb(120,120,120); background-color: $base_colors_hash->{$key}->[$i]\}\n";
-                header_style_string += "\\."+to_string ( ( *itr ).first ) + "\\{color: rgb(120,120,120); background-color:"
-                                       + ( *itr ).second[index] + "\\ \n";
+                header_style_string += "."+to_string ( ( *itr ).first ) + "{color: rgb(120,120,120); background-color:"
+                                       + ( *itr ).second[index] + "\n";
                 //    }
             }
             //   }
@@ -1243,9 +1277,170 @@ string alignment_output::create_header_string()
     }
     //
     //     $self-> {no_color_index} = scalar(@ {$base_colors_hash->{'G'}}) - 1;
+    no_color_index = 5; //TODO
     return header_style_string;
 }
 
+
+
+string alignment_output::html_alignment_line(alignment_output::Alignment_Base a, const bool &coords, const bool &use_quality_range)
+{
+// #my ($self, $a, $coords, $quality_range) = @_;
+// #   my $output;
+  string output;
+// #   $output .= start_code;
+// #   
+// #   my @split_aligned_bases = split //, $a->{aligned_bases};
+  string split_aligned_bases = a.aligned_bases;
+// #   my @split_aligned_quals;
+  string split_aligned_quals = a.aligned_quals;
+// #   @split_aligned_quals = split //, $a->{aligned_quals} if ($a->{aligned_quals});
+  if (!a.aligned_quals.empty())
+    split_aligned_quals = a.aligned_quals;
+// #   if (@split_aligned_quals)
+// #   {
+  if (!split_aligned_quals.empty())
+  {
+// #     
+// #     if (scalar @split_aligned_bases != scalar @split_aligned_quals)
+// #     {
+    if (split_aligned_bases.length() != split_aligned_quals.length())
+    {
+// #       print "@split_aligned_bases\n";
+      cout << split_aligned_bases << endl;;
+// #       print "@split_aligned_quals\n";
+      cout << split_aligned_quals << endl;
+// #     # $self->throw("unequal aligned base and aligned quals");
+      cerr << "unequal aligned base and aligned quals" <<endl;
+      cout << "Bases: " + split_aligned_bases.length() << endl;
+      cout << "Quals: " + split_aligned_bases.length() << endl;
+// #     }
+// #   }
+    }
+  }   
+// #   my $last_color = '';
+  string last_color = "";
+// #   for (my $i=0; $i<scalar @split_aligned_bases; $i++)
+// #   {
+    for(int index = 0; index < split_aligned_bases.length(); index++)
+    {
+// #     my $q = 255;
+      uint8_t q = 255;
+// #     $q = ord($split_aligned_quals[$i]) if (@split_aligned_quals);
+      if(!split_aligned_quals.empty())
+        q = (uint8_t) split_aligned_quals[index]; 
+// #     my $b = $split_aligned_bases[$i];
+        string b = to_string(split_aligned_bases[index]);       
+// #     my $color;    
+        string color = "";
+// #     ## no base quality provided -- assume BEST if not space
+// #     if ($q != 254)
+// #     {
+        if (q != 254)
+        {
+// #       if (($q == 255) ||  (!defined $quality_range))
+// #       {
+          if ( (q == 255) || (!use_quality_range) )
+          {
+// #         $color = ($b eq ' ') ? 'NC' : "\U$b" . $self->{no_color_index};
+// #       }
+            color = to_upper(b) + (char)no_color_index;
+          }
+// #       ##Note: no color for $q == 254
+// # 
+// #       elsif ((defined $quality_range) && (!($b =~ m/[.-]/))) #($b =~ m/[NATCGnatcg]/))
+// #       {
+          if ( (use_quality_range) &&
+             ( (b.find(".") == string::npos) || (b.find("-") == string::npos) ) ) /// TODO correct REGEX?
+          {
+// #         my $color_num = $quality_range->{qual_to_color_index}->[$q];
+            uint8_t color_num = m_quality_range.qual_to_color_index[q];
+// #         #$color = $base_colors_hash->{"\U$b"}->[$color_num];
+// #         $color = "\U$b" . $color_num;
+            color = "\\U" + b + (char)color_num;
+// #       }
+// #     }
+          }
+        }     
+// #     $b = '&nbsp;' if ($b eq ' ');
+        if (b == " ")
+          b = "&nbsp";
+// #     if (not defined $color)
+// #     {
+        if (color.empty())
+        {
+// #       $color = "UN";
+          color = "UN";
+// #       #older version
+// #       #$color = "color: rgb(0,0,0); background-color: rgb(255,255,255)";
+// #     }
+        } 
+// #     if ($color ne $last_color)
+// #     {
+        if (color != last_color)
+        {
+// #       $output .= "</font>" if ($last_color);
+          if (!last_color.empty())
+            output += "</font>"; 
+// #       $output .= "<font class=\"$color\">";
+          output += "<font class=\"" + color + "\">"; 
+// #       $last_color = $color;
+          last_color = color;
+// #     }
+        }
+// #     $output .= $b;
+        output += b;
+// #   }
+    }
+// #   $output .= "</font>" if ($last_color);
+  if (!last_color.empty())
+    output += "</font>";
+// #   $output .= "&nbsp;&nbsp;" . _html_strand_char($a->{strand})  if (defined $a->{strand});
+  if (a.strand != 0)
+    output += "&nbsp;&nbsp;" + html_alignment_strand(a.strand); 
+// #   ##write the seq_id and coords in non-breaking html
+// #   if (defined $a->{seq_id})
+// #   {
+  if (!a.seq_id.empty())
+  {
+// #     my $seq_id = $a->{seq_id};
+    string seq_id = a.seq_id;
+// #     $seq_id =~ s/-/&#8209;/g;
+    ///TODO $seq_id =~ s/-/&#8209;/g;
+    
+    
+// #     $seq_id .= "/$a->{start}&#8209;$a->{end}" if (defined $coords);   
+    if(coords)
+    {
+      seq_id += "/" + a.start;
+      seq_id += "&#8209;"; ///TODO FIXED?
+      seq_id += a.end;   
+    }
+// #     $output .= "&nbsp;&nbsp;" . $seq_id;
+// #   }
+    output += "&nbsp;&nbsp;" + seq_id;
+  }   
+// #   $output .=  end_code;
+// #   
+// #   return $output;
+return output;
+}
+string alignment_output::html_alignment_strand(const uint32_t &strand)
+{
+//   my ($s) = @_;
+//   return '&lt;' if ($s == -1);
+  if (strand == -1)
+    return "&lt;";
+//   return '&gt;' if ($s == +1);
+  if (strand == 1)
+    return "&gt;";
+//   return '.';
+    return ".";
+//   
+}
+
 } // namespace breseq
+
+
 
 
