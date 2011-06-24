@@ -36,6 +36,7 @@ namespace breseq
   {
   public:
     //! returns more information about aligned reads given a sequence id string.
+    
     struct Aligned_Read
     {
       Aligned_Read() 
@@ -77,8 +78,7 @@ namespace breseq
         , aligned_bases("")
         , aligned_quals("")
         , reference_length(0)
-        , reference_name("")
-        , base(0)  
+        , reference_name("")  
       {}
       
       uint32_t start;
@@ -87,7 +87,6 @@ namespace breseq
       string aligned_quals;
       uint32_t reference_length;
       string reference_name;
-      char base;
     };
     
     typedef struct
@@ -100,6 +99,13 @@ namespace breseq
       string seq_id;
       uint32_t aligned_bases_length;
     }Sorted_Key;
+    
+    //!Helper struct for set_quality_range
+    typedef struct
+    {
+      map<uint, uint32_t> qual_to_color_index;
+      vector<uint32_t> qaul_cutoffs;
+    }Quality_Range;
     
     typedef map<string, Aligned_Read> Aligned_Reads;
     typedef vector<Aligned_Reference> Aligned_References;
@@ -136,12 +142,6 @@ namespace breseq
       uint32_t max_indel;
       char base;
     };
-    //!Helper struct for set_quality_range
-    typedef struct
-    {
-      vector<uint32_t> qual_to_color_index;
-      vector<uint32_t> qaul_cutoffs;
-    }Quality_Range;
     
     Alignment_Output_Pileup m_alignment_output_pileup;
     Aligned_Reads m_aligned_reads;
@@ -157,13 +157,33 @@ namespace breseq
     void create_alignment ( const string bam, const string fasta, const string region );
     void set_quality_range();
   private:
+    uint no_color_index;
     string create_header_string();
+    string html_alignment_line(const string& aligned_bases, const bool& coords,
+                               const string& aligned_quals = "");
+    string html_alignment_line(const string& aligned_bases, const bool& coords,
+                               const Quality_Range& quality_range, const string& aligned_quals ="");
+    string html_alignment_line(Aligned_Read *aligned_read = NULL, Aligned_Reference *aligned_reference =NULL,
+                               const bool& coords = false);
+    
+    
+    
+//     string html_alignment_line(Aligned_Reference (*aligned_reference) = NULL, Aligned_Annotation (*aligned_annotation) =NULL,
+//                                Aligned_Read (*aligned_read) = NULL, Quality_Range (*quality_range) = NULL,
+//                                string aligned_bases = "", string aligned_quals = "", bool coords = false);
+    
     static bool sort_by_aligned_bases_length ( const Sorted_Key& a, const Sorted_Key& b )
     {
       return ( a.aligned_bases_length > b.aligned_bases_length );
     }
   };
-  
+// _html_alignment_line($aligned_reference, 1) 
+// _html_alignment_line($aligned_annotation, 0) 
+// _html_alignment_line($aligned_reads->{$key}, 0, $quality_range)
+// _html_alignment_line($aligned_annotation, 0) 
+// _html_alignment_line($aligned_reference, 1)
+// _html_alignment_line({aligned_bases => 'ATCG', => aligned_quals => pack('CCCC',0,0,0,0)}, 0,  $quality_range)
+// _html_alignment_line({aligned_bases => 'ATCG', => aligned_quals => pack('CCCC',$c,$c,$c,$c)}, 0,  $quality_range)
   
   
   
