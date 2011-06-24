@@ -115,6 +115,11 @@ namespace breseq {
 
   }
 
+  cSequenceFeature* cReferenceSequences::find_closest_repeat_region(uint32_t position, vector<cSequenceFeature>& repeat_list_ref, uint32_t max_distance, bool direction)
+  {
+	  //TODO: Translate function body
+	  return &(repeat_list_ref[0]);
+  }
 
   void cReferenceSequences::WriteFASTA(const std::string &file_name) {
     

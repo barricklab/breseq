@@ -95,13 +95,11 @@ namespace breseq {
 		////faidx_t * junction_faidx = fai_load(junction_fasta.c_str());
 		////assert(junction_faidx);
 
-		//
 		//## Load header once at the beginning (but have to peek at TAM file to do this).
 		//      my @read_structures = $settings->read_structures;
 		//      my $read_file = $read_structures[0]->{base_name};
 		//      my $junction_sam_file_name = $settings->file_name('candidate_junction_sam_file_name', {'#'=>$read_file});
 		//      $junction_header = $junction_tam->header_read2($junction_faidx_file_name) or die("Error reading reference fasta index file: $junction_faidx_file_name");
-		//
 
 		string junction_sam_file_name = junction_sam_path + "/" + read_files[0].m_base_name + ".candidate_junction.sam";
 		junction_tam = new tam_file(junction_sam_file_name, junction_fasta, ios::in);
@@ -509,79 +507,82 @@ namespace breseq {
 	passed_junction_ids = get_sorted_junction_ids(matched_junction, passed_junction_ids);
 	rejected_junction_ids = get_sorted_junction_ids(matched_junction, rejected_junction_ids);
 
-//    foreach my $key (@passed_junction_ids)
-//    {	  
-//      print "$key\n" if ($verbose);
-//      my $item = _junction_to_hybrid_list_item($key, $ref_seq_info, scalar @{$matched_junction{$key}}, $junction_test_info{$key});
-//      $gd->add($item);
-//      
-//## save the score in the distribution
-//      Breseq::Shared::add_score_to_distribution(\%accepted_pos_hash_score_distribution, $junction_test_info{$key}->{pos_hash_score});
-//      Breseq::Shared::add_score_to_distribution(\%accepted_min_overlap_score_distribution, $junction_test_info{$key}->{min_overlap_score});
-//      
-//## Create matches from UNIQUE sides of each match to reference genome
-//## this fixes, for example appearing to not have any coverage at the origin of a circular DNA fragment
-//### Currently, we do not add coverage to redundantly matched sides because we don't know which copy.
-//
-//next if ( !$settings->{add_split_junction_sides} );
-//
-//foreach my $match (@{$matched_junction{$key}})
-//{
-//my $a = $match->{junction_alignments}->[0];
-//my $fastq_file_index = $match->{fastq_file_index};
-//
-//print ">>>>" . $a->reference_name() . "\n" if ($verbose);
-//print ">>>>Alignment start-end: " . $a->reference_start_1() . "  " . $a->reference_end_1() . "\n" if ($verbose);
-//
-//foreach my $side (1, 2)
-//{
-//my $side_key = 'side_' . $side;
-//## Do not count for coverage if it is redundant!!
-//
-//next if ($item->{"$side_key\_redundant"});
-//
-//## Write out match corresponding to this part to SAM file
-//## By trimming in the candidate junctions sequence, rather than on each half,
-//## this is done properly.						
-//my $trim = _trim_ambiguous_ends($a, $junction_header, $junction_fai);						
-//Breseq::Shared::tam_write_moved_alignment(
-//$RREF, 
-//$junction_header,
-//$a, 
-//$fastq_file_index, 
-//$item->{"$side_key\_seq_id"}, 
-//$item->{"$side_key\_position"}, 
-//$item->{"$side_key\_strand"},
-//$item->{"$side_key\_overlap"}, 
-//$side, 
-//$item->{flanking_left}, 
-//$item->{alignment_overlap}, 
-//$trim
-//);		
-//}
-//}
-//}
-//
-//## Save summary statistics
-//$summary->{alignment_correction}->{new_junctions}->{observed_min_overlap_score_distribution} = \%observed_min_overlap_score_distribution;
-//$summary->{alignment_correction}->{new_junctions}->{accepted_min_overlap_score_distribution} = \%accepted_min_overlap_score_distribution;
-//
-//$summary->{alignment_correction}->{new_junctions}->{observed_pos_hash_score_distribution} = \%observed_pos_hash_score_distribution;
-//$summary->{alignment_correction}->{new_junctions}->{accepted_pos_hash_score_distribution} = \%accepted_pos_hash_score_distribution;
-//
-//my @rejected_hybrid_predictions = ();
-//foreach my $key (@rejected_junction_ids)
-//{
-//print "$key\n" if ($verbose);
-//my $item = _junction_to_hybrid_list_item($key, $ref_seq_info, scalar @{$matched_junction{$key}}, $junction_test_info{$key});
-//GenomeDiff::add_reject_reason($item, "NJ");
-//$gd->add($item);
-//}
-//
-//my $jc_genome_diff_file_name = $settings->file_name('jc_genome_diff_file_name');
-//$gd->write($jc_genome_diff_file_name);	
-//}
-//
+	for (uint32_t i = 0; i < passed_junction_ids.size(); i++)
+	{
+		string key = passed_junction_ids[i];
+		if (verbose) cout << key << endl;
+		diff_entry item = _junction_to_hybrid_list_item(key, ref_seq_info, matched_junction[key].size(), junction_test_info[key]);
+		gd.add(item);
+
+		// save the score in the distribution
+		add_score_to_distribution(accepted_pos_hash_score_distribution, junction_test_info[key].pos_hash_score);
+		add_score_to_distribution(accepted_min_overlap_score_distribution, junction_test_info[key].min_overlap_score);
+
+		// Create matches from UNIQUE sides of each match to reference genome
+		// this fixes, for example appearing to not have any coverage at the origin of a circular DNA fragment
+		//  Currently, we do not add coverage to redundantly matched sides because we don't know which copy.
+		if (!settings.add_split_junction_sides) continue;
+
+		for (int32_t j = 0; j < matched_junction[key].size(); j++)
+		{
+			MatchedJunction match = matched_junction[key][j];
+			alignment a = match.junction_alignments[0];
+			uint32_t fastq_file_index = match.fastq_file_index;
+
+			if (verbose) {
+				cout << ">>>>" << a.read_name() << endl;
+				cout << ">>>>Alignment start-end: " << a.reference_start_1() << "  " << a.reference_end_1() << endl;
+			}
+
+			for (uint32_t side = 1; side <= 2; side++)
+			{
+				string side_key = "side_" + to_string(side);
+
+				// Do not count for coverage if it is redundant!!
+				if (from_string<bool>(item[side_key + "_redundant"])) continue;
+
+				// Write out match corresponding to this part to SAM file
+				// By trimming in the candidate junctions sequence, rather than on each half,
+				// this is done properly.
+				Trim trim = _trim_ambiguous_ends(a, *junction_tam, ref_seq_info);
+				//TODO: add parameters, function body to write_split_alignment, assumed the be the equivalent of write_moved_alignments
+				junction_tam->write_split_alignment(0, a);
+				//Breseq::Shared::tam_write_moved_alignment(
+					//RREF,
+					//fastq_file_index,
+					//item[side_key + "_seq_id"],
+					//item[side_key + "_position"],
+					//item[side_key + "_strand"],
+					//item[side_key + "_overlap"],
+					//side,
+					//item["flanking_left"],
+					//item["alignment_overlap"],
+					//trim
+				//);
+			}
+		}
+	}
+
+	//TODO: Uncomment when summary structure is used again
+	// Save summary statistics
+	//$summary->{alignment_correction}->{new_junctions}->{observed_min_overlap_score_distribution} = \%observed_min_overlap_score_distribution;
+	//$summary->{alignment_correction}->{new_junctions}->{accepted_min_overlap_score_distribution} = \%accepted_min_overlap_score_distribution;
+
+	//$summary->{alignment_correction}->{new_junctions}->{observed_pos_hash_score_distribution} = \%observed_pos_hash_score_distribution;
+	//$summary->{alignment_correction}->{new_junctions}->{accepted_pos_hash_score_distribution} = \%accepted_pos_hash_score_distribution;
+
+	//my @rejected_hybrid_predictions = ();
+
+	for (uint32_t i = 0; i < rejected_junction_ids.size(); i++)
+	{
+		string key = rejected_junction_ids[i];
+		diff_entry item = _junction_to_hybrid_list_item(key, ref_seq_info, matched_junction[key].size(), junction_test_info[key]);
+		add_reject_reason(item, "NJ");
+		gd.add(item);
+	}
+
+	string jc_genome_diff_file_name = settings.file_name(settings.jc_genome_diff_file_name);
+	gd.write(jc_genome_diff_file_name);
 
 	if (junction_tam != NULL) delete junction_tam;
 	if (reference_tam != NULL) delete reference_tam;
@@ -1130,193 +1131,200 @@ bool _test_junction(const Settings& settings, /*const map<string, uint32_t>& sum
 	return !failed;
 }
 
-//sub _junction_to_hybrid_list_item
-//{
-//	my ($key, $ref_seq_info, $total_reads, $test_info) = @_;
-//
-//	## split the key to an item with information about the junction
-//	my $jc = Breseq::Shared::junction_name_split($key);
-//	$jc->{key} = $key;
-//
-//	## overlap may be adjusted below... this messes up making the alignment
-//	## 'alignment_overlap' is the original one that applies to the candidate junction BAM file
-//	## 'overlap' is a version where overlap has been resolved if possible for adding sides of the
-//	##    alignment
-//	$jc->{overlap} = $jc->{alignment_overlap};
-//	$jc->{total_reads} = $total_reads;
-//
-//	## Redundancy is loaded from the key, but we doubly enforce it when IS elements are involved.
-//
-//	## Correct for overlapping IS elements
-//
-//	###
-//	# IS insertion overlap correction
-//	#
-//	# For these the coordinates may have been offset incorrectly initially (because both sides of the junction may look unique)
-//	# The goal is to offset through positive overlap to get as close as possible to the ends of the IS
-//	###
-//
-//	my $is;
-//	foreach my $side_key ('side_1', 'side_2')
-//	{
-//		## Determine IS elements
-//		## Is it within an IS or near the boundary of an IS in the direction leading up to the junction?
-//		if (my $is = Breseq::ReferenceSequence::find_closest_repeat_region($jc->{$side_key}->{position}, $ref_seq_info->{repeat_lists}->{$jc->{$side_key}->{seq_id}}, 200, $jc->{$side_key}->{strand}))
-//		{
-//			$jc->{$side_key}->{is}->{name} = $is->{name};
-//			$jc->{$side_key}->{is}->{interval} = ($is->{strand} == +1) ? "$is->{start}-$is->{end}" : "$is->{end}-$is->{start}";
-//			$jc->{$side_key}->{is}->{product} = $is->{product};
-//		}
-//	}
-//
-//	## use of $j is historical due to a move of this part of the function from annotate_rearrangements
-//	my $j = $jc;
-//	sub _add_is_coords_from_interval
-//	{
-//		my ($c) = @_;
-//		return if (!defined $c->{is});
-//
-//		my ($is_start, $is_end) = split /-/, $c->{is}->{interval};
-//		$c->{is}->{strand} = ($is_start < $is_end) ? +1 : -1;
-//		$c->{is}->{start} = ($is_start < $is_end) ? $is_start : $is_end;
-//		$c->{is}->{end} = ($is_start < $is_end) ? $is_end : $is_start;
-//	}
-//
-//	_add_is_coords_from_interval($j->{side_1});
-//	_add_is_coords_from_interval($j->{side_2});
-//
-//	$j->{side_1}->{read_side} = -1;
-//	$j->{side_2}->{read_side} = +1;
-//
-//	## Determine which side of the junction is the IS and which is unique
-//	## these point to the correct initial interval...
-//	if (defined $j->{side_1}->{is} && !defined $j->{side_2}->{is})
-//	{
-//		if (abs($j->{side_1}->{is}->{start} - $j->{side_1}->{position}) <= 20)
-//		{
-//			$j->{is_side} = $j->{side_1};
-//			$j->{is_side}->{is}->{side_key} = 'start';
-//		}
-//		elsif (abs($j->{side_1}->{is}->{end} - $j->{side_1}->{position}) <= 20 )
-//		{
-//			$j->{is_side} = $j->{side_1};
-//			$j->{is_side}->{is}->{side_key} = 'end';
-//		}
-//		$j->{unique_side} = $j->{side_2};
-//	}
-//
-//	if (!defined $j->{side_1}->{is} && defined $j->{side_2}->{is})
-//	{
-//		if (abs($j->{side_2}->{is}->{start} - $j->{side_2}->{position}) <= 20)
-//		{
-//			$j->{is_side} = $j->{side_2};
-//			$j->{is_side}->{is}->{side_key} = 'start';
-//		}
-//		elsif (abs($j->{side_2}->{is}->{end} - $j->{side_2}->{position}) <= 20 )
-//		{
-//			$j->{is_side} = $j->{side_2};
-//			$j->{is_side}->{is}->{side_key} = 'end';
-//		}
-//		$j->{unique_side} = $j->{side_1};
-//	}
-//
-//	## both were IS! -- define as redundant here
-//	$j->{side_1}->{redundant} = 1 if (defined $j->{side_1}->{is});
-//	$j->{side_2}->{redundant} = 1 if (defined $j->{side_2}->{is});
-//
-//	#by default, overlap is included on both sides of the junction (possibly changed below)
-//	$jc->{side_1}->{overlap} = 0;
-//	$jc->{side_2}->{overlap} = 0;
-//
-//	## Resolve redundant overlap
-//	if ($jc->{overlap} > 0)
-//	{
-//		$jc->{side_1}->{overlap} = $jc->{overlap};
-//		$jc->{side_2}->{overlap} = $jc->{overlap};
-//
-//		## If there was in IS, resolve overlap so it goes to the edge of the IS element
-//		if (defined $j->{is_side})
-//		{
-//			### first, adjust the repetitive sequence boundary to get as close to the IS as possible
-//			my $move_dist = $j->{is_side}->{strand} * ($j->{is_side}->{is}->{$j->{is_side}->{is}->{side_key}} - $j->{is_side}->{position});
-//
-//			$move_dist = 0 if ($move_dist < 0);
-//			$move_dist = $j->{overlap} if ($move_dist > $j->{overlap});
-//			$j->{is_side}->{position} += $j->{is_side}->{strand} * $move_dist;
-//			$j->{overlap} -= $move_dist;
-//			$j->{is_side}->{overlap} -= $move_dist;
-//
-//			### second, adjust the unique sequence side with any remaining overlap
-//			$j->{unique_side}->{position} += $j->{unique_side}->{strand} * $j->{overlap};
-//			$j->{unique_side}->{overlap} -= $j->{overlap};
-//
-//			$j->{overlap} = 0;
-//		}
-//
-//		### If there is no IS element and
-//		##    (1) both sides are unique
-//		## OR (2) only the second side is redundant,
-//		## OR (3) both sides are redundant
-//		### then give overlap to first side.
-//		### This gives proper support for junctions.
-//		### and ensures we don't count this coverage twice.
-//		elsif ((!$jc->{side_1}->{redundant}) || ($jc->{side_1}->{redundant} && $jc->{side_2}->{redundant}) )
-//		{
-//			my $strand_direction = ($jc->{side_2}->{strand} > 0) ? +1 : -1;
-//
-//			$jc->{side_2}->{position} += $jc->{overlap} * $strand_direction;
-//			$jc->{side_2}->{overlap} = 0;
-//			$jc->{overlap} = 0;
-//		}
-//		else  ## side_1 was redundant, give overlap to side_2
-//		{
-//			my $strand_direction = ($jc->{side_1}->{strand} > 0) ? -1 : +1;
-//			$jc->{side_1}->{position} += $jc->{overlap} * $strand_direction;
-//			$jc->{side_1}->{overlap} = 0;
-//			$jc->{overlap} = 0;
-//		}
-//
-//		## If both sides were redundant, no adjustment because we are not going to count coverage
-//	}
-//
-//	##flatten things to only what we want to keep
-//	my $item = {
-//		type => 'JC',
-//
-//		side_1_seq_id => $jc->{side_1}->{seq_id},
-//		side_1_position => $jc->{side_1}->{position},
-//		side_1_redundant => $jc->{side_1}->{redundant},
-//		side_1_strand => $jc->{side_1}->{strand},
-//		side_1_overlap => $jc->{side_1}->{overlap},
-//
-//		side_2_seq_id => $jc->{side_2}->{seq_id},
-//		side_2_position => $jc->{side_2}->{position},
-//		side_2_redundant => $jc->{side_2}->{redundant},
-//		side_2_strand => $jc->{side_2}->{strand},
-//		side_2_overlap => $jc->{side_2}->{overlap},
-//
-//		key => $jc->{key},
-//		alignment_overlap => $jc->{alignment_overlap},
-//		overlap => $jc->{overlap},
-//		total_reads => $jc->{total_reads},
-//		flanking_left => $jc->{flanking_left},
-//		flanking_right => $jc->{flanking_right},
-//
-//		unique_read_sequence => $jc->{unique_read_sequence},
-//	};
-//
+diff_entry _junction_to_hybrid_list_item(const string& key, cReferenceSequences& ref_seq_info, uint32_t total_reads, CandidateJunction& test_info)
+{
+	// split the key to an item with information about the junction
+	JunctionInfo jc = junction_name_split(key);
+
+	jc.key = key;
+
+	// overlap may be adjusted below... this messes up making the alignment
+	// 'alignment_overlap' is the original one that applies to the candidate junction BAM file
+	// 'overlap' is a version where overlap has been resolved if possible for adding sides of the
+	//    alignment
+	jc.overlap = jc.alignment_overlap;
+	jc.total_reads = total_reads;
+
+	// Redundancy is loaded from the key, but we doubly enforce it when IS elements are involved.
+
+	// Correct for overlapping IS elements
+
+	///
+	// IS insertion overlap correction
+	//
+	// For these the coordinates may have been offset incorrectly initially (because both sides of the junction may look unique)
+	// The goal is to offset through positive overlap to get as close as possible to the ends of the IS
+	///
+
+	cSequenceFeature* is = NULL;
+	for (int32_t i = 0; i <= 1; i++)
+	{
+		// Determine IS elements
+		// Is it within an IS or near the boundary of an IS in the direction leading up to the junction?
+		is = cReferenceSequences::find_closest_repeat_region(jc.sides[i].position, ref_seq_info.repeat_lists[jc.sides[i].seq_id], 200, jc.sides[i].strand);
+		if (is != NULL)
+		{
+			jc.sides[i].is.name = is->SafeGet("name");
+			jc.sides[i].is.interval = (is->m_strand == 1) ? to_string(is->m_start) + "-" + to_string(is->m_end) : to_string(is->m_end) + "-" + to_string(is->m_start);
+			jc.sides[i].is.product = is->SafeGet("product");
+		}
+	}
+
+	//_add_is_coords_from_interval($jc->{side_1});
+	//_add_is_coords_from_interval($jc->{side_2});
+	for (int32_t i = 0; i <= 1; i++)
+	{
+		JunctionInfo::Side c = jc.sides[i];
+		//return if (!defined $c->{is});
+
+		vector<string> is_start_end = split(c.is.interval, "-");
+		int32_t is_start = from_string<int32_t>(is_start_end[0]);
+		int32_t is_end = from_string<int32_t>(is_start_end[1]);
+		c.is.strand = is_start < is_end;
+		c.is.start = c.is.strand ? is_start : is_end;
+		c.is.end = c.is.strand ? is_end : is_start;
+	}
+
+	jc.sides[0].read_side = false;
+	jc.sides[1].read_side = true;
+
+	// Determine which side of the junction is the IS and which is unique
+	// these point to the correct initial interval...
+	jc.is_side = UNDEFINED;
+//	if (defined jc.side_1.is} && !defined jc.side_2.is})
+	if (jc.sides[0].is.name.size() > 0 && jc.sides[1].is.name.size() == 0)
+	{
+		if (abs(jc.sides[0].is.start - jc.sides[0].position) <= 20)
+		{
+			jc.is_side = 0;
+			jc.sides[jc.is_side].is.side_key = "start";
+		}
+		else if (abs(jc.sides[0].is.end - jc.sides[0].position) <= 20 )
+		{
+			jc.is_side = 0;
+			jc.sides[jc.is_side].is.side_key = "end";
+		}
+		jc.unique_side = 1;
+	}
+
+//	if (!defined jc.side_1.is} && defined jc.side_2.is})
+	else if (jc.sides[0].is.name.size() == 0 && jc.sides[1].is.name.size() > 0)
+	{
+		if (abs(jc.sides[1].is.start - jc.sides[1].position) <= 20)
+		{
+			jc.is_side = 1;
+			jc.sides[jc.is_side].is.side_key = "start";
+		}
+		else if (abs(jc.sides[1].is.end - jc.sides[1].position) <= 20 )
+		{
+			jc.is_side = 1;
+			jc.sides[jc.is_side].is.side_key = "end";
+		}
+		jc.unique_side = 0;
+	}
+	// both were IS! -- define as redundant here
+	else if (jc.sides[0].is.name.size() > 0)
+		jc.sides[0].redundant = true;
+	else if (jc.sides[1].is.name.size() > 0)
+		jc.sides[1].redundant = true;
+
+	// By default, overlap is included on both sides of the junction (possibly changed below)
+	jc.sides[0].overlap = 0;
+	jc.sides[1].overlap = 0;
+
+	// Resolve redundant overlap
+	if (jc.overlap > 0)
+	{
+		jc.sides[0].overlap = jc.overlap;
+		jc.sides[1].overlap = jc.overlap;
+
+		int32_t strand_direction;
+
+		// If there was in IS, resolve overlap so it goes to the edge of the IS element
+		if (jc.is_side != UNDEFINED)
+		{
+			// first, adjust the repetitive sequence boundary to get as close to the IS as possible
+			strand_direction = (jc.sides[jc.is_side].strand ? 1 : -1);
+			int32_t move_dist = strand_direction * (jc.sides[jc.is_side].is.side_key == "start" ? jc.sides[jc.is_side].is.start : jc.sides[jc.is_side].is.end) - jc.sides[jc.is_side].position;
+
+			if (move_dist < 0) move_dist = 0;
+			if (move_dist > jc.overlap) move_dist = jc.overlap ;
+
+			jc.sides[jc.is_side].position += strand_direction * move_dist;
+			jc.overlap -= move_dist;
+			jc.sides[jc.is_side].overlap -= move_dist;
+
+			// second, adjust the unique sequence side with any remaining overlap
+			strand_direction = (jc.sides[jc.unique_side].strand ? 1 : -1);
+			jc.sides[jc.unique_side].position += strand_direction * jc.overlap;
+			jc.sides[jc.unique_side].overlap -= jc.overlap;
+
+			jc.overlap = 0;
+		}
+		/// If there is no IS element and
+		//    (1) both sides are unique
+		// OR (2) only the second side is redundant,
+		// OR (3) both sides are redundant
+		/// then give overlap to first side.
+		/// This gives proper support for junctions.
+		/// and ensures we don't count this coverage twice.
+		else if ((!jc.sides[0].redundant) || (jc.sides[0].redundant && jc.sides[1].redundant) )
+		{
+			strand_direction = (jc.sides[1].strand > 0 ? 1 : -1);
+			jc.sides[1].position += jc.overlap * strand_direction;
+			jc.sides[1].overlap = 0;
+			jc.overlap = 0;
+		}
+		else  // side_1 was redundant, give overlap to side_2
+		{
+			strand_direction = (jc.sides[0].strand > 0 ? -1 : 1);
+			jc.sides[0].position += jc.overlap * strand_direction;
+			jc.sides[0].overlap = 0;
+			jc.overlap = 0;
+		}
+
+		// If both sides were redundant, no adjustment because we are not going to count coverage
+	}
+
+	// flatten things to only what we want to keep
+	//TODO: Are parameters to constructor correct?
+	diff_entry item("JC", jc.key, "");
+	item
+		("side_1_seq_id", jc.sides[0].seq_id)
+		("side_1_position", to_string(jc.sides[0].position))
+		("side_1_redundant", to_string(jc.sides[0].redundant))
+		("side_1_strand", to_string(jc.sides[0].strand))
+		("side_1_overlap", to_string(jc.sides[0].overlap))
+
+		("side_2_seq_id", jc.sides[1].seq_id)
+		("side_2_position", to_string(jc.sides[1].position))
+		("side_2_redundant", to_string(jc.sides[1].redundant))
+		("side_2_strand", to_string(jc.sides[1].strand))
+		("side_2_overlap", to_string(jc.sides[1].overlap))
+
+		("key", jc.key)
+		("alignment_overlap", to_string(jc.alignment_overlap))
+		("overlap", to_string(jc.overlap))
+		("total_reads", to_string(jc.total_reads))
+		("flanking_left", to_string(jc.flanking_left))
+		("flanking_right", to_string(jc.flanking_right))
+
+		("unique_read_sequence", to_string(jc.unique_read_sequence))
+	;
+
+	//TODO: Copy specific fields from CandidateJunction test_info to diff_entry fields
 //	## may want to take only selected of these fields...
 //	foreach my $key (keys %$test_info)
 //	{
-//		$item->{$key} = $test_info->{$key};
+//		$item[key] = $test_info[key];
 //	}
-//
-//	### Note: Other adjustments to overlap can happen at the later annotation stage
-//	### and they will not affect coverage for calling deletions or mutations
-//	### because they will be in REDUNDANTLY matched sides of junctions
-//	return $item;
-//}
-//
+
+	/// Note: Other adjustments to overlap can happen at the later annotation stage
+	/// and they will not affect coverage for calling deletions or mutations
+	/// because they will be in REDUNDANTLY matched sides of junctions
+	return item;
+}
+
 Trim _trim_ambiguous_ends(const alignment& a, const tam_file& tam, cReferenceSequences& ref_seq_info)
 {
 	bool verbose = false;

@@ -125,7 +125,12 @@ namespace breseq {
 				
 		//! Marshal this diff entry into an ordered list of fields.
 		virtual void marshal(field_list_t& s);
-		
+
+		diff_entry& operator()(const key_t& key, const value_t& value) {
+			(*this)[key] = value;
+			return *this;
+		}
+
 		//! Clone this entry.
 		//virtual diff_entry* clone() const = 0;
     

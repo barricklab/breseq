@@ -90,14 +90,14 @@ namespace breseq {
 			static bool sort_by_score_unique_coord(const CombinedCandidateJunction& a, const CombinedCandidateJunction &b)
 			{
 				JunctionInfo a_item = junction_name_split(a.id);
-				int32_t a_uc = a_item.side_1.position;
-				int32_t a_rc = a_item.side_2.position;
-				if (a_item.side_1.redundant != 0) swap(a_uc, a_rc);
+				int32_t a_uc = a_item.sides[0].position;
+				int32_t a_rc = a_item.sides[1].position;
+				if (a_item.sides[0].redundant != 0) swap(a_uc, a_rc);
 
 				JunctionInfo b_item = junction_name_split(b.id);
-				int32_t b_uc = b_item.side_1.position;
-				int32_t b_rc = b_item.side_2.position;
-				if (b_item.side_1.redundant != 0) swap(b_uc, b_rc);
+				int32_t b_uc = b_item.sides[0].position;
+				int32_t b_rc = b_item.sides[1].position;
+				if (b_item.sides[0].redundant != 0) swap(b_uc, b_rc);
 
 				if (b.pos_hash_score != a.pos_hash_score)
 					return (b.pos_hash_score < a.pos_hash_score);
@@ -124,10 +124,10 @@ namespace breseq {
 				JunctionInfo acj = junction_name_split(a.id);
 				JunctionInfo bcj = junction_name_split(b.id);
 				//TODO: Uncomment this code after supplying it with a ref_seq_info with a seq_order field
-				/*if (ref_seq_info.seq_order[acj.side_1.seq_id] != ref_seq_info.seq_order[bcj.side_1.seq_id])
-					return (ref_seq_info.seq_order[acj.side_1.seq_id] < ref_seq_info.seq_order[bcj.side_1.seq_id]);
+				/*if (ref_seq_info.seq_order[acj.sides[0].seq_id] != ref_seq_info.seq_order[bcj.sides[0].seq_id])
+					return (ref_seq_info.seq_order[acj.sides[0].seq_id] < ref_seq_info.seq_order[bcj.sides[0].seq_id]);
 				else*/
-					return (acj.side_1.position < bcj.side_1.position);
+					return (acj.sides[0].position < bcj.sides[0].position);
 			}
 		};
 

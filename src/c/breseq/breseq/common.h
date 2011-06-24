@@ -426,6 +426,22 @@ namespace breseq {
 		};
 	};
 
+	struct Feature
+	{
+		string type;
+		string name;
+		uint32_t start;
+		uint32_t end;
+		bool strand;
+		string product;
+		string pseudogene;
+		string cds;
+		string note;
+
+		string interval;
+		string side_key;
+	};
+
 	struct JunctionInfo
 	{
 		struct Side
@@ -434,12 +450,25 @@ namespace breseq {
 			int32_t position;
 			bool strand;
 			int32_t redundant;
-		} side_1, side_2;
+
+			// Extended properties for resolve_alignments.cpp
+			Feature is;
+			bool read_side;
+			int32_t overlap;
+		};
+		Side sides[2];
 
 		int32_t alignment_overlap;
 		string unique_read_sequence;
 		int32_t flanking_left;
 		int32_t flanking_right;
+
+		// Extended properties for resolve_alignments.cpp
+		string key;
+		int32_t overlap;
+		uint32_t total_reads;
+		uint32_t unique_side;
+		uint32_t is_side;
 	};
 
 	const string junction_name_separator = "__";
@@ -476,19 +505,19 @@ namespace breseq {
 	// Serializes a JunctionInfo to a string
 	inline string junction_name_join(const JunctionInfo& item)
 	{
-		bool has_redundant = (item.side_1.redundant >= 0 && item.side_2.redundant >= 0);
+		bool has_redundant = (item.sides[0].redundant >= 0 && item.sides[1].redundant >= 0);
     
     // allocate vector of correct size
 		vector<string> values(has_redundant ? 12 : 10); 
 
     // place values in vector
-		values[0] = item.side_1.seq_id;
-		values[1] = to_string(item.side_1.position);
-		values[2] = to_string(item.side_1.strand);
+		values[0] = item.sides[0].seq_id;
+		values[1] = to_string(item.sides[0].position);
+		values[2] = to_string(item.sides[0].strand);
 
-		values[3] = item.side_2.seq_id;
-		values[4] = to_string(item.side_2.position);
-		values[5] = to_string(item.side_2.strand);
+		values[3] = item.sides[1].seq_id;
+		values[4] = to_string(item.sides[1].position);
+		values[5] = to_string(item.sides[1].strand);
 
 		values[6] = to_string(item.alignment_overlap);
 		values[7] = to_string(item.unique_read_sequence);
@@ -497,8 +526,8 @@ namespace breseq {
 
 		if (has_redundant)
 		{
-			values[10] = to_string(item.side_1.redundant);
-			values[11] = to_string(item.side_2.redundant);
+			values[10] = to_string(item.sides[0].redundant);
+			values[11] = to_string(item.sides[1].redundant);
 		}
 
 		return join(values, junction_name_separator);

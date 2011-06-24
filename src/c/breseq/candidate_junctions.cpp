@@ -347,20 +347,19 @@ namespace breseq {
 		};
 		JunctionInfo new_junction =
 		{
-			side_1,
-			side_2,
+			{ side_1, side_2 },
 			overlap, 				// alignment_overlap
 			unique_read_seq_string,	// unique_read_sequence
 			flanking_left,
 			flanking_right
-		}; junction_id_list = new_junction;
+		};
 
 		string join1[] = { hash_seq_id_1, to_string(hash_coord_1), to_string(hash_strand_1) };
 		junction_coord_1 = join(join1, "::");
 		string join2[] = { hash_seq_id_2, to_string(hash_coord_2), to_string(hash_strand_2) };
 		junction_coord_2 = join(join2, "::");
 
-		string junction_id = junction_name_join(junction_id_list);
+		string junction_id = junction_name_join(new_junction);
 		if (verbose)
 		{
 			cout << "READ ID: " << a1.read_name() << endl;
