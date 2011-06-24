@@ -63,15 +63,13 @@ int main(int argc, char* argv[]) {
                         options["fasta"],
                         options["region"]
                         );
-    ao.set_quality_range();
-    string html_output(ao.html_alignment(options["region"]));
-
+   
+   string html_output = ao.html_alignment(options["region"]);
+   //cout << html_output << endl;
 
 
   } catch(...) {
 		// failed;
 		return -1;
-	}
-
-	return 0;
+	}	return 0;
 }
