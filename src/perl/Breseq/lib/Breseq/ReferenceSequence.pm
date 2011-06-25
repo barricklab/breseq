@@ -29,11 +29,9 @@ version 1, or (at your option) any later version.
 ###
 
 use strict;
-use Bio::Root::Root;
 
 package Breseq::ReferenceSequence;
 
-use Bio::Seq::RichSeq;
 use Breseq::Settings;
 use Breseq::Shared;
 use Data::Dumper;
@@ -133,30 +131,50 @@ sub bridge_load_ref_seq_info
 	my ($summary, $reference_feature_table_file_name, $reference_fasta_file_name) = @_;
 	my $ref_seq_info;
 	my $seq_id;
-	my $s;
 	
 ## FEATURE TABLE
 	open FEATURES, "$reference_feature_table_file_name" or die;
+	my %seq_ids;
 	while (my $line = <FEATURES>) {
 		chomp $line;
-		if ($line =~ m/^>(\S+)/) {
-			$seq_id = $1;
 		
-			##next four lines are fields...
-			$line = <FEATURES>;
-			$s->{$seq_id}->{seq_id} = <FEATURES>;
-			chomp $s->{$seq_id}->{seq_id};
-			$s->{$seq_id}->{length} = <FEATURES>;
-			chomp $s->{$seq_id}->{length};
-			$s->{$seq_id}->{definition} = <FEATURES>;
-			chomp $s->{$seq_id}->{definition};
-			$s->{$seq_id}->{version} = <FEATURES>;
-			chomp $s->{$seq_id}->{version};
-		}		
+		if ($line =~ s/##(\S+)\s+//) {
+			if ($1 eq "sequence-region") {
+				my @ll = split /\s+/, $line;
+				
+				if (scalar @ll == 3) {
+					my ($seq_id, $start, $end) = @ll;
+					if (defined $summary) {
+						$summary->{sequence_conversion}->{reference_sequences}->{$seq_id}->{length} = $end;
+					}
+										
+					## this list is used elsewhere in the program
+					## this ensures they are in order
+					if (!defined $seq_ids{$seq_id}) 
+					{
+						push @{$ref_seq_info->{seq_ids}}, $seq_id;
+						$seq_ids{$seq_id}++;
+						$ref_seq_info->{seq_order}->{$seq_id} = scalar keys %seq_ids;
+						$ref_seq_info->{repeat_lists}->{$seq_id} = [] ;
+						$ref_seq_info->{gene_lists}->{$seq_id} = [] ;
+						$summary->{sequence_conversion}->{reference_sequences}->{$seq_id}->{definition} = "" if (!defined $summary->{sequence_conversion}->{reference_sequences}->{$seq_id}->{definition});									
+					}
+				}
+			}
+			elsif ($1 eq "description") {
+				if ($line =~ m/^(\S+)\s+(.+)$/) {
+					my ($seq_id, $definition) = ($1, $2);
+					$summary->{sequence_conversion}->{reference_sequences}->{$seq_id}->{definition} = $definition;
+				}
+			}
+		}
 		else {
+			
 			my $f;
-			( 	$f->{type}, 
-			#	$f->{accession},
+			( 	
+				$f->{seq_id},
+				$f->{type}, 
+				$f->{accession},
 				$f->{name}, 
 				$f->{start}, 
 				$f->{end}, 
@@ -166,42 +184,46 @@ sub bridge_load_ref_seq_info
 				$f->{cds},
 				$f->{note}
 			) = split /\t/, $line;
-			
+		
 			# push on proper list
 			if ($f->{type} eq 'repeat_region') {
-				push @{$ref_seq_info->{repeat_lists}->{$seq_id}}, $f;
+				push @{$ref_seq_info->{repeat_lists}->{$f->{seq_id}}}, $f;
 			} else {
-				push @{$ref_seq_info->{gene_lists}->{$seq_id}}, $f;
+				push @{$ref_seq_info->{gene_lists}->{$f->{seq_id}}}, $f;
 			}
-		}
+		}		
 	}
-
-
+	
 ## FASTA	
 	$summary->{sequence_conversion}->{total_reference_sequence_length} = 0 if (defined $summary);
 
+	undef $seq_id;
 	open FASTA, "$reference_fasta_file_name" or die;
 	while (my $line = <FASTA>) {
 		chomp $line;
 		if ($line =~ m/^>(\S+)/) {
+			if (defined $summary && defined $seq_id) {
+				$summary->{sequence_conversion}->{reference_sequences}->{$seq_id}->{length} = length $ref_seq_info->{ref_strings}->{$seq_id};
+				$summary->{sequence_conversion}->{total_reference_sequence_length} += length $ref_seq_info->{ref_strings}->{$seq_id};
+			}
+
 			$seq_id = $1;
 			$ref_seq_info->{ref_strings}->{$seq_id} = '';
 		} else {
 			$ref_seq_info->{ref_strings}->{$seq_id} .= $line;
 		}		
+		
 	}
 	
-	if (defined $summary) {
+	if (defined $summary && defined $seq_id) {
+		$summary->{sequence_conversion}->{reference_sequences}->{$seq_id}->{length} = length $ref_seq_info->{ref_strings}->{$seq_id};
 		$summary->{sequence_conversion}->{total_reference_sequence_length} += length $ref_seq_info->{ref_strings}->{$seq_id};
 	}
-		
-	#save statistics if requested
-	$summary->{sequence_conversion}->{reference_sequences} = $s if (defined $summary);
-
 
 	return $ref_seq_info;
 }
 
+=comment
 
 sub load_ref_seq_info
 {
@@ -350,6 +372,8 @@ sub load_ref_seq_info
 	return $ref_seq_info;
 }
 
+=cut
+
 sub annotate_1_mutation
 {
 	my ($ref_seq_info, $mut, $start, $end, $repeat_override) = @_;
@@ -370,11 +394,12 @@ sub annotate_1_mutation
 	@{$mut->{gene_list}} = (); #affected genes
 
 	my $seq_id = $mut->{seq_id};
+		
 	my $gene_list_ref = $ref_seq_info->{gene_lists}->{$seq_id};
 	my $repeat_list_ref = $ref_seq_info->{repeat_lists}->{$seq_id};
 	my $ref_string = $ref_seq_info->{ref_strings}->{$seq_id};		
 
-	die "Unknown seq_id in reference sequence info.\n" if ((!defined $gene_list_ref) || (!defined $repeat_list_ref) || (!defined $ref_string));
+	die "Unknown seq_id in reference sequence info: $seq_id\n" if ((!defined $gene_list_ref) || (!defined $repeat_list_ref) || (!defined $ref_string));
 
 	my $size = $end - $start + 1;
 

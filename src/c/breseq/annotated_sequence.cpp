@@ -25,7 +25,19 @@ namespace breseq {
 
     ofstream out(file_name.c_str());
     assert(!out.fail()); 
+    
+    out << "##gff-version\t3" << endl;
+    for(vector<cAnnotatedSequence>::iterator it_as = this->begin(); it_as < this->end(); it_as++) {
+    
+      
+      uint32_t m_length;
+      string m_definition, m_version, m_seq_id;
+      
+      out << "##sequence-region " << it_as->m_seq_id << " 1 " << it_as->m_length << endl;
+      out << "##description " << it_as->m_seq_id << " " << it_as->m_definition << endl;
 
+    }
+    
     for(vector<cAnnotatedSequence>::iterator it_as = this->begin(); it_as < this->end(); it_as++) {
 
       for (vector<cSequenceFeature>::iterator it = it_as->m_features.begin(); it < it_as->m_features.end(); it++) {

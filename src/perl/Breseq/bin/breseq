@@ -127,7 +127,6 @@ sub sequence_conversion {}
 
 my $ref_seq_info;
 my $sequence_converson_summary_file_name = $settings->file_name('sequence_conversion_summary_file_name');
-my $ref_seq_info_file_name = $settings->file_name('ref_seq_info_file_name');
 $settings->create_path('sequence_conversion_path');
 $settings->create_path('data_path');
 
@@ -191,19 +190,15 @@ if ($settings->do_step('sequence_conversion_done_file_name', "Read and reference
 	my @genbank_file_names = $settings->file_name('reference_genbank_file_names'); 
 	my @junction_only_genbank_file_names = $settings->file_name('junction_only_reference_genbank_file_names'); 
 	my $reference_fasta_file_name = $settings->file_name('reference_fasta_file_name');
-	$ref_seq_info = Breseq::ReferenceSequence::load_ref_seq_info(\@genbank_file_names, \@junction_only_genbank_file_names, $summary, $reference_fasta_file_name);
-	Storable::store($ref_seq_info, $ref_seq_info_file_name) or die "Can't store data in file $ref_seq_info_file_name!\n";
 	
 	## C++ version of reference sequence processing
-	{
-		my $reference_features_file_name = $settings->file_name('reference_features_file_name');
-		my $cbreseq = $settings->ctool("cbreseq");
-		my $command = "$cbreseq CONVERT_GENBANK --fasta $reference_fasta_file_name --features $reference_features_file_name";
-		foreach my $input (@genbank_file_names) {
-			$command .= " --input " . $input;
-		} 
-		Breseq::Shared::system($command);
-	}
+	my $reference_features_file_name = $settings->file_name('reference_features_file_name');
+	my $cbreseq = $settings->ctool("cbreseq");
+	my $command = "$cbreseq CONVERT_GENBANK --fasta $reference_fasta_file_name --features $reference_features_file_name";
+	foreach my $input (@genbank_file_names) {
+		$command .= " --input " . $input;
+	} 
+	Breseq::Shared::system($command);
 
 	## create SAM faidx
 	my $samtools = $settings->ctool('samtools');
@@ -211,8 +206,7 @@ if ($settings->do_step('sequence_conversion_done_file_name', "Read and reference
 
 	## calculate trim files
 	my $output_path = $settings->file_name('sequence_conversion_path');
-	my $cbreseq = $settings->ctool("cbreseq");
-	my $command = "$cbreseq CALCULATE_TRIMS -f $reference_fasta_file_name -o $output_path";
+	$command = "$cbreseq CALCULATE_TRIMS -f $reference_fasta_file_name -o $output_path";
 	Breseq::Shared::system($command);
 	
 	## store summary information
@@ -220,19 +214,15 @@ if ($settings->do_step('sequence_conversion_done_file_name', "Read and reference
 	$settings->done_step('sequence_conversion_done_file_name');
 }
 
-
-#test this! -- load C++ info
-if (0) {
-	my $reference_features_file_name = $settings->file_name('reference_features_file_name');
-	my $reference_fasta_file_name = $settings->file_name('reference_fasta_file_name');
-	$ref_seq_info = ReferenceSequence::bridge_load_ref_seq_info($summary, $reference_features_file_name, $reference_fasta_file_name);
-}
-
-$ref_seq_info = Storable::retrieve($ref_seq_info_file_name);
-die "Can't retrieve data from file $ref_seq_info_file_name!\n" if (!$ref_seq_info);
 $summary->{sequence_conversion} = Storable::retrieve($sequence_converson_summary_file_name);
 die "Can't retrieve data from file $sequence_converson_summary_file_name!\n" if (!$summary->{sequence_conversion});
 (defined $summary->{sequence_conversion}->{max_read_length}) or die "Can't retrieve max read length from file $sequence_converson_summary_file_name\n";
+
+#test this! -- load C++ info
+my $reference_features_file_name = $settings->file_name('reference_features_file_name');
+my $reference_fasta_file_name = $settings->file_name('reference_fasta_file_name');
+$ref_seq_info = Breseq::ReferenceSequence::bridge_load_ref_seq_info($summary, $reference_features_file_name, $reference_fasta_file_name);
+die "Can't retrieve reference sequence data from files $reference_features_file_name and $reference_fasta_file_name!\n" if (!$ref_seq_info);
 
 ## reload certain information into $settings from $summary
 foreach my $read_file (keys %{$summary->{sequence_conversion}->{reads}})
@@ -917,9 +907,6 @@ if ($settings->do_step('output_done_file_name', "Output"))
 	###	
 
 	print STDERR "Creating index HTML table...\n";	
-
-	my $sequence_conversion_summary_file_name = $settings->file_name('sequence_conversion_summary_file_name');	
-	$summary->{sequence_conversion} = Storable::retrieve($sequence_conversion_summary_file_name);
 
 	my $index_html_file_name = $settings->file_name('index_html_file_name');		
 	Breseq::Output::html_index($index_html_file_name, $settings, $summary, $ref_seq_info, $gd);	
