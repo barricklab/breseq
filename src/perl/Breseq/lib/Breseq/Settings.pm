@@ -114,7 +114,7 @@ sub new
 		'perl-preprocess-alignments' => \$self->{perl_preprocess_alignments},
 		'perl-identify-candidate-junctions' => \$self->{perl_identify_candidate_junctions},
 		'smalt' => \$self->{smalt},
-		'no_ssaha2' => \$self->{no_ssaha2},
+##		'no_ssaha2' => \$self->{no_ssaha2},
 		
 	) or pod2usage(2);
 
@@ -122,8 +122,8 @@ sub new
 	pod2usage(-exitstatus => 0, -verbose => 2) if $man;
 	pod2usage(-exitstatus => 0, -verbose => 2) if (scalar @ARGV == 0);
 	
-	## default to using smalt
-	##$self->{smalt} = 1 if (!$self->{no_ssaha2});
+## FUTURE default to using smalt
+##	$self->{smalt} = 1 if (!$self->{no_ssaha2});
 	
 	$self->post_option_initialize;
 	
@@ -260,7 +260,6 @@ sub post_option_initialize
 	$self->{sequence_conversion_path} = "01_sequence_conversion";
 	$self->{sequence_conversion_path} = "$self->{base_output_path}/$self->{sequence_conversion_path}" if ($self->{base_output_path});
 	$self->{converted_fastq_file_name} = "$self->{sequence_conversion_path}/#.converted.fastq";
-    $self->{ref_seq_info_file_name} = "$self->{sequence_conversion_path}/ref_seq_info.bin";	
 	$self->{unwanted_fasta_file_name} = "$self->{sequence_conversion_path}/unwanted.fasta";
 	$self->{reference_trim_file_name} = "$self->{sequence_conversion_path}/@.trims";
 	$self->{sequence_conversion_summary_file_name} = "$self->{sequence_conversion_path}/summary.bin";
