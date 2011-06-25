@@ -113,11 +113,17 @@ sub new
 		'strict-polymorphism-prediction' => \$self->{strict_polymorphism_prediction},
 		'perl-preprocess-alignments' => \$self->{perl_preprocess_alignments},
 		'perl-identify-candidate-junctions' => \$self->{perl_identify_candidate_junctions},
+		'smalt' => \$self->{smalt},
+##		'no_ssaha2' => \$self->{no_ssaha2},
+		
 	) or pod2usage(2);
 
 	pod2usage(1) if $help;
 	pod2usage(-exitstatus => 0, -verbose => 2) if $man;
 	pod2usage(-exitstatus => 0, -verbose => 2) if (scalar @ARGV == 0);
+	
+## FUTURE default to using smalt
+##	$self->{smalt} = 1 if (!$self->{no_ssaha2});
 	
 	$self->post_option_initialize;
 	
@@ -254,7 +260,6 @@ sub post_option_initialize
 	$self->{sequence_conversion_path} = "01_sequence_conversion";
 	$self->{sequence_conversion_path} = "$self->{base_output_path}/$self->{sequence_conversion_path}" if ($self->{base_output_path});
 	$self->{converted_fastq_file_name} = "$self->{sequence_conversion_path}/#.converted.fastq";
-    $self->{ref_seq_info_file_name} = "$self->{sequence_conversion_path}/ref_seq_info.bin";	
 	$self->{unwanted_fasta_file_name} = "$self->{sequence_conversion_path}/unwanted.fasta";
 	$self->{reference_trim_file_name} = "$self->{sequence_conversion_path}/@.trims";
 	$self->{sequence_conversion_summary_file_name} = "$self->{sequence_conversion_path}/summary.bin";
@@ -546,6 +551,7 @@ sub read_file_to_fastq_file_index
 sub read_file_to_fastq_file_name
 {
 	my ($self, $read_file) = @_;
+	
 	if (defined $self->{read_file_to_converted_fastq_file}->{$read_file}) {
 		return $self->{read_file_to_converted_fastq_file}->{$read_file};
 	}
@@ -611,8 +617,7 @@ sub ctool
 			$self->throw("Executable \"$tool_name\" not found in breseq bin path\"$self->{bin_path}\".");
 		}
 	}
-
-	return "$self->{bin_path}/$tool_name";
+	return "$self->{installed}->{$tool_name}";
 }
 
 sub installed
@@ -620,11 +625,19 @@ sub installed
 	my ($self) = @_;
 	
 	## breseq C++ executables
-	$self->{installed}->{cbreseq} = (-x "$self->{bin_path}/cbreseq") ? 1 : 0;
+	$self->{installed}->{cbreseq} = (-x "$self->{bin_path}/cbreseq") ? "$self->{bin_path}/cbreseq" : 0;
 
-	## absolutely required
-	$self->{installed}->{SSAHA2} = (`which ssaha2`) ? 1 : 0;
-	$self->{installed}->{R} = (`which R`) ? 1 : 0;	
+	## absolutely required ssaha2 or smalt
+	$self->{installed}->{SSAHA2} = (`which ssaha2`) ? "ssaha2" : 0;
+	
+	## check for default names
+	$self->{installed}->{smalt} = (`which smalt`) ? "smalt" : 0;
+	if (!$self->{installed}->{smalt}) { $self->{installed}->{smalt} = (`which smalt_i386`) ? "smalt_i386" : 0; }
+	if (!$self->{installed}->{smalt}) { $self->{installed}->{smalt} = (`which smalt_ia64`) ? "smalt_ia64" : 0; }
+	if (!$self->{installed}->{smalt}) { $self->{installed}->{smalt} = (`which smalt_x86_64`) ? "smalt_x86_64" : 0; }
+	if (!$self->{installed}->{smalt}) { $self->{installed}->{smalt} = (`which smalt_MacOSX_i386`) ? "smalt_MacOSX_i386" : 0; }
+
+	$self->{installed}->{R} = (`which R`) ? "R" : 0;	
 	if ($self->{installed}->{R}) 
 	{
 		my $R_version = `R --version`;
@@ -639,17 +652,11 @@ sub installed
 	}
 	
 	$self->{installed}->{Statistics_Distributions} = (eval 'require Statistics::Distributions');	
-	$self->{installed}->{samtools} = (-x "$self->{bin_path}/samtools") ? 1 : 0;
+	$self->{installed}->{samtools} = (-x "$self->{bin_path}/samtools") ? "$self->{bin_path}/samtools" : 0;
 	$self->{installed}->{bioperl} = (eval 'require Bio::Root::Root');	
 
 	## installed locally
-	$self->{installed}->{Bio_DB_Sam} = (eval 'require Bio::DB::Sam');
-	
-	## optional
-	#$self->{installed}->{Math_Pari} = (eval 'require Math::Pari');
-
-	## optional, being phased out, seems to make no difference compared to Statistics::Distributions
-	#$self->{installed}->{Math_GSL_CDF} = (eval 'require Math::GSL::CDF');	
+	$self->{installed}->{Bio_DB_Sam} = (eval 'require Bio::DB::Sam');	
 }
 
 sub check_installed
@@ -658,11 +665,18 @@ sub check_installed
 
 	my $good_to_go = 1;
 	
-	if (!$self->{installed}->{SSAHA2})
+	if (!$self->{smalt} && !$self->{installed}->{SSAHA2})
 	{
 		$good_to_go = 0;
 		print STDERR "---> ERROR Required executable \"ssaha2\" not found.\n";
 		print STDERR "---> See http://www.sanger.ac.uk/resources/software/ssaha2\n";
+	}
+	
+	if ($self->{smalt} && !$self->{installed}->{smalt})
+	{
+		$good_to_go = 0;
+		print STDERR "---> ERROR Required executable \"smalt\" not found.\n";
+		print STDERR "---> See http://www.sanger.ac.uk/resources/software/smalt/\n";
 	}
 
 	## R version 2.1 required

@@ -106,6 +106,8 @@ sub tam_next_read_alignments
 		#returns bytes == -1 if EOF reached
 		return ($al_ref, undef) if ($bytes < 0);
 		
+		next ALIGNMENT if ($last_alignment->unmapped);
+		
 		my $read_name = $last_alignment->qname;
 		
 		if ((defined $last_read_name) && ($read_name ne $last_read_name))

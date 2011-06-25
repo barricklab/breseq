@@ -235,8 +235,8 @@ uint32_t alignment::query_end_1() const {
   // traverse the cigar array
   uint32_t* cigar = bam1_cigar(_a); // cigar array for this alignment
   int32_t pos = bam_cigar2qlen(&_a->core, cigar); // total length of the query
-	
-  for(uint32_t j=(_a->core.n_cigar-1); j>0; --j) {
+  
+  for(uint32_t j=(_a->core.n_cigar-1); j>0; j--) {
     uint32_t op = cigar[j] & BAM_CIGAR_MASK;
     uint32_t len = cigar[j] >> BAM_CIGAR_SHIFT;
     

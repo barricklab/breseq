@@ -307,8 +307,9 @@ sub html_statistics
 	);
 	my $total_length = 0;
 	foreach my $seq_id (@{$ref_seq_info->{seq_ids}})
-	{
+	{		
 		my $c = $summary->{sequence_conversion}->{reference_sequences}->{$seq_id};
+		
 		print HTML Tr(
 			td(a({-href=>$settings->html_path('coverage_plot_file_name', {'@'=>$seq_id})}, "coverage")), 
 			td(a({-href=>$settings->html_path('unique_only_coverage_plot_file_name', {'@'=>$seq_id})}, "distribution")), 
