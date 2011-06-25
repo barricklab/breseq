@@ -938,7 +938,7 @@ bool _test_junction(const Settings& settings, /*const map<string, uint32_t>& sum
 		//   more principled way of doing things...
 		if (this_left < this_right) {
 			min_overlap_score += this_left;
-			if (max_min_left_per_strand[rev_key] < this_left);
+			if (max_min_left_per_strand[rev_key] < this_left)
 				max_min_left_per_strand[rev_key] = this_left;
 		}
 		else
@@ -1174,7 +1174,7 @@ diff_entry _junction_to_hybrid_list_item(const string& key, cReferenceSequences&
 	//_add_is_coords_from_interval($jc->{side_2});
 	for (int32_t i = 0; i <= 1; i++)
 	{
-		JunctionInfo::Side c = jc.sides[i];
+		JunctionInfo::Side& c = jc.sides[i];
 		//return if (!defined $c->{is});
 
 		vector<string> is_start_end = split(c.is.interval, "-");
@@ -1194,12 +1194,12 @@ diff_entry _junction_to_hybrid_list_item(const string& key, cReferenceSequences&
 //	if (defined jc.side_1.is} && !defined jc.side_2.is})
 	if (jc.sides[0].is.name.size() > 0 && jc.sides[1].is.name.size() == 0)
 	{
-		if (abs(jc.sides[0].is.start - jc.sides[0].position) <= 20)
+		if (abs(static_cast<int32_t>(jc.sides[0].is.start - jc.sides[0].position)) <= 20)
 		{
 			jc.is_side = 0;
 			jc.sides[jc.is_side].is.side_key = "start";
 		}
-		else if (abs(jc.sides[0].is.end - jc.sides[0].position) <= 20 )
+		else if (abs(static_cast<int32_t>(jc.sides[0].is.end - jc.sides[0].position)) <= 20 )
 		{
 			jc.is_side = 0;
 			jc.sides[jc.is_side].is.side_key = "end";
@@ -1210,12 +1210,12 @@ diff_entry _junction_to_hybrid_list_item(const string& key, cReferenceSequences&
 //	if (!defined jc.side_1.is} && defined jc.side_2.is})
 	else if (jc.sides[0].is.name.size() == 0 && jc.sides[1].is.name.size() > 0)
 	{
-		if (abs(jc.sides[1].is.start - jc.sides[1].position) <= 20)
+		if (abs(static_cast<int32_t>(jc.sides[1].is.start - jc.sides[1].position)) <= 20)
 		{
 			jc.is_side = 1;
 			jc.sides[jc.is_side].is.side_key = "start";
 		}
-		else if (abs(jc.sides[1].is.end - jc.sides[1].position) <= 20 )
+		else if (abs(static_cast<int32_t>(jc.sides[1].is.end - jc.sides[1].position)) <= 20 )
 		{
 			jc.is_side = 1;
 			jc.sides[jc.is_side].is.side_key = "end";

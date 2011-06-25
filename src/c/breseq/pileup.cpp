@@ -16,7 +16,6 @@ LICENSE AND COPYRIGHT
 
 *****************************************************************************/
 
-#include <iostream>
 
 #include "breseq/pileup.h"
 

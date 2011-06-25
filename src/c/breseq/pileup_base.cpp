@@ -16,9 +16,6 @@ LICENSE AND COPYRIGHT
 
 *****************************************************************************/
 
-#include <assert.h>
-#include <iostream>
-#include <sstream>
 
 #include "breseq/pileup_base.h"
 #include "breseq/pileup.h"
