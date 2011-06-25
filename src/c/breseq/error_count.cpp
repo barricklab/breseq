@@ -16,17 +16,6 @@ LICENSE AND COPYRIGHT
 
 *****************************************************************************/
 
-#include <iostream>
-#include <cmath>
-#include <map>
-#include <sstream>
-#include <string>
-#include <fstream>
-#include <vector>
-#include <sam.h>
-#include <faidx.h>
-#include <assert.h>
-
 #include "breseq/common.h"
 #include "breseq/pileup.h"
 #include "breseq/error_count.h"

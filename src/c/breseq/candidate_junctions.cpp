@@ -17,7 +17,6 @@ LICENSE AND COPYRIGHT
 
 *****************************************************************************/
 
-#include "breseq/common.h"
 
 #include "breseq/candidate_junctions.h"
 
@@ -339,29 +338,33 @@ namespace breseq {
 			hash_coord_1,	// position
 			hash_strand_1,	// strand
 			-1				// redundant: set to magic (uninitialized) value
-		}, side_2 = {
+		};
+    
+    JunctionInfo::Side side_2 = {
 			hash_seq_id_2,	// seq_id
 			hash_coord_2,	// position
 			hash_strand_2,	// strand
 			-1				// redundant: set to magic (uninitialized) value
 		};
-		JunctionInfo new_junction =
-		{
+    
+		JunctionInfo new_junction = {
 			{ side_1, side_2 },
 			overlap, 				// alignment_overlap
 			unique_read_seq_string,	// unique_read_sequence
 			flanking_left,
 			flanking_right
 		};
-
+    
+    junction_id_list = new_junction;
+    
 		string join1[] = { hash_seq_id_1, to_string(hash_coord_1), to_string(hash_strand_1) };
 		junction_coord_1 = join(join1, "::");
 		string join2[] = { hash_seq_id_2, to_string(hash_coord_2), to_string(hash_strand_2) };
 		junction_coord_2 = join(join2, "::");
 
-		string junction_id = junction_name_join(new_junction);
 		if (verbose)
 		{
+      string junction_id = junction_name_join(new_junction);
 			cout << "READ ID: " << a1.read_name() << endl;
 			cout << "JUNCTION ID: " << junction_id << endl;
 		}

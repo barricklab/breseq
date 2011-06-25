@@ -24,6 +24,7 @@ LICENSE AND COPYRIGHT
 #include "annotated_sequence.h"
 #include "genome_diff.h"
 
+
 using namespace std;
 
 namespace breseq {

@@ -483,16 +483,18 @@ namespace breseq {
 			from_string<int32_t>(s[1]),
 			from_string<bool>(s[2]),
 			from_string<int32_t>(s[10])
-		}, side_2 = {
+		};
+    
+    JunctionInfo::Side side_2 = {
 			s[3],
 			from_string<int32_t>(s[4]),
 			from_string<bool>(s[5]),
 			from_string<int32_t>(s[11])
 		};
+    
 		JunctionInfo retval =
 		{
-			side_1,
-			side_2,
+			{ side_1, side_2 },
 			from_string<int32_t>(s[6]),
 			s[7],
 			from_string<int32_t>(s[8]),

@@ -17,9 +17,6 @@
  *****************************************************************************/
 
 #include "breseq/alignment_output.h"
-#include "breseq/common.h"
-#include "breseq/pileup.h"
-
 
 using namespace std;
 
