@@ -457,7 +457,7 @@ void alignment_output::create_alignment ( const string bam, const string fasta, 
     //  ## Need to reverse the coords for some
     //  foreach my $key (keys %$aligned_reads)
     //  {
-    for ( map<string, Aligned_Read>::iterator itr_read = m_aligned_reads.begin(); //TODO typedef map
+    for ( Aligned_Reads::iterator itr_read = m_aligned_reads.begin(); 
             itr_read != m_aligned_reads.end(); itr_read++ )
     {
         //      my $aligned_read = $aligned_reads->{$key};
@@ -528,20 +528,20 @@ string alignment_output::html_alignment ( const string& region )
     //$output .= style($self->{header_style_string});
     //$output .= start_table({-style=>"background-color: rgb(255,255,255)"}) . start_Tr() . start_td({-style=>"font-size:10pt"});
     //
-    output += "<style>"+create_header_string()+"</style>";
-    output += "<table style=\"background-color: rgb(255,255,255)\">";
-    output += "<tr><td style=\"font-size:10pt\"><code><font class=\"-5\">";
+    output += "<STYLE>"+create_header_string()+"</STYLE";
+    output += "<TABLE STYLE=\"background-color: rgb(255,255,255)\">";
+    output += "<TR><TD STYLE=\"font-size:10pt\">";    
     
     //foreach my $aligned_reference (@aligned_references)
     //{
     for (uint index = 0; index < m_aligned_references.size(); index++)
     {
       //  $output .= $self->_html_alignment_line($aligned_reference, 1) . br; 
-      output += html_alignment_line( (Alignment_Base) m_aligned_references[index] , true ,false); ///TODO + .br
+      output += html_alignment_line( (Alignment_Base) m_aligned_references[index] , true ,false) + "<BR>";
     //}
     }
     //$output .= $self->_html_alignment_line($aligned_annotation, 0) . br;
-    output += html_alignment_line( (Alignment_Base) m_aligned_annotation, true, false ); ///TODO + .br
+    output += html_alignment_line( (Alignment_Base) m_aligned_annotation, true, false ) + "<BR>";
     //
     //     foreach my $key (@sorted_keys)
     //     {
@@ -549,7 +549,7 @@ string alignment_output::html_alignment ( const string& region )
          itr_key != sorted_keys.end(); itr_key ++)
     {
     //         $output .= $self->_html_alignment_line($aligned_reads->{$key}, 0, $quality_range) . br;
-      output += html_alignment_line( (Alignment_Base) m_aligned_reads[itr_key->seq_id], false, true); ///TODO + .br
+      output += html_alignment_line( (Alignment_Base) m_aligned_reads[itr_key->seq_id], false, true) + "<BR>";
     //     }
     }
     //     $output .= $self->_html_alignment_line($aligned_annotation, 0) . br;
@@ -559,18 +559,16 @@ string alignment_output::html_alignment ( const string& region )
     for (uint index = 0; index < m_aligned_references.size(); index++)
     {
     //         $output .= $self->_html_alignment_line($aligned_reference, 1) . br;
-      output += html_alignment_line( (Alignment_Base) m_aligned_references[index], true, false); ///TODO + .br
+      output += html_alignment_line( (Alignment_Base) m_aligned_references[index], true, false) + "<BR>";
     //     }
     }
     //     $output .= br;
-    ///TODO output += .br
+    output += "<BR>";
     //
     //     ## create legend information
     //
     //     $output .= start_code . "Base quality scores:&nbsp;" . end_code;
-    ///TODO output += start_code;
-    output += "Base quality scores:&nbso:";
-    ///TODO output += end_code;
+    output += "<CODE>Base quality scores:&nbsp:</CODE>";
     //     $output .= $self->_html_alignment_line({aligned_bases => 'ATCG', => aligned_quals => pack('CCCC',0,0,0,0)}, 0,  $quality_range);
     Alignment_Base temp_a;
     temp_a.aligned_bases = "ATCG";
@@ -583,9 +581,9 @@ string alignment_output::html_alignment ( const string& region )
     //         my $c = $quality_range->{qual_cutoffs}->[$i];
     char c = (char) m_quality_range.qaul_cutoffs.at(index);
     //         $output .= start_code . "&nbsp;&lt;&nbsp;$c&nbsp;&le;&nbsp;" . end_code;
-    ///TODO output += start_code;
-    output += "&nbsp;&lt;&nbsp;$c&nbsp;&le;&nbsp;";
-    ///TODO output += end_code;
+    
+    output += "<CODE>&nbsp;&lt;&nbsp;$c&nbsp;&le;&nbsp;</CODE>";
+    
     //         $output .= $self->_html_alignment_line({aligned_bases => 'ATCG', => aligned_quals => pack('CCCC',$c,$c,$c,$c)}, 0,  $quality_range);
     temp_a.aligned_bases = "ATCG";
     temp_a.aligned_quals = "CCCC";
@@ -595,7 +593,7 @@ string alignment_output::html_alignment ( const string& region )
    }
     //
     //     $output .= end_table() . end_Tr() . end_td();
-    output += "</table></tr></td>";
+    output += "</TABLE></TR></TD>";
     //     return $output;
     // }
     return output;
@@ -735,7 +733,7 @@ void alignment_output::Alignment_Output_Pileup::pileup_callback ( const pileup& 
     //         while ( last_pos < p.position_1() )
     //         {
     //             //READS: add gaps to all
-    //             for ( map<string, Aligned_Read>::const_iterator itr_reads = aligned_reads.begin(); //TODO typedef map
+    //             for ( Aligned_Reads::iterator itr_reads = aligned_reads.begin(); 
     //                     itr_reads != aligned_reads.end(); itr_reads++ )
     //             {
     //                 aligned_reads[ ( *itr_reads ).first].aligned_bases += '.';
@@ -884,7 +882,7 @@ void alignment_output::Alignment_Output_Pileup::pileup_callback ( const pileup& 
     // ## READS: handle those with no
     //     foreach my $key (keys %$aligned_reads)
     //     {
-		for ( Aligned_Reads::iterator itr_read = aligned_reads.begin(); //TODO typedef map
+		for ( Aligned_Reads::iterator itr_read = aligned_reads.begin(); 
             itr_read != aligned_reads.end(); itr_read++ )
     {    
       // my $aligned_read = $aligned_reads-> {$key};
@@ -1313,7 +1311,7 @@ string alignment_output::html_alignment_line(alignment_output::Alignment_Base a,
 // #   my $output;
   string output;
 // #   $output .= start_code;
-  ///TODO output += start_code
+  output += "<CODE>";
 // #   
 // #   my @split_aligned_bases = split //, $a->{aligned_bases};
   string split_aligned_bases = a.aligned_bases;
@@ -1337,8 +1335,6 @@ string alignment_output::html_alignment_line(alignment_output::Alignment_Base a,
       cout << split_aligned_quals << endl;
 // #     # $self->throw("unequal aligned base and aligned quals");
       cerr << "unequal aligned base and aligned quals" <<endl;
-      cerr << "Bases: " + split_aligned_bases.length() << endl;
-      cerr << "Quals: " + split_aligned_bases.length() << endl;
 // #     }
 // #   }
     }
@@ -1369,7 +1365,10 @@ string alignment_output::html_alignment_line(alignment_output::Alignment_Base a,
           {
 // #         $color = ($b eq ' ') ? 'NC' : "\U$b" . $self->{no_color_index};
 // #       }
-            color = to_upper(b) + (char)no_color_index;
+            if (b == " ")
+              color = "-" + (char)no_color_index;   ///TODO NC, no color or neg character?
+            else
+              color = to_upper(b) + (char)no_color_index;
           }
 // #       ##Note: no color for $q == 254
 // # 
@@ -1446,6 +1445,7 @@ string alignment_output::html_alignment_line(alignment_output::Alignment_Base a,
     output += "&nbsp;&nbsp;" + seq_id;
   }   
 // #   $output .=  end_code;
+  output += "</CODE>";
 // #   
 // #   return $output;
 return output;
