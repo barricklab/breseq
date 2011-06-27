@@ -225,6 +225,7 @@ sub bridge_load_ref_seq_info
 
 =comment
 
+
 sub load_ref_seq_info
 {
 	##summaryand create_fasta are optional
@@ -372,7 +373,20 @@ sub load_ref_seq_info
 	return $ref_seq_info;
 }
 
+sub get_tag
+{
+	my ($Feature, $Tag, $Allow_Array) = @_;
+	$Allow_Array = 0 if (!defined $Allow_Array);
+	
+	return '' if (!$Feature->has_tag("$Tag"));
+	my @Tag_Values = $Feature->get_tag_values("$Tag");
+	return '' if (scalar @Tag_Values == 0);
+	return $Tag_Values[0] if (!$Allow_Array);
+	return @Tag_Values;
+}
+
 =cut
+
 
 sub annotate_1_mutation
 {
@@ -776,16 +790,6 @@ sub repeat_example
 	die "Unknown repeat type: $repeat_name";
 }
 
-sub get_tag
-{
-	my ($Feature, $Tag, $Allow_Array) = @_;
-	$Allow_Array = 0 if (!defined $Allow_Array);
-	
-	return '' if (!$Feature->has_tag("$Tag"));
-	my @Tag_Values = $Feature->get_tag_values("$Tag");
-	return '' if (scalar @Tag_Values == 0);
-	return $Tag_Values[0] if (!$Allow_Array);
-	return @Tag_Values;
-}
+
 
 return 1;
