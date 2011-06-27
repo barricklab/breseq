@@ -65,6 +65,15 @@ int main(int argc, char* argv[]) {
                         );
    string html_output = ao.html_alignment(options["region"]);
    cout << html_output << endl;
+   ///Write to html file
+   string file_name = options["region"] + ".html";
+   ofstream myfile (file_name.c_str());
+   if (myfile.is_open())
+   {
+     myfile << html_output;
+     myfile.close();
+   }
+   else cerr << "Unable to open file";
 
 
   } catch(...) {
