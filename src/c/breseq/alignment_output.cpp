@@ -531,9 +531,9 @@ string alignment_output::html_alignment ( const string& region )
     //$output .= style($self->{header_style_string});
     //$output .= start_table({-style=>"background-color: rgb(255,255,255)"}) . start_Tr() . start_td({-style=>"font-size:10pt"});
     //
-    output += "<STYLE>"+create_header_string()+"</STYLE";
-    output += "<TABLE STYLE=\"background-color: rgb(255,255,255)\">";
-    output += "<TR><TD STYLE=\"font-size:10pt\">";    
+    output += "<style>"+create_header_string()+"</style>";
+    output += "<table style=\"background-color: rgb(255,255,255)\">";
+    output += "<tr><td style=\"font-size:10pt\">";    
     
     //foreach my $aligned_reference (@aligned_references)
     //{
@@ -1286,7 +1286,7 @@ string alignment_output::create_header_string()
 
                 //      $self-> {header_style_string} .= "\.$key$i \{color: rgb(255,255,255); background-color: $base_colors_hash->{$key}->[$i]\}\n";
                 header_style_string += "." + to_string ( ( *itr ).first) + to_string(index) + "{color: rgb(255,255,255); background-color:"
-                                       + ( *itr ).second[index] + "\n";
+                                       + ( *itr ).second[index] + "}\n";
                 //    }
             }
             //    else
@@ -1295,7 +1295,7 @@ string alignment_output::create_header_string()
             {
                 //      $self-> {header_style_string} .= "\.$key$i \{color: rgb(120,120,120); background-color: $base_colors_hash->{$key}->[$i]\}\n";
                 header_style_string += "."+to_string ( ( *itr ).first) + to_string(index) + "{color: rgb(120,120,120); background-color:"
-                                       + ( *itr ).second[index] + "\n";
+                                       + ( *itr ).second[index] + "}\n";
                 //    }
             }
             //   }
