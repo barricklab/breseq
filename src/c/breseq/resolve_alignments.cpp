@@ -32,7 +32,9 @@ namespace breseq {
   // 1) Memory allocation and deallocation
   
   // Compares matches to candidate junctions with matches to original genome
-  void resolve_alignments( 
+  void resolve_alignments(
+                          const Settings& settings,
+                          Summary& summary,
                           bool junction_prediction,
                           const string &reference_fasta,
                           const string &junction_fasta,
@@ -46,9 +48,7 @@ namespace breseq {
                           const uint32_t alignment_read_limit
                           ) 
   {
-	Settings settings;
-
-	int verbose = 1;
+	bool verbose = false;
 
 	// my $verbose = 0;
 	// my ($settings, $summary, $ref_seq_info) = @_;
@@ -158,7 +158,7 @@ namespace breseq {
 	uint32_t reads_processed = 0;
 
 	// keep track of overall index of fastq files
-	uint32_t on_fastq_file_index = 0;
+	//uint32_t on_fastq_file_index = 0;
 
 	// foreach my $read_struct ($settings->read_structures)
 	for (uint32_t fastq_file_index = 0; fastq_file_index < read_files.size(); fastq_file_index++)
@@ -166,9 +166,7 @@ namespace breseq {
 		cReadFile rf = read_files[fastq_file_index];
 		cerr << "  READ FILE:" << rf.m_base_name << endl;
 
-		map<string, uint32_t> summary_info;
-
-		summary_info["unmatched_reads"] = 0;
+		map<string,int32_t> summary_info = make_map<string,int32_t>("unmatched_reads", 0);
 
 		// Traverse the original fastq files to keep track of order
 		// b/c some matches may exist in only one or the other file
@@ -415,9 +413,8 @@ namespace breseq {
 
 		} // End loop through every $read_struct
 
-		//
-		//## save statistics
-		//      $summary->{alignment_correction}->{read_file}->{$read_file} = $s;
+		// save statistics
+		summary.alignment_correction.read_file[read_files[0].m_base_name] = summary_info;
 
 	} // End of Read File loop
 
@@ -451,7 +448,7 @@ namespace breseq {
 		string key = sorted_junction_ids[i];
 
 		bool has_non_overlap_alignment;
-		bool success = _test_junction(settings, /*summary,*/ key, matched_junction, degenerate_matches, junction_test_info, ref_seq_info, RREF, RCJ, *reference_tam, *junction_tam, has_non_overlap_alignment);
+		bool success = _test_junction(settings, summary, key, matched_junction, degenerate_matches, junction_test_info, ref_seq_info, RREF, RCJ, *reference_tam, *junction_tam, has_non_overlap_alignment);
 
 		// save the score in the distribution
 		add_score_to_distribution(observed_pos_hash_score_distribution, junction_test_info[key].pos_hash_score);
@@ -484,7 +481,7 @@ namespace breseq {
 		if (verbose) cout << "Trying degenerate " << key << endl;
 
 		bool has_non_overlap_alignment;
-		bool success = _test_junction(settings, /*summary,*/ key, matched_junction, degenerate_matches, junction_test_info, ref_seq_info, RREF, RCJ, *reference_tam, *junction_tam, has_non_overlap_alignment);
+		bool success = _test_junction(settings, summary, key, matched_junction, degenerate_matches, junction_test_info, ref_seq_info, RREF, RCJ, *reference_tam, *junction_tam, has_non_overlap_alignment);
 
 		// save the score in the distribution
 		add_score_to_distribution(observed_pos_hash_score_distribution, junction_test_info[key].pos_hash_score);
@@ -563,13 +560,12 @@ namespace breseq {
 		}
 	}
 
-	//TODO: Uncomment when summary structure is used again
 	// Save summary statistics
-	//$summary->{alignment_correction}->{new_junctions}->{observed_min_overlap_score_distribution} = \%observed_min_overlap_score_distribution;
-	//$summary->{alignment_correction}->{new_junctions}->{accepted_min_overlap_score_distribution} = \%accepted_min_overlap_score_distribution;
+	summary.alignment_correction.new_junctions.observed_min_overlap_score_distribution = observed_min_overlap_score_distribution;
+	summary.alignment_correction.new_junctions.accepted_min_overlap_score_distribution = accepted_min_overlap_score_distribution;
 
-	//$summary->{alignment_correction}->{new_junctions}->{observed_pos_hash_score_distribution} = \%observed_pos_hash_score_distribution;
-	//$summary->{alignment_correction}->{new_junctions}->{accepted_pos_hash_score_distribution} = \%accepted_pos_hash_score_distribution;
+	summary.alignment_correction.new_junctions.observed_pos_hash_score_distribution = observed_pos_hash_score_distribution;
+	summary.alignment_correction.new_junctions.accepted_pos_hash_score_distribution = accepted_pos_hash_score_distribution;
 
 	//my @rejected_hybrid_predictions = ();
 
@@ -819,7 +815,7 @@ void _write_reference_matches(const Settings& settings, cReferenceSequences& ref
 	reference_tam.write_alignments((int32_t)fastq_file_index, reference_alignments, &trims);
 }
 
-bool _test_junction(const Settings& settings, /*const map<string, uint32_t>& summary_info,*/ const string& junction_seq_id, map<string, vector<MatchedJunction> >& matched_junction_ref, map<string, map<string, MatchedJunction> >& degenerate_matches_ref, map<string, CandidateJunction>& junction_test_info_ref, cReferenceSequences& ref_seq_info, ifstream& RREF, ifstream& RCJ, tam_file& reference_tam, tam_file& junction_tam, bool& has_non_overlap_alignment)
+bool _test_junction(const Settings& settings, Summary& summary, const string& junction_seq_id, map<string, vector<MatchedJunction> >& matched_junction_ref, map<string, map<string, MatchedJunction> >& degenerate_matches_ref, map<string, CandidateJunction>& junction_test_info_ref, cReferenceSequences& ref_seq_info, ifstream& RREF, ifstream& RCJ, tam_file& reference_tam, tam_file& junction_tam, bool& has_non_overlap_alignment)
 {
 	bool verbose = false;
 //	my ($settings, $summary, $junction_seq_id, $matched_junction_ref, $degenerate_matches_ref, $junction_test_info_ref, $reference_fai, $ref_seq_info, $RREF, $reference_header, $RCJ, $candidate_junction_header) = @_;
@@ -1006,13 +1002,12 @@ bool _test_junction(const Settings& settings, /*const map<string, uint32_t>& sum
 
 	// POS_HASH test
 	// New way, but we need to have examined the coverage distribution to calibrate what scores to accept!
-	// TODO: Reimpliment when summary structure exists
-	//	my $junction_accept_score_cutoff_1 = $summary->{preprocess_coverage}->{$scj->{side_1}->{seq_id}}->{junction_accept_score_cutoff};
-	//	my $junction_accept_score_cutoff_2 = $summary->{preprocess_coverage}->{$scj->{side_2}->{seq_id}}->{junction_accept_score_cutoff};
-	//	$failed ||= ( $test_info->{pos_hash_score} < $junction_accept_score_cutoff_1 ) && ( $test_info->{pos_hash_score} < $junction_accept_score_cutoff_2 );
+	int32_t junction_accept_score_cutoff_1 = summary.preprocess_coverage[scj.sides[0].seq_id].junction_accept_score_cutoff;
+	int32_t junction_accept_score_cutoff_2 = summary.preprocess_coverage[scj.sides[1].seq_id].junction_accept_score_cutoff;
+	failed |= ( test_info.pos_hash_score < junction_accept_score_cutoff_1 ) && ( test_info.pos_hash_score < junction_accept_score_cutoff_2 );
 	//
 	//	print Dumper($test_info) if ($verbose);
-	//	print ($failed ? "Failed\n" : "Passed\n") if ($verbose);
+	if (verbose) cout << (failed ? "Failed" : "Passed") << endl;
 
 	// TODO:
 	// ADD -- NEED TO CORRECT OVERLAP AND ADJUST NUMBER OF READS SUPPORTING HERE, RATHER THAN LATER

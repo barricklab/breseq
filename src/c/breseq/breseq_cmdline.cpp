@@ -216,8 +216,12 @@ int do_resolve_alignments(int argc, char* argv[]) {
 	// attempt to calculate error calibrations:
 	try {
     cReadFiles rf(from_string<vector<string> >(options["read-file"]));
+	Settings settings;
+	Summary summary;
     
     resolve_alignments(
+	  settings,
+	  summary,
       from_string<bool>(options["junction-prediction"]),
       options["reference-fasta"],
       options["junction-fasta"],

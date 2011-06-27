@@ -159,24 +159,23 @@ namespace breseq {
     
 		struct AlignmentCorrection
 		{
-			string read_file;
+			map<string, map<string, int32_t> > read_file;
 			struct NewJunction
 			{
-				int32_t observed_min_overlap_score_distribution;
-				int32_t accepted_min_overlap_score_distribution;
-				int32_t observed_pos_hash_score_distribution;
-				int32_t accepted_pos_hash_score_distribution;
-			};
-			list<NewJunction> new_junctions;
+				map<int32_t,int32_t> observed_min_overlap_score_distribution;
+				map<int32_t,int32_t> accepted_min_overlap_score_distribution;
+				map<int32_t,int32_t> observed_pos_hash_score_distribution;
+				map<int32_t,int32_t> accepted_pos_hash_score_distribution;
+			} new_junctions;
       
 		} alignment_correction;
     
-		struct PreprocessCoverage
-		{
-			int32_t junction_accept_score_cutoff_1;
-			int32_t junction_accept_score_cutoff_2;
-		} preprocess_coverage;
-    
+		struct Coverage {
+			int32_t junction_accept_score_cutoff;
+		};
+		map<string,Coverage> preprocess_coverage;
+		map<string,Coverage> unique_coverage;
+
 		struct CandidateJunctionSummaryData
 		{
 			struct Total

@@ -129,8 +129,32 @@ namespace breseq {
 
   cSequenceFeature* cReferenceSequences::find_closest_repeat_region(uint32_t position, vector<cSequenceFeature>& repeat_list_ref, uint32_t max_distance, bool direction)
   {
-	  //TODO: Translate function body
-	  return &(repeat_list_ref[0]);
+	if (repeat_list_ref.size() == 0) return NULL;
+
+	cSequenceFeature* is = NULL;
+	uint32_t best_distance = 0;
+
+	for (int32_t i = 0; i < repeat_list_ref.size(); i++) //IS
+	{
+		cSequenceFeature* test_is = &(repeat_list_ref[i]);
+
+		//count within the IS element as zero distance
+		//if this happens then we are immediately done
+		if ( (test_is->m_start <= position) && (test_is->m_end >= position) )
+			return test_is;
+
+		//otherwise calculate the distance
+		//keep if less than max_distance, in the correct direction, and the best found so far
+		int32_t test_distance = (!direction ? position - test_is->m_end : test_is->m_start - position);
+		if (test_distance < 0) continue; //wrong direction...
+
+		if ((test_distance <= max_distance) && ((is == NULL) || (test_distance < best_distance)) )
+		{
+			is = test_is;
+			best_distance = test_distance;
+		}
+	}
+	return is;
   }
 
   void cReferenceSequences::WriteFASTA(const std::string &file_name) {
