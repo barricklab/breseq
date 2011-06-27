@@ -36,70 +36,73 @@ namespace breseq
   {
   public:
     //! returns more information about aligned reads given a sequence id string.
-    struct Aligned_Read
+    struct Alignment_Base
+    {
+      Alignment_Base() 
+        : seq_id("")
+        , start(0)
+        , end(0)
+        , aligned_bases("")
+        , aligned_quals("")
+        , strand(0)
+        {}
+      
+      string seq_id;
+      uint32_t start;
+      uint32_t end;
+      string aligned_bases;
+      string aligned_quals;
+      uint32_t strand; ///TODO uint8
+      
+    };
+    //! returns more information about aligned reads given a sequence id string.
+    struct Aligned_Read:Alignment_Base
     {
       Aligned_Read() 
         : seq_id("")
         , length(0)
         , read_sequence("")
         , qual_sequence("")
-        , aligned_bases("")
-        , aligned_quals("")
         , reference_start(0) 
-        , reference_end(0)  
-        , start(0)  
-        , end(0)  
-        , strand(0)  
+        , reference_end(0) 
         , updated(false)
       {}
-      
-      
+            
       string seq_id;
       uint32_t length;
       string read_sequence;
       string qual_sequence;
-      string aligned_bases;
-      string aligned_quals;
       uint32_t reference_start;
       uint32_t reference_end;
-      uint32_t start;
-      uint32_t end;
-      int32_t strand;
       bool updated; //whether the read was updated at this pileup iteration already
     };
-    
     //! returns more information about an aligned references
-    struct Aligned_Reference
+    struct Aligned_Reference:Alignment_Base
     {
       Aligned_Reference() 
-        : start(0)
-        , end(0)
-        , aligned_bases("")
-        , aligned_quals("")
-        , reference_length(0)
-        , reference_name("")
-        , base(0)  
-      {}
-      
-      uint32_t start;
-      uint32_t end;
-      string aligned_bases;
-      string aligned_quals;
+         : reference_length(0)
+         , reference_name("")  
+         {}
+         
       uint32_t reference_length;
       string reference_name;
-      char base;
     };
     
-    typedef struct
-    {
-      string aligned_bases;
-    }Aligned_Annotation;
+    struct Aligned_Annotation:Alignment_Base  ///@GRC waste of memory? Only need aligned_bases;
+    {};
     
     typedef struct 
     {
       string seq_id;
       uint32_t aligned_bases_length;
     }Sorted_Key;
+    
+    //!Helper struct for set_quality_range
+    typedef struct
+    {
+      map<uint, uint8_t> qual_to_color_index;
+      vector<uint8_t> qaul_cutoffs;
+    }Quality_Range;
     
     typedef map<string, Aligned_Read> Aligned_Reads;
     typedef vector<Aligned_Reference> Aligned_References;
@@ -136,12 +139,6 @@ namespace breseq
       uint32_t max_indel;
       char base;
     };
-    //!Helper struct for set_quality_range
-    typedef struct
-    {
-      vector<uint32_t> qual_to_color_index;
-      vector<uint32_t> qaul_cutoffs;
-    }Quality_Range;
     
     Alignment_Output_Pileup m_alignment_output_pileup;
     Aligned_Reads m_aligned_reads;
@@ -156,14 +153,24 @@ namespace breseq
     string html_alignment ( const string& region );
     void create_alignment ( const string bam, const string fasta, const string region );
     void set_quality_range();
-  private:
+  private: //
+    uint no_color_index;
     string create_header_string();
+    string html_alignment_line(Alignment_Base a, const bool &coords, const bool &use_quality_range);
+    string html_alignment_strand(const uint32_t &strand);
+    
     static bool sort_by_aligned_bases_length ( const Sorted_Key& a, const Sorted_Key& b )
     {
       return ( a.aligned_bases_length > b.aligned_bases_length );
     }
   };
-  
+// _html_alignment_line($aligned_reference, 1) 
+// _html_alignment_line($aligned_annotation, 0) 
+// _html_alignment_line($aligned_reads->{$key}, 0, $quality_range)
+// _html_alignment_line($aligned_annotation, 0) 
+// _html_alignment_line($aligned_reference, 1)
+// _html_alignment_line({aligned_bases => 'ATCG', => aligned_quals => pack('CCCC',0,0,0,0)}, 0,  $quality_range)
+// _html_alignment_line({aligned_bases => 'ATCG', => aligned_quals => pack('CCCC',$c,$c,$c,$c)}, 0,  $quality_range)
   
   
   
