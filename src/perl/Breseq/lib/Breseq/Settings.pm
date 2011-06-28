@@ -631,11 +631,11 @@ sub installed
 	$self->{installed}->{SSAHA2} = (`which ssaha2`) ? "ssaha2" : 0;
 	
 	## check for default names
-	$self->{installed}->{smalt} = (`which smalt`) ? "smalt" : 0;
-	if (!$self->{installed}->{smalt}) { $self->{installed}->{smalt} = (`which smalt_i386`) ? "smalt_i386" : 0; }
-	if (!$self->{installed}->{smalt}) { $self->{installed}->{smalt} = (`which smalt_ia64`) ? "smalt_ia64" : 0; }
-	if (!$self->{installed}->{smalt}) { $self->{installed}->{smalt} = (`which smalt_x86_64`) ? "smalt_x86_64" : 0; }
-	if (!$self->{installed}->{smalt}) { $self->{installed}->{smalt} = (`which smalt_MacOSX_i386`) ? "smalt_MacOSX_i386" : 0; }
+	$self->{installed}->{smalt} = (`which smalt 2>/dev/null`) ? "smalt" : 0;
+	if (!$self->{installed}->{smalt}) { $self->{installed}->{smalt} = (`which smalt_i386 2>/dev/null`) ? "smalt_i386" : 0; }
+	if (!$self->{installed}->{smalt}) { $self->{installed}->{smalt} = (`which smalt_ia64 2>/dev/null`) ? "smalt_ia64" : 0; }
+	if (!$self->{installed}->{smalt}) { $self->{installed}->{smalt} = (`which smalt_x86_64 2>/dev/null`) ? "smalt_x86_64" : 0; }
+	if (!$self->{installed}->{smalt}) { $self->{installed}->{smalt} = (`which smalt_MacOSX_i386 2>/dev/null`) ? "smalt_MacOSX_i386" : 0; }
 
 	$self->{installed}->{R} = (`which R`) ? "R" : 0;	
 	if ($self->{installed}->{R}) 
