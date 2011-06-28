@@ -75,10 +75,15 @@ if (pdf_output == 0) {
 	## bitmap() requires ghostscript to be installed. 
 	## taa=4, gaa=2 options NOT compatible with earlier R versions!
 	## units = "px" NOT compatible with even earlier R versions!
-	##bitmap(out_file, height=6, width=11, type = "png16m", res = 72, pointsize=16)
 	
-	## png works with out of the box R and looks nicer
-	png(out_file, height=6, width=11, units ="in", res = 72, pointsize=16)
+	if(!capabilities(what = "png"))
+	{
+		## fallback to ghostscript
+		bitmap(out_file, height=6, width=11, type = "png16m", res = 72, pointsize=16)
+	} else {
+		## use X11 function, which gives better resolution
+		png(out_file, height=6, width=11, units ="in", res = 72, pointsize=16)
+	}
 } else {
 	pdf(out_file, height=6, width=11)
 }
