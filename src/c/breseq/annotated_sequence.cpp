@@ -132,9 +132,9 @@ namespace breseq {
 	if (repeat_list_ref.size() == 0) return NULL;
 
 	cSequenceFeature* is = NULL;
-	uint32_t best_distance = 0;
+	int32_t best_distance = 0;
 
-	for (int32_t i = 0; i < repeat_list_ref.size(); i++) //IS
+	for (uint32_t i = 0; i < repeat_list_ref.size(); i++) //IS
 	{
 		cSequenceFeature* test_is = &(repeat_list_ref[i]);
 
@@ -148,7 +148,7 @@ namespace breseq {
 		int32_t test_distance = (!direction ? position - test_is->m_end : test_is->m_start - position);
 		if (test_distance < 0) continue; //wrong direction...
 
-		if ((test_distance <= max_distance) && ((is == NULL) || (test_distance < best_distance)) )
+		if ((test_distance <= (int32_t)max_distance) && ((is == NULL) || (test_distance < best_distance)) )
 		{
 			is = test_is;
 			best_distance = test_distance;

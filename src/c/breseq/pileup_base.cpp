@@ -263,7 +263,7 @@ int add_pileup_line (const bam1_t *b, void *data) {
     !clip means that we handle all alignment positions that reads overlapping this position overlap
     clip means we stop and end at the indicated alignment columns, even if reads extend past them
  */ 
-void pileup_base::do_pileup(std::string region, bool clip, uint32_t downsample) {
+void pileup_base::do_pileup(const string& region, bool clip, uint32_t downsample) {
   
   int target_id, start_pos, end_pos;
   bam_parse_region(m_bam_header, region.c_str(), &target_id, &start_pos, &end_pos); 
@@ -310,16 +310,17 @@ void pileup_base::do_pileup(std::string region, bool clip, uint32_t downsample) 
 }
 
   
-void pileup_base::do_fetch(std::string region) {
+void pileup_base::do_fetch(const string& region) {
   
-  int target_id, start_pos, end_pos;
-  bam_parse_region(m_bam_header, region.c_str(), &target_id, &start_pos, &end_pos); 
+  uint32_t target_id;
+  uint32_t start_pos;
+  uint32_t end_pos;
+  parse_region(region.c_str(), target_id, start_pos, end_pos);
   
   // should throw if target not found!
-//	cout << this->unique_start << endl;
+  //	cout << this->unique_start << endl;
   bam_fetch(m_bam_file,m_bam_index,target_id,start_pos,end_pos,this,first_level_fetch_callback);
 	//cout << this->unique_start << endl;
 }
-
 
 } //end namespace breseq

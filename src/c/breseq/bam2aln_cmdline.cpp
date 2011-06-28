@@ -45,7 +45,7 @@ int main(int argc, char* argv[]) {
 	if(options.count("help")
 		 || !options.count("bam")
 		 || !options.count("fasta")
-		 || !options.count("output")) {
+		 || !options.count("region")) {
 		options.printUsage();
 		return -1;
 	}
@@ -58,22 +58,22 @@ int main(int argc, char* argv[]) {
                         from_string<uint32_t>(options["max-reads"])
                         );
     
-		ao.create_alignment(
-                        options["bam"],
-                        options["fasta"],
-                        options["region"]
-                        );
-   string html_output = ao.html_alignment(options["region"]);
-   cout << html_output << endl;
-   ///Write to html file
-   string file_name = options["region"] + ".html";
-   ofstream myfile (file_name.c_str());
-   if (myfile.is_open())
-   {
-     myfile << html_output;
-     myfile.close();
-   }
-   else cerr << "Unable to open file";
+  string html_output = ao.html_alignment(options["region"]);
+  cout << html_output << endl;
+  
+  ///Write to html file
+  string file_name = options["region"] + ".html";
+  if (options.count("output")) {
+    file_name = options["output"];
+  }
+    
+  ofstream myfile (file_name.c_str());
+  if (myfile.is_open())
+  {
+    myfile << html_output;
+    myfile.close();
+  }
+  else cerr << "Unable to open file";
 
 
   } catch(...) {
