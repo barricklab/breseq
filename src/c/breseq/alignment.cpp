@@ -348,13 +348,13 @@ bool tam_file::read_alignments(alignment_list& alignments, bool paired)
   alignments.clear();
   
 	int num_to_slurp = (paired) ? 2 : 1;
-	string last_read_name;
+	string last_read_name = "";
 	if (loaded_alignments.size() > 0)
 	{
     alignment last_alignment(loaded_alignments.back());
 		last_read_name = last_alignment.read_name();
     
-    loaded_alignments.resize(loaded_alignments.size()-1);
+    loaded_alignments.clear();
 		alignments.push_back(last_alignment);
 	}
 
@@ -363,7 +363,7 @@ bool tam_file::read_alignments(alignment_list& alignments, bool paired)
 	{
 		bam1_t* last_alignment_bam = new bam1_t;
     last_alignment_bam = bam_init1();
-    int bytes = sam_read1(input_tam,bam_header,last_alignment_bam);
+    int32_t bytes = sam_read1(input_tam,bam_header,last_alignment_bam);
     if (bytes < 0) break;
     
     loaded_alignments.push_back(last_alignment_bam);
