@@ -74,11 +74,11 @@ class pileup_base {
   
     //! Retrieve the length of the given target.
     const uint32_t target_length(uint32_t target) const {
-        return m_refs[target]->m_len;
+      return m_refs[target]->m_len;
     }
 
     char reference_base_char_1(uint32_t target, uint32_t pos1) const  {
-        return get_refseq(target)[pos1-1];
+      return get_refseq(target)[pos1-1];
     } ;
   
     char reference_base_char_0(uint32_t target, uint32_t pos0) const  {
@@ -94,10 +94,10 @@ class pileup_base {
     void do_pileup();
 
     //! Do the pileup, but only on specified region.
-    void do_pileup(string region, bool clip = false, uint32_t downsample = 0);
+    void do_pileup(const string& region, bool clip = false, uint32_t downsample = 0);
 
     //! Do the fetch, (Callback for each read alignment to region.)
-    void do_fetch(string region);
+    void do_fetch(const string& region);
 
     //! Pileup callback.
     virtual void pileup_callback(const pileup& p) {
@@ -114,6 +114,16 @@ class pileup_base {
   
     //! Called after the pileup completed a target.
     virtual void at_target_end(const uint32_t tid) { }
+  
+    //! Pass through to BAM.
+    void parse_region(const string& region, uint32_t& target_id, uint32_t& start_pos, uint32_t& end_pos)
+    {
+      int temp_target_id, temp_start_pos, temp_end_pos;
+      bam_parse_region(m_bam_header, region.c_str(), &temp_target_id, &temp_start_pos, &temp_end_pos); 
+      target_id = static_cast<uint32_t>(temp_target_id);
+      start_pos = static_cast<uint32_t>(temp_start_pos);
+      end_pos = static_cast<uint32_t>(temp_end_pos);
+    }
 
   protected:
     friend int first_level_pileup_callback(uint32_t tid, uint32_t pos, int n, const bam_pileup1_t *pile, void *data);

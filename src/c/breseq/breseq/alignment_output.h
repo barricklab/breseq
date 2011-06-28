@@ -24,7 +24,6 @@
 #include "pileup.h"
 #include "alignment.h"
 
-
 using namespace std;
 
 namespace breseq
@@ -45,6 +44,7 @@ namespace breseq
         , aligned_bases("")
         , aligned_quals("")
         , strand(0)
+        , show_strand(true)
         {}
       
       string seq_id;
@@ -52,23 +52,22 @@ namespace breseq
       uint32_t end;
       string aligned_bases;
       string aligned_quals;
-      uint32_t strand; ///TODO uint8
+      int8_t strand;
+      bool show_strand;
       
     };
     //! returns more information about aligned reads given a sequence id string.
-    struct Aligned_Read:Alignment_Base
+    struct Aligned_Read : Alignment_Base
     {
       Aligned_Read() 
-        : seq_id("")
-        , length(0)
+        : length(0)
         , read_sequence("")
         , qual_sequence("")
         , reference_start(0) 
         , reference_end(0) 
         , updated(false)
-      {}
+      { }
             
-      string seq_id;
       uint32_t length;
       string read_sequence;
       string qual_sequence;
@@ -77,31 +76,51 @@ namespace breseq
       bool updated; //whether the read was updated at this pileup iteration already
     };
     //! returns more information about an aligned references
-    struct Aligned_Reference:Alignment_Base
+    struct Aligned_Reference : Alignment_Base
     {
       Aligned_Reference() 
          : reference_length(0)
          , reference_name("")  
+         , truncate_start(0)
+         , truncate_end(0)
+         , target_id(-1)
          {}
          
       uint32_t reference_length;
       string reference_name;
+      uint32_t truncate_start, truncate_end;
+      uint32_t target_id;
     };
     
-    struct Aligned_Annotation:Alignment_Base  ///@GRC waste of memory? Only need aligned_bases;
-    {};
+    struct Aligned_Annotation: Alignment_Base
+    { 
+      Aligned_Annotation() 
+      { show_strand = false; }
+    };
     
-    typedef struct 
+    struct Sorted_Key
     {
+      Sorted_Key() 
+        : seq_id("")
+       , aligned_bases ("")
+      { }
+      
+      Sorted_Key(const Sorted_Key& copy)
+      {
+        seq_id = copy.seq_id;
+        aligned_bases = copy.aligned_bases;
+      }
+
+
       string seq_id;
-      uint32_t aligned_bases_length;
-    }Sorted_Key;
+      string aligned_bases;
+    };
     
     //!Helper struct for set_quality_range
     typedef struct
     {
       map<uint, uint8_t> qual_to_color_index;
-      vector<uint8_t> qaul_cutoffs;
+      vector<uint8_t> qual_cutoffs;
     }Quality_Range;
     
     typedef map<string, Aligned_Read> Aligned_Reads;
@@ -151,19 +170,20 @@ namespace breseq
     alignment_output ( string bam, string fasta, uint32_t in_maximum_to_align );
     //! Output an HTML alignment.
     string html_alignment ( const string& region );
-    void create_alignment ( const string bam, const string fasta, const string region );
-    void set_quality_range();
-  private: //
+    void create_alignment ( const string& region );
+    void set_quality_range(const uint32_t quality_score_cutoff = 0);
+  private:
     uint no_color_index;
     string create_header_string();
-    string html_alignment_line(Alignment_Base a, const bool &coords, const bool &use_quality_range);
-    string html_alignment_strand(const uint32_t &strand);
+    string html_alignment_line(const Alignment_Base& a, const bool coords, const bool use_quality_range);
+    string html_alignment_strand(const int8_t &strand);
     
     static bool sort_by_aligned_bases_length ( const Sorted_Key& a, const Sorted_Key& b )
     {
-      return ( a.aligned_bases_length > b.aligned_bases_length );
+      return ( a.aligned_bases.compare(b.aligned_bases) > 0 );
     }
   };
+  
 // _html_alignment_line($aligned_reference, 1) 
 // _html_alignment_line($aligned_annotation, 0) 
 // _html_alignment_line($aligned_reads->{$key}, 0, $quality_range)

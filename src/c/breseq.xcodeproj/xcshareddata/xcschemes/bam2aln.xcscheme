@@ -52,7 +52,7 @@
             isEnabled = "NO">
          </CommandLineArgument>
          <CommandLineArgument
-            argument = "--fasta=/Users/jbarrick/src/breseq/tests/REL606_fragment_is_mediated_dels/data/reference.fasta --bam=/Users/jbarrick/src/breseq/tests/REL606_fragment_is_mediated_dels/data/reference.bam --region=REL606-5:1-15 --output=&quot;Testing&quot;"
+            argument = "--fasta=/Users/jbarrick/src/breseq/tests/REL606_fragment_is_mediated_dels/data/reference.fasta --bam=/Users/jbarrick/src/breseq/tests/REL606_fragment_is_mediated_dels/data/reference.bam --region=REL606-5:1-15 --output=/Users/jbarrick/Desktop/test.html"
             isEnabled = "YES">
          </CommandLineArgument>
       </CommandLineArguments>

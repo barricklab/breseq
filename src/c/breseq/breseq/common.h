@@ -371,6 +371,31 @@ namespace breseq {
     }
     return rev_string;
   }
+  
+  inline string repeat_char(const char char_to_append, const uint32_t num_times)
+  {
+    string s;
+    // reserve memory to be a little more efficient
+    s.reserve(num_times);
+    for (uint32_t i=0; i< num_times; i++)
+    {
+      s += char_to_append;
+    }
+    return s;
+  }
+  
+  inline string substitute(const string& in_s, const string& replace_this, const string& with_this)
+  {
+    string s = in_s;
+    size_t pos = s.find(replace_this);
+    while (pos != string::npos)
+    {
+      s.replace(pos, replace_this.size(), with_this);
+      pos += with_this.size();
+      pos = s.find(replace_this, pos);
+    }
+    return s;
+  }
 
 	struct Trim
 	{
