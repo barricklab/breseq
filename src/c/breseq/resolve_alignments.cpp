@@ -542,20 +542,19 @@ namespace breseq {
 				// By trimming in the candidate junctions sequence, rather than on each half,
 				// this is done properly.
 				Trim trim = _trim_ambiguous_ends(a, *junction_tam, ref_seq_info);
-				//TODO: add parameters, function body to write_split_alignment, assumed the be the equivalent of write_moved_alignments
-				junction_tam->write_split_alignment(0, a);
-				//Breseq::Shared::tam_write_moved_alignment(
+				junction_tam->write_moved_alignment(
 					//RREF,
-					//fastq_file_index,
-					//item[side_key + "_seq_id"],
-					//item[side_key + "_position"],
-					//item[side_key + "_strand"],
-					//item[side_key + "_overlap"],
-					//side,
-					//item["flanking_left"],
-					//item["alignment_overlap"],
-					//trim
-				//);
+					a,
+					fastq_file_index,
+					item[side_key + "_seq_id"],
+					from_string<int32_t>(item[side_key + "_position"]),
+					from_string<bool>(item[side_key + "_strand"]),
+					from_string<int32_t>(item[side_key + "_overlap"]),
+					side,
+					from_string<int32_t>(item["flanking_left"]),
+					from_string<int32_t>(item["alignment_overlap"]),
+					&trim
+				);
 			}
 		}
 	}
