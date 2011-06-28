@@ -233,13 +233,18 @@ class alignment {
     { 
       uint8_t *auxl = aux_get(tag); 
       return (uint32_t)bam_aux2i(auxl); 
-    } 
+    }
+
+	inline bool proper_pair() const
+	{
+		return ((_a->core.flag & BAM_FPROPER_PAIR) != 0);
+	}
+
+	static const char op_to_char[10];
 
   protected:
     const bam_pileup1_t* _p; //!< Pileup.
     const bam1_t* _a; //!< Alignment.
-  
-    static const char op_to_char[10];
 };
   
 typedef vector<alignment> alignment_list;  
@@ -255,6 +260,7 @@ public:
   
   bool read_alignments(alignment_list& alignments, bool paired = false);
   void write_alignments(int32_t fastq_file_index, alignment_list& alignments, vector<Trim>* trims = NULL);
+  void write_moved_alignment(const alignment& a, uint32_t fastq_file_index, const string& seq_id, int32_t reference_pos, bool reference_strand, int32_t reference_overlap, const uint32_t junction_side, int32_t junction_flanking, int32_t junction_overlap, const Trim* trim);
   void write_split_alignment(uint32_t min_indel_split_len, const alignment& a);
 
   bam_header_t* bam_header;
