@@ -74,6 +74,7 @@ void alignment_output::create_alignment ( const string& region )
   Aligned_Reference aligned_reference;
   aligned_reference.target_id = target_id;
   aligned_reference.seq_id = m_alignment_output_pileup.target_name(target_id);
+  aligned_reference.reference_length = m_alignment_output_pileup.target_length(target_id);
   m_alignment_output_pileup.aligned_references.push_back(aligned_reference);
 
   // @JEB TODO
@@ -411,370 +412,186 @@ string alignment_output::html_alignment ( const string& region )
 /*! Called for each position.*/
 void alignment_output::Alignment_Output_Pileup::pileup_callback ( const pileup& p )
 {
+  uint32_t& start_1( m_start_position_1 );
+  uint32_t& end_1( m_end_position_1 );
+  uint32_t reference_pos_1 = p.position_1();
+
+  if ( verbose ) cout << "POSITION: " << reference_pos_1 << endl;
+
+  // Don't pay attention if no reads uniquely aligned here
+  if ( ( reference_pos_1 < unique_start ) || ( reference_pos_1 > unique_end ) )
+    return;
   
-  //  #create the alignment via "pileup"
-  //  my $pileup_function = sub { 
-    ///EX: region = REL606-5:1-15; 1 is start, 15 is end
-    uint32_t& start_1( m_start_position_1 );
-    uint32_t& end_1( m_end_position_1 );
-    
-    
-    // my ($seq_id,$pos,$pileup) = @_;
-    uint32_t pos_1 = p.position_1();
-    
-    // print "POSITION: $pos\n" if ($verbose);
-    if ( verbose ) //TODO Options
-        cout << "POSITION: " << pos_1 << endl;
-    
-    // return if ($pos < $unique_start);
-        // return if ($pos > $unique_end);
-        if ( ( pos_1 < unique_start ) || ( pos_1 > unique_end ) )
-          return;
-        //
-        // foreach my $aligned_reference (@aligned_references)
-        // {
-        //   $aligned_reference->{start} = $pos if (!defined $aligned_reference->{start});
-        //   $aligned_reference->{end} = $pos;
-        // }
-        //
-        
-    ///For Multiple Reference case
-//     for ( uint32_t index_aligned_reference = 0;
-//          index_aligned_reference < aligned_references.size();
-//          index_aligned_reference++ )
-//          {
-//            //@JEB: 0 counts as undefined since we use 1-indexed coords
-//            if (aligned_references[index_aligned_reference].start == 0) 
-//            {
-//              aligned_references[index_aligned_reference].start = pos_1;  
-//            }
-//              aligned_references[index_aligned_reference].end =pos_1;
-//          }
-//TODO Must be better way to get this information then calling it in pileup...
-        
-   ///Single Reference case
-   Aligned_Reference& aligned_reference (aligned_references[0]);
-   aligned_reference.reference_name = p.target_name();
-   aligned_reference.reference_length = p.target_length();
-   if(aligned_reference.start == 0)
-     aligned_reference.start = pos_1;
-   aligned_reference.end = pos_1;
-   
-   //TEST with multiple reference sequences
+  // update beginning and end of each reference
+  for (vector<Aligned_Reference>::iterator it=aligned_references.begin(); it!=aligned_references.end(); it++)
+  {
+    Aligned_Reference& aligned_reference = *it;
+    if(aligned_reference.start == 0) aligned_reference.start = reference_pos_1;
+    aligned_reference.end = reference_pos_1;
+  }
 
-    ////      ## Cull the list to those we want to align
-    ////      ## Other alignments may overlap this position that DO NOT
-    ////      ## overlap the positions of interest. This removes them.
-    ////      @$pileup = grep { defined $aligned_reads->{$_->alignment->display_name} } @$pileup;
-    //
-    //      ## Find the maximum indel count
-    //      ## We will add gaps to reads with an indel count lower than this.
-    //      my $max_indel = 0;
-    //      my $alignment_spans_position;
-    int temp_max_indel = 0;
-    vector<string> alignment_spans_position;
+  //## Cull the list to those we want to align
+  //## Other alignments may overlap this position that DO NOT
+  //## overlap the positions of interest. This removes them.
 
-    // ALIGNMENT: for my $p (@$pileup)
-    for ( pileup::const_iterator itr_pileup = p.begin();
-            itr_pileup != p.end() ; itr_pileup ++ )
+  vector<alignment> alignments;
+  for ( pileup::const_iterator itr_pileup = p.begin(); itr_pileup != p.end() ; itr_pileup++ )
+  {
+    const alignment& a = *itr_pileup;
+    
+    if (aligned_reads.find(a.read_name()) != aligned_reads.end()) 
     {
-        //## alignment spans the position unless this is the first base...
-        //$alignment_spans_position->{$p->alignment->display_name} = 1 if ($p->qpos > 0);
-        ///KNOWN qpos is zero indexed
-        if (itr_pileup->query_position_0() > 0)
-        {
-            alignment_spans_position.push_back ( itr_pileup->read_name() );
-        }
-          
-        //$max_indel = $p->indel if ($p->indel > $max_indel);
-        if (itr_pileup->indel() > temp_max_indel )
-        {
-          temp_max_indel = itr_pileup->indel();
-        }
+      alignments.push_back(a);
     }
-    assert(temp_max_indel >= 0);
-    uint32_t max_indel = static_cast<uint32_t>(temp_max_indel);
+  }
   
-    if ( verbose ) //TODO Options
-        cout << "MAX INDEL: " << max_indel << endl;
+  int32_t temp_max_indel = 0;
+  vector<string> alignment_spans_position;
+  for ( vector<alignment>::const_iterator itr_pileup = alignments.begin(); itr_pileup != alignments.end() ; itr_pileup ++ )
+  {
+    const alignment& a = *itr_pileup;
 
-    // ## Reference only positions, with no aligned reads
-    // ## are never called, so we keep track of the last position to add them
-    //     if (defined $last_pos && ($last_pos < $pos - 1))
-    //     {
-    //         $last_pos++;
-    //         while ($last_pos < $pos)
-    //         {
-    // ## READS: add gaps to all
-    //             foreach my $key (keys %$aligned_reads)
-    //             {
-    //                 my $aligned_read = $aligned_reads-> {$key};
-    //                 $aligned_read-> {aligned_bases} .= ($alignment_spans_position-> {$key}) ? '.' : ' ';
-    //                 $aligned_read-> {aligned_quals} .= chr(255);
-    //             }
-    //
-    // ## REFERENCE SEQUENCES: add actual bases
-    //             my $ref_bases = $bam->segment($seq_id,$last_pos,$last_pos)->dna;
-    //             foreach my $aligned_reference (@aligned_references)
-    //             {
-    //                 my $my_ref_bases = $ref_bases;
-    //                 ////                 $my_ref_bases = '.' if ($aligned_reference->{truncate_start} && ($last_pos < $aligned_reference->{truncate_start}))
-    //                 ////                                  || ($aligned_reference->{truncate_end} && ($last_pos > $aligned_reference->{truncate_end}));
-    //                 $aligned_reference-> {aligned_bases} .= $my_ref_bases;
-    //                 $aligned_reference-> {aligned_quals} .= chr(255);
-    //             }
-    //
-    // ## ANNOTATIONS: add gaps
-    //             $aligned_annotation-> {aligned_bases} .=
-    //                 ( (($insert_start == 0) && ($last_pos == $start)) || (($last_pos > $start) && ($last_pos <= $end)) )
-    //                 ? '|' : ' ';
-    //
-    //             $last_pos++;
-    //         }
-    //     }
-    //     $last_pos = $pos;
-
-
-    //     //NOT NEEDED IN C++ PORT?
-    //     if ( ( last_pos != 0 ) && ( last_pos < pos ) )
-    //     {
-    //         last_pos++;
-    //         while ( last_pos < p.position_1() )
-    //         {
-    //             //READS: add gaps to all
-    //             for ( Aligned_Reads::iterator itr_reads = aligned_reads.begin(); 
-    //                     itr_reads != aligned_reads.end(); itr_reads++ )
-    //             {
-    //                 aligned_reads[ ( *itr_reads ).first].aligned_bases += '.';
-    //                 aligned_reads[itr_reads->first].aligned_quals += char ( 255 );
-    //             }
-    //             //REFERENCE SEQUENCES: add actual bases
-    //             for ( uint32_t index_aligned_reference;
-    //                     index_aligned_reference < aligned_references.size();
-    //                     index_aligned_reference++ )
-    //             {
-    //                 aligned_references[index_aligned_reference].aligned_bases += p.reference_base_char_1 ( pos );
-    //                 aligned_references[index_aligned_reference].aligned_quals += char ( 255 );
-    //             }//TEST with multiple reference sequences
-    //             //ANNOTATIONS: add gaps
-    //
-    //
-    //
-    //             if ( ( insert_start == 0 ) && ( last_pos == start )
-    //                     || ( last_pos > start ) && ( last_pos <= end ) )
-    //             {
-    //                 aligned_annotation.aligned_bases += '|';
-    //             }
-    //             else
-    //             {
-    //                 aligned_annotation.aligned_bases += ' ';
-    //             }
-    //             last_pos++;
-    //         }
-    //     }
-    //     last_pos = pos;
-
-    // ## END adding reference only positions.
-    //
-    // ## Now add this position to the alignments
-    //     my $updated;
-		/// Reset "updated flag" @JEB
-    /// This flag is set if the read was among those returned by the pileup
-    /// if it is not set, we insert padding after the loop through the alignments!
-    for (Aligned_Reads::iterator itr_read = aligned_reads.begin(); itr_read != aligned_reads.end(); itr_read++ )
+    //## alignment spans the position unless this is the first base...
+    if (a.query_position_1() > 1)
     {
-        Aligned_Read& aligned_read ( itr_read->second );
-        aligned_read.updated = false;
+        alignment_spans_position.push_back ( a.read_name() );
     }
-    // ALIGNMENT:
-    //     for my $p (@$pileup)
-    //     {
-    //BEGIN FIRST ALIGNMENT LABEL LOOP
-    for ( pileup::const_iterator itr_pileup = p.begin(); itr_pileup != p.end(); itr_pileup++ )
+      
+    if (a.on_base_indel() > temp_max_indel )
     {
-        // my $a = $p->alignment;
-        Aligned_Read& aligned_read = aligned_reads[itr_pileup->read_name()];
-      
-        //$updated-> {$a->display_name} = 1;
-        aligned_read.updated = true;
-        //
-        // ##this setup gives expected behavior for indels!
-        //my $indel = $p->indel;
-        // $indel = 0 if ($indel < 0);
-        // $indel = -1 if ($p->is_del);
-        bool indel = itr_pileup->indel();
+      temp_max_indel = a.on_base_indel();
+    }
+  }
+  assert(temp_max_indel >= 0);
+  int32_t max_indel = static_cast<uint32_t>(temp_max_indel);
 
-        // ## Which read are we on?
-      
-        // my $aligned_read = $aligned_reads-> {$a->display_name};
-        // $aligned_read-> {strand} = ($a->reversed) ? -1 : +1;
-        aligned_read.strand = itr_pileup->strand();
-      
-        // $aligned_read-> {reference_start} = $pos if (!defined $aligned_read-> {reference_start});
-        if (aligned_read.reference_start == 0) aligned_read.reference_start = pos_1;
-      
-        // $aligned_read-> {reference_end} = $pos;
-        aligned_read.reference_end = pos_1;
-      
-        // $aligned_read-> {start} = $p->qpos+1 if (!defined $aligned_read-> {start});
-        if ( aligned_read.start == 0 )
+  if ( verbose ) cout << "MAX INDEL: " << max_indel << endl;
+
+  // ## Now add this position to the alignments
+
+  /// This flag is set if the read was among those returned by the pileup
+  /// if it is not set, we insert padding after the loop through the alignments!
+  for (Aligned_Reads::iterator itr_read = aligned_reads.begin(); itr_read != aligned_reads.end(); itr_read++ )
+  {
+      Aligned_Read& aligned_read ( itr_read->second );
+      aligned_read.updated = false;
+  }
+
+  // MAIN ALIGNMENT LOOP
+  for ( vector<alignment>::const_iterator itr_pileup = alignments.begin(); itr_pileup != alignments.end() ; itr_pileup ++ )
+  {
+    const alignment& a = *itr_pileup;
+    
+    Aligned_Read& aligned_read = aligned_reads[a.read_name()];
+    aligned_read.updated = true;
+
+    // -1 for gap in this read, >0 for this many bases inserted in read
+    int32_t indel = a.on_base_indel();      
+    aligned_read.strand = a.strand();
+    
+    // Update the beginning and the end coords of what we are showing
+    if (aligned_read.reference_start == 0) aligned_read.reference_start = reference_pos_1;
+    aligned_read.reference_end = reference_pos_1;
+    
+    if ( aligned_read.start == 0 ) aligned_read.start = itr_pileup->query_position_1();
+    aligned_read.end = a.query_position_1();
+
+    // ## READS: add aligned positions
+    // FOR EACH INSERT COUNT
+    for ( int32_t index = 0; index <= max_indel; index ++ )
+    {
+      // add gap
+      if ( index > indel )
+      {
+        if ( verbose )
         {
-          aligned_read.start = itr_pileup->query_position_1();
+          cout << "Adding gap: " << indel << endl;
         }
-          
-        //         $aligned_read-> {end} = $p->qpos+1;
-				aligned_read.end = itr_pileup->query_position_1(); //BUG correctly initialized here for all but READ 4421-M1
+        aligned_read.aligned_bases += '.';
+        aligned_read.aligned_quals += char ( 255 );
+      }
+      // add the aligned base
+      else
+      {
+        uint8_t quality = a.read_base_quality_0( a.query_position_0() + index );
+        char base = a.read_base_char_0( a.query_position_0() + index );
 
-        // ## READS: add aligned positions
-        // for (my $i=0; $i<=$max_indel; $i++)
-				for ( uint32_t index = 0; index <= max_indel; index ++ )
+        if ( !text )
         {
-          // if ($i > $indel)
-					if ( index > indel )
-					{
-            //print $p->indel . "\n" if ($verbose);
-        		if ( verbose )
-          	{
-              cout << indel << endl;
-            }
-            //$aligned_read-> {aligned_bases} .= '.';
-            aligned_read.aligned_bases += ',';
-            
-            // $aligned_read-> {aligned_quals} .= chr(255);
-            aligned_read.aligned_quals += char ( 255 );
-					}
-          // else
-					else
+          uint8_t trim_left = a.trim_left();
+          if ( ( trim_left > 0 ) && ( a.query_position_1() <= trim_left ) )
           {
-            // my $quality = $a->qscore->[$p->qpos+$i];
-        		uint8_t quality = itr_pileup->read_base_quality_0( itr_pileup->query_position_0() +index );
-            // my $base  = substr($a->qseq, $p->qpos+$i,1);
-        		char base = itr_pileup->read_char_sequence().substr ( ( *itr_pileup ).query_position_0() +index,1 ) [0];
-
-            // if (!$options-> {text})
-						if ( !text ) //TODO Options
-            {
-              // my $trim_left = $a->aux_get('XL');
-        			uint8_t trim_left = ( *itr_pileup ).trim_left();
-              // $base = "\L$base" if ((defined $trim_left) && ($p->qpos+1 <= $trim_left));
-							if ( ( trim_left > 0 ) && ( itr_pileup->query_position_1() <= trim_left ) ) //BUG FIX trim_left >0
-              {
-                base = tolower ( base );           
-              }
-              
-              // my $trim_right = $a->aux_get('XR');
-						  uint8_t trim_right = ( *itr_pileup ).trim_right();
-              // $base = "\L$base" if ((defined $trim_right) && ($a->l_qseq-$p->qpos <= $trim_right));
-							if ( ( trim_right !=0 ) && ( ( itr_pileup->read_length() - itr_pileup->query_position_0() ) <= trim_right ) )
-              {
-              	base = tolower ( base );
-              }
-						}
-            // $aligned_read-> {aligned_bases} .= $base;
-        	  aligned_read.aligned_bases += base;
-            // $aligned_read-> {aligned_quals} .= chr($quality);
-						aligned_read.aligned_quals += char ( quality );
-					}
-          // print $aligned_read-> {aligned_bases} . " " .$aligned_read-> {seq_id} . " " . $p->indel . "\n" if ($verbose);
-          if ( verbose )
-          {
-          	cout << aligned_read.aligned_bases << " ";
-            cout << aligned_read.seq_id << " ";
-            cout << ( *itr_pileup ).indel() << endl;
+            base = tolower ( base );           
           }
-
+          
+          uint8_t trim_right = ( *itr_pileup ).trim_right();
+          if ( ( trim_right !=0 ) && ( ( itr_pileup->read_length() - itr_pileup->query_position_0() ) <= trim_right ) )
+          {
+            base = tolower ( base );
+          }
         }
-    }
-    //END FIRST ALGINMENT LABEL LOOP
-   
-    //
-    // ## READS: handle those with no
-    //     foreach my $key (keys %$aligned_reads)
-    //     {
-		for ( Aligned_Reads::iterator itr_read = aligned_reads.begin(); 
-            itr_read != aligned_reads.end(); itr_read++ )
-    {    
-      // my $aligned_read = $aligned_reads-> {$key};
-			Aligned_Read& aligned_read (itr_read->second );
       
-      // next if ($updated-> {$key});
-    	if ( aligned_read.updated ) continue;
-      
-      // $aligned_read-> {aligned_bases} .= ' ' x ($max_indel+1);
-			for(uint32_t i = 0; i < (max_indel + 1); i++)
-      {
-				aligned_read.aligned_bases += ' '; //BUG dont .append(' ', max_indel+1)
+        aligned_read.aligned_bases += base;
+        aligned_read.aligned_quals += char ( quality );
       }
-      
-      // $aligned_read-> {aligned_quals} .= chr(254) x ($max_indel+1);
-    	for(uint32_t i = 0; i < (max_indel + 1); i++)
-      {
-				aligned_read.aligned_quals += char(254); //BUG dont .append(char(254), max_indel+1)
-      }
-      // print $aligned_read-> {aligned_bases} . " NOALIGN " . $key . " " . "\n" if ($verbose);
-     	if ( verbose )
-        cout << aligned_read.aligned_bases << " NOALIGN " << itr_read->first << endl;
-    }
-    //
-    // ##now handle the reference sequence
-    // my $ref_base = $bam->segment($seq_id,$pos,$pos)->dna;
-    char ref_base = p.reference_base_char_1(pos_1);
 
-    // foreach my $aligned_reference (@aligned_references)
-		for ( uint32_t index = 0; index < aligned_references.size(); index ++ )
-    {
-      // my $my_ref_base = $ref_base;
-    	char my_ref_base = ref_base;
-      //// $my_ref_base = '.' if ($aligned_reference-> {truncate_start} && ($last_pos < $aligned_reference-> {truncate_start}))
-      //// || ($aligned_reference-> {truncate_end} && ($last_pos > $aligned_reference-> {truncate_end}));
-      
-			Aligned_Reference& aligned_reference ( aligned_references[index] );	
-      
-      // $aligned_reference-> {aligned_bases} .= $my_ref_base;
-			aligned_reference.aligned_bases += my_ref_base;
-      
-      // $aligned_reference-> {aligned_bases} .= '.' x ($max_indel) if ($max_indel > 0);
-			if ( max_indel >  0 )
-      	aligned_reference.aligned_bases.append ( '.',max_indel );
-        // $aligned_reference-> {aligned_quals} .= chr(255) x ($max_indel+1);
-      for(uint32_t i = 0 ; i < (max_indel + 1); i++)
-				aligned_reference.aligned_quals += char(255); //BUG dont .append ( char ( 255 ), max_indel +1 );
+      if ( verbose )
+      {
+        cout << aligned_read.aligned_bases << " ";
+        cout << aligned_read.seq_id << " ";
+        cout << a.on_base_indel() << endl;
+      }
+    } // END FOR EACH INSERT COUNT
+  }
+  //END MAIN ALIGNMENT LOOP
    
-				///TODO assigned here for single reference case?
-				///aligned_reference.base = my_ref_base;
-        ///aligned_reference.reference_length = p.target_length();
-        ///aligned_reference.reference_name = p.target_name();
-		}
-    //
+  // ## READS: handle those with no base aligned to this position
+  for ( Aligned_Reads::iterator itr_read = aligned_reads.begin();  itr_read != aligned_reads.end(); itr_read++ )
+  {    
+    Aligned_Read& aligned_read (itr_read->second );
+    
+    if ( aligned_read.updated ) continue;
+          
+    aligned_read.aligned_bases += repeat_char(' ', max_indel+1);
+    aligned_read.aligned_quals += repeat_char(char(254), max_indel+1);
+    if ( verbose ) cout << aligned_read.aligned_bases << " NOALIGN " << itr_read->first << endl;
+  }
   
-    // @JEB these 
-    ///For basic case these are 0, defined in the user defined Region
   
-    // ##also update any positions of interest for gaps
-  
-    // for (my $insert_count=0; $insert_count<=$max_indel; $insert_count++)
-	  for ( uint32_t insert_count = 0; insert_count <= max_indel; insert_count++ )
+  // ##now handle the reference sequences
+  char ref_base = p.reference_base_char_1(reference_pos_1);
+
+  for ( uint32_t index = 0; index < aligned_references.size(); index ++ )
+  {
+    char my_ref_base = ref_base;
+    
+    Aligned_Reference& aligned_reference ( aligned_references[index] );	
+    
+    aligned_reference.aligned_bases += my_ref_base;
+    aligned_reference.aligned_bases += repeat_char('.', max_indel);
+    aligned_reference.aligned_quals += repeat_char(char(255), max_indel);
+    
+      ///TODO assigned here for single reference case?
+      ///aligned_reference.base = my_ref_base;
+      ///aligned_reference.reference_length = p.target_length();
+      ///aligned_reference.reference_name = p.target_name();
+  }
+    
+  // ##also update any positions of interest for gaps
+  for ( int32_t insert_count = 0; insert_count <= max_indel; insert_count++ )
+  {
+    if ( (( insert_start <= insert_count ) && ( insert_count <= insert_end ) && ( reference_pos_1 == start_1 ) && ( reference_pos_1 == end_1 ) )
+        || ( ( insert_start <= insert_count ) && ( reference_pos_1 == start_1 ) && ( reference_pos_1 != end_1 ) )
+        || ( ( reference_pos_1 < end_1 ) && ( reference_pos_1 > start_1 ) )
+        || ( ( insert_end <= insert_count ) && ( reference_pos_1 == end_1 ) && ( reference_pos_1 != start_1 ) ) )
     {
-      // if (   (($insert_start <= $insert_count) && ($insert_count <= $insert_end) && ($pos == $start) && ($pos == $end))
-    	if ( (( insert_start <= insert_count ) && ( insert_count <= insert_end ) && ( pos_1 == start_1 ) && ( pos_1 == end_1 ) )
-          // || (($insert_start <= $insert_count) && ($pos == $start) && ($pos != $end))
-					|| ( ( insert_start <= insert_count ) && ( pos_1 == start_1 ) && ( pos_1 != end_1 ) )
-    	// || (($pos < $end) && ($pos > $start))
-			 		|| ( ( pos_1 < end_1 ) && ( pos_1 > start_1 ) )
-    	// || (($insert_end <= $insert_count) && ($pos == $end) && ($pos != $start)) )
-					|| ( ( insert_end <= insert_count ) && ( pos_1 == end_1 ) && ( pos_1 != start_1 ) ) )
-			{
-        
-        // $aligned_annotation-> {aligned_bases} .= '|';
-    		aligned_annotation.aligned_bases += '|';
-			}
-    	// else
-	  	else
-			{		
-        //$aligned_annotation-> {aligned_bases} .= ' ';
-    		aligned_annotation.aligned_bases += ' ';
-     	}
+      aligned_annotation.aligned_bases += '|';
     }
+    else
+    {		
+      aligned_annotation.aligned_bases += ' ';
+    }
+  }
 
 }
 //END create_alignment()

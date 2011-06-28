@@ -31,8 +31,8 @@ int main(int argc, char* argv[]) {
 	AnyOption options("Usage: bam2aln --bam=<reference.bam> --fasta=<reference.fasta> --region=<accession:start-end> --output=<output.html> [--max-reads=1000]");
 	options
   ("help,h", "produce this help message", TAKES_NO_ARGUMENT)
-  ("bam,b", "bam file containing sequences to be aligned")
-	("fasta,f", "FASTA file of reference sequence")
+  ("bam,b", "bam file containing sequences to be aligned", "data/reference.bam")
+	("fasta,f", "FASTA file of reference sequence", "data/reference.fasta")
   ("output,o", "name of output file")
   ("region,r", "region to print (accession:start-end)", "")
   ("max-reads,n", "maximum number of reads to show in alignment", 1000)
@@ -43,9 +43,10 @@ int main(int argc, char* argv[]) {
   
 	// make sure that the config options are good:
 	if(options.count("help")
-		 || !options.count("bam")
-		 || !options.count("fasta")
-		 || !options.count("region")) {
+		 || !options.count("region")
+     || !file_exists(options["fasta"].c_str())
+     || !file_exists(options["bam"].c_str()) )
+  {
 		options.printUsage();
 		return -1;
 	}
@@ -59,7 +60,7 @@ int main(int argc, char* argv[]) {
                         );
     
   string html_output = ao.html_alignment(options["region"]);
-  cout << html_output << endl;
+  //cout << html_output << endl;
   
   ///Write to html file
   string file_name = options["region"] + ".html";

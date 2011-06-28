@@ -3,7 +3,7 @@
 <plist version="1.0">
 <dict>
 	<key>currentDocument</key>
-	<string>Breseq/lib/Breseq/ReferenceSequence.pm</string>
+	<string>Breseq/lib/Breseq/AlignmentOutput.pm</string>
 	<key>documents</key>
 	<array>
 		<dict>
@@ -250,14 +250,14 @@
 			<key>caret</key>
 			<dict>
 				<key>column</key>
-				<integer>56</integer>
+				<integer>63</integer>
 				<key>line</key>
-				<integer>356</integer>
+				<integer>117</integer>
 			</dict>
 			<key>firstVisibleColumn</key>
 			<integer>0</integer>
 			<key>firstVisibleLine</key>
-			<integer>0</integer>
+			<integer>87</integer>
 		</dict>
 		<key>Breseq/lib/Breseq/CandidateJunctions.pm</key>
 		<dict>
@@ -376,14 +376,14 @@
 			<key>caret</key>
 			<dict>
 				<key>column</key>
-				<integer>1</integer>
+				<integer>18</integer>
 				<key>line</key>
-				<integer>385</integer>
+				<integer>486</integer>
 			</dict>
 			<key>firstVisibleColumn</key>
 			<integer>0</integer>
 			<key>firstVisibleLine</key>
-			<integer>360</integer>
+			<integer>463</integer>
 		</dict>
 		<key>Breseq/lib/Breseq/Settings.pm</key>
 		<dict>
@@ -535,6 +535,6 @@
 	<key>showFileHierarchyDrawer</key>
 	<true/>
 	<key>windowFrame</key>
-	<string>{{446, 142}, {744, 736}}</string>
+	<string>{{413, 189}, {799, 689}}</string>
 </dict>
 </plist>
