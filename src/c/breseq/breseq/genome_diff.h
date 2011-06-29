@@ -142,6 +142,11 @@ namespace breseq {
 	
   void add_reject_reason(diff_entry& de, const string &reason);
 
+    //! Convert genome diff to GVF
+    void GDtoGVF( const string& gdfile, const string& gfffile );
+    
+    //! Convert VCF to genome diff
+    void VCFtoGD( const string& vcffile, const string& gfffile );
 	
 	//! Output operator for a diff entry.
 	ostream& operator<<(ostream& out, diff_entry& de);
@@ -239,6 +244,7 @@ namespace breseq {
 		
 		//! Write the genome diff to a file.
 		void write(const string& filename);
+        
 
 	protected:		
 		const string _default_filename; //!< Default filename for this diff.
