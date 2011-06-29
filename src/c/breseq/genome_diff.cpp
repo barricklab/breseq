@@ -317,7 +317,7 @@ void breseq::genome_diff::write(const string& filename) {
 }
 
 // Convert GD file to GVF file
-void GDtoGVF( const string &gdfile, const string &gfffile ){
+void breseq::GDtoGVF( const string &gdfile, const string &gfffile ){
     
     // Stores the features
     vector< vector<string> > features;
@@ -524,7 +524,7 @@ void GDtoGVF( const string &gdfile, const string &gfffile ){
     
 }
 
-void VCFtoGD( const string& vcffile, const string& gdfile ){
+void breseq::VCFtoGD( const string& vcffile, const string& gdfile ){
     // Stores the features
     vector< vector<string> > featuresVCF;
     vector< vector<string> > featuresGD;
