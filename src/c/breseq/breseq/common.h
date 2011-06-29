@@ -82,7 +82,6 @@ namespace breseq {
   //       'A', 'C', 'G', 'T', 'N', '.'
   typedef char base_char;
   
-    typedef unsigned int uint;
   // index: Numbered starting at zero, used for array storage and lookups
   //       A(0), C(1), G(2), T(3), .(4)  No 'N' bases allowed.
   typedef uint8_t base_index;
