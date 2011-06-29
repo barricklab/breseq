@@ -119,7 +119,7 @@ namespace breseq
     //!Helper struct for set_quality_range
     typedef struct
     {
-      map<uint, uint8_t> qual_to_color_index;
+      map<uint32_t, uint8_t> qual_to_color_index;
       vector<uint8_t> qual_cutoffs;
     }Quality_Range;
     
@@ -174,7 +174,7 @@ namespace breseq
     void create_alignment ( const string& region );
     void set_quality_range(const uint32_t quality_score_cutoff = 0);
   private:
-    uint no_color_index;
+    uint32_t no_color_index;
     string create_header_string();
     string html_alignment_line(const Alignment_Base& a, const bool coords, const bool use_quality_range);
     string html_alignment_strand(const int8_t &strand);
