@@ -59,7 +59,7 @@ class alignment {
     //! Is the read aligned to the reverse strand?
     //  Returns 1 if read aligned to bottom strand, 0 if aligned to top strand
     inline uint32_t reference_target_id() const { return _a->core.tid; }
-
+  
     //!Retrieve name of read.
     inline string read_name() const { return bam1_qname(_a);}
 

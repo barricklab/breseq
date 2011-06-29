@@ -476,7 +476,7 @@ void tam_file::write_split_alignment(uint32_t min_indel_split_len, const alignme
 	vector<pair<uint8_t,uint8_t> > cigar_list = a.cigar_pair_array();
 	char op;
 	uint8_t len;
-	int32_t i = 0;
+	uint32_t i = 0;
 	while (i < cigar_list.size())
 	{
 		uint32_t rstart = rpos;
@@ -628,7 +628,7 @@ void tam_file::write_moved_alignment(const alignment& a, uint32_t fastq_file_ind
 
 	vector<uint8_t> qual_scores;
 	stringstream qseq_ss;
-	for (int32_t i = 0; i < q_length; i++)
+	for (uint32_t i = 0; i < q_length; i++)
 	{
 		qual_scores.push_back(*qscore);
 		qseq_ss << static_cast<char>(*qseq);
@@ -671,7 +671,7 @@ void tam_file::write_moved_alignment(const alignment& a, uint32_t fastq_file_ind
 	// where we want to split the read and only count one side
 	// For side 1, we go up to this coordinate
 	// Side 2 begins after this coordinate
-	int32_t junction_pos = junction_flanking;
+	uint32_t junction_pos = junction_flanking;
 	if (junction_side == 1)
 	{
 		// Offset position to include additional sequence on this side
@@ -737,7 +737,7 @@ void tam_file::write_moved_alignment(const alignment& a, uint32_t fastq_file_ind
 				}
 				// After $n may have been adjusted add it to both positions
 				test_junction_pos += n;
-				if (op != 'D'); //if not deletion in read relative to reference
+				if (op != 'D') //if not deletion in read relative to reference
 					test_read_pos += n;
 			}
 
@@ -855,7 +855,7 @@ void tam_file::write_moved_alignment(const alignment& a, uint32_t fastq_file_ind
 	//// is corect and that there are no negative nums
 	stringstream cigar_string_ss;
 	uint32_t cigar_length = 0;
-	for (int32_t i = 0; i < cigar_list.size(); i++) //CIGAR
+	for (uint32_t i = 0; i < cigar_list.size(); i++) //CIGAR
 	{
 		char op = alignment::op_to_char[cigar_list[i].first];
 		char len = cigar_list[i].second;
