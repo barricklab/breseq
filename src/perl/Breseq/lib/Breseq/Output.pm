@@ -1190,18 +1190,30 @@ sub html_evidence_file
 		$s .= ".$interval->{insert_start}" if (defined $interval->{insert_start});
 		$s .= "-$interval->{end}";
 		$s .= ".$interval->{insert_end}" if (defined $interval->{insert_end});
-				
-		my $ao = Breseq::AlignmentOutput->new;
-		my $options = {};
+		print STDERR "Creating read alignment for region \'$s\'\n";
+
 		$interval->{quality_score_cutoff} = $settings->{base_quality_cutoff} if (defined $settings->{base_quality_cutoff});
 		
-		print STDERR "Creating read alignment for region \'$s\'\n";
-		print HTML $ao->html_alignment(
-			$interval->{bam_path}, 
-			$interval->{fasta_path}, 
-			$s, 
-			$interval,
-		);
+		# experiment with using C++ version
+		if (!$settings->{perl_bam2aln}) 
+		{
+			my $cbam2aln = $settings->ctool("cbam2aln");
+			my $command = "$cbam2aln --bam $interval->{bam_path} --fasta $interval->{fasta_path} --region $s --quality-score-cutoff $settings->{base_quality_cutoff} --stdout";
+			print HTML `$command`;
+			print STDERR "$command\n";
+		}
+		else 
+		{
+			my $ao = Breseq::AlignmentOutput->new;
+			my $options = {};
+		
+			print HTML $ao->html_alignment(
+				$interval->{bam_path}, 
+				$interval->{fasta_path}, 
+				$s, 
+				$interval,
+			);
+		}
 	}
 	print HTML end_html;
 	close HTML;

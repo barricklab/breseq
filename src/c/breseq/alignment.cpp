@@ -491,11 +491,10 @@ void tam_file::write_split_alignment(uint32_t min_indel_split_len, const alignme
 			//#print "$cigar_string\n";
 			//#print Dumper($c);
 
-			if (op == 'S')
-			{
-				continue;
-			}
-			else if (op == 'I')
+			//if (op == 'S')
+			//{
+			//}
+      if (op == 'I')
 			{
 				if (len >= min_indel_split_len) break;
 				qpos += len;

@@ -164,10 +164,11 @@ namespace breseq
     Aligned_References m_aligned_references;
     Aligned_Annotation m_aligned_annotation;
     Quality_Range m_quality_range;
+    uint32_t m_quality_score_cutoff;
     
   public:
     //! Constructor.
-    alignment_output ( string bam, string fasta, uint32_t in_maximum_to_align );
+    alignment_output ( string bam, string fasta, uint32_t in_maximum_to_align, const uint32_t quality_score_cutoff );
     //! Output an HTML alignment.
     string html_alignment ( const string& region );
     void create_alignment ( const string& region );

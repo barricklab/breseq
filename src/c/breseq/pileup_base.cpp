@@ -265,15 +265,15 @@ int add_pileup_line (const bam1_t *b, void *data) {
  */ 
 void pileup_base::do_pileup(const string& region, bool clip, uint32_t downsample) {
   
-  int target_id, start_pos, end_pos;
-  bam_parse_region(m_bam_header, region.c_str(), &target_id, &start_pos, &end_pos); 
+  uint32_t target_id, start_pos_1, end_pos_1;
+  parse_region(region.c_str(), target_id, start_pos_1, end_pos_1); 
   // start_pos is one less than input??
   
   // should throw if target not found!
 
   m_downsample = downsample; // init
-  m_start_position_1 = start_pos;
-  m_end_position_1 = end_pos;
+  m_start_position_1 = start_pos_1;
+  m_end_position_1 = end_pos_1;
   
   m_last_tid = UNDEFINED;
   m_last_position_1 = 0; // reset
@@ -281,8 +281,8 @@ void pileup_base::do_pileup(const string& region, bool clip, uint32_t downsample
   m_clip_end_position_1 = 0; // reset
 
   if (clip) {
-    m_clip_start_position_1 = start_pos+1; // bam_parse_region returns zero indexed start and one indexed end
-    m_clip_end_position_1 = end_pos;
+    m_clip_start_position_1 = start_pos_1;
+    m_clip_end_position_1 = end_pos_1;
     assert(m_clip_start_position_1 > 0); // prevent underflow of unsigned
 
     //@JEB test removal
@@ -291,7 +291,9 @@ void pileup_base::do_pileup(const string& region, bool clip, uint32_t downsample
     
   bam_plbuf_t        *pileup_buff;
   pileup_buff = bam_plbuf_init(first_level_pileup_callback,this);
-  bam_fetch(m_bam_file,m_bam_index,target_id,start_pos,end_pos,(void*)pileup_buff,add_pileup_line);
+  bam_fetch(m_bam_file,m_bam_index,target_id,start_pos_1-1,end_pos_1,(void*)pileup_buff,add_pileup_line);
+  // bam_fetch expected 1 indexed start_pos and 0 indexed end_pos
+
   bam_plbuf_push(NULL,pileup_buff); // This clears out the clipped right regions... call before at_end!
   bam_plbuf_destroy(pileup_buff);
 
@@ -313,13 +315,14 @@ void pileup_base::do_pileup(const string& region, bool clip, uint32_t downsample
 void pileup_base::do_fetch(const string& region) {
   
   uint32_t target_id;
-  uint32_t start_pos;
-  uint32_t end_pos;
-  parse_region(region.c_str(), target_id, start_pos, end_pos);
+  uint32_t start_pos_1;
+  uint32_t end_pos_1;
+  parse_region(region.c_str(), target_id, start_pos_1, end_pos_1);
   
   // should throw if target not found!
   //	cout << this->unique_start << endl;
-  bam_fetch(m_bam_file,m_bam_index,target_id,start_pos,end_pos,this,first_level_fetch_callback);
+  bam_fetch(m_bam_file,m_bam_index,target_id,start_pos_1-1,end_pos_1,this,first_level_fetch_callback);
+  // bam_fetch expected 1 indexed start_pos and 0 indexed end_pos
 	//cout << this->unique_start << endl;
 }
 

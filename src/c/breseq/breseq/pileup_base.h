@@ -116,13 +116,14 @@ class pileup_base {
     virtual void at_target_end(const uint32_t tid) { }
   
     //! Pass through to BAM.
-    void parse_region(const string& region, uint32_t& target_id, uint32_t& start_pos, uint32_t& end_pos)
+    //! @JEB make this transparently handle insert_start and insert_end REL606:13.1-16.0 using split_on_any
+    void parse_region(const string& region, uint32_t& target_id, uint32_t& start_pos_1, uint32_t& end_pos_1)
     {
       int temp_target_id, temp_start_pos, temp_end_pos;
       bam_parse_region(m_bam_header, region.c_str(), &temp_target_id, &temp_start_pos, &temp_end_pos); 
       target_id = static_cast<uint32_t>(temp_target_id);
-      start_pos = static_cast<uint32_t>(temp_start_pos);
-      end_pos = static_cast<uint32_t>(temp_end_pos);
+      start_pos_1 = static_cast<uint32_t>(temp_start_pos)+1; // bam_parse_region returns zero indexed start
+      end_pos_1 = static_cast<uint32_t>(temp_end_pos);       // bam_parse_region returns one indexed end
     }
 
   protected:

@@ -27,10 +27,7 @@ LICENSE AND COPYRIGHT
 using namespace std;
 
 namespace breseq {
-  
-  // TODO: Things to FIX
-  // 1) Memory allocation and deallocation
-  
+    
   // Compares matches to candidate junctions with matches to original genome
   void resolve_alignments(
                           const Settings& settings,
@@ -50,12 +47,6 @@ namespace breseq {
   {
 	bool verbose = false;
 
-	// my $verbose = 0;
-	// my ($settings, $summary, $ref_seq_info) = @_;
-	// my $gene_list_hash_ref = $ref_seq_info->{gene_lists};
-	// my $repeat_list_hash_ref = $ref_seq_info->{repeat_lists};
-	// my $flanking_length = $settings->{max_read_length};
-
 	// ####
 	// ##	Reference sequences
 	// ####
@@ -68,14 +59,7 @@ namespace breseq {
 	// ##	Junction sequences
 	// ####
 
-
-	// clean up allocated objects
-
-	// use to get sequences
-	// m_seq = fai_fetch(m_ref, target.c_str(), &m_len);
-
 	//## if there were no candidate junctions (file is empty) then we seg fault if we try to use samtools on it...
-	//    $settings->{no_junction_prediction} = 1 if ( (!-e $junction_faidx_file_name) || (-s $junction_fasta_file_name == 0) );
 	if (junction_prediction
 			&& !file_exists(junction_fasta.c_str())
 			&& !file_empty(junction_fasta.c_str())
@@ -87,7 +71,6 @@ namespace breseq {
 	tam_file* junction_tam = NULL;
 	tam_file* reference_tam = NULL;
 
-	//    if (!$settings->{no_junction_prediction})
 	if (junction_prediction)
 	{
 
@@ -102,31 +85,18 @@ namespace breseq {
 		//      $junction_header = $junction_tam->header_read2($junction_faidx_file_name) or die("Error reading reference fasta index file: $junction_faidx_file_name");
 
 		string junction_sam_file_name = junction_sam_path + "/" + read_files[0].m_base_name + ".candidate_junction.sam";
-		junction_tam = new tam_file(junction_sam_file_name, junction_fasta, ios::in);
-
-		// $junction_tam = Bio::DB::Tam->open($junction_sam_file_name) or die " Could not open junction SAM file\n";
-		//junction_tam = sam_open(junction_sam_file_name.c_str());
-		assert(junction_tam);
-
-		//## junction_header = $junction_tam->header_read2($junction_faidx_file_name) or die("Error reading reference fasta index file: $junction_faidx_file_name");
-		//string junction_faidx_file_name = junction_fasta + ".fai";
-		//junction_header = sam_header_read2(junction_faidx_file_name.c_str());
+		tam_file junction_tam(junction_sam_file_name, junction_fasta, ios::in);
 
 		//## Preload all of the information about junctions
 		//## so that we only have to split the names once
-		// my $junction_ids = $junction_header->target_name;
-
-		// for (my $i=0; $i< $junction_header->n_targets; $i++)
-		for (int i = 0; i < junction_tam->bam_header->n_targets; i++)
+		for (int i = 0; i < junction_tam.bam_header->n_targets; i++)
 		{
 			// $junction_info->[$i] = Breseq::Shared::junction_name_split($junction_ids->[$i]);
 			JunctionInfo ji = junction_name_split(
-					junction_tam->bam_header->target_name[i]);
+					junction_tam.bam_header->target_name[i]);
 			junction_info_list.push_back(ji);
 		}
 
-		delete junction_tam;
-		//bam_header_destroy(junction_header);
 	}
 
 	//####
@@ -201,21 +171,15 @@ namespace breseq {
 				+ rf.m_base_name + ".reference.sam";
 		reference_tam = new tam_file(reference_sam_file_name, reference_fasta, ios::in); //# or die "Could not open $reference_sam_file_name";
 
-		// if (!$settings->{no_junction_prediction})
 		if (junction_prediction)
 		{
-			// my $junction_sam_file_name = $settings->file_name('candidate_junction_sam_file_name', {'#'=>$read_file});
 			string junction_sam_file_name = junction_sam_path + "/" + rf.m_base_name + ".candidate_junction.sam";
-
 			junction_tam = new tam_file(junction_sam_file_name, junction_fasta, ios::in); // or die " Could not open junction SAM file\n";
-
-			//## junction_header = $junction_tam->header_read2($junction_faidx_file_name) or die("Error reading reference fasta index file: $junction_faidx_file_name");
 		}
 
 		vector<alignment> junction_alignments;
 
 		//#proceed through all of the alignments
-		// if (!$settings->{no_junction_prediction})
 		if (junction_prediction)
 			junction_tam->read_alignments(junction_alignments, false);
 
@@ -226,11 +190,9 @@ namespace breseq {
 		//  Test each read for its matches to the reference and candidate junctions
 		///
 
-		//uint32_t f = 0;
 		cFastqSequence seq;
 		while (in_fastq.read_sequence(seq)) // READ
 		{
-			// $reads_processed++;
 			reads_processed++;
 
 			// last if ($settings->{alignment_read_limit} && ($reads_processed > $settings->{alignment_read_limit}));
@@ -378,7 +340,6 @@ namespace breseq {
 					fastq_file_index, // index of the fastq file this read came from
 					mapping_quality_difference, 0 // degenerate count
 				};
-				//#print Dumper($item) if ($verbose);
 
 				///
 				// Just one best hit to candidate junctions, that is better than every match to the reference
@@ -387,7 +348,6 @@ namespace breseq {
 				{
 					alignment a = this_junction_alignments[0];
 					string junction_id = junction_tam->bam_header->target_name[a.reference_target_id()];
-					//#print "$junction_id\n";
 					matched_junction[junction_id].push_back(item);
 				}
 				///
@@ -406,10 +366,6 @@ namespace breseq {
 					}
 				}
 			} // READ
-
-			//TODO: Verify correct porting of the following 2 lines
-			//f++;
-			//f %= in_fastq.m_current_line;
 
 		} // End loop through every $read_struct
 
@@ -543,7 +499,6 @@ namespace breseq {
 				// this is done properly.
 				Trim trim = _trim_ambiguous_ends(a, *junction_tam, ref_seq_info);
 				junction_tam->write_moved_alignment(
-					//RREF,
 					a,
 					fastq_file_index,
 					item[side_key + "_seq_id"],
@@ -565,8 +520,6 @@ namespace breseq {
 
 	summary.alignment_correction.new_junctions.observed_pos_hash_score_distribution = observed_pos_hash_score_distribution;
 	summary.alignment_correction.new_junctions.accepted_pos_hash_score_distribution = accepted_pos_hash_score_distribution;
-
-	//my @rejected_hybrid_predictions = ();
 
 	for (uint32_t i = 0; i < rejected_junction_ids.size(); i++)
 	{
@@ -639,13 +592,6 @@ uint32_t _eligible_read_alignments(const Settings& settings, const cReferenceSeq
 
 	// This sucks, but we need to re-sort matches and check scores ourselves...
 	// for now just count mismatches (which include soft padding!)
-	//my %mismatch_hash;
-
-  //foreach my $a (@al)
-	//{
-	//	$mismatch_hash{$a} = Breseq::Shared::alignment_mismatches($a, $reference_header, $reference_fai, $ref_seq_info);
-	//}
-	//@al = sort { $mismatch_hash{$a} <=> $mismatch_hash{$b} } @al;
   
   //@JEB This method of sorting may be slower than alternatives
   //     Ideally, the scores should be hashes and only references should be sorted.
@@ -670,13 +616,10 @@ uint32_t _eligible_read_alignments(const Settings& settings, const cReferenceSeq
   
 	// how many reads share the best score?
   uint32_t last_best(0);
-	//my $last_best = 0;
   uint32_t best_score = mismatch_map[&(alignments[0])];
-	//my $best_score = $mismatch_hash{$al[0]};
 	
   // no scores meet minimum
   if ((minimum_best_score > 0) && (best_score < minimum_best_score)) return 0; 
-	//return (0) if (defined $minimum_best_score && ($best_score < $minimum_best_score));
 
   
 	while ((last_best+1 < alignments.size()) && (mismatch_map[&(alignments[last_best+1])] == best_score))
@@ -692,11 +635,8 @@ uint32_t _eligible_read_alignments(const Settings& settings, const cReferenceSeq
 	//#	return () if ($second_best_score + $minimum_best_score_difference >= $best_score)
 	//#}
 
-	//@al = splice @al, 0, $last_best+1;
-  
   alignments.resize(last_best+1);
 
-  
 	if (verbose)
 	{
     cerr << last_best << endl;
@@ -707,7 +647,6 @@ uint32_t _eligible_read_alignments(const Settings& settings, const cReferenceSeq
 	}
 
 	// Note that the score we return is higher for matches so we negative this value...
-	//return $al[0]->l_qseq-$best_score;
   return best_score;
 }
   
@@ -732,7 +671,6 @@ bool _test_read_alignment_requirements(const Settings& settings, const cReferenc
 
 	if (settings.required_match_length > 0)
 	{
-		//uint32_t* cigar = a.cigar_array(); // cigar array for this alignment
 		int32_t alignment_length_on_query = a.query_match_length(); //this is the length of the alignment on the read
 		if (alignment_length_on_query < settings.required_match_length)
     {
@@ -769,34 +707,19 @@ bool _test_read_alignment_requirements(const Settings& settings, const cReferenc
 //
 //=cut
 //
-//sub _alignment_overlaps_junction
 bool _alignment_overlaps_junction(const vector<JunctionInfo>& junction_info_list, alignment a)
 {
-  //my ($junction_info, $a) = @_;
-  //my $this_junction_info = $junction_info->[$a->reference_target_id()];
   uint32_t tid = a.reference_target_id();
   const JunctionInfo& this_junction_info = junction_info_list[tid];
-  //my $overlap = $this_junction_info->{alignment_overlap};
   int32_t overlap = this_junction_info.alignment_overlap;
   
-  //my $flanking_left = $this_junction_info->{flanking_left};
-  //## find the start and end coordinates of the overlap
-  //my ($junction_start, $junction_end);
-  //
-  //$junction_start = $flanking_left + 1;
   uint32_t junction_start = this_junction_info.flanking_left + 1;
-
-  //$junction_end = $flanking_left + abs($overlap);
   uint32_t junction_end = this_junction_info.flanking_left + abs(overlap);
-
 
   //## If it didn't overlap the junction at all
   //## Check coordinates in the "reference" junction sequence
-  // return 0 if ($a->start > $junction_end);
   if (a.reference_start_1() > junction_end) return false;
-  // return 0 if ($a->end < $junction_start);
   if (a.reference_end_1() < junction_start) return false;
-  // return 1;
   return true;
 }
 
@@ -1004,8 +927,6 @@ bool _test_junction(const Settings& settings, Summary& summary, const string& ju
 	uint32_t junction_accept_score_cutoff_1 = summary.preprocess_coverage[scj.sides[0].seq_id].junction_accept_score_cutoff;
 	uint32_t junction_accept_score_cutoff_2 = summary.preprocess_coverage[scj.sides[1].seq_id].junction_accept_score_cutoff;
 	failed |= ( test_info.pos_hash_score < junction_accept_score_cutoff_1 ) && ( test_info.pos_hash_score < junction_accept_score_cutoff_2 );
-	//
-	//	print Dumper($test_info) if ($verbose);
 	if (verbose) cout << (failed ? "Failed" : "Passed") << endl;
 
 	// TODO:
@@ -1328,384 +1249,56 @@ Trim _trim_ambiguous_ends(const alignment& a, const tam_file& tam, cReferenceSeq
 	string seq_id = tam.bam_header->target_name[tid];
 	int32_t ref_seq_length = tam.bam_header->target_len[tid];
 
-	///////////////////////////////////////////////
-	// NEW version using preacalculated trim files
-	///////////////////////////////////////////////
-	//if ((defined $ref_seq_info) && (defined $ref_seq_info->{trims}))
-	//{
-		//TODO: To accelerate this code further we may want to have trims
-		// in array by target ID so translation to name and hash lookup
-		// can be skipped.
+  //TODO: To accelerate this code further we may want to have trims
+  // in array by target ID so translation to name and hash lookup
+  // can be skipped.
 
-		uint32_t left_trim = ref_seq_info.trims[seq_id][a.reference_start_0()];
-		uint32_t right_trim = ref_seq_info.trims[seq_id][a.reference_end_0() + ref_seq_length];
+  uint32_t left_trim = ref_seq_info.trims[seq_id][a.reference_start_0()];
+  uint32_t right_trim = ref_seq_info.trims[seq_id][a.reference_end_0() + ref_seq_length];
 
-		left_trim += a.reference_start_0();
-		right_trim += a.read_length() - a.reference_end_1();
+  left_trim += a.reference_start_0();
+  right_trim += a.read_length() - a.reference_end_1();
 
-		cerr << a.read_name() << endl;
-		cerr << "start: " << a.reference_start_1() << " end: " << a.reference_end_1() << endl;
-		cerr << "left: " << left_trim << " right: " << right_trim << endl;
+  cerr << a.read_name() << endl;
+  cerr << "start: " << a.reference_start_1() << " end: " << a.reference_end_1() << endl;
+  cerr << "left: " << left_trim << " right: " << right_trim << endl;
 
-		Trim retval = { to_string(left_trim), to_string(right_trim) };
-		return retval;
-//	}
-
-	//	###############################################
-	//	## OLD version using Perl string comparisons
-	//	###############################################
-	//
-	//	# Has two keys: 'left' and 'right' which are how far to inset in REFERENCE coords.
-	//	my $trims;
-	//
-	//	## using $fai is more compatible, and must currently be used for junctions
-	//	## using $ref_seq_info is slightly quicker, and currently used for the reference sequence
-	//	my $ref_strings;
-	//	if (defined $ref_seq_info)
-	//	{
-	//		$ref_strings = $ref_seq_info->{ref_strings};
-	//	}
-	//
-	//	#create sequence snippets that we need to pay attention to ends of sequence
-	//	my $expand_by = 18; #36
-	//	my $expand_left = ($a->reference_start_0() < $expand_by) ? $a->reference_start_0() : $expand_by;
-	//	my $expand_right = ($ref_seq_length - $a->reference_end_1() < $expand_by) ? $ref_seq_length-$a->reference_end_1() : $expand_by;
-	//
-	//	my $expanded_ref_string = '';
-	//	if (defined $ref_strings)
-	//	{
-	//		$expanded_ref_string = substr $ref_strings->{$seq_id}, $a->reference_start_1()-$expand_left-1, ($a->reference_end_1()+$expand_right) - ($a->reference_start_1()-$expand_left) + 1;
-	//	}
-	//	## >>> transition to not using ref_seq_info
-	//	else
-	//	{
-	//		my $expanded_ref_range = $seq_id . ':' . ($a->reference_start_1()-$expand_left) . '-' . ($a->reference_end_1()+$expand_right);
-	//		$expanded_ref_string = $fai->fetch($expanded_ref_range);
-	//	}
-	//
-	//	my $ref_string;
-	//	if (defined $ref_strings)
-	//	{
-	//		$ref_string = substr $ref_strings->{$seq_id}, $a->reference_start_0(), $a->reference_end_1() - $a->reference_start_1() + 1;
-	//	}
-	//	## >>> transition to not using ref_seq_info
-	//	else
-	//	{
-	//		my $ref_range = $seq_id . ':' . $a->reference_start_1() . '..' . $a->reference_end_1();
-	//		$ref_string = $fai->fetch( $seq_id . ':' . $a->reference_start_1() . '-' . $a->reference_end_1() );
-	//	}
-	//
-	//	my ($q_start, $q_end) = Breseq::Shared::alignment_query_start_end($a);
-	//	my $q_length = $a->l_qseq;
-	//	my $qry_string = substr $a->qseq, $q_start-1, $q_end - $q_start + 1;
-	//	my $full_qry_string = $a->qseq;
-	//
-	//	#take maximum of inset for query and reference
-	//#	my ($left_ref_inset, $right_ref_inset) = (0,0); ##TESTING
-	//	my ($left_ref_inset, $right_ref_inset) = _ambiguous_end_offsets_from_sequence($ref_string);
-	//
-	//	#add UNALIGNED bases at te end of reads
-	//	$left_ref_inset += $q_start - 1;
-	//	$right_ref_inset += $q_length - $q_end;
-	//
-	//	## save a little time if qry and ref sequences are identical.
-	//	my ($left_qry_inset, $right_qry_inset) = (0,0);
-	//	if ($ref_string ne $qry_string)
-	//	{
-	//		($left_qry_inset, $right_qry_inset) = _ambiguous_end_offsets_from_sequence($qry_string);
-	//		#add UNALIGNED bases at the end of reads
-	//		$left_qry_inset += $q_start - 1;
-	//		$right_qry_inset += $q_length - $q_end;
-	//	}
-	//
-	//
-	//#	my ($left_full_qry_inset, $right_full_qry_inset) = (0,0); ##TESTING
-	//#	my ($left_ref_expanded_inset, $right_ref_expanded_inset) = (0,0); ##TESTING
-	//
-	//	my ($left_full_qry_inset, $right_full_qry_inset) = _ambiguous_end_offsets_from_sequence($full_qry_string);
-	//	my ($left_ref_expanded_inset, $right_ref_expanded_inset)
-	//		= _ambiguous_end_offsets_from_expanded_sequence($expand_left, $expand_right, $expanded_ref_string);
-	//
-	//	if ($verbose)
-	//	{
-	//		print "Whole Read: $ref_string\n";
-	//		print "Qry Start, End: $q_start, $q_end\n";
-	//		print "Ref: $ref_string\n";
-	//		print "Ref insets: $left_ref_inset, $right_ref_inset\n";
-	//		print "Qry: $qry_string\n";
-	//		print "Qry insets: $left_qry_inset, $right_qry_inset\n";
-	//		print "Full Qry: $full_qry_string\n";
-	//		print "Full Qry insets: $left_full_qry_inset, $right_full_qry_inset\n";
-	//		print "Expanded: $expanded_ref_string\n";
-	//		print "Expand: $expand_left, $expand_right\n";
-	//		print "Expanded Ref insets: $left_ref_expanded_inset, $right_ref_expanded_inset\n";
-	//	}
-	//
-	//	$left_qry_inset = ($left_qry_inset > $left_full_qry_inset) ? $left_qry_inset : $left_full_qry_inset;
-	//	$right_qry_inset = ($right_qry_inset > $right_full_qry_inset) ? $right_qry_inset : $right_full_qry_inset;
-	//
-	//	$left_ref_inset = ($left_ref_inset > $left_ref_expanded_inset) ? $left_ref_inset : $left_ref_expanded_inset;
-	//	$right_ref_inset = ($right_ref_inset > $right_ref_expanded_inset) ? $right_ref_inset : $right_ref_expanded_inset;
-	//
-	//	##
-	//	# Correct insets in the ref sequence to read coordinates, which must pay attention to gaps
-	//	##
-	//
-	//	#if no gaps, then just need to take the greater one
-	//	my $left_ref_count = ($left_ref_inset > $left_qry_inset) ? $left_ref_inset : $left_qry_inset;
-	//	my $left_qry_count = $left_ref_count;
-	//	my $right_ref_count = ($right_ref_inset > $right_qry_inset) ? $right_ref_inset : $right_qry_inset;
-	//	my $right_qry_count = $right_ref_count;
-	//
-	//	if ($verbose)
-	//	{
-	//		print "Ref insets: $left_ref_inset, $right_ref_inset\n";
-	//		print "Full Qry insets: $left_full_qry_inset, $right_full_qry_inset\n";
-	//		print "Expanded Ref insets: $left_ref_expanded_inset, $right_ref_expanded_inset\n";
-	//		print "Qry Count: $left_qry_count, $right_qry_count\n";
-	//	}
-	//
-	//	return ( {'L'=>$left_qry_count, 'R'=>$right_qry_count} );
+  Trim retval = { to_string(left_trim), to_string(right_trim) };
+  return retval;
 }
 
-//sub _ambiguous_end_offsets_from_expanded_sequence
-//{
-//	my $verbose = 0;
-//	my ($expand_left, $expand_right, $ref_string) = @_;
-//
-//	my $left_inset = 0;
-//	my $right_inset = 0;
-//
-//	{ #left side
-//
-//		#maximum size to check is $expand_by
-//		my $test_left_inset = 0;
-//		while ($test_left_inset < $expand_left)
-//		{
-//			my $found_left_inset = $test_left_inset;
-//			my $test_length = $expand_left-$test_left_inset;
-//
-//			my $match_found = 0;
-//			my $test_end_string;
-//			while ( ($test_length > 0) && !$match_found)
-//			{
-//				$test_end_string = substr $ref_string, $found_left_inset, $test_length;
-//				#force removal of end nucleotides if no higher order repeats found
-//				$found_left_inset-- if ($test_length == 1);
-//				my $test_interior_string = substr $ref_string, $found_left_inset+$test_length, $test_length;
-//
-//				while ($test_end_string eq $test_interior_string)
-//				{
-//					$match_found = 1;
-//					$found_left_inset += $test_length;
-//					$test_interior_string = substr $ref_string, $found_left_inset+$test_length, $test_length;
-//				}
-//
-//				print "Complete:\n" if ($verbose);
-//				print "left_inset $test_left_inset :: test_length $test_length\n" if ($verbose);
-//				print "test_end: $test_end_string\ntest_interior: $test_interior_string\n" if ($verbose);
-//
-//				$found_left_inset += $test_length if ($match_found);
-//				$test_length--;
-//			}
-//
-//			#test partial matches (that continue part of repeat further)
-//			 #note: already starts at one less than actual repeat size
-//			my $test_partial_size = $test_length;
-//			while ($test_partial_size > 0)
-//			{
-//				my $test_partial_end_string = substr $test_end_string, 0, $test_partial_size;
-//				my $test_interior_string = substr $ref_string, $found_left_inset, $test_partial_size;
-//				if ($test_partial_end_string eq $test_interior_string)
-//				{
-//					$found_left_inset += $test_partial_size;
-//					last;
-//				}
-//
-//				print "Partial:\n" if ($verbose);
-//				print "test_partial_size $test_partial_size :: test_length $test_length\n" if ($verbose);
-//				print "test_end: $test_partial_end_string\ntest_interior: $test_interior_string\n" if ($verbose);
-//
-//				$test_partial_size--;
-//			}
-//
-//			$left_inset = $found_left_inset-$expand_left if ($found_left_inset-$expand_left > $left_inset);
-//			$test_left_inset++;
-//		}
-//	}
-//
-//	{ #right side
-//
-//		#maximum size to check is $expand_by
-//		my $test_right_inset = 0;
-//		while ($test_right_inset < $expand_right)
-//		{
-//			my $found_right_inset = $test_right_inset;
-//			my $test_length = $expand_right-$test_right_inset;
-//
-//			my $match_found = 0;
-//			my $test_end_string;
-//			while ( ($test_length > 0) && !$match_found)
-//			{
-//				$test_end_string = substr $ref_string, $found_right_inset, $test_length;
-//				#force removal of end nucleotides if no higher order repeats found
-//				$found_right_inset-- if ($test_length == 1);
-//				my $test_interior_string = substr $ref_string, $found_right_inset+$test_length, $test_length;
-//
-//				while ($test_end_string eq $test_interior_string)
-//				{
-//					$match_found = 1;
-//					$found_right_inset += $test_length;
-//					$test_interior_string = substr $ref_string, $found_right_inset+$test_length, $test_length;
-//				}
-//				$found_right_inset += $test_length if ($match_found);
-//				$test_length--;
-//			}
-//
-//			#test partial matches (that continue part of repeat further)
-//			 #note: already starts at one less than actual repeat size
-//			my $test_partial_size = $test_length;
-//			while ($test_partial_size > 0)
-//			{
-//				my $test_partial_end_string = substr $test_end_string, 0, $test_partial_size;
-//				my $test_interior_string = substr $ref_string, $found_right_inset, $test_partial_size;
-//				if ($test_partial_end_string eq $test_interior_string)
-//				{
-//					$found_right_inset += $test_partial_size;
-//					last;
-//				}
-//				$test_partial_size--;
-//			}
-//
-//			$right_inset = $found_right_inset-$expand_right if ($found_right_inset-$expand_right > $right_inset);
-//			$test_right_inset++;
-//		}
-//	}
-//
-//
-//
-//	return ($left_inset, $right_inset);
-//}
-//
-//
-//sub _ambiguous_end_offsets_from_sequence
-//{
-//	my ($ref_string) = @_;
-//
-//	#test longest substrings
-//	my $left_inset = 0;
-//	my $right_inset = 0;
-//
-//	{ #left side
-//		my $test_length = int((length $ref_string) / 2);
-//		my $match_found = 0;
-//		my $test_end_string;
-//		while ( ($test_length > 0) && !$match_found)
-//		{
-//			$test_end_string = substr $ref_string, $left_inset, $test_length;
-//			#force removal of end nucleotides if no higher order repeats found
-//			$left_inset-- if ($test_length == 1);
-//			my $test_interior_string = substr $ref_string, $left_inset+$test_length, $test_length;
-//
-//			while ($test_end_string eq $test_interior_string)
-//			{
-//				$match_found = 1;
-//				$left_inset += $test_length;
-//				$test_interior_string = substr $ref_string, $left_inset+$test_length, $test_length;
-//			}
-//			$left_inset += $test_length if ($match_found);
-//			$test_length--;
-//		}
-//
-//		#test partial matches (that continue part of repeat further)
-//		 #note: already starts at one less than actual repeat size
-//		my $test_partial_size = $test_length;
-//		while ($test_partial_size > 0)
-//		{
-//			my $test_partial_end_string = substr $test_end_string, 0, $test_partial_size;
-//			my $test_interior_string = substr $ref_string, $left_inset, $test_partial_size;
-//			if ($test_partial_end_string eq $test_interior_string)
-//			{
-//				$left_inset += $test_partial_size;
-//				last;
-//			}
-//			$test_partial_size--;
-//		}
-//
-//	}
-//
-//	{ #right side
-//		my $test_length = int((length $ref_string) / 2);
-//		my $match_found = 0;
-//		my $test_end_string;
-//		while ( ($test_length > 0) && !$match_found)
-//		{
-//			$test_end_string = substr $ref_string, -$right_inset-$test_length, $test_length;
-//			#force removal of end nucleotides if no higher order repeats found
-//			$right_inset-- if ($test_length == 1);
-//			my $test_interior_string = substr $ref_string, -$right_inset-2 * $test_length, $test_length;
-//
-//			while ($test_end_string eq $test_interior_string)
-//			{
-//				$match_found = 1;
-//				$right_inset += $test_length;
-//				$test_interior_string = substr $ref_string, -$right_inset-2 * $test_length, $test_length;
-//			}
-//			$right_inset += $test_length if ($match_found);
-//
-//			$test_length--;
-//		}
-//
-//		#test partial matches (that continue part of repeat further)
-//		 #note: already starts at one less than actual repeat size
-//		my $test_partial_size = $test_length;
-//		while ($test_partial_size > 0)
-//		{
-//			my $test_partial_end_string = substr $test_end_string, -$test_partial_size, $test_partial_size;
-//			my $test_interior_string = substr $ref_string, -$right_inset-$test_partial_size, $test_partial_size;
-//			if ($test_partial_end_string eq $test_interior_string)
-//			{
-//				$right_inset += $test_partial_size;
-//				last;
-//			}
-//			$test_partial_size--;
-//		}
-//	}
-//
-//	return ($left_inset, $right_inset);
-//}
 
-	//sort junction ids based on size of vector contained in map
-	vector<string> get_sorted_junction_ids(map<string, vector<MatchedJunction> >& map, const vector<string>& keys)
-	{
-		vector<VectorSize> vector_sizes;
-		for (uint32_t i = 0; i < keys.size(); i++)
-		{
-			VectorSize info = { keys[i], map[keys[i]].size() };
-			vector_sizes.push_back(info);
-		}
-		sort(vector_sizes.begin(), vector_sizes.end(), VectorSize::sort_by_size);
-		
-		vector<string> sorted_junction_ids;
-		for (uint32_t i = 0; i < keys.size(); i++)
-			sorted_junction_ids.push_back(vector_sizes[i].junction_id);
-		return sorted_junction_ids;
-	}
-	vector<string> get_sorted_junction_ids(map<string, map<string, MatchedJunction> >& map, const vector<string>& keys)
-	{
-		vector<VectorSize> vector_sizes;
-		for (uint32_t i = 0; i < keys.size(); i++)
-		{
-			VectorSize info = { keys[i], map[keys[i]].size() };
-			vector_sizes.push_back(info);
-		}
-		sort(vector_sizes.begin(), vector_sizes.end(), VectorSize::sort_by_size);
+//sort junction ids based on size of vector contained in map
+vector<string> get_sorted_junction_ids(map<string, vector<MatchedJunction> >& map, const vector<string>& keys)
+{
+  vector<VectorSize> vector_sizes;
+  for (uint32_t i = 0; i < keys.size(); i++)
+  {
+    VectorSize info = { keys[i], map[keys[i]].size() };
+    vector_sizes.push_back(info);
+  }
+  sort(vector_sizes.begin(), vector_sizes.end(), VectorSize::sort_by_size);
+  
+  vector<string> sorted_junction_ids;
+  for (uint32_t i = 0; i < keys.size(); i++)
+    sorted_junction_ids.push_back(vector_sizes[i].junction_id);
+  return sorted_junction_ids;
+}
+vector<string> get_sorted_junction_ids(map<string, map<string, MatchedJunction> >& map, const vector<string>& keys)
+{
+  vector<VectorSize> vector_sizes;
+  for (uint32_t i = 0; i < keys.size(); i++)
+  {
+    VectorSize info = { keys[i], map[keys[i]].size() };
+    vector_sizes.push_back(info);
+  }
+  sort(vector_sizes.begin(), vector_sizes.end(), VectorSize::sort_by_size);
 
-		vector<string> sorted_junction_ids;
-		for (uint32_t i = 0; i < keys.size(); i++)
-			sorted_junction_ids.push_back(vector_sizes[i].junction_id);
-		return sorted_junction_ids;
-	}
+  vector<string> sorted_junction_ids;
+  for (uint32_t i = 0; i < keys.size(); i++)
+    sorted_junction_ids.push_back(vector_sizes[i].junction_id);
+  return sorted_junction_ids;
+}
   
 } // namespace breseq
 
