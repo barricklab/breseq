@@ -113,6 +113,7 @@ sub new
 		'strict-polymorphism-prediction' => \$self->{strict_polymorphism_prediction},
 		'perl-preprocess-alignments' => \$self->{perl_preprocess_alignments},
 		'perl-identify-candidate-junctions' => \$self->{perl_identify_candidate_junctions},
+		'perl-bam2aln' => \$self->{perl_bam2aln},
 		'smalt' => \$self->{smalt},
 ##		'no_ssaha2' => \$self->{no_ssaha2},
 		
@@ -124,6 +125,8 @@ sub new
 	
 ## FUTURE default to using smalt
 ##	$self->{smalt} = 1 if (!$self->{no_ssaha2});
+## FUTURE default to using C++ for alignments
+	$self->{perl_bam2aln} = 1;
 	
 	$self->post_option_initialize;
 	
@@ -626,6 +629,7 @@ sub installed
 	
 	## breseq C++ executables
 	$self->{installed}->{cbreseq} = (-x "$self->{bin_path}/cbreseq") ? "$self->{bin_path}/cbreseq" : 0;
+	$self->{installed}->{cbam2aln} = (-x "$self->{bin_path}/cbam2aln") ? "$self->{bin_path}/cbam2aln" : 0;
 
 	## absolutely required ssaha2 or smalt
 	$self->{installed}->{SSAHA2} = (`which ssaha2`) ? "ssaha2" : 0;

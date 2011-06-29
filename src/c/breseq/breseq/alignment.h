@@ -108,6 +108,16 @@ class alignment {
 	
     //! Retrieve the quality score array.
     inline uint8_t* read_base_quality_sequence() const { return bam1_qual(_a); }
+  
+    inline string read_base_quality_string() const
+    {
+      string s;
+      for(uint32_t i=0; i<read_length(); i++)
+      {
+        s += ((char*)(read_base_quality_sequence()))[i];
+      }
+      return s;
+    };
 
     //! Retrieve the quality score of a single base. (was 0-indexed)
     //  Methods available for 0-indexed and 1-indexed coordinates.

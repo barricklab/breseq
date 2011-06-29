@@ -36,6 +36,9 @@ int main(int argc, char* argv[]) {
   ("output,o", "name of output file")
   ("region,r", "region to print (accession:start-end)", "")
   ("max-reads,n", "maximum number of reads to show in alignment", 1000)
+  ("quality-score-cutoff,c", "quality score cutoff", 0)
+  ("stdout", "write output to stdout", TAKES_NO_ARGUMENT)
+
   .processCommandArgs(argc, argv);
 
   //("output,o", "out to files") // outputs to STDOUT for now
@@ -56,26 +59,33 @@ int main(int argc, char* argv[]) {
 		alignment_output ao(
                         options["bam"],
                         options["fasta"],
-                        from_string<uint32_t>(options["max-reads"])
+                        from_string<uint32_t>(options["max-reads"]),
+                        from_string<uint32_t>(options["quality-score-cutoff"])
                         );
     
-  string html_output = ao.html_alignment(options["region"]);
-  //cout << html_output << endl;
-  
-  ///Write to html file
-  string file_name = options["region"] + ".html";
-  if (options.count("output")) {
-    file_name = options["output"];
-  }
-    
-  ofstream myfile (file_name.c_str());
-  if (myfile.is_open())
-  {
-    myfile << html_output;
-    myfile.close();
-  }
-  else cerr << "Unable to open file";
-
+    string html_output = ao.html_alignment(options["region"]);
+    //cout << html_output << endl;
+          
+    if (options.count("stdout"))
+    {
+      cout << html_output << endl;
+    }
+    else
+    {
+      ///Write to html file
+      string file_name = options["region"] + ".html";
+      if (options.count("output")) {
+        file_name = options["output"];
+      }
+      
+      ofstream myfile (file_name.c_str());
+      if (myfile.is_open())
+      {
+        myfile << html_output;
+        myfile.close();
+      }
+      else cerr << "Unable to open file";
+    }
 
   } catch(...) {
 		// failed;

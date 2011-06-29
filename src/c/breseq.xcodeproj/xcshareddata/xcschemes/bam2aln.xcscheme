@@ -57,7 +57,15 @@
             isEnabled = "NO">
          </CommandLineArgument>
          <CommandLineArgument
-            argument = "--region NC_001416:139-139"
+            argument = "--region NC_001416:139-139 --quality-score-cutoff 3 --stdout"
+            isEnabled = "NO">
+         </CommandLineArgument>
+         <CommandLineArgument
+            argument = "--bam /Users/jbarrick/src/breseq/tests/lambda_mixed_pop/data/reference.bam --fasta /Users/jbarrick/src/breseq/tests/lambda_mixed_pop/data/reference.fasta --region NC_001416:47004-47004 --quality-score-cutoff 3 --stdout"
+            isEnabled = "NO">
+         </CommandLineArgument>
+         <CommandLineArgument
+            argument = "--bam /Users/jbarrick/src/breseq/tests/lambda_mixed_pop/data/reference.bam --fasta /Users/jbarrick/src/breseq/tests/lambda_mixed_pop/data/reference.fasta --region NC_001416:21737-21737--quality-score-cutoff 3 --stdout"
             isEnabled = "YES">
          </CommandLineArgument>
       </CommandLineArguments>

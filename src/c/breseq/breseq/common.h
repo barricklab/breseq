@@ -261,6 +261,37 @@ namespace breseq {
 		}
 		return theStringVector;
 	}
+  
+  //!< Split a string on any char in string of delimiters into a vector
+	inline vector<string> split_on_any(
+                              const  string  & theString,
+                              const  string  & theDelimiters
+                              ) {
+		assert(theDelimiters.size() > 0); // My own ASSERT macro.
+    
+		size_t start = 0, end = 0;
+		vector<string> theStringVector;
+    
+		while (end != string::npos)
+		{
+			end = theString.find_first_of( theDelimiters, start );
+      
+			// If at end, use length=maxLength.  Else use length=end-start.
+			theStringVector.push_back(
+                                theString.substr(
+                                                 start,
+                                                 (end == string::npos) ? string::npos : end - start
+                                                 )
+                                );
+      
+			// If at end, use start=maxSize.  Else use start=end+delimiter.
+			start =
+      (end > (string::npos - 1))
+      ? string::npos
+      : end + 1;
+		}
+		return theStringVector;
+	}
 
 	inline string join(const vector<string>& values, const string& separator)
 	{
