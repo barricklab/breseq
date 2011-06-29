@@ -578,7 +578,7 @@ void alignment_output::Alignment_Output_Pileup::pileup_callback ( const pileup& 
   }
     
   // ##also update any positions of interest for gaps
-  for ( int32_t insert_count = 0; insert_count <= max_indel; insert_count++ )
+  for ( uint32_t insert_count = 0; insert_count <= static_cast<uint32_t>(max_indel); insert_count++ )
   {
     if ( (( insert_start <= insert_count ) && ( insert_count <= insert_end ) && ( reference_pos_1 == start_1 ) && ( reference_pos_1 == end_1 ) )
         || ( ( insert_start <= insert_count ) && ( reference_pos_1 == start_1 ) && ( reference_pos_1 != end_1 ) )

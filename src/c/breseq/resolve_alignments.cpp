@@ -520,7 +520,7 @@ namespace breseq {
 		//  Currently, we do not add coverage to redundantly matched sides because we don't know which copy.
 		if (!settings.add_split_junction_sides) continue;
 
-		for (int32_t j = 0; j < matched_junction[key].size(); j++)
+		for (uint32_t j = 0; j < matched_junction[key].size(); j++)
 		{
 			MatchedJunction match = matched_junction[key][j];
 			alignment a = match.junction_alignments[0];
@@ -837,11 +837,11 @@ bool _test_junction(const Settings& settings, Summary& summary, const string& ju
 	// Debatable about whether we save more string comparisons by doing this here or each time
 
 	// @JEB v1> hash by tid rather than alignment junction names!!
-	int32_t junction_tid;
-	for (junction_tid = 0; junction_tid < junction_tam.bam_header->n_targets; junction_tid++)
+	uint32_t junction_tid;
+	for (junction_tid = 0; junction_tid < static_cast<uint32_t>(junction_tam.bam_header->n_targets); junction_tid++)
 		if (junction_tam.bam_header->target_name[junction_tid] == junction_seq_id) break;
 
-	assert(junction_tid < junction_tam.bam_header->n_targets);
+	assert(junction_tid < static_cast<uint32_t>(junction_tam.bam_header->n_targets));
 
 	if (verbose) {
 		cout << "Testing Junction Candidate: " << junction_seq_id << endl;
@@ -874,7 +874,7 @@ bool _test_junction(const Settings& settings, Summary& summary, const string& ju
 	for (map<string, MatchedJunction>::iterator it = degenerate_matches.begin(); it != degenerate_matches.end(); it++)
 		items.push_back(&(it->second));
 
-	for (int32_t i = 0; i < items.size(); i++) // READ (loops over unique_matches, degenerate_matches)
+	for (uint32_t i = 0; i < items.size(); i++) // READ (loops over unique_matches, degenerate_matches)
 	{
 		MatchedJunction* item = items[i];
 		//!!> Matches that don't extend through the overlap region will have the same quality
@@ -891,7 +891,7 @@ bool _test_junction(const Settings& settings, Summary& summary, const string& ju
 
 		// as it is, we must be sure we are looking at the one that matches
 		alignment* a = NULL;
-		for (int32_t j = 0; j < item->junction_alignments.size(); j++) //ALIGNMENT
+		for (uint32_t j = 0; j < item->junction_alignments.size(); j++) //ALIGNMENT
 		{
 			alignment* candidate_a = &(item->junction_alignments[j]);
 			if (candidate_a->reference_target_id() == junction_tid) {
@@ -915,11 +915,11 @@ bool _test_junction(const Settings& settings, Summary& summary, const string& ju
 			cout << "  " << item->junction_alignments[0].read_name() << ' ' << strand_key << endl;
 
 		// The left side goes exactly up to the flanking length
-		int32_t this_left = flanking_left;
+		uint32_t this_left = flanking_left;
 		this_left -= a->reference_start_1() + 1;
 
 		// The right side starts after moving past any overlap (negative or positive)
-		int32_t this_right = flanking_left + 1;
+		uint32_t this_right = flanking_left + 1;
 		this_right += abs(overlap);
 		//TODO: Order of operations issue? If not, spaces on either side of plus sign would be more pleasant
 		this_right = a->reference_end_1() - this_right + 1;
@@ -1001,8 +1001,8 @@ bool _test_junction(const Settings& settings, Summary& summary, const string& ju
 
 	// POS_HASH test
 	// New way, but we need to have examined the coverage distribution to calibrate what scores to accept!
-	int32_t junction_accept_score_cutoff_1 = summary.preprocess_coverage[scj.sides[0].seq_id].junction_accept_score_cutoff;
-	int32_t junction_accept_score_cutoff_2 = summary.preprocess_coverage[scj.sides[1].seq_id].junction_accept_score_cutoff;
+	uint32_t junction_accept_score_cutoff_1 = summary.preprocess_coverage[scj.sides[0].seq_id].junction_accept_score_cutoff;
+	uint32_t junction_accept_score_cutoff_2 = summary.preprocess_coverage[scj.sides[1].seq_id].junction_accept_score_cutoff;
 	failed |= ( test_info.pos_hash_score < junction_accept_score_cutoff_1 ) && ( test_info.pos_hash_score < junction_accept_score_cutoff_2 );
 	//
 	//	print Dumper($test_info) if ($verbose);
@@ -1034,7 +1034,7 @@ bool _test_junction(const Settings& settings, Summary& summary, const string& ju
 
 				// Purge all references to this read from the degenerate match hash
 				// so that it cannot be counted for any other junction
-				for (int32_t i = 0; i < degenerate_match.junction_alignments.size(); i++)
+				for (uint32_t i = 0; i < degenerate_match.junction_alignments.size(); i++)
 				{
 					alignment* a = &(degenerate_match.junction_alignments[i]);
 					string test_junction_seq_id = junction_tam.bam_header->target_name[a->reference_target_id()];
@@ -1049,7 +1049,7 @@ bool _test_junction(const Settings& settings, Summary& summary, const string& ju
 				// Keep only the alignment
 //------>		// WE SHOULD ALSO UPDATE THE MAPPING SCORE!
 				alignment* a = NULL;
-				for (int32_t j = 0; j < degenerate_match.junction_alignments.size(); j++) //DOMINANT_ALIGNMENT
+				for (uint32_t j = 0; j < degenerate_match.junction_alignments.size(); j++) //DOMINANT_ALIGNMENT
 				{
 					alignment* candidate_a = &(degenerate_match.junction_alignments[j]);
 					if (candidate_a->reference_target_id() == junction_tid) {
@@ -1079,7 +1079,7 @@ bool _test_junction(const Settings& settings, Summary& summary, const string& ju
 					_write_reference_matches(settings, ref_seq_info, this_reference_al, reference_tam, fastq_file_index);
 				}
 
-				for (int32_t j = 0; j < degenerate_match.junction_alignments.size(); j++) //DOMINANT_ALIGNMENT
+				for (uint32_t j = 0; j < degenerate_match.junction_alignments.size(); j++) //DOMINANT_ALIGNMENT
 				{
 					alignment* candidate_a = &(degenerate_match.junction_alignments[j]); //this is the one for the current candidate junction
 					if (candidate_a->reference_target_id() == junction_tid)
@@ -1104,7 +1104,7 @@ bool _test_junction(const Settings& settings, Summary& summary, const string& ju
 
 	// UNIQUE JUNCTION MATCHES
 	// =======================
-	for (int32_t i = 0; i< unique_matches.size(); i++)
+	for (uint32_t i = 0; i< unique_matches.size(); i++)
 	{
 		MatchedJunction item = unique_matches[i];
 		// Write out the matches to the proper SAM file(s) depending on whether the junction succeeded or failed
@@ -1679,7 +1679,7 @@ Trim _trim_ambiguous_ends(const alignment& a, const tam_file& tam, cReferenceSeq
 	vector<string> get_sorted_junction_ids(map<string, vector<MatchedJunction> >& map, const vector<string>& keys)
 	{
 		vector<VectorSize> vector_sizes;
-		for (int32_t i = 0; i < keys.size(); i++)
+		for (uint32_t i = 0; i < keys.size(); i++)
 		{
 			VectorSize info = { keys[i], map[keys[i]].size() };
 			vector_sizes.push_back(info);
@@ -1687,14 +1687,14 @@ Trim _trim_ambiguous_ends(const alignment& a, const tam_file& tam, cReferenceSeq
 		sort(vector_sizes.begin(), vector_sizes.end(), VectorSize::sort_by_size);
 		
 		vector<string> sorted_junction_ids;
-		for (int32_t i = 0; i < keys.size(); i++)
+		for (uint32_t i = 0; i < keys.size(); i++)
 			sorted_junction_ids.push_back(vector_sizes[i].junction_id);
 		return sorted_junction_ids;
 	}
 	vector<string> get_sorted_junction_ids(map<string, map<string, MatchedJunction> >& map, const vector<string>& keys)
 	{
 		vector<VectorSize> vector_sizes;
-		for (int32_t i = 0; i < keys.size(); i++)
+		for (uint32_t i = 0; i < keys.size(); i++)
 		{
 			VectorSize info = { keys[i], map[keys[i]].size() };
 			vector_sizes.push_back(info);
@@ -1702,7 +1702,7 @@ Trim _trim_ambiguous_ends(const alignment& a, const tam_file& tam, cReferenceSeq
 		sort(vector_sizes.begin(), vector_sizes.end(), VectorSize::sort_by_size);
 
 		vector<string> sorted_junction_ids;
-		for (int32_t i = 0; i < keys.size(); i++)
+		for (uint32_t i = 0; i < keys.size(); i++)
 			sorted_junction_ids.push_back(vector_sizes[i].junction_id);
 		return sorted_junction_ids;
 	}
