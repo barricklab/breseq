@@ -366,6 +366,7 @@ string alignment_output::html_alignment ( const string& region )
   output += "<table style=\"background-color: rgb(255,255,255)\">";
   output += "<tr><td style=\"font-size:10pt\">";    
   
+    donothing();
   for (uint index = 0; index < m_aligned_references.size(); index++)
   {
     output += html_alignment_line( m_aligned_references[index] , true ,false) + "<BR>";
