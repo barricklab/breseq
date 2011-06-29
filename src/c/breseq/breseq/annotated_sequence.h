@@ -96,6 +96,7 @@ namespace breseq {
   public:
     
     cReferenceSequences() {};    
+      
     
     //!< Write a tab delimited feature 
     void WriteFeatureTable(const string &file_name);
@@ -109,6 +110,9 @@ namespace breseq {
     //!< Read FASTA file       
     void ReadFASTA(const std::string &file_name);
     
+    //!< Write a tab delimited GFF3 file
+    void WriteGFF( const string &file_name );  
+      
     //!< Convert 
     uint32_t seq_id_to_index(const string& seq_id) { return m_seq_id_to_index[seq_id]; };
 

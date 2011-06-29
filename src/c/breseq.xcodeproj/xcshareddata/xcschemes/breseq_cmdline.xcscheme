@@ -35,7 +35,7 @@
       displayScaleIsEnabled = "NO"
       displayScale = "1.00"
       launchStyle = "0"
-      useCustomWorkingDirectory = "NO"
+      useCustomWorkingDirectory = "YES"
       customWorkingDirectory = "$(SRCROOT)/../.."
       buildConfiguration = "Debug">
       <BuildableProductRunnable>
@@ -103,7 +103,7 @@
          </CommandLineArgument>
          <CommandLineArgument
             argument = "CONVERT_GENBANK --input /Users/jbarrick/db/lenski/REL606.gbk --fasta /Users/jbarrick/Desktop/test.fasta --features /Users/jbarrick/Desktop/features.tab"
-            isEnabled = "NO">
+            isEnabled = "YES">
          </CommandLineArgument>
          <CommandLineArgument
             argument = "ERROR_COUNT --bam /Users/jbarrick/src/breseq/tests/lambda_mixed_pop/data/reference.bam --fasta /Users/jbarrick/src/breseq/tests/lambda_mixed_pop/data/reference.fasta --output /Users/jbarrick/src/breseq/tests/lambda_mixed_pop/07_error_calibration/ --readfile lambda_mixed_population --coverage --errors --minimum-quality-score 3 --covariates=read_set=1,obs_base,ref_base,quality=67"
@@ -140,10 +140,17 @@
          <CommandLineArgument
             argument = "IDENTIFY_MUTATIONS --bam /Users/jbarrick/src/breseq/tests/lambda_mult_ref_read/data/reference.bam --fasta /Users/jbarrick/src/breseq/tests/lambda_mult_ref_read/data/reference.fasta --readfile lambda_mixed_population.1 --readfile lambda_mixed_population.2 --readfile lambda_mixed_population.3 --readfile lambda_mixed_population.4 --readfile lambda_mixed_population.5 --error_dir /Users/jbarrick/src/breseq/tests/lambda_mult_ref_read/07_error_calibration/ --genome_diff /Users/jbarrick/src/breseq/tests/lambda_mult_ref_read/08_mutation_identification/ra_mc_evidence.gd --output /Users/jbarrick/src/breseq/tests/lambda_mult_ref_read/08_mutation_identification/ --mutation_cutoff 2 --coverage_dir /Users/jbarrick/src/breseq/tests/lambda_mult_ref_read/08_mutation_identification/ --deletion_propagation_cutoff 37 --deletion_propagation_cutoff 32 --deletion_propagation_cutoff 36 --deletion_propagation_cutoff 57 --deletion_propagation_cutoff 44 --predict_deletions 1 --minimum_quality_score 3 --error_table /Users/jbarrick/src/breseq/tests/lambda_mult_ref_read/07_error_calibration//error_rates.tab"
             isEnabled = "NO">
+<<<<<<< local
+=======
          </CommandLineArgument>
          <CommandLineArgument
             argument = "PREPROCESS_ALIGNMENTS --data-path /Users/jbarrick/src/breseq/tests/lambda_mixed_pop/data --reference-alignment-path /Users/jbarrick/src/breseq/tests/lambda_mixed_pop/02_reference_alignment --candidate-junction-path /Users/jbarrick/src/breseq/tests/lambda_mixed_pop/03_candidate_junctions --read-file /Users/jbarrick/src/breseq/tests/data/lambda/lambda_mixed_population.fastq "
+<<<<<<< local
+            isEnabled = "YES">
+>>>>>>> other
+=======
             isEnabled = "NO">
+>>>>>>> other
          </CommandLineArgument>
          <CommandLineArgument
             argument = "IDENTIFY_MUTATIONS --bam /Users/jbarrick/src/breseq/tests/lambda_mixed_pop/data/reference.bam --fasta /Users/jbarrick/src/breseq/tests/lambda_mixed_pop/data/reference.fasta --readfile lambda_mixed_population --error_dir /Users/jbarrick/src/breseq/tests/lambda_mixed_pop/07_error_calibration/ --genome_diff /Users/jbarrick/src/breseq/tests/lambda_mixed_pop/08_mutation_identification/ra_mc_evidence.gd --output /Users/jbarrick/src/breseq/tests/lambda_mixed_pop/08_mutation_identification/ --mutation_cutoff 2 --coverage_dir /Users/jbarrick/src/breseq/tests/lambda_mixed_pop/08_mutation_identification/ --deletion_propagation_cutoff 31 --predict_deletions 1 --minimum_quality_score 3 --error_table /Users/jbarrick/src/breseq/tests/lambda_mixed_pop/07_error_calibration//error_rates.tab"

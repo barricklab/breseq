@@ -54,6 +54,33 @@ namespace breseq {
       
     }
   }
+  
+  void cReferenceSequences::WriteGFF( const string &file_name ){
+      
+      ofstream out(file_name.c_str());
+      assert(!out.fail()); 
+      
+      for(vector<cAnnotatedSequence>::iterator it_as = this->begin(); it_as < this->end(); it_as++) {
+          
+          for (vector<cSequenceFeature>::iterator it = it_as->m_features.begin(); it < it_as->m_features.end(); it++) {
+              out << it_as->m_seq_id;
+              out << "\tGenBank";
+              out << "\t" << (*it)["type"];
+              out << "\t" << (*it).m_start;
+              out << "\t" << (*it).m_end;
+              out << "\t.";
+              out << "\t" << (int)(*it).m_strand;
+              out << "\t.";
+              out << "\t" << "accession=" <<(*it)["accession"];
+              out << ";" << "name=" <<(*it)["name"];
+              out << ";" << "produce=" <<(*it)["product"];
+              out << std::endl;
+          }
+          
+      }
+        
+  }
+
 
   void cReferenceSequences::ReadFeatureTable(const string &file_name) {
 
