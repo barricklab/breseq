@@ -31,6 +31,7 @@ LICENSE AND COPYRIGHT
 #include "breseq/resolve_alignments.h"
 #include "breseq/tabulate_coverage.h"
 #include "breseq/settings.h"
+#include "breseq/genome_diff.h"
 
 
 using namespace breseq;
@@ -82,7 +83,7 @@ int do_analyze_fastq(int argc, char* argv[]) {
  */
 
 // Helper function
-void convert_genbank(const vector<string>& in, const string& fasta, const string& ft) {
+void convert_genbank(const vector<string>& in, const string& fasta, const string& ft, const string& gff3 ) {
   
   cReferenceSequences refseqs;
   
@@ -94,6 +95,8 @@ void convert_genbank(const vector<string>& in, const string& fasta, const string
   
   // Output feature table
   if (ft != "") refseqs.WriteFeatureTable(ft);
+     
+  if (gff3 != "" ) refseqs.WriteGFF( gff3 );
 }
 
 
@@ -106,6 +109,7 @@ int do_convert_genbank(int argc, char* argv[]) {
 		("input,i", "input GenBank flatfile (multiple allowed, comma-separated)")
 		("features,g", "output feature table", "")
 		("fasta,f", "FASTA file of reference sequences", "")
+        ("gff3,v", "GFF file of features", "" )
 	.processCommandArgs(argc, argv);
 	
 	// make sure that the config options are good:
@@ -123,7 +127,8 @@ int do_convert_genbank(int argc, char* argv[]) {
 		convert_genbank(  
                     from_string<vector<string> >(options["input"]),
                     options["fasta"],
-                    options["features"]
+                    options["features"],
+                    options["gff3"]
                     );
   } catch(...) {
 		// failed; 
@@ -600,6 +605,40 @@ int do_tabulate_coverage(int argc, char* argv[]) {
 }
 
 
+int do_convert_gvf( int argc, char* argv[]){
+    AnyOption options("Usage: GD2GVF --gd <genomediff.gd> --output <gvf.gvf>"); options( "gd,i","gd file to convert") ("output,o","name of output file").processCommandArgs( argc,argv);
+    
+    if( !options.count("gd") || !options.count("output") ){
+        options.printUsage(); return -1;
+    }
+    
+    try{
+        GDtoGVF( options["gd"], options["output"] );
+    } 
+    catch(...){ 
+        return -1; // failed 
+    }
+    
+    return 0;
+}
+
+int do_convert_gd( int argc, char* argv[]){
+    AnyOption options("Usage: VCF2GD --vcf <vcf.vcf> --output <gd.gd>"); options( "vcf,i","gd file to convert") ("output,o","name of output file").processCommandArgs( argc,argv);
+    
+    if( !options.count("vcf") || !options.count("output") ){
+        options.printUsage(); return -1;
+    }
+    
+    try{
+        VCFtoGD( options["vcf"], options["output"] );
+    } 
+    catch(...){ 
+        return -1; // failed 
+    }
+    
+    return 0;
+}
+
 /*! breseq commands
  
     First argument is a command that should be removed from argv.
@@ -646,7 +685,11 @@ int main(int argc, char* argv[]) {
 		return do_tabulate_coverage(argc_new, argv_new);
 	} else if (command == "RESOLVE_ALIGNMENTS") {
 		return do_resolve_alignments(argc_new, argv_new);
-	}
+	} else if( command == "GD2GVF"){
+        return do_convert_gvf(argc_new, argv_new);
+    } else if( command == "VCF2GD" ){
+        return do_convert_gd( argc_new, argv_new);
+    }
 
 	// Command was not recognized. Should output valid commands.
 	cout << "Unrecognized command" << endl;
