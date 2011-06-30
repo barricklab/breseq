@@ -151,9 +151,6 @@ namespace breseq
       uint32_t processed_reads;
       uint32_t maximum_to_align;
       
-      uint32_t insert_start;
-      uint32_t insert_end;
-      
       uint32_t last_pos;
       uint32_t max_indel;
       char base;

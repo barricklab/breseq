@@ -265,8 +265,8 @@ int add_pileup_line (const bam1_t *b, void *data) {
  */ 
 void pileup_base::do_pileup(const string& region, bool clip, uint32_t downsample) {
   
-  uint32_t target_id, start_pos_1, end_pos_1;
-  parse_region(region.c_str(), target_id, start_pos_1, end_pos_1); 
+  uint32_t target_id, start_pos_1, end_pos_1, insert_start, insert_end;
+  parse_region(region.c_str(), target_id, start_pos_1, end_pos_1, insert_start, insert_end); 
   // start_pos is one less than input??
   
   // should throw if target not found!
@@ -274,6 +274,8 @@ void pileup_base::do_pileup(const string& region, bool clip, uint32_t downsample
   m_downsample = downsample; // init
   m_start_position_1 = start_pos_1;
   m_end_position_1 = end_pos_1;
+  m_insert_start = insert_start;
+  m_insert_end = insert_end;
   
   m_last_tid = UNDEFINED;
   m_last_position_1 = 0; // reset
@@ -314,10 +316,10 @@ void pileup_base::do_pileup(const string& region, bool clip, uint32_t downsample
   
 void pileup_base::do_fetch(const string& region) {
   
-  uint32_t target_id;
-  uint32_t start_pos_1;
-  uint32_t end_pos_1;
-  parse_region(region.c_str(), target_id, start_pos_1, end_pos_1);
+  uint32_t target_id, start_pos_1, end_pos_1, insert_start, insert_end;
+  parse_region(region.c_str(), target_id, start_pos_1, end_pos_1, insert_start, insert_end);
+  m_insert_start = insert_start;
+  m_insert_end = insert_end;
   
   // should throw if target not found!
   //	cout << this->unique_start << endl;
