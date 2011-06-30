@@ -103,8 +103,11 @@ breseq::identify_mutations_pileup::identify_mutations_pileup(
 , _on_deletion_seq_id(UNDEFINED)
 , _this_deletion_reaches_seed_value(false)
 , _last_position_coverage_printed(0)
-, _print_per_position_file(print_per_position_file) {
+, _print_per_position_file(print_per_position_file)
+{
 	  
+  set_print_progress(true);
+  
   assert(m_bam->header->n_targets == (int32_t)_deletion_propagation_cutoff.size());
     
 	// reserve enough space for the sequence info:

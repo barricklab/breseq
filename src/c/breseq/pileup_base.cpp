@@ -55,7 +55,7 @@ reference_sequence::~reference_sequence() {
 pileup_base::pileup_base(const std::string& bam, const std::string& fasta)
 : m_bam(0), m_bam_header(0), m_bam_index(0), m_bam_file(0), m_last_position_1(0), 
 m_start_position_1(0), m_end_position_1(0), m_clip_start_position_1(0), m_clip_end_position_1(0), m_downsample(0),
-m_last_tid(static_cast<uint32_t>(-1))
+  m_last_tid(static_cast<uint32_t>(-1)), m_print_progress(false)
 {
 	using namespace std;
 	m_bam = samopen(bam.c_str(), "rb", 0);
@@ -63,8 +63,11 @@ m_last_tid(static_cast<uint32_t>(-1))
 
 	// load all the reference sequences:
 	for(int i=0; i<m_bam->header->n_targets; ++i) {
-		cerr << "  REFERENCE: " << m_bam->header->target_name[i] << endl;
-		cerr << "  LENGTH: " << m_bam->header->target_len[i] << endl;
+    
+    if (m_print_progress) {
+      cerr << "  REFERENCE: " << m_bam->header->target_name[i] << endl;
+      cerr << "  LENGTH: " << m_bam->header->target_len[i] << endl;
+    }
 		reference_sequence* refseq = new reference_sequence(fasta, m_bam->header->target_name[i]);
 		assert(static_cast<unsigned int>(refseq->m_len) == m_bam->header->target_len[i]);
 		m_refs.push_back(refseq);
@@ -110,7 +113,7 @@ char* pileup_base::get_refseq(uint32_t target) const {
 bool pileup_base::handle_position(uint32_t pos_1) {
 
   // Print progress (1-indexed position)
-  if((pos_1 % 10000) == 0) {
+  if(m_print_progress && (pos_1 % 10000 == 0) ) {
     std::cerr << "    POSITION:" << pos_1 << std::endl;
   }
   
@@ -277,11 +280,13 @@ void pileup_base::do_pileup(const string& region, bool clip, uint32_t downsample
   m_insert_start = insert_start;
   m_insert_end = insert_end;
   
-  m_last_tid = UNDEFINED;
+  m_last_tid = target_id;
   m_last_position_1 = 0; // reset
   m_clip_start_position_1 = 0; // reset
   m_clip_end_position_1 = 0; // reset
 
+  at_target_start(target_id);
+  
   if (clip) {
     m_clip_start_position_1 = start_pos_1;
     m_clip_end_position_1 = end_pos_1;
@@ -294,7 +299,7 @@ void pileup_base::do_pileup(const string& region, bool clip, uint32_t downsample
   bam_plbuf_t        *pileup_buff;
   pileup_buff = bam_plbuf_init(first_level_pileup_callback,this);
   bam_fetch(m_bam_file,m_bam_index,target_id,start_pos_1-1,end_pos_1,(void*)pileup_buff,add_pileup_line);
-  // bam_fetch expected 1 indexed start_pos and 0 indexed end_pos
+  // bam_fetch expected 0 indexed start_pos and 1 indexed end_pos
 
   bam_plbuf_push(NULL,pileup_buff); // This clears out the clipped right regions... call before at_end!
   bam_plbuf_destroy(pileup_buff);
@@ -310,7 +315,7 @@ void pileup_base::do_pileup(const string& region, bool clip, uint32_t downsample
       m_last_position_1 = on_pos_1;
     }
   }
-  at_target_end(m_last_tid);
+  at_target_end(target_id);
 }
 
   
@@ -322,10 +327,8 @@ void pileup_base::do_fetch(const string& region) {
   m_insert_end = insert_end;
   
   // should throw if target not found!
-  //	cout << this->unique_start << endl;
   bam_fetch(m_bam_file,m_bam_index,target_id,start_pos_1-1,end_pos_1,this,first_level_fetch_callback);
-  // bam_fetch expected 1 indexed start_pos and 0 indexed end_pos
-	//cout << this->unique_start << endl;
+  // bam_fetch expected 0 indexed start_pos and 1 indexed end_pos
 }
 
 } //end namespace breseq
