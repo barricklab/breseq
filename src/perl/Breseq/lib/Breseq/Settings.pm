@@ -126,7 +126,7 @@ sub new
 ## FUTURE default to using smalt
 ##	$self->{smalt} = 1 if (!$self->{no_ssaha2});
 ## FUTURE default to using C++ for alignments
-	$self->{perl_bam2aln} = 1;
+##	$self->{perl_bam2aln} = 1;
 	
 	$self->post_option_initialize;
 	

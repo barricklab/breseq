@@ -181,6 +181,8 @@ class pileup_base {
       insert_start = from_string<uint32_t>(insert_start_string);
       insert_end = from_string<uint32_t>(insert_end_string);
     }
+  
+  inline void set_print_progress(bool print_progress) { m_print_progress = print_progress; }
 
   protected:
     friend int first_level_pileup_callback(uint32_t tid, uint32_t pos, int n, const bam_pileup1_t *pile, void *data);
@@ -202,6 +204,8 @@ class pileup_base {
     
     refseq_list_t m_refs; //!< Reference sequences.
     uint32_t m_last_tid; //!< The "last target" for which the first-level-callback was called. -1 = none
+  
+    bool m_print_progress;
 };
 
 } // breseq

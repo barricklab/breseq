@@ -61,6 +61,7 @@ error_count_pileup::error_count_pileup(const string& bam, const string& fasta, b
 	// reserve enough space for the sequence info:
 	_seq_info.resize(num_targets());
   m_use_CErrorTable = (covariates.length() > 0);
+  set_print_progress(true);
 }
 
 

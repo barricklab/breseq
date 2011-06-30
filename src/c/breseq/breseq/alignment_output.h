@@ -84,12 +84,19 @@ namespace breseq
          , truncate_start(0)
          , truncate_end(0)
          , target_id(-1)
+         , ghost_strand(0)
+         , ghost_start(0)
+         , ghost_end(0)
+         , ghost_seq_id("")
          {}
          
       uint32_t reference_length;
       string reference_name;
       uint32_t truncate_start, truncate_end;
       uint32_t target_id;
+      int8_t ghost_strand;
+      uint32_t ghost_start, ghost_end;
+      string ghost_seq_id;
     };
     
     struct Aligned_Annotation: Alignment_Base
@@ -133,8 +140,7 @@ namespace breseq
     {
     public:
       //! Constructor.
-      Alignment_Output_Pileup ( const string& bam, const string& fasta,
-                                const uint32_t maximum_to_align );
+      Alignment_Output_Pileup ( const string& bam, const string& fasta );
       //! Destructor.
       virtual ~Alignment_Output_Pileup();
       //! Called for each genome position.
@@ -149,9 +155,7 @@ namespace breseq
       uint32_t unique_end; //used in create alignment and passed to fetch
       uint32_t total_reads;
       uint32_t processed_reads;
-      uint32_t maximum_to_align;
       
-      uint32_t last_pos;
       uint32_t max_indel;
       char base;
     };
@@ -162,6 +166,9 @@ namespace breseq
     Aligned_Annotation m_aligned_annotation;
     Quality_Range m_quality_range;
     uint32_t m_quality_score_cutoff;
+    string m_error_message;
+    uint32_t m_maximum_to_align;
+
     
   public:
     //! Constructor.
@@ -181,17 +188,6 @@ namespace breseq
       return ( a.aligned_bases.compare(b.aligned_bases) > 0 );
     }
   };
-  
-// _html_alignment_line($aligned_reference, 1) 
-// _html_alignment_line($aligned_annotation, 0) 
-// _html_alignment_line($aligned_reads->{$key}, 0, $quality_range)
-// _html_alignment_line($aligned_annotation, 0) 
-// _html_alignment_line($aligned_reference, 1)
-// _html_alignment_line({aligned_bases => 'ATCG', => aligned_quals => pack('CCCC',0,0,0,0)}, 0,  $quality_range)
-// _html_alignment_line({aligned_bases => 'ATCG', => aligned_quals => pack('CCCC',$c,$c,$c,$c)}, 0,  $quality_range)
-  
-  
-  
   
   
 }//end namespace breseq
