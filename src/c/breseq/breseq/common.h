@@ -284,11 +284,11 @@ namespace breseq {
       
 			// If at end, use length=maxLength.  Else use length=end-start.
 			theStringVector.push_back(
-                                theString.substr(
-                                                 start,
-                                                 (end == string::npos) ? string::npos : end - start
-                                                 )
-                                );
+        theString.substr(
+           start,
+           (end == string::npos) ? string::npos : end - start
+           )
+        );
       
 			// If at end, use start=maxSize.  Else use start=end+delimiter.
 			start =

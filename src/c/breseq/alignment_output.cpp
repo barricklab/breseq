@@ -33,8 +33,6 @@ alignment_output::Alignment_Output_Pileup::Alignment_Output_Pileup ( const strin
         , total_reads ( 0 )
         , processed_reads ( 0 )
         , maximum_to_align ( maximum_to_align )
-        , insert_start ( 0 ) //these should be initialized by create alignment
-        , insert_end ( 0 ) //these should be initialized by create alignment
         , last_pos ( 0 )
 {
 }
@@ -53,7 +51,7 @@ void alignment_output::create_alignment ( const string& region )
   // we need the target_id to properly fill out the reference sequence later
   uint32_t target_id, start_pos, end_pos;
   m_alignment_output_pileup.parse_region(region, target_id, start_pos, end_pos);
-    
+  
   ///Single Reference case
   Aligned_Reference aligned_reference;
   aligned_reference.target_id = target_id;
@@ -550,9 +548,11 @@ void alignment_output::Alignment_Output_Pileup::pileup_callback ( const pileup& 
   // ##also update any positions of interest for gaps
   for ( uint32_t insert_count = 0; insert_count <= static_cast<uint32_t>(max_indel); insert_count++ )
   {      
-    if ( (( reference_pos_1 == start_1 ) && ( insert_start >= insert_count )) 
-      || (( reference_pos_1 == end_1 ) && ( insert_end <= insert_count )) 
-      || (( reference_pos_1 > start_1 ) && ( reference_pos_1 < end_1 )) )
+    
+    if (   ((m_insert_start <= insert_count) && (insert_count <= m_insert_end) && (reference_pos_1 == start_1) && (reference_pos_1 == end_1))
+				|| ((m_insert_start <= insert_count) && (reference_pos_1 == start_1) && (reference_pos_1 != end_1)) 
+        || ((m_insert_end <= insert_count) && (reference_pos_1 == end_1) && (reference_pos_1 != start_1))
+        || ((reference_pos_1 < end_1) && (reference_pos_1 > start_1)) )
     {
       aligned_annotation.aligned_bases += '|';
     }

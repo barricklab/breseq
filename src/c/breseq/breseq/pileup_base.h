@@ -125,6 +125,62 @@ class pileup_base {
       start_pos_1 = static_cast<uint32_t>(temp_start_pos)+1; // bam_parse_region returns zero indexed start
       end_pos_1 = static_cast<uint32_t>(temp_end_pos);       // bam_parse_region returns one indexed end
     }
+  
+    void parse_region(const string& region, uint32_t& target_id, uint32_t& start_pos_1, uint32_t& end_pos_1, uint32_t& insert_start, uint32_t& insert_end)
+    {
+      insert_start = 0;
+      insert_end = 0;
+            
+      size_t start = 0;
+      size_t end = 0;
+      
+      end = region.find_first_of(':', start);
+      assert(end != string::npos);
+      string target_name = region.substr(start, end - start);
+      start = end+1;
+      
+      string start_pos_1_string;
+      string insert_start_string("0");
+      end = region.find_first_of('.', start);
+      if (end == string::npos) {
+        end = region.find_first_of('-', start);
+        assert(end != string::npos);
+        start_pos_1_string = region.substr(start, end - start);
+        start = end+1;
+      }
+      else
+      {
+        start_pos_1_string = region.substr(start, end - start);
+        start = end+1;
+        end = region.find_first_of('-', start);
+        assert(end != string::npos);
+        insert_start_string = region.substr(start, end - start);
+        start = end+1;
+      }
+
+      string end_pos_1_string;
+      string insert_end_string("0");
+      end = region.find_first_of('.', start);
+      if (end == string::npos) {
+        end = string::npos;
+        end_pos_1_string = region.substr(start, end - start);
+        start = end+1;
+      }
+      else
+      {
+        end_pos_1_string = region.substr(start, end - start);
+        start = end+1;
+        end = string::npos;
+        insert_end_string = region.substr(start, end - start);
+        start = end+1;
+      }
+
+      string new_region = target_name + ":" + start_pos_1_string + "-" + end_pos_1_string;
+      parse_region(new_region, target_id, start_pos_1, end_pos_1);
+      
+      insert_start = from_string<uint32_t>(insert_start_string);
+      insert_end = from_string<uint32_t>(insert_end_string);
+    }
 
   protected:
     friend int first_level_pileup_callback(uint32_t tid, uint32_t pos, int n, const bam_pileup1_t *pile, void *data);
@@ -138,6 +194,8 @@ class pileup_base {
     uint32_t m_last_position_1;        // last position handled by pileup
     uint32_t m_start_position_1;       // requested start, 0 = whole fragment
     uint32_t m_end_position_1;         // requested end,   0 = whole fragment
+    uint32_t m_insert_start;           // requested insert start (#bases after reference base inserted in read)
+    uint32_t m_insert_end;             // requested insert end (#bases after reference base inserted in read)
     uint32_t m_clip_start_position_1;  // clip columns handled starting here, 0 = off
     uint32_t m_clip_end_position_1;    // clip columns handled ending here,   0 = off
     uint32_t m_downsample;
