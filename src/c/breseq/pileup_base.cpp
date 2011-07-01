@@ -28,12 +28,16 @@ namespace breseq {
  
  Open the FASTA and read the target reference sequence.
  */
-reference_sequence::reference_sequence(const std::string& fasta_filename, const std::string& target)
-: m_ref(0), m_seq(0), m_len(0) {
-	m_ref = fai_load(fasta_filename.c_str());
-	assert(m_ref);
+  
+// @JEB TODO: remove reference_sequence object and 
+// only load reference sequences as requested from a single fai index
+// stored in the pileup object. This is currently very inefficient.
+reference_sequence::reference_sequence(faidx_t* m_ref, const string& fasta_filename, const string& target)
+: m_seq(0), m_len(0) {
 
-	m_seq = fai_fetch(m_ref, target.c_str(), &m_len);
+	m_seq = fai_fetch(m_ref, target.c_str(), &m_len);  
+  // need to close the file
+  
 	assert(m_seq);
 	assert(m_len > 0);
 }
@@ -42,7 +46,6 @@ reference_sequence::reference_sequence(const std::string& fasta_filename, const 
 /*! Destructor.
  */
 reference_sequence::~reference_sequence() {
-	if(m_ref) { fai_destroy(m_ref);	}
 	if(m_seq) { free(m_seq); }
 }
 
@@ -52,26 +55,14 @@ reference_sequence::~reference_sequence() {
  \todo Change this to lazily load & cache reference sequences as they are needed,
  instead of loading all sequences at once.
  */
-pileup_base::pileup_base(const std::string& bam, const std::string& fasta)
-: m_bam(0), m_bam_header(0), m_bam_index(0), m_bam_file(0), m_last_position_1(0), 
+pileup_base::pileup_base(const string& bam, const string& fasta)
+: m_bam(0), m_bam_header(0), m_bam_index(0), m_bam_file(0), m_faidx(0), m_last_position_1(0), 
 m_start_position_1(0), m_end_position_1(0), m_clip_start_position_1(0), m_clip_end_position_1(0), m_downsample(0),
   m_last_tid(static_cast<uint32_t>(-1)), m_print_progress(false)
 {
 	using namespace std;
 	m_bam = samopen(bam.c_str(), "rb", 0);
 	assert(m_bam);
-
-	// load all the reference sequences:
-	for(int i=0; i<m_bam->header->n_targets; ++i) {
-    
-    if (m_print_progress) {
-      cerr << "  REFERENCE: " << m_bam->header->target_name[i] << endl;
-      cerr << "  LENGTH: " << m_bam->header->target_len[i] << endl;
-    }
-		reference_sequence* refseq = new reference_sequence(fasta, m_bam->header->target_name[i]);
-		assert(static_cast<unsigned int>(refseq->m_len) == m_bam->header->target_len[i]);
-		m_refs.push_back(refseq);
-	}
   
   m_bam_file = bam_open(bam.c_str(), "r");
   assert(m_bam_file);
@@ -81,6 +72,22 @@ m_start_position_1(0), m_end_position_1(0), m_clip_start_position_1(0), m_clip_e
 
   m_bam_header = bam_header_read(m_bam_file);
   assert(m_bam_header);
+  
+	// load all the reference sequences:
+  m_faidx = fai_load(fasta.c_str());
+  assert(m_faidx);
+  
+  for(int i=0; i<m_bam->header->n_targets; ++i) {
+    
+    // @JEB TODO: move printing to at_start
+    if (m_print_progress) {
+      cerr << "  REFERENCE: " << m_bam->header->target_name[i] << endl;
+      cerr << "  LENGTH: " << m_bam->header->target_len[i] << endl;
+    }
+		reference_sequence* refseq = new reference_sequence(m_faidx, fasta, m_bam->header->target_name[i]);
+		assert(static_cast<unsigned int>(refseq->m_len) == m_bam->header->target_len[i]);
+		m_refs.push_back(refseq);
+	}
 }
 
 
@@ -90,7 +97,8 @@ pileup_base::~pileup_base() {
 	samclose(m_bam);
   bam_close(m_bam_file);
   bam_header_destroy(m_bam_header);
-
+  fai_destroy(m_faidx);
+  
   // Clean up vector of pointers
   while(!m_refs.empty())
   {
@@ -104,7 +112,7 @@ pileup_base::~pileup_base() {
 /*! Retrieve the reference sequence for the given target and fasta index.
  */
 char* pileup_base::get_refseq(uint32_t target) const {
-	assert(static_cast<std::size_t>(target) < m_refs.size());
+	assert(static_cast<uint32_t>(target) < m_refs.size());
 	return m_refs[target]->m_seq;
 }
 
@@ -114,7 +122,7 @@ bool pileup_base::handle_position(uint32_t pos_1) {
 
   // Print progress (1-indexed position)
   if(m_print_progress && (pos_1 % 10000 == 0) ) {
-    std::cerr << "    POSITION:" << pos_1 << std::endl;
+    cerr << "    POSITION:" << pos_1 << endl;
   }
   
   if ( m_clip_start_position_1 && (pos_1 < m_clip_start_position_1) ) return false;

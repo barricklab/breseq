@@ -36,7 +36,7 @@
       displayScale = "1.00"
       launchStyle = "0"
       useCustomWorkingDirectory = "YES"
-      customWorkingDirectory = "/Users/jbarrick/src/breseq/tests/lambda_mixed_pop"
+      customWorkingDirectory = "/Users/jbarrick/tmp/test_campy_run"
       buildConfiguration = "Debug">
       <BuildableProductRunnable>
          <BuildableReference
@@ -70,6 +70,10 @@
          </CommandLineArgument>
          <CommandLineArgument
             argument = "--bam /Users/jbarrick/src/breseq/tests/lambda_mixed_pop/06_bam/junction.bam --fasta /Users/jbarrick/src/breseq/tests/lambda_mixed_pop/03_candidate_junctions/candidate_junction.fasta --region NC_001416__21737__0__NC_001416__27729__1__5____35__35__0__0:36-40 --quality-score-cutoff 3 --output /Users/jbarrick/Desktop/out.html"
+            isEnabled = "NO">
+         </CommandLineArgument>
+         <CommandLineArgument
+            argument = "--bam 06_bam/junction.bam --fasta 03_candidate_junctions/candidate_junction.fasta --region NC_002163__878096__1__NC_002163__878767__0__-4__CTAA__75__75__0__0:76-79 --quality-score-cutoff 3 --stdout"
             isEnabled = "YES">
          </CommandLineArgument>
       </CommandLineArguments>

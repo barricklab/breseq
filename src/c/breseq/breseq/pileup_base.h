@@ -33,10 +33,9 @@ int first_level_fetch_callback(bam1_t *b, void *data);
 //! Helper struct to manage a single reference sequence.
 struct reference_sequence {
   public:
-    reference_sequence(const string& fasta_filename, const string& target);
+    reference_sequence(faidx_t* m_ref, const string& fasta_filename, const string& target);
     ~reference_sequence();
 
-    faidx_t* m_ref; //!< FAI file handle.
     char* m_seq; //!< Reference sequence (ascii).
     int m_len; //<! Length of reference sequence.
 // 
@@ -192,6 +191,7 @@ class pileup_base {
     bam_header_t* m_bam_header;
     bam_index_t* m_bam_index;
     bamFile m_bam_file;
+    faidx_t* m_faidx;
 
     uint32_t m_last_position_1;        // last position handled by pileup
     uint32_t m_start_position_1;       // requested start, 0 = whole fragment
