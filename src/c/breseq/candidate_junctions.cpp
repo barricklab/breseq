@@ -745,7 +745,7 @@ namespace breseq {
 			r_str = reverse_string(r_str);
 		}
 
-    vector<pair<uint8_t,uint8_t> > cigar_pair_array = a.cigar_pair_array();
+    vector<pair<char,uint16_t> > cigar_pair_array = a.cigar_pair_array();
     
 		char op_0 = cigar_pair_array.front().first;
 		char op_last = cigar_pair_array.back().first;

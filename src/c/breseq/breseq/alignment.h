@@ -106,19 +106,32 @@ class alignment {
     inline uint32_t query_position_0() const { return _p->qpos; }
     inline uint32_t query_position_1() const { return _p->qpos+1; }
 	
-    //! Retrieve the quality score array.
-    inline uint8_t* read_base_quality_sequence() const { return bam1_qual(_a); }
+    //! Retrieve the quality score array. Raw quality scores.
+    inline uint8_t* read_base_quality_bam_sequence() const { return bam1_qual(_a); }
   
-    inline string read_base_quality_string() const
+    inline string  read_base_quality_bam_string() const
     {
       string s;
-      for(uint32_t i=0; i<read_length(); i++)
+      uint8_t* qscore = read_base_quality_bam_sequence();      
+      for (uint32_t j = 0; j < read_length(); j++)
       {
-        s += ((char*)(read_base_quality_sequence()))[i];
+        s += static_cast<char>(*qscore);
       }
       return s;
     };
-
+  
+    //! Retrieve quality scores as a string of SANGER (+33) offset characters.
+    inline string read_base_quality_char_sequence() const
+    {
+      string s;
+      uint8_t* qscore = read_base_quality_bam_sequence();      
+      for (uint32_t j = 0; j < read_length(); j++)
+      {
+        s += static_cast<char>(*qscore + 33);
+      }
+      return s;
+    };
+  
     //! Retrieve the quality score of a single base. (was 0-indexed)
     //  Methods available for 0-indexed and 1-indexed coordinates.
     inline uint8_t read_base_quality_0(const uint32_t pos) const { assert((pos>=0) && (pos<read_length())); return bam1_qual(_a)[pos]; }
@@ -218,21 +231,23 @@ class alignment {
       return cigar_string_ss.str();
     }
   
-    inline vector<pair<uint8_t,uint8_t> > cigar_pair_array() const
+    //! Returns a vector of pairs where internal bam format has been changed to chars and ints
+    //  first item in pair is operation, second is length
+    inline vector<pair<char,uint16_t> > cigar_pair_array() const
     {
-      vector<pair<uint8_t,uint8_t> > cigar_pair_list;
+      vector<pair<char,uint16_t> > cigar_pair_list;
       uint32_t* cigar_list = cigar_array();
       for (uint32_t i=0; i<cigar_array_length(); i++)
       {
         uint32_t op = cigar_list[i] & BAM_CIGAR_MASK;
         uint32_t len = cigar_list[i] >> BAM_CIGAR_SHIFT;
-        cigar_pair_list.push_back(make_pair(op, len));
+        cigar_pair_list.push_back(make_pair( op_to_char[op], len));
       }
       return cigar_pair_list;
     }
   
     inline int32_t isize() const { return _a->core.isize; }
-    inline uint8_t quality() const { return _a->core.qual; }
+    inline uint32_t quality() const { return _a->core.qual; }
     inline uint16_t flag() const { return _a->core.flag; }
     inline uint8_t* aux_get(const char tag[2]) const { return bam_aux_get(_a, tag); }
     

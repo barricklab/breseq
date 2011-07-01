@@ -620,7 +620,7 @@ void alignment_output::Alignment_Output_Pileup::pileup_callback ( const pileup& 
     
     if (   ((m_insert_start <= insert_count) && (insert_count <= m_insert_end) && (reference_pos_1 == start_1) && (reference_pos_1 == end_1))
 				|| ((m_insert_start <= insert_count) && (reference_pos_1 == start_1) && (reference_pos_1 != end_1)) 
-        || ((m_insert_end <= insert_count) && (reference_pos_1 == end_1) && (reference_pos_1 != start_1))
+        || ((m_insert_end >= insert_count) && (reference_pos_1 == end_1) && (reference_pos_1 != start_1))
         || ((reference_pos_1 < end_1) && (reference_pos_1 > start_1)) )
     {
       aligned_annotation.aligned_bases += '|';
@@ -649,7 +649,7 @@ void alignment_output::Alignment_Output_Pileup::fetch_callback ( const alignment
   aligned_read.seq_id = a.read_name();
   aligned_read.length = a.read_length();
   aligned_read.read_sequence = a.read_char_sequence();
-  aligned_read.qual_sequence = a.read_base_quality_string();
+  aligned_read.qual_sequence = a.read_base_quality_bam_string();
 
   aligned_reads[aligned_read.seq_id] = aligned_read;
 

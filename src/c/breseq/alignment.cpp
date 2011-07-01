@@ -405,7 +405,7 @@ void tam_file::write_alignments(int32_t fastq_file_index, alignment_list& alignm
 
 		string aux_tags = aux_tags_ss.str();
 
-		uint8_t* qscore = a.read_base_quality_sequence();
+		uint8_t* qscore = a.read_base_quality_bam_sequence();
 		stringstream quality_score_ss;
 
 		for (uint32_t j = 0; j < a.read_length(); j++)
@@ -413,7 +413,7 @@ void tam_file::write_alignments(int32_t fastq_file_index, alignment_list& alignm
 			quality_score_ss << static_cast<char>(*qscore + 33);
 			qscore++;
 		}
-		string quality_score_string = quality_score_ss.str();
+		string quality_score_string = a.read_base_quality_char_sequence();
     
 		string cigar_string = a.cigar_string();
 
@@ -451,31 +451,22 @@ void tam_file::write_alignments(int32_t fastq_file_index, alignment_list& alignm
 
 void tam_file::write_split_alignment(uint32_t min_indel_split_len, const alignment& a)
 {
-	//#print $a->qname . "\n";
-
-	uint8_t* qseq = a.read_bam_sequence(); // query sequence (read)
-	uint8_t* qscore = a.read_base_quality_sequence(); // quality score array
-
+  // Debug
+  //if (a.read_name() == "GW1ULQG02DEM06") {
+  //  cout << "stop here << endl";
+  //}
+  
 	uint32_t q_length = a.read_length();
 
-    stringstream quality_score_ss, qseq_ss;
-	for (uint32_t i = 0; i < q_length; i++)
-    {
-		quality_score_ss << static_cast<char>(*qscore + 33);
-		qseq_ss << static_cast<char>(*qseq);
-		qscore++;
-		qseq++;
-    }
-    string qual_string = quality_score_ss.str();
-	string qseq_string = qseq_ss.str();
+  string qual_string = a.read_base_quality_char_sequence();
+	string qseq_string = a.read_char_sequence();
 
 	uint32_t rpos = a.reference_start_1();
 	uint32_t qpos = a.query_start_1();
-	//int32_t rdir = (a.reversed()) ? -1 : +1;
 
-	vector<pair<uint8_t,uint8_t> > cigar_list = a.cigar_pair_array();
+	vector<pair<char,uint16_t> > cigar_list = a.cigar_pair_array();
 	char op;
-	uint8_t len;
+	uint32_t len;
 	uint32_t i = 0;
 	while (i < cigar_list.size())
 	{
@@ -485,15 +476,12 @@ void tam_file::write_split_alignment(uint32_t min_indel_split_len, const alignme
 		string cigar_string = "";
 		while (i < cigar_list.size()) //CIGAR
 		{
-			op = alignment::op_to_char[cigar_list[i].first];
+			op = cigar_list[i].first;
 			len = cigar_list[i].second;
 
 			//#print "$cigar_string\n";
 			//#print Dumper($c);
-
-			//if (op == 'S')
-			//{
-			//}
+      
       if (op == 'I')
 			{
 				if (len >= min_indel_split_len) break;
@@ -510,9 +498,13 @@ void tam_file::write_split_alignment(uint32_t min_indel_split_len, const alignme
 				rpos += len;
 			}
 			
-			cigar_string += char(len) + op;
-			i++;
-		}
+      // @JEB we must skip over soft padding at the ends, it will be added back in one chunk
+      if (op != 'S')
+      {
+        cigar_string += to_string(len) + op;
+      }
+      i++;
+    }
 
 		if (qpos > qstart)
 		{
@@ -523,8 +515,6 @@ void tam_file::write_split_alignment(uint32_t min_indel_split_len, const alignme
 			cigar_string = ( left_padding > 0 ? to_string(left_padding) + "S" : "" ) + cigar_string + ( right_padding > 0 ? to_string(right_padding) + "S" : "" );
 
 			//#print "Q: $qstart to " . ($qpos-1) . "\n";
-
-			//my $aux_tags = '';
 
 			vector<string> ll = make_list<string>
 				(a.read_name())
@@ -544,28 +534,27 @@ void tam_file::write_split_alignment(uint32_t min_indel_split_len, const alignme
 		//move up to the next match position
 		while (i < cigar_list.size()) //CIGAR
 		{
-			op = alignment::op_to_char[cigar_list[i].first];
+			op = cigar_list[i].first;
 			len = cigar_list[i].second;
 
 			if (op == 'I')
 			{
 				qpos += len;
-				i++;
 			}
 			else if (op == 'D')
 			{
 				rpos += len;
-				i++;
 			}
-			else if (op == 'S')
-			{
-				qpos += len;
-				i++;
-			}
-			else // 'M'
+			//else if (op == 'S')
+			//{
+			//	qpos += len;
+			//	i++;
+			//}
+			else if (op == 'M')
 			{
 				break;
 			}
+      i++;
 		}
 	}
 
@@ -621,8 +610,7 @@ void tam_file::write_moved_alignment(const alignment& a, uint32_t fastq_file_ind
 
 
 	// Setup all of the original read information
-	uint8_t* qscore = a.read_base_quality_sequence(); // quality score array
-	uint8_t* qseq = a.read_bam_sequence(); // query sequence (read)
+	uint8_t* qscore = a.read_base_quality_bam_sequence(); // quality score array
 	uint32_t q_length = a.read_length();
 
 	vector<uint8_t> qual_scores;
@@ -630,25 +618,23 @@ void tam_file::write_moved_alignment(const alignment& a, uint32_t fastq_file_ind
 	for (uint32_t i = 0; i < q_length; i++)
 	{
 		qual_scores.push_back(*qscore);
-		qseq_ss << static_cast<char>(*qseq);
 		qscore++;
-		qseq++;
 	}
-	string seq = qseq_ss.str();
+	string seq = a.read_char_sequence();
 
-	vector<pair<uint8_t,uint8_t> > cigar_list = a.cigar_pair_array();
+	vector<pair<char,uint16_t> > cigar_list = a.cigar_pair_array();
 	uint16_t flags = a.flag();
 
 	// Remove soft padding from CIGAR (since it does not correspond to the
 	// aligned positions we are dealing with. It is added back later.
 	uint32_t left_padding = 0;
 	uint32_t right_padding = 0;
-	if (alignment::op_to_char[cigar_list[0].first] == 'S')
+	if (cigar_list[0].first == 'S')
 	{
 		left_padding = cigar_list[0].second;
 		cigar_list.erase(cigar_list.begin());
 	}
-	if (alignment::op_to_char[(*cigar_list.end()).first] == 'S')
+	if ((*cigar_list.end()).first == 'S')
 	{
 		right_padding = (*cigar_list.end()).second;
 		cigar_list.pop_back();
@@ -698,7 +684,7 @@ void tam_file::write_moved_alignment(const alignment& a, uint32_t fastq_file_ind
 	// of this position, use the CIGAR to correct for indels:
 	// At the same time, split the CIGAR
 
-	vector<pair<uint8_t,uint8_t> > side_1_cigar_list, side_2_cigar_list;
+	vector<pair<char,uint16_t> > side_1_cigar_list, side_2_cigar_list;
 
 	uint32_t test_read_pos = a_read_start;
 	uint32_t test_junction_pos = a.reference_start_1();
@@ -856,7 +842,7 @@ void tam_file::write_moved_alignment(const alignment& a, uint32_t fastq_file_ind
 	uint32_t cigar_length = 0;
 	for (uint32_t i = 0; i < cigar_list.size(); i++) //CIGAR
 	{
-		char op = alignment::op_to_char[cigar_list[i].first];
+		char op = cigar_list[i].first;
 		char len = cigar_list[i].second;
 
 		assert(len > 0);
