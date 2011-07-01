@@ -616,5 +616,99 @@ namespace breseq {
 		return mismatches;
 	}
 
+	string shifted_cigar_string(alignment& a, cReferenceSequences& ref_seq_info)
+	{
+		string ref_seq = ref_seq_info[a.reference_target_id()].m_fasta_sequence.m_sequence;
+		uint32_t ref_seq_index = 0;
+		string read_seq = a.read_char_sequence();
+		uint32_t read_seq_index = 0;
+		vector<pair<char,uint16_t> > cigar_pair_array = a.cigar_pair_array();
+
+		for (vector<pair<char,uint16_t> >::iterator it = cigar_pair_array.begin(); it != cigar_pair_array.end(); it++)
+		{
+			char op = it->first;
+			uint16_t len = it->second;
+
+			if (op == 'D')
+			{
+				char base = ref_seq[ref_seq_index];
+				bool all_same_base = true;
+				for (uint32_t j = 1; j < len; j++)
+					all_same_base &= (ref_seq[ref_seq_index + j] == base);
+
+				if (all_same_base)
+				{
+					uint32_t shift_amount = 0;
+					while (ref_seq[ref_seq_index + len + shift_amount] == base)
+						shift_amount++;
+
+					if (shift_amount > 0)
+					{
+						if (it != cigar_pair_array.begin())
+							(it - 1)->second += shift_amount;
+						else
+							cigar_pair_array.insert(it, make_pair<char,uint16_t>('M', shift_amount));
+
+						if (it != cigar_pair_array.end())
+							(it + 1)->second -= shift_amount;
+						else
+							cigar_pair_array.push_back(make_pair<char,uint16_t>('M', shift_amount));
+					}
+
+					ref_seq_index += len + shift_amount;
+				}
+				else
+				{
+					ref_seq_index += len;
+				}
+			}
+			else if (op == 'I')
+			{
+				char base = read_seq[read_seq_index];
+				bool all_same_base = true;
+				for (uint32_t j = 1; j < len; j++)
+					all_same_base &= (read_seq[read_seq_index + j] == base);
+
+				if (all_same_base)
+				{
+					uint32_t shift_amount = 0;
+					while (read_seq[read_seq_index + len + shift_amount] == base)
+						shift_amount++;
+
+					if (shift_amount > 0)
+					{
+						if (it != cigar_pair_array.begin())
+							(it - 1)->second += shift_amount;
+						else
+							cigar_pair_array.insert(it, make_pair<char,uint16_t>('M', shift_amount));
+
+						if (it != cigar_pair_array.end())
+							(it + 1)->second -= shift_amount;
+						else
+							cigar_pair_array.push_back(make_pair<char,uint16_t>('M', shift_amount));
+					}
+
+					read_seq_index += len + shift_amount;
+				}
+				else
+				{
+					read_seq_index += len;
+				}
+			}
+			else
+			{
+				ref_seq_index += len;
+				read_seq_index += len;
+			}
+		}
+
+		stringstream shifted_cigar_string_ss;
+		for (vector<pair<char,uint16_t> >::iterator it = cigar_pair_array.begin(); it != cigar_pair_array.end(); it++)
+			shifted_cigar_string_ss << it->first << it->second;
+
+		string shifted_cigar_string = shifted_cigar_string_ss.str();
+		return shifted_cigar_string;
+	}
+
 } // breseq namespace
 
