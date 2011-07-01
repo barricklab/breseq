@@ -109,7 +109,7 @@ int do_convert_genbank(int argc, char* argv[]) {
 		("input,i", "input GenBank flatfile (multiple allowed, comma-separated)")
 		("features,g", "output feature table", "")
 		("fasta,f", "FASTA file of reference sequences", "")
-        ("gff3,v", "GFF file of features", "" )
+    ("gff3,v", "GFF file of features", "" )
 	.processCommandArgs(argc, argv);
 	
 	// make sure that the config options are good:
