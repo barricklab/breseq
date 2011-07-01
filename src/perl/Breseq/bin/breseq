@@ -193,8 +193,9 @@ if ($settings->do_step('sequence_conversion_done_file_name', "Read and reference
 	
 	## C++ version of reference sequence processing
 	my $reference_features_file_name = $settings->file_name('reference_features_file_name');
+	my $reference_gff3_file_name = $settings->file_name('reference_gff3_file_name');
 	my $cbreseq = $settings->ctool("cbreseq");
-	my $command = "$cbreseq CONVERT_GENBANK --fasta $reference_fasta_file_name --features $reference_features_file_name";
+	my $command = "$cbreseq CONVERT_GENBANK --fasta $reference_fasta_file_name --features $reference_features_file_name --gff3 $reference_gff3_file_name";
 	foreach my $input (@genbank_file_names) {
 		$command .= " --input " . $input;
 	} 

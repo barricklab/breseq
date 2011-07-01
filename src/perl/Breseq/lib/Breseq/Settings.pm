@@ -363,6 +363,7 @@ sub post_option_initialize
 	$self->{reference_fasta_file_name} = "$self->{data_path}/reference.fasta";
 	$self->{reference_faidx_file_name} = "$self->{data_path}/reference.fasta.fai";
 	$self->{reference_features_file_name} = "$self->{data_path}/reference.features.tab";
+	$self->{reference_gff3_file_name} = "$self->{data_path}/reference.gff3";
 	$self->{unmatched_read_file_name} = "$self->{data_path}/#.unmatched.fastq";
 	
 	##### output #####
