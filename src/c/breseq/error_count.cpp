@@ -121,7 +121,7 @@ void error_count_pileup::pileup_callback(const pileup& p) {
 		int32_t qstart = i->query_start_0(); // @dk: want 0-indexed, so subtract 1
 		int32_t qend = i->query_end_0(); // @dk: want 0-indexed, so subtract 1
 
-		uint8_t* qscore = i->read_base_quality_sequence(); // quality score array
+		uint8_t* qscore = i->read_base_quality_bam_sequence(); // quality score array
 		int32_t fastq_file_index = i->fastq_file_index(); // sequencer-generated read file that this alignment belongs to
 		
 		uint32_t pos = p.position_0(); // position of this alignment on the reference sequence
@@ -859,7 +859,7 @@ void cErrorTable::count_alignment_position(const alignment& i, const pileup& p) 
 		int32_t q_start_0 = i.query_start_0(); // 0-indexed
 		int32_t q_end_0 = i.query_end_0(); // 0-indexed
 
-		uint8_t* qscore = i.read_base_quality_sequence(); // quality score array
+		uint8_t* qscore = i.read_base_quality_bam_sequence(); // quality score array
 		int32_t fastq_file_index = i.fastq_file_index(); // sequencer-generated read file that this alignment belongs to
 
     // Fill in all covariates that are used...
