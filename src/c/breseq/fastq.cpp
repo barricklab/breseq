@@ -260,12 +260,11 @@ namespace breseq {
       
       switch (count) {
         case 0:
-          sequence.m_name = line;
-          if( sequence.m_name[0] != '@' ) {
+          if( line[0] != '@' ) {
             fprintf(stderr, "FASTQ sequence record does not begin with @NAME line.\nFile %s\nLine: %d\n", m_file_name.c_str(), m_current_line);
             exit(-1);
           }
-          
+          sequence.m_name = line.substr(1,string::npos);
           if (m_current_line == 1) {
             if (sequence.m_name.find("/") != string::npos) m_needs_conversion = true;
           }
@@ -327,14 +326,14 @@ namespace breseq {
           
           break;
         case 2:
-          sequence.m_name_plus = line;
           
           //Only need to see if the first character is a +
-          if( sequence.m_name_plus[0] != '+' ) {
+          if( line[0] != '+' ) {
             fprintf(stderr, "FASTQ sequence record does not contain +NAME line.\nFile %s\nLine: %d\n", m_file_name.c_str(), m_current_line);
             exit(-1);
           }
           // Could optionally check to see if the name after the + was either absent or identical to the earlier name
+          sequence.m_name_plus = line.substr(1,string::npos);
 
           break;
         case 3:
@@ -355,9 +354,9 @@ namespace breseq {
   }
 
   void cFastqFile::write_sequence(const cFastqSequence &sequence) {
-    (*this) << sequence.m_name << std::endl;
+    (*this) << '@' << sequence.m_name << std::endl;
     (*this) << sequence.m_sequence << std::endl;
-    (*this) << sequence.m_name_plus << std::endl;
+    (*this) << '+' << sequence.m_name_plus << std::endl;
     (*this) << sequence.m_qualities << std::endl;
   }
   

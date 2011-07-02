@@ -56,9 +56,44 @@ namespace breseq {
       if (pos == rf.m_base_name.size() - 6) {
         rf.m_base_name.erase(pos);
       }
+      // - trailing .converted
+      pos = rf.m_base_name.rfind(".converted");
+      if (pos == rf.m_base_name.size() - 10) {
+        rf.m_base_name.erase(pos);
+      }
       
       (*this).push_back(rf);
     }
   }
+  
+  // Set up defaults and build paths
+  Settings::Settings(const string& run_path) {
+    
+    max_read_mismatches = -1;
+    require_complete_match = false;
+    
+    // Paths are only partially implemented:
+    //   @ are to be replaced by reference sequence ids
+    //   # are to be replaced with read file names
+    
+    // Need to port the rest from Perl...
+    
+    data_path = run_path + "data";    
+    reference_fasta_file_name = data_path + "/reference.fasta";
+    reference_features_file_name = data_path + "/reference.features.tab";
+    
+    sequence_conversion_path = run_path + "01_sequence_conversion";    
+    reference_trim_file_name = sequence_conversion_path + "/@.trims";
+
+    candidate_junction_path = run_path + "03_candidate_junctions";      
+    candidate_junction_fasta_file_name = candidate_junction_fasta_file_name + "/candidate_junction.fasta";
+    
+    alignment_correction_path = run_path + "05_alignment_correction";    
+    jc_genome_diff_file_name = alignment_correction_path + "/jc_evidence.gd";
+    resolved_reference_sam_file_name = alignment_correction_path + "/reference.sam";
+    resolved_junction_sam_file_name = alignment_correction_path + "/junction.sam";
+    
+  }
+  
   
 }

@@ -397,7 +397,7 @@ void tam_file::write_alignments(int32_t fastq_file_index, alignment_list& alignm
     
 		aux_tags_ss << "AS:i:" << a.aux_get_i("AS") << "\t" << "X1:i:" << alignments.size() << "\t" << "X2:i:" << fastq_file_index;
 
-		if (trims != NULL && trims->size() > i)
+		if ((trims != NULL) && (trims->size() > i))
 		{
 			Trim trim = (*trims)[i];
 			aux_tags_ss << "\t" << "XL:i:" << trim.L << "\t" << "XR:i:" << trim.R;
@@ -405,16 +405,7 @@ void tam_file::write_alignments(int32_t fastq_file_index, alignment_list& alignm
 
 		string aux_tags = aux_tags_ss.str();
 
-		uint8_t* qscore = a.read_base_quality_bam_sequence();
-		stringstream quality_score_ss;
-
-		for (uint32_t j = 0; j < a.read_length(); j++)
-		{
-			quality_score_ss << static_cast<char>(*qscore + 33);
-			qscore++;
-		}
-		string quality_score_string = a.read_base_quality_char_sequence();
-    
+		string quality_score_string = a.read_base_quality_char_string();
 		string cigar_string = a.cigar_string();
 
 		vector<string> ll;
@@ -458,7 +449,7 @@ void tam_file::write_split_alignment(uint32_t min_indel_split_len, const alignme
   
 	uint32_t q_length = a.read_length();
 
-  string qual_string = a.read_base_quality_char_sequence();
+  string qual_string = a.read_base_quality_char_string();
 	string qseq_string = a.read_char_sequence();
 
 	uint32_t rpos = a.reference_start_1();
