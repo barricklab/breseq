@@ -32,40 +32,32 @@ namespace breseq {
   void resolve_alignments(
                           const Settings& settings,
                           Summary& summary,
+                          cReferenceSequences& ref_seq_info,
                           bool junction_prediction,
-                          const string &reference_fasta,
-                          const string &junction_fasta,
                           const string &reference_sam_path,
                           const string &junction_sam_path,
-                          const string &resolved_path,
                           const string &data_path,
-                          const string &features_file,
                           const cReadFiles &read_files,
                           const uint32_t max_read_length,
                           const uint32_t alignment_read_limit
                           ) 
   {
 	bool verbose = false;
-
-	// ####
-	// ##	Reference sequences
-	// ####
-
-	// Load the reference sequence info
-	cReferenceSequences ref_seq_info;
-	LoadFeatureIndexedFastaFile(ref_seq_info, features_file, reference_fasta);
-
+    
 	// ####
 	// ##	Junction sequences
 	// ####
 
 	//## if there were no candidate junctions (file is empty) then we seg fault if we try to use samtools on it...
+  cReferenceSequences junction_ref_seq_info;
 	if (junction_prediction
-			&& !file_exists(junction_fasta.c_str())
-			&& !file_empty(junction_fasta.c_str())
+			&& !file_exists(settings.candidate_junction_fasta_file_name.c_str())
+			&& !file_empty(settings.candidate_junction_fasta_file_name.c_str())
 		)
+  {
 		junction_prediction = 0;
-
+  }
+    
 	vector<JunctionInfo> junction_info_list;
 
 	tam_file* junction_tam = NULL;
@@ -73,10 +65,7 @@ namespace breseq {
 
 	if (junction_prediction)
 	{
-
-		// $junction_fai = Bio::DB::Sam::Fai->load($junction_fasta_file_name);
-		////faidx_t * junction_faidx = fai_load(junction_fasta.c_str());
-		////assert(junction_faidx);
+    LoadFeatureIndexedFastaFile(junction_ref_seq_info, "", settings.candidate_junction_fasta_file_name);
 
 		//## Load header once at the beginning (but have to peek at TAM file to do this).
 		//      my @read_structures = $settings->read_structures;
@@ -85,7 +74,7 @@ namespace breseq {
 		//      $junction_header = $junction_tam->header_read2($junction_faidx_file_name) or die("Error reading reference fasta index file: $junction_faidx_file_name");
 
 		string junction_sam_file_name = junction_sam_path + "/" + read_files[0].m_base_name + ".candidate_junction.sam";
-		tam_file junction_tam(junction_sam_file_name, junction_fasta, ios::in);
+		tam_file junction_tam(junction_sam_file_name, settings.candidate_junction_fasta_file_name, ios::in);
 
 		//## Preload all of the information about junctions
 		//## so that we only have to split the names once
@@ -105,21 +94,11 @@ namespace breseq {
 
 	// our $gd = GenomeDiff->new();
 	genome_diff gd;
-
-	// my $resolved_reference_sam_file_name = $settings->file_name('resolved_reference_sam_file_name');
-	string resolved_reference_sam_file_name = resolved_path + "/reference.sam";
-	// my $RREF;
-	// open $RREF, ">$resolved_reference_sam_file_name" or die;
-	ifstream RREF(resolved_reference_sam_file_name.c_str(), ios_base::in);
-
-	// my $resolved_junction_sam_file_name = $settings->file_name('resolved_junction_sam_file_name');
-	string resolved_junction_sam_file_name = resolved_path + "/junction.sam";
-
-	// my $RCJ;
-	// open $RCJ, ">$resolved_junction_sam_file_name" or die;
-	ifstream RCJ(resolved_junction_sam_file_name.c_str(), ios_base::in);
-
-	map<string, vector<MatchedJunction> > matched_junction;
+    
+  tam_file resolved_reference_tam(settings.resolved_reference_sam_file_name, settings.reference_fasta_file_name, ios::out);
+  tam_file resolved_junction_tam(settings.resolved_junction_sam_file_name, settings.candidate_junction_fasta_file_name, ios::out);
+    
+  map<string, vector<MatchedJunction> > matched_junction;
 
 	// my %degenerate_matches;
 	map<string, map<string, MatchedJunction> > degenerate_matches;
@@ -133,7 +112,7 @@ namespace breseq {
 	// foreach my $read_struct ($settings->read_structures)
 	for (uint32_t fastq_file_index = 0; fastq_file_index < read_files.size(); fastq_file_index++)
 	{
-		cReadFile rf = read_files[fastq_file_index];
+		const cReadFile& rf = read_files[fastq_file_index];
 		cerr << "  READ FILE:" << rf.m_base_name << endl;
 
 		map<string,int32_t> summary_info = make_map<string,int32_t>("unmatched_reads", 0);
@@ -143,38 +122,21 @@ namespace breseq {
 
 		cFastqFile in_fastq(rf.m_fastq_file_name, ios::in);
 
-		// my @fastq_file_name;
-		// my @
+    string this_unmatched_file_name = data_path + "/unmatched."
+        + rf.m_base_name + ".fastq";
+    cFastqFile out_unmatched_fastq(this_unmatched_file_name, ios::out);
+    assert(!out_unmatched_fastq.fail());
 
-		// @JEB No longer looping
-		// for (my $i=0; $i < scalar @{$read_struct->{base_names}}; $i++)
+		string reference_sam_file_name = reference_sam_path + "/" + rf.m_base_name + ".reference.sam";
+    
+    string reference_fasta = data_path + "/reference.fasta";
 
-		// my $this_read_file = $read_struct->{base_names}->[$i];
-		// $fastq_file_name[$i] = $settings->read_file_to_fastq_file_name($this_read_file);
-		// $fastq_file_index[$i] = $settings->read_file_to_fastq_file_index($this_read_file);
-
-		// if ($settings->{unmatched_reads})
-		//if (true){
-			// my $unmatched_file_name = $settings->file_name('unmatched_read_file_name', {'#'=>$this_read_file});
-			// $out_unmatched_fastq[$i] = Breseq::Fastq->new(-file => ">$unmatched_file_name");
-
-			string this_unmatched_file_name = data_path + "/unmatched."
-					+ rf.m_base_name + ".fastq";
-			cFastqFile out_unmatched_fastq(this_unmatched_file_name, ios::out);
-			assert(!out_unmatched_fastq.fail());
-		//}
-
-		if (junction_tam != NULL) delete junction_tam;
-		if (reference_tam != NULL) delete reference_tam;
-
-		string reference_sam_file_name = reference_sam_path + "/"
-				+ rf.m_base_name + ".reference.sam";
 		reference_tam = new tam_file(reference_sam_file_name, reference_fasta, ios::in); //# or die "Could not open $reference_sam_file_name";
 
 		if (junction_prediction)
 		{
 			string junction_sam_file_name = junction_sam_path + "/" + rf.m_base_name + ".candidate_junction.sam";
-			junction_tam = new tam_file(junction_sam_file_name, junction_fasta, ios::in); // or die " Could not open junction SAM file\n";
+			junction_tam = new tam_file(junction_sam_file_name, settings.candidate_junction_fasta_file_name, ios::in); // or die " Could not open junction SAM file\n";
 		}
 
 		vector<alignment> junction_alignments;
@@ -217,6 +179,11 @@ namespace breseq {
 				cerr << " Before Overlap Reference alignments = " << reference_alignments.size() << endl;
 				cerr << " Before Overlap Junction alignments = " << junction_alignments.size() << endl;
 			}
+      
+      if (verbose)
+      {
+        cerr << " Junction SAM read name: " << junction_alignments[0].read_name() <<endl;
+      }
 
 			if ((junction_alignments.size() > 0) && (seq.m_name == junction_alignments[0].read_name()))
 			{
@@ -237,16 +204,21 @@ namespace breseq {
 					if (!_alignment_overlaps_junction(junction_info_list, *it))
 						this_junction_alignments.erase(it);
 
-				best_reference_score = _eligible_read_alignments(settings, ref_seq_info, this_junction_alignments);
+				best_reference_score = _eligible_read_alignments(settings, junction_ref_seq_info, this_junction_alignments);
 
 				if (verbose)
 					cerr << " Best junction score: " << best_junction_score
 							<< endl;
 			}
 
+      if (verbose)
+      {
+        cerr << " Reference SAM read name: " << reference_alignments[0].read_name() <<endl;
+      }
+      
 			// Does this read have eligible reference sequence matches?
 			vector<alignment> this_reference_alignments;
-			if ((junction_alignments.size() > 0) && (seq.m_name == junction_alignments[0].read_name()))
+			if ((reference_alignments.size() > 0) && (seq.m_name == reference_alignments[0].read_name()))
 			{
 
 				this_reference_alignments = reference_alignments;
@@ -327,7 +299,7 @@ namespace breseq {
 			{
 				if (verbose)
 					cout << "Best alignment to reference.";
-				_write_reference_matches(settings, ref_seq_info, this_reference_alignments, *reference_tam, fastq_file_index);
+				_write_reference_matches(settings, ref_seq_info, this_reference_alignments, resolved_reference_tam, fastq_file_index);
 			}
 			else
 			{
@@ -371,6 +343,10 @@ namespace breseq {
 
 		// save statistics
 		summary.alignment_correction.read_file[read_files[0].m_base_name] = summary_info;
+    
+    // safe only because we know they are always or never used
+    if (junction_tam != NULL) delete junction_tam;
+		if (reference_tam != NULL) delete reference_tam;
 
 	} // End of Read File loop
 
@@ -404,7 +380,7 @@ namespace breseq {
 		string key = sorted_junction_ids[i];
 
 		bool has_non_overlap_alignment;
-		bool success = _test_junction(settings, summary, key, matched_junction, degenerate_matches, junction_test_info, ref_seq_info, RREF, RCJ, *reference_tam, *junction_tam, has_non_overlap_alignment);
+		bool success = _test_junction(settings, summary, key, matched_junction, degenerate_matches, junction_test_info, ref_seq_info, resolved_reference_tam, resolved_junction_tam, has_non_overlap_alignment);
 
 		// save the score in the distribution
 		add_score_to_distribution(observed_pos_hash_score_distribution, junction_test_info[key].pos_hash_score);
@@ -437,7 +413,7 @@ namespace breseq {
 		if (verbose) cout << "Trying degenerate " << key << endl;
 
 		bool has_non_overlap_alignment;
-		bool success = _test_junction(settings, summary, key, matched_junction, degenerate_matches, junction_test_info, ref_seq_info, RREF, RCJ, *reference_tam, *junction_tam, has_non_overlap_alignment);
+		bool success = _test_junction(settings, summary, key, matched_junction, degenerate_matches, junction_test_info, ref_seq_info, resolved_reference_tam, resolved_junction_tam, has_non_overlap_alignment);
 
 		// save the score in the distribution
 		add_score_to_distribution(observed_pos_hash_score_distribution, junction_test_info[key].pos_hash_score);
@@ -498,7 +474,7 @@ namespace breseq {
 				// By trimming in the candidate junctions sequence, rather than on each half,
 				// this is done properly.
 				Trim trim = _trim_ambiguous_ends(a, *junction_tam, ref_seq_info);
-				junction_tam->write_moved_alignment(
+				resolved_junction_tam.write_moved_alignment(
 					a,
 					fastq_file_index,
 					item[side_key + "_seq_id"],
@@ -531,9 +507,6 @@ namespace breseq {
 
 	string jc_genome_diff_file_name = settings.file_name(settings.jc_genome_diff_file_name);
 	gd.write(jc_genome_diff_file_name);
-
-	if (junction_tam != NULL) delete junction_tam;
-	if (reference_tam != NULL) delete reference_tam;
 }
     
 //
@@ -564,7 +537,7 @@ uint32_t _eligible_read_alignments(const Settings& settings, const cReferenceSeq
 	uint32_t minimum_best_score_difference = 0;
 	// but the code below works if they are set
 
-	if (alignments.size() <= 0) return false;
+	if (alignments.size() <= 0) return 0;
 
 	// require a minimum length of the read to be mapped
 	for (vector<alignment>::iterator it = alignments.end() - 1; it >= alignments.begin(); it--)
@@ -666,8 +639,7 @@ bool _test_read_alignment_requirements(const Settings& settings, const cReferenc
 {
 	bool accept = true;
 
-	bool unmapped = ((a.flag() & BAM_FUNMAP) != 0);
-	if (unmapped) return false;
+	if (a.unmapped()) return false;
 
 	if (settings.required_match_length > 0)
 	{
@@ -731,13 +703,13 @@ void _write_reference_matches(const Settings& settings, cReferenceSequences& ref
 
 	vector<Trim> trims;
 
-	for (uint32_t i; i < reference_alignments.size(); i++)
+	for (uint32_t i=0; i < reference_alignments.size(); i++)
 		trims.push_back(_trim_ambiguous_ends(reference_alignments[i], reference_tam, ref_seq_info));
 
 	reference_tam.write_alignments((int32_t)fastq_file_index, reference_alignments, &trims);
 }
 
-bool _test_junction(const Settings& settings, Summary& summary, const string& junction_seq_id, map<string, vector<MatchedJunction> >& matched_junction_ref, map<string, map<string, MatchedJunction> >& degenerate_matches_ref, map<string, CandidateJunction>& junction_test_info_ref, cReferenceSequences& ref_seq_info, ifstream& RREF, ifstream& RCJ, tam_file& reference_tam, tam_file& junction_tam, bool& has_non_overlap_alignment)
+bool _test_junction(const Settings& settings, Summary& summary, const string& junction_seq_id, map<string, vector<MatchedJunction> >& matched_junction_ref, map<string, map<string, MatchedJunction> >& degenerate_matches_ref, map<string, CandidateJunction>& junction_test_info_ref, cReferenceSequences& ref_seq_info, tam_file& reference_tam, tam_file& junction_tam, bool& has_non_overlap_alignment)
 {
 	bool verbose = false;
 //	my ($settings, $summary, $junction_seq_id, $matched_junction_ref, $degenerate_matches_ref, $junction_test_info_ref, $reference_fai, $ref_seq_info, $RREF, $reference_header, $RCJ, $candidate_junction_header) = @_;

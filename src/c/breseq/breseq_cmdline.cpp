@@ -188,13 +188,13 @@ int do_resolve_alignments(int argc, char* argv[]) {
 	options
 		("help,h", "produce this help message", TAKES_NO_ARGUMENT)
 		("junction-prediction,p", "whether to predict new junctions")
-		("reference-fasta,f", "FASTA file of reference sequences")
 		("junction-fasta,j", "FASTA file of candidate junction sequences")
+// convert to basing everything off the main output path, so we don't have to set so many options
+    ("path", "path to breseq output")
 		("reference-sam-path", "path to SAM files of read alignments to reference sequences")
 		("junction-sam-path", "path to SAM files of read alignments to candidate junction sequences")
-		("resolved-path,o", "output path for resolved sam files")
-		("data-path,o", "data path")
-		("features,g", "feature table file for reference sequences")
+		("resolved-path", "output path for resolved sam files")
+		("data-path", "data path")
 		("read-file,r", "FASTQ read files (multiple allowed, comma-separated) ")
 		("max-read-length,m", "number of flanking bases in candidate junctions")
 		("alignment-read-limit", "maximum number of alignments to process. DEFAULT = 0 (OFF).", 0)
@@ -203,13 +203,12 @@ int do_resolve_alignments(int argc, char* argv[]) {
 	// make sure that the config options are good:
 	if(options.count("help")
 		 || !options.count("junction-prediction")
-		 || !options.count("reference-fasta")
      || !options.count("junction-fasta")
+     || !options.count("path")
 		 || !options.count("reference-sam-path")
 		 || !options.count("junction-sam-path")
 		 || !options.count("resolved-path")
      || !options.count("data-path")
-		 || !options.count("features")
      || !options.count("read-file")
 		 || !options.count("max-read-length")
 
@@ -218,23 +217,27 @@ int do_resolve_alignments(int argc, char* argv[]) {
 		return -1;
 	}                       
   
-	// attempt to calculate error calibrations:
 	try {
+    
+    Settings settings(options["path"]);
+
+    
+    Summary summary;
+
     cReadFiles rf(from_string<vector<string> >(options["read-file"]));
-	Settings settings;
-	Summary summary;
+    
+    // Load the reference sequence info
+    cReferenceSequences ref_seq_info;
+    LoadFeatureIndexedFastaFile(ref_seq_info, settings.reference_features_file_name, settings.reference_fasta_file_name);
     
     resolve_alignments(
-	  settings,
-	  summary,
+      settings,
+      summary,
+      ref_seq_info,
       from_string<bool>(options["junction-prediction"]),
-      options["reference-fasta"],
-      options["junction-fasta"],
       options["reference-sam-path"],
       options["junction-sam-path"],
-      options["resolved-path"],
       options["data-path"],
-      options["features"],
       rf,
       from_string<uint32_t>(options["max-read-length"]),
       from_string<uint32_t>(options["alignment-read-limit"])
@@ -439,8 +442,7 @@ int do_preprocess_alignments(int argc, char* argv[]) {
 	settings.preprocess_junction_best_sam_file_name = options["candidate-junction-path"];
   settings.preprocess_junction_best_sam_file_name += "/best.sam";
     
-	settings.reference_fasta_file_name = options["data-path"];
-  settings.reference_fasta_file_name += "/reference.fasta";
+	settings.reference_fasta_file_name = options["data-path"] + "/reference.fasta";
   settings.reference_faidx_file_name = settings.reference_fasta_file_name + ".fai";
     
 	settings.reference_sam_file_name = options["reference-alignment-path"];

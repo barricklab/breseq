@@ -121,13 +121,13 @@ class alignment {
     };
   
     //! Retrieve quality scores as a string of SANGER (+33) offset characters.
-    inline string read_base_quality_char_sequence() const
+    inline string read_base_quality_char_string() const
     {
       string s;
       uint8_t* qscore = read_base_quality_bam_sequence();      
       for (uint32_t j = 0; j < read_length(); j++)
       {
-        s += static_cast<char>(*qscore + 33);
+        s += static_cast<char>(qscore[j] + 33);
       }
       return s;
     };

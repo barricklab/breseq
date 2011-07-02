@@ -117,8 +117,9 @@ namespace breseq {
     uint32_t seq_id_to_index(const string& seq_id) { return m_seq_id_to_index[seq_id]; };
 
     map<string,string> trims;
-	map<string, vector<cSequenceFeature> > repeat_lists;
-	static cSequenceFeature* find_closest_repeat_region(uint32_t position, vector<cSequenceFeature>& repeat_list_ref, uint32_t max_distance, bool direction);
+    
+    map<string, vector<cSequenceFeature> > repeat_lists;
+    static cSequenceFeature* find_closest_repeat_region(uint32_t position, vector<cSequenceFeature>& repeat_list_ref, uint32_t max_distance, bool direction);
   };  
   
   /*! Helper function for creating cReferenceSequences
