@@ -497,7 +497,8 @@ namespace breseq {
         
         (*it)["accession"] = (*it).SafeGet("locus_tag");
         
-        if ((*it).SafeGet("pseudo") != "") {
+        // /pseudo tag doesn't take a value
+        if ((*it).count("pseudo") != 0) {
           (*it)["type"] = "pseudogene";
         }
         
