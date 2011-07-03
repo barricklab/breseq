@@ -179,10 +179,7 @@ sub bridge_load_ref_seq_info
 				$f->{start}, 
 				$f->{end}, 
 				$f->{strand}, 
-				$f->{product},
-				$f->{pseudogene},
-				$f->{cds},
-				$f->{note}
+				$f->{product}
 			) = split /\t/, $line;
 		
 			# push on proper list
@@ -516,7 +513,7 @@ sub annotate_1_mutation
 			$mut->{gene_position} = "pseudogene ($mut->{gene_position}/$gene_nt_size nt)";
 			return $mut;			
 		}
-		elsif (!$gene->{cds})
+		elsif ($gene->{type} ne "protein")
 		{
 			$mut->{snp_type} = "noncoding";
 			$mut->{gene_position} = "noncoding ($mut->{gene_position}/$gene_nt_size nt)";
