@@ -44,6 +44,7 @@ LICENSE AND COPYRIGHT
 #include <string>
 #include <utility>
 #include <vector>
+#include <typeinfo>
 
 // Library specific headers
 #include <bam.h>
