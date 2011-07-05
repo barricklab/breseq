@@ -600,3 +600,90 @@ void breseq::VCFtoGD( const string& vcffile, const string& gdfile ){
     }
     output.close();
 }
+namespace breseq {
+
+genome_diff::entry_list_t genome_diff::list(string types[], uint8_t ntypes)
+{
+// # sub list
+// # {
+// #   my ($self, @types) = @_;
+// #     
+// #   ## return ALL
+// #   if (scalar @types == 0)
+// #   {
+  if(!ntypes)
+  {
+// #     return @{$self->{list}};
+    return _entry_list;
+// #   }
+  }
+// #   ## return only requested types
+// #   else
+// #   {
+  else
+  {
+// #     my %requested;
+    
+// #     foreach my $type (@types)
+// #     {
+// #       $requested{$type} = 1;
+// #     }
+// #     my @return_list = grep { $requested{$_->{type}} } @{$self->{list}};
+// #     return @return_list;
+// #   }
+    entry_list_t return_list;
+    for (entry_list_t::iterator itr_diff_entry = _entry_list.begin(); 
+       itr_diff_entry != _entry_list.end() ;itr_diff_entry ++)
+    {
+      
+      for (uint8_t index = 0; index < ntypes; index++)
+      {
+        if(itr_diff_entry->_type == types[index])
+          return_list.push_back(*itr_diff_entry);
+      }
+    }
+    return return_list;
+  }
+// #   
+// #   return undef;
+///TODO return undef
+// # }
+}
+
+genome_diff::entry_list_t genome_diff::filter_used_as_evidence(entry_list_t list)
+{
+// # sub filter_used_as_evidence
+// # {
+// #   my ($self, @list) = @_;
+// #   
+// #   IN: for (my $i=0; $i<scalar @list; $i++)
+// #   {
+  for (entry_list_t::iterator i = list.begin(); 
+       i != list.end() ;i ++)
+  {
+// #     my $in_item = $list[$i];
+    diff_entry &in_item = (*i);
+// #     foreach my $test_item ($self->list)
+// #     {
+    for(entry_list_t::iterator test_item = _entry_list.begin();
+        test_item != _entry_list.end(); test_item++)
+    {
+// #       foreach my $test_evidence_id (@{$test_item->{evidence}})
+// #       {
+  
+// #         if ($test_evidence_id ==  $in_item->{id})
+// #         {
+// #           splice @list, $i, 1;
+// #           $i--;
+// #           next IN;
+// #         }
+// #       }
+// #     }
+// #   }
+    }
+  }
+// #   return @list;
+// # }
+}
+  
+}
