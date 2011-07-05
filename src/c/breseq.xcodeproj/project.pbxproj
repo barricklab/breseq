@@ -57,6 +57,7 @@
 		70B69E071369E2440001B750 /* libbam.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 70B69E051369E2440001B750 /* libbam.a */; };
 		70B69E081369E2440001B750 /* libbam.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 70B69E051369E2440001B750 /* libbam.a */; };
 		70B9320F1394008200885753 /* settings.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 70B9320E1394008200885753 /* settings.cpp */; };
+		70D789D413C3CEB70036BEAB /* output.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 70D789D313C3CEB70036BEAB /* output.cpp */; };
 		70F9FB86130C592700D6E11D /* tabulate_coverage.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 70F9FB85130C592700D6E11D /* tabulate_coverage.cpp */; };
 /* End PBXBuildFile section */
 
@@ -156,6 +157,8 @@
 		70B69E0B1369E51E0001B750 /* Shared.xcconfig */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.xcconfig; path = Shared.xcconfig; sourceTree = "<group>"; };
 		70B9320E1394008200885753 /* settings.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = settings.cpp; path = breseq/settings.cpp; sourceTree = SOURCE_ROOT; };
 		70B932111394009100885753 /* settings.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = settings.h; sourceTree = "<group>"; };
+		70D789D313C3CEB70036BEAB /* output.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = output.cpp; path = breseq/output.cpp; sourceTree = SOURCE_ROOT; };
+		70D789D613C3CEC80036BEAB /* output.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = output.h; sourceTree = "<group>"; };
 		70F9FB85130C592700D6E11D /* tabulate_coverage.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; lineEnding = 0; name = tabulate_coverage.cpp; path = breseq/tabulate_coverage.cpp; sourceTree = SOURCE_ROOT; xcLanguageSpecificationIdentifier = xcode.lang.cpp; };
 		70F9FB89130C828000D6E11D /* tabulate_coverage.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; lineEnding = 0; path = tabulate_coverage.h; sourceTree = "<group>"; xcLanguageSpecificationIdentifier = xcode.lang.objcpp; };
 /* End PBXFileReference section */
@@ -238,6 +241,7 @@
 				702EABF613421A8400103019 /* fastq.cpp */,
 				7087728A12BC169C000F9B57 /* genome_diff.cpp */,
 				7087728B12BC169C000F9B57 /* identify_mutations.cpp */,
+				70D789D313C3CEB70036BEAB /* output.cpp */,
 				7087728D12BC169C000F9B57 /* pileup.cpp */,
 				7087728C12BC169C000F9B57 /* pileup_base.cpp */,
 				708D62431390B1D5007FF13C /* resolve_alignments.cpp */,
@@ -264,6 +268,7 @@
 				70A8364813477A560037F8DE /* fastq.h */,
 				7087747812BC1C06000F9B57 /* genome_diff.h */,
 				7087747912BC1C06000F9B57 /* identify_mutations.h */,
+				70D789D613C3CEC80036BEAB /* output.h */,
 				7087747A12BC1C06000F9B57 /* pileup.h */,
 				7087747B12BC1C06000F9B57 /* pileup_base.h */,
 				708D62411390B1C6007FF13C /* resolve_alignments.h */,
@@ -436,6 +441,7 @@
 				70B9320F1394008200885753 /* settings.cpp in Sources */,
 				70B48C4B13A9918E00BF2BF0 /* anyoption.cpp in Sources */,
 				70B48C4F13A991BE00BF2BF0 /* chisquare.cpp in Sources */,
+				70D789D413C3CEB70036BEAB /* output.cpp in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
