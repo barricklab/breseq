@@ -44,7 +44,6 @@ LICENSE AND COPYRIGHT
 #include <string>
 #include <utility>
 #include <vector>
-#include <typeinfo>
 
 // Library specific headers
 #include <bam.h>
@@ -378,25 +377,24 @@ namespace breseq {
 		}
 	}
 
+  // handle bool as either TRUE/FALSE or zero/non-zero number
+  // Does not handle single-character T/F correctly 
+  inline bool from_string(const string& s)
+  {
+    bool t;
+    istringstream iss1(s);
+    iss1 >> boolalpha >> t;
+    
+    int32_t t2;
+    istringstream iss2(s);
+    iss2 >> noboolalpha >> t2;
+    t = t || (t2 != 0);
+    
+    return t;
+  }
+  
 	template <typename T> inline T from_string(const string &s)
 	{
-    // handle bool as either TRUE/FALSE or zero/non-zero number
-    // Does not handle single-character T/F correctly
-    bool b;
-    if (typeid(T) == typeid(b))
-    {
-      bool t;
-      istringstream iss1(s);
-      iss1 >> boolalpha >> t;
-      
-      int32_t t2;
-      istringstream iss2(s);
-      iss2 >> noboolalpha >> t2;
-      t = t || (t2 != 0);
-      
-      return static_cast<T>(t);
-    }
-    
     T t;
 		istringstream iss(s);
 		iss >> boolalpha >> t;
