@@ -137,7 +137,7 @@ namespace breseq {
 		map_t _fields; //!< Information about this diff entry.
 		string _type;
 		string _id;
-		string _parents;
+		string _parents; 
 	};
 	
   void add_reject_reason(diff_entry& de, const string &reason);
@@ -244,7 +244,13 @@ namespace breseq {
 		
 		//! Write the genome diff to a file.
 		void write(const string& filename);
-        
+    
+    //! Splice items used as evidence by any mutations out of input list
+    //TODO not implemented
+    entry_list_t filter_used_as_evidence(entry_list_t list);
+    
+    //! Retrieve diff_entrys that match given type(s) 
+    entry_list_t list(string types[], uint8_t ntypes);
 
 	protected:		
 		const string _default_filename; //!< Default filename for this diff.
