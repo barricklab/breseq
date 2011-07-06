@@ -29,6 +29,7 @@ libbreseq_la_SOURCES = \
 	anyoption.cpp \
 	calculate_trims.cpp \
 	candidate_junctions.cpp \
+	contingency_loci.cpp \
 	chisquare.cpp \
 	error_count.cpp \
 	fasta.cpp \
@@ -48,6 +49,7 @@ libbreseq_la_SOURCES = \
 	breseq/calculate_trims.h \
 	breseq/candidate_junctions.h \
 	breseq/chisquare.h \
+	breseq/contingency_loci.h \
 	breseq/common.h \
 	breseq/error_count.h \
 	breseq/fasta.h \

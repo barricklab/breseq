@@ -21,10 +21,13 @@ LICENSE AND COPYRIGHT
 #include "breseq/identify_mutations.h"
 #include "breseq/error_count.h"
 
+using namespace std;
+
+namespace breseq {
 
 /*! Convenience wrapper around the identify_mutations_pileup class.
  */
-void breseq::identify_mutations(
+void identify_mutations(
 								const string& bam,
 								const string& fasta,
 								const string& error_dir,
@@ -68,7 +71,7 @@ void breseq::identify_mutations(
 
 /*! Constructor.
  */
-breseq::identify_mutations_pileup::identify_mutations_pileup(
+identify_mutations_pileup::identify_mutations_pileup(
 															const string& bam,
 															const string& fasta,
 															const string& error_dir,
@@ -86,7 +89,7 @@ breseq::identify_mutations_pileup::identify_mutations_pileup(
 															const string& error_table_file,
 															bool print_per_position_file
                                                             )
-: breseq::pileup_base(bam, fasta)
+: pileup_base(bam, fasta)
 , _ecr(error_dir, readfiles)
 , _gd(gd_file)
 , _min_qual_score(min_qual_score)
@@ -147,15 +150,14 @@ breseq::identify_mutations_pileup::identify_mutations_pileup(
 
 /*! Destructor.
  */
-breseq::identify_mutations_pileup::~identify_mutations_pileup()
+identify_mutations_pileup::~identify_mutations_pileup()
 {
 }
 
 
 /*! Called for each alignment.
  */
-void breseq::identify_mutations_pileup::pileup_callback(const breseq::pileup& p) {
-	using namespace std;
+void identify_mutations_pileup::pileup_callback(const pileup& p) {
 	assert(p.target() < _seq_info.size());
   _this_deletion_propagation_cutoff = _deletion_propagation_cutoff[p.target()];
   
@@ -557,7 +559,7 @@ void breseq::identify_mutations_pileup::pileup_callback(const breseq::pileup& p)
 			mut[NEW_BASE] = best_base_char;
 			mut[FREQUENCY] = "1";
 			if(e_value_call < _mutation_cutoff) {
-        breseq::add_reject_reason(mut, "EVALUE");
+        add_reject_reason(mut, "EVALUE");
 			}
     }
     //## Specific initilizations for polymorphisms
@@ -587,7 +589,7 @@ void breseq::identify_mutations_pileup::pileup_callback(const breseq::pileup& p)
       
 			mut[POLYMORPHISM_QUALITY] = formatted_double(ppred.log10_e_value, kMutationQualityPrecision).to_string();
 			if (ppred.log10_e_value < _polymorphism_cutoff ) {
-        breseq::add_reject_reason(mut, "EVALUE");
+        add_reject_reason(mut, "EVALUE");
       } 
 
  /// <--- PROBLEM     
@@ -664,7 +666,7 @@ void breseq::identify_mutations_pileup::pileup_callback(const breseq::pileup& p)
       _polymorphism_r_input_file << endl;
 			
       if ( (ppred.frequency < _polymorphism_frequency_cutoff) || (ppred.frequency > 1 -_polymorphism_frequency_cutoff) ) {
-        breseq::add_reject_reason(mut, "FREQ");
+        add_reject_reason(mut, "FREQ");
       }
 		}
     
@@ -686,7 +688,7 @@ void breseq::identify_mutations_pileup::pileup_callback(const breseq::pileup& p)
 
 /*! Called at the end of the pileup.
  */
-void breseq::identify_mutations_pileup::at_target_end(const uint32_t tid) {
+void identify_mutations_pileup::at_target_end(const uint32_t tid) {
 
   // end "open" intervals
 	check_deletion_completion(target_length(tid)+1, tid, position_coverage(numeric_limits<double>::quiet_NaN()), numeric_limits<double>::quiet_NaN());
@@ -710,7 +712,7 @@ void breseq::identify_mutations_pileup::at_target_end(const uint32_t tid) {
  @JEB This function expects 1-indexed positions!!!
  
  */
-void breseq::identify_mutations_pileup::check_deletion_completion(uint32_t position, uint32_t seq_id, const position_coverage& this_position_coverage, double e_value_call) {
+void identify_mutations_pileup::check_deletion_completion(uint32_t position, uint32_t seq_id, const position_coverage& this_position_coverage, double e_value_call) {
 
 	//cerr << position << " " << e_value_call << endl;
 	
@@ -808,7 +810,7 @@ void breseq::identify_mutations_pileup::check_deletion_completion(uint32_t posit
 
 /*! Helper method to track unknowns.
  */
-void breseq::identify_mutations_pileup::update_unknown_intervals(uint32_t position, uint32_t seq_id, bool base_predicted, bool this_position_unique_only_coverage) 
+void identify_mutations_pileup::update_unknown_intervals(uint32_t position, uint32_t seq_id, bool base_predicted, bool this_position_unique_only_coverage) 
 {
   //debug
   /*
@@ -847,7 +849,7 @@ void breseq::identify_mutations_pileup::update_unknown_intervals(uint32_t positi
 
 /*! Predict the significance of putative polymorphisms.
  */
-breseq::polymorphism_prediction breseq::identify_mutations_pileup::predict_polymorphism (base_char best_base_char, base_char second_best_base_char, vector<polymorphism_data>& pdata ) {
+polymorphism_prediction identify_mutations_pileup::predict_polymorphism (base_char best_base_char, base_char second_best_base_char, vector<polymorphism_data>& pdata ) {
     
   //#calculate the likelihood of observed reads given this position is 100% the best base  
 	double log10_likelihood_of_one_base_model = 0;
@@ -937,7 +939,7 @@ breseq::polymorphism_prediction breseq::identify_mutations_pileup::predict_polym
 
 /*! Find the best fraction for the best base at a polymorphic site.
  */
-pair<double,double> breseq::identify_mutations_pileup::best_two_base_model_log10_likelihood(base_char best_base_char, base_char second_best_base_char, vector<polymorphism_data>& pdata)
+pair<double,double> identify_mutations_pileup::best_two_base_model_log10_likelihood(base_char best_base_char, base_char second_best_base_char, vector<polymorphism_data>& pdata)
 {	
 	double cur_pr_first_base = 1;
 	double cur_log_pr = calculate_two_base_model_log10_likelihood(best_base_char, second_best_base_char, pdata, cur_pr_first_base);
@@ -963,7 +965,7 @@ pair<double,double> breseq::identify_mutations_pileup::best_two_base_model_log10
 
 /*! Calculate the likelihood of a mixture model of two bases leading to the observed read bases.
  */
-double breseq::identify_mutations_pileup::calculate_two_base_model_log10_likelihood (base_char best_base_char, base_char second_best_base_char, const vector<polymorphism_data>& pdata, double best_base_freq)
+double identify_mutations_pileup::calculate_two_base_model_log10_likelihood (base_char best_base_char, base_char second_best_base_char, const vector<polymorphism_data>& pdata, double best_base_freq)
 {
 	double log10_likelihood = 0;	
 	
@@ -1032,7 +1034,7 @@ double breseq::identify_mutations_pileup::calculate_two_base_model_log10_likelih
 	return log10_likelihood;
 }
 
-breseq::cDiscreteSNPCaller::cDiscreteSNPCaller(uint8_t ploidy) 
+cDiscreteSNPCaller::cDiscreteSNPCaller(uint8_t ploidy) 
 : _observations(0), _ploidy(ploidy)
 {
   assert(ploidy==1); // only the haploid version is implemented
@@ -1048,7 +1050,7 @@ breseq::cDiscreteSNPCaller::cDiscreteSNPCaller(uint8_t ploidy)
 }
 
 // obs_base is a BAM style base when input
-void breseq::cDiscreteSNPCaller::update(base_bam obs_base_bam, uint8_t obs_quality, bool obs_top_strand, int32_t fastq_file_index, error_count_results &ecr)
+void cDiscreteSNPCaller::update(base_bam obs_base_bam, uint8_t obs_quality, bool obs_top_strand, int32_t fastq_file_index, error_count_results &ecr)
 {  
   //update probabilities give observation using Bayes rule
   for (int i=0; i<base_list_size; i++) {
@@ -1068,7 +1070,7 @@ void breseq::cDiscreteSNPCaller::update(base_bam obs_base_bam, uint8_t obs_quali
   _observations++;
 }
 
-void breseq::cDiscreteSNPCaller::update(const covariate_values_t& cv, bool obs_top_strand, cErrorTable& et) {
+void cDiscreteSNPCaller::update(const covariate_values_t& cv, bool obs_top_strand, cErrorTable& et) {
 
   covariate_values_t this_cv = cv;
   //update probabilities give observation using Bayes rule
@@ -1092,7 +1094,7 @@ void breseq::cDiscreteSNPCaller::update(const covariate_values_t& cv, bool obs_t
 }
 
 
-pair<uint8_t,double> breseq::cDiscreteSNPCaller::get_prediction()
+pair<uint8_t,double> cDiscreteSNPCaller::get_prediction()
 {
   
   if (_observations == 0) {
@@ -1149,4 +1151,6 @@ pair<uint8_t,double> breseq::cDiscreteSNPCaller::get_prediction()
   
   return make_pair(best_base, -total_log10_error_probability);
 }
+
+} // namespace breseq
 

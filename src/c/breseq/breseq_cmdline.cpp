@@ -21,17 +21,18 @@ LICENSE AND COPYRIGHT
 #include <vector>
 
 #include "breseq/anyoption.h"
-#include "breseq/fastq.h"
 #include "breseq/alignment_output.h"
 #include "breseq/annotated_sequence.h"
 #include "breseq/calculate_trims.h"
-#include "breseq/error_count.h"
-#include "breseq/identify_mutations.h"
 #include "breseq/candidate_junctions.h"
-#include "breseq/resolve_alignments.h"
-#include "breseq/tabulate_coverage.h"
-#include "breseq/settings.h"
+#include "breseq/contingency_loci.h"
+#include "breseq/error_count.h"
+#include "breseq/fastq.h"
 #include "breseq/genome_diff.h"
+#include "breseq/identify_mutations.h"
+#include "breseq/resolve_alignments.h"
+#include "breseq/settings.h"
+#include "breseq/tabulate_coverage.h"
 
 
 using namespace breseq;
@@ -381,6 +382,49 @@ int do_identify_mutations(int argc, char* argv[]) {
 	return 0;
 }
 
+/*! Contingency Loci
+ 
+ Analyze lengths of homopolymer repeats in mixed samples.
+ 
+ */
+int do_contingency_loci(int argc, char* argv[]) {
+	
+	// setup and parse configuration options:
+	AnyOption options("Usage: breseq CONTINGENCY_LOCI --bam <sequences.bam> --fasta <reference.fasta> --output <path>");
+	options
+  ("help,h", "produce this help message", TAKES_NO_ARGUMENT)
+  ("bam,b", "bam file containing sequences to be aligned")
+  ("fasta,f", "FASTA file of reference sequence")
+  ("output,o", "output file")
+	.processCommandArgs(argc, argv);
+  
+	// make sure that the config options are good:
+	if(options.count("help")
+		 || !options.count("bam")
+		 || !options.count("fasta")
+		 || !options.count("output")
+     
+		 ) {
+		options.printUsage();
+		return -1;
+	}                       
+  
+	// attempt to calculate error calibrations:
+	try {
+		analyze_contingency_loci(
+                       options["bam"],
+                       options["fasta"],
+                       options["output"]
+                       );
+	} catch(...) {
+		// failed; 
+		return -1;
+	}
+	
+	return 0;
+}
+
+
 
 /* Candidate Junctions
  
@@ -671,10 +715,12 @@ int main(int argc, char* argv[]) {
 	command = to_upper(command);
 	if (command == "ANALYZE_FASTQ") {
 		return do_analyze_fastq(argc_new, argv_new);
-	} else if (command == "CONVERT_GENBANK") {
-		return do_convert_genbank(argc_new, argv_new);
 	} else if (command == "CALCULATE_TRIMS") {
 		return do_calculate_trims(argc_new, argv_new);
+	} else if (command == "CONVERT_GENBANK") {
+		return do_convert_genbank(argc_new, argv_new);
+	} else if (command == "CONTINGENCY_LOCI") {
+		return do_contingency_loci(argc_new, argv_new);
 	} else if (command == "ERROR_COUNT") {
 		return do_error_count(argc_new, argv_new);
 	} else if (command == "IDENTIFY_MUTATIONS") {
