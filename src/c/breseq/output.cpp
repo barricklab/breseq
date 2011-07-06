@@ -150,7 +150,7 @@ return os.str();
 // # {
 // #   my ($file_name, $settings, $summary, $ref_seq_info, $gd) = @_;
 void html_index(string file_name, Settings settings, Summary summary,
-                cReferenceSequences ref_seq_info, genome_diff gd)
+                cReferenceSequences ref_seq_info, genome_diff &gd)
 {
 // # 
 // #   open HTML, ">$file_name" or die "Could not open file: $file_name";
@@ -160,7 +160,7 @@ void html_index(string file_name, Settings settings, Summary summary,
   HTML << "<html>";
   HTML << "<head>";
   // #       -title => "BRESEQ :: Mutation Predictions" . ($settings->{print_run_name} ne 'unnamed' ? " :: $settings->{print_run_name}" : ''), 
-  HTML << "<title>BRESEQ :: Mutation Predictions<title>"; //TODO settings->print_run_name
+  HTML << "<title>BRESEQ :: Mutation Predictions</title>"; ///TODO @GRC settings->print_run_name
   // #       -head  => style({type => 'text/css'}, $header_style_string),
   HTML << "<style type = \"text/css\">";
   HTML << header_style_string();
@@ -168,43 +168,57 @@ void html_index(string file_name, Settings settings, Summary summary,
 // #   );
   
 // #   print HTML breseq_header_string($settings) . p;
+  HTML << breseq_header_string(settings) << "</p>";
 // # 
 // #   ###
 // #   ## Mutation predictions
 // #   ###
 // #   
 // #   my @muts = $gd->list('SNP', 'INS', 'DEL', 'SUB', 'MOB', 'AMP');
-  const char* muts[] = {SNP,INS,DEL,SUB,MOB,AMP}; ///TODO check
+  genome_diff::entry_list_t muts(gd.list(make_list<string>("SNP")("INS")("DEL")("SUB")("MOB")("AMP")));
 // #   my $relative_path = $settings->file_name('local_evidence_path');
   string relative_path = settings.file_name("local_evidence_path");
 // #   $relative_path .= "/" if ($relative_path);
   if(!relative_path.empty())
     relative_path += "/";
 // #   my $one_ref_seq = scalar(keys %{$ref_seq_info->{ref_strings}}) == 1;
-  
+  bool one_ref_seq;
+  if (ref_seq_info.size() == 1)
+    one_ref_seq = true;
+  else
+    one_ref_seq = false;
 // #   print HTML p . html_mutation_table_string($settings, $gd, \@muts, $relative_path, undef, $one_ref_seq);
 // # 
+  HTML << "<p>" << html_mutation_table_string(settings, gd, muts, relative_path, false, one_ref_seq);
 // #   ###
 // #   ## Unassigned evidence
 // #   ###
 // #   
 // #   my @mc = $gd->filter_used_as_evidence($gd->list('MC'));
-  
+  genome_diff::entry_list_t mc(gd.filter_used_as_evidence(gd.list(make_list<string>("MC"))));
 // #   if (scalar @mc > 0)
 // #   {
-  
+  if (mc.size() > 0)
 // #     print HTML p . html_missing_coverage_table_string(\@mc, $relative_path, "Unassigned missing coverage evidence...");
-  
-  // #   }
+    HTML << "<p>" << html_missing_coverage_table_string(mc, relative_path, "Unassigned missing coverage evidence");
+// #   }
 // #   
 // #   my @jc = $gd->filter_used_as_evidence($gd->list('JC'));
+    genome_diff::entry_list_t jc(gd.filter_used_as_evidence(gd.list(make_list<string>("JC"))));
+///TODO @GRC implement jc and jcu ####
 // #   @jc = grep { !$_->{no_show} } @jc;  
+    
+    
 // #   @jc = grep { !$_->{circular_chromosome} } @jc if ($settings->{hide_circular_genome_junctions}); #don't show junctions for circular chromosomes  
 // # 
 // #   my @jcu = grep { !$_->{reject} } @jc; 
+    genome_diff::entry_list_t jcu;
+///##############################
 // #   if (scalar @jcu > 0)
 // #   {
+    if (jcu.size() > 0)
 // #     print HTML p . html_new_junction_table_string(\@jcu, $relative_path, "Unassigned new junction evidence...");  
+      HTML << "<p>" << html_new_junction_table_string(jcu, relative_path, "Unassigned new junction evidence...");
 // #   }
 // #   
 // #   print HTML end_html;
@@ -217,33 +231,57 @@ void html_index(string file_name, Settings settings, Summary summary,
 // # sub html_marginal_predictions
 // # {
 // #   my ($file_name, $settings, $summary, $ref_seq_info, $gd) = @_;
+void html_marginal_predictions(string file_name, Settings settings,Summary summary,
+                               cReferenceSequences ref_seq_info, genome_diff gd)
+{
 // # 
 // #   open HTML, ">$file_name" or die "Could not open file: $file_name";    
+  ofstream HTML(file_name.c_str());
 // # 
 // #     print HTML start_html(
+  HTML << "<html>";
+  HTML << "<head>";  
 // #       -title => "BRESEQ :: Marginal Predictions" . ($settings->{print_run_name} ne 'unnamed' ? " :: $settings->{print_run_name}" : ''), 
+  HTML << "<title>BRESEQ :: Marginal Predictions</title>";///TODO @GRC settings->print_run_name
 // #       -head  => style({type => 'text/css'}, $header_style_string),
+  HTML << "<style type=\"text/css\">";
+  HTML << header_style_string();
+  HTML << "</style>";
 // #   );
 // #   print HTML breseq_header_string($settings) . p;
+  HTML << breseq_header_string(settings) + "</p>";
 // #   
 // #   my $relative_path = $settings->file_name('local_evidence_path');
+  string relative_path = settings.file_name("local_evidence_path");
 // #   $relative_path .= "/" if ($relative_path);
+  if (!relative_path.empty())
+    relative_path += "/";
 // #   my $one_ref_seq = scalar(keys %{$ref_seq_info->{ref_strings}}) == 1;
+  bool one_ref_seq;
+  if (ref_seq_info.size() == 1)
+    one_ref_seq = true;
+  else
+    one_ref_seq = false; 
 // #   
 // #   ###
 // #   ## Marginal evidence
 // #   ###
 // #   
 // #   my @ra = $gd->filter_used_as_evidence($gd->list('RA')); 
+  genome_diff::entry_list_t ra = gd.filter_used_as_evidence(gd.list(make_list<string>("RA")));
 // #   ## don't print ones that overlap predicted deletions or were marked to not show
-// #   @ra = grep { !$_->{deleted} && !$_->{no_show} } @ra;
+/// #   @ra = grep { !$_->{deleted} && !$_->{no_show} } @ra;
 // #   
 // #   if (scalar @ra > 0)
 // #   {
+  if (ra.size() > 0)
 // #     print HTML p . html_read_alignment_table_string(\@ra, $relative_path, "Marginal read alignment evidence...");
+    HTML << "<p>" ;///TODO << html_read_alignment_table_string(ra, relative_path, "Marginal read alignment evidence...");
 // #   }
 // #   
 // #   my @jc = $gd->filter_used_as_evidence($gd->list('JC'));
+    genome_diff::entry_list_t JC = gd.filter_used_as_evidence(gd.list(make_list<string>("JC")));
+///TODO @GRC implement jc and jcu ####
 // #   @jc = grep { !$_->{no_show} } @jc;
 // #   @jc = grep { $_->{reject} } @jc;
 // #   if (scalar @jc > 0)
@@ -256,6 +294,7 @@ void html_index(string file_name, Settings settings, Summary summary,
 // #   print HTML end_html;
 // #   close HTML;
 // # }
+}
 // # 
 // # sub html_header
 // # {

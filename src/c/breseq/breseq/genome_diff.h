@@ -159,7 +159,7 @@ namespace breseq {
 		ra(const string& id, const string& parents);
 
 		//! Clone this entry.
-		virtual diff_entry* clone() const { return new ra(*this); }
+		virtual diff_entry* clone() const { return new ra(*this); }		
 	};
 
 	
@@ -246,11 +246,12 @@ namespace breseq {
 		void write(const string& filename);
     
     //! Splice items used as evidence by any mutations out of input list
-    //TODO not implemented
+    //TODO not implemented @GRC
     entry_list_t filter_used_as_evidence(entry_list_t list);
     
     //! Retrieve diff_entrys that match given type(s) 
-    entry_list_t list(string types[], uint8_t ntypes);
+    //TEST @GRC
+    entry_list_t list(vector<string> types);
 
 	protected:		
 		const string _default_filename; //!< Default filename for this diff.

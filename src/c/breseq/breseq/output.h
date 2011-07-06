@@ -15,10 +15,13 @@ struct Options {
 struct Mutation{};
 struct Interval{};
 struct Reference{};
+class tSettings:Settings{
+  string print_run_name;
+};
 
-
-// sub html_index
-//         my (string file_name, Settings settings, Summary summary, $ref_seq_info, $gd) = @_;
+//TEST
+/// sub html_index
+///         my (string file_name, Settings settings, Summary summary, $ref_seq_info, $gd) = @_;
 void html_index(string file_name, Settings settings, Summary summary,
                 cReferenceSequences ref_seq_info, genome_diff gd);
 // sub html_marginal_predictions
@@ -42,50 +45,67 @@ void html_compare(Settings settings, string file_name, string title,
 // sub html_compare_polymorphisms
 //         my (Settings settings, string file_name, $title, $list_ref) = @_;
 void html_compare_polymorphisms(Settings settings, string file_name, string title,
-                                vector <cSequenceFeature> list_ref);
-//? vector <cSequenceFeature> list_ref
+                                vector <string> list_ref);
+//? vector <string> list_ref
 // sub html_statistics
 //         my (string file_name, Settings settings, $summary, $ref_seq_info) = @_;
 void html_statistics(string file_name, Settings settings, Summary summary, 
                      cReferenceSequences ref_seq_info);
-// sub breseq_header_string
-//         my (Settings settings) = @_;
-string breseq_header_string(Settings settings, genome_diff gd, vector<cSequenceFeature> list_ref);
+/// sub breseq_header_string
+///         my (Settings settings) = @_;
+string breseq_header_string(Settings settings);
+
 // sub html_genome_diff_item_table_string
 //         my (Settings settings, $gd, $list_ref) = @_;
 void html_genome_diff_item_table_string(Settings settings, genome_diff gd, 
-                                        vector <cSequenceFeature> list_ref);
-//? vector <cSequenceFeature> list_ref
+                                        vector <string> list_ref);
+//? vector <string> list_ref
 
 // sub formatted_mutation_annotation
 //         my ($mut) = @_;
 void formatted_mutation_annotation(Mutation mut);
 //                 sub to_underline_red_codon
 //                         my ($mut, $codon_key) = @_;
-// sub html_mutation_table_string
-//         our (Settings settings, $gd, $list_ref, $relative_link, $legend_row, $one_ref_seq, $gd_name_list_ref, $options) = @_;
-//                 @freq_header_list = @$gd_name_list_ref;
-//                 sub freq_to_string
-//                         my ($freq) = @_;
-//                 sub freq_cols
-//                         my @freq_list = @_;
-void html_mutation_table_string(Settings settings, genome_diff gd, vector <cSequenceFeature> list_ref,
-                                string relative_link, bool legend_row, bool one_ref_seq,
-                                vector<string> gd_name_list_ref, Options options);                  
+
+/// sub html_mutation_table_string
+///         our (Settings settings, $gd, $list_ref, $relative_link, $legend_row, $one_ref_seq, $gd_name_list_ref, $options) = @_;
+//html_mutation_table_string($settings, $gd, \@muts, undef, undef, $one_ref_seq, $gd_name_list_ref, $options)
+string html_mutation_table_string(Settings settings, genome_diff gd, genome_diff::entry_list_t muts,
+                                  bool legend_row, bool one_ref_seq, vector<string> gd_name_list_ref,
+                                  Options options) 
+{return "html_mutation_table_string:needs implementaion";}
+//html_mutation_table_string($settings, $gd, \@muts, $relative_path, undef, $one_ref_seq)
+string html_mutation_table_string(Settings settings, genome_diff gd, genome_diff::entry_list_t muts, 
+                                  string relative_path, bool legend_row, bool one_ref_seq)
+{return "html_mutation_table_string:needs implementation";}
+//html_mutation_table_string($settings, $gd, $list_ref)
+string html_mutation_table_string(Settings settings, genome_diff gd, vector <string> list_ref)
+{return "html_mutation_table_string:needs implementaion";}
                                
-// sub html_read_alignment_table_string
-//         my ($list_ref, $relative_link, $title, $show_reject_reason) = @_;
-void html_read_alignment_table_string(vector<cSequenceFeature> list_ref, string relative_link,
+/// sub html_read_alignment_table_string
+///         my ($list_ref, $relative_link, $title, $show_reject_reason) = @_;
+void html_read_alignment_table_string(vector <string> list_ref, string relative_link,
                                       string title, bool show_reject_reason);
-// sub html_missing_coverage_table_string
-//         my ($list_ref, $relative_link, $title, $show_reject_reason) = @_;
-string html_missing_coverage_table_string(vector<cSequenceFeature>list_ref, string relative_link, string title,
+/// sub html_missing_coverage_table_string
+///         my ($list_ref, $relative_link, $title, $show_reject_reason) = @_;
+//html_missing_coverage_table_string($list_ref, undef, undef, 1)
+string html_missing_coverage_table_string(vector <string> list_ref, string relative_link, string title,
                                         bool show_reject_reason);
-//         #       $gene_string =~ s/-/&#8209;/g; #substitute nonbreaking dash
-// sub html_new_junction_table_string
-//         our ($list_ref, $relative_link, $title, $show_reject_reason) = @_;
+//html_missing_coverage_table_string(\@mc, $relative_path, "Unassigned missing coverage evidence...")
+string html_missing_coverage_table_string(genome_diff::entry_list_t muts, string relative_path, string title)
+{return "needs implementaion";}
+
+/// sub html_new_junction_table_string
+///   our ($list_ref, $relative_link, $title, $show_reject_reason) = @_;
+
+//html_new_junction_table_string($list_ref, undef, undef, 1)
 string html_new_junction_table_string(vector<cReferenceSequences> list_ref, string relative_link, string title,
                                     bool show_reject_reason);
+//html_new_junction_table_string(\@jc, $relative_path, "Marginal new junction evidence...")
+//html_new_junction_table_string(\@jcu, $relative_path, "Unassigned new junction evidence...")
+string html_new_junction_table_string(genome_diff::entry_list_t jc, string relative_path, string title);
+
+
 // sub html_evidence_file_name
 //         my ($interval) = @_;
 void html_evidence_file_name(Interval interval);
