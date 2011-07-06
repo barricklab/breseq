@@ -602,7 +602,7 @@ void breseq::VCFtoGD( const string& vcffile, const string& gdfile ){
 }
 namespace breseq {
 
-genome_diff::entry_list_t genome_diff::list(string types[], uint8_t ntypes)
+genome_diff::entry_list_t genome_diff::list(vector<string> types)
 {
 // # sub list
 // # {
@@ -611,7 +611,7 @@ genome_diff::entry_list_t genome_diff::list(string types[], uint8_t ntypes)
 // #   ## return ALL
 // #   if (scalar @types == 0)
 // #   {
-  if(!ntypes)
+  if(types.size())
   {
 // #     return @{$self->{list}};
     return _entry_list;
@@ -635,10 +635,10 @@ genome_diff::entry_list_t genome_diff::list(string types[], uint8_t ntypes)
     for (entry_list_t::iterator itr_diff_entry = _entry_list.begin(); 
        itr_diff_entry != _entry_list.end() ;itr_diff_entry ++)
     {
-      
-      for (uint8_t index = 0; index < ntypes; index++)
+      for (make_list<string>::iterator requested_type = types.begin();
+           requested_type != types.end(); requested_type++)
       {
-        if(itr_diff_entry->_type == types[index])
+        if(itr_diff_entry->_type == *requested_type)
           return_list.push_back(*itr_diff_entry);
       }
     }
@@ -646,7 +646,7 @@ genome_diff::entry_list_t genome_diff::list(string types[], uint8_t ntypes)
   }
 // #   
 // #   return undef;
-///TODO return undef
+  ///TODO return undef
 // # }
 }
 
@@ -658,19 +658,11 @@ genome_diff::entry_list_t genome_diff::filter_used_as_evidence(entry_list_t list
 // #   
 // #   IN: for (my $i=0; $i<scalar @list; $i++)
 // #   {
-  for (entry_list_t::iterator i = list.begin(); 
-       i != list.end() ;i ++)
-  {
 // #     my $in_item = $list[$i];
-    diff_entry &in_item = (*i);
 // #     foreach my $test_item ($self->list)
 // #     {
-    for(entry_list_t::iterator test_item = _entry_list.begin();
-        test_item != _entry_list.end(); test_item++)
-    {
 // #       foreach my $test_evidence_id (@{$test_item->{evidence}})
 // #       {
-  
 // #         if ($test_evidence_id ==  $in_item->{id})
 // #         {
 // #           splice @list, $i, 1;
@@ -680,10 +672,8 @@ genome_diff::entry_list_t genome_diff::filter_used_as_evidence(entry_list_t list
 // #       }
 // #     }
 // #   }
-    }
-  }
 // #   return @list;
+return list;
 // # }
 }
-  
-}
+}//namespace bresesq
