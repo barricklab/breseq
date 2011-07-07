@@ -112,7 +112,7 @@ namespace breseq {
 		typedef map<key_t, value_t> map_t; //!< Diff entry key-value map.
 		
 		//! Constructor.
-		diff_entry(const string& t, const string& id, const string& parents);
+		diff_entry(const string& type, const string& id, const string& parents);
 		
 		//! Copy constructor
 		//diff_entry(const diff_entry& rhs) : _fields(rhs._fields), _type(rhs._type), _id(rhs._id), _parents(rhs._parents) {}
@@ -151,41 +151,7 @@ namespace breseq {
 	//! Output operator for a diff entry.
 	ostream& operator<<(ostream& out, diff_entry& de);
 	
-	
-	/*!
-	 */
-	struct ra : public diff_entry {
-		//! Constructor.
-		ra(const string& id, const string& parents);
-
-		//! Clone this entry.
-		virtual diff_entry* clone() const { return new ra(*this); }		
-	};
-
-	
-	/*!
-	 */
-	struct mc : public diff_entry {
-		//! Constructor.
-		mc(const string& id, const string& parents);
-	
-		//! Clone this entry.
-		virtual diff_entry* clone() const { return new mc(*this); }
-	};
-	
-	
-	/*!
-	 */
-	struct un : public diff_entry {
-		//! Constructor.
-		un(const string& id, const string& parents);
-
-		//! Clone this entry.
-		virtual diff_entry* clone() const { return new un(*this); }
-	};
-
-
-  //! Genome Diff Sorting
+	//! Genome Diff Sorting
   //! For sorting by a number, then by fields to break ties
   struct sort_fields_item {
   
@@ -233,8 +199,8 @@ namespace breseq {
 		//! Add evidence to this genome diff.
 		void add(const diff_entry& v);
 
-		//! Read a genome diff from the default file.
-		void read() { read(_default_filename); }
+		//! Read a genome diff from the default file to build entry_list_t,
+    void read() { read(_default_filename); }
 
 		//! Write the genome diff to the default file.
 		void write() { write(_default_filename); }

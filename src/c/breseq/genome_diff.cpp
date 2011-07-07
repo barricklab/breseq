@@ -109,8 +109,8 @@ breseq::END_RANGE,
 
 /*! Constructor.
  */
-breseq::diff_entry::diff_entry(const string& t, const string& id, const string& parents)
-: _type(t)
+breseq::diff_entry::diff_entry(const string& type, const string& id, const string& parents)
+: _type(type)
 , _id(id)
 , _parents(parents) {
 }
@@ -173,24 +173,6 @@ ostream& breseq::operator<<(ostream& out, breseq::diff_entry& de) {
 }
 
 
-/*!
- */
-breseq::ra::ra(const string& id, const string& parents) : diff_entry(RA, id, parents) {
-}
-
-
-/*!
- */
-breseq::mc::mc(const string& id, const string& parents) : diff_entry(MC, id, parents) {
-}
-
-
-/*!
- */
-breseq::un::un(const string& id, const string& parents) : diff_entry(UN, id, parents) {
-}
-
-
 /*! Add evidence to this genome diff.
  */
 void breseq::genome_diff::add(const diff_entry& v) {
@@ -198,25 +180,66 @@ void breseq::genome_diff::add(const diff_entry& v) {
 }
 
 
-/*! Read a genome diff from the given file.
+/*! Read a genome diff(.gd) from the given file to build entry_list_t,
+ * a vector of diff_entry's. Each row of the .gd file is a diff_entry,
+ * depending on the diff_entry's _type parameter (first column of each
+ * entry) the diff_entry's _fields map is then set appropriately.  
  */
 void breseq::genome_diff::read(const string& filename) {
-	using namespace std;
-	ifstream ifs(filename.c_str());
-	
-	while(!ifs.eof()) {
-		string line;
-		getline(ifs, line); // read a line upto eof or '\n'.
-		
-		// strip all characters trailing a '#', unless it's escaped.
-		
-		// if !line.empty
+	// Stores the features
+    vector< vector<string> > features;
+    // Keeps track of the index of the entry associated with a particular evidence number
+    map< string, int > eDict;
+    
+    //Read input into array
+    ifstream ifs( filename.c_str() );
+    string line;
+    getline( ifs, line);
+    
+    // read a line upto eof or '\n'
+    while( !ifs.eof() ){
+        // split line on tabs
+        char * cstr = new char [line.size()+1];
+        strcpy (cstr, line.c_str());
+        
+        // strip all characters trailing a '#', unless it's escaped.
+        if( cstr[0] == '#' ){ getline(ifs,line); continue; }
+        vector<string> feature;
+        char * pch;
+        pch = strtok(cstr,"\t");
+        
+        // if !line.empty
+        while (pch != NULL)
+        {
+            feature.push_back(pch);
+            pch = strtok (NULL, "\t");
+            
+        }  
+        features.push_back(feature);
+        
+        // If it is evidence, note its index
+        if( feature[0].size() == 2 ){
+            eDict[ feature[1]] = (int)features.size()-1;
+        }
+        
+        delete[] cstr;
+        getline(ifs,line);
+        
+    }
+    ifs.close();
+    
+  for (vector< vector<string> >::iterator row = features.begin();
+       row != features.end(); row++)
+  {
+    (*row)[0];
+  }
+       
 		
 		// match common fields - type id pid seqid
 		
 		// match type-specific fields
 		
-	}
+	
 }
 
 
@@ -317,7 +340,7 @@ void breseq::genome_diff::write(const string& filename) {
 }
 
 // Convert GD file to GVF file
-void breseq::GDtoGVF( const string &gdfile, const string &gfffile ){
+void breseq::GDtoGVF( const string &file, const string &gdfile ){
     
     // Stores the features
     vector< vector<string> > features;
@@ -513,7 +536,7 @@ void breseq::GDtoGVF( const string &gdfile, const string &gfffile ){
     }
     
     // Write results to file
-    ofstream output( gfffile.c_str() );
+    ofstream output( gdfile.c_str() );
     for( int i=0; i<featuresGVF.size(); i++ ){
         for( int j=0; j<featuresGVF[i].size(); j++ ){
             output << featuresGVF[i][j] << "\t";
@@ -602,6 +625,9 @@ void breseq::VCFtoGD( const string& vcffile, const string& gdfile ){
 }
 namespace breseq {
 
+/*! Given a list of types, search and return the diff_entry's within entry_list_t whose 
+ * _type parameter matches one of those within input types. 
+ */ 
 genome_diff::entry_list_t genome_diff::list(vector<string> types)
 {
 // # sub list
@@ -676,4 +702,6 @@ genome_diff::entry_list_t genome_diff::filter_used_as_evidence(entry_list_t list
 return list;
 // # }
 }
+
+
 }//namespace bresesq
