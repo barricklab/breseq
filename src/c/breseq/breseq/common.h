@@ -623,32 +623,51 @@ namespace breseq {
 	
 	//! Returns true if exp is found anywhere in input
 	//! true regex expressions ie !^[\s](\w)+ do not work.
-  inline	bool regex_m(char exp, string input)
+  inline	bool regex_m(string exp, string input)
   {
-  stringstream ss(input);
-  char c;
-  while(ss.good())
-  {
-   c = ss.get();
-   if(ss.good() && c == exp)
-     return true;
-  }
-  return false;
+    if(input.find(exp) != string::npos)
+      return true;
+    else
+      return false;
   }
   
   //! Applies regex_m to a vector of strings, returns a vector of strings
   //! that do/don't (dependent on bool match) contain an exp.
   //! true regex expressions ie !^[\s](\w)+ do not work.
-  inline vector<string> grep(bool match, char exp, vector<string> lines)
+  inline vector<string> grep(bool match, string exp, vector<string> lines)
   {
     typedef vector<string> Lines;
     Lines matching_lines;
     
     for(Lines::iterator line = lines.begin();
         line != lines.end(); line ++)
-      if(match == regex_m(exp, (*line)))
-        matching_lines.push_back((*line));
-      return matching_lines;    
+        if(match == regex_m(exp, (*line)))
+          matching_lines.push_back((*line));
+        return matching_lines;    
+  }
+  
+  inline string shift(vector<string> &input)
+  {
+    typedef vector<string> Input;
+    Input::iterator first = input.begin();
+    string retval = (*first);
+    input.erase(first);
+    
+    return retval;
+  }
+  
+  //! 1       2       3       4       5       6       7
+  //! splice(list, 3, 2);
+  //! 1       2       3       6       7
+  inline vector<string> splice (vector<string> &input, uint8_t offset, uint8_t length)
+  {
+    vector<string>::iterator itr = input.begin();
+    vector<string>::iterator start = itr + offset;
+    vector<string>::iterator end = start + length;
+    
+    input.erase(start,end);
+    
+    return input;
   }
 
 } // breseq
