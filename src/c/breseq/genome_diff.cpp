@@ -62,22 +62,37 @@ const char* breseq::JC="JC";
 const char* breseq::UN="UN";
 
 //our $line_specification = {
+map<string, vector<string> > line_specification =make_map<string, vector<string> > 
+//! seq_id and positions are already parameters in diff_entry
 //## mutations
 //'SNP' => ['seq_id', 'position', 'ref_seq', 'new_seq'],
+("SNP",make_list<string> ("ref_seq")("new_seq"))
 //'SUB' => ['seq_id', 'position', 'ref_seq', 'new_seq'],
+("SUB",make_list<string> ("ref_seq")("new_seq"))
 //'DEL' => ['seq_id', 'position', 'size'],
+("DEL",make_list<string> ("ref_seq")("size"))
 //'INS' => ['seq_id', 'position', 'new_seq'],
+("INS",make_list<string> ("ref_seq")("new_seq"))
 //'MOB' => ['seq_id', 'position', 'repeat_name', 'strand', 'duplication_size', 'gap_left', 'gap_right'],
-//#	'MOB' => ['seq_id', 'position', 'repeat_name', 'strand', 'duplication_size', 'del_left', 'del_right', 'ins_left', 'ins_right'],	
+("MOB",make_list<string> ("repeat_name")("strand")("duplication_size")("gap_left")("gap_right"))
 //'DUP' => ['seq_id', 'position', 'size'],
+("DEL",make_list<string> ("size"))
 //'INV' => ['seq_id', 'position', 'size'],
+("INV",make_list<string> ("size"))
 //
-//## evidence
+//## evidence  ("")
 //'RA' => ['seq_id', 'position', 'insert_position', 'ref_base', 'new_base'],
+("RA",make_list<string> ("insert_position")("ref_base")("new_base"))
 //'MC' => ['seq_id', 'start', 'end'],
+("MC",make_list<string> ("start")("end"))
 //'JC' => ['side_1_seq_id', 'side_1_position', 'side_1_strand', 'side_2_seq_id', 'side_2_position', 'side_2_strand', 'overlap'],
+("MC",make_list<string> ("side_1_seq_id")("side_1_position")("side_1_strand")("side_2_seq_id")("side_2_position")("side_2_strand")("overlap"))
 //'UN' => ['seq_id', 'start', 'end'],
+("UN",make_list<string> ("start")("end"))
 //};
+;
+
+
 //
 //our $tag_sort_fields = {
 //'SNP' => [1, 'seq_id', 'position'],
@@ -92,6 +107,9 @@ const char* breseq::UN="UN";
 //'JC' => [2, 'side_1_seq_id', 'side_1_position'],
 //'UN' => [3, 'seq_id', 'start'],
 //};
+
+
+
 
 // Field order.
 static const char* s_field_order[] = { 
@@ -109,10 +127,10 @@ breseq::END_RANGE,
 
 /*! Constructor.
  */
-breseq::diff_entry::diff_entry(const string& type, const string& id, const string& parents)
+breseq::diff_entry::diff_entry(const string& type, const string& id, vector<string> positions)
 : _type(type)
-, _id(id)
-, _parents(parents) {
+, _seq_id(id)
+, _positions(positions) {
 }
 
 
@@ -120,8 +138,10 @@ breseq::diff_entry::diff_entry(const string& type, const string& id, const strin
  */
 void breseq::diff_entry::marshal(field_list_t& s) {
 	s.push_back(_type);
-	s.push_back(_id);
-	s.push_back(_parents);
+	s.push_back(_seq_id);
+  
+  for(uint8_t i = 0; i < _positions.size(); i++)
+	  s.push_back(_positions[i]);
 	
 	// copy all fields:
 	map_t cp=_fields;
@@ -185,55 +205,64 @@ void breseq::genome_diff::add(const diff_entry& v) {
  * depending on the diff_entry's _type parameter (first column of each
  * entry) the diff_entry's _fields map is then set appropriately.  
  */
-void breseq::genome_diff::read(const string& filename) {
-	// Stores the features
-    vector< vector<string> > features;
-    // Keeps track of the index of the entry associated with a particular evidence number
-    map< string, int > eDict;
-    
-    //Read input into array
-    ifstream ifs( filename.c_str() );
-    string line;
-    getline( ifs, line);
-    
-    // read a line upto eof or '\n'
-    while( !ifs.eof() ){
-        // split line on tabs
-        char * cstr = new char [line.size()+1];
-        strcpy (cstr, line.c_str());
-        
-        // strip all characters trailing a '#', unless it's escaped.
-        if( cstr[0] == '#' ){ getline(ifs,line); continue; }
-        vector<string> feature;
-        char * pch;
-        pch = strtok(cstr,"\t");
-        
-        // if !line.empty
-        while (pch != NULL)
-        {
-            feature.push_back(pch);
-            pch = strtok (NULL, "\t");
-            
-        }  
-        features.push_back(feature);
-        
-        // If it is evidence, note its index
-        if( feature[0].size() == 2 ){
-            eDict[ feature[1]] = (int)features.size()-1;
-        }
-        
-        delete[] cstr;
-        getline(ifs,line);
-        
-    }
-    ifs.close();
-    
-  for (vector< vector<string> >::iterator row = features.begin();
-       row != features.end(); row++)
+
+vector<vector<string> > breseq::genome_diff::read(const string& filename) {
+// # sub read
+// # {
+// #   my ($self, $file_name) = @_;
+// #   open IN, "<$file_name" or $self->throw("Could not open file for reading: $file_name");
+// # 
+// #   #read lines, skip comment lines, and blank lines
+// #   my @lines = <IN>;
+// #   chomp @lines;
+// #     
+// #   @lines = grep {!/^\s*#[^=]/} @lines;
+// #   @lines = grep {!/^\s*$/} @lines;
+// #     
+// #   ## read version from first line
+// #   my $l = shift @lines;
+// #   ($l =~ m/#=GENOME_DIFF\s+(\d+)/) or ($l =~ m/#=GENOMEDIFF\s+(\d+)/)  or $self->throw("Could not match version line in file $self->{file_name}.");
+// #   $self->{version} = $1;
+// # 
+// #   ## read header information
+// #   
+// #   ## read data
+// #   while ($l = shift @lines)
+// #   {
+// #     if ($l =~ m/^\s*#=(\S+)\s+(.+)/) {
+// #       #metadata line key value pair
+// #       push @{$self->{metadata}->{$1}}, $2;
+// #       push @{$self->{metadata_lines}}, $l;
+// #       
+// #     } elsif ($l =~ m/^\s+#=(.+)/) {
+// #     } else {
+// #       $self->add($self->_line_to_item($l));
+// #     }
+// #   }
+// #   close IN;
+// # }
+///! @GRC refractor into convertion functions
+  typedef vector<vector<string> > Lines;
+  Lines lines;
+  
+  ifstream IN(filename.c_str());
+  
+  char const line_delim = '\n';
+  char const field_delim = '\t';
+  
+  for(string line; getline(IN, line, line_delim); ) 
   {
-    (*row)[0];
+    if(line[0] == '#')
+      continue;
+    lines.push_back(Lines::value_type());
+    istringstream ss(line);
+    for(string field; getline(ss, field, field_delim); ) 
+      lines.back().push_back(field);
+    
   }
-       
+  IN.close();
+  
+  return lines;
 		
 		// match common fields - type id pid seqid
 		
@@ -702,6 +731,211 @@ genome_diff::entry_list_t genome_diff::filter_used_as_evidence(entry_list_t list
 return list;
 // # }
 }
+
+
+diff_entry genome_diff::_line_to_item(vector<string> line)
+{
+// # sub _line_to_item
+// # {
+// #   my ($self, $line) = @_;
+// #   my @line_list = split /\t/, $line;
+
+  typedef vector<string> Line_List;
+  Line_List &line_list(line); ///Done, each string is a tab-delimited segment
+// #   
+// #   ##remove items at the end that are empty
+// #   while ( scalar(@line_list) && ($line_list[-1] =~ m/^\s+$/) )
+// #   {
+// #     pop @line_list;
+// #   }
+  ///Done, each line stops at /n 
+// #   
+// #   my $item = {};
+  ///Can't build diff_entry yet, need params for constructor
+// #   $item->{type} = shift @line_list;
+  uint8_t shift = 0;
+  string type = line_list[shift]; shift++;
+// #   $item->{id} = shift @line_list;
+  string id = line_list[shift]; shift++;
+// #   my $evidence_string = shift @line_list;
+// #   @{$item->{evidence}} = split /,/, $evidence_string;
+  ///Multiple parents are given as index,index (EX: 3,14)
+  ///separate 3 and 14 by , and place into seperate 
+  ///elements of parents;
+  vector<string> evidence;
+  istringstream ss(line_list[shift]); shift++;
+  char const evidence_delim = ',';
+  
+  for(string evidence_string; getline(ss, evidence_string, evidence_delim); )
+    evidence.push_back(evidence_string);  
+  
+  ///Now we can build diff_entry
+  diff_entry item(type, id, evidence);
+// #     
+// #   my $spec = $line_specification->{$item->{type}};
+  const vector<string> &spec = line_specification[type];  
+// #   if (!defined $spec)
+// #   {
+  if(spec.empty())
+  {
+// #     $self->warn("Type \'$item->{type}\' is not recognized for line:\n$line");
+    cerr << "Type " << type << "is not recognized for line # "<< endl;
+// #     return undef;
+    ///TODO undef
+// #   }
+  }
+// #   
+// #   ######## Temporary transition code for 'DUP' => AMP
+// #   if ($item->{type} eq 'DUP')
+// #   {
+  if(item._type == "DUP")
+  {
+// #     $item->{type} = 'AMP';
+    item._type = "AMP";
+// #     $item->{new_copy_number} = 2;
+    item.new_copy_number = 2;
+// #   }
+  }
+// #   
+// #   ######## Temporary transition code for 'MOB'
+// #   if ($item->{type} eq 'MOB')
+// #   {
+  if(item._type == "MOB")
+  {
+// #     my @spec_items = grep {!($_ =~ m/=/)} @line_list;
+    ///grep everything that doesn't have an equal sign?
+    vector<string> spec_items;
+    for(uint8_t i = shift; i < line_list.size(); i++)
+    {
+      size_t found = line_list[i].find("=");
+      /// if "=" is found it will return npos
+      if(found == string::npos)
+        spec_items.push_back(line_list[i]);
+    }
+// #     
+// #     if (scalar(@spec_items) == scalar(@$spec) + 2)
+// #     {
+    if(spec_items.size() == spec.size() + 2)
+    {
+// #       my $gap_left = $line_list[5];
+      string gap_left = line_list[5];//TODO TEST are these zero indexed?
+// #       if ($gap_left =~ m/^-/)
+// #       {
+      if(gap_left.find("-")!= string::npos)
+      {
+// #         $item->{del_start} = abs($gap_left);
+        item.del_start = abs(atoi(gap_left.c_str()));
+// #       }
+      }
+// #       else
+// #       {
+      else
+      {
+// #         $item->{ins_start} = $gap_left;
+        item.ins_start = atoi(gap_left.c_str());
+// #       }
+      }
+///TODO TEST if abs(atoi("-7")) equals 7
+// # 
+// #       my $gap_right = $line_list[6];
+      string gap_right = line_list[6];
+// #       if ($gap_right =~ m/^-/)
+// #       {
+      if(gap_right.find("-")!= string::npos)
+      {
+// #         $item->{del_end} = abs($gap_left);
+        item.del_end = abs(atoi(gap_left.c_str())); ///TODO really gap_left?
+// #       }
+      }
+// #       else
+// #       {
+      else
+      {
+// #         $item->{ins_end} = $gap_left;
+        item.ins_end = atoi(gap_left.c_str());
+// #       }
+      }
+// #       
+// #       ##remove these items
+// #       splice @line_list, 5, 2;
+      line_list.erase(line_list.begin()+5, line_list.end()+6);      
+// #     }
+    }
+// #   }
+  }
+// #   
+// #   
+  vector<string> spec_keys = get_keys<string>(line_specification);
+// #   foreach my $key (@$spec)
+// #   {
+  for(uint8_t i = 0; i < spec_keys.size(); i++)
+  {
+// #     my $next = shift @line_list;
+    string next = line_list[shift]; shift++;    
+// #     if (!defined $next)
+// #     {
+    if(next.empty())
+    {
+// #       $self->warn("Number of required items is less than expected for type \'$item->{type}\' line:\n$line");
+      cerr << "Number of required items is less than expected for type " << endl; ///TODO 
+// #       return undef;
+      ///TODO return undef
+      
+// #     }
+    }
+// #     if ($next =~ m/=/) 
+// #     {
+    if(next.find("=") != string::npos)
+    {
+// #       $self->warn("Unexpected key=value pair \'$next\' encountered for required item \'$key\' in type \'$item->{type}\' line:\n$line");
+      cerr << "Unexpected key=value pair \'$next\' encountered for required item" << endl; ///TODO
+// # #     return undef;
+      ///TODO return undef
+// #     }
+    }
+// #     
+// #     $item->{$key} = $next;
+    string &key = spec_keys[i];
+    item._fields[key] = next;
+// #   }
+  }
+  
+// # 
+// #   ## Remainder of the line is comprised of non-required key value pairs
+// #   foreach my $key_value_pair (@line_list)
+// #   {
+// #     next if (!$key_value_pair);
+// #     next if ($key_value_pair =~ m/^\s*$/);
+// #     my $matched = ($key_value_pair =~ m/^(.+)=(.+)$/);
+// #     if (!$matched)
+// #     {
+// #       $self->warn("Not a key value pair \'$key_value_pair\' line:\n$line");
+// #       next;
+// #     }   
+// #     
+// #     my ($item_key, $item_value) = ($1, $2); 
+// #     $item->{$item_key} = $item_value;
+// #   }
+// #   
+// #   ### We do some extra convenience processing for junctions...
+// #   if ($item->{type} eq 'JC')
+// #   {
+// #     foreach my $side_key ('side_1', 'side_2')
+// #     {
+// #       foreach my $key ('seq_id', 'position', 'strand')
+// #       {
+// #         $item->{"_$side_key"}->{$key} = $item->{"$side_key\_$key"};
+// #       }
+// #       $item->{"_$side_key"}->{type} = 'NA';
+// #     }
+// #   }
+// # 
+// #   return $item;
+// # } 
+}
+
+
+
 
 
 }//namespace bresesq

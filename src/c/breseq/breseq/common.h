@@ -620,6 +620,36 @@ namespace breseq {
 		else
 			distribution_hash_ref[score]++;
 	}
+	
+	//! Returns true if exp is found anywhere in input
+	//! true regex expressions ie !^[\s](\w)+ do not work.
+  inline	bool regex_m(char exp, string input)
+  {
+  stringstream ss(input);
+  char c;
+  while(ss.good())
+  {
+   c = ss.get();
+   if(ss.good() && c == exp)
+     return true;
+  }
+  return false;
+  }
+  
+  //! Applies regex_m to a vector of strings, returns a vector of strings
+  //! that do/don't (dependent on bool match) contain an exp.
+  //! true regex expressions ie !^[\s](\w)+ do not work.
+  inline vector<string> grep(bool match, char exp, vector<string> lines)
+  {
+    typedef vector<string> Lines;
+    Lines matching_lines;
+    
+    for(Lines::iterator line = lines.begin();
+        line != lines.end(); line ++)
+      if(match == regex_m(exp, (*line)))
+        matching_lines.push_back((*line));
+      return matching_lines;    
+  }
 
 } // breseq
 

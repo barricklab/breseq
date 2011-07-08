@@ -112,7 +112,7 @@ namespace breseq {
 		typedef map<key_t, value_t> map_t; //!< Diff entry key-value map.
 		
 		//! Constructor.
-		diff_entry(const string& type, const string& id, const string& parents);
+		diff_entry(const string& type, const string& id, vector<string> positions);
 		
 		//! Copy constructor
 		//diff_entry(const diff_entry& rhs) : _fields(rhs._fields), _type(rhs._type), _id(rhs._id), _parents(rhs._parents) {}
@@ -136,8 +136,14 @@ namespace breseq {
     
 		map_t _fields; //!< Information about this diff entry.
 		string _type;
-		string _id;
-		string _parents; 
+		string _seq_id;
+		vector<string> _positions; 
+    
+    uint8_t new_copy_number;
+    uint16_t del_start;
+    uint16_t ins_start;
+    uint16_t del_end;
+    uint16_t ins_end;
 	};
 	
   void add_reject_reason(diff_entry& de, const string &reason);
@@ -206,7 +212,8 @@ namespace breseq {
 		void write() { write(_default_filename); }
 
 		//! Read a genome diff from a file.
-		void read(const string& filename);
+		//TEST @GRC
+		vector<vector<string> > read(const string& filename);
 		
 		//! Write the genome diff to a file.
 		void write(const string& filename);
@@ -218,13 +225,18 @@ namespace breseq {
     //! Retrieve diff_entrys that match given type(s) 
     //TEST @GRC
     entry_list_t list(vector<string> types);
+    void strcopy(char* arg1, const char* arg2);
+    diff_entry _line_to_item(vector<string> line);
+    
+    
 
 	protected:		
 		const string _default_filename; //!< Default filename for this diff.
 		entry_list_t _entry_list; //!< All diff entries.
 		unsigned int _current_id; //!< Smallest available id.
 	};
-	
+  
+
 }
 
 #endif
