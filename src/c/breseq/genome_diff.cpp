@@ -66,29 +66,29 @@ map<string, vector<string> > line_specification =make_map<string, vector<string>
 //! seq_id and positions are already parameters in diff_entry
 //## mutations
 //'SNP' => ['seq_id', 'position', 'ref_seq', 'new_seq'],
-("SNP",make_list<string> ("ref_seq")("new_seq"))
+("SNP",make_list<string> ("seq_id")("position")("ref_seq")("new_seq"))
 //'SUB' => ['seq_id', 'position', 'ref_seq', 'new_seq'],
-("SUB",make_list<string> ("ref_seq")("new_seq"))
+("SUB",make_list<string> ("seq_id")("position")("ref_seq")("new_seq"))
 //'DEL' => ['seq_id', 'position', 'size'],
-("DEL",make_list<string> ("ref_seq")("size"))
+("DEL",make_list<string> ("seq_id")("position")("size"))
 //'INS' => ['seq_id', 'position', 'new_seq'],
-("INS",make_list<string> ("ref_seq")("new_seq"))
+("INS",make_list<string> ("seq_id")("position")("new_seq"))
 //'MOB' => ['seq_id', 'position', 'repeat_name', 'strand', 'duplication_size', 'gap_left', 'gap_right'],
-("MOB",make_list<string> ("repeat_name")("strand")("duplication_size")("gap_left")("gap_right"))
+("MOB",make_list<string> ("seq_id")("position")("repeat_name")("strand")("duplication_size")("gap_left")("gap_right"))
 //'DUP' => ['seq_id', 'position', 'size'],
-("DEL",make_list<string> ("size"))
+("DEL",make_list<string> ("seq_id")("position")("size"))
 //'INV' => ['seq_id', 'position', 'size'],
-("INV",make_list<string> ("size"))
+("INV",make_list<string> ("seq_id")("position")("size"))
 //
 //## evidence  ("")
 //'RA' => ['seq_id', 'position', 'insert_position', 'ref_base', 'new_base'],
-("RA",make_list<string> ("insert_position")("ref_base")("new_base"))
+("RA",make_list<string> ("seq_id")("position")("insert_position")("ref_base")("new_base"))
 //'MC' => ['seq_id', 'start', 'end'],
-("MC",make_list<string> ("start")("end"))
+("MC",make_list<string> ("seq_id")("start")("end"))
 //'JC' => ['side_1_seq_id', 'side_1_position', 'side_1_strand', 'side_2_seq_id', 'side_2_position', 'side_2_strand', 'overlap'],
-("MC",make_list<string> ("side_1_seq_id")("side_1_position")("side_1_strand")("side_2_seq_id")("side_2_position")("side_2_strand")("overlap"))
+("JC",make_list<string> ("side_1_seq_id")("side_1_position")("side_1_strand")("side_2_seq_id")("side_2_position")("side_2_strand")("overlap"))
 //'UN' => ['seq_id', 'start', 'end'],
-("UN",make_list<string> ("start")("end"))
+("UN",make_list<string> ("seq_id")("start")("end"))
 //};
 ;
 
@@ -129,8 +129,14 @@ breseq::END_RANGE,
  */
 breseq::diff_entry::diff_entry(const string& type, const string& id, vector<string> positions)
 : _type(type)
-, _seq_id(id)
-, _positions(positions) {
+, _id(id)
+, _evidence(positions) {
+}
+
+breseq::diff_entry::diff_entry()
+: _type("")
+, _id("")
+, _evidence(make_list<string>("")) {
 }
 
 
@@ -138,10 +144,10 @@ breseq::diff_entry::diff_entry(const string& type, const string& id, vector<stri
  */
 void breseq::diff_entry::marshal(field_list_t& s) {
 	s.push_back(_type);
-	s.push_back(_seq_id);
+	s.push_back(_id);
   
-  for(uint8_t i = 0; i < _positions.size(); i++)
-	  s.push_back(_positions[i]);
+  for(uint8_t i = 0; i < _evidence.size(); i++)
+	  s.push_back(_evidence[i]);
 	
 	// copy all fields:
 	map_t cp=_fields;
@@ -200,33 +206,44 @@ void breseq::genome_diff::add(const diff_entry& v) {
 }
 
 
-/*! Read a genome diff(.gd) from the given file to build entry_list_t,
- * a vector of diff_entry's. Each row of the .gd file is a diff_entry,
- * depending on the diff_entry's _type parameter (first column of each
- * entry) the diff_entry's _fields map is then set appropriately.  
+/*! Read a genome diff(.gd) from the given file to build the vector lines
  */
 
-vector<vector<string> > breseq::genome_diff::read(const string& filename) {
-// # sub read
-// # {
-// #   my ($self, $file_name) = @_;
-// #   open IN, "<$file_name" or $self->throw("Could not open file for reading: $file_name");
-// # 
-// #   #read lines, skip comment lines, and blank lines
-// #   my @lines = <IN>;
+void breseq::genome_diff::read(const string& filename) {
+    ifstream IN(filename.c_str());
+  if(!IN.good())
+    cerr << "Could not open file for reading: " << filename << endl;
+  
+
 // #   chomp @lines;
-// #     
-// #   @lines = grep {!/^\s*#[^=]/} @lines;
-// #   @lines = grep {!/^\s*$/} @lines;
-// #     
+  char const line_delim = '\n';
 // #   ## read version from first line
 // #   my $l = shift @lines;
-// #   ($l =~ m/#=GENOME_DIFF\s+(\d+)/) or ($l =~ m/#=GENOMEDIFF\s+(\d+)/)  or $self->throw("Could not match version line in file $self->{file_name}.");
+  string l; getline(IN, l, line_delim);
+// #   ($l =~ m/#=GENOME_DIFF\s+(\d+)/) or ($l =~ m/#=GENOMEDIFF\s+(\d+)/)  
+// #   or $self->throw("Could not match version line in file $self->{file_name}.");
+  if(!regex_m("#=GENOME_DIFF",l)
+      && !regex_m("#=GENOMEDIFF",l))
+    cerr << "Could not match version line in file" << endl;
+  vector<string> version_split = split(l," ");
+  assert(version_split.size() == 2);
 // #   $self->{version} = $1;
-// # 
+  version = version_split.back();
 // #   ## read header information
 // #   
 // #   ## read data
+// #   while ($l = shift @lines)
+// #   {
+  while(getline(IN, l, line_delim))
+  {
+    ///TODO metadata 
+    
+    // # $self->add($self->_line_to_item($l));
+    //TODO     
+  }
+
+  
+
 // #   while ($l = shift @lines)
 // #   {
 // #     if ($l =~ m/^\s*#=(\S+)\s+(.+)/) {
@@ -240,29 +257,12 @@ vector<vector<string> > breseq::genome_diff::read(const string& filename) {
 // #     }
 // #   }
 // #   close IN;
-// # }
-///! @GRC refractor into convertion functions
-  typedef vector<vector<string> > Lines;
-  Lines lines;
-  
-  ifstream IN(filename.c_str());
-  
-  char const line_delim = '\n';
-  char const field_delim = '\t';
-  
-  for(string line; getline(IN, line, line_delim); ) 
-  {
-    if(line[0] == '#')
-      continue;
-    lines.push_back(Lines::value_type());
-    istringstream ss(line);
-    for(string field; getline(ss, field, field_delim); ) 
-      lines.back().push_back(field);
-    
-  }
   IN.close();
+
   
-  return lines;
+  
+  
+  
 		
 		// match common fields - type id pid seqid
 		
@@ -733,53 +733,41 @@ return list;
 }
 
 
-diff_entry genome_diff::_line_to_item(vector<string> line)
+diff_entry genome_diff::_line_to_item(string line)
 {
+
 // # sub _line_to_item
 // # {
 // #   my ($self, $line) = @_;
 // #   my @line_list = split /\t/, $line;
-
-  typedef vector<string> Line_List;
-  Line_List &line_list(line); ///Done, each string is a tab-delimited segment
+  list_t line_list = split(line, "\t");
 // #   
 // #   ##remove items at the end that are empty
 // #   while ( scalar(@line_list) && ($line_list[-1] =~ m/^\s+$/) )
 // #   {
 // #     pop @line_list;
 // #   }
-  ///Done, each line stops at /n 
 // #   
 // #   my $item = {};
-  ///Can't build diff_entry yet, need params for constructor
+  diff_entry item;
 // #   $item->{type} = shift @line_list;
-  uint8_t shift = 0;
-  string type = line_list[shift]; shift++;
+  item._type = shift(line_list);
 // #   $item->{id} = shift @line_list;
-  string id = line_list[shift]; shift++;
+  item._id = shift(line_list);
 // #   my $evidence_string = shift @line_list;
+  string evidence_string = shift(line_list);
 // #   @{$item->{evidence}} = split /,/, $evidence_string;
-  ///Multiple parents are given as index,index (EX: 3,14)
-  ///separate 3 and 14 by , and place into seperate 
-  ///elements of parents;
-  vector<string> evidence;
-  istringstream ss(line_list[shift]); shift++;
-  char const evidence_delim = ',';
+  item._evidence = split(evidence_string, ",");
   
-  for(string evidence_string; getline(ss, evidence_string, evidence_delim); )
-    evidence.push_back(evidence_string);  
-  
-  ///Now we can build diff_entry
-  diff_entry item(type, id, evidence);
 // #     
 // #   my $spec = $line_specification->{$item->{type}};
-  const vector<string> &spec = line_specification[type];  
+  const list_t &spec = line_specification[item._type];  
 // #   if (!defined $spec)
 // #   {
   if(spec.empty())
   {
 // #     $self->warn("Type \'$item->{type}\' is not recognized for line:\n$line");
-    cerr << "Type " << type << "is not recognized for line # "<< endl;
+    cerr << "Type " << item._type << "is not recognized for line # "<< endl;
 // #     return undef;
     ///TODO undef
 // #   }
@@ -793,7 +781,7 @@ diff_entry genome_diff::_line_to_item(vector<string> line)
 // #     $item->{type} = 'AMP';
     item._type = "AMP";
 // #     $item->{new_copy_number} = 2;
-    item.new_copy_number = 2;
+    item["new_copy_number"] = 2;
 // #   }
   }
 // #   
@@ -803,28 +791,20 @@ diff_entry genome_diff::_line_to_item(vector<string> line)
   if(item._type == "MOB")
   {
 // #     my @spec_items = grep {!($_ =~ m/=/)} @line_list;
-    ///grep everything that doesn't have an equal sign?
-    vector<string> spec_items;
-    for(uint8_t i = shift; i < line_list.size(); i++)
-    {
-      size_t found = line_list[i].find("=");
-      /// if "=" is found it will return npos
-      if(found == string::npos)
-        spec_items.push_back(line_list[i]);
-    }
+    list_t spec_items = grep(false, "=", line_list);    
 // #     
 // #     if (scalar(@spec_items) == scalar(@$spec) + 2)
 // #     {
     if(spec_items.size() == spec.size() + 2)
     {
 // #       my $gap_left = $line_list[5];
-      string gap_left = line_list[5];//TODO TEST are these zero indexed?
+      string gap_left = line_list[5];
 // #       if ($gap_left =~ m/^-/)
 // #       {
-      if(gap_left.find("-")!= string::npos)
+      if(regex_m("-", gap_left))
       {
 // #         $item->{del_start} = abs($gap_left);
-        item.del_start = abs(atoi(gap_left.c_str()));
+        item["del_start"] = to_string(abs(atoi(gap_left.c_str()))); ///TODO GROSS
 // #       }
       }
 // #       else
@@ -832,7 +812,7 @@ diff_entry genome_diff::_line_to_item(vector<string> line)
       else
       {
 // #         $item->{ins_start} = $gap_left;
-        item.ins_start = atoi(gap_left.c_str());
+        item["ins_start"] = gap_left;
 // #       }
       }
 ///TODO TEST if abs(atoi("-7")) equals 7
@@ -841,10 +821,10 @@ diff_entry genome_diff::_line_to_item(vector<string> line)
       string gap_right = line_list[6];
 // #       if ($gap_right =~ m/^-/)
 // #       {
-      if(gap_right.find("-")!= string::npos)
+      if(regex_m("-",gap_right))
       {
 // #         $item->{del_end} = abs($gap_left);
-        item.del_end = abs(atoi(gap_left.c_str())); ///TODO really gap_left?
+        item["del_end"] = abs(atoi(gap_left.c_str())); ///TODO GROSS / really gap_left?
 // #       }
       }
 // #       else
@@ -852,26 +832,28 @@ diff_entry genome_diff::_line_to_item(vector<string> line)
       else
       {
 // #         $item->{ins_end} = $gap_left;
-        item.ins_end = atoi(gap_left.c_str());
+        item["ins_end"] = gap_left;
 // #       }
       }
 // #       
 // #       ##remove these items
 // #       splice @line_list, 5, 2;
-      line_list.erase(line_list.begin()+5, line_list.end()+6);      
+      splice(line_list, 5, 2); 
 // #     }
     }
 // #   }
   }
 // #   
 // #   
-  vector<string> spec_keys = get_keys<string>(line_specification);
+
 // #   foreach my $key (@$spec)
 // #   {
-  for(uint8_t i = 0; i < spec_keys.size(); i++)
+  for(map<string, vector<string> >::iterator itr = line_specification.begin();
+      itr != line_specification.end(); itr++)
   {
+    string key = itr->first;
 // #     my $next = shift @line_list;
-    string next = line_list[shift]; shift++;    
+   string next = shift(line_list);
 // #     if (!defined $next)
 // #     {
     if(next.empty())
@@ -885,7 +867,7 @@ diff_entry genome_diff::_line_to_item(vector<string> line)
     }
 // #     if ($next =~ m/=/) 
 // #     {
-    if(next.find("=") != string::npos)
+    if(regex_m("=",next))
     {
 // #       $self->warn("Unexpected key=value pair \'$next\' encountered for required item \'$key\' in type \'$item->{type}\' line:\n$line");
       cerr << "Unexpected key=value pair \'$next\' encountered for required item" << endl; ///TODO
@@ -895,8 +877,7 @@ diff_entry genome_diff::_line_to_item(vector<string> line)
     }
 // #     
 // #     $item->{$key} = $next;
-    string &key = spec_keys[i];
-    item._fields[key] = next;
+  item[key] = next;
 // #   }
   }
   
@@ -904,38 +885,68 @@ diff_entry genome_diff::_line_to_item(vector<string> line)
 // #   ## Remainder of the line is comprised of non-required key value pairs
 // #   foreach my $key_value_pair (@line_list)
 // #   {
+  for(list_t::iterator itr = line_list.begin();
+      itr != line_list.end(); itr ++)
+  {
+       string key_value_pair(*itr); 
 // #     next if (!$key_value_pair);
+       if(key_value_pair.empty()) continue;
 // #     next if ($key_value_pair =~ m/^\s*$/);
+       if(!regex_m("=",key_value_pair)) continue;//TODO ASK
 // #     my $matched = ($key_value_pair =~ m/^(.+)=(.+)$/);
+         vector<string> matched = split("=", key_value_pair);
 // #     if (!$matched)
 // #     {
+       if(matched.size() != 2)
+       {
 // #       $self->warn("Not a key value pair \'$key_value_pair\' line:\n$line");
+         cerr << "Not a key value pair" << key_value_pair <<  endl;
 // #       next;
+         continue;
 // #     }   
+       }
 // #     
 // #     my ($item_key, $item_value) = ($1, $2); 
-// #     $item->{$item_key} = $item_value;
+         string item_key = matched[0], item_value = matched[1]; 
+         // #     $item->{$item_key} = $item_value;
+         item[item_key] = item_value;
 // #   }
+  }
 // #   
 // #   ### We do some extra convenience processing for junctions...
 // #   if ($item->{type} eq 'JC')
 // #   {
+  if(item._type == "JC")
+  {
+    list_t side_keys(make_list<string>("side_1")("side_2"));
+    list_t keys(make_list<string>("seq_id")("position")("strand"));
 // #     foreach my $side_key ('side_1', 'side_2')
 // #     {
+    for(list_t::iterator itr_side = side_keys.begin();
+        itr_side != side_keys.end(); itr_side++)
+    {
+      string side_key(*itr_side);
 // #       foreach my $key ('seq_id', 'position', 'strand')
 // #       {
+      for(list_t::iterator itr_key = keys.begin();
+          itr_key != keys.end(); itr_key++)
+      {
+        string key(*itr_key);
 // #         $item->{"_$side_key"}->{$key} = $item->{"$side_key\_$key"};
+        item[side_key+key] = item[side_key+key]; ///TODO NOT CORRECT AT ALL;
 // #       }
+      }
 // #       $item->{"_$side_key"}->{type} = 'NA';
+          
 // #     }
+    }
 // #   }
+  }
 // # 
 // #   return $item;
+return item;
 // # } 
 }
-
-
-
 
 
 }//namespace bresesq
