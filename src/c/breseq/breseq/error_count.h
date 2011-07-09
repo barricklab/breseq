@@ -23,6 +23,8 @@ LICENSE AND COPYRIGHT
 #include "alignment.h"
 #include "pileup_base.h"
 
+using namespace std;
+
 namespace breseq {
 	
 	/*! Count errors.
@@ -32,15 +34,15 @@ namespace breseq {
 	 \param output_dir is the directory in which output files will be placed.
 	 \param readfiles is a list of read files that were used to build the bam (do not include filename extension)
 	 */
-	void error_count(const std::string& bam, 
-									 const std::string& fasta,
-									 const std::string& output_dir,
-									 const std::vector<std::string>& readfiles,
+	void error_count(const string& bam, 
+									 const string& fasta,
+									 const string& output_dir,
+									 const vector<std::string>& readfiles,
 									 bool do_coverage,
                    bool do_errors,
                    uint8_t min_qual_score,
-                   const std::string& covariates
-        );
+                   const string& covariates
+                    );
 
 	/*! Error table class.
 
@@ -100,9 +102,8 @@ namespace breseq {
  class cErrorTable {
     private:
       static const char m_sep;   //* separator between entries within a line in files
-      static const std::string covariate_names[];
+      static const string covariate_names[];
       
-       
       std::vector<double> m_count_table;
       std::vector<double> m_log10_prob_table;
 
@@ -114,13 +115,13 @@ namespace breseq {
     public:
 
       //* does not allocate table or assign covariates
-      cErrorTable() {};
+      cErrorTable(): m_per_position(false) {};
       
       //* create table with covariates read from command line options
-      cErrorTable(const std::string& colnames);
+      cErrorTable(const string& colnames);
       
       //* create empty table
-      cErrorTable(covariates_used_t covariate_used, covariates_max_t covariate_max, covariates_enforce_max_t covariate_enforce_max); // for creating empty table
+      cErrorTable(covariates_used_t covariate_used, covariates_max_t covariate_max, covariates_enforce_max_t covariate_enforce_max, bool per_position); // for creating empty table
 
       //* create summed sub-tables
       cErrorTable(cErrorTable& error_table, covariates_used_t covariates); 
@@ -137,27 +138,42 @@ namespace breseq {
       //void split(const std::string& s, char c, std::vector<std::string>& v); // helper function
 
       //* IO of tables
-      void read_log10_prob_table(const std::string& filename);
-      void write_log10_prob_table(const std::string& output_file);
-      void write_base_qual_only_prob_table(const std::string& filename, const vector<string>& readfiles);
-      void write_count_table(const std::string& filename);
-      
+      void read_log10_prob_table(const string& filename);
+      void write_log10_prob_table(const string& output_file);
+      void write_base_qual_only_prob_table(const string& filename, const vector<string>& readfiles);
+      void write_count_table(const string& out);
+      void write_count_table_header(ofstream& out);
+      void write_count_table_content(ofstream& out, const uint32_t position = 0);
+
       //* recording counts during error calibration     
       void count_alignment_position(const alignment& i, const pileup& p);
       void count_covariate(const covariate_values_t& cv);
       void counts_to_log10_prob();
+   
+      void clear() 
+      { 
+        for(vector<double>::iterator it=m_count_table.begin(); it != m_count_table.end(); it++ )
+        {
+          *it = 0;
+        }
+      }
       
       //* determining error probabilities to use during
       bool alignment_position_to_covariates(const alignment& a, int32_t insert_count, covariate_values_t& cv);
       
       //* accessors
       double get_log10_prob(covariate_values_t& cv);
+   
       
     protected:
       covariates_used_t         m_covariate_used;         // list of covariates that are used by table
       covariates_max_t          m_covariate_max;          // maximum value of each covariate
       covariates_enforce_max_t  m_covariate_enforce_max;  // do not throw an error if max exceeded, reassign value to max
       covariates_offset_t       m_covariate_offset;       // number to multiply this covariate by when constructing row numbers
+
+    public:
+      bool                      m_per_position;
+
   };
 	
 	/*! Error-counting class.
@@ -166,9 +182,6 @@ namespace breseq {
 	 */
 	class error_count_pileup : public breseq::pileup_base {
 	public:
-		typedef std::map<std::string,int> base_count_t;
-		typedef std::map<uint8_t,base_count_t> qual_map_t;
-		typedef std::map<int32_t,qual_map_t> fastq_map_t;
 		
 		//! Information that is tracked per-sequence.
 		struct sequence_info {
@@ -184,7 +197,14 @@ namespace breseq {
 		
 		
 		//! Constructor.
-		error_count_pileup(const std::string& bam, const std::string& fasta, bool do_coverage, bool do_errors, uint8_t min_qual_score, const std::string& covariates);
+		error_count_pileup(const std::string& bam, 
+                       const std::string& fasta,
+                       const string& output_dir,
+                       bool do_coverage, 
+                       bool do_errors, 
+                       uint8_t min_qual_score, 
+                       const std::string& covariates
+                       );
 		
 		//! Destructor.
 		virtual ~error_count_pileup();		
@@ -193,19 +213,19 @@ namespace breseq {
 		virtual void pileup_callback(const pileup& p);
 		
 		//! Print coverage distribution.
-		void print_coverage(const std::string& output_dir);
+		void print_coverage();
 		
 		//! Print error file.
-		void print_error(const std::string& output_dir, const std::vector<std::string>& readfiles);
+		void print_error(const std::vector<std::string>& readfiles);
 
 	protected:		
-		std::vector<sequence_info> _seq_info; //!< information about each sequence.
-		fastq_map_t _error_hash; //!< fastq_file_index -> quality map.
+    const string& m_output_dir;
+		vector<sequence_info> _seq_info; //!< information about each sequence.
 		bool m_do_coverage;
     bool m_do_errors;
     uint8_t m_min_qual_score; //! @JEB THIS IS CURRENTLY NOT USED (BUT WOULD BE IF WE CALCULATED RATES)
-    bool m_use_CErrorTable;
     cErrorTable m_error_table;
+    ofstream m_per_position_file;
 	};
 	
 
