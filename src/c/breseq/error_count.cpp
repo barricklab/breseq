@@ -37,31 +37,56 @@ const char cErrorTable::m_sep = '\t';
 
 /*! Count errors.
  */
-void error_count(const string& bam,
-												 const string& fasta,
-												 const string& output_dir,
-												 const vector<string>& readfiles,
-                         bool do_coverage,
-                         bool do_errors,
-                         uint8_t min_qual_score,
-                         const string& covariates
-                      ) 
+void error_count(
+                 const string& bam,
+                 const string& fasta,
+								 const string& output_dir,
+								 const vector<string>& readfiles,
+                 bool do_coverage,
+                 bool do_errors,
+                 uint8_t min_qual_score,
+                 const string& covariates
+                 ) 
 {
-	error_count_pileup ecp(bam, fasta, do_coverage, do_errors, min_qual_score, covariates);
+	error_count_pileup ecp(bam, fasta, output_dir, do_coverage, do_errors, min_qual_score, covariates);
 	ecp.do_pileup();
-	if (do_coverage) ecp.print_coverage(output_dir);
-	if (do_errors) ecp.print_error(output_dir, readfiles);
+	if (do_coverage) ecp.print_coverage();
+	if (do_errors) ecp.print_error(readfiles);
 }
 
 
 /*! Constructor.
  */
-error_count_pileup::error_count_pileup(const string& bam, const string& fasta, bool do_coverage, bool do_errors, uint8_t min_qual_score, const string& covariates)
-: pileup_base(bam, fasta), m_do_coverage(do_coverage), m_do_errors(do_errors), m_min_qual_score(min_qual_score), m_error_table(covariates) {
+error_count_pileup::error_count_pileup(
+                                       const string& bam, 
+                                       const string& fasta, 
+                                       const string& output_dir,
+                                       bool do_coverage, 
+                                       bool do_errors, 
+                                       uint8_t min_qual_score, 
+                                       const string& covariates
+                                       )
+: pileup_base(bam, fasta)
+, m_output_dir(output_dir)
+, m_do_coverage(do_coverage)
+, m_do_errors(do_errors)
+, m_min_qual_score(min_qual_score)
+, m_error_table(covariates)
+{
 	// reserve enough space for the sequence info:
 	_seq_info.resize(num_targets());
-  m_use_CErrorTable = (covariates.length() > 0);
   set_print_progress(true);
+  
+  // Set up to print out file during pileup
+  if (m_error_table.m_per_position)
+  {
+    string output_file;
+
+    output_file = output_dir + "error_counts.tab";     
+    m_per_position_file.open(output_file.c_str());
+    assert(!m_per_position_file.fail());
+    m_error_table.write_count_table_header(m_per_position_file);
+  }
 }
 
 
@@ -75,7 +100,6 @@ error_count_pileup::~error_count_pileup() {
  */
 void error_count_pileup::pileup_callback(const pileup& p) {
   
-	using namespace std;
 	assert(p.target() < _seq_info.size());
 	sequence_info& info=_seq_info[p.target()];
 
@@ -108,116 +132,8 @@ void error_count_pileup::pileup_callback(const pileup& p) {
       continue;
     }		
 
-    // Newer implementation...
-    if (m_use_CErrorTable) {
-      m_error_table.count_alignment_position(*i, p);
-      continue;
-    }
-
-				
-		uint32_t reversed = i->reversed(); // are we on the reverse strand?
-		uint8_t* qseq = i->read_bam_sequence(); // query sequence (read)
-		int32_t qpos = i->query_position_0(); // position of the alignment in the query
-		int32_t qstart = i->query_start_0(); // @dk: want 0-indexed, so subtract 1
-		int32_t qend = i->query_end_0(); // @dk: want 0-indexed, so subtract 1
-
-		uint8_t* qscore = i->read_base_quality_bam_sequence(); // quality score array
-		int32_t fastq_file_index = i->fastq_file_index(); // sequencer-generated read file that this alignment belongs to
-		
-		uint32_t pos = p.position_0(); // position of this alignment on the reference sequence
-		char* refseq = p.reference_sequence(); // reference sequence for this target
-		
-		// Things to remember in the following:
-    // -->1 Reverse the base when the read is on the other strand
-    // -->2 Correct for which base is AFTER in error counts when on the other strand
-    // -->3 Observations that involve an N base in any way should not be counted
-
-			//# (1) base substitutions
-			//#     e.g. 'AG' key for observing a G in read at a place where the reference has an A
-			//#     IMPROVE by keeping track of flanking base context and scores?
-			//#     this would, for example, penalize low scoring sequences more
-
-    //We already skipped deletions of *this* base so we know we have a (mis)match
-    {
-      base_bam read_base_bam = bam1_seqi(qseq,qpos);    
-      base_char ref_base_char = refseq[pos];
-      
-      if (!_base_bam_is_N(read_base_bam) && !_base_char_is_N(ref_base_char)) {
-        if(reversed) {
-          read_base_bam = complement_base_bam(read_base_bam);
-          ref_base_char = complement_base_char(ref_base_char);
-        }
-        string key; key += static_cast<char>(ref_base_char); key += basebam2char(read_base_bam);
-        uint8_t quality = qscore[qpos];
-        ++_error_hash[fastq_file_index][quality][key];
-      }
-    }
-
-		//# the next base also matches 
-    //# (1) base substitution or match
-    //#     e.g. '..' key indicating an observation of a "non-gap, non-gap"
-    //#     quality score is of the second non-gap in the pair
-    if(i->indel() == 0) {
-      //## don't count past last match position
-      if (qpos < qend) {	
-        int32_t mqpos = qpos + 1 - reversed;
-        uint8_t base = bam1_seqi(qseq,mqpos);
-        
-        int32_t mrpos = pos + 1 - reversed;
-        uint8_t ref_base = refseq[mrpos];
-        
-        if (!_base_bam_is_N(base) && !_base_char_is_N(ref_base)) {     
-          string key = ".."; 
-          uint8_t quality = qscore[mqpos];
-          ++_error_hash[fastq_file_index][quality][key];
-        }
-      }	
-    }
-		
-		//# there is a deletion of EXACTLY one base in the read relative to the reference before the next read base
-    //# (2) deletion in read relative to reference
-    //#     e.g. 'A.' key for observing nothing in a read at a position where the reference has an A
-    //#     quality score is of the next non-gap base in the read
-    else if (i->indel() == -1) {
-      //## count the quality of this or next base depending on reversed, and make sure it is not an N
-      int32_t mqpos = qpos + 1 - reversed;
-      base_bam read_base_bam = bam1_seqi(qseq,mqpos);   
-			
-      //## the reference base opposite the deletion is really the NEXT base
-      int32_t mrpos = pos + 1;
-      base_char ref_base_char = refseq[mrpos];      
-      
-      if (!_base_bam_is_N(read_base_bam) && !_base_char_is_N(ref_base_char)) {
-        if(reversed) {
-          ref_base_char = complement_base_char(ref_base_char);
-        }
-        string key; key += static_cast<char>(ref_base_char); key += '.';
-        uint8_t quality = qscore[mqpos];
-        ++_error_hash[fastq_file_index][quality][key];									
-      }
-    }
-
-		
-    //# there is an insertion of EXACTLY one base in the read relative to the reference before the next reference base
-    //# (3) insertion in read relative to reference
-    //#     e.g. '.A' key for observing an A in a read at a position where the reference has no base
-    //#     quality score is that of the observed inserted base
-    else if (i->indel() == +1) {
-      int32_t mqpos = qpos + 1;
-			
-      if ((mqpos <= qend) && (mqpos >= qstart)) {
-        uint8_t read_base_bam = bam1_seqi(qseq,mqpos);    
-				
-        if (!_base_bam_is_N(read_base_bam)) {
-          if(reversed) {
-            read_base_bam = complement_base_bam(read_base_bam);
-          }        
-          string key; key += '.'; key += basebam2char(read_base_bam);
-          uint8_t quality = qscore[mqpos];
-          ++_error_hash[fastq_file_index][quality][key];									
-        }	
-      }
-    }
+    // count the error
+    m_error_table.count_alignment_position(*i, p);
 	}
 	
 	// NOTE: this can't move inside the for-loop; we're tracking information about
@@ -230,15 +146,22 @@ void error_count_pileup::pileup_callback(const pileup& p) {
 		}
 		++info.unique_only_coverage[unique_coverage];
 	}
+  
+  // per-position prints each line separately
+  if (m_error_table.m_per_position) 
+  {
+    m_error_table.write_count_table_content(m_per_position_file, p.position_1());
+    m_error_table.clear();  
+  }
 }
 
 
 /*! Print coverage distribution.
  */
-void error_count_pileup::print_coverage(const string& output_dir) {
+void error_count_pileup::print_coverage() {
 	using namespace std;
 	for(size_t i=0; i<_seq_info.size(); ++i) {
-		string filename(output_dir + m_bam->header->target_name[i] + ".unique_only_coverage_distribution.tab");
+		string filename(m_output_dir + m_bam->header->target_name[i] + ".unique_only_coverage_distribution.tab");
 		ofstream out(filename.c_str());					
 		
 		out << "coverage\tn" << endl;
@@ -252,60 +175,31 @@ void error_count_pileup::print_coverage(const string& output_dir) {
 
 /*! Print error file.
  */
-void error_count_pileup::print_error(const string& output_dir, const vector<string>& readfiles) {
+void error_count_pileup::print_error(const vector<string>& readfiles) {
 
-  if (m_use_CErrorTable) {
-      string output_file;
-      output_file = output_dir + "error_counts.tab"; 
+    string output_file;
+  
+    // It will be printed during pileup if !m_per_position
+    // and we don't want the additional processing.
+    if (!m_error_table.m_per_position) 
+    {
+      output_file = m_output_dir + "error_counts.tab"; 
       m_error_table.write_count_table(output_file);
       
-      output_file = output_dir + "error_rates.tab"; 
+      output_file = m_output_dir + "error_rates.tab"; 
       m_error_table.counts_to_log10_prob();
       m_error_table.write_log10_prob_table(output_file);
-    
-      output_file = output_dir + "base_qual_error_prob.#.tab"; 
+  
+      output_file = m_output_dir + "base_qual_error_prob.#.tab"; 
       m_error_table.write_base_qual_only_prob_table(output_file, readfiles);
       return;
-  }
-    
-	using namespace std;
-	char bases[] = {'A', 'T', 'C', 'G', '.'};
-	
-	assert(readfiles.size() == _error_hash.size());
-	
-	for(fastq_map_t::iterator iter=_error_hash.begin(); iter!=_error_hash.end(); ++iter) {
-		ostringstream filename;
-		filename << output_dir << readfiles[iter->first] << ".error_counts.tab";
-		ofstream out(filename.str().c_str());
-		
-		out << "quality";
-		for(int i=0; i<5; ++i) {
-			for(int j=0; j<5; ++j) {
-				out << "\t" << bases[i] << bases[j];
-			}
-		}
-		out << endl;
-		
-		qual_map_t& qual_map=iter->second;
-		for(qual_map_t::reverse_iterator iter=qual_map.rbegin(); iter!=qual_map.rend(); ++iter) {
-			out << static_cast<unsigned int>(iter->first);
-			for(int i=0; i<5; ++i) {
-				for(int j=0; j<5; ++j) {
-					string k; k += bases[i]; k += bases[j];
-					out << "\t" << iter->second[k];
-				}
-			}
-			out << endl;
-		}
-		out.close();
-	}
+    }
 }
 
 
 /*! Load error rates.
  */
 error_count_results::error_count_results(const string& input_dir, const vector<string>& readfiles) {
-	using namespace std;
 	char bases[] = {'A', 'T', 'C', 'G', '.'}; // order is important!!! must match the header from the error rates file...
 	
 	_error_rates.resize(readfiles.size());
@@ -403,6 +297,7 @@ const pair<double,double>& error_count_results::log10_rates(int32_t fastq_file_i
 */
 cErrorTable::cErrorTable (const string& colnames)
 {
+  m_per_position = 0;
   if (colnames.length() == 0) return;
   read_covariates(colnames);
   allocate_table();
@@ -412,10 +307,12 @@ cErrorTable::cErrorTable (const string& colnames)
 
     Allocates an empty table with the given covariates.
 */
-cErrorTable::cErrorTable(covariates_used_t covariate_used, covariates_max_t covariate_max, covariates_enforce_max_t covariate_enforce_max) {
+cErrorTable::cErrorTable(covariates_used_t covariate_used, covariates_max_t covariate_max, covariates_enforce_max_t covariate_enforce_max, bool per_position) {
+
+  m_per_position = per_position;
 
   int current_offset = 1;
-
+  
   for (int i=0; i<k_num_covariates; i++) {
   
     m_covariate_used[i] = covariate_used[i];
@@ -442,6 +339,8 @@ cErrorTable::cErrorTable(covariates_used_t covariate_used, covariates_max_t cova
 */
 cErrorTable::cErrorTable(cErrorTable& error_table, covariates_used_t covariates) {
 
+  m_per_position = error_table.m_per_position;
+  
   int current_offset = 1;
 
   // Set up new covariates
@@ -571,6 +470,11 @@ void cErrorTable::read_covariates(const string& colnames) {
       m_covariate_used[k_read_set] = true;
       m_covariate_max[k_read_set] = atoi(columns_parts[1].c_str());
     }
+    // Note: ref_pos is treated special, because the table would be too big
+    // to store, and we can go through the pile_up and print as we can.
+    else if (columns_parts[0] == "ref_pos") {
+      m_per_position = true;
+    }
     else if (columns_parts[0] == "read_pos") {
       m_covariate_used[k_read_pos] = true;
       m_covariate_max[k_read_pos] = atoi(columns_parts[1].c_str());
@@ -606,7 +510,7 @@ void cErrorTable::read_covariates(const string& colnames) {
 string cErrorTable::print_covariates() {
 
   stringstream covariate_string;
-  
+  if (m_per_position) covariate_string << "ref_pos";
   for (uint32_t i=0; i<k_num_covariates; i++) {
     if (m_covariate_used[i]) {
       if (covariate_string.str().length() > 0) covariate_string << ",";
@@ -626,23 +530,6 @@ string cErrorTable::print_covariates() {
 }
 
 
-/*  cErrorTable::split()
-
-    Split the string into a vector on each occurrence of a character.
-*/
-/*void cErrorTable::split(const string& s, char c, vector<string>& v) {
-  string::size_type i = 0;
-  string::size_type j = s.find(c);
-
-  while (j != string::npos) {
-      v.push_back(s.substr(i, j-i));
-      i = ++j;
-      j = s.find(c, j);
-  }
-  if (j == string::npos) v.push_back(s.substr(i, s.length( )));
-}*/
-
-
 
 /*  cErrorTable::read_log10_prob_table()
 
@@ -660,7 +547,7 @@ void cErrorTable::read_log10_prob_table(const string& filename) {
   allocate_table();
   m_log10_prob_table.resize(m_count_table.size());
   
-  // Ignore the neader line, we expect order to be constant
+  // Ignore the header line, we expect order to be constant
   getline(in, s);
   
   // We don't need the beginning of the line, since we know the
@@ -806,7 +693,7 @@ void cErrorTable::write_log10_prob_table(const string& filename) {
     }
   }
 
-/*  cErrorTable::print()
+/*  cErrorTable::write_count_table()
 
     Print out a table of covariates and counts.
 */
@@ -815,29 +702,54 @@ void cErrorTable::write_count_table(const string& filename) {
   ofstream out(filename.c_str());
   
   // First line contains the covariates
+  write_count_table_header(out);
+  write_count_table_content(out);
+}
+  
+void cErrorTable::write_count_table_header(ofstream& out) {
+  
   out << print_covariates() << endl;
   
+  if (m_per_position) out << "ref_pos" << m_sep;
+
   for (int i=0; i<k_num_covariates; i++) {
     if(m_covariate_used[i]) out << covariate_names[i] << m_sep;
   }
   out << "count" << endl;
 
+}
+
+  
+/*  cErrorTable::write_count_table_content()
+ 
+ Print out a table of covariates and counts.
+ */
+void cErrorTable::write_count_table_content(ofstream& out, const uint32_t position) {
+  
   for (uint32_t idx=0; idx<m_count_table.size(); idx++) {
-      
-      for (int i=0; i<k_num_covariates; i++) {
-        if (!m_covariate_used[i]) continue;
-        
-        uint32_t j = (idx / m_covariate_offset[i]) % m_covariate_max[i];
-       
-        if ( (i == k_ref_base) || (i == k_obs_base) ) {
-          char base = baseindex2char(j);
-          out << base << m_sep;
-        }
-        else {
-          out << j << m_sep;
-        }
+    
+    // if in per_position mode, skip empty lines
+    if ((position != 0) && (m_count_table[idx] == 0))
+    {
+      continue;
     }
-        
+    
+    if (m_per_position) out << position << m_sep;
+    
+    for (int i=0; i<k_num_covariates; i++) {
+      if (!m_covariate_used[i]) continue;
+      
+      uint32_t j = (idx / m_covariate_offset[i]) % m_covariate_max[i];
+      
+      if ( (i == k_ref_base) || (i == k_obs_base) ) {
+        char base = baseindex2char(j);
+        out << base << m_sep;
+      }
+      else {
+        out << j << m_sep;
+      }
+    }
+    
     out << m_count_table[idx] << endl;
   }
 }

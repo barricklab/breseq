@@ -837,6 +837,8 @@ sub do_count
 		'strain', 
 		'total', 
 		@snp_types, 
+		'small_indel',
+		'large_del',
 		'deleted', 
 		@mod_name_list, 
 		'called_bp', 
@@ -918,6 +920,25 @@ sub do_count
 				$total_deleted += $mut->{size};
 				$count->{mob}->{$mut->{mediated}}++ if ($mut->{mediated});
 				
+				if ($mut->{size} > 1000) 
+				{
+					$count->{large_del}++;
+				}
+				else 
+				{
+					$count->{small_indel}++;
+				}
+			}
+			
+			if ($mut->{type} eq 'INS')
+			{
+				$total_deleted += $mut->{size};
+				$count->{mob}->{$mut->{mediated}}++ if ($mut->{mediated});
+				
+				if ($mut->{size} < 1000) 
+				{
+					$count->{small_indel}++;
+				}
 			}
 			
 			if ($mut->{type} eq 'MOB')
@@ -950,7 +971,9 @@ sub do_count
 		my @this_columns = (
 			$gd_name, 
 			scalar(@mut_list),  
-			map({$count->{type}->{$_} } @snp_types), 
+			map({$count->{type}->{$_} } @snp_types),
+			$count->{small_indel},
+			$count->{large_del}, 
 			$total_deleted, 
 			map({$count->{mob}->{$_}} @mod_name_list), 
 			$called_bp, 

@@ -65,6 +65,8 @@ namespace breseq {
         if( this_score > max_quality_score ) max_quality_score = this_score;
         if( this_score < min_quality_score ) min_quality_score = this_score;
       }
+      
+      format_to_chr_offset["SANGER"];
     }
     input_fastq_file.close();
     
@@ -102,11 +104,12 @@ namespace breseq {
       cFastqSequence min_max_sequence;
       min_max_sequence.m_qualities.append(1,min_quality_score);
       min_max_sequence.m_qualities.append(1,max_quality_score);
-
       fqc.convert_sequence(min_max_sequence);
-      min_quality_score = (uint8_t)min_max_sequence.m_qualities[0] - format_to_chr_offset["SANGER"];
-      max_quality_score = (uint8_t)min_max_sequence.m_qualities[1] - format_to_chr_offset["SANGER"];
-
+      min_quality_score = (uint8_t)min_max_sequence.m_qualities[0];
+      max_quality_score = (uint8_t)min_max_sequence.m_qualities[1];
+      
+      // (much faster than looking through all qualities again)
+      
       while (input_fastq_file.read_sequence(on_sequence)) {
         
         // truncate second name name
@@ -133,6 +136,13 @@ namespace breseq {
       
       converted_fastq_name = convert_file_name;
     }
+    
+    // quality scores are in SANGER at this point
+    min_quality_score = min_quality_score - format_to_chr_offset["SANGER"];
+    max_quality_score = max_quality_score - format_to_chr_offset["SANGER"];
+        
+    //cerr << "min_quality_score "     << (int)min_quality_score  << endl;
+    //cerr << "max_quality_score "     << (int)max_quality_score  << endl;
     
     // Output information to stdout
     cout << "max_read_length "       << max_read_length         << endl;
