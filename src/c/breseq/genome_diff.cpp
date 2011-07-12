@@ -272,26 +272,23 @@ void breseq::genome_diff::add(const diff_entry& item) {
  */
 
 void breseq::genome_diff::read(const string& filename) {
-  typedef vector<string> Lines;
-  typedef string Line;
-  
   ifstream IN(filename.c_str());
   if(!IN.good())
     cerr << "Could not open file for reading: " << filename << endl;
   
- Lines lines;
+ vector<string> lines;
   char const line_delim = '\n';
-  for(Line line; getline(IN, line, line_delim);)
+  for(string line; getline(IN, line, line_delim);)
     lines.push_back(line);
 // #   ## read version from first line
 // #   my $l = shift @lines;
-  Line l = shift(lines);
+  string l = shift(lines);
 // #   ($l =~ m/#=GENOME_DIFF\s+(\d+)/) or ($l =~ m/#=GENOMEDIFF\s+(\d+)/)  
 // #   or $self->throw("Could not match version line in file $self->{file_name}.");
   if(!regex_m("#=GENOME_DIFF",l)
       && !regex_m("#=GENOMEDIFF",l))
     cerr << "Could not match version line in file" << endl;
-  Lines version_split = split(l," ");
+  vector<string> version_split = split(l," ");
   assert(version_split.size() == 2);
 // #   $self->{version} = $1;
   version = version_split.back();
@@ -306,11 +303,8 @@ void breseq::genome_diff::read(const string& filename) {
     ///TODO metadata 
     
     // # $self->add($self->_line_to_item($l));
-    diff_entry temp = _line_to_item(l);
+    add(_line_to_item(l));
   }
-  
-
-  
 
 // #   while ($l = shift @lines)
 // #   {
@@ -326,17 +320,20 @@ void breseq::genome_diff::read(const string& filename) {
 // #   }
 // #   close IN;
   IN.close();
-
-  
-  
-  
-  
-		
-		// match common fields - type id pid seqid
+   	// match common fields - type id pid seqid
 		
 		// match type-specific fields
-		
-	
+///USED for Testing
+// 		for(vector<diff_entry>::iterator itr = _entry_list.begin(); 
+//         itr != _entry_list.end(); itr++)
+//         {
+//           map<string,string> fields(itr->_fields);
+//           for(map<string,string>::iterator j = fields.begin();
+//               j != fields.end();j++)
+//               cout<< j->first<< " "<<j->second<<"   ";
+//           cout <<endl;
+//         }
+// 	
 }
 
 
@@ -947,7 +944,7 @@ diff_entry genome_diff::_line_to_item(string line)
   item[key] = next;
 // #   }
   }
-  
+  ///BUG = _id ending up here for RA
 // # 
 // #   ## Remainder of the line is comprised of non-required key value pairs
 // #   foreach my $key_value_pair (@line_list)
@@ -961,7 +958,7 @@ diff_entry genome_diff::_line_to_item(string line)
 // #     next if ($key_value_pair =~ m/^\s*$/);
        if(!regex_m("=",key_value_pair)) continue;//TODO ASK
 // #     my $matched = ($key_value_pair =~ m/^(.+)=(.+)$/);
-         vector<string> matched = split("=", key_value_pair);
+         vector<string> matched = split(key_value_pair,"=");
 // #     if (!$matched)
 // #     {
        if(matched.empty())
@@ -974,7 +971,8 @@ diff_entry genome_diff::_line_to_item(string line)
        }
 // #     
 // #     my ($item_key, $item_value) = ($1, $2); +
-         string item_key = matched[0], item_value = matched[1]; 
+         string item_key = matched[0];
+         string item_value = matched[1]; 
          // #     $item->{$item_key} = $item_value;
          item[item_key] = item_value;
 // #   }

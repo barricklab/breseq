@@ -214,7 +214,7 @@ namespace breseq {
 		void write() { write(_default_filename); }
 
 		//! Read a genome diff from a file.
-		//TEST @GRC
+		//TEST Completed @GRC
 		void read(const string& filename);
 		
 		//! Write the genome diff to a file.
@@ -225,7 +225,7 @@ namespace breseq {
     entry_list_t filter_used_as_evidence(entry_list_t list);
     
     //! Retrieve diff_entrys that match given type(s) 
-    //TEST @GRC
+    //TEST Completed @GRC
     entry_list_t list(vector<string> types);
     
     void strcopy(char* arg1, const char* arg2);
