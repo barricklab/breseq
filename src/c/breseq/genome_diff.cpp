@@ -66,7 +66,7 @@ map<string, vector<string> > line_specification =make_map<string, vector<string>
 //! seq_id and positions are already parameters in diff_entry
 //## mutations
 //'SNP' => ['seq_id', 'position', 'ref_seq', 'new_seq'],
-("SNP",make_list<string> ("seq_id")("position")("ref_seq")("new_seq"))
+("SNP",make_list<string> ("seq_id")("position")("ref_seq")) ///BUG 1 too many parameters, new_seq?
 //'SUB' => ['seq_id', 'position', 'ref_seq', 'new_seq'],
 ("SUB",make_list<string> ("seq_id")("position")("ref_seq")("new_seq"))
 //'DEL' => ['seq_id', 'position', 'size'],
@@ -197,12 +197,74 @@ ostream& breseq::operator<<(ostream& out, breseq::diff_entry& de) {
 	out << join(fields, "\t");
 	return out;
 }
-
+/*! Constructor.
+ */
+breseq::genome_diff::genome_diff(const string& filename)
+ : _default_filename(filename)
+ , _current_id(0) 
+{
+ read(filename);  
+}
 
 /*! Add evidence to this genome diff.
  */
-void breseq::genome_diff::add(const diff_entry& v) {
-	_entry_list.push_back(v);
+void breseq::genome_diff::add(const diff_entry& item) {
+	_entry_list.push_back(item);
+// # sub add
+// # {
+// #   my ($self, $item) = @_;
+// #   my @missing_required_columns = ();
+// # 
+// #   ## no ID, give it a new one (need to re-assign id's later...)
+// #   if ( !defined $item->{id} )
+// #   {
+// #     $item->{id} = $self->new_unique_id;
+// #   }
+// #   elsif ( $self->used_unique_id( $item->{id}) && !(($item->{id} eq '.') || ($item->{id} eq '+') || ($item->{id} eq '?')))
+// #   {
+// #     $self->warn("Ignoring attempt to add item with an existing id: $item->{id}");
+// #     return;
+// #   }
+// # 
+// #   sub check_required_field
+// #   {
+// #     my ($item, $field, $missing_ref) = @_;
+// #     push @$missing_ref, $field if (!defined $item->{$field});
+// #   }
+// #   
+// #   ## check to be sure the item has required fields, or auto-populate them
+// #   $item->{type} = '' if (!defined $item->{type});
+// #   
+// #   my $spec = $line_specification->{$item->{type}};
+// #   if (!defined $spec)
+// #   {
+// #     $self->warn("Type \'$item->{type}\' is not recognized. Ignoring item.");
+// #     return;
+// #   }
+// #   
+// #   ## check for required fields
+// #   foreach my $key (@$spec)
+// #   {
+// #     check_required_field($item, $key, \@missing_required_columns);
+// #   }
+// # 
+// #   if (scalar @missing_required_columns > 0)
+// #   {
+// #     $self->warn("GenomeDiff::Ignoring item of type \'$item->{type}\' that is missing required field(s):" . join (',', @missing_required_columns));
+// #     return;
+// #   }
+// # 
+// #   ## these are all required columns
+// #   $item->{SORT_1} = $tag_sort_fields->{$item->{type}}->[0];
+// #   $item->{SORT_2} = $item->{$tag_sort_fields->{$item->{type}}->[1]};
+// #   $item->{SORT_3} = $item->{$tag_sort_fields->{$item->{type}}->[2]};
+// #   
+// #   push @{$self->{list}}, $item;
+// #   $self->mark_unique_id($item->{id});
+// # }
+  
+  
+  
 }
 
 
@@ -210,22 +272,26 @@ void breseq::genome_diff::add(const diff_entry& v) {
  */
 
 void breseq::genome_diff::read(const string& filename) {
-    ifstream IN(filename.c_str());
+  typedef vector<string> Lines;
+  typedef string Line;
+  
+  ifstream IN(filename.c_str());
   if(!IN.good())
     cerr << "Could not open file for reading: " << filename << endl;
   
-
-// #   chomp @lines;
+ Lines lines;
   char const line_delim = '\n';
+  for(Line line; getline(IN, line, line_delim);)
+    lines.push_back(line);
 // #   ## read version from first line
 // #   my $l = shift @lines;
-  string l; getline(IN, l, line_delim);
+  Line l = shift(lines);
 // #   ($l =~ m/#=GENOME_DIFF\s+(\d+)/) or ($l =~ m/#=GENOMEDIFF\s+(\d+)/)  
 // #   or $self->throw("Could not match version line in file $self->{file_name}.");
   if(!regex_m("#=GENOME_DIFF",l)
       && !regex_m("#=GENOMEDIFF",l))
     cerr << "Could not match version line in file" << endl;
-  vector<string> version_split = split(l," ");
+  Lines version_split = split(l," ");
   assert(version_split.size() == 2);
 // #   $self->{version} = $1;
   version = version_split.back();
@@ -234,13 +300,15 @@ void breseq::genome_diff::read(const string& filename) {
 // #   ## read data
 // #   while ($l = shift @lines)
 // #   {
-  while(getline(IN, l, line_delim))
+  while(!lines.empty())
   {
+    l=shift(lines);
     ///TODO metadata 
     
     // # $self->add($self->_line_to_item($l));
-    //TODO     
+    diff_entry temp = _line_to_item(l);
   }
+  
 
   
 
@@ -742,32 +810,32 @@ diff_entry genome_diff::_line_to_item(string line)
 // #   my @line_list = split /\t/, $line;
   list_t line_list = split(line, "\t");
 // #   
-// #   ##remove items at the end that are empty
+// #   ##remove items at the end that are empty 
 // #   while ( scalar(@line_list) && ($line_list[-1] =~ m/^\s+$/) )
 // #   {
 // #     pop @line_list;
 // #   }
+  ///^^^NOT Applicable?
 // #   
 // #   my $item = {};
   diff_entry item;
 // #   $item->{type} = shift @line_list;
-  item._type = shift(line_list);
+  item._type = shift(line_list); 
 // #   $item->{id} = shift @line_list;
   item._id = shift(line_list);
 // #   my $evidence_string = shift @line_list;
   string evidence_string = shift(line_list);
 // #   @{$item->{evidence}} = split /,/, $evidence_string;
   item._evidence = split(evidence_string, ",");
-  
 // #     
 // #   my $spec = $line_specification->{$item->{type}};
-  const list_t &spec = line_specification[item._type];  
+  const list_t spec = line_specification[item._type];  
 // #   if (!defined $spec)
 // #   {
   if(spec.empty())
   {
 // #     $self->warn("Type \'$item->{type}\' is not recognized for line:\n$line");
-    cerr << "Type " << item._type << "is not recognized for line # "<< endl;
+    cerr << "Type " << item._type << "is not recognized for line # :"<< endl << line;
 // #     return undef;
     ///TODO undef
 // #   }
@@ -848,10 +916,9 @@ diff_entry genome_diff::_line_to_item(string line)
 
 // #   foreach my $key (@$spec)
 // #   {
-  for(map<string, vector<string> >::iterator itr = line_specification.begin();
-      itr != line_specification.end(); itr++)
+  for(uint8_t i = 0; i < spec.size(); i++)
   {
-    string key = itr->first;
+    string key = spec[i];
 // #     my $next = shift @line_list;
    string next = shift(line_list);
 // #     if (!defined $next)
@@ -859,7 +926,7 @@ diff_entry genome_diff::_line_to_item(string line)
     if(next.empty())
     {
 // #       $self->warn("Number of required items is less than expected for type \'$item->{type}\' line:\n$line");
-      cerr << "Number of required items is less than expected for type " << endl; ///TODO 
+      cerr << "Number of required items is less than expected for type " << item._type << " line:" << endl << line; 
 // #       return undef;
       ///TODO return undef
       
@@ -870,7 +937,7 @@ diff_entry genome_diff::_line_to_item(string line)
     if(regex_m("=",next))
     {
 // #       $self->warn("Unexpected key=value pair \'$next\' encountered for required item \'$key\' in type \'$item->{type}\' line:\n$line");
-      cerr << "Unexpected key=value pair \'$next\' encountered for required item" << endl; ///TODO
+      cerr << "Unexpected key=value pair \'$next\' encountered for required item" << key << " in type " << item._type << " line:" << endl << line; 
 // # #     return undef;
       ///TODO return undef
 // #     }
@@ -897,56 +964,43 @@ diff_entry genome_diff::_line_to_item(string line)
          vector<string> matched = split("=", key_value_pair);
 // #     if (!$matched)
 // #     {
-       if(matched.size() != 2)
+       if(matched.empty())
        {
 // #       $self->warn("Not a key value pair \'$key_value_pair\' line:\n$line");
-         cerr << "Not a key value pair" << key_value_pair <<  endl;
+         cerr << "Not a key value pair" << key_value_pair <<  endl << line;
 // #       next;
          continue;
 // #     }   
        }
 // #     
-// #     my ($item_key, $item_value) = ($1, $2); 
+// #     my ($item_key, $item_value) = ($1, $2); +
          string item_key = matched[0], item_value = matched[1]; 
          // #     $item->{$item_key} = $item_value;
          item[item_key] = item_value;
 // #   }
   }
-// #   
+/// Dealing with JC is inconvenient here
+///#############################3
 // #   ### We do some extra convenience processing for junctions...
 // #   if ($item->{type} eq 'JC')
 // #   {
-  if(item._type == "JC")
-  {
-    list_t side_keys(make_list<string>("side_1")("side_2"));
-    list_t keys(make_list<string>("seq_id")("position")("strand"));
 // #     foreach my $side_key ('side_1', 'side_2')
 // #     {
-    for(list_t::iterator itr_side = side_keys.begin();
-        itr_side != side_keys.end(); itr_side++)
-    {
-      string side_key(*itr_side);
 // #       foreach my $key ('seq_id', 'position', 'strand')
 // #       {
-      for(list_t::iterator itr_key = keys.begin();
-          itr_key != keys.end(); itr_key++)
-      {
-        string key(*itr_key);
 // #         $item->{"_$side_key"}->{$key} = $item->{"$side_key\_$key"};
-        item[side_key+key] = item[side_key+key]; ///TODO NOT CORRECT AT ALL;
 // #       }
-      }
 // #       $item->{"_$side_key"}->{type} = 'NA';
-          
 // #     }
-    }
 // #   }
-  }
+///###############################
 // # 
 // #   return $item;
-return item;
+ return item;
 // # } 
 }
+
+
 
 
 }//namespace bresesq

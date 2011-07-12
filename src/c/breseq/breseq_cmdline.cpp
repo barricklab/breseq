@@ -685,6 +685,25 @@ int do_convert_gd( int argc, char* argv[]){
     return 0;
 }
 
+int do_read_gd( int argc, char* argv[]){
+  AnyOption options("Usage: --gd <gd.gd>"); options( "gd,i","gd file to read").processCommandArgs( argc,argv);
+  if( !options.count("gd")){
+        options.printUsage(); return -1;
+    }
+    
+    try{
+        genome_diff( string(options["gd"])); ///TODO Why string()?
+    } 
+    catch(...){ 
+        return -1; // failed 
+    }
+    
+    return 0;
+}
+
+
+
+
 /*! breseq commands
  
     First argument is a command that should be removed from argv.
@@ -733,11 +752,14 @@ int main(int argc, char* argv[]) {
 		return do_tabulate_coverage(argc_new, argv_new);
 	} else if (command == "RESOLVE_ALIGNMENTS") {
 		return do_resolve_alignments(argc_new, argv_new);
-	} else if( command == "GD2GVF"){
-        return do_convert_gvf(argc_new, argv_new);
-    } else if( command == "VCF2GD" ){
-        return do_convert_gd( argc_new, argv_new);
-    }
+	} else if(command == "GD2GVF") {
+    return do_convert_gvf(argc_new, argv_new);
+  } else if(command == "VCF2GD") {
+    return do_convert_gd( argc_new, argv_new);
+  } else if(command == "READGD") {
+    return do_read_gd(argc_new, argv_new);
+  }
+    
 
 	// Command was not recognized. Should output valid commands.
 	cout << "Unrecognized command" << endl;

@@ -135,16 +135,14 @@ namespace breseq {
 		//! Clone this entry.
 		//virtual diff_entry* clone() const = 0;
     
-		map_t _fields; //!< Information about this diff entry.
+    //! Parameters most diff_entrys have in common
 		string _type;
 		string _id;
-		vector<string> _evidence; 
+    vector<string> _evidence; 
+    map_t _fields; //!< Additional information about this diff entry. Look at 
     
-    uint8_t new_copy_number;
-    uint16_t del_start;
-    uint16_t ins_start;
-    uint16_t del_end;
-    uint16_t ins_end;
+    
+  
 	};
 	
   void add_reject_reason(diff_entry& de, const string &reason);
@@ -198,7 +196,7 @@ namespace breseq {
 		genome_diff() : _current_id(0) { }
 		
 		//! Constructor that sets a default filename.
-		genome_diff(const string& filename) : _default_filename(filename), _current_id(0) { }
+		genome_diff(const string& filename);
 		
 		//! Destructor.
 		~genome_diff() { }
@@ -207,7 +205,7 @@ namespace breseq {
 		unsigned int new_id() { return ++_current_id; }
 		
 		//! Add evidence to this genome diff.
-		void add(const diff_entry& v);
+		void add(const diff_entry& item);
 
 		//! Read a genome diff from the default file to build entry_list_t,
     void read() { read(_default_filename); }
@@ -229,6 +227,7 @@ namespace breseq {
     //! Retrieve diff_entrys that match given type(s) 
     //TEST @GRC
     entry_list_t list(vector<string> types);
+    
     void strcopy(char* arg1, const char* arg2);
     diff_entry _line_to_item(string line);
     
