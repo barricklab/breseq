@@ -621,7 +621,7 @@ namespace breseq {
 			distribution_hash_ref[score]++;
 	}
 	
-	//! Returns true if exp is found anywhere in input
+	//! Returns true if exp matches anywhere in input
 	//! true regex expressions ie !^[\s](\w)+ do not work.
   inline	bool regex_m(string exp, string input)
   {

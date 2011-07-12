@@ -207,7 +207,7 @@ void html_index(string file_name, Settings settings, Summary summary,
     genome_diff::entry_list_t jc(gd.filter_used_as_evidence(gd.list(make_list<string>("JC"))));
 ///TODO @GRC implement jc and jcu ####
 // #   @jc = grep { !$_->{no_show} } @jc;  
-    
+  
     
 // #   @jc = grep { !$_->{circular_chromosome} } @jc if ($settings->{hide_circular_genome_junctions}); #don't show junctions for circular chromosomes  
 // # 
