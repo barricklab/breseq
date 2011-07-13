@@ -42,13 +42,31 @@ namespace breseq {
 
       for (vector<cSequenceFeature>::iterator it = it_as->m_features.begin(); it < it_as->m_features.end(); it++) {
         out << it_as->m_seq_id;
-        out << "\t" << (*it)["type"];
-        out << "\t" << (*it)["accession"];
-        out << "\t" << (*it)["name"];
+        out << "\tBullForm";
+        
+        if (it->SafeGet("type") == "") 
+          out << "\t" << ".";
+        else
+          out << "\t" << (*it)["type"];
+        
+        if( it->SafeGet("accession") == "" )
+          out << "\t" << ".";
+        else
+          out << "\t" <<(*it)["accession"];
+        
+        if( it->SafeGet("name") == "" )
+          out << "\t" << ".";
+        else
+          out << "\t" <<(*it)["name"];
+        
         out << "\t" << (*it).m_start;
         out << "\t" << (*it).m_end;
         out << "\t" << (int)(*it).m_strand;
-        out << "\t" << (*it)["product"];
+        
+        if( it->SafeGet("product") == "" )
+          out << "\t" << ".";
+        else
+          out << "\t" <<(*it)["product"];
         out << std::endl;
       }
       
@@ -63,18 +81,37 @@ namespace breseq {
       for(vector<cAnnotatedSequence>::iterator it_as = this->begin(); it_as < this->end(); it_as++) {
           
           for (vector<cSequenceFeature>::iterator it = it_as->m_features.begin(); it < it_as->m_features.end(); it++) {
-              out << it_as->m_seq_id;
-              out << "\tGenBank";
+            out << it_as->m_seq_id;
+            out << "\tGenBank";
+          
+            if (it->SafeGet("type") == "") 
+              out << ".";
+            else
               out << "\t" << (*it)["type"];
-              out << "\t" << (*it).m_start;
-              out << "\t" << (*it).m_end;
-              out << "\t.";
-              out << "\t" << (int)(*it).m_strand;
-              out << "\t.";
+            
+            
+            out << "\t" << (*it).m_start;
+            out << "\t" << (*it).m_end;
+            out << "\t.";
+            out << "\t" << (int)(*it).m_strand;
+            out << "\t.";
+            
+            if( it->SafeGet("accession") == "" )
+              out << ".";
+            else
               out << "\t" << "accession=" <<(*it)["accession"];
+            
+            if( it->SafeGet("name") == "" )
+              out << ";" << "name=" << ".";
+            else
               out << ";" << "name=" <<(*it)["name"];
+            
+            if( it->SafeGet("product") == "" )
+              out << ";" << "produce=" << ".";
+            else
               out << ";" << "produce=" <<(*it)["product"];
-              out << std::endl;
+            
+            out << std::endl;
           }
           
       }
@@ -548,6 +585,85 @@ namespace breseq {
     if (in_feature_file_name.size() > 0)
     	s.ReadFeatureTable(in_feature_file_name);
   }
+  
+  void LoadBullFile(cReferenceSequences& rs, const vector<string>& in_file_names) {
+    
+    for (vector<string>::const_iterator it = in_file_names.begin(); it < in_file_names.end(); it++) {
+      
+      ifstream in(it->c_str(), ios_base::in);
+      assert(!in.fail()); 
+      
+      LoadBullFeatureFile(in, rs.back());
+    }
+    
+   
+    
+    /*for (vector<cSequenceFeature>::iterator it = s.m_features.begin(); it < s.m_features.end(); it++) {
+      
+      if (it->SafeGet("type") == "") 
+        cout << "\t.";
+      else
+        cout << "\t" << (*it)["type"];
+      
+      
+      cout << "\t" << (*it).m_start;
+      cout << "\t" << (*it).m_end;
+      cout << "\t.";
+      cout << "\t" << (int)(*it).m_strand;
+      cout << "\t.";
+      
+      if( it->SafeGet("accession") == "" )
+        cout << "\t.";
+      else
+        cout << "\t" << "accession=" <<(*it)["accession"];
+      
+      if( it->SafeGet("name") == "" )
+        cout << "\t" << ".";
+      else
+        cout << "\t" << (*it)["name"];
+      
+      if( it->SafeGet("product") == "" )
+        cout << "\t" << ".";
+      else
+        cout << "\t" <<(*it)["product"];
+      
+      cout << std::endl;
+    }*/
+    
+  }
+  
+  void LoadBullFeatureFile(ifstream& in, cAnnotatedSequence& s) {
+      
+    char line[10];
+    
+    vector<cSequenceFeature> all_features;
+    
+    while ( !in.eof() ) {
+      
+      cSequenceFeature* current_feature(NULL);
+      
+      all_features.resize(all_features.size()+1);
+      current_feature = &(all_features[all_features.size()-1]);
+      
+      current_feature->m_strand = 1;
+      
+      in.getline(line, 10, ' ');
+      current_feature->m_start = from_string<uint32_t>(line);
+      
+      in.getline(line, 10, ' ');
+      current_feature->m_end = from_string<uint32_t>(line);
+      
+      in.getline(line, 10, '\n');
+      string name( (string) line );
+      name.erase(std::remove(name.begin(), name.end(), '\n'), name.end());
+      (*current_feature)["name"] = name;
+    }
+    
+    for (vector<cSequenceFeature>::iterator it = all_features.begin(); it < all_features.end(); it++) {
+      //s.m_features.push_back(*it);
+      cout << "Start: " << (*it).m_start << " Stop: " << (*it).m_end << " Strand: " << (*it).m_strand << endl;
+    }
+  }
 
 	uint32_t alignment_mismatches(alignment a, const cReferenceSequences& ref_seq_info)
 	{
@@ -615,7 +731,7 @@ namespace breseq {
 
 		//#	print $a->qname . "\n$mismatches\n$cigar_string\n$ref_string\n$read_string\n" if ($mismatches);
 		return mismatches;
-	}
+  }
 
 	string shifted_cigar_string(alignment& a, cReferenceSequences& ref_seq_info)
 	{

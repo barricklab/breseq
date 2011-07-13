@@ -100,6 +100,21 @@ void convert_genbank(const vector<string>& in, const string& fasta, const string
   if (gff3 != "" ) refseqs.WriteGFF( gff3 );
 }
 
+void convert_bull_form(const vector<string>& in, const string& fasta, const string& ft, const string& gff3 ) {
+  cReferenceSequences refseqs;
+  
+  // Load the GenBank file
+  LoadBullFile(refseqs, in);
+  
+  // Output sequence
+  //if (fasta != "") refseqs.WriteFASTA(fasta);
+  
+  // Output feature table
+  if (ft != "") refseqs.WriteFeatureTable(ft);
+  
+  //if (gff3 != "" ) refseqs.WriteGFF( gff3 );
+}
+
 
 int do_convert_genbank(int argc, char* argv[]) {
 	
@@ -131,6 +146,44 @@ int do_convert_genbank(int argc, char* argv[]) {
                     options["features"],
                     options["gff3"]
                     );
+  } catch(...) {
+		// failed; 
+		return -1;
+	}
+	
+	return 0;
+}
+
+int do_convert_bull_form(int argc, char* argv[]) {
+	
+	// setup and parse configuration options:
+	AnyOption options("Usage: breseq CONVERT_BULL_FORM --input <bull_form.txt> [--features <output.tab>]");
+	options
+  ("help,h", "produce this help message", TAKES_NO_ARGUMENT)
+  ("input,i", "input bull form flatfile (multiple allowed, comma-separated)")
+  ("features,g", "output feature table", "")
+  ("fasta,f", "FASTA file of reference sequences", "")
+  ("gff3,v", "GFF file of features", "" )
+	.processCommandArgs(argc, argv);
+	
+	// make sure that the config options are good:
+	if(options.count("help")
+		 || !options.count("input")
+		 || (!options.count("features") /*&& !options.count("fasta")*/)  
+		 ) {
+		options.printUsage();
+		return -1;
+	}
+  
+	// attempt to calculate error calibrations:
+	try {
+    
+		convert_bull_form(  
+                      from_string<vector<string> >(options["input"]),
+                      options["fasta"],
+                      options["features"],
+                      options["gff3"]
+                      );
   } catch(...) {
 		// failed; 
 		return -1;
@@ -738,6 +791,8 @@ int main(int argc, char* argv[]) {
 		return do_calculate_trims(argc_new, argv_new);
 	} else if (command == "CONVERT_GENBANK") {
 		return do_convert_genbank(argc_new, argv_new);
+  } else if (command == "CONVERT_BULL_FORM") {
+    return do_convert_bull_form(argc_new, argv_new);
 	} else if (command == "CONTINGENCY_LOCI") {
 		return do_contingency_loci(argc_new, argv_new);
 	} else if (command == "ERROR_COUNT") {
@@ -752,14 +807,13 @@ int main(int argc, char* argv[]) {
 		return do_tabulate_coverage(argc_new, argv_new);
 	} else if (command == "RESOLVE_ALIGNMENTS") {
 		return do_resolve_alignments(argc_new, argv_new);
-	} else if(command == "GD2GVF") {
+	} else if (command == "GD2GVF") {
     return do_convert_gvf(argc_new, argv_new);
-  } else if(command == "VCF2GD") {
+  } else if (command == "VCF2GD") {
     return do_convert_gd( argc_new, argv_new);
-  } else if(command == "READGD") {
+  } else if (command == "READGD") {
     return do_read_gd(argc_new, argv_new);
   }
-    
 
 	// Command was not recognized. Should output valid commands.
 	cout << "Unrecognized command" << endl;

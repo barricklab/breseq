@@ -37,6 +37,21 @@
       launchStyle = "0"
       useCustomWorkingDirectory = "NO"
       buildConfiguration = "Debug">
+      <BuildableProductRunnable>
+         <BuildableReference
+            BuildableIdentifier = "primary"
+            BlueprintIdentifier = "42B6EDB811C69CC70075F8A3"
+            BuildableName = "cbreseq"
+            BlueprintName = "breseq_cmdline"
+            ReferencedContainer = "container:breseq.xcodeproj">
+         </BuildableReference>
+      </BuildableProductRunnable>
+      <CommandLineArguments>
+         <CommandLineArgument
+            argument = "CONVERT_BULL_FORM --input /Users/austin/Desktop/bull_form_test.txt --features /Users/austin/Desktop/bull_form_test.tab"
+            isEnabled = "YES">
+         </CommandLineArgument>
+      </CommandLineArguments>
       <AdditionalOptions>
       </AdditionalOptions>
    </LaunchAction>
