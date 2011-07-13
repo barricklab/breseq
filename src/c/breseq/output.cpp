@@ -4,6 +4,42 @@
 using namespace std;
 namespace breseq
 {
+
+vector<diff_entry> grep(const bool &match, const string &exp, vector<diff_entry> &input)
+{
+  assert(!input.empty());  
+  vector<diff_entry> matched_diff_entrys;
+
+  for(vector<diff_entry>::iterator diff_entry = input.begin();
+      diff_entry != input.end(); diff_entry++)
+  {
+    vector<string> fields = get_keys<string>((*diff_entry)._fields);
+    vector<string> matched_fields = grep(match, exp, fields);  
+      if(!matched_fields.empty())
+        matched_diff_entrys.push_back((*diff_entry));
+  }
+  return matched_diff_entrys;
+}
+
+vector<diff_entry> grep(const bool &match, const string &exp1, const string &exp2, vector<diff_entry> &input)
+{
+  assert(!input.empty());  
+  vector<diff_entry> matched_diff_entrys;
+
+  for(vector<diff_entry>::iterator diff_entry = input.begin();
+      diff_entry != input.end(); diff_entry++)
+  {
+    vector<string> fields = get_keys<string>((*diff_entry)._fields);
+    vector<string> matched_fields = grep(match, exp1, fields); 
+	 matched_fields = grep(match, exp2, fields);
+      if(!matched_fields.empty())
+        matched_diff_entrys.push_back((*diff_entry));
+}
+  return matched_diff_entrys;
+}
+  
+  
+  
 //   # ###
 // # # Pod Documentation
 // # ###
@@ -204,12 +240,16 @@ void html_index(string file_name, Settings settings, Summary summary,
 // #   }
 // #   
 // #   my @jc = $gd->filter_used_as_evidence($gd->list('JC'));
-    genome_diff::entry_list_t jc(gd.filter_used_as_evidence(gd.list(make_list<string>("JC"))));
+  genome_diff::entry_list_t jc(gd.filter_used_as_evidence(gd.list(make_list<string>("JC"))));
 ///TODO @GRC implement jc and jcu ####
 // #   @jc = grep { !$_->{no_show} } @jc;  
+  jc = grep(false, "no_show",jc); ///TODO not sure if this will work
+   
   
     
 // #   @jc = grep { !$_->{circular_chromosome} } @jc if ($settings->{hide_circular_genome_junctions}); #don't show junctions for circular chromosomes  
+  if(!settings.hide_circular_genome_junctions.empty())
+    jc = grep(false, "circular_chromosome", jc);
 // # 
 // #   my @jcu = grep { !$_->{reject} } @jc; 
     genome_diff::entry_list_t jcu;
@@ -270,7 +310,8 @@ void html_marginal_predictions(string file_name, Settings settings,Summary summa
 // #   my @ra = $gd->filter_used_as_evidence($gd->list('RA')); 
   genome_diff::entry_list_t ra = gd.filter_used_as_evidence(gd.list(make_list<string>("RA")));
 // #   ## don't print ones that overlap predicted deletions or were marked to not show
-/// #   @ra = grep { !$_->{deleted} && !$_->{no_show} } @ra;
+// #   @ra = grep { !$_->{deleted} && !$_->{no_show} } @ra;
+	ra = grep(false, "deleted", "no_show", ra);
 // #   
 // #   if (scalar @ra > 0)
 // #   {
@@ -280,22 +321,36 @@ void html_marginal_predictions(string file_name, Settings settings,Summary summa
 // #   }
 // #   
 // #   my @jc = $gd->filter_used_as_evidence($gd->list('JC'));
-    genome_diff::entry_list_t JC = gd.filter_used_as_evidence(gd.list(make_list<string>("JC")));
+    genome_diff::entry_list_t jc = gd.filter_used_as_evidence(gd.list(make_list<string>("JC")));
 ///TODO @GRC implement jc and jcu ####
 // #   @jc = grep { !$_->{no_show} } @jc;
+		jc = grep(false, "no_show", jc);
 // #   @jc = grep { $_->{reject} } @jc;
+    jc = grep(false, "reject", jc);
 // #   if (scalar @jc > 0)
 // #   { 
+		if (jc.size() >0)
+		{
+/// TODO sort 
 // #     ## sort by score, not by position (the default order)...
 // #     @jc = sort { -($a->{pos_hash_score} <=> $b->{pos_hash_score}) || -($a->{min_overlap_score} <=> $b->{min_overlap_score})  || ($a->{total_reads} <=> $a->{total_reads}) } @jc;
+			
 // #     print HTML p . html_new_junction_table_string(\@jc, $relative_path, "Marginal new junction evidence..."); 
+  		HTML << "<p>" << html_new_junction_table_string(jc, relative_path, "Marginal new junction evidence...");
 // #   }
+		}
 // #   
 // #   print HTML end_html;
+		HTML <<  "</HTML>";
 // #   close HTML;
+		HTML.close();
 // # }
 }
 // # 
+
+string html_header (const string &title)
+{
+	stringstream ss;	
 // # sub html_header
 // # {
 // #   my ($title) = @_;
@@ -303,23 +358,51 @@ void html_marginal_predictions(string file_name, Settings settings,Summary summa
 // #       -title => $title, 
 // #       -head  => style({type => 'text/css'}, $header_style_string),
 // #   );
+	
+  ss << "<HTML>\n"; ///TODO End HTML tag in this function also?  
+	ss << "<title>" << title << "</title>\n";
+	ss << "<head>\n";
+	ss << "<style type = \"text/css\">\n";
+	ss << header_style_string() << "\n";
+	ss << "</style>\n";
+	ss << "</head>\n";
+  
+	return ss.str();
 // # }
+}
 // # 
 // # sub html_footer
 // # {
+string html_footer()
+{
 // #   return end_html;
+	return "</html>";
 // # }
+	}
 // # 
 // # sub html_compare
 // # {
+void html_compare(const string &filename, const string &title)
+{
 // #   my ($settings, $file_name, $title, $gd, $one_ref_seq, $gd_name_list_ref, $options) = @_;
 // # 
 // #   open HTML, ">$file_name" or die "Could not open file: $file_name";    
+	ofstream HTML(filename.c_str());
+
+	if(!HTML.good());
+		cerr << "Could not open file: " << filename << endl; 
 // # 
 // #     print HTML start_html(
 // #       -title => $title, 
 // #       -head  => style({type => 'text/css'}, $header_style_string),
 // #   );
+	HTML << "<HTML>\n"; ///TODO End HTML tag in this function also?  
+	HTML << "<title>" << title << "</title>\n";
+	HTML << "<head>\n";
+	HTML << "<style type = \"text/css\">\n";
+	HTML << header_style_string() << "\n";
+	HTML << "</style>\n";
+	HTML << "</head>\n";
 // #   
 // #   my @muts = $gd->mutation_list;
 // #   
@@ -328,6 +411,7 @@ void html_marginal_predictions(string file_name, Settings settings,Summary summa
 // #   print HTML end_html;
 // #   close HTML;
 // # }
+}
 // # 
 // # sub html_compare_polymorphisms
 // # {

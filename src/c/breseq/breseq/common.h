@@ -243,6 +243,7 @@ namespace breseq {
 					const  string  & theDelimiter
 	) {
 		assert(theDelimiter.size() > 0); // My own ASSERT macro.
+    assert(theString.size() != 1); //@GRC check that programmer hasn't switched variables in declaration.
 
 		size_t start = 0, end = 0;
 		vector<string> theStringVector;
@@ -645,12 +646,12 @@ namespace breseq {
           matching_lines.push_back((*line));
         return matching_lines;    
   }
-  
-  inline string shift(vector<string> &input)
+  ///! Returns first element, then removes it from container.
+  template <typename T> inline T shift(vector<T>& input)
   {
-    typedef vector<string> Input;
-    Input::iterator first = input.begin();
-    string retval = (*first);
+    assert(!input.empty());
+    class vector<T>::iterator first = input.begin();
+    T retval = (*first);
     input.erase(first);
     
     return retval;
@@ -659,7 +660,7 @@ namespace breseq {
   //! 1       2       3       4       5       6       7
   //! splice(list, 3, 2);
   //! 1       2       3       6       7
-  inline vector<string> splice (vector<string> &input, uint8_t offset, uint8_t length)
+  inline vector<string> splice (vector<string> &input, const uint8_t &offset, const uint8_t &length)
   {
     vector<string>::iterator itr = input.begin();
     vector<string>::iterator start = itr + offset;
@@ -669,6 +670,9 @@ namespace breseq {
     
     return input;
   }
+  
+
+  
 
 } // breseq
 

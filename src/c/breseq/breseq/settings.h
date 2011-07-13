@@ -121,6 +121,10 @@ namespace breseq {
     
 		cReadFiles read_structures;
     
+    //!@GRC needed for output.cpp
+    string print_run_name;
+    string hide_circular_genome_junctions;
+    
 		// Utility function to substitute specific details into a generic file name
 		static string file_name(const string& file_name_key, const string& substitute = "", const string& with = "")
 		{
