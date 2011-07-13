@@ -49,6 +49,10 @@
       <CommandLineArguments>
          <CommandLineArgument
             argument = "CONVERT_BULL_FORM --input /Users/austin/Desktop/bull_form_test.txt --features /Users/austin/Desktop/bull_form_test.tab"
+            isEnabled = "NO">
+         </CommandLineArgument>
+         <CommandLineArgument
+            argument = "ANALYZE_FASTQ --input /Users/austin/Desktop/breseq_working/EcoliB_Ara-1_test.fastq --convert /Users/austin/Desktop/breseq_working/test.fastq"
             isEnabled = "YES">
          </CommandLineArgument>
       </CommandLineArguments>

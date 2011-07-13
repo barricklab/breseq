@@ -38,8 +38,8 @@ namespace breseq {
     
     // Summary information that will be printed at the end
     uint32_t max_read_length = 0;
-    uint8_t min_quality_score = 255;
-    uint8_t max_quality_score = 0;
+    int min_quality_score = 255;
+    int max_quality_score = 0;
     uint32_t num_bases = 0; 
     uint32_t num_reads = 0;
     
@@ -59,19 +59,35 @@ namespace breseq {
       //add current sequence length to number of bases
       num_bases += on_sequence.m_sequence.size();
       
+      vector<int> numerical_quality_scores;
+      
+      if( on_sequence.m_numerical_qualities ) {
+        vector<string> numerical_qualities_as_string( split(on_sequence.m_qualities, " " ) );
+        
+        on_sequence.m_qualities.resize(numerical_qualities_as_string.size());
+        
+        for (uint32_t this_quality = 0; this_quality < numerical_qualities_as_string.size(); ++this_quality) {
+          //cout << "Numerical score: " << from_string<int>(numerical_qualities_as_string[this_quality]);
+          on_sequence.m_qualities[this_quality] = from_string<int>(numerical_qualities_as_string[this_quality]) + 64;
+          //cout << " Converted character score: " << on_sequence.m_qualities[this_quality] << endl;
+        }
+      }
+      
+      cout << "I'm here: " << num_reads << endl;
+      
       //iterate through sequence grabbing the associated scores
       for (uint32_t i=0; i<on_sequence.m_qualities.size(); i++) {
         int this_score(uint8_t(on_sequence.m_qualities[i]));
         if( this_score > max_quality_score ) max_quality_score = this_score;
         if( this_score < min_quality_score ) min_quality_score = this_score;
-      }
-      
+
       format_to_chr_offset["SANGER"];
+      }
     }
     input_fastq_file.close();
     
     // Default is SANGER
-    string quality_format ="SANGER";
+    string quality_format = "SANGER";
     
     // Typical range: (-5, 40) + 64
     if (min_quality_score >= format_to_chr_offset["SOLEXA"] - 5) {
@@ -80,7 +96,7 @@ namespace breseq {
     // Typical range:  (0, 40) + 64
     if (min_quality_score >= format_to_chr_offset["ILLUMINA_1.3+"]) {
       quality_format = "ILLUMINA_1.3+";
-    } 
+    }
     
     //cerr << "min_quality_score "     << (int)min_quality_score  << endl;
     //cerr << "max_quality_score "     << (int)max_quality_score  << endl;
@@ -114,6 +130,18 @@ namespace breseq {
         
         // truncate second name name
         on_sequence.m_name_plus = "+";
+        
+        if( on_sequence.m_numerical_qualities ) {
+          vector<string> numerical_qualities_as_string( split(on_sequence.m_qualities, " " ) );
+          
+          on_sequence.m_qualities.resize(numerical_qualities_as_string.size());
+          
+          for (uint32_t this_quality = 0; this_quality < numerical_qualities_as_string.size(); ++this_quality) {
+            //cout << "Numerical score: " << from_string<int>(numerical_qualities_as_string[this_quality]);
+            on_sequence.m_qualities[this_quality] = from_string<int>(numerical_qualities_as_string[this_quality]) + 64;
+            //cout << " Converted character score: " << on_sequence.m_qualities[this_quality] << endl;
+          }
+        }
         
         // fastq quality convert
         fqc.convert_sequence(on_sequence);
@@ -350,8 +378,18 @@ namespace breseq {
           sequence.m_qualities = line;
           
           if( sequence.m_sequence.size() != sequence.m_qualities.size() ) {
-            fprintf(stderr, "FASTQ sequence record has different SEQUENCE and QUALITY lengths.\nFile %s\nLine: %d\n", m_file_name.c_str(), m_current_line);
-            exit(-1);
+            vector<string> numerical_qualities(split(sequence.m_qualities, " "));
+            
+            if( sequence.m_sequence.size() != numerical_qualities.size() ) {
+              fprintf(stderr, "FASTQ sequence record has different SEQUENCE and QUALITY lengths.\nFile %s\nLine: %d\n", m_file_name.c_str(), m_current_line);
+              exit(-1);
+            }
+            else if( sequence.m_sequence.size() == numerical_qualities.size() ) {
+              sequence.m_numerical_qualities = true; 
+            }
+          }
+          else {
+            sequence.m_numerical_qualities = false;
           }
 
           break;
