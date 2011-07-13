@@ -81,7 +81,14 @@ namespace breseq {
       vector<cSequenceFeature> m_features;  //!< List of sequence features
 
     public:
-      cAnnotatedSequence() {} ; //Constructor for empty object
+    
+      //Constructor for empty object
+      cAnnotatedSequence() : 
+        m_length(0), 
+        m_definition("na"), 
+        m_version("na"), 
+        m_seq_id("na"),
+        m_features(0) {} ; 
   };
   
   /*! Reference Sequences
@@ -120,7 +127,7 @@ namespace breseq {
     
     map<string, vector<cSequenceFeature> > repeat_lists;
     static cSequenceFeature* find_closest_repeat_region(uint32_t position, vector<cSequenceFeature>& repeat_list_ref, uint32_t max_distance, bool direction);
-  };  
+  };
   
   /*! Helper function for creating cReferenceSequences
    */
@@ -131,6 +138,9 @@ namespace breseq {
   void LoadGenBankFileSequence(ifstream& in, cAnnotatedSequence& s);
   
   void LoadFeatureIndexedFastaFile(cReferenceSequences& s, const string &in_feature_file_name, const string &in_fasta_file_name);
+  
+  void LoadBullFile(cReferenceSequences& s, const vector<string>& in_file_names);
+  void LoadBullFeatureFile(ifstream& in, cAnnotatedSequence& s);
 
   /*! Utility functions.
   */
