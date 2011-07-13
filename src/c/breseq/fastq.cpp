@@ -61,17 +61,8 @@ namespace breseq {
       
       vector<int> numerical_quality_scores;
       
-      if( on_sequence.m_numerical_qualities ) {
-        vector<string> numerical_qualities_as_string( split(on_sequence.m_qualities, " " ) );
-        
-        on_sequence.m_qualities.resize(numerical_qualities_as_string.size());
-        
-        for (uint32_t this_quality = 0; this_quality < numerical_qualities_as_string.size(); ++this_quality) {
-          //cout << "Numerical score: " << from_string<int>(numerical_qualities_as_string[this_quality]);
-          on_sequence.m_qualities[this_quality] = from_string<int>(numerical_qualities_as_string[this_quality]) + 64;
-          //cout << " Converted character score: " << on_sequence.m_qualities[this_quality] << endl;
-        }
-      }
+      if( on_sequence.m_numerical_qualities )
+        convert_numeric_scores(on_sequence);
       
       cout << "I'm here: " << num_reads << endl;
       
@@ -130,18 +121,9 @@ namespace breseq {
         
         // truncate second name name
         on_sequence.m_name_plus = "+";
-        
-        if( on_sequence.m_numerical_qualities ) {
-          vector<string> numerical_qualities_as_string( split(on_sequence.m_qualities, " " ) );
-          
-          on_sequence.m_qualities.resize(numerical_qualities_as_string.size());
-          
-          for (uint32_t this_quality = 0; this_quality < numerical_qualities_as_string.size(); ++this_quality) {
-            //cout << "Numerical score: " << from_string<int>(numerical_qualities_as_string[this_quality]);
-            on_sequence.m_qualities[this_quality] = from_string<int>(numerical_qualities_as_string[this_quality]) + 64;
-            //cout << " Converted character score: " << on_sequence.m_qualities[this_quality] << endl;
-          }
-        }
+      
+        if( on_sequence.m_numerical_qualities )
+          convert_numeric_scores(on_sequence);
         
         // fastq quality convert
         fqc.convert_sequence(on_sequence);
@@ -406,6 +388,16 @@ namespace breseq {
     (*this) << sequence.m_sequence << std::endl;
     (*this) << '+' << sequence.m_name_plus << std::endl;
     (*this) << sequence.m_qualities << std::endl;
+  }
+  
+  void convert_numeric_scores(cFastqSequence &sequence) {
+    vector<string> numerical_qualities_as_string( split(sequence.m_qualities, " " ) );
+    
+    sequence.m_qualities.resize(numerical_qualities_as_string.size());
+    
+    for (uint32_t this_quality = 0; this_quality < numerical_qualities_as_string.size(); ++this_quality) {
+      sequence.m_qualities[this_quality] = from_string<int>(numerical_qualities_as_string[this_quality]) + 64;
+    }
   }
   
 } // breseq namespace

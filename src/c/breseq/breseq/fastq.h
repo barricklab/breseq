@@ -47,6 +47,8 @@ namespace breseq {
       bool   m_numerical_qualities; //are the scores already numerical?
    }; 
   
+  //Add offset to numeric quality scores so the original logic can handle them
+  void convert_numeric_scores(cFastqSequence &sequence);
   
   /*! Quality score conversion class.
    */
