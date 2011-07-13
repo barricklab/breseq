@@ -142,6 +142,7 @@ namespace breseq {
     map_t _fields; //!< Additional information about this diff entry. Look at 
     
     
+    
   
 	};
 	
@@ -214,7 +215,7 @@ namespace breseq {
 		void write() { write(_default_filename); }
 
 		//! Read a genome diff from a file.
-		//TEST Completed @GRC
+		//TEST 6/12 Completed @GRC
 		void read(const string& filename);
 		
 		//! Write the genome diff to a file.
@@ -225,11 +226,17 @@ namespace breseq {
     entry_list_t filter_used_as_evidence(entry_list_t list);
     
     //! Retrieve diff_entrys that match given type(s) 
-    //TEST Completed @GRC
+    //TEST 6/12 Completed @GRC
     entry_list_t list(vector<string> types);
     
+    //! Converts a genomed_diff(.gd) file's line to a diff_entry
+    //TEST 6/12 Completed @GRC
+    diff_entry _line_to_item(const string& line);
+
+		entry_list_t mutation_list();
+    
     void strcopy(char* arg1, const char* arg2);
-    diff_entry _line_to_item(string line);
+
     
     
 

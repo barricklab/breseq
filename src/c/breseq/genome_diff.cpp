@@ -130,13 +130,13 @@ breseq::END_RANGE,
 breseq::diff_entry::diff_entry(const string& type, const string& id, vector<string> positions)
 : _type(type)
 , _id(id)
-, _evidence(positions) {
+, _evidence(positions){
 }
 
 breseq::diff_entry::diff_entry()
 : _type("")
 , _id("")
-, _evidence(make_list<string>("")) {
+, _evidence(make_list<string>("")){
 }
 
 
@@ -282,7 +282,7 @@ void breseq::genome_diff::read(const string& filename) {
     lines.push_back(line);
 // #   ## read version from first line
 // #   my $l = shift @lines;
-  string l = shift(lines);
+  string l = shift<string>(lines);
 // #   ($l =~ m/#=GENOME_DIFF\s+(\d+)/) or ($l =~ m/#=GENOMEDIFF\s+(\d+)/)  
 // #   or $self->throw("Could not match version line in file $self->{file_name}.");
   if(!regex_m("#=GENOME_DIFF",l)
@@ -299,7 +299,7 @@ void breseq::genome_diff::read(const string& filename) {
 // #   {
   while(!lines.empty())
   {
-    l=shift(lines);
+    l=shift<string>(lines);
     ///TODO metadata 
     
     // # $self->add($self->_line_to_item($l));
@@ -798,7 +798,7 @@ return list;
 }
 
 
-diff_entry genome_diff::_line_to_item(string line)
+diff_entry genome_diff::_line_to_item(const string& line)
 {
 
 // # sub _line_to_item
@@ -817,11 +817,11 @@ diff_entry genome_diff::_line_to_item(string line)
 // #   my $item = {};
   diff_entry item;
 // #   $item->{type} = shift @line_list;
-  item._type = shift(line_list); 
+  item._type = shift<string>(line_list); 
 // #   $item->{id} = shift @line_list;
-  item._id = shift(line_list);
+  item._id = shift<string>(line_list);
 // #   my $evidence_string = shift @line_list;
-  string evidence_string = shift(line_list);
+  string evidence_string = shift<string>(line_list);
 // #   @{$item->{evidence}} = split /,/, $evidence_string;
   item._evidence = split(evidence_string, ",");
 // #     
@@ -917,7 +917,7 @@ diff_entry genome_diff::_line_to_item(string line)
   {
     string key = spec[i];
 // #     my $next = shift @line_list;
-   string next = shift(line_list);
+   string next = shift<string>(line_list);
 // #     if (!defined $next)
 // #     {
     if(next.empty())
@@ -944,7 +944,6 @@ diff_entry genome_diff::_line_to_item(string line)
   item[key] = next;
 // #   }
   }
-  ///BUG = _id ending up here for RA
 // # 
 // #   ## Remainder of the line is comprised of non-required key value pairs
 // #   foreach my $key_value_pair (@line_list)
@@ -998,7 +997,12 @@ diff_entry genome_diff::_line_to_item(string line)
 // # } 
 }
 
-
-
-
+genome_diff::entry_list_t genome_diff::mutation_list()
+{
+  entry_list_t mut_list;
+  return mut_list;
+}
 }//namespace bresesq
+
+
+
