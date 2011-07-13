@@ -44,6 +44,7 @@ namespace breseq {
       string m_sequence;  //sequence
       string m_name_plus; //+NAME
       string m_qualities; //quality score characters
+      bool   m_numerical_qualities; //are the scores already numerical?
    }; 
   
   
