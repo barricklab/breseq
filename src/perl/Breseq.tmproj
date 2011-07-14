@@ -3,7 +3,7 @@
 <plist version="1.0">
 <dict>
 	<key>currentDocument</key>
-	<string>Breseq/lib/Breseq/polymorphism_statistics.r</string>
+	<string>Breseq/lib/Breseq/AlignmentCorrection.pm</string>
 	<key>documents</key>
 	<array>
 		<dict>
@@ -166,42 +166,42 @@
 			<key>caret</key>
 			<dict>
 				<key>column</key>
-				<integer>38</integer>
+				<integer>41</integer>
 				<key>line</key>
-				<integer>186</integer>
+				<integer>535</integer>
 			</dict>
 			<key>firstVisibleColumn</key>
 			<integer>0</integer>
 			<key>firstVisibleLine</key>
-			<integer>170</integer>
+			<integer>514</integer>
 		</dict>
 		<key>Breseq/bin/fastq_utils</key>
 		<dict>
 			<key>caret</key>
 			<dict>
 				<key>column</key>
-				<integer>28</integer>
+				<integer>0</integer>
 				<key>line</key>
-				<integer>370</integer>
+				<integer>96</integer>
 			</dict>
 			<key>firstVisibleColumn</key>
 			<integer>0</integer>
 			<key>firstVisibleLine</key>
-			<integer>338</integer>
+			<integer>67</integer>
 		</dict>
 		<key>Breseq/bin/genbank_utils</key>
 		<dict>
 			<key>caret</key>
 			<dict>
 				<key>column</key>
-				<integer>0</integer>
+				<integer>1</integer>
 				<key>line</key>
-				<integer>460</integer>
+				<integer>351</integer>
 			</dict>
 			<key>firstVisibleColumn</key>
 			<integer>0</integer>
 			<key>firstVisibleLine</key>
-			<integer>433</integer>
+			<integer>339</integer>
 		</dict>
 		<key>Breseq/bin/shrimp_normalize</key>
 		<dict>
@@ -236,29 +236,29 @@
 			<key>caret</key>
 			<dict>
 				<key>column</key>
-				<integer>18</integer>
+				<integer>6</integer>
 				<key>line</key>
-				<integer>675</integer>
+				<integer>934</integer>
 			</dict>
 			<key>columnSelection</key>
 			<false/>
 			<key>firstVisibleColumn</key>
 			<integer>0</integer>
 			<key>firstVisibleLine</key>
-			<integer>652</integer>
+			<integer>748</integer>
 			<key>selectFrom</key>
 			<dict>
 				<key>column</key>
-				<integer>4</integer>
+				<integer>0</integer>
 				<key>line</key>
-				<integer>675</integer>
+				<integer>934</integer>
 			</dict>
 			<key>selectTo</key>
 			<dict>
 				<key>column</key>
-				<integer>18</integer>
+				<integer>0</integer>
 				<key>line</key>
-				<integer>675</integer>
+				<integer>935</integer>
 			</dict>
 		</dict>
 		<key>Breseq/lib/Breseq/AlignmentOutput.pm</key>
@@ -296,14 +296,30 @@
 			<key>caret</key>
 			<dict>
 				<key>column</key>
-				<integer>22</integer>
+				<integer>84</integer>
 				<key>line</key>
-				<integer>744</integer>
+				<integer>435</integer>
 			</dict>
+			<key>columnSelection</key>
+			<false/>
 			<key>firstVisibleColumn</key>
 			<integer>0</integer>
 			<key>firstVisibleLine</key>
-			<integer>716</integer>
+			<integer>416</integer>
+			<key>selectFrom</key>
+			<dict>
+				<key>column</key>
+				<integer>59</integer>
+				<key>line</key>
+				<integer>435</integer>
+			</dict>
+			<key>selectTo</key>
+			<dict>
+				<key>column</key>
+				<integer>84</integer>
+				<key>line</key>
+				<integer>435</integer>
+			</dict>
 		</dict>
 		<key>Breseq/lib/Breseq/CoverageDistribution.pm</key>
 		<dict>
@@ -338,14 +354,30 @@
 			<key>caret</key>
 			<dict>
 				<key>column</key>
-				<integer>42</integer>
+				<integer>41</integer>
 				<key>line</key>
-				<integer>309</integer>
+				<integer>70</integer>
 			</dict>
+			<key>columnSelection</key>
+			<false/>
 			<key>firstVisibleColumn</key>
 			<integer>0</integer>
 			<key>firstVisibleLine</key>
-			<integer>29</integer>
+			<integer>45</integer>
+			<key>selectFrom</key>
+			<dict>
+				<key>column</key>
+				<integer>0</integer>
+				<key>line</key>
+				<integer>70</integer>
+			</dict>
+			<key>selectTo</key>
+			<dict>
+				<key>column</key>
+				<integer>0</integer>
+				<key>line</key>
+				<integer>71</integer>
+			</dict>
 		</dict>
 		<key>Breseq/lib/Breseq/Fastq.pm</key>
 		<dict>
@@ -436,44 +468,44 @@
 			<key>caret</key>
 			<dict>
 				<key>column</key>
-				<integer>17</integer>
+				<integer>30</integer>
 				<key>line</key>
-				<integer>582</integer>
-			</dict>
-			<key>firstVisibleColumn</key>
-			<integer>0</integer>
-			<key>firstVisibleLine</key>
-			<integer>764</integer>
-		</dict>
-		<key>Breseq/lib/Breseq/Shared.pm</key>
-		<dict>
-			<key>caret</key>
-			<dict>
-				<key>column</key>
-				<integer>26</integer>
-				<key>line</key>
-				<integer>611</integer>
+				<integer>193</integer>
 			</dict>
 			<key>columnSelection</key>
 			<false/>
 			<key>firstVisibleColumn</key>
 			<integer>0</integer>
 			<key>firstVisibleLine</key>
-			<integer>584</integer>
+			<integer>174</integer>
 			<key>selectFrom</key>
 			<dict>
 				<key>column</key>
 				<integer>9</integer>
 				<key>line</key>
-				<integer>611</integer>
+				<integer>193</integer>
 			</dict>
 			<key>selectTo</key>
 			<dict>
 				<key>column</key>
-				<integer>26</integer>
+				<integer>30</integer>
 				<key>line</key>
-				<integer>611</integer>
+				<integer>193</integer>
 			</dict>
+		</dict>
+		<key>Breseq/lib/Breseq/Shared.pm</key>
+		<dict>
+			<key>caret</key>
+			<dict>
+				<key>column</key>
+				<integer>19</integer>
+				<key>line</key>
+				<integer>546</integer>
+			</dict>
+			<key>firstVisibleColumn</key>
+			<integer>0</integer>
+			<key>firstVisibleLine</key>
+			<integer>538</integer>
 		</dict>
 		<key>Breseq/lib/Breseq/coverage_distribution.r</key>
 		<dict>
@@ -522,30 +554,14 @@
 			<key>caret</key>
 			<dict>
 				<key>column</key>
-				<integer>9</integer>
+				<integer>40</integer>
 				<key>line</key>
-				<integer>51</integer>
+				<integer>45</integer>
 			</dict>
-			<key>columnSelection</key>
-			<false/>
 			<key>firstVisibleColumn</key>
 			<integer>0</integer>
 			<key>firstVisibleLine</key>
-			<integer>21</integer>
-			<key>selectFrom</key>
-			<dict>
-				<key>column</key>
-				<integer>6</integer>
-				<key>line</key>
-				<integer>51</integer>
-			</dict>
-			<key>selectTo</key>
-			<dict>
-				<key>column</key>
-				<integer>9</integer>
-				<key>line</key>
-				<integer>51</integer>
-			</dict>
+			<integer>0</integer>
 		</dict>
 		<key>Breseq/t/00-load.t</key>
 		<dict>
@@ -614,6 +630,6 @@
 	<key>showFileHierarchyDrawer</key>
 	<true/>
 	<key>windowFrame</key>
-	<string>{{484, 83}, {793, 711}}</string>
+	<string>{{537, -142}, {872, 673}}</string>
 </dict>
 </plist>

@@ -23,6 +23,7 @@ LICENSE AND COPYRIGHT
 
 #include "annotated_sequence.h"
 #include "genome_diff.h"
+#include "calculate_trims.h"
 
 
 using namespace std;
@@ -49,9 +50,11 @@ namespace breseq {
 	bool _test_read_alignment_requirements(const Settings& settings, const cReferenceSequences& ref_seq_info, const alignment& a);
 	bool _alignment_overlaps_junction(const vector<JunctionInfo>& junction_info_list, alignment in_a);
 	diff_entry _junction_to_hybrid_list_item(const string& key, cReferenceSequences& ref_seq_info, uint32_t total_reads, CandidateJunction& test_info);
-	bool _test_junction(const Settings& settings, Summary& summary, const string& junction_seq_id, map<string, vector<MatchedJunction> >& matched_junction_ref, map<string, map<string, MatchedJunction> >& degenerate_matches_ref, map<string, CandidateJunction>& junction_test_info_ref, cReferenceSequences& ref_seq_info, tam_file& reference_tam, tam_file& junction_tam, bool& has_non_overlap_alignment);
-	Trim _trim_ambiguous_ends(const alignment& a, const tam_file& tam, cReferenceSequences& ref_seq_info);
-	void _write_reference_matches(const Settings& settings, cReferenceSequences& ref_seq_info, alignment_list& reference_alignments, tam_file& reference_tam, uint32_t fastq_file_index);
+	bool _test_junction(const Settings& settings, Summary& summary, const string& junction_seq_id, map<string, vector<MatchedJunction> >& matched_junction_ref, map<string, map<string, MatchedJunction> >& degenerate_matches_ref, map<string, CandidateJunction>& junction_test_info_ref, cReferenceSequences& ref_seq_info, const SequenceTrimsList& trims_list, tam_file& reference_tam, tam_file& junction_tam, bool& has_non_overlap_alignment);
+	Trims _trim_ambiguous_ends(const alignment& a, const tam_file& tam, cReferenceSequences& ref_seq_info, const SequenceTrimsList& trim_list);
+  void read_trims(SequenceTrimsList& trims, const cReferenceSequences& ref_seqs, const string &in_trims_file_name ); 
+
+	void _write_reference_matches(const Settings& settings, cReferenceSequences& ref_seq_info, const SequenceTrimsList& trim_list, alignment_list& reference_alignments, tam_file& reference_tam, uint32_t fastq_file_index);
 	vector<string> get_sorted_junction_ids(map<string, vector<MatchedJunction> >& map, const vector<string>& keys);
 	vector<string> get_sorted_junction_ids(map<string, map<string, MatchedJunction> >& map, const vector<string>& keys);
 
@@ -63,7 +66,6 @@ namespace breseq {
                           const bool junction_prediction,
                           const string &reference_sam_path,
                           const string &junction_sam_path,
-                          const string &data_path,
                           const cReadFiles &read_files,
                           const uint32_t max_read_length,
                           const uint32_t alignment_read_limit

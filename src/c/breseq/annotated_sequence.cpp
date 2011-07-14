@@ -42,7 +42,6 @@ namespace breseq {
 
       for (vector<cSequenceFeature>::iterator it = it_as->m_features.begin(); it < it_as->m_features.end(); it++) {
         out << it_as->m_seq_id;
-        out << "\tBullForm";
         
         if (it->SafeGet("type") == "") 
           out << "\t" << ".";
@@ -240,11 +239,11 @@ namespace breseq {
       cAnnotatedSequence new_seq;
       new_seq.m_fasta_sequence = on_seq;
       new_seq.m_seq_id = on_seq.m_name;
+      new_seq.m_length = on_seq.m_sequence.size();
       (*this).push_back(new_seq);
       m_seq_id_to_index[on_seq.m_name] = on_seq_id++;
     }
   }
-
 
   void LoadGenBankFile(cReferenceSequences& rs, const vector<string>& in_file_names) {
     

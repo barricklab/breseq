@@ -387,7 +387,7 @@ bool tam_file::read_alignments(alignment_list& alignments, bool paired)
   return (alignments.size() > 0);
 }
   
-void tam_file::write_alignments(int32_t fastq_file_index, alignment_list& alignments, vector<Trim>* trims)
+void tam_file::write_alignments(int32_t fastq_file_index, alignment_list& alignments, vector<Trims>* trims)
 {
 	for (uint32_t i = 0; i < alignments.size(); i++)
 	{
@@ -399,7 +399,7 @@ void tam_file::write_alignments(int32_t fastq_file_index, alignment_list& alignm
 
 		if ((trims != NULL) && (trims->size() > i))
 		{
-			Trim trim = (*trims)[i];
+			Trims trim = (*trims)[i];
 			aux_tags_ss << "\t" << "XL:i:" << trim.L << "\t" << "XR:i:" << trim.R;
 		}
 
@@ -567,7 +567,7 @@ void tam_file::write_split_alignment(uint32_t min_indel_split_len, const alignme
 	$junction_overlap, 		# CJ: amount of overlap in the candidate junction sequence that we aligned to
 	$trim					# CJ: list with two items, indicating what the trim on each end is
 */
-void tam_file::write_moved_alignment(const alignment& a, uint32_t fastq_file_index, const string& seq_id, int32_t reference_pos, bool reference_strand, int32_t reference_overlap, uint32_t junction_side, int32_t junction_flanking, int32_t junction_overlap, const Trim* trim)
+void tam_file::write_moved_alignment(const alignment& a, uint32_t fastq_file_index, const string& seq_id, int32_t reference_pos, bool reference_strand, int32_t reference_overlap, uint32_t junction_side, int32_t junction_flanking, int32_t junction_overlap, const Trims* trim)
 {
 	bool verbose = false;
 
@@ -867,8 +867,8 @@ void tam_file::write_moved_alignment(const alignment& a, uint32_t fastq_file_ind
 	//need to be aware if read is trimmed out of existence??
 	if (trim != NULL)
 	{
-		string trim_left = (junction_side == 1) ? trim->L : "0";
-		string trim_right = (junction_side == 1) ? "0" : trim->R;
+		string trim_left = (junction_side == 1) ? to_string(trim->L) : "0";
+		string trim_right = (junction_side == 1) ? "0" : to_string(trim->R);
 		if (!read_strand) swap(trim_left, trim_right);
 		aux_tags_ss << "\t" << "XL:i:" << trim_left << "\t" << "XR:i:" << trim_right;
 	}

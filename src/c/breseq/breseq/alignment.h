@@ -20,6 +20,7 @@ LICENSE AND COPYRIGHT
 #define _BRESEQ_ALIGNMENT_H_
 
 #include "common.h"
+#include "calculate_trims.h"
 
 using namespace std;
 
@@ -284,8 +285,8 @@ public:
   void open_write(const string& tam_file_name, const string& fasta_file_name);
   
   bool read_alignments(alignment_list& alignments, bool paired = false);
-  void write_alignments(int32_t fastq_file_index, alignment_list& alignments, vector<Trim>* trims = NULL);
-  void write_moved_alignment(const alignment& a, uint32_t fastq_file_index, const string& seq_id, int32_t reference_pos, bool reference_strand, int32_t reference_overlap, const uint32_t junction_side, int32_t junction_flanking, int32_t junction_overlap, const Trim* trim);
+  void write_alignments(int32_t fastq_file_index, alignment_list& alignments, vector<Trims>* trims = NULL);
+  void write_moved_alignment(const alignment& a, uint32_t fastq_file_index, const string& seq_id, int32_t reference_pos, bool reference_strand, int32_t reference_overlap, const uint32_t junction_side, int32_t junction_flanking, int32_t junction_overlap, const Trims* trim = NULL);
   void write_split_alignment(uint32_t min_indel_split_len, const alignment& a);
 
   bam_header_t* bam_header;
