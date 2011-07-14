@@ -69,6 +69,7 @@ namespace breseq {
   // Set up defaults and build paths
   Settings::Settings(const string& run_path) {
     
+    required_match_length = 28;
     max_read_mismatches = -1;
     require_complete_match = false;
     
@@ -78,21 +79,23 @@ namespace breseq {
     
     // Need to port the rest from Perl...
     
-    data_path = run_path + "data";    
+    data_path = run_path + "/data";    
     reference_fasta_file_name = data_path + "/reference.fasta";
     reference_features_file_name = data_path + "/reference.features.tab";
     
-    sequence_conversion_path = run_path + "01_sequence_conversion";    
+    sequence_conversion_path = run_path + "/01_sequence_conversion";    
     reference_trim_file_name = sequence_conversion_path + "/@.trims";
 
-    candidate_junction_path = run_path + "03_candidate_junctions";      
-    candidate_junction_fasta_file_name = candidate_junction_fasta_file_name + "/candidate_junction.fasta";
+    candidate_junction_path = run_path + "/03_candidate_junctions";      
+    candidate_junction_fasta_file_name = candidate_junction_path + "/candidate_junction.fasta";
     
-    alignment_correction_path = run_path + "05_alignment_correction";    
+    alignment_correction_path = run_path + "/05_alignment_correction";    
     jc_genome_diff_file_name = alignment_correction_path + "/jc_evidence.gd";
     resolved_reference_sam_file_name = alignment_correction_path + "/reference.sam";
     resolved_junction_sam_file_name = alignment_correction_path + "/junction.sam";
-    
+   
+    output_path = run_path + "/output";    
+
   }
   
   

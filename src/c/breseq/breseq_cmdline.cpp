@@ -241,28 +241,24 @@ int do_resolve_alignments(int argc, char* argv[]) {
 	AnyOption options("Usage: breseq RESOLVE_ALIGNMENTS ... ");
 	options
 		("help,h", "produce this help message", TAKES_NO_ARGUMENT)
-		("junction-prediction,p", "whether to predict new junctions")
+		("no-junction-prediction,p", "whether to predict new junctions", TAKES_NO_ARGUMENT)
 		("junction-fasta,j", "FASTA file of candidate junction sequences")
 // convert to basing everything off the main output path, so we don't have to set so many options
     ("path", "path to breseq output")
 		("reference-sam-path", "path to SAM files of read alignments to reference sequences")
 		("junction-sam-path", "path to SAM files of read alignments to candidate junction sequences")
-		("resolved-path", "output path for resolved sam files")
-		("data-path", "data path")
 		("read-file,r", "FASTQ read files (multiple allowed, comma-separated) ")
 		("max-read-length,m", "number of flanking bases in candidate junctions")
 		("alignment-read-limit", "maximum number of alignments to process. DEFAULT = 0 (OFF).", 0)
+
 	.processCommandArgs(argc, argv);
 
 	// make sure that the config options are good:
 	if(options.count("help")
-		 || !options.count("junction-prediction")
      || !options.count("junction-fasta")
      || !options.count("path")
 		 || !options.count("reference-sam-path")
 		 || !options.count("junction-sam-path")
-		 || !options.count("resolved-path")
-     || !options.count("data-path")
      || !options.count("read-file")
 		 || !options.count("max-read-length")
 
@@ -275,7 +271,6 @@ int do_resolve_alignments(int argc, char* argv[]) {
     
     Settings settings(options["path"]);
 
-    
     Summary summary;
 
     cReadFiles rf(from_string<vector<string> >(options["read-file"]));
@@ -288,10 +283,9 @@ int do_resolve_alignments(int argc, char* argv[]) {
       settings,
       summary,
       ref_seq_info,
-      from_string<bool>(options["junction-prediction"]),
+      !options.count("no-junction-prediction"),
       options["reference-sam-path"],
       options["junction-sam-path"],
-      options["data-path"],
       rf,
       from_string<uint32_t>(options["max-read-length"]),
       from_string<uint32_t>(options["alignment-read-limit"])

@@ -451,12 +451,6 @@ namespace breseq {
     return s;
   }
 
-	struct Trim
-	{
-		string L;
-		string R;
-	};
-
 	inline string reverse_complement(string seq)
 	{
 		char trade[static_cast<uint8_t>('Z')];

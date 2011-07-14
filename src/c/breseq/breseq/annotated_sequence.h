@@ -67,6 +67,7 @@ namespace breseq {
       void ReadTag(string& tag, string& s, ifstream& in);
   };
 
+  
 
 	/*! Sequence class.
 	 */   
@@ -90,6 +91,7 @@ namespace breseq {
         m_seq_id("na"),
         m_features(0) {} ; 
   };
+
   
   /*! Reference Sequences
    
@@ -103,7 +105,6 @@ namespace breseq {
   public:
     
     cReferenceSequences() {};    
-      
     
     //!< Write a tab delimited feature 
     void WriteFeatureTable(const string &file_name);
@@ -122,8 +123,6 @@ namespace breseq {
       
     //!< Convert 
     uint32_t seq_id_to_index(const string& seq_id) { return m_seq_id_to_index[seq_id]; };
-
-    map<string,string> trims;
     
     map<string, vector<cSequenceFeature> > repeat_lists;
     static cSequenceFeature* find_closest_repeat_region(uint32_t position, vector<cSequenceFeature>& repeat_list_ref, uint32_t max_distance, bool direction);

@@ -87,7 +87,8 @@ namespace breseq {
 		string jc_genome_diff_file_name;
 		string preprocess_junction_best_sam_file_name;
 		string preprocess_junction_split_sam_file_name;
-
+    
+    string output_path;
 
 		string reference_sam_file_name;
 		string resolved_reference_sam_file_name;

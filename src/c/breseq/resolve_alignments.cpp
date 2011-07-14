@@ -36,13 +36,16 @@ namespace breseq {
                           bool junction_prediction,
                           const string &reference_sam_path,
                           const string &junction_sam_path,
-                          const string &data_path,
                           const cReadFiles &read_files,
                           const uint32_t max_read_length,
                           const uint32_t alignment_read_limit
                           ) 
   {
 	bool verbose = false;
+    
+  // Load the trims
+  SequenceTrimsList trims_list;
+  read_trims(trims_list, ref_seq_info, settings.reference_trim_file_name);
     
 	// ####
 	// ##	Junction sequences
@@ -62,8 +65,9 @@ namespace breseq {
 
 	tam_file* junction_tam = NULL;
 	tam_file* reference_tam = NULL;
+    
 
-	if (junction_prediction)
+  if (junction_prediction)
 	{
     LoadFeatureIndexedFastaFile(junction_ref_seq_info, "", settings.candidate_junction_fasta_file_name);
 
@@ -122,16 +126,16 @@ namespace breseq {
 
 		cFastqFile in_fastq(rf.m_fastq_file_name, ios::in);
 
-    string this_unmatched_file_name = data_path + "/unmatched."
+    string this_unmatched_file_name = settings.data_path + "/unmatched."
         + rf.m_base_name + ".fastq";
     cFastqFile out_unmatched_fastq(this_unmatched_file_name, ios::out);
     assert(!out_unmatched_fastq.fail());
 
 		string reference_sam_file_name = reference_sam_path + "/" + rf.m_base_name + ".reference.sam";
     
-    string reference_fasta = data_path + "/reference.fasta";
+    string reference_fasta = settings.reference_fasta_file_name;
 
-		reference_tam = new tam_file(reference_sam_file_name, reference_fasta, ios::in); //# or die "Could not open $reference_sam_file_name";
+		reference_tam = new tam_file(reference_sam_file_name, settings.reference_fasta_file_name, ios::in); //# or die "Could not open $reference_sam_file_name";
 
 		if (junction_prediction)
 		{
@@ -204,7 +208,7 @@ namespace breseq {
 					if (!_alignment_overlaps_junction(junction_info_list, *it))
 						this_junction_alignments.erase(it);
 
-				best_reference_score = _eligible_read_alignments(settings, junction_ref_seq_info, this_junction_alignments);
+				best_junction_score = _eligible_read_alignments(settings, junction_ref_seq_info, this_junction_alignments);
 
 				if (verbose)
 					cerr << " Best junction score: " << best_junction_score
@@ -299,7 +303,7 @@ namespace breseq {
 			{
 				if (verbose)
 					cout << "Best alignment to reference.";
-				_write_reference_matches(settings, ref_seq_info, this_reference_alignments, resolved_reference_tam, fastq_file_index);
+				_write_reference_matches(settings, ref_seq_info, trims_list, this_reference_alignments, resolved_reference_tam, fastq_file_index);
 			}
 			else
 			{
@@ -380,7 +384,7 @@ namespace breseq {
 		string key = sorted_junction_ids[i];
 
 		bool has_non_overlap_alignment;
-		bool success = _test_junction(settings, summary, key, matched_junction, degenerate_matches, junction_test_info, ref_seq_info, resolved_reference_tam, resolved_junction_tam, has_non_overlap_alignment);
+		bool success = _test_junction(settings, summary, key, matched_junction, degenerate_matches, junction_test_info, ref_seq_info, trims_list, resolved_reference_tam, resolved_junction_tam, has_non_overlap_alignment);
 
 		// save the score in the distribution
 		add_score_to_distribution(observed_pos_hash_score_distribution, junction_test_info[key].pos_hash_score);
@@ -413,7 +417,7 @@ namespace breseq {
 		if (verbose) cout << "Trying degenerate " << key << endl;
 
 		bool has_non_overlap_alignment;
-		bool success = _test_junction(settings, summary, key, matched_junction, degenerate_matches, junction_test_info, ref_seq_info, resolved_reference_tam, resolved_junction_tam, has_non_overlap_alignment);
+		bool success = _test_junction(settings, summary, key, matched_junction, degenerate_matches, junction_test_info, ref_seq_info, trims_list, resolved_reference_tam, resolved_junction_tam, has_non_overlap_alignment);
 
 		// save the score in the distribution
 		add_score_to_distribution(observed_pos_hash_score_distribution, junction_test_info[key].pos_hash_score);
@@ -473,7 +477,8 @@ namespace breseq {
 				// Write out match corresponding to this part to SAM file
 				// By trimming in the candidate junctions sequence, rather than on each half,
 				// this is done properly.
-				Trim trim = _trim_ambiguous_ends(a, *junction_tam, ref_seq_info);
+				Trims trims = _trim_ambiguous_ends(a, *junction_tam, ref_seq_info, trims_list);
+        
 				resolved_junction_tam.write_moved_alignment(
 					a,
 					fastq_file_index,
@@ -484,7 +489,7 @@ namespace breseq {
 					side,
 					from_string<int32_t>(item["flanking_left"]),
 					from_string<int32_t>(item["alignment_overlap"]),
-					&trim
+					&trims
 				);
 			}
 		}
@@ -531,11 +536,6 @@ bool sort_by_mismatches (alignment a1, alignment a2) { return mismatch_map[&a1] 
 uint32_t _eligible_read_alignments(const Settings& settings, const cReferenceSequences& ref_seq_info, vector<alignment>& alignments)
 {
 	bool verbose = false;
-  
-	// These settings are currently not used
-	uint32_t minimum_best_score = 0;
-	uint32_t minimum_best_score_difference = 0;
-	// but the code below works if they are set
 
 	if (alignments.size() <= 0) return 0;
 
@@ -592,9 +592,6 @@ uint32_t _eligible_read_alignments(const Settings& settings, const cReferenceSeq
   uint32_t best_score = mismatch_map[&(alignments[0])];
 	
   // no scores meet minimum
-  if ((minimum_best_score > 0) && (best_score < minimum_best_score)) return 0; 
-
-  
 	while ((last_best+1 < alignments.size()) && (mismatch_map[&(alignments[last_best+1])] == best_score))
 	{
     last_best++;
@@ -620,7 +617,7 @@ uint32_t _eligible_read_alignments(const Settings& settings, const cReferenceSeq
 	}
 
 	// Note that the score we return is higher for matches so we negative this value...
-  return best_score;
+  return alignments[0].read_length() - best_score;
 }
   
 //
@@ -696,20 +693,23 @@ bool _alignment_overlaps_junction(const vector<JunctionInfo>& junction_info_list
 }
 
 
-void _write_reference_matches(const Settings& settings, cReferenceSequences& ref_seq_info, alignment_list& reference_alignments, tam_file& reference_tam, uint32_t fastq_file_index)
+void _write_reference_matches(const Settings& settings, cReferenceSequences& ref_seq_info, const SequenceTrimsList& trims_list, alignment_list& reference_alignments, tam_file& reference_tam, uint32_t fastq_file_index)
 {
 	// Nice try, no alignments
 	if (reference_alignments.size() == 0) return;
 
-	vector<Trim> trims;
+	vector<Trims> trims;
 
 	for (uint32_t i=0; i < reference_alignments.size(); i++)
-		trims.push_back(_trim_ambiguous_ends(reference_alignments[i], reference_tam, ref_seq_info));
-
+  {
+    Trims t = _trim_ambiguous_ends(reference_alignments[i], reference_tam, ref_seq_info, trims_list);
+		trims.push_back(t);
+  }
+  
 	reference_tam.write_alignments((int32_t)fastq_file_index, reference_alignments, &trims);
 }
 
-bool _test_junction(const Settings& settings, Summary& summary, const string& junction_seq_id, map<string, vector<MatchedJunction> >& matched_junction_ref, map<string, map<string, MatchedJunction> >& degenerate_matches_ref, map<string, CandidateJunction>& junction_test_info_ref, cReferenceSequences& ref_seq_info, tam_file& reference_tam, tam_file& junction_tam, bool& has_non_overlap_alignment)
+bool _test_junction(const Settings& settings, Summary& summary, const string& junction_seq_id, map<string, vector<MatchedJunction> >& matched_junction_ref, map<string, map<string, MatchedJunction> >& degenerate_matches_ref, map<string, CandidateJunction>& junction_test_info_ref, cReferenceSequences& ref_seq_info, const SequenceTrimsList& trims_list, tam_file& reference_tam, tam_file& junction_tam, bool& has_non_overlap_alignment)
 {
 	bool verbose = false;
 //	my ($settings, $summary, $junction_seq_id, $matched_junction_ref, $degenerate_matches_ref, $junction_test_info_ref, $reference_fai, $ref_seq_info, $RREF, $reference_header, $RCJ, $candidate_junction_header) = @_;
@@ -969,7 +969,7 @@ bool _test_junction(const Settings& settings, Summary& summary, const string& ju
 				if (degenerate_match.degenerate_count == 0)
 				{
 					vector<alignment> this_reference_al = degenerate_match.reference_alignments;
-					_write_reference_matches(settings, ref_seq_info, this_reference_al, reference_tam, fastq_file_index);
+					_write_reference_matches(settings, ref_seq_info, trims_list, this_reference_al, reference_tam, fastq_file_index);
 				}
 
 				for (uint32_t j = 0; j < degenerate_match.junction_alignments.size(); j++) //DOMINANT_ALIGNMENT
@@ -1007,7 +1007,7 @@ bool _test_junction(const Settings& settings, Summary& summary, const string& ju
 		if (failed)
 		{
 			vector<alignment> this_reference_al = item.reference_alignments;
-			_write_reference_matches(settings, ref_seq_info, this_reference_al, reference_tam, fastq_file_index);
+			_write_reference_matches(settings, ref_seq_info, trims_list, this_reference_al, reference_tam, fastq_file_index);
 		}
 
 		// REGARDLESS of success: write matches to the candidate junction SAM file
@@ -1212,31 +1212,34 @@ diff_entry _junction_to_hybrid_list_item(const string& key, cReferenceSequences&
 	return item;
 }
 
-Trim _trim_ambiguous_ends(const alignment& a, const tam_file& tam, cReferenceSequences& ref_seq_info)
+Trims _trim_ambiguous_ends(const alignment& a, const tam_file& tam, cReferenceSequences& ref_seq_info, const SequenceTrimsList& trims_list)
 {
 	bool verbose = false;
 
 	// which reference sequence?
 	uint32_t tid = a.reference_target_id();
-	string seq_id = tam.bam_header->target_name[tid];
-	int32_t ref_seq_length = tam.bam_header->target_len[tid];
 
-  //TODO: To accelerate this code further we may want to have trims
-  // in array by target ID so translation to name and hash lookup
-  // can be skipped.
+  Trims t;
+  t.L= trims_list[tid].left_trim_0(a.reference_start_0());
+  t.R = trims_list[tid].right_trim_0(a.reference_end_0());
 
-  uint32_t left_trim = ref_seq_info.trims[seq_id][a.reference_start_0()];
-  uint32_t right_trim = ref_seq_info.trims[seq_id][a.reference_end_0() + ref_seq_length];
+  t.L += a.query_start_0();
+  t.R += a.read_length() - a.query_end_1();
 
-  left_trim += a.reference_start_0();
-  right_trim += a.read_length() - a.reference_end_1();
+//  cerr << a.read_name() << endl;
+//  cerr << "start: " << a.reference_start_1() << " end: " << a.reference_end_1() << endl;
+//  cerr << "left: " << t.L << " right: " << t.R << endl;
 
-  cerr << a.read_name() << endl;
-  cerr << "start: " << a.reference_start_1() << " end: " << a.reference_end_1() << endl;
-  cerr << "left: " << left_trim << " right: " << right_trim << endl;
-
-  Trim retval = { to_string(left_trim), to_string(right_trim) };
-  return retval;
+  return t;
+}
+  
+void read_trims(SequenceTrimsList& trims, const cReferenceSequences& ref_seqs, const string &in_trims_file_name ) 
+{
+  trims.resize(ref_seqs.size());
+  for(uint32_t i = 0; i < ref_seqs.size(); i++) {
+    string this_file_name = Settings::file_name(in_trims_file_name, "@", ref_seqs[i].m_seq_id);
+    trims[i].ReadFile(this_file_name, ref_seqs[i].m_length);
+  }
 }
 
 

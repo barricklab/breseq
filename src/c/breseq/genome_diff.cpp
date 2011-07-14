@@ -203,7 +203,8 @@ breseq::genome_diff::genome_diff(const string& filename)
  : _default_filename(filename)
  , _current_id(0) 
 {
- read(filename);  
+ // Need changes in usage if we read by default @JEB
+ //read(filename);  
 }
 
 /*! Add evidence to this genome diff.
