@@ -48,7 +48,7 @@ copyright = u'2011 Jeffrey E. Barrick and contributors'
 # built documents.
 #
 # The short X.Y version.
-version = '1.00'
+version = os.environ.get("BRESEQ_VERSION")
 # The full version, including alpha/beta/rc tags.
 release = os.environ.get("BRESEQ_VERSION")
 

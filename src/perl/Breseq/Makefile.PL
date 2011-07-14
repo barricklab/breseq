@@ -6,11 +6,13 @@ WriteMakefile
           'INSTALLDIRS' => 'site',
           'NAME' => 'Breseq',
           'EXE_FILES' => [
+                           'bin/.DS_Store',
                            'bin/bam2aln',
                            'bin/bam2cov',
                            'bin/breseq',
                            'bin/fastq_utils',
-                           'bin/genbank_utils'
+                           'bin/genbank_utils',
+                           'bin/shrimp_normalize'
                          ],
           'VERSION_FROM' => 'lib/Breseq.pm',
           'PREREQ_PM' => {

@@ -13,7 +13,6 @@ Several external packages and software programs need to be installed to compile 
 * `BioPerl <http://www.bioperl.org>`_ (version 1.4 or higher)
 * `SSAHA2 <http://www.sanger.ac.uk/resources/software/ssaha2/>`_ read mapping program
 * `R <http://www.r-project.org>`_ (version 2.1.0 or higher) statistical programming language 
-* `Boost <http://www.boost.org>`_ (version 1.42 or higher) C++ libraries
 
 To install each missing dependency, use your system's package manager or visit the respective web pages linked above and follow the instructions for your platform. More specific directions are available below for some platforms. You must make sure that the executables for |SSAHA2| and :program:`R` are in your environment's $PATH for |breseq| to function.
 
@@ -42,10 +41,6 @@ You should now get a message like this, telling you that the system can find you
 * :program:`R`: Either (1) **Recommended:** Download the installer package from http://www.r-project.org/. OR (2) Install with :program:`MacPorts` terminal command: 
 
 >>> sudo port install R ghostscript
-
-* :program:`Boost`: Either (1) Download and install according to the instructions at http://www.boost.org/.  If you do this, be sure that you build at least the ``program_options`` compiled library. An install of only the header files will not work. OR (2) **Recommended:** Install with :program:`MacPorts` terminal command: 
-
->>> sudo port install boost
 
 2. Compile and install |breseq|
 -------------------------------
@@ -133,7 +128,6 @@ Dependencies installed in custom locations
 
 In general, you will need to be sure that your environment is set up correctly to find and use each dependency. This will likely be taken care of for you if you use a package manager or installer package. If you install some dependencies from source or in custom locations, and run into problems with |breseq| installation, be sure to check that:
 
-#. If :program:`Boost` is installed in a custom location with :program:`Boost Libraries` in ``/path/to/boost/lib`` and :program:`Boost Headers` in ``/path/to/boost/include``, then you may need to run the ``./configure`` step for |breseq| with the additional option:``--with-boost=/path/to/boost``.
 #. :program:`BioPerl` is in your $PERL5LIB.
 #. :program:`R` is in your $PATH.
 #. :program:`SSAHA2` is in your $PATH.
