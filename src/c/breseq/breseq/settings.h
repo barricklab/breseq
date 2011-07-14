@@ -29,7 +29,9 @@ LICENSE AND COPYRIGHT
 using namespace std;
 
 namespace breseq {
-	  
+
+  class cReferenceSequences;
+
   // We need to be able to group read files for two reasons
   // 1) They may be paired-end, so we want to map them together
   // 2) They may have the same error rates, so we want to treat them together for error analysis
@@ -121,6 +123,11 @@ namespace breseq {
 		int32_t preprocess_junction_min_indel_split_length;
     
 		cReadFiles read_structures;
+
+		struct Coverage {
+			int32_t junction_coverage_cutoff;
+		};
+		map<string,Coverage> unique_coverage;
     
     //!@GRC needed for output.cpp
     string print_run_name;
@@ -212,7 +219,9 @@ namespace breseq {
     
 		struct SequenceConversion
 		{
-			int32_t total_reference_sequence_length;
+			uint32_t total_reference_sequence_length;
+			uint32_t max_read_length;
+			cReferenceSequences* reference_sequences;
 		} sequence_conversion;
 	};
 
