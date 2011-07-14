@@ -105,7 +105,7 @@ clean-local :: clean-tests clean-breseq
 		
 dist-hook:
 
-## This environmentl variable is used by python
+## This environmentl variable is used by python Sphinx
 	echo $(PACKAGE_VERSION); \
 	export BRESEQ_VERSION=$PACKAGE_VERSION; \
 	cd $(DOCDIR) ; \

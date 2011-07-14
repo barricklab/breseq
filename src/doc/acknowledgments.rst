@@ -6,10 +6,15 @@ Developers
 
 * `Jeffrey E. Barrick <http://barricklab.org>`_
 * `David B. Knoester <http://www.cse.msu.edu/~dk/>`_
+* `Austin G. Meyer <http://www.meyerresearch.com>`_
+* Jordan Borges
+* Geoffrey Colburn
+* Alex Hu
+
 
 |breseq| was initially developed at Michigan State University while Jeff was a postdoc with Dr. Richard Lenski and Dr. Charles Ofria, and while Dave was a graduate student in the lab of Dr. Philip McKinley.
 
-Jeff is beginning a position as an assistant professor in the department of Chemistry and Biochemistry at the University of Texas at Austin in January 2011. `Lab Website <http://barricklab.org>`_ 
+It is now developed in the Barrick lab in the Department of Chemistry and Biochemistry at the University of Texas at Austin. `Lab Website <http://barricklab.org>`_ 
 
 Testers
 ------------
