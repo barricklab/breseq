@@ -36,6 +36,7 @@ libbreseq_la_SOURCES = \
 	fastq.cpp \
 	genome_diff.cpp \
 	identify_mutations.cpp \
+	mutation_predictor.cpp \
 	output.cpp \
 	pileup_base.cpp \
 	pileup.cpp \
@@ -56,6 +57,7 @@ libbreseq_la_SOURCES = \
 	breseq/fastq.h \
 	breseq/genome_diff.h \
 	breseq/identify_mutations.h \
+	breseq/mutation_predictor.h \
 	breseq/output.h \
 	breseq/pileup_base.h \
 	breseq/pileup.h \

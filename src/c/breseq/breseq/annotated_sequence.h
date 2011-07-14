@@ -123,8 +123,12 @@ namespace breseq {
       
     //!< Convert 
     uint32_t seq_id_to_index(const string& seq_id) { return m_seq_id_to_index[seq_id]; };
-    
-    map<string, vector<cSequenceFeature> > repeat_lists;
+
+	map<string,int32_t> seq_order;
+    map<string,string> trims;
+    map<string,string> ref_strings;
+
+	map<string, vector<cSequenceFeature> > repeat_lists;
     static cSequenceFeature* find_closest_repeat_region(uint32_t position, vector<cSequenceFeature>& repeat_list_ref, uint32_t max_distance, bool direction);
   };
   

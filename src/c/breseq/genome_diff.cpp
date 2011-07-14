@@ -188,6 +188,17 @@ void breseq::add_reject_reason(diff_entry& de, const string &reason) {
 
 }
 
+uint32_t breseq::number_reject_reasons(diff_entry& de) {
+
+	if (!de.entry_exists(REJECT) || de[REJECT].size() == 0)
+		return 0;
+
+	uint32_t reason_count = 1;
+	for (uint32_t i = 0; i < de[REJECT].size(); i++)
+		if (de[REJECT][i] == ',') reason_count++;
+	return reason_count;
+}
+
 
 /*! Output operator for a diff entry.
  */

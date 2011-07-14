@@ -123,7 +123,8 @@ namespace breseq {
 		
 		//! Ease-of-use accessor for setting fields on this entry.
 		value_t& operator[](const key_t& k) { return _fields[k]; }
-				
+		bool entry_exists(const key_t& k) { return (_fields.count(k) > 0); }
+
 		//! Marshal this diff entry into an ordered list of fields.
 		virtual void marshal(field_list_t& s);
 
@@ -147,6 +148,7 @@ namespace breseq {
 	};
 	
   void add_reject_reason(diff_entry& de, const string &reason);
+  uint32_t number_reject_reasons(diff_entry& de);
 
     //! Convert genome diff to GVF
     void GDtoGVF( const string& gdfile, const string& gfffile );
