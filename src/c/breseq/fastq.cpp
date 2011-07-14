@@ -64,7 +64,7 @@ namespace breseq {
       if( on_sequence.m_numerical_qualities )
         convert_numeric_scores(on_sequence);
       
-      cout << "I'm here: " << num_reads << endl;
+      //cout << "I'm here: " << num_reads << endl;
       
       //iterate through sequence grabbing the associated scores
       for (uint32_t i=0; i<on_sequence.m_qualities.size(); i++) {
