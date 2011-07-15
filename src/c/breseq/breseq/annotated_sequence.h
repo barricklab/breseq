@@ -50,10 +50,16 @@ namespace breseq {
       int8_t m_strand;
     
       cSequenceFeature() {}
-      cSequenceFeature(const cSequenceFeature& _in) : sequence_feature_map_t(_in) {
-        m_start = _in.m_start;
-        m_end = _in.m_end;        
-        m_strand = _in.m_strand;
+      cSequenceFeature(cSequenceFeature* _in) : sequence_feature_map_t(*_in) {
+        m_start = _in->m_start;
+        m_end = _in->m_end;
+        m_strand = _in->m_strand;
+      }
+	  cSequenceFeature operator=(cSequenceFeature* _in) {
+        m_start = _in->m_start;
+        m_end = _in->m_end;
+        m_strand = _in->m_strand;
+		sequence_feature_map_t::operator=(*_in);
       }
       
       //<! Safe accessor that returns empty string if not defined. 
