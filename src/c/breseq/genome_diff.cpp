@@ -84,7 +84,7 @@ map<string, vector<string> > line_specification =make_map<string, vector<string>
 //'RA' => ['seq_id', 'position', 'insert_position', 'ref_base', 'new_base'],
 ("RA",make_list<string> ("seq_id")("position")("insert_position")("ref_base")("new_base"))
 //'MC' => ['seq_id', 'start', 'end'],
-("MC",make_list<string> ("seq_id")("start")("end"))
+("MC",make_list<string> ("seq_id")("start")("end")("start_range")("end_range"))
 //'JC' => ['side_1_seq_id', 'side_1_position', 'side_1_strand', 'side_2_seq_id', 'side_2_position', 'side_2_strand', 'overlap'],
 ("JC",make_list<string> ("side_1_seq_id")("side_1_position")("side_1_strand")("side_2_seq_id")("side_2_position")("side_2_strand")("overlap"))
 //'UN' => ['seq_id', 'start', 'end'],
@@ -113,15 +113,15 @@ map<string, vector<string> > line_specification =make_map<string, vector<string>
 
 // Field order.
 static const char* s_field_order[] = { 
-breseq::SEQ_ID,
-breseq::POSITION,
-breseq::INSERT_POSITION,
-breseq::REF_BASE,
-breseq::NEW_BASE,
-breseq::START,
-breseq::END,
-breseq::START_RANGE,
-breseq::END_RANGE,
+  breseq::SEQ_ID,
+  breseq::POSITION,
+  breseq::INSERT_POSITION,
+  breseq::REF_BASE,
+  breseq::NEW_BASE,
+  breseq::START,
+  breseq::END,
+  breseq::START_RANGE,
+  breseq::END_RANGE,
 0}; // required trailing null.
 
 
@@ -140,6 +140,7 @@ breseq::diff_entry::diff_entry()
 }
 
 
+
 /*! Marshal this diff entry into an ordered list of fields.
  */
 void breseq::diff_entry::marshal(field_list_t& s) {
@@ -154,22 +155,25 @@ void breseq::diff_entry::marshal(field_list_t& s) {
 
 	// marshal specified fields in-order, removing them from the copy after they've 
 	// been printed:
-	const char* f=s_field_order[0];
-	for(size_t i=0; ; ++i) {
-		f = s_field_order[i];
-		if(f == 0) { break; }
-	
-		map_t::iterator iter=cp.find(f);
+  
+  vector<string>& f = line_specification[_type]; 
+
+  for (vector<string>::iterator it=f.begin(); it != f.end(); it++)
+  {
+		map_t::iterator iter=cp.find(*it);
 		if(iter != cp.end()) {
 			s.push_back(iter->second);
 			cp.erase(iter);
 		}
 	}
 	
-	// marshal whatever's left:
+	// marshal whatever's left, unless it's an empty field
 	for(map_t::iterator i=cp.begin(); i!=cp.end(); ++i) {
-		s.push_back(i->first + "=" + i->second);
-	}
+    if (i->second.size() > 0) 
+    {
+      s.push_back(i->first + "=" + i->second);
+    }
+  }
 }
 
 /*! Add reject reason to diff entry.
@@ -221,7 +225,16 @@ breseq::genome_diff::genome_diff(const string& filename)
 /*! Add evidence to this genome diff.
  */
 void breseq::genome_diff::add(const diff_entry& item) {
-	_entry_list.push_back(item);
+
+  _entry_list.push_back(item);
+  
+  diff_entry& added_item = _entry_list.back();
+  
+  if (added_item._id.size() == 0)
+  {
+    added_item._id = to_string(new_id()); 
+  }
+  
 // # sub add
 // # {
 // #   my ($self, $item) = @_;

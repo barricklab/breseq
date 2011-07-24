@@ -30,7 +30,7 @@ namespace breseq {
 
 	/*! Represents a pileup of alignments.
 	 */
-	class pileup : public std::vector<alignment> {
+	class pileup : public std::vector<pileup_alignment> {
 	public:
 		//! Constructor for this pileup.
 		pileup(uint32_t tid, uint32_t pos_1, int n, const bam_pileup1_t *pile, pileup_base& pb);

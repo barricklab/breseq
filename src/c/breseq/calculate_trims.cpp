@@ -47,22 +47,34 @@ bool repeat_match ( const string& _in_seq, const uint32_t pos, const uint32_t re
   return true;
 }
 
+// writes straight to file
 void calculate_trims_1 ( const string& _in_seq, const string& in_output_filename ) {
+  SequenceTrims trims(_in_seq);
+  trims.WriteFile(in_output_filename);
+}
+
+  
+  
+// Initialize trims for a sequence from the string
+SequenceTrims::SequenceTrims(const string& _in_seq) 
+: trim_data(NULL), m_length(0) 
+{
 
   //cerr << _in_seq.length() << endl;
-
+    
   // use one structure to avoid byte alignment issues when writing
-  uint8_t * trim = new unsigned char[2*_in_seq.length()];
-  memset( trim, 0, 2*_in_seq.length() );
+  trim_data = new unsigned char[2*_in_seq.length()];
+  m_length = _in_seq.length();
+  assert(trim_data != NULL);
+  memset( trim_data, 0, 2*m_length );
   
   const uint32_t left_trim_offset = 0;
-  const uint32_t right_trim_offset = _in_seq.length();
+  const uint32_t right_trim_offset = m_length;
   
   uint32_t max_repeat_length = 18;
 
-  for (unsigned int pos=0; pos<_in_seq.length(); pos++)
-  {
-  
+  for (unsigned int pos=0; pos<m_length; pos++)
+  {  
     // always trim at least one bp
     uint32_t max_trim_length = 1;
   
@@ -99,7 +111,7 @@ void calculate_trims_1 ( const string& _in_seq, const string& in_output_filename
       
       uint8_t this_trim = offset + 1;
       //cerr << (right_trim_offset + pos + offset) << " " << (int)(this_trim) << " " << (int)(trim[right_trim_offset + pos + offset]) << endl;
-      trim[right_trim_offset + pos + offset] = max(this_trim, trim[right_trim_offset + pos + offset]);
+      trim_data[right_trim_offset + pos + offset] = max(this_trim, trim_data[right_trim_offset + pos + offset]);
     }
  
     for (int32_t offset=add_max_trim_length; offset>=0; offset--)
@@ -108,28 +120,19 @@ void calculate_trims_1 ( const string& _in_seq, const string& in_output_filename
 
       uint8_t this_trim = add_max_trim_length - offset;      
       //cerr << (left_trim_offset + pos + offset) << " " << (int)(this_trim) << " " << int(trim[left_trim_offset + pos + offset]) << endl;
-      trim[left_trim_offset + pos + offset] = max(this_trim, trim[left_trim_offset + pos + offset]);
+      trim_data[left_trim_offset + pos + offset] = max(this_trim, trim_data[left_trim_offset + pos + offset]);
     }
     
-    // debug
     
+    // debug
     //if (pos == 10000) break;
   }
-
-  // Write out the trims to abinary file
-  
-  //cerr << in_output_filename << endl;
-  ofstream out(in_output_filename.c_str(), ios::out | ios::binary);
-  out.write(reinterpret_cast<char *>(trim), 2*_in_seq.length());
-  out.close();
 
 //debugging...
 //  for (uint32_t i=0; i<_in_seq.length(); i++)
 //  {
 //    cerr << (i+1) << " " << (int)left_trim[i] << " " << (int)right_trim[i] << endl;
 //  }
-      
-  delete[] trim;
 }
 
 void calculate_trims( const string& in_fasta, const string& in_output_path) {

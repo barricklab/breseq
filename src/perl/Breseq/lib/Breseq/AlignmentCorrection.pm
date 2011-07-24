@@ -103,8 +103,8 @@ sub correct_alignments
 	open $RCJ, ">$resolved_junction_sam_file_name" or die;
 
 	
-	my %matched_junction;
-	my %degenerate_matches;
+	our %matched_junction;
+	our %degenerate_matches;
 	my $reads_processed = 0;
 	
 	foreach my $read_struct ($settings->read_structures)
@@ -361,7 +361,34 @@ sub correct_alignments
 	###
 	## Candidate junctions with unique matches
 	###
-	my @sorted_junction_ids = sort {-(scalar @{$matched_junction{$a}} <=> scalar @{$matched_junction{$b}})} keys %matched_junction;
+	sub by_unique_then_degenerate
+	{
+		my ($unique_1, $unique_2) = (scalar @{$matched_junction{$a}}, scalar @{$matched_junction{$b}});
+		
+		if ($unique_1 != $unique_2) 
+		{
+			return -($unique_1 <=> $unique_2);
+		}
+		
+		my ($degenerate_1, $degenerate_2) = (0,0);
+		if (defined $degenerate_matches{$a})
+		{
+			$degenerate_1 = scalar keys %{$degenerate_matches{$a}};
+		} 
+		if (defined $degenerate_matches{$b})
+		{
+			$degenerate_2 = scalar keys %{$degenerate_matches{$b}};
+		}
+		
+		if ($degenerate_1 != $degenerate_2) 
+		{
+			return -($degenerate_1 <=> $degenerate_2);
+		}
+		
+		return ($a cmp $b);
+	}
+	
+	my @sorted_junction_ids = sort by_unique_then_degenerate keys %matched_junction;
 		
 	print "Degenerate matches before handling ones with unique matches: " . (scalar keys %degenerate_matches) . "\n" if ($verbose);
 		
@@ -392,6 +419,7 @@ sub correct_alignments
 	## Candidate junctions with ONLY degenerate matches
 	##
 	###
+	
 	@sorted_junction_ids = sort {-(scalar keys %{$degenerate_matches{$a}} <=> scalar keys %{$degenerate_matches{$b}})} keys %degenerate_matches;
 	while (@sorted_junction_ids)
 	{
@@ -737,7 +765,11 @@ sub _test_junction
 		##!!> Matches that don't extend through the overlap region will have the same quality 
 		##!!> as a reference match and, therefore, no difference in mapping quality
 		##!!> do not count these toward scoring!
-		next READ if ($item->{mapping_quality_difference} == 0);
+		if ($item->{mapping_quality_difference} == 0)
+		{
+			print "  Degenerate: " . $item->{junction_alignments}->[0]->qname . "\n" if ($verbose);
+			next READ;
+		}
 		
 		$total_non_overlap_reads++;
 		$has_non_overlap_only = 0;
@@ -869,7 +901,7 @@ sub _test_junction
 	
 	if (defined $degenerate_matches_ref->{$junction_seq_id})
 	{
-		foreach my $read_name (keys %{$degenerate_matches_ref->{$junction_seq_id}})
+		foreach my $read_name (sort keys %{$degenerate_matches_ref->{$junction_seq_id}})
 		{	
 			my $degenerate_match = $degenerate_matches_ref->{$junction_seq_id}->{$read_name};
 			my $fastq_file_index = $degenerate_match->{fastq_file_index};

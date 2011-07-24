@@ -760,7 +760,7 @@ void cErrorTable::write_count_table_content(ofstream& out, const uint32_t positi
     Record all observations in an alignment to a column of the reference genome
     in the count table. This function is called by the pileup_callback.
 */
-void cErrorTable::count_alignment_position(const alignment& i, const pileup& p) {
+void cErrorTable::count_alignment_position(const pileup_alignment& i, const pileup& p) {
     
     uint32_t ref_pos = p.position_0();
     const char* ref_seq = p.reference_sequence();
@@ -932,7 +932,7 @@ void cErrorTable::counts_to_log10_prob() {
   Note: Does not fill in the ref_base covariate!
 */
 
-bool cErrorTable::alignment_position_to_covariates(const alignment& a, int32_t insert_count, covariate_values_t& cv) {
+bool cErrorTable::alignment_position_to_covariates(const pileup_alignment& a, int32_t insert_count, covariate_values_t& cv) {
   
   // -1 for deletion, otherwise 1-number of bases inserted at this position
   int indel=a.on_base_indel();

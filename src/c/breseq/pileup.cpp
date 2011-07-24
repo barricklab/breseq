@@ -28,9 +28,9 @@ breseq::pileup::pileup(uint32_t tid, uint32_t pos_1, int n, const bam_pileup1_t 
 , _pb(pb) {
 	
 	// build our alignment objects:
-	reserve(static_cast<std::size_t>(n));
+	reserve(static_cast<size_t>(n));
 	for(int i=0; i<n; ++i) {
-		push_back(alignment(&pile[i]));
+		push_back(pileup_alignment(&pile[i]));
 	}		
 }
 

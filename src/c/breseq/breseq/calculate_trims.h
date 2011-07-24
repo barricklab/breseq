@@ -26,7 +26,8 @@ using namespace std;
 namespace breseq {
 
   void calculate_trims( const string& in_fasta, const string& in_output_path);
-	
+  void calculate_trims_1( const string& in_fasta, const string& in_output_path);
+
   /*! Trim classes
    
 	 */ 
@@ -56,9 +57,11 @@ namespace breseq {
       memcpy(trim_data, _in.trim_data, 2*m_length);
     }
     
+    SequenceTrims(const string& _in_seq);
+    
     ~SequenceTrims() { if (trim_data) delete[] trim_data; };
     
-    void ReadFile(const string& trim_file_name, uint32_t in_seq_length) 
+    inline void ReadFile(const string& trim_file_name, uint32_t in_seq_length) 
     { 
       // delete any old content
       if (trim_data) delete[] trim_data;
@@ -70,6 +73,13 @@ namespace breseq {
       assert(!in_trim_file.fail());
       assert(in_trim_file.gcount() == 2*in_seq_length);
       in_trim_file.close();
+    }
+
+    inline void WriteFile(const string& trim_file_name) 
+    {       
+      ofstream out(trim_file_name.c_str(), ios::out | ios::binary);
+      out.write(reinterpret_cast<char *>(trim_data), 2*m_length);
+      out.close();
     }
     
     uint8_t left_trim_0(uint32_t pos_0) const
@@ -98,7 +108,7 @@ namespace breseq {
   };
   
   typedef vector<SequenceTrims> SequenceTrimsList;
-
+  
   
 } // breseq
 

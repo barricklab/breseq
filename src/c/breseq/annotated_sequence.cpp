@@ -664,7 +664,7 @@ namespace breseq {
     }
   }
 
-	uint32_t alignment_mismatches(alignment a, const cReferenceSequences& ref_seq_info)
+	uint32_t alignment_mismatches(const alignment& a, const cReferenceSequences& ref_seq_info)
 	{
 		bool verbose = false;
 		uint32_t mismatches = 0;

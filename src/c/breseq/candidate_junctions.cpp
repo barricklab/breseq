@@ -367,14 +367,14 @@ namespace breseq {
 		return true;
 	}
 
-	void CandidateJunctions::_alignments_to_candidate_junctions(const Settings& settings, Summary& summary, const cReferenceSequences& ref_seq_info, map<string, map<string, CandidateJunction>, CandidateJunction::Sorter>& candidate_junctions, vector<alignment>& alignments)
+	void CandidateJunctions::_alignments_to_candidate_junctions(const Settings& settings, Summary& summary, const cReferenceSequences& ref_seq_info, map<string, map<string, CandidateJunction>, CandidateJunction::Sorter>& candidate_junctions, alignment_list& alignments)
 	{
 		bool verbose = false;
 
 		if (verbose)
 		{
 			cout << endl << "###########################" << endl;
-			cout << alignments[0].read_name();
+			cout << alignments.front()->read_name();
 			cout << endl << "###########################" << endl;
 		}
 
@@ -387,22 +387,22 @@ namespace breseq {
 
 		if (verbose)
 		{
-			cout << alignments[0].read_name() << endl;
+			cout << alignments.front()->read_name() << endl;
 			cout << "Total matches: " << alignments.size() << endl;
 		}
 
-		vector<alignment> list1, list2;
+		alignment_list list1, list2;
 
 	  	// Try only pairs where one match starts at the beginning of the read >>>
 		// This saves a number of comparisons and gets rid of a lot of bad matches.
 		int32_t max_union_length = 0;
 
-		for (uint32_t i = 0; i < alignments.size(); i++)
+    for (alignment_list::iterator it=alignments.begin(); it != alignments.end(); it++)
 		{
-			alignment a = alignments[i];
+			counted_ptr<bam_alignment> a = *it;
 
 			uint32_t a_start, a_end;
-      a.query_stranded_bounds_1(a_start, a_end);
+      a->query_stranded_bounds_1(a_start, a_end);
 
 			if (verbose) cout << "(" << a_start << ", " << a_end << ")" << endl;
 
@@ -433,16 +433,16 @@ namespace breseq {
 		vector<PassedPair> passed_pair_list;
 
 		// Try adding together each pair of matches to make a junction, by looking at read coordinates
-		for (uint32_t i = 0; i < list1.size(); i++)
+    for (alignment_list::iterator it1 = list1.begin(); it1 != list1.end(); it1++)
 		{
-			alignment a1 = list1[i];
+			bam_alignment& a1 = *(it1->get());
 
 			uint32_t a1_start, a1_end;
 			a1.query_stranded_bounds_1(a1_start, a1_end);
 
-			for (uint32_t j = 0; j < list2.size(); j++)
+      for (alignment_list::iterator it2 = list2.begin(); it2 != list2.end(); it2++)
 			{
-				alignment a2 = list2[j];
+				alignment& a2 = *(it2->get());
 
 				uint32_t a2_start, a2_end;
 				a2.query_stranded_bounds_1(a2_start, a2_end);
@@ -545,7 +545,7 @@ namespace breseq {
 		// Done if everything already ruled out...
 		if (junctions.size() == 0) return;
 
-		if (verbose) cout << alignments[0].read_name() << endl;
+		if (verbose) cout << alignments.front()->read_name() << endl;
 
 		// only now that we've looked through everything can we determine whether the reference sequence matched
 		// on a side was unique, after correcting for overlap
@@ -820,9 +820,6 @@ namespace breseq {
   //## candidate junctions.
   //##
   //    
-  //    sub _split_indel_alignments
-  //    {
-  //      my ($settings, $summary, $header, $PSAM, $min_indel_split_len, $al_ref) = @_;  
   
   void CandidateJunctions::_split_indel_alignments(const Settings& settings, Summary& summary, tam_file& PSAM, int32_t min_indel_split_len, const alignment_list& alignments)
   {
@@ -831,11 +828,11 @@ namespace breseq {
     alignment_list untouched_alignments;
     uint32_t alignments_written = 0;      
 
-    for(alignment_list::const_iterator it = alignments.begin(); it < alignments.end(); it++) 
+    for(alignment_list::const_iterator it = alignments.begin(); it != alignments.end(); it++) 
     {
-      uint32_t* cigar_list = it->cigar_array();
+      uint32_t* cigar_list = (*it)->cigar_array();
       bool do_split = false;
-      for(uint32_t i=0; i<it->cigar_array_length(); i++)
+      for(uint32_t i=0; i<(*it)->cigar_array_length(); i++)
       {
         uint32_t op = cigar_list[i] & BAM_CIGAR_MASK;
         uint32_t len = cigar_list[i] >> BAM_CIGAR_SHIFT;
@@ -847,7 +844,7 @@ namespace breseq {
       
       if (do_split)
       {
-        PSAM.write_split_alignment(min_indel_split_len, *it);
+        PSAM.write_split_alignment(min_indel_split_len, **it);
         alignments_written += 2;
       }
       else
@@ -866,10 +863,10 @@ namespace breseq {
     //##
     //## Use $self->{required_both_unique_length_per_side} to rule them out.
     //## 
-        
-    for(alignment_list::iterator it = untouched_alignments.begin(); it < untouched_alignments.end(); it++) 
+    
+    for(alignment_list::iterator it = untouched_alignments.begin(); it != untouched_alignments.end(); it++) 
     {
-      if ((*it).beginning_to_end_match())
+      if ((*it)->beginning_to_end_match())
       {
         untouched_alignments.erase(it);
       }
@@ -915,7 +912,7 @@ namespace breseq {
       string preprocess_junction_split_sam_file_name = Settings::file_name(settings.preprocess_junction_split_sam_file_name, "#", read_struct.m_base_name);
       tam_file PSAM(preprocess_junction_split_sam_file_name, reference_fasta_file_name, ios_base::out);
       
-			vector<alignment> alignments;
+			alignment_list alignments;
 			uint32_t i = 0;
 			while (tam.read_alignments(alignments, false))
 			{
@@ -978,7 +975,7 @@ namespace breseq {
 			string reference_sam_file_name = Settings::file_name(settings.preprocess_junction_split_sam_file_name, "#", settings.read_structures[j].m_base_name);
 
       tam_file tam(reference_sam_file_name, settings.reference_fasta_file_name, ios_base::in);
-			vector<alignment> alignments;
+			alignment_list alignments;
       
 			while (tam.read_alignments(alignments, false))
 			{

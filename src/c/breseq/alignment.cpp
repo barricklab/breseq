@@ -24,31 +24,6 @@ using namespace std;
 namespace breseq {
 
 const char alignment::op_to_char[10] = "MIDNSHP=X";
-  
-/*! Constructor.
- */
-alignment::alignment(const bam_pileup1_t* p)
-: _p(p)
-, _a(p->b) {
-}
-  
-/*! Constructor.
- only alignment!
- */
-alignment::alignment(const bam1_t* a)
-: _p(NULL), _a(a) 
-{
-}
-  
-alignment::alignment()
-: _p(NULL), _a(NULL) 
-{
-}
-  
-alignment::~alignment()
-{
-}
-
 
 /*! Does this alignment have any redundancies?
  */
@@ -81,25 +56,6 @@ uint32_t alignment::fastq_file_index() const {
 	return bam_aux2i(bam_aux_get(_a,"X2"));
 }
 
-//! Has this alignment been trimmed?
-bool alignment::is_trimmed() const {
-	// is our query position in the left-side trimmed region?
-	uint8_t *auxl = bam_aux_get(_a,"XL");
-	if(auxl) {
-		if((query_position_1()) <= (uint32_t)bam_aux2i(auxl)) {
-			return true;
-		}
-	}	
-	// is our query position in the right-side trimmed region?
-	uint8_t *auxr = bam_aux_get(_a,"XR");
-	if(auxr) {
-		if((read_length()-(query_position_1())) <= (uint32_t)bam_aux2i(auxr)) {
-			return true;
-		}
-	}
-	
-	return false;
-}
 //! Return number of locations on left of sequence to be trimmed
 uint32_t alignment::trim_left() const {
   uint8_t *auxl = bam_aux_get(_a,"XL");
@@ -310,18 +266,7 @@ tam_file::~tam_file()
 {
   sam_close(input_tam);
   if (bam_header) bam_header_destroy(bam_header);
-  free_loaded_alignments();
 }
-  
-void tam_file::free_loaded_alignments()
-{
-  for(vector<bam1_t*>::iterator it=loaded_alignments.begin(); it<loaded_alignments.end(); it++)
-  {
-    bam_destroy1(*it);
-  }
-  loaded_alignments.clear();
-}
-
   
 void tam_file::open_read(const string& tam_file_name, const string& fasta_file_name)
 {
@@ -346,31 +291,29 @@ void tam_file::open_write(const string& tam_file_name, const string& fasta_file_
 bool tam_file::read_alignments(alignment_list& alignments, bool paired)
 {
   alignments.clear();
-  
+
 	int num_to_slurp = (paired) ? 2 : 1;
 	string last_read_name = "";
-	if (loaded_alignments.size() > 0)
+	if (last_alignment.get() != NULL)
 	{
-    alignment last_alignment(loaded_alignments.back());
-		last_read_name = last_alignment.read_name();
-    
-    loaded_alignments.clear();
+		last_read_name = last_alignment->read_name();    
 		alignments.push_back(last_alignment);
+    last_alignment = counted_ptr<bam_alignment>(NULL);
 	}
 
 	int num_slurped = 0;
 	while (true)
 	{
-		bam1_t* last_alignment_bam = new bam1_t;
-    last_alignment_bam = bam_init1();
-    int32_t bytes = sam_read1(input_tam,bam_header,last_alignment_bam);
+    bam_alignment* this_alignment_bam = new bam_alignment(); 
+    
+    counted_ptr<bam_alignment> this_alignment(this_alignment_bam);
+    
+    int32_t bytes = sam_read1(input_tam,bam_header, this_alignment_bam);
     if (bytes < 0) break;
     
-    loaded_alignments.push_back(last_alignment_bam);
-    
-    alignment last_alignment(last_alignment_bam);
+    last_alignment = this_alignment;
 
-		string read_name = last_alignment.read_name();
+		string read_name = this_alignment->read_name();
       
 		if (last_read_name.size() == 0)
     {
@@ -378,20 +321,20 @@ bool tam_file::read_alignments(alignment_list& alignments, bool paired)
     }
     else
     {
-      if (read_name != last_read_name) break;
+      if (read_name != last_read_name) break; 
     }
-    
-    alignments.push_back(last_alignment);
+    alignments.push_back(this_alignment);
   }
-
-  return (alignments.size() > 0);
+  return (!alignments.empty());
 }
   
 void tam_file::write_alignments(int32_t fastq_file_index, alignment_list& alignments, vector<Trims>* trims)
 {
-	for (uint32_t i = 0; i < alignments.size(); i++)
+  uint32_t i=-1;
+  for (alignment_list::iterator it=alignments.begin(); it != alignments.end(); it++)
 	{
-		alignment& a = alignments[i];
+    i++;
+		bam_alignment& a = *(it->get());
 
 		stringstream aux_tags_ss;
     
@@ -567,16 +510,28 @@ void tam_file::write_split_alignment(uint32_t min_indel_split_len, const alignme
 	$junction_overlap, 		# CJ: amount of overlap in the candidate junction sequence that we aligned to
 	$trim					# CJ: list with two items, indicating what the trim on each end is
 */
-void tam_file::write_moved_alignment(const alignment& a, uint32_t fastq_file_index, const string& seq_id, int32_t reference_pos, bool reference_strand, int32_t reference_overlap, uint32_t junction_side, int32_t junction_flanking, int32_t junction_overlap, const Trims* trim)
+void tam_file::write_moved_alignment(
+                                     const alignment& a, 
+                                     const string& rname,
+                                     uint32_t fastq_file_index, 
+                                     const string& seq_id, 
+                                     int32_t reference_pos, 
+                                     int32_t reference_strand, 
+                                     int32_t reference_overlap, 
+                                     uint32_t junction_side, 
+                                     int32_t junction_flanking, 
+                                     int32_t junction_overlap, 
+                                     const Trims* trim
+                                     )
 {
 	bool verbose = false;
 
 	if (verbose)
 	{
 		cerr << "qname                 = " << a.read_name() << endl;
-		cerr << "rname                 = " << this->bam_header->target_name[a.reference_target_id()] << endl;
+		cerr << "rname                 = " << rname << endl;
 		cerr << "seq_id                = " << seq_id << endl;
-		cerr << "reference_pos	        = " << reference_pos << endl;
+		cerr << "reference_pos	       = " << reference_pos << endl;
 		cerr << "reference_strand      = " << reference_strand << endl;
 		cerr << "reference_overlap     = " << reference_overlap << endl;
 		cerr << "junction_side         = " << junction_side << endl;
@@ -588,11 +543,10 @@ void tam_file::write_moved_alignment(const alignment& a, uint32_t fastq_file_ind
 	}
 
 	// Which strand of the read are we on? Controls whether CIGAR is reversed
-	bool read_strand = (junction_side != 1);
-	if (!reference_strand) read_strand = !read_strand;
+	int8_t read_strand = ((junction_side == 1) ? -1 : +1) * reference_strand;
 
 	if (verbose)
-		cerr << "read strand = " << read_strand << endl;
+		cerr << "read strand = " << static_cast<int32_t>(read_strand) << endl;
 
 	uint32_t a_read_start, a_read_end;
 	a.query_bounds_1(a_read_start, a_read_end);
@@ -622,18 +576,18 @@ void tam_file::write_moved_alignment(const alignment& a, uint32_t fastq_file_ind
 	uint32_t right_padding = 0;
 	if (cigar_list[0].first == 'S')
 	{
-		left_padding = cigar_list[0].second;
+		left_padding = cigar_list.front().second;
 		cigar_list.erase(cigar_list.begin());
 	}
-	if ((*cigar_list.end()).first == 'S')
+	if (cigar_list.back().first == 'S')
 	{
-		right_padding = (*cigar_list.end()).second;
+		right_padding = cigar_list.back().second;
 		cigar_list.pop_back();
 	}
 
 	// If we are operating on the opposite read strand,
 	// Reverse complement sequence, reverse quals, and toggle strand bit
-	if (!read_strand)
+	if (read_strand == -1)
 	{
 		seq = reverse_complement(seq);
 		reverse(qual_scores.begin(), qual_scores.end());
@@ -690,10 +644,10 @@ void tam_file::write_moved_alignment(const alignment& a, uint32_t fastq_file_ind
 		// Remove CIGAR operations until we have enough length for side 1
 		while (cigar_list.size() > 0)
 		{
-			pair<uint8_t,uint8_t> c = cigar_list[0];
+			pair<char,uint16_t> c = cigar_list[0];
 			cigar_list.erase(cigar_list.begin());
-			char op = alignment::op_to_char[c.first];
-			uint8_t n = c.second;
+			char op = c.first;
+			uint16_t n = c.second;
 			if (op == 'I') //insertion in read relative to reference
 			{
 				test_read_pos += n;
@@ -708,7 +662,7 @@ void tam_file::write_moved_alignment(const alignment& a, uint32_t fastq_file_ind
 					n -= overshoot;
 					// push back the reduced match length onto the CIGAR
 					// so that it can become part of the side 2 match
-					pair<uint8_t,uint8_t> new_element = make_pair<uint8_t,uint8_t>(c.first, overshoot);
+					pair<char,uint16_t> new_element = make_pair<char,uint16_t>(c.first, overshoot);
 					cigar_list.insert(cigar_list.begin(), new_element);
 				}
 				// After $n may have been adjusted add it to both positions
@@ -717,14 +671,16 @@ void tam_file::write_moved_alignment(const alignment& a, uint32_t fastq_file_ind
 					test_read_pos += n;
 			}
 
-			pair<uint8_t,uint8_t> new_element = make_pair<uint8_t,uint8_t>(c.first, n);
+			pair<char,uint16_t> new_element = make_pair<char,uint16_t>(c.first, n);
 			side_1_cigar_list.push_back(new_element);
 			if (test_junction_pos >= junction_pos) break;
 		}
 	}
 
+  side_2_cigar_list = cigar_list;
 	// Use the remaining CIGAR operations to construct side 2
-	copy(cigar_list.begin(), cigar_list.end(), side_2_cigar_list.begin());
+  // @JEB below causes memory error
+  //	copy(cigar_list.begin(), cigar_list.end(), side_2_cigar_list.begin());
 
 	if (verbose) cout << "test_read_pos = " << test_read_pos << endl;
 	if (verbose) cout << "test_junction_pos = " << test_junction_pos << endl;
@@ -747,6 +703,7 @@ void tam_file::write_moved_alignment(const alignment& a, uint32_t fastq_file_ind
 	int32_t side_1_junction_match_length = test_junction_pos - a.reference_start_1();
 	if (side_1_junction_match_length < 0) side_1_junction_match_length = 0;
 	int32_t side_2_junction_match_length = total_junction_match_length - side_1_junction_match_length;
+  
 	int32_t junction_match_length = (junction_side == 1) ? side_1_junction_match_length : side_2_junction_match_length;
 	if (verbose) {
 		cerr << "total_junction_match_length = " << total_junction_match_length << endl;
@@ -795,19 +752,18 @@ void tam_file::write_moved_alignment(const alignment& a, uint32_t fastq_file_ind
 	if (verbose)
 		cerr << "Adjusted Left Padding = " << left_padding << ", Adjusted Right Padding = " << right_padding << endl;
 
-	uint8_t char_to_op = string(alignment::op_to_char).find('S');
 	if (left_padding > 0)
 	{
-		pair<uint8_t,uint8_t> new_element = make_pair<uint8_t,uint8_t>(char_to_op, left_padding);
+		pair<char,uint16_t> new_element = make_pair<char,uint16_t>('S', left_padding);
 		cigar_list.insert(cigar_list.begin(), new_element);
 	}
 	if (right_padding > 0)
 	{
-		pair<uint8_t,uint8_t> new_element = make_pair<uint8_t,uint8_t>(char_to_op, right_padding);
+		pair<char,uint16_t> new_element = make_pair<char,uint16_t>('S', right_padding);
 		cigar_list.push_back(new_element);
 	}
 
-	if (!read_strand)
+	if (read_strand == -1)
 		reverse(cigar_list.begin(), cigar_list.end());
 
 	//if (verbose) cerr << "Final CIGAR:" << endl << Dumper($cigar_list);
@@ -822,7 +778,7 @@ void tam_file::write_moved_alignment(const alignment& a, uint32_t fastq_file_ind
 	// Recall:
 	//  strand == 1 means this is the lowest coordinate of that junction side sequence
 	//  strand == 0 means this is the highest coordinate
-	int32_t reference_match_start = (reference_strand) ? reference_pos + short_of_junction : reference_pos - (junction_match_length - 1) - short_of_junction;
+	int32_t reference_match_start = (reference_strand == 1) ? reference_pos + short_of_junction : reference_pos - (junction_match_length - 1) - short_of_junction;
 
 	////
 	//// Convert the CIGAR list back to a CIGAR string
@@ -834,14 +790,14 @@ void tam_file::write_moved_alignment(const alignment& a, uint32_t fastq_file_ind
 	for (uint32_t i = 0; i < cigar_list.size(); i++) //CIGAR
 	{
 		char op = cigar_list[i].first;
-		char len = cigar_list[i].second;
+		uint32_t len = static_cast<uint32_t>(cigar_list[i].second);
 
 		assert(len > 0);
 		cigar_string_ss << len << op;
 		if (op != 'D') cigar_length += len;
 	}
 	string cigar_string = cigar_string_ss.str();
-
+  
 	////
 	//// Assemble the quality score string
 	////
@@ -860,16 +816,16 @@ void tam_file::write_moved_alignment(const alignment& a, uint32_t fastq_file_ind
 	aux_tags_ss << "AS:i:" << a.aux_get_i("AS") << "\t" << "X1:i:" << 1 << "\t" << "X2:i:" << fastq_file_index;
 
 	//this flag indicates this is a junction match and which side of the match is in the middle of the read across the junction
-	int32_t within_side = (reference_strand) ? junction_side : (junction_side + 1) % 2;
+	int32_t within_side = (reference_strand == 1) ? junction_side : (junction_side + 1) % 2;
 	aux_tags_ss << "\t" << "XJ:i:" << within_side;
 
 	//handle putting the trims in the right places
 	//need to be aware if read is trimmed out of existence??
 	if (trim != NULL)
 	{
-		string trim_left = (junction_side == 1) ? to_string(trim->L) : "0";
-		string trim_right = (junction_side == 1) ? "0" : to_string(trim->R);
-		if (!read_strand) swap(trim_left, trim_right);
+		string trim_left = (junction_side == 1) ? to_string(trim->L+left_padding) : "0";
+		string trim_right = (junction_side == 1) ? "0" : to_string(trim->R+right_padding);
+		if (read_strand == -1) swap(trim_left, trim_right);
 		aux_tags_ss << "\t" << "XL:i:" << trim_left << "\t" << "XR:i:" << trim_right;
 	}
 
@@ -896,11 +852,6 @@ void tam_file::write_moved_alignment(const alignment& a, uint32_t fastq_file_ind
 	string l = join(ll, "\t") + "\n";
 	if (verbose) cout << l;
 
-	/*if (cigar_length != q_length)
-	{
-		print Dumper($cigar_string, $cigar_length, $a->l_qseq);
-		die "CIGAR length does not match calculated length";
-	}*/
 	assert(cigar_length == q_length);
 	output_tam << l;
 }

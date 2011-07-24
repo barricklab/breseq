@@ -67,14 +67,14 @@ namespace breseq {
 	extern const char* MC;
   extern const char* JC;
 	extern const char* UN;
-
+  
   //!  
   static uint8_t kPolymorphismFrequencyPrecision = 4;
   static uint8_t kMutationQualityPrecision = 14;
 	
 	//! Convenience typedef, used during diff entry marshalling.
 	typedef vector<string> field_list_t;
-
+  
 	//! Used to add types that will print with a specified precision
   struct formatted_double {
   
@@ -141,20 +141,16 @@ namespace breseq {
 		string _id;
     vector<string> _evidence; 
     map_t _fields; //!< Additional information about this diff entry. Look at 
-    
-    
-    
-  
 	};
 	
   void add_reject_reason(diff_entry& de, const string &reason);
   uint32_t number_reject_reasons(diff_entry& de);
 
-    //! Convert genome diff to GVF
-    void GDtoGVF( const string& gdfile, const string& gfffile );
-    
-    //! Convert VCF to genome diff
-    void VCFtoGD( const string& vcffile, const string& gfffile );
+  //! Convert genome diff to GVF
+  void GDtoGVF( const string& gdfile, const string& gfffile );
+  
+  //! Convert VCF to genome diff
+  void VCFtoGD( const string& vcffile, const string& gfffile );
 	
 	//! Output operator for a diff entry.
 	ostream& operator<<(ostream& out, diff_entry& de);
