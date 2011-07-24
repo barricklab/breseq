@@ -18,6 +18,7 @@ LICENSE AND COPYRIGHT
 
 #include "breseq/alignment.h"
 
+#include "breseq/annotated_sequence.h"
 
 using namespace std;
 
@@ -327,11 +328,17 @@ bool tam_file::read_alignments(alignment_list& alignments, bool paired)
   }
   return (!alignments.empty());
 }
-  
-void tam_file::write_alignments(int32_t fastq_file_index, alignment_list& alignments, vector<Trims>* trims)
+ 
+void tam_file::write_alignments(
+                                int32_t fastq_file_index, 
+                                const alignment_list& alignments, 
+                                vector<Trims>* trims, 
+                                const cReferenceSequences* ref_seq_info_ptr,
+                                bool shift_gaps
+                                )
 {
   uint32_t i=-1;
-  for (alignment_list::iterator it=alignments.begin(); it != alignments.end(); it++)
+  for (alignment_list::const_iterator it=alignments.begin(); it != alignments.end(); it++)
 	{
     i++;
 		bam_alignment& a = *(it->get());
@@ -349,7 +356,20 @@ void tam_file::write_alignments(int32_t fastq_file_index, alignment_list& alignm
 		string aux_tags = aux_tags_ss.str();
 
 		string quality_score_string = a.read_base_quality_char_string();
-		string cigar_string = a.cigar_string();
+		string cigar_string;
+    
+    // @JEB experimental!!
+    // Fix the cigar string by shifting gaps if asked for!
+    if (0)
+    //if (ref_seq_info_ptr && shift_gaps)
+    {
+      cigar_string =  shifted_cigar_string(a, *ref_seq_info_ptr);
+    }
+    else
+    {
+      cigar_string = a.cigar_string();
+    }
+    
 
 		vector<string> ll;
 		ll.push_back(a.read_name());

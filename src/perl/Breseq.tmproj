@@ -3,7 +3,7 @@
 <plist version="1.0">
 <dict>
 	<key>currentDocument</key>
-	<string>Breseq/lib/Breseq/AlignmentCorrection.pm</string>
+	<string>Breseq/bin/breseq</string>
 	<key>documents</key>
 	<array>
 		<dict>
@@ -40,44 +40,132 @@
 			<key>caret</key>
 			<dict>
 				<key>column</key>
-				<integer>21</integer>
+				<integer>23</integer>
 				<key>line</key>
-				<integer>535</integer>
-			</dict>
-			<key>firstVisibleColumn</key>
-			<integer>0</integer>
-			<key>firstVisibleLine</key>
-			<integer>511</integer>
-		</dict>
-		<key>Breseq/lib/Breseq/AlignmentCorrection.pm</key>
-		<dict>
-			<key>caret</key>
-			<dict>
-				<key>column</key>
-				<integer>54</integer>
-				<key>line</key>
-				<integer>925</integer>
+				<integer>280</integer>
 			</dict>
 			<key>columnSelection</key>
 			<false/>
 			<key>firstVisibleColumn</key>
 			<integer>0</integer>
 			<key>firstVisibleLine</key>
-			<integer>896</integer>
+			<integer>257</integer>
+			<key>selectFrom</key>
+			<dict>
+				<key>column</key>
+				<integer>18</integer>
+				<key>line</key>
+				<integer>280</integer>
+			</dict>
+			<key>selectTo</key>
+			<dict>
+				<key>column</key>
+				<integer>23</integer>
+				<key>line</key>
+				<integer>280</integer>
+			</dict>
+		</dict>
+		<key>Breseq/lib/Breseq/AlignmentCorrection.pm</key>
+		<dict>
+			<key>caret</key>
+			<dict>
+				<key>column</key>
+				<integer>42</integer>
+				<key>line</key>
+				<integer>942</integer>
+			</dict>
+			<key>columnSelection</key>
+			<false/>
+			<key>firstVisibleColumn</key>
+			<integer>0</integer>
+			<key>firstVisibleLine</key>
+			<integer>930</integer>
+			<key>selectFrom</key>
+			<dict>
+				<key>column</key>
+				<integer>6</integer>
+				<key>line</key>
+				<integer>942</integer>
+			</dict>
+			<key>selectTo</key>
+			<dict>
+				<key>column</key>
+				<integer>42</integer>
+				<key>line</key>
+				<integer>942</integer>
+			</dict>
+		</dict>
+		<key>Breseq/lib/Breseq/AlignmentOutput.pm</key>
+		<dict>
+			<key>caret</key>
+			<dict>
+				<key>column</key>
+				<integer>18</integer>
+				<key>line</key>
+				<integer>682</integer>
+			</dict>
+			<key>columnSelection</key>
+			<false/>
+			<key>firstVisibleColumn</key>
+			<integer>0</integer>
+			<key>firstVisibleLine</key>
+			<integer>660</integer>
 			<key>selectFrom</key>
 			<dict>
 				<key>column</key>
 				<integer>0</integer>
 				<key>line</key>
-				<integer>925</integer>
+				<integer>682</integer>
 			</dict>
 			<key>selectTo</key>
 			<dict>
 				<key>column</key>
 				<integer>0</integer>
 				<key>line</key>
-				<integer>926</integer>
+				<integer>683</integer>
 			</dict>
+		</dict>
+		<key>Breseq/lib/Breseq/CoverageDistribution.pm</key>
+		<dict>
+			<key>caret</key>
+			<dict>
+				<key>column</key>
+				<integer>28</integer>
+				<key>line</key>
+				<integer>10</integer>
+			</dict>
+			<key>firstVisibleColumn</key>
+			<integer>0</integer>
+			<key>firstVisibleLine</key>
+			<integer>0</integer>
+		</dict>
+		<key>Breseq/lib/Breseq/Settings.pm</key>
+		<dict>
+			<key>caret</key>
+			<dict>
+				<key>column</key>
+				<integer>75</integer>
+				<key>line</key>
+				<integer>570</integer>
+			</dict>
+			<key>firstVisibleColumn</key>
+			<integer>0</integer>
+			<key>firstVisibleLine</key>
+			<integer>316</integer>
+		</dict>
+		<key>Breseq/lib/Breseq/Shared.pm</key>
+		<dict>
+			<key>caret</key>
+			<dict>
+				<key>column</key>
+				<integer>17</integer>
+				<key>line</key>
+				<integer>56</integer>
+			</dict>
+			<key>firstVisibleColumn</key>
+			<integer>0</integer>
+			<key>firstVisibleLine</key>
+			<integer>30</integer>
 		</dict>
 		<key>Breseq/t/00-load.t</key>
 		<dict>
@@ -111,11 +199,15 @@
 	<key>openDocuments</key>
 	<array>
 		<string>Breseq/lib/Breseq/AlignmentCorrection.pm</string>
+		<string>Breseq/lib/Breseq/Shared.pm</string>
+		<string>Breseq/lib/Breseq/Settings.pm</string>
 		<string>Breseq/bin/breseq</string>
+		<string>Breseq/lib/Breseq/AlignmentOutput.pm</string>
+		<string>Breseq/lib/Breseq/CoverageDistribution.pm</string>
 	</array>
 	<key>showFileHierarchyDrawer</key>
 	<true/>
 	<key>windowFrame</key>
-	<string>{{693, 90}, {880, 788}}</string>
+	<string>{{1744, 34}, {880, 788}}</string>
 </dict>
 </plist>

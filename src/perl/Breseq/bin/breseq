@@ -321,7 +321,8 @@ if ($settings->do_step('reference_alignment_done_file_name', "Read alignment to 
 			else
 			{
 				my $smalt = $settings->ctool("smalt");
-				Breseq::Shared::system("$smalt map -d $settings->{max_smalt_diff} -m 12 -f samsoft -o $reference_sam_file_name $reference_hash_file_name $read_fastq_file");			
+				Breseq::Shared::system("$smalt map -n 2 -d $settings->{max_smalt_diff} -f samsoft -o $reference_sam_file_name $reference_hash_file_name $read_fastq_file");			
+				# -m 12
 			}
 		}
 	}
@@ -506,7 +507,8 @@ sub candidate_junction_alignment {}
 			elsif (-e "$candidate_junction_hash_file_name.sma")
 			{
 				my $smalt = $settings->ctool("smalt");
-				Breseq::Shared::system("$smalt map -d $settings->{max_smalt_diff} -m 12 -f samsoft -o $candidate_junction_sam_file_name $candidate_junction_hash_file_name $read_fastq_file");			
+				Breseq::Shared::system("$smalt map -c 0.8 -x -n 2 -d 1 -f samsoft -o $candidate_junction_sam_file_name $candidate_junction_hash_file_name $read_fastq_file");			
+				#-m 12
 			}
 		}
 		

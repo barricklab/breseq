@@ -26,11 +26,8 @@ using namespace std;
 
 namespace breseq {
 
-// TODO:
-// A lot of this code is unsafe because the pileup can be
-// undefined. We should properly create a pileup_alignment
-// class that inherits from this alignment class and extends it.
-// @JEB
+// pre-defs
+class cReferenceSequences;
 
   
 /*! class alignment
@@ -373,7 +370,14 @@ public:
   void open_write(const string& tam_file_name, const string& fasta_file_name);
   
   bool read_alignments(alignment_list& alignments, bool paired = false);
-  void write_alignments(int32_t fastq_file_index, alignment_list& alignments, vector<Trims>* trims = NULL);
+  void write_alignments(
+                        int32_t fastq_file_index, 
+                        const alignment_list& alignments, 
+                        vector<Trims>* trims = NULL,
+                        const cReferenceSequences* ref_seq_info = NULL,
+                        bool shift_gaps = false
+                        );
+  
   void write_moved_alignment(const alignment& a, const string& rname, uint32_t fastq_file_index, const string& seq_id, int32_t reference_pos, int32_t reference_strand, int32_t reference_overlap, const uint32_t junction_side, int32_t junction_flanking, int32_t junction_overlap, const Trims* trim = NULL);
   void write_split_alignment(uint32_t min_indel_split_len, const alignment& a);
 
