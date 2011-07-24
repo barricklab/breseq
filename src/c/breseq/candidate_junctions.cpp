@@ -929,10 +929,8 @@ namespace breseq {
         }
         
 				// write best alignments
-				{
-          int32_t best_score = _eligible_read_alignments(settings, ref_seq_info, alignments);
-          BSAM.write_alignments(0, alignments, NULL);
-				}
+        int32_t best_score = _eligible_read_alignments(settings, ref_seq_info, alignments);
+        BSAM.write_alignments(0, alignments, NULL);
       }
     }
   }

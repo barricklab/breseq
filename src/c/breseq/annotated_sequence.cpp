@@ -682,9 +682,7 @@ namespace breseq {
 		if (verbose)
 		{
 			cout << a.read_name() << endl;
-			//cout << Dumper(cigar_list)
 		}
-		//#	my $cigar_string = '';
 
 		for (uint32_t i = 0; i < a.cigar_array_length(); i++)
 		{
@@ -719,27 +717,37 @@ namespace breseq {
           {
 						mismatches++;
 					}
-          //#print "$read_pos $ref_pos\n";
-
 					read_pos++;
 					ref_pos++;
 				}
 			}
-			//#$cigar_string .= $len . $op;
 		}
 
 		//#	print $a->qname . "\n$mismatches\n$cigar_string\n$ref_string\n$read_string\n" if ($mismatches);
 		return mismatches;
   }
 
-	string shifted_cigar_string(alignment& a, cReferenceSequences& ref_seq_info)
+	string shifted_cigar_string(const alignment& a, const cReferenceSequences& ref_seq_info)
 	{
+    bool verbose = true;
+    
 		string ref_seq = ref_seq_info[a.reference_target_id()].m_fasta_sequence.m_sequence;
 		uint32_t ref_seq_index = 0;
 		string read_seq = a.read_char_sequence();
 		uint32_t read_seq_index = 0;
 		vector<pair<char,uint16_t> > cigar_pair_array = a.cigar_pair_array();
 
+    if (verbose)
+    {
+      cout << a.read_name() << endl;
+      
+      if (a.read_name() == "GW1ULQG02EIUY7")
+      {
+        cout << "debug" << endl;
+      }
+      cout << a.cigar_string() << endl;
+    }
+    
 		for (vector<pair<char,uint16_t> >::iterator it = cigar_pair_array.begin(); it != cigar_pair_array.end(); it++)
 		{
 			char op = it->first;
@@ -750,7 +758,7 @@ namespace breseq {
 				char base = ref_seq[ref_seq_index];
 				bool all_same_base = true;
 				for (uint32_t j = 1; j < len; j++)
-					all_same_base &= (ref_seq[ref_seq_index + j] == base);
+					all_same_base = all_same_base && (ref_seq[ref_seq_index + j] == base);
 
 				if (all_same_base)
 				{
@@ -760,6 +768,11 @@ namespace breseq {
 
 					if (shift_amount > 0)
 					{
+            if (verbose)
+            {
+              cout << "Shifting D: " << a.read_name() << endl;
+            }
+            
 						if (it != cigar_pair_array.begin())
 							(it - 1)->second += shift_amount;
 						else
@@ -783,7 +796,7 @@ namespace breseq {
 				char base = read_seq[read_seq_index];
 				bool all_same_base = true;
 				for (uint32_t j = 1; j < len; j++)
-					all_same_base &= (read_seq[read_seq_index + j] == base);
+					all_same_base = all_same_base && (read_seq[read_seq_index + j] == base);
 
 				if (all_same_base)
 				{
@@ -793,6 +806,11 @@ namespace breseq {
 
 					if (shift_amount > 0)
 					{
+            if (verbose)
+            {
+              cout << "Shifting I: " << a.read_name() << endl;
+            }
+            
 						if (it != cigar_pair_array.begin())
 							(it - 1)->second += shift_amount;
 						else
@@ -820,9 +838,14 @@ namespace breseq {
 
 		stringstream shifted_cigar_string_ss;
 		for (vector<pair<char,uint16_t> >::iterator it = cigar_pair_array.begin(); it != cigar_pair_array.end(); it++)
-			shifted_cigar_string_ss << it->first << it->second;
+			shifted_cigar_string_ss << it->second << it->first;
 
 		string shifted_cigar_string = shifted_cigar_string_ss.str();
+    if (verbose)
+    {
+      cout << shifted_cigar_string << endl;
+    }
+    
 		return shifted_cigar_string;
 	}
 

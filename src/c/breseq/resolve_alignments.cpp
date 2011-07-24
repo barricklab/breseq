@@ -208,9 +208,10 @@ namespace breseq {
 				///
 
 				for (alignment_list::iterator it = this_junction_alignments.begin(); it != this_junction_alignments.end(); it++)
+        {
 					if (!_alignment_overlaps_junction(junction_info_list, it->get()))
 						this_junction_alignments.erase(it);
-
+        }
 				best_junction_score = _eligible_read_alignments(settings, junction_ref_seq_info, this_junction_alignments);
 
 				if (verbose)
@@ -717,7 +718,12 @@ bool _test_read_alignment_requirements(const Settings& settings, const cReferenc
 //
 bool _alignment_overlaps_junction(const vector<JunctionInfo>& junction_info_list, alignment a)
 {
-  uint32_t tid = a.reference_target_id();
+  // unmapped reads don't overlap the junction
+  if (a.unmapped()) return false;
+  
+  int32_t tid = a.reference_target_id();
+  assert (tid >= 0);
+  
   const JunctionInfo& this_junction_info = junction_info_list[tid];
   int32_t overlap = this_junction_info.alignment_overlap;
   
@@ -745,7 +751,7 @@ void _write_reference_matches(const Settings& settings, cReferenceSequences& ref
 		trims.push_back(t);
   }
   
-	reference_tam.write_alignments((int32_t)fastq_file_index, reference_alignments, &trims);
+	reference_tam.write_alignments((int32_t)fastq_file_index, reference_alignments, &trims, &ref_seq_info, true);
 }
 
 bool _test_junction(const Settings& settings, Summary& summary, const string& junction_seq_id, map<string, vector<MatchedJunction> >& matched_junction_ref, map<string, map<string, MatchedJunction> >& degenerate_matches_ref, map<string, CandidateJunction>& junction_test_info_ref, cReferenceSequences& ref_seq_info, const SequenceTrimsList& trims_list, tam_file& reference_tam, tam_file& junction_tam, bool& has_non_overlap_alignment)
@@ -1041,7 +1047,7 @@ bool _test_junction(const Settings& settings, Summary& summary, const string& ju
 			if (!has_non_overlap_alignment) {
 				alignment_list alignments;
         alignments.push_back(matched_alignment);
-				junction_tam.write_alignments(fastq_file_index, alignments, NULL);
+				junction_tam.write_alignments(fastq_file_index, alignments, NULL, &ref_seq_info, true);
 			}
       
 		}
@@ -1069,7 +1075,7 @@ bool _test_junction(const Settings& settings, Summary& summary, const string& ju
 
 		// REGARDLESS of success: write matches to the candidate junction SAM file
 		if (!has_non_overlap_alignment)
-			junction_tam.write_alignments(fastq_file_index, item.junction_alignments, NULL);
+			junction_tam.write_alignments(fastq_file_index, item.junction_alignments, NULL, &ref_seq_info, true);
 	}
 
 	return !failed;
