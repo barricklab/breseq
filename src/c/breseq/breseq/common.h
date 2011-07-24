@@ -396,6 +396,7 @@ namespace breseq {
   
 	template <typename T> inline T from_string(const string &s)
 	{
+    assert(!s.empty());
     T t;
 		istringstream iss(s);
 		iss >> boolalpha >> t;
@@ -521,7 +522,7 @@ namespace breseq {
 		{
 			string seq_id;
 			int32_t position;
-			bool strand;
+			int32_t strand;
 			int32_t redundant;
 
 			// Extended properties for resolve_alignments.cpp
@@ -554,16 +555,18 @@ namespace breseq {
 		JunctionInfo::Side side_1 = {
 			s[0],
 			from_string<int32_t>(s[1]),
-			from_string<bool>(s[2]),
+			from_string<int32_t>(s[2]),
 			from_string<int32_t>(s[10])
 		};
+    if (side_1.strand == 0) side_1.strand = -1;
     
     JunctionInfo::Side side_2 = {
 			s[3],
 			from_string<int32_t>(s[4]),
-			from_string<bool>(s[5]),
+			from_string<int32_t>(s[5]),
 			from_string<int32_t>(s[11])
 		};
+    if (side_2.strand == 0) side_2.strand = -1;
     
 		JunctionInfo retval =
 		{
@@ -664,8 +667,61 @@ namespace breseq {
     
     return input;
   }
-  
 
+  
+// counted_ptr keeps track of number of references 
+  
+  template <class X> class counted_ptr
+  {
+  public:
+    typedef X element_type;
+    
+    explicit counted_ptr(X* p = 0) // allocate a new counter
+    : itsCounter(0) {if (p) itsCounter = new counter(p);}
+    ~counted_ptr()
+    {release();}
+    counted_ptr(const counted_ptr& r) throw()
+    {acquire(r.itsCounter);}
+    counted_ptr& operator=(const counted_ptr& r)
+    {
+      if (this != &r) {
+        release();
+        acquire(r.itsCounter);
+      }
+      return *this;
+    }
+    
+    X& operator*()  const throw()   {return *itsCounter->ptr;}
+    X* operator->() const throw()   {return itsCounter->ptr;}
+    X* get()        const throw()   {return itsCounter ? itsCounter->ptr : 0;}
+    bool unique()   const throw()
+    {return (itsCounter ? itsCounter->count == 1 : true);}
+    
+  private:
+    
+    struct counter {
+      counter(X* p = 0, unsigned c = 1) : ptr(p), count(c) {}
+      X*          ptr;
+      unsigned    count;
+    }* itsCounter;
+    
+    void acquire(counter* c) throw()
+    { // increment the count
+      itsCounter = c;
+      if (c) ++c->count;
+    }
+    
+    void release()
+    { // decrement the count, delete if it is 0
+      if (itsCounter) {
+        if (--itsCounter->count == 0) {
+          delete itsCounter->ptr;
+          delete itsCounter;
+        }
+        itsCounter = 0;
+      }
+    }
+  };
   
 
 } // breseq

@@ -163,15 +163,13 @@ void alignment_output::create_alignment ( const string& region )
 
   int32_t max_extend_left = 0;
   int32_t max_extend_right = 0;
-  for ( Aligned_Reads::iterator itr_read = m_aligned_reads.begin(); //TODO typedef map
-          itr_read != m_aligned_reads.end(); itr_read++ )
-    
+  for ( Aligned_Reads::iterator itr_read = m_aligned_reads.begin(); itr_read != m_aligned_reads.end(); itr_read++ )
   {
     Aligned_Read& aligned_read = ( m_aligned_reads[ ( *itr_read ).first] );
 
     // read the padding off of each sequence
     int32_t left_padding_length = aligned_read.aligned_bases.find_first_not_of ( ' ' );
-    int32_t right_padding_length = aligned_read.aligned_bases.length() - aligned_read.aligned_bases.find_last_not_of ( ' ' );
+    int32_t right_padding_length = aligned_read.aligned_bases.length() - aligned_read.aligned_bases.find_last_not_of ( ' ' ) - 1;
          
     if ( verbose )
     {
@@ -188,8 +186,7 @@ void alignment_output::create_alignment ( const string& region )
   }
   
   // Now add this much to every read 
-  for (Aligned_Reads::iterator itr_read = m_aligned_reads.begin(); //TODO typedef map
-          itr_read != m_aligned_reads.end(); itr_read++ )
+  for ( Aligned_Reads::iterator itr_read = m_aligned_reads.begin(); itr_read != m_aligned_reads.end(); itr_read++ )
   {
     Aligned_Read& aligned_read ( itr_read->second );
     
@@ -306,10 +303,10 @@ void alignment_output::create_alignment ( const string& region )
     if ( aligned_read.end < aligned_read.length )
     {
       string add_seq = aligned_read.read_sequence.substr ( aligned_read.end, ( aligned_read.length - aligned_read.end ) );
-      aligned_read.aligned_bases.replace ( right_pos, add_seq.length(), to_lower ( add_seq ) );
+      aligned_read.aligned_bases.replace ( right_pos+1, add_seq.length(), to_lower ( add_seq ) );
 
       add_seq = repeat_char(char(254), aligned_read.length - aligned_read.end);
-      aligned_read.aligned_quals.replace ( right_pos,add_seq.length(), add_seq );
+      aligned_read.aligned_quals.replace ( right_pos+1,add_seq.length(), add_seq );
     }
   }
 
@@ -473,10 +470,10 @@ void alignment_output::Alignment_Output_Pileup::pileup_callback ( const pileup& 
   //## Other alignments may overlap this position that DO NOT
   //## overlap the positions of interest. This removes them.
 
-  vector<alignment> alignments;
+  vector<pileup_alignment> alignments;
   for ( pileup::const_iterator itr_pileup = p.begin(); itr_pileup != p.end() ; itr_pileup++ )
   {
-    const alignment& a = *itr_pileup;
+    const pileup_alignment& a = *itr_pileup;
     
     if (aligned_reads.find(a.read_name()) != aligned_reads.end()) 
     {
@@ -485,9 +482,9 @@ void alignment_output::Alignment_Output_Pileup::pileup_callback ( const pileup& 
   }
   
   int32_t temp_max_indel = 0;
-  for ( vector<alignment>::const_iterator itr_pileup = alignments.begin(); itr_pileup != alignments.end() ; itr_pileup ++ )
+  for ( vector<pileup_alignment>::const_iterator itr_pileup = alignments.begin(); itr_pileup != alignments.end() ; itr_pileup ++ )
   {
-    const alignment& a = *itr_pileup;
+    const pileup_alignment& a = *itr_pileup;
       
     if (a.on_base_indel() > temp_max_indel )
     {
@@ -510,9 +507,9 @@ void alignment_output::Alignment_Output_Pileup::pileup_callback ( const pileup& 
   }
 
   // MAIN ALIGNMENT LOOP
-  for ( vector<alignment>::const_iterator itr_pileup = alignments.begin(); itr_pileup != alignments.end() ; itr_pileup ++ )
+  for ( vector<pileup_alignment>::const_iterator itr_pileup = alignments.begin(); itr_pileup != alignments.end() ; itr_pileup ++ )
   {
-    const alignment& a = *itr_pileup;
+    const pileup_alignment& a = *itr_pileup;
     
     Aligned_Read& aligned_read = aligned_reads[a.read_name()];
     aligned_read.updated = true;
@@ -551,13 +548,13 @@ void alignment_output::Alignment_Output_Pileup::pileup_callback ( const pileup& 
         if ( !text )
         {
           uint8_t trim_left = a.trim_left();
-          if ( ( trim_left > 0 ) && ( a.query_position_1() <= trim_left ) )
+          if ( ( trim_left != 0 ) && ( a.query_position_1() <= trim_left ) )
           {
             base = tolower ( base );           
           }
           
-          uint8_t trim_right = ( *itr_pileup ).trim_right();
-          if ( ( trim_right !=0 ) && ( ( itr_pileup->read_length() - itr_pileup->query_position_0() ) <= trim_right ) )
+          uint8_t trim_right = a.trim_right();
+          if ( ( trim_right != 0 ) && ( ( a.read_length() - a.query_position_0() ) <= trim_right ) )
           {
             base = tolower ( base );
           }

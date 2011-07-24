@@ -130,11 +130,11 @@ namespace breseq {
     //!< Convert 
     uint32_t seq_id_to_index(const string& seq_id) { return m_seq_id_to_index[seq_id]; };
 
-	map<string,int32_t> seq_order;
+    map<string,int32_t> seq_order;
     map<string,string> trims;
     map<string,string> ref_strings;
 
-	map<string, vector<cSequenceFeature> > repeat_lists;
+    map<string, vector<cSequenceFeature> > repeat_lists;
     static cSequenceFeature* find_closest_repeat_region(uint32_t position, vector<cSequenceFeature>& repeat_list_ref, uint32_t max_distance, bool direction);
   };
   
@@ -158,7 +158,7 @@ namespace breseq {
   void RemoveLeadingWhitespace(string &s);
   void RemoveLeadingTrailingWhitespace(string &s);
 
-  uint32_t alignment_mismatches(alignment a, const cReferenceSequences& ref_seq_info);
+  uint32_t alignment_mismatches(const alignment& a, const cReferenceSequences& ref_seq_info);
   string shifted_cigar_string(alignment& a, cReferenceSequences& ref_seq_info);
 
 } // breseq namespace

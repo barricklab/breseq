@@ -272,7 +272,7 @@ namespace breseq {
 				uint32_t slop_distance = summary.sequence_conversion.max_read_length;
 
 				// prefer to delete the second copy
-				if ((abs(r1_overlap - r2_overlap) <= slop_distance) || (r2_overlap > r1_overlap ))
+				if ( (static_cast<uint32_t>(abs(r1_overlap - r2_overlap)) <= slop_distance) || (r2_overlap > r1_overlap ))
 				{
 					mut["position"] = s(n(r1["end"]) + 1);
 					mut["size"] = s(n(r2["end"]) - n(r1["end"]));
@@ -821,6 +821,7 @@ namespace breseq {
 			int32_t position = n(j["_side_1_position"]);
 
 			// Special case of circular chromosome
+      // TODO: change to use ref_seq_info length field
 			if ( (j["_side_1_position"] == "1") && (n(j["_side_2_position"]) == (*summary.sequence_conversion.reference_sequences)[summary.sequence_conversion.reference_sequences->seq_id_to_index(seq_id)].m_length ) )
 			{
 				j["circular_chromosome"] = "1";
@@ -1065,17 +1066,6 @@ namespace breseq {
 
 			gd.add(mut);
 		}
-		
-
-		// PROBLEM: We can't apply the coverage cutoff until AFTER we count errors
-		//   (because only then do we have the distribution to fit)
-		//   but we have to choose which junctions we believe BEFORE counting
-		//   (because we put their split alignments in the BAM file)
-		// Ideally we would do this after step 7, then remove the offending read pieces from the BAM file
-		// before proceeding to SNP calling.
-		// this could be done by reserving these pieces in a separate SAM file
-		// then merging them later? But full matches would also have to be kept separate...
-		//
 
 		// Remove remaining junctions that we didn't pair up with anything that are below a coverage cutoff.
 		jc = gd.filter_used_as_evidence(gd.list(jc_types));

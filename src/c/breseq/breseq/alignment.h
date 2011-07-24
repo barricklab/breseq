@@ -26,36 +26,35 @@ using namespace std;
 
 namespace breseq {
 
-  /*! Represents a single alignment within a pileup.
- */
+// TODO:
+// A lot of this code is unsafe because the pileup can be
+// undefined. We should properly create a pileup_alignment
+// class that inherits from this alignment class and extends it.
+// @JEB
+
+  
+/*! class alignment
+    Represents a single alignment within a pileup.
+    This is purely a WRAPPER class. It does not allocate memory.
+*/
 class alignment {
   public:
     //! Constructor.
-    alignment(const bam_pileup1_t* p);
-    alignment(const bam1_t* a);
-    alignment();
-    ~alignment();
+  alignment() : _a(NULL) {};
+    alignment(const bam1_t* a) : _a(a) {};
   
+    // These only copy the pointer.
+    // There is a danger of going stale when using them.
+    //alignment(const alignment& _in) {assert(false);};
+    //alignment&  operator = (const alignment& other) {assert(false);};
+
+    ~alignment() {};
     
     //! Does this alignment have any redundancies?
     bool is_redundant() const;
 
     //! Number of redundancies at this alignment.
     uint32_t redundancy() const;
-
-    //! Is this alignment a deletion?
-    inline bool is_del() const { return _p->is_del; }
-      
-    //! Indel length; 0 for no indel, positive for ins and negative for del
-    inline int indel() const { return _p->indel; }
-
-    //! Indel length; 0 for no indel, -1 for this base deleted and +n for number of inserted bases
-    inline int on_base_indel() const {
-      int on_indel=indel();
-      if(on_indel < 0) on_indel = 0;
-      if(is_del()) on_indel = -1; 
-      return on_indel;
-    }
 
     //! Is the read aligned to the reverse strand?
     //  Returns 1 if read aligned to bottom strand, 0 if aligned to top strand
@@ -83,13 +82,6 @@ class alignment {
       }
       return s;
     }
-
-    //! Retrieve the base at a specified insert count relative to the current position
-    inline uint8_t on_base_bam(int32_t insert_count=0) const { 
-      uint32_t pos0 = query_position_0() + insert_count;
-      if (on_base_indel() < insert_count) return '.'; // gap character
-      return read_base_bam_0(pos0); 
-    };
     
     //! Calculate the total length of the read.
     inline uint32_t read_length() const { return _a->core.l_qseq; }
@@ -101,11 +93,6 @@ class alignment {
 
     inline char read_base_char_0(const uint32_t pos) const { return basebam2char(read_base_bam_0(pos)); }
     inline char read_base_char_1(const uint32_t pos) const { return basebam2char(read_base_bam_1(pos)); }
-
-    //! Retrieve the position of the alignment in the query (was 0-indexed).
-    //  Methods available for 0-indexed and 1-indexed coordinates.
-    inline uint32_t query_position_0() const { return _p->qpos; }
-    inline uint32_t query_position_1() const { return _p->qpos+1; }
 	
     //! Retrieve the quality score array. Raw quality scores.
     inline uint8_t* read_base_quality_bam_sequence() const { return bam1_qual(_a); }
@@ -204,15 +191,6 @@ class alignment {
     //! Number of bases before this position (on read strand)
     //  that are the same base.
     uint32_t base_repeat_0(uint32_t q_pos_0) const;
-    
-    //! Is this alignment under the current position?
-    bool is_alignment_spanning_position()  const {
-      if((_p->qpos+1) > 0)  {
-        return true;
-      } else {
-        return false;
-      }
-    }
   
     //! Operations on CIGAR match string
     inline uint32_t* cigar_array() const { return bam1_cigar(_a); }
@@ -269,11 +247,121 @@ class alignment {
 	static const char op_to_char[10];
 
   protected:
-    const bam_pileup1_t* _p; //!< Pileup.
-    const bam1_t* _a; //!< Alignment.
+    const bam1_t* _a;             //!< Alignment.
 };
   
-typedef vector<alignment> alignment_list;  
+/*! class pileup_alignment
+ Represents a single alignment within a pileup.
+ Inherits al methods of alignment, and adds additional ones that get information about pileup position.
+ This is purely a WRAPPER class. It does not allocate memory.
+ */  
+class pileup_alignment : public alignment
+{
+public:
+  pileup_alignment() : alignment(NULL), _p(NULL) {};
+  pileup_alignment(const bam_pileup1_t* p) : alignment(p->b), _p(p) {};
+  
+  
+  //! Is this alignment a deletion?
+  inline bool is_del() const { return _p->is_del; }
+  
+  //! Indel length; 0 for no indel, positive for ins and negative for del
+  inline int indel() const { return _p->indel; }
+  
+  //! Indel length; 0 for no indel, -1 for this base deleted and +n for number of inserted bases
+  inline int on_base_indel() const {
+    int on_indel=indel();
+    if(on_indel < 0) on_indel = 0;
+    if(is_del()) on_indel = -1; 
+    return on_indel;
+  }
+  
+  //! Retrieve the base at a specified insert count relative to the current position
+  inline uint8_t on_base_bam(int32_t insert_count=0) const { 
+    uint32_t pos0 = query_position_0() + insert_count;
+    if (on_base_indel() < insert_count) return '.'; // gap character
+    return read_base_bam_0(pos0); 
+  };
+  
+  //! Retrieve the position of the alignment in the query (was 0-indexed).
+  //  Methods available for 0-indexed and 1-indexed coordinates.
+  inline uint32_t query_position_0() const { return _p->qpos; }
+  inline uint32_t query_position_1() const { return _p->qpos+1; }
+
+  //! Is this alignment under the current position?
+  bool is_alignment_spanning_position()  const {
+    if((_p->qpos+1) > 0)  {
+      return true;
+    } else {
+      return false;
+    }
+  }
+  
+  //! Has this alignment been trimmed?
+  inline bool is_trimmed() const {
+    // is our query position in the left-side trimmed region?
+    uint8_t *auxl = bam_aux_get(_a,"XL");
+    if(auxl) {
+      if((query_position_1()) <= (uint32_t)bam_aux2i(auxl)) {
+        return true;
+      }
+    }	
+    // is our query position in the right-side trimmed region?
+    uint8_t *auxr = bam_aux_get(_a,"XR");
+    if(auxr) {
+      if((read_length()-(query_position_1())) <= (uint32_t)bam_aux2i(auxr)) {
+        return true;
+      }
+    }
+    
+    return false;
+  }
+
+  
+protected:
+  const bam_pileup1_t* _p;     //!< Pileup. May or may not be defined.
+
+};
+  
+/*! class bam_alignment
+    This class stores the memory of the bam1_t.
+ */  
+  class bam_alignment : public bam1_t, public alignment
+{
+public:
+  bam_alignment() : bam1_t(), alignment(this)
+  {
+    l_aux = 0;
+    data_len = 0;
+    m_data = 0;
+    data = NULL;
+  }
+  
+  bam_alignment(const bam_alignment& _in) : alignment(_in._a)
+  {
+    bam_copy1(this, &_in);
+  }
+  
+  ~bam_alignment()
+  {
+    free(data);
+  }
+  
+};
+
+typedef list<counted_ptr<bam_alignment> > alignment_list;  
+  
+// for debugging
+inline void print_alignment_list(const alignment_list& alignments)  
+{
+  cout << ">>> Begin list" << endl;
+  for(alignment_list::const_iterator it=alignments.begin(); it != alignments.end(); it++)
+  {
+//    printf(" %p\n", (*it)->read_name());
+  }
+  cout << "<<< End list" << endl;
+}
+
   
 class tam_file {
 
@@ -286,17 +374,23 @@ public:
   
   bool read_alignments(alignment_list& alignments, bool paired = false);
   void write_alignments(int32_t fastq_file_index, alignment_list& alignments, vector<Trims>* trims = NULL);
-  void write_moved_alignment(const alignment& a, uint32_t fastq_file_index, const string& seq_id, int32_t reference_pos, bool reference_strand, int32_t reference_overlap, const uint32_t junction_side, int32_t junction_flanking, int32_t junction_overlap, const Trims* trim = NULL);
+  void write_moved_alignment(const alignment& a, const string& rname, uint32_t fastq_file_index, const string& seq_id, int32_t reference_pos, int32_t reference_strand, int32_t reference_overlap, const uint32_t junction_side, int32_t junction_flanking, int32_t junction_overlap, const Trims* trim = NULL);
   void write_split_alignment(uint32_t min_indel_split_len, const alignment& a);
 
+  inline const char* target_name(const alignment& a)
+  {
+    int32_t tid = a.reference_target_id();
+    assert (tid < bam_header->n_targets);
+    return bam_header->target_name[tid];
+  }
+  
   bam_header_t* bam_header;
   
 protected:
   tamFile input_tam;                // used for input
   ofstream output_tam;              // used for output
-  vector<bam1_t*> loaded_alignments; // contains alignment* last_alignment
+  counted_ptr<bam_alignment> last_alignment; // contains alignment* last_alignment
   
-  void free_loaded_alignments();
 };
 	
 }

@@ -36,7 +36,7 @@
       displayScale = "1.00"
       launchStyle = "0"
       useCustomWorkingDirectory = "YES"
-      customWorkingDirectory = "/Users/jbarrick/tmp/test_campy_run"
+      customWorkingDirectory = "/Users/jbarrick/src/breseq"
       buildConfiguration = "Debug">
       <BuildableProductRunnable>
          <BuildableReference
@@ -74,6 +74,10 @@
          </CommandLineArgument>
          <CommandLineArgument
             argument = "--bam 06_bam/junction.bam --fasta 03_candidate_junctions/candidate_junction.fasta --region NC_002163__878096__1__NC_002163__878767__0__-4__CTAA__75__75__0__0:76-79 --quality-score-cutoff 3 --stdout"
+            isEnabled = "NO">
+         </CommandLineArgument>
+         <CommandLineArgument
+            argument = "--bam tests/lambda_mixed_pop/data/reference.bam --fasta tests/lambda_mixed_pop/data/reference.fasta --region NC_001416:21737-21737 --quality-score-cutoff 3"
             isEnabled = "YES">
          </CommandLineArgument>
       </CommandLineArguments>

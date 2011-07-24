@@ -69,6 +69,7 @@ namespace breseq {
   // Set up defaults and build paths
   Settings::Settings(const string& run_path) {
     
+    add_split_junction_sides = true;
     required_match_length = 28;
     max_read_mismatches = -1;
     require_complete_match = false;
@@ -85,9 +86,15 @@ namespace breseq {
     
     sequence_conversion_path = run_path + "/01_sequence_conversion";    
     reference_trim_file_name = sequence_conversion_path + "/@.trims";
-
+    
+    reference_alignment_path = run_path + "/02_reference_alignment";    
+    reference_sam_file_name = reference_alignment_path + "/#.reference.sam";
+    
     candidate_junction_path = run_path + "/03_candidate_junctions";      
     candidate_junction_fasta_file_name = candidate_junction_path + "/candidate_junction.fasta";
+    
+    candidate_junction_alignment_path = run_path + "/04_candidate_junction_alignment";
+    candidate_junction_sam_file_name = candidate_junction_alignment_path + "/#.candidate_junction.sam";
     
     alignment_correction_path = run_path + "/05_alignment_correction";    
     jc_genome_diff_file_name = alignment_correction_path + "/jc_evidence.gd";

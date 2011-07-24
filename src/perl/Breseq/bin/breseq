@@ -219,7 +219,7 @@ $summary->{sequence_conversion} = Storable::retrieve($sequence_converson_summary
 die "Can't retrieve data from file $sequence_converson_summary_file_name!\n" if (!$summary->{sequence_conversion});
 (defined $summary->{sequence_conversion}->{max_read_length}) or die "Can't retrieve max read length from file $sequence_converson_summary_file_name\n";
 
-#test this! -- load C++ info
+#load C++ info
 my $reference_features_file_name = $settings->file_name('reference_features_file_name');
 my $reference_fasta_file_name = $settings->file_name('reference_fasta_file_name');
 $ref_seq_info = Breseq::ReferenceSequence::bridge_load_ref_seq_info($summary, $reference_features_file_name, $reference_fasta_file_name);
@@ -533,8 +533,44 @@ my @hybrids;
 my $alignment_correction_summary_file_name = $settings->file_name('alignment_correction_summary_file_name');	
 if ($settings->do_step('alignment_correction_done_file_name', "Resolving alignments with candidate junctions"))
 {
-	$settings->create_path('alignment_correction_path');		
-	Breseq::AlignmentCorrection::correct_alignments($settings, $summary, $ref_seq_info);
+	$settings->create_path('alignment_correction_path');			
+	if ($settings->{perl_alignment_correction})
+	#if (1)
+	{	
+		Breseq::AlignmentCorrection::correct_alignments($settings, $summary, $ref_seq_info);
+	}
+	else 
+	{
+		my $cbreseq = $settings->ctool('cbreseq');
+		
+		my $cmdline = "$cbreseq RESOLVE_ALIGNMENTS"; 
+		my $base_output_path = $settings->file_name("base_output_path");
+		$cmdline .= " --path $base_output_path";
+		
+		#print Dumper($settings);
+		# complicated because we need full paths to original or converted files
+		
+		foreach my $read_file ($settings->read_files) 
+		{
+			my $fastq_file = $settings->read_file_to_fastq_file_name($read_file);
+			$cmdline .= " --readfile $fastq_file";
+		}
+	
+		my $maximum_read_length = $summary->{sequence_conversion}->{max_read_length};
+		$cmdline .= " --maximum-read-length $maximum_read_length";
+		
+		foreach my $seq_id (@{$ref_seq_info->{seq_ids}})
+		{
+			my $junction_cutoff = $summary->{preprocess_coverage}->{$seq_id}->{junction_accept_score_cutoff};
+			$cmdline .= " --junction-cutoff $junction_cutoff";
+		}
+		
+		Breseq::Shared::system($cmdline);	
+		
+		## need to fill this in
+		$summary->{alignment_correction} = {};
+	}
+	
 	my $alignment_correction_summary_file_name = $settings->file_name('alignment_correction_summary_file_name');	
 	Storable::store($summary->{alignment_correction}, $alignment_correction_summary_file_name) 
 		or die "Can't store data in file $alignment_correction_summary_file_name!\n";	

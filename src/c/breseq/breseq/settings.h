@@ -75,27 +75,32 @@ namespace breseq {
     string sequence_conversion_path;
     string reference_trim_file_name;
     
-    string alignment_correction_path;
+    string reference_alignment_path;
+		string reference_sam_file_name;
+    
+    string candidate_junction_path;
+		string candidate_junction_fasta_file_name;
+		string candidate_junction_faidx_file_name;
+		string jc_genome_diff_file_name;
+		string preprocess_junction_best_sam_file_name;
+		string preprocess_junction_split_sam_file_name;
 
+    string candidate_junction_alignment_path;
+    string candidate_junction_sam_file_name; 
+    
+    string alignment_correction_path;
+		string resolved_reference_sam_file_name;
+		string resolved_junction_sam_file_name;
+    
     string data_path;
 		string reference_fasta_file_name;
 		string reference_faidx_file_name;
     string reference_features_file_name;
-        
-    string candidate_junction_path;
-		string candidate_junction_fasta_file_name;
-		string candidate_junction_faidx_file_name;
-		string candidate_junction_sam_file_name;
-		string jc_genome_diff_file_name;
-		string preprocess_junction_best_sam_file_name;
-		string preprocess_junction_split_sam_file_name;
+		string unmatched_read_file_name;
     
     string output_path;
+    
 
-		string reference_sam_file_name;
-		string resolved_reference_sam_file_name;
-		string resolved_junction_sam_file_name;
-		string unmatched_read_file_name;
     
     // Options...
     

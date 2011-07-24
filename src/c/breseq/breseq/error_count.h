@@ -146,7 +146,7 @@ namespace breseq {
       void write_count_table_content(ofstream& out, const uint32_t position = 0);
 
       //* recording counts during error calibration     
-      void count_alignment_position(const alignment& i, const pileup& p);
+      void count_alignment_position(const pileup_alignment& i, const pileup& p);
       void count_covariate(const covariate_values_t& cv);
       void counts_to_log10_prob();
    
@@ -159,7 +159,7 @@ namespace breseq {
       }
       
       //* determining error probabilities to use during
-      bool alignment_position_to_covariates(const alignment& a, int32_t insert_count, covariate_values_t& cv);
+      bool alignment_position_to_covariates(const pileup_alignment& a, int32_t insert_count, covariate_values_t& cv);
       
       //* accessors
       double get_log10_prob(covariate_values_t& cv);

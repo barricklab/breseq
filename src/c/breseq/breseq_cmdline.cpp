@@ -242,26 +242,21 @@ int do_resolve_alignments(int argc, char* argv[]) {
 	options
 		("help,h", "produce this help message", TAKES_NO_ARGUMENT)
 		("no-junction-prediction,p", "whether to predict new junctions", TAKES_NO_ARGUMENT)
-		("junction-fasta,j", "FASTA file of candidate junction sequences")
 // convert to basing everything off the main output path, so we don't have to set so many options
     ("path", "path to breseq output")
-		("reference-sam-path", "path to SAM files of read alignments to reference sequences")
-		("junction-sam-path", "path to SAM files of read alignments to candidate junction sequences")
-		("read-file,r", "FASTQ read files (multiple allowed, comma-separated) ")
-		("max-read-length,m", "number of flanking bases in candidate junctions")
+		("readfile,r", "FASTQ read files (multiple allowed, comma-separated) ")
+		("maximum-read-length,m", "number of flanking bases in candidate junctions")
 		("alignment-read-limit", "maximum number of alignments to process. DEFAULT = 0 (OFF).", 0)
+    ("junction-cutoff", "coverage cutoffs for different reference sequences")
 
 	.processCommandArgs(argc, argv);
 
 	// make sure that the config options are good:
 	if(options.count("help")
-     || !options.count("junction-fasta")
      || !options.count("path")
-		 || !options.count("reference-sam-path")
-		 || !options.count("junction-sam-path")
-     || !options.count("read-file")
-		 || !options.count("max-read-length")
-
+     || !options.count("readfile")
+		 || !options.count("maximum-read-length")
+		 || !options.count("junction-cutoff")
 		 ) {
 		options.printUsage();
 		return -1;
@@ -272,22 +267,30 @@ int do_resolve_alignments(int argc, char* argv[]) {
     Settings settings(options["path"]);
 
     Summary summary;
+    
 
-    cReadFiles rf(from_string<vector<string> >(options["read-file"]));
+    cReadFiles rf(from_string<vector<string> >(options["readfile"]));
     
     // Load the reference sequence info
     cReferenceSequences ref_seq_info;
     LoadFeatureIndexedFastaFile(ref_seq_info, settings.reference_features_file_name, settings.reference_fasta_file_name);
     
+    // should be one coverage cutoff value for each reference sequence
+    vector<double> coverage_cutoffs = from_string<vector<double> >(options["junction-cutoff"]);
+    assert(coverage_cutoffs.size() == ref_seq_info.size());
+    
+    for (uint32_t i=0; i<ref_seq_info.size(); i++)
+    {
+      summary.preprocess_coverage[ref_seq_info[i].m_seq_id].junction_accept_score_cutoff = coverage_cutoffs[i];
+    }
+        
     resolve_alignments(
       settings,
       summary,
       ref_seq_info,
       !options.count("no-junction-prediction"),
-      options["reference-sam-path"],
-      options["junction-sam-path"],
       rf,
-      from_string<uint32_t>(options["max-read-length"]),
+      from_string<uint32_t>(options["maximum-read-length"]),
       from_string<uint32_t>(options["alignment-read-limit"])
     );
     

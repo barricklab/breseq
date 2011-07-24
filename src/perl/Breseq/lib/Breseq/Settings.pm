@@ -114,6 +114,7 @@ sub new
 		'perl-preprocess-alignments' => \$self->{perl_preprocess_alignments},
 		'perl-identify-candidate-junctions' => \$self->{perl_identify_candidate_junctions},
 		'perl-bam2aln' => \$self->{perl_bam2aln},
+		'perl-alignment-correction' => \$self->{perl_alignment_correction},
 		'smalt' => \$self->{smalt},
 ##		'no_ssaha2' => \$self->{no_ssaha2},
 		
