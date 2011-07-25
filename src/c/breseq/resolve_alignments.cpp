@@ -207,11 +207,18 @@ namespace breseq {
 				// their own. (They will also match the original reference genome equally well).
 				///
 
-				for (alignment_list::iterator it = this_junction_alignments.begin(); it != this_junction_alignments.end(); it++)
+				for (alignment_list::iterator it = this_junction_alignments.begin(); it != this_junction_alignments.end(); )
         {
 					if (!_alignment_overlaps_junction(junction_info_list, it->get()))
-						this_junction_alignments.erase(it);
+          {
+						this_junction_alignments.erase(it++);
+          }
+          else
+          {
+            it++; 
+          }
         }
+
 				best_junction_score = _eligible_read_alignments(settings, junction_ref_seq_info, this_junction_alignments);
 
 				if (verbose)
