@@ -38,22 +38,18 @@ use Breseq::File::Path;
 
 use Breseq;
 
-use vars qw(@ISA);
-@ISA = qw( Bio::Root::Root );
-
-our %unwanted_sequences = ( 
-	'UNWANTED::ILLUMINA_ADAPTOR_1'    => 'GATCGGAAGAGCTCGTATGCCGTCTTCTGCTTG',  #Solexa Adaptor sequence.
-	'UNWANTED::ILLUMINA_ADAPTOR_2'	  => 'ACACTCTTTCCCTACACGACGCTCTTCCGATCT'
-);                              
+use vars qw(@ISA);                            
 
 ## Options for turning analysis off ##
 ## Mainly for development, long names only ##
 
 sub new
 {	
-	my($caller,@args) = @_;
+	my($caller,$args) = @_;
+	
 	my $class = ref($caller) || $caller;
-	my $self = new Bio::Root::Root($caller, @args);
+	$args = {} if (!defined $args);
+	my $self = $args;
 	bless ($self, $class);
 
 	$self->pre_option_initialize;
@@ -106,15 +102,7 @@ sub new
 		'no-indel-polymorphisms' => \$self->{no_indel_polymorphisms},	
 	## Options for candidate junction identification	
 		'maximum-candidate-junctions=s' => \$self->{maximum_candidate_junctions},
-	## Options for using deprecated and slow Perl methods		
-		'perl-error-count' => \$self->{perl_error_count},
-		'perl-identify-mutations' => \$self->{perl_identify_mutations},
-		'perl-calc-trims' => \$self->{perl_calc_trims},
-		'strict-polymorphism-prediction' => \$self->{strict_polymorphism_prediction},
-		'perl-preprocess-alignments' => \$self->{perl_preprocess_alignments},
-		'perl-identify-candidate-junctions' => \$self->{perl_identify_candidate_junctions},
-		'perl-bam2aln' => \$self->{perl_bam2aln},
-		'perl-alignment-correction' => \$self->{perl_alignment_correction},
+	## Options for using alternate methods
 		'smalt' => \$self->{smalt},
 ##		'no_ssaha2' => \$self->{no_ssaha2},
 		
@@ -126,8 +114,6 @@ sub new
 	
 ## FUTURE default to using smalt
 ##	$self->{smalt} = 1 if (!$self->{no_ssaha2});
-## FUTURE default to using C++ for alignments
-##	$self->{perl_bam2aln} = 1;
 	
 	$self->post_option_initialize;
 	
@@ -657,12 +643,7 @@ sub installed
 		}
 	}
 	
-	$self->{installed}->{Statistics_Distributions} = (eval 'require Statistics::Distributions');	
-	$self->{installed}->{samtools} = (-x "$self->{bin_path}/samtools") ? "$self->{bin_path}/samtools" : 0;
-	$self->{installed}->{bioperl} = (eval 'require Bio::Root::Root');	
-
-	## installed locally
-	$self->{installed}->{Bio_DB_Sam} = (eval 'require Bio::DB::Sam');	
+	$self->{installed}->{samtools} = (-x "$self->{bin_path}/samtools") ? "$self->{bin_path}/samtools" : 0;	
 }
 
 sub check_installed
@@ -713,27 +694,6 @@ sub check_installed
 		$good_to_go = 0;
 		print STDERR "---> ERROR Required executable \"samtools\" not found.\n";
 		print STDERR "---> This should have been installed by the breseq installer.\n";
-	}
-	
-	if (!$self->{installed}->{bioperl})
-	{
-		$good_to_go = 0;
-		print STDERR "---> ERROR Required \"Bioperl\" modules not found.\n";
-		print STDERR "---> See http://www.bioperl.org\n";
-	}
-
-	if (!$self->{installed}->{Bio_DB_Sam})
-	{
-		$good_to_go = 0;
-		print STDERR "---> ERROR Required Perl module \"Bio::DB::Sam\" not found.\n";
-		print STDERR "---> This module should have been installed by the breseq installer.\n";
-	}
-	
-	if ( ($self->{perl_identify_mutations} && $self->{polymorphism_prediction} && !$self->{installed}->{Statistics_Distributions}) )
-	{
-		$good_to_go = 0;
-		print STDERR "---> ERROR Perl module Statistics::Distributions not found.\n";
-		print STDERR "---> Required for Perl polymorphism prediction.\n";
 	}
 	
 	die "\n" if (!$good_to_go);

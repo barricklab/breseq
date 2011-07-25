@@ -5,15 +5,15 @@ using namespace std;
 namespace breseq
 {
 
-vector<diff_entry> grep(const bool &match, const string &exp, vector<diff_entry> &input)
+genome_diff::entry_list_t grep(const bool &match, const string &exp, genome_diff::entry_list_t &input)
 {
   assert(!input.empty());  
-  vector<diff_entry> matched_diff_entrys;
+  genome_diff::entry_list_t matched_diff_entrys;
 
-  for(vector<diff_entry>::iterator diff_entry = input.begin();
+  for(genome_diff::entry_list_t::iterator diff_entry = input.begin();
       diff_entry != input.end(); diff_entry++)
   {
-    vector<string> fields = get_keys<string>((*diff_entry)._fields);
+    vector<string> fields = get_keys<string>((**diff_entry)._fields);
     vector<string> matched_fields = grep(match, exp, fields);  
       if(!matched_fields.empty())
         matched_diff_entrys.push_back((*diff_entry));
@@ -21,15 +21,15 @@ vector<diff_entry> grep(const bool &match, const string &exp, vector<diff_entry>
   return matched_diff_entrys;
 }
 
-vector<diff_entry> grep(const bool &match, const string &exp1, const string &exp2, vector<diff_entry> &input)
+genome_diff::entry_list_t grep(const bool &match, const string &exp1, const string &exp2, genome_diff::entry_list_t &input)
 {
   assert(!input.empty());  
-  vector<diff_entry> matched_diff_entrys;
+  genome_diff::entry_list_t matched_diff_entrys;
 
-  for(vector<diff_entry>::iterator diff_entry = input.begin();
+  for(genome_diff::entry_list_t::iterator diff_entry = input.begin();
       diff_entry != input.end(); diff_entry++)
   {
-    vector<string> fields = get_keys<string>((*diff_entry)._fields);
+    vector<string> fields = get_keys<string>((**diff_entry)._fields);
     vector<string> matched_fields = grep(match, exp1, fields); 
 	 matched_fields = grep(match, exp2, fields);
       if(!matched_fields.empty())

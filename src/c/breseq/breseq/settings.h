@@ -99,8 +99,10 @@ namespace breseq {
 		string unmatched_read_file_name;
     
     string output_path;
-    
-
+    string local_evidence_path;
+    string evidence_path;
+    string evidence_genome_diff_file_name;
+    string final_genome_diff_file_name;
     
     // Options...
     

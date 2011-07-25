@@ -100,9 +100,14 @@ namespace breseq {
     jc_genome_diff_file_name = alignment_correction_path + "/jc_evidence.gd";
     resolved_reference_sam_file_name = alignment_correction_path + "/reference.sam";
     resolved_junction_sam_file_name = alignment_correction_path + "/junction.sam";
-   
-    output_path = run_path + "/output";    
+       
+    output_path = run_path + "/output";
+    local_evidence_path = "/evidence";
+    evidence_path = output_path + local_evidence_path;
+    evidence_genome_diff_file_name = evidence_path + "/evidence.gd";
+    final_genome_diff_file_name = output_path + "/output.gd";
 
+    
   }
   
   

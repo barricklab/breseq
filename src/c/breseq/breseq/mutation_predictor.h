@@ -34,25 +34,25 @@ namespace breseq {
 	{
 	public:
 
-		static cReferenceSequences ref_seq_info;
+    static cReferenceSequences ref_seq_info;
 
 		MutationPredictor(cReferenceSequences& ref_seq_info);
-		void predict(Settings& settings, const Summary& summary, genome_diff& gd);
+		void predict(Settings& settings, genome_diff& gd, uint32_t max_read_length);
 
-		static bool sort_by_hybrid(diff_entry a, diff_entry b);
-		static bool sort_by_reject_score(diff_entry a, diff_entry b);
-		static bool sort_by_pos(diff_entry a, diff_entry b);
+		static bool sort_by_hybrid(const counted_ptr<diff_entry>& a, const counted_ptr<diff_entry>& b);
+		static bool sort_by_reject_score(const counted_ptr<diff_entry>& a, const counted_ptr<diff_entry>& b);
+		static bool sort_by_pos(const counted_ptr<diff_entry>& a, const counted_ptr<diff_entry>& b);
 
 	private:
 
-		string get_sequence(string seq_id, int32_t start, int32_t end);
+		string get_sequence(string seq_id, uint32_t start, uint32_t end);
 		cSequenceFeature* within_repeat(string seq_id, uint32_t position);
 
 	}; // class MutationPredictor
 
-	int32_t n(string input) { return from_string<int32_t>(input); };
-	bool b(string input) { return from_string<bool>(input); };
-	string s(int32_t input) { return to_string(input); };
+	inline int32_t n(string input) { return from_string<int32_t>(input); };
+	inline bool b(string input) { return from_string(input); };
+	inline string s(int32_t input) { return to_string(input); };
 
 } // namespace breseq
 

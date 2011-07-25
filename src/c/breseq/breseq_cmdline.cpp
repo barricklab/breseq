@@ -33,6 +33,7 @@ LICENSE AND COPYRIGHT
 #include "breseq/resolve_alignments.h"
 #include "breseq/settings.h"
 #include "breseq/tabulate_coverage.h"
+#include "breseq/mutation_predictor.h"
 
 
 using namespace breseq;
@@ -302,6 +303,64 @@ int do_resolve_alignments(int argc, char* argv[]) {
 	
 	return 0;
 }
+
+
+/*!  Predict Mutations
+ 
+ Predict mutations from evidence in a genome diff file.
+ 
+ */
+
+int do_predict_mutations(int argc, char* argv[]) {
+	
+	// setup and parse configuration options:
+	AnyOption options("Usage: breseq PREDICT_MUTATIONS ... ");
+	options
+  ("help,h", "produce this help message", TAKES_NO_ARGUMENT)
+  // convert to basing everything off the main output path, so we don't have to set so many options
+  ("path", "path to breseq output")
+  ("maximum-read-length,m", "number of flanking bases in candidate junctions")
+	.processCommandArgs(argc, argv);
+  
+	// make sure that the config options are good:
+	if(options.count("help")
+     || !options.count("path")
+		 || !options.count("maximum-read-length")
+		 ) {
+		options.printUsage();
+		return -1;
+	}                       
+  
+	try {
+    
+    Settings settings(options["path"]);
+            
+    // Load the reference sequence info
+    cReferenceSequences ref_seq_info;
+    LoadFeatureIndexedFastaFile(ref_seq_info, settings.reference_features_file_name, settings.reference_fasta_file_name);
+        
+    MutationPredictor mp(ref_seq_info);
+    
+    genome_diff gd( settings.evidence_genome_diff_file_name );
+    gd.read();
+    
+    mp.predict(
+               settings,
+               gd,
+               from_string<uint32_t>(options["maximum-read-length"])
+               );
+    
+    gd.write(settings.final_genome_diff_file_name);
+    
+  } catch(...) {
+		// failed; 
+    
+		return -1;
+	}
+	
+	return 0;
+}
+
 
 
 
@@ -804,6 +863,8 @@ int main(int argc, char* argv[]) {
 		return do_tabulate_coverage(argc_new, argv_new);
 	} else if (command == "RESOLVE_ALIGNMENTS") {
 		return do_resolve_alignments(argc_new, argv_new);
+  } else if (command == "PREDICT_MUTATIONS") {
+		return do_predict_mutations(argc_new, argv_new);
 	} else if (command == "GD2GVF") {
     return do_convert_gvf(argc_new, argv_new);
   } else if (command == "VCF2GD") {

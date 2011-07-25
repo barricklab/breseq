@@ -220,170 +220,6 @@ sub bridge_load_ref_seq_info
 	return $ref_seq_info;
 }
 
-=comment
-
-
-sub load_ref_seq_info
-{
-	##summaryand create_fasta are optional
-	my ($genbank_file_names_ref, $junction_only_genbank_file_names_ref, $summary, $reference_fasta_file_name) = @_;
-			
-	print STDERR "Loading reference sequences...\n";
-
-	$summary->{sequence_conversion}->{total_reference_sequence_length} = 0 if (defined $summary);
-	
-	my $ref_seq_info;
-	my $i = 0;
-	my $s;
-
-	# get two pieces of information from $settings
-	my @genbank_file_names = (); 
-	@genbank_file_names = @$genbank_file_names_ref if ($genbank_file_names_ref); 
-	
-	my @junction_only_genbank_file_names = ();
-	@junction_only_genbank_file_names = @$junction_only_genbank_file_names_ref if ($junction_only_genbank_file_names_ref); 
-
-	my %junction_only_hash;
-	foreach my $jo (@junction_only_genbank_file_names)
-	{
-		$junction_only_hash{$jo} = 1;
-	}
-	
-	## optionally create FASTA for writing to...
-	my $fasta_o;
-	if ($reference_fasta_file_name)
-	{
-		$fasta_o = Bio::SeqIO->new( -format => "FASTA", -file => ">$reference_fasta_file_name");
-	}	
-
-	foreach my $genbank_file_name (@genbank_file_names, @junction_only_genbank_file_names)
-	{
-		## open this GenBank file
-		my $ref_i = Bio::SeqIO->new( -file => "<$genbank_file_name");
-		print STDERR "  Loading File::$genbank_file_name\n";
-
-		my $junction_only = $junction_only_hash{$genbank_file_name};
-
-		while (my $ref_seq = $ref_i->next_seq)
-		{			
-			my $seq_id = $ref_seq->id;
-			die "Duplicate reference sequence id: $seq_id\n" if (defined $ref_seq_info->{ref_strings}->{$seq_id});
-			
-			print STDERR "    Sequence::$seq_id loaded.\n";
-			
-			$s->{$seq_id}->{seq_id} = $seq_id;
-			$s->{$seq_id}->{length} = $ref_seq->length;
-			$s->{$seq_id}->{definition} = $ref_seq->desc;
-			$s->{$seq_id}->{version} = $ref_seq->display_id;			
-			
-			$summary->{sequence_conversion}->{total_reference_sequence_length} += $ref_seq->length if (defined $summary);
-			
-			## it would be nice to get rid of storing the whole genome in memory
-			$ref_seq_info->{bioperl_ref_seqs}->{$seq_id} = $ref_seq;
-
-			##it is much faster to use substr to create the lists for nt comparisons than BioPerl trunc
-			
-			#load the reference sequence, uppercase it, and scrub degenerate bases to N's 
-			$ref_seq_info->{ref_strings}->{$seq_id} = $ref_seq->seq;
-			$ref_seq_info->{ref_strings}->{$seq_id} = uc($ref_seq_info->{ref_strings}->{$seq_id});
-			$ref_seq_info->{ref_strings}->{$seq_id} =~ s/[^ATCG]/N/g;
-			$ref_seq->seq($ref_seq_info->{ref_strings}->{$seq_id});						
-			$ref_seq_info->{seq_order}->{$seq_id} = $i++;
-			
-			## optionally write out FASTA -- AFTER scrubbing sequence
-			$fasta_o->write_seq($ref_seq) if ($reference_fasta_file_name);
-			
-			if (!$junction_only)
-			{
-				push @{$ref_seq_info->{seq_ids}}, $seq_id;
-			}
-			else
-			{
-				push @{$ref_seq_info->{junction_only_seq_ids}}, $seq_id;
-			}
-
-			##load the genbank record
-			my @Feature_List = $ref_seq->get_SeqFeatures();
-			my @gene_list;
-			my @repeat_list;
-			
-			FEATURE: foreach my $Feature ( @Feature_List ) 
-			{ 	
-				if ($Feature->primary_tag eq 'repeat_region')
-				{	
-					my $r;
-					$r->{name} = get_tag($Feature, "mobile_element");
-					$r->{name} =~ s/insertion sequence:// if ($r->{name});
-					$r->{name} =~ s/(IS\d+)\D+/$1/ if ($r->{name}); #strip additional words
-					#print get_tag($Feature, "mobile_element") . " $r->{name}\n";
-
-					## don't add unnamed ones to list...
-					#$r->{name} = "unknown_repeat" if (!$r->{name});
-					next FEATURE if (!$r->{name});
-					
-					$r->{product} = "repeat region";
-					$r->{start} = $Feature->start;
-					$r->{end} = $Feature->end;
-					$r->{strand} = $Feature->strand;
-					push @repeat_list, $r;
-					next FEATURE;
-				}
-				
-				## add additional information to the last 
-				if (   ($Feature->primary_tag eq 'CDS') 
-					|| ($Feature->primary_tag eq 'tRNA') 
-					|| ($Feature->primary_tag eq 'rRNA') )
-
-				{
-					#Add information to last gene
-					my $gene;
-					$gene->{name} = get_tag($Feature, "gene");
-					$gene->{name} = get_tag($Feature, "locus_tag") if (!$gene->{name});
-					$gene->{start} = $Feature->start;
-					$gene->{end} = $Feature->end;
-					$gene->{strand} = $Feature->strand;
-					$gene->{product} = "";
-					$gene->{note} = get_tag($Feature, "note");
-					$gene->{cds} = 1 if ($Feature->primary_tag eq 'CDS');
-					
-					#$gene->{accession} = get_tag($Feature, "protein_id");
-					$gene->{product} = get_tag($Feature, "product");
-					
-					#set a type for the feature
-					$gene->{type} = $Feature->primary_tag;
-					$gene->{type} = "protein" if ($gene->{type} eq 'CDS');
-					$gene->{pseudogene} = get_tag($Feature, "pseudo");
-					$gene->{type} = "pseudogene" if ($gene->{pseudogene});
-									
-					push @gene_list, $gene;		
-				}
-			}
-			
-			$ref_seq_info->{gene_lists}->{$seq_id} = \@gene_list;
-			$ref_seq_info->{repeat_lists}->{$seq_id} = \@repeat_list;	
-		}
-	}
-			
-	#save statistics if requested
-	$summary->{sequence_conversion}->{reference_sequences} = $s if (defined $summary);
-
-	return $ref_seq_info;
-}
-
-sub get_tag
-{
-	my ($Feature, $Tag, $Allow_Array) = @_;
-	$Allow_Array = 0 if (!defined $Allow_Array);
-	
-	return '' if (!$Feature->has_tag("$Tag"));
-	my @Tag_Values = $Feature->get_tag_values("$Tag");
-	return '' if (scalar @Tag_Values == 0);
-	return $Tag_Values[0] if (!$Allow_Array);
-	return @Tag_Values;
-}
-
-=cut
-
 
 sub annotate_1_mutation
 {
@@ -538,7 +374,7 @@ sub annotate_1_mutation
 		my $codon_seq = ($gene->{strand} == +1) ?
 		
 			substr($ref_string, $gene->{start} + 3 * ($mut->{aa_position}-1) - 1, 3) :
-			Breseq::Fastq::revcom(substr($ref_string, $gene->{end} - 3 * $mut->{aa_position}, 3));
+			Breseq::Shared::revcom(substr($ref_string, $gene->{end} - 3 * $mut->{aa_position}, 3));
 		
 			#$ref_seq->trunc($gene->{start} + 3 * ($mut->{aa_position}-1),$gene->{start} + 3 * $mut->{aa_position} - 1) :
 			#$ref_seq->trunc($gene->{end} - 3 * $mut->{aa_position}+1,$gene->{end} - 3 * ($mut->{aa_position}-1))->revcom;
@@ -552,7 +388,7 @@ sub annotate_1_mutation
 
 		$mut->{codon_new_seq} = $codon_seq;
 		#remember to revcom the change if gene is on opposite strand
-		substr($mut->{codon_new_seq}, $mut->{codon_position} - 1, 1) = ($gene->{strand} == +1) ? $mut->{new_seq} : Breseq::Fastq::revcom($mut->{new_seq});
+		substr($mut->{codon_new_seq}, $mut->{codon_position} - 1, 1) = ($gene->{strand} == +1) ? $mut->{new_seq} : Breseq::Shared::revcom($mut->{new_seq});
 		$mut->{aa_new_seq} =  bridge_translate($mut->{codon_new_seq});
 		#$codon_seq->seq($mut->{codon_new_seq});
 		#$mut->{aa_new_seq} = $codon_seq->translate( undef, undef, undef, 11 )->seq();

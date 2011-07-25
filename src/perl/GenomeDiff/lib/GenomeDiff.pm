@@ -114,13 +114,9 @@ package GenomeDiff;
 use vars qw(@ISA);
 use strict;
 
-use Bio::Root::Root;
 use Data::Dumper;
 
-@ISA = qw( Bio::Root::Root );
-
 our $VERSION = '1.00';
-
 
 #
 # Format specification
@@ -205,9 +201,11 @@ our $type_sort_order = {
 
 sub new
 {
-	my($caller,@args) = @_;
+	my($caller,$args) = @_;
 	my $class = ref($caller) || $caller;
-	my $self = new Bio::Root::Root($caller, @args);
+	$args = {} if (!defined $args);
+	my $self = $args;
+	bless ($self, $class);
 
 	# initialize
 	@{$self->{list}} = ();
@@ -217,9 +215,8 @@ sub new
 	bless ($self, $class);
 	
 	# load from file if one of these options found...
-	$self->{file_name} = $self->Bio::Root::RootI::_rearrange([qw(FILE_NAME)], @args);
-	$self->{file_name} = $self->Bio::Root::RootI::_rearrange([qw(FILE)], @args) if (!defined $self->{file_name});
-	$self->{file_name} = $self->Bio::Root::RootI::_rearrange([qw(IN)], @args) if (!defined $self->{file_name});
+	$self->{file_name} = $self->{file} if (!defined $self->{file_name});
+	$self->{file_name} = $self->{in} if (!defined $self->{file_name});
 	$self->read($self->{file_name}) if ($self->{file_name});
 	
 	return $self;

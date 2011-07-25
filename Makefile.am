@@ -44,7 +44,6 @@ ROOTDIR=$(PWD)
 DOCDIR=$(ROOTDIR)/src/doc
 PERLBRESEQ=$(ROOTDIR)/src/perl/Breseq
 PERLGENOMEDIFF=$(ROOTDIR)/src/perl/GenomeDiff
-BIOSAMTOOLS=$(ROOTDIR)/extern/Bio-SamTools-1.28
 SAMTOOLSDIR=$(ROOTDIR)/$(LIBBAM)
 
 ## Main hooks called after normal make steps
@@ -54,13 +53,6 @@ all-local :
 ## We should build Perl modules here (and not during install) because
 ## otherwise a sudo make install creates superuser owned files in the
 ## distribution, that are not removed by make clean.
-
-	## Bio::SamTools
-	cd $(BIOSAMTOOLS) ; \
-	export SAMTOOLSLIBRARY=$(SAMTOOLSDIR)/.libs; \
-	export SAMTOOLSHEADERS=$(SAMTOOLSDIR); \
-	perl Build.PL --install_base=$(prefix) --install_path bin=$(bindir) --install_path script=$(bindir) ; \
-	./Build ;
 
 	## GenomeDiff
 	cd $(PERLGENOMEDIFF) ; \
@@ -75,19 +67,6 @@ all-local :
 install-exec-local :
 
 	echo $(prefix)/lib
-
-### Alternate way of doing things
-##	## Bio::SamTools - compiled here because libbam must be in final location for static link to work!
-##	cd $(BIOSAMTOOLS) ; \
-##	export SAMTOOLSLIBRARY=$(libdir); \
-##	export SAMTOOLSHEADERS=$(SAMTOOLSDIR); \
-##	perl Build.PL --install_base=$(prefix) --install_path bin=$(bindir) --install_path script=$(bindir) ; \
-##	./Build ; \
-##	./Build install ;
-
-	## Bio::SamTools
-	cd $(BIOSAMTOOLS) ; \
-	./Build install --destdir=${DESTDIR};
 
 	## GenomeDiff
 	cd $(PERLGENOMEDIFF) ; \
@@ -112,11 +91,6 @@ dist-hook:
 	make html ;
 	
 	cp -r $(DOCDIR)/_build/html $(distdir)/documentation ;
-
-	##Bio::SamTools
-	cd $(BIOSAMTOOLS) ; \
-	./Build distdir ;
-	cp -r $(BIOSAMTOOLS)/Bio-SamTools-* $(distdir)/extern ; 
 
 	## GenomeDiff
 	cd $(PERLGENOMEDIFF) ; \
@@ -169,14 +143,6 @@ macosx-pkg-download :
 
 	mkdir -p $(PACKAGEDIR)
 	mkdir -p $(MACPACKAGEDIR)
-
-	cd $(MACPACKAGEDIR) ; \
-	curl -O http://cran.r-project.org/src/base/R-2/R-2.13.0.tar.gz ; \
-	tar -xvzf R-2.13.0.tar.gz ;
-
-	cd $(MACPACKAGEDIR) ; \
-	curl -O http://mirror.datapipe.net/CPAN/authors/id/C/CJ/CJFIELDS/BioPerl-1.6.900.tar.gz ; \
-	tar -xvzf BioPerl-1.6.900.tar.gz;
 	
 	cd $(MACPACKAGEDIR) ; \
 	curl -O ftp://ftp.sanger.ac.uk/pub4/resources/software/ssaha2/ssaha2_mac.tgz ; \
@@ -185,26 +151,6 @@ macosx-pkg-download :
 macosx-pkg-compile :
 
 	mkdir -p $(MACPACKAGEBUILDDIR)
-
-	## We have a problem that when building an XS module
-	## the architecture differs between the system Perl /usr/bin/perl
-	## and MacPorts Perl, so we rebuild using the system Perl here
-	cd $(BIOSAMTOOLS) ; \
-	export SAMTOOLSLIBRARY=$(SAMTOOLSDIR)/.libs; \
-	export SAMTOOLSHEADERS=$(SAMTOOLSDIR); \
-	/usr/bin/perl Build.PL --install_base=$(MACPACKAGEBUILDDIR) --install_path bin=$(MACPACKAGEBUILDDIR)/bin --install_path script=$(MACPACKAGEBUILDDIR)/bin ; \
-	./Build clean; \
-	./Build ; \
-	./Build install ;
-
-	cd $(MACPACKAGEDIR)/R-2.13.0; \
-	./configure --prefix=$(MACPACKAGEBUILDDIR) G77=gfortran --without-aqua --disable-R-framework ; \
-	make ; \
-	make install ;
-
-	cd $(MACPACKAGEDIR)/BioPerl-1.6.900; \
-	perl Build.PL --accept --install_base=$(MACPACKAGEBUILDDIR) ; \
-	./Build install ;	
 	
 	cp $(MACPACKAGEDIR)/ssaha2*/ssaha2* $(MACPACKAGEBUILDDIR)/bin ;
 	

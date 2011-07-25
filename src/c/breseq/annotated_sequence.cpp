@@ -184,13 +184,16 @@ namespace breseq {
       
       uint32_t seq_idx = seq_id_to_index(seq_id);
       (*this)[seq_idx].m_features.push_back(feature);
-            
+      
+      if (feature["type"] == "repeat_region")
+        (*this).repeat_lists[seq_id].push_back(feature);
+      
       getline(infile,line);
     }
 
   }
 
-  cSequenceFeature* cReferenceSequences::find_closest_repeat_region(uint32_t position, vector<cSequenceFeature>& repeat_list_ref, uint32_t max_distance, bool direction)
+  cSequenceFeature* cReferenceSequences::find_closest_repeat_region(uint32_t position, vector<cSequenceFeature>& repeat_list_ref, uint32_t max_distance, int32_t direction)
   {
 	if (repeat_list_ref.size() == 0) return NULL;
 
@@ -208,7 +211,7 @@ namespace breseq {
 
 		//otherwise calculate the distance
 		//keep if less than max_distance, in the correct direction, and the best found so far
-		int32_t test_distance = (!direction ? position - test_is->m_end : test_is->m_start - position);
+		int32_t test_distance = ((direction == -1) ? position - test_is->m_end : test_is->m_start - position);
 		if (test_distance < 0) continue; //wrong direction...
 
 		if ((test_distance <= (int32_t)max_distance) && ((is == NULL) || (test_distance < best_distance)) )

@@ -248,6 +248,9 @@ namespace breseq {
 		size_t start = 0, end = 0;
 		vector<string> theStringVector;
 
+    if (theString.size() == 0) return theStringVector;
+    // return empty list if the string is empty
+    
 		while (end != string::npos)
 		{
 			end = theString.find( theDelimiter, start );
@@ -380,9 +383,10 @@ namespace breseq {
 
   // handle bool as either TRUE/FALSE or zero/non-zero number
   // Does not handle single-character T/F correctly 
+  // @JEB this is never called
   inline bool from_string(const string& s)
   {
-    bool t;
+    bool t = false;
     istringstream iss1(s);
     iss1 >> boolalpha >> t;
     
@@ -394,7 +398,7 @@ namespace breseq {
     return t;
   }
   
-	template <typename T> inline T from_string(const string &s)
+  template <typename T> inline T from_string(const string &s)
 	{
     assert(!s.empty());
     T t;
@@ -717,8 +721,9 @@ namespace breseq {
         if (--itsCounter->count == 0) {
           delete itsCounter->ptr;
           delete itsCounter;
+          itsCounter = 0; //@JEB edit
         }
-        itsCounter = 0;
+//@JEB -- this is an error?        itsCounter = 0;
       }
     }
   };
