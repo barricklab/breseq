@@ -2,19 +2,19 @@
 SNP	112	11	NC_001416	54	A	frequency=0.0930
 SNP	113	12	NC_001416	73	G	frequency=0.0870
 SNP	114	13	NC_001416	102	C	frequency=0.0770
-DEL	115	15	NC_001416	139	1	
+DEL	115	15	NC_001416	139	1
 SNP	116	16	NC_001416	145	G	frequency=0.0810
 SNP	117	17	NC_001416	176	G	frequency=0.0970
 SNP	118	20	NC_001416	490	A	frequency=0.0400
-INS	119	26	NC_001416	14266	G	
-SNP	120	27	NC_001416	20661	G	
-INS	121	28	NC_001416	20835	C	
-SNP	122	29	NC_001416	21714	A	
-DEL	111	46,1	NC_001416	21738	5996	
-SNP	123	48	NC_001416	31016	C	
-SNP	124	52	NC_001416	34934	G	
-DEL	125	54	NC_001416	37818	1	
-SNP	126	57	NC_001416	45618	C	
+INS	119	26	NC_001416	14266	G
+SNP	120	27	NC_001416	20661	G
+INS	121	28	NC_001416	20835	C
+SNP	122	29	NC_001416	21714	A
+DEL	111	46,1	NC_001416	21738	5996
+SNP	123	48	NC_001416	31016	C
+SNP	124	52	NC_001416	34934	G
+DEL	125	54	NC_001416	37818	1
+SNP	126	57	NC_001416	45618	C
 SNP	127	58	NC_001416	46136	C	frequency=0.0780
 SNP	128	59	NC_001416	46154	A	frequency=0.0770
 SNP	129	60	NC_001416	46157	G	frequency=0.0620
@@ -35,22 +35,22 @@ SNP	143	75	NC_001416	46720	T	frequency=0.0650
 SNP	144	76	NC_001416	46942	G	frequency=0.0520
 SNP	145	77	NC_001416	46953	C	frequency=0.1000
 INS	146	78	NC_001416	46957	A	frequency=0.9500
-SNP	147	79	NC_001416	46985	T	
-SNP	148	80	NC_001416	46992	T	
-SNP	149	81	NC_001416	47004	A	
-SNP	150	82	NC_001416	47129	G	
-SNP	151	83	NC_001416	47143	T	
-SNP	152	84	NC_001416	47243	A	
-SNP	153	85	NC_001416	47315	A	
-SNP	154	86	NC_001416	47360	A	
-SNP	155	87	NC_001416	47398	T	
-SNP	156	88	NC_001416	47509	C	
-SNP	157	89	NC_001416	47529	T	
-SNP	158	90	NC_001416	47575	A	
-SNP	159	91	NC_001416	47669	C	
-SNP	160	92	NC_001416	47878	G	
-SNP	161	94	NC_001416	47973	C	
-SUB	162	95,96	NC_001416	47977	2	AC	
+SNP	147	79	NC_001416	46985	T
+SNP	148	80	NC_001416	46992	T
+SNP	149	81	NC_001416	47004	A
+SNP	150	82	NC_001416	47129	G
+SNP	151	83	NC_001416	47143	T
+SNP	152	84	NC_001416	47243	A
+SNP	153	85	NC_001416	47315	A
+SNP	154	86	NC_001416	47360	A
+SNP	155	87	NC_001416	47398	T
+SNP	156	88	NC_001416	47509	C
+SNP	157	89	NC_001416	47529	T
+SNP	158	90	NC_001416	47575	A
+SNP	159	91	NC_001416	47669	C
+SNP	160	92	NC_001416	47878	G
+SNP	161	94	NC_001416	47973	C
+SUB	162	95,96	NC_001416	47977	2	AC
 SNP	163	98	NC_001416	48126	G	frequency=0.0480
 SNP	164	99	NC_001416	48160	C	frequency=0.8030
 SNP	165	101	NC_001416	48295	A	frequency=0.1590
@@ -69,49 +69,49 @@ RA	17		NC_001416	176	0	T	G	bias_e_value=37348.9411310356	bias_p_value=0.77004950
 RA	18		NC_001416	333	0	A	G	bias_e_value=48229.7444086876	bias_p_value=0.994386714129059	fisher_strand_p_value=1	frequency=0.0410	ks_quality_p_value=0.89593258401727	log10_base_likelihood=-5.43672	log10_qual_likelihood_position_model=3.20104773698811	log10_strand_likelihood_position_model=0.493867276033578	new_cov=2/3	polymorphism_quality=1.84934023806810	quality=334.9	quality_position_model=0.00201240562085455	ref_cov=56/56	reject=EVALUE,EVALUE	tot_cov=58/59
 RA	19		NC_001416	484	0	A	G	bias_e_value=15454.6846510677	bias_p_value=0.318640151974511	fisher_strand_p_value=0.160610426039891	frequency=0.0410	ks_quality_p_value=0.591550770136719	log10_base_likelihood=-4.59229	log10_qual_likelihood_position_model=4.00996835152022	log10_strand_likelihood_position_model=1.05301933301238	new_cov=1/4	polymorphism_quality=0.96825609789976	quality=322.5	quality_position_model=Inf	ref_cov=66/45	reject=EVALUE,EVALUE	tot_cov=67/49
 RA	20		NC_001416	490	0	G	A	bias_e_value=43684.8234325574	bias_p_value=0.90068086743964	fisher_strand_p_value=0.667754087689512	frequency=0.0400	ks_quality_p_value=0.881795462298539	log10_base_likelihood=-6.8595	log10_qual_likelihood_position_model=3.23221241113843	log10_strand_likelihood_position_model=0.522744016058333	new_cov=2/3	polymorphism_quality=3.32260319327208	quality=318.2	quality_position_model=6.7806263438647e-05	ref_cov=62/55	tot_cov=64/58
-JC	2		NC_001416	5491	1	NC_001416	30255	1	0	alignment_overlap=4	coverage_minus=8	coverage_plus=0	flanking_left=35	flanking_right=35	key=NC_001416__5491__1__NC_001416__30251__1__4____35__35__0__0	max_left=30	max_left_minus=30	max_left_plus=0	max_min_left=0	max_min_left_minus=0	max_min_left_plus=0	max_min_right=11	max_min_right_minus=11	max_min_right_plus=0	max_right=11	max_right_minus=11	max_right_plus=0	min_overlap_score=44	pos_hash_score=7	reject=NJ,COV	side_1_annotate_key=gene	side_1_overlap=4	side_1_redundant=0	side_2_annotate_key=gene	side_2_overlap=0	side_2_redundant=0	total_non_overlap_reads=8	total_reads=8
+JC	2		NC_001416	5491	1	NC_001416	30255	1	0	alignment_overlap=4	coverage_minus=8	coverage_plus=0	flanking_left=35	flanking_right=35	key=NC_001416__5491__1__NC_001416__30251__1__4____35__35__0__0	max_left=30	max_left_minus=30	max_left_plus=0	max_min_left=0	max_min_left_minus=0	max_min_left_plus=0	max_min_right=11	max_min_right_minus=11	max_min_right_plus=0	max_right=11	max_right_minus=11	max_right_plus=0	min_overlap_score=44	pos_hash_score=7	reject=NJ	side_1_annotate_key=gene	side_1_overlap=4	side_1_redundant=0	side_2_annotate_key=gene	side_2_overlap=0	side_2_redundant=0	total_non_overlap_reads=8	total_reads=8
 RA	21		NC_001416	6417	0	G	T	bias_e_value=93.3257225161044	bias_p_value=0.00192416235446176	fisher_strand_p_value=0.000202434895830232	frequency=0.1150	ks_quality_p_value=1	log10_base_likelihood=-7.11271	log10_qual_likelihood_position_model=10.2405549096028	log10_strand_likelihood_position_model=3.81808154169844	new_cov=0/12	polymorphism_quality=3.58368097174637	quality=183.0	quality_position_model=Inf	ref_cov=37/28	reject=FISHER_STRAND_P_VALUE	tot_cov=37/40
 RA	22		NC_001416	6939	0	G	T	bias_e_value=1693.76111957999	bias_p_value=0.0349214696214588	fisher_strand_p_value=0.00565512131664154	frequency=0.0710	ks_quality_p_value=1	log10_base_likelihood=-6.24097	log10_qual_likelihood_position_model=8.23781713443623	log10_strand_likelihood_position_model=2.33161794234097	new_cov=1/11	polymorphism_quality=2.68354677128832	quality=233.6	quality_position_model=Inf	ref_cov=44/43	reject=FISHER_STRAND_P_VALUE	tot_cov=45/54
 RA	23		NC_001416	10551	0	C	A	bias_e_value=0.413094610866508	bias_p_value=8.51706343793056e-06	fisher_strand_p_value=5.52756415612568e-07	frequency=0.1160	ks_quality_p_value=1	log10_base_likelihood=-14.1832	log10_qual_likelihood_position_model=11.6672726894454	log10_strand_likelihood_position_model=6.26673375524712	new_cov=14/1	polymorphism_quality=10.80401275355319	quality=256.8	quality_position_model=Inf	ref_cov=22/67	reject=FISHER_STRAND_P_VALUE	tot_cov=36/69
 RA	24		NC_001416	11792	0	C	A	bias_e_value=1349.71696466054	bias_p_value=0.0278280682169918	fisher_strand_p_value=0.00439826127344374	frequency=0.1170	ks_quality_p_value=0.981698067661008	log10_base_likelihood=-8.73003	log10_qual_likelihood_position_model=9.32994191597036	log10_strand_likelihood_position_model=2.49839508658648	new_cov=9/1	polymorphism_quality=5.24549136403487	quality=170.2	quality_position_model=Inf	ref_cov=24/37	reject=FISHER_STRAND_P_VALUE	tot_cov=33/38
 RA	25		NC_001416	12296	0	C	A	bias_e_value=1.92869275310779	bias_p_value=3.97652210858891e-05	fisher_strand_p_value=2.89120956643422e-06	frequency=0.2340	ks_quality_p_value=1	log10_base_likelihood=-9.77987	log10_qual_likelihood_position_model=8.72841074148656	log10_strand_likelihood_position_model=5.53892042778718	new_cov=11/0	polymorphism_quality=6.31999150516524	quality=90.4	quality_position_model=Inf	ref_cov=6/25	reject=FISHER_STRAND_P_VALUE	tot_cov=17/25
-JC	3		NC_001416	13180	1	NC_001416	13218	1	0	alignment_overlap=4	coverage_minus=1	coverage_plus=0	flanking_left=35	flanking_right=35	key=NC_001416__13180__1__NC_001416__13214__1__4____35__35__0__0	max_left=17	max_left_minus=17	max_left_plus=0	max_min_left=0	max_min_left_minus=0	max_min_left_plus=0	max_min_right=14	max_min_right_minus=14	max_min_right_plus=0	max_right=14	max_right_minus=14	max_right_plus=0	min_overlap_score=14	pos_hash_score=1	reject=NJ,COV	side_1_annotate_key=gene	side_1_overlap=4	side_1_redundant=0	side_2_annotate_key=gene	side_2_overlap=0	side_2_redundant=0	total_non_overlap_reads=1	total_reads=1
+JC	3		NC_001416	13180	1	NC_001416	13218	1	0	alignment_overlap=4	coverage_minus=1	coverage_plus=0	flanking_left=35	flanking_right=35	key=NC_001416__13180__1__NC_001416__13214__1__4____35__35__0__0	max_left=17	max_left_minus=17	max_left_plus=0	max_min_left=0	max_min_left_minus=0	max_min_left_plus=0	max_min_right=14	max_min_right_minus=14	max_min_right_plus=0	max_right=14	max_right_minus=14	max_right_plus=0	min_overlap_score=14	pos_hash_score=1	reject=NJ	side_1_annotate_key=gene	side_1_overlap=4	side_1_redundant=0	side_2_annotate_key=gene	side_2_overlap=0	side_2_redundant=0	total_non_overlap_reads=1	total_reads=1
 RA	26		NC_001416	14266	1	.	G	frequency=1	new_cov=44/31	quality=207.9	ref_cov=0/0	tot_cov=44/31
-JC	4		NC_001416	14869	-1	NC_001416	15609	-1	0	alignment_overlap=7	coverage_minus=1	coverage_plus=0	flanking_left=35	flanking_right=35	key=NC_001416__14869__0__NC_001416__15616__0__7____35__35__0__0	max_left=21	max_left_minus=21	max_left_plus=0	max_min_left=0	max_min_left_minus=0	max_min_left_plus=0	max_min_right=7	max_min_right_minus=7	max_min_right_plus=0	max_right=7	max_right_minus=7	max_right_plus=0	min_overlap_score=7	pos_hash_score=1	reject=NJ,COV	side_1_annotate_key=gene	side_1_overlap=7	side_1_redundant=0	side_2_annotate_key=gene	side_2_overlap=0	side_2_redundant=0	total_non_overlap_reads=1	total_reads=1
+JC	4		NC_001416	14869	-1	NC_001416	15609	-1	0	alignment_overlap=7	coverage_minus=1	coverage_plus=0	flanking_left=35	flanking_right=35	key=NC_001416__14869__0__NC_001416__15616__0__7____35__35__0__0	max_left=21	max_left_minus=21	max_left_plus=0	max_min_left=0	max_min_left_minus=0	max_min_left_plus=0	max_min_right=7	max_min_right_minus=7	max_min_right_plus=0	max_right=7	max_right_minus=7	max_right_plus=0	min_overlap_score=7	pos_hash_score=1	reject=NJ	side_1_annotate_key=gene	side_1_overlap=7	side_1_redundant=0	side_2_annotate_key=gene	side_2_overlap=0	side_2_redundant=0	total_non_overlap_reads=1	total_reads=1
 RA	27		NC_001416	20661	0	A	G	frequency=1	new_cov=22/60	quality=221.4	ref_cov=0/1	tot_cov=22/62
 RA	28		NC_001416	20835	1	.	C	frequency=1	new_cov=33/64	quality=277.5	ref_cov=0/0	tot_cov=33/64
 RA	29		NC_001416	21714	0	G	A	frequency=1	new_cov=32/62	quality=285.2	ref_cov=0/1	tot_cov=33/63
 JC	1		NC_001416	21737	-1	NC_001416	27734	1	0	alignment_overlap=5	coverage_minus=38	coverage_plus=43	flanking_left=35	flanking_right=35	key=NC_001416__21737__0__NC_001416__27729__1__5____35__35__0__0	max_left=29	max_left_minus=27	max_left_plus=29	max_min_left=13	max_min_left_minus=13	max_min_left_plus=11	max_min_right=15	max_min_right_minus=15	max_min_right_plus=15	max_right=29	max_right_minus=29	max_right_plus=28	min_overlap_score=604	pos_hash_score=40	side_1_annotate_key=gene	side_1_overlap=5	side_1_redundant=0	side_2_annotate_key=gene	side_2_overlap=0	side_2_redundant=0	total_non_overlap_reads=81	total_reads=117
 MC	46		NC_001416	21738	27733	0	0	left_inside_cov=0	left_outside_cov=105	right_inside_cov=0	right_outside_cov=105
-RA	30		NC_001416	22444	0	A	G	deleted=1	frequency=1	new_cov=1/0	quality=-1.6	ref_cov=0/0	reject=EVALUE	tot_cov=1/0
-RA	31		NC_001416	22470	0	C	A	deleted=1	frequency=1	new_cov=1/0	quality=-2.2	ref_cov=0/0	reject=EVALUE	tot_cov=1/0
-RA	32		NC_001416	24211	0	C	T	deleted=1	frequency=1	new_cov=1/0	quality=-1.9	ref_cov=0/0	reject=EVALUE	tot_cov=1/0
-RA	33		NC_001416	24220	0	C	T	deleted=1	frequency=1	new_cov=1/1	quality=1.8	ref_cov=0/0	reject=EVALUE	tot_cov=1/1
-RA	34		NC_001416	24222	0	G	A	deleted=1	frequency=1	new_cov=1/1	quality=1.6	ref_cov=0/0	reject=EVALUE	tot_cov=1/1
-RA	35		NC_001416	24225	0	G	A	deleted=1	frequency=1	new_cov=1/1	quality=0.2	ref_cov=0/0	reject=EVALUE	tot_cov=1/1
-RA	37		NC_001416	24241	0	T	C	deleted=1	frequency=1	new_cov=1/0	quality=-3.0	ref_cov=0/0	reject=EVALUE	tot_cov=1/0
-RA	38		NC_001416	24242	0	T	C	deleted=1	frequency=1	new_cov=1/0	quality=-3.2	ref_cov=0/0	reject=EVALUE	tot_cov=1/0
-RA	39		NC_001416	24244	0	C	T	deleted=1	frequency=1	new_cov=1/0	quality=-1.8	ref_cov=0/0	reject=EVALUE	tot_cov=1/0
-RA	40		NC_001416	24248	0	C	G	deleted=1	frequency=1	new_cov=1/0	quality=-2.5	ref_cov=0/0	reject=EVALUE	tot_cov=1/0
-RA	41		NC_001416	27555	0	A	G	deleted=1	frequency=1	new_cov=1/0	quality=-1.6	ref_cov=0/0	reject=EVALUE	tot_cov=1/0
-RA	42		NC_001416	27563	1	.	A	deleted=1	frequency=1	new_cov=1/0	quality=-1.7	ref_cov=0/0	reject=EVALUE	tot_cov=1/0
-RA	43		NC_001416	27601	0	C	T	deleted=1	frequency=1	new_cov=1/0	quality=-1.7	ref_cov=0/0	reject=EVALUE	tot_cov=1/0
-RA	44		NC_001416	27653	0	A	T	deleted=1	frequency=1	new_cov=0/1	quality=-1.7	ref_cov=0/0	reject=EVALUE	tot_cov=0/1
-RA	45		NC_001416	27668	0	T	G	deleted=1	frequency=1	new_cov=0/1	quality=-2.2	ref_cov=0/0	reject=EVALUE	tot_cov=0/1
-JC	5		NC_001416	28757	-1	NC_001416	38418	-1	0	alignment_overlap=9	coverage_minus=0	coverage_plus=1	flanking_left=35	flanking_right=35	key=NC_001416__28757__0__NC_001416__38427__0__9____35__35__0__0	max_left=5	max_left_minus=0	max_left_plus=5	max_min_left=5	max_min_left_minus=0	max_min_left_plus=5	max_min_right=0	max_min_right_minus=0	max_min_right_plus=0	max_right=17	max_right_minus=0	max_right_plus=17	min_overlap_score=5	pos_hash_score=1	reject=NJ,COV	side_1_annotate_key=gene	side_1_overlap=9	side_1_redundant=0	side_2_annotate_key=gene	side_2_overlap=0	side_2_redundant=0	total_non_overlap_reads=1	total_reads=1
+RA	30		NC_001416	22444	0	A	G	deleted=	frequency=1	new_cov=1/0	quality=-1.6	ref_cov=0/0	reject=EVALUE	tot_cov=1/0
+RA	31		NC_001416	22470	0	C	A	deleted=	frequency=1	new_cov=1/0	quality=-2.2	ref_cov=0/0	reject=EVALUE	tot_cov=1/0
+RA	32		NC_001416	24211	0	C	T	deleted=	frequency=1	new_cov=1/0	quality=-1.9	ref_cov=0/0	reject=EVALUE	tot_cov=1/0
+RA	33		NC_001416	24220	0	C	T	deleted=	frequency=1	new_cov=1/1	quality=1.8	ref_cov=0/0	reject=EVALUE	tot_cov=1/1
+RA	34		NC_001416	24222	0	G	A	deleted=	frequency=1	new_cov=1/1	quality=1.6	ref_cov=0/0	reject=EVALUE	tot_cov=1/1
+RA	35		NC_001416	24225	0	G	A	deleted=	frequency=1	new_cov=1/1	quality=0.2	ref_cov=0/0	reject=EVALUE	tot_cov=1/1
+RA	37		NC_001416	24241	0	T	C	deleted=	frequency=1	new_cov=1/0	quality=-3.0	ref_cov=0/0	reject=EVALUE	tot_cov=1/0
+RA	38		NC_001416	24242	0	T	C	deleted=	frequency=1	new_cov=1/0	quality=-3.2	ref_cov=0/0	reject=EVALUE	tot_cov=1/0
+RA	39		NC_001416	24244	0	C	T	deleted=	frequency=1	new_cov=1/0	quality=-1.8	ref_cov=0/0	reject=EVALUE	tot_cov=1/0
+RA	40		NC_001416	24248	0	C	G	deleted=	frequency=1	new_cov=1/0	quality=-2.5	ref_cov=0/0	reject=EVALUE	tot_cov=1/0
+RA	41		NC_001416	27555	0	A	G	deleted=	frequency=1	new_cov=1/0	quality=-1.6	ref_cov=0/0	reject=EVALUE	tot_cov=1/0
+RA	42		NC_001416	27563	1	.	A	deleted=	frequency=1	new_cov=1/0	quality=-1.7	ref_cov=0/0	reject=EVALUE	tot_cov=1/0
+RA	43		NC_001416	27601	0	C	T	deleted=	frequency=1	new_cov=1/0	quality=-1.7	ref_cov=0/0	reject=EVALUE	tot_cov=1/0
+RA	44		NC_001416	27653	0	A	T	deleted=	frequency=1	new_cov=0/1	quality=-1.7	ref_cov=0/0	reject=EVALUE	tot_cov=0/1
+RA	45		NC_001416	27668	0	T	G	deleted=	frequency=1	new_cov=0/1	quality=-2.2	ref_cov=0/0	reject=EVALUE	tot_cov=0/1
+JC	5		NC_001416	28757	-1	NC_001416	38418	-1	0	alignment_overlap=9	coverage_minus=0	coverage_plus=1	flanking_left=35	flanking_right=35	key=NC_001416__28757__0__NC_001416__38427__0__9____35__35__0__0	max_left=5	max_left_minus=0	max_left_plus=5	max_min_left=5	max_min_left_minus=0	max_min_left_plus=5	max_min_right=0	max_min_right_minus=0	max_min_right_plus=0	max_right=17	max_right_minus=0	max_right_plus=17	min_overlap_score=5	pos_hash_score=1	reject=NJ	side_1_annotate_key=gene	side_1_overlap=9	side_1_redundant=0	side_2_annotate_key=gene	side_2_overlap=0	side_2_redundant=0	total_non_overlap_reads=1	total_reads=1
 RA	48		NC_001416	31016	0	T	C	frequency=1	new_cov=57/47	quality=288.8	ref_cov=0/0	tot_cov=58/47
 RA	49		NC_001416	31859	0	T	G	bias_e_value=14636.1319341365	bias_p_value=0.301763472313234	fisher_strand_p_value=0.0879533659712727	frequency=0.0530	ks_quality_p_value=1	log10_base_likelihood=-3.83941	log10_qual_likelihood_position_model=6.05011418695804	log10_strand_likelihood_position_model=1.1282652065214	new_cov=4/2	polymorphism_quality=0.17649113039787	quality=223.9	quality_position_model=Inf	ref_cov=23/53	reject=EVALUE,EVALUE	tot_cov=27/55
 RA	50		NC_001416	32877	0	T	G	bias_e_value=4721.36471464112	bias_p_value=0.097343711901388	fisher_strand_p_value=0.0198626135951907	frequency=0.0440	ks_quality_p_value=0.995393040127886	log10_base_likelihood=-3.73105	log10_qual_likelihood_position_model=7.72952765746748	log10_strand_likelihood_position_model=1.73475611942384	new_cov=5/1	polymorphism_quality=0.06191460785569	quality=288.5	quality_position_model=Inf	ref_cov=32/67	reject=EVALUE,EVALUE,FISHER_STRAND_P_VALUE	tot_cov=37/68
 RA	51		NC_001416	34428	0	T	G	bias_e_value=1628.20617068871	bias_p_value=0.033569876926492	fisher_strand_p_value=0.00539512673919693	frequency=0.1150	ks_quality_p_value=1	log10_base_likelihood=-8.1993	log10_qual_likelihood_position_model=10.1751669687846	log10_strand_likelihood_position_model=2.5653303801715	new_cov=9/2	polymorphism_quality=4.70113657486942	quality=194.8	quality_position_model=Inf	ref_cov=23/47	reject=FISHER_STRAND_P_VALUE	tot_cov=32/49
 RA	52		NC_001416	34934	0	A	G	frequency=1	new_cov=21/45	quality=180.0	ref_cov=0/0	tot_cov=21/46
-JC	6		NC_001416	35670	1	NC_001416	35715	-1	0	alignment_overlap=6	coverage_minus=1	coverage_plus=0	flanking_left=35	flanking_right=35	key=NC_001416__35670__1__NC_001416__35721__0__6____35__35__0__0	max_left=15	max_left_minus=15	max_left_plus=0	max_min_left=0	max_min_left_minus=0	max_min_left_plus=0	max_min_right=14	max_min_right_minus=14	max_min_right_plus=0	max_right=14	max_right_minus=14	max_right_plus=0	min_overlap_score=14	pos_hash_score=1	reject=NJ,COV	side_1_annotate_key=gene	side_1_overlap=6	side_1_redundant=0	side_2_annotate_key=gene	side_2_overlap=0	side_2_redundant=0	total_non_overlap_reads=1	total_reads=1
+JC	6		NC_001416	35670	1	NC_001416	35715	-1	0	alignment_overlap=6	coverage_minus=1	coverage_plus=0	flanking_left=35	flanking_right=35	key=NC_001416__35670__1__NC_001416__35721__0__6____35__35__0__0	max_left=15	max_left_minus=15	max_left_plus=0	max_min_left=0	max_min_left_minus=0	max_min_left_plus=0	max_min_right=14	max_min_right_minus=14	max_min_right_plus=0	max_right=14	max_right_minus=14	max_right_plus=0	min_overlap_score=14	pos_hash_score=1	reject=NJ	side_1_annotate_key=gene	side_1_overlap=6	side_1_redundant=0	side_2_annotate_key=gene	side_2_overlap=0	side_2_redundant=0	total_non_overlap_reads=1	total_reads=1
 RA	53		NC_001416	37417	0	A	C	bias_e_value=590.668843470868	bias_p_value=0.0121782368453026	fisher_strand_p_value=0.00164686250879327	frequency=0.0650	ks_quality_p_value=0.997804611201067	log10_base_likelihood=-5.39935	log10_qual_likelihood_position_model=5.03367551298263	log10_strand_likelihood_position_model=2.79352758413278	new_cov=1/4	polymorphism_quality=1.81047484503843	quality=199.5	quality_position_model=Inf	ref_cov=58/7	reject=EVALUE,EVALUE,FISHER_STRAND_P_VALUE	tot_cov=59/11
 RA	54		NC_001416	37818	0	C	.	frequency=1	new_cov=30/18	quality=184.6	ref_cov=1/0	tot_cov=31/18
-JC	7		NC_001416	41264	-1	NC_001416	41306	-1	0	alignment_overlap=7	coverage_minus=1	coverage_plus=0	flanking_left=35	flanking_right=35	key=NC_001416__41264__0__NC_001416__41313__0__7____35__35__0__0	max_left=5	max_left_minus=5	max_left_plus=0	max_min_left=5	max_min_left_minus=5	max_min_left_plus=0	max_min_right=0	max_min_right_minus=0	max_min_right_plus=0	max_right=17	max_right_minus=17	max_right_plus=0	min_overlap_score=5	pos_hash_score=1	reject=NJ,COV	side_1_annotate_key=gene	side_1_overlap=7	side_1_redundant=0	side_2_annotate_key=gene	side_2_overlap=0	side_2_redundant=0	total_non_overlap_reads=1	total_reads=1
+JC	7		NC_001416	41264	-1	NC_001416	41306	-1	0	alignment_overlap=7	coverage_minus=1	coverage_plus=0	flanking_left=35	flanking_right=35	key=NC_001416__41264__0__NC_001416__41313__0__7____35__35__0__0	max_left=5	max_left_minus=5	max_left_plus=0	max_min_left=5	max_min_left_minus=5	max_min_left_plus=0	max_min_right=0	max_min_right_minus=0	max_min_right_plus=0	max_right=17	max_right_minus=17	max_right_plus=0	min_overlap_score=5	pos_hash_score=1	reject=NJ	side_1_annotate_key=gene	side_1_overlap=7	side_1_redundant=0	side_2_annotate_key=gene	side_2_overlap=0	side_2_redundant=0	total_non_overlap_reads=1	total_reads=1
 RA	55		NC_001416	41698	0	G	C	bias_e_value=9740.02905758025	bias_p_value=0.200817060277520	fisher_strand_p_value=0.177489177489178	frequency=0.0200	ks_quality_p_value=0.283647528200175	log10_base_likelihood=-4.246	log10_qual_likelihood_position_model=1.14052415816023	log10_strand_likelihood_position_model=0.750828123172416	new_cov=0/2	polymorphism_quality=0.60494010047066	quality=276.1	quality_position_model=0.000430774404856407	ref_cov=57/40	reject=EVALUE,EVALUE	tot_cov=57/42
 RA	56		NC_001416	42687	0	C	A	bias_e_value=64.3834623536492	bias_p_value=0.00132743932938125	fisher_strand_p_value=0.000134136877101877	frequency=0.0620	ks_quality_p_value=0.997701810837451	log10_base_likelihood=-5.94136	log10_qual_likelihood_position_model=4.93939859850425	log10_strand_likelihood_position_model=3.87245180887363	new_cov=0/4	polymorphism_quality=2.37325729893060	quality=136.6	quality_position_model=Inf	ref_cov=53/4	reject=FISHER_STRAND_P_VALUE	tot_cov=53/8
 RA	57		NC_001416	45618	0	T	C	frequency=1	new_cov=59/78	quality=389.0	ref_cov=0/1	tot_cov=61/79
-JC	8		NC_001416	45885	1	NC_001416	45888	1	0	alignment_overlap=1	coverage_minus=0	coverage_plus=1	flanking_left=35	flanking_right=35	key=NC_001416__45885__1__NC_001416__45887__1__1____35__35__0__0	max_left=15	max_left_minus=0	max_left_plus=15	max_min_left=15	max_min_left_minus=0	max_min_left_plus=15	max_min_right=0	max_min_right_minus=0	max_min_right_plus=0	max_right=16	max_right_minus=0	max_right_plus=16	min_overlap_score=15	pos_hash_score=1	reject=NJ,COV	side_1_annotate_key=gene	side_1_overlap=1	side_1_redundant=0	side_2_annotate_key=gene	side_2_overlap=0	side_2_redundant=0	total_non_overlap_reads=1	total_reads=1
+JC	8		NC_001416	45885	1	NC_001416	45888	1	0	alignment_overlap=1	coverage_minus=0	coverage_plus=1	flanking_left=35	flanking_right=35	key=NC_001416__45885__1__NC_001416__45887__1__1____35__35__0__0	max_left=15	max_left_minus=0	max_left_plus=15	max_min_left=15	max_min_left_minus=0	max_min_left_plus=15	max_min_right=0	max_min_right_minus=0	max_min_right_plus=0	max_right=16	max_right_minus=0	max_right_plus=16	min_overlap_score=15	pos_hash_score=1	reject=NJ	side_1_annotate_key=gene	side_1_overlap=1	side_1_redundant=0	side_2_annotate_key=gene	side_2_overlap=0	side_2_redundant=0	total_non_overlap_reads=1	total_reads=1
 RA	58		NC_001416	46136	0	T	C	bias_e_value=14672.8649412337	bias_p_value=0.302520822671925	fisher_strand_p_value=0.103808978099907	frequency=0.0780	ks_quality_p_value=0.850264975458691	log10_base_likelihood=-12.1662	log10_qual_likelihood_position_model=7.05128383987615	log10_strand_likelihood_position_model=1.28965449503524	new_cov=11/1	polymorphism_quality=8.75377751417352	quality=369.3	quality_position_model=1.17394557893881e-05	ref_cov=88/45	tot_cov=99/47
 RA	59		NC_001416	46154	0	G	A	bias_e_value=46426.6504311645	bias_p_value=0.957211051733217	fisher_strand_p_value=0.752458085922473	frequency=0.0770	ks_quality_p_value=0.959660187753606	log10_base_likelihood=-19.1767	log10_qual_likelihood_position_model=5.8834903409504	log10_strand_likelihood_position_model=0.643859897051053	new_cov=9/3	polymorphism_quality=15.86303155100938	quality=377.3	quality_position_model=1.00128572404355e-14	ref_cov=96/47	tot_cov=106/50
 RA	60		NC_001416	46157	0	C	G	bias_e_value=47921.8320052735	bias_p_value=0.988038266571966	fisher_strand_p_value=1	frequency=0.0620	ks_quality_p_value=0.849368756303535	log10_base_likelihood=-23.405	log10_qual_likelihood_position_model=5.31078221304659	log10_strand_likelihood_position_model=0.573885027659256	new_cov=8/3	polymorphism_quality=20.13464380094511	quality=420.3	quality_position_model=1.15019729423798e-19	ref_cov=109/46	tot_cov=117/49
@@ -163,8 +163,8 @@ RA	105		NC_001416	48432	0	C	T	bias_e_value=41046.3663577573	bias_p_value=0.84628
 RA	106		NC_001416	48444	0	T	C	bias_e_value=42813.0107191744	bias_p_value=0.882706088804057	fisher_strand_p_value=1	frequency=0.0770	ks_quality_p_value=0.556582005751236	log10_base_likelihood=-5.14412	log10_qual_likelihood_position_model=2.82027445628922	log10_strand_likelihood_position_model=0.357686332752164	new_cov=3/1	polymorphism_quality=1.54473336357098	quality=129.6	quality_position_model=0.00113955973110280	ref_cov=36/11	reject=EVALUE,EVALUE	tot_cov=39/12
 RA	107		NC_001416	48459	0	C	T	bias_e_value=29635.984726645	bias_p_value=0.611026034527339	fisher_strand_p_value=1	frequency=0.1030	ks_quality_p_value=0.260584632371953	log10_base_likelihood=-5.18825	log10_qual_likelihood_position_model=1.6085260335772	log10_strand_likelihood_position_model=0.329772432624369	new_cov=2/1	polymorphism_quality=1.59071391742411	quality=56.7	quality_position_model=4.75284150367817e-05	ref_cov=18/8	reject=EVALUE,EVALUE	tot_cov=20/9
 MC	109		NC_001416	48462	48502	0	0	left_inside_cov=31	left_outside_cov=33	right_inside_cov=0	right_outside_cov=NA
-RA	108		NC_001416	48467	0	C	T	bias_e_value=47207.4726858699	bias_p_value=0.973309815798727	deleted=1	fisher_strand_p_value=1	frequency=0.1170	ks_quality_p_value=0.778037627049139	log10_base_likelihood=-3.7161	log10_qual_likelihood_position_model=1.83250891270624	log10_strand_likelihood_position_model=0.313994972828349	new_cov=1/1	polymorphism_quality=0.04609246698842	quality=30.6	quality_position_model=0.00312794475471234	ref_cov=10/5	reject=EVALUE,EVALUE	tot_cov=11/6
-UN	10		NC_001416	1	8	
-UN	36		NC_001416	21738	24227	
-UN	47		NC_001416	24239	27733	
-UN	110		NC_001416	48497	48502	
+RA	108		NC_001416	48467	0	C	T	bias_e_value=47207.4726858699	bias_p_value=0.973309815798727	deleted=	fisher_strand_p_value=1	frequency=0.1170	ks_quality_p_value=0.778037627049139	log10_base_likelihood=-3.7161	log10_qual_likelihood_position_model=1.83250891270624	log10_strand_likelihood_position_model=0.313994972828349	new_cov=1/1	polymorphism_quality=0.04609246698842	quality=30.6	quality_position_model=0.00312794475471234	ref_cov=10/5	reject=EVALUE,EVALUE	tot_cov=11/6
+UN	10		NC_001416	1	8
+UN	36		NC_001416	21738	24227
+UN	47		NC_001416	24239	27733
+UN	110		NC_001416	48497	48502

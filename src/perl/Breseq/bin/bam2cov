@@ -83,8 +83,6 @@ use lib $FindBin::Bin . "/../lib/perl5";
 use lib $FindBin::Bin . "/../lib/perl5/site_perl";
 use lib $FindBin::Bin . "/../lib/perl5/$Config{archname}";
 
-use Bio::DB::Sam;
-
 ## breseq modules
 use Breseq::CoverageOutput;
 
@@ -126,7 +124,7 @@ $fasta_path = 'data/reference.fasta' if (!$fasta_path && -e 'data/reference.fast
 die "No BAM file defined.\n" if (!$bam_path);
 die "No fasta file defined.\n" if (!$fasta_path);
 
-my $co = Breseq::CoverageOutput->new(-fasta => $fasta_path, -bam => $bam_path);
+my $co = Breseq::CoverageOutput->new({fasta => $fasta_path, bam => $bam_path});
 
 ### Create regions that tile the genome with this size
 if ($tile)

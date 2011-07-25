@@ -59,7 +59,8 @@ namespace breseq {
         m_start = _in->m_start;
         m_end = _in->m_end;
         m_strand = _in->m_strand;
-		sequence_feature_map_t::operator=(*_in);
+        sequence_feature_map_t::operator=(*_in);
+        return this;
       }
       
       //<! Safe accessor that returns empty string if not defined. 
@@ -135,7 +136,7 @@ namespace breseq {
     map<string,string> ref_strings;
 
     map<string, vector<cSequenceFeature> > repeat_lists;
-    static cSequenceFeature* find_closest_repeat_region(uint32_t position, vector<cSequenceFeature>& repeat_list_ref, uint32_t max_distance, bool direction);
+    static cSequenceFeature* find_closest_repeat_region(uint32_t position, vector<cSequenceFeature>& repeat_list_ref, uint32_t max_distance, int32_t direction);
   };
   
   /*! Helper function for creating cReferenceSequences

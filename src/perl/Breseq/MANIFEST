@@ -1,4 +1,3 @@
-bin/bam2aln
 bin/bam2cov
 bin/breseq
 bin/fastq_utils
@@ -6,18 +5,12 @@ bin/genbank_utils
 bin/shrimp_normalize
 Build.PL
 Changes
-lib/Breseq/AlignmentCorrection.pm
-lib/Breseq/AlignmentOutput.pm
 lib/Breseq/breseq_small.png
 lib/Breseq/breseq.png
-lib/Breseq/CandidateJunctions.pm
 lib/Breseq/coverage_distribution.r
 lib/Breseq/CoverageDistribution.pm
 lib/Breseq/CoverageOutput.pm
-lib/Breseq/ErrorCalibration.pm
 lib/Breseq/Fastq.pm
-lib/Breseq/MutationIdentification.pm
-lib/Breseq/MutationPredictor.pm
 lib/Breseq/Output.pm
 lib/Breseq/plot_coverage.r
 lib/Breseq/plot_error_rate.r

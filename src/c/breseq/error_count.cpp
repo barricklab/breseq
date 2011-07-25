@@ -464,7 +464,7 @@ void cErrorTable::read_covariates(const string& colnames) {
     else if (columns_parts[0] == "quality") {
       m_covariate_used[k_quality] = true;
       // This is a bit lazy, we could assign a minimum quality offset to save empty bins...
-      m_covariate_max[k_quality] = atoi(columns_parts[1].c_str()) + 1;
+      m_covariate_max[k_quality] = atoi(columns_parts[1].c_str());
     }
     else if (columns_parts[0] == "read_set") {
       m_covariate_used[k_read_set] = true;
@@ -481,7 +481,7 @@ void cErrorTable::read_covariates(const string& colnames) {
     }
     else if (columns_parts[0] == "base_repeat") {
       m_covariate_used[k_base_repeat] = true;
-      m_covariate_max[k_base_repeat] = atoi(columns_parts[1].c_str())+1;
+      m_covariate_max[k_base_repeat] = atoi(columns_parts[1].c_str());
       // Base repeat will trypically have a cap, above which we combine all values
       m_covariate_enforce_max[k_base_repeat] = true;
     }

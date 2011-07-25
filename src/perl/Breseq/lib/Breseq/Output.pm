@@ -38,7 +38,6 @@ require Exporter;
 our @ISA = qw( Exporter );
 our @EXPORT = qw();
 
-use Breseq::AlignmentOutput;
 use Breseq::CoverageOutput;
 use GenomeDiff;
 
@@ -1077,7 +1076,7 @@ sub html_new_junction_table_string
 	## the rows in this table are linked (same background color for every two)
 	my $row_bg_color_index = 0;
 	foreach my $c (@$list_ref)
-	{			
+	{					
 		### Side 1
 		my $key = 'side_1';			
 		my $annotate_key = "junction_" . $c->{"$key\_annotate_key"};
@@ -1194,26 +1193,11 @@ sub html_evidence_file
 
 		$interval->{quality_score_cutoff} = $settings->{base_quality_cutoff} if (defined $settings->{base_quality_cutoff});
 		
-		# experiment with using C++ version
-		if (!$settings->{perl_bam2aln}) 
-		{
-			my $cbam2aln = $settings->ctool("cbam2aln");
-			my $command = "$cbam2aln --bam $interval->{bam_path} --fasta $interval->{fasta_path} --region $s --quality-score-cutoff $settings->{base_quality_cutoff} --stdout";
-			print HTML `$command`;
-			print STDERR "$command\n";
-		}
-		else 
-		{
-			my $ao = Breseq::AlignmentOutput->new;
-			my $options = {};
-		
-			print HTML $ao->html_alignment(
-				$interval->{bam_path}, 
-				$interval->{fasta_path}, 
-				$s, 
-				$interval,
-			);
-		}
+		# use C++ version
+		my $cbam2aln = $settings->ctool("cbam2aln");
+		my $command = "$cbam2aln --bam $interval->{bam_path} --fasta $interval->{fasta_path} --region $s --quality-score-cutoff $settings->{base_quality_cutoff} --stdout";
+		print HTML `$command`;
+		print STDERR "$command\n";
 	}
 	print HTML end_html;
 	close HTML;
@@ -1575,64 +1559,46 @@ sub draw_coverage
 	my @mc = $gd->list('MC');
 	my $drawing_format = 'png';
 
-	if (0)
+	my $fasta_path = $settings->file_name('reference_fasta_file_name');
+	my $bam_path = $settings->file_name('reference_bam_file_name');
+	my $evidence_path = $settings->file_name('evidence_path');
+	
+	my $co = Breseq::CoverageOutput->new({fasta => $fasta_path, bam => $bam_path, path => $evidence_path});
+
+	##plot the overview for each seq_id
+	foreach my $seq_id (@{$ref_seq_info->{seq_ids}})
 	{
-		$settings->create_path('coverage_plot_path');
-		my $coverage_plot_path = $settings->file_name('coverage_plot_path');	
-		my $deletions_text_file_name = $settings->file_name('deletions_text_file_name');
-		Breseq::Output::save_text_deletion_file($deletions_text_file_name, \@mc);
-		
-		foreach my $seq_id (@{$ref_seq_info->{seq_ids}})
-		{
-			my $this_complete_coverage_text_file_name = $settings->file_name('complete_coverage_text_file_name', {'@'=>$seq_id});			
-			my $res = Breseq::Shared::system("$FindBin::Bin/plot_coverage --drawing-format $drawing_format -t $coverage_plot_path -p $settings->{coverage_plot_path} -i $deletions_text_file_name -c $this_complete_coverage_text_file_name --seq_id=$seq_id");				
-			die if ($res);
+		my $region = $seq_id . ":" . "1" . "-" . (length $ref_seq_info->{ref_strings}->{$seq_id});
+		print STDERR "Creating coverage plot for region $region\n";
+		$co->plot_coverage($region, "$evidence_path/$seq_id\.overview", {verbose=>0, resolution=>undef, pdf => 0, total_only => 1, shaded_flanking => 0, reference_length => length($ref_seq_info->{ref_strings}->{$seq_id}) });
+	}
 
-			#need to assign link names that correspond to what the R script is doing
-			my $i=1;
-			my @this_deletions = grep {$_->{seq_id} eq $seq_id} @mc if ($seq_id);
-			foreach my $del (@this_deletions)
-			{
-				$del->{_coverage_plot_file_name} = "$seq_id\.$i\.$drawing_format";
-				$i++;
-			}
-		}
-		$settings->remove_path('deletions_text_file_name');
-	}	
-	else
+	#make plot for every missing coverqge item
+	foreach my $item (@mc)
 	{
-		my $fasta_path = $settings->file_name('reference_fasta_file_name');
-		my $bam_path = $settings->file_name('reference_bam_file_name');
-		my $evidence_path = $settings->file_name('evidence_path');
+		my $start = $item->{start};
+		my $end = $item->{end};
+		my $size = $end - $start + 1;
 		
-		my $co = Breseq::CoverageOutput->new(-fasta => $fasta_path, -bam => $bam_path, -path => $evidence_path);
+		my $shaded_flanking = int($size/10);
+		$shaded_flanking = 100 if ($shaded_flanking < 100);
+		my $region = $item->{seq_id} . ":" . $start . "-" . $end;
 
-		##plot the overview for each seq_id
-		foreach my $seq_id (@{$ref_seq_info->{seq_ids}})
-		{
-			my $region = $seq_id . ":" . "1" . "-" . (length $ref_seq_info->{ref_strings}->{$seq_id});
-			print STDERR "Creating coverage plot for region $region\n";
-			$co->plot_coverage($region, "$evidence_path/$seq_id\.overview", {verbose=>0, resolution=>undef, pdf => 0, total_only => 1, shaded_flanking => 0, use_c_tabulate_coverage => 1});
-		}
-
-		#make plot for every missing coverqge item
-		foreach my $item (@mc)
-		{
-			my $start = $item->{start};
-			my $end = $item->{end};
-			my $size = $end - $start + 1;
+		$item->{_coverage_plot_file_name} = "$item->{seq_id}\_$start\-$end";
+		print STDERR "Creating coverage plot for region $region\n";
 			
-			my $shaded_flanking = int($size/10);
-			$shaded_flanking = 100 if ($shaded_flanking < 100);
-			my $region = $item->{seq_id} . ":" . $start . "-" . $end;
-
-			$item->{_coverage_plot_file_name} = "$item->{seq_id}\_$start\-$end";
-			print STDERR "Creating coverage plot for region $region\n";
-				
-			$co->plot_coverage($region, "$evidence_path/$item->{_coverage_plot_file_name}", {verbose=>0, resolution=>undef, pdf => 0, total_only => 0, shaded_flanking => $shaded_flanking, use_c_tabulate_coverage => 1});
-			$item->{_coverage_plot_file_name} .= ".$drawing_format";
-		}
-
+		$co->plot_coverage( $region, 
+							"$evidence_path/$item->{_coverage_plot_file_name}", 
+							{
+								verbose=>0, 
+								resolution=>undef, 
+								pdf => 0, 
+								total_only => 0, 
+								shaded_flanking => $shaded_flanking, 
+								reference_length => length($ref_seq_info->{ref_strings}->{$item->{seq_id}})
+							}
+						);
+		$item->{_coverage_plot_file_name} .= ".$drawing_format";
 	}
 
 }

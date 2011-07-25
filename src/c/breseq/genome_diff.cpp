@@ -18,57 +18,57 @@ LICENSE AND COPYRIGHT
 
 #include "breseq/genome_diff.h"
 
-using namespace breseq;
+namespace breseq {
 
 // Common keywords used for diff entries:
-const char* breseq::TYPE="type";
-const char* breseq::ID="id";
-const char* breseq::PID="parent";
-const char* breseq::SEQ_ID="seq_id";
-const char* breseq::START="start";
-const char* breseq::END="end";
-const char* breseq::START_RANGE="start_range";
-const char* breseq::END_RANGE="end_range";
-const char* breseq::LEFT_OUTSIDE_COV="left_outside_cov";
-const char* breseq::LEFT_INSIDE_COV="left_inside_cov";
-const char* breseq::RIGHT_INSIDE_COV="right_inside_cov";
-const char* breseq::RIGHT_OUTSIDE_COV="right_outside_cov";
-const char* breseq::POSITION="position";
-const char* breseq::INSERT_POSITION="insert_position";
-const char* breseq::QUALITY="quality";
-const char* breseq::POLYMORPHISM_QUALITY="polymorphism_quality";
-const char* breseq::REF_BASE="ref_base";
-const char* breseq::NEW_BASE="new_base";
-const char* breseq::FREQUENCY="frequency";
-const char* breseq::REJECT="reject";
-const char* breseq::REF_COV="ref_cov";
-const char* breseq::NEW_COV="new_cov";
-const char* breseq::TOT_COV="tot_cov";
-const char* breseq::ERROR="error";
+const char* TYPE="type";
+const char* ID="id";
+const char* PID="parent";
+const char* SEQ_ID="seq_id";
+const char* START="start";
+const char* END="end";
+const char* START_RANGE="start_range";
+const char* END_RANGE="end_range";
+const char* LEFT_OUTSIDE_COV="left_outside_cov";
+const char* LEFT_INSIDE_COV="left_inside_cov";
+const char* RIGHT_INSIDE_COV="right_inside_cov";
+const char* RIGHT_OUTSIDE_COV="right_outside_cov";
+const char* POSITION="position";
+const char* INSERT_POSITION="insert_position";
+const char* QUALITY="quality";
+const char* POLYMORPHISM_QUALITY="polymorphism_quality";
+const char* REF_BASE="ref_base";
+const char* NEW_BASE="new_base";
+const char* FREQUENCY="frequency";
+const char* REJECT="reject";
+const char* REF_COV="ref_cov";
+const char* NEW_COV="new_cov";
+const char* TOT_COV="tot_cov";
+const char* ERROR="error";
 
 // Types of diff entries:
-const char* breseq::SNP="SNP";
-const char* breseq::SUB="SUB";
-const char* breseq::DEL="DEL";
-const char* breseq::INS="INS";
-const char* breseq::MOB="MOB";
-const char* breseq::AMP="AMP";
-const char* breseq::INV="INV";
-const char* breseq::CON="CON";
+const char* SNP="SNP";
+const char* SUB="SUB";
+const char* DEL="DEL";
+const char* INS="INS";
+const char* MOB="MOB";
+const char* AMP="AMP";
+const char* INV="INV";
+const char* CON="CON";
 
-const char* breseq::RA="RA";
-const char* breseq::MC="MC";
-const char* breseq::JC="JC";
-const char* breseq::UN="UN";
+const char* RA="RA";
+const char* MC="MC";
+const char* JC="JC";
+const char* UN="UN";
 
 //our $line_specification = {
 map<string, vector<string> > line_specification =make_map<string, vector<string> > 
 //! seq_id and positions are already parameters in diff_entry
 //## mutations
 //'SNP' => ['seq_id', 'position', 'ref_seq', 'new_seq'],
-("SNP",make_list<string> ("seq_id")("position")("ref_seq")) ///BUG 1 too many parameters, new_seq?
+("SNP",make_list<string> ("seq_id")("position")("new_seq"))
 //'SUB' => ['seq_id', 'position', 'ref_seq', 'new_seq'],
-("SUB",make_list<string> ("seq_id")("position")("ref_seq")("new_seq"))
+("SUB",make_list<string> ("seq_id")("position")("size")("new_seq"))
 //'DEL' => ['seq_id', 'position', 'size'],
 ("DEL",make_list<string> ("seq_id")("position")("size"))
 //'INS' => ['seq_id', 'position', 'new_seq'],
@@ -113,43 +113,45 @@ map<string, vector<string> > line_specification =make_map<string, vector<string>
 
 // Field order.
 static const char* s_field_order[] = { 
-  breseq::SEQ_ID,
-  breseq::POSITION,
-  breseq::INSERT_POSITION,
-  breseq::REF_BASE,
-  breseq::NEW_BASE,
-  breseq::START,
-  breseq::END,
-  breseq::START_RANGE,
-  breseq::END_RANGE,
+  SEQ_ID,
+  POSITION,
+  INSERT_POSITION,
+  REF_BASE,
+  NEW_BASE,
+  START,
+  END,
+  START_RANGE,
+  END_RANGE,
 0}; // required trailing null.
 
 
 /*! Constructor.
  */
-breseq::diff_entry::diff_entry(const string& type, const string& id, vector<string> positions)
+diff_entry::diff_entry(const string& type)
 : _type(type)
-, _id(id)
-, _evidence(positions){
+, _id("")
+, _evidence()
+{
 }
 
-breseq::diff_entry::diff_entry()
+diff_entry::diff_entry()
 : _type("")
 , _id("")
-, _evidence(make_list<string>("")){
+, _evidence()
+{
 }
 
 
 
 /*! Marshal this diff entry into an ordered list of fields.
  */
-void breseq::diff_entry::marshal(field_list_t& s) {
+void diff_entry::marshal(field_list_t& s) {
 	s.push_back(_type);
 	s.push_back(_id);
   
-  for(uint8_t i = 0; i < _evidence.size(); i++)
-	  s.push_back(_evidence[i]);
-	
+  s.push_back(join(_evidence, ","));
+
+  
 	// copy all fields:
 	map_t cp=_fields;
 
@@ -167,8 +169,12 @@ void breseq::diff_entry::marshal(field_list_t& s) {
 		}
 	}
 	
-	// marshal whatever's left, unless it's an empty field
+	// marshal whatever's left, unless it's an empty field or _begins with an underscore
 	for(map_t::iterator i=cp.begin(); i!=cp.end(); ++i) {
+    
+    assert(i->first.size());
+    if (i->first.substr(0,1) == "_") continue;
+    
     if (i->second.size() > 0) 
     {
       s.push_back(i->first + "=" + i->second);
@@ -178,7 +184,7 @@ void breseq::diff_entry::marshal(field_list_t& s) {
 
 /*! Add reject reason to diff entry.
  */
-void breseq::add_reject_reason(diff_entry& de, const string &reason) {
+void add_reject_reason(diff_entry& de, const string &reason) {
 
   if (de._fields.find(REJECT) == de._fields.end()) {
       de[REJECT] = reason;
@@ -192,7 +198,7 @@ void breseq::add_reject_reason(diff_entry& de, const string &reason) {
 
 }
 
-uint32_t breseq::number_reject_reasons(diff_entry& de) {
+uint32_t number_reject_reasons(diff_entry& de) {
 
 	if (!de.entry_exists(REJECT) || de[REJECT].size() == 0)
 		return 0;
@@ -206,7 +212,7 @@ uint32_t breseq::number_reject_reasons(diff_entry& de) {
 
 /*! Output operator for a diff entry.
  */
-ostream& breseq::operator<<(ostream& out, breseq::diff_entry& de) {
+ostream& operator<<(ostream& out, diff_entry& de) {
 	field_list_t fields;
 	de.marshal(fields);
 	out << join(fields, "\t");
@@ -214,25 +220,44 @@ ostream& breseq::operator<<(ostream& out, breseq::diff_entry& de) {
 }
 /*! Constructor.
  */
-breseq::genome_diff::genome_diff(const string& filename)
+genome_diff::genome_diff(const string& filename)
  : _default_filename(filename)
- , _current_id(0) 
+ , _unique_id_counter(0) 
 {
  // Need changes in usage if we read by default @JEB
  //read(filename);  
 }
+  
+uint32_t genome_diff::new_unique_id() 
+{ 
+  uint32_t assigned_id = ++_unique_id_counter;
+  
+  while (unique_id_used.count(assigned_id))
+  {
+    assigned_id++;
+  }
+  return assigned_id; 
+}
 
 /*! Add evidence to this genome diff.
  */
-void breseq::genome_diff::add(const diff_entry& item) {
+void genome_diff::add(const diff_entry& item) {
 
-  _entry_list.push_back(item);
-  
-  diff_entry& added_item = _entry_list.back();
-  
-  if (added_item._id.size() == 0)
+  // allocating counted_ptr takes care of disposal
+  diff_entry* diff_entry_copy = new diff_entry(item);  
+  counted_ptr<diff_entry> added_item(diff_entry_copy);
+  _entry_list.push_back(added_item);
+    
+  if (added_item->_id.size() == 0)
   {
-    added_item._id = to_string(new_id()); 
+    uint32_t new_id = new_unique_id();
+    added_item->_id = to_string(new_id); 
+    unique_id_used[new_id] = true;
+  }
+  else
+  {
+    uint32_t new_id = from_string<uint32_t>(added_item->_id);
+    unique_id_used[new_id] = true;
   }
   
 // # sub add
@@ -296,7 +321,7 @@ void breseq::genome_diff::add(const diff_entry& item) {
 /*! Read a genome diff(.gd) from the given file to build the vector lines
  */
 
-void breseq::genome_diff::read(const string& filename) {
+void genome_diff::read(const string& filename) {
   ifstream IN(filename.c_str());
   if(!IN.good())
     cerr << "Could not open file for reading: " << filename << endl;
@@ -305,23 +330,19 @@ void breseq::genome_diff::read(const string& filename) {
   char const line_delim = '\n';
   for(string line; getline(IN, line, line_delim);)
     lines.push_back(line);
-// #   ## read version from first line
-// #   my $l = shift @lines;
+  
+  // read version from first line
   string l = shift<string>(lines);
-// #   ($l =~ m/#=GENOME_DIFF\s+(\d+)/) or ($l =~ m/#=GENOMEDIFF\s+(\d+)/)  
-// #   or $self->throw("Could not match version line in file $self->{file_name}.");
-  if(!regex_m("#=GENOME_DIFF",l)
-      && !regex_m("#=GENOMEDIFF",l))
+  if(!regex_m("#=GENOME_DIFF",l) && !regex_m("#=GENOMEDIFF",l))
+  {
     cerr << "Could not match version line in file" << endl;
+    assert(false);
+  }
   vector<string> version_split = split(l," ");
   assert(version_split.size() == 2);
-// #   $self->{version} = $1;
   version = version_split.back();
-// #   ## read header information
-// #   
-// #   ## read data
-// #   while ($l = shift @lines)
-// #   {
+
+  
   while(!lines.empty())
   {
     l=shift<string>(lines);
@@ -395,10 +416,10 @@ map<string, uint8_t> sort_order = make_map<string, uint8_t>
 
 /*! Write this genome diff to a file.
  */
-bool breseq::diff_entry_sort(diff_entry a, diff_entry b) {
+bool diff_entry_sort(const counted_ptr<diff_entry>& a, const counted_ptr<diff_entry>& b) {
 
-  string a_type = a._type;
-  string b_type = b._type;
+  string a_type = a->_type;
+  string b_type = b->_type;
 
   sort_fields_item a_sort_fields = diff_entry_sort_fields[a_type];
   sort_fields_item b_sort_fields = diff_entry_sort_fields[b_type];
@@ -410,8 +431,8 @@ bool breseq::diff_entry_sort(diff_entry a, diff_entry b) {
     return false;
   }
   
-  string a_sort_field_2 = a[a_sort_fields._f2];
-  string b_sort_field_2 = b[b_sort_fields._f2];
+  string a_sort_field_2 = (*a)[a_sort_fields._f2];
+  string b_sort_field_2 = (*b)[b_sort_fields._f2];
   
   if (a_sort_field_2 < b_sort_field_2) {
     return true;
@@ -419,8 +440,8 @@ bool breseq::diff_entry_sort(diff_entry a, diff_entry b) {
     return false;
   }  
 
-  uint32_t a_sort_field_3 = from_string<uint32_t>(a[a_sort_fields._f3]);
-  uint32_t b_sort_field_3 = from_string<uint32_t>(b[b_sort_fields._f3]);
+  uint32_t a_sort_field_3 = from_string<uint32_t>((*a)[a_sort_fields._f3]);
+  uint32_t b_sort_field_3 = from_string<uint32_t>((*b)[b_sort_fields._f3]);
   
   if (a_sort_field_3 < b_sort_field_3) {
     return true;
@@ -445,7 +466,7 @@ bool breseq::diff_entry_sort(diff_entry a, diff_entry b) {
 
 /*! Write this genome diff to a file.
  */
-void breseq::genome_diff::write(const string& filename) {
+void genome_diff::write(const string& filename) {
 	ofstream ofs(filename.c_str());
 	ofs << "#=GENOME_DIFF 1.0" << endl;
   
@@ -453,13 +474,13 @@ void breseq::genome_diff::write(const string& filename) {
   sort(_entry_list.begin(), _entry_list.end(), diff_entry_sort);
   
 	for(entry_list_t::iterator i=_entry_list.begin(); i!=_entry_list.end(); ++i) {
-		ofs << (*i) << endl;
+		ofs << (**i) << endl;
 	}
 	ofs.close();
 }
 
 // Convert GD file to GVF file
-void breseq::GDtoGVF( const string &file, const string &gdfile ){
+void GDtoGVF( const string &file, const string &gdfile ){
     
     // Stores the features
     vector< vector<string> > features;
@@ -521,7 +542,7 @@ void breseq::GDtoGVF( const string &file, const string &gdfile ){
     // f[7]: Varies
     // f[8]: Varies
     
-    for( int i=0; i<features.size(); i++ ){
+    for( size_t i=0; i<features.size(); i++ ){
         vector<string> gvf(9,"");
         
         for( int j=5; j<8; j++ ){
@@ -553,7 +574,7 @@ void breseq::GDtoGVF( const string &file, const string &gdfile ){
             
             gvf[8].append(";Reference_seq=").append( evidence[5] );
             
-            for( int j=0; j<evidence.size(); j++ ){
+            for( size_t j=0; j<evidence.size(); j++ ){
                 string s = evidence[j];
                 if( s.size()>8 && s.substr(0,8).compare("quality=") == 0){
                     gvf[5] = s.substr(8,s.size()-8);
@@ -565,7 +586,7 @@ void breseq::GDtoGVF( const string &file, const string &gdfile ){
                 }
             }
             
-            for( int j=0; j<features[i].size(); j++ ){
+            for( size_t j=0; j<features[i].size(); j++ ){
                 if( features[i][j].size()>10 && features[i][j].substr(0,10).compare("frequency=") == 0){
                     gvf[8].append(";Variant_freq=").append( features[i][j].substr(10,features[i][j].size()-10 ) );
                 }
@@ -577,7 +598,7 @@ void breseq::GDtoGVF( const string &file, const string &gdfile ){
             //Look for evidence information
             vector<string> evidenceNums = split( features[i][2], "," );
             string s = "";
-            for( int j=0; j<evidenceNums.size(); j++ ){
+            for( size_t j=0; j<evidenceNums.size(); j++ ){
                 vector<string> e = features[ eDict[ evidenceNums[j] ] ];
                 s.append( e[5] );
             }
@@ -656,8 +677,8 @@ void breseq::GDtoGVF( const string &file, const string &gdfile ){
     
     // Write results to file
     ofstream output( gdfile.c_str() );
-    for( int i=0; i<featuresGVF.size(); i++ ){
-        for( int j=0; j<featuresGVF[i].size(); j++ ){
+    for( size_t i=0; i<featuresGVF.size(); i++ ){
+        for( size_t j=0; j<featuresGVF[i].size(); j++ ){
             output << featuresGVF[i][j] << "\t";
         }
         output << "\n";
@@ -666,7 +687,7 @@ void breseq::GDtoGVF( const string &file, const string &gdfile ){
     
 }
 
-void breseq::VCFtoGD( const string& vcffile, const string& gdfile ){
+void VCFtoGD( const string& vcffile, const string& gdfile ){
     // Stores the features
     vector< vector<string> > featuresVCF;
     vector< vector<string> > featuresGD;
@@ -702,7 +723,7 @@ void breseq::VCFtoGD( const string& vcffile, const string& gdfile ){
     }
     vcf.close();
     
-    for( int i=0; i<featuresVCF.size(); i++ ){
+    for( size_t i=0; i<featuresVCF.size(); i++ ){
         vector<string> gd(9,"");
         vector<string> ev(9,"");
         
@@ -734,65 +755,40 @@ void breseq::VCFtoGD( const string& vcffile, const string& gdfile ){
     
     // Write results to file
     ofstream output( gdfile.c_str() );
-    for( int i=0; i<featuresGD.size(); i++ ){
-        for( int j=0; j<featuresGD[i].size(); j++ ){
+    for( size_t i=0; i<featuresGD.size(); i++ ){
+        for( size_t j=0; j<featuresGD[i].size(); j++ ){
             output << featuresGD[i][j] << "\t";
         }
         output << "\n";
     }
     output.close();
 }
-namespace breseq {
 
 /*! Given a list of types, search and return the diff_entry's within entry_list_t whose 
  * _type parameter matches one of those within input types. 
  */ 
 genome_diff::entry_list_t genome_diff::list(vector<string> types)
 {
-// # sub list
-// # {
-// #   my ($self, @types) = @_;
-// #     
-// #   ## return ALL
-// #   if (scalar @types == 0)
-// #   {
-  if(types.size())
+  entry_list_t return_list;
+
+  if(types.size() == 0)
   {
-// #     return @{$self->{list}};
     return _entry_list;
-// #   }
   }
-// #   ## return only requested types
-// #   else
-// #   {
   else
   {
-// #     my %requested;
-    
-// #     foreach my $type (@types)
-// #     {
-// #       $requested{$type} = 1;
-// #     }
-// #     my @return_list = grep { $requested{$_->{type}} } @{$self->{list}};
-// #     return @return_list;
-// #   }
-    entry_list_t return_list;
     for (entry_list_t::iterator itr_diff_entry = _entry_list.begin(); 
-       itr_diff_entry != _entry_list.end() ;itr_diff_entry ++)
+       itr_diff_entry != _entry_list.end(); itr_diff_entry++)
     {
       for (make_list<string>::iterator requested_type = types.begin();
            requested_type != types.end(); requested_type++)
       {
-        if(itr_diff_entry->_type == *requested_type)
+        if((*itr_diff_entry)->_type == *requested_type)
           return_list.push_back(*itr_diff_entry);
       }
     }
-    return return_list;
   }
-// #   
-// #   return undef;
-  ///TODO return undef
-// # }
+  return return_list;
 }
 
 genome_diff::entry_list_t genome_diff::filter_used_as_evidence(entry_list_t list)
@@ -825,182 +821,63 @@ return list;
 
 diff_entry genome_diff::_line_to_item(const string& line)
 {
-
-// # sub _line_to_item
-// # {
-// #   my ($self, $line) = @_;
-// #   my @line_list = split /\t/, $line;
   list_t line_list = split(line, "\t");
-// #   
-// #   ##remove items at the end that are empty 
-// #   while ( scalar(@line_list) && ($line_list[-1] =~ m/^\s+$/) )
-// #   {
-// #     pop @line_list;
-// #   }
-  ///^^^NOT Applicable?
-// #   
-// #   my $item = {};
   diff_entry item;
-// #   $item->{type} = shift @line_list;
   item._type = shift<string>(line_list); 
-// #   $item->{id} = shift @line_list;
   item._id = shift<string>(line_list);
-// #   my $evidence_string = shift @line_list;
   string evidence_string = shift<string>(line_list);
-// #   @{$item->{evidence}} = split /,/, $evidence_string;
   item._evidence = split(evidence_string, ",");
-// #     
-// #   my $spec = $line_specification->{$item->{type}};
+
   const list_t spec = line_specification[item._type];  
-// #   if (!defined $spec)
-// #   {
+
   if(spec.empty())
   {
-// #     $self->warn("Type \'$item->{type}\' is not recognized for line:\n$line");
     cerr << "Type " << item._type << "is not recognized for line # :"<< endl << line;
-// #     return undef;
-    ///TODO undef
-// #   }
+    assert(false);
   }
-// #   
-// #   ######## Temporary transition code for 'DUP' => AMP
-// #   if ($item->{type} eq 'DUP')
-// #   {
-  if(item._type == "DUP")
-  {
-// #     $item->{type} = 'AMP';
-    item._type = "AMP";
-// #     $item->{new_copy_number} = 2;
-    item["new_copy_number"] = 2;
-// #   }
-  }
-// #   
-// #   ######## Temporary transition code for 'MOB'
-// #   if ($item->{type} eq 'MOB')
-// #   {
-  if(item._type == "MOB")
-  {
-// #     my @spec_items = grep {!($_ =~ m/=/)} @line_list;
-    list_t spec_items = grep(false, "=", line_list);    
-// #     
-// #     if (scalar(@spec_items) == scalar(@$spec) + 2)
-// #     {
-    if(spec_items.size() == spec.size() + 2)
-    {
-// #       my $gap_left = $line_list[5];
-      string gap_left = line_list[5];
-// #       if ($gap_left =~ m/^-/)
-// #       {
-      if(regex_m("-", gap_left))
-      {
-// #         $item->{del_start} = abs($gap_left);
-        item["del_start"] = to_string(abs(atoi(gap_left.c_str()))); ///TODO GROSS
-// #       }
-      }
-// #       else
-// #       {
-      else
-      {
-// #         $item->{ins_start} = $gap_left;
-        item["ins_start"] = gap_left;
-// #       }
-      }
-///TODO TEST if abs(atoi("-7")) equals 7
-// # 
-// #       my $gap_right = $line_list[6];
-      string gap_right = line_list[6];
-// #       if ($gap_right =~ m/^-/)
-// #       {
-      if(regex_m("-",gap_right))
-      {
-// #         $item->{del_end} = abs($gap_left);
-        item["del_end"] = abs(atoi(gap_left.c_str())); ///TODO GROSS / really gap_left?
-// #       }
-      }
-// #       else
-// #       {
-      else
-      {
-// #         $item->{ins_end} = $gap_left;
-        item["ins_end"] = gap_left;
-// #       }
-      }
-// #       
-// #       ##remove these items
-// #       splice @line_list, 5, 2;
-      splice(line_list, 5, 2); 
-// #     }
-    }
-// #   }
-  }
-// #   
-// #   
 
-// #   foreach my $key (@$spec)
-// #   {
-  for(uint8_t i = 0; i < spec.size(); i++)
+
+  for(size_t i = 0; i < spec.size(); i++)
   {
     string key = spec[i];
-// #     my $next = shift @line_list;
-   string next = shift<string>(line_list);
-// #     if (!defined $next)
-// #     {
+    string next = shift<string>(line_list);
+
     if(next.empty())
     {
-// #       $self->warn("Number of required items is less than expected for type \'$item->{type}\' line:\n$line");
       cerr << "Number of required items is less than expected for type " << item._type << " line:" << endl << line; 
-// #       return undef;
-      ///TODO return undef
-      
-// #     }
+      assert(false);
     }
-// #     if ($next =~ m/=/) 
-// #     {
+
     if(regex_m("=",next))
     {
-// #       $self->warn("Unexpected key=value pair \'$next\' encountered for required item \'$key\' in type \'$item->{type}\' line:\n$line");
       cerr << "Unexpected key=value pair \'$next\' encountered for required item" << key << " in type " << item._type << " line:" << endl << line; 
-// # #     return undef;
-      ///TODO return undef
-// #     }
+      assert(false);
     }
-// #     
-// #     $item->{$key} = $next;
-  item[key] = next;
-// #   }
+    item[key] = next;
   }
-// # 
-// #   ## Remainder of the line is comprised of non-required key value pairs
-// #   foreach my $key_value_pair (@line_list)
-// #   {
+
+
   for(list_t::iterator itr = line_list.begin();
       itr != line_list.end(); itr ++)
   {
-       string key_value_pair(*itr); 
-// #     next if (!$key_value_pair);
-       if(key_value_pair.empty()) continue;
-// #     next if ($key_value_pair =~ m/^\s*$/);
-       if(!regex_m("=",key_value_pair)) continue;//TODO ASK
-// #     my $matched = ($key_value_pair =~ m/^(.+)=(.+)$/);
-         vector<string> matched = split(key_value_pair,"=");
-// #     if (!$matched)
-// #     {
-       if(matched.empty())
-       {
-// #       $self->warn("Not a key value pair \'$key_value_pair\' line:\n$line");
-         cerr << "Not a key value pair" << key_value_pair <<  endl << line;
-// #       next;
-         continue;
-// #     }   
-       }
-// #     
-// #     my ($item_key, $item_value) = ($1, $2); +
-         string item_key = matched[0];
-         string item_value = matched[1]; 
-         // #     $item->{$item_key} = $item_value;
-         item[item_key] = item_value;
-// #   }
+    string key_value_pair(*itr); 
+    if(key_value_pair.empty()) continue;
+    assert(regex_m("=",key_value_pair));
+
+    vector<string> matched = split(key_value_pair,"=");
+
+    if(matched.empty())
+    {
+      cerr << "Not a key value pair" << key_value_pair <<  endl << line;
+      assert(false);
+      continue;
+    }
+    assert(matched.size()==2);
+    string item_key = matched[0];
+    string item_value = matched[1]; 
+    item[item_key] = item_value;
   }
+  
 /// Dealing with JC is inconvenient here
 ///#############################3
 // #   ### We do some extra convenience processing for junctions...
@@ -1016,10 +893,8 @@ diff_entry genome_diff::_line_to_item(const string& line)
 // #     }
 // #   }
 ///###############################
-// # 
-// #   return $item;
+  
  return item;
-// # } 
 }
 
 genome_diff::entry_list_t genome_diff::mutation_list()

@@ -89,23 +89,12 @@ use lib $FindBin::Bin . "/../lib/perl5/vendor_perl";
 use lib $FindBin::Bin . "/../lib/perl5/vendor_perl/$Config{archname}";
 use lib $FindBin::Bin . "/../lib/perl5/vendor_perl/$Config{archname}/$Config{version}";
 
-# This block can test to be sure the right location/version is being used...
-#use Bio::DB::Sam;
-#print "$Bio::DB::Sam::VERSION \n";
-
 #### Breseq Perl Modules ####
-use Breseq::AlignmentCorrection;
-use Breseq::ErrorCalibration;
 use Breseq::Output;
 use Breseq::Settings;
 use Breseq::Shared;
-use Breseq::CandidateJunctions;
-use Breseq::MutationIdentification;
-use Breseq::MutationPredictor;
 use Breseq::ReferenceSequence;
-
-#### BioPerl Modules ####
-use Bio::SeqIO;
+use Breseq::CoverageDistribution;
 
 #### Configuration Options ####
 
@@ -186,7 +175,6 @@ if ($settings->do_step('sequence_conversion_done_file_name', "Read and reference
 	$s->{max_qual} = $overall_max_qual;	
 	$summary->{sequence_conversion} = $s;
 		
-	## convert reference sequence to fasta and store other information so it can be reloaded quickly w/o bioperl
 	my @genbank_file_names = $settings->file_name('reference_genbank_file_names'); 
 	my @junction_only_genbank_file_names = $settings->file_name('junction_only_reference_genbank_file_names'); 
 	my $reference_fasta_file_name = $settings->file_name('reference_fasta_file_name');
@@ -237,25 +225,22 @@ $settings->{max_smalt_diff} = floor($settings->{max_read_length}/2);
 $settings->{total_reference_sequence_length} = $summary->{sequence_conversion}->{total_reference_sequence_length};
 
 #load trim data per refseq
-if (!$settings->{perl_calc_trims})
+foreach my $seq_id (sort keys %{$ref_seq_info->{ref_strings}})
 {
-	foreach my $seq_id (sort keys %{$ref_seq_info->{ref_strings}})
+	my $trim_file_name = $settings->file_name('reference_trim_file_name', {'@'=>$seq_id});
+	open TRIM, "<$trim_file_name" or die "Could not open trims file: $trim_file_name\n";
+	$ref_seq_info->{trims}->{$seq_id} = '';
+	my $block;
+	my $block_size = 512;
+	while (read TRIM, $block, $block_size)
 	{
-		my $trim_file_name = $settings->file_name('reference_trim_file_name', {'@'=>$seq_id});
-		open TRIM, "<$trim_file_name" or die "Could not open trims file: $trim_file_name\n";
-		$ref_seq_info->{trims}->{$seq_id} = '';
-		my $block;
-		my $block_size = 512;
-		while (read TRIM, $block, $block_size)
-		{
-			$ref_seq_info->{trims}->{$seq_id} .= $block;
-		}
-		(length($ref_seq_info->{trims}->{$seq_id}) > 0) or die "Error reading trims file: $trim_file_name\n";
-		close TRIM;
-	
-		#print "$seq_id " . length($ref_seq_info->{trims}->{$seq_id}) . "\n";
-		#print Dumper($ref_seq_info->{trims}->{$seq_id});
+		$ref_seq_info->{trims}->{$seq_id} .= $block;
 	}
+	(length($ref_seq_info->{trims}->{$seq_id}) > 0) or die "Error reading trims file: $trim_file_name\n";
+	close TRIM;
+
+	#print "$seq_id " . length($ref_seq_info->{trims}->{$seq_id}) . "\n";
+	#print Dumper($ref_seq_info->{trims}->{$seq_id});
 }
 
 ##
@@ -356,25 +341,18 @@ if (!$settings->{no_junction_prediction})
 		
 		if ($settings->do_step('preprocess_junction_done_file_name', "Preprocessing alignments for candidate junction identification"))
 		{
-			if ($settings->{perl_preprocess_alignments})
-			{
-				Breseq::CandidateJunction::preprocess_alignments($settings, $summary, $ref_seq_info);
-			}
-			else
-			{
-				my $cbreseq = $settings->ctool('cbreseq');
-				my $readfiles = join(" --read-file ", $settings->read_files);
-				my $data_path = $settings->file_name("data_path");
-				my $reference_alignment_path = $settings->file_name("reference_alignment_path");
-				my $candidate_junction_path = $settings->file_name("candidate_junction_path");
+			my $cbreseq = $settings->ctool('cbreseq');
+			my $readfiles = join(" --read-file ", $settings->read_files);
+			my $data_path = $settings->file_name("data_path");
+			my $reference_alignment_path = $settings->file_name("reference_alignment_path");
+			my $candidate_junction_path = $settings->file_name("candidate_junction_path");
 
-				my $cmdline = "$cbreseq PREPROCESS_ALIGNMENTS --data-path $data_path";
-				$cmdline .= " --reference-alignment-path $reference_alignment_path";
-				$cmdline .= " --candidate-junction-path $candidate_junction_path";
-				$cmdline .= " --read-file $readfiles";
-				
-				Breseq::Shared::system($cmdline);				
-			}
+			my $cmdline = "$cbreseq PREPROCESS_ALIGNMENTS --data-path $data_path";
+			$cmdline .= " --reference-alignment-path $reference_alignment_path";
+			$cmdline .= " --candidate-junction-path $candidate_junction_path";
+			$cmdline .= " --read-file $readfiles";
+			
+			Breseq::Shared::system($cmdline);				
 			
 			$settings->done_step('preprocess_junction_done_file_name');
 		}
@@ -399,11 +377,24 @@ if (!$settings->{no_junction_prediction})
 			unlink $coverage_junction_best_bam_unsorted_file_name if (!$settings->{keep_all_intermediates});
 			Breseq::Shared::system("$samtools index $coverage_junction_best_bam_file_name");
 		
-			Breseq::ErrorCalibration::count($settings, $summary, $ref_seq_info, 
-				'reference_fasta_file_name', 'coverage_junction_best_bam_file_name', 'coverage_junction_distribution_file_name');
-		
+			# Count errors
+			my $reference_fasta_file_name = $settings->file_name('reference_fasta_file_name');
+	        my $reference_bam_file_name = $settings->file_name('coverage_junction_best_bam_file_name');
+			
+	        my $cbreseq = $settings->ctool('cbreseq');	
+			## deal with distribution or error count keys being undefined...
+			my $coverage_fn = $settings->file_name('coverage_junction_distribution_file_name', {'@'=>""});
+			my $outputdir = `dirname $coverage_fn`;
+			chomp $outputdir; $outputdir .= '/';
+			my $readfiles = join(" --readfile ", $settings->read_files);
+			my $cmdline = "$cbreseq ERROR_COUNT --bam $reference_bam_file_name --fasta $reference_fasta_file_name --output $outputdir --readfile $readfiles --coverage";
+			## IMPORTANT: WE DON'T COUNT ERRORS HERE, ONLY COVERAGE @JEB
+			##$cmdline .= " --errors";
+			$cmdline .= " --minimum-quality-score $settings->{base_quality_cutoff}" if ($settings->{base_quality_cutoff});
+			Breseq::Shared::system($cmdline);
+					
 			my $error_rates_summary_file_name = $settings->file_name('error_rates_summary_file_name');
-			Breseq::ErrorCalibration::analyze_unique_coverage_distributions($settings, $summary, $ref_seq_info, 
+			Breseq::CoverageDistribution::analyze_unique_coverage_distributions($settings, $summary, $ref_seq_info, 
 				'coverage_junction_plot_file_name', 'coverage_junction_distribution_file_name');
 
 			Storable::store($summary->{unique_coverage}, $coverage_junction_summary_file_name) or die "Can't store data in file $coverage_junction_summary_file_name!\n";
@@ -419,36 +410,29 @@ if (!$settings->{no_junction_prediction})
 	{
 		print STDERR "Identifying candidate junctions...\n";
 		
-		if ($settings->{perl_identify_candidate_junctions})
-		{
-			Breseq::CandidateJunction::identify_candidate_junctions($settings, $summary, $ref_seq_info);
-		}
-		else
-		{
-			my $cbreseq = $settings->ctool('cbreseq');
-			my $readfiles = join(" --read-file ", $settings->read_files);
-			my $data_path = $settings->file_name("data_path");
-			my $candidate_junction_path = $settings->file_name("candidate_junction_path");
+		my $cbreseq = $settings->ctool('cbreseq');
+		my $readfiles = join(" --read-file ", $settings->read_files);
+		my $data_path = $settings->file_name("data_path");
+		my $candidate_junction_path = $settings->file_name("candidate_junction_path");
 
-			my $cmdline = "$cbreseq IDENTIFY_CANDIDATE_JUNCTIONS --data-path $data_path";
-			$cmdline .= " --candidate-junction-path $candidate_junction_path";
-			$cmdline .= " --read-file $readfiles";
-			my $maximum_read_length = $summary->{sequence_conversion}->{max_read_length};
-			$cmdline .= " --maximum-read-length $maximum_read_length";
-			my $reference_sequence_length = $settings->{total_reference_sequence_length};
-			$cmdline .= " --reference-sequence-length $reference_sequence_length";
-			
-			Breseq::Shared::system($cmdline);	
-			
-			my $samtools = $settings->ctool("samtools");
-			my $faidx_command = "$samtools faidx $candidate_junction_path/candidate_junction.fasta";
-			if (-s "$candidate_junction_path/candidate_junction.fasta" > 0)
-			{
-				Breseq::Shared::system($faidx_command);	
-			}
-			## @JEB Fix this -- no summary currently...
-			$summary->{candidate_junction} = {};
+		my $cmdline = "$cbreseq IDENTIFY_CANDIDATE_JUNCTIONS --data-path $data_path";
+		$cmdline .= " --candidate-junction-path $candidate_junction_path";
+		$cmdline .= " --read-file $readfiles";
+		my $maximum_read_length = $summary->{sequence_conversion}->{max_read_length};
+		$cmdline .= " --maximum-read-length $maximum_read_length";
+		my $reference_sequence_length = $settings->{total_reference_sequence_length};
+		$cmdline .= " --reference-sequence-length $reference_sequence_length";
+		
+		Breseq::Shared::system($cmdline);	
+		
+		my $samtools = $settings->ctool("samtools");
+		my $faidx_command = "$samtools faidx $candidate_junction_path/candidate_junction.fasta";
+		if (-s "$candidate_junction_path/candidate_junction.fasta" > 0)
+		{
+			Breseq::Shared::system($faidx_command);	
 		}
+		## @JEB Fix this -- no summary currently...
+		$summary->{candidate_junction} = {};
 		
 		Storable::store($summary->{candidate_junction}, $candidate_junction_summary_file_name) 
 			or die "Can't store data in file $candidate_junction_summary_file_name!\n";
@@ -536,42 +520,35 @@ my $alignment_correction_summary_file_name = $settings->file_name('alignment_cor
 if ($settings->do_step('alignment_correction_done_file_name', "Resolving alignments with candidate junctions"))
 {
 	$settings->create_path('alignment_correction_path');			
-	if ($settings->{perl_alignment_correction})
-	#if (1)
-	{	
-		Breseq::AlignmentCorrection::correct_alignments($settings, $summary, $ref_seq_info);
-	}
-	else 
-	{
-		my $cbreseq = $settings->ctool('cbreseq');
-		
-		my $cmdline = "$cbreseq RESOLVE_ALIGNMENTS"; 
-		my $base_output_path = $settings->file_name("base_output_path");
-		$cmdline .= " --path $base_output_path";
-		
-		#print Dumper($settings);
-		# complicated because we need full paths to original or converted files
-		
-		foreach my $read_file ($settings->read_files) 
-		{
-			my $fastq_file = $settings->read_file_to_fastq_file_name($read_file);
-			$cmdline .= " --readfile $fastq_file";
-		}
+
+	my $cbreseq = $settings->ctool('cbreseq');
 	
-		my $maximum_read_length = $summary->{sequence_conversion}->{max_read_length};
-		$cmdline .= " --maximum-read-length $maximum_read_length";
-		
-		foreach my $seq_id (@{$ref_seq_info->{seq_ids}})
-		{
-			my $junction_cutoff = $summary->{preprocess_coverage}->{$seq_id}->{junction_accept_score_cutoff};
-			$cmdline .= " --junction-cutoff $junction_cutoff";
-		}
-		
-		Breseq::Shared::system($cmdline);	
-		
-		## need to fill this in
-		$summary->{alignment_correction} = {};
+	my $cmdline = "$cbreseq RESOLVE_ALIGNMENTS"; 
+	my $base_output_path = $settings->file_name("base_output_path");
+	$cmdline .= " --path $base_output_path";
+	
+	#print Dumper($settings);
+	# complicated because we need full paths to original or converted files
+	
+	foreach my $read_file ($settings->read_files) 
+	{
+		my $fastq_file = $settings->read_file_to_fastq_file_name($read_file);
+		$cmdline .= " --readfile $fastq_file";
 	}
+
+	my $maximum_read_length = $summary->{sequence_conversion}->{max_read_length};
+	$cmdline .= " --maximum-read-length $maximum_read_length";
+	
+	foreach my $seq_id (@{$ref_seq_info->{seq_ids}})
+	{
+		my $junction_cutoff = $summary->{preprocess_coverage}->{$seq_id}->{junction_accept_score_cutoff};
+		$cmdline .= " --junction-cutoff $junction_cutoff";
+	}
+	
+	Breseq::Shared::system($cmdline);	
+	
+	## need to fill this in
+	$summary->{alignment_correction} = {};
 	
 	my $alignment_correction_summary_file_name = $settings->file_name('alignment_correction_summary_file_name');	
 	Storable::store($summary->{alignment_correction}, $alignment_correction_summary_file_name) 
@@ -625,127 +602,127 @@ if ($settings->do_step('bam_done_file_name', "Creating BAM files"))
 	$settings->done_step('bam_done_file_name');
 }
 
-##
-# Graph paired read outliers (experimental)
-sub paired_read_distances {}
-##
-{
-	my @rs = $settings->read_structures;
-		
-	my @min_pair_dist;
-	my @max_pair_dist;
-	
-	my $paired = 0;
-	
-	my $i=0;
-	foreach my $rfi (@{$settings->{read_file_index_to_struct_index}})
-	{
-		$min_pair_dist[$i] = 0;
-		$max_pair_dist[$i] = 0;
-		
-		if ($rs[$rfi]->{paired})
-		{
-			$paired = 1;
-			$min_pair_dist[$i] = $rs[$rfi]->{min_pair_dist};
-			$max_pair_dist[$i] = $rs[$rfi]->{max_pair_dist};
-		}
-		$i++;
-	}
-	
-	my $long_pairs_file_name = $settings->file_name('long_pairs_file_name');
-	
-	if ($paired && (!-e $long_pairs_file_name))
-	{
-	
-		my $reference_sam_file_name = $settings->file_name('resolved_reference_sam_file_name');
-		my $reference_tam = Bio::DB::Tam->open($reference_sam_file_name) or die "Could not open $reference_sam_file_name";
-
-		my $reference_faidx_file_name = $settings->file_name('reference_faidx_file_name');
-		my $reference_header = $reference_tam->header_read2($reference_faidx_file_name) or throw("Error reading reference fasta index file: $reference_faidx_file_name");		
-		my $target_names = $reference_header->target_name;
-
-		my $save;
-		my $on_alignment = 0;
-		my $last;		
-	
-		while (1)
-		{
-			$a = Bio::DB::Bam::Alignment->new();
-			my $bytes = $reference_tam->read1($reference_header, $a);
-			last if ($bytes <= 0);
-		
-		
-			my $start       = $a->start;
-		    my $end         = $a->end;
-		    my $seqid       = $target_names->[$a->tid];
-		
-			$on_alignment++;
-			print "$on_alignment\n" if ($on_alignment % 10000 == 0);
-		
-			#last if ($on_alignment > 100000);
-			
-			#print $a->qname . "\n";		
-				
-			if (!$a->unmapped)
-			{
-				my $mate_insert_size = abs($a->isize);
-				my $mate_end = $a->mate_end;
-				my $mate_start = $a->mate_start;
-				my $mate_reversed = 2*$a->mreversed + $a->reversed;
-		 		my $mreversed = $a->mreversed;
-		 		my $reversed = $a->reversed;	
-	
-				my $fastq_file_index = $a->aux_get('X2');
-				#print "$mate_insert_size $min_pair_dist[$fastq_file_index] $max_pair_dist[$fastq_file_index]\n";
-				#if (($mate_insert_size < $min_pair_dist[$fastq_file_index]) || ($mate_insert_size > $max_pair_dist[$fastq_file_index]))
-				if ((($mate_insert_size >= 400) && ($mate_insert_size < $min_pair_dist[$fastq_file_index])) || ($mate_insert_size > $max_pair_dist[$fastq_file_index]))
-				{
-					#correct pair
-				
-					if ($last && ($last->{start} == $mate_start))
-					{					
-						$save->{int($start/100)}->{int($mate_start/100)}->{$mate_reversed}++;
-						$save->{int($last->{start}/100)}->{int($last->{mate_start}/100)}->{$last->{mate_reversed}}++;
-						undef $last;				
-					}
-					else
-					{
-						($last->{mate_reversed}, $last->{start}, $last->{mate_start}) = ($mate_reversed, $start, $mate_start);
-					}
-								
-					#$save->{$mate_reversed}->{int($start/100)}->{int($mate_start/100)}++;
-				    #print $a->qname," aligns to $seqid:$start..$end, $mate_start $mate_reversed ($mreversed $reversed) $mate_insert_size\n";	
-				}
-
-			}
-		}
-	
-		open LP, ">$long_pairs_file_name" or die;
-
-		foreach my $key_1 (sort {$a <=> $b} keys %$save)
-		{
-			foreach my $key_2 (sort {$a <=> $b} keys %{$save->{$key_1}})
-			{
-				foreach my $key_reversed (sort {$a <=> $b} keys %{$save->{$key_1}->{$key_2}})
-				{
-					print LP "$key_1\t$key_2\t$key_reversed\t$save->{$key_1}->{$key_2}->{$key_reversed}\n";
-				}
-			}
-		}
-		close LP;
-	}
-	
-	if ($paired)
-	{
-		open LP, "$long_pairs_file_name" or die;
-		while ($_ = <LP>)
-		{
-			chomp $_;
-			my ($start, $end, $key_reversed);
-		}
-	}
-}
-
+# 
+#  Graph paired read outliers (experimental)
+# sub paired_read_distances {}
+# 
+# {
+# 	my @rs = $settings->read_structures;
+# 		
+# 	my @min_pair_dist;
+# 	my @max_pair_dist;
+# 	
+# 	my $paired = 0;
+# 	
+# 	my $i=0;
+# 	foreach my $rfi (@{$settings->{read_file_index_to_struct_index}})
+# 	{
+# 		$min_pair_dist[$i] = 0;
+# 		$max_pair_dist[$i] = 0;
+# 		
+# 		if ($rs[$rfi]->{paired})
+# 		{
+# 			$paired = 1;
+# 			$min_pair_dist[$i] = $rs[$rfi]->{min_pair_dist};
+# 			$max_pair_dist[$i] = $rs[$rfi]->{max_pair_dist};
+# 		}
+# 		$i++;
+# 	}
+# 	
+# 	my $long_pairs_file_name = $settings->file_name('long_pairs_file_name');
+# 	
+# 	if ($paired && (!-e $long_pairs_file_name))
+# 	{
+# 	
+# 		my $reference_sam_file_name = $settings->file_name('resolved_reference_sam_file_name');
+# 		my $reference_tam = Bio::DB::Tam->open($reference_sam_file_name) or die "Could not open $reference_sam_file_name";
+# 
+# 		my $reference_faidx_file_name = $settings->file_name('reference_faidx_file_name');
+# 		my $reference_header = $reference_tam->header_read2($reference_faidx_file_name) or throw("Error reading reference fasta index file: $reference_faidx_file_name");		
+# 		my $target_names = $reference_header->target_name;
+# 
+# 		my $save;
+# 		my $on_alignment = 0;
+# 		my $last;		
+# 	
+# 		while (1)
+# 		{
+# 			$a = Bio::DB::Bam::Alignment->new();
+# 			my $bytes = $reference_tam->read1($reference_header, $a);
+# 			last if ($bytes <= 0);
+# 		
+# 		
+# 			my $start       = $a->start;
+# 		    my $end         = $a->end;
+# 		    my $seqid       = $target_names->[$a->tid];
+# 		
+# 			$on_alignment++;
+# 			print "$on_alignment\n" if ($on_alignment % 10000 == 0);
+# 		
+# 			#last if ($on_alignment > 100000);
+# 			
+# 			#print $a->qname . "\n";		
+# 				
+# 			if (!$a->unmapped)
+# 			{
+# 				my $mate_insert_size = abs($a->isize);
+# 				my $mate_end = $a->mate_end;
+# 				my $mate_start = $a->mate_start;
+# 				my $mate_reversed = 2*$a->mreversed + $a->reversed;
+# 		 		my $mreversed = $a->mreversed;
+# 		 		my $reversed = $a->reversed;	
+# 	
+# 				my $fastq_file_index = $a->aux_get('X2');
+# 				#print "$mate_insert_size $min_pair_dist[$fastq_file_index] $max_pair_dist[$fastq_file_index]\n";
+# 				#if (($mate_insert_size < $min_pair_dist[$fastq_file_index]) || ($mate_insert_size > $max_pair_dist[$fastq_file_index]))
+# 				if ((($mate_insert_size >= 400) && ($mate_insert_size < $min_pair_dist[$fastq_file_index])) || ($mate_insert_size > $max_pair_dist[$fastq_file_index]))
+# 				{
+# 					#correct pair
+# 				
+# 					if ($last && ($last->{start} == $mate_start))
+# 					{					
+# 						$save->{int($start/100)}->{int($mate_start/100)}->{$mate_reversed}++;
+# 						$save->{int($last->{start}/100)}->{int($last->{mate_start}/100)}->{$last->{mate_reversed}}++;
+# 						undef $last;				
+# 					}
+# 					else
+# 					{
+# 						($last->{mate_reversed}, $last->{start}, $last->{mate_start}) = ($mate_reversed, $start, $mate_start);
+# 					}
+# 								
+# 					#$save->{$mate_reversed}->{int($start/100)}->{int($mate_start/100)}++;
+# 				    #print $a->qname," aligns to $seqid:$start..$end, $mate_start $mate_reversed ($mreversed $reversed) $mate_insert_size\n";	
+# 				}
+# 
+# 			}
+# 		}
+# 	
+# 		open LP, ">$long_pairs_file_name" or die;
+# 
+# 		foreach my $key_1 (sort {$a <=> $b} keys %$save)
+# 		{
+# 			foreach my $key_2 (sort {$a <=> $b} keys %{$save->{$key_1}})
+# 			{
+# 				foreach my $key_reversed (sort {$a <=> $b} keys %{$save->{$key_1}->{$key_2}})
+# 				{
+# 					print LP "$key_1\t$key_2\t$key_reversed\t$save->{$key_1}->{$key_2}->{$key_reversed}\n";
+# 				}
+# 			}
+# 		}
+# 		close LP;
+# 	}
+# 	
+# 	if ($paired)
+# 	{
+# 		open LP, "$long_pairs_file_name" or die;
+# 		while ($_ = <LP>)
+# 		{
+# 			chomp $_;
+# 			my ($start, $end, $key_reversed);
+# 		}
+# 	}
+# }
+# 
 	
 ##
 # Tabulate error counts and coverage distribution at unique only sites
@@ -771,8 +748,9 @@ if ($settings->do_step('error_counts_done_file_name', "Tabulating error counts")
 	$cmdline .= " --minimum-quality-score $settings->{base_quality_cutoff}" if ($settings->{base_quality_cutoff});
 	
 ##----->##this line should be calculated
-	my $num_read_files = scalar keys %{$summary->{sequence_conversion}->{reads}};
-	$cmdline .= " --covariates=read_set=$num_read_files,obs_base,ref_base,quality=$summary->{sequence_conversion}->{max_qual}";
+	my $num_read_files = scalar(keys %{$summary->{sequence_conversion}->{reads}});
+	my $num_qual = $summary->{sequence_conversion}->{max_qual} + 1;
+	$cmdline .= " --covariates=read_set=$num_read_files,obs_base,ref_base,quality=$num_qual";
 ##		$cmdline .= " --covariates=read_set=$num_read_files,obs_base,ref_base,quality=$summary->{sequence_conversion}->{max_qual},base_repeat=5";
 	Breseq::Shared::system($cmdline);
 	
@@ -792,14 +770,9 @@ if ($settings->do_step('error_rates_done_file_name', "Re-calibrating base error 
 {	
 	$summary->{unique_coverage} = {};
 	if (!$settings->{no_deletion_prediction}) {
-		Breseq::ErrorCalibration::analyze_unique_coverage_distributions($settings, $summary, $ref_seq_info,
+		Breseq::CoverageDistribution::analyze_unique_coverage_distributions($settings, $summary, $ref_seq_info,
 			'unique_only_coverage_plot_file_name', 'unique_only_coverage_distribution_file_name');	
 	}
-	## this can be removed soon --->
-	if ($settings->{perl_identify_mutations}) {
-		Breseq::ErrorCalibration::error_counts_to_error_rates($settings, $summary, $ref_seq_info);
-	}
-	##<-----
 	
 	foreach my $read_file ($settings->read_files) {
 		my $error_rates_base_qual_error_prob_file_name = $settings->file_name('error_rates_base_qual_error_prob_file_name', {'#' => $read_file});
@@ -834,18 +807,67 @@ if (!$settings->{no_mutation_prediction})
 	{			
 		my $error_rates;
 		
-		if ($settings->{perl_identify_mutations}) {
-		    $error_rates = Breseq::ErrorCalibration::load_error_rates($settings, $summary, $ref_seq_info);
-		}
+		my $reference_fasta_file_name = $settings->file_name('reference_fasta_file_name');
+		my $reference_bam_file_name = $settings->file_name('reference_bam_file_name');
 		
-		Breseq::MutationIdentification::identify_mutations($settings, $summary, $ref_seq_info, $error_rates);
+		my $cbreseq = $settings->ctool('cbreseq');
+
+		my $coverage_fn = $settings->file_name('unique_only_coverage_distribution_file_name', {'@'=>""});
+		my $error_dir = `dirname $coverage_fn`;
+		chomp $error_dir; $error_dir .= '/';
+		my $this_predicted_mutation_file_name = $settings->file_name('predicted_mutation_file_name', {'@'=>""});
+		my $output_dir = `dirname $this_predicted_mutation_file_name`;
+		chomp $output_dir; $output_dir .= '/';
+		my $readfiles = join(" --readfile ", $settings->read_files);
+		my $cmdline = "$cbreseq IDENTIFY_MUTATIONS --bam $reference_bam_file_name --fasta $reference_fasta_file_name --readfile $readfiles";
+		$cmdline .= " --error_dir $error_dir";
+		my $ra_mc_genome_diff_file_name = $settings->file_name('ra_mc_genome_diff_file_name');	
+		$cmdline .= " --genome_diff $ra_mc_genome_diff_file_name";
+		$cmdline .= " --output $output_dir";
+		if(defined $settings->{mutation_log10_e_value_cutoff}) {
+			$cmdline .= " --mutation_cutoff $settings->{mutation_log10_e_value_cutoff}"; # defaults to 2.0.
+		}		
+		my $coverage_tab_file_name = $settings->file_name('complete_coverage_text_file_name', {'@'=>""});
+		my $coverage_dir = `dirname $coverage_tab_file_name`;
+		chomp $coverage_dir; $coverage_dir .= '/';
+		$cmdline .= " --coverage_dir $coverage_dir";
+
+		## It is important that these are in consistent order with the fasta file!!
+		foreach my $seq_id ( @{$ref_seq_info->{seq_ids}})
+		{
+			my $deletion_propagation_cutoff = $settings->{unique_coverage}->{$seq_id}->{deletion_coverage_propagation_cutoff};
+			$cmdline .= " --deletion_propagation_cutoff $deletion_propagation_cutoff";
+		}
+
+		if((defined $settings->{no_deletion_prediction}) && ($settings->{no_deletion_prediction})) {
+			$cmdline .= "";
+		} else {
+			$cmdline .= " --predict_deletions"; # defaults TO predicting deletions.
+		}
+
+		if (defined $settings->{base_quality_cutoff})
+		{
+			$cmdline .= " --minimum_quality_score $settings->{base_quality_cutoff}";
+		}
+
+		if ($settings->{polymorphism_prediction})
+		{
+			$cmdline .= " --predict_polymorphisms";
+			$cmdline .= " --polymorphism_cutoff $settings->{polymorphism_log10_e_value_cutoff}";
+			$cmdline .= " --polymorphism_frequency_cutoff $settings->{polymorphism_frequency_cutoff}";			
+		}
+
+		$cmdline .= " --error_table $error_dir/error_rates.tab";		
+
+		Breseq::Shared::system($cmdline);
+								
 		$settings->done_step('mutation_identification_done_file_name');
 	}
 
 	my $polymorphism_statistics_done_file_name = $settings->file_name('polymorphism_statistics_done_file_name');
 	if ($settings->{polymorphism_prediction} && $settings->do_step('polymorphism_statistics_done_file_name', "Polymorphism statistics"))
 	{
-		Breseq::MutationIdentification::polymorphism_statistics($settings, $summary, $ref_seq_info);
+		Breseq::Shared::polymorphism_statistics($settings, $summary, $ref_seq_info);
 		$settings->done_step('polymorphism_statistics_done_file_name');
 	}
 }
@@ -864,9 +886,9 @@ if ($settings->do_step('output_done_file_name', "Output"))
 	## merge all of the evidence GenomeDiff files into one...
 	$settings->create_path('evidence_path');
 	my $jc_genome_diff_file_name = $settings->file_name('jc_genome_diff_file_name');	
-	my $jc_gd = GenomeDiff->new( -in => $jc_genome_diff_file_name );
+	my $jc_gd = GenomeDiff->new( {in => $jc_genome_diff_file_name} );
 	my $ra_mc_genome_diff_file_name = $settings->file_name('ra_mc_genome_diff_file_name');	
-	my $ra_mc_gd = GenomeDiff->new( -in => $ra_mc_genome_diff_file_name);
+	my $ra_mc_gd = GenomeDiff->new( {in => $ra_mc_genome_diff_file_name} );
 	my $evidence_genome_diff_file_name = $settings->file_name('evidence_genome_diff_file_name');
 	my $evidence_gd = GenomeDiff::merge($jc_gd, $ra_mc_gd);	
 	$evidence_gd->write($evidence_genome_diff_file_name);
@@ -874,18 +896,23 @@ if ($settings->do_step('output_done_file_name', "Output"))
 	
 	## predict mutations from evidence in the GenomeDiff
 	print STDERR "Predicting mutations from evidence...\n";
-	my $mp = Breseq::MutationPredictor->new( -ref_seq_info => $ref_seq_info );
-	$mp->predict($settings, $summary, $ref_seq_info, $evidence_gd);
+	
+	my $gd;
 	my $final_genome_diff_file_name = $settings->file_name('final_genome_diff_file_name');
-	$evidence_gd->write($final_genome_diff_file_name);
-	unlink $evidence_genome_diff_file_name;
+	
+	my $cbreseq = $settings->ctool('cbreseq');
+	my $maximum_read_length = $summary->{sequence_conversion}->{max_read_length};
+	my $base_output_path = $settings->file_name("base_output_path");
+	my $cmdline = "$cbreseq PREDICT_MUTATIONS --maximum-read-length $maximum_read_length --path $base_output_path";	
+	Breseq::Shared::system($cmdline);
+	$gd = GenomeDiff->new({file_name => $final_genome_diff_file_name});
+	##unlink $evidence_genome_diff_file_name;
 
 	sub mutation_annotation {}
 	
 	my @genbank_file_names = $settings->file_name('reference_genbank_file_names'); 
 	my @junction_only_genbank_file_names = $settings->file_name('junction_only_reference_genbank_file_names'); 
 
-	my $gd = $evidence_gd;
 
 	##
 	# Annotate mutations

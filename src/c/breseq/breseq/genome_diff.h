@@ -112,7 +112,7 @@ namespace breseq {
 		typedef map<key_t, value_t> map_t; //!< Diff entry key-value map.
 		
 		//! Constructor.
-		diff_entry(const string& type, const string& id, vector<string> positions);
+		diff_entry(const string& type);
     diff_entry();
 		
 		//! Copy constructor
@@ -174,7 +174,7 @@ namespace breseq {
   };
 	
   //! Sort routine
-  bool diff_entry_sort(diff_entry a, diff_entry b);
+  bool diff_entry_sort(const counted_ptr<diff_entry>& a, const counted_ptr<diff_entry>& b);
 	
 	/*! Genome diff class.
 	 
@@ -186,13 +186,13 @@ namespace breseq {
 	class genome_diff {
 	public:
 
-		typedef vector<diff_entry> entry_list_t; //!< Type for a list of diff entries.
+		typedef vector<counted_ptr<diff_entry> > entry_list_t; //!< Type for a list of diff entries.
 		typedef string key_t; 
     typedef vector<string> list_t;
     
 		
 		//! Constructor.
-		genome_diff() : _current_id(0) { }
+		genome_diff() : _unique_id_counter(0) { }
 		
 		//! Constructor that sets a default filename.
 		genome_diff(const string& filename);
@@ -201,7 +201,7 @@ namespace breseq {
 		~genome_diff() { }
 
 		//! Retrieve a new diff entry id for this genome diff.
-		unsigned int new_id() { return ++_current_id; }
+		uint32_t new_unique_id();
 		
 		//! Add evidence to this genome diff.
 		void add(const diff_entry& item);
@@ -241,7 +241,8 @@ namespace breseq {
 	protected:		
 		const string _default_filename; //!< Default filename for this diff.
 		entry_list_t _entry_list; //!< All diff entries.
-		unsigned int _current_id; //!< Smallest available id.
+		uint32_t _unique_id_counter; //!< Smallest available id.
+    map<uint32_t,bool> unique_id_used;
 		string version; //!< .gd file #=GENOME_DIFF version, found on first line
 	};
   
