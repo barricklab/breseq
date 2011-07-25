@@ -32,11 +32,7 @@ package Breseq::MutationPredictor;
 use vars qw(@ISA);
 use strict;
 
-use Bio::Root::Root;
 use Data::Dumper;
-
-
-@ISA = qw( Bio::Root::Root );
 
 
 =head2 new
@@ -51,16 +47,13 @@ use Data::Dumper;
 
 sub new
 {
-	my($caller,@args) = @_;
+	my($caller,$args) = @_;
 	my $class = ref($caller) || $caller;
-	my $self = new Bio::Root::Root($caller, @args);	
+	my $self = $args;	
 	bless ($self, $class);
 	
 	# initialize options
-	$self->{ref_seq_info} = $self->Bio::Root::RootI::_rearrange([qw(REF_SEQ_INFO)], @args);
 	$self->throw("Must provide -ref_seq_info to constructor.") if (!defined $self->{ref_seq_info});
-	
-	$self->{mutation_log10_e_value_cutoff} = $self->Bio::Root::RootI::_rearrange([qw(MUTATION_LOG10_E_VALUE_CUTOFF)], @args);
 	$self->{mutation_log10_e_value_cutoff} = 2 if (!defined $self->{mutation_log10_e_value_cutoff});
 
 	return $self;
@@ -500,7 +493,7 @@ sub predict
 				
 				if ($j1->{"_$j1->{_is_interval}\_read_side"} * $j1->{"$j1->{_is_interval}\_strand"} == -1)
 				{
-					$j1_not_flush_seq = Breseq::Fastq::revcom($j1_not_flush_seq);
+					$j1_not_flush_seq = Breseq::Shared::revcom($j1_not_flush_seq);
 				}
 				
 				if ($j1->{"_$j1->{_is_interval}\_read_side"} == -1)
@@ -551,7 +544,7 @@ sub predict
 				
 				if ($j2->{"_$j2->{_is_interval}\_read_side"} * $j2->{"$j2->{_is_interval}\_strand"} == -1)
 				{
-					$j2_not_flush_seq = Breseq::Fastq::revcom($j2_not_flush_seq);
+					$j2_not_flush_seq = Breseq::Shared::revcom($j2_not_flush_seq);
 				}
 				
 				if ($j2->{"_$j2->{_is_interval}\_read_side"} == -1)
@@ -577,14 +570,14 @@ sub predict
 			if ($j1->{"$j1->{_unique_interval}\_strand"} *  $j1->{"_$j1->{_unique_interval}\_read_side"} == -1)
 			{
 				print "RC left\n" if ($verbose);
-				$mut->{_ins_start} = Breseq::Fastq::revcom($mut->{_ins_start});
+				$mut->{_ins_start} = Breseq::Shared::revcom($mut->{_ins_start});
 				
 			}
 
 			if ($j2->{"$j2->{_unique_interval}\_strand"} *  $j2->{"_$j2->{_unique_interval}\_read_side"} == -1)
 			{
 				print "RC right\n" if ($verbose);
-				$mut->{_ins_end} = Breseq::Fastq::revcom($mut->{_ins_end});
+				$mut->{_ins_end} = Breseq::Shared::revcom($mut->{_ins_end});
 			}
 
 			#### Check for ambiguous insertion direction!
@@ -615,7 +608,7 @@ sub predict
 					$j1->{"$j1->{_is_interval}\_position"} - ($j1_is_overlap_length - 1),
 					$j1->{"$j1->{_is_interval}\_position"} - $j1_not_flush_length
 				);
-				$j1_is_seq_matched = Breseq::Fastq::revcom($j1_is_seq_matched);
+				$j1_is_seq_matched = Breseq::Shared::revcom($j1_is_seq_matched);
 			}
 			else
 			{
@@ -634,7 +627,7 @@ sub predict
 					$j2->{"$j2->{_is_interval}\_position"} - ($j2_is_overlap_length - 1),
 					$j2->{"$j2->{_is_interval}\_position"} - $j2_not_flush_length
 				);
-				$j2_is_seq_matched = Breseq::Fastq::revcom($j2_is_seq_matched);
+				$j2_is_seq_matched = Breseq::Shared::revcom($j2_is_seq_matched);
 			}
 			else
 			{
@@ -658,7 +651,7 @@ sub predict
 				$j1->{"_$j1->{_is_interval}\_is"}->{end} - ($j1_is_overlap_length - 1),
 				$j1->{"_$j1->{_is_interval}\_is"}->{end}
 			);
-			$j1_right_is_sequence = Breseq::Fastq::revcom($j1_right_is_sequence);
+			$j1_right_is_sequence = Breseq::Shared::revcom($j1_right_is_sequence);
 			
 			print "J1 LEFT : $j1_left_is_sequence\n" if ($verbose);
 			print "J1 RIGHT: $j1_right_is_sequence\n" if ($verbose);
@@ -677,7 +670,7 @@ sub predict
 				$j2->{"_$j2->{_is_interval}\_is"}->{end} - ($j2_is_overlap_length - 1),
 				$j2->{"_$j2->{_is_interval}\_is"}->{end}
 			);
-			$j2_right_is_sequence = Breseq::Fastq::revcom($j2_right_is_sequence);
+			$j2_right_is_sequence = Breseq::Shared::revcom($j2_right_is_sequence);
 
 			#believe the direction if the sequences are different
 			my $j2_is_ambiguous = ($j2_left_is_sequence eq $j2_right_is_sequence) ? 1 : 0;
