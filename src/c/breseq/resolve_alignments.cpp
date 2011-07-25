@@ -575,11 +575,15 @@ uint32_t _eligible_read_alignments(const Settings& settings, const cReferenceSeq
 	if (alignments.size() <= 0) return 0;
 
 	// require a minimum length of the read to be mapped
-	for (alignment_list::iterator it = alignments.begin(); it != alignments.end(); it++)
+	for (alignment_list::iterator it = alignments.begin(); it != alignments.end(); )
   {
 		if ( !_test_read_alignment_requirements(settings, ref_seq_info, *(it->get())) )
     {
-			alignments.erase(it);
+			alignments.erase(it++);
+    }
+    else
+    {
+      it++;
     }
   }
 	if (alignments.size() == 0) return 0;
