@@ -864,11 +864,15 @@ namespace breseq {
     //## Use $self->{required_both_unique_length_per_side} to rule them out.
     //## 
     
-    for(alignment_list::iterator it = untouched_alignments.begin(); it != untouched_alignments.end(); it++) 
+    for(alignment_list::iterator it = untouched_alignments.begin(); it != untouched_alignments.end();) 
     {
       if ((*it)->beginning_to_end_match())
       {
-        untouched_alignments.erase(it);
+        untouched_alignments.erase(it++);
+      }
+      else
+      {
+        it++;
       }
     }
     
