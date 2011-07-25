@@ -70,17 +70,21 @@ install-exec-local :
 
 	## GenomeDiff
 	cd $(PERLGENOMEDIFF) ; \
-	./Build install --destdir=${DESTDIR};
+	./Build install;
 	
 	## Breseq
 	cd $(PERLBRESEQ) ; \
-	./Build install --destdir=${DESTDIR};
+	./Build install;
 	
-clean-local :: clean-tests clean-breseq
+clean-local :: clean-tests
+
+	## GenomeDiff
+	cd $(PERLGENOMEDIFF) ; \
+	./Build clean;
 	
-	cd $(BIOSAMTOOLS) ; \
-	./Build clean
-	
+	## Breseq
+	cd $(PERLBRESEQ) ; \
+	./Build clean;	
 		
 dist-hook:
 
@@ -110,34 +114,7 @@ dist-hook:
 	
 	## Remove ._ files
 	rm -rf `find $(distdir) -name ".*"`
-		
-## breseq only	
-make-breseq :
-	cd $(PERLBRESEQ) ; \
-	perl Build.PL --install_base=$(prefix) ; \
-	./Build ; 
-
-install-breseq :
-	cd $(PERLBRESEQ) ; \
-	./Build install
-	
-clean-breseq :
-	cd $(PERLBRESEQ) ; \
-	./Build clean
-	
-#utility to avoid everything else
-breseq :
-
-	cd $(PERLBRESEQ) ; \
-	perl Build.PL --install_base=$(prefix) ; \
-	./Build
-
-	cd $(PERLBRESEQ) ; \
-	./Build install
-	
-remake-breseq :: clean-breseq make-breseq install-breseq	
-
-##
+			
 
 macosx-pkg-download : 
 
