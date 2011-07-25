@@ -10,7 +10,6 @@ Several external packages and software programs need to be installed to compile 
 
 * `GCC <http://gcc.gnu.org>`_ (or other C++ compiler) already installed on many systems
 * `Perl <http://www.perl.org>`_ (version 5.8 or higher) already installed on many systems.
-* `BioPerl <http://www.bioperl.org>`_ (version 1.4 or higher)
 * `SSAHA2 <http://www.sanger.ac.uk/resources/software/ssaha2/>`_ read mapping program
 * `R <http://www.r-project.org>`_ (version 2.1.0 or higher) statistical programming language 
 
@@ -22,13 +21,7 @@ MacOSX Instructions
 You will need administrator privileges to install |breseq| dependencies using these instructions. We recommend that you install and use the package manager `MacPorts <http://www.macports.org/>`_ to simplify these installation steps. Using  :program:`MacPorts` will generally take longer than downloading and installing the packages in other ways, but it greatly simplifies the searching you might otherwise have to do to track down all the prerequisites.
 
 * :program:`GCC`: Download and install the `Apple Developer tools <http://developer.apple.com/tools/>`_. You can use either version 3 (which is free) or download version 4 from the App Store for a small price.
-* :program:`MacPorts`: This program is optional, but recommended for making the following installation steps easier. Download the package for your operating system version and install according to the directions at `MacPorts.org <http://www.macports.org/>`_.
 * :program:`Perl`: is already installed on MacOSX systems. 
-* :program:`BioPerl`: Either (1) Download and install according to the directions at `BioPerl.org <http://www.bioperl.org>`_  OR (2) **Recommended:**  Download directly from the link at `CPAN <http://search.cpan.org/dist/BioPerl/>`_, change into the directory of the archive after unzipping, and execute these commands to install:
-
->>> perl Build.PL --accept 
->>> sudo ./Build install
-
 * :program:`SSAHA2`: download and install the MacOSX package from the `Sanger Center <http://www.sanger.ac.uk/resources/software/ssaha2/>`_. You will need to move the executables to where your system can use them. If you change into the ssaha2_v2.5.1_MacOS directory, you can use this command:
 
 >>> sudo cp ssaha2* /usr/local/bin
@@ -38,9 +31,7 @@ You should now get a message like this, telling you that the system can find you
 >>> which ssaha2
 /users/local/bin/ssaha2
 
-* :program:`R`: Either (1) **Recommended:** Download the installer package from http://www.r-project.org/. OR (2) Install with :program:`MacPorts` terminal command: 
-
->>> sudo port install R ghostscript
+* :program:`R`: Download the installer package from http://www.r-project.org/.
 
 2. Compile and install |breseq|
 -------------------------------
@@ -66,10 +57,9 @@ Open a terminal window and change directory to the root of the |breseq| source d
 These commands compile and install not only |breseq|, but also some open-source code developed by others. These packages are included in the |breseq| source distribution under /extern:
 
 * `SAMtools <http://samtools.sourceforge.net>`_ 
-* `Bio::DB::Sam <http://search.cpan.org/~lds/Bio-SamTools/lib/Bio/DB/Sam.pm>`_ 
 
 .. WARNING::
-   Installing |breseq| will overwrite any other versions of :program:`SAMtools` or the Perl module :program:`Bio::DB::Sam` that you have in the default ./configure install locations. To avoid this, you can follow the instructions in :ref:`installing-in-the-source-directory` or :ref:`installing-in-a-custom-location` to safely install |breseq| elsewhere.
+   Installing |breseq| will overwrite any other versions of :program:`SAMtools` that you have in the default ./configure install locations. To avoid this, you can follow the instructions in :ref:`installing-in-the-source-directory` or :ref:`installing-in-a-custom-location` to safely install |breseq| elsewhere.
 
 Finally, we recommend that you test that your |breseq| installation functions with this command::
 
@@ -126,29 +116,13 @@ Common installation problems
 Dependencies installed in custom locations
 ******************************************
 
-In general, you will need to be sure that your environment is set up correctly to find and use each dependency. This will likely be taken care of for you if you use a package manager or installer package. If you install some dependencies from source or in custom locations, and run into problems with |breseq| installation, be sure to check that:
+In general, you will need to be sure that your environment is set up correctly to find and use each dependency. This will likely be taken care of for you if you use an installer package. If you install some dependencies from source or in custom locations, and run into problems with |breseq| installation, be sure to check that:
 
-#. :program:`BioPerl` is in your $PERL5LIB.
 #. :program:`R` is in your $PATH.
 #. :program:`SSAHA2` is in your $PATH.
 
 .. note::
    You may need to use absolute paths (i.e. ``/absolute/path``) rather than paths relative to your home directory (i.e ``~/path/relative/to/home``) for these settings.
-
-Missing Perl modules
-*********************
-
-Some version of Perl do not have recent versions of required Perl Modules.
-
-If you get an error like this::
-
-  Can't locate Module/Build.pm in @INC
-  
-Or this::
-
-  File::Path version 2.0605 required--this is only version 2.04_02
-  
-Then you will need to install or update a missing Perl Module (Module::Build and File::Path in these two cases). On most systems you can use `the CPAN shell <http://search.cpan.org/~andk/CPAN/lib/CPAN.pm#SYNOPSIS>`_.
 
 Other problems
 ***************
