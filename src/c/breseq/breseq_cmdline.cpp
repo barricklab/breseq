@@ -645,9 +645,9 @@ int do_identify_candidate_junctions(int argc, char* argv[]) {
 
     // Defaults should be moved to Settings constructor
     ("maximum-candidate-junctions",
-     "Maximum number of candidate junction to create.", static_cast<unsigned long>(5000))
+     "Maximum number of candidate junction to create.", static_cast<uint32_t>(5000))
     ("minimum-candidate-junctions",
-     "Minimum number of candidate junctions to create.", static_cast<unsigned long>(200))
+     "Minimum number of candidate junctions to create.", static_cast<uint32_t>(200))
     // This should be in the summary...
     ("reference-sequence-length",
      "Total length of reference sequences.")  

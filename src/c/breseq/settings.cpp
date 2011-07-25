@@ -69,11 +69,6 @@ namespace breseq {
   // Set up defaults and build paths
   Settings::Settings(const string& run_path) {
     
-    add_split_junction_sides = true;
-    required_match_length = 28;
-    max_read_mismatches = -1;
-    require_complete_match = false;
-    
     // Paths are only partially implemented:
     //   @ are to be replaced by reference sequence ids
     //   # are to be replaced with read file names
@@ -107,6 +102,25 @@ namespace breseq {
     evidence_genome_diff_file_name = evidence_path + "/evidence.gd";
     final_genome_diff_file_name = output_path + "/output.gd";
 
+    // settings that control execution
+    add_split_junction_sides = true;
+    required_match_length = 28;
+    max_read_mismatches = -1;
+    require_complete_match = false;
+    
+    alignment_read_limit = 0;
+		candidate_junction_read_limit = 0;
+		minimum_candidate_junction_pos_hash_score = 0;
+		minimum_candidate_junction_min_overlap_score = 0;
+		minimum_candidate_junctions = 0;
+		maximum_candidate_junctions = 0;
+		maximum_candidate_junction_length_factor = 0;
+    maximum_read_length = 0;
+    maximum_inserted_junction_sequence_length = 0;
+    
+		required_both_unique_length_per_side = 0;
+		required_one_unique_length_per_side = 0;
+		required_extra_pair_total_length = 0;
     
   }
   
