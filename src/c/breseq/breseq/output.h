@@ -5,21 +5,213 @@
 #include "breseq/annotated_sequence.h"
 #include "breseq/genome_diff.h"
 #include "breseq/settings.h"
-
 namespace breseq
 {
-///Temporary structs 
+
+/*-----------------------------------------------------------------------------
+ *  TEMPORARY STRUCTS, STILL NEED IMPLEMENTATION.
+ *-----------------------------------------------------------------------------*/
 struct Options {
   bool repeat_header;
 };
-struct Mutation{};
 struct Interval{};
 struct Reference{};
 class tSettings:Settings{
   string print_run_name;
 };
+/*-----------------------------------------------------------------------------
+ *  Diff_Entry Keywords 
+ *-----------------------------------------------------------------------------*/
+extern const char* ALIGNMENT_EMPTY_CHANGE_LINE;
+extern const char* ALIGNMENT_OVERLAP;
+extern const char* AM_PATH;
+extern const char* FASTA_PATH;
+extern const char* FILE_NAME;
+extern const char* FLANKING_LEFT;
+extern const char* GENES;
+extern const char* GENE_NAME;
+extern const char* GENE_POSITION;
+extern const char* GHOST_END;
+extern const char* GHOST_SEQ_ID_END;
+extern const char* GHOST_SEQ_ID_START;
+extern const char* GHOST_START;
+extern const char* GHOST_STRAND_END;
+extern const char* GHOST_STRAND_START;
+extern const char* INSERT_END;
+extern const char* INSERT_START;
+extern const char* ITEM;
+extern const char* MC_SIDE_1;
+extern const char* MC_SIDE_2;
+extern const char* NEW_SEQ;
+extern const char* NO_SHOW;
+extern const char* PLOT;
+extern const char* PREFIX;
+extern const char* SIDE_1_OVERLAP;
+extern const char* SIDE_1_POSITION;
+extern const char* SIDE_1_SEQ_ID;
+extern const char* SIDE_1_STRAND;
+extern const char* SIDE_2_POSITION;
+extern const char* SIDE_2_SEQ_ID;
+extern const char* SIDE_2_STRAND;
+extern const char* SIZE;
+extern const char* TRUNCATE_END;
+extern const char* TRUNCATE_START;
+extern const char* _COVERAGE_PLOT_FILE_NAME;
+extern const char* _EVIDENCE_FILE_NAME;
+extern const char* _NEW_JUNCTION_EVIDENCE_FILE_NAME;
+extern const char* _SIDE_1_EVIDENCE_FILE_NAME; 
+extern const char* _SIDE_2_EVIDENCE_FILE_NAME;
+/*-----------------------------------------------------------------------------
+ *  HTML Attribute Keywords
+ *-----------------------------------------------------------------------------*/
+extern const char* ALIGN_CENTER;
+extern const char* ALIGN_RIGHT;
+extern const char* ALIGN_LEFT;
 
-//TEST
+/*-----------------------------------------------------------------------------
+ *  Utilities for Encoding HTML
+ *-----------------------------------------------------------------------------*/
+  //! Wraps input in <i></i> tags which renders as italic text
+  string i(const string& input) {return "<i>"+input+"</i>";}
+	//! Wraps input in <b></b> tags which renders as bold text
+  string b(const string& input) {return "<b>"+input+"</b>";}
+  //! Wraps input in <a></a> tags which defines an anchor,
+	//used to create a link to another target document.
+	string a(const string& target, const string& input) 
+    {return "<a href=\"" + target +"\">"+input+"</a>";} 
+	//! Wraps input in <th></th> tags	which defines a header cell		
+	string th(const string& input) { return "<th>"+input+"</th>";}
+	string th(const string& attributes, const string& input) 
+	  {return "<th " + attributes + ">" + input + "</th>";}
+	//! Wraps input in <td></td> tags	which defines a standar cell		
+	string td(const string& input, const string& attributes = "")
+    {return "<td " + attributes + ">" + input + "</td>";}
+	//! Wraps input in <tr></tr> tags which define a row in an HTML table	
+  string start_tr(const string& attributes = "") 
+    {return "<tr " + attributes + ">";}
+	string tr(const string& input) {return "<tr>" + input + "</tr>";}
+  string tr(const string& attributes, const string& input)
+	  {return start_tr(attributes) + input + "</tr>";}
+	string start_table(const string& attributes)
+    {return "<table " + attributes + ">";}
+	//! Wraps input in <font></font> tags
+	string font(const string& attributes, const string& input) 
+		{return "<font " + attributes + ">" + input + "</font>";}
+	
+  //! Encodes dash, en dash and spaces to HTML
+	string nonbreaking(const string& input);
+	//! Encodes en dash
+	string htmlize(const string& input);
+	//! Adds commas to large numbers (ex 1000 to 1,000)
+  string commify(const string& input);
+
+
+/*-----------------------------------------------------------------------------
+ * HTML TABLES
+ *-----------------------------------------------------------------------------*/
+struct Html_Mutation_Table_String : public string
+{
+	public:
+		//!Constructors
+		Html_Mutation_Table_String(Settings settings, genome_diff gd, vector<diff_entry> list_ref,
+															 bool relative_link, bool legend_row, bool one_ref_seq,
+															 vector<string> gd_name_list_ref, Options options);
+		Html_Mutation_Table_String();
+    
+	private: 
+    //! Main Build Object
+		stringstream m_output;
+ 		//!Factory Methods
+		void Header_Line();
+		void Item_Lines();
+		//!Helper Functions
+		string freq_to_string(const string& freq);//!< Used in Item_Lines()
+		string freq_cols(vector<string> freq_list);//!< Used in Item_Lines()
+ 		uint8_t total_cols; //!< Shared between Factory Methods, set in Header_Line()
+
+		//!Parameters
+		Settings settings;
+	 	genome_diff gd;
+	 	vector<diff_entry> list_ref;
+		bool relative_link;
+	 	bool legend_row;
+	 	bool one_ref_seq;
+		vector<string> gd_name_list_ref; 
+		Options options;
+};
+
+string html_missing_coverage_table_string
+  (genome_diff::entry_list_t list_ref, 
+	 bool show_reject_reason,
+	 string title, 
+	 string relative_link);
+//TODO Below not fully complete
+string html_missing_coverage_table_string
+  (genome_diff::entry_list_t list_ref, 
+	 bool show_reject_reason,
+	 string title = "Missing coverage evidence...",
+	 string relative_link = "");
+string html_read_alignment_table_string  
+  (genome_diff::entry_list_t list_ref, 
+   bool show_reject_reason,
+   string title = "Read alignment evidence...",
+   string relative_link = "");
+string html_new_junction_table_string
+  (genome_diff::entry_list_t jc,
+	 bool show_reject_reason,
+	 string title,
+	 string relative_link = "");
+
+/*-----------------------------------------------------------------------------
+ *  Formatted_Mutation_Annotation
+ *-----------------------------------------------------------------------------*/
+class Formatted_Mutation_Annotation : public string
+{
+  public:
+		//!Constructor
+	  Formatted_Mutation_Annotation(const diff_entry& mut);
+  private:
+    //!Main Build Object
+		stringstream m_output;
+		//!Helper Function
+		string To_Underline_Red_Codon(diff_entry mut, 
+										              const string& codon_key);
+	  //!Parameters
+		diff_entry mut;
+};
+
+string decode_reject_reason(string reject); //TODO used anywhere else?
+
+/*-----------------------------------------------------------------------------
+ *  Create_Evidence_Files
+ *-----------------------------------------------------------------------------*/
+struct Evidence_Files
+{
+  struct Evidence_Item
+  {
+    map<string,string> fields;
+		diff_entry parent_item;
+		diff_entry item;
+		string operator[](const string key){return fields[key];}
+		bool entry_exists(const string in){return (fields.count(in) > 0);}
+	};
+
+	Evidence_Files(const Settings& settings, genome_diff& gd);
+  
+	private:
+	  vector<Evidence_Item> evidence_list;
+    void add_evidence(const string& file_name, diff_entry item,
+										  diff_entry parent_item, map<string,string> fields);
+    string file_name(Evidence_Item& evidence_item);
+};
+/*-----------------------------------------------------------------------------
+ *  FUNCTIONS BELOW HERE STILL NEED FURTHER PORTING
+ *-----------------------------------------------------------------------------*/
+
+
+
+
+
 /// sub html_index
 ///         my (string file_name, Settings settings, Summary summary, $ref_seq_info, $gd) = @_;
 void html_index(string file_name, Settings settings, Summary summary,
@@ -34,19 +226,14 @@ void html_header(string title);
 // sub html_footer
 // sub html_compare
 //         my (Settings settings, string file_name, $title, $gd, $one_ref_seq, $gd_name_list_ref, $options) = @_;
-void html_compare(Settings settings, string file_name, string title, 
+void html_compare(Settings settings,const string &file_name, const string &title, 
                   genome_diff gd, bool one_ref_seq, vector<string> gd_name_list_ref, Options options); 
-//? string gd_name_list_ref
-// if (defined $gd_name_list_ref)
-//                 @freq_header_list = @$gd_name_list_ref;
-//? Options options
-//$output_str.= $header_str if (($row_num != 0) && (defined $options->{repeat_header}) && ($row_num % $options->{repeat_header} == 0));
 
 // sub html_compare_polymorphisms
 //         my (Settings settings, string file_name, $title, $list_ref) = @_;
 void html_compare_polymorphisms(Settings settings, string file_name, string title,
                                 vector <string> list_ref);
-//? vector <string> list_ref
+
 // sub html_statistics
 //         my (string file_name, Settings settings, $summary, $ref_seq_info) = @_;
 void html_statistics(string file_name, Settings settings, Summary summary, 
@@ -57,68 +244,16 @@ string breseq_header_string(Settings settings);
 
 // sub html_genome_diff_item_table_string
 //         my (Settings settings, $gd, $list_ref) = @_;
-void html_genome_diff_item_table_string(Settings settings, genome_diff gd, 
-                                        vector <string> list_ref);
-//? vector <string> list_ref
-
-// sub formatted_mutation_annotation
-//         my ($mut) = @_;
-void formatted_mutation_annotation(Mutation mut);
-//                 sub to_underline_red_codon
-//                         my ($mut, $codon_key) = @_;
-
-/// sub html_mutation_table_string
-///         our (Settings settings, $gd, $list_ref, $relative_link, $legend_row, $one_ref_seq, $gd_name_list_ref, $options) = @_;
-//html_mutation_table_string($settings, $gd, \@muts, undef, undef, $one_ref_seq, $gd_name_list_ref, $options)
-string html_mutation_table_string(Settings settings, genome_diff gd, genome_diff::entry_list_t muts,
-                                  bool legend_row, bool one_ref_seq, vector<string> gd_name_list_ref,
-                                  Options options) 
-{return "html_mutation_table_string:needs implementaion";}
-//html_mutation_table_string($settings, $gd, \@muts, $relative_path, undef, $one_ref_seq)
-string html_mutation_table_string(Settings settings, genome_diff gd, genome_diff::entry_list_t muts, 
-                                  string relative_path, bool legend_row, bool one_ref_seq)
-{return "html_mutation_table_string:needs implementation";}
-//html_mutation_table_string($settings, $gd, $list_ref)
-string html_mutation_table_string(Settings settings, genome_diff gd, vector <string> list_ref)
-{return "html_mutation_table_string:needs implementaion";}
-                               
-/// sub html_read_alignment_table_string
-///         my ($list_ref, $relative_link, $title, $show_reject_reason) = @_;
-void html_read_alignment_table_string(vector <string> list_ref, string relative_link,
-                                      string title, bool show_reject_reason);
-/// sub html_missing_coverage_table_string
-///         my ($list_ref, $relative_link, $title, $show_reject_reason) = @_;
-//html_missing_coverage_table_string($list_ref, undef, undef, 1)
-string html_missing_coverage_table_string(vector <string> list_ref, string relative_link, string title,
-                                        bool show_reject_reason);
-//html_missing_coverage_table_string(\@mc, $relative_path, "Unassigned missing coverage evidence...")
-string html_missing_coverage_table_string(genome_diff::entry_list_t muts, string relative_path, string title)
-{return "needs implementaion";}
-
-/// sub html_new_junction_table_string
-///   our ($list_ref, $relative_link, $title, $show_reject_reason) = @_;
-
-//html_new_junction_table_string($list_ref, undef, undef, 1)
-string html_new_junction_table_string(vector<cReferenceSequences> list_ref, string relative_link, string title,
-                                    bool show_reject_reason);
-//html_new_junction_table_string(\@jc, $relative_path, "Marginal new junction evidence...")
-//html_new_junction_table_string(\@jcu, $relative_path, "Unassigned new junction evidence...")
-string html_new_junction_table_string(genome_diff::entry_list_t jc, string relative_path, string title);
-
-
+string html_genome_diff_item_table_string(Settings settings, genome_diff gd, 
+                                        genome_diff::entry_list_t list_ref);
 // sub html_evidence_file_name
 //         my ($interval) = @_;
-void html_evidence_file_name(Interval interval);
+
 // sub html_evidence_file
 //         my (Settings settings, $gd, $interval) = @_;
 void  html_evidence_file(Settings settings, genome_diff gd, Interval interval);
 // sub decode_reject_reason
 //         my ($reject) = @_;
-void decode_reject_reason(string reject);
-// sub create_evidence_files
-//         my (Settings settings, $gd) = @_;
-//         sub add_evidence
-//                 my ($evidence_file_name_key, $evidence_item) = @_;
 void create_evidence_files(Settings settings, genome_diff gd);
 // sub save_text_deletion_file
 //         my ($deletion_file_name, $deletions_ref) = @_;
@@ -138,12 +273,8 @@ void save_statistics(string file_name, string data);
 // sub load_statistics
 //         my (string file_name) = @_;
 void load_statistics(string file_name);
-// sub nonbreaking
-//         my ($text) = @_;
-string nonbreaking(string text);
-// sub htmlize
-//         my ($text) = @_;
-string htmlize(string text);
-  
+																 
+
+ 
 }// end breseq namespace
 #endif

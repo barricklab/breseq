@@ -577,6 +577,7 @@ int do_preprocess_alignments(int argc, char* argv[]) {
     
   // Set the things we need...
 	Settings settings;
+  cout << options["read-file"] << endl;
     
   settings.read_structures.Init(from_string<vector<string> >(options["read-file"]));
  
