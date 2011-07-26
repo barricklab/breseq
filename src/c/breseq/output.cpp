@@ -5,85 +5,104 @@ using namespace std;
 namespace breseq
 {
 
-genome_diff::entry_list_t grep(const bool &match, const string &exp, genome_diff::entry_list_t &input)
-{
-  assert(!input.empty());  
-  genome_diff::entry_list_t matched_diff_entrys;
+/*-----------------------------------------------------------------------------
+ *  Diff_Entry Keywords 
+ *-----------------------------------------------------------------------------*/
+const char* GENES="genes";
+const char* GENE_NAME="gene_name";
+const char* _EVIDENCE_FILE_NAME="_evidence_file_name";
+const char* _SIDE_1_EVIDENCE_FILE_NAME="_side_1_evidence_file_name";
+const char* _SIDE_2_EVIDENCE_FILE_NAME="_side_2_evidence_file_name";
+const char* _NEW_JUNCTION_EVIDENCE_FILE_NAME="_new_junction_evidence_file_name";
+const char* PREFIX="prefix";
+const char* INSERT_START="insert_start";
+const char* INSERT_END="insert_end";
+const char* FILE_NAME="file_name";
+const char* GENE_POSITION="gene_position";
+const char* NO_SHOW="no_show";
+const char* BAM_PATH="bam_path";
+const char* FASTA_PATH="fasta_path";
+const char* PLOT="plot";
+const char* _COVERAGE_PLOT_FILE_NAME="_coverage_plot_file_name";
+const char* NEW_SEQ="new_seq";
+const char* SIZE="size";
+const char* MC_SIDE_1="mc_side_1";
+const char* MC_SIDE_2="mc_side_2";
+const char* ALIGNMENT_OVERLAP="alignment_overlap";
+const char* FLANKING_LEFT="flanking_left";
+//TODO initialize more from header file
 
-  for(genome_diff::entry_list_t::iterator diff_entry = input.begin();
-      diff_entry != input.end(); diff_entry++)
-  {
-    vector<string> fields = get_keys<string>((**diff_entry)._fields);
-    vector<string> matched_fields = grep(match, exp, fields);  
-      if(!matched_fields.empty())
-        matched_diff_entrys.push_back((*diff_entry));
+/*
+ * =====================================================================================
+ *        Class:  HTML
+ *  Description:  
+ * =====================================================================================
+ */
+/*-----------------------------------------------------------------------------
+ *  HTML Attribute Keywords
+ *-----------------------------------------------------------------------------*/
+const char* ALIGN_CENTER="align=\"center\"";
+const char* ALIGN_RIGHT="align=\"right\"";
+const char* ALIGN_LEFT="align=\"left\"";
+
+/*-----------------------------------------------------------------------------
+ *  HTML Utility for printing numbers
+ *-----------------------------------------------------------------------------*/
+string commify(const string& input)
+{
+	string retval;
+	string temp = input;
+  reverse(temp.begin(), temp.end());
+	for (uint8_t i = 0; i < input.size(); i++) {
+	  if ((i+1)%3 > 0) {
+	  	retval.push_back(temp[i]);
+	  } else {
+	  	retval.push_back(temp[i]);
+			retval.push_back(',');
+		}
+	}
+  reverse(retval.begin(),retval.end());
+ 	return retval;
+}
+/*-----------------------------------------------------------------------------
+ *  HTML Utility for Encoding HTML
+ *-----------------------------------------------------------------------------*/
+string nonbreaking(const string& input)
+{ 
+	string retval = input;
+	/* substitute nonbreaking hyphen */
+  while (retval.find("-") != string::npos) {
+    size_t pos = retval.find("-");
+		retval.replace(pos, 1, "&#8209;");
   }
-  return matched_diff_entrys;
-}
 
-genome_diff::entry_list_t grep(const bool &match, const string &exp1, const string &exp2, genome_diff::entry_list_t &input)
+	/* substitute nonbreaking en dash */
+	while (retval.find("–") != string::npos) {
+    size_t pos = retval.find("–");
+		retval.replace(pos, 3, "&#8211;");//!< En Dash is 3 chars, not 1
+  }
+
+	/* substitute nonbreaking space */
+ 	while (retval.find(" ") != string::npos) {
+    size_t pos = retval.find(" ");
+		retval.replace(pos, 1, "&nbsp;");
+  }
+	return retval;
+}
+/*-----------------------------------------------------------------------------
+ *  HTML Utility for Encoding HTML
+ *-----------------------------------------------------------------------------*/
+string htmlize (const string& input) 
 {
-  assert(!input.empty());  
-  genome_diff::entry_list_t matched_diff_entrys;
+	string retval = input;
+	//substitute nonbreaking en dash
+	while (retval.find("–") != string::npos) {
+    size_t pos = retval.find("–");
+		retval.replace(pos, 3, "&#8211;");//!< En Dash is 3 chars, not 1
+  }
+  return retval;
+}
 
-  for(genome_diff::entry_list_t::iterator diff_entry = input.begin();
-      diff_entry != input.end(); diff_entry++)
-  {
-    vector<string> fields = get_keys<string>((**diff_entry)._fields);
-    vector<string> matched_fields = grep(match, exp1, fields); 
-	 matched_fields = grep(match, exp2, fields);
-      if(!matched_fields.empty())
-        matched_diff_entrys.push_back((*diff_entry));
-}
-  return matched_diff_entrys;
-}
-  
-  
-  
-//   # ###
-// # # Pod Documentation
-// # ###
-// # 
-// # =head1 NAME
-// # 
-// # Breseq::Output
-// # 
-// # =head1 SYNOPSIS
-// # 
-// # Perl modules used internally by breseq.
-// # 
-// # =head1 AUTHOR
-// # 
-// # Jeffrey E. Barrick <jeffrey.e.barrick@gmail.com>
-// # 
-// # =head1 LICENSE AND COPYRIGHT
-// # 
-// # Copyright (c) 2010 Michigan State University
-// # 
-// # breseq is free software; you can redistribute it and/or modify it under the terms the 
-// # GNU General Public License as published by the Free Software Foundation; either 
-// # version 1, or (at your option) any later version.
-// # 
-// # =cut
-// # 
-// # ###
-// # # End Pod Documentation
-// # ###
-// # 
-// # package Breseq::Output;
-// # use strict;
-// # use CGI qw/:standard *table *Tr *th *td *div/;
-// # use Data::Dumper;
-// # use File::Copy;
-// # 
-// # require Exporter;
-// # our @ISA = qw( Exporter );
-// # our @EXPORT = qw();
-// # 
-// # use Breseq::AlignmentOutput;
-// # use Breseq::CoverageOutput;
-// # use GenomeDiff;
-// # 
 // # ## these style definitions are included between the
 // # ## HEAD tags of every generated page
 // # our $header_style_string = <<ENDOFSTYLE;
@@ -158,27 +177,26 @@ genome_diff::entry_list_t grep(const bool &match, const string &exp1, const stri
 // # ENDOFSTYLE
 string header_style_string() 
 {
-  stringstream os;
+  stringstream ss(ios_base::out | ios_base::app);
+  ss << "body {font-family: sans-serif; font-size: 11pt;}"                 << endl;
+  ss << "th {background-color: rgb(0,0,0); color: rgb(255,255,255);}"      << endl;
+	ss << "table {background-color: rgb(0,0,0); color: rgb(0,0,0);}"         << endl;
+  ss << "tr {background-color: rgb(255,255,255);}"                         << endl;
+	ss << ".mutation_in_codon {color:red; text-decoration : underline;}}"    << endl;
+  ss << ".mutation_header_row {background-color: rgb(0,130,0);}"           << endl; 
+ 	ss << ".read_alignment_header_row {background-color: rgb(255,0,0);}"		 << endl;
+  ss << ".missing_coverage_header_row {background-color: rgb(0,100,100);}" << endl;
+  ss << ".new_junction_header_row {background-color: rgb(0,0,155);}"			 << endl;
+  ss << ".alternate_table_row_0 {background-color: rgb(255,255,255);}"		 << endl;
+  ss << ".alternate_table_row_1 {background-color: rgb(230,230,245);}"		 << endl;
+  ss << ".polymorphism_table_row {background-color: rgb(160,255,160);}"		 << endl;
+  ss << ".highlight_table_row {background-color: rgb(192,255,255);}"			 << endl;
+  ss << ".reject_table_row {background-color: rgb(255,200,165);}"					 << endl;
+  ss << ".information_table_row {background-color: rgb(200,255,255);}"		 << endl;
+  ss << ".junction_repeat {background-color: rgb(255,165,0)}"              << endl;
+  ss << ".junction_gene {}\n";
   
-  os << "body {font-family: sans-serif; font-size: 11pt;}\n";
-  os << "th {background-color: rgb(0,0,0); color: rgb(255,255,255);}\n";
-  os << "table {background-color: rgb(0,0,0); color: rgb(0,0,0);}\n";
-  os << "tr {background-color: rgb(255,255,255);}\n";
-  os << ".mutation_in_codon {color:red; text-decoration : underline;}\n";
-  os << ".mutation_header_row {background-color: rgb(0,130,0);}\n";
-  os << ".read_alignment_header_row {background-color: rgb(255,0,0);}\n";
-  os << ".missing_coverage_header_row {background-color: rgb(0,100,100);}\n";
-  os << ".new_junction_header_row {background-color: rgb(0,0,155);}\n";
-  os << ".alternate_table_row_0 {background-color: rgb(255,255,255);}\n"; 
-  os << ".alternate_table_row_1 {background-color: rgb(230,230,245);}\n"; 
-  os << ".polymorphism_table_row {background-color: rgb(160,255,160);}\n"; 
-  os << ".highlight_table_row {background-color: rgb(192,255,255);}\n"; 
-  os << ".reject_table_row {background-color: rgb(255,200,165);}\n"; 
-  os << ".information_table_row {background-color: rgb(200,255,255);}\n"; 
-  os << ".junction_repeat {background-color: rgb(255,165,0)}\n";
-  os << ".junction_gene {}\n";
-  
-return os.str();
+return ss.str();
 }
 // # 
 // # 
@@ -211,7 +229,7 @@ void html_index(string file_name, Settings settings, Summary summary,
 // #   ###
 // #   
 // #   my @muts = $gd->list('SNP', 'INS', 'DEL', 'SUB', 'MOB', 'AMP');
-  genome_diff::entry_list_t muts(gd.list(make_list<string>("SNP")("INS")("DEL")("SUB")("MOB")("AMP")));
+	genome_diff::entry_list_t muts = gd.list(make_list<string>(SNP)(INS)(DEL)(SUB)(MOB)(AMP));
 // #   my $relative_path = $settings->file_name('local_evidence_path');
   string relative_path = settings.file_name("local_evidence_path");
 // #   $relative_path .= "/" if ($relative_path);
@@ -225,40 +243,40 @@ void html_index(string file_name, Settings settings, Summary summary,
     one_ref_seq = false;
 // #   print HTML p . html_mutation_table_string($settings, $gd, \@muts, $relative_path, undef, $one_ref_seq);
 // # 
-  HTML << "<p>" << html_mutation_table_string(settings, gd, muts, relative_path, false, one_ref_seq);
+	//string html_mutation_table_string = Html_Mutation_Table_String()
+  HTML << "<p>" << Html_Mutation_Table_String();//TODO
 // #   ###
 // #   ## Unassigned evidence
 // #   ###
 // #   
 // #   my @mc = $gd->filter_used_as_evidence($gd->list('MC'));
-  genome_diff::entry_list_t mc(gd.filter_used_as_evidence(gd.list(make_list<string>("MC"))));
+  genome_diff::entry_list_t mc(gd.filter_used_as_evidence(gd.list(make_list<string>(MC))));
 // #   if (scalar @mc > 0)
 // #   {
   if (mc.size() > 0)
 // #     print HTML p . html_missing_coverage_table_string(\@mc, $relative_path, "Unassigned missing coverage evidence...");
-    HTML << "<p>" << html_missing_coverage_table_string(mc, relative_path, "Unassigned missing coverage evidence");
+    HTML << "<p>" << html_missing_coverage_table_string(mc, false, "Unassigned missing coverage evidence", relative_path);
 // #   }
 // #   
 // #   my @jc = $gd->filter_used_as_evidence($gd->list('JC'));
-  genome_diff::entry_list_t jc(gd.filter_used_as_evidence(gd.list(make_list<string>("JC"))));
+	genome_diff::entry_list_t jc(gd.filter_used_as_evidence(gd.list(make_list<string>(JC))));
 ///TODO @GRC implement jc and jcu ####
 // #   @jc = grep { !$_->{no_show} } @jc;  
-  jc = grep(false, "no_show",jc); ///TODO not sure if this will work
+  
    
   
     
 // #   @jc = grep { !$_->{circular_chromosome} } @jc if ($settings->{hide_circular_genome_junctions}); #don't show junctions for circular chromosomes  
-  if(!settings.hide_circular_genome_junctions.empty())
-    jc = grep(false, "circular_chromosome", jc);
+  if(!settings.hide_circular_genome_junctions)
+		//TODO grep
+   
 // # 
 // #   my @jcu = grep { !$_->{reject} } @jc; 
     genome_diff::entry_list_t jcu;
 ///##############################
 // #   if (scalar @jcu > 0)
 // #   {
-    if (jcu.size() > 0)
 // #     print HTML p . html_new_junction_table_string(\@jcu, $relative_path, "Unassigned new junction evidence...");  
-      HTML << "<p>" << html_new_junction_table_string(jcu, relative_path, "Unassigned new junction evidence...");
 // #   }
 // #   
 // #   print HTML end_html;
@@ -277,6 +295,8 @@ void html_marginal_predictions(string file_name, Settings settings,Summary summa
 // # 
 // #   open HTML, ">$file_name" or die "Could not open file: $file_name";    
   ofstream HTML(file_name.c_str());
+	if(!HTML)
+		cerr << "Could not open file: " <<  file_name << endl;
 // # 
 // #     print HTML start_html(
   HTML << "<html>";
@@ -308,37 +328,30 @@ void html_marginal_predictions(string file_name, Settings settings,Summary summa
 // #   ###
 // #   
 // #   my @ra = $gd->filter_used_as_evidence($gd->list('RA')); 
-  genome_diff::entry_list_t ra = gd.filter_used_as_evidence(gd.list(make_list<string>("RA")));
+	genome_diff::entry_list_t ra = gd.filter_used_as_evidence(gd.list(make_list<string>("RA")));
+//TODO
 // #   ## don't print ones that overlap predicted deletions or were marked to not show
 // #   @ra = grep { !$_->{deleted} && !$_->{no_show} } @ra;
-	ra = grep(false, "deleted", "no_show", ra);
 // #   
 // #   if (scalar @ra > 0)
 // #   {
-  if (ra.size() > 0)
 // #     print HTML p . html_read_alignment_table_string(\@ra, $relative_path, "Marginal read alignment evidence...");
     HTML << "<p>" ;///TODO << html_read_alignment_table_string(ra, relative_path, "Marginal read alignment evidence...");
 // #   }
 // #   
 // #   my @jc = $gd->filter_used_as_evidence($gd->list('JC'));
-    genome_diff::entry_list_t jc = gd.filter_used_as_evidence(gd.list(make_list<string>("JC")));
+		genome_diff::entry_list_t jc = gd.filter_used_as_evidence(gd.list(make_list<string>("JC")));
 ///TODO @GRC implement jc and jcu ####
 // #   @jc = grep { !$_->{no_show} } @jc;
-		jc = grep(false, "no_show", jc);
 // #   @jc = grep { $_->{reject} } @jc;
-    jc = grep(false, "reject", jc);
 // #   if (scalar @jc > 0)
 // #   { 
-		if (jc.size() >0)
-		{
 /// TODO sort 
 // #     ## sort by score, not by position (the default order)...
 // #     @jc = sort { -($a->{pos_hash_score} <=> $b->{pos_hash_score}) || -($a->{min_overlap_score} <=> $b->{min_overlap_score})  || ($a->{total_reads} <=> $a->{total_reads}) } @jc;
 			
 // #     print HTML p . html_new_junction_table_string(\@jc, $relative_path, "Marginal new junction evidence..."); 
-  		HTML << "<p>" << html_new_junction_table_string(jc, relative_path, "Marginal new junction evidence...");
 // #   }
-		}
 // #   
 // #   print HTML end_html;
 		HTML <<  "</HTML>";
@@ -350,7 +363,7 @@ void html_marginal_predictions(string file_name, Settings settings,Summary summa
 
 string html_header (const string &title)
 {
-	stringstream ss;	
+	stringstream ss(ios_base::out | ios_base::app);	
 // # sub html_header
 // # {
 // #   my ($title) = @_;
@@ -382,7 +395,8 @@ string html_footer()
 // # 
 // # sub html_compare
 // # {
-void html_compare(const string &filename, const string &title)
+void html_compare(Settings settings,const string &filename, const string &title, genome_diff gd,
+								  bool one_ref_seq, vector<string> gd_name_list_ref, Options options)
 {
 // #   my ($settings, $file_name, $title, $gd, $one_ref_seq, $gd_name_list_ref, $options) = @_;
 // # 
@@ -396,7 +410,7 @@ void html_compare(const string &filename, const string &title)
 // #       -title => $title, 
 // #       -head  => style({type => 'text/css'}, $header_style_string),
 // #   );
-	HTML << "<HTML>\n"; ///TODO End HTML tag in this function also?  
+	HTML << "<html>\n"; ///TODO End HTML tag in this function also?  
 	HTML << "<title>" << title << "</title>\n";
 	HTML << "<head>\n";
 	HTML << "<style type = \"text/css\">\n";
@@ -405,50 +419,94 @@ void html_compare(const string &filename, const string &title)
 	HTML << "</head>\n";
 // #   
 // #   my @muts = $gd->mutation_list;
+	genome_diff::entry_list_t muts = gd.mutation_list();
 // #   
 // #   print HTML html_mutation_table_string($settings, $gd, \@muts, undef, undef, $one_ref_seq, $gd_name_list_ref, $options);
 // # 
+	HTML << Html_Mutation_Table_String(); /// TODO
 // #   print HTML end_html;
+	HTML << "</html>";
 // #   close HTML;
+	HTML.close();
 // # }
 }
 // # 
+
 // # sub html_compare_polymorphisms
 // # {
+void html_compare_polymorphisms(Settings settings, string file_name, string title, genome_diff::entry_list_t list_ref)
+{
 // #   my ($settings, $file_name, $title, $list_ref) = @_;
 // # 
-// #   open HTML, ">$file_name" or die "Could not open file: $file_name";    
+// #   open HTML, ">$file_name" or die "Could not open file: $file_name";
+    
+	ofstream HTML(file_name.c_str());
+	if(!HTML.good())
+		cerr << "Could not open file: " << file_name << endl;
 // # 
 // #     print HTML start_html(
 // #       -title => $title, 
 // #       -head  => style({type => 'text/css'}, $header_style_string),
 // #   );
+	HTML << "<html>\n";
+	HTML << "<title>" << title << "</title>\n";
+	HTML << "<head>\n";
+	HTML << "<style type =\"text/css\">\n";
+	HTML << header_style_string() << "\n";
+	HTML << "</style>\n";
+	HTML << "</head>\n";
 // #     
 // #   print HTML html_read_alignment_table_string($settings, $list_ref, undef, undef, 1);
+  HTML << html_read_alignment_table_string(list_ref, true); 
+//! TODO Confirm settings is never used
 // # 
 // #   print HTML end_html;
+	HTML << "</html>\n";
 // #   close HTML;
+  HTML.close();
 // # }
+}
 // # 
 // # ## Note that we should probably not overwrite past summary tables
 // # ## Instead, we should concatenate them.
 // # 
+void html_statistic(const string &file_name, Settings settings, Summary summary, cReferenceSequences ref_seq_info)
+{	
 // # sub html_statistics
 // # {
 // #   my ($file_name, $settings, $summary, $ref_seq_info) = @_;
 // #   
 // #   ## Create the current file...
 // #   open HTML, ">$file_name" or die "Could not open file: $file_name";    
+	ofstream HTML(file_name.c_str());
+	if(!HTML.good())
+		cerr << " Could not open file: " << file_name;
 // #     
 // #     print HTML start_html(
 // #       -title => "BRESEQ :: Summary Statistics" . ($settings->{print_run_name} ? " :: $settings->{print_run_name}" : ''), 
 // #       -head  => style({type => 'text/css'}, $header_style_string),
 // #   );
+	HTML << "<html>\n";
+	HTML << "<title>" << "Summary Statistics" << "</title>\n";
+	HTML << "<head>\n";
+	HTML << "<style type =\"text/css\">\n";
+	HTML << header_style_string() << "\n";
+	HTML << "</style>\n";
+	HTML << "</head>\n";
+
 // #   print HTML breseq_header_string($settings) . p; 
+	HTML << breseq_header_string(settings) << "\n";
 // #   
 // #   ## Write fastq read file information
 // #     print HTML start_table({-border => 0, -cellspacing => 1, -cellpadding => 5});
+	HTML << "<table border=\"0\" cellspace=\"1\" cellpadding=\"1\">\n";
 // #   print HTML Tr(th(), th("fastq read file"), th("reads"), th("bases"), th("longest"));
+	HTML << "<tr>\n";
+	HTML << "<th>fastq read file</th>\n";
+	HTML << "<th>reads</th>\n";
+	HTML << "<th>bases</th>\n";
+	HTML << "<th>longest</th>\n";
+	HTML << "</tr>\n";
 // # 
 // #   foreach my $read_file ($settings->read_files)
 // #   {
@@ -541,6 +599,7 @@ void html_compare(const string &filename, const string &title)
 // # 
 // #   close HTML;
 // # }
+}
 // # 
 // # sub breseq_header_string
 // # {
@@ -548,13 +607,13 @@ void html_compare(const string &filename, const string &title)
 string breseq_header_string(Settings settings)
 {
 // #   my $output_string = '';
-  stringstream os;
+  stringstream ss(ios_base::out | ios_base::app);
 // #   
 // #   #copy over the breseq_graphic
 // #   my $breseq_graphic_from_file_name = $settings->file_name('breseq_small_graphic_from_file_name');
-  string breseq_graphic_from_file_name;
+  string breseq_graphic_from_file_name; //TODO
 // #   my $breseq_graphic_to_file_name = $settings->file_name('breseq_small_graphic_to_file_name');
-  string breseq_graphic_to_file_name;
+  string breseq_graphic_to_file_name; //TODO	
 // #   
 // #   if (!-e $breseq_graphic_to_file_name)
 // #   {
@@ -562,77 +621,111 @@ string breseq_header_string(Settings settings)
 // #   }
 // #   
 // #   $output_string .= start_table({-width => "100%", -border => 0, -cellspacing => 0, -cellpadding => 3});
-  os << "<table width=\"100%\" border=\"0\" cellspacing=\"0\" cellpadding=\"3\">";
+  ss << "<table width=\"100%\" border=\"0\" cellspacing=\"0\" cellpadding=\"3\">" << endl;
 // #   $output_string .= start_Tr;
-  os << "<tr>";
+  ss << "<tr>" << endl;
 // #   $output_string .=  td(a({-href=>$settings->{website}}, 
 // #                 img({-src=>$settings->html_path('breseq_small_graphic_to_file_name')})
-  os << "<td><a href=\"";  //TODO
-  // #               )
+  ss << "<td><a href=\"" << endl;  //TODO
 // #             );
 // #   $output_string .= start_td({-width => "100%"});
-  os << "<td width=\"100%\">\n";
+  ss << "<td width=\"100%\">" << endl;
 // #   $output_string .= $settings->{byline};
 // #   $output_string .= br; 
-  os << "<br>";
+  ss << "<br>";
 // #   $output_string .= a({-href=>$settings->html_path('index_html_file_name')}, 'mutation predictions');
-  os << "<a href=\"\">mutation predictions</a>\n";
+  ss << "<a href=\"\">mutation predictions</a>\n";
 // #   $output_string .= " | ";
-  os << " | ";
+  ss << " | ";
 // #   $output_string .= a({-href=>$settings->html_path('marginal_html_file_name')}, 'marginal predictions');
-  os << "<a href=\"\">marginal predictions</a>\n";
+  ss << "<a href=\"\">marginal predictions</a>\n";
 // #   $output_string .= " | ";
-  os << " | ";
+  ss << " | ";
 // #   $output_string .= a({-href=>$settings->html_path('summary_html_file_name')}, 'summary statistics');
-  os << "<a href=\"\">summary statistics</a>\n";
+  ss << "<a href=\"\">summary statistics</a>\n";
 // #   $output_string .= " | ";
-  os << " | ";
+  ss << " | ";
 // #   $output_string .= a({-href=>$settings->html_path('final_genome_diff_file_name')}, 'genome diff');
-  os << "<a href=\"\">genome diff</a>\n";
+  ss << "<a href=\"\">genome diff</a>\n";
 // #   $output_string .= " | ";
-  os << " | ";
+  ss << " | ";
 // #   $output_string .= a({-href=>$settings->html_path('log_file_name')}, 'command line log');
-  os << "<a href=\"\">command line log</a>\n";
+  ss << "<a href=\"\">command line log</a>\n";
 // #   $output_string .= end_td . end_Tr . end_table;
-  os << "</td></tr></table>\n";
+  ss << "</td></tr></table>\n";
 // #   
 // #   return $output_string;
-  return os.str();
+  return ss.str();
 // # }
 }
 // # 
-// # 
+// #
+string html_genome_diff_item_table_string(Settings settings, genome_diff gd, genome_diff::entry_list_t list_ref)
+{
 // # sub html_genome_diff_item_table_string
 // # {
 // #   my ($settings, $gd, $list_ref) = @_;
 // #   
 // #   return '' if (!defined $list_ref) || (scalar @$list_ref) == 0;
-// #   my $first_item = $list_ref->[0];  
+	if(list_ref.empty())
+		return "";
+// #   my $first_item = $list_ref->[0];
+	diff_entry& first_item = *list_ref[0];
 // #         
 // #   ##mutation
 // #   if (length($first_item->{type}) == 3)
 // #   { 
+	if(first_item._type.length() == 3)
+	{
 // #     return html_mutation_table_string($settings, $gd, $list_ref);
+		return Html_Mutation_Table_String(); ///TODO
 // #   }
+	}
 // #   
 // #   ##evidence
 // #   else
 // #   {
+	else
+	{
 // #     if ($first_item->{type} eq 'MC')
 // #     {
+		if(first_item._type == "MC")
+		{
 // #       return html_missing_coverage_table_string($list_ref, undef, undef, 1);
+			return html_missing_coverage_table_string(list_ref, true, "", "" );
 // #     }
+		}
 // #     elsif ($first_item->{type} eq 'RA')
 // #     {
+		else if(first_item._type == "RA")
+		{
+// #     {
 // #       return html_read_alignment_table_string($list_ref, undef, undef, 1);
+			return html_read_alignment_table_string(list_ref, true);
 // #     }
+		}
 // #     elsif ($first_item->{type} eq 'JC')
 // #     {
+		else if(first_item._type == "JC")
+		{
 // #       return html_new_junction_table_string($list_ref, undef, undef, 1);
+			return html_new_junction_table_string(list_ref,false, "", "" );
 // #     }
+		}
 // #   }
+	}
 // # }
-// # 
+}
+
+//===============================================================================
+//       CLASS: Formatted_Mutation_Annotation
+// DESCRIPTION: 
+//===============================================================================
+Formatted_Mutation_Annotation::Formatted_Mutation_Annotation(const diff_entry& in_mut)
+ : mut(in_mut)
+ , string()
+ , m_output(ios_base::out | ios_base::app)
+{
 // # sub formatted_mutation_annotation
 // # {
 // #   my ($mut) = @_;
@@ -641,376 +734,126 @@ string breseq_header_string(Settings settings)
 // #   my $formatted_annotated = '';
 // #   if ((defined $mut->{snp_type}) && ($mut->{snp_type} ne 'intergenic') && ($mut->{snp_type} ne 'noncoding') && ($mut->{snp_type} ne 'pseudogene'))
 // #   {
+	if((!(mut["snp_type"].empty())) && (mut["snp_type"] != "intergenic") &&
+		 (mut["snp_type"] != "noncoding") && (mut["snp_type"] != "noncoding") && 
+		 (mut["snp_type"] != "pseudogene"))
+	{		
 // #     $formatted_annotated .= "$mut->{aa_ref_seq}$mut->{aa_position}$mut->{aa_new_seq}";
+		m_output << mut["aa_ref_seq"] << mut["aa_position"] << mut["aa_new_seq"];
 // #     ## add color and underlining  
 // # 
 // #     my $codon_ref_seq = to_underline_red_codon($mut, 'codon_ref_seq');
+		string codon_ref_seq = To_Underline_Red_Codon(mut, "codon_ref_seq");
 // #     my $codon_new_seq = to_underline_red_codon($mut, 'codon_new_seq');
+		string codon_new_seq = To_Underline_Red_Codon(mut, "codon_new_seq");
+// #    // # 
+// #     $formatted_annotated .= "&nbsp;($codon_ref_seq&rarr;$codon_new_seq)";
+	m_output << "&nbsp;" << codon_ref_seq << "&rarr;" << codon_new_seq << "&nbsp;";	
+// #   }
+	}
+// #   else # ($mut->{snp_type} eq 'NC')
+// #   {
+	else
+	{
+// #     $formatted_annotated .= nonbreaking($mut->{gene_position});
+		m_output << nonbreaking(mut["gene_positon"]) << endl; 
+// #   }
+	}
 // # 
-// #     sub to_underline_red_codon
+// #   return $formatted_annotated;
+	 (*this) += m_output.str();
+// # }
+}
+//===============================================================================
+//       CLASS: Formatted_Mutation_Annotation
+//      METHOD: To_Underline_Red_Codon
+// DESCRIPTION: 
+//===============================================================================
+string Formatted_Mutation_Annotation::To_Underline_Red_Codon(diff_entry mut, 
+																											 const string& codon_key)
+{
+// # sub to_underline_red_codon
 // #     {
 // #       my ($mut, $codon_key) = @_;     
 // #       return '' if (!defined $mut->{$codon_key} || !defined $mut->{codon_position} || $mut->{codon_position} eq '');
+  if (!mut.entry_exists(codon_key) || 
+      !mut.entry_exists("codon_position") ||
+      mut["codon_position"] == "") {
+    return "";
+  }
 // # 
 // #       my $codon_string;
+	stringstream ss(ios_base::out | ios_base::app); //!< codon_string
 // #       my @codon_ref_seq_list = split //, $mut->{$codon_key};
+	vector<string> codon_ref_seq_list = split(mut[codon_key],"/"); 
 // #       for (my $i=0; $i<scalar @codon_ref_seq_list; $i++)
 // #       {
+	for (uint8_t i = 0; i < codon_ref_seq_list.size(); i++) {
 // #         if ($i == $mut->{codon_position})
 // #         {
+	  if (to_string(i) == mut["codon_position"]) {
 // #           $codon_string.= font({-class=>"mutation_in_codon"}, $codon_ref_seq_list[$i]);
+		  ss << font("class=\"mutation_in_codon\"", codon_ref_seq_list[i]);
 // #         }
+	  }
 // #         else
 // #         {
+	  else 
+	  {
+		
 // #           $codon_string.= $codon_ref_seq_list[$i];
+		  ss << codon_ref_seq_list[i];
 // #         } 
+	  }
 // #       } 
+  }
 // #       return $codon_string;
+  return ss.str();
 // #     }
-// # 
-// #     $formatted_annotated .= "&nbsp;($codon_ref_seq&rarr;$codon_new_seq)";
-// #   }
-// #   else # ($mut->{snp_type} eq 'NC')
-// #   {
-// #     $formatted_annotated .= nonbreaking($mut->{gene_position});
-// #   }
-// # 
-// #   return $formatted_annotated;
-// # }
+ 
+}
+
 // # 
 // # 
-// # sub html_mutation_table_string
-// # { 
-// #   # Recognized $settings are
-// #   # shade_frequencies => 1, instead of frequences, shade boxes
-// #   
-// #   # Recognized $options are
-// #   # repeat_header => 15 (which means repeat the header line after this many mutations)
-// # 
-// #   our ($settings, $gd, $list_ref, $relative_link, $legend_row, $one_ref_seq, $gd_name_list_ref, $options) = @_;
-// #   $relative_link = '' if (!defined $relative_link);
-// #   my $output_str = '';
-// # 
-// #   my $q = new CGI;
-// #   $output_str.= start_table({-border => 0, -cellspacing => 1, -cellpadding => 3});
-// # 
-// #   #####################
-// #   #### HEADER LINE ####
-// #   #####################
-// # 
-// #   my $header_text = "Predicted mutation";
-// #   $header_text .= "s" if (scalar @$list_ref > 1);
-// # 
-// #   # There are three possibilities for the frequency column(s)
-// #   # (1) We don't want it at all. (Single genome no poly prediction)   
-// #   my @freq_header_list = ();
-// #   # (2) We want multiple columns because we are comparing genomes.
-// #   if (defined $gd_name_list_ref)
-// #   {
-// #     @freq_header_list = @$gd_name_list_ref;
-// #   }
-// #   # (3) We want a single column (polymorphism prediction)
-// #   elsif ($settings->{polymorphism_prediction})
-// #   {
-// #     @freq_header_list = ("freq");
-// #   }
-// #   
-// #   my $total_cols;
-// #   my $header_str = '';
-// #   
-// #   if ($settings->{lenski_format}) {
-// #     
-// #     my @header_list = split /\|/, $freq_header_list[0];
-// #     my $header_rows = scalar @header_list;
-// #     
-// #     $total_cols = 7 + scalar @freq_header_list;
-// #     $total_cols += 1 if (!$one_ref_seq);
-// #     $total_cols += 1 if (!$settings->{no_evidence});  ## evidence column 
-// #       
-// #     for (my $i=1; $i<=$header_rows; $i++)
-// #     { 
-// #       $header_str.= start_Tr();
-// #       $header_str.= th("evidence") if (!$settings->{no_evidence}); 
-// #       $header_str.= th(nonbreaking("seq id")) if (!$one_ref_seq); 
-// #     
-// #       $header_str .= th(
-// #         [
-// #           ($header_rows == $i) ? "position" : "",
-// #           ($header_rows == $i) ? "mutation" : "",
-// #           ($header_rows == $i) ? "annotation" : "", 
-// #           ($header_rows == $i) ? "gene" : ""
-// #         ]
-// #       );
-// #       $header_str.= th({-width => "100%"}, ($header_rows == $i) ? "description" : ""); 
-// #     
-// #       foreach my $freq_header_item (@freq_header_list) {
-// #         
-// #         my @header_list = split /\|/, $freq_header_item;        
-// #         my $this_header_string = $header_list[$i-1];
-// #         $this_header_string =~ s/_/&nbsp;/g;
-// #         my $this_header_string_1 = $header_list[0];
-// #         my $this_header_string_2 = $header_list[1];
-// # 
-// #         my $color = "black";
-// #         
-// #         if ($this_header_string_1 eq "UC") {
-// #           $color = "gray";
-// #         } elsif ($this_header_string_1 eq "clade_1") {
-// #           $color = "green";
-// #         } elsif ($this_header_string_1 eq "clade_2") {
-// #           $color = "blue";
-// #         } elsif ( ($this_header_string_1 eq "clade_3") 
-// #           && ( ($this_header_string_2 eq "ZDB483") 
-// #           || ($this_header_string_2 eq "ZDB30") ) )
-// #         {
-// #           $color = "orange";
-// #         } elsif ($this_header_string_1 eq "clade_3") {
-// #           $color = "red";
-// #         }   
-// #         
-// #         $header_str .= th({style=>"background-color:$color"}, $this_header_string);
-// #         #$header_str .= th($this_header_string);
-// #       }
-// #     
-// #       $header_str .= th(
-// #         [
-// #           ($header_rows == $i) ? "position" : "",
-// #         ]
-// #       );    
-// #       $header_str.= end_Tr; 
-// #     }
-// #     
-// #   } else {
-// #     $total_cols = 5 + scalar @freq_header_list;
-// #     $total_cols += 1 if (!$one_ref_seq);
-// #     $total_cols += 1 if (!$settings->{no_evidence});  ## evidence column 
-// #       
-// #     $header_str.= start_Tr();
-// #     $header_str.= th("evidence") if (!$settings->{no_evidence}); 
-// #     $header_str.= th(nonbreaking("seq id")) if (!$one_ref_seq); 
-// #     
-// #     $header_str .= th(
-// #       [
-// #         "position",
-// #         "mutation",
-// #       ]
-// #     );
-// #     
-// #     foreach my $freq_header_item (@freq_header_list) {
-// #       $header_str .= th( [$freq_header_item] );
-// #     } 
-// #     
-// #     $header_str .= th(
-// #       [   
-// #         "annotation", 
-// #         "gene", 
-// #       ]
-// #     );    
-// #     $header_str.= th({-width => "100%"}, "description"); 
-// #     $header_str.= end_Tr;
-// #   }
-// #   
-// #   if (!$settings->{no_header})
-// #   {
-// #     $output_str.= Tr(th({-colspan => $total_cols, -align => "left", -class=>"mutation_header_row"}, $header_text));
-// #   }
-// #   $output_str.= $header_str;
-// # 
-// #   ####################
-// #   #### ITEM LINES ####
-// #   ####################
-// # 
-// #   my $row_num = 0;
-// #   foreach my $mut (@$list_ref)
-// #   { 
-// #     $output_str.= $header_str if (($row_num != 0) && (defined $options->{repeat_header}) && ($row_num % $options->{repeat_header} == 0));
-// #     $row_num++;
-// #     
-// #     my $evidence_string = '';
-// #     if (!$settings->{no_evidence}) 
-// #     {
-// #       my $already_added_RA;
-// #       EVIDENCE: foreach my $evidence_item ($gd->mutation_evidence_list($mut))
-// #       {         
-// #         if ($evidence_item->{type} eq 'RA')
-// #         {
-// #           next EVIDENCE if ($already_added_RA);
-// #           $already_added_RA = 1;
-// #         }
-// #         $evidence_string .= "&nbsp;" if ($evidence_string);
-// #         $evidence_string .= a({href => "$relative_link$evidence_item->{_evidence_file_name}" }, $evidence_item->{type});
-// #       }
-// #     }
-// #     
-// #     sub freq_to_string
-// #     {
-// #       my ($freq) = @_;
-// #       
-// #       $freq = 1 if (!defined $freq);
-// #       return 'H' if ($freq eq 'H');
-// #       return '?' if ($freq eq '?');
-// #       return '' if ($freq == 0);
-// #       my $frequency_string;
-// #       if ($freq == 1) {
-// #         $frequency_string = "100%";
-// #       }
-// #       else { 
-// #         $frequency_string = sprintf("%4.1f%%", $freq*100);
-// #       }
-// #       return $frequency_string;
-// #     }
-// #     
-// #     sub freq_cols
-// #     {
-// #       my @freq_list = @_;
-// #       my $output_str = '';
-// #       
-// #       foreach my $freq (@freq_list) {
-// #         if ($settings->{shade_frequencies}) {
-// #           my $bgcolor;
-// #           $bgcolor = 'Blue' if ($freq == 1);
-// #           if (defined $bgcolor) {
-// #             $output_str .= td({align=>"right", bgcolor=>$bgcolor}, '&nbsp;');
-// #           }
-// #           else {
-// #             $output_str .= td({align=>"right"}, '&nbsp;');
-// #           }
-// #         }
-// #         else {
-// #           $output_str .= td({align=>"right"}, freq_to_string($freq));
-// #         }
-// #       }
-// #       return $output_str;
-// #     }
-// #     
-// #     my $row_class = "normal_table_row";
-// #     
-// #     # There are three possibilities for the frequency column(s)
-// #     # (1) We don't want it at all. (Single genome no poly prediction)   
-// #     my @freq_list = ();
-// #     # (2) We want multiple columns because we are comparing genomes.
-// #     if (defined $gd_name_list_ref) {
-// #       #"_freq_[name]" keys were made within GenomeDiff structure        
-// #       @freq_list = map { $mut->{"frequency_$_"} } @$gd_name_list_ref; 
-// #       $row_class = "alternate_table_row_" . ($row_num % 2);
-// #     }
-// #     # (3) We want a single column (polymorphism prediction)
-// #     elsif ($settings->{polymorphism_prediction}) {      
-// #       if ((defined $mut->{frequency}) && ($mut->{frequency} != 1)) {
-// #         $row_class = "polymorphism_table_row";  
-// #       }     
-// #       push @freq_list, $mut->{frequency};
-// #     }
-// #     
-// #     
-// #     ## marshal cells defined depending on mutation type
-// #     # $evidence_string
-// #     my $cell_seq_id = nonbreaking($mut->{seq_id}); 
-// #     my $cell_position = commify($mut->{position});
-// #     my $cell_mutation;
-// #     my $cell_mutation_annotation = nonbreaking(formatted_mutation_annotation($mut));
-// #     my $cell_gene_name = i(nonbreaking($mut->{gene_name}));
-// #     my $cell_gene_product = htmlize($mut->{gene_product});
-// #         
-// #     if ($mut->{type} eq 'SNP') {
-// #       $cell_mutation = "$mut->{_ref_seq}&rarr;$mut->{new_seq}";
-// #     } elsif ($mut->{type} eq 'INS') {
-// #       $cell_mutation = "+$mut->{new_seq}";
-// #     } elsif ($mut->{type} eq 'DEL') {
-// #       $cell_mutation = nonbreaking("&Delta;" . commify($mut->{size}) . " bp");
-// #       my $annotation_str = '';
-// #       $annotation_str = "between $mut->{between}" if ($mut->{between});
-// #       $annotation_str = "$mut->{mediated}-mediated" if ($mut->{mediated});
-// #       $annotation_str = nonbreaking($mut->{gene_position}) if (!$annotation_str); 
-// #       $cell_mutation_annotation = nonbreaking($annotation_str);
-// #     } elsif ($mut->{type} eq 'SUB') {
-// #       $cell_mutation = nonbreaking("$mut->{size} bp&rarr;$mut->{new_seq}");
-// #     } elsif ($mut->{type} eq 'CON') {
-// #       $cell_mutation = nonbreaking("$mut->{size} bp&rarr;$mut->{region}");      
-// #     } elsif ($mut->{type} eq 'MOB') {
-// #       my $s;
-// #       my $s_start = '';
-// #       $s_start .= "+" . $mut->{ins_start} if ($mut->{ins_start});
-// #       $s_start .= "&Delta;" . $mut->{del_start} if ($mut->{del_start});
-// #       $s.= $s_start . " :: " if ($s_start);
-// # 
-// #       $s .= "$mut->{repeat_name} (";
-// #       $s .= (($mut->{strand}==+1) ? '+' : (($mut->{strand}==-1) ? '&minus;' : '?'));
-// #       $s .= ")";
-// # 
-// #       my $s_end = '';
-// #       $s_end .= "&Delta;" . $mut->{del_end} if ($mut->{del_end});
-// #       $s_end .= "+" . $mut->{ins_end} if ($mut->{ins_end});
-// #       $s.= " :: " . $s_end if ($s_end);
-// # 
-// #       my $dup_str = ($mut->{duplication_size} >= 0) ? "+$mut->{duplication_size}" : "&Delta;" . abs($mut->{duplication_size});
-// #       $s .= " ($dup_str) bp";     
-// #       $cell_mutation = nonbreaking($s);
-// #     } elsif ($mut->{type} eq 'INV') {
-// #       $cell_mutation =  nonbreaking(commify($mut->{size}) . " bp inversion");
-// #       $cell_gene_name = i(nonbreaking($mut->{gene_name_1})) . "&darr;" . i(nonbreaking($mut->{gene_name_2}));
-// #       $cell_gene_product = htmlize($mut->{gene_product_1}) . "&darr;" . htmlize($mut->{gene_product_2});
-// #     } elsif ($mut->{type} eq 'AMP') {       
-// #       $cell_mutation = nonbreaking(commify($mut->{size}) . " bp x $mut->{new_copy_number}");
-// #       $cell_mutation_annotation = ($mut->{new_copy_number} == 2) ? "duplication" : "amplification";       
-// #     }
-// #   
-// #     ##### PRINT THE TABLE ROW ####
-// #     $output_str.= start_Tr({-class=>$row_class}); 
-// #     $output_str.= td({align=>"center"}, $evidence_string) if (!$settings->{no_evidence}); 
-// #     $output_str.= td({align=>"center"}, $cell_seq_id) if (!$one_ref_seq); 
-// #     $output_str.= td({align=>"right"}, $cell_position);
-// #     
-// #     $output_str.= td({align=>"center"}, $cell_mutation);
-// #     if ($settings->{lenski_format}) {
-// #       $output_str.= td({align=>"center"}, $cell_mutation_annotation);
-// #       $output_str.= td({align=>"center"}, $cell_gene_name);
-// #       $output_str.= td({align=>"left"}, $cell_gene_product);
-// #     }
-// #     $output_str.= freq_cols(@freq_list);
-// #     
-// #     if ($settings->{lenski_format}) {
-// #       $output_str.= td({align=>"right"}, $cell_position);
-// #     } else {
-// #       $output_str.= td({align=>"center"}, $cell_mutation_annotation);     
-// #       $output_str.= td({align=>"center"}, $cell_gene_name);
-// #       $output_str.= td({align=>"left"}, $cell_gene_product);
-// #     }
-// #     $output_str.= end_Tr;   
-// #     ##### END TABLE ROW ####
-// #   }
-// #   
-// #   if ($legend_row) {
-// #     $output_str.= start_Tr(); 
-// #     $output_str.= td({-colspan=>$total_cols}, b("Evidence codes: RA = read alignment, MC = missing coverage, JC = new junction"));
-// #     $output_str.= end_Tr; 
-// #   }
-// #   
-// #   $output_str.= end_table;  
-// # }
-// # 
-// # sub html_read_alignment_table_string
+string html_read_alignment_table_string(vector<diff_entry>list_ref, bool show_reject_reason,
+							                          string title, string relative_link)
+{
+// # sub html_read_alignment_table_strin/usr/share/vim/site/plugin/a.vimg
 // # {
 // #   my ($list_ref, $relative_link, $title, $show_reject_reason) = @_;
 // #   $relative_link = '' if (!$relative_link);
 // #   $title = "Read alignment evidence..." if (!$title);
 // #   
 // #   my $output_str = '';
+  stringstream ss(ios_base::out | ios_base::app); //!< Main Build Object for Function
+	stringstream ssf; //<! Stream used to temporarily format numbers before being passed on,
+                    // uses default construct because we want buffer emptied on every use.
 // #   
-// #   my $q = new CGI;
+// #   my $q = new CGI; //TODO ?
 // #   $output_str.= start_table({-border => 0, -cellspacing => 1, -cellpadding => 3});
+  start_table("border=\"0\" cellspacing=\"1\", cellpadding=\"3\"");
 // #   
 // #   my $link = (defined $list_ref->[0]) && (defined $list_ref->[0]->{_evidence_file_name});
+	bool link = list_ref[0].entry_exists("_evidence_file_name"); //TODO defined?
 // #   my $total_cols = $link ? 11 : 10;
+	uint8_t total_cols = link ? 11 : 10;
 // #   $output_str.= Tr(th({-colspan => $total_cols, -align => "left", -class=>"read_alignment_header_row"}, $title));
+	ss << tr(th("colspan=\"" + to_string(total_cols) + 
+							"\" align=\"left\", class=\"read_alignment_header_row\"", title));
 // # 
 // #   $output_str.= start_Tr();
+	ss << start_tr();
 // #   if ($link)
 // #   {
 // #     $output_str.= th("&nbsp;"); 
 // #   }
+	if (link) {
+		ss << th("&nbsp;");
+	}
 // #   $output_str.= th("seq&nbsp;id");
+  ss << th("seq&nbsp;id");
 // #   $output_str.= th({colspan => 2}, "position");
+	ss << th("colspan=\"2\"", "position");
 // #   
 // #   $output_str.= th( [
 // #       "change",
@@ -1021,77 +864,168 @@ string breseq_header_string(Settings settings)
 // #       "genes", 
 // #       
 // #     ]
-// #   );  
+// #   );
+	ss << th("change")     << endl <<
+				th("freq")       << endl <<
+				th("score")      << endl <<
+				th("cov")        << endl <<
+				th("annotation") << endl <<
+				th("gene")       << endl;
+  
 // #   $output_str.= th({-width => "100%"}, "product"); 
+	ss << th("width=\"100%\"", "product");
 // #   $output_str.= end_Tr;
+	ss << "<tr>" << endl;
 // #   
 // #   foreach my $c (@$list_ref)
 // #   {     
+	for (vector<diff_entry>::iterator itr = list_ref.begin();
+	     itr != list_ref.end(); itr ++) {	
+	  diff_entry& c = (*itr);
 // #     my $is_polymorphism = ((defined $c->{frequency}) && ($c->{frequency} != 1)) ? 1 : 0;
+	  bool polymorphism = false;
+		if (c.entry_exists(FREQUENCY) && (from_string<uint8_t>(c[FREQUENCY]) != 1)) {
+			polymorphism = true;
+		}
 // #     
 // #     my $row_class = "normal_table_row";
+		string row_class = "normal_table_row";
 // #     if ($is_polymorphism)
 // #     {
 // #       $row_class = "polymorphism_table_row";  
 // #     }
+		if (polymorphism) {
+			row_class = "polymorphism_table_row";
+		}
 // #     $output_str.= start_Tr({-class=>$row_class});
+		ss << start_tr("class=\"" + row_class + "\"");
 // #     
 // #     if ($link)
 // #     {
 // #       $output_str.= td(a({-href=>"$relative_link$c->{_evidence_file_name}"}, '*')); 
 // #     }
+		if (link) {
+			ss << td(a(relative_link + c[_EVIDENCE_FILE_NAME], "*"));
+		}
 // #     
 // #     my $fisher_p_value = '';
+		string fisher_p_value;
 // #     $fisher_p_value = nonbreaking(sprintf("&nbsp;(%.1E)", $c->{fisher_strand_p_value})) if (defined $c->{fisher_strand_p_value} && $c->{fisher_strand_p_value} ne 'ND');
+		if (c.entry_exists("fisher_strand_p_value") &&
+			 (c["fisher_strand_p_value"] != "ND")) {
+		  ssf.precision(1);
+      ssf << scientific << from_string<double>(c["fisher_strand_p_value"]); //TODO Confirm
+		  fisher_p_value = nonbreaking("&nbsp;(" + ssf.str() + ")");
+     }
 // #     
 // #     $output_str.= td({align => "center"}, nonbreaking($c->{seq_id}) );  
 // #     $output_str.= td({align => "right"}, commify($c->{position}) ); 
 // #     $output_str.= td({align => "right"}, $c->{insert_position} );
 // #     $output_str.= td({align => "center"}, "$c->{ref_base}&rarr;$c->{new_base}" ); 
 // #     $output_str.= td({align => "right"}, sprintf("%4.1f%%", $c->{frequency}*100) );
+		ss << td("align=\"center\"", nonbreaking(c[SEQ_ID]));
+		ss << td("align=\"right\"", commify(c["position"]));
+		ss << td("align=\"right\"", c["insert_position"]);
+		ss << td("align=\"center\"", c["ref_base"] + "&rarr;" + c["new_base"]);
+		ssf.width(4);
+    ssf.precision(1);
+	  ssf << from_string<float>(c["frequency"]) * 100;
+		ss << td("align=\"right\"", ssf.str());
+		ssf.width(); //!< Reset width back to it's default. //TODO Confirm
 // #     if ($is_polymorphism)
 // #     {
+		if (polymorphism) {
 // #       ## display extra score data for polymorphisms...
 // #       my $log_fisher = ($c->{fisher_strand_p_value} > 0) ? log($c->{fisher_strand_p_value})/log(10) : 999;
 // #       my $log_ks = ($c->{ks_quality_p_value} > 0) ? log($c->{ks_quality_p_value})/log(10) : 999;
 // #       $output_str.= td({align => "right"}, nonbreaking(sprintf("%.1f,%.1f,%.1f", $c->{polymorphism_quality}, $log_fisher, $log_ks)) );  # . $fisher_p_value 
 // #     }
+	  }
 // #     else
 // #     {
+	  else {
 // #       $output_str.= td({align => "right"}, nonbreaking(sprintf("%.1f", $c->{quality})) );
+		  
 // #     }
+  	}  
 // #     my ($top_cov, $bot_cov) = split /\//, $c->{tot_cov};  
+	  vector<string> temp_cov = split(c["tot_cov"], "/");
+		string top_cov = temp_cov[0];
+		string bot_cov = temp_cov[1];
 // #     $output_str.= td({align => "center"}, $top_cov + $bot_cov );
 // #     $output_str.= td({align => "center"}, nonbreaking(formatted_mutation_annotation($c)) ); 
+		ss << td("align=\"center\"", top_cov + bot_cov);
+		ss << td("align=\"center\"", nonbreaking(Formatted_Mutation_Annotation(c)));
 // #     $output_str.= td({align => "center"}, i(nonbreaking($c->{gene_name})) );  
+		ss << td("align=\"center\"", i(nonbreaking(c[GENE_NAME])));
+		
 // #     $output_str.= td({align => "left"}, htmlize($c->{gene_product}) );  
+		ss << td("align=\"left\"", htmlize(c["gene_product"]));
 // #       
 // #     $output_str.= end_Tr;
+		ss << "<tr>" << endl;
 // #     
 // #     if ($show_reject_reason) 
 // #     {
+		if (show_reject_reason && c.entry_exists(REJECT)) { ///TODO entry exists check good/bad?
 // #       foreach my $reject (GenomeDiff::get_reject_reasons($c))
 // #       {
+		  vector<string> reject_reasons = split(c[REJECT], ",");
+			for (vector<string>::iterator itr = reject_reasons.begin();
+			     itr != reject_reasons.end(); itr ++) {	
+			  string& reject = (*itr);
 // #         $output_str.= Tr({-class=>'reject_table_row'}, td({-colspan => $total_cols}, "Rejected: " . decode_reject_reason($reject)));
+       ss << tr("class=\"reject_table_row\"", 
+								td("colspan=\"" + to_string(total_cols) + "\"",
+									 "Rejected: " + decode_reject_reason(reject)));
+																				          
 // #       }
+ 			}
 // #       
 // #       if (defined $c->{fisher_strand_p_value})
 // #       {
+		/* Fisher Strand Test */
+		if (c.entry_exists("fisher_strand_p_value")) {
 // #         my $fisher_strand_p_value = sprintf("%.2E", $c->{fisher_strand_p_value});
+			ssf.precision(2);
+			ssf << scientific << from_string<float>(c["fisher_strand_p_value"]);
+      string fisher_strand_p_value = ssf.str();
 // #         $output_str.= Tr({-class=>'information_table_row'}, td({-colspan => $total_cols}, 
 // #           "Strands of reads supporting (+/-):&nbsp;&nbsp;" 
 // #           . b("new") . " base ($c->{new_cov})&nbsp;&nbsp;" 
 // #           . b("ref") . " base ($c->{ref_cov})&nbsp;&nbsp;" 
 // #           . b("total") . " ($c->{tot_cov})"));
+			ss << tr("class=\"information_table_row\"", 
+							 td("colspan=\"total_cols\"",
+									"Strands of reads supporting (+/-):&nbsp;&nbsp;" +
+									b("new") + " base " + "(" + c[NEW_COV] + ")" + ":&nbsp;&nbsp;" +
+									b("ref") + " base " + "(" + c[REF_COV] + ")" + ":&nbsp;&nbsp;" +
+									b("total") + " (" + c[TOT_COV] + ")")); 
 // #         $output_str.= Tr({-class=>'information_table_row'}, td({-colspan => $total_cols}, "Fisher's exact test strand distribution " . i("p") . "-value = $fisher_strand_p_value"));
+			ss << tr("class=\"information_table_row\"", 
+							 td("colspan=\"" + to_string(total_cols) + "\"",
+									"Fisher's exact test strand distribution" +
+								  i("p") + "-value = " +fisher_strand_p_value));
 // #       }
+		}//end fisher_strand_p_value
 // # 
 // #       if (defined $c->{ks_quality_p_value})
 // #       {
 // #       my $ks_quality_p_value = sprintf("%.2E", $c->{ks_quality_p_value});
 // #         $output_str.= Tr({-class=>'information_table_row'}, td({-colspan => $total_cols}, "Kolmogorov-Smirnov test that lower quality scores support polymorphism than reference " . i("p") . "-value = $ks_quality_p_value"));
 // #       }
-// # 
+		/* Kolmogorov-Smirov Test */
+		if (c.entry_exists("ks_quality_p_value")) {
+		ssf.precision(2);
+		ssf << scientific << from_string<float>(c["ks_quality_p_value"]);
+		string ks_quality_p_value = ssf.str();
+
+		ss << tr("class=\"information_table_row\"", 
+						 td("colspan=\"" + to_string(total_cols) + "\"",
+								" Kolmogorov-Smirnov test that lower quality scores support polymorphism than reference" + //TODO Grammar?
+							  i("p") + "-value = " +ks_quality_p_value));
+		}
+// #
 // # 
 // # ### Currently not calculated...
 // #       if (defined $c->{ks_quality_p_value_unusual_poly})
@@ -1121,13 +1055,16 @@ string breseq_header_string(Settings settings)
 // # ### ---->     
 // # 
 // #     }
+	  }// end show_reject_reason
 // #   }
+  } // end list_ref loop
 // #   
 // #   $output_str.= end_table;
 // # }
+}
 // # 
-string html_missing_coverage_table_string(vector<cSequenceFeature>list_ref, bool relative_link, string title,
-                                        bool show_reject_reason)
+string html_missing_coverage_table_string(vector<diff_entry>list_ref, bool show_reject_reason,
+							                            string title, string relative_link)
 {
 // # sub html_missing_coverage_table_string
 // # {
@@ -1136,19 +1073,28 @@ string html_missing_coverage_table_string(vector<cSequenceFeature>list_ref, bool
 // #   $title = "Missing coverage evidence..." if (!$title);
 // #   
 // #   my $output_str = '';
+			stringstream ss(ios_base::out | ios_base::app); //!< Main Build Object in Function
 // #   
-// #   my $q = new CGI;
+// #   my $q = new CGI; //TODO
 // #   $output_str.= start_table({-border => 0, -cellspacing => 1, -cellpadding => 3, -width => "100%"});
+			ss << start_table("border=\"0\" cellspacing=\"1\" cellpadding=\"3\" width=\"100\"");
 // #   
 // #   my $coverage_plots;
+		  bool coverage_plots;
 // #   $coverage_plots = (defined $list_ref->[0]) && (defined $list_ref->[0]->{_evidence_file_name});
+			coverage_plots = (!list_ref[0]["_evidence_file_name"].empty()); //TODO other conditions needed?
 // #   
 // #   my $link = (defined $list_ref->[0]) && (defined $list_ref->[0]->{_side_1_evidence_file_name}) && (defined $list_ref->[0]->{_side_2_evidence_file_name});
+      bool link = (list_ref[0].entry_exists("_side_1_evidence_file_name")) && 
+							    (list_ref[0].entry_exists("_side_2_evidence_file_name")); //TODO other conditions needed?
 // # 
 // #   my $total_cols = $link ? 11 : 8;
+			uint8_t total_cols = link ? 11 : 8;
 // #   $output_str.= Tr(th({-colspan => $total_cols, -align => "left", -class=>"missing_coverage_header_row"}, $title));
+			ss << tr(th("colspan=\"" + to_string(total_cols) + "\" align=\"left\" class=\"missing_coverage_header_row", title));
 // # 
 // #   $output_str.= start_Tr();
+			ss << start_tr();
 // #   if ($link)
 // #   {
 // #     $output_str.= th("&nbsp;"); 
@@ -1158,7 +1104,12 @@ string html_missing_coverage_table_string(vector<cSequenceFeature>list_ref, bool
 // #       $output_str.= th("&nbsp;");
 // #     }
 // #   }
-// #   
+			if (link) {
+				ss << th("&nbsp;") <<  th("&nbsp;");
+				if (coverage_plots) {
+					ss << th("&nbsp;");
+				}
+			}
 // #   $output_str.= th(
 // #     [
 // #       "seq&nbsp;id",
@@ -1170,17 +1121,38 @@ string html_missing_coverage_table_string(vector<cSequenceFeature>list_ref, bool
 // #       "gene", 
 // #     ]
 // #   );  
+		  ss << th("seq&nbsp;id") << endl <<
+						th("start")       << endl <<
+						th("end")         << endl <<
+						th("size")        << endl <<
+						th("&larr;cov")   << endl <<
+					  th("gene")        << endl;
 // #   $output_str.= th({-width => "100%"}, "description");
 // #   $output_str.= end_Tr;
+			ss << th("width=\"100%\"","description") << endl;
+			ss << "</tr>" << endl;
 // #   
 // #   foreach my $c (@$list_ref)
 // #   {
+			for (vector<diff_entry>::iterator itr = list_ref.begin();
+			     itr != list_ref.end(); itr ++) {	
+			  diff_entry& c = (*itr);
 // #     ## additional formatting for some variables
 // #     my $gene_string = $c->{genes};
+        string gene = c[GENES];
 // #   # $gene_string =~ s/ /&nbsp;/g;
+      while (gene.find(" ") != string::npos) {
+        size_t pos = gene.find(" ");
+		    gene.replace(pos, 1, "&nbsp;");
+      }
 // #   # $gene_string =~ s/-/&#8209;/g; #substitute nonbreaking dash
-// #     
+// #   
+			while (gene.find("-") != string::npos) {
+        size_t pos = gene.find("-");
+		    gene.replace(pos, 1, "&#8209;");
+      }  
 // #     $output_str.= start_Tr;
+			ss << "<tr>" << endl;
 // #     
 // #     if ($link)
 // #     {
@@ -1192,25 +1164,59 @@ string html_missing_coverage_table_string(vector<cSequenceFeature>list_ref, bool
 // #         $output_str.= td(a({-href=>"$relative_link$c->{_evidence_file_name}"}, '&divide;')); 
 // #       }
 // #     }
+			if (link) {
+				ss << td(a(relative_link + c[_SIDE_1_EVIDENCE_FILE_NAME], "*")) << endl;
+				ss << td(a(relative_link + c[_SIDE_2_EVIDENCE_FILE_NAME], "*")) << endl;
+				if (coverage_plots	) {
+				  ss << td(a(relative_link + c[_EVIDENCE_FILE_NAME], "*")) << endl;
+				}
+			}
 // # 
 // #     my $start_str = $c->{start};
+			string start = c[START];
 // #     $start_str .= "–" . ($c->{start} + $c->{start_range}) if ($c->{start_range} > 0);
+			start += "–";
+			if (from_string<uint8_t>(c[START_RANGE]) > 0) {
+			  start += "–" + c[START] + c[END];
+			}
 // #     my $end_str = $c->{end};
+			string end = c[END];
 // #     $end_str .= "–" . ($c->{end} - $c->{end_range}) if ($c->{end_range} > 0);
+			if (from_string<uint8_t>(c[END_RANGE])) {
+				 end += c[END] + c[END_RANGE];
+			}
 // # 
 // #     my $size_str = ($c->{end} - $c->{start} + 1);
 // #     $size_str = ($c->{end} - $c->{start} + 1 - $c->{end_range} - $c->{start_range}) . "–" . $size_str if (($c->{end_range} > 0) || ($c->{start_range} > 0));
+			string size = to_string(from_string<uint32_t>(c[END]) + from_string<uint32_t>(c[START]) + 1);
+			if ((from_string<uint32_t>(c[START_RANGE]) > 0) ||
+					(from_string<uint32_t>(c[START_RANGE]) > 0)) {
+				uint32_t size_value = from_string<uint32_t>(c[END]) - from_string<uint32_t>(c[START]) + 1 -
+								              from_string<uint32_t>(c[END_RANGE]) - from_string<uint32_t>(c[START_RANGE]);
+				size.insert(0, "–" + to_string(size_value)); //TODO confirm that this works
+			} else {
+			  size = to_string(from_string<uint32_t>(c[END]) + from_string<uint32_t>(c[START]));
+			}
 // # 
 // #         
 // #     $output_str.= td(nonbreaking($c->{seq_id})); 
+			ss << td(nonbreaking(c[SEQ_ID])) << endl;
 // #     $output_str.= td({-align=>"right"}, nonbreaking($start_str)); 
+      ss << td(ALIGN_RIGHT, nonbreaking(start));
 // #     $output_str.= td({-align=>"right"}, nonbreaking($end_str));   
+      ss << td(ALIGN_RIGHT, nonbreaking(end));
 // #     $output_str.= td({-align=>"right"}, nonbreaking($size_str));    
+      ss << td(ALIGN_RIGHT, nonbreaking(size));
 // #     $output_str.= td({-align=>"center"}, nonbreaking("$c->{left_outside_cov} \[$c->{left_inside_cov}\]")); 
+      ss << td(ALIGN_CENTER, nonbreaking(c[LEFT_OUTSIDE_COV] + "[" + c[LEFT_INSIDE_COV] + "]"));
 // #     $output_str.= td({-align=>"center"}, nonbreaking("\[$c->{right_inside_cov}\] $c->{right_outside_cov}")); 
+      ss << td(ALIGN_CENTER, nonbreaking(c[RIGHT_OUTSIDE_COV] + "[" + c[RIGHT_OUTSIDE_COV] + "]"));
 // #     $output_str.= td({align=>"center"}, i(nonbreaking($c->{gene_name})));       
+      ss << td(ALIGN_CENTER, i(nonbreaking(c[GENE_NAME])));
 // #     $output_str.= td({align=>"left"}, htmlize($c->{gene_product}));   
+      ss << td(ALIGN_LEFT, htmlize(c[GENE_NAME]));
 // #     $output_str.= end_Tr;
+			ss << "</tr>" << endl;
 // #     
 // #     if ($show_reject_reason)
 // #     {
@@ -1219,40 +1225,65 @@ string html_missing_coverage_table_string(vector<cSequenceFeature>list_ref, bool
 // #         $output_str.= Tr({-class=>'reject_table_row'}, td({-colspan => $total_cols}, "Rejected: " . decode_reject_reason($reject)));
 // #       }
 // #     }
+		if (show_reject_reason && c.entry_exists(REJECT)) {
+		  vector<string> reject_reasons = split(c[REJECT], ",");
+			for (vector<string>::iterator itr = reject_reasons.begin();
+			     itr != reject_reasons.end(); itr ++) {	
+			  string& reject = (*itr);
+			  ss << tr("class=\"reject_table_row\"", 
+							   td("colspan=\"" + to_string(total_cols) + "\"",
+								    "Rejected: " + decode_reject_reason(reject)));	
+			}
+		}
 // #   }
+  }
 // #   
-// #   $output_str.= end_table;
+// #   $output_str.= end_table;	
+  ss << "</table>";
 // #   return $output_str;
+	return ss.str();
 // # }
 }
 // # 
 // # sub html_new_junction_table_string
 // # {
+string html_new_junction_table_string(vector<diff_entry> list_ref, bool show_reject_reason,
+								                      string title , string relative_link)
+{
 // #   our ($list_ref, $relative_link, $title, $show_reject_reason) = @_;
 // #   $relative_link = '' if (!$relative_link);
 // #   $title = "New junction evidence..." if (!$title);
 // #   
 // #   my $output_str = '';
+  stringstream ss(ios_base::out | ios_base::app); //!<< Main Build Object for Function
 // # 
 // #   my $test_item = $list_ref->[0];
+	diff_entry& test_item = list_ref[0];
 // #   my $link =  
 // #          (defined $test_item) 
 // #     && (defined $test_item->{_side_1_evidence_file_name}) 
 // #     && (defined $test_item->{_side_2_evidence_file_name})
 // #     && (defined $test_item->{_new_junction_evidence_file_name})
 // #   ;
+	bool link = (test_item.entry_exists(_SIDE_1_EVIDENCE_FILE_NAME) &&
+					     test_item.entry_exists(_SIDE_2_EVIDENCE_FILE_NAME) &&
+							 test_item.entry_exists(_NEW_JUNCTION_EVIDENCE_FILE_NAME));
 // #   
-// #   my $q = new CGI;
+// #   my $q = new CGI; //TODO
 // #   $output_str.= start_table({-border => 0, -cellspacing => 1, -cellpadding => 3});
+	ss << start_table("border=\"0\" cellspacing=\"1\" cellpadding=\"3\"");
 // # 
 // #   my $total_cols = $link ? 10 : 8;
+	uint8_t total_cols = link ? 10 : 8;
 // #   $output_str.= Tr(th({-colspan => $total_cols, -align => "left", -class=>"new_junction_header_row"}, $title));
+	ss << tr(th("colspan=\"" + to_string(total_cols) + "\" align=\"left\" class=\"new_junction_header_row\"", title));
 // #     
 // #   #####################
 // #   #### HEADER LINE ####
 // #   #####################
 // #   
 // #   $output_str.= start_Tr();
+	ss << start_tr();
 // #   if ($link)
 // #   {
 // #     $output_str.= th({-colspan=>2}, "&nbsp;"); 
@@ -1268,8 +1299,21 @@ string html_missing_coverage_table_string(vector<cSequenceFeature>list_ref, bool
 // #       "gene",
 // #     ]
 // #   );    
+	if (link) {
+		ss << th("colspan=\"2\"", "&nbsp;");
+	}
+	ss << th("seq&nbsp;id") << endl <<
+				th("position")    << endl <<
+				th("overlap")     << endl <<
+				th("reads")       << endl <<
+				th("score")       << endl <<
+				th("annotation")  << endl <<
+				th("gene")        << endl;
+
 // #   $output_str.= th({-width => "100%"}, "product"); 
 // #   $output_str.= end_Tr;
+	ss << th("width=\"100%\"","product");
+	ss << "</tr>";
 // #   
 // #   ####################
 // #   #### ITEM LINES ####
@@ -1277,23 +1321,46 @@ string html_missing_coverage_table_string(vector<cSequenceFeature>list_ref, bool
 // #   
 // #   ## the rows in this table are linked (same background color for every two)
 // #   my $row_bg_color_index = 0;
+	string row_bg_color_index; ///TODO TODO TODO html color codes are kind of wonky?
 // #   foreach my $c (@$list_ref)
 // #   {     
+	for (vector<diff_entry>::iterator itr = list_ref.begin();
+	     itr != list_ref.end(); itr ++) {	
+	  diff_entry& c = (*itr);
 // #     ### Side 1
 // #     my $key = 'side_1';     
 // #     my $annotate_key = "junction_" . $c->{"$key\_annotate_key"};
+		string key = "side_1";
+		string annotate_key = "junction_" + c[key + "_annotation_key"];
 // #     
 // #     $output_str.= start_Tr({-class=> "mutation_table_row_$row_bg_color_index"});
+		ss << start_tr("class=\"mutation_table_row_" + row_bg_color_index +"\"");
 // #     $output_str.= td({-rowspan=>2}, a({-href=>"$relative_link$c->{_new_junction_evidence_file_name}"}, "*")) if ($link); 
 // #     { 
+		if (link) {
+			ss << td("rowspan=\"2\"", a(relative_link + c[_NEW_JUNCTION_EVIDENCE_FILE_NAME], "*" ));
+		}
 // #       $output_str.= td({-rowspan=>1}, a({-href=>"$relative_link$c->{_side_1_evidence_file_name}"}, "?")) if ($link); 
+		if (link) {
+		  ss << td("rowspan=\"1\"", a(relative_link + c[_SIDE_1_EVIDENCE_FILE_NAME], "?"));
+		}
 // #       $output_str.= td({-rowspan=>1, -class=>"$annotate_key"}, nonbreaking($c->{"$key\_seq_id"}));      
+		ss << td("rowspan=\"1\" class=\"" + annotate_key + "\"", nonbreaking(c[key + "_seq_id"]));
 // #       $output_str.= td( {-align=>"center", -class=>"$annotate_key"}, ($c->{"$key\_strand"} == +1) ? $c->{"$key\_position"} . "&nbsp;=": "=&nbsp;" . $c->{"$key\_position"} );
+		ss << td("align=\"center\" class-\"" + annotate_key +"\"",
+						 (from_string<int>(c[key + "_strand"])) ? c[key + "_position"] + "&nbsp;=" :
+						 "=&nbsp;" + c[key + "_position"]);
 // #       $output_str.= td( {-rowspan=>2, -align=>"center"}, $c->{overlap} );
+		ss << td("rowspan=\"2\" align=\"center\"", c["overlap"]);
 // #       $output_str.= td( {-rowspan=>2, -align=>"center"}, $c->{total_reads} );
+		ss << td("rowspan=\"2\" align=\"center\"", c["total_reads"] );
 // #       $output_str.= td( {-rowspan=>2, -align=>"center"}, b("&lt;" . $c->{pos_hash_score} . "&gt;") . br . $c->{min_overlap_score} );
+		ss << td("rowspan=\"2\" align=\"center\"", 
+						 b("&lt;" + c["pos_hash_score"] + "&gt") + "<br>" + c["min_overlap_score"]);
 // #       $output_str.= td( {-align=>"center", -class=>"$annotate_key"}, nonbreaking($c->{"_$key"}->{gene_position}) );
+		ss << td("align=\"center\" class=\"" + annotate_key + "\"", nonbreaking("_" + key + c[GENE_POSITION]));
 // #       $output_str.= td( {-align=>"center", -class=>"$annotate_key"}, i(nonbreaking($c->{"_$key"}->{gene_name})) );
+		///TODO TODO TODO difficult one to code
 // #       $output_str.= td( {-class=>"$annotate_key"}, htmlize($c->{"_$key"}->{gene_product}) );
 // #     }
 // #     $output_str.= end_Tr;
@@ -1328,23 +1395,10 @@ string html_missing_coverage_table_string(vector<cSequenceFeature>list_ref, bool
 // #   $output_str.= end_table;
 // # 
 // # }
+  }
+  return ss.str();
+}
 // # 
-// # sub html_evidence_file_name
-// # {
-// #   my ($interval) = @_;
-// #   
-// #   #set up the file name
-// #   my $html_evidence_file_name = 
-// #     "$interval->{prefix}"
-// #     . "_$interval->{seq_id}"
-// #     . "_$interval->{start}" 
-// #     . ((defined $interval->{insert_start}) ?  ".$interval->{insert_start}" : '')
-// #     . "_$interval->{end}"
-// #     . ((defined $interval->{insert_end}) ?  ".$interval->{insert_end}" : '')
-// #     . "_alignment.html";
-// #     
-// #   return $html_evidence_file_name;
-// # }
 // # 
 // # sub html_evidence_file
 // # {
@@ -1421,74 +1475,82 @@ string html_missing_coverage_table_string(vector<cSequenceFeature>list_ref, bool
 // # }
 // # 
 // # 
-// # sub decode_reject_reason
-// # {
-// #   my ($reject) = @_;
-// #   
-// #   if ($reject eq 'NJ')
-// #   {
-// #     return "Position hash score below cutoff.";
-// #   }
-// #   elsif ($reject eq 'EVALUE')
-// #   {
-// #     return "E-value exceeds prediction threshold.";
-// #   }
-// #   elsif ($reject eq 'STRAND')
-// #   {
-// #     return "Prediction not supported by reads on both strands.";
-// #   }
-// #   elsif ($reject eq 'FREQ')
-// #   {
-// #     return "Prediction has frequency below cutoff threshold.";
-// #   } 
-// #   elsif ($reject eq 'COV')
-// #   {
-// #     return "Prediction has coverage below cutoff threshold.";
-// #   }
-// #   elsif ($reject eq 'BIAS_P_VALUE')
-// #   {
-// #     return "Prediction has biased strand and/or quality scores supporting polymorphism.";
-// #   }
-// #   elsif ($reject eq 'KS_QUALITY_P_VALUE')
-// #   {
-// #     return "Prediction has significantly lower quality scores supporting polymorphism compared to reference.";
-// #   }
-// #   elsif ($reject eq 'KS_QUALITY_P_VALUE_UNUSUAL_POLY')
-// #   {
-// #     return "Prediction has biased quality score distribution for polymorphism bases.";
-// #   }
-// #   elsif ($reject eq 'KS_QUALITY_P_VALUE_UNUSUAL_REF')
-// #   {
-// #     return "Prediction has biased quality score distribution for new bases.";
-// #   }
-// #   elsif ($reject eq 'KS_QUALITY_P_VALUE_UNUSUAL_NEW')
-// #   {
-// #     return "Prediction has biased quality score distribution for ref bases.";
-// #   }
-// #   elsif ($reject eq 'KS_QUALITY_P_VALUE_UNUSUAL_ALL')
-// #   {
-// #     return "Prediction has biased quality score distribution for all bases.";
-// #   }
-// #   elsif ($reject eq 'FISHER_STRAND_P_VALUE')
-// #   {
-// #     return "Prediction has biased read strand distribution supporting polymorphism.";
-// #   } 
-// #   elsif ($reject eq 'POLYMORPHISM_STRAND')
-// #   {
-// #     return "Polymorphism prediction not supported by minimum number of reads on both strands.";
-// #   }
-// #   elsif ($reject eq 'POLYMORPHISM_FREQUENCY_CUTOFF')
-// #   {
-// #     return "Polymorphism does not pass frequency cutoff.";
-// #   }
-// #   elsif ($reject eq 'HOMOPOLYMER_STRETCH')
-// #   {
-// #     return "Polymorphism is in a homopolymer stretch.";
-// #   }
-// #   
-// #   return '';
-// # }
+string decode_reject_reason(const string& reject)
+{
+	
+	if (reject == "NJ")
+	{
+		return "Position hash score below cutoff.";
+	}
+	else if (reject == "EVALUE")
+	{
+		return "E-value exceeds prediction threshold.";
+	}
+	else if (reject == "STRAND")
+	{
+		return "Prediction not supported by reads on both strands.";
+	}
+	else if (reject == "FREQ")
+	{
+		return "Prediction has fr==uency below cutoff threshold.";
+	}	
+	else if (reject == "COV")
+	{
+		return "Prediction has coverage below cutoff threshold.";
+	}
+	else if (reject == "BIAS_P_VALUE")
+	{
+		return "Prediction has biased strand and/or quality scores supporting polymorphism.";
+	}
+	else if (reject == "KS_QUALITY_P_VALUE")
+	{
+		return "Prediction has significantly lower quality scores supporting polymorphism compared to reference.";
+	}
+	else if (reject == "KS_QUALITY_P_VALUE_UNUSUAL_POLY")
+	{
+		return "Prediction has biased quality score distribution for polymorphism bases.";
+	}
+	else if (reject == "KS_QUALITY_P_VALUE_UNUSUAL_REF")
+	{
+		return "Prediction has biased quality score distribution for new bases.";
+	}
+	else if (reject == "KS_QUALITY_P_VALUE_UNUSUAL_NEW")
+	{
+		return "Prediction has biased quality score distribution for ref bases.";
+	}
+	else if (reject == "KS_QUALITY_P_VALUE_UNUSUAL_ALL")
+	{
+		return "Prediction has biased quality score distribution for all bases.";
+	}
+	else if (reject == "FISHER_STRAND_P_VALUE")
+	{
+		return "Prediction has biased read strand distribution supporting polymorphism.";
+	}	
+	else if (reject == "POLYMORPHISM_STRAND")
+	{
+		return "Polymorphism prediction not supported by minimum number of reads on both strands.";
+	}
+	else if (reject == "POLYMORPHISM_FREQUENCY_CUTOFF")
+	{
+		return "Polymorphism does not pass fr==uency cutoff.";
+	}
+	else if (reject == "HOMOPOLYMER_STRETCH")
+	{
+		return "Polymorphism is in a homopolymer stretch.";
+	}
+	
+	return "";
+}
 // # 
+
+/*
+ * =====================================================================================
+ *        Class:  Evidence_Files
+ *  Description:  
+ * =====================================================================================
+ */
+Evidence_Files::Evidence_Files(const Settings& settings, genome_diff& gd)
+{
 // # sub create_evidence_files
 // # {
 // #   my ($settings, $gd) = @_;
@@ -1497,29 +1559,34 @@ string html_missing_coverage_table_string(vector<cSequenceFeature>list_ref, bool
 // #   our @evidence_list;
 // # 
 // # 
-// #   sub add_evidence
-// #   {
-// #     my ($evidence_file_name_key, $evidence_item) = @_;    
-// #     $evidence_item->{file_name} = html_evidence_file_name($evidence_item);
-// #     $evidence_item->{item}->{$evidence_file_name_key} = $evidence_item->{file_name};    
-// #     push @evidence_list, $evidence_item;
-// #   }
+// #  
 // #   
 // #   # Fasta and BAM files for making alignments.
 // #   my $reference_bam_file_name = $settings->file_name('reference_bam_file_name');
 // #   my $reference_fasta_file_name = $settings->file_name('reference_fasta_file_name');
 // # 
+  string reference_bam_file_name = settings.file_name("reference_bam_file_name");
+	string reference_fasta_file_name = settings.file_name("reference_fasta_file_name");
 // #   ## hybrids use different BAM files for making the alignments!!!
 // #   my $junction_bam_file_name = $settings->file_name('junction_bam_file_name');
+	string junction_bam_file_name = settings.file_name("junction_bam_file_name");
 // #   my $junction_fasta_file_name = $settings->file_name('candidate_junction_fasta_file_name');
+	string junction_fasta_file_name = settings.file_name("candidate_junction_fasta_file_name");
 // # 
 // #   ### We make alignments of two regions for deletions: upstream and downstream edges.
+	genome_diff::entry_list_t items_MC = gd.list(make_list<string>(MC));
 // #   foreach my $item ( $gd->list('MC') )
-// #   { 
+	for (genome_diff::entry_list_t::iterator itr = items_MC.begin();
+	     itr != items_MC.end(); itr ++) {	
+	  diff_entry& item = **itr;
+// #   { 	 
 // #     next if ($item->{no_show});
+		if (item.entry_exists(NO_SHOW)) continue;
 // #     
 // #     my $parent_item = $gd->parent($item);
+		diff_entry parent_item = gd.parent(item);
 // #     $parent_item = $item if (!$parent_item);
+		//TODO undef parent_item
 // #     
 // #     add_evidence( 
 // #       '_side_1_evidence_file_name',
@@ -1534,6 +1601,17 @@ string html_missing_coverage_table_string(vector<cSequenceFeature>list_ref, bool
 // #         prefix    => 'MC_SIDE_1',
 // #       }
 // #     );
+	 add_evidence(_SIDE_1_EVIDENCE_FILE_NAME,
+								item,
+							 	parent_item,
+								make_map<string,string>
+								(BAM_PATH, reference_bam_file_name)
+								(FASTA_PATH, reference_fasta_file_name)
+								(PREFIX, "MC_SIDE_1")
+								(SEQ_ID, item[SEQ_ID])						
+								(START, to_string(from_string<uint8_t>(item[START]) - 1))
+								(END,  to_string(from_string<uint8_t>(item[START]) - 1)));
+
 // #     
 // #     add_evidence( 
 // #       '_side_2_evidence_file_name',
@@ -1548,6 +1626,18 @@ string html_missing_coverage_table_string(vector<cSequenceFeature>list_ref, bool
 // #         prefix    => 'MC_SIDE_2',     
 // #       }
 // #     );
+    add_evidence(_SIDE_2_EVIDENCE_FILE_NAME,
+								item,
+							 	parent_item,
+								make_map<string,string>
+								(BAM_PATH, reference_bam_file_name)
+								(FASTA_PATH, reference_fasta_file_name)
+								(PREFIX, "MC_SIDE_2")
+								(SEQ_ID, item[SEQ_ID])						
+								(START, to_string(from_string<uint8_t>(item[END]) + 1))
+								(END,  to_string(from_string<uint8_t>(item[END]) + 1)));
+
+
 // # 
 // #     add_evidence( 
 // #       '_evidence_file_name',
@@ -1558,46 +1648,86 @@ string html_missing_coverage_table_string(vector<cSequenceFeature>list_ref, bool
 // #         parent_item => $parent_item,
 // #         item    => $item,
 // #         prefix    => 'MC_PLOT', 
-// #         plot    => $item->{_coverage_plot_file_name},
+// #        plot    => $item->{_coverage_plot_file_name},
 // #       }
+    add_evidence(_EVIDENCE_FILE_NAME,
+								item,
+							 	parent_item,
+								make_map<string,string>
+								(PREFIX, "MC_PLOT")
+								(SEQ_ID, item[SEQ_ID])						
+								(START, to_string(from_string<uint8_t>(item[END]) + 1))
+								(END,  to_string(from_string<uint8_t>(item[END]) + 1))
+								(PLOT, item[_COVERAGE_PLOT_FILE_NAME]));
+
 // #     );
 // #   } 
+	}
 // # 
 // #   #--> currently don't do this with 'AMP' because they are all junction evidence
+	genome_diff::entry_list_t items_SNP_INS_DEL_SUB = 
+	  gd.list(make_list<string>(SNP)(INS)(DEL)(SUB));
 // #   
 // #   MUT: foreach my $item ( $gd->list('SNP', 'INS', 'DEL', 'SUB') )
 // #   {
+MUT:for (genome_diff::entry_list_t::iterator itr = items_SNP_INS_DEL_SUB.begin();
+	     itr != items_SNP_INS_DEL_SUB.end(); itr ++) {	
+	  diff_entry& item = **itr;
+		genome_diff::entry_list_t mutation_evidence_list = gd.mutation_evidence_list(item);
 // #     next if ($item->{no_show});
+		if (item.entry_exists(NO_SHOW)) continue;
 // #     
 // #     #this reconstructs the proper columns to draw
 // #     my $start = $item->{position};
 // #     my $end = $start;
 // #     my $insert_start = undef;
 // #     my $insert_end = undef;
+		uint32_t start = from_string<uint32_t>(item[POSITION]);
+		uint32_t end = start;
+		uint32_t insert_start; //TODO undef
+		uint32_t insert_end; //TODO undef
+
 // # 
 // #     if ($item->{type} eq 'INS')
 // #     {
 // #       $insert_start = 1;
 // #       $insert_end = length($item->{new_seq});     
 // #     }
+		if (item._type == INS) {
+			insert_start = 1;
+			insert_end = item[NEW_SEQ].size();
+		}
 // #     elsif ($item->{type} eq 'DEL')
+		else if (item._type == DEL) {
 // #     {
 // #       my $has_ra_evidence;
+	    bool has_ra_evidence;
 // #       foreach my $evidence_item ($gd->mutation_evidence_list($item))
 // #       {
 // #         $has_ra_evidence = 1 if ($evidence_item->{type} eq 'RA');
 // #       }
+			for (genome_diff::entry_list_t::iterator itr = mutation_evidence_list.begin();
+			     itr != mutation_evidence_list.end(); itr ++) {	
+			  diff_entry& evidence_item = **itr;
+			  if (evidence_item._type == RA) has_ra_evidence = true;
+			}
 // #       ## only do deletions if they have within-read evidence
 // #       next MUT if (!$has_ra_evidence);
+      if(!has_ra_evidence) goto MUT; //TODO or goto MUT?
 // # 
 // #       $end = $start + $item->{size} - 1;
+			end = start + from_string<uint32_t>(item[SIZE]) - 1;
 // #     }
+		}
 // # 
 // #     ##may be a problem here...
 // #     elsif ($item->{type} eq 'SUB')
 // #     {
 // #       $end = $start + length($item->{new_seq}) - 1;
 // #     }
+		else if (item._type == SUB ) {
+		  end = start + item[NEW_SEQ].size() - 1;
+		}
 // #     #elsif ($item->{type} eq 'AMP')
 // #     #{
 // #     # $end = $start + $item->{size};
@@ -1618,6 +1748,19 @@ string html_missing_coverage_table_string(vector<cSequenceFeature>list_ref, bool
 // #         prefix      => $item->{type}, 
 // #       }
 // #     );
+		add_evidence(_EVIDENCE_FILE_NAME,
+								 item,
+								 item,
+                 make_map<string,string>
+								 (BAM_PATH, reference_bam_file_name)
+								 (FASTA_PATH, reference_fasta_file_name)
+								 (SEQ_ID, item[SEQ_ID])						
+								 (START, to_string(start))
+								 (END,  to_string(end))
+								 (INSERT_START, to_string(insert_start))
+								 (INSERT_END, to_string(insert_end))
+								 (PREFIX, item._type));
+
 // #         
 // #     #add evidence to 'RA' items as well
 // #     foreach my $evidence_item ( $gd->mutation_evidence_list($item) )
@@ -1625,17 +1768,31 @@ string html_missing_coverage_table_string(vector<cSequenceFeature>list_ref, bool
 // #       next if ($evidence_item->{type} ne 'RA');
 // #       $evidence_item->{_evidence_file_name} = $item->{_evidence_file_name};
 // #     }
+    /* Add evidence to RA items as well */
+		for (genome_diff::entry_list_t::iterator itr = mutation_evidence_list.begin();
+		     itr != mutation_evidence_list.end(); itr ++) {	
+		  diff_entry& evidence_item = **itr;
+		  if (evidence_item._type != RA) continue;
+		  evidence_item[_EVIDENCE_FILE_NAME] = item[_EVIDENCE_FILE_NAME];	
+		}
 // #   }
+  }
 // #   
 // #   
 // #   ## Still create files for RA evidence that was not good enough to predict a mutation from
 // # 
 // #   my @ra_list = $gd->list('RA');  
+genome_diff::entry_list_t ra_list = gd.list(make_list<string>(RA));
 // #   @ra_list = $gd->filter_used_as_evidence(@ra_list);
+	ra_list = gd.filter_used_as_evidence(ra_list);
 // #   
 // #   RA: foreach my $item ( @ra_list )
 // #   {
+  for (genome_diff::entry_list_t::iterator itr = ra_list.begin();
+     itr != ra_list.end(); itr ++) {	
+    diff_entry& item = **itr;
 // #     next if ($item->{no_show});
+	  if (item.entry_exists(NO_SHOW)) continue;
 // #     
 // #     #this reconstructs the proper columns to draw
 // #     add_evidence( 
@@ -1653,36 +1810,73 @@ string html_missing_coverage_table_string(vector<cSequenceFeature>list_ref, bool
 // #         prefix      => $item->{type}, 
 // #       }
 // #     );
+	  add_evidence(_EVIDENCE_FILE_NAME,
+		   					 item,
+			  				 item,
+                 make_map<string,string>
+					  		 (BAM_PATH, reference_bam_file_name)
+						  	 (FASTA_PATH, reference_fasta_file_name)
+							   (SEQ_ID, item[SEQ_ID])						
+							   (START, item[POSITION])
+					       (END, item[POSITION])
+							   (INSERT_START, item[INSERT_POSITION])
+							   (INSERT_END, item[INSERT_POSITION])
+							   (PREFIX, item._type));
+
 // #   }
+  }
 // # 
 // #   ## This additional information is used for the complex reference line.
 // #   ## Note that it is completely determined by the original candidate junction sequence 
 // #   ## positions and overlap: alignment_pos and alignment_overlap.
 // # 
+genome_diff::entry_list_t items_JC = gd.list(make_list<string>(JC));
 // #   foreach my $item ( $gd->list('JC') )
 // #   { 
+	for (genome_diff::entry_list_t::iterator itr = items_JC.begin();
+	     itr != items_JC.end(); itr ++) {	
+	  diff_entry& item = **itr;
 // #     next if ($item->{no_show});
+		if (item.entry_exists(NO_SHOW)) continue;
 // #     
 // #     my $parent_item = $gd->parent($item);
+		diff_entry parent_item = gd.parent(item);
 // #     $parent_item = $item if (!$parent_item);
+    //TODO undef parent item in gd.parent()
 // #     
 // #     ## regenerate the alignment overlap from the junction_key
 // #     my ($start, $end);
+		uint32_t start;
+		uint32_t end;
 // #     if ($item->{alignment_overlap} == 0)
 // #     {
 // #       $start = $item->{flanking_left};
 // #       $end = $item->{flanking_left}+1;      
 // #     }
+		if (from_string<uint8_t>(item[ALIGNMENT_OVERLAP]) == 0) {
+			start = from_string<uint32_t>(item[FLANKING_LEFT]);
+			end = from_string<uint32_t>(item[FLANKING_LEFT]) + 1;
+		}
 // #     elsif ($item->{alignment_overlap} > 0)
 // #     {
+		else if (from_string <uint8_t>(item[ALIGNMENT_OVERLAP]) > 0) {
 // #       $start = $item->{flanking_left}+1;
+	    start = from_string<uint32_t>(item[FLANKING_LEFT]) + 1;
 // #       $end = $item->{flanking_left}+$item->{alignment_overlap};
+	    end = from_string<uint32_t>(item[FLANKING_LEFT]) + 
+						from_string<uint32_t>(item[ALIGNMENT_OVERLAP]);
 // #     }
+	  }
 // #     else ## ($item->{overlap} < 0)
 // #     {
+	  else 
+		{
 // #       $start = $item->{flanking_left}+1;
+		  start = from_string<uint32_t>(item[FLANKING_LEFT]) + 1;
 // #       $end = $item->{flanking_left}-$item->{alignment_overlap};
+			end = from_string<uint32_t>(item[FLANKING_LEFT]) - from_string<uint32_t>(item[ALIGNMENT_OVERLAP]);
 // #     }
+	  }
 // # 
 // #     add_evidence( 
 // #       '_new_junction_evidence_file_name',
@@ -1713,6 +1907,29 @@ string html_missing_coverage_table_string(vector<cSequenceFeature>list_ref, bool
 // #         ],
 // #       }
 // #     );
+	  add_evidence(_NEW_JUNCTION_EVIDENCE_FILE_NAME,
+		   					 item,
+			  				 parent_item,
+                 make_map<string,string>
+					  		 (BAM_PATH, junction_bam_file_name)
+						  	 (FASTA_PATH, junction_fasta_file_name)
+							   (SEQ_ID, item[SEQ_ID])						
+							   (START, to_string(start))
+					       (END, to_string(end))
+							   (PREFIX, JC)
+		             (ALIGNMENT_EMPTY_CHANGE_LINE, "1")
+								 (TRUNCATE_END, to_string(from_string<uint32_t>(item[FLANKING_LEFT]) +
+																				  from_string<uint32_t>(item[SIDE_1_OVERLAP])))
+								 (GHOST_END, item[SIDE_1_POSITION])
+								 (GHOST_STRAND_END, item[SIDE_1_STRAND])
+								 (GHOST_SEQ_ID_END, item[SIDE_1_SEQ_ID])
+								 (TRUNCATE_START, "")//TODO
+								 (GHOST_START, item[SIDE_2_POSITION])
+								 (GHOST_STRAND_START, item[SIDE_2_STRAND])
+								 (GHOST_SEQ_ID_START, item[SIDE_2_SEQ_ID]));
+
+
+
 // #     ## this is the flagship file that we show first when clicking on evidence from a mutation...
 // #     $item->{_evidence_file_name} = $item->{_new_junction_evidence_file_name};
 // #     
@@ -1743,6 +1960,7 @@ string html_missing_coverage_table_string(vector<cSequenceFeature>list_ref, bool
 // #         prefix    => 'JC_SIDE_2' . "_$item->{side_1_seq_id}_$item->{side_1_position}_$item->{side_1_position}",
 // #       }
 // #     );
+	}
 // #   }
 // # 
 // #   ### now create evidence files
@@ -1756,6 +1974,70 @@ string html_missing_coverage_table_string(vector<cSequenceFeature>list_ref, bool
 // #     
 // # }
 // # 
+}
+
+/*-----------------------------------------------------------------------------
+ *  Helper Function For Create_Evidence_Files()
+ *-----------------------------------------------------------------------------*/
+// # sub add_evidence
+// #   {
+// #     my ($evidence_file_name_key, $evidence_item) = @_;    
+// #     $evidence_item->{file_name} = html_evidence_file_name($evidence_item);
+// #     $evidence_item->{item}->{$evidence_file_name_key} = $evidence_item->{file_name};    
+// #     push @evidence_list, $evidence_item;
+// #   }
+void Evidence_Files::add_evidence(const string& evidence_file_name_key, diff_entry item,
+								                  diff_entry parent_item, map<string,string> fields)
+{
+	Evidence_Item evidence_item;
+  evidence_item.fields = fields;
+  evidence_item.item = item;
+	evidence_item.parent_item = parent_item;
+
+  evidence_item[FILE_NAME] = file_name(evidence_item);
+  evidence_item[evidence_file_name_key] = evidence_item[FILE_NAME];
+	
+	evidence_list.push_back(evidence_item);
+}
+/*-----------------------------------------------------------------------------
+ *  Helper Function For Create_Evidence_Files()
+ *-----------------------------------------------------------------------------*/
+// # sub html_evidence_file_name
+// # {
+// #   my ($interval) = @_;
+// #   
+// #   #set up the file name
+// #   my $html_evidence_file_name = 
+// #     "$interval->{prefix}"
+// #     . "_$interval->{seq_id}"
+// #     . "_$interval->{start}" 
+// #     . ((defined $interval->{insert_start}) ?  ".$interval->{insert_start}" : '')
+// #     . "_$interval->{end}"
+// #     . ((defined $interval->{insert_end}) ?  ".$interval->{insert_end}" : '')
+// #     . "_alignment.html";
+// #     
+// #   return $html_evidence_file_name;
+// # }
+string Evidence_Files::file_name(Evidence_Item& evidence_item)
+{
+  stringstream ss(ios_base::out | ios_base::app);
+
+	ss << evidence_item[PREFIX];
+	ss << "_" << evidence_item[SEQ_ID];
+	ss << "_" << evidence_item[START];
+	ss << evidence_item.entry_exists(INSERT_START) ? "." + evidence_item[INSERT_START] : "";
+  ss << "_" << evidence_item[END];
+	ss << evidence_item.entry_exists(INSERT_END) ? "." + evidence_item[INSERT_END] : "";
+	ss << "_alignment.html";
+	
+	return ss.str();
+}
+/*-----------------------------------------------------------------------------
+ *  //End Create_Evidence_Files
+ *-----------------------------------------------------------------------------*/
+
+
+
 // # sub save_text_deletion_file
 // # {
 // #   my ($deletion_file_name, $deletions_ref) = @_;
@@ -1915,37 +2197,643 @@ string html_missing_coverage_table_string(vector<cSequenceFeature>list_ref, bool
 // #   return retrieve($file_name);
 // # }
 // # 
-// # sub nonbreaking
-// # {
-// #   my ($text) = @_;
-// #   $text =~ s/-/&#8209;/g; #substitute nonbreaking hyphen
-// #   $text =~ s/–/&#8211;/g; #substitute nonbreaking en dash
-// #   $text =~ s/ /&nbsp;/g; #substitute nonbreaking space
-// #   return $text;
-// # }
+/*
+ * =====================================================================================
+ *        Class:  Html_Mutation_Table_String
+ *  Description:  
+ * =====================================================================================
+ */
+Html_Mutation_Table_String::Html_Mutation_Table_String(Settings settings, genome_diff gd, vector<diff_entry> list_ref,
+															 bool relative_link, bool legend_row, bool one_ref_seq,
+															 vector<string> gd_name_list_ref, Options options)
+  : string()
+	, m_output(ios_base::out | ios_base::app)
+	, total_cols(0)
+	, settings(settings)
+	, gd(gd)
+	, list_ref(list_ref)
+	, relative_link(relative_link)
+  , legend_row(legend_row)
+	, one_ref_seq(one_ref_seq)
+	, gd_name_list_ref(gd_name_list_ref)
+	, options(options)
+{
+// # Recognized $settings are
+// #   # shade_frequencies => 1, instead of frequences, shade boxes
+// #   
+// #   # Recognized $options are
+// #   # repeat_header => 15 (which means repeat the header line after this many mutations)
 // # 
-// # sub htmlize
-// # {
-// #   my ($text) = @_;
-// #   $text =~ s/–/&#8211;/g; #substitute nonbreaking en dash
-// #   return $text;
-// # }
-// # 
-// # sub commify 
-// # {
-// #   my ($input)  = @_;
-// #   $input =~ s{(?<!\d|\.)(\d{4,})}
+// #   our ($settings, $gd, $list_ref, $relative_link, $legend_row, $one_ref_seq, $gd_name_list_ref, $options) = @_;
+// #   $relative_link = '' if (!defined $relative_link);
+// #   my $output_str = '';
+  // # 
+// #   my $q = new CGI;
+// #   $output_str.= start_table({-border => 0, -cellspacing => 1, -cellpadding => 3});
+	
+		
+}
+Html_Mutation_Table_String::Html_Mutation_Table_String()
+ :string()
+ , m_output(ios_base::out | ios_base::app)
+{
+
+}
+/*
+ *--------------------------------------------------------------------------------------
+ *       Class:  Html_Mutation_Table_String
+ *      Method:  Html_Mutation_Table_String :: Header_Line
+ * Description:  
+ *--------------------------------------------------------------------------------------
+ */
+void Html_Mutation_Table_String::Header_Line()
+{
+// #   #####################
+// #   #### HEADER LINE ####
+// #   #####################
+	stringstream ss(ios_base::out | ios_base::app); //<! Main Build Object for Function
+// #   my $header_text = "Predicted mutation";
+// #   $header_text .= "s" if (scalar @$list_ref > 1);
+	string header_text = ((list_ref.size() > 1) ? "Predicted mutations" : "Predicted mutation");
+// #
+// #   # There are three possibilities for the frequency column(s)
+// #   # (1) We don't want it at all. (Single genome no poly prediction)   
+// #   my @freq_header_list = ();
+  vector<string> freq_header_list;
+// #   # (2) We want multiple columns because we are comparing genomes.
+// #   if (defined $gd_name_list_ref)
 // #   {
-// #     my $n = $1;
-// #       $n=~s/(?<=.)(?=(?:.{3})+$)/,/g;
-// #       $n;
-// #     }eg;
-// #    return $input;
-// # }
-// # 
-// # 
-// # 
-// # return 1;
-// # 
+// #     @freq_header_list = @$gd_name_list_ref;
+// #   }
+// #   # (3) We want a single column (polymorphism prediction)
+// #   elsif ($settings->{polymorphism_prediction})
+// #   {
+// #     @freq_header_list = ("freq");
+// #   }
+  if(settings.polymorphism_prediction)
+    freq_header_list = make_list<string>("freq");
+  else
+    freq_header_list = gd_name_list_ref;
+// #   
+// #   my $total_cols;
   
-}// end breseq namespace
+// #   my $header_str = '';
+
+// #   
+// #   if ($settings->{lenski_format}) {
+  if (settings.lenski_format) {
+// #     my @header_list = split /\|/, $freq_header_list[0];
+    vector<string> header_list = split(freq_header_list[0], "|");
+// #     my $header_rows = scalar @header_list;
+    uint8_t header_rows = header_list.size();
+// #     
+// #     $total_cols = 7 + scalar @freq_header_list;
+    total_cols = 7 + freq_header_list.size();
+// #     $total_cols += 1 if (!$one_ref_seq);
+    if(!one_ref_seq) total_cols += 1; 
+// #     $total_cols += 1 if (!$settings->{no_evidence});  ## evidence column 
+    if(!settings.no_evidence) total_cols + 1;
+// #       
+// #     for (my $i=1; $i<=$header_rows; $i++)
+// #     { 
+    for (uint8_t i = 0; i <= header_rows; i++) {
+// #       $header_str.= start_Tr();
+     ss << "<tr>" << endl;
+// #       $header_str.= th("evidence") if (!$settings->{no_evidence}); 
+      if(settings.no_evidence)
+        ss << th("evidence");
+// #       $header_str.= th(nonbreaking("seq id")) if (!$one_ref_seq); 
+      if(!one_ref_seq)
+       ss << nonbreaking("seq id");
+// #     
+// #       $header_str .= th(
+// #         [
+// #           ($header_rows == $i) ? "position" : "",
+// #           ($header_rows == $i) ? "mutation" : "",
+// #           ($header_rows == $i) ? "annotation" : "", 
+// #           ($header_rows == $i) ? "gene" : ""
+// #         ]
+// #       );
+      ss << th( (header_rows == i) ? "position" : "");
+      ss << th( (header_rows == i) ? "mutation" : "");
+      ss << th( (header_rows == i) ? "annotation" : "");
+      ss << th( (header_rows == i) ? "gene" : "");
+// #       $header_str.= th({-width => "100%"}, ($header_rows == $i) ? "description" : ""); 
+      ss << th("width=\"100%\"", (header_rows == i) ? "description" : "");
+// #       foreach my $freq_header_item (@freq_header_list) {
+      for (uint8_t j = 0; j < freq_header_list.size(); j++) {
+        string& freq_header_item(freq_header_list[j]);				
+// #         
+// #         my @header_list = split /\|/, $freq_header_item; 
+        vector<string> header_list = split(freq_header_item, "|");				
+// #         my $this_header_string = $header_list[$i-1];
+        string this_header_string = header_list[i-1];
+// #         $this_header_string =~ s/_/&nbsp;/g;
+				while(this_header_string.find("_") != string::npos)
+				{
+				  size_t pos = this_header_string.find("_");
+				  this_header_string.replace(pos, 1, "&nbsp;");//TODO confim "_" is 1 char
+				}
+//	replace(this_header_string.begin(), this_header_string.end(), "_", "&nbsp;");
+// #         my $this_header_string_1 = $header_list[0];
+        string this_header_string_1 = header_list[0];
+// #         my $this_header_string_2 = $header_list[1];
+        string this_header_string_2 = header_list[1];
+// # 
+// #         my $color = "black";
+        string color = "black";	
+// #         
+// #         if ($this_header_string_1 eq "UC") {
+// #           $color = "gray";
+// #         } elsif ($this_header_string_1 eq "clade_1") {
+// #           $color = "green";
+// #         } elsif ($this_header_string_1 eq "clade_2") {
+// #           $color = "blue";
+// #         } elsif ( ($this_header_string_1 eq "clade_3") 
+// #           && ( ($this_header_string_2 eq "ZDB483") 
+// #           || ($this_header_string_2 eq "ZDB30") ) )
+// #         {
+// #           $color = "orange";
+// #         } elsif ($this_header_string_1 eq "clade_3") {
+// #           $color = "red";
+// #         }   
+        if( this_header_string_1 == "UC" )
+        color = "gray";
+        else if( this_header_string_1 == "clade_1" )
+        color = "green";	
+        else if( this_header_string_1 == "clade_2" )
+          color = "blue";	
+        else if( this_header_string_1 == "clade_3" &&
+                 this_header_string_2 == "ZDB483" ||
+                 this_header_string_2 == "ZDB30" )
+          color = "orange";
+        else if( this_header_string_1 == "clade_3" )
+          color = "red";
+//#     
+// #         $header_str .= th({style=>"background-color:$color"}, $this_header_string);
+        ss << th("style=\"background-color:" + 
+												 color + "\"", this_header_string);	
+// #         #$header_str .= th($this_header_string);
+        ss << th(this_header_string);
+// #       }
+      }
+// #     
+
+// #       $header_str .= th(
+// #         [
+// #           ($header_rows == $i) ? "position" : "",
+// #         ]
+// #       );    
+      ss << (header_rows == i ? "position" : "");
+// #       $header_str.= end_Tr; 
+      ss << "</tr>\n";
+// #     }
+    }
+// #     
+// #   } else {
+  } else {
+// #     $total_cols = 5 + scalar @freq_header_list;
+    total_cols = 5 + freq_header_list.size();
+// #     $total_cols += 1 if (!$one_ref_seq);
+    if (!one_ref_seq) {
+    total_cols += 1;
+    }
+// #     $total_cols += 1 if (!$settings->{no_evidence});  ## evidence column 	
+    if (!settings.no_evidence) {
+	    total_cols += 1;
+    }
+// #       
+// #     $header_str.= start_Tr();
+    ss <<  "<tr>";
+// #     $header_str.= th("evidence") if (!$settings->{no_evidence}); 
+   if (!settings.no_evidence) {
+	   ss << th("evidence");
+   } 
+// #     $header_str.= th(nonbreaking("seq id")) if (!$one_ref_seq); 
+   if(!one_ref_seq) {
+	   ss << th(nonbreaking("seq id"));
+	 }
+// #     
+    
+// #     $header_str .= th(
+// #       [
+// #         "position",
+// #         "mutation",
+// #       ]
+// #     );
+	 ss << th("position");
+	 ss << th("mutation");
+// #     
+// #     foreach my $freq_header_item (@freq_header_list) {
+// #       $header_str .= th( [$freq_header_item] );
+// #     } 
+	 for (vector<string>::iterator itr = freq_header_list.begin() ;
+			  itr != freq_header_list.end() ; itr++) {
+	   string& freq_header_item = *itr;
+	   ss << th(freq_header_item); //TODO th([]) ? 
+	 }
+	 
+// #     
+// #     $header_str .= th(
+// #       [   
+// #         "annotation", 
+// #         "gene", 
+// #       ]
+// #     );    
+	 ss << th("annotation");
+	 ss << th("gene");
+// #     $header_str.= th({-width => "100%"}, "description"); 
+// #     $header_total_colsstr.= end_Tr;
+	 ss << th("width=\"100%\"","description");
+// #   }
+  }
+// #   
+// #   if (!$settings->{no_header})
+// #   {
+// #     $output_str.= Tr(th({-colspan => $total_cols, -align => "left", -class=>"mutation_header_row"}, $header_text));
+// #   }
+	if(!settings.no_header) {
+					m_output<< tr(th("colspan=\"" + to_string(total_cols) +
+													 "\" align=\"left\" class=\"mutation_header_row\"",
+													 header_text));
+	}
+// #   $output_str.= $header_str; //	
+// # 
+	m_output << ss.str();
+}
+//===============================================================================
+//       CLASS: Html_Mutation_Table_String
+//      METHOD: Item_Lines
+// DESCRIPTION: 
+//===============================================================================
+void Html_Mutation_Table_String::Item_Lines()
+{
+// #   ####################
+// #   #### ITEM LINES ####
+// #   ####################
+// # 
+// #   my $row_num = 0;
+	uint8_t row_num = 0;
+// #   foreach my $mut (@$list_ref)
+// #   { 
+	for (vector<diff_entry>::iterator itr = list_ref.begin();
+	     itr != list_ref.end(); itr ++) { 
+		diff_entry& mut = (*itr);
+// #     $output_str.= $header_str if (($row_num != 0) && (defined $options->{repeat_header}) && ($row_num % $options->{repeat_header} == 0));
+		if ((row_num != 0) && (options.repeat_header)) {
+			Header_Line();
+		}
+// #     $row_num++;
+		row_num++;
+// #     
+// #     my $evidence_string = ''
+		string evidence_string;
+// #     if (!$settings->{no_evidence}) 
+// #     {
+		if (!settings.no_evidence) {
+// #       my $already_added_RA;
+		  bool already_added_RA = false;
+// #       EVIDENCE: foreach my $evidence_item ($gd->mutation_evidence_list($mut))
+// #       {         
+			genome_diff::entry_list_t mutation_evidence_list = gd.mutation_evidence_list(mut);
+			
+			for (genome_diff::entry_list_t::iterator itr = mutation_evidence_list.begin();
+			     itr != mutation_evidence_list.end(); itr ++) {	
+			  diff_entry& evidence_item = **itr;
+// #         if ($evidence_item->{type} eq 'RA')
+// #         {
+				if (evidence_item._type == RA) {
+// #           next EVIDENCE if ($already_added_RA);
+// #           $already_added_RA = 1;
+				  if (already_added_RA) 
+				  	continue;
+				  else 
+				  	already_added_RA = true;
+// #         }
+			  }
+// #         $evidence_string .= "&nbsp;" if ($evidence_string);
+			evidence_string = "&nbsp;"; //TODO Check. if statement needed?
+// #         $evidence_string .= a({href => "$relative_link$evidence_item->{_evidence_file_name}" }, $evidence_item->{type});
+			//TODO evidence_string += a(relative_link , evidence_item._type);
+// #       }+ evidence_item[_EVIDENCE_FILE_NAME]
+			}
+// #     }
+		}
+	
+// #     
+// #    // #     
+// #     my $row_class = "normal_table_row";
+	string row_class = "normal_table_row";
+// #     
+// #     # There are three possibilities for the frequency column(s)
+// #     # (1) We don't want it at all. (Single genome no poly prediction)   
+// #     my @freq_list = ();
+  vector<string> freq_list;
+// #     # (2) We want multiple columns because we are comparing genomes.
+// #     if (defined $gd_name_list_ref) {
+// #       #"_freq_[name]" keys were made within GenomeDiff structure        
+// #       @freq_list = map { $mut->{"frequency_$_"} } @$gd_name_list_ref; 
+// #       $row_class = "alternate_table_row_" . ($row_num % 2);
+// #     }
+// #     # (3) We want a single column (polymorphism prediction)
+// #     elsif ($settings->{polymorphism_prediction}) {      
+// #       if ((defined $mut->{frequency}) && ($mut->{frequency} != 1)) {
+// #         $row_class = "polymorphism_table_row";  
+// #       }     
+// #       push @freq_list, $mut->{frequency};
+// #     }
+// #     
+	//TODO TODO TODO TODO 
+// #     
+// #     ## marshal cells defined depending on mutation type
+// #     # $evidence_string
+// #     my $cell_seq_id = nonbreaking($mut->{seq_id}); 	
+    string cell_seq_id = nonbreaking(mut[SEQ_ID]);
+// #     my $cell_position = commify($mut->{position});
+ 		string cell_position = commify(mut[POSITION]);
+// #     my $cell_mutation;
+		string cell_mutation;
+// #     my $cell_mutation_annotation = nonbreaking(formatted_mutation_annotation($mut));
+		string cell_mutation_annotation = nonbreaking(Formatted_Mutation_Annotation(mut));
+// #     my $cell_gene_name = i(nonbreaking($mut->{gene_name}));
+		string cell_gene_name = i(nonbreaking(mut[GENE_NAME]));
+// #     my $cell_gene_product = htmlize($mut->{gene_product});
+		string cell_gene_product = htmlize(mut["gene_product"]);
+// #         
+// #     if ($mut->{type} eq 'SNP') {
+// #       $cell_mutation = "$mut->{_ref_seq}&rarr;$mut->{new_seq}";
+// #     } elsif ($mut->{type} eq 'INS') {
+// #       $cell_mutation = "+$mut->{new_seq}";
+// #     } elsif ($mut->{type} eq 'DEL') {
+// #       $cell_mutation = nonbreaking("&Delta;" . commify($mut->{size}) . " bp");
+// #       my $annotation_str = '';
+// #       $annotation_str = "between $mut->{between}" if ($mut->{between});
+// #       $annotation_str = "$mut->{mediated}-mediated" if ($mut->{mediated});
+// #       $annotation_str = nonbreaking($mut->{gene_position}) if (!$annotation_str); 
+// #       $cell_mutation_annotation = nonbreaking($annotation_str);
+// #     } elsif ($mut->{type} eq 'SUB') {
+// #       $cell_mutation = nonbreaking("$mut->{size} bp&rarr;$mut->{new_seq}");
+// #     } elsif ($mut->{type} eq 'CON') {
+// #       $cell_mutation = nonbreaking("$mut->{size} bp&rarr;$mut->{region}");      
+
+		if (mut._type == SNP) {
+			cell_mutation = mut["_ref_seq"] + "&rarr;" + mut[NEW_SEQ];
+		} else if (mut._type == INS) {
+		  cell_mutation = "+";
+		  cell_mutation += mut[NEW_SEQ];
+		} else if (mut._type == DEL) {
+		  cell_mutation = nonbreaking("&Delta;");
+		 	cell_mutation	+= commify(mut["size"]);
+		  cell_mutation	+= "<bp>";
+		  string annotation_str;
+		  annotation_str = mut.entry_exists("between") ? "between" + mut["between"]	: ""; 
+		  annotation_str = mut.entry_exists("mediated") ? mut["mediated"] + "-mediated"	: ""; 
+		  annotation_str = annotation_str.empty() ? nonbreaking(mut["gene_position"]) : ""; 
+		  cell_mutation_annotation =  nonbreaking(annotation_str);
+		} else if (mut._type == SUB) {
+		  cell_mutation = nonbreaking(mut["size"] + "<bp>&rarr;" + mut["new_seq"]);
+		} else if (mut._type == CON) {
+		  cell_mutation = nonbreaking(mut["size"] + "<bp>&rarr;" + mut["region"]);
+// #       my $s;
+// #       my $s_start = '';
+// #       $s_start .= "+" . $mut->{ins_start} if ($mut->{ins_start});
+// #       $s_start .= "&Delta;" . $mut->{del_start} if ($mut->{del_start});
+// #       $s.= $s_start . " :: " if ($s_start);
+// # 
+// #       $s .= "$mut->{repeat_name} (";
+// #       $s .= (($mut->{strand}==+1) ? '+' : (($mut->{strand}==-1) ? '&minus;' : '?'));
+// #       $s .= ")";
+// # 
+// #       my $s_end = '';
+// #       $s_end .= "&Delta;" . $mut->{del_end} if ($mut->{del_end});
+// #       $s_end .= "+" . $mut->{ins_end} if ($mut->{ins_end});
+// #       $s.= " :: " . $s_end if ($s_end);
+// # 
+// #       my $dup_str = ($mut->{duplication_size} >= 0) ? "+$mut->{duplication_size}" : "&Delta;" . abs($mut->{duplication_size});
+// #       $s .= " ($dup_str) bp";     
+// #       $cell_mutation = nonbreaking($s);
+// #     } elsif ($mut->{type} eq 'MOB') {
+		} else if (mut._type == MOB) {
+      stringstream s(ios_base::out | ios_base::app);
+			
+		  stringstream s_start(ios_base::out | ios_base::app);
+      if (mut.entry_exists("ins_start")) {
+      	s_start << "+" << mut["ins_start"];
+      }
+			if (mut.entry_exists("del_start")) {
+				s_start << "&Delta;" << mut["del_start"];
+			}
+			if (!(s_start.str()).empty()) {
+				s << s_start << " :: ";
+			}
+
+			s << mut["repeat_name"] << " (";
+			s << (mut["strand"] == "+1" ? "+" : (mut["strand"] == "-1" ? "&minus;" : "?"));
+		  s << ")";
+
+			stringstream s_end(ios_base::out | ios_base::app);
+			if (mut.entry_exists("del_end")) {
+			  s_end << "&Delta;" + mut["del_end"];
+			}
+			if (mut.entry_exists("ins_end")) {
+				s_end << "+" << mut["ins_end"];
+			}
+			if (!(s_end.str()).empty()) {
+				s << " :: " << s_end;
+			}
+			
+			//dup_str not necessary
+			stringstream s_dup(ios_base::out | ios_base::app);
+			if (from_string<int>(mut["duplication_size"]) >= 0) {
+				s_dup << "+" << mut["duplication_size"];
+			} else {
+				s_dup << "&Delta;" << abs(from_string<int>(mut["duplication_size"]));
+		  }
+      s << s_dup.str() << "<bp>";
+		  cell_mutation = nonbreaking(s.str());
+// #     } elsif ($mut->{type} eq 'INV') {
+// #       $cell_mutation =  nonbreaking(commify($mut->{size}) . " bp inversion");
+// #       $cell_gene_name = i(nonbreaking($mut->{gene_name_1})) . "&darr;" . i(nonbreaking($mut->{gene_name_2}));
+// #       $cell_gene_product = htmlize($mut->{gene_product_1}) . "&darr;" . htmlize($mut->{gene_product_2});
+	  } else if (mut._type == INV) {
+      cell_mutation = nonbreaking(commify(mut["size"]) + " bp inversion");
+		  cell_gene_name = i(nonbreaking(mut["gene_name_1"])) + "&darr;" +
+			  			         i(nonbreaking(mut["gene_name_2"]));
+		  cell_gene_product = htmlize(mut["gene_product_1"]) + "&darr;" + 
+			  									htmlize(mut["gene_product_2"]);
+// #     } elsif ($mut->{type} eq 'AMP') {       
+// #       $cell_mutation = nonbreaking(commify($mut->{size}) . " bp x $mut->{new_copy_number}");
+// #       $cell_mutation_annotation = ($mut->{new_copy_number} == 2) ? "duplication" : "amplification";       
+// #     }
+		} else if (mut._type == AMP) {
+		  cell_mutation = nonbreaking(commify(mut["size"]) + "bp x " + mut["new_copy_number"]);
+			cell_mutation_annotation = from_string<uint8_t>(mut["new_copy_number"]) == 2 ?
+							                     "duplication" : "amplification";
+		}
+// #     ##### PRINT THE TABLE ROW ####
+// #     $output_str.= start_Tr({-class=>$row_class}); 
+// #     $output_str.= td({align=>"center"}, $evidence_string) if (!$settings->{no_evidence}); 
+// #     $output_str.= td({align=>"center"}, $cell_seq_id) if (!$one_ref_seq); 
+// #     $output_str.= td({align=>"right"}, $cell_position);
+// # 
+	  
+		m_output << start_tr("class=\"" + row_class + "\"") << endl;
+		if (!settings.no_evidence) {
+		 m_output << td(ALIGN_CENTER, evidence_string) << endl;
+		}
+		if (!one_ref_seq) {
+			m_output << td(ALIGN_CENTER, cell_seq_id) << endl;
+		}
+	  m_output << td(ALIGN_CENTER, cell_position);
+// #     $output_str.= td({align=>"center"}, $cell_mutation);
+// #     if ($settings->{lenski_format}) {
+// #       $output_str.= td({align=>"center"}, $cell_mutation_annotation);
+// #       $output_str.= td({align=>"center"}, $cell_gene_name);
+// #       $output_str.= td({align=>"left"}, $cell_gene_product);
+// #     }
+		m_output << td(ALIGN_CENTER, cell_mutation) << endl;
+		if (settings.lenski_format) {
+		  m_output << td(ALIGN_CENTER, cell_mutation_annotation) << endl;
+	    m_output << td(ALIGN_CENTER, cell_gene_name) << endl;
+	    m_output << td(ALIGN_CENTER, cell_gene_product) << endl;
+		}
+// #     $output_str.= freq_cols(@freq_list);
+		m_output << freq_cols(freq_list);
+// #     
+// #     if ($settings->{lenski_format}) {
+// #       $output_str.= td({align=>"right"}, $cell_position);
+// #     } else {
+// #       $output_str.= td({align=>"center"}, $cell_mutation_annotation);     
+// #       $output_str.= td({align=>"center"}, $cell_gene_name);
+// #       $output_str.= td({align=>"left"}, $cell_gene_product);
+// #     }
+// #     $output_str.= end_Tr;   
+		if (settings.lenski_format) {
+		  m_output << td(ALIGN_CENTER, cell_position) << endl;
+		} else {
+		  m_output << td(ALIGN_CENTER, cell_mutation_annotation) << endl;
+	    m_output << td(ALIGN_CENTER, cell_gene_name) << endl;
+		  m_output << td(ALIGN_CENTER, cell_gene_product) << endl;
+		}
+		m_output << "</tr>" << endl;
+// #     ##### END TABLE ROW ####
+// #   }
+  }
+// #   
+// #   if ($legend_row) {
+// #     $output_str.= start_Tr(); 
+// #     $output_str.= td({-colspan=>$total_cols}, b("Evidence codes: RA = read alignment, MC = missing coverage, JC = new junction"));
+// #     $output_str.= end_Tr; 
+// #   }
+	if (legend_row) {
+		m_output << "<tr>" << endl;
+		m_output << td("colspan=\"" + to_string(total_cols) + "\"", 
+										b("Evidence codes: RA = read alignment, MC = missing coverage, JC = new junction"));
+		m_output << "</tr>" << endl;
+	}
+		
+// #   
+// #   $output_str.= end_table;  
+// # }
+  m_output << "</table>";
+}
+// # 
+//===============================================================================
+//       CLASS: Html_Mutation_Table_String
+//      METHOD: freq_to_string	
+// DESCRIPTION: Helper function used in Item_Lines
+//===============================================================================
+string Html_Mutation_Table_String::freq_to_string(const string& freq)
+{
+// #     sub freq_to_string
+// #     {
+// #       my ($freq) = @_;
+// #       
+// #       $freq = 1 if (!defined $freq);
+// #       return 'H' if ($freq eq 'H');
+// #       return '?' if ($freq eq '?');
+// #       return '' if ($freq == 0);
+// #       my $frequency_string;
+// #       if ($freq == 1) {
+// #         $frequency_string = "100%";
+// #       }
+// #       else { 
+// #         $frequency_string = sprintf("%4.1f%%", $freq*100);
+// #       }
+// #       return $frequency_string;
+// #     }
+	///TODO check that my changes of freq=1 is okay
+	if (freq == "H") {
+		return "H";
+	}
+	if (from_string<uint8_t>(freq) == 0) {
+		return "";
+	}
+	stringstream ss;
+	if (from_string<uint8_t>(freq) == 1 || freq.empty()) {
+		ss << "100%";
+	} 
+	else {
+	  float conv_freq = from_string<float>(freq) * 100;
+		ss.width(4);
+		ss.precision(1);
+		ss << conv_freq;
+	}
+  return ss.str(); 
+}
+
+//===============================================================================
+//       CLASS: Html_Mutation_Table_String
+//      METHOD: freq_cols	
+// DESCRIPTION: Helper function used in Item_Lines
+//===============================================================================
+string Html_Mutation_Table_String::freq_cols(vector<string> freq_list)
+{
+// #     sub freq_cols:
+// #     {
+// #       my @freq_list = @_;
+// #       my $output_str = '';
+// #       
+// #       foreach my $freq (@freq_list) {
+// #         if ($settings->{shade_frequencies}) {
+// #           my $bgcolor;
+// #           $bgcolor = 'Blue' if ($freq == 1);
+// #           if (defined $bgcolor) {
+// #             $output_str .= td({align=>"right", bgcolor=>$bgcolor}, '&nbsp;');
+// #           }
+// #           else {
+// #             $output_str .= td({align=>"right"}, '&nbsp;');
+// #           }
+// #         }
+// #         else {
+// #           $output_str .= td({align=>"right"}, freq_to_string($freq));
+// #         }
+// #       }
+// #       return $output_str;
+// #     }
+  stringstream ss(ios_base::out | ios_base::app);
+  for (vector<string>::iterator itr = freq_list.begin();
+       itr != freq_list.end(); itr ++) {	
+    string& freq = (*itr);
+		if (settings.shade_frequencies) {
+	    string bgcolor;
+      if (freq == "1") {
+ 	    bgcolor = "Blue";
+      }
+	    if (!bgcolor.empty()) {
+		    ss << td("align=\"right\" bgcolor=\"" + bgcolor +"\"", "&nbsp;"); //TODO Check
+	    } 
+		  else {
+		    ss << td(ALIGN_RIGHT,"&nbsp;");
+      }
+    }
+	  else {
+		  ss << td (ALIGN_RIGHT, freq_to_string(freq));
+	  }
+  }
+	return ss.str();
+}
+
+
+
+}
