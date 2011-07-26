@@ -19,7 +19,7 @@ It is now developed in the Barrick lab in the Department of Chemistry and Bioche
 Testers
 ------------
 
-We thank Zachary Blount, Tim Cooper, Tara Gianoulis, Dan Goodman, J.P. Jerome, Ranno Nahku, Sébastien Wielgoss, and participants in Titus Brown's 2010 summer course in next-gen sequencing at the Kellogg Biological Station for providing feedback on |breseq| usage.
+We thank Zachary Blount, Tim Cooper, Tara Gianoulis, Dan Goodman, J.P. Jerome, Ranno Nahku, Gerda Saxer, Sébastien Wielgoss, and participants in Titus Brown's 2010 summer course in next-gen sequencing at the Kellogg Biological Station for providing feedback on |breseq| usage.
 
 Funding
 -----------
