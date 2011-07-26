@@ -7,7 +7,6 @@ WriteMakefile
           'NAME' => 'Breseq',
           'EXE_FILES' => [
                            'bin/.DS_Store',
-                           'bin/bam2aln',
                            'bin/bam2cov',
                            'bin/breseq',
                            'bin/fastq_utils',
