@@ -136,9 +136,14 @@ namespace breseq {
 		};
 		map<string,Coverage> unique_coverage;
     
-    //!@GRC needed for output.cpp
-    string print_run_name;
-    string hide_circular_genome_junctions;
+    //!@GRC Setting options needed for HTML outputs
+    string print_run_name; //!< need to set default to "unnamed"
+    bool hide_circular_genome_junctions;
+  	bool polymorphism_prediction;
+		bool lenski_format;
+		bool no_evidence;
+		bool shade_frequencies;
+		bool no_header;
     
 		// Utility function to substitute specific details into a generic file name
 		static string file_name(const string& file_name_key, const string& substitute = "", const string& with = "")

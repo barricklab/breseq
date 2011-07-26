@@ -224,15 +224,19 @@ namespace breseq {
     entry_list_t filter_used_as_evidence(entry_list_t list);
     
     //! Retrieve diff_entrys that match given type(s) 
-    //TEST 6/12 Completed @GRC
     entry_list_t list(vector<string> types);
     
     //! Converts a genomed_diff(.gd) file's line to a diff_entry
-    //TEST 6/12 Completed @GRC
     diff_entry _line_to_item(const string& line);
 
-		entry_list_t mutation_list();
     
+    //Returns _entry_list with matching item._evidence
+    entry_list_t mutation_evidence_list(const diff_entry& item);
+
+    entry_list_t mutation_list();
+
+		diff_entry parent(diff_entry item);
+
     void strcopy(char* arg1, const char* arg2);
 
     

@@ -1109,7 +1109,7 @@ namespace breseq {
 		if (getFlag(option_name))
 			return TRUE_FLAG;
 		if (getValue(option_name) != NULL)
-			return *getValue(option_name);
+      return *getValue(option_name);
 		else if (default_values.count(option_name))
 			return default_values[option_name];
 		else

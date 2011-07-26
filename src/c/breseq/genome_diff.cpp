@@ -879,7 +879,7 @@ diff_entry genome_diff::_line_to_item(const string& line)
   }
   
 /// Dealing with JC is inconvenient here
-///#############################3
+///##############################
 // #   ### We do some extra convenience processing for junctions...
 // #   if ($item->{type} eq 'JC')
 // #   {
@@ -900,8 +900,88 @@ diff_entry genome_diff::_line_to_item(const string& line)
 genome_diff::entry_list_t genome_diff::mutation_list()
 {
   entry_list_t mut_list;
+
+   for(entry_list_t::iterator itr = _entry_list.begin();
+       itr != _entry_list.end(); itr ++) {
+     diff_entry& item = **itr;
+     size_t type_length = item._type.length();
+     if(type_length == 2) {
+       mut_list.push_back(*itr);
+     }
+   }
+
   return mut_list;
 }
+
+
+/*! Return all diff_entrys within _entry_list whose _type matches one
+ * of those within input's item._evidence
+ */ 
+genome_diff::entry_list_t genome_diff::mutation_evidence_list(const diff_entry& item)
+{
+// # my ($self, $item) = @_;  
+// # $self->throw if (ref($item) ne 'HASH');
+// # return () if (!defined $item->{evidence});
+// # 
+// # my %evidence;
+// # foreach my $evidence_id (@{$item->{evidence}})
+// # {
+// # $evidence{$evidence_id} = 1;
+// # }
+// # my @return_list = grep { $evidence{$_->{id}} } $self->list;
+  entry_list_t return_list;
+  vector<string> evidence_list = item._evidence;
+  //return diff_entrys with matching evidence
+  for (vector<string>::iterator itr_i = evidence_list.begin();
+       itr_i != evidence_list.end(); itr_i ++) {  
+    string& evidence = *itr_i;
+    
+    for (entry_list_t::iterator itr_j = _entry_list.begin();
+         itr_j != _entry_list.end(); itr_j ++) {  
+      diff_entry& entry = **itr_j;
+    
+      if (entry._id == evidence) {
+        return_list.push_back(*itr_j);
+      }
+    
+    }   
+  }
+// # return @return_list;
+}
+
+diff_entry genome_diff::parent(diff_entry item)
+{
+// # sub parent
+// # {
+// #  my ($self, $item) = @_;
+// # 
+// #  TEST: foreach my $test_item ($self->list)
+// #  {
+  for(entry_list_t::iterator itr_test_item = _entry_list.begin();
+      itr_test_item != _entry_list.end(); itr_test_item ++) { 
+    diff_entry& test_item = **itr_test_item;
+// #    foreach my $test_evidence_id (@{$test_item->{evidence}})
+// #    {
+    for(vector<string>::iterator itr = test_item._evidence.begin();
+        itr != test_item._evidence.end(); itr ++) { 
+      string& test_evidence_id = (*itr);
+// #      if ($test_evidence_id == $item->{id})
+// #      {
+      if(test_evidence_id == item._id)      
+// #        return $test_item;
+        return test_item;
+// #      }
+// #    }
+    }
+// #  }
+  }
+// #  
+// #  return undef;
+///TODO return undef
+// # }
+}
+
+
 }//namespace bresesq
 
 
