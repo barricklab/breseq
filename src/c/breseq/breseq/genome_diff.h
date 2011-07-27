@@ -235,7 +235,7 @@ namespace breseq {
 
     entry_list_t mutation_list();
 
-		diff_entry parent(diff_entry item);
+    counted_ptr<diff_entry> parent(const diff_entry& item);
 
     void strcopy(char* arg1, const char* arg2);
 

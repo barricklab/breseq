@@ -403,7 +403,7 @@ void html_compare(Settings settings,const string &filename, const string &title,
 // #   open HTML, ">$file_name" or die "Could not open file: $file_name";    
 	ofstream HTML(filename.c_str());
 
-	if(!HTML.good());
+	if(!HTML.good())
 		cerr << "Could not open file: " << filename << endl; 
 // # 
 // #     print HTML start_html(
@@ -715,6 +715,8 @@ string html_genome_diff_item_table_string(Settings settings, genome_diff gd, gen
 // #   }
 	}
 // # }
+  
+  return "";
 }
 
 //===============================================================================
@@ -722,10 +724,10 @@ string html_genome_diff_item_table_string(Settings settings, genome_diff gd, gen
 // DESCRIPTION: 
 //===============================================================================
 Formatted_Mutation_Annotation::Formatted_Mutation_Annotation(const diff_entry& in_mut)
- : mut(in_mut)
- , string()
- , m_output(ios_base::out | ios_base::app)
+ : string()
+ , mut(in_mut)
 {
+  ostringstream m_output;
 // # sub formatted_mutation_annotation
 // # {
 // #   my ($mut) = @_;
@@ -1025,6 +1027,7 @@ string html_read_alignment_table_string(vector<diff_entry>list_ref, bool show_re
 								" Kolmogorov-Smirnov test that lower quality scores support polymorphism than reference" + //TODO Grammar?
 							  i("p") + "-value = " +ks_quality_p_value));
 		}
+      
 // #
 // # 
 // # ### Currently not calculated...
@@ -1061,8 +1064,9 @@ string html_read_alignment_table_string(vector<diff_entry>list_ref, bool show_re
 // #   
 // #   $output_str.= end_table;
 // # }
+  return ss.str();
 }
-// # 
+
 string html_missing_coverage_table_string(vector<diff_entry>list_ref, bool show_reject_reason,
 							                            string title, string relative_link)
 {
@@ -1575,18 +1579,14 @@ Evidence_Files::Evidence_Files(const Settings& settings, genome_diff& gd)
 // # 
 // #   ### We make alignments of two regions for deletions: upstream and downstream edges.
 	genome_diff::entry_list_t items_MC = gd.list(make_list<string>(MC));
-// #   foreach my $item ( $gd->list('MC') )
 	for (genome_diff::entry_list_t::iterator itr = items_MC.begin();
 	     itr != items_MC.end(); itr ++) {	
 	  diff_entry& item = **itr;
-// #   { 	 
-// #     next if ($item->{no_show});
 		if (item.entry_exists(NO_SHOW)) continue;
-// #     
-// #     my $parent_item = $gd->parent($item);
-		diff_entry parent_item = gd.parent(item);
-// #     $parent_item = $item if (!$parent_item);
-		//TODO undef parent_item
+     
+		counted_ptr<diff_entry> parent_item = gd.parent(item);
+    if (parent_item.get() == NULL)
+      parent_item = *itr;
 // #     
 // #     add_evidence( 
 // #       '_side_1_evidence_file_name',
@@ -1603,7 +1603,7 @@ Evidence_Files::Evidence_Files(const Settings& settings, genome_diff& gd)
 // #     );
 	 add_evidence(_SIDE_1_EVIDENCE_FILE_NAME,
 								item,
-							 	parent_item,
+							 	*parent_item,
 								make_map<string,string>
 								(BAM_PATH, reference_bam_file_name)
 								(FASTA_PATH, reference_fasta_file_name)
@@ -1628,7 +1628,7 @@ Evidence_Files::Evidence_Files(const Settings& settings, genome_diff& gd)
 // #     );
     add_evidence(_SIDE_2_EVIDENCE_FILE_NAME,
 								item,
-							 	parent_item,
+							 	*parent_item,
 								make_map<string,string>
 								(BAM_PATH, reference_bam_file_name)
 								(FASTA_PATH, reference_fasta_file_name)
@@ -1652,7 +1652,7 @@ Evidence_Files::Evidence_Files(const Settings& settings, genome_diff& gd)
 // #       }
     add_evidence(_EVIDENCE_FILE_NAME,
 								item,
-							 	parent_item,
+							 	*parent_item,
 								make_map<string,string>
 								(PREFIX, "MC_PLOT")
 								(SEQ_ID, item[SEQ_ID])						
@@ -1840,8 +1840,9 @@ genome_diff::entry_list_t items_JC = gd.list(make_list<string>(JC));
 		if (item.entry_exists(NO_SHOW)) continue;
 // #     
 // #     my $parent_item = $gd->parent($item);
-		diff_entry parent_item = gd.parent(item);
+		counted_ptr<diff_entry> parent_item = gd.parent(item);
 // #     $parent_item = $item if (!$parent_item);
+    
     //TODO undef parent item in gd.parent()
 // #     
 // #     ## regenerate the alignment overlap from the junction_key
@@ -1909,7 +1910,7 @@ genome_diff::entry_list_t items_JC = gd.list(make_list<string>(JC));
 // #     );
 	  add_evidence(_NEW_JUNCTION_EVIDENCE_FILE_NAME,
 		   					 item,
-			  				 parent_item,
+			  				 *parent_item,
                  make_map<string,string>
 					  		 (BAM_PATH, junction_bam_file_name)
 						  	 (FASTA_PATH, junction_fasta_file_name)
@@ -2207,7 +2208,6 @@ Html_Mutation_Table_String::Html_Mutation_Table_String(Settings settings, genome
 															 bool relative_link, bool legend_row, bool one_ref_seq,
 															 vector<string> gd_name_list_ref, Options options)
   : string()
-	, m_output(ios_base::out | ios_base::app)
 	, total_cols(0)
 	, settings(settings)
 	, gd(gd)
@@ -2235,7 +2235,6 @@ Html_Mutation_Table_String::Html_Mutation_Table_String(Settings settings, genome
 }
 Html_Mutation_Table_String::Html_Mutation_Table_String()
  :string()
- , m_output(ios_base::out | ios_base::app)
 {
 
 }
@@ -2292,7 +2291,7 @@ void Html_Mutation_Table_String::Header_Line()
 // #     $total_cols += 1 if (!$one_ref_seq);
     if(!one_ref_seq) total_cols += 1; 
 // #     $total_cols += 1 if (!$settings->{no_evidence});  ## evidence column 
-    if(!settings.no_evidence) total_cols + 1;
+    if(!settings.no_evidence) total_cols += 1;
 // #       
 // #     for (my $i=1; $i<=$header_rows; $i++)
 // #     { 
@@ -2453,13 +2452,13 @@ void Html_Mutation_Table_String::Header_Line()
 // #     $output_str.= Tr(th({-colspan => $total_cols, -align => "left", -class=>"mutation_header_row"}, $header_text));
 // #   }
 	if(!settings.no_header) {
-					m_output<< tr(th("colspan=\"" + to_string(total_cols) +
+					ss<< tr(th("colspan=\"" + to_string(total_cols) +
 													 "\" align=\"left\" class=\"mutation_header_row\"",
 													 header_text));
 	}
 // #   $output_str.= $header_str; //	
 // # 
-	m_output << ss.str();
+	(*this) += ss.str();
 }
 //===============================================================================
 //       CLASS: Html_Mutation_Table_String
@@ -2676,7 +2675,7 @@ void Html_Mutation_Table_String::Item_Lines()
 // #     $output_str.= td({align=>"center"}, $cell_seq_id) if (!$one_ref_seq); 
 // #     $output_str.= td({align=>"right"}, $cell_position);
 // # 
-	  
+	  ostringstream m_output;
 		m_output << start_tr("class=\"" + row_class + "\"") << endl;
 		if (!settings.no_evidence) {
 		 m_output << td(ALIGN_CENTER, evidence_string) << endl;
@@ -2725,6 +2724,7 @@ void Html_Mutation_Table_String::Item_Lines()
 // #     $output_str.= td({-colspan=>$total_cols}, b("Evidence codes: RA = read alignment, MC = missing coverage, JC = new junction"));
 // #     $output_str.= end_Tr; 
 // #   }
+  ostringstream m_output;
 	if (legend_row) {
 		m_output << "<tr>" << endl;
 		m_output << td("colspan=\"" + to_string(total_cols) + "\"", 
@@ -2736,6 +2736,8 @@ void Html_Mutation_Table_String::Item_Lines()
 // #   $output_str.= end_table;  
 // # }
   m_output << "</table>";
+  
+  (*this) += m_output.str();
 }
 // # 
 //===============================================================================
