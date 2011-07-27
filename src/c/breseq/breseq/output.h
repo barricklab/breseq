@@ -109,18 +109,17 @@ extern const char* ALIGN_LEFT;
 /*-----------------------------------------------------------------------------
  * HTML TABLES
  *-----------------------------------------------------------------------------*/
-struct Html_Mutation_Table_String : public string
+class Html_Mutation_Table_String : public string
 {
 	public:
 		//!Constructors
 		Html_Mutation_Table_String(Settings settings, genome_diff gd, vector<diff_entry> list_ref,
 															 bool relative_link, bool legend_row, bool one_ref_seq,
 															 vector<string> gd_name_list_ref, Options options);
-		Html_Mutation_Table_String();
-    
+    Html_Mutation_Table_String();
+  
 	private: 
     //! Main Build Object
-		stringstream m_output;
  		//!Factory Methods
 		void Header_Line();
 		void Item_Lines();
@@ -170,9 +169,8 @@ class Formatted_Mutation_Annotation : public string
   public:
 		//!Constructor
 	  Formatted_Mutation_Annotation(const diff_entry& mut);
+
   private:
-    //!Main Build Object
-		stringstream m_output;
 		//!Helper Function
 		string To_Underline_Red_Codon(diff_entry mut, 
 										              const string& codon_key);

@@ -919,16 +919,6 @@ genome_diff::entry_list_t genome_diff::mutation_list()
  */ 
 genome_diff::entry_list_t genome_diff::mutation_evidence_list(const diff_entry& item)
 {
-// # my ($self, $item) = @_;  
-// # $self->throw if (ref($item) ne 'HASH');
-// # return () if (!defined $item->{evidence});
-// # 
-// # my %evidence;
-// # foreach my $evidence_id (@{$item->{evidence}})
-// # {
-// # $evidence{$evidence_id} = 1;
-// # }
-// # my @return_list = grep { $evidence{$_->{id}} } $self->list;
   entry_list_t return_list;
   vector<string> evidence_list = item._evidence;
   //return diff_entrys with matching evidence
@@ -946,39 +936,24 @@ genome_diff::entry_list_t genome_diff::mutation_evidence_list(const diff_entry& 
     
     }   
   }
-// # return @return_list;
+  return return_list;
 }
 
-diff_entry genome_diff::parent(diff_entry item)
+// @JEB: we need to have this return a counted_ptr<diff_entry> (which can be NULL)
+// we should create a typedef for counted_ptr<diff_entry> = diff_entry_ptr
+counted_ptr<diff_entry> genome_diff::parent(const diff_entry& item)
 {
-// # sub parent
-// # {
-// #  my ($self, $item) = @_;
-// # 
-// #  TEST: foreach my $test_item ($self->list)
-// #  {
   for(entry_list_t::iterator itr_test_item = _entry_list.begin();
       itr_test_item != _entry_list.end(); itr_test_item ++) { 
     diff_entry& test_item = **itr_test_item;
-// #    foreach my $test_evidence_id (@{$test_item->{evidence}})
-// #    {
     for(vector<string>::iterator itr = test_item._evidence.begin();
         itr != test_item._evidence.end(); itr ++) { 
       string& test_evidence_id = (*itr);
-// #      if ($test_evidence_id == $item->{id})
-// #      {
       if(test_evidence_id == item._id)      
-// #        return $test_item;
-        return test_item;
-// #      }
-// #    }
+        return counted_ptr<diff_entry>(*itr_test_item);
     }
-// #  }
   }
-// #  
-// #  return undef;
-///TODO return undef
-// # }
+  return counted_ptr<diff_entry>(NULL);
 }
 
 
