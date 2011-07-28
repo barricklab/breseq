@@ -254,6 +254,7 @@ sub post_option_initialize
 	$self->{reference_trim_file_name} = "$self->{sequence_conversion_path}/@.trims";
 	$self->{sequence_conversion_summary_file_name} = "$self->{sequence_conversion_path}/summary.bin";
 	$self->{sequence_conversion_done_file_name} = "$self->{sequence_conversion_path}/sequence_conversion.done";
+	$self->{analyze_fastq_temp_output_file_name} = "$self->{sequence_conversion_path}/analyze_fastq.out";
 
 	##### reference #####
 	$self->{reference_alignment_path} = "02_reference_alignment";
@@ -383,10 +384,6 @@ sub post_option_initialize
 	$self->{breseq_small_graphic_to_file_name} = "$self->{output_path}/$self->{local_evidence_path}/breseq_small.png";
 
 	$self->{long_pairs_file_name} = "$self->{output_path}/long_pairs.tab";
-
-	###### tmp ######
-	$self->{tmp_path} = "tmp";
-	$self->{tmp_path} = "$self->{base_output_path}/$self->{tmp_path}" if ($self->{base_output_path});
 	
 	#read sequence filenames are given as straight arguments
 	@{$self->{read_fastq_list}} = @ARGV;

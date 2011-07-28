@@ -20,28 +20,7 @@ LICENSE AND COPYRIGHT
 #ifndef _BRESEQ_SETTINGS_H_
 #define _BRESEQ_SETTINGS_H_
 
-// C
-#include <assert.h>
-#include <limits.h>
-#include <stdint.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-
-// C++
-#include <algorithm>
-#include <cmath>
-#include <fstream>
-#include <iomanip>
-#include <iostream>
-#include <limits>
-#include <list>
-#include <map>
-#include <memory>
-#include <sstream>
-#include <string>
-#include <utility>
-#include <vector>
+#include "breseq/common.h"
 
 #ifndef UNDEFINED
 #define UNDEFINED UINT_MAX
@@ -92,7 +71,7 @@ namespace breseq
         {
         public:
                 // Set up defaults here
-                Settings(const string& run_path = "");
+                Settings(const string& _run_path = "");
 
                 // Fields
                 map<string, string> installed;
@@ -155,7 +134,7 @@ namespace breseq
                 uint32_t max_quality;
                 string run_name;
                 uint32_t clean;
-                string base_output_path;
+          
                 string error_model_method;
                 uint32_t base_quality_cutoff;
 
@@ -175,7 +154,7 @@ namespace breseq
                 uint32_t maximum_inserted_junction_sequence_length;
                 uint32_t minimum_candidate_junctions;
                 uint32_t maximum_candidate_junctions;
-
+          
                 bool smalt;
 
                 bool no_mutation_prediction;
@@ -197,6 +176,9 @@ namespace breseq
                 string lib_path;
                 bool strict_polymorphism_prediction;
                 uint32_t maximum_read_mismatches;
+          
+                string base_output_path;          // main path containing all output
+          
                 string converted_fastq_file_name;
                 string unwanted_fasta_file_name;
                 string sequence_conversion_summary_file_name;
@@ -282,9 +264,6 @@ namespace breseq
                 string breseq_small_graphic_to_file_name;
 
                 string long_pairs_file_name;
-
-                ////// tmp //////
-                string tmp_path;
 
                 cReadFiles read_structures;
 

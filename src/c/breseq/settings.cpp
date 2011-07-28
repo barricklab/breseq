@@ -18,17 +18,6 @@ LICENSE AND COPYRIGHT
 
 #include "breseq/settings.h"
 
-#include <map>
-#include <string>
-#include <vector>
-#include <limits>
-#include <list>
-#include <sstream>
-#include <stdint.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <assert.h>
-
 using namespace std;
 
 namespace breseq
@@ -80,8 +69,11 @@ namespace breseq
         }
 
         // Set up defaults and build paths
-        Settings::Settings(const string& run_path)
+        Settings::Settings(const string& _base_output_path)
         {
+                // things work fine if this is empty ""
+                this->base_output_path = _base_output_path;
+          
                 this->pre_option_initialize();
 
                 // settings that control execution
@@ -110,22 +102,20 @@ namespace breseq
 
                 // Need to port the rest from Perl...
 
-                data_path = run_path + "/data";
-                reference_fasta_file_name = data_path + "/reference.fasta";
-                reference_features_file_name = data_path + "/reference.features.tab";
+                //data_path = base_output_path + "/data";
+                //reference_fasta_file_name = data_path + "/reference.fasta";
+                //reference_features_file_name = data_path + "/reference.features.tab";
 
-                sequence_conversion_path = run_path + "/01_sequence_conversion";
-                reference_trim_file_name = sequence_conversion_path + "/@.trims";
+                //sequence_conversion_path = base_output_path + "/01_sequence_conversion";
+                //reference_trim_file_name = sequence_conversion_path + "/@.trims";
 
-                candidate_junction_path = run_path + "/03_candidate_junctions";
-                candidate_junction_fasta_file_name = candidate_junction_path + "/candidate_junction.fasta";
+                //candidate_junction_path = base_output_path + "/03_candidate_junctions";
+                //candidate_junction_fasta_file_name = candidate_junction_path + "/candidate_junction.fasta";
 
-                alignment_correction_path = run_path + "/05_alignment_correction";
-                jc_genome_diff_file_name = alignment_correction_path + "/jc_evidence.gd";
-                resolved_reference_sam_file_name = alignment_correction_path + "/reference.sam";
-                resolved_junction_sam_file_name = alignment_correction_path + "/junction.sam";
-
-                output_path = run_path + "/output";
+                //alignment_correction_path = base_output_path + "/05_alignment_correction";
+                //jc_genome_diff_file_name = alignment_correction_path + "/jc_evidence.gd";
+                //resolved_reference_sam_file_name = alignment_correction_path + "/reference.sam";
+                //resolved_junction_sam_file_name = alignment_correction_path + "/junction.sam";
 
                 this->post_option_initialize();
         }
@@ -143,7 +133,6 @@ namespace breseq
                 this->max_quality = 0;
                 this->run_name = "unnamed";
                 this->clean = 0;
-                this->base_output_path = "";
                 this->error_model_method = "EMPIRICAL";
                 this->base_quality_cutoff = 3;                  // avoids problem with Illumina assigning 2 to bad ends of reads!
 
@@ -217,7 +206,7 @@ namespace breseq
                 this->lib_path = this->bin_path + "/../lib/perl5/Breseq";
 
                 //neaten up some settings for later string comparisons
-                this->error_model_method = "\\U" + this->error_model_method;
+                this->error_model_method = to_upper(this->error_model_method);
 
                 //on by default
                 this->unmatched_reads = (this->no_unmatched_reads) ? 0 : 1;
@@ -242,13 +231,13 @@ namespace breseq
                 this->print_run_name =~ s/_/ /g;*/
 
                 ////////  SETUP FILE NAMES  ////////
-                //// '//' replaced with read fastq name
+                //// '#' replaced with read fastq name
                 //// '@' replaced by seq_id of reference sequence
 
                 ////// sequence conversion //////
                 this->sequence_conversion_path = "01_sequence_conversion";
                 if (this->base_output_path.size() > 0) this->sequence_conversion_path = this->base_output_path + "/" + this->sequence_conversion_path;
-                this->converted_fastq_file_name = this->sequence_conversion_path + "///.converted.fastq";
+                this->converted_fastq_file_name = this->sequence_conversion_path + "/#.converted.fastq";
                 this->unwanted_fasta_file_name = this->sequence_conversion_path + "/unwanted.fasta";
                 this->reference_trim_file_name = this->sequence_conversion_path + "/@.trims";
                 this->sequence_conversion_summary_file_name = this->sequence_conversion_path + "/summary.bin";
@@ -258,7 +247,7 @@ namespace breseq
                 this->reference_alignment_path = "02_reference_alignment";
                 if (this->base_output_path.size() > 0) this->reference_alignment_path = this->base_output_path + "/" + this->reference_alignment_path;
                 this->reference_hash_file_name = this->reference_alignment_path + "/reference";
-                this->reference_sam_file_name = this->reference_alignment_path + "///.reference.sam";
+                this->reference_sam_file_name = this->reference_alignment_path + "/#.reference.sam";
                 this->reference_alignment_done_file_name = "this->reference_alignment_path/alignment.done";
 
                 ////// candidate junction //////
@@ -266,7 +255,7 @@ namespace breseq
                 if (this->base_output_path.size() > 0) this->candidate_junction_path = this->base_output_path + "/" + this->candidate_junction_path;
 
                 this->preprocess_junction_best_sam_file_name = this->candidate_junction_path + "/best.sam";
-                this->preprocess_junction_split_sam_file_name = this->candidate_junction_path + "///.split.sam";
+                this->preprocess_junction_split_sam_file_name = this->candidate_junction_path + "/#.split.sam";
                 this->preprocess_junction_done_file_name = this->candidate_junction_path + "/preprocess_junction_alignment.done";
 
                 this->coverage_junction_best_bam_unsorted_file_name = this->candidate_junction_path + "/best.unsorted.bam";
@@ -286,7 +275,7 @@ namespace breseq
                 this->candidate_junction_alignment_path = "04_candidate_junction_alignment";
                  if (this->base_output_path.size() > 0) this->candidate_junction_alignment_path = this->base_output_path + "/" + this->candidate_junction_alignment_path;
                 this->candidate_junction_hash_file_name = this->candidate_junction_alignment_path + "/candidate_junction";
-                this->candidate_junction_sam_file_name = this->candidate_junction_alignment_path + "///.candidate_junction.sam";
+                this->candidate_junction_sam_file_name = this->candidate_junction_alignment_path + "/#.candidate_junction.sam";
                 this->candidate_junction_alignment_done_file_name = this->candidate_junction_alignment_path + "/candidate_junction_alignment.done";
 
                 ////// alignment correction //////
@@ -310,9 +299,9 @@ namespace breseq
                 ////// error rates and coverage distribution //////
                 this->error_calibration_path = "07_error_calibration";
                 if (this->base_output_path.size() > 0) this->error_calibration_path = this->base_output_path + "/" + this->error_calibration_path;
-                this->error_counts_file_name = this->error_calibration_path + "///.error_counts.tab";
+                this->error_counts_file_name = this->error_calibration_path + "/#.error_counts.tab";
                 //FOR TESTING: this->complex_error_counts_file_name = "this->error_calibration_path///.complex_error_counts.tab";
-                this->error_rates_file_name = this->error_calibration_path + "///.error_rates.tab";
+                this->error_rates_file_name = this->error_calibration_path + "/#.error_rates.tab";
                 this->error_counts_done_file_name = this->error_calibration_path + "/error_counts.done";
                 this->error_rates_done_file_name = this->error_calibration_path + "/error_rates.done";
                 this->coverage_file_name = this->error_calibration_path + "/@.coverage.tab";
@@ -321,7 +310,7 @@ namespace breseq
                 this->error_rates_base_qual_error_prob_file_name = this->error_calibration_path + "/base_qual_error_prob.//.tab";
                 this->plot_error_rates_r_script_file_name = this->lib_path + "/plot_error_rate.r";
                 this->plot_error_rates_fit_r_script_file_name = this->error_calibration_path + "/fit.//.r_script";
-                this->plot_error_rates_r_script_log_file_name = this->error_calibration_path + "///.plot_error_rate.log";
+                this->plot_error_rates_r_script_log_file_name = this->error_calibration_path + "/#.plot_error_rate.log";
 
                 ////// mutation identification //////
                 this->mutation_identification_path = "08_mutation_identification";
@@ -350,7 +339,7 @@ namespace breseq
                 this->reference_faidx_file_name = this->data_path + "/reference.fasta.fai";
                 this->reference_features_file_name = this->data_path + "/reference.features.tab";
                 this->reference_gff3_file_name = this->data_path + "/reference.gff3";
-                this->unmatched_read_file_name = this->data_path + "///.unmatched.fastq";
+                this->unmatched_read_file_name = this->data_path + "/#.unmatched.fastq";
 
                 ////// output //////
                 // things in this location are part of the user-readable output
@@ -371,7 +360,7 @@ namespace breseq
                 this->coverage_plot_file_name = this->coverage_plot_path + "/@.overview.png";
                 this->output_calibration_path = this->output_path + "/calibration";
                 this->unique_only_coverage_plot_file_name = this->output_calibration_path + "/@.unique_coverage.pdf";
-                this->error_rates_plot_file_name = this->output_calibration_path + "///.error_rates.pdf";
+                this->error_rates_plot_file_name = this->output_calibration_path + "/#.error_rates.pdf";
 
                 // text output files, to be replaced...
                 this->settings_text_file_name = this->output_path + "/settings.tab";
@@ -382,10 +371,6 @@ namespace breseq
                 this->breseq_small_graphic_to_file_name = this->output_path + "/" + this->local_evidence_path + "/breseq_small.png";
 
                 this->long_pairs_file_name = this->output_path + "/long_pairs.tab";
-
-                ////// tmp //////
-                this->tmp_path = "tmp";
-                if (this->base_output_path.size() > 0) this->tmp_path = this->base_output_path+ "/" + this->tmp_path;
 
                 //read sequence filenames are given as straight arguments
                 /*@{this->read_fastq_list} = @ARGV;

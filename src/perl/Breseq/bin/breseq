@@ -139,7 +139,8 @@ if ($settings->do_step('sequence_conversion_done_file_name', "Read and reference
 		my $cbreseq = $settings->ctool("cbreseq");
 		my $convert_file_name =  $settings->file_name('converted_fastq_file_name', {'#'=>$read_file});
 		my $command = "$cbreseq ANALYZE_FASTQ --input=$fastq_file_name --convert=$convert_file_name";
-		my $output = Breseq::Shared::capture_system($command);
+		my $analyze_fastq_temp_output_file_name = $settings->file_name('analyze_fastq_temp_output_file_name');
+		my $output = Breseq::Shared::capture_system($command, undef, undef, $analyze_fastq_temp_output_file_name);
 		#print "$output\n";
 		
 		## Parse output

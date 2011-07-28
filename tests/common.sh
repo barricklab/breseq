@@ -9,6 +9,8 @@
 # common variables:
 # paths must either be relative to the location of this script or absolute.
 COMMONDIR=`dirname ${BASH_SOURCE}`
+source ${COMMONDIR}/test.config
+
 # path to breseq:
 if [ "$TESTBINPREFIX" == "" ]
 then
@@ -31,7 +33,7 @@ EXPECTED=expected.gd
 # name of testexec file
 TESTEXEC=testcmd.sh
 
-# build the list of hashes
+# build the expected results from the current output
 # $1 == testdir
 #
 do_build() {
@@ -54,7 +56,7 @@ do_show() {
 }
 
 
-# check current hashes against expected values.
+# check current results against expected values.
 # $1 == testdir
 #
 do_check() {

@@ -63,6 +63,9 @@ all-local :
 	cd $(PERLBRESEQ) ; \
 	perl Build.PL --install_base=$(prefix) --install_path bin=$(bindir)  --install_path script=$(bindir) ; \
 	./Build ;
+	
+	## This saves the install path for the test script
+	echo "export TESTBINPREFIX=$(bindir)" > tests/test.config;
 
 install-exec-local :
 
@@ -85,10 +88,13 @@ clean-local :: clean-tests
 	## Breseq
 	cd $(PERLBRESEQ) ; \
 	./Build clean;	
+	
+	## This saves the install path for the test script
+	rm tests/test.config;
 		
 dist-hook:
 
-## This environmentl variable is used by python Sphinx
+## This environmental variable is used by python Sphinx
 	echo $(PACKAGE_VERSION); \
 	export BRESEQ_VERSION=$(PACKAGE_VERSION); \
 	cd $(DOCDIR) ; \
@@ -143,7 +149,7 @@ clean-pkg :
 ## tests
 
 test:
-	export TESTBINPREFIX=$(bindir); tests/test.sh test tests
+	tests/test.sh test tests
 
 clean-tests:
-	export TESTBINPREFIX=$(bindir); tests/test.sh clean tests
+	tests/test.sh clean tests
