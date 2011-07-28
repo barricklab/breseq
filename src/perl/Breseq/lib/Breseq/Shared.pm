@@ -50,17 +50,19 @@ sub system
 
 sub capture_system
 {
-	my ($command, $silent, $continue) = @_;	
+	my ($command, $silent, $continue, $temp_filename) = @_;	
+	$temp_filename = "$$.script_output" if (!defined $temp_filename);
+	
 	print STDERR "[system] $command\n" if (!$silent);
-	$command .= " > $$.script_output";
+	$command .= " > $temp_filename";
 	my $res = CORE::system $command;
 	print STDERR "Error: $!\nResult code: $res\n" if ($res);
 	die if ($res && !$continue);
 	
-	open IN, "$$.script_output";
+	open IN, "$temp_filename";
 	my @lines = <IN>;
 	close IN;
-	unlink("$$.script_output");
+	unlink("$temp_filename");
 	return join("", @lines);
 }
 

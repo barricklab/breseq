@@ -215,4 +215,5 @@ if (length(X$best_quals) > 0)
 	}
 }
 
+Y = signif(Y, digits = 6)
 write.table(Y, out_file, sep="\t", row.names=F, quote=F)

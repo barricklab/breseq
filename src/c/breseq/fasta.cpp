@@ -29,7 +29,10 @@ namespace breseq {
     , m_current_line_num(0)
     , m_bases_per_line(60)
   {
-    assert(!(*this).fail());
+    if ((*this).fail()) {
+      cerr << "Failed to open FASTA file: " << m_file_name << endl;
+      assert(false);
+    }
     
     if (mode == ios_base::in) {
       std::getline(*this, m_current_line);

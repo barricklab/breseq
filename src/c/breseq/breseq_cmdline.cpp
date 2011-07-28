@@ -573,7 +573,6 @@ int do_preprocess_alignments(int argc, char* argv[]) {
 	}
 
 	try {
-  cout << "TESTING" << endl;
     
   Summary summary;
     
