@@ -34,6 +34,7 @@ LICENSE AND COPYRIGHT
 #include "breseq/settings.h"
 #include "breseq/tabulate_coverage.h"
 #include "breseq/mutation_predictor.h"
+#include "breseq/output.h"
 
 
 using namespace breseq;
@@ -794,19 +795,8 @@ int do_convert_gd( int argc, char* argv[]){
     return 0;
 }
 
-int do_read_gd( int argc, char* argv[]){
-  AnyOption options("Usage: --gd <gd.gd>"); options( "gd,i","gd file to read").processCommandArgs( argc,argv);
-  if( !options.count("gd")){
-        options.printUsage(); return -1;
-    }
-    
-    try{
-        genome_diff( string(options["gd"])); ///TODO Why string()?
-    } 
-    catch(...){ 
-        return -1; // failed 
-    }
-    
+int do_output( int argc, char* argv[]){
+  cout << html_header("TEST");
     return 0;
 }
 
@@ -869,8 +859,8 @@ int main(int argc, char* argv[]) {
     return do_convert_gvf(argc_new, argv_new);
   } else if (command == "VCF2GD") {
     return do_convert_gd( argc_new, argv_new);
-  } else if (command == "READGD") {
-    return do_read_gd(argc_new, argv_new);
+  } else if (command == "OUTPUT") {
+    return do_output(argc_new, argv_new);
   }
 
 	// Command was not recognized. Should output valid commands.
