@@ -391,27 +391,17 @@ string html_header (const string &title)
 // #       -head  => style({type => 'text/css'}, $header_style_string),
 // #   );
   
-  ss << "<HTML>\n"; ///TODO End HTML tag in this function also?  
-  ss << "<title>" << title << "</title>\n";
-  ss << "<head>\n";
-  ss << "<style type = \"text/css\">\n";
-  ss << header_style_string() << "\n";
-  ss << "</style>\n";
-  ss << "</head>\n";
+  ss << "<html>" << endl;   
+  ss << "<title>" << title << "</title>" << endl;
+  ss << "<head>" << endl;
+  ss << "<style type = \"text/css\">" << endl;
+  ss << header_style_string() << endl;
+  ss << "</style>" << endl;
+  ss << "</head>" << endl;
   
   return ss.str();
 // # }
 }
-// # 
-// # sub html_footer
-// # {
-string html_footer()
-{
-// #   return end_html;
-  return "</html>";
-// # }
-  }
-// # 
 // # sub html_compare
 // # {
 void html_compare(Settings settings,const string &filename, const string &title, genome_diff gd,
@@ -429,13 +419,13 @@ void html_compare(Settings settings,const string &filename, const string &title,
 // #       -title => $title, 
 // #       -head  => style({type => 'text/css'}, $header_style_string),
 // #   );
-  HTML << "<html>\n"; ///TODO End HTML tag in this function also?  
-  HTML << "<title>" << title << "</title>\n";
-  HTML << "<head>\n";
-  HTML << "<style type = \"text/css\">\n";
-  HTML << header_style_string() << "\n";
-  HTML << "</style>\n";
-  HTML << "</head>\n";
+  HTML << "<html>" << endl; ///TODO End HTML tag in this function also?  
+  HTML << "<title>" << title << "</title>" << endl;
+  HTML << "<head>" << endl;
+  HTML << "<style type=\"text/css\">" << endl;
+  HTML << header_style_string() << endl;
+  HTML << "</style>" << endl;
+  HTML << "</head>" << endl;
 // #   
 // #   my @muts = $gd->mutation_list;
   genome_diff::entry_list_t muts = gd.mutation_list();
@@ -467,20 +457,20 @@ void html_compare_polymorphisms(Settings settings, string file_name, string titl
 // #       -title => $title, 
 // #       -head  => style({type => 'text/css'}, $header_style_string),
 // #   );
-  HTML << "<html>\n";
-  HTML << "<title>" << title << "</title>\n";
-  HTML << "<head>\n";
-  HTML << "<style type =\"text/css\">\n";
-  HTML << header_style_string() << "\n";
-  HTML << "</style>\n";
-  HTML << "</head>\n";
+  HTML << "<html>" << endl;
+  HTML << "<title>" << title << "</title>" << endl;
+  HTML << "<head>" << endl;
+  HTML << "<style type =\"text/css\">" << endl;
+  HTML << header_style_string() << endl;
+  HTML << "</style>" << endl;
+  HTML << "</head>" << endl;
 // #     
 // #   print HTML html_read_alignment_table_string($settings, $list_ref, undef, undef, 1);
   HTML << html_read_alignment_table_string(list_ref, true); 
 //! TODO Confirm settings is never used
 // # 
 // #   print HTML end_html;
-  HTML << "</html>\n";
+  HTML << "</html>" << endl;
 // #   close HTML;
   HTML.close();
 // # }
@@ -505,27 +495,27 @@ void html_statistic(const string &file_name, Settings settings, Summary summary,
 // #       -title => "BRESEQ :: Summary Statistics" . ($settings->{print_run_name} ? " :: $settings->{print_run_name}" : ''), 
 // #       -head  => style({type => 'text/css'}, $header_style_string),
 // #   );
-  HTML << "<html>\n";
-  HTML << "<title>" << "Summary Statistics" << "</title>\n";
-  HTML << "<head>\n";
-  HTML << "<style type =\"text/css\">\n";
-  HTML << header_style_string() << "\n";
-  HTML << "</style>\n";
-  HTML << "</head>\n";
+  HTML << "<html>" << endl;
+  HTML << "<title>" << "Summary Statistics" << "</title>" << endl;
+  HTML << "<head>" << endl;
+  HTML << "<style type =\"text/css\">" << endl;
+  HTML << header_style_string() << endl;
+  HTML << "</style>" << endl;
+  HTML << "</head>" << endl;
 
 // #   print HTML breseq_header_string($settings) . p; 
-  HTML << breseq_header_string(settings) << "\n";
+  HTML << breseq_header_string(settings)<< "</p>" << endl; //TODO Confirm p
 // #   
 // #   ## Write fastq read file information
 // #     print HTML start_table({-border => 0, -cellspacing => 1, -cellpadding => 5});
-  HTML << "<table border=\"0\" cellspace=\"1\" cellpadding=\"1\">\n";
+  HTML << "<table border=\"0\" cellspace=\"1\" cellpadding=\"1\">" << endl;
 // #   print HTML Tr(th(), th("fastq read file"), th("reads"), th("bases"), th("longest"));
-  HTML << "<tr>\n";
-  HTML << "<th>fastq read file</th>\n";
-  HTML << "<th>reads</th>\n";
-  HTML << "<th>bases</th>\n";
-  HTML << "<th>longest</th>\n";
-  HTML << "</tr>\n";
+  HTML << "<tr>" << endl;
+  HTML << "<th>fastq read file</th>" << endl;
+  HTML << "<th>reads</th>" << endl;
+  HTML << "<th>bases</th>" << endl;
+  HTML << "<th>longest</th>" << endl;
+  HTML << "</tr>" << endl;
 // # 
 // #   foreach my $read_file ($settings->read_files)
 // #   {
@@ -875,7 +865,7 @@ html_read_alignment_table_string(
   uint8_t total_cols = link ? 11 : 10;
 // #   $output_str.= Tr(th({-colspan => $total_cols, -align => "left", -class=>"read_alignment_header_row"}, $title));
   ss << tr(th("colspan=\"" + to_string(total_cols) + 
-              "\" align=\"left\", class=\"read_alignment_header_row\"", title));
+              "\" align=\"left\" class=\"read_alignment_header_row\"", title));
 // # 
 // #   $output_str.= start_Tr();
   ss << start_tr();
@@ -1213,15 +1203,18 @@ html_missing_coverage_table_string(
       if (link) {
         ss << td(a(relative_link + c[_SIDE_1_EVIDENCE_FILE_NAME], "*")) << endl;
         ss << td(a(relative_link + c[_SIDE_2_EVIDENCE_FILE_NAME], "*")) << endl;
+        
         if (coverage_plots  ) {
           ss << td(a(relative_link + c[_EVIDENCE_FILE_NAME], "*")) << endl;
         }
+
       }
 // # 
 // #     my $start_str = $c->{start};
       string start = c[START];
 // #     $start_str .= "–" . ($c->{start} + $c->{start_range}) if ($c->{start_range} > 0);
       start += "–";
+
       if (from_string<uint8_t>(c[START_RANGE]) > 0) {
         start += "–" + c[START] + c[END];
       }
@@ -1957,8 +1950,8 @@ genome_diff::entry_list_t items_JC = gd.list(make_list<string>(JC));
 // #     );
     add_evidence(_NEW_JUNCTION_EVIDENCE_FILE_NAME,
                   item,
-                 *parent_item,
-                 make_map<string,string>
+                  *parent_item,
+                  make_map<string,string>
                  (BAM_PATH, junction_bam_file_name)
                  (FASTA_PATH, junction_fasta_file_name)
                  (SEQ_ID, item[SEQ_ID])            
@@ -1980,6 +1973,7 @@ genome_diff::entry_list_t items_JC = gd.list(make_list<string>(JC));
 
 // #     ## this is the flagship file that we show first when clicking on evidence from a mutation...
 // #     $item->{_evidence_file_name} = $item->{_new_junction_evidence_file_name};
+    item[_EVIDENCE_FILE_NAME] = item[_NEW_JUNCTION_EVIDENCE_FILE_NAME];
 // #     
 // #     add_evidence( 
 // #       '_side_1_evidence_file_name',
@@ -1994,6 +1988,16 @@ genome_diff::entry_list_t items_JC = gd.list(make_list<string>(JC));
 // #         prefix    => 'JC_SIDE_1' . "_$item->{side_2_seq_id}_$item->{side_2_position}_$item->{side_2_position}",   ## need to be unique
 // #       }
 // #     );
+    add_evidence(_SIDE_1_EVIDENCE_FILE_NAME,
+                 item,
+                 *parent_item,
+                 make_map<string,string>
+                 (BAM_PATH, reference_bam_file_name)
+                 (FASTA_PATH, reference_bam_file_name)
+                 (SEQ_ID, item[SIDE_1_SEQ_ID])            
+                 (START, item[SIDE_1_POSITION])
+                 (END, item[SIDE_1_POSITION])
+                 (PREFIX, "JC_SIDE_1")); //TODO finish
 // # 
 // #     add_evidence( 
 // #       '_side_2_evidence_file_name',
@@ -2006,10 +2010,19 @@ genome_diff::entry_list_t items_JC = gd.list(make_list<string>(JC));
 // #         parent_item => $parent_item,
 // #         item    => $item, 
 // #         prefix    => 'JC_SIDE_2' . "_$item->{side_1_seq_id}_$item->{side_1_position}_$item->{side_1_position}",
-// #       }
-// #     );
-  }
+    add_evidence(_SIDE_2_EVIDENCE_FILE_NAME,
+                 item,
+                 *parent_item,
+                 make_map<string,string>
+                 (BAM_PATH, reference_bam_file_name)
+                 (FASTA_PATH, reference_bam_file_name)
+                 (SEQ_ID, item[SIDE_2_SEQ_ID])            
+                 (START, item[SIDE_2_POSITION])
+                 (END, item[SIDE_2_POSITION])
+                 (PREFIX, "JC_SIDE_2")); //TODO finish
+
 // #   }
+  }
 // # 
 // #   ### now create evidence files
 // #   $settings->create_path('evidence_path');
@@ -2019,9 +2032,13 @@ genome_diff::entry_list_t items_JC = gd.list(make_list<string>(JC));
 // #     print STDERR "Creating evidence file: $e->{file_name}\n" if ($settings->{verbose});
 // #     Breseq::Output::html_evidence_file($settings, $gd, $e);   
 // #   }
+  
+
+
+
+
 // #     
 // # }
-// # 
 }
 
 /*-----------------------------------------------------------------------------

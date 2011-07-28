@@ -573,12 +573,13 @@ int do_preprocess_alignments(int argc, char* argv[]) {
 	}
 
 	try {
-
+  cout << "TESTING" << endl;
+    
   Summary summary;
     
   // Set the things we need...
 	Settings settings;
-    
+     
   settings.read_structures.Init(from_string<vector<string> >(options["read-file"]));
  
 	settings.candidate_junction_fasta_file_name = options["candidate-junction-path"];
