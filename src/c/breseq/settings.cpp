@@ -17,6 +17,7 @@ LICENSE AND COPYRIGHT
 *****************************************************************************/
 
 #include "breseq/settings.h"
+#include "breseq/common.h"
 
 using namespace std;
 
@@ -45,20 +46,22 @@ namespace breseq {
       rf.m_error_group = on_error_group++;         
       rf.m_id = on_id++;
       
-      
       // create base name
       rf.m_base_name = rf.m_fastq_file_name;
+      
       // - beginning path
       size_t pos = rf.m_base_name.rfind("/");
       if (pos != string::npos) rf.m_base_name.erase(0,pos+1);
       // - trailing .fastq
       pos = rf.m_base_name.rfind(".fastq");
-      if (pos == rf.m_base_name.size() - 6) {
+      if (rf.m_base_name.size() > 6 &&
+          pos != string::npos) {
         rf.m_base_name.erase(pos);
       }
-      // - trailing .converted
+      //- trailing .converted
       pos = rf.m_base_name.rfind(".converted");
-      if (pos == rf.m_base_name.size() - 10) {
+      if (rf.m_base_name.size() > 10 &&
+          pos != string::npos) { 
         rf.m_base_name.erase(pos);
       }
       

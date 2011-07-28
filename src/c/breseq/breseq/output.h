@@ -99,6 +99,8 @@ extern const char* ALIGN_LEFT;
   //! Wraps input in <font></font> tags
   inline string font(const string& attributes, const string& input) 
     {return "<font " + attributes + ">" + input + "</font>";}
+  inline string html_footer()
+    {return "/html";}
   
   //! Encodes dash, en dash and spaces to HTML
   string nonbreaking(const string& input);
@@ -157,7 +159,6 @@ string html_new_junction_table_string
    bool show_reject_reason,
    string title= "New junction evidence",
    string relative_link = "");
-
 /*-----------------------------------------------------------------------------
  *  Formatted_Mutation_Annotation
  *-----------------------------------------------------------------------------*/
@@ -174,9 +175,6 @@ class Formatted_Mutation_Annotation : public string
     //!Parameters
   	diff_entry mut;
 };
-
-
-
 /*-----------------------------------------------------------------------------
  *  Create_Evidence_Files
  *-----------------------------------------------------------------------------*/
@@ -199,11 +197,15 @@ struct Evidence_Files
                       diff_entry parent_item, map<string,string> fields);
     string file_name(Evidence_Item& evidence_item);
 };
+
 /*-----------------------------------------------------------------------------
- *  FUNCTIONS BELOW HERE STILL NEED FURTHER PORTING
+ *  
  *-----------------------------------------------------------------------------*/
 string html_header(const string& title);
 string decode_reject_reason(const string & reject);
+/*-----------------------------------------------------------------------------
+ *  FUNCTIONS BELOW HERE STILL NEED FURTHER PORTING
+ *-----------------------------------------------------------------------------*/
 
 
 
