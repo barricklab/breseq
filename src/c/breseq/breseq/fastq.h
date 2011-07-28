@@ -33,7 +33,7 @@ namespace breseq {
       Main function for this analysis. Prints summary information
       about fastq and converts file to SANGER format if necessary.
    */  
-  void analyze_fastq(const string &file_name, const string &convert_file_name);
+  AnalyzeFastq analyze_fastq(const string &file_name, const string &convert_file_name);
   
   /*! Sequence class.
    */
