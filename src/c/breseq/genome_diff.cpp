@@ -941,7 +941,7 @@ genome_diff::entry_list_t genome_diff::mutation_evidence_list(const diff_entry& 
 
 // @JEB: we need to have this return a counted_ptr<diff_entry> (which can be NULL)
 // we should create a typedef for counted_ptr<diff_entry> = diff_entry_ptr
-counted_ptr<diff_entry> genome_diff::parent(const diff_entry& item)
+genome_diff::diff_entry_ptr genome_diff::parent(const diff_entry& item)
 {
   for(entry_list_t::iterator itr_test_item = _entry_list.begin();
       itr_test_item != _entry_list.end(); itr_test_item ++) { 
