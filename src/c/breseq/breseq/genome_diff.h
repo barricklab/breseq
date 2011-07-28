@@ -187,6 +187,7 @@ namespace breseq {
 	public:
 
 		typedef vector<counted_ptr<diff_entry> > entry_list_t; //!< Type for a list of diff entries.
+                typedef counted_ptr<diff_entry> diff_entry_ptr;
 		typedef string key_t; 
     typedef vector<string> list_t;
     
