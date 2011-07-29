@@ -823,6 +823,8 @@ int breseq_default_action(int argc, char* argv[])
 
 	cReferenceSequences ref_seq_info;
 
+	int exit_code; // Return value of system calls
+
 	vector<string> read_file_names;
 	for (int32_t i = 0; i < options.getArgc(); i++)
 	{
@@ -855,167 +857,187 @@ int breseq_default_action(int argc, char* argv[])
 	string sequence_converson_summary_file_name = settings.file_name("sequence_conversion_summary_file_name");
 	settings.create_path("sequence_conversion_path");
 	settings.create_path("data_path");
-/*
+
 	if (settings.do_step("sequence_conversion_done_file_name", "Read and reference sequence file input"))
 	{
-		my $s;
+		Summary::SequenceConversion s;
 
 		//Check the FASTQ format and collect some information about the input read files at the same time
-		print STDERR "  Analyzing fastq read files...\n";
-		my $overall_max_read_length;
-		my $overall_max_qual = 0;
+		cerr << "  Analyzing fastq read files..." << endl;
+		uint32_t overall_max_read_length = UNDEFINED;
+		uint32_t overall_max_qual = 0;
 
-		$s->{num_reads} = 0;
-		foreach my $read_file ($settings->read_files)
+		s.num_reads = 0;
+		for (uint32_t i = 0; i < settings.read_files.size(); i++)
 		{
-			print STDERR "    READ FILE::$read_file\n";
-			my $max_read_length;
-			my $num_bases = 0;
-			my $num_reads = 0;
-			my $fastq_file_name = $settings->read_file_to_fastq_file_name($read_file);
-			my $cbreseq = $settings->ctool("cbreseq");
-			my $convert_file_name =  $settings->file_name("converted_fastq_file_name", {"//"=>$read_file});
-			my $command = "$cbreseq ANALYZE_FASTQ --input=$fastq_file_name --convert=$convert_file_name";
-			my $output = Breseq::Shared::capture_system($command);
-			//print "$output\n";
+			string read_file = settings.read_files[i];
+			cerr << "    READ FILE::" << read_file << endl;
+			/*uint32_t max_read_length;
+			uint32_t num_bases = 0;
+			uint32_t num_reads = 0;*/
+			string fastq_file_name = settings.read_file_to_fastq_file_name(read_file);
+			//string cbreseq = settings.ctool("cbreseq");
+			string convert_file_name =  settings.file_name("converted_fastq_file_name", "//", read_file);
+			//string command = cbreseq + " ANALYZE_FASTQ --input=" + fastq_file_name + " --convert=" + convert_file_name;
+			//string output = capture_system(command);
+			//print "$output" << endl;
 
 			// Parse output
-			my $s_rf;
-			foreach my $line ( split(/\n/, $output) ) {
-				if ($line =~ m/^(\S+)\s+(\S+)$/) {
-					$s_rf->{$1} = $2;
-				}
-			}
+			AnalyzeFastq s_rf = analyze_fastq(fastq_file_name, convert_file_name);
 
-			die if (!defined $s_rf->{max_read_length});
-			die if (!defined $s_rf->{max_quality_score});
-			die if (!defined $s_rf->{num_reads});
-			die if (!defined $s_rf->{num_bases});
-			die if (!defined $s_rf->{qual_format});
-			die if (!defined $s_rf->{original_qual_format});
-			die if (!defined $s_rf->{converted_fastq_name});
+			assert(
+				is_defined(s_rf.max_read_length) &&
+				is_defined(s_rf.max_quality_score) &&
+				is_defined(s_rf.num_reads) &&
+				is_defined(s_rf.num_bases) &&
+				(s_rf.qual_format.size() > 0) &&
+				(s_rf.original_qual_format.size() > 0) &&
+				(s_rf.converted_fastq_name.size() > 0)
+			);
 
 			// Save the converted file name -- have to save it in summary because only that
 			// is reloaded if we skip this step.
-			$s->{converted_fastq_name}->{$read_file} = $s_rf->{converted_fastq_name};
+			s.converted_fastq_name[read_file] = s_rf.converted_fastq_name;
 
 			// Record statistics
-			$overall_max_read_length = $s_rf->{max_read_length} if ((!defined $overall_max_read_length) || ($s_rf->{max_read_length} > $overall_max_read_length));
-			$overall_max_qual = $s_rf->{max_quality_score} if ((!defined $overall_max_qual) || ($s_rf->{max_quality_score} > $overall_max_qual));
-			$s->{num_reads} += $s_rf->{num_reads};
-			$s->{num_bases} += $s_rf->{num_bases};
+			if (!is_defined(overall_max_read_length) || s_rf.max_read_length > overall_max_read_length)
+				overall_max_read_length = s_rf.max_read_length;
+			if (!is_defined(overall_max_qual) || s_rf.max_quality_score > overall_max_qual)
+				overall_max_qual = s_rf.max_quality_score;
+			s.num_reads += s_rf.num_reads;
+			s.num_bases += s_rf.num_bases;
 
-			$s->{reads}->{$read_file} = $s_rf;
+			s.reads[read_file] = s_rf;
 		}
-		$s->{avg_read_length} = $s->{num_bases} / $s->{num_reads};
-		$s->{max_read_length} = $overall_max_read_length;
-		$s->{max_qual} = $overall_max_qual;
-		$summary->{sequence_conversion} = $s;
+		s.avg_read_length = s.num_bases / s.num_reads;
+		s.max_read_length = overall_max_read_length;
+		s.max_qual = overall_max_qual;
+		summary.sequence_conversion = s;
 
-		my @genbank_file_names = $settings->file_name("reference_genbank_file_names");
-		my @junction_only_genbank_file_names = $settings->file_name("junction_only_reference_genbank_file_names");
-		my $reference_fasta_file_name = $settings->file_name("reference_fasta_file_name");
+		vector<string> genbank_file_names = from_string<vector<string> >(settings.file_name("reference_genbank_file_names"));
+		vector<string> junction_only_genbank_file_names = from_string<vector<string> >(settings.file_name("junction_only_reference_genbank_file_names"));
+		string reference_fasta_file_name = settings.file_name("reference_fasta_file_name");
 
 		// C++ version of reference sequence processing
-		my $reference_features_file_name = $settings->file_name("reference_features_file_name");
-		my $reference_gff3_file_name = $settings->file_name("reference_gff3_file_name");
-		my $cbreseq = $settings->ctool("cbreseq");
+		string reference_features_file_name = settings.file_name("reference_features_file_name");
+		string reference_gff3_file_name = settings.file_name("reference_gff3_file_name");
+		/*my $cbreseq = $settings->ctool("cbreseq");
 		my $command = "$cbreseq CONVERT_GENBANK --fasta $reference_fasta_file_name --features $reference_features_file_name --gff3 $reference_gff3_file_name";
 		foreach my $input (@genbank_file_names) {
 			$command .= " --input " . $input;
 		}
-		Breseq::Shared::system($command);
+		Breseq::Shared::system($command);*/
+		convert_genbank(
+			genbank_file_names,
+			reference_fasta_file_name,
+			reference_features_file_name,
+			reference_gff3_file_name
+		);
 
 		// create SAM faidx
-		my $samtools = $settings->ctool("samtools");
-		Breseq::Shared::system("$samtools faidx $reference_fasta_file_name", 1);
+		string samtools = settings.ctool("samtools");
+		string command = samtools + " faidx " + reference_fasta_file_name;
+		exit_code = system(command.c_str());
 
 		// calculate trim files
-		my $output_path = $settings->file_name("sequence_conversion_path");
-		$command = "$cbreseq CALCULATE_TRIMS -f $reference_fasta_file_name -o $output_path";
-		Breseq::Shared::system($command);
+		string output_path = settings.file_name("sequence_conversion_path");
+		//command = "$cbreseq CALCULATE_TRIMS -f $reference_fasta_file_name -o $output_path";
+		//Breseq::Shared::system($command);
+		calculate_trims(reference_fasta_file_name, output_path);
 
 		// store summary information
-		Storable::store($summary->{sequence_conversion}, $sequence_converson_summary_file_name) or die "Can"t store data in file $sequence_converson_summary_file_name!\n";
-		$settings->done_step("sequence_conversion_done_file_name");
+		//Storable::store($summary->{sequence_conversion}, $sequence_converson_summary_file_name) or die "Can"t store data in file $sequence_converson_summary_file_name!" << endl;
+		settings.done_step("sequence_conversion_done_file_name");
 	}
-
+/*
 	$summary->{sequence_conversion} = Storable::retrieve($sequence_converson_summary_file_name);
 	die "Can"t retrieve data from file $sequence_converson_summary_file_name!\n" if (!$summary->{sequence_conversion});
-	(defined $summary->{sequence_conversion}->{max_read_length}) or die "Can"t retrieve max read length from file $sequence_converson_summary_file_name\n";
-
+	(defined $summary->{sequence_conversion}->{max_read_length}) or die "Can"t retrieve max read length from file $sequence_converson_summary_file_name" << endl;
+*/
 	//load C++ info
-	my $reference_features_file_name = $settings->file_name("reference_features_file_name");
-	my $reference_fasta_file_name = $settings->file_name("reference_fasta_file_name");
-	$ref_seq_info = Breseq::ReferenceSequence::bridge_load_ref_seq_info($summary, $reference_features_file_name, $reference_fasta_file_name);
+	string reference_features_file_name = settings.file_name("reference_features_file_name");
+	string reference_fasta_file_name = settings.file_name("reference_fasta_file_name");
+	/*ref_seq_info = Breseq::ReferenceSequence::bridge_load_ref_seq_info($summary, $reference_features_file_name, $reference_fasta_file_name);
 	die "Can"t retrieve reference sequence data from files $reference_features_file_name and $reference_fasta_file_name!\n" if (!$ref_seq_info);
-
+	*/
 	// reload certain information into $settings from $summary
-	foreach my $read_file (keys %{$summary->{sequence_conversion}->{reads}})
+	for (map<string, AnalyzeFastq>::iterator it = summary.sequence_conversion.reads.begin(); it != summary.sequence_conversion.reads.end(); it++)
 	{
-		if (defined $summary->{sequence_conversion}->{reads}->{$read_file}->{converted_fastq_name}) {
-			$settings->{read_file_to_converted_fastq_file}->{$read_file} = $summary->{sequence_conversion}->{reads}->{$read_file}->{converted_fastq_name};
-		}
+		string read_file = it->first;
+		if (it->second.converted_fastq_name.size() > 0)
+			settings.read_file_to_converted_fastq_file[read_file] = it->second.converted_fastq_name;
 	}
-	$settings->{max_read_length} = $summary->{sequence_conversion}->{max_read_length};
-	$settings->{max_smalt_diff} = floor($settings->{max_read_length}/2);
-	$settings->{total_reference_sequence_length} = $summary->{sequence_conversion}->{total_reference_sequence_length};
+	settings.max_read_length = summary.sequence_conversion.max_read_length;
+	settings.max_smalt_diff = (settings.max_read_length / 2);
+	settings.total_reference_sequence_length = summary.sequence_conversion.total_reference_sequence_length;
 
 	//load trim data per refseq
-	foreach my $seq_id (sort keys %{$ref_seq_info->{ref_strings}})
+	for (map<string, string>::iterator it = ref_seq_info.ref_strings.begin(); it != ref_seq_info.ref_strings.end(); it++)
 	{
-		my $trim_file_name = $settings->file_name("reference_trim_file_name", {"@"=>$seq_id});
-		open TRIM, "<$trim_file_name" or die "Could not open trims file: $trim_file_name\n";
-		$ref_seq_info->{trims}->{$seq_id} = "";
-		my $block;
-		my $block_size = 512;
-		while (read TRIM, $block, $block_size)
-		{
-			$ref_seq_info->{trims}->{$seq_id} .= $block;
-		}
-		(length($ref_seq_info->{trims}->{$seq_id}) > 0) or die "Error reading trims file: $trim_file_name\n";
-		close TRIM;
+		string seq_id = it->first;
+		ref_seq_info.trims[seq_id] = "";
 
-		//print "$seq_id " . length($ref_seq_info->{trims}->{$seq_id}) . "\n";
+		string trim_file_name = settings.file_name("reference_trim_file_name", "@", seq_id);
+		ifstream TRIM(trim_file_name.c_str());
+		string block;
+		//uint32_t block_size = 512;
+		if (TRIM.is_open()) {
+			while (TRIM.good()) {
+				getline(TRIM, block);
+				ref_seq_info.trims[seq_id] += block;
+			}
+		}
+
+		assert(ref_seq_info.trims[seq_id].size() > 0); // or die "Error reading trims file: $trim_file_name" << endl;
+		TRIM.close();
+
+		//print "$seq_id " . length($ref_seq_info->{trims}->{$seq_id}) . "" << endl;
 		//print Dumper($ref_seq_info->{trims}->{$seq_id});
 	}
 
 	//
 	// Match all reads against the reference genome
-	sub alignment_to_reference {}
+	//sub alignment_to_reference {}
 	//
 
-	if ($settings->do_step("reference_alignment_done_file_name", "Read alignment to reference genome"))
+	if (settings.do_step("reference_alignment_done_file_name", "Read alignment to reference genome"))
 	{
-		$settings->create_path("reference_alignment_path");
+		settings.create_path("reference_alignment_path");
 
-	//
-	//nohup ssaha2 -save REL606_kmer1_skip1 -kmer 10 -skip 1 -output sam_soft -outfile JEB559_REL606_kmer1_skip1.sam JEB559.fastq &> JEB559_REL606_kmer1_skip1.out
-	//nohup ssaha2 -save REL606_solexa -rtype solexa -output sam_soft -outfile JEB559_REL606_solexa.sam JEB559.fastq &> JEB559_REL606_solexa.out
-	//
-	//the lower seed value is important for finding split matches
-	//nohup ssaha2 -save REL606_solexa -kmer 13 -skip 2 -seeds 1 -score 12 -cmatch 9 -ckmer 6 -output sam_soft -outfile JEB559_REL606_solexa_3.sam JEB559.fastq >&JEB559_REL606_solexa_3.out &
+		//
+		//nohup ssaha2 -save REL606_kmer1_skip1 -kmer 10 -skip 1 -output sam_soft -outfile JEB559_REL606_kmer1_skip1.sam JEB559.fastq &> JEB559_REL606_kmer1_skip1.out
+		//nohup ssaha2 -save REL606_solexa -rtype solexa -output sam_soft -outfile JEB559_REL606_solexa.sam JEB559.fastq &> JEB559_REL606_solexa.out
+		//
+		//the lower seed value is important for finding split matches
+		//nohup ssaha2 -save REL606_solexa -kmer 13 -skip 2 -seeds 1 -score 12 -cmatch 9 -ckmer 6 -output sam_soft -outfile JEB559_REL606_solexa_3.sam JEB559.fastq >&JEB559_REL606_solexa_3.out &
 
 		/// create ssaha2 hash
-		my $reference_hash_file_name = $settings->file_name("reference_hash_file_name");
-		my $reference_fasta_file_name = $settings->file_name("reference_fasta_file_name");
+		string reference_hash_file_name = settings.file_name("reference_hash_file_name");
+		string reference_fasta_file_name = settings.file_name("reference_fasta_file_name");
 
-		if (!$settings->{smalt})
+		if (!settings.smalt)
 		{
-			Breseq::Shared::system("ssaha2Build -rtype solexa -skip 1 -save $reference_hash_file_name $reference_fasta_file_name");
+			string command = "ssaha2Build -rtype solexa -skip 1 -save " + reference_hash_file_name + " " + reference_fasta_file_name;
+			exit_code = system(command.c_str());
 		}
 		else
 		{
-			my $smalt = $settings->ctool("smalt");
-			Breseq::Shared::system("$smalt index -k 13 -s 1 $reference_hash_file_name $reference_fasta_file_name");
+			string smalt = settings.ctool("smalt");
+			string command = smalt + " index -k 13 -s 1 " + reference_hash_file_name + " " + reference_fasta_file_name;
+			exit_code = system(command.c_str());
 		}
 		/// ssaha2 align reads to reference sequences
-		foreach my $read_struct ($settings->read_structures)
+		for (uint32_t i = 0; i < settings.read_structures.size(); i++)
 		{
+			cReadFile read_struct = settings.read_structures[i];
+
 			//reads are paired
-			if (defined $read_struct->{min_pair_dist} && defined $read_struct->{max_pair_dist})
+			//if (is_defined(read_struct.min_pair_dist) && is_defined(read_struct.max_pair_dist))
+			if (is_defined(read_struct.m_paired_end_group))
 			{
 				// JEB this is not working currently
+				assert(false);
+				/*
 				die "Paired end mapping is broken.";
 				die if (scalar @{$read_struct->{read_fastq_list}} != 2);
 
@@ -1026,49 +1048,49 @@ int breseq_default_action(int argc, char* argv[])
 
 				my $reference_sam_file_name = $settings->file_name("reference_sam_file_name", {"//"=>$read_struct->{base_name}});
 				Breseq::Shared::system("ssaha2 -save $reference_hash_file_name -kmer 13 -skip 1 -seeds 1 -score 12 -cmatch 9 -ckmer 1 -output sam_soft -outfile $reference_sam_file_name -multi 1 -mthresh 9 -pair $min,$max $fastq_1 $fastq_2");
+				*/
 			}
-
-			//reads are not paired
-			else
+			else //reads are not paired
 			{
-				die if (scalar @{$read_struct->{base_names}} != 1);
-				my $read_name = $read_struct->{base_names}->[0];
-				my $read_fastq_file = $settings->read_file_to_fastq_file_name($read_name);
-				my $reference_sam_file_name = $settings->file_name("reference_sam_file_name", {"//"=>$read_name});
+				//assert(read_struct.base_names.size() == 1);
+				string read_name = read_struct.m_base_name;
+				string read_fastq_file = settings.read_file_to_fastq_file_name(read_name);
+				string reference_sam_file_name = settings.file_name("reference_sam_file_name", "//", read_name);
 
-				if (!$settings->{smalt})
+				if (!settings.smalt)
 				{
-					Breseq::Shared::system("ssaha2 -save $reference_hash_file_name -kmer 13 -skip 1 -seeds 1 -score 12 -cmatch 9 -ckmer 1 -output sam_soft -outfile $reference_sam_file_name $read_fastq_file");
+					string command = "ssaha2 -save " + reference_hash_file_name + " -kmer 13 -skip 1 -seeds 1 -score 12 -cmatch 9 -ckmer 1 -output sam_soft -outfile " + reference_sam_file_name + " " + read_fastq_file;
+					exit_code = system(command.c_str());
 				}
 				else
 				{
-					my $smalt = $settings->ctool("smalt");
-					Breseq::Shared::system("$smalt map -n 2 -d $settings->{max_smalt_diff} -f samsoft -o $reference_sam_file_name $reference_hash_file_name $read_fastq_file");
-					// -m 12
+					string smalt = settings.ctool("smalt");
+					string command = smalt + " map -n 2 -d " + to_string(settings.max_smalt_diff) + " -f samsoft -o " + reference_sam_file_name + " " + reference_hash_file_name + " " + read_fastq_file; // -m 12
+					exit_code = system(command.c_str());
 				}
 			}
 		}
 
 		/// Delete the hash files immediately
-		if (!$settings->{keep_all_intermediates})
+		if (!settings.keep_all_intermediates)
 		{
-			unlink "$reference_hash_file_name.base";
-			unlink "$reference_hash_file_name.body";
-			unlink "$reference_hash_file_name.head";
-			unlink "$reference_hash_file_name.name";
-			unlink "$reference_hash_file_name.size";
+			remove("reference_hash_file_name.base");
+			remove("reference_hash_file_name.body");
+			remove("reference_hash_file_name.head");
+			remove("reference_hash_file_name.name");
+			remove("reference_hash_file_name.size");
 		}
 
-		$settings->done_step("reference_alignment_done_file_name");
+		settings.done_step("reference_alignment_done_file_name");
 	}
 
 	//
 	// Identify candidate junctions from split read alignments
-	sub identify_candidate_junctions {}
+	//sub identify_candidate_junctions {}
 	//
 
 
-	if (!$settings->{no_junction_prediction})
+	/*if (!settings.no_junction_prediction)
 	{
 		$settings->create_path("candidate_junction_path");
 
@@ -1134,7 +1156,7 @@ int breseq_default_action(int argc, char* argv[])
 				Breseq::CoverageDistribution::analyze_unique_coverage_distributions($settings, $summary, $ref_seq_info,
 					"coverage_junction_plot_file_name", "coverage_junction_distribution_file_name");
 
-				Storable::store($summary->{unique_coverage}, $coverage_junction_summary_file_name) or die "Can"t store data in file $coverage_junction_summary_file_name!\n";
+				Storable::store($summary->{unique_coverage}, $coverage_junction_summary_file_name) or die "Can"t store data in file $coverage_junction_summary_file_name!" << endl;
 				$settings->done_step("coverage_junction_done_file_name");
 			}
 
@@ -1145,7 +1167,7 @@ int breseq_default_action(int argc, char* argv[])
 		my $candidate_junction_summary_file_name = $settings->file_name("candidate_junction_summary_file_name");
 		if ($settings->do_step("candidate_junction_done_file_name", "Identifying candidate junctions"))
 		{
-			print STDERR "Identifying candidate junctions...\n";
+			print STDERR "Identifying candidate junctions..." << endl;
 
 			my $cbreseq = $settings->ctool("cbreseq");
 			my $readfiles = join(" --read-file ", $settings->read_files);
@@ -1172,7 +1194,7 @@ int breseq_default_action(int argc, char* argv[])
 			$summary->{candidate_junction} = {};
 
 			Storable::store($summary->{candidate_junction}, $candidate_junction_summary_file_name)
-				or die "Can"t store data in file $candidate_junction_summary_file_name!\n";
+				or die "Can"t store data in file $candidate_junction_summary_file_name!" << endl;
 
 			Breseq::Output::record_time("Candidate junction identification");
 
@@ -1218,7 +1240,7 @@ int breseq_default_action(int argc, char* argv[])
 				my $candidate_junction_sam_file_name = $settings->file_name("candidate_junction_sam_file_name", {"//"=>$read_name});
 
 				my $read_fastq_file = $settings->read_file_to_fastq_file_name($read_name);
-				print "$read_fastq_file\n";
+				print "$read_fastq_file" << endl;
 
 				if (!$settings->{smalt} && (-e "$candidate_junction_hash_file_name.base"))
 				{
@@ -1289,7 +1311,7 @@ int breseq_default_action(int argc, char* argv[])
 
 		my $alignment_correction_summary_file_name = $settings->file_name("alignment_correction_summary_file_name");
 		Storable::store($summary->{alignment_correction}, $alignment_correction_summary_file_name)
-			or die "Can"t store data in file $alignment_correction_summary_file_name!\n";
+			or die "Can"t store data in file $alignment_correction_summary_file_name!" << endl;
 		Breseq::Output::record_time("Resolve candidate junctions");
 		$settings->done_step("alignment_correction_done_file_name");
 	}
@@ -1398,7 +1420,7 @@ int breseq_default_action(int argc, char* argv[])
 	//
 	// 			//last if ($on_alignment > 100000);
 	//
-	// 			//print $a->qname . "\n";
+	// 			//print $a->qname . "" << endl;
 	//
 	// 			if (!$a->unmapped)
 	// 			{
@@ -1410,7 +1432,7 @@ int breseq_default_action(int argc, char* argv[])
 	// 		 		my $reversed = $a->reversed;
 	//
 	// 				my $fastq_file_index = $a->aux_get("X2");
-	// 				//print "$mate_insert_size $min_pair_dist[$fastq_file_index] $max_pair_dist[$fastq_file_index]\n";
+	// 				//print "$mate_insert_size $min_pair_dist[$fastq_file_index] $max_pair_dist[$fastq_file_index]" << endl;
 	// 				//if (($mate_insert_size < $min_pair_dist[$fastq_file_index]) || ($mate_insert_size > $max_pair_dist[$fastq_file_index]))
 	// 				if ((($mate_insert_size >= 400) && ($mate_insert_size < $min_pair_dist[$fastq_file_index])) || ($mate_insert_size > $max_pair_dist[$fastq_file_index]))
 	// 				{
@@ -1428,7 +1450,7 @@ int breseq_default_action(int argc, char* argv[])
 	// 					}
 	//
 	// 					//$save->{$mate_reversed}->{int($start/100)}->{int($mate_start/100)}++;
-	// 				    //print $a->qname," aligns to $seqid:$start..$end, $mate_start $mate_reversed ($mreversed $reversed) $mate_insert_size\n";
+	// 				    //print $a->qname," aligns to $seqid:$start..$end, $mate_start $mate_reversed ($mreversed $reversed) $mate_insert_size" << endl;
 	// 				}
 	//
 	// 			}
@@ -1442,7 +1464,7 @@ int breseq_default_action(int argc, char* argv[])
 	// 			{
 	// 				foreach my $key_reversed (sort {$a <=> $b} keys %{$save->{$key_1}->{$key_2}})
 	// 				{
-	// 					print LP "$key_1\t$key_2\t$key_reversed\t$save->{$key_1}->{$key_2}->{$key_reversed}\n";
+	// 					print LP "$key_1\t$key_2\t$key_reversed\t$save->{$key_1}->{$key_2}->{$key_reversed}" << endl;
 	// 				}
 	// 			}
 	// 		}
@@ -1519,7 +1541,7 @@ int breseq_default_action(int argc, char* argv[])
 			Breseq::Shared::system("R --vanilla in_file=$error_rates_base_qual_error_prob_file_name out_file=$error_rates_plot_file_name < $plot_error_rates_r_script_file_name > $plot_error_rates_r_script_log_file_name");
 		}
 
-		Storable::store($summary->{unique_coverage}, $error_rates_summary_file_name) or die "Can"t store data in file $error_rates_summary_file_name!\n";
+		Storable::store($summary->{unique_coverage}, $error_rates_summary_file_name) or die "Can"t store data in file $error_rates_summary_file_name!" << endl;
 		$settings->done_step("error_rates_done_file_name");
 	}
 	$summary->{unique_coverage} = Storable::retrieve($error_rates_summary_file_name);
@@ -1618,7 +1640,7 @@ int breseq_default_action(int argc, char* argv[])
 		// Output Genome Diff File
 		sub genome_diff_output {}
 		///
-		print STDERR "Creating merged genome diff evidence file...\n";
+		print STDERR "Creating merged genome diff evidence file..." << endl;
 
 		// merge all of the evidence GenomeDiff files into one...
 		$settings->create_path("evidence_path");
@@ -1632,7 +1654,7 @@ int breseq_default_action(int argc, char* argv[])
 
 
 		// predict mutations from evidence in the GenomeDiff
-		print STDERR "Predicting mutations from evidence...\n";
+		print STDERR "Predicting mutations from evidence..." << endl;
 
 		my $gd;
 		my $final_genome_diff_file_name = $settings->file_name("final_genome_diff_file_name");
@@ -1654,13 +1676,13 @@ int breseq_default_action(int argc, char* argv[])
 		//
 		// Annotate mutations
 		//
-		print STDERR "Annotating mutations...\n";
+		print STDERR "Annotating mutations..." << endl;
 		Breseq::ReferenceSequence::annotate_mutations($ref_seq_info, $gd);
 
 		//
 		// Plot coverage of genome and large deletions
 		//
-		print STDERR "Drawing coverage plots...\n";
+		print STDERR "Drawing coverage plots..." << endl;
 		Breseq::Output::draw_coverage($settings, $ref_seq_info, $gd);
 
 		//
@@ -1709,7 +1731,7 @@ int breseq_default_action(int argc, char* argv[])
 		// HTML output
 		///
 
-		print STDERR "Creating index HTML table...\n";
+		print STDERR "Creating index HTML table..." << endl;
 
 		my $index_html_file_name = $settings->file_name("index_html_file_name");
 		Breseq::Output::html_index($index_html_file_name, $settings, $summary, $ref_seq_info, $gd);
