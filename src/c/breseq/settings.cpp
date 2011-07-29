@@ -80,7 +80,7 @@ namespace breseq
     
     this->pre_option_initialize();
 
-    // @JEB here
+    // @JEB insert handling of command line options here
     
 		this->post_option_initialize();
 	}
@@ -89,9 +89,6 @@ namespace breseq
 	{
 		//@{this->reference_genbank_file_names} = ();  // files containing reference sequences
 		//@{this->junction_only_reference_genbank_file_names} = (); //files to look for junctions to but not align to
-
-   //// Scoring to decide which pairs of alignments to the same read to consider
-   this->require_complete_match = false;
     
 		// Set up default values for options
 		this->full_command_line = "$0 @ARGV";
@@ -104,27 +101,6 @@ namespace breseq
 		this->error_model_method = "EMPIRICAL";
 		this->base_quality_cutoff = 3; // avoids problem with Illumina assigning 2 to bad ends of reads!
 
-		////
-		//   CandidateJunctions.pm
-		////
-		this->no_junction_prediction = UNDEFINED; // don't perform junction prediction steps
-		this->candidate_junction_score_method = "POS_HASH"; // Either POS_HASH, or MIN_OVERLAP
-		this->preprocess_junction_min_indel_split_length = 3; // Split the SAM entries on indels of this many bp or more before identifying CJ
-		// Undefined = OFF
-
-		//// Scoring to decide which pairs of alignments to the same read to consider
-		this->required_extra_pair_total_length = 2; // The union of the pairs must exceed the best of any single match by this length
-		// Setting this does penalize some *real* new junctions, so be careful!
-		this->required_both_unique_length_per_side = 5; // Require both of the pair of matches supporting a junction to have this
-		// much of their matches unique in the reference sequence.
-		this->required_one_unique_length_per_side = 10; // Require at least one of the pair of matches supporting a junction to have this
-		// much of its match that is unique in the reference sequence.
-
-		//// Scoring section to choose which ones from list to take
-		this->minimum_candidate_junction_pos_hash_score = 0; // Require at least this many unique start coordinate/strand reads to accept a CJ
-		// OFF by default, because a fixed number are taken
-		this->minimum_candidate_junction_min_overlap_score = 0; // Require at least this many unique start coordinate/strand reads to accept a CJ
-		// OFF by default, because a fixed number are taken
 
     this->maximum_read_length = 0;                  // @JEB this will not be an option once porting is complete
 
@@ -137,22 +113,44 @@ namespace breseq
 		this->maximum_candidate_junction_length_factor = 0.1; // Only keep CJ cumulative lengths adding up to this factor times the total reference size
 		this->candidate_junction_read_limit = 0; // FOR TESTING: only process this many reads when creating candidate junctions
 
-		//used by AlignmentCorrection.pm
-    this->add_split_junction_sides = true;                     // Add the sides of passed junctions to the SAM file?
-    this->required_match_length = 28;                       // Match must span this many bases in query to count as a match
-    this->max_read_mismatches = -1;
+    //// READ ALIGNMENT ////
+    this->add_split_junction_sides = true;     // Add the sides of passed junctions to the SAM file?
+    this->require_complete_match = false;
+    this->required_match_length = 28;          // Match must span this many bases in query to count as a match
+    this->max_read_mismatches = -1;            // Read alignments with more than this number of mismatches are not counted; -1 = OFF
+		this->preprocess_junction_min_indel_split_length = 3; // Split the SAM entries on indels of this many bp or more before identifying CJ
+		this->candidate_junction_score_method = "POS_HASH"; // Either POS_HASH, or MIN_OVERLAP
 
-		this->no_mutation_prediction = false; // don't perform read mismatch/indel prediction steps
+    //// Identify CandidateJunctions ////
+    
+		//// Scoring to decide which pairs of alignments to the same read to consider
+		this->required_extra_pair_total_length = 2;       // The union of the pairs must exceed the best of any single match by this length
+                                                      // Setting this does penalize some *real* new junctions, so be careful!
+		this->required_both_unique_length_per_side = 5;   // Require both of the pair of matches supporting a junction to have this
+                                                      // much of their matches unique in the reference sequence.
+		this->required_one_unique_length_per_side = 10;   // Require at least one of the pair of matches supporting a junction to have this
+                                                      // much of its match that is unique in the reference sequence.
+    
+		//// Scoring section to choose which ones from list to take
+		this->minimum_candidate_junction_pos_hash_score = 0;    // Require at least this many unique start coordinate/strand reads to accept a CJ
+                                                            // OFF by default, because a fixed number are taken
+		this->minimum_candidate_junction_min_overlap_score = 0; // Require at least this many unique start coordinate/strand reads to accept a CJ
+                                                            // OFF by default, because a fixed number are taken
+    
+    //// WORKFLOW ////
+    this->no_junction_prediction = false; // don't perform junction prediction steps
+		this->no_mutation_prediction = false;  // don't perform read mismatch/indel prediction steps
 		this->no_deletion_prediction = false; // don't perform deletion prediction steps
 		this->no_alignment_generation = false; // don't generate alignments
 		this->alignment_read_limit = 0; // only go through this many reads when creating alignments
 		this->correction_read_limit = 0; // only go through this many reads when correcting alignments
 
+    
 		// NOT IMPLEMENTED
 		this->no_filter_unwanted = false; // don't filter out unwanted reads with adaptor matches
 		this->unwanted_prefix = "UNWANTED:::"; // prefix on unwanted read names
 
-		//used by MutationIdentification.pm
+		//// MutationIdentification ////
 		this->mutation_log10_e_value_cutoff = 2; // log10 of evidence required for SNP calls
 		this->polymorphism_log10_e_value_cutoff = 2;
 		this->polymorphism_bias_p_value_cutoff = 0.05;
@@ -160,7 +158,7 @@ namespace breseq
 		this->polymorphism_coverage_both_strands = 0; // require this much coverage on each strand
 		this->no_indel_polymorphisms = 0;
 
-		//used by Output.pm
+		//// Output ////
 		this->max_rejected_polymorphisms_to_show = 20;
 		this->max_rejected_junctions_to_show = 20;
 		this->hide_circular_genome_junctions = 1;
@@ -187,7 +185,7 @@ namespace breseq
 		{
 			this->polymorphism_prediction = 1;
 			this->maximum_read_mismatches = 1;
-			this->require_complete_match = 1;
+			this->require_complete_match = true;
 			this->no_indel_polymorphisms = 1;
 			this->polymorphism_log10_e_value_cutoff = 5;
 		}
@@ -420,7 +418,7 @@ namespace breseq
 		this->installed["cbam2aln"] = system(path.c_str()) ? this->bin_path + "/cbam2aln" : "";
 
 		// absolutely required ssaha2 or smalt
-		this->installed["SSAHA2"] = system("which ssaha2") ? "ssaha2" : "";
+		this->installed["SSAHA2"] = system("which ssaha2 2>/dev/null") ? "ssaha2" : "";
 
 		// check for default names
 		this->installed["smalt"] = system("which smalt 2>/dev/null") ? "smalt" : "";
@@ -455,12 +453,10 @@ namespace breseq
 			}*/
 		}
 
-		/*this->installed["Statistics_Distributions"] = (eval 'require Statistics::Distributions');
+    /*
 		this->installed["samtools"] = (-x "this->bin_path/samtools") ? "this->bin_path/samtools" : "";
 		this->installed["bioperl"] = (eval 'require Bio::Root::Root');
-
-		// installed locally
-		this->installed["Bio_DB_Sam"] = (eval 'require Bio::DB::Sam');*/
+    */
 	}
 
 	void Settings::check_installed()

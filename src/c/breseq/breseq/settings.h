@@ -349,6 +349,7 @@ namespace breseq
 			$self->throw if (!defined $self->{read_file_to_fastq_file}->{$read_file});
 			return $self->{read_file_to_fastq_file}->{$read_file};
 			 */
+      return "";
 		}
 
 
