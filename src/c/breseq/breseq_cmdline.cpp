@@ -555,7 +555,7 @@ int do_preprocess_alignments(int argc, char* argv[]) {
 
 		("candidate-junction-score-method", "scoring method", "POS_HASH")
 		("min-indel-split-length", "split indels this long in matches", 3)
-		("max-read-mismatches", "ignore reads with more than this number of mismatches", uint32_t(0))
+		("max-read-mismatches", "ignore reads with more than this number of mismatches", int32_t(-1))
 		("require-complete-match", "require the complete read to match (both end bases", TAKES_NO_ARGUMENT)
 		("required-match-length", "require this length of sequence -- on the read -- to match", static_cast<uint32_t>(28))
 		("candidate-junction-read-limit", "limit handled reads to this many", -1)

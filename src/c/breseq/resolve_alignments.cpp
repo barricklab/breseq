@@ -705,7 +705,7 @@ bool _test_read_alignment_requirements(const Settings& settings, const cReferenc
       return false; 
     }
 	}
-	if (settings.max_read_mismatches > 0)
+	if (settings.max_read_mismatches >= 0)
 	{
 		int32_t mismatches = alignment_mismatches(a, ref_seq_info);
 		if (mismatches > settings.max_read_mismatches)
