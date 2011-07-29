@@ -672,19 +672,19 @@ namespace breseq {
 			cout << "    Union: " << union_length << "   Intersection: " << intersection_length << endl;
 
 		//// 1. Require maximum negative overlap (inserted unique sequence length) to be less than some value
-		if (intersection_length_negative > settings.maximum_inserted_junction_sequence_length)
+		if (intersection_length_negative > static_cast<int32_t>(settings.maximum_inserted_junction_sequence_length))
 			return false;
 
 		//// 2. Require both ends to extend a certain minimum length outside of the overlap
-		if (a1_length < intersection_length_positive + settings.required_both_unique_length_per_side)
+		if (a1_length < intersection_length_positive + static_cast<int32_t>(settings.required_both_unique_length_per_side))
 			return false;
 
-		if (a2_length < intersection_length_positive + settings.required_both_unique_length_per_side)
+		if (a2_length < intersection_length_positive + static_cast<int32_t>(settings.required_both_unique_length_per_side))
 			return false;
 
 		//// 3. Require one end to extend a higher minimum length outside of the overlap
-		if ((a1_length < intersection_length_positive + settings.required_one_unique_length_per_side)
-				  && (a2_length < intersection_length_positive + settings.required_one_unique_length_per_side))
+		if ((a1_length < intersection_length_positive + static_cast<int32_t>(settings.required_one_unique_length_per_side))
+				  && (a2_length < intersection_length_positive + static_cast<int32_t>(settings.required_one_unique_length_per_side)))
 			return false;
 
 		//// 4. Require both matches together to cover a minimum part of the read.

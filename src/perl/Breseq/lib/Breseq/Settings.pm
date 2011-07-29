@@ -597,12 +597,13 @@ sub ctool
 	{
 		if ($allow_fail)
 		{
-			$self->warn("Executable \"$tool_name\" not found in breseq bin path\"$self->{bin_path}\".");
+			print "Executable \"$tool_name\" not found in breseq bin path\"$self->{bin_path}\".\n";
 			return undef; # couldn't find it, but it's not an error.
 		}
 		else
 		{
-			$self->throw("Executable \"$tool_name\" not found in breseq bin path\"$self->{bin_path}\".");
+			print "Executable \"$tool_name\" not found in breseq bin path\"$self->{bin_path}\".\n";
+			die;
 		}
 	}
 	return "$self->{installed}->{$tool_name}";
@@ -719,7 +720,7 @@ sub do_step
 	if (!$time) 
 	{	
 		$time = {};
-		$self->warn("Can't retrieve time data from file $done_file_name");
+		print "Can't retrieve time data from file $done_file_name\n";
 	}
 	push @{$self->{execution_times}}, $time;
 	
@@ -773,7 +774,7 @@ sub record_end_time
 	
 	if ($i >= scalar @{$self->{execution_times}})
 	{
-		$self->warn("Did not find matching start time for:\n$message");
+		print "Did not find matching start time for:\n$message\n";
 	}
 	
 	my $ex_time = $self->{execution_times}->[$i];

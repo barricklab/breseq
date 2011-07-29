@@ -69,6 +69,7 @@ namespace breseq
         }
 
         // Set up defaults and build paths
+        // @JEB There should be a version of the constructor that takes argv.
         Settings::Settings(const string& _base_output_path)
         {
                 // things work fine if this is empty ""
@@ -77,46 +78,6 @@ namespace breseq
                 this->pre_option_initialize();
 
                 // settings that control execution
-                add_split_junction_sides = true;
-                required_match_length = 28;
-                max_read_mismatches = -1;
-                require_complete_match = false;
-
-            alignment_read_limit = 0;
-                candidate_junction_read_limit = 0;
-                minimum_candidate_junction_pos_hash_score = 0;
-                minimum_candidate_junction_min_overlap_score = 0;
-                minimum_candidate_junctions = 0;
-                maximum_candidate_junctions = 0;
-                maximum_candidate_junction_length_factor = 0;
-                maximum_read_length = 0;
-                maximum_inserted_junction_sequence_length = 0;
-
-                required_both_unique_length_per_side = 0;
-                required_one_unique_length_per_side = 0;
-                required_extra_pair_total_length = 0;
-
-                // Paths are only partially implemented:
-                //   @ are to be replaced by reference sequence ids
-                //   # are to be replaced with read file names
-
-                // Need to port the rest from Perl...
-
-                //data_path = base_output_path + "/data";
-                //reference_fasta_file_name = data_path + "/reference.fasta";
-                //reference_features_file_name = data_path + "/reference.features.tab";
-
-                //sequence_conversion_path = base_output_path + "/01_sequence_conversion";
-                //reference_trim_file_name = sequence_conversion_path + "/@.trims";
-
-                //candidate_junction_path = base_output_path + "/03_candidate_junctions";
-                //candidate_junction_fasta_file_name = candidate_junction_path + "/candidate_junction.fasta";
-
-                //alignment_correction_path = base_output_path + "/05_alignment_correction";
-                //jc_genome_diff_file_name = alignment_correction_path + "/jc_evidence.gd";
-                //resolved_reference_sam_file_name = alignment_correction_path + "/reference.sam";
-                //resolved_junction_sam_file_name = alignment_correction_path + "/junction.sam";
-
                 this->post_option_initialize();
         }
 
@@ -150,7 +111,8 @@ namespace breseq
                 this->required_both_unique_length_per_side = 5;                 // Require both of the pair of matches supporting a junction to have this
                                                                                                                                         // much of their matches unique in the reference sequence.
                 this->required_one_unique_length_per_side = 10;                 // Require at least one of the pair of matches supporting a junction to have this
-                                                                                                                                        // much of its match that is unique in the reference sequence.
+                this->require_complete_match = false;
+                                                                                                                        // much of its match that is unique in the reference sequence.
 
                 //// Scoring section to choose which ones from list to take
                 this->minimum_candidate_junction_pos_hash_score = 0;            // Require at least this many unique start coordinate/strand reads to accept a CJ
@@ -158,6 +120,8 @@ namespace breseq
                 this->minimum_candidate_junction_min_overlap_score = 0; // Require at least this many unique start coordinate/strand reads to accept a CJ
                                                                                                                                 // OFF by default, because a fixed number are taken
 
+          
+          
                 //      this->required_unique_length_per_side = 10;                             // Require at least one of the pair of matches supporting a junction to have this
                                                                                                                                 // much of its match that is unique in the reference sequence.
                 this->maximum_inserted_junction_sequence_length = 20;   // Ignore junctions with negative overlap (unique inserted sequence between reference
@@ -165,17 +129,21 @@ namespace breseq
                 this->minimum_candidate_junctions = 200;                                        // Minimum number of candidate junctions to keep
                 this->maximum_candidate_junctions = 5000;                               // Maximum number of candidate junctions to keep
                 this->maximum_candidate_junction_length_factor = 0.1;   // Only keep CJ cumulative lengths adding up to this factor times the total reference size
-                this->candidate_junction_read_limit = UNDEFINED;                // FOR TESTING: only process this many reads when creating candidate junctions
+                this->candidate_junction_read_limit = 0;                // FOR TESTING: only process this many reads when creating candidate junctions; 0 = OFF
 
                 //used by AlignmentCorrection.pm
-                this->add_split_junction_sides = 1;                     // Add the sides of passed junctions to the SAM file?
+                this->add_split_junction_sides = true;                     // Add the sides of passed junctions to the SAM file?
                 this->required_match_length = 28;                       // Match must span this many bases in query to count as a match
+                this->max_read_mismatches = -1;
 
+                this->maximum_read_length = 0;                  // @JEB this will not be an option once porting is complete
+
+          
                 this->no_mutation_prediction = false;           // don't perform read mismatch/indel prediction steps
                 this->no_deletion_prediction = false;           // don't perform deletion prediction steps
                 this->no_alignment_generation = false;          // don't generate alignments
-                this->alignment_read_limit = UNDEFINED;                 // only go through this many reads when creating alignments
-                this->correction_read_limit = UNDEFINED;                        // only go through this many reads when correcting alignments
+                this->alignment_read_limit = 0;                 // only go through this many reads when creating alignments; 0 = OFF
+                this->correction_read_limit = 0;                // only go through this many reads when correcting alignments; 0 = OFF
 
                 // NOT IMPLEMENTED
                 this->no_filter_unwanted = false;                       // don't filter out unwanted reads with adaptor matches
@@ -216,7 +184,7 @@ namespace breseq
                 {
                         this->polymorphism_prediction = 1;
                         this->maximum_read_mismatches = 1;
-                        this->require_complete_match = 1;
+                        this->require_complete_match = true;
                         this->no_indel_polymorphisms = 1;
                         this->polymorphism_log10_e_value_cutoff = 5;
                 }

@@ -21,6 +21,20 @@
 	<integer>270</integer>
 	<key>metaData</key>
 	<dict>
+		<key>Breseq/Build</key>
+		<dict>
+			<key>caret</key>
+			<dict>
+				<key>column</key>
+				<integer>8</integer>
+				<key>line</key>
+				<integer>45</integer>
+			</dict>
+			<key>firstVisibleColumn</key>
+			<integer>0</integer>
+			<key>firstVisibleLine</key>
+			<integer>16</integer>
+		</dict>
 		<key>Breseq/MANIFEST</key>
 		<dict>
 			<key>caret</key>
@@ -68,14 +82,14 @@
 			<key>caret</key>
 			<dict>
 				<key>column</key>
-				<integer>3</integer>
+				<integer>21</integer>
 				<key>line</key>
-				<integer>908</integer>
+				<integer>130</integer>
 			</dict>
 			<key>firstVisibleColumn</key>
 			<integer>0</integer>
 			<key>firstVisibleLine</key>
-			<integer>883</integer>
+			<integer>117</integer>
 		</dict>
 		<key>Breseq/bin/fastq_utils</key>
 		<dict>
@@ -209,6 +223,36 @@
 				<integer>377</integer>
 			</dict>
 		</dict>
+		<key>Breseq/lib/Breseq/File/Path.pm</key>
+		<dict>
+			<key>caret</key>
+			<dict>
+				<key>column</key>
+				<integer>47</integer>
+				<key>line</key>
+				<integer>715</integer>
+			</dict>
+			<key>columnSelection</key>
+			<false/>
+			<key>firstVisibleColumn</key>
+			<integer>0</integer>
+			<key>firstVisibleLine</key>
+			<integer>694</integer>
+			<key>selectFrom</key>
+			<dict>
+				<key>column</key>
+				<integer>43</integer>
+				<key>line</key>
+				<integer>715</integer>
+			</dict>
+			<key>selectTo</key>
+			<dict>
+				<key>column</key>
+				<integer>47</integer>
+				<key>line</key>
+				<integer>715</integer>
+			</dict>
+		</dict>
 		<key>Breseq/lib/Breseq/Output.pm</key>
 		<dict>
 			<key>caret</key>
@@ -242,14 +286,14 @@
 			<key>caret</key>
 			<dict>
 				<key>column</key>
-				<integer>0</integer>
+				<integer>58</integer>
 				<key>line</key>
-				<integer>109</integer>
+				<integer>776</integer>
 			</dict>
 			<key>firstVisibleColumn</key>
 			<integer>0</integer>
 			<key>firstVisibleLine</key>
-			<integer>124</integer>
+			<integer>754</integer>
 		</dict>
 		<key>Breseq/lib/Breseq/Shared.pm</key>
 		<dict>
@@ -258,26 +302,72 @@
 				<key>column</key>
 				<integer>0</integer>
 				<key>line</key>
-				<integer>122</integer>
+				<integer>61</integer>
 			</dict>
 			<key>firstVisibleColumn</key>
 			<integer>0</integer>
 			<key>firstVisibleLine</key>
-			<integer>88</integer>
+			<integer>34</integer>
 		</dict>
 		<key>Breseq/lib/Breseq/plot_error_rate.r</key>
 		<dict>
 			<key>caret</key>
 			<dict>
 				<key>column</key>
-				<integer>0</integer>
+				<integer>13</integer>
 				<key>line</key>
-				<integer>53</integer>
+				<integer>71</integer>
 			</dict>
+			<key>columnSelection</key>
+			<false/>
 			<key>firstVisibleColumn</key>
 			<integer>0</integer>
 			<key>firstVisibleLine</key>
 			<integer>31</integer>
+			<key>selectFrom</key>
+			<dict>
+				<key>column</key>
+				<integer>9</integer>
+				<key>line</key>
+				<integer>71</integer>
+			</dict>
+			<key>selectTo</key>
+			<dict>
+				<key>column</key>
+				<integer>13</integer>
+				<key>line</key>
+				<integer>71</integer>
+			</dict>
+		</dict>
+		<key>Breseq/lib/Breseq/polymorphism_statistics.r</key>
+		<dict>
+			<key>caret</key>
+			<dict>
+				<key>column</key>
+				<integer>14</integer>
+				<key>line</key>
+				<integer>162</integer>
+			</dict>
+			<key>columnSelection</key>
+			<false/>
+			<key>firstVisibleColumn</key>
+			<integer>0</integer>
+			<key>firstVisibleLine</key>
+			<integer>141</integer>
+			<key>selectFrom</key>
+			<dict>
+				<key>column</key>
+				<integer>10</integer>
+				<key>line</key>
+				<integer>162</integer>
+			</dict>
+			<key>selectTo</key>
+			<dict>
+				<key>column</key>
+				<integer>14</integer>
+				<key>line</key>
+				<integer>162</integer>
+			</dict>
 		</dict>
 		<key>Breseq/t/00-load.t</key>
 		<dict>
@@ -311,7 +401,10 @@
 	<key>openDocuments</key>
 	<array>
 		<string>Breseq/lib/Breseq/Shared.pm</string>
+		<string>Breseq/lib/Breseq/polymorphism_statistics.r</string>
 		<string>Breseq/lib/Breseq/Settings.pm</string>
+		<string>Breseq/Build</string>
+		<string>Breseq/lib/Breseq/File/Path.pm</string>
 		<string>Breseq/lib/Breseq/Output.pm</string>
 		<string>Breseq/lib/Breseq/ReferenceSequence.pm</string>
 		<string>Breseq/lib/Breseq.pm</string>
@@ -328,6 +421,6 @@
 	<key>showFileHierarchyDrawer</key>
 	<true/>
 	<key>windowFrame</key>
-	<string>{{334, -218}, {845, 781}}</string>
+	<string>{{337, 136}, {1016, 713}}</string>
 </dict>
 </plist>
