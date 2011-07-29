@@ -28,7 +28,8 @@ namespace breseq {
    print statistics about the fastq file
 
    */
-  void analyze_fastq(const string &file_name, const string &convert_file_name) {
+
+  AnalyzeFastq analyze_fastq(const string &file_name, const string &convert_file_name) {
     
     // Set up maps between formats
     map<string,uint8_t> format_to_chr_offset;
@@ -163,6 +164,8 @@ namespace breseq {
     cout << "original_qual_format "  << quality_format          << endl;
     cout << "qual_format "           << "SANGER"                << endl;
     cout << "converted_fastq_name "  << converted_fastq_name    << endl;
+	AnalyzeFastq retval = { max_read_length, num_reads, min_quality_score, max_quality_score, num_bases, quality_format, "SANGER", converted_fastq_name };
+	return retval;
   }
 
   // constructor
