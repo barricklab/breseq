@@ -152,12 +152,16 @@ namespace breseq
 
 		//// MutationIdentification ////
 		this->mutation_log10_e_value_cutoff = 2; // log10 of evidence required for SNP calls
+    
+    this->polymorphism_prediction = false;          // perform polymorphism prediction
+    this->strict_polymorphism_prediction = false;   // perform polymorphism predictin with strict requirements
+
 		this->polymorphism_log10_e_value_cutoff = 2;
 		this->polymorphism_bias_p_value_cutoff = 0.05;
 		this->polymorphism_frequency_cutoff = 0; // cut off if < X or > 1-X
 		this->polymorphism_coverage_both_strands = 0; // require this much coverage on each strand
 		this->no_indel_polymorphisms = 0;
-
+    
 		//// Output ////
 		this->max_rejected_polymorphisms_to_show = 20;
 		this->max_rejected_junctions_to_show = 20;
@@ -183,7 +187,7 @@ namespace breseq
 		// block option
 		if (this->strict_polymorphism_prediction)
 		{
-			this->polymorphism_prediction = 1;
+			this->polymorphism_prediction = true;
 			this->maximum_read_mismatches = 1;
 			this->require_complete_match = true;
 			this->no_indel_polymorphisms = 1;
