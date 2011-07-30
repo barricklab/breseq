@@ -667,7 +667,7 @@ namespace breseq {
     }
   }
 
-	uint32_t alignment_mismatches(const alignment& a, const cReferenceSequences& ref_seq_info)
+	uint32_t alignment_mismatches(const alignment_wrapper& a, const cReferenceSequences& ref_seq_info)
 	{
 		bool verbose = false;
 		uint32_t mismatches = 0;
@@ -730,7 +730,7 @@ namespace breseq {
 		return mismatches;
   }
 
-	string shifted_cigar_string(const alignment& a, const cReferenceSequences& ref_seq_info)
+	string shifted_cigar_string(const alignment_wrapper& a, const cReferenceSequences& ref_seq_info)
 	{
     bool verbose = true;
     

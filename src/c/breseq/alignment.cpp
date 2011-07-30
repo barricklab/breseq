@@ -25,18 +25,18 @@ using namespace std;
 
 namespace breseq {
 
-const char alignment::op_to_char[10] = "MIDNSHP=X";
+const char alignment_wrapper::op_to_char[10] = "MIDNSHP=X";
 
 /*! Does this alignment have any redundancies?
  */
-bool alignment::is_redundant() const {
+bool alignment_wrapper::is_redundant() const {
 	return (redundancy() > 1);
 }
 
 
 /*! Number of redundancies at this alignment.
  */
-uint32_t alignment::redundancy() const {
+uint32_t alignment_wrapper::redundancy() const {
 	return bam_aux2i(bam_aux_get(_a,"X1"));
 }
 
@@ -54,12 +54,12 @@ uint32_t alignment::query_length() const {
 
 /*! Retrieve the index of the read file that contained this alignment
  */
-uint32_t alignment::fastq_file_index() const {
+uint32_t alignment_wrapper::fastq_file_index() const {
 	return bam_aux2i(bam_aux_get(_a,"X2"));
 }
 
 //! Return number of locations on left of sequence to be trimmed
-uint32_t alignment::trim_left() const {
+uint32_t alignment_wrapper::trim_left() const {
   uint8_t *auxl = bam_aux_get(_a,"XL");
   if(auxl)
   {
@@ -71,7 +71,7 @@ uint32_t alignment::trim_left() const {
   }
 }
 //! Return number of locations on right of sequence to be trimmed
-uint32_t alignment::trim_right() const {
+uint32_t alignment_wrapper::trim_right() const {
   uint8_t *auxr = bam_aux_get(_a,"XR");
   if(auxr)
   {
@@ -97,13 +97,13 @@ uint32_t alignment::trim_right() const {
 //			}
 
 
-std::pair<uint32_t,uint32_t> alignment::query_bounds_0() const {
+std::pair<uint32_t,uint32_t> alignment_wrapper::query_bounds_0() const {
   pair<uint32_t,uint32_t> qb = query_bounds_1();
   qb.first--;
   qb.second--;
   return qb;
 }
-void alignment::query_bounds_0(uint32_t& start, uint32_t& end) const {
+void alignment_wrapper::query_bounds_0(uint32_t& start, uint32_t& end) const {
 	pair<uint32_t,uint32_t> qb = query_bounds_0();
 	start = qb.first;
 	end = qb.second;
@@ -111,7 +111,7 @@ void alignment::query_bounds_0(uint32_t& start, uint32_t& end) const {
 
 /*! Retrieve the start and end coordinates of the aligned part of the read.
  */
-std::pair<uint32_t,uint32_t> alignment::query_bounds_1() const {
+std::pair<uint32_t,uint32_t> alignment_wrapper::query_bounds_1() const {
   uint32_t* cigar = bam1_cigar(_a); // cigar array for this alignment
 	int32_t start=1, end=bam_cigar2qlen(&_a->core,cigar);
 	
@@ -139,7 +139,7 @@ std::pair<uint32_t,uint32_t> alignment::query_bounds_1() const {
 
 	return std::make_pair(start,end);
 }
-void alignment::query_bounds_1(uint32_t& start, uint32_t& end) const {
+void alignment_wrapper::query_bounds_1(uint32_t& start, uint32_t& end) const {
 	pair<uint32_t,uint32_t> qb = query_bounds_1();
 	start = (int32_t)qb.first;
 	end = (int32_t)qb.second;
@@ -148,7 +148,7 @@ void alignment::query_bounds_1(uint32_t& start, uint32_t& end) const {
 /*! Retrieve the start and end coordinates of the aligned part of the read.
     switch start and end if on opposite reference strand
  */
-std::pair<uint32_t,uint32_t> alignment::query_stranded_bounds_1() const {
+std::pair<uint32_t,uint32_t> alignment_wrapper::query_stranded_bounds_1() const {
   
   pair<uint32_t,uint32_t> qb = query_bounds_1();
   uint32_t start = (int32_t)qb.first;
@@ -160,7 +160,7 @@ std::pair<uint32_t,uint32_t> alignment::query_stranded_bounds_1() const {
   
   return std::make_pair(start,end);
 }
-void alignment::query_stranded_bounds_1(uint32_t& start, uint32_t& end) const {
+void alignment_wrapper::query_stranded_bounds_1(uint32_t& start, uint32_t& end) const {
   pair<uint32_t,uint32_t> qb = query_stranded_bounds_1();
   start = (int32_t)qb.first;
   end = (int32_t)qb.second;
@@ -168,7 +168,7 @@ void alignment::query_stranded_bounds_1(uint32_t& start, uint32_t& end) const {
 
 /*! Get the query start or end from the cigar string of an alignment
  */
-uint32_t alignment::query_start_1() const {
+uint32_t alignment_wrapper::query_start_1() const {
   // traverse the cigar array
   uint32_t* cigar = bam1_cigar(_a); // cigar array for this alignment
   int32_t pos = 1;
@@ -189,7 +189,7 @@ uint32_t alignment::query_start_1() const {
 }
 
 
-uint32_t alignment::query_end_1() const {
+uint32_t alignment_wrapper::query_end_1() const {
   // traverse the cigar array
   uint32_t* cigar = bam1_cigar(_a); // cigar array for this alignment
   int32_t pos = bam_cigar2qlen(&_a->core, cigar); // total length of the query
@@ -230,7 +230,7 @@ uint32_t alignment::query_end_1() const {
 
 
 
-uint32_t alignment::base_repeat_0(uint32_t q_pos_0) const {
+uint32_t alignment_wrapper::base_repeat_0(uint32_t q_pos_0) const {
 
   uint8_t this_base_bam = read_base_bam_0(q_pos_0);
   uint32_t base_repeat = 0;
@@ -404,7 +404,7 @@ void tam_file::write_alignments(
 	}
 }
 
-void tam_file::write_split_alignment(uint32_t min_indel_split_len, const alignment& a)
+void tam_file::write_split_alignment(uint32_t min_indel_split_len, const alignment_wrapper& a)
 {
   // Debug
   //if (a.read_name() == "GW1ULQG02DEM06") {
@@ -532,7 +532,7 @@ void tam_file::write_split_alignment(uint32_t min_indel_split_len, const alignme
 	$trim					# CJ: list with two items, indicating what the trim on each end is
 */
 void tam_file::write_moved_alignment(
-                                     const alignment& a, 
+                                     const alignment_wrapper& a, 
                                      const string& rname,
                                      uint32_t fastq_file_index, 
                                      const string& seq_id, 

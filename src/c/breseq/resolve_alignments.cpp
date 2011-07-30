@@ -683,7 +683,7 @@ uint32_t _eligible_read_alignments(const Settings& settings, const cReferenceSeq
 //
 //=cut
 //
-bool _test_read_alignment_requirements(const Settings& settings, const cReferenceSequences& ref_seq_info, const alignment& a)
+bool _test_read_alignment_requirements(const Settings& settings, const cReferenceSequences& ref_seq_info, const alignment_wrapper& a)
 {
 	bool accept = true;
 
@@ -727,7 +727,7 @@ bool _test_read_alignment_requirements(const Settings& settings, const cReferenc
 //
 //=cut
 //
-bool _alignment_overlaps_junction(const vector<JunctionInfo>& junction_info_list, alignment a)
+bool _alignment_overlaps_junction(const vector<JunctionInfo>& junction_info_list, const alignment_wrapper& a)
 {
   // unmapped reads don't overlap the junction
   if (a.unmapped()) return false;
@@ -843,10 +843,10 @@ bool _test_junction(const Settings& settings, Summary& summary, const string& ju
 		//#my $a = $item->{junction_alignments}->[0];
 
 		// as it is, we must be sure we are looking at the one that matches
-		alignment* a = NULL;
+		alignment_wrapper* a = NULL;
     for(alignment_list::iterator it=item->junction_alignments.begin(); it!=item->junction_alignments.end(); it++)
 		{
-			alignment* candidate_a = &(**it);
+			alignment_wrapper* candidate_a = &(**it);
 			if (candidate_a->reference_target_id() == junction_tid) {
 				a = candidate_a;
 				break;
@@ -1306,7 +1306,7 @@ diff_entry _junction_to_hybrid_list_item(const string& key, cReferenceSequences&
 }
 
   
-Trims _trim_ambiguous_ends(const alignment& a, const SequenceTrimsList& trims)
+Trims _trim_ambiguous_ends(const alignment_wrapper& a, const SequenceTrimsList& trims)
 {
 	bool verbose = false;
   

@@ -26,7 +26,7 @@ namespace breseq {
 
 // pre-decs
 class pileup;
-class alignment;
+class alignment_wrapper;
 int first_level_pileup_callback(uint32_t tid, uint32_t pos, int n, const bam_pileup1_t *pile, void *data);
 int first_level_fetch_callback(bam1_t *b, void *data);
 
@@ -104,7 +104,7 @@ class pileup_base {
     };
 
     //! Fetch callback.
-    virtual void fetch_callback(const alignment& a) {
+    virtual void fetch_callback(const alignment_wrapper& a) {
         assert(false);
     };
   

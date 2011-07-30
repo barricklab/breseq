@@ -470,21 +470,21 @@ void alignment_output::Alignment_Output_Pileup::pileup_callback ( const pileup& 
   //## Other alignments may overlap this position that DO NOT
   //## overlap the positions of interest. This removes them.
 
-  vector<pileup_alignment> alignments;
+  vector<const pileup_wrapper*> alignments;
   for ( pileup::const_iterator itr_pileup = p.begin(); itr_pileup != p.end() ; itr_pileup++ )
   {
-    const pileup_alignment& a = *itr_pileup;
+    const pileup_wrapper& a = *itr_pileup;
     
     if (aligned_reads.find(a.read_name()) != aligned_reads.end()) 
     {
-      alignments.push_back(a);
+      alignments.push_back(&a);
     }
   }
   
   int32_t temp_max_indel = 0;
-  for ( vector<pileup_alignment>::const_iterator itr_pileup = alignments.begin(); itr_pileup != alignments.end() ; itr_pileup ++ )
+  for ( vector<const pileup_wrapper*>::const_iterator itr_pileup = alignments.begin(); itr_pileup != alignments.end() ; itr_pileup ++ )
   {
-    const pileup_alignment& a = *itr_pileup;
+    const pileup_wrapper& a = **itr_pileup;
       
     if (a.on_base_indel() > temp_max_indel )
     {
@@ -507,9 +507,9 @@ void alignment_output::Alignment_Output_Pileup::pileup_callback ( const pileup& 
   }
 
   // MAIN ALIGNMENT LOOP
-  for ( vector<pileup_alignment>::const_iterator itr_pileup = alignments.begin(); itr_pileup != alignments.end() ; itr_pileup ++ )
+  for ( vector<const pileup_wrapper*>::const_iterator itr_pileup = alignments.begin(); itr_pileup != alignments.end() ; itr_pileup ++ )
   {
-    const pileup_alignment& a = *itr_pileup;
+    const pileup_wrapper& a = **itr_pileup;
     
     Aligned_Read& aligned_read = aligned_reads[a.read_name()];
     aligned_read.updated = true;
@@ -522,7 +522,7 @@ void alignment_output::Alignment_Output_Pileup::pileup_callback ( const pileup& 
     if (aligned_read.reference_start == 0) aligned_read.reference_start = reference_pos_1;
     aligned_read.reference_end = reference_pos_1;
     
-    if ( aligned_read.start == 0 ) aligned_read.start = itr_pileup->query_position_1();
+    if ( aligned_read.start == 0 ) aligned_read.start = a.query_position_1();
     aligned_read.end = a.query_position_1();
 
     // ## READS: add aligned positions
@@ -632,7 +632,7 @@ void alignment_output::Alignment_Output_Pileup::pileup_callback ( const pileup& 
 //END create_alignment()
 
 /*! Called for each read alignment.*/
-void alignment_output::Alignment_Output_Pileup::fetch_callback ( const alignment& a )
+void alignment_output::Alignment_Output_Pileup::fetch_callback ( const alignment_wrapper& a )
 {
   // we only keep track of unique alignments 
   if ( a.is_redundant() ) return;
