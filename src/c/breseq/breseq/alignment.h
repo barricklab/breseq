@@ -20,7 +20,9 @@ LICENSE AND COPYRIGHT
 #define _BRESEQ_ALIGNMENT_H_
 
 #include "common.h"
+
 #include "calculate_trims.h"
+
 
 using namespace std;
 

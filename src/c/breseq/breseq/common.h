@@ -458,19 +458,6 @@ namespace breseq {
     return s;
   }
 
-	inline string reverse_complement(string seq)
-	{
-		char trade[static_cast<uint8_t>('Z')];
-		trade[static_cast<uint8_t>('A')] = 'T'; 
-    trade[static_cast<uint8_t>('T')] = 'A'; 
-    trade[static_cast<uint8_t>('C')] = 'G'; 
-    trade[static_cast<uint8_t>('G')] = 'C';
-		string retval = seq;
-		for (uint32_t i = 0; i < seq.size(); i++)
-			retval[i] = trade[static_cast<uint8_t>(seq[seq.size() - 1 - i])];
-		return retval;
-	}
-
 	struct CandidateJunction
 	{
 		int32_t r1;

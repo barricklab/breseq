@@ -83,6 +83,19 @@ namespace breseq {
   
     bool needs_conversion() { return m_needs_conversion; }
   };
+
+  /*! General sequence helper function.
+	 */ 
+  
+  extern char reverse_complement_lookup_table[256];
+  
+  inline string reverse_complement(string seq)
+	{
+		string retval(seq.length(), ' ');
+		for (uint32_t i = 0; i < seq.size(); i++)      
+      retval[i] = reverse_complement_lookup_table[static_cast<uint8_t>(seq[seq.size() - 1 - i])];
+    return retval;
+	}
 	
 } // breseq namespace
 

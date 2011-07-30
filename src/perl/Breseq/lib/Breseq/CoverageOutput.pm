@@ -76,7 +76,7 @@ sub plot_coverage
 	
 	my ($seq_id, $start, $end, $insert_start, $insert_end);
 	($seq_id, $start, $end, $insert_start, $insert_end, $region)  = Breseq::Shared::region_to_coords($region, $options->{reference_length});
-	$self->throw("Invalid region $region") if (!$seq_id || !$start || !$end);
+	$self->die("Invalid region $region") if (!$seq_id || !$start || !$end);
 		
 	## extend the region and re-check
 	my $extended_start = $start - $options->{shaded_flanking};

@@ -77,7 +77,7 @@ sub new
 
 	bless ($self, $class);
 	($self->{file_name}, $self->{format}, $self->{list_format}, $self->{verbose}) = $self->Bio::Root::RootI::_rearrange([qw(FILE FORMAT LIST_FORMAT VERBOSE)], @args);
-	$self->{file_name} or $self->throw("Must provide -file parameter");
+	$self->{file_name} or $self->die("Must provide -file parameter");
 	#$self->{dont_reverse} = $self->Bio::Root::RootI::_rearrange([qw(dont_reverse)], @args);		
 	
 	$self->{write_mode} = ($self->{file_name} =~ m/^>/) ? 1 : 0;
@@ -85,8 +85,8 @@ sub new
 	## If no quality score format is provided, predict the format
 	if ($self->{write_mode})
 	{
-		$self->throw("It is only possible to write in SANGER format.") if ((defined $self->{format}) && ($self->{format} ne 'SANGER'));
-		$self->throw("It is not possible to write in list format.") if ($self->{list_format});
+		$self->die("It is only possible to write in SANGER format.") if ((defined $self->{format}) && ($self->{format} ne 'SANGER'));
+		$self->die("It is not possible to write in list format.") if ($self->{list_format});
 	}	
 	else #read_mode
 	{
@@ -108,12 +108,12 @@ sub new
 	#opening for writing
 	if ($self->{file_name} =~ m/^>/)
 	{
-		open $self->{fh}, "$self->{file_name}" or $self->throw("Could not open file $self->{file_name}");
+		open $self->{fh}, "$self->{file_name}" or $self->die("Could not open file $self->{file_name}");
 	}
 	#opening for reading
 	else
 	{	
-		open $self->{fh}, "$self->{file_name}" or $self->throw("Could not open file $self->{file_name}");
+		open $self->{fh}, "$self->{file_name}" or $self->die("Could not open file $self->{file_name}");
 		$self->{next_line} = readline $self->{fh};
 		chomp $self->{next_line} if ($self->{next_line});
 	}
@@ -150,7 +150,7 @@ sub next_seq
 	}
 	else
 	{
-		$self->throw("Sequence record does not begin with \'@\' as expected.");	
+		$self->die("Sequence record does not begin with \'@\' as expected.");	
 	}
 	#strip id after spaces!!
 	$new_seq->{id} =~ s/\s.*$//;
@@ -188,8 +188,8 @@ sub next_seq
 				
 		foreach my $q (@qual_list)
 		{
-			$self->throw("chr out of range $q, fastq type may be incorrect") if ($q+$self->{chr_offset} < 0);
-			$self->throw("chr out of range $q, fastq type may be incorrect") if ($q+$self->{chr_offset} > 255);
+			$self->die("chr out of range $q, fastq type may be incorrect") if ($q+$self->{chr_offset} < 0);
+			$self->die("chr out of range $q, fastq type may be incorrect") if ($q+$self->{chr_offset} > 255);
 			$self->{chr_offset} = 64; #we must do this to be safe
 			$new_seq->{qual_chars}.= chr($q+$self->{chr_offset});
 		}
@@ -204,9 +204,9 @@ sub set_format
 	$format = "\U$format";
 	$self->{format} = $format;
 	$self->{quality_type} = $format_to_quality_type->{$format};
-	$self->throw("Invalid base quality score format: $format") if (!defined $self->{quality_type});
+	$self->die("Invalid base quality score format: $format") if (!defined $self->{quality_type});
 	$self->{chr_offset} = $format_to_chr_offset->{$format};
-	$self->throw("Invalid base quality score format: $format") if (!defined $self->{chr_offset});
+	$self->die("Invalid base quality score format: $format") if (!defined $self->{chr_offset});
 }
 
 =head2 predict_qual_format
@@ -223,8 +223,8 @@ sub predict_format
 	my ($self, $n) = @_;
 	
 	## no predicting the format in write mode
-	$self->throw if ($self->{write_mode});
-	$self->throw if ($self->{format} ne 'UNKNOWN');
+	$self->die if ($self->{write_mode});
+	$self->die if ($self->{format} ne 'UNKNOWN');
 	
 	##default number of reads to peek at
 	$n = 10000 if (!defined $n);
@@ -237,7 +237,7 @@ sub predict_format
 	my $qual_num = 0;
 	
 	## reset the file to the beginning and setup for reading...
-	open ($self->{fh}, "$self->{file_name}") or $self->throw("Could not open file $self->{file_name}");
+	open ($self->{fh}, "$self->{file_name}") or $self->die("Could not open file $self->{file_name}");
 	$self->{next_line} = readline $self->{fh};
 	chomp $self->{next_line} if ($self->{next_line});
 	
@@ -264,7 +264,7 @@ sub predict_format
 	}
 	close $self->{fh};
 		
-	$qual_num or $self->throw("No sequences found in FASTQ file.");
+	$qual_num or $self->die("No sequences found in FASTQ file.");
 	
 	$average_qual /= $qual_num;
 	my @sorted_quals = sort {-($qual_found_hash{$a} <=> $qual_found_hash{$b})} keys (%qual_found_hash);
