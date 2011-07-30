@@ -76,7 +76,7 @@ namespace breseq {
     void analyze_contingency_locus(const string& region_of_interest);
 
 		//! Called for each alignment.
-		virtual void fetch_callback(const alignment& a);
+		virtual void fetch_callback(const alignment_wrapper& a);
     
 		
 	protected:

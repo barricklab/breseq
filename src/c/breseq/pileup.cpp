@@ -19,18 +19,23 @@ LICENSE AND COPYRIGHT
 
 #include "breseq/pileup.h"
 
+namespace breseq {
 
 /*! Constructor.
  */
-breseq::pileup::pileup(uint32_t tid, uint32_t pos_1, int n, const bam_pileup1_t *pile, breseq::pileup_base& pb)
+pileup::pileup(uint32_t tid, uint32_t pos_1, int n, const bam_pileup1_t *pile, pileup_base& pb)
 : _tid(tid)
 , _pos_1(pos_1)
-, _pb(pb) {
-	
+, _pb(pb)
+/* @JEB If we ever want to get rid of the ugly copiable_pileup_wrapper stuff...
+, _bam_pileup(pile)
+, _num_bam_pileup(n)
+*/
+{	
 	// build our alignment objects:
 	reserve(static_cast<size_t>(n));
 	for(int i=0; i<n; ++i) {
-		push_back(pileup_alignment(&pile[i]));
+		push_back(copiable_pileup_wrapper(&pile[i]));
 	}		
 }
 
@@ -40,3 +45,5 @@ breseq::pileup::pileup(uint32_t tid, uint32_t pos_1, int n, const bam_pileup1_t 
 char* breseq::pileup::reference_sequence() const { 
 	return _pb.get_refseq(_tid); 
 }
+
+} //namespace breseq;

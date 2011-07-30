@@ -146,7 +146,7 @@ namespace breseq
       //! Called for each genome position.
       virtual void pileup_callback ( const pileup& aligned_reference );
       //! Called for each aligned read.
-      virtual void fetch_callback ( const alignment& a );
+      virtual void fetch_callback ( const alignment_wrapper& a );
       
       Aligned_Reads aligned_reads;
       Aligned_References aligned_references;

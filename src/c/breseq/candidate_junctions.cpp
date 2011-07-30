@@ -30,7 +30,7 @@ namespace breseq {
 
 	CandidateJunctions::CandidateJunctions() {}
 
-	bool CandidateJunctions::_alignments_to_candidate_junction(const Settings& settings, Summary& summary, const cReferenceSequences& ref_seq_info, alignment& a1, alignment& a2,
+	bool CandidateJunctions::_alignments_to_candidate_junction(const Settings& settings, Summary& summary, const cReferenceSequences& ref_seq_info, bam_alignment& a1, bam_alignment& a2,
 															  int32_t& redundancy_1, int32_t& redundancy_2, string& junction_seq_string, string& ref_seq_matched_1, string& ref_seq_matched_2, string& junction_coord_1, string& junction_coord_2, int32_t& read_begin_coord, JunctionInfo& junction_id_list)
 	{
 		bool verbose = false;
@@ -64,8 +64,8 @@ namespace breseq {
 		string read_id = a1.read_name();
 
 		// First, sort matches by their order in the query
-		alignment q1 = a1;
-		alignment q2 = a2;
+		bam_alignment& q1 = a1;
+		bam_alignment& q2 = a2;
 		uint32_t q1_start, q1_end;
 		uint32_t q2_start, q2_end;
 		q1.query_stranded_bounds_1(q1_start, q1_end);
@@ -444,7 +444,7 @@ namespace breseq {
 
       for (alignment_list::iterator it2 = list2.begin(); it2 != list2.end(); it2++)
 			{
-				alignment& a2 = *(it2->get());
+				bam_alignment& a2 = *(it2->get());
 
 				uint32_t a2_start, a2_end;
 				a2.query_stranded_bounds_1(a2_start, a2_end);
@@ -491,11 +491,11 @@ namespace breseq {
 
 		for (uint32_t i = 0; i < passed_pair_list.size(); i++)
 		{
-			PassedPair pp = passed_pair_list[i];
+			PassedPair& pp = passed_pair_list[i];
 
 			// localize variables
-			alignment a1 = pp.a1;
-			alignment a2 = pp.a2;
+			bam_alignment& a1 = pp.a1;
+			bam_alignment& a2 = pp.a2;
 			uint32_t a1_unique_length = pp.a1_unique_length;
 			uint32_t a2_unique_length = pp.a2_unique_length;
 
@@ -704,7 +704,7 @@ namespace breseq {
 		return true;
 	}
 
-	void CandidateJunctions::_num_matches_from_end(alignment& a, const string& refseq_str, bool dir, int32_t overlap, int32_t& qry_mismatch_pos, int32_t& ref_mismatch_pos)
+	void CandidateJunctions::_num_matches_from_end(alignment_wrapper& a, const string& refseq_str, bool dir, int32_t overlap, int32_t& qry_mismatch_pos, int32_t& ref_mismatch_pos)
 	{
 		bool verbose = false;
 

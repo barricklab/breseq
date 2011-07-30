@@ -70,7 +70,7 @@ void contingency_loci_pileup::analyze_contingency_locus(const string& region) {
 
 /*! Called for each alignment.
  */
-void contingency_loci_pileup::fetch_callback(const alignment& a) {
+void contingency_loci_pileup::fetch_callback(const alignment_wrapper& a) {
 }
   
   

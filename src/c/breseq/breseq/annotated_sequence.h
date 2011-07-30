@@ -159,8 +159,8 @@ namespace breseq {
   void RemoveLeadingWhitespace(string &s);
   void RemoveLeadingTrailingWhitespace(string &s);
 
-  uint32_t alignment_mismatches(const alignment& a, const cReferenceSequences& ref_seq_info);
-  string shifted_cigar_string(const alignment& a, const cReferenceSequences& ref_seq_info);
+  uint32_t alignment_mismatches(const alignment_wrapper& a, const cReferenceSequences& ref_seq_info);
+  string shifted_cigar_string(const alignment_wrapper& a, const cReferenceSequences& ref_seq_info);
 
 } // breseq namespace
 

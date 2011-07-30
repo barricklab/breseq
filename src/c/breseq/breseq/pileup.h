@@ -23,6 +23,8 @@ LICENSE AND COPYRIGHT
 #include "alignment.h"
 #include "pileup_base.h"
 
+using namespace std;
+
 namespace breseq {
 	
 	// pre-decs:
@@ -30,7 +32,7 @@ namespace breseq {
 
 	/*! Represents a pileup of alignments.
 	 */
-	class pileup : public std::vector<pileup_alignment> {
+	class pileup : public vector<copiable_pileup_wrapper> {
 	public:
 		//! Constructor for this pileup.
 		pileup(uint32_t tid, uint32_t pos_1, int n, const bam_pileup1_t *pile, pileup_base& pb);
@@ -60,12 +62,22 @@ namespace breseq {
       
     //stub function for dealing properly with falling off the end of the genome
     inline uint32_t wrap_position(int32_t) const { assert(false); return 0; } ;
-
+    
+    /* @JEB If we ever want to get rid of the ugly copiable_pileup_wrapper stuff...
+    pileup_wrapper operator[](uint32_t i) { return pileup_wrapper(&(_bam_pileup[i])); 
+    uint32_t size() const { return _num_bam_pileup; }
+    */
+    
 	protected:
 		uint32_t _tid; //!< Target id for this pileup.
 		uint32_t _pos_1; //!< Position of this pileup in the reference sequence. 1-indexed.
 		pileup_base& _pb; //!< Pileup base class that built this pileup.
-	};
+    
+    /* @JEB If we ever want to get rid of the ugly copiable_pileup_wrapper stuff...
+    const bam_pileup1_t* _bam_pileup; // !< Copy of the pointer to SAMtools data. Allocated elsewhere.
+    uint32_t _num_bam_pileup;
+    */
+  };
 	
 }
 

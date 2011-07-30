@@ -210,7 +210,7 @@ int first_level_pileup_callback(uint32_t tid, uint32_t pos, int n, const bam_pil
 int first_level_fetch_callback(const bam1_t *b, void *data)
 {
  	pileup_base* pb = reinterpret_cast<pileup_base*>(data);
-  alignment a(b);
+  alignment_wrapper a(b);
   pb->fetch_callback(a);
   
   return 0;

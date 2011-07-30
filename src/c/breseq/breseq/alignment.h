@@ -30,24 +30,29 @@ namespace breseq {
 
 // pre-defs
 class cReferenceSequences;
-
+class pileup;
   
 /*! class alignment
     Represents a single alignment within a pileup.
     This is purely a WRAPPER class. It does not allocate memory.
 */
-class alignment {
+class alignment_wrapper {
   public:
     //! Constructor.
-  alignment() : _a(NULL) {};
-    alignment(const bam1_t* a) : _a(a) {};
+    alignment_wrapper() : _a(NULL) {};
+    alignment_wrapper(const bam1_t* a) : _a(a) {};
+    ~alignment_wrapper() {};
   
-    // These only copy the pointer.
-    // There is a danger of going stale when using them.
-    //alignment(const alignment& _in) {assert(false);};
-    //alignment&  operator = (const alignment& other) {assert(false);};
+    // Copying is not allowed. Because it would only copy
+    // a pointer, which could go stale.
 
-    ~alignment() {};
+  friend int first_level_fetch_callback(const bam1_t *b, void *data);
+  
+  protected:
+    alignment_wrapper(const alignment_wrapper& _in) { _a = _in._a; }
+    alignment_wrapper&  operator =(const alignment_wrapper& _in) { _a = _in._a; return *this; }
+  
+  public:
     
     //! Does this alignment have any redundancies?
     bool is_redundant() const;
@@ -254,12 +259,25 @@ class alignment {
  Inherits al methods of alignment, and adds additional ones that get information about pileup position.
  This is purely a WRAPPER class. It does not allocate memory.
  */  
-class pileup_alignment : public alignment
+    
+class pileup_wrapper : public alignment_wrapper
 {
 public:
-  pileup_alignment() : alignment(NULL), _p(NULL) {};
-  pileup_alignment(const bam_pileup1_t* p) : alignment(p->b), _p(p) {};
+  friend class pileup;
   
+  pileup_wrapper() : alignment_wrapper(NULL), _p(NULL) {};
+  pileup_wrapper(const bam_pileup1_t* p) : alignment_wrapper(p->b), _p(p) {};
+
+  // Copying is not allowed, except for special friend cases. 
+  // Because it only copies a pointer, which could go stale.
+  
+protected:
+  pileup_wrapper(const pileup_wrapper& _in) 
+    { _a = _in._a; _p = _in._p; }
+  pileup_wrapper&  operator =(const pileup_wrapper& _in) 
+    { _a = _in._a; _p = _in._p; return *this; }
+  
+public:
   
   //! Is this alignment a deletion?
   inline bool is_del() const { return _p->is_del; }
@@ -318,26 +336,54 @@ public:
 
   
 protected:
-  const bam_pileup1_t* _p;     //!< Pileup. May or may not be defined.
+  const bam_pileup1_t* _p;     //!< Pileup.
 
+};
+
+// This class is provided when we do want to copy the pointer
+// Basically, this is only in pileup
+// Do not use this class unless you know what you are doing.
+class copiable_pileup_wrapper : public pileup_wrapper {
+
+public:
+  copiable_pileup_wrapper() : pileup_wrapper() {};
+  copiable_pileup_wrapper(const bam_pileup1_t* p) : pileup_wrapper(p) {};
+  
+  copiable_pileup_wrapper(const copiable_pileup_wrapper& _in) : pileup_wrapper(_in) { }
+  copiable_pileup_wrapper&  operator =(const copiable_pileup_wrapper& _in) 
+  { pileup_wrapper::operator=(_in); return *this; }
 };
   
 /*! class bam_alignment
     This class stores the memory of the bam1_t.
+    Thus, it is a copiable version of alignment_wrapper
  */  
-  class bam_alignment : public bam1_t, public alignment
+  class bam_alignment : public bam1_t, public alignment_wrapper
 {
 public:
-  bam_alignment() : bam1_t(), alignment(this)
+  bam_alignment() : bam1_t(), alignment_wrapper(this)
   {
     l_aux = 0;
     data_len = 0;
     m_data = 0;
     data = NULL;
   }
-  
-  bam_alignment(const bam_alignment& _in) : alignment(_in._a)
+
+  bam_alignment(const bam1_t& _in)
   {
+    l_aux = 0;
+    data_len = 0;
+    m_data = 0;
+    data = NULL;
+    bam_copy1(this, &_in);
+  }
+  
+  bam_alignment(const bam_alignment& _in) : alignment_wrapper(_in._a)
+  {
+    l_aux = 0;
+    data_len = 0;
+    m_data = 0;
+    data = NULL;
     bam_copy1(this, &_in);
   }
   
@@ -348,7 +394,8 @@ public:
   
 };
 
-typedef list<counted_ptr<bam_alignment> > alignment_list;  
+typedef counted_ptr<bam_alignment> bam_alignment_ptr;
+typedef list<bam_alignment_ptr> alignment_list;  
   
 // for debugging
 inline void print_alignment_list(const alignment_list& alignments)  
@@ -380,10 +427,10 @@ public:
                         bool shift_gaps = false
                         );
   
-  void write_moved_alignment(const alignment& a, const string& rname, uint32_t fastq_file_index, const string& seq_id, int32_t reference_pos, int32_t reference_strand, int32_t reference_overlap, const uint32_t junction_side, int32_t junction_flanking, int32_t junction_overlap, const Trims* trim = NULL);
-  void write_split_alignment(uint32_t min_indel_split_len, const alignment& a);
+  void write_moved_alignment(const alignment_wrapper& a, const string& rname, uint32_t fastq_file_index, const string& seq_id, int32_t reference_pos, int32_t reference_strand, int32_t reference_overlap, const uint32_t junction_side, int32_t junction_flanking, int32_t junction_overlap, const Trims* trim = NULL);
+  void write_split_alignment(uint32_t min_indel_split_len, const alignment_wrapper& a);
 
-  inline const char* target_name(const alignment& a)
+  inline const char* target_name(const alignment_wrapper& a)
   {
     int32_t tid = a.reference_target_id();
     assert (tid < bam_header->n_targets);
@@ -395,8 +442,7 @@ public:
 protected:
   tamFile input_tam;                // used for input
   ofstream output_tam;              // used for output
-  counted_ptr<bam_alignment> last_alignment; // contains alignment* last_alignment
-  
+  bam_alignment_ptr last_alignment; // contains alignment* last_alignment
 };
 	
 }
