@@ -20,6 +20,8 @@ LICENSE AND COPYRIGHT
 
 #include "breseq/candidate_junctions.h"
 
+#include "breseq/fastq.h"
+
 using namespace std;
 
 namespace breseq {
@@ -1103,12 +1105,26 @@ namespace breseq {
 			// <--- Begin sanity check
 			if (ids_to_print.count(best_candidate_junction.id))
 			{
-				cout << "Attempt to create junction candidate with duplicate id: " << combined_candidate_junction_list[0].id << endl;
-				//cout << "==Existing junction==" << endl;
-				//print STDERR Dumper($ids_to_print{$best_candidate_junction->{id}});
-				//cerr "==New junction==" << endl;
-				//print STDERR Dumper($best_candidate_junction);
+        CombinedCandidateJunction& ccj = ids_to_print[best_candidate_junction.id];
 
+				cout << "Attempt to create junction candidate with duplicate id: " << combined_candidate_junction_list[0].id << endl;
+        
+				cout << "==Existing junction==" << endl;      
+        cout << "  id: " << ccj.id << endl;
+        cout << "  pos_hash_score: " << ccj.pos_hash_score << endl;
+        cout << "  pos_hash_score: " << ccj.pos_hash_score << endl;
+        cout << "  min_overlap_score: " << ccj.min_overlap_score << endl;
+        cout << "  seq: " << ccj.seq << endl;
+        cout << "  rc_seq: " << ccj.rc_seq << endl;   
+        
+				cout << "==New junction==" << endl;
+        cout << "  id: " << best_candidate_junction.id << endl;
+        cout << "  pos_hash_score: " << best_candidate_junction.pos_hash_score << endl;
+        cout << "  pos_hash_score: " << best_candidate_junction.pos_hash_score << endl;
+        cout << "  min_overlap_score: " << best_candidate_junction.min_overlap_score << endl;
+        cout << "  seq: " << best_candidate_junction.seq << endl;
+        cout << "  rc_seq: " << best_candidate_junction.rc_seq << endl;  
+        
 				assert (best_candidate_junction.seq == ids_to_print[best_candidate_junction.id].seq);
 				exit(-1);
 			}

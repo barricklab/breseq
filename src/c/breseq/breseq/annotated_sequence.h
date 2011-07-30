@@ -19,10 +19,10 @@ LICENSE AND COPYRIGHT
 #ifndef _BRESEQ_ANNOTATED_SEQUENCE_H_
 #define _BRESEQ_ANNOTATED_SEQUENCE_H_
 
-#include "common.h"
+#include "breseq/common.h"
 
-#include "fasta.h"
-#include "alignment.h"
+#include "breseq/fasta.h"
+#include "breseq/alignment.h"
 
 using namespace std;
 

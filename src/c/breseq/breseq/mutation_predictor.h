@@ -50,9 +50,9 @@ namespace breseq {
 
 	}; // class MutationPredictor
 
-	inline int32_t n(string input) { return from_string<int32_t>(input); };
-	inline bool b(string input) { return from_string(input); };
-	inline string s(int32_t input) { return to_string(input); };
+	inline int32_t n(string input) { return from_string<int32_t>(input); }
+	inline bool b(string input) { return from_string(input); }
+	inline string s(int32_t input) { return to_string(input); }
 
 } // namespace breseq
 

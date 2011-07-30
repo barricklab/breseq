@@ -141,7 +141,7 @@ sub pre_option_initialize
 	$self->{max_quality} = 0;
 	$self->{run_name} = 'unnamed';
 	$self->{clean} = 0;
-	$self->{base_output_path} = '';
+	$self->{base_output_path} = '.';
 	$self->{error_model_method} = 'EMPIRICAL';
 	$self->{base_quality_cutoff} = 3;			# avoids problem with Illumina assigning 2 to bad ends of reads!
 	
@@ -434,7 +434,10 @@ sub post_option_initialize
 
 			#index for keeping track of what file reads came from in alignment database
 			#max is 256 b/c stored as unsigned byte in alignment database
-			$self->throw("Maximum of 256 input files allowed.") if ($fastq_file_index > 255);
+			if ($fastq_file_index > 255) {
+				print "Maximum of 256 input files allowed.\n";
+				die;
+			}
 		}
 		
 		$read_structure->{base_name} = join ("-pair-", @{$read_structure->{base_names}});
@@ -472,7 +475,10 @@ sub file_name
 {
 	my ($self, $file_name_key, $sub_hash)= @_;
 	my $file_name = $self->{$file_name_key};
-	$file_name or $self->throw("Settings file \"$file_name_key\" not found.");
+	
+	if (!defined $file_name) {
+		die "Settings file \"$file_name_key\" not found.";
+	}
 
 	return $self->substitute_file_name($file_name, $sub_hash);
 }
@@ -483,7 +489,7 @@ sub substitute_file_name
 	
 	foreach my $key (keys %$sub_hash)
 	{		
-		(!ref($file_name)) or $self->throw("Substituting in file name arrays not supported.");
+		(!ref($file_name)) or die("Substituting in file name arrays not supported.");
 		defined $sub_hash->{$key} or $self->throw("Value to substitute for $key not defined");
 		$file_name =~ s/$key/$sub_hash->{$key}/g or $self->throw("No '$key' found to substitute for in file name name '$file_name'.");
 	}
