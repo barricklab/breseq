@@ -1196,8 +1196,8 @@ sub html_evidence_file
 		# use C++ version
 		my $cbam2aln = $settings->ctool("cbam2aln");
 		my $command = "$cbam2aln --bam $interval->{bam_path} --fasta $interval->{fasta_path} --region $s --quality-score-cutoff $settings->{base_quality_cutoff} --stdout";
-		print HTML `$command`;
 		print STDERR "$command\n";
+		print HTML `$command`;
 	}
 	print HTML end_html;
 	close HTML;

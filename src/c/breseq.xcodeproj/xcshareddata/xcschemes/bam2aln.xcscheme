@@ -36,7 +36,7 @@
       displayScale = "1.00"
       launchStyle = "0"
       useCustomWorkingDirectory = "YES"
-      customWorkingDirectory = "/Users/jbarrick/src/breseq"
+      customWorkingDirectory = "/Users/jbarrick/tmp/B2C1"
       buildConfiguration = "Debug">
       <BuildableProductRunnable>
          <BuildableReference
@@ -78,6 +78,18 @@
          </CommandLineArgument>
          <CommandLineArgument
             argument = "--bam tests/lambda_mixed_pop/data/reference.bam --fasta tests/lambda_mixed_pop/data/reference.fasta --region NC_001416:21737-21737 --quality-score-cutoff 3"
+            isEnabled = "NO">
+         </CommandLineArgument>
+         <CommandLineArgument
+            argument = "--bam ./06_bam/junction.bam --fasta ./03_candidate_junctions/candidate_junction.fasta --region NC_012967__1266671__0__NC_012967__1680462__0__-19__GTCTTCTGCTTGAAAAAAA__96__96__0__0:97-115 --quality-score-cutoff 3 --stdout"
+            isEnabled = "NO">
+         </CommandLineArgument>
+         <CommandLineArgument
+            argument = "--bam ./06_bam/junction.bam --fasta ./03_candidate_junctions/candidate_junction.fasta --region NC_012967__1266671__0__NC_012967__1680462__0__-19__GTCTTCTGCTTGAAAAAAA__96__96__0__0:97-115 --quality-score-cutoff 3 --stdout"
+            isEnabled = "NO">
+         </CommandLineArgument>
+         <CommandLineArgument
+            argument = "--bam ./06_bam/junction.bam --fasta ./03_candidate_junctions/candidate_junction.fasta --region NC_012967__640360__0__NC_012967__3952439__0__-19__GCTCTTCCGATCTCCATCT__96__96__0__0:97-115 --quality-score-cutoff 3 --output"
             isEnabled = "YES">
          </CommandLineArgument>
       </CommandLineArguments>
