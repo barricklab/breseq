@@ -200,17 +200,18 @@ namespace breseq {
       j["_unique_interval_position"] = j[j["_unique_interval"] + "_position"];
       j["_unique_interval_strand"] = j[j["_unique_interval"] + "_strand"];
     }
-
+    
+    // Don't count rejected ones, this can be relaxed, but it makes MOB prediction much more complicated and prone to errors.
 		for(genome_diff::entry_list_t::iterator it = jc.begin(); it < jc.end(); it++)
     {
       diff_entry& de = **it;
 			if (de.entry_exists("reject"))
       {
 				jc.erase(it);
+        it--;
       }
 		}
-    // Don't count rejected ones, this can be relaxed, but it makes MOB prediction much more complicated and prone to errors.
-
+    
 		vector<string> mc_types = make_list<string>("MC");
 		genome_diff::entry_list_t mc = gd.list(mc_types);
 
@@ -824,12 +825,14 @@ namespace breseq {
 		{
 			diff_entry& j = *jc[i];
 
+      //cout << j["side_1_seq_id"] << " " << j["side_2_seq_id"] << endl;
+      //cout << j["side_1_strand"] << " " << j["side_2_strand"] << endl;
+      
 			if (
 				// must be on same sequence
-				j["side_1_seq_id"] != j["side_2_seq_id"]
-				// must be in same orientation
-				|| !b(j["side_1_strand"])
-				|| b(j["side_2_strand"])
+				   (j["side_1_seq_id"] != j["side_2_seq_id"])
+				// must be in same orientation (implies strands are opposite)
+				|| (j["side_1_strand"] == j["side_2_strand"])
 			)
 				continue;
 
@@ -837,14 +840,15 @@ namespace breseq {
 
 			// We can assume that the lower coordinate will be first since this is NOT a deletion
 			// (which would be handled above)
-			assert(n(j["overlap"]) > 0);
-
+      // By this point any positive overlap should have been resolved.
+			assert(n(j["overlap"]) <= 0);
+      
 			// mutation will always be after this position
 			int32_t position = n(j["side_1_position"]);
 
 			// Special case of circular chromosome
       // TODO: change to use ref_seq_info length field
-			if ( (j["side_1_position"] == "1") && ( static_cast<uint32_t>(n(j["side_2_position"])) == ref_seq_info[ref_seq_info.seq_id_to_index(seq_id)].m_length ) )
+			if ( (j["side_1_position"] == "1") && ( static_cast<uint32_t>(n(j["side_2_position"])) == ref_seq_info[ref_seq_info.seq_id_to_index(j["side_2_seq_id"])].m_length ) )
 			{
 				j["circular_chromosome"] = "1";
 				continue;

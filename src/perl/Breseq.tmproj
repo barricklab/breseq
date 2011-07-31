@@ -3,7 +3,7 @@
 <plist version="1.0">
 <dict>
 	<key>currentDocument</key>
-	<string>Breseq/lib/Breseq/coverage_distribution.r</string>
+	<string>Breseq/lib/Breseq/Output.pm</string>
 	<key>documents</key>
 	<array>
 		<dict>
@@ -302,14 +302,14 @@
 			<key>caret</key>
 			<dict>
 				<key>column</key>
-				<integer>5</integer>
+				<integer>1</integer>
 				<key>line</key>
-				<integer>1078</integer>
+				<integer>1207</integer>
 			</dict>
 			<key>firstVisibleColumn</key>
 			<integer>0</integer>
 			<key>firstVisibleLine</key>
-			<integer>1058</integer>
+			<integer>1169</integer>
 		</dict>
 		<key>Breseq/lib/Breseq/ReferenceSequence.pm</key>
 		<dict>
@@ -358,9 +358,9 @@
 			<key>caret</key>
 			<dict>
 				<key>column</key>
-				<integer>20</integer>
+				<integer>57</integer>
 				<key>line</key>
-				<integer>204</integer>
+				<integer>219</integer>
 			</dict>
 			<key>firstVisibleColumn</key>
 			<integer>0</integer>
@@ -482,6 +482,6 @@
 	<key>showFileHierarchyDrawer</key>
 	<true/>
 	<key>windowFrame</key>
-	<string>{{383, 5}, {982, 785}}</string>
+	<string>{{377, 93}, {982, 785}}</string>
 </dict>
 </plist>

@@ -90,6 +90,9 @@
          </CommandLineArgument>
          <CommandLineArgument
             argument = "--bam ./06_bam/junction.bam --fasta ./03_candidate_junctions/candidate_junction.fasta --region NC_012967__640360__0__NC_012967__3952439__0__-19__GCTCTTCCGATCTCCATCT__96__96__0__0:97-115 --quality-score-cutoff 3 --output"
+            isEnabled = "NO">
+         </CommandLineArgument>
+         <CommandLineArgument
             isEnabled = "YES">
          </CommandLineArgument>
       </CommandLineArguments>

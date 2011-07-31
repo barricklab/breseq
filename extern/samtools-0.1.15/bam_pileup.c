@@ -169,7 +169,7 @@ bam_plp_t bam_plp_init(bam_plp_auto_f func, void *data)
 	iter->dummy = mp_alloc(iter->mp);
 	iter->max_tid = iter->max_pos = -1;
 	iter->flag_mask = BAM_DEF_MASK;
-	iter->maxcnt = 8000;
+	iter->maxcnt = 10000000;
 	if (func) {
 		iter->func = func;
 		iter->data = data;

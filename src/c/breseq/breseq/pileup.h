@@ -25,6 +25,8 @@ LICENSE AND COPYRIGHT
 
 using namespace std;
 
+//@JEB: Note that a maximum of 8000 reads are returned by pileup!
+
 namespace breseq {
 	
 	// pre-decs:
@@ -35,7 +37,7 @@ namespace breseq {
 	class pileup : public vector<copiable_pileup_wrapper> {
 	public:
 		//! Constructor for this pileup.
-		pileup(uint32_t tid, uint32_t pos_1, int n, const bam_pileup1_t *pile, pileup_base& pb);
+		pileup(uint32_t tid, uint32_t pos_1, uint32_t n, const bam_pileup1_t *pile, pileup_base& pb);
 		
 		//! Retrieve the target id for this pileup.
 		inline uint32_t target() const { return _tid; }
