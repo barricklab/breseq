@@ -57,6 +57,8 @@ void alignment_output::create_alignment ( const string& region )
   vector<string> split_region = split(region.substr(0,end_match), junction_name_separator);
   if (split_region.size() == 12)
   {    
+    // This how the region name was constructed:
+    
     //values[0] = item.sides[0].seq_id;
 		//values[1] = to_string(item.sides[0].position);
 		//values[2] = to_string(item.sides[0].strand);
@@ -73,17 +75,19 @@ void alignment_output::create_alignment ( const string& region )
     //values[10] = to_string(item.sides[0].redundant);
     //values[11] = to_string(item.sides[1].redundant);
     
+    //Example:
     //NC_001416__5491__1__NC_001416__30251__1__4____35__35__0__0:36-39
-        
+    // Notice that strands are 0/1 and we need them as -1/+1 in the code
+
     Aligned_Reference aligned_reference_1, aligned_reference_2;
-    aligned_reference_1.truncate_end = from_string<uint32_t>(split_region[8]) + from_string<uint32_t>(split_region[6]);
+    aligned_reference_1.truncate_end = from_string<uint32_t>(split_region[8]) + from_string<int32_t>(split_region[6]);
     aligned_reference_1.ghost_end = from_string<uint32_t>(split_region[1]);
-    aligned_reference_1.ghost_strand = from_string<int16_t>(split_region[2]); // don't do int8_t here, returns wrong value
+    aligned_reference_1.ghost_strand = from_string<int16_t>(split_region[2]) == 1 ? +1 : -1; // don't do int8_t here, returns wrong value
     aligned_reference_1.ghost_seq_id = split_region[0];
     
-    aligned_reference_2.truncate_start = from_string<uint32_t>(split_region[8]) + 1 + from_string<uint32_t>(split_region[6]) + split_region[7].size();
+    aligned_reference_2.truncate_start = from_string<uint32_t>(split_region[8]) + 1 + from_string<int32_t>(split_region[6]) + split_region[7].size();
     aligned_reference_2.ghost_start = from_string<uint32_t>(split_region[4]) + from_string<uint32_t>(split_region[6]);
-    aligned_reference_2.ghost_strand = from_string<int16_t>(split_region[5]); // don't do int8_t here, returns wrong value
+    aligned_reference_2.ghost_strand = from_string<int16_t>(split_region[5]) == 1 ? +1 : -1; // don't do int8_t here, returns wrong value
     aligned_reference_2.ghost_seq_id = split_region[3];
  
     // common settings
@@ -94,6 +98,9 @@ void alignment_output::create_alignment ( const string& region )
     aligned_reference_2.seq_id = m_alignment_output_pileup.target_name(target_id);
     aligned_reference_2.reference_length = m_alignment_output_pileup.target_length(target_id);
 
+    // they are both +1 stranded in the reference sequence
+    aligned_reference_1.strand = +1;
+    aligned_reference_2.strand = +1;
     
     m_alignment_output_pileup.aligned_references.push_back(aligned_reference_1);
     m_alignment_output_pileup.aligned_references.push_back(aligned_reference_2);
@@ -401,7 +408,10 @@ string alignment_output::html_alignment ( const string& region )
   output += "<table style=\"background-color: rgb(255,255,255)\">";
   output += "<tr><td style=\"font-size:10pt\">";    
   
-  output += m_error_message;
+  if (m_error_message != "") 
+  {
+    output += m_error_message + "<br>";
+  }
   
   for (uint32_t index = 0; index < m_aligned_references.size(); index++)
   {
