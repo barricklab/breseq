@@ -35,7 +35,7 @@ int main(int argc, char* argv[]) {
 	("fasta,f", "FASTA file of reference sequence", "data/reference.fasta")
   ("output,o", "name of output file")
   ("region,r", "region to print (accession:start-end)", "")
-  ("max-reads,n", "maximum number of reads to show in alignment", 1000)
+  ("max-reads,n", "maximum number of reads to show in alignment", 200)
   ("quality-score-cutoff,c", "quality score cutoff", 0)
   ("stdout", "write output to stdout", TAKES_NO_ARGUMENT)
 

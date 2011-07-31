@@ -27,7 +27,7 @@ namespace breseq {
 // pre-decs
 class pileup;
 class alignment_wrapper;
-int first_level_pileup_callback(uint32_t tid, uint32_t pos, int n, const bam_pileup1_t *pile, void *data);
+int first_level_pileup_callback(uint32_t tid, uint32_t pos, int32_t n, const bam_pileup1_t *pile, void *data);
 int first_level_fetch_callback(bam1_t *b, void *data);
 
 //! Helper struct to manage a single reference sequence.
@@ -184,7 +184,7 @@ class pileup_base {
   inline void set_print_progress(bool print_progress) { m_print_progress = print_progress; }
 
   protected:
-    friend int first_level_pileup_callback(uint32_t tid, uint32_t pos, int n, const bam_pileup1_t *pile, void *data);
+    friend int first_level_pileup_callback(uint32_t tid, uint32_t pos, int32_t n, const bam_pileup1_t *pile, void *data);
     friend int first_level_fetch_callback(const bam1_t *b, void *data);
 
     samfile_t* m_bam; //!< BAM file handle.

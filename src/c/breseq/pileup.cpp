@@ -23,7 +23,7 @@ namespace breseq {
 
 /*! Constructor.
  */
-pileup::pileup(uint32_t tid, uint32_t pos_1, int n, const bam_pileup1_t *pile, pileup_base& pb)
+pileup::pileup(uint32_t tid, uint32_t pos_1, uint32_t n, const bam_pileup1_t *pile, pileup_base& pb)
 : _tid(tid)
 , _pos_1(pos_1)
 , _pb(pb)
@@ -34,7 +34,7 @@ pileup::pileup(uint32_t tid, uint32_t pos_1, int n, const bam_pileup1_t *pile, p
 {	
 	// build our alignment objects:
 	reserve(static_cast<size_t>(n));
-	for(int i=0; i<n; ++i) {
+	for(uint32_t i=0; i<n; ++i) {
 		push_back(copiable_pileup_wrapper(&pile[i]));
 	}		
 }

@@ -79,14 +79,17 @@ void alignment_output::create_alignment ( const string& region )
     //NC_001416__5491__1__NC_001416__30251__1__4____35__35__0__0:36-39
     // Notice that strands are 0/1 and we need them as -1/+1 in the code
 
+    int32_t overlap_offset = from_string<int32_t>(split_region[6]);
+    int32_t positive_overlap_offset = (overlap_offset > 0) ? overlap_offset : 0;
+    
     Aligned_Reference aligned_reference_1, aligned_reference_2;
-    aligned_reference_1.truncate_end = from_string<uint32_t>(split_region[8]) + from_string<int32_t>(split_region[6]);
+    aligned_reference_1.truncate_end = from_string<uint32_t>(split_region[8]) + positive_overlap_offset;
     aligned_reference_1.ghost_end = from_string<uint32_t>(split_region[1]);
     aligned_reference_1.ghost_strand = from_string<int16_t>(split_region[2]) == 1 ? +1 : -1; // don't do int8_t here, returns wrong value
     aligned_reference_1.ghost_seq_id = split_region[0];
     
-    aligned_reference_2.truncate_start = from_string<uint32_t>(split_region[8]) + 1 + from_string<int32_t>(split_region[6]) + split_region[7].size();
-    aligned_reference_2.ghost_start = from_string<uint32_t>(split_region[4]) + from_string<uint32_t>(split_region[6]);
+    aligned_reference_2.truncate_start = from_string<uint32_t>(split_region[8]) + 1 + positive_overlap_offset + split_region[7].size();
+    aligned_reference_2.ghost_start = from_string<uint32_t>(split_region[4]) + positive_overlap_offset;
     aligned_reference_2.ghost_strand = from_string<int16_t>(split_region[5]) == 1 ? +1 : -1; // don't do int8_t here, returns wrong value
     aligned_reference_2.ghost_seq_id = split_region[3];
  
@@ -97,10 +100,6 @@ void alignment_output::create_alignment ( const string& region )
     aligned_reference_2.target_id = target_id;
     aligned_reference_2.seq_id = m_alignment_output_pileup.target_name(target_id);
     aligned_reference_2.reference_length = m_alignment_output_pileup.target_length(target_id);
-
-    // they are both +1 stranded in the reference sequence
-    aligned_reference_1.strand = +1;
-    aligned_reference_2.strand = +1;
     
     m_alignment_output_pileup.aligned_references.push_back(aligned_reference_1);
     m_alignment_output_pileup.aligned_references.push_back(aligned_reference_2);
@@ -126,6 +125,33 @@ void alignment_output::create_alignment ( const string& region )
     m_error_message = "No reads aligned to region.";
     return;
   }
+  
+  // Reduce the number of reads to the maximum that we want to align
+  Aligned_Reads& aligned_reads = m_alignment_output_pileup.aligned_reads;
+  if ( (m_maximum_to_align != 0) && (aligned_reads.size() > m_maximum_to_align) )
+  {
+    Aligned_Reads new_aligned_reads;
+    m_error_message = "Only " + to_string(m_maximum_to_align) + " of " + to_string(aligned_reads.size()) + " total aligned reads displayed.";
+    
+    // create a list of the keys
+    vector<string> key_list;
+    for(Aligned_Reads::iterator ar = aligned_reads.begin(); ar != aligned_reads.end(); ar++)
+    {
+      key_list.push_back(ar->first);
+    }
+    
+    double max = static_cast<double>(m_maximum_to_align);
+    double num = static_cast<double>(key_list.size());
+    // Pick the desired number of reads evenly across th reads returned
+    for (size_t i=0; i<m_maximum_to_align; i++)
+    {
+      size_t keep_index = floor(static_cast<double>(i) / max * num);
+      new_aligned_reads[key_list[keep_index]] = aligned_reads[key_list[keep_index]];
+    }
+    
+    m_alignment_output_pileup.aligned_reads = new_aligned_reads;
+  }
+  
 
   // Not implemented @JEB
   //if ( m_alignment_output_pileup.total_reads > m_maximum_to_display )
@@ -144,7 +170,9 @@ void alignment_output::create_alignment ( const string& region )
   m_aligned_reads = m_alignment_output_pileup.aligned_reads;
   m_aligned_references = m_alignment_output_pileup.aligned_references;
   m_aligned_annotation = m_alignment_output_pileup.aligned_annotation;
-  
+
+  /* @JEB - This is an elternate method of reducing the number of reads to show
+            Since it happens after aligning them it is slower.
   // sampling a limited number of reads when there are too many
   if ( (m_maximum_to_align != 0) && (m_aligned_reads.size() > m_maximum_to_align) )
   {
@@ -165,7 +193,8 @@ void alignment_output::create_alignment ( const string& region )
       }
     }
   }
- 
+  */
+   
   // now add the unaligned portions of each
 
   int32_t max_extend_left = 0;
@@ -317,12 +346,16 @@ void alignment_output::create_alignment ( const string& region )
     }
   }
 
-  // @JEB TODO
-  //  ## swap out the ghost seq_ids
+  //  ## swap out the ghost seq_ids and coordinates
   for ( uint32_t itr_ref = 0; itr_ref < m_aligned_references.size(); itr_ref++ )
   {    
     Aligned_Reference& aligned_reference = m_aligned_references[itr_ref];
-    aligned_reference.seq_id = aligned_reference.ghost_seq_id;
+    
+    if (aligned_reference.ghost_seq_id != "")
+    {
+      aligned_reference.seq_id = aligned_reference.ghost_seq_id;
+    }
+    
     if (aligned_reference.truncate_start != 0)
     {
       uint32_t len = aligned_reference.end - aligned_reference.truncate_start + 1;
@@ -336,28 +369,8 @@ void alignment_output::create_alignment ( const string& region )
       aligned_reference.end = aligned_reference.ghost_end;
       aligned_reference.start = aligned_reference.end + aligned_reference.ghost_strand * (len - 1);
     }
+    
   }
-  
-  //////  foreach my $ar (@aligned_references)
-  //////  {
-  //      $ar->{seq_id} = $ar->{ghost_seq_id} if (defined $ar->{ghost_seq_id});
-  //
-  //      if (defined $ar->{truncate_start})
-  //      {
-  //          $ar->{start} = $ar->{truncate_start};
-  //          my $len = $ar->{end} - $ar->{start} + 1;
-  //          $ar->{start} = $ar->{ghost_start};
-  //          $ar->{end} = $ar->{start} + $ar->{ghost_strand} * ($len - 1);
-  //      }
-  //      if (defined $ar->{truncate_end})
-  //      {
-  //          $ar->{end} = $ar->{truncate_end};
-  //          my $len = $ar->{end} - $ar->{start} + 1;
-  //          $ar->{end} = $ar->{ghost_end};
-  //          $ar->{start} = $ar->{end} + $ar->{ghost_strand} * ($len - 1);
-  //      }
-  //////  }
-
 
   // Need to reverse the coords for some
   for ( Aligned_Reads::iterator itr_read = m_aligned_reads.begin(); itr_read != m_aligned_reads.end(); itr_read++ )
@@ -462,8 +475,12 @@ void alignment_output::Alignment_Output_Pileup::pileup_callback ( const pileup& 
   uint32_t& end_1( m_end_position_1 );
   uint32_t reference_pos_1 = p.position_1();
 
-  if ( verbose ) cout << "POSITION: " << reference_pos_1 << endl;
-
+  if ( verbose )
+  {
+    cout << "POSITION: " << reference_pos_1 << endl;
+    cout << "ALIGNED:  " << p.size() << endl;
+  }
+  
   // Don't pay attention if no reads uniquely aligned here
   if ( ( reference_pos_1 < unique_start ) || ( reference_pos_1 > unique_end ) )
     return;
@@ -484,10 +501,9 @@ void alignment_output::Alignment_Output_Pileup::pileup_callback ( const pileup& 
   for ( pileup::const_iterator itr_pileup = p.begin(); itr_pileup != p.end() ; itr_pileup++ )
   {
     const pileup_wrapper& a = *itr_pileup;
-    
-    if (aligned_reads.find(a.read_name()) != aligned_reads.end()) 
+    if (aligned_reads.count(a.read_name())) 
     {
-      alignments.push_back(&a);
+      alignments.push_back(&(*itr_pileup));
     }
   }
   
@@ -526,7 +542,6 @@ void alignment_output::Alignment_Output_Pileup::pileup_callback ( const pileup& 
 
     // -1 for gap in this read, >0 for this many bases inserted in read
     int32_t indel = a.on_base_indel();      
-    aligned_read.strand = a.strand();
     
     // Update the beginning and the end coords of what we are showing
     if (aligned_read.reference_start == 0) aligned_read.reference_start = reference_pos_1;
@@ -539,15 +554,25 @@ void alignment_output::Alignment_Output_Pileup::pileup_callback ( const pileup& 
     // FOR EACH INSERT COUNT
     for ( int32_t index = 0; index <= max_indel; index ++ )
     {
-      // add gap
+      // add gap or space
       if ( index > indel )
       {
         if ( verbose )
         {
           cout << "Adding gap: " << indel << endl;
         }
-        aligned_read.aligned_bases += '.';
-        aligned_read.aligned_quals += char ( 255 );
+        
+        // If this is a gap at the last position, then add space
+        if (reference_pos_1 == a.reference_end_1())
+        {
+          aligned_read.aligned_bases += ' ';
+          aligned_read.aligned_quals += char ( 254 );
+        }
+        else
+        {
+          aligned_read.aligned_bases += '.';
+          aligned_read.aligned_quals += char ( 255 );
+        }
       }
       // add the aligned base
       else
@@ -576,9 +601,9 @@ void alignment_output::Alignment_Output_Pileup::pileup_callback ( const pileup& 
 
       if ( verbose )
       {
-        cout << aligned_read.aligned_bases << " ";
-        cout << aligned_read.seq_id << " ";
-        cout << a.on_base_indel() << endl;
+//        cout << aligned_read.aligned_bases << " ";
+//        cout << aligned_read.seq_id << " ";
+//        cout << a.on_base_indel() << endl;
       }
     } // END FOR EACH INSERT COUNT
   }
@@ -648,18 +673,23 @@ void alignment_output::Alignment_Output_Pileup::fetch_callback ( const alignment
   if ( a.is_redundant() ) return;
   
   total_reads++;
-
-  // create a new empty structure and fill it
-  aligned_reads[a.read_name()] = Aligned_Read();
-  Aligned_Read& aligned_read = aligned_reads[a.read_name()];
   
+  // create a new empty structure and fill it  
+  Aligned_Read aligned_read;
   aligned_read.seq_id = a.read_name();
+  aligned_read.strand = a.strand();
   aligned_read.length = a.read_length();
   aligned_read.read_sequence = a.read_char_sequence();
   aligned_read.qual_sequence = a.read_base_quality_bam_string();
-
+  
   aligned_reads[aligned_read.seq_id] = aligned_read;
-
+  
+  if (verbose)
+  {
+    cout << a.read_name() << endl;
+    cout << a.reference_start_1() << " " << a.reference_end_1() << endl;
+  }
+  
   if ( ( unique_start == 0 ) || ( unique_start > a.reference_start_1() ) )
   {
       unique_start = a.reference_start_1();

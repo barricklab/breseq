@@ -60,7 +60,6 @@ pileup_base::pileup_base(const string& bam, const string& fasta)
 m_start_position_1(0), m_end_position_1(0), m_clip_start_position_1(0), m_clip_end_position_1(0), m_downsample(0),
   m_last_tid(static_cast<uint32_t>(-1)), m_print_progress(false)
 {
-	using namespace std;
 	m_bam = samopen(bam.c_str(), "rb", 0);
 	assert(m_bam);
   
@@ -136,7 +135,7 @@ bool pileup_base::handle_position(uint32_t pos_1) {
 /*! First-level callback, used to re-route the callback from samtools to the virtual
  function defined in breseq::pileup_base.
  */
-int first_level_pileup_callback(uint32_t tid, uint32_t pos, int n, const bam_pileup1_t *pile, void *data) {
+int first_level_pileup_callback(uint32_t tid, uint32_t pos, int32_t n, const bam_pileup1_t *pile, void *data) {
   
 	pileup_base* pb = reinterpret_cast<pileup_base*>(data);
   

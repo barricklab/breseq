@@ -205,6 +205,7 @@ namespace breseq {
 				// Alignments that extend only into the overlap region, are only additional
 				//  evidence for predicted junctions and NOT support for a new junction on
 				// their own. (They will also match the original reference genome equally well).
+        // ... but this last point only if overlap >=0 for the junction
 				///
 
 				for (alignment_list::iterator it = this_junction_alignments.begin(); it != this_junction_alignments.end(); )
@@ -313,7 +314,8 @@ namespace breseq {
 			if (mapping_quality_difference < 0)
 			{
 				if (verbose)
-					cout << "Best alignment to reference." << endl;
+					cout << "Best alignment to reference. MQD: " << mapping_quality_difference << endl;
+
 				_write_reference_matches(settings, ref_seq_info, trims_list, this_reference_alignments, resolved_reference_tam, fastq_file_index);
 			}
 			else
