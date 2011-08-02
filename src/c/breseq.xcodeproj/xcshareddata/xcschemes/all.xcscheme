@@ -35,7 +35,8 @@
       displayScaleIsEnabled = "NO"
       displayScale = "1.00"
       launchStyle = "0"
-      useCustomWorkingDirectory = "NO"
+      useCustomWorkingDirectory = "YES"
+      customWorkingDirectory = "/Users/Alex/Campylobacter"
       buildConfiguration = "Debug">
       <BuildableProductRunnable>
          <BuildableReference
@@ -53,6 +54,10 @@
          </CommandLineArgument>
          <CommandLineArgument
             argument = "ANALYZE_FASTQ --input /Users/austin/Desktop/breseq_working/EcoliB_Ara-1_test.fastq --convert /Users/austin/Desktop/breseq_working/test.fastq"
+            isEnabled = "NO">
+         </CommandLineArgument>
+         <CommandLineArgument
+            argument = "CONTINGENCY_LOCI --bam 62GAVAAXX_5_GTCT_11168_p1_pool_pf/data/reference.bam --fasta 62GAVAAXX_5_GTCT_11168_p1_pool_pf/data/reference.fasta --output outp1pool.txt"
             isEnabled = "YES">
          </CommandLineArgument>
       </CommandLineArguments>

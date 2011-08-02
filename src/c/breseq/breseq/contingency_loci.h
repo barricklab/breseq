@@ -27,27 +27,40 @@ using namespace std;
 
 namespace breseq {
 	      
-	/*! Analyze contingency loci.
-	 
-	 */
+    //Unnecessary stuff that I need to graph stuff
+    
+    vector<int> readIndices();
+    
+
 	void analyze_contingency_loci(const string& bam,
                         const string& fasta,
                         const string& output
                         );
 	
+
 	
   // Structure to hold information about repeats
 	struct homopolymer_repeat {
-
+        /*
 		homopolymer_repeat() {
 			bzero(this,sizeof(homopolymer_repeat));
-		}
+		}*/
 		
-    string    seq_id;
-    uint32_t  start;
-    uint32_t  length;
-		char      base;
+        string    seq_id;
+        uint32_t  start;
+        uint32_t  length;
+        char      base;
+        vector<double> freqs;
 	};
+    
+    struct repeat_stats {
+        string region;
+        vector<double> freqs;
+        
+        repeat_stats( string r ){
+            region = r;
+        }
+    };
 	
   typedef vector<homopolymer_repeat> homopolymer_repeat_list;
 
@@ -78,13 +91,100 @@ namespace breseq {
 		//! Called for each alignment.
 		virtual void fetch_callback(const alignment_wrapper& a);
     
-		
+        
+        void printStats(const string& output){
+            cout << "PRINTING...\n";
+            getchar();
+            ofstream out(output.c_str());
+            assert(!out.fail()); 
+            
+            int mindiff = 0;
+            int maxdiff = 0;
+            
+            //Finds the max and min diff with respect to the length of the original repeat
+            for( int i=0; i<repeats.size(); i++ ){
+                vector<string> bounds = split( split( repeats[i].region, ":" )[1], "-" );
+                int length = atoi( bounds[1].c_str() ) - atoi( bounds[0].c_str() );
+                //out << repeats[i].region << ":" << length << " ";
+                //cout << length << "\n";
+        
+                int diff = (repeats[i].freqs.size()+1)-length;
+                if( diff > maxdiff ){
+                    maxdiff = diff;
+                }
+                
+                //Finds the greatest del
+                for( int j=0; j<repeats[i].freqs.size(); j++ ){
+                    if( repeats[i].freqs[j] != 0 ){
+                        if( j-length < mindiff ){
+                            mindiff = j-length;
+                        }
+                        break;
+                    }
+                }
+
+            }
+            
+            //cout << mindiff << ":" << maxdiff << "\n";
+            //getchar();
+            
+            for( int i=0; i<repeats.size(); i++ ){
+                vector<string> bounds = split( split( repeats[i].region, ":" )[1], "-" );
+                int length = atoi( bounds[1].c_str() ) - atoi( bounds[0].c_str() );
+                for( int j=mindiff+length; j<repeats[i].freqs.size(); j++ ){
+                    out << repeats[i].freqs[j] << " ";
+                }
+                for( int j=0; j<length+maxdiff-repeats[i].freqs.size(); j++ ){
+                    out << 0 << " ";
+                }
+                out << bounds[0];
+                out << "\n";
+                
+            }
+            /*   
+            for( int i=0; i<repeats.size(); i++ ){
+                for( int j=0; j<repeats[i].freqs.size(); j++ ){
+                    out << repeats[i].freqs[j] << " ";
+                }
+                out << "\n";
+            }*/
+            out << mindiff << " " << maxdiff;
+            out.close();
+        }
+
+        
+ 
+        
+        
 	protected:
+        // These are used to store information for each run of analyze_contingency_locus
+        vector<repeat_stats> repeats;
+        homopolymer_repeat current_region;
+        string fastaf;
+        tam_file tf;
+        //const string& bamf;
+        //const string& fastaf;
+        
+        
+        //Unnecessary stuff:
+        vector<int> indices;
+        
 
     // Add variables that keep track of distribution while fetch_callback is called....
+        
+        
 
 	};  
+    
+
+    
+    
+    //
+    
+    void writeTAM( const string& tam_file_name, const string& fasta, contingency_loci_pileup clp, alignment_list al );
+
   
 } // breseq namespace
+
 
 #endif

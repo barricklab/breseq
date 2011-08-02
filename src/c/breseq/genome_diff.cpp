@@ -729,7 +729,19 @@ void VCFtoGD( const string& vcffile, const string& gdfile ){
         vector<string> ev(9,"");
         
         // SeqID
-        gd[0] = "SNP";
+        if( featuresVCF[i][3].size() > featuresVCF[i][4].size() ){
+            gd[0] = "DEL";
+        }
+        else if( featuresVCF[i][3].size() < featuresVCF[i][4].size() ){
+            gd[0] = "INS";
+        }
+        else if( featuresVCF[i][3].size() == 1 ){
+            gd[0] = "SNP";
+        }
+        else{
+            gd[0] = "SUB";
+        }
+        
         stringstream ss; ss << i+1;
         ss >> gd[1];
         ss << i+featuresVCF.size()+1;
