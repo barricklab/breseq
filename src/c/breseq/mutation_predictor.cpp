@@ -128,6 +128,7 @@ namespace breseq {
 		for (uint32_t i = 0; i < jc.size(); i++)
 		{
 			diff_entry& j = *(jc[i].get());
+      
 			j["_side_1_read_side"] = "false";
 			j["_side_2_read_side"] = "true";
 
@@ -161,7 +162,7 @@ namespace breseq {
 			// these point to the correct initial interval...
 			if (j.entry_exists("_side_1_is"))
 			{
-        cout << n(j["_side_1_is_start"]) << " " << n(j["_side_1_is_end"]) << " " << n(j["side_1_position"]) << endl;
+        //cout << n(j["_side_1_is_start"]) << " " << n(j["_side_1_is_end"]) << " " << n(j["side_1_position"]) << endl;
         
 				if (abs(n(j["_side_1_is_start"]) - n(j["side_1_position"])) <= 20)
 				{
@@ -179,7 +180,7 @@ namespace breseq {
       
       if (j.entry_exists("_side_2_is"))
 			{
-        cout << n(j["_side_2_is_start"]) << " " << n(j["_side_2_is_end"]) << " " << n(j["side_2_position"]) << endl;
+        //cout << n(j["_side_2_is_start"]) << " " << n(j["_side_2_is_end"]) << " " << n(j["side_2_position"]) << endl;
 
 				if (abs(n(j["_side_2_is_start"]) - n(j["side_2_position"])) <= 20)
 				{
@@ -232,7 +233,6 @@ namespace breseq {
 			  continue;
 
 			// set up generic deletion item
-			//TODO: Make sure this constructor is correct
 			diff_entry mut;
 			mut._type = "DEL";
 			mut._evidence = make_list<string>(mc_item._id);
@@ -475,8 +475,8 @@ namespace breseq {
 				diff_entry& j2 = **it;
 
 				// positive overlap should be resolved by now
-				assert(n(j1["overlap"]) > 0);
-				assert(n(j2["overlap"]) > 0);
+				assert(n(j1["overlap"]) <= 0);
+				assert(n(j2["overlap"]) <= 0);
 
 				// the first unique coords are going into the IS element
 				bool uc1_strand = b(j1[j1["_unique_interval"] + "_strand"]);
