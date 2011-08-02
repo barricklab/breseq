@@ -87,7 +87,7 @@ samtools$
 ^src/c/build
 .xcodeproj/.+\.mode1v3$
 .xcodeproj/.+\.pbxuser$
-.xcodeproj/project.xcworkspace.+$
+.breseq.xcodeproj/project.xcworkspace/xcuserdata.+$
 .xcodeproj/xcuserdata.+$
 
 ## For Various IDEs
