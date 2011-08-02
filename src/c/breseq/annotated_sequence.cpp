@@ -127,67 +127,70 @@ namespace breseq {
     getline(infile,line);
     
     while (!infile.eof())
-    {
-      // split line on tabs
-      char * cstr = new char [line.size()+1];
-      strcpy (cstr, line.c_str());
-      
-      cSequenceFeature feature;
-      string seq_id;
-      
-      char * pch;
-      pch = strtok(cstr,"\t");
-      uint32_t on_token = 0;
-      while (pch != NULL)
-      {
-        //printf ("%s\n",pch);
+    {      
+      if (line[0] != '#') {
         
-        switch (on_token) {
-          case 0:
-            seq_id = pch;
-            break;
+      
+        // split line on tabs
+        char * cstr = new char [line.size()+1];
+        strcpy (cstr, line.c_str());
+        
+        cSequenceFeature feature;
+        string seq_id;
+        
+        char * pch;
+        pch = strtok(cstr,"\t");
+        uint32_t on_token = 0;
+        while (pch != NULL)
+        {
+          //printf ("%s\n",pch);
           
-          case 1:
-            feature["type"] = pch;
-            break;
+          switch (on_token) {
+            case 0:
+              seq_id = pch;
+              break;
             
-          case 2:
-            feature["accession"] = pch;
-            break;
-            
-          case 3:
-            feature["name"] = pch;
-            break;
-            
-          case 4:
-            feature.m_start = atoi(pch);
-            break;
-            
-          case 5:
-            feature.m_end = atoi(pch);
-            break;
-            
-          case 6:
-            feature.m_strand = atoi(pch);
-            break;
-            
-          case 7:
-            feature["product"] = pch;
-            break;
-        }
+            case 1:
+              feature["type"] = pch;
+              break;
+              
+            case 2:
+              feature["accession"] = pch;
+              break;
+              
+            case 3:
+              feature["name"] = pch;
+              break;
+              
+            case 4:
+              feature.m_start = atoi(pch);
+              break;
+              
+            case 5:
+              feature.m_end = atoi(pch);
+              break;
+              
+            case 6:
+              feature.m_strand = atoi(pch);
+              break;
+              
+            case 7:
+              feature["product"] = pch;
+              break;
+          }
+          
+          pch = strtok (NULL, "\t");
+          on_token++;
+        }  
         
-        pch = strtok (NULL, "\t");
-        on_token++;
-      }  
-      
-      delete[] cstr;
-      
-      uint32_t seq_idx = seq_id_to_index(seq_id);
-      (*this)[seq_idx].m_features.push_back(feature);
-      
-      if (feature["type"] == "repeat_region")
-        (*this).repeat_lists[seq_id].push_back(feature);
-      
+        delete[] cstr;
+        
+        uint32_t seq_idx = seq_id_to_index(seq_id);
+        (*this)[seq_idx].m_features.push_back(feature);
+        
+        if (feature["type"] == "repeat_region")
+          (*this).repeat_lists[seq_id].push_back(feature);
+      }
       getline(infile,line);
     }
 

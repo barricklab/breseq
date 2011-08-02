@@ -37,7 +37,6 @@ namespace breseq {
 
 		// set up local settings
 		int32_t flanking_length = settings.maximum_read_length;
-//		my $reference_sequence_string_hash_ref = $ref_seq_info->{ref_strings};
 
 		// Method
 		//
@@ -58,7 +57,6 @@ namespace breseq {
 		// Need the junction key to include the offset to get to the junction within the read for cases where
 		// the junction is near the end of the sequence... test case exists in JEB574.
 
-//		my %printed_keys;
 		int32_t i = 0;
 
 		string read_id = a1.read_name();
