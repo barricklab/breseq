@@ -59,14 +59,7 @@ namespace breseq {
 
       //add current sequence length to number of bases
       num_bases += on_sequence.m_sequence.size();
-      
-      vector<int> numerical_quality_scores;
-      
-      if( on_sequence.m_numerical_qualities )
-        convert_numeric_scores(on_sequence);
-      
-      //cout << "I'm here: " << num_reads << endl;
-      
+            
       //iterate through sequence grabbing the associated scores
       for (uint32_t i=0; i<on_sequence.m_qualities.size(); i++) {
         int this_score(uint8_t(on_sequence.m_qualities[i]));
@@ -90,6 +83,7 @@ namespace breseq {
       quality_format = "ILLUMINA_1.3+";
     }
     
+    //debug
     //cerr << "min_quality_score "     << (int)min_quality_score  << endl;
     //cerr << "max_quality_score "     << (int)max_quality_score  << endl;
 
@@ -121,10 +115,7 @@ namespace breseq {
       while (input_fastq_file.read_sequence(on_sequence)) {
         
         // truncate second name name
-        on_sequence.m_name_plus = "+";
-      
-        if( on_sequence.m_numerical_qualities )
-          convert_numeric_scores(on_sequence);
+        on_sequence.m_name_plus = "";
         
         // fastq quality convert
         fqc.convert_sequence(on_sequence);
@@ -207,17 +198,17 @@ namespace breseq {
       int to_quality;
             
       if (format_to_quality_type[to_quality_type] == "SOLEXA") {
-        to_quality = round(-10 * log((1-probability_of_error)/probability_of_error) / log(10));
+        to_quality = round(10 * log((1-probability_of_error)/probability_of_error) / log(10));
       } else if (format_to_quality_type[to_quality_type] == "PHRED") {
-        double t_quality = round(-10 * log(probability_of_error) / log(10));
-
-        to_quality = round(t_quality);
+        to_quality = round(-10 * log(probability_of_error) / log(10));
       } else {
         cerr << "Unknown base quality score type: " << to_quality_type << endl;
         exit(-1);
       }
       
-      int16_t to_chr = from_quality + format_to_chr_offset[to_quality_type];
+      assert(to_quality >= 0);
+      
+      int16_t to_chr = to_quality + format_to_chr_offset[to_quality_type];
 
       
       // May be out of range
@@ -236,7 +227,7 @@ namespace breseq {
     for(uint32_t i=0; i < seq.m_qualities.size(); i++)
     {
       //seq.m_qualities.replace(i,1,1,(*this)[seq.m_qualities[i]]);
-      seq.m_qualities[i]= (*this)[seq.m_qualities[i]];
+      seq.m_qualities[i] = (*this)[seq.m_qualities[i]];
     }
   }
   
@@ -308,6 +299,14 @@ namespace breseq {
             // convert to uppercase and require
             // reformatting if this was necessary
             switch (sequence.m_sequence[i]) {
+                
+              case 'A':
+              case 'T':
+              case 'C':
+              case 'G':
+              case 'N':
+                break;
+                
               case 'a':
                 sequence.m_sequence.replace(i,1,1,'A');
                 m_needs_conversion = true;
@@ -332,6 +331,12 @@ namespace breseq {
                 sequence.m_sequence.replace(i,1,1,'N');
                 m_needs_conversion = true;
                 break;
+              
+              // all other characters converted to 'N'
+              default :
+                sequence.m_sequence.replace(i,1,1,'N');
+                m_needs_conversion = true;
+
             }
 
             
@@ -360,21 +365,26 @@ namespace breseq {
 
           break;
         case 3:
-          sequence.m_qualities = line;
           
-          if( sequence.m_sequence.size() != sequence.m_qualities.size() ) {
-            vector<string> numerical_qualities(split(sequence.m_qualities, " "));
-            
+          if (sequence.m_sequence.size() == line.size()) {
+            sequence.m_qualities = line;
+          } else {
+            m_needs_conversion = true;
+            vector<string> numerical_qualities(split(line, " "));
             if( sequence.m_sequence.size() != numerical_qualities.size() ) {
               fprintf(stderr, "FASTQ sequence record has different SEQUENCE and QUALITY lengths.\nFile %s\nLine: %d\n", m_file_name.c_str(), m_current_line);
               exit(-1);
             }
-            else if( sequence.m_sequence.size() == numerical_qualities.size() ) {
-              sequence.m_numerical_qualities = true; 
+            
+            // convert the qualities to characters with the Illumina offset (which keeps things from being negative)
+            sequence.m_qualities = "";
+            for(vector<string>::iterator it = numerical_qualities.begin(); it != numerical_qualities.end(); it++)
+            {
+              // use of uint16_t is on purpose to force proper conversion @JEB
+              sequence.m_qualities += static_cast<char>(from_string<int16_t>(*it) + 64); // Hard-coded format_to_chr_offset["SOLEXA"]
             }
-          }
-          else {
-            sequence.m_numerical_qualities = false;
+              
+            
           }
 
           break;
@@ -393,18 +403,9 @@ namespace breseq {
     (*this) << sequence.m_qualities << std::endl;
   }
   
-  void convert_numeric_scores(cFastqSequence &sequence) {
-    vector<string> numerical_qualities_as_string( split(sequence.m_qualities, " " ) );
-    
-    sequence.m_qualities.resize(numerical_qualities_as_string.size());
-    
-    for (uint32_t this_quality = 0; this_quality < numerical_qualities_as_string.size(); ++this_quality) {
-      sequence.m_qualities[this_quality] = from_string<int>(numerical_qualities_as_string[this_quality]) + 64;
-    }
-  }
-  
 
-// Convert most characters to 'N', might want to give errors on non-printable characters
+// Reverse complement and also uppercase
+// Convert most characters to 'N'. Might want to give errors on non-printable characters
   char reverse_complement_lookup_table[256] = {
 /*  0*/    'N', 'N', 'N', 'N', 'N', 'N', 'N', 'N', 'N', 'N', 'N', 'N', 'N', 'N', 'N', 'N',
 /* 16*/    'N', 'N', 'N', 'N', 'N', 'N', 'N', 'N', 'N', 'N', 'N', 'N', 'N', 'N', 'N', 'N',
