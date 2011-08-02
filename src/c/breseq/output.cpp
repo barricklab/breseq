@@ -1920,7 +1920,7 @@ genome_diff::entry_list_t items_JC = gd.list(make_list<string>(JC));
                  (TRUNCATE_START, to_string(
                                             from_string<uint32_t>(item[FLANKING_LEFT]) + 
                                             1 +
-                                            abs(from_string<uint32_t>(item[ALIGNMENT_OVERLAP]))
+                                            abs(from_string<int32_t>(item[ALIGNMENT_OVERLAP]))
                                            ))
                  (GHOST_START, item[SIDE_2_POSITION])
                  (GHOST_STRAND_START, item[SIDE_2_STRAND])
@@ -2427,11 +2427,11 @@ Html_Mutation_Table_String::Html_Mutation_Table_String(
   , settings(settings)
   , gd(gd)
   , list_ref(list_ref)
-  , relative_link(relative_link)
   , legend_row(legend_row)
   , one_ref_seq(one_ref_seq)
   , gd_name_list_ref(gd_name_list_ref)
   , options(options)
+  , relative_link(relative_link)
 {
 // # Recognized $settings are
 // #   # shade_frequencies => 1, instead of frequences, shade boxes
