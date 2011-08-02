@@ -39,15 +39,6 @@ namespace breseq {
 
 	// Private methods
 
-	// Utility function
-	string MutationPredictor::get_sequence(string seq_id, uint32_t start, uint32_t end)
-	{
-		bool verbose = false;
-		if (verbose)
-			cout << "Get sequence: " << seq_id << ":" << start << "-" << end << endl;
-		return ref_seq_info.ref_strings[seq_id].substr(start - 1, end - start + 1);
-	}
-
 	cSequenceFeature* MutationPredictor::within_repeat(string seq_id, uint32_t position)
 	{
 		vector<cSequenceFeature>& r = ref_seq_info.repeat_lists[seq_id];
@@ -128,8 +119,9 @@ namespace breseq {
 		for (uint32_t i = 0; i < jc.size(); i++)
 		{
 			diff_entry& j = *(jc[i].get());
-			j["_side_1_read_side"] = "false";
-			j["_side_2_read_side"] = "true";
+      
+			j["_side_1_read_side"] = "-1";
+			j["_side_2_read_side"] = "1";
 
 			for (uint32_t side = 1; side <= 2; side++)
 			{
@@ -150,8 +142,8 @@ namespace breseq {
           j["_" + side_key + "_is_strand"] = s(is->m_strand);
 				}
 				
-        bool test_val = b(j[side_key + "_redundant"]);
-				j[side_key + "_annotate_key"] = (j.entry_exists("_" + side_key + "_is_start") || b(j[side_key + "_redundant"])) ? "repeat" : "gene";
+        uint32_t test_val = n(j[side_key + "_redundant"]);
+				j[side_key + "_annotate_key"] = (j.entry_exists("_" + side_key + "_is_start") || n(j[side_key + "_redundant"])) ? "repeat" : "gene";
 			}
 
 			// by default, we are sorted by this coord
@@ -161,7 +153,7 @@ namespace breseq {
 			// these point to the correct initial interval...
 			if (j.entry_exists("_side_1_is"))
 			{
-        cout << n(j["_side_1_is_start"]) << " " << n(j["_side_1_is_end"]) << " " << n(j["side_1_position"]) << endl;
+        //cout << n(j["_side_1_is_start"]) << " " << n(j["_side_1_is_end"]) << " " << n(j["side_1_position"]) << endl;
         
 				if (abs(n(j["_side_1_is_start"]) - n(j["side_1_position"])) <= 20)
 				{
@@ -179,7 +171,7 @@ namespace breseq {
       
       if (j.entry_exists("_side_2_is"))
 			{
-        cout << n(j["_side_2_is_start"]) << " " << n(j["_side_2_is_end"]) << " " << n(j["side_2_position"]) << endl;
+        //cout << n(j["_side_2_is_start"]) << " " << n(j["_side_2_is_end"]) << " " << n(j["side_2_position"]) << endl;
 
 				if (abs(n(j["_side_2_is_start"]) - n(j["side_2_position"])) <= 20)
 				{
@@ -232,7 +224,6 @@ namespace breseq {
 			  continue;
 
 			// set up generic deletion item
-			//TODO: Make sure this constructor is correct
 			diff_entry mut;
 			mut._type = "DEL";
 			mut._evidence = make_list<string>(mc_item._id);
@@ -423,13 +414,13 @@ namespace breseq {
 			uint32_t overlap = n(j["overlap"]);
 			if (move_dist > overlap) move_dist = overlap;
 
-			is_interval_position += (b(j[j["_is_interval"] + "_strand"]) ? 1 : -1) * move_dist;
+			is_interval_position += n(j[j["_is_interval"] + "_strand"]) * move_dist;
 			j[j["_is_interval"] + "_position"] = s(is_interval_position);
 			overlap -= move_dist;
 
 			/// second, adjust the unique sequence side with any remaining overlap
 			int32_t unique_interval_position = n(j[j["_unique_interval"] + "_position"]);
-			unique_interval_position += (b(j[j["_unique_interval"] + "_strand"]) ? 1 : -1) * overlap;
+			unique_interval_position += n(j[j["_unique_interval"] + "_strand"]) * overlap;
 			j[j["_unique_interval"] + "_position"] = s(unique_interval_position);
 
 			j["overlap"] = "0";
@@ -475,17 +466,17 @@ namespace breseq {
 				diff_entry& j2 = **it;
 
 				// positive overlap should be resolved by now
-				assert(n(j1["overlap"]) > 0);
-				assert(n(j2["overlap"]) > 0);
+				assert(n(j1["overlap"]) <= 0);
+				assert(n(j2["overlap"]) <= 0);
 
 				// the first unique coords are going into the IS element
-				bool uc1_strand = b(j1[j1["_unique_interval"] + "_strand"]);
-				bool uc2_strand = b(j2[j2["_unique_interval"] + "_strand"]);
+				int32_t uc1_strand = n(j1[j1["_unique_interval"] + "_strand"]);
+				int32_t uc2_strand = n(j2[j2["_unique_interval"] + "_strand"]);
 				if (uc1_strand == uc2_strand) continue;
 
 				// What strand is the IS on relative to the top strand of the genome
-				bool is1_strand = ! (b(j1[j1["_is_interval"] + "_strand"]) == b(j1["_" + j1["_is_interval"] + "_is_strand"]) == b(j1[j1["_unique_interval"] + "_strand"]));
-				bool is2_strand = ! (b(j2[j2["_is_interval"] + "_strand"]) == b(j2["_" + j2["_is_interval"] + "_is_strand"]) == b(j2[j2["_unique_interval"] + "_strand"]));
+				int32_t is1_strand = (n(j1[j1["_is_interval"] + "_strand"]) * n(j1["_" + j1["_is_interval"] + "_is_strand"]) * n(j1[j1["_unique_interval"] + "_strand"]));
+				int32_t is2_strand = (n(j2[j2["_is_interval"] + "_strand"]) * n(j2["_" + j2["_is_interval"] + "_is_strand"]) * n(j2[j2["_unique_interval"] + "_strand"]));
 
 				// Remove these predictions from the list, $j2 first, so indices don't shift
 				jc.erase(jc.begin() + n(j2["_delete_index"]));
@@ -500,8 +491,8 @@ namespace breseq {
 				mut
 					("seq_id", j1[j1["_unique_interval"] + "_seq_id"])
 				;
-				mut["_start"] = (!uc1_strand) ? j2[j2["_unique_interval"] + "_position"] : j1[j1["_unique_interval"] + "_position"];
-				mut["_end"] = (!uc1_strand) ? j1[j1["_unique_interval"] + "_position"] : j2[j2["_unique_interval"] + "_position"];
+				mut["_start"] = (uc1_strand == -1) ? j2[j2["_unique_interval"] + "_position"] : j1[j1["_unique_interval"] + "_position"];
+				mut["_end"] = (uc1_strand == -1) ? j1[j1["_unique_interval"] + "_position"] : j2[j2["_unique_interval"] + "_position"];
 				mut["repeat_name"] = j1["_" + j1["_is_interval"] + "_is_name"];
 
 				//print Dumper($j1, $j2) if ($verbose);
@@ -532,13 +523,13 @@ namespace breseq {
 
 				// sometimes the ends of the IS are not quite flush
 				string j1_not_flush_seq = "";
-				if (!b(j1[j1["_is_interval"] + "_strand"]))
+				if (n(j1[j1["_is_interval"] + "_strand"]) == -1)
 				{
 					mut["_gap_left"] = s(n(j1[j1["_is_interval"] + "_position"]) - n(j1["_" + j1["_is_interval"] + "_is_end"]));
 
 					if (n(mut["_gap_left"]) > 0)
 					{
-						j1_not_flush_seq = get_sequence (
+						j1_not_flush_seq = ref_seq_info.get_sequence (
 							j1[j1["_is_interval"] + "_seq_id"],
 							n(j1["_" + j1["_is_interval"] + "_is_end"]) + 1,
 							n(j1[j1["_is_interval"] + "_position"])
@@ -550,7 +541,7 @@ namespace breseq {
 					mut["_gap_left"] = s(n(j1["_" + j1["_is_interval"] + "_is_start"]) - n(j1[j1["_is_interval"] + "_position"]));
 					if (n(mut["_gap_left"]) > 0)
 					{
-						j1_not_flush_seq = get_sequence (
+						j1_not_flush_seq = ref_seq_info.get_sequence (
 							j1[j1["_is_interval"] + "_seq_id"],
 							n(j1[j1["_is_interval"] + "_position"]),
 							n(j1["_" + j1["_is_interval"] + "_is_start"]) - 1
@@ -563,12 +554,12 @@ namespace breseq {
 					if (verbose)
 						cout << "J1 NF:" << j1_not_flush_seq << " U:" << j1_unique_read_sequence << endl;
 
-					if (j1["_" + j1["_is_interval"] + "_read_side"] != j1[j1["_is_interval"] + "_strand"])
+					if (n(j1["_" + j1["_is_interval"] + "_read_side"]) != n(j1[j1["_is_interval"] + "_strand"]))
 					{
 						j1_not_flush_seq = reverse_complement(j1_not_flush_seq);
 					}
 
-					if (!b(j1["_" + j1["_is_interval"] + "_read_side"]))
+					if (n(j1["_" + j1["_is_interval"] + "_read_side"]) == -1)
 					{
 						mut["_gap_left"] = j1_not_flush_seq + j1_unique_read_sequence;
 					}
@@ -584,12 +575,12 @@ namespace breseq {
 				}
 
 				string j2_not_flush_seq = "";
-				if (!b(j2[j2["_is_interval"] + "_strand"]))
+				if (n(j2[j2["_is_interval"] + "_strand"]) == -1)
 				{
 					mut["_gap_right"] = s(n(j2[j2["_is_interval"] + "_position"]) - n(j2["_" + j2["_is_interval"] + "_is_end"]));
 					if (n(mut["_gap_right"]) > 0)
 					{
-						j2_not_flush_seq = get_sequence (
+						j2_not_flush_seq = ref_seq_info.get_sequence (
 							j1[j2["_is_interval"] + "_seq_id"],
 							n(j2["_" + j2["_is_interval"] + "_is_end"]) + 1,
 							n(j2[j2["_is_interval"] + "_position"])
@@ -601,7 +592,7 @@ namespace breseq {
 					mut["_gap_right"] = s(n(j2["_" + j2["_is_interval"] + "_is_start"]) - n(j2[j2["_is_interval"] + "_position"]));
 					if (n(mut["_gap_right"]) > 0)
 					{
-						j2_not_flush_seq = get_sequence (
+						j2_not_flush_seq = ref_seq_info.get_sequence (
 							j1[j2["_is_interval"] + "_seq_id"],
 							n(j2[j2["_is_interval"] + "_position"]),
 							n(j2["_" + j2["_is_interval"] + "_is_start"]) - 1
@@ -615,12 +606,12 @@ namespace breseq {
 					if (verbose)
 						cout << "J2 NF:" << j2_not_flush_seq << " U:" << j2_unique_read_sequence << endl;
 
-					if (j2["_" + j2["_is_interval"] + "_read_side"] != j2[j2["_is_interval"] + "_strand"])
+					if ( n(j2["_" + j2["_is_interval"] + "_read_side"]) * n(j2[j2["_is_interval"] + "_strand"]) == -1)
 					{
 						j2_not_flush_seq = reverse_complement(j2_not_flush_seq);
 					}
 
-					if (!b(j2["_" + j2["_is_interval"] + "_read_side"]))
+					if (n(j2["_" + j2["_is_interval"] + "_read_side"]) == -1)
 					{
 						mut["_gap_right"] = j2_not_flush_seq + j2_unique_read_sequence;
 					}
@@ -645,13 +636,13 @@ namespace breseq {
 				if (verbose)
 					cout << mut["_gap_left"] << " :: " << mut["_gap_right"] << endl;
 
-				if (j1[j1["_unique_interval"] + "_strand"] != j1["_" + j1["_unique_interval"] + "_read_side"])
+				if ( n(j1[j1["_unique_interval"] + "_strand"]) != n(j1["_" + j1["_unique_interval"] + "_read_side"]))
 				{
 					if (verbose) cout << "RC left" << endl;
 					mut["_ins_start"] = reverse_complement(mut["_ins_start"]);
 				}
 
-				if (j2[j2["_unique_interval"] + "_strand"] != j2["_" + j2["_unique_interval"] + "_read_side"])
+				if ( n(j2[j2["_unique_interval"] + "_strand"]) != n(j2["_" + j2["_unique_interval"] + "_read_side"]))
 				{
 					if (verbose) cout << "RC right" << endl;
 					mut["_ins_end"] = reverse_complement(mut["_ins_end"]);
@@ -673,8 +664,8 @@ namespace breseq {
 					cout << "Max not flush length: " << max_not_flush_length << endl;
 				}
 
-				int32_t j1_is_overlap_length = n(!b(j1["_" + j1["_is_interval"] + "_read_side"]) ? j1["max_left"] : j1["max_right"]);
-				int32_t j2_is_overlap_length = n(!b(j2["_" + j2["_is_interval"] + "_read_side"]) ? j2["max_left"] : j2["max_right"]);
+				int32_t j1_is_overlap_length = (n(j1["_" + j1["_is_interval"] + "_read_side"]) == -1) ? n(j1["max_left"]) : n(j1["max_right"]);
+				int32_t j2_is_overlap_length = (n(j2["_" + j2["_is_interval"] + "_read_side"]) == -1) ? n(j2["max_left"]) : n(j2["max_right"]);
 
 				if (verbose) {
 					cout << "J1 IS overlap length: " << j1_is_overlap_length << endl;
@@ -682,9 +673,9 @@ namespace breseq {
 				}
 
 				string j1_is_seq_matched = "";
-				if (!b(j1[j1["_is_interval"] + "_strand"]))
+				if (n(j1[j1["_is_interval"] + "_strand"]) == -1)
 				{
-					j1_is_seq_matched = get_sequence (
+					j1_is_seq_matched = ref_seq_info.get_sequence (
 						j1[j1["_is_interval"] + "_seq_id"],
 						n(j1[j1["_is_interval"] + "_position"]) - (j1_is_overlap_length - 1),
 						n(j1[j1["_is_interval"] + "_position"]) - j1_not_flush_length
@@ -693,7 +684,7 @@ namespace breseq {
 				}
 				else
 				{
-					j1_is_seq_matched = get_sequence (
+					j1_is_seq_matched = ref_seq_info.get_sequence (
 						j1[j1["_is_interval"] + "_seq_id"],
 						n(j1[j1["_is_interval"] + "_position"]) + j1_not_flush_length,
 						n(j1[j1["_is_interval"] + "_position"]) + j1_is_overlap_length - 1
@@ -701,9 +692,9 @@ namespace breseq {
 				}
 
 				string j2_is_seq_matched = "";
-				if (!b(j2[j2["_is_interval"] + "_strand"]))
+				if (n(j2[j2["_is_interval"] + "_strand"]) == -1)
 				{
-					j2_is_seq_matched = get_sequence (
+					j2_is_seq_matched = ref_seq_info.get_sequence (
 						j2[j2["_is_interval"] + "_seq_id"],
 						n(j2[j2["_is_interval"] + "_position"]) - (j2_is_overlap_length - 1),
 						n(j2[j2["_is_interval"] + "_position"]) - j2_not_flush_length
@@ -712,7 +703,7 @@ namespace breseq {
 				}
 				else
 				{
-					j2_is_seq_matched = get_sequence (
+					j2_is_seq_matched = ref_seq_info.get_sequence (
 						j2[j2["_is_interval"] + "_seq_id"],
 						n(j2[j2["_is_interval"] + "_position"]) + j2_not_flush_length,
 						n(j2[j2["_is_interval"] + "_position"]) + j2_is_overlap_length - 1
@@ -721,13 +712,13 @@ namespace breseq {
 
 				// what are the actual sequences of this length at the end of the IS elements?
 
-				string j1_left_is_sequence = get_sequence (
+				string j1_left_is_sequence = ref_seq_info.get_sequence (
 					j1[j1["_is_interval"] + "_seq_id"],
 					n(j1["_" + j1["_is_interval"] + "_is_start"]),
 					n(j1["_" + j1["_is_interval"] + "_is_start"]) + j1_is_overlap_length - 1
 				);
 
-				string j1_right_is_sequence = get_sequence (
+				string j1_right_is_sequence = ref_seq_info.get_sequence (
 					j1[j1["_is_interval"] + "_seq_id"],
 					n(j1["_" + j1["_is_interval"] + "_is_end"]) - (j1_is_overlap_length - 1),
 					n(j1["_" + j1["_is_interval"] + "_is_end"])
@@ -742,13 +733,13 @@ namespace breseq {
 				// believe the direction if the sequences are different
 				bool j1_is_ambiguous = (j1_left_is_sequence == j1_right_is_sequence);
 
-				string j2_left_is_sequence = get_sequence (
+				string j2_left_is_sequence = ref_seq_info.get_sequence (
 					j2[j2["_is_interval"] + "_seq_id"],
 					n(j2["_" + j2["_is_interval"] + "_is_start"]),
 					n(j2["_" + j2["_is_interval"] + "_is_start"]) + j2_is_overlap_length - 1
 				);
 
-				string j2_right_is_sequence = get_sequence (
+				string j2_right_is_sequence = ref_seq_info.get_sequence (
 					j2[j2["_is_interval"] + "_seq_id"],
 					n(j2["_" + j2["_is_interval"] + "_is_end"]) - (j2_is_overlap_length - 1),
 					n(j2["_" + j2["_is_interval"] + "_is_end"])
@@ -768,7 +759,7 @@ namespace breseq {
 				}
 
 				// if the matched IS element sequences are the same then the direction is AMBIGUOUS
-				bool is_strand = false;
+				int32_t is_strand = 0;
 				if (j1_is_ambiguous && j2_is_ambiguous)
 				{
 					if (verbose) cout << "AMBIGUOUS strand for mobile element insertion" << endl;
@@ -791,7 +782,7 @@ namespace breseq {
 				////
 				//// We are still not checking for a case where one junction side extends far enough to uniquely define the
 				//// side of the IS, but the other side does not (giving it the wrong strand).
-
+				////
 
 				// Finally, do this AFTER checking for the IS-matched sequences...
 				// $j1 may be the left side, rather than the right side of the insertion, if so...
@@ -832,7 +823,7 @@ namespace breseq {
 				// must be on same sequence
 				   (j["side_1_seq_id"] != j["side_2_seq_id"])
 				// must be in same orientation (implies strands are opposite)
-				|| (j["side_1_strand"] == j["side_2_strand"])
+				|| (n(j["side_1_strand"]) == n(j["side_2_strand"]))
 			)
 				continue;
 
@@ -858,7 +849,7 @@ namespace breseq {
 				continue;
 
 			// 'AMP'
-			if (!b(j["unique_read_sequence"]))
+			if (j.entry_exists("unique_read_sequence"))
 			{
 				int32_t size = n(j["side_2_position"]) - n(j["side_1_position"]) + 1;
 				if (size < 0) continue; // this is a deletion!
@@ -882,7 +873,7 @@ namespace breseq {
 				string new_seq = j["unique_read_sequence"];
 				if (n(j["side_1_position"]) >= n(j["side_2_position"])) //TODO: When would this be false?
 				{
-					new_seq = get_sequence (
+					new_seq = ref_seq_info.get_sequence (
 						seq_id,
 						n(j["side_2_position"]),
 						n(j["side_1_position"])

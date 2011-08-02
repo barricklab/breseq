@@ -45,7 +45,6 @@ namespace breseq {
 
 	private:
 
-		string get_sequence(string seq_id, uint32_t start, uint32_t end);
 		cSequenceFeature* within_repeat(string seq_id, uint32_t position);
 
 	}; // class MutationPredictor
