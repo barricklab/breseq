@@ -290,6 +290,16 @@ namespace breseq
 		bool no_evidence;
 		bool shade_frequencies;
 		bool no_header;
+                inline string html_path(string input) {return "not implemented";}
+                bool verbose;
+                struct execution_time
+                {
+                  string _message;
+                  string _formatted_time_start; 
+                  string _formatted_time_end;
+                  string _formatted_time_elapsed;
+                  string _time_elapsed;
+                };
 
 		// Utility function to substitute specific details into a generic file name
 

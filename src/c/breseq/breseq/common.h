@@ -687,6 +687,8 @@ namespace breseq {
     X& operator*()  const throw()   {return *itsCounter->ptr;}
     X* operator->() const throw()   {return itsCounter->ptr;}
     X* get()        const throw()   {return itsCounter ? itsCounter->ptr : 0;}
+    bool defined() const throw()
+    {return (itsCounter == 0 || itsCounter==NULL) ? false : true;}
     bool unique()   const throw()
     {return (itsCounter ? itsCounter->count == 1 : true);}
     

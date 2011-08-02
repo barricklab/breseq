@@ -137,6 +137,7 @@ namespace breseq {
 
     map<string, vector<cSequenceFeature> > repeat_lists;
     static cSequenceFeature* find_closest_repeat_region(uint32_t position, vector<cSequenceFeature>& repeat_list_ref, uint32_t max_distance, int32_t direction);
+    vector<string> seq_ids; //< @GRC need to implement, get_keys(m_seq_id_to_index)?
   };
   
   /*! Helper function for creating cReferenceSequences

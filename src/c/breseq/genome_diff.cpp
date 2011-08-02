@@ -46,6 +46,7 @@ const char* NEW_COV="new_cov";
 const char* TOT_COV="tot_cov";
 const char* ERROR="error";
 
+
 // Types of diff entries:
 const char* SNP="SNP";
 const char* SUB="SUB";
@@ -893,6 +894,19 @@ diff_entry genome_diff::_line_to_item(const string& line)
 // #     }
 // #   }
 ///###############################
+  if(false) {//item._type == JC
+  item["side_1_seq_id"] = item["side_1\\_seq_id"];
+  item["side_1_position"] = item["side_1\\_position"];
+  item["side_1_strand"] = item["side_1\\_strand"];
+  item["side_2_seq_id"] = item["side_2\\_seq_id"];
+  item["side_2_position"] = item["side_2\\_position"];
+  item["side_2_strand"] = item["side_2\\_strand"];
+  item["side_1_jc"] = "NA"; //TODO Not sure why these arent in scope
+  item["side_2_jc"] = "NA";
+  }
+
+
+
   
  return item;
 }

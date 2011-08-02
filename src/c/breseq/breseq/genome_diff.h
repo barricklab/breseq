@@ -41,7 +41,7 @@ namespace breseq {
 	extern const char* POSITION;
 	extern const char* INSERT_POSITION;
 	extern const char* QUALITY;
-  extern const char* POLYMORPHISM_QUALITY;
+        extern const char* POLYMORPHISM_QUALITY;
 	extern const char* REF_BASE;
 	extern const char* NEW_BASE;
 	extern const char* FREQUENCY;
@@ -50,6 +50,15 @@ namespace breseq {
 	extern const char* NEW_COV;
 	extern const char* TOT_COV;
 	extern const char* ERROR;
+        //For JC
+        extern const char* _SIDE_1_SEQ_ID;
+        extern const char* _SIDE_1_POSITION;
+        extern const char* _SIDE_1_STRAND;
+        extern const char* _SIDE_2_SEQ_ID;
+        extern const char* _SIDE_2_POSITION;
+        extern const char* _SIDE_2_STRAND;
+        extern const char* _SIDE_KEY_JC;
+
   
   
   // Types of diff entries:

@@ -47,13 +47,6 @@ extern const char* NEW_SEQ;
 extern const char* NO_SHOW;
 extern const char* PLOT;
 extern const char* PREFIX;
-extern const char* SIDE_1_OVERLAP;
-extern const char* SIDE_1_POSITION;
-extern const char* SIDE_1_SEQ_ID;
-extern const char* SIDE_1_STRAND;
-extern const char* SIDE_2_POSITION;
-extern const char* SIDE_2_SEQ_ID;
-extern const char* SIDE_2_STRAND;
 extern const char* SIZE;
 extern const char* TRUNCATE_END;
 extern const char* TRUNCATE_START;
@@ -62,6 +55,17 @@ extern const char* _EVIDENCE_FILE_NAME;
 extern const char* _NEW_JUNCTION_EVIDENCE_FILE_NAME;
 extern const char* _SIDE_1_EVIDENCE_FILE_NAME; 
 extern const char* _SIDE_2_EVIDENCE_FILE_NAME;
+// For JC
+extern const char* SIDE_1_OVERLAP;
+extern const char* SIDE_1_POSITION;
+extern const char* SIDE_1_SEQ_ID;
+extern const char* SIDE_1_STRAND;
+extern const char* SIDE_2_POSITION;
+extern const char* SIDE_2_SEQ_ID;
+extern const char* SIDE_2_STRAND;
+extern const char* SIDE_1_JC;
+extern const char* SIDE_2_JC;
+
 /*-----------------------------------------------------------------------------
  *  HTML Attribute Keywords
  *-----------------------------------------------------------------------------*/
@@ -82,11 +86,13 @@ extern const char* ALIGN_LEFT;
   inline string a(const string& target, const string& input) 
     {return "<a href=\"" + target +"\">"+input+"</a>";} 
   //! Wraps input in <th></th> tags	which defines a header cell		
-  inline string th(const string& input) { return "<th>"+input+"</th>";}
+  inline string th(const string& input = "") { return "<th>"+input+"</th>";}
   inline string th(const string& attributes, const string& input) 
     {return "<th " + attributes + ">" + input + "</th>";}
-  //! Wraps input in <td></td> tags	which defines a standar cell		
-  inline string td(const string& input, const string& attributes = "")
+  //! Wraps input in <td></td> tags	which defines a standar cell
+  inline string start_td(const string& attributes)
+    {return "<td " + attributes + ">";}  
+  inline string td(const string& input="", const string& attributes = "")
     {return "<td " + attributes + ">" + input + "</td>";}
   //! Wraps input in <tr></tr> tags which define a row in an HTML table	
   inline string start_tr(const string& attributes = "") 
@@ -100,7 +106,11 @@ extern const char* ALIGN_LEFT;
   inline string font(const string& attributes, const string& input) 
     {return "<font " + attributes + ">" + input + "</font>";}
   inline string html_footer()
-    {return "/html";}
+    {return "</html>";}
+  inline string div(const string& attributes, const string& input)
+    {return "<div " + attributes + ">" + input + "</div>";}
+  inline string img(const string& target)
+    {return "<img src=\"" + target + "\" />";}
   
   //! Encodes dash, en dash and spaces to HTML
   string nonbreaking(const string& input);
@@ -116,31 +126,40 @@ extern const char* ALIGN_LEFT;
 class Html_Mutation_Table_String : public string
 {
   public:
-  	//!Constructors
-  	Html_Mutation_Table_String(Settings settings, genome_diff gd, vector<diff_entry> list_ref,
-  				   bool relative_link, bool legend_row, bool one_ref_seq,
-  				   vector<string> gd_name_list_ref, Options options);
-    Html_Mutation_Table_String();
+    //!Constructors
+    Html_Mutation_Table_String(
+                               Settings settings,
+                               genome_diff gd,
+                               genome_diff::entry_list_t list_ref,
+  			       vector<string> gd_name_list_ref,
+                               Options options,
+                               bool legend_row = false, 
+                               bool one_ref_seq = false,
+  			       string relative_link = "" 
+                               );
+    
+
+    Html_Mutation_Table_String();//<! Place Holder, delete when complete
   
   private: 
     //! Main Build Object
-   	//!Factory Methods
-  	void Header_Line();
-  	void Item_Lines();
-  	//!Helper Functions
-  	string freq_to_string(const string& freq);//!< Used in Item_Lines()
-  	string freq_cols(vector<string> freq_list);//!< Used in Item_Lines()
-   	uint8_t total_cols; //!< Shared between Factory Methods, set in Header_Line()
+    //!Factory Methods
+    void Header_Line();
+    void Item_Lines();
+    //!Helper Functions
+    string freq_to_string(const string& freq);//!< Used in Item_Lines()
+    string freq_cols(vector<string> freq_list);//!< Used in Item_Lines()
+    uint8_t total_cols; //!< Shared between Factory Methods, set in Header_Line()
 
-  	//!Parameters
-  	Settings settings;
-   	genome_diff gd;
-   	vector<diff_entry> list_ref;
-  	bool relative_link;
-   	bool legend_row;
-   	bool one_ref_seq;
-  	vector<string> gd_name_list_ref; 
-  	Options options;
+    //!Parameters
+    Settings settings;
+    genome_diff gd;
+    genome_diff::entry_list_t list_ref;
+    bool legend_row;
+    bool one_ref_seq;
+    vector<string> gd_name_list_ref; 
+    Options options;
+    string relative_link;
 };
 
 //TODO Below not fully complete
@@ -162,19 +181,9 @@ string html_new_junction_table_string
 /*-----------------------------------------------------------------------------
  *  Formatted_Mutation_Annotation
  *-----------------------------------------------------------------------------*/
-class Formatted_Mutation_Annotation : public string
-{
-  public:
-  	//!Constructor
-    Formatted_Mutation_Annotation(const diff_entry& mut);
+string formatted_mutation_annotation(diff_entry mut);
+string to_underline_red_codon(diff_entry mut,const string& codon_key);
 
-  private:
-  	//!Helper Function
-  	string To_Underline_Red_Codon(diff_entry mut, 
-  	                              const string& codon_key);
-    //!Parameters
-  	diff_entry mut;
-};
 /*-----------------------------------------------------------------------------
  *  Create_Evidence_Files
  *-----------------------------------------------------------------------------*/
@@ -189,6 +198,15 @@ struct Evidence_Files
   	bool entry_exists(const string in){return (fields.count(in) > 0);}
   };
 
+  struct Type_Not_Equal
+  {
+    string type;
+    Type_Not_Equal(string in_type)
+      : type(in_type)
+      {}
+    bool operator() (genome_diff::diff_entry_ptr item) { return (*item)._type != type;} 
+  };
+
   Evidence_Files(const Settings& settings, genome_diff& gd);
   
   private:
@@ -196,6 +214,9 @@ struct Evidence_Files
     void add_evidence(const string& file_name, diff_entry item,
                       diff_entry parent_item, map<string,string> fields);
     string file_name(Evidence_Item& evidence_item);
+    void html_evidence_file(Settings settings, genome_diff gd, Evidence_Item item);
+
+
 };
 
 /*-----------------------------------------------------------------------------
