@@ -31,6 +31,7 @@ namespace breseq {
 // pre-defs
 class cReferenceSequences;
 class pileup;
+class bam_alignment;
   
 /*! class alignment
     Represents a single alignment within a pileup.
@@ -38,6 +39,7 @@ class pileup;
 */
 class alignment_wrapper {
   public:
+    friend class bam_alignment;
     //! Constructor.
     alignment_wrapper() : _a(NULL) {};
     alignment_wrapper(const bam1_t* a) : _a(a) {};
@@ -369,7 +371,7 @@ public:
     data = NULL;
   }
 
-  bam_alignment(const bam1_t& _in)
+    bam_alignment(const bam1_t& _in) : alignment_wrapper(this)
   {
     l_aux = 0;
     data_len = 0;
@@ -377,12 +379,21 @@ public:
     data = NULL;
     bam_copy1(this, &_in);
   }
+    
+    bam_alignment(const alignment_wrapper& _in)  : alignment_wrapper(this)
+    {
+        l_aux = 0;
+        data_len = 0;
+        m_data = 0;
+        data = NULL;
+        bam_copy1(this, _in._a);
+    }
   
   bam_alignment(const bam_alignment& _in) : alignment_wrapper(_in._a)
   {
     l_aux = 0;
     data_len = 0;
-    m_data = 0;
+    m_data = 0; 
     data = NULL;
     bam_copy1(this, &_in);
   }
@@ -412,6 +423,7 @@ inline void print_alignment_list(const alignment_list& alignments)
 class tam_file {
 
 public:
+  tam_file() : input_tam(NULL) {}
   tam_file(const string& tam_file_name, const string& fasta_file_name, ios_base::openmode mode);
   ~tam_file();
   

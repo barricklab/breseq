@@ -376,6 +376,7 @@ void tam_file::write_alignments(
 		ll.push_back(a.read_name());
 		//if (verbose) cerr << a.read_name() << endl;
 		ll.push_back(to_string(fix_flags(a.flag())));
+        cout << "RefTargetID: " << a.reference_target_id() << "\n";
 		ll.push_back(bam_header->target_name[a.reference_target_id()]);
 		ll.push_back(to_string(a.reference_start_1()));
 		ll.push_back(to_string<uint32_t>(a.quality()));

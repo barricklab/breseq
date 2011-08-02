@@ -33,6 +33,7 @@ LICENSE AND COPYRIGHT
 #include "breseq/resolve_alignments.h"
 #include "breseq/settings.h"
 #include "breseq/tabulate_coverage.h"
+#include "breseq/contingency_loci.h"
 #include "breseq/mutation_predictor.h"
 #include "breseq/output.h"
 
