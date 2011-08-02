@@ -96,7 +96,13 @@ namespace breseq {
         m_definition("na"), 
         m_version("na"), 
         m_seq_id("na"),
-        m_features(0) {} ; 
+        m_features(0) {} ;
+    
+      // Utility to get yop strand sequence
+      string get_sequence(uint32_t start_1, uint32_t end_1) 
+      {
+        return m_fasta_sequence.m_sequence.substr(start_1 - 1, end_1 - start_1 + 1);
+      }
   };
 
   
@@ -129,8 +135,16 @@ namespace breseq {
     void WriteGFF( const string &file_name );  
       
     //!< Convert 
-    uint32_t seq_id_to_index(const string& seq_id) { return m_seq_id_to_index[seq_id]; };
+    uint32_t seq_id_to_index(const string& seq_id) 
+      { assert(m_seq_id_to_index.count(seq_id)); return m_seq_id_to_index[seq_id]; };
 
+    //!< Utility to get sequences by seq_id
+    string get_sequence(const string& seq_id, uint32_t start_1, uint32_t end_1) 
+    {
+      return (*this)[seq_id_to_index(seq_id)].get_sequence(start_1, end_1);
+    }
+
+    
     map<string,int32_t> seq_order;
     map<string,string> trims;
     map<string,string> ref_strings;
