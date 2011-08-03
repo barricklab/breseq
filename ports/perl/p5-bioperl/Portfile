@@ -1,0 +1,12 @@
+# -*- coding: utf-8; mode: tcl; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*- vim:fenc=utf-8:ft=tcl:et:sw=4:ts=4:sts=4
+# $Id$
+PortSystem          1.0
+PortGroup           perl5 1.0
+perl5.setup         Bioperl 1.6.0
+maintainers         nomaintainer
+description         Perl interface for bioinformatics.
+long_description    Perl modules for interacting with \
+                    biological sequences and data.
+platforms           darwin
+checksums           md5     5632c195fb7dcfa3c7cc9ae8b3d231bc
+master_sites        http://barricklab.org/dist/
