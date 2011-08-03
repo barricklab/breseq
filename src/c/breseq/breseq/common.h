@@ -667,7 +667,7 @@ namespace breseq {
     size_t found = file_name.rfind("/");
     return ((found != string::npos) ? file_name.substr(0, found) : "");
   }
-  
+
 // counted_ptr keeps track of number of references 
   
   template <class X> class counted_ptr

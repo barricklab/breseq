@@ -277,7 +277,8 @@ namespace breseq
 
 		struct Coverage
 		{
-			int32_t junction_coverage_cutoff;
+			double junction_coverage_cutoff;
+			double deletion_coverage_propagation_cutoff;
 		};
 
 		map<string, Coverage> unique_coverage;
