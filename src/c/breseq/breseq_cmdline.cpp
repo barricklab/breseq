@@ -1206,11 +1206,11 @@ int breseq_default_action(int argc, char* argv[])
 		}
 
 		string candidate_junction_summary_file_name = settings.file_name("candidate_junction_summary_file_name");
-		/*if (settings.do_step("candidate_junction_done_file_name", "Identifying candidate junctions"))
+		if (settings.do_step("candidate_junction_done_file_name", "Identifying candidate junctions"))
 		{
-			print STDERR "Identifying candidate junctions..." << endl;
+			cerr << "Identifying candidate junctions..." << endl;
 
-			my $cbreseq = settings.ctool("cbreseq");
+			/*my $cbreseq = settings.ctool("cbreseq");
 			my $readfiles = join(" --read-file ", settings.read_files);
 			my $data_path = settings.file_name("data_path");
 			my $candidate_junction_path = settings.file_name("candidate_junction_path");
@@ -1223,33 +1223,48 @@ int breseq_default_action(int argc, char* argv[])
 			my $reference_sequence_length = settings.{total_reference_sequence_length};
 			$cmdline .= " --reference-sequence-length $reference_sequence_length";
 
-			Breseq::Shared::system($cmdline);
+			Breseq::Shared::system($cmdline);*/
 
-			my $samtools = settings.ctool("samtools");
-			my $faidx_command = "$samtools faidx $candidate_junction_path/candidate_junction.fasta";
-			if (-s "$candidate_junction_path/candidate_junction.fasta" > 0)
-			{
-				Breseq::Shared::system($faidx_command);
-			}
+		    // File settings
+			settings.read_structures.Init(settings.read_files);
+			settings.preprocess_junction_split_sam_file_name = settings.file_name("candidate_junction_path") + "/#.split.sam";
+			settings.reference_fasta_file_name = settings.file_name("data_path") + "/reference.fasta";
+			settings.candidate_junction_fasta_file_name = settings.file_name("candidate_junction_path") + "/candidate_junction.fasta";
+
+			// Other settings
+			settings.maximum_read_length = summary.sequence_conversion.max_read_length;
+
+			// We should inherit the summary object from earlier steps
+			summary.sequence_conversion.total_reference_sequence_length = settings.total_reference_sequence_length;
+
+		    breseq::LoadFeatureIndexedFastaFile(ref_seq_info, "", settings.file_name("data_path") + "/reference.fasta");
+
+		    CandidateJunctions::identify_candidate_junctions(settings, summary, ref_seq_info);
+
+			string samtools = settings.ctool("samtools");
+			string filename = settings.file_name("candidate_junction_path") + "/candidate_junction.fasta";
+			string faidx_command = samtools + " faidx " + filename;
+			if (!file_empty(filename.c_str()))
+				system(faidx_command.c_str());
 			// @JEB Fix this -- no summary currently...
-			$summary->{candidate_junction} = {};
+			//summary.candidate_junction = {};
 
-			Storable::store($summary->{candidate_junction}, $candidate_junction_summary_file_name)
-				or die "Can"t store data in file $candidate_junction_summary_file_name!" << endl;
+			//Storable::store($summary->{candidate_junction}, $candidate_junction_summary_file_name)
+			//	or die "Can"t store data in file $candidate_junction_summary_file_name!" << endl;
 
-			Breseq::Output::record_time("Candidate junction identification");
+			//TODO: record_time("Candidate junction identification");
 
 			settings.done_step("candidate_junction_done_file_name");
 		}
 
 		//load this info
-		$summary->{candidate_junction} = Storable::retrieve($candidate_junction_summary_file_name);
-		die "Can"t retrieve data from file $candidate_junction_summary_file_name!\n" if (!$summary->{candidate_junction});
+		//$summary->{candidate_junction} = Storable::retrieve($candidate_junction_summary_file_name);
+		//die "Can"t retrieve data from file $candidate_junction_summary_file_name!\n" if (!$summary->{candidate_junction});
 
 
 		//
 		// Find matches to new junction candidates
-		sub candidate_junction_alignment {}
+		//sub candidate_junction_alignment {}
 		//
 
 		if (settings.do_step("candidate_junction_alignment_done_file_name", "Candidate junction alignment"))
@@ -1257,71 +1272,84 @@ int breseq_default_action(int argc, char* argv[])
 			settings.create_path("candidate_junction_alignment_path");
 
 			/// create ssaha2 hash
-			my $candidate_junction_hash_file_name = settings.file_name("candidate_junction_hash_file_name");
-			my $candidate_junction_fasta_file_name = settings.file_name("candidate_junction_fasta_file_name");
+			string candidate_junction_hash_file_name = settings.file_name("candidate_junction_hash_file_name");
+			string candidate_junction_fasta_file_name = settings.file_name("candidate_junction_fasta_file_name");
 
-			if (-s $candidate_junction_fasta_file_name > 0)
+			if (!file_empty(candidate_junction_fasta_file_name.c_str()))
 			{
-				if (!settings.{smalt})
+				if (!settings.smalt)
 				{
-					Breseq::Shared::system("ssaha2Build -rtype solexa -skip 1 -save $candidate_junction_hash_file_name $candidate_junction_fasta_file_name");
+					string command = "ssaha2Build -rtype solexa -skip 1 -save " + candidate_junction_hash_file_name + " " + candidate_junction_fasta_file_name;
+					system(command.c_str());
 				}
 				else
 				{
-					my $smalt = settings.ctool("smalt");
-					Breseq::Shared::system("$smalt index -k 13 -s 1 $candidate_junction_hash_file_name $candidate_junction_fasta_file_name");
+					string smalt = settings.ctool("smalt");
+					string command = smalt + " index -k 13 -s 1 " + candidate_junction_hash_file_name + " "+ candidate_junction_fasta_file_name;
+					system(command.c_str());
 				}
 			}
 
 
 			/// ssaha2 align reads to candidate junction sequences
 
-			foreach my $read_name (settings.read_files)
+			for (uint32_t i = 0; i < settings.read_files.size(); i++)
 			{
-				my $candidate_junction_sam_file_name = settings.file_name("candidate_junction_sam_file_name", {"//"=>$read_name});
+				string read_name = settings.read_files[i];
+				string candidate_junction_sam_file_name = settings.file_name("candidate_junction_sam_file_name", "//", read_name);
 
-				my $read_fastq_file = settings.read_file_to_fastq_file_name($read_name);
-				print "$read_fastq_file" << endl;
-
-				if (!settings.{smalt} && (-e "$candidate_junction_hash_file_name.base"))
+				string read_fastq_file = settings.read_file_to_fastq_file_name(read_name);
+				cout << read_fastq_file << endl;
+				string filename = candidate_junction_hash_file_name + ".base";
+				if (!settings.smalt && file_exists(filename.c_str()))
 				{
-					Breseq::Shared::system("ssaha2 -save $candidate_junction_hash_file_name -best 1 -rtype solexa -skip 1 -seeds 1 -output sam_soft -outfile $candidate_junction_sam_file_name $read_fastq_file");
+					string command = "ssaha2 -save " + candidate_junction_hash_file_name + " -best 1 -rtype solexa -skip 1 -seeds 1 -output sam_soft -outfile " + candidate_junction_sam_file_name + " " + read_fastq_file;
+					system(command.c_str());
 					// Note: Added -best parameter to try to avoid too many matches to redundant junctions!
 				}
-				elsif (-e "$candidate_junction_hash_file_name.sma")
+				else
 				{
-					my $smalt = settings.ctool("smalt");
-					Breseq::Shared::system("$smalt map -c 0.8 -x -n 2 -d 1 -f samsoft -o $candidate_junction_sam_file_name $candidate_junction_hash_file_name $read_fastq_file");
-					//-m 12
+					filename = candidate_junction_hash_file_name + ".sma";
+					if (file_exists(filename.c_str()))
+					{
+						string smalt = settings.ctool("smalt");
+						string command = smalt + " map -c 0.8 -x -n 2 -d 1 -f samsoft -o " + candidate_junction_sam_file_name + " " + candidate_junction_hash_file_name + " " + read_fastq_file;
+						system(command.c_str());
+						//-m 12
+					}
 				}
 			}
 
 			/// Delete the hash files immediately
-			if (!settings.{keep_all_intermediates})
+			if (!settings.keep_all_intermediates)
 			{
-				unlink "$candidate_junction_hash_file_name.base";
-				unlink "$candidate_junction_hash_file_name.body";
-				unlink "$candidate_junction_hash_file_name.head";
-				unlink "$candidate_junction_hash_file_name.name";
-				unlink "$candidate_junction_hash_file_name.size";
+				string filename = candidate_junction_hash_file_name + ".base";
+				remove(filename.c_str());
+				filename = candidate_junction_hash_file_name + ".body";
+				remove(filename.c_str());
+				filename = candidate_junction_hash_file_name + ".head";
+				remove(filename.c_str());
+				filename = candidate_junction_hash_file_name + ".name";
+				remove(filename.c_str());
+				filename = candidate_junction_hash_file_name + ".size";
+				remove(filename.c_str());
 			}
 
 			settings.done_step("candidate_junction_alignment_done_file_name");
-		}*/
+		}
 	}
-	/*
+	
 	//
 	// Resolve matches to new junction candidates
-	sub alignment_correction {}
+	//sub alignment_correction {}
 	//
 
-	my @hybrids;
-	my $alignment_correction_summary_file_name = settings.file_name("alignment_correction_summary_file_name");
+	string alignment_correction_summary_file_name = settings.file_name("alignment_correction_summary_file_name");
 	if (settings.do_step("alignment_correction_done_file_name", "Resolving alignments with candidate junctions"))
 	{
 		settings.create_path("alignment_correction_path");
 
-		my $cbreseq = settings.ctool("cbreseq");
+		/*my $cbreseq = settings.ctool("cbreseq");
 
 		my $cmdline = "$cbreseq RESOLVE_ALIGNMENTS";
 		my $base_output_path = settings.file_name("base_output_path");
@@ -1345,214 +1373,253 @@ int breseq_default_action(int argc, char* argv[])
 			$cmdline .= " --junction-cutoff $junction_cutoff";
 		}
 
-		Breseq::Shared::system($cmdline);
+		Breseq::Shared::system($cmdline);*/
+
+		cReadFiles rf(settings.read_files);
+
+		// Load the reference sequence info
+		LoadFeatureIndexedFastaFile(ref_seq_info, settings.reference_features_file_name, settings.reference_fasta_file_name);
+
+		// should be one coverage cutoff value for each reference sequence
+		vector<double> coverage_cutoffs;
+		for (uint32_t i = 0; i < ref_seq_info.seq_ids.size(); i++)
+			coverage_cutoffs.push_back(summary.preprocess_coverage[ref_seq_info.seq_ids[i]].junction_accept_score_cutoff);
+		assert(coverage_cutoffs.size() == ref_seq_info.size());
+
+		resolve_alignments(
+			settings,
+			summary,
+			ref_seq_info,
+			!options.count("no-junction-prediction"),
+			rf,
+			summary.sequence_conversion.max_read_length,
+			UNDEFINED
+		);
 
 		// need to fill this in
-		$summary->{alignment_correction} = {};
+		//$summary->{alignment_correction} = {};
 
-		my $alignment_correction_summary_file_name = settings.file_name("alignment_correction_summary_file_name");
-		Storable::store($summary->{alignment_correction}, $alignment_correction_summary_file_name)
-			or die "Can"t store data in file $alignment_correction_summary_file_name!" << endl;
-		Breseq::Output::record_time("Resolve candidate junctions");
+		string alignment_correction_summary_file_name = settings.file_name("alignment_correction_summary_file_name");
+		//Storable::store($summary->{alignment_correction}, $alignment_correction_summary_file_name)
+		//	or die "Can"t store data in file $alignment_correction_summary_file_name!" << endl;
+		//TODO: record_time("Resolve candidate junctions");
 		settings.done_step("alignment_correction_done_file_name");
 	}
-	$summary->{alignment_correction} = Storable::retrieve($alignment_correction_summary_file_name) if (-e $alignment_correction_summary_file_name);
+	//$summary->{alignment_correction} = Storable::retrieve($alignment_correction_summary_file_name) if (-e $alignment_correction_summary_file_name);
 
 
 	//
 	// Create BAM files
-	sub bam_creation {}
+	//sub bam_creation {}
 	//
 
 	if (settings.do_step("bam_done_file_name", "Creating BAM files"))
 	{
 		settings.create_path("bam_path");
 
-		my $reference_faidx_file_name = settings.file_name("reference_faidx_file_name");
-		my $candidate_junction_faidx_file_name = settings.file_name("candidate_junction_faidx_file_name");
+		string reference_faidx_file_name = settings.file_name("reference_faidx_file_name");
+		string candidate_junction_faidx_file_name = settings.file_name("candidate_junction_faidx_file_name");
 
-		my $resolved_junction_sam_file_name = settings.file_name("resolved_junction_sam_file_name");
-		my $junction_bam_unsorted_file_name = settings.file_name("junction_bam_unsorted_file_name");
-		my $junction_bam_prefix = settings.file_name("junction_bam_prefix");
-		my $junction_bam_file_name = settings.file_name("junction_bam_file_name");
+		string resolved_junction_sam_file_name = settings.file_name("resolved_junction_sam_file_name");
+		string junction_bam_unsorted_file_name = settings.file_name("junction_bam_unsorted_file_name");
+		string junction_bam_prefix = settings.file_name("junction_bam_prefix");
+		string junction_bam_file_name = settings.file_name("junction_bam_file_name");
 
-		my $samtools = settings.ctool("samtools");
+		string samtools = settings.ctool("samtools");
+		string command;
 
-		if (!settings.{no_junction_prediction})
+		if (!settings.no_junction_prediction)
 		{
-			Breseq::Shared::system("$samtools import $candidate_junction_faidx_file_name $resolved_junction_sam_file_name $junction_bam_unsorted_file_name");
-			Breseq::Shared::system("$samtools sort $junction_bam_unsorted_file_name $junction_bam_prefix");
-			unlink $junction_bam_unsorted_file_name if (!settings.{keep_all_intermediates});
-			Breseq::Shared::system("$samtools index $junction_bam_file_name");
+			command = samtools + " import " + candidate_junction_faidx_file_name + " " + resolved_junction_sam_file_name + " " + junction_bam_unsorted_file_name;
+			system(command.c_str());
+			command = samtools + " sort " + junction_bam_unsorted_file_name + " " + junction_bam_prefix;
+			system(command.c_str());
+			if (!settings.keep_all_intermediates)
+				remove(junction_bam_unsorted_file_name.c_str());
+			system(command.c_str());
+			command = samtools + " index " + junction_bam_file_name;
+			system(command.c_str());
 		}
 
-		my $resolved_reference_sam_file_name = settings.file_name("resolved_reference_sam_file_name");
-		my $reference_bam_unsorted_file_name = settings.file_name("reference_bam_unsorted_file_name");
-		my $reference_bam_prefix = settings.file_name("reference_bam_prefix");
-		my $reference_bam_file_name = settings.file_name("reference_bam_file_name");
+		string resolved_reference_sam_file_name = settings.file_name("resolved_reference_sam_file_name");
+		string reference_bam_unsorted_file_name = settings.file_name("reference_bam_unsorted_file_name");
+		string reference_bam_prefix = settings.file_name("reference_bam_prefix");
+		string reference_bam_file_name = settings.file_name("reference_bam_file_name");
 
-		Breseq::Shared::system("$samtools import $reference_faidx_file_name $resolved_reference_sam_file_name $reference_bam_unsorted_file_name");
-		Breseq::Shared::system("$samtools sort $reference_bam_unsorted_file_name $reference_bam_prefix");
-		unlink $reference_bam_unsorted_file_name if (!settings.{keep_all_intermediates});
-		Breseq::Shared::system("$samtools index $reference_bam_file_name");
+		command = samtools + " import " + reference_faidx_file_name + " " + resolved_reference_sam_file_name + " " + reference_bam_unsorted_file_name;
+		command = samtools + " sort " + reference_bam_unsorted_file_name + " " + reference_bam_prefix;
+		if (!settings.keep_all_intermediates)
+			remove(reference_bam_unsorted_file_name.c_str());
+		command = samtools + " index " + reference_bam_file_name;
 
 		// delete unneeded files
-		unlink $reference_bam_unsorted_file_name;
+		remove(reference_bam_unsorted_file_name.c_str());
 
 		settings.done_step("bam_done_file_name");
-	}*/
+	}
 
 	//
-	//  Graph paired read outliers (experimental)
-	// sub paired_read_distances {}
-	//
-	// {
-	// 	my @rs = settings.read_structures;
-	//
-	// 	my @min_pair_dist;
-	// 	my @max_pair_dist;
-	//
-	// 	my $paired = 0;
-	//
-	// 	my $i=0;
-	// 	foreach my $rfi (@{settings.{read_file_index_to_struct_index}})
-	// 	{
-	// 		$min_pair_dist[$i] = 0;
-	// 		$max_pair_dist[$i] = 0;
-	//
-	// 		if ($rs[$rfi]->{paired})
-	// 		{
-	// 			$paired = 1;
-	// 			$min_pair_dist[$i] = $rs[$rfi]->{min_pair_dist};
-	// 			$max_pair_dist[$i] = $rs[$rfi]->{max_pair_dist};
-	// 		}
-	// 		$i++;
-	// 	}
-	//
-	// 	my $long_pairs_file_name = settings.file_name("long_pairs_file_name");
-	//
-	// 	if ($paired && (!-e $long_pairs_file_name))
-	// 	{
-	//
-	// 		my $reference_sam_file_name = settings.file_name("resolved_reference_sam_file_name");
-	// 		my $reference_tam = Bio::DB::Tam->open($reference_sam_file_name) or die "Could not open $reference_sam_file_name";
-	//
-	// 		my $reference_faidx_file_name = settings.file_name("reference_faidx_file_name");
-	// 		my $reference_header = $reference_tam->header_read2($reference_faidx_file_name) or throw("Error reading reference fasta index file: $reference_faidx_file_name");
-	// 		my $target_names = $reference_header->target_name;
-	//
-	// 		my $save;
-	// 		my $on_alignment = 0;
-	// 		my $last;
-	//
-	// 		while (1)
-	// 		{
-	// 			$a = Bio::DB::Bam::Alignment->new();
-	// 			my $bytes = $reference_tam->read1($reference_header, $a);
-	// 			last if ($bytes <= 0);
-	//
-	//
-	// 			my $start       = $a->start;
-	// 		    my $end         = $a->end;
-	// 		    my $seqid       = $target_names->[$a->tid];
-	//
-	// 			$on_alignment++;
-	// 			print "$on_alignment\n" if ($on_alignment % 10000 == 0);
-	//
-	// 			//last if ($on_alignment > 100000);
-	//
-	// 			//print $a->qname . "" << endl;
-	//
-	// 			if (!$a->unmapped)
-	// 			{
-	// 				my $mate_insert_size = abs($a->isize);
-	// 				my $mate_end = $a->mate_end;
-	// 				my $mate_start = $a->mate_start;
-	// 				my $mate_reversed = 2*$a->mreversed + $a->reversed;
-	// 		 		my $mreversed = $a->mreversed;
-	// 		 		my $reversed = $a->reversed;
-	//
-	// 				my $fastq_file_index = $a->aux_get("X2");
-	// 				//print "$mate_insert_size $min_pair_dist[$fastq_file_index] $max_pair_dist[$fastq_file_index]" << endl;
-	// 				//if (($mate_insert_size < $min_pair_dist[$fastq_file_index]) || ($mate_insert_size > $max_pair_dist[$fastq_file_index]))
-	// 				if ((($mate_insert_size >= 400) && ($mate_insert_size < $min_pair_dist[$fastq_file_index])) || ($mate_insert_size > $max_pair_dist[$fastq_file_index]))
-	// 				{
-	// 					//correct pair
-	//
-	// 					if ($last && ($last->{start} == $mate_start))
-	// 					{
-	// 						$save->{int($start/100)}->{int($mate_start/100)}->{$mate_reversed}++;
-	// 						$save->{int($last->{start}/100)}->{int($last->{mate_start}/100)}->{$last->{mate_reversed}}++;
-	// 						undef $last;
-	// 					}
-	// 					else
-	// 					{
-	// 						($last->{mate_reversed}, $last->{start}, $last->{mate_start}) = ($mate_reversed, $start, $mate_start);
-	// 					}
-	//
-	// 					//$save->{$mate_reversed}->{int($start/100)}->{int($mate_start/100)}++;
-	// 				    //print $a->qname," aligns to $seqid:$start..$end, $mate_start $mate_reversed ($mreversed $reversed) $mate_insert_size" << endl;
-	// 				}
-	//
-	// 			}
-	// 		}
-	//
-	// 		open LP, ">$long_pairs_file_name" or die;
-	//
-	// 		foreach my $key_1 (sort {$a <=> $b} keys %$save)
-	// 		{
-	// 			foreach my $key_2 (sort {$a <=> $b} keys %{$save->{$key_1}})
-	// 			{
-	// 				foreach my $key_reversed (sort {$a <=> $b} keys %{$save->{$key_1}->{$key_2}})
-	// 				{
-	// 					print LP "$key_1\t$key_2\t$key_reversed\t$save->{$key_1}->{$key_2}->{$key_reversed}" << endl;
-	// 				}
-	// 			}
-	// 		}
-	// 		close LP;
-	// 	}
-	//
-	// 	if ($paired)
-	// 	{
-	// 		open LP, "$long_pairs_file_name" or die;
-	// 		while ($_ = <LP>)
-	// 		{
-	// 			chomp $_;
-	// 			my ($start, $end, $key_reversed);
-	// 		}
-	// 	}
-	// }
-	//
+	//#  Graph paired read outliers (experimental)
+	//# sub paired_read_distances {}
+	//#
+	//# {
+	//# 	my @rs = settings.read_structures;
+	//#
+	//# 	my @min_pair_dist;
+	//# 	my @max_pair_dist;
+	//#
+	//# 	my $paired = 0;
+	//#
+	//# 	my $i=0;
+	//# 	foreach my $rfi (@{settings.{read_file_index_to_struct_index}})
+	//# 	{
+	//# 		$min_pair_dist[$i] = 0;
+	//# 		$max_pair_dist[$i] = 0;
+	//#
+	//# 		if ($rs[$rfi]->{paired})
+	//# 		{
+	//# 			$paired = 1;
+	//# 			$min_pair_dist[$i] = $rs[$rfi]->{min_pair_dist};
+	//# 			$max_pair_dist[$i] = $rs[$rfi]->{max_pair_dist};
+	//# 		}
+	//# 		$i++;
+	//# 	}
+	//#
+	//# 	my $long_pairs_file_name = settings.file_name("long_pairs_file_name");
+	//#
+	//# 	if ($paired && (!-e $long_pairs_file_name))
+	//# 	{
+	//#
+	//# 		my $reference_sam_file_name = settings.file_name("resolved_reference_sam_file_name");
+	//# 		my $reference_tam = Bio::DB::Tam->open($reference_sam_file_name) or die "Could not open $reference_sam_file_name";
+	//#
+	//# 		my $reference_faidx_file_name = settings.file_name("reference_faidx_file_name");
+	//# 		my $reference_header = $reference_tam->header_read2($reference_faidx_file_name) or throw("Error reading reference fasta index file: $reference_faidx_file_name");
+	//# 		my $target_names = $reference_header->target_name;
+	//#
+	//# 		my $save;
+	//# 		my $on_alignment = 0;
+	//# 		my $last;
+	//#
+	//# 		while (1)
+	//# 		{
+	//# 			$a = Bio::DB::Bam::Alignment->new();
+	//# 			my $bytes = $reference_tam->read1($reference_header, $a);
+	//# 			last if ($bytes <= 0);
+	//#
+	//#
+	//# 			my $start       = $a->start;
+	//# 		    my $end         = $a->end;
+	//# 		    my $seqid       = $target_names->[$a->tid];
+	//#
+	//# 			$on_alignment++;
+	//# 			print "$on_alignment\n" if ($on_alignment % 10000 == 0);
+	//#
+	//# 			//#last if ($on_alignment > 100000);
+	//#
+	//# 			//#print $a->qname . "" << endl;
+	//#
+	//# 			if (!$a->unmapped)
+	//# 			{
+	//# 				my $mate_insert_size = abs($a->isize);
+	//# 				my $mate_end = $a->mate_end;
+	//# 				my $mate_start = $a->mate_start;
+	//# 				my $mate_reversed = 2*$a->mreversed + $a->reversed;
+	//# 		 		my $mreversed = $a->mreversed;
+	//# 		 		my $reversed = $a->reversed;
+	//#
+	//# 				my $fastq_file_index = $a->aux_get("X2");
+	//# 				//#print "$mate_insert_size $min_pair_dist[$fastq_file_index] $max_pair_dist[$fastq_file_index]" << endl;
+	//# 				//#if (($mate_insert_size < $min_pair_dist[$fastq_file_index]) || ($mate_insert_size > $max_pair_dist[$fastq_file_index]))
+	//# 				if ((($mate_insert_size >= 400) && ($mate_insert_size < $min_pair_dist[$fastq_file_index])) || ($mate_insert_size > $max_pair_dist[$fastq_file_index]))
+	//# 				{
+	//# 					//#correct pair
+	//#
+	//# 					if ($last && ($last->{start} == $mate_start))
+	//# 					{
+	//# 						$save->{int($start/100)}->{int($mate_start/100)}->{$mate_reversed}++;
+	//# 						$save->{int($last->{start}/100)}->{int($last->{mate_start}/100)}->{$last->{mate_reversed}}++;
+	//# 						undef $last;
+	//# 					}
+	//# 					else
+	//# 					{
+	//# 						($last->{mate_reversed}, $last->{start}, $last->{mate_start}) = ($mate_reversed, $start, $mate_start);
+	//# 					}
+	//#
+	//# 					//#$save->{$mate_reversed}->{int($start/100)}->{int($mate_start/100)}++;
+	//# 				    //print $a->qname," aligns to $seqid:$start..$end, $mate_start $mate_reversed ($mreversed $reversed) $mate_insert_size" << endl;
+	//# 				}
+	//#
+	//# 			}
+	//# 		}
+	//#
+	//# 		open LP, ">$long_pairs_file_name" or die;
+	//#
+	//# 		foreach my $key_1 (sort {$a <=> $b} keys %$save)
+	//# 		{
+	//# 			foreach my $key_2 (sort {$a <=> $b} keys %{$save->{$key_1}})
+	//# 			{
+	//# 				foreach my $key_reversed (sort {$a <=> $b} keys %{$save->{$key_1}->{$key_2}})
+	//# 				{
+	//# 					print LP "$key_1\t$key_2\t$key_reversed\t$save->{$key_1}->{$key_2}->{$key_reversed}" << endl;
+	//# 				}
+	//# 			}
+	//# 		}
+	//# 		close LP;
+	//# 	}
+	//#
+	//# 	if ($paired)
+	//# 	{
+	//# 		open LP, "$long_pairs_file_name" or die;
+	//# 		while ($_ = <LP>)
+	//# 		{
+	//# 			chomp $_;
+	//# 			my ($start, $end, $key_reversed);
+	//# 		}
+	//# 	}
+	//# }
+	//#
 
 	//
 	// Tabulate error counts and coverage distribution at unique only sites
 	//sub error_count {}
 	//
 
-	/*if (settings.do_step("error_counts_done_file_name", "Tabulating error counts"))
+	if (settings.do_step("error_counts_done_file_name", "Tabulating error counts"))
 	{
 		settings.create_path("error_calibration_path");
 
-		my $reference_fasta_file_name = settings.file_name("reference_fasta_file_name");
-		my $reference_bam_file_name = settings.file_name("reference_bam_file_name");
+		string reference_fasta_file_name = settings.file_name("reference_fasta_file_name");
+		string reference_bam_file_name = settings.file_name("reference_bam_file_name");
 
-		my $cbreseq = settings.ctool("cbreseq");
+		//my $cbreseq = settings.ctool("cbreseq");
 
 		// deal with distribution or error count keys being undefined...
-		my $coverage_fn = settings.file_name("unique_only_coverage_distribution_file_name", {"@"=>""});
-		my $outputdir = `dirname $coverage_fn`;
-		chomp $outputdir; $outputdir .= "/";
+		string coverage_fn = settings.file_name("unique_only_coverage_distribution_file_name", "@", "");
+		string outputdir = dirname(coverage_fn) + "/";
+		/*chomp $outputdir; $outputdir .= "/";
 		my $readfiles = join(" --readfile ", settings.read_files);
 		my $cmdline = "$cbreseq ERROR_COUNT --bam $reference_bam_file_name --fasta $reference_fasta_file_name --output $outputdir --readfile $readfiles --coverage";
 		$cmdline .= " --errors";
-		$cmdline .= " --minimum-quality-score settings.{base_quality_cutoff}" if (settings.{base_quality_cutoff});
+		$cmdline .= " --minimum-quality-score settings.{base_quality_cutoff}" if (settings.{base_quality_cutoff});*/
 
 	//----->//this line should be calculated
-		my $num_read_files = scalar(keys %{$summary->{sequence_conversion}->{reads}});
-		my $num_qual = $summary->{sequence_conversion}->{max_qual} + 1;
-		$cmdline .= " --covariates=read_set=$num_read_files,obs_base,ref_base,quality=$num_qual";
+		uint32_t num_read_files = summary.sequence_conversion.reads.size();
+		uint32_t num_qual = summary.sequence_conversion.max_qual + 1;
+		/*$cmdline .= " --covariates=read_set=$num_read_files,obs_base,ref_base,quality=$num_qual";
 	//		$cmdline .= " --covariates=read_set=$num_read_files,obs_base,ref_base,quality=$summary->{sequence_conversion}->{max_qual},base_repeat=5";
-		Breseq::Shared::system($cmdline);
+		Breseq::Shared::system($cmdline);*/
+
+		breseq::error_count(
+			reference_bam_file_name, // bam
+			reference_fasta_file_name, // fasta
+			outputdir, // output
+			settings.read_files, // readfile
+			true, // coverage
+			true, // errors
+			settings.base_quality_cutoff, // minimum quality score
+			"read_set=" + to_string(num_read_files) + ",obs_base,ref_base,quality=" + to_string(num_qual) // covariates
+		);
 
 		settings.done_step("error_counts_done_file_name");
 	}
@@ -1560,86 +1627,88 @@ int breseq_default_action(int argc, char* argv[])
 
 	//
 	// Calculate error rates
-	sub error_rates {}
+	//sub error_rates {}
 	//
 
 	settings.create_path("output_path"); //need output for plots
-	my $error_rates_summary_file_name = settings.file_name("error_rates_summary_file_name");
+	string error_rates_summary_file_name = settings.file_name("error_rates_summary_file_name");
 
 	if (settings.do_step("error_rates_done_file_name", "Re-calibrating base error rates"))
 	{
-		$summary->{unique_coverage} = {};
-		if (!settings.{no_deletion_prediction}) {
-			Breseq::CoverageDistribution::analyze_unique_coverage_distributions($settings, $summary, $ref_seq_info,
+		//$summary->{unique_coverage} = {};
+		if (!settings.no_deletion_prediction)
+			CoverageDistribution::analyze_unique_coverage_distributions(settings, summary, ref_seq_info,
 				"unique_only_coverage_plot_file_name", "unique_only_coverage_distribution_file_name");
+
+		string command;
+		for (uint32_t i = 0; settings.read_files.size(); i++) {
+			string read_file = settings.read_files[i];
+			string error_rates_base_qual_error_prob_file_name = settings.file_name("error_rates_base_qual_error_prob_file_name", "//", read_file);
+			string plot_error_rates_r_script_file_name = settings.file_name("plot_error_rates_r_script_file_name");
+			string plot_error_rates_r_script_log_file_name = settings.file_name("plot_error_rates_r_script_log_file_name", "//", read_file);
+			string error_rates_plot_file_name = settings.file_name("error_rates_plot_file_name", "//", read_file);
+			command = "R --vanilla in_file=" + error_rates_base_qual_error_prob_file_name + " out_file=" + error_rates_plot_file_name + " < " + plot_error_rates_r_script_file_name + " > " + plot_error_rates_r_script_log_file_name;
+			system(command.c_str());
 		}
 
-		foreach my $read_file (settings.read_files) {
-			my $error_rates_base_qual_error_prob_file_name = settings.file_name("error_rates_base_qual_error_prob_file_name", {"//" => $read_file});
-			my $plot_error_rates_r_script_file_name = settings.file_name("plot_error_rates_r_script_file_name");
-			my $plot_error_rates_r_script_log_file_name = settings.file_name("plot_error_rates_r_script_log_file_name", {"//" => $read_file});
-			my $error_rates_plot_file_name = settings.file_name("error_rates_plot_file_name", {"//" => $read_file});
-			Breseq::Shared::system("R --vanilla in_file=$error_rates_base_qual_error_prob_file_name out_file=$error_rates_plot_file_name < $plot_error_rates_r_script_file_name > $plot_error_rates_r_script_log_file_name");
-		}
-
-		Storable::store($summary->{unique_coverage}, $error_rates_summary_file_name) or die "Can"t store data in file $error_rates_summary_file_name!" << endl;
+		//Storable::store($summary->{unique_coverage}, $error_rates_summary_file_name) or die "Can"t store data in file $error_rates_summary_file_name!" << endl;
 		settings.done_step("error_rates_done_file_name");
 	}
-	$summary->{unique_coverage} = Storable::retrieve($error_rates_summary_file_name);
-	die "Can"t retrieve data from file $error_rates_summary_file_name!\n" if (!$summary->{unique_coverage});
+	//$summary->{unique_coverage} = Storable::retrieve($error_rates_summary_file_name);
+	//die "Can"t retrieve data from file $error_rates_summary_file_name!\n" if (!$summary->{unique_coverage});
 	//these are determined by the loaded summary information
-	settings.{unique_coverage} = $summary->{unique_coverage};
+	/*TODO:
+	settings.unique_coverage.clear();
+	settings.unique_coverage.insert(summary.unique_coverage.begin(), summary.unique_coverage.end());*/
 
 	//
 	// Make predictions of point mutations, small indels, and large deletions
-	sub mutation_prediction {}
+	//sub mutation_prediction {}
 	//
 
-	my @mutations;
-	my @deletions;
-	my @unknowns;
+	//my @mutations;
+	//my @deletions;
+	//my @unknowns;
 
-	if (!settings.{no_mutation_prediction})
+	if (!settings.no_mutation_prediction)
 	{
 		settings.create_path("mutation_identification_path");
 
 		if (settings.do_step("mutation_identification_done_file_name", "Read alignment mutations"))
 		{
-			my $error_rates;
+			//my $error_rates;
 
-			my $reference_fasta_file_name = settings.file_name("reference_fasta_file_name");
-			my $reference_bam_file_name = settings.file_name("reference_bam_file_name");
+			string reference_fasta_file_name = settings.file_name("reference_fasta_file_name");
+			string reference_bam_file_name = settings.file_name("reference_bam_file_name");
 
-			my $cbreseq = settings.ctool("cbreseq");
+			//my $cbreseq = settings.ctool("cbreseq");
 
-			my $coverage_fn = settings.file_name("unique_only_coverage_distribution_file_name", {"@"=>""});
-			my $error_dir = `dirname $coverage_fn`;
-			chomp $error_dir; $error_dir .= "/";
-			my $this_predicted_mutation_file_name = settings.file_name("predicted_mutation_file_name", {"@"=>""});
-			my $output_dir = `dirname $this_predicted_mutation_file_name`;
-			chomp $output_dir; $output_dir .= "/";
+			string coverage_fn = settings.file_name("unique_only_coverage_distribution_file_name", "@", "");
+			string error_dir = dirname(coverage_fn) + "/";
+			//chomp $error_dir; $error_dir .= "/";
+			string this_predicted_mutation_file_name = settings.file_name("predicted_mutation_file_name", "@", "");
+			string output_dir = dirname(this_predicted_mutation_file_name) + "/";
+			/*chomp $output_dir; $output_dir .= "/";
 			my $readfiles = join(" --readfile ", settings.read_files);
 			my $cmdline = "$cbreseq IDENTIFY_MUTATIONS --bam $reference_bam_file_name --fasta $reference_fasta_file_name --readfile $readfiles";
-			$cmdline .= " --error_dir $error_dir";
-			my $ra_mc_genome_diff_file_name = settings.file_name("ra_mc_genome_diff_file_name");
-			$cmdline .= " --genome_diff $ra_mc_genome_diff_file_name";
+			$cmdline .= " --error_dir $error_dir";*/
+			string ra_mc_genome_diff_file_name = settings.file_name("ra_mc_genome_diff_file_name");
+			/*$cmdline .= " --genome_diff $ra_mc_genome_diff_file_name";
 			$cmdline .= " --output $output_dir";
 			if(defined settings.{mutation_log10_e_value_cutoff}) {
 				$cmdline .= " --mutation_cutoff settings.{mutation_log10_e_value_cutoff}"; // defaults to 2.0.
-			}
-			my $coverage_tab_file_name = settings.file_name("complete_coverage_text_file_name", {"@"=>""});
-			my $coverage_dir = `dirname $coverage_tab_file_name`;
-			chomp $coverage_dir; $coverage_dir .= "/";
-			$cmdline .= " --coverage_dir $coverage_dir";
+			}*/
+			string coverage_tab_file_name = settings.file_name("complete_coverage_text_file_name", "@", "");
+			string coverage_dir = dirname(coverage_tab_file_name) + "/";
+			/*chomp $coverage_dir; $coverage_dir .= "/";
+			$cmdline .= " --coverage_dir $coverage_dir";*/
 
 			// It is important that these are in consistent order with the fasta file!!
-			foreach my $seq_id ( @{$ref_seq_info->{seq_ids}})
-			{
-				my $deletion_propagation_cutoff = settings.{unique_coverage}->{$seq_id}->{deletion_coverage_propagation_cutoff};
-				$cmdline .= " --deletion_propagation_cutoff $deletion_propagation_cutoff";
-			}
+			vector<double> deletion_propagation_cutoffs;
+			for (uint32_t i = 0; i < ref_seq_info.seq_ids.size(); i++)
+				deletion_propagation_cutoffs.push_back(settings.unique_coverage[ref_seq_info.seq_ids[i]].deletion_coverage_propagation_cutoff);
 
-			if((defined settings.{no_deletion_prediction}) && (settings.{no_deletion_prediction})) {
+			/*if((defined settings.{no_deletion_prediction}) && (settings.{no_deletion_prediction})) {
 				$cmdline .= "";
 			} else {
 				$cmdline .= " --predict_deletions"; // defaults TO predicting deletions.
@@ -1659,89 +1728,108 @@ int breseq_default_action(int argc, char* argv[])
 
 			$cmdline .= " --error_table $error_dir/error_rates.tab";
 
-			Breseq::Shared::system($cmdline);
+			Breseq::Shared::system($cmdline);*/
+
+			identify_mutations(
+				reference_bam_file_name,
+				reference_fasta_file_name,
+				error_dir,
+				ra_mc_genome_diff_file_name,
+				output_dir,
+				settings.read_files,
+				coverage_dir,
+				deletion_propagation_cutoffs,
+				settings.mutation_log10_e_value_cutoff, // mutation_cutoff
+				!settings.no_deletion_prediction,
+				settings.polymorphism_prediction,
+				settings.base_quality_cutoff, // minimum_quality_score
+				settings.polymorphism_log10_e_value_cutoff, // polymorphism_cutoff
+				settings.polymorphism_frequency_cutoff, //polymorphism_frequency_cutoff
+				error_dir + "/error_rates.tab",
+				false //per_position_file
+			);
 
 			settings.done_step("mutation_identification_done_file_name");
 		}
 
-		my $polymorphism_statistics_done_file_name = settings.file_name("polymorphism_statistics_done_file_name");
-		if (settings.{polymorphism_prediction} && settings.do_step("polymorphism_statistics_done_file_name", "Polymorphism statistics"))
+		string polymorphism_statistics_done_file_name = settings.file_name("polymorphism_statistics_done_file_name");
+		if (settings.polymorphism_prediction && settings.do_step("polymorphism_statistics_done_file_name", "Polymorphism statistics"))
 		{
-			Breseq::Shared::polymorphism_statistics($settings, $summary, $ref_seq_info);
+			//TODO: polymorphism_statistics(settings, summary, ref_seq_info);
 			settings.done_step("polymorphism_statistics_done_file_name");
 		}
 	}
 
 	//rewire which GenomeDiff we get data from if we have the elaborated polymorphism_statistics version
-	settings.{ra_mc_genome_diff_file_name} = settings.{polymorphism_statistics_ra_mc_genome_diff_file_name} if (settings.{polymorphism_prediction});
+	 if (settings.polymorphism_prediction)
+		settings.ra_mc_genome_diff_file_name = settings.polymorphism_statistics_ra_mc_genome_diff_file_name;
 
 	if (settings.do_step("output_done_file_name", "Output"))
 	{
 		///
 		// Output Genome Diff File
-		sub genome_diff_output {}
+		//sub genome_diff_output {}
 		///
-		print STDERR "Creating merged genome diff evidence file..." << endl;
+		cerr << "Creating merged genome diff evidence file..." << endl;
 
 		// merge all of the evidence GenomeDiff files into one...
-		settings.create_path("evidence_path");
-		my $jc_genome_diff_file_name = settings.file_name("jc_genome_diff_file_name");
-		my $jc_gd = GenomeDiff->new( {in => $jc_genome_diff_file_name} );
-		my $ra_mc_genome_diff_file_name = settings.file_name("ra_mc_genome_diff_file_name");
-		my $ra_mc_gd = GenomeDiff->new( {in => $ra_mc_genome_diff_file_name} );
-		my $evidence_genome_diff_file_name = settings.file_name("evidence_genome_diff_file_name");
-		my $evidence_gd = GenomeDiff::merge($jc_gd, $ra_mc_gd);
+		/*settings.create_path("evidence_path");
+		string jc_genome_diff_file_name = settings.file_name("jc_genome_diff_file_name");
+		genome_diff jc_gd = GenomeDiff->new( {in => $jc_genome_diff_file_name} );
+		string ra_mc_genome_diff_file_name = settings.file_name("ra_mc_genome_diff_file_name");
+		genome_diff ra_mc_gd = GenomeDiff->new( {in => $ra_mc_genome_diff_file_name} );
+		string evidence_genome_diff_file_name = settings.file_name("evidence_genome_diff_file_name");
+		genome_diff evidence_gd = GenomeDiff::merge($jc_gd, $ra_mc_gd);
 		$evidence_gd->write($evidence_genome_diff_file_name);
 
 
 		// predict mutations from evidence in the GenomeDiff
-		print STDERR "Predicting mutations from evidence..." << endl;
+		cerr << "Predicting mutations from evidence..." << endl;
 
-		my $gd;
-		my $final_genome_diff_file_name = settings.file_name("final_genome_diff_file_name");
+		genome_diff gd;
+		string final_genome_diff_file_name = settings.file_name("final_genome_diff_file_name");
 
-		my $cbreseq = settings.ctool("cbreseq");
-		my $maximum_read_length = $summary->{sequence_conversion}->{max_read_length};
-		my $base_output_path = settings.file_name("base_output_path");
-		my $cmdline = "$cbreseq PREDICT_MUTATIONS --maximum-read-length $maximum_read_length --path $base_output_path";
+		string cbreseq = settings.ctool("cbreseq");
+		string maximum_read_length = $summary->{sequence_conversion}->{max_read_length};
+		string base_output_path = settings.file_name("base_output_path");
+		string cmdline = "$cbreseq PREDICT_MUTATIONS --maximum-read-length $maximum_read_length --path $base_output_path";
 		Breseq::Shared::system($cmdline);
-		$gd = GenomeDiff->new({file_name => $final_genome_diff_file_name});
-		//unlink $evidence_genome_diff_file_name;
 
-		sub mutation_annotation {}
+		gd = GenomeDiff->new({file_name => $final_genome_diff_file_name});
+		//#unlink $evidence_genome_diff_file_name;
 
-		my @genbank_file_names = settings.file_name("reference_genbank_file_names");
-		my @junction_only_genbank_file_names = settings.file_name("junction_only_reference_genbank_file_names");
+		//sub mutation_annotation {}
+
+		vector<string> genbank_file_names = from_string<vector<string> >(settings.file_name("reference_genbank_file_names"));
+		vector<string> junction_only_genbank_file_names = from_string<vector<string> >(settings.file_name("junction_only_reference_genbank_file_names"));
 
 
 		//
 		// Annotate mutations
 		//
-		print STDERR "Annotating mutations..." << endl;
+		cerr << "Annotating mutations..." << endl;
 		Breseq::ReferenceSequence::annotate_mutations($ref_seq_info, $gd);
 
 		//
 		// Plot coverage of genome and large deletions
 		//
-		print STDERR "Drawing coverage plots..." << endl;
+		cerr << "Drawing coverage plots..." << endl;
 		Breseq::Output::draw_coverage($settings, $ref_seq_info, $gd);
 
 		//
 		// Mark lowest RA evidence items as no-show, or we may be drawing way too many alignments
 		//
 
-		my @ra = $gd->filter_used_as_evidence($gd->list("RA"));
+		diff_entry ra = gd.filter_used_as_evidence(gd.list("RA"));
 
 		@ra = grep { ($_->{frequency} != 0) && ($_->{frequency} != 1) && (!$_->{no_show})  } @ra;
 		@ra = sort { -($a->{quality} <=> $b->{quality}) } @ra;
 
-		for (my $i = settings.{max_rejected_polymorphisms_to_show}; $i< scalar @ra; $i++)
-		{
+		for (string i = settings.max_rejected_polymorphisms_to_show; i < scalar @ra; $i++)
 			$ra[$i]->{no_show} = 1;
-		}
 
 		// require a certain amount of coverage
-		foreach my $item ($gd->filter_used_as_evidence($gd->list("RA")))
+		foreach string item ($gd->filter_used_as_evidence($gd->list("RA")))
 		{
 			my ($top, $bot) = split /\//, $item->{tot_cov};
 			$item->{no_show} = 1 if ($top + $bot <= 2);
@@ -1755,52 +1843,50 @@ int breseq_default_action(int argc, char* argv[])
 		@jc = grep { $_->{reject} } @jc;
 
 		@jc = sort { -($a->{pos_hash_score} <=> $b->{pos_hash_score}) || -($a->{min_overlap_score} <=> $b->{min_overlap_score})  || ($a->{total_reads} <=> $a->{total_reads}) } @jc;
-		for (my $i = settings.{max_rejected_junctions_to_show}; $i< scalar @jc; $i++)
-		{
+		for (string i = settings.{max_rejected_junctions_to_show}; $i< scalar @jc; $i++)
 			$jc[$i]->{no_show} = 1;
-		}
 
 		//
 		// Create evidence files containing alignments and coverage plots
 		//
-		if (!settings.{no_alignment_generation})
+		if (!settings.no_alignment_generation)
 		{
-			Breseq::Output::create_evidence_files($settings, $gd);
+			Breseq::Output::create_evidence_files(settings, gd);
 		}
 
 		///
 		// HTML output
 		///
 
-		print STDERR "Creating index HTML table..." << endl;
+		cerr << "Creating index HTML table..." << endl;
 
-		my $index_html_file_name = settings.file_name("index_html_file_name");
+		string index_html_file_name = settings.file_name("index_html_file_name");
 		Breseq::Output::html_index($index_html_file_name, $settings, $summary, $ref_seq_info, $gd);
 
-		my $marginal_html_file_name = settings.file_name("marginal_html_file_name");
+		string marginal_html_file_name = settings.file_name("marginal_html_file_name");
 		Breseq::Output::html_marginal_predictions($marginal_html_file_name, $settings, $summary, $ref_seq_info, $gd);
 
 		///
 		// Temporary debug output using Data::Dumper
 		///
 
-		my $summary_text_file_name = settings.file_name("summary_text_file_name");
+		string summary_text_file_name = settings.file_name("summary_text_file_name");
 		open SUM, ">$summary_text_file_name";
 		print SUM Dumper($summary);
 		close SUM;
 
-		my $settings_text_file_name = settings.file_name("settings_text_file_name");
+		string settings_text_file_name = settings.file_name("settings_text_file_name");
 		open SETTINGS, ">$settings_text_file_name";
 		print SETTINGS Dumper($settings);
 		close SETTINGS;
 
 		// record the final time and print summary table
-		settings.record_end_time("Output");
+		settings.record_end_time("Output");*/
 
-		Breseq::Output::html_statistics(settings.{summary_html_file_name}, $settings, $summary, $ref_seq_info);
+		//TODO: html_statistics(settings.summary_html_file_name, settings, summary, ref_seq_info);
 
 		settings.done_step("output_done_file_name");
-	}*/
+	}
 }
 
 
