@@ -19,13 +19,6 @@ LICENSE AND COPYRIGHT
 
 #include "breseq/mutation_predictor.h"
 
-#include "breseq/alignment.h"
-#include "breseq/annotated_sequence.h"
-#include "breseq/genome_diff.h"
-#include "breseq/settings.h"
-#include "breseq/fastq.h"
-
-
 using namespace std;
 
 namespace breseq {

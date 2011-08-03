@@ -661,6 +661,12 @@ namespace breseq {
     return input;
   }
 
+  // Return the path of the file without the trailing forward-slash
+  inline string dirname(string file_name)
+  {
+    size_t found = file_name.rfind("/");
+    return ((found != string::npos) ? file_name.substr(0, found) : "");
+  }
   
 // counted_ptr keeps track of number of references 
   

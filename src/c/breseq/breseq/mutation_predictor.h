@@ -25,6 +25,7 @@ LICENSE AND COPYRIGHT
 #include "annotated_sequence.h"
 #include "genome_diff.h"
 #include "settings.h"
+#include "fastq.h"
 
 using namespace std;
 
@@ -34,7 +35,7 @@ namespace breseq {
 	{
 	public:
 
-    static cReferenceSequences ref_seq_info;
+		static cReferenceSequences ref_seq_info;
 
 		MutationPredictor(cReferenceSequences& ref_seq_info);
 		void predict(Settings& settings, genome_diff& gd, uint32_t max_read_length);

@@ -406,7 +406,16 @@ namespace breseq
 
 		struct Coverage
 		{
-			int32_t junction_accept_score_cutoff;
+			uint32_t junction_accept_score_cutoff;
+			uint32_t deletion_coverage_propagation_cutoff;
+			uint32_t junction_coverage_cutoff;
+			uint32_t junction_keep_score_cutoff;
+			string nbinom_size_parameter;
+			string nbinom_mean_parameter;
+			string nbinom_prob_parameter;
+			uint32_t average;
+			string variance;
+			string dispersion;
 		};
 		map<string, Coverage> preprocess_coverage;
 		map<string, Coverage> unique_coverage;
