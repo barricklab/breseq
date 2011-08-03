@@ -180,7 +180,7 @@ namespace breseq {
     
     for (uint16_t from_chr = 0; from_chr<=255; from_chr++) {
 
-      int16_t from_quality = from_chr - format_to_chr_offset[from_quality_type];
+      int32_t from_quality = from_chr - format_to_chr_offset[from_quality_type];
       
       // Calculate the probability of error
       double probability_of_error;
@@ -195,7 +195,7 @@ namespace breseq {
       }
       
       //Convert back to quality score
-      int to_quality;
+      int32_t to_quality;
             
       if (format_to_quality_type[to_quality_type] == "SOLEXA") {
         to_quality = round(10 * log((1-probability_of_error)/probability_of_error) / log(10));
@@ -205,11 +205,8 @@ namespace breseq {
         cerr << "Unknown base quality score type: " << to_quality_type << endl;
         exit(-1);
       }
-      
-      assert(to_quality >= 0);
-      
+            
       int16_t to_chr = to_quality + format_to_chr_offset[to_quality_type];
-
       
       // May be out of range
       if ((to_chr < 0) || (to_chr > 255)) continue;

@@ -735,7 +735,7 @@ namespace breseq {
 
 	string shifted_cigar_string(const alignment_wrapper& a, const cReferenceSequences& ref_seq_info)
 	{
-    bool verbose = true;
+    bool verbose = false;
     
 		string ref_seq = ref_seq_info[a.reference_target_id()].m_fasta_sequence.m_sequence;
 		uint32_t ref_seq_index = 0;
