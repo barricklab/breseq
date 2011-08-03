@@ -52,9 +52,7 @@ namespace breseq {
 
 	bool MutationPredictor::sort_by_hybrid(const counted_ptr<diff_entry>& a, const counted_ptr<diff_entry>& b)
 	{
-    
-		//return (a.field < b.field);
-		int32_t a_pos = n(a->entry_exists("_side_1_is") ? (*a)["side_2_position"] : (*a)["side_1_position"]);
+    int32_t a_pos = n(a->entry_exists("_side_1_is") ? (*a)["side_2_position"] : (*a)["side_1_position"]);
 		int32_t b_pos = n(b->entry_exists("_side_1_is") ? (*b)["side_2_position"] : (*b)["side_1_position"]);
 
 		int32_t a_seq_order = (a->entry_exists("_side_1_is") ? ref_seq_info.seq_order[(*a)["side_2_seq_id"]] : ref_seq_info.seq_order[(*a)["side_1_seq_id"]]);
@@ -64,13 +62,17 @@ namespace breseq {
 		uint32_t b_reject_order = number_reject_reasons(*b);
 
 		// sort by seq_id, position, fewer reject reasons, then score (highest to lowest)
-		return (
-			(a_seq_order != b_seq_order) ? (a_seq_order < b_seq_order) :
-			(a_pos != b_pos) ? (a_pos < b_pos) :
-			(a_reject_order != b_reject_order) ? (a_reject_order < b_reject_order) :
-			((*a)["pos_hash_score"] != (*b)["pos_hash_score"]) ? (n((*a)["pos_hash_score"]) > n((*b)["pos_hash_score"])) :
-			(n((*a)["min_overlap_score"]) > n((*b)["min_overlap_score"]))
-		);
+    
+    if (a_seq_order != b_seq_order) 
+      return (a_seq_order < b_seq_order);
+    if (a_pos != b_pos) 
+      return (a_pos < b_pos);
+    if (a_reject_order != b_reject_order) 
+      return (a_reject_order < b_reject_order);
+    if ((*a)["pos_hash_score"] != (*b)["pos_hash_score"]) 
+      return (n((*a)["pos_hash_score"]) > n((*b)["pos_hash_score"]));
+    
+    return (n((*a)["min_overlap_score"]) > n((*b)["min_overlap_score"]));
 	}
 
 	bool MutationPredictor::sort_by_reject_score(const counted_ptr<diff_entry>& a, const counted_ptr<diff_entry>& b)
@@ -79,10 +81,10 @@ namespace breseq {
 		uint32_t b_reject_order = number_reject_reasons(*b);
 
 		// sort by seq_id, position, fewer reject reasons, then score (highest to lowest)
-		return (
-			(a_reject_order != b_reject_order) ? (a_reject_order < b_reject_order) :
-			(n((*a)["score"]) < n((*b)["score"]))
-		);
+    if (a_reject_order != b_reject_order) 
+      return (a_reject_order < b_reject_order);
+            
+    return (n((*a)["pos_hash_score"]) > n((*b)["pos_hash_score"]));
 	}
 
 	// look at SNPs and small indels predicted by read alignments.
@@ -400,13 +402,13 @@ namespace breseq {
 		{
 			diff_entry& j = **it;
 		
-			// Ah, we don't have an IS, we are done
+			// Junction isn't near an IS. Move on.
 			if (!j.entry_exists("_is_interval")) continue;
 
-			// Ah, there is no overlap to play with, we are done
+			// There is no overlap to correct. Move on.
 			if (n(j["overlap"]) <= 0) continue;
 
-			// The following code implies $j->{overlap} > 0
+			// The following code implies n(j["overlap"]) > 0
 
 			/// first, adjust the repetitive sequence boundary to get as close to the IS as possible
 			int32_t is_interval_position = n(j[j["_is_interval"] + "_position"]);
@@ -432,7 +434,7 @@ namespace breseq {
 		for (uint32_t i = 0; i < jc.size(); i++) //JC1
 		{
 			diff_entry& j1 = *jc[i];
-
+      
 			// Compile a list of the next possibilities within a certain length of bases
       genome_diff::entry_list_t j2_list;
 			
@@ -451,9 +453,9 @@ namespace breseq {
 
 				j2["_delete_index"] = s(i + j); // for remembering what to delete if this one succeeds
 				j2_list.push_back(jc[i+j]);
-
-				j++;
 			}
+      if (verbose)
+        cout << "Size of J2 list: " << j2_list.size() << endl;
 
 			//sort the $j2_list by reject reason and score
 
@@ -465,6 +467,20 @@ namespace breseq {
 			{
 				diff_entry& j2 = **it;
 
+        if (verbose) 
+        {
+          cout << "Sorted: == J1 ==" << endl;
+          for(map<string,string>::iterator it=j1._fields.begin(); it!=j1._fields.end(); it++)
+          {
+            cout << it->first << " = " << it->second << endl; 
+          }
+          cout << "Sorted: == J2 ==" << endl;
+          for(map<string,string>::iterator it=j2._fields.begin(); it!=j2._fields.end(); it++)
+          {
+            cout << it->first << " = " << it->second << endl; 
+          }
+        }
+        
 				// positive overlap should be resolved by now
 				assert(n(j1["overlap"]) <= 0);
 				assert(n(j2["overlap"]) <= 0);
@@ -472,11 +488,11 @@ namespace breseq {
 				// the first unique coords are going into the IS element
 				int32_t uc1_strand = n(j1[j1["_unique_interval"] + "_strand"]);
 				int32_t uc2_strand = n(j2[j2["_unique_interval"] + "_strand"]);
-				if (uc1_strand == uc2_strand) continue;
+				if (uc1_strand != -uc2_strand) continue;
 
 				// What strand is the IS on relative to the top strand of the genome
-				int32_t is1_strand = (n(j1[j1["_is_interval"] + "_strand"]) * n(j1["_" + j1["_is_interval"] + "_is_strand"]) * n(j1[j1["_unique_interval"] + "_strand"]));
-				int32_t is2_strand = (n(j2[j2["_is_interval"] + "_strand"]) * n(j2["_" + j2["_is_interval"] + "_is_strand"]) * n(j2[j2["_unique_interval"] + "_strand"]));
+				int32_t is1_strand = - (n(j1[j1["_is_interval"] + "_strand"]) * n(j1["_" + j1["_is_interval"] + "_is_strand"]) * n(j1[j1["_unique_interval"] + "_strand"]));
+				int32_t is2_strand = - (n(j2[j2["_is_interval"] + "_strand"]) * n(j2["_" + j2["_is_interval"] + "_is_strand"]) * n(j2[j2["_unique_interval"] + "_strand"]));
 
 				// Remove these predictions from the list, $j2 first, so indices don't shift
 				jc.erase(jc.begin() + n(j2["_delete_index"]));
@@ -803,6 +819,28 @@ namespace breseq {
 				if (verbose)
 					cout << mut["_gap_left"] << " :: " << mut["_gap_right"] << endl;
 
+        // print out everything
+        if (verbose)
+        {
+          cout << "== J1 ==" << endl;
+          for(map<string,string>::iterator it=j1._fields.begin(); it!=j1._fields.end(); it++)
+          {
+            cout << it->first << " = " << it->second << endl; 
+          }
+          
+          cout << "== J2 ==" << endl;
+          for(map<string,string>::iterator it=j2._fields.begin(); it!=j2._fields.end(); it++)
+          {
+            cout << it->first << " = " << it->second << endl; 
+          }
+          
+          cout << "== Mut ==" << endl;
+          for(map<string,string>::iterator it=mut._fields.begin(); it!=mut._fields.end(); it++)
+          {
+            cout << it->first << " = " << it->second << endl; 
+          }
+        }
+        
 				gd.add(mut);
 				break; // next JC1
 			}
