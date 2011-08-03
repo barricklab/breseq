@@ -102,7 +102,7 @@ namespace breseq {
             int maxdiff = 0;
             
             //Finds the max and min diff with respect to the length of the original repeat
-            for( int i=0; i<repeats.size(); i++ ){
+            for( size_t i=0; i<repeats.size(); i++ ){
                 vector<string> bounds = split( split( repeats[i].region, ":" )[1], "-" );
                 int length = atoi( bounds[1].c_str() ) - atoi( bounds[0].c_str() );
                 //out << repeats[i].region << ":" << length << " ";
@@ -114,9 +114,9 @@ namespace breseq {
                 }
                 
                 //Finds the greatest del
-                for( int j=0; j<repeats[i].freqs.size(); j++ ){
+                for( size_t j=0; j<repeats[i].freqs.size(); j++ ){
                     if( repeats[i].freqs[j] != 0 ){
-                        if( j-length < mindiff ){
+                        if( static_cast<int32_t>(j)-length < mindiff ){
                             mindiff = j-length;
                         }
                         break;
@@ -128,13 +128,13 @@ namespace breseq {
             //cout << mindiff << ":" << maxdiff << "\n";
             //getchar();
             
-            for( int i=0; i<repeats.size(); i++ ){
+            for( size_t i=0; i<repeats.size(); i++ ){
                 vector<string> bounds = split( split( repeats[i].region, ":" )[1], "-" );
                 int length = atoi( bounds[1].c_str() ) - atoi( bounds[0].c_str() );
-                for( int j=mindiff+length; j<repeats[i].freqs.size(); j++ ){
+                for( size_t j=mindiff+length; j<repeats[i].freqs.size(); j++ ){
                     out << repeats[i].freqs[j] << " ";
                 }
-                for( int j=0; j<length+maxdiff-repeats[i].freqs.size(); j++ ){
+                for( size_t j=0; j<length+maxdiff-repeats[i].freqs.size(); j++ ){
                     out << 0 << " ";
                 }
                 out << bounds[0];

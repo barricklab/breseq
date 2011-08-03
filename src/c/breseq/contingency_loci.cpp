@@ -72,7 +72,7 @@ void analyze_contingency_loci(
     
     cout << "Analyzing alignments...\n";
     // For each repeat
-    for( int i=0; i<hr.size(); i++ ){
+    for( size_t i=0; i<hr.size(); i++ ){
         //cout << ".";
         //cout.flush();
         // Makes the region string
@@ -98,13 +98,13 @@ void analyze_contingency_loci(
 void identify_homopolymer_repeats(homopolymer_repeat_list& hr, const cReferenceSequences& ref_seqs)
 {
     //For each sequence
-    for( int i=0; i<ref_seqs.size(); i++ ){
+    for( size_t i=0; i<ref_seqs.size(); i++ ){
         
         char base = ' ';
         int rnumber = 0;
         
         // For each nucleotide in the sequence
-        for( int j=0; j<ref_seqs[i].m_fasta_sequence.m_sequence.size(); j++ ){
+        for( size_t j=0; j<ref_seqs[i].m_fasta_sequence.m_sequence.size(); j++ ){
             if( ref_seqs[i].m_fasta_sequence.m_sequence[j] == base ){
                 rnumber++;
             }
@@ -175,8 +175,8 @@ void contingency_loci_pileup::analyze_contingency_locus(const string& region) {
     }*/
     
     int boo = 0;
-    for( int i=0; i<indices.size(); i++ ){
-        if( indices[i] == current_region.start ){
+    for( size_t i=0; i<indices.size(); i++ ){
+        if( static_cast<uint32_t>(indices[i]) == current_region.start ){
             boo = 1;
         }
     }
@@ -195,7 +195,7 @@ void contingency_loci_pileup::analyze_contingency_locus(const string& region) {
     vector<double> histogram(1,0);
     int count = 0;
     //printf( "Freqs.size(): %i\n", repeats.back().freqs.size() );
-    for( int i=0; i<repeats.back().freqs.size(); i++ ){
+    for( size_t i=0; i<repeats.back().freqs.size(); i++ ){
         //printf( "%f ", repeats.back().freqs[i] );
         if( histogram.size() < repeats.back().freqs[i]+1 ){
             histogram.resize( repeats.back().freqs[i]+1 );
@@ -245,7 +245,7 @@ void contingency_loci_pileup::fetch_callback(const alignment_wrapper& a) {
     int dist_to_first_match = 0;
     
     // Goes through cigar to see if the alignment is appropriate. Then counts the length of the repeat
-    for( int i=0; i<cigar_pair.size(); i++ ){
+    for( size_t i=0; i<cigar_pair.size(); i++ ){
         if( cigar_pair[i].first == 'S' ){
             dist_to_first_match += cigar_pair[i].second;
         }
@@ -268,7 +268,7 @@ void contingency_loci_pileup::fetch_callback(const alignment_wrapper& a) {
                     int cigar_start_pos;
 
                     
-                    for( int j=0; j+i<cigar_pair.size(); j++ ){
+                    for( size_t j=0; j+i<cigar_pair.size(); j++ ){
                         if( cigar_pair[i+j].first == 'M' ){
                             if( ref_bypass_length - cigar_pair[i+j].second >= 0 ){
                                 read_bypass_length += cigar_pair[i+j].second;
@@ -303,9 +303,9 @@ void contingency_loci_pileup::fetch_callback(const alignment_wrapper& a) {
                     int read_repeat_length = 0;
                     int ref_repeat_length = current_region.length;
 
-                    for( int j=cigar_start_pos; j<cigar_pair.size(); j++ ){
+                    for( size_t j=cigar_start_pos; j<cigar_pair.size(); j++ ){
                         
-                        if( cigar_pair[j].first == 'M' && j == cigar_start_pos ){
+                        if( cigar_pair[j].first == 'M' && j == static_cast<uint32_t>(cigar_start_pos) ){
                             if( ref_repeat_length - (cigar_pair[j].second - ref_bypass_length) >= 0 ){
                                 ref_repeat_length -= (cigar_pair[j].second - ref_bypass_length);
                                 read_repeat_length += (cigar_pair[j].second - ref_bypass_length);
@@ -330,7 +330,7 @@ void contingency_loci_pileup::fetch_callback(const alignment_wrapper& a) {
                             
                         }
                         
-                        else if( cigar_pair[j].first == 'D' && j == cigar_start_pos ){
+                        else if( cigar_pair[j].first == 'D' && j == static_cast<uint32_t>(cigar_start_pos) ){
                             if( ref_repeat_length - (cigar_pair[j].second - ref_bypass_length) >= 0 ){
                                 ref_repeat_length -= (cigar_pair[j].second - ref_bypass_length);
                                                             }

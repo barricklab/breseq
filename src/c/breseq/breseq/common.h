@@ -231,10 +231,10 @@ namespace breseq {
 	};
 
 
-	template <class T, class U> inline vector<T> get_keys(map<T,U> input)
+	template <class T, class U> inline vector<T> get_keys(const map<T,U>& input)
 	{
 		vector<T> retval;
-		for (class map<T,U>::iterator it = input.begin(); it != input.end(); it++)
+		for (class map<T,U>::const_iterator it = input.begin(); it != input.end(); it++)
 			retval.push_back(it->first);
 		return retval;
 	}
