@@ -93,7 +93,9 @@ for (i in trunc(m/4):length(X$ma))
 ##
 
 start_i = floor(max_i/2);
-end_i <-i
+end_i = min(ceiling(max_i*10), length(X$ma));
+
+cat(start_i, " ", end_i, "\n", sep="")
 
 
 ##
@@ -116,7 +118,7 @@ end_i <-i
 #end_i <-i
 
 ##
-# Now preform fitting to the censored data
+# Now perform fitting to the censored data
 ##
 
 inner_total<-0;
@@ -238,11 +240,14 @@ axis(1, cex.lab=1.2, cex.axis=1.2, labels=T)
 box()
 
 #graph the coverage as points
-fit_data <- subset(X, coverage>=start_i);
+fit_data <- subset(X, (coverage>=start_i) & (coverage<=end_i) );
 points(fit_data$coverage, fit_data$n, pch=my_pch, col=my_col, bg="white", cex=1.2)
 
 #graph the censored coverage as red points
-censored_data <- subset(X, coverage<start_i);
+cat(start_i, " ", end_i, "\n", sep="")
+
+censored_data <- subset(X, (coverage<start_i) | (coverage>end_i) );
+
 points(censored_data$coverage, censored_data$n, pch=my_pch, col=my_col_censored, bg="white", cex=1.2)
 
 #graph the poisson fit IF REQUESTED

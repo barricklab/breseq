@@ -243,7 +243,7 @@ sub add
 	}
 	elsif ( $self->used_unique_id( $item->{id}) && !(($item->{id} eq '.') || ($item->{id} eq '+') || ($item->{id} eq '?')))
 	{
-		$self->warn("Ignoring attempt to add item with an existing id: $item->{id}");
+		print "Ignoring attempt to add item with an existing id: $item->{id}\n";
 		return;
 	}
 
@@ -259,7 +259,7 @@ sub add
 	my $spec = $line_specification->{$item->{type}};
 	if (!defined $spec)
 	{
-		$self->warn("Type \'$item->{type}\' is not recognized. Ignoring item.");
+		print "Type \'$item->{type}\' is not recognized. Ignoring item.\n";
 		return;
 	}
 	
@@ -271,7 +271,7 @@ sub add
 
 	if (scalar @missing_required_columns > 0)
 	{
-		$self->warn("GenomeDiff::Ignoring item of type \'$item->{type}\' that is missing required field(s):" . join (',', @missing_required_columns));
+		print "GenomeDiff::Ignoring item of type \'$item->{type}\' that is missing required field(s):" . join (',', @missing_required_columns) . "\n";
 		return;
 	}
 
@@ -405,7 +405,7 @@ sub _line_to_item
 	my $spec = $line_specification->{$item->{type}};
 	if (!defined $spec)
 	{
-		$self->warn("Type \'$item->{type}\' is not recognized for line:\n$line");
+		print "Type \'$item->{type}\' is not recognized for line:\n$line\n";
 		return undef;
 	}
 	
@@ -454,12 +454,12 @@ sub _line_to_item
 		my $next = shift @line_list;
 		if (!defined $next)
 		{
-			$self->warn("Number of required items is less than expected for type \'$item->{type}\' line:\n$line");
+			print "Number of required items is less than expected for type \'$item->{type}\' line:\n$line\n";
 			return undef;
 		}
 		if ($next =~ m/=/) 
 		{
-			$self->warn("Unexpected key=value pair \'$next\' encountered for required item \'$key\' in type \'$item->{type}\' line:\n$line");
+			print "Unexpected key=value pair \'$next\' encountered for required item \'$key\' in type \'$item->{type}\' line:\n$line\n";
 #			return undef;
 		}
 		
@@ -474,7 +474,7 @@ sub _line_to_item
 		my $matched = ($key_value_pair =~ m/^(.+)=(.+)$/);
 		if (!$matched)
 		{
-			$self->warn("Not a key value pair \'$key_value_pair\' line:\n$line");
+			print "Not a key value pair \'$key_value_pair\' line:\n$line\n";
 			next;
 		}		
 		
@@ -507,7 +507,7 @@ sub _item_to_line
 	my $spec = $line_specification->{$item->{type}};
 	if (!defined $spec)
 	{
-		$self->warn("Type \'$item->{type}\' not found for item. Ignoring.");
+		print "Type \'$item->{type}\' not found for item. Ignoring.\n";
 		print Dumper($item);
 		return '';
 	}
@@ -564,7 +564,7 @@ sub read
 {
 	my ($self, $file_name) = @_;
 	
-	open IN, "<$file_name" or $self->throw("Could not open file for reading: $file_name");
+	open IN, "<$file_name" or die "Could not open file for reading: $file_name";
 
 	#read lines, skip comment lines, and blank lines
 	my @lines = <IN>;
@@ -575,7 +575,7 @@ sub read
 		
 	## read version from first line
 	my $l = shift @lines;
-	($l =~ m/#=GENOME_DIFF\s+(\d+)/) or ($l =~ m/#=GENOMEDIFF\s+(\d+)/)  or $self->throw("Could not match version line in file $self->{file_name}.");
+	($l =~ m/#=GENOME_DIFF\s+(\d+)/) or ($l =~ m/#=GENOMEDIFF\s+(\d+)/)  or die "Could not match version line in file $self->{file_name}.";
 	$self->{version} = $1;
 
 	## read header information
@@ -610,7 +610,7 @@ sub write
 	my ($self, $file_name, $no_sort) = @_;
 
 	## read version from first line
-	open OUT, ">$file_name" or $self->throw("Could not write file: $file_name");
+	open OUT, ">$file_name" or die "Could not write file: $file_name";
 	print OUT "#=GENOME_DIFF 1.0\n";
 #	print OUT "#=SAMPLE " . $self->hash_to_line($self->{'SAMPLE'}) . "\n" if (defined $self->{'SAMPLE'});
 	
@@ -646,7 +646,7 @@ sub write_yaml
 	#eval ('require YAML::XS qw(Dump)');
 	#eval ('require YAML::XS qw(Dump)') or die "Module YAML::XS not found.";
 
-	open OUT, ">$file_name" or $self->throw("Could not write file: $file_name");
+	open OUT, ">$file_name" or die "Could not write file: $file_name";
 
 
 	#fill in the sort fields
@@ -1098,7 +1098,7 @@ sub interval_un
 sub mutation_evidence_list
 {
 	my ($self, $item) = @_;	
-	$self->throw if (ref($item) ne 'HASH');
+	die if (ref($item) ne 'HASH');
 	return () if (!defined $item->{evidence});
 	
 	my %evidence;

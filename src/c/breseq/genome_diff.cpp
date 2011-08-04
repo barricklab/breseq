@@ -66,31 +66,19 @@ const char* UN="UN";
 map<string, vector<string> > line_specification =make_map<string, vector<string> > 
 //! seq_id and positions are already parameters in diff_entry
 //## mutations
-//'SNP' => ['seq_id', 'position', 'ref_seq', 'new_seq'],
 ("SNP",make_list<string> ("seq_id")("position")("new_seq"))
-//'SUB' => ['seq_id', 'position', 'ref_seq', 'new_seq'],
 ("SUB",make_list<string> ("seq_id")("position")("size")("new_seq"))
-//'DEL' => ['seq_id', 'position', 'size'],
 ("DEL",make_list<string> ("seq_id")("position")("size"))
-//'INS' => ['seq_id', 'position', 'new_seq'],
 ("INS",make_list<string> ("seq_id")("position")("new_seq"))
-//'MOB' => ['seq_id', 'position', 'repeat_name', 'strand', 'duplication_size', 'gap_left', 'gap_right'],
 ("MOB",make_list<string> ("seq_id")("position")("repeat_name")("strand")("duplication_size")("gap_left")("gap_right"))
-//'DUP' => ['seq_id', 'position', 'size'],
 ("DEL",make_list<string> ("seq_id")("position")("size"))
-//'INV' => ['seq_id', 'position', 'size'],
 ("INV",make_list<string> ("seq_id")("position")("size"))
-//
-//## evidence  ("")
-//'RA' => ['seq_id', 'position', 'insert_position', 'ref_base', 'new_base'],
+("AMP",make_list<string> ("seq_id")("position")("size")("new_copy_number"))
+//## evidence
 ("RA",make_list<string> ("seq_id")("position")("insert_position")("ref_base")("new_base"))
-//'MC' => ['seq_id', 'start', 'end'],
 ("MC",make_list<string> ("seq_id")("start")("end")("start_range")("end_range"))
-//'JC' => ['side_1_seq_id', 'side_1_position', 'side_1_strand', 'side_2_seq_id', 'side_2_position', 'side_2_strand', 'overlap'],
 ("JC",make_list<string> ("side_1_seq_id")("side_1_position")("side_1_strand")("side_2_seq_id")("side_2_position")("side_2_strand")("overlap"))
-//'UN' => ['seq_id', 'start', 'end'],
 ("UN",make_list<string> ("seq_id")("start")("end"))
-//};
 ;
 
 

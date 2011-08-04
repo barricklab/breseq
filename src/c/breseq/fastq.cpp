@@ -279,7 +279,18 @@ namespace breseq {
           if (m_current_line == 1) {
             if (sequence.m_name.find("/") != string::npos) m_needs_conversion = true;
           }
+          
+          // Delete any sequence name information after the first space...
+          // Necessary for scrubbing SRA FASTQs, for example.
+          { // block to keep inside this switch case
+            size_t space_pos = sequence.m_name.find(" ");
+            if (space_pos != string::npos) 
+            {
+              sequence.m_name.erase(space_pos);
+            }
+          }
           break;
+          
         case 1:
           sequence.m_sequence = line;
           

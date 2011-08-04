@@ -275,8 +275,11 @@ void tam_file::open_read(const string& tam_file_name, const string& fasta_file_n
   string faidx_file_name(fasta_file_name);
   faidx_file_name += ".fai";
   
-  input_tam = sam_open(tam_file_name.c_str()); // or die("Could not open reference same file: $reference_sam_file_name");
-  assert(input_tam);
+  input_tam = sam_open(tam_file_name.c_str());
+  if (!input_tam) {
+    cerr << "Could not open tam file: " << tam_file_name << endl;
+    assert(input_tam);
+  }
   bam_header = sam_header_read2(faidx_file_name.c_str()); // or die("Error reading reference fasta index file: $reference_faidx_file_name");
 }
 

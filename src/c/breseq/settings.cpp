@@ -51,17 +51,18 @@ namespace breseq
 			// - beginning path
 			size_t pos = rf.m_base_name.rfind("/");
 			if (pos != string::npos) rf.m_base_name.erase(0, pos + 1);
-			// - trailing .fastq
+			// - trailing .fastq, must be at the end of the sequence
 			pos = rf.m_base_name.rfind(".fastq");
-			if (rf.m_base_name.size() > 6 &&
-			  pos != string::npos)
+			if ((pos != string::npos) && (pos = rf.m_base_name.size() - 6))
 			{
 				rf.m_base_name.erase(pos);
 			}
-			//- trailing .converted
+			
+      // @JEB - this shouldn't be necessary? - it actually causes some problems.
+      // Fix when we move to all C++ TODO
+      //- trailing .converted
 			pos = rf.m_base_name.rfind(".converted");
-			if (rf.m_base_name.size() > 10 &&
-			  pos != string::npos)
+      if ((pos != string::npos) && (pos = rf.m_base_name.size() - 10))
 			{
 				rf.m_base_name.erase(pos);
 			}
