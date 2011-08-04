@@ -54,6 +54,9 @@ const char* SIDE_2_SEQ_ID="side_2_seq_id";
 const char* SIDE_2_STRAND="side_2_strand";
 const char* SIDE_1_JC="side_1_jc";
 const char* SIDE_2_JC="side_2_jc";
+namespace output
+{
+
 /*
  * =====================================================================================
  *        Class:  HTML
@@ -124,6 +127,9 @@ string htmlize (const string& input)
   }
   return retval;
 }
+
+
+
 
 // # ## these style definitions are included between the
 // # ## HEAD tags of every generated page
@@ -206,17 +212,17 @@ string header_style_string()
   ss << "tr {background-color: rgb(255,255,255);}"                         << endl;
   ss << ".mutation_in_codon {color:red; text-decoration : underline;}}"    << endl;
   ss << ".mutation_header_row {background-color: rgb(0,130,0);}"           << endl; 
-   ss << ".read_alignment_header_row {background-color: rgb(255,0,0);}"     << endl;
+  ss << ".read_alignment_header_row {background-color: rgb(255,0,0);}"     << endl;
   ss << ".missing_coverage_header_row {background-color: rgb(0,100,100);}" << endl;
   ss << ".new_junction_header_row {background-color: rgb(0,0,155);}"       << endl;
   ss << ".alternate_table_row_0 {background-color: rgb(255,255,255);}"     << endl;
   ss << ".alternate_table_row_1 {background-color: rgb(230,230,245);}"     << endl;
-  ss << ".polymorphism_table_row {background-color: rgb(160,255,160);}"     << endl;
+  ss << ".polymorphism_table_row {background-color: rgb(160,255,160);}"    << endl;
   ss << ".highlight_table_row {background-color: rgb(192,255,255);}"       << endl;
-  ss << ".reject_table_row {background-color: rgb(255,200,165);}"           << endl;
+  ss << ".reject_table_row {background-color: rgb(255,200,165);}"          << endl;
   ss << ".information_table_row {background-color: rgb(200,255,255);}"     << endl;
   ss << ".junction_repeat {background-color: rgb(255,165,0)}"              << endl;
-  ss << ".junction_gene {}\n";
+  ss << ".junction_gene {}" << endl;
   
 return ss.str();
 }
@@ -236,7 +242,8 @@ void html_index(string file_name, Settings settings, Summary summary,
   HTML << "<html>";
   HTML << "<head>";
   // #       -title => "BRESEQ :: Mutation Predictions" . ($settings->{print_run_name} ne 'unnamed' ? " :: $settings->{print_run_name}" : ''), 
-  HTML << "<title>BRESEQ :: Mutation Predictions</title>"; ///TODO @GRC settings->print_run_name
+  HTML << "<title>BRESEQ :: Mutation Predictions</title>"; 
+  // TODO HTML << settings.print_run_name != "unnamed" ? settings.print_run_name : "";
   // #       -head  => style({type => 'text/css'}, $header_style_string),
   HTML << "<style type = \"text/css\">";
   HTML << header_style_string();
@@ -272,7 +279,7 @@ void html_index(string file_name, Settings settings, Summary summary,
 // #   ###
 // #   
 // #   my @mc = $gd->filter_used_as_evidence($gd->list('MC'));
-  genome_diff::entry_list_t mc(gd.filter_used_as_evidence(gd.list(make_list<string>(MC))));
+  entry_list_t mc(gd.filter_used_as_evidence(gd.list(make_list<string>(MC))));
 // #   if (scalar @mc > 0)
 // #   {
   if (mc.size() > 0)
@@ -280,15 +287,15 @@ void html_index(string file_name, Settings settings, Summary summary,
     HTML << "<p>" << html_missing_coverage_table_string(mc, false, "Unassigned missing coverage evidence", relative_path);
 // #   }
 // #   
+//TODO grep    
 // #   my @jc = $gd->filter_used_as_evidence($gd->list('JC'));
-  genome_diff::entry_list_t jc(gd.filter_used_as_evidence(gd.list(make_list<string>(JC))));
-///TODO @GRC implement jc and jcu ####
 // #   @jc = grep { !$_->{no_show} } @jc;  
-  
-   
-  
-    
 // #   @jc = grep { !$_->{circular_chromosome} } @jc if ($settings->{hide_circular_genome_junctions}); #don't show junctions for circular chromosomes  
+  entry_list_t jc = 
+    gd.filter_used_as_evidence(gd.list(make_list<string>(JC)));
+  //TODO jc.remove_if(not1(bind2nd(mem_fun(&diff_entry::entry_exists), "no_show")));
+
+
   if(!settings.hide_circular_genome_junctions)
     //TODO grep
    
@@ -350,7 +357,7 @@ void html_marginal_predictions(string file_name, Settings settings,Summary summa
 // #   ###
 // #   
 // #   my @ra = $gd->filter_used_as_evidence($gd->list('RA')); 
-  genome_diff::entry_list_t ra = gd.filter_used_as_evidence(gd.list(make_list<string>("RA")));
+  entry_list_t ra = gd.filter_used_as_evidence(gd.list(make_list<string>("RA")));
 //TODO
 // #   ## don't print ones that overlap predicted deletions or were marked to not show
 // #   @ra = grep { !$_->{deleted} && !$_->{no_show} } @ra;
@@ -362,7 +369,7 @@ void html_marginal_predictions(string file_name, Settings settings,Summary summa
 // #   }
 // #   
 // #   my @jc = $gd->filter_used_as_evidence($gd->list('JC'));
-    genome_diff::entry_list_t jc = gd.filter_used_as_evidence(gd.list(make_list<string>("JC")));
+    entry_list_t jc = gd.filter_used_as_evidence(gd.list(make_list<string>("JC")));
 ///TODO @GRC implement jc and jcu ####
 // #   @jc = grep { !$_->{no_show} } @jc;
 // #   @jc = grep { $_->{reject} } @jc;
@@ -446,7 +453,7 @@ void html_compare(Settings settings,const string &filename, const string &title,
 
 // # sub html_compare_polymorphisms
 // # {
-void html_compare_polymorphisms(Settings settings, string file_name, string title, genome_diff::entry_list_t list_ref)
+void html_compare_polymorphisms(Settings settings, string file_name, string title, entry_list_t list_ref)
 {
 // #   my ($settings, $file_name, $title, $list_ref) = @_;
 // # 
@@ -562,6 +569,7 @@ void html_statistic(const string &file_name, Settings settings, Summary summary,
              
 // #   my $total_length = 0;
   uint32_t total_length = 0;
+// # //TODO TODO TODO TODO Summary
 // #   foreach my $seq_id (@{$ref_seq_info->{seq_ids}})
 // #   {   
 // #     my $c = $summary->{sequence_conversion}->{reference_sequences}->{$seq_id};
@@ -591,6 +599,7 @@ void html_statistic(const string &file_name, Settings settings, Summary summary,
   HTML << td();
   HTML << ">"; // End tr
 // #   
+// # //TODO TODO TODO TODO Summary
 // #   ## junction only reference sequences
 // #   foreach my $seq_id (@{$ref_seq_info->{junction_only_seq_ids}})
 // #   {
@@ -604,15 +613,27 @@ void html_statistic(const string &file_name, Settings settings, Summary summary,
 // #     $total_length+= $c->{length};
 // #   }
 // #   
-// #   print HTML end_table();   
+// #   print HTML end_table();
+  HTML << "</html>";
+
 // #     
 // #     
 // #   my @times = @{$settings->{execution_times}};
+  vector<Settings::execution_time> times = settings.execution_times;
 // #   ## Write times
 // #   print HTML p . h1("Execution Times");
+  HTML << "<p>" << h1("Execution Times");
 // #   print HTML start_table({-width => "100%", -border => 1, -cellspacing => 0, -cellpadding => 3});
+  HTML << start_table("width=\"100%\" border=\"1\" cellspacing=\"0\" cellpadding=\"3\"");
 // #   print HTML Tr(th("Step"), th("Start"), th("End"), th("Elapsed"));
-// #   my $total_time_elapsed = 0;
+  HTML << "<tr ";
+  HTML << th("Step");
+  HTML << th("Start");
+  HTML << th("End");
+  HTML << th("Elapsed");
+  HTML << " >"; // End tr
+// #   my $total_time_elapsed = 0; 
+  string total_time_elapsed; 
 // #   foreach my $t (@times)
 // #   {
 // #     next if (!defined $t->{_message});
@@ -624,10 +645,26 @@ void html_statistic(const string &file_name, Settings settings, Summary summary,
 // #     );
 // #     $total_time_elapsed += $t->{_time_elapsed};
 // #   }
+  for (vector<Settings::execution_time>::iterator itr = times.begin();
+       itr != times.end(); itr ++) {  
+    Settings::execution_time& t = (*itr);
+    HTML << "<tr ";
+    HTML << td(t._message);
+    HTML << td(nonbreaking(t._formatted_time_start));
+    HTML << td(nonbreaking(t._formatted_time_end));
+    HTML << td(nonbreaking(t._formatted_time_elapsed));
+    HTML << ">"; //End tr 
+  }
 // #   print HTML Tr({-class=>"highlight_table_row"}, td({-colspan=>3}, b("Total")), td(b(nonbreaking(Breseq::Settings::time2string($total_time_elapsed,1)))));
 // #   print HTML end_table();
 // # 
 // #   close HTML;
+  HTML << "<tr>";
+  HTML << "class=\"highlight_table_row\"";
+  HTML << td("colspan=\"3\"");
+  HTML << b("Total");
+  HTML << // TODO td(b(nonbreaking(settings.time2string(total_time_elapsed, true);
+  HTML << "</tr>";
 // # }
 }
 // # 
@@ -699,7 +736,7 @@ string
 html_genome_diff_item_table_string(
                                    Settings settings,
                                    genome_diff gd,
-                                   genome_diff::entry_list_t list_ref
+                                   entry_list_t list_ref
                                    )
 {
 // # sub html_genome_diff_item_table_string
@@ -710,7 +747,7 @@ html_genome_diff_item_table_string(
   if(list_ref.empty())
     return "";
 // #   my $first_item = $list_ref->[0];
-  diff_entry& first_item = *list_ref[0];
+  diff_entry& first_item = *list_ref.front();
 // #         
 // #   ##mutation
 // #   if (length($first_item->{type}) == 3)
@@ -1114,7 +1151,7 @@ html_read_alignment_table_string(
 
 string
 html_missing_coverage_table_string(
-                                   genome_diff::entry_list_t list_ref,
+                                   entry_list_t list_ref,
                                    bool show_reject_reason,
                                    string title,
                                    string relative_link
@@ -1136,14 +1173,14 @@ html_missing_coverage_table_string(
 // #   my $coverage_plots;
       bool coverage_plots;
 // #   $coverage_plots = (defined $list_ref->[0]) && (defined $list_ref->[0]->{_evidence_file_name});
-      if (list_ref[0].get() != 0 && (*list_ref[0]).entry_exists("_EVIDENCE_FILE_NAME")) {
+      if ((list_ref.front()).get() != NULL && (*list_ref.front()).entry_exists("_EVIDENCE_FILE_NAME")) {
         coverage_plots = true;
       } else {
         coverage_plots = false;
       }
 // #   my $link = (defined $list_ref->[0]) && (defined $list_ref->[0]->{_side_1_evidence_file_name}) && (defined $list_ref->[0]->{_side_2_evidence_file_name});
-      bool link = ((*list_ref[0]).entry_exists("_side_1_evidence_file_name")) && 
-                  ((*list_ref[0]).entry_exists("_side_2_evidence_file_name")); //TODO other conditions needed?
+      bool link = ((*list_ref.front()).entry_exists("_side_1_evidence_file_name")) && 
+                  ((*list_ref.front()).entry_exists("_side_2_evidence_file_name")); //TODO other conditions needed?
 // # 
 // #   my $total_cols = $link ? 11 : 8;
       uint8_t total_cols = link ? 11 : 8;
@@ -1191,7 +1228,7 @@ html_missing_coverage_table_string(
 // #   
 // #   foreach my $c (@$list_ref)
 // #   {
-      for (genome_diff::entry_list_t::iterator itr = list_ref.begin();
+      for (entry_list_t::iterator itr = list_ref.begin();
            itr != list_ref.end(); itr ++) {  
         diff_entry& c =  **itr;
 // #     ## additional formatting for some variables
@@ -1772,13 +1809,12 @@ MUT:for (genome_diff::entry_list_t::iterator itr = items_SNP_INS_DEL_SUB.begin()
 // #   ## Still create files for RA evidence that was not good enough to predict a mutation from
 // # 
 // #   my @ra_list = $gd->list('RA');  
-genome_diff::entry_list_t ra_list = gd.list(make_list<string>(RA));
 // #   @ra_list = $gd->filter_used_as_evidence(@ra_list);
-  ra_list = gd.filter_used_as_evidence(ra_list);
+  entry_list_t ra_list = gd.filter_used_as_evidence(gd.list(make_list<string>(RA)));
 // #   
 // #   RA: foreach my $item ( @ra_list )
 // #   {
-  for (genome_diff::entry_list_t::iterator itr = ra_list.begin();
+  for (entry_list_t::iterator itr = ra_list.begin();
      itr != ra_list.end(); itr ++) {  
     diff_entry& item = **itr;
 // #     next if ($item->{no_show});
@@ -1832,7 +1868,7 @@ genome_diff::entry_list_t items_JC = gd.list(make_list<string>(JC));
 // #     my $parent_item = $gd->parent($item);
     genome_diff::diff_entry_ptr parent_item = gd.parent(item);
 // #     $parent_item = $item if (!$parent_item);
-    if(!parent_item.defined()) {
+    if(parent_item.get() == NULL) {
       parent_item = *itr;
     }
 // #     
@@ -2086,7 +2122,7 @@ Evidence_Files::html_evidence_file (
 // #   my ($settings, $gd, $interval) = @_;
 // # 
 // #   $interval->{output_path} = $settings->file_name('evidence_path') . "/$interval->{file_name}"; 
-  item["OUTPUT_PATH"] = settings.file_name("evidence_path") + 
+  item["output_path"] = settings.file_name("evidence_path") + 
                         "/" + item[FILE_NAME];
 // #   
 // #   my $title = 'BRESEQ :: Results' . ($settings->{print_run_name} ne 'unnamed' ? " :: $settings->{print_run_name}" : ''),
@@ -2096,7 +2132,7 @@ Evidence_Files::html_evidence_file (
   }
 // #   
 // #   open HTML, ">$interval->{output_path}" or die "Could not open file: $interval->{output_path}";
-  fstream HTML(item["OUTPUT_PATH"].c_str());
+  fstream HTML(item["output_path"].c_str());
   if (!HTML) {
     cerr << " Could not open file: " << item["OUTPUT_PATH"];
   }
@@ -2143,17 +2179,17 @@ Evidence_Files::html_evidence_file (
     Type_Not_Equal type_not_equal(type);
     
     genome_diff::entry_list_t::iterator 
-    matched_type_end = remove_if(
-                                 evidence_list.begin(),
-                                 evidence_list.end(),
-                                 type_not_equal
-                                );
+      matched_type_end = remove_if(
+                                   evidence_list.begin(),
+                                   evidence_list.end(),
+                                   type_not_equal
+                                  );
     
-    genome_diff::entry_list_t 
-    this_evidence_list(
-                       evidence_list.begin(),
-                       matched_type_end
-                      );
+    entry_list_t 
+      this_evidence_list(
+                         evidence_list.begin(),
+                         matched_type_end
+                        );
 
     //finished grep //TODO Confirm this works
     if(this_evidence_list.empty()) continue;
@@ -3059,6 +3095,6 @@ string Html_Mutation_Table_String::freq_cols(vector<string> freq_list)
 }
 
 
-
-}
+}//end namespace output
+}//end namespace breseq
 

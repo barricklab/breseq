@@ -17,6 +17,7 @@ LICENSE AND COPYRIGHT
 *****************************************************************************/
 
 #include "breseq/genome_diff.h"
+#include <list>
 
 namespace breseq {
 
@@ -307,7 +308,8 @@ void genome_diff::add(const diff_entry& item) {
 }
 
 
-/*! Read a genome diff(.gd) from the given file to build the vector lines
+/*! Read a genome diff(.gd) from the given file to class member
+  _entry_list
  */
 
 void genome_diff::read(const string& filename) {
@@ -792,30 +794,36 @@ genome_diff::entry_list_t genome_diff::list(vector<string> types)
   return return_list;
 }
 
-genome_diff::entry_list_t genome_diff::filter_used_as_evidence(entry_list_t list)
+/*-----------------------------------------------------------------------------
+ * returns mutations not used as evidence. 
+ *
+ * Poorly implemented right now, look into future refractor into returning
+ * list<counted_ptr<diff_entry> >
+ *-----------------------------------------------------------------------------*/
+::list<counted_ptr<diff_entry> > genome_diff::filter_used_as_evidence(const entry_list_t& input)
 {
-// # sub filter_used_as_evidence
-// # {
-// #   my ($self, @list) = @_;
-// #   
-// #   IN: for (my $i=0; $i<scalar @list; $i++)
-// #   {
-// #     my $in_item = $list[$i];
-// #     foreach my $test_item ($self->list)
-// #     {
-// #       foreach my $test_evidence_id (@{$test_item->{evidence}})
-// #       {
-// #         if ($test_evidence_id ==  $in_item->{id})
-// #         {
-// #           splice @list, $i, 1;
-// #           $i--;
-// #           next IN;
-// #         }
-// #       }
-// #     }
-// #   }
-// #   return @list;
-return list;
+  ::list<counted_ptr<diff_entry> > return_list(input.begin(),input.end());
+// Can't change first loop to ::list because you will get segmentation faults after 
+// the .remove() method. Check if .end() is called only during initialization or 
+// during each itr_outer != input.end() ?
+  for (genome_diff::entry_list_t::const_iterator itr_outer = input.begin();
+       itr_outer != input.end(); itr_outer++) {
+    string& input_id = (**itr_outer)._id;
+
+    for (genome_diff::entry_list_t::const_iterator itr_inner = _entry_list.begin();
+         itr_inner != _entry_list.end(); itr_inner ++) {  
+      diff_entry& test_item = **itr_inner;
+      
+        if (count(test_item._evidence.begin(), 
+            test_item._evidence.end(),
+            input_id) > 0) {
+          return_list.remove(*itr_outer);
+          break;
+        }    
+    
+    }    
+  }
+  return return_list;
 // # }
 }
 
@@ -879,7 +887,7 @@ diff_entry genome_diff::_line_to_item(const string& line)
     item[item_key] = item_value;
   }
   
-/// Dealing with JC is inconvenient here
+/// Dealing with JC is inconvenient here// TODO @GRC Confirm not needed?
 ///##############################
 // #   ### We do some extra convenience processing for junctions...
 // #   if ($item->{type} eq 'JC')
@@ -894,16 +902,7 @@ diff_entry genome_diff::_line_to_item(const string& line)
 // #     }
 // #   }
 ///###############################
-  if(false) {//item._type == JC
-  item["side_1_seq_id"] = item["side_1\\_seq_id"];
-  item["side_1_position"] = item["side_1\\_position"];
-  item["side_1_strand"] = item["side_1\\_strand"];
-  item["side_2_seq_id"] = item["side_2\\_seq_id"];
-  item["side_2_position"] = item["side_2\\_position"];
-  item["side_2_strand"] = item["side_2\\_strand"];
-  item["side_1_jc"] = "NA"; //TODO Not sure why these arent in scope
-  item["side_2_jc"] = "NA";
-  }
+
 
 
 

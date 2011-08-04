@@ -65,7 +65,10 @@ extern const char* SIDE_2_SEQ_ID;
 extern const char* SIDE_2_STRAND;
 extern const char* SIDE_1_JC;
 extern const char* SIDE_2_JC;
-
+namespace output
+{
+typedef vector<counted_ptr<diff_entry> >  entry_vector_t;
+typedef list<counted_ptr<diff_entry> > entry_list_t;
 /*-----------------------------------------------------------------------------
  *  HTML Attribute Keywords
  *-----------------------------------------------------------------------------*/
@@ -111,6 +114,8 @@ extern const char* ALIGN_LEFT;
     {return "<div " + attributes + ">" + input + "</div>";}
   inline string img(const string& target)
     {return "<img src=\"" + target + "\" />";}
+  inline string h1(const string & input)
+    {return "<h1>" + input + "</h1>";} 
   
   //! Encodes dash, en dash and spaces to HTML
   string nonbreaking(const string& input);
@@ -164,17 +169,19 @@ class Html_Mutation_Table_String : public string
 
 //TODO Below not fully complete
 string html_missing_coverage_table_string
-  (genome_diff::entry_list_t list_ref, 
+  (entry_list_t list_ref, 
    bool show_reject_reason,
    string title = "Missing coverage evidence",
    string relative_link="");
+
 string html_read_alignment_table_string  
-  (genome_diff::entry_list_t list_ref, 
+  (entry_list_t list_ref, 
    bool show_reject_reason,
    string title = "Read alignment evidence...",
    string relative_link = "");
+
 string html_new_junction_table_string
-  (genome_diff::entry_list_t jc,
+  (entry_list_t jc,
    bool show_reject_reason,
    string title= "New junction evidence",
    string relative_link = "");
@@ -263,7 +270,7 @@ string breseq_header_string(Settings settings);
 // sub html_genome_diff_item_table_string
 //         my (Settings settings, $gd, $list_ref) = @_;
 string html_genome_diff_item_table_string(Settings settings, genome_diff gd, 
-                                        genome_diff::entry_list_t list_ref);
+                                        entry_list_t list_ref);
 // sub html_evidence_file_name
 //         my ($interval) = @_;
 
@@ -293,6 +300,6 @@ void save_statistics(string file_name, string data);
 void load_statistics(string file_name);
   															 
 
- 
+}// end output namespace 
 }// end breseq namespace
 #endif

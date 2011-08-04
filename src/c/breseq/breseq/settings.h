@@ -301,6 +301,11 @@ namespace breseq
                   string _formatted_time_elapsed;
                   string _time_elapsed;
                 };
+                vector<execution_time> execution_times;
+                string time2string(const time_t* timer, const bool& relative);
+
+                //@GRC End of settings needed for HTML outputs
+
 
 		// Utility function to substitute specific details into a generic file name
 

@@ -44,6 +44,7 @@ LICENSE AND COPYRIGHT
 #include <string>
 #include <utility>
 #include <vector>
+#include <functional>
 
 // Library specific headers
 #include <bam.h>
@@ -689,12 +690,13 @@ namespace breseq {
       }
       return *this;
     }
-    
+    friend bool operator!= (const counted_ptr<X>& lhs, const counted_ptr<X>& rhs)
+    {return (lhs.itsCounter->ptr == rhs.itsCounter->ptr);}
+    friend bool operator== (const counted_ptr<X>& lhs, const counted_ptr<X>& rhs)
+    {return (lhs.itsCounter->ptr == rhs.itsCounter->ptr);}
     X& operator*()  const throw()   {return *itsCounter->ptr;}
     X* operator->() const throw()   {return itsCounter->ptr;}
     X* get()        const throw()   {return itsCounter ? itsCounter->ptr : 0;}
-    bool defined() const throw()
-    {return (itsCounter == 0 || itsCounter==NULL) ? false : true;}
     bool unique()   const throw()
     {return (itsCounter ? itsCounter->count == 1 : true);}
     

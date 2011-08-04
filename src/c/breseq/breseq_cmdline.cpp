@@ -798,7 +798,6 @@ int do_convert_gd( int argc, char* argv[]){
 }
 
 int do_output( int argc, char* argv[]){
-  cout << html_header("TEST");
     return 0;
 }
 
