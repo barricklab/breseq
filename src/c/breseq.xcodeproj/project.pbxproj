@@ -26,6 +26,7 @@
 		4247E82C1268EC3E006A6D78 /* libz.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 421ACFAC1170F05500C2EB85 /* libz.a */; };
 		701EE98313C4BB5200F2EC70 /* contingency_loci.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 701EE98213C4BB5200F2EC70 /* contingency_loci.cpp */; };
 		702EABF713421A8400103019 /* fastq.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 702EABF613421A8400103019 /* fastq.cpp */; };
+		70367D2113EB232C000787CC /* coverage_distribution.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 70367D2013EB232C000787CC /* coverage_distribution.cpp */; };
 		707F211413478B6500ED2F3E /* candidate_junctions.h in Headers */ = {isa = PBXBuildFile; fileRef = 707F211313478B6500ED2F3E /* candidate_junctions.h */; };
 		707F211613478B7700ED2F3E /* candidate_junctions.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 707F211513478B7700ED2F3E /* candidate_junctions.cpp */; };
 		7084E56713CFD471005B57D1 /* mutation_predictor.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 7084E56613CFD471005B57D1 /* mutation_predictor.cpp */; };
@@ -120,6 +121,8 @@
 		701EE98013C4BB3B00F2EC70 /* contingency_loci.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = contingency_loci.h; sourceTree = "<group>"; };
 		701EE98213C4BB5200F2EC70 /* contingency_loci.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = contingency_loci.cpp; path = breseq/contingency_loci.cpp; sourceTree = SOURCE_ROOT; };
 		702EABF613421A8400103019 /* fastq.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = fastq.cpp; path = breseq/fastq.cpp; sourceTree = SOURCE_ROOT; };
+		70367D2013EB232C000787CC /* coverage_distribution.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = coverage_distribution.cpp; path = breseq/coverage_distribution.cpp; sourceTree = SOURCE_ROOT; };
+		70367D2313EB2339000787CC /* coverage_distribution.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = coverage_distribution.h; sourceTree = "<group>"; };
 		707F211313478B6500ED2F3E /* candidate_junctions.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; lineEnding = 0; path = candidate_junctions.h; sourceTree = "<group>"; xcLanguageSpecificationIdentifier = xcode.lang.objcpp; };
 		707F211513478B7700ED2F3E /* candidate_junctions.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; lineEnding = 0; name = candidate_junctions.cpp; path = breseq/candidate_junctions.cpp; sourceTree = SOURCE_ROOT; xcLanguageSpecificationIdentifier = xcode.lang.cpp; };
 		7084E56613CFD471005B57D1 /* mutation_predictor.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = mutation_predictor.cpp; path = breseq/mutation_predictor.cpp; sourceTree = SOURCE_ROOT; };
@@ -243,6 +246,7 @@
 				707F211513478B7700ED2F3E /* candidate_junctions.cpp */,
 				70B48C4E13A991BE00BF2BF0 /* chisquare.cpp */,
 				701EE98213C4BB5200F2EC70 /* contingency_loci.cpp */,
+				70367D2013EB232C000787CC /* coverage_distribution.cpp */,
 				7087728912BC169C000F9B57 /* error_count.cpp */,
 				70B4AEAF1391F72200B9638D /* fasta.cpp */,
 				702EABF613421A8400103019 /* fastq.cpp */,
@@ -272,6 +276,7 @@
 				707F211313478B6500ED2F3E /* candidate_junctions.h */,
 				70B48C4D13A991AD00BF2BF0 /* chisquare.h */,
 				701EE98013C4BB3B00F2EC70 /* contingency_loci.h */,
+				70367D2313EB2339000787CC /* coverage_distribution.h */,
 				7087747712BC1C06000F9B57 /* error_count.h */,
 				70B4AEAD1391F71500B9638D /* fasta.h */,
 				70A8364813477A560037F8DE /* fastq.h */,
@@ -454,6 +459,7 @@
 				70D789D413C3CEB70036BEAB /* output.cpp in Sources */,
 				701EE98313C4BB5200F2EC70 /* contingency_loci.cpp in Sources */,
 				7084E56713CFD471005B57D1 /* mutation_predictor.cpp in Sources */,
+				70367D2113EB232C000787CC /* coverage_distribution.cpp in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

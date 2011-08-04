@@ -71,7 +71,7 @@ namespace breseq
 	{
 	public:
 		// Set up defaults here
-		Settings(const string& _run_path = "");
+		Settings(const string& _base_output_path = "");
 
 		// Fields
 		map<string, string> installed;

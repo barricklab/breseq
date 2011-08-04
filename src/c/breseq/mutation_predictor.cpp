@@ -884,7 +884,8 @@ namespace breseq {
 			{
 				int32_t size = n(j["side_2_position"]) - n(j["side_1_position"]) + 1;
 				if (size < 0) continue; // this is a deletion!
-				//#	next if ($size > 100); #spurious duplication, need extra evidence from coverage!
+        // @JEB TODO: Large duplications are likely spurious... need to x-ref with coverage differences.
+				if (size > 100) continue;
 
 				diff_entry mut;
 				mut._type = "AMP";
