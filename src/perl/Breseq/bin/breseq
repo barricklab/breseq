@@ -540,10 +540,17 @@ if ($settings->do_step('alignment_correction_done_file_name', "Resolving alignme
 	my $maximum_read_length = $summary->{sequence_conversion}->{max_read_length};
 	$cmdline .= " --maximum-read-length $maximum_read_length";
 	
-	foreach my $seq_id (@{$ref_seq_info->{seq_ids}})
+	if ($settings->{no_junction_prediction})
 	{
-		my $junction_cutoff = $summary->{preprocess_coverage}->{$seq_id}->{junction_accept_score_cutoff};
-		$cmdline .= " --junction-cutoff $junction_cutoff";
+		$cmdline .= " --no-junction-prediction";
+	}
+	else
+	{
+		foreach my $seq_id (@{$ref_seq_info->{seq_ids}})
+		{
+			my $junction_cutoff = $summary->{preprocess_coverage}->{$seq_id}->{junction_accept_score_cutoff};
+			$cmdline .= " --junction-cutoff $junction_cutoff";
+		}
 	}
 	
 	Breseq::Shared::system($cmdline);	
