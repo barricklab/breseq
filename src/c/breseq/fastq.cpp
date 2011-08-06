@@ -287,6 +287,7 @@ namespace breseq {
             if (space_pos != string::npos) 
             {
               sequence.m_name.erase(space_pos);
+              m_needs_conversion = true;
             }
           }
           break;
