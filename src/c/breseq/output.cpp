@@ -619,7 +619,7 @@ void html_statistic(const string &file_name, Settings settings, Summary summary,
 // #     
 // #     
 // #   my @times = @{$settings->{execution_times}};
-  vector<Settings::execution_time> times = settings.execution_times;
+  vector<ExecutionTime> times = settings.execution_times;
 // #   ## Write times
 // #   print HTML p . h1("Execution Times");
   HTML << "<p>" << h1("Execution Times");
@@ -645,9 +645,9 @@ void html_statistic(const string &file_name, Settings settings, Summary summary,
 // #     );
 // #     $total_time_elapsed += $t->{_time_elapsed};
 // #   }
-  for (vector<Settings::execution_time>::iterator itr = times.begin();
+  for (vector<ExecutionTime>::iterator itr = times.begin();
        itr != times.end(); itr ++) {  
-    Settings::execution_time& t = (*itr);
+    ExecutionTime& t = (*itr);
     HTML << "<tr ";
     HTML << td(t._message);
     HTML << td(nonbreaking(t._formatted_time_start));
@@ -2366,34 +2366,31 @@ Evidence_Files::html_evidence_file (
 // # }
 // # 
 // # our @execution_times;
-// # sub record_time
-// # {
-// #   my ($name) = @_;
-// #   
-// #   my $this_time = time;
+vector<ExecutionTime> execution_times;
+string record_time(string name)
+{
+	time_t this_time = time(NULL);
 // #   my ($sec,$min,$hour,$mday,$mon,$year,$wday,$yday,$isdst) = localtime($this_time); 
-// #   my $formatted_time = sprintf "%04d-%02d-%02d %02d:%02d:%02d", $year+1900, $mon+1, $mday, $hour, $min, $sec;
-// #   my $new_time = { 
-// #     _name => $name, 
-// #     _formatted_time => $formatted_time, 
-// #     _time => $this_time,
-// #     _time_elapsed => 0,
-// #     _formatted_time_elapsed => '',
-// #    };
-// #   
-// #   ##if we had a previous time
-// #   my $time_since_last;
-// #   my $time_since_last_formatted;
-// #   if (scalar @execution_times > 0)
-// #   {
-// #     $time_since_last = $this_time - $execution_times[-1]->{_time};
-// #     $new_time->{_time_elapsed} = $time_since_last;
-// #     $new_time->{_formatted_time_elapsed} = time2string($time_since_last);
-// #   }
-// #   
-// #   push @execution_times, $new_time;
-// #   return $formatted_time;
-// # }
+	string formatted_time = to_string(this_time);
+	ExecutionTime new_time;
+	new_time._name = name;
+	new_time._formatted_time = formatted_time;
+	new_time._time = this_time;
+	new_time._time_elapsed = 0;
+	new_time._formatted_time_elapsed = "";
+
+	//if we had a previous time
+	time_t time_since_last;
+	//string time_since_last_formatted;
+	if (execution_times.size() > 0)
+	{
+		time_since_last = this_time - execution_times[execution_times.size() - 1]._time;
+		new_time._time_elapsed = time_since_last;
+		new_time._formatted_time_elapsed = to_string(time_since_last);
+	}
+	execution_times.push_back(new_time);
+	return formatted_time;
+}
 // # 
 // # sub time2string
 // # {

@@ -217,6 +217,16 @@ genome_diff::genome_diff(const string& filename)
  // Need changes in usage if we read by default @JEB
  //read(filename);  
 }
+
+/*! Merge Constructor.
+ */
+genome_diff::genome_diff(genome_diff& merge1, genome_diff& merge2)
+ : _unique_id_counter(0)
+{
+	_entry_list.insert(_entry_list.begin(), merge1._entry_list.begin(), merge1._entry_list.end());
+	_entry_list.insert(_entry_list.begin() + _entry_list.size(), merge2._entry_list.begin(), merge2._entry_list.end());
+}
+
   
 uint32_t genome_diff::new_unique_id() 
 { 

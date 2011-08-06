@@ -288,7 +288,7 @@ void save_text_deletion_file(string deletion_file_name, vector<Reference> deleti
 void draw_coverage(Settings settings, cReferenceSequences ref_seq_info, genome_diff gd);
 // sub record_time
 //         my ($name) = @_;
-void record_time(string name);
+string record_time(string name);
 // sub time2string
 //     my ($seconds) = @_;
 void time2string(uint32_t seconds);
