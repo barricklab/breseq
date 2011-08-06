@@ -211,7 +211,10 @@ public:
   
   //! Constructor that sets a default filename.
   genome_diff(const string& filename);
-  
+
+  //! Constructor that replaces ::merge(1,2) function
+  genome_diff(genome_diff& merge1, genome_diff& merge2);
+
   //! Destructor.
   ~genome_diff() { }
 

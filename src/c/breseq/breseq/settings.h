@@ -32,6 +32,19 @@ using namespace std;
 namespace breseq
 {
 
+	struct ExecutionTime {
+		string _message;
+		string _name;
+		time_t _time;
+		string _formatted_time;
+		time_t _time_elapsed;
+		string _formatted_time_elapsed;
+		time_t _time_start;
+		string _formatted_time_start;
+		time_t _time_end;
+		string _formatted_time_end;
+	};
+
 	class cReferenceSequences;
 
 	// We need to be able to group read files for two reasons
@@ -293,15 +306,8 @@ namespace breseq
 		bool no_header;
                 inline string html_path(string input) {return "not implemented";}
                 bool verbose;
-                struct execution_time
-                {
-                  string _message;
-                  string _formatted_time_start; 
-                  string _formatted_time_end;
-                  string _formatted_time_elapsed;
-                  string _time_elapsed;
-                };
-                vector<execution_time> execution_times;
+
+				vector<ExecutionTime> execution_times;
                 string time2string(const time_t* timer, const bool& relative);
 
                 //@GRC End of settings needed for HTML outputs
@@ -352,6 +358,41 @@ namespace breseq
 			string path = file_name(path_key);
 			//(-e $path) or Breseq::File::Path::make_path($path) or $self->throw("Could not create path \'$path\'.");
 			return path;
+		}
+
+		void record_end_time(string message)
+		{
+			uint32_t i = 0;
+			while (i < this->execution_times.size())
+			{
+				if (this->execution_times[i]._message == message)
+					break;
+				i++;
+			}
+
+			if (i >= this->execution_times.size())
+			{
+				cout << "Did not find matching start time for:" << endl << message << endl;
+				ExecutionTime blank;
+				this->execution_times.push_back(blank);
+			}
+
+			ExecutionTime ex_time = this->execution_times[i];
+			ex_time._message = message;
+
+			time_t this_time = time(NULL);
+			ex_time._time_end = this_time;
+			ex_time._formatted_time_end = ctime(&this_time);
+
+			//if we had a previous time, calculate elapsed
+			if (i < this->execution_times.size())
+			{
+				time_t time_interval = ex_time._time_end - ex_time._time_start;
+				ex_time._time_elapsed = time_interval;
+				stringstream ss;
+				ss << time_interval;
+				ex_time._formatted_time_elapsed = ss.str(); //, 1);
+			}
 		}
 
 		//transparent to whether read trimming is on

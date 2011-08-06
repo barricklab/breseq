@@ -1772,29 +1772,42 @@ int breseq_default_action(int argc, char* argv[])
 		cerr << "Creating merged genome diff evidence file..." << endl;
 
 		// merge all of the evidence GenomeDiff files into one...
-		/*settings.create_path("evidence_path");
+		settings.create_path("evidence_path");
 		string jc_genome_diff_file_name = settings.file_name("jc_genome_diff_file_name");
-		genome_diff jc_gd = GenomeDiff->new( {in => $jc_genome_diff_file_name} );
+		genome_diff jc_gd(jc_genome_diff_file_name);
 		string ra_mc_genome_diff_file_name = settings.file_name("ra_mc_genome_diff_file_name");
-		genome_diff ra_mc_gd = GenomeDiff->new( {in => $ra_mc_genome_diff_file_name} );
+		genome_diff ra_mc_gd(ra_mc_genome_diff_file_name);
 		string evidence_genome_diff_file_name = settings.file_name("evidence_genome_diff_file_name");
-		genome_diff evidence_gd = GenomeDiff::merge($jc_gd, $ra_mc_gd);
-		$evidence_gd->write($evidence_genome_diff_file_name);
+		genome_diff evidence_gd(jc_gd, ra_mc_gd);
+		evidence_gd.write(evidence_genome_diff_file_name);
 
 
 		// predict mutations from evidence in the GenomeDiff
 		cerr << "Predicting mutations from evidence..." << endl;
 
-		genome_diff gd;
 		string final_genome_diff_file_name = settings.file_name("final_genome_diff_file_name");
 
-		string cbreseq = settings.ctool("cbreseq");
-		string maximum_read_length = $summary->{sequence_conversion}->{max_read_length};
+		/*string cbreseq = settings.ctool("cbreseq");
+		uint32_t maximum_read_length = summary.sequence_conversion.max_read_length;
 		string base_output_path = settings.file_name("base_output_path");
 		string cmdline = "$cbreseq PREDICT_MUTATIONS --maximum-read-length $maximum_read_length --path $base_output_path";
-		Breseq::Shared::system($cmdline);
+		Breseq::Shared::system($cmdline);*/
 
-		gd = GenomeDiff->new({file_name => $final_genome_diff_file_name});
+		settings.base_output_path = settings.file_name("base_output_path");
+
+		// Load the reference sequence info
+		LoadFeatureIndexedFastaFile(ref_seq_info, settings.reference_features_file_name, settings.reference_fasta_file_name);
+
+		MutationPredictor mp(ref_seq_info);
+
+		genome_diff mpgd(settings.evidence_genome_diff_file_name);
+		mpgd.read();
+
+		mp.predict(settings, mpgd, summary.sequence_conversion.max_read_length);
+
+		mpgd.write(settings.final_genome_diff_file_name);
+
+		genome_diff gd(final_genome_diff_file_name);
 		//#unlink $evidence_genome_diff_file_name;
 
 		//sub mutation_annotation {}
@@ -1802,56 +1815,77 @@ int breseq_default_action(int argc, char* argv[])
 		vector<string> genbank_file_names = from_string<vector<string> >(settings.file_name("reference_genbank_file_names"));
 		vector<string> junction_only_genbank_file_names = from_string<vector<string> >(settings.file_name("junction_only_reference_genbank_file_names"));
 
-
 		//
 		// Annotate mutations
 		//
 		cerr << "Annotating mutations..." << endl;
-		Breseq::ReferenceSequence::annotate_mutations($ref_seq_info, $gd);
+		ref_seq_info.annotate_mutations(gd, false);
 
 		//
 		// Plot coverage of genome and large deletions
 		//
 		cerr << "Drawing coverage plots..." << endl;
-		Breseq::Output::draw_coverage($settings, $ref_seq_info, $gd);
+
+		//TODO: draw_coverage(settings, ref_seq_info, gd);
 
 		//
 		// Mark lowest RA evidence items as no-show, or we may be drawing way too many alignments
 		//
 
-		diff_entry ra = gd.filter_used_as_evidence(gd.list("RA"));
+		vector<string> ra_types = make_list<string>("RA");
+		list<counted_ptr<diff_entry> > ra = gd.filter_used_as_evidence(gd.list(ra_types));
 
-		@ra = grep { ($_->{frequency} != 0) && ($_->{frequency} != 1) && (!$_->{no_show})  } @ra;
-		@ra = sort { -($a->{quality} <=> $b->{quality}) } @ra;
+		for (list<counted_ptr<diff_entry> >::iterator it = ra.end(); it != ra.begin(); it--)
+			if ((**it)["frequency"] == "0" || (**it)["frequency"] == "1" || from_string<bool>((**it)["no_show"]))
+				ra.erase(it);
 
-		for (string i = settings.max_rejected_polymorphisms_to_show; i < scalar @ra; $i++)
-			$ra[$i]->{no_show} = 1;
+		//@ra = sort { -($a->{quality} <=> $b->{quality}) } @ra;
+
+		list<counted_ptr<diff_entry> >::iterator it;
+
+		it = ra.begin();
+		for (uint32_t i = 0; i < ra.size(); i++)
+		{
+			if (i++ >= settings.max_rejected_polymorphisms_to_show)
+				(**(it++))["no_show"] = "true";
+		}
 
 		// require a certain amount of coverage
-		foreach string item ($gd->filter_used_as_evidence($gd->list("RA")))
+		list<counted_ptr<diff_entry> > new_ra = gd.filter_used_as_evidence(gd.list(ra_types));
+		for (list<counted_ptr<diff_entry> >::iterator item = new_ra.begin(); item != new_ra.end(); item++)
 		{
-			my ($top, $bot) = split /\//, $item->{tot_cov};
-			$item->{no_show} = 1 if ($top + $bot <= 2);
+			vector<string> top_bot = split((**item)["tot_cov"], "/");
+			uint32_t top = from_string<int32_t>(top_bot[0]);
+			uint32_t bot = from_string<int32_t>(top_bot[1]);
+			if (top + bot <= 2) (**item)["no_show"] = "true";
 		}
-		@ra = grep { !$_->{coverage} && !$_->{no_show} } @ra;
+
+		for (it = ra.end(); it != ra.begin(); it--)
+			if (from_string<bool>((**it)["coverage"]) || from_string<bool>((**it)["no_show"]))
+				ra.erase(it);
 
 		//
 		// Mark lowest scoring reject junctions as no-show
 		//
-		my @jc = $gd->filter_used_as_evidence($gd->list("JC"));
-		@jc = grep { $_->{reject} } @jc;
+		vector<string> jc_types = make_list<string>("JC");
+		list<counted_ptr<diff_entry> > jc = gd.filter_used_as_evidence(gd.list(jc_types));
+		for (it = jc.end(); it != jc.begin(); it--)
+			if (!from_string<bool>((**it)["reject"]))
+				ra.erase(it);
 
-		@jc = sort { -($a->{pos_hash_score} <=> $b->{pos_hash_score}) || -($a->{min_overlap_score} <=> $b->{min_overlap_score})  || ($a->{total_reads} <=> $a->{total_reads}) } @jc;
-		for (string i = settings.{max_rejected_junctions_to_show}; $i< scalar @jc; $i++)
-			$jc[$i]->{no_show} = 1;
+		//@jc = sort { -($a->{pos_hash_score} <=> $b->{pos_hash_score}) || -($a->{min_overlap_score} <=> $b->{min_overlap_score})  || ($a->{total_reads} <=> $a->{total_reads}) } @jc;
+		it = jc.begin();
+		for (uint32_t i = 0; i < jc.size(); i++)
+		{
+			if (i++ >= settings.max_rejected_junctions_to_show)
+				(**(it++))["no_show"] = "true";
+		}
 
 		//
 		// Create evidence files containing alignments and coverage plots
 		//
 		if (!settings.no_alignment_generation)
-		{
-			Breseq::Output::create_evidence_files(settings, gd);
-		}
+			//TODO: create_evidence_files(settings, gd);
 
 		///
 		// HTML output
@@ -1860,27 +1894,27 @@ int breseq_default_action(int argc, char* argv[])
 		cerr << "Creating index HTML table..." << endl;
 
 		string index_html_file_name = settings.file_name("index_html_file_name");
-		Breseq::Output::html_index($index_html_file_name, $settings, $summary, $ref_seq_info, $gd);
+		//TODO: html_index(index_html_file_name, settings, summary, ref_seq_info, gd);
 
 		string marginal_html_file_name = settings.file_name("marginal_html_file_name");
-		Breseq::Output::html_marginal_predictions($marginal_html_file_name, $settings, $summary, $ref_seq_info, $gd);
+		//TODO: html_marginal_predictions(marginal_html_file_name, settings, summary, ref_seq_info, gd);
 
 		///
 		// Temporary debug output using Data::Dumper
 		///
 
 		string summary_text_file_name = settings.file_name("summary_text_file_name");
-		open SUM, ">$summary_text_file_name";
+		/*open SUM, ">$summary_text_file_name";
 		print SUM Dumper($summary);
-		close SUM;
+		close SUM;*/
 
 		string settings_text_file_name = settings.file_name("settings_text_file_name");
-		open SETTINGS, ">$settings_text_file_name";
+		/*open SETTINGS, ">$settings_text_file_name";
 		print SETTINGS Dumper($settings);
-		close SETTINGS;
+		close SETTINGS;*/
 
 		// record the final time and print summary table
-		settings.record_end_time("Output");*/
+		settings.record_end_time("Output");
 
 		//TODO: html_statistics(settings.summary_html_file_name, settings, summary, ref_seq_info);
 

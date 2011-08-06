@@ -28,7 +28,7 @@ LICENSE AND COPYRIGHT
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-
+#include <time.h>
 
 // C++
 #include <algorithm>
@@ -340,6 +340,12 @@ namespace breseq {
 		stream << join(lhs, ",");
 		return stream;
 	}
+	/*inline ostream &operator << (ostream &stream, time_t lhs)
+	{
+		//stream << sprintf("%04d-%02d-%02d %02d:%02d:%02d", lhs.year+1900, lhs.mon+1, lhs.mday, lhs.hour, lhs.min, lhs.sec);
+		stream << ctime(&lhs);
+		return stream;
+	}*/
 	/*istream &operator >> (istream &stream, vector<string>& lhs)
 	{
 		string value;
@@ -382,6 +388,10 @@ namespace breseq {
 			interpreter << fixed << setprecision(precision) << t;
 			return interpreter.str();
 		}
+	}
+	inline string to_string (time_t& t)
+	{
+		return ctime(&t);
 	}
 
   // handle bool as either TRUE/FALSE or zero/non-zero number
