@@ -48,12 +48,16 @@ namespace breseq {
   // create junction trims
   // directly from FASTA
   SequenceTrimsList junction_trims_list;
-  cFastaFile ff(settings.candidate_junction_fasta_file_name, ios::in);
-  cFastaSequence fs;
-  while (ff.read_sequence(fs))
-  {
-    SequenceTrims st(fs.m_sequence);
-    junction_trims_list.push_back(st);
+  
+  if (junction_prediction)
+  {  
+    cFastaFile ff(settings.candidate_junction_fasta_file_name, ios::in);
+    cFastaSequence fs;
+    while (ff.read_sequence(fs))
+    {
+      SequenceTrims st(fs.m_sequence);
+      junction_trims_list.push_back(st);
+    }
   }
     
 	// ####

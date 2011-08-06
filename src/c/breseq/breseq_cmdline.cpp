@@ -260,7 +260,7 @@ int do_resolve_alignments(int argc, char* argv[]) {
      || !options.count("path")
      || !options.count("readfile")
 		 || !options.count("maximum-read-length")
-		 || !options.count("junction-cutoff")
+		 || (!options.count("no-junction-prediction") && !options.count("junction-cutoff"))
 		 ) {
 		options.printUsage();
 		return -1;
@@ -280,13 +280,18 @@ int do_resolve_alignments(int argc, char* argv[]) {
     LoadFeatureIndexedFastaFile(ref_seq_info, settings.reference_features_file_name, settings.reference_fasta_file_name);
     
     // should be one coverage cutoff value for each reference sequence
-    vector<double> coverage_cutoffs = from_string<vector<double> >(options["junction-cutoff"]);
-    assert(coverage_cutoffs.size() == ref_seq_info.size());
+    vector<double> coverage_cutoffs;
     
-    for (uint32_t i=0; i<ref_seq_info.size(); i++)
-    {
-      summary.preprocess_coverage[ref_seq_info[i].m_seq_id].junction_accept_score_cutoff = coverage_cutoffs[i];
+    if (!options.count("no-junction-prediction")) {
+      from_string<vector<double> >(options["junction-cutoff"]);
+      assert(coverage_cutoffs.size() == ref_seq_info.size());
+      
+      for (uint32_t i=0; i<ref_seq_info.size(); i++)
+      {
+        summary.preprocess_coverage[ref_seq_info[i].m_seq_id].junction_accept_score_cutoff = coverage_cutoffs[i];
+      }
     }
+    
         
     resolve_alignments(
       settings,
