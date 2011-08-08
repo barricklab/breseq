@@ -3,7 +3,7 @@
 <plist version="1.0">
 <dict>
 	<key>currentDocument</key>
-	<string>Breseq/lib/Breseq/Output.pm</string>
+	<string>Breseq/bin/breseq</string>
 	<key>documents</key>
 	<array>
 		<dict>
@@ -142,14 +142,14 @@
 			<key>caret</key>
 			<dict>
 				<key>column</key>
-				<integer>19</integer>
+				<integer>20</integer>
 				<key>line</key>
-				<integer>909</integer>
+				<integer>544</integer>
 			</dict>
 			<key>firstVisibleColumn</key>
 			<integer>0</integer>
 			<key>firstVisibleLine</key>
-			<integer>0</integer>
+			<integer>513</integer>
 		</dict>
 		<key>Breseq/bin/fastq_utils</key>
 		<dict>
@@ -194,6 +194,20 @@
 			<integer>0</integer>
 			<key>firstVisibleLine</key>
 			<integer>87</integer>
+		</dict>
+		<key>Breseq/bin/shrimp_normalize</key>
+		<dict>
+			<key>caret</key>
+			<dict>
+				<key>column</key>
+				<integer>12</integer>
+				<key>line</key>
+				<integer>92</integer>
+			</dict>
+			<key>firstVisibleColumn</key>
+			<integer>0</integer>
+			<key>firstVisibleLine</key>
+			<integer>79</integer>
 		</dict>
 		<key>Breseq/lib/Breseq.pm</key>
 		<dict>
@@ -464,6 +478,7 @@
 		<string>Breseq/Build</string>
 		<string>Breseq/lib/Breseq/File/Path.pm</string>
 		<string>Breseq/lib/Breseq/Output.pm</string>
+		<string>Breseq/bin/shrimp_normalize</string>
 		<string>Breseq/lib/Breseq.pm</string>
 		<string>Breseq/bin/breseq</string>
 		<string>Breseq/lib/Breseq/ReferenceSequence.pm</string>
@@ -482,6 +497,6 @@
 	<key>showFileHierarchyDrawer</key>
 	<true/>
 	<key>windowFrame</key>
-	<string>{{377, 93}, {982, 785}}</string>
+	<string>{{539, 150}, {887, 728}}</string>
 </dict>
 </plist>

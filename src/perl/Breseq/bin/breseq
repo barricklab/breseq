@@ -289,7 +289,7 @@ if ($settings->do_step('reference_alignment_done_file_name', "Read alignment to 
 			my $max = $read_struct->{max_pair_dist};
 			
 			my $reference_sam_file_name = $settings->file_name('reference_sam_file_name', {'#'=>$read_struct->{base_name}});	
-			Breseq::Shared::system("ssaha2 -save $reference_hash_file_name -kmer 13 -skip 1 -seeds 1 -score 12 -cmatch 9 -ckmer 1 -output sam_soft -outfile $reference_sam_file_name -multi 1 -mthresh 9 -pair $min,$max $fastq_1 $fastq_2");
+			Breseq::Shared::system("ssaha2 -disk 2 -save $reference_hash_file_name -kmer 13 -skip 1 -seeds 1 -score 12 -cmatch 9 -ckmer 1 -output sam_soft -outfile $reference_sam_file_name -multi 1 -mthresh 9 -pair $min,$max $fastq_1 $fastq_2");
 		}
 		
 		##reads are not paired
@@ -302,7 +302,7 @@ if ($settings->do_step('reference_alignment_done_file_name', "Read alignment to 
 			
 			if (!$settings->{smalt}) 
 			{
-				Breseq::Shared::system("ssaha2 -save $reference_hash_file_name -kmer 13 -skip 1 -seeds 1 -score 12 -cmatch 9 -ckmer 1 -output sam_soft -outfile $reference_sam_file_name $read_fastq_file");		
+				Breseq::Shared::system("ssaha2 -disk 2 -save $reference_hash_file_name -kmer 13 -skip 1 -seeds 1 -score 12 -cmatch 9 -ckmer 1 -output sam_soft -outfile $reference_sam_file_name $read_fastq_file");		
 			}
 			else
 			{
@@ -486,7 +486,7 @@ sub candidate_junction_alignment {}
 			
 			if (!$settings->{smalt} && (-e "$candidate_junction_hash_file_name.base"))
 			{
-				Breseq::Shared::system("ssaha2 -save $candidate_junction_hash_file_name -best 1 -rtype solexa -skip 1 -seeds 1 -output sam_soft -outfile $candidate_junction_sam_file_name $read_fastq_file");		
+				Breseq::Shared::system("ssaha2 -disk 2 -save $candidate_junction_hash_file_name -best 1 -rtype solexa -skip 1 -seeds 1 -output sam_soft -outfile $candidate_junction_sam_file_name $read_fastq_file");		
 				# Note: Added -best parameter to try to avoid too many matches to redundant junctions!
 			}
 			elsif (-e "$candidate_junction_hash_file_name.sma")
@@ -855,7 +855,7 @@ if (!$settings->{no_mutation_prediction})
 
 		if (defined $settings->{base_quality_cutoff})
 		{
-			$cmdline .= " --minimum_quality_score $settings->{base_quality_cutoff}";
+			$cmdline .= " --minimum_quality_score " . ($settings->{base_quality_cutoff}+1);
 		}
 
 		if ($settings->{polymorphism_prediction})
