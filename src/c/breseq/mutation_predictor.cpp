@@ -217,6 +217,11 @@ namespace breseq {
       
 			if (mc_item.entry_exists("reject"))
 			  continue;
+      
+      //if (mc_item["end"] == "3147574")
+      //{
+      //  cout << "breakpoint" << endl;
+      //}
 
 			// set up generic deletion item
 			diff_entry mut;
@@ -364,7 +369,7 @@ namespace breseq {
 					cout << "Pass 5" << endl;
 
 				// need to adjust the non-unique coords
-				if (!redundant_deletion_side)
+				if (redundant_deletion_side == -1)
 				{
 					uint32_t move_dist = r.m_end + 1 - n(mut["position"]);
 					mut["position"] = s(n(mut["position"]) + move_dist);
@@ -372,7 +377,7 @@ namespace breseq {
 				}
 				else
 				{
-					uint32_t move_dist = (n(mut["position"]) + n(mut["size"]) - 1) - (r.m_start - 1);
+					int32_t move_dist = (n(mut["position"]) + n(mut["size"]) - 1) - (r.m_start - 1);
 					mut["size"] = s(n(mut["size"]) - move_dist);
 				}
 
