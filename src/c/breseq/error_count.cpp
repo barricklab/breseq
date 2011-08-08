@@ -951,7 +951,6 @@ bool cErrorTable::alignment_position_to_covariates(const pileup_wrapper& a, int3
   //  if (indel == 0)
           
   uint32_t q_pos_0 = a.query_position_0();
-  uint32_t quality = 0;
   
   //## (2) Deletion in read relative to reference...
   //##       Quality is of the NEXT base in the read, and check that it is not an N

@@ -114,6 +114,14 @@ namespace breseq {
       
       while (input_fastq_file.read_sequence(on_sequence)) {
         
+        // Don't keep heavily N sequences. They are very slow in SSAHA2 alignment.
+        // This discards sequences that are more than 50% N.
+        if ( 0.5 < static_cast<double>(on_sequence.m_num_N_bases) / static_cast<double>(on_sequence.m_sequence.size())) 
+        {
+          //cout << "Discarding..." << endl;
+          //cout << on_sequence.m_sequence << endl;
+          continue;
+        }
         // truncate second name name
         on_sequence.m_name_plus = "";
         
@@ -250,6 +258,8 @@ namespace breseq {
     uint32_t count = 0;
     string line;
     
+    sequence.m_num_N_bases = 0;
+    
     // get the next four lines
     while (count < 4) {
       std::getline(*this, line);
@@ -313,7 +323,11 @@ namespace breseq {
               case 'T':
               case 'C':
               case 'G':
+                break;
+                
               case 'N':
+                sequence.m_num_N_bases++;
+                m_needs_conversion = true;
                 break;
                 
               case 'a':
@@ -344,6 +358,7 @@ namespace breseq {
               // all other characters converted to 'N'
               default :
                 sequence.m_sequence.replace(i,1,1,'N');
+                sequence.m_num_N_bases++;
                 m_needs_conversion = true;
 
             }

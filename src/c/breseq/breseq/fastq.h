@@ -44,6 +44,7 @@ namespace breseq {
       string m_sequence;  //sequence
       string m_name_plus; //+NAME
       string m_qualities; //quality score characters
+      uint32_t m_num_N_bases; // number of N bases, used for filtering
    }; 
   
   /*! Quality score conversion class.

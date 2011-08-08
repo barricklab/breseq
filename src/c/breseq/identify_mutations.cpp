@@ -164,6 +164,10 @@ void identify_mutations_pileup::pileup_callback(const pileup& p) {
   uint32_t position = p.position_1();
   //cout << position << endl;
   
+  //if (position == 498187) {
+  //  cout << "debug" << endl;
+  //}
+  
 	int insert_count=-1;
 	bool next_insert_count_exists=true;
 	
@@ -307,6 +311,7 @@ void identify_mutations_pileup::pileup_callback(const pileup& p) {
         if (is_ok)  {
         
           if (cv.quality() < _min_qual_score) {
+            //cout << cv.quality()  << endl;
             continue;
           }
   

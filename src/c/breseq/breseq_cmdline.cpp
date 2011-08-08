@@ -283,7 +283,7 @@ int do_resolve_alignments(int argc, char* argv[]) {
     vector<double> coverage_cutoffs;
     
     if (!options.count("no-junction-prediction")) {
-      from_string<vector<double> >(options["junction-cutoff"]);
+      coverage_cutoffs = from_string<vector<double> >(options["junction-cutoff"]);
       assert(coverage_cutoffs.size() == ref_seq_info.size());
       
       for (uint32_t i=0; i<ref_seq_info.size(); i++)
