@@ -126,7 +126,7 @@ namespace breseq
     //!Helper struct for set_quality_range
     typedef struct
     {
-      map<uint32_t, uint8_t> qual_to_color_index;
+      vector<uint8_t> qual_to_color_index;
       vector<uint8_t> qual_cutoffs;
     }Quality_Range;
     

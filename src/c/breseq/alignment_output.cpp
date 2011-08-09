@@ -703,98 +703,106 @@ void alignment_output::Alignment_Output_Pileup::fetch_callback ( const alignment
 // 'quality_score_cutoff' = below this value you get a special color -- for bad Illumina bases
 void alignment_output::set_quality_range(const uint32_t quality_score_cutoff)
 {
-    // calculate a cumulative distribution of the bases we are showing
-    vector<uint32_t> qc(255, 0);
-    uint32_t total = 0;
+  // calculate a cumulative distribution of the bases we are showing
+  vector<uint32_t> qc(255, 0);
+  uint32_t total = 0;
+  uint32_t max_qual = 0;
 
-    for ( Aligned_Reads::iterator itr_read = m_aligned_reads.begin(); itr_read != m_aligned_reads.end(); itr_read++ )
+  for ( Aligned_Reads::iterator itr_read = m_aligned_reads.begin(); itr_read != m_aligned_reads.end(); itr_read++ )
+  {
+    Aligned_Read& aligned_read(itr_read->second );
+    for ( uint32_t index = 0; index < aligned_read.qual_sequence.length(); index++ )
     {
-      Aligned_Read& aligned_read(itr_read->second );
-      for ( uint32_t index = 0; index < aligned_read.qual_sequence.length(); index++ )
+      uint8_t c = static_cast<uint8_t>(aligned_read.qual_sequence[index]);
+      if ( c >= quality_score_cutoff )
       {
-        uint8_t c = static_cast<uint8_t>(aligned_read.qual_sequence[index]);
-        if ( c >= quality_score_cutoff )
-        {
-          qc[c]++;
-          total++;
-        }
+        qc[c]++;
+        total++;
       }
+      if (c > max_qual) max_qual = c;
     }
-    
-    map<uint32_t,uint8_t> qual_to_color;
-    double cutoff_percentiles[] = {0, 0.03, 0.1, 0.3, 0.9, 1.0};
-    uint32_t num_cutoff_percentiles = 6;
-
-    uint32_t current_cutoff_level = 0;
-    //##set up to this score to the zero level (which is a completely different color)
-    uint32_t index;
-    for ( index = 0; index <  quality_score_cutoff; index++ )
-    {
-        qual_to_color[index] = current_cutoff_level;
-    }
+  }
   
-    current_cutoff_level++;
-    double cumq = 0;
-    while ( index < qc.size() )
-    {
-        cumq += (double)qc[index] / (double)total;
+  vector<uint8_t> qual_to_color(max_qual+1,0);
+  double cutoff_percentiles[] = {0, 0.03, 0.1, 0.3, 0.9, 1.0};
+  uint32_t num_cutoff_percentiles = 6;
 
-        // this can increment by at most one per quality score
-        if ( cumq > cutoff_percentiles[current_cutoff_level] )
-        {
-          current_cutoff_level++;
-        }
-        qual_to_color[index] = current_cutoff_level;
-        index++;     
-        if (cumq == 1.0) break;
+  uint32_t current_cutoff_level = 0;
+  //##set up to this score to the zero level (which is a completely different color)
+  uint32_t index;
+  for ( index = 0; index <  quality_score_cutoff; index++ )
+  {
+      qual_to_color[index] = current_cutoff_level;
+  }
+
+  current_cutoff_level++;
+  double cumq = 0;
+  while ( index <= qual_to_color.size() )
+  {
+    cumq += (double)qc[index] / (double)total;
+
+    // this can increment by at most one per quality score
+    if ( cumq > cutoff_percentiles[current_cutoff_level] )
+    {
+      current_cutoff_level++;
     }
-    //#last must be set to max
-    qual_to_color[index - 1] = num_cutoff_percentiles - 1;
-    //#first must be set to min
-    qual_to_color[quality_score_cutoff] = 1;
+    qual_to_color[index] = current_cutoff_level;
+    index++;     
+    if (cumq == 1.0) break;
+  }
+  //#last must be set to max
+  qual_to_color[index - 1] = num_cutoff_percentiles - 1;
+  //#first must be set to min
+  qual_to_color[quality_score_cutoff] = 1;
 
-    //#if there are at least as many quality scores in existence as
-    //#there are color levels to assign....
-
-    if ( qual_to_color.size() > ( num_cutoff_percentiles - 1 ) )
+  //#if there are at least as many quality scores in existence as
+  //#there are color levels to assign....
+  if ( index > ( num_cutoff_percentiles - 1 ) )
+  {
+    //  #...redistribute such that there are no jumps in quality level
+    uint32_t gap = 1;
+    while ( gap )
     {
-      //  #...redistribute such that there are no jumps in quality level
-      uint32_t gap = 1;
-      while ( gap )
-      {
-        gap = 0;
-        uint32_t last = 0;
+      gap = 0;
+      uint32_t last = 0;
 
-        for ( uint32_t index = 0; index < qual_to_color.size(); index++ )
+      for ( uint32_t index = 0; index < qual_to_color.size(); index++ )
+      {
+        if ( qual_to_color[index] > last + 1 )
         {
-          if ( qual_to_color[index] > last + 1 )
-          {
-            qual_to_color[index - 1]++;
-            gap = 1;
-          }
-          last = qual_to_color[index];
+          qual_to_color[index]--;
+          gap = 1;
         }
+        last = qual_to_color[index];
       }
     }
-    //
-    //##finally, this sets the cutoff levels
-    uint32_t last = 0;
-    vector<uint8_t> cutoff_levels;
-    cutoff_levels.clear();
-    cutoff_levels.push_back ( quality_score_cutoff );
+  }
 
-    for ( uint32_t index = quality_score_cutoff;
-            index < qual_to_color.size(); index++ )
+  //
+  //##finally, this sets the cutoff levels
+  uint32_t last = 0;
+  vector<uint8_t> cutoff_levels;
+  cutoff_levels.clear();
+  cutoff_levels.push_back ( quality_score_cutoff );
+
+  for ( uint32_t index = quality_score_cutoff; index < qual_to_color.size(); index++ )
+  {
+    if ( qual_to_color[index] > last )
     {
-        if ( qual_to_color[index] > last )
-        {
-            cutoff_levels.push_back ( index );
-            last = qual_to_color[index];
-        }
+        cutoff_levels.push_back ( index );
+        last = qual_to_color[index];
     }
+  }
 
-    m_quality_range.qual_to_color_index = qual_to_color;
-    m_quality_range.qual_cutoffs = cutoff_levels;
+  m_quality_range.qual_to_color_index = qual_to_color;
+
+  // DEBUG
+  //for (size_t i=0; i<qual_to_color.size(); i++)
+  //{
+  //  cout << i << ": " << (uint32_t)m_quality_range.qual_to_color_index[i] << endl;
+  //}
+  
+  m_quality_range.qual_cutoffs = cutoff_levels;
 }
 
 
@@ -900,8 +908,7 @@ string alignment_output::html_alignment_line(const alignment_output::Alignment_B
         else
           color = to_upper(to_string(b)) + to_string<uint32_t>(no_color_index);
       }
-      else if ( (use_quality_range) &&
-         ( (b.find(".") == string::npos) || (b.find("-") == string::npos) ) )
+      else if ( (use_quality_range) && ( (b != ".") || (b != "-") ) )
       {
         uint8_t color_num = m_quality_range.qual_to_color_index[q];
         color = to_upper(b) + to_string<uint32_t>(color_num);
