@@ -142,14 +142,14 @@
 			<key>caret</key>
 			<dict>
 				<key>column</key>
-				<integer>20</integer>
+				<integer>3</integer>
 				<key>line</key>
-				<integer>544</integer>
+				<integer>853</integer>
 			</dict>
 			<key>firstVisibleColumn</key>
 			<integer>0</integer>
 			<key>firstVisibleLine</key>
-			<integer>513</integer>
+			<integer>828</integer>
 		</dict>
 		<key>Breseq/bin/fastq_utils</key>
 		<dict>
@@ -200,7 +200,7 @@
 			<key>caret</key>
 			<dict>
 				<key>column</key>
-				<integer>12</integer>
+				<integer>0</integer>
 				<key>line</key>
 				<integer>92</integer>
 			</dict>
@@ -372,7 +372,7 @@
 			<key>caret</key>
 			<dict>
 				<key>column</key>
-				<integer>57</integer>
+				<integer>1</integer>
 				<key>line</key>
 				<integer>219</integer>
 			</dict>
@@ -497,6 +497,6 @@
 	<key>showFileHierarchyDrawer</key>
 	<true/>
 	<key>windowFrame</key>
-	<string>{{539, 150}, {887, 728}}</string>
+	<string>{{547, 150}, {887, 728}}</string>
 </dict>
 </plist>

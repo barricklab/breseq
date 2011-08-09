@@ -110,6 +110,7 @@ class alignment_wrapper {
       for (uint32_t j = 0; j < read_length(); j++)
       {
         s += static_cast<char>(*qscore);
+        qscore++;
       }
       return s;
     };

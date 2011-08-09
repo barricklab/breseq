@@ -36,7 +36,7 @@
       displayScale = "1.00"
       launchStyle = "0"
       useCustomWorkingDirectory = "YES"
-      customWorkingDirectory = "/Users/jbarrick/tmp/B2C1"
+      customWorkingDirectory = "/Users/jbarrick/tmp/Ara-2-test-1"
       buildConfiguration = "Debug">
       <BuildableProductRunnable>
          <BuildableReference
@@ -49,50 +49,7 @@
       </BuildableProductRunnable>
       <CommandLineArguments>
          <CommandLineArgument
-            argument = "--bam /Users/jbarrick/src/breseq/tests/lambda_mixed_pop/data/reference.bam --fasta /Users/jbarrick/src/breseq/tests/lambda_mixed_pop/data/reference.fasta --region NC_001416:139-139 --output /Users/jbarrick/Desktop/output.html"
-            isEnabled = "NO">
-         </CommandLineArgument>
-         <CommandLineArgument
-            argument = "--fasta=/Users/jbarrick/src/breseq/tests/REL606_fragment_is_mediated_dels/data/reference.fasta --bam=/Users/jbarrick/src/breseq/tests/REL606_fragment_is_mediated_dels/data/reference.bam --region=REL606-5:1-15 --output=/Users/jbarrick/Desktop/test.html"
-            isEnabled = "NO">
-         </CommandLineArgument>
-         <CommandLineArgument
-            argument = "--region NC_001416:139-139 --quality-score-cutoff 3 --stdout"
-            isEnabled = "NO">
-         </CommandLineArgument>
-         <CommandLineArgument
-            argument = "--bam /Users/jbarrick/src/breseq/tests/lambda_mixed_pop/data/reference.bam --fasta /Users/jbarrick/src/breseq/tests/lambda_mixed_pop/data/reference.fasta --region NC_001416:47004-47004 --quality-score-cutoff 3 --stdout"
-            isEnabled = "NO">
-         </CommandLineArgument>
-         <CommandLineArgument
-            argument = "--bam /Users/jbarrick/src/breseq/tests/lambda_mixed_pop/data/reference.bam --fasta /Users/jbarrick/src/breseq/tests/lambda_mixed_pop/data/reference.fasta --region NC_001416:21737.2-21737.3 --quality-score-cutoff 3 --stdout"
-            isEnabled = "NO">
-         </CommandLineArgument>
-         <CommandLineArgument
-            argument = "--bam /Users/jbarrick/src/breseq/tests/lambda_mixed_pop/06_bam/junction.bam --fasta /Users/jbarrick/src/breseq/tests/lambda_mixed_pop/03_candidate_junctions/candidate_junction.fasta --region NC_001416__21737__0__NC_001416__27729__1__5____35__35__0__0:36-40 --quality-score-cutoff 3 --output /Users/jbarrick/Desktop/out.html"
-            isEnabled = "NO">
-         </CommandLineArgument>
-         <CommandLineArgument
-            argument = "--bam 06_bam/junction.bam --fasta 03_candidate_junctions/candidate_junction.fasta --region NC_002163__878096__1__NC_002163__878767__0__-4__CTAA__75__75__0__0:76-79 --quality-score-cutoff 3 --stdout"
-            isEnabled = "NO">
-         </CommandLineArgument>
-         <CommandLineArgument
-            argument = "--bam tests/lambda_mixed_pop/data/reference.bam --fasta tests/lambda_mixed_pop/data/reference.fasta --region NC_001416:21737-21737 --quality-score-cutoff 3"
-            isEnabled = "NO">
-         </CommandLineArgument>
-         <CommandLineArgument
-            argument = "--bam ./06_bam/junction.bam --fasta ./03_candidate_junctions/candidate_junction.fasta --region NC_012967__1266671__0__NC_012967__1680462__0__-19__GTCTTCTGCTTGAAAAAAA__96__96__0__0:97-115 --quality-score-cutoff 3 --stdout"
-            isEnabled = "NO">
-         </CommandLineArgument>
-         <CommandLineArgument
-            argument = "--bam ./06_bam/junction.bam --fasta ./03_candidate_junctions/candidate_junction.fasta --region NC_012967__1266671__0__NC_012967__1680462__0__-19__GTCTTCTGCTTGAAAAAAA__96__96__0__0:97-115 --quality-score-cutoff 3 --stdout"
-            isEnabled = "NO">
-         </CommandLineArgument>
-         <CommandLineArgument
-            argument = "--bam ./06_bam/junction.bam --fasta ./03_candidate_junctions/candidate_junction.fasta --region NC_012967__640360__0__NC_012967__3952439__0__-19__GCTCTTCCGATCTCCATCT__96__96__0__0:97-115 --quality-score-cutoff 3 --output"
-            isEnabled = "NO">
-         </CommandLineArgument>
-         <CommandLineArgument
+            argument = "--bam ./data/reference.bam --fasta ./data/reference.fasta --region REL606:498187-498187 --quality-score-cutoff 3 --stdout"
             isEnabled = "YES">
          </CommandLineArgument>
       </CommandLineArguments>
