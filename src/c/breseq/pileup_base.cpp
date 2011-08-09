@@ -146,6 +146,10 @@ int first_level_pileup_callback(uint32_t tid, uint32_t pos, int32_t n, const bam
   if (pb->m_last_tid == UNDEFINED) {
     pb->m_last_tid = 0;
     pb->at_target_start(pb->m_last_tid); 
+    
+    if(pb->m_print_progress) {
+      cerr << "  REFERENCE:" << pb->target_name(pb->m_last_tid) << endl;
+    }
   }
 
   
@@ -173,6 +177,9 @@ int first_level_pileup_callback(uint32_t tid, uint32_t pos, int32_t n, const bam
     // Start a new target if necessary
     if (pb->m_last_position_1 == 0) {
       pb->at_target_start(pb->m_last_tid); 
+      if(pb->m_print_progress) {
+        cerr << "  REFERENCE:" << pb->target_name(pb->m_last_tid) << endl;
+      }
     }
   }
   
@@ -255,7 +262,7 @@ void pileup_base::do_pileup() {
     at_target_end(m_last_tid);
     m_last_position_1 = 0;
   }
-  // @JEB strictly speaking, should also handle any remaining fragments in list....
+  // @JEB strictly speaking, should also handle any remaining fragments in list that pileup never encountered....
 }
 
 

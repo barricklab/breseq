@@ -1364,7 +1364,7 @@ vector<string> get_sorted_junction_ids(map<string, vector<MatchedJunction> >& un
       degenerate_count = degenerate_map[keys[i]].size();
     }
     
-    VectorSize info(keys[i], unique_map[keys[i]].size(), degenerate_count);
+    VectorSize info(keys[i], unique_map[keys[i]].size()+degenerate_count, degenerate_count);
     vector_sizes.push_back(info);
   }
   sort(vector_sizes.begin(), vector_sizes.end(), VectorSize::sort_reverse_by_size);

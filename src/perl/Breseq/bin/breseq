@@ -855,7 +855,7 @@ if (!$settings->{no_mutation_prediction})
 
 		if (defined $settings->{base_quality_cutoff})
 		{
-			$cmdline .= " --minimum_quality_score " . ($settings->{base_quality_cutoff}+1);
+			$cmdline .= " --minimum_quality_score " . $settings->{base_quality_cutoff};
 		}
 
 		if ($settings->{polymorphism_prediction})

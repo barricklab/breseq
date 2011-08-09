@@ -416,35 +416,38 @@ namespace breseq
 
 	void Settings::init_installed()
 	{
-		// breseq C++ executables
+		// breseq C++ executables - look in the local bin path only
+    // @JEB this won't be necessary once C++ conversion is complete
 		string path = this->bin_path + "/cbreseq";
-		this->installed["cbreseq"] = system(path.c_str()) ? this->bin_path + "/cbreseq" : "";
+    string test_command = path + " &>/dev/null";
+		this->installed["cbreseq"] = system(test_command.c_str()) ? this->bin_path + "/cbreseq" : "";
 		path = this->bin_path + "/cbam2aln";
-		this->installed["cbam2aln"] = system(path.c_str()) ? this->bin_path + "/cbam2aln" : "";
+    test_command = path + " &>/dev/null";
+		this->installed["cbam2aln"] = system(test_command.c_str()) ? this->bin_path + "/cbam2aln" : "";
 
 		// absolutely required ssaha2 or smalt
-		this->installed["SSAHA2"] = system("which ssaha2 2>/dev/null") ? "ssaha2" : "";
+		this->installed["SSAHA2"] = system("which ssaha2 &>/dev/null") ? "ssaha2" : "";
 
 		// check for default names
-		this->installed["smalt"] = system("which smalt 2>/dev/null") ? "smalt" : "";
+		this->installed["smalt"] = system("which smalt &>/dev/null") ? "smalt" : "";
 		if (this->installed["smalt"].size() == 0)
 		{
-			this->installed["smalt"] = system("which smalt_i386 2>/dev/null") ? "smalt_i386" : "";
+			this->installed["smalt"] = system("which smalt_i386 &>/dev/null") ? "smalt_i386" : "";
 		}
 		if (this->installed["smalt"].size() == 0)
 		{
-			this->installed["smalt"] = system("which smalt_ia64 2>/dev/null") ? "smalt_ia64" : "";
+			this->installed["smalt"] = system("which smalt_ia64 &>/dev/null") ? "smalt_ia64" : "";
 		}
 		if (this->installed["smalt"].size() == 0)
 		{
-			this->installed["smalt"] = system("which smalt_x86_64 2>/dev/null") ? "smalt_x86_64" : "";
+			this->installed["smalt"] = system("which smalt_x86_64 &>/dev/null") ? "smalt_x86_64" : "";
 		}
 		if (this->installed["smalt"].size() == 0)
 		{
-			this->installed["smalt"] = system("which smalt_MacOSX_i386 2>/dev/null") ? "smalt_MacOSX_i386" : "";
+			this->installed["smalt"] = system("which smalt_MacOSX_i386 &>/dev/null") ? "smalt_MacOSX_i386" : "";
 		}
 
-		this->installed["R"] = system("which R") ? "R" : "";
+		this->installed["R"] = system("which R &>/dev/null") ? "R" : "";
 		if (this->installed["R"].size() > 0)
 		{
 			/*string R_version = system("R --version");
