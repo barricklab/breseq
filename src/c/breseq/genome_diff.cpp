@@ -326,61 +326,102 @@ void genome_diff::read(const string& filename) {
   ifstream IN(filename.c_str());
   if(!IN.good())
     cerr << "Could not open file for reading: " << filename << endl;
+
+  ::list<string> lines;
+  string line;
   
- vector<string> lines;
-  char const line_delim = '\n';
-  for(string line; getline(IN, line, line_delim);)
-    lines.push_back(line);
+  if(IN.is_open()) {
+    while(IN.good()) {
+      getline(IN,line);
+      lines.push_back(line);
+    }
+    IN.close();
+  }
   
-  // read version from first line
-  string l = shift<string>(lines);
-  if(!regex_m("#=GENOME_DIFF",l) && !regex_m("#=GENOMEDIFF",l))
+  //Can't find version in first line
+  if(lines.front().find("#=GENOME_DIFF") == string::npos)
   {
     cerr << "Could not match version line in file" << endl;
     assert(false);
   }
-  vector<string> version_split = split(l," ");
-  assert(version_split.size() == 2);
-  version = version_split.back();
+  
+  //strip paths and .gd off of filename to obtain run_id
+  //EX: a filename of 
+  //RS0001_Woods2011/RJW1129.gd
+  //or
+  //RJW1129.gd
+  //becomes RJW1129
+  size_t run_id_end = filename.find(".gd");
+  if(size_t run_id_begin = filename.find_last_of("\\") == string::npos) {
+    metadata.run_id = filename.substr(0, run_id_end);
+  } else {
+    metadata.run_id = filename.substr(run_id_begin, run_id_end);
+  }
+ 
+  // Check for and read in metadata
+  //#=GENOME_DIFF 1.0
+  //#=AUTHOR    Barrick JE 
+  //#=REFSEQ    Genbank:NC_012967.1
+  //#=READSEQ   SRA:SRR066595
+  while (lines.front().find_first_of("#") == 0)
+  {
+    string line = lines.front();
+  
+    //#=GENOME_DIFF 1.0
+    if (line.find("#=GENOME_DIFF") != string::npos) {
+      vector<string> version_split = split(line, " ");
+      metadata.version = version_split.back();
+    }
 
+    //#=AUTHOR    Barrick JE 
+    if (line.find("#=AUTHOR") != string::npos) {
+      size_t author_begins = line.find_first_not_of(" ", 8);
+      size_t author_ends = line.length();
+      metadata.author = line.substr(author_begins, author_ends);
+    }
+
+    //#=REFSEQ    Genbank:NC_012967.1
+    if (line.find("#=REFSEQ") != string::npos) {
+      vector<string> ref_seq_split = split(line, ":");
+      metadata.ref_seq = ref_seq_split.back(); 
+    }
+
+    //#=READSEQ   SRA:SRR066595 
+    if (line.find("#=READSEQ") != string::npos) {
+      vector<string> read_seq_split = split(line, ":");
+      metadata.read_seq.push_back(read_seq_split.back());
+    }
+
+    lines.pop_front();
+  }
+  
   
   while(!lines.empty())
-  {
-    l=shift<string>(lines);
-    ///TODO metadata 
-    
+  {    
+    string line = lines.front();
+    //Check that line isn't empty
+    if (line.empty()) {
+      lines.erase(lines.begin());
+      continue;
+    }
+    //Remove lines containing evidence
+    string type = split(line, "\t").front();
+    if(type.length() > 3) {
+      lines.erase(lines.begin());
+      continue;
+    }
+      
     // # $self->add($self->_line_to_item($l));
-    add(_line_to_item(l));
+    add(_line_to_item(line));
+    
+    lines.pop_front();
   }
 
-// #   while ($l = shift @lines)
-// #   {
-// #     if ($l =~ m/^\s*#=(\S+)\s+(.+)/) {
-// #       #metadata line key value pair
-// #       push @{$self->{metadata}->{$1}}, $2;
-// #       push @{$self->{metadata_lines}}, $l;
-// #       
-// #     } elsif ($l =~ m/^\s+#=(.+)/) {
-// #     } else {
-// #       $self->add($self->_line_to_item($l));
-// #     }
-// #   }
-// #   close IN;
-  IN.close();
-   	// match common fields - type id pid seqid
+  // match common fields - type id pid seqid
 		
-		// match type-specific fields
-///USED for Testing
-// 		for(vector<diff_entry>::iterator itr = _entry_list.begin(); 
-//         itr != _entry_list.end(); itr++)
-//         {
-//           map<string,string> fields(itr->_fields);
-//           for(map<string,string>::iterator j = fields.begin();
-//               j != fields.end();j++)
-//               cout<< j->first<< " "<<j->second<<"   ";
-//           cout <<endl;
-//         }
-// 	
+  // match type-specific fields
+
+ 	
 }
 
 

@@ -255,6 +255,17 @@ public:
 
   void strcopy(char* arg1, const char* arg2);
 
+  //Metadata kept in .gd files
+  struct Metadata
+  {
+  string run_id;
+  string version; 
+  string author;
+  string ref_seq;
+  vector<string> read_seq;
+  };
+
+  Metadata metadata;
   
   
 
