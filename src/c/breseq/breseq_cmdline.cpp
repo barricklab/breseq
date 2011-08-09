@@ -1163,13 +1163,13 @@ int breseq_default_action(int argc, char* argv[])
 				string samtools = settings.ctool("samtools");
 
 				string command = samtools + " import " + reference_faidx_file_name + " " + preprocess_junction_best_sam_file_name + " " + coverage_junction_best_bam_unsorted_file_name;
-				system(command.c_str());
+				exit_code = system(command.c_str());
 				command = samtools + " sort " + coverage_junction_best_bam_unsorted_file_name + " " + coverage_junction_best_bam_prefix;
-				system(command.c_str());
+				exit_code = system(command.c_str());
 				if (!settings.keep_all_intermediates)
 					remove(coverage_junction_best_bam_unsorted_file_name.c_str());
 				command = samtools + " index " + coverage_junction_best_bam_file_name;
-				system(command.c_str());
+				exit_code = system(command.c_str());
 
 				// Count errors
 				string reference_fasta_file_name = settings.file_name("reference_fasta_file_name");
@@ -1249,7 +1249,7 @@ int breseq_default_action(int argc, char* argv[])
 			string filename = settings.file_name("candidate_junction_path") + "/candidate_junction.fasta";
 			string faidx_command = samtools + " faidx " + filename;
 			if (!file_empty(filename.c_str()))
-				system(faidx_command.c_str());
+				exit_code = system(faidx_command.c_str());
 			// @JEB Fix this -- no summary currently...
 			//summary.candidate_junction = {};
 
@@ -1284,13 +1284,13 @@ int breseq_default_action(int argc, char* argv[])
 				if (!settings.smalt)
 				{
 					string command = "ssaha2Build -rtype solexa -skip 1 -save " + candidate_junction_hash_file_name + " " + candidate_junction_fasta_file_name;
-					system(command.c_str());
+					exit_code = system(command.c_str());
 				}
 				else
 				{
 					string smalt = settings.ctool("smalt");
 					string command = smalt + " index -k 13 -s 1 " + candidate_junction_hash_file_name + " "+ candidate_junction_fasta_file_name;
-					system(command.c_str());
+					exit_code = system(command.c_str());
 				}
 			}
 
@@ -1308,7 +1308,7 @@ int breseq_default_action(int argc, char* argv[])
 				if (!settings.smalt && file_exists(filename.c_str()))
 				{
 					string command = "ssaha2 -save " + candidate_junction_hash_file_name + " -best 1 -rtype solexa -skip 1 -seeds 1 -output sam_soft -outfile " + candidate_junction_sam_file_name + " " + read_fastq_file;
-					system(command.c_str());
+					exit_code = system(command.c_str());
 					// Note: Added -best parameter to try to avoid too many matches to redundant junctions!
 				}
 				else
@@ -1318,7 +1318,7 @@ int breseq_default_action(int argc, char* argv[])
 					{
 						string smalt = settings.ctool("smalt");
 						string command = smalt + " map -c 0.8 -x -n 2 -d 1 -f samsoft -o " + candidate_junction_sam_file_name + " " + candidate_junction_hash_file_name + " " + read_fastq_file;
-						system(command.c_str());
+						exit_code = system(command.c_str());
 						//-m 12
 					}
 				}
@@ -1435,14 +1435,14 @@ int breseq_default_action(int argc, char* argv[])
 		if (!settings.no_junction_prediction)
 		{
 			command = samtools + " import " + candidate_junction_faidx_file_name + " " + resolved_junction_sam_file_name + " " + junction_bam_unsorted_file_name;
-			system(command.c_str());
+			exit_code = system(command.c_str());
 			command = samtools + " sort " + junction_bam_unsorted_file_name + " " + junction_bam_prefix;
-			system(command.c_str());
+			exit_code = system(command.c_str());
 			if (!settings.keep_all_intermediates)
 				remove(junction_bam_unsorted_file_name.c_str());
-			system(command.c_str());
+			exit_code = system(command.c_str());
 			command = samtools + " index " + junction_bam_file_name;
-			system(command.c_str());
+			exit_code = system(command.c_str());
 		}
 
 		string resolved_reference_sam_file_name = settings.file_name("resolved_reference_sam_file_name");
@@ -1652,7 +1652,7 @@ int breseq_default_action(int argc, char* argv[])
 			string plot_error_rates_r_script_log_file_name = settings.file_name("plot_error_rates_r_script_log_file_name", "//", read_file);
 			string error_rates_plot_file_name = settings.file_name("error_rates_plot_file_name", "//", read_file);
 			command = "R --vanilla in_file=" + error_rates_base_qual_error_prob_file_name + " out_file=" + error_rates_plot_file_name + " < " + plot_error_rates_r_script_file_name + " > " + plot_error_rates_r_script_log_file_name;
-			system(command.c_str());
+			exit_code = system(command.c_str());
 		}
 
 		//Storable::store($summary->{unique_coverage}, $error_rates_summary_file_name) or die "Can"t store data in file $error_rates_summary_file_name!" << endl;
@@ -1661,9 +1661,7 @@ int breseq_default_action(int argc, char* argv[])
 	//$summary->{unique_coverage} = Storable::retrieve($error_rates_summary_file_name);
 	//die "Can"t retrieve data from file $error_rates_summary_file_name!\n" if (!$summary->{unique_coverage});
 	//these are determined by the loaded summary information
-	/*TODO:
-	settings.unique_coverage.clear();
-	settings.unique_coverage.insert(summary.unique_coverage.begin(), summary.unique_coverage.end());*/
+	settings.unique_coverage = summary.unique_coverage;
 
 	//
 	// Make predictions of point mutations, small indels, and large deletions
@@ -1759,7 +1757,7 @@ int breseq_default_action(int argc, char* argv[])
 		string polymorphism_statistics_done_file_name = settings.file_name("polymorphism_statistics_done_file_name");
 		if (settings.polymorphism_prediction && settings.do_step("polymorphism_statistics_done_file_name", "Polymorphism statistics"))
 		{
-			//TODO: polymorphism_statistics(settings, summary, ref_seq_info);
+			ref_seq_info.polymorphism_statistics(settings, summary);
 			settings.done_step("polymorphism_statistics_done_file_name");
 		}
 	}

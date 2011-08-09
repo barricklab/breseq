@@ -251,6 +251,620 @@ namespace breseq {
     }
   }
 
+	cSequenceFeature* cReferenceSequences::get_overlapping_feature(vector<cSequenceFeature>& feature_list_ref, uint32_t pos)
+	{
+		for (uint32_t i = 0; i < feature_list_ref.size(); i++)
+			if (pos >= feature_list_ref[i].m_start && pos <= feature_list_ref[i].m_end)
+				return &feature_list_ref[i];
+		return NULL;
+	}
+
+	void cReferenceSequences::find_nearby_genes(vector<Gene>& gene_list_ref, uint32_t pos_1, uint32_t pos_2, vector<Gene>& within_genes, vector<Gene>& between_genes, vector<Gene>& inside_left_genes, vector<Gene>& inside_right_genes, Gene& prev_gene, Gene& next_gene)
+	{
+		if (!is_defined(pos_2))
+			pos_2 = pos_1;
+
+		//#	print "$pos_1, $pos_2\n";
+
+		for (uint32_t i = 0; i < gene_list_ref.size(); i++) //GENE
+		{
+			Gene test_gene = gene_list_ref[i];
+
+			if (test_gene.end < pos_1)
+				prev_gene = test_gene;
+
+			if (  (test_gene.start <= pos_1) && (test_gene.end >= pos_1)
+			   && (test_gene.start <= pos_2) && (test_gene.end >= pos_2) )
+			{
+				within_genes.push_back(test_gene);
+				//#	print "^ $test_gene->{name}\n";
+			}
+			else if ( (test_gene.start <= pos_1) && (test_gene.end >= pos_1) )
+			{
+				inside_left_genes.push_back(test_gene);
+			}
+			else if ( (test_gene.start <= pos_2) && (test_gene.end >= pos_2) )
+			{
+				inside_right_genes.push_back(test_gene);
+			}
+			else if ( (test_gene.start >= pos_1) && (test_gene.end <= pos_2) )
+			{
+				between_genes.push_back(test_gene);
+				//#	print ">< $test_gene->{name}\n";
+			}
+			// We've passed the changes, so it is in the previous intergenic space
+			if (test_gene.start > pos_2)
+			{
+				next_gene = test_gene;
+				break;
+			}
+		}
+
+		//#	print "$prev_gene->{name} || $next_gene->{name}\n";
+
+		//return ($prev_gene, $next_gene, \@within_genes, \@between_genes, \@inside_left_genes, \@inside_right_genes);
+	}
+
+	map<string,char> cReferenceSequences::translation_table_11 = make_map<string,char>
+		("TTT", 'F')
+		("TTC", 'F')
+		("TTA", 'L')
+		("TTG", 'L')
+
+		("TCT", 'S')
+		("TCC", 'S')
+		("TCA", 'S')
+		("TCG", 'S')
+
+		("TAT", 'Y')
+		("TAC", 'Y')
+		("TAA", '*')
+		("TAG", '*')
+
+		("TGT", 'C')
+		("TGC", 'C')
+		("TGA", '*')
+		("TGG", 'W')
+
+		("CTT", 'L')
+		("CTC", 'L')
+		("CTA", 'L')
+		("CTG", 'L')
+
+		("CCT", 'P')
+		("CCC", 'P')
+		("CCA", 'P')
+		("CCG", 'P')
+
+		("CAT", 'H')
+		("CAC", 'H')
+		("CAA", 'Q')
+		("CAG", 'Q')
+
+		("CGT", 'R')
+		("CGC", 'R')
+		("CGA", 'R')
+		("CGG", 'R')
+
+		("ATT", 'I')
+		("ATC", 'I')
+		("ATA", 'I')
+		("ATG", 'M')
+
+		("ACT", 'T')
+		("ACC", 'T')
+		("ACA", 'T')
+		("ACG", 'T')
+
+		("AAT", 'N')
+		("AAC", 'N')
+		("AAA", 'K')
+		("AAG", 'K')
+
+		("AGT", 'S')
+		("AGC", 'S')
+		("AGA", 'R')
+		("AGG", 'R')
+
+		("GTT", 'V')
+		("GTC", 'V')
+		("GTA", 'V')
+		("GTG", 'V')
+
+		("GCT", 'A')
+		("GCC", 'A')
+		("GCA", 'A')
+		("GCG", 'A')
+
+		("GAT", 'D')
+		("GAC", 'D')
+		("GAA", 'E')
+		("GAG", 'E')
+
+		("GGT", 'G')
+		("GGC", 'G')
+		("GGA", 'G')
+		("GGG", 'G')
+	;
+	
+	char cReferenceSequences::bridge_translate(string seq)
+	{
+		assert(translation_table_11.count(seq) > 0);
+		return translation_table_11[seq];
+	}
+
+  	void cReferenceSequences::annotate_1_mutation(diff_entry& mut, uint32_t start, uint32_t end, bool repeat_override)
+	{
+		// this could be moved to the object
+		string intergenic_seperator = "/";
+
+		// initialize everything, even though we don"t always use it
+		mut["aa_position"] = "";
+		mut["aa_ref_seq"] = "";
+		mut["aa_new_seq"] = "";
+		mut["codon_position"] = "";
+		mut["codon_ref_seq"] = "";
+		mut["codon_new_seq"] = "";
+		mut["gene_name"] = "";
+		mut["gene_position"] = "";
+		mut["gene_product"] = "";
+		mut["gene_list"] = ""; //#affected genes
+
+		string seq_id = mut["seq_id"];
+
+		assert (this->gene_lists.count(seq_id) > 0 && this->repeat_lists.count(seq_id) > 0 && this->ref_strings.count(seq_id) > 0);
+		//or die "Unknown seq_id in reference sequence info: $seq_id\n";
+
+		vector<Gene> gene_list_ref = this->gene_lists[seq_id];
+		vector<cSequenceFeature> repeat_list_ref = this->repeat_lists[seq_id];
+		string ref_string = this->ref_strings[seq_id];
+
+		int32_t size = end - start + 1;
+
+		Gene prev_gene, next_gene;
+		vector<Gene> within_genes;
+		vector<Gene> between_genes;
+		vector<Gene> inside_left_genes;
+		vector<Gene> inside_right_genes;
+
+		cSequenceFeature* repeat_region;
+		if (repeat_override)
+		{
+			assert(start == end);
+			repeat_region = get_overlapping_feature(repeat_list_ref, start);
+			if (repeat_region != NULL)
+			{
+				Gene within_gene(*repeat_region);
+				within_genes.push_back(within_gene);
+			}
+		}
+
+		if (repeat_region == NULL)
+			find_nearby_genes(gene_list_ref, start, end, within_genes, between_genes, inside_left_genes, inside_right_genes, prev_gene, next_gene);
+		else
+			delete repeat_region;
+
+		// Mutation is intergenic
+		if (within_genes.size() + between_genes.size() + inside_left_genes.size() + inside_right_genes.size() == 0)
+		{
+			mut["snp_type"] = "intergenic";
+
+			mut["gene_name"] += (prev_gene.name.size() > 0) ? prev_gene.name : "–";
+			mut["gene_name"] += intergenic_seperator;
+			mut["gene_name"] += (next_gene.name.size() > 0) ? next_gene.name : "–";
+
+			if (prev_gene.name.size() > 0)
+			{
+				mut["gene_position"] += "intergenic (";
+				mut["gene_position"] += (prev_gene.strand) ? "+" : "-";
+				mut["gene_position"] += to_string(start - prev_gene.end);
+			}
+			else
+			{
+				mut["gene_position"] += "intergenic (–";
+			}
+			mut["gene_position"] += intergenic_seperator;
+			if (next_gene.name.size() > 0)
+			{
+				mut["gene_position"] += (next_gene.strand) ? "-" : "+";
+				mut["gene_position"] += to_string(next_gene.start - end);
+			}
+			else
+			{
+				mut["gene_position"] += "–";
+			}
+			mut["gene_position"] += ")";
+
+			mut["gene_product"] += (prev_gene.name.size() > 0) ? prev_gene.product : "–";
+			mut["gene_product"] += intergenic_seperator;
+			mut["gene_product"] += (next_gene.name.size() > 0) ? next_gene.product : "–";
+
+			return;// mut;
+		}
+		// Mutation is completely within genes
+		else if (within_genes.size() > 0)
+		{
+			/// TODO: It can be within multiple genes, in which case we need to annotate
+			/// the change it causes in each reading frame UGH! YUCKY!
+			/// FOR NOW: just take the first of the within genes...
+			Gene gene = within_genes[0];
+			mut["gene_name"] = gene.name;
+			mut["gene_product"] = gene.product;
+
+			//#added for gene table
+			mut["gene_list"] = gene.name;
+
+			uint32_t within_gene_start = (gene.strand) ? gene.start : gene.end;
+
+			if (start == end)
+			{
+				mut["gene_position"] = abs(start - within_gene_start) + 1;
+			}
+			else
+			{
+				uint32_t gene_start = abs(start - within_gene_start) + 1;
+				uint32_t gene_end = abs(end - within_gene_start) + 1;
+				mut["gene_position"] = (gene_start < gene_end) ? gene_start + "–" + gene_end : gene_end + "–" + gene_start;
+			}
+
+			string gene_nt_size = to_string(gene.end - gene.start + 1);
+
+			// ...but the gene is a pseudogene or not a protein coding gene
+			if (gene.pseudogene)
+			{
+				mut["snp_type"] = "pseudogene";
+				mut["gene_position"] = "pseudogene (" + mut["gene_position"] + "/" + gene_nt_size + " nt)";
+				return;// mut;
+			}
+			else if (gene.type != "protein")
+			{
+				mut["snp_type"] = "noncoding";
+				mut["gene_position"] = "noncoding (" + mut["gene_position"] + "/" + gene_nt_size + " nt)";
+				return;// mut;
+			}
+
+			//#only add gene information to SNPs and RA mutations that don"t include indels...
+			if ((mut._type != "SNP") && !((mut._type == "RA") && (mut["ref_base"] != ".") && (mut["new_base"] != ".")))
+			{
+				mut["gene_position"] = "coding (" + mut["gene_position"] + "/" + gene_nt_size + " nt)";
+				return;// mut;
+			}
+
+			// this is for RA...
+			if (!mut.entry_exists("ref_seq")) mut["ref_seq"] = mut["ref_base"];
+			if (!mut.entry_exists("new_seq")) mut["new_seq"] = mut["new_base"];
+
+			// determine the old and new translation of this codon
+			mut["aa_position"] = to_string((from_string<uint32_t>(mut["gene_position"]) - 1) / 3 + 1); // 1 indexed
+			mut["codon_position"] = to_string(int(abs(start - within_gene_start)) % 3 + 1); // 1 indexed
+
+			string codon_seq = (gene.strand)
+				? ref_string.substr(gene.start + 3 * (from_string<uint32_t>(mut["aa_position"]) - 1) - 1, 3)
+				: reverse_complement(ref_string.substr(gene.end - 3 * from_string<uint32_t>(mut["aa_position"]), 3));
+
+			//#$ref_seq.trunc($gene.start} + 3 * (mut["aa_position"]-1),$gene.start} + 3 * mut["aa_position"] - 1) :
+			//#$ref_seq.trunc($gene.end} - 3 * mut["aa_position"]+1,$gene.end} - 3 * (mut["aa_position"]-1)).revcom;
+
+			//Debug
+			//print "mut["aa_position"] mut["codon_position"] $gene.start} $gene.end} $codon_seq\n";
+
+			mut["codon_ref_seq"] = codon_seq;
+			mut["aa_ref_seq"] = bridge_translate(mut["codon_ref_seq"]);
+			//#$mut.aa_ref_seq} = $codon_seq.translate( undef, undef, undef, 11 ).seq();
+
+			mut["codon_new_seq"] = codon_seq;
+			//#remember to revcom the change if gene is on opposite strand
+			mut["codon_new_seq"][from_string<uint32_t>(mut["codon_position"]) - 1] = gene.strand
+				? mut["new_seq"][0]
+				: reverse_complement(mut["new_seq"])[0];
+			mut["aa_new_seq"] =  bridge_translate(mut["codon_new_seq"]);
+			//#$codon_seq.seq(mut["codon_new_seq"]);
+			//#mut["aa_new_seq"] = $codon_seq.translate( undef, undef, undef, 11 ).seq();
+
+			mut["snp_type"] = (mut["aa_ref_seq"] != mut["aa_new_seq"]) ? "nonsynonymous" : "synonymous";
+		}
+
+		//The mutation actually contains several genes
+		else if (between_genes.size() + inside_left_genes.size() + inside_right_genes.size() > 0)
+		{/*TODO: Uncomment and convert
+			my @gene_list = ( map({ "<i>[" . $_.name} . "]</i>" } @inside_left_genes),
+							  map({ "<i>" . $_.name} . "</i>" } @between_genes),
+							  map({ "<i>[" . $_.name} ."]</i>" } @inside_right_genes) );
+
+
+			//#added for gene table
+			@{mut["gene_list"]} = ( map({ $_.name} } @inside_left_genes),
+									 map({ $_.name} } @between_genes),
+									 map({ $_.name} } @inside_right_genes) );
+
+			mut["gene_product"] = join (", ", @gene_list);
+
+			if (gene_list.size() == 1)
+				mut["gene_name"] = gene_list[0];
+			else
+				mut["gene_name"] = gene_list[0] + "–" + gene_list[gene_list.size() - 1];
+		*/}
+
+		//return mut;
+	}
+
+	void cReferenceSequences::annotate_mutations(genome_diff& gd, bool only_muts)
+	{
+		//keep track of other mutations that affect SNPs
+		//because we may double-hit a codon
+
+		//TODO: the proper way to do this is to create list of SNPs that have been hit
+		// hashed by gene protein accession ID and AA position within gene
+		// and have the annotation point to them (and back at them)
+		// so that the codon will be correctly updated with all changes and we can notify the
+		// changes that their SNP_type is not really SNP, but multiple hit SNP.
+
+		//my $snp_hits_hash;
+
+		genome_diff::entry_list_t muts = gd.mutation_list();
+		for (uint32_t i = 0; i < muts.size(); i++) //MUT
+		{
+			diff_entry mut = *muts[i];
+			if (only_muts && mut._type.size() != 3) continue;
+
+			if (mut._type == "SNP")
+			{
+				mut["_ref_seq"] = get_sequence(mut["seq_id"], from_string<uint32_t>(mut["position"]), from_string<uint32_t>(mut["position"]));
+				annotate_1_mutation(mut, from_string<uint32_t>(mut["position"]), from_string<uint32_t>(mut["position"]));
+			}
+			else if (mut._type == "SUB")
+			{
+				annotate_1_mutation(mut, from_string<uint32_t>(mut["position"]), from_string<uint32_t>(mut["position"]) + from_string<uint32_t>(mut["size"]) - 1);
+			}
+			else if (mut._type == "DEL")
+			{
+				annotate_1_mutation(mut, from_string<uint32_t>(mut["position"]), from_string<uint32_t>(mut["position"]) + from_string<uint32_t>(mut["size"]) - 1);
+			}
+			else if (mut._type == "INS")
+			{
+				annotate_1_mutation(mut, from_string<uint32_t>(mut["position"]), from_string<uint32_t>(mut["position"]));
+			}
+			else if (mut._type == "CON")
+			{
+				annotate_1_mutation(mut, from_string<uint32_t>(mut["position"]), from_string<uint32_t>(mut["position"]) + from_string<uint32_t>(mut["size"]) - 1);
+			}
+			else if (mut._type == "MOB")
+			{
+				annotate_1_mutation(mut, from_string<uint32_t>(mut["position"]), from_string<uint32_t>(mut["position"]) + from_string<uint32_t>(mut["duplication_size"]) - 1);
+			}
+			else if (mut._type == "INV")
+			{
+				annotate_1_mutation(mut, from_string<uint32_t>(mut["position"]), from_string<uint32_t>(mut["position"]));
+				mut["gene_name_1"] = mut["gene_name"];
+				mut["gene_product_1"] = mut["gene_product"];
+				annotate_1_mutation(mut, from_string<uint32_t>(mut["position"]) + from_string<uint32_t>(mut["size"])-1, from_string<uint32_t>(mut["position"]) + from_string<uint32_t>(mut["size"])-1);
+				mut["gene_name_2"] = mut["gene_name"];
+				mut["gene_product_2"] = mut["gene_product"];
+				mut._fields.erase("gene_name");
+				mut._fields.erase("gene_product");
+			}
+			else if (mut._type == "AMP")
+			{
+				annotate_1_mutation(mut, from_string<uint32_t>(mut["position"]), from_string<uint32_t>(mut["position"]) + from_string<uint32_t>(mut["size"]) - 1);
+			}
+			else if (mut._type == "JC")
+			{/*TODO: Uncomment and fix
+				annotate_1_mutation(mut["_side_1"], from_string<uint32_t>(mut["side_1_position"]), from_string<uint32_t>(mut["side_1_position"]), true);
+				annotate_1_mutation(mut["_side_2"], from_string<uint32_t>(mut["side_2_position"], from_string<uint32_t>(mut["side_2_position"]), true);
+			*/}
+			else if (mut._type == "RA")
+			{
+				annotate_1_mutation(mut, from_string<uint32_t>(mut["position"]), from_string<uint32_t>(mut["position"]));
+			}
+			else if (mut._type == "MC")
+			{
+				annotate_1_mutation(mut, from_string<uint32_t>(mut["start"]), from_string<uint32_t>(mut["end"]));
+			}
+		}
+	}
+
+	void cReferenceSequences::polymorphism_statistics(Settings& settings, Summary& summary)
+	{
+		string reference_fasta_file_name = settings.file_name("reference_fasta_file_name");
+		vector<string> seq_ids = this->seq_ids;
+
+		// some local variable lookups for convenience
+		uint32_t total_ref_length = 0;
+		for (uint32_t i = 0; i < seq_ids.size(); i++)
+			total_ref_length += this->ref_strings[seq_ids[i]].size();
+		double log10_ref_length = log(total_ref_length) / log(10);
+
+		//
+		// Replacement for below
+		//
+		// ToDo: This should really make a different column for each input read set.
+		//
+		string coverage_fn = settings.file_name("unique_only_coverage_distribution_file_name", "@", "");
+		string outputdir = dirname(coverage_fn) + "/";
+		//chomp $outputdir; $outputdir .= "/";
+		string count_file_name = outputdir + "error_counts.tab";
+
+		ifstream COUNT(count_file_name.c_str());
+		assert(COUNT.is_open());
+		string count_header_line;
+		getline(COUNT, count_header_line);
+		//chomp $count_header_line;
+		vector<string> count_header_list = split(count_header_line, "\t");
+
+		uint32_t quality_column, count_column;
+		for (uint32_t i = 0; i < count_header_list.size(); i++)
+		{
+			if (count_header_list[i] == "quality")
+				quality_column = i;
+			else if (count_header_list[i] == "count")
+				count_column = i;
+		}
+
+		////#print "$count_column $quality_column\n";
+
+		vector<uint32_t> quality_count_list;
+		string line;
+		while (COUNT.good())
+		{
+			getline(COUNT, line);
+			//chomp $line;
+			////#print "$_\n";
+			vector<string> line_list = split(line,  "\t");
+			uint32_t count = from_string<uint32_t>(line_list[count_column]);
+			uint32_t quality = from_string<uint32_t>(line_list[quality_column]);
+			quality_count_list[quality] += count;
+		}
+		COUNT.close();
+
+		string genome_error_counts_file_name = settings.file_name("genome_error_counts_file_name");
+
+		ofstream GEC(genome_error_counts_file_name.c_str());
+		assert(GEC.is_open());
+		for (uint32_t i = 1; i < quality_count_list.size(); i++)
+		{
+			uint32_t val = 0;
+			//if (is_defined(quality_count_list[i]))
+				val = quality_count_list[i];
+			GEC << val << endl;
+		}
+		GEC.close();
+
+		string polymorphism_statistics_input_file_name = settings.file_name("polymorphism_statistics_input_file_name");
+		string polymorphism_statistics_output_file_name = settings.file_name("polymorphism_statistics_output_file_name");
+
+		/// Load the older GenomeDiff and add new fields
+		string ra_mc_genome_diff_file_name = settings.file_name("ra_mc_genome_diff_file_name");
+		genome_diff gd(ra_mc_genome_diff_file_name);
+
+		string polymorphism_statistics_r_script_file_name = settings.file_name("polymorphism_statistics_r_script_file_name");
+		string polymorphism_statistics_r_script_log_file_name = settings.file_name("polymorphism_statistics_r_script_log_file_name");
+		uint32_t total_reference_length = summary.sequence_conversion.total_reference_sequence_length;
+
+		string command = "R --vanilla total_length=" + to_string(total_reference_length) + " in_file=" + polymorphism_statistics_input_file_name + " out_file=" + polymorphism_statistics_output_file_name + " qual_file=" + genome_error_counts_file_name + " < " + polymorphism_statistics_r_script_file_name + " > " + polymorphism_statistics_r_script_log_file_name;
+		int exit_code = system(command.c_str());
+
+		// Read R file and add new results corresponding to all columns
+		ifstream ROUT(polymorphism_statistics_output_file_name.c_str());
+		assert(ROUT.is_open()); // or die "Could not find file: $polymorphism_statistics_output_file_name";
+		string header;
+		getline(ROUT, header);
+		//chomp $header;
+		vector<string> header_list = split(header, "\t");
+
+		genome_diff new_gd;
+		genome_diff::entry_list_t muts = gd.mutation_list();
+		for (uint32_t i = 0; i < muts.size(); i++)
+		{
+			diff_entry mut = *muts[i];
+			// lines only exist for RA evidence
+			if (mut._type != "RA")
+			{
+				new_gd.add(mut);
+				continue;
+			}
+
+			// lines only exist for polymorphisms
+			if ((mut["frequency"] == "1") || (mut["frequency"] == "0"))
+			{
+				new_gd.add(mut);
+				continue;
+			}
+
+			string line;
+			getline(ROUT, line);
+			//chomp $header;
+			vector<string> line_list = split(line, "\t");
+
+			for (uint32_t j = 0; j < header_list.size(); j++)
+			{
+				assert(line_list.size() > j); // die "Incorrect number of items on line:\n$line"
+				mut[header_list[j]] = line_list[j];
+			}
+
+			// Evalue cutoff again (in case we are only running this part)
+			if (from_string<double>(mut["polymorphism_quality"]) < settings.polymorphism_log10_e_value_cutoff)
+				add_reject_reason(mut, "EVALUE");
+
+			// Frequency cutoff
+			if ( (from_string<double>(mut["frequency"]) < settings.polymorphism_frequency_cutoff)
+			  || (from_string<double>(mut["frequency"]) > 1-settings.polymorphism_frequency_cutoff) )
+				add_reject_reason(mut, "POLYMORPHISM_FREQUENCY_CUTOFF");
+
+			// Minimum coverage on both strands
+			double polymorphism_coverage_limit_both_bases = settings.polymorphism_coverage_both_strands;
+			bool passed = true;
+			vector<string> top_bot = split(mut["ref_cov"], "/");
+			double top = from_string<double>(top_bot[0]);
+			double bot = from_string<double>(top_bot[1]);
+			passed = passed && (top >= polymorphism_coverage_limit_both_bases);
+			top_bot = split(mut["new_cov"], "/");
+			top = from_string<double>(top_bot[0]);
+			bot = from_string<double>(top_bot[1]);
+			passed = passed && (top >= polymorphism_coverage_limit_both_bases);
+			passed = passed && (bot >= polymorphism_coverage_limit_both_bases);
+
+			if (!passed)
+				add_reject_reason(mut, "POLYMORPHISM_STRAND");
+			if (from_string<double>(mut["ks_quality_p_value"]) < settings.polymorphism_bias_p_value_cutoff)
+				add_reject_reason(mut, "KS_QUALITY_P_VALUE");
+			if (from_string<double>(mut["fisher_strand_p_value"]) < settings.polymorphism_bias_p_value_cutoff)
+				add_reject_reason(mut, "FISHER_STRAND_P_VALUE");
+
+			////// Optionally, ignore if in a homopolymer stretch
+			if (is_defined(settings.polymorphism_reject_homopolymer_length))
+			{
+				uint32_t test_length = 20;
+				string seq_id = mut["seq_id"];
+				uint32_t end_pos = from_string<uint32_t>(mut["position"]);
+				uint32_t start_pos = end_pos - test_length + 1;
+				if (start_pos < 1) start_pos = 1;
+				uint32_t length = this->ref_strings[seq_id].size();
+				string bases = this->ref_strings[seq_id].substr(start_pos - 1, (end_pos - start_pos + 1));
+
+				//#print Dumper($mut);
+				//#print "$bases\n";
+
+				uint32_t same_base_length = 0;
+				string first_base = bases.substr(end_pos - start_pos, 1);
+				for (uint32_t j = end_pos; j >= start_pos; j--)
+				{
+					string this_base = bases.substr(j - start_pos, 1);
+					if (first_base != this_base) break;
+					same_base_length++;
+				}
+
+				//#print "$same_base_length\n";
+				if (same_base_length >= settings.polymorphism_reject_homopolymer_length)
+				{
+					add_reject_reason(mut, "HOMOPOLYMER_STRETCH");
+				}
+			}
+
+			if (from_string<bool>(mut["reject"]) && from_string<double>(mut["polymorphism_quality"]) > settings.mutation_log10_e_value_cutoff && from_string<double>(mut["frequency"]) > 0.5)
+			{
+				//#print Dumper($mut);
+				mut["frequency"] = "1";
+				mut._fields.erase("reject");
+
+				// FIX -- need to re-evaluate whether it would have been accepted as a normal mutation
+				// This is NOT the right quality being used here. Need a separate quality for consensus call and polymorphism call!
+				if (from_string<double>(mut["polymorphism_quality"]) < settings.mutation_log10_e_value_cutoff)
+					add_reject_reason(mut, "EVALUE");
+			}
+
+			new_gd.add(mut);
+
+			// END EXPERIMENTAL
+		}
+
+		ROUT.close();
+
+		/// Write out the file which now has much more data
+		string polymorphism_statistics_ra_mc_genome_diff_file_name = settings.file_name("polymorphism_statistics_ra_mc_genome_diff_file_name");
+		new_gd.write(polymorphism_statistics_ra_mc_genome_diff_file_name);
+
+	}
+
   void LoadGenBankFile(cReferenceSequences& rs, const vector<string>& in_file_names) {
     
     for (vector<string>::const_iterator it = in_file_names.begin(); it < in_file_names.end(); it++) {
