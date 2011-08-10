@@ -119,6 +119,8 @@ namespace breseq {
 	map<string, map<string, MatchedJunction> > degenerate_matches;
 	uint32_t reads_processed = 0;
 
+  // stores all junction ids that we have encountered
+  map<string,uint32_t> all_junction_ids;
 
 	for (uint32_t fastq_file_index = 0; fastq_file_index < read_files.size(); fastq_file_index++)
 	{
@@ -338,6 +340,7 @@ namespace breseq {
 					bam_alignment& a = *(this_junction_alignments.front().get());
 					string junction_id = junction_tam->bam_header->target_name[a.reference_target_id()];
 					matched_junction[junction_id].push_back(item);
+          all_junction_ids[junction_id]++;
 				}
 				///
 				// Multiple equivalent matches to junctions and reference, ones with most hits later will win these matches
@@ -354,6 +357,7 @@ namespace breseq {
 						item.degenerate_count = this_junction_alignments.size(); // mark as degenerate
 						string junction_id = junction_tam->bam_header->target_name[a.reference_target_id()];
 						degenerate_matches[junction_id][seq.m_name] = item;
+            all_junction_ids[junction_id]++;
 					}
 				}
 			} // READ
@@ -391,12 +395,10 @@ namespace breseq {
 
 	//sort junction ids based on size of vector
 
-	vector<string> sorted_junction_ids = get_sorted_junction_ids(matched_junction, degenerate_matches, get_keys(matched_junction));
+	vector<string> sorted_junction_ids = get_sorted_junction_ids(matched_junction, degenerate_matches, get_keys(all_junction_ids));
     
   if (verbose) cout << "Number of unique matches: " << sorted_junction_ids.size() << endl;
 
-    
-	if (verbose) cout << "Degenerate matches before handling ones with unique matches: " << degenerate_matches.size() << endl;
 
 	for (uint32_t i = 0; i < sorted_junction_ids.size(); i++)
 	{
@@ -404,8 +406,10 @@ namespace breseq {
 
     if (verbose) 
     {
-      cout << "Testing Junction with Unique Matches: key" << endl;
-      cout << "Number of matches:" << matched_junction["key"].size() << endl;
+      cout << "Testing Junction with Unique Matches:" << key << endl;
+      cout << "  Number of unique matches:" << matched_junction[key].size() << endl;
+      size_t num_degenerate_matches = degenerate_matches.count(key) ? degenerate_matches[key].size() : 0;
+      cout << "  Number of degenerate matches:" << num_degenerate_matches << endl;
     }
 		bool has_non_overlap_alignment = false;
 		bool success = _test_junction(settings, summary, key, matched_junction, degenerate_matches, junction_test_info, ref_seq_info, trims_list, resolved_reference_tam, resolved_junction_tam, has_non_overlap_alignment);
@@ -414,49 +418,31 @@ namespace breseq {
 		add_score_to_distribution(observed_pos_hash_score_distribution, junction_test_info[key].pos_hash_score);
 		add_score_to_distribution(observed_min_overlap_score_distribution, junction_test_info[key].min_overlap_score);
 
+    if (verbose && !has_non_overlap_alignment) cout << "Does not have nonoverlap alignments" << endl;
+    
 		// only count matches that span overlap
 		if (has_non_overlap_alignment)
 		{
 			if (success)
+      {
+// @JEB we might want to re-sort the list here, probably
+// Strategy would be to use a <list> and shorten it each time
+// Then re-sort when we successfully added one that might
+// Have eaten up degenerate matches shared with others.
 				passed_junction_ids.push_back(key);
-			else
-				rejected_junction_ids.push_back(key);
-		}
-	}
+        if (verbose) cout << "  PASSED" << endl;
+			}
+      else
+			{
+        rejected_junction_ids.push_back(key);
+        if (verbose) cout << "  REJECTED" << endl;
+      }
+    }
+  }
 
   if (verbose)
     cout << "Degenerate matches after handling ones with unique matches: " << degenerate_matches.size() << endl;
-
-	///
-	// Candidate junctions with ONLY degenerate matches
-	///
-
-	sorted_junction_ids = get_sorted_junction_ids(degenerate_matches, get_keys(degenerate_matches));
-
-	while(sorted_junction_ids.size() > 0)
-	{
-		string key = sorted_junction_ids[0];
-		sorted_junction_ids.erase(sorted_junction_ids.begin());
-
-		if (verbose) cout << "Trying degenerate " << key << endl;
-
-		bool has_non_overlap_alignment = false;
-		bool success = _test_junction(settings, summary, key, matched_junction, degenerate_matches, junction_test_info, ref_seq_info, trims_list, resolved_reference_tam, resolved_junction_tam, has_non_overlap_alignment);
-
-		// save the score in the distribution
-		add_score_to_distribution(observed_pos_hash_score_distribution, junction_test_info[key].pos_hash_score);
-		add_score_to_distribution(observed_min_overlap_score_distribution, junction_test_info[key].min_overlap_score);
-
-		// if it succeeded, then it may have changed the order of the remaining ones by removing some reads...
-		if (success)
-			sorted_junction_ids = get_sorted_junction_ids(degenerate_matches, get_keys(degenerate_matches));
-
-		// only count matches that span overlap
-		if (has_non_overlap_alignment)
-			if (success) // Failed ones are not kept in the rejected list (but they could be?)
-				passed_junction_ids.push_back(key);
-	}
-
+    
 	// print successful ones out
 	if (verbose) cout << "Successful hybrids" << endl;
 
@@ -1369,21 +1355,6 @@ vector<string> get_sorted_junction_ids(map<string, vector<MatchedJunction> >& un
   }
   sort(vector_sizes.begin(), vector_sizes.end(), VectorSize::sort_reverse_by_size);
   
-  vector<string> sorted_junction_ids;
-  for (uint32_t i = 0; i < keys.size(); i++)
-    sorted_junction_ids.push_back(vector_sizes[i].junction_id);
-  return sorted_junction_ids;
-}
-vector<string> get_sorted_junction_ids(map<string, map<string, MatchedJunction> >& map, const vector<string>& keys)
-{
-  vector<VectorSize> vector_sizes;
-  for (uint32_t i = 0; i < keys.size(); i++)
-  {
-    VectorSize info(keys[i], map[keys[i]].size(), 0);
-    vector_sizes.push_back(info);
-  }
-  sort(vector_sizes.begin(), vector_sizes.end(), VectorSize::sort_reverse_by_size);
-
   vector<string> sorted_junction_ids;
   for (uint32_t i = 0; i < keys.size(); i++)
     sorted_junction_ids.push_back(vector_sizes[i].junction_id);

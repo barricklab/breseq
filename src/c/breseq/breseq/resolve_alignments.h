@@ -78,7 +78,6 @@ namespace breseq {
 	void _write_reference_matches(const Settings& settings, cReferenceSequences& ref_seq_info, const SequenceTrimsList& trim_list, alignment_list& reference_alignments, tam_file& reference_tam, uint32_t fastq_file_index);
 
 	vector<string> get_sorted_junction_ids(map<string, vector<MatchedJunction> >& unique_map, map<string, map<string, MatchedJunction> >& degenerate_map, const vector<string>& keys);
-	vector<string> get_sorted_junction_ids(map<string, map<string, MatchedJunction> >& map, const vector<string>& keys);
 
 
 	void resolve_alignments(
