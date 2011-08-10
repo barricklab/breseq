@@ -36,7 +36,7 @@
       displayScale = "1.00"
       launchStyle = "0"
       useCustomWorkingDirectory = "YES"
-      customWorkingDirectory = "/Users/jbarrick/tmp/Ara-2-test-1"
+      customWorkingDirectory = "/Users/jbarrick/src/breseq/"
       buildConfiguration = "Debug">
       <BuildableProductRunnable>
          <BuildableReference
@@ -50,6 +50,10 @@
       <CommandLineArguments>
          <CommandLineArgument
             argument = "--bam ./data/reference.bam --fasta ./data/reference.fasta --region REL606:498187-498187 --quality-score-cutoff 3 --stdout"
+            isEnabled = "NO">
+         </CommandLineArgument>
+         <CommandLineArgument
+            argument = "--bam tests/bull_1/data/reference.bam --fasta tests/bull_1/data/reference.fasta --region rachael:344-344 --quality-score-cutoff 3 --stdout"
             isEnabled = "YES">
          </CommandLineArgument>
       </CommandLineArguments>
