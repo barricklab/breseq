@@ -337,7 +337,6 @@ void genome_diff::read(const string& filename) {
     }
     IN.close();
   }
-  
   //Can't find version in first line
   if(lines.front().find("#=GENOME_DIFF") == string::npos)
   {

@@ -803,7 +803,36 @@ int do_convert_gd( int argc, char* argv[]){
 }
 
 int do_output( int argc, char* argv[]){
-    return 0;
+  
+  //TESTED
+  if (false) { 
+    Settings settings;
+    cout << output::breseq_header_string(settings);
+  }
+
+  //TESTED, needs summary before useful
+  if (false) {
+    string file_name = "html_statistics.html";
+    Settings settings;
+    Summary summary;
+    cReferenceSequences ref_seq_info;
+    output::html_statistics(file_name, settings, summary, ref_seq_info);
+  }
+    
+  
+  if(true) {
+    string file_name = "html_index.html";
+    Settings settings;
+    Summary summary;
+    cReferenceSequences ref_seq_info;
+    genome_diff gd;
+    gd.read("/home/geoff/src/dcamp/src/data/RS0001_Woods2011/RJW1129.gd");
+    output::html_index(file_name, settings, summary, ref_seq_info, gd);
+  }
+  
+
+
+  return 0;
 }
 
 int breseq_default_action(int argc, char* argv[])
@@ -1257,6 +1286,7 @@ int breseq_default_action(int argc, char* argv[])
 			//	or die "Can"t store data in file $candidate_junction_summary_file_name!" << endl;
 
 			//TODO: record_time("Candidate junction identification");
+                        //TODO: ported but needs global execution_times variable, look at source
 
 			settings.done_step("candidate_junction_done_file_name");
 		}
@@ -1919,7 +1949,8 @@ int breseq_default_action(int argc, char* argv[])
 		// record the final time and print summary table
 		settings.record_end_time("Output");
 
-		//TODO: html_statistics(settings.summary_html_file_name, settings, summary, ref_seq_info);
+		//html_statistics(settings.summary_html_file_name, settings, summary, ref_seq_info);
+                //output::html_statistics(settings.summary_html_file_name, settings, summary, ref_seq_info);
 
 		settings.done_step("output_done_file_name");
 	}

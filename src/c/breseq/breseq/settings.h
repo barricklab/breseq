@@ -317,7 +317,7 @@ namespace breseq
                 inline string html_path(string input) {return "not implemented";}
                 bool verbose;
 
-				vector<ExecutionTime> execution_times;
+		vector<ExecutionTime> execution_times;
                 string time2string(const time_t* timer, const bool& relative);
 
                 //@GRC End of settings needed for HTML outputs

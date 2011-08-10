@@ -95,8 +95,10 @@ extern const char* ALIGN_LEFT;
   //! Wraps input in <td></td> tags	which defines a standar cell
   inline string start_td(const string& attributes)
     {return "<td " + attributes + ">";}  
-  inline string td(const string& input="", const string& attributes = "")
+  inline string td(const string& attributes, const string& input)
     {return "<td " + attributes + ">" + input + "</td>";}
+  inline string td(const string& input ="")
+  {return "<td>" + input + "</td>";}
   //! Wraps input in <tr></tr> tags which define a row in an HTML table	
   inline string start_tr(const string& attributes = "") 
     {return "<tr " + attributes + ">";}
@@ -128,14 +130,14 @@ extern const char* ALIGN_LEFT;
 /*-----------------------------------------------------------------------------
  * HTML TABLES
  *-----------------------------------------------------------------------------*/
-class Html_Mutation_Table_String : public string
+struct Html_Mutation_Table_String : public string
 {
   public:
     //!Constructors
     Html_Mutation_Table_String(
                                Settings settings,
                                genome_diff gd,
-                               genome_diff::entry_list_t list_ref,
+                               genome_diff::entry_vector_t list_ref,
   			       vector<string> gd_name_list_ref,
                                Options options,
                                bool legend_row = false, 
@@ -143,10 +145,20 @@ class Html_Mutation_Table_String : public string
   			       string relative_link = "" 
                                );
     
+    Html_Mutation_Table_String(
+                               Settings settings,
+                               genome_diff gd,
+                               genome_diff::entry_vector_t list_ref,
+  			       string relative_path = "", 
+                               bool legend_row = false, 
+                               bool one_ref_seq = false
+                               );
+
+    
 
     Html_Mutation_Table_String();//<! Place Holder, delete when complete
   
-  private: 
+   
     //! Main Build Object
     //!Factory Methods
     void Header_Line();
@@ -231,6 +243,9 @@ struct Evidence_Files
  *-----------------------------------------------------------------------------*/
 string html_header(const string& title);
 string decode_reject_reason(const string & reject);
+// sub html_statistics
+//         my (string file_name, Settings settings, $summary, $ref_seq_info) = @_;
+void html_statistics(const string& file_name, Settings settings, Summary summary, cReferenceSequences ref_seq_info);
 /*-----------------------------------------------------------------------------
  *  FUNCTIONS BELOW HERE STILL NEED FURTHER PORTING
  *-----------------------------------------------------------------------------*/
@@ -259,10 +274,7 @@ void html_compare(Settings settings,const string &file_name, const string &title
 void html_compare_polymorphisms(Settings settings, string file_name, string title,
                                 vector <string> list_ref);
 
-// sub html_statistics
-//         my (string file_name, Settings settings, $summary, $ref_seq_info) = @_;
-void html_statistics(string file_name, Settings settings, Summary summary, 
-                     cReferenceSequences ref_seq_info);
+
 /// sub breseq_header_string
 ///         my (Settings settings) = @_;
 string breseq_header_string(Settings settings);
