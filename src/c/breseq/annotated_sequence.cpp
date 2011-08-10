@@ -494,16 +494,16 @@ namespace breseq {
 			//#added for gene table
 			mut["gene_list"] = gene.name;
 
-			uint32_t within_gene_start = (gene.strand) ? gene.start : gene.end;
+			int32_t within_gene_start = (gene.strand) ? gene.start : gene.end;
 
 			if (start == end)
 			{
-				mut["gene_position"] = abs(start - within_gene_start) + 1;
+				mut["gene_position"] = abs(static_cast<int32_t>(start) - within_gene_start) + 1;
 			}
 			else
 			{
-				uint32_t gene_start = abs(start - within_gene_start) + 1;
-				uint32_t gene_end = abs(end - within_gene_start) + 1;
+				uint32_t gene_start = abs(static_cast<int32_t>(start) - within_gene_start) + 1;
+				uint32_t gene_end = abs(static_cast<int32_t>(end) - within_gene_start) + 1;
 				mut["gene_position"] = (gene_start < gene_end) ? gene_start + "–" + gene_end : gene_end + "–" + gene_start;
 			}
 
@@ -536,7 +536,7 @@ namespace breseq {
 
 			// determine the old and new translation of this codon
 			mut["aa_position"] = to_string((from_string<uint32_t>(mut["gene_position"]) - 1) / 3 + 1); // 1 indexed
-			mut["codon_position"] = to_string(int(abs(start - within_gene_start)) % 3 + 1); // 1 indexed
+			mut["codon_position"] = to_string(int(abs(static_cast<int32_t>(start) - within_gene_start)) % 3 + 1); // 1 indexed
 
 			string codon_seq = (gene.strand)
 				? ref_string.substr(gene.start + 3 * (from_string<uint32_t>(mut["aa_position"]) - 1) - 1, 3)
