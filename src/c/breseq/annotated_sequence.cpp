@@ -66,7 +66,7 @@ namespace breseq {
           out << "\t" << ".";
         else
           out << "\t" <<(*it)["product"];
-        out << std::endl;
+        out << endl;
       }
       
     }
@@ -1103,32 +1103,54 @@ namespace breseq {
     
     for (vector<cSequenceFeature>::iterator it = all_features.begin(); it < all_features.end(); it++) {
     
+      // common changes for any type
+      // use /note as the product if there is not product
+      if ((*it).SafeGet("product") == "")
+      {
+        (*it)["product"] = (*it).SafeGet("note");
+      }
+      
+      
       if ((*it)["type"] == "repeat_region") {
 
         // Don't add unnamed ones to the list...
-        if (it->SafeGet("mobile_element") == "") continue;
-                  
-        (*it)["name"] = (*it)["mobile_element"];
-        std::string& name = (*it)["name"];
+        //if (it->SafeGet("mobile_element") == "") continue;
         
-        // remove prefix
-        int pos = name.find("insertion sequence:");
-        if (pos != -1) {
-          name.erase(pos,pos+19);
-        }
+        (*it)["name"] = "repeat_region";
         
-        // remove suffix if "IS(\d)}
-        pos = name.find("IS");
-        if (pos != -1) {
-          int found = name.find_first_not_of("0123456789", 3);
-          if (found != -1) { 
-            name.erase(found, name.length());
+        // E. coli case:
+        if (it->SafeGet("mobile_element") != "")
+        {
+          (*it)["name"] = (*it)["mobile_element"];
+          std::string& name = (*it)["name"];
+          
+          // remove prefix
+          int pos = name.find("insertion sequence:");
+          if (pos != -1) {
+            name.erase(pos,pos+19);
+          }
+          
+          // remove suffix if "IS(\d)}
+          pos = name.find("IS");
+          if (pos != -1) {
+            int found = name.find_first_not_of("0123456789", 3);
+            if (found != -1) { 
+              name.erase(found, name.length());
+            }
           }
         }
         
+        // S. cerevisiae case
+        if (it->SafeGet("rpt_family") != "")
+        {
+          (*it)["name"] = (*it)["rpt_family"];
+        }        
         //std::cerr << (*it).SafeGet("mobile_element") << " " << (*it).SafeGet("name") << std::endl;
         
-        (*it)["product"] = "repeat_region";
+        if ((*it).SafeGet("product") == "")
+        {
+          (*it)["product"] = "repeat region";
+        }
       
         s.m_features.push_back(*it);
 
@@ -1214,41 +1236,6 @@ namespace breseq {
       
       LoadBullFeatureFile(in, rs.back());
     }
-    
-   
-    
-    /*for (vector<cSequenceFeature>::iterator it = s.m_features.begin(); it < s.m_features.end(); it++) {
-      
-      if (it->SafeGet("type") == "") 
-        cout << "\t.";
-      else
-        cout << "\t" << (*it)["type"];
-      
-      
-      cout << "\t" << (*it).m_start;
-      cout << "\t" << (*it).m_end;
-      cout << "\t.";
-      cout << "\t" << (int)(*it).m_strand;
-      cout << "\t.";
-      
-      if( it->SafeGet("accession") == "" )
-        cout << "\t.";
-      else
-        cout << "\t" << "accession=" <<(*it)["accession"];
-      
-      if( it->SafeGet("name") == "" )
-        cout << "\t" << ".";
-      else
-        cout << "\t" << (*it)["name"];
-      
-      if( it->SafeGet("product") == "" )
-        cout << "\t" << ".";
-      else
-        cout << "\t" <<(*it)["product"];
-      
-      cout << std::endl;
-    }*/
-    
   }
   
   void LoadBullFeatureFile(ifstream& in, cAnnotatedSequence& s) {
