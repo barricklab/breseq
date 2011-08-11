@@ -248,6 +248,7 @@ namespace breseq {
       new_seq.m_length = on_seq.m_sequence.size();
       (*this).push_back(new_seq);
       m_seq_id_to_index[on_seq.m_name] = on_seq_id++;
+      ref_strings[on_seq.m_name] = on_seq.m_sequence;
     }
   }
 
