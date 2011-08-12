@@ -79,7 +79,7 @@ extern const char* UN;
 
 //!  
 static uint8_t kPolymorphismFrequencyPrecision = 4;
-static uint8_t kMutationQualityPrecision = 14;
+static uint8_t kMutationQualityPrecision = 4;
 
 //! Convenience typedef, used during diff entry marshalling.
 typedef vector<string> field_list_t;
