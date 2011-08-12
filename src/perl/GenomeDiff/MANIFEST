@@ -1,0 +1,16 @@
+Build.PL
+Changes
+MANIFEST
+README
+lib/GenomeDiff.pm
+lib/GenomeDiff/PreterminationTables.pm
+lib/GenomeDiff/SynonymousNonsynonymous.pm
+lib/GenomeDiff/BaseSubstitutionFile.pm
+t/00-load.t
+t/manifest.t
+t/pod-coverage.t
+t/pod.t
+bin/genomediff
+bin/tree_utils
+Makefile.PL
+META.yml
