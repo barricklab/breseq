@@ -981,14 +981,14 @@ int breseq_default_action(int argc, char* argv[])
 		calculate_trims(reference_fasta_file_name, output_path);
 
 		// store summary information
-		//Storable::store($summary->{sequence_conversion}, $sequence_converson_summary_file_name) or die "Can"t store data in file $sequence_converson_summary_file_name!" << endl;
+		summary.sequence_conversion.store(sequence_converson_summary_file_name);// or die "Can"t store data in file $sequence_converson_summary_file_name!" << endl;
 		settings.done_step("sequence_conversion_done_file_name");
 	}
-/*
-	$summary->{sequence_conversion} = Storable::retrieve($sequence_converson_summary_file_name);
-	die "Can"t retrieve data from file $sequence_converson_summary_file_name!\n" if (!$summary->{sequence_conversion});
-	(defined $summary->{sequence_conversion}->{max_read_length}) or die "Can"t retrieve max read length from file $sequence_converson_summary_file_name" << endl;
-*/
+
+	summary.sequence_conversion.retrieve(sequence_converson_summary_file_name);
+	//die "Can"t retrieve data from file $sequence_converson_summary_file_name!\n" if (!$summary->{sequence_conversion});
+	assert(is_defined(summary.sequence_conversion.max_read_length));// or die "Can"t retrieve max read length from file $sequence_converson_summary_file_name" << endl;
+
 	//load C++ info
 	string reference_features_file_name = settings.file_name("reference_features_file_name");
 	string reference_fasta_file_name = settings.file_name("reference_fasta_file_name");
@@ -1230,11 +1230,11 @@ int breseq_default_action(int argc, char* argv[])
 				CoverageDistribution::analyze_unique_coverage_distributions(settings, summary, ref_seq_info,
 					"coverage_junction_plot_file_name", "coverage_junction_distribution_file_name");
 
-				//Storable::store($summary->{unique_coverage}, $coverage_junction_summary_file_name) or die "Can"t store data in file $coverage_junction_summary_file_name!" << endl;
+				Storable::store(summary.unique_coverage, coverage_junction_summary_file_name); //or die "Can"t store data in file $coverage_junction_summary_file_name!" << endl;
 				settings.done_step("coverage_junction_done_file_name");
 			}
 
-			//$summary->{preprocess_coverage} = Storable::retrieve($coverage_junction_summary_file_name);
+			Storable::retrieve(summary.preprocess_coverage, coverage_junction_summary_file_name);
 			//die "Can"t retrieve data from file $coverage_junction_summary_file_name!\n" if (!$summary->{preprocess_coverage});
 		}
 
@@ -1282,7 +1282,7 @@ int breseq_default_action(int argc, char* argv[])
 			// @JEB Fix this -- no summary currently...
 			//summary.candidate_junction = {};
 
-			//Storable::store($summary->{candidate_junction}, $candidate_junction_summary_file_name)
+			summary.candidate_junction.store(candidate_junction_summary_file_name);
 			//	or die "Can"t store data in file $candidate_junction_summary_file_name!" << endl;
 
 			//TODO: record_time("Candidate junction identification");
@@ -1292,7 +1292,7 @@ int breseq_default_action(int argc, char* argv[])
 		}
 
 		//load this info
-		//$summary->{candidate_junction} = Storable::retrieve($candidate_junction_summary_file_name);
+		summary.candidate_junction.retrieve(candidate_junction_summary_file_name);
 		//die "Can"t retrieve data from file $candidate_junction_summary_file_name!\n" if (!$summary->{candidate_junction});
 
 
@@ -1434,12 +1434,13 @@ int breseq_default_action(int argc, char* argv[])
 		//$summary->{alignment_correction} = {};
 
 		string alignment_correction_summary_file_name = settings.file_name("alignment_correction_summary_file_name");
-		//Storable::store($summary->{alignment_correction}, $alignment_correction_summary_file_name)
+		summary.alignment_correction.store(alignment_correction_summary_file_name);
 		//	or die "Can"t store data in file $alignment_correction_summary_file_name!" << endl;
 		//TODO: record_time("Resolve candidate junctions");
 		settings.done_step("alignment_correction_done_file_name");
 	}
-	//$summary->{alignment_correction} = Storable::retrieve($alignment_correction_summary_file_name) if (-e $alignment_correction_summary_file_name);
+	if (file_exists(alignment_correction_summary_file_name.c_str()))
+		summary.alignment_correction.retrieve(alignment_correction_summary_file_name);
 
 
 	//
@@ -1685,10 +1686,10 @@ int breseq_default_action(int argc, char* argv[])
 			exit_code = system(command.c_str());
 		}
 
-		//Storable::store($summary->{unique_coverage}, $error_rates_summary_file_name) or die "Can"t store data in file $error_rates_summary_file_name!" << endl;
+		Storable::store(summary.unique_coverage, error_rates_summary_file_name); //or die "Can"t store data in file $error_rates_summary_file_name!" << endl;
 		settings.done_step("error_rates_done_file_name");
 	}
-	//$summary->{unique_coverage} = Storable::retrieve($error_rates_summary_file_name);
+	Storable::retrieve(summary.unique_coverage, error_rates_summary_file_name);
 	//die "Can"t retrieve data from file $error_rates_summary_file_name!\n" if (!$summary->{unique_coverage});
 	//these are determined by the loaded summary information
 	settings.unique_coverage = summary.unique_coverage;

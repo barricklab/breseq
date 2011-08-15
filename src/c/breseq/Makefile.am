@@ -65,6 +65,7 @@ libbreseq_la_SOURCES = \
 	breseq/pileup.h \
 	breseq/resolve_alignments.h \
 	breseq/settings.h \
+	breseq/storable.h \
 	breseq/tabulate_coverage.h 
 libbreseq_la_LIBADD = $(top_srcdir)/$(LIBBAM)/libbam.la
 
