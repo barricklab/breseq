@@ -20,7 +20,8 @@ LICENSE AND COPYRIGHT
 #ifndef _BRESEQ_SETTINGS_H_
 #define _BRESEQ_SETTINGS_H_
 
-#include "breseq/common.h"
+#include "common.h"
+#include "storable.h"
 
 #ifndef UNDEFINED
 #define UNDEFINED UINT_MAX
@@ -58,8 +59,7 @@ namespace breseq
 		string variance;
 		string dispersion;
 	};
-
-
+	
 	class cReferenceSequences;
 
 	// We need to be able to group read files for two reasons
@@ -443,11 +443,11 @@ namespace breseq
 		string converted_fastq_name;
 	};
 
-	struct Summary
+	struct Summary : Storable
 	{
 	public:
 
-		struct AlignmentCorrection
+		struct AlignmentCorrection : Storable
 		{
 			map<string, map<string, int32_t> > read_file;
 
@@ -459,14 +459,36 @@ namespace breseq
 				map<int32_t, int32_t> accepted_pos_hash_score_distribution;
 			} new_junctions;
 
+			void store(string filename)
+			{
+				ofstream outfile(filename.c_str());
+				write_to_file(outfile, *this);
+				write_to_file(outfile, read_file);
+				write_to_file(outfile, new_junctions.observed_min_overlap_score_distribution);
+				write_to_file(outfile, new_junctions.accepted_min_overlap_score_distribution);
+				write_to_file(outfile, new_junctions.observed_pos_hash_score_distribution);
+				write_to_file(outfile, new_junctions.accepted_pos_hash_score_distribution);
+				outfile.close();
+			}
+			void retrieve(string filename)
+			{
+				ifstream infile(filename.c_str());
+				read_from_file(infile, *this);
+				read_from_file(infile, read_file);
+				read_from_file(infile, new_junctions.observed_min_overlap_score_distribution);
+				read_from_file(infile, new_junctions.accepted_min_overlap_score_distribution);
+				read_from_file(infile, new_junctions.observed_pos_hash_score_distribution);
+				read_from_file(infile, new_junctions.accepted_pos_hash_score_distribution);
+				infile.close();
+			}
+
 		} alignment_correction;
 
 		map<string, Coverage> preprocess_coverage;
 		map<string, Coverage> unique_coverage;
 
-		struct CandidateJunctionSummaryData
+		struct CandidateJunctionSummaryData : Storable
 		{
-
 			struct Total
 			{
 				int32_t number;
@@ -486,9 +508,28 @@ namespace breseq
 
 			map<string, map<string, int32_t> > read_file;
 
+			void store(string filename)
+			{
+				ofstream outfile(filename.c_str());
+				write_to_file(outfile, *this);
+				write_to_file(outfile, pos_hash_score_distribution);
+				write_to_file(outfile, min_overlap_score_distribution);
+				write_to_file(outfile, read_file);
+				outfile.close();
+			}
+			void retrieve(string filename)
+			{
+				ifstream infile(filename.c_str());
+				read_from_file(infile, *this);
+				read_from_file(infile, pos_hash_score_distribution);
+				read_from_file(infile, min_overlap_score_distribution);
+				read_from_file(infile, read_file);
+				infile.close();
+			}
+
 		} candidate_junction;
 
-		struct SequenceConversion
+		struct SequenceConversion : Storable
 		{
 			float avg_read_length;
 			uint32_t max_qual;
@@ -501,8 +542,61 @@ namespace breseq
 			uint32_t max_read_length;
 			cReferenceSequences* reference_sequences;
 
+			void store(string filename)
+			{
+				ofstream outfile(filename.c_str());
+				write_to_file(outfile, *this);
+				write_to_file(outfile, converted_fastq_name);
+				write_to_file(outfile, reads);
+				outfile.close();
+			}
+			void retrieve(string filename)
+			{
+				ifstream infile(filename.c_str());
+				read_from_file(infile, *this);
+				read_from_file(infile, converted_fastq_name);
+				read_from_file(infile, reads);
+				infile.close();
+			}
+
 		} sequence_conversion;
 
+		void store(string filename)
+		{
+			ofstream outfile(filename.c_str());
+			write_to_file(outfile, *this);
+			write_to_file(outfile, alignment_correction.read_file);
+			write_to_file(outfile, alignment_correction.new_junctions.observed_min_overlap_score_distribution);
+			write_to_file(outfile, alignment_correction.new_junctions.accepted_min_overlap_score_distribution);
+			write_to_file(outfile, alignment_correction.new_junctions.observed_pos_hash_score_distribution);
+			write_to_file(outfile, alignment_correction.new_junctions.accepted_pos_hash_score_distribution);
+			write_to_file(outfile, preprocess_coverage);
+			write_to_file(outfile, unique_coverage);
+			write_to_file(outfile, candidate_junction.pos_hash_score_distribution);
+			write_to_file(outfile, candidate_junction.min_overlap_score_distribution);
+			write_to_file(outfile, candidate_junction.read_file);
+			write_to_file(outfile, sequence_conversion.converted_fastq_name);
+			write_to_file(outfile, sequence_conversion.reads);
+			outfile.close();
+		}
+		void retrieve(string filename)
+		{
+			ifstream infile(filename.c_str());
+			read_from_file(infile, *this);
+			read_from_file(infile, alignment_correction.read_file);
+			read_from_file(infile, alignment_correction.new_junctions.observed_min_overlap_score_distribution);
+			read_from_file(infile, alignment_correction.new_junctions.accepted_min_overlap_score_distribution);
+			read_from_file(infile, alignment_correction.new_junctions.observed_pos_hash_score_distribution);
+			read_from_file(infile, alignment_correction.new_junctions.accepted_pos_hash_score_distribution);
+			read_from_file(infile, preprocess_coverage);
+			read_from_file(infile, unique_coverage);
+			read_from_file(infile, candidate_junction.pos_hash_score_distribution);
+			read_from_file(infile, candidate_junction.min_overlap_score_distribution);
+			read_from_file(infile, candidate_junction.read_file);
+			read_from_file(infile, sequence_conversion.converted_fastq_name);
+			read_from_file(infile, sequence_conversion.reads);
+			infile.close();
+		}
 	};
 
 
