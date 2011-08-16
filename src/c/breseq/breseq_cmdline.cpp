@@ -823,10 +823,16 @@ int do_output( int argc, char* argv[]){
   if(true) {
     string file_name = "html_index.html";
     Settings settings;
+    settings.no_evidence = false;
+    settings.polymorphism_prediction = false;
+    settings.lenski_format=false;
+    settings.no_header = false;
+
     Summary summary;
     cReferenceSequences ref_seq_info;
+    ref_seq_info.ReadFASTA("/home/geoffc/Dropbox/test/1B4/reference.fasta");
     genome_diff gd;
-    gd.read("/home/geoff/src/dcamp/src/data/RS0001_Woods2011/RJW1129.gd");
+    gd.read("/home/geoffc/Dropbox/test/1B4/output.gd");
     output::html_index(file_name, settings, summary, ref_seq_info, gd);
   }
   

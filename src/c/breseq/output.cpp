@@ -1178,6 +1178,7 @@ html_missing_coverage_table_string(
             th("end")         << endl <<
             th("size")        << endl <<
             th("&larr;cov")   << endl <<
+            th("cov&rarr;")   << endl <<
             th("gene")        << endl;
 // #   $output_str.= th({-width => "100%"}, "description");
 // #   $output_str.= end_Tr;
@@ -2157,7 +2158,7 @@ Evidence_Files::html_evidence_file (
                                               gd,
                                               this_evidence_list
                                               );
-    HTML << "</p>"; //TODO . p ?
+    HTML << "<p>"; 
     
   }
 
@@ -2520,7 +2521,7 @@ void Html_Mutation_Table_String::Header_Line()
   }
   
 // #   
-// #   my $total_cols;
+// #   my $total_cols; // Class parameter
   
 // #   my $header_str = '';
 
@@ -2528,7 +2529,7 @@ void Html_Mutation_Table_String::Header_Line()
 // #   if ($settings->{lenski_format}) {
   if (settings.lenski_format) {
 // #     my @header_list = split /\|/, $freq_header_list[0];
-    vector<string> header_list = split(freq_header_list[0], "|");
+    vector<string> header_list = split(freq_header_list.front(), "|");
 // #     my $header_rows = scalar @header_list;
     size_t header_rows = header_list.size() - 1; //!< -1 is necessary for C++
 // #     
@@ -2580,7 +2581,7 @@ void Html_Mutation_Table_String::Header_Line()
           this_header_string.replace(pos, 1, "&nbsp;");//TODO confim "_" is 1 char
         }
 // #         my $this_header_string_1 = $header_list[0];
-        string this_header_string_1 = header_list[0];
+        string this_header_string_1 = header_list.front();
 // #         my $this_header_string_2 = $header_list[1];
         string this_header_string_2 = header_list[1];
 // # 
@@ -2754,7 +2755,6 @@ void Html_Mutation_Table_String::Item_Lines()
 // #         $evidence_string .= "&nbsp;" if ($evidence_string);
       if (!evidence_string.empty()) evidence_string += "&nbsp;"; //TODO Confirm "if statement" needed?
 // #         $evidence_string .= a({href => "$relative_link$evidence_item->{_evidence_file_name}" }, $evidence_item->{type});
-      cout << evidence_item << endl;
       evidence_string += a(relative_link + evidence_item[_EVIDENCE_FILE_NAME],
         evidence_item._type);
 // #       
