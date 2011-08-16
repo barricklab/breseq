@@ -404,11 +404,11 @@ void genome_diff::read(const string& filename) {
       continue;
     }
     //Remove lines containing evidence
-    string type = split(line, "\t").front();
-    if(type.length() > 3) {
-      lines.erase(lines.begin());
-      continue;
-    }
+//    string type = split(line, "\t").front();
+//   if(type.length() > 3) {
+//      lines.erase(lines.begin());
+//      continue;
+//    }
       
     // # $self->add($self->_line_to_item($l));
     add(_line_to_item(line));
@@ -823,14 +823,8 @@ void VCFtoGD( const string& vcffile, const string& gdfile ){
 genome_diff::entry_list_t genome_diff::list(vector<string> types)
 {
   entry_list_t return_list;
-
-  if(types.size() == 0)
-  {
-    return _entry_list;
-  }
-  else
-  {
-    for (entry_list_t::iterator itr_diff_entry = _entry_list.begin(); 
+  
+  for (entry_list_t::iterator itr_diff_entry = _entry_list.begin(); 
        itr_diff_entry != _entry_list.end(); itr_diff_entry++)
     {
       for (make_list<string>::iterator requested_type = types.begin();
@@ -840,7 +834,7 @@ genome_diff::entry_list_t genome_diff::list(vector<string> types)
           return_list.push_back(*itr_diff_entry);
       }
     }
-  }
+  
   return return_list;
 }
 
