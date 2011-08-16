@@ -183,7 +183,7 @@ struct Html_Mutation_Table_String : public string
 string html_missing_coverage_table_string
   (entry_list_t list_ref, 
    bool show_reject_reason,
-   string title = "Missing coverage evidence",
+   string title = "Missing coverage evidence...",
    string relative_link="");
 
 string html_read_alignment_table_string  

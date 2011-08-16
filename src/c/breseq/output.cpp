@@ -1126,7 +1126,7 @@ html_missing_coverage_table_string(
 // #   my $q = new CGI; //TODO
 // #   $output_str.= start_table({-border => 0, -cellspacing => 1, -cellpadding => 3, -width => "100%"});
       ss << endl;
-      ss << start_table("border=\"0\" cellspacing=\"1\" cellpadding=\"3\" width=\"100\"") << endl;
+      ss << start_table("border=\"0\" cellspacing=\"1\" cellpadding=\"3\" width=\"100%\"") << endl;
 // #   
 // #   my $coverage_plots;
       bool coverage_plots;
@@ -1230,21 +1230,25 @@ html_missing_coverage_table_string(
 // #     my $start_str = $c->{start};
       string start = c[START];
 // #     $start_str .= "–" . ($c->{start} + $c->{start_range}) if ($c->{start_range} > 0);
-      start += "–";
 
-      if (from_string<uint8_t>(c[START_RANGE]) > 0) {
-        start += "–" + c[START] + c[END];
+      if (from_string<uint32_t>(c[START_RANGE]) > 0) {
+        start += "–" + 
+          to_string(from_string<uint32_t>(c[START]) + 
+                    from_string<uint32_t>(c[START_RANGE]));
       }
 // #     my $end_str = $c->{end};
       string end = c[END];
 // #     $end_str .= "–" . ($c->{end} - $c->{end_range}) if ($c->{end_range} > 0);
-      if (from_string<uint8_t>(c[END_RANGE])) {
-         end += c[END] + c[END_RANGE];
+      if (from_string<uint32_t>(c[END_RANGE]) > 0) {
+         end += "–" + 
+           to_string(from_string<uint32_t>(c[END]) -
+                     from_string<uint32_t>(c[END_RANGE]));
       }
 // # 
 // #     my $size_str = ($c->{end} - $c->{start} + 1);
 // #     $size_str = ($c->{end} - $c->{start} + 1 - $c->{end_range} - $c->{start_range}) . "–" . $size_str if (($c->{end_range} > 0) || ($c->{start_range} > 0));
-      string size = to_string(from_string<uint32_t>(c[END]) + from_string<uint32_t>(c[START]) + 1);
+      string size = to_string(from_string<uint32_t>(c[END]) - 
+                              from_string<uint32_t>(c[START]) + 1);
       if ((from_string<uint32_t>(c[START_RANGE]) > 0) ||
           (from_string<uint32_t>(c[START_RANGE]) > 0)) {
        
@@ -1254,28 +1258,27 @@ html_missing_coverage_table_string(
         from_string<uint32_t>(c[END_RANGE]) -
         from_string<uint32_t>(c[START_RANGE]);
        
-        size.insert(0, "–" + to_string(size_value)); //TODO confirm that this works
-      } else {
-        size = to_string(from_string<uint32_t>(c[END]) + from_string<uint32_t>(c[START]));
+        size = to_string(size_value) + "–" + size; 
+        //TODO confirm that this works
       }
 // # 
 // #         
 // #     $output_str.= td(nonbreaking($c->{seq_id})); 
       ss << td(nonbreaking(c[SEQ_ID])) << endl;
 // #     $output_str.= td({-align=>"right"}, nonbreaking($start_str)); 
-      ss << td(ALIGN_RIGHT, nonbreaking(start));
+      ss << td(ALIGN_RIGHT, nonbreaking(start)) << endl;
 // #     $output_str.= td({-align=>"right"}, nonbreaking($end_str));   
-      ss << td(ALIGN_RIGHT, nonbreaking(end));
+      ss << td(ALIGN_RIGHT, nonbreaking(end)) << endl;
 // #     $output_str.= td({-align=>"right"}, nonbreaking($size_str));    
-      ss << td(ALIGN_RIGHT, nonbreaking(size));
+      ss << td(ALIGN_RIGHT, nonbreaking(size)) << endl;
 // #     $output_str.= td({-align=>"center"}, nonbreaking("$c->{left_outside_cov} \[$c->{left_inside_cov}\]")); 
-      ss << td(ALIGN_CENTER, nonbreaking(c[LEFT_OUTSIDE_COV] + "[" + c[LEFT_INSIDE_COV] + "]"));
+      ss << td(ALIGN_CENTER, nonbreaking(c[LEFT_OUTSIDE_COV] + "[" + c[LEFT_INSIDE_COV] + "]")) <<endl;
 // #     $output_str.= td({-align=>"center"}, nonbreaking("\[$c->{right_inside_cov}\] $c->{right_outside_cov}")); 
-      ss << td(ALIGN_CENTER, nonbreaking(c[RIGHT_OUTSIDE_COV] + "[" + c[RIGHT_OUTSIDE_COV] + "]"));
+      ss << td(ALIGN_CENTER, nonbreaking(c[RIGHT_INSIDE_COV] + "[" + c[RIGHT_OUTSIDE_COV] + "]")) << endl;
 // #     $output_str.= td({align=>"center"}, i(nonbreaking($c->{gene_name})));       
-      ss << td(ALIGN_CENTER, i(nonbreaking(c[GENE_NAME])));
+      ss << td(ALIGN_CENTER, i(nonbreaking(c[GENE_NAME]))) << endl;
 // #     $output_str.= td({align=>"left"}, htmlize($c->{gene_product}));   
-      ss << td(ALIGN_LEFT, htmlize(c[GENE_NAME]));
+      ss << td(ALIGN_LEFT, htmlize(c[GENE_NAME])) << endl;
 // #     $output_str.= end_Tr;
       ss << "</tr>" << endl;
 // #     
@@ -1300,7 +1303,7 @@ html_missing_coverage_table_string(
   }
 // #   
 // #   $output_str.= end_table;  
-  ss << "</table>";
+  ss << "</table>" << endl;
 // #   return $output_str;
   return ss.str();
 // # }
