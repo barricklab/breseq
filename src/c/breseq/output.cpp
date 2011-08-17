@@ -2255,89 +2255,88 @@ Evidence_Files::html_evidence_file (
 
 
 
-// # sub save_text_deletion_file
-// # {
-// #   my ($deletion_file_name, $deletions_ref) = @_;
-// # 
-// #   open DEL, ">$deletion_file_name" or die "Could not open: $deletion_file_name";
-// #   print DEL join("\t", 'seq_id', 'start', 'end') . "\n";
-// #   foreach my $d (@$deletions_ref)
-// #   {
-// #     print DEL join("\t", $d->{seq_id}, $d->{start}, $d->{end}) . "\n"; 
-// #   }
-// #   close DEL;
-// # }
-// # 
-// # 
-// # sub draw_coverage
-// # {
-// #   my ($settings, $ref_seq_info, $gd) = @_;
-// #   my @mc = $gd->list('MC');
-// #   my $drawing_format = 'png';
-// # 
-// #   if (0)
-// #   {
-// #     $settings->create_path('coverage_plot_path');
-// #     my $coverage_plot_path = $settings->file_name('coverage_plot_path');  
-// #     my $deletions_text_file_name = $settings->file_name('deletions_text_file_name');
-// #     Breseq::Output::save_text_deletion_file($deletions_text_file_name, \@mc);
-// #     
-// #     foreach my $seq_id (@{$ref_seq_info->{seq_ids}})
-// #     {
-// #       my $this_complete_coverage_text_file_name = $settings->file_name('complete_coverage_text_file_name', {'@'=>$seq_id});     
-// #       my $res = Breseq::Shared::system("$FindBin::Bin/plot_coverage --drawing-format $drawing_format -t $coverage_plot_path -p $settings->{coverage_plot_path} -i $deletions_text_file_name -c $this_complete_coverage_text_file_name --seq_id=$seq_id");       
-// #       die if ($res);
-// # 
-// #       #need to assign link names that correspond to what the R script is doing
-// #       my $i=1;
-// #       my @this_deletions = grep {$_->{seq_id} eq $seq_id} @mc if ($seq_id);
-// #       foreach my $del (@this_deletions)
-// #       {
-// #         $del->{_coverage_plot_file_name} = "$seq_id\.$i\.$drawing_format";
-// #         $i++;
-// #       }
-// #     }
-// #     $settings->remove_path('deletions_text_file_name');
-// #   } 
-// #   else
-// #   {
-// #     my $fasta_path = $settings->file_name('reference_fasta_file_name');
-// #     my $bam_path = $settings->file_name('reference_bam_file_name');
-// #     my $evidence_path = $settings->file_name('evidence_path');
-// #     
+void save_text_deletion_file(string deletion_file_name, breseq::genome_diff::entry_list_t& deletions_ref)
+{
+	ofstream DEL(deletion_file_name.c_str()); //or die "Could not open: $deletion_file_name";
+	DEL << "seq_id\tstart\tend\n";
+	for (breseq::genome_diff::entry_list_t::iterator d = deletions_ref.begin(); d != deletions_ref.end(); d++)
+		DEL << (**d)["seq_id"] << "\t" << (**d)["start"] << "\t" << (**d)["end"] << "\n";
+	DEL.close();
+}
+
+void draw_coverage(Settings& settings, cReferenceSequences* ref_seq_info, genome_diff& gd)
+{
+	vector<string> mc_types = make_list<string>("MC");
+	breseq::genome_diff::entry_list_t mc = gd.list(mc_types);
+	string drawing_format = "png";
+
+// #if (0)
+	{
+		settings.create_path("coverage_plot_path");
+		string coverage_plot_path = settings.file_name("coverage_plot_path");
+		string deletions_text_file_name = settings.file_name("deletions_text_file_name");
+		save_text_deletion_file(deletions_text_file_name, mc);
+
+		for (uint32_t i = 0; i < ref_seq_info->seq_ids.size(); i++)
+		{
+			string seq_id = ref_seq_info->seq_ids[i];
+			string this_complete_coverage_text_file_name = settings.file_name("complete_coverage_text_file_name", "@", seq_id);
+			string command = settings.bin_path + "/plot_coverage --drawing-format " + drawing_format + " -t " + coverage_plot_path + " -p " + settings.coverage_plot_path + " -i " + deletions_text_file_name + " -c " + this_complete_coverage_text_file_name + " --seq_id=" + seq_id;
+			assert(system(command.c_str()) >= 0);
+
+			// need to assign link names that correspond to what the R script is doing
+
+			breseq::genome_diff::entry_list_t this_deletions;
+			breseq::genome_diff::entry_list_t::iterator it;
+			
+			if (seq_id.size() > 0)
+				for (it = mc.begin(); it != mc.end(); it++)
+					if ((**it)["seq_id"] == seq_id)
+						this_deletions.push_back(*it);
+
+			uint32_t j = 1;
+			for (it = this_deletions.begin(); it != this_deletions.end(); it++)
+				(**it)["_coverage_plot_file_name"] = seq_id + to_string(j++) + "." + drawing_format;
+		}
+		settings.remove_path("deletions_text_file_name");
+	}
+	//#else
+	/*{
+		string fasta_path = settings.file_name("reference_fasta_file_name");
+		string bam_path = settings.file_name("reference_bam_file_name");
+		string evidence_path = settings.file_name("evidence_path");
+
 // #     my $co = Breseq::CoverageOutput->new(-fasta => $fasta_path, -bam => $bam_path, -path => $evidence_path);
-// # 
-// #     ##plot the overview for each seq_id
-// #     foreach my $seq_id (@{$ref_seq_info->{seq_ids}})
-// #     {
-// #       my $region = $seq_id . ":" . "1" . "-" . (length $ref_seq_info->{ref_strings}->{$seq_id});
-// #       print STDERR "Creating coverage plot for region $region\n";
+
+		//plot the overview for each seq_id
+		for (uint32_t i = 0; i < ref_seq_info->seq_ids.size(); i++)
+		{
+			string seq_id = ref_seq_info->seq_ids[i];
+			string region = seq_id + ":1-" + to_string(ref_seq_info->ref_strings[seq_id].size());
+			cerr << "Creating coverage plot for region " << region << endl;
 // #       $co->plot_coverage($region, "$evidence_path/$seq_id\.overview", {verbose=>0, resolution=>undef, pdf => 0, total_only => 1, shaded_flanking => 0, use_c_tabulate_coverage => 1});
-// #     }
-// # 
-// #     #make plot for every missing coverqge item
-// #     foreach my $item (@mc)
-// #     {
-// #       my $start = $item->{start};
-// #       my $end = $item->{end};
-// #       my $size = $end - $start + 1;
-// #       
-// #       my $shaded_flanking = int($size/10);
-// #       $shaded_flanking = 100 if ($shaded_flanking < 100);
-// #       my $region = $item->{seq_id} . ":" . $start . "-" . $end;
-// # 
-// #       $item->{_coverage_plot_file_name} = "$item->{seq_id}\_$start\-$end";
-// #       print STDERR "Creating coverage plot for region $region\n";
-// #         
+		}
+
+		//make plot for every missing coverage item
+		for (entry_list_t::iterator item = mc.begin(); item != mc.end(); item++)
+		{
+			uint32_t start = from_string<uint32_t>((**item)["start"]);
+			uint32_t end = from_string<uint32_t>((**item)["end"]);
+			uint32_t size = end - start + 1;
+
+			uint32_t shaded_flanking = size / 10;
+			if (shaded_flanking < 100) shaded_flanking = 100;
+			string region = (**item)["seq_id"] + ":" + to_string(start) + "-" + to_string(end);
+
+			(**item)["_coverage_plot_file_name"] = (**item)["seq_id"] + "_" + to_string(start) + "-" + to_string(end);
+			cerr << "Creating coverage plot for region " << region << endl;
+
 // #       $co->plot_coverage($region, "$evidence_path/$item->{_coverage_plot_file_name}", {verbose=>0, resolution=>undef, pdf => 0, total_only => 0, shaded_flanking => $shaded_flanking, use_c_tabulate_coverage => 1});
-// #       $item->{_coverage_plot_file_name} .= ".$drawing_format";
-// #     }
-// # 
-// #   }
-// # 
-// # }
-// # 
-// # our @execution_times;
+			(**item)["_coverage_plot_file_name"] += "." + drawing_format;
+		}
+	}*/
+}
+
 vector<ExecutionTime> execution_times; 
 string record_time(string name)
 {

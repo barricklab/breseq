@@ -41,7 +41,7 @@ namespace breseq {
 		command += " junction_keep_pr_cutoff=" + junction_keep_pr_cutoff;
 		command += " junction_max_score=" + junction_max_score;
 
-		system(command.c_str());
+		int retval = system(command.c_str());
 
 		ifstream ROUT(log_file_name.c_str());
 		string line;

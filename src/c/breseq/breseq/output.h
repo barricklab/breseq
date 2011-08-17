@@ -14,7 +14,6 @@ struct Options {
   bool repeat_header;
 };
 struct Interval{};
-struct Reference{};
 
 /*-----------------------------------------------------------------------------
  *  Diff_Entry Keywords 
@@ -294,10 +293,10 @@ void  html_evidence_file(Settings settings, genome_diff gd, Interval interval);
 void create_evidence_files(Settings settings, genome_diff gd);
 // sub save_text_deletion_file
 //         my ($deletion_file_name, $deletions_ref) = @_;
-void save_text_deletion_file(string deletion_file_name, vector<Reference> deletions_ref);
+void save_text_deletion_file(string deletion_file_name, breseq::genome_diff::entry_list_t& deletions_ref);
 // sub draw_coverage
 //         my (Settings settings, $ref_seq_info, $gd) = @_;
-void draw_coverage(Settings settings, cReferenceSequences ref_seq_info, genome_diff gd);
+void draw_coverage(Settings& settings, cReferenceSequences* ref_seq_info, genome_diff& gd);
 // sub record_time
 //         my ($name) = @_;
 string record_time(string name);

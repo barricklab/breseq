@@ -370,6 +370,13 @@ namespace breseq
 			return path;
 		}
 
+		string remove_path(string path_key)
+		{
+			string path = file_name(path_key);
+			//(-e $path) and Breseq::File::Path::remove_tree($path) or $self->throw("Could not remove path \'$path\'.");
+			return path;
+		}
+
 		void record_end_time(string message)
 		{
 			uint32_t i = 0;
