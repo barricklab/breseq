@@ -278,6 +278,20 @@ protected:
   map<uint32_t,bool> unique_id_used;
 };
 
+//! Functor. Wraps diff_entry.entry_exists() for use in STL algorithms.
+struct field_exists : public unary_function<genome_diff::diff_entry_ptr, bool>
+{
+  //! Constructor
+  explicit field_exists (diff_entry::key_t field_key)
+    : m_field_key(field_key) {}
+  
+  //! Predicate
+  bool operator() (genome_diff::diff_entry_ptr p_diff_entry) 
+    {return (p_diff_entry->entry_exists(m_field_key));}
+
+  private:
+    diff_entry::key_t m_field_key;
+};
 
 }
 
