@@ -231,7 +231,6 @@ public:
   void write() { write(_default_filename); }
 
   //! Read a genome diff from a file.
-  //TEST 6/12 Completed @GRC
   void read(const string& filename);
   
   //! Write the genome diff to a file.
@@ -242,31 +241,34 @@ public:
   
   //! Retrieve diff_entrys that match given type(s) 
   entry_list_t list(vector<string> types);
+  entry_list_t list() {return _entry_list;}
   
   //! Converts a genome_diff(.gd) file's line to a diff_entry
   diff_entry _line_to_item(const string& line);
 
-  //Returns _entry_list with matching item._evidence
+  //! Returns _entry_list with matching item._evidence
   entry_list_t mutation_evidence_list(const diff_entry& item);
 
   entry_list_t mutation_list();
 
   diff_entry_ptr parent(const diff_entry& item);
-
+  
+  //! Returns values for diff_entry["reject"]
+  vector<string> get_reject_reasons(diff_entry item);
+      
   void strcopy(char* arg1, const char* arg2);
 
-  //Metadata kept in .gd files
+  //! Metadata kept in .gd files
   struct Metadata
   {
-  string run_id;
-  string version; 
-  string author;
-  string ref_seq;
-  vector<string> read_seq;
+    string run_id;
+    string version; 
+    string author;
+    string ref_seq;
+    vector<string> read_seq;
   };
 
   Metadata metadata;
-  
   
 
 protected:  	
@@ -274,7 +276,6 @@ protected:
   entry_list_t _entry_list; //!< All diff entries.
   uint32_t _unique_id_counter; //!< Smallest available id.
   map<uint32_t,bool> unique_id_used;
-  string version; //!< .gd file #=GENOME_DIFF version, found on first line
 };
 
 
