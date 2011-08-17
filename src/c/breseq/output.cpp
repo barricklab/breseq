@@ -130,81 +130,10 @@ string htmlize (const string& input)
   return retval;
 }
 
-
-
-
-// # ## these style definitions are included between the
-// # ## HEAD tags of every generated page
-// # our $header_style_string = <<ENDOFSTYLE;
-// # body {
-// #   font-family: sans-serif;
-// #   font-size: 11pt;
-// # }
-// # th  {
-// #   background-color: rgb(0,0,0); 
-// #   color: rgb(255,255,255);
-// # }
-// # table {
-// #   background-color: rgb(0,0,0); 
-// #   color: rgb(0,0,0);
-// # }
-// # 
-// # tr  {
-// #   background-color: rgb(255,255,255); 
-// # }
-// # 
-// # .mutation_in_codon  {
-// #   color:red;
-// #   text-decoration : underline;
-// # }
-// # 
-// # .mutation_header_row {
-// #   background-color: rgb(0,130,0);
-// # }
-// # 
-// # .read_alignment_header_row {
-// #   background-color: rgb(255,0,0);
-// # }
-// # 
-// # .missing_coverage_header_row {
-// #   background-color: rgb(0,100,100);
-// # }
-// # 
-// # .new_junction_header_row {
-// #   background-color: rgb(0,0,155);
-// # }
-// # 
-// # .alternate_table_row_0  {
-// #   background-color: rgb(255,255,255);
-// # }
-// # 
-// # .alternate_table_row_1  {
-// #   background-color: rgb(230,230,245);
-// # } 
-// # 
-// # .polymorphism_table_row {
-// #   background-color: rgb(160,255,160);
-// # }
-// # 
-// # .highlight_table_row  {
-// #   background-color: rgb(192,255,255);
-// # }
-// # 
-// # .reject_table_row {
-// #   background-color: rgb(255,200,165);
-// # }
-// # 
-// # .information_table_row  {
-// #   background-color: rgb(200,255,255);
-// # }
-// # 
-// # .junction_repeat  {
-// #   background-color: rgb(255,165,0); /* orange */
-// # }
-// # .junction_gene  {
-// # }
-// # 
-// # ENDOFSTYLE
+/*-----------------------------------------------------------------------------
+ *  These style definitions are included between the HTML <head> 
+ *  tags of every genereated .html page.
+ *-----------------------------------------------------------------------------*/
 string header_style_string() 
 {
   stringstream ss(ios_base::out | ios_base::app);
@@ -213,7 +142,6 @@ string header_style_string()
   ss << "table {background-color: rgb(1,0,0); color: rgb(0,0,0);}"         << endl;
   ss << "tr {background-color: rgb(255,255,255);}"                         << endl;
   ss << ".mutation_in_codon {color:red; text-decoration : underline;}}"    << endl;
-  ss << ".mutation_header_row {background-color: rgb(0,130,0);}"           << endl; 
   ss << ".read_alignment_header_row {background-color: rgb(255,0,0);}"     << endl;
   ss << ".missing_coverage_header_row {background-color: rgb(0,100,100);}" << endl;
   ss << ".new_junction_header_row {background-color: rgb(0,0,155);}"       << endl;
@@ -229,38 +157,39 @@ string header_style_string()
 return ss.str();
 }
 
-struct field_exists : public unary_function<genome_diff::diff_entry_ptr, bool>
-{
-  diff_entry::key_t field_key;
 
-  explicit field_exists (diff_entry::key_t in_field_key)
-    : field_key(in_field_key)
-  {}
-  bool operator() (genome_diff::diff_entry_ptr a) 
-    {return (a->entry_exists(field_key));}
-};
 
 void html_index(string file_name, Settings settings, Summary summary,
                 cReferenceSequences ref_seq_info, genome_diff gd)
 {
-// #   open HTML, ">$file_name" or die "Could not open file: $file_name";
+  // Create Stream and Confirm It's Open
   ofstream HTML(file_name.c_str());
+
+  if (!HTML.good()) {
+    cerr << "Could not open file: " << file_name << endl;
+    assert(HTML.good());
+  }
   
-  
+  // Build HTML Head
+  HTML <<"<!--Head For Mutation Predictions -->" << endl;
+
   HTML << "<html>" << endl;
-  // #       -title => "BRESEQ :: Mutation Predictions" . ($settings->{print_run_name} ne 'unnamed' ? " :: $settings->{print_run_name}" : ''), 
-  HTML << "<title>BRESEQ :: Mutation Predictions " << settings.print_run_name << "</title>" << endl; 
-  // #       -head  => style({type => 'text/css'}, $header_style_string),
+  HTML << "<title>BRESEQ :: Mutation Predictions ";
+  if (!settings.print_run_name.empty()) {
+    HTML << " :: " << settings.print_run_name; 
+  } 
+  HTML << "</title>" << endl; 
   HTML << "<head>" << endl;
   HTML << "<style type = \"text/css\">" << endl;
   HTML << header_style_string();
   HTML << "</style>" << endl;
   HTML << "</head>" << endl;
-// #   );
   
 // #   print HTML breseq_header_string($settings) . p; 
-  HTML << breseq_header_string(settings) << "<p>";
-// # 
+  HTML << breseq_header_string(settings) << endl;
+  HTML << "<p>" << endl;
+
+  
 // #   ###
 // #   ## Mutation predictions
 // #   ###
@@ -344,44 +273,52 @@ void html_index(string file_name, Settings settings, Summary summary,
 void html_marginal_predictions(string file_name, Settings settings,Summary summary,
                                cReferenceSequences ref_seq_info, genome_diff gd)
 {
-// # 
-// #   open HTML, ">$file_name" or die "Could not open file: $file_name";    
+  // Create Stream and Confirm It's Open
   ofstream HTML(file_name.c_str());
-  if(!HTML)
+  
+  if(!HTML.good()) {
     cerr << "Could not open file: " <<  file_name << endl;
-// # 
-// #     print HTML start_html(
+    assert(HTML.good());
+  }
+
+  // Build HTML Head
+  HTML << "<!-- Head for Marginal Predictions -->" << endl;
+
   HTML << "<html>";
-  HTML << "<head>";  
-// #       -title => "BRESEQ :: Marginal Predictions" . ($settings->{print_run_name} ne 'unnamed' ? " :: $settings->{print_run_name}" : ''), 
-  HTML << "<title>BRESEQ :: Marginal Predictions</title>";///TODO @GRC settings->print_run_name
-// #       -head  => style({type => 'text/css'}, $header_style_string),
-  HTML << "<style type=\"text/css\">" << header_style_string() << "</style>";
-// #   );
-// #   print HTML breseq_header_string($settings) . p;
-  HTML << breseq_header_string(settings) + "<p>";
-// #   
-// #   my $relative_path = $settings->file_name('local_evidence_path');
+  HTML << "<title>BRESEQ :: Marginal Predictions"; 
+  if (!settings.print_run_name.empty()) {
+    HTML << " :: " << settings.print_run_name;
+  }
+  HTML << "</title>" << endl;
+  HTML << "<head>" << endl;  
+  HTML << "<style type=\"text/css\">" << endl;
+  HTML << header_style_string() << endl;
+  HTML << "</style>" << endl;
+  HTML << "</head>" << endl;
+  
+  HTML << breseq_header_string(settings) << endl;
+  HTML << "<p>" << endl;
+  
   string relative_path = settings.file_name("local_evidence_path");
-// #   $relative_path .= "/" if ($relative_path);
+  
   if (!relative_path.empty())
     relative_path += "/";
-// #   my $one_ref_seq = scalar(keys %{$ref_seq_info->{ref_strings}}) == 1;
+  
+  //Determine if more than one reference sequence is used
   bool one_ref_seq;
   if (get_keys<string,string>(ref_seq_info.ref_strings).size() == 1)
     one_ref_seq = true;
   else
     one_ref_seq = false; 
-// #   
+
 // #   ###
 // #   ## Marginal evidence
 // #   ###
-// #   
 // #   my @ra = $gd->filter_used_as_evidence($gd->list('RA')); 
   entry_list_t ra = gd.filter_used_as_evidence(gd.list(make_list<string>("RA")));
-//TODO
 // #   ## don't print ones that overlap predicted deletions or were marked to not show
 // #   @ra = grep { !$_->{deleted} && !$_->{no_show} } @ra;
+  
 // #   
 // #   if (scalar @ra > 0)
 // #   {
@@ -435,16 +372,18 @@ string html_header (const string &title)
 }
 // # sub html_compare
 // # {
-void html_compare(Settings settings,const string &filename, const string &title, genome_diff gd,
+void html_compare(Settings settings,const string &file_name, const string &title, genome_diff gd,
                   bool one_ref_seq, vector<string> gd_name_list_ref, Options options)
 {
 // #   my ($settings, $file_name, $title, $gd, $one_ref_seq, $gd_name_list_ref, $options) = @_;
 // # 
 // #   open HTML, ">$file_name" or die "Could not open file: $file_name";    
-  ofstream HTML(filename.c_str());
+  ofstream HTML(file_name.c_str());
 
-  if(!HTML.good())
-    cerr << "Could not open file: " << filename << endl; 
+  if (!HTML.good()) {
+    cerr << "Could not open file: " << file_name << endl;
+    assert(HTML.good());
+  }
 // # 
 // #     print HTML start_html(
 // #       -title => $title, 
@@ -477,8 +416,11 @@ void html_compare_polymorphisms(Settings settings, string file_name, string titl
 // #   my ($settings, $file_name, $title, $list_ref) = @_;
     
   ofstream HTML(file_name.c_str());
-  if(!HTML.good())
+  
+  if(!HTML.good()) {
     cerr << "Could not open file: " << file_name << endl;
+    assert(HTML.good());
+  }
 // # 
 // #     print HTML start_html(
 // #       -title => $title, 
@@ -518,7 +460,11 @@ void html_statistics(const string &file_name, Settings settings, Summary summary
 // #       -head  => style({type => 'text/css'}, $header_style_string),
 // #   );
   HTML << "<html>" << endl;
-  HTML << "<title>" << "Summary Statistics" << settings.print_run_name << "</title>" << endl;
+  HTML << "<title>" << "Summary Statistics";
+  if (!settings.print_run_name.empty()) {
+    HTML << " :: " << settings.print_run_name; 
+  }
+  HTML << "</title>" << endl;
   HTML << "<head>" << endl;
   HTML << "<style type =\"text/css\">" << endl;
   HTML << header_style_string() << endl;
@@ -771,7 +717,7 @@ string formatted_mutation_annotation(diff_entry mut)
 // #   my $formatted_annotated = '';
 // #   if ((defined $mut->{snp_type}) && ($mut->{snp_type} ne 'intergenic') && ($mut->{snp_type} ne 'noncoding') && ($mut->{snp_type} ne 'pseudogene'))
 // #   {
-  if((!(mut["snp_type"].empty())) && (mut["snp_type"] != "intergenic") &&
+  if((mut.entry_exists("snp_type")) && (mut["snp_type"] != "intergenic") &&
      (mut["snp_type"] != "noncoding") && (mut["snp_type"] != "pseudogene"))
   {    
 // #     $formatted_annotated .= "$mut->{aa_ref_seq}$mut->{aa_position}$mut->{aa_new_seq}";
