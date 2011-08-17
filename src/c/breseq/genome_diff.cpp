@@ -1013,6 +1013,19 @@ genome_diff::diff_entry_ptr genome_diff::parent(const diff_entry& item)
   return counted_ptr<diff_entry>(NULL);
 }
 
+vector<string> genome_diff::get_reject_reasons(diff_entry item)
+{
+  if (item.entry_exists("reject")) {
+    return split(item["reject"], ",");
+  } else {
+    //! Safer to call .entry_exists 
+    //prior to calling this function
+    vector<string> return_value;
+    return return_value;
+  }
+
+}
+
 
 }//namespace bresesq
 

@@ -228,19 +228,25 @@ string header_style_string()
   
 return ss.str();
 }
-// # 
-// # 
-// # sub html_index
-// # {
-// #   my ($file_name, $settings, $summary, $ref_seq_info, $gd) = @_;
+
+struct field_exists : public unary_function<genome_diff::diff_entry_ptr, bool>
+{
+  diff_entry::key_t field_key;
+
+  explicit field_exists (diff_entry::key_t in_field_key)
+    : field_key(in_field_key)
+  {}
+  bool operator() (genome_diff::diff_entry_ptr a) 
+    {return (a->entry_exists(field_key));}
+};
+
 void html_index(string file_name, Settings settings, Summary summary,
                 cReferenceSequences ref_seq_info, genome_diff gd)
 {
-// # 
 // #   open HTML, ">$file_name" or die "Could not open file: $file_name";
   ofstream HTML(file_name.c_str());
-// # 
-// #     print HTML start_html(
+  
+  
   HTML << "<html>" << endl;
   // #       -title => "BRESEQ :: Mutation Predictions" . ($settings->{print_run_name} ne 'unnamed' ? " :: $settings->{print_run_name}" : ''), 
   HTML << "<title>BRESEQ :: Mutation Predictions " << settings.print_run_name << "</title>" << endl; 
@@ -252,32 +258,30 @@ void html_index(string file_name, Settings settings, Summary summary,
   HTML << "</head>" << endl;
 // #   );
   
-// #   print HTML breseq_header_string($settings) . p; //TODO Confirm p
+// #   print HTML breseq_header_string($settings) . p; 
   HTML << breseq_header_string(settings) << "<p>";
 // # 
 // #   ###
 // #   ## Mutation predictions
 // #   ###
   HTML << "<!--Mutation Predictions -->" << endl;
-// #   
-// #   my @muts = $gd->list('SNP', 'INS', 'DEL', 'SUB', 'MOB', 'AMP');
   genome_diff::entry_vector_t muts = gd.list(make_list<string>(SNP)(INS)(DEL)(SUB)(MOB)(AMP));
   
   string relative_path = settings.file_name("local_evidence_path");
   
   if(!relative_path.empty())
     relative_path += "/";
-// #   my $one_ref_seq = scalar(keys %{$ref_seq_info->{ref_strings}}) == 1;
+  
+  //Determine if more than one reference sequence is used
   bool one_ref_seq;
 
   if (get_keys<string,string>(ref_seq_info.ref_strings).size() == 1)
     one_ref_seq = true;
   else
     one_ref_seq = false;
-// #   print HTML p . html_mutation_table_string($settings, $gd, \@muts, $relative_path, undef, $one_ref_seq);
-// # 
+
+  //Build Mutation Predictions table
   HTML << "<p>" << endl;
-  //Build Html_Mutation_Table_String 
   Html_Mutation_Table_String 
     html_mutation_table_string(
                                settings, 
@@ -287,7 +291,6 @@ void html_index(string file_name, Settings settings, Summary summary,
                                false, 
                                one_ref_seq
                                );
-  html_mutation_table_string.Item_Lines();
 
   HTML << html_mutation_table_string << endl;
   
@@ -295,44 +298,44 @@ void html_index(string file_name, Settings settings, Summary summary,
 // #   ## Unassigned evidence
 // #   ###
   HTML << "<!--Unassigned evidence-->" << endl;
-// #   
-// #   my @mc = $gd->filter_used_as_evidence($gd->list('MC'));
+  
   entry_list_t mc = gd.filter_used_as_evidence(gd.list(make_list<string>("MC")));
-
-// #   if (scalar @mc > 0)
-// #   {
-  if (mc.size() > 0)
+  
+  if (mc.size() > 0) {
 // #     print HTML p . html_missing_coverage_table_string(\@mc, $relative_path, "Unassigned missing coverage evidence...");
     HTML << "<p>" << html_missing_coverage_table_string(mc, false, "Unassigned missing coverage evidence", relative_path);
-   // cout << "<p>" << html_missing_coverage_table_string(mc, false, "Unassigned missing coverage evidence", relative_path);
-// #   }
-// #   
-//TODO grep    
+  }
+
 // #   my @jc = $gd->filter_used_as_evidence($gd->list('JC'));
-// #   @jc = grep { !$_->{no_show} } @jc;  
-// #   @jc = grep { !$_->{circular_chromosome} } @jc if ($settings->{hide_circular_genome_junctions}); #don't show junctions for circular chromosomes  
   entry_list_t jc = 
-    gd.filter_used_as_evidence(gd.list(make_list<string>(JC)));
-  //TODO jc.remove_if(not1(bind2nd(mem_fun(&diff_entry::entry_exists), "no_show")));
+    gd.filter_used_as_evidence(gd.list(make_list<string>("JC")));
 
+// #   @jc = grep { !$_->{no_show} } @jc;  
+  jc.remove_if(field_exists("no_show"));
+  
+// #   @jc = grep { !$_->{circular_chromosome} } @jc if ($settings->{hide_circular_genome_junctions}); 
 
-  if(!settings.hide_circular_genome_junctions)
-    //TODO grep
+  //Don't show junctions for circular chromosomes
+  if (!settings.hide_circular_genome_junctions) {
+    jc.remove_if(field_exists("circular_chromosome")); 
+  }
    
 // # 
 // #   my @jcu = grep { !$_->{reject} } @jc; 
-    genome_diff::entry_list_t jcu;
-///##############################
+  entry_list_t jcu = jc;
+  jcu.remove_if(field_exists("reject"));
+
 // #   if (scalar @jcu > 0)
 // #   {
 // #     print HTML p . html_new_junction_table_string(\@jcu, $relative_path, "Unassigned new junction evidence...");  
 // #   }
-// #   
-// #   print HTML end_html;
-    HTML << "</html>";
-// #   close HTML;
-    HTML.close();
-// # }
+  if (jcu.size() > 0) {
+    HTML << "<p>" << endl;
+    HTML << html_new_junction_table_string(jcu, false, "Unassigned new junction evidence...", relative_path);
+  }
+
+  HTML << "</html>";
+  HTML.close();
 }
 // # 
 // # sub html_marginal_predictions
@@ -1259,7 +1262,6 @@ html_missing_coverage_table_string(
         from_string<uint32_t>(c[START_RANGE]);
        
         size = to_string(size_value) + "–" + size; 
-        //TODO confirm that this works
       }
 // # 
 // #         
@@ -1308,9 +1310,7 @@ html_missing_coverage_table_string(
   return ss.str();
 // # }
 }
-// # 
-// # sub html_new_junction_table_string
-// # {
+
 string
 html_new_junction_table_string(
                                entry_list_t list_ref,
@@ -1320,10 +1320,7 @@ html_new_junction_table_string(
                                )
 {
 // #   our ($list_ref, $relative_link, $title, $show_reject_reason) = @_;
-// #   $relative_link = '' if (!$relative_link);
-// #   $title = "New junction evidence..." if (!$title);
 // #   
-// #   my $output_str = '';
   stringstream ss(ios_base::out | ios_base::app); //!<< Main Build Object for Function
 // # 
 // #   my $test_item = $list_ref->[0];
@@ -1340,19 +1337,19 @@ html_new_junction_table_string(
 // #   
 // #   my $q = new CGI; //TODO
 // #   $output_str.= start_table({-border => 0, -cellspacing => 1, -cellpadding => 3});
-  ss << start_table("border=\"0\" cellspacing=\"1\" cellpadding=\"3\"");
+  ss << start_table("border=\"0\" cellspacing=\"1\" cellpadding=\"3\"") << endl;
 // # 
 // #   my $total_cols = $link ? 10 : 8;
-  uint8_t total_cols = link ? 10 : 8;
+  size_t total_cols = link ? 10 : 8;
 // #   $output_str.= Tr(th({-colspan => $total_cols, -align => "left", -class=>"new_junction_header_row"}, $title));
-  ss << tr(th("colspan=\"" + to_string(total_cols) + "\" align=\"left\" class=\"new_junction_header_row\"", title));
+  ss << tr(th("colspan=\"" + to_string(total_cols) + "\" align=\"left\" class=\"new_junction_header_row\"", title)) << endl;
 // #     
 // #   #####################
 // #   #### HEADER LINE ####
 // #   #####################
-// #   
+  ss << "<!-- Header Lines for New Junction -->" << endl; 
 // #   $output_str.= start_Tr();
-  ss << start_tr();
+  ss << "<tr>" << endl;
 // #   if ($link)
 // #   {
 // #     $output_str.= th({-colspan=>2}, "&nbsp;"); 
@@ -1369,7 +1366,7 @@ html_new_junction_table_string(
 // #     ]
 // #   );    
   if (link) {
-    ss << th("colspan=\"2\"", "&nbsp;");
+    ss << th("colspan=\"2\"", "&nbsp;") << endl;
   }
   ss << th("seq&nbsp;id") << endl <<
         th("position")    << endl <<
@@ -1381,74 +1378,128 @@ html_new_junction_table_string(
 
 // #   $output_str.= th({-width => "100%"}, "product"); 
 // #   $output_str.= end_Tr;
-  ss << th("width=\"100%\"","product");
-  ss << "</tr>";
+  ss << th("width=\"100%\"","product") << endl;
+  ss << "</tr>" << endl;
+  ss << endl;
 // #   
 // #   ####################
 // #   #### ITEM LINES ####
 // #   ####################
+  ss << "<!-- Item Lines for New Junction -->" << endl;
 // #   
 // #   ## the rows in this table are linked (same background color for every two)
 // #   my $row_bg_color_index = 0;
-  string row_bg_color_index; ///TODO Confirm we want a string
+  size_t row_bg_color_index = 0; 
 // #   foreach my $c (@$list_ref)
 // #   {     
   for (entry_list_t::iterator itr = list_ref.begin();
        itr != list_ref.end(); itr ++) {  
     diff_entry& c = **itr;
-// #     ### Side 1
+// #     ##############
+// #     ### Side 1 ###
+// #     ##############
+    ss << "<!-- Side 1 Item Lines for New Junction -->" << endl;
 // #     my $key = 'side_1';     
 // #     my $annotate_key = "junction_" . $c->{"$key\_annotate_key"};
     string key = "side_1";
     string annotate_key = "junction_" + c[key + "_annotation_key"];
-// #     
 // #     $output_str.= start_Tr({-class=> "mutation_table_row_$row_bg_color_index"});
-    ss << start_tr("class=\"mutation_table_row_" + row_bg_color_index +"\"");
+    ss << start_tr("class=\"mutation_table_row_" +
+                  to_string(row_bg_color_index) +"\"") << endl;
 // #     $output_str.= td({-rowspan=>2}, a({-href=>"$relative_link$c->{_new_junction_evidence_file_name}"}, "*")) if ($link); 
 // #     { 
-    if (link) {
-      ss << td("rowspan=\"2\"", a(relative_link + c[_NEW_JUNCTION_EVIDENCE_FILE_NAME], "*" ));
-    }
+     if (link) {
+      ss << td("rowspan=\"2\"", 
+              a(relative_link + c[_NEW_JUNCTION_EVIDENCE_FILE_NAME], "*" )) << endl;
+     }
+
+     { // Begin Hiding Data for Side 1
+
 // #       $output_str.= td({-rowspan=>1}, a({-href=>"$relative_link$c->{_side_1_evidence_file_name}"}, "?")) if ($link); 
-    if (link) {
-      ss << td("rowspan=\"1\"", a(relative_link + c[_SIDE_1_EVIDENCE_FILE_NAME], "?"));
-    }
+      if (link) {   
+        ss << td("rowspan=\"1\"", 
+                a(relative_link + c[_SIDE_1_EVIDENCE_FILE_NAME], "?")) << endl;
+      }
 // #       $output_str.= td({-rowspan=>1, -class=>"$annotate_key"}, nonbreaking($c->{"$key\_seq_id"}));      
-    ss << td("rowspan=\"1\" class=\"" + annotate_key + "\"", nonbreaking(c[key + "_seq_id"]));
+      ss << td("rowspan=\"1\" class=\"" + annotate_key + "\"",
+            nonbreaking(c[key + "_seq_id"])) << endl;
 // #       $output_str.= td( {-align=>"center", -class=>"$annotate_key"}, ($c->{"$key\_strand"} == +1) ? $c->{"$key\_position"} . "&nbsp;=": "=&nbsp;" . $c->{"$key\_position"} );
-    ss << td("align=\"center\" class-\"" + annotate_key +"\"",
-             (from_string<int>(c[key + "_strand"])) ? c[key + "_position"] + "&nbsp;=" :
-             "=&nbsp;" + c[key + "_position"]);
+      //? if (c[key + "_strand"] == "+1") 
+      if (from_string<int32_t>(c[key + "_strand"]) == 1) { 
+        ss << td("align=\"center\" class-\"" + annotate_key +"\"",
+                c[key + "_position"] + "&nbsp;=");
+      } else {
+        ss << td("align=\"center\" class-\"" + annotate_key +"\"",
+                "=&nbsp;" + c[key + "_position"]);
+      }
 // #       $output_str.= td( {-rowspan=>2, -align=>"center"}, $c->{overlap} );
-    ss << td("rowspan=\"2\" align=\"center\"", c["overlap"]);
+      ss << td("rowspan=\"2\" align=\"center\"", c["overlap"]) << endl;
 // #       $output_str.= td( {-rowspan=>2, -align=>"center"}, $c->{total_reads} );
-    ss << td("rowspan=\"2\" align=\"center\"", c["total_reads"] );
+      ss << td("rowspan=\"2\" align=\"center\"", c["total_reads"]) << endl;
 // #       $output_str.= td( {-rowspan=>2, -align=>"center"}, b("&lt;" . $c->{pos_hash_score} . "&gt;") . br . $c->{min_overlap_score} );
-    ss << td("rowspan=\"2\" align=\"center\"", 
-             b("&lt;" + c["pos_hash_score"] + "&gt") + "<br>" + c["min_overlap_score"]);
+      ss << td("rowspan=\"2\" align=\"center\"", 
+               b("&lt;" + c["pos_hash_score"] + "&gt;") + 
+                 "<br>" + c["min_overlap_score"]) << endl;
 // #       $output_str.= td( {-align=>"center", -class=>"$annotate_key"}, nonbreaking($c->{"_$key"}->{gene_position}) );
-    ss << td("align=\"center\" class=\"" + annotate_key + "\"", nonbreaking("_" + key + c[GENE_POSITION]));
+      ss << td("align=\"center\" class=\"" + annotate_key + "\"", 
+              nonbreaking(c["_" + key] + c[GENE_POSITION])) << endl;
 // #       $output_str.= td( {-align=>"center", -class=>"$annotate_key"}, i(nonbreaking($c->{"_$key"}->{gene_name})) );
-    ///TODO TODO TODO TODO Implement JC 
+      ss << td("align=\"center\" class=\"" + annotate_key + "\"", 
+              nonbreaking(c["_" + key] + c[GENE_NAME])) << endl;
 // #       $output_str.= td( {-class=>"$annotate_key"}, htmlize($c->{"_$key"}->{gene_product}) );
+      ss << td("class=\"" + annotate_key + "\"",
+              htmlize(c["_" + key] + c[GENE_PRODUCT])) << endl;  
 // #     }
+    } // End Hiding Data for Side 1
 // #     $output_str.= end_Tr;
-// # 
-// #     ### Side 2
+    ss << "</tr>" << endl;
+
+
+// #     ##############
+// #     ### Side 2 ###
+// #     ##############
+    ss << "<!-- Side 2 Item Lines for New Junction -->" << endl;
 // #     $key = 'side_2';
+    key = "side_2";
 // #     $annotate_key = "junction_" . $c->{"$key\_annotate_key"};
-// #     
+    annotate_key = "junction_" + c[key + "_annotate_key"];
 // #     $output_str.= start_Tr({-class=> "mutation_table_row_$row_bg_color_index"});    
+    ss << start_tr("class=\"mutation_table_row_" + 
+                  to_string(row_bg_color_index) + "\"") << endl;
 // #     {
+    { //Begin Hiding Data for Side 2
 // #       $output_str.= td({-rowspan=>1}, a({-href=>"$relative_link$c->{_side_2_evidence_file_name}"}, "?")) if ($link); 
+      if (link) {
+        ss << td("rowspan=\"1\"", 
+                a("href=\"" + relative_link + 
+                  c[_SIDE_2_EVIDENCE_FILE_NAME] + "\"", "?"));
+      }
 // #       $output_str.= td({-rowspan=>1, -class=>"$annotate_key"}, nonbreaking($c->{"$key\_seq_id"}));    
+      ss << td("rowspan=\"1\" class=\"" + annotate_key + "\"",
+              nonbreaking(c[key + "_seq_id"])) << endl;
 // #       $output_str.= td( {-align=>"center", -class=>"$annotate_key"}, ($c->{"$key\_strand"} == +1) ? $c->{"$key\_position"} . "&nbsp;=": "=&nbsp;" . $c->{"$key\_position"} );
-// # 
+// #
+      //? if (c[key + "_strand"] == "+1") 
+      if (from_string<int32_t>(c[key + "_strand"]) == 1) { 
+        ss << td("align=\"center\" class-\"" + annotate_key +"\"",
+                c[key + "_position"] + "&nbsp;=") << endl;
+      } else {
+        ss << td("align=\"center\" class-\"" + annotate_key +"\"",
+                "=&nbsp;" + c[key + "_position"]) << endl;
+      } 
 // #       $output_str.= td( {-align=>"center", -class=>"$annotate_key"}, nonbreaking($c->{"_$key"}->{gene_position}) );
+      ss << td("align=\"center\" class=\"" + annotate_key + "\"",
+              nonbreaking(c["_" + key] + c[GENE_POSITION])) << endl;
 // #       $output_str.= td( {-align=>"center", -class=>"$annotate_key"}, i(nonbreaking($c->{"_$key"}->{gene_name})) );
+      ss << td("align=\"center\" class=\"" + annotate_key + "\"",
+              i(nonbreaking(c["_" + key] + c[GENE_NAME]))) << endl;
 // #       $output_str.= td( {-class=>"$annotate_key"}, htmlize($c->{"_$key"}->{gene_product}) );
+      ss << td("class=\"" + annotate_key + "\"",
+              htmlize(c["_" + key] + c[GENE_PRODUCT])) << endl;
 // #     }     
+    } //End Hiding Data for Side 2
 // #     $output_str.= end_Tr;
+  ss << "</tr>" << endl;
 // #     
 // #     if ($show_reject_reason)
 // #     {
@@ -1457,14 +1508,27 @@ html_new_junction_table_string(
 // #         $output_str.= Tr({-class=>'reject_table_row'}, td({-colspan => $total_cols}, "Rejected: " . decode_reject_reason($reject)));
 // #       }
 // #     }
+  if (show_reject_reason && c.entry_exists("reject")) {
+    genome_diff gd;
+
+    vector<string> reject_reasons = gd.get_reject_reasons(c);
+    
+    for (vector<string>::iterator itr = reject_reasons.begin();
+         itr != reject_reasons.end(); itr++) {
+      string& reject(*itr);
+    
+      ss << tr("class=\"reject_table_row\"",
+              td("colspan=\"" + to_string(total_cols) + "\"",
+                "Rejected: " + decode_reject_reason(reject))) << endl;
+    }
+
+  }
 // #     
 // #     $row_bg_color_index = ($row_bg_color_index+1)%2;
+  row_bg_color_index = (row_bg_color_index + 1) % 2; 
 // #   }
-// #   
-// #   $output_str.= end_table;
-// # 
-// # }
-  }
+  }// End list_ref Loop
+  ss << "</table>" << endl;
   return ss.str();
 }
 
@@ -2474,7 +2538,7 @@ Html_Mutation_Table_String::Html_Mutation_Table_String(
   this->options = options;
   
   this->Header_Line();
-
+  this->Item_Lines();
 }
 
 
