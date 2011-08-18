@@ -279,6 +279,7 @@ protected:
 };
 
 //! Functor. Wraps diff_entry.entry_exists() for use in STL algorithms.
+//Returns true if a diff_entry contains the given field_key.
 struct field_exists : public unary_function<genome_diff::diff_entry_ptr, bool>
 {
   //! Constructor
@@ -292,6 +293,36 @@ struct field_exists : public unary_function<genome_diff::diff_entry_ptr, bool>
   private:
     diff_entry::key_t m_field_key;
 };
+
+//! Functor. Wraps diff_entry.entry_exists() for use in STL algorithms.
+//Returns true if a diff_entry contains all of the given field_keys.
+//ie:  diff_entry[field_key_1] && diff_entry[field_key_2]
+struct fields_exist : public unary_function<genome_diff::diff_entry_ptr, bool>
+{
+  //! Constructor
+  explicit fields_exist (vector<diff_entry::key_t> field_keys)
+    : m_field_keys(field_keys) {}
+  
+  //! Predicate
+  bool operator() (genome_diff::diff_entry_ptr p_diff_entry) 
+  {
+    for (vector<diff_entry::key_t>::iterator itr = m_field_keys.begin();
+         itr != m_field_keys.end(); itr++) {
+      genome_diff::key_t field_key(*itr);
+      if (p_diff_entry->entry_exists(field_key)) 
+        continue;
+      else 
+        return false;
+    }
+    
+    // diff_entry contains all field_keys
+    return true;
+    
+  }
+  private:
+    vector<diff_entry::key_t> m_field_keys;
+};
+
 
 }
 
