@@ -622,31 +622,7 @@ namespace breseq {
 		else
 			distribution_hash_ref[score]++;
 	}
-	
-	//! Returns true if exp matches anywhere in input
-	//! true regex expressions ie !^[\s](\w)+ do not work.
-  inline	bool regex_m(string exp, string input)
-  {
-    if(input.find(exp) != string::npos)
-      return true;
-    else
-      return false;
-  }
   
-  //! Applies regex_m to a vector of strings, returns a vector of strings
-  //! that do/don't (dependent on bool match) contain an exp.
-  //! true regex expressions ie !^[\s](\w)+ do not work.
-  inline vector<string> grep(bool match, string exp, vector<string> lines)
-  {
-    typedef vector<string> Lines;
-    Lines matching_lines;
-    
-    for(Lines::iterator line = lines.begin();
-        line != lines.end(); line ++)
-        if(match == regex_m(exp, (*line)))
-          matching_lines.push_back((*line));
-        return matching_lines;    
-  }
   ///! Returns first element, then removes it from container.
   template <typename T> inline T shift(vector<T>& input)
   {
@@ -658,20 +634,6 @@ namespace breseq {
     return retval;
   }
   
-  //! 1       2       3       4       5       6       7
-  //! splice(list, 3, 2);
-  //! 1       2       3       6       7
-  inline vector<string> splice (vector<string> &input, const uint8_t &offset, const uint8_t &length)
-  {
-    vector<string>::iterator itr = input.begin();
-    vector<string>::iterator start = itr + offset;
-    vector<string>::iterator end = start + length;
-    
-    input.erase(start,end);
-    
-    return input;
-  }
-
   // Return the path of the file without the trailing forward-slash
   inline string dirname(string file_name)
   {
