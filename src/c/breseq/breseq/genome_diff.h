@@ -255,6 +255,14 @@ public:
   
   //! Returns values for diff_entry["reject"]
   vector<string> get_reject_reasons(diff_entry item);
+  
+  //Additional functions that need? adding from GenomeDiff.gm
+  void add_reject_reasons(diff_entry item, const string& reason);
+  size_t number_reject_reasons(diff_entry item);
+  bool mutation_unknown(diff_entry mut);
+  bool has_mutation(diff_entry test_item);
+  bool interval_un (const uint32_t& start, const uint32_t& end);
+
       
   void strcopy(char* arg1, const char* arg2);
 
