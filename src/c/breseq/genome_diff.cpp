@@ -901,7 +901,8 @@ diff_entry genome_diff::_line_to_item(const string& line)
       assert(false);
     }
 
-    if(regex_m("=",next))
+    //if(regex_m("=",next))
+    if (next.find("=") != string::npos)
     {
       cerr << "Unexpected key=value pair \'$next\' encountered for required item" << key << " in type " << item._type << " line:" << endl << line; 
       assert(false);
@@ -915,8 +916,8 @@ diff_entry genome_diff::_line_to_item(const string& line)
   {
     string key_value_pair(*itr); 
     if(key_value_pair.empty()) continue;
-    assert(regex_m("=",key_value_pair));
-
+    //assert(regex_m("=",key_value_pair));
+    assert(key_value_pair.find("=")); 
     vector<string> matched = split(key_value_pair,"=");
 
     if(matched.empty())
@@ -1128,10 +1129,11 @@ genome_diff::interval_un(const uint32_t& start,const uint32_t& end)
     diff_entry un(**itr);
 
     if (start >= from_string<uint32_t>(un[START]) &&
-        end <= from_string<uint32_t>(un[END]))
+        end <= from_string<uint32_t>(un[END])) {
       return true;
-    else
-      return false;
+    }
+
+    return false;
 
   }
 }
