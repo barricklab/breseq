@@ -316,15 +316,26 @@ void html_marginal_predictions(string file_name, Settings settings,Summary summa
 // #   ###
 // #   my @ra = $gd->filter_used_as_evidence($gd->list('RA')); 
   entry_list_t ra = gd.filter_used_as_evidence(gd.list(make_list<string>("RA")));
+
 // #   ## don't print ones that overlap predicted deletions or were marked to not show
 // #   @ra = grep { !$_->{deleted} && !$_->{no_show} } @ra;
+  //Don't print ones that overlap predicted deletions or were marked to not show.
+  ra.remove_if(fields_exist(make_list<genome_diff::key_t>("deleted")("no_show")));
   
 // #   
 // #   if (scalar @ra > 0)
 // #   {
 // #     print HTML p . html_read_alignment_table_string(\@ra, $relative_path, "Marginal read alignment evidence...");
-    HTML << "<p>" ;///TODO << html_read_alignment_table_string(ra, relative_path, "Marginal read alignment evidence...");
 // #   }
+  if (ra.size() > 0) {
+    HTML << "<p>" << endl;
+    HTML << html_read_alignment_table_string(ra, false, "Marginal read alignment evidence...",
+      relative_path) << endl;
+  }
+
+//
+//
+//
 // #   
 // #   my @jc = $gd->filter_used_as_evidence($gd->list('JC'));
     entry_list_t jc = gd.filter_used_as_evidence(gd.list(make_list<string>("JC")));
@@ -803,91 +814,61 @@ html_read_alignment_table_string(
                                  string relative_link
                                  )
 {
-// # sub html_read_alignment_table_string
-// # {
-// #   my ($list_ref, $relative_link, $title, $show_reject_reason) = @_;
-// #   $relative_link = '' if (!$relative_link);
-// #   $title = "Read alignment evidence..." if (!$title);
-// #   
-// #   my $output_str = '';
-  stringstream ss(ios_base::out | ios_base::app); //!< Main Build Object for Function
-  stringstream ssf; //<! Stream used to temporarily format numbers before being passed on,
-                    // uses default construct because we want buffer emptied on every use.
-// #   
+  stringstream ss; //!< Main Build Object for Function
+  stringstream ssf; //!< Used for Formatting Strings
+
 // #   my $q = new CGI; //TODO ?
-// #   $output_str.= start_table({-border => 0, -cellspacing => 1, -cellpadding => 3});
-  start_table("border=\"0\" cellspacing=\"1\", cellpadding=\"3\"");
-// #   
-// #   my $link = (defined $list_ref->[0]) && (defined $list_ref->[0]->{_evidence_file_name});
+  
+  ss << start_table("border=\"0\" cellspacing=\"1\", cellpadding=\"3\"") << endl;
+  
+  // Evidence Hyperlinks Will be the First Column if They Exist
   bool link;
   if (list_ref.front().get() != 0 && (*list_ref.front()).entry_exists(_EVIDENCE_FILE_NAME)) {
     link = true;
   } else {
     link = false;
   }
-// #   my $total_cols = $link ? 11 : 10;
-  uint8_t total_cols = link ? 11 : 10;
-// #   $output_str.= Tr(th({-colspan => $total_cols, -align => "left", -class=>"read_alignment_header_row"}, $title));
+
+  //Determine Number of Columns in Table
+  size_t total_cols = link ? 11 : 10;
+  
+  //Create Column Titles
+  //seq_id/position/change/freq/score/cov/annotation/genes/product
   ss << tr(th("colspan=\"" + to_string(total_cols) + 
-              "\" align=\"left\" class=\"read_alignment_header_row\"", title));
-// # 
-// #   $output_str.= start_Tr();
-  ss << start_tr();
-// #   if ($link)
-// #   {
-// #     $output_str.= th("&nbsp;"); 
-// #   }
+              "\" align=\"left\" class=\"read_alignment_header_row\"", title)) << endl;
+  ss << "<tr>" << endl;
+  
   if (link) {
-    ss << th("&nbsp;");
+    ss << th("&nbsp;") << endl;
   }
-// #   $output_str.= th("seq&nbsp;id");
-  ss << th("seq&nbsp;id");
-// #   $output_str.= th({colspan => 2}, "position");
-  ss << th("colspan=\"2\"", "position");
-// #   
-// #   $output_str.= th( [
-// #       "change",
-// #       "freq",
-// #       "score", 
-// #       "cov", 
-// #       "annotation", 
-// #       "genes", 
-// #       
-// #     ]
-// #   );
+  ss << th("seq&nbsp;id") << endl;
+  ss << th("colspan=\"2\"", "position") << endl;
   ss << th("change")     << endl <<
         th("freq")       << endl <<
         th("score")      << endl <<
         th("cov")        << endl <<
         th("annotation") << endl <<
         th("gene")       << endl;
+
+  ss << "</tr>" << endl;
   
-// #   $output_str.= th({-width => "100%"}, "product"); 
-  ss << th("width=\"100%\"", "product");
-// #   $output_str.= end_Tr;
-  ss << "<tr>" << endl;
-// #   
-// #   foreach my $c (@$list_ref)
-// #   {     
+  //Loop Through list_ref to Build Table Rows
   for (entry_list_t::iterator itr = list_ref.begin();
        itr != list_ref.end(); itr ++) {  
     diff_entry& c = **itr;
 // #     my $is_polymorphism = ((defined $c->{frequency}) && ($c->{frequency} != 1)) ? 1 : 0;
-    bool polymorphism = false;
-    if (c.entry_exists(FREQUENCY) && (from_string<uint8_t>(c[FREQUENCY]) != 1)) {
-      polymorphism = true;
+    bool is_polymorphism = false;
+    if (c.entry_exists(FREQUENCY) && (from_string<size_t>(c[FREQUENCY]) != 1)) {
+      is_polymorphism = true;
     }
-// #     
-// #     my $row_class = "normal_table_row";
+    
     string row_class = "normal_table_row";
-// #     if ($is_polymorphism)
-// #     {
-// #       $row_class = "polymorphism_table_row";  
-// #     }
-    if (polymorphism) {
+    
+    if (is_polymorphism) {
       row_class = "polymorphism_table_row";
     }
-// #     $output_str.= start_Tr({-class=>$row_class});
+    
+    // Start Building a Single Table Row
     ss << start_tr("class=\"" + row_class + "\"");
 // #     
 // #     if ($link)
@@ -906,6 +887,9 @@ html_read_alignment_table_string(
       ssf.precision(1);
       ssf << scientific << from_string<double>(c["fisher_strand_p_value"]); //TODO Confirm
       fisher_p_value = nonbreaking("&nbsp;(" + ssf.str() + ")");
+      //Clear Formated String Stream
+      ssf.str("");
+      ssf.clear();
      }
 // #     
 // #     $output_str.= td({align => "center"}, nonbreaking($c->{seq_id}) );  
@@ -916,36 +900,62 @@ html_read_alignment_table_string(
     ss << td(ALIGN_CENTER, nonbreaking(c[SEQ_ID]));
     ss << td(ALIGN_RIGHT, commify(c["position"]));
     ss << td(ALIGN_RIGHT, c["insert_position"]);
-    ss << td(ALIGN_CENTER, c["ref_base"] + "&rarr;" + c["new_base"]);
+    ss << td(ALIGN_CENTER, c["ref_base"] + "&rarr;" + c["new_base"]); // "Change" Column
     ssf.width(4);
     ssf.precision(1);
-    ssf << from_string<float>(c["frequency"]) * 100;
+    ssf << fixed << from_string<double>(c["frequency"]) * 100 << "%" << endl;
     ss << td(ALIGN_RIGHT, ssf.str());
-    ssf.width(); //!< Reset width back to it's default. //TODO Confirm
+    //Clear Formated String Stream
+    ssf.str("");
+    ssf.clear();
 // #     if ($is_polymorphism)
 // #     {
-    if (polymorphism) {
+    if (is_polymorphism) {
 // #       ## display extra score data for polymorphisms...
 // #       my $log_fisher = ($c->{fisher_strand_p_value} > 0) ? log($c->{fisher_strand_p_value})/log(10) : 999;
+      string log_fisher = "999";
+      string log_ks = "999";
+         
+      if (c.entry_exists(FISHER_STRAND_P_VALUE) &&
+          from_string<double>(c[FISHER_STRAND_P_VALUE]) > 0 )
+        log_fisher = to_string(log(from_string<double>(c[FISHER_STRAND_P_VALUE])));
+
 // #       my $log_ks = ($c->{ks_quality_p_value} > 0) ? log($c->{ks_quality_p_value})/log(10) : 999;
+      if (c.entry_exists(KS_QUALITY_P_VALUE) &&
+          from_string<double>(c[KS_QUALITY_P_VALUE]) > 0 ) 
+        log_ks = to_string(log(from_string<double>(c[KS_QUALITY_P_VALUE]))/log(10));
+
 // #       $output_str.= td({align => "right"}, nonbreaking(sprintf("%.1f,%.1f,%.1f", $c->{polymorphism_quality}, $log_fisher, $log_ks)) );  # . $fisher_p_value 
-// #     }
+      ssf.precision(1);
+      ssf << fixed << c["polymorphism_quality"] << " " <<
+                      log_fisher << " " <<
+                      log_ks;
+      ss << td(ALIGN_RIGHT, nonbreaking(ssf.str()));
+      //Clear Formated String Stream
+      ssf.str("");
+      ssf.clear();
+
     }
 // #     else
 // #     {
     else {
 // #       $output_str.= td({align => "right"}, nonbreaking(sprintf("%.1f", $c->{quality})) );
-      
+      ssf.precision(1);
+      ssf << fixed << c["quality"] << endl;
+      ss << td(ALIGN_RIGHT, nonbreaking(ssf.str()));
+      ssf.str("");
+      ssf.clear();
 // #     }
     }  
-// #     my ($top_cov, $bot_cov) = split /\//, $c->{tot_cov};  
+    // Build "Cov" Column Value
     vector<string> temp_cov = split(c[TOT_COV], "/");
     string top_cov = temp_cov[0];
     string bot_cov = temp_cov[1];
-// #     $output_str.= td({align => "center"}, $top_cov + $bot_cov );
+    string total_cov = to_string(from_string<uint32_t>(top_cov) + 
+                                 from_string<uint32_t>(bot_cov));
+    ss << td(ALIGN_CENTER, total_cov);// "Cov" Column
 // #     $output_str.= td({align => "center"}, nonbreaking(formatted_mutation_annotation($c)) ); 
-    ss << td(ALIGN_CENTER, top_cov + bot_cov);
-    ss << td(ALIGN_CENTER, nonbreaking(formatted_mutation_annotation(c)));
+    ss << td(ALIGN_CENTER, nonbreaking(formatted_mutation_annotation(c))); //"Annotation" Column
 // #     $output_str.= td({align => "center"}, i(nonbreaking($c->{gene_name})) );  
     ss << td(ALIGN_CENTER, i(nonbreaking(c[GENE_NAME])));
     
@@ -971,15 +981,18 @@ html_read_alignment_table_string(
                                                   
 // #       }
        }
-// #       
-// #       if (defined $c->{fisher_strand_p_value})
-// #       {
+    
     /* Fisher Strand Test */
     if (c.entry_exists("fisher_strand_p_value")) {
 // #         my $fisher_strand_p_value = sprintf("%.2E", $c->{fisher_strand_p_value});
       ssf.precision(2);
       ssf << scientific << from_string<float>(c["fisher_strand_p_value"]);
       string fisher_strand_p_value = ssf.str();
+      
+      //Clear Formated String Stream
+      ssf.str("");
+      ssf.clear();
+
 // #         $output_str.= Tr({-class=>'information_table_row'}, td({-colspan => $total_cols}, 
 // #           "Strands of reads supporting (+/-):&nbsp;&nbsp;" 
 // #           . b("new") . " base ($c->{new_cov})&nbsp;&nbsp;" 
@@ -1007,14 +1020,20 @@ html_read_alignment_table_string(
     /* Kolmogorov-Smirov Test */
     if (c.entry_exists("ks_quality_p_value")) {
     ssf.precision(2);
-    ssf << scientific << from_string<float>(c["ks_quality_p_value"]);
+    ssf << scientific << c.entry_exists(KS_QUALITY_P_VALUE) ? 
+      from_string<float>(c["ks_quality_p_value"]) :
+      0;
     string ks_quality_p_value = ssf.str();
+    
+    //Clear Formated String Stream
+    ssf.str("");
+    ssf.clear();
 
     ss << tr("class=\"information_table_row\"", 
              td("colspan=\"" + to_string(total_cols) + "\"",
-                " Kolmogorov-Smirnov test that lower quality scores support polymorphism than reference" + //TODO Grammar?
+                " Kolmogorov-Smirnov test that lower quality scores support polymorphism than reference" + //TODO @ JEB grammar?
                 i("p") + "-value = " +ks_quality_p_value));
-    }
+    }//end ks_quality_p_value
       
 // #
 // # 
@@ -1047,11 +1066,13 @@ html_read_alignment_table_string(
 // # 
 // #     }
     }// end show_reject_reason
+  
 // #   }
   } // end list_ref loop
 // #   
 // #   $output_str.= end_table;
 // # }
+  ss << "</table>" << endl;
   return ss.str();
 }
 
@@ -1070,32 +1091,32 @@ html_missing_coverage_table_string(
 // #   $title = "Missing coverage evidence..." if (!$title);
 // #   
 // #   my $output_str = '';
-      stringstream ss(ios_base::out | ios_base::app); //!< Main Build Object in Function
+  stringstream ss(ios_base::out | ios_base::app); //!< Main Build Object in Function
 // #   
 // #   my $q = new CGI; //TODO
 // #   $output_str.= start_table({-border => 0, -cellspacing => 1, -cellpadding => 3, -width => "100%"});
-      ss << endl;
-      ss << start_table("border=\"0\" cellspacing=\"1\" cellpadding=\"3\" width=\"100%\"") << endl;
+  ss << endl;
+  ss << start_table("border=\"0\" cellspacing=\"1\" cellpadding=\"3\" width=\"100%\"") << endl;
 // #   
 // #   my $coverage_plots;
-      bool coverage_plots;
+  bool coverage_plots;
 // #   $coverage_plots = (defined $list_ref->[0]) && (defined $list_ref->[0]->{_evidence_file_name});
-      if ((list_ref.front()).get() != NULL && (*list_ref.front()).entry_exists("_EVIDENCE_FILE_NAME")) {
-        coverage_plots = true;
-      } else {
-        coverage_plots = false;
-      }
+  if ((list_ref.front()).get() != NULL && (*list_ref.front()).entry_exists("_EVIDENCE_FILE_NAME")) {
+  coverage_plots = true;
+  } else {
+  coverage_plots = false;
+  }
 // #   my $link = (defined $list_ref->[0]) && (defined $list_ref->[0]->{_side_1_evidence_file_name}) && (defined $list_ref->[0]->{_side_2_evidence_file_name});
-      bool link = ((*list_ref.front()).entry_exists("_side_1_evidence_file_name")) && 
-                  ((*list_ref.front()).entry_exists("_side_2_evidence_file_name")); //TODO other conditions needed?
+  bool link = ((*list_ref.front()).entry_exists("_side_1_evidence_file_name")) && 
+              ((*list_ref.front()).entry_exists("_side_2_evidence_file_name")); //TODO other conditions needed?
 // # 
 // #   my $total_cols = $link ? 11 : 8;
-     size_t total_cols = link ? 11 : 8;
+  size_t total_cols = link ? 11 : 8;
 // #   $output_str.= Tr(th({-colspan => $total_cols, -align => "left", -class=>"missing_coverage_header_row"}, $title));
-      ss << "<tr>"<< th("colspan=\"" + to_string(total_cols) + "\" align=\"left\" class=\"missing_coverage_header_row\"", title) << "</tr>" << endl;
+  ss << "<tr>"<< th("colspan=\"" + to_string(total_cols) + "\" align=\"left\" class=\"missing_coverage_header_row\"", title) << "</tr>" << endl;
 // # 
-// #   $output_str.= start_Tr();
-      ss << "<tr>";
+// #   $output_str.= start_Tr();    
+  ss << "<tr>";
 // #   if ($link)
 // #   {
 // #     $output_str.= th("&nbsp;"); 
@@ -1105,12 +1126,12 @@ html_missing_coverage_table_string(
 // #       $output_str.= th("&nbsp;");
 // #     }
 // #   }
-      if (link) {
-        ss << th("&nbsp;") <<  th("&nbsp;");
-        if (coverage_plots) {
-          ss << th("&nbsp;");
-        }
-      }
+  if (link) {
+    ss << th("&nbsp;") <<  th("&nbsp;");
+    if (coverage_plots) {
+      ss << th("&nbsp;");
+    }
+  }
 // #   $output_str.= th(
 // #     [
 // #       "seq&nbsp;id",
@@ -1122,17 +1143,17 @@ html_missing_coverage_table_string(
 // #       "gene", 
 // #     ]
 // #   );  
-      ss << th("seq&nbsp;id") << endl <<
-            th("start")       << endl <<
-            th("end")         << endl <<
-            th("size")        << endl <<
-            th("&larr;cov")   << endl <<
-            th("cov&rarr;")   << endl <<
-            th("gene")        << endl;
+  ss << th("seq&nbsp;id") << endl <<
+        th("start")       << endl <<
+        th("end")         << endl <<
+        th("size")        << endl <<
+        th("&larr;cov")   << endl <<
+        th("cov&rarr;")   << endl <<
+        th("gene")        << endl;
 // #   $output_str.= th({-width => "100%"}, "description");
 // #   $output_str.= end_Tr;
-      ss << th("width=\"100%\"","description") << endl;
-      ss << "</tr>" << endl;
+  ss << th("width=\"100%\"","description") << endl;
+  ss << "</tr>" << endl;
 // #   
 // #   foreach my $c (@$list_ref)
 // #   {
