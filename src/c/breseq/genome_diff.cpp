@@ -1026,6 +1026,115 @@ vector<string> genome_diff::get_reject_reasons(diff_entry item)
 
 }
 
+bool genome_diff::mutation_unknown(diff_entry mut)
+{
+//sub mutation_unknown
+//{
+//	my ($self, $mut) = @_;
+//
+//	if ($mut->{type} eq 'SNP')
+//	{
+//		return $self->interval_un($mut->{position}, $mut->{position});
+//	}
+  if (mut._type == SNP) {
+    return interval_un(from_string<uint32_t>(mut[POSITION]),
+                       from_string<uint32_t>(mut[POSITION]));
+  }
+//	
+//	## should be updated to new unknown that includes linkage
+//	if ($mut->{type} eq 'INS')
+//	{
+//		return $self->interval_un($mut->{position}, $mut->{position}+1);
+//	}
+  //Should be updated to new unknown that includes linkage
+  if (mut._type == INS) {
+    return interval_un(from_string<uint32_t>(mut[POSITION]),
+                       from_string<uint32_t>(mut[POSITION])) + 1;
+  }
+//
+//	if ($mut->{type} eq 'DEL')
+//	{
+//
+//#doesn't work b/c evidence list may not be correct here
+//		## only call unknowns if all support is RA
+//#		my $only_ra_evidence = 1;
+//#		foreach my $ev ($self->mutation_evidence_list($mut))
+//#		{
+//#			print Dumper($ev);
+//#			$only_ra_evidence &&= $ev->{type} eq 'RA';
+//#		}
+//#		print Dumper($mut);
+//#		print "Only RA evidence? $only_ra_evidence\n";		
+//#		return 0 if (!$only_ra_evidence);
+//		return $self->interval_un($mut->{position}, $mut->{position}+$mut->{size}-1);
+//	}
+//	
+//	if ($mut->{type} eq 'SUB')
+//	{
+//		return $self->interval_un($mut->{position}, $mut->{position}+$mut->{size}-1);
+//	}
+  if (mut._type == SUB) {
+    return interval_un(from_string<uint32_t>(mut[POSITION]),
+                       from_string<uint32_t>(mut[POSITION]) - 1);
+  }
+//	
+//	return 0;
+  return false;
+//}
+}
+//
+
+void genome_diff::add_reject_reasons(diff_entry item, const string& reject)
+{
+  if (item.entry_exists(REJECT))
+    item[REJECT] += ",";
+  else 
+    item[REJECT] += reject;
+}
+//
+//
+//
+//sub number_reject_reasons
+//{
+//	my ($item) = @_;
+//	return 0 if (!defined $item->{reject});
+//	return scalar get_reject_reasons($item);
+//}
+size_t genome_diff::number_reject_reasons(diff_entry item)
+{
+  if(item.entry_exists(REJECT))
+    return get_reject_reasons(item).size();
+  else 
+    return 0;
+}
+//sub interval_un
+//{
+//	my ($gd, $start, $end) = @_;
+//
+//	my @un_list = $gd->list('UN');	
+//	UNKNOWN: foreach my $un (@un_list) 
+//	{					
+//		return 1 if ( ($start >= $un->{start}) && ($end <= $un->{end}) );
+//	}
+//	return 0;
+//}
+bool 
+genome_diff::interval_un(const uint32_t& start,const uint32_t& end)
+{
+  entry_vector_t un_list = list(make_list<string>(UN));
+
+  for (entry_vector_t::iterator itr = un_list.begin();
+       itr != un_list.end(); itr++) {
+    diff_entry un(**itr);
+
+    if (start >= from_string<uint32_t>(un[START]) &&
+        end <= from_string<uint32_t>(un[END]))
+      return true;
+    else
+      return false;
+
+  }
+}
 
 }//namespace bresesq
 
