@@ -290,7 +290,7 @@ string html_genome_diff_item_table_string(Settings settings, genome_diff gd,
 void  html_evidence_file(Settings settings, genome_diff gd, Interval interval);
 // sub decode_reject_reason
 //         my ($reject) = @_;
-void create_evidence_files(Settings settings, genome_diff gd);
+//void create_evidence_files(Settings& settings, genome_diff& gd);
 // sub save_text_deletion_file
 //         my ($deletion_file_name, $deletions_ref) = @_;
 void save_text_deletion_file(string deletion_file_name, breseq::genome_diff::entry_list_t& deletions_ref);
