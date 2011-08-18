@@ -810,7 +810,7 @@ int do_output( int argc, char* argv[]){
     cout << output::breseq_header_string(settings);
   }
 
-  //TESTED, needs summary before useful
+  //TESTED, needs summary before useful.
   if (false) {
     string file_name = "html_statistics.html";
     Settings settings;
@@ -819,8 +819,10 @@ int do_output( int argc, char* argv[]){
     output::html_statistics(file_name, settings, summary, ref_seq_info);
   }
     
-  
-  if(true) {
+  //TESTED, displays properly, but there are some oddities between it and 
+  //the orgininal, needs calls like diff_entry["gene"] and diff_entry["annotation"]
+  //to be implemented.
+  if(false) {
     string file_name = "html_index.html";
     Settings settings;
     settings.no_evidence = false;
@@ -830,13 +832,27 @@ int do_output( int argc, char* argv[]){
 
     Summary summary;
     cReferenceSequences ref_seq_info;
-    ref_seq_info.ReadFASTA("/home/geoffc/Dropbox/test/1B4/reference.fasta");
+    ref_seq_info.ReadFASTA("/home/geoff/Dropbox/test/1B4/reference.fasta");
     genome_diff gd;
-    gd.read("/home/geoffc/Dropbox/test/1B4/output.gd");
+    gd.read("/home/geoff/Dropbox/test/1B4/output.gd");
     output::html_index(file_name, settings, summary, ref_seq_info, gd);
   }
   
+  if (true) {
+    string file_name = "html_marginal_predictions.html";
+    Settings settings;
+    settings.no_evidence = false;
+    settings.polymorphism_prediction = false;
+    settings.lenski_format=false;
+    settings.no_header = false;
 
+    Summary summary;
+    cReferenceSequences ref_seq_info;
+    ref_seq_info.ReadFASTA("/home/geoff/Dropbox/test/1B4/reference.fasta");
+    genome_diff gd;
+    gd.read("/home/geoff/Dropbox/test/1B4/output.gd");
+    output::html_marginal_predictions(file_name, settings, summary, ref_seq_info, gd);
+  }
 
   return 0;
 }
