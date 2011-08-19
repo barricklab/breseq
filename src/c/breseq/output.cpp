@@ -532,7 +532,7 @@ void html_statistics(const string &file_name, Settings settings, Summary summary
                     th("description") << 
           "</tr>" << endl;
              
-  uint32_t total_length = 0;
+  size_t total_length = 0;
 // # //TODO TODO TODO TODO Summary
 // #   foreach my $seq_id (@{$ref_seq_info->{seq_ids}})
 // #   {   
@@ -1027,7 +1027,7 @@ html_read_alignment_table_string(
 // #       my $ks_quality_p_value = sprintf("%.2E", $c->{ks_quality_p_value});
 // #         $output_str.= Tr({-class=>'information_table_row'}, td({-colspan => $total_cols}, "Kolmogorov-Smirnov test that lower quality scores support polymorphism than reference " . i("p") . "-value = $ks_quality_p_value"));
 // #       }
-    /* Kolmogorov-Smirov Test */
+    /* Kolmogorov-Smirnov Test */
     if (c.entry_exists("ks_quality_p_value")) {
     ssf.precision(2);
     ssf << scientific << c.entry_exists(KS_QUALITY_P_VALUE) ? 
@@ -2368,7 +2368,7 @@ void draw_coverage(Settings& settings, cReferenceSequences* ref_seq_info, genome
 	}*/
 }
 
-vector<ExecutionTime> execution_times; 
+vector<ExecutionTime> execution_times;
 string record_time(string name)
 {
 	time_t this_time = time(NULL);
