@@ -917,7 +917,7 @@ diff_entry genome_diff::_line_to_item(const string& line)
     string key_value_pair(*itr); 
     if(key_value_pair.empty()) continue;
     //assert(regex_m("=",key_value_pair));
-    assert(key_value_pair.find("=")); 
+    assert(key_value_pair.find("=") != string::npos); 
     vector<string> matched = split(key_value_pair,"=");
 
     if(matched.empty())

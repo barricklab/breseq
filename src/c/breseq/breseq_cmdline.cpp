@@ -1307,8 +1307,7 @@ int breseq_default_action(int argc, char* argv[])
 			summary.candidate_junction.store(candidate_junction_summary_file_name);
 			//	or die "Can"t store data in file $candidate_junction_summary_file_name!" << endl;
 
-			//TODO: record_time("Candidate junction identification");
-                        //TODO: ported but needs global execution_times variable, look at source
+			output::record_time("Candidate junction identification");
 
 			settings.done_step("candidate_junction_done_file_name");
 		}
@@ -1458,7 +1457,7 @@ int breseq_default_action(int argc, char* argv[])
 		string alignment_correction_summary_file_name = settings.file_name("alignment_correction_summary_file_name");
 		summary.alignment_correction.store(alignment_correction_summary_file_name);
 		//	or die "Can"t store data in file $alignment_correction_summary_file_name!" << endl;
-		//TODO: record_time("Resolve candidate junctions");
+		output::record_time("Resolve candidate junctions");
 		settings.done_step("alignment_correction_done_file_name");
 	}
 	if (file_exists(alignment_correction_summary_file_name.c_str()))
@@ -1882,7 +1881,7 @@ int breseq_default_action(int argc, char* argv[])
 		//
 		cerr << "Drawing coverage plots..." << endl;
 
-		//TODO: draw_coverage(settings, ref_seq_info, gd);
+		output::draw_coverage(settings, &ref_seq_info, gd);
 
 		//
 		// Mark lowest RA evidence items as no-show, or we may be drawing way too many alignments
@@ -1941,7 +1940,7 @@ int breseq_default_action(int argc, char* argv[])
 		// Create evidence files containing alignments and coverage plots
 		//
 		if (!settings.no_alignment_generation)
-			//TODO: create_evidence_files(settings, gd);
+			output::Evidence_Files(settings, gd);
 
 		///
 		// HTML output
@@ -1950,10 +1949,10 @@ int breseq_default_action(int argc, char* argv[])
 		cerr << "Creating index HTML table..." << endl;
 
 		string index_html_file_name = settings.file_name("index_html_file_name");
-		//TODO: html_index(index_html_file_name, settings, summary, ref_seq_info, gd);
+		output::html_index(index_html_file_name, settings, summary, ref_seq_info, gd);
 
 		string marginal_html_file_name = settings.file_name("marginal_html_file_name");
-		//TODO: html_marginal_predictions(marginal_html_file_name, settings, summary, ref_seq_info, gd);
+		output::html_marginal_predictions(marginal_html_file_name, settings, summary, ref_seq_info, gd);
 
 		///
 		// Temporary debug output using Data::Dumper
@@ -1972,8 +1971,7 @@ int breseq_default_action(int argc, char* argv[])
 		// record the final time and print summary table
 		settings.record_end_time("Output");
 
-		//html_statistics(settings.summary_html_file_name, settings, summary, ref_seq_info);
-                //output::html_statistics(settings.summary_html_file_name, settings, summary, ref_seq_info);
+		output::html_statistics(settings.summary_html_file_name, settings, summary, ref_seq_info);
 
 		settings.done_step("output_done_file_name");
 	}
