@@ -101,7 +101,6 @@ struct formatted_double {
   uint8_t _precision; //number of digits past zero to print
 };
 
-
 /*! Genome diff entry type.
  
  Instead of trying to define (and maintain!) concrete classes for each different 
@@ -136,6 +135,11 @@ struct diff_entry {
 
   //! Marshal this diff entry into an ordered list of fields.
   virtual void marshal(field_list_t& s);
+
+  
+  struct sort_by_descending_scores;
+  struct field_exists;
+  struct fields_exist;
 
   diff_entry& operator()(const key_t& key, const value_t& value) {
   	(*this)[key] = value;
@@ -184,9 +188,6 @@ struct sort_fields_item {
 
 //! Sort routine
 bool diff_entry_sort(const counted_ptr<diff_entry>& a, const counted_ptr<diff_entry>& b);
-
-
-
 
 
 /*! Genome diff class.
@@ -288,7 +289,7 @@ protected:
 
 //! Functor. Wraps diff_entry.entry_exists() for use in STL algorithms.
 //Returns true if a diff_entry contains the given field_key.
-struct field_exists : public unary_function<genome_diff::diff_entry_ptr, bool>
+struct diff_entry::field_exists : public unary_function <genome_diff::diff_entry_ptr, bool>
 {
   //! Constructor
   explicit field_exists (diff_entry::key_t field_key)
@@ -296,7 +297,7 @@ struct field_exists : public unary_function<genome_diff::diff_entry_ptr, bool>
   
   //! Predicate
   bool operator() (genome_diff::diff_entry_ptr p_diff_entry) 
-    {return (p_diff_entry->entry_exists(m_field_key));}
+    const {return (p_diff_entry->entry_exists(m_field_key));}
 
   private:
     diff_entry::key_t m_field_key;
@@ -305,14 +306,14 @@ struct field_exists : public unary_function<genome_diff::diff_entry_ptr, bool>
 //! Functor. Wraps diff_entry.entry_exists() for use in STL algorithms.
 //Returns true if a diff_entry contains all of the given field_keys.
 //ie:  diff_entry[field_key_1] && diff_entry[field_key_2]
-struct fields_exist : public unary_function<genome_diff::diff_entry_ptr, bool>
+struct diff_entry::fields_exist : public unary_function <genome_diff::diff_entry_ptr, bool> 
 {
   //! Constructor
   explicit fields_exist (vector<diff_entry::key_t> field_keys)
     : m_field_keys(field_keys) {}
   
   //! Predicate
-  bool operator() (genome_diff::diff_entry_ptr p_diff_entry) 
+  bool operator() (genome_diff::diff_entry_ptr p_diff_entry)
   {
     for (vector<diff_entry::key_t>::iterator itr = m_field_keys.begin();
          itr != m_field_keys.end(); itr++) {
@@ -325,10 +326,36 @@ struct fields_exist : public unary_function<genome_diff::diff_entry_ptr, bool>
     
     // diff_entry contains all field_keys
     return true;
-    
   }
   private:
     vector<diff_entry::key_t> m_field_keys;
+};
+
+struct diff_entry::sort_by_descending_scores: public binary_function
+  <genome_diff::diff_entry_ptr, genome_diff::diff_entry_ptr, bool>
+{
+
+  //! Constructor
+  explicit sort_by_descending_scores (vector<key_t> field_keys)
+    : m_field_keys(field_keys) {}
+  
+  //! Predicate
+  bool operator() (genome_diff::diff_entry_ptr a, genome_diff::diff_entry_ptr b) 
+  {
+    for (vector<key_t>::iterator itr = m_field_keys.begin();
+         itr != m_field_keys.end(); itr++) {
+      string& key(*itr);
+
+      if (from_string<uint32_t>((*a)[key]) == from_string<uint32_t>((*b)[key]))
+        continue;
+      else 
+        return from_string<uint32_t>((*a)[key]) > from_string<uint32_t>((*b)[key]);
+      
+    }
+  }
+  
+  private:
+    vector<key_t> m_field_keys;
 };
 
 

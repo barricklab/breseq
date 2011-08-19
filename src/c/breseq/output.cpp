@@ -240,19 +240,19 @@ void html_index(string file_name, Settings settings, Summary summary,
     gd.filter_used_as_evidence(gd.list(make_list<string>("JC")));
 
 // #   @jc = grep { !$_->{no_show} } @jc;  
-  jc.remove_if(field_exists("no_show"));
+  jc.remove_if(diff_entry::field_exists("no_show"));
   
 // #   @jc = grep { !$_->{circular_chromosome} } @jc if ($settings->{hide_circular_genome_junctions}); 
 
   //Don't show junctions for circular chromosomes
   if (!settings.hide_circular_genome_junctions) {
-    jc.remove_if(field_exists("circular_chromosome")); 
+    jc.remove_if(diff_entry::field_exists("circular_chromosome")); 
   }
    
 // # 
 // #   my @jcu = grep { !$_->{reject} } @jc; 
   entry_list_t jcu = jc;
-  jcu.remove_if(field_exists("reject"));
+  jcu.remove_if(diff_entry::field_exists("reject"));
 
 // #   if (scalar @jcu > 0)
 // #   {
@@ -320,7 +320,7 @@ void html_marginal_predictions(string file_name, Settings settings,Summary summa
 // #   ## don't print ones that overlap predicted deletions or were marked to not show
 // #   @ra = grep { !$_->{deleted} && !$_->{no_show} } @ra;
   //Don't print ones that overlap predicted deletions or were marked to not show.
-  ra.remove_if(fields_exist(make_list<genome_diff::key_t>("deleted")("no_show")));
+  ra.remove_if(diff_entry::fields_exist(make_list<genome_diff::key_t>("deleted")("no_show")));
   
 // #   
 // #   if (scalar @ra > 0)
@@ -339,17 +339,26 @@ void html_marginal_predictions(string file_name, Settings settings,Summary summa
 // #   
 // #   my @jc = $gd->filter_used_as_evidence($gd->list('JC'));
     entry_list_t jc = gd.filter_used_as_evidence(gd.list(make_list<string>("JC")));
-///TODO @GRC implement jc and jcu ####
 // #   @jc = grep { !$_->{no_show} } @jc;
+    jc.remove_if(diff_entry::field_exists("no_show"));
 // #   @jc = grep { $_->{reject} } @jc;
+    jc.remove_if(not1(diff_entry::field_exists("reject")));
 // #   if (scalar @jc > 0)
 // #   { 
-/// TODO sort 
 // #     ## sort by score, not by position (the default order)...
 // #     @jc = sort { -($a->{pos_hash_score} <=> $b->{pos_hash_score}) || -($a->{min_overlap_score} <=> $b->{min_overlap_score})  || ($a->{total_reads} <=> $a->{total_reads}) } @jc;
-      
 // #     print HTML p . html_new_junction_table_string(\@jc, $relative_path, "Marginal new junction evidence..."); 
 // #   }
+     if (jc.size()) {
+       //Sort by score, not by position (the default order)...
+       jc.sort(diff_entry::sort_by_descending_scores(
+         make_list<diff_entry::key_t>("pos_hash_score")("min_overlap_score")("total_reads"))); 
+      
+       HTML << "<p>" << endl;
+       HTML << html_new_junction_table_string(jc, false, "Marginal new junction evidence...", relative_path);
+     }
+
+    
 // #   
 // #   print HTML end_html;
     HTML <<  "</HTML>";
@@ -848,8 +857,9 @@ html_read_alignment_table_string(
         th("score")      << endl <<
         th("cov")        << endl <<
         th("annotation") << endl <<
-        th("gene")       << endl;
-
+        th("genes")       << endl;
+  
+  ss << th("width=\"100%\"", "product") << endl;
   ss << "</tr>" << endl;
   
   //Loop Through list_ref to Build Table Rows
