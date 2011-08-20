@@ -37,7 +37,7 @@ namespace breseq {
 	void error_count(const string& bam, 
 									 const string& fasta,
 									 const string& output_dir,
-									 const vector<std::string>& readfiles,
+									 const vector<string>& readfiles,
 									 bool do_coverage,
                    bool do_errors,
                    uint8_t min_qual_score,

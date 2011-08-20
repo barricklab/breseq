@@ -947,10 +947,6 @@ diff_entry genome_diff::_line_to_item(const string& line)
 // #     }
 // #   }
 ///###############################
-
-
-
-
   
  return item;
 }
@@ -1092,15 +1088,7 @@ void genome_diff::add_reject_reasons(diff_entry item, const string& reject)
   else 
     item[REJECT] += reject;
 }
-//
-//
-//
-//sub number_reject_reasons
-//{
-//	my ($item) = @_;
-//	return 0 if (!defined $item->{reject});
-//	return scalar get_reject_reasons($item);
-//}
+
 size_t genome_diff::number_reject_reasons(diff_entry item)
 {
   if(item.entry_exists(REJECT))
@@ -1108,17 +1096,7 @@ size_t genome_diff::number_reject_reasons(diff_entry item)
   else 
     return 0;
 }
-//sub interval_un
-//{
-//	my ($gd, $start, $end) = @_;
-//
-//	my @un_list = $gd->list('UN');	
-//	UNKNOWN: foreach my $un (@un_list) 
-//	{					
-//		return 1 if ( ($start >= $un->{start}) && ($end <= $un->{end}) );
-//	}
-//	return 0;
-//}
+
 bool 
 genome_diff::interval_un(const uint32_t& start,const uint32_t& end)
 {
@@ -1132,10 +1110,8 @@ genome_diff::interval_un(const uint32_t& start,const uint32_t& end)
         end <= from_string<uint32_t>(un[END])) {
       return true;
     }
-
-    return false;
-
   }
+  return false;
 }
 
 }//namespace bresesq

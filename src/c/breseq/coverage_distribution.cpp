@@ -57,7 +57,7 @@ namespace breseq {
 
 	// helper functions
 
-	void CoverageDistribution::analyze_unique_coverage_distribution(Settings& settings, string seq_id, Summary& summary, string plot_key, string distribution_key)
+	void CoverageDistribution::analyze_unique_coverage_distribution(Settings& settings, Summary& summary, cReferenceSequences& ref_seq_info, string seq_id, string plot_key, string distribution_key)
 	{
 		//initialize summary information
 		summary.unique_coverage[seq_id].nbinom_size_parameter = "ND";
@@ -72,7 +72,7 @@ namespace breseq {
 		string unique_only_coverage_distribution_file_name = settings.file_name(distribution_key, "@", seq_id);
 
 		// Define various coverage thresholds...
-		uint32_t sequence_length = (*summary.sequence_conversion.reference_sequences)[summary.sequence_conversion.reference_sequences->seq_id_to_index(seq_id)].m_length;
+		uint32_t sequence_length = ref_seq_info[ref_seq_info.seq_id_to_index(seq_id)].m_length;
 
 		/// DELETION PROPAGATION CUTOFF
 		// One-tailed test p=0.05, Bonferroni correction
@@ -118,7 +118,7 @@ namespace breseq {
 	void CoverageDistribution::analyze_unique_coverage_distributions(Settings& settings, Summary& summary, cReferenceSequences& ref_seq_info, string plot_key, string distribution_key)
 	{
 		for (uint32_t i = 0; i < ref_seq_info.seq_ids.size(); i++)
-			analyze_unique_coverage_distribution(settings, ref_seq_info.seq_ids[i], summary, plot_key, distribution_key);
+			analyze_unique_coverage_distribution(settings, summary, ref_seq_info, ref_seq_info.seq_ids[i], plot_key, distribution_key);
 	}
 
 } // namespace breseq

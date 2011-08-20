@@ -637,10 +637,6 @@ namespace breseq {
 					printVerbose();
 					printAutoUsage();
 				}
-				printVerbose("Unknown command argument option: ");
-				printVerbose(argv[i]);
-				printVerbose();
-				printAutoUsage();
 			}
 		}
 	}

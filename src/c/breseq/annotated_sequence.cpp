@@ -666,7 +666,7 @@ namespace breseq {
 
 	void cReferenceSequences::polymorphism_statistics(Settings& settings, Summary& summary)
 	{
-		string reference_fasta_file_name = settings.file_name("reference_fasta_file_name");
+		string reference_fasta_file_name = settings.reference_fasta_file_name;
 		vector<string> seq_ids = this->seq_ids;
 
 		// some local variable lookups for convenience
@@ -717,7 +717,7 @@ namespace breseq {
 		}
 		COUNT.close();
 
-		string genome_error_counts_file_name = settings.file_name("genome_error_counts_file_name");
+		string genome_error_counts_file_name = settings.genome_error_counts_file_name;
 
 		ofstream GEC(genome_error_counts_file_name.c_str());
 		assert(GEC.is_open());
@@ -730,15 +730,15 @@ namespace breseq {
 		}
 		GEC.close();
 
-		string polymorphism_statistics_input_file_name = settings.file_name("polymorphism_statistics_input_file_name");
-		string polymorphism_statistics_output_file_name = settings.file_name("polymorphism_statistics_output_file_name");
+		string polymorphism_statistics_input_file_name = settings.polymorphism_statistics_input_file_name;
+		string polymorphism_statistics_output_file_name = settings.polymorphism_statistics_output_file_name;
 
 		/// Load the older GenomeDiff and add new fields
-		string ra_mc_genome_diff_file_name = settings.file_name("ra_mc_genome_diff_file_name");
+		string ra_mc_genome_diff_file_name = settings.ra_mc_genome_diff_file_name;
 		genome_diff gd(ra_mc_genome_diff_file_name);
 
-		string polymorphism_statistics_r_script_file_name = settings.file_name("polymorphism_statistics_r_script_file_name");
-		string polymorphism_statistics_r_script_log_file_name = settings.file_name("polymorphism_statistics_r_script_log_file_name");
+		string polymorphism_statistics_r_script_file_name = settings.polymorphism_statistics_r_script_file_name;
+		string polymorphism_statistics_r_script_log_file_name = settings.polymorphism_statistics_r_script_log_file_name;
 		uint32_t total_reference_length = summary.sequence_conversion.total_reference_sequence_length;
 
 		string command = "R --vanilla total_length=" + to_string(total_reference_length) + " in_file=" + polymorphism_statistics_input_file_name + " out_file=" + polymorphism_statistics_output_file_name + " qual_file=" + genome_error_counts_file_name + " < " + polymorphism_statistics_r_script_file_name + " > " + polymorphism_statistics_r_script_log_file_name;
@@ -861,7 +861,7 @@ namespace breseq {
 		ROUT.close();
 
 		/// Write out the file which now has much more data
-		string polymorphism_statistics_ra_mc_genome_diff_file_name = settings.file_name("polymorphism_statistics_ra_mc_genome_diff_file_name");
+		string polymorphism_statistics_ra_mc_genome_diff_file_name = settings.polymorphism_statistics_ra_mc_genome_diff_file_name;
 		new_gd.write(polymorphism_statistics_ra_mc_genome_diff_file_name);
 
 	}

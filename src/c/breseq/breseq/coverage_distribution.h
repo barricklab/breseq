@@ -37,7 +37,7 @@ namespace breseq {
 
 		CoverageDistribution();
 		vector<string> fit(string distribution_file, string plot_file, uint32_t deletion_propagation_pr_cutoff, uint32_t junction_coverage_pr_cutoff, uint32_t junction_accept_pr_cutoff, uint32_t junction_keep_pr_cutoff, uint32_t junction_max_score);
-		static void analyze_unique_coverage_distribution(Settings& settings, string seq_id, Summary& summary, string plot_key, string distribution_key);
+		static void analyze_unique_coverage_distribution(Settings& settings, Summary& summary, cReferenceSequences& ref_seq_info, string seq_id, string plot_key, string distribution_key);
 		static void analyze_unique_coverage_distributions(Settings& settings, Summary& summary, cReferenceSequences& ref_seq_info, string plot_key, string distribution_key);
 
 	}; // class CoverageDistribution

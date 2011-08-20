@@ -180,7 +180,7 @@ void html_index(string file_name, Settings settings, Summary summary,
   HTML << "<!--Mutation Predictions -->" << endl;
   genome_diff::entry_vector_t muts = gd.list(make_list<string>(SNP)(INS)(DEL)(SUB)(MOB)(AMP));
   
-  string relative_path = settings.file_name("local_evidence_path");
+  string relative_path = settings.local_evidence_path;
   
   if(!relative_path.empty())
     relative_path += "/";
@@ -258,7 +258,7 @@ void html_marginal_predictions(string file_name, Settings settings,Summary summa
   HTML << html_header("BRESEQ :: Marginal Predictions",settings); 
   
   
-  string relative_path = settings.file_name("local_evidence_path");
+  string relative_path = settings.local_evidence_path;
   
   if (!relative_path.empty())
     relative_path += "/";
@@ -578,8 +578,8 @@ string breseq_header_string(Settings settings)
   stringstream ss(ios_base::out | ios_base::app);
 // #   
 // #   #copy over the breseq_graphic
-  string breseq_graphic_from_file_name = settings.file_name("breseq_small_graphic_from_file_name");
-  string breseq_graphic_to_file_name= settings.file_name("breseq_small_graphic_to_file_name");
+  string breseq_graphic_from_file_name = settings.breseq_small_graphic_from_file_name;
+  string breseq_graphic_to_file_name= settings.breseq_small_graphic_to_file_name;
 // #   if (!-e $breseq_graphic_to_file_name)
 // #   {
 // #     copy($breseq_graphic_from_file_name, $breseq_graphic_to_file_name);
@@ -970,9 +970,9 @@ string html_read_alignment_table_string(entry_list_t list_ref, bool show_reject_
     /* Kolmogorov-Smirnov Test */
     if (c.entry_exists("ks_quality_p_value")) {
     ssf.precision(2);
-    ssf << scientific << c.entry_exists(KS_QUALITY_P_VALUE) ? 
+    ssf << scientific << (c.entry_exists(KS_QUALITY_P_VALUE) ? 
       from_string<float>(c["ks_quality_p_value"]) :
-      0;
+      0);
     string ks_quality_p_value = ssf.str();
     
     //Clear formated string stream
@@ -1429,7 +1429,7 @@ string html_new_junction_table_string(entry_list_t list_ref, bool show_reject_re
   }
 // #     
 // #     $row_bg_color_index = ($row_bg_color_index+1)%2;
-  row_bg_color_index = row_bg_color_index++ % 2;//(row_bg_color_index) % 2; 
+  row_bg_color_index = (row_bg_color_index+1) % 2;//(row_bg_color_index) % 2; 
 // #   }
   }// End list_ref Loop
   ss << "</table>" << endl;
@@ -1526,13 +1526,11 @@ Evidence_Files::Evidence_Files(const Settings& settings, genome_diff& gd)
 // #   my $reference_bam_file_name = $settings->file_name('reference_bam_file_name');
 // #   my $reference_fasta_file_name = $settings->file_name('reference_fasta_file_name');
 // # 
-  string reference_bam_file_name = settings.file_name("reference_bam_file_name");
-  string reference_fasta_file_name = settings.file_name("reference_fasta_file_name");
+  string reference_bam_file_name = settings.reference_bam_file_name;
+  string reference_fasta_file_name = settings.reference_fasta_file_name;
 // #   ## hybrids use different BAM files for making the alignments!!!
-// #   my $junction_bam_file_name = $settings->file_name('junction_bam_file_name');
-  string junction_bam_file_name = settings.file_name("junction_bam_file_name");
-// #   my $junction_fasta_file_name = $settings->file_name('candidate_junction_fasta_file_name');
-  string junction_fasta_file_name = settings.file_name("candidate_junction_fasta_file_name");
+  string junction_bam_file_name = settings.junction_bam_file_name;
+  string junction_fasta_file_name = settings.candidate_junction_fasta_file_name;
 // # 
 // #   ### We make alignments of two regions for deletions: upstream and downstream edges.
   genome_diff::entry_list_t items_MC = gd.list(make_list<string>(MC));
@@ -2052,8 +2050,7 @@ Evidence_Files::html_evidence_file (
 // #   my ($settings, $gd, $interval) = @_;
 // # 
 // #   $interval->{output_path} = $settings->file_name('evidence_path') . "/$interval->{file_name}"; 
-  item["output_path"] = settings.file_name("evidence_path") + 
-                        "/" + item[FILE_NAME];
+  item["output_path"] = settings.evidence_path + "/" + item[FILE_NAME];
 
   
   // Create Stream and Confirm It's Open
@@ -2227,8 +2224,8 @@ void draw_coverage(Settings& settings, cReferenceSequences* ref_seq_info, genome
 // #if (0)
 	{
 		settings.create_path("coverage_plot_path");
-		string coverage_plot_path = settings.file_name("coverage_plot_path");
-		string deletions_text_file_name = settings.file_name("deletions_text_file_name");
+		string coverage_plot_path = settings.coverage_plot_path;
+		string deletions_text_file_name = settings.deletions_text_file_name;
 		save_text_deletion_file(deletions_text_file_name, mc);
 
 		for (uint32_t i = 0; i < ref_seq_info->seq_ids.size(); i++)

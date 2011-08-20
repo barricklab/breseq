@@ -36,7 +36,6 @@ namespace breseq
 		static void write_to_file(ofstream& outfile, string& input)
 		{
 			uint32_t size = input.size();
-			cout << "string size " << size << endl;
 			outfile.write(reinterpret_cast<char*>(&size), sizeof(uint32_t));
 			const char* output = input.c_str();
 			outfile.write(output, size * sizeof(char));
@@ -45,25 +44,21 @@ namespace breseq
 		{
 			uint32_t size;
 			infile.read(reinterpret_cast<char*>(&size), sizeof(uint32_t));
-			cout << "string size " << size << endl;
 			char input[size];
 			infile.read(input, size * sizeof(char));
 			output = string(input);
 		}
 		template<typename T> static void write_to_file(ofstream& outfile, T& input)
 		{
-			cout << "catchall" << endl;
 			outfile.write(reinterpret_cast<char*>(&input), sizeof(T));
 		}
 		template<typename T> static void read_from_file(ifstream& infile, T& output)
 		{
-			cout << "catchall" << endl;
 			infile.read(reinterpret_cast<char*>(&output), sizeof(T));
 		}
 		template<typename T, typename U> static void write_to_file(ofstream& outfile, map<T,U>& input)
 		{
 			uint32_t size = input.size();
-			cout << "map size " << size << endl;
 			write_to_file(outfile, size);
 			for (typename map<T,U>::iterator it = input.begin(); it != input.end(); it++)
 			{
@@ -77,7 +72,6 @@ namespace breseq
 		{
 			uint32_t size;
 			read_from_file(infile, size);
-			cout << "map size " << size << endl;
 			for (uint32_t i = 0; i < size; i++)
 			{
 				T t; read_from_file(infile, t);

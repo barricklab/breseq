@@ -29,9 +29,11 @@ LICENSE AND COPYRIGHT
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
+#include <sys/stat.h>
 
 // C++
 #include <algorithm>
+#include <cerrno>
 #include <cmath>
 #include <fstream>
 #include <iomanip>
@@ -639,6 +641,27 @@ namespace breseq {
   {
     size_t found = file_name.rfind("/");
     return ((found != string::npos) ? file_name.substr(0, found) : "");
+  }
+  
+  inline void breseq_throw(bool condition, const string& message = "")
+  {
+    if (!condition)
+    {
+      cerr << "---> FATAL ERROR --->" << endl;
+      cerr << message << endl;
+      cerr << "<--- FATAL ERROR <---" << endl;
+      exit(0);
+    }
+  }
+  
+  inline void breseq_warn(bool condition, const string& message = "")
+  {
+    if (!condition)
+    {
+      cerr << "---> WARNING --->" << endl;
+      cerr << message << endl;
+      cerr << "<--- WARNING <---" << endl;
+    }
   }
 
 // counted_ptr keeps track of number of references 
