@@ -820,9 +820,9 @@ int do_output( int argc, char* argv[]){
   }
     
   //TESTED, displays properly, but there are some oddities between it and 
-  //the orgininal, needs calls like diff_entry["gene"] and diff_entry["annotation"]
+  //the orgininal, needs calls like diff_entry["gene"] 
   //to be implemented.
-  if(false) {
+  if(true) {
     string file_name = "html_index.html";
     Settings settings;
     settings.no_evidence = false;
@@ -838,7 +838,8 @@ int do_output( int argc, char* argv[]){
     output::html_index(file_name, settings, summary, ref_seq_info, gd);
   }
   
-  if (true) {
+  // html_new_junction_table_string needs work
+  if (false) {
     string file_name = "html_marginal_predictions.html";
     Settings settings;
     settings.no_evidence = false;
@@ -848,11 +849,23 @@ int do_output( int argc, char* argv[]){
 
     Summary summary;
     cReferenceSequences ref_seq_info;
-    ref_seq_info.ReadFASTA("/home/geoff/Dropbox/test/1B4/reference.fasta");
+    ref_seq_info.ReadFASTA("/home/geoffc/Dropbox/test/1B4/reference.fasta");
     genome_diff gd;
     gd.read("/home/geoff/Dropbox/test/1B4/output.gd");
     output::html_marginal_predictions(file_name, settings, summary, ref_seq_info, gd);
   }
+
+  if (false) {
+    Settings settings;
+    genome_diff gd;
+    gd.read("/home/geoff/Dropbox/test/1B4/output.gd");
+
+    output::Evidence_Files evidence_files(settings, gd);
+
+        
+  }
+
+
 
   return 0;
 }

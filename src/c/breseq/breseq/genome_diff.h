@@ -137,7 +137,7 @@ struct diff_entry {
   virtual void marshal(field_list_t& s);
 
   
-  struct sort_by_descending_scores;
+  struct sort_by_scores;
   struct field_exists;
   struct fields_exist;
 
@@ -296,10 +296,10 @@ struct diff_entry::field_exists : public unary_function <genome_diff::diff_entry
     : m_field_key(field_key) {}
   
   //! Predicate
-  bool operator() (genome_diff::diff_entry_ptr p_diff_entry) 
+  virtual bool operator() (genome_diff::diff_entry_ptr p_diff_entry) 
     const {return (p_diff_entry->entry_exists(m_field_key));}
 
-  private:
+  protected:
     diff_entry::key_t m_field_key;
 };
 
@@ -313,9 +313,9 @@ struct diff_entry::fields_exist : public unary_function <genome_diff::diff_entry
     : m_field_keys(field_keys) {}
   
   //! Predicate
-  bool operator() (genome_diff::diff_entry_ptr p_diff_entry)
+  virtual bool operator() (genome_diff::diff_entry_ptr p_diff_entry) const
   {
-    for (vector<diff_entry::key_t>::iterator itr = m_field_keys.begin();
+    for (vector<diff_entry::key_t>::const_iterator itr = m_field_keys.begin();
          itr != m_field_keys.end(); itr++) {
       genome_diff::key_t field_key(*itr);
       if (p_diff_entry->entry_exists(field_key)) 
@@ -327,24 +327,26 @@ struct diff_entry::fields_exist : public unary_function <genome_diff::diff_entry
     // diff_entry contains all field_keys
     return true;
   }
-  private:
+  protected:
     vector<diff_entry::key_t> m_field_keys;
 };
 
-struct diff_entry::sort_by_descending_scores: public binary_function
+//! Functor. Sorts diff_entrys in a decending order depending on given fields that
+//can be evaluated as a unsigned integer.
+struct diff_entry::sort_by_scores : public binary_function
   <genome_diff::diff_entry_ptr, genome_diff::diff_entry_ptr, bool>
 {
 
   //! Constructor
-  explicit sort_by_descending_scores (vector<key_t> field_keys)
+  explicit sort_by_scores (vector<key_t> field_keys)
     : m_field_keys(field_keys) {}
   
   //! Predicate
-  bool operator() (genome_diff::diff_entry_ptr a, genome_diff::diff_entry_ptr b) 
+  virtual bool operator() (genome_diff::diff_entry_ptr a, genome_diff::diff_entry_ptr b) const 
   {
-    for (vector<key_t>::iterator itr = m_field_keys.begin();
+    for (vector<key_t>::const_iterator itr = m_field_keys.begin();
          itr != m_field_keys.end(); itr++) {
-      string& key(*itr);
+      string key(*itr);
 
       if (from_string<uint32_t>((*a)[key]) == from_string<uint32_t>((*b)[key]))
         continue;
@@ -354,7 +356,7 @@ struct diff_entry::sort_by_descending_scores: public binary_function
     }
   }
   
-  private:
+  protected:
     vector<key_t> m_field_keys;
 };
 

@@ -171,24 +171,8 @@ void html_index(string file_name, Settings settings, Summary summary,
   }
   
   // Build HTML Head
-  HTML <<"<!--Head For Mutation Predictions -->" << endl;
-
-  HTML << "<html>" << endl;
-  HTML << "<title>BRESEQ :: Mutation Predictions ";
-  if (!settings.print_run_name.empty()) {
-    HTML << " :: " << settings.print_run_name; 
-  } 
-  HTML << "</title>" << endl; 
-  HTML << "<head>" << endl;
-  HTML << "<style type = \"text/css\">" << endl;
-  HTML << header_style_string();
-  HTML << "</style>" << endl;
-  HTML << "</head>" << endl;
   
-// #   print HTML breseq_header_string($settings) . p; 
-  HTML << breseq_header_string(settings) << endl;
-  HTML << "<p>" << endl;
-
+  HTML << html_header("BRESEQ :: Mutation Predictions", settings);
   
 // #   ###
 // #   ## Mutation predictions
@@ -211,18 +195,8 @@ void html_index(string file_name, Settings settings, Summary summary,
 
   //Build Mutation Predictions table
   HTML << "<p>" << endl;
-  Html_Mutation_Table_String 
-    html_mutation_table_string(
-                               settings, 
-                               gd, 
-                               muts, 
-                               relative_path, 
-                               false, 
-                               one_ref_seq
-                               );
+  HTML << Html_Mutation_Table_String(settings, gd, muts, relative_path, false, one_ref_seq) << endl;
 
-  HTML << html_mutation_table_string << endl;
-  
 // #   ###
 // #   ## Unassigned evidence
 // #   ###
@@ -266,10 +240,9 @@ void html_index(string file_name, Settings settings, Summary summary,
   HTML << "</html>";
   HTML.close();
 }
-// # 
-// # sub html_marginal_predictions
-// # {
-// #   my ($file_name, $settings, $summary, $ref_seq_info, $gd) = @_;
+
+
+
 void html_marginal_predictions(string file_name, Settings settings,Summary summary,
                                cReferenceSequences ref_seq_info, genome_diff gd)
 {
@@ -282,22 +255,8 @@ void html_marginal_predictions(string file_name, Settings settings,Summary summa
   }
 
   // Build HTML Head
-  HTML << "<!-- Head for Marginal Predictions -->" << endl;
-
-  HTML << "<html>";
-  HTML << "<title>BRESEQ :: Marginal Predictions"; 
-  if (!settings.print_run_name.empty()) {
-    HTML << " :: " << settings.print_run_name;
-  }
-  HTML << "</title>" << endl;
-  HTML << "<head>" << endl;  
-  HTML << "<style type=\"text/css\">" << endl;
-  HTML << header_style_string() << endl;
-  HTML << "</style>" << endl;
-  HTML << "</head>" << endl;
+  HTML << html_header("BRESEQ :: Marginal Predictions",settings); 
   
-  HTML << breseq_header_string(settings) << endl;
-  HTML << "<p>" << endl;
   
   string relative_path = settings.file_name("local_evidence_path");
   
@@ -315,12 +274,12 @@ void html_marginal_predictions(string file_name, Settings settings,Summary summa
 // #   ## Marginal evidence
 // #   ###
 // #   my @ra = $gd->filter_used_as_evidence($gd->list('RA')); 
-  entry_list_t ra = gd.filter_used_as_evidence(gd.list(make_list<string>("RA")));
+  entry_list_t ra = gd.filter_used_as_evidence(gd.list(make_list<diff_entry::key_t>("RA")));
 
 // #   ## don't print ones that overlap predicted deletions or were marked to not show
 // #   @ra = grep { !$_->{deleted} && !$_->{no_show} } @ra;
   //Don't print ones that overlap predicted deletions or were marked to not show.
-  ra.remove_if(diff_entry::fields_exist(make_list<genome_diff::key_t>("deleted")("no_show")));
+  ra.remove_if(diff_entry::fields_exist(make_list<diff_entry::key_t>("deleted")("no_show")));
   
 // #   
 // #   if (scalar @ra > 0)
@@ -351,7 +310,7 @@ void html_marginal_predictions(string file_name, Settings settings,Summary summa
 // #   }
      if (jc.size()) {
        //Sort by score, not by position (the default order)...
-       jc.sort(diff_entry::sort_by_descending_scores(
+       jc.sort(diff_entry::sort_by_scores(
          make_list<diff_entry::key_t>("pos_hash_score")("min_overlap_score")("total_reads"))); 
       
        HTML << "<p>" << endl;
@@ -368,7 +327,7 @@ void html_marginal_predictions(string file_name, Settings settings,Summary summa
 }
 // # 
 
-string html_header (const string &title)
+string html_header (const string &title, const Settings& settings)
 {
   stringstream ss(ios_base::out | ios_base::app);  
 // # sub html_header
@@ -380,36 +339,39 @@ string html_header (const string &title)
 // #   );
   
   ss << "<html>" << endl;   
-  ss << "<title>" << title << "</title>" << endl;
+  ss << "<title>" << title;
+  if (!settings.print_run_name.empty()) {
+    ss << " :: " << settings.print_run_name;
+  }
+  ss << "</title>" << endl;
+  
   ss << "<head>" << endl;
   ss << "<style type = \"text/css\">" << endl;
   ss << header_style_string() << endl;
   ss << "</style>" << endl;
   ss << "</head>" << endl;
   
+  ss << breseq_header_string(settings) << endl;
+  ss << "<p>" << endl;
+ 
   return ss.str();
-// # }
 }
-// # sub html_compare
-// # {
+
+
+
 void html_compare(Settings settings,const string &file_name, const string &title, genome_diff gd,
                   bool one_ref_seq, vector<string> gd_name_list_ref, Options options)
 {
-// #   my ($settings, $file_name, $title, $gd, $one_ref_seq, $gd_name_list_ref, $options) = @_;
-// # 
-// #   open HTML, ">$file_name" or die "Could not open file: $file_name";    
+  // Create stream and confirm it's open
   ofstream HTML(file_name.c_str());
-
-  if (!HTML.good()) {
-    cerr << "Could not open file: " << file_name << endl;
+  
+  if(!HTML.good()) {
+    cerr << "Could not open file: " <<  file_name << endl;
     assert(HTML.good());
   }
-// # 
-// #     print HTML start_html(
-// #       -title => $title, 
-// #       -head  => style({type => 'text/css'}, $header_style_string),
-// #   );
-  HTML << "<html>" << endl; ///TODO End HTML tag in this function also?  
+
+  //Build html head
+  HTML << "<html>" << endl;   
   HTML << "<title>" << title << "</title>" << endl;
   HTML << "<head>" << endl;
   HTML << "<style type=\"text/css\">" << endl;
@@ -418,11 +380,11 @@ void html_compare(Settings settings,const string &file_name, const string &title
   HTML << "</head>" << endl;
 // #   
 // #   my @muts = $gd->mutation_list;
-  genome_diff::entry_list_t muts = gd.mutation_list();
+  genome_diff::entry_vector_t muts = gd.mutation_list();
 // #   
 // #   print HTML html_mutation_table_string($settings, $gd, \@muts, undef, undef, $one_ref_seq, $gd_name_list_ref, $options);
 // # 
-  HTML << Html_Mutation_Table_String(); /// TODO
+  HTML << Html_Mutation_Table_String(settings, gd, muts, gd_name_list_ref, options, false, one_ref_seq, "");
 // #   print HTML end_html;
   HTML << "</html>";
 // #   close HTML;
@@ -433,19 +395,17 @@ void html_compare(Settings settings,const string &file_name, const string &title
 
 void html_compare_polymorphisms(Settings settings, string file_name, string title, entry_list_t list_ref)
 {
-// #   my ($settings, $file_name, $title, $list_ref) = @_;
-    
+
+  // Create stream and confirm it's open
   ofstream HTML(file_name.c_str());
   
   if(!HTML.good()) {
-    cerr << "Could not open file: " << file_name << endl;
+    cerr << "Could not open file: " <<  file_name << endl;
     assert(HTML.good());
   }
-// # 
-// #     print HTML start_html(
-// #       -title => $title, 
-// #       -head  => style({type => 'text/css'}, $header_style_string),
-// #   );
+
+
+  //Build html head
   HTML << "<html>" << endl;
   HTML << "<title>" << title << "</title>" << endl;
   HTML << "<head>" << endl;
@@ -453,7 +413,8 @@ void html_compare_polymorphisms(Settings settings, string file_name, string titl
   HTML << header_style_string() << endl;
   HTML << "</style>" << endl;
   HTML << "</head>" << endl;
-// #     
+
+
 // #   print HTML html_read_alignment_table_string($settings, $list_ref, undef, undef, 1);
   HTML << html_read_alignment_table_string(list_ref, true); 
 //! TODO Confirm settings is never used in html_read_alignment_table_string
@@ -470,35 +431,25 @@ void html_compare_polymorphisms(Settings settings, string file_name, string titl
 // # 
 void html_statistics(const string &file_name, Settings settings, Summary summary, cReferenceSequences ref_seq_info)
 {  
-// #   my ($file_name, $settings, $summary, $ref_seq_info) = @_;
-  ofstream HTML(file_name.c_str());
-  if(!HTML.good())
-    cerr << " Could not open file: " << file_name;
-// #     
-// #     print HTML start_html(
-// #       -title => "BRESEQ :: Summary Statistics" . ($settings->{print_run_name} ? " :: $settings->{print_run_name}" : ''), 
-// #       -head  => style({type => 'text/css'}, $header_style_string),
-// #   );
-  HTML << "<html>" << endl;
-  HTML << "<title>" << "Summary Statistics";
-  if (!settings.print_run_name.empty()) {
-    HTML << " :: " << settings.print_run_name; 
-  }
-  HTML << "</title>" << endl;
-  HTML << "<head>" << endl;
-  HTML << "<style type =\"text/css\">" << endl;
-  HTML << header_style_string() << endl;
-  HTML << "</style>" << endl;
-  HTML << "</head>" << endl;
 
-// #   print HTML breseq_header_string($settings) . p; 
-  HTML << breseq_header_string(settings)<< "</p>" << endl; //TODO Confirm p
+  // Create stream and confirm it's open
+  ofstream HTML(file_name.c_str());
+  
+  if(!HTML.good()) {
+    cerr << "Could not open file: " <<  file_name << endl;
+    assert(HTML.good());
+  }
+
+  //Build html head
+  HTML << html_header("BRESEQ :: Summary Statistics", settings);
+ 
+
 // #   
   HTML << "<!-- Write fastq read file informations -->" << endl;
   HTML << "<table border=\"0\" cellspace=\"1\" cellpadding=\"5\">" << endl;
   HTML << "<tr>" << th("fastq read file") << th("reads") << 
                     th("bases") << th("longest") << "</tr>" << endl;
-// # //TODO TODO TODO TODO Summary
+// # //TODO @JEB Summary
 // #   foreach my $read_file ($settings->read_files)
 // #   {
 // #     my $c = $summary->{sequence_conversion}->{reads}->{$read_file};
@@ -520,7 +471,7 @@ void html_statistics(const string &file_name, Settings settings, Summary summary
 // #   print HTML end_table();
 // # 
 // #   ## Write reference sequence information
-// #   print HTML p; //TODO Confirm
+// #   print HTML p; 
   //Write reference sequence information
   HTML << "<!-- Write reference sequence information -->" << endl;
   HTML << "<p>" << endl;
@@ -533,7 +484,7 @@ void html_statistics(const string &file_name, Settings settings, Summary summary
           "</tr>" << endl;
              
   size_t total_length = 0;
-// # //TODO TODO TODO TODO Summary
+// # //TODO @JEB Summary
 // #   foreach my $seq_id (@{$ref_seq_info->{seq_ids}})
 // #   {   
 // #     my $c = $summary->{sequence_conversion}->{reference_sequences}->{$seq_id};
@@ -564,7 +515,7 @@ void html_statistics(const string &file_name, Settings settings, Summary summary
   HTML << td();
   HTML << "</tr>" << endl;
 // #   
-// # //TODO TODO TODO TODO Summary
+// # //TODO @JEB Summary
 // #   ## junction only reference sequences
 // #   foreach my $seq_id (@{$ref_seq_info->{junction_only_seq_ids}})
 // #   {
@@ -641,7 +592,7 @@ string breseq_header_string(Settings settings)
   ss << td(a(settings.website, img(settings.html_path("breseq_small_graphic_to_file_name"))));
   ss << endl;
   ss << start_td("width=\"100%\"") << endl;
-// #   $output_string .= $settings->{byline}
+// #   $output_string .= $settings->{byline} /TODO @JEB set byline to breseq version
   ss << settings.byline << endl;
   ss << "<br>";
   ss << a(settings.html_path("index_html_file_name"), "mutation predictions"); 
@@ -657,22 +608,17 @@ string breseq_header_string(Settings settings)
   ss << "</td></tr></table>" << endl;
   return ss.str();
 }
-// # 
-// #
-string
-html_genome_diff_item_table_string(
-                                   Settings settings,
-                                   genome_diff gd,
-                                   entry_list_t list_ref
-                                   )
+
+
+string html_genome_diff_item_table_string(Settings settings, genome_diff gd, entry_list_t list_ref)
 {
 // # sub html_genome_diff_item_table_string
 // # {
 // #   my ($settings, $gd, $list_ref) = @_;
 // #   
 // #   return '' if (!defined $list_ref) || (scalar @$list_ref) == 0;
-  if(list_ref.empty())
-    return "";
+  if(list_ref.empty()) return "";
+
 // #   my $first_item = $list_ref->[0];
   diff_entry& first_item = *list_ref.front();
 // #         
@@ -682,7 +628,7 @@ html_genome_diff_item_table_string(
   if(first_item._type.length() == 3)
   {
 // #     return html_mutation_table_string($settings, $gd, $list_ref);
-    return Html_Mutation_Table_String(); ///TODO
+    return Html_Mutation_Table_String(settings, gd, vector<counted_ptr<diff_entry> >(list_ref.begin(), list_ref.end())); 
 // #   }
   }
 // #   
@@ -755,7 +701,7 @@ string formatted_mutation_annotation(diff_entry mut)
   }
 // #   else # ($mut->{snp_type} eq 'NC')
 // #   {
-  else
+  else // mut["snp_type"] == "NC"
   {
 // #     $formatted_annotated .= nonbreaking($mut->{gene_position});
     ss << nonbreaking(mut["gene_positon"]); 
@@ -815,22 +761,16 @@ string to_underline_red_codon(diff_entry mut, const string& codon_key)
 
 // # 
 // # 
-string 
-html_read_alignment_table_string(
-                                 entry_list_t list_ref, 
-                                 bool show_reject_reason,
-                                 string title, 
-                                 string relative_link
-                                 )
+string html_read_alignment_table_string(entry_list_t list_ref, bool show_reject_reason, string title, string relative_link)
 {
-  stringstream ss; //!< Main Build Object for Function
-  stringstream ssf; //!< Used for Formatting Strings
+  stringstream ss; //!< Main build object for function
+  stringstream ssf; //!< Used for formatting strings
 
 // #   my $q = new CGI; //TODO ?
   
   ss << start_table("border=\"0\" cellspacing=\"1\", cellpadding=\"3\"") << endl;
   
-  // Evidence Hyperlinks Will be the First Column if They Exist
+  // Evidence hyperlinks will be the first column if they exist
   bool link;
   if (list_ref.front().get() != 0 && (*list_ref.front()).entry_exists(_EVIDENCE_FILE_NAME)) {
     link = true;
@@ -862,7 +802,7 @@ html_read_alignment_table_string(
   ss << th("width=\"100%\"", "product") << endl;
   ss << "</tr>" << endl;
   
-  //Loop Through list_ref to Build Table Rows
+  //Loop through list_ref to build table rows
   for (entry_list_t::iterator itr = list_ref.begin();
        itr != list_ref.end(); itr ++) {  
     diff_entry& c = **itr;
@@ -878,7 +818,7 @@ html_read_alignment_table_string(
       row_class = "polymorphism_table_row";
     }
     
-    // Start Building a Single Table Row
+    // Start building a single table row
     ss << start_tr("class=\"" + row_class + "\"");
 // #     
 // #     if ($link)
@@ -915,7 +855,7 @@ html_read_alignment_table_string(
     ssf.precision(1);
     ssf << fixed << from_string<double>(c["frequency"]) * 100 << "%" << endl;
     ss << td(ALIGN_RIGHT, ssf.str());
-    //Clear Formated String Stream
+    //Clear formated string stream
     ssf.str("");
     ssf.clear();
 // #     if ($is_polymorphism)
@@ -941,7 +881,7 @@ html_read_alignment_table_string(
                       log_fisher << " " <<
                       log_ks;
       ss << td(ALIGN_RIGHT, nonbreaking(ssf.str()));
-      //Clear Formated String Stream
+      //Clear formated string stream
       ssf.str("");
       ssf.clear();
 
@@ -957,7 +897,7 @@ html_read_alignment_table_string(
       ssf.clear();
 // #     }
     }  
-    // Build "Cov" Column Value
+    // Build "cov" column value
     vector<string> temp_cov = split(c[TOT_COV], "/");
     string top_cov = temp_cov[0];
     string bot_cov = temp_cov[1];
@@ -999,7 +939,7 @@ html_read_alignment_table_string(
       ssf << scientific << from_string<float>(c["fisher_strand_p_value"]);
       string fisher_strand_p_value = ssf.str();
       
-      //Clear Formated String Stream
+      //Clear formated string stream
       ssf.str("");
       ssf.clear();
 
@@ -1035,7 +975,7 @@ html_read_alignment_table_string(
       0;
     string ks_quality_p_value = ssf.str();
     
-    //Clear Formated String Stream
+    //Clear formated string stream
     ssf.str("");
     ssf.clear();
 
@@ -1086,13 +1026,7 @@ html_read_alignment_table_string(
   return ss.str();
 }
 
-string
-html_missing_coverage_table_string(
-                                   entry_list_t list_ref,
-                                   bool show_reject_reason,
-                                   string title,
-                                   string relative_link
-                                  )
+string html_missing_coverage_table_string(entry_list_t list_ref, bool show_reject_reason, string title, string relative_link)
 {
 // # sub html_missing_coverage_table_string
 // # {
@@ -1288,12 +1222,7 @@ html_missing_coverage_table_string(
 // # }
 }
 
-string
-html_new_junction_table_string(
-                               entry_list_t list_ref,
-                               bool show_reject_reason,
-                               string title ,
-                               string relative_link
+string html_new_junction_table_string(entry_list_t list_ref, bool show_reject_reason, string title, string relative_link
                                )
 {
 // #   our ($list_ref, $relative_link, $title, $show_reject_reason) = @_;
@@ -1352,9 +1281,7 @@ html_new_junction_table_string(
         th("score")       << endl <<
         th("annotation")  << endl <<
         th("gene")        << endl;
-
-// #   $output_str.= th({-width => "100%"}, "product"); 
-// #   $output_str.= end_Tr;
+  
   ss << th("width=\"100%\"","product") << endl;
   ss << "</tr>" << endl;
   ss << endl;
@@ -1366,7 +1293,7 @@ html_new_junction_table_string(
 // #   
 // #   ## the rows in this table are linked (same background color for every two)
 // #   my $row_bg_color_index = 0;
-  size_t row_bg_color_index = 0; 
+  uint32_t row_bg_color_index = 0; 
 // #   foreach my $c (@$list_ref)
 // #   {     
   for (entry_list_t::iterator itr = list_ref.begin();
@@ -1390,7 +1317,7 @@ html_new_junction_table_string(
               a(relative_link + c[_NEW_JUNCTION_EVIDENCE_FILE_NAME], "*" )) << endl;
      }
 
-     { // Begin Hiding Data for Side 1
+     { // Begin hiding data for side 1
 
 // #       $output_str.= td({-rowspan=>1}, a({-href=>"$relative_link$c->{_side_1_evidence_file_name}"}, "?")) if ($link); 
       if (link) {   
@@ -1427,7 +1354,7 @@ html_new_junction_table_string(
       ss << td("class=\"" + annotate_key + "\"",
               htmlize(c["_" + key] + c[GENE_PRODUCT])) << endl;  
 // #     }
-    } // End Hiding Data for Side 1
+    } // End hiding data for side 1
 // #     $output_str.= end_Tr;
     ss << "</tr>" << endl;
 
@@ -1444,7 +1371,7 @@ html_new_junction_table_string(
     ss << start_tr("class=\"mutation_table_row_" + 
                   to_string(row_bg_color_index) + "\"") << endl;
 // #     {
-    { //Begin Hiding Data for Side 2
+    { //Begin hiding data for side 2
 // #       $output_str.= td({-rowspan=>1}, a({-href=>"$relative_link$c->{_side_2_evidence_file_name}"}, "?")) if ($link); 
       if (link) {
         ss << td("rowspan=\"1\"", 
@@ -1474,7 +1401,7 @@ html_new_junction_table_string(
       ss << td("class=\"" + annotate_key + "\"",
               htmlize(c["_" + key] + c[GENE_PRODUCT])) << endl;
 // #     }     
-    } //End Hiding Data for Side 2
+    } //end hiding data for side 2
 // #     $output_str.= end_Tr;
   ss << "</tr>" << endl;
 // #     
@@ -1502,7 +1429,7 @@ html_new_junction_table_string(
   }
 // #     
 // #     $row_bg_color_index = ($row_bg_color_index+1)%2;
-  row_bg_color_index = (row_bg_color_index + 1) % 2; 
+  row_bg_color_index = row_bg_color_index++ % 2;//(row_bg_color_index) % 2; 
 // #   }
   }// End list_ref Loop
   ss << "</table>" << endl;
@@ -2064,7 +1991,7 @@ void Evidence_Files::add_evidence(const string& evidence_file_name_key, diff_ent
                                   diff_entry parent_item, map<string,string> fields)
 {
   Evidence_Item evidence_item;
-  evidence_item.fields = fields;
+  evidence_item._fields = fields;
   evidence_item.item = item;
   evidence_item.parent_item = parent_item;
 
@@ -2127,17 +2054,14 @@ Evidence_Files::html_evidence_file (
 // #   $interval->{output_path} = $settings->file_name('evidence_path') . "/$interval->{file_name}"; 
   item["output_path"] = settings.file_name("evidence_path") + 
                         "/" + item[FILE_NAME];
-// #   
-// #   my $title = 'BRESEQ :: Results' . ($settings->{print_run_name} ne 'unnamed' ? " :: $settings->{print_run_name}" : ''),
-  string title = "BRESEQ :: Results";
-  if (settings.print_run_name != "unnamed") {
-    title += settings.print_run_name;
-  }
-// #   
-// #   open HTML, ">$interval->{output_path}" or die "Could not open file: $interval->{output_path}";
-  fstream HTML(item["output_path"].c_str());
-  if (!HTML) {
-    cerr << " Could not open file: " << item["OUTPUT_PATH"];
+
+  
+  // Create Stream and Confirm It's Open
+  ofstream HTML(item["output_path"].c_str());
+  
+  if (!HTML.good()) {
+    cerr << "Could not open file: " << item["output_path"] << endl;
+    assert(HTML.good());
   }
 // # 
 // #   my $q = new CGI; //TODO?
@@ -2148,12 +2072,20 @@ Evidence_Files::html_evidence_file (
 // #       -head  => style({type => 'text/css'},$header_style_string),
 // #       );
 // # 
+  
+  // Build HTML Head
   HTML << "<html>" << endl;
+  HTML << "<title>BRESEQ :: Results";
+  if (!settings.print_run_name.empty()) {
+    HTML << " :: " << settings.print_run_name; 
+  } 
+  HTML << "</title>" << endl; 
   HTML << "<head>" << endl;
-  HTML << "<title>" << title << "</title>" << endl; 
   HTML << "<style type = \"text/css\">" << endl;
-  HTML << header_style_string() << endl;
+  HTML << header_style_string();
   HTML << "</style>" << endl;
+  HTML << "</head>" << endl;
+  
 
 // #   ## print a table for the main item
 // #   ## followed by auxiliary tables for each piece of evidence
@@ -2260,16 +2192,7 @@ Evidence_Files::html_evidence_file (
 // #       );
 // #     }
     //Commands for bam2aln
-    string cbam2aln = settings.ctool("cbam2aln");
-    string command = 
-    "bam_2_aln --bam " + item[BAM_PATH] +
-              "--fasta " + item[FASTA_PATH] +
-              "--region " + ss.str() +
-              "--quality_score_cutoff " + item["BASE_QUALITY_CUTOFF"] +
-              "-- stdout";
-    HTML << command;
-    cerr << command << endl;
-// #   }
+
   }
 // #   print HTML end_html;
 // #   close HTML;
@@ -2468,18 +2391,11 @@ Html_Mutation_Table_String::Html_Mutation_Table_String(
   , options(options)
   , relative_link(relative_link)
 {
-// # Recognized $settings are
-// #   # shade_frequencies => 1, instead of frequences, shade boxes
-// #   
-// #   # Recognized $options are
-// #   # repeat_header => 15 (which means repeat the header line after this many mutations)
-// # 
-// #   our ($settings, $gd, $list_ref, $relative_link, $legend_row, $one_ref_seq, $gd_name_list_ref, $options) = @_;
-// #   $relative_link = '' if (!defined $relative_link);
-// #   my $output_str = '';
-  // # 
-// #   my $q = new CGI;
-// #   $output_str.= start_table({-border => 0, -cellspacing => 1, -cellpadding => 3});
+  (*this) += "<!--Output Html_Mutation_Table_String-->\n";
+  (*this) += "<table border=\"0\" cellspacing=\"1\" cellpadding=\"3\">\n";
+  
+  this->Header_Line();
+  this->Item_Lines();
    
     
 }
@@ -2488,7 +2404,7 @@ Html_Mutation_Table_String::Html_Mutation_Table_String(
                                                        Settings settings,
                                                        genome_diff gd,
                                                        genome_diff::entry_vector_t list_ref,
-  			                               string relative_path, 
+  			                                               string relative_path, 
                                                        bool legend_row, 
                                                        bool one_ref_seq
                                                        )
@@ -2610,8 +2526,9 @@ void Html_Mutation_Table_String::Header_Line()
 // #       $header_str.= th({-width => "100%"}, ($header_rows == $i) ? "description" : ""); 
       ss << th("width=\"100%\"", (header_rows == i) ? "description" : "") << endl;
 // #       foreach my $freq_header_item (@freq_header_list) {
-      for (size_t j = 0; j < freq_header_list.size(); j++) {
-        string& freq_header_item(freq_header_list[j]);        
+      for (vector<string>::iterator itr = freq_header_list.begin();
+           itr != freq_header_list.end(); itr++) {
+        string& freq_header_item(*itr);        
 // #         
 // #         my @header_list = split /\|/, $freq_header_item; 
         vector<string> header_list = split(freq_header_item, "|");        
