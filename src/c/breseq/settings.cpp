@@ -18,15 +18,13 @@ LICENSE AND COPYRIGHT
 
 #include "breseq/settings.h"
 
+#include "breseq/anyoption.h"
+
+
 using namespace std;
 
 namespace breseq
 {
-
-	cReadFiles::cReadFiles(const vector<string>& read_file_names)
-	{
-		Init(read_file_names);
-	}
 
 	void cReadFiles::Init(const vector<string>& read_file_names)
 	{
@@ -40,14 +38,14 @@ namespace breseq
 		for (vector<string>::const_iterator it = read_file_names.begin(); it < read_file_names.end(); it++)
 		{
 			cReadFile rf;
-			rf.m_fastq_file_name = *it;
+			rf.m_original_file_name = *it;
 
 			rf.m_paired_end_group = on_paired_end_group++;
 			rf.m_error_group = on_error_group++;
 			rf.m_id = on_id++;
 
 			// create base name
-			rf.m_base_name = rf.m_fastq_file_name;
+			rf.m_base_name = rf.m_original_file_name;
 			// - beginning path
 			size_t pos = rf.m_base_name.rfind("/");
 			if (pos != string::npos) rf.m_base_name.erase(0, pos + 1);
@@ -66,32 +64,106 @@ namespace breseq
 			{
 				rf.m_base_name.erase(pos);
 			}
-
+      
+      // set up the map for converting base names to fastq file names to be used
+      read_file_to_fastq_file_name_map[rf.m_base_name] = rf.m_original_file_name;
+      
 			this->push_back(rf);
 		}
 	}
-
+  
+  string cReadFiles::base_name_to_read_file_name(const string& base_name)
+  {    
+    if (read_file_to_converted_fastq_file_name_map.count(base_name)) 
+    {
+      return read_file_to_converted_fastq_file_name_map[base_name];
+    }
+    
+    assert(read_file_to_fastq_file_name_map.count(base_name));
+    
+    return read_file_to_fastq_file_name_map[base_name];
+  }
   
   // Set up defaults and build paths
-  // @JEB There should be a version of the constructor that takes argv.
   Settings::Settings(const string& _base_output_path)
   {
     // things work fine if this is empty ""
     this->base_output_path = _base_output_path;
     
     this->pre_option_initialize();
+    // no command line arguments here
+		this->post_option_initialize();
+	}
+  
+  Settings::Settings(int argc, char* argv[])
+  {
+    this->pre_option_initialize();
+    
+    // we need the path to the executable to locate scripts and our own installed versions of binaries
+    this->bin_path = argv[0];
+    size_t slash_pos = this->bin_path.rfind("/");
+    if (slash_pos != string::npos) this->bin_path.erase(slash_pos);
+    
+    // setup and parse configuration options:
+    AnyOption options("Usage: breseq -r reference.gbk reads1.fastq [reads2.fastq, reads3.fastq...]");
+    options
+		("help,h", "produce this help message", TAKES_NO_ARGUMENT)
+		// convert to basing everything off the main output path, so we don't have to set so many options
+		("output,o", "path to breseq output")
+		("reference,r", "reference GenBank flatfile")
+    .processCommandArgs(argc, argv);
+    
+    // Reference sequence provided?
+		if (options.count("reference") == 0)
+		{
+      cerr << "No reference sequences provided (-r)." << endl;
+      options.printUsage();
+      exit(-1);
+		}
+    
+    // Read sequence file provided?
+		if (options.getArgc() == 0)
+		{
+      cerr << "No read sequence files provided." << endl;
+      options.printUsage();
+      exit(-1);		
+    }
+    
+    // make sure that the other config options are good:
+    if(options.count("help")) 
+    {
+      options.printUsage();
+      exit(-1);
+    }
+    
+    this->base_output_path = "";
+    if (options.count("output")) this->base_output_path = options["output"];
 
-    // @JEB insert handling of command line options here
+    //// GENBANK REFERENCE FILES ////
+    this->reference_file_names = from_string<vector<string> >(options["reference"]);
+    
+    //// FASTQ READ FILES ////
+    // Remaining command line items are read files
+    for (int32_t i = 0; i < options.getArgc(); i++)
+    {
+      string read_file_name = options.getArgv(i);
+      this->read_file_names.push_back(read_file_name);
+    }
+    this->read_files.Init(read_file_names);
+    
+    //// Other options ////
+    this->junction_prediction = !options.count("no-junction-prediction");
+    
     
 		this->post_option_initialize();
 	}
+  
+  
 
 	void Settings::pre_option_initialize()
-	{
-		//@{this->reference_genbank_file_names} = ();  // files containing reference sequences
-		//@{this->junction_only_reference_genbank_file_names} = (); //files to look for junctions to but not align to
-    
+	{    
 		// Set up default values for options
+    this->bin_path = ".";
 		this->full_command_line = "$0 @ARGV";
 		this->arguments = "@ARGV";
 		this->predicted_quality_type = "";
@@ -101,7 +173,6 @@ namespace breseq
 		this->clean = 0;
 		this->error_model_method = "EMPIRICAL";
 		this->base_quality_cutoff = 3; // avoids problem with Illumina assigning 2 to bad ends of reads!
-
 
     this->maximum_read_length = 0;                  // @JEB this will not be an option once porting is complete
 
@@ -167,6 +238,7 @@ namespace breseq
 		this->max_rejected_polymorphisms_to_show = 20;
 		this->max_rejected_junctions_to_show = 20;
 		this->hide_circular_genome_junctions = 1;
+    
 
 		//@{this->execution_times} = ();
 	}
@@ -176,7 +248,7 @@ namespace breseq
 		//this->version = $Breseq::VERSION;
 		this->byline = "<b><i>breseq</i></b>&nbsp;&nbsp;version this->version";
 		this->website = "http://barricklab.org/breseq";
-		this->bin_path = ".";
+    
 		this->lib_path = this->bin_path + "/../lib/perl5/Breseq";
 
 		//neaten up some settings for later string comparisons
@@ -346,88 +418,42 @@ namespace breseq
 
 		this->long_pairs_file_name = this->output_path + "/long_pairs.tab";
 
-		//read sequence filenames are given as straight arguments
-		/*@{this->read_fastq_list} = @ARGV;
-
-		// Read sequence file provided?
-		if (scalar @{this->read_fastq_list} == 0)
-		{
-				print STDERR "No read sequence files provided.";
-				pod2usage(1);
-		}
-
-		//
-		// Order the input fastq files, remove their '.fastq' endings,
-		// and give each read sequence a unique id (used in alignment database and file names)
-		//
-		my $fastq_file_index = -1;
-		my @new_fastq_list;
-		foreach my $raw_read_fastq_file (@{this->read_fastq_list})
-		{
-				my $read_structure = {};
-
-				//paired files have form READFILE1,READFILE2::MIN,MAX
-				my @fastq_files = ($raw_read_fastq_file);
-				$read_structure.paired = 0;
-				if ($raw_read_fastq_file =~ m/^(.+),(.+)::(.+)-(.+)$/)
-				{
-						@fastq_files = ($1,$2);
-						$read_structure.min_pair_dist = $3;
-						$read_structure.max_pair_dist = $4;
-						$read_structure.paired = 1;
-				}
-				@{$read_structure.read_fastq_list} = @fastq_files;
-				push @{this->read_structures}, $read_structure;
-
-				foreach my $read_fastq_file (@fastq_files)
-				{
-						$fastq_file_index++;
-						//name without path or fastq ending
-						my $read_file = $read_fastq_file;
-						$read_file =~ s/\.fastq$//; //no trailing .fastq
-						$read_file =~ s/.+\///; //no beginning path
-						push @{this->read_file_base_names}, $read_file;
-						push @{$read_structure.base_names}, $read_file;
-						push @{this->read_file_index_to_struct_index}, $//{this->read_structures};
-
-						this->read_file_to_fastq_file_index.$read_file = $fastq_file_index;
-						this->read_file_to_fastq_file.$read_file = $read_fastq_file;
-
-						//index for keeping track of what file reads came from in alignment database
-						//max is 256 b/c stored as unsigned byte in alignment database
-						$self->throw("Maximum of 256 input files allowed.") if ($fastq_file_index > 255);
-				}
-
-				$read_structure.base_name = join ("-pair-", @{$read_structure.base_names});
-		}
-		@{this->read_fastq_list} = @new_fastq_list;
-
-		// Reference sequence provided?
-		if (scalar @{this->reference_genbank_file_names} == 0)
-		{
-				print STDERR "No reference sequences provided (-r).";
-				pod2usage(1);
-		}*/
-
-		//$self->compare_to_saved_settings();
-
 		this->init_installed();
 	}
 
 	void Settings::init_installed()
 	{
-		// breseq C++ executables - look in the local bin path only
+
+    // Save the path for reference
+    char * pPath;
+    pPath = getenv("PATH");
+    this->installed["path"] = "";
+    if (pPath!=NULL)
+    {
+      this->installed["path"] = pPath;
+    }
+    
+    // breseq C++ and SAMtools executables - look in the local bin path only
     // @JEB this won't be necessary once C++ conversion is complete
-		string path = this->bin_path + "/cbreseq";
-    string test_command = path + " &>/dev/null";
-		this->installed["cbreseq"] = system(test_command.c_str()) ? this->bin_path + "/cbreseq" : "";
-		path = this->bin_path + "/cbam2aln";
-    test_command = path + " &>/dev/null";
-		this->installed["cbam2aln"] = system(test_command.c_str()) ? this->bin_path + "/cbam2aln" : "";
 
-		// absolutely required ssaha2 or smalt
-		this->installed["SSAHA2"] = system("which ssaha2 &>/dev/null") ? "ssaha2" : "";
+		string test_command = "which " + this->bin_path + "/cbreseq";
+		this->installed["cbreseq"] = system_capture_output(test_command);
+		
+    test_command = "which " + this->bin_path + "/cbam2aln";
+		this->installed["cbam2aln"] = system_capture_output(test_command);
 
+    test_command = "which " + this->bin_path + "/samtools";
+		this->installed["samtools"] = system_capture_output(test_command);
+    
+		// search first for ssaha2 in the same location as breseq    
+    test_command = "which " + this->bin_path + "/ssaha2";
+		this->installed["SSAHA2"] = system_capture_output(test_command);
+    
+    // attempt to fall back on system-wide install
+    if (this->installed["SSAHA2"].size() == 0)
+      this->installed["SSAHA2"] = system_capture_output("which ssaha2");
+
+    /*
 		// check for default names
 		this->installed["smalt"] = system("which smalt &>/dev/null") ? "smalt" : "";
 		if (this->installed["smalt"].size() == 0)
@@ -446,29 +472,47 @@ namespace breseq
 		{
 			this->installed["smalt"] = system("which smalt_MacOSX_i386 &>/dev/null") ? "smalt_MacOSX_i386" : "";
 		}
-
-		this->installed["R"] = system("which R &>/dev/null") ? "R" : "";
+    */
+    
+		this->installed["R"] = system_capture_output("which R").size() ? "R" : "";
 		if (this->installed["R"].size() > 0)
 		{
-			/*string R_version = system("R --version");
-			if ($R_version =~ m/R\s+(version\s+|)(\d+)\.(\d+)\.(\d+)/)
-			{
-					this->installed_version.R = $2 * 1000000 +  $3 * 1000 + $4;
-			}
-			else
-			{
-					this->installed_version.R = 0;
-			}*/
+			string R_version = system_capture_output("R --version");
+      
+      // default if output does not match our pattern
+      this->installed["R_version"] = "0";
+      
+      size_t start_version_pos = R_version.find("R version ");
+      if (start_version_pos != string::npos)
+      {
+        start_version_pos+=10;
+        size_t end_version_pos = R_version.find(" ", start_version_pos);
+        
+        if (end_version_pos == string::npos)
+          end_version_pos = R_version.size();
+        end_version_pos--;
+        
+        string version_string = R_version.substr(start_version_pos, end_version_pos - start_version_pos + 1);
+        vector<string> split_version_string = split(version_string, ".");
+        if (split_version_string.size() == 3)
+        {
+          uint32_t R_numerical_version = from_string<uint32_t>(split_version_string[0]) * 1000000 + from_string<uint32_t>(split_version_string[1]) * 1000 + from_string<uint32_t>(split_version_string[2]);
+          this->installed["R_version"] = to_string(R_numerical_version);
+        }
+      }
 		}
 
-    /*
-		this->installed["samtools"] = (-x "this->bin_path/samtools") ? "this->bin_path/samtools" : "";
-		this->installed["bioperl"] = (eval 'require Bio::Root::Root');
-    */
+    
 	}
 
 	void Settings::check_installed()
 	{
+   
+    // Developer's Note
+    //
+    // If you are running things through a debugger (like in XCode), your $PATH may need to be
+    // set to include the paths where you have SSAHA2 and R installed within your IDE.
+    
 		bool good_to_go = true;
 
 		if (!this->smalt && this->installed["SSAHA2"].size() == 0)
@@ -492,72 +536,67 @@ namespace breseq
 			cerr << "---> ERROR Required executable \"R\" not found." << endl;
 			cerr << "---> See http://www.r-project.org" << endl;
 		}
-		/*elsif ( (!defined $self->{installed_version}->{R}) || ($self->{installed_version}->{R} < 2001000) )
+		else if ( (this->installed["R_version"].size() == 0) || (from_string<uint32_t>(this->installed["R_version"]) < 2001000) )
 		{
-				my $R_version = 'unknown';
-				if ($self->{installed_version}->{R})
-				{
-						$R_version = int($self->{installed_version}->{R}/1000000)
-								. "." . int($self->{installed_version}->{R}%1000000/1000)
-								. "." . int($self->{installed_version}->{R}%1000);
-				}
+      good_to_go = false;
+      uint32_t R_numerical_version = from_string<uint32_t>(this->installed["R_version"]);
+      string R_version = to_string(floor(R_numerical_version/1000000)) 
+        + "." + to_string(floor(R_numerical_version%1000000/1000))
+        + "." + to_string(floor(R_numerical_version%1000));
 
-				$good_to_go = 0;
-				print STDERR "---> ERROR Required executable \"R version 2.1.0 or later\" not found.\n";
-				print STDERR "---> Your version is $R_version\n";
-				print STDERR "---> See http://www.r-project.org\n";
-		}
+      cerr << "---> ERROR Required executable \"R version 2.1.0 or later\" not found." << endl;
+      cerr << "---> Your version is " << R_version << endl;
+      cerr << "---> See http://www.r-project.org" << endl;
+    }
 
-		if (!$self->{installed}->{samtools})
-		{
-				$good_to_go = 0;
-				print STDERR "---> ERROR Required executable \"samtools\" not found.\n";
-				print STDERR "---> This should have been installed by the breseq installer.\n";
-		}*/
+    if (this->installed["samtools"].size() == 0)
+    {
+      good_to_go = false;
+      cerr << "---> ERROR Required executable \"samtools\" not found." << endl;
+      cerr << "---> This should have been installed by the breseq installer." << endl;
+    }
 
-		assert(good_to_go);
+		if (!good_to_go) exit(0);
 	}
 
 	bool Settings::do_step(string done_key, string message)
 	{
-		string done_file_name = file_name(done_key);
-		/*$self->{done_key_messages}->{$done_key} = $message;
-		if (!-e $done_file_name)
+		string done_file_name = done_key;
+		this->done_key_messages[done_key] = message;
+    
+		if (!file_exists(done_file_name.c_str()))
 		{
-				print STDERR "+++   NOW PROCESSING $message\n";
-				$self->record_start_time($message);
-				return 1;
+      cerr << "+++   NOW PROCESSING " << message << endl;
+      this->record_start_time(message);
+      return true;
 		}
+    
+		cerr << "--- ALREADY COMPLETE " << message << endl;
 
-		print STDERR "--- ALREADY COMPLETE $message\n";
+		ExecutionTime et;
+    et.retrieve(done_file_name);    
+    // @JEB Should check for errors, such as incomplete reads...
 
-		my $time;
-		$time = Storable::retrieve($done_file_name) if (-s $done_file_name > 0);
-		if (!$time)
-		{
-				$time = {};
-				$self->warn("Can't retrieve time data from file $done_file_name");
-		}
-		push @{$self->{execution_times}}, $time;*/
+    this->execution_times.push_back(et);
 
 		return false;
 	}
 
 	void Settings::done_step(string done_key)
 	{
-		string done_file_name = this->file_name(done_key);
-		/*my $message = $self->{done_key_messages}->{$done_key};
-		$self->record_end_time($message);
+		string done_file_name = done_key;
+		string message = this->done_key_messages[done_key];
+		this->record_end_time(message);
 
-		## create the done file with timing information
-		Storable::store($self->{execution_times}->[-1], $done_file_name)
-			or $self->throw("Can't store time data in file $done_file_name");*/
+		// create the done file with timing information
+		this->execution_times.back().store(done_file_name);
 	}
 
-	string system_with_stdout(string command)
+	string system_capture_output(string command)
 	{
 		// Open the command for reading.
-		FILE *fp = popen(command.c_str(), "r");
+    string piped_command = command + " 2>&1";
+		FILE *fp = popen(piped_command.c_str(), "r");
 		assert(fp != NULL);
 
 		// Read the output a line at a time
@@ -570,8 +609,13 @@ namespace breseq
 
 		// Close
 		pclose(fp);
-
-		return ss.str();
+    
+    // Delete the trailing line ending as a convenience for 'which'
+    string s = ss.str();
+    size_t line_break_pos = s.rfind("\n");
+    if (line_break_pos != string::npos) 
+      s.erase(line_break_pos);
+		return s;
 	}
 
 }

@@ -904,16 +904,16 @@ namespace breseq {
     
     tam_file BSAM(preprocess_junction_best_sam_file_name, reference_fasta_file_name, ios_base::out);
 
-		for (uint32_t index = 0; index < settings.read_structures.size(); index++)
+		for (uint32_t index = 0; index < settings.read_files.size(); index++)
 		{
-			cReadFile read_struct = settings.read_structures[index];
-			cerr << "  READ FILE::" << read_struct.m_base_name << endl;
+			cReadFile read_file = settings.read_files[index];
+			cerr << "  READ FILE::" << read_file.m_base_name << endl;
 
-			string reference_sam_file_name = Settings::file_name(settings.reference_sam_file_name, "#", read_struct.m_base_name);
+			string reference_sam_file_name = Settings::file_name(settings.reference_sam_file_name, "#", read_file.m_base_name);
       tam_file tam(reference_sam_file_name, reference_fasta_file_name, ios_base::in);
  
 			// includes all matches, and splits long indels
-      string preprocess_junction_split_sam_file_name = Settings::file_name(settings.preprocess_junction_split_sam_file_name, "#", read_struct.m_base_name);
+      string preprocess_junction_split_sam_file_name = Settings::file_name(settings.preprocess_junction_split_sam_file_name, "#", read_file.m_base_name);
       tam_file PSAM(preprocess_junction_split_sam_file_name, reference_fasta_file_name, ios_base::out);
       
 			alignment_list alignments;
@@ -953,12 +953,12 @@ namespace breseq {
 
 		uint32_t i = 0;
 
-		for (uint32_t j = 0; j < settings.read_structures.size(); j++)
+		for (uint32_t j = 0; j < settings.read_files.size(); j++)
 		{
-			cReadFile read_struct = settings.read_structures[j];
+			cReadFile read_file = settings.read_files[j];
 
-			string read_file = read_struct.m_base_name;
-			cerr << "  READ FILE::" << read_file << endl;
+			string read_file_name = read_file.m_base_name;
+			cerr << "  READ FILE::" << read_file_name << endl;
 
 			// Zero out summary information
 			map<string, int32_t> s;
@@ -974,7 +974,7 @@ namespace breseq {
 
 			// Decide which input SAM file we are using...
       
-			string reference_sam_file_name = Settings::file_name(settings.preprocess_junction_split_sam_file_name, "#", settings.read_structures[j].m_base_name);
+			string reference_sam_file_name = Settings::file_name(settings.preprocess_junction_split_sam_file_name, "#", settings.read_files[j].m_base_name);
 
       tam_file tam(reference_sam_file_name, settings.reference_fasta_file_name, ios_base::in);
 			alignment_list alignments;
@@ -994,7 +994,7 @@ namespace breseq {
 				_alignments_to_candidate_junctions(settings, summary, ref_seq_info, candidate_junctions, alignments);
 			}
 
-			hcs.read_file[read_file] = s;
+			hcs.read_file[read_file_name] = s;
 		}
 
 		//
@@ -1251,8 +1251,7 @@ namespace breseq {
 
 		sort(combined_candidate_junctions.begin(), combined_candidate_junctions.end(), CombinedCandidateJunction::sort_by_ref_seq_coord);
 
-    string candidate_junction_fasta_file_name = Settings::file_name(settings.candidate_junction_fasta_file_name);
-    cFastaFile out(candidate_junction_fasta_file_name, ios_base::out);
+    cFastaFile out(settings.candidate_junction_fasta_file_name, ios_base::out);
 
 		for (uint32_t j = 0; j < combined_candidate_junctions.size(); j++)
 		{

@@ -155,6 +155,7 @@ namespace breseq {
     //cerr << "max_quality_score "     << (int)max_quality_score  << endl;
     
     // Output information to stdout
+    /* Remove post-perl --->*/
     cout << "max_read_length "       << max_read_length         << endl;
     cout << "num_reads "             << num_reads               << endl;
     cout << "min_quality_score "     << (int)min_quality_score  << endl;

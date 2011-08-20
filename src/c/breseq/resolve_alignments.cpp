@@ -132,7 +132,7 @@ namespace breseq {
 		// Traverse the original fastq files to keep track of order
 		// b/c some matches may exist in only one or the other file
     
-		cFastqFile in_fastq(rf.m_fastq_file_name, ios::in);
+		cFastqFile in_fastq(rf.m_original_file_name, ios::in);
 
     string this_unmatched_file_name = settings.data_path + "/unmatched."
         + rf.m_base_name + ".fastq";
@@ -540,8 +540,7 @@ namespace breseq {
 		gd.add(item);
 	}
 
-	string jc_genome_diff_file_name = settings.file_name(settings.jc_genome_diff_file_name);
-	gd.write(jc_genome_diff_file_name);
+	gd.write(settings.jc_genome_diff_file_name);
 }
     
 //

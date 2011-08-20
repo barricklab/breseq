@@ -33,7 +33,8 @@ using namespace std;
 namespace breseq
 {
 
-	struct ExecutionTime {
+	class ExecutionTime : Storable {
+  public:
 		string _message;
 		string _name;
 		time_t _time;
@@ -44,6 +45,37 @@ namespace breseq
 		string _formatted_time_start;
 		time_t _time_end;
 		string _formatted_time_end;
+    
+    void store(string filename)
+    {
+      ofstream outfile(filename.c_str());
+      write_to_file(outfile, _message);
+      write_to_file(outfile, _name);
+      write_to_file(outfile, _time);
+      write_to_file(outfile, _formatted_time);
+      write_to_file(outfile, _time_elapsed);
+      write_to_file(outfile, _formatted_time_elapsed);
+      write_to_file(outfile, _time_start);
+      write_to_file(outfile, _formatted_time_start);
+      write_to_file(outfile, _time_end);
+      write_to_file(outfile, _formatted_time_end);
+      outfile.close();
+    }
+    void retrieve(string filename)
+    {
+      ifstream infile(filename.c_str());
+      read_from_file(infile, _message);
+      read_from_file(infile, _name);
+      read_from_file(infile, _time);
+      read_from_file(infile, _formatted_time);
+      read_from_file(infile, _time_elapsed);
+      read_from_file(infile, _formatted_time_elapsed);
+      read_from_file(infile, _time_start);
+      read_from_file(infile, _formatted_time_start);
+      read_from_file(infile, _time_end);
+      read_from_file(infile, _formatted_time_end);
+      infile.close();
+    }
 	};
 
 	struct Coverage
@@ -69,30 +101,37 @@ namespace breseq
 	struct cReadFile
 	{
 	public:
-		string m_fastq_file_name;
-		string m_base_name;
-		uint32_t m_paired_end_group; // indicated what file contains paired reads
-		uint32_t m_error_group; // indicates what other read files have the same error rates
-		uint32_t m_id; // index used to refer to this fastq file in BAM
+		string m_original_file_name;  // the original name provided at the command line
+		string m_base_name;           // the original name minus path and .fastq ending (if any)
+    string m_converted_file_name; // the name of the converted FASTQ file (if it exists)
+		uint32_t m_paired_end_group;  // indicates what file contains paired reads
+		uint32_t m_error_group;       // indicates what other read files have the same error rates
+		uint32_t m_id;                // index used to refer to this fastq file in BAM
+    
+    string file_name()
+    {
+      if (m_converted_file_name != "") return m_converted_file_name; 
+      return m_original_file_name;
+    }
+    
+    string base_name() { return m_base_name; }
 	};
 
-	typedef vector<vector<cReadFile> > cReadFileGroup;
+	typedef vector<vector<cReadFile> > cReadFileGroup; // unused? delete? @JEB
 
 	class cReadFiles : public vector<cReadFile>
 	{
 	public:
+    map<string,string> read_file_to_fastq_file_name_map;
+    map<string,string> read_file_to_converted_fastq_file_name_map;
 
-		cReadFiles()
-		{
-		};
-		cReadFiles(const vector<string>& read_file_names);
-
-		~cReadFiles()
-		{
-		};
+    
+		cReadFiles() { };
+		cReadFiles(const vector<string>& read_file_names) { Init(read_file_names); };
+		~cReadFiles() { };
 
 		void Init(const vector<string>& read_file_names);
-
+    string base_name_to_read_file_name(const string& base_name);
 	};
 
 	struct Settings
@@ -100,12 +139,22 @@ namespace breseq
 	public:
 		// Set up defaults here
 		Settings(const string& _base_output_path = "");
-
-		// Fields
+    
+    // Constructor for default action
+    Settings(int argc, char* argv[]);
+    
+    //////////////////////////////////
+    ////    Settings Variables    ////
+    //////////////////////////////////
+    
+		// Paths populated from location of executable
+		string bin_path;                  // absolute path to where this binary resides
+    string lib_path;                  // path to where R scripts and images reside
 		map<string, string> installed;
-		string bin_path;
+    
+		// Paths populated relative to output_path
+    string output_path;               // command line option
 
-		// Path to files....
 		string sequence_conversion_path;
 		string reference_trim_file_name;
 
@@ -134,7 +183,6 @@ namespace breseq
 
 		string unmatched_read_file_name;
 
-		string output_path;
 		string local_evidence_path;
 		string evidence_path;
 		string evidence_genome_diff_file_name;
@@ -205,7 +253,6 @@ namespace breseq
 		uint32_t max_rejected_junctions_to_show;
 		string byline;
 		string website;
-		string lib_path;
 		bool strict_polymorphism_prediction;
 		uint32_t maximum_read_mismatches;
 
@@ -300,12 +347,17 @@ namespace breseq
 		uint32_t total_reference_sequence_length;
 		uint32_t max_read_length;
 
-		cReadFiles read_structures;
-		vector<string> read_files;
+    bool junction_prediction; // whether to perform junction prediction step
+    
+		cReadFiles read_files;
+		vector<string> read_file_names;
+    vector<string> reference_file_names;
 		map<string,string> read_file_to_converted_fastq_file;
 
 		map<string, Coverage> unique_coverage;
 
+    map<string,string> done_key_messages;
+    
 		//!@GRC Setting options needed for HTML outputs
 		string print_run_name; //!< need to set default to "unnamed"
 		bool hide_circular_genome_junctions;
@@ -314,18 +366,17 @@ namespace breseq
 		bool no_evidence;
 		bool shade_frequencies;
 		bool no_header;
-                inline string html_path(string input) {return "not implemented";}
-                bool verbose;
+    inline string html_path(string input) {return "not implemented";}
+    bool verbose;
 
 		vector<ExecutionTime> execution_times;
-                string time2string(const time_t* timer, const bool& relative);
+    string time2string(const time_t* timer, const bool& relative);
 
-                //@GRC End of settings needed for HTML outputs
-
+    //@GRC End of settings needed for HTML outputs
 
 		// Utility function to substitute specific details into a generic file name
 
-		static string file_name(const string& file_name_key, const string& substitute = "", const string& with = "")
+		static string file_name(const string& file_name_key, const string& substitute, const string& with)
 		{
 			string s(file_name_key);
 
@@ -343,41 +394,53 @@ namespace breseq
 
 		// assumes things are in our path for now
 
-		string ctool(string tool_name) const
+		string ctool(string tool_name, bool allow_fail = false)
 		{
-			//                      my ($self, $tool_name, $allow_fail) = @_;
-			//
-			//                      if (!$self->{installed}->{$tool_name})
-			//                      {
-			//                              if ($allow_fail)
-			//                              {
-			//                                      $self->warn("Executable \"$tool_name\" not found in breseq bin path\"$self->{bin_path}\".");
-			//                                      return undef; # couldn't find it, but it's not an error.
-			//                              }
-			//                              else
-			//                              {
-			//                                      $self->throw("Executable \"$tool_name\" not found in breseq bin path\"$self->{bin_path}\".");
-			//                              }
-			//                      }
-
+      if (this->installed[tool_name].size() == 0)
+      {
+        cerr << "Executable '" << tool_name << "' not found in breseq bin path '" << this->bin_path << "'." << endl;
+        if (!allow_fail) exit(-1);
+        return "";
+      }
 			return tool_name;
 		}
 
-		string create_path(string path_key)
+		static string create_path(string path)
 		{
-			string path = file_name(path_key);
-			//(-e $path) or Breseq::File::Path::make_path($path) or $self->throw("Could not create path \'$path\'.");
+      int status = mkdir(path.c_str(), S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH);
+      
+      if (status && (errno != EEXIST))
+      {
+        cerr << "Could not create path: '" << path << "'" << endl;
+        exit(-1);
+      }
+      
 			return path;
 		}
 
-		string remove_path(string path_key)
+		static string remove_path(string path)
 		{
-			string path = file_name(path_key);
-			//(-e $path) and Breseq::File::Path::remove_tree($path) or $self->throw("Could not remove path \'$path\'.");
+      assert(false);
+      remove(path.c_str()); // @JEB this will probably not work.
 			return path;
 		}
+    
+    void record_start_time(const string& message)
+    {
+      ExecutionTime ex_time;
+      time_t this_time = time(NULL);
+      ex_time._time_start = this_time;
+      ex_time._formatted_time_start = ctime(&this_time);
+      ex_time._time_end = 0;
+      ex_time._formatted_time_end = "";
+      ex_time._time_elapsed = 0;
+      ex_time._formatted_time_elapsed = "";
+      ex_time._message = message;
 
-		void record_end_time(string message)
+      this->execution_times.push_back(ex_time);
+    }
+
+		void record_end_time(const string& message)
 		{
 			uint32_t i = 0;
 			while (i < this->execution_times.size())
@@ -412,20 +475,10 @@ namespace breseq
 			}
 		}
 
-		//transparent to whether read trimming is on
-
-		string read_file_to_fastq_file_name(string read_file)
+		string base_name_to_read_file_name(string base_name)
 		{
-			/*
-			if (defined $self->{read_file_to_converted_fastq_file}->{$read_file}) {
-				return $self->{read_file_to_converted_fastq_file}->{$read_file};
-			}
-			$self->throw if (!defined $self->{read_file_to_fastq_file}->{$read_file});
-			return $self->{read_file_to_fastq_file}->{$read_file};
-			 */
-      return "";
+      return this->read_files.base_name_to_read_file_name(base_name);
 		}
-
 
 		bool do_step(string done_key, string message);
 		void done_step(string done_key);
@@ -444,9 +497,8 @@ namespace breseq
 		uint32_t min_quality_score;
 		uint32_t max_quality_score;
 		uint32_t num_bases;
-		string quality_format;
-		string qual_format;
 		string original_qual_format;
+    string quality_format;
 		string converted_fastq_name;
 	};
 
@@ -544,25 +596,33 @@ namespace breseq
 			uint32_t num_bases;
 			map<string, string> converted_fastq_name;
 			map<string, AnalyzeFastq> reads;
-
 			uint32_t total_reference_sequence_length;
 			uint32_t max_read_length;
-			cReferenceSequences* reference_sequences;
 
 			void store(string filename)
 			{
 				ofstream outfile(filename.c_str());
-				write_to_file(outfile, *this);
+				write_to_file(outfile, avg_read_length);
+        write_to_file(outfile, max_qual);
+				write_to_file(outfile, num_reads);
+				write_to_file(outfile, num_bases);
 				write_to_file(outfile, converted_fastq_name);
 				write_to_file(outfile, reads);
+        write_to_file(outfile, total_reference_sequence_length);
+				write_to_file(outfile, max_read_length);
 				outfile.close();
 			}
 			void retrieve(string filename)
 			{
 				ifstream infile(filename.c_str());
-				read_from_file(infile, *this);
+        read_from_file(infile, avg_read_length);
+        read_from_file(infile, max_qual);
+				read_from_file(infile, num_reads);
+				read_from_file(infile, num_bases);
 				read_from_file(infile, converted_fastq_name);
 				read_from_file(infile, reads);
+        read_from_file(infile, total_reference_sequence_length);
+				read_from_file(infile, max_read_length);
 				infile.close();
 			}
 
@@ -607,7 +667,7 @@ namespace breseq
 	};
 
 
-	string capture_system(string command);
+	string system_capture_output(string command);
 
 } // breseq namespace
 

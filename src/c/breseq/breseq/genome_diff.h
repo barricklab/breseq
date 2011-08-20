@@ -352,8 +352,8 @@ struct diff_entry::sort_by_scores : public binary_function
         continue;
       else 
         return from_string<uint32_t>((*a)[key]) > from_string<uint32_t>((*b)[key]);
-      
     }
+    return false;
   }
   
   protected:
