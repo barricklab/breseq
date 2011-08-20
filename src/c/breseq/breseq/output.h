@@ -13,7 +13,6 @@ namespace breseq
 struct Options {
   bool repeat_header;
 };
-struct Interval{};
 
 /*-----------------------------------------------------------------------------
  *  Diff_Entry Keywords 
@@ -64,10 +63,14 @@ extern const char* SIDE_2_SEQ_ID;
 extern const char* SIDE_2_STRAND;
 extern const char* SIDE_1_JC;
 extern const char* SIDE_2_JC;
+
+
+
 namespace output
 {
-typedef vector<counted_ptr<diff_entry> >  entry_vector_t;
+typedef vector<counted_ptr<diff_entry> > entry_vector_t;
 typedef list<counted_ptr<diff_entry> > entry_list_t;
+
 /*-----------------------------------------------------------------------------
  *  HTML Attribute Keywords
  *-----------------------------------------------------------------------------*/
@@ -125,9 +128,24 @@ extern const char* ALIGN_LEFT;
   //! Adds commas to large numbers (ex 1000 to 1,000)
   string commify(const string& input);
 
+  //Specific to Breseq HTML Files
+  string html_header(const string& title, const Settings& settings);
+  string breseq_header_string(Settings settings);
 
 /*-----------------------------------------------------------------------------
- * HTML TABLES
+ * HTML FILES 
+ *-----------------------------------------------------------------------------*/
+void html_index(string file_name, Settings settings, Summary summary,
+                cReferenceSequences ref_seq_info, genome_diff gd);
+void html_marginal_predictions(string file_name, Settings settings,Summary summary,
+                               cReferenceSequences ref_seq_info, genome_diff gd);
+void html_statistics(const string& file_name, Settings settings, Summary summary, cReferenceSequences ref_seq_info);
+void html_compare(Settings settings,const string &file_name, const string &title, 
+                  genome_diff gd, bool one_ref_seq, vector<string> gd_name_list_ref, Options options); 
+void html_compare_polymorphisms(Settings settings, string file_name, string title,
+                                vector <string> list_ref);
+/*-----------------------------------------------------------------------------
+ * HTML TABLES STRINGS
  *-----------------------------------------------------------------------------*/
 struct Html_Mutation_Table_String : public string
 {
@@ -137,18 +155,18 @@ struct Html_Mutation_Table_String : public string
                                Settings settings,
                                genome_diff gd,
                                genome_diff::entry_vector_t list_ref,
-  			       vector<string> gd_name_list_ref,
+  			                       vector<string> gd_name_list_ref,
                                Options options,
                                bool legend_row = false, 
                                bool one_ref_seq = false,
-  			       string relative_link = "" 
+  			                       string relative_link = "" 
                                );
     
     Html_Mutation_Table_String(
                                Settings settings,
                                genome_diff gd,
                                genome_diff::entry_vector_t list_ref,
-  			       string relative_path = "", 
+  			                       string relative_path = "", 
                                bool legend_row = false, 
                                bool one_ref_seq = false
                                );
@@ -178,7 +196,7 @@ struct Html_Mutation_Table_String : public string
     string relative_link;
 };
 
-//TODO Below not fully complete
+
 string html_missing_coverage_table_string
   (entry_list_t list_ref, 
    bool show_reject_reason,
@@ -196,24 +214,25 @@ string html_new_junction_table_string
    bool show_reject_reason,
    string title= "New junction evidence",
    string relative_link = "");
+
+string html_genome_diff_item_table_string(Settings settings, genome_diff gd, 
+                                        entry_list_t list_ref);
 /*-----------------------------------------------------------------------------
- *  Formatted_Mutation_Annotation
+ * Helper Functions For Tables 
  *-----------------------------------------------------------------------------*/
 string formatted_mutation_annotation(diff_entry mut);
 string to_underline_red_codon(diff_entry mut,const string& codon_key);
+string decode_reject_reason(const string & reject);
 
 /*-----------------------------------------------------------------------------
  *  Create_Evidence_Files
  *-----------------------------------------------------------------------------*/
 struct Evidence_Files
 {
-  struct Evidence_Item
+  struct Evidence_Item:diff_entry
   {
-    map<string,string> fields;
   	diff_entry parent_item;
   	diff_entry item;
-  	string operator[](const string key){return fields[key];}
-  	bool entry_exists(const string in){return (fields.count(in) > 0);}
   };
 
   struct Type_Not_Equal
@@ -234,63 +253,13 @@ struct Evidence_Files
     string file_name(Evidence_Item& evidence_item);
     void html_evidence_file(Settings settings, genome_diff gd, Evidence_Item item);
 
-
 };
 
 /*-----------------------------------------------------------------------------
- *  
- *-----------------------------------------------------------------------------*/
-string html_header(const string& title);
-string decode_reject_reason(const string & reject);
-// sub html_statistics
-//         my (string file_name, Settings settings, $summary, $ref_seq_info) = @_;
-void html_statistics(const string& file_name, Settings settings, Summary summary, cReferenceSequences ref_seq_info);
-/*-----------------------------------------------------------------------------
- *  FUNCTIONS BELOW HERE STILL NEED FURTHER PORTING
+ *  Output Utilities
  *-----------------------------------------------------------------------------*/
 
 
-
-
-/// sub html_index
-///         my (string file_name, Settings settings, Summary summary, $ref_seq_info, $gd) = @_;
-void html_index(string file_name, Settings settings, Summary summary,
-                cReferenceSequences ref_seq_info, genome_diff gd);
-// sub html_marginal_predictions
-//         my (string file_name, Settings settings, $summary, $ref_seq_info, $gd) = @_;
-void html_marginal_predictions(string file_name, Settings settings,Summary summary,
-                               cReferenceSequences ref_seq_info, genome_diff gd);
-// sub html_header
-//         my ($title) = @_;
-// sub html_footer
-// sub html_compare
-//         my (Settings settings, string file_name, $title, $gd, $one_ref_seq, $gd_name_list_ref, $options) = @_;
-void html_compare(Settings settings,const string &file_name, const string &title, 
-                  genome_diff gd, bool one_ref_seq, vector<string> gd_name_list_ref, Options options); 
-
-// sub html_compare_polymorphisms
-//         my (Settings settings, string file_name, $title, $list_ref) = @_;
-void html_compare_polymorphisms(Settings settings, string file_name, string title,
-                                vector <string> list_ref);
-
-
-/// sub breseq_header_string
-///         my (Settings settings) = @_;
-string breseq_header_string(Settings settings);
-
-// sub html_genome_diff_item_table_string
-//         my (Settings settings, $gd, $list_ref) = @_;
-string html_genome_diff_item_table_string(Settings settings, genome_diff gd, 
-                                        entry_list_t list_ref);
-// sub html_evidence_file_name
-//         my ($interval) = @_;
-
-// sub html_evidence_file
-//         my (Settings settings, $gd, $interval) = @_;
-void  html_evidence_file(Settings settings, genome_diff gd, Interval interval);
-// sub decode_reject_reason
-//         my ($reject) = @_;
-//void create_evidence_files(Settings& settings, genome_diff& gd);
 // sub save_text_deletion_file
 //         my ($deletion_file_name, $deletions_ref) = @_;
 void save_text_deletion_file(string deletion_file_name, breseq::genome_diff::entry_list_t& deletions_ref);
