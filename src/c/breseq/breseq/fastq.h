@@ -70,6 +70,11 @@ namespace breseq {
     bool      m_needs_conversion;
     
   public:
+    // keep track of duplicate read names one after another and append r# to later ones
+    bool m_check_for_repeated_read_names;
+    string m_last_read_name;
+    uint32_t m_repeated_read_name_count;
+    
   
     cFastqFile();
     cFastqFile(const string &file_name, ios_base::openmode mode); 

@@ -71,8 +71,18 @@ int do_analyze_fastq(int argc, char* argv[]) {
   
 	try {
     
-    analyze_fastq(options["input"], options["convert"]);
-        
+    AnalyzeFastq af = analyze_fastq(options["input"], options["convert"]);
+    
+    // Output information to stdout
+    cout << "max_read_length "       << af.max_read_length         << endl;
+    cout << "num_reads "             << af.num_reads               << endl;
+    cout << "min_quality_score "     << (int)af.min_quality_score  << endl;
+    cout << "max_quality_score "     << (int)af.max_quality_score  << endl;
+    cout << "num_bases "             << af.num_bases               << endl;
+    cout << "original_qual_format "  << af.original_qual_format    << endl;
+    cout << "qual_format "           << af.quality_format          << endl;
+    cout << "converted_fastq_name "  << af.converted_fastq_name    << endl;
+    
   } catch(...) {
 		// failed; 
 		return -1;

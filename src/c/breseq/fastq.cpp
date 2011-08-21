@@ -46,6 +46,7 @@ namespace breseq {
     
     // Process the input file, one sequence at a time
     cFastqFile input_fastq_file(file_name.c_str(), fstream::in);
+    input_fastq_file.m_check_for_repeated_read_names = true;
     assert(input_fastq_file.is_open());
 
     cFastqSequence on_sequence;
@@ -154,18 +155,8 @@ namespace breseq {
     //cerr << "min_quality_score "     << (int)min_quality_score  << endl;
     //cerr << "max_quality_score "     << (int)max_quality_score  << endl;
     
-    // Output information to stdout
-    /* Remove post-perl --->*/
-    cout << "max_read_length "       << max_read_length         << endl;
-    cout << "num_reads "             << num_reads               << endl;
-    cout << "min_quality_score "     << (int)min_quality_score  << endl;
-    cout << "max_quality_score "     << (int)max_quality_score  << endl;
-    cout << "num_bases "             << num_bases               << endl;
-    cout << "original_qual_format "  << quality_format          << endl;
-    cout << "qual_format "           << "SANGER"                << endl;
-    cout << "converted_fastq_name "  << converted_fastq_name    << endl;
-	AnalyzeFastq retval(max_read_length, num_reads, min_quality_score, max_quality_score, num_bases, quality_format, "SANGER", converted_fastq_name);
-	return retval;
+    AnalyzeFastq retval(max_read_length, num_reads, min_quality_score, max_quality_score, num_bases, quality_format, "SANGER", converted_fastq_name);
+    return retval;
   }
 
   // constructor
@@ -239,13 +230,15 @@ namespace breseq {
   
   //constructor
   cFastqFile::cFastqFile() :
-    fstream(), m_current_line(0), m_file_name(""), m_needs_conversion(false)
+    fstream(), m_current_line(0), m_file_name(""), m_needs_conversion(false),
+    m_check_for_repeated_read_names(false), m_last_read_name(""), m_repeated_read_name_count(0)
   {
   }
  
   
   cFastqFile::cFastqFile(const std::string &file_name, std::ios_base::openmode mode) :
-    fstream(file_name.c_str(), mode), m_current_line(0), m_file_name(file_name), m_needs_conversion(false)
+    fstream(file_name.c_str(), mode), m_current_line(0), m_file_name(file_name), m_needs_conversion(false),
+    m_check_for_repeated_read_names(false), m_last_read_name(""), m_repeated_read_name_count(0)
   { 
     assert(!(*this).fail());
   }
@@ -301,6 +294,24 @@ namespace breseq {
               m_needs_conversion = true;
             }
           }
+          
+          // some SRA files have identical read names, we don't like this...
+          if (m_check_for_repeated_read_names)
+          {
+            string original_read_name = sequence.m_name;
+            if (m_last_read_name == sequence.m_name)
+            {
+              m_repeated_read_name_count++;
+              sequence.m_name += "r" + to_string(m_repeated_read_name_count);
+              m_needs_conversion = true;
+            }
+            else
+            {
+              m_repeated_read_name_count = 0;
+            }
+            m_last_read_name = original_read_name;
+          }
+          
           break;
           
         case 1:
