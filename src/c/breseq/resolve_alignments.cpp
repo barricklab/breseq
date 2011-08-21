@@ -30,18 +30,18 @@ namespace breseq {
     
   // Compares matches to candidate junctions with matches to original genome
   void resolve_alignments(
-                          const Settings& settings,
+                          Settings& settings,
                           Summary& summary,
                           cReferenceSequences& ref_seq_info,
                           bool junction_prediction,
-                          const cReadFiles &read_files,
+                          cReadFiles &read_files,
                           const uint32_t max_read_length,
                           const uint32_t alignment_read_limit
                           ) 
   {
 	bool verbose = false;
     
-  // Load the trims
+  // Load the trims @JEB could speed up by only loading this once in main
   SequenceTrimsList trims_list;
   read_trims(trims_list, ref_seq_info, settings.reference_trim_file_name);
   
@@ -83,13 +83,6 @@ namespace breseq {
   if (junction_prediction)
 	{
     LoadFeatureIndexedFastaFile(junction_ref_seq_info, "", settings.candidate_junction_fasta_file_name);
-
-		//## Load header once at the beginning (but have to peek at TAM file to do this).
-		//      my @read_structures = $settings->read_structures;
-		//      my $read_file = $read_structures[0]->{base_name};
-		//      my $junction_sam_file_name = $settings->file_name('candidate_junction_sam_file_name', {'#'=>$read_file});
-		//      $junction_header = $junction_tam->header_read2($junction_faidx_file_name) or die("Error reading reference fasta index file: $junction_faidx_file_name");
-
 		string junction_sam_file_name = settings.file_name(settings.candidate_junction_sam_file_name, "#", read_files[0].m_base_name);
 		tam_file junction_tam(junction_sam_file_name, settings.candidate_junction_fasta_file_name, ios::in);
 
@@ -97,9 +90,7 @@ namespace breseq {
 		//## so that we only have to split the names once
 		for (int i = 0; i < junction_tam.bam_header->n_targets; i++)
 		{
-			// $junction_info->[$i] = Breseq::Shared::junction_name_split($junction_ids->[$i]);
-			JunctionInfo ji = junction_name_split(
-					junction_tam.bam_header->target_name[i]);
+			JunctionInfo ji = junction_name_split(junction_tam.bam_header->target_name[i]);
 			junction_info_list.push_back(ji);
 		}
 
@@ -109,7 +100,6 @@ namespace breseq {
 	//##	Output files
 	//####
 
-	// our $gd = GenomeDiff->new();
 	genome_diff gd;
     
   tam_file resolved_reference_tam(settings.resolved_reference_sam_file_name, settings.reference_fasta_file_name, ios::out);
@@ -124,7 +114,9 @@ namespace breseq {
 
 	for (uint32_t fastq_file_index = 0; fastq_file_index < read_files.size(); fastq_file_index++)
 	{
-		const cReadFile& rf = read_files[fastq_file_index];
+    const cReadFile& rf = read_files[fastq_file_index];
+    string fastq_file_name = read_files.base_name_to_read_file_name(rf.m_base_name);
+    
 		cerr << "  READ FILE:" << rf.m_base_name << endl;
 
 		map<string,int32_t> summary_info = make_map<string,int32_t>("unmatched_reads", 0);
@@ -132,7 +124,7 @@ namespace breseq {
 		// Traverse the original fastq files to keep track of order
 		// b/c some matches may exist in only one or the other file
     
-		cFastqFile in_fastq(rf.m_original_file_name, ios::in);
+		cFastqFile in_fastq(fastq_file_name, ios::in);
 
     string this_unmatched_file_name = settings.data_path + "/unmatched."
         + rf.m_base_name + ".fastq";
@@ -152,7 +144,7 @@ namespace breseq {
 
 		alignment_list junction_alignments;
 
-		//#proceed through all of the alignments
+		//proceed through all of the alignments
 		if (junction_prediction)
 			junction_tam->read_alignments(junction_alignments, false);
 

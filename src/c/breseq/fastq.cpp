@@ -164,7 +164,7 @@ namespace breseq {
     cout << "original_qual_format "  << quality_format          << endl;
     cout << "qual_format "           << "SANGER"                << endl;
     cout << "converted_fastq_name "  << converted_fastq_name    << endl;
-	AnalyzeFastq retval = { max_read_length, num_reads, min_quality_score, max_quality_score, num_bases, quality_format, "SANGER", converted_fastq_name };
+	AnalyzeFastq retval(max_read_length, num_reads, min_quality_score, max_quality_score, num_bases, quality_format, "SANGER", converted_fastq_name);
 	return retval;
   }
 

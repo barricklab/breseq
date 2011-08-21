@@ -44,10 +44,21 @@ namespace breseq
 		{
 			uint32_t size;
 			infile.read(reinterpret_cast<char*>(&size), sizeof(uint32_t));
-			char input[size];
+			char input[size+1];
 			infile.read(input, size * sizeof(char));
+      input[size] = '\0'; // need to null terminate
 			output = string(input);
 		}
+    
+    static void write_to_file(ofstream& outfile, Storable& s)
+		{
+      s.serialize(outfile);
+		}
+		static void read_from_file(ifstream& infile, Storable& s)
+		{
+      s.deserialize(infile);
+		}
+    
 		template<typename T> static void write_to_file(ofstream& outfile, T& input)
 		{
 			outfile.write(reinterpret_cast<char*>(&input), sizeof(T));
@@ -82,22 +93,73 @@ namespace breseq
 
 	  public:
 
-		virtual void store(string filename) = 0;
+    // classes that inherit from this must define how to write and read themselves
+    virtual void serialize(ofstream& f) = 0;
+    virtual void deserialize(ifstream& f) = 0;
+    
+    void store(string filename)
+    {
+      ofstream outfile(filename.c_str());
+      serialize(outfile);
+      outfile.close();    
+    }
+    
+    void retrieve(string filename)
+    {
+      ifstream infile(filename.c_str());
+      deserialize(infile);
+      infile.close();
+    }
+
+    // static convenience functions to store/retrieve maps
 		template<typename T, typename U> static void store(map<T,U>& input, string filename)
 		{
 			ofstream outfile(filename.c_str());
 			write_to_file(outfile, input);
 			outfile.close();
 		}
-		virtual void retrieve(string filename) = 0;
 		template<typename T, typename U> static void retrieve(map<T,U>& output, string filename)
 		{
 			ifstream infile(filename.c_str());
 			read_from_file(infile, output);
 			infile.close();
 		}
+    
+
 
 	}; // class Storable
+
+  
+  template <typename T,typename U> class storable_map : public map<T,U>, public Storable 
+  {
+  public: 
+    void serialize(ofstream& outfile)
+		{
+			uint32_t elements = map<T,U>::size();
+			write_to_file(outfile, elements);
+			for (typename map<T,U>::iterator it = map<T,U>::begin(); it != map<T,U>::end(); it++)
+			{
+				T t = it->first;
+				U& u = it->second;
+				write_to_file(outfile, t);
+				u.serialize(outfile);
+			}
+		}
+		void deserialize(ifstream& infile)
+		{
+			uint32_t size;
+			read_from_file(infile, size);
+			for (uint32_t i = 0; i < size; i++)
+			{
+				T t; read_from_file(infile, t);
+				U u;
+        u.deserialize(infile);
+				map<T,U>::insert(pair<T,U>(t,u));
+			}
+		}
+    
+  };
+  
 
 } // breseq namespace
 

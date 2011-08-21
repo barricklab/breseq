@@ -161,7 +161,7 @@ void error_count_pileup::pileup_callback(const pileup& p) {
 void error_count_pileup::print_coverage() {
 	using namespace std;
 	for(size_t i=0; i<_seq_info.size(); ++i) {
-		string filename(m_output_dir + m_bam->header->target_name[i] + ".unique_only_coverage_distribution.tab");
+		string filename(m_output_dir + "/" + m_bam->header->target_name[i] + ".unique_only_coverage_distribution.tab");
 		ofstream out(filename.c_str());					
 		
 		out << "coverage\tn" << endl;
@@ -183,14 +183,14 @@ void error_count_pileup::print_error(const vector<string>& readfiles) {
     // and we don't want the additional processing.
     if (!m_error_table.m_per_position) 
     {
-      output_file = m_output_dir + "error_counts.tab"; 
+      output_file = m_output_dir + "/error_counts.tab"; 
       m_error_table.write_count_table(output_file);
       
-      output_file = m_output_dir + "error_rates.tab"; 
+      output_file = m_output_dir + "/error_rates.tab"; 
       m_error_table.counts_to_log10_prob();
       m_error_table.write_log10_prob_table(output_file);
   
-      output_file = m_output_dir + "base_qual_error_prob.#.tab"; 
+      output_file = m_output_dir + "/base_qual_error_prob.#.tab"; 
       m_error_table.write_base_qual_only_prob_table(output_file, readfiles);
       return;
     }

@@ -3,7 +3,7 @@
 <plist version="1.0">
 <dict>
 	<key>currentDocument</key>
-	<string>Breseq/lib/Breseq/CoverageDistribution.pm</string>
+	<string>Breseq/bin/breseq</string>
 	<key>documents</key>
 	<array>
 		<dict>
@@ -34,6 +34,20 @@
 			<integer>0</integer>
 			<key>firstVisibleLine</key>
 			<integer>16</integer>
+		</dict>
+		<key>Breseq/LICENSE</key>
+		<dict>
+			<key>caret</key>
+			<dict>
+				<key>column</key>
+				<integer>0</integer>
+				<key>line</key>
+				<integer>7</integer>
+			</dict>
+			<key>firstVisibleColumn</key>
+			<integer>0</integer>
+			<key>firstVisibleLine</key>
+			<integer>0</integer>
 		</dict>
 		<key>Breseq/MANIFEST</key>
 		<dict>
@@ -142,14 +156,14 @@
 			<key>caret</key>
 			<dict>
 				<key>column</key>
-				<integer>45</integer>
+				<integer>33</integer>
 				<key>line</key>
-				<integer>857</integer>
+				<integer>286</integer>
 			</dict>
 			<key>firstVisibleColumn</key>
 			<integer>0</integer>
 			<key>firstVisibleLine</key>
-			<integer>828</integer>
+			<integer>270</integer>
 		</dict>
 		<key>Breseq/bin/fastq_utils</key>
 		<dict>
@@ -328,30 +342,14 @@
 			<key>caret</key>
 			<dict>
 				<key>column</key>
-				<integer>47</integer>
+				<integer>18</integer>
 				<key>line</key>
-				<integer>548</integer>
+				<integer>755</integer>
 			</dict>
-			<key>columnSelection</key>
-			<false/>
 			<key>firstVisibleColumn</key>
 			<integer>0</integer>
 			<key>firstVisibleLine</key>
-			<integer>532</integer>
-			<key>selectFrom</key>
-			<dict>
-				<key>column</key>
-				<integer>21</integer>
-				<key>line</key>
-				<integer>548</integer>
-			</dict>
-			<key>selectTo</key>
-			<dict>
-				<key>column</key>
-				<integer>54</integer>
-				<key>line</key>
-				<integer>548</integer>
-			</dict>
+			<integer>726</integer>
 		</dict>
 		<key>Breseq/lib/Breseq/Shared.pm</key>
 		<dict>
@@ -491,12 +489,13 @@
 		<string>Breseq/lib/Breseq/Fastq.pm</string>
 		<string>Breseq/lib/Breseq/plot_error_rate.r</string>
 		<string>Breseq/lib/Breseq/CoverageDistribution.pm</string>
+		<string>Breseq/LICENSE</string>
 		<string>Breseq/lib/Breseq/coverage_distribution.r</string>
 		<string>Breseq/MANIFEST</string>
 	</array>
 	<key>showFileHierarchyDrawer</key>
 	<true/>
 	<key>windowFrame</key>
-	<string>{{348, 0}, {957, 743}}</string>
+	<string>{{1733, 125}, {957, 743}}</string>
 </dict>
 </plist>

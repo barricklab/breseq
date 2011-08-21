@@ -33,7 +33,7 @@ using namespace std;
 namespace breseq
 {
 
-	class ExecutionTime : Storable {
+	class ExecutionTime : public Storable {
   public:
 		string _message;
 		string _name;
@@ -46,50 +46,74 @@ namespace breseq
 		time_t _time_end;
 		string _formatted_time_end;
     
-    void store(string filename)
+    void serialize(ofstream& f)
     {
-      ofstream outfile(filename.c_str());
-      write_to_file(outfile, _message);
-      write_to_file(outfile, _name);
-      write_to_file(outfile, _time);
-      write_to_file(outfile, _formatted_time);
-      write_to_file(outfile, _time_elapsed);
-      write_to_file(outfile, _formatted_time_elapsed);
-      write_to_file(outfile, _time_start);
-      write_to_file(outfile, _formatted_time_start);
-      write_to_file(outfile, _time_end);
-      write_to_file(outfile, _formatted_time_end);
-      outfile.close();
+      write_to_file(f, _message);
+      write_to_file(f, _name);
+      write_to_file(f, _time);
+      write_to_file(f, _formatted_time);
+      write_to_file(f, _time_elapsed);
+      write_to_file(f, _formatted_time_elapsed);
+      write_to_file(f, _time_start);
+      write_to_file(f, _formatted_time_start);
+      write_to_file(f, _time_end);
+      write_to_file(f, _formatted_time_end);
     }
-    void retrieve(string filename)
+    void deserialize(ifstream& f)
     {
-      ifstream infile(filename.c_str());
-      read_from_file(infile, _message);
-      read_from_file(infile, _name);
-      read_from_file(infile, _time);
-      read_from_file(infile, _formatted_time);
-      read_from_file(infile, _time_elapsed);
-      read_from_file(infile, _formatted_time_elapsed);
-      read_from_file(infile, _time_start);
-      read_from_file(infile, _formatted_time_start);
-      read_from_file(infile, _time_end);
-      read_from_file(infile, _formatted_time_end);
-      infile.close();
+      read_from_file(f, _message);
+      read_from_file(f, _name);
+      read_from_file(f, _time);
+      read_from_file(f, _formatted_time);
+      read_from_file(f, _time_elapsed);
+      read_from_file(f, _formatted_time_elapsed);
+      read_from_file(f, _time_start);
+      read_from_file(f, _formatted_time_start);
+      read_from_file(f, _time_end);
+      read_from_file(f, _formatted_time_end);
     }
 	};
 
-	struct Coverage
+	class Coverage : public Storable
 	{
+  public:
 		double junction_accept_score_cutoff;
 		double deletion_coverage_propagation_cutoff;
 		double junction_coverage_cutoff;
 		double junction_keep_score_cutoff;
-		string nbinom_size_parameter;
-		string nbinom_mean_parameter;
-		string nbinom_prob_parameter;
-		uint32_t average;
-		string variance;
-		string dispersion;
+		double nbinom_size_parameter;
+		double nbinom_mean_parameter;
+		double nbinom_prob_parameter;
+		double average;
+		double variance;
+		double dispersion;
+    
+    void serialize(ofstream& f)
+    {
+      write_to_file(f, junction_accept_score_cutoff);
+      write_to_file(f, deletion_coverage_propagation_cutoff);
+      write_to_file(f, junction_coverage_cutoff);
+      write_to_file(f, junction_keep_score_cutoff);
+      write_to_file(f, nbinom_size_parameter);
+      write_to_file(f, nbinom_mean_parameter);
+      write_to_file(f, nbinom_prob_parameter);
+      write_to_file(f, average);
+      write_to_file(f, variance);
+      write_to_file(f, dispersion);
+    }
+    void deserialize(ifstream& f)
+    {
+      read_from_file(f, junction_accept_score_cutoff);
+      read_from_file(f, deletion_coverage_propagation_cutoff);
+      read_from_file(f, junction_coverage_cutoff);
+      read_from_file(f, junction_keep_score_cutoff);
+      read_from_file(f, nbinom_size_parameter);
+      read_from_file(f, nbinom_mean_parameter);
+      read_from_file(f, nbinom_prob_parameter);
+      read_from_file(f, average);
+      read_from_file(f, variance);
+      read_from_file(f, dispersion);
+    }
 	};
 	
 	class cReferenceSequences;
@@ -107,6 +131,13 @@ namespace breseq
 		uint32_t m_paired_end_group;  // indicates what file contains paired reads
 		uint32_t m_error_group;       // indicates what other read files have the same error rates
 		uint32_t m_id;                // index used to refer to this fastq file in BAM
+    
+    cReadFile()
+    {
+      m_paired_end_group = UNDEFINED;
+      m_error_group = UNDEFINED;
+      m_id = UNDEFINED;
+    }
     
     string file_name()
     {
@@ -132,6 +163,16 @@ namespace breseq
 
 		void Init(const vector<string>& read_file_names);
     string base_name_to_read_file_name(const string& base_name);
+    vector<string> base_names()
+    {
+      vector<string> return_value;
+      for(vector<cReadFile>::iterator it=this->begin(); it!=this->end(); it++)
+      {
+        return_value.push_back(it->base_name());
+      }
+      return return_value;
+    }
+    
 	};
 
 	struct Settings
@@ -352,9 +393,8 @@ namespace breseq
 		cReadFiles read_files;
 		vector<string> read_file_names;
     vector<string> reference_file_names;
-		map<string,string> read_file_to_converted_fastq_file;
 
-		map<string, Coverage> unique_coverage;
+		storable_map<string, Coverage> unique_coverage;
 
     map<string,string> done_key_messages;
     
@@ -491,7 +531,8 @@ namespace breseq
 		void init_installed();
 	};
 
-	struct AnalyzeFastq {
+	class AnalyzeFastq : public Storable {
+  public:
 		uint32_t max_read_length;
 		uint32_t num_reads;
 		uint32_t min_quality_score;
@@ -500,13 +541,58 @@ namespace breseq
 		string original_qual_format;
     string quality_format;
 		string converted_fastq_name;
+    
+    AnalyzeFastq() {};
+    
+    AnalyzeFastq(
+                 uint32_t _max_read_length, 
+                 uint32_t _num_reads, 
+                 uint32_t _min_quality_score, 
+                 uint32_t _max_quality_score, 
+                 uint32_t _num_bases, 
+                 const string& _original_qual_format, 
+                 const string& _quality_format,
+                 const string& _converted_fastq_name
+                )
+    : max_read_length(_max_read_length)
+    , num_reads(_num_reads)
+    , min_quality_score(_min_quality_score)
+    , max_quality_score(_max_quality_score)
+    , num_bases(_num_bases)
+    , original_qual_format(_original_qual_format)
+    , quality_format(_quality_format)
+    , converted_fastq_name(_converted_fastq_name)
+    { }
+    
+    void serialize(ofstream& f)
+    {
+      write_to_file(f, max_read_length);
+      write_to_file(f, num_reads);
+      write_to_file(f, min_quality_score);
+      write_to_file(f, max_quality_score);
+      write_to_file(f, num_bases);
+      write_to_file(f, original_qual_format);
+      write_to_file(f, quality_format);
+      write_to_file(f, converted_fastq_name);
+    }
+    void deserialize(ifstream& f)
+    {
+      read_from_file(f, max_read_length);
+      read_from_file(f, num_reads);
+      read_from_file(f, min_quality_score);
+      read_from_file(f, max_quality_score);
+      read_from_file(f, num_bases);
+      read_from_file(f, original_qual_format);
+      read_from_file(f, quality_format);
+      read_from_file(f, converted_fastq_name);
+    }
 	};
 
-	struct Summary : Storable
+	struct Summary : public Storable
 	{
 	public:
 
-		struct AlignmentCorrection : Storable
+		struct AlignmentCorrection : public Storable
 		{
 			map<string, map<string, int32_t> > read_file;
 
@@ -518,35 +604,29 @@ namespace breseq
 				map<int32_t, int32_t> accepted_pos_hash_score_distribution;
 			} new_junctions;
 
-			void store(string filename)
+			void serialize(ofstream& f)
 			{
-				ofstream outfile(filename.c_str());
-				write_to_file(outfile, *this);
-				write_to_file(outfile, read_file);
-				write_to_file(outfile, new_junctions.observed_min_overlap_score_distribution);
-				write_to_file(outfile, new_junctions.accepted_min_overlap_score_distribution);
-				write_to_file(outfile, new_junctions.observed_pos_hash_score_distribution);
-				write_to_file(outfile, new_junctions.accepted_pos_hash_score_distribution);
-				outfile.close();
+				write_to_file(f, read_file);
+				write_to_file(f, new_junctions.observed_min_overlap_score_distribution);
+				write_to_file(f, new_junctions.accepted_min_overlap_score_distribution);
+				write_to_file(f, new_junctions.observed_pos_hash_score_distribution);
+				write_to_file(f, new_junctions.accepted_pos_hash_score_distribution);
 			}
-			void retrieve(string filename)
+			void deserialize(ifstream& f)
 			{
-				ifstream infile(filename.c_str());
-				read_from_file(infile, *this);
-				read_from_file(infile, read_file);
-				read_from_file(infile, new_junctions.observed_min_overlap_score_distribution);
-				read_from_file(infile, new_junctions.accepted_min_overlap_score_distribution);
-				read_from_file(infile, new_junctions.observed_pos_hash_score_distribution);
-				read_from_file(infile, new_junctions.accepted_pos_hash_score_distribution);
-				infile.close();
+				read_from_file(f, read_file);
+				read_from_file(f, new_junctions.observed_min_overlap_score_distribution);
+				read_from_file(f, new_junctions.accepted_min_overlap_score_distribution);
+				read_from_file(f, new_junctions.observed_pos_hash_score_distribution);
+				read_from_file(f, new_junctions.accepted_pos_hash_score_distribution);
 			}
 
 		} alignment_correction;
 
-		map<string, Coverage> preprocess_coverage;
-		map<string, Coverage> unique_coverage;
+		storable_map<string, Coverage> preprocess_coverage;
+		storable_map<string, Coverage> unique_coverage;
 
-		struct CandidateJunctionSummaryData : Storable
+		struct CandidateJunctionSummaryData : public Storable
 		{
 			struct Total
 			{
@@ -567,107 +647,80 @@ namespace breseq
 
 			map<string, map<string, int32_t> > read_file;
 
-			void store(string filename)
-			{
-				ofstream outfile(filename.c_str());
-				write_to_file(outfile, *this);
-				write_to_file(outfile, pos_hash_score_distribution);
-				write_to_file(outfile, min_overlap_score_distribution);
-				write_to_file(outfile, read_file);
-				outfile.close();
-			}
-			void retrieve(string filename)
-			{
-				ifstream infile(filename.c_str());
-				read_from_file(infile, *this);
-				read_from_file(infile, pos_hash_score_distribution);
-				read_from_file(infile, min_overlap_score_distribution);
-				read_from_file(infile, read_file);
-				infile.close();
-			}
+      void serialize(ofstream& f)
+      {
+        write_to_file(f, total);
+        write_to_file(f, accepted);
+				write_to_file(f, pos_hash_score_distribution);
+				write_to_file(f, min_overlap_score_distribution);
+				write_to_file(f, read_file);
+      }
+      
+      void deserialize(ifstream& f)
+      {
+        read_from_file(f, total);
+        read_from_file(f, accepted);
+				read_from_file(f, pos_hash_score_distribution);
+				read_from_file(f, min_overlap_score_distribution);
+				read_from_file(f, read_file);
+      }
 
 		} candidate_junction;
 
-		struct SequenceConversion : Storable
+		struct SequenceConversion : public Storable
 		{
 			float avg_read_length;
 			uint32_t max_qual;
 			uint32_t num_reads;
 			uint32_t num_bases;
 			map<string, string> converted_fastq_name;
-			map<string, AnalyzeFastq> reads;
+			storable_map<string, AnalyzeFastq> reads;
 			uint32_t total_reference_sequence_length;
 			uint32_t max_read_length;
 
-			void store(string filename)
+			void serialize(ofstream& f)
 			{
-				ofstream outfile(filename.c_str());
-				write_to_file(outfile, avg_read_length);
-        write_to_file(outfile, max_qual);
-				write_to_file(outfile, num_reads);
-				write_to_file(outfile, num_bases);
-				write_to_file(outfile, converted_fastq_name);
-				write_to_file(outfile, reads);
-        write_to_file(outfile, total_reference_sequence_length);
-				write_to_file(outfile, max_read_length);
-				outfile.close();
+				write_to_file(f, avg_read_length);
+        write_to_file(f, max_qual);
+				write_to_file(f, num_reads);
+				write_to_file(f, num_bases);
+				write_to_file(f, converted_fastq_name);
+        reads.serialize(f);
+        write_to_file(f, total_reference_sequence_length);
+				write_to_file(f, max_read_length);
 			}
-			void retrieve(string filename)
+			void deserialize(ifstream& f)
 			{
-				ifstream infile(filename.c_str());
-        read_from_file(infile, avg_read_length);
-        read_from_file(infile, max_qual);
-				read_from_file(infile, num_reads);
-				read_from_file(infile, num_bases);
-				read_from_file(infile, converted_fastq_name);
-				read_from_file(infile, reads);
-        read_from_file(infile, total_reference_sequence_length);
-				read_from_file(infile, max_read_length);
-				infile.close();
+        read_from_file(f, avg_read_length);
+        read_from_file(f, max_qual);
+				read_from_file(f, num_reads);
+				read_from_file(f, num_bases);
+				read_from_file(f, converted_fastq_name);
+        reads.deserialize(f);
+        read_from_file(f, total_reference_sequence_length);
+				read_from_file(f, max_read_length);
 			}
 
 		} sequence_conversion;
 
-		void store(string filename)
+		void serialize(ofstream& f)
 		{
-			ofstream outfile(filename.c_str());
-			write_to_file(outfile, *this);
-			write_to_file(outfile, alignment_correction.read_file);
-			write_to_file(outfile, alignment_correction.new_junctions.observed_min_overlap_score_distribution);
-			write_to_file(outfile, alignment_correction.new_junctions.accepted_min_overlap_score_distribution);
-			write_to_file(outfile, alignment_correction.new_junctions.observed_pos_hash_score_distribution);
-			write_to_file(outfile, alignment_correction.new_junctions.accepted_pos_hash_score_distribution);
-			write_to_file(outfile, preprocess_coverage);
-			write_to_file(outfile, unique_coverage);
-			write_to_file(outfile, candidate_junction.pos_hash_score_distribution);
-			write_to_file(outfile, candidate_junction.min_overlap_score_distribution);
-			write_to_file(outfile, candidate_junction.read_file);
-			write_to_file(outfile, sequence_conversion.converted_fastq_name);
-			write_to_file(outfile, sequence_conversion.reads);
-			outfile.close();
-		}
-		void retrieve(string filename)
+      sequence_conversion.serialize(f);
+      candidate_junction.serialize(f);
+      alignment_correction.serialize(f);
+      preprocess_coverage.serialize(f);
+      unique_coverage.serialize(f);
+    }
+    
+		void deserialize(ifstream& f)
 		{
-			ifstream infile(filename.c_str());
-			read_from_file(infile, *this);
-			read_from_file(infile, alignment_correction.read_file);
-			read_from_file(infile, alignment_correction.new_junctions.observed_min_overlap_score_distribution);
-			read_from_file(infile, alignment_correction.new_junctions.accepted_min_overlap_score_distribution);
-			read_from_file(infile, alignment_correction.new_junctions.observed_pos_hash_score_distribution);
-			read_from_file(infile, alignment_correction.new_junctions.accepted_pos_hash_score_distribution);
-			read_from_file(infile, preprocess_coverage);
-			read_from_file(infile, unique_coverage);
-			read_from_file(infile, candidate_junction.pos_hash_score_distribution);
-			read_from_file(infile, candidate_junction.min_overlap_score_distribution);
-			read_from_file(infile, candidate_junction.read_file);
-			read_from_file(infile, sequence_conversion.converted_fastq_name);
-			read_from_file(infile, sequence_conversion.reads);
-			infile.close();
+      sequence_conversion.deserialize(f);
+      candidate_junction.deserialize(f);
+      alignment_correction.deserialize(f);
+      preprocess_coverage.deserialize(f);
+      unique_coverage.deserialize(f);
 		}
 	};
-
-
-	string system_capture_output(string command);
 
 } // breseq namespace
 

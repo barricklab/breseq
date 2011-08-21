@@ -29,6 +29,11 @@
 		70367D2113EB232C000787CC /* coverage_distribution.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 70367D2013EB232C000787CC /* coverage_distribution.cpp */; };
 		70436D5813FF6DA8006448FB /* coverage_distribution.r in CopyFiles */ = {isa = PBXBuildFile; fileRef = 70436D5713FF6D7D006448FB /* coverage_distribution.r */; };
 		70436D5B13FF7675006448FB /* samtools in CopyFiles */ = {isa = PBXBuildFile; fileRef = 70436D5A13FF7675006448FB /* samtools */; };
+		70616DD41400A0E8006E7800 /* plot_error_rate.r in CopyFiles */ = {isa = PBXBuildFile; fileRef = 70616DD01400A0C0006E7800 /* plot_error_rate.r */; };
+		70616DD51400A0EA006E7800 /* polymorphism_statistics.r in CopyFiles */ = {isa = PBXBuildFile; fileRef = 70616DD11400A0C0006E7800 /* polymorphism_statistics.r */; };
+		70616DD61400A0EE006E7800 /* plot_coverage.r in CopyFiles */ = {isa = PBXBuildFile; fileRef = 70616DCF1400A0C0006E7800 /* plot_coverage.r */; };
+		70616DD71400A0F1006E7800 /* breseq_small.png in CopyFiles */ = {isa = PBXBuildFile; fileRef = 70616DD21400A0CE006E7800 /* breseq_small.png */; };
+		70616DD81400A0F5006E7800 /* breseq.png in CopyFiles */ = {isa = PBXBuildFile; fileRef = 70616DD31400A0CE006E7800 /* breseq.png */; };
 		707F211413478B6500ED2F3E /* candidate_junctions.h in Headers */ = {isa = PBXBuildFile; fileRef = 707F211313478B6500ED2F3E /* candidate_junctions.h */; };
 		707F211613478B7700ED2F3E /* candidate_junctions.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 707F211513478B7700ED2F3E /* candidate_junctions.cpp */; };
 		7084E56713CFD471005B57D1 /* mutation_predictor.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 7084E56613CFD471005B57D1 /* mutation_predictor.cpp */; };
@@ -125,7 +130,12 @@
 			dstPath = ../lib/perl5/Breseq;
 			dstSubfolderSpec = 16;
 			files = (
+				70616DD61400A0EE006E7800 /* plot_coverage.r in CopyFiles */,
 				70436D5813FF6DA8006448FB /* coverage_distribution.r in CopyFiles */,
+				70616DD41400A0E8006E7800 /* plot_error_rate.r in CopyFiles */,
+				70616DD51400A0EA006E7800 /* polymorphism_statistics.r in CopyFiles */,
+				70616DD71400A0F1006E7800 /* breseq_small.png in CopyFiles */,
+				70616DD81400A0F5006E7800 /* breseq.png in CopyFiles */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -151,6 +161,11 @@
 		70436D5713FF6D7D006448FB /* coverage_distribution.r */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.rez; name = coverage_distribution.r; path = breseq/coverage_distribution.r; sourceTree = "<group>"; };
 		70436D5A13FF7675006448FB /* samtools */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.executable"; name = samtools; path = "../../extern/samtools-0.1.15/samtools"; sourceTree = "<group>"; };
 		70436D5C14000744006448FB /* storable.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = storable.h; sourceTree = "<group>"; };
+		70616DCF1400A0C0006E7800 /* plot_coverage.r */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.rez; name = plot_coverage.r; path = breseq/plot_coverage.r; sourceTree = "<group>"; };
+		70616DD01400A0C0006E7800 /* plot_error_rate.r */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.rez; name = plot_error_rate.r; path = breseq/plot_error_rate.r; sourceTree = "<group>"; };
+		70616DD11400A0C0006E7800 /* polymorphism_statistics.r */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.rez; name = polymorphism_statistics.r; path = breseq/polymorphism_statistics.r; sourceTree = "<group>"; };
+		70616DD21400A0CE006E7800 /* breseq_small.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; name = breseq_small.png; path = breseq/breseq_small.png; sourceTree = "<group>"; };
+		70616DD31400A0CE006E7800 /* breseq.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; name = breseq.png; path = breseq/breseq.png; sourceTree = "<group>"; };
 		707F211313478B6500ED2F3E /* candidate_junctions.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; lineEnding = 0; path = candidate_junctions.h; sourceTree = "<group>"; xcLanguageSpecificationIdentifier = xcode.lang.objcpp; };
 		707F211513478B7700ED2F3E /* candidate_junctions.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; lineEnding = 0; name = candidate_junctions.cpp; path = breseq/candidate_junctions.cpp; sourceTree = SOURCE_ROOT; xcLanguageSpecificationIdentifier = xcode.lang.cpp; };
 		7084E56613CFD471005B57D1 /* mutation_predictor.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = mutation_predictor.cpp; path = breseq/mutation_predictor.cpp; sourceTree = SOURCE_ROOT; };
@@ -238,7 +253,7 @@
 				70A9AEA6135BA2DF006B6D79 /* config */,
 				4247E77F1268E175006A6D78 /* breseq */,
 				421ACF5F1170E06300C2EB85 /* lib */,
-				70436D5613FF6D5C006448FB /* scripts  */,
+				70436D5613FF6D5C006448FB /* copied  */,
 				421ACF301170DF1800C2EB85 /* Products */,
 			);
 			sourceTree = "<group>";
@@ -294,12 +309,17 @@
 			path = "breseq-1.0";
 			sourceTree = "<group>";
 		};
-		70436D5613FF6D5C006448FB /* scripts  */ = {
+		70436D5613FF6D5C006448FB /* copied  */ = {
 			isa = PBXGroup;
 			children = (
+				70616DCF1400A0C0006E7800 /* plot_coverage.r */,
+				70616DD01400A0C0006E7800 /* plot_error_rate.r */,
+				70616DD11400A0C0006E7800 /* polymorphism_statistics.r */,
 				70436D5713FF6D7D006448FB /* coverage_distribution.r */,
+				70616DD21400A0CE006E7800 /* breseq_small.png */,
+				70616DD31400A0CE006E7800 /* breseq.png */,
 			);
-			name = "scripts ";
+			name = "copied ";
 			sourceTree = "<group>";
 		};
 		7087747412BC1C06000F9B57 /* breseq */ = {
