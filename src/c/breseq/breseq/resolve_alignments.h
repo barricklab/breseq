@@ -81,11 +81,11 @@ namespace breseq {
 
 
 	void resolve_alignments(
-                          const Settings& settings,
+                          Settings& settings,
                           Summary& summary,
                           cReferenceSequences& ref_seq_info,
                           const bool junction_prediction,
-                          const cReadFiles &read_files,
+                          cReadFiles &read_files,
                           const uint32_t max_read_length,
                           const uint32_t alignment_read_limit
                           );

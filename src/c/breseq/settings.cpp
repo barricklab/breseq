@@ -239,6 +239,7 @@ namespace breseq
 		this->max_rejected_junctions_to_show = 20;
 		this->hide_circular_genome_junctions = 1;
     
+    this->smalt = false;
 
 		//@{this->execution_times} = ();
 	}
@@ -294,7 +295,7 @@ namespace breseq
 		if (this->base_output_path.size() > 0) this->reference_alignment_path = this->base_output_path + "/" + this->reference_alignment_path;
 		this->reference_hash_file_name = this->reference_alignment_path + "/reference";
 		this->reference_sam_file_name = this->reference_alignment_path + "/#.reference.sam";
-		this->reference_alignment_done_file_name = "this->reference_alignment_path/alignment.done";
+		this->reference_alignment_done_file_name = this->reference_alignment_path + "/alignment.done";
 
 		////// candidate junction //////
 		this->candidate_junction_path = "03_candidate_junctions";
@@ -303,7 +304,7 @@ namespace breseq
 		this->preprocess_junction_best_sam_file_name = this->candidate_junction_path + "/best.sam";
 		this->preprocess_junction_split_sam_file_name = this->candidate_junction_path + "/#.split.sam";
 		this->preprocess_junction_done_file_name = this->candidate_junction_path + "/preprocess_junction_alignment.done";
-
+    
 		this->coverage_junction_best_bam_unsorted_file_name = this->candidate_junction_path + "/best.unsorted.bam";
 		this->coverage_junction_best_bam_file_name = this->candidate_junction_path + "/best.bam";
 		this->coverage_junction_best_bam_prefix = this->candidate_junction_path + "/best";
@@ -353,9 +354,9 @@ namespace breseq
 		this->coverage_file_name = this->error_calibration_path + "/@.coverage.tab";
 		this->unique_only_coverage_distribution_file_name = this->error_calibration_path + "/@.unique_only_coverage_distribution.tab";
 		this->error_rates_summary_file_name = this->error_calibration_path + "/summary.bin";
-		this->error_rates_base_qual_error_prob_file_name = this->error_calibration_path + "/base_qual_error_prob.//.tab";
+		this->error_rates_base_qual_error_prob_file_name = this->error_calibration_path + "/base_qual_error_prob.#.tab";
 		this->plot_error_rates_r_script_file_name = this->lib_path + "/plot_error_rate.r";
-		this->plot_error_rates_fit_r_script_file_name = this->error_calibration_path + "/fit.//.r_script";
+		this->plot_error_rates_fit_r_script_file_name = this->error_calibration_path + "/fit.#.r_script";
 		this->plot_error_rates_r_script_log_file_name = this->error_calibration_path + "/#.plot_error_rate.log";
 
 		////// mutation identification //////
@@ -437,21 +438,21 @@ namespace breseq
     // @JEB this won't be necessary once C++ conversion is complete
 
 		string test_command = "which " + this->bin_path + "/cbreseq";
-		this->installed["cbreseq"] = system_capture_output(test_command);
+		this->installed["cbreseq"] = _system_capture_output(test_command, true);
 		
     test_command = "which " + this->bin_path + "/cbam2aln";
-		this->installed["cbam2aln"] = system_capture_output(test_command);
+		this->installed["cbam2aln"] = _system_capture_output(test_command, true);
 
     test_command = "which " + this->bin_path + "/samtools";
-		this->installed["samtools"] = system_capture_output(test_command);
+		this->installed["samtools"] = _system_capture_output(test_command, true);
     
 		// search first for ssaha2 in the same location as breseq    
     test_command = "which " + this->bin_path + "/ssaha2";
-		this->installed["SSAHA2"] = system_capture_output(test_command);
+		this->installed["SSAHA2"] = _system_capture_output(test_command, true);
     
     // attempt to fall back on system-wide install
     if (this->installed["SSAHA2"].size() == 0)
-      this->installed["SSAHA2"] = system_capture_output("which ssaha2");
+      this->installed["SSAHA2"] = _system_capture_output("which ssaha2", true);
 
     /*
 		// check for default names
@@ -474,10 +475,10 @@ namespace breseq
 		}
     */
     
-		this->installed["R"] = system_capture_output("which R").size() ? "R" : "";
+		this->installed["R"] = _system_capture_output("which R", true).size() ? "R" : "";
 		if (this->installed["R"].size() > 0)
 		{
-			string R_version = system_capture_output("R --version");
+			string R_version = _system_capture_output("R --version", true);
       
       // default if output does not match our pattern
       this->installed["R_version"] = "0";
@@ -540,9 +541,9 @@ namespace breseq
 		{
       good_to_go = false;
       uint32_t R_numerical_version = from_string<uint32_t>(this->installed["R_version"]);
-      string R_version = to_string(floor(R_numerical_version/1000000)) 
-        + "." + to_string(floor(R_numerical_version%1000000/1000))
-        + "." + to_string(floor(R_numerical_version%1000));
+      string R_version = to_string<uint32_t>(floor(R_numerical_version/1000000)) 
+        + "." + to_string<uint32_t>(floor(R_numerical_version%1000000/1000))
+        + "." + to_string<uint32_t>(floor(R_numerical_version%1000));
 
       cerr << "---> ERROR Required executable \"R version 2.1.0 or later\" not found." << endl;
       cerr << "---> Your version is " << R_version << endl;
@@ -591,32 +592,5 @@ namespace breseq
 		// create the done file with timing information
 		this->execution_times.back().store(done_file_name);
 	}
-
-	string system_capture_output(string command)
-	{
-		// Open the command for reading.
-    string piped_command = command + " 2>&1";
-		FILE *fp = popen(piped_command.c_str(), "r");
-		assert(fp != NULL);
-
-		// Read the output a line at a time
-		stringstream ss;
-		char path[1035];
-		while (fgets(path, sizeof (path) - 1, fp) != NULL)
-		{
-			ss << path;
-		}
-
-		// Close
-		pclose(fp);
-    
-    // Delete the trailing line ending as a convenience for 'which'
-    string s = ss.str();
-    size_t line_break_pos = s.rfind("\n");
-    if (line_break_pos != string::npos) 
-      s.erase(line_break_pos);
-		return s;
-	}
-
 }
 

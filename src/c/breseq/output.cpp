@@ -2228,9 +2228,9 @@ void draw_coverage(Settings& settings, cReferenceSequences* ref_seq_info, genome
 		string deletions_text_file_name = settings.deletions_text_file_name;
 		save_text_deletion_file(deletions_text_file_name, mc);
 
-		for (uint32_t i = 0; i < ref_seq_info->seq_ids.size(); i++)
+		for (uint32_t i = 0; i < ref_seq_info->size(); i++)
 		{
-			string seq_id = ref_seq_info->seq_ids[i];
+			string seq_id = (*ref_seq_info)[i].m_seq_id;
 			string this_complete_coverage_text_file_name = settings.file_name("complete_coverage_text_file_name", "@", seq_id);
 			string command = settings.bin_path + "/plot_coverage --drawing-format " + drawing_format + " -t " + coverage_plot_path + " -p " + settings.coverage_plot_path + " -i " + deletions_text_file_name + " -c " + this_complete_coverage_text_file_name + " --seq_id=" + seq_id;
 			assert(system(command.c_str()) >= 0);

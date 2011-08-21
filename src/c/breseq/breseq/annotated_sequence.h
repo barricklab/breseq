@@ -145,6 +145,14 @@ namespace breseq {
     {
       return (*this)[seq_id_to_index(seq_id)].get_sequence(start_1, end_1);
     }
+    
+    vector<string> seq_ids()
+    {
+      vector<string> return_value;
+      for(vector<cAnnotatedSequence>::iterator it=this->begin(); it != this->end(); it++)
+        return_value.push_back(it->m_seq_id);
+      return return_value;
+    }
 
     map<string,int32_t> seq_order;
     map<string,string> trims;
@@ -172,11 +180,7 @@ namespace breseq {
 		}
 	};
 	map<string,vector<Gene> > gene_lists;
-
-    map<string, vector<cSequenceFeature> > repeat_lists;
-
-    vector<string> seq_ids; //< @GRC need to implement, get_keys(m_seq_id_to_index)?
-
+  map<string, vector<cSequenceFeature> > repeat_lists;
 	static map<string,char> translation_table_11;
 
     static cSequenceFeature* find_closest_repeat_region(uint32_t position, vector<cSequenceFeature>& repeat_list_ref, uint32_t max_distance, int32_t direction);

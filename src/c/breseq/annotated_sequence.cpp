@@ -667,7 +667,7 @@ namespace breseq {
 	void cReferenceSequences::polymorphism_statistics(Settings& settings, Summary& summary)
 	{
 		string reference_fasta_file_name = settings.reference_fasta_file_name;
-		vector<string> seq_ids = this->seq_ids;
+		vector<string> seq_ids = this->seq_ids();
 
 		// some local variable lookups for convenience
 		uint32_t total_ref_length = 0;
