@@ -220,7 +220,7 @@ namespace breseq {
 
 		// first end
 		int32_t flanking_left = flanking_length;
-		if (!hash_strand_1) // alignment is not reversed
+		if (hash_strand_1 != 1) // alignment is not reversed
 		{
 			// start_pos is in 1-based coordinates
 			int32_t start_pos = hash_coord_1 - (flanking_left - 1) - overlap_offset;
@@ -263,7 +263,7 @@ namespace breseq {
 
 		// second end - added without overlapping sequence
 		int32_t flanking_right = flanking_length;
-		if (hash_strand_2) //alignment is not reversed
+		if (hash_strand_2 == 1) //alignment is not reversed
 		{
 			// end_pos is in 1-based coordinates
 			uint32_t end_pos = hash_coord_2 + (flanking_right - 1) + overlap_offset;
