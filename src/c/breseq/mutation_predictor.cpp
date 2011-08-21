@@ -786,10 +786,9 @@ namespace breseq {
 				{
 					is_strand = is1_strand;
 				}
-				else // neither is ambiguous, hopefully the strands agree
+				else // neither is ambiguous and the strands don't agree (this is not a simple IS insertion)
 				{
-					assert (is1_strand == is2_strand);
-          is_strand = is1_strand;
+					if (is1_strand != is2_strand) continue;
 				}
 				mut["strand"] = s(is_strand);
 
