@@ -647,7 +647,7 @@ namespace breseq {
   
   inline void _assert(bool condition, const string& message = "")
   {
-    if (!condition)
+    if (condition)
     {
       cerr << "---> FATAL ERROR --->" << endl;
       cerr << message << endl;
