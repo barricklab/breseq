@@ -281,12 +281,12 @@
 			isa = PBXGroup;
 			children = (
 				7087747412BC1C06000F9B57 /* breseq */,
-				709794A8138ECAD300E48727 /* bam2aln_cmdline.cpp */,
-				70B69DE51369B8700001B750 /* breseq_cmdline.cpp */,
 				7087728712BC1660000F9B57 /* alignment.cpp */,
 				70A8364C13477AAE0037F8DE /* alignment_output.cpp */,
 				70B5B0FF13324D8300737DC1 /* annotated_sequence.cpp */,
 				70B48C4A13A9918E00BF2BF0 /* anyoption.cpp */,
+				709794A8138ECAD300E48727 /* bam2aln_cmdline.cpp */,
+				70B69DE51369B8700001B750 /* breseq_cmdline.cpp */,
 				70B69DE91369D3510001B750 /* calculate_trims.cpp */,
 				707F211513478B7700ED2F3E /* candidate_junctions.cpp */,
 				70B48C4E13A991BE00BF2BF0 /* chisquare.cpp */,
