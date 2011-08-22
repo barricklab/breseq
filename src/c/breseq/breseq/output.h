@@ -170,11 +170,7 @@ struct Html_Mutation_Table_String : public string
                                bool legend_row = false, 
                                bool one_ref_seq = false
                                );
-
     
-
-    Html_Mutation_Table_String();//<! Place Holder, delete when complete
-  
    
     //! Main Build Object
     //!Factory Methods
