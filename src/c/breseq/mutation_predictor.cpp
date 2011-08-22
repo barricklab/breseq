@@ -98,9 +98,12 @@ namespace breseq {
 	 Returns :
 
 	*/
-	void MutationPredictor::predict(Settings& settings, genome_diff& gd, uint32_t max_read_length)
+	void MutationPredictor::predict(Settings& settings, genome_diff& gd, uint32_t max_read_length, double avg_read_length)
 	{
 		
+    //@JEB TODO: will not need this when Perl is gone.
+    if (avg_read_length == 0.0) avg_read_length = max_read_length;
+    
 		bool verbose = false;
 
 		///
@@ -217,11 +220,6 @@ namespace breseq {
       
 			if (mc_item.entry_exists("reject"))
 			  continue;
-      
-      //if (mc_item["end"] == "3147574")
-      //{
-      //  cout << "breakpoint" << endl;
-      //}
 
 			// set up generic deletion item
 			diff_entry mut;
@@ -889,25 +887,50 @@ namespace breseq {
 			if (n(j["side_2_position"]) - n(j["side_1_position"]) + 1 > 100000)
 				continue;
 
-			// 'AMP'
-			if (j.entry_exists("unique_read_sequence"))
+			// 'DEL' and 'AMP'
+			if (!j.entry_exists("unique_read_sequence"))
 			{
-				int32_t size = n(j["side_2_position"]) - n(j["side_1_position"]) + 1;
-				if (size < 0) continue; // this is a deletion!
-        // @JEB TODO: Large duplications are likely spurious... need to x-ref with coverage differences.
-				if (size > 100) continue;
+        int32_t side_1_position = n(j["side_1_position"]);
+        int32_t side_2_position = n(j["side_2_position"]);
+        
+        if (n(j["side_1_strand"]) == -1)
+        {
+          int32_t t = side_1_position;
+          side_1_position = side_2_position;
+          side_2_position = t;
+        }
 
-				diff_entry mut;
-				mut._type = "AMP";
-				mut
-					("seq_id", seq_id)
-					("position", s(position))
-					("size", s(size))
-					("new_copy_number", "2")
-				;
-				mut._evidence = make_list<string>(j._id);
-				gd.add(mut);
-			}
+				int32_t size = side_2_position - side_1_position + 1;
+        
+        // @JEB TODO: Large duplications are likely spurious... need to x-ref with coverage differences.
+        if (abs(size) > avg_read_length / 3.0) continue;
+        
+				if (size < 0) // this is a deletion!
+        {
+          diff_entry mut;
+          mut._type = "DEL";
+          mut
+          ("seq_id", seq_id)
+          ("position", s(position+1))
+          ("size", s(-size))         // note adjustment due to +1 above
+          ;
+          mut._evidence = make_list<string>(j._id);
+          gd.add(mut);
+        } 
+        else // this is an amplification.
+        {
+          diff_entry mut;
+          mut._type = "AMP";
+          mut
+            ("seq_id", seq_id)
+            ("position", s(position))
+            ("size", s(size))
+            ("new_copy_number", "2")
+          ;
+          mut._evidence = make_list<string>(j._id);
+          gd.add(mut);
+        }
+      }
 			// 'SUB'
 			else if (n(j["side_1_position"]) >= n(j["side_2_position"]))
 			{
@@ -982,7 +1005,7 @@ namespace breseq {
 					// there might be a problem here with insert_position > 0
 					if ( (n(ra_item["position"]) >= n(del_item["position"])) && (n(ra_item["position"]) <= n(del_item["position"]) + n(del_item["size"]) - 1) )
 					{
-						ra_item["deleted"] = 1;
+						ra_item["deleted"] = "1";
 						next_ra = true;
 						break;
 					}
@@ -997,7 +1020,7 @@ namespace breseq {
 
 					if ( (n(ra_item["position"]) >= n(mc_item["start"])) && (n(ra_item["position"]) <= n(mc_item["end"])) )
 					{
-						ra_item["deleted"] = 1;
+						ra_item["deleted"] = "1";
 						break;
 					}
 				}

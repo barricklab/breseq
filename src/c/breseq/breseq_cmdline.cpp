@@ -1647,7 +1647,7 @@ int breseq_default_action(int argc, char* argv[])
 		genome_diff mpgd(settings.evidence_genome_diff_file_name);
 		mpgd.read();
 
-		mp.predict(settings, mpgd, summary.sequence_conversion.max_read_length);
+		mp.predict(settings, mpgd, summary.sequence_conversion.max_read_length, summary.sequence_conversion.avg_read_length);
 
 		mpgd.write(settings.final_genome_diff_file_name);
 
