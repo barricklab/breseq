@@ -34,7 +34,9 @@ namespace breseq {
 
 	void analyze_contingency_loci(const string& bam,
                         const string& fasta,
-                        const string& output
+                        const string& output,
+                        const string& loci,
+                        int strict
                         );
 	
 
@@ -78,7 +80,9 @@ namespace breseq {
 		//! Constructor.
 		contingency_loci_pileup(
                               const string& bam,
-															const string& fasta
+															const string& fasta,
+                              const string& loci,
+                              int string
                             );
 				
 		//! Destructor.
@@ -93,14 +97,13 @@ namespace breseq {
     
         
         void printStats(const string& output){
-            cout << "PRINTING...\n";
-            getchar();
             ofstream out(output.c_str());
             assert(!out.fail()); 
             
             int mindiff = 0;
             int maxdiff = 0;
             
+            /*
             //Finds the max and min diff with respect to the length of the original repeat
             for( size_t i=0; i<repeats.size(); i++ ){
                 vector<string> bounds = split( split( repeats[i].region, ":" )[1], "-" );
@@ -141,16 +144,75 @@ namespace breseq {
                 out << "\n";
                 
             }
-            /*   
-            for( int i=0; i<repeats.size(); i++ ){
+            out << mindiff << " " << maxdiff;
+ 
+            */
+          int maxsize = 0;
+          //Finds the max size of freqs
+          for( int i=0; i<repeats.size(); i++ ){
+            if( maxsize < repeats[i].freqs.size() ){
+              maxsize = repeats[i].freqs.size();
+            }
+          }
+          
+          for( int i=0; i<repeats.size(); i++ ){
+                vector<string> bounds = split( split( repeats[i].region, ":" )[1], "-" );
                 for( int j=0; j<repeats[i].freqs.size(); j++ ){
                     out << repeats[i].freqs[j] << " ";
                 }
+              for( int j=0; j<maxsize-repeats[i].freqs.size(); j++ ){
+                out << 0 << " ";
+              }
+                
+                // Checks if it is a contingency loci. If so, prints out the name of the locus
+                bool locus = false;
+                for( int j=0; j<indices.size(); j++ ){
+                  if( atoi( bounds[0].c_str() ) == indices[j] ){
+                    //locus = true;
+                    //out << names[j];
+                    //break;
+                  }
+                }
+                // If it's not, then it prints the coordinate
+                if( !locus ){
+                  out << bounds[0];
+                }
                 out << "\n";
-            }*/
-            out << mindiff << " " << maxdiff;
+            }
             out.close();
+          }
+    
+    void readIndices( vector<int>& indices, vector<string>&  names, const string& loci){
+      
+      if( loci.compare("NA") ){
+        indices = vector<int>();
+      }
+      
+      ifstream file( loci.c_str() );
+      vector<int> ind;
+      vector<string> n;
+      int i=0;
+      int x = 0;
+      string s;
+      while( !file.eof() ){
+        if( i%5 == 1 ){
+          file >> x;
+          ind.push_back(x);
         }
+        else if( i%5 == 4 ){
+          file >> s;
+          n.push_back(s);
+        }
+        else{
+          file >> s; 
+        }
+        i++;
+      }
+      
+      file.close();
+      names = n;
+      indices =  ind;
+    }
 
         
  
@@ -162,12 +224,15 @@ namespace breseq {
         homopolymer_repeat current_region;
         string fastaf;
         tam_file tf;
+        int strict;
+        
         //const string& bamf;
         //const string& fastaf;
         
         
         //Unnecessary stuff:
         vector<int> indices;
+        vector<string> names;
         
 
     // Add variables that keep track of distribution while fetch_callback is called....

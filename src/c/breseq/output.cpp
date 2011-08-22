@@ -1,4 +1,6 @@
 #include "breseq/output.h"
+#include "breseq/anyoption.h"
+#include "breseq/alignment_output.h"
 
 
 using namespace std;
@@ -171,9 +173,9 @@ void html_index(string file_name, Settings settings, Summary summary,
   }
   
   // Build HTML Head
-  
   HTML << html_header("BRESEQ :: Mutation Predictions", settings);
-  
+  HTML << breseq_header_string(settings) << endl;
+  HTML << "<p>" << endl;
 // #   ###
 // #   ## Mutation predictions
 // #   ###
@@ -256,7 +258,8 @@ void html_marginal_predictions(string file_name, Settings settings,Summary summa
 
   // Build HTML Head
   HTML << html_header("BRESEQ :: Marginal Predictions",settings); 
-  
+  HTML << breseq_header_string(settings) << endl;
+  HTML << "<p>" << endl;
   
   string relative_path = settings.local_evidence_path;
   
@@ -310,7 +313,7 @@ void html_marginal_predictions(string file_name, Settings settings,Summary summa
 // #   }
      if (jc.size()) {
        //Sort by score, not by position (the default order)...
-       jc.sort(diff_entry::sort_by_scores(
+       jc.sort(diff_entry::by_scores(
          make_list<diff_entry::key_t>("pos_hash_score")("min_overlap_score")("total_reads"))); 
       
        HTML << "<p>" << endl;
@@ -442,7 +445,8 @@ void html_statistics(const string &file_name, Settings settings, Summary summary
 
   //Build html head
   HTML << html_header("BRESEQ :: Summary Statistics", settings);
- 
+  HTML << breseq_header_string(settings) << endl;
+  HTML << "<p>" << endl;
 
 // #   
   HTML << "<!-- Write fastq read file informations -->" << endl;
@@ -1625,10 +1629,10 @@ Evidence_Files::Evidence_Files(const Settings& settings, genome_diff& gd)
 // #   
 // #   MUT: foreach my $item ( $gd->list('SNP', 'INS', 'DEL', 'SUB') )
 // #   {
-MUT:for (genome_diff::entry_list_t::iterator itr = items_SNP_INS_DEL_SUB.begin();
+for (genome_diff::entry_list_t::iterator itr = items_SNP_INS_DEL_SUB.begin();
        itr != items_SNP_INS_DEL_SUB.end(); itr ++) {  
     diff_entry& item = **itr;
-    genome_diff::entry_list_t mutation_evidence_list = gd.mutation_evidence_list(item);
+    entry_list_t mutation_evidence_list = gd.mutation_evidence_list(item);
 // #     next if ($item->{no_show});
     if (item.entry_exists(NO_SHOW)) continue;
 // #     
@@ -1639,8 +1643,8 @@ MUT:for (genome_diff::entry_list_t::iterator itr = items_SNP_INS_DEL_SUB.begin()
 // #     my $insert_end = undef;
     uint32_t start = from_string<uint32_t>(item[POSITION]);
     uint32_t end = start;
-    uint32_t insert_start; //TODO undef
-    uint32_t insert_end; //TODO undef
+    uint32_t insert_start; //TODO @JEB undef
+    uint32_t insert_end; //TODO @JEB undef
 
 // # 
 // #     if ($item->{type} eq 'INS')
@@ -1661,15 +1665,15 @@ MUT:for (genome_diff::entry_list_t::iterator itr = items_SNP_INS_DEL_SUB.begin()
 // #       {
 // #         $has_ra_evidence = 1 if ($evidence_item->{type} eq 'RA');
 // #       }
-      for (genome_diff::entry_list_t::iterator itr = mutation_evidence_list.begin();
+      for (entry_list_t::iterator itr = mutation_evidence_list.begin();
            itr != mutation_evidence_list.end(); itr ++) {  
         diff_entry& evidence_item = **itr;
         if (evidence_item._type == RA) has_ra_evidence = true;
       }
 // #       ## only do deletions if they have within-read evidence
 // #       next MUT if (!$has_ra_evidence);
-      if(!has_ra_evidence) goto MUT; //TODO Confirm goto MUT or continue?
-// # 
+      if(!has_ra_evidence) continue;  
+
 // #       $end = $start + $item->{size} - 1;
       end = start + from_string<uint32_t>(item[SIZE]) - 1;
 // #     }
@@ -1724,7 +1728,7 @@ MUT:for (genome_diff::entry_list_t::iterator itr = items_SNP_INS_DEL_SUB.begin()
 // #       $evidence_item->{_evidence_file_name} = $item->{_evidence_file_name};
 // #     }
     /* Add evidence to RA items as well */
-    for (genome_diff::entry_list_t::iterator itr = mutation_evidence_list.begin();
+    for (entry_list_t::iterator itr = mutation_evidence_list.begin();
          itr != mutation_evidence_list.end(); itr ++) {  
       diff_entry& evidence_item = **itr;
       if (evidence_item._type != RA) continue;
@@ -1784,10 +1788,10 @@ MUT:for (genome_diff::entry_list_t::iterator itr = items_SNP_INS_DEL_SUB.begin()
 // #   ## Note that it is completely determined by the original candidate junction sequence 
 // #   ## positions and overlap: alignment_pos and alignment_overlap.
 // # 
-genome_diff::entry_list_t items_JC = gd.list(make_list<string>(JC));
+genome_diff::entry_vector_t items_JC = gd.list(make_list<string>(JC));
 // #   foreach my $item ( $gd->list('JC') )
 // #   { 
-  for (genome_diff::entry_list_t::iterator itr = items_JC.begin();
+  for (genome_diff::entry_vector_t::iterator itr = items_JC.begin();
        itr != items_JC.end(); itr ++) {  
     diff_entry& item = **itr;
 // #     next if ($item->{no_show});
@@ -1809,13 +1813,13 @@ genome_diff::entry_list_t items_JC = gd.list(make_list<string>(JC));
 // #       $start = $item->{flanking_left};
 // #       $end = $item->{flanking_left}+1;      
 // #     }
-    if (from_string<uint8_t>(item[ALIGNMENT_OVERLAP]) == 0) {
+    if (from_string<uint32_t>(item[ALIGNMENT_OVERLAP]) == 0) {
       start = from_string<uint32_t>(item[FLANKING_LEFT]);
       end = from_string<uint32_t>(item[FLANKING_LEFT]) + 1;
     }
 // #     elsif ($item->{alignment_overlap} > 0)
 // #     {
-    else if (from_string <uint8_t>(item[ALIGNMENT_OVERLAP]) > 0) {
+    else if (from_string <uint32_t>(item[ALIGNMENT_OVERLAP]) > 0) {
 // #       $start = $item->{flanking_left}+1;
       start = from_string<uint32_t>(item[FLANKING_LEFT]) + 1;
 // #       $end = $item->{flanking_left}+$item->{alignment_overlap};
@@ -2071,19 +2075,8 @@ Evidence_Files::html_evidence_file (
 // # 
   
   // Build HTML Head
-  HTML << "<html>" << endl;
-  HTML << "<title>BRESEQ :: Results";
-  if (!settings.print_run_name.empty()) {
-    HTML << " :: " << settings.print_run_name; 
-  } 
-  HTML << "</title>" << endl; 
-  HTML << "<head>" << endl;
-  HTML << "<style type = \"text/css\">" << endl;
-  HTML << header_style_string();
-  HTML << "</style>" << endl;
-  HTML << "</head>" << endl;
+  HTML << html_header("BRESEQ :: Results", settings);
   
-
 // #   ## print a table for the main item
 // #   ## followed by auxiliary tables for each piece of evidence
 // #   
@@ -2093,8 +2086,7 @@ Evidence_Files::html_evidence_file (
 // #   print HTML html_genome_diff_item_table_string($settings, $gd, [$parent_item]) . p;
 // #   my @evidence_list = $gd->mutation_evidence_list($parent_item);
 // #   
-  genome_diff::entry_list_t 
-  evidence_list = gd.mutation_evidence_list(parent_item);
+  list<counted_ptr<diff_entry> > evidence_list = gd.mutation_evidence_list(parent_item);
 
 // #   foreach my $type ( 'RA', 'MC', 'JC' )
 // #   {
@@ -2107,30 +2099,15 @@ Evidence_Files::html_evidence_file (
   for (vector<string>::iterator itr = types.begin();
        itr != types.end(); itr ++) {  
     string& type = (*itr);
-    //grep {$_->{type} eq $type} @evidence_list;
-    Type_Not_Equal type_not_equal(type);
-    
-    genome_diff::entry_list_t::iterator 
-      matched_type_end = remove_if(
-                                   evidence_list.begin(),
-                                   evidence_list.end(),
-                                   type_not_equal
-                                  );
-    
-    entry_list_t 
-      this_evidence_list(
-                         evidence_list.begin(),
-                         matched_type_end
-                        );
 
-    //finished grep //TODO Confirm this works
+    list<counted_ptr<diff_entry> > this_evidence_list = evidence_list;
+    
+    //grep {$_->{type} eq $type} @evidence_list;
+    evidence_list.remove_if(diff_entry::is_type(type));   
+    
     if(this_evidence_list.empty()) continue;
 
-    HTML << html_genome_diff_item_table_string(
-                                              settings, 
-                                              gd,
-                                              this_evidence_list
-                                              );
+    HTML << html_genome_diff_item_table_string(settings, gd, this_evidence_list);
     HTML << "<p>"; 
     
   }
@@ -2140,7 +2117,7 @@ Evidence_Files::html_evidence_file (
 // #   {
 // #     print HTML div({-align=>"center"}, img({-src=>$interval->{plot}}));
 // #   }
-  if (!item[PLOT].empty()) {
+  if (item.entry_exists(PLOT) && !item[PLOT].empty()) {
     HTML << div(ALIGN_CENTER, img(item[PLOT]));
   } else {
 // #   elsif ( (defined $interval->{bam_path}) && ($interval->{fasta_path}) )
@@ -2159,13 +2136,13 @@ Evidence_Files::html_evidence_file (
     }
     ss << item[END];
     if (!item[INSERT_END].empty()) {
-      ss << item[INSERT_END];
+      ss << "-" << item[INSERT_END];
     }
     cerr << "Creating read alignment for region " << ss.str() << endl;
 // # 
 // #     $interval->{quality_score_cutoff} = $settings->{base_quality_cutoff} if (defined $settings->{base_quality_cutoff});
     if (settings.base_quality_cutoff != 0) {
-    item["BASE_QUALITY_CUTOFF"] = to_string(settings.base_quality_cutoff);
+      item["BASE_QUALITY_CUTOFF"] = to_string(settings.base_quality_cutoff);
     }
 // #     
 // #     # experiment with using C++ version
@@ -2189,6 +2166,12 @@ Evidence_Files::html_evidence_file (
 // #       );
 // #     }
     //Commands for bam2aln
+    //TODO @JEB
+    
+
+     alignment_output ao(item["bam_path"], item["fasta_path"], from_string<uint32_t>(ss.str()), settings.base_quality_cutoff);
+     
+     HTML << ao.html_alignment(ss.str());
 
   }
 // #   print HTML end_html;
@@ -2203,9 +2186,6 @@ Evidence_Files::html_evidence_file (
 /*-----------------------------------------------------------------------------
  *  //End Create_Evidence_Files
  *-----------------------------------------------------------------------------*/
-
-
-
 void save_text_deletion_file(string deletion_file_name, breseq::genome_diff::entry_list_t& deletions_ref)
 {
 	ofstream DEL(deletion_file_name.c_str()); //or die "Could not open: $deletion_file_name";
@@ -2430,13 +2410,6 @@ Html_Mutation_Table_String::Html_Mutation_Table_String(
   this->Item_Lines();
 }
 
-
-
-Html_Mutation_Table_String::Html_Mutation_Table_String()
- :string()
-{
-
-}
 /*
  *--------------------------------------------------------------------------------------
  *       Class:  Html_Mutation_Table_String
@@ -2693,9 +2666,9 @@ void Html_Mutation_Table_String::Item_Lines()
       bool already_added_RA = false;
 // #       EVIDENCE: foreach my $evidence_item ($gd->mutation_evidence_list($mut))
 // #       {         
-      entry_vector_t mutation_evidence_list = gd.mutation_evidence_list(mut);
+      entry_list_t mutation_evidence_list = gd.mutation_evidence_list(mut);
       
-      for (entry_vector_t::iterator itr = mutation_evidence_list.begin();
+      for (entry_list_t::iterator itr = mutation_evidence_list.begin();
            itr != mutation_evidence_list.end(); itr ++) {  
         diff_entry& evidence_item = **itr;
 // #         if ($evidence_item->{type} eq 'RA')
@@ -2728,7 +2701,7 @@ void Html_Mutation_Table_String::Item_Lines()
 // #     # (1) We don't want it at all. (Single genome no poly prediction)   
 // #     my @freq_list = ();
   vector<string> freq_list = make_list<string>("");
-  //TODO TODO TODO TODO 
+  //TODO @JEB 
 // #     # (2) We want multiple columns because we are comparing genomes.
 // #     if (defined $gd_name_list_ref) {
 // #       #"_freq_[name]" keys were made within GenomeDiff structure        
@@ -2750,7 +2723,7 @@ void Html_Mutation_Table_String::Item_Lines()
     }
     freq_list.push_back(mut["frequency"]);
   }  
-  //TODO TODO TODO TODO 
+  //
 // #     
 // #     ## marshal cells defined depending on mutation type
 // #     # $evidence_string

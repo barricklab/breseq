@@ -517,12 +517,14 @@ int do_identify_mutations(int argc, char* argv[]) {
 int do_contingency_loci(int argc, char* argv[]) {
 	
 	// setup and parse configuration options:
-	AnyOption options("Usage: breseq CONTINGENCY_LOCI --bam <sequences.bam> --fasta <reference.fasta> --output <path>");
+	AnyOption options("Usage: breseq CONTINGENCY_LOCI --bam <sequences.bam> --fasta <reference.fasta> --output <path> --loci <loci.txt> --strict");
 	options
   ("help,h", "produce this help message", TAKES_NO_ARGUMENT)
   ("bam,b", "bam file containing sequences to be aligned")
   ("fasta,f", "FASTA file of reference sequence")
   ("output,o", "output file")
+  ("loci,l", "Contingency loci coordinates" )
+  ("strict,s", "exclude non-perfect matches in surrounding 5 bases", TAKES_NO_ARGUMENT)
 	.processCommandArgs(argc, argv);
   
 	// make sure that the config options are good:
@@ -530,7 +532,6 @@ int do_contingency_loci(int argc, char* argv[]) {
 		 || !options.count("bam")
 		 || !options.count("fasta")
 		 || !options.count("output")
-     
 		 ) {
 		options.printUsage();
 		return -1;
@@ -538,11 +539,24 @@ int do_contingency_loci(int argc, char* argv[]) {
   
 	// attempt to calculate error calibrations:
 	try {
-		analyze_contingency_loci(
+    
+    if( !options.count("loci") ){
+      analyze_contingency_loci(
+                               options["bam"],
+                               options["fasta"],
+                               options["output"],
+                               NULL,
+                               options.count("strict")
+                               );
+    }
+		else{ analyze_contingency_loci(
                        options["bam"],
                        options["fasta"],
-                       options["output"]
+                       options["output"],
+                      options["loci"],
+                        options.count("strict")
                        );
+    }
 	} catch(...) {
 		// failed; 
 		return -1;
@@ -832,7 +846,7 @@ int do_output( int argc, char* argv[]){
   //TESTED, displays properly, but there are some oddities between it and 
   //the orgininal, needs calls like diff_entry["gene"] 
   //to be implemented.
-  if(true) {
+  if(false) {
     string file_name = "html_index.html";
     Settings settings;
     settings.no_evidence = false;
@@ -1683,6 +1697,7 @@ int breseq_default_action(int argc, char* argv[])
 				ra.erase(it);
 
 		//@ra = sort { -($a->{quality} <=> $b->{quality}) } @ra;
+    ra.sort(diff_entry::by_scores(make_list<string>("quality"))); 
 
 		list<counted_ptr<diff_entry> >::iterator it;
 
@@ -1717,6 +1732,7 @@ int breseq_default_action(int argc, char* argv[])
 				ra.erase(it);
 
 		//@jc = sort { -($a->{pos_hash_score} <=> $b->{pos_hash_score}) || -($a->{min_overlap_score} <=> $b->{min_overlap_score})  || ($a->{total_reads} <=> $a->{total_reads}) } @jc;
+    jc.sort(diff_entry::by_scores(make_list<diff_entry::key_t>("pos_hash_score")("min_overlap_score")("total_reads")));
 		it = jc.begin();
 		for (uint32_t i = 0; i < jc.size(); i++)
 		{

@@ -971,9 +971,9 @@ genome_diff::entry_list_t genome_diff::mutation_list()
 /*! Return all diff_entrys within _entry_list whose _type matches one
  * of those within input's item._evidence
  */ 
-genome_diff::entry_list_t genome_diff::mutation_evidence_list(const diff_entry& item)
+::list<counted_ptr<diff_entry> > genome_diff::mutation_evidence_list(const diff_entry& item)
 {
-  entry_list_t return_list;
+  ::list<counted_ptr<diff_entry> > return_list;
   vector<string> evidence_list = item._evidence;
   //return diff_entrys with matching evidence
   for (vector<string>::iterator itr_i = evidence_list.begin();
