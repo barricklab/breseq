@@ -261,14 +261,19 @@ namespace breseq {
 			}
 
 			///
-			// (2) there is is no junction, but both ends of the deletion are in repeat sequences
+			// (2) there is is no junction, but both ends of the deletion are in different repeat sequences
 			///
 
 			cSequenceFeature* r1_pointer = within_repeat(mut["seq_id"], n(mut["position"]));
 			cSequenceFeature* r2_pointer = within_repeat(mut["seq_id"], n(mut["position"]) + n(mut["size"]));
 
 			// Then we will adjust the coordinates to remove...
-			if (r1_pointer != NULL && r2_pointer != NULL && ((*r1_pointer)["name"] == (*r2_pointer)["name"]))
+			if  (
+           (r1_pointer != r2_pointer) 
+           && (r1_pointer != NULL) 
+           && r2_pointer != NULL 
+           && ((*r1_pointer)["name"] == (*r2_pointer)["name"])
+          )
 			{
 				cSequenceFeature& r1 = *r1_pointer, r2 = *r2_pointer;
 
@@ -789,6 +794,7 @@ namespace breseq {
 				else // neither is ambiguous and the strands don't agree (this is not a simple IS insertion)
 				{
 					if (is1_strand != is2_strand) continue;
+          is_strand = is1_strand;
 				}
 				mut["strand"] = s(is_strand);
 

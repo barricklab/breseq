@@ -652,7 +652,7 @@ namespace breseq {
       cerr << "---> FATAL ERROR --->" << endl;
       cerr << message << endl;
       cerr << "<--- FATAL ERROR <---" << endl;
-      assert(false);
+      exit(-1);
     }
   }
   
