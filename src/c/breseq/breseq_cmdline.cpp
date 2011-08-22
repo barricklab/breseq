@@ -517,12 +517,14 @@ int do_identify_mutations(int argc, char* argv[]) {
 int do_contingency_loci(int argc, char* argv[]) {
 	
 	// setup and parse configuration options:
-	AnyOption options("Usage: breseq CONTINGENCY_LOCI --bam <sequences.bam> --fasta <reference.fasta> --output <path>");
+	AnyOption options("Usage: breseq CONTINGENCY_LOCI --bam <sequences.bam> --fasta <reference.fasta> --output <path> --loci <loci.txt> --strict");
 	options
   ("help,h", "produce this help message", TAKES_NO_ARGUMENT)
   ("bam,b", "bam file containing sequences to be aligned")
   ("fasta,f", "FASTA file of reference sequence")
   ("output,o", "output file")
+  ("loci,l", "Contingency loci coordinates" )
+  ("strict,s", "exclude non-perfect matches in surrounding 5 bases", TAKES_NO_ARGUMENT)
 	.processCommandArgs(argc, argv);
   
 	// make sure that the config options are good:
@@ -530,7 +532,6 @@ int do_contingency_loci(int argc, char* argv[]) {
 		 || !options.count("bam")
 		 || !options.count("fasta")
 		 || !options.count("output")
-     
 		 ) {
 		options.printUsage();
 		return -1;
@@ -538,11 +539,24 @@ int do_contingency_loci(int argc, char* argv[]) {
   
 	// attempt to calculate error calibrations:
 	try {
-		analyze_contingency_loci(
+    
+    if( !options.count("loci") ){
+      analyze_contingency_loci(
+                               options["bam"],
+                               options["fasta"],
+                               options["output"],
+                               NULL,
+                               options.count("strict")
+                               );
+    }
+		else{ analyze_contingency_loci(
                        options["bam"],
                        options["fasta"],
-                       options["output"]
+                       options["output"],
+                      options["loci"],
+                        options.count("strict")
                        );
+    }
 	} catch(...) {
 		// failed; 
 		return -1;

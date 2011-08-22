@@ -57,7 +57,7 @@
             isEnabled = "NO">
          </CommandLineArgument>
          <CommandLineArgument
-            argument = "CONTINGENCY_LOCI --bam 62GAVAAXX_5_GTCT_11168_p1_pool_pf/data/reference.bam --fasta 62GAVAAXX_5_GTCT_11168_p1_pool_pf/data/reference.fasta --output outp1pool.txt"
+            argument = "CONTINGENCY_LOCI --bam 62GAVAAXX_5_GTCT_11168_p1_pool_pf/data/SortedReferenceSmalt.bam --fasta 62GAVAAXX_5_GTCT_11168_p1_pool_pf/data/reference.fasta --output out.txt --loci cloci.txt --strict"
             isEnabled = "YES">
          </CommandLineArgument>
       </CommandLineArguments>
