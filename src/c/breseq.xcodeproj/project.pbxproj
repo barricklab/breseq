@@ -1,0 +1,833 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 42;
+	objects = {
+
+/* Begin PBXAggregateTarget section */
+		422D46201219DEFF003FD94D /* all */ = {
+			isa = PBXAggregateTarget;
+			buildConfigurationList = 422D46371219DF1D003FD94D /* Build configuration list for PBXAggregateTarget "all" */;
+			buildPhases = (
+			);
+			dependencies = (
+				708FA5D5132578BD00864C40 /* PBXTargetDependency */,
+				422D462A1219DF08003FD94D /* PBXTargetDependency */,
+				422D46241219DF08003FD94D /* PBXTargetDependency */,
+			);
+			name = all;
+			productName = all;
+		};
+/* End PBXAggregateTarget section */
+
+/* Begin PBXBuildFile section */
+		4247E82C1268EC3E006A6D78 /* libz.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 421ACFAC1170F05500C2EB85 /* libz.a */; };
+		701EE98313C4BB5200F2EC70 /* contingency_loci.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 701EE98213C4BB5200F2EC70 /* contingency_loci.cpp */; };
+		702EABF713421A8400103019 /* fastq.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 702EABF613421A8400103019 /* fastq.cpp */; };
+		70367D2113EB232C000787CC /* coverage_distribution.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 70367D2013EB232C000787CC /* coverage_distribution.cpp */; };
+		70436D5813FF6DA8006448FB /* coverage_distribution.r in CopyFiles */ = {isa = PBXBuildFile; fileRef = 70436D5713FF6D7D006448FB /* coverage_distribution.r */; };
+		70436D5B13FF7675006448FB /* samtools in CopyFiles */ = {isa = PBXBuildFile; fileRef = 70436D5A13FF7675006448FB /* samtools */; };
+		70616DD41400A0E8006E7800 /* plot_error_rate.r in CopyFiles */ = {isa = PBXBuildFile; fileRef = 70616DD01400A0C0006E7800 /* plot_error_rate.r */; };
+		70616DD51400A0EA006E7800 /* polymorphism_statistics.r in CopyFiles */ = {isa = PBXBuildFile; fileRef = 70616DD11400A0C0006E7800 /* polymorphism_statistics.r */; };
+		70616DD61400A0EE006E7800 /* plot_coverage.r in CopyFiles */ = {isa = PBXBuildFile; fileRef = 70616DCF1400A0C0006E7800 /* plot_coverage.r */; };
+		70616DD71400A0F1006E7800 /* breseq_small.png in CopyFiles */ = {isa = PBXBuildFile; fileRef = 70616DD21400A0CE006E7800 /* breseq_small.png */; };
+		70616DD81400A0F5006E7800 /* breseq.png in CopyFiles */ = {isa = PBXBuildFile; fileRef = 70616DD31400A0CE006E7800 /* breseq.png */; };
+		707F211413478B6500ED2F3E /* candidate_junctions.h in Headers */ = {isa = PBXBuildFile; fileRef = 707F211313478B6500ED2F3E /* candidate_junctions.h */; };
+		707F211613478B7700ED2F3E /* candidate_junctions.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 707F211513478B7700ED2F3E /* candidate_junctions.cpp */; };
+		7084E56713CFD471005B57D1 /* mutation_predictor.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 7084E56613CFD471005B57D1 /* mutation_predictor.cpp */; };
+		7087728812BC1660000F9B57 /* alignment.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 7087728712BC1660000F9B57 /* alignment.cpp */; };
+		7087728E12BC169C000F9B57 /* error_count.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 7087728912BC169C000F9B57 /* error_count.cpp */; };
+		7087728F12BC169C000F9B57 /* genome_diff.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 7087728A12BC169C000F9B57 /* genome_diff.cpp */; };
+		7087729012BC169C000F9B57 /* identify_mutations.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 7087728B12BC169C000F9B57 /* identify_mutations.cpp */; };
+		7087729112BC169C000F9B57 /* pileup_base.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 7087728C12BC169C000F9B57 /* pileup_base.cpp */; };
+		7087729212BC169C000F9B57 /* pileup.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 7087728D12BC169C000F9B57 /* pileup.cpp */; };
+		7087748212BC1C31000F9B57 /* alignment.h in Headers */ = {isa = PBXBuildFile; fileRef = 7087747512BC1C06000F9B57 /* alignment.h */; };
+		7087748412BC1C31000F9B57 /* error_count.h in Headers */ = {isa = PBXBuildFile; fileRef = 7087747712BC1C06000F9B57 /* error_count.h */; };
+		7087748512BC1C31000F9B57 /* genome_diff.h in Headers */ = {isa = PBXBuildFile; fileRef = 7087747812BC1C06000F9B57 /* genome_diff.h */; };
+		7087748612BC1C31000F9B57 /* identify_mutations.h in Headers */ = {isa = PBXBuildFile; fileRef = 7087747912BC1C06000F9B57 /* identify_mutations.h */; };
+		7087748712BC1C31000F9B57 /* pileup.h in Headers */ = {isa = PBXBuildFile; fileRef = 7087747A12BC1C06000F9B57 /* pileup.h */; };
+		7087748812BC1C31000F9B57 /* pileup_base.h in Headers */ = {isa = PBXBuildFile; fileRef = 7087747B12BC1C06000F9B57 /* pileup_base.h */; };
+		708D62441390B1D5007FF13C /* resolve_alignments.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 708D62431390B1D5007FF13C /* resolve_alignments.cpp */; };
+		708FA5FD13257A7D00864C40 /* libbreseq.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 708FA5DA132578BE00864C40 /* libbreseq.a */; };
+		709794A9138ECAD300E48727 /* bam2aln_cmdline.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 709794A8138ECAD300E48727 /* bam2aln_cmdline.cpp */; };
+		70A8364713477A180037F8DE /* alignment_output.h in Headers */ = {isa = PBXBuildFile; fileRef = 70A8364613477A180037F8DE /* alignment_output.h */; };
+		70A8364913477A560037F8DE /* fastq.h in Headers */ = {isa = PBXBuildFile; fileRef = 70A8364813477A560037F8DE /* fastq.h */; };
+		70A8364D13477AAE0037F8DE /* alignment_output.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 70A8364C13477AAE0037F8DE /* alignment_output.cpp */; };
+		70A8365713477F7B0037F8DE /* libbreseq.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 708FA5DA132578BE00864C40 /* libbreseq.a */; };
+		70B48C4B13A9918E00BF2BF0 /* anyoption.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 70B48C4A13A9918E00BF2BF0 /* anyoption.cpp */; };
+		70B48C4F13A991BE00BF2BF0 /* chisquare.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 70B48C4E13A991BE00BF2BF0 /* chisquare.cpp */; };
+		70B4AEB01391F72200B9638D /* fasta.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 70B4AEAF1391F72200B9638D /* fasta.cpp */; };
+		70B5B10013324D8300737DC1 /* annotated_sequence.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 70B5B0FF13324D8300737DC1 /* annotated_sequence.cpp */; };
+		70B5B10B13324DBD00737DC1 /* annotated_sequence.h in Headers */ = {isa = PBXBuildFile; fileRef = 70B5B10A13324DB500737DC1 /* annotated_sequence.h */; };
+		70B69DE61369B8700001B750 /* breseq_cmdline.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 70B69DE51369B8700001B750 /* breseq_cmdline.cpp */; };
+		70B69DF41369D8B20001B750 /* calculate_trims.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 70B69DE91369D3510001B750 /* calculate_trims.cpp */; };
+		70B69E061369E2440001B750 /* libbam.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 70B69E051369E2440001B750 /* libbam.a */; };
+		70B69E071369E2440001B750 /* libbam.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 70B69E051369E2440001B750 /* libbam.a */; };
+		70B69E081369E2440001B750 /* libbam.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 70B69E051369E2440001B750 /* libbam.a */; };
+		70B9320F1394008200885753 /* settings.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 70B9320E1394008200885753 /* settings.cpp */; };
+		70D789D413C3CEB70036BEAB /* output.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 70D789D313C3CEB70036BEAB /* output.cpp */; };
+		70F9FB86130C592700D6E11D /* tabulate_coverage.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 70F9FB85130C592700D6E11D /* tabulate_coverage.cpp */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXContainerItemProxy section */
+		422D46231219DF08003FD94D /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 421ACEB71170DB9600C2EB85 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 42BA690B1189B7FD000B00B1;
+			remoteInfo = breseq;
+		};
+		422D46291219DF08003FD94D /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 421ACEB71170DB9600C2EB85 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 421ACF201170DC4400C2EB85;
+			remoteInfo = samtools;
+		};
+		42B6EDBA11C69CC70075F8A3 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 421ACEB71170DB9600C2EB85 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 421ACF201170DC4400C2EB85;
+			remoteInfo = samtools;
+		};
+		42B6EDBC11C69CC70075F8A3 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 421ACEB71170DB9600C2EB85 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 42BA690B1189B7FD000B00B1;
+			remoteInfo = breseq;
+		};
+		708FA5D4132578BD00864C40 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 421ACEB71170DB9600C2EB85 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 42B6EDB811C69CC70075F8A3;
+			remoteInfo = identify_mutations;
+		};
+		70A8365113477F7B0037F8DE /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 421ACEB71170DB9600C2EB85 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 421ACF201170DC4400C2EB85;
+			remoteInfo = samtools;
+		};
+		70A8365313477F7B0037F8DE /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 421ACEB71170DB9600C2EB85 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 42BA690B1189B7FD000B00B1;
+			remoteInfo = breseq;
+		};
+/* End PBXContainerItemProxy section */
+
+/* Begin PBXCopyFilesBuildPhase section */
+		70436D5413FF6CBB006448FB /* CopyFiles */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 12;
+			dstPath = ../lib/perl5/Breseq;
+			dstSubfolderSpec = 16;
+			files = (
+				70616DD61400A0EE006E7800 /* plot_coverage.r in CopyFiles */,
+				70436D5813FF6DA8006448FB /* coverage_distribution.r in CopyFiles */,
+				70616DD41400A0E8006E7800 /* plot_error_rate.r in CopyFiles */,
+				70616DD51400A0EA006E7800 /* polymorphism_statistics.r in CopyFiles */,
+				70616DD71400A0F1006E7800 /* breseq_small.png in CopyFiles */,
+				70616DD81400A0F5006E7800 /* breseq.png in CopyFiles */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		70436D5913FF7659006448FB /* CopyFiles */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 12;
+			dstPath = "";
+			dstSubfolderSpec = 16;
+			files = (
+				70436D5B13FF7675006448FB /* samtools in CopyFiles */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXCopyFilesBuildPhase section */
+
+/* Begin PBXFileReference section */
+		421ACFAC1170F05500C2EB85 /* libz.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = libz.a; path = /opt/local/lib/libz.a; sourceTree = "<absolute>"; };
+		701EE98013C4BB3B00F2EC70 /* contingency_loci.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = contingency_loci.h; sourceTree = "<group>"; };
+		701EE98213C4BB5200F2EC70 /* contingency_loci.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = contingency_loci.cpp; path = breseq/contingency_loci.cpp; sourceTree = SOURCE_ROOT; };
+		702EABF613421A8400103019 /* fastq.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = fastq.cpp; path = breseq/fastq.cpp; sourceTree = SOURCE_ROOT; };
+		70367D2013EB232C000787CC /* coverage_distribution.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = coverage_distribution.cpp; path = breseq/coverage_distribution.cpp; sourceTree = SOURCE_ROOT; };
+		70367D2313EB2339000787CC /* coverage_distribution.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = coverage_distribution.h; sourceTree = "<group>"; };
+		70436D5713FF6D7D006448FB /* coverage_distribution.r */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.rez; name = coverage_distribution.r; path = breseq/coverage_distribution.r; sourceTree = "<group>"; };
+		70436D5A13FF7675006448FB /* samtools */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.executable"; name = samtools; path = "../../extern/samtools-0.1.15/samtools"; sourceTree = "<group>"; };
+		70436D5C14000744006448FB /* storable.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = storable.h; sourceTree = "<group>"; };
+		70616DCF1400A0C0006E7800 /* plot_coverage.r */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.rez; name = plot_coverage.r; path = breseq/plot_coverage.r; sourceTree = "<group>"; };
+		70616DD01400A0C0006E7800 /* plot_error_rate.r */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.rez; name = plot_error_rate.r; path = breseq/plot_error_rate.r; sourceTree = "<group>"; };
+		70616DD11400A0C0006E7800 /* polymorphism_statistics.r */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.rez; name = polymorphism_statistics.r; path = breseq/polymorphism_statistics.r; sourceTree = "<group>"; };
+		70616DD21400A0CE006E7800 /* breseq_small.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; name = breseq_small.png; path = breseq/breseq_small.png; sourceTree = "<group>"; };
+		70616DD31400A0CE006E7800 /* breseq.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; name = breseq.png; path = breseq/breseq.png; sourceTree = "<group>"; };
+		707F211313478B6500ED2F3E /* candidate_junctions.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; lineEnding = 0; path = candidate_junctions.h; sourceTree = "<group>"; xcLanguageSpecificationIdentifier = xcode.lang.objcpp; };
+		707F211513478B7700ED2F3E /* candidate_junctions.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; lineEnding = 0; name = candidate_junctions.cpp; path = breseq/candidate_junctions.cpp; sourceTree = SOURCE_ROOT; xcLanguageSpecificationIdentifier = xcode.lang.cpp; };
+		7084E56613CFD471005B57D1 /* mutation_predictor.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = mutation_predictor.cpp; path = breseq/mutation_predictor.cpp; sourceTree = SOURCE_ROOT; };
+		7084E56913CFD47D005B57D1 /* mutation_predictor.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = mutation_predictor.h; sourceTree = "<group>"; };
+		7087728712BC1660000F9B57 /* alignment.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; lineEnding = 0; name = alignment.cpp; path = breseq/alignment.cpp; sourceTree = SOURCE_ROOT; xcLanguageSpecificationIdentifier = xcode.lang.cpp; };
+		7087728912BC169C000F9B57 /* error_count.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; lineEnding = 0; name = error_count.cpp; path = breseq/error_count.cpp; sourceTree = SOURCE_ROOT; xcLanguageSpecificationIdentifier = xcode.lang.cpp; };
+		7087728A12BC169C000F9B57 /* genome_diff.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; lineEnding = 0; name = genome_diff.cpp; path = breseq/genome_diff.cpp; sourceTree = SOURCE_ROOT; xcLanguageSpecificationIdentifier = xcode.lang.cpp; };
+		7087728B12BC169C000F9B57 /* identify_mutations.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; lineEnding = 0; name = identify_mutations.cpp; path = breseq/identify_mutations.cpp; sourceTree = SOURCE_ROOT; xcLanguageSpecificationIdentifier = xcode.lang.cpp; };
+		7087728C12BC169C000F9B57 /* pileup_base.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; lineEnding = 0; name = pileup_base.cpp; path = breseq/pileup_base.cpp; sourceTree = SOURCE_ROOT; xcLanguageSpecificationIdentifier = xcode.lang.cpp; };
+		7087728D12BC169C000F9B57 /* pileup.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; lineEnding = 0; name = pileup.cpp; path = breseq/pileup.cpp; sourceTree = SOURCE_ROOT; xcLanguageSpecificationIdentifier = xcode.lang.cpp; };
+		7087747512BC1C06000F9B57 /* alignment.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; lineEnding = 0; name = alignment.h; path = breseq/breseq/alignment.h; sourceTree = SOURCE_ROOT; xcLanguageSpecificationIdentifier = xcode.lang.objcpp; };
+		7087747712BC1C06000F9B57 /* error_count.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; lineEnding = 0; name = error_count.h; path = breseq/breseq/error_count.h; sourceTree = SOURCE_ROOT; xcLanguageSpecificationIdentifier = xcode.lang.objcpp; };
+		7087747812BC1C06000F9B57 /* genome_diff.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; lineEnding = 0; name = genome_diff.h; path = breseq/breseq/genome_diff.h; sourceTree = SOURCE_ROOT; xcLanguageSpecificationIdentifier = xcode.lang.objcpp; };
+		7087747912BC1C06000F9B57 /* identify_mutations.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; lineEnding = 0; name = identify_mutations.h; path = breseq/breseq/identify_mutations.h; sourceTree = SOURCE_ROOT; xcLanguageSpecificationIdentifier = xcode.lang.objcpp; };
+		7087747A12BC1C06000F9B57 /* pileup.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; lineEnding = 0; name = pileup.h; path = breseq/breseq/pileup.h; sourceTree = SOURCE_ROOT; xcLanguageSpecificationIdentifier = xcode.lang.objcpp; };
+		7087747B12BC1C06000F9B57 /* pileup_base.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; lineEnding = 0; name = pileup_base.h; path = breseq/breseq/pileup_base.h; sourceTree = SOURCE_ROOT; xcLanguageSpecificationIdentifier = xcode.lang.objcpp; };
+		708D62411390B1C6007FF13C /* resolve_alignments.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = resolve_alignments.h; sourceTree = "<group>"; };
+		708D62431390B1D5007FF13C /* resolve_alignments.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = resolve_alignments.cpp; path = breseq/resolve_alignments.cpp; sourceTree = SOURCE_ROOT; };
+		708FA5D6132578BE00864C40 /* cbreseq */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = cbreseq; sourceTree = BUILT_PRODUCTS_DIR; };
+		708FA5DA132578BE00864C40 /* libbreseq.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; includeInIndex = 0; path = libbreseq.a; sourceTree = BUILT_PRODUCTS_DIR; };
+		709794A8138ECAD300E48727 /* bam2aln_cmdline.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = bam2aln_cmdline.cpp; path = breseq/bam2aln_cmdline.cpp; sourceTree = SOURCE_ROOT; };
+		70A8364613477A180037F8DE /* alignment_output.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; lineEnding = 0; path = alignment_output.h; sourceTree = "<group>"; xcLanguageSpecificationIdentifier = xcode.lang.objcpp; };
+		70A8364813477A560037F8DE /* fastq.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; lineEnding = 0; path = fastq.h; sourceTree = "<group>"; xcLanguageSpecificationIdentifier = xcode.lang.objcpp; };
+		70A8364C13477AAE0037F8DE /* alignment_output.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; lineEnding = 0; name = alignment_output.cpp; path = breseq/alignment_output.cpp; sourceTree = SOURCE_ROOT; xcLanguageSpecificationIdentifier = xcode.lang.cpp; };
+		70A8365C13477F7B0037F8DE /* cbam2aln */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = cbam2aln; sourceTree = BUILT_PRODUCTS_DIR; };
+		70B48C4313A9917C00BF2BF0 /* anyoption.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = anyoption.h; sourceTree = "<group>"; };
+		70B48C4A13A9918E00BF2BF0 /* anyoption.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = anyoption.cpp; path = breseq/anyoption.cpp; sourceTree = SOURCE_ROOT; };
+		70B48C4D13A991AD00BF2BF0 /* chisquare.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = chisquare.h; sourceTree = "<group>"; };
+		70B48C4E13A991BE00BF2BF0 /* chisquare.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = chisquare.cpp; path = breseq/chisquare.cpp; sourceTree = SOURCE_ROOT; };
+		70B4AEAD1391F71500B9638D /* fasta.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = fasta.h; sourceTree = "<group>"; };
+		70B4AEAF1391F72200B9638D /* fasta.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = fasta.cpp; path = breseq/fasta.cpp; sourceTree = SOURCE_ROOT; };
+		70B5B0FF13324D8300737DC1 /* annotated_sequence.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = annotated_sequence.cpp; path = breseq/annotated_sequence.cpp; sourceTree = SOURCE_ROOT; };
+		70B5B10A13324DB500737DC1 /* annotated_sequence.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; lineEnding = 0; path = annotated_sequence.h; sourceTree = "<group>"; xcLanguageSpecificationIdentifier = xcode.lang.objcpp; };
+		70B69DE51369B8700001B750 /* breseq_cmdline.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = breseq_cmdline.cpp; path = breseq/breseq_cmdline.cpp; sourceTree = SOURCE_ROOT; };
+		70B69DE71369BB990001B750 /* common.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = common.h; sourceTree = "<group>"; };
+		70B69DE81369D3450001B750 /* calculate_trims.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = calculate_trims.h; sourceTree = "<group>"; };
+		70B69DE91369D3510001B750 /* calculate_trims.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = calculate_trims.cpp; path = breseq/calculate_trims.cpp; sourceTree = SOURCE_ROOT; };
+		70B69E051369E2440001B750 /* libbam.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = libbam.a; path = "../../extern/samtools-0.1.15/libbam.a"; sourceTree = "<group>"; };
+		70B69E091369E51E0001B750 /* Debug.xcconfig */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.xcconfig; path = Debug.xcconfig; sourceTree = "<group>"; };
+		70B69E0A1369E51E0001B750 /* Release.xcconfig */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.xcconfig; path = Release.xcconfig; sourceTree = "<group>"; };
+		70B69E0B1369E51E0001B750 /* Shared.xcconfig */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.xcconfig; path = Shared.xcconfig; sourceTree = "<group>"; };
+		70B9320E1394008200885753 /* settings.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = settings.cpp; path = breseq/settings.cpp; sourceTree = SOURCE_ROOT; };
+		70B932111394009100885753 /* settings.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = settings.h; sourceTree = "<group>"; };
+		70D789D313C3CEB70036BEAB /* output.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = output.cpp; path = breseq/output.cpp; sourceTree = SOURCE_ROOT; };
+		70D789D613C3CEC80036BEAB /* output.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = output.h; sourceTree = "<group>"; };
+		70F9FB85130C592700D6E11D /* tabulate_coverage.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; lineEnding = 0; name = tabulate_coverage.cpp; path = breseq/tabulate_coverage.cpp; sourceTree = SOURCE_ROOT; xcLanguageSpecificationIdentifier = xcode.lang.cpp; };
+		70F9FB89130C828000D6E11D /* tabulate_coverage.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; lineEnding = 0; path = tabulate_coverage.h; sourceTree = "<group>"; xcLanguageSpecificationIdentifier = xcode.lang.objcpp; };
+/* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		42B6EDC011C69CC70075F8A3 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				708FA5FD13257A7D00864C40 /* libbreseq.a in Frameworks */,
+				70B69E071369E2440001B750 /* libbam.a in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		42BA690A1189B7FD000B00B1 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				4247E82C1268EC3E006A6D78 /* libz.a in Frameworks */,
+				70B69E061369E2440001B750 /* libbam.a in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		70A8365613477F7B0037F8DE /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				70A8365713477F7B0037F8DE /* libbreseq.a in Frameworks */,
+				70B69E081369E2440001B750 /* libbam.a in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		421ACEB51170DB9600C2EB85 = {
+			isa = PBXGroup;
+			children = (
+				70436D5A13FF7675006448FB /* samtools */,
+				70A9AEA6135BA2DF006B6D79 /* config */,
+				4247E77F1268E175006A6D78 /* breseq */,
+				421ACF5F1170E06300C2EB85 /* lib */,
+				70436D5613FF6D5C006448FB /* copied  */,
+				421ACF301170DF1800C2EB85 /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		421ACF301170DF1800C2EB85 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				708FA5D6132578BE00864C40 /* cbreseq */,
+				708FA5DA132578BE00864C40 /* libbreseq.a */,
+				70A8365C13477F7B0037F8DE /* cbam2aln */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		421ACF5F1170E06300C2EB85 /* lib */ = {
+			isa = PBXGroup;
+			children = (
+				70B69E051369E2440001B750 /* libbam.a */,
+				421ACFAC1170F05500C2EB85 /* libz.a */,
+			);
+			name = lib;
+			sourceTree = "<group>";
+		};
+		4247E77F1268E175006A6D78 /* breseq */ = {
+			isa = PBXGroup;
+			children = (
+				7087747412BC1C06000F9B57 /* breseq */,
+				709794A8138ECAD300E48727 /* bam2aln_cmdline.cpp */,
+				70B69DE51369B8700001B750 /* breseq_cmdline.cpp */,
+				7087728712BC1660000F9B57 /* alignment.cpp */,
+				70A8364C13477AAE0037F8DE /* alignment_output.cpp */,
+				70B5B0FF13324D8300737DC1 /* annotated_sequence.cpp */,
+				70B48C4A13A9918E00BF2BF0 /* anyoption.cpp */,
+				70B69DE91369D3510001B750 /* calculate_trims.cpp */,
+				707F211513478B7700ED2F3E /* candidate_junctions.cpp */,
+				70B48C4E13A991BE00BF2BF0 /* chisquare.cpp */,
+				701EE98213C4BB5200F2EC70 /* contingency_loci.cpp */,
+				70367D2013EB232C000787CC /* coverage_distribution.cpp */,
+				7087728912BC169C000F9B57 /* error_count.cpp */,
+				70B4AEAF1391F72200B9638D /* fasta.cpp */,
+				702EABF613421A8400103019 /* fastq.cpp */,
+				7087728A12BC169C000F9B57 /* genome_diff.cpp */,
+				7087728B12BC169C000F9B57 /* identify_mutations.cpp */,
+				7084E56613CFD471005B57D1 /* mutation_predictor.cpp */,
+				70D789D313C3CEB70036BEAB /* output.cpp */,
+				7087728D12BC169C000F9B57 /* pileup.cpp */,
+				7087728C12BC169C000F9B57 /* pileup_base.cpp */,
+				708D62431390B1D5007FF13C /* resolve_alignments.cpp */,
+				70B9320E1394008200885753 /* settings.cpp */,
+				70F9FB85130C592700D6E11D /* tabulate_coverage.cpp */,
+			);
+			name = breseq;
+			path = "breseq-1.0";
+			sourceTree = "<group>";
+		};
+		70436D5613FF6D5C006448FB /* copied  */ = {
+			isa = PBXGroup;
+			children = (
+				70616DCF1400A0C0006E7800 /* plot_coverage.r */,
+				70616DD01400A0C0006E7800 /* plot_error_rate.r */,
+				70616DD11400A0C0006E7800 /* polymorphism_statistics.r */,
+				70436D5713FF6D7D006448FB /* coverage_distribution.r */,
+				70616DD21400A0CE006E7800 /* breseq_small.png */,
+				70616DD31400A0CE006E7800 /* breseq.png */,
+			);
+			name = "copied ";
+			sourceTree = "<group>";
+		};
+		7087747412BC1C06000F9B57 /* breseq */ = {
+			isa = PBXGroup;
+			children = (
+				70B69DE71369BB990001B750 /* common.h */,
+				7087747512BC1C06000F9B57 /* alignment.h */,
+				70A8364613477A180037F8DE /* alignment_output.h */,
+				70B5B10A13324DB500737DC1 /* annotated_sequence.h */,
+				70B48C4313A9917C00BF2BF0 /* anyoption.h */,
+				70B69DE81369D3450001B750 /* calculate_trims.h */,
+				707F211313478B6500ED2F3E /* candidate_junctions.h */,
+				70B48C4D13A991AD00BF2BF0 /* chisquare.h */,
+				701EE98013C4BB3B00F2EC70 /* contingency_loci.h */,
+				70367D2313EB2339000787CC /* coverage_distribution.h */,
+				7087747712BC1C06000F9B57 /* error_count.h */,
+				70B4AEAD1391F71500B9638D /* fasta.h */,
+				70A8364813477A560037F8DE /* fastq.h */,
+				7087747812BC1C06000F9B57 /* genome_diff.h */,
+				7087747912BC1C06000F9B57 /* identify_mutations.h */,
+				7084E56913CFD47D005B57D1 /* mutation_predictor.h */,
+				70D789D613C3CEC80036BEAB /* output.h */,
+				7087747A12BC1C06000F9B57 /* pileup.h */,
+				7087747B12BC1C06000F9B57 /* pileup_base.h */,
+				708D62411390B1C6007FF13C /* resolve_alignments.h */,
+				70B932111394009100885753 /* settings.h */,
+				70436D5C14000744006448FB /* storable.h */,
+				70F9FB89130C828000D6E11D /* tabulate_coverage.h */,
+			);
+			name = breseq;
+			path = breseq/breseq;
+			sourceTree = SOURCE_ROOT;
+		};
+		70A9AEA6135BA2DF006B6D79 /* config */ = {
+			isa = PBXGroup;
+			children = (
+				70B69E091369E51E0001B750 /* Debug.xcconfig */,
+				70B69E0A1369E51E0001B750 /* Release.xcconfig */,
+				70B69E0B1369E51E0001B750 /* Shared.xcconfig */,
+			);
+			path = config;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXHeadersBuildPhase section */
+		42BA69081189B7FD000B00B1 /* Headers */ = {
+			isa = PBXHeadersBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				7087748212BC1C31000F9B57 /* alignment.h in Headers */,
+				70A8364713477A180037F8DE /* alignment_output.h in Headers */,
+				7087748412BC1C31000F9B57 /* error_count.h in Headers */,
+				70A8364913477A560037F8DE /* fastq.h in Headers */,
+				7087748512BC1C31000F9B57 /* genome_diff.h in Headers */,
+				7087748612BC1C31000F9B57 /* identify_mutations.h in Headers */,
+				7087748712BC1C31000F9B57 /* pileup.h in Headers */,
+				7087748812BC1C31000F9B57 /* pileup_base.h in Headers */,
+				70B5B10B13324DBD00737DC1 /* annotated_sequence.h in Headers */,
+				707F211413478B6500ED2F3E /* candidate_junctions.h in Headers */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXHeadersBuildPhase section */
+
+/* Begin PBXLegacyTarget section */
+		421ACF201170DC4400C2EB85 /* samtools */ = {
+			isa = PBXLegacyTarget;
+			buildArgumentsString = "-f Makefile.original lib";
+			buildConfigurationList = 421ACF251170DC6C00C2EB85 /* Build configuration list for PBXLegacyTarget "samtools" */;
+			buildPhases = (
+			);
+			buildToolPath = /usr/bin/make;
+			buildWorkingDirectory = "$(PROJECT_DIR)/../../extern/samtools-0.1.15";
+			dependencies = (
+			);
+			name = samtools;
+			passBuildSettingsInEnvironment = 1;
+			productName = samtools;
+		};
+/* End PBXLegacyTarget section */
+
+/* Begin PBXNativeTarget section */
+		42B6EDB811C69CC70075F8A3 /* breseq_cmdline */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 42B6EDC511C69CC70075F8A3 /* Build configuration list for PBXNativeTarget "breseq_cmdline" */;
+			buildPhases = (
+				42B6EDBD11C69CC70075F8A3 /* Sources */,
+				42B6EDC011C69CC70075F8A3 /* Frameworks */,
+				70436D5413FF6CBB006448FB /* CopyFiles */,
+				70436D5913FF7659006448FB /* CopyFiles */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				42B6EDB911C69CC70075F8A3 /* PBXTargetDependency */,
+				42B6EDBB11C69CC70075F8A3 /* PBXTargetDependency */,
+			);
+			name = breseq_cmdline;
+			productName = error_count;
+			productReference = 708FA5D6132578BE00864C40 /* cbreseq */;
+			productType = "com.apple.product-type.tool";
+		};
+		42BA690B1189B7FD000B00B1 /* breseq */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 42BA69191189B83D000B00B1 /* Build configuration list for PBXNativeTarget "breseq" */;
+			buildPhases = (
+				42BA69081189B7FD000B00B1 /* Headers */,
+				42BA69091189B7FD000B00B1 /* Sources */,
+				42BA690A1189B7FD000B00B1 /* Frameworks */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = breseq;
+			productName = breseq;
+			productReference = 708FA5DA132578BE00864C40 /* libbreseq.a */;
+			productType = "com.apple.product-type.library.static";
+		};
+		70A8364F13477F7B0037F8DE /* bam2aln */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 70A8365913477F7B0037F8DE /* Build configuration list for PBXNativeTarget "bam2aln" */;
+			buildPhases = (
+				70A8365413477F7B0037F8DE /* Sources */,
+				70A8365613477F7B0037F8DE /* Frameworks */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				70A8365013477F7B0037F8DE /* PBXTargetDependency */,
+				70A8365213477F7B0037F8DE /* PBXTargetDependency */,
+			);
+			name = bam2aln;
+			productName = error_count;
+			productReference = 70A8365C13477F7B0037F8DE /* cbam2aln */;
+			productType = "com.apple.product-type.tool";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		421ACEB71170DB9600C2EB85 /* Project object */ = {
+			isa = PBXProject;
+			buildConfigurationList = 421ACEBA1170DB9600C2EB85 /* Build configuration list for PBXProject "breseq" */;
+			compatibilityVersion = "Xcode 2.4";
+			developmentRegion = English;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				English,
+				Japanese,
+				French,
+				German,
+			);
+			mainGroup = 421ACEB51170DB9600C2EB85;
+			productRefGroup = 421ACF301170DF1800C2EB85 /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				422D46201219DEFF003FD94D /* all */,
+				421ACF201170DC4400C2EB85 /* samtools */,
+				42BA690B1189B7FD000B00B1 /* breseq */,
+				42B6EDB811C69CC70075F8A3 /* breseq_cmdline */,
+				70A8364F13477F7B0037F8DE /* bam2aln */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXSourcesBuildPhase section */
+		42B6EDBD11C69CC70075F8A3 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				70B69DE61369B8700001B750 /* breseq_cmdline.cpp in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		42BA69091189B7FD000B00B1 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				7087728812BC1660000F9B57 /* alignment.cpp in Sources */,
+				70A8364D13477AAE0037F8DE /* alignment_output.cpp in Sources */,
+				70B5B10013324D8300737DC1 /* annotated_sequence.cpp in Sources */,
+				7087728E12BC169C000F9B57 /* error_count.cpp in Sources */,
+				702EABF713421A8400103019 /* fastq.cpp in Sources */,
+				7087728F12BC169C000F9B57 /* genome_diff.cpp in Sources */,
+				7087729012BC169C000F9B57 /* identify_mutations.cpp in Sources */,
+				7087729112BC169C000F9B57 /* pileup_base.cpp in Sources */,
+				7087729212BC169C000F9B57 /* pileup.cpp in Sources */,
+				70F9FB86130C592700D6E11D /* tabulate_coverage.cpp in Sources */,
+				707F211613478B7700ED2F3E /* candidate_junctions.cpp in Sources */,
+				70B69DF41369D8B20001B750 /* calculate_trims.cpp in Sources */,
+				708D62441390B1D5007FF13C /* resolve_alignments.cpp in Sources */,
+				70B4AEB01391F72200B9638D /* fasta.cpp in Sources */,
+				70B9320F1394008200885753 /* settings.cpp in Sources */,
+				70B48C4B13A9918E00BF2BF0 /* anyoption.cpp in Sources */,
+				70B48C4F13A991BE00BF2BF0 /* chisquare.cpp in Sources */,
+				70D789D413C3CEB70036BEAB /* output.cpp in Sources */,
+				701EE98313C4BB5200F2EC70 /* contingency_loci.cpp in Sources */,
+				7084E56713CFD471005B57D1 /* mutation_predictor.cpp in Sources */,
+				70367D2113EB232C000787CC /* coverage_distribution.cpp in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		70A8365413477F7B0037F8DE /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				709794A9138ECAD300E48727 /* bam2aln_cmdline.cpp in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		422D46241219DF08003FD94D /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 42BA690B1189B7FD000B00B1 /* breseq */;
+			targetProxy = 422D46231219DF08003FD94D /* PBXContainerItemProxy */;
+		};
+		422D462A1219DF08003FD94D /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 421ACF201170DC4400C2EB85 /* samtools */;
+			targetProxy = 422D46291219DF08003FD94D /* PBXContainerItemProxy */;
+		};
+		42B6EDB911C69CC70075F8A3 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 421ACF201170DC4400C2EB85 /* samtools */;
+			targetProxy = 42B6EDBA11C69CC70075F8A3 /* PBXContainerItemProxy */;
+		};
+		42B6EDBB11C69CC70075F8A3 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 42BA690B1189B7FD000B00B1 /* breseq */;
+			targetProxy = 42B6EDBC11C69CC70075F8A3 /* PBXContainerItemProxy */;
+		};
+		708FA5D5132578BD00864C40 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 42B6EDB811C69CC70075F8A3 /* breseq_cmdline */;
+			targetProxy = 708FA5D4132578BD00864C40 /* PBXContainerItemProxy */;
+		};
+		70A8365013477F7B0037F8DE /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 421ACF201170DC4400C2EB85 /* samtools */;
+			targetProxy = 70A8365113477F7B0037F8DE /* PBXContainerItemProxy */;
+		};
+		70A8365213477F7B0037F8DE /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 42BA690B1189B7FD000B00B1 /* breseq */;
+			targetProxy = 70A8365313477F7B0037F8DE /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
+
+/* Begin XCBuildConfiguration section */
+		421ACEB81170DB9600C2EB85 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				COPY_PHASE_STRIP = NO;
+				HEADER_SEARCH_PATHS = "$(value)";
+				LIBRARY_SEARCH_PATHS = "$(value)";
+			};
+			name = Debug;
+		};
+		421ACEB91170DB9600C2EB85 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				COPY_PHASE_STRIP = YES;
+				HEADER_SEARCH_PATHS = "$(value)";
+				LIBRARY_SEARCH_PATHS = "$(value)";
+			};
+			name = Release;
+		};
+		421ACF211170DC4400C2EB85 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				COPY_PHASE_STRIP = NO;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				PRODUCT_NAME = samtools;
+			};
+			name = Debug;
+		};
+		421ACF221170DC4400C2EB85 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				COPY_PHASE_STRIP = YES;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				GCC_ENABLE_FIX_AND_CONTINUE = NO;
+				PRODUCT_NAME = samtools;
+				ZERO_LINK = NO;
+			};
+			name = Release;
+		};
+		422D46211219DEFF003FD94D /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ARCHS = "$(NATIVE_ARCH_ACTUAL)";
+				COPY_PHASE_STRIP = NO;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				HEADER_SEARCH_PATHS = "$(value)";
+				LIBRARY_SEARCH_PATHS = "$(value)";
+				PRODUCT_NAME = all;
+			};
+			name = Debug;
+		};
+		422D46221219DEFF003FD94D /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				COPY_PHASE_STRIP = YES;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				GCC_ENABLE_FIX_AND_CONTINUE = NO;
+				HEADER_SEARCH_PATHS = "$(value)";
+				LIBRARY_SEARCH_PATHS = "$(value)";
+				PRODUCT_NAME = all;
+				ZERO_LINK = NO;
+			};
+			name = Release;
+		};
+		42B6EDC611C69CC70075F8A3 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = 70B69E091369E51E0001B750 /* Debug.xcconfig */;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ARCHS = "$(NATIVE_ARCH_ACTUAL)";
+				COPY_PHASE_STRIP = NO;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_ENABLE_FIX_AND_CONTINUE = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_WARN_ABOUT_POINTER_SIGNEDNESS = YES;
+				HEADER_SEARCH_PATHS = "$(value)";
+				HEADER_SEARCH_PATHS_QUOTED_FOR_TARGET_1 = "";
+				HEADER_SEARCH_PATHS_QUOTED_FOR_TARGET_2 = "";
+				INSTALL_PATH = /usr/local/bin;
+				LIBRARY_SEARCH_PATHS = "$(value)";
+				LIBRARY_SEARCH_PATHS_QUOTED_FOR_TARGET_1 = "";
+				LIBRARY_SEARCH_PATHS_QUOTED_FOR_TARGET_2 = "";
+				ONLY_ACTIVE_ARCH = YES;
+				PREBINDING = NO;
+				PRODUCT_NAME = cbreseq;
+				USER_HEADER_SEARCH_PATHS = "";
+			};
+			name = Debug;
+		};
+		42B6EDC711C69CC70075F8A3 /* Release */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = 70B69E0A1369E51E0001B750 /* Release.xcconfig */;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ARCHS = "$(NATIVE_ARCH_ACTUAL)";
+				COPY_PHASE_STRIP = YES;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				GCC_ENABLE_FIX_AND_CONTINUE = NO;
+				GCC_MODEL_TUNING = G5;
+				HEADER_SEARCH_PATHS = "$(value)";
+				HEADER_SEARCH_PATHS_QUOTED_FOR_TARGET_1 = "";
+				HEADER_SEARCH_PATHS_QUOTED_FOR_TARGET_2 = "";
+				INSTALL_PATH = /usr/local/bin;
+				LIBRARY_SEARCH_PATHS = "$(value)";
+				LIBRARY_SEARCH_PATHS_QUOTED_FOR_TARGET_1 = "";
+				LIBRARY_SEARCH_PATHS_QUOTED_FOR_TARGET_2 = "";
+				PREBINDING = NO;
+				PRODUCT_NAME = cbreseq;
+				USER_HEADER_SEARCH_PATHS = "";
+				ZERO_LINK = NO;
+			};
+			name = Release;
+		};
+		42BA690D1189B7FE000B00B1 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = 70B69E091369E51E0001B750 /* Debug.xcconfig */;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ARCHS = "$(NATIVE_ARCH_ACTUAL)";
+				HEADER_SEARCH_PATHS = "$(value)";
+				LIBRARY_SEARCH_PATHS = "$(value)";
+				ONLY_ACTIVE_ARCH = YES;
+				PRODUCT_NAME = breseq;
+			};
+			name = Debug;
+		};
+		42BA690E1189B7FE000B00B1 /* Release */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = 70B69E0A1369E51E0001B750 /* Release.xcconfig */;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ARCHS = "$(NATIVE_ARCH_ACTUAL)";
+				COPY_PHASE_STRIP = YES;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				GCC_ENABLE_FIX_AND_CONTINUE = NO;
+				GCC_MODEL_TUNING = G5;
+				HEADER_SEARCH_PATHS = "$(value)";
+				INSTALL_PATH = /usr/local/lib;
+				LIBRARY_SEARCH_PATHS = "$(value)";
+				PREBINDING = NO;
+				PRODUCT_NAME = breseq;
+				ZERO_LINK = NO;
+			};
+			name = Release;
+		};
+		70A8365A13477F7B0037F8DE /* Debug */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = 70B69E091369E51E0001B750 /* Debug.xcconfig */;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ARCHS = "$(NATIVE_ARCH_ACTUAL)";
+				COPY_PHASE_STRIP = NO;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_ENABLE_FIX_AND_CONTINUE = YES;
+				HEADER_SEARCH_PATHS = "$(value)";
+				HEADER_SEARCH_PATHS_QUOTED_FOR_TARGET_1 = "\"$(SRCROOT)/\"/**";
+				HEADER_SEARCH_PATHS_QUOTED_FOR_TARGET_2 = "";
+				INSTALL_PATH = /usr/local/bin;
+				LIBRARY_SEARCH_PATHS = "$(value)";
+				LIBRARY_SEARCH_PATHS_QUOTED_FOR_TARGET_1 = "\"$(SRCROOT)/.libs\"";
+				LIBRARY_SEARCH_PATHS_QUOTED_FOR_TARGET_2 = "\"$(SRCROOT)/breseq/.libs\"";
+				LIBRARY_SEARCH_PATHS_QUOTED_FOR_TARGET_3 = "\"$(SRCROOT)/build/Debug\"";
+				ONLY_ACTIVE_ARCH = YES;
+				PREBINDING = NO;
+				PRODUCT_NAME = cbam2aln;
+				USER_HEADER_SEARCH_PATHS = /opt/local/include;
+			};
+			name = Debug;
+		};
+		70A8365B13477F7B0037F8DE /* Release */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = 70B69E0A1369E51E0001B750 /* Release.xcconfig */;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ARCHS = "$(NATIVE_ARCH_ACTUAL)";
+				COPY_PHASE_STRIP = YES;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				GCC_ENABLE_FIX_AND_CONTINUE = NO;
+				GCC_MODEL_TUNING = G5;
+				HEADER_SEARCH_PATHS = "$(value)";
+				HEADER_SEARCH_PATHS_QUOTED_FOR_TARGET_1 = "\"$(SRCROOT)/\"/**";
+				HEADER_SEARCH_PATHS_QUOTED_FOR_TARGET_2 = "";
+				INSTALL_PATH = /usr/local/bin;
+				LIBRARY_SEARCH_PATHS = "$(value)";
+				LIBRARY_SEARCH_PATHS_QUOTED_FOR_TARGET_1 = "\"$(SRCROOT)/samtools-0.1.7a\"";
+				LIBRARY_SEARCH_PATHS_QUOTED_FOR_TARGET_2 = "\"$(SRCROOT)/../../extern/samtools-0.1.7a\"";
+				LIBRARY_SEARCH_PATHS_QUOTED_FOR_TARGET_3 = "\"$(SRCROOT)/.libs\"";
+				LIBRARY_SEARCH_PATHS_QUOTED_FOR_TARGET_4 = "\"$(SRCROOT)/breseq/.libs\"";
+				LIBRARY_SEARCH_PATHS_QUOTED_FOR_TARGET_5 = "\"$(SRCROOT)/build/Debug\"";
+				PREBINDING = NO;
+				PRODUCT_NAME = cbam2aln;
+				USER_HEADER_SEARCH_PATHS = /opt/local/include;
+				ZERO_LINK = NO;
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		421ACEBA1170DB9600C2EB85 /* Build configuration list for PBXProject "breseq" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				421ACEB81170DB9600C2EB85 /* Debug */,
+				421ACEB91170DB9600C2EB85 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		421ACF251170DC6C00C2EB85 /* Build configuration list for PBXLegacyTarget "samtools" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				421ACF211170DC4400C2EB85 /* Debug */,
+				421ACF221170DC4400C2EB85 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		422D46371219DF1D003FD94D /* Build configuration list for PBXAggregateTarget "all" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				422D46211219DEFF003FD94D /* Debug */,
+				422D46221219DEFF003FD94D /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		42B6EDC511C69CC70075F8A3 /* Build configuration list for PBXNativeTarget "breseq_cmdline" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				42B6EDC611C69CC70075F8A3 /* Debug */,
+				42B6EDC711C69CC70075F8A3 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		42BA69191189B83D000B00B1 /* Build configuration list for PBXNativeTarget "breseq" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				42BA690D1189B7FE000B00B1 /* Debug */,
+				42BA690E1189B7FE000B00B1 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		70A8365913477F7B0037F8DE /* Build configuration list for PBXNativeTarget "bam2aln" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				70A8365A13477F7B0037F8DE /* Debug */,
+				70A8365B13477F7B0037F8DE /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+/* End XCConfigurationList section */
+	};
+	rootObject = 421ACEB71170DB9600C2EB85 /* Project object */;
+}
