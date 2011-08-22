@@ -137,7 +137,8 @@ struct diff_entry {
   virtual void marshal(field_list_t& s);
 
   
-  struct sort_by_scores;
+  struct by_scores;
+  struct is_type;
   struct field_exists;
   struct fields_exist;
 
@@ -248,7 +249,7 @@ public:
   diff_entry _line_to_item(const string& line);
 
   //! Returns _entry_list with matching item._evidence
-  entry_list_t mutation_evidence_list(const diff_entry& item);
+  ::list<counted_ptr<diff_entry> > mutation_evidence_list(const diff_entry& item);
 
   entry_list_t mutation_list();
 
@@ -292,11 +293,11 @@ protected:
 struct diff_entry::field_exists : public unary_function <genome_diff::diff_entry_ptr, bool>
 {
   //! Constructor
-  explicit field_exists (diff_entry::key_t field_key)
+  explicit field_exists (const diff_entry::key_t& field_key)
     : m_field_key(field_key) {}
   
   //! Predicate
-  virtual bool operator() (genome_diff::diff_entry_ptr p_diff_entry) 
+  virtual bool operator() (const genome_diff::diff_entry_ptr& p_diff_entry) 
     const {return (p_diff_entry->entry_exists(m_field_key));}
 
   protected:
@@ -309,11 +310,11 @@ struct diff_entry::field_exists : public unary_function <genome_diff::diff_entry
 struct diff_entry::fields_exist : public unary_function <genome_diff::diff_entry_ptr, bool> 
 {
   //! Constructor
-  explicit fields_exist (vector<diff_entry::key_t> field_keys)
+  explicit fields_exist (const vector<diff_entry::key_t>& field_keys)
     : m_field_keys(field_keys) {}
   
   //! Predicate
-  virtual bool operator() (genome_diff::diff_entry_ptr p_diff_entry) const
+  virtual bool operator() (const genome_diff::diff_entry_ptr& p_diff_entry) const
   {
     for (vector<diff_entry::key_t>::const_iterator itr = m_field_keys.begin();
          itr != m_field_keys.end(); itr++) {
@@ -331,18 +332,18 @@ struct diff_entry::fields_exist : public unary_function <genome_diff::diff_entry
     vector<diff_entry::key_t> m_field_keys;
 };
 
-//! Functor. Sorts diff_entrys in a decending order depending on given fields that
-//can be evaluated as a unsigned integer.
-struct diff_entry::sort_by_scores : public binary_function
+//! Functor. Sorts diff_entrys in decending order depending on given fields that
+//can be evaluated as an unsigned integer.
+struct diff_entry::by_scores : public binary_function
   <genome_diff::diff_entry_ptr, genome_diff::diff_entry_ptr, bool>
 {
 
   //! Constructor
-  explicit sort_by_scores (vector<key_t> field_keys)
+  explicit by_scores (const vector<key_t>& field_keys)
     : m_field_keys(field_keys) {}
   
   //! Predicate
-  virtual bool operator() (genome_diff::diff_entry_ptr a, genome_diff::diff_entry_ptr b) const 
+  virtual bool operator() (const genome_diff::diff_entry_ptr& a, const genome_diff::diff_entry_ptr& b) const 
   {
     for (vector<key_t>::const_iterator itr = m_field_keys.begin();
          itr != m_field_keys.end(); itr++) {
@@ -358,6 +359,22 @@ struct diff_entry::sort_by_scores : public binary_function
   
   protected:
     vector<key_t> m_field_keys;
+};
+
+
+struct diff_entry::is_type: unary_function <genome_diff::diff_entry_ptr, bool>
+{
+  //! Constructor
+  explicit is_type(const string& type)
+    : m_type(type) {}
+
+  //! Predicate 
+  virtual bool operator() (const genome_diff::diff_entry_ptr& diff_entry)
+    const {return (*diff_entry)._type == m_type;}
+
+
+  protected:
+    string m_type;
 };
 
 
