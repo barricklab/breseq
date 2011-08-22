@@ -147,26 +147,26 @@ namespace breseq {
             out << mindiff << " " << maxdiff;
  
             */
-          int maxsize = 0;
+          size_t maxsize = 0;
           //Finds the max size of freqs
-          for( int i=0; i<repeats.size(); i++ ){
+          for( size_t i=0; i<repeats.size(); i++ ){
             if( maxsize < repeats[i].freqs.size() ){
               maxsize = repeats[i].freqs.size();
             }
           }
           
-          for( int i=0; i<repeats.size(); i++ ){
+          for( size_t i=0; i<repeats.size(); i++ ){
                 vector<string> bounds = split( split( repeats[i].region, ":" )[1], "-" );
-                for( int j=0; j<repeats[i].freqs.size(); j++ ){
+                for( size_t j=0; j<repeats[i].freqs.size(); j++ ){
                     out << repeats[i].freqs[j] << " ";
                 }
-              for( int j=0; j<maxsize-repeats[i].freqs.size(); j++ ){
+              for( size_t j=0; j<maxsize-repeats[i].freqs.size(); j++ ){
                 out << 0 << " ";
               }
                 
                 // Checks if it is a contingency loci. If so, prints out the name of the locus
                 bool locus = false;
-                for( int j=0; j<indices.size(); j++ ){
+                for( size_t j=0; j<indices.size(); j++ ){
                   if( atoi( bounds[0].c_str() ) == indices[j] ){
                     //locus = true;
                     //out << names[j];
