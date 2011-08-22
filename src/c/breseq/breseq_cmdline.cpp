@@ -832,7 +832,7 @@ int do_output( int argc, char* argv[]){
   //TESTED, displays properly, but there are some oddities between it and 
   //the orgininal, needs calls like diff_entry["gene"] 
   //to be implemented.
-  if(true) {
+  if(false) {
     string file_name = "html_index.html";
     Settings settings;
     settings.no_evidence = false;
@@ -1683,6 +1683,7 @@ int breseq_default_action(int argc, char* argv[])
 				ra.erase(it);
 
 		//@ra = sort { -($a->{quality} <=> $b->{quality}) } @ra;
+    ra.sort(diff_entry::by_scores(make_list<string>("quality"))); 
 
 		list<counted_ptr<diff_entry> >::iterator it;
 
@@ -1717,6 +1718,7 @@ int breseq_default_action(int argc, char* argv[])
 				ra.erase(it);
 
 		//@jc = sort { -($a->{pos_hash_score} <=> $b->{pos_hash_score}) || -($a->{min_overlap_score} <=> $b->{min_overlap_score})  || ($a->{total_reads} <=> $a->{total_reads}) } @jc;
+    jc.sort(diff_entry::by_scores(make_list<diff_entry::key_t>("pos_hash_score")("min_overlap_score")("total_reads")));
 		it = jc.begin();
 		for (uint32_t i = 0; i < jc.size(); i++)
 		{
