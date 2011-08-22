@@ -46,7 +46,7 @@ namespace breseq {
     
     cout << "Analyzing alignments...\n";
     // For each repeat
-    for( int i=0; i<hr.size(); i++ ){
+    for( size_t i=0; i<hr.size(); i++ ){
       // Makes the region string
       stringstream ss(ios_base::out | ios_base::app); 
       ss << hr[i].start;  ss << "-"; ss << hr[i].start + hr[i].length; 
@@ -69,13 +69,13 @@ namespace breseq {
   void identify_homopolymer_repeats(homopolymer_repeat_list& hr, const cReferenceSequences& ref_seqs)
   {
     //For each sequence
-    for( int i=0; i<ref_seqs.size(); i++ ){
+    for( size_t i=0; i<ref_seqs.size(); i++ ){
       
       char base = ' ';
       int rnumber = 0;
       
       // For each nucleotide in the sequence
-      for( int j=0; j<ref_seqs[i].m_fasta_sequence.m_sequence.size(); j++ ){
+      for( size_t j=0; j<ref_seqs[i].m_fasta_sequence.m_sequence.size(); j++ ){
         if( ref_seqs[i].m_fasta_sequence.m_sequence[j] == base ){
           rnumber++;
         }
@@ -143,8 +143,8 @@ namespace breseq {
     
     // Proceeds if it is a contingecy locus, or there the file for the loci "NA" was given
     bool contingency = 0;
-    for( int i=0; i<indices.size(); i++ ){
-      if( indices[i] == current_region.start ){
+    for( size_t i=0; i<indices.size(); i++ ){
+      if( static_cast<uint32_t>(indices[i]) == current_region.start ){
         //cout << "locus: " << indices[i] << "\n";
         //getchar();
         contingency = true;
@@ -162,7 +162,7 @@ namespace breseq {
     vector<double> histogram(1,0);
     int count = 0;
     //printf( "Freqs.size(): %i\n", repeats.back().freqs.size() );
-    for( int i=0; i<repeats.back().freqs.size(); i++ ){
+    for( size_t i=0; i<repeats.back().freqs.size(); i++ ){
       //printf( "%f ", repeats.back().freqs[i] );
       if( histogram.size() < repeats.back().freqs[i]+1 ){
         histogram.resize( repeats.back().freqs[i]+1 );
@@ -198,7 +198,7 @@ namespace breseq {
     }
     
     // Goes through cigar to see if the alignment is appropriate. Then counts the length of the repeat
-    for( int i=0; i<cigar_pair.size(); i++ ){
+    for( size_t i=0; i<cigar_pair.size(); i++ ){
       if( cigar_pair[i].first == 'S' ){
         dist_to_first_match += cigar_pair[i].second;
       }
@@ -218,10 +218,10 @@ namespace breseq {
             //Find where in the read to begin counting repeats from the first match
             int ref_bypass_length = current_region.start - a.reference_start_1();
             int read_bypass_length = 0;
-            int cigar_start_pos;
+            size_t cigar_start_pos;
             
             
-            for( int j=0; j+i<cigar_pair.size(); j++ ){
+            for( size_t j=0; j+i<cigar_pair.size(); j++ ){
               if( cigar_pair[i+j].first == 'M' ){
                 
                 // If the match doesn't start within 5 nucleotides of the repeat
@@ -266,7 +266,7 @@ namespace breseq {
             //Checks the supposed length of the repeat in the read
             int read_repeat_length = 0;
             int ref_repeat_length = current_region.length;
-            for( int j=cigar_start_pos; j<cigar_pair.size(); j++ ){
+            for( size_t j=cigar_start_pos; j<cigar_pair.size(); j++ ){
               
               if( cigar_pair[j].first == 'M' && j == cigar_start_pos ){
                 if( ref_repeat_length - (cigar_pair[j].second - ref_bypass_length) >= 0 ){
