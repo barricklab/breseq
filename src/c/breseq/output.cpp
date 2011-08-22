@@ -1,4 +1,6 @@
 #include "breseq/output.h"
+#include "breseq/anyoption.h"
+#include "breseq/alignment_output.h"
 
 
 using namespace std;
@@ -2134,13 +2136,13 @@ Evidence_Files::html_evidence_file (
     }
     ss << item[END];
     if (!item[INSERT_END].empty()) {
-      ss << item[INSERT_END];
+      ss << "-" << item[INSERT_END];
     }
     cerr << "Creating read alignment for region " << ss.str() << endl;
 // # 
 // #     $interval->{quality_score_cutoff} = $settings->{base_quality_cutoff} if (defined $settings->{base_quality_cutoff});
     if (settings.base_quality_cutoff != 0) {
-    item["BASE_QUALITY_CUTOFF"] = to_string(settings.base_quality_cutoff);
+      item["BASE_QUALITY_CUTOFF"] = to_string(settings.base_quality_cutoff);
     }
 // #     
 // #     # experiment with using C++ version
@@ -2165,6 +2167,12 @@ Evidence_Files::html_evidence_file (
 // #     }
     //Commands for bam2aln
     //TODO @JEB
+    
+
+     alignment_output ao(item["bam_path"], item["fasta_path"], from_string<uint32_t>(ss.str()), settings.base_quality_cutoff);
+     
+     HTML << ao.html_alignment(ss.str());
+
   }
 // #   print HTML end_html;
 // #   close HTML;

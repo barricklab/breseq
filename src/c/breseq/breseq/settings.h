@@ -398,8 +398,8 @@ namespace breseq
 
     map<string,string> done_key_messages;
     
-		//!@GRC Setting options needed for HTML outputs
-		string print_run_name; //!< need to set default to "unnamed"
+		//! TODO @JEB / GRC Setting options needed for HTML outputs
+		string print_run_name; 
 		bool hide_circular_genome_junctions;
 		bool polymorphism_prediction;
 		bool lenski_format;
@@ -412,7 +412,7 @@ namespace breseq
 		vector<ExecutionTime> execution_times;
     string time2string(const time_t* timer, const bool& relative);
 
-    //@GRC End of settings needed for HTML outputs
+    //End of settings needed for HTML outputs
 
 		// Utility function to substitute specific details into a generic file name
 
