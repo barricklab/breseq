@@ -30,6 +30,7 @@ LICENSE AND COPYRIGHT
 #include <string.h>
 #include <time.h>
 #include <sys/stat.h>
+#include <limits.h>
 
 // C++
 #include <algorithm>
