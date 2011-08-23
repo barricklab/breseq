@@ -180,7 +180,7 @@ void html_index(string file_name, Settings settings, Summary summary,
 // #   ## Mutation predictions
 // #   ###
   HTML << "<!--Mutation Predictions -->" << endl;
-  genome_diff::entry_vector_t muts = gd.list(make_list<string>(SNP)(INS)(DEL)(SUB)(MOB)(AMP));
+  diff_entry_list muts = gd.list(make_list<string>(SNP)(INS)(DEL)(SUB)(MOB)(AMP));
   
   string relative_path = settings.local_evidence_path;
   
@@ -204,7 +204,7 @@ void html_index(string file_name, Settings settings, Summary summary,
 // #   ###
   HTML << "<!--Unassigned evidence-->" << endl;
   
-  entry_list_t mc = gd.filter_used_as_evidence(gd.list(make_list<string>("MC")));
+  diff_entry_list mc = gd.filter_used_as_evidence(gd.list(make_list<string>("MC")));
   
   if (mc.size() > 0) {
 // #     print HTML p . html_missing_coverage_table_string(\@mc, $relative_path, "Unassigned missing coverage evidence...");
@@ -212,7 +212,7 @@ void html_index(string file_name, Settings settings, Summary summary,
   }
 
 // #   my @jc = $gd->filter_used_as_evidence($gd->list('JC'));
-  entry_list_t jc = 
+  diff_entry_list jc = 
     gd.filter_used_as_evidence(gd.list(make_list<string>("JC")));
 
 // #   @jc = grep { !$_->{no_show} } @jc;  
@@ -227,7 +227,7 @@ void html_index(string file_name, Settings settings, Summary summary,
    
 // # 
 // #   my @jcu = grep { !$_->{reject} } @jc; 
-  entry_list_t jcu = jc;
+  diff_entry_list jcu = jc;
   jcu.remove_if(diff_entry::field_exists("reject"));
 
 // #   if (scalar @jcu > 0)
@@ -277,7 +277,7 @@ void html_marginal_predictions(string file_name, Settings settings,Summary summa
 // #   ## Marginal evidence
 // #   ###
 // #   my @ra = $gd->filter_used_as_evidence($gd->list('RA')); 
-  entry_list_t ra = gd.filter_used_as_evidence(gd.list(make_list<diff_entry::key_t>("RA")));
+  diff_entry_list ra = gd.filter_used_as_evidence(gd.list(make_list<diff_entry::key_t>("RA")));
 
 // #   ## don't print ones that overlap predicted deletions or were marked to not show
 // #   @ra = grep { !$_->{deleted} && !$_->{no_show} } @ra;
@@ -300,7 +300,7 @@ void html_marginal_predictions(string file_name, Settings settings,Summary summa
 //
 // #   
 // #   my @jc = $gd->filter_used_as_evidence($gd->list('JC'));
-    entry_list_t jc = gd.filter_used_as_evidence(gd.list(make_list<string>("JC")));
+    diff_entry_list jc = gd.filter_used_as_evidence(gd.list(make_list<string>("JC")));
 // #   @jc = grep { !$_->{no_show} } @jc;
     jc.remove_if(diff_entry::field_exists("no_show"));
 // #   @jc = grep { $_->{reject} } @jc;
@@ -383,7 +383,7 @@ void html_compare(Settings settings,const string &file_name, const string &title
   HTML << "</head>" << endl;
 // #   
 // #   my @muts = $gd->mutation_list;
-  genome_diff::entry_vector_t muts = gd.mutation_list();
+  diff_entry_list muts = gd.mutation_list();
 // #   
 // #   print HTML html_mutation_table_string($settings, $gd, \@muts, undef, undef, $one_ref_seq, $gd_name_list_ref, $options);
 // # 
@@ -396,7 +396,7 @@ void html_compare(Settings settings,const string &file_name, const string &title
 }
 // # 
 
-void html_compare_polymorphisms(Settings settings, string file_name, string title, entry_list_t list_ref)
+void html_compare_polymorphisms(Settings settings, string file_name, string title, diff_entry_list list_ref)
 {
 
   // Create stream and confirm it's open
@@ -614,7 +614,7 @@ string breseq_header_string(Settings settings)
 }
 
 
-string html_genome_diff_item_table_string(Settings settings, genome_diff gd, entry_list_t list_ref)
+string html_genome_diff_item_table_string(Settings settings, genome_diff gd, diff_entry_list list_ref)
 {
 // # sub html_genome_diff_item_table_string
 // # {
@@ -632,7 +632,7 @@ string html_genome_diff_item_table_string(Settings settings, genome_diff gd, ent
   if(first_item._type.length() == 3)
   {
 // #     return html_mutation_table_string($settings, $gd, $list_ref);
-    return Html_Mutation_Table_String(settings, gd, vector<counted_ptr<diff_entry> >(list_ref.begin(), list_ref.end())); 
+    return Html_Mutation_Table_String(settings, gd, diff_entry_list(list_ref.begin(), list_ref.end())); 
 // #   }
   }
 // #   
@@ -765,7 +765,7 @@ string to_underline_red_codon(diff_entry mut, const string& codon_key)
 
 // # 
 // # 
-string html_read_alignment_table_string(entry_list_t list_ref, bool show_reject_reason, string title, string relative_link)
+string html_read_alignment_table_string(diff_entry_list list_ref, bool show_reject_reason, string title, string relative_link)
 {
   stringstream ss; //!< Main build object for function
   stringstream ssf; //!< Used for formatting strings
@@ -807,7 +807,7 @@ string html_read_alignment_table_string(entry_list_t list_ref, bool show_reject_
   ss << "</tr>" << endl;
   
   //Loop through list_ref to build table rows
-  for (entry_list_t::iterator itr = list_ref.begin();
+  for (diff_entry_list::iterator itr = list_ref.begin();
        itr != list_ref.end(); itr ++) {  
     diff_entry& c = **itr;
 // #     my $is_polymorphism = ((defined $c->{frequency}) && ($c->{frequency} != 1)) ? 1 : 0;
@@ -1030,7 +1030,7 @@ string html_read_alignment_table_string(entry_list_t list_ref, bool show_reject_
   return ss.str();
 }
 
-string html_missing_coverage_table_string(entry_list_t list_ref, bool show_reject_reason, string title, string relative_link)
+string html_missing_coverage_table_string(diff_entry_list list_ref, bool show_reject_reason, string title, string relative_link)
 {
 // # sub html_missing_coverage_table_string
 // # {
@@ -1105,7 +1105,7 @@ string html_missing_coverage_table_string(entry_list_t list_ref, bool show_rejec
 // #   
 // #   foreach my $c (@$list_ref)
 // #   {
-      for (entry_list_t::iterator itr = list_ref.begin();
+      for (diff_entry_list::iterator itr = list_ref.begin();
            itr != list_ref.end(); itr ++) {  
         diff_entry& c =  **itr;
 // #     ## additional formatting for some variables
@@ -1226,7 +1226,7 @@ string html_missing_coverage_table_string(entry_list_t list_ref, bool show_rejec
 // # }
 }
 
-string html_new_junction_table_string(entry_list_t list_ref, bool show_reject_reason, string title, string relative_link
+string html_new_junction_table_string(diff_entry_list list_ref, bool show_reject_reason, string title, string relative_link
                                )
 {
 // #   our ($list_ref, $relative_link, $title, $show_reject_reason) = @_;
@@ -1300,7 +1300,7 @@ string html_new_junction_table_string(entry_list_t list_ref, bool show_reject_re
   uint32_t row_bg_color_index = 0; 
 // #   foreach my $c (@$list_ref)
 // #   {     
-  for (entry_list_t::iterator itr = list_ref.begin();
+  for (diff_entry_list::iterator itr = list_ref.begin();
        itr != list_ref.end(); itr ++) {  
     diff_entry& c = **itr;
 // #     ##############
@@ -1537,8 +1537,8 @@ Evidence_Files::Evidence_Files(const Settings& settings, genome_diff& gd)
   string junction_fasta_file_name = settings.candidate_junction_fasta_file_name;
 // # 
 // #   ### We make alignments of two regions for deletions: upstream and downstream edges.
-  genome_diff::entry_list_t items_MC = gd.list(make_list<string>(MC));
-  for (genome_diff::entry_list_t::iterator itr = items_MC.begin();
+  diff_entry_list items_MC = gd.list(make_list<string>(MC));
+  for (diff_entry_list::iterator itr = items_MC.begin();
        itr != items_MC.end(); itr ++) {  
     diff_entry& item = **itr;
     if (item.entry_exists(NO_SHOW)) continue;
@@ -1624,15 +1624,15 @@ Evidence_Files::Evidence_Files(const Settings& settings, genome_diff& gd)
   }
 // # 
 // #   #--> currently don't do this with 'AMP' because they are all junction evidence
-  genome_diff::entry_list_t items_SNP_INS_DEL_SUB = 
+  diff_entry_list items_SNP_INS_DEL_SUB = 
     gd.list(make_list<string>(SNP)(INS)(DEL)(SUB));
 // #   
 // #   MUT: foreach my $item ( $gd->list('SNP', 'INS', 'DEL', 'SUB') )
 // #   {
-for (genome_diff::entry_list_t::iterator itr = items_SNP_INS_DEL_SUB.begin();
+for (diff_entry_list::iterator itr = items_SNP_INS_DEL_SUB.begin();
        itr != items_SNP_INS_DEL_SUB.end(); itr ++) {  
     diff_entry& item = **itr;
-    entry_list_t mutation_evidence_list = gd.mutation_evidence_list(item);
+    diff_entry_list mutation_evidence_list = gd.mutation_evidence_list(item);
 // #     next if ($item->{no_show});
     if (item.entry_exists(NO_SHOW)) continue;
 // #     
@@ -1665,7 +1665,7 @@ for (genome_diff::entry_list_t::iterator itr = items_SNP_INS_DEL_SUB.begin();
 // #       {
 // #         $has_ra_evidence = 1 if ($evidence_item->{type} eq 'RA');
 // #       }
-      for (entry_list_t::iterator itr = mutation_evidence_list.begin();
+      for (diff_entry_list::iterator itr = mutation_evidence_list.begin();
            itr != mutation_evidence_list.end(); itr ++) {  
         diff_entry& evidence_item = **itr;
         if (evidence_item._type == RA) has_ra_evidence = true;
@@ -1728,7 +1728,7 @@ for (genome_diff::entry_list_t::iterator itr = items_SNP_INS_DEL_SUB.begin();
 // #       $evidence_item->{_evidence_file_name} = $item->{_evidence_file_name};
 // #     }
     /* Add evidence to RA items as well */
-    for (entry_list_t::iterator itr = mutation_evidence_list.begin();
+    for (diff_entry_list::iterator itr = mutation_evidence_list.begin();
          itr != mutation_evidence_list.end(); itr ++) {  
       diff_entry& evidence_item = **itr;
       if (evidence_item._type != RA) continue;
@@ -1742,11 +1742,11 @@ for (genome_diff::entry_list_t::iterator itr = items_SNP_INS_DEL_SUB.begin();
 // # 
 // #   my @ra_list = $gd->list('RA');  
 // #   @ra_list = $gd->filter_used_as_evidence(@ra_list);
-  entry_list_t ra_list = gd.filter_used_as_evidence(gd.list(make_list<string>(RA)));
+  diff_entry_list ra_list = gd.filter_used_as_evidence(gd.list(make_list<string>(RA)));
 // #   
 // #   RA: foreach my $item ( @ra_list )
 // #   {
-  for (entry_list_t::iterator itr = ra_list.begin();
+  for (diff_entry_list::iterator itr = ra_list.begin();
      itr != ra_list.end(); itr ++) {  
     diff_entry& item = **itr;
 // #     next if ($item->{no_show});
@@ -1788,17 +1788,17 @@ for (genome_diff::entry_list_t::iterator itr = items_SNP_INS_DEL_SUB.begin();
 // #   ## Note that it is completely determined by the original candidate junction sequence 
 // #   ## positions and overlap: alignment_pos and alignment_overlap.
 // # 
-genome_diff::entry_vector_t items_JC = gd.list(make_list<string>(JC));
+diff_entry_list items_JC = gd.list(make_list<string>(JC));
 // #   foreach my $item ( $gd->list('JC') )
 // #   { 
-  for (genome_diff::entry_vector_t::iterator itr = items_JC.begin();
+  for (diff_entry_list::iterator itr = items_JC.begin();
        itr != items_JC.end(); itr ++) {  
     diff_entry& item = **itr;
 // #     next if ($item->{no_show});
     if (item.entry_exists(NO_SHOW)) continue;
 // #     
 // #     my $parent_item = $gd->parent($item);
-    genome_diff::diff_entry_ptr parent_item = gd.parent(item);
+    diff_entry_ptr parent_item = gd.parent(item);
 // #     $parent_item = $item if (!$parent_item);
     if(parent_item.get() == NULL) {
       parent_item = *itr;
@@ -2186,11 +2186,11 @@ Evidence_Files::html_evidence_file (
 /*-----------------------------------------------------------------------------
  *  //End Create_Evidence_Files
  *-----------------------------------------------------------------------------*/
-void save_text_deletion_file(string deletion_file_name, breseq::genome_diff::entry_list_t& deletions_ref)
+void save_text_deletion_file(string deletion_file_name, diff_entry_list& deletions_ref)
 {
 	ofstream DEL(deletion_file_name.c_str()); //or die "Could not open: $deletion_file_name";
 	DEL << "seq_id\tstart\tend\n";
-	for (breseq::genome_diff::entry_list_t::iterator d = deletions_ref.begin(); d != deletions_ref.end(); d++)
+	for (diff_entry_list::iterator d = deletions_ref.begin(); d != deletions_ref.end(); d++)
 		DEL << (**d)["seq_id"] << "\t" << (**d)["start"] << "\t" << (**d)["end"] << "\n";
 	DEL.close();
 }
@@ -2198,7 +2198,7 @@ void save_text_deletion_file(string deletion_file_name, breseq::genome_diff::ent
 void draw_coverage(Settings& settings, cReferenceSequences* ref_seq_info, genome_diff& gd)
 {
 	vector<string> mc_types = make_list<string>("MC");
-	breseq::genome_diff::entry_list_t mc = gd.list(mc_types);
+	diff_entry_list mc = gd.list(mc_types);
 	string drawing_format = "png";
 
 // #if (0)
@@ -2217,8 +2217,8 @@ void draw_coverage(Settings& settings, cReferenceSequences* ref_seq_info, genome
 
 			// need to assign link names that correspond to what the R script is doing
 
-			breseq::genome_diff::entry_list_t this_deletions;
-			breseq::genome_diff::entry_list_t::iterator it;
+			diff_entry_list this_deletions;
+			diff_entry_list::iterator it;
 			
 			if (seq_id.size() > 0)
 				for (it = mc.begin(); it != mc.end(); it++)
@@ -2229,7 +2229,7 @@ void draw_coverage(Settings& settings, cReferenceSequences* ref_seq_info, genome
 			for (it = this_deletions.begin(); it != this_deletions.end(); it++)
 				(**it)["_coverage_plot_file_name"] = seq_id + to_string(j++) + "." + drawing_format;
 		}
-		settings.remove_path("deletions_text_file_name");
+    Settings::remove_file(deletions_text_file_name);
 	}
 	//#else
 	/*{
@@ -2249,7 +2249,7 @@ void draw_coverage(Settings& settings, cReferenceSequences* ref_seq_info, genome
 		}
 
 		//make plot for every missing coverage item
-		for (entry_list_t::iterator item = mc.begin(); item != mc.end(); item++)
+		for (diff_entry_list::iterator item = mc.begin(); item != mc.end(); item++)
 		{
 			uint32_t start = from_string<uint32_t>((**item)["start"]);
 			uint32_t end = from_string<uint32_t>((**item)["end"]);
@@ -2350,7 +2350,7 @@ string record_time(string name)
 Html_Mutation_Table_String::Html_Mutation_Table_String(
                                                        Settings settings,
                                                        genome_diff gd,
-                                                       genome_diff::entry_vector_t list_ref,
+                                                       diff_entry_list list_ref,
                                                        vector<string> gd_name_list_ref,
                                                        Options options,
                                                        bool legend_row, 
@@ -2380,7 +2380,7 @@ Html_Mutation_Table_String::Html_Mutation_Table_String(
 Html_Mutation_Table_String::Html_Mutation_Table_String(
                                                        Settings settings,
                                                        genome_diff gd,
-                                                       genome_diff::entry_vector_t list_ref,
+                                                       diff_entry_list list_ref,
   			                                               string relative_path, 
                                                        bool legend_row, 
                                                        bool one_ref_seq
@@ -2649,7 +2649,7 @@ void Html_Mutation_Table_String::Item_Lines()
   ss << "<!-- Item Lines -->" << endl;
 // #   foreach my $mut (@$list_ref)
 // #   { 
-  for (entry_vector_t::iterator itr = list_ref.begin();
+  for (diff_entry_list::iterator itr = list_ref.begin();
        itr != list_ref.end(); itr ++) { 
     diff_entry& mut = (**itr);
 // #     $output_str.= $header_str if (($row_num != 0) && (defined $options->{repeat_header}) && ($row_num % $options->{repeat_header} == 0));
@@ -2666,9 +2666,9 @@ void Html_Mutation_Table_String::Item_Lines()
       bool already_added_RA = false;
 // #       EVIDENCE: foreach my $evidence_item ($gd->mutation_evidence_list($mut))
 // #       {         
-      entry_list_t mutation_evidence_list = gd.mutation_evidence_list(mut);
+      diff_entry_list mutation_evidence_list = gd.mutation_evidence_list(mut);
       
-      for (entry_list_t::iterator itr = mutation_evidence_list.begin();
+      for (diff_entry_list::iterator itr = mutation_evidence_list.begin();
            itr != mutation_evidence_list.end(); itr ++) {  
         diff_entry& evidence_item = **itr;
 // #         if ($evidence_item->{type} eq 'RA')

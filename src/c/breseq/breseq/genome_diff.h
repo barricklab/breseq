@@ -130,7 +130,10 @@ struct diff_entry {
   virtual ~diff_entry() { }
   
   //! Ease-of-use accessor for setting fields on this entry.
-  value_t& operator[](const key_t& k) { return _fields[k]; }
+  value_t& operator[](const key_t& k) 
+  { 
+    return _fields[k]; 
+  }
   bool entry_exists(const key_t& k) { return (_fields.count(k) > 0); }
 
   //! Marshal this diff entry into an ordered list of fields.
@@ -186,9 +189,12 @@ struct sort_fields_item {
   string _f2;
   string _f3;
 };
+  
+typedef list<counted_ptr<diff_entry> > diff_entry_list; //!< Type for a list of diff entries.a
+typedef counted_ptr<diff_entry> diff_entry_ptr;
 
 //! Sort routine
-bool diff_entry_sort(const counted_ptr<diff_entry>& a, const counted_ptr<diff_entry>& b);
+bool diff_entry_sort(const diff_entry_ptr& a, const diff_entry_ptr& b);
 
 
 /*! Genome diff class.
@@ -200,10 +206,6 @@ bool diff_entry_sort(const counted_ptr<diff_entry>& a, const counted_ptr<diff_en
  */
 class genome_diff {
 public:
-
-  typedef vector<counted_ptr<diff_entry> > entry_list_t; //!< Type for a list of diff entries.a
-  typedef vector<counted_ptr<diff_entry> > entry_vector_t;
-  typedef counted_ptr<diff_entry> diff_entry_ptr;
 
   typedef string key_t; 
   typedef vector<string> list_t;
@@ -226,12 +228,6 @@ public:
   //! Add evidence to this genome diff.
   void add(const diff_entry& item);
 
-  //! Read a genome diff from the default file to build entry_list_t,
-  void read() { read(_default_filename); }
-
-  //! Write the genome diff to the default file.
-  void write() { write(_default_filename); }
-
   //! Read a genome diff from a file.
   void read(const string& filename);
   
@@ -239,19 +235,19 @@ public:
   void write(const string& filename);
   
   //! Remove items used as evidence by any mutations out of input list
-  ::list<counted_ptr<diff_entry> > filter_used_as_evidence(const entry_list_t& list);
+  ::list<counted_ptr<diff_entry> > filter_used_as_evidence(const diff_entry_list& list);
   
   //! Retrieve diff_entrys that match given type(s) 
-  entry_list_t list(vector<string> types);
-  entry_list_t list() {return _entry_list;}
+  diff_entry_list list(vector<string> types);
+  diff_entry_list list() {return _entry_list;}
   
   //! Converts a genome_diff(.gd) file's line to a diff_entry
   diff_entry _line_to_item(const string& line);
 
   //! Returns _entry_list with matching item._evidence
-  ::list<counted_ptr<diff_entry> > mutation_evidence_list(const diff_entry& item);
+  diff_entry_list mutation_evidence_list(const diff_entry& item);
 
-  entry_list_t mutation_list();
+  diff_entry_list mutation_list();
 
   diff_entry_ptr parent(const diff_entry& item);
   
@@ -283,21 +279,21 @@ public:
 
 protected:  	
   const string _default_filename; //!< Default filename for this diff.
-  entry_list_t _entry_list; //!< All diff entries.
+  diff_entry_list _entry_list; //!< All diff entries.
   uint32_t _unique_id_counter; //!< Smallest available id.
   map<uint32_t,bool> unique_id_used;
 };
 
 //! Functor. Wraps diff_entry.entry_exists() for use in STL algorithms.
 //Returns true if a diff_entry contains the given field_key.
-struct diff_entry::field_exists : public unary_function <genome_diff::diff_entry_ptr, bool>
+struct diff_entry::field_exists : public unary_function <diff_entry_ptr, bool>
 {
   //! Constructor
   explicit field_exists (const diff_entry::key_t& field_key)
     : m_field_key(field_key) {}
   
   //! Predicate
-  virtual bool operator() (const genome_diff::diff_entry_ptr& p_diff_entry) 
+  virtual bool operator() (const diff_entry_ptr& p_diff_entry) 
     const {return (p_diff_entry->entry_exists(m_field_key));}
 
   protected:
@@ -307,14 +303,14 @@ struct diff_entry::field_exists : public unary_function <genome_diff::diff_entry
 //! Functor. Wraps diff_entry.entry_exists() for use in STL algorithms.
 //Returns true if a diff_entry contains all of the given field_keys.
 //ie:  diff_entry[field_key_1] && diff_entry[field_key_2]
-struct diff_entry::fields_exist : public unary_function <genome_diff::diff_entry_ptr, bool> 
+struct diff_entry::fields_exist : public unary_function <diff_entry_ptr, bool> 
 {
   //! Constructor
   explicit fields_exist (const vector<diff_entry::key_t>& field_keys)
     : m_field_keys(field_keys) {}
   
   //! Predicate
-  virtual bool operator() (const genome_diff::diff_entry_ptr& p_diff_entry) const
+  virtual bool operator() (const diff_entry_ptr& p_diff_entry) const
   {
     for (vector<diff_entry::key_t>::const_iterator itr = m_field_keys.begin();
          itr != m_field_keys.end(); itr++) {
@@ -335,7 +331,7 @@ struct diff_entry::fields_exist : public unary_function <genome_diff::diff_entry
 //! Functor. Sorts diff_entrys in decending order depending on given fields that
 //can be evaluated as an unsigned integer.
 struct diff_entry::by_scores : public binary_function
-  <genome_diff::diff_entry_ptr, genome_diff::diff_entry_ptr, bool>
+  <diff_entry_ptr, diff_entry_ptr, bool>
 {
 
   //! Constructor
@@ -343,7 +339,7 @@ struct diff_entry::by_scores : public binary_function
     : m_field_keys(field_keys) {}
   
   //! Predicate
-  virtual bool operator() (const genome_diff::diff_entry_ptr& a, const genome_diff::diff_entry_ptr& b) const 
+  virtual bool operator() (const diff_entry_ptr& a, const diff_entry_ptr& b) const 
   {
     for (vector<key_t>::const_iterator itr = m_field_keys.begin();
          itr != m_field_keys.end(); itr++) {
@@ -362,14 +358,14 @@ struct diff_entry::by_scores : public binary_function
 };
 
 
-struct diff_entry::is_type: unary_function <genome_diff::diff_entry_ptr, bool>
+struct diff_entry::is_type: unary_function <diff_entry_ptr, bool>
 {
   //! Constructor
   explicit is_type(const string& type)
     : m_type(type) {}
 
   //! Predicate 
-  virtual bool operator() (const genome_diff::diff_entry_ptr& diff_entry)
+  virtual bool operator() (const diff_entry_ptr& diff_entry)
     const {return (*diff_entry)._type == m_type;}
 
 

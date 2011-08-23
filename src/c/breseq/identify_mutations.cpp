@@ -91,7 +91,8 @@ identify_mutations_pileup::identify_mutations_pileup(
                                                             )
 : pileup_base(bam, fasta)
 , _ecr(error_dir, readfiles)
-, _gd(gd_file)
+, _gd()
+, _gd_file(gd_file)
 , _min_qual_score(min_qual_score)
 , _deletion_seed_cutoff(0)
 , _deletion_propagation_cutoff(deletion_propagation_cutoff)
@@ -700,7 +701,7 @@ void identify_mutations_pileup::at_target_end(const uint32_t tid) {
   update_unknown_intervals(target_length(tid)+1, tid, true, false);
 
   // write genome diff file
-	_gd.write();
+	_gd.write(_gd_file);
 	
   // close open files
 	_coverage_data.close();
