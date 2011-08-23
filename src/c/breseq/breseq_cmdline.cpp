@@ -970,7 +970,7 @@ int breseq_default_action(int argc, char* argv[])
 	}
 
 	summary.sequence_conversion.retrieve(settings.sequence_conversion_summary_file_name);
-	_assert(summary.sequence_conversion.max_read_length, "Can't retrieve max read length from file: " + settings.sequence_conversion_summary_file_name);
+	_assert(summary.sequence_conversion.max_read_length == UNDEFINED, "Can't retrieve max read length from file: " + settings.sequence_conversion_summary_file_name);
 
 	//load C++ info
 	string reference_features_file_name = settings.reference_features_file_name;

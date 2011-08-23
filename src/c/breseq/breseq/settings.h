@@ -445,18 +445,8 @@ namespace breseq
 			return tool_name;
 		}
 
-		static string create_path(string path)
-		{
-      int status = mkdir(path.c_str(), S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH);
-      
-      if (status && (errno != EEXIST))
-      {
-        cerr << "Could not create path: '" << path << "'" << endl;
-        exit(-1);
-      }
-      
-			return path;
-		}
+		string create_path(string path);
+		
 
 		static string remove_file(string path)
 		{
