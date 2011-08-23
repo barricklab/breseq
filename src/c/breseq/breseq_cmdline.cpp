@@ -1668,9 +1668,9 @@ int breseq_default_action(int argc, char* argv[])
 		vector<string> ra_types = make_list<string>("RA");
 		list<counted_ptr<diff_entry> > ra = gd.filter_used_as_evidence(gd.list(ra_types));
 
-		for (diff_entry_list::iterator it = ra.end(); it != ra.begin(); it--)
-			if ((**it)["frequency"] == "0" || (**it)["frequency"] == "1" || ((**it).entry_exists("no_show")))
-				ra.erase(it);
+    ra.remove_if(diff_entry::frequency_less_than_two_or_no_show());
+    
+
 
 		//@ra = sort { -($a->{quality} <=> $b->{quality}) } @ra;
     ra.sort(diff_entry::by_scores(make_list<string>("quality"))); 
@@ -1693,19 +1693,22 @@ int breseq_default_action(int argc, char* argv[])
 			uint32_t bot = from_string<int32_t>(top_bot[1]);
 			if (top + bot <= 2) (**item)["no_show"] = "true";
 		}
-
-		for (it = ra.end(); it != ra.begin(); it--)
-			if (from_string<bool>((**it)["coverage"]) || from_string<bool>((**it)["no_show"]))
-				ra.erase(it);
+		
+    ra.remove_if(diff_entry::coverage_or_no_show_is_true());
 
 		//
 		// Mark lowest scoring reject junctions as no-show
 		//
 		vector<string> jc_types = make_list<string>("JC");
 		list<counted_ptr<diff_entry> > jc = gd.filter_used_as_evidence(gd.list(jc_types));
-		for (it = jc.end(); it != jc.begin(); it--)
-			if (!from_string<bool>((**it)["reject"]))
-				ra.erase(it);
+	  
+    for (it = jc.end(); it != jc.begin();)
+      if (!from_string<bool>((**it)["reject"]))
+        ra.erase(it);
+      else
+        it--;
+	
+    //jc.remove_if(diff_entry::reject_is_not_true());
 
 		//@jc = sort { -($a->{pos_hash_score} <=> $b->{pos_hash_score}) || -($a->{min_overlap_score} <=> $b->{min_overlap_score})  || ($a->{total_reads} <=> $a->{total_reads}) } @jc;
     jc.sort(diff_entry::by_scores(make_list<diff_entry::key_t>("pos_hash_score")("min_overlap_score")("total_reads")));
