@@ -144,6 +144,10 @@ struct diff_entry {
   struct is_type;
   struct field_exists;
   struct fields_exist;
+  struct frequency_less_than_two_or_no_show;
+  struct coverage_or_no_show_is_true;
+  struct reject_is_not_true;
+
 
   diff_entry& operator()(const key_t& key, const value_t& value) {
   	(*this)[key] = value;
@@ -373,7 +377,32 @@ struct diff_entry::is_type: unary_function <diff_entry_ptr, bool>
     string m_type;
 };
 
+struct diff_entry::frequency_less_than_two_or_no_show:public unary_function<diff_entry_ptr, bool>
+{
+  virtual bool operator() (const diff_entry_ptr& diff_entry) const
+  {
+    return ((*diff_entry)["frequency"] == "0" || (*diff_entry)["frequency"] == "1" || (*diff_entry).entry_exists("no_show"));
+  }
+};
+
+struct diff_entry::coverage_or_no_show_is_true:public unary_function<diff_entry_ptr,bool>
+{
+  virtual bool operator() (const diff_entry_ptr& diff_entry) const
+  {
+    return from_string<bool>((*diff_entry)["coverage"]) || from_string<bool>((*diff_entry)["no_show"]);
+  }
+
+
+};
+
+struct diff_entry::reject_is_not_true:public unary_function<diff_entry_ptr,bool>
+{
+  virtual bool operator() (diff_entry_ptr diff_entry) 
+  {
+    return !from_string<bool>((*diff_entry)["reject"]);
+  }
+
+};
 
 }
-
 #endif
