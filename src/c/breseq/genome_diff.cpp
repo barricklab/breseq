@@ -214,8 +214,7 @@ genome_diff::genome_diff(const string& filename)
  : _default_filename(filename)
  , _unique_id_counter(0) 
 {
- // Need changes in usage if we read by default @JEB
- //read(filename);  
+ read(filename);  
 }
 
 /*! Merge Constructor.
@@ -223,8 +222,16 @@ genome_diff::genome_diff(const string& filename)
 genome_diff::genome_diff(genome_diff& merge1, genome_diff& merge2)
  : _unique_id_counter(0)
 {
-	_entry_list.insert(_entry_list.begin(), merge1._entry_list.begin(), merge1._entry_list.end());
-	_entry_list.insert(_entry_list.begin() + _entry_list.size(), merge2._entry_list.begin(), merge2._entry_list.end());
+  // calling add() makes sure numbers are assigned appropriately
+  for(diff_entry_list::iterator it=merge1._entry_list.begin(); it != merge1._entry_list.end(); it++)
+  {
+    this->add(*(it->get()));
+  }
+ 
+  for(diff_entry_list::iterator it=merge2._entry_list.begin(); it != merge2._entry_list.end(); it++)
+  {
+    this->add(*(it->get()));
+  }  
 }
 
   
@@ -457,7 +464,7 @@ map<string, uint8_t> sort_order = make_map<string, uint8_t>
 
 /*! Write this genome diff to a file.
  */
-bool diff_entry_sort(const counted_ptr<diff_entry>& a, const counted_ptr<diff_entry>& b) {
+bool diff_entry_sort(const diff_entry_ptr& a, const diff_entry_ptr& b) {
 
   string a_type = a->_type;
   string b_type = b->_type;
@@ -512,9 +519,9 @@ void genome_diff::write(const string& filename) {
 	ofs << "#=GENOME_DIFF 1.0" << endl;
   
   // sort
-  sort(_entry_list.begin(), _entry_list.end(), diff_entry_sort);
+  _entry_list.sort(diff_entry_sort);
   
-	for(entry_list_t::iterator i=_entry_list.begin(); i!=_entry_list.end(); ++i) {
+	for(diff_entry_list::iterator i=_entry_list.begin(); i!=_entry_list.end(); ++i) {
 		ofs << (**i) << endl;
 	}
 	ofs.close();
@@ -817,17 +824,17 @@ void VCFtoGD( const string& vcffile, const string& gdfile ){
     output.close();
 }
 
-/*! Given a list of types, search and return the diff_entry's within entry_list_t whose 
+/*! Given a list of types, search and return the diff_entry's within diff_entry_list whose 
  * _type parameter matches one of those within input types. 
  */ 
-genome_diff::entry_list_t genome_diff::list(vector<string> types)
+diff_entry_list genome_diff::list(vector<string> types)
 {
-  entry_list_t return_list;
+  diff_entry_list return_list;
   
-  for (entry_list_t::iterator itr_diff_entry = _entry_list.begin(); 
+  for (diff_entry_list::iterator itr_diff_entry = _entry_list.begin(); 
        itr_diff_entry != _entry_list.end(); itr_diff_entry++)
     {
-      for (make_list<string>::iterator requested_type = types.begin();
+      for (vector<string>::iterator requested_type = types.begin();
            requested_type != types.end(); requested_type++)
       {
         if((*itr_diff_entry)->_type == *requested_type)
@@ -844,17 +851,17 @@ genome_diff::entry_list_t genome_diff::list(vector<string> types)
  * Poorly implemented right now, look into future refractor into returning
  * list<counted_ptr<diff_entry> >
  *-----------------------------------------------------------------------------*/
-::list<counted_ptr<diff_entry> > genome_diff::filter_used_as_evidence(const entry_list_t& input)
+::list<counted_ptr<diff_entry> > genome_diff::filter_used_as_evidence(const diff_entry_list& input)
 {
   ::list<counted_ptr<diff_entry> > return_list(input.begin(),input.end());
 // Can't change first loop to ::list because you will get segmentation faults after 
 // the .remove() method. Check if .end() is called only during initialization or 
 // during each itr_outer != input.end() ?
-  for (genome_diff::entry_list_t::const_iterator itr_outer = input.begin();
+  for (diff_entry_list::const_iterator itr_outer = input.begin();
        itr_outer != input.end(); itr_outer++) {
     string& input_id = (**itr_outer)._id;
 
-    for (genome_diff::entry_list_t::const_iterator itr_inner = _entry_list.begin();
+    for (diff_entry_list::const_iterator itr_inner = _entry_list.begin();
          itr_inner != _entry_list.end(); itr_inner ++) {  
       diff_entry& test_item = **itr_inner;
       
@@ -951,11 +958,11 @@ diff_entry genome_diff::_line_to_item(const string& line)
  return item;
 }
 
-genome_diff::entry_list_t genome_diff::mutation_list()
+diff_entry_list genome_diff::mutation_list()
 {
-  entry_list_t mut_list;
+  diff_entry_list mut_list;
 
-   for(entry_list_t::iterator itr = _entry_list.begin();
+   for(diff_entry_list::iterator itr = _entry_list.begin();
        itr != _entry_list.end(); itr ++) {
      diff_entry& item = **itr;
      size_t type_length = item._type.length();
@@ -980,7 +987,7 @@ genome_diff::entry_list_t genome_diff::mutation_list()
        itr_i != evidence_list.end(); itr_i ++) {  
     string& evidence = *itr_i;
     
-    for (entry_list_t::iterator itr_j = _entry_list.begin();
+    for (diff_entry_list::iterator itr_j = _entry_list.begin();
          itr_j != _entry_list.end(); itr_j ++) {  
       diff_entry& entry = **itr_j;
     
@@ -995,9 +1002,9 @@ genome_diff::entry_list_t genome_diff::mutation_list()
 
 // @JEB: we need to have this return a counted_ptr<diff_entry> (which can be NULL)
 // we should create a typedef for counted_ptr<diff_entry> = diff_entry_ptr
-genome_diff::diff_entry_ptr genome_diff::parent(const diff_entry& item)
+diff_entry_ptr genome_diff::parent(const diff_entry& item)
 {
-  for(entry_list_t::iterator itr_test_item = _entry_list.begin();
+  for(diff_entry_list::iterator itr_test_item = _entry_list.begin();
       itr_test_item != _entry_list.end(); itr_test_item ++) { 
     diff_entry& test_item = **itr_test_item;
     for(vector<string>::iterator itr = test_item._evidence.begin();
@@ -1100,9 +1107,9 @@ size_t genome_diff::number_reject_reasons(diff_entry item)
 bool 
 genome_diff::interval_un(const uint32_t& start,const uint32_t& end)
 {
-  entry_vector_t un_list = list(make_list<string>(UN));
+  diff_entry_list un_list = list(make_list<string>(UN));
 
-  for (entry_vector_t::iterator itr = un_list.begin();
+  for (diff_entry_list::iterator itr = un_list.begin();
        itr != un_list.end(); itr++) {
     diff_entry un(**itr);
 

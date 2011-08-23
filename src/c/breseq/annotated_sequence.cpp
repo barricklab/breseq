@@ -188,8 +188,17 @@ namespace breseq {
         uint32_t seq_idx = seq_id_to_index(seq_id);
         (*this)[seq_idx].m_features.push_back(feature);
         
+        // create empty lists so they exist for later checks
+        if ((*this).repeat_lists.count(seq_id) == 0)
+          (*this).repeat_lists[seq_id] = vector<cSequenceFeature>();
+        if ((*this).gene_lists.count(seq_id) == 0)
+          (*this).gene_lists[seq_id] = vector<Gene>();
+        
+        // add this feature to the proper list
         if (feature["type"] == "repeat_region")
           (*this).repeat_lists[seq_id].push_back(feature);
+        else
+          (*this).gene_lists[seq_id].push_back(Gene(feature)); // note up-cast
       }
       getline(infile,line);
     }
@@ -394,7 +403,7 @@ namespace breseq {
 		return translation_table_11[seq];
 	}
 
-  	void cReferenceSequences::annotate_1_mutation(diff_entry& mut, uint32_t start, uint32_t end, bool repeat_override)
+  void cReferenceSequences::annotate_1_mutation(diff_entry& mut, uint32_t start, uint32_t end, bool repeat_override)
 	{
 		// this could be moved to the object
 		string intergenic_seperator = "/";
@@ -499,13 +508,13 @@ namespace breseq {
 
 			if (start == end)
 			{
-				mut["gene_position"] = abs(static_cast<int32_t>(start) - within_gene_start) + 1;
+				mut["gene_position"] = to_string(abs(static_cast<int32_t>(start) - within_gene_start) + 1);
 			}
 			else
 			{
 				uint32_t gene_start = abs(static_cast<int32_t>(start) - within_gene_start) + 1;
 				uint32_t gene_end = abs(static_cast<int32_t>(end) - within_gene_start) + 1;
-				mut["gene_position"] = (gene_start < gene_end) ? gene_start + "–" + gene_end : gene_end + "–" + gene_start;
+				mut["gene_position"] = to_string((gene_start < gene_end) ? gene_start + "–" + gene_end : gene_end + "–" + gene_start);
 			}
 
 			string gene_nt_size = to_string(gene.end - gene.start + 1);
@@ -600,12 +609,11 @@ namespace breseq {
 		// so that the codon will be correctly updated with all changes and we can notify the
 		// changes that their SNP_type is not really SNP, but multiple hit SNP.
 
-		//my $snp_hits_hash;
-
-		genome_diff::entry_list_t muts = gd.mutation_list();
-		for (uint32_t i = 0; i < muts.size(); i++) //MUT
+		diff_entry_list muts = gd.mutation_list();
+    for (diff_entry_list::iterator it=muts.begin(); it!=muts.end(); it++)
 		{
-			diff_entry mut = *muts[i];
+      diff_entry& mut= **it;
+      
 			if (only_muts && mut._type.size() != 3) continue;
 
 			if (mut._type == "SNP")
@@ -753,10 +761,12 @@ namespace breseq {
 		vector<string> header_list = split(header, "\t");
 
 		genome_diff new_gd;
-		genome_diff::entry_list_t muts = gd.mutation_list();
-		for (uint32_t i = 0; i < muts.size(); i++)
+    
+    diff_entry_list muts = gd.mutation_list();
+    for (diff_entry_list::iterator it=muts.begin(); it!=muts.end(); it++)
 		{
-			diff_entry mut = *muts[i];
+      diff_entry& mut= **it;
+      
 			// lines only exist for RA evidence
 			if (mut._type != "RA")
 			{

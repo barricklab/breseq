@@ -112,11 +112,11 @@ namespace breseq {
 
 		// For all that follows, we need information about repeat_regions overlapping the sides of junctions
 		vector<string> jc_types = make_list<string>("JC");
-		genome_diff::entry_list_t jc = gd.list(jc_types);
+		diff_entry_list jc = gd.list(jc_types);
 
-		for (uint32_t i = 0; i < jc.size(); i++)
+		for (diff_entry_list::iterator jc_it=jc.begin(); jc_it!=jc.end(); jc_it++)
 		{
-			diff_entry& j = *(jc[i].get());
+			diff_entry& j = **jc_it;
       
 			j["_side_1_read_side"] = "-1";
 			j["_side_2_read_side"] = "1";
@@ -192,18 +192,18 @@ namespace breseq {
     }
     
     // Don't count rejected ones, this can be relaxed, but it makes MOB prediction much more complicated and prone to errors.
-		for(genome_diff::entry_list_t::iterator it = jc.begin(); it < jc.end(); it++)
+		for(diff_entry_list::iterator jc_it = jc.begin(); jc_it != jc.end(); jc_it++)
     {
-      diff_entry& de = **it;
+      diff_entry& de = **jc_it;
 			if (de.entry_exists("reject"))
       {
-				jc.erase(it);
-        it--;
+				jc.erase(jc_it);
+        jc_it--;
       }
 		}
     
 		vector<string> mc_types = make_list<string>("MC");
-		genome_diff::entry_list_t mc = gd.list(mc_types);
+		diff_entry_list mc = gd.list(mc_types);
 
 		///
 		// evidence MC + JC => DEL mutation
@@ -214,9 +214,9 @@ namespace breseq {
 		// (2) there is is no junction, but both ends of the deletion are in repeat sequences
 		// (3) there is a junction between unique sequence and a repeat element
 
-		for (uint32_t i = 0; i < mc.size(); i++) //MC
-		{
-      diff_entry& mc_item = *mc[i];
+    for(diff_entry_list::iterator mc_it = mc.begin(); mc_it != mc.end(); mc_it++)
+    {
+      diff_entry& mc_item = **mc_it;
       
 			if (mc_item.entry_exists("reject"))
 			  continue;
@@ -235,9 +235,9 @@ namespace breseq {
 			// (1) there is a junction that exactly crosses the deletion boundary deletion
 			///
 
-			for(genome_diff::entry_list_t::iterator it = jc.begin(); it < jc.end(); it++) //JC
+			for(diff_entry_list::iterator jc_it = jc.begin(); jc_it != jc.end(); jc_it++) //JC
 			{
-				diff_entry& jc_item = **it;
+				diff_entry& jc_item = **jc_it;
 
 				if (jc_item["side_1_seq_id"] != mut["seq_id"] || jc_item["side_2_seq_id"] != mut["seq_id"])
 					continue;
@@ -252,7 +252,8 @@ namespace breseq {
            )
 				{
 					mut._evidence.push_back(jc_item._id);
-					jc.erase(it);
+					jc.erase(jc_it);
+          jc_it--;
 					gd.add(mut);
 					continue;
 				}
@@ -322,9 +323,9 @@ namespace breseq {
 			  : n(mut["position"]) - 1;
 
 			bool ok_were_good = false;
-			for(genome_diff::entry_list_t::iterator it = jc.begin(); it < jc.end(); it++) //JUNCTION
+			for(diff_entry_list::iterator jc_it = jc.begin(); jc_it != jc.end(); jc_it++) //JUNCTION
 			{
-				diff_entry& j = **it;
+				diff_entry& j = **jc_it;
 
 				if (!j.entry_exists("_is_interval")) continue;
 
@@ -387,7 +388,8 @@ namespace breseq {
 				// OK, we're good!
 				mut["mediated"] = r["name"];
 				mut._evidence.push_back(j._id);
-				jc.erase(it);
+				jc.erase(jc_it);
+        jc_it--;
 				gd.add(mut);
 				ok_were_good = true;
 			}
@@ -399,7 +401,7 @@ namespace breseq {
 		// evidence JC + JC = MOB mutation
 		///
 
-		for(genome_diff::entry_list_t::iterator it = jc.begin(); it < jc.end(); it++) //JC
+		for(diff_entry_list::iterator it = jc.begin(); it != jc.end(); it++) //JC
 		{
 			diff_entry& j = **it;
 		
@@ -429,19 +431,21 @@ namespace breseq {
 			j["overlap"] = "0";
 		}
 
-		sort(jc.begin(), jc.end(), MutationPredictor::sort_by_hybrid);
+		jc.sort(MutationPredictor::sort_by_hybrid);
 
-
-		for (uint32_t i = 0; i < jc.size(); i++) //JC1
+    for(diff_entry_list::iterator jc1_it = jc.begin(); jc1_it != jc.end(); jc1_it++) //JC1
 		{
-			diff_entry& j1 = *jc[i];
+			diff_entry& j1 = **jc1_it;
       
 			// Compile a list of the next possibilities within a certain length of bases
-      genome_diff::entry_list_t j2_list;
-			
-			for (uint32_t j = 1; i + j < jc.size(); j++) //JC2
+      vector<diff_entry_ptr> j2_list;
+			vector<diff_entry_list::iterator> it_delete_list_2;
+      
+      // start looking at the next JC entry
+      diff_entry_list::iterator jc2_it = jc1_it;
+      for(jc2_it++ ; jc2_it != jc.end(); jc2_it++) //JC2
 			{
-				diff_entry& j2 = *jc[i+j];
+				diff_entry& j2 = **jc2_it;
         
 				// must be close together in real coords
 				if ( (j1[j1["_unique_interval"] + "_seq_id"] != j2[j2["_unique_interval"] + "_seq_id"])
@@ -451,9 +455,9 @@ namespace breseq {
 				if ( (!j1.entry_exists("_is_interval") || !j2.entry_exists("_is_interval"))
 					|| (j1["_" + j1["_is_interval"] + "_is_name"] != j2["_" + j2["_is_interval"] + "_is_name"]) )
 					continue;
-
-				j2["_delete_index"] = s(i + j); // for remembering what to delete if this one succeeds
-				j2_list.push_back(jc[i+j]);
+        
+        it_delete_list_2.push_back(jc2_it);        
+				j2_list.push_back(*jc2_it);
 			}
       if (verbose)
         cout << "Size of J2 list: " << j2_list.size() << endl;
@@ -464,9 +468,9 @@ namespace breseq {
 
 			// We need to go through all with the same coordinate (or within a certain coordinate stretch?)
 			// because sometimes a failed junction will be in between the successful junctions
-			for(genome_diff::entry_list_t::iterator it = j2_list.begin(); it < j2_list.end(); it++) //J2
+      for(size_t i=0; i<j2_list.size(); i++)
 			{
-				diff_entry& j2 = **it;
+				diff_entry& j2 = *(j2_list[i]);
 
         if (verbose) 
         {
@@ -495,10 +499,10 @@ namespace breseq {
 				int32_t is1_strand = - (n(j1[j1["_is_interval"] + "_strand"]) * n(j1["_" + j1["_is_interval"] + "_is_strand"]) * n(j1[j1["_unique_interval"] + "_strand"]));
 				int32_t is2_strand = - (n(j2[j2["_is_interval"] + "_strand"]) * n(j2["_" + j2["_is_interval"] + "_is_strand"]) * n(j2[j2["_unique_interval"] + "_strand"]));
 
-				// Remove these predictions from the list, $j2 first, so indices don't shift
-				jc.erase(jc.begin() + n(j2["_delete_index"]));
-				jc.erase(jc.begin() + i);
-				i--; // only minus one b/c the current one was deleted
+				// Remove these predictions from the list
+				jc.erase(jc1_it);
+        jc1_it--;
+				jc.erase(it_delete_list_2[i]);
 
 				// Create the mutation, with evidence
 				diff_entry mut;
@@ -850,10 +854,9 @@ namespace breseq {
 		///
 		// evidence JC => INS, SUB, AMP mutations
 		///
-
-		for (uint32_t i = 0; i < jc.size(); i++) //JC
+    for(diff_entry_list::iterator jc_it = jc.begin(); jc_it != jc.end(); jc_it++) //JC
 		{
-			diff_entry& j = *jc[i];
+			diff_entry& j = **jc_it;
 
       //cout << j["side_1_seq_id"] << " " << j["side_2_seq_id"] << endl;
       //cout << j["side_1_strand"] << " " << j["side_2_strand"] << endl;
@@ -978,7 +981,7 @@ namespace breseq {
 		///
 
 		vector<string> ra_types = make_list<string>("RA");
-    genome_diff::entry_list_t ra = gd.list(ra_types);
+    diff_entry_list ra = gd.list(ra_types);
 
 		///
 		// Ignore RA that overlap DEL or MC
@@ -988,17 +991,19 @@ namespace breseq {
 		{
 			vector<string> del_types = make_list<string>("DEL");
 			vector<string> mc_types = make_list<string>("MC");
-			genome_diff::entry_list_t del = gd.list(del_types);
-			genome_diff::entry_list_t mc = gd.list(mc_types);
+			diff_entry_list del = gd.list(del_types);
+      diff_entry_list mc = gd.list(mc_types);
 
-			for (uint32_t i = 0; i < ra.size(); i++) // RA
-			{
-				diff_entry& ra_item = *ra[i];
+      for(diff_entry_list::iterator ra_it = ra.begin(); ra_it != ra.end(); ra_it++) //RA
+      {
+        diff_entry& ra_item = **ra_it;
 
 				bool next_ra = false;
-				for (uint32_t j = 0; j < del.size(); j++) // DEL
-				{
-					diff_entry& del_item = *del[j];
+        
+        for(diff_entry_list::iterator del_it = del.begin(); del_it != del.end(); del_it++) //DEL
+        {
+          diff_entry& del_item = **del_it;
+
 					if (ra_item["seq_id"] != del_item["seq_id"])
 						continue;
 
@@ -1012,9 +1017,9 @@ namespace breseq {
 				}
 				if (next_ra) continue;
 
-				for (uint32_t j = 0; j < mc.size(); j++) // MC
-				{
-					diff_entry& mc_item = *mc[j];
+        for(diff_entry_list::iterator mc_it = mc.begin(); mc_it != mc.end(); mc_it++) //MC
+        {
+          diff_entry& mc_item = **mc_it;
 
 					if (ra_item["seq_id"] != mc_item["seq_id"]) continue;
 
@@ -1028,7 +1033,7 @@ namespace breseq {
 			}
 		}
 
-		sort(ra.begin(), ra.end(), MutationPredictor::sort_by_pos);
+		ra.sort(MutationPredictor::sort_by_pos);
 
 		///
 		// Gather together read alignment mutations that occur next to each other
@@ -1039,9 +1044,10 @@ namespace breseq {
 		diff_entry mut;
 		vector<diff_entry> muts;
 
-		for (uint32_t i = 0; i < ra.size(); i++) // RA
-		{
-			diff_entry& item = *ra[i];
+    
+    for(diff_entry_list::iterator ra_it = ra.begin(); ra_it != ra.end(); ra_it++) //RA
+    {
+      diff_entry& item = **ra_it;
 
 			if ( item.entry_exists("reject") || item.entry_exists("deleted"))
 			  continue;

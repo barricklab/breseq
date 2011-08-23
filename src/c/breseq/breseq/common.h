@@ -248,7 +248,6 @@ namespace breseq {
 					const  string  & theDelimiter
 	) {
 		assert(theDelimiter.size() > 0); // My own ASSERT macro.
-    assert(theString.size() != 1); //@GRC check that programmer hasn't switched variables in declaration.
 
 		size_t start = 0, end = 0;
 		vector<string> theStringVector;
@@ -647,7 +646,7 @@ namespace breseq {
   
   inline void _assert(bool condition, const string& message = "")
   {
-    if (condition)
+    if (!condition)
     {
       cerr << "---> FATAL ERROR --->" << endl;
       cerr << message << endl;

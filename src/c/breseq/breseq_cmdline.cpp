@@ -360,7 +360,6 @@ int do_predict_mutations(int argc, char* argv[]) {
     MutationPredictor mp(ref_seq_info);
     
     genome_diff gd( settings.evidence_genome_diff_file_name );
-    gd.read();
     
     mp.predict(
                settings,
@@ -1633,44 +1632,22 @@ int breseq_default_action(int argc, char* argv[])
 
 		// merge all of the evidence GenomeDiff files into one...
 		settings.create_path(settings.evidence_path);
-		string jc_genome_diff_file_name = settings.jc_genome_diff_file_name;
-		genome_diff jc_gd(jc_genome_diff_file_name);
-		string ra_mc_genome_diff_file_name = settings.ra_mc_genome_diff_file_name;
-		genome_diff ra_mc_gd(ra_mc_genome_diff_file_name);
-		string evidence_genome_diff_file_name = settings.evidence_genome_diff_file_name;
+		genome_diff jc_gd(settings.jc_genome_diff_file_name);
+		genome_diff ra_mc_gd(settings.ra_mc_genome_diff_file_name);
 		genome_diff evidence_gd(jc_gd, ra_mc_gd);
-		evidence_gd.write(evidence_genome_diff_file_name);
+		evidence_gd.write(settings.evidence_genome_diff_file_name);
 
 
 		// predict mutations from evidence in the GenomeDiff
 		cerr << "Predicting mutations from evidence..." << endl;
 
-		string final_genome_diff_file_name = settings.final_genome_diff_file_name;
-
-		/*string cbreseq = settings.ctool("cbreseq");
-		uint32_t maximum_read_length = summary.sequence_conversion.max_read_length;
-		string base_output_path = settings.file_name("base_output_path");
-		string cmdline = "$cbreseq PREDICT_MUTATIONS --maximum-read-length $maximum_read_length --path $base_output_path";
-		Breseq::Shared::system($cmdline);*/
-
-		// Load the reference sequence info
-		LoadFeatureIndexedFastaFile(ref_seq_info, settings.reference_features_file_name, settings.reference_fasta_file_name);
-
 		MutationPredictor mp(ref_seq_info);
-
 		genome_diff mpgd(settings.evidence_genome_diff_file_name);
-		mpgd.read();
-
 		mp.predict(settings, mpgd, summary.sequence_conversion.max_read_length, summary.sequence_conversion.avg_read_length);
-
 		mpgd.write(settings.final_genome_diff_file_name);
 
-		genome_diff gd(final_genome_diff_file_name);
+		genome_diff gd(settings.final_genome_diff_file_name);
 		//#unlink $evidence_genome_diff_file_name;
-
-		//sub mutation_annotation {}
-
-		vector<string> genbank_file_names = settings.reference_file_names;
 
 		//
 		// Annotate mutations
@@ -1682,7 +1659,6 @@ int breseq_default_action(int argc, char* argv[])
 		// Plot coverage of genome and large deletions
 		//
 		cerr << "Drawing coverage plots..." << endl;
-
 		output::draw_coverage(settings, &ref_seq_info, gd);
 
 		//
@@ -1692,8 +1668,8 @@ int breseq_default_action(int argc, char* argv[])
 		vector<string> ra_types = make_list<string>("RA");
 		list<counted_ptr<diff_entry> > ra = gd.filter_used_as_evidence(gd.list(ra_types));
 
-		for (list<counted_ptr<diff_entry> >::iterator it = ra.end(); it != ra.begin(); it--)
-			if ((**it)["frequency"] == "0" || (**it)["frequency"] == "1" || from_string<bool>((**it)["no_show"]))
+		for (diff_entry_list::iterator it = ra.end(); it != ra.begin(); it--)
+			if ((**it)["frequency"] == "0" || (**it)["frequency"] == "1" || ((**it).entry_exists("no_show")))
 				ra.erase(it);
 
 		//@ra = sort { -($a->{quality} <=> $b->{quality}) } @ra;
