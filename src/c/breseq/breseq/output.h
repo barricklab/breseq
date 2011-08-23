@@ -68,8 +68,7 @@ extern const char* SIDE_2_JC;
 
 namespace output
 {
-typedef vector<counted_ptr<diff_entry> > entry_vector_t;
-typedef list<counted_ptr<diff_entry> > entry_list_t;
+
 
 /*-----------------------------------------------------------------------------
  *  HTML Attribute Keywords
@@ -154,7 +153,7 @@ struct Html_Mutation_Table_String : public string
     Html_Mutation_Table_String(
                                Settings settings,
                                genome_diff gd,
-                               genome_diff::entry_vector_t list_ref,
+                               diff_entry_list list_ref,
   			                       vector<string> gd_name_list_ref,
                                Options options,
                                bool legend_row = false, 
@@ -165,7 +164,7 @@ struct Html_Mutation_Table_String : public string
     Html_Mutation_Table_String(
                                Settings settings,
                                genome_diff gd,
-                               genome_diff::entry_vector_t list_ref,
+                               diff_entry_list list_ref,
   			                       string relative_path = "", 
                                bool legend_row = false, 
                                bool one_ref_seq = false
@@ -184,7 +183,7 @@ struct Html_Mutation_Table_String : public string
     //!Parameters
     Settings settings;
     genome_diff gd;
-    genome_diff::entry_list_t list_ref;
+    diff_entry_list list_ref;
     bool legend_row;
     bool one_ref_seq;
     vector<string> gd_name_list_ref; 
@@ -194,25 +193,25 @@ struct Html_Mutation_Table_String : public string
 
 
 string html_missing_coverage_table_string
-  (entry_list_t list_ref, 
+  (diff_entry_list list_ref, 
    bool show_reject_reason,
    string title = "Missing coverage evidence...",
    string relative_link="");
 
 string html_read_alignment_table_string  
-  (entry_list_t list_ref, 
+  (diff_entry_list list_ref, 
    bool show_reject_reason,
    string title = "Read alignment evidence...",
    string relative_link = "");
 
 string html_new_junction_table_string
-  (entry_list_t jc,
+  (diff_entry_list jc,
    bool show_reject_reason,
    string title= "New junction evidence",
    string relative_link = "");
 
 string html_genome_diff_item_table_string(Settings settings, genome_diff gd, 
-                                        entry_list_t list_ref);
+                                        diff_entry_list list_ref);
 /*-----------------------------------------------------------------------------
  * Helper Functions For Tables 
  *-----------------------------------------------------------------------------*/
@@ -237,7 +236,7 @@ struct Evidence_Files
     Type_Not_Equal(string in_type)
       : type(in_type)
       {}
-    bool operator() (genome_diff::diff_entry_ptr item) { return (*item)._type != type;} 
+    bool operator() (diff_entry_ptr item) { return (*item)._type != type;} 
   };
 
   Evidence_Files(const Settings& settings, genome_diff& gd);
@@ -258,7 +257,7 @@ struct Evidence_Files
 
 // sub save_text_deletion_file
 //         my ($deletion_file_name, $deletions_ref) = @_;
-void save_text_deletion_file(string deletion_file_name, breseq::genome_diff::entry_list_t& deletions_ref);
+void save_text_deletion_file(string deletion_file_name, diff_entry_list& deletions_ref);
 // sub draw_coverage
 //         my (Settings settings, $ref_seq_info, $gd) = @_;
 void draw_coverage(Settings& settings, cReferenceSequences* ref_seq_info, genome_diff& gd);

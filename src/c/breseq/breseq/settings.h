@@ -458,9 +458,8 @@ namespace breseq
 			return path;
 		}
 
-		static string remove_path(string path)
+		static string remove_file(string path)
 		{
-      assert(false);
       remove(path.c_str()); // @JEB this will probably not work.
 			return path;
 		}
