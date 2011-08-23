@@ -496,14 +496,23 @@ bool diff_entry_sort(const diff_entry_ptr& a, const diff_entry_ptr& b) {
   } else if (a_sort_field_3 > b_sort_field_3) {
     return false;
   }  
-
-
+  
   uint8_t a_sort_order = sort_order[a_type];
   uint8_t b_sort_order = sort_order[b_type];
 
   if (a_sort_order < b_sort_order) {
     return true;
   } else if (a_sort_order > b_sort_order) {
+    return false;
+  } 
+  
+  // last sort by id
+  uint32_t a_sort_id = from_string(a->_id);
+  uint32_t b_sort_id = from_string(b->_id);
+
+  if (a_sort_id < b_sort_id) {
+    return true;
+  } else if (a_sort_id > b_sort_id) {
     return false;
   } 
   
