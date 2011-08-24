@@ -417,7 +417,9 @@ string alignment_output::html_alignment ( const string& region )
   std::sort(sorted_keys.begin(),sorted_keys.end(),alignment_output::sort_by_aligned_bases_length);
   
   
-  output += "<style>"+create_header_string()+"</style>";
+  output += "<style>";
+  output += create_header_string();
+  output += "</style>";
   output += "<table style=\"background-color: rgb(255,255,255)\">";
   output += "<tr><td style=\"font-size:10pt\">";    
   

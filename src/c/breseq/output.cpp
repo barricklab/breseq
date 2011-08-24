@@ -1238,8 +1238,8 @@ Evidence_Files::Evidence_Files(const Settings& settings, genome_diff& gd)
                 (FASTA_PATH, junction_fasta_file_name)
                 (PREFIX, "MC_PLOT")
                 (SEQ_ID, item[SEQ_ID])            
-                (START, to_string(from_string<uint8_t>(item[END]) + 1))
-                (END,  to_string(from_string<uint8_t>(item[END]) + 1))
+                (START, item[START])
+                (END,  item[END])
                 (PLOT, item[_COVERAGE_PLOT_FILE_NAME]));
     
   } // mc_item list
@@ -1343,8 +1343,8 @@ Evidence_Files::Evidence_Files(const Settings& settings, genome_diff& gd)
       parent_item = *itr;
     }
 
-    uint32_t start;
-    uint32_t end;
+    uint32_t start = 0;
+    uint32_t end = 0;
 
     if (from_string<uint32_t>(item[ALIGNMENT_OVERLAP]) == 0) 
     {
@@ -1531,7 +1531,7 @@ Evidence_Files::html_evidence_file (
       ss << "." << item[INSERT_START];
     }
     ss << "-" << item[END];
-    if (item[INSERT_END].size() > 0) {
+    if (item[INSERT_END].size()) {
       ss << "." << item[INSERT_END];
     }
     cerr << "Creating read alignment for region " << ss.str() << endl;
