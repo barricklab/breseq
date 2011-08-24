@@ -406,7 +406,7 @@ namespace breseq
 		bool no_evidence;
 		bool shade_frequencies;
 		bool no_header;
-    inline string html_path(string input) {return "not implemented";}
+    string html_path(const string& input) const {return "not implemented";}
     bool verbose;
 
 		vector<ExecutionTime> execution_times;
@@ -443,15 +443,6 @@ namespace breseq
         return "";
       }
 			return tool_name;
-		}
-
-		string create_path(string path);
-		
-
-		static string remove_file(string path)
-		{
-      remove(path.c_str()); // @JEB this will probably not work.
-			return path;
 		}
     
     void record_start_time(const string& message)

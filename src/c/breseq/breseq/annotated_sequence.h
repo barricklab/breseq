@@ -188,7 +188,7 @@ namespace breseq {
 	static char bridge_translate(string seq);
 	static void find_nearby_genes(vector<Gene>& gene_list_ref, uint32_t pos_1, uint32_t pos_2, vector<Gene>& within_genes, vector<Gene>& between_genes, vector<Gene>& inside_left_genes, vector<Gene>& inside_right_genes, Gene& prev_gene, Gene& next_gene);
 	void annotate_1_mutation(diff_entry& mut, uint32_t start, uint32_t end, bool repeat_override = false);
-	void annotate_mutations(genome_diff& gd, bool only_muts);
+	void annotate_mutations(genome_diff& gd, bool only_muts = false);
 	void polymorphism_statistics(Settings& settings, Summary& summary);
   };
   

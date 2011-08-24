@@ -51,8 +51,8 @@ namespace breseq {
 		int32_t a_seq_order = (a->entry_exists("_side_1_is") ? ref_seq_info.seq_order[(*a)["side_2_seq_id"]] : ref_seq_info.seq_order[(*a)["side_1_seq_id"]]);
 		int32_t b_seq_order = (b->entry_exists("_side_1_is") ? ref_seq_info.seq_order[(*b)["side_2_seq_id"]] : ref_seq_info.seq_order[(*b)["side_1_seq_id"]]);
 
-		uint32_t a_reject_order = number_reject_reasons(*a);
-		uint32_t b_reject_order = number_reject_reasons(*b);
+		uint32_t a_reject_order = a->number_reject_reasons();
+		uint32_t b_reject_order = b->number_reject_reasons();
 
 		// sort by seq_id, position, fewer reject reasons, then score (highest to lowest)
     
@@ -70,8 +70,8 @@ namespace breseq {
 
 	bool MutationPredictor::sort_by_reject_score(const counted_ptr<diff_entry>& a, const counted_ptr<diff_entry>& b)
 	{
-		uint32_t a_reject_order = number_reject_reasons(*a);
-		uint32_t b_reject_order = number_reject_reasons(*b);
+		uint32_t a_reject_order = a->number_reject_reasons();
+		uint32_t b_reject_order = b->number_reject_reasons();
 
 		// sort by seq_id, position, fewer reject reasons, then score (highest to lowest)
     if (a_reject_order != b_reject_order) 

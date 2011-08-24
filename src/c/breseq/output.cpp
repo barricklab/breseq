@@ -100,22 +100,14 @@ string nonbreaking(const string& input)
 { 
   string retval = input;
   /* substitute nonbreaking hyphen */
-  while (retval.find("-") != string::npos) {
-    size_t pos = retval.find("-");
-    retval.replace(pos, 1, "&#8209;");
-  }
+  substitute(retval, "-", "&#8209;");
 
   /* substitute nonbreaking en dash */
-  while (retval.find("–") != string::npos) {
-    size_t pos = retval.find("–");
-    retval.replace(pos, 3, "&#8211;");//!< En Dash is 3 chars, not 1
-  }
+  substitute(retval, "–", "&#8211;");
 
   /* substitute nonbreaking space */
-   while (retval.find(" ") != string::npos) {
-    size_t pos = retval.find(" ");
-    retval.replace(pos, 1, "&nbsp;");
-  }
+  substitute(retval, " ", "&nbsp;");
+
   return retval;
 }
 /*-----------------------------------------------------------------------------
@@ -161,8 +153,8 @@ return ss.str();
 
 
 
-void html_index(string file_name, Settings settings, Summary summary,
-                cReferenceSequences ref_seq_info, genome_diff gd)
+void html_index(const string& file_name, const Settings& settings, Summary& summary,
+                cReferenceSequences& ref_seq_info, genome_diff& gd)
 {
   // Create Stream and Confirm It's Open
   ofstream HTML(file_name.c_str());
@@ -207,33 +199,21 @@ void html_index(string file_name, Settings settings, Summary summary,
   diff_entry_list mc = gd.filter_used_as_evidence(gd.list(make_list<string>("MC")));
   
   if (mc.size() > 0) {
-// #     print HTML p . html_missing_coverage_table_string(\@mc, $relative_path, "Unassigned missing coverage evidence...");
     HTML << "<p>" << html_missing_coverage_table_string(mc, false, "Unassigned missing coverage evidence", relative_path);
   }
 
-// #   my @jc = $gd->filter_used_as_evidence($gd->list('JC'));
-  diff_entry_list jc = 
-    gd.filter_used_as_evidence(gd.list(make_list<string>("JC")));
+  diff_entry_list jc = gd.filter_used_as_evidence(gd.list(make_list<string>("JC")));
 
-// #   @jc = grep { !$_->{no_show} } @jc;  
   jc.remove_if(diff_entry::field_exists("no_show"));
   
-// #   @jc = grep { !$_->{circular_chromosome} } @jc if ($settings->{hide_circular_genome_junctions}); 
-
   //Don't show junctions for circular chromosomes
   if (!settings.hide_circular_genome_junctions) {
     jc.remove_if(diff_entry::field_exists("circular_chromosome")); 
   }
    
-// # 
-// #   my @jcu = grep { !$_->{reject} } @jc; 
   diff_entry_list jcu = jc;
   jcu.remove_if(diff_entry::field_exists("reject"));
 
-// #   if (scalar @jcu > 0)
-// #   {
-// #     print HTML p . html_new_junction_table_string(\@jcu, $relative_path, "Unassigned new junction evidence...");  
-// #   }
   if (jcu.size() > 0) {
     HTML << "<p>" << endl;
     HTML << html_new_junction_table_string(jcu, false, "Unassigned new junction evidence...", relative_path);
@@ -245,8 +225,8 @@ void html_index(string file_name, Settings settings, Summary summary,
 
 
 
-void html_marginal_predictions(string file_name, Settings settings,Summary summary,
-                               cReferenceSequences ref_seq_info, genome_diff gd)
+void html_marginal_predictions(const string& file_name, const Settings& settings,Summary& summary,
+                               cReferenceSequences& ref_seq_info, genome_diff& gd)
 {
   // Create Stream and Confirm It's Open
   ofstream HTML(file_name.c_str());
@@ -276,7 +256,6 @@ void html_marginal_predictions(string file_name, Settings settings,Summary summa
 // #   ###
 // #   ## Marginal evidence
 // #   ###
-// #   my @ra = $gd->filter_used_as_evidence($gd->list('RA')); 
   diff_entry_list ra = gd.filter_used_as_evidence(gd.list(make_list<diff_entry::key_t>("RA")));
 
 // #   ## don't print ones that overlap predicted deletions or were marked to not show
@@ -284,11 +263,6 @@ void html_marginal_predictions(string file_name, Settings settings,Summary summa
   //Don't print ones that overlap predicted deletions or were marked to not show.
   ra.remove_if(diff_entry::fields_exist(make_list<diff_entry::key_t>("deleted")("no_show")));
   
-// #   
-// #   if (scalar @ra > 0)
-// #   {
-// #     print HTML p . html_read_alignment_table_string(\@ra, $relative_path, "Marginal read alignment evidence...");
-// #   }
   if (ra.size() > 0) {
     HTML << "<p>" << endl;
     HTML << html_read_alignment_table_string(ra, false, "Marginal read alignment evidence...",
@@ -320,26 +294,13 @@ void html_marginal_predictions(string file_name, Settings settings,Summary summa
        HTML << html_new_junction_table_string(jc, false, "Marginal new junction evidence...", relative_path);
      }
 
-    
-// #   
-// #   print HTML end_html;
     HTML <<  "</HTML>";
-// #   close HTML;
     HTML.close();
-// # }
 }
-// # 
 
-string html_header (const string &title, const Settings& settings)
+string html_header (const string& title, const Settings& settings)
 {
   stringstream ss(ios_base::out | ios_base::app);  
-// # sub html_header
-// # {
-// #   my ($title) = @_;
-// #   return start_html(
-// #       -title => $title, 
-// #       -head  => style({type => 'text/css'}, $header_style_string),
-// #   );
   
   ss << "<html>" << endl;   
   ss << "<title>" << title;
@@ -362,8 +323,8 @@ string html_header (const string &title, const Settings& settings)
 
 
 
-void html_compare(Settings settings,const string &file_name, const string &title, genome_diff gd,
-                  bool one_ref_seq, vector<string> gd_name_list_ref, Options options)
+void html_compare(Settings& settings,const string &file_name, const string &title, genome_diff& gd,
+                  bool one_ref_seq, vector<string>& gd_name_list_ref, Options& options)
 {
   // Create stream and confirm it's open
   ofstream HTML(file_name.c_str());
@@ -381,22 +342,15 @@ void html_compare(Settings settings,const string &file_name, const string &title
   HTML << header_style_string() << endl;
   HTML << "</style>" << endl;
   HTML << "</head>" << endl;
-// #   
-// #   my @muts = $gd->mutation_list;
+  
   diff_entry_list muts = gd.mutation_list();
-// #   
-// #   print HTML html_mutation_table_string($settings, $gd, \@muts, undef, undef, $one_ref_seq, $gd_name_list_ref, $options);
-// # 
-  HTML << Html_Mutation_Table_String(settings, gd, muts, gd_name_list_ref, options, false, one_ref_seq, "");
-// #   print HTML end_html;
-  HTML << "</html>";
-// #   close HTML;
-  HTML.close();
-// # }
-}
-// # 
 
-void html_compare_polymorphisms(Settings settings, string file_name, string title, diff_entry_list list_ref)
+  HTML << Html_Mutation_Table_String(settings, gd, muts, gd_name_list_ref, options, false, one_ref_seq, "");
+  HTML << "</html>";
+  HTML.close();
+}
+
+void html_compare_polymorphisms(Settings& settings, const string& file_name, const string& title, diff_entry_list& list_ref)
 {
 
   // Create stream and confirm it's open
@@ -407,7 +361,6 @@ void html_compare_polymorphisms(Settings settings, string file_name, string titl
     assert(HTML.good());
   }
 
-
   //Build html head
   HTML << "<html>" << endl;
   HTML << "<title>" << title << "</title>" << endl;
@@ -416,23 +369,13 @@ void html_compare_polymorphisms(Settings settings, string file_name, string titl
   HTML << header_style_string() << endl;
   HTML << "</style>" << endl;
   HTML << "</head>" << endl;
-
-
-// #   print HTML html_read_alignment_table_string($settings, $list_ref, undef, undef, 1);
   HTML << html_read_alignment_table_string(list_ref, true); 
-//! TODO Confirm settings is never used in html_read_alignment_table_string
-// # 
-// #   print HTML end_html;
   HTML << "</html>" << endl;
-// #   close HTML;
   HTML.close();
-// # }
 }
-// # 
-// # ## Note that we should probably not overwrite past summary tables
-// # ## Instead, we should concatenate them.
-// # 
-void html_statistics(const string &file_name, Settings settings, Summary summary, cReferenceSequences ref_seq_info)
+  
+
+void html_statistics(const string &file_name, const Settings& settings, Summary& summary, cReferenceSequences& ref_seq_info)
 {  
 
   // Create stream and confirm it's open
@@ -448,7 +391,6 @@ void html_statistics(const string &file_name, Settings settings, Summary summary
   HTML << breseq_header_string(settings) << endl;
   HTML << "<p>" << endl;
 
-// #   
   HTML << "<!-- Write fastq read file informations -->" << endl;
   HTML << "<table border=\"0\" cellspace=\"1\" cellpadding=\"5\">" << endl;
   HTML << "<tr>" << th("fastq read file") << th("reads") << 
@@ -476,6 +418,7 @@ void html_statistics(const string &file_name, Settings settings, Summary summary
 // # 
 // #   ## Write reference sequence information
 // #   print HTML p; 
+  
   //Write reference sequence information
   HTML << "<!-- Write reference sequence information -->" << endl;
   HTML << "<p>" << endl;
@@ -488,6 +431,7 @@ void html_statistics(const string &file_name, Settings settings, Summary summary
           "</tr>" << endl;
              
   size_t total_length = 0;
+  
 // # //TODO @JEB Summary
 // #   foreach my $seq_id (@{$ref_seq_info->{seq_ids}})
 // #   {   
@@ -511,6 +455,7 @@ void html_statistics(const string &file_name, Settings settings, Summary summary
 // #     td()
 // #   );
   //TODO move this into above loop when summary is implemented
+  
   HTML << "<tr class=\"highlight_table_row\">";
   HTML << td();
   HTML << td();
@@ -518,7 +463,7 @@ void html_statistics(const string &file_name, Settings settings, Summary summary
   HTML << td("<b align=\"right\">" + commify(to_string(total_length)) + "</b>");
   HTML << td();
   HTML << "</tr>" << endl;
-// #   
+
 // # //TODO @JEB Summary
 // #   ## junction only reference sequences
 // #   foreach my $seq_id (@{$ref_seq_info->{junction_only_seq_ids}})
@@ -540,15 +485,13 @@ void html_statistics(const string &file_name, Settings settings, Summary summary
 // #     
   vector<ExecutionTime> times = settings.execution_times;
 // #   ## Write Times
-  HTML << "<!-- Write Times -->" << endl;
-// #   print HTML p . h1("Execution Times");
+// HTML << "<!-- Write Times -->" << endl;
   HTML << "<p>"  << endl;
   HTML << h1("Execution Times") << endl;
   HTML << start_table("width=\"100%\" border=\"1\" cellspacing=\"0\" cellpadding=\"3\"") << endl;
   HTML << "<tr>" << th("Step") << th("Start") << th("End") << th("Elapsed") << "</tr>" << endl; 
   time_t total_time_elapsed = 0; 
 
- 
   for (vector<ExecutionTime>::iterator itr = times.begin();
        itr != times.end(); itr ++) {  
     ExecutionTime& t = (*itr);
@@ -573,11 +516,8 @@ void html_statistics(const string &file_name, Settings settings, Summary summary
   HTML << "</table>";
   HTML.close();
 }
-// # 
-// # sub breseq_header_string
-// # {
-// #   my ($settings) = @_;
-string breseq_header_string(Settings settings)
+
+string breseq_header_string(const Settings& settings)
 {
   stringstream ss(ios_base::out | ios_base::app);
 // #   
@@ -593,7 +533,7 @@ string breseq_header_string(Settings settings)
   }
   ss << "<table width=\"100%\" border=\"0\" cellspacing=\"0\" cellpadding=\"3\">" << endl;
   ss << "<tr>" << endl;
-  ss << td(a(settings.website, img(settings.html_path("breseq_small_graphic_to_file_name"))));
+  ss << td(a(settings.website, img(settings.html_path(settings.breseq_small_graphic_to_file_name))));
   ss << endl;
   ss << start_td("width=\"100%\"") << endl;
 // #   $output_string .= $settings->{byline} /TODO @JEB set byline to breseq version
@@ -614,163 +554,92 @@ string breseq_header_string(Settings settings)
 }
 
 
-string html_genome_diff_item_table_string(Settings settings, genome_diff gd, diff_entry_list list_ref)
+string html_genome_diff_item_table_string(const Settings& settings, genome_diff& gd, diff_entry_list& list_ref)
 {
-// # sub html_genome_diff_item_table_string
-// # {
-// #   my ($settings, $gd, $list_ref) = @_;
-// #   
-// #   return '' if (!defined $list_ref) || (scalar @$list_ref) == 0;
   if(list_ref.empty()) return "";
 
-// #   my $first_item = $list_ref->[0];
   diff_entry& first_item = *list_ref.front();
-// #         
-// #   ##mutation
-// #   if (length($first_item->{type}) == 3)
-// #   { 
+  //mutation
   if(first_item._type.length() == 3)
   {
-// #     return html_mutation_table_string($settings, $gd, $list_ref);
-    return Html_Mutation_Table_String(settings, gd, diff_entry_list(list_ref.begin(), list_ref.end())); 
-// #   }
+    diff_entry_list new_list(list_ref.begin(), list_ref.end());
+    return Html_Mutation_Table_String(settings, gd, new_list); 
   }
-// #   
-// #   ##evidence
-// #   else
-// #   {
+  //evidence
   else
   {
-// #     if ($first_item->{type} eq 'MC')
-// #     {
     if(first_item._type == "MC")
     {
-// #       return html_missing_coverage_table_string($list_ref, undef, undef, 1);
       return html_missing_coverage_table_string(list_ref, true, "", "" );
-// #     }
     }
-// #     elsif ($first_item->{type} eq 'RA')
-// #     {
     else if(first_item._type == "RA")
     {
-// #     {
-// #       return html_read_alignment_table_string($list_ref, undef, undef, 1);
       return html_read_alignment_table_string(list_ref, true);
-// #     }
     }
-// #     elsif ($first_item->{type} eq 'JC')
-// #     {
     else if(first_item._type == "JC")
     {
-// #       return html_new_junction_table_string($list_ref, undef, undef, 1);
       return html_new_junction_table_string(list_ref,false, "", "" );
-// #     }
     }
-// #   }
-  }
-// # }
-  
+  }  
   return "";
 }
 
 /*-----------------------------------------------------------------------------
  *  FORMATTED_MUTATION_ANNOTATION
  *-----------------------------------------------------------------------------*/
-string formatted_mutation_annotation(diff_entry mut)
+string formatted_mutation_annotation(const diff_entry& mut)
 {
-  stringstream ss(ios_base::out | ios_base::app);
-// # sub formatted_mutation_annotation
-// # {
-// #   my ($mut) = @_;
-// # 
-// #   ## additional formatting for some variables
-// #   my $formatted_annotated = '';
-// #   if ((defined $mut->{snp_type}) && ($mut->{snp_type} ne 'intergenic') && ($mut->{snp_type} ne 'noncoding') && ($mut->{snp_type} ne 'pseudogene'))
-// #   {
+  stringstream ss;
+
+  // additional formatting for some variables
   if((mut.entry_exists("snp_type")) && (mut["snp_type"] != "intergenic") &&
      (mut["snp_type"] != "noncoding") && (mut["snp_type"] != "pseudogene"))
   {    
-// #     $formatted_annotated .= "$mut->{aa_ref_seq}$mut->{aa_position}$mut->{aa_new_seq}";
     ss << mut["aa_ref_seq"] << mut["aa_position"] << mut["aa_new_seq"];
-// #     ## add color and underlining  
-// # 
-// #     my $codon_ref_seq = to_underline_red_codon($mut, 'codon_ref_seq');
+
     string codon_ref_seq = to_underline_red_codon(mut, "codon_ref_seq");
-// #     my $codon_new_seq = to_underline_red_codon($mut, 'codon_new_seq');
     string codon_new_seq = to_underline_red_codon(mut, "codon_new_seq");
-// #    // # 
-// #     $formatted_annotated .= "&nbsp;($codon_ref_seq&rarr;$codon_new_seq)";
-  ss << "&nbsp;" << codon_ref_seq << "&rarr;" << codon_new_seq << "&nbsp;";  
-// #   }
+    
+    ss << "&nbsp;" << codon_ref_seq << "&rarr;" << codon_new_seq << "&nbsp;";  
   }
-// #   else # ($mut->{snp_type} eq 'NC')
-// #   {
-  else // mut["snp_type"] == "NC"
+  else // mut[SNP_TYPE] == "NC"
   {
-// #     $formatted_annotated .= nonbreaking($mut->{gene_position});
-    ss << nonbreaking(mut["gene_positon"]); 
-// #   }
+    ss << nonbreaking(mut[GENE_POSITION]); 
   }
-// # 
-// #   return $formatted_annotated;
   return ss.str(); 
-// # }
 }
 
 /*-----------------------------------------------------------------------------
  *  Helper function for formatted_mutation_annotation
  *-----------------------------------------------------------------------------*/
-string to_underline_red_codon(diff_entry mut, const string& codon_key)
+string to_underline_red_codon(const diff_entry& mut, const string& codon_key)
 {
-// # sub to_underline_red_codon
-// #     {
-// #       my ($mut, $codon_key) = @_;     
-// #       return '' if (!defined $mut->{$codon_key} || !defined $mut->{codon_position} || $mut->{codon_position} eq '');
   if (!mut.entry_exists(codon_key) || 
       !mut.entry_exists("codon_position") ||
       mut["codon_position"] == "") {
     return "";
   }
-// # 
-// #       my $codon_string;
-  stringstream ss(ios_base::out | ios_base::app); //!< codon_string
-// #       my @codon_ref_seq_list = split //, $mut->{$codon_key};
-  vector<string> codon_ref_seq_list = split(mut[codon_key],"/"); 
-// #       for (my $i=0; $i<scalar @codon_ref_seq_list; $i++)
-// #       {
-  for (size_t i = 0; i < codon_ref_seq_list.size(); i++) {
-// #         if ($i == $mut->{codon_position})
-// #         {
-    if (to_string(i) == mut["codon_position"]) {
-// #           $codon_string.= font({-class=>"mutation_in_codon"}, $codon_ref_seq_list[$i]);
-      ss << font("class=\"mutation_in_codon\"", codon_ref_seq_list[i]);
-// #         }
+
+  stringstream ss; //!< codon_string
+  
+  string codon_ref_seq = mut[codon_key];
+  for (size_t i = 0; i < codon_ref_seq.size(); i++) {
+
+    if (i == from_string(mut["codon_position"])) {
+      ss << font("class=\"mutation_in_codon\"", codon_ref_seq.substr(i,1));
     }
-// #         else
-// #         {
     else 
     {
-    
-// #           $codon_string.= $codon_ref_seq_list[$i];
-      ss << codon_ref_seq_list[i];
-// #         } 
+      ss << codon_ref_seq[i];
     }
-// #       } 
   }
-// #       return $codon_string;
   return ss.str();
-// #     }
- 
 }
 
-// # 
-// # 
-string html_read_alignment_table_string(diff_entry_list list_ref, bool show_reject_reason, string title, string relative_link)
+string html_read_alignment_table_string(diff_entry_list& list_ref, bool show_reject_reason, const string& title, const string& relative_link)
 {
   stringstream ss; //!< Main build object for function
   stringstream ssf; //!< Used for formatting strings
-
-// #   my $q = new CGI; //TODO ?
   
   ss << start_table("border=\"0\" cellspacing=\"1\", cellpadding=\"3\"") << endl;
   
@@ -810,9 +679,8 @@ string html_read_alignment_table_string(diff_entry_list list_ref, bool show_reje
   for (diff_entry_list::iterator itr = list_ref.begin();
        itr != list_ref.end(); itr ++) {  
     diff_entry& c = **itr;
-// #     my $is_polymorphism = ((defined $c->{frequency}) && ($c->{frequency} != 1)) ? 1 : 0;
     bool is_polymorphism = false;
-    if (c.entry_exists(FREQUENCY) && (from_string<size_t>(c[FREQUENCY]) != 1)) {
+    if (c.entry_exists(FREQUENCY) && (from_string<double>(c[FREQUENCY]) != 1.0)) {
       is_polymorphism = true;
     }
     
@@ -824,20 +692,14 @@ string html_read_alignment_table_string(diff_entry_list list_ref, bool show_reje
     
     // Start building a single table row
     ss << start_tr("class=\"" + row_class + "\"");
-// #     
-// #     if ($link)
-// #     {
-// #       $output_str.= td(a({-href=>"$relative_link$c->{_evidence_file_name}"}, '*')); 
-// #     }
     if (link) {
       ss << td(a(relative_link + c[_EVIDENCE_FILE_NAME], "*"));
     }
-// #     
-// #     my $fisher_p_value = '';
+
     string fisher_p_value;
-// #     $fisher_p_value = nonbreaking(sprintf("&nbsp;(%.1E)", $c->{fisher_strand_p_value})) if (defined $c->{fisher_strand_p_value} && $c->{fisher_strand_p_value} ne 'ND');
     if (c.entry_exists("fisher_strand_p_value") &&
-       (c["fisher_strand_p_value"] != "ND")) {
+       (c["fisher_strand_p_value"] != "ND")) 
+    {
       ssf.precision(1);
       ssf << scientific << from_string<double>(c["fisher_strand_p_value"]); //TODO Confirm
       fisher_p_value = nonbreaking("&nbsp;(" + ssf.str() + ")");
@@ -845,12 +707,7 @@ string html_read_alignment_table_string(diff_entry_list list_ref, bool show_reje
       ssf.str("");
       ssf.clear();
      }
-// #     
-// #     $output_str.= td({align => "center"}, nonbreaking($c->{seq_id}) );  
-// #     $output_str.= td({align => "right"}, commify($c->{position}) ); 
-// #     $output_str.= td({align => "right"}, $c->{insert_position} );
-// #     $output_str.= td({align => "center"}, "$c->{ref_base}&rarr;$c->{new_base}" ); 
-// #     $output_str.= td({align => "right"}, sprintf("%4.1f%%", $c->{frequency}*100) );
+
     ss << td(ALIGN_CENTER, nonbreaking(c[SEQ_ID]));
     ss << td(ALIGN_RIGHT, commify(c["position"]));
     ss << td(ALIGN_RIGHT, c["insert_position"]);
@@ -862,11 +719,9 @@ string html_read_alignment_table_string(diff_entry_list list_ref, bool show_reje
     //Clear formated string stream
     ssf.str("");
     ssf.clear();
-// #     if ($is_polymorphism)
-// #     {
+
     if (is_polymorphism) {
-// #       ## display extra score data for polymorphisms...
-// #       my $log_fisher = ($c->{fisher_strand_p_value} > 0) ? log($c->{fisher_strand_p_value})/log(10) : 999;
+      // display extra score data for polymorphisms...
       string log_fisher = "999";
       string log_ks = "999";
          
@@ -874,12 +729,10 @@ string html_read_alignment_table_string(diff_entry_list list_ref, bool show_reje
           from_string<double>(c[FISHER_STRAND_P_VALUE]) > 0 )
         log_fisher = to_string(log(from_string<double>(c[FISHER_STRAND_P_VALUE])));
 
-// #       my $log_ks = ($c->{ks_quality_p_value} > 0) ? log($c->{ks_quality_p_value})/log(10) : 999;
       if (c.entry_exists(KS_QUALITY_P_VALUE) &&
           from_string<double>(c[KS_QUALITY_P_VALUE]) > 0 ) 
         log_ks = to_string(log(from_string<double>(c[KS_QUALITY_P_VALUE]))/log(10));
 
-// #       $output_str.= td({align => "right"}, nonbreaking(sprintf("%.1f,%.1f,%.1f", $c->{polymorphism_quality}, $log_fisher, $log_ks)) );  # . $fisher_p_value 
       ssf.precision(1);
       ssf << fixed << c["polymorphism_quality"] << " " <<
                       log_fisher << " " <<
@@ -890,16 +743,13 @@ string html_read_alignment_table_string(diff_entry_list list_ref, bool show_reje
       ssf.clear();
 
     }
-// #     else
-// #     {
+
     else {
-// #       $output_str.= td({align => "right"}, nonbreaking(sprintf("%.1f", $c->{quality})) );
       ssf.precision(1);
       ssf << fixed << c["quality"] << endl;
       ss << td(ALIGN_RIGHT, nonbreaking(ssf.str()));
       ssf.str("");
       ssf.clear();
-// #     }
     }  
     // Build "cov" column value
     vector<string> temp_cov = split(c[TOT_COV], "/");
@@ -908,189 +758,92 @@ string html_read_alignment_table_string(diff_entry_list list_ref, bool show_reje
     string total_cov = to_string(from_string<uint32_t>(top_cov) + 
                                  from_string<uint32_t>(bot_cov));
     ss << td(ALIGN_CENTER, total_cov);// "Cov" Column
-// #     $output_str.= td({align => "center"}, nonbreaking(formatted_mutation_annotation($c)) ); 
     ss << td(ALIGN_CENTER, nonbreaking(formatted_mutation_annotation(c))); //"Annotation" Column
-// #     $output_str.= td({align => "center"}, i(nonbreaking($c->{gene_name})) );  
     ss << td(ALIGN_CENTER, i(nonbreaking(c[GENE_NAME])));
-    
-// #     $output_str.= td({align => "left"}, htmlize($c->{gene_product}) );  
     ss << td(ALIGN_LEFT, htmlize(c[GENE_PRODUCT]));
-// #       
-// #     $output_str.= end_Tr;
     ss << "</tr>" << endl;
-// #     
-// #     if ($show_reject_reason) 
-// #     {
-    if (show_reject_reason) {
-// #       foreach my $reject (GenomeDiff::get_reject_reasons($c))
-// #       {
-      vector<string> reject_reasons = split(c[REJECT], ",");
-      for (vector<string>::iterator itr = reject_reasons.begin();
-           itr != reject_reasons.end(); itr ++) {  
+
+    if (show_reject_reason) 
+    {
+      vector<string> reject_reasons = c.get_reject_reasons();
+      for (vector<string>::iterator itr = reject_reasons.begin(); itr != reject_reasons.end(); itr ++) 
+      {  
         string& reject = (*itr);
-// #         $output_str.= Tr({-class=>'reject_table_row'}, td({-colspan => $total_cols}, "Rejected: " . decode_reject_reason($reject)));
        ss << tr("class=\"reject_table_row\"", 
                 td("colspan=\"" + to_string(total_cols) + "\"",
                    "Rejected: " + decode_reject_reason(reject)));
-                                                  
-// #       }
-       }
+      }
     
-    /* Fisher Strand Test */
-    if (c.entry_exists("fisher_strand_p_value")) {
-// #         my $fisher_strand_p_value = sprintf("%.2E", $c->{fisher_strand_p_value});
+      /* Fisher Strand Test */
+      if (c.entry_exists("fisher_strand_p_value")) 
+      {
+        ssf.precision(2);
+        ssf << scientific << from_string<float>(c["fisher_strand_p_value"]);
+        string fisher_strand_p_value = ssf.str();
+        
+        //Clear formated string stream
+        ssf.str("");
+        ssf.clear();
+
+        ss << tr("class=\"information_table_row\"", 
+                 td("colspan=\"total_cols\"",
+                    "Strands of reads supporting (+/-):&nbsp;&nbsp;" +
+                    b("new") + " base " + "(" + c[NEW_COV] + ")" + ":&nbsp;&nbsp;" +
+                    b("ref") + " base " + "(" + c[REF_COV] + ")" + ":&nbsp;&nbsp;" +
+                    b("total") + " (" + c[TOT_COV] + ")")); 
+        ss << tr("class=\"information_table_row\"", 
+                 td("colspan=\"" + to_string(total_cols) + "\"",
+                    "Fisher's exact test strand distribution" +
+                    i("p") + "-value = " +fisher_strand_p_value));
+      } //end fisher_strand_p_value
+
+      /* Kolmogorov-Smirnov Test */
+      if (c.entry_exists("ks_quality_p_value")) {
       ssf.precision(2);
-      ssf << scientific << from_string<float>(c["fisher_strand_p_value"]);
-      string fisher_strand_p_value = ssf.str();
+      ssf << scientific << (c.entry_exists(KS_QUALITY_P_VALUE) ? 
+        from_string<float>(c["ks_quality_p_value"]) :
+        0);
+      string ks_quality_p_value = ssf.str();
       
       //Clear formated string stream
       ssf.str("");
       ssf.clear();
 
-// #         $output_str.= Tr({-class=>'information_table_row'}, td({-colspan => $total_cols}, 
-// #           "Strands of reads supporting (+/-):&nbsp;&nbsp;" 
-// #           . b("new") . " base ($c->{new_cov})&nbsp;&nbsp;" 
-// #           . b("ref") . " base ($c->{ref_cov})&nbsp;&nbsp;" 
-// #           . b("total") . " ($c->{tot_cov})"));
-      ss << tr("class=\"information_table_row\"", 
-               td("colspan=\"total_cols\"",
-                  "Strands of reads supporting (+/-):&nbsp;&nbsp;" +
-                  b("new") + " base " + "(" + c[NEW_COV] + ")" + ":&nbsp;&nbsp;" +
-                  b("ref") + " base " + "(" + c[REF_COV] + ")" + ":&nbsp;&nbsp;" +
-                  b("total") + " (" + c[TOT_COV] + ")")); 
-// #         $output_str.= Tr({-class=>'information_table_row'}, td({-colspan => $total_cols}, "Fisher's exact test strand distribution " . i("p") . "-value = $fisher_strand_p_value"));
       ss << tr("class=\"information_table_row\"", 
                td("colspan=\"" + to_string(total_cols) + "\"",
-                  "Fisher's exact test strand distribution" +
-                  i("p") + "-value = " +fisher_strand_p_value));
-// #       }
-    }//end fisher_strand_p_value
-// # 
-// #       if (defined $c->{ks_quality_p_value})
-// #       {
-// #       my $ks_quality_p_value = sprintf("%.2E", $c->{ks_quality_p_value});
-// #         $output_str.= Tr({-class=>'information_table_row'}, td({-colspan => $total_cols}, "Kolmogorov-Smirnov test that lower quality scores support polymorphism than reference " . i("p") . "-value = $ks_quality_p_value"));
-// #       }
-    /* Kolmogorov-Smirnov Test */
-    if (c.entry_exists("ks_quality_p_value")) {
-    ssf.precision(2);
-    ssf << scientific << (c.entry_exists(KS_QUALITY_P_VALUE) ? 
-      from_string<float>(c["ks_quality_p_value"]) :
-      0);
-    string ks_quality_p_value = ssf.str();
-    
-    //Clear formated string stream
-    ssf.str("");
-    ssf.clear();
-
-    ss << tr("class=\"information_table_row\"", 
-             td("colspan=\"" + to_string(total_cols) + "\"",
-                " Kolmogorov-Smirnov test that lower quality scores support polymorphism than reference" + //TODO @ JEB grammar?
-                i("p") + "-value = " +ks_quality_p_value));
-    }//end ks_quality_p_value
-      
-// #
-// # 
-// # ### Currently not calculated...
-// #       if (defined $c->{ks_quality_p_value_unusual_poly})
-// #       {
-// #         my $ks_quality_p_value = sprintf("%.2E", $c->{ks_quality_p_value_unusual_poly});
-// #         $output_str.= Tr({-class=>'information_table_row'}, td({-colspan => $total_cols}, "Kolmogorov-Smirnov test of lower base quality scores supporting polymorphism than normal distribution " . i("p") . "-value = $ks_quality_p_value"));
-// #       }
-// # 
-// # 
-// #       if (defined $c->{ks_quality_p_value_unusual_new})
-// #       {
-// #         my $ks_quality_p_value = sprintf("%.2E", $c->{ks_quality_p_value_unusual_new});
-// #         $output_str.= Tr({-class=>'information_table_row'}, td({-colspan => $total_cols}, "Kolmogorov-Smirnov test of lower quality scores supporting new bases " . i("p") . "-value = $ks_quality_p_value"));
-// #       }
-// # 
-// #       if (defined $c->{ks_quality_p_value_unusual_ref})
-// #       {
-// #         my $ks_quality_p_value = sprintf("%.2E", $c->{ks_quality_p_value_unusual_ref});
-// #         $output_str.= Tr({-class=>'information_table_row'}, td({-colspan => $total_cols}, "Kolmogorov-Smirnov test of lower quality scores supporting ref bases " . i("p") . "-value = $ks_quality_p_value"));
-// #       }
-// #       
-// #       if (defined $c->{ks_quality_p_value_unusual_all})
-// #       {
-// #         my $ks_quality_p_value = sprintf("%.2E", $c->{ks_quality_p_value_unusual_all});
-// #         $output_str.= Tr({-class=>'information_table_row'}, td({-colspan => $total_cols}, "Kolmogorov-Smirnov test of lower quality scores supporting all bases " . i("p") . "-value = $ks_quality_p_value"));
-// #       }     
-// # ### ---->     
-// # 
-// #     }
-    }// end show_reject_reason
-  
-// #   }
+                  " Kolmogorov-Smirnov test that lower quality scores support polymorphism than reference" + //TODO @ JEB grammar?
+                  i("p") + "-value = " +ks_quality_p_value));
+      } //end ks_quality_p_value
+    } // end show_reject_reason
   } // end list_ref loop
-// #   
-// #   $output_str.= end_table;
-// # }
+
   ss << "</table>" << endl;
   return ss.str();
 }
 
-string html_missing_coverage_table_string(diff_entry_list list_ref, bool show_reject_reason, string title, string relative_link)
+string html_missing_coverage_table_string(diff_entry_list& list_ref, bool show_reject_reason, const string& title, const string& relative_link)
 {
-// # sub html_missing_coverage_table_string
-// # {
-// #   my ($list_ref, $relative_link, $title, $show_reject_reason) = @_;
-// #   $relative_link = '' if (!$relative_link);
-// #   $title = "Missing coverage evidence..." if (!$title);
-// #   
-// #   my $output_str = '';
-  stringstream ss(ios_base::out | ios_base::app); //!< Main Build Object in Function
-// #   
-// #   my $q = new CGI; //TODO
-// #   $output_str.= start_table({-border => 0, -cellspacing => 1, -cellpadding => 3, -width => "100%"});
+  stringstream ss; //!< Main Build Object in Function
+  
   ss << endl;
   ss << start_table("border=\"0\" cellspacing=\"1\" cellpadding=\"3\" width=\"100%\"") << endl;
-// #   
-// #   my $coverage_plots;
-  bool coverage_plots;
-// #   $coverage_plots = (defined $list_ref->[0]) && (defined $list_ref->[0]->{_evidence_file_name});
-  if ((list_ref.front()).get() != NULL && (*list_ref.front()).entry_exists("_EVIDENCE_FILE_NAME")) {
-  coverage_plots = true;
-  } else {
-  coverage_plots = false;
-  }
-// #   my $link = (defined $list_ref->[0]) && (defined $list_ref->[0]->{_side_1_evidence_file_name}) && (defined $list_ref->[0]->{_side_2_evidence_file_name});
+  
+  bool coverage_plots = ((list_ref.front()).get() != NULL && (*list_ref.front()).entry_exists("_EVIDENCE_FILE_NAME"));
+  
   bool link = ((*list_ref.front()).entry_exists("_side_1_evidence_file_name")) && 
-              ((*list_ref.front()).entry_exists("_side_2_evidence_file_name")); //TODO other conditions needed?
-// # 
-// #   my $total_cols = $link ? 11 : 8;
+              ((*list_ref.front()).entry_exists("_side_2_evidence_file_name"));
+  
   size_t total_cols = link ? 11 : 8;
-// #   $output_str.= Tr(th({-colspan => $total_cols, -align => "left", -class=>"missing_coverage_header_row"}, $title));
-  ss << "<tr>"<< th("colspan=\"" + to_string(total_cols) + "\" align=\"left\" class=\"missing_coverage_header_row\"", title) << "</tr>" << endl;
-// # 
-// #   $output_str.= start_Tr();    
+  ss << "<tr>" << th("colspan=\"" + to_string(total_cols) + "\" align=\"left\" class=\"missing_coverage_header_row\"", title) << "</tr>" << endl;   
   ss << "<tr>";
-// #   if ($link)
-// #   {
-// #     $output_str.= th("&nbsp;"); 
-// #     $output_str.= th("&nbsp;"); 
-// #     if ($coverage_plots)
-// #     {
-// #       $output_str.= th("&nbsp;");
-// #     }
-// #   }
+
   if (link) {
     ss << th("&nbsp;") <<  th("&nbsp;");
     if (coverage_plots) {
       ss << th("&nbsp;");
     }
   }
-// #   $output_str.= th(
-// #     [
-// #       "seq&nbsp;id",
-// #       "start", 
-// #       "end", 
-// #       "size",
-// #       "&larr;cov",
-// #       "cov&rarr;",
-// #       "gene", 
-// #     ]
-// #   );  
+
   ss << th("seq&nbsp;id") << endl <<
         th("start")       << endl <<
         th("end")         << endl <<
@@ -1098,43 +851,14 @@ string html_missing_coverage_table_string(diff_entry_list list_ref, bool show_re
         th("&larr;cov")   << endl <<
         th("cov&rarr;")   << endl <<
         th("gene")        << endl;
-// #   $output_str.= th({-width => "100%"}, "description");
-// #   $output_str.= end_Tr;
-  ss << th("width=\"100%\"","description") << endl;
+  
+  ss << th("width=\"100%\"", "description") << endl;
   ss << "</tr>" << endl;
-// #   
-// #   foreach my $c (@$list_ref)
-// #   {
-      for (diff_entry_list::iterator itr = list_ref.begin();
-           itr != list_ref.end(); itr ++) {  
+
+      for (diff_entry_list::iterator itr = list_ref.begin(); itr != list_ref.end(); itr ++) {  
         diff_entry& c =  **itr;
-// #     ## additional formatting for some variables
-// #     my $gene_string = $c->{genes};
-        string gene = c[GENES];
-// #   # $gene_string =~ s/ /&nbsp;/g;
-      while (gene.find(" ") != string::npos) {
-        size_t pos = gene.find(" ");
-        gene.replace(pos, 1, "&nbsp;");
-      }
-// #   # $gene_string =~ s/-/&#8209;/g; #substitute nonbreaking dash
-// #   
-      while (gene.find("-") != string::npos) {
-        size_t pos = gene.find("-");
-        gene.replace(pos, 1, "&#8209;");
-      }  
-// #     $output_str.= start_Tr;
-      ss << "<tr>" << endl;
-// #     
-// #     if ($link)
-// #     {
-// #       $output_str.= td(a({-href=>"$relative_link$c->{_side_1_evidence_file_name}"}, '*')); 
-// #       $output_str.= td(a({-href=>"$relative_link$c->{_side_2_evidence_file_name}"}, '*')); 
-// #       
-// #       if ($coverage_plots)
-// #       {
-// #         $output_str.= td(a({-href=>"$relative_link$c->{_evidence_file_name}"}, '&divide;')); 
-// #       }
-// #     }
+
+        ss << "<tr>" << endl;
       if (link) {
         ss << td(a(relative_link + c[_SIDE_1_EVIDENCE_FILE_NAME], "*")) << endl;
         ss << td(a(relative_link + c[_SIDE_2_EVIDENCE_FILE_NAME], "*")) << endl;
@@ -1144,30 +868,25 @@ string html_missing_coverage_table_string(diff_entry_list list_ref, bool show_re
         }
 
       }
-// # 
-// #     my $start_str = $c->{start};
-      string start = c[START];
-// #     $start_str .= "–" . ($c->{start} + $c->{start_range}) if ($c->{start_range} > 0);
 
-      if (from_string<uint32_t>(c[START_RANGE]) > 0) {
+      string start = c[START];
+      if (from_string<uint32_t>(c[START_RANGE]) > 0) 
+      {
         start += "–" + 
           to_string(from_string<uint32_t>(c[START]) + 
                     from_string<uint32_t>(c[START_RANGE]));
       }
-// #     my $end_str = $c->{end};
       string end = c[END];
-// #     $end_str .= "–" . ($c->{end} - $c->{end_range}) if ($c->{end_range} > 0);
-      if (from_string<uint32_t>(c[END_RANGE]) > 0) {
+      if (from_string<uint32_t>(c[END_RANGE]) > 0) 
+      {
          end += "–" + 
            to_string(from_string<uint32_t>(c[END]) -
                      from_string<uint32_t>(c[END_RANGE]));
       }
-// # 
-// #     my $size_str = ($c->{end} - $c->{start} + 1);
-// #     $size_str = ($c->{end} - $c->{start} + 1 - $c->{end_range} - $c->{start_range}) . "–" . $size_str if (($c->{end_range} > 0) || ($c->{start_range} > 0));
-      string size = to_string(from_string<uint32_t>(c[END]) - 
-                              from_string<uint32_t>(c[START]) + 1);
-      if ((from_string<uint32_t>(c[START_RANGE]) > 0) ||
+
+      string size = to_string(from_string<uint32_t>(c[END]) - from_string<uint32_t>(c[START]) + 1);
+        
+      if ((from_string<uint32_t>(c[END_RANGE]) > 0) ||
           (from_string<uint32_t>(c[START_RANGE]) > 0)) {
        
         uint32_t size_value = 
@@ -1178,25 +897,15 @@ string html_missing_coverage_table_string(diff_entry_list list_ref, bool show_re
        
         size = to_string(size_value) + "–" + size; 
       }
-// # 
-// #         
-// #     $output_str.= td(nonbreaking($c->{seq_id})); 
+       
       ss << td(nonbreaking(c[SEQ_ID])) << endl;
-// #     $output_str.= td({-align=>"right"}, nonbreaking($start_str)); 
       ss << td(ALIGN_RIGHT, nonbreaking(start)) << endl;
-// #     $output_str.= td({-align=>"right"}, nonbreaking($end_str));   
       ss << td(ALIGN_RIGHT, nonbreaking(end)) << endl;
-// #     $output_str.= td({-align=>"right"}, nonbreaking($size_str));    
       ss << td(ALIGN_RIGHT, nonbreaking(size)) << endl;
-// #     $output_str.= td({-align=>"center"}, nonbreaking("$c->{left_outside_cov} \[$c->{left_inside_cov}\]")); 
       ss << td(ALIGN_CENTER, nonbreaking(c[LEFT_OUTSIDE_COV] + "[" + c[LEFT_INSIDE_COV] + "]")) <<endl;
-// #     $output_str.= td({-align=>"center"}, nonbreaking("\[$c->{right_inside_cov}\] $c->{right_outside_cov}")); 
       ss << td(ALIGN_CENTER, nonbreaking(c[RIGHT_INSIDE_COV] + "[" + c[RIGHT_OUTSIDE_COV] + "]")) << endl;
-// #     $output_str.= td({align=>"center"}, i(nonbreaking($c->{gene_name})));       
       ss << td(ALIGN_CENTER, i(nonbreaking(c[GENE_NAME]))) << endl;
-// #     $output_str.= td({align=>"left"}, htmlize($c->{gene_product}));   
-      ss << td(ALIGN_LEFT, htmlize(c[GENE_NAME])) << endl;
-// #     $output_str.= end_Tr;
+      ss << td(ALIGN_LEFT, htmlize(c[GENE_PRODUCT])) << endl;
       ss << "</tr>" << endl;
 // #     
 // #     if ($show_reject_reason)
@@ -1207,7 +916,7 @@ string html_missing_coverage_table_string(diff_entry_list list_ref, bool show_re
 // #       }
 // #     }
     if (show_reject_reason && c.entry_exists(REJECT)) {
-      vector<string> reject_reasons = split(c[REJECT], ",");
+      vector<string> reject_reasons = c.get_reject_reasons();
       for (vector<string>::iterator itr = reject_reasons.begin();
            itr != reject_reasons.end(); itr ++) {  
         string& reject = (*itr);
@@ -1216,65 +925,31 @@ string html_missing_coverage_table_string(diff_entry_list list_ref, bool show_re
                     "Rejected: " + decode_reject_reason(reject)));  
       }
     }
-// #   }
   }
-// #   
-// #   $output_str.= end_table;  
   ss << "</table>" << endl;
-// #   return $output_str;
   return ss.str();
-// # }
 }
 
-string html_new_junction_table_string(diff_entry_list list_ref, bool show_reject_reason, string title, string relative_link
+string html_new_junction_table_string(diff_entry_list& list_ref, bool show_reject_reason, const string& title, const string& relative_link
                                )
 {
-// #   our ($list_ref, $relative_link, $title, $show_reject_reason) = @_;
-// #   
-  stringstream ss(ios_base::out | ios_base::app); //!<< Main Build Object for Function
-// # 
-// #   my $test_item = $list_ref->[0];
+  stringstream ss; //!<< Main Build Object for Function
   diff_entry& test_item = *list_ref.front();
-// #   my $link =  
-// #          (defined $test_item) 
-// #     && (defined $test_item->{_side_1_evidence_file_name}) 
-// #     && (defined $test_item->{_side_2_evidence_file_name})
-// #     && (defined $test_item->{_new_junction_evidence_file_name})
-// #   ;
+
   bool link = (test_item.entry_exists(_SIDE_1_EVIDENCE_FILE_NAME) &&
                test_item.entry_exists(_SIDE_2_EVIDENCE_FILE_NAME) &&
                test_item.entry_exists(_NEW_JUNCTION_EVIDENCE_FILE_NAME));
-// #   
-// #   my $q = new CGI; //TODO
-// #   $output_str.= start_table({-border => 0, -cellspacing => 1, -cellpadding => 3});
+
   ss << start_table("border=\"0\" cellspacing=\"1\" cellpadding=\"3\"") << endl;
-// # 
-// #   my $total_cols = $link ? 10 : 8;
   size_t total_cols = link ? 10 : 8;
-// #   $output_str.= Tr(th({-colspan => $total_cols, -align => "left", -class=>"new_junction_header_row"}, $title));
   ss << tr(th("colspan=\"" + to_string(total_cols) + "\" align=\"left\" class=\"new_junction_header_row\"", title)) << endl;
 // #     
 // #   #####################
 // #   #### HEADER LINE ####
 // #   #####################
   ss << "<!-- Header Lines for New Junction -->" << endl; 
-// #   $output_str.= start_Tr();
   ss << "<tr>" << endl;
-// #   if ($link)
-// #   {
-// #     $output_str.= th({-colspan=>2}, "&nbsp;"); 
-// #   }
-// #   $output_str.= th(
-// #     [
-// #       "seq&nbsp;id",
-// #       "position",
-// #       "overlap",
-// #       "reads", 
-// #       "score",
-// #       "annotation",
-// #       "gene",
-// #     ]
-// #   );    
+    
   if (link) {
     ss << th("colspan=\"2\"", "&nbsp;") << endl;
   }
@@ -1296,12 +971,10 @@ string html_new_junction_table_string(diff_entry_list list_ref, bool show_reject
   ss << "<!-- Item Lines for New Junction -->" << endl;
 // #   
 // #   ## the rows in this table are linked (same background color for every two)
-// #   my $row_bg_color_index = 0;
   uint32_t row_bg_color_index = 0; 
-// #   foreach my $c (@$list_ref)
-// #   {     
-  for (diff_entry_list::iterator itr = list_ref.begin();
-       itr != list_ref.end(); itr ++) {  
+   
+  for (diff_entry_list::iterator itr = list_ref.begin(); itr != list_ref.end(); itr ++) 
+  {  
     diff_entry& c = **itr;
 // #     ##############
 // #     ### Side 1 ###
@@ -1419,7 +1092,7 @@ string html_new_junction_table_string(diff_entry_list list_ref, bool show_reject
   if (show_reject_reason && c.entry_exists("reject")) {
     genome_diff gd;
 
-    vector<string> reject_reasons = gd.get_reject_reasons(c);
+    vector<string> reject_reasons = c.get_reject_reasons();
     
     for (vector<string>::iterator itr = reject_reasons.begin();
          itr != reject_reasons.end(); itr++) {
@@ -1515,51 +1188,26 @@ string decode_reject_reason(const string& reject)
  * =====================================================================================
  */
 Evidence_Files::Evidence_Files(const Settings& settings, genome_diff& gd)
-{
-// # sub create_evidence_files
-// # {
-// #   my ($settings, $gd) = @_;
-// #   
-// #   # gather everything together and then handle all at once
-// #   our @evidence_list;
-// # 
-// # 
-// #  
-// #   
-// #   # Fasta and BAM files for making alignments.
-// #   my $reference_bam_file_name = $settings->file_name('reference_bam_file_name');
-// #   my $reference_fasta_file_name = $settings->file_name('reference_fasta_file_name');
-// # 
+{  
+  // Fasta and BAM files for making alignments.
   string reference_bam_file_name = settings.reference_bam_file_name;
   string reference_fasta_file_name = settings.reference_fasta_file_name;
-// #   ## hybrids use different BAM files for making the alignments!!!
+
+  // hybrids use different BAM files for making the alignments!!!
   string junction_bam_file_name = settings.junction_bam_file_name;
   string junction_fasta_file_name = settings.candidate_junction_fasta_file_name;
-// # 
-// #   ### We make alignments of two regions for deletions: upstream and downstream edges.
+
+  // We make alignments of two regions for deletions: upstream and downstream edges.
   diff_entry_list items_MC = gd.list(make_list<string>(MC));
-  for (diff_entry_list::iterator itr = items_MC.begin();
-       itr != items_MC.end(); itr ++) {  
+  for (diff_entry_list::iterator itr = items_MC.begin(); itr != items_MC.end(); itr ++) 
+  {  
     diff_entry& item = **itr;
     if (item.entry_exists(NO_SHOW)) continue;
      
     counted_ptr<diff_entry> parent_item = gd.parent(item);
     if (parent_item.get() == NULL)
       parent_item = *itr;
-// #     
-// #     add_evidence( 
-// #       '_side_1_evidence_file_name',
-// #       { 
-// #         bam_path  => $reference_bam_file_name,
-// #         fasta_path  => $reference_fasta_file_name,
-// #         seq_id    => $item->{seq_id}, 
-// #         start     => $item->{start}-1, 
-// #         end     => $item->{start}-1, 
-// #         parent_item => $parent_item,
-// #         item    => $item,
-// #         prefix    => 'MC_SIDE_1',
-// #       }
-// #     );
+
    add_evidence(_SIDE_1_EVIDENCE_FILE_NAME,
                 item,
                  *parent_item,
@@ -1571,20 +1219,6 @@ Evidence_Files::Evidence_Files(const Settings& settings, genome_diff& gd)
                 (START, to_string(from_string<uint8_t>(item[START]) - 1))
                 (END,  to_string(from_string<uint8_t>(item[START]) - 1)));
 
-// #     
-// #     add_evidence( 
-// #       '_side_2_evidence_file_name',
-// #       {
-// #         bam_path  => $reference_bam_file_name,
-// #         fasta_path  => $reference_fasta_file_name,
-// #         seq_id    => $item->{seq_id}, 
-// #         start   => $item->{end}+1, 
-// #         end     => $item->{end}+1, 
-// #         parent_item => $parent_item,
-// #         item    => $item,
-// #         prefix    => 'MC_SIDE_2',     
-// #       }
-// #     );
     add_evidence(_SIDE_2_EVIDENCE_FILE_NAME,
                 item,
                  *parent_item,
@@ -1596,117 +1230,57 @@ Evidence_Files::Evidence_Files(const Settings& settings, genome_diff& gd)
                 (START, to_string(from_string<uint8_t>(item[END]) + 1))
                 (END,  to_string(from_string<uint8_t>(item[END]) + 1)));
 
-
-// # 
-// #     add_evidence( 
-// #       '_evidence_file_name',
-// #       {
-// #         seq_id    => $item->{seq_id}, 
-// #         start   => $item->{start}, 
-// #         end     => $item->{end}, 
-// #         parent_item => $parent_item,
-// #         item    => $item,
-// #         prefix    => 'MC_PLOT', 
-// #        plot    => $item->{_coverage_plot_file_name},
-// #       }
     add_evidence(_EVIDENCE_FILE_NAME,
                 item,
                  *parent_item,
                 make_map<string,string>
+                (BAM_PATH, junction_bam_file_name)
+                (FASTA_PATH, junction_fasta_file_name)
                 (PREFIX, "MC_PLOT")
                 (SEQ_ID, item[SEQ_ID])            
                 (START, to_string(from_string<uint8_t>(item[END]) + 1))
                 (END,  to_string(from_string<uint8_t>(item[END]) + 1))
                 (PLOT, item[_COVERAGE_PLOT_FILE_NAME]));
+    
+  } // mc_item list
+  
+  diff_entry_list items_SNP_INS_DEL_SUB = gd.list(make_list<string>(SNP)(INS)(DEL)(SUB));
 
-// #     );
-// #   } 
-  }
-// # 
-// #   #--> currently don't do this with 'AMP' because they are all junction evidence
-  diff_entry_list items_SNP_INS_DEL_SUB = 
-    gd.list(make_list<string>(SNP)(INS)(DEL)(SUB));
-// #   
-// #   MUT: foreach my $item ( $gd->list('SNP', 'INS', 'DEL', 'SUB') )
-// #   {
-for (diff_entry_list::iterator itr = items_SNP_INS_DEL_SUB.begin();
-       itr != items_SNP_INS_DEL_SUB.end(); itr ++) {  
+  for (diff_entry_list::iterator itr = items_SNP_INS_DEL_SUB.begin(); itr != items_SNP_INS_DEL_SUB.end(); itr ++) 
+  {  
     diff_entry& item = **itr;
     diff_entry_list mutation_evidence_list = gd.mutation_evidence_list(item);
-// #     next if ($item->{no_show});
     if (item.entry_exists(NO_SHOW)) continue;
-// #     
-// #     #this reconstructs the proper columns to draw
-// #     my $start = $item->{position};
-// #     my $end = $start;
-// #     my $insert_start = undef;
-// #     my $insert_end = undef;
+
+    // #this reconstructs the proper columns to draw
     uint32_t start = from_string<uint32_t>(item[POSITION]);
     uint32_t end = start;
-    uint32_t insert_start; //TODO @JEB undef
-    uint32_t insert_end; //TODO @JEB undef
+    uint32_t insert_start = 0;
+    uint32_t insert_end = 0;
 
-// # 
-// #     if ($item->{type} eq 'INS')
-// #     {
-// #       $insert_start = 1;
-// #       $insert_end = length($item->{new_seq});     
-// #     }
-    if (item._type == INS) {
+    if (item._type == INS) 
+    {
       insert_start = 1;
       insert_end = item[NEW_SEQ].size();
     }
-// #     elsif ($item->{type} eq 'DEL')
-    else if (item._type == DEL) {
-// #     {
-// #       my $has_ra_evidence;
+    else if (item._type == DEL) 
+    {
       bool has_ra_evidence;
-// #       foreach my $evidence_item ($gd->mutation_evidence_list($item))
-// #       {
-// #         $has_ra_evidence = 1 if ($evidence_item->{type} eq 'RA');
-// #       }
-      for (diff_entry_list::iterator itr = mutation_evidence_list.begin();
-           itr != mutation_evidence_list.end(); itr ++) {  
+      for (diff_entry_list::iterator itr = mutation_evidence_list.begin(); itr != mutation_evidence_list.end(); itr ++) 
+      {  
         diff_entry& evidence_item = **itr;
         if (evidence_item._type == RA) has_ra_evidence = true;
       }
-// #       ## only do deletions if they have within-read evidence
-// #       next MUT if (!$has_ra_evidence);
       if(!has_ra_evidence) continue;  
 
-// #       $end = $start + $item->{size} - 1;
       end = start + from_string<uint32_t>(item[SIZE]) - 1;
-// #     }
     }
-// # 
-// #     ##may be a problem here...
-// #     elsif ($item->{type} eq 'SUB')
-// #     {
-// #       $end = $start + length($item->{new_seq}) - 1;
-// #     }
-    else if (item._type == SUB ) {
+
+    else if (item._type == SUB ) 
+    {
       end = start + item[NEW_SEQ].size() - 1;
     }
-// #     #elsif ($item->{type} eq 'AMP')
-// #     #{
-// #     # $end = $start + $item->{size};
-// #     #}
-// # 
-// #     add_evidence( 
-// #       '_evidence_file_name',
-// #       {
-// #         bam_path    => $reference_bam_file_name,
-// #         fasta_path    => $reference_fasta_file_name,
-// #         seq_id      => $item->{seq_id}, 
-// #         start       => $start, 
-// #         end       => $end, 
-// #         insert_start  => $insert_start, 
-// #         insert_end    => $insert_end,
-// #         parent_item   => $item, 
-// #         item      => $item, 
-// #         prefix      => $item->{type}, 
-// #       }
-// #     );
+
     add_evidence(_EVIDENCE_FILE_NAME,
                  item,
                  item,
@@ -1720,56 +1294,27 @@ for (diff_entry_list::iterator itr = items_SNP_INS_DEL_SUB.begin();
                  (INSERT_END, to_string(insert_end))
                  (PREFIX, item._type));
 
-// #         
-// #     #add evidence to 'RA' items as well
-// #     foreach my $evidence_item ( $gd->mutation_evidence_list($item) )
-// #     {
-// #       next if ($evidence_item->{type} ne 'RA');
-// #       $evidence_item->{_evidence_file_name} = $item->{_evidence_file_name};
-// #     }
+
     /* Add evidence to RA items as well */
-    for (diff_entry_list::iterator itr = mutation_evidence_list.begin();
-         itr != mutation_evidence_list.end(); itr ++) {  
+    for (diff_entry_list::iterator itr = mutation_evidence_list.begin(); itr != mutation_evidence_list.end(); itr ++) 
+    {  
       diff_entry& evidence_item = **itr;
       if (evidence_item._type != RA) continue;
       evidence_item[_EVIDENCE_FILE_NAME] = item[_EVIDENCE_FILE_NAME];  
     }
-// #   }
   }
-// #   
-// #   
-// #   ## Still create files for RA evidence that was not good enough to predict a mutation from
-// # 
-// #   my @ra_list = $gd->list('RA');  
-// #   @ra_list = $gd->filter_used_as_evidence(@ra_list);
+  
+
+  // Still create files for RA evidence that was not good enough to predict a mutation from
   diff_entry_list ra_list = gd.filter_used_as_evidence(gd.list(make_list<string>(RA)));
-// #   
-// #   RA: foreach my $item ( @ra_list )
-// #   {
-  for (diff_entry_list::iterator itr = ra_list.begin();
-     itr != ra_list.end(); itr ++) {  
+  
+  for (diff_entry_list::iterator itr = ra_list.begin(); itr != ra_list.end(); itr ++) 
+  {  
     diff_entry& item = **itr;
-// #     next if ($item->{no_show});
     if (item.entry_exists(NO_SHOW)) continue;
-// #     
-// #     #this reconstructs the proper columns to draw
-// #     add_evidence( 
-// #       '_evidence_file_name',
-// #       {
-// #         bam_path    => $reference_bam_file_name,
-// #         fasta_path    => $reference_fasta_file_name,
-// #         seq_id      => $item->{seq_id}, 
-// #         start       => $item->{position}, 
-// #         end       => $item->{position}, 
-// #         insert_start  => $item->{insert_position}, 
-// #         insert_end    => $item->{insert_position},
-// #         parent_item   => $item, 
-// #         item      => $item, 
-// #         prefix      => $item->{type}, 
-// #       }
-// #     );
+
     add_evidence(_EVIDENCE_FILE_NAME,
-                  item,
+                 item,
                  item,
                  make_map<string,string>
                  (BAM_PATH, reference_bam_file_name)
@@ -1780,100 +1325,51 @@ for (diff_entry_list::iterator itr = items_SNP_INS_DEL_SUB.begin();
                  (INSERT_START, item[INSERT_POSITION])
                  (INSERT_END, item[INSERT_POSITION])
                  (PREFIX, item._type));
-
-// #   }
   }
-// # 
-// #   ## This additional information is used for the complex reference line.
-// #   ## Note that it is completely determined by the original candidate junction sequence 
-// #   ## positions and overlap: alignment_pos and alignment_overlap.
-// # 
-diff_entry_list items_JC = gd.list(make_list<string>(JC));
-// #   foreach my $item ( $gd->list('JC') )
-// #   { 
-  for (diff_entry_list::iterator itr = items_JC.begin();
-       itr != items_JC.end(); itr ++) {  
+  // This additional information is used for the complex reference line.
+  // Note that it is completely determined by the original candidate junction sequence 
+  // positions and overlap: alignment_pos and alignment_overlap.
+  
+  diff_entry_list items_JC = gd.list(make_list<string>(JC));
+
+  for (diff_entry_list::iterator itr = items_JC.begin(); itr != items_JC.end(); itr ++) 
+  {  
     diff_entry& item = **itr;
-// #     next if ($item->{no_show});
     if (item.entry_exists(NO_SHOW)) continue;
-// #     
-// #     my $parent_item = $gd->parent($item);
+
     diff_entry_ptr parent_item = gd.parent(item);
-// #     $parent_item = $item if (!$parent_item);
+
     if(parent_item.get() == NULL) {
       parent_item = *itr;
     }
-// #     
-// #     ## regenerate the alignment overlap from the junction_key
-// #     my ($start, $end);
+
     uint32_t start;
     uint32_t end;
-// #     if ($item->{alignment_overlap} == 0)
-// #     {
-// #       $start = $item->{flanking_left};
-// #       $end = $item->{flanking_left}+1;      
-// #     }
-    if (from_string<uint32_t>(item[ALIGNMENT_OVERLAP]) == 0) {
+
+    if (from_string<uint32_t>(item[ALIGNMENT_OVERLAP]) == 0) 
+    {
       start = from_string<uint32_t>(item[FLANKING_LEFT]);
       end = from_string<uint32_t>(item[FLANKING_LEFT]) + 1;
     }
-// #     elsif ($item->{alignment_overlap} > 0)
-// #     {
-    else if (from_string <uint32_t>(item[ALIGNMENT_OVERLAP]) > 0) {
-// #       $start = $item->{flanking_left}+1;
+    else if (from_string <uint32_t>(item[ALIGNMENT_OVERLAP]) > 0) 
+    {
       start = from_string<uint32_t>(item[FLANKING_LEFT]) + 1;
-// #       $end = $item->{flanking_left}+$item->{alignment_overlap};
       end = from_string<uint32_t>(item[FLANKING_LEFT]) + 
             from_string<uint32_t>(item[ALIGNMENT_OVERLAP]);
-// #     }
     }
-// #     else ## ($item->{overlap} < 0)
-// #     {
-    else 
+    else //if (from_string <uint32_t>(item[ALIGNMENT_OVERLAP]) > 0) 
     {
-// #       $start = $item->{flanking_left}+1;
       start = from_string<uint32_t>(item[FLANKING_LEFT]) + 1;
-// #       $end = $item->{flanking_left}-$item->{alignment_overlap};
       end = from_string<uint32_t>(item[FLANKING_LEFT]) - from_string<uint32_t>(item[ALIGNMENT_OVERLAP]);
-// #     }
     }
-// # 
-// #     add_evidence( 
-// #       '_new_junction_evidence_file_name',
-// #       {
-// #         bam_path  => $junction_bam_file_name,
-// #         fasta_path  => $junction_fasta_file_name,
-// #         seq_id    => $item->{key}, 
-// #         start     => $start, 
-// #         end     => $end, 
-// #         parent_item => $parent_item,
-// #         item    => $item,
-// #         prefix    => 'JC',
-// #       #### extra information  
-// #         alignment_empty_change_line => 1,     
-// #         alignment_reference_info_list => [
-// #           { 
-// #             truncate_end  => $item->{flanking_left} + $item->{side_1_overlap}, 
-// #             ghost_end     => $item->{side_1_position}, 
-// #             ghost_strand  => $item->{side_1_strand},
-// #             ghost_seq_id  => $item->{side_1_seq_id}
-// #           },
-// #           { 
-// #             truncate_start  => $item->{flanking_left} + 1 + abs($item->{alignment_overlap}) - $item->{side_2_overlap}, 
-// #             ghost_start   => $item->{side_2_position} , 
-// #             ghost_strand  => $item->{side_2_strand},
-// #             ghost_seq_id  => $item->{side_2_seq_id}
-// #           }
-// #         ],
-// #       }
-// #     );
+    
     add_evidence(_NEW_JUNCTION_EVIDENCE_FILE_NAME,
                   item,
                   *parent_item,
                   make_map<string,string>
                  (BAM_PATH, junction_bam_file_name)
                  (FASTA_PATH, junction_fasta_file_name)
-                 (SEQ_ID, item[SEQ_ID])            
+                 (SEQ_ID, item["key"])              // @JEB TODO: Need to update this to SEQ_ID when making evidence file
                  (START, to_string(start))
                  (END, to_string(end))
                  (PREFIX, JC)
@@ -1896,101 +1392,58 @@ diff_entry_list items_JC = gd.list(make_list<string>(JC));
 
 
 
-// #     ## this is the flagship file that we show first when clicking on evidence from a mutation...
-// #     $item->{_evidence_file_name} = $item->{_new_junction_evidence_file_name};
+    // this is the flagship file that we show first when clicking on evidence from a mutation...
     item[_EVIDENCE_FILE_NAME] = item[_NEW_JUNCTION_EVIDENCE_FILE_NAME];
-// #     
-// #     add_evidence( 
-// #       '_side_1_evidence_file_name',
-// #       { 
-// #         bam_path  => $reference_bam_file_name,
-// #         fasta_path  => $reference_fasta_file_name,
-// #         seq_id    => $item->{side_1_seq_id}, 
-// #         start     => $item->{side_1_position}, 
-// #         end     => $item->{side_1_position}, 
-// #         parent_item => $parent_item,
-// #         item    => $item,
-// #         prefix    => 'JC_SIDE_1' . "_$item->{side_2_seq_id}_$item->{side_2_position}_$item->{side_2_position}",   ## need to be unique
-// #       }
-// #     );
+    string side_1_key_str;
     add_evidence(_SIDE_1_EVIDENCE_FILE_NAME,
                  item,
                  *parent_item,
                  make_map<string,string>
                  (BAM_PATH, reference_bam_file_name)
-                 (FASTA_PATH, reference_bam_file_name)
+                 (FASTA_PATH, reference_fasta_file_name)
                  (SEQ_ID, item[SIDE_1_SEQ_ID])            
                  (START, item[SIDE_1_POSITION])
                  (END, item[SIDE_1_POSITION])
-                 (PREFIX, "JC_SIDE_1" +
-                          item[SIDE_2_SEQ_ID] +
-                          item[SIDE_2_POSITION] +
+                 (PREFIX, "JC_SIDE_1" + '_' +
+                          item[SIDE_2_SEQ_ID] + '_' +
+                          item[SIDE_2_POSITION] + '_' +
                           item[SIDE_2_POSITION]
                  )); 
-// # 
-// #     add_evidence( 
-// #       '_side_2_evidence_file_name',
-// #       {
-// #         bam_path  => $reference_bam_file_name,
-// #         fasta_path  => $reference_fasta_file_name,
-// #         seq_id    => $item->{side_2_seq_id}, 
-// #         start     => $item->{side_2_position}, 
-// #         end     => $item->{side_2_position}, 
-// #         parent_item => $parent_item,
-// #         item    => $item, 
-// #         prefix    => 'JC_SIDE_2' . "_$item->{side_1_seq_id}_$item->{side_1_position}_$item->{side_1_position}",
+
     add_evidence(_SIDE_2_EVIDENCE_FILE_NAME,
                  item,
                  *parent_item,
                  make_map<string,string>
                  (BAM_PATH, reference_bam_file_name)
-                 (FASTA_PATH, reference_bam_file_name)
+                 (FASTA_PATH, reference_fasta_file_name)
                  (SEQ_ID, item[SIDE_2_SEQ_ID])            
                  (START, item[SIDE_2_POSITION])
                  (END, item[SIDE_2_POSITION])
-                 (PREFIX, "JC_SIDE_2" +
-                          item[SIDE_1_SEQ_ID] +
-                          item[SIDE_1_POSITION] +
+                 (PREFIX, "JC_SIDE_2" + '_' +
+                          item[SIDE_1_SEQ_ID] + '_' +
+                          item[SIDE_1_POSITION] + '_' +
                           item[SIDE_1_POSITION]
                  ));
-
-// #   }
   }
-// # 
-// #   ### now create evidence files
-// #   $settings->create_path('evidence_path');
-// #   print STDERR "Creating HTML evidence files...\n";
-// #   foreach my $e (@evidence_list)
-// #   {     
-// #     print STDERR "Creating evidence file: $e->{file_name}\n" if ($settings->{verbose});
-// #     Breseq::Output::html_evidence_file($settings, $gd, $e);   
-// #   }
-  for (vector<Evidence_Item>::iterator itr = evidence_list.begin();
-       itr != evidence_list.end(); itr ++) {  
+
+  // now create evidence files
+  create_path(settings.evidence_path);
+  for (vector<Evidence_Item>::iterator itr = evidence_list.begin(); itr != evidence_list.end(); itr ++) 
+  {  
     Evidence_Item& e = (*itr);
 
     if (settings.verbose) {
       cerr << "Creating evidence file: " + e[FILE_NAME] << endl;   
     }
-    
     html_evidence_file(settings, gd, e);
   }
-// #     
-// # }
 }
 
 /*-----------------------------------------------------------------------------
  *  Helper Function For Create_Evidence_Files()
  *-----------------------------------------------------------------------------*/
-// # sub add_evidence
-// #   {
-// #     my ($evidence_file_name_key, $evidence_item) = @_;    
-// #     $evidence_item->{file_name} = html_evidence_file_name($evidence_item);
-// #     $evidence_item->{item}->{$evidence_file_name_key} = $evidence_item->{file_name};    
-// #     push @evidence_list, $evidence_item;
-// #   }
-void Evidence_Files::add_evidence(const string& evidence_file_name_key, diff_entry item,
-                                  diff_entry parent_item, map<string,string> fields)
+void Evidence_Files::add_evidence(const string& evidence_file_name_key, diff_entry& item,
+                                  diff_entry& parent_item, map<string,string> fields)
 {
   Evidence_Item evidence_item;
   evidence_item._fields = fields;
@@ -2005,22 +1458,6 @@ void Evidence_Files::add_evidence(const string& evidence_file_name_key, diff_ent
 /*-----------------------------------------------------------------------------
  *  Helper Function For Create_Evidence_Files()
  *-----------------------------------------------------------------------------*/
-// # sub html_evidence_file_name
-// # {
-// #   my ($interval) = @_;
-// #   
-// #   #set up the file name
-// #   my $html_evidence_file_name = 
-// #     "$interval->{prefix}"
-// #     . "_$interval->{seq_id}"
-// #     . "_$interval->{start}" 
-// #     . ((defined $interval->{insert_start}) ?  ".$interval->{insert_start}" : '')
-// #     . "_$interval->{end}"
-// #     . ((defined $interval->{insert_end}) ?  ".$interval->{insert_end}" : '')
-// #     . "_alignment.html";
-// #     
-// #   return $html_evidence_file_name;
-// # }
 string Evidence_Files::file_name(Evidence_Item& evidence_item)
 {
   stringstream ss(ios_base::out | ios_base::app);
@@ -2044,16 +1481,11 @@ string Evidence_Files::file_name(Evidence_Item& evidence_item)
 // # 
 void 
 Evidence_Files::html_evidence_file (
-                    Settings settings, 
-                    genome_diff gd, 
-                    Evidence_Item item
+                    const Settings& settings, 
+                    genome_diff& gd, 
+                    Evidence_Item& item
                    )
 {
-// # sub html_evidence_file
-// # {
-// #   my ($settings, $gd, $interval) = @_;
-// # 
-// #   $interval->{output_path} = $settings->file_name('evidence_path') . "/$interval->{file_name}"; 
   item["output_path"] = settings.evidence_path + "/" + item[FILE_NAME];
 
   
@@ -2064,124 +1496,59 @@ Evidence_Files::html_evidence_file (
     cerr << "Could not open file: " << item["output_path"] << endl;
     assert(HTML.good());
   }
-// # 
-// #   my $q = new CGI; //TODO?
-// # 
-// #   print HTML
-// #     start_html(
-// #       -title => $title, 
-// #       -head  => style({type => 'text/css'},$header_style_string),
-// #       );
-// # 
   
   // Build HTML Head
   HTML << html_header("BRESEQ :: Results", settings);
   
-// #   ## print a table for the main item
-// #   ## followed by auxiliary tables for each piece of evidence
-// #   
-// #   my $parent_item = $interval->{parent_item};
-  diff_entry parent_item = item.parent_item;
-// #         
-// #   print HTML html_genome_diff_item_table_string($settings, $gd, [$parent_item]) . p;
-// #   my @evidence_list = $gd->mutation_evidence_list($parent_item);
-// #   
-  list<counted_ptr<diff_entry> > evidence_list = gd.mutation_evidence_list(parent_item);
+  // print a table for the main item
+  // followed by auxiliary tables for each piece of evidence
 
-// #   foreach my $type ( 'RA', 'MC', 'JC' )
-// #   {
-// #     my @this_evidence_list = grep {$_->{type} eq $type} @evidence_list;
-// #     next if (scalar @this_evidence_list == 0);
-// #     print HTML html_genome_diff_item_table_string($settings, $gd, \@this_evidence_list) . p;
-// #   }
+  diff_entry parent_item = item.parent_item;
+  diff_entry_list evidence_list = gd.mutation_evidence_list(parent_item);
+
   vector<string> types = make_list<string>("RA")("MC")("JC");
   
-  for (vector<string>::iterator itr = types.begin();
-       itr != types.end(); itr ++) {  
+  for (vector<string>::iterator itr = types.begin(); itr != types.end(); itr ++) 
+  {  
     string& type = (*itr);
 
-    list<counted_ptr<diff_entry> > this_evidence_list = evidence_list;
-    
-    //grep {$_->{type} eq $type} @evidence_list;
-    evidence_list.remove_if(diff_entry::is_type(type));   
+    diff_entry_list this_evidence_list = evidence_list;
+    this_evidence_list.remove_if(diff_entry::is_not_type(type));   
     
     if(this_evidence_list.empty()) continue;
 
     HTML << html_genome_diff_item_table_string(settings, gd, this_evidence_list);
     HTML << "<p>"; 
-    
   }
 
-// #     
-// #   if (defined $interval->{plot})
-// #   {
-// #     print HTML div({-align=>"center"}, img({-src=>$interval->{plot}}));
-// #   }
+  
   if (item.entry_exists(PLOT) && !item[PLOT].empty()) {
     HTML << div(ALIGN_CENTER, img(item[PLOT]));
   } else {
-// #   elsif ( (defined $interval->{bam_path}) && ($interval->{fasta_path}) )
-// #   {         
-// #     #construct the interval string 
-// #     my $s = '';
-// #     $s .= "$interval->{seq_id}:$interval->{start}";
-// #     $s .= ".$interval->{insert_start}" if (defined $interval->{insert_start});
-// #     $s .= "-$interval->{end}";
-// #     $s .= ".$interval->{insert_end}" if (defined $interval->{insert_end});
-// #     print STDERR "Creating read alignment for region \'$s\'\n";
-    stringstream ss(ios_base::out | ios_base::app);   
+    stringstream ss;   
     ss << item[SEQ_ID] << ":" << item[START];
-    if (!item[INSERT_START].empty()) {
-      ss << item[INSERT_START];
+    if (item[INSERT_START].size() > 0) {
+      ss << "." << item[INSERT_START];
     }
-    ss << item[END];
-    if (!item[INSERT_END].empty()) {
-      ss << "-" << item[INSERT_END];
+    ss << "-" << item[END];
+    if (item[INSERT_END].size() > 0) {
+      ss << "." << item[INSERT_END];
     }
     cerr << "Creating read alignment for region " << ss.str() << endl;
-// # 
-// #     $interval->{quality_score_cutoff} = $settings->{base_quality_cutoff} if (defined $settings->{base_quality_cutoff});
+
     if (settings.base_quality_cutoff != 0) {
       item["BASE_QUALITY_CUTOFF"] = to_string(settings.base_quality_cutoff);
     }
-// #     
-// #     # experiment with using C++ version
-// #     if (!$settings->{perl_bam2aln}) 
-// #     {
-// #       my $cbam2aln = $settings->ctool("cbam2aln");
-// #       my $command = "$cbam2aln --bam $interval->{bam_path} --fasta $interval->{fasta_path} --region $s --quality-score-cutoff $settings->{base_quality_cutoff} --stdout";
-// #       print HTML `$command`;
-// #       print STDERR "$command\n";
-// #     }
-// #     else 
-// #     {
-// #       my $ao = Breseq::AlignmentOutput->new;
-// #       my $options = {};
-// #     
-// #       print HTML $ao->html_alignment(
-// #         $interval->{bam_path}, 
-// #         $interval->{fasta_path}, 
-// #         $s, 
-// #         $interval,
-// #       );
-// #     }
-    //Commands for bam2aln
-    //TODO @JEB
     
-
-     alignment_output ao(item["bam_path"], item["fasta_path"], from_string<uint32_t>(ss.str()), settings.base_quality_cutoff);
+    alignment_output ao(item[BAM_PATH], item[FASTA_PATH], from_string<uint32_t>(ss.str()), settings.base_quality_cutoff);
      
-     HTML << ao.html_alignment(ss.str());
+    HTML << ao.html_alignment(ss.str());
 
   }
-// #   print HTML end_html;
-// #   close HTML;
   HTML << endl << "</html>";
   HTML.close();
-// # }
 }
-// # 
-// # 
+
 
 /*-----------------------------------------------------------------------------
  *  //End Create_Evidence_Files
@@ -2201,9 +1568,8 @@ void draw_coverage(Settings& settings, cReferenceSequences* ref_seq_info, genome
 	diff_entry_list mc = gd.list(mc_types);
 	string drawing_format = "png";
 
-// #if (0)
 	{
-		settings.create_path("coverage_plot_path");
+		create_path("coverage_plot_path");
 		string coverage_plot_path = settings.coverage_plot_path;
 		string deletions_text_file_name = settings.deletions_text_file_name;
 		save_text_deletion_file(deletions_text_file_name, mc);
@@ -2212,11 +1578,10 @@ void draw_coverage(Settings& settings, cReferenceSequences* ref_seq_info, genome
 		{
 			string seq_id = (*ref_seq_info)[i].m_seq_id;
 			string this_complete_coverage_text_file_name = settings.file_name("complete_coverage_text_file_name", "@", seq_id);
-			string command = settings.bin_path + "/plot_coverage --drawing-format " + drawing_format + " -t " + coverage_plot_path + " -p " + settings.coverage_plot_path + " -i " + deletions_text_file_name + " -c " + this_complete_coverage_text_file_name + " --seq_id=" + seq_id;
+			string command = settings.lib_path + "plot_coverage --drawing-format " + drawing_format + " -t " + coverage_plot_path + " -p " + settings.coverage_plot_path + " -i " + deletions_text_file_name + " -c " + this_complete_coverage_text_file_name + " --seq_id=" + seq_id;
 			assert(system(command.c_str()) >= 0);
 
 			// need to assign link names that correspond to what the R script is doing
-
 			diff_entry_list this_deletions;
 			diff_entry_list::iterator it;
 			
@@ -2229,43 +1594,8 @@ void draw_coverage(Settings& settings, cReferenceSequences* ref_seq_info, genome
 			for (it = this_deletions.begin(); it != this_deletions.end(); it++)
 				(**it)["_coverage_plot_file_name"] = seq_id + to_string(j++) + "." + drawing_format;
 		}
-    Settings::remove_file(deletions_text_file_name);
+    remove_file(deletions_text_file_name);
 	}
-	//#else
-	/*{
-		string fasta_path = settings.file_name("reference_fasta_file_name");
-		string bam_path = settings.file_name("reference_bam_file_name");
-		string evidence_path = settings.file_name("evidence_path");
-
-// #     my $co = Breseq::CoverageOutput->new(-fasta => $fasta_path, -bam => $bam_path, -path => $evidence_path);
-
-		//plot the overview for each seq_id
-		for (uint32_t i = 0; i < ref_seq_info->seq_ids.size(); i++)
-		{
-			string seq_id = ref_seq_info->seq_ids[i];
-			string region = seq_id + ":1-" + to_string(ref_seq_info->ref_strings[seq_id].size());
-			cerr << "Creating coverage plot for region " << region << endl;
-// #       $co->plot_coverage($region, "$evidence_path/$seq_id\.overview", {verbose=>0, resolution=>undef, pdf => 0, total_only => 1, shaded_flanking => 0, use_c_tabulate_coverage => 1});
-		}
-
-		//make plot for every missing coverage item
-		for (diff_entry_list::iterator item = mc.begin(); item != mc.end(); item++)
-		{
-			uint32_t start = from_string<uint32_t>((**item)["start"]);
-			uint32_t end = from_string<uint32_t>((**item)["end"]);
-			uint32_t size = end - start + 1;
-
-			uint32_t shaded_flanking = size / 10;
-			if (shaded_flanking < 100) shaded_flanking = 100;
-			string region = (**item)["seq_id"] + ":" + to_string(start) + "-" + to_string(end);
-
-			(**item)["_coverage_plot_file_name"] = (**item)["seq_id"] + "_" + to_string(start) + "-" + to_string(end);
-			cerr << "Creating coverage plot for region " << region << endl;
-
-// #       $co->plot_coverage($region, "$evidence_path/$item->{_coverage_plot_file_name}", {verbose=>0, resolution=>undef, pdf => 0, total_only => 0, shaded_flanking => $shaded_flanking, use_c_tabulate_coverage => 1});
-			(**item)["_coverage_plot_file_name"] += "." + drawing_format;
-		}
-	}*/
 }
 
 vector<ExecutionTime> execution_times;
@@ -2348,14 +1678,14 @@ string record_time(string name)
  * =====================================================================================
  */
 Html_Mutation_Table_String::Html_Mutation_Table_String(
-                                                       Settings settings,
-                                                       genome_diff gd,
-                                                       diff_entry_list list_ref,
-                                                       vector<string> gd_name_list_ref,
-                                                       Options options,
+                                                       const Settings& settings,
+                                                       genome_diff& gd,
+                                                       diff_entry_list& list_ref,
+                                                       vector<string>& gd_name_list_ref,
+                                                       Options& options,
                                                        bool legend_row, 
                                                        bool one_ref_seq,
-                                                       string relative_link
+                                                       const string& relative_link
                                                        )
   : string()
   , total_cols(0)
@@ -2373,15 +1703,13 @@ Html_Mutation_Table_String::Html_Mutation_Table_String(
   
   this->Header_Line();
   this->Item_Lines();
-   
-    
 }
 
 Html_Mutation_Table_String::Html_Mutation_Table_String(
-                                                       Settings settings,
-                                                       genome_diff gd,
-                                                       diff_entry_list list_ref,
-  			                                               string relative_path, 
+                                                       const Settings& settings,
+                                                       genome_diff& gd,
+                                                       diff_entry_list& list_ref,
+  			                                               const string& relative_path, 
                                                        bool legend_row, 
                                                        bool one_ref_seq
                                                        )
@@ -2647,54 +1975,38 @@ void Html_Mutation_Table_String::Item_Lines()
 
   stringstream ss(ios_base::out | ios_base::app); 
   ss << "<!-- Item Lines -->" << endl;
-// #   foreach my $mut (@$list_ref)
-// #   { 
   for (diff_entry_list::iterator itr = list_ref.begin();
        itr != list_ref.end(); itr ++) { 
     diff_entry& mut = (**itr);
-// #     $output_str.= $header_str if (($row_num != 0) && (defined $options->{repeat_header}) && ($row_num % $options->{repeat_header} == 0));
-    if ((row_num != 0) && (options.repeat_header)) {
+    if ((row_num != 0) && (options.repeat_header != 0) && (row_num % options.repeat_header == 0))
+    {
       Header_Line();
     }
-// #     $row_num++;
     row_num++;
-// # 
-// // Build Evidence Column
+        
+    // Build Evidence Column
     string evidence_string;
     if (!settings.no_evidence) {
-// #       my $already_added_RA;
       bool already_added_RA = false;
-// #       EVIDENCE: foreach my $evidence_item ($gd->mutation_evidence_list($mut))
-// #       {         
+       
       diff_entry_list mutation_evidence_list = gd.mutation_evidence_list(mut);
       
       for (diff_entry_list::iterator itr = mutation_evidence_list.begin();
            itr != mutation_evidence_list.end(); itr ++) {  
         diff_entry& evidence_item = **itr;
-// #         if ($evidence_item->{type} eq 'RA')
-// #         {
+
         if (evidence_item._type == RA) {
-// #           next EVIDENCE if ($already_added_RA);
-// #           $already_added_RA = 1;
           if (already_added_RA) 
             continue;
           else 
             already_added_RA = true;
-// #         }
         }
-// #         $evidence_string .= "&nbsp;" if ($evidence_string);
       if (!evidence_string.empty()) evidence_string += "&nbsp;"; //TODO Confirm "if statement" needed?
-// #         $evidence_string .= a({href => "$relative_link$evidence_item->{_evidence_file_name}" }, $evidence_item->{type});
       evidence_string += a(relative_link + evidence_item[_EVIDENCE_FILE_NAME],
         evidence_item._type);
-// #       
       }
-// #     }
     }
   
-// #     
-// #    // #     
-// #     my $row_class = "normal_table_row";
   string row_class = "normal_table_row";
 // #     
 // #     # There are three possibilities for the frequency column(s)
@@ -2732,9 +2044,7 @@ void Html_Mutation_Table_String::Item_Lines()
     string cell_position = commify(mut[POSITION]);
     string cell_mutation;
     string cell_mutation_annotation = nonbreaking(formatted_mutation_annotation(mut));
-// #     my $cell_gene_name = i(nonbreaking($mut->{gene_name}));
     string cell_gene_name = i(nonbreaking(mut[GENE_NAME]));
-// #     my $cell_gene_product = htmlize($mut->{gene_product});
     string cell_gene_product = htmlize(mut["gene_product"]);
 // #         
 // #     if ($mut->{type} eq 'SNP') {

@@ -705,6 +705,45 @@ namespace breseq {
     if (!ignore_errors)
       assert(return_value == 0);
   }
+  
+  inline string remove_file(string path)
+  {
+    remove(path.c_str()); // @JEB this will probably not work.
+    return path;
+  }
+  
+  inline string create_path(string path)
+  {
+    int status;
+    
+    if (path.find("/") != string::npos) {
+      string accumulate_path;
+      vector<string> directories = split(path, "/");
+      
+      for (vector<string>::iterator itr = directories.begin();
+           itr != directories.end(); itr ++) {
+        accumulate_path.append(*itr);
+        status = mkdir(accumulate_path.c_str(), S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH);
+        accumulate_path.append("/");
+      }
+    } else {
+      status = mkdir(path.c_str(), S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH);
+    }
+    
+    if (status && (errno != EEXIST))
+    {
+      cerr << "Could not create path: '" << path << "'" << endl;
+      exit(-1);
+    }
+    
+		return path;
+	}
+  
+  template <typename T, typename U> inline void print_map(const map<T,U>& the_map)
+  {
+    for (class map<T,U>::const_iterator it = the_map.begin(); it != the_map.end(); it++ )
+      cout << it->first << '=' << it->second << endl;
+  }
 
 // counted_ptr keeps track of number of references 
   

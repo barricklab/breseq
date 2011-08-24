@@ -130,18 +130,30 @@ struct diff_entry {
   virtual ~diff_entry() { }
   
   //! Ease-of-use accessor for setting fields on this entry.
-  value_t& operator[](const key_t& k) 
+  value_t& operator[](const key_t& k)
   { 
     return _fields[k]; 
   }
-  bool entry_exists(const key_t& k) { return (_fields.count(k) > 0); }
+  value_t operator[](const key_t& k) const
+  { 
+    map_t::const_iterator it = _fields.find(k);
+    assert(it != _fields.end());
+    return it->second; 
+  }
+  
+  bool entry_exists(const key_t& k) const { return (_fields.count(k) > 0); }
 
   //! Marshal this diff entry into an ordered list of fields.
   virtual void marshal(field_list_t& s);
 
+  //! Returns values for diff_entry["reject"]
+  vector<string> get_reject_reasons();
   
+  size_t number_reject_reasons();
+
   struct by_scores;
   struct is_type;
+  struct is_not_type;
   struct field_exists;
   struct fields_exist;
   struct frequency_less_than_two_or_no_show;
@@ -165,7 +177,6 @@ struct diff_entry {
 };
 
 void add_reject_reason(diff_entry& de, const string &reason);
-uint32_t number_reject_reasons(diff_entry& de);
 
 //! Convert genome diff to GVF
 void GDtoGVF( const string& gdfile, const string& gfffile );
@@ -254,10 +265,7 @@ public:
   diff_entry_list mutation_list();
 
   diff_entry_ptr parent(const diff_entry& item);
-  
-  //! Returns values for diff_entry["reject"]
-  vector<string> get_reject_reasons(diff_entry item);
-  
+    
   //Additional functions that need? adding from GenomeDiff.gm
   void add_reject_reasons(diff_entry item, const string& reason);
   size_t number_reject_reasons(diff_entry item);
@@ -375,6 +383,21 @@ struct diff_entry::is_type: unary_function <diff_entry_ptr, bool>
 
   protected:
     string m_type;
+};
+  
+struct diff_entry::is_not_type: unary_function <diff_entry_ptr, bool>
+{
+  //! Constructor
+  explicit is_not_type(const string& type)
+  : m_type(type) {}
+  
+  //! Predicate 
+  virtual bool operator() (const diff_entry_ptr& diff_entry)
+  const {return (*diff_entry)._type != m_type;}
+  
+  
+protected:
+  string m_type;
 };
 
 struct diff_entry::frequency_less_than_two_or_no_show:public unary_function<diff_entry_ptr, bool>
