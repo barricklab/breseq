@@ -166,7 +166,7 @@ namespace breseq {
 		uint32_t start;
 		uint32_t end;
 		bool strand;
-		bool pseudogene;
+		bool pseudogene; 
 
 		Gene() {};
 		Gene(cSequenceFeature& src)
@@ -177,6 +177,7 @@ namespace breseq {
 			start = src.m_start;
 			end = src.m_end;
 			strand = (src.m_strand >= 1);
+      pseudogene = false;//TODO @JEB this is never declared
 		}
 	};
 	map<string,vector<Gene> > gene_lists;
