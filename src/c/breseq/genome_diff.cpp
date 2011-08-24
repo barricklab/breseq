@@ -171,7 +171,25 @@ void diff_entry::marshal(field_list_t& s) {
     }
   }
 }
+  
+vector<string> diff_entry::get_reject_reasons()
+{
+  vector<string> return_value;
+  if (this->entry_exists("reject")) {
+    return_value = split((*this)["reject"], ",");
+  } 
+  return return_value;
+}
 
+size_t diff_entry::number_reject_reasons()
+{
+  if(this->entry_exists(REJECT))
+  {
+    return this->get_reject_reasons().size();
+  }
+  return 0;
+}
+  
 /*! Add reject reason to diff entry.
  */
 void add_reject_reason(diff_entry& de, const string &reason) {
@@ -1026,19 +1044,6 @@ diff_entry_ptr genome_diff::parent(const diff_entry& item)
   return counted_ptr<diff_entry>(NULL);
 }
 
-vector<string> genome_diff::get_reject_reasons(diff_entry item)
-{
-  if (item.entry_exists("reject")) {
-    return split(item["reject"], ",");
-  } else {
-    //! Safer to call .entry_exists 
-    //prior to calling this function
-    vector<string> return_value;
-    return return_value;
-  }
-
-}
-
 bool genome_diff::mutation_unknown(diff_entry mut)
 {
 //sub mutation_unknown
@@ -1103,14 +1108,6 @@ void genome_diff::add_reject_reasons(diff_entry item, const string& reject)
     item[REJECT] += ",";
   else 
     item[REJECT] += reject;
-}
-
-size_t genome_diff::number_reject_reasons(diff_entry item)
-{
-  if(item.entry_exists(REJECT))
-    return get_reject_reasons(item).size();
-  else 
-    return 0;
 }
 
 bool 

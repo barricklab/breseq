@@ -906,8 +906,8 @@ int breseq_default_action(int argc, char* argv[])
 	// 01_sequence_conversion 
   // * Convert the input reference GenBank into FASTA for alignment
 	//
-	settings.create_path(settings.sequence_conversion_path);
-	settings.create_path(settings.data_path);
+	create_path(settings.sequence_conversion_path);
+	create_path(settings.data_path);
 
 	if (settings.do_step(settings.sequence_conversion_done_file_name, "Read and reference sequence file input"))
 	{
@@ -998,7 +998,7 @@ int breseq_default_action(int argc, char* argv[])
 
 	if (settings.do_step(settings.reference_alignment_done_file_name, "Read alignment to reference genome"))
 	{
-		settings.create_path(settings.reference_alignment_path);
+		create_path(settings.reference_alignment_path);
 
 		/// create ssaha2 hash
 		string reference_hash_file_name = settings.reference_hash_file_name;
@@ -1078,7 +1078,7 @@ int breseq_default_action(int argc, char* argv[])
 	//
 	if (!settings.no_junction_prediction)
 	{
-		settings.create_path(settings.candidate_junction_path);
+		create_path(settings.candidate_junction_path);
 
 		if (is_defined(settings.preprocess_junction_min_indel_split_length) || settings.candidate_junction_score_method == "POS_HASH")
 		{
@@ -1169,7 +1169,7 @@ int breseq_default_action(int argc, char* argv[])
 		//
 		if (settings.do_step(settings.candidate_junction_alignment_done_file_name, "Candidate junction alignment"))
 		{
-			settings.create_path(settings.candidate_junction_alignment_path);
+			create_path(settings.candidate_junction_alignment_path);
 
 			/// create ssaha2 hash
 			string candidate_junction_hash_file_name = settings.candidate_junction_hash_file_name;
@@ -1237,7 +1237,7 @@ int breseq_default_action(int argc, char* argv[])
 	string alignment_correction_summary_file_name = settings.alignment_correction_summary_file_name;
 	if (settings.do_step(settings.alignment_correction_done_file_name, "Resolving alignments with candidate junctions"))
 	{
-		settings.create_path(settings.alignment_correction_path);
+		create_path(settings.alignment_correction_path);
     
 		// should be one coverage cutoff value for each reference sequence
 		vector<double> coverage_cutoffs;
@@ -1275,7 +1275,7 @@ int breseq_default_action(int argc, char* argv[])
 
 	if (settings.do_step(settings.bam_done_file_name, "Creating BAM files"))
 	{
-		settings.create_path(settings.bam_path);
+		create_path(settings.bam_path);
 
 		string reference_faidx_file_name = settings.reference_faidx_file_name;
 		string candidate_junction_faidx_file_name = settings.candidate_junction_faidx_file_name;
@@ -1446,7 +1446,7 @@ int breseq_default_action(int argc, char* argv[])
 
 	if (settings.do_step(settings.error_counts_done_file_name, "Tabulating error counts"))
 	{
-		settings.create_path(settings.error_calibration_path);
+		create_path(settings.error_calibration_path);
 
 		string reference_fasta_file_name = settings.reference_fasta_file_name;
 		string reference_bam_file_name = settings.reference_bam_file_name;
@@ -1489,8 +1489,8 @@ int breseq_default_action(int argc, char* argv[])
 	//sub error_rates {}
 	//
 
-	settings.create_path(settings.output_path); //need output for plots
-  settings.create_path(settings.output_calibration_path);
+	create_path(settings.output_path); //need output for plots
+  create_path(settings.output_calibration_path);
 	string error_rates_summary_file_name = settings.error_rates_summary_file_name;
 
 	if (settings.do_step(settings.error_rates_done_file_name, "Re-calibrating base error rates"))
@@ -1530,7 +1530,7 @@ int breseq_default_action(int argc, char* argv[])
 
 	if (!settings.no_mutation_prediction)
 	{
-		settings.create_path(settings.mutation_identification_path);
+		create_path(settings.mutation_identification_path);
 
 		if (settings.do_step(settings.mutation_identification_done_file_name, "Read alignment mutations"))
 		{
@@ -1631,7 +1631,7 @@ int breseq_default_action(int argc, char* argv[])
 		cerr << "Creating merged genome diff evidence file..." << endl;
 
 		// merge all of the evidence GenomeDiff files into one...
-		settings.create_path(settings.evidence_path);
+		create_path(settings.evidence_path);
 		genome_diff jc_gd(settings.jc_genome_diff_file_name);
 		genome_diff ra_mc_gd(settings.ra_mc_genome_diff_file_name);
 		genome_diff evidence_gd(jc_gd, ra_mc_gd);
@@ -1653,7 +1653,7 @@ int breseq_default_action(int argc, char* argv[])
 		// Annotate mutations
 		//
 		cerr << "Annotating mutations..." << endl;
-		ref_seq_info.annotate_mutations(gd, false);
+		ref_seq_info.annotate_mutations(gd);
 
 		//
 		// Plot coverage of genome and large deletions
@@ -1702,12 +1702,12 @@ int breseq_default_action(int argc, char* argv[])
 		vector<string> jc_types = make_list<string>("JC");
 		list<counted_ptr<diff_entry> > jc = gd.filter_used_as_evidence(gd.list(jc_types));
 	  
-    for (it = jc.end(); it != jc.begin();)
+    for (it = jc.begin(); it != jc.end(); it++)
+    {
       if (!from_string<bool>((**it)["reject"]))
-        ra.erase(it);
-      else
-        it--;
-	
+        ra.erase(it--);
+    }
+    
     //jc.remove_if(diff_entry::reject_is_not_true());
 
 		//@jc = sort { -($a->{pos_hash_score} <=> $b->{pos_hash_score}) || -($a->{min_overlap_score} <=> $b->{min_overlap_score})  || ($a->{total_reads} <=> $a->{total_reads}) } @jc;
@@ -1733,21 +1733,6 @@ int breseq_default_action(int argc, char* argv[])
 
 		output::html_index(settings.index_html_file_name, settings, summary, ref_seq_info, gd);
 		output::html_marginal_predictions(settings.marginal_html_file_name, settings, summary, ref_seq_info, gd);
-
-		///
-		// Temporary debug output using Data::Dumper
-		///
-
-    // Remove post-Perl
-		//string summary_text_file_name = settings.file_name("summary_text_file_name");
-		/*open SUM, ">$summary_text_file_name";
-		print SUM Dumper($summary);
-		close SUM;*/
-
-		//string settings_text_file_name = settings.file_name("settings_text_file_name");
-		/*open SETTINGS, ">$settings_text_file_name";
-		print SETTINGS Dumper($settings);
-		close SETTINGS;*/
         
 		// record the final time and print summary table
 		settings.record_end_time("Output");

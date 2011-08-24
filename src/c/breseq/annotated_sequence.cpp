@@ -451,8 +451,6 @@ namespace breseq {
 
 		if (repeat_region == NULL)
 			find_nearby_genes(gene_list_ref, start, end, within_genes, between_genes, inside_left_genes, inside_right_genes, prev_gene, next_gene);
-		else
-			delete repeat_region;
 
 		// Mutation is intergenic
 		if (within_genes.size() + between_genes.size() + inside_left_genes.size() + inside_right_genes.size() == 0)
@@ -609,12 +607,12 @@ namespace breseq {
 		// so that the codon will be correctly updated with all changes and we can notify the
 		// changes that their SNP_type is not really SNP, but multiple hit SNP.
 
-		diff_entry_list muts = gd.mutation_list();
+		diff_entry_list muts = gd.list();
     for (diff_entry_list::iterator it=muts.begin(); it!=muts.end(); it++)
 		{
       diff_entry& mut= **it;
       
-			if (only_muts && mut._type.size() != 3) continue;
+			if (only_muts && (mut._type.size() != 3)) continue;
 
 			if (mut._type == "SNP")
 			{
