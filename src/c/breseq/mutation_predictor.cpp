@@ -192,7 +192,7 @@ namespace breseq {
     }
     
     // Don't count rejected ones, this can be relaxed, but it makes MOB prediction much more complicated and prone to errors.
-		for(diff_entry_list::iterator jc_it = jc.begin(); jc_it != jc.end(); jc_it++)
+		/*for(diff_entry_list::iterator jc_it = jc.begin(); jc_it != jc.end(); jc_it++)
     {
       diff_entry& de = **jc_it;
 			if (de.entry_exists("reject"))
@@ -200,7 +200,8 @@ namespace breseq {
 				jc.erase(jc_it);
         jc_it--;
       }
-		}
+		}*/
+    jc.remove_if(diff_entry::field_exists("reject"));
     
 		vector<string> mc_types = make_list<string>("MC");
 		diff_entry_list mc = gd.list(mc_types);

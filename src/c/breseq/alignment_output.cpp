@@ -732,6 +732,9 @@ void alignment_output::set_quality_range(const uint32_t quality_score_cutoff)
   uint32_t current_cutoff_level = 0;
   //##set up to this score to the zero level (which is a completely different color)
   uint32_t index;
+
+  assert(qual_to_color.size() > quality_score_cutoff); 
+
   for ( index = 0; index <  quality_score_cutoff; index++ )
   {
       qual_to_color[index] = current_cutoff_level;
