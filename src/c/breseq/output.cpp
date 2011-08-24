@@ -1537,10 +1537,11 @@ Evidence_Files::html_evidence_file (
     cerr << "Creating read alignment for region " << ss.str() << endl;
 
     if (settings.base_quality_cutoff != 0) {
-      item["BASE_QUALITY_CUTOFF"] = to_string(settings.base_quality_cutoff);
+      item["base_quality_cutoff"] = to_string(settings.base_quality_cutoff);
     }
     
-    alignment_output ao(item[BAM_PATH], item[FASTA_PATH], from_string<uint32_t>(ss.str()), settings.base_quality_cutoff);
+    alignment_output ao(item[BAM_PATH], item[FASTA_PATH], from_string<uint32_t>(ss.str()), 
+      from_string<uint32_t>(item["base_quality_cutoff"]));
      
     HTML << ao.html_alignment(ss.str());
 

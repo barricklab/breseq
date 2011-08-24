@@ -243,7 +243,7 @@ namespace breseq
 		this->hide_circular_genome_junctions = 1;
     
     this->smalt = false;
-
+    this->verbose = false;
 		//@{this->execution_times} = ();
 	}
 
