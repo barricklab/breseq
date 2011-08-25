@@ -28,17 +28,19 @@ using namespace std;
 
 namespace breseq {
     
-  // Compares matches to candidate junctions with matches to original genome
-  void resolve_alignments(
-                          Settings& settings,
-                          Summary& summary,
-                          cReferenceSequences& ref_seq_info,
-                          bool junction_prediction,
-                          cReadFiles &read_files,
-                          const uint32_t max_read_length,
-                          const uint32_t alignment_read_limit
-                          ) 
-  {
+// Compares matches to candidate junctions with matches to original genome
+void resolve_alignments(
+                        Settings& settings,
+                        Summary& summary,
+                        cReferenceSequences& ref_seq_info,
+                        bool junction_prediction,
+                        cReadFiles &read_files,
+                        const uint32_t max_read_length,
+                        const uint32_t alignment_read_limit
+                        ) 
+{
+  (void)max_read_length; // @TODO: needed?
+    
 	bool verbose = false;
     
   // Load the trims @JEB could speed up by only loading this once in main
@@ -730,6 +732,7 @@ bool _alignment_overlaps_junction(const vector<JunctionInfo>& junction_info_list
 
 void _write_reference_matches(const Settings& settings, cReferenceSequences& ref_seq_info, const SequenceTrimsList& trims_list, alignment_list& reference_alignments, tam_file& reference_tam, uint32_t fastq_file_index)
 {
+  (void)settings; //TODO: unused?
 	// Nice try, no alignments
 	if (reference_alignments.size() == 0) return;
 

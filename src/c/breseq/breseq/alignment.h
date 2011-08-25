@@ -94,8 +94,8 @@ class alignment_wrapper {
   
     //! Retrieve the base at a specified position in the read (was 0-indexed)
     //  Methods available for 0-indexed and 1-indexed coordinates.
-    inline uint8_t read_base_bam_0(const uint32_t pos) const { assert((pos>=0) && (pos<read_length())); return bam1_seqi(read_bam_sequence(), pos); }
-    inline uint8_t read_base_bam_1(const uint32_t pos) const { assert((pos>0) && (pos<=read_length())); return bam1_seqi(read_bam_sequence(), pos-1); }
+    inline uint8_t read_base_bam_0(const uint32_t pos) const { assert(pos<read_length()); return bam1_seqi(read_bam_sequence(), pos); }
+    inline uint8_t read_base_bam_1(const uint32_t pos) const { assert(pos<=read_length()); return bam1_seqi(read_bam_sequence(), pos-1); }
 
     inline char read_base_char_0(const uint32_t pos) const { return basebam2char(read_base_bam_0(pos)); }
     inline char read_base_char_1(const uint32_t pos) const { return basebam2char(read_base_bam_1(pos)); }
@@ -129,8 +129,8 @@ class alignment_wrapper {
   
     //! Retrieve the quality score of a single base. (was 0-indexed)
     //  Methods available for 0-indexed and 1-indexed coordinates.
-    inline uint8_t read_base_quality_0(const uint32_t pos) const { assert((pos>=0) && (pos<read_length())); return bam1_qual(_a)[pos]; }
-    inline uint8_t read_base_quality_1(const uint32_t pos) const { assert((pos>0) && (pos<=read_length())); return bam1_qual(_a)[pos-1]; }
+    inline uint8_t read_base_quality_0(const uint32_t pos) const { assert(pos<read_length()); return bam1_qual(_a)[pos]; }
+    inline uint8_t read_base_quality_1(const uint32_t pos) const { assert(pos<=read_length()); return bam1_qual(_a)[pos-1]; }
 
     //! Retrieve the index of the read file that contained this alignment.
     uint32_t fastq_file_index() const;
@@ -275,7 +275,7 @@ public:
   // Because it only copies a pointer, which could go stale.
   
 protected:
-  pileup_wrapper(const pileup_wrapper& _in) 
+  pileup_wrapper(const pileup_wrapper& _in) : alignment_wrapper()
     { _a = _in._a; _p = _in._p; }
   pileup_wrapper&  operator =(const pileup_wrapper& _in) 
     { _a = _in._a; _p = _in._p; return *this; }

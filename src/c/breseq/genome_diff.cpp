@@ -751,7 +751,7 @@ void GDtoGVF( const string &file, const string &gdfile ){
     }
     
     // Write results to file
-    ofstream output( gdfile.c_str() );
+    ofstream output( file.c_str() );
     for( size_t i=0; i<featuresGVF.size(); i++ ){
         for( size_t j=0; j<featuresGVF[i].size(); j++ ){
             output << featuresGVF[i][j] << "\t";

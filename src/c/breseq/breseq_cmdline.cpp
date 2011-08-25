@@ -121,12 +121,12 @@ void convert_bull_form(const vector<string>& in, const string& fasta, const stri
   LoadBullFile(refseqs, in);
   
   // Output sequence
-  //if (fasta != "") refseqs.WriteFASTA(fasta);
+  if (fasta != "") refseqs.WriteFASTA(fasta);
   
   // Output feature table
   if (ft != "") refseqs.WriteFeatureTable(ft);
   
-  //if (gff3 != "" ) refseqs.WriteGFF( gff3 );
+  if (gff3 != "" ) refseqs.WriteGFF( gff3 );
 }
 
 
@@ -826,6 +826,8 @@ int do_convert_gd( int argc, char* argv[]){
 }
 
 int do_output( int argc, char* argv[]){
+  (void)argc;
+  (void)argv;
   
   //TESTED
   if (false) { 

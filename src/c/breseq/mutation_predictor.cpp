@@ -100,7 +100,8 @@ namespace breseq {
 	*/
 	void MutationPredictor::predict(Settings& settings, genome_diff& gd, uint32_t max_read_length, double avg_read_length)
 	{
-		
+		(void)settings; //TODO; unused?
+    
     //@JEB TODO: will not need this when Perl is gone.
     if (avg_read_length == 0.0) avg_read_length = max_read_length;
     

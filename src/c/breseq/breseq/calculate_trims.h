@@ -84,21 +84,18 @@ namespace breseq {
     
     uint8_t left_trim_0(uint32_t pos_0) const
     { 
-      assert(pos_0 >= 0);
       assert(pos_0 < m_length); 
       return trim_data[pos_0];
     }
     
     uint8_t right_trim_0(uint32_t pos_0) const
     { 
-      assert(pos_0 >= 0);
       assert(pos_0 < m_length); 
       return trim_data[m_length+pos_0];
     }
     
     Trims operator[] (uint32_t pos_0) const
     { 
-      assert(pos_0 >= 0);
       assert(pos_0 < m_length); 
       Trims t; 
       t.R = trim_data[pos_0]; 
