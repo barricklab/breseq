@@ -341,6 +341,8 @@ void tam_file::write_alignments(
                                 bool shift_gaps
                                 )
 {
+  (void)shift_gaps;
+  
   uint32_t i=-1;
   for (alignment_list::const_iterator it=alignments.begin(); it != alignments.end(); it++)
 	{

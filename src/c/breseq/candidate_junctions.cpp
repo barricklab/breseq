@@ -33,6 +33,8 @@ namespace breseq {
 	bool CandidateJunctions::_alignments_to_candidate_junction(const Settings& settings, Summary& summary, const cReferenceSequences& ref_seq_info, bam_alignment& a1, bam_alignment& a2,
 															  int32_t& redundancy_1, int32_t& redundancy_2, string& junction_seq_string, string& ref_seq_matched_1, string& ref_seq_matched_2, string& junction_coord_1, string& junction_coord_2, int32_t& read_begin_coord, JunctionInfo& junction_id_list)
 	{
+    (void)summary; //TODO: implement summary
+    
 		bool verbose = false;
 
 		// set up local settings
@@ -325,27 +327,27 @@ namespace breseq {
 			unique_read_seq_string = reverse_complement(unique_read_seq_string);
 		}
 
-		JunctionInfo::Side side_1 = {
+		JunctionInfo::Side side_1(
 			hash_seq_id_1,	// seq_id
 			hash_coord_1,	// position
 			hash_strand_1,	// strand
 			-1				// redundant: set to magic (uninitialized) value
-		};
+		);
     
-    JunctionInfo::Side side_2 = {
+    JunctionInfo::Side side_2(
 			hash_seq_id_2,	// seq_id
 			hash_coord_2,	// position
 			hash_strand_2,	// strand
 			-1				// redundant: set to magic (uninitialized) value
-		};
+		);
     
-		JunctionInfo new_junction = {
-			{ side_1, side_2 },
+		JunctionInfo new_junction(
+			side_1, side_2,
 			overlap, 				// alignment_overlap
 			unique_read_seq_string,	// unique_read_sequence
 			flanking_left,
 			flanking_right
-		};
+		);
     
     junction_id_list = new_junction;
     
@@ -823,6 +825,9 @@ namespace breseq {
   
   void CandidateJunctions::_split_indel_alignments(const Settings& settings, Summary& summary, tam_file& PSAM, int32_t min_indel_split_len, const alignment_list& alignments)
   {
+    (void)settings; //TODO? unused?
+    (void)summary; //TODO: track statistics?
+    
     assert(min_indel_split_len >= 0);
     
     alignment_list untouched_alignments;

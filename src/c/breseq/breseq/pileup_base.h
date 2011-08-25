@@ -100,19 +100,22 @@ class pileup_base {
 
     //! Pileup callback.
     virtual void pileup_callback(const pileup& p) {
-        assert(false);
+      (void)p;
+      assert(false);
     };
+
 
     //! Fetch callback.
     virtual void fetch_callback(const alignment_wrapper& a) {
-        assert(false);
+      (void)a;
+      assert(false);
     };
   
     //! Called before pileup starts a target.
-    virtual void at_target_start(uint32_t tid) { }
+    virtual void at_target_start(uint32_t tid) { (void)tid; }
   
     //! Called after the pileup completed a target.
-    virtual void at_target_end(const uint32_t tid) { }
+    virtual void at_target_end(const uint32_t tid) { (void)tid; }
   
     //! Pass through to BAM.
     //! @JEB make this transparently handle insert_start and insert_end REL606:13.1-16.0 using split_on_any

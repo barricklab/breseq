@@ -156,6 +156,8 @@ return ss.str();
 void html_index(const string& file_name, const Settings& settings, Summary& summary,
                 cReferenceSequences& ref_seq_info, genome_diff& gd)
 {
+  (void)summary; //TODO: unused?
+  
   // Create Stream and Confirm It's Open
   ofstream HTML(file_name.c_str());
 
@@ -228,6 +230,9 @@ void html_index(const string& file_name, const Settings& settings, Summary& summ
 void html_marginal_predictions(const string& file_name, const Settings& settings,Summary& summary,
                                cReferenceSequences& ref_seq_info, genome_diff& gd)
 {
+  (void)summary; //TODO: unused?
+
+  
   // Create Stream and Confirm It's Open
   ofstream HTML(file_name.c_str());
   
@@ -352,6 +357,7 @@ void html_compare(Settings& settings,const string &file_name, const string &titl
 
 void html_compare_polymorphisms(Settings& settings, const string& file_name, const string& title, diff_entry_list& list_ref)
 {
+  (void)settings; //TODO: unused?
 
   // Create stream and confirm it's open
   ofstream HTML(file_name.c_str());
@@ -377,6 +383,8 @@ void html_compare_polymorphisms(Settings& settings, const string& file_name, con
 
 void html_statistics(const string &file_name, const Settings& settings, Summary& summary, cReferenceSequences& ref_seq_info)
 {  
+  (void)summary; //TODO: unused?
+  (void)ref_seq_info; //TODO: unused?
 
   // Create stream and confirm it's open
   ofstream HTML(file_name.c_str());
@@ -533,21 +541,21 @@ string breseq_header_string(const Settings& settings)
   }
   ss << "<table width=\"100%\" border=\"0\" cellspacing=\"0\" cellpadding=\"3\">" << endl;
   ss << "<tr>" << endl;
-  ss << td(a(settings.website, img(settings.html_path(settings.breseq_small_graphic_to_file_name))));
+  ss << td(a(settings.website, img(Settings::relative_path(settings.breseq_small_graphic_to_file_name, settings.output_path))));
   ss << endl;
   ss << start_td("width=\"100%\"") << endl;
 // #   $output_string .= $settings->{byline} /TODO @JEB set byline to breseq version
   ss << settings.byline << endl;
   ss << "<br>";
-  ss << a(settings.html_path("index_html_file_name"), "mutation predictions"); 
+  ss << a(Settings::relative_path(settings.index_html_file_name, settings.output_path), "mutation predictions"); 
   ss << " | " << endl;
-  ss << a(settings.html_path("marginal_html_file_name"), "marginal predictions");
+  ss << a(Settings::relative_path(settings.marginal_html_file_name, settings.output_path), "marginal predictions");
   ss << " | " << endl;
-  ss << a(settings.html_path("summary_html_file_name"), "summary statistics");
+  ss << a(Settings::relative_path(settings.summary_html_file_name, settings.output_path), "summary statistics");
   ss << " | " << endl;
-  ss << a(settings.html_path("final_genome_diff_file_name"), "genome diff");
+  ss << a(Settings::relative_path(settings.final_genome_diff_file_name, settings.output_path), "genome diff");
   ss << " | " << endl;
-  ss << a(settings.html_path("log_file_name"), "command line log");
+  ss << a(Settings::relative_path(settings.log_file_name, settings.output_path), "command line log");
   ss << endl;
   ss << "</td></tr></table>" << endl;
   return ss.str();

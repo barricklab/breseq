@@ -521,6 +521,13 @@ namespace breseq {
 
 		string interval;
 		string side_key;
+    
+    Feature()
+    {
+      start = 0;
+      end = 0;
+      strand = false;
+    }
 	};
 
 	struct JunctionInfo
@@ -536,6 +543,27 @@ namespace breseq {
 			Feature is;
 			bool read_side;
 			int32_t overlap;
+      
+      Side()
+      {
+        position = 0;
+        strand = 0;
+        redundant = 0;
+        read_side = false;
+        overlap = 0;
+      }
+      
+      Side(const string& _seq_id, int32_t _position, int32_t _strand, int32_t _redundant)
+      {
+        seq_id = _seq_id;
+        position = _position;
+        strand = _strand;
+        redundant = _redundant;
+        
+        read_side = false;
+        overlap = 0;
+      }
+      
 		};
 		Side sides[2];
 
@@ -550,6 +578,33 @@ namespace breseq {
 		uint32_t total_reads;
 		uint32_t unique_side;
 		uint32_t is_side;
+    
+    JunctionInfo()
+    {
+      alignment_overlap = 0;
+      flanking_left = 0;
+      flanking_right = 0;
+      overlap = 0;
+      total_reads = 0;
+      unique_side = 0;
+      is_side = 0;
+    }
+    
+    JunctionInfo(Side& _side_1, Side& _side_2, int32_t _alignment_overlap, const string& _unique_read_sequence, int32_t _flanking_left, int32_t _flanking_right)
+    {
+      sides[0] = _side_1;
+      sides[1] = _side_2;
+      
+      alignment_overlap = _alignment_overlap;
+      unique_read_sequence = _unique_read_sequence;
+      flanking_left = _flanking_left;
+      flanking_right = _flanking_right;
+
+      overlap = 0;
+      total_reads = 0;
+      unique_side = 0;
+      is_side = 0;
+    }
 	};
 
 	const string junction_name_separator = "__";
@@ -559,30 +614,20 @@ namespace breseq {
 	{
 		vector<string> s = split(junction_name, junction_name_separator);
 
-		JunctionInfo::Side side_1 = {
-			s[0],
-			from_string<int32_t>(s[1]),
-			from_string<int32_t>(s[2]),
-			from_string<int32_t>(s[10])
-		};
+		JunctionInfo::Side side_1(s[0], from_string<int32_t>(s[1]), from_string<int32_t>(s[2]), from_string<int32_t>(s[10]));
     if (side_1.strand == 0) side_1.strand = -1;
     
-    JunctionInfo::Side side_2 = {
-			s[3],
-			from_string<int32_t>(s[4]),
-			from_string<int32_t>(s[5]),
-			from_string<int32_t>(s[11])
-		};
+    JunctionInfo::Side side_2(s[3], from_string<int32_t>(s[4]), from_string<int32_t>(s[5]), from_string<int32_t>(s[11]));
     if (side_2.strand == 0) side_2.strand = -1;
     
-		JunctionInfo retval =
-		{
-			{ side_1, side_2 },
+    JunctionInfo retval(
+      side_1, 
+      side_2,
 			from_string<int32_t>(s[6]),
 			s[7],
 			from_string<int32_t>(s[8]),
 			from_string<int32_t>(s[9])
-		};
+		);
 
 		return retval;
 	}

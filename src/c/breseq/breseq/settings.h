@@ -406,7 +406,6 @@ namespace breseq
 		bool no_evidence;
 		bool shade_frequencies;
 		bool no_header;
-    string html_path(const string& input) const {return "not implemented";}
     bool verbose;
 
 		vector<ExecutionTime> execution_times;
@@ -415,7 +414,6 @@ namespace breseq
     //End of settings needed for HTML outputs
 
 		// Utility function to substitute specific details into a generic file name
-
 		static string file_name(const string& file_name_key, const string& substitute, const string& with)
 		{
 			string s(file_name_key);
@@ -431,8 +429,17 @@ namespace breseq
 
 			return s;
 		}
-
-		// assumes things are in our path for now
+    
+		// Utility function to get relative path from two file locations for making HTML files
+    static string relative_path(const string& full_path, const string& base_path) 
+    {
+      string s(full_path);
+      if (s.substr(0, base_path.size()) == base_path)
+      {
+        s.erase(0,base_path.size());
+      }
+      return s;
+    }
 
 		string ctool(string tool_name, bool allow_fail = false)
 		{

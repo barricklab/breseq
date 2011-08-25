@@ -1275,7 +1275,7 @@ namespace breseq {
     }
     
     for (vector<cSequenceFeature>::iterator it = all_features.begin(); it < all_features.end(); it++) {
-      //s.m_features.push_back(*it);
+      s.m_features.push_back(*it);
       cout << "Start: " << (*it).m_start << " Stop: " << (*it).m_end << " Strand: " << (*it).m_strand << endl;
     }
   }
