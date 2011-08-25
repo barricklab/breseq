@@ -103,7 +103,7 @@ namespace breseq
     this->pre_option_initialize();
     
     // we need the path to the executable to locate scripts and our own installed versions of binaries
-    this->bin_path = argv[0];
+    this->bin_path = getExecPath(argv[0]);
     size_t slash_pos = this->bin_path.rfind("/");
     if (slash_pos != string::npos) this->bin_path.erase(slash_pos);
     
