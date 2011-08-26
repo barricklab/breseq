@@ -144,7 +144,7 @@ int first_level_pileup_callback(uint32_t tid, uint32_t pos, int32_t n, const bam
   // We've changed targets (and may have skipped a target entirely)
 
   // handle special case at the beginning
-  if (pb->m_last_tid == UNDEFINED) {
+  if (pb->m_last_tid == UNDEFINED_UINT32) {
     pb->m_last_tid = 0;
     pb->at_target_start(pb->m_last_tid); 
     
@@ -235,7 +235,7 @@ void pileup_base::do_pileup() {
   m_end_position_1 = 0;
   m_clip_start_position_1 = 0;
   m_clip_end_position_1 = 0;
-  m_last_tid = UNDEFINED;
+  m_last_tid = UNDEFINED_UINT32;
   
   // Do the samtools pileup
 	sampileup(m_bam, BAM_DEF_MASK, first_level_pileup_callback, this);

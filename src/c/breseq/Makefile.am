@@ -15,7 +15,7 @@
 ##
 ###
 
-AM_CPPFLAGS = -I$(top_srcdir)/$(LIBBAM)
+AM_CPPFLAGS = -I$(top_srcdir)/$(LIBBAM) -I$(top_srcdir)/aux_build
 AM_LDFLAGS = -static
 LDADD =   $(top_srcdir)/$(LIBBAM)/libbam.la \
 					libbreseq.la

@@ -1153,7 +1153,7 @@ diff_entry _junction_to_hybrid_list_item(const string& key, cReferenceSequences&
 
 	// Determine which side of the junction is the IS and which is unique
 	// these point to the correct initial interval...
-	jc.is_side = UNDEFINED;
+	jc.is_side = UNDEFINED_UINT32;
 	if (jc.sides[0].is.name.size() > 0 && jc.sides[1].is.name.size() == 0)
 	{
 		if (abs(static_cast<int32_t>(jc.sides[0].is.start) - static_cast<int32_t>(jc.sides[0].position)) <= 20)
@@ -1200,7 +1200,7 @@ diff_entry _junction_to_hybrid_list_item(const string& key, cReferenceSequences&
 		jc.sides[1].overlap = jc.overlap;
 
 		// If there was in IS, resolve overlap so it goes to the edge of the IS element
-		if (jc.is_side != UNDEFINED)
+		if (jc.is_side != UNDEFINED_UINT32)
 		{
 			// first, adjust the repetitive sequence boundary to get as close to the IS as possible
       assert(jc.sides[jc.is_side].is.side_key.size() > 0);

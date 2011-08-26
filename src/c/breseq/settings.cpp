@@ -163,8 +163,16 @@ namespace breseq
   
   
 
+
 	void Settings::pre_option_initialize()
 	{    
+    // Constants
+    this->byline = "<b><i>breseq</i></b>&nbsp;&nbsp;version ";
+    this->byline += PACKAGE_VERSION;
+    
+    this->website = "http://barricklab.org/breseq";
+    this->website += PACKAGE_URL;
+    
 		// Set up default values for options
     this->bin_path = ".";
 		this->full_command_line = "$0 @ARGV";
@@ -245,14 +253,12 @@ namespace breseq
     this->smalt = false;
     this->verbose = false;
 		//@{this->execution_times} = ();
+    
+    this->polymorphism_reject_homopolymer_length = UNDEFINED_UINT32;
 	}
 
 	void Settings::post_option_initialize()
-	{
-		//this->version = $Breseq::VERSION;
-		this->byline = "<b><i>breseq</i></b>&nbsp;&nbsp;version this->version";
-		this->website = "http://barricklab.org/breseq";
-    
+	{    
 		this->lib_path = this->bin_path + "/../lib/perl5/Breseq";
 
 		//neaten up some settings for later string comparisons

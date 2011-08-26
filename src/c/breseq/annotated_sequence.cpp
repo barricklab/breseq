@@ -271,7 +271,7 @@ namespace breseq {
 
 	void cReferenceSequences::find_nearby_genes(vector<Gene>& gene_list_ref, uint32_t pos_1, uint32_t pos_2, vector<Gene>& within_genes, vector<Gene>& between_genes, vector<Gene>& inside_left_genes, vector<Gene>& inside_right_genes, Gene& prev_gene, Gene& next_gene)
 	{
-		if (!is_defined(pos_2))
+		if (pos_2 == UNDEFINED_UINT32)
 			pos_2 = pos_1;
 
 		//#	print "$pos_1, $pos_2\n";
@@ -698,7 +698,8 @@ namespace breseq {
 		//chomp $count_header_line;
 		vector<string> count_header_list = split(count_header_line, "\t");
 
-		uint32_t count_column, quality_column = UNDEFINED;
+		uint32_t count_column = UNDEFINED_UINT32;
+    uint32_t quality_column = UNDEFINED_UINT32;
 		for (uint32_t i = 0; i < count_header_list.size(); i++)
 		{
 			if (count_header_list[i] == "quality")
@@ -707,7 +708,7 @@ namespace breseq {
 				count_column = i;
 		}
 
-    if (!is_defined(quality_column) || !is_defined(count_column)) {
+    if ((quality_column == UNDEFINED_UINT32) || (count_column == UNDEFINED_UINT32)) {
       cerr << "Warning, undefined quantity being used" << endl;
       cerr << "FILE:LINE --> " << __FILE__ << ":"<< __LINE__ << endl;
     }
@@ -825,14 +826,13 @@ namespace breseq {
 				add_reject_reason(mut, "FISHER_STRAND_P_VALUE");
 
 			////// Optionally, ignore if in a homopolymer stretch
-			if (is_defined(settings.polymorphism_reject_homopolymer_length))
+			if (settings.polymorphism_reject_homopolymer_length != UNDEFINED_UINT32)
 			{
 				uint32_t test_length = 20;
 				string seq_id = mut["seq_id"];
 				uint32_t end_pos = from_string<uint32_t>(mut["position"]);
 				uint32_t start_pos = end_pos - test_length + 1;
 				if (start_pos < 1) start_pos = 1;
-				uint32_t length = this->ref_strings[seq_id].size();
 				string bases = this->ref_strings[seq_id].substr(start_pos - 1, (end_pos - start_pos + 1));
 
 				//#print Dumper($mut);

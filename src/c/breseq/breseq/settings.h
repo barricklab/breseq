@@ -23,11 +23,6 @@ LICENSE AND COPYRIGHT
 #include "common.h"
 #include "storable.h"
 
-#ifndef UNDEFINED
-#define UNDEFINED UINT_MAX
-#define is_defined(x) (x != UINT_MAX)
-#endif
-
 using namespace std;
 
 namespace breseq
@@ -134,9 +129,9 @@ namespace breseq
     
     cReadFile()
     {
-      m_paired_end_group = UNDEFINED;
-      m_error_group = UNDEFINED;
-      m_id = UNDEFINED;
+      m_paired_end_group = UINT32_MAX;
+      m_error_group = UINT32_MAX;
+      m_id = UINT32_MAX;
     }
     
     string file_name()
@@ -438,6 +433,10 @@ namespace breseq
       {
         s.erase(0,base_path.size());
       }
+      
+      if (s.at(0) == '/')
+        s.erase(0,1);
+      
       return s;
     }
 

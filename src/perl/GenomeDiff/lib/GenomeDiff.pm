@@ -204,7 +204,7 @@ sub new
 	my($caller,$args) = @_;
 	my $class = ref($caller) || $caller;
 	$args = {} if (!defined $args);
-	my $self = $args;
+	my $self = $args;	
 	bless ($self, $class);
 
 	# initialize

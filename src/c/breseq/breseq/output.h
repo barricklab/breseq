@@ -244,6 +244,8 @@ struct Evidence_Files
   vector<Evidence_Item> evidence_list;
   
   private:
+  
+    string html_evidence_file_name(Evidence_Item& evidence_item);
     void add_evidence(const string& file_name, diff_entry& item,
                       diff_entry& parent_item, map<string,string> fields);
     string file_name(Evidence_Item& evidence_item);
