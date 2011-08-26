@@ -150,18 +150,7 @@ void alignment_output::create_alignment ( const string& region )
     }
     
     m_alignment_output_pileup.aligned_reads = new_aligned_reads;
-  }
-  
-
-  // Not implemented @JEB
-  //if ( m_alignment_output_pileup.total_reads > m_maximum_to_display )
-  //{
-  //  m_error_message = "Reads exceeded maximum to display alignment. ";
-  //  m_error_message += to_string(m_alignment_output_pileup.total_reads) + " reads. ";
-  //  m_error_message += "(Limit = " + to_string(m_maximum_to_display) + ")\n";
-  // return;
-  //}
-  
+  }  
 
   // Build the alignment with the pileup
   m_alignment_output_pileup.do_pileup ( region );
@@ -170,30 +159,6 @@ void alignment_output::create_alignment ( const string& region )
   m_aligned_reads = m_alignment_output_pileup.aligned_reads;
   m_aligned_references = m_alignment_output_pileup.aligned_references;
   m_aligned_annotation = m_alignment_output_pileup.aligned_annotation;
-
-  /* @JEB - This is an elternate method of reducing the number of reads to show
-            Since it happens after aligning them it is slower.
-  // sampling a limited number of reads when there are too many
-  if ( (m_maximum_to_align != 0) && (m_aligned_reads.size() > m_maximum_to_align) )
-  {
-    m_error_message = "Only " + to_string(m_maximum_to_align) + " of " + to_string(m_aligned_reads.size()) + " total aligned reads displayed.";
-
-    while (m_aligned_reads.size() > m_maximum_to_align)
-    {
-      uint32_t random_index = rand() % m_aligned_reads.size();
-      
-      for ( Aligned_Reads::iterator itr_read = m_aligned_reads.begin();  itr_read != m_aligned_reads.end(); itr_read++ )
-      {
-        if (random_index == 0)
-        {
-          m_aligned_reads.erase(itr_read);
-          break;
-        }
-        random_index--;
-      }
-    }
-  }
-  */
    
   // now add the unaligned portions of each
 
@@ -390,15 +355,20 @@ string alignment_output::html_alignment ( const string& region )
   create_alignment(region);
   
   string output = "";
-  //return p . "No reads uniquely align to region." if (!defined $alignment_info);
-  //$output .= p . "$alignment_info->{message}" if ($alignment_info->{message});
-  //return $output if (!defined $alignment_info->{aligned_reads});
-  //
-  //my $aligned_reads = $alignment_info->{aligned_reads};
-  //my @aligned_references = @{$alignment_info->{aligned_references}};
-  //my $aligned_annotation = $alignment_info->{aligned_annotation};
-  //my $quality_range = $self->set_quality_range($aligned_reads, $options);
-  //
+  
+  if (m_aligned_reads.size() == 0)
+    output += "No reads uniquely align to region.<br>";
+
+  if (m_error_message.size() > 0)
+  {
+    output += m_error_message;
+    output += "<br>";
+  }
+  
+  // We must have aligned reads for the remainder of the code to be safe
+  if (m_aligned_reads.size() == 0)
+    return output;
+  
   /// all built by create_alignment and stored as member, m_ , variables.
     
   set_quality_range(m_quality_score_cutoff);
@@ -420,11 +390,6 @@ string alignment_output::html_alignment ( const string& region )
   output += "</style>";
   output += "<table style=\"background-color: rgb(255,255,255)\">";
   output += "<tr><td style=\"font-size:10pt\">";    
-  
-  if (m_error_message != "") 
-  {
-    output += m_error_message + "<br>";
-  }
   
   for (uint32_t index = 0; index < m_aligned_references.size(); index++)
   {
@@ -706,7 +671,7 @@ void alignment_output::set_quality_range(const uint32_t quality_score_cutoff)
   // calculate a cumulative distribution of the bases we are showing
   vector<uint32_t> qc(255, 0);
   uint32_t total = 0;
-  int32_t max_qual = UNDEFINED;
+  int32_t max_qual = UINT32_MAX;
 
   for ( Aligned_Reads::iterator itr_read = m_aligned_reads.begin(); itr_read != m_aligned_reads.end(); itr_read++ )
   {
@@ -723,11 +688,8 @@ void alignment_output::set_quality_range(const uint32_t quality_score_cutoff)
     }
   }
 
-  if (!is_defined(max_qual)) {
-    cerr << "Warning, undefined quantity being used" << endl;
-    cerr << "FILE:LINE --> " << __FILE__ << ":"<< __LINE__ << endl;
-    }
-  
+  // problem
+  assert(max_qual != INT32_MAX);
   
   vector<uint8_t> qual_to_color(max_qual+1,0);
   double cutoff_percentiles[] = {0, 0.03, 0.1, 0.3, 0.9, 1.0};
@@ -943,7 +905,7 @@ string alignment_output::html_alignment_line(const alignment_output::Alignment_B
   // write the seq_id and coords in non-breaking html
   if (!a.seq_id.empty())
   {
-    string seq_id = substitute(a.seq_id, "-", "&#8209;");
+    string seq_id = substitute(a.seq_id, "–", "&#8209;");
         
     if(coords)
     {

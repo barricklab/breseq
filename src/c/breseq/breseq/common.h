@@ -21,6 +21,9 @@ LICENSE AND COPYRIGHT
 
 // System headers
 
+// Autoconf header
+#include <config.h>
+
 // C
 #include <assert.h>
 #include <libgen.h>
@@ -67,10 +70,9 @@ LICENSE AND COPYRIGHT
 #define _base_bam_is_N(x) (x == 0x0f)
 #define _base_char_is_N(x) (x == 'N')
 
-#ifndef UNDEFINED
-#define UNDEFINED UINT_MAX
-#define is_defined(x) (x != UINT_MAX)
-#endif
+#define UNDEFINED_UINT32 UINT_MAX
+#define UNDEFINED_INT32 INT_MAX
+
 
 using namespace std;
 
@@ -857,8 +859,9 @@ namespace breseq {
       dest_len++;
     }
     
-    /* again someone has use execve: we dont knowe the executable name; we surrender and give instead current path */
+    /* again someone has use execve: we dont know the executable name; we surrender and give instead current path */
     if (getcwd (path, dest_len - 1) == NULL) return NULL;
+    return path;
   }
   
   template <typename T, typename U> inline void print_map(const map<T,U>& the_map)

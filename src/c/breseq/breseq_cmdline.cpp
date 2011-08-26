@@ -917,7 +917,7 @@ int breseq_default_action(int argc, char* argv[])
 
 		//Check the FASTQ format and collect some information about the input read files at the same time
 		cerr << "  Analyzing fastq read files..." << endl;
-		uint32_t overall_max_read_length = UNDEFINED;
+		uint32_t overall_max_read_length = UNDEFINED_UINT32;
 		uint32_t overall_max_qual = 0;
 
 		s.num_reads = 0;
@@ -936,9 +936,9 @@ int breseq_default_action(int argc, char* argv[])
 			s.converted_fastq_name[base_name] = s_rf.converted_fastq_name;
 
 			// Record statistics
-			if (!is_defined(overall_max_read_length) || s_rf.max_read_length > overall_max_read_length)
+			if ((overall_max_read_length == UNDEFINED_UINT32) || (s_rf.max_read_length > overall_max_read_length))
 				overall_max_read_length = s_rf.max_read_length;
-			if (!is_defined(overall_max_qual) || s_rf.max_quality_score > overall_max_qual)
+			if ((overall_max_qual == UNDEFINED_UINT32) || (s_rf.max_quality_score > overall_max_qual))
 				overall_max_qual = s_rf.max_quality_score;
 			s.num_reads += s_rf.num_reads;
 			s.num_bases += s_rf.num_bases;
@@ -962,7 +962,7 @@ int breseq_default_action(int argc, char* argv[])
 		string samtools = settings.ctool("samtools");
 		string command = samtools + " faidx " + settings.reference_fasta_file_name;
 		int exit_code = system(command.c_str());
-
+    
 		// calculate trim files
 		calculate_trims(settings.reference_fasta_file_name, settings.sequence_conversion_path);
 
@@ -972,7 +972,7 @@ int breseq_default_action(int argc, char* argv[])
 	}
 
 	summary.sequence_conversion.retrieve(settings.sequence_conversion_summary_file_name);
-	_assert(summary.sequence_conversion.max_read_length != UNDEFINED, "Can't retrieve max read length from file: " + settings.sequence_conversion_summary_file_name);
+	_assert(summary.sequence_conversion.max_read_length != UNDEFINED_UINT32, "Can't retrieve max read length from file: " + settings.sequence_conversion_summary_file_name);
 
 	//load C++ info
 	string reference_features_file_name = settings.reference_features_file_name;
@@ -1082,7 +1082,7 @@ int breseq_default_action(int argc, char* argv[])
 	{
 		create_path(settings.candidate_junction_path);
 
-		if (is_defined(settings.preprocess_junction_min_indel_split_length) || settings.candidate_junction_score_method == "POS_HASH")
+		if ((settings.preprocess_junction_min_indel_split_length != UNDEFINED_UINT32) || settings.candidate_junction_score_method == "POS_HASH")
 		{
 			string preprocess_junction_done_file_name = settings.preprocess_junction_done_file_name;
 

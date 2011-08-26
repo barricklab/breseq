@@ -295,6 +295,7 @@ void tam_file::open_write(const string& tam_file_name, const string& fasta_file_
 
 bool tam_file::read_alignments(alignment_list& alignments, bool paired)
 {
+  (void)paired;
   alignments.clear();
 
 	//uint32_t num_to_slurp = (paired) ? 2 : 1; //TODO:unused?

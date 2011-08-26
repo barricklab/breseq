@@ -802,7 +802,7 @@ sub do_count
 		$gd_name =~ s/^.+\///;		
 		$gd_name =~ s/\.[^.]+$//;		
 		
-		my $gd = GenomeDiff->new(-in=>$gd_file_name);
+		my $gd = GenomeDiff->new({in=>$gd_file_name});
 		foreach my $mut ($gd->list('MOB'))
 		{
 			$mob_name_hash->{$mut->{repeat_name}} = 1;
@@ -875,7 +875,7 @@ sub do_count
 		$gd_name =~ s/^.+\///;		
 		$gd_name =~ s/\.[^.]+$//;		
 		
-		my $gd = GenomeDiff->new(-in=>$gd_file_name);
+		my $gd = GenomeDiff->new({in=>$gd_file_name});
 		Breseq::ReferenceSequence::annotate_mutations($ref_seq_info, $gd, 1);
 
 		#deep copy sums
