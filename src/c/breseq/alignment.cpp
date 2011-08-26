@@ -297,7 +297,7 @@ bool tam_file::read_alignments(alignment_list& alignments, bool paired)
 {
   alignments.clear();
 
-	int num_to_slurp = (paired) ? 2 : 1;
+	//uint32_t num_to_slurp = (paired) ? 2 : 1; //TODO:unused?
 	string last_read_name = "";
 	if (last_alignment.get() != NULL)
 	{
@@ -306,7 +306,7 @@ bool tam_file::read_alignments(alignment_list& alignments, bool paired)
     last_alignment = counted_ptr<bam_alignment>(NULL);
 	}
 
-	int num_slurped = 0;
+	//int num_slurped = 0;//TODO:unused?
 	while (true)
 	{
     bam_alignment* this_alignment_bam = new bam_alignment(); 

@@ -437,7 +437,7 @@ namespace breseq {
 		vector<Gene> inside_left_genes;
 		vector<Gene> inside_right_genes;
 
-		cSequenceFeature* repeat_region;
+		cSequenceFeature* repeat_region(NULL);
 		if (repeat_override)
 		{
 			assert(start == end);
@@ -698,7 +698,7 @@ namespace breseq {
 		//chomp $count_header_line;
 		vector<string> count_header_list = split(count_header_line, "\t");
 
-		uint32_t quality_column, count_column;
+		uint32_t count_column, quality_column = UNDEFINED;
 		for (uint32_t i = 0; i < count_header_list.size(); i++)
 		{
 			if (count_header_list[i] == "quality")
@@ -706,6 +706,11 @@ namespace breseq {
 			else if (count_header_list[i] == "count")
 				count_column = i;
 		}
+
+    if (!is_defined(quality_column) || !is_defined(count_column)) {
+      cerr << "Warning, undefined quantity being used" << endl;
+      cerr << "FILE:LINE --> " << __FILE__ << ":"<< __LINE__ << endl;
+    }
 
 		////#print "$count_column $quality_column\n";
 
