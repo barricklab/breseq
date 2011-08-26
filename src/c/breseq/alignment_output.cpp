@@ -671,7 +671,7 @@ void alignment_output::set_quality_range(const uint32_t quality_score_cutoff)
   // calculate a cumulative distribution of the bases we are showing
   vector<uint32_t> qc(255, 0);
   uint32_t total = 0;
-  int32_t max_qual = UINT32_MAX;
+  int32_t max_qual = UINT_MAX;
 
   for ( Aligned_Reads::iterator itr_read = m_aligned_reads.begin(); itr_read != m_aligned_reads.end(); itr_read++ )
   {
@@ -689,7 +689,7 @@ void alignment_output::set_quality_range(const uint32_t quality_score_cutoff)
   }
 
   // problem
-  assert(max_qual != INT32_MAX);
+  assert(max_qual != INT_MAX);
   
   vector<uint8_t> qual_to_color(max_qual+1,0);
   double cutoff_percentiles[] = {0, 0.03, 0.1, 0.3, 0.9, 1.0};

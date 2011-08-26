@@ -129,9 +129,9 @@ namespace breseq
     
     cReadFile()
     {
-      m_paired_end_group = UINT32_MAX;
-      m_error_group = UINT32_MAX;
-      m_id = UINT32_MAX;
+      m_paired_end_group = UINT_MAX;
+      m_error_group = UINT_MAX;
+      m_id = UINT_MAX;
     }
     
     string file_name()
