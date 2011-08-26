@@ -269,8 +269,7 @@ void alignment_output::create_alignment ( const string& region )
       {
         
         char base = m_alignment_output_pileup.reference_base_char_1(target_id, pos);
-        if ( (aligned_reference.truncate_start != 0) && (pos < aligned_reference.truncate_start) 
-            || (aligned_reference.truncate_end != 0) && (pos > aligned_reference.truncate_end) )
+        if ( ((aligned_reference.truncate_start != 0) && (pos < aligned_reference.truncate_start))            || ((aligned_reference.truncate_end != 0) && (pos > aligned_reference.truncate_end)) )
         {
           base = '.';
         }
@@ -283,8 +282,7 @@ void alignment_output::create_alignment ( const string& region )
       while ( pos <= aligned_reference.end + ref_extend_right )
       {
         char base = m_alignment_output_pileup.reference_base_char_1(target_id, pos);
-        if ( (aligned_reference.truncate_start != 0) && (pos < aligned_reference.truncate_start) 
-          || (aligned_reference.truncate_end != 0) && (pos > aligned_reference.truncate_end) )
+        if ( ((aligned_reference.truncate_start != 0) && (pos < aligned_reference.truncate_start))            || ((aligned_reference.truncate_end != 0) && (pos > aligned_reference.truncate_end) ))
         {
           base = '.';
         }
@@ -708,7 +706,7 @@ void alignment_output::set_quality_range(const uint32_t quality_score_cutoff)
   // calculate a cumulative distribution of the bases we are showing
   vector<uint32_t> qc(255, 0);
   uint32_t total = 0;
-  int32_t max_qual = -1;
+  int32_t max_qual = UNDEFINED;
 
   for ( Aligned_Reads::iterator itr_read = m_aligned_reads.begin(); itr_read != m_aligned_reads.end(); itr_read++ )
   {
@@ -724,6 +722,12 @@ void alignment_output::set_quality_range(const uint32_t quality_score_cutoff)
       if (c > max_qual) max_qual = c;
     }
   }
+
+  if (!is_defined(max_qual)) {
+    cerr << "Warning, undefined quantity being used" << endl;
+    cerr << "FILE:LINE --> " << __FILE__ << ":"<< __LINE__ << endl;
+    }
+  
   
   vector<uint8_t> qual_to_color(max_qual+1,0);
   double cutoff_percentiles[] = {0, 0.03, 0.1, 0.3, 0.9, 1.0};

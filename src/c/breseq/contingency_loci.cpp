@@ -218,7 +218,7 @@ namespace breseq {
             //Find where in the read to begin counting repeats from the first match
             int ref_bypass_length = current_region.start - a.reference_start_1();
             int read_bypass_length = 0;
-            size_t cigar_start_pos;
+            size_t cigar_start_pos = 0;//TODO @JEB change to uint32_t and default to UNDEFINED?
             
             
             for( size_t j=0; j+i<cigar_pair.size(); j++ ){

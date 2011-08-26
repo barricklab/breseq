@@ -1412,10 +1412,10 @@ Evidence_Files::Evidence_Files(const Settings& settings, genome_diff& gd)
                  (SEQ_ID, item[SIDE_1_SEQ_ID])            
                  (START, item[SIDE_1_POSITION])
                  (END, item[SIDE_1_POSITION])
-                 (PREFIX, "JC_SIDE_1" + '_' +
-                          item[SIDE_2_SEQ_ID] + '_' +
-                          item[SIDE_2_POSITION] + '_' +
-                          item[SIDE_2_POSITION]
+                 (PREFIX, to_string("JC_SIDE_1" + '_' +
+                                    item[SIDE_2_SEQ_ID] + '_' +
+                                    item[SIDE_2_POSITION] + '_' +
+                                    item[SIDE_2_POSITION])
                  )); 
 
     add_evidence(_SIDE_2_EVIDENCE_FILE_NAME,
@@ -1427,10 +1427,10 @@ Evidence_Files::Evidence_Files(const Settings& settings, genome_diff& gd)
                  (SEQ_ID, item[SIDE_2_SEQ_ID])            
                  (START, item[SIDE_2_POSITION])
                  (END, item[SIDE_2_POSITION])
-                 (PREFIX, "JC_SIDE_2" + '_' +
-                          item[SIDE_1_SEQ_ID] + '_' +
-                          item[SIDE_1_POSITION] + '_' +
-                          item[SIDE_1_POSITION]
+                 (PREFIX, to_string("JC_SIDE_2" + '_' +
+                                    item[SIDE_1_SEQ_ID] + '_' +
+                                    item[SIDE_1_POSITION] + '_' +
+                                    item[SIDE_1_POSITION])
                  ));
   }
 
@@ -1741,6 +1741,7 @@ Html_Mutation_Table_String::Html_Mutation_Table_String(
   this->gd_name_list_ref = gd_name_list_ref;
   
   Options options;
+  options.repeat_header = false;
   this->options = options;
   
   this->Header_Line();

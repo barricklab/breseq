@@ -760,7 +760,7 @@ namespace breseq {
   
   inline string create_path(string path)
   {
-    int status;
+    int status = umask(0);
     
     if (path.find("/") != string::npos) {
       string accumulate_path;
@@ -859,7 +859,6 @@ namespace breseq {
     
     /* again someone has use execve: we dont knowe the executable name; we surrender and give instead current path */
     if (getcwd (path, dest_len - 1) == NULL) return NULL;
-    return path;
   }
   
   template <typename T, typename U> inline void print_map(const map<T,U>& the_map)
