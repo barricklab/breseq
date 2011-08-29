@@ -257,26 +257,9 @@ struct Evidence_Files
  *  Output Utilities
  *-----------------------------------------------------------------------------*/
 
-
-// sub save_text_deletion_file
-//         my ($deletion_file_name, $deletions_ref) = @_;
-void save_text_deletion_file(string deletion_file_name, diff_entry_list& deletions_ref);
 // sub draw_coverage
-//         my (Settings settings, $ref_seq_info, $gd) = @_;
-void draw_coverage(Settings& settings, cReferenceSequences* ref_seq_info, genome_diff& gd);
-// sub record_time
-//         my ($name) = @_;
-string record_time(string name);
-// sub time2string
-//     my ($seconds) = @_;
-void time2string(uint32_t seconds);
-// sub save_statistics
-//         my (string file_name, $data) = @_;
-void save_statistics(string file_name, string data);
-// sub load_statistics
-//         my (string file_name) = @_;
-void load_statistics(string file_name);
-  															 
+void draw_coverage(Settings& settings, cReferenceSequences& ref_seq_info, genome_diff& gd);
+
 
 }// end output namespace 
 }// end breseq namespace

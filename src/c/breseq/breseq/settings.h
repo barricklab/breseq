@@ -34,7 +34,7 @@ namespace breseq
 		string _name;
 		time_t _time;
 		string _formatted_time;
-		time_t _time_elapsed;
+		double _time_elapsed; // in seconds
 		string _formatted_time_elapsed;
 		time_t _time_start;
 		string _formatted_time_start;
@@ -364,12 +364,15 @@ namespace breseq
 
 		string local_coverage_plot_path;
 		string coverage_plot_path;
-		string deletions_text_file_name;
-		string coverage_plot_file_name;
+    string coverage_plot_r_script_file_name;
+		string overview_coverage_plot_file_name;
 		string output_calibration_path;
 		string unique_only_coverage_plot_file_name;
 		string error_rates_plot_file_name;
 
+    // for alignment output
+    uint32_t maximum_reads_to_align;
+    
 		// text output files, to be replaced...
 		string settings_text_file_name;
 		string summary_text_file_name;
@@ -391,9 +394,7 @@ namespace breseq
 
 		storable_map<string, Coverage> unique_coverage;
 
-    map<string,string> done_key_messages;
     
-		//! TODO @JEB / GRC Setting options needed for HTML outputs
 		string print_run_name; 
 		bool hide_circular_genome_junctions;
 		bool polymorphism_prediction;
@@ -403,9 +404,9 @@ namespace breseq
 		bool no_header;
     bool verbose;
 
+    map<string,string> done_key_messages;
 		vector<ExecutionTime> execution_times;
-    string time2string(const time_t* timer, const bool& relative);
-
+    
     //End of settings needed for HTML outputs
 
 		// Utility function to substitute specific details into a generic file name
@@ -451,12 +452,64 @@ namespace breseq
 			return tool_name;
 		}
     
+    static string time2string(const time_t& _time)
+    {
+      const struct tm * time_info = localtime(&_time);
+      char s[1024];
+      strftime(s, 1024, "%H:%M:%S %d %b %Y", time_info);
+      return s;
+    }
+    
+    static string elapsedtime2string(double _diff_time)
+    {
+      stringstream ss;
+      
+      double t = _diff_time; // in seconds
+      uint32_t tm_yday = floor( t / (60*60*24));
+      t -= tm_yday * 60*60*24;
+      uint32_t tm_hour = floor( t / (60*60));
+      t -= tm_yday * 60*60;
+      uint32_t tm_min = floor( t / (60));
+      t -= tm_min * 60;
+      uint32_t tm_sec = floor( t / (1));      
+      if (tm_yday > 0)
+      {
+        if (ss.str().length() > 0) ss << " ";
+        ss << tm_yday;
+        ss << ((tm_yday!=1)?" days":" day");
+      }
+
+      if (tm_hour > 0)
+      {
+        if (ss.str().length() > 0) ss << " ";
+        ss << tm_hour;
+        ss << ((tm_hour!=1)?" hours":" hour");
+      }
+      
+      if (tm_min > 0)
+      {
+        if (ss.str().length() > 0) ss << " ";
+        ss << tm_min;
+        ss << ((tm_min!=1)?" minutes":" minute");
+      }
+      
+      //if (tm_sec > 0)
+      {
+        if (ss.str().length() > 0) ss << " ";
+        ss << tm_sec;
+        ss << ((tm_sec!=1)?" seconds":" second");
+      }
+
+      return ss.str();
+    }
+
+    
     void record_start_time(const string& message)
     {
       ExecutionTime ex_time;
       time_t this_time = time(NULL);
       ex_time._time_start = this_time;
-      ex_time._formatted_time_start = ctime(&this_time);
+      ex_time._formatted_time_start = time2string(this_time);
       ex_time._time_end = 0;
       ex_time._formatted_time_end = "";
       ex_time._time_elapsed = 0;
@@ -483,24 +536,22 @@ namespace breseq
 				this->execution_times.push_back(blank);
 			}
 
-			ExecutionTime ex_time = this->execution_times[i];
+			ExecutionTime& ex_time = this->execution_times[i];
 			ex_time._message = message;
 
 			time_t this_time = time(NULL);
 			ex_time._time_end = this_time;
-			ex_time._formatted_time_end = ctime(&this_time);
+			ex_time._formatted_time_end = time2string(this_time);
 
 			//if we had a previous time, calculate elapsed
 			if (i < this->execution_times.size())
 			{
-				time_t time_interval = ex_time._time_end - ex_time._time_start;
-				ex_time._time_elapsed = time_interval;
-				stringstream ss;
-				ss << time_interval;
-				ex_time._formatted_time_elapsed = ss.str(); //, 1);
+				ex_time._time_elapsed = difftime(ex_time._time_end, ex_time._time_start);
+				ex_time._formatted_time_elapsed = elapsedtime2string(ex_time._time_elapsed);
 			}
 		}
-
+    
+ 
 		string base_name_to_read_file_name(string base_name)
 		{
       return this->read_files.base_name_to_read_file_name(base_name);
@@ -574,7 +625,7 @@ namespace breseq
     }
 	};
 
-	struct Summary : public Storable
+	class Summary : public Storable
 	{
 	public:
 

@@ -114,6 +114,8 @@ namespace breseq
 		// convert to basing everything off the main output path, so we don't have to set so many options
 		("output,o", "path to breseq output")
 		("reference,r", "reference GenBank flatfile")
+    ("name,n", "human-readable name of sample/run for output")
+
     .processCommandArgs(argc, argv);
     
     // Reference sequence provided?
@@ -141,7 +143,8 @@ namespace breseq
     
     this->base_output_path = "";
     if (options.count("output")) this->base_output_path = options["output"];
-
+    if (options.count("name")) this->run_name = options["name"];
+    
     //// GENBANK REFERENCE FILES ////
     this->reference_file_names = from_string<vector<string> >(options["reference"]);
     
@@ -251,10 +254,19 @@ namespace breseq
 		this->hide_circular_genome_junctions = 1;
     
     this->smalt = false;
-    this->verbose = false;
-		//@{this->execution_times} = ();
     
     this->polymorphism_reject_homopolymer_length = UNDEFINED_UINT32;
+    
+    this->maximum_reads_to_align = 200;
+        
+    this->print_run_name = ""; 
+		this->hide_circular_genome_junctions = true;
+		this->polymorphism_prediction = false;
+		this->lenski_format = false;
+		this->no_evidence = false;
+		this->shade_frequencies = false;
+		this->no_header = false;
+    this->verbose = false;
 	}
 
 	void Settings::post_option_initialize()
@@ -412,12 +424,12 @@ namespace breseq
 		this->evidence_genome_diff_file_name = this->evidence_path + "/evidence.gd";
 		this->local_coverage_plot_path = "evidence";
 		this->coverage_plot_path = this->output_path + "/" + this->local_coverage_plot_path;
-		this->deletions_text_file_name = this->coverage_plot_path + "/deletions.tab";
-		this->coverage_plot_file_name = this->coverage_plot_path + "/@.overview.png";
+		this->overview_coverage_plot_file_name = this->coverage_plot_path + "/@.overview.png";
 		this->output_calibration_path = this->output_path + "/calibration";
 		this->unique_only_coverage_plot_file_name = this->output_calibration_path + "/@.unique_coverage.pdf";
 		this->error_rates_plot_file_name = this->output_calibration_path + "/#.error_rates.pdf";
-
+    this->coverage_plot_r_script_file_name = this->lib_path + "/plot_coverage.r";
+    
 		// text output files, to be replaced...
 		this->settings_text_file_name = this->output_path + "/settings.tab";
 		this->summary_text_file_name = this->output_path + "/summary.tab";
