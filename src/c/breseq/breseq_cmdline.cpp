@@ -921,6 +921,7 @@ int breseq_default_action(int argc, char* argv[])
 		uint32_t overall_max_qual = 0;
 
 		s.num_reads = 0;
+    s.num_bases = 0;
 		for (uint32_t i = 0; i < settings.read_files.size(); i++)
 		{
 			string base_name = settings.read_files[i].m_base_name;
@@ -1260,10 +1261,7 @@ int breseq_default_action(int argc, char* argv[])
 			settings.alignment_read_limit
 		);
 
-
 		summary.alignment_correction.store(settings.alignment_correction_summary_file_name);
-		//	or die "Can"t store data in file $alignment_correction_summary_file_name!" << endl;
-		output::record_time("Resolve candidate junctions");
 		settings.done_step(settings.alignment_correction_done_file_name);
 	}
   
@@ -1545,50 +1543,16 @@ int breseq_default_action(int argc, char* argv[])
 
 			string coverage_fn = settings.file_name(settings.unique_only_coverage_distribution_file_name, "@", "");
 			string error_dir = dirname(coverage_fn) + "/";
-			//chomp $error_dir; $error_dir .= "/";
 			string this_predicted_mutation_file_name = settings.file_name(settings.predicted_mutation_file_name, "@", "");
 			string output_dir = dirname(this_predicted_mutation_file_name) + "/";
-			/*chomp $output_dir; $output_dir .= "/";
-			my $readfiles = join(" --readfile ", settings.read_files);
-			my $cmdline = "$cbreseq IDENTIFY_MUTATIONS --bam $reference_bam_file_name --fasta $reference_fasta_file_name --readfile $readfiles";
-			$cmdline .= " --error_dir $error_dir";*/
 			string ra_mc_genome_diff_file_name = settings.ra_mc_genome_diff_file_name;
-			/*$cmdline .= " --genome_diff $ra_mc_genome_diff_file_name";
-			$cmdline .= " --output $output_dir";
-			if(defined settings.{mutation_log10_e_value_cutoff}) {
-				$cmdline .= " --mutation_cutoff settings.{mutation_log10_e_value_cutoff}"; // defaults to 2.0.
-			}*/
 			string coverage_tab_file_name = settings.file_name(settings.complete_coverage_text_file_name, "@", "");
 			string coverage_dir = dirname(coverage_tab_file_name) + "/";
-			/*chomp $coverage_dir; $coverage_dir .= "/";
-			$cmdline .= " --coverage_dir $coverage_dir";*/
 
 			// It is important that these are in consistent order with the fasta file!!
 			vector<double> deletion_propagation_cutoffs;
 			for (uint32_t i = 0; i < ref_seq_info.size(); i++)
 				deletion_propagation_cutoffs.push_back(settings.unique_coverage[ref_seq_info[i].m_seq_id].deletion_coverage_propagation_cutoff);
-
-			/*if((defined settings.{no_deletion_prediction}) && (settings.{no_deletion_prediction})) {
-				$cmdline .= "";
-			} else {
-				$cmdline .= " --predict_deletions"; // defaults TO predicting deletions.
-			}
-
-			if (defined settings.{base_quality_cutoff})
-			{
-				$cmdline .= " --minimum_quality_score settings.{base_quality_cutoff}";
-			}
-
-			if (settings.{polymorphism_prediction})
-			{
-				$cmdline .= " --predict_polymorphisms";
-				$cmdline .= " --polymorphism_cutoff settings.{polymorphism_log10_e_value_cutoff}";
-				$cmdline .= " --polymorphism_frequency_cutoff settings.{polymorphism_frequency_cutoff}";
-			}
-
-			$cmdline .= " --error_table $error_dir/error_rates.tab";
-
-			Breseq::Shared::system($cmdline);*/
 
 			identify_mutations(
 				reference_bam_file_name,
@@ -1661,7 +1625,7 @@ int breseq_default_action(int argc, char* argv[])
 		// Plot coverage of genome and large deletions
 		//
 		cerr << "Drawing coverage plots..." << endl;
-		output::draw_coverage(settings, &ref_seq_info, gd);
+		output::draw_coverage(settings, ref_seq_info, gd);
 
 		//
 		// Mark lowest RA evidence items as no-show, or we may be drawing way too many alignments

@@ -64,15 +64,16 @@ class pileup_base {
 
     //! Retrieve the name of the given target.
     const char* target_name(uint32_t target) const {
-        return m_bam->header->target_name[target];
+      _assert(target < num_targets(), "Requested target_id [" + to_string(target) + "] was not found in FASTA file [" + m_fasta_file_name + "]");
+      return m_bam->header->target_name[target];
     }
 
-    const uint32_t num_targets() const {
+    uint32_t num_targets() const {
       return m_bam->header->n_targets;
     }
   
     //! Retrieve the length of the given target.
-    const uint32_t target_length(uint32_t target) const {
+    uint32_t target_length(uint32_t target) const {
       return m_refs[target]->m_len;
     }
 
@@ -123,6 +124,10 @@ class pileup_base {
     {
       int temp_target_id, temp_start_pos, temp_end_pos;
       bam_parse_region(m_bam_header, region.c_str(), &temp_target_id, &temp_start_pos, &temp_end_pos); 
+      
+      // Target was not found.
+      _assert(temp_target_id != -1, "Target sequence was not found for region [" + region + "] using FASTA file [" + m_fasta_file_name + "]." );
+      
       target_id = static_cast<uint32_t>(temp_target_id);
       start_pos_1 = static_cast<uint32_t>(temp_start_pos)+1; // bam_parse_region returns zero indexed start
       end_pos_1 = static_cast<uint32_t>(temp_end_pos);       // bam_parse_region returns one indexed end
@@ -195,6 +200,9 @@ class pileup_base {
     bam_index_t* m_bam_index;
     bamFile m_bam_file;
     faidx_t* m_faidx;
+    string m_bam_file_name;
+    string m_fasta_file_name;
+
 
     uint32_t m_last_position_1;        // last position handled by pileup
     uint32_t m_start_position_1;       // requested start, 0 = whole fragment

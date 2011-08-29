@@ -1,7 +1,7 @@
 #include "breseq/output.h"
 #include "breseq/anyoption.h"
 #include "breseq/alignment_output.h"
-
+#include "breseq/coverage_output.h"
 
 using namespace std;
 namespace breseq
@@ -381,9 +381,6 @@ void html_compare_polymorphisms(Settings& settings, const string& file_name, con
 
 void html_statistics(const string &file_name, const Settings& settings, Summary& summary, cReferenceSequences& ref_seq_info)
 {  
-  (void)summary; //TODO: unused?
-  (void)ref_seq_info; //TODO: unused?
-
   // Create stream and confirm it's open
   ofstream HTML(file_name.c_str());
   
@@ -397,76 +394,76 @@ void html_statistics(const string &file_name, const Settings& settings, Summary&
   HTML << breseq_header_string(settings) << endl;
   HTML << "<p>" << endl;
 
-  HTML << "<!-- Write fastq read file informations -->" << endl;
+  //Write read file information
+  //HTML << "<!-- Write fastq read file informations -->" << endl;
   HTML << "<table border=\"0\" cellspace=\"1\" cellpadding=\"5\">" << endl;
-  HTML << "<tr>" << th("fastq read file") << th("reads") << 
+  HTML << "<tr>" << th() << th("fastq read file") << th("reads") << 
                     th("bases") << th("longest") << "</tr>" << endl;
-// # //TODO @JEB Summary
-// #   foreach my $read_file ($settings->read_files)
-// #   {
-// #     my $c = $summary->{sequence_conversion}->{reads}->{$read_file};
-// #     print HTML Tr(
-// #       td(a({-href=>$settings->html_path('error_rates_plot_file_name', {'#'=>$read_file})}, "errors")),
-// #       td($read_file), 
-// #       td({-align=>"right"}, commify($c->{num_reads})), 
-// #       td({-align=>"right"},commify($c->{num_bases})), 
-// #       td($c->{max_read_length} . "&nbsp;bases"), 
-// #     );
-// #   }
-// #   print HTML Tr({-class=>"highlight_table_row"}, 
-// #     td(),
-// #     td(b("total")), 
-// #     td({-align=>"right"},b(commify($summary->{sequence_conversion}->{num_reads}))), 
-// #     td({-align=>"right"},b(commify($summary->{sequence_conversion}->{num_bases}))), 
-// #     td(b($summary->{sequence_conversion}->{max_read_length} . "&nbsp;bases")), 
-// #   );
-// #   print HTML end_table();
-// # 
-// #   ## Write reference sequence information
-// #   print HTML p; 
+  for(cReadFiles::const_iterator it=settings.read_files.begin(); it!=settings.read_files.end(); it++)
+  {
+    const AnalyzeFastq& s = summary.sequence_conversion.reads[it->m_base_name];
+    
+    HTML << "<tr>";
+    HTML << td( a(Settings::relative_path( 
+                      settings.file_name(settings.error_rates_plot_file_name, "#", it->m_base_name), settings.output_path
+                                          ), 
+                "errors" 
+                )
+              );
+    HTML << td(it->m_base_name);
+    HTML << td(ALIGN_RIGHT, commify(to_string(s.num_reads)));
+    HTML << td(ALIGN_RIGHT, commify(to_string(s.num_bases)));
+    HTML << td(ALIGN_RIGHT, to_string(s.max_read_length) + "&nbsp;bases");
+
+    HTML << "</tr>";
+  }
+  
+  HTML << "<tr class=\"highlight_table_row\">";
+  HTML << td();
+  HTML << td(b("total"));
+  HTML << td(ALIGN_RIGHT , b(commify(to_string(summary.sequence_conversion.num_reads))) );
+  HTML << td(ALIGN_RIGHT , b(commify(to_string(summary.sequence_conversion.num_bases))) );
+  HTML << td(b(commify(to_string(summary.sequence_conversion.max_read_length))) + "&nbsp;bases");
+  HTML << "</tr></table>";
   
   //Write reference sequence information
-  HTML << "<!-- Write reference sequence information -->" << endl;
+  //HTML << "<!-- Write reference sequence information -->" << endl;
   HTML << "<p>" << endl;
   HTML << "<table border=\"0\" cellspacing=\"1\" cellpadding=\"5\" >" << endl;
   HTML << "<tr>" << th() << 
                     th() << 
-                    th("reference sequences") << 
+                    th("reference sequence") << 
                     th("length") << 
                     th(ALIGN_LEFT, "description") << 
           "</tr>" << endl;
              
   size_t total_length = 0;
-  
-// # //TODO @JEB Summary
-// #   foreach my $seq_id (@{$ref_seq_info->{seq_ids}})
-// #   {   
-// #     my $c = $summary->{sequence_conversion}->{reference_sequences}->{$seq_id};
-// #     
-// #     print HTML Tr(
-// #       td(a({-href=>$settings->html_path('coverage_plot_file_name', {'@'=>$seq_id})}, "coverage")), 
-// #       td(a({-href=>$settings->html_path('unique_only_coverage_plot_file_name', {'@'=>$seq_id})}, "distribution")), 
-// #       td($seq_id), 
-// #       td({-align=>"right"},commify($c->{length})), 
-// #       td($c->{definition})
-// #     );
-// #     $total_length+= $c->{length};
-// #   } 
-// #   
-// #   print HTML Tr({-class=>"highlight_table_row"},
-// #     td(),
-// #     td(),
-// #     td(b("total")), 
-// #     td(b({-align=>"right"},commify($total_length))), 
-// #     td()
-// #   );
-  //TODO move this into above loop when summary is implemented
+  for(cReferenceSequences::iterator it=ref_seq_info.begin(); it!=ref_seq_info.end(); it++)
+  {
+    total_length += it->m_length;
+    
+    HTML << td( a(Settings::relative_path( 
+                                          settings.file_name(settings.overview_coverage_plot_file_name, "@", it->m_seq_id), settings.output_path
+                                          ), 
+                  "coverage" 
+                  )
+               );
+    HTML << td( a(Settings::relative_path( 
+                                          settings.file_name(settings.unique_only_coverage_plot_file_name, "@", it->m_seq_id), settings.output_path
+                                          ), 
+                  "distribution" 
+                  )
+               ); 
+    HTML << td(it->m_seq_id);
+    HTML << td(ALIGN_RIGHT, commify(to_string(it->m_length)));
+    HTML << td(it->m_definition);
+  }  
   
   HTML << "<tr class=\"highlight_table_row\">";
   HTML << td();
   HTML << td();
   HTML << td(b("total"));
-  HTML << td("<b align=\"right\">" + commify(to_string(total_length)) + "</b>");
+  HTML << td(ALIGN_RIGHT, b(commify(to_string(total_length))) );
   HTML << td();
   HTML << "</tr>" << endl;
 
@@ -485,22 +482,19 @@ void html_statistics(const string &file_name, const Settings& settings, Summary&
 // #   }
 // #   
 // #   print HTML end_table();
-  HTML << "</table>" << endl;
-
-// #     
-// #     
-  vector<ExecutionTime> times = settings.execution_times;
-// #   ## Write Times
-// HTML << "<!-- Write Times -->" << endl;
+  HTML << "</table>" << endl;  
+  
+  // Write Execution Times
+  const vector<ExecutionTime>& times = settings.execution_times;
+  // HTML << "<!-- Write Times -->" << endl;
   HTML << "<p>"  << endl;
   HTML << h1("Execution Times") << endl;
   HTML << start_table("width=\"100%\" border=\"1\" cellspacing=\"0\" cellpadding=\"3\"") << endl;
   HTML << "<tr>" << th("Step") << th("Start") << th("End") << th("Elapsed") << "</tr>" << endl; 
-  time_t total_time_elapsed = 0; 
+  double total_time_elapsed = 0; 
 
-  for (vector<ExecutionTime>::iterator itr = times.begin();
-       itr != times.end(); itr ++) {  
-    ExecutionTime& t = (*itr);
+  for (vector<ExecutionTime>::const_iterator itr = times.begin(); itr != times.end(); itr ++) {  
+    const ExecutionTime& t = (*itr);
     
     if (t._message.empty()) continue;
 
@@ -516,7 +510,7 @@ void html_statistics(const string &file_name, const Settings& settings, Summary&
 
   HTML << "<tr class=\"highlight_table_row\">"<< endl;
   HTML << "<td colspan=\"3\" >" << b("Total") << "</td>" << endl;
-  HTML << "<td>" << (b(nonbreaking(to_string(&total_time_elapsed)))) << "</td>" << endl;
+  HTML << "<td>" << (b(nonbreaking(Settings::elapsedtime2string(total_time_elapsed)))) << "</td>" << endl;
   HTML << "</tr>" << endl;
 
   HTML << "</table>";
@@ -1224,8 +1218,8 @@ Evidence_Files::Evidence_Files(const Settings& settings, genome_diff& gd)
                 (FASTA_PATH, reference_fasta_file_name)
                 (PREFIX, "MC_SIDE_1")
                 (SEQ_ID, item[SEQ_ID])            
-                (START, to_string(from_string<uint8_t>(item[START]) - 1))
-                (END,  to_string(from_string<uint8_t>(item[START]) - 1)));
+                (START, to_string(from_string<uint32_t>(item[START]) - 1))
+                (END,  to_string(from_string<uint32_t>(item[START]) - 1)));
 
     add_evidence(_SIDE_2_EVIDENCE_FILE_NAME,
                 item,
@@ -1235,15 +1229,15 @@ Evidence_Files::Evidence_Files(const Settings& settings, genome_diff& gd)
                 (FASTA_PATH, reference_fasta_file_name)
                 (PREFIX, "MC_SIDE_2")
                 (SEQ_ID, item[SEQ_ID])            
-                (START, to_string(from_string<uint8_t>(item[END]) + 1))
-                (END,  to_string(from_string<uint8_t>(item[END]) + 1)));
-
+                (START, to_string(from_string<uint32_t>(item[END]) + 1))
+                (END,  to_string(from_string<uint32_t>(item[END]) + 1)));
+    
     add_evidence(_EVIDENCE_FILE_NAME,
                 item,
                  *parent_item,
                 make_map<string,string>
-                (BAM_PATH, junction_bam_file_name)
-                (FASTA_PATH, junction_fasta_file_name)
+                (BAM_PATH, reference_bam_file_name)
+                (FASTA_PATH, reference_fasta_file_name)
                 (PREFIX, "MC_PLOT")
                 (SEQ_ID, item[SEQ_ID])            
                 (START, item[START])
@@ -1377,7 +1371,7 @@ Evidence_Files::Evidence_Files(const Settings& settings, genome_diff& gd)
                   make_map<string,string>
                  (BAM_PATH, junction_bam_file_name)
                  (FASTA_PATH, junction_fasta_file_name)
-                 (SEQ_ID, item["key"])              // @JEB TODO: Need to update this to SEQ_ID when making evidence file
+                 (SEQ_ID, item["key"])
                  (START, to_string(start))
                  (END, to_string(end))
                  (PREFIX, JC)
@@ -1524,7 +1518,7 @@ Evidence_Files::html_evidence_file (
                     genome_diff& gd, 
                     Evidence_Item& item
                    )
-{
+{  
   item["output_path"] = settings.evidence_path + "/" + item[FILE_NAME];
 
   
@@ -1542,7 +1536,7 @@ Evidence_Files::html_evidence_file (
   // print a table for the main item
   // followed by auxiliary tables for each piece of evidence
 
-  diff_entry parent_item = item.parent_item;
+  diff_entry& parent_item = item.parent_item;
   diff_entry_list evidence_list = gd.mutation_evidence_list(parent_item);
 
   vector<string> types = make_list<string>("RA")("MC")("JC");
@@ -1573,15 +1567,19 @@ Evidence_Files::html_evidence_file (
     if (item[INSERT_END].size()) {
       ss << "." << item[INSERT_END];
     }
-    cerr << "Creating read alignment for region " << ss.str() << endl;
+    cerr << "Creating read alignment for " << item._type << " region: " << ss.str() << endl;
 
     if (settings.base_quality_cutoff != 0) {
       item["base_quality_cutoff"] = to_string(settings.base_quality_cutoff);
     }
     
-    alignment_output ao(item[BAM_PATH], item[FASTA_PATH], from_string<uint32_t>(ss.str()), 
-      from_string<uint32_t>(item["base_quality_cutoff"]));
+    alignment_output ao(item[BAM_PATH], item[FASTA_PATH], settings.maximum_reads_to_align, settings.base_quality_cutoff);
      
+    // DEBUG
+    //cout << item.item._type << endl;
+    //print_map(item.item._fields);
+    //print_map(item._fields);
+
     HTML << ao.html_alignment(ss.str());
 
   }
@@ -1593,124 +1591,53 @@ Evidence_Files::html_evidence_file (
 /*-----------------------------------------------------------------------------
  *  //End Create_Evidence_Files
  *-----------------------------------------------------------------------------*/
-void save_text_deletion_file(string deletion_file_name, diff_entry_list& deletions_ref)
-{
-	ofstream DEL(deletion_file_name.c_str()); //or die "Could not open: $deletion_file_name";
-	DEL << "seq_id\tstart\tend\n";
-	for (diff_entry_list::iterator d = deletions_ref.begin(); d != deletions_ref.end(); d++)
-		DEL << (**d)["seq_id"] << "\t" << (**d)["start"] << "\t" << (**d)["end"] << "\n";
-	DEL.close();
-}
 
-void draw_coverage(Settings& settings, cReferenceSequences* ref_seq_info, genome_diff& gd)
-{
-	vector<string> mc_types = make_list<string>("MC");
+void draw_coverage(Settings& settings, cReferenceSequences& ref_seq_info, genome_diff& gd)
+{  
+  coverage_output co(
+                     settings.reference_bam_file_name, 
+                     settings.reference_fasta_file_name, 
+                     settings.coverage_plot_r_script_file_name, 
+                     settings.coverage_plot_path
+                     );
+  co.output_format("png");
+  
+  create_path(settings.coverage_plot_path);
+  string coverage_plot_path = settings.coverage_plot_path;
+  
+  // Coverage overview plots of entire reference sequences
+  for (cReferenceSequences::iterator it = ref_seq_info.begin(); it != ref_seq_info.end(); ++it)
+  {
+    cAnnotatedSequence& seq = *it;
+    string region = seq.m_seq_id + ":" + "1" + "-" + to_string(seq.m_length);
+    string this_complete_coverage_text_file_name = settings.file_name(settings.overview_coverage_plot_file_name, "@", seq.m_seq_id);
+    
+    cerr << "Creating coverage plot for region: " << region << endl;
+    co.plot(region, this_complete_coverage_text_file_name);
+   }
+  
+  // Zoom-in plots of individual deletions
+  vector<string> mc_types = make_list<string>("MC");
 	diff_entry_list mc = gd.list(mc_types);
-	string drawing_format = "png";
+  for (diff_entry_list::iterator it=mc.begin(); it!=mc.end(); it++)
+  {
+    diff_entry_ptr& item = *it;
+    uint32_t start = from_string<uint32_t>((*item)[START]);
+    uint32_t end = from_string<uint32_t>((*item)[END]);
+    uint32_t size = end - start + 1;
+    
+    uint32_t _shaded_flanking = floor(static_cast<double>(size) / 10.0);
+    if (_shaded_flanking < 100) _shaded_flanking = 100;
+    co.shaded_flanking(_shaded_flanking);
+    
+    string region = (*item)[SEQ_ID] + ":" + (*item)[START] + "-" + (*item)[END];
+    string coverage_plot_file_name = settings.evidence_path + "/" + (*item)[SEQ_ID] + "_" + (*item)[START] + "-" + (*item)[END];
 
-	{
-		create_path("coverage_plot_path");
-		string coverage_plot_path = settings.coverage_plot_path;
-		string deletions_text_file_name = settings.deletions_text_file_name;
-		save_text_deletion_file(deletions_text_file_name, mc);
-
-		for (uint32_t i = 0; i < ref_seq_info->size(); i++)
-		{
-			string seq_id = (*ref_seq_info)[i].m_seq_id;
-			string this_complete_coverage_text_file_name = settings.file_name("complete_coverage_text_file_name", "@", seq_id);
-			string command = settings.lib_path + "plot_coverage --drawing-format " + drawing_format + " -t " + coverage_plot_path + " -p " + settings.coverage_plot_path + " -i " + deletions_text_file_name + " -c " + this_complete_coverage_text_file_name + " --seq_id=" + seq_id;
-			assert(system(command.c_str()) >= 0);
-
-			// need to assign link names that correspond to what the R script is doing
-			diff_entry_list this_deletions;
-			diff_entry_list::iterator it;
-			
-			if (seq_id.size() > 0)
-				for (it = mc.begin(); it != mc.end(); it++)
-					if ((**it)["seq_id"] == seq_id)
-						this_deletions.push_back(*it);
-
-			uint32_t j = 1;
-			for (it = this_deletions.begin(); it != this_deletions.end(); it++)
-				(**it)["_coverage_plot_file_name"] = seq_id + to_string(j++) + "." + drawing_format;
-		}
-    remove_file(deletions_text_file_name);
-	}
+    cerr << "Creating coverage plot for region: " << region << endl;
+    co.plot(region, coverage_plot_file_name);
+  }
 }
 
-vector<ExecutionTime> execution_times;
-string record_time(string name)
-{
-	time_t this_time = time(NULL);
-// #   my ($sec,$min,$hour,$mday,$mon,$year,$wday,$yday,$isdst) = localtime($this_time); 
-	string formatted_time = to_string(this_time);
-	ExecutionTime new_time;
-	new_time._name = name;
-	new_time._formatted_time = formatted_time;
-	new_time._time = this_time;
-	new_time._time_elapsed = 0;
-	new_time._formatted_time_elapsed = "";
-
-	//if we had a previous time
-	time_t time_since_last;
-	//string time_since_last_formatted;
-	if (execution_times.size() > 0)
-	{
-		time_since_last = this_time - execution_times[execution_times.size() - 1]._time;
-		new_time._time_elapsed = time_since_last;
-		new_time._formatted_time_elapsed = to_string(time_since_last);
-	}
-	execution_times.push_back(new_time);
-	return formatted_time;
-}
-// # 
-// # sub time2string
-// # {
-// #     my ($seconds) = @_;
-// #     # Convert seconds to days, hours, minutes, seconds
-// #     my @parts = gmtime($seconds);
-// #     my $ret = '';
-// #     if(sprintf("%4d",$parts[7])>0)
-// #     {
-// #         $ret .= sprintf("%4d",$parts[7]);
-// #         $ret .= sprintf(" %s",($parts[7]>1)?'days':'day');
-// #     }
-// #     if(sprintf("%4d",$parts[2])>0)
-// #     {
-// #         $ret .= sprintf("%4d",$parts[2]);
-// #         $ret .= sprintf(" %s",($parts[2]>1)?'hours':'hour');
-// #     }
-// #     if(sprintf("%4d",$parts[1])>0)
-// #     {
-// #         $ret .= sprintf("%4d",$parts[1]);
-// #         $ret .= sprintf(" %s",($parts[1]>1)?'minutes':'minute');
-// #     }
-// #     if(sprintf("%4d",$parts[0])>0)
-// #     {
-// #         $ret .= sprintf("%4d",$parts[0]);
-// #         $ret .= sprintf(" %s",($parts[0]>1)?'seconds':'second');
-// #     }
-// #     return $ret;
-// # }
-// # 
-// # 
-// # ## Rather than dealing with our own formats for saving 
-// # ## many different kinds of summary statistics,
-// # ## just use freeze and thaw to directly save and load
-// # ## the perl data structures (generally hashes).
-// # use Storable;
-// # sub save_statistics
-// # {
-// #   my ($file_name, $data) = @_;
-// #   store $data, "$file_name";
-// # }
-// # 
-// # sub load_statistics
-// # {
-// #   my ($file_name) = @_;
-// #   return retrieve($file_name);
-// # }
-// # 
 /*
  * =====================================================================================
  *        Class:  Html_Mutation_Table_String
@@ -1837,8 +1764,7 @@ void Html_Mutation_Table_String::Header_Line()
       ss << th( (header_rows == i) ? "annotation" : "") << endl;
       ss << th( (header_rows == i) ? "gene" : "") << endl;
       ss << th("width=\"100%\"", (header_rows == i) ? "description" : "") << endl;
-      for (vector<string>::iterator itr = freq_header_list.begin();
-           itr != freq_header_list.end(); itr++) {
+      for (vector<string>::iterator itr = freq_header_list.begin(); itr != freq_header_list.end(); itr++) {
         string& freq_header_item(*itr);        
 
         vector<string> header_list = split(freq_header_item, "|");        

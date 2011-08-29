@@ -128,9 +128,24 @@ namespace breseq {
     
     while (!infile.eof())
     {      
-      if (line[0] != '#') {
-        
-      
+      if (line[0] == '#') 
+      {
+        // description line
+        if (line.find("##description ") == 0)
+        {
+          line.erase(0,14);
+          size_t pos = line.find(" ");
+          if (pos != string::npos) 
+          {
+            string seq_id = line.substr(0,pos);
+            line.erase(0,pos+1);            
+            uint32_t seq_idx = seq_id_to_index(seq_id);
+            (*this)[seq_idx].m_definition = line;
+          }
+        }
+      }
+      else 
+      {
         // split line on tabs
         char * cstr = new char [line.size()+1];
         strcpy (cstr, line.c_str());

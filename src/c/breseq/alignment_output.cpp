@@ -44,6 +44,11 @@ alignment_output::alignment_output ( string bam, string fasta, uint32_t maximum_
         , m_maximum_to_align ( maximum_to_align )
 
 {
+  // zero is the default if no arg provided, make a reasonable value
+  if (m_maximum_to_align == 0)
+    m_maximum_to_align = 200;
+  
+  // the default for m_quality_score_cutoff is zero, which makes sense
 }
 
 void alignment_output::create_alignment ( const string& region )
@@ -356,9 +361,6 @@ string alignment_output::html_alignment ( const string& region )
   
   string output = "";
   
-  if (m_aligned_reads.size() == 0)
-    output += "No reads uniquely align to region.<br>";
-
   if (m_error_message.size() > 0)
   {
     output += m_error_message;

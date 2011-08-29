@@ -57,9 +57,9 @@ reference_sequence::~reference_sequence() {
  instead of loading all sequences at once.
  */
 pileup_base::pileup_base(const string& bam, const string& fasta)
-: m_bam(0), m_bam_header(0), m_bam_index(0), m_bam_file(0), m_faidx(0), m_last_position_1(0), 
-m_start_position_1(0), m_end_position_1(0), m_clip_start_position_1(0), m_clip_end_position_1(0), m_downsample(0),
-  m_last_tid(static_cast<uint32_t>(-1)), m_print_progress(false)
+: m_bam(0), m_bam_header(0), m_bam_index(0), m_bam_file(0), m_faidx(0), m_bam_file_name(bam), m_fasta_file_name(fasta), 
+  m_last_position_1(0), m_start_position_1(0), m_end_position_1(0), m_clip_start_position_1(0), m_clip_end_position_1(0), 
+  m_downsample(0), m_last_tid(static_cast<uint32_t>(-1)), m_print_progress(false)
 {
 	m_bam = samopen(bam.c_str(), "rb", 0);
 	assert(m_bam);
