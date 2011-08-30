@@ -56,6 +56,7 @@ const char* SIDE_2_SEQ_ID="side_2_seq_id";
 const char* SIDE_2_STRAND="side_2_strand";
 const char* SIDE_1_JC="side_1_jc";
 const char* SIDE_2_JC="side_2_jc";
+const char* SIDE_2_OVERLAP="side_2_overlap";
 namespace output
 {
 
@@ -1189,7 +1190,311 @@ string decode_reject_reason(const string& reject)
  *  Description:  
  * =====================================================================================
  */
-Evidence_Files::Evidence_Files(const Settings& settings, genome_diff& gd)
+void EvidenceFiles::EvidenceItem::MUT::init_MUT(diff_entry_ptr& item, const Settings& settings, genome_diff& gd)
+{ 
+  bam_path = settings.reference_bam_file_name;
+  bam_path = settings.reference_fasta_file_name;
+  prefix = type = item->_type;
+  seq_id = item->_id;
+  start = from_string<uint32_t>((*item)[START]);
+  end = start;
+
+  //Determine What kind of mutation it is.
+  if (item->_type == INS) {  
+    insert_start = 1;
+    insert_end = (*item)[NEW_SEQ].length();
+  } else if (item->_type == DEL) {
+    genome_diff gd;
+    diff_entry_list mutation_list = gd.mutation_evidence_list(*item);
+    //Only do deletions if they have within_read evidence
+    if (count_if(mutation_list.begin(), mutation_list.end(), diff_entry::is_type("RA")) > 0)
+      return;
+    else
+      end = start + from_string<uint32_t>((*item)[SIZE]) - 1;
+  } else if (item->_type == SUB) {
+    end = start + (*item)[NEW_SEQ].length() - 1;
+  }
+  item = item;
+  parent_item = item;
+  quality_score_cutoff = settings.base_quality_cutoff;
+  evidence_list = gd.mutation_evidence_list(*parent_item);
+
+  file_name = this->html_evidence_file_name();
+  //Set item's file name
+  item->_fields[_EVIDENCE_FILE_NAME] = file_name;
+  output_path = settings.evidence_path + "/" + file_name;
+}
+
+void EvidenceFiles::EvidenceItem::RA::init_RA(diff_entry_ptr& item, const Settings& settings, genome_diff& gd)
+{
+  bam_path = settings.reference_bam_file_name;
+  bam_path = settings.reference_fasta_file_name;
+  seq_id = item->_id;
+  start = from_string<uint32_t>((*item)[POSITION]);
+  end = from_string<uint32_t>((*item)[POSITION]);
+  insert_start = from_string<uint32_t>((*item)[INSERT_POSITION]);
+  insert_end = from_string<uint32_t>((*item)[INSERT_POSITION]);
+  parent_item = item;
+  item = item;
+  prefix = item->_type;
+  quality_score_cutoff = settings.base_quality_cutoff;
+  evidence_list = gd.mutation_evidence_list(*parent_item);
+  
+  file_name = this->html_evidence_file_name();
+  //Set item's file name
+  item->_fields[_EVIDENCE_FILE_NAME] = file_name;
+  output_path = settings.evidence_path + "/" + file_name;
+}
+
+
+void EvidenceFiles::EvidenceItem::MC::init_MC(diff_entry_ptr& item, const Settings& settings, genome_diff& gd)
+{
+  //Determine if a parent exists
+  diff_entry_ptr parent_item = gd.parent(*item);
+  
+  if (parent_item.get() == NULL) parent_item = item;
+
+  //Side 1
+  side_1_evidence.bam_path = settings.reference_bam_file_name;
+  side_1_evidence.fasta_path  = settings.reference_fasta_file_name;
+  side_1_evidence.seq_id = item->_id;
+  side_1_evidence.start = (from_string<uint32_t>((*item)[START]) - 1);
+  side_1_evidence.end = (from_string<uint32_t>((*item)[START]) - 1);
+  side_1_evidence.parent_item = parent_item;
+  side_1_evidence.item = item;
+  side_1_evidence.prefix = "MC_SIDE_1";
+  side_1_evidence.file_name = side_1_evidence.html_evidence_file_name();
+  side_1_evidence.item->_fields[_SIDE_1_EVIDENCE_FILE_NAME] = side_1_evidence.file_name;
+  side_1_evidence.quality_score_cutoff = settings.base_quality_cutoff;
+  side_1_evidence.evidence_list = gd.mutation_evidence_list(*parent_item);
+  //Side 2
+  side_2_evidence.bam_path = settings.reference_bam_file_name;
+  side_2_evidence.fasta_path  = settings.reference_fasta_file_name;
+  side_2_evidence.seq_id = item->_id;
+  side_2_evidence.start = (from_string<uint32_t>((*item)[END]) + 1);
+  side_2_evidence.end = (from_string<uint32_t>((*item)[END]) + 1);
+  side_2_evidence.parent_item = parent_item;
+  side_2_evidence.item = item;
+  side_2_evidence.prefix = "MC_SIDE_2";
+  side_2_evidence.file_name = side_2_evidence.html_evidence_file_name();
+  side_2_evidence.item->_fields[_SIDE_2_EVIDENCE_FILE_NAME] = side_2_evidence.file_name;
+  side_2_evidence.quality_score_cutoff = settings.base_quality_cutoff;
+  side_2_evidence.evidence_list = gd.mutation_evidence_list(*parent_item);
+  //Evidence_Files
+  evidence.seq_id = item->_id;
+  evidence.start = from_string<uint32_t>((*item)[START]);
+  evidence.end = from_string<uint32_t>((*item)[END]);
+  evidence.parent_item = parent_item;
+  evidence.item = item;
+  evidence.prefix = "MC_PLOT";
+  evidence.plot = (*item)[_COVERAGE_PLOT_FILE_NAME];
+  evidence.file_name = evidence.html_evidence_file_name(); 
+  evidence.item->_fields[_COVERAGE_PLOT_FILE_NAME];
+  evidence.evidence_list = gd.mutation_evidence_list(*parent_item);
+}
+
+
+
+void EvidenceFiles::EvidenceItem::JC::init_JC(diff_entry_ptr& item, const Settings& settings, genome_diff& gd)
+{
+  diff_entry_ptr parent_item = gd.parent(*item);
+  if (parent_item.get() == NULL) parent_item = item;
+
+  //Define here for cleaner declarations below.
+  uint32_t start = UINT_MAX;
+  uint32_t end = UINT_MAX;
+  //Regenereate the alignment overlap from the junction key
+  uint32_t alignment_overlap = from_string<uint32_t>((*item)[ALIGNMENT_OVERLAP]);
+  uint32_t flanking_left = from_string<uint32_t>((*item)[FLANKING_LEFT]);
+   
+  if ( alignment_overlap == 0) {
+    start = flanking_left;
+    end = (flanking_left + 1);
+  } else if (alignment_overlap > 0) {
+    start = (flanking_left + 1);
+    end = (flanking_left + alignment_overlap);
+  } else { //item->{overlap} < 0);
+    start = (flanking_left + 1);
+    end = (flanking_left - alignment_overlap);
+  }
+  assert(start != UINT_MAX || end != UINT_MAX);//TODO @JEB possible negative value?
+  
+  //Define here for cleaner declarations below.
+  uint32_t side_1_overlap = from_string<uint32_t>((*item)[SIDE_1_OVERLAP]);
+  uint32_t side_1_position = from_string<uint32_t>((*item)[SIDE_1_POSITION]);
+  string side_1_strand = (*item)[SIDE_1_STRAND];
+  string side_1_seq_id = (*item)[SIDE_1_SEQ_ID];
+  uint32_t side_2_overlap = from_string<uint32_t>((*item)[SIDE_2_OVERLAP]);
+  uint32_t side_2_position = from_string<uint32_t>((*item)[SIDE_2_POSITION]);
+  string side_2_strand = (*item)[SIDE_2_STRAND];
+  string side_2_seq_id = (*item)[SIDE_2_SEQ_ID];
+  uint32_t truncate_start = (flanking_left + 1 + abs(alignment_overlap - side_2_overlap));
+
+  //Evidence 
+  evidence.bam_path = settings.junction_bam_file_name;
+  evidence.fasta_path = settings.candidate_junction_fasta_file_name;
+  evidence.seq_id = item->_id;
+  evidence.start = start;
+  evidence.end = end;
+  evidence.parent_item = parent_item;
+  evidence.item = item;
+  evidence.prefix = "JC";
+  evidence.file_name = evidence.html_evidence_file_name();
+  evidence.item->_fields[_NEW_JUNCTION_EVIDENCE_FILE_NAME] = evidence.file_name;
+  evidence.quality_score_cutoff = settings.base_quality_cutoff;
+  evidence.evidence_list = gd.mutation_evidence_list(*parent_item);
+  
+    //Extra information
+    evidence.alignment_empty_change_line = true;
+    //Reference info
+    evidence.alignment_reference_info_side_1.truncate_end = flanking_left + side_1_overlap;
+    evidence.alignment_reference_info_side_1.ghost_end = side_1_position;
+    evidence.alignment_reference_info_side_1.ghost_strand = side_1_seq_id;
+    evidence.alignment_reference_info_side_1.ghost_seq_id = side_1_seq_id;
+  
+    evidence.alignment_reference_info_side_2.truncate_start = flanking_left + side_1_overlap;
+    evidence.alignment_reference_info_side_2.ghost_start = side_2_position;
+    evidence.alignment_reference_info_side_2.ghost_strand = side_2_seq_id;
+    evidence.alignment_reference_info_side_2.ghost_seq_id = side_2_seq_id;
+  
+  //This is the mothership file taht we show first when clicking on evidence from a mutation...
+  item->_fields[_EVIDENCE_FILE_NAME] = item->_fields[_NEW_JUNCTION_EVIDENCE_FILE_NAME];
+
+
+  //Side 1
+  side_1_evidence.bam_path = settings.junction_bam_file_name;
+  side_1_evidence.fasta_path = settings.candidate_junction_fasta_file_name;
+  side_1_evidence.seq_id = (*item)[SIDE_1_SEQ_ID];
+  side_1_evidence.start = from_string<uint32_t>((*item)[SIDE_1_POSITION]);
+  side_1_evidence.end = from_string<uint32_t>((*item)[SIDE_1_POSITION]);
+  side_1_evidence.parent_item = parent_item;
+  side_1_evidence.item = item;
+  side_1_evidence.prefix = "JC_SIDE_1_" + (*item)[SIDE_2_SEQ_ID] + "_" + (*item)[SIDE_2_POSITION]; // Need to be unique
+  side_1_evidence.file_name = side_1_evidence.html_evidence_file_name();
+  side_1_evidence.item->_fields[_SIDE_1_EVIDENCE_FILE_NAME] = side_1_evidence.file_name;
+  side_1_evidence.quality_score_cutoff = settings.base_quality_cutoff;
+  side_1_evidence.evidence_list = gd.mutation_evidence_list(*parent_item);
+  //Side 2
+  side_2_evidence.bam_path = settings.junction_bam_file_name;
+  side_2_evidence.fasta_path = settings.candidate_junction_fasta_file_name;
+  side_2_evidence.seq_id = (*item)[SIDE_2_SEQ_ID];
+  side_2_evidence.start = from_string<uint32_t>((*item)[SIDE_2_POSITION]);
+  side_2_evidence.end = from_string<uint32_t>((*item)[SIDE_2_POSITION]);
+  side_2_evidence.parent_item = parent_item;
+  side_2_evidence.item = item;
+  side_2_evidence.prefix = ("JC_SIDE_2_" + (*item)[SIDE_1_POSITION] + "_" + (*item)[SIDE_1_POSITION]); // Need to be unique
+  side_2_evidence.file_name = side_2_evidence.html_evidence_file_name();
+  side_2_evidence.item->_fields[_SIDE_2_EVIDENCE_FILE_NAME] = side_2_evidence.file_name;
+  side_2_evidence.quality_score_cutoff = settings.base_quality_cutoff;
+  side_2_evidence.evidence_list = gd.mutation_evidence_list(*parent_item);
+
+}
+
+void EvidenceFiles::EvidenceItem::MC::Evidence::create_html_file(const Settings& settings, genome_diff& gd)
+{
+ if (true) { //TODO @JEB settings.verbose
+   cerr << "Creating evidence file: " << this->file_name << endl;   
+ }
+  ofstream HTML(this->output_path.c_str());
+
+ if (!HTML.good()) {
+    cerr << "Could not open file: " << this->output_path << endl;
+    assert(HTML.good());
+  }
+  
+  // Build HTML Head
+  HTML << html_header("BRESEQ :: Results", settings);
+  
+  vector<string> types = make_list<string>("RA")("MC")("JC");
+ 
+  for (vector<string>::iterator itr = types.begin(); itr != types.end(); itr ++) 
+  {  
+    string& type = (*itr);
+
+    this->evidence_list.remove_if(diff_entry::is_not_type(type));   
+
+    if(this->evidence_list.empty()) continue;
+
+    HTML << html_genome_diff_item_table_string(settings, gd, this->evidence_list);
+    HTML << "<p>";
+  }
+  //Create MC Evidence Plot
+  HTML << div(ALIGN_CENTER, img(this->plot));
+
+  HTML << "</html>";
+  HTML.close();
+}
+
+
+void EvidenceFiles::EvidenceItem::BaseEvidence::create_html_file(const Settings&settings, genome_diff& gd)
+{
+ if (true) { //TODO @JEB settings.verbose
+   cerr << "Creating evidence file: " << this->file_name << endl;   
+ }
+
+ ofstream HTML(this->output_path.c_str());
+
+ if (!HTML.good()) {
+    cerr << "Could not open file: " << this->output_path << endl;
+    assert(HTML.good());
+  }
+  
+  // Build HTML Head
+  HTML << html_header("BRESEQ :: Results", settings);
+  
+  vector<string> types = make_list<string>("RA")("MC")("JC");
+ 
+  for (vector<string>::iterator itr = types.begin(); itr != types.end(); itr ++) 
+  {  
+    string& type = (*itr);
+
+    this->evidence_list.remove_if(diff_entry::is_not_type(type));   
+
+    if(this->evidence_list.empty()) continue;
+
+    HTML << html_genome_diff_item_table_string(settings, gd, this->evidence_list);
+    HTML << "<p>";
+  }
+  stringstream ss;   
+  ss << this->seq_id << ":" << this->start;
+  ss << (this->insert_start == UINT_MAX ? "" :to_string(this->insert_start));
+  ss << "-" << this->end;
+  ss << (this->insert_end == UINT_MAX ? "" : to_string(this->insert_end));
+  cerr << "Creating read alignment for region " << ss.str() << endl;
+  
+  //TODO @GRC settings.maximum_reads_to_align 
+  alignment_output ao(this->bam_path, this->fasta_path, 200 , 
+    settings.base_quality_cutoff);
+   
+  HTML << ao.html_alignment(ss.str());
+
+  
+
+  HTML << endl << "</html>";
+  HTML.close();
+
+}
+
+
+string EvidenceFiles::EvidenceItem::BaseEvidence::html_evidence_file_name()
+{
+  stringstream ss;
+
+  ss << prefix;
+  ss << "_" << seq_id;
+  ss << "_" << start;
+  if (this->insert_start != UINT_MAX) 
+    ss << "." << this->insert_start;
+  ss << "_" << end;
+  if (this->insert_end != UINT_MAX)
+    ss << "." << this->insert_end;
+  ss << "_alignment.html";
+  
+  return ss.str();
+}
+  
+
+void EvidenceFiles::initEvidenceItems(const Settings& settings, genome_diff& gd)
 {  
   // Fasta and BAM files for making alignments.
   string reference_bam_file_name = settings.reference_bam_file_name;
@@ -1199,394 +1504,126 @@ Evidence_Files::Evidence_Files(const Settings& settings, genome_diff& gd)
   string junction_bam_file_name = settings.junction_bam_file_name;
   string junction_fasta_file_name = settings.candidate_junction_fasta_file_name;
 
+  create_path(settings.evidence_path);
+
+  // Handle MC 
   // We make alignments of two regions for deletions: upstream and downstream edges.
-  diff_entry_list items_MC = gd.list(make_list<string>(MC));
-  for (diff_entry_list::iterator itr = items_MC.begin(); itr != items_MC.end(); itr ++) 
-  {  
-    diff_entry& item = **itr;
-    if (item.entry_exists(NO_SHOW)) continue;
-     
-    counted_ptr<diff_entry> parent_item = gd.parent(item);
-    if (parent_item.get() == NULL)
-      parent_item = *itr;
+  diff_entry_list MC_items = gd.list(make_list<string>(MC));
+  MC_items.remove_if(diff_entry::field_exists(NO_SHOW));
 
-   add_evidence(_SIDE_1_EVIDENCE_FILE_NAME,
-                item,
-                 *parent_item,
-                make_map<string,string>
-                (BAM_PATH, reference_bam_file_name)
-                (FASTA_PATH, reference_fasta_file_name)
-                (PREFIX, "MC_SIDE_1")
-                (SEQ_ID, item[SEQ_ID])            
-                (START, to_string(from_string<uint32_t>(item[START]) - 1))
-                (END,  to_string(from_string<uint32_t>(item[START]) - 1)));
+  diff_entry_list::iterator itr_item; 
+  for (itr_item = MC_items.begin(); itr_item != MC_items.end(); itr_item++) {
+    counted_ptr<EvidenceItem::MC> mc;
 
-    add_evidence(_SIDE_2_EVIDENCE_FILE_NAME,
-                item,
-                 *parent_item,
-                make_map<string,string>
-                (BAM_PATH, reference_bam_file_name)
-                (FASTA_PATH, reference_fasta_file_name)
-                (PREFIX, "MC_SIDE_2")
-                (SEQ_ID, item[SEQ_ID])            
-                (START, to_string(from_string<uint32_t>(item[END]) + 1))
-                (END,  to_string(from_string<uint32_t>(item[END]) + 1)));
+    mc->init_MC(*itr_item, settings, gd);
     
-    add_evidence(_EVIDENCE_FILE_NAME,
-                item,
-                 *parent_item,
-                make_map<string,string>
-                (BAM_PATH, reference_bam_file_name)
-                (FASTA_PATH, reference_fasta_file_name)
-                (PREFIX, "MC_PLOT")
-                (SEQ_ID, item[SEQ_ID])            
-                (START, item[START])
-                (END,  item[END])
-                (PLOT, item[_COVERAGE_PLOT_FILE_NAME]));
-    
-  } // mc_item list
-  
-  diff_entry_list items_SNP_INS_DEL_SUB = gd.list(make_list<string>(SNP)(INS)(DEL)(SUB));
-
-  for (diff_entry_list::iterator itr = items_SNP_INS_DEL_SUB.begin(); itr != items_SNP_INS_DEL_SUB.end(); itr ++) 
-  {  
-    diff_entry& item = **itr;
-    diff_entry_list mutation_evidence_list = gd.mutation_evidence_list(item);
-    if (item.entry_exists(NO_SHOW)) continue;
-
-    // #this reconstructs the proper columns to draw
-    uint32_t start = from_string<uint32_t>(item[POSITION]);
-    uint32_t end = start;
-    uint32_t insert_start = 0;
-    uint32_t insert_end = 0;
-
-    if (item._type == INS) 
-    {
-      insert_start = 1;
-      insert_end = item[NEW_SEQ].size();
-    }
-    else if (item._type == DEL) 
-    {
-      bool has_ra_evidence;
-      for (diff_entry_list::iterator itr = mutation_evidence_list.begin(); itr != mutation_evidence_list.end(); itr ++) 
-      {  
-        diff_entry& evidence_item = **itr;
-        if (evidence_item._type == RA) has_ra_evidence = true;
-      }
-      if(!has_ra_evidence) continue;  
-
-      end = start + from_string<uint32_t>(item[SIZE]) - 1;
-    }
-
-    else if (item._type == SUB ) 
-    {
-      end = start + item[NEW_SEQ].size() - 1;
-    }
-
-    add_evidence(_EVIDENCE_FILE_NAME,
-                 item,
-                 item,
-                 make_map<string,string>
-                 (BAM_PATH, reference_bam_file_name)
-                 (FASTA_PATH, reference_fasta_file_name)
-                 (SEQ_ID, item[SEQ_ID])            
-                 (START, to_string(start))
-                 (END,  to_string(end))
-                 (INSERT_START, to_string(insert_start))
-                 (INSERT_END, to_string(insert_end))
-                 (PREFIX, item._type));
-
-
-    /* Add evidence to RA items as well */
-    for (diff_entry_list::iterator itr = mutation_evidence_list.begin(); itr != mutation_evidence_list.end(); itr ++) 
-    {  
-      diff_entry& evidence_item = **itr;
-      if (evidence_item._type != RA) continue;
-      evidence_item[_EVIDENCE_FILE_NAME] = item[_EVIDENCE_FILE_NAME];  
-    }
+    this->m_MC_items.push_back(mc);
   }
   
+  //Handle Mutations 
+  diff_entry_list MUT_items = gd.list(make_list<string>(SNP)(INS)(DEL)(SUB));
+  MUT_items.remove_if(diff_entry::field_exists(NO_SHOW));
 
-  // Still create files for RA evidence that was not good enough to predict a mutation from
-  diff_entry_list ra_list = gd.filter_used_as_evidence(gd.list(make_list<string>(RA)));
-  
-  for (diff_entry_list::iterator itr = ra_list.begin(); itr != ra_list.end(); itr ++) 
-  {  
-    diff_entry& item = **itr;
-    if (item.entry_exists(NO_SHOW)) continue;
+  for (itr_item = MUT_items.begin(); itr_item != MUT_items.end(); itr_item++) {
+    
+    //Build mutation and add to 
+    counted_ptr<EvidenceItem::MUT> mut;
+    
+    mut->init_MUT(*itr_item, settings, gd);
+    
+    this->m_MUT_items.push_back(mut);
+    
+    //Add evidence to RA items as well
+    diff_entry_list MUT_evidence = gd.mutation_evidence_list(**itr_item);
+    for (diff_entry_list::iterator evidence = MUT_evidence.begin();
+         evidence != MUT_evidence.end(); evidence++) {
+      if ((*evidence)->_type != RA)
+        continue;
+      else
+        (**evidence)[_EVIDENCE_FILE_NAME] = (**itr_item)[_EVIDENCE_FILE_NAME];
 
-    add_evidence(_EVIDENCE_FILE_NAME,
-                 item,
-                 item,
-                 make_map<string,string>
-                 (BAM_PATH, reference_bam_file_name)
-                 (FASTA_PATH, reference_fasta_file_name)
-                 (SEQ_ID, item[SEQ_ID])            
-                 (START, item[POSITION])
-                 (END, item[POSITION])
-                 (INSERT_START, item[INSERT_POSITION])
-                 (INSERT_END, item[INSERT_POSITION])
-                 (PREFIX, item._type));
+    }
   }
+
+  // Handle RA 
+  
+  diff_entry_list RA_items = gd.filter_used_as_evidence(gd.list(make_list<string>(RA)));
+  RA_items.remove_if(diff_entry::field_exists(NO_SHOW));
+  for (itr_item = RA_items.begin(); itr_item != RA_items.end(); itr_item++) {
+    counted_ptr<EvidenceItem::RA> ra;
+
+    ra->init_RA(*itr_item, settings, gd);
+
+    this->m_RA_items.push_back(ra);
+  }
+  
   // This additional information is used for the complex reference line.
   // Note that it is completely determined by the original candidate junction sequence 
   // positions and overlap: alignment_pos and alignment_overlap.
   
-  diff_entry_list items_JC = gd.list(make_list<string>(JC));
+  diff_entry_list JC_items = gd.list(make_list<string>(JC));
+  JC_items.remove_if(diff_entry::field_exists(NO_SHOW));
 
-  for (diff_entry_list::iterator itr = items_JC.begin(); itr != items_JC.end(); itr ++) 
+  for (itr_item = JC_items.begin(); itr_item != JC_items.end(); itr_item ++) 
   {  
-    diff_entry& item = **itr;
-    if (item.entry_exists(NO_SHOW)) continue;
+    counted_ptr<EvidenceItem::JC> jc;
+    jc->init_JC(*itr_item, settings, gd);
 
-    diff_entry_ptr parent_item = gd.parent(item);
-
-    if(parent_item.get() == NULL) {
-      parent_item = *itr;
-    }
-
-    uint32_t start = 0;
-    uint32_t end = 0;
-
-    if (from_string<uint32_t>(item[ALIGNMENT_OVERLAP]) == 0) 
-    {
-      start = from_string<uint32_t>(item[FLANKING_LEFT]);
-      end = from_string<uint32_t>(item[FLANKING_LEFT]) + 1;
-    }
-    else if (from_string <uint32_t>(item[ALIGNMENT_OVERLAP]) > 0) 
-    {
-      start = from_string<uint32_t>(item[FLANKING_LEFT]) + 1;
-      end = from_string<uint32_t>(item[FLANKING_LEFT]) + 
-            from_string<uint32_t>(item[ALIGNMENT_OVERLAP]);
-    }
-    else //if (from_string <uint32_t>(item[ALIGNMENT_OVERLAP]) > 0) 
-    {
-      start = from_string<uint32_t>(item[FLANKING_LEFT]) + 1;
-      end = from_string<uint32_t>(item[FLANKING_LEFT]) - from_string<uint32_t>(item[ALIGNMENT_OVERLAP]);
-    }
-    
-    add_evidence(_NEW_JUNCTION_EVIDENCE_FILE_NAME,
-                  item,
-                  *parent_item,
-                  make_map<string,string>
-                 (BAM_PATH, junction_bam_file_name)
-                 (FASTA_PATH, junction_fasta_file_name)
-                 (SEQ_ID, item["key"])
-                 (START, to_string(start))
-                 (END, to_string(end))
-                 (PREFIX, JC)
-                 (ALIGNMENT_EMPTY_CHANGE_LINE, "1")
-                 (TRUNCATE_END, to_string(
-                                          from_string<uint32_t>(item[FLANKING_LEFT]) +
-                                          from_string<uint32_t>(item[SIDE_1_OVERLAP])
-                                         ))
-                 (GHOST_END, item[SIDE_1_POSITION])
-                 (GHOST_STRAND_END, item[SIDE_1_STRAND])
-                 (GHOST_SEQ_ID_END, item[SIDE_1_SEQ_ID])
-                 (TRUNCATE_START, to_string(
-                                            from_string<uint32_t>(item[FLANKING_LEFT]) + 
-                                            1 +
-                                            abs(from_string<int32_t>(item[ALIGNMENT_OVERLAP]))
-                                           ))
-                 (GHOST_START, item[SIDE_2_POSITION])
-                 (GHOST_STRAND_START, item[SIDE_2_STRAND])
-                 (GHOST_SEQ_ID_START, item[SIDE_2_SEQ_ID]));
-
-
-
-    // this is the flagship file that we show first when clicking on evidence from a mutation...
-    item[_EVIDENCE_FILE_NAME] = item[_NEW_JUNCTION_EVIDENCE_FILE_NAME];
-    string side_1_key_str;
-    add_evidence(_SIDE_1_EVIDENCE_FILE_NAME,
-                 item,
-                 *parent_item,
-                 make_map<string,string>
-                 (BAM_PATH, reference_bam_file_name)
-                 (FASTA_PATH, reference_fasta_file_name)
-                 (SEQ_ID, item[SIDE_1_SEQ_ID])            
-                 (START, item[SIDE_1_POSITION])
-                 (END, item[SIDE_1_POSITION])
-                 (PREFIX, to_string("JC_SIDE_1" + '_' +
-                                    item[SIDE_2_SEQ_ID] + '_' +
-                                    item[SIDE_2_POSITION] + '_' +
-                                    item[SIDE_2_POSITION])
-                 )); 
-
-    add_evidence(_SIDE_2_EVIDENCE_FILE_NAME,
-                 item,
-                 *parent_item,
-                 make_map<string,string>
-                 (BAM_PATH, reference_bam_file_name)
-                 (FASTA_PATH, reference_fasta_file_name)
-                 (SEQ_ID, item[SIDE_2_SEQ_ID])            
-                 (START, item[SIDE_2_POSITION])
-                 (END, item[SIDE_2_POSITION])
-                 (PREFIX, to_string("JC_SIDE_2" + '_' +
-                                    item[SIDE_1_SEQ_ID] + '_' +
-                                    item[SIDE_1_POSITION] + '_' +
-                                    item[SIDE_1_POSITION])
-                 ));
+    this->m_JC_items.push_back(jc);
   }
 
-  // now create evidence files
-  create_path(settings.evidence_path);
-  for (vector<Evidence_Item>::iterator itr = evidence_list.begin(); itr != evidence_list.end(); itr ++) 
-  {  
-    Evidence_Item& e = (*itr);
-
-    if (settings.verbose) {
-      cerr << "Creating evidence file: " + e[FILE_NAME] << endl;   
-    }
-    html_evidence_file(settings, gd, e);
-  }
 }
-
-/*-----------------------------------------------------------------------------
- *  Helper Function For Create_Evidence_Files()
- *-----------------------------------------------------------------------------*/
-
-string Evidence_Files::html_evidence_file_name(Evidence_Item& evidence_item)
-{
-  //set up the file name
-  string s = evidence_item[PREFIX];
-  s += "_";
-  s += evidence_item[SEQ_ID];
-  s += "_";
-  s += evidence_item[START];
-  
-  if (evidence_item.entry_exists(INSERT_START))
-  {
-    s += ".";
-    s += evidence_item[INSERT_START];
-  }
-  
-  s += "_";
-  s += evidence_item[END];
-
-  if (evidence_item.entry_exists(INSERT_END))
-  {
-    s += ".";
-    s += evidence_item[INSERT_END];
-  }
-  s += "_alignment.html";
-
-  cout << s << endl;
-  return s;
-}
-  
-  
-void Evidence_Files::add_evidence(const string& evidence_file_name_key, diff_entry& item,
-                                  diff_entry& parent_item, map<string,string> fields)
-{
-  Evidence_Item evidence_item;
-  evidence_item._fields = fields;
-  evidence_item.item = item;
-  evidence_item.parent_item = parent_item;
-
-  evidence_item[FILE_NAME] = html_evidence_file_name(evidence_item);
-  evidence_item[evidence_file_name_key] = evidence_item[FILE_NAME];
-  
-  evidence_list.push_back(evidence_item);
-}
-/*-----------------------------------------------------------------------------
- *  Helper Function For Create_Evidence_Files()
- *-----------------------------------------------------------------------------*/
-string Evidence_Files::file_name(Evidence_Item& evidence_item)
-{
-  stringstream ss(ios_base::out | ios_base::app);
-
-  ss << evidence_item[PREFIX];
-  ss << "_" << evidence_item[SEQ_ID];
-  ss << "_" << evidence_item[START];
-  ss << evidence_item.entry_exists(INSERT_START) ? "." + evidence_item[INSERT_START] : "";
-  ss << "_" << evidence_item[END];
-  ss << evidence_item.entry_exists(INSERT_END) ? "." + evidence_item[INSERT_END] : "";
-  ss << "_alignment.html";
-  
-  return ss.str();
-}
-
 
 /*-----------------------------------------------------------------------------
  *  Create the HTML Evidence File
  *-----------------------------------------------------------------------------*/
-// # 
-// # 
-void 
-Evidence_Files::html_evidence_file (
-                    const Settings& settings, 
-                    genome_diff& gd, 
-                    Evidence_Item& item
-                   )
-{  
-  item["output_path"] = settings.evidence_path + "/" + item[FILE_NAME];
 
-  
-  // Create Stream and Confirm It's Open
-  ofstream HTML(item["output_path"].c_str());
-  
-  if (!HTML.good()) {
-    cerr << "Could not open file: " << item["output_path"] << endl;
-    assert(HTML.good());
-  }
-  
-  // Build HTML Head
-  HTML << html_header("BRESEQ :: Results", settings);
-  
-  // print a table for the main item
-  // followed by auxiliary tables for each piece of evidence
 
-  diff_entry& parent_item = item.parent_item;
-  diff_entry_list evidence_list = gd.mutation_evidence_list(parent_item);
-
-  vector<string> types = make_list<string>("RA")("MC")("JC");
+void EvidenceFiles::htmlOutput(const Settings& settings, genome_diff& gd)
+{
+  this->initEvidenceItems(settings, gd);
   
-  for (vector<string>::iterator itr = types.begin(); itr != types.end(); itr ++) 
-  {  
-    string& type = (*itr);
 
-    diff_entry_list this_evidence_list = evidence_list;
-    this_evidence_list.remove_if(diff_entry::is_not_type(type));   
+  //MC Evidence
+  for (list<counted_ptr<EvidenceItem::MC> >::iterator itr = m_MC_items.begin();
+       itr != m_MC_items.end(); itr++) {
+    counted_ptr<EvidenceItem::MC> mc = *itr;
     
-    if(this_evidence_list.empty()) continue;
-
-    HTML << html_genome_diff_item_table_string(settings, gd, this_evidence_list);
-    HTML << "<p>"; 
-  }
-
-  
-  if (item.entry_exists(PLOT) && !item[PLOT].empty()) {
-    HTML << div(ALIGN_CENTER, img(item[PLOT]));
-  } else {
-    stringstream ss;   
-    ss << item[SEQ_ID] << ":" << item[START];
-    if (item[INSERT_START].size() > 0) {
-      ss << "." << item[INSERT_START];
-    }
-    ss << "-" << item[END];
-    if (item[INSERT_END].size()) {
-      ss << "." << item[INSERT_END];
-    }
-    cerr << "Creating read alignment for " << item._type << " region: " << ss.str() << endl;
-
-    if (settings.base_quality_cutoff != 0) {
-      item["base_quality_cutoff"] = to_string(settings.base_quality_cutoff);
-    }
-    
-    alignment_output ao(item[BAM_PATH], item[FASTA_PATH], settings.maximum_reads_to_align, settings.base_quality_cutoff);
-     
-    // DEBUG
-    //cout << item.item._type << endl;
-    //print_map(item.item._fields);
-    //print_map(item._fields);
-
-    HTML << ao.html_alignment(ss.str());
+    mc->evidence.create_html_file(settings, gd);
+    mc->side_1_evidence.create_html_file(settings, gd);
+    mc->side_2_evidence.create_html_file(settings, gd);
 
   }
-  HTML << endl << "</html>";
-  HTML.close();
+
+  //RA Evidence
+  for (list<counted_ptr<EvidenceItem::RA> >::iterator itr = m_RA_items.begin();
+       itr != m_RA_items.end(); itr++) {
+    counted_ptr<EvidenceItem::RA> ra = *itr;
+
+    ra->create_html_file(settings, gd);
+
+  }
+
+  //JC Evidence 
+  for (list<counted_ptr<EvidenceItem::JC> >::iterator itr = m_JC_items.begin();
+       itr != m_JC_items.end(); itr++) {
+    counted_ptr<EvidenceItem::JC> jc = *itr;
+
+    jc->evidence.create_html_file(settings, gd);
+    jc->side_1_evidence.create_html_file(settings, gd);
+    jc->side_2_evidence.create_html_file(settings, gd);
+
+  }
+
+  //MUT Evidence
+  for (list<counted_ptr<EvidenceItem::MUT> >::iterator itr = m_MUT_items.begin();
+       itr != m_MUT_items.end(); itr ++) {
+    counted_ptr<EvidenceItem::MUT> mut = *itr;
+
+    mut->create_html_file(settings, gd);
+  }
+
 }
-
 
 /*-----------------------------------------------------------------------------
  *  //End Create_Evidence_Files

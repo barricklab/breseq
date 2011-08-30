@@ -885,7 +885,6 @@ int do_output( int argc, char* argv[]){
     genome_diff gd;
     gd.read("/home/geoff/Dropbox/test/1B4/output.gd");
 
-    output::Evidence_Files evidence_files(settings, gd);
 
         
   }
@@ -1688,8 +1687,11 @@ int breseq_default_action(int argc, char* argv[])
 		//
 		// Create evidence files containing alignments and coverage plots
 		//
-		if (!settings.no_alignment_generation)
-			output::Evidence_Files(settings, gd);
+		if (!settings.no_alignment_generation) {
+			output::EvidenceFiles evidence_files;
+      evidence_files.htmlOutput(settings, gd);
+      
+    }
 
 		///
 		// HTML output
