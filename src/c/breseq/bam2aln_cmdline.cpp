@@ -16,8 +16,8 @@ LICENSE AND COPYRIGHT
 
 *****************************************************************************/
 
-#include "breseq/anyoption.h"
-#include "breseq/alignment_output.h"
+#include "libbreseq/anyoption.h"
+#include "libbreseq/alignment_output.h"
 
 using namespace std;
 using namespace breseq;

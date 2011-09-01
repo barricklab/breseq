@@ -15,7 +15,7 @@
  
  *****************************************************************************/
 
-#include "breseq/fasta.h"
+#include "libbreseq/fasta.h"
 
 using namespace std;
 

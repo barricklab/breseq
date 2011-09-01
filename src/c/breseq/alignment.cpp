@@ -16,10 +16,10 @@ LICENSE AND COPYRIGHT
 
 *****************************************************************************/
 
-#include "breseq/alignment.h"
+#include "libbreseq/alignment.h"
 
-#include "breseq/fastq.h"
-#include "breseq/annotated_sequence.h"
+#include "libbreseq/fastq.h"
+#include "libbreseq/annotated_sequence.h"
 
 using namespace std;
 

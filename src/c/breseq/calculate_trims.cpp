@@ -17,7 +17,7 @@ LICENSE AND COPYRIGHT
 *****************************************************************************/
 
 
-#include "breseq/calculate_trims.h"
+#include "libbreseq/calculate_trims.h"
 
 using namespace std;
 

@@ -98,14 +98,14 @@
 			<key>caret</key>
 			<dict>
 				<key>column</key>
-				<integer>0</integer>
+				<integer>25</integer>
 				<key>line</key>
-				<integer>208</integer>
+				<integer>853</integer>
 			</dict>
 			<key>firstVisibleColumn</key>
 			<integer>0</integer>
 			<key>firstVisibleLine</key>
-			<integer>186</integer>
+			<integer>826</integer>
 		</dict>
 		<key>GenomeDiff/lib/GenomeDiff/BaseSubstitutionFile.pm</key>
 		<dict>
@@ -196,6 +196,6 @@
 	<key>showFileHierarchyDrawer</key>
 	<true/>
 	<key>windowFrame</key>
-	<string>{{265, 103}, {958, 775}}</string>
+	<string>{{335, 37}, {768, 733}}</string>
 </dict>
 </plist>

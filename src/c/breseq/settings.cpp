@@ -16,9 +16,9 @@ LICENSE AND COPYRIGHT
 
  *****************************************************************************/
 
-#include "breseq/settings.h"
+#include "libbreseq/settings.h"
 
-#include "breseq/anyoption.h"
+#include "libbreseq/anyoption.h"
 
 
 using namespace std;
@@ -106,16 +106,76 @@ namespace breseq
     this->bin_path = getExecPath(argv[0]);
     size_t slash_pos = this->bin_path.rfind("/");
     if (slash_pos != string::npos) this->bin_path.erase(slash_pos);
+
+/* FULL LIST OF PERL ARGS - Don't need to port all
+    'help|?' => \$help, 'man' => \$man,
+		'verbose|v' => \$self->{verbose},
+## Options for turning various analysis chunks off or on
+		'no-junction-prediction' => \$self->{no_junction_prediction},
+		'no-mismatch-prediction' => \$self->{no_mutation_prediction},
+		'no-deletion-prediction' => \$self->{no_deletion_prediction},
+		'no-alignment-generation' => \$self->{no_alignment_generation},
+		'no-filter-unwanted' => \$self->{no_filter_unwanted},
+		'no-unmatched-reads' => \$self->{no_unmatched_reads},
+		'copy-number-variation' => \$self->{copy_number_variation},
+## Options for only using part of the data		
+		'read-limit|l=s' => \$self->{read_limit},
+		'candidate-junction-read-limit=s' => \$self->{candidate_junction_read_limit},
+		'alignment-read-limit=s' => \$self->{alignment_read_limit},		
+## Options for input
+		'name|n=s' => \$self->{run_name},	
+		'output-path|o=s' => \$self->{base_output_path},	
+		'reference-sequence|r=s' => \@{$self->{reference_genbank_file_names}},
+		'junction-sequence|j=s' => \@{$self->{junction_only_reference_genbank_file_names}},	
+## Options for output			
+		'keep-all-intermediates' => \$self->{keep_all_intermediates},
+		'shade-frequencies' => \$self->{shade_frequencies},
+		'max-rejected-polymorphisms-to-show=s' => \$self->{max_rejected_polymorphisms_to_show},
+		'max-rejected-junctions-to-show=s' => \$self->{max_rejected_junctions_to_show},	
+## Options for read aligment
+		'maximum-mismatches|m=s' => \$self->{maximum_read_mismatches},	
+		'required-match-length=s' => \$self->{required_match_length},
+## Options for snp error analysis
+		'require-complete-match' => \$self->{require_complete_match},
+		'require-no-indel-match' => \$self->{require_no_indel_match},
+		'require-max-mismatches=s' => \$self->{require_max_mismatches},
+		'do-not-trim-ambiguous-ends' => \$self->{do_not_trim_ambiguous_ends},
+		'base-quality-cutoff|b=s' => \$self->{base_quality_cutoff},
+		'error-model-method=s' => \$self->{error_model_method},
+## Options for polymorphism analysis
+		'polymorphism-prediction' => \$self->{polymorphism_prediction},		
+		'polymorphism-log10-e-value-cutoff=s' => \$self->{polymorphism_log10_e_value_cutoff},
+		'polymorphism-frequency-cutoff=s' =>  \$self->{polymorphism_frequency_cutoff},	
+		'polymorphism-p-value-cutoff=s' => \$self->{polymorphism_bias_p_value_cutoff},
+		'polymorphism-coverage-both-strands=s' => \$self->{polymorphism_coverage_both_strands},	
+		'polymorphism-reject-homopolymer-length=s' => \$self->{polymorphism_reject_homopolymer_length},
+		'no-indel-polymorphisms' => \$self->{no_indel_polymorphisms},	
+## Options for candidate junction identification	
+		'maximum-candidate-junctions=s' => \$self->{maximum_candidate_junctions},
+## Options for using deprecated and slow Perl methods		
+		'perl-error-count' => \$self->{perl_error_count},
+		'perl-identify-mutations' => \$self->{perl_identify_mutations},
+		'perl-calc-trims' => \$self->{perl_calc_trims},
+		'strict-polymorphism-prediction' => \$self->{strict_polymorphism_prediction},
+		'perl-preprocess-alignments' => \$self->{perl_preprocess_alignments},
+		'perl-identify-candidate-junctions' => \$self->{perl_identify_candidate_junctions},
+		'perl-bam2aln' => \$self->{perl_bam2aln},
+		'perl-alignment-correction' => \$self->{perl_alignment_correction},
+		'smalt' => \$self->{smalt},
+*/
     
     // setup and parse configuration options:
     AnyOption options("Usage: breseq -r reference.gbk reads1.fastq [reads2.fastq, reads3.fastq...]");
+    
     options
 		("help,h", "produce this help message", TAKES_NO_ARGUMENT)
 		// convert to basing everything off the main output path, so we don't have to set so many options
 		("output,o", "path to breseq output")
 		("reference,r", "reference GenBank flatfile")
     ("name,n", "human-readable name of sample/run for output")
-
+    ("polymorphism-prediction,p", "predict polymorphic mutations", TAKES_NO_ARGUMENT)
+    ("base-quality-cutoff,b", "ignore aligned bases with quality scores lower than this value")
+    
     .processCommandArgs(argc, argv);
     
     // Reference sequence provided?
@@ -142,9 +202,14 @@ namespace breseq
     }
     
     this->base_output_path = "";
-    if (options.count("output")) this->base_output_path = options["output"];
-    if (options.count("name")) this->run_name = options["name"];
-    
+    if (options.count("output")) 
+      this->base_output_path = options["output"];
+    if (options.count("name")) 
+      this->run_name = options["name"];
+    this->polymorphism_prediction = options.count("polymorphism-prediction");
+    if (options.count("base-quality-cutoff")) 
+      this->base_quality_cutoff = from_string<uint32_t>(options["base-quality-cutoff"]);
+
     //// GENBANK REFERENCE FILES ////
     this->reference_file_names = from_string<vector<string> >(options["reference"]);
     
@@ -271,7 +336,8 @@ namespace breseq
 
 	void Settings::post_option_initialize()
 	{    
-		this->lib_path = this->bin_path + "/../lib/perl5/Breseq";
+    // DATADIR is a preprocessor directive set by Automake or the IDE (XCode)
+		this->program_data_path = DATADIR; 
 
 		//neaten up some settings for later string comparisons
 		this->error_model_method = to_upper(this->error_model_method);
@@ -376,7 +442,7 @@ namespace breseq
 		this->unique_only_coverage_distribution_file_name = this->error_calibration_path + "/@.unique_only_coverage_distribution.tab";
 		this->error_rates_summary_file_name = this->error_calibration_path + "/summary.bin";
 		this->error_rates_base_qual_error_prob_file_name = this->error_calibration_path + "/base_qual_error_prob.#.tab";
-		this->plot_error_rates_r_script_file_name = this->lib_path + "/plot_error_rate.r";
+		this->plot_error_rates_r_script_file_name = this->program_data_path + "/plot_error_rate.r";
 		this->plot_error_rates_fit_r_script_file_name = this->error_calibration_path + "/fit.#.r_script";
 		this->plot_error_rates_r_script_log_file_name = this->error_calibration_path + "/#.plot_error_rate.log";
 
@@ -392,7 +458,7 @@ namespace breseq
 		this->genome_error_counts_file_name = this->mutation_identification_path + "/error_counts.tab";
 		this->polymorphism_statistics_input_file_name = this->mutation_identification_path + "/polymorphism_statistics_input.tab";
 		this->polymorphism_statistics_output_file_name = this->mutation_identification_path + "/polymorphism_statistics_output.tab";
-		this->polymorphism_statistics_r_script_file_name = this->lib_path + "/polymorphism_statistics.r";
+		this->polymorphism_statistics_r_script_file_name = this->program_data_path + "/polymorphism_statistics.r";
 		this->polymorphism_statistics_r_script_log_file_name = this->mutation_identification_path + "/polymorphism_statistics_output.log";
 		this->polymorphism_statistics_ra_mc_genome_diff_file_name = this->mutation_identification_path + "/ra_mc_evidence_polymorphism_statistics.gd";
 		this->polymorphism_statistics_done_file_name = this->mutation_identification_path + "/polymorphism_statistics.done";
@@ -428,14 +494,14 @@ namespace breseq
 		this->output_calibration_path = this->output_path + "/calibration";
 		this->unique_only_coverage_plot_file_name = this->output_calibration_path + "/@.unique_coverage.pdf";
 		this->error_rates_plot_file_name = this->output_calibration_path + "/#.error_rates.pdf";
-    this->coverage_plot_r_script_file_name = this->lib_path + "/plot_coverage.r";
+    this->coverage_plot_r_script_file_name = this->program_data_path + "/plot_coverage.r";
     
 		// text output files, to be replaced...
 		this->settings_text_file_name = this->output_path + "/settings.tab";
 		this->summary_text_file_name = this->output_path + "/summary.tab";
 		this->tiled_coverage_text_file_name = this->output_path + "/@.tiled_coverage.tab";
 
-		this->breseq_small_graphic_from_file_name = this->lib_path + "/breseq_small.png";
+		this->breseq_small_graphic_from_file_name = this->program_data_path + "/breseq_small.png";
 		this->breseq_small_graphic_to_file_name = this->output_path + "/" + this->local_evidence_path + "/breseq_small.png";
 
 		this->long_pairs_file_name = this->output_path + "/long_pairs.tab";

@@ -16,7 +16,7 @@
  *
  *****************************************************************************/
 
-#include "breseq/alignment_output.h"
+#include "libbreseq/alignment_output.h"
 
 using namespace std;
 
@@ -907,8 +907,10 @@ string alignment_output::html_alignment_line(const alignment_output::Alignment_B
   // write the seq_id and coords in non-breaking html
   if (!a.seq_id.empty())
   {
-    string seq_id = substitute(a.seq_id, "–", "&#8209;");
-        
+    // substitute breaking hyphens
+    string seq_id = substitute(a.seq_id, "–", "&#8209;"); // en-dash
+    seq_id = substitute(seq_id, "-", "&#8209;");          // hyphen
+    
     if(coords)
     {
       seq_id += "/" + to_string<uint32_t>(a.start);

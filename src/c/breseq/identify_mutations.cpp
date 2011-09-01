@@ -16,10 +16,10 @@ LICENSE AND COPYRIGHT
 
 *****************************************************************************/
 
-#include "breseq/common.h"
-#include "breseq/pileup.h"
-#include "breseq/identify_mutations.h"
-#include "breseq/error_count.h"
+#include "libbreseq/common.h"
+#include "libbreseq/pileup.h"
+#include "libbreseq/identify_mutations.h"
+#include "libbreseq/error_count.h"
 
 using namespace std;
 

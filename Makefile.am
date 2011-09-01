@@ -42,7 +42,7 @@ EXTRA_DIST = \
 
 ROOTDIR=$(PWD)
 DOCDIR=$(ROOTDIR)/src/doc
-PERLBRESEQ=$(ROOTDIR)/src/perl/Breseq
+##PERLBRESEQ=$(ROOTDIR)/src/perl/Breseq
 PERLGENOMEDIFF=$(ROOTDIR)/src/perl/GenomeDiff
 SAMTOOLSDIR=$(ROOTDIR)/$(LIBBAM)
 
@@ -60,9 +60,9 @@ all-local :
 	./Build ;
 
 	## Breseq
-	cd $(PERLBRESEQ) ; \
-	perl Build.PL --install_base=$(prefix) --install_path bin=$(bindir)  --install_path script=$(bindir) ; \
-	./Build ;
+	##cd $(PERLBRESEQ) ; \
+	##perl Build.PL --install_base=$(prefix) --install_path bin=$(bindir)  --install_path script=$(bindir) ; \
+	##./Build ;
 	
 	## This saves the install path for the test script
 	echo "export TESTBINPREFIX=$(bindir)" > tests/test.config;
@@ -76,8 +76,8 @@ install-exec-local :
 	./Build install;
 	
 	## Breseq
-	cd $(PERLBRESEQ) ; \
-	./Build install;
+	##cd $(PERLBRESEQ) ; \
+	##./Build install;
 	
 clean-local :: clean-tests
 
@@ -86,8 +86,8 @@ clean-local :: clean-tests
 	./Build clean;
 	
 	## Breseq
-	cd $(PERLBRESEQ) ; \
-	./Build clean;	
+	##cd $(PERLBRESEQ) ; \
+	##./Build clean;	
 	
 	## This saves the install path for the test script
 	rm tests/test.config;
@@ -111,12 +111,12 @@ dist-hook:
 	cp -r $(PERLGENOMEDIFF)/GenomeDiff-* $(distdir)/src/perl/GenomeDiff ; 
 
 	## Breseq
-	cd $(PERLBRESEQ) ; \
-	./Build distdir ; \
-	echo $(distdir)/src/perl/Breseq ;
+	##cd $(PERLBRESEQ) ; \
+	##./Build distdir ; \
+	##echo $(distdir)/src/perl/Breseq ;
 	
-	mkdir -p $(distdir)/src/perl
-	cp -r $(PERLBRESEQ)/Breseq-* $(distdir)/src/perl/Breseq ; 
+	##mkdir -p $(distdir)/src/perl
+	##cp -r $(PERLBRESEQ)/Breseq-* $(distdir)/src/perl/Breseq ; 
 	
 	## Remove ._ files
 	rm -rf `find $(distdir) -name ".*"`

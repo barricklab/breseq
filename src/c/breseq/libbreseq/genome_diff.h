@@ -253,7 +253,7 @@ public:
   ::list<counted_ptr<diff_entry> > filter_used_as_evidence(const diff_entry_list& list);
   
   //! Retrieve diff_entrys that match given type(s) 
-  diff_entry_list list(vector<string> types);
+  diff_entry_list list(const vector<string>& types);
   diff_entry_list list() {return _entry_list;}
   
   //! Converts a genome_diff(.gd) file's line to a diff_entry
@@ -412,10 +412,13 @@ struct diff_entry::coverage_or_no_show_is_true:public unary_function<diff_entry_
 {
   virtual bool operator() (const diff_entry_ptr& diff_entry) const
   {
-    return from_string<bool>((*diff_entry)["coverage"]) || from_string<bool>((*diff_entry)["no_show"]);
+    if ( (*diff_entry).entry_exists("no_show") && from_string<bool>((*diff_entry)["no_show"]) )
+    {
+      return true;
+    }
+    
+    return false;
   }
-
-
 };
 
 struct diff_entry::reject_is_not_true:public unary_function<diff_entry_ptr,bool>

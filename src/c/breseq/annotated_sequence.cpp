@@ -15,7 +15,9 @@
  
  *****************************************************************************/
 
-#include "breseq/annotated_sequence.h"
+#include "libbreseq/annotated_sequence.h"
+
+#include "libbreseq/error_count.h"
 
 using namespace std;
 
@@ -436,8 +438,7 @@ namespace breseq {
 		mut["gene_list"] = ""; //#affected genes
 
 		string seq_id = mut["seq_id"];
-
-		assert (this->gene_lists.count(seq_id) > 0 && this->repeat_lists.count(seq_id) > 0 && this->ref_strings.count(seq_id) > 0);
+    
 		//or die "Unknown seq_id in reference sequence info: $seq_id\n";
 
 		vector<Gene> gene_list_ref = this->gene_lists[seq_id];
@@ -565,9 +566,6 @@ namespace breseq {
 				? ref_string.substr(gene.start + 3 * (from_string<uint32_t>(mut["aa_position"]) - 1) - 1, 3)
 				: reverse_complement(ref_string.substr(gene.end - 3 * from_string<uint32_t>(mut["aa_position"]), 3));
 
-			//#$ref_seq.trunc($gene.start} + 3 * (mut["aa_position"]-1),$gene.start} + 3 * mut["aa_position"] - 1) :
-			//#$ref_seq.trunc($gene.end} - 3 * mut["aa_position"]+1,$gene.end} - 3 * (mut["aa_position"]-1)).revcom;
-
 			//Debug
 			//print "mut["aa_position"] mut["codon_position"] $gene.start} $gene.end} $codon_seq\n";
 
@@ -577,8 +575,8 @@ namespace breseq {
 
 			mut["codon_new_seq"] = codon_seq;
 			//#remember to revcom the change if gene is on opposite strand
-			mut["codon_new_seq"][from_string<uint32_t>(mut["codon_position"]) - 1] = gene.strand
-				? mut["new_seq"][0]
+			mut["codon_new_seq"][from_string<uint32_t>(mut["codon_position"]) - 1] = gene.strand ? 
+        mut["new_seq"][0]
 				: reverse_complement(mut["new_seq"])[0];
 			mut["aa_new_seq"] =  bridge_translate(mut["codon_new_seq"]);
 			//#$codon_seq.seq(mut["codon_new_seq"]);
@@ -589,27 +587,34 @@ namespace breseq {
 
 		//The mutation actually contains several genes
 		else if (between_genes.size() + inside_left_genes.size() + inside_right_genes.size() > 0)
-		{/*TODO: Uncomment and convert
-			my @gene_list = ( map({ "<i>[" . $_.name} . "]</i>" } @inside_left_genes),
-							  map({ "<i>" . $_.name} . "</i>" } @between_genes),
-							  map({ "<i>[" . $_.name} ."]</i>" } @inside_right_genes) );
+		{
+      vector<Gene> gene_list;
+      gene_list.insert( gene_list.end(), inside_left_genes.begin(), inside_left_genes.end() );
+      gene_list.insert( gene_list.end(), between_genes.begin(), between_genes.end() );
+      gene_list.insert( gene_list.end(), inside_right_genes.begin(), inside_right_genes.end() );
+      
+      vector<string> gene_name_list;
+      for (vector<Gene>::iterator it=inside_left_genes.begin(); it != inside_left_genes.end(); it++)
+      {
+        gene_name_list.push_back("<i>[" + it->name + "]</i>");
+      }
+      for (vector<Gene>::iterator it=between_genes.begin(); it != between_genes.end(); it++)
+      {
+        gene_name_list.push_back("<i>" + it->name + "</i>");
+      }
+      for (vector<Gene>::iterator it=inside_right_genes.begin(); it != inside_right_genes.end(); it++)
+      {
+        gene_name_list.push_back("<i>[" + it->name + "]</i>");
+      }
 
+			mut["gene_product"] = join (gene_name_list, ", ");
 
-			//#added for gene table
-			@{mut["gene_list"]} = ( map({ $_.name} } @inside_left_genes),
-									 map({ $_.name} } @between_genes),
-									 map({ $_.name} } @inside_right_genes) );
-
-			mut["gene_product"] = join (", ", @gene_list);
-
-			if (gene_list.size() == 1)
-				mut["gene_name"] = gene_list[0];
+			if (gene_name_list.size() == 1)
+				mut["gene_name"] = gene_name_list[0];
 			else
-				mut["gene_name"] = gene_list[0] + "–" + gene_list[gene_list.size() - 1];
-		*/}
-
-		//return mut;
-	}
+				mut["gene_name"] = gene_name_list.front() + "–" + gene_name_list.back();
+    }
+  }
 
 	void cReferenceSequences::annotate_mutations(genome_diff& gd, bool only_muts)
 	{
@@ -670,10 +675,25 @@ namespace breseq {
 				annotate_1_mutation(mut, from_string<uint32_t>(mut["position"]), from_string<uint32_t>(mut["position"]) + from_string<uint32_t>(mut["size"]) - 1);
 			}
 			else if (mut._type == "JC")
-			{/*TODO: Uncomment and fix
-				annotate_1_mutation(mut["_side_1"], from_string<uint32_t>(mut["side_1_position"]), from_string<uint32_t>(mut["side_1_position"]), true);
-				annotate_1_mutation(mut["_side_2"], from_string<uint32_t>(mut["side_2_position"], from_string<uint32_t>(mut["side_2_position"]), true);
-			*/}
+			{
+        diff_entry side_1;
+        side_1[SEQ_ID] = mut["side_1_seq_id"];
+				annotate_1_mutation(side_1, from_string<uint32_t>(mut["side_1_position"]), from_string<uint32_t>(mut["side_1_position"]), true);
+        //copy over entries with prefix
+        for(diff_entry::map_t::iterator it=side_1._fields.begin(); it!=side_1._fields.end(); it++)
+        {
+          mut["_side_1"+ it->first] = it->second;
+        }
+        
+        diff_entry side_2;
+        side_2[SEQ_ID] = mut["side_2_seq_id"];
+				annotate_1_mutation(side_2, from_string<uint32_t>(mut["side_2_position"]), from_string<uint32_t>(mut["side_2_position"]), true);
+        //copy over entries with prefix
+        for(diff_entry::map_t::iterator it=side_2._fields.begin(); it!=side_2._fields.end(); it++)
+        {
+          mut["_side_2"+ it->first] = it->second;
+        }
+      }
 			else if (mut._type == "RA")
 			{
 				annotate_1_mutation(mut, from_string<uint32_t>(mut["position"]), from_string<uint32_t>(mut["position"]));
@@ -701,16 +721,26 @@ namespace breseq {
 		//
 		// ToDo: This should really make a different column for each input read set.
 		//
-		string coverage_fn = settings.file_name("unique_only_coverage_distribution_file_name", "@", "");
+		string coverage_fn = settings.file_name(settings.unique_only_coverage_distribution_file_name, "@", "");
 		string outputdir = dirname(coverage_fn) + "/";
 		//chomp $outputdir; $outputdir .= "/";
 		string count_file_name = outputdir + "error_counts.tab";
 
 		ifstream COUNT(count_file_name.c_str());
 		assert(COUNT.is_open());
-		string count_header_line;
-		getline(COUNT, count_header_line);
-		//chomp $count_header_line;
+		string count_header_line, count_covariate_line;
+		getline(COUNT, count_covariate_line); // ignore the first line
+    
+    // we parse the covariates to know how many different qualities we are dealing with...
+    covariates_used_t         covariate_used;        
+    covariates_max_t          covariate_max;         
+    covariates_enforce_max_t  covariate_enforce_max; 
+    covariates_offset_t       covariate_offset;
+    bool                      per_position;
+    cErrorTable::read_covariates(count_covariate_line, covariate_used, covariate_max, covariate_enforce_max, covariate_offset, per_position);
+    
+    getline(COUNT, count_header_line); // second line is the header 
+
 		vector<string> count_header_list = split(count_header_line, "\t");
 
 		uint32_t count_column = UNDEFINED_UINT32;
@@ -723,21 +753,19 @@ namespace breseq {
 				count_column = i;
 		}
 
-    if ((quality_column == UNDEFINED_UINT32) || (count_column == UNDEFINED_UINT32)) {
-      cerr << "Warning, undefined quantity being used" << endl;
-      cerr << "FILE:LINE --> " << __FILE__ << ":"<< __LINE__ << endl;
-    }
+    _assert( (quality_column != UNDEFINED_UINT32) && (count_column != UNDEFINED_UINT32), 
+            "'quality' and 'count' columns not found in file: " + count_file_name);
+    
 
 		////#print "$count_column $quality_column\n";
 
-		vector<uint32_t> quality_count_list;
+		vector<uint32_t> quality_count_list(covariate_max[k_quality]);
 		string line;
 		while (COUNT.good())
 		{
 			getline(COUNT, line);
-			//chomp $line;
-			////#print "$_\n";
 			vector<string> line_list = split(line,  "\t");
+      if (line_list.size() < 2) break; // empty line
 			uint32_t count = from_string<uint32_t>(line_list[count_column]);
 			uint32_t quality = from_string<uint32_t>(line_list[quality_column]);
 			quality_count_list[quality] += count;
@@ -768,8 +796,8 @@ namespace breseq {
 		string polymorphism_statistics_r_script_log_file_name = settings.polymorphism_statistics_r_script_log_file_name;
 		uint32_t total_reference_length = summary.sequence_conversion.total_reference_sequence_length;
 
-		string command = "R --vanilla total_length=" + to_string(total_reference_length) + " in_file=" + polymorphism_statistics_input_file_name + " out_file=" + polymorphism_statistics_output_file_name + " qual_file=" + genome_error_counts_file_name + " < " + polymorphism_statistics_r_script_file_name + " > " + polymorphism_statistics_r_script_log_file_name;
-		int exit_code = system(command.c_str());
+		string command = "R --vanilla total_length=" + to_string<uint32_t>(total_reference_length) + " in_file=" + polymorphism_statistics_input_file_name + " out_file=" + polymorphism_statistics_output_file_name + " qual_file=" + genome_error_counts_file_name + " < " + polymorphism_statistics_r_script_file_name + " > " + polymorphism_statistics_r_script_log_file_name;
+		_system(command);
 
 		// Read R file and add new results corresponding to all columns
 		ifstream ROUT(polymorphism_statistics_output_file_name.c_str());
@@ -794,7 +822,7 @@ namespace breseq {
 			}
 
 			// lines only exist for polymorphisms
-			if ((mut["frequency"] == "1") || (mut["frequency"] == "0"))
+			if ((mut[FREQUENCY] == "1") || (mut[FREQUENCY] == "0"))
 			{
 				new_gd.add(mut);
 				continue;
@@ -869,15 +897,19 @@ namespace breseq {
 				}
 			}
 
-			if (from_string<bool>(mut["reject"]) && from_string<double>(mut["polymorphism_quality"]) > settings.mutation_log10_e_value_cutoff && from_string<double>(mut["frequency"]) > 0.5)
+			if (
+          mut.number_reject_reasons() > 0 
+          && (from_string<double>(mut[POLYMORPHISM_QUALITY]) > settings.mutation_log10_e_value_cutoff) 
+          && (from_string<double>(mut[FREQUENCY]) > 0.5)
+          )
 			{
 				//#print Dumper($mut);
-				mut["frequency"] = "1";
-				mut._fields.erase("reject");
+				mut[FREQUENCY] = "1";
+				mut._fields.erase(REJECT);
 
 				// FIX -- need to re-evaluate whether it would have been accepted as a normal mutation
 				// This is NOT the right quality being used here. Need a separate quality for consensus call and polymorphism call!
-				if (from_string<double>(mut["polymorphism_quality"]) < settings.mutation_log10_e_value_cutoff)
+				if (from_string<double>(mut[POLYMORPHISM_QUALITY]) < settings.mutation_log10_e_value_cutoff)
 					add_reject_reason(mut, "EVALUE");
 			}
 

@@ -15,7 +15,9 @@
 ##
 ###
 
-AM_CPPFLAGS = -I$(top_srcdir)/$(LIBBAM) -I$(top_srcdir)/aux_build
+##is there a variable for this?
+BRESEQDATADIR=$(datadir)/$(PACKAGE_NAME)
+AM_CPPFLAGS = -I$(top_srcdir)/$(LIBBAM) -I$(top_srcdir)/aux_build  -DDATADIR=\"$(BRESEQDATADIR)\"
 AM_LDFLAGS = -static
 LDADD =   $(top_srcdir)/$(LIBBAM)/libbam.la \
 					libbreseq.la
@@ -45,33 +47,44 @@ libbreseq_la_SOURCES = \
 	resolve_alignments.cpp \
 	settings.cpp \
 	tabulate_coverage.cpp \
-	breseq/alignment.h \
-	breseq/alignment_output.h \
-	breseq/annotated_sequence.h \
-	breseq/anyoption.h \
-	breseq/calculate_trims.h \
-	breseq/candidate_junctions.h \
-	breseq/chisquare.h \
-	breseq/contingency_loci.h \
-	breseq/common.h \
-	breseq/coverage_distribution.h \
-	breseq/coverage_output.h \
-	breseq/error_count.h \
-	breseq/fasta.h \
-	breseq/fastq.h \
-	breseq/genome_diff.h \
-	breseq/identify_mutations.h \
-	breseq/mutation_predictor.h \
-	breseq/output.h \
-	breseq/pileup_base.h \
-	breseq/pileup.h \
-	breseq/resolve_alignments.h \
-	breseq/settings.h \
-	breseq/storable.h \
-	breseq/tabulate_coverage.h 
+	libbreseq/alignment.h \
+	libbreseq/alignment_output.h \
+	libbreseq/annotated_sequence.h \
+	libbreseq/anyoption.h \
+	libbreseq/calculate_trims.h \
+	libbreseq/candidate_junctions.h \
+	libbreseq/chisquare.h \
+	libbreseq/contingency_loci.h \
+	libbreseq/common.h \
+	libbreseq/coverage_distribution.h \
+	libbreseq/coverage_output.h \
+	libbreseq/error_count.h \
+	libbreseq/fasta.h \
+	libbreseq/fastq.h \
+	libbreseq/genome_diff.h \
+	libbreseq/identify_mutations.h \
+	libbreseq/mutation_predictor.h \
+	libbreseq/output.h \
+	libbreseq/pileup_base.h \
+	libbreseq/pileup.h \
+	libbreseq/resolve_alignments.h \
+	libbreseq/settings.h \
+	libbreseq/storable.h \
+	libbreseq/tabulate_coverage.h
 libbreseq_la_LIBADD = $(top_srcdir)/$(LIBBAM)/libbam.la
 
-bin_PROGRAMS = cbreseq cbam2aln
+bin_PROGRAMS = breseq cbam2aln
+breseq_SOURCES = breseq_cmdline.cpp
 
-cbreseq_SOURCES = breseq_cmdline.cpp
 cbam2aln_SOURCES = bam2aln_cmdline.cpp
+
+install-data-local :
+
+	##copy our data files
+	mkdir -p $(BRESEQDATADIR)
+	cp breseq.png $(BRESEQDATADIR)
+	cp breseq_small.png $(BRESEQDATADIR)
+	cp coverage_distribution.r $(BRESEQDATADIR)
+	cp plot_coverage.r $(BRESEQDATADIR)
+	cp plot_error_rate.r $(BRESEQDATADIR)
+	cp polymorphism_statistics.r $(BRESEQDATADIR)

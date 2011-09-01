@@ -185,7 +185,7 @@ namespace breseq
     
 		// Paths populated from location of executable
 		string bin_path;                  // absolute path to where this binary resides
-    string lib_path;                  // path to where R scripts and images reside
+    string program_data_path;                  // path to where R scripts and images reside
 		map<string, string> installed;
     
 		// Paths populated relative to output_path
@@ -383,7 +383,6 @@ namespace breseq
 
 		string long_pairs_file_name;
 
-		uint32_t total_reference_sequence_length;
 		uint32_t max_read_length;
 
     bool junction_prediction; // whether to perform junction prediction step

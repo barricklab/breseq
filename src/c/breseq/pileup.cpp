@@ -17,7 +17,7 @@ LICENSE AND COPYRIGHT
 *****************************************************************************/
 
 
-#include "breseq/pileup.h"
+#include "libbreseq/pileup.h"
 
 namespace breseq {
 

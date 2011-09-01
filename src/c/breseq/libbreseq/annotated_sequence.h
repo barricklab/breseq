@@ -19,12 +19,12 @@ LICENSE AND COPYRIGHT
 #ifndef _BRESEQ_ANNOTATED_SEQUENCE_H_
 #define _BRESEQ_ANNOTATED_SEQUENCE_H_
 
-#include "breseq/common.h"
+#include "libbreseq/common.h"
 
-#include "breseq/fasta.h"
-#include "breseq/fastq.h"
-#include "breseq/alignment.h"
-#include "breseq/genome_diff.h"
+#include "libbreseq/fasta.h"
+#include "libbreseq/fastq.h"
+#include "libbreseq/alignment.h"
+#include "libbreseq/genome_diff.h"
 
 using namespace std;
 
@@ -136,6 +136,18 @@ namespace breseq {
     //!< Write a tab delimited GFF3 file
     void WriteGFF( const string &file_name );  
       
+    
+    //!< Calculates the total length of all reference sequences together
+    uint32_t total_length()
+    {
+      uint32_t ret_val(0);
+      for (cReferenceSequences::iterator it = (*this).begin(); it != (*this).end(); it++)
+      {
+        ret_val += it->m_length;
+      }
+      return ret_val;
+    }
+    
     //!< Convert 
     uint32_t seq_id_to_index(const string& seq_id) 
       { assert(m_seq_id_to_index.count(seq_id)); return m_seq_id_to_index[seq_id]; };
@@ -184,7 +196,7 @@ namespace breseq {
   map<string, vector<cSequenceFeature> > repeat_lists;
 	static map<string,char> translation_table_11;
 
-    static cSequenceFeature* find_closest_repeat_region(uint32_t position, vector<cSequenceFeature>& repeat_list_ref, uint32_t max_distance, int32_t direction);
+  static cSequenceFeature* find_closest_repeat_region(uint32_t position, vector<cSequenceFeature>& repeat_list_ref, uint32_t max_distance, int32_t direction);
 	static cSequenceFeature* get_overlapping_feature(vector<cSequenceFeature>& feature_list_ref, uint32_t pos);
 	static char bridge_translate(string seq);
 	static void find_nearby_genes(vector<Gene>& gene_list_ref, uint32_t pos_1, uint32_t pos_2, vector<Gene>& within_genes, vector<Gene>& between_genes, vector<Gene>& inside_left_genes, vector<Gene>& inside_right_genes, Gene& prev_gene, Gene& next_gene);

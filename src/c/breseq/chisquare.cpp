@@ -1,4 +1,4 @@
-#include "breseq/common.h"
+#include "libbreseq/common.h"
 
 namespace breseq {
 

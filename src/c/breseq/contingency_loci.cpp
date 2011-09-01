@@ -16,7 +16,7 @@
  
  *****************************************************************************/
 
-#include "breseq/contingency_loci.h"
+#include "libbreseq/contingency_loci.h"
 
 using namespace std;
 

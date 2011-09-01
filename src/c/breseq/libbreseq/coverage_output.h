@@ -70,11 +70,14 @@ namespace breseq
       : pileup_base(bam, fasta), m_output_format("png"), m_downsample(0), m_total_only(false)
       , m_shaded_flanking(0), m_r_script_file_name(r_script_file_name), m_intermediate_path(intermediate_path) {};
     
-    string output_format(const string& _output_format) 
+    string output_format(const string& _output_format = "") 
     { 
-      m_output_format = _output_format;
-      _assert( (m_output_format=="png") || (m_output_format=="pdf"), 
-              "Unrecognized coverage plot output format: " + m_output_format);
+      if (_output_format.length() > 0)
+      {
+        m_output_format = _output_format;
+        _assert( (m_output_format=="png") || (m_output_format=="pdf"), 
+                "Unrecognized coverage plot output format: " + m_output_format);
+      }
       return m_output_format; 
     }
     bool shaded_flanking(uint32_t _shaded_flanking) { m_shaded_flanking = _shaded_flanking; return m_shaded_flanking; }

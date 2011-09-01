@@ -19,9 +19,9 @@ LICENSE AND COPYRIGHT
 #ifndef _BRESEQ_CONTINGENCY_LOCI_H_
 #define _BRESEQ_CONTINGENCY_LOCI_H_
 
-#include "breseq/common.h"
-#include "breseq/pileup_base.h"
-#include "breseq/annotated_sequence.h"
+#include "libbreseq/common.h"
+#include "libbreseq/pileup_base.h"
+#include "libbreseq/annotated_sequence.h"
 
 using namespace std;
 

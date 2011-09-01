@@ -59,7 +59,7 @@ LICENSE AND COPYRIGHT
 #include <faidx.h>
 
 // Breseq
-#include "breseq/settings.h"
+#include "libbreseq/settings.h"
 
 // Begin breseq specific --->
 
