@@ -98,6 +98,12 @@ namespace breseq {
 
   };
   
+  
+  typedef bool covariates_used_t[k_num_covariates];
+  typedef uint32_t covariates_max_t[k_num_covariates];
+  typedef bool covariates_enforce_max_t[k_num_covariates];
+  typedef uint32_t covariates_offset_t[k_num_covariates];
+
  
  class cErrorTable {
     private:
@@ -106,12 +112,7 @@ namespace breseq {
       
       std::vector<double> m_count_table;
       std::vector<double> m_log10_prob_table;
-
-      typedef bool covariates_used_t[k_num_covariates];
-      typedef uint32_t covariates_max_t[k_num_covariates];
-      typedef bool covariates_enforce_max_t[k_num_covariates];
-      typedef uint32_t covariates_offset_t[k_num_covariates];
-
+   
     public:
 
       //* does not allocate table or assign covariates
@@ -133,8 +134,21 @@ namespace breseq {
       uint32_t covariates_to_index(const covariate_values_t& cv);
       void index_to_covariates(const uint32_t idx, covariate_values_t& cv);
 
-      void read_covariates(const std::string& colnames);
-      std::string print_covariates();
+      void read_covariates(const string& colnames)
+      { 
+        read_covariates(colnames, m_covariate_used, m_covariate_max, m_covariate_enforce_max, m_covariate_offset, m_per_position);
+      }
+   
+      // static helper function
+      static void read_covariates(
+                                  const string& colnames, 
+                                  covariates_used_t&         _covariate_used,         // list of covariates that are used by table
+                                  covariates_max_t&          _covariate_max,          // maximum value of each covariate
+                                  covariates_enforce_max_t&  _covariate_enforce_max,  // do not throw an error if max exceeded, reassign value to max
+                                  covariates_offset_t&       _covariate_offset,       // number to multiply this covariate by when constructing row numbers
+                                  bool                       _per_position
+                                  );
+      string print_covariates();
       //void split(const std::string& s, char c, std::vector<std::string>& v); // helper function
 
       //* IO of tables

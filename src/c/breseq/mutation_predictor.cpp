@@ -17,7 +17,7 @@ LICENSE AND COPYRIGHT
 
 *****************************************************************************/
 
-#include "breseq/mutation_predictor.h"
+#include "libbreseq/mutation_predictor.h"
 
 using namespace std;
 

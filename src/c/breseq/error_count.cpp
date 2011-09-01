@@ -16,9 +16,9 @@ LICENSE AND COPYRIGHT
 
 *****************************************************************************/
 
-#include "breseq/common.h"
-#include "breseq/pileup.h"
-#include "breseq/error_count.h"
+#include "libbreseq/common.h"
+#include "libbreseq/pileup.h"
+#include "libbreseq/error_count.h"
 
 using namespace std;
 
@@ -435,12 +435,19 @@ void cErrorTable::index_to_covariates(const uint32_t idx, covariate_values_t& cv
 
     Convert string representation to covariates
 */
-void cErrorTable::read_covariates(const string& colnames) {
-
+void cErrorTable::read_covariates(
+  const string& colnames, 
+  covariates_used_t&         _covariate_used,         // list of covariates that are used by table
+  covariates_max_t&          _covariate_max,          // maximum value of each covariate
+  covariates_enforce_max_t&  _covariate_enforce_max,  // do not throw an error if max exceeded, reassign value to max
+  covariates_offset_t&       _covariate_offset,       // number to multiply this covariate by when constructing row numbers
+  bool                       _per_position
+  )
+{
   // set default values
   for (int i=0; i<k_num_covariates; i++) {
-    m_covariate_used[i] = false;
-    m_covariate_enforce_max[i] = false;
+    _covariate_used[i] = false;
+    _covariate_enforce_max[i] = false;
   }
 
   vector<string> columns_to_use = split(colnames, ",");
@@ -450,40 +457,40 @@ void cErrorTable::read_covariates(const string& colnames) {
     vector<string> columns_parts = split(*i, "=");
 
 		if (columns_parts[0] == "ref_base") {
-      m_covariate_used[k_ref_base] = true;
-      m_covariate_max[k_ref_base] = 5;
+      _covariate_used[k_ref_base] = true;
+      _covariate_max[k_ref_base] = 5;
     }
 		else if (columns_parts[0] == "prev_base") {
-      m_covariate_used[k_prev_base] = true;
-      m_covariate_max[k_prev_base] = 5;
+      _covariate_used[k_prev_base] = true;
+      _covariate_max[k_prev_base] = 5;
     }
 		else if (columns_parts[0] == "obs_base") {
-      m_covariate_used[k_obs_base] = true;
-      m_covariate_max[k_obs_base] = 5;
+      _covariate_used[k_obs_base] = true;
+      _covariate_max[k_obs_base] = 5;
     }
     else if (columns_parts[0] == "quality") {
-      m_covariate_used[k_quality] = true;
+      _covariate_used[k_quality] = true;
       // This is a bit lazy, we could assign a minimum quality offset to save empty bins...
-      m_covariate_max[k_quality] = atoi(columns_parts[1].c_str());
+      _covariate_max[k_quality] = atoi(columns_parts[1].c_str());
     }
     else if (columns_parts[0] == "read_set") {
-      m_covariate_used[k_read_set] = true;
-      m_covariate_max[k_read_set] = atoi(columns_parts[1].c_str());
+      _covariate_used[k_read_set] = true;
+      _covariate_max[k_read_set] = atoi(columns_parts[1].c_str());
     }
     // Note: ref_pos is treated special, because the table would be too big
     // to store, and we can go through the pile_up and print as we can.
     else if (columns_parts[0] == "ref_pos") {
-      m_per_position = true;
+      _per_position = true;
     }
     else if (columns_parts[0] == "read_pos") {
-      m_covariate_used[k_read_pos] = true;
-      m_covariate_max[k_read_pos] = atoi(columns_parts[1].c_str());
+      _covariate_used[k_read_pos] = true;
+      _covariate_max[k_read_pos] = atoi(columns_parts[1].c_str());
     }
     else if (columns_parts[0] == "base_repeat") {
-      m_covariate_used[k_base_repeat] = true;
-      m_covariate_max[k_base_repeat] = atoi(columns_parts[1].c_str());
+      _covariate_used[k_base_repeat] = true;
+      _covariate_max[k_base_repeat] = atoi(columns_parts[1].c_str());
       // Base repeat will trypically have a cap, above which we combine all values
-      m_covariate_enforce_max[k_base_repeat] = true;
+      _covariate_enforce_max[k_base_repeat] = true;
     }
     else {
       cerr << "Unrecognized covariate: " << columns_parts[0] << endl;
@@ -495,9 +502,9 @@ void cErrorTable::read_covariates(const string& colnames) {
   int current_offset = 1;
 
   for (int i=0; i<k_num_covariates; i++) {
-    if (m_covariate_used[i]) {
-      m_covariate_offset[i] = current_offset;
-      current_offset *= m_covariate_max[i];
+    if (_covariate_used[i]) {
+      _covariate_offset[i] = current_offset;
+      current_offset *= _covariate_max[i];
     }
   }
 }

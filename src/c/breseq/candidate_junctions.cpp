@@ -18,9 +18,9 @@ LICENSE AND COPYRIGHT
 *****************************************************************************/
 
 
-#include "breseq/candidate_junctions.h"
+#include "libbreseq/candidate_junctions.h"
 
-#include "breseq/fastq.h"
+#include "libbreseq/fastq.h"
 
 using namespace std;
 

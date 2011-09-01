@@ -1,9 +1,9 @@
 #ifndef _BRESEQ_OUTPUT_H_
 #define _BRESEQ_OUTPUT_H_
-#include "breseq/common.h"
-#include "breseq/settings.h"
-#include "breseq/annotated_sequence.h"
-#include "breseq/genome_diff.h"
+#include "libbreseq/common.h"
+#include "libbreseq/settings.h"
+#include "libbreseq/annotated_sequence.h"
+#include "libbreseq/genome_diff.h"
 namespace breseq
 {
 
@@ -63,7 +63,6 @@ extern const char* SIDE_2_SEQ_ID;
 extern const char* SIDE_2_STRAND;
 extern const char* SIDE_1_JC;
 extern const char* SIDE_2_JC;
-extern const char* SIDE_2_OVERLAP;
 
 
 
@@ -113,7 +112,7 @@ extern const char* ALIGN_LEFT;
   inline string font(const string& attributes, const string& input) 
     {return "<font " + attributes + ">" + input + "</font>";}
   inline string html_footer()
-    {return "</html>";}
+    {return "</body></html>";}
   inline string div(const string& attributes, const string& input)
     {return "<div " + attributes + ">" + input + "</div>";}
   inline string img(const string& target)
@@ -223,126 +222,26 @@ string decode_reject_reason(const string & reject);
 /*-----------------------------------------------------------------------------
  *  Create_Evidence_Files
  *-----------------------------------------------------------------------------*/
-class EvidenceFiles
+struct Evidence_Files
 {
+  struct Evidence_Item:diff_entry
+  {
+  	diff_entry_ptr parent_item;
+  	diff_entry_ptr item;
+  };
+
+  Evidence_Files(const Settings& settings, genome_diff& gd);
+  
+  vector<Evidence_Item> evidence_list;
+  
   private:
-
-    struct EvidenceItem
-    {  
-      struct BaseEvidence
-      { 
-        //!Constructor
-        BaseEvidence()
-          :bam_path(""),
-          fasta_path(""),
-          insert_start(UINT_MAX),
-          insert_end(UINT_MAX),
-          start(UINT_MAX),
-          end(UINT_MAX)
-        {}
-
-        string bam_path;//!<Not Used in MC::Evidence
-        string fasta_path;//!<Not Used in MC::Evidence
-        string seq_id;
-        uint32_t start;
-        uint32_t end;
-        uint32_t insert_start;//!<Used in RA and MUT
-        uint32_t insert_end;//!<Used in RA and MUT
-        diff_entry_ptr item;
-        diff_entry_ptr parent_item;
-        string file_name;
-        string prefix;
-        string output_path;
-        uint32_t quality_score_cutoff;
-        diff_entry_list evidence_list;
-
-        virtual void create_html_file(const Settings& settings, genome_diff& gd);
-        string html_evidence_file_name();
-      };
-      //Missing Candidates
-      struct MC
-      { 
-        struct Evidence:BaseEvidence  
-        {
-          //!Constructor
-          Evidence() : BaseEvidence() {}
-
-          string plot;
-
-          void create_html_file(const Settings& settings, genome_diff& gd);
-        };
-        BaseEvidence side_1_evidence;
-        BaseEvidence side_2_evidence;
-        Evidence evidence;
-
-        void init_MC(diff_entry_ptr& item,  const Settings& settings, genome_diff& gd);
-      };
-
-      struct RA : public BaseEvidence
-      {
-        //Constructor
-        RA() : BaseEvidence() {}
-
-        void init_RA(diff_entry_ptr& item, const Settings& settings, genome_diff& gd);
-      };
-
-      //Junction Candidates
-      struct JC 
-      {
-        struct Evidence : public BaseEvidence
-        {
-          //!Constructor
-          Evidence() : BaseEvidence() {}
-
-          struct AlignmentReferenceInfo
-          {
-            uint32_t truncate_start;
-            uint32_t ghost_start;
-            uint32_t truncate_end;
-            uint32_t ghost_end;
-            string ghost_strand;
-            string ghost_seq_id;
-          };
-
-          AlignmentReferenceInfo alignment_reference_info_side_1;
-          AlignmentReferenceInfo alignment_reference_info_side_2;
-          bool alignment_empty_change_line;
-        };
-
-        BaseEvidence side_1_evidence;
-        BaseEvidence side_2_evidence;
-        Evidence evidence;
-
-        void init_JC(diff_entry_ptr& item, const Settings& settings, genome_diff& gd);
-      };
-
-
-      //Mutations
-      struct MUT : public BaseEvidence
-      { 
-        //!Constructor
-        MUT() : BaseEvidence() {}
-
-        string type;
-
-        void init_MUT(diff_entry_ptr& item, const Settings& settings, genome_diff& gd);
-      };
-
-
-    };
   
-  protected:
-    list<counted_ptr<EvidenceItem::MUT> > m_MUT_items;
-    list<counted_ptr<EvidenceItem::MC> > m_MC_items;
-    list<counted_ptr<EvidenceItem::RA> > m_RA_items;
-    list<counted_ptr<EvidenceItem::JC> > m_JC_items;
-  
-  public:
-    //Methods
-    //!Initialize m_MUT_items, m_MC_items, m_RA_items and m_JC_items
-    void initEvidenceItems(const Settings& settings, genome_diff& gd);
-    void htmlOutput(const Settings& settings, genome_diff& gd);
-    
+    string html_evidence_file_name(Evidence_Item& evidence_item);
+    void add_evidence(const string& file_name, diff_entry_ptr item,
+                      diff_entry_ptr parent_item, map<string,string> fields);
+    string file_name(Evidence_Item& evidence_item);
+    void html_evidence_file(const Settings& settings, genome_diff& gd, Evidence_Item& item);
+
 };
 
 /*-----------------------------------------------------------------------------

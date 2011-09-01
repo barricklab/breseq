@@ -16,13 +16,13 @@ LICENSE AND COPYRIGHT
 
 *****************************************************************************/
 
-#include "breseq/resolve_alignments.h"
+#include "libbreseq/resolve_alignments.h"
 
-#include "breseq/genome_diff.h"
-#include "breseq/fastq.h"
-#include "breseq/fasta.h"
-#include "breseq/alignment.h"
-#include "breseq/annotated_sequence.h"
+#include "libbreseq/genome_diff.h"
+#include "libbreseq/fastq.h"
+#include "libbreseq/fasta.h"
+#include "libbreseq/alignment.h"
+#include "libbreseq/annotated_sequence.h"
 
 using namespace std;
 

@@ -16,7 +16,7 @@ LICENSE AND COPYRIGHT
 
 *****************************************************************************/
 
-#include "breseq/genome_diff.h"
+#include "libbreseq/genome_diff.h"
 #include <list>
 
 namespace breseq {
@@ -269,11 +269,11 @@ uint32_t genome_diff::new_unique_id()
 void genome_diff::add(const diff_entry& item) {
 
   // allocating counted_ptr takes care of disposal
-  diff_entry* diff_entry_copy = new diff_entry(item);  
-  counted_ptr<diff_entry> added_item(diff_entry_copy);
+  diff_entry* diff_entry_copy = new diff_entry(item); 
+  diff_entry_ptr added_item(diff_entry_copy);
   _entry_list.push_back(added_item);
     
-  if (added_item->_id.size() == 0)
+  if ((added_item->_id.size() == 0) || unique_id_used.count(added_item->_id.size()))
   {
     uint32_t new_id = new_unique_id();
     added_item->_id = to_string(new_id); 
@@ -854,14 +854,14 @@ void VCFtoGD( const string& vcffile, const string& gdfile ){
 /*! Given a list of types, search and return the diff_entry's within diff_entry_list whose 
  * _type parameter matches one of those within input types. 
  */ 
-diff_entry_list genome_diff::list(vector<string> types)
+diff_entry_list genome_diff::list(const vector<string>& types)
 {
   diff_entry_list return_list;
   
   for (diff_entry_list::iterator itr_diff_entry = _entry_list.begin(); 
        itr_diff_entry != _entry_list.end(); itr_diff_entry++)
     {
-      for (vector<string>::iterator requested_type = types.begin();
+      for (vector<string>::const_iterator requested_type = types.begin();
            requested_type != types.end(); requested_type++)
       {
         if((*itr_diff_entry)->_type == *requested_type)
@@ -1005,30 +1005,26 @@ diff_entry_list genome_diff::mutation_list()
 /*! Return all diff_entrys within _entry_list whose _type matches one
  * of those within input's item._evidence
  */ 
-::list<counted_ptr<diff_entry> > genome_diff::mutation_evidence_list(const diff_entry& item)
+diff_entry_list genome_diff::mutation_evidence_list(const diff_entry& item)
 {
-  ::list<counted_ptr<diff_entry> > return_list;
-  vector<string> evidence_list = item._evidence;
-  //return diff_entrys with matching evidence
-  for (vector<string>::iterator itr_i = evidence_list.begin();
-       itr_i != evidence_list.end(); itr_i ++) {  
-    string& evidence = *itr_i;
+  diff_entry_list return_list;
+  
+  //return diff_entries with matching evidence
+  for (vector<string>::const_iterator itr_i = item._evidence.begin(); itr_i != item._evidence.end(); itr_i ++) 
+  {  
+    const string& evidence = *itr_i;
     
-    for (diff_entry_list::iterator itr_j = _entry_list.begin();
-         itr_j != _entry_list.end(); itr_j ++) {  
+    for (diff_entry_list::iterator itr_j = _entry_list.begin(); itr_j != _entry_list.end(); itr_j ++) 
+    {  
       diff_entry& entry = **itr_j;
     
-      if (entry._id == evidence) {
+      if (entry._id == evidence)
         return_list.push_back(*itr_j);
-      }
-    
     }   
   }
   return return_list;
 }
 
-// @JEB: we need to have this return a counted_ptr<diff_entry> (which can be NULL)
-// we should create a typedef for counted_ptr<diff_entry> = diff_entry_ptr
 diff_entry_ptr genome_diff::parent(const diff_entry& item)
 {
   for(diff_entry_list::iterator itr_test_item = _entry_list.begin();
@@ -1038,10 +1034,10 @@ diff_entry_ptr genome_diff::parent(const diff_entry& item)
         itr != test_item._evidence.end(); itr ++) { 
       string& test_evidence_id = (*itr);
       if(test_evidence_id == item._id)      
-        return counted_ptr<diff_entry>(*itr_test_item);
+        return diff_entry_ptr(*itr_test_item);
     }
   }
-  return counted_ptr<diff_entry>(NULL);
+  return diff_entry_ptr(NULL);
 }
 
 bool genome_diff::mutation_unknown(diff_entry mut)

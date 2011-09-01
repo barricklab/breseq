@@ -17,7 +17,7 @@ then
 	echo "Environmental variable \$TESTBINPREFIX not defined."
 	exit
 fi
-BRESEQ="perl -w ${TESTBINPREFIX}/breseq"
+BRESEQ="${TESTBINPREFIX}/breseq"
 
 # path to test data:
 DATADIR=${COMMONDIR}/data

@@ -17,7 +17,7 @@ LICENSE AND COPYRIGHT
 
 *****************************************************************************/
 
-#include "breseq/coverage_distribution.h"
+#include "libbreseq/coverage_distribution.h"
 
 using namespace std;
 
@@ -27,7 +27,7 @@ namespace breseq {
 	{
     pid_t pid = getpid();
 		string log_file_name = settings.base_output_path + "/" + to_string(pid) + ".r.log";
-		string command = "R --vanilla < " + settings.lib_path + "/coverage_distribution.r" + " > " + log_file_name;
+		string command = "R --vanilla < " + settings.program_data_path + "/coverage_distribution.r" + " > " + log_file_name;
 		command += " distribution_file=" + distribution_file_name;
 		command += " plot_file=" + plot_file;
 		command += " deletion_propagation_pr_cutoff=" + to_string<double>(deletion_propagation_pr_cutoff);

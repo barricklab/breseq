@@ -20,23 +20,23 @@ LICENSE AND COPYRIGHT
 #include <string>
 #include <vector>
 
-#include "breseq/anyoption.h"
-#include "breseq/alignment_output.h"
-#include "breseq/annotated_sequence.h"
-#include "breseq/calculate_trims.h"
-#include "breseq/candidate_junctions.h"
-#include "breseq/contingency_loci.h"
-#include "breseq/coverage_distribution.h"
-#include "breseq/error_count.h"
-#include "breseq/fastq.h"
-#include "breseq/genome_diff.h"
-#include "breseq/identify_mutations.h"
-#include "breseq/resolve_alignments.h"
-#include "breseq/settings.h"
-#include "breseq/tabulate_coverage.h"
-#include "breseq/contingency_loci.h"
-#include "breseq/mutation_predictor.h"
-#include "breseq/output.h"
+#include "libbreseq/anyoption.h"
+#include "libbreseq/alignment_output.h"
+#include "libbreseq/annotated_sequence.h"
+#include "libbreseq/calculate_trims.h"
+#include "libbreseq/candidate_junctions.h"
+#include "libbreseq/contingency_loci.h"
+#include "libbreseq/coverage_distribution.h"
+#include "libbreseq/error_count.h"
+#include "libbreseq/fastq.h"
+#include "libbreseq/genome_diff.h"
+#include "libbreseq/identify_mutations.h"
+#include "libbreseq/resolve_alignments.h"
+#include "libbreseq/settings.h"
+#include "libbreseq/tabulate_coverage.h"
+#include "libbreseq/contingency_loci.h"
+#include "libbreseq/mutation_predictor.h"
+#include "libbreseq/output.h"
 
 
 using namespace breseq;
@@ -728,7 +728,7 @@ int do_identify_candidate_junctions(int argc, char* argv[]) {
 
     // We should inherit the summary object from earlier steps
     Summary summary;
-    summary.sequence_conversion.total_reference_sequence_length = from_string<int32_t>(options["reference-sequence-length"]);
+    summary.sequence_conversion.total_reference_sequence_length = from_string<uint32_t>(options["reference-sequence-length"]);
     
     cReferenceSequences ref_seq_info;
     breseq::LoadFeatureIndexedFastaFile(ref_seq_info, "", options["data-path"] + "/reference.fasta");
@@ -885,6 +885,7 @@ int do_output( int argc, char* argv[]){
     genome_diff gd;
     gd.read("/home/geoff/Dropbox/test/1B4/output.gd");
 
+    output::Evidence_Files evidence_files(settings, gd);
 
         
   }
@@ -981,6 +982,9 @@ int breseq_default_action(int argc, char* argv[])
   cReferenceSequences ref_seq_info;
   LoadFeatureIndexedFastaFile(ref_seq_info, settings.reference_features_file_name, settings.reference_fasta_file_name);
   
+  // Calculate the total reference sequence length
+  summary.sequence_conversion.total_reference_sequence_length = ref_seq_info.total_length();
+  
   // @JEB -- This is a bit of an ugly wart.
 	// reload certain information into $settings from $summary
 	for (map<string, AnalyzeFastq>::iterator it = summary.sequence_conversion.reads.begin(); it != summary.sequence_conversion.reads.end(); it++)
@@ -991,7 +995,6 @@ int breseq_default_action(int argc, char* argv[])
 	}
 	settings.max_read_length = summary.sequence_conversion.max_read_length;
 	settings.max_smalt_diff = (settings.max_read_length / 2); // @JEB unused?
-	settings.total_reference_sequence_length = summary.sequence_conversion.total_reference_sequence_length;
 
 	//
   // 02_reference_alignment
@@ -1148,9 +1151,6 @@ int breseq_default_action(int argc, char* argv[])
 
 			// Other settings
 			settings.maximum_read_length = summary.sequence_conversion.max_read_length;
-
-			// We should inherit the summary object from earlier steps
-			summary.sequence_conversion.total_reference_sequence_length = settings.total_reference_sequence_length;
 
       CandidateJunctions::identify_candidate_junctions(settings, summary, ref_seq_info);
 
@@ -1523,22 +1523,14 @@ int breseq_default_action(int argc, char* argv[])
 	//sub mutation_prediction {}
 	//
 
-	//my @mutations;
-	//my @deletions;
-	//my @unknowns;
-
 	if (!settings.no_mutation_prediction)
 	{
 		create_path(settings.mutation_identification_path);
 
 		if (settings.do_step(settings.mutation_identification_done_file_name, "Read alignment mutations"))
 		{
-			//my $error_rates;
-
 			string reference_fasta_file_name = settings.reference_fasta_file_name;
 			string reference_bam_file_name = settings.reference_bam_file_name;
-
-			//my $cbreseq = settings.ctool("cbreseq");
 
 			string coverage_fn = settings.file_name(settings.unique_only_coverage_distribution_file_name, "@", "");
 			string error_dir = dirname(coverage_fn) + "/";
@@ -1575,7 +1567,7 @@ int breseq_default_action(int argc, char* argv[])
 			settings.done_step(settings.mutation_identification_done_file_name);
 		}
 
-		string polymorphism_statistics_done_file_name = settings.polymorphism_statistics_done_file_name;
+    // extra processing for polymorphisms
 		if (settings.polymorphism_prediction && settings.do_step(settings.polymorphism_statistics_done_file_name, "Polymorphism statistics"))
 		{
 			ref_seq_info.polymorphism_statistics(settings, summary);
@@ -1586,6 +1578,8 @@ int breseq_default_action(int argc, char* argv[])
 	//rewire which GenomeDiff we get data from if we have the elaborated polymorphism_statistics version
 	 if (settings.polymorphism_prediction)
 		settings.ra_mc_genome_diff_file_name = settings.polymorphism_statistics_ra_mc_genome_diff_file_name;
+
+  create_path(settings.evidence_path); //need output for plots
 
 	if (settings.do_step(settings.output_done_file_name, "Output"))
 	{
@@ -1669,7 +1663,7 @@ int breseq_default_action(int argc, char* argv[])
 	  
     for (it = jc.begin(); it != jc.end(); it++)
     {
-      if (!from_string<bool>((**it)["reject"]))
+      if (((*it)->number_reject_reasons() > 0))
         ra.erase(it--);
     }
     
@@ -1687,11 +1681,8 @@ int breseq_default_action(int argc, char* argv[])
 		//
 		// Create evidence files containing alignments and coverage plots
 		//
-		if (!settings.no_alignment_generation) {
-			output::EvidenceFiles evidence_files;
-      evidence_files.htmlOutput(settings, gd);
-      
-    }
+		if (!settings.no_alignment_generation)
+			output::Evidence_Files(settings, gd);
 
 		///
 		// HTML output

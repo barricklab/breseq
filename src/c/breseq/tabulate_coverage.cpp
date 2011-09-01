@@ -16,7 +16,7 @@ LICENSE AND COPYRIGHT
 
 *****************************************************************************/
 
-#include "breseq/tabulate_coverage.h"
+#include "libbreseq/tabulate_coverage.h"
 
 using namespace std;
 

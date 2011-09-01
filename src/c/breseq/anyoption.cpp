@@ -61,9 +61,9 @@
 
 #include <sys/ioctl.h>
 
-#include "breseq/common.h"
+#include "libbreseq/common.h"
 
-#include "breseq/anyoption.h"
+#include "libbreseq/anyoption.h"
 
 namespace breseq {
 
@@ -694,7 +694,7 @@ namespace breseq {
 			}
 			else
 			{
-				printVerbose("Unknown command argument option : ");
+				printVerbose("Unknown command argument option: ");
 				printVerbose(arg);
 				printVerbose();
 				printAutoUsage();
@@ -727,7 +727,7 @@ namespace breseq {
 				}
 			}
 		}
-		printVerbose( "Unknown command argument option : " );
+		printVerbose( "Unknown command argument option: " );
 		printVerbose( opt  ) ;
 		printVerbose( );
 		printAutoUsage();
@@ -749,7 +749,7 @@ namespace breseq {
 				}
 			}
 		}
-		printVerbose( "Unknown command argument option : " );
+		printVerbose( "Unknown command argument option: " );
 		printVerbose( c ) ;
 		printVerbose( );
 		printAutoUsage();
