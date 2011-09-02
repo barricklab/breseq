@@ -80,7 +80,11 @@ namespace breseq
       }
       return m_output_format; 
     }
+    
+    // Get/Set Options
     bool shaded_flanking(uint32_t _shaded_flanking) { m_shaded_flanking = _shaded_flanking; return m_shaded_flanking; }
+    string read_begin_output_file_name(const string& _fn) { m_read_begin_output_file_name = _fn; return m_read_begin_output_file_name; }
+    string gc_output_file_name(const string& _fn) { m_gc_output_file_name = _fn; return m_gc_output_file_name; }
     
     void plot(const string& region, const string& output_file_name, uint32_t resolution = 600);
     void tabulate(const string& region, const string& output_file_name, uint32_t downsample = 1);

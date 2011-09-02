@@ -27,13 +27,13 @@ LICENSE AND COPYRIGHT
 #include "libbreseq/candidate_junctions.h"
 #include "libbreseq/contingency_loci.h"
 #include "libbreseq/coverage_distribution.h"
+#include "libbreseq/coverage_output.h"
 #include "libbreseq/error_count.h"
 #include "libbreseq/fastq.h"
 #include "libbreseq/genome_diff.h"
 #include "libbreseq/identify_mutations.h"
 #include "libbreseq/resolve_alignments.h"
 #include "libbreseq/settings.h"
-#include "libbreseq/tabulate_coverage.h"
 #include "libbreseq/contingency_loci.h"
 #include "libbreseq/mutation_predictor.h"
 #include "libbreseq/output.h"
@@ -41,6 +41,77 @@ LICENSE AND COPYRIGHT
 
 using namespace breseq;
 using namespace std;
+
+
+/*! bam2aln
+ Draw HTML alignment from BAM
+ */
+int do_bam2aln(int argc, char* argv[]) {
+    // setup and parse configuration options:
+	AnyOption options("Usage: bam2aln --bam=<reference.bam> --fasta=<reference.fasta> --region=<accession:start-end> --output=<output.html> [--max-reads=1000]");
+	options
+  ("help,h", "produce this help message", TAKES_NO_ARGUMENT)
+  ("bam,b", "bam file containing sequences to be aligned", "data/reference.bam")
+	("fasta,f", "FASTA file of reference sequence", "data/reference.fasta")
+  ("output,o", "name of output file")
+  ("region,r", "region to print (accession:start-end)", "")
+  ("max-reads,n", "maximum number of reads to show in alignment", 200)
+  ("quality-score-cutoff,c", "quality score cutoff", 0)
+  ("stdout", "write output to stdout", TAKES_NO_ARGUMENT)
+  ("output,o", "output to file [region.html]")
+  .processCommandArgs(argc, argv);
+  
+  
+  
+	// make sure that the config options are good:
+	if(options.count("help")
+		 || !options.count("region")
+     || !file_exists(options["fasta"].c_str())
+     || !file_exists(options["bam"].c_str()) )
+  {
+		options.printUsage();
+		return -1;
+	}
+  
+  // generate alignment!
+	try {
+		alignment_output ao(
+                        options["bam"],
+                        options["fasta"],
+                        from_string<uint32_t>(options["max-reads"]),
+                        from_string<uint32_t>(options["quality-score-cutoff"])
+                        );
+    
+    string html_output = ao.html_alignment(options["region"]);
+    //cout << html_output << endl;
+    
+    if (options.count("stdout"))
+    {
+      cout << html_output << endl;
+    }
+    else
+    {
+      ///Write to html file
+      string file_name = options["region"] + ".html";
+      if (options.count("output")) {
+        file_name = options["output"];
+      }
+      
+      ofstream myfile (file_name.c_str());
+      if (myfile.is_open())
+      {
+        myfile << html_output;
+        myfile.close();
+      }
+      else cerr << "Unable to open file";
+    }
+    
+  } catch(...) {
+		// failed;
+		return -1;
+	}	return 0;
+}
+
 
 
 /*! Analyze FASTQ
@@ -769,19 +840,19 @@ int do_tabulate_coverage(int argc, char* argv[]) {
 		options.printUsage();
 		return -1;
 	}  
-  
-  
-	// attempt to calculate error calibrations:
+    
 	try {
-		breseq::tabulate_coverage(
-                              options["bam"],
-                              options["fasta"],
-                              options["output"],
-                              options["region"],
-                              from_string<int>(options["downsample"]),
-                              options["read_start_output"],
-                              options["gc_output"]
-						  );
+    
+    Settings settings;
+    coverage_output co(options["bam"], options["fasta"], settings.coverage_plot_r_script_file_name);
+
+    if (options.count("read_start_output"))
+      co.read_begin_output_file_name(options["read_start_output"]);
+    if (options.count("gc_output"))
+      co.gc_output_file_name(options["gc_output"]);
+    
+    co.tabulate(options["region"], options["output"], from_string<int>(options["downsample"]));
+                
 	} catch(...) {
 		// failed; 
 		return -1;
@@ -962,7 +1033,7 @@ int breseq_default_action(int argc, char* argv[])
 		// create SAM faidx
 		string samtools = settings.ctool("samtools");
 		string command = samtools + " faidx " + settings.reference_fasta_file_name;
-		int exit_code = system(command.c_str());
+		_system(command.c_str());
     
 		// calculate trim files
 		calculate_trims(settings.reference_fasta_file_name, settings.sequence_conversion_path);
@@ -1012,13 +1083,13 @@ int breseq_default_action(int argc, char* argv[])
 		if (!settings.smalt)
 		{
 			string command = "ssaha2Build -rtype solexa -skip 1 -save " + reference_hash_file_name + " " + reference_fasta_file_name;
-			int exit_code = system(command.c_str());
+			_system(command.c_str());
 		}
 		else
 		{
 			string smalt = settings.ctool("smalt");
 			string command = smalt + " index -k 13 -s 1 " + reference_hash_file_name + " " + reference_fasta_file_name;
-			int exit_code = system(command.c_str());
+      _system(command.c_str());
 		}
 		/// ssaha2 align reads to reference sequences
 		for (uint32_t i = 0; i < settings.read_files.size(); i++)
@@ -1053,13 +1124,13 @@ int breseq_default_action(int argc, char* argv[])
 				if (!settings.smalt)
 				{
 					string command = "ssaha2 -disk 2 -save " + reference_hash_file_name + " -kmer 13 -skip 1 -seeds 1 -score 12 -cmatch 9 -ckmer 1 -output sam_soft -outfile " + reference_sam_file_name + " " + read_fastq_file;
-					int exit_code = system(command.c_str());
+					_system(command.c_str());
 				}
 				else
 				{
 					string smalt = settings.ctool("smalt");
 					string command = smalt + " map -n 2 -d " + to_string(settings.max_smalt_diff) + " -f samsoft -o " + reference_sam_file_name + " " + reference_hash_file_name + " " + read_fastq_file; // -m 12
-					int exit_code = system(command.c_str());
+					_system(command.c_str());
 				}
 			}
 		}
@@ -1111,13 +1182,13 @@ int breseq_default_action(int argc, char* argv[])
 				string samtools = settings.ctool("samtools");
 
 				string command = samtools + " import " + reference_faidx_file_name + " " + preprocess_junction_best_sam_file_name + " " + coverage_junction_best_bam_unsorted_file_name;
-				int exit_code = system(command.c_str());
+				_system(command.c_str());
 				command = samtools + " sort " + coverage_junction_best_bam_unsorted_file_name + " " + coverage_junction_best_bam_prefix;
-				exit_code = system(command.c_str());
+				_system(command.c_str());
 				if (!settings.keep_all_intermediates)
 					remove(coverage_junction_best_bam_unsorted_file_name.c_str());
 				command = samtools + " index " + coverage_junction_best_bam_file_name;
-        exit_code = system(command.c_str());
+        _system(command.c_str());
 
 				// Count errors
 				string reference_fasta_file_name = settings.reference_fasta_file_name;
@@ -1158,7 +1229,7 @@ int breseq_default_action(int argc, char* argv[])
 			string filename = settings.candidate_junction_path + "/candidate_junction.fasta";
 			string faidx_command = samtools + " faidx " + filename;
 			if (!file_empty(filename.c_str()))
-				int exit_code = system(faidx_command.c_str());
+				_system(faidx_command.c_str());
 
 			summary.candidate_junction.store(candidate_junction_summary_file_name);
 			settings.done_step(settings.candidate_junction_done_file_name);
@@ -1182,13 +1253,13 @@ int breseq_default_action(int argc, char* argv[])
 				if (!settings.smalt)
 				{
 					string command = "ssaha2Build -rtype solexa -skip 1 -save " + candidate_junction_hash_file_name + " " + candidate_junction_fasta_file_name;
-					int exit_code = system(command.c_str());
+					_system(command.c_str());
 				}
 				else
 				{
 					string smalt = settings.ctool("smalt");
 					string command = smalt + " index -k 13 -s 1 " + candidate_junction_hash_file_name + " "+ candidate_junction_fasta_file_name;
-					int exit_code = system(command.c_str());
+					_system(command.c_str());
 				}
 			}
 
@@ -1203,7 +1274,7 @@ int breseq_default_action(int argc, char* argv[])
 				if (!settings.smalt && file_exists(filename.c_str()))
 				{
 					string command = "ssaha2 -disk 2 -save " + candidate_junction_hash_file_name + " -best 1 -rtype solexa -skip 1 -seeds 1 -output sam_soft -outfile " + candidate_junction_sam_file_name + " " + read_fastq_file;
-					int exit_code = system(command.c_str());
+					_system(command.c_str());
 					// Note: Added -best parameter to try to avoid too many matches to redundant junctions!
 				}
 				else
@@ -1213,7 +1284,7 @@ int breseq_default_action(int argc, char* argv[])
 					{
 						string smalt = settings.ctool("smalt");
 						string command = smalt + " map -c 0.8 -x -n 2 -d 1 -f samsoft -o " + candidate_junction_sam_file_name + " " + candidate_junction_hash_file_name + " " + read_fastq_file;
-						int exit_code = system(command.c_str());
+						_system(command.c_str());
 					}
 				}
 			}
@@ -1762,6 +1833,8 @@ int main(int argc, char* argv[]) {
     return do_convert_gvf(argc_new, argv_new);
   } else if (command == "VCF2GD") {
     return do_convert_gd( argc_new, argv_new);
+  } else if (command == "BAM2ALN") {
+    return do_bam2aln( argc_new, argv_new);    
   } else if (command == "OUTPUT") {
     return do_output(argc_new, argv_new);
   } else {

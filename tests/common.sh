@@ -153,33 +153,42 @@ do_clean() {
 # testcmd == function that must be defined in the test command file.
 #
 do_test() {
+
+# If there is only one argument, assume "test"
+	if [[ -n $2 ]]; then
+		TESTDIR=$2
+		TESTSUBCMD=$1
+	else
+		TESTDIR=$1
+		TESTSUBCMD=test
+	fi
 	echo "++++++++++++++++++++++++++++++++++++++++++++++++++++++++"
-	echo "TEST DIRECTORY:" $2
+	echo "TEST DIRECTORY:" $TESTDIR
 	echo "++++++++++++++++++++++++++++++++++++++++++++++++++++++++"
-	case "$1" in
+	case $TESTSUBCMD in
         build)
-            do_build $2
+            do_build $TESTDIR
         ;;
         check)
-            do_check $2
+            do_check $TESTDIR
         ;;
         clean)
-            do_clean $2
+            do_clean $TESTDIR
         ;;
         rebuild)
-            do_clean $2
+            do_clean $TESTDIR
             do_breseq
-            do_build $2
+            do_build $TESTDIR
         ;;
         show)
-            do_show $2
+            do_show $TESTDIR
         ;;
         test)
         	do_breseq
-            do_check $2
+            do_check $TESTDIR
         ;;
         vcheck)
-            do_vcheck $2
+            do_vcheck $TESTDIR
         ;;
         *)
             do_usage

@@ -179,6 +179,8 @@ namespace breseq
     // Constructor for default action
     Settings(int argc, char* argv[]);
     
+    void command_line_run_header();
+    
     //////////////////////////////////
     ////    Settings Variables    ////
     //////////////////////////////////
@@ -245,6 +247,8 @@ namespace breseq
 		uint32_t min_quality;
 		uint32_t max_quality;
 		string run_name;
+    string print_run_name; 
+
 		uint32_t clean;
 
 		string error_model_method;
@@ -394,7 +398,6 @@ namespace breseq
 		storable_map<string, Coverage> unique_coverage;
 
     
-		string print_run_name; 
 		bool hide_circular_genome_junctions;
 		bool polymorphism_prediction;
 		bool lenski_format;

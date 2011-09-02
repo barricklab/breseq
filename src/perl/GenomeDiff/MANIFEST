@@ -6,6 +6,8 @@ lib/GenomeDiff.pm
 lib/GenomeDiff/PreterminationTables.pm
 lib/GenomeDiff/SynonymousNonsynonymous.pm
 lib/GenomeDiff/BaseSubstitutionFile.pm
+lib/GenomeDiff/ReferenceSequence.pm
+lib/GenomeDiff/Output.pm
 t/00-load.t
 t/manifest.t
 t/pod-coverage.t

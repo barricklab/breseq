@@ -46,7 +46,6 @@ libbreseq_la_SOURCES = \
 	pileup.cpp \
 	resolve_alignments.cpp \
 	settings.cpp \
-	tabulate_coverage.cpp \
 	libbreseq/alignment.h \
 	libbreseq/alignment_output.h \
 	libbreseq/annotated_sequence.h \
@@ -70,13 +69,18 @@ libbreseq_la_SOURCES = \
 	libbreseq/resolve_alignments.h \
 	libbreseq/settings.h \
 	libbreseq/storable.h \
-	libbreseq/tabulate_coverage.h
 libbreseq_la_LIBADD = $(top_srcdir)/$(LIBBAM)/libbam.la
 
-bin_PROGRAMS = breseq cbam2aln
+bin_PROGRAMS = breseq 
 breseq_SOURCES = breseq_cmdline.cpp
 
-cbam2aln_SOURCES = bam2aln_cmdline.cpp
+EXTRA_DIST = \
+	breseq.png \
+	breseq_small.png \
+	coverage_distribution.r \
+	plot_coverage.r \
+	plot_error_rate.r \
+	polymorphism_statistics.r
 
 install-data-local :
 

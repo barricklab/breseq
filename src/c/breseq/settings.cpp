@@ -100,6 +100,7 @@ namespace breseq
   
   Settings::Settings(int argc, char* argv[])
   {
+    this->command_line_run_header();
     this->pre_option_initialize();
     
     // we need the path to the executable to locate scripts and our own installed versions of binaries
@@ -170,11 +171,11 @@ namespace breseq
     options
 		("help,h", "produce this help message", TAKES_NO_ARGUMENT)
 		// convert to basing everything off the main output path, so we don't have to set so many options
-		("output,o", "path to breseq output")
-		("reference,r", "reference GenBank flatfile")
-    ("name,n", "human-readable name of sample/run for output")
+		("output,o", "path to breseq output [current path]", "")
+		("reference,r", "reference sequence in GenBank flatfile format (REQUIRED)")
+    ("name,n", "human-readable name of sample/run for output [unnamed]", "unnamed")
     ("polymorphism-prediction,p", "predict polymorphic mutations", TAKES_NO_ARGUMENT)
-    ("base-quality-cutoff,b", "ignore aligned bases with quality scores lower than this value")
+    ("base-quality-cutoff,b", "ignore bases with quality scores lower than this value", "3")
     
     .processCommandArgs(argc, argv);
     
@@ -201,14 +202,10 @@ namespace breseq
       exit(-1);
     }
     
-    this->base_output_path = "";
-    if (options.count("output")) 
-      this->base_output_path = options["output"];
-    if (options.count("name")) 
-      this->run_name = options["name"];
+    this->base_output_path = options["output"];
+    this->run_name = options["name"];
     this->polymorphism_prediction = options.count("polymorphism-prediction");
-    if (options.count("base-quality-cutoff")) 
-      this->base_quality_cutoff = from_string<uint32_t>(options["base-quality-cutoff"]);
+    this->base_quality_cutoff = from_string<uint32_t>(options["base-quality-cutoff"]);
 
     //// GENBANK REFERENCE FILES ////
     this->reference_file_names = from_string<vector<string> >(options["reference"]);
@@ -229,7 +226,27 @@ namespace breseq
 		this->post_option_initialize();
 	}
   
-  
+  void Settings::command_line_run_header()
+  {
+    
+    this->byline += PACKAGE_VERSION;
+    
+    this->website = "http://barricklab.org/breseq";
+    this->website += PACKAGE_URL;
+    cerr << "===============================================================================" << endl;
+    cerr << PACKAGE_STRING << "      " << PACKAGE_URL << endl;
+    cerr << endl;
+    cerr << "Authors: Barrick JE, Borges JJ, Knoester DB, Colburn GJ, Meyer AG" << endl;
+    cerr << "Contact: " << PACKAGE_BUGREPORT << endl;
+    cerr << endl;
+    cerr << PACKAGE_NAME << " is free software; you can redistribute it and/or modify it under the " << endl;
+    cerr << "terms the GNU General Public License as published by the Free Software" << endl;
+    cerr << "Foundation; either version 1, or (at your option) any later version." << endl;
+    cerr << endl;
+    cerr << "Copyright (c) 2008-2010 Michigan State University" << endl;
+    cerr << "Copyright (c) 2011      The University of Texas at Austin" << endl;
+    cerr << "===============================================================================" << endl;
+  }
 
 
 	void Settings::pre_option_initialize()
@@ -237,9 +254,7 @@ namespace breseq
     // Constants
     this->byline = "<b><i>breseq</i></b>&nbsp;&nbsp;version ";
     this->byline += PACKAGE_VERSION;
-    
-    this->website = "http://barricklab.org/breseq";
-    this->website += PACKAGE_URL;
+    this->website = PACKAGE_URL;
     
 		// Set up default values for options
     this->bin_path = ".";
@@ -335,9 +350,12 @@ namespace breseq
 	}
 
 	void Settings::post_option_initialize()
-	{    
+	{     
     // DATADIR is a preprocessor directive set by Automake or the IDE (XCode)
 		this->program_data_path = DATADIR; 
+    
+    if (getenv("PROGRAMDATAPATH"))
+      this->program_data_path = getenv("PROGRAMDATAPATH");  
 
 		//neaten up some settings for later string comparisons
 		this->error_model_method = to_upper(this->error_model_method);
@@ -354,15 +372,10 @@ namespace breseq
 			this->no_indel_polymorphisms = 1;
 			this->polymorphism_log10_e_value_cutoff = 5;
 		}
-
+    
 		// problems if there are spaces b/c shell removes quotes before we know about them
 		// thus require run names to only use underscores (but when printing output, remove).
-		/*if (this->run_name =~ m/\s/)
-		{
-				die("Option <--name|-n> must not contain whitespace characters. Please use underscores '_' in place of spaces.\n");
-		}
-		this->print_run_name = this->run_name;
-		this->print_run_name =~ s/_/ /g;*/
+    this->print_run_name = substitute(this->run_name, "_", " ");
 
 		////////  SETUP FILE NAMES  ////////
 		//// '#' replaced with read fastq name
@@ -532,6 +545,10 @@ namespace breseq
 
     test_command = "which " + this->bin_path + "/samtools";
 		this->installed["samtools"] = _system_capture_output(test_command, true);
+    
+    // override with environment variable
+    if (getenv("SAMTOOLSPATH"))
+      this->installed["samtools"] = getenv("SAMTOOLSPATH"); 
     
 		// search first for ssaha2 in the same location as breseq    
     test_command = "which " + this->bin_path + "/ssaha2";
