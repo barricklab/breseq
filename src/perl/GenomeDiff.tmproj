@@ -3,7 +3,7 @@
 <plist version="1.0">
 <dict>
 	<key>currentDocument</key>
-	<string>GenomeDiff/lib/GenomeDiff.pm</string>
+	<string>GenomeDiff/lib/GenomeDiff/ReferenceSequence.pm</string>
 	<key>documents</key>
 	<array>
 		<dict>
@@ -40,14 +40,30 @@
 			<key>caret</key>
 			<dict>
 				<key>column</key>
-				<integer>2</integer>
+				<integer>25</integer>
 				<key>line</key>
-				<integer>872</integer>
+				<integer>1926</integer>
 			</dict>
+			<key>columnSelection</key>
+			<false/>
 			<key>firstVisibleColumn</key>
 			<integer>0</integer>
 			<key>firstVisibleLine</key>
-			<integer>856</integer>
+			<integer>1905</integer>
+			<key>selectFrom</key>
+			<dict>
+				<key>column</key>
+				<integer>10</integer>
+				<key>line</key>
+				<integer>1926</integer>
+			</dict>
+			<key>selectTo</key>
+			<dict>
+				<key>column</key>
+				<integer>25</integer>
+				<key>line</key>
+				<integer>1926</integer>
+			</dict>
 		</dict>
 		<key>GenomeDiff/bin/tree_utils</key>
 		<dict>
@@ -98,14 +114,14 @@
 			<key>caret</key>
 			<dict>
 				<key>column</key>
-				<integer>25</integer>
+				<integer>11</integer>
 				<key>line</key>
-				<integer>853</integer>
+				<integer>209</integer>
 			</dict>
 			<key>firstVisibleColumn</key>
 			<integer>0</integer>
 			<key>firstVisibleLine</key>
-			<integer>826</integer>
+			<integer>192</integer>
 		</dict>
 		<key>GenomeDiff/lib/GenomeDiff/BaseSubstitutionFile.pm</key>
 		<dict>
@@ -137,6 +153,20 @@
 				<integer>158</integer>
 			</dict>
 		</dict>
+		<key>GenomeDiff/lib/GenomeDiff/Output.pm</key>
+		<dict>
+			<key>caret</key>
+			<dict>
+				<key>column</key>
+				<integer>26</integer>
+				<key>line</key>
+				<integer>32</integer>
+			</dict>
+			<key>firstVisibleColumn</key>
+			<integer>0</integer>
+			<key>firstVisibleLine</key>
+			<integer>20</integer>
+		</dict>
 		<key>GenomeDiff/lib/GenomeDiff/PreterminationTables.pm</key>
 		<dict>
 			<key>caret</key>
@@ -167,6 +197,20 @@
 				<integer>84</integer>
 			</dict>
 		</dict>
+		<key>GenomeDiff/lib/GenomeDiff/ReferenceSequence.pm</key>
+		<dict>
+			<key>caret</key>
+			<dict>
+				<key>column</key>
+				<integer>109</integer>
+				<key>line</key>
+				<integer>395</integer>
+			</dict>
+			<key>firstVisibleColumn</key>
+			<integer>0</integer>
+			<key>firstVisibleLine</key>
+			<integer>374</integer>
+		</dict>
 		<key>GenomeDiff/lib/GenomeDiff/SynonymousNonsynonymous.pm</key>
 		<dict>
 			<key>caret</key>
@@ -188,6 +232,8 @@
 		<string>GenomeDiff/bin/yaml_test</string>
 		<string>GenomeDiff/lib/GenomeDiff.pm</string>
 		<string>GenomeDiff/bin/genomediff</string>
+		<string>GenomeDiff/lib/GenomeDiff/Output.pm</string>
+		<string>GenomeDiff/lib/GenomeDiff/ReferenceSequence.pm</string>
 		<string>GenomeDiff/bin/tree_utils</string>
 		<string>GenomeDiff/lib/GenomeDiff/BaseSubstitutionFile.pm</string>
 		<string>GenomeDiff/lib/GenomeDiff/PreterminationTables.pm</string>
@@ -196,6 +242,6 @@
 	<key>showFileHierarchyDrawer</key>
 	<true/>
 	<key>windowFrame</key>
-	<string>{{335, 37}, {768, 733}}</string>
+	<string>{{570, 89}, {768, 733}}</string>
 </dict>
 </plist>

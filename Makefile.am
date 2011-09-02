@@ -40,9 +40,12 @@ EXTRA_DIST = \
 	tests/data/lambda/lambda.4.gbk \
 	tests/data/lambda/lambda.5.gbk
 
+## tests - does not work yet.
+##TESTS_ENVIRONMENT = PROGRAMDATAPATH=$(BRESEQ) SAMTOOLSPATH=$(SAMTOOLSDIR)
+##TESTS = tests/lambda_mult_ref_read/testcmd.sh
+
 ROOTDIR=$(PWD)
 DOCDIR=$(ROOTDIR)/src/doc
-##PERLBRESEQ=$(ROOTDIR)/src/perl/Breseq
 PERLGENOMEDIFF=$(ROOTDIR)/src/perl/GenomeDiff
 SAMTOOLSDIR=$(ROOTDIR)/$(LIBBAM)
 
@@ -58,11 +61,6 @@ all-local :
 	cd $(PERLGENOMEDIFF) ; \
 	perl Build.PL --install_base=$(prefix) --install_path bin=$(bindir)  --install_path script=$(bindir) ; \
 	./Build ;
-
-	## Breseq
-	##cd $(PERLBRESEQ) ; \
-	##perl Build.PL --install_base=$(prefix) --install_path bin=$(bindir)  --install_path script=$(bindir) ; \
-	##./Build ;
 	
 	## This saves the install path for the test script
 	echo "export TESTBINPREFIX=$(bindir)" > tests/test.config;
@@ -75,19 +73,11 @@ install-exec-local :
 	cd $(PERLGENOMEDIFF) ; \
 	./Build install;
 	
-	## Breseq
-	##cd $(PERLBRESEQ) ; \
-	##./Build install;
-	
 clean-local :: clean-tests
 
 	## GenomeDiff
 	cd $(PERLGENOMEDIFF) ; \
-	./Build clean;
-	
-	## Breseq
-	##cd $(PERLBRESEQ) ; \
-	##./Build clean;	
+	./Build clean;	
 	
 	## This saves the install path for the test script
 	rm tests/test.config;
@@ -109,14 +99,6 @@ dist-hook:
 	
 	mkdir -p $(distdir)/src/perl
 	cp -r $(PERLGENOMEDIFF)/GenomeDiff-* $(distdir)/src/perl/GenomeDiff ; 
-
-	## Breseq
-	##cd $(PERLBRESEQ) ; \
-	##./Build distdir ; \
-	##echo $(distdir)/src/perl/Breseq ;
-	
-	##mkdir -p $(distdir)/src/perl
-	##cp -r $(PERLBRESEQ)/Breseq-* $(distdir)/src/perl/Breseq ; 
 	
 	## Remove ._ files
 	rm -rf `find $(distdir) -name ".*"`
@@ -146,7 +128,6 @@ clean-pkg :
 
 	rm -rf package
 
-## tests
 
 test:
 	tests/test.sh test tests

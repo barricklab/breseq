@@ -188,6 +188,12 @@ our $type_sort_order = {
 	'UN' => 11,
 };
 
+sub revcom
+{
+	my ($seq) = @_;
+	$seq =~ tr/ATCG/TAGC/;
+	return reverse $seq;
+}
 
 =head2 new
 
@@ -966,7 +972,7 @@ sub apply_to_sequences
 			die "MOB: does not handle ins_start, ins_end, del_start, del_end yet." if (($mut->{ins_start} != 0) || ($mut->{ins_end} != 0) || ($mut->{del_start} != 0) || ($mut->{del_end} != 0) );
 			
 			die "Unknown repeat strand" if ($mut->{strand} eq '?');
-			my $seq_string = Breseq::ReferenceSequence::repeat_example($ref_seq_info, $mut->{repeat_name}, $mut->{strand});
+			my $seq_string = GenomeDiff::ReferenceSequence::repeat_example($ref_seq_info, $mut->{repeat_name}, $mut->{strand});
 			
 			## note that we are setting the size used by shift_positions
 			$mut->{repeat_size} = length($seq_string); ##used by shift_positions
@@ -984,7 +990,7 @@ sub apply_to_sequences
 			my $strand = ($start < $end) ? +1 : -1;
 			($start, $end) = ($end, $start) if ($strand == -1);
 			my $replace_string = substr $ref_strings->{$seq_id}, $start-1, $end-$start+1; #taken from original!!
-			$replace_string = Breseq::Fastq::revcom($replace_string) if ($strand == -1);
+			$replace_string = GenomeDiff::Fastq::revcom($replace_string) if ($strand == -1);
 			my $replaced = substr $new_ref_strings->{$mut->{seq_id}}, $mut->{position}-1, $mut->{size}, $replace_string;
 			
 			print ">> CON: Gene Conversion Mutation <<\n";
