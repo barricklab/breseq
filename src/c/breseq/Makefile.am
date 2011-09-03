@@ -68,7 +68,8 @@ libbreseq_la_SOURCES = \
 	libbreseq/pileup.h \
 	libbreseq/resolve_alignments.h \
 	libbreseq/settings.h \
-	libbreseq/storable.h \
+	libbreseq/storable.h 
+	
 libbreseq_la_LIBADD = $(top_srcdir)/$(LIBBAM)/libbam.la
 
 bin_PROGRAMS = breseq 
