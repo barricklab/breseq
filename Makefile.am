@@ -80,8 +80,13 @@ clean-local :: clean-tests
 	./Build clean;	
 	
 	## This saves the install path for the test script
-	rm tests/test.config;
-		
+	##if [ -f tests/test.config ]; then \
+  ##	rm tests/test.config; \
+	##fi
+	
+	rm -f tests/test.config
+
+	
 dist-hook:
 
 ## This environmental variable is used by python Sphinx
@@ -113,6 +118,7 @@ macosx-pkg-download :
 	curl -O ftp://ftp.sanger.ac.uk/pub4/resources/software/ssaha2/ssaha2_mac.tgz ; \
 	tar -xvzf ssaha2_mac.tgz;
 
+
 macosx-pkg-compile :
 
 	mkdir -p $(MACPACKAGEBUILDDIR)
@@ -122,15 +128,15 @@ macosx-pkg-compile :
 	## Install outselves into this dir
 	./configure --prefix=$(MACPACKAGEBUILDDIR) ; \
 	make install ;
-
+	
 	
 clean-pkg :
-
 	rm -rf package
 
 
 test:
 	tests/test.sh test tests
+
 
 clean-tests:
 	tests/test.sh clean tests
