@@ -33,8 +33,9 @@ LICENSE AND COPYRIGHT
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
-#include <sys/stat.h>
 #include <limits.h>
+#include <sys/stat.h>
+#include <sys/types.h>
 
 // C++
 #include <algorithm>
@@ -126,11 +127,6 @@ namespace breseq {
     }
   }
     
-    
-    inline void donothing(){
-        
-    }
-    
   inline base_index complement_base_index(base_index base) {
     // ascii
     switch(base) {
@@ -201,13 +197,25 @@ namespace breseq {
     ifstream ifile(filename);
     return ifile;
   }
-  
+ 
+  /*
   inline bool file_empty(const char *filename)
   {
     ifstream ifile(filename);
     string test;
     getline(ifile, test);
     return ifile.fail();
+  }
+  */
+  
+  inline bool file_empty(const char *filename)
+  {
+    struct stat filestatus;
+    if (stat( filename, &filestatus ) == 0)
+      return (filestatus.st_size == 0);
+    
+    // error getting stat, file must not exist
+    return true;
   }
 
 	inline uint32_t fix_flags(uint32_t flags)
@@ -693,18 +701,23 @@ namespace breseq {
   
   // These are our own local wrappers for common functions.
   
-  inline void _assert(bool condition, const string& message = "")
+  inline void  my_assertion_handler(bool condition, const char *file, const char *base_file, int line, const string& message = "")
   {
     if (!condition)
     {
-      cerr << "---> FATAL ERROR --->" << endl;
-      cerr << message << endl;
-      cerr << "<--- FATAL ERROR <---" << endl;
-      assert(false);
+      cerr << "-------------> FATAL ERROR <-------------" << endl;
+      if (message.length() > 0) cerr << message << endl;
+      cerr << "File:      " << file << endl;
+      cerr << "Base File: " << base_file << endl;
+      cerr << "Line:      " << line << endl;
+      cerr << "-------------> FATAL ERROR <-------------" << endl;
       exit(-1);
     }
   }
   
+  #define ASSERTM(condition, message) { my_assertion_handler( condition,  __FILE__, __BASE_FILE__, __LINE__, message); }
+  #define ASSERT(condition) { my_assertion_handler( condition,  __FILE__, __BASE_FILE__, __LINE__); }
+
   inline void _warn(bool condition, const string& message = "")
   {
     if (!condition)

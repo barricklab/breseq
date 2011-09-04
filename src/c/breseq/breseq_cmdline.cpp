@@ -1044,7 +1044,7 @@ int breseq_default_action(int argc, char* argv[])
 	}
 
 	summary.sequence_conversion.retrieve(settings.sequence_conversion_summary_file_name);
-	_assert(summary.sequence_conversion.max_read_length != UNDEFINED_UINT32, "Can't retrieve max read length from file: " + settings.sequence_conversion_summary_file_name);
+	ASSERTM(summary.sequence_conversion.max_read_length != UNDEFINED_UINT32, "Can't retrieve max read length from file: " + settings.sequence_conversion_summary_file_name);
 
 	//load C++ info
 	string reference_features_file_name = settings.reference_features_file_name;
@@ -1358,7 +1358,9 @@ int breseq_default_action(int argc, char* argv[])
 		string samtools = settings.ctool("samtools");
 		string command;
 
-		if (!settings.no_junction_prediction)
+    // only run samtools if we are predicting junctions and there were results in the sam file
+    // first part of conditional really not necessary @JEB
+		if (!settings.no_junction_prediction && !file_empty(resolved_junction_sam_file_name.c_str()))
 		{
 			command = samtools + " import " + candidate_junction_faidx_file_name + " " + resolved_junction_sam_file_name + " " + junction_bam_unsorted_file_name;
 			_system(command);
@@ -1526,18 +1528,9 @@ int breseq_default_action(int argc, char* argv[])
 		// deal with distribution or error count keys being undefined...
 		string coverage_fn = settings.file_name(settings.unique_only_coverage_distribution_file_name, "@", "");
 		string outputdir = dirname(coverage_fn) + "/";
-		/*chomp $outputdir; $outputdir .= "/";
-		my $readfiles = join(" --readfile ", settings.read_files);
-		my $cmdline = "$cbreseq ERROR_COUNT --bam $reference_bam_file_name --fasta $reference_fasta_file_name --output $outputdir --readfile $readfiles --coverage";
-		$cmdline .= " --errors";
-		$cmdline .= " --minimum-quality-score settings.{base_quality_cutoff}" if (settings.{base_quality_cutoff});*/
 
-	//----->//this line should be calculated
 		uint32_t num_read_files = summary.sequence_conversion.reads.size();
 		uint32_t num_qual = summary.sequence_conversion.max_qual + 1;
-		/*$cmdline .= " --covariates=read_set=$num_read_files,obs_base,ref_base,quality=$num_qual";
-	//		$cmdline .= " --covariates=read_set=$num_read_files,obs_base,ref_base,quality=$summary->{sequence_conversion}->{max_qual},base_repeat=5";
-		Breseq::Shared::system($cmdline);*/
 
 		error_count(
 			reference_bam_file_name, // bam
@@ -1680,18 +1673,6 @@ int breseq_default_action(int argc, char* argv[])
 		//#unlink $evidence_genome_diff_file_name;
 
 		//
-		// Annotate mutations
-		//
-		cerr << "Annotating mutations..." << endl;
-		ref_seq_info.annotate_mutations(gd);
-
-		//
-		// Plot coverage of genome and large deletions
-		//
-		cerr << "Drawing coverage plots..." << endl;
-		output::draw_coverage(settings, ref_seq_info, gd);
-
-		//
 		// Mark lowest RA evidence items as no-show, or we may be drawing way too many alignments
 		//
 
@@ -1699,10 +1680,6 @@ int breseq_default_action(int argc, char* argv[])
 		list<counted_ptr<diff_entry> > ra = gd.filter_used_as_evidence(gd.list(ra_types));
 
     ra.remove_if(diff_entry::frequency_less_than_two_or_no_show());
-    
-
-
-		//@ra = sort { -($a->{quality} <=> $b->{quality}) } @ra;
     ra.sort(diff_entry::by_scores(make_list<string>("quality"))); 
 
 		list<counted_ptr<diff_entry> >::iterator it;
@@ -1711,44 +1688,54 @@ int breseq_default_action(int argc, char* argv[])
 		for (uint32_t i = 0; i < ra.size(); i++)
 		{
 			if (i++ >= settings.max_rejected_polymorphisms_to_show)
-				(**(it++))["no_show"] = "true";
+				(**(it++))[NO_SHOW] = "1";
 		}
 
 		// require a certain amount of coverage
-		list<counted_ptr<diff_entry> > new_ra = gd.filter_used_as_evidence(gd.list(ra_types));
-		for (list<counted_ptr<diff_entry> >::iterator item = new_ra.begin(); item != new_ra.end(); item++)
+		diff_entry_list new_ra = gd.filter_used_as_evidence(gd.list(ra_types));
+		for (diff_entry_list::iterator item = new_ra.begin(); item != new_ra.end(); item++)
 		{
 			vector<string> top_bot = split((**item)["tot_cov"], "/");
 			uint32_t top = from_string<int32_t>(top_bot[0]);
 			uint32_t bot = from_string<int32_t>(top_bot[1]);
-			if (top + bot <= 2) (**item)["no_show"] = "true";
+			if (top + bot <= 2) (**item)["no_show"] = "1";
 		}
 		
-    ra.remove_if(diff_entry::coverage_or_no_show_is_true());
-
 		//
 		// Mark lowest scoring reject junctions as no-show
 		//
 		vector<string> jc_types = make_list<string>("JC");
-		list<counted_ptr<diff_entry> > jc = gd.filter_used_as_evidence(gd.list(jc_types));
+    
+		diff_entry_list jc = gd.filter_used_as_evidence(gd.list(jc_types));
 	  
     for (it = jc.begin(); it != jc.end(); it++)
     {
-      if (((*it)->number_reject_reasons() > 0))
-        ra.erase(it--);
+      if (((*it)->number_reject_reasons() == 0))
+        jc.erase(it--);
     }
     
-    //jc.remove_if(diff_entry::reject_is_not_true());
-
-		//@jc = sort { -($a->{pos_hash_score} <=> $b->{pos_hash_score}) || -($a->{min_overlap_score} <=> $b->{min_overlap_score})  || ($a->{total_reads} <=> $a->{total_reads}) } @jc;
     jc.sort(diff_entry::by_scores(make_list<diff_entry::key_t>("pos_hash_score")("min_overlap_score")("total_reads")));
 		it = jc.begin();
 		for (uint32_t i = 0; i < jc.size(); i++)
 		{
-			if (i++ >= settings.max_rejected_junctions_to_show)
-				(**(it++))["no_show"] = "true";
+			if (i >= settings.max_rejected_junctions_to_show)
+				(**it)["no_show"] = "1";
+      it++;
 		}
 
+
+    //
+		// Annotate mutations
+		//
+		cerr << "Annotating mutations..." << endl;
+		ref_seq_info.annotate_mutations(gd);
+    
+		//
+		// Plot coverage of genome and large deletions
+		//
+		cerr << "Drawing coverage plots..." << endl;
+		output::draw_coverage(settings, ref_seq_info, gd);
+    
 		//
 		// Create evidence files containing alignments and coverage plots
 		//

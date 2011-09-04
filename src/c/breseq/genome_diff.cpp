@@ -48,6 +48,7 @@ const char* TOT_COV="tot_cov";
 const char* ERROR="error";
 
 
+
 // Types of diff entries:
 const char* SNP="SNP";
 const char* SUB="SUB";
@@ -71,7 +72,7 @@ map<string, vector<string> > line_specification =make_map<string, vector<string>
 ("SUB",make_list<string> ("seq_id")("position")("size")("new_seq"))
 ("DEL",make_list<string> ("seq_id")("position")("size"))
 ("INS",make_list<string> ("seq_id")("position")("new_seq"))
-("MOB",make_list<string> ("seq_id")("position")("repeat_name")("strand")("duplication_size")("gap_left")("gap_right"))
+("MOB",make_list<string> ("seq_id")("position")("repeat_name")("strand")("duplication_size"))
 ("DEL",make_list<string> ("seq_id")("position")("size"))
 ("INV",make_list<string> ("seq_id")("position")("size"))
 ("AMP",make_list<string> ("seq_id")("position")("size")("new_copy_number"))
@@ -153,10 +154,12 @@ void diff_entry::marshal(field_list_t& s) {
   for (vector<string>::iterator it=f.begin(); it != f.end(); it++)
   {
 		map_t::iterator iter=cp.find(*it);
-		if(iter != cp.end()) {
-			s.push_back(iter->second);
-			cp.erase(iter);
-		}
+    
+    ASSERTM(iter != cp.end(), "Did not find required field '" + *it + "' to write in entry id " + _id + " of type '" + _type + "'.");
+    
+    s.push_back(iter->second);
+    cp.erase(iter);
+  
 	}
 	
 	// marshal whatever's left, unless it's an empty field or _begins with an underscore
@@ -856,6 +859,10 @@ void VCFtoGD( const string& vcffile, const string& gdfile ){
  */ 
 diff_entry_list genome_diff::list(const vector<string>& types)
 {
+  // default is to have to types
+  if (types.size() == 0)
+    return _entry_list;
+  
   diff_entry_list return_list;
   
   for (diff_entry_list::iterator itr_diff_entry = _entry_list.begin(); 
@@ -871,38 +878,42 @@ diff_entry_list genome_diff::list(const vector<string>& types)
   
   return return_list;
 }
+  
+diff_entry_list genome_diff::show_list(const vector<string>& types)
+{
+  diff_entry_list ret_list = list(types);
+  ret_list.remove_if(diff_entry::fields_exist(make_list<diff_entry::key_t>("deleted")));
+  ret_list.remove_if(diff_entry::fields_exist(make_list<diff_entry::key_t>("no_show")));  
+  return ret_list;
+}
 
 /*-----------------------------------------------------------------------------
- * returns mutations not used as evidence. 
+ * returns entries NOT used as evidence by other entries. 
  *
- * Poorly implemented right now, look into future refractor into returning
- * list<counted_ptr<diff_entry> >
  *-----------------------------------------------------------------------------*/
-::list<counted_ptr<diff_entry> > genome_diff::filter_used_as_evidence(const diff_entry_list& input)
+diff_entry_list genome_diff::filter_used_as_evidence(const diff_entry_list& input)
 {
-  ::list<counted_ptr<diff_entry> > return_list(input.begin(),input.end());
-// Can't change first loop to ::list because you will get segmentation faults after 
-// the .remove() method. Check if .end() is called only during initialization or 
-// during each itr_outer != input.end() ?
-  for (diff_entry_list::const_iterator itr_outer = input.begin();
-       itr_outer != input.end(); itr_outer++) {
-    string& input_id = (**itr_outer)._id;
-
-    for (diff_entry_list::const_iterator itr_inner = _entry_list.begin();
-         itr_inner != _entry_list.end(); itr_inner ++) {  
-      diff_entry& test_item = **itr_inner;
-      
-        if (count(test_item._evidence.begin(), 
-            test_item._evidence.end(),
-            input_id) > 0) {
-          return_list.remove(*itr_outer);
-          break;
-        }    
-    
-    }    
+  // first we make a map with everything used as evidence by any entry in the entire genome diff
+  map<string,bool> used_as_evidence;
+  for (diff_entry_list::const_iterator it = _entry_list.begin(); it != _entry_list.end(); it++) 
+  {
+    const diff_entry_ptr& de = *it;
+    for (vector<string>::const_iterator ev_it = de->_evidence.begin(); ev_it != de->_evidence.end(); ev_it++) 
+    {  
+      used_as_evidence[*ev_it] = true;
+    }   
   }
+  
+  // then construct a list of all items in input with ids not in this map
+  diff_entry_list return_list;
+  for (diff_entry_list::const_iterator it = input.begin(); it != input.end(); it++) 
+  {
+    const diff_entry_ptr& de = *it;
+    if ( !used_as_evidence.count(de->_id) )
+      return_list.push_back(de);
+  }
+
   return return_list;
-// # }
 }
 
 
@@ -935,12 +946,10 @@ diff_entry genome_diff::_line_to_item(const string& line)
       assert(false);
     }
 
-    //if(regex_m("=",next))
-    if (next.find("=") != string::npos)
-    {
-      cerr << "Unexpected key=value pair \'$next\' encountered for required item" << key << " in type " << item._type << " line:" << endl << line; 
-      assert(false);
-    }
+    ASSERTM(next.find("=") == string::npos,
+            "Unexpected key=value pair '" + next + "' encountered for required item '" + key 
+            + "' in type '" + item._type + "' line:\n" + line);
+    
     item[key] = next;
   }
 
@@ -985,6 +994,7 @@ diff_entry genome_diff::_line_to_item(const string& line)
  return item;
 }
 
+// return items with types that are 3 characters long
 diff_entry_list genome_diff::mutation_list()
 {
   diff_entry_list mut_list;
@@ -993,7 +1003,7 @@ diff_entry_list genome_diff::mutation_list()
        itr != _entry_list.end(); itr ++) {
      diff_entry& item = **itr;
      size_t type_length = item._type.length();
-     if(type_length == 2) {
+     if(type_length == 3) {
        mut_list.push_back(*itr);
      }
    }
@@ -1001,8 +1011,25 @@ diff_entry_list genome_diff::mutation_list()
   return mut_list;
 }
 
+// return items with types that are 2 characters long
+diff_entry_list genome_diff::evidence_list()
+{
+  diff_entry_list mut_list;
+  
+  for(diff_entry_list::iterator itr = _entry_list.begin();
+      itr != _entry_list.end(); itr ++) {
+    diff_entry& item = **itr;
+    size_t type_length = item._type.length();
+    if(type_length == 2) {
+      mut_list.push_back(*itr);
+    }
+  }
+  
+  return mut_list;
+}
 
-/*! Return all diff_entrys within _entry_list whose _type matches one
+
+/*! Return all diff_entrys within _entry_list whose _id matches one
  * of those within input's item._evidence
  */ 
 diff_entry_list genome_diff::mutation_evidence_list(const diff_entry& item)
@@ -1042,33 +1069,19 @@ diff_entry_ptr genome_diff::parent(const diff_entry& item)
 
 bool genome_diff::mutation_unknown(diff_entry mut)
 {
-//sub mutation_unknown
-//{
-//	my ($self, $mut) = @_;
-//
-//	if ($mut->{type} eq 'SNP')
-//	{
-//		return $self->interval_un($mut->{position}, $mut->{position});
-//	}
+  
   if (mut._type == SNP) {
     return interval_un(from_string<uint32_t>(mut[POSITION]),
                        from_string<uint32_t>(mut[POSITION]));
   }
-//	
-//	## should be updated to new unknown that includes linkage
-//	if ($mut->{type} eq 'INS')
-//	{
-//		return $self->interval_un($mut->{position}, $mut->{position}+1);
-//	}
+
   //Should be updated to new unknown that includes linkage
   if (mut._type == INS) {
     return interval_un(from_string<uint32_t>(mut[POSITION]),
                        from_string<uint32_t>(mut[POSITION])) + 1;
   }
-//
-//	if ($mut->{type} eq 'DEL')
-//	{
-//
+  if (mut._type == DEL) {
+
 //#doesn't work b/c evidence list may not be correct here
 //		## only call unknowns if all support is RA
 //#		my $only_ra_evidence = 1;
@@ -1080,23 +1093,18 @@ bool genome_diff::mutation_unknown(diff_entry mut)
 //#		print Dumper($mut);
 //#		print "Only RA evidence? $only_ra_evidence\n";		
 //#		return 0 if (!$only_ra_evidence);
-//		return $self->interval_un($mut->{position}, $mut->{position}+$mut->{size}-1);
-//	}
-//	
-//	if ($mut->{type} eq 'SUB')
-//	{
-//		return $self->interval_un($mut->{position}, $mut->{position}+$mut->{size}-1);
-//	}
+		return interval_un(from_string<uint32_t>(mut[POSITION]),
+                       from_string<uint32_t>(mut[POSITION]) + from_string<uint32_t>(mut["size"]) - 1);
+	}
+	
+
   if (mut._type == SUB) {
     return interval_un(from_string<uint32_t>(mut[POSITION]),
                        from_string<uint32_t>(mut[POSITION]) - 1);
   }
-//	
-//	return 0;
+  
   return false;
-//}
 }
-//
 
 void genome_diff::add_reject_reasons(diff_entry item, const string& reject)
 {

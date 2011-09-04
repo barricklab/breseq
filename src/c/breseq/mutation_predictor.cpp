@@ -816,12 +816,12 @@ namespace breseq {
 					swap(mut["_del_start"], mut["_del_end"]);
 				}
 
-				// clean up unused keys
-				if (mut.entry_exists("_del_start")) mut["del_start"] = mut["_del_start"];
-				if (mut.entry_exists("_del_end")) mut["del_end"] = mut["_del_end"];
+				// only transfer the hidden _keys to normal keys that will be printed if they are different from 0
+				if (mut.entry_exists("_del_start") && (mut["_del_start"] != "0")) mut["del_start"] = mut["_del_start"];
+				if (mut.entry_exists("_del_end")   && (mut["_del_end"] != "0"))   mut["del_end"] = mut["_del_end"];
 
-				 if (mut.entry_exists("_ins_start")) mut["ins_start"] = mut["_ins_start"];
-				 if (mut.entry_exists("_ins_end")) mut["ins_end"] = mut["_ins_end"];
+				 if (mut.entry_exists("_ins_start") && (mut["_del_start"].length() != 0)) mut["ins_start"] = mut["_ins_start"];
+				 if (mut.entry_exists("_ins_end")   && (mut["_del_end"].length() != 0))   mut["ins_end"] = mut["_ins_end"];
 
 				if (verbose)
 					cout << mut["_gap_left"] << " :: " << mut["_gap_right"] << endl;
@@ -882,7 +882,6 @@ namespace breseq {
 			int32_t position = n(j["side_1_position"]);
 
 			// Special case of circular chromosome
-      // TODO: change to use ref_seq_info length field
 			if ( (j["side_1_position"] == "1") && ( static_cast<uint32_t>(n(j["side_2_position"])) == ref_seq_info[ref_seq_info.seq_id_to_index(j["side_2_seq_id"])].m_length ) )
 			{
 				j["circular_chromosome"] = "1";

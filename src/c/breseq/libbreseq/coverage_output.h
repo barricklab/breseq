@@ -75,7 +75,7 @@ namespace breseq
       if (_output_format.length() > 0)
       {
         m_output_format = _output_format;
-        _assert( (m_output_format=="png") || (m_output_format=="pdf"), 
+        ASSERTM( (m_output_format=="png") || (m_output_format=="pdf"), 
                 "Unrecognized coverage plot output format: " + m_output_format);
       }
       return m_output_format; 

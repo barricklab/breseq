@@ -240,7 +240,7 @@ namespace breseq {
     fstream(file_name.c_str(), mode), m_current_line(0), m_file_name(file_name), m_needs_conversion(false),
     m_check_for_repeated_read_names(false), m_last_read_name(""), m_repeated_read_name_count(0)
   { 
-    _assert(!(*this).fail(), "Could not open file: " +  file_name);
+    ASSERTM(!(*this).fail(), "Could not open file: " +  file_name);
   }
 
   // read one sequence record from the file

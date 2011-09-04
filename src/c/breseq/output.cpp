@@ -175,7 +175,7 @@ void html_index(const string& file_name, const Settings& settings, Summary& summ
 // #   ## Mutation predictions
 // #   ###
   HTML << "<!--Mutation Predictions -->" << endl;
-  diff_entry_list muts = gd.list(make_list<string>(SNP)(INS)(DEL)(SUB)(MOB)(AMP));
+  diff_entry_list muts = gd.show_list(make_list<string>(SNP)(INS)(DEL)(SUB)(MOB)(AMP));
   
   string relative_path = settings.local_evidence_path;
   
@@ -199,24 +199,20 @@ void html_index(const string& file_name, const Settings& settings, Summary& summ
 // #   ###
   HTML << "<!--Unassigned evidence-->" << endl;
   
-  diff_entry_list mc = gd.filter_used_as_evidence(gd.list(make_list<string>("MC")));
+  diff_entry_list mc = gd.filter_used_as_evidence(gd.show_list(make_list<string>("MC")));
   
   if (mc.size() > 0) {
     HTML << "<p>" << html_missing_coverage_table_string(mc, false, "Unassigned missing coverage evidence", relative_path);
   }
 
-  diff_entry_list jc = gd.filter_used_as_evidence(gd.list(make_list<string>("JC")));
-
-  jc.remove_if(diff_entry::field_exists("no_show"));
+  diff_entry_list jc = gd.filter_used_as_evidence(gd.show_list(make_list<string>("JC")));
   
   //Don't show junctions for circular chromosomes
-  if (!settings.hide_circular_genome_junctions) {
+  if (settings.hide_circular_genome_junctions) {
     jc.remove_if(diff_entry::field_exists("circular_chromosome")); 
   }
    
   diff_entry_list jcu = jc;
-  jcu.remove_if(diff_entry::field_exists("reject"));
-
   if (jcu.size() > 0) {
     HTML << "<p>" << endl;
     HTML << html_new_junction_table_string(jcu, false, "Unassigned new junction evidence...", relative_path);
@@ -261,19 +257,15 @@ void html_marginal_predictions(const string& file_name, const Settings& settings
   // ###
   // ## Marginal evidence
   // ###
-  diff_entry_list ra = gd.filter_used_as_evidence(gd.list(make_list<diff_entry::key_t>("RA")));
-
-  //Don't print ones that overlap predicted deletions or were marked to not show.
-  ra.remove_if(diff_entry::fields_exist(make_list<diff_entry::key_t>("deleted")("no_show")));
+  diff_entry_list ra = gd.filter_used_as_evidence(gd.show_list(make_list<diff_entry::key_t>("RA")));  
   
   if (ra.size() > 0) {
     HTML << "<p>" << endl;
     HTML << html_read_alignment_table_string(ra, false, "Marginal read alignment evidence...",
       relative_path) << endl;
   }
-
-    diff_entry_list jc = gd.filter_used_as_evidence(gd.list(make_list<string>("JC")));
-    jc.remove_if(diff_entry::field_exists("no_show"));
+  
+    diff_entry_list jc = gd.filter_used_as_evidence(gd.show_list(make_list<string>("JC")));
     jc.remove_if(not1(diff_entry::field_exists("reject")));
    if (jc.size()) {
      //Sort by score, not by position (the default order)...
@@ -804,7 +796,7 @@ string html_read_alignment_table_string(diff_entry_list& list_ref, bool show_rej
 
 string html_missing_coverage_table_string(diff_entry_list& list_ref, bool show_reject_reason, const string& title, const string& relative_link)
 {
-  _assert(list_ref.front().get());
+  ASSERT(list_ref.front().get());
   
   stringstream ss; //!< Main Build Object in Function
   
@@ -851,11 +843,11 @@ string html_missing_coverage_table_string(diff_entry_list& list_ref, bool show_r
     ss << "<tr>" << endl;
     if (link) 
     {
+      ss << td(a(relative_link + c[_SIDE_1_EVIDENCE_FILE_NAME], "*")) << endl;
+      ss << td(a(relative_link + c[_SIDE_2_EVIDENCE_FILE_NAME], "*")) << endl; 
+      
       if (coverage_plots) 
         ss << td(a(relative_link + c[_EVIDENCE_FILE_NAME], "&divide;")) << endl;
-
-      ss << td(a(relative_link + c[_SIDE_1_EVIDENCE_FILE_NAME], "*")) << endl;
-      ss << td(a(relative_link + c[_SIDE_2_EVIDENCE_FILE_NAME], "*")) << endl;      
     }
 
     string start = c[START];
@@ -868,7 +860,7 @@ string html_missing_coverage_table_string(diff_entry_list& list_ref, bool show_r
     string end = c[END];
     if (from_string<uint32_t>(c[END_RANGE]) > 0) 
     {
-       end += "" + 
+       end += "–" + 
          to_string(from_string<uint32_t>(c[END]) -
                    from_string<uint32_t>(c[END_RANGE]));
     }
@@ -968,9 +960,9 @@ string html_new_junction_table_string(diff_entry_list& list_ref, bool show_rejec
 // #     ### Side 1 ###
 // #     ##############
     ss << "<!-- Side 1 Item Lines for New Junction -->" << endl;
-
+    
     string key = "side_1";
-    string annotate_key = "junction_" + c[key + "_annotation_key"];
+    string annotate_key = "junction_" + c[key + "_annotate_key"];
     ss << start_tr("class=\"mutation_table_row_" + to_string(row_bg_color_index) +"\"") << endl;
 
      if (link) {
@@ -988,10 +980,10 @@ string html_new_junction_table_string(diff_entry_list& list_ref, bool show_rejec
             nonbreaking(c[key + "_seq_id"])) << endl;
        
       if (from_string<int32_t>(c[key + "_strand"]) == 1) { 
-        ss << td("align=\"center\" class-\"" + annotate_key +"\"",
+        ss << td("align=\"center\" class=\"" + annotate_key +"\"",
                 c[key + "_position"] + "&nbsp;=");
       } else {
-        ss << td("align=\"center\" class-\"" + annotate_key +"\"",
+        ss << td("align=\"center\" class=\"" + annotate_key +"\"",
                 "=&nbsp;" + c[key + "_position"]);
       }
       ss << td("rowspan=\"2\" align=\"center\"", c["overlap"]) << endl;
@@ -1028,10 +1020,10 @@ string html_new_junction_table_string(diff_entry_list& list_ref, bool show_rejec
               nonbreaking(c[key + "_seq_id"])) << endl;
 
       if (from_string<int32_t>(c[key + "_strand"]) == 1) { 
-        ss << td("align=\"center\" class-\"" + annotate_key +"\"",
+        ss << td("align=\"center\" class=\"" + annotate_key +"\"",
                 c[key + "_position"] + "&nbsp;=") << endl;
       } else {
-        ss << td("align=\"center\" class-\"" + annotate_key +"\"",
+        ss << td("align=\"center\" class=\"" + annotate_key +"\"",
                 "=&nbsp;" + c[key + "_position"]) << endl;
       } 
       ss << td("align=\"center\" class=\"" + annotate_key + "\"",
@@ -1151,11 +1143,12 @@ Evidence_Files::Evidence_Files(const Settings& settings, genome_diff& gd)
   string junction_fasta_file_name = settings.candidate_junction_fasta_file_name;
 
   // We make alignments of two regions for deletions: upstream and downstream edges.
-  diff_entry_list items_MC = gd.list(make_list<string>(MC));
+  diff_entry_list items_MC = gd.show_list(make_list<string>(MC));
+  cerr << "Number of MC evidence items: " << items_MC.size() << endl;
+  
   for (diff_entry_list::iterator itr = items_MC.begin(); itr != items_MC.end(); itr ++) 
   {  
     diff_entry_ptr item(*itr);
-    if (item->entry_exists(NO_SHOW)) continue;
      
     diff_entry_ptr parent_item(gd.parent(*item));
     if (parent_item.get() == NULL)
@@ -1197,13 +1190,13 @@ Evidence_Files::Evidence_Files(const Settings& settings, genome_diff& gd)
     
   } // mc_item list
   
-  diff_entry_list items_SNP_INS_DEL_SUB = gd.list(make_list<string>(SNP)(INS)(DEL)(SUB));
+  diff_entry_list items_SNP_INS_DEL_SUB = gd.show_list(make_list<string>(SNP)(INS)(DEL)(SUB));
+  cerr << "Number of SNP_INS_DEL_SUB evidence items: " << items_SNP_INS_DEL_SUB.size() << endl;
 
   for (diff_entry_list::iterator itr = items_SNP_INS_DEL_SUB.begin(); itr != items_SNP_INS_DEL_SUB.end(); itr ++) 
   {  
     diff_entry_ptr item = *itr;
     diff_entry_list mutation_evidence_list = gd.mutation_evidence_list(*item);
-    if (item->entry_exists(NO_SHOW)) continue;
 
     // #this reconstructs the proper columns to draw
     uint32_t start = from_string<uint32_t>((*item)[POSITION]);
@@ -1259,12 +1252,12 @@ Evidence_Files::Evidence_Files(const Settings& settings, genome_diff& gd)
   
 
   // Still create files for RA evidence that was not good enough to predict a mutation from
-  diff_entry_list ra_list = gd.filter_used_as_evidence(gd.list(make_list<string>(RA)));
-  
-  for (diff_entry_list::iterator itr = ra_list.begin(); itr != ra_list.end(); itr ++) 
+  diff_entry_list items_RA = gd.filter_used_as_evidence(gd.show_list(make_list<string>(RA)));
+  cerr << "Number of RA evidence items: " << items_RA.size() << endl;
+
+  for (diff_entry_list::iterator itr = items_RA.begin(); itr != items_RA.end(); itr ++) 
   {  
     diff_entry_ptr item = *itr;
-    if (item->entry_exists(NO_SHOW)) continue;
 
     add_evidence(_EVIDENCE_FILE_NAME,
                  item,
@@ -1283,12 +1276,12 @@ Evidence_Files::Evidence_Files(const Settings& settings, genome_diff& gd)
   // Note that it is completely determined by the original candidate junction sequence 
   // positions and overlap: alignment_pos and alignment_overlap.
   
-  diff_entry_list items_JC = gd.list(make_list<string>(JC));
+  diff_entry_list items_JC = gd.show_list(make_list<string>(JC));
+  cerr << "Number of JC evidence items: " << items_JC.size() << endl;
 
   for (diff_entry_list::iterator itr = items_JC.begin(); itr != items_JC.end(); itr ++) 
   {  
     diff_entry_ptr item = *itr;
-    if (item->entry_exists(NO_SHOW)) continue;
 
     diff_entry_ptr parent_item(gd.parent(*item));
     if (parent_item.get() == NULL)
@@ -1297,21 +1290,21 @@ Evidence_Files::Evidence_Files(const Settings& settings, genome_diff& gd)
     uint32_t start = 0;
     uint32_t end = 0;
 
-    if (from_string<uint32_t>((*item)[ALIGNMENT_OVERLAP]) == 0) 
+    if (from_string<int32_t>((*item)[ALIGNMENT_OVERLAP]) == 0) 
     {
       start = from_string<uint32_t>((*item)[FLANKING_LEFT]);
       end = from_string<uint32_t>((*item)[FLANKING_LEFT]) + 1;
     }
-    else if (from_string <uint32_t>((*item)[ALIGNMENT_OVERLAP]) > 0) 
+    else if (from_string <int32_t>((*item)[ALIGNMENT_OVERLAP]) > 0) 
     {
       start = from_string<uint32_t>((*item)[FLANKING_LEFT]) + 1;
       end = from_string<uint32_t>((*item)[FLANKING_LEFT]) + 
-            from_string<uint32_t>((*item)[ALIGNMENT_OVERLAP]);
+            from_string<int32_t>((*item)[ALIGNMENT_OVERLAP]);
     }
     else //if (from_string <uint32_t>((*item)[ALIGNMENT_OVERLAP]) > 0) 
     {
       start = from_string<uint32_t>((*item)[FLANKING_LEFT]) + 1;
-      end = from_string<uint32_t>((*item)[FLANKING_LEFT]) - from_string<uint32_t>((*item)[ALIGNMENT_OVERLAP]);
+      end = from_string<uint32_t>((*item)[FLANKING_LEFT]) - from_string<int32_t>((*item)[ALIGNMENT_OVERLAP]);
     }
     
     add_evidence(_NEW_JUNCTION_EVIDENCE_FILE_NAME,
@@ -1359,6 +1352,8 @@ Evidence_Files::Evidence_Files(const Settings& settings, genome_diff& gd)
 
   // now create evidence files
   create_path(settings.evidence_path);
+  cerr << "Total number of evidence items: " << evidence_list.size() << endl;
+
   for (vector<Evidence_Item>::iterator itr = evidence_list.begin(); itr != evidence_list.end(); itr ++) 
   {  
     Evidence_Item& e = (*itr);
@@ -1546,7 +1541,7 @@ void draw_coverage(Settings& settings, cReferenceSequences& ref_seq_info, genome
   
   // Zoom-in plots of individual deletions
   vector<string> mc_types = make_list<string>("MC");
-	diff_entry_list mc = gd.list(mc_types);
+	diff_entry_list mc = gd.show_list(mc_types);
   for (diff_entry_list::iterator it=mc.begin(); it!=mc.end(); it++)
   {
     diff_entry_ptr& item = *it;
@@ -1854,13 +1849,13 @@ void Html_Mutation_Table_String::Item_Lines()
       } 
       cell_mutation_annotation =  nonbreaking(annotation_str);
     } else if (mut._type == SUB) {
-      cell_mutation = nonbreaking(mut["size"] + "bp&rarr;" + mut["new_seq"]);
+      cell_mutation = nonbreaking(mut["size"] + " bp&rarr;" + mut["new_seq"]);
     } else if (mut._type == CON) {
-      cell_mutation = nonbreaking(mut["size"] + "bp&rarr;" + mut["region"]);
+      cell_mutation = nonbreaking(mut["size"] + " bp&rarr;" + mut["region"]);
     } else if (mut._type == MOB) {
-      stringstream s(ios_base::out | ios_base::app);
-      
-      stringstream s_start(ios_base::out | ios_base::app);
+      stringstream s;
+       
+      stringstream s_start;
       if (mut.entry_exists("ins_start")) {
         s_start << "+" << mut["ins_start"];
       }
@@ -1868,29 +1863,39 @@ void Html_Mutation_Table_String::Item_Lines()
         s_start << "&Delta;" << mut["del_start"];
       }
       if (!(s_start.str()).empty()) {
-        s << s_start << " :: ";
+        s << s_start.str() << " :: ";
       }
 
       s << mut["repeat_name"] << " (";
-      s << (mut["strand"] == "+1" ? "+" : (mut["strand"] == "-1" ? "&minus;" : "?"));
+      switch (from_string<int32_t>(mut["strand"]))
+      {
+        case -1:
+          s << "+";
+          break;
+        case 0:
+          s << "?";
+          break;
+        case +1:
+          s << "–";
+          break;
+      }
       s << ")";
 
-      stringstream s_end(ios_base::out | ios_base::app);
+      stringstream s_end;
       if (mut.entry_exists("del_end")) {
-        s_end << "&Delta;" + mut["del_end"];
+        s_end << " &Delta;" << mut["del_end"];
       }
       if (mut.entry_exists("ins_end")) {
-        s_end << "+" << mut["ins_end"];
+        s_end << " +" << mut["ins_end"];
       }
       if (!(s_end.str()).empty()) {
-        s << " :: " << s_end;
+        s << " :: " << s_end.str();
       }
-      if (from_string<int>(mut["duplication_size"]) >= 0) {
-        s << "+" << mut["duplication_size"];
-      } else {
-        s << "&Delta;" << from_string<uint32_t>(mut["duplication_size"]);
+      if (from_string<int32_t>(mut["duplication_size"]) > 0) {
+        s << "+" << mut["duplication_size"] << " bp";
+      } else if (from_string<int32_t>(mut["duplication_size"]) < 0) {
+        s << "&Delta;" << mut["duplication_size"] << " bp";
       }
-      s << "bp";
       cell_mutation = nonbreaking(s.str());
     } else if (mut._type == INV) {
       cell_mutation = nonbreaking(commify(mut["size"]) + " bp inversion");

@@ -480,7 +480,7 @@ namespace breseq {
 			if (prev_gene.name.size() > 0)
 			{
 				mut["gene_position"] += "intergenic (";
-				mut["gene_position"] += (prev_gene.strand) ? "+" : "-";
+				mut["gene_position"] += (prev_gene.strand) ? "+" : "–";
 				mut["gene_position"] += to_string(start - prev_gene.end);
 			}
 			else
@@ -490,7 +490,7 @@ namespace breseq {
 			mut["gene_position"] += intergenic_seperator;
 			if (next_gene.name.size() > 0)
 			{
-				mut["gene_position"] += (next_gene.strand) ? "-" : "+";
+				mut["gene_position"] += (next_gene.strand) ? "–" : "+";
 				mut["gene_position"] += to_string(next_gene.start - end);
 			}
 			else
@@ -503,7 +503,7 @@ namespace breseq {
 			mut["gene_product"] += intergenic_seperator;
 			mut["gene_product"] += (next_gene.name.size() > 0) ? next_gene.product : "–";
 
-			return;// mut;
+			return;
 		}
 		// Mutation is completely within genes
 		else if (within_genes.size() > 0)
@@ -528,7 +528,9 @@ namespace breseq {
 			{
 				uint32_t gene_start = abs(static_cast<int32_t>(start) - within_gene_start) + 1;
 				uint32_t gene_end = abs(static_cast<int32_t>(end) - within_gene_start) + 1;
-				mut["gene_position"] = to_string((gene_start < gene_end) ? gene_start + "–" + gene_end : gene_end + "–" + gene_start);
+				mut["gene_position"] = (gene_start < gene_end) 
+          ? to_string(gene_start) + "–" + to_string(gene_end) 
+          : to_string(gene_end) + "–" + to_string(gene_start);
 			}
 
 			string gene_nt_size = to_string(gene.end - gene.start + 1);
@@ -538,20 +540,20 @@ namespace breseq {
 			{
 				mut["snp_type"] = "pseudogene";
 				mut["gene_position"] = "pseudogene (" + mut["gene_position"] + "/" + gene_nt_size + " nt)";
-				return;// mut;
+				return;
 			}
 			else if (gene.type != "protein")
 			{
 				mut["snp_type"] = "noncoding";
 				mut["gene_position"] = "noncoding (" + mut["gene_position"] + "/" + gene_nt_size + " nt)";
-				return;// mut;
+				return;
 			}
 
 			//#only add gene information to SNPs and RA mutations that don"t include indels...
 			if ((mut._type != "SNP") && !((mut._type == "RA") && (mut["ref_base"] != ".") && (mut["new_base"] != ".")))
 			{
 				mut["gene_position"] = "coding (" + mut["gene_position"] + "/" + gene_nt_size + " nt)";
-				return;// mut;
+				return;
 			}
 
 			// this is for RA...
@@ -566,12 +568,8 @@ namespace breseq {
 				? ref_string.substr(gene.start + 3 * (from_string<uint32_t>(mut["aa_position"]) - 1) - 1, 3)
 				: reverse_complement(ref_string.substr(gene.end - 3 * from_string<uint32_t>(mut["aa_position"]), 3));
 
-			//Debug
-			//print "mut["aa_position"] mut["codon_position"] $gene.start} $gene.end} $codon_seq\n";
-
 			mut["codon_ref_seq"] = codon_seq;
 			mut["aa_ref_seq"] = bridge_translate(mut["codon_ref_seq"]);
-			//#$mut.aa_ref_seq} = $codon_seq.translate( undef, undef, undef, 11 ).seq();
 
 			mut["codon_new_seq"] = codon_seq;
 			//#remember to revcom the change if gene is on opposite strand
@@ -579,8 +577,6 @@ namespace breseq {
         mut["new_seq"][0]
 				: reverse_complement(mut["new_seq"])[0];
 			mut["aa_new_seq"] =  bridge_translate(mut["codon_new_seq"]);
-			//#$codon_seq.seq(mut["codon_new_seq"]);
-			//#mut["aa_new_seq"] = $codon_seq.translate( undef, undef, undef, 11 ).seq();
 
 			mut["snp_type"] = (mut["aa_ref_seq"] != mut["aa_new_seq"]) ? "nonsynonymous" : "synonymous";
 		}
@@ -627,7 +623,7 @@ namespace breseq {
 		// so that the codon will be correctly updated with all changes and we can notify the
 		// changes that their SNP_type is not really SNP, but multiple hit SNP.
 
-		diff_entry_list muts = gd.list();
+		diff_entry_list muts = gd.show_list();
     for (diff_entry_list::iterator it=muts.begin(); it!=muts.end(); it++)
 		{
       diff_entry& mut= **it;
@@ -753,7 +749,7 @@ namespace breseq {
 				count_column = i;
 		}
 
-    _assert( (quality_column != UNDEFINED_UINT32) && (count_column != UNDEFINED_UINT32), 
+    ASSERTM( (quality_column != UNDEFINED_UINT32) && (count_column != UNDEFINED_UINT32), 
             "'quality' and 'count' columns not found in file: " + count_file_name);
     
 
@@ -809,7 +805,7 @@ namespace breseq {
 
 		genome_diff new_gd;
     
-    diff_entry_list muts = gd.mutation_list();
+    diff_entry_list muts = gd.evidence_list();
     for (diff_entry_list::iterator it=muts.begin(); it!=muts.end(); it++)
 		{
       diff_entry& mut= **it;
