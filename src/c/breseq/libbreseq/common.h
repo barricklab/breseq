@@ -703,14 +703,13 @@ namespace breseq {
   
   inline void  my_assertion_handler(bool condition, const char *file, const char *base_file, int line, const string& message = "")
   {
+    (void)base_file;
     if (!condition)
     {
-      cerr << "-------------> FATAL ERROR <-------------" << endl;
+      cerr << "!!!!!!!!!!!!!!!!!!!!!!!> FATAL ERROR <!!!!!!!!!!!!!!!!!!!!!!!" << endl;
       if (message.length() > 0) cerr << message << endl;
-      cerr << "File:      " << file << endl;
-      cerr << "Base File: " << base_file << endl;
-      cerr << "Line:      " << line << endl;
-      cerr << "-------------> FATAL ERROR <-------------" << endl;
+      cerr << "FILE: " << file << "   LINE: " << line << endl;
+      cerr << "!!!!!!!!!!!!!!!!!!!!!!!> FATAL ERROR <!!!!!!!!!!!!!!!!!!!!!!!" << endl;
       exit(-1);
     }
   }

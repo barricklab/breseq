@@ -101,7 +101,7 @@ namespace breseq
   Settings::Settings(int argc, char* argv[])
   {
     this->command_line_run_header();
-    this->pre_option_initialize();
+    this->pre_option_initialize(argc, argv);
     
     // we need the path to the executable to locate scripts and our own installed versions of binaries
     this->bin_path = getExecPath(argv[0]);
@@ -173,7 +173,7 @@ namespace breseq
 		// convert to basing everything off the main output path, so we don't have to set so many options
 		("output,o", "path to breseq output [current path]", "")
 		("reference,r", "reference sequence in GenBank flatfile format (REQUIRED)")
-    ("name,n", "human-readable name of sample/run for output [unnamed]", "unnamed")
+    ("name,n", "human-readable name of sample/run for output [unnamed]", "unnamed_run")
     ("polymorphism-prediction,p", "predict polymorphic mutations", TAKES_NO_ARGUMENT)
     ("base-quality-cutoff,b", "ignore bases with quality scores lower than this value", "3")
     
@@ -224,6 +224,11 @@ namespace breseq
     
     
 		this->post_option_initialize();
+    
+    // Log the command line
+    time_t stamp_time = time(NULL);
+    this->log(ctime(&stamp_time));	
+    this->log(this->full_command_line);
 	}
   
   void Settings::command_line_run_header()
@@ -249,7 +254,7 @@ namespace breseq
   }
 
 
-	void Settings::pre_option_initialize()
+	void Settings::pre_option_initialize(int argc, char* argv[])
 	{    
     // Constants
     this->byline = "<b><i>breseq</i></b>&nbsp;&nbsp;version ";
@@ -258,12 +263,22 @@ namespace breseq
     
 		// Set up default values for options
     this->bin_path = ".";
-		this->full_command_line = "$0 @ARGV";
-		this->arguments = "@ARGV";
+    
+    this->arguments = "";
+    if (argc > 0) this->full_command_line = argv[0];
+    for(int i=1; i<argc; i++)
+    {
+      if (!this->arguments.empty()) this->arguments += " ";
+      this->arguments += argv[i];
+    }
+    this->full_command_line += " " + this->arguments;
+    
+    
 		this->predicted_quality_type = "";
 		this->min_quality = 0;
 		this->max_quality = 0;
-		this->run_name = "unnamed";
+		this->run_name = "";
+    this->print_run_name = ""; 
 		this->clean = 0;
 		this->error_model_method = "EMPIRICAL";
 		this->base_quality_cutoff = 3; // avoids problem with Illumina assigning 2 to bad ends of reads!
@@ -339,7 +354,6 @@ namespace breseq
     
     this->maximum_reads_to_align = 200;
         
-    this->print_run_name = ""; 
 		this->polymorphism_prediction = false;
 		this->lenski_format = false;
 		this->no_evidence = false;
@@ -695,5 +709,16 @@ namespace breseq
 		// create the done file with timing information
 		this->execution_times.back().store(done_file_name);
 	}
-}
+  
+  
+  void Settings::log(const string& message)
+  {    
+    create_path(this->output_path);
+    ofstream LOG(this->log_file_name.c_str(), ios::app);
+    ASSERT(!LOG.fail());
+    LOG << message << endl;
+    LOG.close();
+  }
+
+} // breseq namespace
 

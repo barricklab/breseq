@@ -473,14 +473,14 @@ namespace breseq {
 		{
 			mut["snp_type"] = "intergenic";
 
-			mut["gene_name"] += (prev_gene.name.size() > 0) ? prev_gene.name : "–";
+			mut["gene_name"] += (prev_gene.name.size() > 0) ? prev_gene.name : "–"; //en-dash
 			mut["gene_name"] += intergenic_seperator;
-			mut["gene_name"] += (next_gene.name.size() > 0) ? next_gene.name : "–";
+			mut["gene_name"] += (next_gene.name.size() > 0) ? next_gene.name : "–"; //en-dash
 
 			if (prev_gene.name.size() > 0)
 			{
 				mut["gene_position"] += "intergenic (";
-				mut["gene_position"] += (prev_gene.strand) ? "+" : "–";
+				mut["gene_position"] += (prev_gene.strand) ? "+" : "-"; //hyphen
 				mut["gene_position"] += to_string(start - prev_gene.end);
 			}
 			else
@@ -490,18 +490,18 @@ namespace breseq {
 			mut["gene_position"] += intergenic_seperator;
 			if (next_gene.name.size() > 0)
 			{
-				mut["gene_position"] += (next_gene.strand) ? "–" : "+";
+				mut["gene_position"] += (next_gene.strand) ? "-" : "+"; //hyphen
 				mut["gene_position"] += to_string(next_gene.start - end);
 			}
 			else
 			{
-				mut["gene_position"] += "–";
+				mut["gene_position"] += "–"; //en-dash
 			}
 			mut["gene_position"] += ")";
 
-			mut["gene_product"] += (prev_gene.name.size() > 0) ? prev_gene.product : "–";
+			mut["gene_product"] += (prev_gene.name.size() > 0) ? prev_gene.product : "–"; //en-dash
 			mut["gene_product"] += intergenic_seperator;
-			mut["gene_product"] += (next_gene.name.size() > 0) ? next_gene.product : "–";
+			mut["gene_product"] += (next_gene.name.size() > 0) ? next_gene.product : "–"; //en-dash
 
 			return;
 		}
@@ -529,8 +529,8 @@ namespace breseq {
 				uint32_t gene_start = abs(static_cast<int32_t>(start) - within_gene_start) + 1;
 				uint32_t gene_end = abs(static_cast<int32_t>(end) - within_gene_start) + 1;
 				mut["gene_position"] = (gene_start < gene_end) 
-          ? to_string(gene_start) + "–" + to_string(gene_end) 
-          : to_string(gene_end) + "–" + to_string(gene_start);
+          ? to_string(gene_start) + "–" + to_string(gene_end)  //en-dash
+          : to_string(gene_end) + "–" + to_string(gene_start); //en-dash
 			}
 
 			string gene_nt_size = to_string(gene.end - gene.start + 1);
@@ -608,7 +608,7 @@ namespace breseq {
 			if (gene_name_list.size() == 1)
 				mut["gene_name"] = gene_name_list[0];
 			else
-				mut["gene_name"] = gene_name_list.front() + "–" + gene_name_list.back();
+				mut["gene_name"] = gene_name_list.front() + "–" + gene_name_list.back();  //en-dash
     }
   }
 

@@ -49,7 +49,7 @@
       </BuildableProductRunnable>
       <CommandLineArguments>
          <CommandLineArgument
-            argument = "-b 0 -o tests/REL606_fragment_is_mediated_dels -r tests/REL606_fragment_is_mediated_dels/../data/REL606/REL606.fragment.gbk tests/REL606_fragment_is_mediated_dels/../data/REL606/REL606.fragment.3.fastq"
+            argument = "-o tests/bull_1 -r tests/bull_1/../data/bull/bull_1.gbk tests/bull_1/../data/bull/bull_1.fastq"
             isEnabled = "YES">
          </CommandLineArgument>
          <CommandLineArgument

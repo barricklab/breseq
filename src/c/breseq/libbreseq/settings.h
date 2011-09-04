@@ -562,10 +562,10 @@ namespace breseq
 		bool do_step(string done_key, string message);
 		void done_step(string done_key);
 		void check_installed();
-
+    void log(const string& message);
 	private:
 
-		void pre_option_initialize();
+		void pre_option_initialize(int argc = 0, char* argv[] = NULL);
 		void post_option_initialize();
 		void init_installed();
 	};
