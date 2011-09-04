@@ -108,7 +108,6 @@ do_check() {
 do_breseq() {
 	echo "BRESEQ COMMAND:" 
 	echo $TESTCMD
-	echo "++++++++++++++++++++++++++++++++++++++++++++++++++++++++"
 	$TESTCMD
 	if [[ "$?" -ne 0 ]]; then
 	    echo "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"

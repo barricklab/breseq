@@ -159,7 +159,7 @@ struct diff_entry {
   struct fields_exist;
   struct frequency_less_than_two_or_no_show;
   struct coverage_or_no_show_is_true;
-  struct reject_is_not_true;
+  struct rejected;
 
 
   diff_entry& operator()(const key_t& key, const value_t& value) {
@@ -426,11 +426,11 @@ struct diff_entry::coverage_or_no_show_is_true:public unary_function<diff_entry_
   }
 };
 
-struct diff_entry::reject_is_not_true:public unary_function<diff_entry_ptr,bool>
+struct diff_entry::rejected:public unary_function<diff_entry_ptr,bool>
 {
   virtual bool operator() (diff_entry_ptr diff_entry) 
   {
-    return !from_string<bool>((*diff_entry)["reject"]);
+    return diff_entry->entry_exists(REJECT);
   }
 
 };

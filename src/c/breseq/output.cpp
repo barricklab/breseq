@@ -200,13 +200,15 @@ void html_index(const string& file_name, const Settings& settings, Summary& summ
   HTML << "<!--Unassigned evidence-->" << endl;
   
   diff_entry_list mc = gd.filter_used_as_evidence(gd.show_list(make_list<string>("MC")));
-  
+  mc.remove_if(diff_entry::rejected()); 
+
   if (mc.size() > 0) {
     HTML << "<p>" << html_missing_coverage_table_string(mc, false, "Unassigned missing coverage evidence", relative_path);
   }
 
   diff_entry_list jc = gd.filter_used_as_evidence(gd.show_list(make_list<string>("JC")));
-  
+  jc.remove_if(diff_entry::rejected()); 
+
   //Don't show junctions for circular chromosomes
   if (settings.hide_circular_genome_junctions) {
     jc.remove_if(diff_entry::field_exists("circular_chromosome")); 
@@ -284,17 +286,23 @@ string html_header (const string& title, const Settings& settings)
 {
   stringstream ss(ios_base::out | ios_base::app);  
   
-  ss << "<html>" << endl;   
+  ss << "<!DOCTYPE html" << endl;
+	ss << "PUBLIC \"-//W3C//DTD XHTML 1.0 Transitional//EN\"" << endl;
+  ss << "\"http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd\">" << endl;
+  ss << "<html xmlns=\"http://www.w3.org/1999/xhtml\" lang=\"en-US\" xml:lang=\"en-US\">" << endl;
+  
+  ss << "<html>" << endl;  
+  ss << "<head>" << endl;
   ss << "<title>" << title;
   if (!settings.print_run_name.empty()) {
     ss << " :: " << settings.print_run_name;
   }
   ss << "</title>" << endl;
   
-  ss << "<head>" << endl;
   ss << "<style type = \"text/css\">" << endl;
   ss << header_style_string() << endl;
   ss << "</style>" << endl;
+  ss << "<meta http-equiv=\"Content-Type\" content=\"text/html; charset=iso-8859-1\" />" << endl;
   ss << "</head>" << endl;
   ss << "<body>" << endl;
   return ss.str();
@@ -498,9 +506,9 @@ string breseq_header_string(const Settings& settings)
 {
   stringstream ss(ios_base::out | ios_base::app);
   
-  //copy over the breseq_graphic which we need if it doesn't exist
+  //copy over the breseq_graphic which we need if it doesn't exist - don't show command
   if (!file_exists(settings.breseq_small_graphic_to_file_name.c_str())) {
-    _system("cp " + settings.breseq_small_graphic_from_file_name + " " + settings.breseq_small_graphic_to_file_name);
+    _system("cp " + settings.breseq_small_graphic_from_file_name + " " + settings.breseq_small_graphic_to_file_name, true);
   }
   
   ss << "<table width=\"100%\" border=\"0\" cellspacing=\"0\" cellpadding=\"3\">" << endl;
@@ -1144,7 +1152,7 @@ Evidence_Files::Evidence_Files(const Settings& settings, genome_diff& gd)
 
   // We make alignments of two regions for deletions: upstream and downstream edges.
   diff_entry_list items_MC = gd.show_list(make_list<string>(MC));
-  cerr << "Number of MC evidence items: " << items_MC.size() << endl;
+  //cerr << "Number of MC evidence items: " << items_MC.size() << endl;
   
   for (diff_entry_list::iterator itr = items_MC.begin(); itr != items_MC.end(); itr ++) 
   {  
@@ -1191,7 +1199,7 @@ Evidence_Files::Evidence_Files(const Settings& settings, genome_diff& gd)
   } // mc_item list
   
   diff_entry_list items_SNP_INS_DEL_SUB = gd.show_list(make_list<string>(SNP)(INS)(DEL)(SUB));
-  cerr << "Number of SNP_INS_DEL_SUB evidence items: " << items_SNP_INS_DEL_SUB.size() << endl;
+  //cerr << "Number of SNP_INS_DEL_SUB evidence items: " << items_SNP_INS_DEL_SUB.size() << endl;
 
   for (diff_entry_list::iterator itr = items_SNP_INS_DEL_SUB.begin(); itr != items_SNP_INS_DEL_SUB.end(); itr ++) 
   {  
@@ -1253,7 +1261,7 @@ Evidence_Files::Evidence_Files(const Settings& settings, genome_diff& gd)
 
   // Still create files for RA evidence that was not good enough to predict a mutation from
   diff_entry_list items_RA = gd.filter_used_as_evidence(gd.show_list(make_list<string>(RA)));
-  cerr << "Number of RA evidence items: " << items_RA.size() << endl;
+  //cerr << "Number of RA evidence items: " << items_RA.size() << endl;
 
   for (diff_entry_list::iterator itr = items_RA.begin(); itr != items_RA.end(); itr ++) 
   {  
@@ -1277,7 +1285,7 @@ Evidence_Files::Evidence_Files(const Settings& settings, genome_diff& gd)
   // positions and overlap: alignment_pos and alignment_overlap.
   
   diff_entry_list items_JC = gd.show_list(make_list<string>(JC));
-  cerr << "Number of JC evidence items: " << items_JC.size() << endl;
+  //cerr << "Number of JC evidence items: " << items_JC.size() << endl;
 
   for (diff_entry_list::iterator itr = items_JC.begin(); itr != items_JC.end(); itr ++) 
   {  
@@ -1352,7 +1360,7 @@ Evidence_Files::Evidence_Files(const Settings& settings, genome_diff& gd)
 
   // now create evidence files
   create_path(settings.evidence_path);
-  cerr << "Total number of evidence items: " << evidence_list.size() << endl;
+  //cerr << "Total number of evidence items: " << evidence_list.size() << endl;
 
   for (vector<Evidence_Item>::iterator itr = evidence_list.begin(); itr != evidence_list.end(); itr ++) 
   {  
@@ -1455,7 +1463,7 @@ Evidence_Files::html_evidence_file (
   }
   
   // Build HTML Head
-  HTML << html_header("BRESEQ :: Results", settings);
+  HTML << html_header("BRESEQ :: Evidence", settings);
   
   // print a table for the main item
   // followed by auxiliary tables for each piece of evidence
@@ -1843,7 +1851,13 @@ void Html_Mutation_Table_String::Item_Lines()
     } else if (mut._type == DEL) {
       cell_mutation = nonbreaking("&Delta;" + commify(mut["size"]) + " bp");
       string annotation_str;
-      annotation_str = mut.entry_exists("mediated") ? mut["mediated"] + "-mediated"  : ""; 
+      
+      // special annotation for mediated- and between repeat elements
+      if (mut.entry_exists("mediated")) 
+        annotation_str = mut["mediated"] + "-mediated"; 
+      if (mut.entry_exists("between")) 
+        annotation_str = "between " + mut["between"];
+      // default
       if(annotation_str.empty()) {
         annotation_str = nonbreaking(mut["gene_position"]);
       } 
@@ -1919,7 +1933,7 @@ void Html_Mutation_Table_String::Item_Lines()
     if (!one_ref_seq) {
       ss << td(ALIGN_CENTER, cell_seq_id) << "<!-- Seq_Id -->" << endl;
     }
-    ss << td(ALIGN_CENTER, cell_position) << "<!-- Position -->" << endl;
+    ss << td(ALIGN_RIGHT, cell_position) << "<!-- Position -->" << endl;
 
     ss << td(ALIGN_CENTER, cell_mutation) << "<!-- Cell Mutation -->" << endl;
     if (settings.lenski_format) {
