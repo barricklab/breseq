@@ -50,6 +50,7 @@ extern const char* REF_COV;
 extern const char* NEW_COV;
 extern const char* TOT_COV;
 extern const char* ERROR;
+
 //For JC
 extern const char* _SIDE_1_SEQ_ID;
 extern const char* _SIDE_1_POSITION;
@@ -58,7 +59,6 @@ extern const char* _SIDE_2_SEQ_ID;
 extern const char* _SIDE_2_POSITION;
 extern const char* _SIDE_2_STRAND;
 extern const char* _SIDE_KEY_JC;
-
 
 
 // Types of diff entries:
@@ -76,7 +76,7 @@ extern const char* RA;
 extern const char* MC;
 extern const char* JC;
 extern const char* UN;
-
+  
 //!  
 static uint8_t kPolymorphismFrequencyPrecision = 4; 
 static uint8_t kMutationQualityPrecision = 4; 
@@ -115,6 +115,7 @@ struct formatted_double {
  entries that have been pre-populated according to their type.
  */
 struct diff_entry {
+  
   typedef string key_t; //!< Diff entry keys.
   typedef string value_t; //!< Diff entry values.
   typedef map<key_t, value_t> map_t; //!< Diff entry key-value map.
@@ -250,11 +251,14 @@ public:
   void write(const string& filename);
   
   //! Remove items used as evidence by any mutations out of input list
-  ::list<counted_ptr<diff_entry> > filter_used_as_evidence(const diff_entry_list& list);
+  diff_entry_list filter_used_as_evidence(const diff_entry_list& list);
   
   //! Retrieve diff_entrys that match given type(s) 
-  diff_entry_list list(const vector<string>& types);
-  diff_entry_list list() {return _entry_list;}
+  diff_entry_list list(const vector<string>& types = vector<string>());
+  //diff_entry_list list() {return _entry_list;}
+  
+  //! retrieve diff_entrys that match given type(s) and do not have 'no_show' set
+  diff_entry_list show_list(const vector<string>& types = vector<string>());
   
   //! Converts a genome_diff(.gd) file's line to a diff_entry
   diff_entry _line_to_item(const string& line);
@@ -263,6 +267,7 @@ public:
   diff_entry_list mutation_evidence_list(const diff_entry& item);
 
   diff_entry_list mutation_list();
+  diff_entry_list evidence_list();
 
   diff_entry_ptr parent(const diff_entry& item);
     

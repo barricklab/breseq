@@ -67,7 +67,7 @@ namespace breseq
       
       // set up the map for converting base names to fastq file names to be used
       // check to see whether this is a duplicate
-      _assert(read_file_to_fastq_file_name_map[rf.m_base_name].size() == 0, 
+      ASSERTM(read_file_to_fastq_file_name_map[rf.m_base_name].size() == 0, 
               "Read file provided multiple times:\n1)" + read_file_to_fastq_file_name_map[rf.m_base_name] + "\n2)" + rf.m_original_file_name);
       read_file_to_fastq_file_name_map[rf.m_base_name] = rf.m_original_file_name;
       
@@ -331,7 +331,7 @@ namespace breseq
 		//// Output ////
 		this->max_rejected_polymorphisms_to_show = 20;
 		this->max_rejected_junctions_to_show = 20;
-		this->hide_circular_genome_junctions = 1;
+		this->hide_circular_genome_junctions = true;
     
     this->smalt = false;
     
@@ -340,7 +340,6 @@ namespace breseq
     this->maximum_reads_to_align = 200;
         
     this->print_run_name = ""; 
-		this->hide_circular_genome_junctions = true;
 		this->polymorphism_prediction = false;
 		this->lenski_format = false;
 		this->no_evidence = false;

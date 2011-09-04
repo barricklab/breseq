@@ -64,7 +64,7 @@ class pileup_base {
 
     //! Retrieve the name of the given target.
     const char* target_name(uint32_t target) const {
-      _assert(target < num_targets(), "Requested target_id [" + to_string(target) + "] was not found in FASTA file [" + m_fasta_file_name + "]");
+      ASSERTM(target < num_targets(), "Requested target_id [" + to_string(target) + "] was not found in FASTA file [" + m_fasta_file_name + "]");
       return m_bam->header->target_name[target];
     }
 
@@ -126,7 +126,7 @@ class pileup_base {
       bam_parse_region(m_bam_header, region.c_str(), &temp_target_id, &temp_start_pos, &temp_end_pos); 
       
       // Target was not found.
-      _assert(temp_target_id != -1, "Target sequence was not found for region [" + region + "] using FASTA file [" + m_fasta_file_name + "]." );
+      ASSERTM(temp_target_id != -1, "Target sequence was not found for region [" + region + "] using FASTA file [" + m_fasta_file_name + "]." );
       
       target_id = static_cast<uint32_t>(temp_target_id);
       start_pos_1 = static_cast<uint32_t>(temp_start_pos)+1; // bam_parse_region returns zero indexed start
