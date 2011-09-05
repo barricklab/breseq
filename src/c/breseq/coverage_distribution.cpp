@@ -36,7 +36,7 @@ namespace breseq {
 		command += " junction_keep_pr_cutoff=" + to_string<double>(junction_keep_pr_cutoff);
 		command += " junction_max_score=" + to_string<double>(junction_max_score);
 
-		_system(command);
+		SYSTEM(command);
 
 		ifstream ROUT(log_file_name.c_str());
 		string line;
@@ -50,7 +50,7 @@ namespace breseq {
       }
     }
     ROUT.close();
-		remove(log_file_name.c_str());
+		//remove(log_file_name.c_str());
 
 		return(lines);
 	}

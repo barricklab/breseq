@@ -36,7 +36,7 @@
       displayScale = "1.00"
       launchStyle = "0"
       useCustomWorkingDirectory = "YES"
-      customWorkingDirectory = "/Users/jbarrick/src/breseq"
+      customWorkingDirectory = "/Users/jbarrick/tmp/CC102_H6"
       buildConfiguration = "Debug">
       <BuildableProductRunnable>
          <BuildableReference
@@ -50,11 +50,11 @@
       <CommandLineArguments>
          <CommandLineArgument
             argument = "-o tests/bull_1 -r tests/bull_1/../data/bull/bull_1.gbk tests/bull_1/../data/bull/bull_1.fastq"
-            isEnabled = "YES">
+            isEnabled = "NO">
          </CommandLineArgument>
          <CommandLineArgument
-            argument = "breseq -r NC_000913.2.gbk SRR023512.fastq"
-            isEnabled = "NO">
+            argument = "-r NC_000913.2.gbk SRR023512.fastq"
+            isEnabled = "YES">
          </CommandLineArgument>
       </CommandLineArguments>
       <EnvironmentVariables>

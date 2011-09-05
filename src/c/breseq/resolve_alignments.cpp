@@ -414,12 +414,12 @@ void resolve_alignments(
 
     if (verbose && !has_non_overlap_alignment) cout << "Does not have nonoverlap alignments" << endl;
     
-		// only count matches that span overlap
+		// only keep matches that span overlap
 		if (has_non_overlap_alignment)
 		{
 			if (success)
       {
-// @JEB we might want to re-sort the list here, probably
+// @JEB we might want to re-sort the list here.
 // Strategy would be to use a <list> and shorten it each time
 // Then re-sort when we successfully added one that might
 // Have eaten up degenerate matches shared with others.

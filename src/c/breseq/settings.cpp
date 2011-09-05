@@ -173,7 +173,7 @@ namespace breseq
 		// convert to basing everything off the main output path, so we don't have to set so many options
 		("output,o", "path to breseq output [current path]", "")
 		("reference,r", "reference sequence in GenBank flatfile format (REQUIRED)")
-    ("name,n", "human-readable name of sample/run for output [unnamed]", "unnamed_run")
+    ("name,n", "human-readable name of sample/run for output [empty]", "")
     ("polymorphism-prediction,p", "predict polymorphic mutations", TAKES_NO_ARGUMENT)
     ("base-quality-cutoff,b", "ignore bases with quality scores lower than this value", "3")
     
@@ -282,8 +282,6 @@ namespace breseq
 		this->clean = 0;
 		this->error_model_method = "EMPIRICAL";
 		this->base_quality_cutoff = 3; // avoids problem with Illumina assigning 2 to bad ends of reads!
-
-    this->maximum_read_length = 0;                  // @JEB this will not be an option once porting is complete
 
 		//this->required_unique_length_per_side = 10;                             // Require at least one of the pair of matches supporting a junction to have this
 		// much of its match that is unique in the reference sequence.
@@ -551,13 +549,13 @@ namespace breseq
     // @JEB this won't be necessary once C++ conversion is complete
 
 		string test_command = "which " + this->bin_path + "/cbreseq";
-		this->installed["cbreseq"] = _system_capture_output(test_command, true);
+		this->installed["cbreseq"] = SYSTEM_CAPTURE(test_command, true);
 		
     test_command = "which " + this->bin_path + "/cbam2aln";
-		this->installed["cbam2aln"] = _system_capture_output(test_command, true);
+		this->installed["cbam2aln"] = SYSTEM_CAPTURE(test_command, true);
 
     test_command = "which " + this->bin_path + "/samtools";
-		this->installed["samtools"] = _system_capture_output(test_command, true);
+		this->installed["samtools"] = SYSTEM_CAPTURE(test_command, true);
     
     // override with environment variable
     if (getenv("SAMTOOLSPATH"))
@@ -565,11 +563,11 @@ namespace breseq
     
 		// search first for ssaha2 in the same location as breseq    
     test_command = "which " + this->bin_path + "/ssaha2";
-		this->installed["SSAHA2"] = _system_capture_output(test_command, true);
+		this->installed["SSAHA2"] = SYSTEM_CAPTURE(test_command, true);
     
     // attempt to fall back on system-wide install
     if (this->installed["SSAHA2"].size() == 0)
-      this->installed["SSAHA2"] = _system_capture_output("which ssaha2", true);
+      this->installed["SSAHA2"] = SYSTEM_CAPTURE("which ssaha2", true);
 
     /*
 		// check for default names
@@ -592,10 +590,10 @@ namespace breseq
 		}
     */
     
-		this->installed["R"] = _system_capture_output("which R", true).size() ? "R" : "";
+		this->installed["R"] = SYSTEM_CAPTURE("which R", true).size() ? "R" : "";
 		if (this->installed["R"].size() > 0)
 		{
-			string R_version = _system_capture_output("R --version", true);
+			string R_version = SYSTEM_CAPTURE("R --version", true);
       
       // default if output does not match our pattern
       this->installed["R_version"] = "0";
