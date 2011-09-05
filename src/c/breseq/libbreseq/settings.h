@@ -236,7 +236,6 @@ namespace breseq
 		uint32_t alignment_read_limit;
 		uint32_t candidate_junction_read_limit;
 		double maximum_candidate_junction_length_factor;
-		int32_t maximum_read_length;
 		int32_t max_read_mismatches;
 
 		int32_t required_match_length;

@@ -32,13 +32,11 @@ namespace breseq {
 
 	bool CandidateJunctions::_alignments_to_candidate_junction(const Settings& settings, Summary& summary, const cReferenceSequences& ref_seq_info, bam_alignment& a1, bam_alignment& a2,
 															  int32_t& redundancy_1, int32_t& redundancy_2, string& junction_seq_string, string& ref_seq_matched_1, string& ref_seq_matched_2, string& junction_coord_1, string& junction_coord_2, int32_t& read_begin_coord, JunctionInfo& junction_id_list)
-	{
-    (void)summary; //TODO: implement summary
-    
+	{    
 		bool verbose = false;
 
 		// set up local settings
-		int32_t flanking_length = settings.maximum_read_length;
+		int32_t flanking_length = summary.sequence_conversion.max_read_length;
 
 		// Method
 		//

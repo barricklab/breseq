@@ -791,7 +791,6 @@ int do_identify_candidate_junctions(int argc, char* argv[]) {
     settings.maximum_inserted_junction_sequence_length = from_string<int32_t>(options["maximum-inserted-junction-sequence-length"]);
     settings.required_one_unique_length_per_side = from_string<int32_t>(options["required-one-unique-length-per-side"]);
     settings.required_both_unique_length_per_side = from_string<int32_t>(options["required-both-unique-length-per-side"]);
-    settings.maximum_read_length = from_string<int32_t>(options["maximum-read-length"]);
     
     settings.maximum_candidate_junctions = from_string<int32_t>(options["maximum-candidate-junctions"]);
     settings.minimum_candidate_junctions = from_string<int32_t>(options["minimum-candidate-junctions"]);
@@ -800,7 +799,8 @@ int do_identify_candidate_junctions(int argc, char* argv[]) {
     // We should inherit the summary object from earlier steps
     Summary summary;
     summary.sequence_conversion.total_reference_sequence_length = from_string<uint32_t>(options["reference-sequence-length"]);
-    
+    summary.sequence_conversion.max_read_length = from_string<int32_t>(options["maximum-read-length"]);
+
     cReferenceSequences ref_seq_info;
     breseq::LoadFeatureIndexedFastaFile(ref_seq_info, "", options["data-path"] + "/reference.fasta");
         
@@ -1033,7 +1033,7 @@ int breseq_default_action(int argc, char* argv[])
 		// create SAM faidx
 		string samtools = settings.ctool("samtools");
 		string command = samtools + " faidx " + settings.reference_fasta_file_name;
-		_system(command.c_str());
+		SYSTEM(command.c_str());
     
 		// calculate trim files
 		calculate_trims(settings.reference_fasta_file_name, settings.sequence_conversion_path);
@@ -1083,13 +1083,13 @@ int breseq_default_action(int argc, char* argv[])
 		if (!settings.smalt)
 		{
 			string command = "ssaha2Build -rtype solexa -skip 1 -save " + reference_hash_file_name + " " + reference_fasta_file_name;
-			_system(command.c_str());
+			SYSTEM(command.c_str());
 		}
 		else
 		{
 			string smalt = settings.ctool("smalt");
 			string command = smalt + " index -k 13 -s 1 " + reference_hash_file_name + " " + reference_fasta_file_name;
-      _system(command.c_str());
+      SYSTEM(command.c_str());
 		}
 		/// ssaha2 align reads to reference sequences
 		for (uint32_t i = 0; i < settings.read_files.size(); i++)
@@ -1124,13 +1124,13 @@ int breseq_default_action(int argc, char* argv[])
 				if (!settings.smalt)
 				{
 					string command = "ssaha2 -disk 2 -save " + reference_hash_file_name + " -kmer 13 -skip 1 -seeds 1 -score 12 -cmatch 9 -ckmer 1 -output sam_soft -outfile " + reference_sam_file_name + " " + read_fastq_file;
-					_system(command.c_str());
+					SYSTEM(command.c_str());
 				}
 				else
 				{
 					string smalt = settings.ctool("smalt");
 					string command = smalt + " map -n 2 -d " + to_string(settings.max_smalt_diff) + " -f samsoft -o " + reference_sam_file_name + " " + reference_hash_file_name + " " + read_fastq_file; // -m 12
-					_system(command.c_str());
+					SYSTEM(command.c_str());
 				}
 			}
 		}
@@ -1182,13 +1182,13 @@ int breseq_default_action(int argc, char* argv[])
 				string samtools = settings.ctool("samtools");
 
 				string command = samtools + " import " + reference_faidx_file_name + " " + preprocess_junction_best_sam_file_name + " " + coverage_junction_best_bam_unsorted_file_name;
-				_system(command.c_str());
+				SYSTEM(command.c_str());
 				command = samtools + " sort " + coverage_junction_best_bam_unsorted_file_name + " " + coverage_junction_best_bam_prefix;
-				_system(command.c_str());
+				SYSTEM(command.c_str());
 				if (!settings.keep_all_intermediates)
 					remove(coverage_junction_best_bam_unsorted_file_name.c_str());
 				command = samtools + " index " + coverage_junction_best_bam_file_name;
-        _system(command.c_str());
+        SYSTEM(command.c_str());
 
 				// Count errors
 				string reference_fasta_file_name = settings.reference_fasta_file_name;
@@ -1219,17 +1219,12 @@ int breseq_default_action(int argc, char* argv[])
 		if (settings.do_step(settings.candidate_junction_done_file_name, "Identifying candidate junctions"))
 		{
 			cerr << "Identifying candidate junctions..." << endl;
-
-			// Other settings
-			settings.maximum_read_length = summary.sequence_conversion.max_read_length;
-
       CandidateJunctions::identify_candidate_junctions(settings, summary, ref_seq_info);
 
 			string samtools = settings.ctool("samtools");
-			string filename = settings.candidate_junction_path + "/candidate_junction.fasta";
-			string faidx_command = samtools + " faidx " + filename;
-			if (!file_empty(filename.c_str()))
-				_system(faidx_command.c_str());
+			string faidx_command = samtools + " faidx " + settings.candidate_junction_fasta_file_name;
+			if (!file_empty(settings.candidate_junction_fasta_file_name.c_str()))
+				SYSTEM(faidx_command.c_str());
 
 			summary.candidate_junction.store(candidate_junction_summary_file_name);
 			settings.done_step(settings.candidate_junction_done_file_name);
@@ -1253,13 +1248,13 @@ int breseq_default_action(int argc, char* argv[])
 				if (!settings.smalt)
 				{
 					string command = "ssaha2Build -rtype solexa -skip 1 -save " + candidate_junction_hash_file_name + " " + candidate_junction_fasta_file_name;
-					_system(command.c_str());
+					SYSTEM(command.c_str());
 				}
 				else
 				{
 					string smalt = settings.ctool("smalt");
 					string command = smalt + " index -k 13 -s 1 " + candidate_junction_hash_file_name + " "+ candidate_junction_fasta_file_name;
-					_system(command.c_str());
+					SYSTEM(command.c_str());
 				}
 			}
 
@@ -1274,7 +1269,7 @@ int breseq_default_action(int argc, char* argv[])
 				if (!settings.smalt && file_exists(filename.c_str()))
 				{
 					string command = "ssaha2 -disk 2 -save " + candidate_junction_hash_file_name + " -best 1 -rtype solexa -skip 1 -seeds 1 -output sam_soft -outfile " + candidate_junction_sam_file_name + " " + read_fastq_file;
-					_system(command.c_str());
+					SYSTEM(command.c_str());
 					// Note: Added -best parameter to try to avoid too many matches to redundant junctions!
 				}
 				else
@@ -1284,7 +1279,7 @@ int breseq_default_action(int argc, char* argv[])
 					{
 						string smalt = settings.ctool("smalt");
 						string command = smalt + " map -c 0.8 -x -n 2 -d 1 -f samsoft -o " + candidate_junction_sam_file_name + " " + candidate_junction_hash_file_name + " " + read_fastq_file;
-						_system(command.c_str());
+						SYSTEM(command.c_str());
 					}
 				}
 			}
@@ -1304,8 +1299,8 @@ int breseq_default_action(int argc, char* argv[])
 	}
 	
 	//
-	// Resolve matches to new junction candidates
-	//sub alignment_correction {}
+  // 04 alignment_correction
+	// * Resolve matches to new junction candidates
 	//
 	string alignment_correction_summary_file_name = settings.alignment_correction_summary_file_name;
 	if (settings.do_step(settings.alignment_correction_done_file_name, "Resolving alignments with candidate junctions"))
@@ -1363,13 +1358,13 @@ int breseq_default_action(int argc, char* argv[])
 		if (!settings.no_junction_prediction && !file_empty(resolved_junction_sam_file_name.c_str()))
 		{
 			command = samtools + " import " + candidate_junction_faidx_file_name + " " + resolved_junction_sam_file_name + " " + junction_bam_unsorted_file_name;
-			_system(command);
+			SYSTEM(command);
 			command = samtools + " sort " + junction_bam_unsorted_file_name + " " + junction_bam_prefix;
-      _system(command);
+      SYSTEM(command);
 			if (!settings.keep_all_intermediates)
 				remove(junction_bam_unsorted_file_name.c_str());
 			command = samtools + " index " + junction_bam_file_name;
-			_system(command);
+			SYSTEM(command);
 		}
 
 		string resolved_reference_sam_file_name = settings.resolved_reference_sam_file_name;
@@ -1378,13 +1373,13 @@ int breseq_default_action(int argc, char* argv[])
 		string reference_bam_file_name = settings.reference_bam_file_name;
 
 		command = samtools + " import " + reference_faidx_file_name + " " + resolved_reference_sam_file_name + " " + reference_bam_unsorted_file_name;
-    _system(command);
+    SYSTEM(command);
 		command = samtools + " sort " + reference_bam_unsorted_file_name + " " + reference_bam_prefix;
-    _system(command);
+    SYSTEM(command);
 		if (!settings.keep_all_intermediates)
 			remove(reference_bam_unsorted_file_name.c_str());
 		command = samtools + " index " + reference_bam_file_name;
-    _system(command);
+    SYSTEM(command);
 
 		settings.done_step(settings.bam_done_file_name);
 	}
@@ -1571,7 +1566,7 @@ int breseq_default_action(int argc, char* argv[])
 			string plot_error_rates_r_script_log_file_name = settings.file_name(settings.plot_error_rates_r_script_log_file_name, "#", base_name);
 			string error_rates_plot_file_name = settings.file_name(settings.error_rates_plot_file_name, "#", base_name);
 			command = "R --vanilla in_file=" + error_rates_base_qual_error_prob_file_name + " out_file=" + error_rates_plot_file_name + " < " + plot_error_rates_r_script_file_name + " > " + plot_error_rates_r_script_log_file_name;
-			_system(command);
+			SYSTEM(command);
 		}
 
 		Storable::store(summary.unique_coverage, error_rates_summary_file_name); //or die "Can"t store data in file $error_rates_summary_file_name!" << endl;

@@ -727,7 +727,7 @@ namespace breseq {
     }
   }
   
-	inline string _system_capture_output(string command, bool silent = false)
+	inline string SYSTEM_CAPTURE(string command, bool silent = false)
 	{
     if (!silent) cout << "[system] " << command << endl;
 
@@ -755,7 +755,7 @@ namespace breseq {
 		return s;
 	}
   
-  inline void _system(string command, bool silent = false, bool ignore_errors = false)
+  inline void SYSTEM(string command, bool silent = false, bool ignore_errors = false)
   {
     if (!silent) cout << "[system] " << command << endl;
     int return_value = system(command.c_str());

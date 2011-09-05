@@ -74,7 +74,7 @@ void coverage_output::plot(const string& region, const string& output_file_name,
   command += " < " + m_r_script_file_name;
   command += " > " + log_file_name;
   
-	_system(command);
+	SYSTEM(command);
 	
 	remove(tmp_coverage.c_str());
 	remove(log_file_name.c_str());
