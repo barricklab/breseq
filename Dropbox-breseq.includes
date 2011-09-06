@@ -1,0 +1,6 @@
+aux_build
+extern/samtools-0.1.15/bcftools
+extern/samtools-0.1.15/misc
+extern/samtools-0.1.15/win32
+extern/samtools-0.1.15
+src/c/breseq/libbreseq
