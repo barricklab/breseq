@@ -251,10 +251,7 @@ namespace breseq
 		uint32_t clean;
 
 		string error_model_method;
-    uint32_t base_quality_cutoff;
-
-    double deletion_coverage_propagation_cutoff;
-    double deletion_coverage_seed_cutoff;
+		uint32_t base_quality_cutoff;
 
 		////   CandidateJunctions.pm
 		bool no_junction_prediction;
