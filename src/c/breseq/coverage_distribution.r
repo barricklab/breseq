@@ -198,6 +198,9 @@ while (i <= length(X$n) && X$n[i]>0.01*max_n)
 }
 graph_end_i <-i
 
+## Ths leaves enough room to the right of the peak for the legend
+graph_end_i = max(floor(2.2 * max_i), graph_end_i);
+
 ## graphics settings
 my_pch = 21
 my_col = "black";
@@ -277,6 +280,7 @@ print(deletion_propagation_coverage)
 junction_coverage_cutoff = qnbinom(junction_coverage_pr_cutoff, size = nb_fit_size, mu = nb_fit_mu)
 print(junction_coverage_cutoff)
 
+## not entirely convinced dividing mu by the number of possible pos_hash scores is right here
 junction_accept_coverage_cutoff = qbinom(junction_accept_pr_cutoff, junction_max_score, 1-pnbinom(0, size = nb_fit_size/junction_max_score, mu = nb_fit_mu/junction_max_score))
 print(junction_accept_coverage_cutoff)
 

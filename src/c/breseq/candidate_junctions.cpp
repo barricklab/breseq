@@ -524,14 +524,11 @@ namespace breseq {
         /// decided (keeping track of all the reversals) in _alignments_to_candidate_junction
         redundant_junction_sides[reverse_complement(side_1_ref_seq)][junction_coord_1] += r1 - 1;
         redundant_junction_sides[reverse_complement(side_2_ref_seq)][junction_coord_2] += r2 - 1;
-
-        uint32_t min_overlap_score = min(a1_unique_length, a2_unique_length);
         
         JunctionInfoContainer junction =
         {
           junction_id_list,		// list
           junction_seq_string,	// str
-          min_overlap_score,
           read_begin_coord,
           side_1_ref_seq,
           side_2_ref_seq
@@ -554,7 +551,6 @@ namespace breseq {
 			JunctionInfoContainer& jct = junctions[i];
 			JunctionInfo& junction_id_list = jct.list;
 			string junction_seq_string = jct.str;
-			int32_t min_overlap_score = jct.min_overlap_score;
 			int32_t read_begin_coord = jct.read_begin_coord;
 
 			string side_1_ref_seq = jct.side_1_ref_seq;
@@ -590,17 +586,13 @@ namespace breseq {
         
 				//maximum nonoverlapping match size on each side
 				new_cj.L1 = new_cj.L2 = 0;
-        
-        new_cj.min_overlap_score = 0;
-        
+                
         candidate_junctions[junction_seq_string][junction_id] = new_cj;
       }
       
       CandidateJunction& cj(candidate_junctions[junction_seq_string][junction_id]);
 
 			// Update score of junction and the redundancy of each side
-			cj.min_overlap_score += min_overlap_score;
-      
       cj.read_begin_hash[read_begin_coord]++;
 
 			if (verbose)
@@ -1028,7 +1020,6 @@ namespace breseq {
 		//
 
 		map<int32_t, int32_t> observed_pos_hash_score_distribution;
-		map<int32_t, int32_t> observed_min_overlap_score_distribution;
 
 		vector<CombinedCandidateJunction> combined_candidate_junctions;
 
@@ -1059,7 +1050,6 @@ namespace breseq {
 				CombinedCandidateJunction ccj = {
 					junction_id,			// id
 					cj.pos_hash_score,		// pos_hash_score
-					cj.min_overlap_score,	// min_overlap_score
 					junction_seq,			// seq
 					rc_junction_seq			// rc_seq
 				};
@@ -1080,7 +1070,6 @@ namespace breseq {
 					CombinedCandidateJunction ccj = {
 						junction_id,			// id
 						cj.pos_hash_score,		// pos_hash_score
-						cj.min_overlap_score,	// min_overlap_score
 						rc_junction_seq,		// seq
 						junction_seq			// rc_seq
 					};
@@ -1094,12 +1083,9 @@ namespace breseq {
 
 			// Save the score in the distribution
 			add_score_to_distribution(observed_pos_hash_score_distribution, best_candidate_junction.pos_hash_score);
-			add_score_to_distribution(observed_min_overlap_score_distribution, best_candidate_junction.min_overlap_score);
 
 			// Check minimum requirements
 			if (best_candidate_junction.pos_hash_score < settings.minimum_candidate_junction_pos_hash_score)
-				continue;
-			if (best_candidate_junction.min_overlap_score < settings.minimum_candidate_junction_min_overlap_score)
 				continue;
 
 			// Make sure it isn't a duplicate junction id -- this should NEVER happen and causes downstream problem.
@@ -1114,7 +1100,6 @@ namespace breseq {
         cout << "  id: " << ccj.id << endl;
         cout << "  pos_hash_score: " << ccj.pos_hash_score << endl;
         cout << "  pos_hash_score: " << ccj.pos_hash_score << endl;
-        cout << "  min_overlap_score: " << ccj.min_overlap_score << endl;
         cout << "  seq: " << ccj.seq << endl;
         cout << "  rc_seq: " << ccj.rc_seq << endl;   
         
@@ -1122,7 +1107,6 @@ namespace breseq {
         cout << "  id: " << best_candidate_junction.id << endl;
         cout << "  pos_hash_score: " << best_candidate_junction.pos_hash_score << endl;
         cout << "  pos_hash_score: " << best_candidate_junction.pos_hash_score << endl;
-        cout << "  min_overlap_score: " << best_candidate_junction.min_overlap_score << endl;
         cout << "  seq: " << best_candidate_junction.seq << endl;
         cout << "  rc_seq: " << best_candidate_junction.rc_seq << endl;  
         
@@ -1143,7 +1127,6 @@ namespace breseq {
       {
         cout << "ID: " << it->id << endl;
         cout << "  pos_hash_score: " << it->pos_hash_score << endl;
-        cout << "  min_overlap_score: " << it->min_overlap_score << endl;
         cout << "  seq: " << it->seq << endl;
         cout << "  rc_seq: " << it->rc_seq << endl;
       }
@@ -1166,7 +1149,6 @@ namespace breseq {
 		//my @duplicate_sequences;
 		uint32_t cumulative_cj_length = 0;
 		int32_t lowest_accepted_pos_hash_score = 0;
-		int32_t lowest_accepted_min_overlap_score = 0;
 
 		// Right now we limit the candidate junctions to have a length no longer than the reference sequence.
 		uint32_t cj_length_limit = summary.sequence_conversion.total_reference_sequence_length * settings.maximum_candidate_junction_length_factor;
@@ -1188,7 +1170,6 @@ namespace breseq {
 
 			i = 0;
 			uint32_t current_pos_hash_score = combined_candidate_junctions[i].pos_hash_score;
-			uint32_t current_min_overlap_score = combined_candidate_junctions[i].min_overlap_score;
 
 			// Check to make sure that adding everything from the last iteration doesn't put us over any limits...
 			uint32_t new_number = remaining_ids.size() + list_in_waiting.size();
@@ -1201,7 +1182,6 @@ namespace breseq {
 				remaining_ids.insert(remaining_ids.end(), list_in_waiting.begin(), list_in_waiting.end());
 
 				lowest_accepted_pos_hash_score = current_pos_hash_score;
-				lowest_accepted_min_overlap_score = current_min_overlap_score;
 
 				// Zero out what we will add
 				add_cj_length = 0;
@@ -1212,11 +1192,9 @@ namespace breseq {
 				if (i >= combined_candidate_junctions.size()) break;
 
 				current_pos_hash_score = combined_candidate_junctions[i].pos_hash_score;
-				current_min_overlap_score = combined_candidate_junctions[i].min_overlap_score;
 				while (
 					    (i < combined_candidate_junctions.size())
 				     && (combined_candidate_junctions[i].pos_hash_score == current_pos_hash_score)
-				     && (combined_candidate_junctions[i].min_overlap_score == current_min_overlap_score)
 					)
 				{
 					CombinedCandidateJunction c = combined_candidate_junctions[i];
@@ -1228,13 +1206,13 @@ namespace breseq {
 				new_number = remaining_ids.size() + list_in_waiting.size();
 				new_length = cumulative_cj_length + add_cj_length;
 
-				fprintf(stderr, "      Testing Pos Hash Score = %4d, Min Overlap Score = %4d, Num = %6d, Length = %6d\n", current_pos_hash_score, current_min_overlap_score, int32_t(list_in_waiting.size()), add_cj_length);
+				fprintf(stderr, "      Testing Pos Hash Score = %4d, Num = %6d, Length = %6d\n", current_pos_hash_score, int32_t(list_in_waiting.size()), add_cj_length);
 			}
 			combined_candidate_junctions = remaining_ids;
 		}
 
 		int32_t accepted_candidate_junction_number = combined_candidate_junctions.size();
-		cerr << "    Accepted: Number = " << accepted_candidate_junction_number << ", Pos Hash Score >= " << lowest_accepted_pos_hash_score << ", Min Overlap Score >= " << lowest_accepted_min_overlap_score << ", Cumulative Length = " << cumulative_cj_length << " bases" << endl;
+		cerr << "    Accepted: Number = " << accepted_candidate_junction_number << ", Pos Hash Score >= " << lowest_accepted_pos_hash_score << ", Cumulative Length = " << cumulative_cj_length << " bases" << endl;
 
 		// Save summary statistics
 		hcs.total.number = total_candidate_junction_number;
@@ -1243,10 +1221,7 @@ namespace breseq {
 		hcs.accepted.number = accepted_candidate_junction_number;
 		hcs.accepted.length = cumulative_cj_length;
 		hcs.accepted.pos_hash_score_cutoff = lowest_accepted_pos_hash_score;
-		hcs.accepted.min_overlap_score_cutoff = lowest_accepted_min_overlap_score;
-
 		hcs.pos_hash_score_distribution = observed_pos_hash_score_distribution;
-		hcs.min_overlap_score_distribution = observed_min_overlap_score_distribution;
 
 		///
 		// Print out the candidate junctions, sorted by the lower coordinate, higher coord, then number

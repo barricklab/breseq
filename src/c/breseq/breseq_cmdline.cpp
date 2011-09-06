@@ -1709,7 +1709,7 @@ int breseq_default_action(int argc, char* argv[])
         jc.erase(it--);
     }
     
-    jc.sort(diff_entry::by_scores(make_list<diff_entry::key_t>("pos_hash_score")("min_overlap_score")("total_reads")));
+    jc.sort(diff_entry::by_scores(make_list<diff_entry::key_t>("pos_hash_score")("total_reads")));
 		it = jc.begin();
 		for (uint32_t i = 0; i < jc.size(); i++)
 		{

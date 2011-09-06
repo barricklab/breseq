@@ -171,7 +171,7 @@ namespace breseq
     options
 		("help,h", "produce this help message", TAKES_NO_ARGUMENT)
 		// convert to basing everything off the main output path, so we don't have to set so many options
-		("output,o", "path to breseq output [current path]", "")
+		("output,o", "path to breseq output [current path]", ".")
 		("reference,r", "reference sequence in GenBank flatfile format (REQUIRED)")
     ("name,n", "human-readable name of sample/run for output [empty]", "")
     ("polymorphism-prediction,p", "predict polymorphic mutations", TAKES_NO_ARGUMENT)

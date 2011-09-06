@@ -62,11 +62,9 @@ namespace breseq {
       return (a_pos < b_pos);
     if (a_reject_order != b_reject_order) 
       return (a_reject_order < b_reject_order);
-    if ((*a)["pos_hash_score"] != (*b)["pos_hash_score"]) 
-      return (n((*a)["pos_hash_score"]) > n((*b)["pos_hash_score"]));
-    
-    return (n((*a)["min_overlap_score"]) > n((*b)["min_overlap_score"]));
-	}
+
+    return (n((*a)["pos_hash_score"]) > n((*b)["pos_hash_score"]));
+  }
 
 	bool MutationPredictor::sort_by_reject_score(const counted_ptr<diff_entry>& a, const counted_ptr<diff_entry>& b)
 	{
@@ -1147,25 +1145,6 @@ namespace breseq {
 
 			gd.add(mut);
 		}
-
-    /* @JEB This appears to have been made redundant with new junction methods!
-		// Remove remaining junctions that we didn't pair up with anything that are below a coverage cutoff.
-		jc = gd.filter_used_as_evidence(gd.list(jc_types));
-		for (uint32_t i = 0; i < jc.size(); i++)
-		{
-			diff_entry& item = *jc[i];
-
-			int32_t coverage_cutoff_1 = settings.unique_coverage[item["side_1_seq_id"]].junction_coverage_cutoff;
-			int32_t coverage_cutoff_2 = settings.unique_coverage[item["side_2_seq_id"]].junction_coverage_cutoff;
-
-			//TODO: What range of values means undefined? Is 0 undefined?
-			if ( (coverage_cutoff_1 == 0 || (n(item["total_reads"]) < coverage_cutoff_1) )
-				&& (coverage_cutoff_2 == 0 || (n(item["total_reads"]) < coverage_cutoff_2) ) )
-			{
-				add_reject_reason(item, "COV");
-			}
-		}
-    */
 		
 	}
 
