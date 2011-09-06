@@ -56,6 +56,10 @@
             argument = "-r NC_000913.2.gbk SRR023512.fastq"
             isEnabled = "YES">
          </CommandLineArgument>
+         <CommandLineArgument
+            argument = "-o tests/lambda_mixed_pop -r tests/lambda_mixed_pop/../data/lambda/lambda.gbk tests/lambda_mixed_pop/../data/lambda/lambda_mixed_population.fastq"
+            isEnabled = "NO">
+         </CommandLineArgument>
       </CommandLineArguments>
       <EnvironmentVariables>
          <EnvironmentVariable

@@ -375,9 +375,6 @@ void resolve_alignments(
 
 	map<int32_t, int32_t> accepted_pos_hash_score_distribution;
 	map<int32_t, int32_t> observed_pos_hash_score_distribution;
-
-	map<int32_t, int32_t> accepted_min_overlap_score_distribution;
-	map<int32_t, int32_t> observed_min_overlap_score_distribution;
     
 	vector<string> passed_junction_ids;
 	vector<string> rejected_junction_ids;
@@ -410,7 +407,6 @@ void resolve_alignments(
 
 		// save the score in the distribution
 		add_score_to_distribution(observed_pos_hash_score_distribution, junction_test_info[key].pos_hash_score);
-		add_score_to_distribution(observed_min_overlap_score_distribution, junction_test_info[key].min_overlap_score);
 
     if (verbose && !has_non_overlap_alignment) cout << "Does not have nonoverlap alignments" << endl;
     
@@ -469,7 +465,6 @@ void resolve_alignments(
 
 		// save the score in the distribution
 		add_score_to_distribution(accepted_pos_hash_score_distribution, junction_test_info[key].pos_hash_score);
-		add_score_to_distribution(accepted_min_overlap_score_distribution, junction_test_info[key].min_overlap_score);
 
 		// Create matches from UNIQUE sides of each match to reference genome
 		// this fixes, for example appearing to not have any coverage at the origin of a circular DNA fragment
@@ -520,9 +515,6 @@ void resolve_alignments(
 	}
 
 	// Save summary statistics
-	summary.alignment_correction.new_junctions.observed_min_overlap_score_distribution = observed_min_overlap_score_distribution;
-	summary.alignment_correction.new_junctions.accepted_min_overlap_score_distribution = accepted_min_overlap_score_distribution;
-
 	summary.alignment_correction.new_junctions.observed_pos_hash_score_distribution = observed_pos_hash_score_distribution;
 	summary.alignment_correction.new_junctions.accepted_pos_hash_score_distribution = accepted_pos_hash_score_distribution;
 
@@ -791,8 +783,8 @@ bool _test_junction(const Settings& settings, Summary& summary, const string& ju
 	map<bool,uint32_t> max_min_right_per_strand = make_map<bool,uint32_t>(true,0)(false,0);
 	map<bool,uint32_t> count_per_strand = make_map<bool,uint32_t>(true,0)(false,0);
 	uint32_t total_non_overlap_reads = 0;
-	map<string,uint32_t> count_per_coord_per_strand;
-	uint32_t min_overlap_score = 0;
+	map<int32_t,bool> pos_hash[2];
+  uint32_t pos_hash_count(0);
 
 	// basic information about the junction
 	JunctionInfo scj = junction_name_split(junction_seq_id);
@@ -845,15 +837,34 @@ bool _test_junction(const Settings& settings, Summary& summary, const string& ju
 		bool rev_key = a->reversed();
 		count_per_strand[rev_key]++;
 
-		// The start coordinate is less likely to be misaligned due to errors
-		// than the end coordinate
-		uint32_t begin_coord = rev_key ? a->reference_end_1() : a->reference_start_1();
-		string strand_key = to_string(begin_coord) + "-" + (rev_key ? "1" : "0");
-		if (count_per_coord_per_strand.count(strand_key) == 0) count_per_coord_per_strand[strand_key] = 0;
-		count_per_coord_per_strand[strand_key]++;
+		// Look at reference coords of aligned part of read sequence
+    // and of unaligned ends of query continued straight to where
+    // they would have aligned in the reference.
+    //
+    // All four of these coordinates must have never been seen before to count.
+    
+		int32_t begin_coord = a->reference_start_1();
+    int32_t end_coord   = a->reference_end_1();
+    int32_t begin_read_coord = a->reference_start_1() - (a->query_start_1() - 1);
+    int32_t end_read_coord   = a->reference_end_1() + (a->read_length() - a->query_end_1());
+    
+    if (
+           !pos_hash[rev_key].count(begin_coord)
+        && !pos_hash[rev_key].count(end_coord)
+        && !pos_hash[rev_key].count(begin_read_coord)
+        && !pos_hash[rev_key].count(end_read_coord)
+        ) 
+    {
+      pos_hash_count++;
+    }
+    
+    pos_hash[rev_key][begin_coord] = true;
+    pos_hash[rev_key][end_coord] = true;
+    pos_hash[rev_key][begin_coord] = true;
+    pos_hash[rev_key][begin_coord] = true;
 
 		if (verbose)
-			cout << "  " << item->junction_alignments.front()->read_name() << ' ' << strand_key << endl;
+			cout << "  " << item->junction_alignments.front()->read_name() << ' ' << static_cast<int32_t>(rev_key) << ' ' << begin_coord << ' ' << end_coord << ' ' << begin_read_coord << ' ' << end_read_coord << endl;
 
 		// The left side goes exactly up to the flanking length
 		uint32_t this_left = flanking_left + 1;
@@ -872,13 +883,11 @@ bool _test_junction(const Settings& settings, Summary& summary, const string& ju
 		//   if we implemented that with a certain coverage cutoff it would be a
 		//   more principled way of doing things...
 		if (this_left < this_right) {
-			min_overlap_score += this_left;
 			if (max_min_left_per_strand[rev_key] < this_left)
 				max_min_left_per_strand[rev_key] = this_left;
 		}
 		else
 		{
-			min_overlap_score += this_right;
 			if (max_min_right_per_strand[rev_key] < this_right)
 				max_min_right_per_strand[rev_key] = this_right;
 		}
@@ -913,13 +922,11 @@ bool _test_junction(const Settings& settings, Summary& summary, const string& ju
 		count_per_strand[false],            //coverage_minus
 		count_per_strand[true],             //coverage_plus
 		total_non_overlap_reads,            //total_non_overlap_reads
-    min_overlap_score,                  //min_overlap_score
-    count_per_coord_per_strand.size()   //pos_hash_score
+    pos_hash_count                      //pos_hash_score
 	};
   
 	junction_test_info_ref[junction_seq_id].test_info = test_info;
-	junction_test_info_ref[junction_seq_id].min_overlap_score = min_overlap_score;
-	junction_test_info_ref[junction_seq_id].pos_hash_score = count_per_coord_per_strand.size();
+	junction_test_info_ref[junction_seq_id].pos_hash_score = pos_hash_count;
 
 	// Old way, requiring certain overlap on each side on each strand
 	// @JEB !> Best results may be to combine these methods
@@ -1289,7 +1296,6 @@ diff_entry _junction_to_hybrid_list_item(const string& key, cReferenceSequences&
   ("coverage_minus", to_string(this_test_info.coverage_minus))
   ("coverage_plus", to_string(this_test_info.coverage_plus))
   ("total_non_overlap_reads", to_string(this_test_info.total_non_overlap_reads))
-  ("min_overlap_score", to_string(this_test_info.min_overlap_score))
   ("pos_hash_score", to_string(this_test_info.pos_hash_score))
   ;
 

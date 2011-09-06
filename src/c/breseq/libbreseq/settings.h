@@ -636,8 +636,6 @@ namespace breseq
 
 			struct NewJunction
 			{
-				map<int32_t, int32_t> observed_min_overlap_score_distribution;
-				map<int32_t, int32_t> accepted_min_overlap_score_distribution;
 				map<int32_t, int32_t> observed_pos_hash_score_distribution;
 				map<int32_t, int32_t> accepted_pos_hash_score_distribution;
 			} new_junctions;
@@ -645,16 +643,12 @@ namespace breseq
 			void serialize(ofstream& f)
 			{
 				write_to_file(f, read_file);
-				write_to_file(f, new_junctions.observed_min_overlap_score_distribution);
-				write_to_file(f, new_junctions.accepted_min_overlap_score_distribution);
 				write_to_file(f, new_junctions.observed_pos_hash_score_distribution);
 				write_to_file(f, new_junctions.accepted_pos_hash_score_distribution);
 			}
 			void deserialize(ifstream& f)
 			{
 				read_from_file(f, read_file);
-				read_from_file(f, new_junctions.observed_min_overlap_score_distribution);
-				read_from_file(f, new_junctions.accepted_min_overlap_score_distribution);
 				read_from_file(f, new_junctions.observed_pos_hash_score_distribution);
 				read_from_file(f, new_junctions.accepted_pos_hash_score_distribution);
 			}
@@ -677,11 +671,9 @@ namespace breseq
 				int32_t number;
 				int32_t length;
 				int32_t pos_hash_score_cutoff;
-				int32_t min_overlap_score_cutoff;
 			} accepted;
 
 			map<int32_t, int32_t> pos_hash_score_distribution;
-			map<int32_t, int32_t> min_overlap_score_distribution;
 
 			map<string, map<string, int32_t> > read_file;
 
@@ -690,7 +682,6 @@ namespace breseq
         write_to_file(f, total);
         write_to_file(f, accepted);
 				write_to_file(f, pos_hash_score_distribution);
-				write_to_file(f, min_overlap_score_distribution);
 				write_to_file(f, read_file);
       }
       
@@ -699,7 +690,6 @@ namespace breseq
         read_from_file(f, total);
         read_from_file(f, accepted);
 				read_from_file(f, pos_hash_score_distribution);
-				read_from_file(f, min_overlap_score_distribution);
 				read_from_file(f, read_file);
       }
 

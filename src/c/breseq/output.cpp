@@ -272,7 +272,7 @@ void html_marginal_predictions(const string& file_name, const Settings& settings
    if (jc.size()) {
      //Sort by score, not by position (the default order)...
      jc.sort(diff_entry::by_scores(
-       make_list<diff_entry::key_t>("pos_hash_score")("min_overlap_score")("total_reads"))); 
+       make_list<diff_entry::key_t>("pos_hash_score")("total_reads"))); 
     
      HTML << "<p>" << endl;
      HTML << html_new_junction_table_string(jc, false, "Marginal new junction evidence...", relative_path);
@@ -997,9 +997,7 @@ string html_new_junction_table_string(diff_entry_list& list_ref, bool show_rejec
       }
       ss << td("rowspan=\"2\" align=\"center\"", c["overlap"]) << endl;
       ss << td("rowspan=\"2\" align=\"center\"", c["total_reads"]) << endl;
-      ss << td("rowspan=\"2\" align=\"center\"", 
-               b("&lt;" + c["pos_hash_score"] + "&gt;") + 
-                 "<br>" + c["min_overlap_score"]) << endl;
+      ss << td("rowspan=\"2\" align=\"center\"", c["pos_hash_score"]) << endl;
       ss << td("align=\"center\" class=\"" + annotate_key + "\"", 
               nonbreaking(c["_" + key + GENE_POSITION])) << endl;
       ss << td("align=\"center\" class=\"" + annotate_key + "\"", 
@@ -1904,12 +1902,12 @@ void Html_Mutation_Table_String::Item_Lines()
         s_end << " +" << mut["ins_end"];
       }
       if (!(s_end.str()).empty()) {
-        s << " :: " << s_end.str();
+        s << " ::" << s_end.str();
       }
       if (from_string<int32_t>(mut["duplication_size"]) > 0) {
-        s << "+" << mut["duplication_size"] << " bp";
+        s << " +" << mut["duplication_size"] << " bp";
       } else if (from_string<int32_t>(mut["duplication_size"]) < 0) {
-        s << "&Delta;" << mut["duplication_size"] << " bp";
+        s << " &Delta;" << mut["duplication_size"] << " bp";
       }
       cell_mutation = nonbreaking(s.str());
     } else if (mut._type == INV) {

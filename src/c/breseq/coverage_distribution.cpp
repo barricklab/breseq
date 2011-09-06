@@ -26,7 +26,7 @@ namespace breseq {
 	vector<string> CoverageDistribution::fit(Settings& settings, string distribution_file_name, string plot_file, double deletion_propagation_pr_cutoff, double junction_coverage_pr_cutoff, double junction_accept_pr_cutoff, double junction_keep_pr_cutoff, double junction_max_score)
 	{
     pid_t pid = getpid();
-		string log_file_name = settings.base_output_path + "/" + to_string(pid) + ".r.log";
+		string log_file_name = distribution_file_name + ".r.log";
 		string command = "R --vanilla < " + settings.program_data_path + "/coverage_distribution.r" + " > " + log_file_name;
 		command += " distribution_file=" + distribution_file_name;
 		command += " plot_file=" + plot_file;
@@ -50,7 +50,7 @@ namespace breseq {
       }
     }
     ROUT.close();
-		//remove(log_file_name.c_str());
+		remove(log_file_name.c_str());
 
 		return(lines);
 	}
@@ -86,7 +86,7 @@ namespace breseq {
 
 		/// NEW JUNCTION COVERAGE CUTOFFS
 		// Arbitrary value that seems to work....
-		double junction_coverage_pr_cutoff = 1/sequence_length; //# *0.05
+		double junction_coverage_pr_cutoff = static_cast<double>(1.0)/sequence_length; //# *0.05
 
 		// We really want somewhere between these two, try this...
 		double junction_accept_pr_cutoff = 0.01;
@@ -113,6 +113,22 @@ namespace breseq {
 		summary.unique_coverage[seq_id].junction_coverage_cutoff = from_string<double>(lines[6]);
 		summary.unique_coverage[seq_id].junction_accept_score_cutoff = from_string<double>(lines[7]);
 		summary.unique_coverage[seq_id].junction_keep_score_cutoff = from_string<double>(lines[8]);
+    
+    bool verbose = true;
+    if (verbose)
+    {
+      cout << seq_id << endl;
+      cout << "nbinom_size_parameter " << summary.unique_coverage[seq_id].nbinom_size_parameter << endl;
+      cout << "nbinom_mean_parameter " << summary.unique_coverage[seq_id].nbinom_mean_parameter << endl;
+      cout << "nbinom_prob_parameter " << summary.unique_coverage[seq_id].nbinom_prob_parameter << endl;
+      cout << "average " << summary.unique_coverage[seq_id].average << endl;
+      cout << "variance " << summary.unique_coverage[seq_id].variance << endl;
+      cout << "dispersion " << summary.unique_coverage[seq_id].dispersion << endl;
+      cout << "deletion_coverage_propagation_cutoff " << summary.unique_coverage[seq_id].deletion_coverage_propagation_cutoff << endl;
+      cout << "junction_coverage_cutoff " << summary.unique_coverage[seq_id].junction_coverage_cutoff << endl;
+      cout << "junction_accept_score_cutoff " << summary.unique_coverage[seq_id].junction_accept_score_cutoff << endl;
+      cout << "junction_keep_score_cutoff " << summary.unique_coverage[seq_id].junction_keep_score_cutoff << endl;
+    }
 	}
 
 	void CoverageDistribution::analyze_unique_coverage_distributions(Settings& settings, Summary& summary, cReferenceSequences& ref_seq_info, string plot_file_name, string distribution_file_name)

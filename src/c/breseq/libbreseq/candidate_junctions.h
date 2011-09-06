@@ -73,7 +73,6 @@ namespace breseq {
 		{
 			JunctionInfo list;
 			string str;
-			uint32_t min_overlap_score;
 			uint32_t read_begin_coord;
 			string side_1_ref_seq;
 			string side_2_ref_seq;
@@ -82,7 +81,6 @@ namespace breseq {
 		{
 			string id;
 			uint32_t pos_hash_score;
-			uint32_t min_overlap_score;
 			string seq;
 			string rc_seq;
 
@@ -101,8 +99,6 @@ namespace breseq {
 
 				if (b.pos_hash_score != a.pos_hash_score)
 					return (b.pos_hash_score < a.pos_hash_score);
-				else if (b.min_overlap_score != a.min_overlap_score)
-					return (b.min_overlap_score < a.min_overlap_score);
 				else if (a_uc != b_uc)
 					return (a_uc < b_uc);
 				else
@@ -113,8 +109,6 @@ namespace breseq {
 			{
 				if (b.pos_hash_score != a.pos_hash_score)
 					return (b.pos_hash_score < a.pos_hash_score);
-				else if (b.min_overlap_score != a.min_overlap_score)
-					return (b.min_overlap_score < a.min_overlap_score);
 				else
 					return (a.seq.size() < b.seq.size());
 			}

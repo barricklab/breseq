@@ -529,8 +529,8 @@ namespace breseq {
 				uint32_t gene_start = abs(static_cast<int32_t>(start) - within_gene_start) + 1;
 				uint32_t gene_end = abs(static_cast<int32_t>(end) - within_gene_start) + 1;
 				mut["gene_position"] = (gene_start < gene_end) 
-          ? to_string(gene_start) + "–" + to_string(gene_end)  //en-dash
-          : to_string(gene_end) + "–" + to_string(gene_start); //en-dash
+          ? to_string(gene_start) + "-" + to_string(gene_end)  //hyphen
+          : to_string(gene_end) + "-" + to_string(gene_start); //hyphen
 			}
 
 			string gene_nt_size = to_string(gene.end - gene.start + 1);

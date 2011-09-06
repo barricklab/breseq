@@ -488,7 +488,6 @@ namespace breseq {
 		int32_t r2;
 		int32_t L1;
 		int32_t L2;
-		int32_t min_overlap_score;
 		int32_t pos_hash_score;
 		map<uint32_t, uint32_t> read_begin_hash;
 
@@ -508,7 +507,6 @@ namespace breseq {
 			uint32_t coverage_minus;
 			uint32_t coverage_plus;
 			uint32_t total_non_overlap_reads;
-			uint32_t min_overlap_score;
 			uint32_t pos_hash_score;
 		} test_info;
 
