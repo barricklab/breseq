@@ -469,7 +469,7 @@ namespace breseq
       uint32_t tm_yday = floor( t / (60*60*24));
       t -= tm_yday * 60*60*24;
       uint32_t tm_hour = floor( t / (60*60));
-      t -= tm_yday * 60*60;
+      t -= tm_hour * 60*60;
       uint32_t tm_min = floor( t / (60));
       t -= tm_min * 60;
       uint32_t tm_sec = floor( t / (1));      
