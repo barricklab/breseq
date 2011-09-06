@@ -1488,7 +1488,28 @@ int breseq_default_action(int argc, char* argv[])
 		//$summary->{unique_coverage} = {};
 		if (!settings.no_deletion_prediction)
 			CoverageDistribution::analyze_unique_coverage_distributions(settings, summary, ref_seq_info,
-				settings.unique_only_coverage_plot_file_name, settings.unique_only_coverage_distribution_file_name);
+        settings.unique_only_coverage_plot_file_name, settings.unique_only_coverage_distribution_file_name);
+
+    //Coverage distribution user options
+    if (settings.deletion_coverage_propagation_cutoff && settings.deletion_coverage_propagation_cutoff < 1) {
+      for (uint32_t i = 0; i < ref_seq_info.size(); i++) {
+        string seq_id = ref_seq_info[i].m_seq_id;
+        double average = summary.unique_coverage[seq_id].average;
+        double &deletion_coverage_propagation_cutoff = summary.unique_coverage[seq_id].deletion_coverage_propagation_cutoff;
+
+        deletion_coverage_propagation_cutoff = average * settings.deletion_coverage_propagation_cutoff;
+      }
+    }
+
+    if (settings.deletion_coverage_propagation_cutoff && settings.deletion_coverage_propagation_cutoff >= 1) {
+      for (uint32_t i = 0; i < ref_seq_info.size(); i++) {
+        string seq_id = ref_seq_info[i].m_seq_id;
+        double &deletion_coverage_propagation_cutoff = summary.unique_coverage[seq_id].deletion_coverage_propagation_cutoff;
+
+        deletion_coverage_propagation_cutoff = settings.deletion_coverage_propagation_cutoff;
+      }
+    }
+
 
 		string command;
 		for (uint32_t i = 0; i<settings.read_files.size(); i++) {
