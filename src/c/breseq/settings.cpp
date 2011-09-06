@@ -176,6 +176,9 @@ namespace breseq
     ("name,n", "human-readable name of sample/run for output [empty]", "")
     ("polymorphism-prediction,p", "predict polymorphic mutations", TAKES_NO_ARGUMENT)
     ("base-quality-cutoff,b", "ignore bases with quality scores lower than this value", "3")
+    ("deletion-coverage-propagation-cutoff","")
+    ("deletion-coverage-seed-cutoff","")
+
     
     .processCommandArgs(argc, argv);
     
@@ -206,6 +209,12 @@ namespace breseq
     this->run_name = options["name"];
     this->polymorphism_prediction = options.count("polymorphism-prediction");
     this->base_quality_cutoff = from_string<uint32_t>(options["base-quality-cutoff"]);
+
+    //Coverage distribtuion options
+    if (options.count("deletion-coverage-propagation-cutoff"))
+      this->deletion_coverage_propagation_cutoff = from_string<double>(options["deletion-coverage-propogation-cutoff"]);
+    if (options.count("deletion-coverage-seed-cutoff"))
+      this->deletion_coverage_seed_cutoff = from_string<double>(options["deletions-coverage-seed-cutoff"]);
 
     //// GENBANK REFERENCE FILES ////
     this->reference_file_names = from_string<vector<string> >(options["reference"]);
@@ -281,7 +290,12 @@ namespace breseq
     this->print_run_name = ""; 
 		this->clean = 0;
 		this->error_model_method = "EMPIRICAL";
-		this->base_quality_cutoff = 3; // avoids problem with Illumina assigning 2 to bad ends of reads!
+    this->base_quality_cutoff = 3; // avoids problem with Illumina assigning 2 to bad ends of reads!
+
+    //Coverage distribution options
+    this->deletion_coverage_propagation_cutoff = 0;
+    this->deletion_coverage_seed_cutoff = 0;
+
 
 		//this->required_unique_length_per_side = 10;                             // Require at least one of the pair of matches supporting a junction to have this
 		// much of its match that is unique in the reference sequence.
