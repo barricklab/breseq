@@ -190,14 +190,98 @@ namespace breseq {
       default: assert(false);
     }
   }
+  
+  // These are our own local wrappers for common functions.
+  
+  inline void  my_assertion_handler(bool condition, const char *file, const char *base_file, int line, const string& message = "")
+  {
+    (void)base_file;
+    if (!condition)
+    {
+      cerr << "!!!!!!!!!!!!!!!!!!!!!!!> FATAL ERROR <!!!!!!!!!!!!!!!!!!!!!!!" << endl;
+      if (message.length() > 0) cerr << message << endl;
+      cerr << "FILE: " << file << "   LINE: " << line << endl;
+      cerr << "!!!!!!!!!!!!!!!!!!!!!!!> FATAL ERROR <!!!!!!!!!!!!!!!!!!!!!!!" << endl;
+      exit(-1);
+    }
+  }
+  
+#define ASSERTM(condition, message) { my_assertion_handler( condition,  __FILE__, __BASE_FILE__, __LINE__, message); }
+#define ASSERT(condition) { my_assertion_handler( condition,  __FILE__, __BASE_FILE__, __LINE__); }
+  
+  inline void _warn(bool condition, const string& message = "")
+  {
+    if (!condition)
+    {
+      cerr << "---> WARNING --->" << endl;
+      cerr << message << endl;
+      cerr << "<--- WARNING <---" << endl;
+    }
+  }
+  
+	inline string SYSTEM_CAPTURE(string command, bool silent = false)
+	{
+    if (!silent) cout << "[system] " << command << endl;
+    
+		// Open the command for reading.
+    string piped_command = command + " 2>&1";
+		FILE *fp = popen(piped_command.c_str(), "r");
+		assert(fp != NULL);
+    
+		// Read the output a line at a time
+		stringstream ss;
+		char path[1035];
+		while (fgets(path, sizeof (path) - 1, fp) != NULL)
+		{
+			ss << path;
+		}
+    
+		// Close
+		pclose(fp);
+    
+    // Delete the trailing line ending as a convenience for 'which'
+    string s = ss.str();
+    size_t line_break_pos = s.rfind("\n");
+    if (line_break_pos != string::npos) 
+      s.erase(line_break_pos);
+		return s;
+	}
+  
+  inline void SYSTEM(string command, bool silent = false, bool ignore_errors = false)
+  {
+    if (!silent) cout << "[system] " << command << endl;
+    int return_value = system(command.c_str());
+    
+    if (return_value != 0)
+      cerr << "Error! " << "Result code: " << return_value << endl;
+    
+    if (!ignore_errors)
+      assert(return_value == 0);
+  }
+  
+  inline string remove_file(string path)
+  {
+    remove(path.c_str()); // @JEB this will probably not work.
+    return path;
+  }
 
+  
   // Utility functions
   inline bool file_exists(const char *filename)
   {
     ifstream ifile(filename);
-    return ifile;
+    return !ifile.fail();
   }
  
+  inline void copy_file(const string& in_fn, const string& out_fn)
+  {
+    ifstream ifile(in_fn.c_str());
+    ASSERTM(!ifile.fail(), "Could not open file for input: " + in_fn);
+    ofstream ofile(out_fn.c_str());
+    ASSERTM(!ofile.fail(), "Could not open file for output: " + out_fn);
+    ofile << ifile.rdbuf();
+  }
+  
   /*
   inline bool file_empty(const char *filename)
   {
@@ -697,79 +781,6 @@ namespace breseq {
     return ((found != string::npos) ? file_name.substr(0, found) : "");
   }
   
-  // These are our own local wrappers for common functions.
-  
-  inline void  my_assertion_handler(bool condition, const char *file, const char *base_file, int line, const string& message = "")
-  {
-    (void)base_file;
-    if (!condition)
-    {
-      cerr << "!!!!!!!!!!!!!!!!!!!!!!!> FATAL ERROR <!!!!!!!!!!!!!!!!!!!!!!!" << endl;
-      if (message.length() > 0) cerr << message << endl;
-      cerr << "FILE: " << file << "   LINE: " << line << endl;
-      cerr << "!!!!!!!!!!!!!!!!!!!!!!!> FATAL ERROR <!!!!!!!!!!!!!!!!!!!!!!!" << endl;
-      exit(-1);
-    }
-  }
-  
-  #define ASSERTM(condition, message) { my_assertion_handler( condition,  __FILE__, __BASE_FILE__, __LINE__, message); }
-  #define ASSERT(condition) { my_assertion_handler( condition,  __FILE__, __BASE_FILE__, __LINE__); }
-
-  inline void _warn(bool condition, const string& message = "")
-  {
-    if (!condition)
-    {
-      cerr << "---> WARNING --->" << endl;
-      cerr << message << endl;
-      cerr << "<--- WARNING <---" << endl;
-    }
-  }
-  
-	inline string SYSTEM_CAPTURE(string command, bool silent = false)
-	{
-    if (!silent) cout << "[system] " << command << endl;
-
-		// Open the command for reading.
-    string piped_command = command + " 2>&1";
-		FILE *fp = popen(piped_command.c_str(), "r");
-		assert(fp != NULL);
-    
-		// Read the output a line at a time
-		stringstream ss;
-		char path[1035];
-		while (fgets(path, sizeof (path) - 1, fp) != NULL)
-		{
-			ss << path;
-		}
-    
-		// Close
-		pclose(fp);
-    
-    // Delete the trailing line ending as a convenience for 'which'
-    string s = ss.str();
-    size_t line_break_pos = s.rfind("\n");
-    if (line_break_pos != string::npos) 
-      s.erase(line_break_pos);
-		return s;
-	}
-  
-  inline void SYSTEM(string command, bool silent = false, bool ignore_errors = false)
-  {
-    if (!silent) cout << "[system] " << command << endl;
-    int return_value = system(command.c_str());
-    
-    if (return_value != 0)
-      cerr << "Error! " << "Result code: " << return_value << endl;
-    
-    if (!ignore_errors)
-      assert(return_value == 0);
-  }
-  
-  inline string remove_file(string path)
-  {
-    remove(path.c_str()); // @JEB this will probably not work.
-    return path;
-  }
   
   inline string create_path(string path)
   {
