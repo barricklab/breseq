@@ -109,8 +109,8 @@ namespace breseq {
 		summary.unique_coverage[seq_id].variance = from_string<double>(lines[3]);
 		summary.unique_coverage[seq_id].dispersion = from_string<double>(lines[4]);
 
-		summary.unique_coverage[seq_id].deletion_coverage_propagation_cutoff = from_string<double>(lines[5]);
-		summary.unique_coverage[seq_id].junction_coverage_cutoff = from_string<double>(lines[6]);
+    summary.unique_coverage[seq_id].deletion_coverage_propagation_cutoff = from_string<double>(lines[5]);
+    summary.unique_coverage[seq_id].junction_coverage_cutoff = from_string<double>(lines[6]);
 		summary.unique_coverage[seq_id].junction_accept_score_cutoff = from_string<double>(lines[7]);
 		summary.unique_coverage[seq_id].junction_keep_score_cutoff = from_string<double>(lines[8]);
     
@@ -132,7 +132,7 @@ namespace breseq {
 	}
 
 	void CoverageDistribution::analyze_unique_coverage_distributions(Settings& settings, Summary& summary, cReferenceSequences& ref_seq_info, string plot_file_name, string distribution_file_name)
-	{
+  {
 		for (uint32_t i = 0; i < ref_seq_info.size(); i++)
 			analyze_unique_coverage_distribution(settings, summary, ref_seq_info, ref_seq_info[i].m_seq_id , plot_file_name, distribution_file_name);
 	}
