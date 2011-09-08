@@ -231,8 +231,9 @@ namespace breseq {
 				("size", s(n(mc_item["end"]) - n(mc_item["start"]) + 1));
 			;
 
+      
 			///
-			// (1) there is a junction that exactly crosses the deletion boundary deletion
+			// (1) there is a junction that exactly crosses the deletion boundary 
 			///
 
 			for(diff_entry_list::iterator jc_it = jc.begin(); jc_it != jc.end(); jc_it++) //JC
@@ -241,7 +242,7 @@ namespace breseq {
 
 				if (jc_item["side_1_seq_id"] != mut["seq_id"] || jc_item["side_2_seq_id"] != mut["seq_id"])
 					continue;
-
+        
 				// We always know that the lower coordinate part of the junction is first, hence these
 				// assumptions about the strands hold.
 				if (
@@ -251,6 +252,51 @@ namespace breseq {
 					&& (n(jc_item["side_2_strand"]) == +1)
            )
 				{
+          
+          //it's possible that one or both sides are in repeat elements -- this code may not be perfect @JEB
+          // should really be checking to see if it is on the edge of the repeat?
+          cSequenceFeature* r1_pointer = within_repeat(jc_item["side_1_seq_id"], n(jc_item["side_1_position"]));
+          cSequenceFeature* r2_pointer = within_repeat(jc_item["side_2_seq_id"], n(jc_item["side_2_position"]));
+          
+          // two repeats - not sure this would ever happen?
+          // start and end of deletion would not end up on the junction
+          if ((r1_pointer) && (r2_pointer))
+          {
+            // they have the same name
+            WARN("Edge case detected, cannot predict mutation: " + jc_item["key"]);
+            /*
+            if ((*r1_pointer)["name"] == (*r2_pointer)["name"])
+            {
+              // should check this code @JEB: we are at equivalent positions in each
+              if ( ( (n(jc_item["side_1_position"]) == n((*r1_pointer)["start"])-1)
+                  && (n(jc_item["side_2_position"]) == n((*r2_pointer)["start"])) )
+                || ( (n(jc_item["side_1_position"]) == n((*r1_pointer)["end"])-1)
+                  && (n(jc_item["side_2_position"]) == n((*r2_pointer)["end"])) ) )
+              
+              mut["between"] = (*r1_pointer)["name"];
+            }
+            */
+          }
+          // one repeat cases
+          else if (r1_pointer) 
+          {
+            // must match up to an end of the repeat
+            if ((n(jc_item["side_1_position"]) == static_cast<int32_t>(r1_pointer->m_start))
+             || (n(jc_item["side_1_position"]) == static_cast<int32_t>(r1_pointer->m_end)))
+            {
+              mut["mediated"] = (*r1_pointer)["name"];
+            }
+          }
+          else if (r2_pointer) 
+          {
+            // must match up to an end of the repeat
+            if ((n(jc_item["side_2_position"]) == static_cast<int32_t>(r2_pointer->m_start))
+                || (n(jc_item["side_2_position"]) == static_cast<int32_t>(r2_pointer->m_end)))
+            {
+              mut["mediated"] = (*r2_pointer)["name"];
+            }
+          }    
+                      
 					mut._evidence.push_back(jc_item._id);
 					jc.erase(jc_it);
           jc_it--;
@@ -259,18 +305,18 @@ namespace breseq {
 				}
 			}
 
+      cSequenceFeature* r1_pointer = within_repeat(mut["seq_id"], n(mut["position"]));
+      cSequenceFeature* r2_pointer = within_repeat(mut["seq_id"], n(mut["position"]) + n(mut["size"]));
+      
 			///
-			// (2) there is is no junction, but both ends of the deletion are in different repeat sequences
+			// (2) there is is no junction, but both ends of the deletion are in different copies of the same repeat sequence
 			///
-
-			cSequenceFeature* r1_pointer = within_repeat(mut["seq_id"], n(mut["position"]));
-			cSequenceFeature* r2_pointer = within_repeat(mut["seq_id"], n(mut["position"]) + n(mut["size"]));
 
 			// Then we will adjust the coordinates to remove...
 			if  (
            (r1_pointer != r2_pointer) 
            && (r1_pointer != NULL) 
-           && r2_pointer != NULL 
+           && (r2_pointer != NULL) 
            && ((*r1_pointer)["name"] == (*r2_pointer)["name"])
           )
 			{

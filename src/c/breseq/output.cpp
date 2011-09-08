@@ -509,7 +509,7 @@ string breseq_header_string(const Settings& settings)
   
   //copy over the breseq_graphic which we need if it doesn't exist - don't show command
   if (!file_exists(settings.breseq_small_graphic_to_file_name.c_str())) {
-    SYSTEM("cp " + settings.breseq_small_graphic_from_file_name + " " + settings.breseq_small_graphic_to_file_name, true);
+    copy_file(settings.breseq_small_graphic_from_file_name, settings.breseq_small_graphic_to_file_name);
   }
   
   ss << "<table width=\"100%\" border=\"0\" cellspacing=\"0\" cellpadding=\"3\">" << endl;
