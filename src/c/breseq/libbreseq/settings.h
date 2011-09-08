@@ -470,13 +470,13 @@ namespace breseq
       stringstream ss;
       
       double t = _diff_time; // in seconds
-      uint32_t tm_yday = floor( t / (60*60*24));
+      uint32_t tm_yday = static_cast<uint32_t>(floor( t / (60*60*24)));
       t -= tm_yday * 60*60*24;
-      uint32_t tm_hour = floor( t / (60*60));
+      uint32_t tm_hour = static_cast<uint32_t>(floor( t / (60*60)));
       t -= tm_hour * 60*60;
-      uint32_t tm_min = floor( t / (60));
+      uint32_t tm_min = static_cast<uint32_t>(floor( t / (60)));
       t -= tm_min * 60;
-      uint32_t tm_sec = floor( t / (1));      
+      uint32_t tm_sec = static_cast<uint32_t>(floor( t / (1)));      
       if (tm_yday > 0)
       {
         if (ss.str().length() > 0) ss << " ";
