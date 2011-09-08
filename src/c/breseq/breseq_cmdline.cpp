@@ -162,6 +162,45 @@ int do_analyze_fastq(int argc, char* argv[]) {
   return 0;
 }
 
+int do_convert_fastq(int argc, char* argv[])
+{
+  
+	// setup and parse configuration options:
+	AnyOption options("Usage: breseq ANALYZE_FASTQ --input input.fastq --convert converted.fastq");
+	options
+  ("help,h", "produce this help message", TAKES_NO_ARGUMENT)
+  ("input,i", "input FASTQ file")
+  ("output,o", "output FASTQ file")
+  ("in-format,1", "format to convert from")
+  ("out-format,2", "format to convert to")
+  
+  //("output,o", "out to files") // outputs to STDOUT for now
+	.processCommandArgs(argc, argv);
+	
+	// make sure that the config options are good:
+	if(options.count("help")
+		 || !options.count("input")
+     || !options.count("output")
+     || !options.count("in-format")
+     || !options.count("out-format")
+		 ) {
+		options.printUsage();
+		return -1;
+	}                       
+  
+	try {
+    
+    convert_fastq(options["input"], options["output"], options["in-format"], options["out-format"]);
+    
+    } catch(...) {
+      // failed; 
+      return -1;
+    }
+    
+    return 0;
+  
+}
+
 /*! Convert Genbank
  
  Create a tab-delimited file of information about genes and a
@@ -1742,6 +1781,8 @@ int main(int argc, char* argv[]) {
 	command = to_upper(command);
 	if (command == "ANALYZE_FASTQ") {
 		return do_analyze_fastq(argc_new, argv_new);
+  } else if (command == "CONVERT_FASTQ") {
+		return do_convert_fastq(argc_new, argv_new);
 	} else if (command == "CALCULATE_TRIMS") {
 		return do_calculate_trims(argc_new, argv_new);
 	} else if (command == "CONVERT_GENBANK") {

@@ -237,11 +237,11 @@ Example:
    :width: 750px
    
 Read coverage depth around the missing coverage. The white area shows the maximal boundaries of the predicted range.
-
+   
 Processed Data
 **************
 
-|breseq| outputs several files that can be used by other tools to further analyze the final processed read data.
+|breseq| outputs several files that can be used by other software programs to further analyze the final processed read data.
 
 `data/reference.bam, data/reference.bam.bai`
    The BAM (Binary SAM) formatted database of read alignments to the reference and its index. Along with the *reference.fasta\** files can be used with any :program:`SAMtools` compatible program.
@@ -249,3 +249,27 @@ Processed Data
    File of all reference sequences and the corresponding index. Along with the *reference.fasta\** files can be used with any :program:`SAMtools` compatible program.
 `data/<read_file>.unmatched.fastq`
    These files contain reads from each original file that were not mapped to the reference sequences. This file can be used for de novo assembly to predict if there are novel sequences in the sample.
+
+
+Viewing Output / Aligned Reads in the IGV
+*****************************************
+
+You can visualize the "raw data" (how |breseq| aligned reads to the reference genome) using the `Integrative Genomics Viewer (IGV) <http://www.broadinstitute.org/igv/>`_ and files located in the :file:`data` folder created by |breseq|.
+
+1. Install and open IGV
+2. Import the reference genome sequence:
+
+  * Click 'File', and then 'Import Genome...'
+  * Fill out the requested information: 'ID', 'Name'
+  * Choose the FASTA file: :file:`data/reference.fasta`.
+  * The other fields are optional.
+
+3. Import the reference genome feature information:
+
+  * Click 'File', and then 'Load from File..."
+  * Choose the GFF3 file: :file:`data/reference.gff3`.	
+
+4. Import the read alignments to the reference genome:
+
+  * Click 'File', and then 'Load from File..."
+  * Choose the BAM file: :file:`data/reference.bam`.

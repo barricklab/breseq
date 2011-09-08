@@ -158,6 +158,26 @@ namespace breseq {
     AnalyzeFastq retval(max_read_length, num_reads, min_quality_score, max_quality_score, num_bases, quality_format, "SANGER", converted_fastq_name);
     return retval;
   }
+  
+  // converts a sequence file
+  void convert_fastq(const string &from_file_name, const string &to_file_name, const string &from_format, const string &to_format)
+  {
+    cFastqFile input_fastq_file, output_fastq_file;
+    input_fastq_file.open(from_file_name.c_str(), fstream::in);
+    output_fastq_file.open(to_file_name.c_str(), fstream::out);
+
+    cFastqQualityConverter fqc(from_format, to_format);
+
+    cFastqSequence on_sequence;
+    while (input_fastq_file.read_sequence(on_sequence)) 
+    {
+      fqc.convert_sequence(on_sequence);
+      output_fastq_file.write_sequence(on_sequence);
+    }
+    
+    input_fastq_file.close();
+    output_fastq_file.close();
+  }
 
   // constructor
   cFastqQualityConverter::cFastqQualityConverter(const string &from_quality_type, const string &to_quality_type)

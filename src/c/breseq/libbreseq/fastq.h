@@ -35,6 +35,10 @@ namespace breseq {
    */  
   AnalyzeFastq analyze_fastq(const string &file_name, const string &convert_file_name);
   
+  // Utility function for converting FASTQ files between formats
+  void convert_fastq(const string &from_file_name, const string &to_file_name, const string &from_format, const string &to_format);
+
+  
   /*! Sequence class.
    */
    

@@ -1,7 +1,7 @@
 Installation
 ==============
 
-|breseq| is a command line tool implemented in Perl, C++, and R. It will compile and function on a variety of UNIX platforms, including MacOSX. |breseq| installation from the source code requires some basic familiarity with UNIX commands and environments.
+|breseq| is a command line tool implemented in C++, and R. It will compile and function on a variety of UNIX platforms, including MacOSX. |breseq| installation from the source code requires some basic familiarity with UNIX commands and environments.
 
 1. Install external dependencies
 ---------------------------------
@@ -9,7 +9,6 @@ Installation
 Several external packages and software programs need to be installed to compile and use |breseq|:
 
 * `GCC <http://gcc.gnu.org>`_ (or other C++ compiler) already installed on many systems
-* `Perl <http://www.perl.org>`_ (version 5.8 or higher) already installed on many systems.
 * `SSAHA2 <http://www.sanger.ac.uk/resources/software/ssaha2/>`_ read mapping program
 * `R <http://www.r-project.org>`_ (version 2.1.0 or higher) statistical programming language 
 
@@ -21,7 +20,6 @@ MacOSX Instructions
 You will need administrator privileges to install |breseq| dependencies using these instructions. We recommend that you install and use the package manager `MacPorts <http://www.macports.org/>`_ to simplify these installation steps. Using  :program:`MacPorts` will generally take longer than downloading and installing the packages in other ways, but it greatly simplifies the searching you might otherwise have to do to track down all the prerequisites.
 
 * :program:`GCC`: Download and install the `Apple Developer tools <http://developer.apple.com/tools/>`_. You can use either version 3 (which is free) or download version 4 from the App Store for a small price.
-* :program:`Perl`: is already installed on MacOSX systems. 
 * :program:`SSAHA2`: download and install the MacOSX package from the `Sanger Center <http://www.sanger.ac.uk/resources/software/ssaha2/>`_. You will need to move the executables to where your system can use them. If you change into the ssaha2_v2.5.1_MacOS directory, you can use this command:
 
 >>> sudo cp ssaha2* /usr/local/bin
@@ -61,11 +59,11 @@ These commands compile and install not only |breseq|, but also some open-source 
 .. WARNING::
    Installing |breseq| will overwrite any other versions of :program:`SAMtools` that you have in the default ./configure install locations. To avoid this, you can follow the instructions in :ref:`installing-in-the-source-directory` or :ref:`installing-in-a-custom-location` to safely install |breseq| elsewhere.
 
-Finally, we recommend that you test that your |breseq| installation functions with this command::
+Finally, we recommend that you test that your |breseq| installation functions with this command after installatin::
 
   make test
   
-This should take 5-10 minutes to run and report success at the end if everything is operating correctly.
+This should take less than 5 minutes to run and report success at the end if everything is operating correctly.
 
 .. _installing-in-the-source-directory:
 

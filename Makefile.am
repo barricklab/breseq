@@ -56,36 +56,32 @@ all-local :
 ## We should build Perl modules here (and not during install) because
 ## otherwise a sudo make install creates superuser owned files in the
 ## distribution, that are not removed by make clean.
-
-	## GenomeDiff
-	cd $(PERLGENOMEDIFF) ; \
-	perl Build.PL --install_base=$(prefix) --install_path bin=$(bindir)  --install_path script=$(bindir) ; \
-	./Build ;
 	
 	## This saves the install path for the test script
 	echo "export TESTBINPREFIX=$(bindir)" > tests/test.config;
 
 install-exec-local :
 
-	echo $(prefix)/lib
+	
+clean-local :: clean-tests
+	
+	## This saves the install path for the test script	
+	rm -f tests/test.config
+
+## These two targets are optional for Perl genomediff tools.
+
+genomediff :
 
 	## GenomeDiff
 	cd $(PERLGENOMEDIFF) ; \
+	perl Build.PL --install_base=$(prefix) --install_path bin=$(bindir)  --install_path script=$(bindir) ; \
 	./Build install;
 	
-clean-local :: clean-tests
+clean-genomediff :
 
 	## GenomeDiff
 	cd $(PERLGENOMEDIFF) ; \
 	./Build clean;	
-	
-	## This saves the install path for the test script
-	##if [ -f tests/test.config ]; then \
-  ##	rm tests/test.config; \
-	##fi
-	
-	rm -f tests/test.config
-
 	
 dist-hook:
 
