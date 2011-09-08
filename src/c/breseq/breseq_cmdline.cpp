@@ -896,75 +896,7 @@ int do_convert_gd( int argc, char* argv[]){
     return 0;
 }
 
-int do_output( int argc, char* argv[]){
-  (void)argc;
-  (void)argv;
-  
-  //TESTED
-  if (false) { 
-    Settings settings;
-    cout << output::breseq_header_string(settings);
-  }
 
-  //TESTED, needs summary before useful.
-  if (false) {
-    string file_name = "html_statistics.html";
-    Settings settings;
-    Summary summary;
-    cReferenceSequences ref_seq_info;
-    output::html_statistics(file_name, settings, summary, ref_seq_info);
-  }
-    
-  //TESTED, displays properly, but there are some oddities between it and 
-  //the orgininal, needs calls like diff_entry["gene"] 
-  //to be implemented.
-  if(false) {
-    string file_name = "html_index.html";
-    Settings settings;
-    settings.no_evidence = false;
-    settings.polymorphism_prediction = false;
-    settings.lenski_format=false;
-    settings.no_header = false;
-
-    Summary summary;
-    cReferenceSequences ref_seq_info;
-    ref_seq_info.ReadFASTA("/home/geoff/Dropbox/test/1B4/reference.fasta");
-    genome_diff gd;
-    gd.read("/home/geoff/Dropbox/test/1B4/output.gd");
-    output::html_index(file_name, settings, summary, ref_seq_info, gd);
-  }
-  
-  // html_new_junction_table_string needs work
-  if (false) {
-    string file_name = "html_marginal_predictions.html";
-    Settings settings;
-    settings.no_evidence = false;
-    settings.polymorphism_prediction = false;
-    settings.lenski_format=false;
-    settings.no_header = false;
-
-    Summary summary;
-    cReferenceSequences ref_seq_info;
-    ref_seq_info.ReadFASTA("/home/geoffc/Dropbox/test/1B4/reference.fasta");
-    genome_diff gd;
-    gd.read("/home/geoff/Dropbox/test/1B4/output.gd");
-    output::html_marginal_predictions(file_name, settings, summary, ref_seq_info, gd);
-  }
-
-  if (false) {
-    Settings settings;
-    genome_diff gd;
-    gd.read("/home/geoff/Dropbox/test/1B4/output.gd");
-
-    output::Evidence_Files evidence_files(settings, gd);
-
-        
-  }
-
-
-
-  return 0;
-}
 
 int breseq_default_action(int argc, char* argv[])
 {
@@ -1556,7 +1488,28 @@ int breseq_default_action(int argc, char* argv[])
 		//$summary->{unique_coverage} = {};
 		if (!settings.no_deletion_prediction)
 			CoverageDistribution::analyze_unique_coverage_distributions(settings, summary, ref_seq_info,
-				settings.unique_only_coverage_plot_file_name, settings.unique_only_coverage_distribution_file_name);
+        settings.unique_only_coverage_plot_file_name, settings.unique_only_coverage_distribution_file_name);
+
+    //Coverage distribution user options
+    if (settings.deletion_coverage_propagation_cutoff && settings.deletion_coverage_propagation_cutoff < 1) {
+      for (uint32_t i = 0; i < ref_seq_info.size(); i++) {
+        string seq_id = ref_seq_info[i].m_seq_id;
+        double average = summary.unique_coverage[seq_id].average;
+        double &deletion_coverage_propagation_cutoff = summary.unique_coverage[seq_id].deletion_coverage_propagation_cutoff;
+
+        deletion_coverage_propagation_cutoff = average * settings.deletion_coverage_propagation_cutoff;
+      }
+    }
+
+    if (settings.deletion_coverage_propagation_cutoff && settings.deletion_coverage_propagation_cutoff >= 1) {
+      for (uint32_t i = 0; i < ref_seq_info.size(); i++) {
+        string seq_id = ref_seq_info[i].m_seq_id;
+        double &deletion_coverage_propagation_cutoff = summary.unique_coverage[seq_id].deletion_coverage_propagation_cutoff;
+
+        deletion_coverage_propagation_cutoff = settings.deletion_coverage_propagation_cutoff;
+      }
+    }
+
 
 		string command;
 		for (uint32_t i = 0; i<settings.read_files.size(); i++) {
@@ -1817,8 +1770,6 @@ int main(int argc, char* argv[]) {
     return do_convert_gd( argc_new, argv_new);
   } else if (command == "BAM2ALN") {
     return do_bam2aln( argc_new, argv_new);    
-  } else if (command == "OUTPUT") {
-    return do_output(argc_new, argv_new);
   } else {
     // Not a sub-command. Use original argument list.
     return breseq_default_action(argc, argv);
