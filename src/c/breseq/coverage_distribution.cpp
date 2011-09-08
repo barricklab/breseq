@@ -66,7 +66,8 @@ namespace breseq {
 		summary.unique_coverage[seq_id].average = 1.0;
 		summary.unique_coverage[seq_id].variance = NAN;
 		summary.unique_coverage[seq_id].dispersion = NAN;
-		summary.unique_coverage[seq_id].deletion_coverage_propagation_cutoff = 5.0;
+    summary.unique_coverage[seq_id].deletion_coverage_propagation_cutoff = 5.0;
+    summary.unique_coverage[seq_id].deletion_coverage_seed_cutoff = 0;
 
 		string unique_only_coverage_plot_file_name = settings.file_name(plot_key, "@", seq_id);
 		string unique_only_coverage_distribution_file_name = settings.file_name(distribution_file_name, "@", seq_id);
