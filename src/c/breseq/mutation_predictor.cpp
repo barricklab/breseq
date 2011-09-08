@@ -233,7 +233,7 @@ namespace breseq {
 
       
 			///
-			// (1) there is a junction that exactly crosses the deletion boundary deletion
+			// (1) there is a junction that exactly crosses the deletion boundary 
 			///
 
 			for(diff_entry_list::iterator jc_it = jc.begin(); jc_it != jc.end(); jc_it++) //JC
@@ -258,17 +258,43 @@ namespace breseq {
           cSequenceFeature* r1_pointer = within_repeat(jc_item["side_1_seq_id"], n(jc_item["side_1_position"]));
           cSequenceFeature* r2_pointer = within_repeat(jc_item["side_2_seq_id"], n(jc_item["side_2_position"]));
           
-          if ((r1_pointer) && (r2_pointer) && ((*r1_pointer)["name"] == (*r2_pointer)["name"]))
+          // two repeats - not sure this would ever happen?
+          // start and end of deletion would not end up on the junction
+          if ((r1_pointer) && (r2_pointer))
           {
-            mut["between"] = (*r1_pointer)["name"];
+            // they have the same name
+            WARN("Edge case detected, cannot predict mutation: " + jc_item["key"]);
+            /*
+            if ((*r1_pointer)["name"] == (*r2_pointer)["name"])
+            {
+              // should check this code @JEB: we are at equivalent positions in each
+              if ( ( (n(jc_item["side_1_position"]) == n((*r1_pointer)["start"])-1)
+                  && (n(jc_item["side_2_position"]) == n((*r2_pointer)["start"])) )
+                || ( (n(jc_item["side_1_position"]) == n((*r1_pointer)["end"])-1)
+                  && (n(jc_item["side_2_position"]) == n((*r2_pointer)["end"])) ) )
+              
+              mut["between"] = (*r1_pointer)["name"];
+            }
+            */
           }
+          // one repeat cases
           else if (r1_pointer) 
           {
-            mut["mediated"] = (*r1_pointer)["name"];
+            // must match up to an end of the repeat
+            if ((n(jc_item["side_1_position"]) == static_cast<int32_t>(r1_pointer->m_start))
+             || (n(jc_item["side_1_position"]) == static_cast<int32_t>(r1_pointer->m_end)))
+            {
+              mut["mediated"] = (*r1_pointer)["name"];
+            }
           }
           else if (r2_pointer) 
           {
-            mut["mediated"] = (*r2_pointer)["name"];
+            // must match up to an end of the repeat
+            if ((n(jc_item["side_2_position"]) == static_cast<int32_t>(r2_pointer->m_start))
+                || (n(jc_item["side_2_position"]) == static_cast<int32_t>(r2_pointer->m_end)))
+            {
+              mut["mediated"] = (*r2_pointer)["name"];
+            }
           }    
                       
 					mut._evidence.push_back(jc_item._id);
