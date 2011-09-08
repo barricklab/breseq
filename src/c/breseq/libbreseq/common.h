@@ -206,18 +206,22 @@ namespace breseq {
     }
   }
   
-#define ASSERTM(condition, message) { my_assertion_handler( condition,  __FILE__, __BASE_FILE__, __LINE__, message); }
-#define ASSERT(condition) { my_assertion_handler( condition,  __FILE__, __BASE_FILE__, __LINE__); }
-  
-  inline void _warn(bool condition, const string& message = "")
+  inline void  my_warning_handler(bool condition, const char *file, const char *base_file, int line, const string& message = "")
   {
+    (void)base_file;
     if (!condition)
     {
-      cerr << "---> WARNING --->" << endl;
-      cerr << message << endl;
-      cerr << "<--- WARNING <---" << endl;
+      cerr << "-----------------------> WARNING <-----------------------" << endl;
+      if (message.length() > 0) cerr << message << endl;
+      cerr << "FILE: " << file << "   LINE: " << line << endl;
+      cerr << "-----------------------> WARNING <-----------------------" << endl;
+      exit(-1);
     }
   }
+  
+#define ASSERTM(condition, message) { my_assertion_handler( condition,  __FILE__, __BASE_FILE__, __LINE__, message); }
+#define ASSERT(condition) { my_assertion_handler( condition,  __FILE__, __BASE_FILE__, __LINE__); }
+#define WARN(message) { my_warning_handler( false,  __FILE__, __BASE_FILE__, __LINE__, message); }
   
 	inline string SYSTEM_CAPTURE(string command, bool silent = false)
 	{
@@ -281,17 +285,7 @@ namespace breseq {
     ASSERTM(!ofile.fail(), "Could not open file for output: " + out_fn);
     ofile << ifile.rdbuf();
   }
-  
-  /*
-  inline bool file_empty(const char *filename)
-  {
-    ifstream ifile(filename);
-    string test;
-    getline(ifile, test);
-    return ifile.fail();
-  }
-  */
-  
+
   inline bool file_empty(const char *filename)
   {
     struct stat filestatus;
