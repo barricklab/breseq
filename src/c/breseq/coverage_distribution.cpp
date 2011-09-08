@@ -115,7 +115,7 @@ namespace breseq {
 		summary.unique_coverage[seq_id].junction_accept_score_cutoff = from_string<double>(lines[7]);
 		summary.unique_coverage[seq_id].junction_keep_score_cutoff = from_string<double>(lines[8]);
     
-    bool verbose = true;
+    bool verbose = false;
     if (verbose)
     {
       cout << seq_id << endl;
