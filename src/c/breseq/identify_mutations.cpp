@@ -35,7 +35,8 @@ void identify_mutations(
 								const string& output_dir,
 								const vector<string>& readfiles,
 								const string& coverage_dir,
-								const vector<double>& deletion_propagation_cutoff,
+                const vector<double>& deletion_propagation_cutoff,
+                const vector<double>& deletion_seed_cutoffs,
 								double mutation_cutoff,
 								bool predict_deletions,
 								bool predict_polymorphisms,
@@ -55,7 +56,8 @@ void identify_mutations(
 								output_dir,
 								readfiles,
 								coverage_dir,
-								deletion_propagation_cutoff,
+                deletion_propagation_cutoff,
+                deletion_seed_cutoffs,
 								mutation_cutoff,
 								predict_deletions,
 								predict_polymorphisms,
@@ -79,7 +81,8 @@ identify_mutations_pileup::identify_mutations_pileup(
 															const string& output_dir,
 															const vector<string>& readfiles,
 															const string& coverage_dir,
-															const vector<double>& deletion_propagation_cutoff,
+                              const vector<double>& deletion_propagation_cutoffs,
+                              const vector<double>& deletion_seed_cutoffs,
 															double mutation_cutoff,
 															bool predict_deletions,
 															bool predict_polymorphisms,
@@ -94,8 +97,8 @@ identify_mutations_pileup::identify_mutations_pileup(
 , _gd()
 , _gd_file(gd_file)
 , _min_qual_score(min_qual_score)
-, _deletion_seed_cutoff(0)
-, _deletion_propagation_cutoff(deletion_propagation_cutoff)
+, _deletion_seed_cutoffs(deletion_seed_cutoffs)
+, _deletion_propagation_cutoffs(deletion_propagation_cutoffs)
 , _mutation_cutoff(mutation_cutoff)
 , _predict_deletions(predict_deletions)
 , _predict_polymorphisms(predict_polymorphisms)
@@ -112,7 +115,8 @@ identify_mutations_pileup::identify_mutations_pileup(
 	  
   set_print_progress(true);
   
-  assert(m_bam->header->n_targets == (int32_t)_deletion_propagation_cutoff.size());
+  assert(m_bam->header->n_targets == (int32_t)_deletion_propagation_cutoffs.size());
+  assert(m_bam->header->n_targets == (int32_t)_deletion_seed_cutoffs.size());
     
 	// reserve enough space for the sequence info:
 	_seq_info.resize(m_bam->header->n_targets);
@@ -160,7 +164,8 @@ identify_mutations_pileup::~identify_mutations_pileup()
  */
 void identify_mutations_pileup::pileup_callback(const pileup& p) {
 	assert(p.target() < _seq_info.size());
-  _this_deletion_propagation_cutoff = _deletion_propagation_cutoff[p.target()];
+  _this_deletion_propagation_cutoff = _deletion_propagation_cutoffs[p.target()];
+  _this_deletion_seed_cutoff = _deletion_seed_cutoffs[p.target()];
   
   uint32_t position = p.position_1();
   //cout << position << endl;
@@ -750,7 +755,7 @@ void identify_mutations_pileup::check_deletion_completion(uint32_t position, uin
 		
   //##keep track of whether we've encountered the seed value
   //		if ($this_position_coverage->{total} <= $deletion_seed_cutoff)
-  if(!isnan(this_position_coverage.unique[1]) && (this_position_coverage.total <= _deletion_seed_cutoff)) {
+  if(!isnan(this_position_coverage.unique[1]) && (this_position_coverage.total <= _this_deletion_seed_cutoff)) {
     _this_deletion_reaches_seed_value = true;
   }
     
