@@ -526,7 +526,8 @@ int do_identify_mutations(int argc, char* argv[]) {
 		("output,o", "output directory")
 		("coverage_dir", "directory for coverage files", "")
 		("mutation_cutoff,c", "mutation cutoff (log10 e-value)", 2.0L)
-		("deletion_propagation_cutoff,u", "number after which to cutoff deletions")
+    ("deletion_propagation_cutoff,u", "number after which to cutoff deletions")
+    ("deletion_seed_cutoff", "value below which to cutoff deletions", 0)
 		("minimum_quality_score", "ignore base quality scores lower than this", 0)
 		("predict_deletions,d", "whether to predict deletions", TAKES_NO_ARGUMENT)
 		("predict_polymorphisms,p", "whether to predict polymorphisms", TAKES_NO_ARGUMENT)
@@ -562,6 +563,7 @@ int do_identify_mutations(int argc, char* argv[]) {
                          split(options["readfile"], "\n"),
                          options["coverage_dir"],
                          from_string<vector<double> >(options["deletion_propagation_cutoff"]),
+                         from_string<vector<double> >(options["deletion_seed_cutoff"]),
                          from_string<double>(options["mutation_cutoff"]),
                          options.count("predict_deletions"),
                          options.count("predict_polymorphisms"),
@@ -1490,27 +1492,45 @@ int breseq_default_action(int argc, char* argv[])
 			CoverageDistribution::analyze_unique_coverage_distributions(settings, summary, ref_seq_info,
         settings.unique_only_coverage_plot_file_name, settings.unique_only_coverage_distribution_file_name);
 
-    //Coverage distribution user options
-    if (settings.deletion_coverage_propagation_cutoff && settings.deletion_coverage_propagation_cutoff < 1) {
-      for (uint32_t i = 0; i < ref_seq_info.size(); i++) {
-        string seq_id = ref_seq_info[i].m_seq_id;
-        double average = summary.unique_coverage[seq_id].average;
-        double &deletion_coverage_propagation_cutoff = summary.unique_coverage[seq_id].deletion_coverage_propagation_cutoff;
+    //Coverage distribution user option --deletion-coverage-propagation-cutoff
+    if (settings.deletion_coverage_propagation_cutoff) {
+      if (settings.deletion_coverage_propagation_cutoff < 1) {
+        for (uint32_t i = 0; i < ref_seq_info.size(); i++) {
+          string seq_id = ref_seq_info[i].m_seq_id;
+          double average = summary.unique_coverage[seq_id].average;
+          double &deletion_coverage_propagation_cutoff = summary.unique_coverage[seq_id].deletion_coverage_propagation_cutoff;
 
-        deletion_coverage_propagation_cutoff = average * settings.deletion_coverage_propagation_cutoff;
+          deletion_coverage_propagation_cutoff = average * settings.deletion_coverage_propagation_cutoff;
+        }
+      } else if (settings.deletion_coverage_propagation_cutoff >= 1) {
+        for (uint32_t i = 0; i < ref_seq_info.size(); i++) {
+          string seq_id = ref_seq_info[i].m_seq_id;
+          double &deletion_coverage_propagation_cutoff = summary.unique_coverage[seq_id].deletion_coverage_propagation_cutoff;
+
+          deletion_coverage_propagation_cutoff = settings.deletion_coverage_propagation_cutoff;
+        }
       }
     }
 
-    if (settings.deletion_coverage_propagation_cutoff && settings.deletion_coverage_propagation_cutoff >= 1) {
-      for (uint32_t i = 0; i < ref_seq_info.size(); i++) {
-        string seq_id = ref_seq_info[i].m_seq_id;
-        double &deletion_coverage_propagation_cutoff = summary.unique_coverage[seq_id].deletion_coverage_propagation_cutoff;
+    //Coverage distribution user option --deletion-covereage-seed-cutoff
+    if (settings.deletion_coverage_seed_cutoff) {
+      if (settings.deletion_coverage_seed_cutoff < 1) {
+        for (uint32_t i = 0; i < ref_seq_info.size(); i++) {
+          string seq_id = ref_seq_info[i].m_seq_id;
+          double average = summary.unique_coverage[seq_id].average;
+          double &deletion_coverage_seed_cutoff = summary.unique_coverage[seq_id].deletion_coverage_seed_cutoff;
 
-        deletion_coverage_propagation_cutoff = settings.deletion_coverage_propagation_cutoff;
+          deletion_coverage_seed_cutoff = average * settings.deletion_coverage_seed_cutoff;
+        }
+    } else if (settings.deletion_coverage_seed_cutoff >= 1) {
+        for (uint32_t i = 0; i < ref_seq_info.size(); i++) {
+          string seq_id = ref_seq_info[i].m_seq_id;
+          double &deletion_coverage_seed_cutoff = summary.unique_coverage[seq_id].deletion_coverage_seed_cutoff;
+
+          deletion_coverage_seed_cutoff = settings.deletion_coverage_seed_cutoff;
+        }
       }
     }
-
-
 		string command;
 		for (uint32_t i = 0; i<settings.read_files.size(); i++) {
 			string base_name = settings.read_files[i].base_name();
@@ -1553,9 +1573,12 @@ int breseq_default_action(int argc, char* argv[])
 			string coverage_dir = dirname(coverage_tab_file_name) + "/";
 
 			// It is important that these are in consistent order with the fasta file!!
-			vector<double> deletion_propagation_cutoffs;
-			for (uint32_t i = 0; i < ref_seq_info.size(); i++)
-				deletion_propagation_cutoffs.push_back(settings.unique_coverage[ref_seq_info[i].m_seq_id].deletion_coverage_propagation_cutoff);
+      vector<double> deletion_propagation_cutoffs;
+      vector<double> deletion_seed_cutoffs;
+      for (uint32_t i = 0; i < ref_seq_info.size(); i++) {
+        deletion_propagation_cutoffs.push_back(settings.unique_coverage[ref_seq_info[i].m_seq_id].deletion_coverage_propagation_cutoff);
+        deletion_seed_cutoffs.push_back(settings.unique_coverage[ref_seq_info[i].m_seq_id].deletion_coverage_seed_cutoff);
+      }
 
 			identify_mutations(
 				reference_bam_file_name,
@@ -1565,7 +1588,8 @@ int breseq_default_action(int argc, char* argv[])
 				output_dir,
 				settings.read_file_names,
 				coverage_dir,
-				deletion_propagation_cutoffs,
+        deletion_propagation_cutoffs,
+        deletion_seed_cutoffs,
 				settings.mutation_log10_e_value_cutoff, // mutation_cutoff
 				!settings.no_deletion_prediction,
 				settings.polymorphism_prediction,

@@ -44,6 +44,7 @@ namespace breseq {
 													const vector<string>& readfiles,
 													const string& coverage_dir,
                           const vector<double>& deletion_propagation_cutoff,
+                          const vector<double>& deletion_seed_cutoff,
 													double mutation_cutoff,
 													bool predict_deletions,
 													bool predict_polymorphisms,
@@ -187,7 +188,8 @@ namespace breseq {
 															const string& output_dir,
 															const vector<string>& readfiles,
 															const string& coverage_dir,
-															const vector<double>& deletion_propagation_cutoff,
+                              const vector<double>& deletion_propagation_cutoff,
+                              const vector<double>& deletion_seed_cutoffs,
 															double mutation_cutoff,
 															bool predict_deletions,
 															bool predict_polymorphisms,
@@ -228,8 +230,8 @@ namespace breseq {
 		genome_diff _gd; //!< Genome diff.
     string _gd_file; //!< file name for Genome diff
     uint8_t _min_qual_score; //!< minimum quality score to count base for RA
-		double _deletion_seed_cutoff;
-		vector<double> _deletion_propagation_cutoff; //!< Coverage above which deletions are cutoff.
+    vector<double> _deletion_seed_cutoffs; //!< Coverage below which deletions are cutoff.
+    vector<double> _deletion_propagation_cutoffs; //!< Coverage above which deletions are cutoff.
 		double _mutation_cutoff; //!< log10 e-value cutoff value for mutation predictions.
 		bool _predict_deletions; //!< Whether to predict mutations.
 		bool _predict_polymorphisms; //!< Whether to predict polymorphisms.
@@ -258,7 +260,8 @@ namespace breseq {
 		
 		// these are state variables used by the deletion-prediction method.
 		uint32_t _on_deletion_seq_id;
-		double _this_deletion_propagation_cutoff;
+    double _this_deletion_propagation_cutoff;
+    double _this_deletion_seed_cutoff;
 		uint32_t _last_deletion_start_position;
 		uint32_t _last_deletion_end_position;
 		uint32_t _last_deletion_redundant_start_position;

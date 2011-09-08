@@ -176,8 +176,8 @@ namespace breseq
     ("name,n", "human-readable name of sample/run for output [empty]", "")
     ("polymorphism-prediction,p", "predict polymorphic mutations", TAKES_NO_ARGUMENT)
     ("base-quality-cutoff,b", "ignore bases with quality scores lower than this value", "3")
-    ("deletion-coverage-propagation-cutoff","")
-    ("deletion-coverage-seed-cutoff","")
+    ("deletion-coverage-propagation-cutoff,u","value for coverage above which deletions are cutoff")
+    ("deletion-coverage-seed-cutoff,s","value for coverage below which deletions are cutoff")
 
     
     .processCommandArgs(argc, argv);
@@ -199,7 +199,7 @@ namespace breseq
     }
     
     // make sure that the other config options are good:
-    if(options.count("help")) 
+    if (options.count("help"))
     {
       options.printUsage();
       exit(-1);
@@ -215,6 +215,9 @@ namespace breseq
       this->deletion_coverage_propagation_cutoff = from_string<double>(options["deletion-coverage-propogation-cutoff"]);
     if (options.count("deletion-coverage-seed-cutoff"))
       this->deletion_coverage_seed_cutoff = from_string<double>(options["deletions-coverage-seed-cutoff"]);
+
+    assert(this->deletion_coverage_propagation_cutoff >= 0);
+    assert(this->deletion_coverage_seed_cutoff >= 0);
 
     //// GENBANK REFERENCE FILES ////
     this->reference_file_names = from_string<vector<string> >(options["reference"]);
