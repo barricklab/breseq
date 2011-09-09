@@ -17,6 +17,8 @@ LICENSE AND COPYRIGHT
 *****************************************************************************/
 
 #include "libbreseq/genome_diff.h"
+#include "libbreseq/annotated_sequence.h"
+#include "libbreseq/output.h"
 #include <list>
 
 namespace breseq {
@@ -1130,7 +1132,209 @@ genome_diff::interval_un(const uint32_t& start,const uint32_t& end)
   }
   return false;
 }
+//## currently this destroys the genome diff's original format (maybe not the best thing to do)
+//sub apply_to_sequences
+//Notes:
+// Changing fasta.m_sequence
+// Therefor pass as reference.
+void genome_diff::apply_to_sequences(cReferenceSequences& ref_seq_info)
+{
+//{
+//	my ($self, $ref_seq_info) = @_;
+//	my $verbose = 0;
+    bool verbose = true;
+//	my $ref_strings = $ref_seq_info->{ref_strings};
+//	my $new_ref_strings;
+//	foreach my $seq_id (keys %$ref_strings)
+//	{
+//		$new_ref_strings->{$seq_id} = $ref_strings->{$seq_id};
+//	}
 
+//	foreach my $mut ($self->mutation_list)
+//	{
+  diff_entry_list::iterator itr_mut;
+  for (itr_mut = this->mutation_list().begin(); itr_mut != this->mutation_list().end(); itr_mut++) {
+    const diff_entry& mut(**itr_mut);
+    const uint32_t& position = from_string<uint32_t>(mut[POSITION]);
+//		die "Mutation on unknown reference sequence: $mut->{seq_id}\n" if (!defined $new_ref_strings->{$mut->{seq_id}});
+    ASSERTM(ref_seq_info.ref_strings.count(mut[SEQ_ID]) > 0, "Mutation on unkown reference sequence:" + mut[SEQ_ID]);
+//		print Dumper($mut) if ($verbose);
+//		if ($mut->{type} eq 'SNP')
+//		{
+//			substr $new_ref_strings->{$mut->{seq_id}}, $mut->{position}-1, 1, $mut->{new_seq};
+//			print "SNP: " . (1) . " => " . length($mut->{new_seq}) . "\n" if ($verbose);
+//			print +($mut->{position}-1) . " " . "+" . $mut->{new_seq} . "\n" if ($verbose);
+//		}
+      if (mut._type == SNP) {
+        ref_seq_info.replace_sequence(mut[SEQ_ID], position - 1, 1, mut[NEW_SEQ]);
+        if (verbose) {
+          cout << "SNP: 1 => " << mut[NEW_SEQ].length() << endl;
+          cout << "+" << position - 1 << " + " << mut[NEW_SEQ] << endl;
+        }
+      }
+//		elsif ($mut->{type} eq 'SUB')
+//		{
+//			substr $new_ref_strings->{$mut->{seq_id}}, $mut->{position}-1, $mut->{size}, $mut->{new_seq};
+//			print "SUB: " . ($mut->{size}) . " => " . length($mut->{new_seq}) . "\n" if ($verbose);
+//			print +($mut->{position}-1) . " " . "+" . $mut->{new_seq} . "\n" if ($verbose);
+//		}
+      else if (mut._type == SUB) {
+        const uint32_t& size = from_string<uint32_t>(mut[SIZE]);
+
+        ref_seq_info.replace_sequence(mut[SEQ_ID], position - 1, size, mut[NEW_SEQ]);
+        if (verbose) {
+          cout << "SUB: " << size << " => " << mut[NEW_SEQ].length() << endl;
+          cout << "+" << position - 1 << " + " << mut[NEW_SEQ] << endl;
+        }
+      }
+//		elsif ($mut->{type} eq 'INS')
+//		{
+//			##notice that this is AFTER the position
+//			substr $new_ref_strings->{$mut->{seq_id}}, $mut->{position}, 0, $mut->{new_seq};
+//			print "INS: " . (0) . " => " . length($mut->{new_seq}) . "\n" if ($verbose);
+//			print +($mut->{position}-1) . " " . "+" . $mut->{new_seq} . "\n" if ($verbose);
+//		}
+      else if (mut._type == INS) {
+        ref_seq_info.insert_sequence(mut[SEQ_ID], position, mut[NEW_SEQ]);
+
+        if (verbose) {
+          cout << "INS: 0 => " << mut[NEW_SEQ].length() << endl;
+          cout << "+" << position - 1 << " + " << mut[NEW_SEQ] << endl;
+        }
+      }
+//		elsif ($mut->{type} eq 'DEL')
+//		{
+//			substr $new_ref_strings->{$mut->{seq_id}}, $mut->{position}-1, $mut->{size}, '';
+//			print "DEL: " . ($mut->{size}) . " => " . (0) . "\n" if ($verbose);
+//			print +($mut->{position}-1) . " " . "\n" if ($verbose);
+//		}
+      else if (mut._type == DEL) {
+        const uint32_t& size = from_string<uint32_t>(mut[SIZE]);
+
+        ref_seq_info.replace_sequence(mut[SEQ_ID], position - 1, size, "");
+        if (verbose) {
+          cout << "DEL: " << size << " => 0" << endl;
+          cout << "+" << position - 1 << " + " << mut[NEW_SEQ] << endl;
+        }
+      }
+//		elsif ($mut->{type} eq 'AMP')
+//		{
+//			my $dup = substr $new_ref_strings->{$mut->{seq_id}}, $mut->{position}-1, $mut->{size};
+//			$dup = $dup x ($mut->{new_copy_number} - 1);
+//			substr $new_ref_strings->{$mut->{seq_id}}, $mut->{position}-1 + $mut->{size}, 0, $dup;
+//			print "AMP: " . (0) . " => " . (length($dup)) . "\n" if ($verbose);
+//			print +($mut->{position}-1) . " " . "+" . $dup . "\n" if ($verbose);
+//		}
+      else if (mut._type == AMP) {
+        const uint32_t& size = from_string<uint32_t>(mut[SIZE]);
+
+        //Build duplicate sequence
+        string dup;
+        for (uint32_t i = 0; i < (from_string<uint32_t>(mut["new_copy_number"]) - 1); i ++)//! TODO Confirm this is the correct amount of duplicates
+          dup.append(ref_seq_info.get_sequence (mut[SEQ_ID], position - 1, size));
+        ASSERT(!dup.empty());
+
+        ref_seq_info.insert_sequence(mut[SEQ_ID], position -1, dup);
+        if (verbose) {
+          cout << "AMP: 0" << " => " << dup.length() << endl;
+          cout << "+" << position - 1 << " + " << dup << endl;
+        }
+      }
+//		elsif ($mut->{type} eq 'INV')
+//		{
+//			die "INV: mutation type not handled yet\n";
+//		}
+      else if (mut._type == INV) {
+        ASSERTM(false, "INV: mutation type not handled yet");
+      }
+//		elsif ($mut->{type} eq 'MOB')
+//		{
+//			die "MOB: does not handle ins_start, ins_end, del_start, del_end yet." if (($mut->{ins_start} != 0) || ($mut->{ins_end} != 0) || ($mut->{del_start} != 0) || ($mut->{del_end} != 0) );
+
+//			die "Unknown repeat strand" if ($mut->{strand} eq '?');
+//			my $seq_string = GenomeDiff::ReferenceSequence::repeat_example($ref_seq_info, $mut->{repeat_name}, $mut->{strand});
+//			## note that we are setting the size used by shift_positions
+//			$mut->{repeat_size} = length($seq_string); ##used by shift_positions
+//			my $duplicate_sequence = substr $new_ref_strings->{$mut->{seq_id}}, $mut->{position}-1, $mut->{duplication_size};
+//			substr $new_ref_strings->{$mut->{seq_id}}, $mut->{position}-1, 0, $duplicate_sequence . $seq_string;
+//			print "MOB: " . (0) . " => " . (length($duplicate_sequence . $seq_string)) . "\n" if ($verbose);
+//			print +($mut->{position}) . " " . "+" . $duplicate_sequence . $seq_string . "\n" if ($verbose);
+//		}
+      else if (mut._type == MOB) {
+        ASSERTM(from_string<uint32_t>(mut["ins_start"]) ||
+               from_string<uint32_t>(mut["ins_end"])    ||
+               from_string<uint32_t>(mut["del_start"])  ||
+               from_string<uint32_t>(mut["del_end"]),
+               "MOB: does not handle ins_start, ins_end, del_start, del_end yet.");
+        ASSERTM(mut["strand"] != "?", "Unknown repeat strand");
+        //! TODO port repeat_example?
+        // my $seq_string = GenomeDiff::ReferenceSequence::repeat_example($ref_seq_info, $mut->{repeat_name}, $mut->{strand});
+      }
+//		elsif ($mut->{type} eq 'CON')
+//		{
+//			$mut->{region} =~ m/^(.+):(.+)-(.+)$/ or die "Could not understand CON replacement region: $mut->{region}";
+//			my $start = $2;
+//			my $end = $3;
+//			my $seq_id = $1;
+//			my $strand = ($start < $end) ? +1 : -1;
+//			($start, $end) = ($end, $start) if ($strand == -1);
+//			my $replace_string = substr $ref_strings->{$seq_id}, $start-1, $end-$start+1; #taken from original!!
+//			$replace_string = GenomeDiff::Fastq::revcom($replace_string) if ($strand == -1);
+//			my $replaced = substr $new_ref_strings->{$mut->{seq_id}}, $mut->{position}-1, $mut->{size}, $replace_string;
+
+//			print ">> CON: Gene Conversion Mutation <<\n";
+//			print "$mut->{region}\n";
+//			print "$seq_id : $start - $end" . "\n";
+//			print "Original Length: " . length($new_ref_strings->{$mut->{seq_id}}) . "\n"; //!@JEB Should be ref_strings in perl code?
+//			print "Replace $replaced\n";
+//			print "With $replace_string\n";
+//			print "New Length: " . length($new_ref_strings->{$mut->{seq_id}}) . "\n";
+//		}
+      else if (mut._type == CON) {
+        uint32_t start = from_string<uint32_t>(mut[START]);
+        uint32_t end = from_string<uint32_t>(mut[END]);
+        const uint32_t& size = from_string<uint32_t>(mut[SIZE]);
+
+        string replacing_sequence = ref_seq_info.get_sequence(mut[SEQ_ID], start - 1, end - start + 1);
+
+        bool strand = start < end ?  true : false;
+        if (!strand) {
+          swap(start, end);
+          //! TODO port fastq::revcom?
+          //$replacing_sequence = GenomeDiff::Fastq::revcom($replacing_sequence);
+        }
+
+        string displaced_sequence = ref_seq_info.get_sequence(mut[SEQ_ID], position -1, size);
+        uint32_t original_length = ref_seq_info.get_sequence_length(mut[SEQ_ID]);
+
+        ref_seq_info.replace_sequence(mut[SEQ_ID], position - 1, size, replacing_sequence);
+
+        cout << ">> CON: Gene Conversion Mutation <<" << endl;
+        cout << mut[SEQ_ID] << ":" << start << "-" << end << endl;
+        cout << "Original Length: " << original_length << endl;
+        cout << "Replace " << displaced_sequence << endl;
+        cout << "With " << replacing_sequence << endl;
+        cout << "New Length: " << ref_seq_info.get_sequence_length(mut[SEQ_ID]) << endl;
+      }
+
+
+
+//		else
+//		{
+//			die "Can't handle mutation type: $mut->{type}\n";
+//		}
+      else {
+        ASSERTM(false, "Can't handle mutation type: " + mut._type);
+      }
+//		## we have to update all of the other positions
+//		$self->shift_positions($mut);
+      //! TODO port shift_postions?
+//	}
+  }
+
+//	return $new_ref_strings;
+//}
+}
 }//namespace bresesq
 
 
