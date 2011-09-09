@@ -231,6 +231,17 @@ namespace breseq {
 				("size", s(n(mc_item["end"]) - n(mc_item["start"]) + 1));
 			;
 
+			///
+			// (0) this is a deletion of an entire fragment
+			///     
+      
+      uint32_t tid = ref_seq_info.seq_id_to_index(mut[SEQ_ID]); 
+      if ( (n(mut[POSITION]) == 1) && (n(mut[POSITION]) + n(mut["size"]) - 1 == static_cast<int32_t>(ref_seq_info[tid].m_length)) )
+      {
+        gd.add(mut);
+        continue;
+      }
+      
       
 			///
 			// (1) there is a junction that exactly crosses the deletion boundary 
