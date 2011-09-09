@@ -62,6 +62,10 @@
          </CommandLineArgument>
          <CommandLineArgument
             argument = "-o tests/lambda_mult_ref_read -r tests/lambda_mult_ref_read/../data/lambda/lambda.1.gbk -r tests/lambda_mult_ref_read/../data/lambda/lambda.2.gbk -r tests/lambda_mult_ref_read/../data/lambda/lambda.3.gbk -r tests/lambda_mult_ref_read/../data/lambda/lambda.4.gbk -r tests/lambda_mult_ref_read/../data/lambda/lambda.5.gbk tests/lambda_mult_ref_read/../data/lambda/lambda_mixed_population.1.fastq tests/lambda_mult_ref_read/../data/lambda/lambda_mixed_population.2.fastq tests/lambda_mult_ref_read/../data/lambda/lambda_mixed_population.3.fastq tests/lambda_mult_ref_read/../data/lambda/lambda_mixed_population.4.fastq tests/lambda_mult_ref_read/../data/lambda/lambda_mixed_population.5.fastq"
+            isEnabled = "NO">
+         </CommandLineArgument>
+         <CommandLineArgument
+            argument = "-o tests/lambda_mixed_pop_bad_contig -r tests/lambda_mixed_pop_bad_contig/../data/lambda/lambda.gbk -r tests/lambda_mixed_pop_bad_contig/../data/lambda/other.gbk tests/lambda_mixed_pop_bad_contig/../data/lambda/lambda_mixed_population.fastq"
             isEnabled = "YES">
          </CommandLineArgument>
       </CommandLineArguments>

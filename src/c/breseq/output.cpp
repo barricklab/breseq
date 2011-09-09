@@ -142,6 +142,7 @@ string header_style_string()
   ss << ".new_junction_header_row {background-color: rgb(0,0,155);}"       << endl;
   ss << ".alternate_table_row_0 {background-color: rgb(255,255,255);}"     << endl;
   ss << ".alternate_table_row_1 {background-color: rgb(230,230,245);}"     << endl;
+  ss << ".gray_table_row {background-color: rgb(230,230,245);}"           << endl;
   ss << ".polymorphism_table_row {background-color: rgb(160,255,160);}"    << endl;
   ss << ".highlight_table_row {background-color: rgb(192,255,255);}"       << endl;
   ss << ".reject_table_row {background-color: rgb(255,200,165);}"          << endl;
@@ -427,19 +428,33 @@ void html_statistics(const string &file_name, const Settings& settings, Summary&
   {
     total_length += it->m_length;
     
-    HTML << "<tr>";
+    bool fragment_with_fit_coverage = (summary.unique_coverage[it->m_seq_id].nbinom_mean_parameter != 0);
+    bool fragment_with_no_coverage = (summary.unique_coverage[it->m_seq_id].average == 0);
+
+    HTML << (fragment_with_fit_coverage ? "<tr>" : "<tr class=\"gray_table_row\">");
     HTML << td( a(Settings::relative_path( 
                                           settings.file_name(settings.overview_coverage_plot_file_name, "@", it->m_seq_id), settings.output_path
                                           ), 
                   "coverage" 
                   )
                );
-    HTML << td( a(Settings::relative_path( 
+    
+    // There may be absolutely no coverage and no graph will exist...
+    if (!fragment_with_no_coverage)
+    {
+      HTML << td( a(Settings::relative_path( 
                                           settings.file_name(settings.unique_only_coverage_plot_file_name, "@", it->m_seq_id), settings.output_path
                                           ), 
                   "distribution" 
                   )
                ); 
+    }
+    else
+    {
+      HTML << td(nonbreaking("none aligned"));
+    }
+    
+    
     HTML << td(it->m_seq_id);
     HTML << td(ALIGN_RIGHT, commify(to_string(it->m_length)));
     HTML << td(it->m_definition);
