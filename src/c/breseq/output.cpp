@@ -427,6 +427,7 @@ void html_statistics(const string &file_name, const Settings& settings, Summary&
   {
     total_length += it->m_length;
     
+    HTML << "<tr>";
     HTML << td( a(Settings::relative_path( 
                                           settings.file_name(settings.overview_coverage_plot_file_name, "@", it->m_seq_id), settings.output_path
                                           ), 
@@ -442,6 +443,7 @@ void html_statistics(const string &file_name, const Settings& settings, Summary&
     HTML << td(it->m_seq_id);
     HTML << td(ALIGN_RIGHT, commify(to_string(it->m_length)));
     HTML << td(it->m_definition);
+    HTML << "</tr>";
   }  
   
   HTML << "<tr class=\"highlight_table_row\">";

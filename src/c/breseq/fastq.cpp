@@ -180,7 +180,7 @@ namespace breseq {
   }
 
   // constructor
-  cFastqQualityConverter::cFastqQualityConverter(const string &from_quality_type, const string &to_quality_type)
+  cFastqQualityConverter::cFastqQualityConverter(const string &from_quality_format, const string &to_quality_format)
   {
     // Set up maps between formats
     map<string,uint8_t> format_to_chr_offset;
@@ -192,6 +192,15 @@ namespace breseq {
     format_to_quality_type["SANGER"] = "PHRED";
     format_to_quality_type["SOLEXA"] = "SOLEXA";
     format_to_quality_type["ILLUMINA_1.3+"] = "PHRED";
+    
+    // check what we asked for is valid...
+    ASSERTM(format_to_chr_offset.count(from_quality_format), 
+           "Unknown FASTQ quality score format: " + from_quality_format + "\nValid choices are 'SANGER', 'SOLEXA', 'ILLUMINA_1.3+'");
+    ASSERTM(format_to_chr_offset.count(to_quality_format), 
+           "Unknown FASTQ quality score format: " + to_quality_format + "\nValid choices are 'SANGER', 'SOLEXA', 'ILLUMINA_1.3+'");
+
+    string from_quality_type = format_to_quality_type[from_quality_format];
+    string to_quality_type = format_to_quality_type[to_quality_format];
     
     this->resize(255);
     for (uint16_t i = 0; i<=255; i++) {
@@ -205,9 +214,9 @@ namespace breseq {
       // Calculate the probability of error
       double probability_of_error;
       
-      if (format_to_quality_type[from_quality_type] == "SOLEXA") {
+      if (from_quality_type == "SOLEXA") {
         probability_of_error = 1 / (1+pow(10,(double)from_quality/10));
-      } else if (format_to_quality_type[from_quality_type] == "PHRED") {
+      } else if (from_quality_type == "PHRED") {
         probability_of_error = pow(10,-(double)from_quality/10);
       } else {
         cerr << "Unknown base quality score type: " << from_quality_type << endl;
@@ -217,9 +226,9 @@ namespace breseq {
       //Convert back to quality score
       int32_t to_quality;
             
-      if (format_to_quality_type[to_quality_type] == "SOLEXA") {
+      if (to_quality_type == "SOLEXA") {
         to_quality = round(10 * log((1-probability_of_error)/probability_of_error) / log(10));
-      } else if (format_to_quality_type[to_quality_type] == "PHRED") {
+      } else if (to_quality_type == "PHRED") {
         to_quality = round(-10 * log(probability_of_error) / log(10));
       } else {
         cerr << "Unknown base quality score type: " << to_quality_type << endl;

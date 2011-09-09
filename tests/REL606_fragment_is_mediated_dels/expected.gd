@@ -1,5 +1,5 @@
 #=GENOME_DIFF 1.0
-DEL	15	4,1	REL606-5	10535	15342
+DEL	15	4,1	REL606-5	10535	15342	mediated=IS1
 DEL	16	5,3	REL606-5	28183	3119	mediated=IS1
 JC	2		REL606-5	1	1	REL606-5	46298	-1	0	alignment_overlap=0	circular_chromosome=1	coverage_minus=22	coverage_plus=15	flanking_left=36	flanking_right=36	key=REL606-5__1__1__REL606-5__46298__0__0____36__36__0__0	max_left=35	max_left_minus=35	max_left_plus=35	max_min_left=16	max_min_left_minus=16	max_min_left_plus=13	max_min_right=17	max_min_right_minus=17	max_min_right_plus=13	max_right=35	max_right_minus=33	max_right_plus=35	pos_hash_score=28	side_1_annotate_key=gene	side_1_overlap=0	side_1_redundant=0	side_2_annotate_key=gene	side_2_overlap=0	side_2_redundant=0	total_non_overlap_reads=37	total_reads=37
 JC	3		REL606-5	9767	1	REL606-5	28182	-1	0	alignment_overlap=0	coverage_minus=18	coverage_plus=10	flanking_left=36	flanking_right=36	key=REL606-5__9767__1__REL606-5__28182__0__0____36__36__0__0	max_left=35	max_left_minus=35	max_left_plus=35	max_min_left=17	max_min_left_minus=17	max_min_left_plus=15	max_min_right=18	max_min_right_minus=18	max_min_right_plus=6	max_right=34	max_right_minus=34	max_right_plus=32	pos_hash_score=25	side_1_annotate_key=repeat	side_1_overlap=0	side_1_redundant=0	side_2_annotate_key=gene	side_2_overlap=0	side_2_redundant=0	total_non_overlap_reads=28	total_reads=28
