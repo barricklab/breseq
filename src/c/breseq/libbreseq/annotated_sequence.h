@@ -105,6 +105,22 @@ namespace breseq {
       {
         return m_fasta_sequence.m_sequence.substr(start_1 - 1, end_1 - start_1 + 1);
       }
+
+      void replace_sequence(uint32_t start_1, uint32_t end_1, const string &replacement_seq)
+      {
+        m_fasta_sequence.m_sequence.replace(start_1, end_1, replacement_seq);
+      }
+
+      void insert_sequence(uint32_t pos, const string &insertion_seq)
+      {
+        m_fasta_sequence.m_sequence.insert(pos, insertion_seq);
+      }
+
+      uint32_t get_sequence_length()
+      {
+        return m_fasta_sequence.m_sequence.length();
+      }
+
   };
 
   
@@ -157,7 +173,22 @@ namespace breseq {
     {
       return (*this)[seq_id_to_index(seq_id)].get_sequence(start_1, end_1);
     }
-    
+
+    void replace_sequence(const string& seq_id, uint32_t start_1, uint32_t end_1, const string& replacement_seq)
+    {
+      (*this)[seq_id_to_index(seq_id)].replace_sequence(start_1, end_1, replacement_seq);
+    }
+
+    void insert_sequence(const string& seq_id, uint32_t pos, const string &insertion_seq)
+    {
+      (*this)[seq_id_to_index(seq_id)].insert_sequence(pos, insertion_seq);
+    }
+
+    uint32_t get_sequence_length(const string& seq_id)
+    {
+      (*this)[seq_id_to_index(seq_id)].get_sequence_length();
+    }
+
     vector<string> seq_ids()
     {
       vector<string> return_value;
