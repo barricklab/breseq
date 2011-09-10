@@ -1513,27 +1513,40 @@ namespace breseq {
 		return shifted_cigar_string;
   }
 
-  string cReferenceSequences::repeat_example(const string &repeat_name, Strand strand)
+  string cReferenceSequences::repeat_example(const string &repeat_name, int8_t strand)
   {
+    //foreach my $seq_id (sort keys %{$ref_seq_info->{repeat_lists}})
+    //{
+    //	foreach my $rep (@{$ref_seq_info->{repeat_lists}->{$seq_id}})
+    //	{
+    //		if ($rep->{name} eq $repeat_name)
+    //		{
+    //			my $repeat_seq = substr $ref_seq_info->{ref_strings}->{$seq_id}, $rep->{start} - 1, $rep->{end} - $rep->{start} + 1;
+    //			$repeat_seq = revcom($repeat_seq) if ($strand != $rep->{strand});
+    //			return $repeat_seq;
+    //		}
+    //	}
+    //}
 
-//	foreach my $seq_id (sort keys %{$ref_seq_info->{repeat_lists}})
-//	{
-//		foreach my $rep (@{$ref_seq_info->{repeat_lists}->{$seq_id}})
-//		{
-//			if ($rep->{name} eq $repeat_name)
-//			{
-//				my $repeat_seq = substr $ref_seq_info->{ref_strings}->{$seq_id}, $rep->{start} - 1, $rep->{end} - $rep->{start} + 1;
-//				$repeat_seq = revcom($repeat_seq) if ($strand != $rep->{strand});
-//				return $repeat_seq;
-//			}
-//		}
-//	}
-    vector<string> keys = get_keys<string, vector<cSequenceFeature> >(this->repeat_lists);
-    sort(keys.begin(), keys.end());
+    //	die "Unknown repeat type: $repeat_name";
+    //}
+    map<string, vector<cSequenceFeature> >::iterator itr_features;
+    vector<cSequenceFeature>::iterator itr_rep;
+    for (itr_features = repeat_lists.begin(); itr_features != repeat_lists.end(); itr_features++) {
+      for (itr_rep = itr_features->second.begin(); itr_rep != itr_features->second.end(); itr_rep++) {
+         cSequenceFeature& rep = *itr_rep;
 
-//	die "Unknown repeat type: $repeat_name";
-//}
+         if (rep.SafeGet("name") == repeat_name) {
+           string repeat_seq = this->get_sequence(itr_features->first, rep.m_start - 1, rep.m_end - rep.m_start + 1);
+           if (strand != rep.m_strand)
+             revcom(repeat_seq);
+           return repeat_seq;
+         }
+      }
+    }
 
+    WARN("Unknow repeate type: " + repeat_name);
   }
+
 } // breseq namespace
 

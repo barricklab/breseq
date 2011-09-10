@@ -76,6 +76,8 @@ extern const char* RA;
 extern const char* MC;
 extern const char* JC;
 extern const char* UN;
+
+enum Strand {POS_STRAND = 1, NEG_STRAND = -1};
   
 //!  
 static uint8_t kPolymorphismFrequencyPrecision = 4; 

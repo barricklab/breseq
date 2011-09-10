@@ -191,7 +191,7 @@ namespace breseq {
     }
   }
 
- enum Strand {POS_STRAND, NEG_STRAND};
+
   
   // These are our own local wrappers for common functions.
   
@@ -217,7 +217,7 @@ namespace breseq {
       if (message.length() > 0) cerr << message << endl;
       cerr << "FILE: " << file << "   LINE: " << line << endl;
       cerr << "-----------------------> WARNING <-----------------------" << endl;
-      exit(-1); //@JEB Just a warning so don't exit?
+      exit(-1);
     }
   }
   

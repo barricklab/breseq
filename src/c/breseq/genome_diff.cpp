@@ -1242,7 +1242,7 @@ void genome_diff::apply_to_sequences(cReferenceSequences& ref_seq_info)
 //			die "INV: mutation type not handled yet\n";
 //		}
       else if (mut._type == INV) {
-        ASSERTM(false, "INV: mutation type not handled yet");
+        WARN("INV: mutation type not handled yet");
       }
 //		elsif ($mut->{type} eq 'MOB')
 //		{
@@ -1264,8 +1264,18 @@ void genome_diff::apply_to_sequences(cReferenceSequences& ref_seq_info)
                from_string<uint32_t>(mut["del_end"]),
                "MOB: does not handle ins_start, ins_end, del_start, del_end yet.");
         ASSERTM(mut["strand"] != "?", "Unknown repeat strand");
-        //! TODO port repeat_example?
-        // my $seq_string = GenomeDiff::ReferenceSequence::repeat_example($ref_seq_info, $mut->{repeat_name}, $mut->{strand});
+
+        const string& seq_string = ref_seq_info.repeat_example(mut["repeat_name"], from_string<int8_t>(mut["strand"]));
+        mut["repeat_size"] = to_string(seq_string.length());
+
+        const string& duplicate_sequence = ref_seq_info.get_sequence(mut[SEQ_ID], position - 1, from_string<uint32_t>(mut["duplication_size"]));
+        ref_seq_info.insert_sequence(mut[SEQ_ID], position - 1, duplicate_sequence + seq_string);
+
+        if (verbose) {
+          cout << "MOB: 0" << " => " << duplicate_sequence.length() + seq_string.length() << endl;
+          cout << "+" << position << " + " << duplicate_sequence + seq_string << endl;
+        }
+
       }
 //		elsif ($mut->{type} eq 'CON')
 //		{
@@ -1320,7 +1330,7 @@ void genome_diff::apply_to_sequences(cReferenceSequences& ref_seq_info)
 //			die "Can't handle mutation type: $mut->{type}\n";
 //		}
       else {
-        ASSERTM(false, "Can't handle mutation type: " + mut._type);
+        WARN("Can't handle mutation type: " + mut._type);
       }
 //		## we have to update all of the other positions
 //		$self->shift_positions($mut);
@@ -1331,6 +1341,82 @@ void genome_diff::apply_to_sequences(cReferenceSequences& ref_seq_info)
 //	return $new_ref_strings;
 //}
 }
+
+//sub shift_positions
+//{
+//	my ($self, $mut) = @_;
+//	my $verbose = 0;
+
+//	my $delta = mutation_size_change($mut);
+//	die "Size change not defined for mutation." if (!defined $delta);
+
+//	my $offset = $mut->{position};
+
+//	print "$offset $delta\n"  if ($verbose);
+//	my $inversion = 0;
+
+//	foreach my $mut ($self->mutation_list)
+//	{
+//		if ($inversion)
+//		{
+//			die "shift_positions cannot handle inversions yet!";
+//			if (($mut->{position} > $offset) && ($mut->{position} < $offset + $delta))
+//			{
+//			}
+//		}
+//		else
+//		{
+//			if ($mut->{position} > $offset)
+//			{
+//				$mut->{position} += $delta;
+//			}
+//		}
+//	}
+//}
+
+//sub mutation_size_change
+//{
+//	my ($item) = @_;
+
+//	if ($item->{type} eq 'SNP')
+//	{
+//		return 0;
+//	}
+//	if ($item->{type} eq 'SUB')
+//	{
+//		return length($item->{new_seq}) - $item->{size};
+//	}
+//	elsif ($item->{type} eq 'INS')
+//	{
+//		return length($item->{new_seq});
+//	}
+//	elsif ($item->{type} eq 'DEL')
+//	{
+//		return -$item->{size};
+//	}
+//	elsif ($item->{type} eq 'AMP')
+//	{
+//		return +$item->{size} * ($item->{new_copy_number} - 1);
+//	}
+//	elsif ($item->{type} eq 'MOB')
+//	{
+//		my $size = +$item->{repeat_size} + $item->{duplication_size};
+//		$size -= $item->{del_start} if ($item->{del_start});
+//		$size -= $item->{del_end} if ($item->{del_end});
+//		$size += length($item->{ins_start}) if ($item->{ins_start});
+//		$size += length($item->{ins_end}) if ($item->{ins_end});
+//		return $size;
+//	}
+//	elsif ($item->{type} eq 'CON')
+//	{
+//		my $size = $item->{size};
+//		$item->{region} =~ m/^(.+):(.+)-(.+)$/ or die "Could not understand CON replacement region: $item->{region}";
+//		my $new_size = $3 - $2 + 1;
+//		return $item->{size} - $new_size;
+//	}
+//	return undef;
+//}
+
 }//namespace bresesq
 
 
