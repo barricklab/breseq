@@ -1511,7 +1511,29 @@ namespace breseq {
     }
     
 		return shifted_cigar_string;
-	}
+  }
 
+  string cReferenceSequences::repeat_example(const string &repeat_name, Strand strand)
+  {
+
+//	foreach my $seq_id (sort keys %{$ref_seq_info->{repeat_lists}})
+//	{
+//		foreach my $rep (@{$ref_seq_info->{repeat_lists}->{$seq_id}})
+//		{
+//			if ($rep->{name} eq $repeat_name)
+//			{
+//				my $repeat_seq = substr $ref_seq_info->{ref_strings}->{$seq_id}, $rep->{start} - 1, $rep->{end} - $rep->{start} + 1;
+//				$repeat_seq = revcom($repeat_seq) if ($strand != $rep->{strand});
+//				return $repeat_seq;
+//			}
+//		}
+//	}
+    vector<string> keys = get_keys<string, vector<cSequenceFeature> >(this->repeat_lists);
+    sort(keys.begin(), keys.end());
+
+//	die "Unknown repeat type: $repeat_name";
+//}
+
+  }
 } // breseq namespace
 

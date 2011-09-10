@@ -190,6 +190,8 @@ namespace breseq {
       default: assert(false);
     }
   }
+
+ enum Strand {POS_STRAND, NEG_STRAND};
   
   // These are our own local wrappers for common functions.
   
@@ -558,6 +560,12 @@ namespace breseq {
       pos = s.find(replace_this, pos);
     }
     return s;
+  }
+
+  inline void revcom(string& sequence)
+  {
+    substitute(sequence, "ATCG", "TAGC");
+    reverse(sequence.begin(), sequence.end());
   }
 
 	struct CandidateJunction
@@ -943,7 +951,7 @@ namespace breseq {
       }
     }
   };
-  
+
 
 } // breseq
 
