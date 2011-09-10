@@ -11,7 +11,6 @@ Developers
 * Geoffrey Colburn
 * Alex Hu
 
-
 |breseq| was initially developed at Michigan State University while Jeff was a postdoc with Dr. Richard Lenski and Dr. Charles Ofria, and while Dave was a graduate student in the lab of Dr. Philip McKinley.
 
 It is now developed in the Barrick lab in the Department of Chemistry and Biochemistry at the University of Texas at Austin. `Lab Website <http://barricklab.org>`_ 
@@ -19,7 +18,7 @@ It is now developed in the Barrick lab in the Department of Chemistry and Bioche
 Testers
 ------------
 
-We thank Zachary Blount, Tim Cooper, Tara Gianoulis, Dan Goodman, J.P. Jerome, Ranno Nahku, Elizabeth Perry, Gerda Saxer, Sébastien Wielgoss, and participants in Titus Brown's 2010 summer course in next-gen sequencing at the Kellogg Biological Station for providing feedback on |breseq| usage.
+We thank Zachary Blount, Jim Bull, Tim Cooper, Tara Gianoulis, Aleeza Gersten, Dan Goodman, J.P. Jerome, Ranno Nahku, Elizabeth Perry, Gerda Saxer, William Trimble, Sébastien Wielgoss, and participants in Titus Brown's 2010 summer course in next-gen sequencing at the Kellogg Biological Station for providing feedback on |breseq| usage.
 
 Funding
 -----------
