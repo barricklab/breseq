@@ -101,6 +101,8 @@ struct formatted_double {
   uint8_t _precision; //number of digits past zero to print
 };
 
+
+
 /*! Genome diff entry type.
  
  Instead of trying to define (and maintain!) concrete classes for each different 
@@ -280,7 +282,6 @@ public:
 
   void apply_to_sequences(cReferenceSequences &ref_seq_info);
 
-      
   void strcopy(char* arg1, const char* arg2);
 
   //! Metadata kept in .gd files
