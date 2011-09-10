@@ -40,7 +40,7 @@ The unnamed arguments at the end of the command line are the read files. You can
 
 .. warning::
    
-   Running |breseq| on a full data set like this is not fast. Depending on your computer, this could take several hours. If you want to speed things up, you might only include one of the two sequence files on the command line.
+   Running |breseq| on a full data set like this is not fast. Depending on your computer, this could take several hours. If you want to speed things up, you might only include one of the two read files on the command line.
 
 
 3. Open |breseq| output
