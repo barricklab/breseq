@@ -19,6 +19,7 @@ LICENSE AND COPYRIGHT
 #include "libbreseq/genome_diff.h"
 #include "libbreseq/annotated_sequence.h"
 #include "libbreseq/output.h"
+
 #include <list>
 
 namespace breseq {
@@ -977,22 +978,6 @@ diff_entry genome_diff::_line_to_item(const string& line)
     item[item_key] = item_value;
   }
   
-/// Dealing with JC is inconvenient here// TODO @GRC Confirm not needed?
-///##############################
-// #   ### We do some extra convenience processing for junctions...
-// #   if ($item->{type} eq 'JC')
-// #   {
-// #     foreach my $side_key ('side_1', 'side_2')
-// #     {
-// #       foreach my $key ('seq_id', 'position', 'strand')
-// #       {
-// #         $item->{"_$side_key"}->{$key} = $item->{"$side_key\_$key"};
-// #       }
-// #       $item->{"_$side_key"}->{type} = 'NA';
-// #     }
-// #   }
-///###############################
-  
  return item;
 }
 
@@ -1132,6 +1117,18 @@ genome_diff::interval_un(const uint32_t& start,const uint32_t& end)
   }
   return false;
 }
+
+/* Helper Function for apply_to_sequences
+sub revcom
+{
+  my ($seq) = @_;
+  $seq =~ tr/ATCG/TAGC/;
+  return reverse $seq;
+}
+*/
+
+
+
 //## currently this destroys the genome diff's original format (maybe not the best thing to do)
 //sub apply_to_sequences
 //Notes:
@@ -1297,11 +1294,10 @@ void genome_diff::apply_to_sequences(cReferenceSequences& ref_seq_info)
 
         string replacing_sequence = ref_seq_info.get_sequence(mut[SEQ_ID], start - 1, end - start + 1);
 
-        bool strand = start < end ?  true : false;
-        if (!strand) {
+        Strand strand = start < end ?  POS_STRAND : NEG_STRAND;
+        if (strand == NEG_STRAND) {
           swap(start, end);
-          //! TODO port fastq::revcom?
-          //$replacing_sequence = GenomeDiff::Fastq::revcom($replacing_sequence);
+          revcom(replacing_sequence);
         }
 
         string displaced_sequence = ref_seq_info.get_sequence(mut[SEQ_ID], position -1, size);

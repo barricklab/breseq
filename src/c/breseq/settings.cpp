@@ -212,9 +212,9 @@ namespace breseq
 
     //Coverage distribtuion options
     if (options.count("deletion-coverage-propagation-cutoff"))
-      this->deletion_coverage_propagation_cutoff = from_string<double>(options["deletion-coverage-propogation-cutoff"]);
+      this->deletion_coverage_propagation_cutoff = from_string<double>(options["deletion-coverage-propagation-cutoff"]);
     if (options.count("deletion-coverage-seed-cutoff"))
-      this->deletion_coverage_seed_cutoff = from_string<double>(options["deletions-coverage-seed-cutoff"]);
+      this->deletion_coverage_seed_cutoff = from_string<double>(options["deletion-coverage-seed-cutoff"]);
 
     assert(this->deletion_coverage_propagation_cutoff >= 0);
     assert(this->deletion_coverage_seed_cutoff >= 0);
