@@ -65,7 +65,7 @@
             isEnabled = "NO">
          </CommandLineArgument>
          <CommandLineArgument
-            argument = "-o tests/lambda_mixed_pop_bad_contig -r tests/lambda_mixed_pop_bad_contig/../data/lambda/lambda.gbk -r tests/lambda_mixed_pop_bad_contig/../data/lambda/other.gbk tests/lambda_mixed_pop_bad_contig/../data/lambda/lambda_mixed_population.fastq"
+            argument = "-o tests/lambda_mixed_pop_bad_contigs -r tests/lambda_mixed_pop_bad_contigs/../data/lambda/lambda.gbk -r tests/lambda_mixed_pop_bad_contigs/../data/lambda/other.gbk -r tests/lambda_mixed_pop_bad_contigs/../data/REL606/REL606.fragment.gbk tests/lambda_mixed_pop_bad_contigs/../data/lambda/lambda_mixed_population.fastq"
             isEnabled = "YES">
          </CommandLineArgument>
       </CommandLineArguments>

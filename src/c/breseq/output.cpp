@@ -1235,7 +1235,7 @@ Evidence_Files::Evidence_Files(const Settings& settings, genome_diff& gd)
     }
     else if (item->_type == DEL) 
     {
-      bool has_ra_evidence;
+      bool has_ra_evidence = false;
       for (diff_entry_list::iterator itr = mutation_evidence_list.begin(); itr != mutation_evidence_list.end(); itr ++) 
       {  
         diff_entry& evidence_item = **itr;
@@ -1934,9 +1934,9 @@ void Html_Mutation_Table_String::Item_Lines()
       cell_gene_product = htmlize(mut["gene_product_1"]) + "&darr;" + 
                           htmlize(mut["gene_product_2"]);
     } else if (mut._type == AMP) {
-      cell_mutation = nonbreaking(commify(mut["size"]) + "bp x " + mut["new_copy_number"]);
+      cell_mutation = nonbreaking(commify(mut["size"]) + " bp x " + mut["new_copy_number"]);
       cell_mutation_annotation = 
-        from_string<uint8_t>(mut["new_copy_number"]) == 2 ?
+        from_string<uint32_t>(mut["new_copy_number"]) == 2 ?
           "duplication" : "amplification";
     }
     // ###### PRINT THE TABLE ROW ####
