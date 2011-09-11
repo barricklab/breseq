@@ -36,7 +36,7 @@
       displayScale = "1.00"
       launchStyle = "0"
       useCustomWorkingDirectory = "YES"
-      customWorkingDirectory = "/Users/jbarrick/src/breseq"
+      customWorkingDirectory = "/Users/jbarrick/tmp/REL10938"
       buildConfiguration = "Debug">
       <BuildableProductRunnable>
          <BuildableReference
@@ -66,6 +66,10 @@
          </CommandLineArgument>
          <CommandLineArgument
             argument = "-o tests/lambda_mixed_pop_bad_contigs -r tests/lambda_mixed_pop_bad_contigs/../data/lambda/lambda.gbk -r tests/lambda_mixed_pop_bad_contigs/../data/lambda/other.gbk -r tests/lambda_mixed_pop_bad_contigs/../data/REL606/REL606.fragment.gbk tests/lambda_mixed_pop_bad_contigs/../data/lambda/lambda_mixed_population.fastq"
+            isEnabled = "NO">
+         </CommandLineArgument>
+         <CommandLineArgument
+            argument = "CONVERT_FASTQ -1 SANGER -2 ILLUMINA_1.3+ -i FC20GCB_7_1_pf_REL10938.fastq -o test.fastq"
             isEnabled = "YES">
          </CommandLineArgument>
       </CommandLineArguments>
