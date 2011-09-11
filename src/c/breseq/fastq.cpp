@@ -201,6 +201,10 @@ namespace breseq {
 
     string from_quality_type = format_to_quality_type[from_quality_format];
     string to_quality_type = format_to_quality_type[to_quality_format];
+
+    int32_t from_chr_offset = format_to_chr_offset[from_quality_format];
+    int32_t to_chr_offset = format_to_chr_offset[to_quality_format];
+
     
     this->resize(255);
     for (uint16_t i = 0; i<=255; i++) {
@@ -209,7 +213,8 @@ namespace breseq {
     
     for (uint16_t from_chr = 0; from_chr<=255; from_chr++) {
 
-      int32_t from_quality = from_chr - format_to_chr_offset[from_quality_type];
+      // Note that sequences are always loaded with Illumina 64 offset to prevent negatives...
+      int32_t from_quality = from_chr - from_chr_offset;
       
       // Calculate the probability of error
       double probability_of_error;
@@ -235,7 +240,7 @@ namespace breseq {
         exit(-1);
       }
             
-      int16_t to_chr = to_quality + format_to_chr_offset[to_quality_type];
+      int16_t to_chr = to_quality + to_chr_offset;
       
       // May be out of range
       if ((to_chr < 0) || (to_chr > 255)) continue;
@@ -252,7 +257,6 @@ namespace breseq {
     
     for(uint32_t i=0; i < seq.m_qualities.size(); i++)
     {
-      //seq.m_qualities.replace(i,1,1,(*this)[seq.m_qualities[i]]);
       seq.m_qualities[i] = (*this)[seq.m_qualities[i]];
     }
   }
