@@ -711,7 +711,7 @@ void identify_mutations_pileup::at_target_end(const uint32_t tid) {
   // if the propagation cutoff is zero then the coverage distribution failed
   if (_this_deletion_propagation_cutoff == 0)
   {
-    diff_entry del("MC");
+    diff_entry del(MC);
     del[SEQ_ID] = target_name(tid);
     
     del[START] = to_string<uint32_t>(1);
