@@ -550,7 +550,7 @@ namespace breseq {
 			}
 
 			//#only add gene information to SNPs and RA mutations that don"t include indels...
-			if ((mut._type != "SNP") && !((mut._type == "RA") && (mut["ref_base"] != ".") && (mut["new_base"] != ".")))
+      if ((mut._type != SNP) && !((mut._type == RA) && (mut["ref_base"] != ".") && (mut["new_base"] != ".")))
 			{
 				mut["gene_position"] = "coding (" + mut["gene_position"] + "/" + gene_nt_size + " nt)";
 				return;
@@ -628,34 +628,34 @@ namespace breseq {
 		{
       diff_entry& mut= **it;
       
-			if (only_muts && (mut._type.size() != 3)) continue;
+      if (only_muts && (mut._type > NOT_MUTATION)) continue;
 
-			if (mut._type == "SNP")
+      if (mut._type == SNP)
 			{
 				mut["_ref_seq"] = get_sequence(mut["seq_id"], from_string<uint32_t>(mut["position"]), from_string<uint32_t>(mut["position"]));
 				annotate_1_mutation(mut, from_string<uint32_t>(mut["position"]), from_string<uint32_t>(mut["position"]));
 			}
-			else if (mut._type == "SUB")
+      else if (mut._type == SUB)
 			{
 				annotate_1_mutation(mut, from_string<uint32_t>(mut["position"]), from_string<uint32_t>(mut["position"]) + from_string<uint32_t>(mut["size"]) - 1);
 			}
-			else if (mut._type == "DEL")
+      else if (mut._type == DEL)
 			{
 				annotate_1_mutation(mut, from_string<uint32_t>(mut["position"]), from_string<uint32_t>(mut["position"]) + from_string<uint32_t>(mut["size"]) - 1);
 			}
-			else if (mut._type == "INS")
+      else if (mut._type == INS)
 			{
 				annotate_1_mutation(mut, from_string<uint32_t>(mut["position"]), from_string<uint32_t>(mut["position"]));
 			}
-			else if (mut._type == "CON")
+      else if (mut._type == CON)
 			{
 				annotate_1_mutation(mut, from_string<uint32_t>(mut["position"]), from_string<uint32_t>(mut["position"]) + from_string<uint32_t>(mut["size"]) - 1);
 			}
-			else if (mut._type == "MOB")
+      else if (mut._type == MOB)
 			{
 				annotate_1_mutation(mut, from_string<uint32_t>(mut["position"]), from_string<uint32_t>(mut["position"]) + from_string<uint32_t>(mut["duplication_size"]) - 1);
 			}
-			else if (mut._type == "INV")
+      else if (mut._type == INV)
 			{
 				annotate_1_mutation(mut, from_string<uint32_t>(mut["position"]), from_string<uint32_t>(mut["position"]));
 				mut["gene_name_1"] = mut["gene_name"];
@@ -666,11 +666,11 @@ namespace breseq {
 				mut._fields.erase("gene_name");
 				mut._fields.erase("gene_product");
 			}
-			else if (mut._type == "AMP")
+      else if (mut._type == AMP)
 			{
 				annotate_1_mutation(mut, from_string<uint32_t>(mut["position"]), from_string<uint32_t>(mut["position"]) + from_string<uint32_t>(mut["size"]) - 1);
 			}
-			else if (mut._type == "JC")
+      else if (mut._type == JC)
 			{
         diff_entry side_1;
         side_1[SEQ_ID] = mut["side_1_seq_id"];
@@ -690,11 +690,11 @@ namespace breseq {
           mut["_side_2"+ it->first] = it->second;
         }
       }
-			else if (mut._type == "RA")
+      else if (mut._type == RA)
 			{
 				annotate_1_mutation(mut, from_string<uint32_t>(mut["position"]), from_string<uint32_t>(mut["position"]));
 			}
-			else if (mut._type == "MC")
+      else if (mut._type == MC)
 			{
 				annotate_1_mutation(mut, from_string<uint32_t>(mut["start"]), from_string<uint32_t>(mut["end"]));
 			}
@@ -811,7 +811,7 @@ namespace breseq {
       diff_entry& mut= **it;
       
 			// lines only exist for RA evidence
-			if (mut._type != "RA")
+      if (mut._type != RA)
 			{
 				new_gd.add(mut);
 				continue;
@@ -1545,7 +1545,7 @@ namespace breseq {
       }
     }
 
-    WARN("Unknow repeate type: " + repeat_name);
+    WARN("Unknown repeate type: " + repeat_name);
   }
 
 } // breseq namespace

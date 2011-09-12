@@ -110,7 +110,7 @@ namespace breseq {
 		///
 
 		// For all that follows, we need information about repeat_regions overlapping the sides of junctions
-		vector<string> jc_types = make_list<string>("JC");
+    vector<Type> jc_types = make_list<Type>(JC);
 		diff_entry_list jc = gd.list(jc_types);
 
 		for (diff_entry_list::iterator jc_it=jc.begin(); jc_it!=jc.end(); jc_it++)
@@ -202,7 +202,7 @@ namespace breseq {
 		}*/
     jc.remove_if(diff_entry::field_exists("reject"));
     
-		vector<string> mc_types = make_list<string>("MC");
+    vector<Type> mc_types = make_list<Type>(MC);
 		diff_entry_list mc = gd.list(mc_types);
 
 		///
@@ -223,7 +223,7 @@ namespace breseq {
 
 			// set up generic deletion item
 			diff_entry mut;
-			mut._type = "DEL";
+      mut._type = DEL;
 			mut._evidence = make_list<string>(mc_item._id);
 			mut
 				("seq_id", mc_item["seq_id"])
@@ -552,7 +552,7 @@ namespace breseq {
 
 				// Create the mutation, with evidence
 				diff_entry mut;
-				mut._type = "MOB";
+        mut._type = MOB;
 				mut._evidence.push_back(j1._id);
 				mut._evidence.push_back(j2._id);
 				mut
@@ -956,7 +956,7 @@ namespace breseq {
 				if (size < 0) // this is a deletion!
         {
           diff_entry mut;
-          mut._type = "DEL";
+          mut._type = DEL;
           mut
           ("seq_id", seq_id)
           ("position", s(position+1))
@@ -968,7 +968,7 @@ namespace breseq {
         else // this is an amplification.
         {
           diff_entry mut;
-          mut._type = "AMP";
+          mut._type = AMP;
           mut
             ("seq_id", seq_id)
             ("position", s(position))
@@ -994,7 +994,7 @@ namespace breseq {
 				}
 
 				diff_entry mut;
-				mut._type = "SUB";
+        mut._type = SUB;
 				mut
 					("seq_id", seq_id)
 					("position", s(position))
@@ -1009,7 +1009,7 @@ namespace breseq {
 			else if (n(j["side_1_position"]) + 1 == n(j["side_2_position"]))
 			{
 				diff_entry mut;
-				mut._type = "INS";
+        mut._type = INS;
 				mut
 					("seq_id", seq_id)
 					("position", s(position))
@@ -1025,7 +1025,7 @@ namespace breseq {
 		// Read Alignments => SNP, DEL, INS, SUB
 		///
 
-		vector<string> ra_types = make_list<string>("RA");
+    vector<Type> ra_types = make_list<Type>(RA);
     diff_entry_list ra = gd.list(ra_types);
 
 		///
@@ -1034,8 +1034,8 @@ namespace breseq {
 		///
 
 		{
-			vector<string> del_types = make_list<string>("DEL");
-			vector<string> mc_types = make_list<string>("MC");
+      vector<Type> del_types = make_list<Type>(DEL);
+      vector<Type> mc_types = make_list<Type>(MC);
 			diff_entry_list del = gd.list(del_types);
       diff_entry_list mc = gd.list(mc_types);
 
@@ -1154,14 +1154,14 @@ namespace breseq {
 			// insertion
 			if (mut["ref_seq"].size() == 0)
 			{
-				mut._type = "INS";
+        mut._type = INS;
 				// unused fields
 				mut._fields.erase("ref_seq");
 			}
 			// deletion
 			else if (mut["new_seq"].size() == 0)
 			{
-				mut._type = "DEL";
+        mut._type = DEL;
 				mut["size"] = s(n(mut["end"]) - n(mut["start"]) + 1);
 
 				// unused fields
@@ -1171,7 +1171,7 @@ namespace breseq {
 			// block substitution
 			else if ((mut["ref_seq"].size() > 1) || (mut["new_seq"].size() > 1))
 			{
-				mut._type = "SUB";
+        mut._type = SUB;
 				mut["size"] = s(mut["ref_seq"].size());
 				mut._fields.erase("ref_seq");
 			}
@@ -1179,7 +1179,7 @@ namespace breseq {
 			else
 			{
 				mut._fields.erase("ref_seq");
-				mut._type = "SNP";
+        mut._type = SNP;
 			}
 
 			// we don't need these fields

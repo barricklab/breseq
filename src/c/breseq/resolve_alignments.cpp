@@ -1254,7 +1254,7 @@ diff_entry _junction_to_hybrid_list_item(const string& key, cReferenceSequences&
 
 	// flatten things to only what we want to keep
 	//TODO: Are parameters to constructor correct?
-	diff_entry item("JC");
+  diff_entry item(JC);
 	item
 		("side_1_seq_id", jc.sides[0].seq_id)
 		("side_1_position", to_string(jc.sides[0].position))

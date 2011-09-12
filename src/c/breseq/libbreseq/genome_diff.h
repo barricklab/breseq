@@ -62,20 +62,43 @@ extern const char* _SIDE_KEY_JC;
 
 
 // Types of diff entries:
-extern const char* SNP;
-extern const char* SUB;
-extern const char* DEL;
-extern const char* INS;
-extern const char* MOB;
-extern const char* AMP;
-extern const char* INV;
-extern const char* CON;
+enum Type {TYPE_UNKOWN, SNP, SUB, DEL, INS, MOB, AMP, INV, CON, NOT_MUTATION, RA, MC, JC, UN};
+inline string to_string(const Type type)
+{
+  switch(type) {
+    case SNP: return "SNP";
+    case SUB: return "SUB";
+    case DEL: return "DEL";
+    case INS: return "INS";
+    case MOB: return "MOB";
+    case AMP: return "AMP";
+    case INV: return "INV";
+    case CON: return "CON";
+    case RA: return "RA";
+    case MC: return "MC";
+    case JC: return "JC";
+    case UN: return "UN";
+    default: return "?";
+  }
+}
 
-// Types of diff entries:
-extern const char* RA;
-extern const char* MC;
-extern const char* JC;
-extern const char* UN;
+inline Type to_type(const string& type)
+{
+  if (type == "SNP") return SNP;
+  if (type == "SUB") return SUB;
+  if (type == "DEL") return DEL;
+  if (type == "INS") return INS;
+  if (type == "MOB") return MOB;
+  if (type == "AMP") return AMP;
+  if (type == "INV") return INV;
+  if (type == "CON") return CON;
+  if (type == "RA") return RA;
+  if (type == "MC") return MC;
+  if (type == "JC") return JC;
+  if (type == "UN") return UN;
+return TYPE_UNKOWN;
+}
+
 
 enum Strand {POS_STRAND = 1, NEG_STRAND = -1};
   
@@ -125,7 +148,7 @@ struct diff_entry {
   typedef map<key_t, value_t> map_t; //!< Diff entry key-value map.
   
   //! Constructor.
-  diff_entry(const string& type);
+  diff_entry(const Type type);
   diff_entry();
   
   //! Copy constructor
@@ -175,7 +198,7 @@ struct diff_entry {
   //virtual diff_entry* clone() const = 0;
   
   //! Parameters most diff_entrys have in common
-  string _type;
+  Type _type;
   string _id;
   vector<string> _evidence; 
   map_t _fields; //!< Additional information about this diff entry. Look at 
@@ -258,11 +281,11 @@ public:
   diff_entry_list filter_used_as_evidence(const diff_entry_list& list);
   
   //! Retrieve diff_entrys that match given type(s) 
-  diff_entry_list list(const vector<string>& types = vector<string>());
+  diff_entry_list list(const vector<Type>& types = vector<Type>());
   //diff_entry_list list() {return _entry_list;}
   
   //! retrieve diff_entrys that match given type(s) and do not have 'no_show' set
-  diff_entry_list show_list(const vector<string>& types = vector<string>());
+  diff_entry_list show_list(const vector<Type>& types = vector<Type>());
   
   //! Converts a genome_diff(.gd) file's line to a diff_entry
   diff_entry _line_to_item(const string& line);
@@ -388,7 +411,7 @@ struct diff_entry::is_type: unary_function <diff_entry_ptr, bool>
 
   //! Predicate 
   virtual bool operator() (const diff_entry_ptr& diff_entry)
-    const {return (*diff_entry)._type == m_type;}
+    const {return (*diff_entry)._type == to_type(m_type);}
 
 
   protected:
@@ -403,7 +426,7 @@ struct diff_entry::is_not_type: unary_function <diff_entry_ptr, bool>
   
   //! Predicate 
   virtual bool operator() (const diff_entry_ptr& diff_entry)
-  const {return (*diff_entry)._type != m_type;}
+  const {return (*diff_entry)._type != to_type(m_type);}
   
   
 protected:

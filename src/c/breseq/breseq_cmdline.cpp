@@ -1687,7 +1687,7 @@ int breseq_default_action(int argc, char* argv[])
 		// Mark lowest RA evidence items as no-show, or we may be drawing way too many alignments
 		//
 
-		vector<string> ra_types = make_list<string>("RA");
+    vector<Type> ra_types = make_list<Type>(RA);
 		list<counted_ptr<diff_entry> > ra = gd.filter_used_as_evidence(gd.list(ra_types));
 
     ra.remove_if(diff_entry::frequency_less_than_two_or_no_show());
@@ -1715,7 +1715,7 @@ int breseq_default_action(int argc, char* argv[])
 		//
 		// Mark lowest scoring reject junctions as no-show
 		//
-		vector<string> jc_types = make_list<string>("JC");
+    vector<Type> jc_types = make_list<Type>(JC);
     
 		diff_entry_list jc = gd.filter_used_as_evidence(gd.list(jc_types));
 	  
