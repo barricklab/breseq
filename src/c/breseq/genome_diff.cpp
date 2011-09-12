@@ -52,38 +52,24 @@ const char* ERROR="error";
 
 
 
-// Types of diff entries:
-const char* SNP="SNP";
-const char* SUB="SUB";
-const char* DEL="DEL";
-const char* INS="INS";
-const char* MOB="MOB";
-const char* AMP="AMP";
-const char* INV="INV";
-const char* CON="CON";
-
-const char* RA="RA";
-const char* MC="MC";
-const char* JC="JC";
-const char* UN="UN";
 
 //our $line_specification = {
-map<string, vector<string> > line_specification =make_map<string, vector<string> > 
+map<Type, vector<string> > line_specification =make_map<Type, vector<string> >
 //! seq_id and positions are already parameters in diff_entry
 //## mutations
-("SNP",make_list<string> ("seq_id")("position")("new_seq"))
-("SUB",make_list<string> ("seq_id")("position")("size")("new_seq"))
-("DEL",make_list<string> ("seq_id")("position")("size"))
-("INS",make_list<string> ("seq_id")("position")("new_seq"))
-("MOB",make_list<string> ("seq_id")("position")("repeat_name")("strand")("duplication_size"))
-("DEL",make_list<string> ("seq_id")("position")("size"))
-("INV",make_list<string> ("seq_id")("position")("size"))
-("AMP",make_list<string> ("seq_id")("position")("size")("new_copy_number"))
+(SNP,make_list<string> ("seq_id")("position")("new_seq"))
+(SUB,make_list<string> ("seq_id")("position")("size")("new_seq"))
+(DEL,make_list<string> ("seq_id")("position")("size"))
+(INS,make_list<string> ("seq_id")("position")("new_seq"))
+(MOB,make_list<string> ("seq_id")("position")("repeat_name")("strand")("duplication_size"))
+(DEL,make_list<string> ("seq_id")("position")("size"))
+(INV,make_list<string> ("seq_id")("position")("size"))
+(AMP,make_list<string> ("seq_id")("position")("size")("new_copy_number"))
 //## evidence
-("RA",make_list<string> ("seq_id")("position")("insert_position")("ref_base")("new_base"))
-("MC",make_list<string> ("seq_id")("start")("end")("start_range")("end_range"))
-("JC",make_list<string> ("side_1_seq_id")("side_1_position")("side_1_strand")("side_2_seq_id")("side_2_position")("side_2_strand")("overlap"))
-("UN",make_list<string> ("seq_id")("start")("end"))
+(RA,make_list<string> ("seq_id")("position")("insert_position")("ref_base")("new_base"))
+(MC,make_list<string> ("seq_id")("start")("end")("start_range")("end_range"))
+(JC,make_list<string> ("side_1_seq_id")("side_1_position")("side_1_strand")("side_2_seq_id")("side_2_position")("side_2_strand")("overlap"))
+(UN,make_list<string> ("seq_id")("start")("end"))
 ;
 
 
@@ -121,7 +107,7 @@ static const char* s_field_order[] = {
 
 /*! Constructor.
  */
-diff_entry::diff_entry(const string& type)
+diff_entry::diff_entry(const Type type)
 : _type(type)
 , _id("")
 , _evidence()
@@ -129,7 +115,7 @@ diff_entry::diff_entry(const string& type)
 }
 
 diff_entry::diff_entry()
-: _type("")
+: _type(TYPE_UNKOWN)
 , _id("")
 , _evidence()
 {
@@ -140,7 +126,7 @@ diff_entry::diff_entry()
 /*! Marshal this diff entry into an ordered list of fields.
  */
 void diff_entry::marshal(field_list_t& s) {
-	s.push_back(_type);
+  s.push_back(to_string(_type));
 	s.push_back(_id);
   
   s.push_back(join(_evidence, ","));
@@ -152,13 +138,13 @@ void diff_entry::marshal(field_list_t& s) {
 	// marshal specified fields in-order, removing them from the copy after they've 
 	// been printed:
   
-  vector<string>& f = line_specification[_type]; 
+  vector<string>& f = line_specification[_type];
 
   for (vector<string>::iterator it=f.begin(); it != f.end(); it++)
   {
 		map_t::iterator iter=cp.find(*it);
     
-    ASSERTM(iter != cp.end(), "Did not find required field '" + *it + "' to write in entry id " + _id + " of type '" + _type + "'.");
+    ASSERTM(iter != cp.end(), "Did not find required field '" + *it + "' to write in entry id " + _id + " of type '" + to_string(_type) + "'.");
     
     s.push_back(iter->second);
     cp.erase(iter);
@@ -455,7 +441,7 @@ void genome_diff::read(const string& filename) {
 }
 
 
-map<string, sort_fields_item> diff_entry_sort_fields = make_map<string, sort_fields_item>
+map<Type, sort_fields_item> diff_entry_sort_fields = make_map<Type, sort_fields_item>
   (SNP, sort_fields_item(1, SEQ_ID, POSITION))
   (SUB, sort_fields_item(1, SEQ_ID, POSITION))
   (DEL, sort_fields_item(1, SEQ_ID, POSITION))
@@ -470,7 +456,7 @@ map<string, sort_fields_item> diff_entry_sort_fields = make_map<string, sort_fie
   (UN,  sort_fields_item(3, SEQ_ID, START))
 ;
 
-map<string, uint8_t> sort_order = make_map<string, uint8_t>
+map<Type, uint8_t> sort_order = make_map<Type, uint8_t>
   (SNP, 2)
   (SUB, 4)
   (DEL, 1)
@@ -490,8 +476,8 @@ map<string, uint8_t> sort_order = make_map<string, uint8_t>
  */
 bool diff_entry_sort(const diff_entry_ptr& a, const diff_entry_ptr& b) {
 
-  string a_type = a->_type;
-  string b_type = b->_type;
+  Type a_type = a->_type;
+  Type b_type = b->_type;
 
   sort_fields_item a_sort_fields = diff_entry_sort_fields[a_type];
   sort_fields_item b_sort_fields = diff_entry_sort_fields[b_type];
@@ -860,7 +846,7 @@ void VCFtoGD( const string& vcffile, const string& gdfile ){
 /*! Given a list of types, search and return the diff_entry's within diff_entry_list whose 
  * _type parameter matches one of those within input types. 
  */ 
-diff_entry_list genome_diff::list(const vector<string>& types)
+diff_entry_list genome_diff::list(const vector<Type>& types)
 {
   // default is to have to types
   if (types.size() == 0)
@@ -871,7 +857,7 @@ diff_entry_list genome_diff::list(const vector<string>& types)
   for (diff_entry_list::iterator itr_diff_entry = _entry_list.begin(); 
        itr_diff_entry != _entry_list.end(); itr_diff_entry++)
     {
-      for (vector<string>::const_iterator requested_type = types.begin();
+      for (vector<Type>::const_iterator requested_type = types.begin();
            requested_type != types.end(); requested_type++)
       {
         if((*itr_diff_entry)->_type == *requested_type)
@@ -882,7 +868,7 @@ diff_entry_list genome_diff::list(const vector<string>& types)
   return return_list;
 }
   
-diff_entry_list genome_diff::show_list(const vector<string>& types)
+diff_entry_list genome_diff::show_list(const vector<Type>& types)
 {
   diff_entry_list ret_list = list(types);
   ret_list.remove_if(diff_entry::fields_exist(make_list<diff_entry::key_t>("deleted")));
@@ -924,12 +910,12 @@ diff_entry genome_diff::_line_to_item(const string& line)
 {
   list_t line_list = split(line, "\t");
   diff_entry item;
-  item._type = shift<string>(line_list); 
+  item._type = to_type(shift<string>(line_list));
   item._id = shift<string>(line_list);
   string evidence_string = shift<string>(line_list);
   item._evidence = split(evidence_string, ",");
 
-  const list_t spec = line_specification[item._type];  
+  const list_t spec = line_specification[item._type];
 
   if(spec.empty())
   {
@@ -951,7 +937,7 @@ diff_entry genome_diff::_line_to_item(const string& line)
 
     ASSERTM(next.find("=") == string::npos,
             "Unexpected key=value pair '" + next + "' encountered for required item '" + key 
-            + "' in type '" + item._type + "' line:\n" + line);
+            + "' in type '" + to_string(item._type) + "' line:\n" + line);
     
     item[key] = next;
   }
@@ -989,8 +975,7 @@ diff_entry_list genome_diff::mutation_list()
    for(diff_entry_list::iterator itr = _entry_list.begin();
        itr != _entry_list.end(); itr ++) {
      diff_entry& item = **itr;
-     size_t type_length = item._type.length();
-     if(type_length == 3) {
+     if(item._type < NOT_MUTATION) {
        mut_list.push_back(*itr);
      }
    }
@@ -1006,8 +991,7 @@ diff_entry_list genome_diff::evidence_list()
   for(diff_entry_list::iterator itr = _entry_list.begin();
       itr != _entry_list.end(); itr ++) {
     diff_entry& item = **itr;
-    size_t type_length = item._type.length();
-    if(type_length == 2) {
+    if(item._type > NOT_MUTATION) {
       mut_list.push_back(*itr);
     }
   }
@@ -1104,7 +1088,7 @@ void genome_diff::add_reject_reasons(diff_entry item, const string& reject)
 bool 
 genome_diff::interval_un(const uint32_t& start,const uint32_t& end)
 {
-  diff_entry_list un_list = list(make_list<string>(UN));
+  diff_entry_list un_list = list(make_list<Type>(UN));
 
   for (diff_entry_list::iterator itr = un_list.begin();
        itr != un_list.end(); itr++) {
