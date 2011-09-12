@@ -166,7 +166,7 @@ namespace breseq {
     
     //!< Convert 
     uint32_t seq_id_to_index(const string& seq_id) 
-      { assert(m_seq_id_to_index.count(seq_id)); return m_seq_id_to_index[seq_id]; };
+      { ASSERT(m_seq_id_to_index.count(seq_id)); return m_seq_id_to_index[seq_id]; };
 
     //!< Utility to get sequences by seq_id
     string get_sequence(const string& seq_id, uint32_t start_1, uint32_t end_1) 
@@ -186,7 +186,7 @@ namespace breseq {
 
     uint32_t get_sequence_length(const string& seq_id)
     {
-      (*this)[seq_id_to_index(seq_id)].get_sequence_length();
+      return (*this)[seq_id_to_index(seq_id)].get_sequence_length();
     }
 
     vector<string> seq_ids()

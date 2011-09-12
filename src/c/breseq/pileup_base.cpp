@@ -245,7 +245,7 @@ void pileup_base::do_pileup() {
 
   
   for (uint32_t tid = m_last_tid; tid < num_targets(); tid++) {
-  
+    
     // We need to start this target
     if (m_last_position_1 == 0) {
       at_target_start(m_last_tid);
@@ -261,6 +261,7 @@ void pileup_base::do_pileup() {
     
     // We finished this target
     at_target_end(m_last_tid);
+    m_last_tid++;
     m_last_position_1 = 0;
   }
   // @JEB strictly speaking, should also handle any remaining fragments in list that pileup never encountered....

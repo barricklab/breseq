@@ -56,26 +56,16 @@ Makefile$
 ^tests/.+/output
 ^tests/.+/0
 ^tests/.+/data
+^tests/test.config
 
-^src/c/breseq/cbreseq/
-^src/c/breseq/cbreseq$
-^src/c/breseq/cbam2aln
+^src/c/breseq/breseq/
+^src/c/breseq/breseq$
 
 ^package
 
 ## samtools
 samtools$
 ^extern/samtools-.*/misc
-
-## Bio::DB::Samtools
-^extern/Bio-SamTools-.*/lib/Bio/DB/Sam.c
-^extern/Bio-SamTools-.*/Build$
-^extern/Bio-SamTools-.*/Bio-SamTools-
-
-## Perl Breseq
-^src/perl/Breseq/Build$
-^src/perl/Breseq/Breseq-
-^src/perl/Breseq/META.yml
 
 ## Perl GenomeDiff
 ^src/perl/GenomeDiff/Build$

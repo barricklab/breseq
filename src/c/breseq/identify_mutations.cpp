@@ -164,15 +164,15 @@ identify_mutations_pileup::~identify_mutations_pileup()
  */
 void identify_mutations_pileup::pileup_callback(const pileup& p) {
 	assert(p.target() < _seq_info.size());
+
   _this_deletion_propagation_cutoff = _deletion_propagation_cutoffs[p.target()];
   _this_deletion_seed_cutoff = _deletion_seed_cutoffs[p.target()];
   
+  // if the propagation cutoff is zero then the coverage distribution failed
+  if (_this_deletion_propagation_cutoff == 0) return;
+  
   uint32_t position = p.position_1();
   //cout << position << endl;
-  
-  //if (position == 498187) {
-  //  cout << "debug" << endl;
-  //}
   
 	int insert_count=-1;
 	bool next_insert_count_exists=true;
@@ -705,6 +705,30 @@ void identify_mutations_pileup::at_target_end(const uint32_t tid) {
 	check_deletion_completion(target_length(tid)+1, tid, position_coverage(numeric_limits<double>::quiet_NaN()), numeric_limits<double>::quiet_NaN());
   update_unknown_intervals(target_length(tid)+1, tid, true, false);
 
+  // if this target failed to have its coverage fit, mark the entire thing as a deletion
+  uint32_t _this_deletion_propagation_cutoff = _deletion_propagation_cutoffs[tid];
+  
+  // if the propagation cutoff is zero then the coverage distribution failed
+  if (_this_deletion_propagation_cutoff == 0)
+  {
+    diff_entry del("MC");
+    del[SEQ_ID] = target_name(tid);
+    
+    del[START] = to_string<uint32_t>(1);
+    del[END] = to_string<uint32_t>(target_length(tid));
+    del[START_RANGE] = to_string<uint32_t>(0);
+    del[END_RANGE] = to_string<uint32_t>(0);
+    
+    del[LEFT_OUTSIDE_COV] = "NA";
+    del[LEFT_INSIDE_COV] = formatted_double(0.0, 0).to_string();
+    del[RIGHT_INSIDE_COV] = formatted_double(0.0, 0).to_string();
+    del[RIGHT_OUTSIDE_COV] = "NA";
+
+    _gd.add(del);
+  }
+  
+  
+  
   // write genome diff file
 	_gd.write(_gd_file);
 	

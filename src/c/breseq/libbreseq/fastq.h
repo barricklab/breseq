@@ -56,7 +56,7 @@ namespace breseq {
   
   struct cFastqQualityConverter : public vector<uint8_t> {
   public:
-    cFastqQualityConverter(const string &from_quality, const string &to_quality);
+    cFastqQualityConverter(const string &from_quality_format, const string &to_quality_format);
     ~cFastqQualityConverter() {};
     
     void convert_sequence(cFastqSequence &seq);

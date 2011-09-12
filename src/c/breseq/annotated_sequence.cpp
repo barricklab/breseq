@@ -927,7 +927,7 @@ namespace breseq {
     for (vector<string>::const_iterator it = in_file_names.begin(); it < in_file_names.end(); it++) {
       
       ifstream in(it->c_str(), ios_base::in);
-      assert(!in.fail()); 
+      ASSERTM(!in.fail(), "Could not open GenBank file: " + *it); 
       
       while (LoadGenBankFileHeader(in, rs)) {
         LoadGenBankFileSequenceFeatures(in, rs.back());

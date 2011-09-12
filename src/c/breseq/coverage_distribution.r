@@ -58,9 +58,39 @@ junction_accept_pr_cutoff = as.numeric(junction_accept_pr_cutoff);
 junction_keep_pr_cutoff = as.numeric(junction_keep_pr_cutoff);
 junction_max_score = as.numeric(junction_max_score);
 
+## initialize values to be filled in
+nb_fit_mu = 0
+nb_fit_size = 0
+m = 0
+v = 0
+D = 0
+deletion_propagation_coverage = 0
+junction_coverage_cutoff = 0
+junction_accept_coverage_cutoff = 0
+junction_keep_coverage_cutoff = 0
 
 #load data
 X<-read.table(distribution_file, header=T)
+
+#table might be empty (in which case add dummy data -- that will fail)
+if (nrow(X) == 0)
+{
+  #print out statistics
+  
+  print(nb_fit_size);
+  print(nb_fit_mu);
+  
+  print(m)
+  print(v)
+  print(D)
+  
+  print(deletion_propagation_coverage)
+  print(junction_coverage_cutoff)
+  print(junction_accept_coverage_cutoff)
+  print(junction_keep_coverage_cutoff)
+  
+  q()
+}
 
 #create the distribution vector and fit
 Y<-rep(X$coverage, X$n)
@@ -78,10 +108,11 @@ X$ma = filter(X$n, ma5)
 
 i<-0
 max_n <- 0;
+min_i <- max( trunc(m/4), 1 ); #prevents zero for pathological distributions
 max_i <- i;
-for (i in trunc(m/4):length(X$ma))
+for (i in min_i:length(X$ma))
 {		
-	if (!is.na(X$ma[i]) && X$ma[i] > max_n)
+	if (!is.na(X$ma[i]) && (X$ma[i] > max_n))
 	{
 		max_n = X$ma[i];
 		max_i = i;
@@ -92,8 +123,25 @@ for (i in trunc(m/4):length(X$ma))
 # Censor data on the right and left of the maximum
 ##
 
-start_i = floor(max_i/2);
+start_i = max(floor(max_i/2), 1);
 end_i = min(ceiling(max_i*10), length(X$ma));
+
+if (start_i == end_i)
+{
+  print(nb_fit_size);
+  print(nb_fit_mu);
+  
+  print(m)
+  print(v)
+  print(D)
+  
+  print(deletion_propagation_coverage)
+  print(junction_coverage_cutoff)
+  print(junction_accept_coverage_cutoff)
+  print(junction_keep_coverage_cutoff)
+  
+  q()
+}
 
 cat(start_i, " ", end_i, "\n", sep="")
 
@@ -133,6 +181,13 @@ f_nb <- function(par) {
 	mu = par[1];
 	size = par[2];
 
+  if ((mu <= 0) || (size <= 0))
+  {
+    return(0);
+  }
+  
+  cat(mu, " ", size, "\n");
+  
 	dist<-c()
 	total <- 0;
 	for (i in start_i:end_i)
@@ -147,31 +202,50 @@ f_nb <- function(par) {
 	{
 		l <- l + ((X$n[i]/inner_total)-(dist[i]/total))^2;
 	}
-	l;
+	return(l);
 }
 
+## Fit negative binomial 
+## - allow fit to fail and set all params to zero/empty if that is the case
+nb_fit = NULL
 nb_fit<-nlm(f_nb, c(m,1) )
-nb_fit_mu = nb_fit$estimate[1];
-nb_fit_size = nb_fit$estimate[2];
 
-print(nb_fit_size);
-print(nb_fit_mu);
+if (!is.null(nb_fit) && (nb_fit$estimate[1] > 0) && (nb_fit$estimate[2] > 0))
+{
+  nb_fit_mu = nb_fit$estimate[1];
+  nb_fit_size = nb_fit$estimate[2];
+}
+
+summary(nb_fit)
+
+## things can go wrong with fitting and we can end up with invalid values
+
 
 #fit_nb = dnbinom(0:max(X$coverage), mu = nb_fit_mu, size=nb_fit_size)*total_total;
 
-end_fract = pnbinom(end_i, mu = nb_fit_mu, size=nb_fit_size)
-start_fract = pnbinom(start_i, mu = nb_fit_mu, size=nb_fit_size)
-included_fract = end_fract-start_fract;
-fit_nb = dnbinom(0:max(X$coverage), mu = nb_fit_mu, size=nb_fit_size)*inner_total/included_fract;
+fit_nb = c()
+if (nb_fit_mu > 0)
+{
+  end_fract = pnbinom(end_i, mu = nb_fit_mu, size=nb_fit_size)
+  start_fract = pnbinom(start_i, mu = nb_fit_mu, size=nb_fit_size)
+  included_fract = end_fract-start_fract;
+  fit_nb = dnbinom(0:max(X$coverage), mu = nb_fit_mu, size=nb_fit_size)*inner_total/included_fract;
+}
 
 f_p <- function(par) {
 
 	lambda = par[1];
 
+  if (lambda <= 0)
+  {
+    return(0);
+  }
+  
 	dist<-c()
 	total <- 0;
 	for (i in start_i:end_i)
 	{	
+    #cat(i, " ", lambda, "\n");
 		dist[i] <- dpois(i, lambda=lambda);
 		total <- total + dist[i] 
 	}
@@ -182,13 +256,29 @@ f_p <- function(par) {
 	{
 		l <- l + ((X$n[i]/inner_total)-(dist[i]/total))^2;
 	}
-	l;
+	return(l);
 }
 
-p_fit<-nlm(f_p, c(m))
-p_fit_lambda = nb_fit$estimate[1];
-fit_p<-dpois(0:max(X$coverage), lambda = p_fit_lambda)*inner_total/included_fract;
 
+## Fit Poisson 
+## - allow fit to fail and set all params to zero/empty if that is the case
+
+p_fit = NULL
+try(p_fit<-nlm(f_p, c(m)))
+
+fit_p = c()
+if (!is.null(p_fit) && (p_fit$estimate[1] > 0))
+{
+  #print (nb_fit$estimate[1])
+  p_fit_lambda = p_fit$estimate[1];
+  #print(0:max(X$coverage))
+
+  end_fract = ppois(end_i, lambda = p_fit_lambda)
+  start_fract = ppois(start_i, lambda = p_fit_lambda)
+  included_fract = end_fract-start_fract;
+
+  fit_p<-dpois(0:max(X$coverage), lambda = p_fit_lambda)*inner_total/included_fract;
+}
 
 ## don't graph very high values with very little coverage
 i<-max_i
@@ -269,21 +359,31 @@ if (plot_poisson) {
 
 dev.off()
 
-#print out some statistics
+if (nb_fit_size != 0)
+{
+  cat(nb_fit_size, " ", nb_fit_mu, "\n")
+  
+  deletion_propagation_coverage = qnbinom(deletion_propagation_pr_cutoff, size = nb_fit_size, mu = nb_fit_mu)
+  junction_coverage_cutoff = qnbinom(junction_coverage_pr_cutoff, size = nb_fit_size, mu = nb_fit_mu)
+  
+  ## not entirely convinced dividing mu by the number of possible pos_hash scores is right here
+  junction_accept_coverage_cutoff = qbinom(junction_accept_pr_cutoff, junction_max_score, 1-pnbinom(0, size = nb_fit_size/junction_max_score, mu = nb_fit_mu/junction_max_score))
+  junction_keep_coverage_cutoff = qbinom(junction_keep_pr_cutoff, junction_max_score, 1-pnbinom(0,size = nb_fit_size/junction_max_score, mu = nb_fit_mu/junction_max_score))
+}
+
+
+#print out statistics
+
+print(nb_fit_size);
+print(nb_fit_mu);
+
 print(m)
 print(v)
 print(D)
 
-deletion_propagation_coverage = qnbinom(deletion_propagation_pr_cutoff, size = nb_fit_size, mu = nb_fit_mu)
 print(deletion_propagation_coverage)
-
-junction_coverage_cutoff = qnbinom(junction_coverage_pr_cutoff, size = nb_fit_size, mu = nb_fit_mu)
 print(junction_coverage_cutoff)
-
-## not entirely convinced dividing mu by the number of possible pos_hash scores is right here
-junction_accept_coverage_cutoff = qbinom(junction_accept_pr_cutoff, junction_max_score, 1-pnbinom(0, size = nb_fit_size/junction_max_score, mu = nb_fit_mu/junction_max_score))
 print(junction_accept_coverage_cutoff)
-
-junction_keep_coverage_cutoff = qbinom(junction_keep_pr_cutoff, junction_max_score, 1-pnbinom(0,size = nb_fit_size/junction_max_score, mu = nb_fit_mu/junction_max_score))
 print(junction_keep_coverage_cutoff)
 
+warnings()
