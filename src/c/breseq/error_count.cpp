@@ -631,13 +631,13 @@ void cErrorTable::write_log10_prob_table(const string& filename) {
         uint32_t j = (idx / m_covariate_offset[i]) % m_covariate_max[i];
         
         if (i == k_read_set) {
-          add_index += j;
+          add_index += m_covariate_max[k_obs_base] * m_covariate_max[k_ref_base] * m_covariate_max[k_quality] * j;
         } else if (i == k_ref_base) {
-          add_index += m_covariate_max[k_read_set] * j;
+          add_index +=  j;
         } else if (i == k_obs_base) {
-          add_index += m_covariate_max[k_read_set] * m_covariate_max[k_ref_base] * j;
+          add_index +=  m_covariate_max[k_ref_base] * j;
         } else if (i == k_quality) {
-          add_index += m_covariate_max[k_read_set] * m_covariate_max[k_obs_base] * m_covariate_max[k_ref_base] * j;
+          add_index +=  m_covariate_max[k_obs_base] * m_covariate_max[k_ref_base] * j;
         }
       }
       
@@ -647,10 +647,10 @@ void cErrorTable::write_log10_prob_table(const string& filename) {
     // Calculate probabilities within each set of m_covariate_max[k_ref_base]
     double running_total = 0;
     
-    for (uint32_t j=0; j<m_covariate_max[k_read_set]; j++) {
+    for (uint32_t r=0; r<m_covariate_max[k_read_set]; r++) {
       
       for (uint32_t k=0; k<m_covariate_max[k_obs_base] * m_covariate_max[k_ref_base] * m_covariate_max[k_quality]; k++) {
-        uint32_t i = j * m_covariate_max[k_obs_base] * m_covariate_max[k_ref_base] * m_covariate_max[k_quality] + k;
+        uint32_t i = r * m_covariate_max[k_obs_base] * m_covariate_max[k_ref_base] * m_covariate_max[k_quality] + k;
         running_total += output_table[i];
         if (i % m_covariate_max[k_ref_base] == m_covariate_max[k_ref_base] - 1) {
           
@@ -659,7 +659,7 @@ void cErrorTable::write_log10_prob_table(const string& filename) {
                 output_table[j] /= running_total;
               }
               if (output_table[j] == 0) {
-               output_table[j] = 1E-10; 
+               output_table[j] = NAN; 
               }
             }
             running_total = 0;
@@ -670,7 +670,7 @@ void cErrorTable::write_log10_prob_table(const string& filename) {
       string this_file_name = filename;
       size_t pos = this_file_name.find("#");
       assert(pos);
-      this_file_name.replace(pos, 1, readfiles[j]);
+      this_file_name.replace(pos, 1, readfiles[r]);
       
       std::ofstream out(this_file_name.c_str());
       
@@ -691,8 +691,13 @@ void cErrorTable::write_log10_prob_table(const string& filename) {
         out << q;
         for (uint32_t b1=0; b1< m_covariate_max[k_ref_base]; b1++) {        
           for (uint32_t b2=0; b2< m_covariate_max[k_obs_base]; b2++) {
-            uint32_t idx = q * m_covariate_max[k_obs_base] * m_covariate_max[k_ref_base] + b1 * m_covariate_max[k_ref_base] + b2;
-            out << "\t" << output_table[idx];
+            uint32_t idx = r * m_covariate_max[k_obs_base] * m_covariate_max[k_ref_base] * m_covariate_max[k_quality]
+                      + q * m_covariate_max[k_obs_base] * m_covariate_max[k_ref_base] + b1 * m_covariate_max[k_ref_base] + b2;
+            out << "\t";
+            if (isnan(output_table[idx]))
+              out << "NA";
+            else 
+              out << output_table[idx];
           }
         }
         out << endl;
