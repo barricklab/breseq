@@ -1492,11 +1492,11 @@ Evidence_Files::html_evidence_file (
   
   diff_entry_list evidence_list = gd.mutation_evidence_list(*parent_item);
 
-  vector<string> types = make_list<string>("RA")("MC")("JC");
+  vector<Type> types = make_list<Type>(RA)(MC)(JC);
   
-  for (vector<string>::iterator itr = types.begin(); itr != types.end(); itr ++) 
+  for (vector<Type>::iterator itr = types.begin(); itr != types.end(); itr ++)
   {  
-    string& type = *itr;
+    const Type type = *itr;
     diff_entry_list this_evidence_list = evidence_list;
     this_evidence_list.remove_if(diff_entry::is_not_type(type));   
     

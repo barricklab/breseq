@@ -99,7 +99,6 @@ inline Type to_type(const string& type)
 return TYPE_UNKOWN;
 }
 
-
 enum Strand {POS_STRAND = 1, NEG_STRAND = -1};
   
 //!  
@@ -178,6 +177,7 @@ struct diff_entry {
   vector<string> get_reject_reasons();
   
   size_t number_reject_reasons();
+  int32_t mutation_size_change();
 
   struct by_scores;
   struct is_type;
@@ -185,7 +185,6 @@ struct diff_entry {
   struct field_exists;
   struct fields_exist;
   struct frequency_less_than_two_or_no_show;
-  struct coverage_or_no_show_is_true;
   struct rejected;
 
 
@@ -306,6 +305,7 @@ public:
   bool interval_un (const uint32_t& start, const uint32_t& end);
 
   void apply_to_sequences(cReferenceSequences &ref_seq_info);
+  void shift_positions(diff_entry_ptr& item);
 
   void strcopy(char* arg1, const char* arg2);
 
@@ -406,31 +406,31 @@ struct diff_entry::by_scores : public binary_function
 struct diff_entry::is_type: unary_function <diff_entry_ptr, bool>
 {
   //! Constructor
-  explicit is_type(const string& type)
+  explicit is_type(const Type type)
     : m_type(type) {}
 
   //! Predicate 
   virtual bool operator() (const diff_entry_ptr& diff_entry)
-    const {return (*diff_entry)._type == to_type(m_type);}
+    const {return (*diff_entry)._type == m_type;}
 
 
   protected:
-    string m_type;
+    Type m_type;
 };
   
 struct diff_entry::is_not_type: unary_function <diff_entry_ptr, bool>
 {
   //! Constructor
-  explicit is_not_type(const string& type)
+  explicit is_not_type(const Type type)
   : m_type(type) {}
   
   //! Predicate 
   virtual bool operator() (const diff_entry_ptr& diff_entry)
-  const {return (*diff_entry)._type != to_type(m_type);}
+  const {return (*diff_entry)._type != m_type;}
   
   
 protected:
-  string m_type;
+  Type m_type;
 };
 
 struct diff_entry::frequency_less_than_two_or_no_show:public unary_function<diff_entry_ptr, bool>
@@ -441,18 +441,6 @@ struct diff_entry::frequency_less_than_two_or_no_show:public unary_function<diff
   }
 };
 
-struct diff_entry::coverage_or_no_show_is_true:public unary_function<diff_entry_ptr,bool>
-{
-  virtual bool operator() (const diff_entry_ptr& diff_entry) const
-  {
-    if ( (*diff_entry).entry_exists("no_show") && from_string<bool>((*diff_entry)["no_show"]) )
-    {
-      return true;
-    }
-    
-    return false;
-  }
-};
 
 struct diff_entry::rejected:public unary_function<diff_entry_ptr,bool>
 {

@@ -1773,6 +1773,35 @@ int breseq_default_action(int argc, char* argv[])
   return 0;
 }
 
+int do_mutate(int argc, char *argv[])
+{
+  AnyOption options("Usage: -g <file.gd> -r <reference.gbk>");
+  options("genomediff,g", "genome diff file");
+  options("reference,r",".gbk reference sequence file").processCommandArgs(argc, argv);
+
+  if (!options.count("genomediff") ||
+      !options.count("reference")) {
+    options.printUsage();
+    return -1;
+  }
+
+  try {
+    genome_diff gd(options["genomediff"]);
+    cReferenceSequences ref_seq_info;
+
+    LoadGenBankFile(ref_seq_info, from_string<vector<string> >(options["reference"]));
+
+    gd.apply_to_sequences(ref_seq_info);
+
+    ref_seq_info.WriteFASTA("output.gbk");
+
+  } catch(...) {
+    return -1;
+  }
+
+  return 0;
+}
+
 
 
 /*! breseq commands
@@ -1835,6 +1864,8 @@ int main(int argc, char* argv[]) {
     return do_convert_gd( argc_new, argv_new);
   } else if (command == "BAM2ALN") {
     return do_bam2aln( argc_new, argv_new);    
+  } else if (command == "APPLY") {
+    return do_mutate(argc_new, argv_new);
   } else {
     // Not a sub-command. Use original argument list.
     return breseq_default_action(argc, argv);
