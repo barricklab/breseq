@@ -415,15 +415,12 @@ void html_statistics(const string &file_name, const Settings& settings, Summary&
   //Write reference sequence information
   //HTML << "<!-- Write reference sequence information -->" << endl;
   HTML << "<p>" << endl;
-  HTML << "<table border=\"0\" cellspacing=\"1\" cellpadding=\"8\" >" << endl;
+  HTML << "<table border=\"0\" cellspacing=\"1\" cellpadding=\"5\" >" << endl;
   HTML << "<tr>" << th() << 
                     th() << 
                     th("reference sequence") << 
                     th("length") <<
                     th(ALIGN_LEFT, "description") <<
-                    th("DCSC") <<
-                    th("AVG") <<
-                    th("DCPC") <<
           "</tr>" << endl;
              
   size_t total_length = 0;
@@ -461,9 +458,6 @@ void html_statistics(const string &file_name, const Settings& settings, Summary&
     HTML << td(it->m_seq_id);
     HTML << td(ALIGN_RIGHT, commify(to_string(it->m_length)));
     HTML << td(it->m_definition);
-    HTML << td(to_string(summary.unique_coverage[it->m_seq_id].deletion_coverage_seed_cutoff));
-    HTML << td(to_string(summary.unique_coverage[it->m_seq_id].average));
-    HTML << td(to_string(summary.unique_coverage[it->m_seq_id].deletion_coverage_propagation_cutoff));
     HTML << "</tr>";
   }  
   
@@ -490,7 +484,10 @@ void html_statistics(const string &file_name, const Settings& settings, Summary&
 // #   }
 // #   
 // #   print HTML end_table();
-  HTML << "</table>" << endl;  
+  HTML << "</table>" << endl;
+
+  if (settings.deletion_coverage_propagation_cutoff || settings.deletion_coverage_seed_cutoff)
+    HTML << html_deletion_coverage_values_table_string(settings, ref_seq_info, summary);
   
   // Write Execution Times
   const vector<ExecutionTime>& times = settings.execution_times;
@@ -524,6 +521,72 @@ void html_statistics(const string &file_name, const Settings& settings, Summary&
   HTML << "</table>";
   HTML << html_footer();
   HTML.close();
+}
+
+string html_deletion_coverage_values_table_string(const Settings& settings, cReferenceSequences& ref_seq_info, Summary& summary)
+{
+  stringstream ss; //!< Main Build Object in Function
+
+  ss << "<p>";
+  ss << h1("Coverage Values");
+  ss << start_table("border=\"1\" cellspacing=\"0\" cellpadding=\"3\"");
+  // Table Header
+  ss << "<tr>";
+  ss << th("Parameter");
+
+  cReferenceSequences::iterator it;
+  for(it = ref_seq_info.begin(); it != ref_seq_info.end(); it++)
+      ss << th(it->m_seq_id);
+
+  ss << "</tr>";
+
+  // Table Rows  s
+  ss << "<tr>";
+  ss << td("Calculated average");
+  for(it = ref_seq_info.begin(); it != ref_seq_info.end(); it++)
+    ss << td(to_string(summary.unique_coverage[it->m_seq_id].average));
+  ss << "</tr>";
+
+  ss << "<tr>";
+  ss << td("Calculated propagation cutoff");
+  for(it = ref_seq_info.begin(); it != ref_seq_info.end(); it++)
+    ss << td(to_string(summary.unique_coverage[it->m_seq_id].deletion_coverage_propagation_cutoff));
+  ss << "</tr>";
+
+  ss << "<tr>";
+  ss << td("Calculated seed cutoff");
+  for(it = ref_seq_info.begin(); it != ref_seq_info.end(); it++)
+    ss << td(to_string(summary.unique_coverage[it->m_seq_id].deletion_coverage_seed_cutoff));
+  ss << "</tr>";
+
+
+  ss << "<tr>";
+  ss << td("User defined propagation cutoff");
+  if (settings.deletion_coverage_propagation_cutoff < 1)
+    ss << td(to_string(settings.deletion_coverage_propagation_cutoff) + "%");
+  else
+    ss << td(to_string(settings.deletion_coverage_propagation_cutoff));
+
+  for(size_t i = 0; i < ref_seq_info.size() - 1; i++)
+    ss << td();
+  ss << "</tr>";
+
+  ss << "<tr>";
+  ss << td("User defined seed cutoff");
+  if (settings.deletion_coverage_seed_cutoff < 1)
+    ss << td(to_string(settings.deletion_coverage_seed_cutoff) + "%");
+  else
+    ss << td(to_string(settings.deletion_coverage_seed_cutoff));
+
+  for(size_t i = 0; i < ref_seq_info.size() - 1; i++)
+    ss << td();
+  ss << "</tr>";
+
+
+
+  ss << "</table>";
+
+  return ss.str();
 }
 
 string breseq_header_string(const Settings& settings)

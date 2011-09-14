@@ -213,6 +213,7 @@ string html_new_junction_table_string
 
 string html_genome_diff_item_table_string(const Settings& settings, genome_diff& gd, 
                                         diff_entry_list& list_ref);
+string html_deletion_coverage_values_table_string(const Settings& settings, cReferenceSequences& ref_seq_info, Summary& summary);
 /*-----------------------------------------------------------------------------
  * Helper Functions For Tables 
  *-----------------------------------------------------------------------------*/
