@@ -213,7 +213,6 @@ namespace breseq {
     
     for (uint16_t from_chr = 0; from_chr<=255; from_chr++) {
 
-      // Note that sequences are always loaded with Illumina 64 offset to prevent negatives...
       int32_t from_quality = from_chr - from_chr_offset;
       
       // Calculate the probability of error
