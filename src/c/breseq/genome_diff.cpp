@@ -919,7 +919,7 @@ diff_entry genome_diff::_line_to_item(const string& line)
 
   if(spec.empty())
   {
-    cerr << "Type " << item._type << "is not recognized for line # :"<< endl << line;
+    cerr << "Type " << to_string(item._type) << "is not recognized for line # :"<< endl << line;
     assert(false);
   }
 
@@ -931,7 +931,7 @@ diff_entry genome_diff::_line_to_item(const string& line)
 
     if(next.empty())
     {
-      cerr << "Number of required items is less than expected for type " << item._type << " line:" << endl << line; 
+     WARN("Number of required items is less than expected for type " + to_string(item._type));
       assert(false);
     }
 
@@ -1130,12 +1130,13 @@ void genome_diff::apply_to_sequences(cReferenceSequences& ref_seq_info)
 
 //	foreach my $mut ($self->mutation_list)
 //	{
+  diff_entry_list mutation_list = this->mutation_list();
   diff_entry_list::iterator itr_mut;
-  for (itr_mut = this->mutation_list().begin(); itr_mut != this->mutation_list().end(); itr_mut++) {
+  for (itr_mut = mutation_list.begin(); itr_mut != mutation_list.end(); itr_mut++) {
     const diff_entry& mut(**itr_mut);
-    const uint32_t& position = from_string<uint32_t>(mut[POSITION]);
+    uint32_t position = from_string<uint32_t>(mut[POSITION]);
 //		die "Mutation on unknown reference sequence: $mut->{seq_id}\n" if (!defined $new_ref_strings->{$mut->{seq_id}});
-    ASSERTM(ref_seq_info.ref_strings.count(mut[SEQ_ID]) > 0, "Mutation on unkown reference sequence:" + mut[SEQ_ID]);
+    ref_seq_info.seq_id_to_index(mut[SEQ_ID]);
 //		print Dumper($mut) if ($verbose);
 //		if ($mut->{type} eq 'SNP')
 //		{
@@ -1151,7 +1152,7 @@ void genome_diff::apply_to_sequences(cReferenceSequences& ref_seq_info)
             cout << "SNP: 1 => " << mut[NEW_SEQ].length() << endl;
             cout << "+" << position - 1 << " + " << mut[NEW_SEQ] << endl;
           }
-        }
+        } break;
 //		  elsif ($mut->{type} eq 'SUB')
 //		  {
 //		  	substr $new_ref_strings->{$mut->{seq_id}}, $mut->{position}-1, $mut->{size}, $mut->{new_seq};
@@ -1167,7 +1168,8 @@ void genome_diff::apply_to_sequences(cReferenceSequences& ref_seq_info)
             cout << "SUB: " << size << " => " << mut[NEW_SEQ].length() << endl;
             cout << "+" << position - 1 << " + " << mut[NEW_SEQ] << endl;
           }
-        }
+        } break;
+
 //		  elsif ($mut->{type} eq 'INS')
 //		  {
 //		  	##notice that this is AFTER the position
@@ -1183,7 +1185,7 @@ void genome_diff::apply_to_sequences(cReferenceSequences& ref_seq_info)
             cout << "INS: 0 => " << mut[NEW_SEQ].length() << endl;
             cout << "+" << position - 1 << " + " << mut[NEW_SEQ] << endl;
           }
-        }
+        } break;
 //		  elsif ($mut->{type} eq 'DEL')
 //		  {
 //		  	substr $new_ref_strings->{$mut->{seq_id}}, $mut->{position}-1, $mut->{size}, '';
@@ -1197,9 +1199,9 @@ void genome_diff::apply_to_sequences(cReferenceSequences& ref_seq_info)
           ref_seq_info.replace_sequence(mut[SEQ_ID], position - 1, size, "");
           if (verbose) {
             cout << "DEL: " << size << " => 0" << endl;
-            cout << "+" << position - 1 << " + " << mut[NEW_SEQ] << endl;
+            cout << "+" << position - 1 << endl;
           }
-        }
+        } break;
 //		  elsif ($mut->{type} eq 'AMP')
 //		  {
 //		  	my $dup = substr $new_ref_strings->{$mut->{seq_id}}, $mut->{position}-1, $mut->{size};
@@ -1223,7 +1225,7 @@ void genome_diff::apply_to_sequences(cReferenceSequences& ref_seq_info)
             cout << "AMP: 0" << " => " << dup.length() << endl;
             cout << "+" << position - 1 << " + " << dup << endl;
           }
-        }
+        } break;
 //		  elsif ($mut->{type} eq 'INV')
 //		  {
 //		  	die "INV: mutation type not handled yet\n";
@@ -1231,7 +1233,7 @@ void genome_diff::apply_to_sequences(cReferenceSequences& ref_seq_info)
         case INV:
         {
           WARN("INV: mutation type not handled yet");
-        }
+        } break;
 //		  elsif ($mut->{type} eq 'MOB')
 //		  {
 //		  	die "MOB: does not handle ins_start, ins_end, del_start, del_end yet." if (($mut->{ins_start} != 0) || ($mut->{ins_end} != 0) || ($mut->{del_start} != 0) || ($mut->{del_end} != 0) );
@@ -1264,8 +1266,7 @@ void genome_diff::apply_to_sequences(cReferenceSequences& ref_seq_info)
             cout << "MOB: 0" << " => " << duplicate_sequence.length() + seq_string.length() << endl;
             cout << "+" << position << " + " << duplicate_sequence + seq_string << endl;
           }
-
-        }
+        } break;
 //		  elsif ($mut->{type} eq 'CON')
 //		  {
 //		  	$mut->{region} =~ m/^(.+):(.+)-(.+)$/ or die "Could not understand CON replacement region: $mut->{region}";
@@ -1311,7 +1312,7 @@ void genome_diff::apply_to_sequences(cReferenceSequences& ref_seq_info)
           cout << "Replace " << displaced_sequence << endl;
           cout << "With " << replacing_sequence << endl;
           cout << "New Length: " << ref_seq_info.get_sequence_length(mut[SEQ_ID]) << endl;
-        }
+        } break;
 
 
 
@@ -1321,7 +1322,7 @@ void genome_diff::apply_to_sequences(cReferenceSequences& ref_seq_info)
 //		  }
         default:
         {
-          WARN("Can't handle mutation type: " + mut._type);
+          WARN("Can't handle mutation type: " + to_string(mut._type));
         }
 //		  ## we have to update all of the other positions
 //		  $self->shift_positions($mut);
@@ -1439,11 +1440,11 @@ int32_t diff_entry::mutation_size_change()
 {
 
   switch (this->_type) {
-    case SNP: return 0;
-    case SUB: return (*this)[NEW_SEQ].length() - from_string<uint32_t>((*this)[SIZE]);
-    case INS: return (*this)[NEW_SEQ].length();
-    case DEL: return -(from_string<uint32_t>((*this)[SIZE]));
-    case AMP: return from_string<uint32_t>((*this)[SIZE]) * (from_string<uint32_t>((*this)["new_copy_number"]) - 1);
+    case SNP: return 0; break;
+    case SUB: return (*this)[NEW_SEQ].length() - from_string<uint32_t>((*this)[SIZE]); break;
+    case INS: return (*this)[NEW_SEQ].length(); break;
+    case DEL: return -(from_string<uint32_t>((*this)[SIZE])); break;
+    case AMP: return from_string<uint32_t>((*this)[SIZE]) * (from_string<uint32_t>((*this)["new_copy_number"]) - 1); break;
 
     case MOB:
     {
@@ -1457,6 +1458,7 @@ int32_t diff_entry::mutation_size_change()
       if (this->entry_exists("ins_end"))
         size += (*this)["ins_end"].length();
       return size;
+      break;
     }
 
     case CON:
@@ -1466,10 +1468,24 @@ int32_t diff_entry::mutation_size_change()
       int32_t size = from_string<uint32_t>((*this)[SIZE]);
       int32_t new_size = from_string<uint32_t>((*this)[END]) - from_string<uint32_t>((*this)[START]);
       return  size - new_size;
+      break;
     }
     default: return UNDEFINED_INT32;
   }
 }
+
+void LoadGenomeDiffMutations (ifstream& in, diff_entry& item)
+{
+  string line;
+  while(!in.eof()) {
+    getline(in, line);
+  }
+
+
+
+
+}
+
 
 }//namespace bresesq
 

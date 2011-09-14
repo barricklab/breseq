@@ -928,10 +928,13 @@ namespace breseq {
       
       ifstream in(it->c_str(), ios_base::in);
       ASSERTM(!in.fail(), "Could not open GenBank file: " + *it); 
-      
+
+      uint32_t on_seq_id = 0;
+
       while (LoadGenBankFileHeader(in, rs)) {
         LoadGenBankFileSequenceFeatures(in, rs.back());
         LoadGenBankFileSequence(in, rs.back());
+        rs.set_seq_id_to_index(rs.back().m_seq_id, on_seq_id++);//TODO Write setter for this
       }
     }
   }

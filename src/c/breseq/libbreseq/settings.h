@@ -71,18 +71,18 @@ namespace breseq
 
 	class Coverage : public Storable
 	{
-  public:
-		double junction_accept_score_cutoff;
-    double deletion_coverage_propagation_cutoff;
-    double deletion_coverage_seed_cutoff;
-		double junction_coverage_cutoff;
-		double junction_keep_score_cutoff;
-		double nbinom_size_parameter;
-		double nbinom_mean_parameter;
-		double nbinom_prob_parameter;
-		double average;
-		double variance;
-		double dispersion;
+			public:
+				double junction_accept_score_cutoff;
+				double deletion_coverage_propagation_cutoff;
+				double deletion_coverage_seed_cutoff;
+				double junction_coverage_cutoff;
+				double junction_keep_score_cutoff;
+				double nbinom_size_parameter;
+				double nbinom_mean_parameter;
+				double nbinom_prob_parameter;
+				double average;
+				double variance;
+				double dispersion;
     
     void serialize(ofstream& f)
     {

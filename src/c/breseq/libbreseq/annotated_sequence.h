@@ -235,6 +235,10 @@ namespace breseq {
 	void annotate_mutations(genome_diff& gd, bool only_muts = false);
   void polymorphism_statistics(Settings& settings, Summary& summary);
   string repeat_example(const string& repeat_name, int8_t strand);
+  void set_seq_id_to_index(const string& seq_id, int id)
+  {
+    m_seq_id_to_index[seq_id] = id;
+  }
   };
   
   /*! Helper function for creating cReferenceSequences

@@ -1793,7 +1793,7 @@ int do_mutate(int argc, char *argv[])
 
     gd.apply_to_sequences(ref_seq_info);
 
-    ref_seq_info.WriteFASTA("output.gbk");
+    ref_seq_info.WriteFASTA("output.fasta");
 
   } catch(...) {
     return -1;
