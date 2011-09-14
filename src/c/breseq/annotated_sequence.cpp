@@ -414,10 +414,9 @@ namespace breseq {
 		("GGG", 'G')
 	;
 	
-	char cReferenceSequences::bridge_translate(string seq)
+  char cReferenceSequences::translate(string seq)
 	{
-		assert(translation_table_11.count(seq) > 0);
-		return translation_table_11[seq];
+		return (translation_table_11.count(seq) == 0) ? '?' : translation_table_11[seq];
 	}
 
   void cReferenceSequences::annotate_1_mutation(diff_entry& mut, uint32_t start, uint32_t end, bool repeat_override)
@@ -569,14 +568,14 @@ namespace breseq {
 				: reverse_complement(ref_string.substr(gene.end - 3 * from_string<uint32_t>(mut["aa_position"]), 3));
 
 			mut["codon_ref_seq"] = codon_seq;
-			mut["aa_ref_seq"] = bridge_translate(mut["codon_ref_seq"]);
+			mut["aa_ref_seq"] = translate(mut["codon_ref_seq"]);
 
 			mut["codon_new_seq"] = codon_seq;
 			//#remember to revcom the change if gene is on opposite strand
 			mut["codon_new_seq"][from_string<uint32_t>(mut["codon_position"]) - 1] = gene.strand ? 
         mut["new_seq"][0]
 				: reverse_complement(mut["new_seq"])[0];
-			mut["aa_new_seq"] =  bridge_translate(mut["codon_new_seq"]);
+			mut["aa_new_seq"] =  translate(mut["codon_new_seq"]);
 
 			mut["snp_type"] = (mut["aa_ref_seq"] != mut["aa_new_seq"]) ? "nonsynonymous" : "synonymous";
 		}

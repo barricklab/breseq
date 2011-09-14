@@ -2811,7 +2811,7 @@ ORIGIN
     20461 ccagggcggc aaaaacgtcc gagacgaatg ccaggtcatc tgaaacagca gcggaacgga
     20521 gcgcctctgc cgcggcagac gcaaaaacag cggcggcggg gagtgcgtca acggcatcca
     20581 cgaaggcgac agaggctgcg ggaagtgcgg tatcagcatc gcagagcaaa agtgcggcag
-    20641 aagcggcggc aatacgtgca aaaaattcgg caaaacgtgc agaagatata gcttcagctg
+    20641 aagcggcggc aatacgtgca naaaattcgg caaaacgtgc agaagatata gcttcagctg
     20701 tcgcgcttga ggatgcggac acaacgagaa aggggatagt gcagctcagc agtgcaacca
     20761 acagcacgtc tgaaacgctt gctgcaacgc caaaggcggt taaggtggta atggatgaaa
     20821 cgaacagaaa agcccactgg acagtccggc actgaccgga acgccaacag caccaaccgc
@@ -3255,7 +3255,7 @@ ORIGIN
     47101 caaaggtata gtaatatctt ttatgttcat ggatatttgt aacccatcgg aaaactcctg
     47161 ctttagcaag attttccctg tattgctgaa atgtgatttc tcttgatttc aacctatcat
     47221 aggacgtttc tataagatgc gtgtttcttg agaatttaac atttacaacc tttttaagtc
-    47281 cttttattaa cacggtgtta tcgttttcta acacgatgtg aatattatct gtggctagat
+    47281 cttttattaa cacggtgtta tcgttttcta acacgangtg aatattatct gtggctagat
     47341 agtaaatata atgtgagacg ttgtgacgtt ttagttcaga ataaaacaat tcacagtcta
     47401 aatcttttcg cacttgatcg aatatttctt taaaaatggc aacctgagcc attggtaaaa
     47461 ccttccatgt gatacgaggg cgcgtagttt gcattatcgt ttttatcgtt tcaatctggt
