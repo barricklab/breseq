@@ -229,7 +229,7 @@ namespace breseq {
 
   static cSequenceFeature* find_closest_repeat_region(uint32_t position, vector<cSequenceFeature>& repeat_list_ref, uint32_t max_distance, int32_t direction);
 	static cSequenceFeature* get_overlapping_feature(vector<cSequenceFeature>& feature_list_ref, uint32_t pos);
-	static char bridge_translate(string seq);
+	static char translate(string seq);
 	static void find_nearby_genes(vector<Gene>& gene_list_ref, uint32_t pos_1, uint32_t pos_2, vector<Gene>& within_genes, vector<Gene>& between_genes, vector<Gene>& inside_left_genes, vector<Gene>& inside_right_genes, Gene& prev_gene, Gene& next_gene);
 	void annotate_1_mutation(diff_entry& mut, uint32_t start, uint32_t end, bool repeat_override = false);
 	void annotate_mutations(genome_diff& gd, bool only_muts = false);
