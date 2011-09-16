@@ -53,12 +53,11 @@ int do_bam2aln(int argc, char* argv[]) {
   ("help,h", "produce this help message", TAKES_NO_ARGUMENT)
   ("bam,b", "bam file containing sequences to be aligned", "data/reference.bam")
 	("fasta,f", "FASTA file of reference sequence", "data/reference.fasta")
-  ("output,o", "name of output file")
+  ("output,o", "output to file [region.html]")
   ("region,r", "region to print (accession:start-end)", "")
   ("max-reads,n", "maximum number of reads to show in alignment", 200)
   ("quality-score-cutoff,c", "quality score cutoff", 0)
   ("stdout", "write output to stdout", TAKES_NO_ARGUMENT)
-  ("output,o", "output to file [region.html]")
   .processCommandArgs(argc, argv);
   
   
@@ -111,6 +110,173 @@ int do_bam2aln(int argc, char* argv[]) {
 		return -1;
 	}	return 0;
 }
+
+/*! bam2aln
+ Draw HTML alignment from BAM
+ */
+int do_bam2cov(int argc, char* argv[]) {
+  // setup and parse configuration options:
+	AnyOption options("Usage: bam2aln --bam=<reference.bam> --fasta=<reference.fasta> --region=<accession:start-end> --output=<output.html> [--max-reads=1000]");
+	options
+  ("help,h", "produce this help message", TAKES_NO_ARGUMENT)
+  ("bam,b", "bam file containing sequences to be aligned", "data/reference.bam")
+	("fasta,f", "FASTA file of reference sequence", "data/reference.fasta")
+  ("output,o", "name of output file", "output.png")
+  ("region,r", "region to print (accession:start-end)", "")
+  ("pdf", "create PDF, rather than PNG output", TAKES_NO_ARGUMENT)
+  ("table,t", "output table, rather than plot", "")
+  ("total-only,1", "only plot total", "")
+  ("resolution", "resolution", 600)
+  ("tile", "size of tiles", "")
+  ("tile-overlap", "overlap between tiles", "")
+  .processCommandArgs(argc, argv);
+  
+  
+	// make sure that the config options are good:
+	if(options.count("help")
+		 || !options.count("region")
+     || !file_exists(options["fasta"].c_str())
+     || !file_exists(options["bam"].c_str()) )
+  {
+		options.printUsage();
+		return -1;
+	}
+  
+  // create empty settings object to have R script name
+  Settings settings;
+    
+  // generate coverage table/plot!
+	try {
+		coverage_output co(
+                        options["bam"],
+                        options["fasta"],
+                        settings.coverage_plot_r_script_file_name
+                        );
+    
+    // Need code to set options and handle looping on tiling...
+    
+    co.plot(options["region"], options["output"], from_string<uint32_t>(options["resolution"]));
+    
+    
+  } catch(...) {
+		// failed;
+		return -1;
+	}	return 0;
+}
+
+//@JEB - need to finish porting some more functionality
+
+//my (@regions) = @ARGV;
+//
+//#handle default paths
+//$bam_path = 'reference.bam' if (!$bam_path && -e 'reference.bam');
+//$bam_path = 'data/reference.bam' if (!$bam_path && -e 'data/reference.bam');
+//
+//$fasta_path = 'reference.fasta' if (!$fasta_path && -e 'reference.fasta');
+//$fasta_path = 'data/reference.fasta' if (!$fasta_path && -e 'data/reference.fasta');
+//
+//die "No BAM file defined.\n" if (!$bam_path);
+//die "No fasta file defined.\n" if (!$fasta_path);
+//
+//my $co = Breseq::CoverageOutput->new(-fasta => $fasta_path, -bam => $bam_path);
+//
+//### Create regions that tile the genome with this size
+//if ($tile)
+//{
+//	my $bam = $co->{bam};
+//	my @targets = $bam->seq_ids;
+//	
+//	foreach my $seq_id (@targets)
+//	{
+//		my $reference_length = $bam->length($seq_id);
+//		my $start = 1;
+//		while ($start < $reference_length)
+//		{
+//## ends will be fixed later automatically for when they go too far
+//			my $end = $start + $tile - 1;
+//			
+//			my $offset_start = $start - $tile_overlap;
+//			$offset_start = 1 if ($offset_start < 1);
+//			
+//			my $offset_end = $end + $tile_overlap;
+//			$offset_end = $reference_length if ($offset_end > $reference_length);
+//			
+//			my $region = "$seq_id:$offset_start-$offset_end";
+//			push @regions, $region;
+//			$start += $tile;
+//		}
+//	}
+//	print STDERR Dumper(@regions);
+//	
+//}
+//
+//die "No regions defined.\n" if (scalar @regions == 0);
+//
+//
+//print STDOUT "region\tbp\tavg\tSE\n" if ($table_mode);
+//
+//foreach my $region (@regions)
+//{
+//  
+//#figure out the output file name
+//	my $this_output_file = "$region";
+//	if (defined $output_path)
+//	{
+//#if there is just one region, use this file name straight up if it is not a directory
+//		if ((scalar @regions == 1) && (!-d $output_path))
+//		{
+//			$this_output_file = $output_path;
+//		}
+//		else
+//		{
+//			die "Output directory (-o) does not exist: $output_path\n" if (!-d $output_path);
+//			$this_output_file = "$output_path/$region";
+//		}
+//	}
+//  
+//##Tabulate coverage
+//	if ($table_mode)
+//	{	
+//		$this_output_file .= '.tab';
+//    
+//		$co->tabulate_coverage($this_output_file, $region);
+//    
+//		open COV, "<$this_output_file" or die;
+//		my @ll = <COV>;
+//    
+//		chomp @ll;
+//		shift @ll; #header
+//		my $n = scalar @ll;
+//		my $avg = 0;
+//		my $variance = 0;
+//		foreach my $l (@ll)
+//		{
+//			my @sl = split "\t", $l;
+//			$avg += $sl[1] + $sl[2];
+//		}
+//		$avg /= $n;
+//    
+//		foreach my $l (@ll)
+//		{
+//			my @sl = split "\t", $l;
+//			$variance += ($avg - ($sl[1] + $sl[2]))**2;
+//		}
+//    
+//		my $ssd = (1/($n-1) * $variance)**0.5;
+//		my $sem = $ssd / $n**0.5;
+//		close COV;
+//    
+//		print STDOUT "$region\t$n\t$avg\t$sem\n";
+//	}
+//  
+//## Make drawings
+//	else
+//	{
+//		$co->plot_coverage($region, $this_output_file, {verbose=>$verbose, resolution=>$resolution, pdf => $pdf, total_only => $total_only, use_c_tabulate_coverage => 1});
+//	}
+//}
+
+
 
 
 
@@ -1777,7 +1943,9 @@ int do_mutate(int argc, char *argv[])
 {
   AnyOption options("Usage: -g <file.gd> -r <reference.gbk>");
   options("genomediff,g", "genome diff file");
-  options("reference,r",".gbk reference sequence file").processCommandArgs(argc, argv);
+  options("reference,r",".gbk reference sequence file");
+  options("output,o","output FASTA file", "output.fasta");
+  options.processCommandArgs(argc, argv);
 
   if (!options.count("genomediff") ||
       !options.count("reference")) {
@@ -1793,7 +1961,7 @@ int do_mutate(int argc, char *argv[])
 
     gd.apply_to_sequences(ref_seq_info);
 
-    ref_seq_info.WriteFASTA("output.fasta");
+    ref_seq_info.WriteFASTA(options["output"]);
 
   } catch(...) {
     return -1;
@@ -1863,8 +2031,10 @@ int main(int argc, char* argv[]) {
   } else if (command == "VCF2GD") {
     return do_convert_gd( argc_new, argv_new);
   } else if (command == "BAM2ALN") {
-    return do_bam2aln( argc_new, argv_new);    
-  } else if (command == "APPLY") {
+    return do_bam2aln( argc_new, argv_new);  
+  } else if (command == "BAM2COV") {
+    return do_bam2cov( argc_new, argv_new);    
+  } else if ((command == "APPLY") || (command == "MUTATE")) {
     return do_mutate(argc_new, argv_new);
   } else {
     // Not a sub-command. Use original argument list.

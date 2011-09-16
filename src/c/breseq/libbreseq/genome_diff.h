@@ -62,7 +62,12 @@ extern const char* _SIDE_KEY_JC;
 
 
 // Types of diff entries:
-enum Type {TYPE_UNKOWN, SNP, SUB, DEL, INS, MOB, AMP, INV, CON, NOT_MUTATION, RA, MC, JC, UN};
+enum Type {TYPE_UNKOWN, SNP, SUB, DEL, INS, MOB, AMP, INV, CON, NOT_MUTATION, RA, MC, JC, UN, CURA, FPOS, PHYL, TSEQ, PFLP, RFLP, PFGE};
+  
+// @TODO: add proper functions like is_mutation(), is_evidence(), is_validation()
+// also rename this type to something less generic (namespace collision possibilities). Like "gd_entry_type";
+// I don't like comparing to NOT_MUTATION, since there are three kinds of values (now).
+  
 inline string to_string(const Type type)
 {
   switch(type) {
@@ -74,14 +79,25 @@ inline string to_string(const Type type)
     case AMP: return "AMP";
     case INV: return "INV";
     case CON: return "CON";
+      
     case RA: return "RA";
     case MC: return "MC";
     case JC: return "JC";
     case UN: return "UN";
+      
+    case CURA: return "CURA";
+    case FPOS: return "FPOS";
+    case PHYL: return "PHYL";
+    case TSEQ: return "TSEQ";  
+    case PFLP: return "PFLP";  
+    case RFLP: return "RFLP";  
+    case PFGE: return "PFGE";  
+      
     default: return "?";
   }
 }
 
+//@JEB - would be more efficient with a map
 inline Type to_type(const string& type)
 {
   if (type == "SNP") return SNP;
@@ -92,11 +108,21 @@ inline Type to_type(const string& type)
   if (type == "AMP") return AMP;
   if (type == "INV") return INV;
   if (type == "CON") return CON;
+  
   if (type == "RA") return RA;
   if (type == "MC") return MC;
   if (type == "JC") return JC;
   if (type == "UN") return UN;
-return TYPE_UNKOWN;
+  
+  if (type == "CURA") return CURA;
+  if (type == "FPOS") return FPOS;
+  if (type == "PHYL") return PHYL;
+  if (type == "TSEQ") return TSEQ;
+  if (type == "PFLP") return PFLP;
+  if (type == "RFLP") return RFLP;
+  if (type == "PFGE") return PFGE;
+
+  return TYPE_UNKOWN;
 }
 
 enum Strand {POS_STRAND = 1, NEG_STRAND = -1};
@@ -177,7 +203,7 @@ struct diff_entry {
   vector<string> get_reject_reasons();
   
   size_t number_reject_reasons();
-  int32_t mutation_size_change();
+  int32_t mutation_size_change(cReferenceSequences& ref_seq_info);
 
   struct by_scores;
   struct is_type;
@@ -305,7 +331,7 @@ public:
   bool interval_un (const uint32_t& start, const uint32_t& end);
 
   void apply_to_sequences(cReferenceSequences &ref_seq_info);
-  void shift_positions(diff_entry_ptr& item);
+  void shift_positions(diff_entry& item, cReferenceSequences& ref_seq_info);
 
   void strcopy(char* arg1, const char* arg2);
 

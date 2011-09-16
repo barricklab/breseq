@@ -36,7 +36,7 @@
       displayScale = "1.00"
       launchStyle = "0"
       useCustomWorkingDirectory = "YES"
-      customWorkingDirectory = "/Users/jbarrick/tmp/REL10938"
+      customWorkingDirectory = "/Users/jbarrick/src/breseq"
       buildConfiguration = "Debug">
       <BuildableProductRunnable>
          <BuildableReference
@@ -49,27 +49,7 @@
       </BuildableProductRunnable>
       <CommandLineArguments>
          <CommandLineArgument
-            argument = "-o tests/bull_1 -r tests/bull_1/../data/bull/bull_1.gbk tests/bull_1/../data/bull/bull_1.fastq"
-            isEnabled = "NO">
-         </CommandLineArgument>
-         <CommandLineArgument
-            argument = "-r NC_000913.2.gbk SRR023512.fastq"
-            isEnabled = "NO">
-         </CommandLineArgument>
-         <CommandLineArgument
             argument = "-o tests/lambda_mixed_pop -r tests/lambda_mixed_pop/../data/lambda/lambda.gbk tests/lambda_mixed_pop/../data/lambda/lambda_mixed_population.fastq"
-            isEnabled = "NO">
-         </CommandLineArgument>
-         <CommandLineArgument
-            argument = "-o tests/lambda_mult_ref_read -r tests/lambda_mult_ref_read/../data/lambda/lambda.1.gbk -r tests/lambda_mult_ref_read/../data/lambda/lambda.2.gbk -r tests/lambda_mult_ref_read/../data/lambda/lambda.3.gbk -r tests/lambda_mult_ref_read/../data/lambda/lambda.4.gbk -r tests/lambda_mult_ref_read/../data/lambda/lambda.5.gbk tests/lambda_mult_ref_read/../data/lambda/lambda_mixed_population.1.fastq tests/lambda_mult_ref_read/../data/lambda/lambda_mixed_population.2.fastq tests/lambda_mult_ref_read/../data/lambda/lambda_mixed_population.3.fastq tests/lambda_mult_ref_read/../data/lambda/lambda_mixed_population.4.fastq tests/lambda_mult_ref_read/../data/lambda/lambda_mixed_population.5.fastq"
-            isEnabled = "NO">
-         </CommandLineArgument>
-         <CommandLineArgument
-            argument = "-o tests/lambda_mixed_pop_bad_contigs -r tests/lambda_mixed_pop_bad_contigs/../data/lambda/lambda.gbk -r tests/lambda_mixed_pop_bad_contigs/../data/lambda/other.gbk -r tests/lambda_mixed_pop_bad_contigs/../data/REL606/REL606.fragment.gbk tests/lambda_mixed_pop_bad_contigs/../data/lambda/lambda_mixed_population.fastq"
-            isEnabled = "NO">
-         </CommandLineArgument>
-         <CommandLineArgument
-            argument = "CONVERT_FASTQ -1 SANGER -2 ILLUMINA_1.3+ -i FC20GCB_7_1_pf_REL10938.fastq -o test.fastq"
             isEnabled = "YES">
          </CommandLineArgument>
       </CommandLineArguments>

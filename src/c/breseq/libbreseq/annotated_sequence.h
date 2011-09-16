@@ -75,9 +75,35 @@ namespace breseq {
       void ReadCoords(string& s, ifstream& in);
       void ReadTag(string& tag, string& s, ifstream& in);
   };
-
   
+  //!< Subclass of reference features with more information
+  class Gene : public cSequenceFeature {
+  public:
+    string name;
+    string product;
+    string type;
+    uint32_t start;
+    uint32_t end;
+    bool strand;
+    bool pseudogene; 
+    
+    Gene() {};
+    Gene(cSequenceFeature& src)
+    {
+      name = src["name"];
+      product = src["product"];
+      type = src["type"];
+      start = src.m_start;
+      end = src.m_end;
+      strand = (src.m_strand >= 1);
+      pseudogene = false;
+    }
+  };
 
+  typedef counted_ptr<Gene> cGenePtr;
+  typedef counted_ptr<cSequenceFeature> cSequenceFeaturePtr;
+  typedef vector<cSequenceFeaturePtr> cSequenceFeatureList;
+  
 	/*! Sequence class.
 	 */   
    
@@ -88,8 +114,13 @@ namespace breseq {
       string m_definition, m_version, m_seq_id;
     
       cFastaSequence m_fasta_sequence;            //!< Nucleotide sequence
-      vector<cSequenceFeature> m_features;  //!< List of sequence features
-
+    
+      // Features are stored as counted pointers so that we can have ready-made lists
+      // of different types of features. 
+      cSequenceFeatureList m_features;    //!< Full list of sequence features
+      cSequenceFeatureList m_genes;       //!< Subset of features
+      cSequenceFeatureList m_repeats;     //!< Subset of features
+    
     public:
     
       //Constructor for empty object
@@ -101,19 +132,19 @@ namespace breseq {
         m_features(0) {} ;
     
       // Utility to get yop strand sequence
-      string get_sequence(uint32_t start_1, uint32_t end_1) 
+      string get_sequence_1(uint32_t start_1, uint32_t end_1) 
       {
         return m_fasta_sequence.m_sequence.substr(start_1 - 1, end_1 - start_1 + 1);
       }
 
-      void replace_sequence(uint32_t start_1, uint32_t end_1, const string &replacement_seq)
+      void replace_sequence_1(uint32_t start_1, uint32_t end_1, const string &replacement_seq)
       {
-        m_fasta_sequence.m_sequence.replace(start_1, end_1, replacement_seq);
+        m_fasta_sequence.m_sequence.replace(start_1-1, end_1-1, replacement_seq);
       }
 
-      void insert_sequence(uint32_t pos, const string &insertion_seq)
+      void insert_sequence_1(uint32_t pos_1, const string &insertion_seq)
       {
-        m_fasta_sequence.m_sequence.insert(pos, insertion_seq);
+        m_fasta_sequence.m_sequence.insert(pos_1-1, insertion_seq);
       }
 
       uint32_t get_sequence_length()
@@ -164,24 +195,38 @@ namespace breseq {
       return ret_val;
     }
     
-    //!< Convert 
-    uint32_t seq_id_to_index(const string& seq_id) 
+    //!< These gymnastics allow us to use [] to get a sequence by target_id (uint_32t) or by seq_id (string)
+    
+    void set_seq_id_to_index(const string& seq_id, int id)
+      { m_seq_id_to_index[seq_id] = id; }
+    
+    uint32_t seq_id_to_index(const string& seq_id)
       { ASSERT(m_seq_id_to_index.count(seq_id)); return m_seq_id_to_index[seq_id]; };
 
+    cAnnotatedSequence& operator[](const size_t target_id)
+      { return this->at(target_id); }
+ 
+    const cAnnotatedSequence& operator[](const size_t target_id) const
+    { return this->at(target_id); }
+    
+    cAnnotatedSequence& operator[](const string& seq_id)
+      { ASSERT(m_seq_id_to_index.count(seq_id)); return this->at(m_seq_id_to_index[seq_id]); }
+
+    
     //!< Utility to get sequences by seq_id
-    string get_sequence(const string& seq_id, uint32_t start_1, uint32_t end_1) 
+    string get_sequence_1(const string& seq_id, uint32_t start_1, uint32_t end_1) 
     {
-      return (*this)[seq_id_to_index(seq_id)].get_sequence(start_1, end_1);
+      return (*this)[seq_id_to_index(seq_id)].get_sequence_1(start_1, end_1);
     }
 
-    void replace_sequence(const string& seq_id, uint32_t start_1, uint32_t end_1, const string& replacement_seq)
+    void replace_sequence_1(const string& seq_id, uint32_t start_1, uint32_t end_1, const string& replacement_seq)
     {
-      (*this)[seq_id_to_index(seq_id)].replace_sequence(start_1, end_1, replacement_seq);
+      (*this)[seq_id_to_index(seq_id)].replace_sequence_1(start_1, end_1, replacement_seq);
     }
 
-    void insert_sequence(const string& seq_id, uint32_t pos, const string &insertion_seq)
+    void insert_sequence_1(const string& seq_id, uint32_t pos, const string &insertion_seq)
     {
-      (*this)[seq_id_to_index(seq_id)].insert_sequence(pos, insertion_seq);
+      (*this)[seq_id_to_index(seq_id)].insert_sequence_1(pos, insertion_seq);
     }
 
     uint32_t get_sequence_length(const string& seq_id)
@@ -196,49 +241,46 @@ namespace breseq {
         return_value.push_back(it->m_seq_id);
       return return_value;
     }
+    
+    // This is a duplicate of a function in pileup.h for when
+    // we don't have a BAM available.
+    void parse_region(const string& region, uint32_t& target_id, uint32_t& start_pos_1, uint32_t& end_pos_1)
+    {
+      
+      vector<string> split_region = split_on_any(region, ":-");
+      ASSERTM(split_region.size() != 3, "Unrecognized region: " + region + "\n(Expected seq_id:start-end)");
+
+      target_id = seq_id_to_index(split_region[0]);
+      start_pos_1 = from_string<uint32_t>(split_region[1]);
+      end_pos_1 = from_string<uint32_t>(split_region[2]);
+    }
+
 
     map<string,int32_t> seq_order;
     map<string,string> trims;
     map<string,string> ref_strings;
+    
+    static map<string,char> translation_table_11;
 
-    class Gene : public cSequenceFeature {
-	  public:
-		string name;
-		string product;
-		string type;
-		uint32_t start;
-		uint32_t end;
-		bool strand;
-		bool pseudogene; 
+    static cSequenceFeature* find_closest_repeat_region(uint32_t position, vector<cSequenceFeaturePtr>& repeat_list_ref, uint32_t max_distance, int32_t direction);
+    static cSequenceFeature* get_overlapping_feature(vector<cSequenceFeaturePtr>& feature_list_ref, uint32_t pos);
+    static char translate(string seq);
+    static void find_nearby_genes(
+                                  cSequenceFeatureList& gene_list_ref, 
+                                  uint32_t pos_1, 
+                                  uint32_t pos_2, 
+                                  vector<Gene>& within_genes, 
+                                  vector<Gene>& between_genes, 
+                                  vector<Gene>& inside_left_genes, 
+                                  vector<Gene>& inside_right_genes,
+                                  Gene& prev_gene, 
+                                  Gene& next_gene);
+    void annotate_1_mutation(diff_entry& mut, uint32_t start, uint32_t end, bool repeat_override = false);
+    void annotate_mutations(genome_diff& gd, bool only_muts = false);
+    void polymorphism_statistics(Settings& settings, Summary& summary);
+    string repeat_example(const string& repeat_name, int8_t strand);
 
-		Gene() {};
-		Gene(cSequenceFeature& src)
-		{
-			name = src["name"];
-			product = src["product"];
-			type = src["type"];
-			start = src.m_start;
-			end = src.m_end;
-			strand = (src.m_strand >= 1);
-      pseudogene = false;//TODO @JEB this is never declared
-		}
-	};
-	map<string,vector<Gene> > gene_lists;
-  map<string, vector<cSequenceFeature> > repeat_lists;
-	static map<string,char> translation_table_11;
-
-  static cSequenceFeature* find_closest_repeat_region(uint32_t position, vector<cSequenceFeature>& repeat_list_ref, uint32_t max_distance, int32_t direction);
-	static cSequenceFeature* get_overlapping_feature(vector<cSequenceFeature>& feature_list_ref, uint32_t pos);
-	static char translate(string seq);
-	static void find_nearby_genes(vector<Gene>& gene_list_ref, uint32_t pos_1, uint32_t pos_2, vector<Gene>& within_genes, vector<Gene>& between_genes, vector<Gene>& inside_left_genes, vector<Gene>& inside_right_genes, Gene& prev_gene, Gene& next_gene);
-	void annotate_1_mutation(diff_entry& mut, uint32_t start, uint32_t end, bool repeat_override = false);
-	void annotate_mutations(genome_diff& gd, bool only_muts = false);
-  void polymorphism_statistics(Settings& settings, Summary& summary);
-  string repeat_example(const string& repeat_name, int8_t strand);
-  void set_seq_id_to_index(const string& seq_id, int id)
-  {
-    m_seq_id_to_index[seq_id] = id;
-  }
+    
   };
   
   /*! Helper function for creating cReferenceSequences

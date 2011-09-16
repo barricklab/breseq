@@ -42,32 +42,34 @@ namespace breseq {
     
     for(vector<cAnnotatedSequence>::iterator it_as = this->begin(); it_as < this->end(); it_as++) {
 
-      for (vector<cSequenceFeature>::iterator it = it_as->m_features.begin(); it < it_as->m_features.end(); it++) {
+      for (vector<cSequenceFeaturePtr>::iterator it = it_as->m_features.begin(); it < it_as->m_features.end(); it++) {
+        cSequenceFeature& feat = **it;
+        
         out << it_as->m_seq_id;
         
-        if (it->SafeGet("type") == "") 
+        if (feat.SafeGet("type") == "") 
           out << "\t" << ".";
         else
-          out << "\t" << (*it)["type"];
+          out << "\t" << feat["type"];
         
-        if( it->SafeGet("accession") == "" )
+        if( feat.SafeGet("accession") == "" )
           out << "\t" << ".";
         else
-          out << "\t" <<(*it)["accession"];
+          out << "\t" <<feat["accession"];
         
-        if( it->SafeGet("name") == "" )
+        if( feat.SafeGet("name") == "" )
           out << "\t" << ".";
         else
-          out << "\t" <<(*it)["name"];
+          out << "\t" <<feat["name"];
         
-        out << "\t" << (*it).m_start;
-        out << "\t" << (*it).m_end;
-        out << "\t" << (int)(*it).m_strand;
+        out << "\t" << feat.m_start;
+        out << "\t" << feat.m_end;
+        out << "\t" << (int)feat.m_strand;
         
-        if( it->SafeGet("product") == "" )
+        if( feat.SafeGet("product") == "" )
           out << "\t" << ".";
         else
-          out << "\t" <<(*it)["product"];
+          out << "\t" <<feat["product"];
         out << endl;
       }
       
@@ -81,36 +83,37 @@ namespace breseq {
       
       for(vector<cAnnotatedSequence>::iterator it_as = this->begin(); it_as < this->end(); it_as++) {
           
-          for (vector<cSequenceFeature>::iterator it = it_as->m_features.begin(); it < it_as->m_features.end(); it++) {
+          for (vector<cSequenceFeaturePtr>::iterator it = it_as->m_features.begin(); it < it_as->m_features.end(); it++) {
+            cSequenceFeature& feat = **it;
             out << it_as->m_seq_id;
             out << "\tGenBank";
           
-            if (it->SafeGet("type") == "") 
+            if (feat.SafeGet("type") == "") 
               out << ".";
             else
-              out << "\t" << (*it)["type"];
+              out << "\t" << feat["type"];
             
             
-            out << "\t" << (*it).m_start;
-            out << "\t" << (*it).m_end;
+            out << "\t" << feat.m_start;
+            out << "\t" << feat.m_end;
             out << "\t.";
-            out << "\t" << (int)(*it).m_strand;
+            out << "\t" << (int)feat.m_strand;
             out << "\t.";
             
-            if( it->SafeGet("accession") == "" )
+            if( feat.SafeGet("accession") == "" )
               out << ".";
             else
-              out << "\t" << "accession=" <<(*it)["accession"];
+              out << "\t" << "accession=" <<feat["accession"];
             
-            if( it->SafeGet("name") == "" )
+            if( feat.SafeGet("name") == "" )
               out << ";" << "name=" << ".";
             else
-              out << ";" << "name=" <<(*it)["name"];
+              out << ";" << "name=" <<feat["name"];
             
-            if( it->SafeGet("product") == "" )
+            if( feat.SafeGet("product") == "" )
               out << ";" << "produce=" << ".";
             else
-              out << ";" << "produce=" <<(*it)["product"];
+              out << ";" << "produce=" <<feat["product"];
             
             out << std::endl;
           }
@@ -152,7 +155,9 @@ namespace breseq {
         char * cstr = new char [line.size()+1];
         strcpy (cstr, line.c_str());
         
-        cSequenceFeature feature;
+        cSequenceFeaturePtr fp(new cSequenceFeature);
+        cSequenceFeature& feature = *fp;
+        
         string seq_id;
         
         char * pch;
@@ -202,54 +207,51 @@ namespace breseq {
         
         delete[] cstr;
         
-        uint32_t seq_idx = seq_id_to_index(seq_id);
-        (*this)[seq_idx].m_features.push_back(feature);
-        
-        // create empty lists so they exist for later checks
-        if ((*this).repeat_lists.count(seq_id) == 0)
-          (*this).repeat_lists[seq_id] = vector<cSequenceFeature>();
-        if ((*this).gene_lists.count(seq_id) == 0)
-          (*this).gene_lists[seq_id] = vector<Gene>();
+        (*this)[seq_id].m_features.push_back(fp);
         
         // add this feature to the proper list
         if (feature["type"] == "repeat_region")
-          (*this).repeat_lists[seq_id].push_back(feature);
+        {
+          (*this)[seq_id].m_repeats.push_back(fp);
+        }
         else
-          (*this).gene_lists[seq_id].push_back(Gene(feature)); // note up-cast
+        {
+          (*this)[seq_id].m_genes.push_back(fp);
+        }
       }
       getline(infile,line);
     }
 
   }
 
-  cSequenceFeature* cReferenceSequences::find_closest_repeat_region(uint32_t position, vector<cSequenceFeature>& repeat_list_ref, uint32_t max_distance, int32_t direction)
+  cSequenceFeature* cReferenceSequences::find_closest_repeat_region(uint32_t position, vector<cSequenceFeaturePtr>& repeat_list_ref, uint32_t max_distance, int32_t direction)
   {
-	if (repeat_list_ref.size() == 0) return NULL;
+    if (repeat_list_ref.size() == 0) return NULL;
 
-	cSequenceFeature* is = NULL;
-	int32_t best_distance = 0;
+    cSequenceFeature* is(NULL);
+    int32_t best_distance = 0;
 
-	for (uint32_t i = 0; i < repeat_list_ref.size(); i++) //IS
-	{
-		cSequenceFeature* test_is = &(repeat_list_ref[i]);
+    for (uint32_t i = 0; i < repeat_list_ref.size(); i++) //IS
+    {
+      cSequenceFeature* test_is = repeat_list_ref[i].get();
 
-		//count within the IS element as zero distance
-		//if this happens then we are immediately done
-		if ( (test_is->m_start <= position) && (test_is->m_end >= position) )
-			return test_is;
+      //count within the IS element as zero distance
+      //if this happens then we are immediately done
+      if ( (test_is->m_start <= position) && (test_is->m_end >= position) )
+        return test_is;
 
-		//otherwise calculate the distance
-		//keep if less than max_distance, in the correct direction, and the best found so far
-		int32_t test_distance = ((direction == -1) ? position - test_is->m_end : test_is->m_start - position);
-		if (test_distance < 0) continue; //wrong direction...
+      //otherwise calculate the distance
+      //keep if less than max_distance, in the correct direction, and the best found so far
+      int32_t test_distance = ((direction == -1) ? position - test_is->m_end : test_is->m_start - position);
+      if (test_distance < 0) continue; //wrong direction...
 
-		if ((test_distance <= (int32_t)max_distance) && ((is == NULL) || (test_distance < best_distance)) )
-		{
-			is = test_is;
-			best_distance = test_distance;
-		}
-	}
-	return is;
+      if ((test_distance <= (int32_t)max_distance) && ((is == NULL) || (test_distance < best_distance)) )
+      {
+        is = test_is;
+        best_distance = test_distance;
+      }
+    }
+    return is;
   }
 
   void cReferenceSequences::WriteFASTA(const std::string &file_name) {
@@ -277,16 +279,26 @@ namespace breseq {
       ref_strings[on_seq.m_name] += on_seq.m_sequence;
     }
   }
-
-	cSequenceFeature* cReferenceSequences::get_overlapping_feature(vector<cSequenceFeature>& feature_list_ref, uint32_t pos)
+  
+	cSequenceFeature* cReferenceSequences::get_overlapping_feature(vector<cSequenceFeaturePtr>& feature_list_ref, uint32_t pos)
 	{
 		for (uint32_t i = 0; i < feature_list_ref.size(); i++)
-			if (pos >= feature_list_ref[i].m_start && pos <= feature_list_ref[i].m_end)
-				return &feature_list_ref[i];
+			if (pos >= feature_list_ref[i]->m_start && pos <= feature_list_ref[i]->m_end)
+				return feature_list_ref[i].get();
 		return NULL;
 	}
 
-	void cReferenceSequences::find_nearby_genes(vector<Gene>& gene_list_ref, uint32_t pos_1, uint32_t pos_2, vector<Gene>& within_genes, vector<Gene>& between_genes, vector<Gene>& inside_left_genes, vector<Gene>& inside_right_genes, Gene& prev_gene, Gene& next_gene)
+	void cReferenceSequences::find_nearby_genes(
+                                              cSequenceFeatureList& gene_list_ref, 
+                                              uint32_t pos_1, 
+                                              uint32_t pos_2, 
+                                              vector<Gene>& within_genes, 
+                                              vector<Gene>& between_genes,
+                                              vector<Gene>& inside_left_genes, 
+                                              vector<Gene>& inside_right_genes, 
+                                              Gene& prev_gene, 
+                                              Gene& next_gene
+                                              )
 	{
 		if (pos_2 == UNDEFINED_UINT32)
 			pos_2 = pos_1;
@@ -295,8 +307,9 @@ namespace breseq {
 
 		for (uint32_t i = 0; i < gene_list_ref.size(); i++) //GENE
 		{
-			Gene test_gene = gene_list_ref[i];
-
+			cSequenceFeature& test_gene_feat = *gene_list_ref[i];
+      Gene test_gene = Gene(test_gene_feat); // up-cast, should be a better way to do this @JEB
+      
 			if (test_gene.end < pos_1)
 				prev_gene = test_gene;
 
@@ -439,9 +452,9 @@ namespace breseq {
 		string seq_id = mut["seq_id"];
     
 		//or die "Unknown seq_id in reference sequence info: $seq_id\n";
-
-		vector<Gene> gene_list_ref = this->gene_lists[seq_id];
-		vector<cSequenceFeature> repeat_list_ref = this->repeat_lists[seq_id];
+    
+    vector<cSequenceFeaturePtr>& gene_list_ref = (*this)[seq_id].m_genes;
+		vector<cSequenceFeaturePtr>& repeat_list_ref = (*this)[seq_id].m_repeats;
 		string ref_string = this->ref_strings[seq_id];
 
 		int32_t size = end - start + 1;
@@ -631,7 +644,7 @@ namespace breseq {
 
       if (mut._type == SNP)
 			{
-				mut["_ref_seq"] = get_sequence(mut["seq_id"], from_string<uint32_t>(mut["position"]), from_string<uint32_t>(mut["position"]));
+				mut["_ref_seq"] = get_sequence_1(mut["seq_id"], from_string<uint32_t>(mut["position"]), from_string<uint32_t>(mut["position"]));
 				annotate_1_mutation(mut, from_string<uint32_t>(mut["position"]), from_string<uint32_t>(mut["position"]));
 			}
       else if (mut._type == SUB)
@@ -1123,8 +1136,8 @@ namespace breseq {
 
   void LoadGenBankFileSequenceFeatures(std::ifstream& in, cAnnotatedSequence& s) {
     //std::cout << "features" << std::endl;
-    cSequenceFeature* current_feature=NULL;
-    vector<cSequenceFeature> all_features;
+    cSequenceFeature* current_feature(NULL);
+    cSequenceFeatureList all_features;
     string line;
     while (!in.eof()) {
       getline(in, line);
@@ -1141,9 +1154,10 @@ namespace breseq {
       if (first_word[0] != '/') {
    
         if (first_word != "BASE") {
-
-          all_features.resize(all_features.size()+1);
-          current_feature = &(all_features[all_features.size()-1]);
+          
+          cSequenceFeature* new_feat = new cSequenceFeature;
+          all_features.push_back( cSequenceFeaturePtr(new_feat) );
+          current_feature = new_feat;
           (*current_feature)["type"] = first_word;
           // parse the rest of the line
           std::string coord_s = GetWord(line);
@@ -1160,28 +1174,29 @@ namespace breseq {
     }
     
     
-    for (vector<cSequenceFeature>::iterator it = all_features.begin(); it < all_features.end(); it++) {
-    
+    for (cSequenceFeatureList::iterator it = all_features.begin(); it < all_features.end(); it++) {
+      cSequenceFeature& feat = **it;
+      
       // common changes for any type
       // use /note as the product if there is not product
-      if ((*it).SafeGet("product") == "")
+      if (feat.SafeGet("product") == "")
       {
-        (*it)["product"] = (*it).SafeGet("note");
+        feat["product"] = feat.SafeGet("note");
       }
       
       
-      if ((*it)["type"] == "repeat_region") {
+      if (feat["type"] == "repeat_region") {
 
         // Don't add unnamed ones to the list...
         //if (it->SafeGet("mobile_element") == "") continue;
         
-        (*it)["name"] = "repeat_region";
+        feat["name"] = "repeat_region";
         
         // E. coli case:
-        if (it->SafeGet("mobile_element") != "")
+        if (feat.SafeGet("mobile_element") != "")
         {
-          (*it)["name"] = (*it)["mobile_element"];
-          std::string& name = (*it)["name"];
+          feat["name"] = feat["mobile_element"];
+          string& name = feat["name"];
           
           // remove prefix
           int pos = name.find("insertion sequence:");
@@ -1200,46 +1215,46 @@ namespace breseq {
         }
         
         // S. cerevisiae case
-        if (it->SafeGet("rpt_family") != "")
+        if (feat.SafeGet("rpt_family") != "")
         {
-          (*it)["name"] = (*it)["rpt_family"];
+          feat["name"] = feat["rpt_family"];
         }        
         //std::cerr << (*it).SafeGet("mobile_element") << " " << (*it).SafeGet("name") << std::endl;
         
-        if ((*it).SafeGet("product") == "")
+        if (feat.SafeGet("product") == "")
         {
-          (*it)["product"] = "repeat region";
+          feat["product"] = "repeat region";
         }
       
         s.m_features.push_back(*it);
 
       }
-      else if ( ((*it)["type"] == "CDS") 
-             || ((*it)["type"] == "tRNA") 
-             || ((*it)["type"] == "rRNA") ) {
+      else if ( (feat["type"] == "CDS") 
+             || (feat["type"] == "tRNA") 
+             || (feat["type"] == "rRNA") ) {
              
         // Add information
-        if (it->SafeGet("gene") != "") {
-          (*it)["name"] = (*it)["gene"];
+        if (feat.SafeGet("gene") != "") {
+          feat["name"] = feat["gene"];
         }
-        if ( (it->SafeGet("name") == "") && (it->SafeGet("locus_tag") != "") ) {
-          (*it)["name"] = (*it)["locus_tag"];
+        if ( (feat.SafeGet("name") == "") && (feat.SafeGet("locus_tag") != "") ) {
+          feat["name"] = feat["locus_tag"];
         }
         
         //std::cerr << (*it).SafeGet("name") << " " << (*it).SafeGet("gene") << " " << (*it).SafeGet("locus_tag") << std::endl;
               
-        if ((*it).SafeGet("type") == "CDS") {
-          (*it)["type"] = "protein";
+        if (feat.SafeGet("type") == "CDS") {
+          feat["type"] = "protein";
         }
         
-        (*it)["accession"] = (*it).SafeGet("locus_tag");
+        feat["accession"] = feat.SafeGet("locus_tag");
         
         // /pseudo tag doesn't take a value
-        if ((*it).count("pseudo") != 0) {
-          (*it)["type"] = "pseudogene";
+        if (feat.count("pseudo") != 0) {
+          feat["type"] = "pseudogene";
         }
         
-        (*it)["index"] = s.m_features.size();
+        feat["index"] = s.m_features.size();
         s.m_features.push_back(*it);
       } 
     }
@@ -1301,14 +1316,14 @@ namespace breseq {
       
     char line[10];
     
-    vector<cSequenceFeature> all_features;
+    cSequenceFeatureList all_features;
     
     while ( !in.eof() ) {
       
       cSequenceFeature* current_feature(NULL);
       
       all_features.resize(all_features.size()+1);
-      current_feature = &(all_features[all_features.size()-1]);
+      current_feature = all_features.back().get();
       
       current_feature->m_strand = 1;
       
@@ -1324,9 +1339,10 @@ namespace breseq {
       (*current_feature)["name"] = name;
     }
     
-    for (vector<cSequenceFeature>::iterator it = all_features.begin(); it < all_features.end(); it++) {
+    for (cSequenceFeatureList::iterator it = all_features.begin(); it < all_features.end(); it++) {
+      cSequenceFeature& feat = **it;
       s.m_features.push_back(*it);
-      cout << "Start: " << (*it).m_start << " Stop: " << (*it).m_end << " Strand: " << (*it).m_strand << endl;
+      cout << "Start: " << feat.m_start << " Stop: " << feat.m_end << " Strand: " << feat.m_strand << endl;
     }
   }
 
@@ -1516,30 +1532,20 @@ namespace breseq {
   }
 
   string cReferenceSequences::repeat_example(const string &repeat_name, int8_t strand)
-  {
-    //foreach my $seq_id (sort keys %{$ref_seq_info->{repeat_lists}})
-    //{
-    //	foreach my $rep (@{$ref_seq_info->{repeat_lists}->{$seq_id}})
-    //	{
-    //		if ($rep->{name} eq $repeat_name)
-    //		{
-    //			my $repeat_seq = substr $ref_seq_info->{ref_strings}->{$seq_id}, $rep->{start} - 1, $rep->{end} - $rep->{start} + 1;
-    //			$repeat_seq = revcom($repeat_seq) if ($strand != $rep->{strand});
-    //			return $repeat_seq;
-    //		}
-    //	}
-    //}
-
-    //	die "Unknown repeat type: $repeat_name";
-    //}
-    map<string, vector<cSequenceFeature> >::iterator itr_features;
-    vector<cSequenceFeature>::iterator itr_rep;
-    for (itr_features = repeat_lists.begin(); itr_features != repeat_lists.end(); itr_features++) {
-      for (itr_rep = itr_features->second.begin(); itr_rep != itr_features->second.end(); itr_rep++) {
-         cSequenceFeature& rep = *itr_rep;
+  {    
+    vector<cAnnotatedSequence>::iterator itr_seq;
+    
+    // loop through all reference sequences
+    for (itr_seq = this->begin(); itr_seq != this->begin(); itr_seq++) {
+      cAnnotatedSequence& this_seq = *itr_seq;      
+      cSequenceFeatureList& repeats = this_seq.m_repeats;
+      
+      cSequenceFeatureList::iterator itr_rep;
+      for (itr_rep = repeats.begin(); itr_rep != repeats.end(); itr_rep++) {
+         cSequenceFeature& rep = **itr_rep;
 
          if (rep.SafeGet("name") == repeat_name) {
-           string repeat_seq = this->get_sequence(itr_features->first, rep.m_start - 1, rep.m_end - rep.m_start + 1);
+           string repeat_seq = this_seq.get_sequence_1(rep.m_start - 1, rep.m_end - rep.m_start + 1);
            if (strand != rep.m_strand)
              revcom(repeat_seq);
            return repeat_seq;
@@ -1547,7 +1553,8 @@ namespace breseq {
       }
     }
 
-    WARN("Unknown repeate type: " + repeat_name);
+    ASSERTM(false, "Unknown repeat type: " + repeat_name);
+    return "";
   }
 
 } // breseq namespace
