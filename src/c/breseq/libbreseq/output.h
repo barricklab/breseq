@@ -4,7 +4,7 @@
 #include "libbreseq/settings.h"
 #include "libbreseq/annotated_sequence.h"
 #include "libbreseq/genome_diff.h"
-#include "cgicc/Cgicc.h"
+//#include "cgicc/Cgicc.h"
 namespace breseq
 {
 
