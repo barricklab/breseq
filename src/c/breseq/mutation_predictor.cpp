@@ -34,11 +34,11 @@ namespace breseq {
 
 	cSequenceFeature* MutationPredictor::within_repeat(string seq_id, uint32_t position)
 	{
-		vector<cSequenceFeature>& r = ref_seq_info.repeat_lists[seq_id];
+		cSequenceFeatureList& r = ref_seq_info[seq_id].m_repeats;
     
 		for (uint32_t i = 0; i < r.size(); i++)
-			if ((r[i].m_start <= position) && (position <= r[i].m_end))
-				return &(r[i]);
+			if ((r[i]->m_start <= position) && (position <= r[i]->m_end))
+				return r[i].get();
 
 		return NULL;
 	}
@@ -126,7 +126,7 @@ namespace breseq {
 
 				cSequenceFeature* is = ref_seq_info.find_closest_repeat_region(
 					n(j[side_key + "_position"]),
-					ref_seq_info.repeat_lists[j[side_key + "_seq_id"]],
+					ref_seq_info[j[side_key + "_seq_id"]].m_repeats,
 					50,
 					n(j[side_key + "_strand"])
 				);
@@ -607,7 +607,7 @@ namespace breseq {
 
 					if (n(mut["_gap_left"]) > 0)
 					{
-						j1_not_flush_seq = ref_seq_info.get_sequence (
+						j1_not_flush_seq = ref_seq_info.get_sequence_1 (
 							j1[j1["_is_interval"] + "_seq_id"],
 							n(j1["_" + j1["_is_interval"] + "_is_end"]) + 1,
 							n(j1[j1["_is_interval"] + "_position"])
@@ -619,7 +619,7 @@ namespace breseq {
 					mut["_gap_left"] = s(n(j1["_" + j1["_is_interval"] + "_is_start"]) - n(j1[j1["_is_interval"] + "_position"]));
 					if (n(mut["_gap_left"]) > 0)
 					{
-						j1_not_flush_seq = ref_seq_info.get_sequence (
+						j1_not_flush_seq = ref_seq_info.get_sequence_1 (
 							j1[j1["_is_interval"] + "_seq_id"],
 							n(j1[j1["_is_interval"] + "_position"]),
 							n(j1["_" + j1["_is_interval"] + "_is_start"]) - 1
@@ -658,7 +658,7 @@ namespace breseq {
 					mut["_gap_right"] = s(n(j2[j2["_is_interval"] + "_position"]) - n(j2["_" + j2["_is_interval"] + "_is_end"]));
 					if (n(mut["_gap_right"]) > 0)
 					{
-						j2_not_flush_seq = ref_seq_info.get_sequence (
+						j2_not_flush_seq = ref_seq_info.get_sequence_1 (
 							j1[j2["_is_interval"] + "_seq_id"],
 							n(j2["_" + j2["_is_interval"] + "_is_end"]) + 1,
 							n(j2[j2["_is_interval"] + "_position"])
@@ -670,7 +670,7 @@ namespace breseq {
 					mut["_gap_right"] = s(n(j2["_" + j2["_is_interval"] + "_is_start"]) - n(j2[j2["_is_interval"] + "_position"]));
 					if (n(mut["_gap_right"]) > 0)
 					{
-						j2_not_flush_seq = ref_seq_info.get_sequence (
+						j2_not_flush_seq = ref_seq_info.get_sequence_1 (
 							j1[j2["_is_interval"] + "_seq_id"],
 							n(j2[j2["_is_interval"] + "_position"]),
 							n(j2["_" + j2["_is_interval"] + "_is_start"]) - 1
@@ -753,7 +753,7 @@ namespace breseq {
 				string j1_is_seq_matched = "";
 				if (n(j1[j1["_is_interval"] + "_strand"]) == -1)
 				{
-					j1_is_seq_matched = ref_seq_info.get_sequence (
+					j1_is_seq_matched = ref_seq_info.get_sequence_1 (
 						j1[j1["_is_interval"] + "_seq_id"],
 						n(j1[j1["_is_interval"] + "_position"]) - (j1_is_overlap_length - 1),
 						n(j1[j1["_is_interval"] + "_position"]) - j1_not_flush_length
@@ -762,7 +762,7 @@ namespace breseq {
 				}
 				else
 				{
-					j1_is_seq_matched = ref_seq_info.get_sequence (
+					j1_is_seq_matched = ref_seq_info.get_sequence_1 (
 						j1[j1["_is_interval"] + "_seq_id"],
 						n(j1[j1["_is_interval"] + "_position"]) + j1_not_flush_length,
 						n(j1[j1["_is_interval"] + "_position"]) + j1_is_overlap_length - 1
@@ -772,7 +772,7 @@ namespace breseq {
 				string j2_is_seq_matched = "";
 				if (n(j2[j2["_is_interval"] + "_strand"]) == -1)
 				{
-					j2_is_seq_matched = ref_seq_info.get_sequence (
+					j2_is_seq_matched = ref_seq_info.get_sequence_1 (
 						j2[j2["_is_interval"] + "_seq_id"],
 						n(j2[j2["_is_interval"] + "_position"]) - (j2_is_overlap_length - 1),
 						n(j2[j2["_is_interval"] + "_position"]) - j2_not_flush_length
@@ -781,7 +781,7 @@ namespace breseq {
 				}
 				else
 				{
-					j2_is_seq_matched = ref_seq_info.get_sequence (
+					j2_is_seq_matched = ref_seq_info.get_sequence_1 (
 						j2[j2["_is_interval"] + "_seq_id"],
 						n(j2[j2["_is_interval"] + "_position"]) + j2_not_flush_length,
 						n(j2[j2["_is_interval"] + "_position"]) + j2_is_overlap_length - 1
@@ -790,13 +790,13 @@ namespace breseq {
 
 				// what are the actual sequences of this length at the end of the IS elements?
 
-				string j1_left_is_sequence = ref_seq_info.get_sequence (
+				string j1_left_is_sequence = ref_seq_info.get_sequence_1 (
 					j1[j1["_is_interval"] + "_seq_id"],
 					n(j1["_" + j1["_is_interval"] + "_is_start"]),
 					n(j1["_" + j1["_is_interval"] + "_is_start"]) + j1_is_overlap_length - 1
 				);
 
-				string j1_right_is_sequence = ref_seq_info.get_sequence (
+				string j1_right_is_sequence = ref_seq_info.get_sequence_1 (
 					j1[j1["_is_interval"] + "_seq_id"],
 					n(j1["_" + j1["_is_interval"] + "_is_end"]) - (j1_is_overlap_length - 1),
 					n(j1["_" + j1["_is_interval"] + "_is_end"])
@@ -811,13 +811,13 @@ namespace breseq {
 				// believe the direction if the sequences are different
 				bool j1_is_ambiguous = (j1_left_is_sequence == j1_right_is_sequence);
 
-				string j2_left_is_sequence = ref_seq_info.get_sequence (
+				string j2_left_is_sequence = ref_seq_info.get_sequence_1 (
 					j2[j2["_is_interval"] + "_seq_id"],
 					n(j2["_" + j2["_is_interval"] + "_is_start"]),
 					n(j2["_" + j2["_is_interval"] + "_is_start"]) + j2_is_overlap_length - 1
 				);
 
-				string j2_right_is_sequence = ref_seq_info.get_sequence (
+				string j2_right_is_sequence = ref_seq_info.get_sequence_1 (
 					j2[j2["_is_interval"] + "_seq_id"],
 					n(j2["_" + j2["_is_interval"] + "_is_end"]) - (j2_is_overlap_length - 1),
 					n(j2["_" + j2["_is_interval"] + "_is_end"])
@@ -997,7 +997,7 @@ namespace breseq {
 				string new_seq = j["unique_read_sequence"];
 				if (n(j["side_1_position"]) >= n(j["side_2_position"])) //TODO: When would this be false?
 				{
-					new_seq = ref_seq_info.get_sequence (
+					new_seq = ref_seq_info.get_sequence_1 (
 						seq_id,
 						n(j["side_2_position"]),
 						n(j["side_1_position"])

@@ -1133,7 +1133,7 @@ diff_entry _junction_to_hybrid_list_item(const string& key, cReferenceSequences&
 	{
 		// Determine IS elements
 		// Is it within an IS or near the boundary of an IS in the direction leading up to the junction?
-		is = cReferenceSequences::find_closest_repeat_region(jc.sides[i].position, ref_seq_info.repeat_lists[jc.sides[i].seq_id], 200, jc.sides[i].strand);
+		is = cReferenceSequences::find_closest_repeat_region(jc.sides[i].position, ref_seq_info[jc.sides[i].seq_id].m_repeats, 200, jc.sides[i].strand);
 		if (is != NULL)
 		{
 			jc.sides[i].is.name = is->SafeGet("name");

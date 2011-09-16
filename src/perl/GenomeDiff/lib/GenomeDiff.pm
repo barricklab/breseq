@@ -221,8 +221,12 @@ sub new
 	bless ($self, $class);
 	
 	# load from file if one of these options found...
+	$self->{file_name} = $self->{FILE_NAME} if (!defined $self->{file_name});
 	$self->{file_name} = $self->{file} if (!defined $self->{file_name});
+	$self->{file_name} = $self->{FILE} if (!defined $self->{file_name});
 	$self->{file_name} = $self->{in} if (!defined $self->{file_name});
+	$self->{file_name} = $self->{IN} if (!defined $self->{file_name});
+	
 	$self->read($self->{file_name}) if ($self->{file_name});
 	
 	return $self;
@@ -916,7 +920,7 @@ sub subtract
 sub apply_to_sequences
 {
 	my ($self, $ref_seq_info) = @_;
-	my $verbose = 0;
+	my $verbose = 1;
 	
 	my $ref_strings = $ref_seq_info->{ref_strings};
 	my $new_ref_strings;
@@ -990,7 +994,7 @@ sub apply_to_sequences
 			my $strand = ($start < $end) ? +1 : -1;
 			($start, $end) = ($end, $start) if ($strand == -1);
 			my $replace_string = substr $ref_strings->{$seq_id}, $start-1, $end-$start+1; #taken from original!!
-			$replace_string = GenomeDiff::Fastq::revcom($replace_string) if ($strand == -1);
+			$replace_string = GenomeDiff::ReferenceSequence::revcom($replace_string) if ($strand == -1);
 			my $replaced = substr $new_ref_strings->{$mut->{seq_id}}, $mut->{position}-1, $mut->{size}, $replace_string;
 			
 			print ">> CON: Gene Conversion Mutation <<\n";
