@@ -186,7 +186,7 @@ void html_index(const string& file_name, const Settings& settings, Summary& summ
   //Determine if more than one reference sequence is used
   bool one_ref_seq;
 
-  if (get_keys<string,string>(ref_seq_info.ref_strings).size() == 1)
+  if (ref_seq_info.size() == 1)
     one_ref_seq = true;
   else
     one_ref_seq = false;
@@ -252,7 +252,7 @@ void html_marginal_predictions(const string& file_name, const Settings& settings
   
   //Determine if more than one reference sequence is used
   bool one_ref_seq;
-  if (get_keys<string,string>(ref_seq_info.ref_strings).size() == 1)
+  if (ref_seq_info.size() == 1)
     one_ref_seq = true;
   else
     one_ref_seq = false; 

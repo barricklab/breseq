@@ -207,17 +207,7 @@ namespace breseq {
         
         delete[] cstr;
         
-        (*this)[seq_id].m_features.push_back(fp);
-        
-        // add this feature to the proper list
-        if (feature["type"] == "repeat_region")
-        {
-          (*this)[seq_id].m_repeats.push_back(fp);
-        }
-        else
-        {
-          (*this)[seq_id].m_genes.push_back(fp);
-        }
+        (*this)[seq_id].add_feature(fp);
       }
       getline(infile,line);
     }
@@ -269,14 +259,12 @@ namespace breseq {
     uint32_t on_seq_id = 0;
     
     while ( ff.read_sequence(on_seq) ) {
-      
       cAnnotatedSequence new_seq;
       new_seq.m_fasta_sequence = on_seq;
       new_seq.m_seq_id = on_seq.m_name;
       new_seq.m_length = on_seq.m_sequence.size();
       (*this).push_back(new_seq);
       m_seq_id_to_index[on_seq.m_name] = on_seq_id++;
-      ref_strings[on_seq.m_name] += on_seq.m_sequence;
     }
   }
   
@@ -455,7 +443,6 @@ namespace breseq {
     
     vector<cSequenceFeaturePtr>& gene_list_ref = (*this)[seq_id].m_genes;
 		vector<cSequenceFeaturePtr>& repeat_list_ref = (*this)[seq_id].m_repeats;
-		string ref_string = this->ref_strings[seq_id];
 
 		int32_t size = end - start + 1;
 
@@ -576,6 +563,7 @@ namespace breseq {
 			mut["aa_position"] = to_string((from_string<uint32_t>(mut["gene_position"]) - 1) / 3 + 1); // 1 indexed
 			mut["codon_position"] = to_string(int(abs(static_cast<int32_t>(start) - within_gene_start)) % 3 + 1); // 1 indexed
 
+      string& ref_string = (*this)[seq_id].m_fasta_sequence.m_sequence;
 			string codon_seq = (gene.strand)
 				? ref_string.substr(gene.start + 3 * (from_string<uint32_t>(mut["aa_position"]) - 1) - 1, 3)
 				: reverse_complement(ref_string.substr(gene.end - 3 * from_string<uint32_t>(mut["aa_position"]), 3));
@@ -718,11 +706,8 @@ namespace breseq {
 		string reference_fasta_file_name = settings.reference_fasta_file_name;
 		vector<string> seq_ids = this->seq_ids();
 
-		// some local variable lookups for convenience
-		uint32_t total_ref_length = 0;
-		for (uint32_t i = 0; i < seq_ids.size(); i++)
-			total_ref_length += this->ref_strings[seq_ids[i]].size();
-		double log10_ref_length = log(total_ref_length) / log(10);
+		// some local variable lookups for convenience      
+		double log10_ref_length = log(this->total_length()) / log(10);
 
 		//
 		// Replacement for below
@@ -884,7 +869,7 @@ namespace breseq {
 				uint32_t end_pos = from_string<uint32_t>(mut["position"]);
 				uint32_t start_pos = end_pos - test_length + 1;
 				if (start_pos < 1) start_pos = 1;
-				string bases = this->ref_strings[seq_id].substr(start_pos - 1, (end_pos - start_pos + 1));
+				string bases = this->get_sequence_1(seq_id, start_pos, end_pos);
 
 				//#print Dumper($mut);
 				//#print "$bases\n";
@@ -1137,7 +1122,7 @@ namespace breseq {
   void LoadGenBankFileSequenceFeatures(std::ifstream& in, cAnnotatedSequence& s) {
     //std::cout << "features" << std::endl;
     cSequenceFeature* current_feature(NULL);
-    cSequenceFeatureList all_features;
+    cSequenceFeatureList all_features; // make preliminary list then add once entries are complete
     string line;
     while (!in.eof()) {
       getline(in, line);
@@ -1154,10 +1139,9 @@ namespace breseq {
       if (first_word[0] != '/') {
    
         if (first_word != "BASE") {
-          
-          cSequenceFeature* new_feat = new cSequenceFeature;
-          all_features.push_back( cSequenceFeaturePtr(new_feat) );
-          current_feature = new_feat;
+          cSequenceFeaturePtr new_feat(new cSequenceFeature);
+          all_features.push_back( new_feat );
+          current_feature = new_feat.get();
           (*current_feature)["type"] = first_word;
           // parse the rest of the line
           std::string coord_s = GetWord(line);
@@ -1225,9 +1209,7 @@ namespace breseq {
         {
           feat["product"] = "repeat region";
         }
-      
-        s.m_features.push_back(*it);
-
+        s.add_feature(*it);
       }
       else if ( (feat["type"] == "CDS") 
              || (feat["type"] == "tRNA") 
@@ -1254,8 +1236,7 @@ namespace breseq {
           feat["type"] = "pseudogene";
         }
         
-        feat["index"] = s.m_features.size();
-        s.m_features.push_back(*it);
+        s.add_feature(*it);
       } 
     }
   }
@@ -1536,7 +1517,7 @@ namespace breseq {
     vector<cAnnotatedSequence>::iterator itr_seq;
     
     // loop through all reference sequences
-    for (itr_seq = this->begin(); itr_seq != this->begin(); itr_seq++) {
+    for (itr_seq = this->begin(); itr_seq != this->end(); itr_seq++) {
       cAnnotatedSequence& this_seq = *itr_seq;      
       cSequenceFeatureList& repeats = this_seq.m_repeats;
       
@@ -1545,9 +1526,9 @@ namespace breseq {
          cSequenceFeature& rep = **itr_rep;
 
          if (rep.SafeGet("name") == repeat_name) {
-           string repeat_seq = this_seq.get_sequence_1(rep.m_start - 1, rep.m_end - rep.m_start + 1);
+           string repeat_seq = this_seq.get_sequence_1(rep.m_start, rep.m_end);
            if (strand != rep.m_strand)
-             revcom(repeat_seq);
+             repeat_seq = reverse_complement(repeat_seq);
            return repeat_seq;
          }
       }
