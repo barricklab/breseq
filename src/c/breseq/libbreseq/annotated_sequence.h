@@ -131,27 +131,44 @@ namespace breseq {
         m_seq_id("na"),
         m_features(0) {} ;
     
-      // Utility to get yop strand sequence
+      // Utility to get top strand sequence
       string get_sequence_1(uint32_t start_1, uint32_t end_1) 
       {
-        return m_fasta_sequence.m_sequence.substr(start_1 - 1, end_1 - start_1 + 1);
+        ASSERTM(start_1 <= end_1, "start (" + to_string(start_1) + ")not less than or equal to end(" + to_string(end_1) + ")");
+        return m_fasta_sequence.m_sequence.substr(start_1-1, end_1-start_1+1);
       }
 
       void replace_sequence_1(uint32_t start_1, uint32_t end_1, const string &replacement_seq)
       {
-        m_fasta_sequence.m_sequence.replace(start_1-1, end_1-1, replacement_seq);
+        ASSERTM(start_1 <= end_1, "start (" + to_string(start_1) + ")not less than or equal to end(" + to_string(end_1) + ")");
+        m_fasta_sequence.m_sequence.replace(start_1-1, end_1-start_1+1, replacement_seq);
       }
 
+      // Inserts AFTER the input position
       void insert_sequence_1(uint32_t pos_1, const string &insertion_seq)
       {
-        m_fasta_sequence.m_sequence.insert(pos_1-1, insertion_seq);
+        m_fasta_sequence.m_sequence.insert(pos_1, insertion_seq);
       }
 
       uint32_t get_sequence_length()
       {
         return m_fasta_sequence.m_sequence.length();
       }
-
+    
+      // Correctly adds features across different lists
+      void add_feature(cSequenceFeaturePtr& fp)
+      {
+        m_features.push_back(fp);
+        
+        if ((*fp)["type"] == "repeat_region")
+        {
+          m_repeats.push_back(fp);
+        }
+        else
+        {
+          m_genes.push_back(fp);
+        }
+      }
   };
 
   
@@ -216,22 +233,22 @@ namespace breseq {
     //!< Utility to get sequences by seq_id
     string get_sequence_1(const string& seq_id, uint32_t start_1, uint32_t end_1) 
     {
-      return (*this)[seq_id_to_index(seq_id)].get_sequence_1(start_1, end_1);
+      return (*this)[seq_id].get_sequence_1(start_1, end_1);
     }
 
     void replace_sequence_1(const string& seq_id, uint32_t start_1, uint32_t end_1, const string& replacement_seq)
     {
-      (*this)[seq_id_to_index(seq_id)].replace_sequence_1(start_1, end_1, replacement_seq);
+      (*this)[seq_id].replace_sequence_1(start_1, end_1, replacement_seq);
     }
 
     void insert_sequence_1(const string& seq_id, uint32_t pos, const string &insertion_seq)
     {
-      (*this)[seq_id_to_index(seq_id)].insert_sequence_1(pos, insertion_seq);
+      (*this)[seq_id].insert_sequence_1(pos, insertion_seq);
     }
 
     uint32_t get_sequence_length(const string& seq_id)
     {
-      return (*this)[seq_id_to_index(seq_id)].get_sequence_length();
+      return (*this)[seq_id].get_sequence_length();
     }
 
     vector<string> seq_ids()
@@ -248,7 +265,7 @@ namespace breseq {
     {
       
       vector<string> split_region = split_on_any(region, ":-");
-      ASSERTM(split_region.size() != 3, "Unrecognized region: " + region + "\n(Expected seq_id:start-end)");
+      ASSERTM(split_region.size() == 3, "Unrecognized region: " + region + "\n(Expected seq_id:start-end)");
 
       target_id = seq_id_to_index(split_region[0]);
       start_pos_1 = from_string<uint32_t>(split_region[1]);
@@ -258,7 +275,6 @@ namespace breseq {
 
     map<string,int32_t> seq_order;
     map<string,string> trims;
-    map<string,string> ref_strings;
     
     static map<string,char> translation_table_11;
 

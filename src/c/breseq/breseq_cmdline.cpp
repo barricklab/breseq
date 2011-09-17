@@ -73,42 +73,38 @@ int do_bam2aln(int argc, char* argv[]) {
 	}
   
   // generate alignment!
-	try {
-		alignment_output ao(
-                        options["bam"],
-                        options["fasta"],
-                        from_string<uint32_t>(options["max-reads"]),
-                        from_string<uint32_t>(options["quality-score-cutoff"])
-                        );
-    
-    string html_output = ao.html_alignment(options["region"]);
-    //cout << html_output << endl;
-    
-    if (options.count("stdout"))
-    {
-      cout << html_output << endl;
-    }
-    else
-    {
-      ///Write to html file
-      string file_name = options["region"] + ".html";
-      if (options.count("output")) {
-        file_name = options["output"];
-      }
-      
-      ofstream myfile (file_name.c_str());
-      if (myfile.is_open())
-      {
-        myfile << html_output;
-        myfile.close();
-      }
-      else cerr << "Unable to open file";
+  alignment_output ao(
+                      options["bam"],
+                      options["fasta"],
+                      from_string<uint32_t>(options["max-reads"]),
+                      from_string<uint32_t>(options["quality-score-cutoff"])
+                      );
+  
+  string html_output = ao.html_alignment(options["region"]);
+  //cout << html_output << endl;
+  
+  if (options.count("stdout"))
+  {
+    cout << html_output << endl;
+  }
+  else
+  {
+    ///Write to html file
+    string file_name = options["region"] + ".html";
+    if (options.count("output")) {
+      file_name = options["output"];
     }
     
-  } catch(...) {
-		// failed;
-		return -1;
-	}	return 0;
+    ofstream myfile (file_name.c_str());
+    if (myfile.is_open())
+    {
+      myfile << html_output;
+      myfile.close();
+    }
+    else cerr << "Unable to open file";
+  }
+    
+  return 0;
 }
 
 /*! bam2aln
@@ -131,6 +127,12 @@ int do_bam2cov(int argc, char* argv[]) {
   ("tile-overlap", "overlap between tiles", "")
   .processCommandArgs(argc, argv);
   
+  vector<string> region_list;
+  for (int32_t i = 0; i < options.getArgc(); i++)
+  {
+    string region = options.getArgv(i);
+    region_list.push_back(region);
+  }
   
 	// make sure that the config options are good:
 	if(options.count("help")
@@ -146,22 +148,20 @@ int do_bam2cov(int argc, char* argv[]) {
   Settings settings;
     
   // generate coverage table/plot!
-	try {
-		coverage_output co(
-                        options["bam"],
-                        options["fasta"],
-                        settings.coverage_plot_r_script_file_name
-                        );
-    
-    // Need code to set options and handle looping on tiling...
-    
-    co.plot(options["region"], options["output"], from_string<uint32_t>(options["resolution"]));
-    
-    
-  } catch(...) {
-		// failed;
-		return -1;
-	}	return 0;
+  coverage_output co(
+                      options["bam"],
+                      options["fasta"],
+                      settings.coverage_plot_r_script_file_name
+                      );
+  
+  // Set options =
+  
+  for(vector<string>::iterator it = region_list.begin(); it!= region_list.end(); it++)
+  {
+    co.plot(*it, options["output"], from_string<uint32_t>(options["resolution"]));
+  }
+  
+  return 0;
 }
 
 //@JEB - need to finish porting some more functionality
@@ -1953,19 +1953,12 @@ int do_mutate(int argc, char *argv[])
     return -1;
   }
 
-  try {
-    genome_diff gd(options["genomediff"]);
-    cReferenceSequences ref_seq_info;
+  genome_diff gd(options["genomediff"]);
+  cReferenceSequences ref_seq_info;
+  LoadGenBankFile(ref_seq_info, from_string<vector<string> >(options["reference"]));
+  cReferenceSequences new_ref_seq_info = gd.apply_to_sequences(ref_seq_info);
 
-    LoadGenBankFile(ref_seq_info, from_string<vector<string> >(options["reference"]));
-
-    gd.apply_to_sequences(ref_seq_info);
-
-    ref_seq_info.WriteFASTA(options["output"]);
-
-  } catch(...) {
-    return -1;
-  }
+  new_ref_seq_info.WriteFASTA(options["output"]);
 
   return 0;
 }

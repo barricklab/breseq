@@ -1089,11 +1089,10 @@ genome_diff::interval_un(const uint32_t& start,const uint32_t& end)
   return false;
 }
 
-
-//## Currently this irreversibly changes ref_seq_info @JEB
-//## could rewrite to operator on a copy if needed.
-void genome_diff::apply_to_sequences(cReferenceSequences& ref_seq_info)
+cReferenceSequences genome_diff::apply_to_sequences(cReferenceSequences& ref_seq_info)
 {
+  // copy the reference sequence info
+  cReferenceSequences new_ref_seq_info(ref_seq_info);
   bool verbose = true;
 
   diff_entry_list mutation_list = this->mutation_list();
@@ -1101,17 +1100,15 @@ void genome_diff::apply_to_sequences(cReferenceSequences& ref_seq_info)
   {
     diff_entry& mut(**itr_mut);
     uint32_t position = from_string<uint32_t>(mut[POSITION]);
-    
-    ref_seq_info.seq_id_to_index(mut[SEQ_ID]);
-    
+        
     switch (mut._type) 
     {
       case SNP :
       {
-        ref_seq_info.replace_sequence_1(mut[SEQ_ID], position, 1, mut[NEW_SEQ]);
+        new_ref_seq_info.replace_sequence_1(mut[SEQ_ID], position, position, mut[NEW_SEQ]);
         if (verbose) {
-          cout << "SNP: 1 => " << mut[NEW_SEQ].length() << endl;
-          cout << "+" << position << " + " << mut[NEW_SEQ] << endl;
+          cout << "SNP: 1 bp => " << mut[NEW_SEQ] << " at position " << endl;
+          cout << "  shift: none" << endl;
         }
       } break;
 
@@ -1119,20 +1116,20 @@ void genome_diff::apply_to_sequences(cReferenceSequences& ref_seq_info)
       {
         const uint32_t& size = from_string<uint32_t>(mut[SIZE]);
 
-        ref_seq_info.replace_sequence_1(mut[SEQ_ID], position, size, mut[NEW_SEQ]);
+        new_ref_seq_info.replace_sequence_1(mut[SEQ_ID], position, position + size - 1,  mut[NEW_SEQ]);
         if (verbose) {
-          cout << "SUB: " << size << " => " << mut[NEW_SEQ].length() << endl;
-          cout << "+" << position << " + " << mut[NEW_SEQ] << endl;
+          cout << "SUB: " << size << " => " << mut[NEW_SEQ] << endl;
+          cout << "   shift +" << mut[NEW_SEQ].length() << " bp at position " <<  position << endl;
         }
       } break;
 
       case INS:
       {
-        ref_seq_info.insert_sequence_1(mut[SEQ_ID], position, mut[NEW_SEQ]);
+        new_ref_seq_info.insert_sequence_1(mut[SEQ_ID], position, mut[NEW_SEQ]);
 
         if (verbose) {
-          cout << "INS: 0 => " << mut[NEW_SEQ].length() << endl;
-          cout << "+" << position << " + " << mut[NEW_SEQ] << endl;
+          cout << "INS: 0 => " << mut[NEW_SEQ] << endl;
+          cout << "   shift +" << mut[NEW_SEQ].length() << " bp at position " <<  position << endl;
         }
       } break;
 
@@ -1140,10 +1137,10 @@ void genome_diff::apply_to_sequences(cReferenceSequences& ref_seq_info)
       {
         const uint32_t& size = from_string<uint32_t>(mut[SIZE]);
 
-        ref_seq_info.replace_sequence_1(mut[SEQ_ID], position, size, "");
+        new_ref_seq_info.replace_sequence_1(mut[SEQ_ID], position, position + size -1, "");
         if (verbose) {
           cout << "DEL: " << size << " => 0" << endl;
-          cout << "+" << position << endl;
+          cout << "   shift -" << size << " bp at position " <<  position << endl;
         }
       } break;
 
@@ -1153,14 +1150,14 @@ void genome_diff::apply_to_sequences(cReferenceSequences& ref_seq_info)
 
         //Build duplicate sequence
         string dup;
-        for (uint32_t i = 1; i < from_string<uint32_t>(mut["new_copy_number"]); i++)//! TODO Confirm this is the correct amount of duplicates
-          dup.append(ref_seq_info.get_sequence_1(mut[SEQ_ID], position, size));
+        for (uint32_t i = 1; i < from_string<uint32_t>(mut["new_copy_number"]); i++)
+          dup.append(new_ref_seq_info.get_sequence_1(mut[SEQ_ID], position, position+size-1));
         ASSERT(!dup.empty());
 
-        ref_seq_info.insert_sequence_1(mut[SEQ_ID], position, dup);
+        new_ref_seq_info.insert_sequence_1(mut[SEQ_ID], position-1, dup);
         if (verbose) {
-          cout << "AMP: 0" << " => " << dup.length() << endl;
-          cout << "+" << position << " + " << dup << endl;
+          cout << "AMP: 0" << " => " << dup << endl;
+          cout << "   shift +" << dup.length() << " bp at position " << position << endl;
         }
       } break;
         
@@ -1175,73 +1172,80 @@ void genome_diff::apply_to_sequences(cReferenceSequences& ref_seq_info)
                "MOB: does not handle ins_start, ins_end, del_start, del_end yet.");
         ASSERTM(mut["strand"] != "?", "Unknown repeat strand");
 
-        const string& seq_string = ref_seq_info.repeat_example(mut["repeat_name"], from_string<int16_t>(mut["strand"]));
-        mut["repeat_size"] = to_string(seq_string.length());
+        // @JEB: correct here to look for where the repeat is in the original ref_seq_info.
+        // This saves us from possible looking at a shifted location...
+        string seq_string = ref_seq_info.repeat_example(mut["repeat_name"], from_string<int16_t>(mut["strand"]));
+        mut["repeat_size"] = to_string(seq_string.length()); // saving this for shifting
 
-        const string& duplicate_sequence = ref_seq_info.get_sequence_1(mut[SEQ_ID], position - 1, from_string<uint32_t>(mut["duplication_size"]));
-        ref_seq_info.insert_sequence_1(mut[SEQ_ID], position, duplicate_sequence + seq_string);
+        string duplicate_sequence = new_ref_seq_info.get_sequence_1(mut[SEQ_ID], position, position + from_string<uint32_t>(mut["duplication_size"]) - 1);
+        new_ref_seq_info.insert_sequence_1(mut[SEQ_ID], position-1, duplicate_sequence + seq_string);
 
         if (verbose) {
-          cout << "MOB: 0" << " => " << duplicate_sequence.length() + seq_string.length() << endl;
-          cout << "+" << position << " + " << duplicate_sequence + seq_string << endl;
+          cout << "MOB: 0" << " => " << duplicate_sequence + seq_string << endl;
+          cout << "   shift +" << (duplicate_sequence.length() + seq_string.length())  << " bp at position " << position << endl;
         }
       } break;
 
       case CON:
       {
-        uint32_t start = from_string<uint32_t>(mut[START]);
-        uint32_t end = from_string<uint32_t>(mut[END]);
-        const uint32_t& size = from_string<uint32_t>(mut[SIZE]);
+        uint32_t size = from_string<uint32_t>(mut[SIZE]);
 
         uint32_t replace_target_id, replace_start, replace_end;
-        ref_seq_info.parse_region(mut["region"], replace_target_id, replace_start, replace_end);
-        string replacing_sequence = ref_seq_info[replace_target_id].get_sequence_1(replace_start, replace_end - replace_start + 1);
-
-        Strand strand = start < end ?  POS_STRAND : NEG_STRAND;
+        new_ref_seq_info.parse_region(mut["region"], replace_target_id, replace_start, replace_end);
+        ASSERTM(replace_start != replace_end, "Cannot process CON mutation with end == start. ID:" + to_string(mut._id));
+        
+        Strand strand = (replace_start < replace_end) ?  POS_STRAND : NEG_STRAND;
+        
         if (strand == NEG_STRAND) {
-          swap(start, end);
-          revcom(replacing_sequence);
+          swap(replace_start, replace_end);
+        }
+        
+        // @JEB: correct here to look for where the replacing_sequence is in the original ref_seq_info.
+        // This saves us from possible looking at a shifted location...
+        string replacing_sequence = ref_seq_info[replace_target_id].get_sequence_1(replace_start, replace_end);
+
+        if (strand == NEG_STRAND) {
+          replacing_sequence = reverse_complement(replacing_sequence);
         }
 
-        string displaced_sequence = ref_seq_info.get_sequence_1(mut[SEQ_ID], position, size);
-        uint32_t original_length = ref_seq_info.get_sequence_length(mut[SEQ_ID]);
+        string displaced_sequence = new_ref_seq_info.get_sequence_1(mut[SEQ_ID], position, position + size - 1);
 
-        ref_seq_info.replace_sequence_1(mut[SEQ_ID], position, size, replacing_sequence);
-
-        cout << ">> CON: Gene Conversion Mutation <<" << endl;
-        cout << mut[SEQ_ID] << ":" << start << "-" << end << endl;
-        cout << "Original Length: " << original_length << endl;
-        cout << "Replace " << displaced_sequence << endl;
-        cout << "With " << replacing_sequence << endl;
-        cout << "New Length: " << ref_seq_info.get_sequence_length(mut[SEQ_ID]) << endl;
+        new_ref_seq_info.replace_sequence_1(mut[SEQ_ID], position, position + size - 1, replacing_sequence);
+        
+        if (verbose) {
+          cout << "CON: " << displaced_sequence << " => " << replacing_sequence << endl;
+          int32_t size_change = static_cast<int32_t>(replacing_sequence.length()) - static_cast<int32_t>(displaced_sequence.length());
+          cout << "   shift " << ((size_change >= 0) ? "+" : "") << size_change << " bp at position " << position << endl;
+        }
+        
       } break;
 
       default:
         ASSERTM(false, "Can't handle mutation type: " + to_string(mut._type));
-        
     }
     
-    this->shift_positions(mut, ref_seq_info);
+    this->shift_positions(mut, new_ref_seq_info);
   }
+  
+  return new_ref_seq_info;
 }
 
 
 void genome_diff::shift_positions(diff_entry &item, cReferenceSequences& ref_seq_info)
 {
   bool verbose = true;
-
   int32_t delta = item.mutation_size_change(ref_seq_info);
+  if (verbose)
+    cout << "Shift size: " << delta << endl;
   if (delta == UNDEFINED_INT32)
     WARN("Size change not defined for mutation.");
 
   uint32_t offset = from_string<uint32_t>(item[POSITION]);
-  if (verbose)
-    cout << offset << " " << delta << endl;
   bool inversion = false;
 
   diff_entry_list muts = this->mutation_list();
   for (diff_entry_list::iterator itr = muts.begin(); itr != muts.end(); itr++) {
-    diff_entry mut = **itr;
+    diff_entry& mut = **itr;
 
     if (inversion) {
       WARN("shift_positions cannot handle inversions yet!");
@@ -1282,10 +1286,10 @@ int32_t diff_entry::mutation_size_change(cReferenceSequences& ref_seq_info)
     {
       uint32_t replace_target_id, replace_start, replace_end;
       ref_seq_info.parse_region((*this)["region"], replace_target_id, replace_start, replace_end);  
-      
       int32_t size = from_string<uint32_t>((*this)[SIZE]);
-      int32_t new_size = replace_end - replace_start + 1;
-      return  size - new_size;
+      
+      int32_t new_size = (replace_end > replace_start) ? replace_end - replace_start + 1 : replace_start - replace_end + 1;
+      return  new_size - size;
       break;
     }
     default:

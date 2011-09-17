@@ -562,12 +562,6 @@ namespace breseq {
     return s;
   }
 
-  inline void revcom(string& sequence)
-  {
-    substitute(sequence, "ATCG", "TAGC");
-    reverse(sequence.begin(), sequence.end());
-  }
-
 	struct CandidateJunction
 	{
 		int32_t r1;

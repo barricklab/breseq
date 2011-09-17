@@ -36,7 +36,7 @@
       displayScale = "1.00"
       launchStyle = "0"
       useCustomWorkingDirectory = "YES"
-      customWorkingDirectory = "/Users/jbarrick/src/breseq"
+      customWorkingDirectory = "/Users/jbarrick/tmp/gd_apply_tests"
       buildConfiguration = "Debug">
       <BuildableProductRunnable>
          <BuildableReference
@@ -49,7 +49,7 @@
       </BuildableProductRunnable>
       <CommandLineArguments>
          <CommandLineArgument
-            argument = "-o tests/lambda_mixed_pop -r tests/lambda_mixed_pop/../data/lambda/lambda.gbk tests/lambda_mixed_pop/../data/lambda/lambda_mixed_population.fastq"
+            argument = "APPLY -r REL606.gbk -g JEB808.gd"
             isEnabled = "YES">
          </CommandLineArgument>
       </CommandLineArguments>
