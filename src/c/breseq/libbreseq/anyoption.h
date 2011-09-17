@@ -187,7 +187,7 @@ namespace breseq {
 					this->setOption(option_name_split[0].c_str(), option_name_split[1][0]);
 				else
 					this->setFlag(option_name_split[0].c_str(), option_name_split[1][0]);
-				usage = "  -" + option_name_split[1] + " [ " + option_name_split[0] + " ]";
+				usage = "  -" + option_name_split[1] + ",--" + option_name_split[0];
 			}
 			else
 			{
@@ -196,23 +196,25 @@ namespace breseq {
 				else
 					this->setFlag(option_name_split[0].c_str());
 
-        usage = "  [ " + option_name_split[0] + " ]";
+        usage = "  --" + option_name_split[0];
 			}
 
-			if (has_argument) usage += " arg";
-			if (has_default_value)
-			{
-				string string_value = to_string(option_default_value);
-				if (string_value.size() > 0)
-					usage += " (=" + string_value + ")";
-				else
-					usage += " (optional)";
-			}
+			if (has_argument) usage += " <arg>";
 
 			if (usage.size() < USAGE_LEFT_COLUMN_WIDTH)
 				usage += string(abs(static_cast<int32_t>(USAGE_LEFT_COLUMN_WIDTH - usage.size())), ' ');
 
-			string wrapped_description = word_wrap(option_description, terminal_width - USAGE_LEFT_COLUMN_WIDTH);
+      // Add the default option information
+      string default_value_string;
+      if (has_default_value)
+			{
+				if (default_value_string.size() > 0)
+					default_value_string = " (DEFAULT=" + default_value_string + ")";
+				else
+					default_value_string = " (OPTIONAL)";
+			}
+      
+			string wrapped_description = word_wrap(option_description + default_value_string, terminal_width - USAGE_LEFT_COLUMN_WIDTH);
 			string search_string = "\n";
 			string replace_string = search_string + string(USAGE_LEFT_COLUMN_WIDTH, ' ');
 			string::size_type pos = 0;

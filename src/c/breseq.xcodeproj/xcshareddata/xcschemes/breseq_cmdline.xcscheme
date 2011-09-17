@@ -36,7 +36,7 @@
       displayScale = "1.00"
       launchStyle = "0"
       useCustomWorkingDirectory = "YES"
-      customWorkingDirectory = "/Users/jbarrick/tmp/gd_apply_tests"
+      customWorkingDirectory = "/Users/jbarrick/src/breseq/tests/lambda_mixed_pop"
       buildConfiguration = "Debug">
       <BuildableProductRunnable>
          <BuildableReference
@@ -50,6 +50,10 @@
       <CommandLineArguments>
          <CommandLineArgument
             argument = "APPLY -r REL606.gbk -g JEB808.gd"
+            isEnabled = "NO">
+         </CommandLineArgument>
+         <CommandLineArgument
+            argument = "bam2cov --help"
             isEnabled = "YES">
          </CommandLineArgument>
       </CommandLineArguments>

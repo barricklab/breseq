@@ -42,7 +42,6 @@ void coverage_output::plot(const string& region, const string& output_file_name,
 	string extended_region = seq_id + ":" + to_string(extended_start) + "-" + to_string(extended_end);  
 	uint32_t size = extended_end - extended_start + 1;
 	
-  
   string _output_file_name(output_file_name);
   
   // auto-construct filename if none was provided
@@ -52,21 +51,18 @@ void coverage_output::plot(const string& region, const string& output_file_name,
     _output_file_name = substitute(_output_file_name, ":", "_");
     _output_file_name += "." + m_output_format;
   }
-  // if no guidance provided about how much to downsample, aim for 1E2-1E3 total points.
-  uint32_t downsample = floor(static_cast<double>(size) / static_cast<double>(resolution));
-  if (downsample < 1) downsample = 1;
 	
   pid_t pid = getpid();
 	string tmp_coverage = m_intermediate_path + "/" + to_string(pid) + ".coverage.tab";
 	
-  this->tabulate(extended_region, tmp_coverage, downsample);
+  this->table(extended_region, tmp_coverage, resolution);
 	
   string log_file_name = m_intermediate_path + "/" + to_string(pid) + ".r.log";
   string command = "R --vanilla";
   command += " in_file=" + tmp_coverage;
   command += " out_file=" + _output_file_name;
   command += " pdf_output=";
-  command += ((m_output_format=="pdf") ? "1" : "0");
+  command += ((m_output_format=="PDF") ? "1" : "0");
   command += " total_only=";
   command += ((m_total_only) ? "1" : "0");
   command += " window_start=" + to_string(start_pos);
@@ -74,14 +70,26 @@ void coverage_output::plot(const string& region, const string& output_file_name,
   command += " < " + m_r_script_file_name;
   command += " > " + log_file_name;
   
-	SYSTEM(command);
+	SYSTEM(command, true);
 	
 	remove(tmp_coverage.c_str());
 	remove(log_file_name.c_str());
 }
 
-void coverage_output::tabulate(const string& region, const string& output_file_name, uint32_t downsample)
+void coverage_output::table(const string& region, const string& output_file_name, uint32_t resolution)
 {
+  uint32_t target_id, start_pos, end_pos, insert_start, insert_end;
+  this->parse_region(region, target_id, start_pos, end_pos, insert_start, insert_end);
+	uint32_t size = end_pos - start_pos + 1;
+
+  // Resolution of 0 implies no downsampling, otherwise adjust to get close to resolution # of pts
+  uint32_t downsample = 1;
+  if (resolution != 0)
+  {
+    downsample = floor(static_cast<double>(size) / static_cast<double>(resolution));
+    if (downsample < 1) downsample = 1;
+  }
+  
   m_output_table.open(output_file_name.c_str());
   
   if (m_read_begin_output_file_name.length() > 0) m_read_begin_output.open(m_read_begin_output_file_name.c_str());

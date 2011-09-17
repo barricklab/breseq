@@ -30,7 +30,7 @@ namespace breseq
   
   /*! This class is a FACTORY for generating coverage plots
    */
-  class coverage_output : pileup_base
+  class coverage_output : public pileup_base
   {
   protected:
     string    m_output_format; 
@@ -70,24 +70,33 @@ namespace breseq
       : pileup_base(bam, fasta), m_output_format("png"), m_downsample(0), m_total_only(false)
       , m_shaded_flanking(0), m_r_script_file_name(r_script_file_name), m_intermediate_path(intermediate_path) {};
     
+    // Get/Set Options
+
     string output_format(const string& _output_format = "") 
     { 
       if (_output_format.length() > 0)
       {
-        m_output_format = _output_format;
-        ASSERTM( (m_output_format=="png") || (m_output_format=="pdf"), 
-                "Unrecognized coverage plot output format: " + m_output_format);
+        m_output_format = to_upper(_output_format);
+        ASSERTM( (m_output_format=="PNG") || (m_output_format=="PDF"), 
+                "Unrecognized coverage plot output format '" + m_output_format + "'.\nValid options are: png or pdf");
       }
       return m_output_format; 
     }
     
-    // Get/Set Options
-    bool shaded_flanking(uint32_t _shaded_flanking) { m_shaded_flanking = _shaded_flanking; return m_shaded_flanking; }
-    string read_begin_output_file_name(const string& _fn) { m_read_begin_output_file_name = _fn; return m_read_begin_output_file_name; }
-    string gc_output_file_name(const string& _fn) { m_gc_output_file_name = _fn; return m_gc_output_file_name; }
+    bool shaded_flanking(uint32_t _shaded_flanking) 
+      { m_shaded_flanking = _shaded_flanking; return m_shaded_flanking; }
+    
+    string read_begin_output_file_name(const string& _fn) 
+      { m_read_begin_output_file_name = _fn; return m_read_begin_output_file_name; }
+    
+    string gc_output_file_name(const string& _fn) 
+      { m_gc_output_file_name = _fn; return m_gc_output_file_name; }
+    
+    bool total_only(bool _total_only)
+      { m_total_only = _total_only; return m_total_only; }
     
     void plot(const string& region, const string& output_file_name, uint32_t resolution = 600);
-    void tabulate(const string& region, const string& output_file_name, uint32_t downsample = 1);
+    void table(const string& region, const string& output_file_name, uint32_t resolution = 0);
   };
   
   
