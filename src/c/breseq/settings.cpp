@@ -178,8 +178,6 @@ namespace breseq
     ("base-quality-cutoff,b", "ignore bases with quality scores lower than this value", "3")
     ("deletion-coverage-propagation-cutoff,u","value for coverage above which deletions are cutoff")
     ("deletion-coverage-seed-cutoff,s","value for coverage below which deletions are cutoff")
-
-    
     .processCommandArgs(argc, argv);
     
     // Reference sequence provided?

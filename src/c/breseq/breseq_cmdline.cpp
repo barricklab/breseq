@@ -115,34 +115,58 @@ int do_bam2cov(int argc, char* argv[]) {
 	AnyOption options("Usage: bam2aln --bam=<reference.bam> --fasta=<reference.fasta> --region=<accession:start-end> --output=<output.html> [--max-reads=1000]");
 	options
   ("help,h", "produce this help message", TAKES_NO_ARGUMENT)
+  // required options
   ("bam,b", "bam file containing sequences to be aligned", "data/reference.bam")
 	("fasta,f", "FASTA file of reference sequence", "data/reference.fasta")
-  ("output,o", "name of output file", "output.png")
+  ("output,o", "base name of output file. region appended if multiple output files")
+  // which regions to create files for
   ("region,r", "region to print (accession:start-end)", "")
-  ("pdf", "create PDF, rather than PNG output", TAKES_NO_ARGUMENT)
-  ("table,t", "output table, rather than plot", "")
-  ("total-only,1", "only plot total", "")
-  ("resolution", "resolution", 600)
-  ("tile", "size of tiles", "")
-  ("tile-overlap", "overlap between tiles", "")
+  ("tile-size", "size of tiles")
+  ("tile-overlap", "overlap between tiles (1/2 on each side)")
+  // options controlling what files are output
+  ("plot,p", "create graphical plot of coverage", TAKES_NO_ARGUMENT)
+  ("plot-format", "plot format: PNG or PDF", "PNG")
+  ("table,t", "create text table of coverage", TAKES_NO_ARGUMENT)
+//  ("read_start_output,r", "file name for table file binned by read start bases (DEFAULT: OFF)")
+//  ("gc_output,g", "create additional table file binned by GC content of reads (DEFAULT: OFF)")
+  // options controlling information that is output
+  ("total-only,1", "only plot/tabulate total coverage, not per strand", TAKES_NO_ARGUMENT)
+  ("resolution", "rough number of positions to output coverage information for in interval (0=ALL)", 600)
   .processCommandArgs(argc, argv);
   
-  vector<string> region_list;
-  for (int32_t i = 0; i < options.getArgc(); i++)
-  {
-    string region = options.getArgv(i);
-    region_list.push_back(region);
-  }
-  
-	// make sure that the config options are good:
+  // make sure that the required config options are good:
 	if(options.count("help")
-		 || !options.count("region")
      || !file_exists(options["fasta"].c_str())
      || !file_exists(options["bam"].c_str()) )
   {
 		options.printUsage();
 		return -1;
 	}
+  
+  ASSERTM(options.count("plot") || options.count("table"), "Must specify either --plot or --table.");
+
+  vector<string> region_list;
+  if (options.count("region"))
+    region_list= from_string<vector<string> >(options["region"]);
+  
+  // also take regions off the command line
+  for (int32_t i = 0; i < options.getArgc(); i++)
+  {
+    string region = options.getArgv(i);
+    region_list.push_back(region);
+  }
+  
+  bool tiling_mode = options.count("tile-size") && options.count("tile-overlap");
+  ASSERTM(tiling_mode || (!options.count("tile-size") && !options.count("tile-overlap")),
+          "--tile-size and --tile-overlap args must both be provided to activate tile mode");
+  
+  if (tiling_mode && (region_list.size() > 0))
+  {
+    WARN("Tiling mode activated. Ignoring " + to_string(region_list.size()) + "regions that were specified.");
+    region_list.clear();
+  }
+  
+  ASSERTM(tiling_mode || (region_list.size() > 0), "No regions specified.");
   
   // create empty settings object to have R script name
   Settings settings;
@@ -154,131 +178,64 @@ int do_bam2cov(int argc, char* argv[]) {
                       settings.coverage_plot_r_script_file_name
                       );
   
-  // Set options =
+  // Set options
+  co.total_only(options.count("total-only"));
+  co.output_format( options["plot-format"] );
+  
+  // create regions that tile the genome
+  if (tiling_mode)
+  {
+    int32_t tile_size = from_string<int32_t>(options["tile-size"]);
+    int32_t tile_overlap = from_string<int32_t>(options["tile-overlap"]);
+    tile_overlap = floor( static_cast<double>(tile_overlap) / 2.0);
+
+    for(uint32_t target_id=0; target_id < co.num_targets(); target_id++)
+    {
+      const char* target_name = co.target_name(target_id);
+      int32_t target_length = co.target_length(target_id);
+      
+      int32_t start = 1;
+      while (start < target_length)
+      {
+        int32_t end = start + tile_size - 1;
+        
+        int32_t offset_start = start - tile_overlap;
+        if (offset_start < 1) offset_start = 1;
+        
+        int32_t offset_end = end + tile_overlap;
+        if (offset_end > target_length) offset_end = target_length;
+        
+        string region = target_name;
+        region += ":" + to_string(offset_start) + "-" + to_string(offset_end);
+        
+        region_list.push_back(region);
+        
+        start += tile_size;
+      }
+    }
+  }
   
   for(vector<string>::iterator it = region_list.begin(); it!= region_list.end(); it++)
   {
-    co.plot(*it, options["output"], from_string<uint32_t>(options["resolution"]));
+// these are experimental... additional table files
+//    if (options.count("read_start_output"))
+//      co.read_begin_output_file_name(options["read_start_output"]);
+//    if (options.count("gc_output"))
+//      co.gc_output_file_name(options["gc_output"]);
+    
+    string file_name = options["output"];
+    if ((region_list.size() > 0) || (file_name == ""))  file_name += *it;
+    cout << "Coverage for region: " << *it << endl;
+    
+    if (options.count("table"))
+      co.table(*it, file_name + ".tab", from_string<uint32_t>(options["resolution"]));
+    
+    if (options.count("plot"))
+      co.plot(*it, file_name + "." + to_lower(options["plot-format"]) , from_string<uint32_t>(options["resolution"]));
   }
   
   return 0;
 }
-
-//@JEB - need to finish porting some more functionality
-
-//my (@regions) = @ARGV;
-//
-//#handle default paths
-//$bam_path = 'reference.bam' if (!$bam_path && -e 'reference.bam');
-//$bam_path = 'data/reference.bam' if (!$bam_path && -e 'data/reference.bam');
-//
-//$fasta_path = 'reference.fasta' if (!$fasta_path && -e 'reference.fasta');
-//$fasta_path = 'data/reference.fasta' if (!$fasta_path && -e 'data/reference.fasta');
-//
-//die "No BAM file defined.\n" if (!$bam_path);
-//die "No fasta file defined.\n" if (!$fasta_path);
-//
-//my $co = Breseq::CoverageOutput->new(-fasta => $fasta_path, -bam => $bam_path);
-//
-//### Create regions that tile the genome with this size
-//if ($tile)
-//{
-//	my $bam = $co->{bam};
-//	my @targets = $bam->seq_ids;
-//	
-//	foreach my $seq_id (@targets)
-//	{
-//		my $reference_length = $bam->length($seq_id);
-//		my $start = 1;
-//		while ($start < $reference_length)
-//		{
-//## ends will be fixed later automatically for when they go too far
-//			my $end = $start + $tile - 1;
-//			
-//			my $offset_start = $start - $tile_overlap;
-//			$offset_start = 1 if ($offset_start < 1);
-//			
-//			my $offset_end = $end + $tile_overlap;
-//			$offset_end = $reference_length if ($offset_end > $reference_length);
-//			
-//			my $region = "$seq_id:$offset_start-$offset_end";
-//			push @regions, $region;
-//			$start += $tile;
-//		}
-//	}
-//	print STDERR Dumper(@regions);
-//	
-//}
-//
-//die "No regions defined.\n" if (scalar @regions == 0);
-//
-//
-//print STDOUT "region\tbp\tavg\tSE\n" if ($table_mode);
-//
-//foreach my $region (@regions)
-//{
-//  
-//#figure out the output file name
-//	my $this_output_file = "$region";
-//	if (defined $output_path)
-//	{
-//#if there is just one region, use this file name straight up if it is not a directory
-//		if ((scalar @regions == 1) && (!-d $output_path))
-//		{
-//			$this_output_file = $output_path;
-//		}
-//		else
-//		{
-//			die "Output directory (-o) does not exist: $output_path\n" if (!-d $output_path);
-//			$this_output_file = "$output_path/$region";
-//		}
-//	}
-//  
-//##Tabulate coverage
-//	if ($table_mode)
-//	{	
-//		$this_output_file .= '.tab';
-//    
-//		$co->tabulate_coverage($this_output_file, $region);
-//    
-//		open COV, "<$this_output_file" or die;
-//		my @ll = <COV>;
-//    
-//		chomp @ll;
-//		shift @ll; #header
-//		my $n = scalar @ll;
-//		my $avg = 0;
-//		my $variance = 0;
-//		foreach my $l (@ll)
-//		{
-//			my @sl = split "\t", $l;
-//			$avg += $sl[1] + $sl[2];
-//		}
-//		$avg /= $n;
-//    
-//		foreach my $l (@ll)
-//		{
-//			my @sl = split "\t", $l;
-//			$variance += ($avg - ($sl[1] + $sl[2]))**2;
-//		}
-//    
-//		my $ssd = (1/($n-1) * $variance)**0.5;
-//		my $sem = $ssd / $n**0.5;
-//		close COV;
-//    
-//		print STDOUT "$region\t$n\t$avg\t$sem\n";
-//	}
-//  
-//## Make drawings
-//	else
-//	{
-//		$co->plot_coverage($region, $this_output_file, {verbose=>$verbose, resolution=>$resolution, pdf => $pdf, total_only => $total_only, use_c_tabulate_coverage => 1});
-//	}
-//}
-
-
-
-
 
 /*! Analyze FASTQ
  
@@ -1019,53 +976,6 @@ int do_identify_candidate_junctions(int argc, char* argv[]) {
 	}
   
   return 0;
-}
-
-/*! Tabulate coverage.
- */
-int do_tabulate_coverage(int argc, char* argv[]) {
-	
-	// setup and parse configuration options:
-	AnyOption options("Usage: tabulate_coverage --bam <sequences.bam> --fasta <reference.fasta> --output <coverage.tab> [--downsample <float> --detailed]");
-	options
-		("help,h", "produce this help message", TAKES_NO_ARGUMENT)
-		("bam,b", "bam file containing sequences to be aligned")
-		("fasta,f", "FASTA file of reference sequence")
-		("output,o", "name of output file")
-		("region,r", "region to print (accession:start-end)", "")
-		("downsample,d", "Only print information every this many positions", 1)
-		("read_start_output,r", "Create additional data file binned by read start bases", "")
-		("gc_output,g", "Create additional data file binned by GC content of reads", "")
-	.processCommandArgs(argc, argv);
-
-	// make sure that the config options are good:
-	if(options.count("help")
-		 || !options.count("bam")
-		 || !options.count("fasta")
-		 || !options.count("output")
-     ) {
-		options.printUsage();
-		return -1;
-	}  
-    
-	try {
-    
-    Settings settings;
-    coverage_output co(options["bam"], options["fasta"], settings.coverage_plot_r_script_file_name);
-
-    if (options.count("read_start_output"))
-      co.read_begin_output_file_name(options["read_start_output"]);
-    if (options.count("gc_output"))
-      co.gc_output_file_name(options["gc_output"]);
-    
-    co.tabulate(options["region"], options["output"], from_string<int>(options["downsample"]));
-                
-	} catch(...) {
-		// failed; 
-		return -1;
-	}
-	
-	return 0;
 }
 
 
@@ -2013,8 +1923,6 @@ int main(int argc, char* argv[]) {
 		return do_preprocess_alignments(argc_new, argv_new);
 	} else if (command == "IDENTIFY_CANDIDATE_JUNCTIONS") {
 		return do_identify_candidate_junctions(argc_new, argv_new);
-	} else if (command == "TABULATE_COVERAGE") {
-		return do_tabulate_coverage(argc_new, argv_new);
 	} else if (command == "RESOLVE_ALIGNMENTS") {
 		return do_resolve_alignments(argc_new, argv_new);
   } else if (command == "PREDICT_MUTATIONS") {
