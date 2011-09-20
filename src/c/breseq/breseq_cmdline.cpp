@@ -980,20 +980,28 @@ int do_identify_candidate_junctions(int argc, char* argv[]) {
 
 
 int do_convert_gvf( int argc, char* argv[]){
-    AnyOption options("Usage: GD2GVF --gd <genomediff.gd> --output <gvf.gvf>"); options( "gd,i","gd file to convert") ("output,o","name of output file").processCommandArgs( argc,argv);
-    
-    if( !options.count("gd") || !options.count("output") ){
-        options.printUsage(); return -1;
-    }
-    
-    try{
-        GDtoGVF( options["gd"], options["output"] );
-    } 
-    catch(...){ 
-        return -1; // failed 
-    }
-    
-    return 0;
+  AnyOption options("Usage: GD2GVF --gd <genomediff.gd> --output <gvf.gvf>"); 
+
+  options
+    ("help,h", "produce this help message", TAKES_NO_ARGUMENT)
+    ("input,i","gd file to convert") 
+    ("output,o","name of output file")
+    ("snv-only", "only output SNV entries", TAKES_NO_ARGUMENT)
+    ;
+  options.processCommandArgs( argc,argv);
+  
+  if( !options.count("input") || !options.count("output") ){
+      options.printUsage(); return -1;
+  }
+  
+  try{
+      GDtoGVF( options["input"], options["output"], options.count("snv-only") );
+  } 
+  catch(...){ 
+      return -1; // failed 
+  }
+  
+  return 0;
 }
 
 int do_convert_gd( int argc, char* argv[]){
