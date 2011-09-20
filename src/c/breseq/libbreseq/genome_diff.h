@@ -232,7 +232,7 @@ struct diff_entry {
 void add_reject_reason(diff_entry& de, const string &reason);
 
 //! Convert genome diff to GVF
-void GDtoGVF( const string& gdfile, const string& gfffile );
+void GDtoGVF( const string& gdfile, const string& gvffile, bool snv_only = false );
 
 //! Convert VCF to genome diff
 void VCFtoGD( const string& vcffile, const string& gfffile );
@@ -412,8 +412,7 @@ struct diff_entry::by_scores : public binary_function
   //! Predicate
   virtual bool operator() (const diff_entry_ptr& a, const diff_entry_ptr& b) const 
   {
-    for (vector<key_t>::const_iterator itr = m_field_keys.begin();
-         itr != m_field_keys.end(); itr++) {
+    for (vector<key_t>::const_iterator itr = m_field_keys.begin(); itr != m_field_keys.end(); itr++) {
       string key(*itr);
 
       if (from_string<uint32_t>((*a)[key]) == from_string<uint32_t>((*b)[key]))
