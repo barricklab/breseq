@@ -36,7 +36,7 @@
       displayScale = "1.00"
       launchStyle = "0"
       useCustomWorkingDirectory = "YES"
-      customWorkingDirectory = "/Users/jbarrick/src/breseq/tests/lambda_mixed_pop"
+      customWorkingDirectory = "/Users/jbarrick/tmp/coverage_tests"
       buildConfiguration = "Debug">
       <BuildableProductRunnable>
          <BuildableReference
@@ -53,7 +53,11 @@
             isEnabled = "NO">
          </CommandLineArgument>
          <CommandLineArgument
-            argument = "bam2cov --help"
+            argument = "GD2GVF --input Ara-1_35K-C_REL10707.gd --output Ara-1_35K-C_REL10707.gd.gvf --snv-only"
+            isEnabled = "NO">
+         </CommandLineArgument>
+         <CommandLineArgument
+            argument = "-o 02-20 -r downloads/bull_2.gbk downloads/bull_2.fastq -s .2 -u .8"
             isEnabled = "YES">
          </CommandLineArgument>
       </CommandLineArguments>

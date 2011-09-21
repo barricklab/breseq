@@ -146,10 +146,9 @@ namespace breseq {
                                   covariates_max_t&          _covariate_max,          // maximum value of each covariate
                                   covariates_enforce_max_t&  _covariate_enforce_max,  // do not throw an error if max exceeded, reassign value to max
                                   covariates_offset_t&       _covariate_offset,       // number to multiply this covariate by when constructing row numbers
-                                  bool                       _per_position
+                                  bool&                      _per_position
                                   );
       string print_covariates();
-      //void split(const std::string& s, char c, std::vector<std::string>& v); // helper function
 
       //* IO of tables
       void read_log10_prob_table(const string& filename);
