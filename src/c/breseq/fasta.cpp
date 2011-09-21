@@ -48,6 +48,7 @@ namespace breseq {
     
     // Current line should begin with >
     assert(m_current_line[0] == '>');
+    substitute(m_current_line, " ", "_");//! Errors will occur if two names are present
     sequence.m_name = m_current_line.substr(1);
     
     std::getline(*this, m_current_line);
