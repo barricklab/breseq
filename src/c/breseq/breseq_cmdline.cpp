@@ -332,33 +332,33 @@ int do_convert_fastq(int argc, char* argv[])
 
 // Helper function
 void convert_genbank(const vector<string>& in, const string& fasta, const string& ft, const string& gff3 ) {
-  
+
   cReferenceSequences refseqs;
-  
+
   // Load the GenBank file
   LoadGenBankFile(refseqs, in);
-  
+
   // Output sequence
   if (fasta != "") refseqs.WriteFASTA(fasta);
-  
+
   // Output feature table
   if (ft != "") refseqs.WriteFeatureTable(ft);
-     
+
   if (gff3 != "" ) refseqs.WriteGFF( gff3 );
 }
 
 void convert_bull_form(const vector<string>& in, const string& fasta, const string& ft, const string& gff3 ) {
   cReferenceSequences refseqs;
-  
+
   // Load the GenBank file
   LoadBullFile(refseqs, in);
-  
+
   // Output sequence
   if (fasta != "") refseqs.WriteFASTA(fasta);
-  
+
   // Output feature table
   if (ft != "") refseqs.WriteFeatureTable(ft);
-  
+
   if (gff3 != "" ) refseqs.WriteGFF( gff3 );
 }
 
@@ -1071,13 +1071,14 @@ int breseq_default_action(int argc, char* argv[])
 		s.max_qual = overall_max_qual;
 		summary.sequence_conversion = s;
 
-		// C++ version of reference sequence processing
-		convert_genbank(
-			settings.reference_file_names,
-			settings.reference_fasta_file_name,
-			settings.reference_features_file_name,
-			settings.reference_gff3_file_name
-		);
+    // C++ version of reference sequence processing
+    // Determine what type of reference sequence file the user inputs.
+    cReferenceSequenceConverter ReferenceSequenceConverter(settings);
+    ReferenceSequenceConverter.Process();
+
+
+
+
 
 		// create SAM faidx
 		string samtools = settings.ctool("samtools");
@@ -1872,8 +1873,6 @@ int do_mutate(int argc, char *argv[])
 
   return 0;
 }
-
-
 
 /*! breseq commands
  

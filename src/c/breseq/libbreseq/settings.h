@@ -569,12 +569,12 @@ namespace breseq
 		void done_step(string done_key);
 		void check_installed();
     void log(const string& message);
-	private:
+  private:
 
 		void pre_option_initialize(int argc = 0, char* argv[] = NULL);
 		void post_option_initialize();
-		void init_installed();
-	};
+    void init_installed();
+  };
 
 	class AnalyzeFastq : public Storable {
   public:

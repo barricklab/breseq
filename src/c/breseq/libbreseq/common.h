@@ -339,7 +339,7 @@ namespace breseq {
 					const  string  & theString,
 					const  string  & theDelimiter
 	) {
-		assert(theDelimiter.size() > 0); // My own ASSERT macro.
+    assert(theDelimiter.size() > 0); // My own ASSERT macro.
 
 		size_t start = 0, end = 0;
 		vector<string> theStringVector;
