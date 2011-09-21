@@ -217,7 +217,6 @@ namespace breseq {
       if (message.length() > 0) cerr << message << endl;
       cerr << "FILE: " << file << "   LINE: " << line << endl;
       cerr << "-----------------------> WARNING <-----------------------" << endl;
-      exit(-1);
     }
   }
   
