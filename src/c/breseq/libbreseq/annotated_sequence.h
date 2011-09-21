@@ -25,6 +25,8 @@ LICENSE AND COPYRIGHT
 #include "libbreseq/fastq.h"
 #include "libbreseq/alignment.h"
 #include "libbreseq/genome_diff.h"
+#include "libbreseq/anyoption.h"
+#include "libbreseq/settings.h"
 
 using namespace std;
 
@@ -306,7 +308,7 @@ namespace breseq {
   bool LoadGenBankFileHeader(ifstream& in, cReferenceSequences& s);
   void LoadGenBankFileSequenceFeatures(ifstream& in, cAnnotatedSequence& s);
   void LoadGenBankFileSequence(ifstream& in, cAnnotatedSequence& s);
-  
+
   void LoadFeatureIndexedFastaFile(cReferenceSequences& s, const string &in_feature_file_name, const string &in_fasta_file_name);
   
   void LoadBullFile(cReferenceSequences& s, const vector<string>& in_file_names);
@@ -314,7 +316,6 @@ namespace breseq {
 
   /*! Utility functions.
   */
-    
   std::string GetWord(string &s);
   void RemoveLeadingWhitespace(string &s);
   void RemoveLeadingTrailingWhitespace(string &s);
@@ -322,6 +323,48 @@ namespace breseq {
   uint32_t alignment_mismatches(const alignment_wrapper& a, const cReferenceSequences& ref_seq_info);
   string shifted_cigar_string(const alignment_wrapper& a, const cReferenceSequences& ref_seq_info);
 
+  /*! Class: cReferenceSequenceConverter
+
+   Creates a tab-delimited file of information about genes and a FASTA sequence
+   given various reference sequence file formats.  !*/
+
+  namespace File {enum Type {GENBANK, FASTA, GFF, BULL, GFF_AND_FASTA};}
+  class cReferenceSequenceConverter
+  {
+    public:
+      //! Constructor for use in Breseq's pipeline
+      cReferenceSequenceConverter(const Settings& settings) {
+        m_file_names = settings.reference_file_names;
+        m_fasta = settings.reference_fasta_file_name;
+        m_features = settings.reference_features_file_name;
+        m_gff = settings.reference_gff3_file_name;
+      }
+      //! Constructor for use as a utility option
+      cReferenceSequenceConverter(AnyOption& options) {
+        m_file_names = from_string<vector<string> >(options["input"]);
+        m_fasta = options["fasta"];
+        m_features = options["features"];
+        m_gff = options["gff3"];
+      }
+      //! Main method
+      void Process();
+
+    protected:
+      //! Helper functions
+      File::Type _ParseForFileType(const string& file);
+      File::Type _DetermineUseCase();
+      void _InitFileTypes();
+      void _Converter(const File::Type type);
+
+      //! Parameters initialized by constructor
+      vector<string> m_file_names;
+      string m_fasta;
+      string m_features;
+      string m_gff;
+
+      //! Built by class
+      map<File::Type, vector<string> > m_file_types;
+  };
 } // breseq namespace
 
 #endif

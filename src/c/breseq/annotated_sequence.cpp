@@ -83,7 +83,7 @@ namespace breseq {
       
       for(vector<cAnnotatedSequence>::iterator it_as = this->begin(); it_as < this->end(); it_as++) {
           
-          for (vector<cSequenceFeaturePtr>::iterator it = it_as->m_features.begin(); it < it_as->m_features.end(); it++) {
+          for (vector<cSequenceFeaturePtr>::iterator it = it_as->m_features.begin(); it != it_as->m_features.end(); it++) {
             cSequenceFeature& feat = **it;
             out << it_as->m_seq_id;
             out << "\tGenBank";
@@ -931,7 +931,7 @@ namespace breseq {
       while (LoadGenBankFileHeader(in, rs)) {
         LoadGenBankFileSequenceFeatures(in, rs.back());
         LoadGenBankFileSequence(in, rs.back());
-        rs.set_seq_id_to_index(rs.back().m_seq_id, on_seq_id++);//TODO Write setter for this
+        rs.set_seq_id_to_index(rs.back().m_seq_id, on_seq_id++);
       }
     }
   }
@@ -1536,6 +1536,143 @@ namespace breseq {
 
     ASSERTM(false, "Unknown repeat type: " + repeat_name);
     return "";
+  }
+   /*NOTES:_ParseForFileType
+       Current assumptions to determine file_type based on first line
+       GENBANK: First word is "LOCUS"
+       GFF3:
+       FASTA: First character is '>' and #columns == 1
+       BULL: #columns == 3
+    */
+   File::Type cReferenceSequenceConverter::_ParseForFileType(const string& file)
+   {
+     ifstream in(file.c_str());
+     if (!in.good()) {
+       WARN("Could not open reference file: " +file);
+     }
+
+     string first_line;
+     getline(in, first_line);
+     in.close();// Currently only parsing first line.
+
+     // Break line down to tokens
+     vector<string> tokens;
+     while (!first_line.empty()) {
+       tokens.push_back(GetWord(first_line));
+     }
+
+     // Check if it is a fasta file
+     if (tokens.front()[0] == '>' && tokens.size() == 1) {
+       return File::FASTA;
+     }
+     // Check if it is a genbank file
+     else if (tokens.front() == "LOCUS") {
+       return File::GENBANK;
+     }
+     // Check if it is a Bull file
+     else if (tokens.size() == 3) {
+       return File::BULL;
+     }
+     // Check if it is a GFF file
+     else if (tokens.front() != "LOCUS" && tokens.size() > 3) {
+       return File::GFF;
+     }
+     // The was not identified and will most likely cause Breseq to fail.
+     else {
+       WARN("The file format for the following reference file could not be determined: " + file);
+     }
+   }
+
+   void cReferenceSequenceConverter::_InitFileTypes()
+   {
+    vector<string>::const_iterator itr;
+
+    for(itr = m_file_names.begin(); itr != m_file_names.end(); itr++) {
+      const string& file = *itr;
+      if(file.find(".gbk") != string::npos && this->_ParseForFileType(file) == File::GENBANK) {
+        m_file_types[File::GENBANK].push_back(file);
+      }
+      else if(file.find(".fasta") != string::npos && this->_ParseForFileType(file) == File::FASTA) {
+        m_file_types[File::FASTA].push_back(file);
+      }
+      else if(file.find(".gff") != string::npos && this->_ParseForFileType(file) == File::GFF) {
+        m_file_types[File::GFF].push_back(file);
+      }
+      else if(this->_ParseForFileType(file) == File::BULL) {
+        m_file_types[File::BULL].push_back(file);
+      }
+    }
+  }
+
+  File::Type cReferenceSequenceConverter::_DetermineUseCase()
+  {
+    //! Case 1: All files are Genbank Files
+    if (m_file_types.count(File::GENBANK) == m_file_types.size()) {
+      return File::GENBANK;
+    }
+    //! Case 2: All files are Fasta Files
+    else if (m_file_types.count(File::FASTA) == m_file_types.size()) {
+      return File::FASTA;
+    }
+    //! Case 3: All files are Bull Files
+    else if (m_file_types.count(File::BULL) == m_file_types.size()) {
+      return File::BULL;
+    }
+    //! Case 4: Files are both Fasta and GFF Files
+    else if (m_file_types.count(File::FASTA) +
+             m_file_types.count(File::GFF)== m_file_types.size()) {
+      return File::GFF_AND_FASTA;
+    }
+  }
+  void cReferenceSequenceConverter::_Converter(const File::Type type)
+  {
+    cReferenceSequences refseqs;
+
+    /*! Step 1: Load files into cReferenceSequences, the data loaded
+      will then be written to several files. !*/
+    switch (type) {
+      case File::GENBANK:
+      {
+        LoadGenBankFile(refseqs, m_file_types[File::GENBANK]);
+      }break;
+
+      case File::FASTA:
+      {
+        const vector<string>& fasta_files = m_file_types[File::FASTA];
+        vector<string>::const_iterator itr;
+        for(itr = fasta_files.begin(); itr != fasta_files.end(); itr++) {
+          const string& file = *itr;
+          refseqs.ReadFASTA(file);
+        }
+      }break;
+
+      case File::BULL:
+      {
+        LoadBullFile(refseqs, m_file_types[File::BULL]);
+      }break;
+    }
+
+    //! Step 2: Write files for use in Breseq's initial phase
+    // Output reference sequence
+    if (m_fasta != "") refseqs.WriteFASTA(m_fasta);
+
+    // Output feature table
+    if (m_features != "") refseqs.WriteFeatureTable(m_features);
+
+    // Output GFF file
+    if (m_gff != "" ) refseqs.WriteGFF( m_gff );
+  }
+
+  void cReferenceSequenceConverter::Process()
+  {
+    this->_InitFileTypes();
+
+    switch (this->_DetermineUseCase()) {
+      case File::GENBANK:this->_Converter(File::GENBANK); break;
+      case File::FASTA:this->_Converter(File::FASTA); break;
+      case File::BULL:this->_Converter(File::BULL); break;
+      default: WARN("Unrecognized combination of reference files");
+    }
   }
 
 } // breseq namespace
