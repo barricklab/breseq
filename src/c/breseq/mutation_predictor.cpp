@@ -264,32 +264,12 @@ namespace breseq {
            )
 				{
           
-          //it's possible that one or both sides are in repeat elements -- this code may not be perfect @JEB
-          // should really be checking to see if it is on the edge of the repeat?
+          //it's possible that one or both sides are in repeat elements
           cSequenceFeature* r1_pointer = within_repeat(jc_item["side_1_seq_id"], n(jc_item["side_1_position"]));
           cSequenceFeature* r2_pointer = within_repeat(jc_item["side_2_seq_id"], n(jc_item["side_2_position"]));
           
-          // two repeats - not sure this would ever happen?
-          // start and end of deletion would not end up on the junction
-          if ((r1_pointer) && (r2_pointer))
-          {
-            // they have the same name
-            WARN("Edge case detected, cannot predict mutation: " + jc_item["key"]);
-            /*
-            if ((*r1_pointer)["name"] == (*r2_pointer)["name"])
-            {
-              // should check this code @JEB: we are at equivalent positions in each
-              if ( ( (n(jc_item["side_1_position"]) == n((*r1_pointer)["start"])-1)
-                  && (n(jc_item["side_2_position"]) == n((*r2_pointer)["start"])) )
-                || ( (n(jc_item["side_1_position"]) == n((*r1_pointer)["end"])-1)
-                  && (n(jc_item["side_2_position"]) == n((*r2_pointer)["end"])) ) )
-              
-              mut["between"] = (*r1_pointer)["name"];
-            }
-            */
-          }
-          // one repeat cases
-          else if (r1_pointer) 
+          // one repeat cases where the end matches up exactly
+          if (r1_pointer) 
           {
             // must match up to an end of the repeat
             if ((n(jc_item["side_1_position"]) == static_cast<int32_t>(r1_pointer->m_start))
