@@ -177,6 +177,7 @@ void coverage_output::pileup_callback(const breseq::pileup& p) {
     
     uint32_t redundancy = a->redundancy();
     uint32_t reversed = a->reversed();
+    
     bool first_base_matched;
     bool this_is_first_base;
     if (!reversed) { 
@@ -187,11 +188,6 @@ void coverage_output::pileup_callback(const breseq::pileup& p) {
       // bottom strand
       first_base_matched = (a->query_end_1() == a->read_length());
       this_is_first_base = (a->query_position_1() == a->read_length());     
-    }
-    
-    // WHOA -- do we really want this....?    
-    if (!first_base_matched) {
-      continue;
     }
     
     if (redundancy == 1)

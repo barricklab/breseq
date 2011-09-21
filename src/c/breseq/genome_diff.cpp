@@ -20,8 +20,6 @@ LICENSE AND COPYRIGHT
 #include "libbreseq/annotated_sequence.h"
 #include "libbreseq/output.h"
 
-#include <list>
-
 namespace breseq {
 
 // Common keywords used for diff entries:
@@ -538,210 +536,218 @@ void genome_diff::write(const string& filename) {
 }
 
 // Convert GD file to GVF file
-void GDtoGVF( const string &file, const string &gdfile ){
+void GDtoGVF( const string &gdfile, const string &gvffile, bool snv_only){
     
-    // Stores the features
-    vector< vector<string> > features;
-    vector< vector<string> > featuresGVF;
-    // Keeps track of the index of the entry associated with a particular evidence number
-    map< string, int > eDict;
-    
-    //Read input into array
-    ifstream gd( gdfile.c_str() );
-    string line;
-    getline( gd, line);
-    
-    while( !gd.eof() ){
-        // split line on tabs
-        char * cstr = new char [line.size()+1];
-        strcpy (cstr, line.c_str());
+  // Stores the features
+  vector< vector<string> > features;
+  vector< vector<string> > featuresGVF;
+  // Keeps track of the index of the entry associated with a particular evidence number
+  map< string, int > eDict;
+
+  //Read input into array
+  ifstream gd( gdfile.c_str() );
+  string line;
+  getline( gd, line);
+
+  while( !gd.eof() )
+  {
+    // split line on tabs
+    char * cstr = new char [line.size()+1];
+    strcpy (cstr, line.c_str());
+
+    if( cstr[0] == '#' ){ getline(gd,line); continue; }
+    vector<string> feature;
+    char * pch;
+    pch = strtok(cstr,"\t");
+
+    while (pch != NULL)
+    {
+        feature.push_back(pch);
+        pch = strtok (NULL, "\t");
         
-        if( cstr[0] == '#' ){ getline(gd,line); continue; }
-        vector<string> feature;
-        char * pch;
-        pch = strtok(cstr,"\t");
-        
-        while (pch != NULL)
-        {
-            feature.push_back(pch);
-            pch = strtok (NULL, "\t");
-            
-        }  
-        features.push_back(feature);
-        
-        // If it is evidence, note its index
-        if( feature[0].size() == 2 ){
-            eDict[ feature[1]] = (int)features.size()-1;
-        }
-        
-        delete[] cstr;
-        getline(gd,line);
-        
+    }  
+    features.push_back(feature);
+
+    // If it is evidence, note its index
+    if( feature[0].size() == 2 ){
+        eDict[ feature[1]] = (int)features.size()-1;
     }
-    gd.close();
+
+    delete[] cstr;
+    getline(gd,line);
+      
+  }
+  gd.close();
     
-    // Processes the features
-    // gvf[0]: ID of reference
-    // gvf[1]: Source
-    // gvf[2]: Type
-    // gvf[3]: Start
-    // gvf[4]: End
-    // gvf[5]: Score
-    // gvf[6]: Strand
-    // gvf[7]: Phase
-    // gvf[8]: Attributes    
-    // f[0]: Type
-    // f[1]: ID
-    // f[2]: Evidences
-    // f[3]: seq_id (ID of reference)
-    // f[4]: Position
-    // f[5]: Varies
-    // f[6]: Varies
-    // f[7]: Varies
-    // f[8]: Varies
-    
-    for( size_t i=0; i<features.size(); i++ ){
-        vector<string> gvf(9,"");
-        
-        for( int j=5; j<8; j++ ){
-            gvf[j] = ".";
-        }
-        
-        if( features[i].size() <= 4 || features[i][0].size() == 2 ){
-            continue;
-        }
-        
-        // SeqID
-        gvf[0] = features[i][3];
-        // Source
-        gvf[1] = "breseq";
-        // Type
-        gvf[3] = features[i][4];
-        
-        if( features[i][0].compare( "SNP") == 0 ){
-            
-            gvf[2] = "SNV";
-            stringstream ss;
-            ss << atoi( gvf[3].c_str() ) + 1;
-            ss >> gvf[4];
-            gvf[8].append("Variant_seq=").append( features[i][5] );
-            
-            //Look for evidence information
-            vector<string> evidenceNums = split( features[i][2], "," );
-            vector<string> evidence = features[ eDict[ evidenceNums[0] ] ];
-            
-            gvf[8].append(";Reference_seq=").append( evidence[5] );
-            
-            for( size_t j=0; j<evidence.size(); j++ ){
-                string s = evidence[j];
-                if( s.size()>8 && s.substr(0,8).compare("quality=") == 0){
-                    gvf[5] = s.substr(8,s.size()-8);
-                }
-                if( s.size()>8 && s.substr(0,8).compare("new_cov=") == 0){
-                    s = s.substr(8,s.size()-8);
-                    vector<string> covs = split( s, "/" );
-                    gvf[8] = gvf[8].append(";Variant_reads=").append(covs[0]).append(";Total_reads=").append(covs[1]);
-                }
-            }
-            
-            for( size_t j=0; j<features[i].size(); j++ ){
-                if( features[i][j].size()>10 && features[i][j].substr(0,10).compare("frequency=") == 0){
-                    gvf[8].append(";Variant_freq=").append( features[i][j].substr(10,features[i][j].size()-10 ) );
-                }
-            }
-            
-        }
-        
-        else if( features[i][0].compare("SUB") == 0 ){
-            //Look for evidence information
-            vector<string> evidenceNums = split( features[i][2], "," );
-            string s = "";
-            for( size_t j=0; j<evidenceNums.size(); j++ ){
-                vector<string> e = features[ eDict[ evidenceNums[j] ] ];
-                s.append( e[5] );
-            }
-            gvf[8].append("Reference_seq=").append(s);
-            gvf[2] = "substitution";
-            stringstream ss;
-            ss << atoi( features[i][4].c_str() ) + atoi( features[i][5].c_str() );
-            ss >> gvf[4]; 
-            gvf[8].append(";Variant_seq=").append( features[i][6] );
-        }
-        
-        else if( features[i][0].compare("DEL") == 0){
-            gvf[2] = "deletion";
-            stringstream ss; int length = atoi(features[i][4].c_str()) + atoi(features[i][5].c_str());
-            ss << length;
-            ss >> gvf[4];
-            
-        }
-        
-        else if( features[i][0].compare("INS") == 0 ){
-            gvf[2] = "insertion";
-            gvf[4] = gvf[3];
-            gvf[8] = gvf[8].append("Variant_seq=").append( features[i][5] );
-        }
-        
-        else if( features[i][0].compare("MOB") == 0 ){
-            gvf[2] = "transposable_element";
-            gvf[4] = gvf[3];
-            gvf[8] = string("ID=").append( features[i][5] );
-            //Strand
-            if( atoi( features[i][6].c_str() ) > 0 ){
-                gvf[6] = "+";
-            }
-            else{ gvf[6] = "-"; }
-        }
-        
-        else if( features[i][0].compare("AMP") == 0 ){
-            int x, y; 
-            gvf[2] = "insertion";
-            stringstream ss;
-            ss << gvf[3] << gvf[5]; ss >> x; ss >> y; x += y; ss << x;
-            ss >> gvf[4];
-            gvf[3] = gvf[4];
-            gvf[8].append( "Variant_seq=" );
-            for( int i=0; i < (atoi(features[i][6].c_str())-1)*atoi(features[i][5].c_str()); i++ ){
-                gvf[8].append("N");
-            }
-        }
-        else if( features[i][0].compare("INV") == 0 ){
-            gvf[2] = "inversion";
-            gvf[3] = features[i][4];
-            stringstream ss;
-            ss << atoi( features[i][4].c_str() ) + atoi( features[i][5].c_str() );
-            ss >> gvf[4]; 
-        }
-        else if( features[i][0].compare("CON") == 0 ){
-            gvf[2] = "substitution";
-            gvf[4] = gvf[3];
-            stringstream ss;
-            ss << atoi( features[i][4].c_str() ) + atoi( features[i][5].c_str() );
-            ss >> gvf[4];
-            gvf[8].append(";Variant_seq=").append( features[i][6] );
-        }
-        
-        // ID attribute
-        if( gvf[8].compare( "" ) == 0 || ( gvf[8].size()>8 && !gvf[8].substr(0,3).compare("ID=") == 0) ){
-            string s = "";
-            s.append("ID=").append(gvf[0]).append(":").append(gvf[1]).append(":");
-            s.append(gvf[2]).append(":").append(gvf[3]).append(";");
-            s.append(gvf[8]);
-            gvf[8] = s;
-        }
-        
-        featuresGVF.push_back(gvf);
+  // Processes the features
+  // gvf[0]: ID of reference
+  // gvf[1]: Source
+  // gvf[2]: Type
+  // gvf[3]: Start
+  // gvf[4]: End
+  // gvf[5]: Score
+  // gvf[6]: Strand
+  // gvf[7]: Phase
+  // gvf[8]: Attributes    
+
+  for( size_t i=0; i<features.size(); i++ )
+  {
+    vector<string> gvf(9,"");
+
+    for( int j=5; j<8; j++ ){
+      gvf[j] = ".";
     }
-    
-    // Write results to file
-    ofstream output( file.c_str() );
-    for( size_t i=0; i<featuresGVF.size(); i++ ){
-        for( size_t j=0; j<featuresGVF[i].size(); j++ ){
-            output << featuresGVF[i][j] << "\t";
-        }
-        output << "\n";
+
+    if( features[i].size() <= 4 || features[i][0].size() == 2 ){
+      continue;
     }
-    output.close();
+
+    // SeqID
+    gvf[0] = features[i][3];
+    // Source
+    gvf[1] = "breseq";
+    // Type
+    gvf[3] = features[i][4];
+
+    if( features[i][0].compare( "SNP") == 0 )
+    {
+      gvf[2] = "SNV";
+      stringstream ss;
+      ss << atoi( gvf[3].c_str() );
+      ss >> gvf[4];
+      gvf[8].append("Variant_seq=").append( features[i][5] );
+      
+      //Look for evidence information
+      vector<string> evidenceNums = split( features[i][2], "," );
+      vector<string> evidence = features[ eDict[ evidenceNums[0] ] ];
+      
+      gvf[6] = "+";
+      
+      gvf[8].append(";Reference_seq=").append( evidence[5] );
+      
+      for( size_t j=0; j<evidence.size(); j++ ){
+        string s = evidence[j];
+        if( s.size()>8 && s.substr(0,8).compare("quality=") == 0){
+          gvf[5] = s.substr(8,s.size()-8);
+        }
+        if( s.size()>8 && s.substr(0,8).compare("new_cov=") == 0){
+          s = s.substr(8,s.size()-8);
+          vector<string> covs = split( s, "/" );
+          uint32_t cov = from_string<uint32_t>(covs[0]) + from_string<uint32_t>(covs[1]);
+          gvf[8] = gvf[8].append(";Variant_reads=").append(to_string(cov));
+        }
+      
+        if( s.size()>8 && s.substr(0,8).compare("tot_cov=") == 0){
+          s = s.substr(8,s.size()-8);
+          vector<string> covs = split( s, "/" );
+          uint32_t cov = from_string<uint32_t>(covs[0]) + from_string<uint32_t>(covs[1]);
+          gvf[8] = gvf[8].append(";Total_reads=").append(to_string(cov));
+        }
+      }
+      
+      for( size_t j=0; j<features[i].size(); j++ ){
+        if( features[i][j].size()>10 && features[i][j].substr(0,10).compare("frequency=") == 0){
+          gvf[8].append(";Variant_freq=").append( features[i][j].substr(10,features[i][j].size()-10 ) );
+        }
+      }
+    }
+
+    else if( features[i][0].compare("SUB") == 0 ){
+      //Look for evidence information
+      vector<string> evidenceNums = split( features[i][2], "," );
+      string s = "";
+      for( size_t j=0; j<evidenceNums.size(); j++ ){
+        vector<string> e = features[ eDict[ evidenceNums[j] ] ];
+        s.append( e[5] );
+      }
+      gvf[8].append("Reference_seq=").append(s);
+      gvf[2] = "substitution";
+      stringstream ss;
+      ss << atoi( features[i][4].c_str() ) + atoi( features[i][5].c_str() );
+      ss >> gvf[4]; 
+      gvf[8].append(";Variant_seq=").append( features[i][6] );
+    }
+
+    else if( features[i][0].compare("DEL") == 0){
+      gvf[2] = "deletion";
+      stringstream ss; int length = atoi(features[i][4].c_str()) + atoi(features[i][5].c_str());
+      ss << length;
+      ss >> gvf[4];
+    }
+
+    else if( features[i][0].compare("INS") == 0 ){
+      gvf[2] = "insertion";
+      gvf[4] = gvf[3];
+      gvf[8] = gvf[8].append("Variant_seq=").append( features[i][5] );
+    }
+
+    else if( features[i][0].compare("MOB") == 0 ){
+      gvf[2] = "transposable_element";
+      gvf[4] = gvf[3];
+      gvf[8] = string("ID=").append( features[i][5] );
+      //Strand
+      if( atoi( features[i][6].c_str() ) > 0 ){
+          gvf[6] = "+";
+      }
+      else{ gvf[6] = "-"; }
+    }
+
+    else if( features[i][0].compare("AMP") == 0 )
+    {
+      int x, y; 
+      gvf[2] = "insertion";
+      stringstream ss;
+      ss << gvf[3] << gvf[5]; ss >> x; ss >> y; x += y; ss << x;
+      ss >> gvf[4];
+      gvf[3] = gvf[4];
+      gvf[8].append( "Variant_seq=" );
+      for( int i=0; i < (atoi(features[i][6].c_str())-1)*atoi(features[i][5].c_str()); i++ ){
+        gvf[8].append("N");
+      }
+    }
+    else if( features[i][0].compare("INV") == 0 ){
+      gvf[2] = "inversion";
+      gvf[3] = features[i][4];
+      stringstream ss;
+      ss << atoi( features[i][4].c_str() ) + atoi( features[i][5].c_str() );
+      ss >> gvf[4]; 
+    }
+    else if( features[i][0].compare("CON") == 0 ){
+      gvf[2] = "substitution";
+      gvf[4] = gvf[3];
+      stringstream ss;
+      ss << atoi( features[i][4].c_str() ) + atoi( features[i][5].c_str() );
+      ss >> gvf[4];
+      gvf[8].append(";Variant_seq=").append( features[i][6] );
+    }
+
+    // ID attribute
+    if( gvf[8].compare( "" ) == 0 || ( gvf[8].size()>8 && !gvf[8].substr(0,3).compare("ID=") == 0) ){
+      string s = "";
+      s.append("ID=").append(gvf[0]).append(":").append(gvf[1]).append(":");
+      s.append(gvf[2]).append(":").append(gvf[3]).append(";");
+      s.append(gvf[8]);
+      gvf[8] = s;
+    }
+
+    if (!snv_only || (gvf[2] == "SNV"))
+      featuresGVF.push_back(gvf);
+  }
+
+  // Write results to file
+  ofstream output( gvffile.c_str() );
+  output << "##gff-version 3" << endl;
+  output << "##gvf-version 1.0" << endl;
+  output << "" << endl;
+  output << "##source-method Source=breseq;Type=SNV;Dbxref=http://barricklab.org/breseq;Comment=Mapping and variant calling with breseq;" << endl;
+  output << "" << endl;
+  for( size_t i=0; i<featuresGVF.size(); i++ ){
+    for( size_t j=0; j<featuresGVF[i].size(); j++ ){
+      output << featuresGVF[i][j] << "\t";
+    }
+    output << "\n";
+  }
+  output.close();
     
 }
 
@@ -808,7 +814,7 @@ void VCFtoGD( const string& vcffile, const string& gdfile ){
         gd[5] = featuresVCF[i][4];
         
         ev[0] = "RA";
-        ss << i+1+featuresVCF.size();
+        ss << i+featuresVCF.size();
         ss >> ev[1];
         ev[2] = ".";
         ev[3] = featuresVCF[i][0];

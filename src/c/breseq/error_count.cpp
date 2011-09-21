@@ -400,7 +400,7 @@ uint32_t cErrorTable::covariates_to_index(const covariate_values_t& cv) {
       uint32_t val = cv[i];
       if(val >= m_covariate_max[i]) {
         if (m_covariate_enforce_max[i] == false) {
-          assert(false);
+          ASSERTM(false, "Covariate \'" + covariate_names[i] + "\'exceeded enforced maximum value of \'" + to_string(m_covariate_max[i]) + "\'.");
         } else {
           cout << "Adjusted down " << val << " to " << m_covariate_max[i]-1 << endl;
           val = m_covariate_max[i]-1;
@@ -441,7 +441,7 @@ void cErrorTable::read_covariates(
   covariates_max_t&          _covariate_max,          // maximum value of each covariate
   covariates_enforce_max_t&  _covariate_enforce_max,  // do not throw an error if max exceeded, reassign value to max
   covariates_offset_t&       _covariate_offset,       // number to multiply this covariate by when constructing row numbers
-  bool                       _per_position
+  bool&                      _per_position
   )
 {
   // set default values
@@ -489,7 +489,7 @@ void cErrorTable::read_covariates(
     else if (columns_parts[0] == "base_repeat") {
       _covariate_used[k_base_repeat] = true;
       _covariate_max[k_base_repeat] = atoi(columns_parts[1].c_str());
-      // Base repeat will trypically have a cap, above which we combine all values
+      // Base repeat will typically have a cap, above which we combine all values
       _covariate_enforce_max[k_base_repeat] = true;
     }
     else {

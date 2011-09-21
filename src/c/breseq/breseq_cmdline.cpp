@@ -622,26 +622,29 @@ Calculate error calibrations from FASTA and BAM reference files.
 int do_error_count(int argc, char* argv[]) {
 	  
 	// setup and parse configuration options:
-	AnyOption options("Usage: breseq ERROR_COUNT --bam <sequences.bam> --fasta <reference.fasta> --output <path> --readfile <filename> [--coverage] [--errors] [--minimum-quality-score 3]");
+	AnyOption options("Usage: breseq ERROR_COUNT --bam reference.bam --fasta reference.fasta --output test --readfile reads.fastq --covariates ref_base,obs_base,quality=40 [--coverage] [--errors] [--minimum-quality-score 3]");
 	options
 		("help,h", "produce this help message", TAKES_NO_ARGUMENT)
-		("bam,b", "bam file containing sequences to be aligned")
-		("fasta,f", "FASTA file of reference sequence")
-		("output,o", "output directory")
+		("bam,b", "bam file containing sequences to be aligned", "data/reference.bam")
+		("fasta,f", "FASTA file of reference sequence", "data/reference.fasta")
+		("output,o", "output directory", "./")
 		("readfile,r", "name of readfile (no extension). may occur multiple times")
 		("coverage", "generate unique coverage distribution output", TAKES_NO_ARGUMENT)
 		("errors", "generate unique error count output", TAKES_NO_ARGUMENT)
-    ("covariates", "covariates for error model", "")
+    ("covariates", "covariates for error model. a comma separated list (no spaces) of these choices: ref_base, obs_base, prev_base, quality, read_set, ref_pos, read_pos, base_repeat. For quality, read_pos, and base_repeat you must specify the maximum value possible, e.g. quality=40")
     ("minimum-quality-score", "ignore base quality scores lower than this", 0)
 	.processCommandArgs(argc, argv);
   
 	// make sure that the config options are good:
 	if(options.count("help")
-		 || !options.count("bam")
-		 || !options.count("fasta")
-		 || !options.count("output")
 		 || !options.count("readfile")
 		 || (!options.count("coverage") && !options.count("errors")) ) {
+		options.printUsage();
+		return -1;
+	}
+  
+  if(options.count("errors") && !options.count("covariates") ) {
+    WARN("Must provide --covariates when --errors specified.");
 		options.printUsage();
 		return -1;
 	}
@@ -980,20 +983,28 @@ int do_identify_candidate_junctions(int argc, char* argv[]) {
 
 
 int do_convert_gvf( int argc, char* argv[]){
-    AnyOption options("Usage: GD2GVF --gd <genomediff.gd> --output <gvf.gvf>"); options( "gd,i","gd file to convert") ("output,o","name of output file").processCommandArgs( argc,argv);
-    
-    if( !options.count("gd") || !options.count("output") ){
-        options.printUsage(); return -1;
-    }
-    
-    try{
-        GDtoGVF( options["gd"], options["output"] );
-    } 
-    catch(...){ 
-        return -1; // failed 
-    }
-    
-    return 0;
+  AnyOption options("Usage: GD2GVF --gd <genomediff.gd> --output <gvf.gvf>"); 
+
+  options
+    ("help,h", "produce this help message", TAKES_NO_ARGUMENT)
+    ("input,i","gd file to convert") 
+    ("output,o","name of output file")
+    ("snv-only", "only output SNV entries", TAKES_NO_ARGUMENT)
+    ;
+  options.processCommandArgs( argc,argv);
+  
+  if( !options.count("input") || !options.count("output") ){
+      options.printUsage(); return -1;
+  }
+  
+  try{
+      GDtoGVF( options["input"], options["output"], options.count("snv-only") );
+  } 
+  catch(...){ 
+      return -1; // failed 
+  }
+  
+  return 0;
 }
 
 int do_convert_gd( int argc, char* argv[]){

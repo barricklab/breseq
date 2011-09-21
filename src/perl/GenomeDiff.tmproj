@@ -3,7 +3,7 @@
 <plist version="1.0">
 <dict>
 	<key>currentDocument</key>
-	<string>GenomeDiff/lib/GenomeDiff.pm</string>
+	<string>GenomeDiff/bin/genomediff</string>
 	<key>documents</key>
 	<array>
 		<dict>
@@ -40,14 +40,14 @@
 			<key>caret</key>
 			<dict>
 				<key>column</key>
-				<integer>0</integer>
+				<integer>27</integer>
 				<key>line</key>
-				<integer>1068</integer>
+				<integer>298</integer>
 			</dict>
 			<key>firstVisibleColumn</key>
 			<integer>0</integer>
 			<key>firstVisibleLine</key>
-			<integer>1041</integer>
+			<integer>294</integer>
 		</dict>
 		<key>GenomeDiff/bin/tree_utils</key>
 		<dict>
@@ -63,64 +63,34 @@
 			<key>firstVisibleLine</key>
 			<integer>1182</integer>
 		</dict>
-		<key>GenomeDiff/bin/yaml_test</key>
-		<dict>
-			<key>caret</key>
-			<dict>
-				<key>column</key>
-				<integer>4</integer>
-				<key>line</key>
-				<integer>87</integer>
-			</dict>
-			<key>columnSelection</key>
-			<false/>
-			<key>firstVisibleColumn</key>
-			<integer>0</integer>
-			<key>firstVisibleLine</key>
-			<integer>58</integer>
-			<key>selectFrom</key>
-			<dict>
-				<key>column</key>
-				<integer>12</integer>
-				<key>line</key>
-				<integer>87</integer>
-			</dict>
-			<key>selectTo</key>
-			<dict>
-				<key>column</key>
-				<integer>4</integer>
-				<key>line</key>
-				<integer>87</integer>
-			</dict>
-		</dict>
 		<key>GenomeDiff/lib/GenomeDiff.pm</key>
 		<dict>
 			<key>caret</key>
 			<dict>
 				<key>column</key>
-				<integer>0</integer>
+				<integer>45</integer>
 				<key>line</key>
-				<integer>142</integer>
+				<integer>266</integer>
 			</dict>
 			<key>columnSelection</key>
 			<false/>
 			<key>firstVisibleColumn</key>
 			<integer>0</integer>
 			<key>firstVisibleLine</key>
-			<integer>118</integer>
+			<integer>245</integer>
 			<key>selectFrom</key>
 			<dict>
 				<key>column</key>
-				<integer>32</integer>
+				<integer>41</integer>
 				<key>line</key>
-				<integer>148</integer>
+				<integer>266</integer>
 			</dict>
 			<key>selectTo</key>
 			<dict>
 				<key>column</key>
-				<integer>0</integer>
+				<integer>45</integer>
 				<key>line</key>
-				<integer>142</integer>
+				<integer>266</integer>
 			</dict>
 		</dict>
 		<key>GenomeDiff/lib/GenomeDiff/BaseSubstitutionFile.pm</key>
@@ -245,7 +215,6 @@
 	<key>openDocuments</key>
 	<array>
 		<string>GenomeDiff/MANIFEST</string>
-		<string>GenomeDiff/bin/yaml_test</string>
 		<string>GenomeDiff/lib/GenomeDiff.pm</string>
 		<string>GenomeDiff/bin/genomediff</string>
 		<string>GenomeDiff/lib/GenomeDiff/Output.pm</string>
@@ -258,6 +227,6 @@
 	<key>showFileHierarchyDrawer</key>
 	<true/>
 	<key>windowFrame</key>
-	<string>{{30, 145}, {768, 733}}</string>
+	<string>{{58, 143}, {915, 735}}</string>
 </dict>
 </plist>
