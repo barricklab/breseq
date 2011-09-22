@@ -22,14 +22,13 @@ using namespace std;
 namespace breseq {
   
   /*
-   analyze_fastq
+   normalize_fastq
    
-   convert if necessary
-   print statistics about the fastq file
+   correct common errors in input fastq and normalize to standard SANGER format
 
    */
 
-  AnalyzeFastq analyze_fastq(const string &file_name, const string &convert_file_name) {
+  AnalyzeFastq normalize_fastq(const string &file_name, const string &convert_file_name, const uint32_t file_index) {
     
     // Set up maps between formats
     map<string,uint8_t> format_to_chr_offset;
@@ -91,62 +90,61 @@ namespace breseq {
     string converted_fastq_name(file_name);
     
     //std::cout << m_quality_format << std::endl;
-    if(( quality_format != "SANGER" ) || (input_fastq_file.needs_conversion()) )  {
-      cerr << "  Converting/repairing FASTQ file..." << endl;
-      cerr << "  Original format: " << quality_format << " New format: SANGER"<< endl;
 
-      cFastqQualityConverter fqc(quality_format, "SANGER");
-      
-      // re-open input for another pass
-      input_fastq_file.open(file_name.c_str(), fstream::in);
-      
-      //open output converted file
-      cFastqFile output_fastq_file(convert_file_name.c_str(), fstream::out);
+    cerr << "  Converting/repairing FASTQ file..." << endl;
+    cerr << "  Original format: " << quality_format << " New format: SANGER"<< endl;
 
-      // recalculate min and max quality scores from table
-      cFastqSequence min_max_sequence;
-      min_max_sequence.m_qualities.append(1,min_quality_score);
-      min_max_sequence.m_qualities.append(1,max_quality_score);
-      fqc.convert_sequence(min_max_sequence);
-      min_quality_score = (uint8_t)min_max_sequence.m_qualities[0];
-      max_quality_score = (uint8_t)min_max_sequence.m_qualities[1];
+    cFastqQualityConverter fqc(quality_format, "SANGER");
+    
+    // re-open input for another pass
+    input_fastq_file.open(file_name.c_str(), fstream::in);
+    
+    //open output converted file
+    cFastqFile output_fastq_file(convert_file_name.c_str(), fstream::out);
+
+    // recalculate min and max quality scores from table
+    cFastqSequence min_max_sequence;
+    min_max_sequence.m_qualities.append(1,min_quality_score);
+    min_max_sequence.m_qualities.append(1,max_quality_score);
+    fqc.convert_sequence(min_max_sequence);
+    min_quality_score = (uint8_t)min_max_sequence.m_qualities[0];
+    max_quality_score = (uint8_t)min_max_sequence.m_qualities[1];
+    
+    // (much faster than looking through all qualities again)
+    
+    uint32_t on_read = 1;
+    while (input_fastq_file.read_sequence(on_sequence)) {
       
-      // (much faster than looking through all qualities again)
-      
-      while (input_fastq_file.read_sequence(on_sequence)) {
-        
-        // Don't keep heavily N sequences. They are very slow in SSAHA2 alignment.
-        // This discards sequences that are more than 50% N.
-        if ( 0.5 < static_cast<double>(on_sequence.m_num_N_bases) / static_cast<double>(on_sequence.m_sequence.size())) 
-        {
-          //cout << "Discarding..." << endl;
-          //cout << on_sequence.m_sequence << endl;
-          continue;
-        }
-        // truncate second name name
-        on_sequence.m_name_plus = "";
-        
-        // fastq quality convert
-        fqc.convert_sequence(on_sequence);
-        
-        // replace "/" characters
-        size_t pos = 0;
-        pos = on_sequence.m_name.find("/", pos);
-        while (pos != string::npos)
-        {
-          on_sequence.m_name.replace(pos, 1, "_");
-          pos = on_sequence.m_name.find("/", pos+1);
-        }
-        
-        // convert base qualities
-        output_fastq_file.write_sequence(on_sequence);
-        
+      // Don't keep heavily N sequences. They are very slow in SSAHA2 alignment.
+      // This discards sequences that are more than 50% N.
+      if ( 0.5 < static_cast<double>(on_sequence.m_num_N_bases) / static_cast<double>(on_sequence.m_sequence.size())) 
+      {
+        //cout << "Discarding..." << endl;
+        //cout << on_sequence.m_sequence << endl;
+        continue;
       }
-      input_fastq_file.close();
-      output_fastq_file.close();
+      // truncate second name name
+      on_sequence.m_name_plus = "";
       
-      converted_fastq_name = convert_file_name;
+      // fastq quality convert
+      fqc.convert_sequence(on_sequence);
+      
+      // uniformly name, to prevent problems drawing alignments
+      //char string_buffer[256];
+      //sprintf(string_buffer, "%03u:%010u", file_index, on_read++);
+      //on_sequence.m_name = string_buffer;
+      
+      on_sequence.m_name = to_string(file_index) + ":" + to_string(on_read++);
+      
+      
+      // convert base qualities
+      output_fastq_file.write_sequence(on_sequence);
+      
     }
+    input_fastq_file.close();
+    output_fastq_file.close();
+    
+    converted_fastq_name = convert_file_name;
     
     // quality scores are in SANGER at this point
     min_quality_score = min_quality_score - format_to_chr_offset["SANGER"];
