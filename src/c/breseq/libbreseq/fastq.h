@@ -28,12 +28,12 @@ namespace breseq {
 	/*! Interface for loading and manipulating files in FASTQ format.
    */
   
-  /*! analyze_fastq
+  /*! normalize_fastq
    
       Main function for this analysis. Prints summary information
       about fastq and converts file to SANGER format if necessary.
    */  
-  AnalyzeFastq analyze_fastq(const string &file_name, const string &convert_file_name);
+  AnalyzeFastq normalize_fastq(const string &file_name, const string &convert_file_name, const uint32_t fastq_index);
   
   // Utility function for converting FASTQ files between formats
   void convert_fastq(const string &from_file_name, const string &to_file_name, const string &from_format, const string &to_format);

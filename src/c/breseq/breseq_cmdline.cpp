@@ -237,54 +237,6 @@ int do_bam2cov(int argc, char* argv[]) {
   return 0;
 }
 
-/*! Analyze FASTQ
- 
- Extract information about reads in a FASTQ file.
- 
- */
-
-int do_analyze_fastq(int argc, char* argv[]) {
-  
-	// setup and parse configuration options:
-	AnyOption options("Usage: breseq ANALYZE_FASTQ --input input.fastq --convert converted.fastq");
-	options
-		("help,h", "produce this help message", TAKES_NO_ARGUMENT)
-		("input,i", "input FASTQ file")
-		("convert,c", "converted FASTQ file (created only if necessary)")
-		//("output,o", "out to files") // outputs to STDOUT for now
-	.processCommandArgs(argc, argv);
-	
-	// make sure that the config options are good:
-	if(options.count("help")
-		 || !options.count("input")
-     || !options.count("convert")
-		 ) {
-		options.printUsage();
-		return -1;
-	}                       
-  
-	try {
-    
-    AnalyzeFastq af = analyze_fastq(options["input"], options["convert"]);
-    
-    // Output information to stdout
-    cout << "max_read_length "       << af.max_read_length         << endl;
-    cout << "num_reads "             << af.num_reads               << endl;
-    cout << "min_quality_score "     << (int)af.min_quality_score  << endl;
-    cout << "max_quality_score "     << (int)af.max_quality_score  << endl;
-    cout << "num_bases "             << af.num_bases               << endl;
-    cout << "original_qual_format "  << af.original_qual_format    << endl;
-    cout << "qual_format "           << af.quality_format          << endl;
-    cout << "converted_fastq_name "  << af.converted_fastq_name    << endl;
-    
-  } catch(...) {
-		// failed; 
-		return -1;
-	}
-  
-  return 0;
-}
-
 int do_convert_fastq(int argc, char* argv[])
 {
   
@@ -1061,7 +1013,7 @@ int breseq_default_action(int argc, char* argv[])
 			string convert_file_name =  settings.file_name(settings.converted_fastq_file_name, "#", base_name);
 
 			// Parse output
-			AnalyzeFastq s_rf = analyze_fastq(fastq_file_name, convert_file_name);
+			AnalyzeFastq s_rf = normalize_fastq(fastq_file_name, convert_file_name, i+1);
       
 			// Save the converted file name -- have to save it in summary because only that
 			// is reloaded if we skip this step.
@@ -1086,10 +1038,6 @@ int breseq_default_action(int argc, char* argv[])
     // Determine what type of reference sequence file the user inputs.
     cReferenceSequenceConverter ReferenceSequenceConverter(settings);
     ReferenceSequenceConverter.Process();
-
-
-
-
 
 		// create SAM faidx
 		string samtools = settings.ctool("samtools");
@@ -1898,6 +1846,9 @@ int main(int argc, char* argv[]) {
 	char* argv_new[argc];
 	int argc_new = argc - 1;
 
+  // Print out our generic header
+  Settings::command_line_run_header();
+  
 	if (argc > 1) {
 
 		command = argv[1];
@@ -1906,16 +1857,13 @@ int main(int argc, char* argv[]) {
 			argv_new[i] = argv[i + 1];
 
 	} else {
-		cout << "No [command] provided." << endl;
-		cout << "Usage: cbreseq [command] options ..." << endl;
-		return -1;
+    breseq_default_action(argc, argv); // Gives default usage in this case.
+    return -1; 
 	}
 
 	// Pass the command to the proper handler
 	command = to_upper(command);
-	if (command == "ANALYZE_FASTQ") {
-		return do_analyze_fastq(argc_new, argv_new);
-  } else if (command == "CONVERT_FASTQ") {
+  if (command == "CONVERT_FASTQ") {
 		return do_convert_fastq(argc_new, argv_new);
 	} else if (command == "CALCULATE_TRIMS") {
 		return do_calculate_trims(argc_new, argv_new);
@@ -1951,8 +1899,5 @@ int main(int argc, char* argv[]) {
     // Not a sub-command. Use original argument list.
     return breseq_default_action(argc, argv);
   }
-
-	// Command was not recognized. Should output valid commands.
-	cout << "Unrecognized command" << endl;
 	return -1;
 }
