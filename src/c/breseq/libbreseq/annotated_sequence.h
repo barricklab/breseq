@@ -59,7 +59,7 @@ namespace breseq {
         m_end = _in.m_end;
         m_strand = _in.m_strand;
       }
-	  cSequenceFeature operator=(const cSequenceFeature& _in) {
+      cSequenceFeature operator=(const cSequenceFeature& _in) {
         m_start = _in.m_start;
         m_end = _in.m_end;
         m_strand = _in.m_strand;
@@ -314,6 +314,9 @@ namespace breseq {
   void LoadBullFile(cReferenceSequences& s, const vector<string>& in_file_names);
   void LoadBullFeatureFile(ifstream& in, cAnnotatedSequence& s);
 
+  void LoadGffFile(cReferenceSequences& rs, const vector<string>& in_file_names);
+  void LoadGffFileFeatures(string& line, cAnnotatedSequence& s);
+
   /*! Utility functions.
   */
   std::string GetWord(string &s);
@@ -328,9 +331,10 @@ namespace breseq {
    Creates a tab-delimited file of information about genes and a FASTA sequence
    given various reference sequence file formats.  !*/
 
-  namespace File {enum Type {GENBANK, FASTA, GFF, BULL, GFF_AND_FASTA};}
   class cReferenceSequenceConverter
   {
+    enum FileType {GENBANK, FASTA, GFF, BULL, GFF_AND_FASTA};
+
     public:
       //! Constructor for use in Breseq's pipeline
       cReferenceSequenceConverter(const Settings& settings) {
@@ -350,12 +354,6 @@ namespace breseq {
       void Process();
 
     protected:
-      //! Helper functions
-      File::Type _ParseForFileType(const string& file);
-      File::Type _DetermineUseCase();
-      void _InitFileTypes();
-      void _Converter(const File::Type type);
-
       //! Parameters initialized by constructor
       vector<string> m_file_names;
       string m_fasta;
@@ -363,7 +361,16 @@ namespace breseq {
       string m_gff;
 
       //! Built by class
-      map<File::Type, vector<string> > m_file_types;
+      map<FileType, vector<string> > m_file_types;
+
+      //! Class pipeline functions
+      void _InitFileTypes();//Step 1
+      FileType _DetermineUseCase();//Step 2
+      void _Converter(const FileType type);//Step 3
+
+      //! Helper functions
+      FileType _ParseForFileType(const string& file); //Used in InitFileTypes()
+
   };
 } // breseq namespace
 
