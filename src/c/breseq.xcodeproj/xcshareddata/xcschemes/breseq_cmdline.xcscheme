@@ -36,7 +36,7 @@
       displayScale = "1.00"
       launchStyle = "0"
       useCustomWorkingDirectory = "YES"
-      customWorkingDirectory = "/Users/jbarrick/tmp/coverage_tests"
+      customWorkingDirectory = "/Users/jbarrick/tmp/NWp3"
       buildConfiguration = "Debug">
       <BuildableProductRunnable>
          <BuildableReference
@@ -57,7 +57,7 @@
             isEnabled = "NO">
          </CommandLineArgument>
          <CommandLineArgument
-            argument = "-o 02-20 -r downloads/bull_2.gbk downloads/bull_2.fastq -s .2 -u .8"
+            argument = "-r NC_002163.1.gbk -n NWp3 62GAVAAXX_5_1_TCAT_pf.fastq 62GAVAAXX_5_2_TCAT_pf.fastq"
             isEnabled = "YES">
          </CommandLineArgument>
       </CommandLineArguments>
