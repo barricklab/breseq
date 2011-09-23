@@ -84,7 +84,7 @@ void resolve_alignments(
 
   if (junction_prediction)
 	{
-    LoadFeatureIndexedFastaFile(junction_ref_seq_info, "", settings.candidate_junction_fasta_file_name);
+    junction_ref_seq_info.ReadFeatureIndexedFastaFile("", settings.candidate_junction_fasta_file_name);
 		string junction_sam_file_name = settings.file_name(settings.candidate_junction_sam_file_name, "#", read_files[0].m_base_name);
 		tam_file junction_tam(junction_sam_file_name, settings.candidate_junction_fasta_file_name, ios::in);
 

@@ -143,7 +143,7 @@ int do_bam2cov(int argc, char* argv[]) {
 		return -1;
 	}
   
-  ASSERTM(options.count("plot") || options.count("table"), "Must specify either --plot or --table.");
+  ASSERT(options.count("plot") || options.count("table"), "Must specify either --plot or --table.");
 
   vector<string> region_list;
   if (options.count("region"))
@@ -157,7 +157,7 @@ int do_bam2cov(int argc, char* argv[]) {
   }
   
   bool tiling_mode = options.count("tile-size") && options.count("tile-overlap");
-  ASSERTM(tiling_mode || (!options.count("tile-size") && !options.count("tile-overlap")),
+  ASSERT(tiling_mode || (!options.count("tile-size") && !options.count("tile-overlap")),
           "--tile-size and --tile-overlap args must both be provided to activate tile mode");
   
   if (tiling_mode && (region_list.size() > 0))
@@ -166,7 +166,7 @@ int do_bam2cov(int argc, char* argv[]) {
     region_list.clear();
   }
   
-  ASSERTM(tiling_mode || (region_list.size() > 0), "No regions specified.");
+  ASSERT(tiling_mode || (region_list.size() > 0), "No regions specified.");
   
   // create empty settings object to have R script name
   Settings settings;
@@ -288,8 +288,13 @@ void convert_genbank(const vector<string>& in, const string& fasta, const string
   cReferenceSequences refseqs;
 
   // Load the GenBank file
-  LoadGenBankFile(refseqs, in);
-
+  
+  
+  for (vector<string>::const_iterator it = in.begin(); it < in.end(); it++) 
+  {
+    refseqs.ReadGenBank(*it);
+  }
+  
   // Output sequence
   if (fasta != "") refseqs.WriteFASTA(fasta);
 
@@ -298,22 +303,6 @@ void convert_genbank(const vector<string>& in, const string& fasta, const string
 
   if (gff3 != "" ) refseqs.WriteGFF( gff3 );
 }
-
-void convert_bull_form(const vector<string>& in, const string& fasta, const string& ft, const string& gff3 ) {
-  cReferenceSequences refseqs;
-
-  // Load the GenBank file
-  LoadBullFile(refseqs, in);
-
-  // Output sequence
-  if (fasta != "") refseqs.WriteFASTA(fasta);
-
-  // Output feature table
-  if (ft != "") refseqs.WriteFeatureTable(ft);
-
-  if (gff3 != "" ) refseqs.WriteGFF( gff3 );
-}
-
 
 int do_convert_genbank(int argc, char* argv[]) {
 	
@@ -352,45 +341,6 @@ int do_convert_genbank(int argc, char* argv[]) {
 	
 	return 0;
 }
-
-int do_convert_bull_form(int argc, char* argv[]) {
-	
-	// setup and parse configuration options:
-	AnyOption options("Usage: breseq CONVERT_BULL_FORM --input <bull_form.txt> [--features <output.tab>]");
-	options
-  ("help,h", "produce this help message", TAKES_NO_ARGUMENT)
-  ("input,i", "input bull form flatfile (multiple allowed, comma-separated)")
-  ("features,g", "output feature table", "")
-  ("fasta,f", "FASTA file of reference sequences", "")
-  ("gff3,v", "GFF file of features", "" )
-	.processCommandArgs(argc, argv);
-	
-	// make sure that the config options are good:
-	if(options.count("help")
-		 || !options.count("input")
-		 || (!options.count("features") /*&& !options.count("fasta")*/)  
-		 ) {
-		options.printUsage();
-		return -1;
-	}
-  
-	// attempt to calculate error calibrations:
-	try {
-    
-		convert_bull_form(  
-                      from_string<vector<string> >(options["input"]),
-                      options["fasta"],
-                      options["features"],
-                      options["gff3"]
-                      );
-  } catch(...) {
-		// failed; 
-		return -1;
-	}
-	
-	return 0;
-}
-
 
 /*! Calculate Trims
  
@@ -472,7 +422,7 @@ int do_resolve_alignments(int argc, char* argv[]) {
     
     // Load the reference sequence info
     cReferenceSequences ref_seq_info;
-    LoadFeatureIndexedFastaFile(ref_seq_info, settings.reference_features_file_name, settings.reference_fasta_file_name);
+    ref_seq_info.ReadFeatureIndexedFastaFile(settings.reference_features_file_name, settings.reference_fasta_file_name);
     
     // should be one coverage cutoff value for each reference sequence
     vector<double> coverage_cutoffs;
@@ -540,7 +490,7 @@ int do_predict_mutations(int argc, char* argv[]) {
             
     // Load the reference sequence info
     cReferenceSequences ref_seq_info;
-    LoadFeatureIndexedFastaFile(ref_seq_info, settings.reference_features_file_name, settings.reference_fasta_file_name);
+    ref_seq_info.ReadFeatureIndexedFastaFile(settings.reference_features_file_name, settings.reference_fasta_file_name);
         
     MutationPredictor mp(ref_seq_info);
     
@@ -829,7 +779,7 @@ int do_preprocess_alignments(int argc, char* argv[]) {
   settings.preprocess_junction_min_indel_split_length = from_string<int32_t>(options["min-indel-split-length"]);
  
 	cReferenceSequences ref_seqs;
-	breseq::LoadFeatureIndexedFastaFile(ref_seqs, "", settings.reference_fasta_file_name);
+	ref_seqs.ReadFeatureIndexedFastaFile("", settings.reference_fasta_file_name);
 
 	CandidateJunctions::preprocess_alignments(settings, summary, ref_seqs);
 
@@ -840,6 +790,8 @@ int do_preprocess_alignments(int argc, char* argv[]) {
 
   return 0;
 }
+
+
 
 int do_identify_candidate_junctions(int argc, char* argv[]) {
 
@@ -921,7 +873,7 @@ int do_identify_candidate_junctions(int argc, char* argv[]) {
     summary.sequence_conversion.max_read_length = from_string<int32_t>(options["maximum-read-length"]);
 
     cReferenceSequences ref_seq_info;
-    breseq::LoadFeatureIndexedFastaFile(ref_seq_info, "", options["data-path"] + "/reference.fasta");
+    ref_seq_info.ReadFeatureIndexedFastaFile("", options["data-path"] + "/reference.fasta");
         
     CandidateJunctions::identify_candidate_junctions(settings, summary, ref_seq_info);
     
@@ -976,6 +928,31 @@ int do_convert_gd( int argc, char* argv[]){
     return 0;
 }
 
+int do_mutate(int argc, char *argv[])
+{
+  AnyOption options("Usage: -g <file.gd> -r <reference.gbk>");
+  options("genomediff,g", "genome diff file");
+  options("reference,r",".gbk reference sequence file");
+  options("output,o","output FASTA file", "output.fasta");
+  options.processCommandArgs(argc, argv);
+  
+  if (!options.count("genomediff") ||
+      !options.count("reference")) {
+    options.printUsage();
+    return -1;
+  }
+  
+  genome_diff gd(options["genomediff"]);
+  cReferenceSequences ref_seq_info;
+  ref_seq_info.LoadFiles(from_string<vector<string> >(options["reference"]));
+  cReferenceSequences new_ref_seq_info = gd.apply_to_sequences(ref_seq_info);
+  
+  new_ref_seq_info.WriteFASTA(options["output"]);
+  
+  return 0;
+}
+
+
 
 
 int breseq_default_action(int argc, char* argv[])
@@ -989,15 +966,23 @@ int breseq_default_action(int argc, char* argv[])
 
 	//
 	// 01_sequence_conversion 
-  // * Convert the input reference GenBank into FASTA for alignment
+  // * Convert the input reference into FASTA for alignment and GFF3 for reloading features
+  // * Rename reads in the input FASTQ and change quality scores to Sanger
 	//
 	create_path(settings.sequence_conversion_path);
   create_path(settings.data_path);
-  cReferenceSequences ref_seq_info;
 
 	if (settings.do_step(settings.sequence_conversion_done_file_name, "Read and reference sequence file input"))
 	{
 		Summary::SequenceConversion s;
+    
+    // Load all of the reference sequences and convert to FASTA and GFF3
+    cReferenceSequences ref_seq_info;
+    ref_seq_info.LoadFiles(settings.reference_file_names);
+    ref_seq_info.WriteFASTA(settings.reference_fasta_file_name);
+    ref_seq_info.WriteGFF(settings.reference_gff3_file_name);
+    // @JEB - Once GFF3 reading and writing works, deprecate using FeatureTable format
+    ref_seq_info.WriteFeatureTable(settings.reference_features_file_name);
 
 		//Check the FASTQ format and collect some information about the input read files at the same time
 		cerr << "  Analyzing fastq read files..." << endl;
@@ -1035,26 +1020,6 @@ int breseq_default_action(int argc, char* argv[])
 		s.max_qual = overall_max_qual;
 		summary.sequence_conversion = s;
 
-    // C++ version of reference sequence processing
-    // Determine what type of reference sequence file the user inputs.
-    convert_genbank(
-      settings.reference_file_names,
-      settings.reference_fasta_file_name,
-      settings.reference_features_file_name,
-      settings.reference_gff3_file_name
-    );
-    //Future code
-//    for(vector<string>::const_iterator itr = settings.reference_file_names.begin();
-//        itr != settings.reference_file_names.end()) {
-//      const string& file_name = *itr;
-//      ref_seq_info.LoadFromFile(file_name);
-//    }
-//    ref_seq_info.Varify();
-
-//    ref_seq_info.WriteFASTA(settings.reference_fasta_file_name);
-
-//    ref_seq_info.WriteGFF(settings.reference_gff3_file_name);
-
 		// create SAM faidx
 		string samtools = settings.ctool("samtools");
 		string command = samtools + " faidx " + settings.reference_fasta_file_name;
@@ -1069,13 +1034,17 @@ int breseq_default_action(int argc, char* argv[])
 	}
 
 	summary.sequence_conversion.retrieve(settings.sequence_conversion_summary_file_name);
-	ASSERTM(summary.sequence_conversion.max_read_length != UNDEFINED_UINT32, "Can't retrieve max read length from file: " + settings.sequence_conversion_summary_file_name);
+	ASSERT(summary.sequence_conversion.max_read_length != UNDEFINED_UINT32, "Can't retrieve max read length from file: " + settings.sequence_conversion_summary_file_name);
 
 	//load C++ info
 	string reference_features_file_name = settings.reference_features_file_name;
 	string reference_fasta_file_name = settings.reference_fasta_file_name;
   
-  LoadFeatureIndexedFastaFile(ref_seq_info, settings.reference_features_file_name, settings.reference_fasta_file_name);
+  //(re)load the reference sequences from our converted files
+  cReferenceSequences ref_seq_info;
+  ref_seq_info.ReadFeatureIndexedFastaFile(settings.reference_features_file_name, settings.reference_fasta_file_name);
+  // @JEB - eventually replace with this
+  //ref_seq_info.ReadGFF(settings.reference_gff3_file_name);
   
   // Calculate the total reference sequence length
   summary.sequence_conversion.total_reference_sequence_length = ref_seq_info.total_length();
@@ -1602,7 +1571,7 @@ int breseq_default_action(int argc, char* argv[])
       }
     }
 
-    //Coverage distribution user option --deletion-covereage-seed-cutoff
+    //Coverage distribution user option --deletion-coverage-seed-cutoff
     if (settings.deletion_coverage_seed_cutoff) {
       if (settings.deletion_coverage_seed_cutoff < 1) {
         for (uint32_t i = 0; i < ref_seq_info.size(); i++) {
@@ -1824,30 +1793,6 @@ int breseq_default_action(int argc, char* argv[])
   return 0;
 }
 
-int do_mutate(int argc, char *argv[])
-{
-  AnyOption options("Usage: -g <file.gd> -r <reference.gbk>");
-  options("genomediff,g", "genome diff file");
-  options("reference,r",".gbk reference sequence file");
-  options("output,o","output FASTA file", "output.fasta");
-  options.processCommandArgs(argc, argv);
-
-  if (!options.count("genomediff") ||
-      !options.count("reference")) {
-    options.printUsage();
-    return -1;
-  }
-
-  genome_diff gd(options["genomediff"]);
-  cReferenceSequences ref_seq_info;
-  LoadGenBankFile(ref_seq_info, from_string<vector<string> >(options["reference"]));
-  cReferenceSequences new_ref_seq_info = gd.apply_to_sequences(ref_seq_info);
-
-  new_ref_seq_info.WriteFASTA(options["output"]);
-
-  return 0;
-}
-
 /*! breseq commands
  
     First argument is a command that should be removed from argv.
@@ -1884,8 +1829,6 @@ int main(int argc, char* argv[]) {
 		return do_calculate_trims(argc_new, argv_new);
 	} else if (command == "CONVERT_GENBANK") {
 		return do_convert_genbank(argc_new, argv_new);
-  } else if (command == "CONVERT_BULL_FORM") {
-    return do_convert_bull_form(argc_new, argv_new);
 	} else if (command == "CONTINGENCY_LOCI") {
 		return do_contingency_loci(argc_new, argv_new);
 	} else if (command == "ERROR_COUNT") {

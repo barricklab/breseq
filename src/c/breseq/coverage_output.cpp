@@ -30,7 +30,7 @@ void coverage_output::plot(const string& region, const string& output_file_name,
   this->parse_region(region, target_id, start_pos, end_pos, insert_start, insert_end);
   string seq_id = this->target_name(target_id);
   
-  ASSERTM( (seq_id.length() > 0) || !start_pos || !end_pos, "Invalid region: \"" + region + "\"");
+  ASSERT( (seq_id.length() > 0) || !start_pos || !end_pos, "Invalid region: \"" + region + "\"");
 
   // extend the region and re-check endpoints
   int32_t extended_start = start_pos - m_shaded_flanking;

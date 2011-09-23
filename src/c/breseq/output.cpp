@@ -891,7 +891,7 @@ string html_read_alignment_table_string(diff_entry_list& list_ref, bool show_rej
 
 string html_missing_coverage_table_string(diff_entry_list& list_ref, bool show_reject_reason, const string& title, const string& relative_link)
 {
-  ASSERT(list_ref.front().get());
+  ASSERT(list_ref.front().get(), "No items in table");
   
   stringstream ss; //!< Main Build Object in Function
   

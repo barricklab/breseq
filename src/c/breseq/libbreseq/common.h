@@ -220,8 +220,8 @@ namespace breseq {
     }
   }
   
-#define ASSERTM(condition, message) { my_assertion_handler( condition,  __FILE__, __BASE_FILE__, __LINE__, message); }
-#define ASSERT(condition) { my_assertion_handler( condition,  __FILE__, __BASE_FILE__, __LINE__); }
+#define ASSERT(condition, message) { my_assertion_handler( condition,  __FILE__, __BASE_FILE__, __LINE__, message); }
+#define ERROR(message) { my_assertion_handler( true,  __FILE__, __BASE_FILE__, __LINE__, message); }
 #define WARN(message) { my_warning_handler( false,  __FILE__, __BASE_FILE__, __LINE__, message); }
   
 	inline string SYSTEM_CAPTURE(string command, bool silent = false)
@@ -281,9 +281,9 @@ namespace breseq {
   inline void copy_file(const string& in_fn, const string& out_fn)
   {
     ifstream ifile(in_fn.c_str());
-    ASSERTM(!ifile.fail(), "Could not open file for input: " + in_fn);
+    ASSERT(!ifile.fail(), "Could not open file for input: " + in_fn);
     ofstream ofile(out_fn.c_str());
-    ASSERTM(!ofile.fail(), "Could not open file for output: " + out_fn);
+    ASSERT(!ofile.fail(), "Could not open file for output: " + out_fn);
     ofile << ifile.rdbuf();
   }
 
