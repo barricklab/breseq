@@ -53,7 +53,7 @@ namespace breseq {
       uint32_t m_start, m_end;
       int8_t m_strand;
 
-      map<string, vector<string> > m_attributes;
+      map<string, vector<string> > m_gff_attributes;
     
       cSequenceFeature() {}
       cSequenceFeature(const cSequenceFeature& _in) : sequence_feature_map_t(_in) {
@@ -185,7 +185,8 @@ namespace breseq {
   class cReferenceSequences : public vector<cAnnotatedSequence> {
   protected:
     map<string,int> m_seq_id_to_index; // for looking up sequences by seq_id
-    enum FileType {UNKNOWN, GENBANK, FASTA, GFF, BULL, GFF_AND_FASTA};
+    //!< Currently supported file types.
+    enum FileType {UNKNOWN, GENBANK, FASTA, GFF3, BULL};
 
     uint32_t m_index_id;
 
@@ -211,17 +212,20 @@ namespace breseq {
     
     //!< Read/Write FASTA file     
     void ReadFASTA(const std::string &file_name);
+    void ReadFASTA(cFastaFile& ff);
     void WriteFASTA(const string &file_name);
+    void WriteFASTA(cFastaFile& ff);
         
     //!< Read/Write a tab delimited GFF3 file
     void ReadGFF(const string& file_name);
     void WriteGFF(const string &file_name);
+    void ConvertTags(); // Converts GenBank features to GFF attributes, m_gff_attributes
 
     //!< Read GenBank file
     void ReadGenBank(const string& in_file_names);
     bool ReadGenBankFileHeader(std::ifstream& in);
     void ReadGenBankCoords(string& s, ifstream& in);
-    void ReadGenBankTag(std::string& tag, std::string& s, std::ifstream& in);
+    //void ReadGenBankTag(std::string& tag, std::string& s, std::ifstream& in);
     void ReadGenBankFileSequenceFeatures(std::ifstream& in, cAnnotatedSequence& s);
     void ReadGenBankFileSequence(std::ifstream& in, cAnnotatedSequence& s);
     
