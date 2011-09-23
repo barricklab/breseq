@@ -182,7 +182,7 @@ namespace breseq
     // Constructor for default action
     Settings(int argc, char* argv[]);
     
-    void command_line_run_header();
+    static void command_line_run_header();
     
     //////////////////////////////////
     ////    Settings Variables    ////
