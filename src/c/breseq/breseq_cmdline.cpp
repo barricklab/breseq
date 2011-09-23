@@ -1793,6 +1793,17 @@ int breseq_default_action(int argc, char* argv[])
   return 0;
 }
 
+int do_test() {
+  cReferenceSequences ref_seq;
+  ref_seq.LoadFile("reference.gbk");
+  ref_seq.WriteGFF("reference.gff3");
+
+
+
+
+  return 0;
+}
+
 /*! breseq commands
  
     First argument is a command that should be removed from argv.
@@ -1853,6 +1864,8 @@ int main(int argc, char* argv[]) {
     return do_bam2cov( argc_new, argv_new);    
   } else if ((command == "APPLY") || (command == "MUTATE")) {
     return do_mutate(argc_new, argv_new);
+  } else if (command == "TEST") {
+      do_test();
   } else {
     // Not a sub-command. Use original argument list.
     return breseq_default_action(argc, argv);
