@@ -400,7 +400,7 @@ uint32_t cErrorTable::covariates_to_index(const covariate_values_t& cv) {
       uint32_t val = cv[i];
       if(val >= m_covariate_max[i]) {
         if (m_covariate_enforce_max[i] == false) {
-          ASSERTM(false, "Covariate \'" + covariate_names[i] + "\'exceeded enforced maximum value of \'" + to_string(m_covariate_max[i]) + "\'.");
+          ASSERT(false, "Covariate \'" + covariate_names[i] + "\'exceeded enforced maximum value of \'" + to_string(m_covariate_max[i]) + "\'.");
         } else {
           cout << "Adjusted down " << val << " to " << m_covariate_max[i]-1 << endl;
           val = m_covariate_max[i]-1;

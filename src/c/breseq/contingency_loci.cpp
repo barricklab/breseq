@@ -37,7 +37,7 @@ namespace breseq {
     
     // do the mutation identification:
     cReferenceSequences ref_seqs;
-    LoadFeatureIndexedFastaFile(ref_seqs, "", fasta);
+    ref_seqs.ReadFeatureIndexedFastaFile("", fasta);
     
     cout << "Finding repeats...\n";
     homopolymer_repeat_list hr;

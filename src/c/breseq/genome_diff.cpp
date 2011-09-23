@@ -133,7 +133,7 @@ void diff_entry::marshal(field_list_t& s) {
   {
 		map_t::iterator iter=cp.find(*it);
     
-    ASSERTM(iter != cp.end(), "Did not find required field '" + *it + "' to write in entry id " + _id + " of type '" + to_string(_type) + "'.");
+    ASSERT(iter != cp.end(), "Did not find required field '" + *it + "' to write in entry id " + _id + " of type '" + to_string(_type) + "'.");
     
     s.push_back(iter->second);
     cp.erase(iter);
@@ -915,7 +915,7 @@ diff_entry genome_diff::_line_to_item(const string& line)
   const list_t spec = line_specification[item._type];
 
   // make sure it is a recognized type
-  ASSERTM(!spec.empty(), "Type '" + to_string(item._type) + "' is not recognized for line:\n" + line );
+  ASSERT(!spec.empty(), "Type '" + to_string(item._type) + "' is not recognized for line:\n" + line );
 
   for(size_t i = 0; i < spec.size(); i++)
   {
@@ -928,7 +928,7 @@ diff_entry genome_diff::_line_to_item(const string& line)
       assert(false);
     }
 
-    ASSERTM(next.find("=") == string::npos,
+    ASSERT(next.find("=") == string::npos,
             "Unexpected key=value pair '" + next + "' encountered for required item '" + key 
             + "' in type '" + to_string(item._type) + "' line:\n" + line);
     
@@ -1158,7 +1158,7 @@ cReferenceSequences genome_diff::apply_to_sequences(cReferenceSequences& ref_seq
         string dup;
         for (uint32_t i = 1; i < from_string<uint32_t>(mut["new_copy_number"]); i++)
           dup.append(new_ref_seq_info.get_sequence_1(mut[SEQ_ID], position, position+size-1));
-        ASSERT(!dup.empty());
+        ASSERT(!dup.empty(), "Duplicate sequence is empy.");
 
         new_ref_seq_info.insert_sequence_1(mut[SEQ_ID], position-1, dup);
         if (verbose) {
@@ -1174,9 +1174,9 @@ cReferenceSequences genome_diff::apply_to_sequences(cReferenceSequences& ref_seq
 
       case MOB:
       {
-        ASSERTM(!mut.entry_exists("ins_start") && !mut.entry_exists("ins_end") && !mut.entry_exists("del_start") && !mut.entry_exists("del_end"),
+        ASSERT(!mut.entry_exists("ins_start") && !mut.entry_exists("ins_end") && !mut.entry_exists("del_start") && !mut.entry_exists("del_end"),
                "MOB: does not handle ins_start, ins_end, del_start, del_end yet.");
-        ASSERTM(mut["strand"] != "?", "Unknown repeat strand");
+        ASSERT(mut["strand"] != "?", "Unknown repeat strand");
 
         // @JEB: correct here to look for where the repeat is in the original ref_seq_info.
         // This saves us from possible looking at a shifted location...
@@ -1198,7 +1198,7 @@ cReferenceSequences genome_diff::apply_to_sequences(cReferenceSequences& ref_seq
 
         uint32_t replace_target_id, replace_start, replace_end;
         new_ref_seq_info.parse_region(mut["region"], replace_target_id, replace_start, replace_end);
-        ASSERTM(replace_start != replace_end, "Cannot process CON mutation with end == start. ID:" + to_string(mut._id));
+        ASSERT(replace_start != replace_end, "Cannot process CON mutation with end == start. ID:" + to_string(mut._id));
         
         Strand strand = (replace_start < replace_end) ?  POS_STRAND : NEG_STRAND;
         
@@ -1227,7 +1227,7 @@ cReferenceSequences genome_diff::apply_to_sequences(cReferenceSequences& ref_seq
       } break;
 
       default:
-        ASSERTM(false, "Can't handle mutation type: " + to_string(mut._type));
+        ASSERT(false, "Can't handle mutation type: " + to_string(mut._type));
     }
     
     this->shift_positions(mut, new_ref_seq_info);
@@ -1299,7 +1299,7 @@ int32_t diff_entry::mutation_size_change(cReferenceSequences& ref_seq_info)
       break;
     }
     default:
-      ASSERTM(false, "Unable to calculate mutation size change.");
+      ASSERT(false, "Unable to calculate mutation size change.");
       return UNDEFINED_INT32;
   }
 }

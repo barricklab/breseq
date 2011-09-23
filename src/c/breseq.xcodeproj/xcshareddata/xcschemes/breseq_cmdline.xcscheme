@@ -36,7 +36,7 @@
       displayScale = "1.00"
       launchStyle = "0"
       useCustomWorkingDirectory = "YES"
-      customWorkingDirectory = "/Users/jbarrick/tmp/NWp3"
+      customWorkingDirectory = "/Users/jbarrick/src/breseq"
       buildConfiguration = "Debug">
       <BuildableProductRunnable>
          <BuildableReference
@@ -58,6 +58,10 @@
          </CommandLineArgument>
          <CommandLineArgument
             argument = "-r NC_002163.1.gbk -n NWp3 62GAVAAXX_5_1_TCAT_pf.fastq 62GAVAAXX_5_2_TCAT_pf.fastq"
+            isEnabled = "NO">
+         </CommandLineArgument>
+         <CommandLineArgument
+            argument = "-o tests/bull_1 -r tests/bull_1/../data/bull/bull_1.gbk tests/bull_1/../data/bull/bull_1.fastq"
             isEnabled = "YES">
          </CommandLineArgument>
       </CommandLineArguments>

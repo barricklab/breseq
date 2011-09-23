@@ -192,9 +192,9 @@ namespace breseq {
     format_to_quality_type["ILLUMINA_1.3+"] = "PHRED";
     
     // check what we asked for is valid...
-    ASSERTM(format_to_chr_offset.count(from_quality_format), 
+    ASSERT(format_to_chr_offset.count(from_quality_format), 
            "Unknown FASTQ quality score format: " + from_quality_format + "\nValid choices are 'SANGER', 'SOLEXA', 'ILLUMINA_1.3+'");
-    ASSERTM(format_to_chr_offset.count(to_quality_format), 
+    ASSERT(format_to_chr_offset.count(to_quality_format), 
            "Unknown FASTQ quality score format: " + to_quality_format + "\nValid choices are 'SANGER', 'SOLEXA', 'ILLUMINA_1.3+'");
 
     string from_quality_type = format_to_quality_type[from_quality_format];
@@ -270,7 +270,7 @@ namespace breseq {
     fstream(file_name.c_str(), mode), m_current_line(0), m_file_name(file_name), m_needs_conversion(false),
     m_check_for_repeated_read_names(false), m_last_read_name(""), m_repeated_read_name_count(0)
   { 
-    ASSERTM(!(*this).fail(), "Could not open file: " +  file_name);
+    ASSERT(!(*this).fail(), "Could not open file: " +  file_name);
   }
 
   // read one sequence record from the file

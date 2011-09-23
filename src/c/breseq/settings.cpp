@@ -67,7 +67,7 @@ namespace breseq
       
       // set up the map for converting base names to fastq file names to be used
       // check to see whether this is a duplicate
-      ASSERTM(read_file_to_fastq_file_name_map[rf.m_base_name].size() == 0, 
+      ASSERT(read_file_to_fastq_file_name_map[rf.m_base_name].size() == 0, 
               "Read file provided multiple times:\n1)" + read_file_to_fastq_file_name_map[rf.m_base_name] + "\n2)" + rf.m_original_file_name);
       read_file_to_fastq_file_name_map[rf.m_base_name] = rf.m_original_file_name;
       
@@ -726,7 +726,7 @@ namespace breseq
   {    
     create_path(this->output_path);
     ofstream LOG(this->log_file_name.c_str(), ios::app);
-    ASSERT(!LOG.fail());
+    ASSERT(!LOG.fail(), "Failed to open log file: " + this->log_file_name);
     LOG << message << endl;
     LOG.close();
   }

@@ -76,8 +76,8 @@ namespace breseq {
         return it->second;
       }
       
-      void ReadCoords(string& s, ifstream& in);
-      void ReadTag(string& tag, string& s, ifstream& in);
+      void ReadGenBankCoords(string& s, ifstream& in);
+      void ReadGenBankTag(string& tag, string& s, ifstream& in);
   };
   
   //!< Subclass of reference features with more information
@@ -139,13 +139,13 @@ namespace breseq {
       // Utility to get top strand sequence
       string get_sequence_1(uint32_t start_1, uint32_t end_1) 
       {
-        ASSERTM(start_1 <= end_1, "start (" + to_string(start_1) + ")not less than or equal to end(" + to_string(end_1) + ")");
+        ASSERT(start_1 <= end_1, "start (" + to_string(start_1) + ")not less than or equal to end(" + to_string(end_1) + ")");
         return m_fasta_sequence.m_sequence.substr(start_1-1, end_1-start_1+1);
       }
 
       void replace_sequence_1(uint32_t start_1, uint32_t end_1, const string &replacement_seq)
       {
-        ASSERTM(start_1 <= end_1, "start (" + to_string(start_1) + ")not less than or equal to end(" + to_string(end_1) + ")");
+        ASSERT(start_1 <= end_1, "start (" + to_string(start_1) + ")not less than or equal to end(" + to_string(end_1) + ")");
         m_fasta_sequence.m_sequence.replace(start_1-1, end_1-start_1+1, replacement_seq);
       }
 
@@ -195,31 +195,42 @@ namespace breseq {
       : m_index_id(0)
     {}
 
-    //!< Write a tab delimited feature 
-    void WriteFeatureTable(const string &file_name);
+    //!< Load all reference files and verify
+    void LoadFiles(const vector<string>& file_names);
     
-    //!< Read a tab delimited feature
-    void ReadFeatureTable(const string &file_name);
-
-    //!< Write FASTA file       
-    void WriteFASTA(const string &file_name);
+    //!< Load reference file into object
+    //!< Detect file type and load the information in it appropriately
+    void LoadFile(const string& file_name);
     
-    //!< Read FASTA file       
+    //!< Verify that all seq_id have sequence;
+    void Verify();
+    
+    //!< Read/Write a tab delimited feature 
+    void ReadFeatureTable(const string &file_name); //(TODO: deprecate)
+    void WriteFeatureTable(const string &file_name); //(TODO: deprecate)
+    
+    //!< Read/Write FASTA file     
     void ReadFASTA(const std::string &file_name);
-    
-    //!< Write a tab delimited GFF3 file
+    void WriteFASTA(const string &file_name);
+        
+    //!< Read/Write a tab delimited GFF3 file
+    void ReadGFF(const string& file_name);
     void WriteGFF(const string &file_name);
 
-    //!< Read a tab delimited GFF3 file
-    void ReadGFF(const string& file_name);
+    //!< Read GenBank file
+    void ReadGenBank(const string& in_file_names);
+    bool ReadGenBankFileHeader(std::ifstream& in);
+    void ReadGenBankCoords(string& s, ifstream& in);
+    void ReadGenBankTag(std::string& tag, std::string& s, std::ifstream& in);
+    void ReadGenBankFileSequenceFeatures(std::ifstream& in, cAnnotatedSequence& s);
+    void ReadGenBankFileSequence(std::ifstream& in, cAnnotatedSequence& s);
+    
+    //!< Read Bull gene table file
+    void ReadBull(ifstream& in, cAnnotatedSequence& s);
 
-    //!< Load reference file into object
-    void LoadFromFile(const string& file_name);
-
-    //!< Verify that all seq_id have sequence;
-    void Varify();
-
-
+    //!< Read Feature table fasta combination (TODO: deprecate)
+    void ReadFeatureIndexedFastaFile(const string &in_feature_file_name, const string &in_fasta_file_name);
+    
     //!< Calculates the total length of all reference sequences together
     uint32_t total_length()
     {
@@ -238,7 +249,7 @@ namespace breseq {
         return;
       } else {
         cAnnotatedSequence as;
-        as.m_seq_id;
+        as.m_seq_id = seq_id;
         this->push_back(as);
         m_seq_id_to_index[seq_id] = m_index_id;
         m_index_id++;
@@ -252,7 +263,7 @@ namespace breseq {
       { m_seq_id_to_index[seq_id] = id; }
     
     uint32_t seq_id_to_index(const string& seq_id)
-      { ASSERT(m_seq_id_to_index.count(seq_id)); return m_seq_id_to_index[seq_id]; };
+      { ASSERT(m_seq_id_to_index.count(seq_id), "SEQ_ID not found: " + seq_id); return m_seq_id_to_index[seq_id]; };
 
     cAnnotatedSequence& operator[](const size_t target_id)
       { return this->at(target_id); }
@@ -261,7 +272,7 @@ namespace breseq {
     { return this->at(target_id); }
     
     cAnnotatedSequence& operator[](const string& seq_id)
-      { ASSERT(m_seq_id_to_index.count(seq_id)); return this->at(m_seq_id_to_index[seq_id]); }
+      { ASSERT(m_seq_id_to_index.count(seq_id), "SEQ_ID not found: " + seq_id); return this->at(m_seq_id_to_index[seq_id]); }
 
     
     //!< Utility to get sequences by seq_id
@@ -299,7 +310,7 @@ namespace breseq {
     {
       
       vector<string> split_region = split_on_any(region, ":-");
-      ASSERTM(split_region.size() == 3, "Unrecognized region: " + region + "\n(Expected seq_id:start-end)");
+      ASSERT(split_region.size() == 3, "Unrecognized region: " + region + "\n(Expected seq_id:start-end)");
 
       target_id = seq_id_to_index(split_region[0]);
       start_pos_1 = from_string<uint32_t>(split_region[1]);
@@ -332,23 +343,7 @@ namespace breseq {
 
     
   };
-  
-  /*! Helper function for creating cReferenceSequences
-   */
-  
-  void LoadGenBankFile(cReferenceSequences& s, const vector<string>& in_file_names);
-  bool LoadGenBankFileHeader(ifstream& in, cReferenceSequences& s);
-  void LoadGenBankFileSequenceFeatures(ifstream& in, cAnnotatedSequence& s);
-  void LoadGenBankFileSequence(ifstream& in, cAnnotatedSequence& s);
-
-  void LoadFeatureIndexedFastaFile(cReferenceSequences& s, const string &in_feature_file_name, const string &in_fasta_file_name);
-  
-  void LoadBullFile(cReferenceSequences& s, const vector<string>& in_file_names);
-  void LoadBullFeatureFile(ifstream& in, cAnnotatedSequence& s);
-
-  void LoadGffFile(cReferenceSequences& rs, const vector<string>& in_file_names);
-  void LoadGffFileFeatures(string& line, cAnnotatedSequence& s);
-
+    
   /*! Utility functions.
   */
   std::string GetWord(string &s);

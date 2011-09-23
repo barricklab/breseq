@@ -115,8 +115,14 @@ identify_mutations_pileup::identify_mutations_pileup(
 	  
   set_print_progress(true);
   
-  assert(m_bam->header->n_targets == (int32_t)_deletion_propagation_cutoffs.size());
-  assert(m_bam->header->n_targets == (int32_t)_deletion_seed_cutoffs.size());
+  ASSERT(m_bam->header->n_targets == (int32_t)_deletion_propagation_cutoffs.size(), 
+         "Number of targets in BAM file [" + to_string(m_bam->header->n_targets) + "] " +
+         "does not match + number in cutoff table [" + to_string(_deletion_propagation_cutoffs.size()) + "]."
+         );
+  ASSERT(m_bam->header->n_targets == (int32_t)_deletion_seed_cutoffs.size(),
+         "Number of targets in BAM file [" + to_string(m_bam->header->n_targets) + "] " +
+         "does not match + number in cutoff table [" + to_string(_deletion_propagation_cutoffs.size()) + "]."
+         );
     
 	// reserve enough space for the sequence info:
 	_seq_info.resize(m_bam->header->n_targets);
