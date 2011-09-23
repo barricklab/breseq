@@ -100,7 +100,6 @@ namespace breseq
   
   Settings::Settings(int argc, char* argv[])
   {
-    this->command_line_run_header();
     this->pre_option_initialize(argc, argv);
     
     // we need the path to the executable to locate scripts and our own installed versions of binaries
@@ -180,6 +179,11 @@ namespace breseq
     ("deletion-coverage-seed-cutoff,s","value for coverage below which deletions are cutoff")
     .processCommandArgs(argc, argv);
     
+    options.addUsage("");
+		options.addUsage("Utility Command Usage: breseq [command] options ...");
+    options.addUsage("  Recognized commands: APPLY, BAM2ALN, BAM2COV, CONVERT_FASTQ, ERROR_COUNT");
+    options.addUsage("  For help using a utility command, type: breseq [command] ");
+    
     // Reference sequence provided?
 		if (options.count("reference") == 0)
 		{
@@ -232,7 +236,6 @@ namespace breseq
     //// Other options ////
     this->junction_prediction = !options.count("no-junction-prediction");
     
-    
 		this->post_option_initialize();
     
     // Log the command line
@@ -243,11 +246,6 @@ namespace breseq
   
   void Settings::command_line_run_header()
   {
-    
-    this->byline += PACKAGE_VERSION;
-    
-    this->website = "http://barricklab.org/breseq";
-    this->website += PACKAGE_URL;
     cerr << "===============================================================================" << endl;
     cerr << PACKAGE_STRING << "      " << PACKAGE_URL << endl;
     cerr << endl;
