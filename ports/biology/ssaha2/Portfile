@@ -1,0 +1,41 @@
+# -*- coding: utf-8; mode: tcl; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*- vim:fenc=utf-8:ft=tcl:et:sw=4:ts=4:sts=4
+# $Id$
+PortSystem          1.0
+name                ssaha2
+distname            ${name}_mac
+version             2.5.1
+worksrcdir			${name}_v${version}_MacOS
+categories          biology
+platforms           darwin
+maintainers         Jeffrey Barrick \
+                    gmail.REMOVEme.com:jeffrey.e.barrick
+description         Breseq pipeline for genome re-sequencing data.
+long_description    Breseq pipeline for analyzing next-gen DNA sequencing data. \
+                    Intended for haploid organisms with smaller genome sizes \
+                    (mainly bacteria) includes functionality for predicting new \
+                    sequence junctions and the frequencies of point mutations in \
+                    mixed population samples. \
+homepage            http://barricklab.org/breseq
+license             commercial
+master_sites        ftp://ftp.sanger.ac.uk/pub4/resources/software/ssaha2/
+checksums           md5     a0f408f183083294c05fccb5037f1408
+
+
+extract.suffix      .tgz
+
+use_configure       no
+
+build.cmd           ls
+build.target
+destroot.target
+destroot.destdir
+
+post-destroot {
+    # Install example files not installed by the Makefile
+#    file mkdir ${destroot}${prefix}/share/doc/${name}/examples
+    file copy ${worksrcpath}/ssaha2 ${destroot}${prefix}/bin
+    file copy ${worksrcpath}/ssaha2Build ${destroot}${prefix}/bin
+    file copy ${worksrcpath}/ssahaSNP ${destroot}${prefix}/bin
+
+}
+
