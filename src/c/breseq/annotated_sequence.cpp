@@ -32,6 +32,7 @@ namespace breseq {
     }
     
     this->Verify();
+    this->m_initialized = true;
   }
   
   void cReferenceSequences::LoadFile(const string& file_name)
@@ -70,6 +71,7 @@ namespace breseq {
       case GENBANK:
       {
         ReadGenBank(file_name);
+        this->ConvertFeatureTags(GENBANK);
       }break;
         
       case FASTA:
@@ -85,6 +87,7 @@ namespace breseq {
       case GFF3:
       {
         ReadGFF(file_name);
+        this->ConvertFeatureTags(GFF3);
       }break;
         
       default:
@@ -104,6 +107,7 @@ namespace breseq {
       }
     }
     if (Error) ERROR(ss.str());
+    if (this->empty()) ERROR("Reference files were not loaded");
   }
 
   
@@ -298,22 +302,19 @@ namespace breseq {
     }
   }
 
-
-  
-  
+  /*! ReadGFF abides by the following format:
+    http://www.sequenceontology.org/gff3.shtml !*/
   void cReferenceSequences::ReadGFF(const string& file_name)
   {
     cFastaFile in(file_name.c_str(), ios_base::in);
     ASSERT(!in.fail(), "Could not open GFF file: " + file_name);
-    string line;
-    getline(in, line);
-    //! Step 1: Header
-    if (line.find("##gff-version 3") != string::npos) {
-      while (!in.eof()) {
+    //! Step 1: Header //! cFastaFile removes first line, so no header...
+      string line;
+      while (!in.eof() && getline(in,line)) {
         cSequenceFeaturePtr fp(new cSequenceFeature);
         cSequenceFeature& feature = *fp;
+
     //! Step 2: Check for GFF Tags, reads FASTA from here.
-        getline(in, line);
         // We are concerned about a couple of ## GFF tags
         if (line[0] == '#') {
           if (line.find("##species") != string::npos) {
@@ -326,97 +327,79 @@ namespace breseq {
           }
           // Find embedded fasta file
           else if (line.find("##FASTA") != string::npos) {
+            /* Things admittedly get a bit hairy right here, you have to
+              take the next line (The one with ">XXXXXX") and set it as the
+              current line for cFastaFile, after you've read the fasta you
+              can exit the function since nothing should exist after.
+              */
+            getline(in,line);
+            in.set_current_line(line);
             this->ReadFASTA(in);
+            return; //! Done!
           } else {
             continue;
           }
         }
-    //! Step 3:
-        // split line on tabs
-        char * cstr = new char [line.size()+1];
-        strcpy (cstr, line.c_str());
-        
-        
-        string seq_id;
-        
-        char * pch;
-        pch = strtok(cstr,"\t");
-        uint32_t on_token = 0;
-        while (pch != NULL)
-        {
-          //printf ("%s\n",pch);
-          switch (on_token) {
-            case 0:
-              seq_id = pch;
-              break;
-              
-            case 1:
-              feature["source"] = pch;
-              break;
-              
-            case 2:
-              feature["type"] = pch;
-              break;
-              
-            case 3:
-              feature.m_start = atoi(pch);
-              break;
-              
-            case 4:
-              feature.m_end = atoi(pch);
-              break;
-              
-            case 5:
-              feature["score"] = pch;
-              
-            case 6:
-              feature.m_strand = atoi(pch);
-              break;
-              
-            case 7:
-              feature["phase"] = pch;
-              break;
-              //Handle Attributes
-            case 9:
-            {
-              string raw_attributes = pch;
-              vector<string> attributes;
-              // Step 1
-              if (raw_attributes.find(";") == string::npos) {
-                attributes.push_back(raw_attributes);
-              } else {
-                attributes = split(raw_attributes, ";");
-              }
-              // Step 2
-              for (vector<string>::iterator itr = attributes.begin(); itr != attributes.end(); itr++) {
-                string& attribute = *itr;
-                vector<string> key_value = split(attribute,"=");
-                string& key = key_value.front();
-                string& value = key_value.back();
-                // Step 3
-                if (value.find(",") == string::npos) {
-                  feature.m_gff_attributes[key].push_back(value);
-                } else {
-                  feature.m_gff_attributes[key] = split(value, ",");
-                }
-              }
-              
-            }break;
+    /*! Step 3: Split line on tabs("\t") until last column, grab last column until endl("\n"),
+        the default for getline(). !*/
+          stringstream ss(line);
+          string seq_id, start, end, strand;
+
+          // Handle columns up to the last one, "attributes"
+          // Column 1: "seqid"
+          getline(ss, seq_id, '\t');
+          // Column 2: "source"
+          getline(ss, feature["source"], '\t');
+          // Column 3: "type"
+          getline(ss, feature["type"], '\t');
+          // Column 4: "start"
+          getline(ss, start, '\t');
+          feature.m_start = from_string<uint32_t>(start);
+          // Column 5: "end"
+          getline(ss, end, '\t');
+          feature.m_end = from_string<uint32_t>(end);
+          // Column 6: "score"
+          getline(ss, feature["score"], '\t');
+          // Column 7: "strand"
+          getline(ss, strand, '\t');
+          feature.m_strand = from_string<int8_t>(strand);
+          // Column 8: "phase"
+          getline(ss, feature["phase"], '\t');
+          // Column 9: "attributes"
+          string raw_attributes;
+
+          // Handle parsing the attributes
+          getline(ss, raw_attributes);
+          vector<string> attributes;
+          //! Case 1: Multiple attributes split by ";"
+          if (raw_attributes.find(";") == string::npos) {
+            attributes.push_back(raw_attributes);
+          } else {
+            attributes = split(raw_attributes, ";");
           }
-          
-          pch = strtok (NULL, "\t");
-          on_token++;
-        }
-        
-        delete[] cstr;
-        
-        //! Determine if sequence already exists
-        this->add_new_seq(seq_id);
-        (*this)[seq_id].add_feature(fp);
+          //Split attribute's key and value by "="
+          for (vector<string>::iterator itr = attributes.begin(); itr != attributes.end(); itr++) {
+            string& attribute = *itr;
+            vector<string> key_value = split(attribute,"=");
+            string& key = key_value.front();
+            string& value = key_value.back();
+          //! Case 2: Multiple values for given key, split by ","
+            if (value.find(",") == string::npos) {
+              feature.m_gff_attributes[key].push_back(value);
+            } else {
+              feature.m_gff_attributes[key] = split(value, ",");
+            }
+          }
+    //! Step 4: Determine if sequence already exists
+          this->add_new_seq(seq_id);
+
+          (*this)[seq_id].add_feature(fp);
+
       }
-    }
   }
   
+/*! WriteGFF abides by the following format:
+  http://www.sequenceontology.org/gff3.shtml !*/
 void cReferenceSequences::WriteGFF( const string &file_name ){
 
   cFastaFile out(file_name.c_str(), ios_base::out);
@@ -426,7 +409,7 @@ void cReferenceSequences::WriteGFF( const string &file_name ){
   for (vector<cAnnotatedSequence>::iterator it_as = this->begin(); it_as < this->end(); it_as++) {
     //! TODO @GRC unknown if below line goes at top or before each set of features
     //out << "##sequence-region" << "\t" << it_as->m_seq_id << "\t" << "1" << "\t" << it_as->m_length << endl; //@JEB Correct region?
-      //! Step 2: Features
+  //! Step 2: Features
       for (vector<cSequenceFeaturePtr>::iterator it = it_as->m_features.begin(); it != it_as->m_features.end(); it++) {
         cSequenceFeature& feat = **it;
 
@@ -503,7 +486,6 @@ void cReferenceSequences::ReadGenBank(const string& in_file_name) {
     ReadGenBankFileSequence(in, this->back());
     this->set_seq_id_to_index(this->back().m_seq_id, on_seq_id++);
   }
-  this->ConvertTags();
 }
 
 bool cReferenceSequences::ReadGenBankFileHeader(std::ifstream& in) {
@@ -1782,29 +1764,57 @@ string shifted_cigar_string(const alignment_wrapper& a, const cReferenceSequence
   return shifted_cigar_string;
 }
 
-void cReferenceSequences::ConvertTags()
+void cReferenceSequences::ConvertFeatureTags(const FileType file_type)
 {
   for (vector<cAnnotatedSequence>::iterator it_as = this->begin(); it_as != this->end(); it_as ++) {
     for (cSequenceFeatureList::iterator it_ft = it_as->m_features.begin(); it_ft != it_as->m_features.end(); it_ft++) {
       cSequenceFeature& feature = **it_ft;
+      switch (file_type) {
+      //! Case 1: GenBank input file, convert appropriate tags to GFF features
+      case GENBANK:
+      {
+        // locus_tag to ID and Alias
+        if (feature.count("locus_tag")) {
+          feature.m_gff_attributes["ID"].push_back(feature["locus_tag"]);
+          feature.m_gff_attributes["Alias"].push_back(feature["locus_tag"]);
+        }
 
-      // locus_tag to ID and Alias
-      if (feature.count("locus_tag")) {
-        feature.m_gff_attributes["ID"].push_back(feature["locus_tag"]);
-        feature.m_gff_attributes["Alias"].push_back(feature["locus_tag"]);
-      }
+        // key "type" protein to CDS
+        if (feature.count("type") && feature["type"] == "protein") {
+          feature["type"] = "CDS";
+        }
 
-      // name or gene to Name
-      if (feature.count("name")) {
-        feature.m_gff_attributes["Name"].push_back(feature["name"]);
-      }
-      else if (feature.count("gene")) {
-        feature.m_gff_attributes["Name"].push_back(feature["gene"]);
-      }
+        // name or gene to Name
+        if (feature.count("name")) {
+          feature.m_gff_attributes["Name"].push_back(feature["name"]);
+        }
+        else if (feature.count("gene")) {
+          feature.m_gff_attributes["Name"].push_back(feature["gene"]);
+        }
 
-      //db_xref to Dbxref
-      if (feature.count("db_xref")) {
-        feature.m_gff_attributes["Dbxref"].push_back("NCBI_gi:10727410");
+        //db_xref to Dbxref
+        if (feature.count("db_xref")) {
+          feature.m_gff_attributes["Dbxref"].push_back("NCBI_gi:10727410");
+        }
+      }
+      //! Case 2: GFF input file, convert appropriate tags to GenBank features
+      case GFF3:
+      {
+        if (feature.m_gff_attributes.count("ID")) {
+          feature["locus_tag"] = feature.m_gff_attributes["ID"].front();
+        }
+        else if (feature.m_gff_attributes.count("Alias")) {
+          feature["locus_tag"] = feature.m_gff_attributes["Alias"].front();
+        }
+
+        if (feature.m_gff_attributes.count("Name")) {
+          feature["gene"] = feature.m_gff_attributes["Name"].front();
+        }
+
+        if (feature.m_gff_attributes.count("Dbxref")) {
+          feature["db_xref"] = feature.m_gff_attributes["Dbxref"].front();
+        }
+      }
       }
     }
   }

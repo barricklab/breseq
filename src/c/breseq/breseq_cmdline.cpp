@@ -972,19 +972,20 @@ int breseq_default_action(int argc, char* argv[])
 	create_path(settings.sequence_conversion_path);
   create_path(settings.data_path);
 
+  cReferenceSequences ref_seq_info;
+
 	if (settings.do_step(settings.sequence_conversion_done_file_name, "Read and reference sequence file input"))
 	{
 		Summary::SequenceConversion s;
     
     // Load all of the reference sequences and convert to FASTA and GFF3
-    cReferenceSequences ref_seq_info;
     ref_seq_info.LoadFiles(settings.reference_file_names);
     ref_seq_info.WriteFASTA(settings.reference_fasta_file_name);
     ref_seq_info.WriteGFF(settings.reference_gff3_file_name);
     // @JEB - Once GFF3 reading and writing works, deprecate using FeatureTable format
     ref_seq_info.WriteFeatureTable(settings.reference_features_file_name);
 
-		//Check the FASTQ format and collect some information about the input read files at the same time
+    //Check the FASTQ format and collect some information about the input read files at the same time
 		cerr << "  Analyzing fastq read files..." << endl;
 		uint32_t overall_max_read_length = UNDEFINED_UINT32;
 		uint32_t overall_max_qual = 0;
@@ -1036,13 +1037,10 @@ int breseq_default_action(int argc, char* argv[])
 	summary.sequence_conversion.retrieve(settings.sequence_conversion_summary_file_name);
 	ASSERT(summary.sequence_conversion.max_read_length != UNDEFINED_UINT32, "Can't retrieve max read length from file: " + settings.sequence_conversion_summary_file_name);
 
-	//load C++ info
-	string reference_features_file_name = settings.reference_features_file_name;
-	string reference_fasta_file_name = settings.reference_fasta_file_name;
-  
   //(re)load the reference sequences from our converted files
-  cReferenceSequences ref_seq_info;
-  ref_seq_info.ReadFeatureIndexedFastaFile(settings.reference_features_file_name, settings.reference_fasta_file_name);
+  if(!ref_seq_info.Initialized()) {
+    ref_seq_info.ReadFeatureIndexedFastaFile(settings.reference_features_file_name, settings.reference_fasta_file_name);
+  }
   // @JEB - eventually replace with this
   //ref_seq_info.ReadGFF(settings.reference_gff3_file_name);
   
@@ -1793,16 +1791,6 @@ int breseq_default_action(int argc, char* argv[])
   return 0;
 }
 
-int do_test() {
-  cReferenceSequences ref_seq;
-  ref_seq.LoadFile("reference.gbk");
-  ref_seq.WriteGFF("reference.gff3");
-
-
-
-
-  return 0;
-}
 
 /*! breseq commands
  
@@ -1864,8 +1852,6 @@ int main(int argc, char* argv[]) {
     return do_bam2cov( argc_new, argv_new);    
   } else if ((command == "APPLY") || (command == "MUTATE")) {
     return do_mutate(argc_new, argv_new);
-  } else if (command == "TEST") {
-      do_test();
   } else {
     // Not a sub-command. Use original argument list.
     return breseq_default_action(argc, argv);

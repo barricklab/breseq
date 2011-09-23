@@ -185,15 +185,18 @@ namespace breseq {
   class cReferenceSequences : public vector<cAnnotatedSequence> {
   protected:
     map<string,int> m_seq_id_to_index; // for looking up sequences by seq_id
+    uint32_t m_index_id;
+    bool m_initialized;
+
     //!< Currently supported file types.
     enum FileType {UNKNOWN, GENBANK, FASTA, GFF3, BULL};
 
-    uint32_t m_index_id;
 
   public:
     
     cReferenceSequences()
       : m_index_id(0)
+      , m_initialized(false)
     {}
 
     //!< Load all reference files and verify
@@ -205,6 +208,7 @@ namespace breseq {
     
     //!< Verify that all seq_id have sequence;
     void Verify();
+    bool Initialized() {return m_initialized;}
     
     //!< Read/Write a tab delimited feature 
     void ReadFeatureTable(const string &file_name); //(TODO: deprecate)
@@ -219,7 +223,7 @@ namespace breseq {
     //!< Read/Write a tab delimited GFF3 file
     void ReadGFF(const string& file_name);
     void WriteGFF(const string &file_name);
-    void ConvertTags(); // Converts GenBank features to GFF attributes, m_gff_attributes
+    void ConvertFeatureTags(const FileType file_type);
 
     //!< Read GenBank file
     void ReadGenBank(const string& in_file_names);
