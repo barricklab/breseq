@@ -81,39 +81,61 @@ namespace breseq {
       ofstream out(file_name.c_str());
       assert(!out.fail()); 
       
+      out << "##gff-version 3" << endl;
       for(vector<cAnnotatedSequence>::iterator it_as = this->begin(); it_as < this->end(); it_as++) {
-          
+        //out << "##sequence-region" << "\t" << it_as->m_seq_id << "\t" << "1" << "\t" << it_as->m_length << endl; //@JEB Correct region?
           for (vector<cSequenceFeaturePtr>::iterator it = it_as->m_features.begin(); it != it_as->m_features.end(); it++) {
             cSequenceFeature& feat = **it;
+
             out << it_as->m_seq_id;
-            out << "\tGenBank";
-          
+
+            if (feat.SafeGet("source") == "")
+              out << "\tGenBank";
+            else
+              out << "\t" << feat["source"];
+
             if (feat.SafeGet("type") == "") 
-              out << ".";
+              out << "\t.";
             else
               out << "\t" << feat["type"];
             
             
             out << "\t" << feat.m_start;
             out << "\t" << feat.m_end;
-            out << "\t.";
-            out << "\t" << (int)feat.m_strand;
-            out << "\t.";
-            
-            if( feat.SafeGet("accession") == "" )
-              out << ".";
+
+            if (feat.SafeGet("score") == "")
+              out << "\t.";
             else
-              out << "\t" << "accession=" <<feat["accession"];
-            
-            if( feat.SafeGet("name") == "" )
-              out << ";" << "name=" << ".";
+              out << "\t" << feat["score"];
+
+            if (feat.m_strand > 0)
+              out << "\t" << "+";
             else
-              out << ";" << "name=" <<feat["name"];
-            
-            if( feat.SafeGet("product") == "" )
-              out << ";" << "product=" << ".";
+              out << "\t" << "-";
+
+            if (feat.SafeGet("phase") == "")
+              out << "\t" << ".";
             else
-              out << ";" << "product=" <<feat["product"];
+              out << "\t" << feat["phase"];
+
+            //Attributes
+            out << "\t";
+            vector<string> attributes;
+            map<string,vector<string> >::const_iterator itr;
+            for (itr = feat.m_attributes.begin(); itr != feat.m_attributes.end(); itr++) {
+              const string& key = itr->first;
+              const vector<string>& values = itr->second;
+              if (values.size() == 1) {
+                attributes.push_back(key + "=" + values.front());
+              } else {
+                attributes.push_back(key + "=" + join(values, ","));
+              }
+            }
+            if (attributes.size() == 1) {
+              out << attributes.front();
+            } else {
+              out << join(attributes, ";");
+            }
             
             out << std::endl;
           }
@@ -154,28 +176,28 @@ namespace breseq {
         // split line on tabs
         char * cstr = new char [line.size()+1];
         strcpy (cstr, line.c_str());
-        
+
         cSequenceFeaturePtr fp(new cSequenceFeature);
         cSequenceFeature& feature = *fp;
-        
+
         string seq_id;
-        
+
         char * pch;
         pch = strtok(cstr,"\t");
         uint32_t on_token = 0;
         while (pch != NULL)
         {
           //printf ("%s\n",pch);
-          
+
           switch (on_token) {
             case 0:
               seq_id = pch;
               break;
-            
+
             case 1:
               feature["type"] = pch;
               break;
-              
+
             case 2:
               feature["accession"] = pch;
               break;
@@ -1537,220 +1559,190 @@ namespace breseq {
     ASSERTM(false, "Unknown repeat type: " + repeat_name);
     return "";
   }
-   /*NOTES:_ParseForFileType
-       Current assumptions to determine file_type based on first line
-       GENBANK: First line contains "LOCUS"
-       GFF: First line contains ";name="
-       FASTA: First char of first line contains ">"
-       BULL: First line contains only numbers
-    */
-   cReferenceSequenceConverter::FileType cReferenceSequenceConverter::_ParseForFileType(const string& file)
-   {
-     ifstream in(file.c_str());
-     if (!in.good()) {
-       WARN("Could not open reference file: " +file);
-     }
 
-     string first_line;
-     getline(in, first_line);
-     in.close();// Currently only parsing first line.
 
-     // Check if it is a fasta file
-     if (first_line[0] == '>') {
-       return FASTA;
-     }
-     // Check if it is a genbank file
-     else if (first_line.find("LOCUS") != string::npos) {
-       return GENBANK;
-     }
-     // Check if it is a Bull file
-     else if (first_line.find_first_not_of("1234567890") == string::npos ) {
-       return BULL;
-     }
-     // Check if it is a GFF file
-     else if (first_line.find(";name=") != string::npos) {
-       return GFF;
-     }
-     // The file was not identified and will most likely cause Breseq to fail.
-     else {
-       WARN("The file format for the following reference file could not be determined: " + file);
-     }
-   }
-
-   void cReferenceSequenceConverter::_InitFileTypes()
-   {
-    vector<string>::const_iterator itr;
-
-    for(itr = m_file_names.begin(); itr != m_file_names.end(); itr++) {
-      const string& file = *itr;
-      if(file.find(".gbk") != string::npos && this->_ParseForFileType(file) == GENBANK) {
-        m_file_types[GENBANK].push_back(file);
-      }
-      else if(file.find(".fasta") != string::npos && this->_ParseForFileType(file) == FASTA) {
-        m_file_types[FASTA].push_back(file);
-      }
-      else if(file.find(".gff") != string::npos && this->_ParseForFileType(file) == GFF) {
-        m_file_types[GFF].push_back(file);
-      }
-      else if(this->_ParseForFileType(file) == BULL) {
-        m_file_types[BULL].push_back(file);
-      }
-    }
-  }
-
-  cReferenceSequenceConverter::FileType cReferenceSequenceConverter::_DetermineUseCase()
-  {
-    //! Case 1: All files are Genbank Files
-    if (m_file_types.count(GENBANK) == m_file_types.size()) {
-      return GENBANK;
-    }
-    //! Case 2: All files are Fasta Files
-    else if (m_file_types.count(FASTA) == m_file_types.size()) {
-      return FASTA;
-    }
-    //! Case 3: All files are Bull Files
-    else if (m_file_types.count(BULL) == m_file_types.size()) {
-      return BULL;
-    }
-    //! Case 4: Files are both Fasta and GFF Files
-    else if (m_file_types.count(FASTA) +
-             m_file_types.count(GFF)== m_file_types.size()) {
-      return GFF_AND_FASTA;
-    } else {
-      WARN("Could not determine use case for reference files");
-    }
-  }
-  void cReferenceSequenceConverter::_Converter(const FileType type)
-  {
-    cReferenceSequences refseqs;
-
-    /*! Step 1: Load files into cReferenceSequences, the data loaded
-      will then be written to several files. !*/
-    switch (type) {
-      case GENBANK:
-      {
-        LoadGenBankFile(refseqs, m_file_types[GENBANK]);
-      }break;
-
-      case FASTA:
-      {
-        const vector<string>& fasta_files = m_file_types[FASTA];
-        vector<string>::const_iterator itr;
-        for(itr = fasta_files.begin(); itr != fasta_files.end(); itr++) {
-          const string& file = *itr;
-          refseqs.ReadFASTA(file);
-        }
-      }break;
-
-      case BULL:
-      {
-        LoadBullFile(refseqs, m_file_types[BULL]);
-      }break;
-
-      case GFF_AND_FASTA:
-      {
-        //Handle FASTAs
-        const vector<string>& fasta_files = m_file_types[FASTA];
-        vector<string>::const_iterator itr;
-        for(itr = fasta_files.begin(); itr != fasta_files.end(); itr++) {
-          const string& file = *itr;
-          refseqs.ReadFASTA(file);
-        }
-        //Handle GFF
-        LoadGffFile(refseqs, m_file_types[GFF]);
-
-      }break;
-
-      default:
-        WARN("Could not load the reference files");
-    }
-
-    //! Step 2: Write files for use in Breseq's initial phase
-    // Output reference sequence
-    if (m_fasta != "") refseqs.WriteFASTA(m_fasta);
-
-    // Output feature table
-    if (m_features != "") refseqs.WriteFeatureTable(m_features);
-
-    // Output GFF file
-    if (m_gff != "" ) refseqs.WriteGFF( m_gff );
-  }
-
-  void cReferenceSequenceConverter::Process()
-  {
-    this->_InitFileTypes();
-    //! @GRC this is fairly dumb... this->_Converter(this->DetermineUseCase());
-    switch (this->_DetermineUseCase()) {
-      case GENBANK: this->_Converter(GENBANK); break;
-      case FASTA: this->_Converter(FASTA); break;
-      case BULL: this->_Converter(BULL); break;
-      case GFF_AND_FASTA: this->_Converter(GFF_AND_FASTA); break;
-      default: WARN("Unrecognized combination of reference files");
-    }
-  }
-/*! Notes: LoadGffFileFeatures
- Line order: seq_id, source, type, start, end, score, strand, phase
-
- *seq_id already taken, this function is passed the appropriate
- cAnnotatedSequence related to that seq_id
- !*/
-void LoadGffFileFeatures(const vector<string>& tokens, cAnnotatedSequence& as)
+void cReferenceSequences::ReadGFF(const string& file_name)
 {
-  cSequenceFeaturePtr feature(new cSequenceFeature);
+  ifstream in(file_name.c_str());
+  ASSERTM(!in.fail(), "Could not open GFF file: " + file_name);
+  string line;
+  getline(in, line);
 
-  // Column 2: source
-  (*feature)["source"] = tokens[1];
-
-  // Column 3: type
-  (*feature)["type"] = tokens[2];
-
-  // Column 4: start
-  feature->m_start = from_string<uint32_t>(tokens[3]);
-
-  // Column 5: end
-  feature->m_end = from_string<uint32_t>(tokens[4]);
-
-  // Column 6: score
-  (*feature)["score"] = tokens[5];
-
-  // Column 7: strand
-  feature->m_strand = (tokens[6] == "1" ? 1 : -1);
-
-  // Column 8: phase
-  (*feature)["phase"] = tokens[7];
-
-  //// TODO @GRC The parse tokens[8], ie accession=ECB_r00003;name=rrfH;produce=5S ribosomal RNA
-  //// Column 9: attributes
-  //vector<string> attributes = split(tokens[8], ";");
-  //for(vector<string>::iterator itr = attributes.begin(); itr != attributes.end(); itr++) {
-  //
-  //  vector<string> key_value = split(*itr, "=");
-  //  string& key = key_value.front();
-  //  string& value = key_value.bac
-  //if ((*feature)["type"] != "repeat_region") {
-
-
-  as.add_feature(feature);
-}
-void LoadGffFile(cReferenceSequences& rs, const vector<string>& in_file_names)
-{
-  for (vector<string>::const_iterator itr = in_file_names.begin(); itr != in_file_names.end(); itr++) {
-
-    ifstream in(itr->c_str());
-    ASSERTM(!in.fail(), "Could not open GFF file: " + *itr);
-
-    string line;
+  if (line.find("##gff-version 3") != string::npos) {
     while (!in.eof()) {
-      getline(in, line);
-      vector<string> tokens = split(line, "\t");
-      if(tokens.empty()) break; //! @GRC Find out why an empty line is returned.
+      cSequenceFeaturePtr fp(new cSequenceFeature);
+      cSequenceFeature& feature = *fp;
 
-      string seq_id = tokens[0];
-      LoadGffFileFeatures(tokens, rs[rs.seq_id_to_index(seq_id)]);
+      // Find imbedded Fasta
+      if (in.peek() == '>') {
+        //TODO @GRC pass ifstream to ReadFasta-like function
+        continue;
+      }
+
+      getline(in, line);
+      // We are concered about a couple of ## GFF tags
+      if (line[0] == '#') {
+        if (line.find("##species") != string::npos) {
+          //TODO @GRC
+          continue;
+        }
+        else if (line.find("##sequence-region") != string::npos) {
+          //TODO @GRC
+          continue;
+        }
+      }
+      // split line on tabs
+      char * cstr = new char [line.size()+1];
+      strcpy (cstr, line.c_str());
+
+
+      string seq_id;
+
+      char * pch;
+      pch = strtok(cstr,"\t");
+      uint32_t on_token = 0;
+      while (pch != NULL)
+      {
+        //printf ("%s\n",pch);
+        switch (on_token) {
+          case 0:
+            seq_id = pch;
+            break;
+
+          case 1:
+            feature["source"] = pch;
+            break;
+
+          case 2:
+            feature["type"] = pch;
+            break;
+
+          case 3:
+            feature.m_start = atoi(pch);
+            break;
+
+          case 4:
+            feature.m_end = atoi(pch);
+            break;
+
+          case 5:
+            feature["score"] = pch;
+
+          case 6:
+            feature.m_strand = atoi(pch);
+            break;
+
+          case 7:
+            feature["phase"] = pch;
+            break;
+          //Handle Attributes
+          case 9:
+          {
+            string raw_attributes = pch;
+            vector<string> attributes;
+            // Step 1
+            if (raw_attributes.find(";") == string::npos) {
+              attributes.push_back(raw_attributes);
+            } else {
+              attributes = split(raw_attributes, ";");
+            }
+            // Step 2
+            for (vector<string>::iterator itr = attributes.begin(); itr != attributes.end(); itr++) {
+              string& attribute = *itr;
+              vector<string> key_value = split(attribute,"=");
+              string& key = key_value.front();
+              string& value = key_value.back();
+              // Step 3
+              if (value.find(",") == string::npos) {
+                feature.m_attributes[key].push_back(value);
+              } else {
+                feature.m_attributes[key] = split(value, ",");
+              }
+            }
+
+          }break;
+        }
+
+        pch = strtok (NULL, "\t");
+        on_token++;
+      }
+
+      delete[] cstr;
+
+      //! Determine if sequence already exists
+      this->add_new_seq(seq_id);
+      (*this)[seq_id].add_feature(fp);
     }
   }
 }
 
+void cReferenceSequences::LoadFromFile(const string& file_name)
+{
+  ifstream in(file_name.c_str());
+  if (!in.good()) {
+    WARN("Could not open reference file: " +file_name);
+  }
+  //! Step 1: Determine what file format it is from first line
+  FileType file_type = UNKNOWN;
+  string first_line;
+  getline(in, first_line);
+  in.close();// Currently only parsing first line.
 
+  // Fasta?
+  if (first_line[0] == '>' && file_name.find(".fasta") != string::npos) {
+    file_type = FASTA;
+  }
+  // GenBank?
+  else if ((first_line.find("LOCUS") && file_name.find(".gbk")) != string::npos) {
+    file_type = GENBANK;
+  }
+  // BULL?
+  else if (first_line.find_first_not_of("1234567890") == string::npos ) {
+    file_type = BULL;
+  }
+  // GFF?
+  else if ((first_line.find("##gff-version 3") && file_name.find(".gff3")) != string::npos) {
+    file_type = GFF;
+  }
+  // The file was not identified and will most likely cause Breseq to fail.
+  else {
+    WARN("Could not determine format of reference file: " + file_name);
+  }
+  //! Step 2: Load appropriate file
+  switch (file_type) {
+    case GENBANK:
+    {
+    }break;
+
+    case FASTA:
+    {
+    }break;
+
+    case BULL:
+    {
+    }break;
+
+    case GFF:
+    {
+    }break;
+
+    default:
+      WARN("Could not load the reference files");
+  }
+}
+
+void cReferenceSequences::Varify()
+{
+  bool Error = false;
+  stringstream ss;
+  for (vector<cAnnotatedSequence>::iterator itr= this->begin(); itr != this->end(); itr++) {
+    cAnnotatedSequence& as = *itr;
+    if (as.get_sequence_length() == 0) {
+      ss << "No sequence loaded for: " << as.m_seq_id << endl;
+      Error = true;
+    }
+  }
+  ASSERTM(!Error, ss.str());
+}
 } // breseq namespace
 

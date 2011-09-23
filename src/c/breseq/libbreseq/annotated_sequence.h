@@ -48,10 +48,12 @@ namespace breseq {
   class cSequenceFeature : public sequence_feature_map_t {
     
     public:
-    
+
       // Could add accessors that convert strings to numbers...
       uint32_t m_start, m_end;
       int8_t m_strand;
+
+      map<string, vector<string> > m_attributes;
     
       cSequenceFeature() {}
       cSequenceFeature(const cSequenceFeature& _in) : sequence_feature_map_t(_in) {
@@ -122,6 +124,7 @@ namespace breseq {
       cSequenceFeatureList m_features;    //!< Full list of sequence features
       cSequenceFeatureList m_genes;       //!< Subset of features
       cSequenceFeatureList m_repeats;     //!< Subset of features
+
     
     public:
     
@@ -182,17 +185,22 @@ namespace breseq {
   class cReferenceSequences : public vector<cAnnotatedSequence> {
   protected:
     map<string,int> m_seq_id_to_index; // for looking up sequences by seq_id
-    
+    enum FileType {UNKNOWN, GENBANK, FASTA, GFF, BULL, GFF_AND_FASTA};
+
+    uint32_t m_index_id;
+
   public:
     
-    cReferenceSequences() {};    
-    
+    cReferenceSequences()
+      : m_index_id(0)
+    {}
+
     //!< Write a tab delimited feature 
     void WriteFeatureTable(const string &file_name);
     
     //!< Read a tab delimited feature
     void ReadFeatureTable(const string &file_name);
-    
+
     //!< Write FASTA file       
     void WriteFASTA(const string &file_name);
     
@@ -200,9 +208,18 @@ namespace breseq {
     void ReadFASTA(const std::string &file_name);
     
     //!< Write a tab delimited GFF3 file
-    void WriteGFF( const string &file_name );  
-      
-    
+    void WriteGFF(const string &file_name);
+
+    //!< Read a tab delimited GFF3 file
+    void ReadGFF(const string& file_name);
+
+    //!< Load reference file into object
+    void LoadFromFile(const string& file_name);
+
+    //!< Verify that all seq_id have sequence;
+    void Varify();
+
+
     //!< Calculates the total length of all reference sequences together
     uint32_t total_length()
     {
@@ -212,6 +229,21 @@ namespace breseq {
         ret_val += it->m_length;
       }
       return ret_val;
+    }
+    uint32_t m_index_seq_id;
+
+    void add_new_seq(const string& seq_id)
+    {
+      if (m_seq_id_to_index.count(seq_id)) {
+        return;
+      } else {
+        cAnnotatedSequence as;
+        as.m_seq_id;
+        this->push_back(as);
+        m_seq_id_to_index[seq_id] = m_index_id;
+        m_index_id++;
+      }
+      return;
     }
     
     //!< These gymnastics allow us to use [] to get a sequence by target_id (uint_32t) or by seq_id (string)
@@ -326,52 +358,6 @@ namespace breseq {
   uint32_t alignment_mismatches(const alignment_wrapper& a, const cReferenceSequences& ref_seq_info);
   string shifted_cigar_string(const alignment_wrapper& a, const cReferenceSequences& ref_seq_info);
 
-  /*! Class: cReferenceSequenceConverter
-
-   Creates a tab-delimited file of information about genes and a FASTA sequence
-   given various reference sequence file formats.  !*/
-
-  class cReferenceSequenceConverter
-  {
-    enum FileType {GENBANK, FASTA, GFF, BULL, GFF_AND_FASTA};
-
-    public:
-      //! Constructor for use in Breseq's pipeline
-      cReferenceSequenceConverter(const Settings& settings) {
-        m_file_names = settings.reference_file_names;
-        m_fasta = settings.reference_fasta_file_name;
-        m_features = settings.reference_features_file_name;
-        m_gff = settings.reference_gff3_file_name;
-      }
-      //! Constructor for use as a utility option
-      cReferenceSequenceConverter(AnyOption& options) {
-        m_file_names = from_string<vector<string> >(options["input"]);
-        m_fasta = options["fasta"];
-        m_features = options["features"];
-        m_gff = options["gff3"];
-      }
-      //! Main method
-      void Process();
-
-    protected:
-      //! Parameters initialized by constructor
-      vector<string> m_file_names;
-      string m_fasta;
-      string m_features;
-      string m_gff;
-
-      //! Built by class
-      map<FileType, vector<string> > m_file_types;
-
-      //! Class pipeline functions
-      void _InitFileTypes();//Step 1
-      FileType _DetermineUseCase();//Step 2
-      void _Converter(const FileType type);//Step 3
-
-      //! Helper functions
-      FileType _ParseForFileType(const string& file); //Used in InitFileTypes()
-
-  };
 } // breseq namespace
 
 #endif

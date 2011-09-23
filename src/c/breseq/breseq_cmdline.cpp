@@ -1040,7 +1040,8 @@ int breseq_default_action(int argc, char* argv[])
   // * Convert the input reference GenBank into FASTA for alignment
 	//
 	create_path(settings.sequence_conversion_path);
-	create_path(settings.data_path);
+  create_path(settings.data_path);
+  cReferenceSequences ref_seq_info;
 
 	if (settings.do_step(settings.sequence_conversion_done_file_name, "Read and reference sequence file input"))
 	{
@@ -1084,8 +1085,23 @@ int breseq_default_action(int argc, char* argv[])
 
     // C++ version of reference sequence processing
     // Determine what type of reference sequence file the user inputs.
-    cReferenceSequenceConverter ReferenceSequenceConverter(settings);
-    ReferenceSequenceConverter.Process();
+    convert_genbank(
+      settings.reference_file_names,
+      settings.reference_fasta_file_name,
+      settings.reference_features_file_name,
+      settings.reference_gff3_file_name
+    );
+    //Future code
+//    for(vector<string>::const_iterator itr = settings.reference_file_names.begin();
+//        itr != settings.reference_file_names.end()) {
+//      const string& file_name = *itr;
+//      ref_seq_info.LoadFromFile(file_name);
+//    }
+//    ref_seq_info.Varify();
+
+//    ref_seq_info.WriteFASTA(settings.reference_fasta_file_name);
+
+//    ref_seq_info.WriteGFF(settings.reference_gff3_file_name);
 
 
 
@@ -1111,7 +1127,6 @@ int breseq_default_action(int argc, char* argv[])
 	string reference_features_file_name = settings.reference_features_file_name;
 	string reference_fasta_file_name = settings.reference_fasta_file_name;
   
-  cReferenceSequences ref_seq_info;
   LoadFeatureIndexedFastaFile(ref_seq_info, settings.reference_features_file_name, settings.reference_fasta_file_name);
   
   // Calculate the total reference sequence length
@@ -1884,7 +1899,6 @@ int do_mutate(int argc, char *argv[])
 
   return 0;
 }
-
 
 /*! breseq commands
  
