@@ -52,11 +52,14 @@ namespace breseq {
     
   public:
   
-    cFastaFile(const string &file_name, ios_base::openmode mode); 
+    cFastaFile(const string &file_name, ios_base::openmode mode);
     ~cFastaFile() {};
       
     bool read_sequence(cFastaSequence &sequence);
     void write_sequence(const cFastaSequence &sequence);
+    void set_current_line(const string& current_line)
+    { m_current_line = current_line;}
+
   
   };
 	
