@@ -34,13 +34,16 @@ namespace breseq {
 
 	cSequenceFeature* MutationPredictor::within_repeat(string seq_id, uint32_t position)
 	{
-		cSequenceFeatureList& r = ref_seq_info[seq_id].m_repeats;
+		cSequenceFeatureList& rl = ref_seq_info[seq_id].m_repeats;
+    cSequenceFeature* r= NULL;
     
-		for (uint32_t i = 0; i < r.size(); i++)
-			if ((r[i]->m_start <= position) && (position <= r[i]->m_end))
-				return r[i].get();
+    // by returning the last one we encounter that we are inside, 
+    // we get the inner repeat in nested cases
+		for (uint32_t i = 0; i < rl.size(); i++)
+			if ((rl[i]->m_start <= position) && (position <= rl[i]->m_end))
+				r = rl[i].get();
 
-		return NULL;
+		return r;
 	}
 
 	bool MutationPredictor::sort_by_hybrid(const counted_ptr<diff_entry>& a, const counted_ptr<diff_entry>& b)

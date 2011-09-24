@@ -887,18 +887,23 @@ cSequenceFeature* cReferenceSequences::find_closest_repeat_region(uint32_t posit
   for (uint32_t i = 0; i < repeat_list_ref.size(); i++) //IS
   {
     cSequenceFeature* test_is = repeat_list_ref[i].get();
-
+    int32_t test_distance;
+    
     //count within the IS element as zero distance
-    //if this happens then we are immediately done
     if ( (test_is->m_start <= position) && (test_is->m_end >= position) )
-      return test_is;
+    {
+      test_distance = 0;
+    }
+    else //otherwise calculate the distance
+    {
+      //keep if less than max_distance, in the correct direction, and the best found so far
+      test_distance = ((direction == -1) ? position - test_is->m_end : test_is->m_start - position);
+      if (test_distance < 0) continue; //wrong direction...     
+    }
 
-    //otherwise calculate the distance
-    //keep if less than max_distance, in the correct direction, and the best found so far
-    int32_t test_distance = ((direction == -1) ? position - test_is->m_end : test_is->m_start - position);
-    if (test_distance < 0) continue; //wrong direction...
-
-    if ((test_distance <= (int32_t)max_distance) && ((is == NULL) || (test_distance < best_distance)) )
+    // Note the (test_distance <= best_distance) ensures we get the inner copy in nested cases
+    // because it will be encountered later
+    if ((test_distance <= (int32_t)max_distance) && ((is == NULL) || (test_distance <= best_distance)) )
     {
       is = test_is;
       best_distance = test_distance;
@@ -909,10 +914,11 @@ cSequenceFeature* cReferenceSequences::find_closest_repeat_region(uint32_t posit
 
 cSequenceFeature* cReferenceSequences::get_overlapping_feature(vector<cSequenceFeaturePtr>& feature_list_ref, uint32_t pos)
 {
+  cSequenceFeature* feat = NULL;
   for (uint32_t i = 0; i < feature_list_ref.size(); i++)
     if (pos >= feature_list_ref[i]->m_start && pos <= feature_list_ref[i]->m_end)
-      return feature_list_ref[i].get();
-  return NULL;
+      feat = feature_list_ref[i].get();
+  return feat;
 }
 
 void cReferenceSequences::find_nearby_genes(
@@ -1770,51 +1776,53 @@ void cReferenceSequences::ConvertFeatureTags(const FileType file_type)
     for (cSequenceFeatureList::iterator it_ft = it_as->m_features.begin(); it_ft != it_as->m_features.end(); it_ft++) {
       cSequenceFeature& feature = **it_ft;
       switch (file_type) {
-      //! Case 1: GenBank input file, convert appropriate tags to GFF features
-      case GENBANK:
-      {
-        // locus_tag to ID and Alias
-        if (feature.count("locus_tag")) {
-          feature.m_gff_attributes["ID"].push_back(feature["locus_tag"]);
-          feature.m_gff_attributes["Alias"].push_back(feature["locus_tag"]);
-        }
+        //! Case 1: GenBank input file, convert appropriate tags to GFF features
+        case GENBANK:
+        {
+          // locus_tag to ID and Alias
+          if (feature.count("locus_tag")) {
+            feature.m_gff_attributes["ID"].push_back(feature["locus_tag"]);
+            feature.m_gff_attributes["Alias"].push_back(feature["locus_tag"]);
+          }
 
-        // key "type" protein to CDS
-        if (feature.count("type") && feature["type"] == "protein") {
-          feature["type"] = "CDS";
-        }
+          // key "type" protein to CDS
+          if (feature.count("type") && feature["type"] == "protein") {
+            feature["type"] = "CDS";
+          }
 
-        // name or gene to Name
-        if (feature.count("name")) {
-          feature.m_gff_attributes["Name"].push_back(feature["name"]);
-        }
-        else if (feature.count("gene")) {
-          feature.m_gff_attributes["Name"].push_back(feature["gene"]);
-        }
+          // name or gene to Name
+          if (feature.count("name")) {
+            feature.m_gff_attributes["Name"].push_back(feature["name"]);
+          }
+          else if (feature.count("gene")) {
+            feature.m_gff_attributes["Name"].push_back(feature["gene"]);
+          }
 
-        //db_xref to Dbxref
-        if (feature.count("db_xref")) {
-          feature.m_gff_attributes["Dbxref"].push_back("NCBI_gi:10727410");
+          //db_xref to Dbxref
+          if (feature.count("db_xref")) {
+            feature.m_gff_attributes["Dbxref"].push_back("NCBI_gi:10727410");
+          }
         }
-      }
-      //! Case 2: GFF input file, convert appropriate tags to GenBank features
-      case GFF3:
-      {
-        if (feature.m_gff_attributes.count("ID")) {
-          feature["locus_tag"] = feature.m_gff_attributes["ID"].front();
-        }
-        else if (feature.m_gff_attributes.count("Alias")) {
-          feature["locus_tag"] = feature.m_gff_attributes["Alias"].front();
-        }
+        //! Case 2: GFF input file, convert appropriate tags to GenBank features
+        case GFF3:
+        {
+          if (feature.m_gff_attributes.count("ID")) {
+            feature["locus_tag"] = feature.m_gff_attributes["ID"].front();
+          }
+          else if (feature.m_gff_attributes.count("Alias")) {
+            feature["locus_tag"] = feature.m_gff_attributes["Alias"].front();
+          }
 
-        if (feature.m_gff_attributes.count("Name")) {
-          feature["gene"] = feature.m_gff_attributes["Name"].front();
-        }
+          if (feature.m_gff_attributes.count("Name")) {
+            feature["gene"] = feature.m_gff_attributes["Name"].front();
+          }
 
-        if (feature.m_gff_attributes.count("Dbxref")) {
-          feature["db_xref"] = feature.m_gff_attributes["Dbxref"].front();
+          if (feature.m_gff_attributes.count("Dbxref")) {
+            feature["db_xref"] = feature.m_gff_attributes["Dbxref"].front();
+          }
         }
-      }
+        default:
+          ;
       }
     }
   }
