@@ -773,9 +773,13 @@ int do_preprocess_alignments(int argc, char* argv[]) {
   settings.reference_sam_file_name += "/#.reference.sam";
     
   settings.max_read_mismatches = from_string<int32_t>(options["max-read-mismatches"]);
-  settings.require_complete_match = options.count("require-complete-match");
 	settings.candidate_junction_read_limit = from_string<int32_t>(options["candidate-junction-read-limit"]);
-	settings.required_match_length = from_string<int32_t>(options["required-match-length"]);
+
+  // settings controlling which alignments are used
+  settings.require_complete_match = options.count("require-complete-match");
+  settings.require_match_length = from_string<int32_t>(options["require-match-length"]);
+  settings.require_match_fraction = from_string<int32_t>(options["require-match-fraction"]);
+    
   settings.preprocess_junction_min_indel_split_length = from_string<int32_t>(options["min-indel-split-length"]);
  
 	cReferenceSequences ref_seqs;
@@ -810,7 +814,7 @@ int do_identify_candidate_junctions(int argc, char* argv[]) {
      "Only count reads where at least one match extends this many bases outside of the overlap.", static_cast<unsigned long>(10))
     ("maximum-inserted-junction-sequence-length,3",
      "Maximum number of bases allowed in the overlapping part of a candidate junction.", static_cast<unsigned long>(20))
-    ("required-match-length,4",
+    ("require-match-length,4",
      "At least this many bases in the read must match the reference genome for it to count.", static_cast<unsigned long>(28))
     ("required-extra-pair-total-length,5",
      "Each match pair must have at least this many bases not overlapping for it to count.", static_cast<unsigned long>(2))
@@ -858,7 +862,7 @@ int do_identify_candidate_junctions(int argc, char* argv[]) {
     // Other settings
     settings.candidate_junction_read_limit = from_string<int32_t>(options["candidate-junction-read-limit"]);
     settings.required_extra_pair_total_length = from_string<int32_t>(options["required-extra-pair-total-length"]);
-    settings.required_match_length  = from_string<int32_t>(options["required-match-length"]);
+    settings.require_match_length  = from_string<int32_t>(options["require-match-length"]);
     settings.maximum_inserted_junction_sequence_length = from_string<int32_t>(options["maximum-inserted-junction-sequence-length"]);
     settings.required_one_unique_length_per_side = from_string<int32_t>(options["required-one-unique-length-per-side"]);
     settings.required_both_unique_length_per_side = from_string<int32_t>(options["required-both-unique-length-per-side"]);

@@ -169,13 +169,14 @@ namespace breseq {
 		{
       // split the name first 
       vector<string> option_name_split = split(option_name, ",");
+      string default_value_string = to_string(option_default_value);
 
       // assign default value to both long and short option name variants
       if (has_default_value) 
       {
         for (vector<string>::iterator it=option_name_split.begin(); it<option_name_split.end(); it++) 
         {
-          default_values[*it] = to_string(option_default_value);
+          default_values[*it] = default_value_string;
         }
       }
       
@@ -205,16 +206,16 @@ namespace breseq {
 				usage += string(abs(static_cast<int32_t>(USAGE_LEFT_COLUMN_WIDTH - usage.size())), ' ');
 
       // Add the default option information
-      string default_value_string;
+      string default_value_description;
       if (has_default_value)
 			{
 				if (default_value_string.size() > 0)
-					default_value_string = " (DEFAULT=" + default_value_string + ")";
+					default_value_description = " (DEFAULT=" + default_value_string + ")";
 				else
-					default_value_string = " (OPTIONAL)";
+					default_value_description = " (OPTIONAL)";
 			}
       
-			string wrapped_description = word_wrap(option_description + default_value_string, terminal_width - USAGE_LEFT_COLUMN_WIDTH);
+			string wrapped_description = word_wrap(option_description + default_value_description, terminal_width - USAGE_LEFT_COLUMN_WIDTH);
 			string search_string = "\n";
 			string replace_string = search_string + string(USAGE_LEFT_COLUMN_WIDTH, ' ');
 			string::size_type pos = 0;

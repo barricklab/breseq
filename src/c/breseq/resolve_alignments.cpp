@@ -552,8 +552,18 @@ uint32_t _eligible_read_alignments(const Settings& settings, const cReferenceSeq
 {
 	bool verbose = false;
 
-	if (alignments.size() <= 0) return 0;
+	if (alignments.size() == 0) return 0;
 
+  // require read to be mapped! -- @JEB maybe this should be checked sooner?
+	for (alignment_list::iterator it = alignments.begin(); it != alignments.end(); it++)
+  {
+    if (it->get()->unmapped())
+    {
+      alignments.erase(it);
+    }
+  }
+  if (alignments.size() == 0) return 0;
+  
 	// require a minimum length of the read to be mapped
 	for (alignment_list::iterator it = alignments.begin(); it != alignments.end(); )
   {
@@ -567,16 +577,6 @@ uint32_t _eligible_read_alignments(const Settings& settings, const cReferenceSeq
     }
   }
 	if (alignments.size() == 0) return 0;
-
-  // require read to be mapped! -- @JEB maybe this should be checked sooner?
-	for (alignment_list::iterator it = alignments.begin(); it != alignments.end(); it++)
-  {
-    if (it->get()->unmapped())
-    {
-      alignments.erase(it);
-    }
-  }
-  if (alignments.size() == 0) return 0;
 
 	// @JEB v1> Unfortunately sometimes better matches don't get better alignment scores!
 	// example is 30K88AAXX_LenskiSet2:1:37:1775:92 in RJW1129
@@ -662,29 +662,22 @@ bool _test_read_alignment_requirements(const Settings& settings, const cReferenc
 
 	if (a.unmapped()) return false;
 
-	if (settings.required_match_length > 0)
-	{
-		int32_t alignment_length_on_query = a.query_match_length(); //this is the length of the alignment on the read
-		if (alignment_length_on_query < settings.required_match_length)
-    {
-			return false;
-    }
-  }
+  if (a.query_match_length() < settings.require_match_length)
+    return false;
+  
+  if (a.query_match_length() < settings.require_match_fraction * a.read_length() )
+    return false;
 
 	if (settings.require_complete_match)
 	{
     if (!a.beginning_to_end_match())
-    {
       return false; 
-    }
 	}
 	if (settings.max_read_mismatches >= 0)
 	{
 		int32_t mismatches = alignment_mismatches(a, ref_seq_info);
 		if (mismatches > settings.max_read_mismatches)
-    {
       return false; 
-    }
 	}
 
 	return true;

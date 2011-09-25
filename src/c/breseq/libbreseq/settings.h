@@ -234,15 +234,17 @@ namespace breseq
 		bool unmatched_reads;
 		bool no_unmatched_reads;
 		bool add_split_junction_sides;
-		bool require_complete_match;
 
 		uint32_t alignment_read_limit;
 		uint32_t candidate_junction_read_limit;
 		double maximum_candidate_junction_length_factor;
 		int32_t max_read_mismatches;
 
-		int32_t required_match_length;
-
+    // settings controlling which alignments are considered
+		bool     require_complete_match;
+		uint32_t require_match_length;
+		double   require_match_fraction;
+    
 		string full_command_line;
 		string arguments;
 		string predicted_quality_type;
