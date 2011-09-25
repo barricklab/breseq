@@ -71,7 +71,6 @@ namespace breseq {
       case GENBANK:
       {
         ReadGenBank(file_name);
-        this->ConvertFeatureTags(GENBANK);
       }break;
         
       case FASTA:
@@ -87,7 +86,6 @@ namespace breseq {
       case GFF3:
       {
         ReadGFF(file_name);
-        this->ConvertFeatureTags(GFF3);
       }break;
         
       default:
@@ -133,7 +131,7 @@ namespace breseq {
             string seq_id = line.substr(0,pos);
             line.erase(0,pos+1);            
             uint32_t seq_idx = seq_id_to_index(seq_id);
-            (*this)[seq_idx].m_definition = line;
+            (*this)[seq_idx].m_description = line;
           }
         }
       }
@@ -215,7 +213,7 @@ namespace breseq {
       string m_definition, m_version, m_seq_id;
       
       out << "##sequence-region " << it_as->m_seq_id << " 1 " << it_as->m_length << endl;
-      out << "##description " << it_as->m_seq_id << " " << it_as->m_definition << endl;
+      out << "##description " << it_as->m_seq_id << " " << it_as->m_description << endl;
 
     }
     
@@ -322,7 +320,12 @@ namespace breseq {
             continue;
           }
           else if (line.find("##sequence-region") != string::npos) {
-            //TODO @GRC
+            // Line of form ##sequence-region seqid start end
+            stringstream ls(line);
+            string x, seq_id, start, end;
+            ls >> x >> seq_id >> start >> end;
+            this->add_new_seq(seq_id);
+            (*this)[seq_id].m_length = from_string<uint32_t>(end);
             continue;
           }
           // Find embedded fasta file
@@ -342,59 +345,79 @@ namespace breseq {
         }
     /*! Step 3: Split line on tabs("\t") until last column, grab last column until endl("\n"),
         the default for getline(). !*/
-          stringstream ss(line);
-          string seq_id, start, end, strand;
+        
+        stringstream ss(line);
+        string seq_id, start, end, strand;
 
-          // Handle columns up to the last one, "attributes"
-          // Column 1: "seqid"
-          getline(ss, seq_id, '\t');
-          // Column 2: "source"
-          getline(ss, feature["source"], '\t');
-          // Column 3: "type"
-          getline(ss, feature["type"], '\t');
-          // Column 4: "start"
-          getline(ss, start, '\t');
-          feature.m_start = from_string<uint32_t>(start);
-          // Column 5: "end"
-          getline(ss, end, '\t');
-          feature.m_end = from_string<uint32_t>(end);
-          // Column 6: "score"
-          getline(ss, feature["score"], '\t');
-          // Column 7: "strand"
-          getline(ss, strand, '\t');
-          feature.m_strand = from_string<int8_t>(strand);
-          // Column 8: "phase"
-          getline(ss, feature["phase"], '\t');
-          // Column 9: "attributes"
-          string raw_attributes;
+        // Handle columns up to the last one, "attributes"
+        // Column 1: "seqid"
+        getline(ss, seq_id, '\t');
+        // Column 2: "source"
+        getline(ss, feature["source"], '\t');
+        // Column 3: "type"
+        getline(ss, feature["type"], '\t');
+        // Column 4: "start"
+        getline(ss, start, '\t');
+        feature.m_start = from_string<uint32_t>(start);
+        // Column 5: "end"
+        getline(ss, end, '\t');
+        feature.m_end = from_string<uint32_t>(end);
+        // Column 6: "score"
+        getline(ss, feature["score"], '\t');
+        // Column 7: "strand"
+        getline(ss, strand, '\t');
+        feature.m_strand = from_string<int8_t>(strand);
+        // Column 8: "phase"
+        getline(ss, feature["phase"], '\t');
+        // Column 9: "attributes"
+        string raw_attributes;
 
-          // Handle parsing the attributes
-          getline(ss, raw_attributes);
-          vector<string> attributes;
-          //! Case 1: Multiple attributes split by ";"
-          if (raw_attributes.find(";") == string::npos) {
-            attributes.push_back(raw_attributes);
-          } else {
-            attributes = split(raw_attributes, ";");
-          }
-          //Split attribute's key and value by "="
-          for (vector<string>::iterator itr = attributes.begin(); itr != attributes.end(); itr++) {
-            string& attribute = *itr;
-            vector<string> key_value = split(attribute,"=");
-            string& key = key_value.front();
-            string& value = key_value.back();
-          //! Case 2: Multiple values for given key, split by ","
-            if (value.find(",") == string::npos) {
-              feature.m_gff_attributes[key].push_back(value);
-            } else {
-              feature.m_gff_attributes[key] = split(value, ",");
-            }
-          }
-    //! Step 4: Determine if sequence already exists
-          this->add_new_seq(seq_id);
+        // Handle parsing the attributes
+        getline(ss, raw_attributes);
+        vector<string> attributes = split(raw_attributes, ";");
 
-          (*this)[seq_id].add_feature(fp);
+        //Split attribute's key and value by "="
+        for (vector<string>::iterator itr = attributes.begin(); itr != attributes.end(); itr++) {
+          string& attribute = *itr;
+          vector<string> key_value = split(attribute,"=");
+          string& key = key_value.front();
+          string& value = key_value.back();
+        //! Case 2: Multiple values for given key, split by ","
+          feature.m_gff_attributes[key] = split(value, ",");
+          // unescape special characters after splitting
+          for (uint32_t i=0; i<feature.m_gff_attributes[key].size(); i++)
+            feature.m_gff_attributes[key][i] = GFF3UnescapeString(feature.m_gff_attributes[key][i]);
+        }
+      
+        // Load certain information into the main hash, so breseq knows to use it
+        if (feature.m_gff_attributes.count("Note"))
+        {
+          feature["product"] = join(feature.m_gff_attributes["Note"], ",");
+        }
+        
+        if (feature.m_gff_attributes.count("Alias"))
+        {
+          feature["accession"] = join(feature.m_gff_attributes["Alias"], ",");
+        }
 
+        if (feature.m_gff_attributes.count("Name"))
+        {
+          feature["name"] = join(feature.m_gff_attributes["Name"], ",");
+        }
+        
+      
+  //! Step 4: Determine if sequence already exists (find or create if not found)
+        this->add_new_seq(seq_id);
+        (*this)[seq_id].add_feature(fp);
+      
+        // If this is a landmark "region" corresponding to the entire chromosome grab extra information
+        if ((feature["type"] == "region") && (feature.m_start == 1) && (feature.m_end == (*this)[seq_id].m_length))
+        {
+          if (feature.m_gff_attributes.count("Is_circular"))
+            (*this)[seq_id].m_is_circular = (feature.m_gff_attributes["Is_circular"][0] == "true");
+          if (feature.m_gff_attributes.count("Note"))
+            (*this)[seq_id].m_description = feature.m_gff_attributes["Note"][0];
+        }
       }
   }
   
@@ -406,19 +429,19 @@ void cReferenceSequences::WriteGFF( const string &file_name ){
   assert(!out.fail());
   //! Step 1: Header
   out << "##gff-version 3" << endl;
+
   for (vector<cAnnotatedSequence>::iterator it_as = this->begin(); it_as < this->end(); it_as++) {
-    //! TODO @GRC unknown if below line goes at top or before each set of features
-    //out << "##sequence-region" << "\t" << it_as->m_seq_id << "\t" << "1" << "\t" << it_as->m_length << endl; //@JEB Correct region?
+    out << "##sequence-region" << "\t" << it_as->m_seq_id << "\t" << "1" << "\t" << it_as->m_length << endl;
+  }
+  
   //! Step 2: Features
+  for (vector<cAnnotatedSequence>::iterator it_as = this->begin(); it_as < this->end(); it_as++) {
       for (vector<cSequenceFeaturePtr>::iterator it = it_as->m_features.begin(); it != it_as->m_features.end(); it++) {
         cSequenceFeature& feat = **it;
 
         out << it_as->m_seq_id;
 
-        if (feat.SafeGet("source") == "")
-          out << "\tGenBank";
-        else
-          out << "\t" << feat["source"];
+        out << "\t" << feat.SafeGet("source");
 
         if (feat.SafeGet("type") == "")
           out << "\t.";
@@ -451,17 +474,15 @@ void cReferenceSequences::WriteGFF( const string &file_name ){
         for (itr = feat.m_gff_attributes.begin(); itr != feat.m_gff_attributes.end(); itr++) {
           const string& key = itr->first;
           const vector<string>& values = itr->second;
-          if (values.size() == 1) {
-            attributes.push_back(key + "=" + values.front());
-          } else {
-            attributes.push_back(key + "=" + join(values, ","));
+          
+          vector<string> s;
+          for (vector<string>::const_iterator it = values.begin(); it != values.end(); it++) {
+            s.push_back(GFF3EscapeString(*it));
           }
+          
+          attributes.push_back(key + "=" + join(s, ","));
         }
-        if (attributes.size() == 1) {
-          out << attributes.front();
-        } else {
-          out << join(attributes, ";");
-        }
+        out << join(attributes, ";");
 
         out << std::endl;
       }
@@ -479,49 +500,75 @@ void cReferenceSequences::ReadGenBank(const string& in_file_name) {
   ifstream in(in_file_name.c_str(), ios_base::in);
   ASSERT(!in.fail(), "Could not open GenBank file: " + in_file_name);
 
-  uint32_t on_seq_id = this->size();
+  uint32_t on_seq_index = this->size();
 
   while (ReadGenBankFileHeader(in)) {
-    ReadGenBankFileSequenceFeatures(in, this->back());
-    ReadGenBankFileSequence(in, this->back());
-    this->set_seq_id_to_index(this->back().m_seq_id, on_seq_id++);
+    
+    cAnnotatedSequence& s = this->back();
+    
+    // add a 'region' feature for GFF3 output
+    cSequenceFeaturePtr f(new cSequenceFeature);
+    (*f)["type"] = "region";
+    f->m_strand = 1;
+    f->m_start = 1;
+    f->m_end = s.m_length;
+    
+    if (s.m_is_circular) 
+      f->m_gff_attributes["Is_circular"].push_back("true");
+    else
+      f->m_gff_attributes["Is_circular"].push_back("false");
+    
+    f->m_gff_attributes["Note"].push_back(s.m_description);
+    s.add_feature(f);
+    
+    ReadGenBankFileSequenceFeatures(in, s);
+    ReadGenBankFileSequence(in, s);
+    this->set_seq_id_to_index(s.m_seq_id, on_seq_index++);
+    
   }
 }
 
-bool cReferenceSequences::ReadGenBankFileHeader(std::ifstream& in) {
+bool cReferenceSequences::ReadGenBankFileHeader(ifstream& in) {
 
   //std::cout << "header" << std::endl;
-  std::string line;
-  cAnnotatedSequence * s = NULL;
+  string line;
   bool found_LOCUS_line = false;
+  cAnnotatedSequence* s = NULL;
   while (!in.eof()) {
     std::getline(in, line);
-    std::string first_word = GetWord(line);
+    string first_word = GetWord(line);
     RemoveLeadingTrailingWhitespace(line);
 
-    //std::cout << first_word << "::" << line << std::endl;
-
-    // This is the first line -- if we see it we resize the list
+    // This is the first line
     if (first_word == "LOCUS") {
 
-      this->resize(this->size()+1);
-      s = &(this->back());
-
-      std::string w;
+      // Example line 
+      // LOCUS       EB03                 4629813 bp    DNA     circular BCT 13-APR-2007
+      
+      string w;
       w = GetWord(line);
-      s->m_seq_id = w;
+      string seq_id = w;
+      
+      this->add_new_seq(seq_id);
+      s = &((*this)[seq_id]);
+      
       w = GetWord(line);
       s->m_length = atoi(w.c_str());
-      assert (!found_LOCUS_line); // Should only be one line like this per record!
+      
+      w = GetWord(line);
+      w = GetWord(line);
+      w = GetWord(line);
+      if (to_lower(w) == "circular")
+        s->m_is_circular = true;
+
+      // Should only be one line like this per record!
+      ASSERT(!found_LOCUS_line, "Multiple LOCUS lines found in single GenBank record."); 
       found_LOCUS_line = true;
     }
 
     if (first_word == "DEFINITION") {
-      s->m_definition = line;
-    }
-
-    if (first_word == "VERSION") {
-      s->m_version = line;
+      ASSERT(s, "Missing LOCUS line before DEFINITION line in GenBank record.");
+      s->m_description = line;
     }
 
     if (first_word == "FEATURES") break;
@@ -573,14 +620,6 @@ void cSequenceFeature::ReadGenBankCoords(string& s, ifstream& in) {
   size_t start_complement = value.find("complement(");
 
   if (start_complement != string::npos) {
-    //std::cerr << "before: " << s << std::endl;
-    //value.erase(0,11);
-
-    //size_t end_complement = value.find(")");
-    //assert(end_complement !=string::npos);
-    //value.erase(end_complement);
-
-    //std::cerr << "after: " << s << std::endl;
     m_strand = -1;
   }
 
@@ -700,7 +739,6 @@ void cReferenceSequences::ReadGenBankFileSequenceFeatures(std::ifstream& in, cAn
       feat["product"] = feat.SafeGet("note");
     }
 
-
     if (feat["type"] == "repeat_region") {
 
       // Don't add unnamed ones to the list...
@@ -741,12 +779,9 @@ void cReferenceSequences::ReadGenBankFileSequenceFeatures(std::ifstream& in, cAn
       {
         feat["product"] = "repeat region";
       }
-      s.add_feature(*it);
     }
-    else if ( (feat["type"] == "CDS")
-             || (feat["type"] == "tRNA")
-             || (feat["type"] == "rRNA") ) {
-
+    else
+    {
       // Add information
       if (feat.SafeGet("gene") != "") {
         feat["name"] = feat["gene"];
@@ -757,19 +792,27 @@ void cReferenceSequences::ReadGenBankFileSequenceFeatures(std::ifstream& in, cAn
 
       //std::cerr << (*it).SafeGet("name") << " " << (*it).SafeGet("gene") << " " << (*it).SafeGet("locus_tag") << std::endl;
 
-      if (feat.SafeGet("type") == "CDS") {
-        feat["type"] = "protein";
-      }
-
       feat["accession"] = feat.SafeGet("locus_tag");
 
       // /pseudo tag doesn't take a value
       if (feat.count("pseudo") != 0) {
         feat["type"] = "pseudogene";
       }
-
-      s.add_feature(*it);
     }
+    
+    s.add_feature(*it);
+    
+    // transfer to GFF
+    if (feat.SafeGet("locus_tag") != "")
+      feat.m_gff_attributes["ID"] = make_list<string>(feat["locus_tag"]);
+    if (feat.SafeGet("product") != "")
+      feat.m_gff_attributes["Note"] = make_list<string>(feat["product"]);
+    if (feat.SafeGet("accession") != "")
+      feat.m_gff_attributes["Alias"] = make_list<string>(feat["accession"]);
+    if (feat.SafeGet("name") != "")
+      feat.m_gff_attributes["Name"] = make_list<string>(feat["name"]);
+    
+    feat["phase"] = "0";
   }
 }
 
@@ -1186,7 +1229,7 @@ void cReferenceSequences::annotate_1_mutation(diff_entry& mut, uint32_t start, u
       mut["gene_position"] = "pseudogene (" + mut["gene_position"] + "/" + gene_nt_size + " nt)";
       return;
     }
-    else if (gene.type != "protein")
+    else if (gene.type != "CDS")
     {
       mut["snp_type"] = "noncoding";
       mut["gene_position"] = "noncoding (" + mut["gene_position"] + "/" + gene_nt_size + " nt)";
@@ -1768,65 +1811,6 @@ string shifted_cigar_string(const alignment_wrapper& a, const cReferenceSequence
   }
 
   return shifted_cigar_string;
-}
-
-void cReferenceSequences::ConvertFeatureTags(const FileType file_type)
-{
-  for (vector<cAnnotatedSequence>::iterator it_as = this->begin(); it_as != this->end(); it_as ++) {
-    for (cSequenceFeatureList::iterator it_ft = it_as->m_features.begin(); it_ft != it_as->m_features.end(); it_ft++) {
-      cSequenceFeature& feature = **it_ft;
-      switch (file_type) {
-        //! Case 1: GenBank input file, convert appropriate tags to GFF features
-        case GENBANK:
-        {
-          // locus_tag to ID and Alias
-          if (feature.count("locus_tag")) {
-            feature.m_gff_attributes["ID"].push_back(feature["locus_tag"]);
-            feature.m_gff_attributes["Alias"].push_back(feature["locus_tag"]);
-          }
-
-          // key "type" protein to CDS
-          if (feature.count("type") && feature["type"] == "protein") {
-            feature["type"] = "CDS";
-          }
-
-          // name or gene to Name
-          if (feature.count("name")) {
-            feature.m_gff_attributes["Name"].push_back(feature["name"]);
-          }
-          else if (feature.count("gene")) {
-            feature.m_gff_attributes["Name"].push_back(feature["gene"]);
-          }
-
-          //db_xref to Dbxref
-          if (feature.count("db_xref")) {
-            feature.m_gff_attributes["Dbxref"].push_back("NCBI_gi:10727410");
-          }
-        }
-        //! Case 2: GFF input file, convert appropriate tags to GenBank features
-        case GFF3:
-        {
-          if (feature.m_gff_attributes.count("ID")) {
-            feature["locus_tag"] = feature.m_gff_attributes["ID"].front();
-          }
-          else if (feature.m_gff_attributes.count("Alias")) {
-            feature["locus_tag"] = feature.m_gff_attributes["Alias"].front();
-          }
-
-          if (feature.m_gff_attributes.count("Name")) {
-            feature["gene"] = feature.m_gff_attributes["Name"].front();
-          }
-
-          if (feature.m_gff_attributes.count("Dbxref")) {
-            feature["db_xref"] = feature.m_gff_attributes["Dbxref"].front();
-          }
-        }
-        default:
-          ;
-      }
-    }
-  }
-
 }
 
 } // breseq namespace

@@ -457,7 +457,7 @@ void html_statistics(const string &file_name, const Settings& settings, Summary&
     
     HTML << td(it->m_seq_id);
     HTML << td(ALIGN_RIGHT, commify(to_string(it->m_length)));
-    HTML << td(it->m_definition);
+    HTML << td(it->m_description);
     HTML << "</tr>";
   }  
   

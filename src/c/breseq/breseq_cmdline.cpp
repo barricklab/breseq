@@ -983,7 +983,7 @@ int breseq_default_action(int argc, char* argv[])
     ref_seq_info.WriteFASTA(settings.reference_fasta_file_name);
     ref_seq_info.WriteGFF(settings.reference_gff3_file_name);
     // @JEB - Once GFF3 reading and writing works, deprecate using FeatureTable format
-    ref_seq_info.WriteFeatureTable(settings.reference_features_file_name);
+    //ref_seq_info.WriteFeatureTable(settings.reference_features_file_name);
 
     //Check the FASTQ format and collect some information about the input read files at the same time
 		cerr << "  Analyzing fastq read files..." << endl;
@@ -1038,11 +1038,11 @@ int breseq_default_action(int argc, char* argv[])
 	ASSERT(summary.sequence_conversion.max_read_length != UNDEFINED_UINT32, "Can't retrieve max read length from file: " + settings.sequence_conversion_summary_file_name);
 
   //(re)load the reference sequences from our converted files
-  if(!ref_seq_info.Initialized()) {
-    ref_seq_info.ReadFeatureIndexedFastaFile(settings.reference_features_file_name, settings.reference_fasta_file_name);
-  }
+  //if(!ref_seq_info.Initialized()) {
+  //  ref_seq_info.ReadFeatureIndexedFastaFile(settings.reference_features_file_name, settings.reference_fasta_file_name);
+  //}
   // @JEB - eventually replace with this
-  //ref_seq_info.ReadGFF(settings.reference_gff3_file_name);
+  ref_seq_info.ReadGFF(settings.reference_gff3_file_name);
   
   // Calculate the total reference sequence length
   summary.sequence_conversion.total_reference_sequence_length = ref_seq_info.total_length();

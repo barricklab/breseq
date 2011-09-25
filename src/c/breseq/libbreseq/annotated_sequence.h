@@ -47,6 +47,25 @@ namespace breseq {
   
   class cSequenceFeature : public sequence_feature_map_t {
     
+    // Required Fields
+    //
+    // GFF3: http://www.sequenceontology.org/gff3.shtml
+    // GenBank: http://www.ncbi.nlm.nih.gov/collab/FT/
+    //
+    //   "type"  GenBank (primary key) |  GFF3 (type)
+    //      string [CDS, gene, repeat_region, tRNA, rRNA]
+    //
+    //   m_start, m_end, m_strand GenBank (location) | GFF (start, end, strand)
+    //      uint32_t and -1/+1
+    //
+    //  "name" GenBank (gene, locus_tag) | GFF (name)
+    //      string
+    //
+    //  "alias" GenBank (locus_tag) | GFF (alias)
+    //      string
+    //  
+    
+    
     public:
 
       // Could add accessors that convert strings to numbers...
@@ -115,7 +134,9 @@ namespace breseq {
     
     public:      
       uint32_t m_length;
-      string m_definition, m_version, m_seq_id;
+      bool m_is_circular;
+      string m_description; // GenBank (DEFINITION) | GFF (description), from main feature line
+      string m_seq_id;      // GenBank (LOCUS)      | GFF (seqid), from ##sequence-region line
     
       cFastaSequence m_fasta_sequence;            //!< Nucleotide sequence
     
@@ -130,9 +151,9 @@ namespace breseq {
     
       //Constructor for empty object
       cAnnotatedSequence() : 
-        m_length(0), 
-        m_definition("na"), 
-        m_version("na"), 
+        m_length(0),
+        m_is_circular(false),
+        m_description("na"), 
         m_seq_id("na"),
         m_features(0) {} ;
     
@@ -169,7 +190,7 @@ namespace breseq {
         {
           m_repeats.push_back(fp);
         }
-        else
+        else if (((*fp)["type"] == "CDS") || ((*fp)["type"] == "tRNA") || ((*fp)["type"] == "rRNA") || ((*fp)["type"] == "RNA"))
         {
           m_genes.push_back(fp);
         }
@@ -223,7 +244,6 @@ namespace breseq {
     //!< Read/Write a tab delimited GFF3 file
     void ReadGFF(const string& file_name);
     void WriteGFF(const string &file_name);
-    void ConvertFeatureTags(const FileType file_type);
 
     //!< Read GenBank file
     void ReadGenBank(const string& in_file_names);
@@ -349,6 +369,27 @@ namespace breseq {
     void polymorphism_statistics(Settings& settings, Summary& summary);
     string repeat_example(const string& repeat_name, int8_t strand);
 
+    static string GFF3EscapeString(const string& s)
+    {
+      string escaped_s(s);
+      escaped_s = substitute(escaped_s, ";", "%3B");
+      escaped_s = substitute(escaped_s, "=", "%3D");
+      escaped_s = substitute(escaped_s, "%", "%25");
+      escaped_s = substitute(escaped_s, "&", "%26");
+      escaped_s = substitute(escaped_s, ",", "%2C");
+      return escaped_s;
+    }
+    
+    static string GFF3UnescapeString(const string& escaped_s)
+    {
+      string s(escaped_s);
+      s = substitute(s, "%3B", ";");
+      s = substitute(s, "%3D", "=");
+      s = substitute(s, "%25", ",");
+      s = substitute(s, "%26", "&");
+      s = substitute(s, "%2C", ",");
+      return s;
+    }
     
   };
     
