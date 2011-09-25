@@ -136,7 +136,6 @@ namespace breseq
 		'maximum-mismatches|m=s' => \$self->{maximum_read_mismatches},	
 		'required-match-length=s' => \$self->{required_match_length},
 ## Options for snp error analysis
-		'require-complete-match' => \$self->{require_complete_match},
 		'require-no-indel-match' => \$self->{require_no_indel_match},
 		'require-max-mismatches=s' => \$self->{require_max_mismatches},
 		'do-not-trim-ambiguous-ends' => \$self->{do_not_trim_ambiguous_ends},
@@ -177,6 +176,10 @@ namespace breseq
     ("base-quality-cutoff,b", "ignore bases with quality scores lower than this value", "3")
     ("deletion-coverage-propagation-cutoff,u","value for coverage above which deletions are cutoff")
     ("deletion-coverage-seed-cutoff,s","value for coverage below which deletions are cutoff")
+    ("require-complete-match", "only consider alignments that extend from end to end of a read", TAKES_NO_ARGUMENT)
+    ("require-match-length", "only consider alignments that cover this many bases of a read", "0")
+    ("require-match-fraction", "only consider alignments that cover this fraction of a read", "0.9")
+
     .processCommandArgs(argc, argv);
     
     options.addUsage("");
@@ -210,6 +213,7 @@ namespace breseq
     this->base_output_path = options["output"];
     this->run_name = options["name"];
     this->polymorphism_prediction = options.count("polymorphism-prediction");
+    
     this->base_quality_cutoff = from_string<uint32_t>(options["base-quality-cutoff"]);
 
     //Coverage distribtuion options
@@ -220,6 +224,11 @@ namespace breseq
 
     assert(this->deletion_coverage_propagation_cutoff >= 0);
     assert(this->deletion_coverage_seed_cutoff >= 0);
+
+    // Alignment options    
+    this->require_complete_match = (options.count("require-complete-match") > 0);
+    this->require_match_length = from_string<uint32_t>(options["require-match-length"]);
+    this->require_match_fraction = from_string<uint32_t>(options["require-match-fraction"]);
 
     //// GENBANK REFERENCE FILES ////
     this->reference_file_names = from_string<vector<string> >(options["reference"]);
@@ -300,15 +309,17 @@ namespace breseq
 		// much of its match that is unique in the reference sequence.
 		this->maximum_inserted_junction_sequence_length = 20; // Ignore junctions with negative overlap (unique inserted sequence between reference
 		// matches) greater than this length. Prevents evidence file names that are too long.
-		this->minimum_candidate_junctions = 200; // Minimum number of candidate junctions to keep
+		this->minimum_candidate_junctions = 0; // Minimum number of candidate junctions to keep
 		this->maximum_candidate_junctions = 5000; // Maximum number of candidate junctions to keep
 		this->maximum_candidate_junction_length_factor = 0.1; // Only keep CJ cumulative lengths adding up to this factor times the total reference size
 		this->candidate_junction_read_limit = 0; // FOR TESTING: only process this many reads when creating candidate junctions
 
     //// READ ALIGNMENT ////
-    this->add_split_junction_sides = true;     // Add the sides of passed junctions to the SAM file?
+    this->add_split_junction_sides = true;    // Add the sides of passed junctions to the SAM file?
     this->require_complete_match = false;
-    this->required_match_length = 28;          // Match must span this many bases in query to count as a match
+    this->require_match_length = 0;           // Match must span this many bases in query to count as a match
+    this->require_match_fraction = 0.9;       // Match must span this fraction of bases in query to count as a match
+    
     this->max_read_mismatches = -1;            // Read alignments with more than this number of mismatches are not counted; -1 = OFF
 		this->preprocess_junction_min_indel_split_length = 3; // Split the SAM entries on indels of this many bp or more before identifying CJ
 		this->candidate_junction_score_method = "POS_HASH"; // Either POS_HASH, or MIN_OVERLAP

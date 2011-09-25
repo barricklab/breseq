@@ -680,7 +680,7 @@ namespace breseq {
 			return false;
 
 		//// 4. Require both matches together to cover a minimum part of the read.
-		if (union_length < settings.required_match_length)
+		if (union_length < static_cast<int32_t>(settings.require_match_length))
 			return false;
 
 		//// Add a score based on the current read. We want to favor junctions with reads that overlap each side quite a bit
