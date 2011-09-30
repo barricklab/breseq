@@ -366,7 +366,11 @@ namespace breseq {
         getline(ss, feature["score"], '\t');
         // Column 7: "strand"
         getline(ss, strand, '\t');
-        feature.m_strand = from_string<int8_t>(strand);
+        feature.m_strand = 0;
+        if (strand == "+")
+          feature.m_strand = 1;
+        else if (strand == "-")
+          feature.m_strand = -1;        
         // Column 8: "phase"
         getline(ss, feature["phase"], '\t');
         // Column 9: "attributes"
@@ -925,28 +929,18 @@ cSequenceFeature* cReferenceSequences::find_closest_repeat_region(uint32_t posit
   if (repeat_list_ref.size() == 0) return NULL;
 
   cSequenceFeature* is(NULL);
-  int32_t best_distance = 0;
+  uint32_t best_distance = 0;
 
   for (uint32_t i = 0; i < repeat_list_ref.size(); i++) //IS
   {
     cSequenceFeature* test_is = repeat_list_ref[i].get();
-    int32_t test_distance;
     
-    //count within the IS element as zero distance
-    if ( (test_is->m_start <= position) && (test_is->m_end >= position) )
-    {
-      test_distance = 0;
-    }
-    else //otherwise calculate the distance
-    {
-      //keep if less than max_distance, in the correct direction, and the best found so far
-      test_distance = ((direction == -1) ? position - test_is->m_end : test_is->m_start - position);
-      if (test_distance < 0) continue; //wrong direction...     
-    }
-
+    // distance from the appropriate end of the repeat
+    uint32_t test_distance = abs(static_cast<int32_t>(((direction == -1) ? position - test_is->m_end : test_is->m_start - position)));
+    
     // Note the (test_distance <= best_distance) ensures we get the inner copy in nested cases
     // because it will be encountered later
-    if ((test_distance <= (int32_t)max_distance) && ((is == NULL) || (test_distance <= best_distance)) )
+    if ((test_distance <= max_distance) && ((is == NULL) || (test_distance < best_distance)) )
     {
       is = test_is;
       best_distance = test_distance;
