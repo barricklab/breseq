@@ -22,11 +22,12 @@
 using namespace std;
 
 namespace breseq {
-
   // Load a complete collection of files and verify that sufficient information was loaded
   void cReferenceSequences::LoadFiles(const vector<string>& file_names)
   {
-    for(vector<string>::const_iterator it=file_names.begin(); it!=file_names.end(); it++)
+    vector<string> sorted_file_names = file_names;
+    sort(sorted_file_names.begin(),sorted_file_names.end(), sort_file_names);
+    for(vector<string>::const_iterator it = sorted_file_names.begin(); it != sorted_file_names.end(); it++)
     {
       this->LoadFile(*it);
     }
@@ -80,7 +81,7 @@ namespace breseq {
         
       case BULL:
       {
-        //TODO
+        ReadBull(file_name);
       }break;
         
       case GFF3:
@@ -846,10 +847,14 @@ void cReferenceSequences::ReadGenBankFileSequence(std::ifstream& in, cAnnotatedS
   //cout << s.m_sequence << std::endl;
 }
 
-void cReferenceSequences::ReadBull(ifstream& in, cAnnotatedSequence& s) {
+void cReferenceSequences::ReadBull(const string& file_name) {
 
   // This should only work if we have zero or one reference sequence, because it does not
   // give a seq_id, we assume the FASTA before or the FASTA after is paired with it.
+  ASSERT(this->size() == 1, "Bull format currently only works with one reference sequence");
+
+  ifstream in(file_name.c_str());
+  if(!in.good()) WARN("Could not open file:" + file_name);
 
   char line[10];
 
@@ -875,6 +880,9 @@ void cReferenceSequences::ReadBull(ifstream& in, cAnnotatedSequence& s) {
     name.erase(std::remove(name.begin(), name.end(), '\n'), name.end());
     (*current_feature)["name"] = name;
   }
+
+  in.close();
+  cAnnotatedSequence& s = this->front();
 
   for (cSequenceFeatureList::iterator it = all_features.begin(); it < all_features.end(); it++) {
     cSequenceFeature& feat = **it;
@@ -1811,6 +1819,11 @@ string shifted_cigar_string(const alignment_wrapper& a, const cReferenceSequence
   }
 
   return shifted_cigar_string;
+}
+
+bool sort_file_names(string a, string b)
+{
+  return a.find(".fasta") != string::npos;
 }
 
 } // breseq namespace

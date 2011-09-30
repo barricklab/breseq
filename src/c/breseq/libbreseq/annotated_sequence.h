@@ -254,7 +254,7 @@ namespace breseq {
     void ReadGenBankFileSequence(std::ifstream& in, cAnnotatedSequence& s);
     
     //!< Read Bull gene table file
-    void ReadBull(ifstream& in, cAnnotatedSequence& s);
+    void ReadBull(const string& file_name);
 
     //!< Read Feature table fasta combination (TODO: deprecate)
     void ReadFeatureIndexedFastaFile(const string &in_feature_file_name, const string &in_fasta_file_name);
@@ -401,6 +401,7 @@ namespace breseq {
 
   uint32_t alignment_mismatches(const alignment_wrapper& a, const cReferenceSequences& ref_seq_info);
   string shifted_cigar_string(const alignment_wrapper& a, const cReferenceSequences& ref_seq_info);
+  bool sort_file_names(string a, string b);
 
 } // breseq namespace
 
