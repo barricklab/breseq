@@ -36,7 +36,7 @@
       displayScale = "1.00"
       launchStyle = "0"
       useCustomWorkingDirectory = "YES"
-      customWorkingDirectory = "/Users/jbarrick/src/breseq"
+      customWorkingDirectory = "/Users/jbarrick/tmp/liz_B2C1"
       buildConfiguration = "Debug">
       <BuildableProductRunnable>
          <BuildableReference
@@ -62,6 +62,10 @@
          </CommandLineArgument>
          <CommandLineArgument
             argument = "-o tests/lambda_mixed_pop -r tests/lambda_mixed_pop/../data/lambda/lambda.gbk tests/lambda_mixed_pop/../data/lambda/lambda_mixed_population.fastq"
+            isEnabled = "NO">
+         </CommandLineArgument>
+         <CommandLineArgument
+            argument = "-r NC_012967.1.gbk B2C1_sanger.fastq &gt;&amp; log.txt"
             isEnabled = "YES">
          </CommandLineArgument>
       </CommandLineArguments>

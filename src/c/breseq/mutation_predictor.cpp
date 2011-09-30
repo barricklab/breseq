@@ -102,11 +102,10 @@ namespace breseq {
 	void MutationPredictor::predict(Settings& settings, genome_diff& gd, uint32_t max_read_length, double avg_read_length)
 	{
 		(void)settings; //TODO; unused?
-    
-    //@JEB TODO: will not need this when Perl is gone.
+    bool verbose = false; // for debugging
+
+    //@JEB This could be replaced by passing summary
     if (avg_read_length == 0.0) avg_read_length = max_read_length;
-    
-		bool verbose = false;
 
 		///
 		//  Preprocessing of JC evidence
@@ -115,6 +114,8 @@ namespace breseq {
 		// For all that follows, we need information about repeat_regions overlapping the sides of junctions
     vector<Type> jc_types = make_list<Type>(JC);
 		diff_entry_list jc = gd.list(jc_types);
+    
+    const int32_t max_distance_to_repeat = 50;
 
 		for (diff_entry_list::iterator jc_it=jc.begin(); jc_it!=jc.end(); jc_it++)
 		{
@@ -130,7 +131,7 @@ namespace breseq {
 				cSequenceFeature* is = ref_seq_info.find_closest_repeat_region(
 					n(j[side_key + "_position"]),
 					ref_seq_info[j[side_key + "_seq_id"]].m_repeats,
-					50,
+					max_distance_to_repeat,
 					n(j[side_key + "_strand"])
 				);
 				if (is != NULL)
@@ -155,13 +156,13 @@ namespace breseq {
 			{
         //cout << n(j["_side_1_is_start"]) << " " << n(j["_side_1_is_end"]) << " " << n(j["side_1_position"]) << endl;
         
-				if (abs(n(j["_side_1_is_start"]) - n(j["side_1_position"])) <= 20)
+				if (abs(n(j["_side_1_is_start"]) - n(j["side_1_position"])) <= max_distance_to_repeat)
 				{
 					j["_is_interval"] = "side_1";
 					j["_is_interval_closest_side_key"] = "start";
 					j["_unique_interval"] = "side_2";
 				}
-				else if (abs(n(j["_side_1_is_end"]) - n(j["side_1_position"])) <= 20)
+				else if (abs(n(j["_side_1_is_end"]) - n(j["side_1_position"])) <= max_distance_to_repeat)
 				{
 					j["_is_interval"] = "side_1";
 					j["_is_interval_closest_side_key"] = "end";
@@ -173,13 +174,13 @@ namespace breseq {
 			{
         //cout << n(j["_side_2_is_start"]) << " " << n(j["_side_2_is_end"]) << " " << n(j["side_2_position"]) << endl;
 
-				if (abs(n(j["_side_2_is_start"]) - n(j["side_2_position"])) <= 20)
+				if (abs(n(j["_side_2_is_start"]) - n(j["side_2_position"])) <= max_distance_to_repeat)
 				{
 					j["_is_interval"] = "side_2";
 					j["_is_interval_closest_side_key"] = "start";
 					j["_unique_interval"] = "side_1";
 				}
-				else if (abs(n(j["_side_2_is_end"]) - n(j["side_2_position"])) <= 20)
+				else if (abs(n(j["_side_2_is_end"]) - n(j["side_2_position"])) <= max_distance_to_repeat)
 				{
 					j["_is_interval"] = "side_2";
 					j["_is_interval_closest_side_key"] = "end";
@@ -392,13 +393,10 @@ namespace breseq {
 				if (verbose)
 					cout << "Pass 3" << endl;
 
-				/*print Dumper($mut) if ($verbose);
-				print Dumper($j) if ($verbose);
-				print Dumper($r) if ($verbose);*/
 
 				// check that IS is on the right strand
 				if (verbose)
-					cout << "Check 4: " << redundant_deletion_side << " * " << r.m_strand << " != " << j[j["_is_interval"] + "_strand"] << " * " << j["_" + j["_is_interval"] + "_is_strand"] << endl;
+					cout << "Check 4: " << redundant_deletion_side << " * " << to_string(r.m_strand) << " != " << j[j["_is_interval"] + "_strand"] << " * " << j["_" + j["_is_interval"] + "_is_strand"] << endl;
 				if ( (redundant_deletion_side * r.m_strand) != (n(j[j["_is_interval"] + "_strand"]) * n(j["_" + j["_is_interval"] + "_is_strand"])) )
 					continue;
 				if (verbose)
@@ -555,8 +553,6 @@ namespace breseq {
 				mut["_start"] = (uc1_strand == -1) ? j2[j2["_unique_interval"] + "_position"] : j1[j1["_unique_interval"] + "_position"];
 				mut["_end"] = (uc1_strand == -1) ? j1[j1["_unique_interval"] + "_position"] : j2[j2["_unique_interval"] + "_position"];
 				mut["repeat_name"] = j1["_" + j1["_is_interval"] + "_is_name"];
-
-				//print Dumper($j1, $j2) if ($verbose);
 
 				mut["position"] = mut["_start"]; // - 1; //position is the first duplicated base...
 				mut["duplication_size"] = s(n(mut["_end"]) - n(mut["_start"]) + 1);
