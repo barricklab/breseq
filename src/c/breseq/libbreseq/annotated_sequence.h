@@ -401,7 +401,23 @@ namespace breseq {
 
   uint32_t alignment_mismatches(const alignment_wrapper& a, const cReferenceSequences& ref_seq_info);
   string shifted_cigar_string(const alignment_wrapper& a, const cReferenceSequences& ref_seq_info);
-  bool sort_file_names(string a, string b);
+  struct sort_by_file_name : public binary_function<string, string, bool> {
+
+    explicit sort_by_file_name(const string& name)
+      : m_name(name) {}
+
+     bool operator() (string a, string b) {
+      if(a.find(m_name) != string::npos && b.find(m_name) == string::npos) {
+        return true;
+      }
+      else if (a.find(m_name) != string::npos && b.find(m_name) != string::npos) {
+        return a < b;
+      }
+    }
+
+    private:
+      string m_name;
+  };
 
 } // breseq namespace
 
