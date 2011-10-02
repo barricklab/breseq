@@ -34,8 +34,9 @@ namespace breseq {
    
   struct cFastaSequence {
     public:
-      string m_name;      //>NAME
-      string m_sequence;  //sequence
+      string m_name;          //>NAME DESCRIPTION 
+      string m_description;   //
+      string m_sequence;      //sequence ...
    }; 
   
 

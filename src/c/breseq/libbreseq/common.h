@@ -223,6 +223,7 @@ namespace breseq {
 #define ASSERT(condition, message) { my_assertion_handler( condition,  __FILE__, __BASE_FILE__, __LINE__, message); }
 #define ERROR(message) { my_assertion_handler( true,  __FILE__, __BASE_FILE__, __LINE__, message); }
 #define WARN(message) { my_warning_handler( false,  __FILE__, __BASE_FILE__, __LINE__, message); }
+#define CHECK(condition, message) { my_warning_handler( condition,  __FILE__, __BASE_FILE__, __LINE__, message); }
   
 	inline string SYSTEM_CAPTURE(string command, bool silent = false)
 	{
@@ -372,7 +373,7 @@ namespace breseq {
                               const  string  & theString,
                               const  string  & theDelimiters
                               ) {
-		assert(theDelimiters.size() > 0); // My own ASSERT macro.
+		CHECK(theDelimiters.size() > 0, ""); // My own ASSERT macro.
     
 		size_t start = 0, end = 0;
 		vector<string> theStringVector;
@@ -394,6 +395,36 @@ namespace breseq {
       (end > (string::npos - 1))
       ? string::npos
       : end + 1;
+		}
+		return theStringVector;
+	}
+  
+  //!< Split a string on any char in string of delimiters into a vector
+	inline vector<string> split_on_whitespace(
+                                     const  string  & theString
+                                     ) {
+    
+    string theDelimiters = "\t \n\r";
+		size_t start = 0, end = 0;
+		vector<string> theStringVector;
+    
+    start = theString.find_first_not_of( theDelimiters, start );
+    end = start;
+    
+		while (end != string::npos)
+		{
+			end = theString.find_first_of( theDelimiters, start );
+      
+			// If at end, use length=maxLength.  Else use length=end-start.
+			theStringVector.push_back(
+                                theString.substr(
+                                                 start,
+                                                 (end == string::npos) ? string::npos : end - start
+                                                 )
+                                );
+      
+      
+      start = theString.find_first_not_of( theDelimiters, end );
 		}
 		return theStringVector;
 	}

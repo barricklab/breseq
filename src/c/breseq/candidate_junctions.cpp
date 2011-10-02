@@ -1234,7 +1234,7 @@ namespace breseq {
 		for (uint32_t j = 0; j < combined_candidate_junctions.size(); j++)
 		{
 			CombinedCandidateJunction junction = combined_candidate_junctions[j];
-			cFastaSequence seq = { junction.id, junction.seq };
+			cFastaSequence seq = { junction.id, "", junction.seq };
 			out.write_sequence(seq);
 		}
 		out.close();

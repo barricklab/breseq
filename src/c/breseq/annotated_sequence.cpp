@@ -22,14 +22,13 @@
 using namespace std;
 
 namespace breseq {
+  
+  const string BULL_DUMMY_SEQ_ID = "__BULL_DUMMY_SEQ_ID__";
+  
   // Load a complete collection of files and verify that sufficient information was loaded
   void cReferenceSequences::LoadFiles(const vector<string>& file_names)
   {
     list<string> sorted_unique_file_names(file_names.begin(), file_names.end());
-
-    sorted_unique_file_names.sort(sort_by_file_name(".gff"));
-    sorted_unique_file_names.sort(sort_by_file_name(".gbk"));
-    sorted_unique_file_names.sort(sort_by_file_name(".fasta"));// Fasta will be placed first
 
     sorted_unique_file_names.unique();//Removes non-unique file names
 
@@ -52,6 +51,7 @@ namespace breseq {
     getline(in, first_line);
     in.close();
 
+    vector<string> split_first_line = split_on_whitespace(first_line);
     FileType file_type = UNKNOWN;
     // Fasta?
     if (first_line[0] == '>') {
@@ -61,13 +61,13 @@ namespace breseq {
     else if (first_line.find("LOCUS") != string::npos) {
       file_type = GENBANK;
     }
-    // BULL?
-    else if (first_line.find_first_not_of("1234567890") == string::npos ) {
-      file_type = BULL;
-    }
     // GFF?
     else if (first_line.find("##gff-version 3") != string::npos) {
       file_type = GFF3;
+    }
+    // BULL? Lines have three "words"
+    else if (split_first_line.size() == 3) {
+      file_type = BULL;
     }
     // The file was not identified and will most likely cause Breseq to fail.
     else if(file_type == UNKNOWN) {
@@ -268,12 +268,30 @@ namespace breseq {
     uint32_t on_seq_id = this->size();
 
     while ( ff.read_sequence(on_seq) ) {
-      cAnnotatedSequence new_seq;
-      new_seq.m_fasta_sequence = on_seq;
-      new_seq.m_seq_id = on_seq.m_name;
-      new_seq.m_length = on_seq.m_sequence.size();
-      (*this).push_back(new_seq);
-      m_seq_id_to_index[on_seq.m_name] = on_seq_id++;
+      
+      // @JEB sorting the input files by type seems like a better way of doing this,
+      //    but we can't do it just by looking at file name endings...
+      //
+      // If we have a dummy sequence id from loading a BULL feature file before a FASTA,
+      // then fill it in and update the index
+      if (m_seq_id_to_index.count(BULL_DUMMY_SEQ_ID))
+      {
+        uint32_t seq_index = this->m_seq_id_to_index[BULL_DUMMY_SEQ_ID];
+        this->m_seq_id_to_index.erase(BULL_DUMMY_SEQ_ID);
+        (*this)[seq_index].m_seq_id = on_seq.m_name;
+        m_seq_id_to_index[(*this)[seq_index].m_seq_id] = seq_index;       
+      }
+      else
+      {
+        this->add_new_seq(on_seq.m_name);
+      }
+      
+      // copy the info over (could define an assignment operator...)
+      cAnnotatedSequence& this_seq = (*this)[on_seq.m_name];
+      this_seq.m_fasta_sequence = on_seq;
+      this_seq.m_seq_id = on_seq.m_name;
+      this_seq.m_description = on_seq.m_description;
+      this_seq.m_length = on_seq.m_sequence.size();
     }
 
 
@@ -399,7 +417,7 @@ namespace breseq {
           for (uint32_t i=0; i<feature.m_gff_attributes[key].size(); i++)
             feature.m_gff_attributes[key][i] = GFF3UnescapeString(feature.m_gff_attributes[key][i]);
         }
-      
+              
         // Load certain information into the main hash, so breseq knows to use it
         if (feature.m_gff_attributes.count("Note"))
         {
@@ -452,13 +470,15 @@ void cReferenceSequences::WriteGFF( const string &file_name ){
 
         out << it_as->m_seq_id;
 
-        out << "\t" << feat.SafeGet("source");
-
+        if (feat.SafeGet("source") == "")
+          out << "\t.";
+        else
+          out << "\t" << feat["source"];
+        
         if (feat.SafeGet("type") == "")
           out << "\t.";
         else
           out << "\t" << feat["type"];
-
 
         out << "\t" << feat.m_start;
         out << "\t" << feat.m_end;
@@ -861,8 +881,17 @@ void cReferenceSequences::ReadBull(const string& file_name) {
 
   // This should only work if we have zero or one reference sequence, because it does not
   // give a seq_id, we assume the FASTA before or the FASTA after is paired with it.
-  ASSERT(this->size() == 1, "Bull format currently only works with one reference sequence");
+  ASSERT(this->size() <= 1, "Bull format currently only works with one reference sequence");
 
+  // if we encounter the BULL file first, create an empty sequence
+  if (this->size() == 0)
+  {
+    // if one already exists, throw an error
+    ASSERT(this->m_seq_id_to_index.count(BULL_DUMMY_SEQ_ID), 
+           "Two BULL formatted feature files loaded in a row. Ambiguous assignment to FASTA files.");
+    this->add_new_seq(BULL_DUMMY_SEQ_ID);
+  }
+    
   ifstream in(file_name.c_str());
   if(!in.good()) WARN("Could not open file:" + file_name);
 
@@ -872,44 +901,40 @@ void cReferenceSequences::ReadBull(const string& file_name) {
 
   while ( !in.eof() ) {
 
-    cSequenceFeature* current_feature(NULL);
+    string line;
+    getline(in, line);
+    vector<string> s = split_on_whitespace(line);
 
-    all_features.resize(all_features.size()+1);
-    current_feature = all_features.back().get();
-
-    current_feature->m_strand = 1;
-
-    in.getline(line, 10, ' ');
-    current_feature->m_start = from_string<uint32_t>(line);
-
-    in.getline(line, 10, ' ');
-    current_feature->m_end = from_string<uint32_t>(line);
-
-    in.getline(line, 10, '\n');
-    string name( (string) line );
-    name.erase(std::remove(name.begin(), name.end(), '\n'), name.end());
-    (*current_feature)["name"] = name;
+    if (s.size() == 0) continue;
+    ASSERT(s.size() == 3, "Expected 3 words in line, found " + to_string(s.size()) + " in line:\n" + line);
+    
+    cSequenceFeaturePtr current_feature(new cSequenceFeature);
+    
+    current_feature->m_start = from_string<uint32_t>(s[0]);
+    current_feature->m_end = from_string<uint32_t>(s[1]);
+    current_feature->m_strand = (current_feature->m_start <= current_feature->m_end) ? 1 : -1;
+    
+    // transfer to GenBank
+    (*current_feature)["name"] = s[2];
+    (*current_feature)["type"] = "CDS";
+    (*current_feature)["product"] = "";
+    (*current_feature)["accession"] = s[2];
+    
+    // transfer to GFF3
+    (*current_feature)["ID"] = s[2];
+    (*current_feature)["Note"] = "";
+    (*current_feature)["Alias"] = s[2];
+    (*current_feature)["Name"] = s[2];
+    
+    all_features.push_back(current_feature);
   }
-
   in.close();
-  cAnnotatedSequence& s = this->front();
-
+  
+  cAnnotatedSequence& s = this->back();
   for (cSequenceFeatureList::iterator it = all_features.begin(); it < all_features.end(); it++) {
     cSequenceFeature& feat = **it;
     s.m_features.push_back(*it);
-    cout << "Start: " << feat.m_start << " Stop: " << feat.m_end << " Strand: " << feat.m_strand << endl;
   }
-}
-
-
-void cReferenceSequences::ReadFeatureIndexedFastaFile(
-                                 const string &in_feature_file_name,
-                                 const string &in_fasta_file_name
-                                 )
-{
-  this->ReadFASTA(in_fasta_file_name);
-  if (in_feature_file_name.size() > 0)
-    this->ReadFeatureTable(in_feature_file_name);
 }
 
 string cReferenceSequences::repeat_example(const string &repeat_name, int8_t strand)

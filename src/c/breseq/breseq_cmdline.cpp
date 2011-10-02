@@ -422,7 +422,7 @@ int do_resolve_alignments(int argc, char* argv[]) {
     
     // Load the reference sequence info
     cReferenceSequences ref_seq_info;
-    ref_seq_info.ReadFeatureIndexedFastaFile(settings.reference_features_file_name, settings.reference_fasta_file_name);
+    ref_seq_info.LoadFile(settings.reference_gff3_file_name);
     
     // should be one coverage cutoff value for each reference sequence
     vector<double> coverage_cutoffs;
@@ -490,7 +490,7 @@ int do_predict_mutations(int argc, char* argv[]) {
             
     // Load the reference sequence info
     cReferenceSequences ref_seq_info;
-    ref_seq_info.ReadFeatureIndexedFastaFile(settings.reference_features_file_name, settings.reference_fasta_file_name);
+    ref_seq_info.LoadFile(settings.reference_gff3_file_name);
         
     MutationPredictor mp(ref_seq_info);
     
@@ -783,7 +783,7 @@ int do_preprocess_alignments(int argc, char* argv[]) {
   settings.preprocess_junction_min_indel_split_length = from_string<int32_t>(options["min-indel-split-length"]);
  
 	cReferenceSequences ref_seqs;
-	ref_seqs.ReadFeatureIndexedFastaFile("", settings.reference_fasta_file_name);
+	ref_seqs.ReadFASTA(settings.reference_fasta_file_name);
 
 	CandidateJunctions::preprocess_alignments(settings, summary, ref_seqs);
 
@@ -877,7 +877,7 @@ int do_identify_candidate_junctions(int argc, char* argv[]) {
     summary.sequence_conversion.max_read_length = from_string<int32_t>(options["maximum-read-length"]);
 
     cReferenceSequences ref_seq_info;
-    ref_seq_info.ReadFeatureIndexedFastaFile("", options["data-path"] + "/reference.fasta");
+    ref_seq_info.ReadFASTA(options["data-path"] + "/reference.fasta");
         
     CandidateJunctions::identify_candidate_junctions(settings, summary, ref_seq_info);
     
@@ -1042,10 +1042,6 @@ int breseq_default_action(int argc, char* argv[])
 	ASSERT(summary.sequence_conversion.max_read_length != UNDEFINED_UINT32, "Can't retrieve max read length from file: " + settings.sequence_conversion_summary_file_name);
 
   //(re)load the reference sequences from our converted files
-  //if(!ref_seq_info.Initialized()) {
-  //  ref_seq_info.ReadFeatureIndexedFastaFile(settings.reference_features_file_name, settings.reference_fasta_file_name);
-  //}
-  // @JEB - eventually replace with this
   ref_seq_info.ReadGFF(settings.reference_gff3_file_name);
   
   // Calculate the total reference sequence length
