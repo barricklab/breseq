@@ -49,23 +49,7 @@
       </BuildableProductRunnable>
       <CommandLineArguments>
          <CommandLineArgument
-            argument = "APPLY -r REL606.gbk -g JEB808.gd"
-            isEnabled = "NO">
-         </CommandLineArgument>
-         <CommandLineArgument
-            argument = "GD2GVF --input Ara-1_35K-C_REL10707.gd --output Ara-1_35K-C_REL10707.gd.gvf --snv-only"
-            isEnabled = "NO">
-         </CommandLineArgument>
-         <CommandLineArgument
-            argument = "-r NC_002163.1.gbk -n NWp3 62GAVAAXX_5_1_TCAT_pf.fastq 62GAVAAXX_5_2_TCAT_pf.fastq"
-            isEnabled = "NO">
-         </CommandLineArgument>
-         <CommandLineArgument
-            argument = "-o tests/lambda_mixed_pop -r tests/lambda_mixed_pop/../data/lambda/lambda.gbk tests/lambda_mixed_pop/../data/lambda/lambda_mixed_population.fastq"
-            isEnabled = "NO">
-         </CommandLineArgument>
-         <CommandLineArgument
-            argument = "-o tests/bull_1_bull_fasta -r tests/data/bull/bull_1_features.tab -r tests/data/bull/bull_1.fasta  tests/bull_1_fasta_bull/../data/bull/bull_1.fastq"
+            argument = "-b 0 -o tests/REL606_fragment_deletion_between_is -r tests/REL606_fragment_deletion_between_is/../data/REL606/REL606.fragment.gbk tests/REL606_fragment_deletion_between_is/../data/REL606/REL606.fragment.2.fastq"
             isEnabled = "YES">
          </CommandLineArgument>
       </CommandLineArguments>

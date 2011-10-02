@@ -409,9 +409,8 @@ namespace breseq {
 		vector<string> theStringVector;
     
     start = theString.find_first_not_of( theDelimiters, start );
-    end = start;
     
-		while (end != string::npos)
+		while (start != string::npos)
 		{
 			end = theString.find_first_of( theDelimiters, start );
       
