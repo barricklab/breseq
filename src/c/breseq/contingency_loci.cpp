@@ -164,8 +164,8 @@ namespace breseq {
     //printf( "Freqs.size(): %i\n", repeats.back().freqs.size() );
     for( size_t i=0; i<repeats.back().freqs.size(); i++ ){
       //printf( "%f ", repeats.back().freqs[i] );
-      if( histogram.size() < repeats.back().freqs[i]+1 ){
-        histogram.resize( repeats.back().freqs[i]+1 );
+      if( histogram.size() < static_cast<size_t>(repeats.back().freqs[i]+1) ){
+        histogram.resize( static_cast<size_t>(repeats.back().freqs[i]+1) );
         histogram[ repeats.back().freqs[i] ] = 1;
         count++;
       }

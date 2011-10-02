@@ -381,7 +381,7 @@ namespace breseq {
         {
           return (NAN);
         }
-        i = p;
+        i = static_cast<uint32_t>(p);
         if( (i & 1) == 0 )
           sgngam = -1;
           z = q - p;
@@ -614,7 +614,7 @@ namespace breseq {
       lgsing:
         return (INFINITY);
       }
-      i = p;
+      i = static_cast<size_t>(p);
       if( (i & 1) == 0 )
         sgngam = -1;
         else

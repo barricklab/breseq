@@ -1642,7 +1642,7 @@ void draw_coverage(Settings& settings, cReferenceSequences& ref_seq_info, genome
     uint32_t end = from_string<uint32_t>((*item)[END]);
     uint32_t size = end - start + 1;
     
-    uint32_t _shaded_flanking = floor(static_cast<double>(size) / 10.0);
+    uint32_t _shaded_flanking = static_cast<uint32_t>(floor(static_cast<double>(size) / 10.0));
     if (_shaded_flanking < 100) _shaded_flanking = 100;
     co.shaded_flanking(_shaded_flanking);
     

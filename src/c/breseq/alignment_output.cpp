@@ -150,7 +150,7 @@ void alignment_output::create_alignment ( const string& region )
     // Pick the desired number of reads evenly across th reads returned
     for (size_t i=0; i<m_maximum_to_align; i++)
     {
-      size_t keep_index = floor(static_cast<double>(i) / max * num);
+      size_t keep_index = static_cast<size_t>(floor(static_cast<double>(i) / max * num));
       new_aligned_reads[key_list[keep_index]] = aligned_reads[key_list[keep_index]];
     }
     

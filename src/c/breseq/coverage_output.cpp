@@ -86,7 +86,7 @@ void coverage_output::table(const string& region, const string& output_file_name
   uint32_t downsample = 1;
   if (resolution != 0)
   {
-    downsample = floor(static_cast<double>(size) / static_cast<double>(resolution));
+    downsample = static_cast<uint32_t>(floor(static_cast<double>(size) / static_cast<double>(resolution)));
     if (downsample < 1) downsample = 1;
   }
   

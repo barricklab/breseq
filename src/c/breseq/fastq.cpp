@@ -229,9 +229,9 @@ namespace breseq {
       int32_t to_quality;
             
       if (to_quality_type == "SOLEXA") {
-        to_quality = round(10 * log((1-probability_of_error)/probability_of_error) / log(10));
+        to_quality = static_cast<uint32_t>(round(10 * log((1-probability_of_error)/probability_of_error) / log(10)));
       } else if (to_quality_type == "PHRED") {
-        to_quality = round(-10 * log(probability_of_error) / log(10));
+        to_quality = static_cast<uint32_t>(round(-10 * log(probability_of_error) / log(10)));
       } else {
         cerr << "Unknown base quality score type: " << to_quality_type << endl;
         exit(-1);
@@ -294,7 +294,7 @@ namespace breseq {
         if (count == 0) {
           return false;
         } else {
-          uint32_t last_valid_line = floor((m_current_line-1)/4.0) * 4;
+          uint32_t last_valid_line = static_cast<uint32_t>(floor((m_current_line-1)/4.0) * 4);
           fprintf(stderr, "Incomplete FASTQ sequence record found at end of file.\nFile %s\nLine: %d\n", m_file_name.c_str(), m_current_line-1);
           fprintf(stderr, "You may be able to repair this damage and salvage the reads before this point with the command:\n");
           fprintf(stderr, "  head -n %u %s > new.fastq\n", last_valid_line, m_file_name.c_str());

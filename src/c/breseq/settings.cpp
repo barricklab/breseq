@@ -680,9 +680,9 @@ namespace breseq
 		{
       good_to_go = false;
       uint32_t R_numerical_version = from_string<uint32_t>(this->installed["R_version"]);
-      string R_version = to_string<uint32_t>(floor(R_numerical_version/1000000)) 
-        + "." + to_string<uint32_t>(floor(R_numerical_version%1000000/1000))
-        + "." + to_string<uint32_t>(floor(R_numerical_version%1000));
+      string R_version = to_string<uint32_t>(static_cast<uint32_t>(floor(R_numerical_version/1000000))) 
+        + "." + to_string<uint32_t>(static_cast<uint32_t>(floor(R_numerical_version%1000000/1000)))
+        + "." + to_string<uint32_t>(static_cast<uint32_t>(floor(R_numerical_version%1000)));
 
       cerr << "---> ERROR Required executable \"R version 2.1.0 or later\" not found." << endl;
       cerr << "---> Your version is " << R_version << endl;
