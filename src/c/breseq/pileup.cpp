@@ -46,4 +46,4 @@ char* breseq::pileup::reference_sequence() const {
 	return _pb.get_refseq(_tid); 
 }
 
-} //namespace breseq;
+} //namespace breseq

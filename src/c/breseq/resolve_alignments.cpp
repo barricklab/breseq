@@ -610,7 +610,7 @@ uint32_t _eligible_read_alignments(const Settings& settings, const cReferenceSeq
   
 	// how many reads share the best score?
   uint32_t last_best(0);
-  uint32_t best_score = mismatch_map[(alignments.front().get())];
+  uint32_t best_score = static_cast<uint32_t>(mismatch_map[(alignments.front().get())]);
 	
   // no scores meet minimum
   
@@ -944,8 +944,8 @@ bool _test_junction(const Settings& settings, Summary& summary, const string& ju
 
 	// POS_HASH test
 	// New way, but we need to have examined the coverage distribution to calibrate what scores to accept!
-	uint32_t junction_accept_score_cutoff_1 = summary.preprocess_coverage[scj.sides[0].seq_id].junction_accept_score_cutoff;
-	uint32_t junction_accept_score_cutoff_2 = summary.preprocess_coverage[scj.sides[1].seq_id].junction_accept_score_cutoff;
+	uint32_t junction_accept_score_cutoff_1 = static_cast<uint32_t>(summary.preprocess_coverage[scj.sides[0].seq_id].junction_accept_score_cutoff);
+	uint32_t junction_accept_score_cutoff_2 = static_cast<uint32_t>(summary.preprocess_coverage[scj.sides[1].seq_id].junction_accept_score_cutoff);
   
   // both score cutoffs might be zero - indicating these are missing contigs that are basically deleted
   // fail if this is the case. Revisit this logic at a future time. @JEB

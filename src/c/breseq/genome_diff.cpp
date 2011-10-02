@@ -1264,6 +1264,8 @@ void genome_diff::shift_positions(diff_entry &item, cReferenceSequences& ref_seq
   }
 }
 
+//>! Return the
+  
 int32_t diff_entry::mutation_size_change(cReferenceSequences& ref_seq_info)
 {
   switch (this->_type) {

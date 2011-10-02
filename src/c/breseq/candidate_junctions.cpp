@@ -1151,7 +1151,7 @@ namespace breseq {
 		int32_t lowest_accepted_pos_hash_score = 0;
 
 		// Right now we limit the candidate junctions to have a length no longer than the reference sequence.
-		uint32_t cj_length_limit = summary.sequence_conversion.total_reference_sequence_length * settings.maximum_candidate_junction_length_factor;
+		uint32_t cj_length_limit = static_cast<uint32_t>(summary.sequence_conversion.total_reference_sequence_length * settings.maximum_candidate_junction_length_factor);
 		uint32_t maximum_candidate_junctions = settings.maximum_candidate_junctions;
 		uint32_t minimum_candidate_junctions = settings.minimum_candidate_junctions;
 
