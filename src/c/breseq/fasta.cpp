@@ -41,6 +41,7 @@ namespace breseq {
     
     // clear sequence
     sequence.m_name = "";
+    sequence.m_description = "";
     sequence.m_sequence = "";
     
     // We're done, no error
@@ -48,9 +49,15 @@ namespace breseq {
     
     // Current line should begin with >
     assert(m_current_line[0] == '>');
-    substitute(m_current_line, " ", "_");//! Errors will occur if two names are present
-    sequence.m_name = m_current_line.substr(1);
     
+    // @JEB it may be better to truncate at the space
+    
+    // The sequence name is the first word
+    size_t pos = m_current_line.find_first_of(" \t\r\n", 1);
+    sequence.m_name = m_current_line.substr(1,(pos != string::npos) ? pos-1 : string::npos);
+    pos = m_current_line.find_first_not_of( " \t\r\n", pos);
+    if (pos != string::npos) sequence.m_description = m_current_line.substr(pos);
+        
     std::getline(*this, m_current_line);
     m_current_line_num++;
     

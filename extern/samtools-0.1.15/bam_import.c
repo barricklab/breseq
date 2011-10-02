@@ -146,7 +146,7 @@ bam_header_t *sam_header_read2(const char *fn)
 	ks_destroy(ks);
 	gzclose(fp);
 	free(str->s); free(str);
-	fprintf(stderr, "[sam_header_read2] %d sequences loaded.\n", kh_size(hash));
+	//fprintf(stderr, "[sam_header_read2] %d sequences loaded.\n", kh_size(hash));
 	if (error) return 0;
 	header = hash2header(hash);
 	kh_destroy(ref, hash);

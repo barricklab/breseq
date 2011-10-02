@@ -72,7 +72,7 @@ junction_keep_coverage_cutoff = 0
 #load data
 X<-read.table(distribution_file, header=T)
 
-#table might be empty (in which case add dummy data -- that will fail)
+#table might be empty
 if (nrow(X) == 0)
 {
   #print out statistics
@@ -104,7 +104,13 @@ D<-v/m
 ###
 
 ma5 = c(1, 1, 1, 1, 1)/5;
-X$ma = filter(X$n, ma5)
+
+## filtering fails if there are too few points
+if (nrow(X) >= 5) {
+  X$ma = filter(X$n, ma5)
+} else {
+	X$ma = X$n
+}
 
 i<-0
 max_n <- 0;
@@ -112,6 +118,7 @@ min_i <- max( trunc(m/4), 1 ); #prevents zero for pathological distributions
 max_i <- i;
 for (i in min_i:length(X$ma))
 {		
+  cat(i, "\n")
 	if (!is.na(X$ma[i]) && (X$ma[i] > max_n))
 	{
 		max_n = X$ma[i];

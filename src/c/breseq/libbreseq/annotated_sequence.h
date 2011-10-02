@@ -255,9 +255,6 @@ namespace breseq {
     
     //!< Read Bull gene table file
     void ReadBull(const string& file_name);
-
-    //!< Read Feature table fasta combination (TODO: deprecate)
-    void ReadFeatureIndexedFastaFile(const string &in_feature_file_name, const string &in_fasta_file_name);
     
     //!< Calculates the total length of all reference sequences together
     uint32_t total_length()
@@ -269,7 +266,6 @@ namespace breseq {
       }
       return ret_val;
     }
-    uint32_t m_index_seq_id;
 
     void add_new_seq(const string& seq_id)
     {
