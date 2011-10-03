@@ -36,7 +36,7 @@
       displayScale = "1.00"
       launchStyle = "0"
       useCustomWorkingDirectory = "YES"
-      customWorkingDirectory = "/Users/jbarrick/src/breseq"
+      customWorkingDirectory = "/Users/jbarrick/tmp/JEB807_KL-01_t550"
       buildConfiguration = "Debug">
       <BuildableProductRunnable>
          <BuildableReference
@@ -49,7 +49,7 @@
       </BuildableProductRunnable>
       <CommandLineArguments>
          <CommandLineArgument
-            argument = "-b 0 -o tests/REL606_fragment_deletion_between_is -r tests/REL606_fragment_deletion_between_is/../data/REL606/REL606.fragment.gbk tests/REL606_fragment_deletion_between_is/../data/REL606/REL606.fragment.2.fastq"
+            argument = "-r REL606.gbk -n JEB807_KL-01_t550 6246LAAXX_1_1_pf_ATAT.fastq 6246LAAXX_2_1_pf_ATAT.fastq 6246LAAXX_3_1_pf_ATAT.fastq"
             isEnabled = "YES">
          </CommandLineArgument>
       </CommandLineArguments>

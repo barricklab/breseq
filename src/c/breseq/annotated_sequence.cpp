@@ -887,7 +887,7 @@ void cReferenceSequences::ReadBull(const string& file_name) {
   if (this->size() == 0)
   {
     // if one already exists, throw an error
-    ASSERT(this->m_seq_id_to_index.count(BULL_DUMMY_SEQ_ID), 
+    ASSERT(!this->m_seq_id_to_index.count(BULL_DUMMY_SEQ_ID), 
            "Two BULL formatted feature files loaded in a row. Ambiguous assignment to FASTA files.");
     this->add_new_seq(BULL_DUMMY_SEQ_ID);
   }

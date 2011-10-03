@@ -925,7 +925,7 @@ namespace breseq {
 			if (n(j["side_2_position"]) - n(j["side_1_position"]) + 1 > 100000)
 				continue;
 
-			// 'DEL' and 'AMP'
+			// 'DEL'
 			if (!j.entry_exists("unique_read_sequence"))
 			{
         int32_t side_1_position = n(j["side_1_position"]);
@@ -955,19 +955,6 @@ namespace breseq {
           mut._evidence = make_list<string>(j._id);
           gd.add(mut);
         } 
-        else // this is an amplification.
-        {
-          diff_entry mut;
-          mut._type = AMP;
-          mut
-            ("seq_id", seq_id)
-            ("position", s(position))
-            ("size", s(size))
-            ("new_copy_number", "2")
-          ;
-          mut._evidence = make_list<string>(j._id);
-          gd.add(mut);
-        }
       }
 			// 'SUB'
 			else if (n(j["side_1_position"]) >= n(j["side_2_position"]))
@@ -995,18 +982,39 @@ namespace breseq {
 
 				gd.add(mut);
 			}
-			// "INS"
+			// "INS" || "AMP"
 			else if (n(j["side_1_position"]) + 1 == n(j["side_2_position"]))
 			{
-				diff_entry mut;
-        mut._type = INS;
-				mut
-					("seq_id", seq_id)
-					("position", s(position))
-					("new_seq", j["unique_read_sequence"])
-				;
-				mut._evidence = make_list<string>(j._id);
-				gd.add(mut);
+        // Check to see if unique sequence matches sequence directly before
+        size_t size = j["unique_read_sequence"].size();
+        size_t position = n(j["side_2_position"]) - size;
+        string dup_check_seq = ref_seq_info.get_sequence_1(j["side_1_seq_id"], position, position + size - 1);
+        
+        if (j["unique_read_sequence"] == dup_check_seq)
+        {
+          diff_entry mut;
+          mut._type = AMP;
+          mut
+          ("seq_id", seq_id)
+          ("position", s(n(j["side_2_position"]) - j["unique_read_sequence"].size()))
+          ("size", s(j["unique_read_sequence"].size()))
+          ("new_copy_number", "2")
+          ;
+          mut._evidence = make_list<string>(j._id);
+          gd.add(mut);
+        }
+        else
+        {
+          diff_entry mut;
+          mut._type = INS;
+          mut
+            ("seq_id", seq_id)
+            ("position", s(position))
+            ("new_seq", j["unique_read_sequence"])
+          ;
+          mut._evidence = make_list<string>(j._id);
+          gd.add(mut);
+        }
 			}
 		}
 
