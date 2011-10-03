@@ -367,7 +367,7 @@ namespace breseq
     
 		//// Output ////
 		this->max_rejected_polymorphisms_to_show = 20;
-		this->max_rejected_junctions_to_show = 20;
+		this->max_rejected_junctions_to_show = 10;
 		this->hide_circular_genome_junctions = true;
     
     this->smalt = false;
