@@ -925,7 +925,7 @@ namespace breseq {
 			if (n(j["side_2_position"]) - n(j["side_1_position"]) + 1 > 100000)
 				continue;
 
-			// 'DEL'
+			// 'DEL' or 'AMP'
 			if (!j.entry_exists("unique_read_sequence"))
 			{
         int32_t side_1_position = n(j["side_1_position"]);
@@ -955,6 +955,19 @@ namespace breseq {
           mut._evidence = make_list<string>(j._id);
           gd.add(mut);
         } 
+        else // this is an amplification.		
+        {		
+          diff_entry mut;		
+          mut._type = AMP;		
+          mut		
+          ("seq_id", seq_id)		
+          ("position", s(position))		
+          ("size", s(size))		
+          ("new_copy_number", "2")		
+          ;		
+          mut._evidence = make_list<string>(j._id);		
+          gd.add(mut);		
+        }
       }
 			// 'SUB'
 			else if (n(j["side_1_position"]) >= n(j["side_2_position"]))
@@ -983,6 +996,8 @@ namespace breseq {
 				gd.add(mut);
 			}
 			// "INS" || "AMP"
+      // @JEB Note: this kind of AMP only happens due to the way that reads are currently split.
+      //            If that is resolved, then only the version above will be needed for AMP.
 			else if (n(j["side_1_position"]) + 1 == n(j["side_2_position"]))
 			{
         // Check to see if unique sequence matches sequence directly before
