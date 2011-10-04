@@ -692,7 +692,6 @@ namespace breseq {
 		// Extended properties for resolve_alignments.cpp
 		string key;
 		int32_t overlap;
-		uint32_t total_reads;
 		uint32_t unique_side;
 		uint32_t is_side;
     
@@ -702,7 +701,6 @@ namespace breseq {
       flanking_left = 0;
       flanking_right = 0;
       overlap = 0;
-      total_reads = 0;
       unique_side = 0;
       is_side = 0;
     }
@@ -718,7 +716,6 @@ namespace breseq {
       flanking_right = _flanking_right;
 
       overlap = 0;
-      total_reads = 0;
       unique_side = 0;
       is_side = 0;
     }

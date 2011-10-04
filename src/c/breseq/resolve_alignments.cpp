@@ -219,8 +219,7 @@ void resolve_alignments(
 				best_junction_score = _eligible_read_alignments(settings, junction_ref_seq_info, this_junction_alignments);
 
 				if (verbose)
-					cerr << " Best junction score: " << best_junction_score
-							<< endl;
+					cerr << " Best junction score: " << best_junction_score << endl;
 			}
 
       if (verbose && (reference_alignments.size() > 0))
@@ -383,6 +382,15 @@ void resolve_alignments(
 	///
 	// Candidate junctions with unique matches
 	///
+  
+  // @JEB Better algorithm:
+  //  Score every junction and sort
+  //  Accept top match...
+  //  (Optional: rescore every junction, for lost degenerate matches, and sort)
+  //  Accept next top match...
+  // To implement this, we need to add a separate score function.
+  // We should also re-simplify the current pos hash score, since it can depend on order and also
+  //   penalize a junction with extremely high coverage (because more errors will happen)
 
 	//sort junction ids based on size of vector
 
@@ -460,7 +468,7 @@ void resolve_alignments(
 	{
 		string key = passed_junction_ids[i];
 		if (verbose) cout << key << endl;
-		diff_entry item = _junction_to_hybrid_list_item(key, ref_seq_info, matched_junction[key].size(), junction_test_info[key]);
+		diff_entry item = _junction_to_hybrid_list_item(key, ref_seq_info, junction_test_info[key]);
 		gd.add(item);
 
 		// save the score in the distribution
@@ -521,7 +529,7 @@ void resolve_alignments(
 	for (uint32_t i = 0; i < rejected_junction_ids.size(); i++)
 	{
 		string key = rejected_junction_ids[i];
-		diff_entry item = _junction_to_hybrid_list_item(key, ref_seq_info, matched_junction[key].size(), junction_test_info[key]);
+		diff_entry item = _junction_to_hybrid_list_item(key, ref_seq_info, junction_test_info[key]);
 		add_reject_reason(item, "NJ");
 		gd.add(item);
 	}
@@ -1093,7 +1101,7 @@ bool _test_junction(const Settings& settings, Summary& summary, const string& ju
 	return !failed;
 }
 
-diff_entry _junction_to_hybrid_list_item(const string& key, cReferenceSequences& ref_seq_info, uint32_t total_reads, CandidateJunction& test_info)
+diff_entry _junction_to_hybrid_list_item(const string& key, cReferenceSequences& ref_seq_info, CandidateJunction& test_info)
 {
   
   CandidateJunction::TestInfo& this_test_info = test_info.test_info;
@@ -1108,7 +1116,6 @@ diff_entry _junction_to_hybrid_list_item(const string& key, cReferenceSequences&
 	// 'overlap' is a version where overlap has been resolved if possible for adding sides of the
 	//    alignment
 	jc.overlap = jc.alignment_overlap;
-	jc.total_reads = total_reads;
 
 	// Redundancy is loaded from the key, but we doubly enforce it when IS elements are involved.
 
@@ -1269,7 +1276,6 @@ diff_entry _junction_to_hybrid_list_item(const string& key, cReferenceSequences&
 		("key", jc.key)
 		("alignment_overlap", to_string(jc.alignment_overlap))
 		("overlap", to_string(jc.overlap))
-		("total_reads", to_string(jc.total_reads))
 		("flanking_left", to_string(jc.flanking_left))
 		("flanking_right", to_string(jc.flanking_right))
 
