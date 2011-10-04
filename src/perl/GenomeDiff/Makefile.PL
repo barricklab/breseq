@@ -8,8 +8,7 @@ WriteMakefile
           'EXE_FILES' => [
                            'bin/.DS_Store',
                            'bin/genomediff',
-                           'bin/tree_utils',
-                           'bin/yaml_test'
+                           'bin/tree_utils'
                          ],
           'VERSION_FROM' => 'lib/GenomeDiff.pm',
           'PREREQ_PM' => {
