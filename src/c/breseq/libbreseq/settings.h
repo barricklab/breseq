@@ -398,6 +398,8 @@ namespace breseq
 		uint32_t max_read_length;
 
     bool junction_prediction; // whether to perform junction prediction step
+
+    bool values_to_gd; // @JEB @GRC added in for gathering/analyzing breseq values
     
 		cReadFiles read_files;
 		vector<string> read_file_names;

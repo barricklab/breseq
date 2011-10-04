@@ -1349,7 +1349,7 @@ void cReferenceSequences::annotate_mutations(genome_diff& gd, bool only_muts)
   {
     diff_entry& mut= **it;
 
-    if (only_muts && (mut._type > NOT_MUTATION)) continue;
+    if (only_muts && (mut.is_evidence())) continue;
 
     if (mut._type == SNP)
     {
