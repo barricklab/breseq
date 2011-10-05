@@ -112,41 +112,20 @@ diff_entry::diff_entry()
 
 bool diff_entry::is_mutation() const
 {
-  const size_t n = sizeof(gd_entry_mutation_types) / sizeof(gd_entry_mutation_types[0]);
-  for (size_t i = 0; i < n; i++) {
-    if (gd_entry_mutation_types[i] == this->_type) {
-      return true;
-    } else {
-      continue;
-    }
-  }
-  return false;
+  const size_t size = sizeof(gd_entry_mutation_types) / sizeof(gd_entry_mutation_types[0]);
+  return count(gd_entry_mutation_types, gd_entry_mutation_types + size, this->_type);
 }
 
 bool diff_entry::is_evidence() const
 {
-  const size_t n = sizeof(gd_entry_evidence_types) / sizeof(gd_entry_evidence_types[0]);
-  for (size_t i = 0; i < n; i++) {
-    if (gd_entry_evidence_types[i] == this->_type) {
-      return true;
-    } else {
-      continue;
-    }
-  }
-  return false;
+  const size_t size = sizeof(gd_entry_evidence_types) / sizeof(gd_entry_evidence_types[0]);
+  return count(gd_entry_evidence_types, gd_entry_evidence_types + size, this->_type);
 }
 
 bool diff_entry::is_validation() const
 {
-  const size_t n = sizeof(gd_entry_validation_types) / sizeof(gd_entry_validation_types[0]);
-  for (size_t i = 0; i < n; i++) {
-    if (gd_entry_validation_types[i] == this->_type) {
-      return true;
-    } else {
-      continue;
-    }
-  }
-  return false;
+  const size_t size = sizeof(gd_entry_validation_types) / sizeof(gd_entry_validation_types[0]);
+  return count(gd_entry_validation_types, gd_entry_validation_types + size, this->_type);
 }
 
 
@@ -575,13 +554,17 @@ void genome_diff::write(const string& filename) {
 
 /*! Write this genome diff to a file, gathers further data from breseq run for post analysis
  */
-void genome_diff::write(const string& filename, const Summary& summary, const Settings& settings) {
+void genome_diff::write(const string& filename, Summary& summary, const Settings& settings) {
   ofstream ofs(filename.c_str());
   const Summary::CandidateJunctionSummaryData& hcs = summary.candidate_junction;
 
   ofs << "#=GENOME_DIFF 1.0" << endl;
-  ofs << "#pos_hash_score_cutoff=" << hcs.accepted.pos_hash_score_cutoff << endl;
 
+  for (storable_map<string, Coverage>::iterator it = summary.unique_coverage.begin();
+       it != summary.unique_coverage.end(); it ++) {
+    const string& seq_id = it->first;
+    ofs << "#junction_accept_score_cutoff=" << summary.unique_coverage[seq_id].junction_accept_score_cutoff << endl;
+  }
 
   // sort
   _entry_list.sort(diff_entry_sort);
