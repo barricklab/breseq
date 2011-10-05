@@ -176,7 +176,7 @@ void html_index(const string& file_name, const Settings& settings, Summary& summ
 // #   ## Mutation predictions
 // #   ###
   HTML << "<!--Mutation Predictions -->" << endl;
-  diff_entry_list muts = gd.show_list(make_list<Type>(SNP)(INS)(DEL)(SUB)(MOB)(AMP));
+  diff_entry_list muts = gd.show_list(make_list<gd_entry_type>(SNP)(INS)(DEL)(SUB)(MOB)(AMP));
   
   string relative_path = settings.local_evidence_path;
   
@@ -200,14 +200,14 @@ void html_index(const string& file_name, const Settings& settings, Summary& summ
 // #   ###
   HTML << "<!--Unassigned evidence-->" << endl;
   
-  diff_entry_list mc = gd.filter_used_as_evidence(gd.show_list(make_list<Type>(MC)));
+  diff_entry_list mc = gd.filter_used_as_evidence(gd.show_list(make_list<gd_entry_type>(MC)));
   mc.remove_if(diff_entry::rejected()); 
 
   if (mc.size() > 0) {
     HTML << "<p>" << html_missing_coverage_table_string(mc, false, "Unassigned missing coverage evidence", relative_path);
   }
 
-  diff_entry_list jc = gd.filter_used_as_evidence(gd.show_list(make_list<Type>(JC)));
+  diff_entry_list jc = gd.filter_used_as_evidence(gd.show_list(make_list<gd_entry_type>(JC)));
   jc.remove_if(diff_entry::rejected()); 
 
   //Don't show junctions for circular chromosomes
@@ -260,7 +260,7 @@ void html_marginal_predictions(const string& file_name, const Settings& settings
   // ###
   // ## Marginal evidence
   // ###
-  diff_entry_list ra = gd.filter_used_as_evidence(gd.show_list(make_list<Type>(RA)));
+  diff_entry_list ra = gd.filter_used_as_evidence(gd.show_list(make_list<gd_entry_type>(RA)));
   
   if (ra.size() > 0) {
     HTML << "<p>" << endl;
@@ -268,7 +268,7 @@ void html_marginal_predictions(const string& file_name, const Settings& settings
       relative_path) << endl;
   }
   
-    diff_entry_list jc = gd.filter_used_as_evidence(gd.show_list(make_list<Type>(JC)));
+    diff_entry_list jc = gd.filter_used_as_evidence(gd.show_list(make_list<gd_entry_type>(JC)));
     jc.remove_if(not1(diff_entry::field_exists("reject")));
    if (jc.size()) {
      //Sort by score, not by position (the default order)...
@@ -626,7 +626,7 @@ string html_genome_diff_item_table_string(const Settings& settings, genome_diff&
 
   diff_entry& first_item = *list_ref.front();
   //mutation
-  if(first_item._type < NOT_MUTATION)
+  if(first_item.is_mutation())
   {
     return Html_Mutation_Table_String(settings, gd, list_ref); 
   }
@@ -1236,7 +1236,7 @@ Evidence_Files::Evidence_Files(const Settings& settings, genome_diff& gd)
   string junction_fasta_file_name = settings.candidate_junction_fasta_file_name;
 
   // We make alignments of two regions for deletions: upstream and downstream edges.
-  diff_entry_list items_MC = gd.show_list(make_list<Type>(MC));
+  diff_entry_list items_MC = gd.show_list(make_list<gd_entry_type>(MC));
   //cerr << "Number of MC evidence items: " << items_MC.size() << endl;
   
   for (diff_entry_list::iterator itr = items_MC.begin(); itr != items_MC.end(); itr ++) 
@@ -1283,7 +1283,7 @@ Evidence_Files::Evidence_Files(const Settings& settings, genome_diff& gd)
     
   } // mc_item list
   
-  diff_entry_list items_SNP_INS_DEL_SUB = gd.show_list(make_list<Type>(SNP)(INS)(DEL)(SUB));
+  diff_entry_list items_SNP_INS_DEL_SUB = gd.show_list(make_list<gd_entry_type>(SNP)(INS)(DEL)(SUB));
   //cerr << "Number of SNP_INS_DEL_SUB evidence items: " << items_SNP_INS_DEL_SUB.size() << endl;
 
   for (diff_entry_list::iterator itr = items_SNP_INS_DEL_SUB.begin(); itr != items_SNP_INS_DEL_SUB.end(); itr ++) 
@@ -1345,7 +1345,7 @@ Evidence_Files::Evidence_Files(const Settings& settings, genome_diff& gd)
   
 
   // Still create files for RA evidence that was not good enough to predict a mutation from
-  diff_entry_list items_RA = gd.filter_used_as_evidence(gd.show_list(make_list<Type>(RA)));
+  diff_entry_list items_RA = gd.filter_used_as_evidence(gd.show_list(make_list<gd_entry_type>(RA)));
   //cerr << "Number of RA evidence items: " << items_RA.size() << endl;
 
   for (diff_entry_list::iterator itr = items_RA.begin(); itr != items_RA.end(); itr ++) 
@@ -1369,7 +1369,7 @@ Evidence_Files::Evidence_Files(const Settings& settings, genome_diff& gd)
   // Note that it is completely determined by the original candidate junction sequence 
   // positions and overlap: alignment_pos and alignment_overlap.
   
-  diff_entry_list items_JC = gd.show_list(make_list<Type>(JC));
+  diff_entry_list items_JC = gd.show_list(make_list<gd_entry_type>(JC));
   //cerr << "Number of JC evidence items: " << items_JC.size() << endl;
 
   for (diff_entry_list::iterator itr = items_JC.begin(); itr != items_JC.end(); itr ++) 
@@ -1561,11 +1561,11 @@ Evidence_Files::html_evidence_file (
   
   diff_entry_list evidence_list = gd.mutation_evidence_list(*parent_item);
 
-  vector<Type> types = make_list<Type>(RA)(MC)(JC);
+  vector<gd_entry_type> types = make_list<gd_entry_type>(RA)(MC)(JC);
   
-  for (vector<Type>::iterator itr = types.begin(); itr != types.end(); itr ++)
+  for (vector<gd_entry_type>::iterator itr = types.begin(); itr != types.end(); itr ++)
   {  
-    const Type type = *itr;
+    const gd_entry_type type = *itr;
     diff_entry_list this_evidence_list = evidence_list;
     this_evidence_list.remove_if(diff_entry::is_not_type(type));   
     
@@ -1633,7 +1633,7 @@ void draw_coverage(Settings& settings, cReferenceSequences& ref_seq_info, genome
    }
   
   // Zoom-in plots of individual deletions
-  vector<Type> mc_types = make_list<Type>(MC);
+  vector<gd_entry_type> mc_types = make_list<gd_entry_type>(MC);
 	diff_entry_list mc = gd.show_list(mc_types);
   for (diff_entry_list::iterator it=mc.begin(); it!=mc.end(); it++)
   {

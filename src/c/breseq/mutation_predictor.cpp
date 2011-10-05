@@ -112,7 +112,7 @@ namespace breseq {
 		///
 
 		// For all that follows, we need information about repeat_regions overlapping the sides of junctions
-    vector<Type> jc_types = make_list<Type>(JC);
+    vector<gd_entry_type> jc_types = make_list<gd_entry_type>(JC);
 		diff_entry_list jc = gd.list(jc_types);
     
     const int32_t max_distance_to_repeat = 50;
@@ -206,7 +206,7 @@ namespace breseq {
 		}*/
     jc.remove_if(diff_entry::field_exists("reject"));
     
-    vector<Type> mc_types = make_list<Type>(MC);
+    vector<gd_entry_type> mc_types = make_list<gd_entry_type>(MC);
 		diff_entry_list mc = gd.list(mc_types);
 
 		///
@@ -1038,7 +1038,7 @@ namespace breseq {
 		// Read Alignments => SNP, DEL, INS, SUB
 		///
 
-    vector<Type> ra_types = make_list<Type>(RA);
+    vector<gd_entry_type> ra_types = make_list<gd_entry_type>(RA);
     diff_entry_list ra = gd.list(ra_types);
 
 		///
@@ -1047,8 +1047,8 @@ namespace breseq {
 		///
 
 		{
-      vector<Type> del_types = make_list<Type>(DEL);
-      vector<Type> mc_types = make_list<Type>(MC);
+      vector<gd_entry_type> del_types = make_list<gd_entry_type>(DEL);
+      vector<gd_entry_type> mc_types = make_list<gd_entry_type>(MC);
 			diff_entry_list del = gd.list(del_types);
       diff_entry_list mc = gd.list(mc_types);
 

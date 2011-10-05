@@ -62,13 +62,12 @@ extern const char* _SIDE_KEY_JC;
 
 
 // Types of diff entries:
-enum Type {TYPE_UNKOWN, SNP, SUB, DEL, INS, MOB, AMP, INV, CON, NOT_MUTATION, RA, MC, JC, UN, CURA, FPOS, PHYL, TSEQ, PFLP, RFLP, PFGE};
+enum gd_entry_type {TYPE_UNKOWN, SNP, SUB, DEL, INS, MOB, AMP, INV, CON, RA, MC, JC, UN, CURA, FPOS, PHYL, TSEQ, PFLP, RFLP, PFGE};
+const gd_entry_type gd_entry_mutation_types[] = {SNP, SUB, DEL, INS, MOB, AMP, INV, CON};
+const gd_entry_type gd_entry_evidence_types[] = {RA, MC, JC, UN};
+const gd_entry_type gd_entry_validation_types[] = {CURA, FPOS, PHYL, TSEQ, PFLP, RFLP, PFGE};
   
-// @TODO: add proper functions like is_mutation(), is_evidence(), is_validation()
-// also rename this type to something less generic (namespace collision possibilities). Like "gd_entry_type";
-// I don't like comparing to NOT_MUTATION, since there are three kinds of values (now).
-  
-inline string to_string(const Type type)
+inline string to_string(const gd_entry_type type)
 {
   switch(type) {
     case SNP: return "SNP";
@@ -98,7 +97,7 @@ inline string to_string(const Type type)
 }
 
 //@JEB - would be more efficient with a map
-inline Type to_type(const string& type)
+inline gd_entry_type to_type(const string& type)
 {
   if (type == "SNP") return SNP;
   if (type == "SUB") return SUB;
@@ -173,7 +172,7 @@ struct diff_entry {
   typedef map<key_t, value_t> map_t; //!< Diff entry key-value map.
   
   //! Constructor.
-  diff_entry(const Type type);
+  diff_entry(const gd_entry_type type);
   diff_entry();
   
   //! Copy constructor
@@ -193,8 +192,18 @@ struct diff_entry {
     assert(it != _fields.end());
     return it->second; 
   }
-  
+
+  //! Return if a given key value exists in _fields
   bool entry_exists(const key_t& k) const { return (_fields.count(k) > 0); }
+
+  //! Return if this diff entry is a mutation
+  bool is_mutation() const;
+
+  //! Return if this diff entry is evidence
+  bool is_evidence() const;
+
+  //! Return if this diff entry is a validation
+  bool is_validation() const;
 
   //! Marshal this diff entry into an ordered list of fields.
   virtual void marshal(field_list_t& s);
@@ -223,7 +232,7 @@ struct diff_entry {
   //virtual diff_entry* clone() const = 0;
   
   //! Parameters most diff_entrys have in common
-  Type _type;
+  gd_entry_type _type;
   string _id;
   vector<string> _evidence; 
   map_t _fields; //!< Additional information about this diff entry. Look at 
@@ -301,16 +310,17 @@ public:
   
   //! Write the genome diff to a file.
   void write(const string& filename);
-  
+  void write(const string& filename, const Summary& summary, const Settings& settings); //! Used for gathering/analyzing breseq data
+
   //! Remove items used as evidence by any mutations out of input list
   diff_entry_list filter_used_as_evidence(const diff_entry_list& list);
   
   //! Retrieve diff_entrys that match given type(s) 
-  diff_entry_list list(const vector<Type>& types = vector<Type>());
+  diff_entry_list list(const vector<gd_entry_type>& types = vector<gd_entry_type>());
   //diff_entry_list list() {return _entry_list;}
   
   //! retrieve diff_entrys that match given type(s) and do not have 'no_show' set
-  diff_entry_list show_list(const vector<Type>& types = vector<Type>());
+  diff_entry_list show_list(const vector<gd_entry_type>& types = vector<gd_entry_type>());
   
   //! Converts a genome_diff(.gd) file's line to a diff_entry
   diff_entry _line_to_item(const string& line);
@@ -431,7 +441,7 @@ struct diff_entry::by_scores : public binary_function
 struct diff_entry::is_type: unary_function <diff_entry_ptr, bool>
 {
   //! Constructor
-  explicit is_type(const Type type)
+  explicit is_type(const gd_entry_type type)
     : m_type(type) {}
 
   //! Predicate 
@@ -440,13 +450,13 @@ struct diff_entry::is_type: unary_function <diff_entry_ptr, bool>
 
 
   protected:
-    Type m_type;
+    gd_entry_type m_type;
 };
   
 struct diff_entry::is_not_type: unary_function <diff_entry_ptr, bool>
 {
   //! Constructor
-  explicit is_not_type(const Type type)
+  explicit is_not_type(const gd_entry_type type)
   : m_type(type) {}
   
   //! Predicate 
@@ -455,7 +465,7 @@ struct diff_entry::is_not_type: unary_function <diff_entry_ptr, bool>
   
   
 protected:
-  Type m_type;
+  gd_entry_type m_type;
 };
 
 struct diff_entry::frequency_less_than_two_or_no_show:public unary_function<diff_entry_ptr, bool>

@@ -49,7 +49,7 @@ const char* TOT_COV="tot_cov";
 const char* ERROR="error";
 
 
-map<Type, vector<string> > line_specification = make_map<Type, vector<string> >
+map<gd_entry_type, vector<string> > line_specification = make_map<gd_entry_type, vector<string> >
 //! seq_id and positions are already parameters in diff_entry
 //## mutations
 (SNP,make_list<string> ("seq_id")("position")("new_seq"))
@@ -96,7 +96,7 @@ static const char* s_field_order[] = {
 
 /*! Constructor.
  */
-diff_entry::diff_entry(const Type type)
+diff_entry::diff_entry(const gd_entry_type type)
 : _type(type)
 , _id("")
 , _evidence()
@@ -110,6 +110,44 @@ diff_entry::diff_entry()
 {
 }
 
+bool diff_entry::is_mutation() const
+{
+  const size_t n = sizeof(gd_entry_mutation_types) / sizeof(gd_entry_mutation_types[0]);
+  for (size_t i = 0; i < n; i++) {
+    if (gd_entry_mutation_types[i] == this->_type) {
+      return true;
+    } else {
+      continue;
+    }
+  }
+  return false;
+}
+
+bool diff_entry::is_evidence() const
+{
+  const size_t n = sizeof(gd_entry_evidence_types) / sizeof(gd_entry_evidence_types[0]);
+  for (size_t i = 0; i < n; i++) {
+    if (gd_entry_evidence_types[i] == this->_type) {
+      return true;
+    } else {
+      continue;
+    }
+  }
+  return false;
+}
+
+bool diff_entry::is_validation() const
+{
+  const size_t n = sizeof(gd_entry_validation_types) / sizeof(gd_entry_validation_types[0]);
+  for (size_t i = 0; i < n; i++) {
+    if (gd_entry_validation_types[i] == this->_type) {
+      return true;
+    } else {
+      continue;
+    }
+  }
+  return false;
+}
 
 
 /*! Marshal this diff entry into an ordered list of fields.
@@ -430,7 +468,7 @@ void genome_diff::read(const string& filename) {
 }
 
 
-map<Type, sort_fields_item> diff_entry_sort_fields = make_map<Type, sort_fields_item>
+map<gd_entry_type, sort_fields_item> diff_entry_sort_fields = make_map<gd_entry_type, sort_fields_item>
   (SNP, sort_fields_item(1, SEQ_ID, POSITION))
   (SUB, sort_fields_item(1, SEQ_ID, POSITION))
   (DEL, sort_fields_item(1, SEQ_ID, POSITION))
@@ -445,7 +483,7 @@ map<Type, sort_fields_item> diff_entry_sort_fields = make_map<Type, sort_fields_
   (UN,  sort_fields_item(3, SEQ_ID, START))
 ;
 
-map<Type, uint8_t> sort_order = make_map<Type, uint8_t>
+map<gd_entry_type, uint8_t> sort_order = make_map<gd_entry_type, uint8_t>
   (SNP, 2)
   (SUB, 4)
   (DEL, 1)
@@ -465,8 +503,8 @@ map<Type, uint8_t> sort_order = make_map<Type, uint8_t>
  */
 bool diff_entry_sort(const diff_entry_ptr& a, const diff_entry_ptr& b) {
 
-  Type a_type = a->_type;
-  Type b_type = b->_type;
+  gd_entry_type a_type = a->_type;
+  gd_entry_type b_type = b->_type;
 
   sort_fields_item a_sort_fields = diff_entry_sort_fields[a_type];
   sort_fields_item b_sort_fields = diff_entry_sort_fields[b_type];
@@ -534,6 +572,26 @@ void genome_diff::write(const string& filename) {
 	}
 	ofs.close();
 }
+
+/*! Write this genome diff to a file, gathers further data from breseq run for post analysis
+ */
+void genome_diff::write(const string& filename, const Summary& summary, const Settings& settings) {
+  ofstream ofs(filename.c_str());
+  const Summary::CandidateJunctionSummaryData& hcs = summary.candidate_junction;
+
+  ofs << "#=GENOME_DIFF 1.0" << endl;
+  ofs << "#pos_hash_score_cutoff=" << hcs.accepted.pos_hash_score_cutoff << endl;
+
+
+  // sort
+  _entry_list.sort(diff_entry_sort);
+
+  for(diff_entry_list::iterator i=_entry_list.begin(); i!=_entry_list.end(); ++i) {
+    ofs << (**i) << endl;
+  }
+  ofs.close();
+}
+
 
 // Convert GD file to GVF file
 void GDtoGVF( const string &gdfile, const string &gvffile, bool snv_only){
@@ -843,7 +901,7 @@ void VCFtoGD( const string& vcffile, const string& gdfile ){
 /*! Given a list of types, search and return the diff_entry's within diff_entry_list whose 
  * _type parameter matches one of those within input types. 
  */ 
-diff_entry_list genome_diff::list(const vector<Type>& types)
+diff_entry_list genome_diff::list(const vector<gd_entry_type>& types)
 {
   // default is to have to types
   if (types.size() == 0)
@@ -854,7 +912,7 @@ diff_entry_list genome_diff::list(const vector<Type>& types)
   for (diff_entry_list::iterator itr_diff_entry = _entry_list.begin(); 
        itr_diff_entry != _entry_list.end(); itr_diff_entry++)
     {
-      for (vector<Type>::const_iterator requested_type = types.begin();
+      for (vector<gd_entry_type>::const_iterator requested_type = types.begin();
            requested_type != types.end(); requested_type++)
       {
         if((*itr_diff_entry)->_type == *requested_type)
@@ -865,7 +923,7 @@ diff_entry_list genome_diff::list(const vector<Type>& types)
   return return_list;
 }
   
-diff_entry_list genome_diff::show_list(const vector<Type>& types)
+diff_entry_list genome_diff::show_list(const vector<gd_entry_type>& types)
 {
   diff_entry_list ret_list = list(types);
   ret_list.remove_if(diff_entry::fields_exist(make_list<diff_entry::key_t>("deleted")));
@@ -968,7 +1026,7 @@ diff_entry_list genome_diff::mutation_list()
    for(diff_entry_list::iterator itr = _entry_list.begin();
        itr != _entry_list.end(); itr ++) {
      diff_entry& item = **itr;
-     if(item._type < NOT_MUTATION) {
+     if(item.is_mutation()) {
        mut_list.push_back(*itr);
      }
    }
@@ -984,7 +1042,7 @@ diff_entry_list genome_diff::evidence_list()
   for(diff_entry_list::iterator itr = _entry_list.begin();
       itr != _entry_list.end(); itr ++) {
     diff_entry& item = **itr;
-    if(item._type > NOT_MUTATION) {
+    if(item.is_evidence()) {
       mut_list.push_back(*itr);
     }
   }
@@ -1081,7 +1139,7 @@ void genome_diff::add_reject_reasons(diff_entry item, const string& reject)
 bool 
 genome_diff::interval_un(const uint32_t& start,const uint32_t& end)
 {
-  diff_entry_list un_list = list(make_list<Type>(UN));
+  diff_entry_list un_list = list(make_list<gd_entry_type>(UN));
 
   for (diff_entry_list::iterator itr = un_list.begin();
        itr != un_list.end(); itr++) {

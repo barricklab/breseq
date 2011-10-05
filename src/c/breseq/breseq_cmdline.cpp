@@ -1691,8 +1691,13 @@ int breseq_default_action(int argc, char* argv[])
 
 		MutationPredictor mp(ref_seq_info);
 		genome_diff mpgd(settings.evidence_genome_diff_file_name);
-		mp.predict(settings, mpgd, summary.sequence_conversion.max_read_length, summary.sequence_conversion.avg_read_length);
-		mpgd.write(settings.final_genome_diff_file_name);
+    mp.predict(settings, mpgd, summary.sequence_conversion.max_read_length, summary.sequence_conversion.avg_read_length);
+
+    if (settings.values_to_gd){
+      mpgd.write(settings.final_genome_diff_file_name, summary, settings);
+    } else {
+      mpgd.write(settings.final_genome_diff_file_name);
+    }
 
 		genome_diff gd(settings.final_genome_diff_file_name);
 		//#unlink $evidence_genome_diff_file_name;
@@ -1701,7 +1706,7 @@ int breseq_default_action(int argc, char* argv[])
 		// Mark lowest RA evidence items as no-show, or we may be drawing way too many alignments
 		//
 
-    vector<Type> ra_types = make_list<Type>(RA);
+    vector<gd_entry_type> ra_types = make_list<gd_entry_type>(RA);
 		list<counted_ptr<diff_entry> > ra = gd.filter_used_as_evidence(gd.list(ra_types));
 
     ra.remove_if(diff_entry::frequency_less_than_two_or_no_show());
@@ -1729,7 +1734,7 @@ int breseq_default_action(int argc, char* argv[])
 		//
 		// Mark lowest scoring reject junctions as no-show
 		//
-    vector<Type> jc_types = make_list<Type>(JC);
+    vector<gd_entry_type> jc_types = make_list<gd_entry_type>(JC);
     
 		diff_entry_list jc = gd.filter_used_as_evidence(gd.list(jc_types));
 	  

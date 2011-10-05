@@ -179,6 +179,8 @@ namespace breseq
     ("require-complete-match", "only consider alignments that extend from end to end of a read", TAKES_NO_ARGUMENT)
     ("require-match-length", "only consider alignments that cover this many bases of a read", "0")
     ("require-match-fraction", "only consider alignments that cover this fraction of a read", "0.9")
+    ("values-to-gd","",TAKES_NO_ARGUMENT) // @JEB @GRC added in for gathering/analyzing breseq values
+
 
     .processCommandArgs(argc, argv);
     
@@ -209,6 +211,11 @@ namespace breseq
       options.printUsage();
       exit(-1);
     }
+
+    if (options.count("values-to-gd")) {
+      this->values_to_gd = true;
+    }
+
     
     this->base_output_path = options["output"];
     this->run_name = options["name"];
@@ -258,7 +265,7 @@ namespace breseq
     cerr << "===============================================================================" << endl;
     cerr << PACKAGE_STRING << "      " << PACKAGE_URL << endl;
     cerr << endl;
-    cerr << "Authors: Barrick JE, Borges JJ, Knoester DB, Colburn GJ, Meyer AG" << endl;
+    cerr << "Authors: Barrick JE, Borges JJ, Knoester DB, Colburn GR, Meyer AG" << endl;
     cerr << "Contact: " << PACKAGE_BUGREPORT << endl;
     cerr << endl;
     cerr << PACKAGE_NAME << " is free software; you can redistribute it and/or modify it under the " << endl;
@@ -382,6 +389,7 @@ namespace breseq
 		this->shade_frequencies = false;
 		this->no_header = false;
     this->verbose = false;
+    this->values_to_gd = false;
 	}
 
 	void Settings::post_option_initialize()
