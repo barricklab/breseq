@@ -395,7 +395,7 @@ namespace breseq
 
 		string long_pairs_file_name;
 
-		uint32_t max_read_length;
+		//uint32_t max_read_length;
 
     bool junction_prediction; // whether to perform junction prediction step
 

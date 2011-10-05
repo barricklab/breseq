@@ -61,6 +61,12 @@ namespace breseq {
 
 		string read_id = a1.read_name();
 
+    // debug
+    //if ((read_id == "1:21444") || (read_id == "1:811468"))
+    //{
+    //  cout << read_id << endl;
+    //}
+    
 		// First, sort matches by their order in the query
 		bam_alignment& q1 = a1;
 		bam_alignment& q2 = a2;
@@ -69,7 +75,10 @@ namespace breseq {
 		q1.query_stranded_bounds_1(q1_start, q1_end);
 		q2.query_stranded_bounds_1(q2_start, q2_end);
 
-		if (verbose)
+    if (verbose)
+      cout << q1.read_name() << endl;
+		
+    if (verbose)
 			cout << q1_start << ", " << q1_end << ", " << q2_start << ", " << q2_end << endl;
 
 		// Reverse the coordinates to be consistently such that 1 refers to lowest...
@@ -80,7 +89,7 @@ namespace breseq {
 			swap(redundancy_1, redundancy_2);
 			swap(q1, q2);
 		}
-
+    
 		// create hash key and store information about the location of this hit
 		bool hash_strand_1 = q1.reversed();
 		string hash_seq_id_1 = ref_seq_info[q1.reference_target_id()].m_seq_id;
@@ -89,7 +98,7 @@ namespace breseq {
 		bool hash_strand_2 = !q2.reversed();
 		string hash_seq_id_2 = ref_seq_info[q2.reference_target_id()].m_seq_id;
 		const string& ref_seq_2(ref_seq_info[q2.reference_target_id()].m_fasta_sequence.m_sequence);
-
+    
 		// how much overlap is there between the two matches?
 		// positive if the middle sequence can match either side of the read
 		// negative if there is sequence in the read NOT matched on either side
@@ -176,10 +185,79 @@ namespace breseq {
 			if (verbose)
 				cout << "=== overlap corrected for mismatches " << overlap << endl;
 		}
-
-		// create hash coords AFTER overlap adjustment
+    
+    
+    // create hash coords AFTER overlap adjustment
 		int32_t hash_coord_1 = (hash_strand_1) ? r1_start : r1_end;
 		int32_t hash_coord_2 = (hash_strand_2) ? r2_start : r2_end;
+
+    // if there are multiple ways the two sides could have been aligned...shift them
+    // over so as much is included in the lower reference coordinate side as possible
+      
+    if (overlap == 0)
+    {
+      
+      int32_t lower_coord_side = (hash_coord_1 < hash_coord_2) ? -1 : +1;
+      int32_t move_r1_pos = (hash_strand_1) ? -1 : +1;
+      int32_t move_r2_pos = (!hash_strand_2) ? -1 : +1;
+      move_r1_pos *= lower_coord_side;
+      move_r2_pos *= lower_coord_side;
+
+      if (verbose) cout << "ZERO OVERLAP SHIFT TEST" << endl;
+      if (verbose) cout << "hash coord 1:" << hash_coord_1 << " hash coord 2: " << hash_coord_2 << endl;
+      uint32_t test_r1_pos = (hash_strand_1) ? r1_start : r1_end;
+      uint32_t test_r2_pos = (hash_strand_2) ? r2_start : r2_end;
+      
+      if (lower_coord_side == -1)
+        test_r2_pos += move_r2_pos;
+      else
+        test_r1_pos += move_r1_pos;
+      
+      if ( (test_r1_pos >= 1) && (test_r1_pos <= ref_seq_1.size() )
+        && (test_r2_pos >= 1) && (test_r2_pos <= ref_seq_2.size() ) )
+      {
+        string test_r1_char;
+        string test_r2_char;
+
+        test_r1_char = ref_seq_1.substr(test_r1_pos - 1, 1);
+        if (hash_strand_1) test_r1_char = reverse_complement(test_r1_char);
+        test_r2_char = ref_seq_2.substr(test_r2_pos - 1, 1);
+        if (!hash_strand_2) test_r2_char = reverse_complement(test_r2_char);
+        
+        while (test_r1_char == test_r2_char)
+        {          
+          test_r1_pos += move_r1_pos;
+          test_r2_pos += move_r2_pos;
+          
+          if (! (
+                 (test_r1_pos >= 1) && (test_r1_pos <= ref_seq_1.size())
+                 && (test_r2_pos >= 1) && (test_r2_pos <= ref_seq_2.size()) 
+                 ) )
+          {
+            test_r1_pos -= move_r1_pos;
+            test_r2_pos -= move_r2_pos;
+            break;
+          }
+
+          
+          test_r1_char = ref_seq_1.substr(test_r1_pos - 1, 1);
+          if (hash_strand_1) test_r1_char = reverse_complement(test_r1_char);
+          test_r2_char = ref_seq_2.substr(test_r2_pos - 1, 1);
+          if (!hash_strand_2) test_r2_char = reverse_complement(test_r2_char);
+        }
+        
+        // backtrack by one
+        if (lower_coord_side == -1)
+          test_r2_pos -= move_r2_pos;
+        else
+          test_r1_pos -= move_r1_pos;
+        
+        hash_coord_1 = test_r1_pos;
+        hash_coord_2 = test_r2_pos;
+        if (verbose) cout << "hash coord 1:" << hash_coord_1 << " hash coord 2: " << hash_coord_2 << endl;
+        
+      }
+    }
 
 		// these are the positions of the beginning and end of the read, across the junction
 		// query 1 is the start of the read, which is why we hash by this coordinate
