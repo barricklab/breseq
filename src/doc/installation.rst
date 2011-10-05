@@ -19,7 +19,7 @@ MacOSX Instructions
 
 You will need administrator privileges to install |breseq| dependencies using these instructions. We recommend that you install and use the package manager `MacPorts <http://www.macports.org/>`_ to simplify these installation steps. Using  :program:`MacPorts` will generally take longer than downloading and installing the packages in other ways, but it greatly simplifies the searching you might otherwise have to do to track down all the prerequisites.
 
-* :program:`GCC`: Download and install the `Apple Developer tools <http://developer.apple.com/tools/>`_. You can use either version 3 (which is free) or download version 4 from the App Store for a small price.
+* :program:`GCC`: Download and install `Apple Developer tools <http://developer.apple.com/tools/>`_ (available from the App store).
 * :program:`SSAHA2`: download and install the MacOSX package from the `Sanger Center <http://www.sanger.ac.uk/resources/software/ssaha2/>`_. You will need to move the executables to where your system can use them. If you change into the ssaha2_v2.5.1_MacOS directory, you can use this command:
 
 >>> sudo cp ssaha2* /usr/local/bin

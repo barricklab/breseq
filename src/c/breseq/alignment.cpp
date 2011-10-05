@@ -413,7 +413,7 @@ void tam_file::write_alignments(
 void tam_file::write_split_alignment(uint32_t min_indel_split_len, const alignment_wrapper& a)
 {
   // Debug
-  //if (a.read_name() == "GW1ULQG02DEM06") {
+  //if (a.read_name() == "3:234041") {
   //  cout << "stop here << endl";
   //}
   
@@ -466,10 +466,10 @@ void tam_file::write_split_alignment(uint32_t min_indel_split_len, const alignme
       }
       i++;
     }
-
+    
 		if (qpos > qstart)
 		{
-			//add padding to the sides of the
+			//add padding to the sides of the match
 			uint32_t left_padding = qstart - 1;
 			uint32_t right_padding = q_length - qpos + 1;
 
@@ -491,6 +491,21 @@ void tam_file::write_split_alignment(uint32_t min_indel_split_len, const alignme
 			;
 			output_tam << join(ll, "\t") << endl;
 		}
+    
+    // If the inserted region matches to the next part of the match, then we want to adjust where that begins
+    if ( (op == 'I') && (qpos - len >= 1) )
+    {
+      string previous_string = qseq_string.substr(qpos - len - 1, len);
+      string insert_string = qseq_string.substr(qpos - 1, len);
+      if (previous_string == insert_string)
+      {
+        //cout << a.read_name() << endl;
+        rpos -= len;
+        i++;
+        ASSERT(cigar_list[i].first == 'M', "Expected match in cigar string when resolving repeat insert.");
+        cigar_list[i].second += len;
+      }
+    }
 
 		//move up to the next match position
 		while (i < cigar_list.size()) //CIGAR

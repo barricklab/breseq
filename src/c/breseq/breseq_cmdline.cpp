@@ -986,8 +986,6 @@ int breseq_default_action(int argc, char* argv[])
     ref_seq_info.LoadFiles(settings.reference_file_names);
     ref_seq_info.WriteFASTA(settings.reference_fasta_file_name);
     ref_seq_info.WriteGFF(settings.reference_gff3_file_name);
-    // @JEB - Once GFF3 reading and writing works, deprecate using FeatureTable format
-    //ref_seq_info.WriteFeatureTable(settings.reference_features_file_name);
 
     //Check the FASTQ format and collect some information about the input read files at the same time
 		cerr << "  Analyzing fastq read files..." << endl;
@@ -1047,7 +1045,7 @@ int breseq_default_action(int argc, char* argv[])
   // Calculate the total reference sequence length
   summary.sequence_conversion.total_reference_sequence_length = ref_seq_info.total_length();
   
-  // @JEB -- This is a bit of an ugly wart.
+  // @JEB -- This is a bit of an ugly wart from when converting the input file was optional.
 	// reload certain information into $settings from $summary
 	for (map<string, AnalyzeFastq>::iterator it = summary.sequence_conversion.reads.begin(); it != summary.sequence_conversion.reads.end(); it++)
 	{
@@ -1055,8 +1053,6 @@ int breseq_default_action(int argc, char* argv[])
 		if (it->second.converted_fastq_name.size() > 0)
 			settings.read_files.read_file_to_converted_fastq_file_name_map[read_file] = it->second.converted_fastq_name;
 	}
-	settings.max_read_length = summary.sequence_conversion.max_read_length;
-	settings.max_smalt_diff = (settings.max_read_length / 2); // @JEB unused?
 
 	//
   // 02_reference_alignment
