@@ -258,8 +258,8 @@ class alignment_wrapper {
 };
   
 /*! class pileup_alignment
- Represents a single alignment within a pileup.
- Inherits al methods of alignment, and adds additional ones that get information about pileup position.
+ @abstract Represents a single alignment within a pileup.
+ Inherits all methods of alignment, and adds additional ones that get information about pileup position.
  This is purely a WRAPPER class. It does not allocate memory.
  */  
     
