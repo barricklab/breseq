@@ -311,7 +311,6 @@ public:
   
   //! Write the genome diff to a file.
   void write(const string& filename);
-  void write(const string& filename, Summary& summary, const Settings& settings); //! Used for gathering/analyzing breseq data
 
   //! Remove items used as evidence by any mutations out of input list
   diff_entry_list filter_used_as_evidence(const diff_entry_list& list);
@@ -346,6 +345,8 @@ public:
 
   void strcopy(char* arg1, const char* arg2);
 
+  void add_breseq_data(const key_t& key, const string& value);
+
   //! Metadata kept in .gd files
   struct Metadata
   {
@@ -354,6 +355,7 @@ public:
     string author;
     string ref_seq;
     vector<string> read_seq;
+    map<string,string> breseq_data; // Use this to write values from pipeline to gd
   };
 
   Metadata metadata;

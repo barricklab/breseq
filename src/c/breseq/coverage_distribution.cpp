@@ -22,6 +22,13 @@ LICENSE AND COPYRIGHT
 using namespace std;
 
 namespace breseq {
+  /*! fit
+    @abstract Function for the interaction with R using the script coverage_distribution.r
+    @param settings Used for file_paths
+    @param distribution_file_name Input file for R, created by error_count() and saved as *.unique_only_coverage_distribution.tab
+    @param plot_file Output by R
+    @return vector<string> Each line contains a parameter set by R
+    !*/
 
 	vector<string> CoverageDistribution::fit(Settings& settings, string distribution_file_name, string plot_file, double deletion_propagation_pr_cutoff, double junction_coverage_pr_cutoff, double junction_accept_pr_cutoff, double junction_keep_pr_cutoff, double junction_max_score)
 	{
@@ -55,7 +62,15 @@ namespace breseq {
 		return(lines);
 	}
 
-	// helper functions
+  // helper functions
+  /*! analyze_unique_coverage_distribution
+    @abstract Assigns variables to be sent off to the R script coverage_distribution.r
+
+
+    @param settings
+    @param summary
+    @param ref_seq_info
+    !*/
 
 	void CoverageDistribution::analyze_unique_coverage_distribution(Settings& settings, Summary& summary, cReferenceSequences& ref_seq_info, string seq_id, string plot_key, string distribution_file_name)
 	{
@@ -87,10 +102,10 @@ namespace breseq {
 
 		/// NEW JUNCTION COVERAGE CUTOFFS
 		// Arbitrary value that seems to work....
-		double junction_coverage_pr_cutoff = static_cast<double>(1.0)/sequence_length; //# *0.05
+    double junction_coverage_pr_cutoff = static_cast<double>(1.0)/sequence_length; //# *0.05 @GRC JC
 
 		// We really want somewhere between these two, try this...
-		double junction_accept_pr_cutoff = 0.01;
+    double junction_accept_pr_cutoff = 0.01;
 		double junction_keep_pr_cutoff = 0.01 / sqrt(sequence_length);
 		int32_t junction_max_score = int(2 * summary.sequence_conversion.avg_read_length);
 

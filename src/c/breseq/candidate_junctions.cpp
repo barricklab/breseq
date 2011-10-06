@@ -962,7 +962,12 @@ namespace breseq {
 
 	// Public
 
-	/*! Preprocesses alignments
+  /*! Preprocesses alignments
+    @abstract Loops through each read alignment for the reference, creates a tam file storing the raw alignments to the reference for each
+    read. Then loops through each read alignment in the tam file and assigns it to either the BSAM or PSAM file determined by:
+        _eligible_read_alignments() -> BSAM, best alignments
+        _split_indel_alignments() -> PSAM, split alignments
+    @param
 	 */
 	void CandidateJunctions::preprocess_alignments(const Settings& settings, Summary& summary, const cReferenceSequences& ref_seq_info)
 	{
@@ -1006,7 +1011,7 @@ namespace breseq {
         }
         
 				// write best alignments
-        int32_t best_score = _eligible_read_alignments(settings, ref_seq_info, alignments);
+        int32_t best_score = _eligible_read_alignments(settings, ref_seq_info, alignments);//TODO not used, track for statistics?
         BSAM.write_alignments(0, alignments, NULL);
       }
     }
