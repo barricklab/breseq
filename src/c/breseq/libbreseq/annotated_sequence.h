@@ -37,7 +37,6 @@ namespace breseq {
   
   
 	/*! Sequence Feature class.
-
 	 */ 
 
   // Currently everything is stored as strings...
@@ -64,7 +63,6 @@ namespace breseq {
     //  "alias" GenBank (locus_tag) | GFF (alias)
     //      string
     //  
-    
     
     public:
 
@@ -145,7 +143,6 @@ namespace breseq {
       cSequenceFeatureList m_features;    //!< Full list of sequence features
       cSequenceFeatureList m_genes;       //!< Subset of features
       cSequenceFeatureList m_repeats;     //!< Subset of features
-
     
     public:
     
@@ -158,15 +155,15 @@ namespace breseq {
         m_features(0) {} ;
     
       // Utility to get top strand sequence
-      string get_sequence_1(uint32_t start_1, uint32_t end_1) 
+      string get_sequence_1(uint32_t start_1, uint32_t end_1) const
       {
-        ASSERT(start_1 <= end_1, "start (" + to_string(start_1) + ")not less than or equal to end(" + to_string(end_1) + ")");
+        ASSERT(start_1 <= end_1, "start (" + to_string(start_1) + ") not less than or equal to end (" + to_string(end_1) + ")");
         return m_fasta_sequence.m_sequence.substr(start_1-1, end_1-start_1+1);
       }
 
       void replace_sequence_1(uint32_t start_1, uint32_t end_1, const string &replacement_seq)
       {
-        ASSERT(start_1 <= end_1, "start (" + to_string(start_1) + ")not less than or equal to end(" + to_string(end_1) + ")");
+        ASSERT(start_1 <= end_1, "start (" + to_string(start_1) + ") not less than or equal to end (" + to_string(end_1) + ")");
         m_fasta_sequence.m_sequence.replace(start_1-1, end_1-start_1+1, replacement_seq);
       }
 
@@ -300,9 +297,14 @@ namespace breseq {
 
     
     //!< Utility to get sequences by seq_id
-    string get_sequence_1(const string& seq_id, uint32_t start_1, uint32_t end_1) 
+    string get_sequence_1(const string& seq_id, uint32_t start_1, uint32_t end_1)
     {
       return (*this)[seq_id].get_sequence_1(start_1, end_1);
+    }
+    
+    string get_sequence_1(uint32_t tid, uint32_t start_1, uint32_t end_1) const
+    {
+      return (*this)[tid].get_sequence_1(start_1, end_1);
     }
 
     void replace_sequence_1(const string& seq_id, uint32_t start_1, uint32_t end_1, const string& replacement_seq)
@@ -347,7 +349,7 @@ namespace breseq {
     
     static map<string,char> translation_table_11;
 
-    static cSequenceFeature* find_closest_repeat_region(uint32_t position, vector<cSequenceFeaturePtr>& repeat_list_ref, uint32_t max_distance, int32_t direction);
+    static cSequenceFeature* find_closest_repeat_region_boundary(uint32_t position, vector<cSequenceFeaturePtr>& repeat_list_ref, int32_t max_distance, int32_t direction);
     static cSequenceFeature* get_overlapping_feature(vector<cSequenceFeaturePtr>& feature_list_ref, uint32_t pos);
     static char translate(string seq);
     static void find_nearby_genes(
@@ -391,7 +393,7 @@ namespace breseq {
     
   /*! Utility functions.
   */
-  std::string GetWord(string &s);
+  string GetWord(string &s);
   void RemoveLeadingWhitespace(string &s);
   void RemoveLeadingTrailingWhitespace(string &s);
 

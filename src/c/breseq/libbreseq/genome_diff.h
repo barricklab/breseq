@@ -210,7 +210,7 @@ struct diff_entry {
 
   //! Returns values for diff_entry["reject"]
   vector<string> get_reject_reasons();
-  
+
   size_t number_reject_reasons();
   int32_t mutation_size_change(cReferenceSequences& ref_seq_info);
 

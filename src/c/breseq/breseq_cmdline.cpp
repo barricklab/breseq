@@ -785,7 +785,7 @@ int do_preprocess_alignments(int argc, char* argv[]) {
 	cReferenceSequences ref_seqs;
 	ref_seqs.ReadFASTA(settings.reference_fasta_file_name);
 
-	CandidateJunctions::preprocess_alignments(settings, summary, ref_seqs);
+	PreprocessAlignments::preprocess_alignments(settings, summary, ref_seqs);
 
   } catch(...) {
 		// failed;
@@ -1149,7 +1149,7 @@ int breseq_default_action(int argc, char* argv[])
 
 			if (settings.do_step(settings.preprocess_junction_done_file_name, "Preprocessing alignments for candidate junction identification"))
 			{
-				CandidateJunctions::preprocess_alignments(settings, summary, ref_seq_info);
+				PreprocessAlignments::preprocess_alignments(settings, summary, ref_seq_info);
 				settings.done_step(settings.preprocess_junction_done_file_name);
 			}
 		}
@@ -1738,10 +1738,12 @@ int breseq_default_action(int argc, char* argv[])
     
 		diff_entry_list jc = gd.filter_used_as_evidence(gd.list(jc_types));
 	  
-    for (it = jc.begin(); it != jc.end(); it++)
+    for (it = jc.begin(); it != jc.end(); )
     {
       if (((*it)->number_reject_reasons() == 0))
-        jc.erase(it--);
+        it = jc.erase(it);
+      else
+        it++;
     }
     
     jc.sort(diff_entry::by_scores(make_list<diff_entry::key_t>("pos_hash_score")("total_non_overlap_reads")));

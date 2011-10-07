@@ -686,14 +686,11 @@ namespace breseq
 
 			map<int32_t, int32_t> pos_hash_score_distribution;
 
-			map<string, map<string, int32_t> > read_file;
-
       void serialize(ofstream& f)
       {
         write_to_file(f, total);
         write_to_file(f, accepted);
 				write_to_file(f, pos_hash_score_distribution);
-				write_to_file(f, read_file);
       }
       
       void deserialize(ifstream& f)
@@ -701,7 +698,6 @@ namespace breseq
         read_from_file(f, total);
         read_from_file(f, accepted);
 				read_from_file(f, pos_hash_score_distribution);
-				read_from_file(f, read_file);
       }
 
 		} candidate_junction;

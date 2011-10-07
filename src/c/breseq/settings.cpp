@@ -235,7 +235,7 @@ namespace breseq
     // Alignment options    
     this->require_complete_match = (options.count("require-complete-match") > 0);
     this->require_match_length = from_string<uint32_t>(options["require-match-length"]);
-    this->require_match_fraction = from_string<uint32_t>(options["require-match-fraction"]);
+    this->require_match_fraction = from_string<double>(options["require-match-fraction"]);
 
     //// GENBANK REFERENCE FILES ////
     this->reference_file_names = from_string<vector<string> >(options["reference"]);

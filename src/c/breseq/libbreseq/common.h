@@ -204,7 +204,7 @@ namespace breseq {
       if (message.length() > 0) cerr << message << endl;
       cerr << "FILE: " << file << "   LINE: " << line << endl;
       cerr << "!!!!!!!!!!!!!!!!!!!!!!!> FATAL ERROR <!!!!!!!!!!!!!!!!!!!!!!!" << endl;
-      exit(-1);
+      assert(false);
     }
   }
   
@@ -601,18 +601,18 @@ namespace breseq {
 		map<uint32_t, uint32_t> read_begin_hash;
 
 		struct TestInfo {
-			uint32_t max_left;
-			uint32_t max_left_minus;
-			uint32_t max_left_plus;
-			uint32_t max_right;
-			uint32_t max_right_minus;
-			uint32_t max_right_plus;
-			uint32_t max_min_right;
-			uint32_t max_min_right_minus;
-			uint32_t max_min_right_plus;
-			uint32_t max_min_left;
-			uint32_t max_min_left_minus;
-			uint32_t max_min_left_plus;
+			int32_t max_left;
+			int32_t max_left_minus;
+			int32_t max_left_plus;
+			int32_t max_right;
+			int32_t max_right_minus;
+			int32_t max_right_plus;
+			int32_t max_min_right;
+			int32_t max_min_right_minus;
+			int32_t max_min_right_plus;
+			int32_t max_min_left;
+			int32_t max_min_left_minus;
+			int32_t max_min_left_plus;
 			uint32_t coverage_minus;
 			uint32_t coverage_plus;
 			uint32_t total_non_overlap_reads;

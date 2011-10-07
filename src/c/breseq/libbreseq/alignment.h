@@ -199,6 +199,8 @@ class alignment_wrapper {
     //  that are the same base.
     uint32_t base_repeat_0(uint32_t q_pos_0) const;
   
+    void num_matches_from_end(const cReferenceSequences& ref_seq_info, bool dir, int32_t overlap, int32_t& qry_mismatch_pos, int32_t& ref_mismatch_pos);
+  
     //! Operations on CIGAR match string
     inline uint32_t* cigar_array() const { return bam1_cigar(_a); }
     inline uint32_t cigar_array_length() const { return _a->core.n_cigar; }

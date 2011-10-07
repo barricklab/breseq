@@ -128,7 +128,7 @@ namespace breseq {
 			{
 				string side_key = "side_" + s(side);
 
-				cSequenceFeature* is = ref_seq_info.find_closest_repeat_region(
+				cSequenceFeature* is = ref_seq_info.find_closest_repeat_region_boundary(
 					n(j[side_key + "_position"]),
 					ref_seq_info[j[side_key + "_seq_id"]].m_repeats,
 					max_distance_to_repeat,
@@ -222,6 +222,9 @@ namespace breseq {
     {
       diff_entry& mc_item = **mc_it;
       
+      if (verbose)
+        cout << mc_item << endl;
+      
 			if (mc_item.entry_exists("reject"))
 			  continue;
 
@@ -293,9 +296,10 @@ namespace breseq {
           }    
                       
 					mut._evidence.push_back(jc_item._id);
-					jc.erase(jc_it);
-          jc_it--;
+					jc_it = jc.erase(jc_it);
 					gd.add(mut);
+          if (verbose)
+            cout << "**** Junction precisely matching deletion boundary found ****\n";
 					continue;
 				}
 			}
@@ -346,12 +350,15 @@ namespace breseq {
 				// remember the name of the element
 				mut["between"] = r1["name"];
 				gd.add(mut);
-				continue;
+        
+        if (verbose)
+          cout << "**** Ends of junction in copies of same repeat element ****\n";
+				continue; // to next mc_item
 			}
 
 			// Both sides were unique or redundant, nothing more we can do...
 			if ( (r1_pointer == NULL && r2_pointer == NULL) || (r1_pointer != NULL && r2_pointer != NULL) )
-				continue;
+				continue; // to next mc_item
 
 			///
 			// (3) there is a junction between unique sequence and a repeat element
@@ -367,7 +374,10 @@ namespace breseq {
 			for(diff_entry_list::iterator jc_it = jc.begin(); jc_it != jc.end(); jc_it++) //JUNCTION
 			{
 				diff_entry& j = **jc_it;
-
+        
+        if (verbose)
+          cout << j << endl;
+        
 				if (!j.entry_exists("_is_interval")) continue;
 
 				if (verbose)
@@ -426,12 +436,16 @@ namespace breseq {
 				// OK, we're good!
 				mut["mediated"] = r["name"];
 				mut._evidence.push_back(j._id);
-				jc.erase(jc_it);
-        jc_it--;
+				jc_it = jc.erase(jc_it);
 				gd.add(mut);
 				ok_were_good = true;
+        
+        if (verbose)
+          cout << "**** Junction with repeat element corresponding to deletion boundaries found ****\n";
+
+        break; // done looking at jc_items
 			}
-			if (ok_were_good) continue;
+			if (ok_were_good) continue;  // to next mc_item
 		}
 
 
@@ -538,8 +552,7 @@ namespace breseq {
 				int32_t is2_strand = - (n(j2[j2["_is_interval"] + "_strand"]) * n(j2["_" + j2["_is_interval"] + "_is_strand"]) * n(j2[j2["_unique_interval"] + "_strand"]));
 
 				// Remove these predictions from the list
-				jc.erase(jc1_it);
-        jc1_it--;
+				jc1_it = jc.erase(jc1_it);
 				jc.erase(it_delete_list_2[i]);
 
 				// Create the mutation, with evidence
@@ -863,7 +876,7 @@ namespace breseq {
         // print out everything
         if (verbose)
         {
-          cout << "== J1 ==" << endl;
+          cout << "== J1 ==" << endl << j1 << endl;
           for(map<string,string>::iterator it=j1._fields.begin(); it!=j1._fields.end(); it++)
           {
             cout << it->first << " = " << it->second << endl; 

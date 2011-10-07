@@ -207,13 +207,9 @@ void resolve_alignments(
 				for (alignment_list::iterator it = this_junction_alignments.begin(); it != this_junction_alignments.end(); )
         {
 					if (!_alignment_overlaps_junction(junction_info_list, it->get()))
-          {
-						this_junction_alignments.erase(it++);
-          }
+						it = this_junction_alignments.erase(it);
           else
-          {
             it++; 
-          }
         }
 
 				best_junction_score = _eligible_read_alignments(settings, junction_ref_seq_info, this_junction_alignments);
@@ -563,26 +559,22 @@ uint32_t _eligible_read_alignments(const Settings& settings, const cReferenceSeq
 	if (alignments.size() == 0) return 0;
 
   // require read to be mapped! -- @JEB maybe this should be checked sooner?
-	for (alignment_list::iterator it = alignments.begin(); it != alignments.end(); it++)
+	for (alignment_list::iterator it = alignments.begin(); it != alignments.end();)
   {
     if (it->get()->unmapped())
-    {
-      alignments.erase(it);
-    }
+      it = alignments.erase(it);
+    else
+      it++;
   }
   if (alignments.size() == 0) return 0;
   
 	// require a minimum length of the read to be mapped
-	for (alignment_list::iterator it = alignments.begin(); it != alignments.end(); )
+	for (alignment_list::iterator it = alignments.begin(); it != alignments.end();)
   {
 		if ( !_test_read_alignment_requirements(settings, ref_seq_info, *(it->get())) )
-    {
-			alignments.erase(it++);
-    }
+			it = alignments.erase(it);
     else
-    {
       it++;
-    }
   }
 	if (alignments.size() == 0) return 0;
 
@@ -669,11 +661,11 @@ bool _test_read_alignment_requirements(const Settings& settings, const cReferenc
 	bool accept = true;
 
 	if (a.unmapped()) return false;
-
+  
   if (a.query_match_length() < settings.require_match_length)
     return false;
   
-  if (a.query_match_length() < settings.require_match_fraction * a.read_length() )
+  if (a.query_match_length() < settings.require_match_fraction * static_cast<double>(a.read_length()) )
     return false;
 
 	if (settings.require_complete_match)
@@ -778,11 +770,11 @@ bool _test_junction(const Settings& settings, Summary& summary, const string& ju
 	}
 
 	//// TEST 1: Reads that go a certain number of bp into the nonoverlap sequence on each side of the junction on each strand
-	map<bool,uint32_t> max_left_per_strand = make_map<bool,uint32_t>(true,0)(false,0);
-	map<bool,uint32_t> max_right_per_strand = make_map<bool,uint32_t>(true,0)(false,0);
-	map<bool,uint32_t> max_min_left_per_strand = make_map<bool,uint32_t>(true,0)(false,0);
-	map<bool,uint32_t> max_min_right_per_strand = make_map<bool,uint32_t>(true,0)(false,0);
-	map<bool,uint32_t> count_per_strand = make_map<bool,uint32_t>(true,0)(false,0);
+	map<bool,int32_t> max_left_per_strand = make_map<bool,int32_t>(true,0)(false,0);
+	map<bool,int32_t> max_right_per_strand = make_map<bool,int32_t>(true,0)(false,0);
+	map<bool,int32_t> max_min_left_per_strand = make_map<bool,int32_t>(true,0)(false,0);
+	map<bool,int32_t> max_min_right_per_strand = make_map<bool,int32_t>(true,0)(false,0);
+	map<bool,int32_t> count_per_strand = make_map<bool,int32_t>(true,0)(false,0);
 	uint32_t total_non_overlap_reads = 0;
 	map<int32_t,bool> pos_hash[2];
   uint32_t pos_hash_count(0);
@@ -808,16 +800,12 @@ bool _test_junction(const Settings& settings, Summary& summary, const string& ju
 	for (uint32_t i = 0; i < items.size(); i++) // READ (loops over unique_matches, degenerate_matches)
 	{
 		MatchedJunction* item = items[i];
-		//!!> Matches that don't extend through the overlap region will have the same quality
-		//!!> as a reference match and, therefore, no difference in mapping quality
-		//!!> do not count these toward scoring!
+    
+		//!!> Do not count reads that map the reference equally well toward the score.
 		if (item->mapping_quality_difference == 0) {
       if (verbose) cout << "  Degenerate:" << item->junction_alignments.front()->read_name() << endl;
      continue; 
     }
-
-		total_non_overlap_reads++;
-		has_non_overlap_alignment = true;
 
 		//If there were no degenerate matches, then we could just take the
 		//one and only match in the 'junction_alignments' array
@@ -835,6 +823,24 @@ bool _test_junction(const Settings& settings, Summary& summary, const string& ju
 		}
 		assert(a != NULL);
 
+    // FIRST, check to be sure that this read overlaps the junction.
+    // this_left and this_right are how far it extends into each side (past any overlap)
+    
+    // The left side goes exactly up to the flanking length
+		int32_t this_left = flanking_left + 1;
+		this_left -= a->reference_start_1();
+    
+		// The right side starts after moving past any overlap (negative or positive)
+		int32_t this_right = flanking_left + 1;
+		this_right += abs(overlap);
+		this_right = a->reference_end_1() - this_right + 1;
+    
+    if ((this_right <= 0) || (this_left <= 0)) continue;
+    
+    // ok, it overlapped, we can count it
+    total_non_overlap_reads++;
+    has_non_overlap_alignment = true;
+    
 		bool rev_key = a->reversed();
 		count_per_strand[rev_key]++;
 
@@ -866,45 +872,35 @@ bool _test_junction(const Settings& settings, Summary& summary, const string& ju
 
 		if (verbose)
 			cout << "  " << item->junction_alignments.front()->read_name() << ' ' << static_cast<int32_t>(rev_key) << ' ' << begin_coord << ' ' << end_coord << ' ' << begin_read_coord << ' ' << end_read_coord << endl;
+      
+    // Update:
+    // Score = the minimum unique match length on a side
+    // Max_Min = the maximum of the minimum length match sides
+    // Max = the maximum match on a side
+    // Note that the max and min filtering is really a kind of poor man's KS test
+    //   if we implemented that with a certain coverage cutoff it would be a
+    //   more principled way of doing things...
+    if (this_left < this_right) {
+      if (max_min_left_per_strand[rev_key] < this_left)
+        max_min_left_per_strand[rev_key] = this_left;
+    }
+    else
+    {
+      if (max_min_right_per_strand[rev_key] < this_right)
+        max_min_right_per_strand[rev_key] = this_right;
+    }
 
-		// The left side goes exactly up to the flanking length
-		uint32_t this_left = flanking_left + 1;
-		this_left -= a->reference_start_1();
-
-		// The right side starts after moving past any overlap (negative or positive)
-		uint32_t this_right = flanking_left + 1;
-		this_right += abs(overlap);
-		this_right = a->reference_end_1() - this_right + 1;
-
-		// Update:
-		// Score = the minimum unique match length on a side
-		// Max_Min = the maximum of the minimum length match sides
-		// Max = the maximum match on a side
-		// Note that the max and min filtering is really a kind of poor man's KS test
-		//   if we implemented that with a certain coverage cutoff it would be a
-		//   more principled way of doing things...
-		if (this_left < this_right) {
-			if (max_min_left_per_strand[rev_key] < this_left)
-				max_min_left_per_strand[rev_key] = this_left;
-		}
-		else
-		{
-			if (max_min_right_per_strand[rev_key] < this_right)
-				max_min_right_per_strand[rev_key] = this_right;
-		}
-
-		if (max_left_per_strand[rev_key] < this_left)
-			max_left_per_strand[rev_key] = this_left;
-		if (max_right_per_strand[rev_key] < this_right)
-			max_right_per_strand[rev_key] = this_right;
-
+    if (max_left_per_strand[rev_key] < this_left)
+      max_left_per_strand[rev_key] = this_left;
+    if (max_right_per_strand[rev_key] < this_right)
+      max_right_per_strand[rev_key] = this_right;
 	}
 
-	uint32_t max_left = max(max_left_per_strand[false], max_left_per_strand[true]);
-	uint32_t max_right = max(max_right_per_strand[false], max_right_per_strand[true]);
+	int32_t max_left = max(max_left_per_strand[false], max_left_per_strand[true]);
+	int32_t max_right = max(max_right_per_strand[false], max_right_per_strand[true]);
 
-	uint32_t max_min_left = max(max_min_left_per_strand[false], max_min_left_per_strand[true]);
-	uint32_t max_min_right = max(max_min_right_per_strand[false], max_min_right_per_strand[true]);
+	int32_t max_min_left = max(max_min_left_per_strand[false], max_min_left_per_strand[true]);
+	int32_t max_min_right = max(max_min_right_per_strand[false], max_min_right_per_strand[true]);
 
 	// Save the test info about this junction.
 	CandidateJunction::TestInfo test_info = {
@@ -936,9 +932,9 @@ bool _test_junction(const Settings& settings, Summary& summary, const string& ju
 	// and, naturally, they have problems with scaling with the
 	// total number of reads...
 
-	uint32_t alignment_on_each_side_cutoff = 14; //16
-	uint32_t alignment_on_each_side_cutoff_per_strand = 9; //13
-	uint32_t alignment_on_each_side_min_cutoff = 3;
+	int32_t alignment_on_each_side_cutoff = 14; //16
+	int32_t alignment_on_each_side_cutoff_per_strand = 9; //13
+	int32_t alignment_on_each_side_min_cutoff = 3;
 
 	bool failed = (max_left < alignment_on_each_side_cutoff)
 				|| (max_right < alignment_on_each_side_cutoff)
@@ -1094,8 +1090,7 @@ bool _test_junction(const Settings& settings, Summary& summary, const string& ju
       }
 
       // REGARDLESS of success: write matches to the candidate junction SAM file
-      //if (has_non_overlap_alignment) - since it passed, we want to show them all
-        junction_tam.write_alignments(fastq_file_index, item.junction_alignments, NULL, &ref_seq_info, true);
+      junction_tam.write_alignments(fastq_file_index, item.junction_alignments, NULL, &ref_seq_info, true);
     }
   }
 	return !failed;
@@ -1133,7 +1128,7 @@ diff_entry _junction_to_hybrid_list_item(const string& key, cReferenceSequences&
 	{
 		// Determine IS elements
 		// Is it within an IS or near the boundary of an IS in the direction leading up to the junction?
-		is = cReferenceSequences::find_closest_repeat_region(jc.sides[i].position, ref_seq_info[jc.sides[i].seq_id].m_repeats, 200, jc.sides[i].strand);
+		is = cReferenceSequences::find_closest_repeat_region_boundary(jc.sides[i].position, ref_seq_info[jc.sides[i].seq_id].m_repeats, 20, jc.sides[i].strand);
 		if (is != NULL)
 		{
 			jc.sides[i].is.name = is->SafeGet("name");

@@ -36,7 +36,7 @@
       displayScale = "1.00"
       launchStyle = "0"
       useCustomWorkingDirectory = "YES"
-      customWorkingDirectory = "/Users/jbarrick/tmp/JEB807_KL-01_t550"
+      customWorkingDirectory = "/Users/jbarrick/tmp/caroline"
       buildConfiguration = "Debug">
       <BuildableProductRunnable>
          <BuildableReference
@@ -49,7 +49,7 @@
       </BuildableProductRunnable>
       <CommandLineArguments>
          <CommandLineArgument
-            argument = "-r REL606.gbk -n JEB807_KL-01_t550 6246LAAXX_1_1_pf_ATAT.fastq 6246LAAXX_2_1_pf_ATAT.fastq 6246LAAXX_3_1_pf_ATAT.fastq"
+            argument = "-r /Users/jbarrick/db/lenski/REL606.gbk CT-A_TGACCA_L002_R1_001_pf.fastq CT-A_TGACCA_L004_R1_001_pf.fastq CT-A_TGACCA_L006_R1_001_pf.fastq CT-A_TGACCA_L008_R1_001_pf.fastq"
             isEnabled = "YES">
          </CommandLineArgument>
       </CommandLineArguments>

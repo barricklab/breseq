@@ -28,8 +28,43 @@ using namespace std;
 
 namespace breseq {
 
-	typedef std::map<string, string> map_t;
-
+  class PreprocessAlignments
+  {
+  public:
+    /*! Preprocesses alignments
+		 */
+		static void preprocess_alignments(const Settings& settings, Summary& summary, const cReferenceSequences& ref_seq_info);
+    static void split_alignments_on_indels(const Settings& settings, Summary& summary, tam_file& PSAM, int32_t min_indel_split_len, const alignment_list& alignments);
+  };
+  
+  /*! Structure for storing and testing whether alignment pairs support new junctions
+   */
+  class AlignmentPair
+  {
+  public:
+    bam_alignment	a1;
+    bam_alignment a2;
+    int32_t union_length;
+    int32_t a1_unique_length;
+    int32_t a2_unique_length;
+    bool pass;
+    int32_t intersection_length;
+    int32_t a1_length;
+    int32_t a2_length;
+    int32_t redundancy_1;
+    int32_t redundancy_2;
+    
+    // the constructor - also calculates statistics
+    AlignmentPair(bam_alignment& _a1, bam_alignment& _a2, const Settings& settings);
+    
+  private:
+    void calculate_union_and_unique();
+    
+    //! determines whether a read pair passes
+    bool test(const Settings& settings);
+    
+  };
+  
 	class CandidateJunctions
 	{
 	public:
@@ -48,34 +83,29 @@ namespace breseq {
 			uint32_t flanking_right;
 		};
 
-		struct PassedPair
-		{
-			bam_alignment	a1;
-			bam_alignment a2;
-			int32_t union_length;
-			int32_t a1_unique_length;
-			int32_t a2_unique_length;
-		};
-
-		/*! Preprocesses alignments
-		 */
-		static void preprocess_alignments(const Settings& settings, Summary& summary, const cReferenceSequences& ref_seq_info);
-
 		/*! Predicts candidate junctions
 		 */
 		static void identify_candidate_junctions(const Settings& settings, Summary& summary, const cReferenceSequences& ref_seq_info);
 
 	private:
 
-		CandidateJunctions();
+    
+    /*! Sorting functions
+     */
+    typedef std::map<string, string> map_t;
 
-		struct JunctionInfoContainer
+    static void _by_ref_seq_coord(map_t a, map_t b, map_t ref_seq_info);
+		static void _by_score_unique_coord(map_t a, map_t b);
+
+    struct SingleCandidateJunction
 		{
 			JunctionInfo list;
 			string str;
 			uint32_t read_begin_coord;
 			string side_1_ref_seq;
 			string side_2_ref_seq;
+      string junction_coord_1;
+      string junction_coord_2;
 		};
 		struct CombinedCandidateJunction
 		{
@@ -83,7 +113,7 @@ namespace breseq {
 			uint32_t pos_hash_score;
 			string seq;
 			string rc_seq;
-
+      
 			// Sort by unique coordinate, then redundant (or second unique) coordinate to get reliable ordering for output
 			static bool sort_by_score_unique_coord(const CombinedCandidateJunction& a, const CombinedCandidateJunction &b)
 			{
@@ -91,12 +121,12 @@ namespace breseq {
 				int32_t a_uc = a_item.sides[0].position;
 				int32_t a_rc = a_item.sides[1].position;
 				if (a_item.sides[0].redundant != 0) swap(a_uc, a_rc);
-
+        
 				JunctionInfo b_item = junction_name_split(b.id);
 				int32_t b_uc = b_item.sides[0].position;
 				int32_t b_rc = b_item.sides[1].position;
 				if (b_item.sides[0].redundant != 0) swap(b_uc, b_rc);
-
+        
 				if (b.pos_hash_score != a.pos_hash_score)
 					return (b.pos_hash_score < a.pos_hash_score);
 				else if (a_uc != b_uc)
@@ -104,7 +134,7 @@ namespace breseq {
 				else
 					return (a_rc < b_rc);
 			}
-
+      
 			static bool sort_by_scores_and_seq_length(const CombinedCandidateJunction& a, const CombinedCandidateJunction &b)
 			{
 				if (b.pos_hash_score != a.pos_hash_score)
@@ -112,28 +142,34 @@ namespace breseq {
 				else
 					return (a.seq.size() < b.seq.size());
 			}
-
+      
 			static bool sort_by_ref_seq_coord(const CombinedCandidateJunction& a, const CombinedCandidateJunction &b)
 			{
 				JunctionInfo acj = junction_name_split(a.id);
 				JunctionInfo bcj = junction_name_split(b.id);
 				//TODO: Uncomment this code after supplying it with a ref_seq_info with a seq_order field
 				/*if (ref_seq_info.seq_order[acj.sides[0].seq_id] != ref_seq_info.seq_order[bcj.sides[0].seq_id])
-					return (ref_seq_info.seq_order[acj.sides[0].seq_id] < ref_seq_info.seq_order[bcj.sides[0].seq_id]);
-				else*/
-					return (acj.sides[0].position < bcj.sides[0].position);
+         return (ref_seq_info.seq_order[acj.sides[0].seq_id] < ref_seq_info.seq_order[bcj.sides[0].seq_id]);
+         else*/
+        return (acj.sides[0].position < bcj.sides[0].position);
 			}
 		};
-
-		static bool _alignments_to_candidate_junction(const Settings& settings, Summary& summary, const cReferenceSequences& ref_seq_info, bam_alignment& a1, bam_alignment& a2,
-														int32_t& redundancy_1, int32_t& redundancy_2, string& junction_seq_string, string& ref_seq_matched_1, string& ref_seq_matched_2, string& junction_coord_1, string& junction_coord_2, int32_t& read_begin_coord, JunctionInfo& junction_id_list);
-		static void _alignments_to_candidate_junctions(const Settings& settings, Summary& summary,  const cReferenceSequences& ref_seq_info, map<string, map<string, CandidateJunction>, CandidateJunction::Sorter>& candidate_junctions, alignment_list& alignments);
-		static bool _check_read_pair_requirements(const Settings& settings, int32_t a1_start, int32_t a1_end, int32_t a2_start, int32_t a2_end, int32_t& a1_unique_length, int32_t& a2_unique_length, int32_t& union_length);        
-		static void _num_matches_from_end(alignment_wrapper& a, const string& refseq_str, bool dir, int32_t overlap, int32_t& qry_mismatch_pos, int32_t& ref_mismatch_pos);
-		static void _split_indel_alignments(const Settings& settings, Summary& summary, tam_file& PSAM, int32_t min_indel_split_len, const alignment_list& alignments);
-		static void _by_ref_seq_coord(map_t a, map_t b, map_t ref_seq_info);
-		static void _by_score_unique_coord(map_t a, map_t b);
-
+    
+    static 	bool alignment_pair_to_candidate_junction(
+                                                  const Settings& settings, 
+                                                  Summary& summary, 
+                                                  const cReferenceSequences& ref_seq_info, 
+                                                  AlignmentPair& ap,
+                                                  SingleCandidateJunction& junction_id_list
+                                                  );
+    
+		static void alignments_to_candidate_junctions(
+                                                  const Settings& settings, 
+                                                  Summary& summary,  
+                                                  const cReferenceSequences& ref_seq_info, 
+                                                  map<string, map<string, CandidateJunction>, CandidateJunction::Sorter>& candidate_junctions, 
+                                                  alignment_list& alignments);
+    
 	}; // class CandidateJunction
 
 } // namespace breseq

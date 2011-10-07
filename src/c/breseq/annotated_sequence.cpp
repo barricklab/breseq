@@ -963,23 +963,22 @@ string cReferenceSequences::repeat_example(const string &repeat_name, int8_t str
   return "";
 }
 
-cSequenceFeature* cReferenceSequences::find_closest_repeat_region(uint32_t position, vector<cSequenceFeaturePtr>& repeat_list_ref, uint32_t max_distance, int32_t direction)
+cSequenceFeature* cReferenceSequences::find_closest_repeat_region_boundary(uint32_t position, vector<cSequenceFeaturePtr>& repeat_list_ref, int32_t max_distance, int32_t direction)
 {
   if (repeat_list_ref.size() == 0) return NULL;
 
   cSequenceFeature* is(NULL);
-  uint32_t best_distance = 0;
+  int32_t best_distance = max_distance + 1; // this enforces the max distance
 
   for (uint32_t i = 0; i < repeat_list_ref.size(); i++) //IS
   {
     cSequenceFeature* test_is = repeat_list_ref[i].get();
     
-    // distance from the appropriate end of the repeat
-    uint32_t test_distance = abs(static_cast<int32_t>(((direction == -1) ? position - test_is->m_end : test_is->m_start - position)));
+    // Distance from the appropriate end of the repeat
+    int32_t test_distance = abs(static_cast<int32_t>(((direction == -1) ? position - test_is->m_end : test_is->m_start - position)));
     
-    // Note the (test_distance <= best_distance) ensures we get the inner copy in nested cases
-    // because it will be encountered later
-    if ((test_distance <= max_distance) && ((is == NULL) || (test_distance < best_distance)) )
+    // We want the closest one without going over that is within max_distance
+    if ( (test_distance >= 0) && (test_distance < best_distance) )
     {
       is = test_is;
       best_distance = test_distance;

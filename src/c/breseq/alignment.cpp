@@ -251,6 +251,117 @@ uint32_t alignment_wrapper::base_repeat_0(uint32_t q_pos_0) const {
   return base_repeat;
 }
   
+void alignment_wrapper::num_matches_from_end(const cReferenceSequences& ref_seq_info, bool dir, int32_t overlap, int32_t& qry_mismatch_pos, int32_t& ref_mismatch_pos)
+{
+  bool verbose = false;
+  
+  // Read
+  // start, end, length  of the matching sequence (in top strand coordinates)
+  uint32_t q_start, q_end;
+  this->query_bounds_1(q_start, q_end);
+  uint32_t q_length = q_end - q_start + 1;
+  
+  bool reversed = this->reversed();
+  
+  // sequence of the matching part of the query (top genomic strand)
+  string q_str = read_char_sequence().substr(q_start - 1, q_length);
+  
+  // Reference
+  // start, end, length of match in reference
+  uint32_t r_start, r_end;
+  this->reference_bounds_1(r_start, r_end);
+  uint32_t r_length = r_end - r_start + 1;
+  
+  // sequence of match in reference (top genomic strand)
+  string r_str = ref_seq_info.get_sequence_1(this->reference_target_id(), r_start, r_end);
+  
+  if (verbose)
+  {
+    cout << "====> Num Matches from End" << endl;
+    cout << this->read_name() << endl;
+    cout << "direction: " << dir << endl;
+    cout << "Read sequence: " << this->read_char_sequence() << endl;
+    cout << "Read Match coords: " << q_start << "-" << q_end << " " << reversed << endl;
+    cout << "Read Match sequence: " << q_str << endl;
+    cout << "Reference Match coords: " << r_start << "-" << r_end << endl;
+    cout << "Reference Match sequence: " << r_str << endl;
+  }
+  
+  if (reversed) dir = !dir;
+  if (!dir)
+  {
+    q_str = reverse_string(q_str);
+    r_str = reverse_string(r_str);
+  }
+  
+  vector<pair<char,uint16_t> > cigar_pair_array = this->cigar_pair_array();
+  
+  char op_0 = cigar_pair_array.front().first;
+  char op_last = cigar_pair_array.back().first;
+  
+  //remove soft padding
+  if (op_0 == BAM_CSOFT_CLIP) cigar_pair_array.erase(cigar_pair_array.begin());
+  if (op_last == BAM_CSOFT_CLIP) cigar_pair_array.erase(cigar_pair_array.end()-1);
+  if (!dir) reverse(cigar_pair_array.begin(), cigar_pair_array.end());
+  
+  qry_mismatch_pos = -1;
+  ref_mismatch_pos = -1;
+  
+  uint32_t positive_overlap = (overlap > 0) ? static_cast<uint32_t>(overlap) : 0;
+  uint32_t r_pos = 0;
+  uint32_t q_pos = 0;
+  uint32_t len_0 = cigar_pair_array.front().second;
+  while ((q_pos < positive_overlap) && (r_pos < r_length) && (q_pos < q_length))
+  {
+    // get rid of previous items...
+    if (len_0 == 0) cigar_pair_array.erase(cigar_pair_array.begin());
+    
+    // subtract one from the length
+    len_0 = cigar_pair_array.front().second;
+    len_0--;
+    cigar_pair_array.front().second = len_0;
+    
+    // handle indels
+    op_0 = cigar_pair_array.front().first;
+    if (op_0 == BAM_CINS)
+    {
+      q_pos++;
+      ref_mismatch_pos = r_pos;
+      qry_mismatch_pos = q_pos;
+    }
+    else if (op_0 == BAM_CDEL)
+    {
+      r_pos++;
+      ref_mismatch_pos = r_pos;
+      qry_mismatch_pos = q_pos;
+    }
+    else
+    {
+      if (q_str[q_pos] != r_str[r_pos])
+      {
+        ref_mismatch_pos = r_pos;
+        qry_mismatch_pos = q_pos;
+      }
+      r_pos++;
+      q_pos++;
+    }
+    
+    if (verbose)
+      cout << r_pos << " " << q_pos << endl;
+  }
+  
+  // make 1 indexed...
+  if (qry_mismatch_pos >= 0) qry_mismatch_pos++;
+  if (ref_mismatch_pos >= 0) ref_mismatch_pos++;
+  
+  if (verbose)
+  {
+    if (qry_mismatch_pos >= 0)
+      cout << "Query Mismatch At = " << qry_mismatch_pos << "Reference Mismatch At = " << ref_mismatch_pos << " | Overlap = " << overlap << endl;
+    cout << "<====" << endl;
+  }
+}
+  
 tam_file::tam_file(const string& tam_file_name, const string& fasta_file_name, ios_base::openmode mode) 
   : bam_header(NULL), input_tam(NULL)
 {
