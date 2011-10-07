@@ -1191,7 +1191,7 @@ int breseq_default_action(int argc, char* argv[])
 					"" //covariates
 				);
 
-				string error_rates_summary_file_name = settings.error_rates_summary_file_name;
+        string error_rates_summary_file_name = settings.error_rates_summary_file_name; //TODO unused
 				CoverageDistribution::analyze_unique_coverage_distributions(settings, summary, ref_seq_info,
 					settings.coverage_junction_plot_file_name, settings.coverage_junction_distribution_file_name);
 
@@ -1693,11 +1693,19 @@ int breseq_default_action(int argc, char* argv[])
 		genome_diff mpgd(settings.evidence_genome_diff_file_name);
     mp.predict(settings, mpgd, summary.sequence_conversion.max_read_length, summary.sequence_conversion.avg_read_length);
 
+    // Add addition values from breseq pipleline to genome diff here.
     if (settings.values_to_gd){
-      mpgd.write(settings.final_genome_diff_file_name, summary, settings);
-    } else {
-      mpgd.write(settings.final_genome_diff_file_name);
+       for (storable_map<string, Coverage>::iterator it = summary.unique_coverage.begin();
+            it != summary.unique_coverage.end(); it ++) {
+         const string& seq_id = it->first;
+         mpgd.add_breseq_data("junction_accept_score_cutoff:" + seq_id,
+                              to_string(summary.unique_coverage[seq_id].junction_accept_score_cutoff));
+       }
+
     }
+
+    mpgd.write(settings.final_genome_diff_file_name);
+
 
 		genome_diff gd(settings.final_genome_diff_file_name);
 		//#unlink $evidence_genome_diff_file_name;
