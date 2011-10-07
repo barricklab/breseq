@@ -21,13 +21,217 @@ LICENSE AND COPYRIGHT
 
 #include "common.h"
 
-#include "resolve_alignments.h"
 #include "alignment.h"
+#include "annotated_sequence.h"
 
 using namespace std;
 
 namespace breseq {
 
+  
+	struct CandidateJunction
+	{
+		int32_t pos_hash_score;
+		map<uint32_t, uint32_t> read_begin_hash;
+    
+		struct TestInfo {
+			int32_t max_left;
+			int32_t max_left_minus;
+			int32_t max_left_plus;
+			int32_t max_right;
+			int32_t max_right_minus;
+			int32_t max_right_plus;
+			int32_t max_min_right;
+			int32_t max_min_right_minus;
+			int32_t max_min_right_plus;
+			int32_t max_min_left;
+			int32_t max_min_left_minus;
+			int32_t max_min_left_plus;
+			uint32_t coverage_minus;
+			uint32_t coverage_plus;
+			uint32_t total_non_overlap_reads;
+			uint32_t pos_hash_score;
+      bool redundant_1;
+      bool redundant_2;
+		} test_info;
+    
+		struct Sorter {
+			bool operator() (const string& lhs, const string& rhs) const { return (lhs < rhs); }
+		};
+	};
+  
+  // @JEB Need to do away with this and use cSequenceFeature instead!
+	struct Feature
+	{
+		string type;
+		string name;
+		uint32_t start;
+		uint32_t end;
+		bool strand;
+		string product;
+		string pseudogene;
+		string cds;
+		string note;
+    
+		string interval;
+		string side_key;
+    
+    Feature()
+    {
+      start = 0;
+      end = 0;
+      strand = false;
+    }
+	};
+  
+  const string junction_name_separator = "__";
+  
+	struct JunctionInfo
+	{
+    
+		struct Side
+		{
+			string seq_id;
+			int32_t position;
+			int32_t strand;
+			int32_t redundant;
+      
+			// Extended properties for resolve_alignments.cpp
+			Feature is;
+			bool read_side;
+			int32_t overlap;
+      
+      Side()
+      {
+        position = 0;
+        strand = 0;
+        redundant = 0;
+        read_side = false;
+        overlap = 0;
+      }
+      
+      Side(const string& _seq_id, int32_t _position, int32_t _strand, int32_t _redundant = false)
+      {
+        seq_id = _seq_id;
+        position = _position;
+        strand = _strand;
+        redundant = _redundant;
+        
+        read_side = false;
+        overlap = 0;
+      }
+      
+      bool operator ==(const Side& side) const
+      {
+        return (this->seq_id == side.seq_id) && (this->position == side.position) && (this->strand == side.strand);
+      }
+      
+		};
+		Side sides[2];
+    
+		int32_t alignment_overlap;
+		string unique_read_sequence;
+		int32_t flanking_left;
+		int32_t flanking_right;
+    
+		// Extended properties for resolve_alignments.cpp
+		string key;
+		int32_t overlap;
+		uint32_t unique_side;
+		uint32_t is_side;
+    
+    //! Create empty JunctionInfo
+    JunctionInfo()
+    {
+      alignment_overlap = 0;
+      flanking_left = 0;
+      flanking_right = 0;
+      overlap = 0;
+      unique_side = 0;
+      is_side = 0;
+    }
+    
+    //! Create a JunctionInfo from supplied parameters
+    JunctionInfo(Side& _side_1, Side& _side_2, int32_t _alignment_overlap, const string& _unique_read_sequence, int32_t _flanking_left, int32_t _flanking_right)
+    {
+      sides[0] = _side_1;
+      sides[1] = _side_2;
+      
+      alignment_overlap = _alignment_overlap;
+      unique_read_sequence = _unique_read_sequence;
+      flanking_left = _flanking_left;
+      flanking_right = _flanking_right;
+      
+      overlap = 0;
+      unique_side = 0;
+      is_side = 0;
+    }
+    
+    //! Deserializes JunctionInfo from a key string
+    JunctionInfo(const string& junction_name)
+    {
+      vector<string> s = split(junction_name, junction_name_separator);
+      
+      JunctionInfo::Side side_1(s[0], from_string<int32_t>(s[1]), from_string<int32_t>(s[2]), from_string<int32_t>(s[10]));
+      if (side_1.strand == 0) side_1.strand = -1;
+      
+      JunctionInfo::Side side_2(s[3], from_string<int32_t>(s[4]), from_string<int32_t>(s[5]), from_string<int32_t>(s[11]));
+      if (side_2.strand == 0) side_2.strand = -1;
+      
+      JunctionInfo retval(
+                          side_1, 
+                          side_2,
+                          from_string<int32_t>(s[6]),
+                          s[7],
+                          from_string<int32_t>(s[8]),
+                          from_string<int32_t>(s[9])
+                          );
+      *this = retval;
+      }
+    
+    
+    // Serializes a JunctionInfo to a string
+    string junction_key()
+    {
+      bool has_redundant = (sides[0].redundant >= 0 && sides[1].redundant >= 0);
+      
+      // allocate vector of correct size
+      vector<string> values(has_redundant ? 12 : 10); 
+      
+      // place values in vector
+      values[0] = sides[0].seq_id;
+      values[1] = to_string(sides[0].position);
+      values[2] = to_string(sides[0].strand);
+      
+      values[3] = sides[1].seq_id;
+      values[4] = to_string(sides[1].position);
+      values[5] = to_string(sides[1].strand);
+      
+      values[6] = to_string(alignment_overlap);
+      values[7] = to_string(unique_read_sequence);
+      values[8] = to_string(flanking_left);
+      values[9] = to_string(flanking_right);
+      
+      if (has_redundant)
+      {
+        values[10] = to_string(sides[0].redundant);
+        values[11] = to_string(sides[1].redundant);
+      }
+      
+      return join(values, junction_name_separator);
+    }
+    
+    bool operator ==(const JunctionInfo& junction) const
+    {
+      return (this->sides[0] == junction.sides[0]) && (this->sides[1] == junction.sides[1]);
+    }
+	};
+  
+  
+  uint32_t _eligible_read_alignments(const Settings& settings, const cReferenceSequences& ref_seq_info, alignment_list& alignments);
+	bool _test_read_alignment_requirements(const Settings& settings, const cReferenceSequences& ref_seq_info, const alignment_wrapper& a);
+
+  
   class PreprocessAlignments
   {
   public:
@@ -99,8 +303,8 @@ namespace breseq {
 
     struct SingleCandidateJunction
 		{
-			JunctionInfo list;
-			string str;
+			JunctionInfo junction_info;
+			string sequence;
 			uint32_t read_begin_coord;
 			string side_1_ref_seq;
 			string side_2_ref_seq;
@@ -109,7 +313,8 @@ namespace breseq {
 		};
 		struct CombinedCandidateJunction
 		{
-			string id;
+			JunctionInfo junction_info;
+      string junction_key;
 			uint32_t pos_hash_score;
 			string seq;
 			string rc_seq;
@@ -117,12 +322,12 @@ namespace breseq {
 			// Sort by unique coordinate, then redundant (or second unique) coordinate to get reliable ordering for output
 			static bool sort_by_score_unique_coord(const CombinedCandidateJunction& a, const CombinedCandidateJunction &b)
 			{
-				JunctionInfo a_item = junction_name_split(a.id);
+				const JunctionInfo& a_item(a.junction_info);
 				int32_t a_uc = a_item.sides[0].position;
 				int32_t a_rc = a_item.sides[1].position;
 				if (a_item.sides[0].redundant != 0) swap(a_uc, a_rc);
         
-				JunctionInfo b_item = junction_name_split(b.id);
+				const JunctionInfo& b_item(b.junction_info);
 				int32_t b_uc = b_item.sides[0].position;
 				int32_t b_rc = b_item.sides[1].position;
 				if (b_item.sides[0].redundant != 0) swap(b_uc, b_rc);
@@ -145,8 +350,8 @@ namespace breseq {
       
 			static bool sort_by_ref_seq_coord(const CombinedCandidateJunction& a, const CombinedCandidateJunction &b)
 			{
-				JunctionInfo acj = junction_name_split(a.id);
-				JunctionInfo bcj = junction_name_split(b.id);
+				const JunctionInfo& acj(a.junction_info);
+				const JunctionInfo& bcj(b.junction_info);
 				//TODO: Uncomment this code after supplying it with a ref_seq_info with a seq_order field
 				/*if (ref_seq_info.seq_order[acj.sides[0].seq_id] != ref_seq_info.seq_order[bcj.sides[0].seq_id])
          return (ref_seq_info.seq_order[acj.sides[0].seq_id] < ref_seq_info.seq_order[bcj.sides[0].seq_id]);
