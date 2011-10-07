@@ -26,16 +26,8 @@ using namespace std;
 
 namespace breseq {
 
-  //
-  //=head2 _eligible_alignments
-  //
-  //Title   : _eligible_alignments
-  //Usage   : _eligible_alignments( );
-  //Function:
-  //Returns : Best score
-  //
-  //=cut
-  //
+  /*! Utility for sorting alignments by the number of mismatches
+   */
   
   class mismatch_map_class : public map<bam_alignment*,double> {
   public:
@@ -45,7 +37,11 @@ namespace breseq {
   
   bool sort_by_mismatches (counted_ptr<bam_alignment>& a1, counted_ptr<bam_alignment>& a2) { return mismatch_map[a1.get()] < mismatch_map[a2.get()]; }  
   
-  uint32_t _eligible_read_alignments(const Settings& settings, const cReferenceSequences& ref_seq_info, alignment_list& alignments)
+  
+  /*! Filter a list of alignments to only those that are eligible for mapping
+   */
+  
+ uint32_t eligible_read_alignments(const Settings& settings, const cReferenceSequences& ref_seq_info, alignment_list& alignments)
   {
     bool verbose = false;
     
@@ -64,19 +60,15 @@ namespace breseq {
     // require a minimum length of the read to be mapped
     for (alignment_list::iterator it = alignments.begin(); it != alignments.end();)
     {
-      if ( !_test_read_alignment_requirements(settings, ref_seq_info, *(it->get())) )
+      if ( !test_read_alignment_requirements(settings, ref_seq_info, *(it->get())) )
         it = alignments.erase(it);
       else
         it++;
     }
     if (alignments.size() == 0) return 0;
     
-    // @JEB v1> Unfortunately sometimes better matches don't get better alignment scores!
-    // example is 30K88AAXX_LenskiSet2:1:37:1775:92 in RJW1129
-    // Here a read with an extra match at the end doesn't get a higher score!!!
-    
-    // This sucks, but we need to re-sort matches and check scores ourselves...
-    // for now just count mismatches (which include soft padding!)
+    // @JEB: We would ideally sort by alignment score here
+    // the number of mismatches is our current proxy for this.
     
     //@JEB This method of sorting may be slower than alternatives
     //     Ideally, the scores should be hashes and only references should be sorted.
@@ -127,19 +119,11 @@ namespace breseq {
     return alignments.front()->read_length() - best_score;
   }
   
-  //
-  //
-  //=head2 _read_alignment_passes_requirements
-  //
-  //Title   : _test_read_alignment_requirements
-  //Usage   : _test_read_alignment_requirements( );
-  //Function: Tests an individual read alignment for required match lengths
-  //and number of mismatches
-  //Returns : 
-  //
-  //=cut
-  //
-  bool _test_read_alignment_requirements(const Settings& settings, const cReferenceSequences& ref_seq_info, const alignment_wrapper& a)
+  /*! Test the requirements for an alignment to be counted.
+   *
+   *  Returns whether the alignment passes.
+   */
+  bool test_read_alignment_requirements(const Settings& settings, const cReferenceSequences& ref_seq_info, const alignment_wrapper& a)
   {
     bool accept = true;
     
@@ -216,7 +200,7 @@ namespace breseq {
         }
         
 				// write best alignments
-        int32_t best_score = _eligible_read_alignments(settings, ref_seq_info, alignments);
+        int32_t best_score = eligible_read_alignments(settings, ref_seq_info, alignments);
         BSAM.write_alignments(0, alignments, NULL);
       }
     }
