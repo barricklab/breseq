@@ -1255,9 +1255,4 @@ namespace breseq {
     return true;
   }
 
-  
-  
-
-
-
 } // namespace breseq

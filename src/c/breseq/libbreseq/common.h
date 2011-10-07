@@ -729,6 +729,24 @@ namespace breseq {
       cout << it->first << '=' << it->second << endl;
   }
 
+  template <class inputiterator, class outputiterator, class predicate>
+  outputiterator copy_if(inputiterator first, inputiterator last, outputiterator result, predicate pred)
+  {
+    inputiterator currentin = first;
+    outputiterator currentout = result;
+    while (currentin != last) {
+      if (pred(*currentin)) {
+        *currentout = *currentin;
+        ++currentout;
+        ++currentin;
+      } else {
+        ++currentin;
+      }
+    }
+    return currentout;
+  }
+
+
 // counted_ptr keeps track of number of references 
   
   template <class X> class counted_ptr

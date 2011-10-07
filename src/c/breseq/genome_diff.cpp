@@ -112,41 +112,20 @@ diff_entry::diff_entry()
 
 bool diff_entry::is_mutation() const
 {
-  const size_t n = sizeof(gd_entry_mutation_types) / sizeof(gd_entry_mutation_types[0]);
-  for (size_t i = 0; i < n; i++) {
-    if (gd_entry_mutation_types[i] == this->_type) {
-      return true;
-    } else {
-      continue;
-    }
-  }
-  return false;
+  const size_t size = sizeof(gd_entry_mutation_types) / sizeof(gd_entry_mutation_types[0]);
+  return count(gd_entry_mutation_types, gd_entry_mutation_types + size, this->_type);
 }
 
 bool diff_entry::is_evidence() const
 {
-  const size_t n = sizeof(gd_entry_evidence_types) / sizeof(gd_entry_evidence_types[0]);
-  for (size_t i = 0; i < n; i++) {
-    if (gd_entry_evidence_types[i] == this->_type) {
-      return true;
-    } else {
-      continue;
-    }
-  }
-  return false;
+  const size_t size = sizeof(gd_entry_evidence_types) / sizeof(gd_entry_evidence_types[0]);
+  return count(gd_entry_evidence_types, gd_entry_evidence_types + size, this->_type);
 }
 
 bool diff_entry::is_validation() const
 {
-  const size_t n = sizeof(gd_entry_validation_types) / sizeof(gd_entry_validation_types[0]);
-  for (size_t i = 0; i < n; i++) {
-    if (gd_entry_validation_types[i] == this->_type) {
-      return true;
-    } else {
-      continue;
-    }
-  }
-  return false;
+  const size_t size = sizeof(gd_entry_validation_types) / sizeof(gd_entry_validation_types[0]);
+  return count(gd_entry_validation_types, gd_entry_validation_types + size, this->_type);
 }
 
 
@@ -562,7 +541,16 @@ bool diff_entry_sort(const diff_entry_ptr& a, const diff_entry_ptr& b) {
  */
 void genome_diff::write(const string& filename) {
 	ofstream ofs(filename.c_str());
-	ofs << "#=GENOME_DIFF 1.0" << endl;
+  ofs << "#=GENOME_DIFF 1.0" << endl;
+  //! Place any extra data gathered in breseq pipeline in header
+  if (!this->metadata.breseq_data.empty()) {
+    for (map<key_t,string>::iterator it = metadata.breseq_data.begin();
+         it != metadata.breseq_data.end(); it ++) {
+      const key_t& key = it->first;
+      const string& value = it->second;
+      ofs << "#" << key << "=" << value << endl;
+    }
+  }
   
   // sort
   _entry_list.sort(diff_entry_sort);
@@ -573,23 +561,10 @@ void genome_diff::write(const string& filename) {
 	ofs.close();
 }
 
-/*! Write this genome diff to a file, gathers further data from breseq run for post analysis
- */
-void genome_diff::write(const string& filename, const Summary& summary, const Settings& settings) {
-  ofstream ofs(filename.c_str());
-  const Summary::CandidateJunctionSummaryData& hcs = summary.candidate_junction;
 
-  ofs << "#=GENOME_DIFF 1.0" << endl;
-  ofs << "#pos_hash_score_cutoff=" << hcs.accepted.pos_hash_score_cutoff << endl;
-
-
-  // sort
-  _entry_list.sort(diff_entry_sort);
-
-  for(diff_entry_list::iterator i=_entry_list.begin(); i!=_entry_list.end(); ++i) {
-    ofs << (**i) << endl;
-  }
-  ofs.close();
+void genome_diff::add_breseq_data(const key_t &key, const string& value)
+{
+  this->metadata.breseq_data.insert(pair<string,string>(key, value));
 }
 
 

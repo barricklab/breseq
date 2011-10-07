@@ -36,6 +36,14 @@ const string cErrorTable::covariate_names[] = {
 const char cErrorTable::m_sep = '\t';
 
 /*! Count errors.
+  @abstract Calls a pileup function to count errors along the reference bases.
+  @param bam File name for bam file
+  @param fasta File name for fasta file
+  @param readfiles Vector of file names for read files
+  @param do_coverage Output .unique_only_coverage_distribution.tab
+  @param do_errors
+  @param min_qual_score
+  @param covariates
  */
 void error_count(
                  const string& bam,
@@ -157,6 +165,12 @@ void error_count_pileup::pileup_callback(const pileup& p) {
 
 
 /*! Print coverage distribution.
+  @abstract Creates coverage count table:
+       This is a table of non-deletion reads per position to non-redundancy counts.
+       For example, given unique_only_coverage[i] = x, for all aligned positions p:
+       i is the number of reads that do not indicate a deletion at p
+       x is the number of positions that have no redundancies
+
  */
 void error_count_pileup::print_coverage() {
 	using namespace std;
