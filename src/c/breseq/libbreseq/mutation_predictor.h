@@ -26,6 +26,7 @@ LICENSE AND COPYRIGHT
 #include "genome_diff.h"
 #include "settings.h"
 #include "fastq.h"
+#include "candidate_junctions.h"
 
 using namespace std;
 

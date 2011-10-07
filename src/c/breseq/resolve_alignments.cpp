@@ -92,7 +92,7 @@ void resolve_alignments(
 		//## so that we only have to split the names once
 		for (int i = 0; i < junction_tam.bam_header->n_targets; i++)
 		{
-			JunctionInfo ji = junction_name_split(junction_tam.bam_header->target_name[i]);
+			JunctionInfo ji(junction_tam.bam_header->target_name[i]);
 			junction_info_list.push_back(ji);
 		}
 
@@ -260,22 +260,6 @@ void resolve_alignments(
 			//      and goes into the overlap part of a junction condidate
 			// --> Keep an item that is not used during scoring
 			///
-
-			//#			if (@$this_junction_al)
-			//#			{
-			//#				# This is the length of the match on the query -- NOT the length of the query
-			//#				$best_junction_score = $this_junction_al->[0]->query->length;
-			//# THESE SCORES ARE NOT CONSISTENT ACROSS STRANDS DUE TO DIFFERENT INDEL MATCHES
-			//#				$best_candidate_junction_score = $ca->aux_get("AS");
-			//#			}
-			//#
-			//#			if (@$this_reference_al)
-			//#			{
-			//#				# This is the length of the match on the query -- NOT the length of the query
-			//#				$best_reference_score = $this_reference_al->[0]->query->length;
-			//# THESE SCORES ARE NOT CONSISTENT ACROSS STRANDS DUE TO DIFFERENT INDEL MATCHES
-			//#				$best_reference_score = $ra->aux_get("AS");
-			//#			}
 
 			// if < 0, then the best match is to the reference
 			int32_t mapping_quality_difference = best_junction_score - best_reference_score;
@@ -533,155 +517,8 @@ void resolve_alignments(
 	gd.write(settings.jc_genome_diff_file_name);
 }
     
-//
-//=head2 _eligible_alignments
-//
-//Title   : _eligible_alignments
-//Usage   : _eligible_alignments( );
-//Function:
-//Returns : Best score
-//
-//=cut
-//
+
   
-class mismatch_map_class : public map<bam_alignment*,double> {
-public:
-  inline bool operator() (alignment_list::iterator a1, alignment_list::iterator a2) { return (*this)[a1->get()] < (*this)[a2->get()]; } 
-} mismatch_map;
-
-
-bool sort_by_mismatches (counted_ptr<bam_alignment>& a1, counted_ptr<bam_alignment>& a2) { return mismatch_map[a1.get()] < mismatch_map[a2.get()]; }  
-  
-uint32_t _eligible_read_alignments(const Settings& settings, const cReferenceSequences& ref_seq_info, alignment_list& alignments)
-{
-	bool verbose = false;
-
-	if (alignments.size() == 0) return 0;
-
-  // require read to be mapped! -- @JEB maybe this should be checked sooner?
-	for (alignment_list::iterator it = alignments.begin(); it != alignments.end();)
-  {
-    if (it->get()->unmapped())
-      it = alignments.erase(it);
-    else
-      it++;
-  }
-  if (alignments.size() == 0) return 0;
-  
-	// require a minimum length of the read to be mapped
-	for (alignment_list::iterator it = alignments.begin(); it != alignments.end();)
-  {
-		if ( !_test_read_alignment_requirements(settings, ref_seq_info, *(it->get())) )
-			it = alignments.erase(it);
-    else
-      it++;
-  }
-	if (alignments.size() == 0) return 0;
-
-	// @JEB v1> Unfortunately sometimes better matches don't get better alignment scores!
-	// example is 30K88AAXX_LenskiSet2:1:37:1775:92 in RJW1129
-	// Here a read with an extra match at the end doesn't get a higher score!!!
-
-	// This sucks, but we need to re-sort matches and check scores ourselves...
-	// for now just count mismatches (which include soft padding!)
-  
-  //@JEB This method of sorting may be slower than alternatives
-  //     Ideally, the scores should be hashes and only references should be sorted.
-  mismatch_map.clear();
-	for (alignment_list::iterator it = alignments.begin(); it != alignments.end(); it++)
-  {  
-    bam_alignment* ap = it->get(); // we are saving the pointer value as the map key
-    uint32_t i = alignment_mismatches(*ap, ref_seq_info);
-    mismatch_map[ap] = static_cast<double>(i);
-  }
-  
-  alignments.sort(sort_by_mismatches);
-
-	if (verbose)
-	{
-    for (alignment_list::iterator it = alignments.begin(); it != alignments.end(); it++)
-    {
-      bam_alignment& a = *(it->get());
-      cerr << a.query_start_1() << "-" << a.query_end_1() << " ";
-      cerr << a.query_match_length()-mismatch_map[it->get()] << "\n";
-    }
-	}
-  
-  
-	// how many reads share the best score?
-  uint32_t last_best(0);
-  uint32_t best_score = static_cast<uint32_t>(mismatch_map[(alignments.front().get())]);
-	
-  // no scores meet minimum
-  
-  for (alignment_list::iterator it = alignments.begin()++; it != alignments.end(); it++)
-  {
-    if (mismatch_map[it->get()] != best_score) break;
-    last_best++;
-  }
-
-	//#broken
-	//## no scores meet minimum difference between best and next best
-	//#if (defined $minimum_best_score_difference && (scalar @al > $last_best+1))
-	//#{
-	//#	my $second_best_score = $al[$last_best+1]->aux_get("AS");
-	//#	return () if ($second_best_score + $minimum_best_score_difference >= $best_score)
-	//#}
-
-  alignments.resize(last_best);
-
-	if (verbose)
-	{
-    cerr << last_best << endl;
-    for (alignment_list::iterator it = alignments.begin(); it != alignments.end(); it++)
-    {
-      bam_alignment& a = *(it->get());
-      cerr << a.query_start_1() << "-" << a.query_end_1() << endl;
-    }
-	}
-
-	// Note that the score we return is higher for matches so we negative this value...
-  return alignments.front()->read_length() - best_score;
-}
-  
-//
-//
-//=head2 _read_alignment_passes_requirements
-//
-//Title   : _test_read_alignment_requirements
-//Usage   : _test_read_alignment_requirements( );
-//Function: Tests an individual read alignment for required match lengths
-//and number of mismatches
-//Returns : 
-//
-//=cut
-//
-bool _test_read_alignment_requirements(const Settings& settings, const cReferenceSequences& ref_seq_info, const alignment_wrapper& a)
-{
-	bool accept = true;
-
-	if (a.unmapped()) return false;
-  
-  if (a.query_match_length() < settings.require_match_length)
-    return false;
-  
-  if (a.query_match_length() < settings.require_match_fraction * static_cast<double>(a.read_length()) )
-    return false;
-
-	if (settings.require_complete_match)
-	{
-    if (!a.beginning_to_end_match())
-      return false; 
-	}
-	if (settings.max_read_mismatches >= 0)
-	{
-		int32_t mismatches = alignment_mismatches(a, ref_seq_info);
-		if (mismatches > settings.max_read_mismatches)
-      return false; 
-	}
-
-	return true;
-}
 
 //=head2 _alignment_overlaps_junction
 //
@@ -734,24 +571,27 @@ void _write_reference_matches(const Settings& settings, cReferenceSequences& ref
 
 bool _test_junction(const Settings& settings, Summary& summary, const string& junction_seq_id, map<string, vector<MatchedJunction> >& matched_junction_ref, map<string, map<string, MatchedJunction> >& degenerate_matches_ref, map<string, CandidateJunction>& junction_test_info_ref, cReferenceSequences& ref_seq_info, const SequenceTrimsList& trims_list, tam_file& reference_tam, tam_file& junction_tam, bool& has_non_overlap_alignment)
 {
-	bool verbose = false;
+	bool verbose = true;
 
 	if (verbose) cout << "Testing " << junction_seq_id << endl;
 
 	// There are two kinds of matches to a candidate junction:
-
+  
 	// (1) Reads that uniquely map to one candidate junction (but any number of times to reference)
+  
 	vector<MatchedJunction>* unique_matches = NULL;
 	if (matched_junction_ref.count(junction_seq_id))
+  {
 		unique_matches = &(matched_junction_ref[junction_seq_id]);
-
+  }
+  
   if (verbose) cout << "Unique size: " << (unique_matches ? unique_matches->size() : 0) << endl;
 
 	// (2) Reads that uniquely map equally well to more than one candidate junction (and any number of times to reference)
 	map<string, MatchedJunction>* degenerate_matches = NULL;
 	if (degenerate_matches_ref.count(junction_seq_id))
 		degenerate_matches = &(degenerate_matches_ref[junction_seq_id]);
-
+  
 	// FAI target id -- there is no easy way to get this short of loading the entire array and going through them...
 	// Debatable about whether we save more string comparisons by doing this here or each time
 
@@ -780,7 +620,7 @@ bool _test_junction(const Settings& settings, Summary& summary, const string& ju
   uint32_t pos_hash_count(0);
 
 	// basic information about the junction
-	JunctionInfo scj = junction_name_split(junction_seq_id);
+	JunctionInfo scj(junction_seq_id);
 	int32_t overlap = scj.alignment_overlap;
 	int32_t flanking_left = scj.flanking_left;
 
@@ -849,15 +689,31 @@ bool _test_junction(const Settings& settings, Summary& summary, const string& ju
     // they would have aligned in the reference.
     //
     // All four of these coordinates must have never been seen before to count.
+    //
+    // NB: Hash by read coord, rather than reference here. Because short indels will get penalized
+    // if you hash in read coordinate space
     
-		int32_t begin_coord = a->reference_start_1();
-    int32_t end_coord   = a->reference_end_1();
+    // Note that reference here is the junction sequence!
+    int32_t begin_read_coord = a->reference_start_1();
+    
+    if (verbose)
+			cout << "  " << item->junction_alignments.front()->read_name() << ' ' << static_cast<int32_t>(rev_key) << ' ' << begin_read_coord << endl;
+
+    if (!pos_hash[rev_key].count(begin_read_coord))
+    {
+      pos_hash[rev_key][begin_read_coord] = true;
+      pos_hash_count++;
+    }
+    
+    /* Old hash scheme
+		int32_t begin_match_coord = a->reference_start_1();
+    int32_t end_match_coord   = a->reference_end_1();
     int32_t begin_read_coord = a->reference_start_1() - (a->query_start_1() - 1);
     int32_t end_read_coord   = a->reference_end_1() + (a->read_length() - a->query_end_1());
     
     if (
-           !pos_hash[rev_key].count(begin_coord)
-        && !pos_hash[rev_key].count(end_coord)
+           !pos_hash[rev_key].count(begin_match_coord)
+        && !pos_hash[rev_key].count(end_match_coord)
         && !pos_hash[rev_key].count(begin_read_coord)
         && !pos_hash[rev_key].count(end_read_coord)
         ) 
@@ -865,14 +721,16 @@ bool _test_junction(const Settings& settings, Summary& summary, const string& ju
       pos_hash_count++;
     }
     
-    pos_hash[rev_key][begin_coord] = true;
-    pos_hash[rev_key][end_coord] = true;
-    pos_hash[rev_key][begin_coord] = true;
-    pos_hash[rev_key][begin_coord] = true;
-
+    pos_hash[rev_key][begin_match_coord] = true;
+    pos_hash[rev_key][end_match_coord] = true;
+    pos_hash[rev_key][begin_read_coord] = true;
+    pos_hash[rev_key][end_read_coord] = true;
+     
 		if (verbose)
-			cout << "  " << item->junction_alignments.front()->read_name() << ' ' << static_cast<int32_t>(rev_key) << ' ' << begin_coord << ' ' << end_coord << ' ' << begin_read_coord << ' ' << end_read_coord << endl;
-      
+			cout << "  " << item->junction_alignments.front()->read_name() << ' ' << static_cast<int32_t>(rev_key) << ' ' << begin_match_coord << ' ' << end_match_coord << ' ' << begin_read_coord << ' ' << end_read_coord << endl;
+    */
+     
+     
     // Update:
     // Score = the minimum unique match length on a side
     // Max_Min = the maximum of the minimum length match sides
@@ -902,6 +760,41 @@ bool _test_junction(const Settings& settings, Summary& summary, const string& ju
 	int32_t max_min_left = max(max_min_left_per_strand[false], max_min_left_per_strand[true]);
 	int32_t max_min_right = max(max_min_right_per_strand[false], max_min_right_per_strand[true]);
 
+  // UPDATE REDUNDANCY
+  // =================
+  // If all the matches were degenerate, then at least one of the sides of this junction
+  // needs to be marked as newly degenerate. Even through the whole junction sequences were
+  // unique, no reads extended far enough to disambiguate between them
+  
+  bool redundant[2] = {false, false};
+  if (!unique_matches)
+  {
+    map<string, MatchedJunction>::iterator it = degenerate_matches->begin();
+    JunctionInfo main(it->first);
+    for (it++; it != degenerate_matches->end(); it++)
+    {
+      JunctionInfo test(it->first); // the junction key
+      
+      for (uint32_t best_side_index=0; best_side_index<=1; best_side_index++)
+      {
+        bool found = false;
+        for (uint32_t test_side_index=0; test_side_index<=1; test_side_index++)
+        {
+          if (main.sides[best_side_index] == test.sides[test_side_index])
+            found=true;
+        }
+        
+        // didn't find this side -- mark as redundant
+        if (!found)
+        {
+          redundant[best_side_index] = true;
+          if (verbose) cout << "Marking side " << best_side_index << " as redundant." << endl;
+        }
+      }
+
+    }
+  }
+  
 	// Save the test info about this junction.
 	CandidateJunction::TestInfo test_info = {
 		max_left,                           //max_left
@@ -919,12 +812,16 @@ bool _test_junction(const Settings& settings, Summary& summary, const string& ju
 		count_per_strand[false],            //coverage_minus
 		count_per_strand[true],             //coverage_plus
 		total_non_overlap_reads,            //total_non_overlap_reads
-    pos_hash_count                      //pos_hash_score
+    pos_hash_count,                     //pos_hash_score
+    redundant[0],
+    redundant[1]
 	};
   
 	junction_test_info_ref[junction_seq_id].test_info = test_info;
 	junction_test_info_ref[junction_seq_id].pos_hash_score = pos_hash_count;
 
+  bool failed = false;
+  
 	// Old way, requiring certain overlap on each side on each strand
 	// @JEB !> Best results may be to combine these methods
 
@@ -932,6 +829,7 @@ bool _test_junction(const Settings& settings, Summary& summary, const string& ju
 	// and, naturally, they have problems with scaling with the
 	// total number of reads...
 
+/* JEB: TESTING
 	int32_t alignment_on_each_side_cutoff = 14; //16
 	int32_t alignment_on_each_side_cutoff_per_strand = 9; //13
 	int32_t alignment_on_each_side_min_cutoff = 3;
@@ -945,6 +843,9 @@ bool _test_junction(const Settings& settings, Summary& summary, const string& ju
 				|| (max_min_left < alignment_on_each_side_min_cutoff)
 				|| (max_min_right < alignment_on_each_side_min_cutoff)
 	;
+*/
+  
+  
 
 	// POS_HASH test
 	// New way, but we need to have examined the coverage distribution to calibrate what scores to accept!
@@ -956,11 +857,14 @@ bool _test_junction(const Settings& settings, Summary& summary, const string& ju
   failed = failed || ((junction_accept_score_cutoff_1 == 0) && (junction_accept_score_cutoff_2 == 0)) ;
   
 	failed = failed || ( ( test_info.pos_hash_score < junction_accept_score_cutoff_1 ) && ( test_info.pos_hash_score < junction_accept_score_cutoff_2 ) );
+  
+  if (verbose) cout << "Pos hash score: " << test_info.pos_hash_score << " Cutoff 1: " << junction_accept_score_cutoff_1 << " Cutoff 2: " << junction_accept_score_cutoff_2 << endl;
 	if (verbose) cout << (failed ? "Failed" : "Passed") << endl;
 
 	// TODO:
 	// ADD -- NEED TO CORRECT OVERLAP AND ADJUST NUMBER OF READS SUPPORTING HERE, RATHER THAN LATER
 	//
+
 
 	// DEGENERATE JUNCTION MATCHES
 	// ===========================
@@ -968,6 +872,9 @@ bool _test_junction(const Settings& settings, Summary& summary, const string& ju
 
 	if (degenerate_matches)
 	{
+    
+    // Figure out whether each side is redundantly matched here...
+    
 		for (map<string, MatchedJunction>::iterator it = degenerate_matches->begin(); it != degenerate_matches->end(); it++)
 		{      
 			MatchedJunction& degenerate_match = it->second;
@@ -1069,7 +976,7 @@ bool _test_junction(const Settings& settings, Summary& summary, const string& ju
 
 	// UNIQUE JUNCTION MATCHES
 	// =======================
-  // If there were no unique matches to begin with, we may have created this entry...
+  // If there were no unique matches to begin with, we may have created this entry by processing degenerate junctions...
 
   
   if (unique_matches)
@@ -1102,7 +1009,7 @@ diff_entry _junction_to_hybrid_list_item(const string& key, cReferenceSequences&
   CandidateJunction::TestInfo& this_test_info = test_info.test_info;
   
 	// split the key to an item with information about the junction
-	JunctionInfo jc = junction_name_split(key);
+	JunctionInfo jc(key);
 
 	jc.key = key;
 
@@ -1190,12 +1097,18 @@ diff_entry _junction_to_hybrid_list_item(const string& key, cReferenceSequences&
 		}
 		jc.unique_side = 0;
 	}
-	// both were IS! -- define as redundant here
-	else if (jc.sides[0].is.name.size() > 0)
-		jc.sides[0].redundant = true;
-	else if (jc.sides[1].is.name.size() > 0)
-		jc.sides[1].redundant = true;
 
+// @JEB TODO: Testing removal
+// both were IS! -- define as redundant here
+//	else if (jc.sides[0].is.name.size() > 0)
+//		jc.sides[0].redundant = true;
+//	else if (jc.sides[1].is.name.size() > 0)
+//		jc.sides[1].redundant = true;
+
+  // Carry over redundancy from degenerate matches
+  if (this_test_info.redundant_1) jc.sides[0].redundant = true;
+  if (this_test_info.redundant_2) jc.sides[1].redundant = true;
+  
 	// By default, overlap is included on both sides of the junction (possibly changed below)
 	jc.sides[0].overlap = 0;
 	jc.sides[1].overlap = 0;
@@ -1253,7 +1166,6 @@ diff_entry _junction_to_hybrid_list_item(const string& key, cReferenceSequences&
 	}
 
 	// flatten things to only what we want to keep
-	//TODO: Are parameters to constructor correct?
   diff_entry item(JC);
 	item
 		("side_1_seq_id", jc.sides[0].seq_id)

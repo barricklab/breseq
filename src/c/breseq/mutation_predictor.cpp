@@ -296,7 +296,8 @@ namespace breseq {
           }    
                       
 					mut._evidence.push_back(jc_item._id);
-					jc_it = jc.erase(jc_it);
+					jc_it = jc.erase(jc_it); // iterator is now past the erased element
+          jc_it--;                 // and must be moved back since loop moved it forward
 					gd.add(mut);
           if (verbose)
             cout << "**** Junction precisely matching deletion boundary found ****\n";
@@ -552,7 +553,8 @@ namespace breseq {
 				int32_t is2_strand = - (n(j2[j2["_is_interval"] + "_strand"]) * n(j2["_" + j2["_is_interval"] + "_is_strand"]) * n(j2[j2["_unique_interval"] + "_strand"]));
 
 				// Remove these predictions from the list
-				jc1_it = jc.erase(jc1_it);
+				jc1_it = jc.erase(jc1_it); // iterator is now past element erased
+        jc1_it--;                  // and must be moved back because loop will move forward
 				jc.erase(it_delete_list_2[i]);
 
 				// Create the mutation, with evidence
@@ -577,10 +579,10 @@ namespace breseq {
 				}
 
 				// get any unique junction sequence
-				JunctionInfo j1i = junction_name_split(j1["key"]);
+				JunctionInfo j1i(j1["key"]);
 				string j1_unique_read_sequence = j1i.unique_read_sequence;
 
-				JunctionInfo j2i = junction_name_split(j2["key"]);
+				JunctionInfo j2i(j2["key"]);
 				string j2_unique_read_sequence = j2i.unique_read_sequence;
 
 				// _gap_left and _gap_right also refer to the top strand of the genome

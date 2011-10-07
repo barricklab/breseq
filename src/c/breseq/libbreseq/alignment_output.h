@@ -23,6 +23,7 @@
 #include "pileup_base.h"
 #include "pileup.h"
 #include "alignment.h"
+#include "candidate_junctions.h"
 
 using namespace std;
 
