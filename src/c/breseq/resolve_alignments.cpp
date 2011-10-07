@@ -212,7 +212,7 @@ void resolve_alignments(
             it++; 
         }
 
-				best_junction_score = _eligible_read_alignments(settings, junction_ref_seq_info, this_junction_alignments);
+				best_junction_score = eligible_read_alignments(settings, junction_ref_seq_info, this_junction_alignments);
 
 				if (verbose)
 					cerr << " Best junction score: " << best_junction_score << endl;
@@ -231,7 +231,7 @@ void resolve_alignments(
 				this_reference_alignments = reference_alignments;
 				reference_tam->read_alignments(reference_alignments, false);
 
-				best_reference_score = _eligible_read_alignments(settings, ref_seq_info, this_reference_alignments);
+				best_reference_score = eligible_read_alignments(settings, ref_seq_info, this_reference_alignments);
 
 				if (verbose)
 					cerr << " Best reference score: " << best_reference_score << endl;
