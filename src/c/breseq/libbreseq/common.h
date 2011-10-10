@@ -255,7 +255,7 @@ namespace breseq {
   
   inline void SYSTEM(string command, bool silent = false, bool ignore_errors = false)
   {
-    if (!silent) cout << "[system] " << command << endl;
+    if (!silent) cerr << "[system] " << command << endl;
     int return_value = system(command.c_str());
     
     if (return_value != 0)

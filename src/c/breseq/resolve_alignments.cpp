@@ -520,17 +520,11 @@ void resolve_alignments(
 
   
 
-//=head2 _alignment_overlaps_junction
-//
-//Title   : _test_read_alignment_requirements
-//Usage   : _test_read_alignment_requirements( );
-//Function: Tests an individual read alignment for required match lengths
-//and number of mismatches
-//Returns : 
-//
-//=cut
-//
-bool _alignment_overlaps_junction(const vector<JunctionInfo>& junction_info_list, const alignment_wrapper& a)
+/*! Tests whether a read alignment to a candidate junction extends across
+ *  the entire junction (past overlapping or unique sequence) and thus
+ *  can be used as real evidence for the junction.
+ */
+  bool _alignment_overlaps_junction(const vector<JunctionInfo>& junction_info_list, const alignment_wrapper& a)
 {
   // unmapped reads don't overlap the junction
   if (a.unmapped()) return false;
@@ -541,11 +535,20 @@ bool _alignment_overlaps_junction(const vector<JunctionInfo>& junction_info_list
   const JunctionInfo& this_junction_info = junction_info_list[tid];
   int32_t overlap = this_junction_info.alignment_overlap;
   
-  uint32_t junction_start = this_junction_info.flanking_left + 1;
-  uint32_t junction_end = this_junction_info.flanking_left + abs(overlap);
+  // for overlap == 0
+  //   junction is coords [flanking_left + 1, flanking_left - 0]
+  // for overlap < 0 (unique sequence in read)
+  //   junction is coords [flanking_left + 1, flanking_left - overlap]
+  // for overlap > 0 (overlapping sequence matching to each side)
+  //   junction is coords [flanking_left + 1, flanking_left + overlap]
+  
+  uint32_t junction_start, junction_end;
+  
+  junction_start = this_junction_info.flanking_left + 1;
+  junction_end = this_junction_info.flanking_left + abs(overlap);
 
   //## If it didn't overlap the junction at all
-  //## Check coordinates in the "reference" junction sequence
+  //## Check coordinates in the "reference" (the JUNCTION sequence)
   if (a.reference_start_1() > junction_end) return false;
   if (a.reference_end_1() < junction_start) return false;
   return true;
@@ -571,7 +574,7 @@ void _write_reference_matches(const Settings& settings, cReferenceSequences& ref
 
 bool _test_junction(const Settings& settings, Summary& summary, const string& junction_seq_id, map<string, vector<MatchedJunction> >& matched_junction_ref, map<string, map<string, MatchedJunction> >& degenerate_matches_ref, map<string, CandidateJunction>& junction_test_info_ref, cReferenceSequences& ref_seq_info, const SequenceTrimsList& trims_list, tam_file& reference_tam, tam_file& junction_tam, bool& has_non_overlap_alignment)
 {
-	bool verbose = true;
+	bool verbose = false;
 
 	if (verbose) cout << "Testing " << junction_seq_id << endl;
 
@@ -626,7 +629,7 @@ bool _test_junction(const Settings& settings, Summary& summary, const string& ju
 
 	// Is there at least one read that isn't overlap only?
 	// displaying ones where it doesn't as marginals looks really confusing
-	has_non_overlap_alignment = false;
+	has_non_overlap_alignment = false; // RETURN VALUE
 
 	// We also need to count degenerate matches b/c sometimes ambiguity unfairly penalizes real reads...
 	vector<MatchedJunction*> items;
@@ -640,18 +643,18 @@ bool _test_junction(const Settings& settings, Summary& summary, const string& ju
 	for (uint32_t i = 0; i < items.size(); i++) // READ (loops over unique_matches, degenerate_matches)
 	{
 		MatchedJunction* item = items[i];
-    
-		//!!> Do not count reads that map the reference equally well toward the score.
+
+		//! Do not count reads that map the reference equally well toward the score.
 		if (item->mapping_quality_difference == 0) {
       if (verbose) cout << "  Degenerate:" << item->junction_alignments.front()->read_name() << endl;
-     continue; 
+      continue; 
     }
+    
+    // Determine which alignment we are working with.
 
-		//If there were no degenerate matches, then we could just take the
-		//one and only match in the 'junction_alignments' array
-		//#my $a = $item->{junction_alignments}->[0];
-
-		// as it is, we must be sure we are looking at the one that matches
+		// If there were no degenerate matches, then we could just take the
+		// one and only match in the 'junction_alignments' array.
+		// As it is, we must be sure we are looking at the one that matches
 		alignment_wrapper* a = NULL;
     for(alignment_list::iterator it=item->junction_alignments.begin(); it!=item->junction_alignments.end(); it++)
 		{
@@ -663,8 +666,10 @@ bool _test_junction(const Settings& settings, Summary& summary, const string& ju
 		}
 		assert(a != NULL);
 
-    // FIRST, check to be sure that this read overlaps the junction.
+    ///
+    // CHECK to be sure that this read overlaps the junction.
     // this_left and this_right are how far it extends into each side (past any overlap)
+    ///
     
     // The left side goes exactly up to the flanking length
 		int32_t this_left = flanking_left + 1;
@@ -677,23 +682,17 @@ bool _test_junction(const Settings& settings, Summary& summary, const string& ju
     
     if ((this_right <= 0) || (this_left <= 0)) continue;
     
-    // ok, it overlapped, we can count it
+    ////
+    // COUNT reads that overlap both sides toward the pos hash score and other statistics
+    ///
+    
     total_non_overlap_reads++;
     has_non_overlap_alignment = true;
     
 		bool rev_key = a->reversed();
 		count_per_strand[rev_key]++;
-
-		// Look at reference coords of aligned part of read sequence
-    // and of unaligned ends of query continued straight to where
-    // they would have aligned in the reference.
-    //
-    // All four of these coordinates must have never been seen before to count.
-    //
-    // NB: Hash by read coord, rather than reference here. Because short indels will get penalized
-    // if you hash in read coordinate space
     
-    // Note that reference here is the junction sequence!
+    // Note that reference here is the junction's sequence, not the reference genome sequence!
     int32_t begin_read_coord = a->reference_start_1();
     
     if (verbose)
@@ -704,32 +703,6 @@ bool _test_junction(const Settings& settings, Summary& summary, const string& ju
       pos_hash[rev_key][begin_read_coord] = true;
       pos_hash_count++;
     }
-    
-    /* Old hash scheme
-		int32_t begin_match_coord = a->reference_start_1();
-    int32_t end_match_coord   = a->reference_end_1();
-    int32_t begin_read_coord = a->reference_start_1() - (a->query_start_1() - 1);
-    int32_t end_read_coord   = a->reference_end_1() + (a->read_length() - a->query_end_1());
-    
-    if (
-           !pos_hash[rev_key].count(begin_match_coord)
-        && !pos_hash[rev_key].count(end_match_coord)
-        && !pos_hash[rev_key].count(begin_read_coord)
-        && !pos_hash[rev_key].count(end_read_coord)
-        ) 
-    {
-      pos_hash_count++;
-    }
-    
-    pos_hash[rev_key][begin_match_coord] = true;
-    pos_hash[rev_key][end_match_coord] = true;
-    pos_hash[rev_key][begin_read_coord] = true;
-    pos_hash[rev_key][end_read_coord] = true;
-     
-		if (verbose)
-			cout << "  " << item->junction_alignments.front()->read_name() << ' ' << static_cast<int32_t>(rev_key) << ' ' << begin_match_coord << ' ' << end_match_coord << ' ' << begin_read_coord << ' ' << end_read_coord << endl;
-    */
-     
      
     // Update:
     // Score = the minimum unique match length on a side
@@ -820,32 +793,6 @@ bool _test_junction(const Settings& settings, Summary& summary, const string& ju
 	junction_test_info_ref[junction_seq_id].test_info = test_info;
 	junction_test_info_ref[junction_seq_id].pos_hash_score = pos_hash_count;
 
-  bool failed = false;
-  
-	// Old way, requiring certain overlap on each side on each strand
-	// @JEB !> Best results may be to combine these methods
-
-	// These parameters still need additional testing
-	// and, naturally, they have problems with scaling with the
-	// total number of reads...
-
-/* JEB: TESTING
-	int32_t alignment_on_each_side_cutoff = 14; //16
-	int32_t alignment_on_each_side_cutoff_per_strand = 9; //13
-	int32_t alignment_on_each_side_min_cutoff = 3;
-
-	bool failed = (max_left < alignment_on_each_side_cutoff)
-				|| (max_right < alignment_on_each_side_cutoff)
-        || (max_left_per_strand[false] < alignment_on_each_side_cutoff_per_strand)
-				|| (max_left_per_strand[true] < alignment_on_each_side_cutoff_per_strand)
-	      || (max_right_per_strand[false] < alignment_on_each_side_cutoff_per_strand)
-				|| (max_right_per_strand[true] < alignment_on_each_side_cutoff_per_strand)
-				|| (max_min_left < alignment_on_each_side_min_cutoff)
-				|| (max_min_right < alignment_on_each_side_min_cutoff)
-	;
-*/
-  
-  
 
 	// POS_HASH test
 	// New way, but we need to have examined the coverage distribution to calibrate what scores to accept!
@@ -854,16 +801,12 @@ bool _test_junction(const Settings& settings, Summary& summary, const string& ju
   
   // both score cutoffs might be zero - indicating these are missing contigs that are basically deleted
   // fail if this is the case. Revisit this logic at a future time. @JEB
-  failed = failed || ((junction_accept_score_cutoff_1 == 0) && (junction_accept_score_cutoff_2 == 0)) ;
-  
+  bool failed = false;  
+  failed = failed || ((junction_accept_score_cutoff_1 == 0) || (junction_accept_score_cutoff_2 == 0)) ;
 	failed = failed || ( ( test_info.pos_hash_score < junction_accept_score_cutoff_1 ) && ( test_info.pos_hash_score < junction_accept_score_cutoff_2 ) );
   
   if (verbose) cout << "Pos hash score: " << test_info.pos_hash_score << " Cutoff 1: " << junction_accept_score_cutoff_1 << " Cutoff 2: " << junction_accept_score_cutoff_2 << endl;
 	if (verbose) cout << (failed ? "Failed" : "Passed") << endl;
-
-	// TODO:
-	// ADD -- NEED TO CORRECT OVERLAP AND ADJUST NUMBER OF READS SUPPORTING HERE, RATHER THAN LATER
-	//
 
 
 	// DEGENERATE JUNCTION MATCHES

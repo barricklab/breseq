@@ -380,10 +380,13 @@ void html_statistics(const string &file_name, const Settings& settings, Summary&
   HTML << breseq_header_string(settings) << endl;
   HTML << "<p>" << endl;
 
-  //Write read file information
-  //HTML << "<!-- Write fastq read file informations -->" << endl;
+  ////
+  // Write read file information
+  ////
+  
+  HTML << h2("Read File Information") << endl;
   HTML << "<table border=\"0\" cellspace=\"1\" cellpadding=\"5\">" << endl;
-  HTML << "<tr>" << th() << th("fastq read file") << th("reads") << 
+  HTML << "<tr>" << th() << th("read file") << th("reads") << 
                     th("bases") << th("longest") << "</tr>" << endl;
   for(cReadFiles::const_iterator it=settings.read_files.begin(); it!=settings.read_files.end(); it++)
   {
@@ -412,8 +415,11 @@ void html_statistics(const string &file_name, const Settings& settings, Summary&
   HTML << td(b(commify(to_string(summary.sequence_conversion.max_read_length))) + "&nbsp;bases");
   HTML << "</tr></table>";
   
-  //Write reference sequence information
-  //HTML << "<!-- Write reference sequence information -->" << endl;
+  ////
+  // Write reference sequence information
+  ////
+  
+  HTML << h2("Reference Sequence Information") << endl;
   HTML << "<p>" << endl;
   HTML << "<table border=\"0\" cellspacing=\"1\" cellpadding=\"5\" >" << endl;
   HTML << "<tr>" << th() << 
@@ -461,6 +467,21 @@ void html_statistics(const string &file_name, const Settings& settings, Summary&
     HTML << "</tr>";
   }  
   
+  // # //TODO @JEB Summary
+  // #   ## junction only reference sequences
+  // #   foreach my $seq_id (@{$ref_seq_info->{junction_only_seq_ids}})
+  // #   {
+  // #     my $c = $summary->{sequence_conversion}->{reference_sequences}->{$seq_id};
+  // #     print HTML Tr(
+  // #       td({-colspan=>"2", -align=>"center"}, "junction&nbsp;only"), 
+  // #       td($seq_id), 
+  // #       td({-align=>"right"},commify($c->{length})), 
+  // #       td($c->{definition})
+  // #     );
+  // #     $total_length+= $c->{length};
+  // #   }
+  // #   
+  
   HTML << "<tr class=\"highlight_table_row\">";
   HTML << td();
   HTML << td();
@@ -468,32 +489,55 @@ void html_statistics(const string &file_name, const Settings& settings, Summary&
   HTML << td(ALIGN_RIGHT, b(commify(to_string(total_length))) );
   HTML << td();
   HTML << "</tr>" << endl;
-
-// # //TODO @JEB Summary
-// #   ## junction only reference sequences
-// #   foreach my $seq_id (@{$ref_seq_info->{junction_only_seq_ids}})
-// #   {
-// #     my $c = $summary->{sequence_conversion}->{reference_sequences}->{$seq_id};
-// #     print HTML Tr(
-// #       td({-colspan=>"2", -align=>"center"}, "junction&nbsp;only"), 
-// #       td($seq_id), 
-// #       td({-align=>"right"},commify($c->{length})), 
-// #       td($c->{definition})
-// #     );
-// #     $total_length+= $c->{length};
-// #   }
-// #   
-// #   print HTML end_table();
   HTML << "</table>" << endl;
 
+  ////
+  // Junction prediction information
+  ////
+  
+  if (settings.junction_prediction)
+  {
+    HTML << h2("Junction Prediction Information") << endl;
+    HTML << "<p>" << endl;
+    HTML << "<table border=\"0\" cellspacing=\"1\" cellpadding=\"5\" >" << endl;
+    HTML << "<tr>" << 
+    th("reference sequence") << 
+    th("junction score cutoff") <<
+    "</tr>" << endl;
+    
+    size_t total_length = 0;
+    for(cReferenceSequences::iterator it=ref_seq_info.begin(); it!=ref_seq_info.end(); it++)
+    {
+      HTML << "<tr>" << endl;
+      HTML << td(it->m_seq_id);
+      // this score is always an integer for now, even though it is typed as a double
+      bool fragment_with_fit_coverage = (summary.unique_coverage[it->m_seq_id].nbinom_mean_parameter != 0);
+
+      if (!fragment_with_fit_coverage)
+        HTML << td("NA"); 
+      else
+        HTML << td(to_string(static_cast<int32_t>(summary.unique_coverage[it->m_seq_id].junction_accept_score_cutoff)));
+      HTML << "</tr>";
+    }  
+    HTML << "</table>";
+  }
+  
+  ////
+  // Custom deletion coverage cutoffs
+  ////
+  
   if (settings.deletion_coverage_propagation_cutoff || settings.deletion_coverage_seed_cutoff)
     HTML << html_deletion_coverage_values_table_string(settings, ref_seq_info, summary);
   
+  
+  ////
   // Write Execution Times
+  ////
+  
   const vector<ExecutionTime>& times = settings.execution_times;
   // HTML << "<!-- Write Times -->" << endl;
   HTML << "<p>"  << endl;
-  HTML << h1("Execution Times") << endl;
+  HTML << h2("Execution Times") << endl;
   HTML << start_table("width=\"100%\" border=\"1\" cellspacing=\"0\" cellpadding=\"3\"") << endl;
   HTML << "<tr>" << th("Step") << th("Start") << th("End") << th("Elapsed") << "</tr>" << endl; 
   double total_time_elapsed = 0; 
@@ -528,7 +572,7 @@ string html_deletion_coverage_values_table_string(const Settings& settings, cRef
   stringstream ss; //!< Main Build Object in Function
 
   ss << "<p>";
-  ss << h1("Coverage Values");
+  ss << h2("Coverage Values");
   ss << start_table("border=\"1\" cellspacing=\"0\" cellpadding=\"3\"");
   // Table Header
   ss << "<tr>";

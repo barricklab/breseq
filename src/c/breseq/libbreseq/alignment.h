@@ -22,6 +22,7 @@ LICENSE AND COPYRIGHT
 #include "common.h"
 
 #include "calculate_trims.h"
+#include "fastq.h"
 
 
 using namespace std;
@@ -77,10 +78,10 @@ class alignment_wrapper {
     //  Returns -1 if read aligned to bottom strand, +1 if aligned to top strand
     inline int32_t strand() const { return (bam1_strand(_a) ? -1 : +1); }
     
-    //! Retrieve the query sequence (always on top strand).
+    //! Retrieve the query sequence (always on top genome strand).
     inline uint8_t* read_bam_sequence() const { return bam1_seq(_a); }
 
-    //! Retrieve the query sequence (always on top strand).
+    //! Retrieve the query sequence (always on top genome strand).
     string read_char_sequence() const { 
       string s;
       for (uint32_t p=0; p<read_length(); p++) {
@@ -88,6 +89,17 @@ class alignment_wrapper {
       }
       return s;
     }
+
+    //! Retrieve the query sequence on the query strand of the specified region
+    string read_char_stranded_sequence_1(uint32_t start_1, uint32_t end_1) const { 
+      ASSERT(start_1 <= end_1, "Start (" + to_string(start_1) + ") must be less than end (" + to_string(end_1) + ").");
+      
+      string s = read_char_sequence();
+      if (reversed()) s = reverse_complement(s);
+      s = s.substr(start_1-1, end_1-start_1+1);
+      return s;
+    }
+  
     
     //! Calculate the total length of the read.
     inline uint32_t read_length() const { return _a->core.l_qseq; }
@@ -168,7 +180,7 @@ class alignment_wrapper {
     uint32_t query_match_length() const { return query_end_1() - query_start_1() + 1; };
 
     //! Starting and ending coordinates of the alignment part of the read
-    //  on the reference sequence
+    //  on the reference sequence. Start is always < End unless using 'stranded' version
     uint32_t reference_start_0() const {return _a->core.pos; } ;
     uint32_t reference_start_1() const {return reference_start_0() + 1; };
 
@@ -184,6 +196,8 @@ class alignment_wrapper {
     void reference_bounds_1(uint32_t& start, uint32_t& end) const
       { start = reference_start_1(); end = reference_end_1(); }
 
+    void reference_stranded_bounds_1(uint32_t& start, uint32_t& end) const
+      { start = reference_start_1(); end = reference_end_1(); if (reversed()) swap(start, end); } 
   
     uint32_t reference_match_length() const { return reference_end_1() - reference_start_1() + 1; };
 

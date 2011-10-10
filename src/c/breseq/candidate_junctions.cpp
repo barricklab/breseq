@@ -250,21 +250,15 @@ namespace breseq {
       else
       {
         untouched_alignments.push_back(*it);
-      }
-      
+      }      
     }
 
-    //## @JEB POSSIBLE OPTIMIZATION
-    //## We could actually be a little smarter than this and
-    //## Not write when we know that this matches so much of the
-    //## Read that it cannot be used in a pair to create a candidate junction
-    //##
-    //## Use $self->{required_both_unique_length_per_side} to rule them out.
-    
-    //## Don't write in possible junction file when it covers the entire read!
+    // Don't write in possible junction file when it covers the entire read! 
+    // -- or so much that it couldn't possibly be used in a junction.
     for(alignment_list::iterator it = untouched_alignments.begin(); it != untouched_alignments.end();) 
     {
-      if ((*it)->beginning_to_end_match())
+//    if ((*it)->beginning_to_end_match()) @JEB this is a backup version, sure not to throw anything out
+      if ((*it)->query_match_length() > (*it)->read_length() - settings.required_both_unique_length_per_side)
         it = untouched_alignments.erase(it);
       else
         it++;
@@ -283,11 +277,12 @@ namespace breseq {
 	void CandidateJunctions::identify_candidate_junctions(const Settings& settings, Summary& summary, const cReferenceSequences& ref_seq_info)
 	{
 		(void)summary; // TODO: save statistics
-    bool verbose = true;
+    bool verbose = false;
     
 		// hash by junction sequence concatenated with name of counts
 		map<string, map<string, CandidateJunction>, CandidateJunction::Sorter> candidate_junctions;
     
+        
 		// summary data for this step
 		Summary::CandidateJunctionSummaryData hcs;
     
@@ -328,7 +323,7 @@ namespace breseq {
 		//
 		for (map<string, map<string, CandidateJunction>, CandidateJunction::Sorter>::iterator outer_it = candidate_junctions.begin(); outer_it != candidate_junctions.end(); outer_it++)
 		{
-      cout << "Sequence: " << outer_it->first << endl;
+      if (verbose) cout << "Sequence: " << outer_it->first << endl;
 
 			for (map<string, CandidateJunction>::iterator it = (*outer_it).second.begin(); it != (*outer_it).second.end(); it++)
 			{
@@ -352,10 +347,10 @@ namespace breseq {
 			}
 		}
     
-		//
-		// Combine hash into a list, retaining only one item (the best pos_hash score) for each unique sequence 
-    // (and also its reverse complement)
-		//
+		////
+		//  Combine hash into a list, retaining only one item (the best pos_hash score) for each unique sequence 
+    //  (and also its reverse complement)
+		////
     
 		map<int32_t, int32_t> observed_pos_hash_score_distribution;
     
@@ -368,57 +363,31 @@ namespace breseq {
 		for (map<string, map<string, CandidateJunction>, CandidateJunction::Sorter>::iterator outer_it = candidate_junctions.begin(); outer_it != candidate_junctions.end(); outer_it++)
 		{
 			string junction_seq = (*outer_it).first;
-			if (verbose) cout << "Handling " << junction_seq << endl;
+      string rc_junction_seq = reverse_complement(junction_seq);
+
+      if (verbose) cout << "Handling " << junction_seq << endl;
       
-			// We may have already done the reverse complement
-			if (handled_seq.count(junction_seq) > 0) continue;
+			// These shouldn't be necessary checks, but keeping to detect unintended errors
+			ASSERT(!handled_seq.count(junction_seq) > 0, "Duplicate junction sequence encountered.\n" + junction_seq);
+      ASSERT(!handled_seq.count(junction_seq) > 0, "Duplicate reverse complement junction sequence encountered.\n" + rc_junction_seq);
+
+			// holds all junctions with the same seq      
+			map<string, CandidateJunction>::iterator it = (*outer_it).second.begin();
+      string junction_id = (*it).first;
+      // add redundancy to the junction_id
+      CandidateJunction cj = (*it).second;
       
-			// holds all junctions with the same seq
-			vector<CombinedCandidateJunction> combined_candidate_junction_list;
+      CombinedCandidateJunction best_candidate_junction = {
+        junction_id,			// id
+        "",
+        cj.pos_hash_score,		// pos_hash_score
+        junction_seq,			// seq
+        rc_junction_seq			// rc_seq
+      };
       
-			string rc_junction_seq = reverse_complement(junction_seq);
-      
-			for (map<string, CandidateJunction>::iterator it = (*outer_it).second.begin(); it != (*outer_it).second.end(); it++)
-			{
-				string junction_id = (*it).first;
-				// add redundancy to the junction_id
-				CandidateJunction cj = (*it).second;
-        
-				CombinedCandidateJunction ccj = {
-					junction_id,			// id
-          "",
-					cj.pos_hash_score,		// pos_hash_score
-					junction_seq,			// seq
-					rc_junction_seq			// rc_seq
-				};
-				combined_candidate_junction_list.push_back(ccj);
-			}
 			handled_seq[junction_seq]++;
-      
-			// add the reverse complement
-			if (candidate_junctions.count(rc_junction_seq) > 0)
-			{
-				for (map<string, CandidateJunction>::iterator it = candidate_junctions[rc_junction_seq].begin(); it != candidate_junctions[rc_junction_seq].end(); it++)
-				{
-					string junction_id = (*it).first;
-					// add redundancy to the junction_id (reversed)
-					CandidateJunction cj = (*it).second;
-          
-					CombinedCandidateJunction ccj = {
-						junction_id,			// id
-            "",
-						cj.pos_hash_score,		// pos_hash_score
-						rc_junction_seq,		// seq
-						junction_seq			// rc_seq
-					};
-					combined_candidate_junction_list.push_back(ccj);
-				}
-				handled_seq[rc_junction_seq]++;
-			}
-      
-			sort(combined_candidate_junction_list.begin(), combined_candidate_junction_list.end(), CombinedCandidateJunction::sort_by_score_unique_coord);
-			CombinedCandidateJunction& best_candidate_junction = combined_candidate_junction_list[0];
-      
+			handled_seq[rc_junction_seq]++;
+            
 			// Save the score in the distribution
 			add_score_to_distribution(observed_pos_hash_score_distribution, best_candidate_junction.pos_hash_score);
       
@@ -426,30 +395,8 @@ namespace breseq {
 			if (best_candidate_junction.pos_hash_score < settings.minimum_candidate_junction_pos_hash_score)
 				continue;
       
-      // ASSIGN REDUNDANCY
-      // =================
-      // Assign redundancy to all sides of the BEST junction that are not in EVERY candidate junction with the same sequence
-      for (vector<CombinedCandidateJunction>::iterator it=combined_candidate_junction_list.begin()++; it != combined_candidate_junction_list.end(); it++)
-      {
-        CombinedCandidateJunction& test_candidate_junction(*it);
-        
-        for (uint32_t best_side_index=0; best_side_index<=1; best_side_index++)
-        {
-          bool found = false;
-          for (uint32_t test_side_index=0; test_side_index<=1; test_side_index++)
-          {
-            if (best_candidate_junction.junction_info.sides[best_side_index] == test_candidate_junction.junction_info.sides[test_side_index])
-              found=true;
-          }
-          
-          // didn't find this side -- mark as redundant
-          if (!found)
-          {
-            best_candidate_junction.junction_info.sides[best_side_index].redundant = true;
-            if (verbose) cout << "Marking side " << best_side_index << " as redundant." << endl;
-          }
-        }
-      }
+      if (verbose) cout << "  best candidate junction:" << endl << best_candidate_junction.junction_info.junction_key() << endl;
+
       
       // ONLY NOW can we create the correct junction id key
       best_candidate_junction.junction_key = best_candidate_junction.junction_info.junction_key();
@@ -746,7 +693,7 @@ namespace breseq {
 			if (q1_move >= 0 || q2_move >= 0)
 			{
 				if (verbose)
-					cout << "Rejecting alignment because there is not not enough overlap" << endl;
+					cout << "Rejecting alignment because there is not enough overlap" << endl;
 				int32_t dont_care;
         
         AlignmentPair ap(q1, q2, settings);
@@ -860,16 +807,12 @@ namespace breseq {
 		if (verbose)
 			cout << "Overlap offset: " << overlap_offset << endl;
 
-		// record what parts of the reference sequence were actually matched on each side
-		// this is to determine whether that side was redundant or unique in the reference
-
-		int32_t ref_seq_matched_length_1 = r1_end - r1_start + 1;
-		int32_t ref_seq_matched_length_2 = r2_end - r2_start + 1;
-
-		// create the sequence of the candidate junction
+    ////
+		// Create the sequence of the candidate junction
+    ////
 		string junction_seq_string = "";
 
-		// first end
+		// first end - contains the overlap for >0 overlap
 		int32_t flanking_left = flanking_length;
 		if (hash_strand_1 != 1) // alignment is not reversed
 		{
@@ -904,7 +847,7 @@ namespace breseq {
     }
 
 		// Add any unique junction sequence that was only in the read
-		// and NOT present in the reference genome
+		// and NOT present in the reference genome (overlap < 0)
 		string unique_read_seq_string = "";
 		if (overlap < 0)
 			unique_read_seq_string = q1.read_char_sequence().substr(q1_end, -1 * overlap);
@@ -914,6 +857,7 @@ namespace breseq {
 
 		// second end - added without overlapping sequence
 		int32_t flanking_right = flanking_length;
+    
 		if (hash_strand_2 == 1) //alignment is not reversed
 		{
 			// end_pos is in 1-based coordinates
@@ -939,8 +883,8 @@ namespace breseq {
 				flanking_right += start_pos - 1;
 				start_pos = 1;
 			}
-			string add_seq = ref_seq_2.substr(start_pos - 1, flanking_right);
-			add_seq = reverse_complement(add_seq);
+			string add_seq = ref_seq_2.substr(start_pos - 1, flanking_right);			
+      add_seq = reverse_complement(add_seq);
 			if (verbose) cout << "2R: " << add_seq << endl;
 			junction_seq_string += add_seq;
 		}
@@ -958,10 +902,6 @@ namespace breseq {
 		else //reversed
 			r2_start += overlap_offset;
 
-		// matched reference sequence, EXCLUDING OVERLAP because it is removed by offsets above.
-		string ref_seq_matched_1 = ref_seq_1.substr(r1_start - 1, r1_end - r1_start + 1);
-		string ref_seq_matched_2 = ref_seq_2.substr(r2_start - 1, r2_end - r2_start + 1);
-
 		// want to be sure that lowest ref coord is always first for consistency
 		if ( hash_seq_id_1.compare(hash_seq_id_2) > 0 || (hash_seq_id_1.compare(hash_seq_id_2) == 0 && hash_coord_2 < hash_coord_1) )
 		{
@@ -969,7 +909,6 @@ namespace breseq {
 			swap(hash_strand_1, hash_strand_2);
 			swap(hash_seq_id_1, hash_seq_id_2);
 			swap(flanking_left, flanking_right);
-			swap(ref_seq_matched_1, ref_seq_matched_2);
 
 			junction_seq_string = reverse_complement(junction_seq_string);
 			unique_read_seq_string = reverse_complement(unique_read_seq_string);
@@ -994,12 +933,6 @@ namespace breseq {
 			flanking_left,
 			flanking_right
 		);
-    
-    
-		string join1[] = { hash_seq_id_1, to_string(hash_coord_1), to_string(hash_strand_1) };
-		string junction_coord_1 = join(join1, "::");
-		string join2[] = { hash_seq_id_2, to_string(hash_coord_2), to_string(hash_strand_2) };
-		string junction_coord_2 = join(join2, "::");
 
 		if (verbose)
 		{
@@ -1008,23 +941,27 @@ namespace breseq {
 			cout << "JUNCTION ID: " << junction_id << endl;
 		}
 
-		assert(junction_seq_string.size() > 0); // die "Junction sequence not found: $junction_id " . $q1->qname . " " . $a2->qname  if (!$junction_seq_string);
-		assert(junction_seq_string.size() == flanking_left + flanking_right + static_cast<uint32_t>(abs(overlap))); // die "Incorrect length for $junction_seq_string: $junction_id " . $q1->qname . " " . $a2->qname if (length $junction_seq_string != $flanking_left + $flanking_right + abs($overlap));
+		ASSERT(junction_seq_string.size() > 0, "Junction sequence not found."); 
+		ASSERT(junction_seq_string.size() == flanking_left + flanking_right + static_cast<uint32_t>(abs(overlap)),
+           "Incorrect junction sequence length for " + new_junction.junction_key() + "\n" + junction_seq_string);
 
     // Set return values
     junction.junction_info = new_junction;
     junction.sequence = junction_seq_string;
     junction.read_begin_coord = read_begin_coord;
-    junction.side_1_ref_seq = ref_seq_matched_1;
-    junction.side_2_ref_seq = ref_seq_matched_2;
-    junction.junction_coord_1 = junction_coord_1;
-    junction.junction_coord_2 = junction_coord_2;
     
 		return true;
 	}
 
-	void CandidateJunctions::alignments_to_candidate_junctions(const Settings& settings, Summary& summary, const cReferenceSequences& ref_seq_info, map<string, map<string, CandidateJunction>, CandidateJunction::Sorter>& candidate_junctions, alignment_list& alignments)
+	void CandidateJunctions::alignments_to_candidate_junctions(
+                                                             const Settings& settings, 
+                                                             Summary& summary, const 
+                                                             cReferenceSequences& ref_seq_info, 
+                                                             SequenceToCandidateJunctionMap& candidate_junctions, 
+                                                             alignment_list& alignments
+                                                             )
 	{
+    (void)summary;
 		bool verbose = false;
 
 		if (verbose)
@@ -1034,27 +971,25 @@ namespace breseq {
 			cout << endl << "###########################" << endl;
 		}
 
-		// Must still have multiple matches to support a new junction.
+		// Must  have multiple matches to support a new junction.
 		if (alignments.size() <= 1)
 			return;
 
-		// Now is our chance to decide which groups of matches are compatible,
-		// to change their boundaries and to come up with a final list.
+    ////
+    // Split the read alignments into two lists
+    //  (1) list1 contains all matches starting at the beginning of the read
+    //  (2) list2 contains all other matches
+    // Accepted pairs must have a member from each list
+    // Requiring (1) saves a number of comparisons and gets rid of a lot of bad matches.
+    ////
 
+    alignment_list list1, list2;
+    
 		if (verbose)
 		{
 			cout << alignments.front()->read_name() << endl;
 			cout << "Total matches: " << alignments.size() << endl;
 		}
-
-    // list1 contains all matches starting at the beginning of the read
-    // list2 contains all other matches
-    // you can never have a pair that doesn't have a member from each list
-		alignment_list list1, list2;
-
-    // Try only pairs where one match starts at the beginning of the read >>>
-		// This saves a number of comparisons and gets rid of a lot of bad matches.
-		int32_t max_alignment_length = 0;
 
     for (alignment_list::iterator it=alignments.begin(); it != alignments.end(); it++)
 		{
@@ -1066,18 +1001,12 @@ namespace breseq {
 			if (verbose) cout << "(" << a_start << ", " << a_end << ")" << endl;
 
 			int32_t length = a_end - a_start + 1;
-			if (length > max_alignment_length)
-				max_alignment_length = length;
 
 			if (a_start == 1)
 				list1.push_back(a);
 			else
 				list2.push_back(a);
 		}
-
-		// Pairs must CLEAR the maximum length of any one alignment by a certain amount
-		int32_t required_union_length = max_alignment_length + settings.required_extra_pair_total_length;
-    int32_t max_union_length = 0;
     
 		// The first match in this category is the longest
 		if (verbose)
@@ -1086,50 +1015,167 @@ namespace breseq {
 			cout << "  List2: " << list2.size() << endl;
 		}
 
+
+    ////
+		// Try adding together each pair of matches to make a junction, by looking at read coordinates
+    //   Only keep pairs that cover the maximum number of query bases encountered
+    ////
+    
+    int32_t max_union_length = 0;
 		vector<AlignmentPair> passed_pair_list;
 
-		// Try adding together each pair of matches to make a junction, by looking at read coordinates
     for (alignment_list::iterator it1 = list1.begin(); it1 != list1.end(); it1++)
 		{
-			bam_alignment& a1 = *(it1->get());
+			bam_alignment_ptr& a1 = *it1;
 
       for (alignment_list::iterator it2 = list2.begin(); it2 != list2.end(); it2++)
 			{
-				bam_alignment& a2 = *(it2->get());
+				bam_alignment_ptr& a2 = *it2;
 
 				// constructing the alignment pair calculates statistics about their overlap
         // and tests the guards that are in Settings.
         
-        AlignmentPair ap(a1, a2, settings);
+        AlignmentPair ap(*a1, *a2, settings);
 
-				if (ap.pass && (ap.union_length >= required_union_length))
-				{
-					// right now we use the union length as a score
+				if (ap.pass)
+        {
+          // right now we use the union length as a kind of score
           // matches with greater union length trump those with smaller
-					if (ap.union_length > max_union_length)
-					{
-						max_union_length = ap.union_length;
+          if (ap.union_length > max_union_length)
+          {
+            max_union_length = ap.union_length;
             passed_pair_list.clear();
           }
 
-					passed_pair_list.push_back(ap);
-				}
-			}
+          passed_pair_list.push_back(ap);
+        }
+      }
 		}
-    
+      
     // create a list of all the candidate junctions
-    vector<SingleCandidateJunction> junctions;
+    list<SingleCandidateJunction> junctions;
+    
+    // see if the junction sequence is unique (not contained in or containing any other sequences)
+
+    bool add_to_list = true;
+    
 		for (uint32_t i = 0; i < passed_pair_list.size(); i++)
 		{
 			AlignmentPair& ap = passed_pair_list[i];
       
-      SingleCandidateJunction cj;
-			bool passed = alignment_pair_to_candidate_junction(settings, summary, ref_seq_info, ap, cj);
+      if (ap.a1.read_name() == "1:344198")
+      {
+        cout << "debug" << endl;
+      }
+
+      SingleCandidateJunction new_junction;
+			bool passed = alignment_pair_to_candidate_junction(settings, summary, ref_seq_info, ap, new_junction);
 			if (!passed) continue;
       
-      junctions.push_back(cj);
-    }
+      string sequence(new_junction.sequence);
+      string rc_sequence(reverse_complement(new_junction.sequence));
+      
+      bool merged = false;
+      bool rc_merged = false;
 
+      if (verbose) cout << "Testing junction: " << new_junction.junction_info.junction_key() << endl << new_junction.sequence << endl;
+      
+      for (list<SingleCandidateJunction>::iterator itj=junctions.begin(); itj!=junctions.end(); itj++)
+      {
+        SingleCandidateJunction& test_junction = *itj;
+        
+        if (sequence.size() > itj->sequence.size())
+        {
+          if (sequence.find(test_junction.sequence) != string::npos)
+            merged = true;
+          else if (rc_sequence.find(test_junction.sequence) != string::npos )
+            rc_merged = true;
+        }
+        else
+        {
+          if (test_junction.sequence.find(sequence) != string::npos)
+            merged = true;
+          else if (test_junction.sequence.find(rc_sequence) != string::npos)
+            rc_merged = true;
+        }
+                
+        add_to_list = !(merged || rc_merged);
+        
+        // choose which one to keep
+        if (merged || rc_merged)
+        {
+          
+          SingleCandidateJunction* merge_into = NULL;
+          SingleCandidateJunction* merge_from = NULL;
+
+          // this is a rather complicated compare function to favor longer sequences and those with close coords
+          if ( test_junction < new_junction )
+          {
+            merge_into = &new_junction;
+            merge_from = &test_junction; 
+          }
+          else
+          {
+            merge_into = &test_junction;
+            merge_from = &new_junction;
+          }
+          
+          if (verbose) cout << "Merging into:" << merge_into->junction_info.junction_key() << endl;
+          if (verbose) cout << merge_into->sequence << endl;
+          if (verbose) cout << "Merging from:" << merge_from->junction_info.junction_key() << endl;
+          if (verbose) cout << merge_from ->sequence << endl;
+          
+          if (rc_merged)
+          {
+            merge_into->junction_info.sides[0].redundant = merge_from->junction_info.sides[1].redundant || merge_into->junction_info.sides[0].redundant;
+            merge_into->junction_info.sides[1].redundant = merge_from->junction_info.sides[0].redundant || merge_into->junction_info.sides[1].redundant;
+          }
+          else
+          {
+            merge_into->junction_info.sides[0].redundant = merge_from->junction_info.sides[0].redundant || merge_into->junction_info.sides[0].redundant;
+            merge_into->junction_info.sides[1].redundant = merge_from->junction_info.sides[1].redundant || merge_into->junction_info.sides[1].redundant;
+          }
+          
+          if (verbose) cout << "Merging into carryover:" << merge_into->junction_info.junction_key() << endl;
+
+          
+          for (uint32_t into_side = 0; into_side < 2; into_side++) 
+          {
+            bool found = false;
+
+            for (uint32_t from_side = 0; from_side < 2; from_side++) 
+            {
+              if (merge_into->junction_info.sides[into_side] == merge_from->junction_info.sides[from_side])
+                found = true;
+            }
+            
+            if (!found)
+            {
+              merge_into->junction_info.sides[into_side].redundant = true;
+              if (verbose) cout << "Marking side " << into_side << " as redundant." << endl;
+            }
+            
+          }
+          
+          if (merge_into == &new_junction)
+          {
+            *itj = new_junction;
+          }
+          
+          if (verbose) cout << "Merged junction: " << itj->junction_info.junction_key() << endl;
+
+          break;
+        }
+        
+      } // end current junctions list
+      
+      // not merged
+      if (add_to_list) 
+        junctions.push_back(new_junction);
+
+    } // end passed pair list
+
+    
 		if (verbose) cout << "  Junctions: " << junctions.size() << endl;
 
 		// Done if everything already ruled out...
@@ -1138,15 +1184,12 @@ namespace breseq {
 		if (verbose) cout << alignments.front()->read_name() << endl;
 
     // Add these to the main hash (by sequence)
-		for (uint32_t i = 0; i < junctions.size(); i++)
+    for (list<SingleCandidateJunction>::iterator it=junctions.begin(); it!=junctions.end(); it++)
 		{
-			SingleCandidateJunction& jct = junctions[i];
+			SingleCandidateJunction& jct = *it;
 			JunctionInfo& junction_info = jct.junction_info;
 			string junction_seq_string = jct.sequence;
 			int32_t read_begin_coord = jct.read_begin_coord;
-
-			string side_1_ref_seq = jct.side_1_ref_seq;
-			string side_2_ref_seq = jct.side_2_ref_seq;
 
 			string junction_id = junction_info.junction_key();
 			if (verbose) cout << junction_id << endl;
@@ -1167,6 +1210,7 @@ namespace breseq {
       cj.read_begin_hash[read_begin_coord]++;
 			candidate_junctions[junction_seq_string][junction_id] = cj;
 		}
+    
 	}
   
   /*!
@@ -1174,15 +1218,18 @@ namespace breseq {
    */
   
   AlignmentPair::AlignmentPair(bam_alignment& _a1, bam_alignment& _a2, const Settings &settings)
-    : a1(_a1), a2(_a2), union_length(0), a1_unique_length(0), a2_unique_length(0), pass(false)
-    , intersection_length(0), a1_length(0), a2_length(0)
+  : a1(_a1), a2(_a2), hash_coord(0)
+    , a1_unique_start(0), a1_unique_end(0), a1_unique_length(0)
+    , a2_unique_start(0), a2_unique_end(0), a2_unique_length(0)
+    , union_length(0), intersection_length(0)
+    , pass(false)
   {
     calculate_union_and_unique();
     pass = test(settings);
   }
   
   /*!
-   * Calculates the union and unique lengths of the read pair
+   * Calculates statistics about how the alignments overlap
    */
   
   void AlignmentPair::calculate_union_and_unique()
@@ -1195,32 +1242,47 @@ namespace breseq {
     uint32_t a2_start, a2_end;
     a2.query_stranded_bounds_1(a2_start, a2_end);
     
-		if (verbose)
-			cout << "=== Match1: " << a1_start << "-" << a1_end << "   Match2: " << a2_start << "-" << a2_end << endl;
-    
-    //@JEB TODO Is it ok to remove the following section?
-    
-		// 0. Require one match to start at the beginning of the read
-		//if (a1_start != 1 && a2_start != 1)
-		//	return false;
-		// Already checked when two lists were constructed: TEST AND REMOVE
+    // move adjust so order is a1-a2 on read sequence
+    if (a1_start > a2_start)
+    {
+      swap(a1, a2);
+      swap(a1_start, a2_start);
+      swap(a1_end, a2_end);
+    }
 
-		a1_length = a1_end - a1_start + 1;
-		a2_length = a2_end - a2_start + 1;
+    // this is the coord of the first base in the read
+    // (since we required this to match)
+    uint32_t a1_reference_start, a1_reference_end;
+    a1.reference_stranded_bounds_1(a1_reference_start, a1_reference_end);
+    hash_coord = a1_reference_start;
+    ASSERT(a1_start == 1, "Read does not match from beginning.");
+
     
-		int32_t union_start = (a1_start < a2_start) ? a1_start : a2_start;
-		int32_t union_end = (a1_end > a2_end) ? a1_end : a2_end;
-		union_length = union_end - union_start + 1;
-    
-		int32_t intersection_start = (a1_start > a2_start) ? a1_start : a2_start;
-		int32_t intersection_end = (a1_end < a2_end) ? a1_end : a2_end;
+		int32_t intersection_start = a2_start;
+		int32_t intersection_end = a1_end;
 		this->intersection_length = intersection_end - intersection_start + 1;
     
-		if (intersection_length < 0)
-			this->union_length += this->intersection_length;
+    int32_t union_start = a1_start;
+		int32_t union_end = a2_end;
+    // Note: last term subtracts missing bases when the two alignments don't overlap in the middle
+		this->union_length = union_end - union_start + 1 - max(0, -intersection_length);
+    
+    a1_unique_start = a1_start;
+    a1_unique_end = min(a2_start - 1, a1_end);
+    this->a1_unique_length = max(a1_unique_end - a1_unique_start + 1, 0);
+    
+    a2_unique_start = max(a1_end + 1, a2_start);
+    a2_unique_end = a2_end;
+    this->a2_unique_length = max(a2_unique_end - a2_unique_start + 1, 0);
     
     if (verbose)
+    {
+      cout << " Read: " << a1.read_name() << endl;
+      cout << "=== Match1: " << a1_start << "-" << a1_end << "   Match2: " << a2_start << "-" << a2_end << endl;
 			cout << "    Union: " << this->union_length << "   Intersection: " << this->intersection_length << endl;
+      
+      cout << "    Unique length 1: " << this->a1_unique_length << " Unique length 2:"<< this->a2_unique_length << endl;
+    }
   }
   
   /*!
@@ -1229,28 +1291,33 @@ namespace breseq {
   
   bool AlignmentPair::test(const Settings& settings)
   {
-		int32_t intersection_length_positive = (intersection_length > 0) ? intersection_length : 0;
-		int32_t intersection_length_negative = (intersection_length < 0) ? -1 * intersection_length : 0;
+    int32_t intersection_length_negative = -min(0, intersection_length);
     
 		//// 1. Require maximum negative overlap (inserted unique sequence length) to be less than some value
 		if (intersection_length_negative > static_cast<int32_t>(settings.maximum_inserted_junction_sequence_length))
 			return false;
     
 		//// 2. Require both ends to extend a certain minimum length outside of the overlap
-		if (a1_length < intersection_length_positive + static_cast<int32_t>(settings.required_both_unique_length_per_side))
+		if (a1_unique_length < static_cast<int32_t>(settings.required_both_unique_length_per_side))
 			return false;
     
-		if (a2_length < intersection_length_positive + static_cast<int32_t>(settings.required_both_unique_length_per_side))
+		if (a2_unique_length < static_cast<int32_t>(settings.required_both_unique_length_per_side))
 			return false;
-    
+
 		//// 3. Require one end to extend a higher minimum length outside of the overlap
-		if ((a1_length < intersection_length_positive + static_cast<int32_t>(settings.required_one_unique_length_per_side))
-        && (a2_length < intersection_length_positive + static_cast<int32_t>(settings.required_one_unique_length_per_side)))
+		if ((a1_unique_length <  static_cast<int32_t>(settings.required_one_unique_length_per_side))
+        && (a2_unique_length <  static_cast<int32_t>(settings.required_one_unique_length_per_side)))
 			return false;
     
-		//// 4. Require both matches together to cover a minimum part of the read.
+		//// 4. Test all of the normal criteria for counting a match to the reference
 		if (union_length < static_cast<int32_t>(settings.require_match_length))
 			return false;
+    
+    if (union_length < settings.require_match_fraction * static_cast<double>(a1.read_length()) )
+      return false;
+    
+    if ((settings.require_complete_match) && (static_cast<uint32_t>(union_length) != a1.read_length())) 
+        return false; 
 
     return true;
   }
