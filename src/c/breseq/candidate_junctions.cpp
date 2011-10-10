@@ -368,8 +368,13 @@ namespace breseq {
       if (verbose) cout << "Handling " << junction_seq << endl;
       
 			// These shouldn't be necessary checks, but keeping to detect unintended errors
-			ASSERT(!handled_seq.count(junction_seq) > 0, "Duplicate junction sequence encountered.\n" + junction_seq);
-      ASSERT(!handled_seq.count(junction_seq) > 0, "Duplicate reverse complement junction sequence encountered.\n" + rc_junction_seq);
+      
+      // @JEB: TODO need to merge later to properly account for these
+      // by merging sequences only at a later step... (can ignore pos_hash=1 anyways)
+      if (handled_seq.count(junction_seq)) continue;
+      if (handled_seq.count(rc_junction_seq)) continue;
+			//ASSERT(!handled_seq.count(junction_seq) > 0, "Duplicate junction sequence encountered.\n" + junction_seq);
+      //ASSERT(!handled_seq.count(rc_junction_seq) > 0, "Duplicate reverse complement junction sequence encountered.\n" + rc_junction_seq);
 
 			// holds all junctions with the same seq      
 			map<string, CandidateJunction>::iterator it = (*outer_it).second.begin();
