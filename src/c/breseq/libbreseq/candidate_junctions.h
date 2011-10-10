@@ -55,10 +55,20 @@ namespace breseq {
       bool redundant_2;
 		} test_info;
     
-		struct Sorter {
-			bool operator() (const string& lhs, const string& rhs) const { return (lhs < rhs); }
+		struct Sorter {      
+      bool operator() (const string& lhs, const string& rhs) const
+      { 
+       // if (lhs.size() != rhs.size()) 
+        //  return lhs.size()<rhs.size();
+        return  lhs < rhs;
+        
+        //return lhs.compare(rhs);
+      }
 		};
 	};
+  
+  typedef map<string, map<string, CandidateJunction>, CandidateJunction::Sorter> SequenceToCandidateJunctionMap;
+
   
   // @JEB Need to do away with this and use cSequenceFeature instead!
 	struct Feature
@@ -152,7 +162,7 @@ namespace breseq {
     }
     
     //! Create a JunctionInfo from supplied parameters
-    JunctionInfo(Side& _side_1, Side& _side_2, int32_t _alignment_overlap, const string& _unique_read_sequence, int32_t _flanking_left, int32_t _flanking_right)
+    JunctionInfo(const Side& _side_1, const Side& _side_2, int32_t _alignment_overlap, const string& _unique_read_sequence, int32_t _flanking_left=0, int32_t _flanking_right=0)
     {
       sides[0] = _side_1;
       sides[1] = _side_2;
@@ -248,18 +258,28 @@ namespace breseq {
   public:
     bam_alignment	a1;
     bam_alignment a2;
-    int32_t union_length;
+    int32_t hash_coord;
+    
+    int32_t a1_unique_start;
+    int32_t a1_unique_end;
     int32_t a1_unique_length;
+    
+    int32_t a2_unique_start;
+    int32_t a2_unique_end;    
     int32_t a2_unique_length;
-    bool pass;
+
+    int32_t union_length;
     int32_t intersection_length;
-    int32_t a1_length;
-    int32_t a2_length;
-    int32_t redundancy_1;
-    int32_t redundancy_2;
+    
+    bool pass;
     
     // the constructor - also calculates statistics
     AlignmentPair(bam_alignment& _a1, bam_alignment& _a2, const Settings& settings);
+    
+    static bool reverse_sort_by_overlap (const AlignmentPair& i,const AlignmentPair&  j) 
+      { return (i.intersection_length > j.intersection_length); }
+    
+    string junction_key(const cReferenceSequences& ref_seq_info);
     
   private:
     void calculate_union_and_unique();
@@ -306,11 +326,39 @@ namespace breseq {
 			JunctionInfo junction_info;
 			string sequence;
 			uint32_t read_begin_coord;
-			string side_1_ref_seq;
-			string side_2_ref_seq;
-      string junction_coord_1;
-      string junction_coord_2;
+      
+      //! if returns true then we merge into cj
+      bool operator <(const SingleCandidateJunction& cj) const
+      {
+        // we actually want longest sequence to return true
+        if ( this->sequence.size() < cj.sequence.size() ) return true;  // merge into longer cj
+        if ( this->sequence.size() > cj.sequence.size() ) return false;
+        
+        int32_t equal_seq_1 = (this->junction_info.sides[0].seq_id == this->junction_info.sides[1].seq_id) ? 1 : 0;
+        int32_t equal_seq_2 = (cj.junction_info.sides[0].seq_id == cj.junction_info.sides[1].seq_id) ? 1 : 0;
+        if (equal_seq_1 < equal_seq_2) return true; // merge into cj if only it is on the same fragment
+        if (equal_seq_1 > equal_seq_2) return false;
+          
+        // sequence lengths are equal
+        int32_t distance_1 = abs( this->junction_info.sides[0].position - this->junction_info.sides[1].position );
+        int32_t distance_2 = abs( cj.junction_info.sides[0].position - cj.junction_info.sides[1].position );
+        if (distance_1 > distance_2) return true; // merge into cj if it is separated by a smaller distance
+        if (distance_1 < distance_2) return false;
+        
+        return (this->junction_info.sides[0].position > cj.junction_info.sides[0].position); // merge into cj if it has a smaller coord
+      }
 		};
+    
+    struct CombinedCandidateJunctionCompare {
+      bool operator() (const string& lhs, const string& rhs) const
+      { 
+        if (lhs.size() != rhs.size()) 
+          return lhs.size()<rhs.size();
+        return  lhs < rhs;
+      }
+    };
+    
+    
 		struct CombinedCandidateJunction
 		{
 			JunctionInfo junction_info;
@@ -372,7 +420,7 @@ namespace breseq {
                                                   const Settings& settings, 
                                                   Summary& summary,  
                                                   const cReferenceSequences& ref_seq_info, 
-                                                  map<string, map<string, CandidateJunction>, CandidateJunction::Sorter>& candidate_junctions, 
+                                                  SequenceToCandidateJunctionMap& candidate_junctions, 
                                                   alignment_list& alignments);
     
 	}; // class CandidateJunction

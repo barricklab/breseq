@@ -115,7 +115,6 @@ namespace breseq
 		'no-mismatch-prediction' => \$self->{no_mutation_prediction},
 		'no-deletion-prediction' => \$self->{no_deletion_prediction},
 		'no-alignment-generation' => \$self->{no_alignment_generation},
-		'no-filter-unwanted' => \$self->{no_filter_unwanted},
 		'no-unmatched-reads' => \$self->{no_unmatched_reads},
 		'copy-number-variation' => \$self->{copy_number_variation},
 ## Options for only using part of the data		
@@ -172,6 +171,7 @@ namespace breseq
 		("output,o", "path to breseq output [current path]", ".")
 		("reference,r", "reference sequence in GenBank flatfile format (REQUIRED)")
     ("name,n", "human-readable name of sample/run for output [empty]", "")
+    ("junction-prediction,j", "predict new sequence junctions", TAKES_NO_ARGUMENT)
     ("polymorphism-prediction,p", "predict polymorphic mutations", TAKES_NO_ARGUMENT)
     ("base-quality-cutoff,b", "ignore bases with quality scores lower than this value", "3")
     ("deletion-coverage-propagation-cutoff,u","value for coverage above which deletions are cutoff")
@@ -297,13 +297,8 @@ namespace breseq
     }
     this->full_command_line += " " + this->arguments;
     
-    
-		this->predicted_quality_type = "";
-		this->min_quality = 0;
-		this->max_quality = 0;
 		this->run_name = "";
     this->print_run_name = ""; 
-		this->clean = 0;
 		this->error_model_method = "EMPIRICAL";
     this->base_quality_cutoff = 3; // avoids problem with Illumina assigning 2 to bad ends of reads!
 
@@ -311,61 +306,52 @@ namespace breseq
     this->deletion_coverage_propagation_cutoff = 0;
     this->deletion_coverage_seed_cutoff = 0;
 
+    //// Read Alignment ////
+    
+    // SSAHA2 options
+    this->ssaha2_seed_length = 13;
+    this->ssaha2_skip_length = 1;
 
-		//this->required_unique_length_per_side = 10;                             // Require at least one of the pair of matches supporting a junction to have this
-		// much of its match that is unique in the reference sequence.
-		this->maximum_inserted_junction_sequence_length = 20; // Ignore junctions with negative overlap (unique inserted sequence between reference
-		// matches) greater than this length. Prevents evidence file names that are too long.
-		this->minimum_candidate_junctions = 0; // Minimum number of candidate junctions to keep
-		this->maximum_candidate_junctions = 5000; // Maximum number of candidate junctions to keep
-		this->maximum_candidate_junction_length_factor = 0.1; // Only keep CJ cumulative lengths adding up to this factor times the total reference size
-		this->candidate_junction_read_limit = 0; // FOR TESTING: only process this many reads when creating candidate junctions
-
-    //// READ ALIGNMENT ////
-    this->add_split_junction_sides = true;    // Add the sides of passed junctions to the SAM file?
     this->require_complete_match = false;
     this->require_match_length = 0;           // Match must span this many bases in query to count as a match
     this->require_match_fraction = 0.9;       // Match must span this fraction of bases in query to count as a match
     
     this->max_read_mismatches = -1;            // Read alignments with more than this number of mismatches are not counted; -1 = OFF
 		this->preprocess_junction_min_indel_split_length = 3; // Split the SAM entries on indels of this many bp or more before identifying CJ
-		this->candidate_junction_score_method = "POS_HASH"; // Either POS_HASH, or MIN_OVERLAP
 
     //// Identify CandidateJunctions ////
     
-		//// Scoring to decide which pairs of alignments to the same read to consider
-		this->required_extra_pair_total_length = 2;       // The union of the pairs must exceed the best of any single match by this length
-                                                      // Setting this does penalize some *real* new junctions, so be careful!
-		this->required_both_unique_length_per_side = 5;   // Require both of the pair of matches supporting a junction to have this
+		// Scoring to decide which pairs of alignments to the same read to consider
+		this->required_both_unique_length_per_side = 5; //this->ssaha2_seed_length;  
+    ASSERT(this->required_both_unique_length_per_side <= this->ssaha2_seed_length,
+           "--required-both-unique-length-per-side " + to_string(this->required_both_unique_length_per_side) + " must be less than or equal to --ssaha2-seed-length [" + to_string(this->ssaha2_seed_length) + "].");
+                                                      // Require both of the pair of matches supporting a junction to have this
                                                       // much of their matches unique in the reference sequence.
-		this->required_one_unique_length_per_side = 10;   // Require at least one of the pair of matches supporting a junction to have this
+		this->required_one_unique_length_per_side = this->ssaha2_seed_length;    // Require at least one of the pair of matches supporting a junction to have this
                                                       // much of its match that is unique in the reference sequence.
+		this->maximum_inserted_junction_sequence_length = 20; // Ignore junctions with negative overlap (unique inserted sequence between reference
+
+    this->minimum_candidate_junctions = 10; // Minimum number of candidate junctions to keep
+		this->maximum_candidate_junctions = 5000; // Maximum number of candidate junctions to keep
+		this->maximum_candidate_junction_length_factor = 0.1; // Only keep CJ cumulative lengths adding up to this factor times the total reference size
+
     
-		//// Scoring section to choose which ones from list to take
+		// Scoring section to choose which ones from list to take
 		this->minimum_candidate_junction_pos_hash_score = 0;    // Require at least this many unique start coordinate/strand reads to accept a CJ
                                                             // OFF by default, because a fixed number are taken
 		this->minimum_candidate_junction_min_overlap_score = 0; // Require at least this many unique start coordinate/strand reads to accept a CJ
                                                             // OFF by default, because a fixed number are taken
     
-    //// WORKFLOW ////
-    this->no_junction_prediction = false; // don't perform junction prediction steps
-		this->no_mutation_prediction = false;  // don't perform read mismatch/indel prediction steps
-		this->no_deletion_prediction = false; // don't perform deletion prediction steps
-		this->no_alignment_generation = false; // don't generate alignments
-		this->alignment_read_limit = 0; // only go through this many reads when creating alignments
-		this->correction_read_limit = 0; // only go through this many reads when correcting alignments
-
     
-		// NOT IMPLEMENTED
-		this->no_filter_unwanted = false; // don't filter out unwanted reads with adaptor matches
-		this->unwanted_prefix = "UNWANTED:::"; // prefix on unwanted read names
+    //// Alignment Resolution ////
+    this->add_split_junction_sides = true;    // Add the sides of passed junctions to the SAM file?
 
-		//// MutationIdentification ////
+    //// MutationIdentification ////
 		this->mutation_log10_e_value_cutoff = 2; // log10 of evidence required for SNP calls
     
     this->polymorphism_prediction = false;          // perform polymorphism prediction
     this->strict_polymorphism_prediction = false;   // perform polymorphism predictin with strict requirements
-
+    
 		this->polymorphism_log10_e_value_cutoff = 2;
 		this->polymorphism_bias_p_value_cutoff = 0.05;
 		this->polymorphism_frequency_cutoff = 0; // cut off if < X or > 1-X
@@ -376,20 +362,29 @@ namespace breseq
 		this->max_rejected_polymorphisms_to_show = 20;
 		this->max_rejected_junctions_to_show = 10;
 		this->hide_circular_genome_junctions = true;
-    
-    this->smalt = false;
-    
     this->polymorphism_reject_homopolymer_length = UNDEFINED_UINT32;
-    
     this->maximum_reads_to_align = 200;
-        
-		this->polymorphism_prediction = false;
+    
 		this->lenski_format = false;
 		this->no_evidence = false;
 		this->shade_frequencies = false;
 		this->no_header = false;
     this->verbose = false;
     this->values_to_gd = false;
+    
+    //// Global Workflow ////
+    this->polymorphism_prediction = false; // predict polymorphisms
+    this->junction_prediction = true; // perform junction prediction steps
+		this->no_mutation_prediction = false;  // don't perform read mismatch/indel prediction steps
+		this->no_deletion_prediction = false; // don't perform deletion prediction steps
+		this->no_alignment_generation = false; // don't generate alignments
+    this->unmatched_reads = true;
+    this->no_unmatched_reads = false;
+    //// Options for testing
+		this->alignment_read_limit = 0;           // only go through this many reads when creating alignments
+		this->correction_read_limit = 0;          // only go through this many reads when correcting alignments
+    this->candidate_junction_read_limit = 0;  // only go through this many reads when correcting alignments
+    this->smalt = false;    // experimental use of smalt aligner
 	}
 
 	void Settings::post_option_initialize()

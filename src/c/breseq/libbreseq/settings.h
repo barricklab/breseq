@@ -188,19 +188,26 @@ namespace breseq
     ////    Settings Variables    ////
     //////////////////////////////////
     
-		// Paths populated from location of executable
+    //// Global Settings ////
+    string full_command_line;
+		string arguments;
+		string run_name;
+    string print_run_name; 
+    string byline;
+		string website;
+    
+    //// File Paths ////
+    
+    // Paths populated from location of executable
 		string bin_path;                  // absolute path to where this binary resides
-    string program_data_path;                  // path to where R scripts and images reside
-		map<string, string> installed;
+    string program_data_path;         // path to where R scripts and images reside
+		map<string, string> installed;    // hash of paths to programs that we call
     
 		// Paths populated relative to output_path
-    string output_path;               // command line option
-
+    string output_path;  // only command line option
 		string sequence_conversion_path;
 		string reference_trim_file_name;
-
 		string reference_alignment_path;
-
 		string reference_sam_file_name;
 		string reference_fasta_file_name;
 
@@ -229,31 +236,45 @@ namespace breseq
 		string evidence_genome_diff_file_name;
 		string final_genome_diff_file_name;
 
-		// Options...
-
-		bool unmatched_reads;
-		bool no_unmatched_reads;
-		bool add_split_junction_sides;
-
-		uint32_t alignment_read_limit;
-		uint32_t candidate_junction_read_limit;
-		double maximum_candidate_junction_length_factor;
-		int32_t max_read_mismatches;
-
-    // settings controlling which alignments are considered
+    
+    //// Read Alignment ////
+    uint32_t ssaha2_seed_length;
+    uint32_t ssaha2_skip_length;
+    
 		bool     require_complete_match;
 		uint32_t require_match_length;
 		double   require_match_fraction;
-    
-		string full_command_line;
-		string arguments;
-		string predicted_quality_type;
-		uint32_t min_quality;
-		uint32_t max_quality;
-		string run_name;
-    string print_run_name; 
+    int32_t  max_read_mismatches;
+    uint32_t preprocess_junction_min_indel_split_length;
 
-		uint32_t clean;
+    //// Identify CandidateJunctions ////
+    // Scoring to decide which pairs of alignments to the same read to consider
+		uint32_t required_both_unique_length_per_side;
+		uint32_t required_one_unique_length_per_side;
+    
+		// Scoring section to choose which ones from list to take
+		uint32_t minimum_candidate_junction_pos_hash_score;
+		uint32_t minimum_candidate_junction_min_overlap_score;
+		uint32_t maximum_inserted_junction_sequence_length;
+		uint32_t minimum_candidate_junctions;
+		uint32_t maximum_candidate_junctions;
+    
+    //// Alignment Resolution ////
+		bool add_split_junction_sides;
+    
+    //// MutationIdentification ////
+
+    
+    //// Global Workflow ////
+    bool junction_prediction; // whether to perform junction prediction step
+		uint32_t alignment_read_limit;
+		uint32_t candidate_junction_read_limit;
+    bool unmatched_reads;
+		bool no_unmatched_reads;
+    
+    
+    /// !---> options need to be put in order...
+		double maximum_candidate_junction_length_factor;
 
 		string error_model_method;
     uint32_t base_quality_cutoff;
@@ -261,23 +282,6 @@ namespace breseq
     //Coverage distribution options
     double deletion_coverage_propagation_cutoff;
     double deletion_coverage_seed_cutoff;
-
-		////   CandidateJunctions.pm
-		bool no_junction_prediction;
-		string candidate_junction_score_method;
-		uint32_t preprocess_junction_min_indel_split_length;
-
-		//// Scoring to decide which pairs of alignments to the same read to consider
-		uint32_t required_extra_pair_total_length;
-		uint32_t required_both_unique_length_per_side;
-		uint32_t required_one_unique_length_per_side;
-
-		//// Scoring section to choose which ones from list to take
-		uint32_t minimum_candidate_junction_pos_hash_score;
-		uint32_t minimum_candidate_junction_min_overlap_score;
-		uint32_t maximum_inserted_junction_sequence_length;
-		uint32_t minimum_candidate_junctions;
-		uint32_t maximum_candidate_junctions;
 
 		bool smalt;
 		uint32_t max_smalt_diff;
@@ -288,8 +292,6 @@ namespace breseq
 		bool no_deletion_prediction;
 		bool no_alignment_generation;
 		uint32_t correction_read_limit;
-		bool no_filter_unwanted;
-		string unwanted_prefix;
 		float mutation_log10_e_value_cutoff;
 		float polymorphism_log10_e_value_cutoff;
 		float polymorphism_bias_p_value_cutoff;
@@ -299,8 +301,7 @@ namespace breseq
 		bool no_indel_polymorphisms;
 		uint32_t max_rejected_polymorphisms_to_show;
 		uint32_t max_rejected_junctions_to_show;
-		string byline;
-		string website;
+
 		bool strict_polymorphism_prediction;
 		uint32_t maximum_read_mismatches;
 
@@ -397,7 +398,6 @@ namespace breseq
 
 		//uint32_t max_read_length;
 
-    bool junction_prediction; // whether to perform junction prediction step
 
     bool values_to_gd; // @JEB @GRC added in for gathering/analyzing breseq values
     

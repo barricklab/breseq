@@ -723,7 +723,6 @@ int do_preprocess_alignments(int argc, char* argv[]) {
 		("candidate-junction-path", "path where candidate junction files will be created")
 		("read-file,r", "FASTQ read files (multiple allowed, comma-separated) ")
 
-		("candidate-junction-score-method", "scoring method", "POS_HASH")
 		("min-indel-split-length", "split indels this long in matches", 3)
 		("max-read-mismatches", "ignore reads with more than this number of mismatches", int32_t(-1))
 		("require-complete-match", "require the complete read to match (both end bases", TAKES_NO_ARGUMENT)
@@ -757,9 +756,7 @@ int do_preprocess_alignments(int argc, char* argv[]) {
     
 	settings.candidate_junction_sam_file_name = options["candidate-junction-path"];
   settings.candidate_junction_sam_file_name += "/#.candidate_junction.sam";
-    
-	settings.candidate_junction_score_method = options["candidate-junction-score-method"];
-    
+        
 	settings.preprocess_junction_split_sam_file_name = options["candidate-junction-path"];
   settings.preprocess_junction_split_sam_file_name += "/#.split.sam";
     
@@ -861,7 +858,6 @@ int do_identify_candidate_junctions(int argc, char* argv[]) {
 
     // Other settings
     settings.candidate_junction_read_limit = from_string<int32_t>(options["candidate-junction-read-limit"]);
-    settings.required_extra_pair_total_length = from_string<int32_t>(options["required-extra-pair-total-length"]);
     settings.require_match_length  = from_string<int32_t>(options["require-match-length"]);
     settings.maximum_inserted_junction_sequence_length = from_string<int32_t>(options["maximum-inserted-junction-sequence-length"]);
     settings.required_one_unique_length_per_side = from_string<int32_t>(options["required-one-unique-length-per-side"]);
@@ -1069,13 +1065,13 @@ int breseq_default_action(int argc, char* argv[])
 
 		if (!settings.smalt)
 		{
-			string command = "ssaha2Build -rtype solexa -skip 1 -save " + reference_hash_file_name + " " + reference_fasta_file_name;
+			string command = "ssaha2Build -rtype solexa -skip " + to_string(settings.ssaha2_skip_length) + " -save " + reference_hash_file_name + " " + reference_fasta_file_name;
 			SYSTEM(command.c_str());
 		}
 		else
 		{
 			string smalt = settings.ctool("smalt");
-			string command = smalt + " index -k 13 -s 1 " + reference_hash_file_name + " " + reference_fasta_file_name;
+			string command = smalt + " index -k " + to_string(settings.ssaha2_seed_length) + " -s " + to_string(settings.ssaha2_skip_length) + " " + reference_hash_file_name + " " + reference_fasta_file_name;
       SYSTEM(command.c_str());
 		}
 		/// ssaha2 align reads to reference sequences
@@ -1110,7 +1106,7 @@ int breseq_default_action(int argc, char* argv[])
 
 				if (!settings.smalt)
 				{
-					string command = "ssaha2 -disk 2 -save " + reference_hash_file_name + " -kmer 13 -skip 1 -seeds 1 -score 12 -cmatch 9 -ckmer 1 -output sam_soft -outfile " + reference_sam_file_name + " " + read_fastq_file;
+					string command = "ssaha2 -disk 2 -save " + reference_hash_file_name + " -kmer " + to_string(settings.ssaha2_seed_length) + " -skip " + to_string(settings.ssaha2_skip_length) + " -seeds 1 -score 12 -cmatch 9 -ckmer 1 -output sam_soft -outfile " + reference_sam_file_name + " " + read_fastq_file;
 					SYSTEM(command.c_str());
 				}
 				else
@@ -1139,69 +1135,64 @@ int breseq_default_action(int argc, char* argv[])
 	// 03_candidate_junctions
 	// * Identify candidate junctions from split read alignments
 	//
-	if (!settings.no_junction_prediction)
+	if (settings.junction_prediction)
 	{
 		create_path(settings.candidate_junction_path);
 
-		if ((settings.preprocess_junction_min_indel_split_length != UNDEFINED_UINT32) || settings.candidate_junction_score_method == "POS_HASH")
-		{
-			string preprocess_junction_done_file_name = settings.preprocess_junction_done_file_name;
+    string preprocess_junction_done_file_name = settings.preprocess_junction_done_file_name;
 
-			if (settings.do_step(settings.preprocess_junction_done_file_name, "Preprocessing alignments for candidate junction identification"))
-			{
-				PreprocessAlignments::preprocess_alignments(settings, summary, ref_seq_info);
-				settings.done_step(settings.preprocess_junction_done_file_name);
-			}
+    if (settings.do_step(settings.preprocess_junction_done_file_name, "Preprocessing alignments for candidate junction identification"))
+    {
+      PreprocessAlignments::preprocess_alignments(settings, summary, ref_seq_info);
+      settings.done_step(settings.preprocess_junction_done_file_name);
+    }
+
+
+    string coverage_junction_summary_file_name = settings.coverage_junction_summary_file_name;
+
+    if (settings.do_step(settings.coverage_junction_done_file_name, "Preliminary analysis of coverage distribution"))
+    {
+      string reference_faidx_file_name = settings.reference_faidx_file_name;
+      string preprocess_junction_best_sam_file_name = settings.preprocess_junction_best_sam_file_name;
+      string coverage_junction_best_bam_file_name = settings.coverage_junction_best_bam_file_name;
+      string coverage_junction_best_bam_prefix = settings.coverage_junction_best_bam_prefix;
+      string coverage_junction_best_bam_unsorted_file_name = settings.coverage_junction_best_bam_unsorted_file_name;
+
+      string samtools = settings.ctool("samtools");
+
+      string command = samtools + " import " + reference_faidx_file_name + " " + preprocess_junction_best_sam_file_name + " " + coverage_junction_best_bam_unsorted_file_name;
+      SYSTEM(command.c_str());
+      command = samtools + " sort " + coverage_junction_best_bam_unsorted_file_name + " " + coverage_junction_best_bam_prefix;
+      SYSTEM(command.c_str());
+      if (!settings.keep_all_intermediates)
+        remove(coverage_junction_best_bam_unsorted_file_name.c_str());
+      command = samtools + " index " + coverage_junction_best_bam_file_name;
+      SYSTEM(command.c_str());
+
+      // Count errors
+      string reference_fasta_file_name = settings.reference_fasta_file_name;
+      string reference_bam_file_name = settings.coverage_junction_best_bam_file_name;
+
+      error_count(reference_bam_file_name,
+        reference_fasta_file_name,
+        settings.candidate_junction_path,
+        settings.read_file_names,
+        true, // coverage
+        false, // errors
+        settings.base_quality_cutoff,
+        "" //covariates
+      );
+
+      string error_rates_summary_file_name = settings.error_rates_summary_file_name; //TODO unused
+      CoverageDistribution::analyze_unique_coverage_distributions(settings, summary, ref_seq_info,
+        settings.coverage_junction_plot_file_name, settings.coverage_junction_distribution_file_name);
+
+      // Note that storing from unique_coverage and reloading in preprocess_coverage is by design
+      summary.unique_coverage.store(coverage_junction_summary_file_name);
+      settings.done_step(settings.coverage_junction_done_file_name);
 		}
-
-		if (settings.candidate_junction_score_method == "POS_HASH")
-		{
-			string coverage_junction_summary_file_name = settings.coverage_junction_summary_file_name;
-
-			if (settings.do_step(settings.coverage_junction_done_file_name, "Preliminary analysis of coverage distribution"))
-			{
-				string reference_faidx_file_name = settings.reference_faidx_file_name;
-				string preprocess_junction_best_sam_file_name = settings.preprocess_junction_best_sam_file_name;
-				string coverage_junction_best_bam_file_name = settings.coverage_junction_best_bam_file_name;
-				string coverage_junction_best_bam_prefix = settings.coverage_junction_best_bam_prefix;
-				string coverage_junction_best_bam_unsorted_file_name = settings.coverage_junction_best_bam_unsorted_file_name;
-
-				string samtools = settings.ctool("samtools");
-
-				string command = samtools + " import " + reference_faidx_file_name + " " + preprocess_junction_best_sam_file_name + " " + coverage_junction_best_bam_unsorted_file_name;
-				SYSTEM(command.c_str());
-				command = samtools + " sort " + coverage_junction_best_bam_unsorted_file_name + " " + coverage_junction_best_bam_prefix;
-				SYSTEM(command.c_str());
-				if (!settings.keep_all_intermediates)
-					remove(coverage_junction_best_bam_unsorted_file_name.c_str());
-				command = samtools + " index " + coverage_junction_best_bam_file_name;
-        SYSTEM(command.c_str());
-
-				// Count errors
-				string reference_fasta_file_name = settings.reference_fasta_file_name;
-				string reference_bam_file_name = settings.coverage_junction_best_bam_file_name;
-
-				error_count(reference_bam_file_name,
-					reference_fasta_file_name,
-					settings.candidate_junction_path,
-					settings.read_file_names,
-					true, // coverage
-					false, // errors
-					settings.base_quality_cutoff,
-					"" //covariates
-				);
-
-        string error_rates_summary_file_name = settings.error_rates_summary_file_name; //TODO unused
-				CoverageDistribution::analyze_unique_coverage_distributions(settings, summary, ref_seq_info,
-					settings.coverage_junction_plot_file_name, settings.coverage_junction_distribution_file_name);
-
-				summary.unique_coverage.store(coverage_junction_summary_file_name);
-				settings.done_step(settings.coverage_junction_done_file_name);
-			}
-
-			summary.preprocess_coverage.retrieve(coverage_junction_summary_file_name);
-		}
-
+    summary.preprocess_coverage.retrieve(coverage_junction_summary_file_name);
+    
 		string candidate_junction_summary_file_name = settings.candidate_junction_summary_file_name;
 		if (settings.do_step(settings.candidate_junction_done_file_name, "Identifying candidate junctions"))
 		{
@@ -1234,13 +1225,13 @@ int breseq_default_action(int argc, char* argv[])
 			{
 				if (!settings.smalt)
 				{
-					string command = "ssaha2Build -rtype solexa -skip 1 -save " + candidate_junction_hash_file_name + " " + candidate_junction_fasta_file_name;
+					string command = "ssaha2Build -rtype solexa -skip " + to_string(settings.ssaha2_skip_length) + " -save " + candidate_junction_hash_file_name + " " + candidate_junction_fasta_file_name;
 					SYSTEM(command.c_str());
 				}
 				else
 				{
 					string smalt = settings.ctool("smalt");
-					string command = smalt + " index -k 13 -s 1 " + candidate_junction_hash_file_name + " "+ candidate_junction_fasta_file_name;
+					string command = smalt + " index -k " + to_string(settings.ssaha2_seed_length) + " -s " + to_string(settings.ssaha2_skip_length) + " " + candidate_junction_hash_file_name + " "+ candidate_junction_fasta_file_name;
 					SYSTEM(command.c_str());
 				}
 			}
@@ -1255,7 +1246,7 @@ int breseq_default_action(int argc, char* argv[])
 				string filename = candidate_junction_hash_file_name + ".base";
 				if (!settings.smalt && file_exists(filename.c_str()))
 				{
-					string command = "ssaha2 -disk 2 -save " + candidate_junction_hash_file_name + " -best 1 -rtype solexa -skip 1 -seeds 1 -output sam_soft -outfile " + candidate_junction_sam_file_name + " " + read_fastq_file;
+					string command = "ssaha2 -disk 2 -save " + candidate_junction_hash_file_name + " -best 1 -rtype solexa -kmer " + to_string(settings.ssaha2_seed_length) + " -skip " + to_string(settings.ssaha2_skip_length) + " -seeds 1 -output sam_soft -outfile " + candidate_junction_sam_file_name + " " + read_fastq_file;
 					SYSTEM(command.c_str());
 					// Note: Added -best parameter to try to avoid too many matches to redundant junctions!
 				}
@@ -1284,6 +1275,7 @@ int breseq_default_action(int argc, char* argv[])
 			settings.done_step(settings.candidate_junction_alignment_done_file_name);
 		}
 	}
+
 	
 	//
   // 04 alignment_correction
@@ -1303,11 +1295,14 @@ int breseq_default_action(int argc, char* argv[])
 		}
     assert(coverage_cutoffs.size() == ref_seq_info.size());
 
+    bool junction_prediction = settings.junction_prediction;
+    if (junction_prediction && file_empty(settings.candidate_junction_fasta_file_name.c_str())) junction_prediction = false;
+    
 		resolve_alignments(
 			settings,
 			summary,
 			ref_seq_info,
-      settings.junction_prediction,
+      junction_prediction,
 			settings.read_files,
 			summary.sequence_conversion.max_read_length,
 			settings.alignment_read_limit
@@ -1342,7 +1337,7 @@ int breseq_default_action(int argc, char* argv[])
 
     // only run samtools if we are predicting junctions and there were results in the sam file
     // first part of conditional really not necessary @JEB
-		if (!settings.no_junction_prediction && !file_empty(resolved_junction_sam_file_name.c_str()))
+		if (settings.junction_prediction && !file_empty(resolved_junction_sam_file_name.c_str()))
 		{
 			command = samtools + " import " + candidate_junction_faidx_file_name + " " + resolved_junction_sam_file_name + " " + junction_bam_unsorted_file_name;
 			SYSTEM(command);

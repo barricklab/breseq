@@ -120,6 +120,8 @@ extern const char* ALIGN_LEFT;
     {return "<img src=\"" + target + "\" />";}
   inline string h1(const string & input)
     {return "<h1>" + input + "</h1>";} 
+  inline string h2(const string & input)
+    {return "<h2>" + input + "</h2>";} 
   
   //! Encodes dash, en dash and spaces to HTML
   string nonbreaking(const string& input);
