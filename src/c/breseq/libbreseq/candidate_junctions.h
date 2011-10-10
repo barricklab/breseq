@@ -340,10 +340,10 @@ namespace breseq {
         if (equal_seq_1 > equal_seq_2) return false;
           
         // sequence lengths are equal
-        int32_t distance_1 = abs( this->junction_info.sides[0].position - this->junction_info.sides[1].position );
-        int32_t distance_2 = abs( cj.junction_info.sides[0].position - cj.junction_info.sides[1].position );
-        if (distance_1 > distance_2) return true; // merge into cj if it is separated by a smaller distance
-        if (distance_1 < distance_2) return false;
+        //int32_t distance_1 = abs( this->junction_info.sides[0].position - this->junction_info.sides[1].position );
+        //int32_t distance_2 = abs( cj.junction_info.sides[0].position - cj.junction_info.sides[1].position );
+        //if (distance_1 > distance_2) return true; // merge into cj if it is separated by a smaller distance
+        //if (distance_1 < distance_2) return false;
         
         return (this->junction_info.sides[0].position > cj.junction_info.sides[0].position); // merge into cj if it has a smaller coord
       }

@@ -337,7 +337,7 @@ namespace breseq
 
     
 		// Scoring section to choose which ones from list to take
-		this->minimum_candidate_junction_pos_hash_score = 0;    // Require at least this many unique start coordinate/strand reads to accept a CJ
+		this->minimum_candidate_junction_pos_hash_score = 2;    // Require at least this many unique start coordinate/strand reads to accept a CJ
                                                             // OFF by default, because a fixed number are taken
 		this->minimum_candidate_junction_min_overlap_score = 0; // Require at least this many unique start coordinate/strand reads to accept a CJ
                                                             // OFF by default, because a fixed number are taken
