@@ -28,116 +28,53 @@ using namespace std;
 
 namespace breseq {
 
-  
-	struct CandidateJunction
-	{
-		int32_t pos_hash_score;
-		map<uint32_t, uint32_t> read_begin_hash;
-    
-		struct TestInfo {
-			int32_t max_left;
-			int32_t max_left_minus;
-			int32_t max_left_plus;
-			int32_t max_right;
-			int32_t max_right_minus;
-			int32_t max_right_plus;
-			int32_t max_min_right;
-			int32_t max_min_right_minus;
-			int32_t max_min_right_plus;
-			int32_t max_min_left;
-			int32_t max_min_left_minus;
-			int32_t max_min_left_plus;
-			uint32_t coverage_minus;
-			uint32_t coverage_plus;
-			uint32_t total_non_overlap_reads;
-			uint32_t pos_hash_score;
-      bool redundant_1;
-      bool redundant_2;
-		} test_info;
-    
-		struct Sorter {      
-      bool operator() (const string& lhs, const string& rhs) const
-      { 
-       // if (lhs.size() != rhs.size()) 
-        //  return lhs.size()<rhs.size();
-        return  lhs < rhs;
-        
-        //return lhs.compare(rhs);
-      }
-		};
-	};
-  
-  typedef map<string, map<string, CandidateJunction>, CandidateJunction::Sorter> SequenceToCandidateJunctionMap;
-
-  
-  // @JEB Need to do away with this and use cSequenceFeature instead!
-	struct Feature
-	{
-		string type;
-		string name;
-		uint32_t start;
-		uint32_t end;
-		bool strand;
-		string product;
-		string pseudogene;
-		string cds;
-		string note;
-    
-		string interval;
-		string side_key;
-    
-    Feature()
-    {
-      start = 0;
-      end = 0;
-      strand = false;
-    }
-	};
-  
   const string junction_name_separator = "__";
   
-	struct JunctionInfo
-	{
+  /*! information about one side of a new junction 
+   */
+  class JunctionSide
+  {
+  public:
+    string seq_id;
+    int32_t position;
+    int32_t strand;
+    int32_t redundant;
     
-		struct Side
-		{
-			string seq_id;
-			int32_t position;
-			int32_t strand;
-			int32_t redundant;
-      
-			// Extended properties for resolve_alignments.cpp
-			Feature is;
-			bool read_side;
-			int32_t overlap;
-      
-      Side()
-      {
-        position = 0;
-        strand = 0;
-        redundant = 0;
-        read_side = false;
-        overlap = 0;
-      }
-      
-      Side(const string& _seq_id, int32_t _position, int32_t _strand, int32_t _redundant = false)
-      {
-        seq_id = _seq_id;
-        position = _position;
-        strand = _strand;
-        redundant = _redundant;
-        
-        read_side = false;
-        overlap = 0;
-      }
-      
-      bool operator ==(const Side& side) const
-      {
-        return (this->seq_id == side.seq_id) && (this->position == side.position) && (this->strand == side.strand);
-      }
-      
-		};
-		Side sides[2];
+    // Extended properties for resolve_alignments.cpp
+    cSequenceFeature is;
+    string is_interval;
+		string is_side_key;
+    
+    int32_t overlap;
+    
+    JunctionSide()
+    {
+      position = 0;
+      strand = 0;
+      redundant = 0;
+      overlap = 0;
+    }
+    
+    JunctionSide(const string& _seq_id, int32_t _position, int32_t _strand, int32_t _redundant = false)
+    {
+      seq_id = _seq_id;
+      position = _position;
+      strand = _strand;
+      redundant = _redundant;
+      overlap = 0;
+    }
+    
+    bool operator ==(const JunctionSide& side) const
+    {
+      return (this->seq_id == side.seq_id) && (this->position == side.position) && (this->strand == side.strand);
+    }
+    
+  };
+  
+	class JunctionInfo
+	{
+  public:
+		JunctionSide sides[2];
     
 		int32_t alignment_overlap;
 		string unique_read_sequence;
@@ -162,8 +99,8 @@ namespace breseq {
     }
     
     //! Create a JunctionInfo from supplied parameters
-    JunctionInfo(const Side& _side_1, const Side& _side_2, int32_t _alignment_overlap, const string& _unique_read_sequence, int32_t _flanking_left=0, int32_t _flanking_right=0)
-    {
+    JunctionInfo(const JunctionSide& _side_1, const JunctionSide& _side_2, int32_t _alignment_overlap, const string& _unique_read_sequence, int32_t _flanking_left=0, int32_t _flanking_right=0)
+    {       
       sides[0] = _side_1;
       sides[1] = _side_2;
       
@@ -182,10 +119,10 @@ namespace breseq {
     {
       vector<string> s = split(junction_name, junction_name_separator);
       
-      JunctionInfo::Side side_1(s[0], from_string<int32_t>(s[1]), from_string<int32_t>(s[2]), from_string<int32_t>(s[10]));
+      JunctionSide side_1(s[0], from_string<int32_t>(s[1]), from_string<int32_t>(s[2]), from_string<int32_t>(s[10]));
       if (side_1.strand == 0) side_1.strand = -1;
       
-      JunctionInfo::Side side_2(s[3], from_string<int32_t>(s[4]), from_string<int32_t>(s[5]), from_string<int32_t>(s[11]));
+      JunctionSide side_2(s[3], from_string<int32_t>(s[4]), from_string<int32_t>(s[5]), from_string<int32_t>(s[11]));
       if (side_2.strand == 0) side_2.strand = -1;
       
       JunctionInfo retval(
@@ -203,6 +140,9 @@ namespace breseq {
     // Serializes a JunctionInfo to a string
     string junction_key()
     {
+      ASSERT( (sides[0].strand == +1) || (sides[0].strand == -1), "side 1 strand uninitialized or wrong: must be -1/+1");
+      ASSERT( (sides[1].strand == +1) || (sides[1].strand == -1), "side 2 strand uninitialized or wrong: must be -1/+1");
+
       bool has_redundant = (sides[0].redundant >= 0 && sides[1].redundant >= 0);
       
       // allocate vector of correct size
@@ -236,6 +176,91 @@ namespace breseq {
       return (this->sides[0] == junction.sides[0]) && (this->sides[1] == junction.sides[1]);
     }
 	};
+  
+  
+  class JunctionCandidate : public JunctionInfo {
+  public:
+    string sequence;
+    string reverse_complement_sequence;
+		map<uint32_t, uint32_t> read_begin_hash;
+
+    JunctionCandidate() {}
+    
+    JunctionCandidate(
+                      const JunctionInfo& _junction_info, 
+                      const string& _sequence
+                      ) 
+    : JunctionInfo(_junction_info)
+    , sequence(_sequence)
+    {
+      reverse_complement_sequence = reverse_complement(_sequence);
+    }
+    
+    size_t pos_hash_score() const
+    {
+      return read_begin_hash.size();
+    }
+    
+    // Sort by unique coordinate, then redundant (or second unique) coordinate to get reliable ordering for output
+    static bool sort_by_score_unique_coord(const JunctionCandidate& a, const JunctionCandidate &b)
+    {
+      int32_t a_uc = a.sides[0].position;
+      int32_t a_rc = a.sides[1].position;
+      if (a.sides[0].redundant != 0) swap(a_uc, a_rc);
+      
+      int32_t b_uc = b.sides[0].position;
+      int32_t b_rc = b.sides[1].position;
+      if (b.sides[0].redundant != 0) swap(b_uc, b_rc);
+      
+      if (b.pos_hash_score() != a.pos_hash_score())
+        return (b.pos_hash_score() < a.pos_hash_score());
+      else if (a_uc != b_uc)
+        return (a_uc < b_uc);
+      else
+        return (a_rc < b_rc);
+    }
+    
+    static bool sort_by_scores_and_seq_length(const JunctionCandidate& a, const JunctionCandidate &b)
+    {
+      if (b.pos_hash_score() != a.pos_hash_score())
+        return (b.pos_hash_score() < a.pos_hash_score());
+      else
+        return (a.sequence.size() < b.sequence.size());
+    }
+    
+    static bool sort_by_ref_seq_coord(const JunctionCandidate& a, const JunctionCandidate &b)
+    {
+      //TODO: Uncomment this code after supplying it with a ref_seq_info with a seq_order field
+      /*if (ref_seq_info.seq_order[acj.sides[0].seq_id] != ref_seq_info.seq_order[bcj.sides[0].seq_id])
+       return (ref_seq_info.seq_order[acj.sides[0].seq_id] < ref_seq_info.seq_order[bcj.sides[0].seq_id]);
+       else*/
+      return (a.sides[0].position < b.sides[0].position);
+    }
+    
+    //! if returns true then we merge into cj
+    bool operator <(const JunctionCandidate& cj) const
+    {
+      // we actually want longest sequence to return true
+      if ( this->sequence.size() < cj.sequence.size() ) return true;  // merge into longer cj
+      if ( this->sequence.size() > cj.sequence.size() ) return false;
+      
+      int32_t equal_seq_1 = (this->sides[0].seq_id == this->sides[1].seq_id) ? 1 : 0;
+      int32_t equal_seq_2 = (cj.sides[0].seq_id == cj.sides[1].seq_id) ? 1 : 0;
+      if (equal_seq_1 < equal_seq_2) return true; // merge into cj if only it is on the same fragment
+      if (equal_seq_1 > equal_seq_2) return false;
+      
+      // sequence lengths are equal
+      //int32_t distance_1 = abs( this->junction_info.sides[0].position - this->junction_info.sides[1].position );
+      //int32_t distance_2 = abs( cj.junction_info.sides[0].position - cj.junction_info.sides[1].position );
+      //if (distance_1 > distance_2) return true; // merge into cj if it is separated by a smaller distance
+      //if (distance_1 < distance_2) return false;
+      
+      return (this->sides[0].position > cj.sides[0].position); // merge into cj if it has a smaller coord
+    }
+  };
+  
+  typedef map<string, map<string, JunctionCandidate> > SequenceToKeyToJunctionCandidateMap;
+
   
   
   uint32_t eligible_read_alignments(const Settings& settings, const cReferenceSequences& ref_seq_info, alignment_list& alignments);
@@ -293,20 +318,6 @@ namespace breseq {
 	{
 	public:
 
-		struct Junction
-		{
-			string hash_seq_id_1;
-			int32_t hash_coord_1;
-			bool hash_strand_1;
-			string hash_seq_id_2;
-			int32_t hash_coord_2;
-			bool hash_strand_2;
-			int32_t overlap;
-			string unique_read_seq_string;
-			uint32_t flanking_left;
-			uint32_t flanking_right;
-		};
-
 		/*! Predicts candidate junctions
 		 */
 		static void identify_candidate_junctions(const Settings& settings, Summary& summary, const cReferenceSequences& ref_seq_info);
@@ -321,106 +332,20 @@ namespace breseq {
     static void _by_ref_seq_coord(map_t a, map_t b, map_t ref_seq_info);
 		static void _by_score_unique_coord(map_t a, map_t b);
 
-    struct SingleCandidateJunction
-		{
-			JunctionInfo junction_info;
-			string sequence;
-			uint32_t read_begin_coord;
-      
-      //! if returns true then we merge into cj
-      bool operator <(const SingleCandidateJunction& cj) const
-      {
-        // we actually want longest sequence to return true
-        if ( this->sequence.size() < cj.sequence.size() ) return true;  // merge into longer cj
-        if ( this->sequence.size() > cj.sequence.size() ) return false;
-        
-        int32_t equal_seq_1 = (this->junction_info.sides[0].seq_id == this->junction_info.sides[1].seq_id) ? 1 : 0;
-        int32_t equal_seq_2 = (cj.junction_info.sides[0].seq_id == cj.junction_info.sides[1].seq_id) ? 1 : 0;
-        if (equal_seq_1 < equal_seq_2) return true; // merge into cj if only it is on the same fragment
-        if (equal_seq_1 > equal_seq_2) return false;
-          
-        // sequence lengths are equal
-        //int32_t distance_1 = abs( this->junction_info.sides[0].position - this->junction_info.sides[1].position );
-        //int32_t distance_2 = abs( cj.junction_info.sides[0].position - cj.junction_info.sides[1].position );
-        //if (distance_1 > distance_2) return true; // merge into cj if it is separated by a smaller distance
-        //if (distance_1 < distance_2) return false;
-        
-        return (this->junction_info.sides[0].position > cj.junction_info.sides[0].position); // merge into cj if it has a smaller coord
-      }
-		};
-    
-    struct CombinedCandidateJunctionCompare {
-      bool operator() (const string& lhs, const string& rhs) const
-      { 
-        if (lhs.size() != rhs.size()) 
-          return lhs.size()<rhs.size();
-        return  lhs < rhs;
-      }
-    };
-    
-    
-		struct CombinedCandidateJunction
-		{
-			JunctionInfo junction_info;
-      string junction_key;
-			uint32_t pos_hash_score;
-			string seq;
-			string rc_seq;
-      
-			// Sort by unique coordinate, then redundant (or second unique) coordinate to get reliable ordering for output
-			static bool sort_by_score_unique_coord(const CombinedCandidateJunction& a, const CombinedCandidateJunction &b)
-			{
-				const JunctionInfo& a_item(a.junction_info);
-				int32_t a_uc = a_item.sides[0].position;
-				int32_t a_rc = a_item.sides[1].position;
-				if (a_item.sides[0].redundant != 0) swap(a_uc, a_rc);
-        
-				const JunctionInfo& b_item(b.junction_info);
-				int32_t b_uc = b_item.sides[0].position;
-				int32_t b_rc = b_item.sides[1].position;
-				if (b_item.sides[0].redundant != 0) swap(b_uc, b_rc);
-        
-				if (b.pos_hash_score != a.pos_hash_score)
-					return (b.pos_hash_score < a.pos_hash_score);
-				else if (a_uc != b_uc)
-					return (a_uc < b_uc);
-				else
-					return (a_rc < b_rc);
-			}
-      
-			static bool sort_by_scores_and_seq_length(const CombinedCandidateJunction& a, const CombinedCandidateJunction &b)
-			{
-				if (b.pos_hash_score != a.pos_hash_score)
-					return (b.pos_hash_score < a.pos_hash_score);
-				else
-					return (a.seq.size() < b.seq.size());
-			}
-      
-			static bool sort_by_ref_seq_coord(const CombinedCandidateJunction& a, const CombinedCandidateJunction &b)
-			{
-				const JunctionInfo& acj(a.junction_info);
-				const JunctionInfo& bcj(b.junction_info);
-				//TODO: Uncomment this code after supplying it with a ref_seq_info with a seq_order field
-				/*if (ref_seq_info.seq_order[acj.sides[0].seq_id] != ref_seq_info.seq_order[bcj.sides[0].seq_id])
-         return (ref_seq_info.seq_order[acj.sides[0].seq_id] < ref_seq_info.seq_order[bcj.sides[0].seq_id]);
-         else*/
-        return (acj.sides[0].position < bcj.sides[0].position);
-			}
-		};
     
     static 	bool alignment_pair_to_candidate_junction(
                                                   const Settings& settings, 
                                                   Summary& summary, 
                                                   const cReferenceSequences& ref_seq_info, 
                                                   AlignmentPair& ap,
-                                                  SingleCandidateJunction& junction_id_list
+                                                  JunctionCandidate& junction_id_list
                                                   );
     
 		static void alignments_to_candidate_junctions(
                                                   const Settings& settings, 
                                                   Summary& summary,  
                                                   const cReferenceSequences& ref_seq_info, 
-                                                  SequenceToCandidateJunctionMap& candidate_junctions, 
+                                                  SequenceToKeyToJunctionCandidateMap& candidate_junctions, 
                                                   alignment_list& alignments);
     
 	}; // class CandidateJunction

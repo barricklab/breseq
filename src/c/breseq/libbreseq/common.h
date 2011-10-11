@@ -93,7 +93,7 @@ namespace breseq {
   typedef char base_char;
   
   // index: Numbered starting at zero, used for array storage and lookups
-  //       A(0), C(1), G(2), T(3), .(4)  No 'N' bases allowed.
+  //       A(0), C(1), G(2), T(3), .(4)  No 'N' bases allowed!
   typedef uint8_t base_index;
 
   /*! Definition of all single-base states that are considered */
@@ -225,52 +225,6 @@ namespace breseq {
 #define WARN(message) { my_warning_handler( false,  __FILE__, __BASE_FILE__, __LINE__, message); }
 #define CHECK(condition, message) { my_warning_handler( condition,  __FILE__, __BASE_FILE__, __LINE__, message); }
   
-	inline string SYSTEM_CAPTURE(string command, bool silent = false)
-	{
-    if (!silent) cout << "[system] " << command << endl;
-    
-		// Open the command for reading.
-    string piped_command = command + " 2>&1";
-		FILE *fp = popen(piped_command.c_str(), "r");
-		assert(fp != NULL);
-    
-		// Read the output a line at a time
-		stringstream ss;
-		char path[1035];
-		while (fgets(path, sizeof (path) - 1, fp) != NULL)
-		{
-			ss << path;
-		}
-    
-		// Close
-		pclose(fp);
-    
-    // Delete the trailing line ending as a convenience for 'which'
-    string s = ss.str();
-    size_t line_break_pos = s.rfind("\n");
-    if (line_break_pos != string::npos) 
-      s.erase(line_break_pos);
-		return s;
-	}
-  
-  inline void SYSTEM(string command, bool silent = false, bool ignore_errors = false)
-  {
-    if (!silent) cerr << "[system] " << command << endl;
-    int return_value = system(command.c_str());
-    
-    if (return_value != 0)
-      cerr << "Error! " << "Result code: " << return_value << endl;
-    
-    if (!ignore_errors)
-      assert(return_value == 0);
-  }
-  
-  inline string remove_file(string path)
-  {
-    remove(path.c_str()); // @JEB this will probably not work.
-    return path;
-  }
-
   
   // Utility functions
   inline bool file_exists(const char *filename)
@@ -804,6 +758,58 @@ namespace breseq {
       }
     }
   };
+  
+  inline string SYSTEM_CAPTURE(string command, bool silent = false)
+	{
+    if (!silent) cout << "[system] " << command << endl;
+    
+		// Open the command for reading.
+    string piped_command = command + " 2>&1";
+		FILE *fp = popen(piped_command.c_str(), "r");
+		assert(fp != NULL);
+    
+		// Read the output a line at a time
+		stringstream ss;
+		char path[1035];
+		while (fgets(path, sizeof (path) - 1, fp) != NULL)
+		{
+			ss << path;
+		}
+    
+		// Close
+		pclose(fp);
+    
+    // Delete the trailing line ending as a convenience for 'which'
+    string s = ss.str();
+    size_t line_break_pos = s.rfind("\n");
+    if (line_break_pos != string::npos) 
+      s.erase(line_break_pos);
+		return s;
+	}
+  
+  inline void SYSTEM(string command, bool silent = false, bool ignore_errors = false)
+  {
+    if (!silent) cerr << "[system] " << command << endl;
+    int return_value = system(command.c_str());
+    
+    string error_message = "Error running command:\n[system] " + command + "\nResult code: " + to_string(return_value);
+    if (ignore_errors)
+    {
+      if (return_value != 0) cerr << error_message;
+    }
+    else
+    {
+      ASSERT(return_value == 0, error_message);
+    }
+    
+  }
+  
+  inline string remove_file(string path)
+  {
+    remove(path.c_str()); // @JEB this will probably not work.
+    return path;
+  }
+
 
 
 } // breseq

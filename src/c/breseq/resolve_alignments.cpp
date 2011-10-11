@@ -981,9 +981,8 @@ diff_entry _junction_to_hybrid_list_item(const string& key, cReferenceSequences&
 		is = cReferenceSequences::find_closest_repeat_region_boundary(jc.sides[i].position, ref_seq_info[jc.sides[i].seq_id].m_repeats, 20, jc.sides[i].strand);
 		if (is != NULL)
 		{
-			jc.sides[i].is.name = is->SafeGet("name");
-			jc.sides[i].is.interval = (is->m_strand == 1) ? to_string(is->m_start) + "-" + to_string(is->m_end) : to_string(is->m_end) + "-" + to_string(is->m_start);
-			jc.sides[i].is.product = is->SafeGet("product");
+			jc.sides[i].is = *is;
+			jc.sides[i].is_interval = (is->m_strand == 1) ? to_string(is->m_start) + "-" + to_string(is->m_end) : to_string(is->m_end) + "-" + to_string(is->m_start);
 		}
 	}
 
@@ -991,52 +990,49 @@ diff_entry _junction_to_hybrid_list_item(const string& key, cReferenceSequences&
 	//_add_is_coords_from_interval($jc->{side_2});
 	for (int32_t i = 0; i <= 1; i++)
 	{
-		JunctionInfo::Side& c = jc.sides[i];
+		JunctionSide& c = jc.sides[i];
     
 		//return if (!defined $c->{is});
-    if (c.is.interval.size()!=0)
+    if (c.is_interval.size()!=0)
     {
-      vector<string> is_start_end = split(c.is.interval, "-");
+      vector<string> is_start_end = split(c.is_interval, "-");
       int32_t is_start = from_string<int32_t>(is_start_end[0]);
       int32_t is_end = from_string<int32_t>(is_start_end[1]);
-      c.is.strand = (is_start < is_end) ? +1 : -1;
-      c.is.start = c.is.strand ? is_start : is_end;
-      c.is.end = c.is.strand ? is_end : is_start;
+      c.is.m_strand = (is_start < is_end) ? +1 : -1;
+      c.is.m_start = c.is.m_strand ? is_start : is_end;
+      c.is.m_end = c.is.m_strand ? is_end : is_start;
     }
 	}
-
-	jc.sides[0].read_side = false;
-	jc.sides[1].read_side = true;
 
 	// Determine which side of the junction is the IS and which is unique
 	// these point to the correct initial interval...
 	jc.is_side = UNDEFINED_UINT32;
-	if (jc.sides[0].is.name.size() > 0 && jc.sides[1].is.name.size() == 0)
+	if (jc.sides[0].is.m_start != 0 && jc.sides[1].is.m_start == 0)
 	{
-		if (abs(static_cast<int32_t>(jc.sides[0].is.start) - static_cast<int32_t>(jc.sides[0].position)) <= 20)
+		if (abs(static_cast<int32_t>(jc.sides[0].is.m_start) - static_cast<int32_t>(jc.sides[0].position)) <= 20)
 		{
 			jc.is_side = 0;
-			jc.sides[jc.is_side].is.side_key = "start";
+			jc.sides[jc.is_side].is_side_key = "start";
 		}
-		else if (abs(static_cast<int32_t>(jc.sides[0].is.end) - static_cast<int32_t>(jc.sides[0].position)) <= 20 )
+		else if (abs(static_cast<int32_t>(jc.sides[0].is.m_end) - static_cast<int32_t>(jc.sides[0].position)) <= 20 )
 		{
 			jc.is_side = 0;
-			jc.sides[jc.is_side].is.side_key = "end";
+			jc.sides[jc.is_side].is_side_key = "end";
 		}
 		jc.unique_side = 1;
 	}
 
-	else if (jc.sides[0].is.name.size() == 0 && jc.sides[1].is.name.size() > 0)
+	else if (jc.sides[0].is.m_start == 0 && jc.sides[1].is.m_start > 0)
 	{
-		if (abs(static_cast<int32_t>(jc.sides[1].is.start) - static_cast<int32_t>(jc.sides[1].position)) <= 20)
+		if (abs(static_cast<int32_t>(jc.sides[1].is.m_start) - static_cast<int32_t>(jc.sides[1].position)) <= 20)
 		{
 			jc.is_side = 1;
-			jc.sides[jc.is_side].is.side_key = "start";
+			jc.sides[jc.is_side].is_side_key = "start";
 		}
-		else if (abs(static_cast<int32_t>(jc.sides[1].is.end) - static_cast<int32_t>(jc.sides[1].position)) <= 20 )
+		else if (abs(static_cast<int32_t>(jc.sides[1].is.m_end) - static_cast<int32_t>(jc.sides[1].position)) <= 20 )
 		{
 			jc.is_side = 1;
-			jc.sides[jc.is_side].is.side_key = "end";
+			jc.sides[jc.is_side].is_side_key = "end";
 		}
 		jc.unique_side = 0;
 	}
@@ -1066,9 +1062,9 @@ diff_entry _junction_to_hybrid_list_item(const string& key, cReferenceSequences&
 		if (jc.is_side != UNDEFINED_UINT32)
 		{
 			// first, adjust the repetitive sequence boundary to get as close to the IS as possible
-      assert(jc.sides[jc.is_side].is.side_key.size() > 0);
-			int32_t move_dist = jc.sides[jc.is_side].strand * (static_cast<int32_t>((jc.sides[jc.is_side].is.side_key == "start" 
-          ? jc.sides[jc.is_side].is.start : jc.sides[jc.is_side].is.end)) - jc.sides[jc.is_side].position);
+      assert(jc.sides[jc.is_side].is_side_key.size() > 0);
+			int32_t move_dist = jc.sides[jc.is_side].strand * (static_cast<int32_t>((jc.sides[jc.is_side].is_side_key == "start" 
+          ? jc.sides[jc.is_side].is.m_start : jc.sides[jc.is_side].is.m_end)) - jc.sides[jc.is_side].position);
 
 			if (move_dist < 0) move_dist = 0;
 			if (move_dist > jc.overlap) move_dist = jc.overlap ;

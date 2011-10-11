@@ -31,7 +31,47 @@ using namespace std;
 
 namespace breseq {
 
-	struct MatchedJunction
+  class CandidateJunction
+	{
+  public:
+		int32_t pos_hash_score;
+		map<uint32_t, uint32_t> read_begin_hash;
+    
+		struct TestInfo {
+			int32_t max_left;
+			int32_t max_left_minus;
+			int32_t max_left_plus;
+			int32_t max_right;
+			int32_t max_right_minus;
+			int32_t max_right_plus;
+			int32_t max_min_right;
+			int32_t max_min_right_minus;
+			int32_t max_min_right_plus;
+			int32_t max_min_left;
+			int32_t max_min_left_minus;
+			int32_t max_min_left_plus;
+			uint32_t coverage_minus;
+			uint32_t coverage_plus;
+			uint32_t total_non_overlap_reads;
+			uint32_t pos_hash_score;
+      bool redundant_1;
+      bool redundant_2;
+		} test_info;
+    
+		struct Sorter {      
+      bool operator() (const string& lhs, const string& rhs) const
+      { 
+        // if (lhs.size() != rhs.size()) 
+        //  return lhs.size()<rhs.size();
+        return  lhs < rhs;
+        
+        //return lhs.compare(rhs);
+      }
+		};
+	};
+
+  
+	class MatchedJunction
 	{
   public:
     MatchedJunction() {}
