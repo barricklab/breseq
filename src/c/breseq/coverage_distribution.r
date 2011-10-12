@@ -64,10 +64,10 @@ nb_fit_size = 0
 m = 0
 v = 0
 D = 0
-deletion_propagation_coverage = 0
-junction_coverage_cutoff = 0
-junction_accept_coverage_cutoff = 0
-junction_keep_coverage_cutoff = 0
+deletion_propagation_coverage = -1
+junction_coverage_cutoff = -1
+junction_accept_coverage_cutoff = -1
+junction_keep_coverage_cutoff = -1
 
 #load data
 X<-read.table(distribution_file, header=T)
@@ -226,9 +226,6 @@ if (!is.null(nb_fit) && (nb_fit$estimate[1] > 0) && (nb_fit$estimate[2] > 0))
 summary(nb_fit)
 
 ## things can go wrong with fitting and we can end up with invalid values
-
-
-#fit_nb = dnbinom(0:max(X$coverage), mu = nb_fit_mu, size=nb_fit_size)*total_total;
 
 fit_nb = c()
 if (nb_fit_mu > 0)

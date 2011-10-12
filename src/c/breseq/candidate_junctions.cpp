@@ -317,20 +317,101 @@ namespace breseq {
 				alignments_to_candidate_junctions(settings, summary, ref_seq_info, candidate_junctions, alignments);
 			}
     }
+
+    ////
+		// Merge all junctions with the same exact sequence (that are hashed together)
+		////
     
-    // @JEB There's no reason for this looping except printing
+    list<JunctionCandidatePtr> junction_candidate_list;
     
-		//
+		for (SequenceToKeyToJunctionCandidateMap::iterator same_seq_it = candidate_junctions.begin(); same_seq_it != candidate_junctions.end(); same_seq_it++)
+    {
+      KeyToJunctionCandidateMap& kcjm = same_seq_it->second;
+      
+      KeyToJunctionCandidateMap::iterator it = kcjm.begin();
+      
+      // compare each pair 
+      JunctionCandidatePtr one_junction = it->second;
+
+      for (++it; it != kcjm.end(); ++it)
+      {
+        JunctionCandidatePtr *jcp1 = &one_junction;
+        JunctionCandidatePtr *jcp2 = &it->second;
+
+        merge_candidate_junctions(jcp1, jcp2);
+        one_junction = *jcp1;
+      }
+      
+      if (one_junction->pos_hash_score() >= settings.minimum_candidate_junction_pos_hash_score) junction_candidate_list.push_back(one_junction);
+    }
+    
+    ////
+		// Merge each item in the list
+		////
+    uint32_t count=0;
+    for (list<JunctionCandidatePtr>::iterator it1 = junction_candidate_list.begin(); it1 != junction_candidate_list.end();)
+    {
+      list<JunctionCandidatePtr>::iterator it2 = it1;
+      bool deleted_it1 = false;
+      
+      for (++it2; it2 != junction_candidate_list.end(); )
+      {
+        bool deleted_it2 = false;
+        JunctionCandidatePtr *jcp1 = &(*it1);
+        JunctionCandidatePtr *jcp2 = &(*it2);
+        
+        
+        if (verbose)
+        {
+          cout << "Comparing:" << endl;
+          cout << (*jcp1)->junction_key() << endl;
+          cout << (*jcp1)->sequence << endl;
+          cout << (*jcp2)->junction_key() << endl;
+          cout << (*jcp2)->sequence << endl;
+        }
+        
+        
+        bool merged = merge_candidate_junctions(jcp1, jcp2);
+        if (merged)
+        {
+          if (verbose) cout << "MERGED" << endl;
+          
+          if (*jcp1 == *it1)
+          {
+            it2 = junction_candidate_list.erase(it2);
+            deleted_it2 = true;
+          }
+          else
+          {
+            it1 = junction_candidate_list.erase(it1);
+            deleted_it1 = true;
+            break;
+          }
+        }
+        
+        if (!deleted_it2) it2++;
+      }
+      if (!deleted_it1) it1++;
+      
+      if (!deleted_it1) count++;
+      
+      //cout << count << "/" << junction_candidate_list.size() << endl;
+    }
+
+  /*
+		////
 		// Calculate pos_hash score for each candidate junction now that we have the complete list of read match support
-		//
+		////
+    
+    
 		for (SequenceToKeyToJunctionCandidateMap::iterator outer_it = candidate_junctions.begin(); outer_it != candidate_junctions.end(); outer_it++)
 		{
       if (verbose) cout << "Sequence: " << outer_it->first << endl;
 
-			for (map<string, JunctionCandidate>::iterator it = (*outer_it).second.begin(); it != (*outer_it).second.end(); it++)
+			for (KeyToJunctionCandidateMap::iterator it = (*outer_it).second.begin(); it != (*outer_it).second.end(); it++)
 			{
 				string junction_id = (*it).first;
-				JunctionCandidate& cj = (*it).second;
+				JunctionCandidate& cj = *((*it).second);
         
         // prints out
 				if (verbose)
@@ -338,16 +419,15 @@ namespace breseq {
 					cout << ">>>" << junction_id << endl;
           cout << "  Pos Hash Score: " << cj.pos_hash_score() << endl;
           // this prints out the entire read_begin_hash
-          /*
           for (map<uint32_t,uint32_t>::iterator rhbit=cj.read_begin_hash.begin(); rhbit != cj.read_begin_hash.end(); rhbit++)
           {
             cout << "   " << rhbit->first << " " << rhbit->second << endl;
           }
-           */
+          
 				}
 			}
 		}
-    
+  */  
 		////
 		//  Combine hash into a list, retaining only one item (the best pos_hash score) for each unique sequence 
     //  (and also its reverse complement)
@@ -359,12 +439,15 @@ namespace breseq {
     
 		map<string, int32_t> handled_seq;
 		map<string, JunctionCandidate> ids_to_print;
-    
+        
 		// Not sorted like in perl script to get reproducible ordering, because map is pre-sorted by CandidateJunction::Sorter
-		for (SequenceToKeyToJunctionCandidateMap::iterator outer_it = candidate_junctions.begin(); outer_it != candidate_junctions.end(); outer_it++)
+		for (list<JunctionCandidatePtr>::iterator it = junction_candidate_list.begin(); it != junction_candidate_list.end(); ++it)
 		{
-			string junction_seq = (*outer_it).first;
-      string rc_junction_seq = reverse_complement(junction_seq);
+      JunctionCandidatePtr& jcp = *it;
+      JunctionCandidate& best_candidate_junction = *jcp;
+      
+			string junction_seq = best_candidate_junction.sequence;
+      string rc_junction_seq = best_candidate_junction.reverse_complement_sequence;
 
       if (verbose) cout << "Handling " << junction_seq << endl;
       
@@ -377,13 +460,8 @@ namespace breseq {
 			//ASSERT(!handled_seq.count(junction_seq) > 0, "Duplicate junction sequence encountered.\n" + junction_seq);
       //ASSERT(!handled_seq.count(rc_junction_seq) > 0, "Duplicate reverse complement junction sequence encountered.\n" + rc_junction_seq);
 
-			// holds all junctions with the same seq      
-			map<string, JunctionCandidate>::iterator it = (*outer_it).second.begin();
-      string junction_id = (*it).first;
-      // add redundancy to the junction_id
-      
-      JunctionCandidate& best_candidate_junction = (*it).second;
-      
+      string junction_id = best_candidate_junction.junction_key();
+            
 			handled_seq[junction_seq]++;
 			handled_seq[rc_junction_seq]++;
             
@@ -549,16 +627,110 @@ namespace breseq {
 		summary.candidate_junction = hcs;
 	}
   
+  
+  bool CandidateJunctions::merge_candidate_junctions(JunctionCandidatePtr*& jcp1, JunctionCandidatePtr*& jcp2)
+  {
+    bool verbose = false;
+    uint32_t merged = 0; // 0 for not merged, 1 for sequence, 2 for reverse complement of sequence
+    
+    JunctionCandidate& jc1 = **jcp1;
+    JunctionCandidate& jc2 = **jcp2;
+    
+    if (jc1.sequence.size() > jc2.sequence.size())
+    {
+      if (jc1.sequence.find(jc2.sequence) != string::npos)
+        merged = 1;
+      else if (jc1.reverse_complement_sequence.find(jc2.sequence) != string::npos )
+        merged = 2;
+    }
+    else
+    {
+      if (jc2.sequence.find(jc1.sequence) != string::npos)
+        merged = 1;
+      else if (jc2.sequence.find(jc1.reverse_complement_sequence) != string::npos)
+        merged = 2;
+    }
+    
+    if (!merged) return (merged != 0);
+    
+    if (verbose) cout << ((merged == 1) ? "Merged same strand" : "Merged reverse complement") << endl;
+    
+    JunctionCandidatePtr* merge_into_p = NULL;
+    JunctionCandidatePtr* merge_from_p = NULL;
+    
+    // this is a rather complicated compare function to favor longer sequences and those with close coords
+    if ( jc2 < jc1 )
+    {
+      merge_into_p = jcp1;
+      merge_from_p = jcp2; 
+    }
+    else
+    {
+      merge_into_p = jcp2;
+      merge_from_p = jcp1;
+    }
+    
+    JunctionCandidate& merge_into = **merge_into_p;
+    JunctionCandidate& merge_from = **merge_from_p;
+    
+    
+    if (verbose) cout << "Merging into:" << merge_into.junction_key() << endl;
+    if (verbose) cout << merge_into.sequence << endl;
+    if (verbose) cout << "Merging from:" << merge_from.junction_key() << endl;
+    if (verbose) cout << merge_from.sequence << endl;
+    
+    if (merged == 2)
+    {
+      merge_into.sides[0].redundant = merge_from.sides[1].redundant || merge_into.sides[0].redundant;
+      merge_into.sides[1].redundant = merge_from.sides[0].redundant || merge_into.sides[1].redundant;
+    }
+    else // merged == 1
+    {
+      merge_into.sides[0].redundant = merge_from.sides[0].redundant || merge_into.sides[0].redundant;
+      merge_into.sides[1].redundant = merge_from.sides[1].redundant || merge_into.sides[1].redundant;
+    }
+    
+    if (verbose) cout << "Merging into carryover:" << merge_into.junction_key() << endl;
+    
+    
+    for (uint32_t into_side = 0; into_side < 2; into_side++) 
+    {
+      bool found = false;
+      
+      for (uint32_t from_side = 0; from_side < 2; from_side++) 
+      {
+        if (merge_into.sides[into_side] == merge_from.sides[from_side])
+          found = true;
+      }
+      
+      if (!found)
+      {
+        merge_into.sides[into_side].redundant = true;
+        if (verbose) cout << "Marking side " << into_side << " as redundant." << endl;
+      }
+      
+    }
+    
+    jcp1 = merge_into_p;
+    jcp2 = merge_from_p;
+
+    return (merged != 0);
+  }
+
 
 	bool CandidateJunctions::alignment_pair_to_candidate_junction(
                                                             const Settings& settings, 
                                                             Summary& summary, 
                                                             const cReferenceSequences& ref_seq_info, 
                                                             AlignmentPair& ap,
-                                                            JunctionCandidate& junction
+                                                            JunctionCandidatePtr& returned_junction_candidate
                                                             )
 	{    
 		bool verbose = false;
+    
+    // clear the return value
+    returned_junction_candidate = JunctionCandidatePtr(NULL);
+    
 
 		// set up local settings
 		int32_t flanking_length = summary.sequence_conversion.max_read_length;
@@ -909,8 +1081,9 @@ namespace breseq {
 			unique_read_seq_string = reverse_complement(unique_read_seq_string);
 		}
 
-		        
-		junction = JunctionCandidate(
+    
+    // create junction candidate pointer
+		JunctionCandidate* candidate_junction_ptr = new JunctionCandidate(
           JunctionInfo(
                        JunctionSide(hash_seq_id_1,	hash_coord_1,	hash_strand_1 ? +1 : -1), // note conversion of strand 0/1 to -1/+1
                        JunctionSide(hash_seq_id_2,	hash_coord_2,	hash_strand_2 ? +1 : -1), // note conversion of strand 0/1 to -1/+1
@@ -921,19 +1094,21 @@ namespace breseq {
                        ), 
           junction_seq_string
     );
-    junction.read_begin_hash[read_begin_coord]++;
+    candidate_junction_ptr->read_begin_hash[read_begin_coord]++;
 
+    // set the return value (which takes control of the allocated pointer)
+    returned_junction_candidate = JunctionCandidatePtr(candidate_junction_ptr);
 
 		if (verbose)
 		{
-      string junction_id = junction.junction_key();
+      string junction_id = candidate_junction_ptr->junction_key();
 			cout << "READ ID: " << a1.read_name() << endl;
 			cout << "JUNCTION ID: " << junction_id << endl;
 		}
 
 		ASSERT(junction_seq_string.size() > 0, "Junction sequence not found."); 
 		ASSERT(junction_seq_string.size() == flanking_left + flanking_right + static_cast<uint32_t>(abs(overlap)),
-           "Incorrect junction sequence length for " + junction.junction_key() + "\n" + junction_seq_string);
+           "Incorrect junction sequence length for " + candidate_junction_ptr->junction_key() + "\n" + junction_seq_string);
     
 		return true;
 	}
@@ -1036,162 +1211,39 @@ namespace breseq {
         }
       }
 		}
-      
-    // create a list of all the candidate junctions
-    list<JunctionCandidate> junctions;
     
-    // see if the junction sequence is unique (not contained in or containing any other sequences)
-
-    bool add_to_list = true;
-    
+    // see if the junction sequence is unique (not contained in or containing any other sequences)    
 		for (uint32_t i = 0; i < passed_pair_list.size(); i++)
 		{
 			AlignmentPair& ap = passed_pair_list[i];
-
-      JunctionCandidate new_junction;
-			bool passed = alignment_pair_to_candidate_junction(settings, summary, ref_seq_info, ap, new_junction);
+      
+      JunctionCandidatePtr new_junction_ptr;
+			bool passed = alignment_pair_to_candidate_junction(settings, summary, ref_seq_info, ap, new_junction_ptr);
 			if (!passed) continue;
       
-      string sequence(new_junction.sequence);
-      string rc_sequence(reverse_complement(new_junction.sequence));
-      
+      JunctionCandidate& new_junction = *new_junction_ptr;
+      if (verbose) cout << "Testing junction: " << new_junction_ptr->junction_key() << endl << new_junction_ptr->sequence << endl;
+
       bool merged = false;
-      bool rc_merged = false;
-
-      if (verbose) cout << "Testing junction: " << new_junction.junction_key() << endl << new_junction.sequence << endl;
       
-      for (list<JunctionCandidate>::iterator itj=junctions.begin(); itj!=junctions.end(); itj++)
-      {
-        JunctionCandidate& test_junction = *itj;
-        
-        if (sequence.size() > itj->sequence.size())
-        {
-          if (sequence.find(test_junction.sequence) != string::npos)
-            merged = true;
-          else if (rc_sequence.find(test_junction.sequence) != string::npos )
-            rc_merged = true;
-        }
-        else
-        {
-          if (test_junction.sequence.find(sequence) != string::npos)
-            merged = true;
-          else if (test_junction.sequence.find(rc_sequence) != string::npos)
-            rc_merged = true;
-        }
-                
-        add_to_list = !(merged || rc_merged);
-        
-        // choose which one to keep
-        if (merged || rc_merged)
-        {
-          
-          JunctionCandidate* merge_into = NULL;
-          JunctionCandidate* merge_from = NULL;
+			string junction_id = new_junction.junction_key();
+      if (verbose) cout << junction_id << endl;
 
-          // this is a rather complicated compare function to favor longer sequences and those with close coords
-          if ( test_junction < new_junction )
-          {
-            merge_into = &new_junction;
-            merge_from = &test_junction; 
-          }
-          else
-          {
-            merge_into = &test_junction;
-            merge_from = &new_junction;
-          }
-          
-          if (verbose) cout << "Merging into:" << merge_into->junction_key() << endl;
-          if (verbose) cout << merge_into->sequence << endl;
-          if (verbose) cout << "Merging from:" << merge_from->junction_key() << endl;
-          if (verbose) cout << merge_from ->sequence << endl;
-          
-          if (rc_merged)
-          {
-            merge_into->sides[0].redundant = merge_from->sides[1].redundant || merge_into->sides[0].redundant;
-            merge_into->sides[1].redundant = merge_from->sides[0].redundant || merge_into->sides[1].redundant;
-          }
-          else
-          {
-            merge_into->sides[0].redundant = merge_from->sides[0].redundant || merge_into->sides[0].redundant;
-            merge_into->sides[1].redundant = merge_from->sides[1].redundant || merge_into->sides[1].redundant;
-          }
-          
-          if (verbose) cout << "Merging into carryover:" << merge_into->junction_key() << endl;
-
-          
-          for (uint32_t into_side = 0; into_side < 2; into_side++) 
-          {
-            bool found = false;
-
-            for (uint32_t from_side = 0; from_side < 2; from_side++) 
-            {
-              if (merge_into->sides[into_side] == merge_from->sides[from_side])
-                found = true;
-            }
-            
-            if (!found)
-            {
-              merge_into->sides[into_side].redundant = true;
-              if (verbose) cout << "Marking side " << into_side << " as redundant." << endl;
-            }
-            
-          }
-          
-          if (merge_into == &new_junction)
-          {
-            *itj = new_junction;
-          }
-          
-          if (verbose) cout << "Merged junction: " << itj->junction_key() << endl;
-
-          break;
-        }
-        
-      } // end current junctions list
-      
-      // not merged
-      if (add_to_list) 
-        junctions.push_back(new_junction);
-
-    } // end passed pair list
-
-    
-		if (verbose) cout << "  Junctions: " << junctions.size() << endl;
-
-		// Done if everything already ruled out...
-		if (junctions.size() == 0) return;
-
-		if (verbose) cout << alignments.front()->read_name() << endl;
-
-    // Add these to the main hash (by sequence)
-    for (list<JunctionCandidate>::iterator it=junctions.begin(); it!=junctions.end(); it++)
-		{
-			JunctionCandidate& jct = *it;
-			JunctionInfo& junction_info = jct;
-			string junction_seq_string = jct.sequence;
-			string junction_id = junction_info.junction_key();
-      
-			if (verbose) cout << junction_id << endl;
-
-			// initialize candidate junction if it didn't exist
-			// they are redundant by default, until proven otherwise
-
-      if ((candidate_junctions.count(jct.sequence) == 0) || (candidate_junctions[jct.sequence].count(junction_id) == 0)) {
-        // these values get written over immediately
-        if (verbose) cout << "New saved junction " << jct.sequence << " " << junction_id << endl;
-        candidate_junctions[jct.sequence][junction_id] = jct;
+      if ((candidate_junctions.count(new_junction.sequence) == 0) || (candidate_junctions[new_junction.sequence].count(junction_id) == 0)) {
+        // this is a new combination of sequence and id
+        if (verbose) cout << "New saved junction " << new_junction.sequence << " " << junction_id << endl;
+        candidate_junctions[new_junction.sequence][junction_id] = new_junction_ptr;
       }
       else
       {
-        // Update score of existing junction
-        JunctionCandidate& cj(candidate_junctions[jct.sequence][junction_id]);
-        cj.read_begin_hash[jct.read_begin_hash.begin()->first]++;
-        if (verbose) cout << "Updating score of existing " << jct.sequence << " " << junction_id << endl 
-            << "Pos: " << jct.read_begin_hash.begin()->first << " Score: " << cj.pos_hash_score()  << endl;
-
+        // update score of existing junction
+        JunctionCandidate& cj = *candidate_junctions[new_junction.sequence][junction_id];
+        cj.read_begin_hash[new_junction.read_begin_hash.begin()->first]++;
+        if (verbose) cout << "Updating score of existing " << new_junction.sequence << " " << junction_id << endl 
+          << "Pos: " << new_junction.read_begin_hash.begin()->first << " Score: " << cj.pos_hash_score()  << endl;
       }
-		}
-    
+
+    } // end passed pair list
 	}
   
   /*!
