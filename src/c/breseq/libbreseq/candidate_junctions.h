@@ -41,7 +41,7 @@ namespace breseq {
     int32_t redundant;
     
     // Extended properties for resolve_alignments.cpp
-    cSequenceFeature is;
+    cSequenceFeature* is;
     string is_interval;
 		string is_side_key;
     
@@ -53,6 +53,7 @@ namespace breseq {
       strand = 0;
       redundant = 0;
       overlap = 0;
+      is = NULL;
     }
     
     JunctionSide(const string& _seq_id, int32_t _position, int32_t _strand, int32_t _redundant = false)
@@ -62,6 +63,7 @@ namespace breseq {
       strand = _strand;
       redundant = _redundant;
       overlap = 0;
+      is = NULL;
     }
     
     bool operator ==(const JunctionSide& side) const
@@ -176,7 +178,7 @@ namespace breseq {
       return (this->sides[0] == junction.sides[0]) && (this->sides[1] == junction.sides[1]);
     }
 	};
-  
+
   
   class JunctionCandidate : public JunctionInfo {
   public:
@@ -259,7 +261,9 @@ namespace breseq {
     }
   };
   
-  typedef map<string, map<string, JunctionCandidate> > SequenceToKeyToJunctionCandidateMap;
+  typedef counted_ptr<JunctionCandidate> JunctionCandidatePtr;
+  typedef map<string, JunctionCandidatePtr> KeyToJunctionCandidateMap;
+  typedef map<string, KeyToJunctionCandidateMap > SequenceToKeyToJunctionCandidateMap;
 
   
   
@@ -333,12 +337,15 @@ namespace breseq {
 		static void _by_score_unique_coord(map_t a, map_t b);
 
     
+    //! Merge two Junction candidates, updating redundancy. Returns the one that was merged into, then the one that was merged from
+    static bool merge_candidate_junctions(JunctionCandidatePtr*& jcp1, JunctionCandidatePtr*& jcp2);
+    
     static 	bool alignment_pair_to_candidate_junction(
                                                   const Settings& settings, 
                                                   Summary& summary, 
                                                   const cReferenceSequences& ref_seq_info, 
                                                   AlignmentPair& ap,
-                                                  JunctionCandidate& junction_id_list
+                                                  JunctionCandidatePtr& returned_junction_candidate
                                                   );
     
 		static void alignments_to_candidate_junctions(

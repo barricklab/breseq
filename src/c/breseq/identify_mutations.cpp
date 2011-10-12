@@ -175,7 +175,7 @@ void identify_mutations_pileup::pileup_callback(const pileup& p) {
   _this_deletion_seed_cutoff = _deletion_seed_cutoffs[p.target()];
   
   // if the propagation cutoff is zero then the coverage distribution failed
-  if (_this_deletion_propagation_cutoff == 0) return;
+  if (_this_deletion_propagation_cutoff < 0.0) return;
   
   uint32_t position = p.position_1();
   //cout << position << endl;
@@ -712,10 +712,10 @@ void identify_mutations_pileup::at_target_end(const uint32_t tid) {
   update_unknown_intervals(target_length(tid)+1, tid, true, false);
 
   // if this target failed to have its coverage fit, mark the entire thing as a deletion
-  uint32_t _this_deletion_propagation_cutoff = static_cast<uint32_t>(_deletion_propagation_cutoffs[tid]);
+  double _this_deletion_propagation_cutoff = _deletion_propagation_cutoffs[tid];
   
   // if the propagation cutoff is zero then the coverage distribution failed
-  if (_this_deletion_propagation_cutoff == 0)
+  if (_this_deletion_propagation_cutoff < 0.0)
   {
     diff_entry del(MC);
     del[SEQ_ID] = target_name(tid);

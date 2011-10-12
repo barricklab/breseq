@@ -1316,8 +1316,8 @@ int breseq_default_action(int argc, char* argv[])
 		summary.alignment_correction.retrieve(settings.alignment_correction_summary_file_name);
 
 	//
-	// Create BAM files
-	//sub bam_creation {}
+  // 05 bam
+	// * Create BAM read alignment database files
 	//
 
 	if (settings.do_step(settings.bam_done_file_name, "Creating BAM files"))
@@ -1490,7 +1490,6 @@ int breseq_default_action(int argc, char* argv[])
 
 	//
 	// Tabulate error counts and coverage distribution at unique only sites
-	//sub error_count {}
 	//
 
 	if (settings.do_step(settings.error_counts_done_file_name, "Tabulating error counts"))

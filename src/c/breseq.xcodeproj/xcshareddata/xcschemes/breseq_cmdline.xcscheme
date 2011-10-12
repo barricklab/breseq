@@ -36,7 +36,7 @@
       displayScale = "1.00"
       launchStyle = "0"
       useCustomWorkingDirectory = "YES"
-      customWorkingDirectory = "/Users/jbarrick/src/breseq"
+      customWorkingDirectory = "/Users/jbarrick/tmp/caroline"
       buildConfiguration = "Debug">
       <BuildableProductRunnable>
          <BuildableReference
@@ -50,11 +50,15 @@
       <CommandLineArguments>
          <CommandLineArgument
             argument = "-r /Users/jbarrick/db/lenski/REL606.gbk CT-A_TGACCA_L002_R1_001_pf.fastq CT-A_TGACCA_L004_R1_001_pf.fastq CT-A_TGACCA_L006_R1_001_pf.fastq CT-A_TGACCA_L008_R1_001_pf.fastq"
+            isEnabled = "YES">
+         </CommandLineArgument>
+         <CommandLineArgument
+            argument = "-o tests/bull_2 -r tests/bull_2/../data/bull/bull_2.gbk tests/bull_2/../data/bull/bull_2.fastq"
             isEnabled = "NO">
          </CommandLineArgument>
          <CommandLineArgument
-            argument = "-o tests/bull_1 -r tests/bull_1/../data/bull/bull_1.gbk tests/bull_1/../data/bull/bull_1.fastq"
-            isEnabled = "YES">
+            argument = "-o tests/lambda_mixed_pop_bad_contigs -r tests/lambda_mixed_pop_bad_contigs/../data/lambda/lambda.gbk -r tests/lambda_mixed_pop_bad_contigs/../data/lambda/other.gbk -r tests/lambda_mixed_pop_bad_contigs/../data/REL606/REL606.fragment.gbk tests/lambda_mixed_pop_bad_contigs/../data/lambda/lambda_mixed_population.fastq"
+            isEnabled = "NO">
          </CommandLineArgument>
       </CommandLineArguments>
       <EnvironmentVariables>
