@@ -200,7 +200,7 @@ namespace breseq {
         
         delete[] cstr;
         
-        (*this)[seq_id].add_feature(fp);
+        (*this)[seq_id].feature_push_back(fp);
       }
       getline(infile,line);
     }
@@ -226,7 +226,7 @@ namespace breseq {
     
     for(vector<cAnnotatedSequence>::iterator it_as = this->begin(); it_as < this->end(); it_as++) {
       
-      for (vector<cSequenceFeaturePtr>::iterator it = it_as->m_features.begin(); it < it_as->m_features.end(); it++) {
+      for (cSequenceFeatureList::iterator it = it_as->m_features.begin(); it != it_as->m_features.end(); it++) {
         cSequenceFeature& feat = **it;
         
         out << it_as->m_seq_id;
@@ -274,15 +274,13 @@ namespace breseq {
       //
       // If we have a dummy sequence id from loading a BULL feature file before a FASTA,
       // then fill it in and update the index
-      if (m_seq_id_to_index.count(BULL_DUMMY_SEQ_ID))
-      {
+      if (m_seq_id_to_index.count(BULL_DUMMY_SEQ_ID)) {
         uint32_t seq_index = this->m_seq_id_to_index[BULL_DUMMY_SEQ_ID];
         this->m_seq_id_to_index.erase(BULL_DUMMY_SEQ_ID);
         (*this)[seq_index].m_seq_id = on_seq.m_name;
         m_seq_id_to_index[(*this)[seq_index].m_seq_id] = seq_index;       
       }
-      else
-      {
+      else {
         this->add_new_seq(on_seq.m_name);
       }
       
@@ -293,11 +291,10 @@ namespace breseq {
       this_seq.m_description = on_seq.m_description;
       this_seq.m_length = on_seq.m_sequence.size();
     }
-
-
   }
     
-  void cReferenceSequences::ReadFASTA(cFastaFile& ff) {
+  void cReferenceSequences::ReadFASTA(cFastaFile& ff) 
+  {
     cFastaSequence on_seq;
 
     while ( ff.read_sequence(on_seq) ) {
@@ -310,152 +307,163 @@ namespace breseq {
 
   }
 
-  void cReferenceSequences::WriteFASTA(const std::string &file_name) {
+  void cReferenceSequences::WriteFASTA(const std::string &file_name) 
+  {
     
     cFastaFile ff(file_name, ios_base::out);
-    for(vector<cAnnotatedSequence>::iterator it_as = this->begin(); it_as < this->end(); it_as++) {
+    for(vector<cAnnotatedSequence>::iterator it_as = this->begin(); it_as < this->end(); it_as++)
       ff.write_sequence(it_as->m_fasta_sequence);
-    }
   }
 
-  void cReferenceSequences::WriteFASTA(cFastaFile& ff) {
-
-    for(vector<cAnnotatedSequence>::iterator it_as = this->begin(); it_as < this->end(); it_as++) {
+  void cReferenceSequences::WriteFASTA(cFastaFile& ff) 
+  {
+    for(vector<cAnnotatedSequence>::iterator it_as = this->begin(); it_as < this->end(); it_as++)
       ff.write_sequence(it_as->m_fasta_sequence);
-    }
   }
 
   /*! ReadGFF abides by the following format:
-    http://www.sequenceontology.org/gff3.shtml !*/
+   *  http://www.sequenceontology.org/gff3.shtml 
+   */
   void cReferenceSequences::ReadGFF(const string& file_name)
   {
     cFastaFile in(file_name.c_str(), ios_base::in);
     ASSERT(!in.fail(), "Could not open GFF file: " + file_name);
     //! Step 1: Header //! cFastaFile removes first line, so no header...
-      string line;
-      while (!in.eof() && getline(in,line)) {
-        cSequenceFeaturePtr fp(new cSequenceFeature);
-        cSequenceFeature& feature = *fp;
+    string line;
+    while (!in.eof() && getline(in,line)) {
+      cSequenceFeaturePtr fp(new cSequenceFeature);
+      cSequenceFeature& feature = *fp;
 
-    //! Step 2: Check for GFF Tags, reads FASTA from here.
-        // We are concerned about a couple of ## GFF tags
-        if (line[0] == '#') {
-          if (line.find("##species") != string::npos) {
-            //TODO @GRC
-            continue;
-          }
-          else if (line.find("##sequence-region") != string::npos) {
-            // Line of form ##sequence-region seqid start end
-            stringstream ls(line);
-            string x, seq_id, start, end;
-            ls >> x >> seq_id >> start >> end;
-            this->add_new_seq(seq_id);
-            (*this)[seq_id].m_length = from_string<uint32_t>(end);
-            continue;
-          }
-          // Find embedded fasta file
-          else if (line.find("##FASTA") != string::npos) {
-            /* Things admittedly get a bit hairy right here, you have to
-              take the next line (The one with ">XXXXXX") and set it as the
-              current line for cFastaFile, after you've read the fasta you
-              can exit the function since nothing should exist after.
-              */
-            getline(in,line);
-            in.set_current_line(line);
-            this->ReadFASTA(in);
-            return; //! Done!
-          } else {
-            continue;
-          }
+  //! Step 2: Check for GFF Tags, reads FASTA from here.
+      // We are concerned about a couple of ## GFF tags
+      if (line[0] == '#') {
+        if (line.find("##species") != string::npos) {
+          //TODO @GRC
+          continue;
         }
-    /*! Step 3: Split line on tabs("\t") until last column, grab last column until endl("\n"),
-        the default for getline(). !*/
-        
-        stringstream ss(line);
-        string seq_id, start, end, strand;
-
-        // Handle columns up to the last one, "attributes"
-        // Column 1: "seqid"
-        getline(ss, seq_id, '\t');
-        // Column 2: "source"
-        getline(ss, feature["source"], '\t');
-        // Column 3: "type"
-        getline(ss, feature["type"], '\t');
-        // Column 4: "start"
-        getline(ss, start, '\t');
-        feature.m_start = from_string<uint32_t>(start);
-        // Column 5: "end"
-        getline(ss, end, '\t');
-        feature.m_end = from_string<uint32_t>(end);
-        // Column 6: "score"
-        getline(ss, feature["score"], '\t');
-        // Column 7: "strand"
-        getline(ss, strand, '\t');
-        feature.m_strand = 0;
-        if (strand == "+")
-          feature.m_strand = 1;
-        else if (strand == "-")
-          feature.m_strand = -1;        
-        // Column 8: "phase"
-        getline(ss, feature["phase"], '\t');
-        // Column 9: "attributes"
-        string raw_attributes;
-
-        // Handle parsing the attributes
-        getline(ss, raw_attributes);
-        vector<string> attributes = split(raw_attributes, ";");
-
-        //Split attribute's key and value by "="
-        for (vector<string>::iterator itr = attributes.begin(); itr != attributes.end(); itr++) {
-          string& attribute = *itr;
-          vector<string> key_value = split(attribute,"=");
-          string& key = key_value.front();
-          string& value = key_value.back();
-        //! Case 2: Multiple values for given key, split by ","
-          feature.m_gff_attributes[key] = split(value, ",");
-          // unescape special characters after splitting
-          for (uint32_t i=0; i<feature.m_gff_attributes[key].size(); i++)
-            feature.m_gff_attributes[key][i] = GFF3UnescapeString(feature.m_gff_attributes[key][i]);
+        else if (line.find("##sequence-region") != string::npos) {
+          // Line of form ##sequence-region seqid start end
+          stringstream ls(line);
+          string x, seq_id, start, end;
+          ls >> x >> seq_id >> start >> end;
+          this->add_new_seq(seq_id);
+          (*this)[seq_id].m_length = from_string<uint32_t>(end);
+          continue;
         }
-              
-        // Load certain information into the main hash, so breseq knows to use it
-        if (feature.m_gff_attributes.count("Note"))
-        {
-          feature["product"] = join(feature.m_gff_attributes["Note"], ",");
-        }
-        
-        if (feature.m_gff_attributes.count("Alias"))
-        {
-          feature["accession"] = join(feature.m_gff_attributes["Alias"], ",");
-        }
-
-        if (feature.m_gff_attributes.count("Name"))
-        {
-          feature["name"] = join(feature.m_gff_attributes["Name"], ",");
-        }
-        
-      
-  //! Step 4: Determine if sequence already exists (find or create if not found)
-        this->add_new_seq(seq_id);
-        (*this)[seq_id].add_feature(fp);
-      
-        // If this is a landmark "region" corresponding to the entire chromosome grab extra information
-        if ((feature["type"] == "region") && (feature.m_start == 1) && (feature.m_end == (*this)[seq_id].m_length))
-        {
-          if (feature.m_gff_attributes.count("Is_circular"))
-            (*this)[seq_id].m_is_circular = (feature.m_gff_attributes["Is_circular"][0] == "true");
-          if (feature.m_gff_attributes.count("Note"))
-            (*this)[seq_id].m_description = feature.m_gff_attributes["Note"][0];
+        // Find embedded fasta file
+        else if (line.find("##FASTA") != string::npos) {
+          /* Things admittedly get a bit hairy right here, you have to
+            take the next line (The one with ">XXXXXX") and set it as the
+            current line for cFastaFile, after you've read the fasta you
+            can exit the function since nothing should exist after.
+            */
+          getline(in,line);
+          in.set_current_line(line);
+          this->ReadFASTA(in);
+          continue;
+        } else {
+          continue;
         }
       }
+  /*! Step 3: Split line on tabs("\t") until last column, grab last column until endl("\n"),
+      the default for getline(). !*/
+      
+      stringstream ss(line);
+      string seq_id, start, end, strand;
+
+      // Handle columns up to the last one, "attributes"
+      // Column 1: "seqid"
+      getline(ss, seq_id, '\t');
+      // Column 2: "source"
+      getline(ss, feature["source"], '\t');
+      // Column 3: "type"
+      getline(ss, feature["type"], '\t');
+      // Column 4: "start"
+      getline(ss, start, '\t');
+      feature.m_start = from_string<uint32_t>(start);
+      // Column 5: "end"
+      getline(ss, end, '\t');
+      feature.m_end = from_string<uint32_t>(end);
+      // Column 6: "score"
+      getline(ss, feature["score"], '\t');
+      // Column 7: "strand"
+      getline(ss, strand, '\t');
+      feature.m_strand = 0;
+      if (strand == "+")
+        feature.m_strand = 1;
+      else if (strand == "-")
+        feature.m_strand = -1;        
+      // Column 8: "phase"
+      getline(ss, feature["phase"], '\t');
+      // Column 9: "attributes"
+      string raw_attributes;
+
+      // Handle parsing the attributes
+      getline(ss, raw_attributes);
+      vector<string> attributes = split(raw_attributes, ";");
+
+      //Split attribute's key and value by "="
+      for (vector<string>::iterator itr = attributes.begin(); itr != attributes.end(); itr++) {
+        string& attribute = *itr;
+        vector<string> key_value = split(attribute,"=");
+        string& key = key_value.front();
+        string& value = key_value.back();
+      //! Case 2: Multiple values for given key, split by ","
+        feature.m_gff_attributes[key] = split(value, ",");
+        // unescape special characters after splitting
+        for (uint32_t i=0; i<feature.m_gff_attributes[key].size(); i++)
+          feature.m_gff_attributes[key][i] = GFF3UnescapeString(feature.m_gff_attributes[key][i]);
+      }
+            
+      // Load certain information into the main hash, so breseq knows to use it
+      if (feature.m_gff_attributes.count("Note"))
+        feature["product"] = join(feature.m_gff_attributes["Note"], ",");
+      
+      if (feature.m_gff_attributes.count("Alias"))
+        feature["accession"] = join(feature.m_gff_attributes["Alias"], ",");
+
+      if (feature.m_gff_attributes.count("Name"))
+        feature["name"] = join(feature.m_gff_attributes["Name"], ",");
+      
+    
+//! Step 4: Determine if sequence already exists (find or create if not found)
+      this->add_new_seq(seq_id);
+      (*this)[seq_id].feature_push_back(fp);
+      
+      // Handle features that cross the origin by adding them twice (only one will be written)
+      if (feature.m_end > (*this)[seq_id].m_length) {
+        cSequenceFeaturePtr bonus_circular_feature_ptr(new cSequenceFeature);
+        *bonus_circular_feature_ptr = feature;
+        bonus_circular_feature_ptr->m_start = bonus_circular_feature_ptr->m_start + 1 - (*this)[seq_id].m_length;
+        bonus_circular_feature_ptr->m_end = bonus_circular_feature_ptr->m_end - (*this)[seq_id].m_length;
+        (*this)[seq_id].feature_push_front(bonus_circular_feature_ptr);
+      }
+    
+      // If this is a landmark "region" corresponding to the entire chromosome grab extra information
+      if ((feature["type"] == "region") && (feature.m_start == 1) && (feature.m_end == (*this)[seq_id].m_length)) {
+        if (feature.m_gff_attributes.count("Is_circular"))
+          (*this)[seq_id].m_is_circular = (feature.m_gff_attributes["Is_circular"][0] == "true");
+        if (feature.m_gff_attributes.count("Note"))
+          (*this)[seq_id].m_description = feature.m_gff_attributes["Note"][0];
+      }
+    }
+    
+    // sort because they may now be out of order
+    for (vector<cAnnotatedSequence>::iterator it_as = this->begin(); it_as < this->end(); it_as++) {
+      // sort the list
+      it_as->m_features.sort();
+      it_as->m_genes.sort();
+      it_as->m_repeats.sort();
+    }
   }
+  
   
 /*! WriteGFF abides by the following format:
   http://www.sequenceontology.org/gff3.shtml !*/
 void cReferenceSequences::WriteGFF( const string &file_name ){
 
   cFastaFile out(file_name.c_str(), ios_base::out);
-  assert(!out.fail());
+  ASSERT(!out.fail(), "Failed to open file " + file_name);
   //! Step 1: Header
   out << "##gff-version 3" << endl;
 
@@ -465,58 +473,66 @@ void cReferenceSequences::WriteGFF( const string &file_name ){
   
   //! Step 2: Features
   for (vector<cAnnotatedSequence>::iterator it_as = this->begin(); it_as < this->end(); it_as++) {
-      for (vector<cSequenceFeaturePtr>::iterator it = it_as->m_features.begin(); it != it_as->m_features.end(); it++) {
-        cSequenceFeature& feat = **it;
+    
+    // sort the list
+    it_as->m_features.sort();
+    
+    for (cSequenceFeatureList::iterator it = it_as->m_features.begin(); it != it_as->m_features.end(); it++) {
+      cSequenceFeature& feat = **it;
 
-        out << it_as->m_seq_id;
+      // skip first example of doubly-loaded feature that overlaps circular genome
+      if (feat.m_start < 1)
+        continue;
+      
+      out << it_as->m_seq_id;
 
-        if (feat.SafeGet("source") == "")
-          out << "\t.";
-        else
-          out << "\t" << feat["source"];
+      if (feat.SafeGet("source") == "")
+        out << "\t.";
+      else
+        out << "\t" << feat["source"];
+      
+      if (feat.SafeGet("type") == "")
+        out << "\t.";
+      else
+        out << "\t" << feat["type"];
+
+      out << "\t" << feat.m_start;
+      out << "\t" << feat.m_end;
+
+      if (feat.SafeGet("score") == "")
+        out << "\t.";
+      else
+        out << "\t" << feat["score"];
+
+      if (feat.m_strand > 0)
+        out << "\t" << "+";
+      else
+        out << "\t" << "-";
+
+      if (feat.SafeGet("phase") == "")
+        out << "\t" << ".";
+      else
+        out << "\t" << feat["phase"];
+
+      //Attributes
+      out << "\t";
+      vector<string> attributes;
+      map<string,vector<string> >::const_iterator itr;
+      for (itr = feat.m_gff_attributes.begin(); itr != feat.m_gff_attributes.end(); itr++) {
+        const string& key = itr->first;
+        const vector<string>& values = itr->second;
         
-        if (feat.SafeGet("type") == "")
-          out << "\t.";
-        else
-          out << "\t" << feat["type"];
-
-        out << "\t" << feat.m_start;
-        out << "\t" << feat.m_end;
-
-        if (feat.SafeGet("score") == "")
-          out << "\t.";
-        else
-          out << "\t" << feat["score"];
-
-        if (feat.m_strand > 0)
-          out << "\t" << "+";
-        else
-          out << "\t" << "-";
-
-        if (feat.SafeGet("phase") == "")
-          out << "\t" << ".";
-        else
-          out << "\t" << feat["phase"];
-
-        //Attributes
-        out << "\t";
-        vector<string> attributes;
-        map<string,vector<string> >::const_iterator itr;
-        for (itr = feat.m_gff_attributes.begin(); itr != feat.m_gff_attributes.end(); itr++) {
-          const string& key = itr->first;
-          const vector<string>& values = itr->second;
-          
-          vector<string> s;
-          for (vector<string>::const_iterator it = values.begin(); it != values.end(); it++) {
-            s.push_back(GFF3EscapeString(*it));
-          }
-          
-          attributes.push_back(key + "=" + join(s, ","));
+        vector<string> s;
+        for (vector<string>::const_iterator it = values.begin(); it != values.end(); it++) {
+          s.push_back(GFF3EscapeString(*it));
         }
-        out << join(attributes, ";");
-
-        out << std::endl;
+        
+        attributes.push_back(key + "=" + join(s, ","));
       }
+      out << join(attributes, ";");
+
+      out << std::endl;
+    }
   }
   //! Step 3: Fasta
   out << "##FASTA" << endl;
@@ -550,7 +566,7 @@ void cReferenceSequences::ReadGenBank(const string& in_file_name) {
       f->m_gff_attributes["Is_circular"].push_back("false");
     
     f->m_gff_attributes["Note"].push_back(s.m_description);
-    s.add_feature(f);
+    s.feature_push_back(f);
     
     ReadGenBankFileSequenceFeatures(in, s);
     ReadGenBankFileSequence(in, s);
@@ -608,11 +624,20 @@ bool cReferenceSequences::ReadGenBankFileHeader(ifstream& in) {
   return (found_LOCUS_line);
 }
 
-
+/*! Load start, end, strand for feature from a GenBank coordinate string.
+ *
+ *  The string may cover multiple lines. Currently we do not handle discontinuous features,
+ *  and features that cross the origin of a circular chromosome are returned with end < start. 
+ */
 void cSequenceFeature::ReadGenBankCoords(string& s, ifstream& in) {
 
-  //std::cerr << "whole: " << s << std::endl;
-
+// Typical coordinate strings:
+//   1485..1928
+//   complement(2644..3159)
+//  
+// Example from a circular genome:
+//   complement(join(7504..7835,1..163))
+  
   // Read through all parentheses
   int32_t parentheses_level = 0;
   size_t parenthesis_pos = s.find_first_of("()");
@@ -728,7 +753,7 @@ void cReferenceSequences::ReadGenBankFileSequenceFeatures(std::ifstream& in, cAn
   string line;
   while (!in.eof()) {
     getline(in, line);
-    //debug
+
     //cout << line << endl;
     string first_word = GetWord(line);
 
@@ -741,9 +766,9 @@ void cReferenceSequences::ReadGenBankFileSequenceFeatures(std::ifstream& in, cAn
     if (first_word[0] != '/') {
 
       if (first_word != "BASE") {
-        cSequenceFeaturePtr new_feat(new cSequenceFeature);
-        all_features.push_back( new_feat );
-        current_feature = new_feat.get();
+        cSequenceFeaturePtr new_feature(new cSequenceFeature);
+        all_features.push_back( new_feature );
+        current_feature = new_feature.get();
         (*current_feature)["type"] = first_word;
         // parse the rest of the line
         std::string coord_s = GetWord(line);
@@ -752,7 +777,7 @@ void cReferenceSequences::ReadGenBankFileSequenceFeatures(std::ifstream& in, cAn
     }
     // Minor tag = information about current feature
     else {
-      assert(current_feature);
+      ASSERT(current_feature, "No current feature.");
 
       // Remove leading slash
       current_feature->ReadGenBankTag(first_word, line, in); // reads multi-line entries
@@ -760,34 +785,33 @@ void cReferenceSequences::ReadGenBankFileSequenceFeatures(std::ifstream& in, cAn
   }
 
 
-  for (cSequenceFeatureList::iterator it = all_features.begin(); it < all_features.end(); it++) {
-    cSequenceFeature& feat = **it;
+  for (cSequenceFeatureList::iterator it = all_features.begin(); it != all_features.end(); it++) {
+    cSequenceFeature& feature = **it;
 
     // common changes for any type
     // use /note as the product if there is not product
-    if (feat.SafeGet("product") == "")
+    if (feature.SafeGet("product") == "")
     {
-      feat["product"] = feat.SafeGet("note");
+      feature["product"] = feature.SafeGet("note");
     }
 
-    if (feat["type"] == "repeat_region") {
+    if (feature["type"] == "repeat_region") {
 
       // Don't add unnamed ones to the list...
       //if (it->SafeGet("mobile_element") == "") continue;
 
-      feat["name"] = "repeat_region";
+      feature["name"] = "repeat_region";
 
       // E. coli case:
-      if (feat.SafeGet("mobile_element") != "")
+      if (feature.SafeGet("mobile_element") != "")
       {
-        feat["name"] = feat["mobile_element"];
-        string& name = feat["name"];
+        feature["name"] = feature["mobile_element"];
+        string& name = feature["name"];
 
         // remove prefix
         int pos = name.find("insertion sequence:");
-        if (pos != -1) {
+        if (pos != -1)
           name.erase(pos,pos+19);
-        }
 
         // remove suffix if "IS(\d)}
         pos = name.find("IS");
@@ -800,51 +824,59 @@ void cReferenceSequences::ReadGenBankFileSequenceFeatures(std::ifstream& in, cAn
       }
 
       // S. cerevisiae case
-      if (feat.SafeGet("rpt_family") != "")
-      {
-        feat["name"] = feat["rpt_family"];
-      }
+      if (feature.SafeGet("rpt_family") != "")
+        feature["name"] = feature["rpt_family"];
+
       //std::cerr << (*it).SafeGet("mobile_element") << " " << (*it).SafeGet("name") << std::endl;
 
-      if (feat.SafeGet("product") == "")
-      {
-        feat["product"] = "repeat region";
-      }
+      if (feature.SafeGet("product") == "")
+        feature["product"] = "repeat region";
     }
     else
     {
       // Add information
-      if (feat.SafeGet("gene") != "") {
-        feat["name"] = feat["gene"];
-      }
-      if ( (feat.SafeGet("name") == "") && (feat.SafeGet("locus_tag") != "") ) {
-        feat["name"] = feat["locus_tag"];
-      }
+      if (feature.SafeGet("gene") != "")
+        feature["name"] = feature["gene"];
+      
+      if ( (feature.SafeGet("name") == "") && (feature.SafeGet("locus_tag") != "") )
+        feature["name"] = feature["locus_tag"];
 
       //std::cerr << (*it).SafeGet("name") << " " << (*it).SafeGet("gene") << " " << (*it).SafeGet("locus_tag") << std::endl;
 
-      feat["accession"] = feat.SafeGet("locus_tag");
+      feature["accession"] = feature.SafeGet("locus_tag");
 
       // /pseudo tag doesn't take a value
-      if (feat.count("pseudo") != 0) {
-        feat["type"] = "pseudogene";
-      }
+      if (feature.count("pseudo") != 0)
+        feature["type"] = "pseudogene";
+    }
+        
+    // transfer to GFF
+    feature["phase"] = "0";
+    if (feature.SafeGet("locus_tag") != "")
+      feature.m_gff_attributes["ID"] = make_list<string>(feature["locus_tag"]);
+    if (feature.SafeGet("product") != "")
+      feature.m_gff_attributes["Note"] = make_list<string>(feature["product"]);
+    if (feature.SafeGet("accession") != "")
+      feature.m_gff_attributes["Alias"] = make_list<string>(feature["accession"]);
+    if (feature.SafeGet("name") != "")
+      feature.m_gff_attributes["Name"] = make_list<string>(feature["name"]);
+    
+    // add an extra copy of the feature if it crosses the origin of a circular chromosome
+    if (feature.m_end < feature.m_start) {
+      cSequenceFeaturePtr bonus_circular_feature(new cSequenceFeature);
+      *bonus_circular_feature = feature;
+      bonus_circular_feature->m_start = bonus_circular_feature->m_start - s.m_length + 1;
+      feature.m_end = feature.m_end + s.m_length;
+      s.feature_push_front( bonus_circular_feature );
     }
     
-    s.add_feature(*it);
-    
-    // transfer to GFF
-    if (feat.SafeGet("locus_tag") != "")
-      feat.m_gff_attributes["ID"] = make_list<string>(feat["locus_tag"]);
-    if (feat.SafeGet("product") != "")
-      feat.m_gff_attributes["Note"] = make_list<string>(feat["product"]);
-    if (feat.SafeGet("accession") != "")
-      feat.m_gff_attributes["Alias"] = make_list<string>(feat["accession"]);
-    if (feat.SafeGet("name") != "")
-      feat.m_gff_attributes["Name"] = make_list<string>(feat["name"]);
-    
-    feat["phase"] = "0";
+    s.feature_push_back(*it);
   }
+  
+  // sort the list
+  s.m_features.sort();
+  s.m_genes.sort();
+  s.m_repeats.sort();
 }
 
 void cReferenceSequences::ReadGenBankFileSequence(std::ifstream& in, cAnnotatedSequence& s) {
@@ -931,13 +963,18 @@ void cReferenceSequences::ReadBull(const string& file_name) {
   in.close();
   
   cAnnotatedSequence& s = this->back();
-  for (cSequenceFeatureList::iterator it = all_features.begin(); it < all_features.end(); it++) {
+  for (cSequenceFeatureList::iterator it = all_features.begin(); it != all_features.end(); it++) {
     cSequenceFeature& feat = **it;
     s.m_features.push_back(*it);
   }
 }
 
-string cReferenceSequences::repeat_example(const string &repeat_name, int8_t strand)
+/*! Returns the nucleotide sequence of a typical copy of a repeat.
+ *
+ *  TODO: Needs to check to be sure that it is getting a "typical" copy 
+ *  (not one that has an insertion in it or a non-consensus sequence) 
+ */
+string cReferenceSequences::repeat_family_sequence(const string &repeat_name, int8_t strand)
 {
   vector<cAnnotatedSequence>::iterator itr_seq;
 
@@ -963,43 +1000,45 @@ string cReferenceSequences::repeat_example(const string &repeat_name, int8_t str
   return "";
 }
 
-cSequenceFeature* cReferenceSequences::find_closest_repeat_region_boundary(uint32_t position, vector<cSequenceFeaturePtr>& repeat_list_ref, int32_t max_distance, int32_t direction)
+/*! Find the closest edge of a repeat in the specified direction within the specified distance
+ */
+cSequenceFeaturePtr cReferenceSequences::find_closest_repeat_region_boundary(int32_t position, cSequenceFeatureList& repeat_list, int32_t max_distance, int32_t direction)
 {
-  if (repeat_list_ref.size() == 0) return NULL;
-
-  cSequenceFeature* is(NULL);
+  cSequenceFeaturePtr repeat_ptr(NULL);
   int32_t best_distance = max_distance + 1; // this enforces the max distance
 
-  for (uint32_t i = 0; i < repeat_list_ref.size(); i++) //IS
-  {
-    cSequenceFeature* test_is = repeat_list_ref[i].get();
+  for (cSequenceFeatureList::iterator it = repeat_list.begin(); it != repeat_list.end(); ++it) {
+    cSequenceFeaturePtr test_repeat_ptr = *it;
     
     // Distance from the appropriate end of the repeat
-    int32_t test_distance = abs(static_cast<int32_t>(((direction == -1) ? position - test_is->m_end : test_is->m_start - position)));
+    int32_t test_distance = abs(static_cast<int32_t>(((direction == -1) ? position - test_repeat_ptr->m_end : test_repeat_ptr->m_start - position)));
     
     // We want the closest one without going over that is within max_distance
-    if ( (test_distance >= 0) && (test_distance < best_distance) )
-    {
-      is = test_is;
+    if ( (test_distance >= 0) && (test_distance < best_distance) ) {
+      repeat_ptr = test_repeat_ptr;
       best_distance = test_distance;
     }
   }
-  return is;
+  return repeat_ptr;
 }
 
-cSequenceFeature* cReferenceSequences::get_overlapping_feature(vector<cSequenceFeaturePtr>& feature_list_ref, uint32_t pos)
+/*! Returns the last feature encountered that overlaps a position
+ */
+cSequenceFeaturePtr cReferenceSequences::get_overlapping_feature(cSequenceFeatureList& feature_list, int32_t pos)
 {
-  cSequenceFeature* feat = NULL;
-  for (uint32_t i = 0; i < feature_list_ref.size(); i++)
-    if (pos >= feature_list_ref[i]->m_start && pos <= feature_list_ref[i]->m_end)
-      feat = feature_list_ref[i].get();
-  return feat;
+  cSequenceFeaturePtr feature_ptr(NULL);
+  for (cSequenceFeatureList::iterator it = feature_list.begin(); it != feature_list.end(); ++it) {
+    cSequenceFeaturePtr test_feature_ptr = *it;
+    if (pos >= test_feature_ptr->m_start && pos <= test_feature_ptr->m_end)
+      feature_ptr = test_feature_ptr;
+  }
+  return feature_ptr;
 }
 
 void cReferenceSequences::find_nearby_genes(
-                                            cSequenceFeatureList& gene_list_ref,
-                                            uint32_t pos_1,
-                                            uint32_t pos_2,
+                                            cSequenceFeatureList& gene_list,
+                                            int32_t pos_1,
+                                            int32_t pos_2,
                                             vector<Gene>& within_genes,
                                             vector<Gene>& between_genes,
                                             vector<Gene>& inside_left_genes,
@@ -1008,14 +1047,11 @@ void cReferenceSequences::find_nearby_genes(
                                             Gene& next_gene
                                             )
 {
-  if (pos_2 == UNDEFINED_UINT32)
-    pos_2 = pos_1;
-
   //#	print "$pos_1, $pos_2\n";
 
-  for (uint32_t i = 0; i < gene_list_ref.size(); i++) //GENE
+  for (cSequenceFeatureList::iterator it = gene_list.begin(); it != gene_list.end(); ++it)
   {
-    cSequenceFeature& test_gene_feat = *gene_list_ref[i];
+    cSequenceFeature& test_gene_feat = **it;
     Gene test_gene = Gene(test_gene_feat); // up-cast, should be a better way to do this @JEB
 
     if (test_gene.end < pos_1)
@@ -1161,8 +1197,8 @@ void cReferenceSequences::annotate_1_mutation(diff_entry& mut, uint32_t start, u
 
   //or die "Unknown seq_id in reference sequence info: $seq_id\n";
 
-  vector<cSequenceFeaturePtr>& gene_list_ref = (*this)[seq_id].m_genes;
-  vector<cSequenceFeaturePtr>& repeat_list_ref = (*this)[seq_id].m_repeats;
+  cSequenceFeatureList& gene_list_ref = (*this)[seq_id].m_genes;
+  cSequenceFeatureList& repeat_list_ref = (*this)[seq_id].m_repeats;
 
   int32_t size = end - start + 1;
 
@@ -1172,19 +1208,19 @@ void cReferenceSequences::annotate_1_mutation(diff_entry& mut, uint32_t start, u
   vector<Gene> inside_left_genes;
   vector<Gene> inside_right_genes;
 
-  cSequenceFeature* repeat_region(NULL);
+  cSequenceFeaturePtr repeat_ptr(NULL);
   if (repeat_override)
   {
     assert(start == end);
-    repeat_region = get_overlapping_feature(repeat_list_ref, start);
-    if (repeat_region != NULL)
+    repeat_ptr = get_overlapping_feature(repeat_list_ref, start);
+    if (repeat_ptr.get() != NULL)
     {
-      Gene within_gene(*repeat_region);
+      Gene within_gene(*repeat_ptr);
       within_genes.push_back(within_gene);
     }
   }
 
-  if (repeat_region == NULL)
+  if (repeat_ptr.get() == NULL)
     find_nearby_genes(gene_list_ref, start, end, within_genes, between_genes, inside_left_genes, inside_right_genes, prev_gene, next_gene);
 
   // Mutation is intergenic
@@ -1352,35 +1388,35 @@ void cReferenceSequences::annotate_mutations(genome_diff& gd, bool only_muts)
 
     if (mut._type == SNP)
     {
-      mut["_ref_seq"] = get_sequence_1(mut["seq_id"], from_string<uint32_t>(mut["position"]), from_string<uint32_t>(mut["position"]));
-      annotate_1_mutation(mut, from_string<uint32_t>(mut["position"]), from_string<uint32_t>(mut["position"]));
+      mut["_ref_seq"] = get_sequence_1(mut["seq_id"], from_string<uint32_t>(mut["position"]), from_string<int32_t>(mut["position"]));
+      annotate_1_mutation(mut, from_string<int32_t>(mut["position"]), from_string<int32_t>(mut["position"]));
     }
     else if (mut._type == SUB)
     {
-      annotate_1_mutation(mut, from_string<uint32_t>(mut["position"]), from_string<uint32_t>(mut["position"]) + from_string<uint32_t>(mut["size"]) - 1);
+      annotate_1_mutation(mut, from_string<int32_t>(mut["position"]), from_string<int32_t>(mut["position"]) + from_string<int32_t>(mut["size"]) - 1);
     }
     else if (mut._type == DEL)
     {
-      annotate_1_mutation(mut, from_string<uint32_t>(mut["position"]), from_string<uint32_t>(mut["position"]) + from_string<uint32_t>(mut["size"]) - 1);
+      annotate_1_mutation(mut, from_string<int32_t>(mut["position"]), from_string<int32_t>(mut["position"]) + from_string<int32_t>(mut["size"]) - 1);
     }
     else if (mut._type == INS)
     {
-      annotate_1_mutation(mut, from_string<uint32_t>(mut["position"]), from_string<uint32_t>(mut["position"]));
+      annotate_1_mutation(mut, from_string<int32_t>(mut["position"]), from_string<int32_t>(mut["position"]));
     }
     else if (mut._type == CON)
     {
-      annotate_1_mutation(mut, from_string<uint32_t>(mut["position"]), from_string<uint32_t>(mut["position"]) + from_string<uint32_t>(mut["size"]) - 1);
+      annotate_1_mutation(mut, from_string<int32_t>(mut["position"]), from_string<int32_t>(mut["position"]) + from_string<int32_t>(mut["size"]) - 1);
     }
     else if (mut._type == MOB)
     {
-      annotate_1_mutation(mut, from_string<uint32_t>(mut["position"]), from_string<uint32_t>(mut["position"]) + from_string<uint32_t>(mut["duplication_size"]) - 1);
+      annotate_1_mutation(mut, from_string<int32_t>(mut["position"]), from_string<int32_t>(mut["position"]) + from_string<int32_t>(mut["duplication_size"]) - 1);
     }
     else if (mut._type == INV)
     {
-      annotate_1_mutation(mut, from_string<uint32_t>(mut["position"]), from_string<uint32_t>(mut["position"]));
+      annotate_1_mutation(mut, from_string<int32_t>(mut["position"]), from_string<int32_t>(mut["position"]));
       mut["gene_name_1"] = mut["gene_name"];
       mut["gene_product_1"] = mut["gene_product"];
-      annotate_1_mutation(mut, from_string<uint32_t>(mut["position"]) + from_string<uint32_t>(mut["size"])-1, from_string<uint32_t>(mut["position"]) + from_string<uint32_t>(mut["size"])-1);
+      annotate_1_mutation(mut, from_string<int32_t>(mut["position"]) + from_string<int32_t>(mut["size"])-1, from_string<int32_t>(mut["position"]) + from_string<int32_t>(mut["size"])-1);
       mut["gene_name_2"] = mut["gene_name"];
       mut["gene_product_2"] = mut["gene_product"];
       mut._fields.erase("gene_name");
@@ -1388,13 +1424,13 @@ void cReferenceSequences::annotate_mutations(genome_diff& gd, bool only_muts)
     }
     else if (mut._type == AMP)
     {
-      annotate_1_mutation(mut, from_string<uint32_t>(mut["position"]), from_string<uint32_t>(mut["position"]) + from_string<uint32_t>(mut["size"]) - 1);
+      annotate_1_mutation(mut, from_string<int32_t>(mut["position"]), from_string<int32_t>(mut["position"]) + from_string<int32_t>(mut["size"]) - 1);
     }
     else if (mut._type == JC)
     {
       diff_entry side_1;
       side_1[SEQ_ID] = mut["side_1_seq_id"];
-      annotate_1_mutation(side_1, from_string<uint32_t>(mut["side_1_position"]), from_string<uint32_t>(mut["side_1_position"]), true);
+      annotate_1_mutation(side_1, from_string<int32_t>(mut["side_1_position"]), from_string<int32_t>(mut["side_1_position"]), true);
       //copy over entries with prefix
       for(diff_entry::map_t::iterator it=side_1._fields.begin(); it!=side_1._fields.end(); it++)
       {
@@ -1403,7 +1439,7 @@ void cReferenceSequences::annotate_mutations(genome_diff& gd, bool only_muts)
 
       diff_entry side_2;
       side_2[SEQ_ID] = mut["side_2_seq_id"];
-      annotate_1_mutation(side_2, from_string<uint32_t>(mut["side_2_position"]), from_string<uint32_t>(mut["side_2_position"]), true);
+      annotate_1_mutation(side_2, from_string<int32_t>(mut["side_2_position"]), from_string<int32_t>(mut["side_2_position"]), true);
       //copy over entries with prefix
       for(diff_entry::map_t::iterator it=side_2._fields.begin(); it!=side_2._fields.end(); it++)
       {
@@ -1412,11 +1448,11 @@ void cReferenceSequences::annotate_mutations(genome_diff& gd, bool only_muts)
     }
     else if (mut._type == RA)
     {
-      annotate_1_mutation(mut, from_string<uint32_t>(mut["position"]), from_string<uint32_t>(mut["position"]));
+      annotate_1_mutation(mut, from_string<int32_t>(mut["position"]), from_string<int32_t>(mut["position"]));
     }
     else if (mut._type == MC)
     {
-      annotate_1_mutation(mut, from_string<uint32_t>(mut["start"]), from_string<uint32_t>(mut["end"]));
+      annotate_1_mutation(mut, from_string<int32_t>(mut["start"]), from_string<int32_t>(mut["end"]));
     }
   }
 }

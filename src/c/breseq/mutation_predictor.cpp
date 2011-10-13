@@ -32,18 +32,19 @@ namespace breseq {
 
 	// Private methods
 
-	cSequenceFeature* MutationPredictor::within_repeat(string seq_id, uint32_t position)
+	cSequenceFeature* MutationPredictor::within_repeat(string seq_id, int32_t position)
 	{
-		cSequenceFeatureList& rl = ref_seq_info[seq_id].m_repeats;
-    cSequenceFeature* r= NULL;
+		cSequenceFeatureList& repeat_list = ref_seq_info[seq_id].m_repeats;
+    cSequenceFeature* repeat= NULL;
     
     // by returning the last one we encounter that we are inside, 
     // we get the inner repeat in nested cases
-		for (uint32_t i = 0; i < rl.size(); i++)
-			if ((rl[i]->m_start <= position) && (position <= rl[i]->m_end))
-				r = rl[i].get();
-
-		return r;
+    for(cSequenceFeatureList::iterator it = repeat_list.begin(); it != repeat_list.end(); it++) {
+      cSequenceFeaturePtr& test_repeat = *it;
+			if ((test_repeat->m_start <= position) && (position <= test_repeat->m_end))
+				repeat = test_repeat.get();
+    }
+		return repeat;
 	}
 
 	bool MutationPredictor::sort_by_hybrid(const counted_ptr<diff_entry>& a, const counted_ptr<diff_entry>& b)
@@ -128,13 +129,13 @@ namespace breseq {
 			{
 				string side_key = "side_" + s(side);
 
-				cSequenceFeature* is = ref_seq_info.find_closest_repeat_region_boundary(
+				cSequenceFeaturePtr is = ref_seq_info.find_closest_repeat_region_boundary(
 					n(j[side_key + "_position"]),
 					ref_seq_info[j[side_key + "_seq_id"]].m_repeats,
 					max_distance_to_repeat,
 					n(j[side_key + "_strand"])
 				);
-				if (is != NULL)
+				if (is.get() != NULL)
 				{
 					j["_" + side_key + "_is"] = "1";
 					j["_" + side_key + "_is_start"] = s(is->m_start);
@@ -323,12 +324,12 @@ namespace breseq {
 				cSequenceFeature& r1 = *r1_pointer, r2 = *r2_pointer;
 
 				// there may be more evidence that one or the other is deleted...
-				uint32_t r1_overlap_end = n(mc_item["start"]) + n(mc_item["start_range"]);
+				int32_t r1_overlap_end = n(mc_item["start"]) + n(mc_item["start_range"]);
 				if (r1_overlap_end > r1.m_end)
 					r1_overlap_end = r1.m_end;
 				int32_t r1_overlap = r1_overlap_end - n(mc_item["start"]) + 1;
 
-				uint32_t r2_overlap_start = n(mc_item["end"]) - n(mc_item["end_range"]);
+				int32_t r2_overlap_start = n(mc_item["end"]) - n(mc_item["end_range"]);
 				if (r2_overlap_start < r1.m_start)
 					r2_overlap_start = r2.m_start;
 				int32_t r2_overlap = n(mc_item["end"]) - r2_overlap_start + 1;
@@ -931,7 +932,7 @@ namespace breseq {
 			int32_t position = n(j["side_1_position"]);
 
 			// Special case of circular chromosome
-			if ( (j["side_1_position"] == "1") && ( static_cast<uint32_t>(n(j["side_2_position"])) == ref_seq_info[ref_seq_info.seq_id_to_index(j["side_2_seq_id"])].m_length ) )
+			if ( (j["side_1_position"] == "1") && ( n(j["side_2_position"]) == ref_seq_info[ref_seq_info.seq_id_to_index(j["side_2_seq_id"])].m_length ) )
 			{
 				j["circular_chromosome"] = "1";
 				continue;

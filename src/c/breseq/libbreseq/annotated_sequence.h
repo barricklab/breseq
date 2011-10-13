@@ -67,27 +67,37 @@ namespace breseq {
     public:
 
       // Could add accessors that convert strings to numbers...
-      uint32_t m_start, m_end;
+      int32_t m_start, m_end;
       int8_t m_strand;
 
       map<string, vector<string> > m_gff_attributes;
     
       cSequenceFeature() {}
-      cSequenceFeature(const cSequenceFeature& _in) : sequence_feature_map_t(_in) {
+      cSequenceFeature(const cSequenceFeature& _in) : sequence_feature_map_t(_in) 
+      {
         m_start = _in.m_start;
         m_end = _in.m_end;
         m_strand = _in.m_strand;
       }
-      cSequenceFeature operator=(const cSequenceFeature& _in) {
+      cSequenceFeature operator=(const cSequenceFeature& _in) 
+      {
         m_start = _in.m_start;
         m_end = _in.m_end;
         m_strand = _in.m_strand;
         sequence_feature_map_t::operator=(_in);
         return *this;
       }
-      
+    
+      bool operator<(const cSequenceFeature& _in) const
+      {
+        if (this->m_start == _in.m_start) 
+          return (this->m_end > _in.m_end);
+        return (this->m_start < _in.m_start);
+      }
+    
       //<! Safe accessor that returns empty string if not defined. 
-      std::string SafeGet(sequence_feature_key_t in_key) { 
+      string SafeGet(sequence_feature_key_t in_key) 
+      { 
         sequence_feature_map_t::const_iterator it = this->find(in_key);
         if (it == this->end()) return std::string("");
         return it->second;
@@ -103,8 +113,8 @@ namespace breseq {
     string name;
     string product;
     string type;
-    uint32_t start;
-    uint32_t end;
+    int32_t start;
+    int32_t end;
     bool strand;
     bool pseudogene; 
     
@@ -123,7 +133,7 @@ namespace breseq {
 
   typedef counted_ptr<Gene> cGenePtr;
   typedef counted_ptr<cSequenceFeature> cSequenceFeaturePtr;
-  typedef vector<cSequenceFeaturePtr> cSequenceFeatureList;
+  typedef list<cSequenceFeaturePtr> cSequenceFeatureList;
   
 	/*! Sequence class.
 	 */   
@@ -131,7 +141,7 @@ namespace breseq {
   class cAnnotatedSequence {
     
     public:      
-      uint32_t m_length;
+      int32_t m_length;
       bool m_is_circular;
       string m_description; // GenBank (DEFINITION) | GFF (description), from main feature line
       string m_seq_id;      // GenBank (LOCUS)      | GFF (seqid), from ##sequence-region line
@@ -155,20 +165,24 @@ namespace breseq {
         m_features(0) {} ;
     
       // Utility to get top strand sequence
-      string get_sequence_1(uint32_t start_1, uint32_t end_1) const
+      string get_sequence_1(int32_t start_1, int32_t end_1) const
       {
         ASSERT(start_1 <= end_1, "start (" + to_string(start_1) + ") not less than or equal to end (" + to_string(end_1) + ")");
         return m_fasta_sequence.m_sequence.substr(start_1-1, end_1-start_1+1);
       }
 
-      void replace_sequence_1(uint32_t start_1, uint32_t end_1, const string &replacement_seq)
+      void replace_sequence_1(int32_t start_1, int32_t end_1, const string &replacement_seq)
       {
+        // TODO: Handle circular genomes
+        ASSERT(start_1 >= 1, "features on circular genomes with start coordinate < 1 not handled");
+        ASSERT(end_1 <= m_length, "features on circular genomes with end coordinate > length not handled");
+        
         ASSERT(start_1 <= end_1, "start (" + to_string(start_1) + ") not less than or equal to end (" + to_string(end_1) + ")");
         m_fasta_sequence.m_sequence.replace(start_1-1, end_1-start_1+1, replacement_seq);
       }
 
       // Inserts AFTER the input position
-      void insert_sequence_1(uint32_t pos_1, const string &insertion_seq)
+      void insert_sequence_1(int32_t pos_1, const string &insertion_seq)
       {
         m_fasta_sequence.m_sequence.insert(pos_1, insertion_seq);
       }
@@ -178,8 +192,8 @@ namespace breseq {
         return m_fasta_sequence.m_sequence.length();
       }
     
-      // Correctly adds features across different lists
-      void add_feature(cSequenceFeaturePtr& fp)
+      //! Correctly adds features across different lists
+      void feature_push_back(cSequenceFeaturePtr& fp)
       {
         m_features.push_back(fp);
         
@@ -192,6 +206,21 @@ namespace breseq {
           m_genes.push_back(fp);
         }
       }
+    
+      //! Correctly adds features across different lists
+      void feature_push_front(cSequenceFeaturePtr& fp)
+      {
+        m_features.push_front(fp);
+        
+        if ((*fp)["type"] == "repeat_region")
+        {
+          m_repeats.push_front(fp);
+        }
+        else if (((*fp)["type"] == "CDS") || ((*fp)["type"] == "tRNA") || ((*fp)["type"] == "rRNA") || ((*fp)["type"] == "RNA"))
+        {
+          m_genes.push_front(fp);
+        }
+      }
   };
 
   
@@ -200,7 +229,9 @@ namespace breseq {
    Holds sequences and features for ALL reference sequences.
 	 */ 
   
-  class cReferenceSequences : public vector<cAnnotatedSequence> {
+  class cReferenceSequences : public vector<cAnnotatedSequence> 
+  {
+    
   protected:
     map<string,int> m_seq_id_to_index; // for looking up sequences by seq_id
     uint32_t m_index_id;
@@ -297,22 +328,23 @@ namespace breseq {
 
     
     //!< Utility to get sequences by seq_id
-    string get_sequence_1(const string& seq_id, uint32_t start_1, uint32_t end_1)
+    string get_sequence_1(const string& seq_id, int32_t start_1, int32_t end_1)
     {
       return (*this)[seq_id].get_sequence_1(start_1, end_1);
     }
     
-    string get_sequence_1(uint32_t tid, uint32_t start_1, uint32_t end_1) const
+    string get_sequence_1(uint32_t tid, int32_t start_1, int32_t end_1) const
     {
+      // TODO: Handle circular genomes
       return (*this)[tid].get_sequence_1(start_1, end_1);
     }
 
-    void replace_sequence_1(const string& seq_id, uint32_t start_1, uint32_t end_1, const string& replacement_seq)
+    void replace_sequence_1(const string& seq_id, int32_t start_1, int32_t end_1, const string& replacement_seq)
     {
       (*this)[seq_id].replace_sequence_1(start_1, end_1, replacement_seq);
     }
 
-    void insert_sequence_1(const string& seq_id, uint32_t pos, const string &insertion_seq)
+    void insert_sequence_1(const string& seq_id, int32_t pos, const string &insertion_seq)
     {
       (*this)[seq_id].insert_sequence_1(pos, insertion_seq);
     }
@@ -349,13 +381,13 @@ namespace breseq {
     
     static map<string,char> translation_table_11;
 
-    static cSequenceFeature* find_closest_repeat_region_boundary(uint32_t position, vector<cSequenceFeaturePtr>& repeat_list_ref, int32_t max_distance, int32_t direction);
-    static cSequenceFeature* get_overlapping_feature(vector<cSequenceFeaturePtr>& feature_list_ref, uint32_t pos);
+    static cSequenceFeaturePtr find_closest_repeat_region_boundary(int32_t position, cSequenceFeatureList& repeat_list, int32_t max_distance, int32_t direction);
+    static cSequenceFeaturePtr get_overlapping_feature(cSequenceFeatureList& feature_list, int32_t pos);
     static char translate(string seq);
     static void find_nearby_genes(
-                                  cSequenceFeatureList& gene_list_ref, 
-                                  uint32_t pos_1, 
-                                  uint32_t pos_2, 
+                                  cSequenceFeatureList& gene_list, 
+                                  int32_t pos_1, 
+                                  int32_t pos_2, 
                                   vector<Gene>& within_genes, 
                                   vector<Gene>& between_genes, 
                                   vector<Gene>& inside_left_genes, 
@@ -365,7 +397,7 @@ namespace breseq {
     void annotate_1_mutation(diff_entry& mut, uint32_t start, uint32_t end, bool repeat_override = false);
     void annotate_mutations(genome_diff& gd, bool only_muts = false);
     void polymorphism_statistics(Settings& settings, Summary& summary);
-    string repeat_example(const string& repeat_name, int8_t strand);
+    string repeat_family_sequence(const string& repeat_name, int8_t strand);
 
     static string GFF3EscapeString(const string& s)
     {

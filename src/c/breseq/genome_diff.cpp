@@ -1213,7 +1213,7 @@ cReferenceSequences genome_diff::apply_to_sequences(cReferenceSequences& ref_seq
 
         // @JEB: correct here to look for where the repeat is in the original ref_seq_info.
         // This saves us from possible looking at a shifted location...
-        string seq_string = ref_seq_info.repeat_example(mut["repeat_name"], from_string<int16_t>(mut["strand"]));
+        string seq_string = ref_seq_info.repeat_family_sequence(mut["repeat_name"], from_string<int16_t>(mut["strand"]));
         mut["repeat_size"] = to_string(seq_string.length()); // saving this for shifting
 
         string duplicate_sequence = new_ref_seq_info.get_sequence_1(mut[SEQ_ID], position, position + from_string<uint32_t>(mut["duplication_size"]) - 1);
