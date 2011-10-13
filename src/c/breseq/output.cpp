@@ -198,7 +198,6 @@ void html_index(const string& file_name, const Settings& settings, Summary& summ
 // #   ###
 // #   ## Unassigned evidence
 // #   ###
-  HTML << "<!--Unassigned evidence-->" << endl;
   
   diff_entry_list mc = gd.filter_used_as_evidence(gd.show_list(make_list<gd_entry_type>(MC)));
   mc.remove_if(diff_entry::rejected()); 
@@ -220,6 +219,8 @@ void html_index(const string& file_name, const Settings& settings, Summary& summ
     HTML << "<p>" << endl;
     HTML << html_new_junction_table_string(jcu, false, "Unassigned new junction evidence...", relative_path);
   }
+  
+  HTML << "<p>" << a(Settings::relative_path(settings.marginal_html_file_name, settings.output_path), "Marginal predictions");
 
   HTML << html_footer();
   HTML.close();
@@ -650,8 +651,6 @@ string breseq_header_string(const Settings& settings)
   ss << settings.byline << endl;
   ss << "<br>";
   ss << a(Settings::relative_path(settings.index_html_file_name, settings.output_path), "mutation predictions"); 
-  ss << " | " << endl;
-  ss << a(Settings::relative_path(settings.marginal_html_file_name, settings.output_path), "marginal predictions");
   ss << " | " << endl;
   ss << a(Settings::relative_path(settings.summary_html_file_name, settings.output_path), "summary statistics");
   ss << " | " << endl;

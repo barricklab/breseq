@@ -36,7 +36,7 @@
       displayScale = "1.00"
       launchStyle = "0"
       useCustomWorkingDirectory = "YES"
-      customWorkingDirectory = "/Users/jbarrick/tmp/caroline"
+      customWorkingDirectory = "/Users/jbarrick/tmp/morris"
       buildConfiguration = "Debug">
       <BuildableProductRunnable>
          <BuildableReference
@@ -50,7 +50,7 @@
       <CommandLineArguments>
          <CommandLineArgument
             argument = "-r /Users/jbarrick/db/lenski/REL606.gbk CT-A_TGACCA_L002_R1_001_pf.fastq CT-A_TGACCA_L004_R1_001_pf.fastq CT-A_TGACCA_L006_R1_001_pf.fastq CT-A_TGACCA_L008_R1_001_pf.fastq"
-            isEnabled = "YES">
+            isEnabled = "NO">
          </CommandLineArgument>
          <CommandLineArgument
             argument = "-o tests/bull_2 -r tests/bull_2/../data/bull/bull_2.gbk tests/bull_2/../data/bull/bull_2.fastq"
@@ -59,6 +59,10 @@
          <CommandLineArgument
             argument = "-o tests/lambda_mixed_pop_bad_contigs -r tests/lambda_mixed_pop_bad_contigs/../data/lambda/lambda.gbk -r tests/lambda_mixed_pop_bad_contigs/../data/lambda/other.gbk -r tests/lambda_mixed_pop_bad_contigs/../data/REL606/REL606.fragment.gbk tests/lambda_mixed_pop_bad_contigs/../data/lambda/lambda_mixed_population.fastq"
             isEnabled = "NO">
+         </CommandLineArgument>
+         <CommandLineArgument
+            argument = "-r NC_007604.1.gbk -r NC_004073.2.gbk -r NC_004990.1.gbk JM24a_GGCTAC_L002_R1_001_pf.fastq JM24a_GGCTAC_L004_R1_001_pf.fastq JM24a_GGCTAC_L006_R1_001_pf.fastq JM24a_GGCTAC_L008_R1_001_pf.fastq"
+            isEnabled = "YES">
          </CommandLineArgument>
       </CommandLineArguments>
       <EnvironmentVariables>

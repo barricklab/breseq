@@ -41,29 +41,29 @@ namespace breseq {
     int32_t redundant;
     
     // Extended properties for resolve_alignments.cpp
-    cSequenceFeature* is;
+    cSequenceFeaturePtr is;
     string is_interval;
 		string is_side_key;
     
     int32_t overlap;
     
     JunctionSide()
+    : is(NULL)
     {
       position = 0;
       strand = 0;
       redundant = 0;
       overlap = 0;
-      is = NULL;
     }
     
     JunctionSide(const string& _seq_id, int32_t _position, int32_t _strand, int32_t _redundant = false)
+    : is(NULL)
     {
       seq_id = _seq_id;
       position = _position;
       strand = _strand;
       redundant = _redundant;
       overlap = 0;
-      is = NULL;
     }
     
     bool operator ==(const JunctionSide& side) const

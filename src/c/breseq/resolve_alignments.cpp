@@ -973,23 +973,25 @@ diff_entry _junction_to_hybrid_list_item(const string& key, cReferenceSequences&
 	// The goal is to offset through positive overlap to get as close as possible to the ends of the IS
 	///
 
-	cSequenceFeature* is = NULL;
+	cSequenceFeaturePtr repeat_ptr(NULL);
 	for (int32_t i = 0; i <= 1; i++)
 	{
 		// Determine IS elements
 		// Is it within an IS or near the boundary of an IS in the direction leading up to the junction?
-		is = cReferenceSequences::find_closest_repeat_region_boundary(jc.sides[i].position, ref_seq_info[jc.sides[i].seq_id].m_repeats, 20, jc.sides[i].strand);
-		if (is != NULL)
+		repeat_ptr = cReferenceSequences::find_closest_repeat_region_boundary(jc.sides[i].position, ref_seq_info[jc.sides[i].seq_id].m_repeats, 20, jc.sides[i].strand);
+		if (repeat_ptr.get() != NULL)
 		{
-			jc.sides[i].is = is;
-			jc.sides[i].is_interval = (is->m_strand == 1) ? to_string(is->m_start) + "-" + to_string(is->m_end) : to_string(is->m_end) + "-" + to_string(is->m_start);
+			jc.sides[i].is = repeat_ptr;
+			jc.sides[i].is_interval = (repeat_ptr->m_strand == 1) 
+        ? to_string(repeat_ptr->m_start) + "-" + to_string(repeat_ptr->m_end) 
+        : to_string(repeat_ptr->m_end) + "-" + to_string(repeat_ptr->m_start);
 		}
 	}
 
 	// Determine which side of the junction is the IS and which is unique
 	// these point to the correct initial interval...
 	jc.is_side = UNDEFINED_UINT32;
-	if (jc.sides[0].is && !jc.sides[1].is)
+	if (jc.sides[0].is.get() && !jc.sides[1].is.get())
 	{
 		if (abs(static_cast<int32_t>(jc.sides[0].is->m_start) - static_cast<int32_t>(jc.sides[0].position)) <= 20)
 		{
@@ -1004,7 +1006,7 @@ diff_entry _junction_to_hybrid_list_item(const string& key, cReferenceSequences&
 		jc.unique_side = 1;
 	}
 
-	else if (!jc.sides[0].is && jc.sides[1].is)
+	else if (!jc.sides[0].is.get() && jc.sides[1].is.get())
 	{
 		if (abs(static_cast<int32_t>(jc.sides[1].is->m_start) - static_cast<int32_t>(jc.sides[1].position)) <= 20)
 		{

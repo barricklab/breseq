@@ -204,7 +204,7 @@ namespace breseq {
       if (message.length() > 0) cerr << message << endl;
       cerr << "FILE: " << file << "   LINE: " << line << endl;
       cerr << "!!!!!!!!!!!!!!!!!!!!!!!> FATAL ERROR <!!!!!!!!!!!!!!!!!!!!!!!" << endl;
-      assert(false);
+      exit(-1);
     }
   }
   
@@ -731,6 +731,10 @@ namespace breseq {
     X* get()        const throw()   {return itsCounter ? itsCounter->ptr : 0;}
     bool unique()   const throw()
     {return (itsCounter ? itsCounter->count == 1 : true);}
+    
+    //! compare what we point to, for convenience
+    bool operator<(const counted_ptr& _in) const
+    { return *(this->get())< *(_in.get()); }
     
   private:
     

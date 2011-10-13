@@ -257,7 +257,7 @@ namespace breseq
     // Log the command line
     time_t stamp_time = time(NULL);
     this->log(ctime(&stamp_time));	
-    this->log(this->full_command_line);
+    this->log(this->full_command_line + "\n");
 	}
   
   void Settings::command_line_run_header()
