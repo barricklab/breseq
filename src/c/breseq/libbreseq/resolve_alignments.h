@@ -31,52 +31,48 @@ using namespace std;
 
 namespace breseq {
 
-  class CandidateJunction
-	{
+  class JunctionTestInfo {
   public:
-		int32_t pos_hash_score;
-		map<uint32_t, uint32_t> read_begin_hash;
+    int32_t max_left;
+    int32_t max_left_minus;
+    int32_t max_left_plus;
+    int32_t max_right;
+    int32_t max_right_minus;
+    int32_t max_right_plus;
+    int32_t max_min_right;
+    int32_t max_min_right_minus;
+    int32_t max_min_right_plus;
+    int32_t max_min_left;
+    int32_t max_min_left_minus;
+    int32_t max_min_left_plus;
+    uint32_t coverage_minus;
+    uint32_t coverage_plus;
+    uint32_t total_non_overlap_reads;
+    uint32_t pos_hash_score;
+    bool redundant_1;
+    bool redundant_2;
+    string junction_id;
     
-		struct TestInfo {
-			int32_t max_left;
-			int32_t max_left_minus;
-			int32_t max_left_plus;
-			int32_t max_right;
-			int32_t max_right_minus;
-			int32_t max_right_plus;
-			int32_t max_min_right;
-			int32_t max_min_right_minus;
-			int32_t max_min_right_plus;
-			int32_t max_min_left;
-			int32_t max_min_left_minus;
-			int32_t max_min_left_plus;
-			uint32_t coverage_minus;
-			uint32_t coverage_plus;
-			uint32_t total_non_overlap_reads;
-			uint32_t pos_hash_score;
-      bool redundant_1;
-      bool redundant_2;
-		} test_info;
-    
-		struct Sorter {      
-      bool operator() (const string& lhs, const string& rhs) const
-      { 
-        // if (lhs.size() != rhs.size()) 
-        //  return lhs.size()<rhs.size();
-        return  lhs < rhs;
-        
-        //return lhs.compare(rhs);
-      }
-		};
-	};
-
+    bool operator <(const JunctionTestInfo& _in)
+    {
+      return (this->pos_hash_score < _in.pos_hash_score);
+    }
+  };
   
-	class MatchedJunction
+  typedef map<string, JunctionTestInfo> JunctionTestInfoMap;
+  
+	class JunctionMatch
 	{
   public:
-    MatchedJunction() {}
+    alignment_list reference_alignments;
+		alignment_list junction_alignments;
+		uint32_t fastq_file_index;
+		int32_t mapping_quality_difference;
+		uint32_t degenerate_count;
     
-    MatchedJunction(
+    JunctionMatch() {}
+    
+    JunctionMatch(
                     const alignment_list& _reference_alignments,
                     const alignment_list&  _junction_alignments,
                     uint32_t _fastq_file_index,
@@ -89,12 +85,6 @@ namespace breseq {
           ,mapping_quality_difference(_mapping_quality_difference)
           ,degenerate_count(_degenerate_count)
     { }
-    
-		alignment_list reference_alignments;
-		alignment_list junction_alignments;
-		uint32_t fastq_file_index;
-		int32_t mapping_quality_difference;
-		uint32_t degenerate_count;
 	};
 
 	struct VectorSize {
@@ -107,16 +97,80 @@ namespace breseq {
       return lhs.junction_id < rhs.junction_id;
 		}
 	};
+  
+  typedef counted_ptr<JunctionMatch> JunctionMatchPtr;
+  typedef map<string, vector<JunctionMatchPtr> > UniqueJunctionMatchMap;
+  typedef map<string, map<string, JunctionMatchPtr> > RepeatJunctionMatchMap;
 
-	bool _alignment_overlaps_junction(const vector<JunctionInfo>& junction_info_list, const alignment_wrapper& in_a);
-	diff_entry _junction_to_hybrid_list_item(const string& key, cReferenceSequences& ref_seq_info, CandidateJunction& test_info);
-	bool _test_junction(const Settings& settings, Summary& summary, const string& junction_seq_id, map<string, vector<MatchedJunction> >& matched_junction_ref, map<string, map<string, MatchedJunction> >& degenerate_matches_ref, map<string, CandidateJunction>& junction_test_info_ref, cReferenceSequences& ref_seq_info, const SequenceTrimsList& trims_list, tam_file& reference_tam, tam_file& junction_tam, bool& has_non_overlap_alignment);
+	bool alignment_overlaps_junction(const vector<JunctionInfo>& junction_info_list, const alignment_wrapper& in_a);
+
+  void load_junction_alignments(
+                                const Settings& settings, 
+                                Summary& summary, 
+                                cReadFiles& read_files, 
+                                cReferenceSequences& ref_seq_info,
+                                cReferenceSequences& junction_ref_seq_info,
+                                SequenceTrimsList& trims_list,
+                                map<string,uint32_t>& all_junction_ids,
+                                bool junction_prediction,
+                                const vector<JunctionInfo>& junction_info_list,
+                                UniqueJunctionMatchMap& unique_junction_match_map,
+                                RepeatJunctionMatchMap& repeat_junction_match_map,
+                                tam_file& resolved_reference_tam
+                                );
+  
+  void score_junction(
+                      const Settings& settings, 
+                      Summary& summary, 
+                      const string& junction_id, 
+                      UniqueJunctionMatchMap& matched_junction_ref, 
+                      RepeatJunctionMatchMap& degenerate_matches_ref, 
+                      tam_file& junction_tam,
+                      JunctionTestInfo& junction_test_info           
+                      );
+  
+  void resolve_junction(
+                        const Settings& settings,
+                        Summary& summary,
+                        cReferenceSequences& ref_seq_info,
+                        const SequenceTrimsList& trims_list,
+                        const string& junction_id,
+                        UniqueJunctionMatchMap& unique_junction_match_map,
+                        RepeatJunctionMatchMap& repeat_junction_match_map,
+                        tam_file& reference_tam,
+                        tam_file& junction_tam,
+                        bool failed,
+                        bool has_non_overlap_alignment
+                        );
+  
+	bool _test_junction(
+                      const Settings& settings, 
+                      Summary& summary, 
+                      const string& junction_seq_id, 
+                      UniqueJunctionMatchMap& matched_junction_ref, 
+                      RepeatJunctionMatchMap& degenerate_matches_ref, 
+                      JunctionTestInfoMap& junction_test_info_ref, 
+                      cReferenceSequences& ref_seq_info, 
+                      const SequenceTrimsList& trims_list, tam_file& reference_tam, 
+                      tam_file& junction_tam, bool& has_non_overlap_alignment
+                      );
+
 	Trims _trim_ambiguous_ends(const alignment_wrapper& a, const SequenceTrimsList& trim_list);
   void read_trims(SequenceTrimsList& trims, const cReferenceSequences& ref_seqs, const string &in_trims_file_name ); 
 
-	void _write_reference_matches(const Settings& settings, cReferenceSequences& ref_seq_info, const SequenceTrimsList& trim_list, alignment_list& reference_alignments, tam_file& reference_tam, uint32_t fastq_file_index);
+	void _write_reference_matches(
+                                const Settings& settings, 
+                                cReferenceSequences& ref_seq_info, 
+                                const SequenceTrimsList& trim_list, 
+                                alignment_list& reference_alignments, 
+                                tam_file& reference_tam, 
+                                uint32_t fastq_file_index);
 
-	vector<string> get_sorted_junction_ids(map<string, vector<MatchedJunction> >& unique_map, map<string, map<string, MatchedJunction> >& degenerate_map, const vector<string>& keys);
+	vector<string> get_sorted_junction_ids(
+                                         UniqueJunctionMatchMap& unique_map, 
+                                         RepeatJunctionMatchMap& degenerate_map, 
+                                         const vector<string>& keys
+                                         );
 
 
 	void resolve_alignments(
@@ -124,10 +178,14 @@ namespace breseq {
                           Summary& summary,
                           cReferenceSequences& ref_seq_info,
                           const bool junction_prediction,
-                          cReadFiles &read_files,
-                          const uint32_t max_read_length,
-                          const uint32_t alignment_read_limit
+                          cReadFiles &read_files
                           );
+  
+  diff_entry junction_to_diff_entry(
+                                    const string& key, 
+                                    cReferenceSequences& ref_seq_info, 
+                                    JunctionTestInfo& test_info
+                                    );
 
 }
 

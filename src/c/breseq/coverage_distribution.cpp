@@ -130,6 +130,9 @@ namespace breseq {
 		summary.unique_coverage[seq_id].junction_accept_score_cutoff = from_string<double>(lines[7]);
 		summary.unique_coverage[seq_id].junction_keep_score_cutoff = from_string<double>(lines[8]);
     
+    summary.unique_coverage[seq_id].pr_no_coverage_position_strand = from_string<double>(lines[9]);
+
+    
     bool verbose = false;
     if (verbose)
     {

@@ -36,7 +36,7 @@
       displayScale = "1.00"
       launchStyle = "0"
       useCustomWorkingDirectory = "YES"
-      customWorkingDirectory = "/Users/jbarrick/tmp/morris"
+      customWorkingDirectory = "/Users/jbarrick/tmp/REL2042_BL32+3"
       buildConfiguration = "Debug">
       <BuildableProductRunnable>
          <BuildableReference
@@ -62,7 +62,15 @@
          </CommandLineArgument>
          <CommandLineArgument
             argument = "-r NC_007604.1.gbk -r NC_004073.2.gbk -r NC_004990.1.gbk JM24a_GGCTAC_L002_R1_001_pf.fastq JM24a_GGCTAC_L004_R1_001_pf.fastq JM24a_GGCTAC_L006_R1_001_pf.fastq JM24a_GGCTAC_L008_R1_001_pf.fastq"
+            isEnabled = "NO">
+         </CommandLineArgument>
+         <CommandLineArgument
+            argument = "-r REL606.gbk 43033AAXX_8_1_pf_REL2042.fastq"
             isEnabled = "YES">
+         </CommandLineArgument>
+         <CommandLineArgument
+            argument = "-o tests/lambda_mixed_pop -r tests/lambda_mixed_pop/../data/lambda/lambda.gbk tests/lambda_mixed_pop/../data/lambda/lambda_mixed_population.fastq"
+            isEnabled = "NO">
          </CommandLineArgument>
       </CommandLineArguments>
       <EnvironmentVariables>

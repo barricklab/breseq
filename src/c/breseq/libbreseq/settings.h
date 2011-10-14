@@ -77,6 +77,7 @@ namespace breseq
 				double deletion_coverage_seed_cutoff;
 				double junction_coverage_cutoff;
 				double junction_keep_score_cutoff;
+        double pr_no_coverage_position_strand;
 				double nbinom_size_parameter;
 				double nbinom_mean_parameter;
 				double nbinom_prob_parameter;
@@ -269,6 +270,8 @@ namespace breseq
     bool junction_prediction; // whether to perform junction prediction step
 		uint32_t alignment_read_limit;
 		uint32_t candidate_junction_read_limit;
+    uint32_t resolve_alignment_read_limit;
+
     bool unmatched_reads;
 		bool no_unmatched_reads;
     
@@ -291,7 +294,6 @@ namespace breseq
 		bool no_mutation_prediction;
 		bool no_deletion_prediction;
 		bool no_alignment_generation;
-		uint32_t correction_read_limit;
 		float mutation_log10_e_value_cutoff;
 		float polymorphism_log10_e_value_cutoff;
 		float polymorphism_bias_p_value_cutoff;
