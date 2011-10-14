@@ -378,85 +378,6 @@ int do_calculate_trims(int argc, char* argv[]) {
 	return 0;
 }
 
-/*!  Resolve alignments
- 
- Compare matches to candidate junctions and matches to reference sequence
- to determine what junctions have support. Also splits mosaic matches.
- 
- */
-int do_resolve_alignments(int argc, char* argv[]) {
-	
-	// setup and parse configuration options:
-	AnyOption options("Usage: breseq RESOLVE_ALIGNMENTS ... ");
-	options
-		("help,h", "produce this help message", TAKES_NO_ARGUMENT)
-		("no-junction-prediction,p", "whether to predict new junctions", TAKES_NO_ARGUMENT)
-// convert to basing everything off the main output path, so we don't have to set so many options
-    ("path", "path to breseq output")
-		("readfile,r", "FASTQ read files (multiple allowed, comma-separated) ")
-		("maximum-read-length,m", "number of flanking bases in candidate junctions")
-		("alignment-read-limit", "maximum number of alignments to process. DEFAULT = 0 (OFF).", 0)
-    ("junction-cutoff", "coverage cutoffs for different reference sequences")
-
-	.processCommandArgs(argc, argv);
-
-	// make sure that the config options are good:
-	if(options.count("help")
-     || !options.count("path")
-     || !options.count("readfile")
-		 || !options.count("maximum-read-length")
-		 || (!options.count("no-junction-prediction") && !options.count("junction-cutoff"))
-		 ) {
-		options.printUsage();
-		return -1;
-	}                       
-  
-	try {
-    
-    Settings settings(options["path"]);
-
-    Summary summary;
-    
-
-    cReadFiles rf(from_string<vector<string> >(options["readfile"]));
-    
-    // Load the reference sequence info
-    cReferenceSequences ref_seq_info;
-    ref_seq_info.LoadFile(settings.reference_gff3_file_name);
-    
-    // should be one coverage cutoff value for each reference sequence
-    vector<double> coverage_cutoffs;
-    
-    if (!options.count("no-junction-prediction")) {
-      coverage_cutoffs = from_string<vector<double> >(options["junction-cutoff"]);
-      assert(coverage_cutoffs.size() == ref_seq_info.size());
-      
-      for (uint32_t i=0; i<ref_seq_info.size(); i++)
-      {
-        summary.preprocess_coverage[ref_seq_info[i].m_seq_id].junction_accept_score_cutoff = coverage_cutoffs[i];
-      }
-    }
-    
-        
-    resolve_alignments(
-      settings,
-      summary,
-      ref_seq_info,
-      !options.count("no-junction-prediction"),
-      rf,
-      from_string<uint32_t>(options["maximum-read-length"]),
-      from_string<uint32_t>(options["alignment-read-limit"])
-    );
-    
-  } catch(...) {
-		// failed; 
-    
-		return -1;
-	}
-	
-	return 0;
-}
-
 
 /*!  Predict Mutations
  
@@ -1042,7 +963,7 @@ int breseq_default_action(int argc, char* argv[])
   summary.sequence_conversion.total_reference_sequence_length = ref_seq_info.total_length();
   
   // @JEB -- This is a bit of an ugly wart from when converting the input file was optional.
-	// reload certain information into $settings from $summary
+	// reload certain information into $settings from $summary  
 	for (map<string, AnalyzeFastq>::iterator it = summary.sequence_conversion.reads.begin(); it != summary.sequence_conversion.reads.end(); it++)
 	{
 		string read_file = it->first;
@@ -1303,9 +1224,7 @@ int breseq_default_action(int argc, char* argv[])
 			summary,
 			ref_seq_info,
       junction_prediction,
-			settings.read_files,
-			summary.sequence_conversion.max_read_length,
-			settings.alignment_read_limit
+			settings.read_files
 		);
 
 		summary.alignment_correction.store(settings.alignment_correction_summary_file_name);
@@ -1843,8 +1762,6 @@ int main(int argc, char* argv[]) {
 		return do_preprocess_alignments(argc_new, argv_new);
 	} else if (command == "IDENTIFY_CANDIDATE_JUNCTIONS") {
 		return do_identify_candidate_junctions(argc_new, argv_new);
-	} else if (command == "RESOLVE_ALIGNMENTS") {
-		return do_resolve_alignments(argc_new, argv_new);
   } else if (command == "PREDICT_MUTATIONS") {
 		return do_predict_mutations(argc_new, argv_new);
 	} else if (command == "GD2GVF") {

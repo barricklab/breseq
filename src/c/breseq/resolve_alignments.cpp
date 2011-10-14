@@ -34,14 +34,10 @@ void resolve_alignments(
                         Summary& summary,
                         cReferenceSequences& ref_seq_info,
                         bool junction_prediction,
-                        cReadFiles &read_files,
-                        const uint32_t max_read_length,
-                        const uint32_t alignment_read_limit
+                        cReadFiles& read_files
                         ) 
-{
-  (void)max_read_length; // @TODO: needed?
-    
-	bool verbose = false;
+{    
+	bool verbose = true;
     
   // Load the trims @JEB could speed up by only loading this once in main
   SequenceTrimsList trims_list;
@@ -77,21 +73,17 @@ void resolve_alignments(
   }
     
 	vector<JunctionInfo> junction_info_list;
-
-	tam_file* junction_tam = NULL;
-	tam_file* reference_tam = NULL;
     
 
-  if (junction_prediction)
-	{
+  //## Preload all of the information about junctions
+  //## so that we only have to split the names once
+  
+  if (junction_prediction) {
     junction_ref_seq_info.ReadFASTA(settings.candidate_junction_fasta_file_name);
 		string junction_sam_file_name = settings.file_name(settings.candidate_junction_sam_file_name, "#", read_files[0].m_base_name);
 		tam_file junction_tam(junction_sam_file_name, settings.candidate_junction_fasta_file_name, ios::in);
 
-		//## Preload all of the information about junctions
-		//## so that we only have to split the names once
-		for (int i = 0; i < junction_tam.bam_header->n_targets; i++)
-		{
+		for (int i = 0; i < junction_tam.bam_header->n_targets; i++) {
 			JunctionInfo ji(junction_tam.bam_header->target_name[i]);
 			junction_info_list.push_back(ji);
 		}
@@ -107,258 +99,93 @@ void resolve_alignments(
   tam_file resolved_reference_tam(settings.resolved_reference_sam_file_name, settings.reference_fasta_file_name, ios::out);
   tam_file resolved_junction_tam(settings.resolved_junction_sam_file_name, settings.candidate_junction_fasta_file_name, ios::out);
     
-  map<string, vector<MatchedJunction> > matched_junction;
-	map<string, map<string, MatchedJunction> > degenerate_matches;
-	uint32_t reads_processed = 0;
+  UniqueJunctionMatchMap unique_junction_match_map;    // Map of junction_id to MatchedJunction
+	RepeatJunctionMatchMap repeat_junction_match_map;  // Map of junction_id to read_name to MatchedJunction
 
   // stores all junction ids that we have encountered
   map<string,uint32_t> all_junction_ids;
-
-	for (uint32_t fastq_file_index = 0; fastq_file_index < read_files.size(); fastq_file_index++)
-	{
-    const cReadFile& rf = read_files[fastq_file_index];
-    string fastq_file_name = read_files.base_name_to_read_file_name(rf.m_base_name);
-    
-		cerr << "  READ FILE:" << rf.m_base_name << endl;
-
-		map<string,int32_t> summary_info = make_map<string,int32_t>("unmatched_reads", 0);
-
-		// Traverse the original fastq files to keep track of order
-		// b/c some matches may exist in only one or the other file
-    
-		cFastqFile in_fastq(fastq_file_name, ios::in);
-
-    string this_unmatched_file_name = settings.data_path + "/unmatched."
-        + rf.m_base_name + ".fastq";
-    cFastqFile out_unmatched_fastq(this_unmatched_file_name, ios::out);
-    assert(!out_unmatched_fastq.fail());
-
-		string reference_sam_file_name = settings.file_name(settings.reference_sam_file_name, "#", rf.m_base_name);
-    string reference_fasta = settings.reference_fasta_file_name;
-
-		reference_tam = new tam_file(reference_sam_file_name, settings.reference_fasta_file_name, ios::in); 
-
-		if (junction_prediction)
-		{
-			string junction_sam_file_name = settings.file_name(settings.candidate_junction_sam_file_name, "#", rf.m_base_name);
-			junction_tam = new tam_file(junction_sam_file_name, settings.candidate_junction_fasta_file_name, ios::in); 
-		}
-
-		alignment_list junction_alignments;
-
-		//proceed through all of the alignments
-		if (junction_prediction)
-			junction_tam->read_alignments(junction_alignments, false);
-
-		alignment_list reference_alignments;
-		reference_tam->read_alignments(reference_alignments, false);
-
-		///
-		//  Test each read for its matches to the reference and candidate junctions
-		///
-
-		cFastqSequence seq;
-		while (in_fastq.read_sequence(seq)) // READ
-		{
-			reads_processed++;
-
-			if ((alignment_read_limit) && (reads_processed > alignment_read_limit))
-				break;
-
-			if (reads_processed % 10000 == 0)
-				cerr << "    READS:" << reads_processed << endl;
-
-			if (verbose)
-				cerr << "===> Read: " << seq.m_name << endl;
-
-			uint32_t best_junction_score = 0;
-			uint32_t best_reference_score = 0;
-
-			// Does this read have eligible candidate junction matches?
-			alignment_list this_junction_alignments;
-
-			if (verbose)
-			{
-				cerr << " Before Overlap Reference alignments = " << reference_alignments.size() << endl;
-				cerr << " Before Overlap Junction alignments = " << junction_alignments.size() << endl;
-			}
-      
-      if (verbose && (junction_alignments.size() > 0))
-      {
-        cerr << " Junction SAM read name: " << junction_alignments.front()->read_name() <<endl;
-      }
-
-			if ((junction_alignments.size() > 0) && (seq.m_name == junction_alignments.front()->read_name()))
-			{
-
-				this_junction_alignments = junction_alignments;
-				junction_tam->read_alignments(junction_alignments, false);
-
-				///
-				// Matches to candidate junctions MUST overlap the junction.
-				//
-				// Reduce this list to those that overlap ANY PART of the junction.
-				// Alignments that extend only into the overlap region, are only additional
-				//  evidence for predicted junctions and NOT support for a new junction on
-				// their own. (They will also match the original reference genome equally well).
-        // ... but this last point only if overlap >=0 for the junction
-				///
-
-				for (alignment_list::iterator it = this_junction_alignments.begin(); it != this_junction_alignments.end(); )
-        {
-					if (!_alignment_overlaps_junction(junction_info_list, it->get()))
-						it = this_junction_alignments.erase(it);
-          else
-            it++; 
-        }
-
-				best_junction_score = eligible_read_alignments(settings, junction_ref_seq_info, this_junction_alignments);
-
-				if (verbose)
-					cerr << " Best junction score: " << best_junction_score << endl;
-			}
-
-      if (verbose && (reference_alignments.size() > 0))
-      {
-        cerr << " Reference SAM read name: " << reference_alignments.front()->read_name() <<endl;
-      }
-      
-			// Does this read have eligible reference sequence matches?
-			alignment_list this_reference_alignments;
-			if ((reference_alignments.size() > 0) && (seq.m_name == reference_alignments.front()->read_name()))
-			{
-
-				this_reference_alignments = reference_alignments;
-				reference_tam->read_alignments(reference_alignments, false);
-
-				best_reference_score = eligible_read_alignments(settings, ref_seq_info, this_reference_alignments);
-
-				if (verbose)
-					cerr << " Best reference score: " << best_reference_score << endl;
-			}
-
-			// Nothing to be done if there were no eligible matches to either
-			// Record in the unmatched FASTQ data file
-			if ((this_junction_alignments.size() == 0) && (this_reference_alignments.size() == 0))
-			{
-				summary_info["unmatched_reads"]++;
-				out_unmatched_fastq.write_sequence(seq);
-			}
-
-			///
-			// Determine if the read has a better match to a candidate junction
-			// or to the reference sequence.
-			///
-
-			/// There are three possible kinds of reads at this point
-			//
-			// 1: Read has a best match to the reference genome
-			// --> Write this match and we are done
-			// 2: Read has a best match (or multiple best matches) to junctions
-			// --> Keep an item that describes these matches
-			// 3: Read has an equivalent match to the reference genome
-			//      and goes into the overlap part of a junction condidate
-			// --> Keep an item that is not used during scoring
-			///
-
-			// if < 0, then the best match is to the reference
-			int32_t mapping_quality_difference = best_junction_score - best_reference_score;
-
-			if (verbose)
-			{
-				cerr << " Best junction score: " << best_junction_score << endl;
-				cerr << " Best reference score: " << best_reference_score << endl;
-				cerr << " Mapping quality difference: " << best_reference_score << endl;
-				cerr << " Final Reference alignments = " << this_reference_alignments.size() << endl;
-				cerr << " Final Candidate junction alignments = " << this_junction_alignments.size() << endl;
-			}
-
-			if ((this_junction_alignments.size() == 0) && (this_reference_alignments.size() == 0))
-				continue;
-
-			///
-			// The best match we found to the reference was no better than the best to the
-			// candidate junction. This read potentially supports the candidate junction.
-			//
-			// ONLY allow EQUAL matches through if they match the overlap only, otherwise
-			// you can get predictions of new junctions with all reads supporting them
-			// actually mapping perfectly to the reference.
-			///
-
-			// best match is to the reference, record in that SAM file.
-			if (mapping_quality_difference < 0)
-			{
-				if (verbose)
-					cout << "Best alignment to reference. MQD: " << mapping_quality_difference << endl;
-
-				_write_reference_matches(settings, ref_seq_info, trims_list, this_reference_alignments, resolved_reference_tam, fastq_file_index);
-			}
-			else
-			{
-				if (verbose)
-					cout << "Best alignment is to candidate junction. MQD: " << mapping_quality_difference << endl;
-
-				MatchedJunction item(
-					this_reference_alignments, // reference sequence alignments
-					this_junction_alignments, // the BEST candidate junction alignments
-					fastq_file_index, // index of the fastq file this read came from
-					mapping_quality_difference, 0 // degenerate count
-				);
-
-				///
-				// Just one best hit to candidate junctions, that is better than every match to the reference
-				///
-				if ((this_junction_alignments.size() == 1) && (mapping_quality_difference > 0))
-				{
-					bam_alignment& a = *(this_junction_alignments.front().get());
-					string junction_id = junction_tam->bam_header->target_name[a.reference_target_id()];
-					matched_junction[junction_id].push_back(item);
-          all_junction_ids[junction_id]++;
-				}
-				///
-				// Multiple equivalent matches to junctions and reference, ones with most hits later will win these matches
-				// If $mapping_quality_difference > 0, then they will count for scoring
-				///
-				else
-				{
-          if (verbose)
-            cout << "this_junction_alignments: " << this_junction_alignments.size() << endl;
-          
-          for(alignment_list::iterator it=this_junction_alignments.begin(); it!=this_junction_alignments.end(); it++)
-					{
-            bam_alignment& a = *(it->get());
-						item.degenerate_count = this_junction_alignments.size(); // mark as degenerate
-						string junction_id = junction_tam->bam_header->target_name[a.reference_target_id()];
-						degenerate_matches[junction_id][seq.m_name] = item;
-            all_junction_ids[junction_id]++;
-					}
-				}
-			} // READ
-
-		} // End loop through every $read_struct
-
-		// save statistics
-		summary.alignment_correction.read_file[read_files[0].m_base_name] = summary_info;
-    
-    // safe only because we know they are always or never used
-    if (junction_tam != NULL) delete junction_tam;
-		if (reference_tam != NULL) delete reference_tam;
-
-	} // End of Read File loop
-
-  verbose = false;
-
+  
+  load_junction_alignments(
+                          settings, 
+                          summary, 
+                          read_files, 
+                          ref_seq_info,
+                          junction_ref_seq_info,
+                          trims_list,
+                          all_junction_ids,
+                          junction_prediction,
+                          junction_info_list,
+                          unique_junction_match_map,
+                          repeat_junction_match_map,
+                          resolved_reference_tam
+                          );
+  
+  if (verbose)
+  {
+    cout << "Total junction ids: " << all_junction_ids.size() << endl;
+  }
+  
 	///
 	// Determine which junctions are real, prefer ones with most matches
 	///
+  
+	list<JunctionTestInfo> junction_test_info_list; // scoring information about junctions
+	list<JunctionTestInfo> passed_junction_test_info_list;
+	list<JunctionTestInfo> rejected_junction_test_info_list;
+  
+  ////
+  // Score all of the matches.
+  ////
+  
+  vector<string> junction_ids = get_keys(all_junction_ids);
+  for(vector<string>::iterator it=junction_ids.begin(); it != junction_ids.end(); it++) {
+    const string& junction_id = *it;
+    JunctionTestInfo junction_test_info;
+    score_junction(
+                   settings, 
+                   summary, 
+                   junction_id, 
+                   unique_junction_match_map, 
+                   repeat_junction_match_map,
+                   resolved_junction_tam,
+                   junction_test_info
+                   );
+    junction_test_info_list.push_back(junction_test_info);
 
-	map<int32_t, int32_t> accepted_pos_hash_score_distribution;
-	map<int32_t, int32_t> observed_pos_hash_score_distribution;
     
-	vector<string> passed_junction_ids;
-	vector<string> rejected_junction_ids;
-	map<string, CandidateJunction> junction_test_info; // scoring information about junctions
+    if (verbose) 
+    {
+      cout << "Scoring Junction: " << junction_id << endl;
+      cout << "  Pos hash score: " << junction_test_info.pos_hash_score << endl;
+      cout << "  Number of unique matches: " << unique_junction_match_map[junction_id].size() << endl;
+      size_t num_degenerate_matches = repeat_junction_match_map.count(junction_id) ? repeat_junction_match_map[junction_id].size() : 0;
+      cout << "  Number of degenerate matches: " << num_degenerate_matches << endl;
+    }
+/*    
+ // Immediately reject and resolve junctions that have no overlap matches??
 
+    if (test_info.total_non_overlap_reads > 0) {
+      junction_test_info_list.push_back(test_info);
+    }
+    else {
+      resolve_junction(
+                       settings,
+                       summary,
+                       ref_seq_info,
+                       trims_list,
+                       test_info.junction_id,
+                       unique_junction_match_map,
+                       repeat_junction_match_map,
+                       *reference_tam,
+                       *junction_tam,
+                       true, // it failed
+                       test_info.total_non_overlap_reads > 0 // no non_overlap_alignments
+                       ); 
+      all_junction_ids.erase(test_info.junction_id);
+    }
+*/
+  }
+  
 	///
 	// Candidate junctions with unique matches
 	///
@@ -369,106 +196,98 @@ void resolve_alignments(
   //  (Optional: rescore every junction, for lost degenerate matches, and sort)
   //  Accept next top match...
   // To implement this, we need to add a separate score function.
-  // We should also re-simplify the current pos hash score, since it can depend on order and also
-  //   penalize a junction with extremely high coverage (because more errors will happen)
 
 	//sort junction ids based on size of vector
-
-	vector<string> sorted_junction_ids = get_sorted_junction_ids(matched_junction, degenerate_matches, get_keys(all_junction_ids));
+  junction_test_info_list.sort();
+  
+  while(!junction_test_info_list.empty() ) {
     
-  if (verbose) cout << "Number of unique matches: " << sorted_junction_ids.size() << endl;
-
-
-	for (uint32_t i = 0; i < sorted_junction_ids.size(); i++)
-	{
-		string key = sorted_junction_ids[i];
-
+    JunctionTestInfo& junction_test_info = junction_test_info_list.back();
+    const string& junction_id = junction_test_info.junction_id;
+    
+    // We need to re-score because repeat matches may have been taken by better junctions
+    score_junction(
+                   settings, 
+                   summary, 
+                   junction_id, 
+                   unique_junction_match_map, 
+                   repeat_junction_match_map,
+                   resolved_junction_tam,
+                   junction_test_info
+                   );
+    
+    
+    JunctionInfo junction_info(junction_id);
+    
+    // Test the best-scoring junction.
+    uint32_t junction_accept_score_cutoff_1 = static_cast<uint32_t>(summary.preprocess_coverage[junction_info.sides[0].seq_id].junction_accept_score_cutoff);
+    uint32_t junction_accept_score_cutoff_2 = static_cast<uint32_t>(summary.preprocess_coverage[junction_info.sides[1].seq_id].junction_accept_score_cutoff);
+    
+    
+    // both score cutoffs might be zero - indicating these are missing contigs that are basically deleted
+    // fail if this is the case. Revisit this logic at a future time. @JEB
+    bool failed = false;  
+    failed = failed || ((junction_accept_score_cutoff_1 == 0) || (junction_accept_score_cutoff_2 == 0)) ;
+    failed = failed || ( ( junction_test_info.pos_hash_score < junction_accept_score_cutoff_1 ) && ( junction_test_info.pos_hash_score < junction_accept_score_cutoff_2 ) );
+    failed = failed || (junction_test_info.total_non_overlap_reads == 0);
+    
     if (verbose) 
     {
-      cout << "Testing Junction with Unique Matches:" << key << endl;
-      cout << "  Number of unique matches:" << matched_junction[key].size() << endl;
-      size_t num_degenerate_matches = degenerate_matches.count(key) ? degenerate_matches[key].size() : 0;
-      cout << "  Number of degenerate matches:" << num_degenerate_matches << endl;
+      cout << "Testing Junction: " << junction_id << endl;
+      cout << "  Pos hash score: " << junction_test_info.pos_hash_score << endl;
+      cout << "  Number of unique matches: " << unique_junction_match_map[junction_id].size() << endl;
+      size_t num_degenerate_matches = repeat_junction_match_map.count(junction_id) ? repeat_junction_match_map[junction_id].size() : 0;
+      cout << "  Number of degenerate matches: " << num_degenerate_matches << endl;
     }
-		bool has_non_overlap_alignment = false;
-		bool success = _test_junction(settings, summary, key, matched_junction, degenerate_matches, junction_test_info, ref_seq_info, trims_list, resolved_reference_tam, resolved_junction_tam, has_non_overlap_alignment);
-
-		// save the score in the distribution
-		add_score_to_distribution(observed_pos_hash_score_distribution, junction_test_info[key].pos_hash_score);
-
-    if (verbose && !has_non_overlap_alignment) cout << "Does not have nonoverlap alignments" << endl;
     
-		// only keep matches that span overlap
-		if (has_non_overlap_alignment)
-		{
-			if (success)
-      {
-// @JEB we might want to re-sort the list here.
-// Strategy would be to use a <list> and shorten it each time
-// Then re-sort when we successfully added one that might
-// Have eaten up degenerate matches shared with others.
-				passed_junction_ids.push_back(key);
-        if (verbose) cout << "  PASSED" << endl;
-			}
-      else
-			{
-        rejected_junction_ids.push_back(key);
-        if (verbose) cout << "  REJECTED" << endl;
-      }
-    }
+    resolve_junction(
+                     settings,
+                     summary,
+                     ref_seq_info,
+                     trims_list,
+                     junction_test_info.junction_id,
+                     unique_junction_match_map,
+                     repeat_junction_match_map,
+                     resolved_reference_tam,
+                     resolved_junction_tam,
+                     failed,
+                     junction_test_info.total_non_overlap_reads > 0
+                     ); 
+    
+    if (!failed) 
+      passed_junction_test_info_list.push_back(junction_test_info);
+    else
+      rejected_junction_test_info_list.push_back(junction_test_info);
+    
+    junction_test_info_list.pop_back();
+    
+    // Re-score ones that might have changed due to removing repeat matches and
+    junction_test_info_list.sort();
   }
-
-  if (verbose)
-    cout << "Degenerate matches after handling ones with unique matches: " << degenerate_matches.size() << endl;
     
-	// print successful ones out
-	if (verbose) cout << "Successful hybrids" << endl;
-
-	//Re-sort
-	passed_junction_ids = get_sorted_junction_ids(matched_junction, degenerate_matches, passed_junction_ids);
-	rejected_junction_ids = get_sorted_junction_ids(matched_junction, degenerate_matches, rejected_junction_ids);
-
-  if (verbose)
+  map<int32_t, int32_t> accepted_pos_hash_score_distribution;
+	map<int32_t, int32_t> observed_pos_hash_score_distribution;
+  for(list<JunctionTestInfo>::iterator it = passed_junction_test_info_list.begin(); it != passed_junction_test_info_list.end(); it++)
   {
-    cout << "passed_junction_ids" << endl;
-    for(uint32_t i = 0; i < passed_junction_ids.size(); i++)
-    {
-      string key = passed_junction_ids[i];
-      cout << key << endl;
-    }
-      
-    cout << "matched_junction" << endl;
-    for(map<string, vector<MatchedJunction> >::const_iterator it = matched_junction.begin(); it != matched_junction.end(); it++)
-    {
-      cout << it->first << " " << it->second.size() << endl;
-    }
-  }
-    
-	for (uint32_t i = 0; i < passed_junction_ids.size(); i++)
-	{
-		string key = passed_junction_ids[i];
+    JunctionTestInfo& junction_test_info = *it;
+		string key = junction_test_info.junction_id;
 		if (verbose) cout << key << endl;
-		diff_entry item = _junction_to_hybrid_list_item(key, ref_seq_info, junction_test_info[key]);
+		diff_entry item = junction_to_diff_entry(key, ref_seq_info, junction_test_info);
 		gd.add(item);
 
 		// save the score in the distribution
-		add_score_to_distribution(accepted_pos_hash_score_distribution, junction_test_info[key].pos_hash_score);
+		add_score_to_distribution(accepted_pos_hash_score_distribution, junction_test_info.pos_hash_score);
 
 		// Create matches from UNIQUE sides of each match to reference genome
 		// this fixes, for example appearing to not have any coverage at the origin of a circular DNA fragment
-		//  Currently, we do not add coverage to redundantly matched sides because we don't know which copy.
+		// We do NOT add coverage to REDUNDANT sides because we don't know which copy.
 		if (!settings.add_split_junction_sides) continue;
 
-		for (uint32_t j = 0; j < matched_junction[key].size(); j++)
+		for (uint32_t j = 0; j < unique_junction_match_map[key].size(); j++)
 		{
-			MatchedJunction& match = matched_junction[key][j];
+			JunctionMatch& match = *unique_junction_match_map[key][j];
 			bam_alignment& a = *(match.junction_alignments.front().get());
 			uint32_t fastq_file_index = match.fastq_file_index;
-
-			if (verbose) {
-				cout << ">>>>" << a.read_name() << " #" << match.junction_alignments.size() << endl;
-				cout << ">>>>Alignment start-end: " << a.reference_start_1() << "  " << a.reference_end_1() << endl;
-			}
       
       // at this point, all degeneracy should have been removed!
       assert(match.junction_alignments.size() == 1);
@@ -502,39 +321,299 @@ void resolve_alignments(
 		}
 	}
 
-	// Save summary statistics
-	summary.alignment_correction.new_junctions.observed_pos_hash_score_distribution = observed_pos_hash_score_distribution;
-	summary.alignment_correction.new_junctions.accepted_pos_hash_score_distribution = accepted_pos_hash_score_distribution;
-
-	for (uint32_t i = 0; i < rejected_junction_ids.size(); i++)
-	{
-		string key = rejected_junction_ids[i];
-		diff_entry item = _junction_to_hybrid_list_item(key, ref_seq_info, junction_test_info[key]);
+  for(list<JunctionTestInfo>::iterator it = rejected_junction_test_info_list.begin(); it != rejected_junction_test_info_list.end(); it++)
+  {
+    JunctionTestInfo& junction_test_info = *it;
+		string key = junction_test_info.junction_id;
+		diff_entry item = junction_to_diff_entry(key, ref_seq_info, junction_test_info);
 		add_reject_reason(item, "NJ");
 		gd.add(item);
 	}
 
+  // Save summary statistics
+	summary.alignment_correction.new_junctions.observed_pos_hash_score_distribution = observed_pos_hash_score_distribution;
+	summary.alignment_correction.new_junctions.accepted_pos_hash_score_distribution = accepted_pos_hash_score_distribution;
+
+  // Write the genome diff file
 	gd.write(settings.jc_genome_diff_file_name);
 }
     
 
+void load_junction_alignments(
+                              const Settings& settings, 
+                              Summary& summary, 
+                              cReadFiles& read_files, 
+                              cReferenceSequences& ref_seq_info,
+                              cReferenceSequences& junction_ref_seq_info,
+                              SequenceTrimsList& trims_list,
+                              map<string,uint32_t>& all_junction_ids,
+                              bool junction_prediction,
+                              const vector<JunctionInfo>& junction_info_list,
+                              UniqueJunctionMatchMap& unique_junction_match_map,
+                              RepeatJunctionMatchMap& repeat_junction_match_map,
+                              tam_file& resolved_reference_tam
+                              )
+{
+  bool verbose = false;
+  uint32_t reads_processed = 0;
+  
+  tam_file* reference_tam = NULL;
+  tam_file* junction_tam = NULL;
+  
+  for (uint32_t fastq_file_index = 0; fastq_file_index < read_files.size(); fastq_file_index++)
+  {    
+    const cReadFile& rf = read_files[fastq_file_index];
+    string fastq_file_name = read_files.base_name_to_read_file_name(rf.m_base_name);
+    
+    cerr << "  READ FILE:" << rf.m_base_name << endl;
+    
+    map<string,int32_t> summary_info = make_map<string,int32_t>("unmatched_reads", 0);
+    
+    // Traverse the original fastq files to keep track of order
+    // b/c some matches may exist in only one or the other file
+    
+    cFastqFile in_fastq(fastq_file_name, ios::in);
+    
+    string this_unmatched_file_name = settings.data_path + "/unmatched."
+    + rf.m_base_name + ".fastq";
+    cFastqFile out_unmatched_fastq(this_unmatched_file_name, ios::out);
+    assert(!out_unmatched_fastq.fail());
+    
+    string reference_sam_file_name = settings.file_name(settings.reference_sam_file_name, "#", rf.m_base_name);
+    string reference_fasta = settings.reference_fasta_file_name;
+    
+    reference_tam = new tam_file(reference_sam_file_name, settings.reference_fasta_file_name, ios::in); 
+    
+    if (junction_prediction)
+    {
+      string junction_sam_file_name = settings.file_name(settings.candidate_junction_sam_file_name, "#", rf.m_base_name);
+      junction_tam = new tam_file(junction_sam_file_name, settings.candidate_junction_fasta_file_name, ios::in); 
+    }
+    
+    alignment_list junction_alignments;
+    
+    //proceed through all of the alignments
+    if (junction_prediction)
+      junction_tam->read_alignments(junction_alignments, false);
+    
+    alignment_list reference_alignments;
+    reference_tam->read_alignments(reference_alignments, false);
+    
+    ///
+    //  Test each read for its matches to the reference and candidate junctions
+    ///
+    
+    cFastqSequence seq;
+    while (in_fastq.read_sequence(seq)) // READ
+    {
+      if ((settings.resolve_alignment_read_limit) && (reads_processed >= settings.resolve_alignment_read_limit))
+        break; // to next file
+      
+      reads_processed++;
+
+      
+      if (reads_processed % 10000 == 0)
+        cerr << "    READS:" << reads_processed << endl;
+      
+      if (verbose)
+        cerr << "===> Read: " << seq.m_name << endl;
+      
+      uint32_t best_junction_score = 0;
+      uint32_t best_reference_score = 0;
+      
+      // Does this read have eligible candidate junction matches?
+      alignment_list this_junction_alignments;
+      
+      if (verbose)
+      {
+        cerr << " Before Overlap Reference alignments = " << reference_alignments.size() << endl;
+        cerr << " Before Overlap Junction alignments = " << junction_alignments.size() << endl;
+      }
+      
+      if (verbose && (junction_alignments.size() > 0))
+      {
+        cerr << " Junction SAM read name: " << junction_alignments.front()->read_name() <<endl;
+      }
+      
+      if ((junction_alignments.size() > 0) && (seq.m_name == junction_alignments.front()->read_name()))
+      {
+        
+        this_junction_alignments = junction_alignments;
+        junction_tam->read_alignments(junction_alignments, false);
+        
+        ///
+        // Matches to candidate junctions MUST overlap the junction.
+        //
+        // Reduce this list to those that overlap ANY PART of the junction.
+        // Alignments that extend only into the overlap region, are only additional
+        //  evidence for predicted junctions and NOT support for a new junction on
+        // their own. (They will also match the original reference genome equally well).
+        // ... but this last point only if overlap >=0 for the junction
+        ///
+        
+        for (alignment_list::iterator it = this_junction_alignments.begin(); it != this_junction_alignments.end(); )
+        {
+          if (!alignment_overlaps_junction(junction_info_list, it->get()))
+            it = this_junction_alignments.erase(it);
+          else
+            it++; 
+        }
+        
+        best_junction_score = eligible_read_alignments(settings, junction_ref_seq_info, this_junction_alignments);
+        
+        if (verbose)
+          cerr << " Best junction score: " << best_junction_score << endl;
+      }
+      
+      if (verbose && (reference_alignments.size() > 0))
+      {
+        cerr << " Reference SAM read name: " << reference_alignments.front()->read_name() <<endl;
+      }
+      
+      // Does this read have eligible reference sequence matches?
+      alignment_list this_reference_alignments;
+      if ((reference_alignments.size() > 0) && (seq.m_name == reference_alignments.front()->read_name()))
+      {
+        
+        this_reference_alignments = reference_alignments;
+        reference_tam->read_alignments(reference_alignments, false);
+        
+        best_reference_score = eligible_read_alignments(settings, ref_seq_info, this_reference_alignments);
+        
+        if (verbose)
+          cerr << " Best reference score: " << best_reference_score << endl;
+      }
+      
+      // Nothing to be done if there were no eligible matches to either
+      // Record in the unmatched FASTQ data file
+      if ((this_junction_alignments.size() == 0) && (this_reference_alignments.size() == 0))
+      {
+        summary_info["unmatched_reads"]++;
+        out_unmatched_fastq.write_sequence(seq);
+      }
+      
+      ///
+      // Determine if the read has a better match to a candidate junction
+      // or to the reference sequence.
+      ///
+      
+      /// There are three possible kinds of reads at this point
+      //
+      // 1: Read has a best match to the reference genome
+      // --> Write this match and we are done
+      // 2: Read has a best match (or multiple best matches) to junctions
+      // --> Keep an item that describes these matches
+      // 3: Read has an equivalent match to the reference genome
+      //      and goes into the overlap part of a junction condidate
+      // --> Keep an item that is not used during scoring
+      ///
+      
+      // if < 0, then the best match is to the reference
+      int32_t mapping_quality_difference = best_junction_score - best_reference_score;
+      
+      if (verbose)
+      {
+        cerr << " Best junction score: " << best_junction_score << endl;
+        cerr << " Best reference score: " << best_reference_score << endl;
+        cerr << " Mapping quality difference: " << best_reference_score << endl;
+        cerr << " Final Reference alignments = " << this_reference_alignments.size() << endl;
+        cerr << " Final Candidate junction alignments = " << this_junction_alignments.size() << endl;
+      }
+      
+      if ((this_junction_alignments.size() == 0) && (this_reference_alignments.size() == 0))
+        continue;
+      
+      ///
+      // The best match we found to the reference was no better than the best to the
+      // candidate junction. This read potentially supports the candidate junction.
+      //
+      // ONLY allow EQUAL matches through if they match the overlap only, otherwise
+      // you can get predictions of new junctions with all reads supporting them
+      // actually mapping perfectly to the reference.
+      ///
+      
+      // best match is to the reference, record in that SAM file.
+      if (mapping_quality_difference < 0)
+      {
+        if (verbose)
+          cout << "Best alignment to reference. MQD: " << mapping_quality_difference << endl;
+        
+        _write_reference_matches(settings, ref_seq_info, trims_list, this_reference_alignments, resolved_reference_tam, fastq_file_index);
+      }
+      else
+      {
+        if (verbose)
+          cout << "Best alignment is to candidate junction. MQD: " << mapping_quality_difference << endl;
+        
+        JunctionMatchPtr junction_match_ptr( 
+                                            new JunctionMatch(
+                                                              this_reference_alignments,    // reference sequence alignments
+                                                              this_junction_alignments,     // the BEST candidate junction alignments
+                                                              fastq_file_index,             // index of the fastq file this read came from
+                                                              mapping_quality_difference,   // difference between reference junction alignments (in # mismatches)
+                                                              0                             //
+                                                              )
+                                            );
+        
+        ////
+        // Just one best hit to candidate junctions, that is better than every match to the reference
+        ////
+        if ((this_junction_alignments.size() == 1) && (mapping_quality_difference > 0))
+        {
+          bam_alignment& a = *(this_junction_alignments.front().get());
+          string junction_id = junction_tam->bam_header->target_name[a.reference_target_id()];
+          unique_junction_match_map[junction_id].push_back( junction_match_ptr );
+          all_junction_ids[junction_id]++;
+        }
+        ////
+        // Multiple equivalent matches to junctions and reference, ones with most hits later will win theserepeat matches
+        // If mapping_quality_difference > 0, then they will count for scoring
+        ////
+        else
+        {
+          if (verbose)
+            cout << "this_junction_alignments: " << this_junction_alignments.size() << endl;
+          
+          junction_match_ptr->degenerate_count = this_junction_alignments.size(); // mark as degenerate
+          for(alignment_list::iterator it=this_junction_alignments.begin(); it!=this_junction_alignments.end(); it++)
+          {
+            bam_alignment& a = *(it->get());
+            string junction_id = junction_tam->bam_header->target_name[a.reference_target_id()];
+            repeat_junction_match_map[junction_id][seq.m_name] = junction_match_ptr;
+            all_junction_ids[junction_id]++;
+          }
+        }
+      } // READ
+      
+    } // End loop through every $read_struct
+        
+    // save statistics
+    summary.alignment_correction.read_file[read_files[0].m_base_name] = summary_info;
+    
+    // safe only because we know they are always or never used
+    if (junction_tam != NULL) delete junction_tam;
+    if (reference_tam != NULL) delete reference_tam;
+    
+  } // End of Read File loop
+  
+  // for jump to end of alignments
+}
   
 
 /*! Tests whether a read alignment to a candidate junction extends across
  *  the entire junction (past overlapping or unique sequence) and thus
  *  can be used as real evidence for the junction.
  */
-  bool _alignment_overlaps_junction(const vector<JunctionInfo>& junction_info_list, const alignment_wrapper& a)
+bool alignment_overlaps_junction(const vector<JunctionInfo>& junction_info_list, const alignment_wrapper& a)
 {
   // unmapped reads don't overlap the junction
   if (a.unmapped()) return false;
   
   int32_t tid = a.reference_target_id();
-  assert (tid >= 0);
+  const JunctionInfo& this_junction_info = junction_info_list[a.reference_target_id()];
   
-  const JunctionInfo& this_junction_info = junction_info_list[tid];
-  int32_t overlap = this_junction_info.alignment_overlap;
-  
+  // DESCRIPTION OF LOGIC
+  //
   // for overlap == 0
   //   junction is coords [flanking_left + 1, flanking_left - 0]
   // for overlap < 0 (unique sequence in read)
@@ -545,12 +624,13 @@ void resolve_alignments(
   uint32_t junction_start, junction_end;
   
   junction_start = this_junction_info.flanking_left + 1;
-  junction_end = this_junction_info.flanking_left + abs(overlap);
+  junction_end = this_junction_info.flanking_left + abs(this_junction_info.alignment_overlap);
 
   //## If it didn't overlap the junction at all
   //## Check coordinates in the "reference" (the JUNCTION sequence)
   if (a.reference_start_1() > junction_end) return false;
   if (a.reference_end_1() < junction_start) return false;
+  
   return true;
 }
 
@@ -571,47 +651,56 @@ void _write_reference_matches(const Settings& settings, cReferenceSequences& ref
   
 	reference_tam.write_alignments((int32_t)fastq_file_index, reference_alignments, &trims, &ref_seq_info, true);
 }
-
-bool _test_junction(const Settings& settings, Summary& summary, const string& junction_seq_id, map<string, vector<MatchedJunction> >& matched_junction_ref, map<string, map<string, MatchedJunction> >& degenerate_matches_ref, map<string, CandidateJunction>& junction_test_info_ref, cReferenceSequences& ref_seq_info, const SequenceTrimsList& trims_list, tam_file& reference_tam, tam_file& junction_tam, bool& has_non_overlap_alignment)
+  
+/*! returns whether it has non overlap alignment
+ */
+void score_junction(
+                    const Settings& settings, 
+                    Summary& summary, 
+                    const string& junction_id, 
+                    UniqueJunctionMatchMap& unique_junction_match_map, 
+                    RepeatJunctionMatchMap& repeat_junction_match_map, 
+                    tam_file& resolved_junction_tam, 
+                    JunctionTestInfo& junction_test_info           
+                  )
 {
-	bool verbose = false;
-
-	if (verbose) cout << "Testing " << junction_seq_id << endl;
-
+  // may not need these
+  (void) settings;
+  (void) summary;
+  
+  bool verbose = false;
+  
+	if (verbose) cout << "Testing " << junction_id << endl;
+  
 	// There are two kinds of matches to a candidate junction:
   
 	// (1) Reads that uniquely map to one candidate junction (but any number of times to reference)
-  
-	vector<MatchedJunction>* unique_matches = NULL;
-	if (matched_junction_ref.count(junction_seq_id))
-  {
-		unique_matches = &(matched_junction_ref[junction_seq_id]);
+	vector<JunctionMatchPtr>* unique_matches = NULL;
+	if (unique_junction_match_map.count(junction_id)) {
+		unique_matches = &(unique_junction_match_map[junction_id]);
   }
   
-  if (verbose) cout << "Unique size: " << (unique_matches ? unique_matches->size() : 0) << endl;
-
 	// (2) Reads that uniquely map equally well to more than one candidate junction (and any number of times to reference)
-	map<string, MatchedJunction>* degenerate_matches = NULL;
-	if (degenerate_matches_ref.count(junction_seq_id))
-		degenerate_matches = &(degenerate_matches_ref[junction_seq_id]);
+	map<string, JunctionMatchPtr>* repeat_matches = NULL;
+	if (repeat_junction_match_map.count(junction_id))
+		repeat_matches = &(repeat_junction_match_map[junction_id]);
   
 	// FAI target id -- there is no easy way to get this short of loading the entire array and going through them...
 	// Debatable about whether we save more string comparisons by doing this here or each time
-
-	// @JEB v1> hash by tid rather than alignment junction names!!
+  
+	// @JEB: optimization: it would be more efficient to hash junctions by target id rather than alignment junction names!!
 	uint32_t junction_tid;
-	for (junction_tid = 0; junction_tid < static_cast<uint32_t>(junction_tam.bam_header->n_targets); junction_tid++)
-		if (junction_tam.bam_header->target_name[junction_tid] == junction_seq_id) break;
-
-	assert(junction_tid < static_cast<uint32_t>(junction_tam.bam_header->n_targets));
-
+	for (junction_tid = 0; junction_tid < static_cast<uint32_t>(resolved_junction_tam.bam_header->n_targets); junction_tid++)
+		if (resolved_junction_tam.bam_header->target_name[junction_tid] == junction_id) break;
+	ASSERT(junction_tid < static_cast<uint32_t>(resolved_junction_tam.bam_header->n_targets), "Junction target id out of range.");
+  
 	if (verbose) {
-		cout << "Testing Junction Candidate: " << junction_seq_id << endl;
+		cout << "Testing Junction Candidate: " << junction_id << endl;
     size_t unique_matches_size = (unique_matches) ? unique_matches->size() : 0;
-    size_t degenerate_matches_size = (degenerate_matches) ? degenerate_matches->size() : 0;
-		cout << "Unique Matches: " << unique_matches_size << " Degenerate Matches: " << degenerate_matches_size << endl;
+    size_t repeat_matches_size = (repeat_matches) ? repeat_matches->size() : 0;
+		cout << "Unique Matches: " << unique_matches_size << " Degenerate Matches: " << repeat_matches_size << endl;
 	}
-
+  
 	//// TEST 1: Reads that go a certain number of bp into the nonoverlap sequence on each side of the junction on each strand
 	map<bool,int32_t> max_left_per_strand = make_map<bool,int32_t>(true,0)(false,0);
 	map<bool,int32_t> max_right_per_strand = make_map<bool,int32_t>(true,0)(false,0);
@@ -621,29 +710,27 @@ bool _test_junction(const Settings& settings, Summary& summary, const string& ju
 	uint32_t total_non_overlap_reads = 0;
 	map<int32_t,bool> pos_hash[2];
   uint32_t pos_hash_count(0);
-
+  
 	// basic information about the junction
-	JunctionInfo scj(junction_seq_id);
+	JunctionInfo scj(junction_id);
 	int32_t overlap = scj.alignment_overlap;
 	int32_t flanking_left = scj.flanking_left;
-
-	// Is there at least one read that isn't overlap only?
-	// displaying ones where it doesn't as marginals looks really confusing
-	has_non_overlap_alignment = false; // RETURN VALUE
-
+  
+  map<string,int32_t> repeat_junction_id_map;
+  
 	// We also need to count degenerate matches b/c sometimes ambiguity unfairly penalizes real reads...
-	vector<MatchedJunction*> items;
+	vector<JunctionMatchPtr> items;
   if (unique_matches)
-    for (vector<MatchedJunction>::iterator it = unique_matches->begin(); it != unique_matches->end(); it++)
-      items.push_back(&(*it));
-  if (degenerate_matches)
-    for (map<string, MatchedJunction>::iterator it = degenerate_matches->begin(); it != degenerate_matches->end(); it++)
-      items.push_back(&(it->second));
-
+    for (vector<JunctionMatchPtr>::iterator it = unique_matches->begin(); it != unique_matches->end(); it++)
+      items.push_back(*it);
+  if (repeat_matches)
+    for (map<string, JunctionMatchPtr>::iterator it = repeat_matches->begin(); it != repeat_matches->end(); it++)
+      items.push_back(it->second);
+  
 	for (uint32_t i = 0; i < items.size(); i++) // READ (loops over unique_matches, degenerate_matches)
 	{
-		MatchedJunction* item = items[i];
-
+		JunctionMatchPtr& item = items[i];
+    
 		//! Do not count reads that map the reference equally well toward the score.
 		if (item->mapping_quality_difference == 0) {
       if (verbose) cout << "  Degenerate:" << item->junction_alignments.front()->read_name() << endl;
@@ -651,7 +738,7 @@ bool _test_junction(const Settings& settings, Summary& summary, const string& ju
     }
     
     // Determine which alignment we are working with.
-
+    
 		// If there were no degenerate matches, then we could just take the
 		// one and only match in the 'junction_alignments' array.
 		// As it is, we must be sure we are looking at the one that matches
@@ -665,7 +752,9 @@ bool _test_junction(const Settings& settings, Summary& summary, const string& ju
 			}
 		}
 		assert(a != NULL);
-
+    
+    repeat_junction_id_map[resolved_junction_tam.bam_header->target_name[a->reference_target_id()]]++;
+    
     ///
     // CHECK to be sure that this read overlaps the junction.
     // this_left and this_right are how far it extends into each side (past any overlap)
@@ -676,18 +765,16 @@ bool _test_junction(const Settings& settings, Summary& summary, const string& ju
 		this_left -= a->reference_start_1();
     
 		// The right side starts after moving past any overlap (negative or positive)
-		int32_t this_right = flanking_left + 1;
-		this_right += abs(overlap);
-		this_right = a->reference_end_1() - this_right + 1;
+		int32_t this_right = flanking_left + abs(overlap);
+		this_right = a->reference_end_1() - this_right;
     
     if ((this_right <= 0) || (this_left <= 0)) continue;
     
     ////
     // COUNT reads that overlap both sides toward the pos hash score and other statistics
-    ///
+    ////
     
     total_non_overlap_reads++;
-    has_non_overlap_alignment = true;
     
 		bool rev_key = a->reversed();
 		count_per_strand[rev_key]++;
@@ -697,13 +784,13 @@ bool _test_junction(const Settings& settings, Summary& summary, const string& ju
     
     if (verbose)
 			cout << "  " << item->junction_alignments.front()->read_name() << ' ' << static_cast<int32_t>(rev_key) << ' ' << begin_read_coord << endl;
-
+    
     if (!pos_hash[rev_key].count(begin_read_coord))
     {
       pos_hash[rev_key][begin_read_coord] = true;
       pos_hash_count++;
     }
-     
+    
     // Update:
     // Score = the minimum unique match length on a side
     // Max_Min = the maximum of the minimum length match sides
@@ -720,33 +807,39 @@ bool _test_junction(const Settings& settings, Summary& summary, const string& ju
       if (max_min_right_per_strand[rev_key] < this_right)
         max_min_right_per_strand[rev_key] = this_right;
     }
-
+    
     if (max_left_per_strand[rev_key] < this_left)
       max_left_per_strand[rev_key] = this_left;
     if (max_right_per_strand[rev_key] < this_right)
       max_right_per_strand[rev_key] = this_right;
 	}
-
+  
 	int32_t max_left = max(max_left_per_strand[false], max_left_per_strand[true]);
 	int32_t max_right = max(max_right_per_strand[false], max_right_per_strand[true]);
-
+  
 	int32_t max_min_left = max(max_min_left_per_strand[false], max_min_left_per_strand[true]);
 	int32_t max_min_right = max(max_min_right_per_strand[false], max_min_right_per_strand[true]);
-
+  
   // UPDATE REDUNDANCY
   // =================
   // If all the matches were degenerate, then at least one of the sides of this junction
   // needs to be marked as newly degenerate. Even through the whole junction sequences were
   // unique, no reads extended far enough to disambiguate between them
   
+  // @JEB: TODO broken... needs to construct a unique list of all junction_ids supported by all degenerate matches
+  
   bool redundant[2] = {false, false};
-  if (!unique_matches)
-  {
-    map<string, MatchedJunction>::iterator it = degenerate_matches->begin();
-    JunctionInfo main(it->first);
-    for (it++; it != degenerate_matches->end(); it++)
+
+/*
+  if (!unique_matches) {
+    
+    vector<string> repeat_junction_id_list = get_keys(repeat_junction_id_map);
+    
+    vector<string>::iterator it = repeat_junction_id_list.begin();
+    JunctionInfo main(*it);
+    for (it++; it != repeat_junction_id_list.end(); it++)
     {
-      JunctionInfo test(it->first); // the junction key
+      JunctionInfo test(*it); // the junction key
       
       for (uint32_t best_side_index=0; best_side_index<=1; best_side_index++)
       {
@@ -764,12 +857,11 @@ bool _test_junction(const Settings& settings, Summary& summary, const string& ju
           if (verbose) cout << "Marking side " << best_side_index << " as redundant." << endl;
         }
       }
-
     }
   }
-  
+*/  
 	// Save the test info about this junction.
-	CandidateJunction::TestInfo test_info = {
+	JunctionTestInfo this_junction_test_info = {
 		max_left,                           //max_left
 		max_left_per_strand[false],         //max_left_minus
 		max_left_per_strand[true],          //max_left_plus
@@ -787,42 +879,68 @@ bool _test_junction(const Settings& settings, Summary& summary, const string& ju
 		total_non_overlap_reads,            //total_non_overlap_reads
     pos_hash_count,                     //pos_hash_score
     redundant[0],
-    redundant[1]
+    redundant[1],
+    junction_id
 	};
   
-	junction_test_info_ref[junction_seq_id].test_info = test_info;
-	junction_test_info_ref[junction_seq_id].pos_hash_score = pos_hash_count;
-
-
-	// POS_HASH test
-	// New way, but we need to have examined the coverage distribution to calibrate what scores to accept!
-	uint32_t junction_accept_score_cutoff_1 = static_cast<uint32_t>(summary.preprocess_coverage[scj.sides[0].seq_id].junction_accept_score_cutoff);
-	uint32_t junction_accept_score_cutoff_2 = static_cast<uint32_t>(summary.preprocess_coverage[scj.sides[1].seq_id].junction_accept_score_cutoff);
+  junction_test_info = this_junction_test_info;
+}
   
-  // both score cutoffs might be zero - indicating these are missing contigs that are basically deleted
-  // fail if this is the case. Revisit this logic at a future time. @JEB
-  bool failed = false;  
-  failed = failed || ((junction_accept_score_cutoff_1 == 0) || (junction_accept_score_cutoff_2 == 0)) ;
-	failed = failed || ( ( test_info.pos_hash_score < junction_accept_score_cutoff_1 ) && ( test_info.pos_hash_score < junction_accept_score_cutoff_2 ) );
+/*! deals with the reads corresponding to a successful or failed junction
+ */
+void resolve_junction(
+                      const Settings& settings,
+                      Summary& summary,
+                      cReferenceSequences& ref_seq_info,
+                      const SequenceTrimsList& trims_list,
+                      const string& junction_id,
+                      UniqueJunctionMatchMap& unique_junction_match_map,
+                      RepeatJunctionMatchMap& repeat_junction_match_map,
+                      tam_file& resolved_reference_tam,
+                      tam_file& resolved_junction_tam,
+                      bool failed,
+                      bool has_non_overlap_alignment
+                      )
+{
+  (void) summary;
+  bool verbose = false;
   
-  if (verbose) cout << "Pos hash score: " << test_info.pos_hash_score << " Cutoff 1: " << junction_accept_score_cutoff_1 << " Cutoff 2: " << junction_accept_score_cutoff_2 << endl;
-	if (verbose) cout << (failed ? "Failed" : "Passed") << endl;
+  // There are two kinds of matches to a candidate junction:
+  
+	// (1) Reads that uniquely map to one candidate junction (but any number of times to reference)
+	vector<JunctionMatchPtr>* unique_matches = NULL;
+	if (unique_junction_match_map.count(junction_id)) {
+		unique_matches = &(unique_junction_match_map[junction_id]);
+  }
+  
+	// (2) Reads that uniquely map equally well to more than one candidate junction (and any number of times to reference)
+	map<string, JunctionMatchPtr>* repeat_matches = NULL;
+	if (repeat_junction_match_map.count(junction_id))
+		repeat_matches = &(repeat_junction_match_map[junction_id]);
+  
+  // @JEB: optimization: it would be more efficient to hash junctions by target id rather than alignment junction names!!
+	uint32_t junction_tid;
+	for (junction_tid = 0; junction_tid < static_cast<uint32_t>(resolved_junction_tam.bam_header->n_targets); junction_tid++)
+		if (resolved_junction_tam.bam_header->target_name[junction_tid] == junction_id) break;
+	ASSERT(junction_tid < static_cast<uint32_t>(resolved_junction_tam.bam_header->n_targets), "Junction target id out of range.");
 
-
-	// DEGENERATE JUNCTION MATCHES
+  
+  // DEGENERATE JUNCTION MATCHES
 	// ===========================
 	// Determine the fate of degenerate reads that map to this junction
-
-	if (degenerate_matches)
+  
+	if (repeat_matches)
 	{
     
     // Figure out whether each side is redundantly matched here...
     
-		for (map<string, MatchedJunction>::iterator it = degenerate_matches->begin(); it != degenerate_matches->end(); it++)
+		for (map<string, JunctionMatchPtr>::iterator it = repeat_matches->begin(); it != repeat_matches->end(); it++)
 		{      
-			MatchedJunction& degenerate_match = it->second;
-			uint32_t fastq_file_index = degenerate_match.fastq_file_index;
-
+			JunctionMatchPtr& repeat_match_ptr = it->second;
+      JunctionMatch& repeat_match = *repeat_match_ptr;
+      
+			uint32_t fastq_file_index = repeat_match.fastq_file_index;
+      
 			// Success for this candidate junction...
 			// purge all references to this from the degenerate match hash
 			// so that they will not be counted for other junctions
@@ -834,11 +952,11 @@ bool _test_junction(const Settings& settings, Summary& summary, const string& ju
         // so that it cannot be counted for any other junction
         
         counted_ptr<bam_alignment> matched_alignment(NULL);
-        for (alignment_list::iterator it2=degenerate_match.junction_alignments.begin(); it2 !=degenerate_match.junction_alignments.end(); )
+        for (alignment_list::iterator it2=repeat_match.junction_alignments.begin(); it2 !=repeat_match.junction_alignments.end(); )
 				{          
           // we make a copy and then increment, in case the current iterator value will be erased
 					counted_ptr<bam_alignment> a = *it2; it2++;
-          string test_junction_seq_id = junction_tam.target_name(*a);
+          string test_junction_seq_id = resolved_junction_tam.target_name(*a);
           
           //this is the one for the current candidate junction
           if (a->reference_target_id() == junction_tid)
@@ -847,50 +965,50 @@ bool _test_junction(const Settings& settings, Summary& summary, const string& ju
           }
           else
           {
-            size_t deleted = degenerate_matches_ref[test_junction_seq_id].erase(a->read_name());
+            size_t deleted = repeat_junction_match_map[test_junction_seq_id].erase(a->read_name());
           }
           
-          if (degenerate_matches_ref[test_junction_seq_id].size() == 0)
+          if (repeat_junction_match_map[test_junction_seq_id].size() == 0)
           {
-            degenerate_matches_ref.erase(test_junction_seq_id);
+            repeat_junction_match_map.erase(test_junction_seq_id);
           }
         }
-
+        
 				assert(matched_alignment.get() != NULL);
-				degenerate_match.junction_alignments.clear();
-        degenerate_match.junction_alignments.push_back(matched_alignment);
+				repeat_match.junction_alignments.clear();
+        repeat_match.junction_alignments.push_back(matched_alignment);
         
         // We need to add this degenerately matched read to the other ones supporting this junction
         // Create empty list if necessary...
-        if (matched_junction_ref.count(junction_seq_id) == 0) {
-          matched_junction_ref.insert( pair<string, vector<MatchedJunction> >(junction_seq_id, vector<MatchedJunction>()) );
-          unique_matches = &(matched_junction_ref[junction_seq_id]);
+        if (unique_junction_match_map.count(junction_id) == 0) {
+          unique_junction_match_map.insert( pair<string, vector<JunctionMatchPtr> >(junction_id, vector<JunctionMatchPtr>()) );
+          unique_matches = &(unique_junction_match_map[junction_id]);
         }
-				unique_matches->push_back(degenerate_match);
+				unique_matches->push_back(repeat_match_ptr);
         
         if (verbose) cout << "After size: " << (unique_matches ? unique_matches->size() : 0) << endl;
-
+        
 			}
-
+      
 			// Failure for this candidate junction...
 			// Remove just the degenerate hits to this candidate junction
 			// Once all have failed, then we need to add the reference alignments (if any)!
 			else
 			{
-				degenerate_match.degenerate_count--;
-
-				if (verbose) cout << "New Degenerate match count: " << degenerate_match.degenerate_count << endl;
-
+				repeat_match.degenerate_count--;
+        
+				if (verbose) cout << "New Degenerate match count: " << repeat_match.degenerate_count << endl;
+        
 				// This degenerate match missed on all opportunities,
 				// we should add it to the reference sequence
-				if (degenerate_match.degenerate_count == 0)
+				if (repeat_match.degenerate_count == 0)
 				{
-					alignment_list& this_reference_al = degenerate_match.reference_alignments;
-					_write_reference_matches(settings, ref_seq_info, trims_list, this_reference_al, reference_tam, fastq_file_index);
+					alignment_list& this_reference_al = repeat_match.reference_alignments;
+					_write_reference_matches(settings, ref_seq_info, trims_list, this_reference_al, resolved_reference_tam, fastq_file_index);
 				}
         
         counted_ptr<bam_alignment> matched_alignment(NULL);
-        for (alignment_list::iterator it2=degenerate_match.junction_alignments.begin(); it2 !=degenerate_match.junction_alignments.end(); it2++)
+        for (alignment_list::iterator it2=repeat_match.junction_alignments.begin(); it2 !=repeat_match.junction_alignments.end(); it2++)
 				{
 					counted_ptr<bam_alignment>& candidate_a = *it2; //this is the one for the current candidate junction
 					if (candidate_a->reference_target_id() == junction_tid)
@@ -906,51 +1024,52 @@ bool _test_junction(const Settings& settings, Summary& summary, const string& ju
         if (has_non_overlap_alignment) {
           alignment_list alignments;
           alignments.push_back(matched_alignment);
-          junction_tam.write_alignments(fastq_file_index, alignments, NULL, &ref_seq_info, true);
+          resolved_junction_tam.write_alignments(fastq_file_index, alignments, NULL, &ref_seq_info, true);
         }
 			}
 		}
-
+    
 		// We are completely done with degenerate matches to this junction id.
 		// Deleting them here means that we will never go through this loop with them again
 		// and is necessary for not doubly writing them.
-		degenerate_matches_ref.erase(junction_seq_id);
+		repeat_junction_match_map.erase(junction_id);
 	}
-
+  
 	// UNIQUE JUNCTION MATCHES
 	// =======================
   // If there were no unique matches to begin with, we may have created this entry by processing degenerate junctions...
-
+  
   
   if (unique_matches)
   {
     if (verbose) cout << "Printing size:" << (unique_matches ? unique_matches->size() : 0) << endl;
-
+    
     for (uint32_t i = 0; i< unique_matches->size(); i++)
     {
-      MatchedJunction& item = (*unique_matches)[i];
+      JunctionMatch& item = *((*unique_matches)[i]);
       // Write out the matches to the proper SAM file(s) depending on whether the junction succeeded or failed
       uint32_t fastq_file_index = item.fastq_file_index;
-
+      
       // ONLY if we failed: write matches to reference sequences
       if (failed)
       {
         alignment_list this_reference_al = item.reference_alignments;
-        _write_reference_matches(settings, ref_seq_info, trims_list, this_reference_al, reference_tam, fastq_file_index);
+        _write_reference_matches(settings, ref_seq_info, trims_list, this_reference_al, resolved_reference_tam, fastq_file_index);
       }
-
+      
       // REGARDLESS of success: write matches to the candidate junction SAM file
-      junction_tam.write_alignments(fastq_file_index, item.junction_alignments, NULL, &ref_seq_info, true);
+      resolved_junction_tam.write_alignments(fastq_file_index, item.junction_alignments, NULL, &ref_seq_info, true);
     }
   }
-	return !failed;
+
 }
 
-diff_entry _junction_to_hybrid_list_item(const string& key, cReferenceSequences& ref_seq_info, CandidateJunction& test_info)
+diff_entry junction_to_diff_entry(
+                                         const string& key, 
+                                         cReferenceSequences& ref_seq_info, 
+                                         JunctionTestInfo& test_info
+                                         )
 {
-  
-  CandidateJunction::TestInfo& this_test_info = test_info.test_info;
-  
 	// split the key to an item with information about the junction
 	JunctionInfo jc(key);
 
@@ -1028,9 +1147,10 @@ diff_entry _junction_to_hybrid_list_item(const string& key, cReferenceSequences&
 //	else if (jc.sides[1].is.name.size() > 0)
 //		jc.sides[1].redundant = true;
 
-  // Carry over redundancy from degenerate matches
-  if (this_test_info.redundant_1) jc.sides[0].redundant = true;
-  if (this_test_info.redundant_2) jc.sides[1].redundant = true;
+//  @JEB TODO: Testing removal
+// Carry over redundancy from degenerate matches
+//  if (test_info.redundant_1) jc.sides[0].redundant = true;
+//  if (test_info.redundant_2) jc.sides[1].redundant = true;
   
 	// By default, overlap is included on both sides of the junction (possibly changed below)
 	jc.sides[0].overlap = 0;
@@ -1115,22 +1235,22 @@ diff_entry _junction_to_hybrid_list_item(const string& key, cReferenceSequences&
 //	## may want to take only selected of these fields..
   
   item
-  ("max_left", to_string(this_test_info.max_left))
-  ("max_left_minus", to_string(this_test_info.max_left_minus))
-  ("max_left_plus", to_string(this_test_info.max_left_plus))
-  ("max_right", to_string(this_test_info.max_right))
-  ("max_right_minus", to_string(this_test_info.max_right_minus))
-  ("max_right_plus", to_string(this_test_info.max_right_plus))
-  ("max_min_right", to_string(this_test_info.max_min_right))
-  ("max_min_right_minus", to_string(this_test_info.max_min_right_minus))
-  ("max_min_right_plus", to_string(this_test_info.max_min_right_plus))
-  ("max_min_left", to_string(this_test_info.max_min_left))
-  ("max_min_left_minus", to_string(this_test_info.max_min_left_minus))
-  ("max_min_left_plus", to_string(this_test_info.max_min_left_plus))
-  ("coverage_minus", to_string(this_test_info.coverage_minus))
-  ("coverage_plus", to_string(this_test_info.coverage_plus))
-  ("total_non_overlap_reads", to_string(this_test_info.total_non_overlap_reads))
-  ("pos_hash_score", to_string(this_test_info.pos_hash_score))
+  ("max_left", to_string(test_info.max_left))
+  ("max_left_minus", to_string(test_info.max_left_minus))
+  ("max_left_plus", to_string(test_info.max_left_plus))
+  ("max_right", to_string(test_info.max_right))
+  ("max_right_minus", to_string(test_info.max_right_minus))
+  ("max_right_plus", to_string(test_info.max_right_plus))
+  ("max_min_right", to_string(test_info.max_min_right))
+  ("max_min_right_minus", to_string(test_info.max_min_right_minus))
+  ("max_min_right_plus", to_string(test_info.max_min_right_plus))
+  ("max_min_left", to_string(test_info.max_min_left))
+  ("max_min_left_minus", to_string(test_info.max_min_left_minus))
+  ("max_min_left_plus", to_string(test_info.max_min_left_plus))
+  ("coverage_minus", to_string(test_info.coverage_minus))
+  ("coverage_plus", to_string(test_info.coverage_plus))
+  ("total_non_overlap_reads", to_string(test_info.total_non_overlap_reads))
+  ("pos_hash_score", to_string(test_info.pos_hash_score))
   ;
 
 	/// Note: Other adjustments to overlap can happen at the later annotation stage
@@ -1172,26 +1292,57 @@ void read_trims(SequenceTrimsList& trims, const cReferenceSequences& ref_seqs, c
 
 
 //sort junction ids based on size of vector contained in map
-vector<string> get_sorted_junction_ids(map<string, vector<MatchedJunction> >& unique_map, map<string, map<string, MatchedJunction> >& degenerate_map, const vector<string>& keys)
+vector<string> get_sorted_junction_ids(
+                                       UniqueJunctionMatchMap& unique_map, 
+                                       RepeatJunctionMatchMap& degenerate_map, 
+                                       const vector<string>& keys
+                                       )
 {
+  bool verbose = true;
+  
   vector<VectorSize> vector_sizes;
   for (uint32_t i = 0; i < keys.size(); i++)
   {
+    const string& junction_id = keys[i];
+    
     // may or may not exist
-    uint32_t degenerate_count = 0;
-    if (degenerate_map.count(keys[i]))
-    {
-      degenerate_count = degenerate_map[keys[i]].size();
+    uint32_t num_degenerate_matches = (degenerate_map.count(junction_id)) ? degenerate_map[junction_id].size() : 0;
+    uint32_t num_unique_matches = unique_map[junction_id].size();
+    
+    if (verbose) {
+      cout << "Pre-sort Junction: " << junction_id << endl;
+      cout << "  Number of unique matches: " << num_unique_matches << endl;   
+      
+      for(vector<JunctionMatchPtr>::iterator it=unique_map[junction_id].begin(); it!= unique_map[junction_id].end(); it++) {
+        JunctionMatch& m = **it;
+        cout << "    " << m.junction_alignments.begin()->get()->read_name() << endl;
+      }
+      cout << "  Number of degenerate matches: " << num_degenerate_matches << endl;
+      
+      for(map<string, JunctionMatchPtr>::iterator it=degenerate_map[junction_id].begin(); it!= degenerate_map[junction_id].end(); it++) {
+        JunctionMatch& m = *it->second;
+        cout << "    " << m.junction_alignments.begin()->get()->read_name() << endl;
+      }
+
     }
     
-    VectorSize info(keys[i], unique_map[keys[i]].size()+degenerate_count, degenerate_count);
+    VectorSize info(keys[i], num_unique_matches+num_degenerate_matches, num_degenerate_matches);
     vector_sizes.push_back(info);
   }
   sort(vector_sizes.begin(), vector_sizes.end(), VectorSize::sort_reverse_by_size);
   
+  if (verbose) {
+    cout << "SORTED--->" << endl;
+  }
+  
   vector<string> sorted_junction_ids;
-  for (uint32_t i = 0; i < keys.size(); i++)
+  for (uint32_t i = 0; i < vector_sizes.size(); i++) {
     sorted_junction_ids.push_back(vector_sizes[i].junction_id);
+    
+    cout << "Post-sort Junction: " << vector_sizes[i].junction_id << endl;
+    cout << "  Number of unique matches: " << vector_sizes[i].size << endl;   
+    cout << "  Number of degenerate matches: " << vector_sizes[i].size2 << endl;
+  }
   return sorted_junction_ids;
 }
   

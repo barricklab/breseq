@@ -380,9 +380,10 @@ namespace breseq
 		this->no_alignment_generation = false; // don't generate alignments
     this->unmatched_reads = true;
     this->no_unmatched_reads = false;
+  
     //// Options for testing
 		this->alignment_read_limit = 0;           // only go through this many reads when creating alignments
-		this->correction_read_limit = 0;          // only go through this many reads when correcting alignments
+		this->resolve_alignment_read_limit = 0;          // only go through this many reads when correcting alignments
     this->candidate_junction_read_limit = 0;  // only go through this many reads when correcting alignments
     this->smalt = false;    // experimental use of smalt aligner
 	}
