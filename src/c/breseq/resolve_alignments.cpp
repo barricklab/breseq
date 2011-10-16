@@ -28,6 +28,55 @@ using namespace std;
 
 namespace breseq {
     
+  
+double combination (int32_t num, int32_t choose)
+{
+  double log_result = 0.0;
+  for (int32_t i=num; i > choose; i--)
+  {
+    log_result += log(i);
+  }
+  for (int32_t i=2; i <= num - choose; i++)
+  {
+    log_result -= log(i);
+  }
+ 
+  return exp(log_result);
+}
+  
+double binomial (double pr_success, int32_t num_trials, int32_t num_successes)
+{
+  double ret_val = combination(num_trials, num_successes) * pow(pr_success, num_successes) * pow(1-pr_success, num_trials-num_successes);
+  return ret_val;
+}
+  
+uint32_t qbinomial (double tail_value, int32_t num_trials, double pr_success)
+{
+  ASSERT((tail_value >= 0) && (tail_value < 1), "probability out of range");
+  double cumulative_pr = 0.0;
+
+  int32_t num_successes;
+  for (num_successes=0; num_successes < num_trials; num_successes++) {
+    cumulative_pr += binomial(pr_success, num_trials, num_successes);
+    if (cumulative_pr > tail_value) break;
+  }
+  
+  return num_successes;
+}
+  
+uint32_t qmissing (double tail_value, double pr_missing)
+{
+  int32_t missing = 0;
+  double test_pr = 1;
+  double pr_no_cov = pow(pr_missing, 2);
+  while (test_pr > tail_value) {
+    missing++;  
+    test_pr *= pr_no_cov;
+  }
+  return missing;
+}
+
+  
 // Compares matches to candidate junctions with matches to original genome
 void resolve_alignments(
                         Settings& settings,
@@ -38,8 +87,63 @@ void resolve_alignments(
                         ) 
 {    
 	bool verbose = true;
+
+  
+  // distance from read end that must be achieved to pass threshold for different overlap values
+  // int32_t max_read_length = summary.sequence_conversion.max_read_length;
+  int32_t avg_read_length = round(summary.sequence_conversion.avg_read_length);
+  if (verbose) cout << "Average read length: " << avg_read_length << endl;
+  
+  //map<string,int32_t> distance_cutoffs;
+  map<string, vector<int32_t> > pos_hash_cutoffs;
+  
+  // might have lower than average coverage
+  // might have lower than average distributions
+  
+  for(vector<cAnnotatedSequence>::iterator it = ref_seq_info.begin(); it != ref_seq_info.end(); it++) {
+    const string& seq_id = it->m_seq_id;
+        
+    uint32_t sequence_length = ref_seq_info[seq_id].m_length;
     
-  // Load the trims @JEB could speed up by only loading this once in main
+    //double distance_pr_cutoff = settings.junction_accept_pr * static_cast<double>(1.0)/sequence_length;
+    double pos_hash_pr_cutoff = settings.junction_accept_pr * static_cast<double>(1.0)/sequence_length;
+    
+    double pr_no_coverage_position_strand = summary.error_count[seq_id].no_pos_hash_per_position_pr;
+    if (verbose) cout << "Probability of read starting at position: " << seq_id << " " << (1.0-pr_no_coverage_position_strand) << endl;
+
+    double junction_coverage_cutoff = summary.preprocess_coverage[seq_id].junction_coverage_cutoff;
+    if (verbose) cout << "Junction coverage cutoff: " << seq_id << " " << junction_coverage_cutoff << endl;
+    double average = summary.preprocess_coverage[seq_id].average;
+    if (verbose) cout << "Average coverage: " << seq_id << " " << average << endl;
+
+    
+    for(int32_t i = 0; i <= summary.sequence_conversion.avg_read_length-1; i++) {
+      Coverage& cov = summary.preprocess_coverage[seq_id];
+      
+      // pr_no_coverage_position_strand can be -1 if the fit failed, assign a value of zero for this case
+      pos_hash_cutoffs[seq_id].push_back( 
+                                         (pr_no_coverage_position_strand > 0)
+                                         ? qbinomial(
+                                                   pos_hash_pr_cutoff,  
+                                                   (2*i), 
+                                                   1-pr_no_coverage_position_strand 
+                                                   )
+                                         : 0
+                                         );
+
+      if (verbose) cout << "Pos hash cutoffs: " << seq_id << " " << i << " " << pos_hash_cutoffs[seq_id][i] << endl;
+
+    }
+    
+    //distance_cutoffs[seq_id] = (pr_no_coverage_position_strand > 0) 
+    //                          ? qmissing(distance_pr_cutoff, pr_no_coverage_position_strand)
+    //                          : 0;
+    //if (verbose) cout << "Distance cutoff: " << seq_id << " " << distance_cutoffs[seq_id] << endl;
+
+
+  }
+  
+  // Load the trims @JEB could speed up by only loading this once in main and passing around
   SequenceTrimsList trims_list;
   read_trims(trims_list, ref_seq_info, settings.reference_trim_file_name);
   
@@ -148,7 +252,8 @@ void resolve_alignments(
                    unique_junction_match_map, 
                    repeat_junction_match_map,
                    resolved_junction_tam,
-                   junction_test_info
+                   junction_test_info,
+                   junction_info_list
                    );
     junction_test_info_list.push_back(junction_test_info);
 
@@ -213,28 +318,46 @@ void resolve_alignments(
                    unique_junction_match_map, 
                    repeat_junction_match_map,
                    resolved_junction_tam,
-                   junction_test_info
+                   junction_test_info,
+                   junction_info_list
                    );
     
     
     JunctionInfo junction_info(junction_id);
     
+    int32_t possible_overlap_positions = avg_read_length - 1 - abs(junction_info.alignment_overlap);
+    uint32_t pos_hash_score_cutoff_1 = pos_hash_cutoffs[junction_info.sides[0].seq_id][possible_overlap_positions];
+    uint32_t pos_hash_score_cutoff_2 = pos_hash_cutoffs[junction_info.sides[1].seq_id][possible_overlap_positions];
+
+    //int32_t distance_score_cutoff_1 = possible_overlap_positions - distance_cutoffs[junction_info.sides[0].seq_id];
+    //int32_t distance_score_cutoff_2 = possible_overlap_positions - distance_cutoffs[junction_info.sides[1].seq_id];
+    
+    // @JEB: OLD
     // Test the best-scoring junction.
     uint32_t junction_accept_score_cutoff_1 = static_cast<uint32_t>(summary.preprocess_coverage[junction_info.sides[0].seq_id].junction_accept_score_cutoff);
     uint32_t junction_accept_score_cutoff_2 = static_cast<uint32_t>(summary.preprocess_coverage[junction_info.sides[1].seq_id].junction_accept_score_cutoff);
     
+    bool failed = false;  
     
     // both score cutoffs might be zero - indicating these are missing contigs that are basically deleted
-    // fail if this is the case. Revisit this logic at a future time. @JEB
-    bool failed = false;  
-    failed = failed || ((junction_accept_score_cutoff_1 == 0) || (junction_accept_score_cutoff_2 == 0)) ;
-    failed = failed || ( ( junction_test_info.pos_hash_score < junction_accept_score_cutoff_1 ) && ( junction_test_info.pos_hash_score < junction_accept_score_cutoff_2 ) );
+    // always fail in this case
+    failed = failed || (pos_hash_score_cutoff_1 == 0); 
+    failed = failed || (pos_hash_score_cutoff_2 == 0);
+    
+    failed = failed || ( junction_test_info.pos_hash_score < pos_hash_score_cutoff_1 );
+    failed = failed || ( junction_test_info.pos_hash_score < pos_hash_score_cutoff_2 );
+    
+    //failed = failed || ( junction_test_info.max_left < distance_score_cutoff_1 );
+    //failed = failed || ( junction_test_info.max_right < distance_score_cutoff_2 );
+    
     failed = failed || (junction_test_info.total_non_overlap_reads == 0);
     
     if (verbose) 
     {
       cout << "Testing Junction: " << junction_id << endl;
-      cout << "  Pos hash score: " << junction_test_info.pos_hash_score << endl;
+      cout << "  Pos hash score: " << junction_test_info.pos_hash_score << " [ " << pos_hash_score_cutoff_1 << " / " << pos_hash_score_cutoff_2 << " ]" << endl;
+//      cout << "  Distance score: " << junction_test_info.max_left << " | " << junction_test_info.max_right 
+//           << " [ " << distance_score_cutoff_1 << " / " << distance_score_cutoff_1 << " ]" << endl;
       cout << "  Number of unique matches: " << unique_junction_match_map[junction_id].size() << endl;
       size_t num_degenerate_matches = repeat_junction_match_map.count(junction_id) ? repeat_junction_match_map[junction_id].size() : 0;
       cout << "  Number of degenerate matches: " << num_degenerate_matches << endl;
@@ -661,7 +784,8 @@ void score_junction(
                     UniqueJunctionMatchMap& unique_junction_match_map, 
                     RepeatJunctionMatchMap& repeat_junction_match_map, 
                     tam_file& resolved_junction_tam, 
-                    JunctionTestInfo& junction_test_info           
+                    JunctionTestInfo& junction_test_info, 
+                    vector<JunctionInfo>& junction_info_list
                   )
 {
   // may not need these
@@ -713,11 +837,9 @@ void score_junction(
   
 	// basic information about the junction
 	JunctionInfo scj(junction_id);
-	int32_t overlap = scj.alignment_overlap;
+	int32_t alignment_overlap = scj.alignment_overlap;
 	int32_t flanking_left = scj.flanking_left;
-  
-  map<string,int32_t> repeat_junction_id_map;
-  
+    
 	// We also need to count degenerate matches b/c sometimes ambiguity unfairly penalizes real reads...
 	vector<JunctionMatchPtr> items;
   if (unique_matches)
@@ -753,7 +875,6 @@ void score_junction(
 		}
 		assert(a != NULL);
     
-    repeat_junction_id_map[resolved_junction_tam.bam_header->target_name[a->reference_target_id()]]++;
     
     ///
     // CHECK to be sure that this read overlaps the junction.
@@ -761,13 +882,12 @@ void score_junction(
     ///
     
     // The left side goes exactly up to the flanking length
-		int32_t this_left = flanking_left + 1;
-		this_left -= a->reference_start_1();
+		int32_t this_left = flanking_left + 1 - a->reference_start_1();
     
 		// The right side starts after moving past any overlap (negative or positive)
-		int32_t this_right = flanking_left + abs(overlap);
-		this_right = a->reference_end_1() - this_right;
+		int32_t this_right = a->reference_end_1() - flanking_left - abs(alignment_overlap);
     
+    // doesn't span 
     if ((this_right <= 0) || (this_left <= 0)) continue;
     
     ////
@@ -792,7 +912,6 @@ void score_junction(
     }
     
     // Update:
-    // Score = the minimum unique match length on a side
     // Max_Min = the maximum of the minimum length match sides
     // Max = the maximum match on a side
     // Note that the max and min filtering is really a kind of poor man's KS test
@@ -808,10 +927,8 @@ void score_junction(
         max_min_right_per_strand[rev_key] = this_right;
     }
     
-    if (max_left_per_strand[rev_key] < this_left)
-      max_left_per_strand[rev_key] = this_left;
-    if (max_right_per_strand[rev_key] < this_right)
-      max_right_per_strand[rev_key] = this_right;
+    max_left_per_strand[rev_key] = max(this_left, max_left_per_strand[rev_key]);
+    max_right_per_strand[rev_key] = max(this_right, max_right_per_strand[rev_key]);
 	}
   
 	int32_t max_left = max(max_left_per_strand[false], max_left_per_strand[true]);
@@ -830,16 +947,27 @@ void score_junction(
   
   bool redundant[2] = {false, false};
 
-/*
+  map<uint32_t,bool> repeat_junction_tid_map;
+
   if (!unique_matches) {
-    
-    vector<string> repeat_junction_id_list = get_keys(repeat_junction_id_map);
-    
-    vector<string>::iterator it = repeat_junction_id_list.begin();
-    JunctionInfo main(*it);
-    for (it++; it != repeat_junction_id_list.end(); it++)
+
+    for (uint32_t i = 0; i < items.size(); i++) // READ (loops over unique_matches, degenerate_matches)
     {
-      JunctionInfo test(*it); // the junction key
+      JunctionMatchPtr& item = items[i];
+      
+      for(alignment_list::iterator it=item->junction_alignments.begin(); it!=item->junction_alignments.end(); it++)
+      {
+        repeat_junction_tid_map[(*it)->reference_target_id()] = true;
+      }
+    }
+    
+    vector<uint32_t> repeat_junction_tid_list = get_keys(repeat_junction_tid_map);
+    
+    vector<uint32_t>::iterator it = repeat_junction_tid_list.begin();
+    JunctionInfo main = junction_info_list[*it];
+    for (it++; it != repeat_junction_tid_list.end(); it++)
+    {
+      JunctionInfo test = junction_info_list[*it]; // the junction key
       
       for (uint32_t best_side_index=0; best_side_index<=1; best_side_index++)
       {
@@ -859,7 +987,7 @@ void score_junction(
       }
     }
   }
-*/  
+  
 	// Save the test info about this junction.
 	JunctionTestInfo this_junction_test_info = {
 		max_left,                           //max_left

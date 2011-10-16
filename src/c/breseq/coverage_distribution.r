@@ -380,7 +380,9 @@ if (nb_fit_size != 0)
   junction_accept_coverage_cutoff = qbinom(junction_accept_pr_cutoff, junction_max_score, 1-pnbinom(0, size = nb_fit_size/junction_max_score, mu = nb_fit_mu/junction_max_score))
   junction_keep_coverage_cutoff = qbinom(junction_keep_pr_cutoff, junction_max_score, 1-pnbinom(0,size = nb_fit_size/junction_max_score, mu = nb_fit_mu/junction_max_score))
 
+  #chance_of_no_coverage_position_strand = 1-pnbinom(0, size = nb_fit_size/junction_coverage_cutoff, mu = nb_fit_mu/junction_coverage_cutoff);
   chance_of_no_coverage_position_strand = 1-pnbinom(0, size = nb_fit_size/junction_max_score, mu = nb_fit_mu/junction_max_score);
+
 }
 
 

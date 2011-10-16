@@ -92,6 +92,7 @@ namespace breseq
       write_to_file(f, deletion_coverage_seed_cutoff);
       write_to_file(f, junction_coverage_cutoff);
       write_to_file(f, junction_keep_score_cutoff);
+      write_to_file(f, pr_no_coverage_position_strand);
       write_to_file(f, nbinom_size_parameter);
       write_to_file(f, nbinom_mean_parameter);
       write_to_file(f, nbinom_prob_parameter);
@@ -106,6 +107,7 @@ namespace breseq
       read_from_file(f, deletion_coverage_seed_cutoff);
       read_from_file(f, junction_coverage_cutoff);
       read_from_file(f, junction_keep_score_cutoff);
+      read_from_file(f, pr_no_coverage_position_strand);
       read_from_file(f, nbinom_size_parameter);
       read_from_file(f, nbinom_mean_parameter);
       read_from_file(f, nbinom_prob_parameter);
@@ -262,6 +264,7 @@ namespace breseq
     
     //// Alignment Resolution ////
 		bool add_split_junction_sides;
+    double junction_accept_pr;
     
     //// MutationIdentification ////
 
@@ -322,6 +325,7 @@ namespace breseq
 		string coverage_junction_distribution_file_name;
 		string coverage_junction_plot_file_name;
 		string coverage_junction_summary_file_name;
+    string coverage_junction_error_count_summary_file_name;
 		string coverage_junction_done_file_name;
 		string candidate_junction_summary_file_name;
 		string candidate_junction_done_file_name;
@@ -643,8 +647,9 @@ namespace breseq
 	{
 	public:
 
-		struct AlignmentCorrection : public Storable
+		class AlignmentCorrection : public Storable
 		{
+    public:
 			map<string, map<string, int32_t> > read_file;
 
 			struct NewJunction
@@ -671,8 +676,9 @@ namespace breseq
 		storable_map<string, Coverage> preprocess_coverage;
 		storable_map<string, Coverage> unique_coverage;
 
-		struct CandidateJunctionSummaryData : public Storable
-		{
+		class CandidateJunctionSummaryData : public Storable
+    {
+    public:
 			struct Total
 			{
 				int32_t number;
@@ -704,8 +710,9 @@ namespace breseq
 
 		} candidate_junction;
 
-		struct SequenceConversion : public Storable
+		class SequenceConversion : public Storable
 		{
+    public:
 			float avg_read_length;
 			uint32_t max_qual;
 			uint32_t num_reads;
@@ -739,6 +746,26 @@ namespace breseq
 			}
 
 		} sequence_conversion;
+    
+    class ErrorCount : public Storable
+    {
+    public:
+      double no_pos_hash_per_position_pr;
+      
+      void serialize(ofstream& f)
+      {
+        write_to_file(f, no_pos_hash_per_position_pr);
+      }
+      void deserialize(ifstream& f)
+      {
+        read_from_file(f, no_pos_hash_per_position_pr);
+      }
+    };
+    
+    storable_map<string, ErrorCount> error_count;
+
+
+    // Overall functions for all of summary
 
 		void serialize(ofstream& f)
 		{
@@ -747,6 +774,7 @@ namespace breseq
       alignment_correction.serialize(f);
       preprocess_coverage.serialize(f);
       unique_coverage.serialize(f);
+      error_count.serialize(f);
     }
     
 		void deserialize(ifstream& f)
@@ -756,9 +784,10 @@ namespace breseq
       alignment_correction.deserialize(f);
       preprocess_coverage.deserialize(f);
       unique_coverage.deserialize(f);
+      error_count.deserialize(f);
 		}
 	};
-
+  
 } // breseq namespace
 
 #endif

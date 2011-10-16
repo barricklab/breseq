@@ -46,6 +46,7 @@ const char cErrorTable::m_sep = '\t';
   @param covariates
  */
 void error_count(
+                 Summary& summary,
                  const string& bam,
                  const string& fasta,
 								 const string& output_dir,
@@ -56,7 +57,7 @@ void error_count(
                  const string& covariates
                  ) 
 {
-	error_count_pileup ecp(bam, fasta, output_dir, do_coverage, do_errors, min_qual_score, covariates);
+	error_count_pileup ecp(summary, bam, fasta, output_dir, do_coverage, do_errors, min_qual_score, covariates);
 	ecp.do_pileup();
 	if (do_coverage) ecp.print_coverage();
 	if (do_errors) ecp.print_error(readfiles);
@@ -66,6 +67,7 @@ void error_count(
 /*! Constructor.
  */
 error_count_pileup::error_count_pileup(
+                                       Summary& _summary,
                                        const string& bam, 
                                        const string& fasta, 
                                        const string& output_dir,
@@ -75,6 +77,7 @@ error_count_pileup::error_count_pileup(
                                        const string& covariates
                                        )
 : pileup_base(bam, fasta)
+, summary(_summary)
 , m_output_dir(output_dir)
 , m_do_coverage(do_coverage)
 , m_do_errors(do_errors)
@@ -95,6 +98,10 @@ error_count_pileup::error_count_pileup(
     assert(!m_per_position_file.fail());
     m_error_table.write_count_table_header(m_per_position_file);
   }
+  
+  m_read_found_starting_at_pos[0] = 0;
+  m_read_found_starting_at_pos[1] = 0;
+
 }
 
 
@@ -115,10 +122,11 @@ void error_count_pileup::pileup_callback(const pileup& p) {
   
 	size_t unique_coverage=0; // number of non-deletion, non-redundant alignments at this position.
 	bool has_redundant_reads=false; // flag indicating whether this position has any redundant reads.
-
+  int32_t has_query_start[2] = {0,0};
+  
 	// for each alignment within this pileup:
 	for(pileup::const_iterator i=p.begin(); i!=p.end(); ++i) {
-		
+    
     // skip deletions entirely, they are handled by adjacent matching positions
     if(i->is_del()) {
       continue;
@@ -134,7 +142,12 @@ void error_count_pileup::pileup_callback(const pileup& p) {
 		
 		// track the number of non-deletion, non-redundant alignments:
 		++unique_coverage;
-		
+        
+    if (i->query_position_1() == i->query_stranded_bounds_1().first)
+    {
+      has_query_start[i->reversed() ? 1 : 0] = 1;
+    }
+    
 		// if we are only tracking coverage, go to the next alignment
     if (!m_do_errors) {
       continue;
@@ -153,6 +166,9 @@ void error_count_pileup::pileup_callback(const pileup& p) {
 			info.unique_only_coverage.resize(unique_coverage+1,0); // >= and +1 because of 0-indexing.
 		}
 		++info.unique_only_coverage[unique_coverage];
+
+    m_read_found_starting_at_pos[has_query_start[0]]++;
+    m_read_found_starting_at_pos[has_query_start[1]]++;
 	}
   
   // per-position prints each line separately
@@ -161,6 +177,18 @@ void error_count_pileup::pileup_callback(const pileup& p) {
     m_error_table.write_count_table_content(m_per_position_file, p.position_1());
     m_error_table.clear();  
   }
+}
+  
+void error_count_pileup::at_target_end(const uint32_t tid)
+{
+  double total = static_cast<double>(m_read_found_starting_at_pos[0] + m_read_found_starting_at_pos[1]);
+  summary.error_count[target_name(tid)].no_pos_hash_per_position_pr = 1.0;
+  if (total != 0) {
+    summary.error_count[target_name(tid)].no_pos_hash_per_position_pr = static_cast<double>(m_read_found_starting_at_pos[0]) / total;
+  }
+
+  m_read_found_starting_at_pos[0] = 0;
+  m_read_found_starting_at_pos[1] = 0;
 }
 
 

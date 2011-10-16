@@ -3,7 +3,7 @@ DEL	52	7	NC_001416-0	139	1
 INS	53	8	NC_001416-1	4566	G
 SNP	54	9	NC_001416-2	1261	G
 INS	55	1	NC_001416-2	1435	C
-SNP	56	3	NC_001416-2	2314	A
+SNP	56	4	NC_001416-2	2314	A
 DEL	51	10,5	NC_001416-2	2338	5996
 SNP	57	23	NC_001416-3	1915	C
 SNP	58	24	NC_001416-3	5833	G
@@ -31,10 +31,10 @@ MC	6		NC_001416-0	1	2	0	0	left_inside_cov=0	left_outside_cov=NA	right_inside_cov
 RA	7		NC_001416-0	139	0	G	.	frequency=1	new_cov=34/40	quality=281.8	ref_cov=0/0	tot_cov=34/40
 JC	2		NC_001416-0	9700	-1	NC_001416-1	1	1	0	alignment_overlap=0	coverage_minus=86	coverage_plus=62	flanking_left=35	flanking_right=35	key=NC_001416-0__9700__-1__NC_001416-1__1__1__0____35__35__0__0	max_left=34	max_left_minus=34	max_left_plus=34	max_min_left=17	max_min_left_minus=17	max_min_left_plus=16	max_min_right=17	max_min_right_minus=17	max_min_right_plus=16	max_right=34	max_right_minus=34	max_right_plus=33	pos_hash_score=52	side_1_annotate_key=gene	side_1_overlap=0	side_1_redundant=0	side_2_annotate_key=gene	side_2_overlap=0	side_2_redundant=0	total_non_overlap_reads=148
 RA	8		NC_001416-1	4566	1	.	G	frequency=1	new_cov=41/31	quality=195.1	ref_cov=0/0	tot_cov=41/31
-JC	4		NC_001416-1	9700	-1	NC_001416-2	1	1	0	alignment_overlap=0	coverage_minus=37	coverage_plus=59	flanking_left=35	flanking_right=35	key=NC_001416-1__9700__-1__NC_001416-2__1__1__0____35__35__0__0	max_left=34	max_left_minus=33	max_left_plus=34	max_min_left=17	max_min_left_minus=17	max_min_left_plus=16	max_min_right=17	max_min_right_minus=17	max_min_right_plus=17	max_right=34	max_right_minus=34	max_right_plus=34	pos_hash_score=48	side_1_annotate_key=gene	side_1_overlap=0	side_1_redundant=0	side_2_annotate_key=gene	side_2_overlap=0	side_2_redundant=0	total_non_overlap_reads=96
+JC	3		NC_001416-1	9700	-1	NC_001416-2	1	1	0	alignment_overlap=0	coverage_minus=37	coverage_plus=59	flanking_left=35	flanking_right=35	key=NC_001416-1__9700__-1__NC_001416-2__1__1__0____35__35__0__0	max_left=34	max_left_minus=33	max_left_plus=34	max_min_left=17	max_min_left_minus=17	max_min_left_plus=16	max_min_right=17	max_min_right_minus=17	max_min_right_plus=17	max_right=34	max_right_minus=34	max_right_plus=34	pos_hash_score=48	side_1_annotate_key=gene	side_1_overlap=0	side_1_redundant=0	side_2_annotate_key=gene	side_2_overlap=0	side_2_redundant=0	total_non_overlap_reads=96
 RA	9		NC_001416-2	1261	0	A	G	frequency=1	new_cov=22/58	quality=213.0	ref_cov=0/1	tot_cov=22/60
 RA	1		NC_001416-2	1435	1	.	C	frequency=1	new_cov=32/63	quality=269.4	ref_cov=0/0	tot_cov=32/63
-RA	3		NC_001416-2	2314	0	G	A	frequency=1	new_cov=32/61	quality=275.0	ref_cov=0/1	tot_cov=33/62
+RA	4		NC_001416-2	2314	0	G	A	frequency=1	new_cov=32/61	quality=275.0	ref_cov=0/1	tot_cov=33/62
 JC	5		NC_001416-2	2337	-1	NC_001416-2	8334	1	0	alignment_overlap=5	coverage_minus=38	coverage_plus=42	flanking_left=35	flanking_right=35	key=NC_001416-2__2337__-1__NC_001416-2__8329__1__5____35__35__0__0	max_left=29	max_left_minus=27	max_left_plus=29	max_min_left=13	max_min_left_minus=13	max_min_left_plus=11	max_min_right=15	max_min_right_minus=15	max_min_right_plus=15	max_right=29	max_right_minus=29	max_right_plus=28	pos_hash_score=37	side_1_annotate_key=gene	side_1_overlap=5	side_1_redundant=0	side_2_annotate_key=gene	side_2_overlap=0	side_2_redundant=0	total_non_overlap_reads=80
 MC	10		NC_001416-2	2338	8333	0	0	left_inside_cov=0	left_outside_cov=102	right_inside_cov=0	right_outside_cov=102
 RA	11		NC_001416-2	3044	0	A	G	deleted=1	frequency=1	new_cov=1/0	quality=-1.7	ref_cov=0/0	reject=EVALUE	tot_cov=1/0

@@ -126,7 +126,8 @@ namespace breseq {
                       UniqueJunctionMatchMap& matched_junction_ref, 
                       RepeatJunctionMatchMap& degenerate_matches_ref, 
                       tam_file& junction_tam,
-                      JunctionTestInfo& junction_test_info           
+                      JunctionTestInfo& junction_test_info, 
+                      vector<JunctionInfo>& junction_info_list
                       );
   
   void resolve_junction(
