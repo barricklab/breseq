@@ -57,7 +57,7 @@ namespace breseq {
       }
     }
     ROUT.close();
-		remove(log_file_name.c_str());
+//		remove(log_file_name.c_str());
 
 		return(lines);
 	}
@@ -102,8 +102,9 @@ namespace breseq {
 
 		/// NEW JUNCTION COVERAGE CUTOFFS
 		// Arbitrary value that seems to work....
-    double junction_coverage_pr_cutoff = static_cast<double>(1.0)/sequence_length; //# *0.05 @GRC JC
-
+    //double junction_coverage_pr_cutoff = 0.01; //# *0.05 @GRC JC
+    double junction_coverage_pr_cutoff = settings.junction_accept_pr * static_cast<double>(1.0)/sequence_length; //# *0.05 @GRC JC
+    
 		// We really want somewhere between these two, try this...
     double junction_accept_pr_cutoff = 0.01;
 		double junction_keep_pr_cutoff = 0.01 / sqrt(sequence_length);
@@ -131,7 +132,6 @@ namespace breseq {
 		summary.unique_coverage[seq_id].junction_keep_score_cutoff = from_string<double>(lines[8]);
     
     summary.unique_coverage[seq_id].pr_no_coverage_position_strand = from_string<double>(lines[9]);
-
     
     bool verbose = false;
     if (verbose)

@@ -155,8 +155,8 @@ class alignment_wrapper {
     //! Return number of locations on right of sequence to be trimmed
     uint32_t trim_right() const;
 
-    //! Start and end coordinates of the aligned part of the read. (was 1-indexed)
-    //! Start is always < End. reversed() tells you which strand the match was on.
+    //! Start and end coordinates of the aligned part of the read.
+    //! Start < End always. reversed() tells you which strand the match was on.
     //  Methods available for 0-indexed and 1-indexed coordinates.
     std::pair<uint32_t,uint32_t> query_bounds_0() const;
     void query_bounds_0(uint32_t& start, uint32_t& end) const;
@@ -167,12 +167,12 @@ class alignment_wrapper {
     std::pair<uint32_t,uint32_t> query_stranded_bounds_1() const;
     void query_stranded_bounds_1(uint32_t& start, uint32_t& end) const;
 
-    //! Starting coordinates of the aligned part of the read (was 1-indexed).
+    //! Starting coordinates of the aligned part of the read.
     //  Methods available for 0-indexed and 1-indexed coordinates.
     uint32_t query_start_0() const { return query_start_1()-1; };
     uint32_t query_start_1() const;
 
-    //! Ending coordinates of the aligned part of the read (was 1-indexed).
+    //! Ending coordinates of the aligned part of the read.
     //  Methods available for 0-indexed and 1-indexed coordinates.    
     uint32_t query_end_0() const { return query_end_1()-1; };
     uint32_t query_end_1() const;

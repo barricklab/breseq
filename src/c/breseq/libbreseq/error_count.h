@@ -22,6 +22,7 @@ LICENSE AND COPYRIGHT
 #include "common.h"
 #include "alignment.h"
 #include "pileup_base.h"
+#include "settings.h"
 
 using namespace std;
 
@@ -34,7 +35,8 @@ namespace breseq {
 	 \param output_dir is the directory in which output files will be placed.
 	 \param readfiles is a list of read files that were used to build the bam (do not include filename extension)
 	 */
-	void error_count(const string& bam, 
+	void error_count(Summary& summary,
+                   const string& bam, 
 									 const string& fasta,
 									 const string& output_dir,
 									 const vector<string>& readfiles,
@@ -210,7 +212,8 @@ namespace breseq {
 		
 		
 		//! Constructor.
-		error_count_pileup(const std::string& bam, 
+		error_count_pileup(Summary& _summary,
+                       const std::string& bam, 
                        const std::string& fasta,
                        const string& output_dir,
                        bool do_coverage, 
@@ -224,6 +227,8 @@ namespace breseq {
 		
 		//! Called for each alignment.
 		virtual void pileup_callback(const pileup& p);
+    
+    virtual void at_target_end(const uint32_t tid);
 		
 		//! Print coverage distribution.
 		void print_coverage();
@@ -232,11 +237,13 @@ namespace breseq {
 		void print_error(const std::vector<std::string>& readfiles);
 
 	protected:		
+    Summary& summary;
     const string& m_output_dir;
 		vector<sequence_info> _seq_info; //!< information about each sequence.
 		bool m_do_coverage;
     bool m_do_errors;
     uint8_t m_min_qual_score; //! @JEB THIS IS CURRENTLY NOT USED (BUT WOULD BE IF WE CALCULATED RATES)
+    int32_t m_read_found_starting_at_pos[2]; // 0 none found, 1 found
     cErrorTable m_error_table;
     ofstream m_per_position_file;
 	};

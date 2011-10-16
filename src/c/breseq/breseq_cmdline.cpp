@@ -474,7 +474,10 @@ int do_error_count(int argc, char* argv[]) {
 	
 	// attempt to calculate error calibrations:
 	try {
-		breseq::error_count(options["bam"],
+    Summary summary;
+		breseq::error_count(
+                        summary,
+                        options["bam"],
 												options["fasta"],
 												options["output"],
 												split(options["readfile"], "\n"),
@@ -1068,9 +1071,7 @@ int breseq_default_action(int argc, char* argv[])
       settings.done_step(settings.preprocess_junction_done_file_name);
     }
 
-
-    string coverage_junction_summary_file_name = settings.coverage_junction_summary_file_name;
-
+    
     if (settings.do_step(settings.coverage_junction_done_file_name, "Preliminary analysis of coverage distribution"))
     {
       string reference_faidx_file_name = settings.reference_faidx_file_name;
@@ -1094,7 +1095,9 @@ int breseq_default_action(int argc, char* argv[])
       string reference_fasta_file_name = settings.reference_fasta_file_name;
       string reference_bam_file_name = settings.coverage_junction_best_bam_file_name;
 
-      error_count(reference_bam_file_name,
+      error_count(
+        summary,
+        reference_bam_file_name,
         reference_fasta_file_name,
         settings.candidate_junction_path,
         settings.read_file_names,
@@ -1109,10 +1112,12 @@ int breseq_default_action(int argc, char* argv[])
         settings.coverage_junction_plot_file_name, settings.coverage_junction_distribution_file_name);
 
       // Note that storing from unique_coverage and reloading in preprocess_coverage is by design
-      summary.unique_coverage.store(coverage_junction_summary_file_name);
+      summary.unique_coverage.store(settings.coverage_junction_summary_file_name);
+      summary.error_count.store(settings.coverage_junction_error_count_summary_file_name);
       settings.done_step(settings.coverage_junction_done_file_name);
 		}
-    summary.preprocess_coverage.retrieve(coverage_junction_summary_file_name);
+    summary.preprocess_coverage.retrieve(settings.coverage_junction_summary_file_name);
+    summary.error_count.store(settings.coverage_junction_error_count_summary_file_name);
     
 		string candidate_junction_summary_file_name = settings.candidate_junction_summary_file_name;
 		if (settings.do_step(settings.candidate_junction_done_file_name, "Identifying candidate junctions"))
@@ -1428,6 +1433,7 @@ int breseq_default_action(int argc, char* argv[])
 		uint32_t num_qual = summary.sequence_conversion.max_qual + 1;
 
 		error_count(
+      summary,
 			reference_bam_file_name, // bam
 			reference_fasta_file_name, // fasta
 			settings.error_calibration_path, // output
