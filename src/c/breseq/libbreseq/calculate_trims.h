@@ -71,7 +71,7 @@ namespace breseq {
       ifstream in_trim_file(trim_file_name.c_str(), ios::out | ios::binary);
       in_trim_file.read(reinterpret_cast<char *>(trim_data), 2*in_seq_length);
       assert(!in_trim_file.fail());
-      assert(in_trim_file.gcount() == 2*in_seq_length); //TODO @JEB, int vs uint compare.
+      assert(static_cast<uint32_t>(in_trim_file.gcount()) == 2*in_seq_length); //TODO @JEB, int vs uint compare.
       in_trim_file.close();
     }
 

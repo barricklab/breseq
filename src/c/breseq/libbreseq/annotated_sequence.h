@@ -21,10 +21,10 @@ LICENSE AND COPYRIGHT
 
 #include "libbreseq/common.h"
 
+#include "libbreseq/genome_diff.h"
 #include "libbreseq/fasta.h"
 #include "libbreseq/fastq.h"
 #include "libbreseq/alignment.h"
-#include "libbreseq/genome_diff.h"
 #include "libbreseq/anyoption.h"
 #include "libbreseq/settings.h"
 

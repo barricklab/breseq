@@ -103,7 +103,22 @@ namespace breseq {
   typedef map<string, map<string, JunctionMatchPtr> > RepeatJunctionMatchMap;
 
 	bool alignment_overlaps_junction(const vector<JunctionInfo>& junction_info_list, const alignment_wrapper& in_a);
+  
+  void resolve_alignments(
+                          const Settings& settings,
+                          Summary& summary,
+                          cReferenceSequences& ref_seq_info,
+                          const bool junction_prediction,
+                          cReadFiles &read_files
+                          );
+  
+  void calculate_cutoffs(
+                         const Settings& settings, 
+                         Summary& summary, 
+                         cReferenceSequences& ref_seq_info
+                         );
 
+  
   void load_junction_alignments(
                                 const Settings& settings, 
                                 Summary& summary, 
@@ -173,14 +188,6 @@ namespace breseq {
                                          const vector<string>& keys
                                          );
 
-
-	void resolve_alignments(
-                          Settings& settings,
-                          Summary& summary,
-                          cReferenceSequences& ref_seq_info,
-                          const bool junction_prediction,
-                          cReadFiles &read_files
-                          );
   
   diff_entry junction_to_diff_entry(
                                     const string& key, 

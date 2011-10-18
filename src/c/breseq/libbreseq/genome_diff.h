@@ -22,7 +22,6 @@ LICENSE AND COPYRIGHT
 #include "common.h"
 
 
-
 namespace breseq {
 
 // Common keywords used for diff entries:

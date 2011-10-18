@@ -158,10 +158,10 @@ class alignment_wrapper {
     //! Start and end coordinates of the aligned part of the read.
     //! Start < End always. reversed() tells you which strand the match was on.
     //  Methods available for 0-indexed and 1-indexed coordinates.
-    std::pair<uint32_t,uint32_t> query_bounds_0() const;
-    void query_bounds_0(uint32_t& start, uint32_t& end) const;
-    std::pair<uint32_t,uint32_t> query_bounds_1() const;
-    void query_bounds_1(uint32_t& start, uint32_t& end) const;
+    std::pair<uint32_t,uint32_t> query_bounds_0(uint32_t min_qual = 0) const;
+    void query_bounds_0(uint32_t& start, uint32_t& end, uint32_t min_qual = 0) const;
+    std::pair<uint32_t,uint32_t> query_bounds_1(uint32_t min_qual = 0) const;
+    void query_bounds_1(uint32_t& start, uint32_t& end, uint32_t min_qual = 0) const;
 
     //! Reverse start and end coords if on opposite strand
     std::pair<uint32_t,uint32_t> query_stranded_bounds_1() const;
@@ -181,11 +181,11 @@ class alignment_wrapper {
 
     //! Starting and ending coordinates of the alignment part of the read
     //  on the reference sequence. Start is always < End unless using 'stranded' version
-    uint32_t reference_start_0() const {return _a->core.pos; } ;
-    uint32_t reference_start_1() const {return reference_start_0() + 1; };
+    uint32_t reference_start_0(uint32_t min_qual = 0) const;
+    uint32_t reference_start_1(uint32_t min_qual = 0) const;
 
-    uint32_t reference_end_0() const { return reference_end_1() - 1; };
-    uint32_t reference_end_1() const { return bam_calend(&_a->core, bam1_cigar(_a)); };
+    uint32_t reference_end_0(uint32_t min_qual = 0) const;
+    uint32_t reference_end_1(uint32_t min_qual = 0) const;
 
     std::pair<uint32_t,uint32_t> reference_bounds_0() const 
       { return std::make_pair(reference_start_0(),reference_end_0()); };

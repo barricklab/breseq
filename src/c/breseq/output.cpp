@@ -500,10 +500,17 @@ void html_statistics(const string &file_name, const Settings& settings, Summary&
   {
     HTML << h2("Junction Prediction Information") << endl;
     HTML << "<p>" << endl;
+    
+    //stringstream num;
+    //num << scientific << setprecision(2) << settings.junction_accept_pr;
+    //HTML << "E-value cutoff: " <<  num.str() << endl;
+    //HTML << "<p>" << endl;
     HTML << "<table border=\"0\" cellspacing=\"1\" cellpadding=\"5\" >" << endl;
-    HTML << "<tr>" << 
+    HTML << "<tr>" <<
     th("reference sequence") << 
-    th("junction score cutoff") <<
+    th("read start probability") <<
+    th("pos hash score cutoff") <<
+    th("distance score cutoff") <<
     "</tr>" << endl;
     
     size_t total_length = 0;
@@ -514,10 +521,13 @@ void html_statistics(const string &file_name, const Settings& settings, Summary&
       // this score is always an integer for now, even though it is typed as a double
       bool fragment_with_fit_coverage = (summary.unique_coverage[it->m_seq_id].nbinom_mean_parameter != 0);
 
-      if (!fragment_with_fit_coverage)
+      if (!fragment_with_fit_coverage) {
         HTML << td("NA"); 
-      else
-        HTML << td(to_string(static_cast<int32_t>(summary.unique_coverage[it->m_seq_id].junction_accept_score_cutoff)));
+      } else {
+        HTML << td(ALIGN_CENTER, to_string(summary.error_count[it->m_seq_id].no_pos_hash_per_position_pr, 5));
+        HTML << td(ALIGN_CENTER, to_string(summary.alignment_resolution.pos_hash_cutoffs[it->m_seq_id].back()));
+        HTML << td(ALIGN_CENTER, to_string(summary.alignment_resolution.distance_cutoffs[it->m_seq_id]));
+      }
       HTML << "</tr>";
     }  
     HTML << "</table>";
@@ -1126,7 +1136,7 @@ string html_new_junction_table_string(diff_entry_list& list_ref, bool show_rejec
       }
       ss << td("rowspan=\"2\" align=\"center\"", c["overlap"]) << endl;
       ss << td("rowspan=\"2\" align=\"center\"", c["total_non_overlap_reads"]) << endl;
-      ss << td("rowspan=\"2\" align=\"center\"", c["pos_hash_score"]) << endl;
+      ss << td("rowspan=\"2\" align=\"center\"", c["pos_hash_score"] + " (" + c["max_left"] + "/" + c["max_right"] + ")") << endl;
       ss << td("align=\"center\" class=\"" + annotate_key + "\"", 
               nonbreaking(c["_" + key + GENE_POSITION])) << endl;
       ss << td("align=\"center\" class=\"" + annotate_key + "\"", 
@@ -2023,6 +2033,12 @@ void Html_Mutation_Table_String::Item_Lines()
       }
       s << ")";
 
+      if (from_string<int32_t>(mut["duplication_size"]) > 0) {
+        s << " +" << mut["duplication_size"] << " bp";
+      } else if (from_string<int32_t>(mut["duplication_size"]) < 0) {
+        s << " &Delta;" << abs(from_string(mut["duplication_size"])) << " bp";
+      }
+      
       stringstream s_end;
       if (mut.entry_exists("del_end")) {
         s_end << " &Delta;" << mut["del_end"];
@@ -2033,11 +2049,7 @@ void Html_Mutation_Table_String::Item_Lines()
       if (!(s_end.str()).empty()) {
         s << " ::" << s_end.str();
       }
-      if (from_string<int32_t>(mut["duplication_size"]) > 0) {
-        s << " +" << mut["duplication_size"] << " bp";
-      } else if (from_string<int32_t>(mut["duplication_size"]) < 0) {
-        s << " &Delta;" << mut["duplication_size"] << " bp";
-      }
+
       cell_mutation = nonbreaking(s.str());
     } else if (mut._type == INV) {
       cell_mutation = nonbreaking(commify(mut["size"]) + " bp inversion");

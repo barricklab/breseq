@@ -881,13 +881,15 @@ int do_mutate(int argc, char *argv[])
 
 int breseq_default_action(int argc, char* argv[])
 {
+  
+  
 	///
 	/// Get options from the command line
 	///
   Summary summary;
 	Settings settings(argc, argv);
 	settings.check_installed();
-
+  
 	//
 	// 01_sequence_conversion 
   // * Convert the input reference into FASTA for alignment and GFF3 for reloading features
@@ -1117,7 +1119,7 @@ int breseq_default_action(int argc, char* argv[])
       settings.done_step(settings.coverage_junction_done_file_name);
 		}
     summary.preprocess_coverage.retrieve(settings.coverage_junction_summary_file_name);
-    summary.error_count.store(settings.coverage_junction_error_count_summary_file_name);
+    summary.error_count.retrieve(settings.coverage_junction_error_count_summary_file_name);
     
 		string candidate_junction_summary_file_name = settings.candidate_junction_summary_file_name;
 		if (settings.do_step(settings.candidate_junction_done_file_name, "Identifying candidate junctions"))
@@ -1207,19 +1209,19 @@ int breseq_default_action(int argc, char* argv[])
   // 04 alignment_correction
 	// * Resolve matches to new junction candidates
 	//
-	string alignment_correction_summary_file_name = settings.alignment_correction_summary_file_name;
+	string alignment_resolution_summary_file_name = settings.alignment_resolution_summary_file_name;
 	if (settings.do_step(settings.alignment_correction_done_file_name, "Resolving alignments with candidate junctions"))
 	{
 		create_path(settings.alignment_correction_path);
     
 		// should be one coverage cutoff value for each reference sequence
-		vector<double> coverage_cutoffs;
-		for (uint32_t i = 0; i < ref_seq_info.size(); i++)
-    {
-      Coverage f = summary.preprocess_coverage[ref_seq_info[i].m_seq_id];
-			coverage_cutoffs.push_back(summary.preprocess_coverage[ref_seq_info[i].m_seq_id].junction_accept_score_cutoff);
-		}
-    assert(coverage_cutoffs.size() == ref_seq_info.size());
+		//vector<double> coverage_cutoffs;
+		//for (uint32_t i = 0; i < ref_seq_info.size(); i++)
+    //{
+    //  Coverage f = summary.preprocess_coverage[ref_seq_info[i].m_seq_id];
+	//		coverage_cutoffs.push_back(summary.preprocess_coverage[ref_seq_info[i].m_seq_id].junction_accept_score_cutoff);
+		//}
+    //assert(coverage_cutoffs.size() == ref_seq_info.size());
 
     bool junction_prediction = settings.junction_prediction;
     if (junction_prediction && file_empty(settings.candidate_junction_fasta_file_name.c_str())) junction_prediction = false;
@@ -1232,13 +1234,13 @@ int breseq_default_action(int argc, char* argv[])
 			settings.read_files
 		);
 
-		summary.alignment_correction.store(settings.alignment_correction_summary_file_name);
+		summary.alignment_resolution.store(settings.alignment_resolution_summary_file_name);
 		settings.done_step(settings.alignment_correction_done_file_name);
 	}
   
-	if (file_exists(alignment_correction_summary_file_name.c_str()))
-		summary.alignment_correction.retrieve(settings.alignment_correction_summary_file_name);
-
+	if (file_exists(alignment_resolution_summary_file_name.c_str()))
+    summary.alignment_resolution.retrieve(settings.alignment_resolution_summary_file_name);
+  
 	//
   // 05 bam
 	// * Create BAM read alignment database files
@@ -1617,8 +1619,8 @@ int breseq_default_action(int argc, char* argv[])
        for (storable_map<string, Coverage>::iterator it = summary.unique_coverage.begin();
             it != summary.unique_coverage.end(); it ++) {
          const string& seq_id = it->first;
-         mpgd.add_breseq_data("junction_accept_score_cutoff:" + seq_id,
-                              to_string(summary.unique_coverage[seq_id].junction_accept_score_cutoff));
+//         mpgd.add_breseq_data("junction_accept_score_cutoff:" + seq_id,
+//                              to_string(summary.unique_coverage[seq_id].junction_accept_score_cutoff));
        }
 
     }

@@ -102,8 +102,8 @@ namespace breseq {
 
 		/// NEW JUNCTION COVERAGE CUTOFFS
 		// Arbitrary value that seems to work....
-    //double junction_coverage_pr_cutoff = 0.01; //# *0.05 @GRC JC
-    double junction_coverage_pr_cutoff = settings.junction_accept_pr * static_cast<double>(1.0)/sequence_length; //# *0.05 @GRC JC
+    //double junction_coverage_pr_cutoff =  sqrt(settings.junction_accept_pr / static_cast<double>(sequence_length));
+    double junction_coverage_pr_cutoff = settings.junction_accept_pr;
     
 		// We really want somewhere between these two, try this...
     double junction_accept_pr_cutoff = 0.01;
@@ -128,11 +128,11 @@ namespace breseq {
 
     summary.unique_coverage[seq_id].deletion_coverage_propagation_cutoff = from_string<double>(lines[5]);
     summary.unique_coverage[seq_id].junction_coverage_cutoff = from_string<double>(lines[6]);
-		summary.unique_coverage[seq_id].junction_accept_score_cutoff = from_string<double>(lines[7]);
-		summary.unique_coverage[seq_id].junction_keep_score_cutoff = from_string<double>(lines[8]);
-    
-    summary.unique_coverage[seq_id].pr_no_coverage_position_strand = from_string<double>(lines[9]);
-    
+		
+    // deprecated statistics
+    //summary.unique_coverage[seq_id].junction_accept_score_cutoff = from_string<double>(lines[7]);
+		//summary.unique_coverage[seq_id].junction_keep_score_cutoff = from_string<double>(lines[8]);
+        
     bool verbose = false;
     if (verbose)
     {
@@ -145,8 +145,10 @@ namespace breseq {
       cout << "dispersion " << summary.unique_coverage[seq_id].dispersion << endl;
       cout << "deletion_coverage_propagation_cutoff " << summary.unique_coverage[seq_id].deletion_coverage_propagation_cutoff << endl;
       cout << "junction_coverage_cutoff " << summary.unique_coverage[seq_id].junction_coverage_cutoff << endl;
-      cout << "junction_accept_score_cutoff " << summary.unique_coverage[seq_id].junction_accept_score_cutoff << endl;
-      cout << "junction_keep_score_cutoff " << summary.unique_coverage[seq_id].junction_keep_score_cutoff << endl;
+      //cout << "junction_accept_score_cutoff " << summary.unique_coverage[seq_id].junction_accept_score_cutoff << endl;
+      //cout << "junction_keep_score_cutoff " << summary.unique_coverage[seq_id].junction_keep_score_cutoff << endl;
+      //cout << "pr_no_coverage_position_strand " << summary.unique_coverage[seq_id].pr_no_coverage_position_strand << endl;
+
     }
 	}
 

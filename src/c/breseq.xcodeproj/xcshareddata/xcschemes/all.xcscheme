@@ -42,7 +42,7 @@
          <BuildableReference
             BuildableIdentifier = "primary"
             BlueprintIdentifier = "42B6EDB811C69CC70075F8A3"
-            BuildableName = "cbreseq"
+            BuildableName = "breseq"
             BlueprintName = "breseq_cmdline"
             ReferencedContainer = "container:breseq.xcodeproj">
          </BuildableReference>
