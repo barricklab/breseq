@@ -1,9 +1,14 @@
 Installation
 ==============
 
-|breseq| is a command line tool implemented in C++, and R. It will compile and function on a variety of UNIX platforms, including MacOSX. |breseq| installation from the source code requires some basic familiarity with UNIX commands and environments.
+|breseq| is a command line tool implemented in C++ and R. It will compile and function on a variety of UNIX platforms, including MacOSX. |breseq| installation from the source code requires some basic familiarity with UNIX commands and environments.
 
-1. Install external dependencies
+1. Download source code
+---------------------------------
+
+The most recent |breseq| source code packages are available for download from `Google Code <http://code.google.com/p/breseq/downloads/list>`_.
+
+2. Install external dependencies
 ---------------------------------
 
 Several external packages and software programs need to be installed to compile and use |breseq|:
@@ -31,7 +36,7 @@ You should now get a message like this, telling you that the system can find you
 
 * :program:`R`: Download the installer package from http://www.r-project.org/.
 
-2. Compile and install |breseq|
+3. Compile and install |breseq|
 -------------------------------
 
 If you have admin privileges and want to install |breseq| in a standard location accessible to all users of a computer, then see :ref:`installing-in-a-system-wide-location`. If you do not have admin privileges on your computer, then see :ref:`installing-in-the-source-directory` or :ref:`installing-in-a-custom-location`. 

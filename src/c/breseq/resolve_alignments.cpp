@@ -79,76 +79,27 @@ uint32_t qmissing (double tail_value, double pr_missing)
   
 // Compares matches to candidate junctions with matches to original genome
 void resolve_alignments(
-                        Settings& settings,
+                        const Settings& settings,
                         Summary& summary,
                         cReferenceSequences& ref_seq_info,
                         bool junction_prediction,
                         cReadFiles& read_files
                         ) 
 {    
-	bool verbose = true;
+	bool verbose = false;
 
-  
-  // distance from read end that must be achieved to pass threshold for different overlap values
-  // int32_t max_read_length = summary.sequence_conversion.max_read_length;
+  calculate_cutoffs(settings, summary, ref_seq_info);
+  // local variables for convenience
+  map<string,int32_t>& distance_cutoffs = summary.alignment_resolution.distance_cutoffs;
+  storable_map<string, storable_vector<int32_t> >& pos_hash_cutoffs = summary.alignment_resolution.pos_hash_cutoffs;
   int32_t avg_read_length = round(summary.sequence_conversion.avg_read_length);
-  if (verbose) cout << "Average read length: " << avg_read_length << endl;
+
   
-  //map<string,int32_t> distance_cutoffs;
-  map<string, vector<int32_t> > pos_hash_cutoffs;
-  
-  // might have lower than average coverage
-  // might have lower than average distributions
-  
-  for(vector<cAnnotatedSequence>::iterator it = ref_seq_info.begin(); it != ref_seq_info.end(); it++) {
-    const string& seq_id = it->m_seq_id;
-        
-    uint32_t sequence_length = ref_seq_info[seq_id].m_length;
-    
-    //double distance_pr_cutoff = settings.junction_accept_pr * static_cast<double>(1.0)/sequence_length;
-    double pos_hash_pr_cutoff = settings.junction_accept_pr * static_cast<double>(1.0)/sequence_length;
-    
-    double pr_no_coverage_position_strand = summary.error_count[seq_id].no_pos_hash_per_position_pr;
-    if (verbose) cout << "Probability of read starting at position: " << seq_id << " " << (1.0-pr_no_coverage_position_strand) << endl;
-
-    double junction_coverage_cutoff = summary.preprocess_coverage[seq_id].junction_coverage_cutoff;
-    if (verbose) cout << "Junction coverage cutoff: " << seq_id << " " << junction_coverage_cutoff << endl;
-    double average = summary.preprocess_coverage[seq_id].average;
-    if (verbose) cout << "Average coverage: " << seq_id << " " << average << endl;
-
-    
-    for(int32_t i = 0; i <= summary.sequence_conversion.avg_read_length-1; i++) {
-      Coverage& cov = summary.preprocess_coverage[seq_id];
-      
-      // pr_no_coverage_position_strand can be -1 if the fit failed, assign a value of zero for this case
-      pos_hash_cutoffs[seq_id].push_back( 
-                                         (pr_no_coverage_position_strand > 0)
-                                         ? qbinomial(
-                                                   pos_hash_pr_cutoff,  
-                                                   (2*i), 
-                                                   1-pr_no_coverage_position_strand 
-                                                   )
-                                         : 0
-                                         );
-
-      if (verbose) cout << "Pos hash cutoffs: " << seq_id << " " << i << " " << pos_hash_cutoffs[seq_id][i] << endl;
-
-    }
-    
-    //distance_cutoffs[seq_id] = (pr_no_coverage_position_strand > 0) 
-    //                          ? qmissing(distance_pr_cutoff, pr_no_coverage_position_strand)
-    //                          : 0;
-    //if (verbose) cout << "Distance cutoff: " << seq_id << " " << distance_cutoffs[seq_id] << endl;
-
-
-  }
-  
-  // Load the trims @JEB could speed up by only loading this once in main and passing around
+  // Load the reference sequence trims, for writing resolved alignments
   SequenceTrimsList trims_list;
   read_trims(trims_list, ref_seq_info, settings.reference_trim_file_name);
   
-  // create junction trims
-  // directly from FASTA
+  // Create junction trims directly from FASTA
   SequenceTrimsList junction_trims_list;
   
   if (junction_prediction)
@@ -187,11 +138,12 @@ void resolve_alignments(
 		string junction_sam_file_name = settings.file_name(settings.candidate_junction_sam_file_name, "#", read_files[0].m_base_name);
 		tam_file junction_tam(junction_sam_file_name, settings.candidate_junction_fasta_file_name, ios::in);
 
+    junction_info_list.resize(junction_tam.bam_header->n_targets);
+    
 		for (int i = 0; i < junction_tam.bam_header->n_targets; i++) {
-			JunctionInfo ji(junction_tam.bam_header->target_name[i]);
-			junction_info_list.push_back(ji);
+			junction_info_list[i] = JunctionInfo(junction_tam.bam_header->target_name[i]);
 		}
-
+    if (verbose) cout << "Number of candidate junctions: " << junction_info_list.size() << endl;
 	}
 
 	//####
@@ -325,39 +277,37 @@ void resolve_alignments(
     
     JunctionInfo junction_info(junction_id);
     
+    // Test the best-scoring junction.
+    bool failed = false;  
+
     int32_t possible_overlap_positions = avg_read_length - 1 - abs(junction_info.alignment_overlap);
     uint32_t pos_hash_score_cutoff_1 = pos_hash_cutoffs[junction_info.sides[0].seq_id][possible_overlap_positions];
     uint32_t pos_hash_score_cutoff_2 = pos_hash_cutoffs[junction_info.sides[1].seq_id][possible_overlap_positions];
 
-    //int32_t distance_score_cutoff_1 = possible_overlap_positions - distance_cutoffs[junction_info.sides[0].seq_id];
-    //int32_t distance_score_cutoff_2 = possible_overlap_positions - distance_cutoffs[junction_info.sides[1].seq_id];
+    int32_t distance_score_cutoff_1 = possible_overlap_positions - distance_cutoffs[junction_info.sides[0].seq_id];
+    int32_t distance_score_cutoff_2 = possible_overlap_positions - distance_cutoffs[junction_info.sides[1].seq_id];
+        
     
-    // @JEB: OLD
-    // Test the best-scoring junction.
-    uint32_t junction_accept_score_cutoff_1 = static_cast<uint32_t>(summary.preprocess_coverage[junction_info.sides[0].seq_id].junction_accept_score_cutoff);
-    uint32_t junction_accept_score_cutoff_2 = static_cast<uint32_t>(summary.preprocess_coverage[junction_info.sides[1].seq_id].junction_accept_score_cutoff);
-    
-    bool failed = false;  
-    
-    // both score cutoffs might be zero - indicating these are missing contigs that are basically deleted
-    // always fail in this case
+    // Both pos_hash score cutoffs might be zero - indicating these are missing contigs 
+    // that are basically deleted. Always fail in this case.
     failed = failed || (pos_hash_score_cutoff_1 == 0); 
     failed = failed || (pos_hash_score_cutoff_2 == 0);
     
     failed = failed || ( junction_test_info.pos_hash_score < pos_hash_score_cutoff_1 );
     failed = failed || ( junction_test_info.pos_hash_score < pos_hash_score_cutoff_2 );
     
-    //failed = failed || ( junction_test_info.max_left < distance_score_cutoff_1 );
-    //failed = failed || ( junction_test_info.max_right < distance_score_cutoff_2 );
+    failed = failed || ( junction_test_info.max_left < distance_score_cutoff_1 );
+    failed = failed || ( junction_test_info.max_right < distance_score_cutoff_2 );
     
+    // Should fail other cases, but you can't be too careful.
     failed = failed || (junction_test_info.total_non_overlap_reads == 0);
     
     if (verbose) 
     {
       cout << "Testing Junction: " << junction_id << endl;
       cout << "  Pos hash score: " << junction_test_info.pos_hash_score << " [ " << pos_hash_score_cutoff_1 << " / " << pos_hash_score_cutoff_2 << " ]" << endl;
-//      cout << "  Distance score: " << junction_test_info.max_left << " | " << junction_test_info.max_right 
-//           << " [ " << distance_score_cutoff_1 << " / " << distance_score_cutoff_1 << " ]" << endl;
+      cout << "  Distance score: " << junction_test_info.max_left << " | " << junction_test_info.max_right 
+           << " [ " << distance_score_cutoff_1 << " / " << distance_score_cutoff_1 << " ]" << endl;
       cout << "  Number of unique matches: " << unique_junction_match_map[junction_id].size() << endl;
       size_t num_degenerate_matches = repeat_junction_match_map.count(junction_id) ? repeat_junction_match_map[junction_id].size() : 0;
       cout << "  Number of degenerate matches: " << num_degenerate_matches << endl;
@@ -384,8 +334,9 @@ void resolve_alignments(
     
     junction_test_info_list.pop_back();
     
-    // Re-score ones that might have changed due to removing repeat matches and
-    junction_test_info_list.sort();
+    // @JEB TODO: Re-score ones that might have changed due to removing repeat matches and re-sort
+    // to do this efficiently, we need a list of their junction id's to be passed back by resolve_junction
+    //junction_test_info_list.sort();
   }
     
   map<int32_t, int32_t> accepted_pos_hash_score_distribution;
@@ -454,14 +405,91 @@ void resolve_alignments(
 	}
 
   // Save summary statistics
-	summary.alignment_correction.new_junctions.observed_pos_hash_score_distribution = observed_pos_hash_score_distribution;
-	summary.alignment_correction.new_junctions.accepted_pos_hash_score_distribution = accepted_pos_hash_score_distribution;
+	summary.alignment_resolution.observed_pos_hash_score_distribution = observed_pos_hash_score_distribution;
+	summary.alignment_resolution.accepted_pos_hash_score_distribution = accepted_pos_hash_score_distribution;
 
   // Write the genome diff file
 	gd.write(settings.jc_genome_diff_file_name);
 }
+  
+  
+/*! Passes back calculated values as part of summary
+ */
+void calculate_cutoffs(const Settings& settings, Summary& summary, cReferenceSequences& ref_seq_info)
+{
+  bool verbose = false;
+  
+  // distance from read end that must be achieved to pass threshold for different overlap values
+  // int32_t max_read_length = summary.sequence_conversion.max_read_length;
+  int32_t avg_read_length = round(summary.sequence_conversion.avg_read_length);
+  if (verbose) cout << "Average read length: " << avg_read_length << endl;
+  
+  map<string,int32_t> distance_cutoffs;
+  storable_map<string, storable_vector<int32_t> > pos_hash_cutoffs;
+  
+  for(vector<cAnnotatedSequence>::iterator it = ref_seq_info.begin(); it != ref_seq_info.end(); it++) {
+    const string& seq_id = it->m_seq_id;
     
+    uint32_t sequence_length = ref_seq_info[seq_id].m_length;
+    
+    double distance_pr_cutoff = sqrt(settings.junction_accept_pr / static_cast<double>(sequence_length));
+    double pos_hash_pr_cutoff = settings.junction_accept_pr;
+    //double pos_hash_pr_cutoff = sqrt(settings.junction_accept_pr / static_cast<double>(sequence_length));
+    
+    double pr_no_coverage_position_strand = summary.error_count[seq_id].no_pos_hash_per_position_pr;    
+    if (verbose) cout << pr_no_coverage_position_strand << endl;
+    if (verbose) cout << "Probability of read starting at position: " << seq_id << " " << (static_cast<double>(1.0)-pr_no_coverage_position_strand) << endl;
+      
+    if (verbose) cout << "deletion_coverage_propagation_cutoff " << summary.preprocess_coverage[seq_id].deletion_coverage_propagation_cutoff << endl;
+    if (verbose) cout << "nbinom_mean_parameter " << summary.preprocess_coverage[seq_id].nbinom_mean_parameter << endl;
+    
+    double pr_coverage_position_strand = (static_cast<double>(1.0)-pr_no_coverage_position_strand);
+    
+    
+    double junction_coverage_cutoff = summary.preprocess_coverage[seq_id].junction_coverage_cutoff;
+    if (verbose) cout << "Junction coverage cutoff: " << seq_id << " " << junction_coverage_cutoff << endl;
+    
+    double average = summary.preprocess_coverage[seq_id].average;
+    if (verbose) cout << "Average coverage: " << seq_id << " " << average << endl;
+    
+    double adjusted_pr_no_coverage_position_strand = -1;
+    if (pr_no_coverage_position_strand > 0) {
+      adjusted_pr_no_coverage_position_strand = exp((junction_coverage_cutoff / average) * log(pr_no_coverage_position_strand));
+    }
+    pr_no_coverage_position_strand = adjusted_pr_no_coverage_position_strand;
+    if (verbose) cout << "Adjusted coverage cutoff: " << seq_id << " " << adjusted_pr_no_coverage_position_strand << endl;
+    
+    for(int32_t i = 0; i <= summary.sequence_conversion.avg_read_length-1; i++) {
+      Coverage& cov = summary.preprocess_coverage[seq_id];
+      
+      // pr_no_coverage_position_strand can be -1 if the fit failed, assign a value of zero for this case
+      pos_hash_cutoffs[seq_id].push_back( 
+                                         (pr_no_coverage_position_strand > 0) &&  (pr_no_coverage_position_strand < 1)
+                                         ? qbinomial(
+                                                     pos_hash_pr_cutoff,  
+                                                     (2*i), 
+                                                     1-pr_no_coverage_position_strand 
+                                                     )
+                                         : 0
+                                         );
+      
+      if (verbose) cout << "Pos hash cutoffs: " << seq_id << " " << i << " " << pos_hash_cutoffs[seq_id][i] << endl;
+      
+    }
+    
+    distance_cutoffs[seq_id] = (pr_no_coverage_position_strand > 0) &&  (pr_no_coverage_position_strand < 1)
+    ? qmissing(distance_pr_cutoff, pr_no_coverage_position_strand)
+    : 0;
+    if (verbose) cout << "Distance cutoff: " << seq_id << " " << distance_cutoffs[seq_id] << endl;
+    
+  }
 
+  // return values
+  summary.alignment_resolution.pos_hash_cutoffs = pos_hash_cutoffs;
+  summary.alignment_resolution.distance_cutoffs = distance_cutoffs;
+}
+
+    
 void load_junction_alignments(
                               const Settings& settings, 
                               Summary& summary, 
@@ -490,7 +518,7 @@ void load_junction_alignments(
     
     cerr << "  READ FILE:" << rf.m_base_name << endl;
     
-    map<string,int32_t> summary_info = make_map<string,int32_t>("unmatched_reads", 0);
+    Summary::AlignmentResolution::ReadFile summary_info;
     
     // Traverse the original fastq files to keep track of order
     // b/c some matches may exist in only one or the other file
@@ -611,7 +639,7 @@ void load_junction_alignments(
       // Record in the unmatched FASTQ data file
       if ((this_junction_alignments.size() == 0) && (this_reference_alignments.size() == 0))
       {
-        summary_info["unmatched_reads"]++;
+        summary_info.num_unmatched_reads++;
         out_unmatched_fastq.write_sequence(seq);
       }
       
@@ -711,7 +739,7 @@ void load_junction_alignments(
     } // End loop through every $read_struct
         
     // save statistics
-    summary.alignment_correction.read_file[read_files[0].m_base_name] = summary_info;
+    summary.alignment_resolution.read_file[read_files[fastq_file_index].m_base_name] = summary_info;
     
     // safe only because we know they are always or never used
     if (junction_tam != NULL) delete junction_tam;
@@ -882,10 +910,14 @@ void score_junction(
     ///
     
     // The left side goes exactly up to the flanking length
-		int32_t this_left = flanking_left + 1 - a->reference_start_1();
+    uint32_t reference_start_1 = a->reference_start_1(); //settings.base_quality_cutoff);
+    if (reference_start_1 == UNDEFINED_UINT32) continue;
+		int32_t this_left = flanking_left + 1 - reference_start_1;
     
 		// The right side starts after moving past any overlap (negative or positive)
-		int32_t this_right = a->reference_end_1() - flanking_left - abs(alignment_overlap);
+    uint32_t reference_end_1 = a->reference_end_1(); //settings.base_quality_cutoff);
+    if (reference_end_1 == UNDEFINED_UINT32) continue;
+		int32_t this_right = reference_end_1 - flanking_left - abs(alignment_overlap);
     
     // doesn't span 
     if ((this_right <= 0) || (this_left <= 0)) continue;
@@ -1426,7 +1458,7 @@ vector<string> get_sorted_junction_ids(
                                        const vector<string>& keys
                                        )
 {
-  bool verbose = true;
+  bool verbose = false;
   
   vector<VectorSize> vector_sizes;
   for (uint32_t i = 0; i < keys.size(); i++)

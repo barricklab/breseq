@@ -72,12 +72,14 @@ namespace breseq
 	class Coverage : public Storable
 	{
 			public:
-				double junction_accept_score_cutoff;
 				double deletion_coverage_propagation_cutoff;
 				double deletion_coverage_seed_cutoff;
-				double junction_coverage_cutoff;
-				double junction_keep_score_cutoff;
-        double pr_no_coverage_position_strand;
+        double junction_coverage_cutoff;
+
+        // Deprecated
+        //double junction_accept_score_cutoff;
+				//double junction_keep_score_cutoff;
+        //double pr_no_coverage_position_strand;
 				double nbinom_size_parameter;
 				double nbinom_mean_parameter;
 				double nbinom_prob_parameter;
@@ -87,12 +89,12 @@ namespace breseq
     
     void serialize(ofstream& f)
     {
-      write_to_file(f, junction_accept_score_cutoff);
       write_to_file(f, deletion_coverage_propagation_cutoff);
       write_to_file(f, deletion_coverage_seed_cutoff);
       write_to_file(f, junction_coverage_cutoff);
-      write_to_file(f, junction_keep_score_cutoff);
-      write_to_file(f, pr_no_coverage_position_strand);
+      //write_to_file(f, junction_accept_score_cutoff);
+      //write_to_file(f, junction_keep_score_cutoff);
+      //write_to_file(f, pr_no_coverage_position_strand);
       write_to_file(f, nbinom_size_parameter);
       write_to_file(f, nbinom_mean_parameter);
       write_to_file(f, nbinom_prob_parameter);
@@ -102,12 +104,12 @@ namespace breseq
     }
     void deserialize(ifstream& f)
     {
-      read_from_file(f, junction_accept_score_cutoff);
       read_from_file(f, deletion_coverage_propagation_cutoff);
       read_from_file(f, deletion_coverage_seed_cutoff);
       read_from_file(f, junction_coverage_cutoff);
-      read_from_file(f, junction_keep_score_cutoff);
-      read_from_file(f, pr_no_coverage_position_strand);
+      //read_from_file(f, junction_accept_score_cutoff);
+      //read_from_file(f, junction_keep_score_cutoff);
+      //read_from_file(f, pr_no_coverage_position_strand);
       read_from_file(f, nbinom_size_parameter);
       read_from_file(f, nbinom_mean_parameter);
       read_from_file(f, nbinom_prob_parameter);
@@ -148,8 +150,6 @@ namespace breseq
     
     string base_name() { return m_base_name; }
 	};
-
-	typedef vector<vector<cReadFile> > cReadFileGroup; // unused? delete? @JEB
 
 	class cReadFiles : public vector<cReadFile>
 	{
@@ -331,7 +331,7 @@ namespace breseq
 		string candidate_junction_done_file_name;
 		string candidate_junction_hash_file_name;
 		string candidate_junction_alignment_done_file_name;
-		string alignment_correction_summary_file_name;
+		string alignment_resolution_summary_file_name;
 		string alignment_correction_done_file_name;
 		string bam_path;
 		string reference_bam_unsorted_file_name;
@@ -647,31 +647,71 @@ namespace breseq
 	{
 	public:
 
-		class AlignmentCorrection : public Storable
+		class AlignmentResolution : public Storable
 		{
     public:
-			map<string, map<string, int32_t> > read_file;
-
-			struct NewJunction
-			{
-				map<int32_t, int32_t> observed_pos_hash_score_distribution;
-				map<int32_t, int32_t> accepted_pos_hash_score_distribution;
-			} new_junctions;
+      
+      // @JEB TODO: these statistics are not implemented
+      class ReadFile {
+      public:
+        uint32_t num_unmatched_reads;
+        uint32_t num_unique_reads;
+        uint32_t num_repeat_reads;
+        
+        ReadFile()
+        : num_unmatched_reads(0)
+        , num_unique_reads(0)
+        , num_repeat_reads(0)
+        {}
+        
+        void serialize(ofstream& f)
+        {
+          write_to_file(f, num_unmatched_reads);
+          write_to_file(f, num_unique_reads);
+          write_to_file(f, num_repeat_reads);
+        }
+        void deserialize(ifstream& f)
+        {
+          read_from_file(f, num_unmatched_reads);
+          read_from_file(f, num_unique_reads);
+          read_from_file(f, num_repeat_reads);
+        }
+        
+      };
+      storable_map<string,ReadFile> read_file;
+      uint32_t total_unmatched_reads;
+      uint32_t total_unique_reads;
+      uint32_t total_repeat_reads;
+      
+      // these statistics are implemented
+      
+      //! map by reference seq_id of number of bases from possible overlap
+      //! that will be accepted
+      map<string,int32_t> distance_cutoffs; 
+      //! map by reference seq_id, then list by non-overlap distance possible
+      //! of minimum pos hash score needed for accepting a junction
+      storable_map<string, storable_vector<int32_t> > pos_hash_cutoffs;   
+      map<int32_t, int32_t> observed_pos_hash_score_distribution;
+      map<int32_t, int32_t> accepted_pos_hash_score_distribution;
 
 			void serialize(ofstream& f)
 			{
-				write_to_file(f, read_file);
-				write_to_file(f, new_junctions.observed_pos_hash_score_distribution);
-				write_to_file(f, new_junctions.accepted_pos_hash_score_distribution);
+        read_file.serialize(f);
+        write_to_file(f, distance_cutoffs);
+				pos_hash_cutoffs.serialize(f);
+				write_to_file(f, observed_pos_hash_score_distribution);
+				write_to_file(f, accepted_pos_hash_score_distribution);
 			}
 			void deserialize(ifstream& f)
 			{
-				read_from_file(f, read_file);
-				read_from_file(f, new_junctions.observed_pos_hash_score_distribution);
-				read_from_file(f, new_junctions.accepted_pos_hash_score_distribution);
+        read_file.deserialize(f);
+        read_from_file(f, distance_cutoffs);
+        pos_hash_cutoffs.deserialize(f);
+				read_from_file(f, observed_pos_hash_score_distribution);
+				read_from_file(f, accepted_pos_hash_score_distribution);
 			}
 
-		} alignment_correction;
+		} alignment_resolution;
 
 		storable_map<string, Coverage> preprocess_coverage;
 		storable_map<string, Coverage> unique_coverage;
@@ -771,7 +811,7 @@ namespace breseq
 		{
       sequence_conversion.serialize(f);
       candidate_junction.serialize(f);
-      alignment_correction.serialize(f);
+      alignment_resolution.serialize(f);
       preprocess_coverage.serialize(f);
       unique_coverage.serialize(f);
       error_count.serialize(f);
@@ -781,7 +821,7 @@ namespace breseq
 		{
       sequence_conversion.deserialize(f);
       candidate_junction.deserialize(f);
-      alignment_correction.deserialize(f);
+      alignment_resolution.deserialize(f);
       preprocess_coverage.deserialize(f);
       unique_coverage.deserialize(f);
       error_count.deserialize(f);

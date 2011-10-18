@@ -82,67 +82,102 @@ uint32_t alignment_wrapper::trim_right() const {
     return 0;
   }
 }
-//			my $trimmed = 0;
-//			my $trim_left = $a->aux_get('XL');  
-//			my $trim_right = $a->aux_get('XR');
-//			$trimmed = 1 if ((defined $trim_left) && ($p->qpos+1 <= $trim_left));
-//			$trimmed = 1 if ((defined $trim_right) && ($a->query->length-$p->qpos <= $trim_right));
-//			
-//##also trimmed if up to next position and this is an indel.
-//			if ($indel != 0)
-//			{
-//#remember that qpos is 0-indexed
-//				$trimmed = 1 if ((defined $trim_left) && ($p->qpos+1 <= $trim_left)); #so this is position <1
-//				$trimmed = 1 if ((defined $trim_right) && ($a->query->length-($p->qpos+1)+1 <= $trim_right)); #this is position+1
-//			}
 
 
-std::pair<uint32_t,uint32_t> alignment_wrapper::query_bounds_0() const {
-  pair<uint32_t,uint32_t> qb = query_bounds_1();
-  qb.first--;
-  qb.second--;
+pair<uint32_t,uint32_t> alignment_wrapper::query_bounds_0(uint32_t min_qual) const {
+  pair<uint32_t,uint32_t> qb = query_bounds_1(min_qual);
+  if (qb.first != UNDEFINED_UINT32) qb.first--;
+  if (qb.second != UNDEFINED_UINT32) qb.second--;
   return qb;
 }
-void alignment_wrapper::query_bounds_0(uint32_t& start, uint32_t& end) const {
-	pair<uint32_t,uint32_t> qb = query_bounds_0();
+void alignment_wrapper::query_bounds_0(uint32_t& start, uint32_t& end, uint32_t min_qual) const {
+	pair<uint32_t,uint32_t> qb = query_bounds_0(min_qual);
 	start = qb.first;
 	end = qb.second;
 }
 
 /*! Retrieve the start and end coordinates of the aligned part of the read.
+ *  
+ *  returns {-1,-1} if the entire read has lower than min_qual
  */
-std::pair<uint32_t,uint32_t> alignment_wrapper::query_bounds_1() const {
+pair<uint32_t,uint32_t> alignment_wrapper::query_bounds_1(uint32_t min_qual) const {
   uint32_t* cigar = bam1_cigar(_a); // cigar array for this alignment
-	int32_t start=1, end=bam_cigar2qlen(&_a->core,cigar);
+	uint32_t start=1, end=bam_cigar2qlen(&_a->core,cigar);
 	
 	// start:
-  for(uint32_t i=0; i<=_a->core.n_cigar; i++) {
-    uint32_t op = cigar[i] & BAM_CIGAR_MASK;
-    uint32_t len = cigar[i] >> BAM_CIGAR_SHIFT;
+  uint32_t i;
+  uint32_t op;
+  uint32_t len;
+  for(i=0; i<=_a->core.n_cigar; i++) {
+    op = cigar[i] & BAM_CIGAR_MASK;
+    len = cigar[i] >> BAM_CIGAR_SHIFT;
     // if we encounter padding, or a gap in reference then we are done
     if((op != BAM_CSOFT_CLIP) && (op != BAM_CHARD_CLIP) && (op != BAM_CREF_SKIP)) {
 			break;
     }
     start += len;
   }
-	
+  
+  //move past low quality bases
+  if (min_qual) {
+    
+    for(; i<=_a->core.n_cigar; i++) {
+      
+      if((op != BAM_CSOFT_CLIP) && (op != BAM_CHARD_CLIP) && (op != BAM_CREF_SKIP) && (op != BAM_CINS)) {
+        for(uint32_t j=0; j<len; j++) {
+          if (read_base_quality_1(start+j) > min_qual) {
+            start = start + j;
+            goto finish_start;
+          }
+        }
+      }
+      start += len;
+      op = cigar[i] & BAM_CIGAR_MASK;
+      len = cigar[i] >> BAM_CIGAR_SHIFT;
+    }
+    finish_start: ;
+    
+    if (start == read_length())
+      return make_pair(UNDEFINED_UINT32,UNDEFINED_UINT32);
+  }
+  
 	// end:
-  for(uint32_t i=(_a->core.n_cigar-1); i>0; --i) {
-    uint32_t op = cigar[i] & BAM_CIGAR_MASK;
-    uint32_t len = cigar[i] >> BAM_CIGAR_SHIFT;    
+  for(i=_a->core.n_cigar-1; i>0; --i) {
+    op = cigar[i] & BAM_CIGAR_MASK;
+    len = cigar[i] >> BAM_CIGAR_SHIFT;    
     // if we encounter padding, or a gap in reference then we are done
-    if((op != BAM_CSOFT_CLIP) && (op != BAM_CHARD_CLIP) && (op != BAM_CREF_SKIP)) {
+    if((op != BAM_CSOFT_CLIP) && (op != BAM_CHARD_CLIP) && (op != BAM_CREF_SKIP) ) {
       break;
     }
     end -= len;
   }
+  
+  //move past low quality bases
+  if (min_qual) {
 
-	return std::make_pair(start,end);
+    for(; i>0; --i) {
+      
+      if((op != BAM_CSOFT_CLIP) && (op != BAM_CHARD_CLIP) && (op != BAM_CREF_SKIP) && (op != BAM_CINS)) {
+        for(uint32_t j=0; j<len; j++) {
+          if (read_base_quality_1(end-j) > min_qual) {
+            end = end-j;
+            goto finish_end;
+          }
+        }
+      }
+      end -= len;
+      op = cigar[i] & BAM_CIGAR_MASK;
+      len = cigar[i] >> BAM_CIGAR_SHIFT;
+    }
+  finish_end: ;
+  }
+
+	return make_pair(start,end);
 }
-void alignment_wrapper::query_bounds_1(uint32_t& start, uint32_t& end) const {
-	pair<uint32_t,uint32_t> qb = query_bounds_1();
-	start = (int32_t)qb.first;
-	end = (int32_t)qb.second;
+void alignment_wrapper::query_bounds_1(uint32_t& start, uint32_t& end, uint32_t min_qual) const {
+	pair<uint32_t,uint32_t> qb = query_bounds_1(min_qual);
+	start = qb.first;
+	end = qb.second;
 }
   
 /*! Retrieve the start and end coordinates of the aligned part of the read.
@@ -206,6 +241,116 @@ uint32_t alignment_wrapper::query_end_1() const {
   }
 	
   return pos;
+}
+  
+uint32_t alignment_wrapper::reference_start_0(uint32_t min_qual) const
+{
+  uint32_t start = _a->core.pos;
+  
+  if (min_qual) {
+    
+    uint32_t* cigar = bam1_cigar(_a); // cigar array for this alignment
+    
+    // start:
+    uint32_t i;
+    uint32_t op;
+    uint32_t len;
+    for(i=0; i<=_a->core.n_cigar; i++) {
+      op = cigar[i] & BAM_CIGAR_MASK;
+      len = cigar[i] >> BAM_CIGAR_SHIFT;
+      // if we encounter padding, or a gap in reference then we are done
+      if((op != BAM_CSOFT_CLIP) && (op != BAM_CHARD_CLIP) && (op != BAM_CREF_SKIP)) {
+        break;
+      }
+    }
+    
+    //move past low quality bases
+    for(; i<=_a->core.n_cigar; i++) {
+      
+      if((op != BAM_CSOFT_CLIP) && (op != BAM_CHARD_CLIP) && (op != BAM_CREF_SKIP) && (op != BAM_CDEL)) {
+        for(uint32_t j=0; j<len; j++) {
+          if (read_base_quality_1(start+j) > min_qual) {
+            start = start + j;
+            goto finish_start;
+          }
+        }
+      }
+      start += len;
+      op = cigar[i] & BAM_CIGAR_MASK;
+      len = cigar[i] >> BAM_CIGAR_SHIFT;
+    }
+  finish_start:
+    
+    // whole thing was below quality
+    if (i>_a->core.n_cigar)
+      return UNDEFINED_UINT32;
+  }
+  
+  return start; 
+}
+  
+uint32_t alignment_wrapper::reference_start_1(uint32_t min_qual) const
+{
+  uint32_t start = reference_start_0(min_qual);
+  if (start != UNDEFINED_UINT32) start++;
+  return start;
+}
+
+uint32_t alignment_wrapper::reference_end_0(uint32_t min_qual) const
+{ 
+  uint32_t end = reference_end_1(min_qual);
+  if (end != UNDEFINED_UINT32) end--;
+  return end; 
+}
+uint32_t alignment_wrapper::reference_end_1(uint32_t min_qual ) const
+{ 
+  uint32_t end = bam_calend(&_a->core, bam1_cigar(_a));
+  
+  if (min_qual) {
+    uint32_t query_pos_1 = read_length();
+    uint32_t* cigar = bam1_cigar(_a); // cigar array for this alignment
+
+    uint32_t i;
+    uint32_t op;
+    uint32_t len;
+    for(i=_a->core.n_cigar-1; i>0; --i) {
+      op = cigar[i] & BAM_CIGAR_MASK;
+      len = cigar[i] >> BAM_CIGAR_SHIFT;    
+      // if we encounter padding, or a gap in reference then we are done
+      if((op != BAM_CSOFT_CLIP) && (op != BAM_CHARD_CLIP) && (op != BAM_CREF_SKIP)) {
+        break;
+      }
+      query_pos_1 -=len;
+    }
+  
+  //move past low quality bases
+    
+    for(; i>0; --i) {
+      
+      if((op != BAM_CSOFT_CLIP) && (op != BAM_CHARD_CLIP) && (op != BAM_CREF_SKIP) && (op != BAM_CDEL)) {
+        for(uint32_t j=0; j<len; j++) {
+          if (read_base_quality_1(end-j) > min_qual) {
+            end = end-j;
+            goto finish_end;
+          }
+        }
+        end -= len;
+      }
+
+      op = cigar[i] & BAM_CIGAR_MASK;
+      len = cigar[i] >> BAM_CIGAR_SHIFT;
+    }
+  finish_end:
+
+    
+    // whole thing was below quality
+    if (i == 0)
+      return UNDEFINED_UINT32;
+  }
+
+  
+  
+  return end; 
 }
   
 /*uint32_t alignment::reference_end_0() const {

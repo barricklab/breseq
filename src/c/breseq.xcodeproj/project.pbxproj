@@ -124,7 +124,7 @@
 		7087728C12BC169C000F9B57 /* pileup_base.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; lineEnding = 0; name = pileup_base.cpp; path = breseq/pileup_base.cpp; sourceTree = SOURCE_ROOT; xcLanguageSpecificationIdentifier = xcode.lang.cpp; };
 		7087728D12BC169C000F9B57 /* pileup.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; lineEnding = 0; name = pileup.cpp; path = breseq/pileup.cpp; sourceTree = SOURCE_ROOT; xcLanguageSpecificationIdentifier = xcode.lang.cpp; };
 		708D62431390B1D5007FF13C /* resolve_alignments.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = resolve_alignments.cpp; path = breseq/resolve_alignments.cpp; sourceTree = SOURCE_ROOT; };
-		708FA5D6132578BE00864C40 /* cbreseq */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = cbreseq; sourceTree = BUILT_PRODUCTS_DIR; };
+		708FA5D6132578BE00864C40 /* breseq */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = breseq; sourceTree = BUILT_PRODUCTS_DIR; };
 		708FA5DA132578BE00864C40 /* libbreseq.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; includeInIndex = 0; path = libbreseq.a; sourceTree = BUILT_PRODUCTS_DIR; };
 		7092FAF1140AC70200DDECA2 /* coverage_output.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = coverage_output.cpp; path = breseq/coverage_output.cpp; sourceTree = SOURCE_ROOT; };
 		70A8364C13477AAE0037F8DE /* alignment_output.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; lineEnding = 0; name = alignment_output.cpp; path = breseq/alignment_output.cpp; sourceTree = SOURCE_ROOT; xcLanguageSpecificationIdentifier = xcode.lang.cpp; };
@@ -203,7 +203,7 @@
 		421ACF301170DF1800C2EB85 /* Products */ = {
 			isa = PBXGroup;
 			children = (
-				708FA5D6132578BE00864C40 /* cbreseq */,
+				708FA5D6132578BE00864C40 /* breseq */,
 				708FA5DA132578BE00864C40 /* libbreseq.a */,
 			);
 			name = Products;
@@ -348,7 +348,7 @@
 			);
 			name = breseq_cmdline;
 			productName = error_count;
-			productReference = 708FA5D6132578BE00864C40 /* cbreseq */;
+			productReference = 708FA5D6132578BE00864C40 /* breseq */;
 			productType = "com.apple.product-type.tool";
 		};
 		42BA690B1189B7FD000B00B1 /* breseq */ = {
@@ -534,7 +534,7 @@
 			baseConfigurationReference = 70B69E091369E51E0001B750 /* Debug.xcconfig */;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
-				ARCHS = "$(NATIVE_ARCH_ACTUAL)";
+				ARCHS = "$(ONLY_ACTIVE_ARCH_PRE_XCODE_3_1)";
 				COPY_PHASE_STRIP = NO;
 				CPPFLAGS = "$(CPPFLAGS) -DDATADIR=\"../etc\"";
 				GCC_DYNAMIC_NO_PIC = NO;
@@ -548,9 +548,9 @@
 				LIBRARY_SEARCH_PATHS = "$(value)";
 				LIBRARY_SEARCH_PATHS_QUOTED_FOR_TARGET_1 = "";
 				LIBRARY_SEARCH_PATHS_QUOTED_FOR_TARGET_2 = "";
-				ONLY_ACTIVE_ARCH = YES;
+				ONLY_ACTIVE_ARCH_PRE_XCODE_3_1 = "$(NATIVE_ARCH_64)";
 				PREBINDING = NO;
-				PRODUCT_NAME = cbreseq;
+				PRODUCT_NAME = breseq;
 				USER_HEADER_SEARCH_PATHS = "";
 			};
 			name = Debug;
@@ -560,7 +560,8 @@
 			baseConfigurationReference = 70B69E0A1369E51E0001B750 /* Release.xcconfig */;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
-				ARCHS = "$(NATIVE_ARCH_ACTUAL)";
+				ARCHS = "$(ARCHS_STANDARD_64_BIT_PRE_XCODE_3_1)";
+				ARCHS_STANDARD_64_BIT_PRE_XCODE_3_1 = x86_64;
 				COPY_PHASE_STRIP = YES;
 				CPPFLAGS = "$(CPPFLAGS) -DDATADIR=\"../etc\"";
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
@@ -573,8 +574,9 @@
 				LIBRARY_SEARCH_PATHS = "$(value)";
 				LIBRARY_SEARCH_PATHS_QUOTED_FOR_TARGET_1 = "";
 				LIBRARY_SEARCH_PATHS_QUOTED_FOR_TARGET_2 = "";
+				ONLY_ACTIVE_ARCH = NO;
 				PREBINDING = NO;
-				PRODUCT_NAME = cbreseq;
+				PRODUCT_NAME = breseq;
 				USER_HEADER_SEARCH_PATHS = "";
 				ZERO_LINK = NO;
 			};

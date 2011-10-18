@@ -29,6 +29,8 @@
 ##   junction_max_score=float
 ##   plot_poisson=0 or 1
 ##   pdf_output=0 or 1
+##   pos_hash_e_value_file=0 or 1
+
 
 plot_poisson = 0;
 pdf_output = 1;
@@ -87,10 +89,8 @@ if (nrow(X) == 0)
   
   print(deletion_propagation_coverage)
   print(junction_coverage_cutoff)
-  print(junction_accept_coverage_cutoff)
-  print(junction_keep_coverage_cutoff)
-
-  print (chance_of_no_coverage_position_strand)
+  #print(junction_accept_coverage_cutoff)
+  #print(junction_keep_coverage_cutoff)
   
   q()
 }
@@ -147,11 +147,9 @@ if (start_i == end_i)
   
   print(deletion_propagation_coverage)
   print(junction_coverage_cutoff)
-  print(junction_accept_coverage_cutoff)
-  print(junction_keep_coverage_cutoff)
+  #print(junction_accept_coverage_cutoff)
+  #print(junction_keep_coverage_cutoff)
   
-  print(chance_of_no_coverage_position_strand)
-
   q()
 }
 
@@ -187,6 +185,7 @@ for (i in start_i:end_i)
 	inner_total = inner_total + X$n[i]; 
 }
 total_total<-sum(X$n);
+
 
 f_nb <- function(par) {
 
@@ -377,11 +376,9 @@ if (nb_fit_size != 0)
   
 
   ## not entirely convinced dividing mu by the number of possible pos_hash scores is right here
-  junction_accept_coverage_cutoff = qbinom(junction_accept_pr_cutoff, junction_max_score, 1-pnbinom(0, size = nb_fit_size/junction_max_score, mu = nb_fit_mu/junction_max_score))
-  junction_keep_coverage_cutoff = qbinom(junction_keep_pr_cutoff, junction_max_score, 1-pnbinom(0,size = nb_fit_size/junction_max_score, mu = nb_fit_mu/junction_max_score))
-
-  #chance_of_no_coverage_position_strand = 1-pnbinom(0, size = nb_fit_size/junction_coverage_cutoff, mu = nb_fit_mu/junction_coverage_cutoff);
-  chance_of_no_coverage_position_strand = 1-pnbinom(0, size = nb_fit_size/junction_max_score, mu = nb_fit_mu/junction_max_score);
+  ## update - it isn't! we can't just divide to get this distribution, must be calculated out
+  #junction_accept_coverage_cutoff = qbinom(junction_accept_pr_cutoff, junction_max_score, 1-pnbinom(0, size = nb_fit_size/junction_max_score, mu = nb_fit_mu/junction_max_score))
+  #junction_keep_coverage_cutoff = qbinom(junction_keep_pr_cutoff, junction_max_score, 1-pnbinom(0,size = nb_fit_size/junction_max_score, mu = nb_fit_mu/junction_max_score))
 
 }
 
@@ -397,9 +394,7 @@ print(D)
 
 print(deletion_propagation_coverage)
 print(junction_coverage_cutoff)
-print(junction_accept_coverage_cutoff)
-print(junction_keep_coverage_cutoff)
-
-print(chance_of_no_coverage_position_strand)
+#print(junction_accept_coverage_cutoff)
+#print(junction_keep_coverage_cutoff)
 
 warnings()

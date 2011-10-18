@@ -100,6 +100,8 @@ namespace breseq
     void store(string filename)
     {
       ofstream outfile(filename.c_str());
+      assert(!outfile.fail());
+      //ASSERT(!outfile.fail(), "Error storing in file: " + filename);
       serialize(outfile);
       outfile.close();    
     }
@@ -107,6 +109,8 @@ namespace breseq
     void retrieve(string filename)
     {
       ifstream infile(filename.c_str());
+      assert(!infile.fail());
+      //ASSERT(!infile.fail(), "Error retrieving from file: " + filename);
       deserialize(infile);
       infile.close();
     }
@@ -115,6 +119,7 @@ namespace breseq
 		template<typename T, typename U> static void store(map<T,U>& input, string filename)
 		{
 			ofstream outfile(filename.c_str());
+      outfile << setprecision(10) << scientific;
 			write_to_file(outfile, input);
 			outfile.close();
 		}
@@ -130,7 +135,7 @@ namespace breseq
 	}; // class Storable
 
   
-  template <typename T,typename U> class storable_map : public map<T,U>, public Storable 
+  template <typename T,typename U> class storable_map : public Storable, public map<T,U>
   {
   public: 
     void serialize(ofstream& outfile)
@@ -155,6 +160,33 @@ namespace breseq
 				U u;
         u.deserialize(infile);
 				map<T,U>::insert(pair<T,U>(t,u));
+			}
+		}
+    
+  };
+  
+  template <typename T> class storable_vector : public Storable, public vector<T> 
+  {
+  public: 
+    
+    void serialize(ofstream& outfile)
+		{
+			uint32_t elements = vector<T>::size();
+			write_to_file<uint32_t>(outfile, elements);
+			for (typename vector<T>::iterator it = vector<T>::begin(); it != vector<T>::end(); it++)
+			{
+				write_to_file(outfile, *it);
+			}
+		}
+		void deserialize(ifstream& infile)
+		{
+			uint32_t size;
+			read_from_file(infile, size);
+      vector<T>::resize(size);
+			for (uint32_t i = 0; i < size; i++)
+			{
+				T t; read_from_file(infile, t);
+				(*this)[i] = t;
 			}
 		}
     

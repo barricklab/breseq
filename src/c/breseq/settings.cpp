@@ -471,7 +471,7 @@ namespace breseq
 		if (this->base_output_path.size() > 0) this->alignment_correction_path = this->base_output_path + "/" + this->alignment_correction_path;
 		this->resolved_reference_sam_file_name = this->alignment_correction_path + "/reference.sam";
 		this->resolved_junction_sam_file_name = this->alignment_correction_path + "/junction.sam";
-		this->alignment_correction_summary_file_name = this->alignment_correction_path + "/summary.bin";
+		this->alignment_resolution_summary_file_name = this->alignment_correction_path + "/summary.bin";
 		this->alignment_correction_done_file_name = this->alignment_correction_path + "/alignment_resolution.done";
 		this->jc_genome_diff_file_name = this->alignment_correction_path + "/jc_evidence.gd";
 

@@ -170,7 +170,8 @@ namespace breseq {
     string reference_fasta_file_name = settings.reference_fasta_file_name;
     
     tam_file BSAM(preprocess_junction_best_sam_file_name, reference_fasta_file_name, ios_base::out);
-    
+    uint32_t i = 0;
+
 		for (uint32_t index = 0; index < settings.read_files.size(); index++)
 		{
 			cReadFile read_file = settings.read_files[index];
@@ -184,7 +185,6 @@ namespace breseq {
       tam_file PSAM(preprocess_junction_split_sam_file_name, reference_fasta_file_name, ios_base::out);
       
 			alignment_list alignments;
-			uint32_t i = 0;
 			while (tam.read_alignments(alignments, false))
 			{
 				if (++i % 10000 == 0)
