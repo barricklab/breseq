@@ -933,7 +933,9 @@ int do_mutate(int argc, char *argv[])
   AnyOption options("Usage: -g <file.gd> -r <reference.gbk>");
   options("genomediff,g", "genome diff file");
   options("reference,r",".gbk reference sequence file");
-  options("output,o","output FASTA file", "output.fasta");
+  options("fasta,f","output FASTA file", "output.fasta");
+  options("gff3,3","output GFF3 file", "output.gff3");
+  options("verbose,v","Verbose Mode (Flag)", TAKES_NO_ARGUMENT);
   options.processCommandArgs(argc, argv);
   
   if (!options.count("genomediff") ||
@@ -945,9 +947,10 @@ int do_mutate(int argc, char *argv[])
   genome_diff gd(options["genomediff"]);
   cReferenceSequences ref_seq_info;
   ref_seq_info.LoadFiles(from_string<vector<string> >(options["reference"]));
-  cReferenceSequences new_ref_seq_info = gd.apply_to_sequences(ref_seq_info);
+  cReferenceSequences new_ref_seq_info = gd.apply_to_sequences(ref_seq_info, options.count("verbose"));
   
-  new_ref_seq_info.WriteFASTA(options["output"]);
+  new_ref_seq_info.WriteFASTA(options["fasta"], options.count("verbose"));
+  new_ref_seq_info.WriteGFF(options["gff3"], options.count("verbose"));
   
   return 0;
 }
@@ -1797,7 +1800,6 @@ int breseq_default_action(int argc, char* argv[])
   return 0;
 }
 
-
 /*! breseq commands
  
     First argument is a command that should be removed from argv.
@@ -1857,7 +1859,7 @@ int main(int argc, char* argv[]) {
   } else if (command == "BAM2COV") {
     return do_bam2cov( argc_new, argv_new);    
   } else if ((command == "APPLY") || (command == "MUTATE")) {
-    return do_mutate(argc_new, argv_new);
+    return do_mutate(argc_new, argv_new);      
   } else {
     // Not a sub-command. Use original argument list.
     return breseq_default_action(argc, argv);
