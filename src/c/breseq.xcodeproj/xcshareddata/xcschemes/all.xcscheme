@@ -36,7 +36,7 @@
       displayScale = "1.00"
       launchStyle = "0"
       useCustomWorkingDirectory = "YES"
-      customWorkingDirectory = "/Users/Alex/Campylobacter"
+      customWorkingDirectory = "/Users/jbarrick/tmp/JEB807_KL-01_t550"
       buildConfiguration = "Debug">
       <BuildableProductRunnable>
          <BuildableReference
@@ -58,9 +58,20 @@
          </CommandLineArgument>
          <CommandLineArgument
             argument = "CONTINGENCY_LOCI --bam 62GAVAAXX_5_GTCT_11168_p1_pool_pf/data/SortedReferenceSmalt.bam --fasta 62GAVAAXX_5_GTCT_11168_p1_pool_pf/data/reference.fasta --output out.txt --loci cloci.txt --strict"
+            isEnabled = "NO">
+         </CommandLineArgument>
+         <CommandLineArgument
+            argument = "-o JEB807_KL-01_t550 -r REL606.gbk 6246LAAXX_1_1_pf_ATAT.fastq 6246LAAXX_2_1_pf_ATAT.fastq 6246LAAXX_3_1_pf_ATAT.fastq"
             isEnabled = "YES">
          </CommandLineArgument>
       </CommandLineArguments>
+      <EnvironmentVariables>
+         <EnvironmentVariable
+            key = "PATH"
+            value = "/opt/local/bin:$HOME/local/bin:$PATH"
+            isEnabled = "YES">
+         </EnvironmentVariable>
+      </EnvironmentVariables>
       <AdditionalOptions>
       </AdditionalOptions>
    </LaunchAction>

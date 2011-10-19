@@ -1209,7 +1209,6 @@ int breseq_default_action(int argc, char* argv[])
   // 04 alignment_correction
 	// * Resolve matches to new junction candidates
 	//
-	string alignment_resolution_summary_file_name = settings.alignment_resolution_summary_file_name;
 	if (settings.do_step(settings.alignment_correction_done_file_name, "Resolving alignments with candidate junctions"))
 	{
 		create_path(settings.alignment_correction_path);
@@ -1238,7 +1237,7 @@ int breseq_default_action(int argc, char* argv[])
 		settings.done_step(settings.alignment_correction_done_file_name);
 	}
   
-	if (file_exists(alignment_resolution_summary_file_name.c_str()))
+	if (file_exists(settings.alignment_resolution_summary_file_name.c_str()))
     summary.alignment_resolution.retrieve(settings.alignment_resolution_summary_file_name);
   
 	//

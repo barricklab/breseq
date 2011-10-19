@@ -281,6 +281,8 @@ void resolve_alignments(
     bool failed = false;  
 
     int32_t possible_overlap_positions = avg_read_length - 1 - abs(junction_info.alignment_overlap);
+    ASSERT(possible_overlap_positions > 0, "Possible overlap positions <= 0");
+    
     uint32_t pos_hash_score_cutoff_1 = pos_hash_cutoffs[junction_info.sides[0].seq_id][possible_overlap_positions];
     uint32_t pos_hash_score_cutoff_2 = pos_hash_cutoffs[junction_info.sides[1].seq_id][possible_overlap_positions];
 
@@ -971,7 +973,7 @@ void score_junction(
   
   // UPDATE REDUNDANCY
   // =================
-  // If all the matches were degenerate, then at least one of the sides of this junction
+  // If all the matches were to repeats, then at least one of the sides of this junction
   // needs to be marked as newly degenerate. Even through the whole junction sequences were
   // unique, no reads extended far enough to disambiguate between them
   
@@ -981,9 +983,10 @@ void score_junction(
 
   map<uint32_t,bool> repeat_junction_tid_map;
 
-  if (!unique_matches) {
+  if (!unique_matches && repeat_matches) {
 
-    for (uint32_t i = 0; i < items.size(); i++) // READ (loops over unique_matches, degenerate_matches)
+    // READ (loops over repeats matches)
+    for (uint32_t i = 0; i < items.size(); i++) 
     {
       JunctionMatchPtr& item = items[i];
       
