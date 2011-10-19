@@ -25,6 +25,213 @@ namespace breseq {
   
   const string BULL_DUMMY_SEQ_ID = "__BULL_DUMMY_SEQ_ID__";
   
+  // Replace Sequence with Input
+  void cAnnotatedSequence::replace_sequence_1(uint32_t start_1, uint32_t end_1, const string &replacement_seq, string mut_type, bool verbose)
+  {
+    ASSERT(start_1 <= end_1, "start (" + to_string(start_1) + ") not less than or equal to end (" + to_string(end_1) + ")");
+    m_fasta_sequence.m_sequence.replace(start_1-1, end_1-start_1+1, replacement_seq);
+    
+    //Temporary variable for the amount to shift the start and end positions
+    // Example:
+    //   If we're replacing positions 5 and 6, we need to potentially shift  
+    //   position 7 down by 2 even though the difference between 5 and 6 is 1.
+    //   This is why we add 1.  We also need to take the new replacement
+    //   length into account.
+    int32_t shift = (end_1-start_1 + 1) - replacement_seq.length();
+    
+    //Modify the length of the sequence
+    m_length -= shift;
+    
+    //Iterate through all the features
+    for (vector<cSequenceFeaturePtr>::iterator it = m_features.begin(); it != m_features.end(); it++)
+    {
+      //The current feature we're looking at
+      cSequenceFeature& feat = **it;
+      
+      //Capture the ID of the feature
+      string ident;
+      
+      //If we're in verbose mode, set the ident string to the feature ID
+      if(verbose)
+      {                        
+        //Iterate through the attributes, and find the ID
+        for (map<string,vector<string> >::const_iterator itr = feat.m_gff_attributes.begin(); itr != feat.m_gff_attributes.end(); itr++)
+        {
+          //Is this the ID?
+          if(itr->first == "ID")
+          {
+            //Grab the ID
+            const vector<string>& values = itr->second;
+            ident = values[0];
+            break;
+          }            
+        }
+      }
+      
+      //Does the feature start and end inside of the replacement?
+      if(feat.m_start >= start_1 && feat.m_end <= end_1)
+      {
+        //We'll also be checking other lists to see if they
+        //contain a copy of the current feature
+        vector<cSequenceFeaturePtr>::iterator gene_it;
+        vector<cSequenceFeaturePtr>::iterator repeat_it;
+        
+        //Is the feature in any extra lists?
+        //If so, annihilate it.
+        if(find_feature(m_genes, feat, gene_it)){m_genes.erase(gene_it);}
+        if(find_feature(m_repeats, feat, repeat_it)){m_repeats.erase(repeat_it);}
+        
+        //Remove the current feature
+        m_features.erase(it);
+        
+        //We just removed the current feauture, so the list size has
+        //decreased by 1.  Iterate back by one.
+        it--;
+        
+        //Notify the user of the action
+        if(verbose){cout << "REMOVED\t" << feat["type"] << "\t" << ident << endl;}
+      }
+      
+      //Does the feature end after the replacement starts?
+      else if(feat.m_end > start_1 && feat.m_end < end_1)
+      {
+        //Temporary variable for the new end position
+        uint32_t end_temp = start_1 - 1;
+        
+        //Notify the user of the action
+        if(verbose){cout << "MODIFY\t" << feat["type"]<< "\t" << ident << endl;}
+        
+        //Modify the end of the feature
+        feat.m_end = end_temp;
+        
+        //Modify the notes for this feature
+        feat.m_gff_attributes["Note"].push_back("Mutation from " + mut_type);
+      }
+      
+      //Everything that starts after the replacement starts needs to be shifted          
+      else if(feat.m_start > start_1)
+      {
+        //Does the feature start before the replacement ends?
+        if(feat.m_start < end_1)
+        {
+          //Temporary variable for the new start postion
+          uint32_t start_temp = end_1 + 1;
+          
+          //Notify the user of the action
+          if(verbose){cout << "MODIFY\t" << feat["type"] << "\t" << ident << endl;}
+          
+          //Modify the start of the feature
+          feat.m_start = start_temp;
+          
+          //Modify the notes for this feature
+          feat.m_gff_attributes["Note"].push_back("Mutation from " + mut_type);
+        }             
+        
+        //Is there any reason to shift?
+        if(shift)
+        {          
+          //Modify the both the start and end of the feature
+          feat.m_start -= shift;
+          feat.m_end -= shift;
+          
+          //Notify the user of the action
+          if(verbose){cout << "SHIFT\t" << feat["type"] << "\t" << ident << endl;}
+        }
+      }
+      
+      //Any feature the encompases the replaced sequence needs to be resized
+      else if(feat.m_start <= start_1 && feat.m_end >= end_1)
+      {                          
+        //Is there anything to modify?
+        if(shift)
+        {
+          //Temporary variable for the new end position
+          uint32_t end_temp = feat.m_end - shift;
+          
+          //Notify the user of the action
+          if(verbose){cout << "MODIFY\t" << feat["type"] << "\t" << ident << endl;}
+          
+          //Modify the just the end of the feature
+          feat.m_end = end_temp;
+          
+          //Modify the notes for this feature
+          feat.m_gff_attributes["Note"].push_back("Mutation from " + mut_type);
+        }
+      }
+    }
+  }
+  
+  // Inserts AFTER the input position
+  void cAnnotatedSequence::insert_sequence_1(uint32_t pos_1, const string &insertion_seq, string mut_type, bool verbose)
+  {
+    m_fasta_sequence.m_sequence.insert(pos_1, insertion_seq);
+    
+    //Variable for insertion length, only want to call the
+    //function once
+    uint32_t insert_length = insertion_seq.length();
+    
+    //Iterate through all the features
+    for (vector<cSequenceFeaturePtr>::iterator it = m_features.begin(); it != m_features.end(); it++)
+    {
+      //The current feature we're looking at
+      cSequenceFeature& feat = **it;
+      
+      //Capture the ID of the feature
+      string ident;
+      
+      //If we're in verbose mode, set the ident string to the feature ID
+      if(verbose)
+      {                        
+        //Iterate through the attributes, and find the ID
+        for (map<string,vector<string> >::const_iterator itr = feat.m_gff_attributes.begin(); itr != feat.m_gff_attributes.end(); itr++)
+        {
+          //Is this the ID?
+          if(itr->first == "ID")
+          {
+            //Grab the ID
+            const vector<string>& values = itr->second;
+            ident = values[0];
+            break;
+          }            
+        }
+      }
+      
+      //Does the feature end after the insertion?
+      //If it ends on the same postion, do nothing
+      //because we're adding it AFTER.
+      if(feat.m_end > pos_1)
+      {
+        //Does the feature start after the insertion?
+        //Starting on the same postion will mean we
+        //do NOT alter the start postion.
+        if(feat.m_start > pos_1)
+        {                
+          //Notify the user of the upcomming action
+          if(verbose){cout << "SHIFT\t" << feat["type"] << "\t" << ident << endl;};
+          
+          //Shift the entire feature down the line
+          feat.m_start += insert_length;
+          feat.m_end += insert_length;
+        }
+        else //If we can't move the start, only move the end.  This is a modification of the feature
+        {
+          //Temporary variable for the new end position
+          uint32_t end_temp = feat.m_end + insert_length;
+          
+          //Notify the user of the action
+          if(verbose){cout << "MODIFY\t" << feat["type"] << "\t" << ident << endl;}
+          
+          //Modify the end position
+          feat.m_end += insert_length;
+          
+          //Modify the notes for this feature
+          feat.m_gff_attributes["Note"].push_back("Mutation from " + mut_type);
+        }            
+      }
+    }
+  }
+
+  
   // Load a complete collection of files and verify that sufficient information was loaded
   void cReferenceSequences::LoadFiles(const vector<string>& file_names)
   {
@@ -310,19 +517,29 @@ namespace breseq {
 
   }
 
-  void cReferenceSequences::WriteFASTA(const std::string &file_name) {
+  void cReferenceSequences::WriteFASTA(const std::string &file_name, bool verbose) {
+    
+    if(verbose){cout << "Writing FASTA" << endl << "\t" << file_name << endl;};
     
     cFastaFile ff(file_name, ios_base::out);
     for(vector<cAnnotatedSequence>::iterator it_as = this->begin(); it_as < this->end(); it_as++) {
       ff.write_sequence(it_as->m_fasta_sequence);
     }
+    
+    if(verbose){cout << "\t**FASTA Complete**" << endl;};
+    
   }
 
-  void cReferenceSequences::WriteFASTA(cFastaFile& ff) {
+  void cReferenceSequences::WriteFASTA(cFastaFile& ff, bool verbose) {
 
+    if(verbose){cout << "Writing FASTA" << endl;};
+    
     for(vector<cAnnotatedSequence>::iterator it_as = this->begin(); it_as < this->end(); it_as++) {
       ff.write_sequence(it_as->m_fasta_sequence);
     }
+    
+    if(verbose){cout << "\t**FASTA Complete**" << endl;};
+    
   }
 
   /*! ReadGFF abides by the following format:
@@ -452,10 +669,18 @@ namespace breseq {
   
 /*! WriteGFF abides by the following format:
   http://www.sequenceontology.org/gff3.shtml !*/
-void cReferenceSequences::WriteGFF( const string &file_name ){
+void cReferenceSequences::WriteGFF( const string &file_name, bool verbose ){
 
   cFastaFile out(file_name.c_str(), ios_base::out);
   assert(!out.fail());
+    
+  //Notify the user of output
+  if(verbose)
+  {
+    cout << "Writing GFF3" << endl;
+    cout << "\t" << file_name << endl;
+  }
+    
   //! Step 1: Header
   out << "##gff-version 3" << endl;
 
@@ -524,6 +749,12 @@ void cReferenceSequences::WriteGFF( const string &file_name ){
     this->WriteFASTA(out);
   }
   out.close();
+    
+  //Notify the user of output
+  if(verbose)
+  {
+    cout << "\t**GFF3 Complete**" << endl;
+  }
 }
 
 void cReferenceSequences::ReadGenBank(const string& in_file_name) {
