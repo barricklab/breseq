@@ -534,11 +534,10 @@ void cReferenceSequences::WriteGFF( const string &file_name ){
       out << std::endl;
     }
   }
-  //! Step 3: Fasta
+  //! Step 3: Fasta, one command writes out all sequences
   out << "##FASTA" << endl;
-  for (vector<cAnnotatedSequence>::iterator it_as = this->begin(); it_as < this->end(); it_as++) {
-    this->WriteFASTA(out);
-  }
+  this->WriteFASTA(out);
+  
   out.close();
 }
 

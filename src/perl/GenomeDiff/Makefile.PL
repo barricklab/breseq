@@ -6,7 +6,6 @@ WriteMakefile
           'INSTALLDIRS' => 'site',
           'NAME' => 'GenomeDiff',
           'EXE_FILES' => [
-                           'bin/.DS_Store',
                            'bin/genomediff',
                            'bin/tree_utils'
                          ],

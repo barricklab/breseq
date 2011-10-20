@@ -171,7 +171,7 @@ namespace breseq
 		("output,o", "path to breseq output [current path]", ".")
 		("reference,r", "reference sequence in GenBank flatfile format (REQUIRED)")
     ("name,n", "human-readable name of sample/run for output [empty]", "")
-    ("junction-prediction,j", "predict new sequence junctions", TAKES_NO_ARGUMENT)
+    ("no-junction-prediction,j", "do not predict new sequence junctions", TAKES_NO_ARGUMENT)
     ("polymorphism-prediction,p", "predict polymorphic mutations", TAKES_NO_ARGUMENT)
     ("base-quality-cutoff,b", "ignore bases with quality scores lower than this value", "3")
     ("deletion-coverage-propagation-cutoff,u","value for coverage above which deletions are cutoff")

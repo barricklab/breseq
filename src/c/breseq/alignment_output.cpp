@@ -885,6 +885,9 @@ string alignment_output::html_alignment_line(const alignment_output::Alignment_B
     }     
   
     if (b == " ") b = "&nbsp;";
+    if (b == "–") b = "&#8209;"; //en-dash
+    if (b == "-") b = "&#8209;"; //hyphen
+
     if (color.empty())
     {
       color = "UN";
