@@ -1,4 +1,5 @@
 #include "libbreseq/common.h"
+#include "libbreseq/chisquare.h"
 
 namespace breseq {
 
@@ -111,6 +112,7 @@ namespace breseq {
   
   
 //#include "mconf.h"
+// USING UNK for DEFINES
 
   static double PI=
     3.14159265358979323846264338327950288419716939937510582097494459230781640628620899862803482534211706
@@ -138,87 +140,6 @@ namespace breseq {
 #define MAXGAM 171.624376956302725
   static double LOGPI = 1.14472988584940017414;
   
-#ifdef DEC
-  static unsigned short P[] = {
-    0035047,0162701,0146301,0005234,
-    0035634,0023437,0032065,0176530,
-    0036452,0137157,0047330,0122574,
-    0037103,0017310,0143041,0017232,
-    0037524,0066516,0162563,0164605,
-    0037775,0004671,0146237,0014222,
-    0040200,0000000,0000000,0000000
-  };
-  static unsigned short Q[] = {
-    0134302,0041724,0020006,0116565,
-    0035415,0072121,0044251,0025634,
-    0136222,0003447,0035205,0121114,
-    0036501,0107552,0154335,0104271,
-    0037022,0135717,0014776,0171471,
-    0137560,0034324,0165024,0037021,
-    0037222,0045046,0047151,0161213,
-    0040200,0000000,0000000,0000000
-  };
-#define MAXGAM 34.84425627277176174
-  static unsigned short LPI[4] = {
-    0040222,0103202,0043475,0006750,
-  };
-#define LOGPI *(double *)LPI
-#endif
-  
-#ifdef IBMPC
-  static unsigned short P[] = {
-    0x2153,0x3998,0xfcb8,0x3f24,
-    0xbfab,0xe686,0x84e3,0x3f53,
-    0x14b0,0xe9db,0x57cd,0x3f85,
-    0x23d3,0x18c4,0x63d9,0x3fa8,
-    0x7d31,0xdcae,0x8da9,0x3fca,
-    0xe312,0x3993,0xa137,0x3fdf,
-    0x0000,0x0000,0x0000,0x3ff0
-  };
-  static unsigned short Q[] = {
-    0xd3af,0x8400,0x487a,0xbef8,
-    0x2573,0x2915,0xae8a,0x3f41,
-    0xb44a,0xe750,0x40e4,0xbf72,
-    0xb117,0x5b1b,0x31ed,0x3f88,
-    0xde67,0xe33f,0x5779,0x3fa2,
-    0x87c2,0x9d42,0x071a,0xbfce,
-    0x3c51,0xc9cd,0x4944,0x3fb2,
-    0x0000,0x0000,0x0000,0x3ff0
-  };
-#define MAXGAM 171.624376956302725
-  static unsigned short LPI[4] = {
-    0xa1bd,0x48e7,0x50d0,0x3ff2,
-  };
-#define LOGPI *(double *)LPI
-#endif 
-  
-#ifdef MIEEE
-  static unsigned short P[] = {
-    0x3f24,0xfcb8,0x3998,0x2153,
-    0x3f53,0x84e3,0xe686,0xbfab,
-    0x3f85,0x57cd,0xe9db,0x14b0,
-    0x3fa8,0x63d9,0x18c4,0x23d3,
-    0x3fca,0x8da9,0xdcae,0x7d31,
-    0x3fdf,0xa137,0x3993,0xe312,
-    0x3ff0,0x0000,0x0000,0x0000
-  };
-  static unsigned short Q[] = {
-    0xbef8,0x487a,0x8400,0xd3af,
-    0x3f41,0xae8a,0x2915,0x2573,
-    0xbf72,0x40e4,0xe750,0xb44a,
-    0x3f88,0x31ed,0x5b1b,0xb117,
-    0x3fa2,0x5779,0xe33f,0xde67,
-    0xbfce,0x071a,0x9d42,0x87c2,
-    0x3fb2,0x4944,0xc9cd,0x3c51,
-    0x3ff0,0x0000,0x0000,0x0000
-  };
-#define MAXGAM 171.624376956302725
-  static unsigned short LPI[4] = {
-    0x3ff2,0x50d0,0x48e7,0xa1bd,
-  };
-#define LOGPI *(double *)LPI
-#endif 
-  
   /* Stirling's formula for the gamma function */
   static double STIR[5] = {
     7.87311395793093628397E-4,
@@ -229,59 +150,109 @@ namespace breseq {
   };
 #define MAXSTIR 143.01608
   static double SQTPI = 2.50662827463100050242E0;
-
-#if DEC
-  static unsigned short STIR[20] = {
-    0035516,0061622,0144553,0112224,
-    0135160,0131531,0037460,0165740,
-    0136057,0134460,0037242,0077270,
-    0036143,0107070,0156306,0027751,
-    0037252,0125252,0125252,0146064,
-  };
-#define MAXSTIR 26.77
-  static unsigned short SQT[4] = {
-    0040440,0066230,0177661,0034055,
-  };
-#define SQTPI *(double *)SQT
-#endif
-#if IBMPC
-  static unsigned short STIR[20] = {
-    0x7293,0x592d,0xcc72,0x3f49,
-    0x1d7c,0x27e6,0x166b,0xbf2e,
-    0x4fd7,0x07d4,0xf726,0xbf65,
-    0xc5fd,0x1b98,0x71c7,0x3f6c,
-    0x5986,0x5555,0x5555,0x3fb5,
-  };
-#define MAXSTIR 143.01608
-  static unsigned short SQT[4] = {
-    0x2706,0x1ff6,0x0d93,0x4004,
-  };
-#define SQTPI *(double *)SQT
-#endif
-#if MIEEE
-  static unsigned short STIR[20] = {
-    0x3f49,0xcc72,0x592d,0x7293,
-    0xbf2e,0x166b,0x27e6,0x1d7c,
-    0xbf65,0xf726,0x07d4,0x4fd7,
-    0x3f6c,0x71c7,0x1b98,0xc5fd,
-    0x3fb5,0x5555,0x5555,0x5986,
-  };
-#define MAXSTIR 143.01608
-  static unsigned short SQT[4] = {
-    0x4004,0x0d93,0x1ff6,0x2706,
-  };
-#define SQTPI *(double *)SQT
-#endif
+  static double LS2PI  =  0.91893853320467274178;
   
-  int sgngam = 0;
-  extern int sgngam;
-  extern double MAXLOG, MAXNUM, PI;
-#ifdef INFINITIES
-  extern double INFINITY;
-#endif
-#ifdef NANS
-  extern double NAN;
-#endif
+#define MAXLGM 2.556348e305
+  
+  /* A[]: Stirling's formula expansion of log gamma
+   * B[], C[]: log gamma function between 2 and 3
+   */
+  static double A[] = {
+    8.11614167470508450300E-4,
+    -5.95061904284301438324E-4,
+    7.93650340457716943945E-4,
+    -2.77777777730099687205E-3,
+    8.33333333333331927722E-2
+  };
+  static double B[] = {
+    -1.37825152569120859100E3,
+    -3.88016315134637840924E4,
+    -3.31612992738871184744E5,
+    -1.16237097492762307383E6,
+    -1.72173700820839662146E6,
+    -8.53555664245765465627E5
+  };
+  static double C[] = {
+    /* 1.00000000000000000000E0, */
+    -3.51815701436523470549E2,
+    -1.70642106651881159223E4,
+    -2.20528590553854454839E5,
+    -1.13933444367982507207E6,
+    -2.53252307177582951285E6,
+    -2.01889141433532773231E6
+  };
+  static double P0[5] = {
+    -5.99633501014107895267E1,
+    9.80010754185999661536E1,
+    -5.66762857469070293439E1,
+    1.39312609387279679503E1,
+    -1.23916583867381258016E0,
+  };
+  static double Q0[8] = {
+    /* 1.00000000000000000000E0,*/
+    1.95448858338141759834E0,
+    4.67627912898881538453E0,
+    8.63602421390890590575E1,
+    -2.25462687854119370527E2,
+    2.00260212380060660359E2,
+    -8.20372256168333339912E1,
+    1.59056225126211695515E1,
+    -1.18331621121330003142E0,
+  };
+  static double P1[9] = {
+    4.05544892305962419923E0,
+    3.15251094599893866154E1,
+    5.71628192246421288162E1,
+    4.40805073893200834700E1,
+    1.46849561928858024014E1,
+    2.18663306850790267539E0,
+    -1.40256079171354495875E-1,
+    -3.50424626827848203418E-2,
+    -8.57456785154685413611E-4,
+  };
+  static double Q1[8] = {
+    /*  1.00000000000000000000E0,*/
+    1.57799883256466749731E1,
+    4.53907635128879210584E1,
+    4.13172038254672030440E1,
+    1.50425385692907503408E1,
+    2.50464946208309415979E0,
+    -1.42182922854787788574E-1,
+    -3.80806407691578277194E-2,
+    -9.33259480895457427372E-4,
+  };
+  static double P2[9] = {
+    3.23774891776946035970E0,
+    6.91522889068984211695E0,
+    3.93881025292474443415E0,
+    1.33303460815807542389E0,
+    2.01485389549179081538E-1,
+    1.23716634817820021358E-2,
+    3.01581553508235416007E-4,
+    2.65806974686737550832E-6,
+    6.23974539184983293730E-9,
+  };
+  static double Q2[8] = {
+    /*  1.00000000000000000000E0,*/
+    6.02427039364742014255E0,
+    3.67983563856160859403E0,
+    1.37702099489081330271E0,
+    2.16236993594496635890E-1,
+    1.34204006088543189037E-2,
+    3.28014464682127739104E-4,
+    2.89247864745380683936E-6,
+    6.79019408009981274425E-9,
+  };
+  
+  static double MAXLOG =  7.09782712893383996732E2;
+  static double MINLOG = -7.451332191019412076235E2;
+  static double MACHEP =  1.11022302462515654042E-16;
+  static double MAXNUM =  1.79769313486231570815E308;
+  
+  static int sgngam = 0;  
+  static double big = 4.503599627370496e15;
+  static double biginv =  2.22044604925031308085e-16;
+  static double s2pi = 2.50662827463100050242E0;
 
   double polevl(double x, double coef[], int N )
   {
@@ -327,8 +298,7 @@ namespace breseq {
   /*                                          N
    * Evaluate polynomial when coefficient of x  is 1.0.
    * Otherwise same as polevl.
-   */
-  
+   */  
   double p1evl( double x, double coef[], int N )
   {
     double ans;
@@ -344,10 +314,7 @@ namespace breseq {
       while( --i );
     
     return( ans );
-  }
-
-  
-  
+  }  
   
   double gamma(double x)
   {
@@ -355,21 +322,7 @@ namespace breseq {
     int i;
     
     sgngam = 1;
-#ifdef NANS
-    if( isnan(x) )
-      return(x);
-#endif
-#ifdef INFINITIES
-#ifdef NANS
-    if( x == INFINITY )
-      return(x);
-    if( x == -INFINITY )
-      return(NAN);
-#else
-    if( !isfinite(x) )
-      return(x);
-#endif
-#endif
+    
     q = fabs(x);
     
     if( q > 33.0 )
@@ -451,158 +404,14 @@ namespace breseq {
     double pr = 1 / (exp((df/2.0)*log(2.0))*gamma(df/2.0)) * exp(((df/2.0)-1) * log(x)) * exp(-x/2.0);
     return pr;
   }
-
   
-  
-  /* A[]: Stirling's formula expansion of log gamma
-   * B[], C[]: log gamma function between 2 and 3
-   */
-  static double A[] = {
-    8.11614167470508450300E-4,
-    -5.95061904284301438324E-4,
-    7.93650340457716943945E-4,
-    -2.77777777730099687205E-3,
-    8.33333333333331927722E-2
-  };
-  static double B[] = {
-    -1.37825152569120859100E3,
-    -3.88016315134637840924E4,
-    -3.31612992738871184744E5,
-    -1.16237097492762307383E6,
-    -1.72173700820839662146E6,
-    -8.53555664245765465627E5
-  };
-  static double C[] = {
-    /* 1.00000000000000000000E0, */
-    -3.51815701436523470549E2,
-    -1.70642106651881159223E4,
-    -2.20528590553854454839E5,
-    -1.13933444367982507207E6,
-    -2.53252307177582951285E6,
-    -2.01889141433532773231E6
-  };
-  /* log( sqrt( 2*pi ) ) */
-  static double LS2PI  =  0.91893853320467274178;
-#define MAXLGM 2.556348e305
-  
-#ifdef DEC
-  static unsigned short A[] = {
-    0035524,0141201,0034633,0031405,
-    0135433,0176755,0126007,0045030,
-    0035520,0006371,0003342,0172730,
-    0136066,0005540,0132605,0026407,
-    0037252,0125252,0125252,0125132
-  };
-  static unsigned short B[] = {
-    0142654,0044014,0077633,0035410,
-    0144027,0110641,0125335,0144760,
-    0144641,0165637,0142204,0047447,
-    0145215,0162027,0146246,0155211,
-    0145322,0026110,0010317,0110130,
-    0145120,0061472,0120300,0025363
-  };
-  static unsigned short C[] = {
-    /*0040200,0000000,0000000,0000000*/
-    0142257,0164150,0163630,0112622,
-    0143605,0050153,0156116,0135272,
-    0144527,0056045,0145642,0062332,
-    0145213,0012063,0106250,0001025,
-    0145432,0111254,0044577,0115142,
-    0145366,0071133,0050217,0005122
-  };
-  /* log( sqrt( 2*pi ) ) */
-  static unsigned short LS2P[] = {040153,037616,041445,0172645,};
-#define LS2PI *(double *)LS2P
-#define MAXLGM 2.035093e36
-#endif
-  
-#ifdef IBMPC
-  static unsigned short A[] = {
-    0x6661,0x2733,0x9850,0x3f4a,
-    0xe943,0xb580,0x7fbd,0xbf43,
-    0x5ebb,0x20dc,0x019f,0x3f4a,
-    0xa5a1,0x16b0,0xc16c,0xbf66,
-    0x554b,0x5555,0x5555,0x3fb5
-  };
-  static unsigned short B[] = {
-    0x6761,0x8ff3,0x8901,0xc095,
-    0xb93e,0x355b,0xf234,0xc0e2,
-    0x89e5,0xf890,0x3d73,0xc114,
-    0xdb51,0xf994,0xbc82,0xc131,
-    0xf20b,0x0219,0x4589,0xc13a,
-    0x055e,0x5418,0x0c67,0xc12a
-  };
-  static unsigned short C[] = {
-    /*0x0000,0x0000,0x0000,0x3ff0,*/
-    0x12b2,0x1cf3,0xfd0d,0xc075,
-    0xd757,0x7b89,0xaa0d,0xc0d0,
-    0x4c9b,0xb974,0xeb84,0xc10a,
-    0x0043,0x7195,0x6286,0xc131,
-    0xf34c,0x892f,0x5255,0xc143,
-    0xe14a,0x6a11,0xce4b,0xc13e
-  };
-  /* log( sqrt( 2*pi ) ) */
-  static unsigned short LS2P[] = {
-    0xbeb5,0xc864,0x67f1,0x3fed
-  };
-#define LS2PI *(double *)LS2P
-#define MAXLGM 2.556348e305
-#endif
-  
-#ifdef MIEEE
-  static unsigned short A[] = {
-    0x3f4a,0x9850,0x2733,0x6661,
-    0xbf43,0x7fbd,0xb580,0xe943,
-    0x3f4a,0x019f,0x20dc,0x5ebb,
-    0xbf66,0xc16c,0x16b0,0xa5a1,
-    0x3fb5,0x5555,0x5555,0x554b
-  };
-  static unsigned short B[] = {
-    0xc095,0x8901,0x8ff3,0x6761,
-    0xc0e2,0xf234,0x355b,0xb93e,
-    0xc114,0x3d73,0xf890,0x89e5,
-    0xc131,0xbc82,0xf994,0xdb51,
-    0xc13a,0x4589,0x0219,0xf20b,
-    0xc12a,0x0c67,0x5418,0x055e
-  };
-  static unsigned short C[] = {
-    0xc075,0xfd0d,0x1cf3,0x12b2,
-    0xc0d0,0xaa0d,0x7b89,0xd757,
-    0xc10a,0xeb84,0xb974,0x4c9b,
-    0xc131,0x6286,0x7195,0x0043,
-    0xc143,0x5255,0x892f,0xf34c,
-    0xc13e,0xce4b,0x6a11,0xe14a
-  };
-  /* log( sqrt( 2*pi ) ) */
-  static unsigned short LS2P[] = {
-    0x3fed,0x67f1,0xc864,0xbeb5
-  };
-#define LS2PI *(double *)LS2P
-#define MAXLGM 2.556348e305
-#endif
-
-  
-  
-  
-  
-  /* Logarithm of gamma function */
-  
-  
+  /* Logarithm of gamma function */  
   double lgam(double x)
   {
     double p, q, u, w, z;
     int i;
     
     sgngam = 1;
-#ifdef NANS
-    if( isnan(x) )
-      return(x);
-#endif
-    
-#ifdef INFINITIES
-    if( !isfinite(x) )
-      return(INFINITY);
-#endif
     
     if( x < -34.0 )
     {
@@ -1063,11 +872,921 @@ namespace breseq {
 	{
 		double result;
 
-		assert(x >= 0 && v >= 1); // Domain error in ChiSquareDistribution
+		ASSERT((x >= 0) && (v >= 1), "Domain error in ChiSquareDistribution");
 		result = incompletegamma(v/2.0, x/2.0, false);
 		return result;
 	}
-
   
+  /*							nbdtr.c
+   *
+   *	Negative binomial distribution
+   *
+   *
+   *
+   * SYNOPSIS:
+   *
+   * int k, n;
+   * double p, y, nbdtr();
+   *
+   * y = nbdtr( k, n, p );
+   *
+   * DESCRIPTION:
+   *
+   * Returns the sum of the terms 0 through k of the negative
+   * binomial distribution:
+   *
+   *   k
+   *   --  ( n+j-1 )   n      j
+   *   >   (       )  p  (1-p)
+   *   --  (   j   )
+   *  j=0
+   *
+   * In a sequence of Bernoulli trials, this is the probability
+   * that k or fewer failures precede the nth success.
+   *
+   * The terms are not computed individually; instead the incomplete
+   * beta integral is employed, according to the formula
+   *
+   * y = nbdtr( k, n, p ) = incbet( n, k+1, p ).
+   *
+   * The arguments must be positive, with p ranging from 0 to 1.
+   *
+   * ACCURACY:
+   *
+   * Tested at random points (a,b,p), with p between 0 and 1.
+   *
+   *               a,b                     Relative error:
+   * arithmetic  domain     # trials      peak         rms
+   *    IEEE     0,100       100000      1.7e-13     8.8e-15
+   * See also incbet.c.
+   *
+   *      
+   * Cephes Math Library Release 2.8:  June, 2000
+   * Copyright 1984, 1987, 1995, 2000 by Stephen L. Moshier
+   */  
+  double nbdtrc(int k, int n, double p)
+  {
+    double dk, dn;
+    
+    ASSERT( ((p < 0.0) || (p > 1.0)) ||  (k < 0), "Domain error in nbdtrc" );
+    
+    dk = k+1;
+    dn = n;
+    return( incbet( dk, dn, 1.0 - p ) );
+  }  
+  
+  /*							nbdtr.c
+   *
+   *	Complemented negative binomial distribution
+   *
+   *
+   *
+   * SYNOPSIS:
+   *
+   * int k, n;
+   * double p, y, nbdtrc();
+   *
+   * y = nbdtrc( k, n, p );
+   *
+   * DESCRIPTION:
+   *
+   * Returns the sum of the terms k+1 to infinity of the negative
+   * binomial distribution:
+   *
+   *   inf
+   *   --  ( n+j-1 )   n      j
+   *   >   (       )  p  (1-p)
+   *   --  (   j   )
+   *  j=k+1
+   *
+   * The terms are not computed individually; instead the incomplete
+   * beta integral is employed, according to the formula
+   *
+   * y = nbdtrc( k, n, p ) = incbet( k+1, n, 1-p ).
+   *
+   * The arguments must be positive, with p ranging from 0 to 1.
+   *
+   * ACCURACY:
+   *
+   * Tested at random points (a,b,p), with p between 0 and 1.
+   *
+   *               a,b                     Relative error:
+   * arithmetic  domain     # trials      peak         rms
+   *    IEEE     0,100       100000      1.7e-13     8.8e-15
+   * See also incbet.c.
+   *      
+   * Cephes Math Library Release 2.8:  June, 2000
+   * Copyright 1984, 1987, 1995, 2000 by Stephen L. Moshier
+   */  
+  double nbdtr(int k, int n, double p)
+  {
+    double dk, dn;
+    
+    ASSERT( ((p < 0.0) || (p > 1.0)) ||  (k < 0), "Domain error in nbdtr" );
+    
+    dk = k+1;
+    dn = n;
+    return( incbet( dn, dk, p ) );
+  }  
+  
+  /*							nbdtr.c
+   *
+   *	Functional inverse of negative binomial distribution
+   *
+   *
+   *
+   * SYNOPSIS:
+   *
+   * int k, n;
+   * double p, y, nbdtri();
+   *
+   * p = nbdtri( k, n, y );
+   *
+   * DESCRIPTION:
+   *
+   * Finds the argument p such that nbdtr(k,n,p) is equal to y.
+   *
+   * ACCURACY:
+   *
+   * Tested at random points (a,b,y), with y between 0 and 1.
+   *
+   *               a,b                     Relative error:
+   * arithmetic  domain     # trials      peak         rms
+   *    IEEE     0,100       100000      1.5e-14     8.5e-16
+   * See also incbi.c.
+   *      
+   * Cephes Math Library Release 2.8:  June, 2000
+   * Copyright 1984, 1987, 1995, 2000 by Stephen L. Moshier
+   */  
+  double nbdtri(int k, int n, double p)
+  {
+    double dk, dn, w;
+        
+    ASSERT( ((p < 0.0) || (p > 1.0)) ||  (k < 0), "Domain error in nbdtri" );
+    
+    dk = k+1;
+    dn = n;
+    w = incbi( dn, dk, p );
+    return( w );
+  }
+  
+  /*							incbi()
+   *
+   *      Inverse of imcomplete beta integral
+   *
+   *
+   *
+   * SYNOPSIS:
+   *
+   * double a, b, x, y, incbi();
+   *
+   * x = incbi( a, b, y );
+   *
+   *
+   *
+   * DESCRIPTION:
+   *
+   * Given y, the function finds x such that
+   *
+   *  incbet( a, b, x ) = y .
+   *
+   * The routine performs interval halving or Newton iterations to find the
+   * root of incbet(a,b,x) - y = 0.
+   *
+   *
+   * ACCURACY:
+   *
+   *                      Relative error:
+   *                x     a,b
+   * arithmetic   domain  domain  # trials    peak       rms
+   *    IEEE      0,1    .5,10000   50000    5.8e-12   1.3e-13
+   *    IEEE      0,1   .25,100    100000    1.8e-13   3.9e-15
+   *    IEEE      0,1     0,5       50000    1.1e-12   5.5e-15
+   *    VAX       0,1    .5,100     25000    3.5e-14   1.1e-15
+   * With a and b constrained to half-integer or integer values:
+   *    IEEE      0,1    .5,10000   50000    5.8e-12   1.1e-13
+   *    IEEE      0,1    .5,100    100000    1.7e-14   7.9e-16
+   * With a = .5, b constrained to half-integer or integer values:
+   *    IEEE      0,1    .5,10000   10000    8.3e-11   1.0e-11
+   *
+   * Cephes Math Library Release 2.8:  June, 2000
+   * Copyright 1984, 1996, 2000 by Stephen L. Moshier
+   */  
+  double incbi(double aa, double bb, double yy0)
+  {
+    double a, b, y0, d, y, x, x0, x1, lgm, yp, di, dithresh, yl, yh, xt;
+    int i, rflg, dir, nflg;
+    
+    
+    i = 0;
+    if( yy0 <= 0 )
+      return(0.0);
+    if( yy0 >= 1.0 )
+      return(1.0);
+    x0 = 0.0;
+    yl = 0.0;
+    x1 = 1.0;
+    yh = 1.0;
+    nflg = 0;
+    
+    if( aa <= 1.0 || bb <= 1.0 )
+    {
+      dithresh = 1.0e-6;
+      rflg = 0;
+      a = aa;
+      b = bb;
+      y0 = yy0;
+      x = a/(a+b);
+      y = incbet( a, b, x );
+      goto ihalve;
+    }
+    else
+    {
+      dithresh = 1.0e-4;
+    }
+    /* approximation to inverse function */
+    
+    yp = -ndtri(yy0);
+    
+    if( yy0 > 0.5 )
+    {
+      rflg = 1;
+      a = bb;
+      b = aa;
+      y0 = 1.0 - yy0;
+      yp = -yp;
+    }
+    else
+    {
+      rflg = 0;
+      a = aa;
+      b = bb;
+      y0 = yy0;
+    }
+    
+    lgm = (yp * yp - 3.0)/6.0;
+    x = 2.0/( 1.0/(2.0*a-1.0)  +  1.0/(2.0*b-1.0) );
+    d = yp * sqrt( x + lgm ) / x
+    - ( 1.0/(2.0*b-1.0) - 1.0/(2.0*a-1.0) )
+    * (lgm + 5.0/6.0 - 2.0/(3.0*x));
+    d = 2.0 * d;
+    if( d < MINLOG )
+    {
+      x = 1.0;
+      goto under;
+    }
+    x = a/( a + b * exp(d) );
+    y = incbet( a, b, x );
+    yp = (y - y0)/y0;
+    if( fabs(yp) < 0.2 )
+      goto newt;
+    
+    /* Resort to interval halving if not close enough. */
+  ihalve:
+    
+    dir = 0;
+    di = 0.5;
+    for( i=0; i<100; i++ )
+    {
+      if( i != 0 )
+      {
+        x = x0  +  di * (x1 - x0);
+        if( x == 1.0 )
+          x = 1.0 - MACHEP;
+          if( x == 0.0 )
+          {
+            di = 0.5;
+            x = x0  +  di * (x1 - x0);
+            if( x == 0.0 )
+              goto under;
+          }
+        y = incbet( a, b, x );
+        yp = (x1 - x0)/(x1 + x0);
+        if( fabs(yp) < dithresh )
+          goto newt;
+        yp = (y-y0)/y0;
+        if( fabs(yp) < dithresh )
+          goto newt;
+      }
+      if( y < y0 )
+      {
+        x0 = x;
+        yl = y;
+        if( dir < 0 )
+        {
+          dir = 0;
+          di = 0.5;
+        }
+        else if( dir > 3 )
+          di = 1.0 - (1.0 - di) * (1.0 - di);
+          else if( dir > 1 )
+            di = 0.5 * di + 0.5; 
+            else
+              di = (y0 - y)/(yh - yl);
+              dir += 1;
+              if( x0 > 0.75 )
+              {
+                if( rflg == 1 )
+                {
+                  rflg = 0;
+                  a = aa;
+                  b = bb;
+                  y0 = yy0;
+                }
+                else
+                {
+                  rflg = 1;
+                  a = bb;
+                  b = aa;
+                  y0 = 1.0 - yy0;
+                }
+                x = 1.0 - x;
+                y = incbet( a, b, x );
+                x0 = 0.0;
+                yl = 0.0;
+                x1 = 1.0;
+                yh = 1.0;
+                goto ihalve;
+              }
+      }
+      else
+      {
+        x1 = x;
+        if( rflg == 1 && x1 < MACHEP )
+        {
+          x = 0.0;
+          goto done;
+        }
+        yh = y;
+        if( dir > 0 )
+        {
+          dir = 0;
+          di = 0.5;
+        }
+        else if( dir < -3 )
+          di = di * di;
+          else if( dir < -1 )
+            di = 0.5 * di;
+            else
+              di = (y - y0)/(yh - yl);
+              dir -= 1;
+              }
+    }
+    ASSERT(true, "Percision loss in incbi");
+    if( x0 >= 1.0 )
+    {
+      x = 1.0 - MACHEP;
+      goto done;
+    }
+    if( x <= 0.0 )
+    {
+    under:
+      ASSERT(true, "Underflow in incbi");
+      x = 0.0;
+      goto done;
+    }
+    
+  newt:
+    
+    if( nflg )
+      goto done;
+    nflg = 1;
+    lgm = lgam(a+b) - lgam(a) - lgam(b);
+    
+    for( i=0; i<8; i++ )
+    {
+      /* Compute the function at this point. */
+      if( i != 0 )
+        y = incbet(a,b,x);
+        if( y < yl )
+        {
+          x = x0;
+          y = yl;
+        }
+        else if( y > yh )
+        {
+          x = x1;
+          y = yh;
+        }
+        else if( y < y0 )
+        {
+          x0 = x;
+          yl = y;
+        }
+        else
+        {
+          x1 = x;
+          yh = y;
+        }
+      if( x == 1.0 || x == 0.0 )
+        break;
+      /* Compute the derivative of the function at this point. */
+      d = (a - 1.0) * log(x) + (b - 1.0) * log(1.0-x) + lgm;
+      if( d < MINLOG )
+        goto done;
+      if( d > MAXLOG )
+        break;
+      d = exp(d);
+      /* Compute the step to the next approximation of x. */
+      d = (y - y0)/d;
+      xt = x - d;
+      if( xt <= x0 )
+      {
+        y = (x - x0) / (x1 - x0);
+        xt = x0 + 0.5 * y * (x - x0);
+        if( xt <= 0.0 )
+          break;
+      }
+      if( xt >= x1 )
+      {
+        y = (x1 - x) / (x1 - x0);
+        xt = x1 - 0.5 * y * (x1 - x);
+        if( xt >= 1.0 )
+          break;
+      }
+      x = xt;
+      if( fabs(d/x) < 128.0 * MACHEP )
+        goto done;
+    }
+    /* Did not converge.  */
+    dithresh = 256.0 * MACHEP;
+    goto ihalve;
+    
+  done:
+    
+    if( rflg )
+    {
+      if( x <= MACHEP )
+        x = 1.0 - MACHEP;
+        else
+          x = 1.0 - x;
+          }
+    return( x );
+  }
+  
+  /*							incbet.c
+   *
+   *	Incomplete beta integral
+   *
+   *
+   * SYNOPSIS:
+   *
+   * double a, b, x, y, incbet();
+   *
+   * y = incbet( a, b, x );
+   *
+   *
+   * DESCRIPTION:
+   *
+   * Returns incomplete beta integral of the arguments, evaluated
+   * from zero to x.  The function is defined as
+   *
+   *                  x
+   *     -            -
+   *    | (a+b)      | |  a-1     b-1
+   *  -----------    |   t   (1-t)   dt.
+   *   -     -     | |
+   *  | (a) | (b)   -
+   *                 0
+   *
+   * The domain of definition is 0 <= x <= 1.  In this
+   * implementation a and b are restricted to positive values.
+   * The integral from x to 1 may be obtained by the symmetry
+   * relation
+   *
+   *    1 - incbet( a, b, x )  =  incbet( b, a, 1-x ).
+   *
+   * The integral is evaluated by a continued fraction expansion
+   * or, when b*x is small, by a power series.
+   *
+   * ACCURACY:
+   *
+   * Tested at uniformly distributed random points (a,b,x) with a and b
+   * in "domain" and x between 0 and 1.
+   *                                        Relative error
+   * arithmetic   domain     # trials      peak         rms
+   *    IEEE      0,5         10000       6.9e-15     4.5e-16
+   *    IEEE      0,85       250000       2.2e-13     1.7e-14
+   *    IEEE      0,1000      30000       5.3e-12     6.3e-13
+   *    IEEE      0,10000    250000       9.3e-11     7.1e-12
+   *    IEEE      0,100000    10000       8.7e-10     4.8e-11
+   * Outputs smaller than the IEEE gradual underflow threshold
+   * were excluded from these statistics.
+   *
+   * ERROR MESSAGES:
+   *   message         condition      value returned
+   * incbet domain      x<0, x>1          0.0
+   * incbet underflow                     0.0
+   *
+   * Cephes Math Library, Release 2.8:  June, 2000
+   * Copyright 1984, 1995, 2000 by Stephen L. Moshier
+   */
+  double incbet(double aa, double bb, double xx)
+  {
+    double a, b, t, x, xc, w, y;
+    int flag;
+    
+    if( aa <= 0.0 || bb <= 0.0 )
+      goto domerr;
+    
+    if( (xx <= 0.0) || ( xx >= 1.0) )
+    {
+      if( xx == 0.0 )
+        return(0.0);
+      if( xx == 1.0 )
+        return( 1.0 );
+    domerr:
+      ASSERT(true, "Domain error in incbet");
+      return( 0.0 );
+    }
+    
+    flag = 0;
+    if( (bb * xx) <= 1.0 && xx <= 0.95)
+    {
+      t = pseries(aa, bb, xx);
+      goto done;
+    }
+    
+    w = 1.0 - xx;
+    
+    /* Reverse a and b if x is greater than the mean. */
+    if( xx > (aa/(aa+bb)) )
+    {
+      flag = 1;
+      a = bb;
+      b = aa;
+      xc = xx;
+      x = w;
+    }
+    else
+    {
+      a = aa;
+      b = bb;
+      xc = w;
+      x = xx;
+    }
+    
+    if( flag == 1 && (b * x) <= 1.0 && x <= 0.95)
+    {
+      t = pseries(a, b, x);
+      goto done;
+    }
+    
+    /* Choose expansion for better convergence. */
+    y = x * (a+b-2.0) - (a-1.0);
+    if( y < 0.0 )
+      w = incbcf( a, b, x );
+      else
+        w = incbd( a, b, x ) / xc;
+        
+      /* Multiply w by the factor
+       a      b   _             _     _
+       x  (1-x)   | (a+b) / ( a | (a) | (b) ) .   */
+        
+        y = a * log(x);
+        t = b * log(xc);
+        if( (a+b) < MAXGAM && fabs(y) < MAXLOG && fabs(t) < MAXLOG )
+        {
+          t = pow(xc,b);
+          t *= pow(x,a);
+          t /= a;
+          t *= w;
+          t *= gamma(a+b) / (gamma(a) * gamma(b));
+          goto done;
+        }
+    /* Resort to logarithms.  */
+    y += t + lgam(a+b) - lgam(a) - lgam(b);
+    y += log(w/a);
+    if( y < MINLOG )
+      t = 0.0;
+      else
+        t = exp(y);
+        
+        done:
+        
+        if( flag == 1 )
+        {
+          if( t <= MACHEP )
+            t = 1.0 - MACHEP;
+            else
+              t = 1.0 - t;
+              }
+    return( t );
+  }
+  
+  /* Continued fraction expansion #1
+   * for incomplete beta integral
+   */  
+  double incbcf(double a, double b, double x)
+  {
+    double xk, pk, pkm1, pkm2, qk, qkm1, qkm2;
+    double k1, k2, k3, k4, k5, k6, k7, k8;
+    double r, t, ans, thresh;
+    int n;
+    
+    k1 = a;
+    k2 = a + b;
+    k3 = a;
+    k4 = a + 1.0;
+    k5 = 1.0;
+    k6 = b - 1.0;
+    k7 = k4;
+    k8 = a + 2.0;
+    
+    pkm2 = 0.0;
+    qkm2 = 1.0;
+    pkm1 = 1.0;
+    qkm1 = 1.0;
+    ans = 1.0;
+    r = 1.0;
+    n = 0;
+    thresh = 3.0 * MACHEP;
+    do
+    {
+      
+      xk = -( x * k1 * k2 )/( k3 * k4 );
+      pk = pkm1 +  pkm2 * xk;
+      qk = qkm1 +  qkm2 * xk;
+      pkm2 = pkm1;
+      pkm1 = pk;
+      qkm2 = qkm1;
+      qkm1 = qk;
+      
+      xk = ( x * k5 * k6 )/( k7 * k8 );
+      pk = pkm1 +  pkm2 * xk;
+      qk = qkm1 +  qkm2 * xk;
+      pkm2 = pkm1;
+      pkm1 = pk;
+      qkm2 = qkm1;
+      qkm1 = qk;
+      
+      if( qk != 0 )
+        r = pk/qk;
+        if( r != 0 )
+        {
+          t = fabs( (ans - r)/r );
+          ans = r;
+        }
+        else
+          t = 1.0;
+          
+          if( t < thresh )
+            goto cdone;
+      
+      k1 += 1.0;
+      k2 += 1.0;
+      k3 += 2.0;
+      k4 += 2.0;
+      k5 += 1.0;
+      k6 -= 1.0;
+      k7 += 2.0;
+      k8 += 2.0;
+      
+      if( (fabs(qk) + fabs(pk)) > big )
+      {
+        pkm2 *= biginv;
+        pkm1 *= biginv;
+        qkm2 *= biginv;
+        qkm1 *= biginv;
+      }
+      if( (fabs(qk) < biginv) || (fabs(pk) < biginv) )
+      {
+        pkm2 *= big;
+        pkm1 *= big;
+        qkm2 *= big;
+        qkm1 *= big;
+      }
+    }
+    while( ++n < 300 );
+    
+  cdone:
+    return(ans);
+  }
+  
+  
+  /* Continued fraction expansion #2
+   * for incomplete beta integral
+   */  
+  double incbd(double a, double b, double x)
+  {
+    double xk, pk, pkm1, pkm2, qk, qkm1, qkm2;
+    double k1, k2, k3, k4, k5, k6, k7, k8;
+    double r, t, ans, z, thresh;
+    int n;
+    
+    k1 = a;
+    k2 = b - 1.0;
+    k3 = a;
+    k4 = a + 1.0;
+    k5 = 1.0;
+    k6 = a + b;
+    k7 = a + 1.0;;
+    k8 = a + 2.0;
+    
+    pkm2 = 0.0;
+    qkm2 = 1.0;
+    pkm1 = 1.0;
+    qkm1 = 1.0;
+    z = x / (1.0-x);
+    ans = 1.0;
+    r = 1.0;
+    n = 0;
+    thresh = 3.0 * MACHEP;
+    do
+    {
+      
+      xk = -( z * k1 * k2 )/( k3 * k4 );
+      pk = pkm1 +  pkm2 * xk;
+      qk = qkm1 +  qkm2 * xk;
+      pkm2 = pkm1;
+      pkm1 = pk;
+      qkm2 = qkm1;
+      qkm1 = qk;
+      
+      xk = ( z * k5 * k6 )/( k7 * k8 );
+      pk = pkm1 +  pkm2 * xk;
+      qk = qkm1 +  qkm2 * xk;
+      pkm2 = pkm1;
+      pkm1 = pk;
+      qkm2 = qkm1;
+      qkm1 = qk;
+      
+      if( qk != 0 )
+        r = pk/qk;
+        if( r != 0 )
+        {
+          t = fabs( (ans - r)/r );
+          ans = r;
+        }
+        else
+          t = 1.0;
+          
+          if( t < thresh )
+            goto cdone;
+      
+      k1 += 1.0;
+      k2 -= 1.0;
+      k3 += 2.0;
+      k4 += 2.0;
+      k5 += 1.0;
+      k6 += 1.0;
+      k7 += 2.0;
+      k8 += 2.0;
+      
+      if( (fabs(qk) + fabs(pk)) > big )
+      {
+        pkm2 *= biginv;
+        pkm1 *= biginv;
+        qkm2 *= biginv;
+        qkm1 *= biginv;
+      }
+      if( (fabs(qk) < biginv) || (fabs(pk) < biginv) )
+      {
+        pkm2 *= big;
+        pkm1 *= big;
+        qkm2 *= big;
+        qkm1 *= big;
+      }
+    }
+    while( ++n < 300 );
+  cdone:
+    return(ans);
+  }
+  
+  /* Power series for incomplete beta integral.
+   Use when b*x is small and x not too close to 1.  */  
+  double pseries(double a, double b, double x)
+  {
+    double s, t, u, v, n, t1, z, ai;
+    
+    ai = 1.0 / a;
+    u = (1.0 - b) * x;
+    v = u / (a + 1.0);
+    t1 = v;
+    t = u;
+    n = 2.0;
+    s = 0.0;
+    z = MACHEP * ai;
+    while( fabs(v) > z )
+    {
+      u = (n - b) * x / n;
+      t *= u;
+      v = t / (a + n);
+      s += v; 
+      n += 1.0;
+    }
+    s += t1;
+    s += ai;
+    
+    u = a * log(x);
+    if( (a+b) < MAXGAM && fabs(u) < MAXLOG )
+    {
+      t = gamma(a+b)/(gamma(a)*gamma(b));
+      s = s * t * pow(x,a);
+    }
+    else
+    {
+      t = lgam(a+b) - lgam(a) - lgam(b) + u + log(s);
+      if( t < MINLOG )
+        s = 0.0;
+        else
+          s = exp(t);
+          }
+    return(s);
+  }
+  
+  /*							ndtri.c
+   *
+   *	Inverse of Normal distribution function
+   *
+   *
+   *
+   * SYNOPSIS:
+   *
+   * double x, y, ndtri();
+   *
+   * x = ndtri( y );
+   *
+   *
+   *
+   * DESCRIPTION:
+   *
+   * Returns the argument, x, for which the area under the
+   * Gaussian probability density function (integrated from
+   * minus infinity to x) is equal to y.
+   *
+   *
+   * For small arguments 0 < y < exp(-2), the program computes
+   * z = sqrt( -2.0 * log(y) );  then the approximation is
+   * x = z - log(z)/z  - (1/z) P(1/z) / Q(1/z).
+   * There are two rational functions P/Q, one for 0 < y < exp(-32)
+   * and the other for y up to exp(-2).  For larger arguments,
+   * w = y - 0.5, and  x/sqrt(2pi) = w + w**3 R(w**2)/S(w**2)).
+   *
+   *
+   * ACCURACY:
+   *
+   *                      Relative error:
+   * arithmetic   domain        # trials      peak         rms
+   *    DEC      0.125, 1         5500       9.5e-17     2.1e-17
+   *    DEC      6e-39, 0.135     3500       5.7e-17     1.3e-17
+   *    IEEE     0.125, 1        20000       7.2e-16     1.3e-16
+   *    IEEE     3e-308, 0.135   50000       4.6e-16     9.8e-17
+   *
+   *
+   * ERROR MESSAGES:
+   *
+   *   message         condition    value returned
+   * ndtri domain       x <= 0        -MAXNUM
+   * ndtri domain       x >= 1         MAXNUM
+   *
+   * Cephes Math Library Release 2.8:  June, 2000
+   * Copyright 1984, 1987, 1989, 2000 by Stephen L. Moshier
+   */  
+  double ndtri(double y0)
+  {
+    double x, y, z, y2, x0, x1;
+    int code;
+    
+    if( y0 <= 0.0 )
+    {
+      ASSERT(true, "Domain error in ndtri");
+      return( -MAXNUM );
+    }
+    if( y0 >= 1.0 )
+    {
+      ASSERT(true, "Domain error in ndtri");
+      return( MAXNUM );
+    }
+    code = 1;
+    y = y0;
+    if( y > (1.0 - 0.13533528323661269189) ) /* 0.135... = exp(-2) */
+    {
+      y = 1.0 - y;
+      code = 0;
+    }
+    
+    if( y > 0.13533528323661269189 )
+    {
+      y = y - 0.5;
+      y2 = y * y;
+      x = y + y * (y2 * polevl( y2, P0, 4)/p1evl( y2, Q0, 8 ));
+      x = x * s2pi; 
+      return(x);
+    }
+    
+    x = sqrt( -2.0 * log(y) );
+    x0 = x - log(x)/x;
+    
+    z = 1.0/x;
+    if( x < 8.0 ) /* y > exp(-32) = 1.2664165549e-14 */
+      x1 = z * polevl( z, P1, 8 )/p1evl( z, Q1, 8 );
+      else
+        x1 = z * polevl( z, P2, 8 )/p1evl( z, Q2, 8 );
+        x = x0 - x1;
+        if( code != 0 )
+          x = -x;
+          return( x );
+  }
   
 } // namespace breseq
