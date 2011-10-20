@@ -171,22 +171,46 @@ namespace breseq {
         return m_fasta_sequence.m_sequence.substr(start_1-1, end_1-start_1+1);
       }
 
-      void replace_sequence_1(int32_t start_1, int32_t end_1, const string &replacement_seq)
-      {
-        // TODO: Handle circular genomes
-        ASSERT(start_1 >= 1, "features on circular genomes with start coordinate < 1 not handled");
-        ASSERT(end_1 <= m_length, "features on circular genomes with end coordinate > length not handled");
+      // Replace Sequence with Input
+      // Every position between and including start_1 and end_1 will be replaced with replacement_seq.
+      // This function will shift everything else.
+      // mut_type is used too append the type of mutation to the feature notes.
+      // verbose outputs messages to console.
+      // 
+      // Successfully checks all three feature lists.  m_features, m_genes, and m_repeats.
+      void replace_sequence_1(int32_t start_1, int32_t end_1, const string &replacement_seq, string mut_type, bool verbose);
+      
+      // Insert Input AFTER Position
+      // Place insertion_seq at first position after pos_1.
+      // This function will shift everything else.
+      // mut_type is used too append the type of mutation to the feature notes.
+      // verbose outputs messages to console.
+      // 
+      // Successfully checks all three feature lists.  m_features, m_genes, and m_repeats.
+      void insert_sequence_1(int32_t pos_1, const string &insertion_seq, string mut_type, bool verbose);
+      
+      // Find Specific Feature
+      // Given a cSequenceFeatureList feat_list, iterate through it until
+      // finding the cSequenceFeature feat.
+      // Iterators passed in should be used to quickly find the features
+      bool find_feature(cSequenceFeatureList &feat_list, cSequenceFeature &feat, list<cSequenceFeaturePtr>::iterator &it)
+      {        
+        //Iterate through the list
+        //If a matching feature is found return true
+        for (it = feat_list.begin(); it != feat_list.end(); it++)
+        {
+          //The current feature we're looking at
+          cSequenceFeature& temp_feat = **it;
+          
+          //If the feature in the list matches the the main feature
+          //break out of here and return true.
+          if(temp_feat == feat){return true;}
+        }
         
-        ASSERT(start_1 <= end_1, "start (" + to_string(start_1) + ") not less than or equal to end (" + to_string(end_1) + ")");
-        m_fasta_sequence.m_sequence.replace(start_1-1, end_1-start_1+1, replacement_seq);
+        //If we got this far and found nothing, return false
+        return false;
       }
-
-      // Inserts AFTER the input position
-      void insert_sequence_1(int32_t pos_1, const string &insertion_seq)
-      {
-        m_fasta_sequence.m_sequence.insert(pos_1, insertion_seq);
-      }
-
+        
       uint32_t get_sequence_length()
       {
         return m_fasta_sequence.m_sequence.length();
@@ -266,12 +290,12 @@ namespace breseq {
     //!< Read/Write FASTA file     
     void ReadFASTA(const std::string &file_name);
     void ReadFASTA(cFastaFile& ff);
-    void WriteFASTA(const string &file_name);
-    void WriteFASTA(cFastaFile& ff);
+    void WriteFASTA(const string &file_name, bool verbose=false);
+    void WriteFASTA(cFastaFile& ff, bool verbose=false);
         
     //!< Read/Write a tab delimited GFF3 file
     void ReadGFF(const string& file_name);
-    void WriteGFF(const string &file_name);
+    void WriteGFF(const string &file_name, bool verbose=false);
 
     //!< Read GenBank file
     void ReadGenBank(const string& in_file_names);
@@ -339,14 +363,14 @@ namespace breseq {
       return (*this)[tid].get_sequence_1(start_1, end_1);
     }
 
-    void replace_sequence_1(const string& seq_id, int32_t start_1, int32_t end_1, const string& replacement_seq)
+    void replace_sequence_1(const string& seq_id, int32_t start_1, int32_t end_1, const string& replacement_seq, string mut_type, bool verbose=false)
     {
-      (*this)[seq_id].replace_sequence_1(start_1, end_1, replacement_seq);
+      (*this)[seq_id].replace_sequence_1(start_1, end_1, replacement_seq, mut_type, verbose);
     }
 
-    void insert_sequence_1(const string& seq_id, int32_t pos, const string &insertion_seq)
+    void insert_sequence_1(const string& seq_id, int32_t pos, const string &insertion_seq, string mut_type, bool verbose=false)
     {
-      (*this)[seq_id].insert_sequence_1(pos, insertion_seq);
+      (*this)[seq_id].insert_sequence_1(pos, insertion_seq, mut_type, verbose);
     }
 
     uint32_t get_sequence_length(const string& seq_id)
@@ -402,25 +426,26 @@ namespace breseq {
     static string GFF3EscapeString(const string& s)
     {
       string escaped_s(s);
+      
+      escaped_s = substitute(escaped_s, "%", "%25");
       escaped_s = substitute(escaped_s, ";", "%3B");
       escaped_s = substitute(escaped_s, "=", "%3D");
-      escaped_s = substitute(escaped_s, "%", "%25");
       escaped_s = substitute(escaped_s, "&", "%26");
       escaped_s = substitute(escaped_s, ",", "%2C");
       return escaped_s;
     }
     
+    //Substitute in reverse order as GFF3EscapeString, in case we introduced inconsistentancies.
     static string GFF3UnescapeString(const string& escaped_s)
     {
       string s(escaped_s);
-      s = substitute(s, "%3B", ";");
-      s = substitute(s, "%3D", "=");
-      s = substitute(s, "%25", ",");
-      s = substitute(s, "%26", "&");
       s = substitute(s, "%2C", ",");
+      s = substitute(s, "%26", "&");
+      s = substitute(s, "%3D", "=");
+      s = substitute(s, "%3B", ";");
+      s = substitute(s, "%25", "%");
       return s;
-    }
-    
+    }    
   };
     
   /*! Utility functions.
