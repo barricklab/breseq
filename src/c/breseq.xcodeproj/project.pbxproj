@@ -23,7 +23,6 @@
 /* End PBXAggregateTarget section */
 
 /* Begin PBXBuildFile section */
-		4247E82C1268EC3E006A6D78 /* libz.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 421ACFAC1170F05500C2EB85 /* libz.a */; };
 		701EE98313C4BB5200F2EC70 /* contingency_loci.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 701EE98213C4BB5200F2EC70 /* contingency_loci.cpp */; };
 		702EABF713421A8400103019 /* fastq.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 702EABF613421A8400103019 /* fastq.cpp */; };
 		70367D2113EB232C000787CC /* coverage_distribution.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 70367D2013EB232C000787CC /* coverage_distribution.cpp */; };
@@ -50,6 +49,7 @@
 		70B69E071369E2440001B750 /* libbam.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 70B69E051369E2440001B750 /* libbam.a */; };
 		70B9320F1394008200885753 /* settings.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 70B9320E1394008200885753 /* settings.cpp */; };
 		70D789D413C3CEB70036BEAB /* output.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 70D789D313C3CEB70036BEAB /* output.cpp */; };
+		E215274814450F5B00D86752 /* libz.a in Frameworks */ = {isa = PBXBuildFile; fileRef = E215274714450F5B00D86752 /* libz.a */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -163,6 +163,7 @@
 		70CB7224140FEB6400D578EB /* settings.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = settings.h; sourceTree = "<group>"; };
 		70CB7225140FEB6400D578EB /* storable.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = storable.h; sourceTree = "<group>"; };
 		70D789D313C3CEB70036BEAB /* output.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = output.cpp; path = breseq/output.cpp; sourceTree = SOURCE_ROOT; };
+		E215274714450F5B00D86752 /* libz.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = libz.a; path = ../../../../../../opt/local/var/macports/build/_opt_local_var_macports_sources_rsync.macports.org_release_tarballs_ports_lang_gcc44/gcc44/work/build/zlib/libz.a; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -179,7 +180,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				4247E82C1268EC3E006A6D78 /* libz.a in Frameworks */,
+				E215274814450F5B00D86752 /* libz.a in Frameworks */,
 				70B69E061369E2440001B750 /* libbam.a in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -190,6 +191,7 @@
 		421ACEB51170DB9600C2EB85 = {
 			isa = PBXGroup;
 			children = (
+				E215274714450F5B00D86752 /* libz.a */,
 				70436D5A13FF7675006448FB /* samtools */,
 				70A9AEA6135BA2DF006B6D79 /* config */,
 				70CB720E140FEB6400D578EB /* libbreseq */,
@@ -373,6 +375,9 @@
 /* Begin PBXProject section */
 		421ACEB71170DB9600C2EB85 /* Project object */ = {
 			isa = PBXProject;
+			attributes = {
+				LastUpgradeCheck = 0410;
+			};
 			buildConfigurationList = 421ACEBA1170DB9600C2EB85 /* Build configuration list for PBXProject "breseq" */;
 			compatibilityVersion = "Xcode 2.4";
 			developmentRegion = English;
@@ -468,8 +473,10 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
 				HEADER_SEARCH_PATHS = "$(value)";
 				LIBRARY_SEARCH_PATHS = "$(value)";
+				USER_HEADER_SEARCH_PATHS = "/local/bin/**";
 			};
 			name = Debug;
 		};
@@ -477,8 +484,10 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				COPY_PHASE_STRIP = YES;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
 				HEADER_SEARCH_PATHS = "$(value)";
 				LIBRARY_SEARCH_PATHS = "$(value)";
+				USER_HEADER_SEARCH_PATHS = "/local/bin/**";
 			};
 			name = Release;
 		};
@@ -534,7 +543,7 @@
 			baseConfigurationReference = 70B69E091369E51E0001B750 /* Debug.xcconfig */;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
-				ARCHS = "$(ONLY_ACTIVE_ARCH_PRE_XCODE_3_1)";
+				ARCHS = "$(NATIVE_ARCH_ACTUAL)";
 				COPY_PHASE_STRIP = NO;
 				CPPFLAGS = "$(CPPFLAGS) -DDATADIR=\"../etc\"";
 				GCC_DYNAMIC_NO_PIC = NO;
@@ -548,7 +557,7 @@
 				LIBRARY_SEARCH_PATHS = "$(value)";
 				LIBRARY_SEARCH_PATHS_QUOTED_FOR_TARGET_1 = "";
 				LIBRARY_SEARCH_PATHS_QUOTED_FOR_TARGET_2 = "";
-				ONLY_ACTIVE_ARCH_PRE_XCODE_3_1 = "$(NATIVE_ARCH_64)";
+				ONLY_ACTIVE_ARCH = YES;
 				PREBINDING = NO;
 				PRODUCT_NAME = breseq;
 				USER_HEADER_SEARCH_PATHS = "";
@@ -560,8 +569,7 @@
 			baseConfigurationReference = 70B69E0A1369E51E0001B750 /* Release.xcconfig */;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
-				ARCHS = "$(ARCHS_STANDARD_64_BIT_PRE_XCODE_3_1)";
-				ARCHS_STANDARD_64_BIT_PRE_XCODE_3_1 = x86_64;
+				ARCHS = "$(NATIVE_ARCH_ACTUAL)";
 				COPY_PHASE_STRIP = YES;
 				CPPFLAGS = "$(CPPFLAGS) -DDATADIR=\"../etc\"";
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
@@ -574,7 +582,6 @@
 				LIBRARY_SEARCH_PATHS = "$(value)";
 				LIBRARY_SEARCH_PATHS_QUOTED_FOR_TARGET_1 = "";
 				LIBRARY_SEARCH_PATHS_QUOTED_FOR_TARGET_2 = "";
-				ONLY_ACTIVE_ARCH = NO;
 				PREBINDING = NO;
 				PRODUCT_NAME = breseq;
 				USER_HEADER_SEARCH_PATHS = "";
@@ -589,7 +596,10 @@
 				ALWAYS_SEARCH_USER_PATHS = NO;
 				ARCHS = "$(NATIVE_ARCH_ACTUAL)";
 				HEADER_SEARCH_PATHS = "$(value)";
-				LIBRARY_SEARCH_PATHS = "$(value)";
+				LIBRARY_SEARCH_PATHS = (
+					"$(value)",
+					/opt/local/var/macports/build/_opt_local_var_macports_sources_rsync.macports.org_release_tarballs_ports_lang_gcc44/gcc44/work/build/zlib,
+				);
 				ONLY_ACTIVE_ARCH = YES;
 				PRODUCT_NAME = breseq;
 			};
@@ -607,7 +617,10 @@
 				GCC_MODEL_TUNING = G5;
 				HEADER_SEARCH_PATHS = "$(value)";
 				INSTALL_PATH = /usr/local/lib;
-				LIBRARY_SEARCH_PATHS = "$(value)";
+				LIBRARY_SEARCH_PATHS = (
+					"$(value)",
+					/opt/local/var/macports/build/_opt_local_var_macports_sources_rsync.macports.org_release_tarballs_ports_lang_gcc44/gcc44/work/build/zlib,
+				);
 				PREBINDING = NO;
 				PRODUCT_NAME = breseq;
 				ZERO_LINK = NO;
@@ -624,7 +637,7 @@
 				421ACEB91170DB9600C2EB85 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
-			defaultConfigurationName = Release;
+			defaultConfigurationName = Debug;
 		};
 		421ACF251170DC6C00C2EB85 /* Build configuration list for PBXLegacyTarget "samtools" */ = {
 			isa = XCConfigurationList;
@@ -633,7 +646,7 @@
 				421ACF221170DC4400C2EB85 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
-			defaultConfigurationName = Release;
+			defaultConfigurationName = Debug;
 		};
 		422D46371219DF1D003FD94D /* Build configuration list for PBXAggregateTarget "all" */ = {
 			isa = XCConfigurationList;
@@ -642,7 +655,7 @@
 				422D46221219DEFF003FD94D /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
-			defaultConfigurationName = Release;
+			defaultConfigurationName = Debug;
 		};
 		42B6EDC511C69CC70075F8A3 /* Build configuration list for PBXNativeTarget "breseq_cmdline" */ = {
 			isa = XCConfigurationList;
@@ -651,7 +664,7 @@
 				42B6EDC711C69CC70075F8A3 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
-			defaultConfigurationName = Release;
+			defaultConfigurationName = Debug;
 		};
 		42BA69191189B83D000B00B1 /* Build configuration list for PBXNativeTarget "breseq" */ = {
 			isa = XCConfigurationList;
@@ -660,7 +673,7 @@
 				42BA690E1189B7FE000B00B1 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
-			defaultConfigurationName = Release;
+			defaultConfigurationName = Debug;
 		};
 /* End XCConfigurationList section */
 	};
