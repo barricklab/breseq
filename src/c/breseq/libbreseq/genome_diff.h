@@ -339,8 +339,8 @@ public:
   bool has_mutation(diff_entry test_item);
   bool interval_un (const uint32_t& start, const uint32_t& end);
 
-  cReferenceSequences apply_to_sequences(cReferenceSequences &ref_seq_info);
-  void shift_positions(diff_entry& item, cReferenceSequences& ref_seq_info);
+  cReferenceSequences apply_to_sequences(cReferenceSequences &ref_seq_info, bool verbose=false);
+  void shift_positions(diff_entry& item, cReferenceSequences& ref_seq_info, bool verbose=true);
 
   void strcopy(char* arg1, const char* arg2);
 

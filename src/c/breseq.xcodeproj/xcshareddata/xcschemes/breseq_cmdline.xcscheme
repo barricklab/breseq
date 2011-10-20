@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <Scheme
-   version = "1.3">
+   version = "1.8">
    <BuildAction
       parallelizeBuildables = "YES"
       buildImplicitDependencies = "YES">
@@ -28,6 +28,15 @@
       buildConfiguration = "Debug">
       <Testables>
       </Testables>
+      <MacroExpansion>
+         <BuildableReference
+            BuildableIdentifier = "primary"
+            BlueprintIdentifier = "42B6EDB811C69CC70075F8A3"
+            BuildableName = "breseq"
+            BlueprintName = "breseq_cmdline"
+            ReferencedContainer = "container:breseq.xcodeproj">
+         </BuildableReference>
+      </MacroExpansion>
    </TestAction>
    <LaunchAction
       selectedDebuggerIdentifier = "Xcode.DebuggerFoundation.Debugger.GDB"
@@ -35,9 +44,11 @@
       displayScaleIsEnabled = "NO"
       displayScale = "1.00"
       launchStyle = "0"
-      useCustomWorkingDirectory = "YES"
-      customWorkingDirectory = "/Users/jbarrick/src/breseq"
-      buildConfiguration = "Debug">
+      useCustomWorkingDirectory = "NO"
+      customWorkingDirectory = "/Users/jbarrick/tmp/caroline"
+      buildConfiguration = "Debug"
+      debugDocumentVersioning = "YES"
+      allowLocationSimulation = "YES">
       <BuildableProductRunnable>
          <BuildableReference
             BuildableIdentifier = "primary"
@@ -50,43 +61,11 @@
       <CommandLineArguments>
          <CommandLineArgument
             argument = "-r /Users/jbarrick/db/lenski/REL606.gbk CT-A_TGACCA_L002_R1_001_pf.fastq CT-A_TGACCA_L004_R1_001_pf.fastq CT-A_TGACCA_L006_R1_001_pf.fastq CT-A_TGACCA_L008_R1_001_pf.fastq"
-            isEnabled = "NO">
-         </CommandLineArgument>
-         <CommandLineArgument
-            argument = "-o tests/bull_2 -r tests/bull_2/../data/bull/bull_2.gbk tests/bull_2/../data/bull/bull_2.fastq"
-            isEnabled = "NO">
-         </CommandLineArgument>
-         <CommandLineArgument
-            argument = "-o tests/lambda_mixed_pop_bad_contigs -r tests/lambda_mixed_pop_bad_contigs/../data/lambda/lambda.gbk -r tests/lambda_mixed_pop_bad_contigs/../data/lambda/other.gbk -r tests/lambda_mixed_pop_bad_contigs/../data/REL606/REL606.fragment.gbk tests/lambda_mixed_pop_bad_contigs/../data/lambda/lambda_mixed_population.fastq"
-            isEnabled = "NO">
-         </CommandLineArgument>
-         <CommandLineArgument
-            argument = "-r NC_007604.1.gbk -r NC_004073.2.gbk -r NC_004990.1.gbk JM24a_GGCTAC_L002_R1_001_pf.fastq JM24a_GGCTAC_L004_R1_001_pf.fastq JM24a_GGCTAC_L006_R1_001_pf.fastq JM24a_GGCTAC_L008_R1_001_pf.fastq"
-            isEnabled = "NO">
-         </CommandLineArgument>
-         <CommandLineArgument
-            argument = "-r REL606.gbk 43033AAXX_8_1_pf_REL2042.fastq"
-            isEnabled = "NO">
-         </CommandLineArgument>
-         <CommandLineArgument
-            argument = "-o tests/lambda_mixed_pop -r tests/lambda_mixed_pop/../data/lambda/lambda.gbk tests/lambda_mixed_pop/../data/lambda/lambda_mixed_population.fastq"
-            isEnabled = "NO">
-         </CommandLineArgument>
-         <CommandLineArgument
-            argument = "-r /Users/jbarrick/db/lenski/REL606.gbk CT-A_TGACCA_L002_R1_001_pf.fastq CT-A_TGACCA_L004_R1_001_pf.fastq CT-A_TGACCA_L006_R1_001_pf.fastq CT-A_TGACCA_L008_R1_001_pf.fastq"
-            isEnabled = "NO">
-         </CommandLineArgument>
-         <CommandLineArgument
-            argument = "-o tests/bull_1 -r tests/bull_1/../data/bull/bull_1.gbk tests/bull_1/../data/bull/bull_1.fastq"
-            isEnabled = "NO">
+            isEnabled = "YES">
          </CommandLineArgument>
          <CommandLineArgument
             argument = "-b 0 -o tests/REL606_fragment_is_mediated_dels -r tests/REL606_fragment_is_mediated_dels/../data/REL606/REL606.fragment.gbk tests/REL606_fragment_is_mediated_dels/../data/REL606/REL606.fragment.3.fastq"
             isEnabled = "NO">
-         </CommandLineArgument>
-         <CommandLineArgument
-            argument = "-o tests/lambda_mixed_pop_bad_contigs -r tests/lambda_mixed_pop_bad_contigs/../data/lambda/lambda.gbk -r tests/lambda_mixed_pop_bad_contigs/../data/lambda/other.gbk -r tests/lambda_mixed_pop_bad_contigs/../data/REL606/REL606.fragment.gbk tests/lambda_mixed_pop_bad_contigs/../data/lambda/lambda_mixed_population.fastq"
-            isEnabled = "YES">
          </CommandLineArgument>
       </CommandLineArguments>
       <EnvironmentVariables>
@@ -105,7 +84,8 @@
       shouldUseLaunchSchemeArgsEnv = "YES"
       savedToolIdentifier = ""
       useCustomWorkingDirectory = "NO"
-      buildConfiguration = "Release">
+      buildConfiguration = "Release"
+      debugDocumentVersioning = "YES">
       <BuildableProductRunnable>
          <BuildableReference
             BuildableIdentifier = "primary"
