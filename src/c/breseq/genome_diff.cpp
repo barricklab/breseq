@@ -127,6 +127,30 @@ bool diff_entry::is_validation() const
   const size_t size = sizeof(gd_entry_validation_types) / sizeof(gd_entry_validation_types[0]);
   return count(gd_entry_validation_types, gd_entry_validation_types + size, this->_type);
 }
+  
+bool diff_entry::operator==(const diff_entry& de)
+{
+  diff_entry item = de;
+  //! Case: Easy if not same type
+  if (this->_type != item._type) {
+    return false;
+  }
+  //! Case: Same type, but are fields that are common equal?
+  else {
+    // Get common keys
+    const vector<key_t>& specs = line_specification[this->_type];
+    for(vector<key_t>::const_iterator it = specs.begin();
+        it != specs.end(); it++) {
+      const key_t& spec(*it);
+      if (_fields[spec] != item._fields[spec]) {
+        return false;
+      } else {
+        continue;
+      }
+    }
+    return true;
+  }
+}
 
 
 /*! Marshal this diff entry into an ordered list of fields.
@@ -339,6 +363,38 @@ void genome_diff::add(const diff_entry& item) {
   
   
 }
+
+  //! Subtract mutations using gd_ref as reference.
+  void genome_diff::subtract(genome_diff& gd_ref, bool verbose)
+  {
+    //Iterate through all the entries
+    for (diff_entry_list::iterator it = _entry_list.begin(); it != _entry_list.end(); it++)
+    {
+      //The current entry we're looking at
+      diff_entry& entry = **it;
+      
+      //Is the entry a mutation?
+      if(entry.is_mutation())
+      {
+        //Iterate through all the entries we're checking against.
+        for (diff_entry_list::iterator it_ref = gd_ref._entry_list.begin(); it_ref != gd_ref._entry_list.end(); it_ref++)
+        {
+          //The current entry we're looking at
+          diff_entry& entry_ref = **it_ref;
+          
+          //Does the current entry match any of the reference entries?
+          if(entry == entry_ref)
+          {
+            //Notify the user of the action.
+            //This will currently output the enumerated number representing the _type.
+            if(verbose){cout << "REMOVE\t" << entry._type << "\t" << entry._id << endl;}
+            _entry_list.erase(it);
+            it--;
+          }            
+        }
+      }        
+    }
+  }
 
 
 /*! Read a genome diff(.gd) from the given file to class member

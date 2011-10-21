@@ -226,6 +226,8 @@ struct diff_entry {
   	(*this)[key] = value;
   	return *this;
   }
+  
+  bool operator== (const diff_entry& de);
 
   //! Clone this entry.
   //virtual diff_entry* clone() const = 0;
@@ -266,8 +268,9 @@ struct sort_fields_item {
   string _f3;
 };
   
-typedef list<counted_ptr<diff_entry> > diff_entry_list; //!< Type for a list of diff entries.a
 typedef counted_ptr<diff_entry> diff_entry_ptr;
+typedef list<diff_entry_ptr> diff_entry_list; //!< Type for a list of diff entries.a
+
 
 
 //! Sort routine
@@ -304,6 +307,9 @@ public:
   
   //! Add evidence to this genome diff.
   void add(const diff_entry& item);
+  
+  //! Subtract mutations using gd_ref as reference.
+  void subtract(genome_diff& gd_ref, bool verbose=true);
 
   //! Read a genome diff from a file.
   void read(const string& filename);
