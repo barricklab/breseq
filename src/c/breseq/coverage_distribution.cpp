@@ -30,7 +30,18 @@ namespace breseq {
     @return vector<string> Each line contains a parameter set by R
     !*/
 
-	vector<string> CoverageDistribution::fit(Settings& settings, string distribution_file_name, string plot_file, double deletion_propagation_pr_cutoff, double junction_coverage_pr_cutoff, double junction_accept_pr_cutoff, double junction_keep_pr_cutoff, double junction_max_score)
+	vector<string> CoverageDistribution::fit(
+                                           Settings& settings, 
+                                           string distribution_file_name, 
+                                           string plot_file, 
+                                           string pos_hash_p_value_cutoff_file,
+                                           double deletion_propagation_pr_cutoff, 
+                                           double junction_coverage_pr_cutoff, 
+                                           double junction_accept_pr_cutoff, 
+                                           double junction_keep_pr_cutoff, 
+                                           double junction_max_score,
+                                           double chance_per_pos_strand_no_read_start
+                                           )
 	{
     pid_t pid = getpid();
 		string log_file_name = distribution_file_name + ".r.log";
@@ -43,6 +54,13 @@ namespace breseq {
 		command += " junction_keep_pr_cutoff=" + to_string<double>(junction_keep_pr_cutoff);
 		command += " junction_max_score=" + to_string<double>(junction_max_score);
 
+    // Optionally,  
+    if (settings.use_r_junction_p_value_table_check) {      
+      command += " pos_hash_p_value_cutoff_file=" + pos_hash_p_value_cutoff_file;
+      command += " chance_per_pos_strand_no_read_start=" + to_string<double>(chance_per_pos_strand_no_read_start);
+    }
+    
+    
 		SYSTEM(command);
 
 		ifstream ROUT(log_file_name.c_str());
@@ -72,7 +90,15 @@ namespace breseq {
     @param ref_seq_info
     !*/
 
-	void CoverageDistribution::analyze_unique_coverage_distribution(Settings& settings, Summary& summary, cReferenceSequences& ref_seq_info, string seq_id, string plot_key, string distribution_file_name)
+	void CoverageDistribution::analyze_unique_coverage_distribution(
+                                                                  Settings& settings, 
+                                                                  Summary& summary, 
+                                                                  cReferenceSequences& ref_seq_info, 
+                                                                  string seq_id, 
+                                                                  string plot_key, 
+                                                                  string distribution_file_name, 
+                                                                  string pos_hash_p_value_cutoff_file_name
+                                                                  )
 	{
 		//initialize summary information
 		summary.unique_coverage[seq_id].nbinom_size_parameter = NAN;
@@ -103,16 +129,28 @@ namespace breseq {
 		/// NEW JUNCTION COVERAGE CUTOFFS
 		// Arbitrary value that seems to work....
     //double junction_coverage_pr_cutoff =  sqrt(settings.junction_accept_pr / static_cast<double>(sequence_length));
-    double junction_coverage_pr_cutoff = settings.junction_accept_pr;
+    double junction_coverage_pr_cutoff = 0.01;
     
 		// We really want somewhere between these two, try this...
     double junction_accept_pr_cutoff = 0.01;
 		double junction_keep_pr_cutoff = 0.01 / sqrt(sequence_length);
 		int32_t junction_max_score = int(2 * summary.sequence_conversion.avg_read_length);
 
+    double no_pos_hash_per_position_pr = summary.error_count[seq_id].no_pos_hash_per_position_pr;
+    if (pos_hash_p_value_cutoff_file_name == "") no_pos_hash_per_position_pr = -1;
+    
 		CoverageDistribution dist;
-		vector<string> lines = dist.fit(settings, unique_only_coverage_distribution_file_name, unique_only_coverage_plot_file_name,
-				deletion_propagation_pr_cutoff, junction_coverage_pr_cutoff, junction_accept_pr_cutoff, junction_keep_pr_cutoff, junction_max_score);
+		vector<string> lines = dist.fit(settings, 
+                                    unique_only_coverage_distribution_file_name, 
+                                    unique_only_coverage_plot_file_name,
+                                    pos_hash_p_value_cutoff_file_name,
+                                    deletion_propagation_pr_cutoff, 
+                                    junction_coverage_pr_cutoff, 
+                                    junction_accept_pr_cutoff, 
+                                    junction_keep_pr_cutoff, 
+                                    junction_max_score,
+                                    no_pos_hash_per_position_pr
+                                    );
 
 		// First two lines are negative binomial parameters.
 		// Next three lines are average, standard deviation, and index of overdispersion
@@ -121,7 +159,7 @@ namespace breseq {
 		summary.unique_coverage[seq_id].nbinom_size_parameter = from_string<double>(lines[0]);
 		summary.unique_coverage[seq_id].nbinom_mean_parameter = from_string<double>(lines[1]);
 		// Calculated by formula, prob = size/(size + mu)
-		summary.unique_coverage[seq_id].nbinom_prob_parameter = from_string<double>(lines[0]) / (from_string<float>(lines[0]) + from_string<float>(lines[1]));
+		summary.unique_coverage[seq_id].nbinom_prob_parameter = summary.unique_coverage[seq_id].nbinom_size_parameter / (summary.unique_coverage[seq_id].nbinom_mean_parameter + summary.unique_coverage[seq_id].nbinom_size_parameter);
 		summary.unique_coverage[seq_id].average = from_string<double>(lines[2]);
 		summary.unique_coverage[seq_id].variance = from_string<double>(lines[3]);
 		summary.unique_coverage[seq_id].dispersion = from_string<double>(lines[4]);
@@ -152,10 +190,30 @@ namespace breseq {
     }
 	}
 
-	void CoverageDistribution::analyze_unique_coverage_distributions(Settings& settings, Summary& summary, cReferenceSequences& ref_seq_info, string plot_file_name, string distribution_file_name)
+	void CoverageDistribution::analyze_unique_coverage_distributions(
+                                                                   Settings& settings, 
+                                                                   Summary& summary, 
+                                                                   cReferenceSequences& ref_seq_info, 
+                                                                   string plot_file_name, 
+                                                                   string distribution_file_name,
+                                                                   string pos_hash_p_value_cutoff_file_name
+                                                                   )
   {
-		for (uint32_t i = 0; i < ref_seq_info.size(); i++)
-			analyze_unique_coverage_distribution(settings, summary, ref_seq_info, ref_seq_info[i].m_seq_id , plot_file_name, distribution_file_name);
+		for (uint32_t i = 0; i < ref_seq_info.size(); i++) {
+      
+      string& seq_id = ref_seq_info[i].m_seq_id;
+      string this_pos_hash_p_value_cutoff_file_name = Settings::file_name(pos_hash_p_value_cutoff_file_name, "@", seq_id);
+    
+			analyze_unique_coverage_distribution(
+                                           settings, 
+                                           summary, 
+                                           ref_seq_info, 
+                                           ref_seq_info[i].m_seq_id , 
+                                           plot_file_name, 
+                                           distribution_file_name, 
+                                           this_pos_hash_p_value_cutoff_file_name
+                                           );
+    }
 	}
 
 } // namespace breseq

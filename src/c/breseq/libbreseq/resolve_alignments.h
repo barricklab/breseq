@@ -52,6 +52,7 @@ namespace breseq {
     bool redundant_1;
     bool redundant_2;
     string junction_id;
+    double neg_log10_pos_hash_p_value;
     
     bool operator <(const JunctionTestInfo& _in)
     {
@@ -101,8 +102,55 @@ namespace breseq {
   typedef counted_ptr<JunctionMatch> JunctionMatchPtr;
   typedef map<string, vector<JunctionMatchPtr> > UniqueJunctionMatchMap;
   typedef map<string, map<string, JunctionMatchPtr> > RepeatJunctionMatchMap;
+  
+  
+  class PosHashProbabilityTable {
+  public:
+        
+    struct Parameters {
+      double negative_binomial_size;
+      double negative_binomial_prob;
+      double chance_per_pos_strand_no_read_start;
+      double average_coverage;
+    };
+    
+    map<string, Parameters> param;
+    uint32_t average_read_length;
+    map<string, map<uint32_t, map<uint32_t, double> > > probability_table;
+    
+    PosHashProbabilityTable(Summary& summary);
+    
+    double probability(string& seq_id, uint32_t pos_hash_score, uint32_t overlap);
+  };
 
-	bool alignment_overlaps_junction(const vector<JunctionInfo>& junction_info_list, const alignment_wrapper& in_a);
+  
+  class pos_hash_p_value_table : public vector<vector<double> > {
+  public:
+    pos_hash_p_value_table() {};
+    
+    pos_hash_p_value_table(const string& in_file_name)
+    {      
+      // file may not have been created if fitting failed
+      if (!file_exists(in_file_name.c_str())) return;
+      
+      ifstream in_file(in_file_name.c_str());
+      ASSERT(!in_file.fail(), "Could not open file: " + in_file_name);
+      
+      string line; 
+      while (!in_file.eof()) {
+        getline(in_file, line);
+        if (line == "") continue;
+        vector<string> line_list = split(line, "\t");
+        
+        vector<double> converted_line;
+        for (vector<string>::iterator it=line_list.begin(); it!=line_list.end(); it++) {
+          converted_line.push_back(from_string<double>(*it));
+        }
+        
+        (*this).push_back(converted_line);
+      }
+    }
+  };
   
   void resolve_alignments(
                           const Settings& settings,
@@ -111,13 +159,13 @@ namespace breseq {
                           const bool junction_prediction,
                           cReadFiles &read_files
                           );
-  
+  /*
   void calculate_cutoffs(
                          const Settings& settings, 
                          Summary& summary, 
                          cReferenceSequences& ref_seq_info
                          );
-
+  */
   
   void load_junction_alignments(
                                 const Settings& settings, 
@@ -133,6 +181,9 @@ namespace breseq {
                                 RepeatJunctionMatchMap& repeat_junction_match_map,
                                 tam_file& resolved_reference_tam
                                 );
+  
+  bool alignment_overlaps_junction(const vector<JunctionInfo>& junction_info_list, const alignment_wrapper& in_a);
+
   
   void score_junction(
                       const Settings& settings, 

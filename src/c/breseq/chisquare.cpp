@@ -920,15 +920,16 @@ namespace breseq {
    *    IEEE     0,100       100000      1.7e-13     8.8e-15
    * See also incbet.c.
    *
+   * @JEB This is equivalent to pnbinom(10, size=5, prob=0.3, lower.tail=F) in R.
    *      
    * Cephes Math Library Release 2.8:  June, 2000
    * Copyright 1984, 1987, 1995, 2000 by Stephen L. Moshier
    */  
-  double nbdtrc(int k, int n, double p)
+  double nbdtrc(int k, double n, double p)
   {
     double dk, dn;
     
-    ASSERT( ((p < 0.0) || (p > 1.0)) ||  (k < 0), "Domain error in nbdtrc" );
+    ASSERT( (p >= 0.0) && (p <= 1.0) &&  (k >= 0), "Domain error in nbdtrc" );
     
     dk = k+1;
     dn = n;
@@ -978,11 +979,11 @@ namespace breseq {
    * Cephes Math Library Release 2.8:  June, 2000
    * Copyright 1984, 1987, 1995, 2000 by Stephen L. Moshier
    */  
-  double nbdtr(int k, int n, double p)
+  double nbdtr(int k, double n, double p)
   {
     double dk, dn;
     
-    ASSERT( ((p < 0.0) || (p > 1.0)) ||  (k < 0), "Domain error in nbdtr" );
+    ASSERT( (p >= 0.0) && (p <= 1.0) &&  (k >= 0), "Domain error in nbdtr" );
     
     dk = k+1;
     dn = n;
@@ -1018,11 +1019,11 @@ namespace breseq {
    * Cephes Math Library Release 2.8:  June, 2000
    * Copyright 1984, 1987, 1995, 2000 by Stephen L. Moshier
    */  
-  double nbdtri(int k, int n, double p)
+  double nbdtri(int k, double n, double p)
   {
     double dk, dn, w;
         
-    ASSERT( ((p < 0.0) || (p > 1.0)) ||  (k < 0), "Domain error in nbdtri" );
+    ASSERT( (p >= 0.0) && (p <= 1.0) && (k >= 0), "Domain error in nbdtri" );
     
     dk = k+1;
     dn = n;

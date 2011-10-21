@@ -509,8 +509,8 @@ void html_statistics(const string &file_name, const Settings& settings, Summary&
     HTML << "<tr>" <<
     th("reference sequence") << 
     th("read start probability") <<
-    th("pos hash score cutoff") <<
-    th("distance score cutoff") <<
+//    th("pos hash score cutoff") <<
+//    th("distance score cutoff") <<
     "</tr>" << endl;
     
     size_t total_length = 0;
@@ -525,8 +525,8 @@ void html_statistics(const string &file_name, const Settings& settings, Summary&
         HTML << td("NA"); 
       } else {
         HTML << td(ALIGN_CENTER, to_string(summary.error_count[it->m_seq_id].no_pos_hash_per_position_pr, 5));
-        HTML << td(ALIGN_CENTER, to_string(summary.alignment_resolution.pos_hash_cutoffs[it->m_seq_id].back()));
-        HTML << td(ALIGN_CENTER, to_string(summary.alignment_resolution.distance_cutoffs[it->m_seq_id]));
+//        HTML << td(ALIGN_CENTER, to_string(summary.alignment_resolution.pos_hash_cutoffs[it->m_seq_id].back()
+//        HTML << td(ALIGN_CENTER, to_string(summary.alignment_resolution.distance_cutoffs[it->m_seq_id]));
       }
       HTML << "</tr>";
     }  
@@ -1143,7 +1143,6 @@ string html_new_junction_table_string(diff_entry_list& list_ref, bool show_rejec
               i(nonbreaking(c["_" + key + GENE_NAME]))) << endl;
       ss << td("class=\"" + annotate_key + "\"",
               htmlize(c["_" + key + GENE_PRODUCT])) << endl;  
-// #     }
     } // End hiding data for side 1
     ss << "</tr>" << endl;
 

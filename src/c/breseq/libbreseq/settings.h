@@ -75,11 +75,6 @@ namespace breseq
 				double deletion_coverage_propagation_cutoff;
 				double deletion_coverage_seed_cutoff;
         double junction_coverage_cutoff;
-
-        // Deprecated
-        //double junction_accept_score_cutoff;
-				//double junction_keep_score_cutoff;
-        //double pr_no_coverage_position_strand;
 				double nbinom_size_parameter;
 				double nbinom_mean_parameter;
 				double nbinom_prob_parameter;
@@ -92,9 +87,6 @@ namespace breseq
       write_to_file(f, deletion_coverage_propagation_cutoff);
       write_to_file(f, deletion_coverage_seed_cutoff);
       write_to_file(f, junction_coverage_cutoff);
-      //write_to_file(f, junction_accept_score_cutoff);
-      //write_to_file(f, junction_keep_score_cutoff);
-      //write_to_file(f, pr_no_coverage_position_strand);
       write_to_file(f, nbinom_size_parameter);
       write_to_file(f, nbinom_mean_parameter);
       write_to_file(f, nbinom_prob_parameter);
@@ -107,9 +99,6 @@ namespace breseq
       read_from_file(f, deletion_coverage_propagation_cutoff);
       read_from_file(f, deletion_coverage_seed_cutoff);
       read_from_file(f, junction_coverage_cutoff);
-      //read_from_file(f, junction_accept_score_cutoff);
-      //read_from_file(f, junction_keep_score_cutoff);
-      //read_from_file(f, pr_no_coverage_position_strand);
       read_from_file(f, nbinom_size_parameter);
       read_from_file(f, nbinom_mean_parameter);
       read_from_file(f, nbinom_prob_parameter);
@@ -264,7 +253,8 @@ namespace breseq
     
     //// Alignment Resolution ////
 		bool add_split_junction_sides;
-    double junction_accept_pr;
+    double junction_pos_hash_neg_log10_p_value_cutoff;
+    bool use_r_junction_p_value_table_check;
     
     //// MutationIdentification ////
 
@@ -327,6 +317,7 @@ namespace breseq
 		string coverage_junction_summary_file_name;
     string coverage_junction_error_count_summary_file_name;
 		string coverage_junction_done_file_name;
+    string coverage_junction_pos_hash_p_value_file_name;
 		string candidate_junction_summary_file_name;
 		string candidate_junction_done_file_name;
 		string candidate_junction_hash_file_name;

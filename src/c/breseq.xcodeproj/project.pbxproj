@@ -102,8 +102,6 @@
 		70367D2013EB232C000787CC /* coverage_distribution.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = coverage_distribution.cpp; path = breseq/coverage_distribution.cpp; sourceTree = SOURCE_ROOT; };
 		70436D5713FF6D7D006448FB /* coverage_distribution.r */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.rez; name = coverage_distribution.r; path = breseq/coverage_distribution.r; sourceTree = "<group>"; };
 		70436D5A13FF7675006448FB /* samtools */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.executable"; name = samtools; path = "../../extern/samtools-0.1.15/samtools"; sourceTree = "<group>"; };
-		7056ADFA14511F3700890AB0 /* main.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = main.c; sourceTree = "<group>"; };
-		7056ADFC14511F3700890AB0 /* samtools2.1 */ = {isa = PBXFileReference; lastKnownFileType = text.man; path = samtools2.1; sourceTree = "<group>"; };
 		70616DCF1400A0C0006E7800 /* plot_coverage.r */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.rez; name = plot_coverage.r; path = breseq/plot_coverage.r; sourceTree = "<group>"; };
 		70616DD01400A0C0006E7800 /* plot_error_rate.r */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.rez; name = plot_error_rate.r; path = breseq/plot_error_rate.r; sourceTree = "<group>"; };
 		70616DD11400A0C0006E7800 /* polymorphism_statistics.r */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.rez; name = polymorphism_statistics.r; path = breseq/polymorphism_statistics.r; sourceTree = "<group>"; };
@@ -190,7 +188,6 @@
 				4247E77F1268E175006A6D78 /* breseq */,
 				421ACF5F1170E06300C2EB85 /* lib */,
 				70436D5613FF6D5C006448FB /* copied  */,
-				7056ADF914511F3700890AB0 /* samtools2 */,
 				421ACF301170DF1800C2EB85 /* Products */,
 			);
 			sourceTree = "<group>";
@@ -254,15 +251,6 @@
 				70616DD31400A0CE006E7800 /* breseq.png */,
 			);
 			name = "copied ";
-			sourceTree = "<group>";
-		};
-		7056ADF914511F3700890AB0 /* samtools2 */ = {
-			isa = PBXGroup;
-			children = (
-				7056ADFA14511F3700890AB0 /* main.c */,
-				7056ADFC14511F3700890AB0 /* samtools2.1 */,
-			);
-			path = samtools2;
 			sourceTree = "<group>";
 		};
 		70A9AEA6135BA2DF006B6D79 /* config */ = {
