@@ -80,6 +80,7 @@ samtools$
 xcworkspace
 xcuserdata
 xcshareddata
+xcscheme
 
 #.breseq.xcodeproj/project.xcworkspace/xcuserdata.+$
 #.xcodeproj/xcuserdata.+$

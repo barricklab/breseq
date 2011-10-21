@@ -905,9 +905,10 @@ int do_subtract(int argc, char *argv[])
 }
 
 int breseq_default_action(int argc, char* argv[])
-{
+{  
   
-  
+  double pr_1 = nbdtr(5, 10.8448, 0.08195);
+
 	///
 	/// Get options from the command line
 	///
@@ -1135,8 +1136,13 @@ int breseq_default_action(int argc, char* argv[])
       );
 
       string error_rates_summary_file_name = settings.error_rates_summary_file_name; //TODO unused
-      CoverageDistribution::analyze_unique_coverage_distributions(settings, summary, ref_seq_info,
-        settings.coverage_junction_plot_file_name, settings.coverage_junction_distribution_file_name);
+      CoverageDistribution::analyze_unique_coverage_distributions(settings, 
+                                                                  summary, 
+                                                                  ref_seq_info,
+                                                                  settings.coverage_junction_plot_file_name, 
+                                                                  settings.coverage_junction_distribution_file_name,
+                                                                  settings.coverage_junction_pos_hash_p_value_file_name
+                                                                  );
 
       // Note that storing from unique_coverage and reloading in preprocess_coverage is by design
       summary.unique_coverage.store(settings.coverage_junction_summary_file_name);
@@ -1487,8 +1493,14 @@ int breseq_default_action(int argc, char* argv[])
 	{
 		//$summary->{unique_coverage} = {};
 		if (!settings.no_deletion_prediction)
-			CoverageDistribution::analyze_unique_coverage_distributions(settings, summary, ref_seq_info,
-        settings.unique_only_coverage_plot_file_name, settings.unique_only_coverage_distribution_file_name);
+			CoverageDistribution::analyze_unique_coverage_distributions(
+                                                                  settings, 
+                                                                  summary, 
+                                                                  ref_seq_info,
+                                                                  settings.unique_only_coverage_plot_file_name, 
+                                                                  settings.unique_only_coverage_distribution_file_name,
+                                                                  ""
+                                                                  );
 
     //Coverage distribution user option --deletion-coverage-propagation-cutoff
     if (settings.deletion_coverage_propagation_cutoff) {

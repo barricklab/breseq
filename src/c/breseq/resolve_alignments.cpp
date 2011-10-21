@@ -23,6 +23,7 @@ LICENSE AND COPYRIGHT
 #include "libbreseq/fasta.h"
 #include "libbreseq/alignment.h"
 #include "libbreseq/annotated_sequence.h"
+#include "libbreseq/chisquare.h"
 
 using namespace std;
 
@@ -75,6 +76,80 @@ uint32_t qmissing (double tail_value, double pr_missing)
   }
   return missing;
 }
+  
+PosHashProbabilityTable::PosHashProbabilityTable(Summary& summary)
+{
+  average_read_length = summary.sequence_conversion.avg_read_length;
+  for (map<string,Coverage>::iterator it=summary.preprocess_coverage.begin();
+       it != summary.preprocess_coverage.end(); it++) {
+    
+    string seq_id = it->first;
+    Coverage& cov = it->second;
+    
+    Parameters p = {
+          cov.nbinom_size_parameter,
+          cov.nbinom_prob_parameter,
+          summary.error_count[seq_id].no_pos_hash_per_position_pr,
+          cov.nbinom_mean_parameter
+    };
+    
+    param[it->first] = p;
+  }
+}
+
+double PosHashProbabilityTable::probability(string& seq_id, uint32_t pos_hash_score, uint32_t overlap)
+{
+  bool verbose = false;
+  if (
+      probability_table.count(seq_id) 
+      && probability_table[seq_id].count(pos_hash_score) 
+      && probability_table[seq_id][pos_hash_score].count(overlap)
+      )
+    return probability_table[seq_id][pos_hash_score][overlap];
+  
+  Parameters& p = param[seq_id];
+
+  // no coverage was fit for this fragment.
+  if (p.negative_binomial_size == 0) return 999999;
+  
+  uint32_t junction_max_score = 2 * average_read_length;
+  uint32_t max_coverage = 10*p.average_coverage;
+        
+  double pr = 0;
+  
+  if (verbose)
+    cout << "Calculating: seq_id " << seq_id << " pos_hash_score " << pos_hash_score << " overlap " << overlap << endl;
+      
+  for (uint32_t this_coverage=1; this_coverage<= max_coverage; this_coverage++) {
+    
+    double this_cov_pr =  nbdtr(this_coverage, p.negative_binomial_size, p.negative_binomial_prob)
+                        - nbdtr(this_coverage-1, p.negative_binomial_size, p.negative_binomial_prob); 
+    
+    if (verbose)
+      cout << "NB: " << this_coverage << " " << p.negative_binomial_size << " " << p.negative_binomial_prob << endl;
+
+    double this_chance_per_pos_strand_read_start = 1 - pow(p.chance_per_pos_strand_no_read_start, (this_coverage / static_cast<double>(p.average_coverage)));
+
+    double this_pos_hash_pr = 0;
+    for (uint32_t i=0; i <= pos_hash_score; i++) {
+
+      //chance of getting pos_hash_score or lower
+      this_pos_hash_pr += binomial(this_chance_per_pos_strand_read_start, junction_max_score - 2 * overlap, i);
+    }
+    
+    if (verbose)
+      cout << this_coverage << " " << this_cov_pr << " " << this_pos_hash_pr << " " << this_chance_per_pos_strand_read_start << endl;
+    
+    double this_pr = this_cov_pr*this_pos_hash_pr;
+    pr += this_pr;
+    
+    if (verbose)
+      cout << "  " << pr << endl;      
+  }
+  double log_pr = -log(pr)/log(10);
+  probability_table[seq_id][pos_hash_score][overlap] = log_pr;
+  return log_pr;
+}
 
   
 // Compares matches to candidate junctions with matches to original genome
@@ -88,7 +163,22 @@ void resolve_alignments(
 {    
 	bool verbose = false;
 
-  calculate_cutoffs(settings, summary, ref_seq_info);
+  // @JEB eventually deprecate this
+  map<string,pos_hash_p_value_table> p_value_table_map;
+  if (settings.use_r_junction_p_value_table_check) {      
+
+    for(vector<cAnnotatedSequence>::iterator it = ref_seq_info.begin(); it != ref_seq_info.end(); it++) {
+      const string& seq_id = it->m_seq_id;
+      string coverage_junction_pos_hash_p_value_file_name = Settings::file_name(settings.coverage_junction_pos_hash_p_value_file_name, 
+                                                                                "@", seq_id);
+      pos_hash_p_value_table p_value_table(coverage_junction_pos_hash_p_value_file_name);
+      p_value_table_map[seq_id] = p_value_table;
+    }
+  }
+  
+  //@JEB removed
+  //calculate_cutoffs(settings, summary, ref_seq_info);
+  
   // local variables for convenience
   map<string,int32_t>& distance_cutoffs = summary.alignment_resolution.distance_cutoffs;
   storable_map<string, storable_vector<int32_t> >& pos_hash_cutoffs = summary.alignment_resolution.pos_hash_cutoffs;
@@ -257,6 +347,8 @@ void resolve_alignments(
 	//sort junction ids based on size of vector
   junction_test_info_list.sort();
   
+  PosHashProbabilityTable pos_hash_p_value_calculator(summary);
+  
   while(!junction_test_info_list.empty() ) {
     
     JunctionTestInfo& junction_test_info = junction_test_info_list.back();
@@ -283,33 +375,65 @@ void resolve_alignments(
     int32_t possible_overlap_positions = avg_read_length - 1 - abs(junction_info.alignment_overlap);
     ASSERT(possible_overlap_positions > 0, "Possible overlap positions <= 0");
     
-    uint32_t pos_hash_score_cutoff_1 = pos_hash_cutoffs[junction_info.sides[0].seq_id][possible_overlap_positions];
-    uint32_t pos_hash_score_cutoff_2 = pos_hash_cutoffs[junction_info.sides[1].seq_id][possible_overlap_positions];
+    /* @JEB Deprecate...
+    uint32_t pos_hash_score_cutoff_1, pos_hash_score_cutoff_2;
+    int32_t distance_score_cutoff_1, distance_score_cutoff_2;
+    
+      pos_hash_score_cutoff_1 = pos_hash_cutoffs[junction_info.sides[0].seq_id][possible_overlap_positions];
+      pos_hash_score_cutoff_2 = pos_hash_cutoffs[junction_info.sides[1].seq_id][possible_overlap_positions];
+      
+      distance_score_cutoff_1 = possible_overlap_positions - distance_cutoffs[junction_info.sides[0].seq_id];
+      distance_score_cutoff_2 = possible_overlap_positions - distance_cutoffs[junction_info.sides[1].seq_id];
+    */
+    
+    // table is by overlap, then pos hash score
+    double neg_log10_p_value_1 = 999999999.99;
+    double neg_log10_p_value_2 = 999999999.99;    
+    
+    double neg_log10_p_value_1_2 = pos_hash_p_value_calculator.probability(junction_info.sides[0].seq_id, junction_test_info.pos_hash_score, abs(junction_info.alignment_overlap));
+    double neg_log10_p_value_2_2 = pos_hash_p_value_calculator.probability(junction_info.sides[1].seq_id, junction_test_info.pos_hash_score, abs(junction_info.alignment_overlap));
 
-    int32_t distance_score_cutoff_1 = possible_overlap_positions - distance_cutoffs[junction_info.sides[0].seq_id];
-    int32_t distance_score_cutoff_2 = possible_overlap_positions - distance_cutoffs[junction_info.sides[1].seq_id];
-        
+    //@JEB Eventually deprecate this. It's just a check.
+    if (settings.use_r_junction_p_value_table_check) {      
+      if (p_value_table_map[junction_info.sides[0].seq_id].size())
+          neg_log10_p_value_1 = p_value_table_map[junction_info.sides[0].seq_id][abs(junction_info.alignment_overlap)][junction_test_info.pos_hash_score];
+      if (p_value_table_map[junction_info.sides[1].seq_id].size())
+        neg_log10_p_value_2 = p_value_table_map[junction_info.sides[1].seq_id][abs(junction_info.alignment_overlap)][junction_test_info.pos_hash_score];
+      ASSERT(neg_log10_p_value_1 - neg_log10_p_value_1_2 < 0.01, "Variance in calculated p-values: " + to_string(neg_log10_p_value_1) + " " + to_string(neg_log10_p_value_1_2) );
+      ASSERT(neg_log10_p_value_2 - neg_log10_p_value_2_2 < 0.01, "Variance in calculated p-values: " + to_string(neg_log10_p_value_2) + " " + to_string(neg_log10_p_value_2_2) );
+    }
+    
+    neg_log10_p_value_1 = neg_log10_p_value_1_2;
+    neg_log10_p_value_2 = neg_log10_p_value_2_2;
+    
+    // take the most significantly below pos_hash cutoff
+    junction_test_info.neg_log10_pos_hash_p_value = max(neg_log10_p_value_1, neg_log10_p_value_2);
     
     // Both pos_hash score cutoffs might be zero - indicating these are missing contigs 
     // that are basically deleted. Always fail in this case.
-    failed = failed || (pos_hash_score_cutoff_1 == 0); 
-    failed = failed || (pos_hash_score_cutoff_2 == 0);
+    //failed = failed || (pos_hash_score_cutoff_1 == 0); 
+    //failed = failed || (pos_hash_score_cutoff_2 == 0);
     
-    failed = failed || ( junction_test_info.pos_hash_score < pos_hash_score_cutoff_1 );
-    failed = failed || ( junction_test_info.pos_hash_score < pos_hash_score_cutoff_2 );
+    failed = failed || (junction_test_info.neg_log10_pos_hash_p_value > settings.junction_pos_hash_neg_log10_p_value_cutoff);
     
-    failed = failed || ( junction_test_info.max_left < distance_score_cutoff_1 );
-    failed = failed || ( junction_test_info.max_right < distance_score_cutoff_2 );
+    //failed = failed || ( junction_test_info.pos_hash_score < pos_hash_score_cutoff_1 );
+    //failed = failed || ( junction_test_info.pos_hash_score < pos_hash_score_cutoff_2 );
+    
+    ///failed = failed || ( junction_test_info.max_left < distance_score_cutoff_1 );
+    //failed = failed || ( junction_test_info.max_right < distance_score_cutoff_2 );
     
     // Should fail other cases, but you can't be too careful.
-    failed = failed || (junction_test_info.total_non_overlap_reads == 0);
+    ASSERT(failed || (junction_test_info.total_non_overlap_reads > 0), "Junction passed with no non-overlap reads.");
     
     if (verbose) 
     {
       cout << "Testing Junction: " << junction_id << endl;
-      cout << "  Pos hash score: " << junction_test_info.pos_hash_score << " [ " << pos_hash_score_cutoff_1 << " / " << pos_hash_score_cutoff_2 << " ]" << endl;
-      cout << "  Distance score: " << junction_test_info.max_left << " | " << junction_test_info.max_right 
-           << " [ " << distance_score_cutoff_1 << " / " << distance_score_cutoff_1 << " ]" << endl;
+      cout <<  (failed ? "FAILED" : "SUCCESS") << endl;
+      cout << "  Neg log10 pos hash p-value: " << junction_test_info.neg_log10_pos_hash_p_value
+           << " [ " << settings.junction_pos_hash_neg_log10_p_value_cutoff << " ]" << endl;
+      //cout << "  Pos hash score: " << junction_test_info.pos_hash_score << " [ " << pos_hash_score_cutoff_1 << " / " << pos_hash_score_cutoff_2 << " ]" << endl;
+      //cout << "  Distance score: " << junction_test_info.max_left << " | " << junction_test_info.max_right 
+      //     << " [ " << distance_score_cutoff_1 << " / " << distance_score_cutoff_1 << " ]" << endl;
       cout << "  Number of unique matches: " << unique_junction_match_map[junction_id].size() << endl;
       size_t num_degenerate_matches = repeat_junction_match_map.count(junction_id) ? repeat_junction_match_map[junction_id].size() : 0;
       cout << "  Number of degenerate matches: " << num_degenerate_matches << endl;
@@ -414,9 +538,11 @@ void resolve_alignments(
 	gd.write(settings.jc_genome_diff_file_name);
 }
   
+
   
 /*! Passes back calculated values as part of summary
  */
+/*
 void calculate_cutoffs(const Settings& settings, Summary& summary, cReferenceSequences& ref_seq_info)
 {
   bool verbose = false;
@@ -490,7 +616,7 @@ void calculate_cutoffs(const Settings& settings, Summary& summary, cReferenceSeq
   summary.alignment_resolution.pos_hash_cutoffs = pos_hash_cutoffs;
   summary.alignment_resolution.distance_cutoffs = distance_cutoffs;
 }
-
+*/
     
 void load_junction_alignments(
                               const Settings& settings, 
@@ -1043,7 +1169,8 @@ void score_junction(
     pos_hash_count,                     //pos_hash_score
     redundant[0],
     redundant[1],
-    junction_id
+    junction_id,
+    999999999.99
 	};
   
   junction_test_info = this_junction_test_info;
@@ -1414,6 +1541,7 @@ diff_entry junction_to_diff_entry(
   ("coverage_plus", to_string(test_info.coverage_plus))
   ("total_non_overlap_reads", to_string(test_info.total_non_overlap_reads))
   ("pos_hash_score", to_string(test_info.pos_hash_score))
+  ("neg_log10_pos_hash_p_value", to_string(test_info.neg_log10_pos_hash_p_value))
   ;
 
 	/// Note: Other adjustments to overlap can happen at the later annotation stage

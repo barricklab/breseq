@@ -345,7 +345,8 @@ namespace breseq
     
     //// Alignment Resolution ////
     this->add_split_junction_sides = true;    // Add the sides of passed junctions to the SAM file?
-    this->junction_accept_pr = 0.01;
+    this->junction_pos_hash_neg_log10_p_value_cutoff = 3;
+    this->use_r_junction_p_value_table_check = false;
     
     //// MutationIdentification ////
 		this->mutation_log10_e_value_cutoff = 2; // log10 of evidence required for SNP calls
@@ -452,6 +453,7 @@ namespace breseq
 		this->coverage_junction_plot_file_name = this->candidate_junction_path + "/@.coverage.pdf";
 		this->coverage_junction_summary_file_name = this->candidate_junction_path + "/coverage.summary.bin";
     this->coverage_junction_error_count_summary_file_name = this->candidate_junction_path + "/error_count.summary.bin";
+    this->coverage_junction_pos_hash_p_value_file_name = this->candidate_junction_path + "/@.pos_hash_p_value.tab";
 		this->coverage_junction_done_file_name = this->candidate_junction_path + "/coverage_junction_alignment.done";
 
 		this->candidate_junction_summary_file_name = this->candidate_junction_path + "/candidate_junction_summary.bin";

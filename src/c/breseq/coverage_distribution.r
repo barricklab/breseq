@@ -29,11 +29,14 @@
 ##   junction_max_score=float
 ##   plot_poisson=0 or 1
 ##   pdf_output=0 or 1
-##   pos_hash_e_value_file=0 or 1
+##
+##   chance_per_pos_strand_no_read_start=float (-1 means OFF)
+##   pos_hash_p_value_cutoff_file=/path/to/output
 
 
 plot_poisson = 0;
 pdf_output = 1;
+chance_per_pos_strand_no_read_start = -1
 
 for (e in commandArgs()) {
   ta = strsplit(e,"=",fixed=TRUE)
@@ -59,6 +62,7 @@ junction_coverage_pr_cutoff = as.numeric(junction_coverage_pr_cutoff);
 junction_accept_pr_cutoff = as.numeric(junction_accept_pr_cutoff);
 junction_keep_pr_cutoff = as.numeric(junction_keep_pr_cutoff);
 junction_max_score = as.numeric(junction_max_score);
+chance_per_pos_strand_no_read_start = as.numeric(chance_per_pos_strand_no_read_start);
 
 ## initialize values to be filled in
 nb_fit_mu = 0
@@ -121,7 +125,7 @@ min_i <- max( trunc(m/4), 1 ); #prevents zero for pathological distributions
 max_i <- i;
 for (i in min_i:length(X$ma))
 {		
-  cat(i, "\n")
+  #cat(i, "\n")
 	if (!is.na(X$ma[i]) && (X$ma[i] > max_n))
 	{
 		max_n = X$ma[i];
@@ -396,5 +400,66 @@ print(deletion_propagation_coverage)
 print(junction_coverage_cutoff)
 #print(junction_accept_coverage_cutoff)
 #print(junction_keep_coverage_cutoff)
+
+write_pos_hash_e_value_file <-function (pos_hash_p_value_cutoff_file, chance_per_pos_strand_no_read_start, junction_max_score, nb_fit_size, nb_fit_mu, pr_precision) {
+  
+  max_coverage = floor(nb_fit_mu * 10)
+  
+  #allocate the matrix 
+  max_non_overlap = floor(junction_max_score/2);
+  m <- matrix( rep(999999.99,(max_non_overlap+1)*(junction_max_score+1)), nrow=(max_non_overlap+1), ncol=(junction_max_score+1) )
+  
+  this_cov_pr = rep(0, max_coverage)
+  this_chance_per_pos_strand_read_start = rep(0, max_coverage)
+  
+  for (this_coverage in 1:max_coverage) {
+    
+    #cat(this_coverage, "\n")
+    
+    #chance of observing this coverage
+    this_cov_pr[this_coverage] = dnbinom(this_coverage, size=nb_fit_size, mu=nb_fit_mu)
+    
+    #chance of getting read start
+    this_chance_per_pos_strand_read_start[this_coverage] = 1 - chance_per_pos_strand_no_read_start^(this_coverage / nb_fit_mu)
+    
+    cat("dbinom", " size=", nb_fit_size, " mu= ", nb_fit_mu, "\n");
+    cat("Cov: ", this_coverage, " ", this_cov_pr[this_coverage], " ", this_chance_per_pos_strand_read_start[this_coverage], " ", nb_fit_mu, "\n")
+  }
+  
+  max_non_overlap = min(max_non_overlap, 20);
+  
+  for (this_overlap in 0:max_non_overlap) {
+    for (this_pos_hash_score in 0:(junction_max_score - 2 * this_overlap)) {
+      
+      m[this_overlap+1, this_pos_hash_score+1] = 0;
+      
+      for (this_coverage in 1:max_coverage) {
+        
+        #chance of getting pos_hash_score or lower
+        this_pos_hash_pr = pbinom(this_pos_hash_score, junction_max_score - 2 * this_overlap, this_chance_per_pos_strand_read_start[this_coverage])
+        
+        this_pr = this_cov_pr[this_coverage]*this_pos_hash_pr;
+        
+        m[this_overlap+1, this_pos_hash_score+1] = 	m[this_overlap+1,this_pos_hash_score+1] + this_pr
+        
+        cat("-->", this_coverage, " ", this_cov_pr[this_coverage], " ", this_pos_hash_pr, " " , this_pr, " ", m[this_overlap+1, this_pos_hash_score+1], "\n")
+        #cat(this_pr/m[this_overlap+1, this_pos_hash_score+1], "\n");
+        if (this_pr/m[this_overlap+1, this_pos_hash_score+1] < pr_precision) {
+          break;
+        }
+        
+      }
+      
+      m[this_overlap+1,this_pos_hash_score+1] = -log(m[this_overlap+1, this_pos_hash_score+1])/log(10)
+      cat(this_overlap, " ", this_pos_hash_score, " ", m[this_overlap+1, this_pos_hash_score+1], "\n")
+    }
+  }
+  write.table(m, file=pos_hash_p_value_cutoff_file, col.names=F, row.names=F, sep="\t")
+}
+
+if (chance_per_pos_strand_no_read_start != -1) {
+  pr_precision = 0.0001;
+  write_pos_hash_e_value_file(pos_hash_p_value_cutoff_file, chance_per_pos_strand_no_read_start, junction_max_score, nb_fit_size, nb_fit_mu, pr_precision)
+}
 
 warnings()
