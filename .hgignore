@@ -66,6 +66,8 @@ Makefile$
 ## samtools
 samtools$
 ^extern/samtools-.*/misc
+^extern/samtools-.*/bcftools/bcftools
+^extern/samtools-.*/razip
 
 ## Perl GenomeDiff
 ^src/perl/GenomeDiff/Build$
@@ -75,10 +77,12 @@ samtools$
 ## For Xcode
 
 ^src/c/build
-.xcodeproj/.+\.mode1v3$
-.xcodeproj/.+\.pbxuser$
-.breseq.xcodeproj/project.xcworkspace/xcuserdata.+$
-.xcodeproj/xcuserdata.+$
+xcworkspace
+xcuserdata
+xcshareddata
+
+#.breseq.xcodeproj/project.xcworkspace/xcuserdata.+$
+#.xcodeproj/xcuserdata.+$
 
 ## For Various IDEs
 ^nbproject/.+$
