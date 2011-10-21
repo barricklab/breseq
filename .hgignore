@@ -67,7 +67,7 @@ Makefile$
 samtools$
 ^extern/samtools-.*/misc
 ^extern/samtools-.*/bcftools/bcftools
-^extern/samtools-.*/razip
+^extern/samtools-.*/razip$
 
 ## Perl GenomeDiff
 ^src/perl/GenomeDiff/Build$
