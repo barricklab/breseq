@@ -879,8 +879,30 @@ int do_mutate(int argc, char *argv[])
   return 0;
 }
 
-
-
+int do_subtract(int argc, char *argv[])
+{
+  AnyOption options("Usage: -1 <file.gd> -2 <file.gd>");
+  options("input1,1","input GD file 1");
+  options("input2,2","input GD file 2");
+  options("output,o","output GD file", "output.gd");
+  options("verbose,v","Verbose Mode (Flag)", TAKES_NO_ARGUMENT);
+  options.processCommandArgs(argc, argv);
+  
+  if (!options.count("input1") ||
+      !options.count("input2")) {
+    options.printUsage();
+    return -1;
+  }
+  
+  genome_diff gd1(options["input1"]);
+  genome_diff gd2(options["input2"]);
+  
+  gd1.subtract(gd2, options.count("verbose"));
+  
+  gd1.write(options["output"]);
+  
+  return 0;
+}
 
 int breseq_default_action(int argc, char* argv[])
 {
@@ -1782,7 +1804,9 @@ int main(int argc, char* argv[]) {
   } else if (command == "BAM2COV") {
     return do_bam2cov( argc_new, argv_new);    
   } else if ((command == "APPLY") || (command == "MUTATE")) {
-    return do_mutate(argc_new, argv_new);      
+    return do_mutate(argc_new, argv_new);    
+  } else if (command == "SUBTRACT") {
+    return do_subtract(argc_new, argv_new);
   } else {
     // Not a sub-command. Use original argument list.
     return breseq_default_action(argc, argv);
