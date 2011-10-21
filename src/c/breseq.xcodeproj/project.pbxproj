@@ -555,7 +555,10 @@
 				ALWAYS_SEARCH_USER_PATHS = NO;
 				ARCHS = "$(NATIVE_ARCH_ACTUAL)";
 				HEADER_SEARCH_PATHS = "$(value)";
-				LIBRARY_SEARCH_PATHS = "$(value)";
+				LIBRARY_SEARCH_PATHS = (
+					"$(value)",
+					/opt/local/lib,
+				);
 				ONLY_ACTIVE_ARCH = YES;
 				PRODUCT_NAME = breseq;
 			};
@@ -573,7 +576,10 @@
 				GCC_MODEL_TUNING = G5;
 				HEADER_SEARCH_PATHS = "$(value)";
 				INSTALL_PATH = /usr/local/lib;
-				LIBRARY_SEARCH_PATHS = "$(value)";
+				LIBRARY_SEARCH_PATHS = (
+					"$(value)",
+					/opt/local/lib,
+				);
 				PREBINDING = NO;
 				PRODUCT_NAME = breseq;
 				ZERO_LINK = NO;
