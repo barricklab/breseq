@@ -421,10 +421,7 @@ void resolve_alignments(
     
     ///failed = failed || ( junction_test_info.max_left < distance_score_cutoff_1 );
     //failed = failed || ( junction_test_info.max_right < distance_score_cutoff_2 );
-    
-    // Should fail other cases, but you can't be too careful.
-    ASSERT(failed || (junction_test_info.total_non_overlap_reads > 0), "Junction passed with no non-overlap reads.");
-    
+        
     if (verbose) 
     {
       cout << "Testing Junction: " << junction_id << endl;
@@ -437,7 +434,12 @@ void resolve_alignments(
       cout << "  Number of unique matches: " << unique_junction_match_map[junction_id].size() << endl;
       size_t num_degenerate_matches = repeat_junction_match_map.count(junction_id) ? repeat_junction_match_map[junction_id].size() : 0;
       cout << "  Number of degenerate matches: " << num_degenerate_matches << endl;
+      cout << "  Number of total_non_overlap reads: " << junction_test_info.total_non_overlap_reads  << endl;
     }
+    
+    //@JEB: still need to resolve ones with no overlap reads to give their repeat matches to the reference.
+    //ASSERT(failed || (junction_test_info.total_non_overlap_reads > 0), "Junction passed with no non-overlap reads.");
+
     
     resolve_junction(
                      settings,
