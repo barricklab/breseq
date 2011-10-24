@@ -20,5 +20,9 @@ namespace breseq {
   double pseries(double a, double b, double x);
   
   double ndtri(double y0);
+  
+  double bdtrc(int k, double n, double p);
+  double bdtr(int k, double n, double p);
+  double bdtri(int k, double n, double y);
 
 } // namespace breseq

@@ -1078,7 +1078,10 @@ void cReferenceSequences::ReadGenBankFileSequenceFeatures(std::ifstream& in, cAn
 
       // /pseudo tag doesn't take a value
       if (feature.count("pseudo") != 0)
+      {
         feature["type"] = "pseudogene";
+        int werewrwerwe = 9;
+      }
     }
         
     // transfer to GFF
