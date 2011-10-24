@@ -69,6 +69,7 @@ namespace breseq {
       // Could add accessors that convert strings to numbers...
       int32_t m_start, m_end;
       int8_t m_strand;
+      bool m_pseudo;
 
       map<string, vector<string> > m_gff_attributes;
     
@@ -78,12 +79,14 @@ namespace breseq {
         m_start = _in.m_start;
         m_end = _in.m_end;
         m_strand = _in.m_strand;
+        m_pseudo = _in.m_pseudo;
       }
       cSequenceFeature operator=(const cSequenceFeature& _in) 
       {
         m_start = _in.m_start;
         m_end = _in.m_end;
         m_strand = _in.m_strand;
+        m_pseudo = _in.m_pseudo;
         sequence_feature_map_t::operator=(_in);
         return *this;
       }
@@ -101,6 +104,24 @@ namespace breseq {
         sequence_feature_map_t::const_iterator it = this->find(in_key);
         if (it == this->end()) return std::string("");
         return it->second;
+      }
+    
+      //Mark it as pseudo
+      void flag_pseudo(bool verbose=false)
+      {
+        //If this feature is already pseudo or a region, do nothing.
+        if(m_pseudo || (*this)["type"] == "region")
+          return;
+        
+        //Notify the user of the action
+        if(verbose){cout << "PSEUDO\t" << (*this)["type"] << "\t" << m_gff_attributes["ID"];}
+        
+        m_pseudo = true;
+        m_gff_attributes["Note"].push_back("Pseudogene");
+        if((*this)["type"] == "gene"){(*this)["type"] = "pseudogene";if(verbose){cout << "\tto\t" << (*this)["type"];}}
+        
+        //Notify the user of the action (cont.)
+        cout << endl;
       }
       
       void ReadGenBankCoords(string& s, ifstream& in);
@@ -127,7 +148,7 @@ namespace breseq {
       start = src.m_start;
       end = src.m_end;
       strand = (src.m_strand >= 1);
-      pseudogene = false;
+      pseudogene = src.m_pseudo;
     }
   };
 
