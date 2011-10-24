@@ -1,0 +1,56 @@
+The "testcmd.sh" scripts in each of the subdirectories of tests/ contain
+the breseq command-lines and GenomeDiff output files.  New tests can be 
+added by creating a new subdirectory under tests/, writing the testcmd.sh 
+script, and generating the GenomeDiff output file (see details below). Directories that begin with an underscore "_" are skipped when running all tests.
+
+The main body of code that deals with the hashes is in etc/common.sh,
+while a script that operates on all tests is in bin/test.sh.
+
+=============
+RUNNING TESTS
+=============
+
+There are a few different testing-related "actions": 
+
+build: copies current output GenomeDiffs to expected GenomeDiffs.
+       Use only when you are sure the output should have changed!
+
+check: calculate GenomeDiff using current code & compare to expected values. 
+
+clean: rm current data 
+
+rebuild: clean, run breseq, build expected GenomeDiffs
+         Use only when you are sure the output should have changed!
+
+test: run breseq, check (since breseq is smart about not
+      doing extra work, this should probably follow a clean)
+
+Tests can be run individually using the test's own testcmd.sh script:
+
+dk@hammer:breseq% ./tests/lambda_mixed_pop/testcmd.sh test 
+
+or en masse:
+
+dk@hammer:breseq% ./tests/test.sh test tests
+(This runs the main "make test" action of the breseq Makefile.)
+
+dk@hammer:breseq% ./tests/test.sh clean tests
+(This runs the main "make clean-tests" action of the breseq Makefile.)
+
+You will need to set the environmental variable $TESTBINPREFIX to the bin
+directory of where you have breseq installed to get this to work. This is
+done automatically by loading the file test.config which is automatically created when configuring and compiling breseq.
+
+===================
+CREATING A NEW TEST 
+===================
+
+1. Add any data files that you need for your test under ./tests/data. DO NOT add large files to the Mercurial repository. Whenever possible re-use existing data for your test. You can also choose to not check in a test to the repo. It will still work fine on your machine.
+
+2. Make a new directory with the test's name under ./tests.
+
+3. Create a file called "testcmd.sh" that will tell breseq how to run the test. Copy an existing testcmd.sh script from an existing test. Edit just the TESTCMD= statement to give the options you need.
+
+4. Create expected.gd by running the "rebuild" action on just your test.
+
+dk@hammer:breseq% ./tests/my_test/testcmd.sh rebuild

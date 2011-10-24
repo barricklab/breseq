@@ -1,0 +1,52 @@
+LOCUS       AF322221                 687 bp    mRNA    linear   INV 19-DEC-2000
+DEFINITION  Anemonia sulcata green fluorescent protein asFP499 mRNA, complete
+            cds.
+ACCESSION   AF322221
+VERSION     AF322221.1  GI:11890750
+KEYWORDS    .
+SOURCE      Anemonia sulcata (snake-locks sea anemone)
+  ORGANISM  Anemonia sulcata
+            Eukaryota; Metazoa; Cnidaria; Anthozoa; Hexacorallia; Actiniaria;
+            Nynantheae; Actiniidae; Anemonia.
+REFERENCE   1  (bases 1 to 687)
+  AUTHORS   Wiedenmann,J., Elke,C., Spindler,K.D. and Funke,W.
+  TITLE     Cracks in the beta -can: fluorescent proteins from Anemonia sulcata
+            (Anthozoa, Actinaria)
+  JOURNAL   Proc. Natl. Acad. Sci. U.S.A. 97 (26), 14091-14096 (2000)
+   PUBMED   11121018
+REFERENCE   2  (bases 1 to 687)
+  AUTHORS   Wiedenmann,J., Elke,C., Spindler,K.-D. and Funke,W.
+  TITLE     Direct Submission
+  JOURNAL   Submitted (18-NOV-2000) Allgemeine Zoologie und Endokrinologie,
+            Universitaet Ulm, Albert-Einstein-Allee 11, Ulm 89069, Germany
+FEATURES             Location/Qualifiers
+     source          1..687
+                     /organism="Anemonia sulcata"
+                     /mol_type="mRNA"
+                     /db_xref="taxon:6108"
+     CDS             1..687
+                     /note="GFP"
+                     /codon_start=1
+                     /product="green fluorescent protein asFP499"
+                     /protein_id="AAG41205.1"
+                     /db_xref="GI:11890751"
+                     /translation="MYPSIKETMRVQLSMEGSVNYHAFKCTGKGEGKPYEGTQSLNIT
+                     ITEGGPLPFAFDILSHAFQYGIKVFAKYPKEIPDFFKQSLPGGFSWERVSTYEDGGVL
+                     SATQETSLQGDCIICKVKVLGTNFPANGPVMQKKTCGWEPSTETVIPRDGGLLLRDTP
+                     ALMLADGGHLSCFMETTYKSKKEVKLPELHFHHLRMEKLNISDDWKTVEQHESVVASY
+                     SQVPSKLGHN"
+ORIGIN      
+        1 atgtatcctt ccatcaagga aaccatgcgc gttcagcttt ctatggaggg tagtgttaac
+       61 taccacgcct tcaagtgcac tggaaaagga gagggaaaac catacgaagg cacccaaagc
+      121 ctgaatatta caataactga aggaggtcct ctgccatttg cttttgacat tctgtcacac
+      181 gcctttcagt atggcatcaa ggtcttcgcc aagtacccca aagaaattcc tgacttcttt
+      241 aagcagtctc tacctggtgg tttttcttgg gaaagagtaa gcacctatga agatggagga
+      301 gtgctttcag ctacccaaga aacaagtttg cagggtgatt gcatcatctg caaagttaaa
+      361 gtccttggca ccaattttcc cgcaaacggt ccagtgatgc aaaagaagac ctgtggatgg
+      421 gagccatcaa ctgaaacagt catcccacga gatggtggac ttctgcttcg cgataccccc
+      481 gcacttatgc tggctgacgg aggtcatctt tcttgcttca tggaaacaac ttacaagtcg
+      541 aagaaagagg taaagcttcc agaacttcac tttcatcatt tgcgtatgga aaagctgaac
+      601 ataagtgacg attggaagac cgttgagcag cacgagtctg tggtggctag ctactcccaa
+      661 gtgccttcga aattaggaca taactga
+//
+
