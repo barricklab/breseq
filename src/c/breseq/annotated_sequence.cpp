@@ -48,26 +48,6 @@ namespace breseq {
       //The current feature we're looking at
       cSequenceFeature& feat = **it;
       
-      //Capture the ID of the feature
-      string ident;
-      
-      //If we're in verbose mode, set the ident string to the feature ID
-      if(verbose)
-      {                        
-        //Iterate through the attributes, and find the ID
-        for (map<string,vector<string> >::const_iterator itr = feat.m_gff_attributes.begin(); itr != feat.m_gff_attributes.end(); itr++)
-        {
-          //Is this the ID?
-          if(itr->first == "ID")
-          {
-            //Grab the ID
-            const vector<string>& values = itr->second;
-            ident = values[0];
-            break;
-          }            
-        }
-      }
-      
       //Does the feature start and end inside of the replacement?
       if(feat.m_start >= start_1 && feat.m_end <= end_1)
       {
@@ -89,7 +69,7 @@ namespace breseq {
         it--;
         
         //Notify the user of the action
-        if(verbose){cout << "REMOVED\t" << feat["type"] << "\t" << ident << endl;}
+        if(verbose){cout << "REMOVED\t" << feat["type"] << "\t" << feat.m_gff_attributes["ID"] << endl;}
       }
       
       //Does the feature end after the replacement starts?
@@ -99,10 +79,13 @@ namespace breseq {
         uint32_t end_temp = start_1 - 1;
         
         //Notify the user of the action
-        if(verbose){cout << "MODIFY\t" << feat["type"]<< "\t" << ident << endl;}
+        if(verbose){cout << "MODIFY\t" << feat["type"]<< "\t" << feat.m_gff_attributes["ID"] << endl;}
         
         //Modify the end of the feature
         feat.m_end = end_temp;
+        
+        //Mark it as pseudo
+        feat.flag_pseudo(verbose);
         
         //Modify the notes for this feature
         feat.m_gff_attributes["Note"].push_back("Mutation from " + mut_type);
@@ -118,10 +101,13 @@ namespace breseq {
           uint32_t start_temp = end_1 + 1;
           
           //Notify the user of the action
-          if(verbose){cout << "MODIFY\t" << feat["type"] << "\t" << ident << endl;}
+          if(verbose){cout << "MODIFY\t" << feat["type"] << "\t" << feat.m_gff_attributes["ID"] << endl;}
           
           //Modify the start of the feature
           feat.m_start = start_temp;
+          
+          //Mark it as pseudo
+          feat.flag_pseudo(verbose);
           
           //Modify the notes for this feature
           feat.m_gff_attributes["Note"].push_back("Mutation from " + mut_type);
@@ -135,7 +121,7 @@ namespace breseq {
           feat.m_end -= shift;
           
           //Notify the user of the action
-          if(verbose){cout << "SHIFT\t" << feat["type"] << "\t" << ident << endl;}
+          if(verbose){cout << "SHIFT\t" << feat["type"] << "\t" << feat.m_gff_attributes["ID"] << endl;}
         }
       }
       
@@ -149,10 +135,13 @@ namespace breseq {
           uint32_t end_temp = feat.m_end - shift;
           
           //Notify the user of the action
-          if(verbose){cout << "MODIFY\t" << feat["type"] << "\t" << ident << endl;}
+          if(verbose){cout << "MODIFY\t" << feat["type"] << "\t" << feat.m_gff_attributes["ID"] << endl;}
           
           //Modify the just the end of the feature
           feat.m_end = end_temp;
+          
+          //Mark it as pseudo
+          feat.flag_pseudo(verbose);
           
           //Modify the notes for this feature
           feat.m_gff_attributes["Note"].push_back("Mutation from " + mut_type);
@@ -175,27 +164,7 @@ namespace breseq {
     {
       //The current feature we're looking at
       cSequenceFeature& feat = **it;
-      
-      //Capture the ID of the feature
-      string ident;
-      
-      //If we're in verbose mode, set the ident string to the feature ID
-      if(verbose)
-      {                        
-        //Iterate through the attributes, and find the ID
-        for (map<string,vector<string> >::const_iterator itr = feat.m_gff_attributes.begin(); itr != feat.m_gff_attributes.end(); itr++)
-        {
-          //Is this the ID?
-          if(itr->first == "ID")
-          {
-            //Grab the ID
-            const vector<string>& values = itr->second;
-            ident = values[0];
-            break;
-          }            
-        }
-      }
-      
+         
       //Does the feature end after the insertion?
       //If it ends on the same postion, do nothing
       //because we're adding it AFTER.
@@ -207,7 +176,7 @@ namespace breseq {
         if(feat.m_start > pos_1)
         {                
           //Notify the user of the upcomming action
-          if(verbose){cout << "SHIFT\t" << feat["type"] << "\t" << ident << endl;};
+          if(verbose){cout << "SHIFT\t" << feat["type"] << "\t" << feat.m_gff_attributes["ID"] << endl;};
           
           //Shift the entire feature down the line
           feat.m_start += insert_length;
@@ -219,10 +188,13 @@ namespace breseq {
           uint32_t end_temp = feat.m_end + insert_length;
           
           //Notify the user of the action
-          if(verbose){cout << "MODIFY\t" << feat["type"] << "\t" << ident << endl;}
+          if(verbose){cout << "MODIFY\t" << feat["type"] << "\t" << feat.m_gff_attributes["ID"] << endl;}
           
           //Modify the end position
           feat.m_end += insert_length;
+          
+          //Mark it as pseudo
+          feat.flag_pseudo(verbose);
           
           //Modify the notes for this feature
           feat.m_gff_attributes["Note"].push_back("Mutation from " + mut_type);
@@ -550,6 +522,7 @@ namespace breseq {
     while (!in.eof() && getline(in,line)) {
       cSequenceFeaturePtr fp(new cSequenceFeature);
       cSequenceFeature& feature = *fp;
+      feature.m_pseudo = false; // Until we read otherwise, this feature is NOT pseudo.
 
   //! Step 2: Check for GFF Tags, reads FASTA from here.
       // We are concerned about a couple of ## GFF tags
@@ -628,8 +601,12 @@ namespace breseq {
       //! Case 2: Multiple values for given key, split by ","
         feature.m_gff_attributes[key] = split(value, ",");
         // unescape special characters after splitting
+        // If feature contains a note marking this as pseudo, set the flag.
         for (uint32_t i=0; i<feature.m_gff_attributes[key].size(); i++)
+        {
           feature.m_gff_attributes[key][i] = GFF3UnescapeString(feature.m_gff_attributes[key][i]);
+          if(feature.m_gff_attributes[key][i] == "Pseudogene")feature.m_pseudo = true;
+        }
       }
             
       // Load certain information into the main hash, so breseq knows to use it
@@ -1018,6 +995,9 @@ void cReferenceSequences::ReadGenBankFileSequenceFeatures(std::ifstream& in, cAn
 
   for (cSequenceFeatureList::iterator it = all_features.begin(); it != all_features.end(); it++) {
     cSequenceFeature& feature = **it;
+    
+    // All features default to not being pseudo
+    feature.m_pseudo = false;
 
     // common changes for any type
     // use /note as the product if there is not product
@@ -1076,11 +1056,13 @@ void cReferenceSequences::ReadGenBankFileSequenceFeatures(std::ifstream& in, cAn
 
       feature["accession"] = feature.SafeGet("locus_tag");
 
-      // /pseudo tag doesn't take a value
+      // Is this feature marked as pseudo?
       if (feature.count("pseudo") != 0)
       {
-        feature["type"] = "pseudogene";
-        int werewrwerwe = 9;
+        // Is it a gene type?  Rename it
+        if(feature["type"] == "gene")feature["type"] = "pseudogene";
+        // Flag it as pseudo
+        feature.m_pseudo = true;
       }
     }
         
@@ -1088,8 +1070,11 @@ void cReferenceSequences::ReadGenBankFileSequenceFeatures(std::ifstream& in, cAn
     feature["phase"] = "0";
     if (feature.SafeGet("locus_tag") != "")
       feature.m_gff_attributes["ID"] = make_list<string>(feature["locus_tag"]);
-    if (feature.SafeGet("product") != "")
+    if (feature.SafeGet("product") != "") // Need special case for pseudo
+    {
       feature.m_gff_attributes["Note"] = make_list<string>(feature["product"]);
+      if(feature.m_pseudo)feature.m_gff_attributes["Note"].push_back("Pseudogene");
+    }
     if (feature.SafeGet("accession") != "")
       feature.m_gff_attributes["Alias"] = make_list<string>(feature["accession"]);
     if (feature.SafeGet("name") != "")
