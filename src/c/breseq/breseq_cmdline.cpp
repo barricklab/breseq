@@ -603,23 +603,16 @@ int do_contingency_loci(int argc, char* argv[]) {
 	// attempt to calculate error calibrations:
 	try {
     
-    if( !options.count("loci") ){
-      analyze_contingency_loci(
-                               options["bam"],
-                               options["fasta"],
-                               options["output"],
-                               NULL,
-                               options.count("strict")
-                               );
-    }
-		else{ analyze_contingency_loci(
-                       options["bam"],
-                       options["fasta"],
-                       options["output"],
-                      options["loci"],
-                        options.count("strict")
-                       );
-    }
+    string loci_file = "";
+    if (options.count("loci")) loci_file = options["loci"];
+    
+    analyze_contingency_loci(
+                             options["bam"],
+                             options["fasta"],
+                             options["output"],
+                             loci_file,
+                             options.count("strict")
+                             );
 	} catch(...) {
 		// failed; 
 		return -1;
@@ -733,8 +726,6 @@ int do_identify_candidate_junctions(int argc, char* argv[]) {
      "Only count reads where both matches extend this many bases outside of the overlap.", static_cast<unsigned long>(5))
     ("required-one-unique-length-per-side,2",
      "Only count reads where at least one match extends this many bases outside of the overlap.", static_cast<unsigned long>(10))
-    ("maximum-inserted-junction-sequence-length,3",
-     "Maximum number of bases allowed in the overlapping part of a candidate junction.", static_cast<unsigned long>(20))
     ("require-match-length,4",
      "At least this many bases in the read must match the reference genome for it to count.", static_cast<unsigned long>(28))
     ("required-extra-pair-total-length,5",
@@ -783,7 +774,6 @@ int do_identify_candidate_junctions(int argc, char* argv[]) {
     // Other settings
     settings.candidate_junction_read_limit = from_string<int32_t>(options["candidate-junction-read-limit"]);
     settings.require_match_length  = from_string<int32_t>(options["require-match-length"]);
-    settings.maximum_inserted_junction_sequence_length = from_string<int32_t>(options["maximum-inserted-junction-sequence-length"]);
     settings.required_one_unique_length_per_side = from_string<int32_t>(options["required-one-unique-length-per-side"]);
     settings.required_both_unique_length_per_side = from_string<int32_t>(options["required-both-unique-length-per-side"]);
     
@@ -907,8 +897,6 @@ int do_subtract(int argc, char *argv[])
 int breseq_default_action(int argc, char* argv[])
 {  
   
-  double pr_1 = nbdtr(5, 10.8448, 0.08195);
-
 	///
 	/// Get options from the command line
 	///
@@ -1135,7 +1123,6 @@ int breseq_default_action(int argc, char* argv[])
         "" //covariates
       );
 
-      string error_rates_summary_file_name = settings.error_rates_summary_file_name; //TODO unused
       CoverageDistribution::analyze_unique_coverage_distributions(settings, 
                                                                   summary, 
                                                                   ref_seq_info,
@@ -1146,11 +1133,11 @@ int breseq_default_action(int argc, char* argv[])
 
       // Note that storing from unique_coverage and reloading in preprocess_coverage is by design
       summary.unique_coverage.store(settings.coverage_junction_summary_file_name);
-      summary.error_count.store(settings.coverage_junction_error_count_summary_file_name);
+      summary.preprocess_error_count.store(settings.coverage_junction_error_count_summary_file_name);
       settings.done_step(settings.coverage_junction_done_file_name);
 		}
     summary.preprocess_coverage.retrieve(settings.coverage_junction_summary_file_name);
-    summary.error_count.retrieve(settings.coverage_junction_error_count_summary_file_name);
+    summary.preprocess_error_count.retrieve(settings.coverage_junction_error_count_summary_file_name);
     
 		string candidate_junction_summary_file_name = settings.candidate_junction_summary_file_name;
 		if (settings.do_step(settings.candidate_junction_done_file_name, "Identifying candidate junctions"))
@@ -1168,10 +1155,11 @@ int breseq_default_action(int argc, char* argv[])
 		}
 		summary.candidate_junction.retrieve(candidate_junction_summary_file_name);
 
-		//
-		// Find matches to new junction candidates
-		// sub candidate_junction_alignment {}
-		//
+    
+    //
+    // 04 candidate_junction_alignment
+    // * Align reads to new junction candidates
+    //
 		if (settings.do_step(settings.candidate_junction_alignment_done_file_name, "Candidate junction alignment"))
 		{
 			create_path(settings.candidate_junction_alignment_path);
@@ -1233,11 +1221,11 @@ int breseq_default_action(int argc, char* argv[])
 
 			settings.done_step(settings.candidate_junction_alignment_done_file_name);
 		}
-	}
+  }
 
 	
 	//
-  // 04 alignment_correction
+  // 05 alignment_correction
 	// * Resolve matches to new junction candidates
 	//
 	if (settings.do_step(settings.alignment_correction_done_file_name, "Resolving alignments with candidate junctions"))
@@ -1487,11 +1475,9 @@ int breseq_default_action(int argc, char* argv[])
 
 	create_path(settings.output_path); //need output for plots
   create_path(settings.output_calibration_path);
-	string error_rates_summary_file_name = settings.error_rates_summary_file_name;
 
 	if (settings.do_step(settings.error_rates_done_file_name, "Re-calibrating base error rates"))
 	{
-		//$summary->{unique_coverage} = {};
 		if (!settings.no_deletion_prediction)
 			CoverageDistribution::analyze_unique_coverage_distributions(
                                                                   settings, 
@@ -1552,13 +1538,10 @@ int breseq_default_action(int argc, char* argv[])
 			SYSTEM(command);
 		}
 
-		Storable::store(summary.unique_coverage, error_rates_summary_file_name); //or die "Can"t store data in file $error_rates_summary_file_name!" << endl;
+		summary.unique_coverage.store(settings.error_rates_summary_file_name);
 		settings.done_step(settings.error_rates_done_file_name);
 	}
-	Storable::retrieve(summary.unique_coverage, error_rates_summary_file_name);
-	//die "Can"t retrieve data from file $error_rates_summary_file_name!\n" if (!$summary->{unique_coverage});
-	//these are determined by the loaded summary information
-	settings.unique_coverage = summary.unique_coverage;
+	summary.unique_coverage.retrieve(settings.error_rates_summary_file_name);
 
 	//
 	// Make predictions of point mutations, small indels, and large deletions
@@ -1586,8 +1569,9 @@ int breseq_default_action(int argc, char* argv[])
       vector<double> deletion_propagation_cutoffs;
       vector<double> deletion_seed_cutoffs;
       for (uint32_t i = 0; i < ref_seq_info.size(); i++) {
-        deletion_propagation_cutoffs.push_back(settings.unique_coverage[ref_seq_info[i].m_seq_id].deletion_coverage_propagation_cutoff);
-        deletion_seed_cutoffs.push_back(settings.unique_coverage[ref_seq_info[i].m_seq_id].deletion_coverage_seed_cutoff);
+        deletion_propagation_cutoffs.push_back(summary.unique_coverage[ref_seq_info[i].m_seq_id].deletion_coverage_propagation_cutoff);
+        deletion_seed_cutoffs.push_back(summary.unique_coverage[ref_seq_info[i].m_seq_id].deletion_coverage_seed_cutoff);
+        //cout << ref_seq_info[i].m_seq_id << " " << to_string(deletion_propagation_cutoffs.back()) << " " << to_string(deletion_seed_cutoffs.back()) << endl;
       }
 
 			identify_mutations(

@@ -77,12 +77,20 @@ class pileup_base {
       return m_refs[target]->m_len;
     }
 
-    char reference_base_char_1(uint32_t target, uint32_t pos1) const  {
-      return get_refseq(target)[pos1-1];
+    char reference_base_char_1(uint32_t tid, uint32_t pos1) const  {
+      ASSERT(pos1 <= target_length(tid), "1-indexed position out of bounds! targed_id: " + to_string(tid) 
+             + " position: " + to_string(pos1) + " [1," + to_string(target_length(tid)) + "].");
+      ASSERT(pos1 >= 1, "1-indexed position out of bounds! targed_id: " + to_string(tid) 
+             + " position: " + to_string(1) + " [1," + to_string(target_length(tid)) + "].");
+      return get_refseq(tid)[pos1-1];
     } ;
   
-    char reference_base_char_0(uint32_t target, uint32_t pos0) const  {
-      return get_refseq(target)[pos0];
+    char reference_base_char_0(uint32_t tid, uint32_t pos0) const  {
+      ASSERT(pos0 < target_length(tid), "0-indexed position out of bounds! targed_id: " + to_string(tid) 
+             + " position: " + to_string(pos0) + " [0," + to_string(target_length(tid)-1) + "].");
+      //ASSERT(pos0 >= 0, "0-indexed position out of bounds! targed_id: " + to_string(tid) 
+      //       + " position: " + to_string(0) + " [0," + to_string(target_length(tid)-1) + "].");
+      return get_refseq(tid)[pos0];
     } ;
 
     // handle this reference sequence position during pileup?
@@ -102,14 +110,14 @@ class pileup_base {
     //! Pileup callback.
     virtual void pileup_callback(const pileup& p) {
       (void)p;
-      assert(false);
+      ASSERT(false, "pileup_callback not defined for class");
     };
 
 
     //! Fetch callback.
     virtual void fetch_callback(const alignment_wrapper& a) {
       (void)a;
-      assert(false);
+      ASSERT(false, "fetch_callback not defined for class");
     };
   
     //! Called before pileup starts a target.
@@ -119,7 +127,6 @@ class pileup_base {
     virtual void at_target_end(const uint32_t tid) { (void)tid; }
   
     //! Pass through to BAM.
-    //! @JEB make this transparently handle insert_start and insert_end REL606:13.1-16.0 using split_on_any
     void parse_region(const string& region, uint32_t& target_id, uint32_t& start_pos_1, uint32_t& end_pos_1)
     {
       int temp_target_id, temp_start_pos, temp_end_pos;
@@ -133,6 +140,7 @@ class pileup_base {
       end_pos_1 = static_cast<uint32_t>(temp_end_pos);       // bam_parse_region returns one indexed end
     }
   
+    //! Special parsing for seq_id:start.insert_start-end.insert_end form.
     void parse_region(const string& region, uint32_t& target_id, uint32_t& start_pos_1, uint32_t& end_pos_1, uint32_t& insert_start, uint32_t& insert_end)
     {
       insert_start = 0;
