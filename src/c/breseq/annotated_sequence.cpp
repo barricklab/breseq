@@ -467,7 +467,7 @@ namespace breseq {
     }
   }
   
-  void cReferenceSequences::ReadFASTA(const std::string &file_name) {
+  void cReferenceSequences::ReadFASTA(const string &file_name) {
     
     cFastaFile ff(file_name, ios_base::in);
     cFastaSequence on_seq;

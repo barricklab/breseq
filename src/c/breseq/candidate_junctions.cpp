@@ -67,7 +67,7 @@ namespace breseq {
     }
     if (alignments.size() == 0) return 0;
     
-    // @JEB: We would ideally sort by alignment score here
+    // @JEB: We would ideally sort by alignment/mapping score here
     // the number of mismatches is our current proxy for this.
     
     //@JEB This method of sorting may be slower than alternatives
@@ -1325,24 +1325,29 @@ namespace breseq {
   bool AlignmentPair::test(const Settings& settings)
   {
     int32_t intersection_length_negative = -min(0, intersection_length);
+    int32_t intersection_length_positive = max(0, intersection_length);
     
-		//// 1. Require maximum negative overlap (inserted unique sequence length) to be less than some value
-		if (intersection_length_negative > static_cast<int32_t>(settings.maximum_inserted_junction_sequence_length))
+		//// Require negative overlap (inserted unique sequence length) to be less than some value
+		if (intersection_length_negative > static_cast<int32_t>(settings.maximum_junction_sequence_insertion_length))
 			return false;
     
-		//// 2. Require both ends to extend a certain minimum length outside of the overlap
+    //// Require positive overlap (shared by both ends) to be less than some value
+    if (intersection_length_positive > static_cast<int32_t>(settings.maximum_junction_sequence_overlap_length))
+			return false;
+    
+		//// Require both ends to extend a certain minimum length outside of the overlap
 		if (a1_unique_length < static_cast<int32_t>(settings.required_both_unique_length_per_side))
 			return false;
     
 		if (a2_unique_length < static_cast<int32_t>(settings.required_both_unique_length_per_side))
 			return false;
 
-		//// 3. Require one end to extend a higher minimum length outside of the overlap
+		//// Require one end to extend a higher minimum length outside of the overlap
 		if ((a1_unique_length <  static_cast<int32_t>(settings.required_one_unique_length_per_side))
         && (a2_unique_length <  static_cast<int32_t>(settings.required_one_unique_length_per_side)))
 			return false;
     
-		//// 4. Test all of the normal criteria for counting a match to the reference
+		//// Test all of the normal criteria for counting a match to the reference
 		if (union_length < static_cast<int32_t>(settings.require_match_length))
 			return false;
     
