@@ -329,7 +329,8 @@ namespace breseq
                                                       // much of their matches unique in the reference sequence.
 		this->required_one_unique_length_per_side = this->ssaha2_seed_length;    // Require at least one of the pair of matches supporting a junction to have this
                                                       // much of its match that is unique in the reference sequence.
-		this->maximum_inserted_junction_sequence_length = 20; // Ignore junctions with negative overlap (unique inserted sequence between reference
+		this->maximum_junction_sequence_insertion_length = 20;  // Ignore junctions with negative overlap (unique inserted sequence between reference)
+		this->maximum_junction_sequence_overlap_length = 20;    // Ignore junctions with positive overlap (overlap of reference on each side)
 
     this->minimum_candidate_junctions = 10; // Minimum number of candidate junctions to keep
 		this->maximum_candidate_junctions = 5000; // Maximum number of candidate junctions to keep

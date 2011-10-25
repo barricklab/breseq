@@ -89,7 +89,7 @@ PosHashProbabilityTable::PosHashProbabilityTable(Summary& summary)
     Parameters p = {
           cov.nbinom_size_parameter,
           cov.nbinom_prob_parameter,
-          summary.error_count[seq_id].no_pos_hash_per_position_pr,
+          summary.preprocess_error_count[seq_id].no_pos_hash_per_position_pr,
           cov.nbinom_mean_parameter
     };
     
@@ -847,7 +847,7 @@ void load_junction_alignments(
           all_junction_ids[junction_id]++;
         }
         ////
-        // Multiple equivalent matches to junctions and reference, ones with most hits later will win theserepeat matches
+        // Multiple equivalent matches to junctions and reference, ones with most hits later will win these repeat matches
         // If mapping_quality_difference > 0, then they will count for scoring
         ////
         else
@@ -1012,7 +1012,7 @@ void score_junction(
 		JunctionMatchPtr& item = items[i];
     
 		//! Do not count reads that map the reference equally well toward the score.
-		if (item->mapping_quality_difference == 0) {
+		if (item->mapping_quality_difference < floor(static_cast<double>((summary.sequence_conversion.avg_read_length) / 30.0))) {
       if (verbose) cout << "  Degenerate:" << item->junction_alignments.front()->read_name() << endl;
       continue; 
     }

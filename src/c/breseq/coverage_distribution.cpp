@@ -136,7 +136,7 @@ namespace breseq {
 		double junction_keep_pr_cutoff = 0.01 / sqrt(sequence_length);
 		int32_t junction_max_score = int(2 * summary.sequence_conversion.avg_read_length);
 
-    double no_pos_hash_per_position_pr = summary.error_count[seq_id].no_pos_hash_per_position_pr;
+    double no_pos_hash_per_position_pr = summary.preprocess_error_count[seq_id].no_pos_hash_per_position_pr;
     if (pos_hash_p_value_cutoff_file_name == "") no_pos_hash_per_position_pr = -1;
     
 		CoverageDistribution dist;
