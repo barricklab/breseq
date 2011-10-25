@@ -128,6 +128,8 @@ bool diff_entry::is_validation() const
   return count(gd_entry_validation_types, gd_entry_validation_types + size, this->_type);
 }
   
+  
+//Comparing IDs here will currently break genome_diff::merge and genome_diff::subract
 bool diff_entry::operator==(const diff_entry& de)
 {
   diff_entry item = de;
@@ -295,7 +297,7 @@ void genome_diff::add(const diff_entry& item) {
   diff_entry_ptr added_item(diff_entry_copy);
   _entry_list.push_back(added_item);
     
-  if ((added_item->_id.size() == 0) || unique_id_used.count(added_item->_id.size()))
+  if ((added_item->_id.size() == 0) || unique_id_used.count(from_string<uint32_t>(added_item->_id)))
   {
     uint32_t new_id = new_unique_id();
     added_item->_id = to_string(new_id); 
@@ -393,6 +395,81 @@ void genome_diff::add(const diff_entry& item) {
           }            
         }
       }        
+    }
+  }
+  
+  //! Merge GenomeDiff information using gd_new as potential new info.
+  void genome_diff::merge(genome_diff& gd_new, bool verbose)
+  {
+    uint32_t old_unique_ids = unique_id_used.size();
+    
+    //Iterate through all the potential new entries
+    for (diff_entry_list::iterator it_new = gd_new._entry_list.begin(); it_new != gd_new._entry_list.end(); it_new++)
+    {
+      //The current potential new entry we're looking at
+      diff_entry& entry_new = **it_new;
+      bool new_entry = true;
+      
+      //Iterate through all the entries in the current list.
+      for (diff_entry_list::iterator it_cur = _entry_list.begin(); it_cur != _entry_list.end(); it_cur++)
+      {
+        //The current entry we're looking at
+        diff_entry& entry = **it_cur;
+        
+        //Does the new entry match the current entry?
+        if(entry == entry_new)
+        {
+          //Existing matching entry found, this is not new
+          bool new_entry = false;
+          break;
+        }
+      }
+      
+      //We definately have a new entry
+      if(new_entry)
+      {
+        //Notify user of new entry
+        if(verbose)cout << "NEW ENTRY\t" << entry_new._id << "\t" << gd_new._default_filename << endl;
+        
+        //Add the new entry to the existing list
+        add(entry_new);        
+      }
+    }
+    
+    //Iterate through all the entries in the new list.
+    //This is where we update the evidence IDs for mutations.
+    for (diff_entry_list::iterator it = _entry_list.begin(); it != _entry_list.end(); it++)
+    {
+      //Is this one of the new entries?
+      if(from_string<uint32_t>((**it)._id) > old_unique_ids)
+      {                
+        //For every piece of evidence this entry has
+        for(uint32_t iter = 0; iter < (**it)._evidence.size(); iter++)
+        {
+          bool found_match = false;
+          
+          //Iterate through all the potential new entries
+          for (diff_entry_list::iterator it_new = gd_new._entry_list.begin(); it_new != gd_new._entry_list.end(); it_new++)
+          {            
+            //Does this evidence ID match an ID in the old list?
+            if((**it)._evidence[iter] == (**it_new)._id && !found_match)
+            {
+              //Iterate through all the current entries
+              for (diff_entry_list::iterator it_cur =_entry_list.begin(); it_cur != _entry_list.end(); it_cur++)
+              {
+                //Does the new entry match the current entry?
+                if((**it_cur) == (**it_new))
+                {
+                  //Change the evidence ID to it's new ID in the new updated list
+                  (**it)._evidence[iter] = (**it_cur)._id;
+                  found_match = true;
+                  break;
+                }
+              }
+            }
+          }
+        }
+      }
     }
   }
 

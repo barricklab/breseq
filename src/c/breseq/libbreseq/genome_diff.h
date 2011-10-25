@@ -310,6 +310,9 @@ public:
   
   //! Subtract mutations using gd_ref as reference.
   void subtract(genome_diff& gd_ref, bool verbose=true);
+  
+  //! Merge GenomeDiff information using gd_new as potential new info.
+  void merge(genome_diff& gd_new, bool verbose=true);
 
   //! Read a genome diff from a file.
   void read(const string& filename);
@@ -342,11 +345,10 @@ public:
   void add_reject_reasons(diff_entry item, const string& reason);
   size_t number_reject_reasons(diff_entry item);
   bool mutation_unknown(diff_entry mut);
-  bool has_mutation(diff_entry test_item);
   bool interval_un (const uint32_t& start, const uint32_t& end);
 
   cReferenceSequences apply_to_sequences(cReferenceSequences &ref_seq_info, bool verbose=false);
-  void shift_positions(diff_entry& item, cReferenceSequences& ref_seq_info, bool verbose=true);
+  void shift_positions(diff_entry& item, cReferenceSequences& ref_seq_info, bool verbose=false);
 
   void strcopy(char* arg1, const char* arg2);
 
