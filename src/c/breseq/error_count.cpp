@@ -182,9 +182,9 @@ void error_count_pileup::pileup_callback(const pileup& p) {
 void error_count_pileup::at_target_end(const uint32_t tid)
 {
   double total = static_cast<double>(m_read_found_starting_at_pos[0] + m_read_found_starting_at_pos[1]);
-  summary.error_count[target_name(tid)].no_pos_hash_per_position_pr = 1.0;
+  summary.preprocess_error_count[target_name(tid)].no_pos_hash_per_position_pr = 1.0;
   if (total != 0) {
-    summary.error_count[target_name(tid)].no_pos_hash_per_position_pr = static_cast<double>(m_read_found_starting_at_pos[0]) / total;
+    summary.preprocess_error_count[target_name(tid)].no_pos_hash_per_position_pr = static_cast<double>(m_read_found_starting_at_pos[0]) / total;
   }
 
   m_read_found_starting_at_pos[0] = 0;

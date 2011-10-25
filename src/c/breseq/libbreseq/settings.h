@@ -247,7 +247,8 @@ namespace breseq
 		// Scoring section to choose which ones from list to take
 		uint32_t minimum_candidate_junction_pos_hash_score;
 		uint32_t minimum_candidate_junction_min_overlap_score;
-		uint32_t maximum_inserted_junction_sequence_length;
+		uint32_t maximum_junction_sequence_insertion_length;
+    uint32_t maximum_junction_sequence_overlap_length;
 		uint32_t minimum_candidate_junctions;
 		uint32_t maximum_candidate_junctions;
     
@@ -401,9 +402,6 @@ namespace breseq
 		cReadFiles read_files;
 		vector<string> read_file_names;
     vector<string> reference_file_names;
-
-		storable_map<string, Coverage> unique_coverage;
-
     
 		bool hide_circular_genome_junctions;
 		bool polymorphism_prediction;
@@ -793,7 +791,7 @@ namespace breseq
       }
     };
     
-    storable_map<string, ErrorCount> error_count;
+    storable_map<string, ErrorCount> preprocess_error_count;
 
 
     // Overall functions for all of summary
@@ -805,7 +803,7 @@ namespace breseq
       alignment_resolution.serialize(f);
       preprocess_coverage.serialize(f);
       unique_coverage.serialize(f);
-      error_count.serialize(f);
+      preprocess_error_count.serialize(f);
     }
     
 		void deserialize(ifstream& f)
@@ -815,7 +813,7 @@ namespace breseq
       alignment_resolution.deserialize(f);
       preprocess_coverage.deserialize(f);
       unique_coverage.deserialize(f);
-      error_count.deserialize(f);
+      preprocess_error_count.deserialize(f);
 		}
 	};
   
