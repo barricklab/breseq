@@ -33,11 +33,11 @@ namespace breseq {
     
 
 	void analyze_contingency_loci(const string& bam,
-                        const string& fasta,
-                        const string& output,
-                        const string& loci,
-                        int strict
-                        );
+                                const string& fasta,
+                                const string& output,
+                                const string& loci,
+                                int strict
+                                );
 	
 
 	
@@ -95,127 +95,9 @@ namespace breseq {
 		//! Called for each alignment.
 		virtual void fetch_callback(const alignment_wrapper& a);
     
-        
-        void printStats(const string& output){
-            ofstream out(output.c_str());
-            assert(!out.fail()); 
-            
-            int mindiff = 0;
-            int maxdiff = 0;
-            
-            /*
-            //Finds the max and min diff with respect to the length of the original repeat
-            for( size_t i=0; i<repeats.size(); i++ ){
-                vector<string> bounds = split( split( repeats[i].region, ":" )[1], "-" );
-                int length = atoi( bounds[1].c_str() ) - atoi( bounds[0].c_str() );
-                //out << repeats[i].region << ":" << length << " ";
-                //cout << length << "\n";
-        
-                int diff = (repeats[i].freqs.size()+1)-length;
-                if( diff > maxdiff ){
-                    maxdiff = diff;
-                }
-                
-                //Finds the greatest del
-                for( size_t j=0; j<repeats[i].freqs.size(); j++ ){
-                    if( repeats[i].freqs[j] != 0 ){
-                        if( static_cast<int32_t>(j)-length < mindiff ){
-                            mindiff = j-length;
-                        }
-                        break;
-                    }
-                }
-
-            }
-            
-            //cout << mindiff << ":" << maxdiff << "\n";
-            //getchar();
-            
-            for( size_t i=0; i<repeats.size(); i++ ){
-                vector<string> bounds = split( split( repeats[i].region, ":" )[1], "-" );
-                int length = atoi( bounds[1].c_str() ) - atoi( bounds[0].c_str() );
-                for( size_t j=mindiff+length; j<repeats[i].freqs.size(); j++ ){
-                    out << repeats[i].freqs[j] << " ";
-                }
-                for( size_t j=0; j<length+maxdiff-repeats[i].freqs.size(); j++ ){
-                    out << 0 << " ";
-                }
-                out << bounds[0];
-                out << "\n";
-                
-            }
-            out << mindiff << " " << maxdiff;
- 
-            */
-          size_t maxsize = 0;
-          //Finds the max size of freqs
-          for( size_t i=0; i<repeats.size(); i++ ){
-            if( maxsize < repeats[i].freqs.size() ){
-              maxsize = repeats[i].freqs.size();
-            }
-          }
-          
-          for( size_t i=0; i<repeats.size(); i++ ){
-                vector<string> bounds = split( split( repeats[i].region, ":" )[1], "-" );
-                for( size_t j=0; j<repeats[i].freqs.size(); j++ ){
-                    out << repeats[i].freqs[j] << " ";
-                }
-              for( size_t j=0; j<maxsize-repeats[i].freqs.size(); j++ ){
-                out << 0 << " ";
-              }
-                
-                // Checks if it is a contingency loci. If so, prints out the name of the locus
-                bool locus = false;
-                for( size_t j=0; j<indices.size(); j++ ){
-                  if( atoi( bounds[0].c_str() ) == indices[j] ){
-                    //locus = true;
-                    //out << names[j];
-                    //break;
-                  }
-                }
-                // If it's not, then it prints the coordinate
-                if( !locus ){
-                  out << bounds[0];
-                }
-                out << "\n";
-            }
-            out.close();
-          }
+    void printStats(const string& output);
     
-    void readIndices( vector<int>& indices, vector<string>&  names, const string& loci){
-      
-      if( loci.compare("NA") ){
-        indices = vector<int>();
-      }
-      
-      ifstream file( loci.c_str() );
-      vector<int> ind;
-      vector<string> n;
-      int i=0;
-      int x = 0;
-      string s;
-      while( !file.eof() ){
-        if( i%5 == 1 ){
-          file >> x;
-          ind.push_back(x);
-        }
-        else if( i%5 == 4 ){
-          file >> s;
-          n.push_back(s);
-        }
-        else{
-          file >> s; 
-        }
-        i++;
-      }
-      
-      file.close();
-      names = n;
-      indices =  ind;
-    }
-
-        
- 
+    void readIndices( vector<int>& indices, vector<string>&  names, const string& loci);
         
         
 	protected:

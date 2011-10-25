@@ -524,7 +524,7 @@ void html_statistics(const string &file_name, const Settings& settings, Summary&
       if (!fragment_with_fit_coverage) {
         HTML << td("NA"); 
       } else {
-        HTML << td(ALIGN_CENTER, to_string(summary.error_count[it->m_seq_id].no_pos_hash_per_position_pr, 5));
+        HTML << td(ALIGN_CENTER, to_string(summary.preprocess_error_count[it->m_seq_id].no_pos_hash_per_position_pr, 5));
 //        HTML << td(ALIGN_CENTER, to_string(summary.alignment_resolution.pos_hash_cutoffs[it->m_seq_id].back()
 //        HTML << td(ALIGN_CENTER, to_string(summary.alignment_resolution.distance_cutoffs[it->m_seq_id]));
       }

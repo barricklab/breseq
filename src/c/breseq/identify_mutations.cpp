@@ -169,7 +169,10 @@ identify_mutations_pileup::~identify_mutations_pileup()
 /*! Called for each alignment.
  */
 void identify_mutations_pileup::pileup_callback(const pileup& p) {
-	assert(p.target() < _seq_info.size());
+  
+  bool verbose = false;
+	ASSERT(p.target() < _seq_info.size(), "Unknown target id: " + p.target());
+  if (verbose) cout << "Target id: " << p.target() << " position: " << endl;
 
   _this_deletion_propagation_cutoff = _deletion_propagation_cutoffs[p.target()];
   _this_deletion_seed_cutoff = _deletion_seed_cutoffs[p.target()];
@@ -178,7 +181,6 @@ void identify_mutations_pileup::pileup_callback(const pileup& p) {
   if (_this_deletion_propagation_cutoff < 0.0) return;
   
   uint32_t position = p.position_1();
-  //cout << position << endl;
   
 	int insert_count=-1;
 	bool next_insert_count_exists=true;
@@ -191,6 +193,7 @@ void identify_mutations_pileup::pileup_callback(const pileup& p) {
 		filename += p.target_name();
 		filename += ".coverage.tab";
 		_coverage_data.open(filename.c_str());
+    ASSERT(!_coverage_data.fail(), "Could not open output file:" + filename);
 		_coverage_data << "unique_top_cov" << "\t" << "unique_bot_cov" << "\t" << "redundant_top_cov" << "\t" << "redundant_bot_cov" << "\t" << "raw_redundant_top_cov" << "\t" << "raw_redundant_bot_cov" << "\t" << "e_value" << "\t" << "position" << endl;
 	}	
   
@@ -199,6 +202,7 @@ void identify_mutations_pileup::pileup_callback(const pileup& p) {
 		string filename(_output_dir);
 		filename += "/polymorphism_statistics_input.tab";
 		_polymorphism_r_input_file.open(filename.c_str());
+    ASSERT(!_polymorphism_r_input_file.fail(), "Could not open output file:" + filename);
 		_polymorphism_r_input_file 
       << "seq_id" << "\t"
       << "position" << "\t" 
@@ -425,7 +429,8 @@ void identify_mutations_pileup::pileup_callback(const pileup& p) {
       base_predicted = true;
     }
     
-		//cerr << position << " e:" << e_value_call << " b:" << base_predicted << endl;
+    if (verbose)
+      cout << position << " e:" << e_value_call << " b:" << base_predicted << endl;
 
 		int total_cov[3]={0,0,0}; // triple, same as above
     
@@ -708,12 +713,12 @@ void identify_mutations_pileup::pileup_callback(const pileup& p) {
 void identify_mutations_pileup::at_target_end(const uint32_t tid) {
 
   // end "open" intervals
+
 	check_deletion_completion(target_length(tid)+1, tid, position_coverage(numeric_limits<double>::quiet_NaN()), numeric_limits<double>::quiet_NaN());
   update_unknown_intervals(target_length(tid)+1, tid, true, false);
 
   // if this target failed to have its coverage fit, mark the entire thing as a deletion
   double _this_deletion_propagation_cutoff = _deletion_propagation_cutoffs[tid];
-  
   // if the propagation cutoff is zero then the coverage distribution failed
   if (_this_deletion_propagation_cutoff < 0.0)
   {
@@ -732,15 +737,14 @@ void identify_mutations_pileup::at_target_end(const uint32_t tid) {
 
     _gd.add(del);
   }
-  
-  
-  
+    
   // write genome diff file
 	_gd.write(_gd_file);
-	
+  
   // close open files
 	_coverage_data.close();
   _polymorphism_r_input_file.close();
+
 }
 
 
