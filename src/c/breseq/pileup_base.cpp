@@ -137,6 +137,9 @@ bool pileup_base::handle_position(uint32_t pos_1) {
  function defined in breseq::pileup_base.
  */
 int first_level_pileup_callback(uint32_t tid, uint32_t pos, int32_t n, const bam_pileup1_t *pile, void *data) {
+  bool debug = false;
+  
+  if (debug) cout << "pileup: " << tid << ", pos: " << pos << "n" << endl;
   
 	pileup_base* pb = reinterpret_cast<pileup_base*>(data);
   
@@ -161,7 +164,7 @@ int first_level_pileup_callback(uint32_t tid, uint32_t pos, int32_t n, const bam
       
       // Missing positions
       if ( pb->handle_position(on_pos_1) ) {
-        pileup p(tid,on_pos_1,0,NULL,*pb);
+        pileup p(pb->m_last_tid,on_pos_1,0,NULL,*pb);
         pb->pileup_callback(p);
       }
       
