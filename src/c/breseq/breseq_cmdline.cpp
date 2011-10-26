@@ -847,8 +847,8 @@ int do_mutate(int argc, char *argv[])
   AnyOption options("Usage: -g <file.gd> -r <reference.gbk>");
   options("genomediff,g", "genome diff file");
   options("reference,r",".gbk reference sequence file");
-  options("fasta,f","output FASTA file", "output.fasta");
-  options("gff3,3","output GFF3 file", "output.gff3");
+  options("fasta,f","output FASTA file");
+  options("gff3,3","output GFF3 file");
   options("verbose,v","Verbose Mode (Flag)", TAKES_NO_ARGUMENT);
   options.processCommandArgs(argc, argv);
   
@@ -884,12 +884,19 @@ int do_subtract(int argc, char *argv[])
   AnyOption options("Usage: -1 <file.gd> -2 <file.gd>");
   options("input1,1","input GD file 1");
   options("input2,2","input GD file 2");
-  options("output,o","output GD file", "output.gd");
+  options("output,o","output GD file");
   options("verbose,v","Verbose Mode (Flag)", TAKES_NO_ARGUMENT);
   options.processCommandArgs(argc, argv);
   
   if (!options.count("input1") ||
       !options.count("input2")) {
+    options.printUsage();
+    return -1;
+  }
+  
+  if (!options.count("output")) {
+    options.addUsage("");
+    options.addUsage("You must supply the --output option for output.");
     options.printUsage();
     return -1;
   }
@@ -908,14 +915,21 @@ int do_merge(int argc, char *argv[])
 {
   AnyOption options("Usage: -g <file1.gd file2.gd file3.gd ...>");
   options("genomediff,g","input GD files");
-  options("output,o","output GD file", "output.gd");
+  options("output,o","output GD file");
   options("verbose,v","Verbose Mode (Flag)", TAKES_NO_ARGUMENT);
   options.processCommandArgs(argc, argv);
   
   if (!options.count("genomediff")) {
     options.printUsage();
     return -1;
-  }  
+  }
+  
+  if (!options.count("output")) {
+    options.addUsage("");
+    options.addUsage("You must supply the --output option for output.");
+    options.printUsage();
+    return -1;
+  }
   
   genome_diff gd1(options["genomediff"]);
   
