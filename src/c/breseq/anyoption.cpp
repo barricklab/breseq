@@ -699,7 +699,8 @@ namespace breseq {
 				printVerbose();
 				printAutoUsage();
 				free(tmp);
-				return -1;
+        exit(-1);
+				//return -1;
 			}
 		}
 		else
@@ -731,7 +732,8 @@ namespace breseq {
 		printVerbose( opt  ) ;
 		printVerbose( );
 		printAutoUsage();
-		return  -1;
+    exit(-1);
+		//return  -1;
 	}
 	bool
 	AnyOption::matchChar( char c )
@@ -753,7 +755,8 @@ namespace breseq {
 		printVerbose( c ) ;
 		printVerbose( );
 		printAutoUsage();
-		return false;
+    exit(-1);
+		//return false;
 	}
 
 	/*
