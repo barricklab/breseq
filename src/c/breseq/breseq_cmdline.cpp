@@ -1772,7 +1772,6 @@ int breseq_default_action(int argc, char* argv[])
 /*! breseq commands
  
     First argument is a command that should be removed from argv.
-    Down the road -- if there is no command, pass to actual breseq pipeline
  
  */
 int main(int argc, char* argv[]) {
