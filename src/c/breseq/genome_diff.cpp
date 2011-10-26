@@ -693,6 +693,30 @@ void genome_diff::write(const string& filename) {
 	}
 	ofs.close();
 }
+  
+//! Call to assure that that this GenomeDiff seq_id
+//  matches the passed in cReferenceSequences seq_id
+//  returns true if it matches
+//  returns false if it doesn't match
+bool genome_diff::is_valid_seq_id(cReferenceSequences& ref_seq_info, bool verbose)
+{  
+  if((**(_entry_list.begin()))[SEQ_ID] != ref_seq_info.begin()->m_seq_id)
+  {
+    cout << "LOADED REFERENCE\t" << ref_seq_info.begin()->m_seq_id << endl;
+    cout << "LOADED GENOMEDIFF\t" << (**(_entry_list.begin()))[SEQ_ID] << endl;
+    cout << "LOADED FILES\t\tDIFFER" << endl;
+    return false;
+  }
+  
+  if(verbose)
+  {
+    cout << "LOADED REFERENCE\t" << ref_seq_info.begin()->m_seq_id << endl;
+    cout << "LOADED GENOMEDIFF\t" << (**(_entry_list.begin()))[SEQ_ID] << endl;
+    cout << "LOADED FILES\t\tMATCH" << endl;
+  } 
+  
+  return true;
+}
 
 
 void genome_diff::add_breseq_data(const key_t &key, const string& value)
@@ -1265,6 +1289,8 @@ cReferenceSequences genome_diff::apply_to_sequences(cReferenceSequences& ref_seq
 {
   // copy the reference sequence info
   cReferenceSequences new_ref_seq_info(ref_seq_info);
+  
+  ASSERT(is_valid_seq_id(new_ref_seq_info, verbose), "Loaded files do not match");
     
   uint32_t count_SNP = 0, count_SUB = 0, count_INS = 0, count_DEL = 0, count_AMP = 0, count_INV = 0, count_MOB = 0, count_CON = 0;
 
@@ -1453,6 +1479,8 @@ cReferenceSequences genome_diff::apply_to_sequences(cReferenceSequences& ref_seq
 
 void genome_diff::shift_positions(diff_entry &item, cReferenceSequences& ref_seq_info, bool verbose)
 {
+  ASSERT(is_valid_seq_id(ref_seq_info), "Loaded files do not match");
+  
   int32_t delta = item.mutation_size_change(ref_seq_info);
   if (verbose)
     cout << "Shift size: " << delta << endl;
@@ -1480,7 +1508,7 @@ void genome_diff::shift_positions(diff_entry &item, cReferenceSequences& ref_seq
 //>! Return the
   
 int32_t diff_entry::mutation_size_change(cReferenceSequences& ref_seq_info)
-{
+{  
   switch (this->_type) {
     case SNP: return 0; break;
     case SUB: return (*this)[NEW_SEQ].length() - from_string<uint32_t>((*this)[SIZE]); break;

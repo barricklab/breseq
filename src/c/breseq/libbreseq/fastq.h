@@ -61,7 +61,7 @@ namespace breseq {
     ~cFastqQualityConverter() {};
     
     void convert_sequence(cFastqSequence &seq);
-  }; 
+  };
    
 
 	/*! File class.
