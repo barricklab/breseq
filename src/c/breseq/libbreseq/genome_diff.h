@@ -309,17 +309,23 @@ public:
   void add(const diff_entry& item);
   
   //! Subtract mutations using gd_ref as reference.
-  void subtract(genome_diff& gd_ref, bool verbose=true);
+  void subtract(genome_diff& gd_ref, bool verbose=false);
   
   //! Merge GenomeDiff information using gd_new as potential new info.
-  void merge(genome_diff& gd_new, bool verbose=true);
+  void merge(genome_diff& gd_new, bool verbose=false);
 
   //! Read a genome diff from a file.
   void read(const string& filename);
   
   //! Write the genome diff to a file.
   void write(const string& filename);
-
+  
+  //! Call to assure that that this GenomeDiff seq_id
+  //  matches the passed in cReferenceSequences seq_id
+  //  returns true if it matches
+  //  returns false if it doesn't match
+  bool is_valid_seq_id(cReferenceSequences& ref_seq_info, bool verbose=false);
+  
   //! Remove items used as evidence by any mutations out of input list
   diff_entry_list filter_used_as_evidence(const diff_entry_list& list);
   
