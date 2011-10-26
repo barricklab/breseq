@@ -858,13 +858,23 @@ int do_mutate(int argc, char *argv[])
     return -1;
   }
   
+  if (!options.count("gff3") && !options.count("fasta")) {
+    options.addUsage("");
+    options.addUsage("You must supply at least one of the --fasta or --gff3 options for output.");
+    options.printUsage();
+    return -1;
+  }
+  
+  
   genome_diff gd(options["genomediff"]);
   cReferenceSequences ref_seq_info;
   ref_seq_info.LoadFiles(from_string<vector<string> >(options["reference"]));
   cReferenceSequences new_ref_seq_info = gd.apply_to_sequences(ref_seq_info, options.count("verbose"));
   
-  new_ref_seq_info.WriteFASTA(options["fasta"], options.count("verbose"));
-  new_ref_seq_info.WriteGFF(options["gff3"], options.count("verbose"));
+  if (options.count("fasta"))
+    new_ref_seq_info.WriteFASTA(options["fasta"], options.count("verbose"));
+  if (options.count("gff3"))
+    new_ref_seq_info.WriteGFF(options["gff3"], options.count("verbose"));
   
   return 0;
 }

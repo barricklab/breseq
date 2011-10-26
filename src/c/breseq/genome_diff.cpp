@@ -480,8 +480,7 @@ void genome_diff::add(const diff_entry& item) {
 
 void genome_diff::read(const string& filename) {
   ifstream IN(filename.c_str());
-  if(!IN.good())
-    cerr << "Could not open file for reading: " << filename << endl;
+  ASSERT(IN.good(), "Could not open file for reading: " + filename);
 
   ::list<string> lines;
   string line;
@@ -1095,28 +1094,30 @@ diff_entry_list genome_diff::filter_used_as_evidence(const diff_entry_list& inpu
 
 diff_entry genome_diff::_line_to_item(const string& line)
 {
+  cout << line << endl;
+  
   list_t line_list = split(line, "\t");
+  ASSERT(line_list.size() > 0, "Attempt to create genome diff entry from empty line.");
+
   diff_entry item;
   item._type = to_type(shift<string>(line_list));
   item._id = shift<string>(line_list);
   string evidence_string = shift<string>(line_list);
   item._evidence = split(evidence_string, ",");
 
-  const list_t spec = line_specification[item._type];
-
   // make sure it is a recognized type
+  const list_t spec = line_specification[item._type];
   ASSERT(!spec.empty(), "Type '" + to_string(item._type) + "' is not recognized for line:\n" + line );
-
+  
   for(size_t i = 0; i < spec.size(); i++)
   {
     string key = spec[i];
+    
+    ASSERT(line_list.size() > 0, "Number of required items is less than expected for type '" 
+           + to_string(item._type) + "' line:\n" + line + "\nExpected items: type,id,parent_id," + to_string(spec)
+           + "\nCheck whether you have used spaces rather than tabs to separate items.");
+    
     string next = shift<string>(line_list);
-
-    if(next.empty())
-    {
-     WARN("Number of required items is less than expected for type " + to_string(item._type));
-      assert(false);
-    }
 
     ASSERT(next.find("=") == string::npos,
             "Unexpected key=value pair '" + next + "' encountered for required item '" + key 
