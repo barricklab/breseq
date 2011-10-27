@@ -88,7 +88,8 @@ namespace breseq {
         feat.flag_pseudo(verbose);
         
         //Modify the notes for this feature
-        feat.m_gff_attributes["Note"].push_back("Mutation from " + mut_type);
+        //If this feature is already pseudo or a region, do nothing.
+        if(feat["type"] != "region" && feat["type"] != "source")feat.m_gff_attributes["Note"].push_back("Mutation from " + mut_type);
       }
       
       //Everything that starts after the replacement starts needs to be shifted          
@@ -110,7 +111,7 @@ namespace breseq {
           feat.flag_pseudo(verbose);
           
           //Modify the notes for this feature
-          feat.m_gff_attributes["Note"].push_back("Mutation from " + mut_type);
+          if(feat["type"] != "region" && feat["type"] != "source")feat.m_gff_attributes["Note"].push_back("Mutation from " + mut_type);
         }             
         
         //Is there any reason to shift?
@@ -144,7 +145,7 @@ namespace breseq {
           feat.flag_pseudo(verbose);
           
           //Modify the notes for this feature
-          feat.m_gff_attributes["Note"].push_back("Mutation from " + mut_type);
+          if(feat["type"] != "region" && feat["type"] != "source")feat.m_gff_attributes["Note"].push_back("Mutation from " + mut_type);
         }
       }
     }
@@ -197,7 +198,7 @@ namespace breseq {
           feat.flag_pseudo(verbose);
           
           //Modify the notes for this feature
-          feat.m_gff_attributes["Note"].push_back("Mutation from " + mut_type);
+          if(feat["type"] != "region" && feat["type"] != "source")feat.m_gff_attributes["Note"].push_back("Mutation from " + mut_type);
         }            
       }
     }
