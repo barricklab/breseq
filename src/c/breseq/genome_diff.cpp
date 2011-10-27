@@ -1404,6 +1404,7 @@ cReferenceSequences genome_diff::apply_to_sequences(cReferenceSequences& ref_seq
   {
     diff_entry& mut(**itr_mut);
     uint32_t position = from_string<uint32_t>(mut[POSITION]);
+    string temppos = mut[POSITION];
         
     switch (mut._type) 
     {
@@ -1601,7 +1602,7 @@ void genome_diff::shift_positions(diff_entry &item, cReferenceSequences& ref_seq
       WARN("shift_positions cannot handle inversions yet!");
     } else {
       int32_t position = from_string<int32_t>(mut[POSITION]);
-      if (from_string<uint32_t>(mut[POSITION]) > offset)
+      if (item[SEQ_ID] == mut[SEQ_ID] && from_string<uint32_t>(mut[POSITION]) > offset)
         mut[POSITION] = to_string(position + delta);
     }
 
