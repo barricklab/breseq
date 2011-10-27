@@ -698,23 +698,54 @@ void genome_diff::write(const string& filename) {
 //  This will also try and check entry positions and
 //  sizes against the length of the ref_seq_info.
 bool genome_diff::is_valid(cReferenceSequences& ref_seq_info, bool verbose)
-{
+{  
   //Go through every diff_entry for this genome_diff
   for (diff_entry_list::iterator entry = _entry_list.begin(); entry != _entry_list.end(); entry++)
-  {
+  {    
     //Grab the information based on type for this entry
     const list_t spec = line_specification[(**(entry))._type];
     
     //For every entry of this type go through each of their fields
     for(size_t i = 0; i < spec.size(); i++)
     {
-      //If the current entry has any SEQ_ID fields, does that SEQ_ID
-      // field match the one from ref_seq_info?
-      if((**(entry))[spec[i]] != ref_seq_info.begin()->m_seq_id && spec[i].find(SEQ_ID) != string::npos)
+      //Does the current field contain a SEQ_ID?
+      if(spec[i].find(SEQ_ID) != string::npos)
       {
-        cout << "LOADED REFERENCE\t" << ref_seq_info.begin()->m_seq_id << endl;
-        cout << "LOADED GENOMEDIFF\t" << (**(entry))[spec[i]] << " ID=" << (**(entry))._id << endl;
-        return false;
+        bool no_match = true;
+        vector<string> failure;
+        
+        for (vector<cAnnotatedSequence>::iterator it_as = ref_seq_info.begin(); it_as < ref_seq_info.end(); it_as++)
+        {
+          //If the current entry has any SEQ_ID fields, does that SEQ_ID
+          // field match any from ref_seq_info?
+          if((**(entry))[spec[i]] == it_as->m_seq_id)
+            no_match = false;
+          
+          failure.push_back(it_as->m_seq_id);
+        }
+        
+        //If we couldn't find any matching SEQ_IDs, perform notification and failure.
+        if(no_match)
+        {
+          cout << "LOADED REFERENCE\t" << *failure.begin() << endl;
+          for(vector<string>::iterator it_fail = ++failure.begin(); it_fail < failure.end(); it_fail++)cout << "\t\t\t\t\t" << *it_fail << endl;
+          cout << "LOADED GENOMEDIFF\t" << (**(entry))[spec[i]] << " ID=" << (**(entry))._id << endl;
+          return false;
+        }
+      }
+      
+      string temp_seq_id = "";
+      
+      //Find the previous SEQ_ID; the one associated with this position
+      // To do this, we iterate backwards from the current field.
+      for(int32_t x = 0 + i; x >= 0; --x)
+      {
+        //Does the current entry have a SEQ_ID field?
+        if(spec[x].find(SEQ_ID) != string::npos)
+        {
+          temp_seq_id = (**(entry))[spec[x]];
+          break;
+        }
       }
       
       //Does the current entry have any POSITION fields?
@@ -722,7 +753,7 @@ bool genome_diff::is_valid(cReferenceSequences& ref_seq_info, bool verbose)
       // Position check might fail if the entry has multiple
       // position fields as well as a size field.
       if(spec[i].find(POSITION) != string::npos)
-      {
+      {        
         int32_t temp_pos = from_string<int32_t>((**(entry))[spec[i]]);
         
         //Grab the information based on type for this entry
@@ -737,39 +768,48 @@ bool genome_diff::is_valid(cReferenceSequences& ref_seq_info, bool verbose)
             //Add the size field to the position
             temp_pos += from_string<int32_t>((**(entry))[temp_spec[u]]);
           }
-        }
+        }        
         
-        //Does the position in this field, plus any field that might indicate
-        //size, exceed the length of ref_seq_info?
-        if(temp_pos > ref_seq_info.begin()->m_length)
+        for(vector<cAnnotatedSequence>::iterator it_as = ref_seq_info.begin(); it_as < ref_seq_info.end(); it_as++)
         {
-          cout << "LOADED REFERENCE\tLENGTH: " << ref_seq_info.begin()->m_length << endl;
-          cout << "LOADED GENOMEDIFF\t" << "ID=" << (**(entry))._id << "\t" << temp_pos << " POTENTIAL POSITION" << endl;
-          return false;
+          //Does the position in this field, plus any field that might indicate
+          //size, exceed the length of the relevant sequence in ref_seq_info?
+          if(it_as->m_seq_id == temp_seq_id && temp_pos > it_as->m_length)
+          {
+            cout << "LOADED REFERENCE\t" << it_as->m_seq_id << "\tLENGTH:\t" << it_as->m_length << endl;
+            cout << "LOADED GENOMEDIFF\t" << temp_seq_id << "\tID=" << (**(entry))._id << "\t" << temp_pos << " POTENTIAL POSITION" << endl;
+            return false;
+          }
         }
       }
       
       //Does the current entry have a START field?
       if(spec[i] == START)
-      {
-        //Does this entry have a START larger than ref_seq_info length?
-        if(from_string<int32_t>((**(entry))[spec[i]]) > ref_seq_info.begin()->m_length)
+      {        
+        for(vector<cAnnotatedSequence>::iterator it_as = ref_seq_info.begin(); it_as < ref_seq_info.end(); it_as++)
         {
-          cout << "LOADED REFERENCE\tLENGTH: " << ref_seq_info.begin()->m_length << endl;
-          cout << "LOADED GENOMEDIFF\t" << "ID=" << (**(entry))._id << "\t" << (**(entry))[spec[i]] << " START" << endl;
-          return false;
-        }        
+          //Does this entry have a START larger than ref_seq_info length?
+          if(it_as->m_seq_id == temp_seq_id && from_string<int32_t>((**(entry))[spec[i]]) > it_as->m_length)
+          {
+            cout << "LOADED REFERENCE\t" << it_as->m_seq_id << "\tLENGTH:\t" << it_as->m_length << endl;
+            cout << "LOADED GENOMEDIFF\t" << temp_seq_id << "\tID=" << (**(entry))._id << "\t" << (**(entry))[spec[i]] << " START" << endl;
+            return false;
+          }
+        }
       }
       
       //Does the current entry have a END field?
       if(spec[i] == END)
-      {
-        //Does this entry have a END larger than ref_seq_info length?
-        if(from_string<int32_t>((**(entry))[spec[i]]) > ref_seq_info.begin()->m_length)
+      {        
+        for(vector<cAnnotatedSequence>::iterator it_as = ref_seq_info.begin(); it_as < ref_seq_info.end(); it_as++)
         {
-          cout << "LOADED REFERENCE\tLENGTH: " << ref_seq_info.begin()->m_length << endl;
-          cout << "LOADED GENOMEDIFF\t" << "ID=" << (**(entry))._id << "\t" << (**(entry))[spec[i]] << " END" << endl;
-          return false;
+          //Does this entry have a END larger than ref_seq_info length?
+          if(it_as->m_seq_id == temp_seq_id && from_string<int32_t>((**(entry))[spec[i]]) > it_as->m_length)
+          {
+            cout << "LOADED REFERENCE\t" << it_as->m_seq_id << "\tLENGTH:\t" << it_as->m_length << endl;
+            cout << "LOADED GENOMEDIFF\t" << temp_seq_id << "\tID=" << (**(entry))._id << "\t" << (**(entry))[spec[i]] << " END" << endl;
+            return false;
+          }
         }        
       }
     }
@@ -777,11 +817,7 @@ bool genome_diff::is_valid(cReferenceSequences& ref_seq_info, bool verbose)
    
   //Notify the user that the files match.
   if(verbose)
-  {
-    cout << "LOADED REFERENCE\t" << ref_seq_info.begin()->m_seq_id << endl;
-    cout << "LOADED GENOMEDIFF\t" << (**(_entry_list.begin()))[SEQ_ID] << endl;
-    cout << "LOADED FILES\t\tMATCH" << endl;
-  }
+    cout << "LOADED FILES MATCH" << endl;
   
   return true;
 }

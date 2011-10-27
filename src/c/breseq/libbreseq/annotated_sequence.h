@@ -110,7 +110,7 @@ namespace breseq {
       void flag_pseudo(bool verbose=false)
       {
         //If this feature is already pseudo or a region, do nothing.
-        if(m_pseudo || (*this)["type"] == "region")
+        if(m_pseudo || (*this)["type"] == "region" || (*this)["type"] == "source")
           return;
         
         //Notify the user of the action
