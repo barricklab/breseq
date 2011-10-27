@@ -1404,7 +1404,6 @@ cReferenceSequences genome_diff::apply_to_sequences(cReferenceSequences& ref_seq
   {
     diff_entry& mut(**itr_mut);
     uint32_t position = from_string<uint32_t>(mut[POSITION]);
-    string temppos = mut[POSITION];
         
     switch (mut._type) 
     {

@@ -489,25 +489,25 @@ namespace breseq {
 
   void cReferenceSequences::WriteFASTA(const std::string &file_name, bool verbose) {
     
-    if(verbose){cout << "Writing FASTA" << endl << "\t" << file_name << endl;};
+    if(verbose)cout << "Writing FASTA" << endl << "\t" << file_name << endl;
     
     cFastaFile ff(file_name, ios_base::out);
     for(vector<cAnnotatedSequence>::iterator it_as = this->begin(); it_as < this->end(); it_as++) {
-      ff.write_sequence(it_as->m_fasta_sequence);
+      if(it_as->m_length)ff.write_sequence(it_as->m_fasta_sequence);
     }
     
-    if(verbose){cout << "\t**FASTA Complete**" << endl;};
+    if(verbose)cout << "\t**FASTA Complete**" << endl;
   }
 
   void cReferenceSequences::WriteFASTA(cFastaFile& ff, bool verbose) {
 
-    if(verbose){cout << "Writing FASTA" << endl;};
+    if(verbose)cout << "Writing FASTA" << endl;
     
     for(vector<cAnnotatedSequence>::iterator it_as = this->begin(); it_as < this->end(); it_as++) {
-      ff.write_sequence(it_as->m_fasta_sequence);
+      if(it_as->m_length)ff.write_sequence(it_as->m_fasta_sequence);
     }
     
-    if(verbose){cout << "\t**FASTA Complete**" << endl;};
+    if(verbose)cout << "\t**FASTA Complete**" << endl;
     
   }
 
@@ -672,7 +672,7 @@ void cReferenceSequences::WriteGFF( const string &file_name, bool verbose ){
   out << "##gff-version 3" << endl;
 
   for (vector<cAnnotatedSequence>::iterator it_as = this->begin(); it_as < this->end(); it_as++) {
-    out << "##sequence-region" << "\t" << it_as->m_seq_id << "\t" << "1" << "\t" << it_as->m_length << endl;
+    if(it_as->m_length)out << "##sequence-region" << "\t" << it_as->m_seq_id << "\t" << "1" << "\t" << it_as->m_length << endl;
   }
   
   //! Step 2: Features
@@ -731,7 +731,7 @@ void cReferenceSequences::WriteGFF( const string &file_name, bool verbose ){
           s.push_back(GFF3EscapeString(*it));
         }
         
-        attributes.push_back(key + "=" + join(s, ","));
+        if(s.size())attributes.push_back(key + "=" + join(s, ","));
       }
       out << join(attributes, ";");
 
