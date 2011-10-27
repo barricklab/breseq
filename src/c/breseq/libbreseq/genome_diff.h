@@ -320,11 +320,11 @@ public:
   //! Write the genome diff to a file.
   void write(const string& filename);
   
-  //! Call to assure that that this GenomeDiff seq_id
-  //  matches the passed in cReferenceSequences seq_id
-  //  returns true if it matches
-  //  returns false if it doesn't match
-  bool is_valid_seq_id(cReferenceSequences& ref_seq_info, bool verbose=false);
+  //! Call to assure that every entry in a genome_diff
+  //  has the same SEQ_ID as the ref_seq_info.
+  //  This will also try and check entry positions and
+  //  sizes against the length of the ref_seq_info.
+  bool is_valid(cReferenceSequences& ref_seq_info, bool verbose=false);
   
   //! Remove items used as evidence by any mutations out of input list
   diff_entry_list filter_used_as_evidence(const diff_entry_list& list);

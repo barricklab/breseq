@@ -121,7 +121,7 @@ namespace breseq {
         if((*this)["type"] == "gene"){(*this)["type"] = "pseudogene";if(verbose){cout << "\tto\t" << (*this)["type"];}}
         
         //Notify the user of the action (cont.)
-        cout << endl;
+        if(verbose)cout << endl;
       }
       
       void ReadGenBankCoords(string& s, ifstream& in);
