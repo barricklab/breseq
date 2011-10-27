@@ -57,7 +57,6 @@ map<gd_entry_type, vector<string> > line_specification = make_map<gd_entry_type,
 (DEL,make_list<string> ("seq_id")("position")("size"))
 (INS,make_list<string> ("seq_id")("position")("new_seq"))
 (MOB,make_list<string> ("seq_id")("position")("repeat_name")("strand")("duplication_size"))
-(DEL,make_list<string> ("seq_id")("position")("size"))
 (INV,make_list<string> ("seq_id")("position")("size"))
 (AMP,make_list<string> ("seq_id")("position")("size")("new_copy_number"))
 (CON,make_list<string> ("seq_id")("position")("size")("region"))
@@ -1632,9 +1631,9 @@ int32_t diff_entry::mutation_size_change(cReferenceSequences& ref_seq_info)
       if (this->entry_exists("del_end"))
         size -= from_string<uint32_t>((*this)["del_end"]);
       if (this->entry_exists("ins_start"))
-        size += (*this)["ins_start"].length();
+        size += from_string<uint32_t>((*this)["ins_start"]);
       if (this->entry_exists("ins_end"))
-        size += (*this)["ins_end"].length();
+        size += from_string<uint32_t>((*this)["ins_end"]);
       return size;
       break;
     }
