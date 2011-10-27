@@ -1578,6 +1578,11 @@ cReferenceSequences genome_diff::apply_to_sequences(cReferenceSequences& ref_seq
     cout << "\tCON: " << count_CON << endl;
   }
   
+  //Cleanup.  If any of the sequences are of zero length, remove them.
+  for (vector<cAnnotatedSequence>::iterator it_as = new_ref_seq_info.begin(); it_as < new_ref_seq_info.end(); it_as++) {
+    if(!it_as->m_length){new_ref_seq_info.erase(it_as);it_as--;}
+  }
+  
   return new_ref_seq_info;
 }
 
