@@ -264,8 +264,10 @@ genome_diff::genome_diff(const string& filename)
 genome_diff::genome_diff(genome_diff& merge1, genome_diff& merge2)
  : _unique_id_counter(0)
 {
+  this->merge(merge1);
+  this->merge(merge2);
   // calling add() makes sure numbers are assigned appropriately
-  for(diff_entry_list::iterator it=merge1._entry_list.begin(); it != merge1._entry_list.end(); it++)
+  /*for(diff_entry_list::iterator it=merge1._entry_list.begin(); it != merge1._entry_list.end(); it++)
   {
     this->add(*(it->get()));
   }
@@ -273,7 +275,7 @@ genome_diff::genome_diff(genome_diff& merge1, genome_diff& merge2)
   for(diff_entry_list::iterator it=merge2._entry_list.begin(); it != merge2._entry_list.end(); it++)
   {
     this->add(*(it->get()));
-  }  
+  } */ 
 }
 
   
