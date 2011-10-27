@@ -863,12 +863,16 @@ int do_mutate(int argc, char *argv[])
     options.addUsage("You must supply at least one of the --fasta or --gff3 options for output.");
     options.printUsage();
     return -1;
-  }
+  }  
   
-  
-  genome_diff gd(options["genomediff"]);
-  cReferenceSequences ref_seq_info;
+  genome_diff gd(options["genomediff"]);  
+  cReferenceSequences ref_seq_info;  
   ref_seq_info.LoadFiles(from_string<vector<string> >(options["reference"]));
+  
+  //Check to see if every item in the loaded .gd is
+  // applicable to the reference file.
+  ASSERT(gd.is_valid(ref_seq_info), "Reference file and GenomeDiff file don't match.");
+  
   cReferenceSequences new_ref_seq_info = gd.apply_to_sequences(ref_seq_info, options.count("verbose"));
   
   if (options.count("fasta"))
