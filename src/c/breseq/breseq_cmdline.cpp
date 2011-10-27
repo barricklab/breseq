@@ -844,9 +844,9 @@ int do_convert_gd( int argc, char* argv[]){
 
 int do_mutate(int argc, char *argv[])
 {
-  AnyOption options("Usage: -g <file.gd> -r <reference.gbk>");
+  AnyOption options("Usage: -g <file.gd> -r <reference>");
   options("genomediff,g", "genome diff file");
-  options("reference,r",".gbk reference sequence file");
+  options("reference,r",".gbk/.gff3/.fasta./.bull reference sequence file");
   options("fasta,f","output FASTA file");
   options("gff3,3","output GFF3 file");
   options("verbose,v","Verbose Mode (Flag)", TAKES_NO_ARGUMENT);
