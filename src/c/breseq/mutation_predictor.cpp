@@ -867,11 +867,11 @@ namespace breseq {
 				}
 
 				// only transfer the hidden _keys to normal keys that will be printed if they are different from 0
-				if (mut.entry_exists("_del_start") && (mut["_del_start"] != "0")) mut["del_start"] = mut["_del_start"];
-				if (mut.entry_exists("_del_end")   && (mut["_del_end"] != "0"))   mut["del_end"] = mut["_del_end"];
+        if (mut.entry_exists("_del_start") && (mut["_del_start"] != "0")) mut["del_start"] = mut["_del_start"];
+        if (mut.entry_exists("_del_end")   && (mut["_del_end"] != "0"))   mut["del_end"] = mut["_del_end"];
 
-				 if (mut.entry_exists("_ins_start") && (mut["_del_start"].length() != 0)) mut["ins_start"] = mut["_ins_start"];
-				 if (mut.entry_exists("_ins_end")   && (mut["_del_end"].length() != 0))   mut["ins_end"] = mut["_ins_end"];
+        if (mut.entry_exists("_ins_start") && (mut["_ins_start"] != "0")) mut["ins_start"] = mut["_ins_start"];
+        if (mut.entry_exists("_ins_end")   && (mut["_ins_end"] != "0"))   mut["ins_end"] = mut["_ins_end"];
 
 				if (verbose)
 					cout << mut["_gap_left"] << " :: " << mut["_gap_right"] << endl;
