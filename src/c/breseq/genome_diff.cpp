@@ -767,8 +767,9 @@ bool genome_diff::is_valid(cReferenceSequences& ref_seq_info, bool verbose)
           //Does the current entry have a SIZE field?
           if(spec[u] == SIZE)
           {
-            //Add the size field to the position
-            temp_pos += from_string<int32_t>((**(entry))[temp_spec[u]]);
+            //Add the size field to the position, size should include the current
+            // position, so subtract 1.
+            temp_pos += from_string<int32_t>((**(entry))[temp_spec[u]]) - 1;
           }
         }        
         
