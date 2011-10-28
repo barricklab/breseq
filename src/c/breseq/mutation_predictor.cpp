@@ -103,7 +103,7 @@ namespace breseq {
 	void MutationPredictor::predict(Settings& settings, genome_diff& gd, uint32_t max_read_length, double avg_read_length)
 	{
 		(void)settings; //TODO; unused?
-    bool verbose = false; // for debugging
+    bool verbose = true; // for debugging
 
     //@JEB This could be replaced by passing summary
     if (avg_read_length == 0.0) avg_read_length = max_read_length;
@@ -491,6 +491,10 @@ namespace breseq {
 		{
 			diff_entry& j1 = **jc1_it;
       
+      if(!j1.entry_exists("_position") ||
+         !j1.entry_exists("_is_start") ||
+         !j1.entry_exists("_is_end"))continue;
+      
 			// Compile a list of the next possibilities within a certain length of bases
       vector<diff_entry_ptr> j2_list;
 			vector<diff_entry_list::iterator> it_delete_list_2;
@@ -702,10 +706,6 @@ namespace breseq {
 				// At this point any added junction sequences are on the strand as you would see them in the alignment.
 				// we may need to reverse complement and change sides.
 
-
-				// At this point any added junction sequences are on the strand as you would see them in the alignment.
-				// we may need to reverse complement and change sides.
-
 				if (verbose)
 					cout << mut["_gap_left"] << " :: " << mut["_gap_right"] << endl;
 
@@ -760,7 +760,7 @@ namespace breseq {
 					j1_is_seq_matched = ref_seq_info.get_sequence_1 (
 						j1[j1["_is_interval"] + "_seq_id"],
 						n(j1[j1["_is_interval"] + "_position"]) + j1_not_flush_length,
-						n(j1[j1["_is_interval"] + "_position"]) + j1_is_overlap_length - 1
+						n(j1[j1["_is_interval"] + "_position"]) + (j1_is_overlap_length - 1)
 					);
 				}
 
@@ -779,7 +779,7 @@ namespace breseq {
 					j2_is_seq_matched = ref_seq_info.get_sequence_1 (
 						j2[j2["_is_interval"] + "_seq_id"],
 						n(j2[j2["_is_interval"] + "_position"]) + j2_not_flush_length,
-						n(j2[j2["_is_interval"] + "_position"]) + j2_is_overlap_length - 1
+						n(j2[j2["_is_interval"] + "_position"]) + (j2_is_overlap_length - 1)
 					);
 				}
 
@@ -788,7 +788,7 @@ namespace breseq {
 				string j1_left_is_sequence = ref_seq_info.get_sequence_1 (
 					j1[j1["_is_interval"] + "_seq_id"],
 					n(j1["_" + j1["_is_interval"] + "_is_start"]),
-					n(j1["_" + j1["_is_interval"] + "_is_start"]) + j1_is_overlap_length - 1
+					n(j1["_" + j1["_is_interval"] + "_is_start"]) + (j1_is_overlap_length - 1)
 				);
 
 				string j1_right_is_sequence = ref_seq_info.get_sequence_1 (
@@ -809,7 +809,7 @@ namespace breseq {
 				string j2_left_is_sequence = ref_seq_info.get_sequence_1 (
 					j2[j2["_is_interval"] + "_seq_id"],
 					n(j2["_" + j2["_is_interval"] + "_is_start"]),
-					n(j2["_" + j2["_is_interval"] + "_is_start"]) + j2_is_overlap_length - 1
+					n(j2["_" + j2["_is_interval"] + "_is_start"]) + (j2_is_overlap_length - 1)
 				);
 
 				string j2_right_is_sequence = ref_seq_info.get_sequence_1 (
@@ -870,8 +870,8 @@ namespace breseq {
         if (mut.entry_exists("_del_start") && (mut["_del_start"] != "0")) mut["del_start"] = mut["_del_start"];
         if (mut.entry_exists("_del_end")   && (mut["_del_end"] != "0"))   mut["del_end"] = mut["_del_end"];
 
-        if (mut.entry_exists("_ins_start") && (mut["_ins_start"] != "0")) mut["ins_start"] = mut["_ins_start"];
-        if (mut.entry_exists("_ins_end")   && (mut["_ins_end"] != "0"))   mut["ins_end"] = mut["_ins_end"];
+        if (mut.entry_exists("_ins_start") && (mut["_ins_start"].length() != 0)) mut["ins_start"] = mut["_ins_start"];
+        if (mut.entry_exists("_ins_end")   && (mut["_ins_end"].length() != 0))   mut["ins_end"] = mut["_ins_end"];
 
 				if (verbose)
 					cout << mut["_gap_left"] << " :: " << mut["_gap_right"] << endl;
