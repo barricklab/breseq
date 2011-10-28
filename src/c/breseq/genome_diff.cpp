@@ -265,16 +265,6 @@ genome_diff::genome_diff(genome_diff& merge1, genome_diff& merge2)
 {
   this->merge(merge1);
   this->merge(merge2);
-  // calling add() makes sure numbers are assigned appropriately
-  /*for(diff_entry_list::iterator it=merge1._entry_list.begin(); it != merge1._entry_list.end(); it++)
-  {
-    this->add(*(it->get()));
-  }
- 
-  for(diff_entry_list::iterator it=merge2._entry_list.begin(); it != merge2._entry_list.end(); it++)
-  {
-    this->add(*(it->get()));
-  } */ 
 }
 
   
@@ -308,164 +298,107 @@ void genome_diff::add(const diff_entry& item) {
   {
     uint32_t new_id = from_string<uint32_t>(added_item->_id);
     unique_id_used[new_id] = true;
-  }
-  
-// # sub add
-// # {
-// #   my ($self, $item) = @_;
-// #   my @missing_required_columns = ();
-// # 
-// #   ## no ID, give it a new one (need to re-assign id's later...)
-// #   if ( !defined $item->{id} )
-// #   {
-// #     $item->{id} = $self->new_unique_id;
-// #   }
-// #   elsif ( $self->used_unique_id( $item->{id}) && !(($item->{id} eq '.') || ($item->{id} eq '+') || ($item->{id} eq '?')))
-// #   {
-// #     $self->warn("Ignoring attempt to add item with an existing id: $item->{id}");
-// #     return;
-// #   }
-// # 
-// #   sub check_required_field
-// #   {
-// #     my ($item, $field, $missing_ref) = @_;
-// #     push @$missing_ref, $field if (!defined $item->{$field});
-// #   }
-// #   
-// #   ## check to be sure the item has required fields, or auto-populate them
-// #   $item->{type} = '' if (!defined $item->{type});
-// #   
-// #   my $spec = $line_specification->{$item->{type}};
-// #   if (!defined $spec)
-// #   {
-// #     $self->warn("Type \'$item->{type}\' is not recognized. Ignoring item.");
-// #     return;
-// #   }
-// #   
-// #   ## check for required fields
-// #   foreach my $key (@$spec)
-// #   {
-// #     check_required_field($item, $key, \@missing_required_columns);
-// #   }
-// # 
-// #   if (scalar @missing_required_columns > 0)
-// #   {
-// #     $self->warn("GenomeDiff::Ignoring item of type \'$item->{type}\' that is missing required field(s):" . join (',', @missing_required_columns));
-// #     return;
-// #   }
-// # 
-// #   ## these are all required columns
-// #   $item->{SORT_1} = $tag_sort_fields->{$item->{type}}->[0];
-// #   $item->{SORT_2} = $item->{$tag_sort_fields->{$item->{type}}->[1]};
-// #   $item->{SORT_3} = $item->{$tag_sort_fields->{$item->{type}}->[2]};
-// #   
-// #   push @{$self->{list}}, $item;
-// #   $self->mark_unique_id($item->{id});
-// # }
-  
-  
-  
+  }  
 }
 
-  //! Subtract mutations using gd_ref as reference.
-  void genome_diff::subtract(genome_diff& gd_ref, bool verbose)
+//! Subtract mutations using gd_ref as reference.
+void genome_diff::subtract(genome_diff& gd_ref, bool verbose)
+{
+  //Iterate through all the entries
+  for (diff_entry_list::iterator it = _entry_list.begin(); it != _entry_list.end(); it++)
   {
-    //Iterate through all the entries
-    for (diff_entry_list::iterator it = _entry_list.begin(); it != _entry_list.end(); it++)
+    //The current entry we're looking at
+    diff_entry& entry = **it;
+    
+    //Is the entry a mutation?
+    if(entry.is_mutation())
+    {
+      //Iterate through all the entries we're checking against.
+      for (diff_entry_list::iterator it_ref = gd_ref._entry_list.begin(); it_ref != gd_ref._entry_list.end(); it_ref++)
+      {
+        //The current entry we're looking at
+        diff_entry& entry_ref = **it_ref;
+        
+        //Does the current entry match any of the reference entries?
+        if(entry == entry_ref)
+        {
+          //Notify the user of the action.
+          //This will currently output the enumerated number representing the _type.
+          if(verbose){cout << "REMOVE\t" << entry._type << "\t" << entry._id << endl;}
+          _entry_list.erase(it);
+          it--;
+        }            
+      }
+    }        
+  }
+}
+
+//! Merge GenomeDiff information using gd_new as potential new info.
+void genome_diff::merge(genome_diff& gd_new, bool verbose)
+{
+  uint32_t old_unique_ids = unique_id_used.size();
+  
+  //Iterate through all the potential new entries
+  for (diff_entry_list::iterator it_new = gd_new._entry_list.begin(); it_new != gd_new._entry_list.end(); it_new++)
+  {
+    //The current potential new entry we're looking at
+    diff_entry& entry_new = **it_new;
+    bool new_entry = true;
+    
+    //Iterate through all the entries in the current list.
+    for (diff_entry_list::iterator it_cur = _entry_list.begin(); it_cur != _entry_list.end(); it_cur++)
     {
       //The current entry we're looking at
-      diff_entry& entry = **it;
+      diff_entry& entry = **it_cur;
       
-      //Is the entry a mutation?
-      if(entry.is_mutation())
+      //Does the new entry match the current entry?
+      if(entry == entry_new)
       {
-        //Iterate through all the entries we're checking against.
-        for (diff_entry_list::iterator it_ref = gd_ref._entry_list.begin(); it_ref != gd_ref._entry_list.end(); it_ref++)
-        {
-          //The current entry we're looking at
-          diff_entry& entry_ref = **it_ref;
-          
-          //Does the current entry match any of the reference entries?
-          if(entry == entry_ref)
-          {
-            //Notify the user of the action.
-            //This will currently output the enumerated number representing the _type.
-            if(verbose){cout << "REMOVE\t" << entry._type << "\t" << entry._id << endl;}
-            _entry_list.erase(it);
-            it--;
-          }            
-        }
-      }        
+        //Existing matching entry found, this is not new
+        bool new_entry = false;
+        break;
+      }
+    }
+    
+    //We definately have a new entry
+    if(new_entry)
+    {
+      //Notify user of new entry
+      if(verbose)cout << "NEW ENTRY\t" << entry_new._id << "\t" << gd_new._default_filename << endl;
+      
+      //Add the new entry to the existing list
+      add(entry_new);        
     }
   }
   
-  //! Merge GenomeDiff information using gd_new as potential new info.
-  void genome_diff::merge(genome_diff& gd_new, bool verbose)
+  //Iterate through all the entries in the new list.
+  //This is where we update the evidence IDs for mutations.
+  for (diff_entry_list::iterator it = _entry_list.begin(); it != _entry_list.end(); it++)
   {
-    uint32_t old_unique_ids = unique_id_used.size();
-    
-    //Iterate through all the potential new entries
-    for (diff_entry_list::iterator it_new = gd_new._entry_list.begin(); it_new != gd_new._entry_list.end(); it_new++)
-    {
-      //The current potential new entry we're looking at
-      diff_entry& entry_new = **it_new;
-      bool new_entry = true;
-      
-      //Iterate through all the entries in the current list.
-      for (diff_entry_list::iterator it_cur = _entry_list.begin(); it_cur != _entry_list.end(); it_cur++)
+    //Is this one of the new entries?
+    if(from_string<uint32_t>((**it)._id) > old_unique_ids)
+    {                
+      //For every piece of evidence this entry has
+      for(uint32_t iter = 0; iter < (**it)._evidence.size(); iter++)
       {
-        //The current entry we're looking at
-        diff_entry& entry = **it_cur;
+        bool found_match = false;
         
-        //Does the new entry match the current entry?
-        if(entry == entry_new)
-        {
-          //Existing matching entry found, this is not new
-          bool new_entry = false;
-          break;
-        }
-      }
-      
-      //We definately have a new entry
-      if(new_entry)
-      {
-        //Notify user of new entry
-        if(verbose)cout << "NEW ENTRY\t" << entry_new._id << "\t" << gd_new._default_filename << endl;
-        
-        //Add the new entry to the existing list
-        add(entry_new);        
-      }
-    }
-    
-    //Iterate through all the entries in the new list.
-    //This is where we update the evidence IDs for mutations.
-    for (diff_entry_list::iterator it = _entry_list.begin(); it != _entry_list.end(); it++)
-    {
-      //Is this one of the new entries?
-      if(from_string<uint32_t>((**it)._id) > old_unique_ids)
-      {                
-        //For every piece of evidence this entry has
-        for(uint32_t iter = 0; iter < (**it)._evidence.size(); iter++)
-        {
-          bool found_match = false;
-          
-          //Iterate through all the potential new entries
-          for (diff_entry_list::iterator it_new = gd_new._entry_list.begin(); it_new != gd_new._entry_list.end(); it_new++)
-          {            
-            //Does this evidence ID match an ID in the old list?
-            if((**it)._evidence[iter] == (**it_new)._id && !found_match)
+        //Iterate through all the potential new entries
+        for (diff_entry_list::iterator it_new = gd_new._entry_list.begin(); it_new != gd_new._entry_list.end(); it_new++)
+        {            
+          //Does this evidence ID match an ID in the old list?
+          if((**it)._evidence[iter] == (**it_new)._id && !found_match)
+          {
+            //Iterate through all the current entries
+            for (diff_entry_list::iterator it_cur =_entry_list.begin(); it_cur != _entry_list.end(); it_cur++)
             {
-              //Iterate through all the current entries
-              for (diff_entry_list::iterator it_cur =_entry_list.begin(); it_cur != _entry_list.end(); it_cur++)
+              //Does the new entry match the current entry?
+              if((**it_cur) == (**it_new))
               {
-                //Does the new entry match the current entry?
-                if((**it_cur) == (**it_new))
-                {
-                  //Change the evidence ID to it's new ID in the new updated list
-                  (**it)._evidence[iter] = (**it_cur)._id;
-                  found_match = true;
-                  break;
-                }
+                //Change the evidence ID to it's new ID in the new updated list
+                (**it)._evidence[iter] = (**it_cur)._id;
+                found_match = true;
+                break;
               }
             }
           }
@@ -473,6 +406,7 @@ void genome_diff::add(const diff_entry& item) {
       }
     }
   }
+}
 
 
 /*! Read a genome diff(.gd) from the given file to class member
@@ -1631,9 +1565,9 @@ int32_t diff_entry::mutation_size_change(cReferenceSequences& ref_seq_info)
       if (this->entry_exists("del_end"))
         size -= from_string<uint32_t>((*this)["del_end"]);
       if (this->entry_exists("ins_start"))
-        size += from_string<uint32_t>((*this)["ins_start"]);
+        size += (*this)["ins_start"].length();
       if (this->entry_exists("ins_end"))
-        size += from_string<uint32_t>((*this)["ins_end"]);
+        size += (*this)["ins_end"].length();
       return size;
       break;
     }
