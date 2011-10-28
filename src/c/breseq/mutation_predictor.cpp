@@ -103,7 +103,7 @@ namespace breseq {
 	void MutationPredictor::predict(Settings& settings, genome_diff& gd, uint32_t max_read_length, double avg_read_length)
 	{
 		(void)settings; //TODO; unused?
-    bool verbose = true; // for debugging
+    bool verbose = false; // for debugging
 
     //@JEB This could be replaced by passing summary
     if (avg_read_length == 0.0) avg_read_length = max_read_length;
