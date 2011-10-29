@@ -491,10 +491,6 @@ namespace breseq {
 		{
 			diff_entry& j1 = **jc1_it;
       
-      if(!j1.entry_exists("_position") ||
-         !j1.entry_exists("_is_start") ||
-         !j1.entry_exists("_is_end"))continue;
-      
 			// Compile a list of the next possibilities within a certain length of bases
       vector<diff_entry_ptr> j2_list;
 			vector<diff_entry_list::iterator> it_delete_list_2;
@@ -603,7 +599,6 @@ namespace breseq {
 				if (n(j1[j1["_is_interval"] + "_strand"]) == -1)
 				{
 					mut["_gap_left"] = s(n(j1[j1["_is_interval"] + "_position"]) - n(j1["_" + j1["_is_interval"] + "_is_end"]));
-
 					if (n(mut["_gap_left"]) > 0)
 					{
 						j1_not_flush_seq = ref_seq_info.get_sequence_1 (
@@ -615,7 +610,7 @@ namespace breseq {
 				}
 				else
 				{
-					mut["_gap_left"] = s(n(j1["_" + j1["_is_interval"] + "_is_start"]) - n(j1[j1["_is_interval"] + "_position"]));
+					mut["_gap_left"] = s(n(j1["_" + j1["_is_interval"] + "_is_start"]) - n(j1[j1["_is_interval"] + "_position"]));          
 					if (n(mut["_gap_left"]) > 0)
 					{
 						j1_not_flush_seq = ref_seq_info.get_sequence_1 (
@@ -666,7 +661,7 @@ namespace breseq {
 				}
 				else
 				{
-					mut["_gap_right"] = s(n(j2["_" + j2["_is_interval"] + "_is_start"]) - n(j2[j2["_is_interval"] + "_position"]));
+					mut["_gap_right"] = s(n(j2["_" + j2["_is_interval"] + "_is_start"]) - n(j2[j2["_is_interval"] + "_position"]));          
 					if (n(mut["_gap_right"]) > 0)
 					{
 						j2_not_flush_seq = ref_seq_info.get_sequence_1 (
