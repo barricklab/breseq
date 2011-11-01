@@ -751,7 +751,7 @@ namespace breseq {
 					j1_is_seq_matched = reverse_complement(j1_is_seq_matched);
 				}
 				else
-				{
+				{          
 					j1_is_seq_matched = ref_seq_info.get_sequence_1 (
 						j1[j1["_is_interval"] + "_seq_id"],
 						n(j1[j1["_is_interval"] + "_position"]) + j1_not_flush_length,

@@ -925,7 +925,7 @@ namespace breseq {
    * Cephes Math Library Release 2.8:  June, 2000
    * Copyright 1984, 1987, 1995, 2000 by Stephen L. Moshier
    */  
-  double nbdtrc(int k, double n, double p)
+  double nbdtrc(double k, double n, double p)
   {
     double dk, dn;
     
@@ -979,7 +979,7 @@ namespace breseq {
    * Cephes Math Library Release 2.8:  June, 2000
    * Copyright 1984, 1987, 1995, 2000 by Stephen L. Moshier
    */  
-  double nbdtr(int k, double n, double p)
+  double nbdtr(double k, double n, double p)
   {
     double dk, dn;
     
@@ -1019,7 +1019,7 @@ namespace breseq {
    * Cephes Math Library Release 2.8:  June, 2000
    * Copyright 1984, 1987, 1995, 2000 by Stephen L. Moshier
    */  
-  double nbdtri(int k, double n, double p)
+  double nbdtri(double k, double n, double p)
   {
     double dk, dn, w;
         
@@ -1840,7 +1840,7 @@ namespace breseq {
    * Cephes Math Library Release 2.8:  June, 2000
    * Copyright 1984, 1987, 1995, 2000 by Stephen L. Moshier
    */
-  double bdtrc(int k, double n, double p)
+  double bdtrc(double k, double n, double p)
   {
     double dk, dn;
     
@@ -1926,7 +1926,7 @@ namespace breseq {
    * Cephes Math Library Release 2.8:  June, 2000
    * Copyright 1984, 1987, 1995, 2000 by Stephen L. Moshier
    */
-  double bdtr(int k, double n, double p)
+  double bdtr(double k, double n, double p)
   {
     double dk, dn;
     
@@ -2002,7 +2002,7 @@ namespace breseq {
    * Cephes Math Library Release 2.8:  June, 2000
    * Copyright 1984, 1987, 1995, 2000 by Stephen L. Moshier
    */
-  double bdtri(int k, double n, double y)
+  double bdtri(double k, double n, double y)
   {
     double dk, dn, p;
     

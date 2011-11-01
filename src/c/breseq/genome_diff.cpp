@@ -1343,7 +1343,6 @@ cReferenceSequences genome_diff::apply_to_sequences(cReferenceSequences& ref_seq
       case SNP :
       {
         count_SNP++;
-        string type_temp = "SNP"; 
         
         if (verbose)
         {
@@ -1351,13 +1350,12 @@ cReferenceSequences genome_diff::apply_to_sequences(cReferenceSequences& ref_seq
           cout << "  shift: none" << endl;
         }
         
-        new_ref_seq_info.replace_sequence_1(mut[SEQ_ID], position, position, mut[NEW_SEQ], (type_temp + " " + mut._id), verbose);
+        new_ref_seq_info.replace_sequence_1(mut[SEQ_ID], position, position, mut[NEW_SEQ], (to_string(mut._type) + " " + mut._id), verbose);
       } break;
 
       case SUB:
       {
         count_SUB++;
-        string type_temp = "SUB";
           
         const uint32_t& size = from_string<uint32_t>(mut[SIZE]);
           
@@ -1367,13 +1365,12 @@ cReferenceSequences genome_diff::apply_to_sequences(cReferenceSequences& ref_seq
           cout << "   shift +" << mut[NEW_SEQ].length() << " bp at position " <<  position << endl;
         }
 
-        new_ref_seq_info.replace_sequence_1(mut[SEQ_ID], position, position + size - 1, mut[NEW_SEQ], (type_temp + " " + mut._id), verbose);
+        new_ref_seq_info.replace_sequence_1(mut[SEQ_ID], position, position + size - 1, mut[NEW_SEQ], (to_string(mut._type) + " " + mut._id), verbose);
       } break;
 
       case INS:
       {          
         count_INS++;
-        string type_temp = "INS";
           
         if (verbose)
         {
@@ -1381,13 +1378,12 @@ cReferenceSequences genome_diff::apply_to_sequences(cReferenceSequences& ref_seq
           cout << "   shift +" << mut[NEW_SEQ].length() << " bp at position " <<  position << endl;
         }
           
-        new_ref_seq_info.insert_sequence_1(mut[SEQ_ID], position, mut[NEW_SEQ], (type_temp + " " + mut._id), verbose);
+        new_ref_seq_info.insert_sequence_1(mut[SEQ_ID], position, mut[NEW_SEQ], (to_string(mut._type) + " " + mut._id), verbose);
       } break;
 
       case DEL:
       {
         count_DEL++;
-        string type_temp = "DEL";
           
         const uint32_t& size = from_string<uint32_t>(mut[SIZE]);
           
@@ -1397,13 +1393,12 @@ cReferenceSequences genome_diff::apply_to_sequences(cReferenceSequences& ref_seq
           cout << "   shift -" << size << " bp at position " <<  position << endl;
         }
           
-        new_ref_seq_info.replace_sequence_1(mut[SEQ_ID], position, position + size -1, "", (type_temp + " " + mut._id), verbose);
+        new_ref_seq_info.replace_sequence_1(mut[SEQ_ID], position, position + size -1, "", (to_string(mut._type) + " " + mut._id), verbose);
       } break;
 
       case AMP:
       {
         count_AMP++;
-        string type_temp = "AMP";
           
         const uint32_t& size = from_string<uint32_t>(mut[SIZE]);
 
@@ -1419,7 +1414,7 @@ cReferenceSequences genome_diff::apply_to_sequences(cReferenceSequences& ref_seq
           cout << "   shift +" << dup.length() << " bp at position " << position << endl;
         }
 
-        new_ref_seq_info.insert_sequence_1(mut[SEQ_ID], position-1, dup, (type_temp + " " + mut._id), verbose);
+        new_ref_seq_info.insert_sequence_1(mut[SEQ_ID], position-1, dup, (to_string(mut._type) + " " + mut._id), verbose);
       } break;
         
       case INV:
@@ -1432,32 +1427,45 @@ cReferenceSequences genome_diff::apply_to_sequences(cReferenceSequences& ref_seq
       case MOB:
       {
         count_MOB++;
-        string type_temp = "MOB";
+        string new_seq_string = "";
+        int32_t iDelStart = 0;
+        int32_t iDelEnd = 0;
+        
+        if(mut.entry_exists("del_start")) iDelStart = from_string<uint32_t>(mut["del_start"]);
+        if(mut.entry_exists("del_end"))   iDelEnd = from_string<uint32_t>(mut["del_end"]);
           
-        ASSERT(!mut.entry_exists("ins_start") && !mut.entry_exists("ins_end") && !mut.entry_exists("del_start") && !mut.entry_exists("del_end"),
-               "MOB: does not handle ins_start, ins_end, del_start, del_end yet.");
+        //ASSERT(!mut.entry_exists("ins_start") && !mut.entry_exists("ins_end") && !mut.entry_exists("del_start") && !mut.entry_exists("del_end"),
+        //       "MOB: does not handle ins_start, ins_end, del_start, del_end yet.");
         ASSERT(mut["strand"] != "?", "Unknown repeat strand");
 
         // @JEB: correct here to look for where the repeat is in the original ref_seq_info.
         // This saves us from possible looking at a shifted location...
-        string seq_string = ref_seq_info.repeat_family_sequence(mut["repeat_name"], from_string<int16_t>(mut["strand"]));
-        mut["repeat_size"] = to_string(seq_string.length()); // saving this for shifting
+        string rep_string = ref_seq_info.repeat_family_sequence(mut["repeat_name"], from_string<int16_t>(mut["strand"]));
+        mut["repeat_size"] = to_string(rep_string.length()); // saving this for shifting
 
-        string duplicate_sequence = new_ref_seq_info.get_sequence_1(mut[SEQ_ID], position, position + from_string<uint32_t>(mut["duplication_size"]) - 1);
+        // "duplication_size" can be negative.  get_sequence_1 will ASSERT in those instances.
+        //  TODO correctly grab duplication sequence
+        string duplicate_sequence = new_ref_seq_info.get_sequence_1(mut[SEQ_ID], position, position + from_string<uint32_t>(mut["duplication_size"]) - 1);        
+        
+        new_seq_string = rep_string;
+        if(mut.entry_exists("ins_start")) new_seq_string = mut["ins_start"] + rep_string;
+        if(mut.entry_exists("ins_end"))   new_seq_string += mut["ins_end"];
+        new_seq_string += duplicate_sequence;        
           
         if (verbose)
         {
-          cout << "MOB: 0" << " => " << duplicate_sequence + seq_string << endl;
-          cout << "   shift +" << (duplicate_sequence.length() + seq_string.length())  << " bp at position " << position << endl;
+          cout << "MOB: 0" << " => " << new_seq_string << endl;
+          cout << "   shift +" << new_seq_string.length() - iDelStart - iDelEnd << " bp at position " << position << endl;
         }
           
-        new_ref_seq_info.insert_sequence_1(mut[SEQ_ID], position-1, duplicate_sequence + seq_string, (type_temp + " " + mut._id), verbose);
+        if(iDelStart)new_ref_seq_info.replace_sequence_1(mut[SEQ_ID], position-iDelStart, position-1, "", (to_string(mut._type) + " " + mut._id));
+        if(iDelEnd)new_ref_seq_info.replace_sequence_1(mut[SEQ_ID], position-iDelStart, position-1-iDelStart+iDelEnd, "", (to_string(mut._type) + " " + mut._id));
+        new_ref_seq_info.insert_sequence_1(mut[SEQ_ID], position-1-iDelStart, new_seq_string, (to_string(mut._type) + " " + mut._id), verbose);
       } break;
 
       case CON:
       {
         count_CON++;
-        string type_temp = "CON";
           
         uint32_t size = from_string<uint32_t>(mut[SIZE]);
 
@@ -1488,7 +1496,7 @@ cReferenceSequences genome_diff::apply_to_sequences(cReferenceSequences& ref_seq
           cout << "   shift " << ((size_change >= 0) ? "+" : "") << size_change << " bp at position " << position << endl;
         }
 
-        new_ref_seq_info.replace_sequence_1(mut[SEQ_ID], position, position + size - 1, replacing_sequence, (type_temp + " " + mut._id), verbose);        
+        new_ref_seq_info.replace_sequence_1(mut[SEQ_ID], position, position + size - 1, replacing_sequence, (to_string(mut._type) + " " + mut._id), verbose);        
       } break;
 
       default:
