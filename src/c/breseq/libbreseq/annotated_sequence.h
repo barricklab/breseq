@@ -189,6 +189,7 @@ namespace breseq {
       string get_sequence_1(int32_t start_1, int32_t end_1) const
       {
         ASSERT(start_1 <= end_1, "start (" + to_string(start_1) + ") not less than or equal to end (" + to_string(end_1) + ")");
+        //if(start_1 > end_1)return "";
         return m_fasta_sequence.m_sequence.substr(start_1-1, end_1-start_1+1);
       }
 
