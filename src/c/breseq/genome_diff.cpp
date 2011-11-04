@@ -260,11 +260,11 @@ genome_diff::genome_diff(const string& filename)
 
 /*! Merge Constructor.
  */
-genome_diff::genome_diff(genome_diff& merge1, genome_diff& merge2)
+genome_diff::genome_diff(genome_diff& merge1, genome_diff& merge2, bool verbose)
  : _unique_id_counter(0)
 {
-  this->merge(merge1);
-  this->merge(merge2);
+  this->merge(merge1, verbose);
+  this->merge(merge2, verbose);
 }
 
   
@@ -363,7 +363,7 @@ void genome_diff::merge(genome_diff& gd_new, bool verbose)
     if(new_entry)
     {
       //Notify user of new entry
-      if(verbose)cout << "NEW ENTRY\t" << entry_new._id << "\t" << gd_new._default_filename << endl;
+      if(verbose)cout << "\tNEW ENTRY\t" << entry_new._id << "\t" << gd_new._default_filename << endl;
       
       //Add the new entry to the existing list
       add(entry_new);        
@@ -394,9 +394,12 @@ void genome_diff::merge(genome_diff& gd_new, bool verbose)
               //Does the new entry match the current entry?
               if((**it_cur) == (**it_new))
               {
+                //Notify user of the update
+                if(verbose)cout << "\tEVIDENCE  \t" << (**it)._evidence[iter] << ">>" << (**it_cur)._id << endl;
+                
                 //Change the evidence ID to it's new ID in the new updated list
                 (**it)._evidence[iter] = (**it_cur)._id;
-                found_match = true;
+                found_match = true;  
                 break;
               }
             }
@@ -405,6 +408,10 @@ void genome_diff::merge(genome_diff& gd_new, bool verbose)
       }
     }
   }
+  
+  //Notify user of the update
+  if(verbose)cout << "\tMERGE DONE - " << gd_new._default_filename << endl;
+  
 }
 
 
