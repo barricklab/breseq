@@ -88,14 +88,52 @@ void alignment_output::create_alignment ( const string& region )
     int32_t positive_overlap_offset = (overlap_offset > 0) ? overlap_offset : 0;
     
     Aligned_Reference aligned_reference_1, aligned_reference_2;
-    aligned_reference_1.truncate_end = from_string<uint32_t>(split_region[8]) + positive_overlap_offset;
-    aligned_reference_1.ghost_end = from_string<uint32_t>(split_region[1]);
     aligned_reference_1.ghost_strand = from_string<int16_t>(split_region[2]) == 1 ? +1 : -1; // don't do int8_t here, returns wrong value
-    aligned_reference_1.ghost_seq_id = split_region[0];
-    
-    aligned_reference_2.truncate_start = from_string<uint32_t>(split_region[8]) + 1 + positive_overlap_offset + split_region[7].size();
-    aligned_reference_2.ghost_start = from_string<uint32_t>(split_region[4]) + positive_overlap_offset;
     aligned_reference_2.ghost_strand = from_string<int16_t>(split_region[5]) == 1 ? +1 : -1; // don't do int8_t here, returns wrong value
+    
+    
+    // This handles aligning the reference sequence in the output html
+    // pages.  This is only for Junctions with 2 references.  We have
+    // to do a little juggling to get everything in the right spot.
+    // This can probably be condensed, but right now it works.
+    //
+    // if>if and else>else are both the original statement if we have
+    // to revert because someone changed something further up the line
+    // and we become unaligned in output again. @MDS
+    if(aligned_reference_1.ghost_strand == aligned_reference_2.ghost_strand)
+    {
+      if(aligned_reference_1.ghost_strand > 0)
+      {
+        aligned_reference_1.truncate_end = from_string<uint32_t>(split_region[8]) + positive_overlap_offset;
+        aligned_reference_1.ghost_end = from_string<uint32_t>(split_region[1]);
+        aligned_reference_2.ghost_start = from_string<uint32_t>(split_region[4]) + positive_overlap_offset;
+      }
+      else
+      {
+        aligned_reference_1.truncate_end = from_string<uint32_t>(split_region[8]);
+        aligned_reference_1.ghost_end = from_string<uint32_t>(split_region[1]) - positive_overlap_offset;
+        aligned_reference_2.ghost_start = from_string<uint32_t>(split_region[4]);
+      }
+    }
+    else
+    {
+      if(aligned_reference_1.ghost_strand > 0)
+      {
+        aligned_reference_1.truncate_end = from_string<uint32_t>(split_region[8]);
+        aligned_reference_1.ghost_end = from_string<uint32_t>(split_region[1]) + positive_overlap_offset;
+        aligned_reference_2.ghost_start = from_string<uint32_t>(split_region[4]);
+      }
+      else
+      {
+        aligned_reference_1.truncate_end = from_string<uint32_t>(split_region[8]) + positive_overlap_offset;
+        aligned_reference_1.ghost_end = from_string<uint32_t>(split_region[1]);
+        aligned_reference_2.ghost_start = from_string<uint32_t>(split_region[4]) + positive_overlap_offset;
+      }
+    }
+    
+    aligned_reference_2.truncate_start = aligned_reference_1.truncate_end + 1 + split_region[7].size();
+    
+    aligned_reference_1.ghost_seq_id = split_region[0];    
     aligned_reference_2.ghost_seq_id = split_region[3];
  
     // common settings
