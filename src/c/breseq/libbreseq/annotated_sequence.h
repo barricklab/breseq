@@ -196,20 +196,27 @@ namespace breseq {
       // Replace Sequence with Input
       // Every position between and including start_1 and end_1 will be replaced with replacement_seq.
       // This function will shift everything else.
-      // mut_type is used too append the type of mutation to the feature notes.
+      // mut_type is used to append the type of mutation to the feature notes.
       // verbose outputs messages to console.
       // 
       // Successfully checks all three feature lists.  m_features, m_genes, and m_repeats.
-      void replace_sequence_1(int32_t start_1, int32_t end_1, const string &replacement_seq, string mut_type, bool verbose);
+      void replace_sequence_1(int32_t start_1, int32_t end_1, const string &replacement_seq, string mut_type="", bool verbose=false);
       
       // Insert Input AFTER Position
       // Place insertion_seq at first position after pos_1.
       // This function will shift everything else.
-      // mut_type is used too append the type of mutation to the feature notes.
+      // mut_type is used to append the type of mutation to the feature notes.
       // verbose outputs messages to console.
       // 
       // Successfully checks all three feature lists.  m_features, m_genes, and m_repeats.
-      void insert_sequence_1(int32_t pos_1, const string &insertion_seq, string mut_type, bool verbose);
+      void insert_sequence_1(int32_t pos_1, const string &insertion_seq, string mut_type="", bool verbose=false);
+    
+      // Repeat Feature at Position
+      // Look through ref_seq_info for repeat_name.
+      // Using it's strand, insert the repeat feaure at supplied position.
+      // Also repeat any features inside the repeat.
+      // verbose outputs messages to console.
+      void repeat_feature_1(int32_t pos, cReferenceSequences& ref_seq_info, const string &repeat_name, int8_t strand, bool verbose=false);
       
       // Find Specific Feature
       // Given a cSequenceFeatureList feat_list, iterate through it until
@@ -385,14 +392,19 @@ namespace breseq {
       return (*this)[tid].get_sequence_1(start_1, end_1);
     }
 
-    void replace_sequence_1(const string& seq_id, int32_t start_1, int32_t end_1, const string& replacement_seq, string mut_type, bool verbose=false)
+    void replace_sequence_1(const string& seq_id, int32_t start_1, int32_t end_1, const string& replacement_seq, string mut_type="", bool verbose=false)
     {
       (*this)[seq_id].replace_sequence_1(start_1, end_1, replacement_seq, mut_type, verbose);
     }
 
-    void insert_sequence_1(const string& seq_id, int32_t pos, const string &insertion_seq, string mut_type, bool verbose=false)
+    void insert_sequence_1(const string& seq_id, int32_t pos, const string &insertion_seq, string mut_type="", bool verbose=false)
     {
       (*this)[seq_id].insert_sequence_1(pos, insertion_seq, mut_type, verbose);
+    }
+    
+    void repeat_feature_1(const string& seq_id, int32_t pos, cReferenceSequences& ref_seq_info, const string &repeat_name, int8_t strand, bool verbose=false)
+    {
+      (*this)[seq_id].repeat_feature_1(pos, ref_seq_info, repeat_name, strand, verbose);
     }
 
     uint32_t get_sequence_length(const string& seq_id)
