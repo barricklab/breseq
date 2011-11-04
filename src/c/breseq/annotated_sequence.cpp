@@ -42,6 +42,9 @@ namespace breseq {
     //Modify the length of the sequence
     m_length -= shift;
     
+    //Notify what mutation is being worked on
+    if(verbose)cout << "** " << mut_type << " **" << endl;
+    
     //Iterate through all the features
     for (list<cSequenceFeaturePtr>::iterator it = m_features.begin(); it != m_features.end(); it++)
     {
@@ -69,7 +72,7 @@ namespace breseq {
         it--;
         
         //Notify the user of the action
-        if(verbose){cout << "REMOVED\t" << feat["type"] << "\t" << feat.m_gff_attributes["ID"] << endl;}
+        if(verbose){cout << "REMOVED\t" << feat["type"] << "\t" << feat.m_gff_attributes["ID"] << " " << feat.m_gff_attributes["Name"] << endl;}
       }
       
       //Does the feature end after the replacement starts?
@@ -79,7 +82,7 @@ namespace breseq {
         uint32_t end_temp = start_1 - 1;
         
         //Notify the user of the action
-        if(verbose){cout << "MODIFY\t" << feat["type"]<< "\t" << feat.m_gff_attributes["ID"] << endl;}
+        if(verbose){cout << "MODIFY\t" << feat["type"]<< "\t" << feat.m_gff_attributes["ID"] << " " << feat.m_gff_attributes["Name"] << endl;}
         
         //Modify the end of the feature
         feat.m_end = end_temp;
@@ -89,7 +92,7 @@ namespace breseq {
         
         //Modify the notes for this feature
         //If this feature is already pseudo or a region, do nothing.
-        if(feat["type"] != "region" && feat["type"] != "source" && !feat.m_gff_attributes.count("Mutation from " + mut_type))feat.m_gff_attributes["Note"].push_back("Mutation from " + mut_type);
+        //if(feat["type"] != "region" && feat["type"] != "source" && !feat.m_gff_attributes.count("Mutation from " + mut_type))feat.m_gff_attributes["Note"].push_back("Mutation from " + mut_type);
       }
       
       //Everything that starts after the replacement starts needs to be shifted          
@@ -102,7 +105,7 @@ namespace breseq {
           uint32_t start_temp = end_1 + 1;
           
           //Notify the user of the action
-          if(verbose){cout << "MODIFY\t" << feat["type"] << "\t" << feat.m_gff_attributes["ID"] << endl;}
+          if(verbose){cout << "MODIFY\t" << feat["type"] << "\t" << feat.m_gff_attributes["ID"] << " " << feat.m_gff_attributes["Name"] << endl;}
           
           //Modify the start of the feature
           feat.m_start = start_temp;
@@ -111,7 +114,7 @@ namespace breseq {
           feat.flag_pseudo(verbose);
           
           //Modify the notes for this feature
-          if(feat["type"] != "region" && feat["type"] != "source" && !feat.m_gff_attributes.count("Mutation from " + mut_type))feat.m_gff_attributes["Note"].push_back("Mutation from " + mut_type);
+          //if(feat["type"] != "region" && feat["type"] != "source" && !feat.m_gff_attributes.count("Mutation from " + mut_type))feat.m_gff_attributes["Note"].push_back("Mutation from " + mut_type);
         }             
         
         //Is there any reason to shift?
@@ -122,7 +125,7 @@ namespace breseq {
           feat.m_end -= shift;
           
           //Notify the user of the action
-          if(verbose){cout << "SHIFT\t" << feat["type"] << "\t" << feat.m_gff_attributes["ID"] << endl;}
+          if(verbose){cout << "SHIFT\t" << feat["type"] << "\t" << feat.m_gff_attributes["ID"] << " " << feat.m_gff_attributes["Name"] << endl;}
         }
       }
       
@@ -136,7 +139,7 @@ namespace breseq {
           uint32_t end_temp = feat.m_end - shift;
           
           //Notify the user of the action
-          if(verbose){cout << "MODIFY\t" << feat["type"] << "\t" << feat.m_gff_attributes["ID"] << endl;}
+          if(verbose){cout << "MODIFY\t" << feat["type"] << "\t" << feat.m_gff_attributes["ID"] << " " << feat.m_gff_attributes["Name"] << endl;}
           
           //Modify the just the end of the feature
           feat.m_end = end_temp;
@@ -145,7 +148,7 @@ namespace breseq {
           feat.flag_pseudo(verbose);
           
           //Modify the notes for this feature
-          if(feat["type"] != "region" && feat["type"] != "source" && !feat.m_gff_attributes.count("Mutation from " + mut_type))feat.m_gff_attributes["Note"].push_back("Mutation from " + mut_type);
+          //if(feat["type"] != "region" && feat["type"] != "source" && !feat.m_gff_attributes.count("Mutation from " + mut_type))feat.m_gff_attributes["Note"].push_back("Mutation from " + mut_type);
         }
       }
     }
@@ -162,6 +165,9 @@ namespace breseq {
     
     //Modify the length of the sequence
     m_length += insert_length;
+    
+    //Notify what mutation is being worked on
+    if(verbose)cout << "** " << mut_type << " **" << endl;
     
     //Iterate through all the features
     for (list<cSequenceFeaturePtr>::iterator it = m_features.begin(); it != m_features.end(); it++)
@@ -180,7 +186,7 @@ namespace breseq {
         if(feat.m_start > pos_1)
         {                
           //Notify the user of the upcomming action
-          if(verbose){cout << "SHIFT\t" << feat["type"] << "\t" << feat.m_gff_attributes["ID"] << endl;};
+          if(verbose){cout << "SHIFT\t" << feat["type"] << "\t" << feat.m_gff_attributes["ID"] << " " << feat.m_gff_attributes["Name"] << endl;};
           
           //Shift the entire feature down the line
           feat.m_start += insert_length;
@@ -192,7 +198,7 @@ namespace breseq {
           uint32_t end_temp = feat.m_end + insert_length;
           
           //Notify the user of the action
-          if(verbose){cout << "MODIFY\t" << feat["type"] << "\t" << feat.m_gff_attributes["ID"] << endl;}
+          if(verbose){cout << "MODIFY\t" << feat["type"] << "\t" << feat.m_gff_attributes["ID"] << " " << feat.m_gff_attributes["Name"] << endl;}
           
           //Modify the end position
           feat.m_end += insert_length;
@@ -201,12 +207,103 @@ namespace breseq {
           feat.flag_pseudo(verbose);
           
           //Modify the notes for this feature
-          if(feat["type"] != "region" && feat["type"] != "source" && !feat.m_gff_attributes.count("Mutation from " + mut_type))feat.m_gff_attributes["Note"].push_back("Mutation from " + mut_type);
+          //if(feat["type"] != "region" && feat["type"] != "source" && !feat.m_gff_attributes.count("Mutation from " + mut_type))feat.m_gff_attributes["Note"].push_back("Mutation from " + mut_type);
         }            
       }
     }
   }
-
+  
+  // Repeat Feature at Position
+  //
+  //  TODO: Needs to check to be sure that it is getting a "typical" copy 
+  //  (not one that has an insertion in it or a non-consensus sequence) 
+  void cAnnotatedSequence::repeat_feature_1(int32_t pos, cReferenceSequences& ref_seq_info, const string &repeat_name, int8_t strand, bool verbose)
+  {    
+    // Go through all the reference sequences in ref_seq_info
+    for (vector<cAnnotatedSequence>::iterator itr_seq = ref_seq_info.begin(); itr_seq != ref_seq_info.end(); itr_seq++)
+    {
+      cAnnotatedSequence& this_seq = *itr_seq;
+      cSequenceFeatureList& repeats = this_seq.m_repeats;
+      
+      // Go through the repeats of the sequence
+      for (cSequenceFeatureList::iterator itr_rep = repeats.begin(); itr_rep != repeats.end(); itr_rep++)
+      {
+        cSequenceFeature& rep = **itr_rep;
+        
+        // Is this the repeat we're looking for?
+        if (rep.SafeGet("name") == repeat_name)
+        {      
+          cSequenceFeatureList& features = this_seq.m_features;
+          cSequenceFeatureList feat_list_new;        
+                 
+          // Go through ALL the features of the (this_seq) sequence
+          for (cSequenceFeatureList::iterator itr_feat = features.begin(); itr_feat != features.end(); itr_feat++)
+          {
+            cSequenceFeature& feat = **itr_feat;
+            
+            // Does this feature start and end inside of the repeat?
+            if(feat.m_start >= rep.m_start && feat.m_end <= rep.m_end && feat["type"] != "region" && feat["type"] != "source")
+            {
+              // Create a brand new feature, that we can love and cuddle.
+              // This is where we copy the feature and all the attributes.
+              cSequenceFeaturePtr fp(new cSequenceFeature(feat));              
+              cSequenceFeature& feat_new = *fp;              
+              feat_new.m_gff_attributes = feat.m_gff_attributes;              
+              
+              // Depending on the strand of the mutation and the strand of the
+              // repeat, we juggle the starts and ends of here.
+              if(rep.m_strand != strand)
+              {
+                feat_new.m_end = pos - (feat.m_start - rep.m_end);
+                feat_new.m_start = feat_new.m_end - (feat.m_end - feat.m_start);
+                feat_new.m_strand = -feat.m_strand;
+                feat_list_new.push_front(fp);
+              }
+              else
+              {
+                feat_new.m_start = pos + (feat.m_start - rep.m_start);
+                feat_new.m_end = feat_new.m_start + (feat.m_end - feat.m_start);
+                feat_list_new.push_back(fp);
+              }
+              
+              // This is where we let the user know that "very imporant" things are going on
+              if(verbose){cout << "REPEAT\t" << feat["type"] << "\t" << feat.m_gff_attributes["ID"] << " " << feat.m_gff_attributes["Name"] << endl;}
+            }
+          }
+          
+          // Add these to all the correct feature lists, and in the right order.
+          for (cSequenceFeatureList::reverse_iterator itr_feat = feat_list_new.rbegin(); itr_feat != feat_list_new.rend(); itr_feat++)
+          {
+            cSequenceFeature& feat = **itr_feat;
+            
+            // Load certain information into the main hash, so breseq knows to use it.
+            // It's unlikely this will be necessary, but you can never be too cautious
+            if (feat.m_gff_attributes.count("Note"))
+              feat["product"] = join(feat.m_gff_attributes["Note"], ",");
+            
+            if (feat.m_gff_attributes.count("Alias"))
+              feat["accession"] = join(feat.m_gff_attributes["Alias"], ",");
+            
+            if (feat.m_gff_attributes.count("Name"))
+              feat["name"] = join(feat.m_gff_attributes["Name"], ",");
+            
+            this->feature_push_back(*itr_feat);
+          }
+          
+          // Sort, because while I did manage to implement a way to insert
+          // all of these new features at the correct positions and in the
+          // right order without these functions, it was a stupid function
+          m_features.sort();
+          m_genes.sort();
+          m_repeats.sort();
+          
+          return;
+        }
+      }
+    }
+    
+    ASSERT(false, "Unknown repeat type: " + repeat_name);
+  }
   
   // Load a complete collection of files and verify that sufficient information was loaded
   void cReferenceSequences::LoadFiles(const vector<string>& file_names)
@@ -1036,11 +1133,15 @@ void cReferenceSequences::ReadGenBankFileSequenceFeatures(std::ifstream& in, cAn
             name.erase(found, name.length());
           }
         }
-      }
+      }      
 
       // S. cerevisiae case
       if (feature.SafeGet("rpt_family") != "")
         feature["name"] = feature["rpt_family"];
+      
+      // Give the repeat region a name if NOTHING else can be found
+      if (feature.SafeGet("note") != "")
+        feature["name"] = feature.SafeGet("note");
 
       //std::cerr << (*it).SafeGet("mobile_element") << " " << (*it).SafeGet("name") << std::endl;
 

@@ -323,8 +323,7 @@ void genome_diff::subtract(genome_diff& gd_ref, bool verbose)
         if(entry == entry_ref)
         {
           //Notify the user of the action.
-          //This will currently output the enumerated number representing the _type.
-          if(verbose){cout << "REMOVE\t" << entry._type << "\t" << entry._id << endl;}
+          if(verbose){cout << "REMOVE\t" << to_string(entry._type) << "\t" << entry._id << endl;}
           _entry_list.erase(it);
           it--;
         }            
@@ -1344,13 +1343,13 @@ cReferenceSequences genome_diff::apply_to_sequences(cReferenceSequences& ref_seq
       {
         count_SNP++;
         
+        new_ref_seq_info.replace_sequence_1(mut[SEQ_ID], position, position, mut[NEW_SEQ], (to_string(mut._type) + " " + mut._id), verbose);
+        
         if (verbose)
         {
           cout << "SNP: 1 bp => " << mut[NEW_SEQ] << " at position " << position << endl;
           cout << "  shift: none" << endl;
         }
-        
-        new_ref_seq_info.replace_sequence_1(mut[SEQ_ID], position, position, mut[NEW_SEQ], (to_string(mut._type) + " " + mut._id), verbose);
       } break;
 
       case SUB:
@@ -1358,27 +1357,27 @@ cReferenceSequences genome_diff::apply_to_sequences(cReferenceSequences& ref_seq
         count_SUB++;
           
         const uint32_t& size = from_string<uint32_t>(mut[SIZE]);
+        
+        new_ref_seq_info.replace_sequence_1(mut[SEQ_ID], position, position + size - 1, mut[NEW_SEQ], (to_string(mut._type) + " " + mut._id), verbose);
           
         if (verbose)
         {
           cout << "SUB: " << size << " => " << mut[NEW_SEQ] << endl;
           cout << "   shift +" << mut[NEW_SEQ].length() << " bp at position " <<  position << endl;
         }
-
-        new_ref_seq_info.replace_sequence_1(mut[SEQ_ID], position, position + size - 1, mut[NEW_SEQ], (to_string(mut._type) + " " + mut._id), verbose);
       } break;
 
       case INS:
       {          
         count_INS++;
+        
+        new_ref_seq_info.insert_sequence_1(mut[SEQ_ID], position, mut[NEW_SEQ], (to_string(mut._type) + " " + mut._id), verbose);
           
         if (verbose)
         {
           cout << "INS: 0 => " << mut[NEW_SEQ] << endl;
           cout << "   shift +" << mut[NEW_SEQ].length() << " bp at position " <<  position << endl;
         }
-          
-        new_ref_seq_info.insert_sequence_1(mut[SEQ_ID], position, mut[NEW_SEQ], (to_string(mut._type) + " " + mut._id), verbose);
       } break;
 
       case DEL:
@@ -1386,14 +1385,14 @@ cReferenceSequences genome_diff::apply_to_sequences(cReferenceSequences& ref_seq
         count_DEL++;
           
         const uint32_t& size = from_string<uint32_t>(mut[SIZE]);
+        
+        new_ref_seq_info.replace_sequence_1(mut[SEQ_ID], position, position + size -1, "", (to_string(mut._type) + " " + mut._id), verbose);
           
         if (verbose)
         {
           cout << "DEL: " << size << " => 0" << endl;
           cout << "   shift -" << size << " bp at position " <<  position << endl;
         }
-          
-        new_ref_seq_info.replace_sequence_1(mut[SEQ_ID], position, position + size -1, "", (to_string(mut._type) + " " + mut._id), verbose);
       } break;
 
       case AMP:
@@ -1408,13 +1407,13 @@ cReferenceSequences genome_diff::apply_to_sequences(cReferenceSequences& ref_seq
           dup.append(new_ref_seq_info.get_sequence_1(mut[SEQ_ID], position, position+size-1));
         ASSERT(!dup.empty(), "Duplicate sequence is empy.");
           
+        new_ref_seq_info.insert_sequence_1(mut[SEQ_ID], position-1, dup, (to_string(mut._type) + " " + mut._id), verbose);
+        
         if (verbose)
         {
           cout << "AMP: 0" << " => " << dup << endl;
           cout << "   shift +" << dup.length() << " bp at position " << position << endl;
-        }
-
-        new_ref_seq_info.insert_sequence_1(mut[SEQ_ID], position-1, dup, (to_string(mut._type) + " " + mut._id), verbose);
+        }        
       } break;
         
       case INV:
@@ -1430,6 +1429,8 @@ cReferenceSequences genome_diff::apply_to_sequences(cReferenceSequences& ref_seq
         string new_seq_string = "";
         int32_t iDelStart = 0;
         int32_t iDelEnd = 0;
+        int32_t iInsStart = 0;
+        int32_t iInsEnd = 0;
         
         if(mut.entry_exists("del_start")) iDelStart = from_string<uint32_t>(mut["del_start"]);
         if(mut.entry_exists("del_end"))   iDelEnd = from_string<uint32_t>(mut["del_end"]);
@@ -1442,25 +1443,43 @@ cReferenceSequences genome_diff::apply_to_sequences(cReferenceSequences& ref_seq
         // This saves us from possible looking at a shifted location...
         string rep_string = ref_seq_info.repeat_family_sequence(mut["repeat_name"], from_string<int16_t>(mut["strand"]));
         mut["repeat_size"] = to_string(rep_string.length()); // saving this for shifting
-
-        // "duplication_size" can be negative.  get_sequence_1 will ASSERT in those instances.
-        //  TODO correctly grab duplication sequence
-        string duplicate_sequence = new_ref_seq_info.get_sequence_1(mut[SEQ_ID], position, position + from_string<uint32_t>(mut["duplication_size"]) - 1);        
         
+        // This is the string we're going to pass to be inserted.
+        // It will eventually contain the repeat string, insertions
+        // and the duplicate_sequence.
         new_seq_string = rep_string;
-        if(mut.entry_exists("ins_start")) new_seq_string = mut["ins_start"] + rep_string;
-        if(mut.entry_exists("ins_end"))   new_seq_string += mut["ins_end"];
-        new_seq_string += duplicate_sequence;        
+        
+        // The position of a MOB is the first position that is duplicated
+        // Inserting at the position means we have to copy the duplication
+        // in FRONT OF the repeat sequence
+        string duplicate_sequence = reverse_string(new_ref_seq_info.get_sequence_1(mut[SEQ_ID], position, position + (from_string<uint32_t>(mut["duplication_size"]) - 1)));
+        
+        // If there are any inserts, put them in front of or behind the
+        // repeat sequence.
+        if(mut.entry_exists("ins_start")) {new_seq_string = mut["ins_start"] + rep_string;iInsStart = mut["ins_start"].length();}
+        if(mut.entry_exists("ins_end"))   {new_seq_string += mut["ins_end"];iInsEnd = mut["ins_end"].length();}
+        
+        // Add on the duplicated sequence.  This happens AFTER
+        // we have inserted any insertions.
+        new_seq_string = duplicate_sequence + new_seq_string;
+        
+        // Do we have deletes?  Go ahead and do that now.
+        if(iDelStart)new_ref_seq_info.replace_sequence_1(mut[SEQ_ID], position-iDelStart, position-1, "");
+        if(iDelEnd)new_ref_seq_info.replace_sequence_1(mut[SEQ_ID], position-iDelStart, position-1-iDelStart+iDelEnd, "");
+        
+        // Insert our newly minted sequence.  Take any deletions that may have occured
+        // at the start in mind.
+        new_ref_seq_info.insert_sequence_1(mut[SEQ_ID], position-1-iDelStart, new_seq_string, (to_string(mut._type) + " " + mut._id), verbose);
+        
+        // We've repeated the sequence, now it's time to repeat all the features
+        // inside of and including the repeat region.
+        new_ref_seq_info.repeat_feature_1(mut[SEQ_ID], position-iDelStart+iInsStart+duplicate_sequence.size(), ref_seq_info, mut["repeat_name"], from_string<int16_t>(mut["strand"]), verbose);
           
         if (verbose)
         {
           cout << "MOB: 0" << " => " << new_seq_string << endl;
           cout << "   shift +" << new_seq_string.length() - iDelStart - iDelEnd << " bp at position " << position << endl;
-        }
-          
-        if(iDelStart)new_ref_seq_info.replace_sequence_1(mut[SEQ_ID], position-iDelStart, position-1, "", (to_string(mut._type) + " " + mut._id));
-        if(iDelEnd)new_ref_seq_info.replace_sequence_1(mut[SEQ_ID], position-iDelStart, position-1-iDelStart+iDelEnd, "", (to_string(mut._type) + " " + mut._id));
-        new_ref_seq_info.insert_sequence_1(mut[SEQ_ID], position-1-iDelStart, new_seq_string, (to_string(mut._type) + " " + mut._id), verbose);
+        }          
       } break;
 
       case CON:
@@ -1488,15 +1507,15 @@ cReferenceSequences genome_diff::apply_to_sequences(cReferenceSequences& ref_seq
         }
 
         string displaced_sequence = new_ref_seq_info.get_sequence_1(mut[SEQ_ID], position, position + size - 1);
+        
+        new_ref_seq_info.replace_sequence_1(mut[SEQ_ID], position, position + size - 1, replacing_sequence, (to_string(mut._type) + " " + mut._id), verbose); 
           
         if (verbose)
         {
           cout << "CON: " << displaced_sequence << " => " << replacing_sequence << endl;
           int32_t size_change = static_cast<int32_t>(replacing_sequence.length()) - static_cast<int32_t>(displaced_sequence.length());
           cout << "   shift " << ((size_change >= 0) ? "+" : "") << size_change << " bp at position " << position << endl;
-        }
-
-        new_ref_seq_info.replace_sequence_1(mut[SEQ_ID], position, position + size - 1, replacing_sequence, (to_string(mut._type) + " " + mut._id), verbose);        
+        }       
       } break;
 
       default:
@@ -1546,8 +1565,8 @@ void genome_diff::shift_positions(diff_entry &item, cReferenceSequences& ref_seq
     if (inversion) {
       WARN("shift_positions cannot handle inversions yet!");
     } else {
-      int32_t position = from_string<int32_t>(mut[POSITION]);
-      if (item[SEQ_ID] == mut[SEQ_ID] && from_string<uint32_t>(mut[POSITION]) > offset)
+      uint32_t position = from_string<uint32_t>(mut[POSITION]);
+      if (item[SEQ_ID] == mut[SEQ_ID] && position > offset)
         mut[POSITION] = to_string(position + delta);
     }
 
