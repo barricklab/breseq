@@ -1484,14 +1484,14 @@ diff_entry junction_to_diff_entry(
 		/// and ensures we don't count this coverage twice.
 		else if ((!jc.sides[0].redundant) || (jc.sides[0].redundant && jc.sides[1].redundant) )
 		{
-			uint32_t strand_direction = (jc.sides[1].strand > 0 ? 1 : -1);
+			int32_t strand_direction = (jc.sides[1].strand > 0 ? 1 : -1);
 			jc.sides[1].position += jc.overlap * strand_direction;
 			jc.sides[1].overlap = 0;
 			jc.overlap = 0;
 		}
 		else  // side_1 was redundant, give overlap to side_2
 		{
-			uint32_t strand_direction = (jc.sides[0].strand > 0 ? -1 : 1);
+			int32_t strand_direction = (jc.sides[0].strand > 0 ? -1 : 1);
 			jc.sides[0].position += jc.overlap * strand_direction;
 			jc.sides[0].overlap = 0;
 			jc.overlap = 0;
