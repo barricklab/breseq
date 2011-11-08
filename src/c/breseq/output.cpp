@@ -56,6 +56,7 @@ const char* SIDE_2_SEQ_ID="side_2_seq_id";
 const char* SIDE_2_STRAND="side_2_strand";
 const char* SIDE_1_JC="side_1_jc";
 const char* SIDE_2_JC="side_2_jc";
+const char* CORRECTED_KEY="coorected_key";
 namespace output
 {
 
@@ -1452,6 +1453,17 @@ Evidence_Files::Evidence_Files(const Settings& settings, genome_diff& gd)
       end = from_string<uint32_t>((*item)[FLANKING_LEFT]) - from_string<int32_t>((*item)[ALIGNMENT_OVERLAP]);
     }
     
+    // The "key"/ID is set early in breseq.  It must remain unique and unchanging
+    // through the run so we know what we're referencing.  Because we derive values
+    // from the name (like here), sometimes those values won't match the new resolved
+    // values for each side.  This is a dirty fix so that the evidence files
+    // will be operating with the correct positions for each side. @MDS
+    JunctionInfo juncInfo((*item)["key"]);
+    juncInfo.sides[0].redundant = (from_string<int32_t>((*item)[SIDE_1_POSITION]) != juncInfo.sides[0].position);
+    juncInfo.sides[1].redundant = (from_string<int32_t>((*item)[SIDE_2_POSITION]) != juncInfo.sides[1].position);
+    juncInfo.sides[0].position = from_string<int32_t>((*item)[SIDE_1_POSITION]);
+    juncInfo.sides[1].position = from_string<int32_t>((*item)[SIDE_2_POSITION]);
+    
     add_evidence(_NEW_JUNCTION_EVIDENCE_FILE_NAME,
                   item,
                   parent_item,
@@ -1463,8 +1475,8 @@ Evidence_Files::Evidence_Files(const Settings& settings, genome_diff& gd)
                  (END, to_string(end))
                  (PREFIX, "JC")
                  (ALIGNMENT_EMPTY_CHANGE_LINE, "1")
+                 (CORRECTED_KEY, juncInfo.junction_key())
                  );
-
 
     // this is the flagship file that we show first when clicking on evidence from a mutation...
     (*item)[_EVIDENCE_FILE_NAME] = (*item)[_NEW_JUNCTION_EVIDENCE_FILE_NAME];
@@ -1518,9 +1530,9 @@ string Evidence_Files::html_evidence_file_name(Evidence_Item& evidence_item)
 {
   
   //set up the file name
-  string s = evidence_item[PREFIX];
+  string s = evidence_item[PREFIX];  
   s += "_";
-  s += evidence_item[SEQ_ID];
+  s += evidence_item[SEQ_ID];  
   s += "_";
   s += evidence_item[START];
   
@@ -1532,13 +1544,14 @@ string Evidence_Files::html_evidence_file_name(Evidence_Item& evidence_item)
   
   s += "_";
   s += evidence_item[END];
-
+  
   if (evidence_item.entry_exists(INSERT_END))
   {
     s += ".";
     s += evidence_item[INSERT_END];
   }
-  s += "_alignment.html";
+  
+  s += "_alignment.html";  
 
   return s;
 }
@@ -1568,9 +1581,11 @@ string Evidence_Files::file_name(Evidence_Item& evidence_item)
   ss << evidence_item[PREFIX];
   ss << "_" << evidence_item[SEQ_ID];
   ss << "_" << evidence_item[START];
-  ss << evidence_item.entry_exists(INSERT_START) ? "." + evidence_item[INSERT_START] : "";
+  if(evidence_item.entry_exists(INSERT_START))
+    ss << "." + evidence_item[INSERT_START];
   ss << "_" << evidence_item[END];
-  ss << evidence_item.entry_exists(INSERT_END) ? "." + evidence_item[INSERT_END] : "";
+  if(evidence_item.entry_exists(INSERT_END))
+    ss << "." + evidence_item[INSERT_END];
   ss << "_alignment.html";
   
   return ss.str();
@@ -1628,27 +1643,42 @@ Evidence_Files::html_evidence_file (
   }
 
   
-  if (item.entry_exists(PLOT) && !item[PLOT].empty()) {
+  if (item.entry_exists(PLOT) && !item[PLOT].empty())
     HTML << div(ALIGN_CENTER, img(item[PLOT]));
-  } else {
-    stringstream ss;   
+  else
+  {
+    bool bCorrectExist = false;
+    if(item.entry_exists(CORRECTED_KEY))
+      bCorrectExist = true;
+        
+    stringstream ss;
+    stringstream sc;
+    
     ss << item[SEQ_ID] << ":" << item[START];
-    if (item[INSERT_START].size() > 0) {
+    if(bCorrectExist)sc << item[CORRECTED_KEY] << ":" << item[START];
+    
+    if (item[INSERT_START].size() > 0)
+    {
       ss << "." << item[INSERT_START];
+      if(bCorrectExist)sc << "." << item[INSERT_START];
     }
+    
     ss << "-" << item[END];
-    if (item[INSERT_END].size()) {
+    if(bCorrectExist)sc << "-" << item[END];
+    
+    if (item[INSERT_END].size())
+    {
       ss << "." << item[INSERT_END];
+      if(bCorrectExist)sc << "." << item[INSERT_END];
     }
     cerr << "Creating read alignment for region: " << ss.str() << endl;
 
-    if (settings.base_quality_cutoff != 0) {
+    if (settings.base_quality_cutoff != 0)
       item["base_quality_cutoff"] = to_string(settings.base_quality_cutoff);
-    }
     
     alignment_output ao(item[BAM_PATH], item[FASTA_PATH], settings.maximum_reads_to_align, settings.base_quality_cutoff);
 
-    HTML << ao.html_alignment(ss.str());
+    HTML << ao.html_alignment(ss.str(), sc.str());
 
   }
   HTML << html_footer();
@@ -1846,8 +1876,8 @@ void Html_Mutation_Table_String::Header_Line()
         else if( this_header_string_1 == "clade_2" )
           color = "blue";  
         else if( this_header_string_1 == "clade_3" &&
-                 this_header_string_2 == "ZDB483" ||
-                 this_header_string_2 == "ZDB30" )
+                 (this_header_string_2 == "ZDB483" ||
+                 this_header_string_2 == "ZDB30") )
           color = "orange";
         else if( this_header_string_1 == "clade_3" )
           color = "red";

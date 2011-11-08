@@ -51,7 +51,7 @@ alignment_output::alignment_output ( string bam, string fasta, uint32_t maximum_
   // the default for m_quality_score_cutoff is zero, which makes sense
 }
 
-void alignment_output::create_alignment ( const string& region )
+void alignment_output::create_alignment ( const string& region, const string& corrected )
 {
   // we need the target_id to properly fill out the reference sequence later
   uint32_t target_id, start_pos, end_pos;
@@ -61,7 +61,9 @@ void alignment_output::create_alignment ( const string& region )
   size_t end_match = region.find_first_of(':');
   vector<string> split_region = split(region.substr(0,end_match), junction_name_separator);
   if (split_region.size() == 12)
-  {    
+  {
+    vector<string> split_corrected = split(corrected.substr(0,end_match), junction_name_separator);
+    
     // This how the region name was constructed:
     
     //values[0] = item.sides[0].seq_id;
@@ -84,53 +86,29 @@ void alignment_output::create_alignment ( const string& region )
     //NC_001416__5491__1__NC_001416__30251__1__4____35__35__0__0:36-39
     // Notice that strands are 0/1 and we need them as -1/+1 in the code
 
-    int32_t overlap_offset = from_string<int32_t>(split_region[6]);
+    int32_t overlap_offset = from_string<int32_t>(split_corrected[6]);
     int32_t positive_overlap_offset = (overlap_offset > 0) ? overlap_offset : 0;
     
     Aligned_Reference aligned_reference_1, aligned_reference_2;
-    aligned_reference_1.ghost_strand = from_string<int16_t>(split_region[2]) == 1 ? +1 : -1; // don't do int8_t here, returns wrong value
-    aligned_reference_2.ghost_strand = from_string<int16_t>(split_region[5]) == 1 ? +1 : -1; // don't do int8_t here, returns wrong value
+    aligned_reference_1.ghost_strand = from_string<int16_t>(split_corrected[2]) == 1 ? +1 : -1; // don't do int8_t here, returns wrong value
+    aligned_reference_2.ghost_strand = from_string<int16_t>(split_corrected[5]) == 1 ? +1 : -1; // don't do int8_t here, returns wrong value    
     
-    
-    // This handles aligning the reference sequence in the output html
-    // pages.  This is only for Junctions with 2 references.  We have
-    // to do a little juggling to get everything in the right spot.
-    // This can probably be condensed, but right now it works.
+    // This is absolutely horrible.  Sure, maybe it works...
+    // Here we're essentially checking to see which side is redundant,
+    // and shifting the truncation using the overlap.  However, if the
+    // sides share the overlap, then we sort of just... this. @MDS
     //
-    // if>if and else>else are both the original statement if we have
-    // to revert because someone changed something further up the line
-    // and we become unaligned in output again. @MDS
-    if(aligned_reference_1.ghost_strand == aligned_reference_2.ghost_strand)
-    {
-      if(aligned_reference_1.ghost_strand > 0)
-      {
-        aligned_reference_1.truncate_end = from_string<uint32_t>(split_region[8]) + positive_overlap_offset;
-        aligned_reference_1.ghost_end = from_string<uint32_t>(split_region[1]);
-        aligned_reference_2.ghost_start = from_string<uint32_t>(split_region[4]) + positive_overlap_offset;
-      }
-      else
-      {
-        aligned_reference_1.truncate_end = from_string<uint32_t>(split_region[8]);
-        aligned_reference_1.ghost_end = from_string<uint32_t>(split_region[1]) - positive_overlap_offset;
-        aligned_reference_2.ghost_start = from_string<uint32_t>(split_region[4]);
-      }
-    }
+    // TODO: Only tested with lmited data, and split overlaps.  Can
+    // overlaps favor one side more than another?
+    if(from_string<int32_t>(split_corrected[10]) && from_string<int32_t>(split_corrected[11]))
+      aligned_reference_1.truncate_end = from_string<uint32_t>(split_corrected[8]) + abs(from_string<int32_t>(split_corrected[1]) - from_string<int32_t>(split_region[1]));
+    else if(from_string<int32_t>(split_corrected[10]))
+      aligned_reference_1.truncate_end = from_string<uint32_t>(split_corrected[8]);
     else
-    {
-      if(aligned_reference_1.ghost_strand > 0)
-      {
-        aligned_reference_1.truncate_end = from_string<uint32_t>(split_region[8]);
-        aligned_reference_1.ghost_end = from_string<uint32_t>(split_region[1]) + positive_overlap_offset;
-        aligned_reference_2.ghost_start = from_string<uint32_t>(split_region[4]);
-      }
-      else
-      {
-        aligned_reference_1.truncate_end = from_string<uint32_t>(split_region[8]) + positive_overlap_offset;
-        aligned_reference_1.ghost_end = from_string<uint32_t>(split_region[1]);
-        aligned_reference_2.ghost_start = from_string<uint32_t>(split_region[4]) + positive_overlap_offset;
-      }
-    }
+      aligned_reference_1.truncate_end = from_string<uint32_t>(split_corrected[8]) + positive_overlap_offset;
     
+    aligned_reference_1.ghost_end = from_string<uint32_t>(split_corrected[1]);
+    aligned_reference_2.ghost_start = from_string<uint32_t>(split_corrected[4]);    
     aligned_reference_2.truncate_start = aligned_reference_1.truncate_end + 1 + split_region[7].size();
     
     aligned_reference_1.ghost_seq_id = split_region[0];    
@@ -391,11 +369,11 @@ void alignment_output::create_alignment ( const string& region )
   }
 } //End create alignment
 
-string alignment_output::html_alignment ( const string& region )
+string alignment_output::html_alignment ( const string& region, const string& corrected )
 {
 
   // this sets object values (not re-usable currently)
-  create_alignment(region);
+  create_alignment(region, corrected);
   
   string output = "";
   

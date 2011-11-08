@@ -194,28 +194,12 @@ namespace breseq {
       }
 
       // Replace Sequence with Input
-      // Every position between and including start_1 and end_1 will be replaced with replacement_seq.
-      // This function will shift everything else.
-      // mut_type is used to append the type of mutation to the feature notes.
-      // verbose outputs messages to console.
-      // 
-      // Successfully checks all three feature lists.  m_features, m_genes, and m_repeats.
       void replace_sequence_1(int32_t start_1, int32_t end_1, const string &replacement_seq, string mut_type="", bool verbose=false);
       
       // Insert Input AFTER Position
-      // Place insertion_seq at first position after pos_1.
-      // This function will shift everything else.
-      // mut_type is used to append the type of mutation to the feature notes.
-      // verbose outputs messages to console.
-      // 
-      // Successfully checks all three feature lists.  m_features, m_genes, and m_repeats.
       void insert_sequence_1(int32_t pos_1, const string &insertion_seq, string mut_type="", bool verbose=false);
     
       // Repeat Feature at Position
-      // Look through ref_seq_info for repeat_name.
-      // Using it's strand, insert the repeat feaure at supplied position.
-      // Also repeat any features inside the repeat.
-      // verbose outputs messages to console.
       void repeat_feature_1(int32_t pos, cReferenceSequences& ref_seq_info, const string &repeat_name, int8_t strand, bool verbose=false);
       
       // Find Specific Feature
