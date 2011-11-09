@@ -26,6 +26,12 @@ namespace breseq {
   const string BULL_DUMMY_SEQ_ID = "__BULL_DUMMY_SEQ_ID__";
   
   // Replace Sequence with Input
+  // Every position between and including start_1 and end_1 will be replaced with replacement_seq.
+  // This function will shift everything else.
+  // mut_type is used to append the type of mutation to the feature notes.
+  // verbose outputs messages to console.
+  // 
+  // Successfully checks all three feature lists.  m_features, m_genes, and m_repeats.
   void cAnnotatedSequence::replace_sequence_1(int32_t start_1, int32_t end_1, const string &replacement_seq, string mut_type, bool verbose)
   {
     ASSERT(start_1 <= end_1, "start (" + to_string(start_1) + ") not less than or equal to end (" + to_string(end_1) + ")");
@@ -155,6 +161,12 @@ namespace breseq {
   }
   
   // Inserts AFTER the input position
+  // Place insertion_seq at first position after pos_1.
+  // This function will shift everything else.
+  // mut_type is used to append the type of mutation to the feature notes.
+  // verbose outputs messages to console.
+  // 
+  // Successfully checks all three feature lists.  m_features, m_genes, and m_repeats.
   void cAnnotatedSequence::insert_sequence_1(int32_t pos_1, const string &insertion_seq, string mut_type, bool verbose)
   {
     m_fasta_sequence.m_sequence.insert(pos_1, insertion_seq);
@@ -186,7 +198,7 @@ namespace breseq {
         if(feat.m_start > pos_1)
         {                
           //Notify the user of the upcomming action
-          if(verbose){cout << "SHIFT\t" << feat["type"] << "\t" << feat.m_gff_attributes["ID"] << " " << feat.m_gff_attributes["Name"] << endl;};
+          if(verbose){cout << "SHIFT\t" << feat["type"] << "\t" << feat.m_gff_attributes["ID"] << " " << feat.m_gff_attributes["Name"] << endl;}
           
           //Shift the entire feature down the line
           feat.m_start += insert_length;
@@ -214,11 +226,22 @@ namespace breseq {
   }
   
   // Repeat Feature at Position
+  // Look through ref_seq_info for repeat_name.
+  // Using the strand, insert the repeat feaure at supplied position.
+  // Also repeat any features inside the repeat.
+  // verbose outputs messages to console.
   //
   //  TODO: Needs to check to be sure that it is getting a "typical" copy 
   //  (not one that has an insertion in it or a non-consensus sequence) 
   void cAnnotatedSequence::repeat_feature_1(int32_t pos, cReferenceSequences& ref_seq_info, const string &repeat_name, int8_t strand, bool verbose)
-  {    
+  {
+    // This sorting should be completely unnecessary. To be
+    // safe, we sort here only because the following code
+    // assumes that these lists are in order from least to greatest.
+    m_features.sort();
+    m_genes.sort();
+    m_repeats.sort();
+    
     // Go through all the reference sequences in ref_seq_info
     for (vector<cAnnotatedSequence>::iterator itr_seq = ref_seq_info.begin(); itr_seq != ref_seq_info.end(); itr_seq++)
     {
