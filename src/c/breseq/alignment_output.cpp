@@ -98,7 +98,7 @@ void alignment_output::create_alignment ( const string& region, const string& co
     // and shifting the truncation using the overlap.  However, if the
     // sides share the overlap, then we sort of just... this. @MDS
     //
-    // TODO: Only tested with lmited data, and split overlaps.  Can
+    // TODO: Only tested with limited data, and split overlaps.  Can
     // overlaps favor one side more than another?
     if(from_string<int32_t>(split_corrected[10]) && from_string<int32_t>(split_corrected[11]))
       aligned_reference_1.truncate_end = from_string<uint32_t>(split_corrected[8]) + abs(from_string<int32_t>(split_corrected[1]) - from_string<int32_t>(split_region[1]));
