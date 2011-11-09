@@ -2009,88 +2009,108 @@ void Html_Mutation_Table_String::Item_Lines()
     string cell_gene_name = i(nonbreaking(mut[GENE_NAME]));
     string cell_gene_product = htmlize(mut["gene_product"]);
 
-    // build 'mutation' column = description of the genetic change
-    if (mut._type == SNP) {
-      cell_mutation = mut["_ref_seq"] + "&rarr;" + mut[NEW_SEQ];
-    } else if (mut._type == INS) {
-      cell_mutation = "+";
-      cell_mutation += mut[NEW_SEQ];
-    } else if (mut._type == DEL) {
-      cell_mutation = nonbreaking("&Delta;" + commify(mut["size"]) + " bp");
-      string annotation_str;
-      
-      // special annotation for mediated- and between repeat elements
-      if (mut.entry_exists("mediated")) 
-        annotation_str = mut["mediated"] + "-mediated"; 
-      if (mut.entry_exists("between")) 
-        annotation_str = "between " + mut["between"];
-      // default
-      if(annotation_str.empty()) {
-        annotation_str = nonbreaking(mut["gene_position"]);
-      } 
-      cell_mutation_annotation =  nonbreaking(annotation_str);
-    } else if (mut._type == SUB) {
-      cell_mutation = nonbreaking(mut["size"] + " bp&rarr;" + mut["new_seq"]);
-    } else if (mut._type == CON) {
-      cell_mutation = nonbreaking(mut["size"] + " bp&rarr;" + mut["region"]);
-    } else if (mut._type == MOB) {
-      stringstream s;
-       
-      stringstream s_start;
-      if (mut.entry_exists("ins_start")) {
-        s_start << "+" << mut["ins_start"];
-      }
-      if (mut.entry_exists("del_start")) {
-        s_start << "&Delta;" << mut["del_start"];
-      }
-      if (!(s_start.str()).empty()) {
-        s << s_start.str() << " :: ";
-      }
-
-      s << mut["repeat_name"] << " (";
-      switch (from_string<int32_t>(mut["strand"]))
-      {
-        case -1:
-          s << "+";
-          break;
-        case 0:
-          s << "?";
-          break;
-        case +1:
-          s << "–";
-          break;
-      }
-      s << ")";
-
-      if (from_string<int32_t>(mut["duplication_size"]) > 0) {
-        s << " +" << mut["duplication_size"] << " bp";
-      } else if (from_string<int32_t>(mut["duplication_size"]) < 0) {
-        s << " &Delta;" << abs(from_string(mut["duplication_size"])) << " bp";
-      }
-      
-      stringstream s_end;
-      if (mut.entry_exists("del_end")) {
-        s_end << " &Delta;" << mut["del_end"];
-      }
-      if (mut.entry_exists("ins_end")) {
-        s_end << " +" << mut["ins_end"];
-      }
-      if (!(s_end.str()).empty()) {
-        s << " ::" << s_end.str();
-      }
-
-      cell_mutation = nonbreaking(s.str());
-    } else if (mut._type == INV) {
-      cell_mutation = nonbreaking(commify(mut["size"]) + " bp inversion");
-      cell_gene_name = i(nonbreaking(mut["gene_name_1"])) + "&darr;" +
-                       i(nonbreaking(mut["gene_name_2"]));
-      cell_gene_product = htmlize(mut["gene_product_1"]) + "&darr;" + 
-                          htmlize(mut["gene_product_2"]);
-    } else if (mut._type == AMP) {
-      cell_mutation = nonbreaking(commify(mut["size"]) + " bp x " + mut["new_copy_number"]);
-      cell_mutation_annotation = 
+    // build 'mutation' column = description of the genetic change    
+    switch (mut._type)
+    {
+      case SNP:{
+        cell_mutation = mut["_ref_seq"] + "&rarr;" + mut[NEW_SEQ];
+      } break;
+        
+      case INS:{
+        cell_mutation = "+";
+        cell_mutation += mut[NEW_SEQ];
+      } break;
+        
+      case DEL:{
+        cell_mutation = nonbreaking("&Delta;" + commify(mut["size"]) + " bp");
+        string annotation_str;
+        
+        // special annotation for mediated- and between repeat elements
+        if (mut.entry_exists("mediated")) 
+          annotation_str = mut["mediated"] + "-mediated"; 
+        if (mut.entry_exists("between")) 
+          annotation_str = "between " + mut["between"];
+        // default
+        if(annotation_str.empty()) {
+          annotation_str = nonbreaking(mut["gene_position"]);
+        } 
+        cell_mutation_annotation =  nonbreaking(annotation_str);
+      } break;
+        
+      case SUB:{
+        cell_mutation = nonbreaking(mut["size"] + " bp&rarr;" + mut["new_seq"]);
+      } break;
+        
+      case CON:{
+        cell_mutation = nonbreaking(mut["size"] + " bp&rarr;" + mut["region"]);
+      } break;
+        
+      case MOB:{
+        stringstream s;
+        
+        stringstream s_start;
+        if (mut.entry_exists("ins_start")) {
+          s_start << "+" << mut["ins_start"];
+        }
+        if (mut.entry_exists("del_start")) {
+          s_start << "&Delta;" << mut["del_start"];
+        }
+        if (!(s_start.str()).empty()) {
+          s << s_start.str() << " :: ";
+        }
+        
+        s << mut["repeat_name"] << " (";
+        switch (from_string<int32_t>(mut["strand"]))
+        {
+          case -1:
+            s << "–";
+            break;
+          case 0:
+            s << "?";
+            break;
+          case +1:
+            s << "+";
+            break;
+        }
+        s << ")";
+        
+        if (from_string<int32_t>(mut["duplication_size"]) > 0) {
+          s << " +" << mut["duplication_size"] << " bp";
+        } else if (from_string<int32_t>(mut["duplication_size"]) < 0) {
+          s << " &Delta;" << abs(from_string(mut["duplication_size"])) << " bp";
+        }
+        
+        stringstream s_end;
+        if (mut.entry_exists("del_end")) {
+          s_end << " &Delta;" << mut["del_end"];
+        }
+        if (mut.entry_exists("ins_end")) {
+          s_end << " +" << mut["ins_end"];
+        }
+        if (!(s_end.str()).empty()) {
+          s << " ::" << s_end.str();
+        }
+        
+        cell_mutation = nonbreaking(s.str());
+      } break;
+        
+      case INV:{
+        cell_mutation = nonbreaking(commify(mut["size"]) + " bp inversion");
+        cell_gene_name = i(nonbreaking(mut["gene_name_1"])) + "&darr;" +
+        i(nonbreaking(mut["gene_name_2"]));
+        cell_gene_product = htmlize(mut["gene_product_1"]) + "&darr;" + 
+        htmlize(mut["gene_product_2"]);
+      } break;
+        
+      case AMP:{
+        cell_mutation = nonbreaking(commify(mut["size"]) + " bp x " + mut["new_copy_number"]);
+        cell_mutation_annotation = 
         from_string<uint32_t>(mut["new_copy_number"]) == 2 ?
-          "duplication" : "amplification";
+        "duplication" : "amplification";
+      } break;
+        
+      default:
+        break;
     }
     // ###### PRINT THE TABLE ROW ####
     ss << endl << "<!-- Print The Table Row -->" << endl; 

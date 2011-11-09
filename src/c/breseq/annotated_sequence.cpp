@@ -1731,75 +1731,80 @@ void cReferenceSequences::annotate_mutations(genome_diff& gd, bool only_muts)
   {
     diff_entry& mut= **it;
 
-    if (only_muts && (mut.is_evidence())) continue;
+    if (only_muts && !(mut.is_mutation())) continue;
 
-    if (mut._type == SNP)
+    switch (mut._type)
     {
-      mut["_ref_seq"] = get_sequence_1(mut["seq_id"], from_string<uint32_t>(mut["position"]), from_string<int32_t>(mut["position"]));
-      annotate_1_mutation(mut, from_string<int32_t>(mut["position"]), from_string<int32_t>(mut["position"]));
-    }
-    else if (mut._type == SUB)
-    {
-      annotate_1_mutation(mut, from_string<int32_t>(mut["position"]), from_string<int32_t>(mut["position"]) + from_string<int32_t>(mut["size"]) - 1);
-    }
-    else if (mut._type == DEL)
-    {
-      annotate_1_mutation(mut, from_string<int32_t>(mut["position"]), from_string<int32_t>(mut["position"]) + from_string<int32_t>(mut["size"]) - 1);
-    }
-    else if (mut._type == INS)
-    {
-      annotate_1_mutation(mut, from_string<int32_t>(mut["position"]), from_string<int32_t>(mut["position"]));
-    }
-    else if (mut._type == CON)
-    {
-      annotate_1_mutation(mut, from_string<int32_t>(mut["position"]), from_string<int32_t>(mut["position"]) + from_string<int32_t>(mut["size"]) - 1);
-    }
-    else if (mut._type == MOB)
-    {
-      annotate_1_mutation(mut, from_string<int32_t>(mut["position"]), from_string<int32_t>(mut["position"]) + from_string<int32_t>(mut["duplication_size"]) - 1);
-    }
-    else if (mut._type == INV)
-    {
-      annotate_1_mutation(mut, from_string<int32_t>(mut["position"]), from_string<int32_t>(mut["position"]));
-      mut["gene_name_1"] = mut["gene_name"];
-      mut["gene_product_1"] = mut["gene_product"];
-      annotate_1_mutation(mut, from_string<int32_t>(mut["position"]) + from_string<int32_t>(mut["size"])-1, from_string<int32_t>(mut["position"]) + from_string<int32_t>(mut["size"])-1);
-      mut["gene_name_2"] = mut["gene_name"];
-      mut["gene_product_2"] = mut["gene_product"];
-      mut._fields.erase("gene_name");
-      mut._fields.erase("gene_product");
-    }
-    else if (mut._type == AMP)
-    {
-      annotate_1_mutation(mut, from_string<int32_t>(mut["position"]), from_string<int32_t>(mut["position"]) + from_string<int32_t>(mut["size"]) - 1);
-    }
-    else if (mut._type == JC)
-    {
-      diff_entry side_1;
-      side_1[SEQ_ID] = mut["side_1_seq_id"];
-      annotate_1_mutation(side_1, from_string<int32_t>(mut["side_1_position"]), from_string<int32_t>(mut["side_1_position"]), true);
-      //copy over entries with prefix
-      for(diff_entry::map_t::iterator it=side_1._fields.begin(); it!=side_1._fields.end(); it++)
-      {
-        mut["_side_1"+ it->first] = it->second;
-      }
-
-      diff_entry side_2;
-      side_2[SEQ_ID] = mut["side_2_seq_id"];
-      annotate_1_mutation(side_2, from_string<int32_t>(mut["side_2_position"]), from_string<int32_t>(mut["side_2_position"]), true);
-      //copy over entries with prefix
-      for(diff_entry::map_t::iterator it=side_2._fields.begin(); it!=side_2._fields.end(); it++)
-      {
-        mut["_side_2"+ it->first] = it->second;
-      }
-    }
-    else if (mut._type == RA)
-    {
-      annotate_1_mutation(mut, from_string<int32_t>(mut["position"]), from_string<int32_t>(mut["position"]));
-    }
-    else if (mut._type == MC)
-    {
-      annotate_1_mutation(mut, from_string<int32_t>(mut["start"]), from_string<int32_t>(mut["end"]));
+      case SNP:{
+        mut["_ref_seq"] = get_sequence_1(mut["seq_id"], from_string<uint32_t>(mut["position"]), from_string<int32_t>(mut["position"]));
+        annotate_1_mutation(mut, from_string<int32_t>(mut["position"]), from_string<int32_t>(mut["position"]));
+      } break;
+        
+      case SUB:{
+        annotate_1_mutation(mut, from_string<int32_t>(mut["position"]), from_string<int32_t>(mut["position"]) + from_string<int32_t>(mut["size"]) - 1);
+      } break;
+        
+      case DEL:{
+        annotate_1_mutation(mut, from_string<int32_t>(mut["position"]), from_string<int32_t>(mut["position"]) + from_string<int32_t>(mut["size"]) - 1);
+      } break;
+        
+      case INS:{
+        annotate_1_mutation(mut, from_string<int32_t>(mut["position"]), from_string<int32_t>(mut["position"]));
+      } break;
+        
+      case CON:{
+        annotate_1_mutation(mut, from_string<int32_t>(mut["position"]), from_string<int32_t>(mut["position"]) + from_string<int32_t>(mut["size"]) - 1);
+      } break;
+        
+      case MOB:{
+        annotate_1_mutation(mut, from_string<int32_t>(mut["position"]), from_string<int32_t>(mut["position"]) + from_string<int32_t>(mut["duplication_size"]) - 1);
+      } break;
+        
+      case INV:{
+        annotate_1_mutation(mut, from_string<int32_t>(mut["position"]), from_string<int32_t>(mut["position"]));
+        mut["gene_name_1"] = mut["gene_name"];
+        mut["gene_product_1"] = mut["gene_product"];
+        annotate_1_mutation(mut, from_string<int32_t>(mut["position"]) + from_string<int32_t>(mut["size"])-1, from_string<int32_t>(mut["position"]) + from_string<int32_t>(mut["size"])-1);
+        mut["gene_name_2"] = mut["gene_name"];
+        mut["gene_product_2"] = mut["gene_product"];
+        mut._fields.erase("gene_name");
+        mut._fields.erase("gene_product");
+      } break;
+        
+      case AMP:{
+        annotate_1_mutation(mut, from_string<int32_t>(mut["position"]), from_string<int32_t>(mut["position"]) + from_string<int32_t>(mut["size"]) - 1);
+      } break;
+        
+      case JC:{
+        diff_entry side_1;
+        side_1[SEQ_ID] = mut["side_1_seq_id"];
+        annotate_1_mutation(side_1, from_string<int32_t>(mut["side_1_position"]), from_string<int32_t>(mut["side_1_position"]), true);
+        //copy over entries with prefix
+        for(diff_entry::map_t::iterator it=side_1._fields.begin(); it!=side_1._fields.end(); it++)
+        {
+          mut["_side_1"+ it->first] = it->second;
+        }
+        
+        diff_entry side_2;
+        side_2[SEQ_ID] = mut["side_2_seq_id"];
+        annotate_1_mutation(side_2, from_string<int32_t>(mut["side_2_position"]), from_string<int32_t>(mut["side_2_position"]), true);
+        //copy over entries with prefix
+        for(diff_entry::map_t::iterator it=side_2._fields.begin(); it!=side_2._fields.end(); it++)
+        {
+          mut["_side_2"+ it->first] = it->second;
+        }
+      } break;
+        
+      case RA:{
+        annotate_1_mutation(mut, from_string<int32_t>(mut["position"]), from_string<int32_t>(mut["position"]));
+      } break;
+        
+      case MC:{
+        annotate_1_mutation(mut, from_string<int32_t>(mut["start"]), from_string<int32_t>(mut["end"]));
+      } break;
+        
+      default:{
+      } break;
     }
   }
 }
