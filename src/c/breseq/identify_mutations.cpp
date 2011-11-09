@@ -109,6 +109,7 @@ identify_mutations_pileup::identify_mutations_pileup(
 , _log10_ref_length(0)
 , _on_deletion_seq_id(UNDEFINED_UINT32)
 , _this_deletion_reaches_seed_value(false)
+, _this_deletion_redundant_reached_zero(false)
 , _last_position_coverage_printed(0)
 , _print_per_position_file(print_per_position_file)
 {

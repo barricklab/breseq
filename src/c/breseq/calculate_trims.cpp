@@ -42,6 +42,7 @@ bool repeat_match ( const string& _in_seq, const uint32_t pos, const uint32_t re
     //cerr << i << " " << _in_seq[pos+i] << " " << _in_seq[pos+i+base_offset] << endl;
     
     if (pos+i >= _in_seq.length()) return false;
+    if (pos+i+base_offset >= _in_seq.length()) return false;
     if (_in_seq[pos+i] != _in_seq[pos+i+base_offset]) return false;
   }
   return true;

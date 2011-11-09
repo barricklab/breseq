@@ -383,6 +383,7 @@ namespace breseq
 		this->no_alignment_generation = false; // don't generate alignments
     this->unmatched_reads = true;
     this->no_unmatched_reads = false;
+    this->keep_all_intermediates = false;
   
     //// Options for testing
 		this->alignment_read_limit = 0;           // only go through this many reads when creating alignments

@@ -204,7 +204,7 @@ namespace breseq {
     int32_t to_chr_offset = format_to_chr_offset[to_quality_format];
 
     
-    this->resize(255);
+    this->resize(256);
     for (uint16_t i = 0; i<=255; i++) {
       (*this)[i] = 0;
     }
