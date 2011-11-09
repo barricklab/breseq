@@ -414,7 +414,6 @@ void genome_diff::merge(genome_diff& gd_new, bool verbose)
   
 }
 
-
 /*! Read a genome diff(.gd) from the given file to class member
   _entry_list
  */
@@ -1432,6 +1431,10 @@ cReferenceSequences genome_diff::apply_to_sequences(cReferenceSequences& ref_seq
 
       case MOB:
       {
+        //ASSERT(!mut.entry_exists("ins_start") && !mut.entry_exists("ins_end") && !mut.entry_exists("del_start") && !mut.entry_exists("del_end"),
+        //       "MOB: does not handle ins_start, ins_end, del_start, del_end yet.");
+        ASSERT(mut["strand"] != "?", "Unknown repeat strand");
+        
         count_MOB++;
         string new_seq_string = "";
         int32_t iDelStart = 0;
@@ -1441,10 +1444,8 @@ cReferenceSequences genome_diff::apply_to_sequences(cReferenceSequences& ref_seq
         
         if(mut.entry_exists("del_start")) iDelStart = from_string<uint32_t>(mut["del_start"]);
         if(mut.entry_exists("del_end"))   iDelEnd = from_string<uint32_t>(mut["del_end"]);
-          
-        //ASSERT(!mut.entry_exists("ins_start") && !mut.entry_exists("ins_end") && !mut.entry_exists("del_start") && !mut.entry_exists("del_end"),
-        //       "MOB: does not handle ins_start, ins_end, del_start, del_end yet.");
-        ASSERT(mut["strand"] != "?", "Unknown repeat strand");
+        if(from_string<int16_t>(mut["strand"]) > 0)
+          swap(iDelStart,iDelEnd);
 
         // @JEB: correct here to look for where the repeat is in the original ref_seq_info.
         // This saves us from possible looking at a shifted location...
