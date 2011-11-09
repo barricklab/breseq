@@ -1460,7 +1460,7 @@ cReferenceSequences genome_diff::apply_to_sequences(cReferenceSequences& ref_seq
         // The position of a MOB is the first position that is duplicated
         // Inserting at the position means we have to copy the duplication
         // in FRONT OF the repeat sequence
-        string duplicate_sequence = reverse_string(new_ref_seq_info.get_sequence_1(mut[SEQ_ID], position, position + (from_string<uint32_t>(mut["duplication_size"]) - 1)));
+        string duplicate_sequence = new_ref_seq_info.get_sequence_1(mut[SEQ_ID], position, position + (from_string<uint32_t>(mut["duplication_size"]) - 1));
         
         // If there are any inserts, put them in front of or behind the
         // repeat sequence.
