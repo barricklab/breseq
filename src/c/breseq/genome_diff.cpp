@@ -796,7 +796,7 @@ bool genome_diff::is_valid(cReferenceSequences& ref_seq_info, bool verbose)
    
   //Notify the user that the files match.
   if(verbose)
-    cout << "LOADED FILES MATCH" << endl;
+    cout << "** LOADED FILES MATCH **" << endl;
   
   return true;
 }

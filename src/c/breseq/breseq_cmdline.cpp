@@ -825,8 +825,12 @@ int do_convert_gvf( int argc, char* argv[]){
   return 0;
 }
 
-int do_convert_gd( int argc, char* argv[]){
-    AnyOption options("Usage: VCF2GD --vcf <vcf.vcf> --output <gd.gd>"); options( "vcf,i","gd file to convert") ("output,o","name of output file").processCommandArgs( argc,argv);
+int do_convert_gd( int argc, char* argv[])
+{
+    AnyOption options("Usage: VCF2GD --vcf <vcf.vcf> --output <gd.gd>");
+    options("vcf,i","gd file to convert");
+    options("output,o","name of output file");
+    options.processCommandArgs( argc,argv);
     
     if( !options.count("vcf") || !options.count("output") ){
         options.printUsage(); return -1;
@@ -844,7 +848,7 @@ int do_convert_gd( int argc, char* argv[]){
 
 int do_mutate(int argc, char *argv[])
 {
-  AnyOption options("Usage: -g <file.gd> -r <reference>");
+  AnyOption options("Usage: APPLY -g <file.gd> -r <reference>");
   options("genomediff,g", "genome diff file");
   options("reference,r",".gbk/.gff3/.fasta/.bull reference sequence file");
   options("fasta,f","output FASTA file");
@@ -852,8 +856,17 @@ int do_mutate(int argc, char *argv[])
   options("verbose,v","Verbose Mode (Flag)", TAKES_NO_ARGUMENT);
   options.processCommandArgs(argc, argv);
   
+  options.addUsage("");
+  options.addUsage("Input a single GenomeDiff, and as many reference files");
+  options.addUsage("as you like.  Using the GenomeDiff, we will apply all");
+  options.addUsage("the mutations to the reference sequences, output is to");
+  options.addUsage("a single file that includes all the references.");
+  
   if (!options.count("genomediff") ||
       !options.count("reference")) {
+    options.addUsage("");
+    options.addUsage("You must supply BOTH the --genomediff and --reference");
+    options.addUsage("options for input.");
     options.printUsage();
     return -1;
   }
@@ -871,7 +884,7 @@ int do_mutate(int argc, char *argv[])
   
   //Check to see if every item in the loaded .gd is
   // applicable to the reference file.
-  ASSERT(gd.is_valid(ref_seq_info), "Reference file and GenomeDiff file don't match.");
+  ASSERT(gd.is_valid(ref_seq_info, options.count("verbose")), "Reference file and GenomeDiff file don't match.");
   
   cReferenceSequences new_ref_seq_info = gd.apply_to_sequences(ref_seq_info, options.count("verbose"));
   
@@ -885,15 +898,23 @@ int do_mutate(int argc, char *argv[])
 
 int do_subtract(int argc, char *argv[])
 {
-  AnyOption options("Usage: -1 <file.gd> -2 <file.gd> -o <output.gd>");
+  AnyOption options("Usage: SUBTRACT -1 <file.gd> -2 <file.gd> -o <output.gd>");
   options("input1,1","input GD file 1");
   options("input2,2","input GD file 2");
   options("output,o","output GD file");
   options("verbose,v","Verbose Mode (Flag)", TAKES_NO_ARGUMENT);
   options.processCommandArgs(argc, argv);
   
+  options.addUsage("");
+  options.addUsage("Input two GenomeDiff files and compare mutations.");
+  options.addUsage("Mutations that appear in BOTH will be subtracted from");
+  options.addUsage("--input1 and results will output to a new file specified.");
+  
   if (!options.count("input1") ||
       !options.count("input2")) {
+    options.addUsage("");
+    options.addUsage("You must supply BOTH the --input1 and --input2 options");
+    options.addUsage("for input.");
     options.printUsage();
     return -1;
   }
@@ -917,7 +938,7 @@ int do_subtract(int argc, char *argv[])
 
 int do_merge(int argc, char *argv[])
 {
-  AnyOption options("Usage: -g <file1.gd file2.gd file3.gd ...> -o <output.gd>");
+  AnyOption options("Usage: MERGE -g <file1.gd file2.gd file3.gd ...> -o <output.gd>");
   options("genomediff,g","input GD files");
   options("output,o","output GD file");
   options("unique,u","Unique Entries Only (Flag)", TAKES_NO_ARGUMENT);
@@ -932,6 +953,8 @@ int do_merge(int argc, char *argv[])
   options.addUsage("IDs will be properly updated to acknowledge the change.");
   
   if (!options.count("genomediff")) {
+    options.addUsage("");
+    options.addUsage("You must supply the --genomediff option for input.");
     options.printUsage();
     return -1;
   }
@@ -943,8 +966,17 @@ int do_merge(int argc, char *argv[])
     return -1;
   }
   
-  genome_diff gd1(options["genomediff"]);
+  vector<string> gd_list = from_string<vector<string> >(options["genomediff"]);  
+  genome_diff gd1(gd_list[0]);
   
+  //Load all the GD files that were input with -g.
+  for(uint32_t i = 1; i < gd_list.size(); i++)
+  {
+    genome_diff gd2(gd_list[i]);
+    gd1.merge(gd2, options.count("unique"), options.count("verbose"));
+  }
+  
+  //Treat EVERY extra argument passed as another GD file.
   for(int32_t i = 0; i < options.getArgc() ; i++)
   {
     genome_diff gd2(options.getArgv(i));
@@ -958,7 +990,7 @@ int do_merge(int argc, char *argv[])
 
 int do_not_evidence(int argc, char *argv[])
 {
-  AnyOption options("Usage: -g <genomediff.gd> -o <output.gd>");
+  AnyOption options("Usage: NOT_EVIDENCE -g <genomediff.gd> -o <output.gd>");
   options("genomediff,g","input GD files");
   options("output,o","output GD file");
   options("verbose,v","Verbose Mode (Flag)", TAKES_NO_ARGUMENT);
@@ -971,6 +1003,8 @@ int do_not_evidence(int argc, char *argv[])
   options.addUsage("verbose will still inform what evidence isn't being used.");
   
   if (!options.count("genomediff")) {
+    options.addUsage("");
+    options.addUsage("You must supply the --genomediff option for input.");
     options.printUsage();
     return -1;
   }
