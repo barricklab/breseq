@@ -260,13 +260,12 @@ genome_diff::genome_diff(const string& filename)
 
 /*! Merge Constructor.
  */
-genome_diff::genome_diff(genome_diff& merge1, genome_diff& merge2, bool verbose)
+genome_diff::genome_diff(genome_diff& merge1, genome_diff& merge2, bool unique, bool verbose)
  : _unique_id_counter(0)
 {
-  this->merge(merge1, verbose);
-  this->merge(merge2, verbose);
+  this->merge(merge1, unique, verbose);
+  this->merge(merge2, unique, verbose);
 }
-
   
 uint32_t genome_diff::new_unique_id() 
 { 
@@ -333,7 +332,12 @@ void genome_diff::subtract(genome_diff& gd_ref, bool verbose)
 }
 
 //! Merge GenomeDiff information using gd_new as potential new info.
-void genome_diff::merge(genome_diff& gd_new, bool verbose)
+//  Evidence IDs that are not unique are given new IDs.  Mutations
+//  that refer to this evidence have their evidence updated as well.
+//
+//  bool unique:  TRUE will NOT merge entries that match existing entries.
+//                FALSE WILL merge entries that match existing entries.
+void genome_diff::merge(genome_diff& gd_new, bool unique, bool verbose)
 {
   uint32_t old_unique_ids = unique_id_used.size();
   
@@ -345,7 +349,7 @@ void genome_diff::merge(genome_diff& gd_new, bool verbose)
     bool new_entry = true;
     
     //Iterate through all the entries in the current list.
-    for (diff_entry_list::iterator it_cur = _entry_list.begin(); it_cur != _entry_list.end(); it_cur++)
+    for (diff_entry_list::iterator it_cur = _entry_list.begin(); it_cur != _entry_list.end() && unique; it_cur++)
     {
       //The current entry we're looking at
       diff_entry& entry = **it_cur;
@@ -375,7 +379,7 @@ void genome_diff::merge(genome_diff& gd_new, bool verbose)
   for (diff_entry_list::iterator it = _entry_list.begin(); it != _entry_list.end(); it++)
   {
     //Is this one of the new entries?
-    if(from_string<uint32_t>((**it)._id) > old_unique_ids)
+    if(from_string<uint32_t>((**it)._id) > old_unique_ids && (**it).is_mutation())
     {                
       //For every piece of evidence this entry has
       for(uint32_t iter = 0; iter < (**it)._evidence.size(); iter++)
@@ -631,6 +635,40 @@ void genome_diff::write(const string& filename) {
 		ofs << (**i) << endl;
 	}
 	ofs.close();
+}
+  
+//! Removes all GD entries that aren't used as evidence.
+void genome_diff::filter_not_used_as_evidence(bool verbose)
+{
+  // Yes, I know the bool is useless.
+  map<string,bool> used_evidence;
+  
+  diff_entry_list muts = this->mutation_list();  
+  //Iterate through all mutations
+  for (diff_entry_list::iterator it = muts.begin(); it != muts.end(); it++)
+  {    
+    //For every piece of evidence this entry has
+    for(uint32_t iter = 0; iter < (**it)._evidence.size(); iter++)
+    {
+      //Each piece of evidence will only get assigned to the map once.
+      used_evidence[(**it)._evidence[iter]] = true;
+    }
+  }
+  
+  //Iterate through all entries
+  for (diff_entry_list::iterator it = _entry_list.begin(); it != _entry_list.end(); it++)
+  {
+    //Is this ID in our map of used_evidence?
+    if(!(used_evidence.count((**it)._id)) && (**it).is_evidence())
+    {
+      //Inform the user
+      if(verbose){cout << "NOT USED AS EVIDENCE: " << (**it)._id << endl;}
+      
+      //Remove this entry from the list, and iterate down one.
+      _entry_list.erase(it);
+      it--;
+    }
+  }
 }
   
 //! Call to assure that every entry in a genome_diff

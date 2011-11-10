@@ -297,7 +297,7 @@ public:
   genome_diff(const string& filename);
 
   //! Constructor that replaces ::merge(1,2) function
-  genome_diff(genome_diff& merge1, genome_diff& merge2, bool verbose=false);
+  genome_diff(genome_diff& merge1, genome_diff& merge2, bool unique=true, bool verbose=false);
 
   //! Destructor.
   ~genome_diff() { }
@@ -312,13 +312,16 @@ public:
   void subtract(genome_diff& gd_ref, bool verbose=false);
   
   //! Merge GenomeDiff information using gd_new as potential new info.
-  void merge(genome_diff& gd_new, bool verbose=false);
+  void merge(genome_diff& gd_new, bool unique=true, bool verbose=false);
 
   //! Read a genome diff from a file.
   void read(const string& filename);
   
   //! Write the genome diff to a file.
   void write(const string& filename);
+  
+  //! Removes all GD entries that aren't used as evidence.
+  void filter_not_used_as_evidence(bool verbose=false);
   
   //! Call to check if loaded info is matches supplied reference.
   bool is_valid(cReferenceSequences& ref_seq_info, bool verbose=false);
