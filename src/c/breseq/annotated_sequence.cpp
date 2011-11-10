@@ -348,6 +348,8 @@ namespace breseq {
   {
     ifstream in(file_name.c_str());
     ASSERT(in.good(), "Could not open reference file: " +file_name);
+    
+    str_uint old_load = m_seq_id_loaded;
 
     //! Step 1: Determine what file format it is from first line
     string first_line;
@@ -401,12 +403,17 @@ namespace breseq {
       default:
         WARN("Could not load the reference file: " +file_name);
     }
+    
+    for(str_uint::iterator i = old_load.begin(); i != old_load.end(); i++)
+    {
+      ASSERT(m_seq_id_loaded[i->first] == i->second, file_name + "\nANOTHER FILE HAS ALREADY LOADED REFERENCE INFORMATION FOR: " + i->first);
+    }    
   }
   
   void cReferenceSequences::Verify()
   {
     bool Error = false;
-    stringstream ss;
+    stringstream ss;    
     for (vector<cAnnotatedSequence>::iterator itr= this->begin(); itr != this->end(); itr++) {
       cAnnotatedSequence& as = *itr;
       if (!as.get_sequence_length()) {
