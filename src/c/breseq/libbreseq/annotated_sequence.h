@@ -266,11 +266,14 @@ namespace breseq {
    Holds sequences and features for ALL reference sequences.
 	 */ 
   
+  typedef map<string,uint32_t> str_uint;
+  
   class cReferenceSequences : public vector<cAnnotatedSequence> 
   {
     
   protected:
     map<string,int> m_seq_id_to_index; // for looking up sequences by seq_id
+    str_uint m_seq_id_loaded; // for recording how many times we tried to load this seq_id
     uint32_t m_index_id;
     bool m_initialized;
 
@@ -334,6 +337,7 @@ namespace breseq {
 
     void add_new_seq(const string& seq_id)
     {
+      m_seq_id_loaded[seq_id]++;
       if (m_seq_id_to_index.count(seq_id)) {
         return;
       } else {
