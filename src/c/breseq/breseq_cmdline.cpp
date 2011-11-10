@@ -885,7 +885,7 @@ int do_mutate(int argc, char *argv[])
 
 int do_subtract(int argc, char *argv[])
 {
-  AnyOption options("Usage: -1 <file.gd> -2 <file.gd>");
+  AnyOption options("Usage: -1 <file.gd> -2 <file.gd> -o <output.gd>");
   options("input1,1","input GD file 1");
   options("input2,2","input GD file 2");
   options("output,o","output GD file");
@@ -917,11 +917,19 @@ int do_subtract(int argc, char *argv[])
 
 int do_merge(int argc, char *argv[])
 {
-  AnyOption options("Usage: -g <file1.gd file2.gd file3.gd ...>");
+  AnyOption options("Usage: -g <file1.gd file2.gd file3.gd ...> -o <output.gd>");
   options("genomediff,g","input GD files");
   options("output,o","output GD file");
+  options("unique,u","Unique Entries Only (Flag)", TAKES_NO_ARGUMENT);
   options("verbose,v","Verbose Mode (Flag)", TAKES_NO_ARGUMENT);
   options.processCommandArgs(argc, argv);
+  
+  options.addUsage("");
+  options.addUsage("Input as many GenomeDiff files as you want, and have them");
+  options.addUsage("merged together into a single GenomeDiff file specified.");
+  options.addUsage("Unique IDs will remain unique across files, any IDs that");
+  options.addUsage("aren't unique will get new ones.  Mutations that use those");
+  options.addUsage("IDs will be properly updated to acknowledge the change.");
   
   if (!options.count("genomediff")) {
     options.printUsage();
@@ -940,10 +948,38 @@ int do_merge(int argc, char *argv[])
   for(int32_t i = 0; i < options.getArgc() ; i++)
   {
     genome_diff gd2(options.getArgv(i));
-    gd1.merge(gd2, options.count("verbose"));
+    gd1.merge(gd2, options.count("unique"), options.count("verbose"));
   }
   
   gd1.write(options["output"]);
+  
+  return 0;
+}
+
+int do_not_evidence(int argc, char *argv[])
+{
+  AnyOption options("Usage: -g <genomediff.gd> -o <output.gd>");
+  options("genomediff,g","input GD files");
+  options("output,o","output GD file");
+  options("verbose,v","Verbose Mode (Flag)", TAKES_NO_ARGUMENT);
+  options.processCommandArgs(argc, argv);
+  
+  options.addUsage("");
+  options.addUsage("Takes a GenomeDiff file and removes all of the entries that");
+  options.addUsage("are NOT used as evidence by a mutation.  Outputs to a new");
+  options.addUsage("GenomeDiff file if specified.  If no output is specified,");
+  options.addUsage("verbose will still inform what evidence isn't being used.");
+  
+  if (!options.count("genomediff")) {
+    options.printUsage();
+    return -1;
+  }
+  
+  genome_diff gd1(options["genomediff"]);
+  
+  gd1.filter_not_used_as_evidence(options.count("verbose"));
+  
+  if(options.count("output")){gd1.write(options["output"]);}
   
   return 0;
 }
@@ -1857,7 +1893,9 @@ int main(int argc, char* argv[]) {
   } else if (command == "SUBTRACT") {
     return do_subtract(argc_new, argv_new);    
   } else if (command == "UNION" || command == "MERGE") {
-    return do_merge(argc_new, argv_new);
+    return do_merge(argc_new, argv_new);    
+  } else if (command == "NOT_EVIDENCE") {
+    return do_not_evidence(argc_new, argv_new);
   } else {
     // Not a sub-command. Use original argument list.
     return breseq_default_action(argc, argv);
