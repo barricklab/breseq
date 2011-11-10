@@ -22,6 +22,7 @@
 #define DEFAULT_MAXHELP         10
 
 #define TRUE_FLAG "true"
+#define ADVANCED_OPTION true
 
 #define TAKES_NO_ARGUMENT	((void*)NULL)
 #define USAGE_LEFT_COLUMN_WIDTH	35
@@ -149,8 +150,9 @@ namespace breseq {
 		 */
 		void printUsage();
 		void printAutoUsage();
-		void addUsage( string line );
-		void printHelp();
+		void addUsage( string line , bool advanced=false);
+		void printAdvanced();
+    void addAdvanced( string line );
 			/* print auto usage printing for unknown options or flag */
 		void autoUsagePrint(bool flag);
 
@@ -165,7 +167,7 @@ namespace breseq {
 
 	private:
 		string word_wrap(string sentence, int width);
-		template<class T> void addOptionOrFlag(const string& option_name, const string& option_description, const T& option_default_value, bool has_argument, bool has_default_value)
+		template<class T> void addOptionOrFlag(const string& option_name, const string& option_description, const T& option_default_value, bool has_argument, bool has_default_value, bool advanced)
 		{
       // split the name first 
       vector<string> option_name_split = split(option_name, ",");
@@ -178,8 +180,7 @@ namespace breseq {
         {
           default_values[*it] = default_value_string;
         }
-      }
-      
+      }      
       
       string usage;
 			if (option_name_split.size() > 1)
@@ -225,30 +226,30 @@ namespace breseq {
 			}
 			usage += wrapped_description;
 
-			addUsage(usage);
+			addUsage(usage, advanced);
 		}
 
 	public:
-		AnyOption& operator()(const string& option_name, const string& option_description)
+		AnyOption& operator()(const string& option_name, const string& option_description, bool advanced=false)
 		{
-			addOptionOrFlag(option_name, option_description, "", true, false);
+			addOptionOrFlag(option_name, option_description, "", true, false, advanced);
 			return *this;
 		}
-		AnyOption& operator()(const string& option_name, const string& option_description, void* pass_null_if_option_takes_no_argument)
+		AnyOption& operator()(const string& option_name, const string& option_description, void* pass_null_if_option_takes_no_argument, bool advanced=false)
 		{
 			assert(pass_null_if_option_takes_no_argument == NULL);
-			addOptionOrFlag(option_name, option_description, "", false, false);
+			addOptionOrFlag(option_name, option_description, "", false, false, advanced);
 			return *this;
 		}
-    AnyOption& operator()(const string& option_name, const string& option_description, const char* option_default_value)
+    AnyOption& operator()(const string& option_name, const string& option_description, const char* option_default_value, bool advanced=false)
 		{
-			addOptionOrFlag(option_name, option_description, string(option_default_value), true, true);
+			addOptionOrFlag(option_name, option_description, string(option_default_value), true, true, advanced);
 			return *this;
 		}
     
-		template<class T> AnyOption& operator()(const string& option_name, const string& option_description, const T& option_default_value)
+		template<class T> AnyOption& operator()(const string& option_name, const string& option_description, const T& option_default_value, bool advanced=false)
 		{
-			addOptionOrFlag(option_name, option_description, option_default_value, true, true);
+			addOptionOrFlag(option_name, option_description, option_default_value, true, true, advanced);
 			return *this;
 		}
 
@@ -289,6 +290,8 @@ namespace breseq {
 		/* help and usage */
 		vector<string> usage; 	/* usage */
 		int usage_lines;	/* number of usage lines */
+    vector<string> advanced; 	/* advanced usage */
+		int advanced_lines;	/* number of advanced usage lines */
 
 		bool command_set;	/* if argc/argv were provided */
 		bool file_set;		/* if a filename was provided */

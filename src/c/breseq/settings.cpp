@@ -166,7 +166,7 @@ namespace breseq
     AnyOption options("Usage: breseq -r reference.gbk reads1.fastq [reads2.fastq, reads3.fastq...]");
     
     options
-		("help,h", "produce this help message", TAKES_NO_ARGUMENT)
+		("help,h", "produce advanced help message", TAKES_NO_ARGUMENT)
 		// convert to basing everything off the main output path, so we don't have to set so many options
 		("output,o", "path to breseq output [current path]", ".")
 		("reference,r", "reference sequence in GenBank flatfile format (REQUIRED)")
@@ -179,7 +179,7 @@ namespace breseq
     ("require-complete-match", "only consider alignments that extend from end to end of a read", TAKES_NO_ARGUMENT)
     ("require-match-length", "only consider alignments that cover this many bases of a read", "0")
     ("require-match-fraction", "only consider alignments that cover this fraction of a read", "0.9")
-    ("values-to-gd","",TAKES_NO_ARGUMENT) // @JEB @GRC added in for gathering/analyzing breseq values
+    ("values-to-gd","",TAKES_NO_ARGUMENT, ADVANCED_OPTION) // @JEB @GRC added in for gathering/analyzing breseq values
 
 
     .processCommandArgs(argc, argv);
@@ -189,10 +189,18 @@ namespace breseq
     options.addUsage("  Recognized commands: APPLY, BAM2ALN, BAM2COV, CONVERT_FASTQ, ERROR_COUNT");
     options.addUsage("  For help using a utility command, type: breseq [command] ");
     
+    // make sure that the other config options are good:
+    if (options.count("help"))
+    {
+      options.printAdvanced();
+      exit(-1);
+    }
+    
     // Reference sequence provided?
 		if (options.count("reference") == 0)
 		{
-      cerr << "No reference sequences provided (-r)." << endl;
+      options.addUsage("");
+      options.addUsage("No reference sequences provided (-r).");
       options.printUsage();
       exit(-1);
 		}
@@ -200,16 +208,10 @@ namespace breseq
     // Read sequence file provided?
 		if (options.getArgc() == 0)
 		{
-      cerr << "No read sequence files provided." << endl;
+      options.addUsage("");
+      options.addUsage("No read sequence files provided.");
       options.printUsage();
       exit(-1);		
-    }
-    
-    // make sure that the other config options are good:
-    if (options.count("help"))
-    {
-      options.printUsage();
-      exit(-1);
     }
 
     if (options.count("values-to-gd")) {
