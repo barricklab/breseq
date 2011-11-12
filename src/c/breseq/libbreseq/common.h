@@ -221,7 +221,7 @@ namespace breseq {
   }
   
 #define ASSERT(condition, message) { my_assertion_handler( condition,  __FILE__, __BASE_FILE__, __LINE__, message); }
-#define ERROR(message) { my_assertion_handler( true,  __FILE__, __BASE_FILE__, __LINE__, message); }
+#define ERROR(message) { my_assertion_handler( false,  __FILE__, __BASE_FILE__, __LINE__, message); }
 #define WARN(message) { my_warning_handler( false,  __FILE__, __BASE_FILE__, __LINE__, message); }
 #define CHECK(condition, message) { my_warning_handler( condition,  __FILE__, __BASE_FILE__, __LINE__, message); }
   

@@ -73,7 +73,7 @@ namespace breseq {
 
       map<string, vector<string> > m_gff_attributes;
     
-      cSequenceFeature() {}
+      cSequenceFeature() : m_pseudo(0) {}
       cSequenceFeature(const cSequenceFeature& _in) : sequence_feature_map_t(_in) 
       {
         m_start = _in.m_start;
