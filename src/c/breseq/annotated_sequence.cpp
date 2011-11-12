@@ -350,6 +350,12 @@ namespace breseq {
     ASSERT(in.good(), "Could not open reference file: " +file_name);
     
     str_uint old_load = m_seq_id_loaded;
+    map<string,pair<uint32_t,uint32_t> > old_seq_info;
+    for(vector<cAnnotatedSequence>::iterator its = this->begin(); its != this->end(); its++)
+    {      
+      old_seq_info[(*its).m_seq_id].first = (*its).m_features.size();
+      old_seq_info[(*its).m_seq_id].second = get_sequence_length((*its).m_seq_id);
+    }
 
     //! Step 1: Determine what file format it is from first line
     string first_line;
@@ -404,10 +410,71 @@ namespace breseq {
         WARN("Could not load the reference file: " +file_name);
     }
     
+    //Here we check to see we haven't loaded some of the same information again.
     for(str_uint::iterator i = old_load.begin(); i != old_load.end(); i++)
-    {
-      ASSERT(m_seq_id_loaded[i->first] == i->second, file_name + "\nANOTHER FILE HAS ALREADY LOADED REFERENCE INFORMATION FOR: " + i->first);
-    }    
+    {      
+      //This SEQ_ID has been loaded before
+      if(m_seq_id_loaded[i->first] != i->second)
+      {
+        //Have features and the sequence BOTH been loaded?
+        ASSERT(!(old_seq_info[i->first].first && old_seq_info[i->first].second), file_name + "\nANOTHER FILE(S) HAS ALREADY LOADED ALL INFORMATION FOR: " + i->first);
+        
+        //Have we only loaded features?
+        if(old_seq_info[i->first].first)
+        {
+          ASSERT(old_seq_info[i->first].first == (*this)[i->first].m_features.size(), file_name + "\nANOTHER FILE HAS ALREADY LOADED FEATURES FOR: " + i->first);
+        }
+        //Have we only loaded the sequence?
+        else if(old_seq_info[i->first].second)
+        {
+          switch (file_type) {
+              
+              //We've already loaded the sequence and we just tried to load a GENBANK?
+            case GENBANK:{
+              ERROR(file_name + "\nANOTHER FILE HAS ALREADY LOADED THE SEQUENCE FOR: " + i->first);
+            }break;
+              
+              //We've already loaded the sequence and we just tried to load a FASTA?
+            case FASTA:{
+              ERROR(file_name + "\nANOTHER FILE HAS ALREADY LOADED THE SEQUENCE FOR: " + i->first);
+            }break;
+              
+              //We've already loaded the sequence and we just tried to load a GFF3?
+            case GFF3:{
+              cFastaFile gff3_in(file_name.c_str(), ios_base::in);
+              ASSERT(!gff3_in.fail(), "Could not open GFF file: " + file_name);
+              string line;
+              while (!gff3_in.eof() && getline(gff3_in,line))
+              {
+                if(line.find("##FASTA") != string::npos)
+                {
+                  while (!gff3_in.eof() && getline(gff3_in,line))
+                  {
+                    //The line we're on should be a sequence name line
+                    if(line[0] == '>')
+                    {
+                      //Remove the '>' from the line.
+                      line.replace(0,1,"");
+                      
+                      //Is this line an EXACT match for the current SEQ_ID we're worried about?
+                      if(line == i->first)
+                      {
+                        ERROR(file_name + "\nANOTHER FILE HAS ALREADY LOADED THE SEQUENCE FOR: " + i->first);
+                      }
+                    }
+                  }
+                }                
+              }
+            }break;
+              
+            default:
+              break;
+          }
+        }
+      }
+      
+     //ASSERT(m_seq_id_loaded[i->first] == i->second, file_name + "\nANOTHER FILE HAS ALREADY LOADED REFERENCE INFORMATION FOR: " + i->first);
+    }
   }
   
   void cReferenceSequences::Verify()
@@ -653,7 +720,6 @@ namespace breseq {
     while (!in.eof() && getline(in,line)) {
       cSequenceFeaturePtr fp(new cSequenceFeature);
       cSequenceFeature& feature = *fp;
-      feature.m_pseudo = false; // Until we read otherwise, this feature is NOT pseudo.
 
   //! Step 2: Check for GFF Tags, reads FASTA from here.
       // We are concerned about a couple of ## GFF tags
@@ -1126,9 +1192,6 @@ void cReferenceSequences::ReadGenBankFileSequenceFeatures(std::ifstream& in, cAn
 
   for (cSequenceFeatureList::iterator it = all_features.begin(); it != all_features.end(); it++) {
     cSequenceFeature& feature = **it;
-    
-    // All features default to not being pseudo
-    feature.m_pseudo = false;
 
     // common changes for any type
     // use /note as the product if there is not product
