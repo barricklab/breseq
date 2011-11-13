@@ -371,6 +371,9 @@ void resolve_alignments(
     
     // Test the best-scoring junction.
     bool failed = false;  
+    
+    // One can actually have a passing E-value score with a pos_hash score of zero under some circumstances...
+    failed = failed || (junction_test_info.pos_hash_score == 0);
 
     int32_t possible_overlap_positions = avg_read_length - 1 - abs(junction_info.alignment_overlap);
     ASSERT(possible_overlap_positions > 0, "Possible overlap positions <= 0");
@@ -387,13 +390,11 @@ void resolve_alignments(
     */
     
     // table is by overlap, then pos hash score
-    double neg_log10_p_value_1 = 999999999.99;
-    double neg_log10_p_value_2 = 999999999.99;    
-    
-    double neg_log10_p_value_1_2 = pos_hash_p_value_calculator.probability(junction_info.sides[0].seq_id, junction_test_info.pos_hash_score, abs(junction_info.alignment_overlap));
-    double neg_log10_p_value_2_2 = pos_hash_p_value_calculator.probability(junction_info.sides[1].seq_id, junction_test_info.pos_hash_score, abs(junction_info.alignment_overlap));
+    double neg_log10_p_value_1 = pos_hash_p_value_calculator.probability(junction_info.sides[0].seq_id, junction_test_info.pos_hash_score, abs(junction_info.alignment_overlap));
+    double neg_log10_p_value_2 = pos_hash_p_value_calculator.probability(junction_info.sides[1].seq_id, junction_test_info.pos_hash_score, abs(junction_info.alignment_overlap));
 
     //@JEB Eventually deprecate this. It's just a check.
+    /*
     if (settings.use_r_junction_p_value_table_check) {      
       if (p_value_table_map[junction_info.sides[0].seq_id].size())
           neg_log10_p_value_1 = p_value_table_map[junction_info.sides[0].seq_id][abs(junction_info.alignment_overlap)][junction_test_info.pos_hash_score];
@@ -402,9 +403,7 @@ void resolve_alignments(
       ASSERT(neg_log10_p_value_1 - neg_log10_p_value_1_2 < 0.01, "Variance in calculated p-values: " + to_string(neg_log10_p_value_1) + " " + to_string(neg_log10_p_value_1_2) );
       ASSERT(neg_log10_p_value_2 - neg_log10_p_value_2_2 < 0.01, "Variance in calculated p-values: " + to_string(neg_log10_p_value_2) + " " + to_string(neg_log10_p_value_2_2) );
     }
-    
-    neg_log10_p_value_1 = neg_log10_p_value_1_2;
-    neg_log10_p_value_2 = neg_log10_p_value_2_2;
+    */
     
     // take the most significantly below pos_hash cutoff
     junction_test_info.neg_log10_pos_hash_p_value = max(neg_log10_p_value_1, neg_log10_p_value_2);

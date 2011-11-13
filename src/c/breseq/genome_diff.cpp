@@ -112,42 +112,37 @@ diff_entry::diff_entry()
 bool diff_entry::is_mutation() const
 {
   const size_t size = sizeof(gd_entry_mutation_types) / sizeof(gd_entry_mutation_types[0]);
-  return count(gd_entry_mutation_types, gd_entry_mutation_types + size, this->_type);
+  return std::count(gd_entry_mutation_types, gd_entry_mutation_types + size, this->_type);
 }
 
 bool diff_entry::is_evidence() const
 {
   const size_t size = sizeof(gd_entry_evidence_types) / sizeof(gd_entry_evidence_types[0]);
-  return count(gd_entry_evidence_types, gd_entry_evidence_types + size, this->_type);
+  return std::count(gd_entry_evidence_types, gd_entry_evidence_types + size, this->_type);
 }
 
 bool diff_entry::is_validation() const
 {
   const size_t size = sizeof(gd_entry_validation_types) / sizeof(gd_entry_validation_types[0]);
-  return count(gd_entry_validation_types, gd_entry_validation_types + size, this->_type);
+  return std::count(gd_entry_validation_types, gd_entry_validation_types + size, this->_type);
 }
   
   
 //Comparing IDs here will currently break genome_diff::merge and genome_diff::subract
 bool diff_entry::operator==(const diff_entry& de)
 {
-  diff_entry item = de;
   //! Case: Easy if not same type
-  if (this->_type != item._type) {
+  if (this->_type != de._type) {
     return false;
   }
   //! Case: Same type, but are fields that are common equal?
   else {
     // Get common keys
-    const vector<key_t>& specs = line_specification[this->_type];
-    for(vector<key_t>::const_iterator it = specs.begin();
-        it != specs.end(); it++) {
-      const key_t& spec(*it);
-      if (_fields[spec] != item._fields[spec]) {
+    const vector<diff_entry_key_t>& specs = line_specification[this->_type];
+    for(vector<diff_entry_key_t>::const_iterator it = specs.begin(); it != specs.end(); it++) {
+      const diff_entry_key_t& spec(*it);
+      if ((*this)[spec] != de.find(spec)->second)
         return false;
-      } else {
-        continue;
-      }
     }
     return true;
   }
@@ -162,9 +157,8 @@ void diff_entry::marshal(field_list_t& s) {
   
   s.push_back(join(_evidence, ","));
 
-  
-	// copy all fields:
-	map_t cp=_fields;
+	// deep copy all fields:
+	diff_entry cp= *this;
 
 	// marshal specified fields in-order, removing them from the copy after they've 
 	// been printed:
@@ -173,7 +167,7 @@ void diff_entry::marshal(field_list_t& s) {
 
   for (vector<string>::iterator it=f.begin(); it != f.end(); it++)
   {
-		map_t::iterator iter=cp.find(*it);
+		diff_entry_map_t::iterator iter=cp.find(*it);
     
     ASSERT(iter != cp.end(), "Did not find required field '" + *it + "' to write in entry id " + _id + " of type '" + to_string(_type) + "'.");
     
@@ -183,7 +177,7 @@ void diff_entry::marshal(field_list_t& s) {
 	}
 	
 	// marshal whatever's left, unless it's an empty field or _begins with an underscore
-	for(map_t::iterator i=cp.begin(); i!=cp.end(); ++i) {
+	for(diff_entry_map_t::iterator i=cp.begin(); i!=cp.end(); ++i) {
     
     assert(i->first.size());
     if (i->first.substr(0,1) == "_") continue;
@@ -217,7 +211,7 @@ size_t diff_entry::number_reject_reasons()
  */
 void add_reject_reason(diff_entry& de, const string &reason) {
 
-  if (de._fields.find(REJECT) == de._fields.end()) {
+  if (de.find(REJECT) == de.end()) {
       de[REJECT] = reason;
   }
   // exists already, make comma separated list
@@ -378,6 +372,9 @@ void genome_diff::merge(genome_diff& gd_new, bool unique, bool verbose)
   //This is where we update the evidence IDs for mutations.
   for (diff_entry_list::iterator it = _entry_list.begin(); it != _entry_list.end(); it++)
   {
+    // @JEB: optimization: we don't need to do this for evidence items.
+    if ( (*it)->is_evidence() ) continue;
+    
     //Is this one of the new entries?
     if(from_string<uint32_t>((**it)._id) > old_unique_ids && (**it).is_mutation())
     {                
@@ -416,6 +413,20 @@ void genome_diff::merge(genome_diff& gd_new, bool unique, bool verbose)
   //Notify user of the update
   if(verbose)cout << "\tMERGE DONE - " << gd_new._default_filename << endl;
   
+}
+  
+genome_diff genome_diff::fast_merge(const genome_diff& gd1, const genome_diff& gd2)
+{
+  genome_diff gd = gd1;
+  
+  //cout << gd2.list().size() << endl;
+  diff_entry_list gd_list = gd2.list();
+  for(diff_entry_list::const_iterator it=gd_list.begin(); it!= gd_list.end(); it++) {
+    //diff_entry de = **(gd_list.begin());
+    //cout << de << endl;
+    gd.add(**it);
+  }
+  return gd;
 }
 
 /*! Read a genome diff(.gd) from the given file to class member
@@ -1141,8 +1152,8 @@ diff_entry_list genome_diff::list(const vector<gd_entry_type>& types)
 diff_entry_list genome_diff::show_list(const vector<gd_entry_type>& types)
 {
   diff_entry_list ret_list = list(types);
-  ret_list.remove_if(diff_entry::fields_exist(make_list<diff_entry::key_t>("deleted")));
-  ret_list.remove_if(diff_entry::fields_exist(make_list<diff_entry::key_t>("no_show")));  
+  ret_list.remove_if(diff_entry::fields_exist(make_list<diff_entry_key_t>("deleted")));
+  ret_list.remove_if(diff_entry::fields_exist(make_list<diff_entry_key_t>("no_show")));  
   return ret_list;
 }
 

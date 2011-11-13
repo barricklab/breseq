@@ -161,9 +161,17 @@ namespace breseq {
 			 */
 		int   getArgc();
 		char* getArgv( int index );
+    vector<string> getRemainingArgs() {
+      vector<string> return_vector;
+      for (int32_t i = 0; i < getArgc(); i++)
+      {
+        string read_file_name = getArgv(i);
+        return_vector.push_back(read_file_name);
+      }
+      return return_vector;
+    }
+    
 		bool  hasOptions();
-
-
 
 	private:
 		string word_wrap(string sentence, int width);

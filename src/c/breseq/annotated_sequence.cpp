@@ -1837,8 +1837,8 @@ void cReferenceSequences::annotate_mutations(genome_diff& gd, bool only_muts)
         annotate_1_mutation(mut, from_string<int32_t>(mut["position"]) + from_string<int32_t>(mut["size"])-1, from_string<int32_t>(mut["position"]) + from_string<int32_t>(mut["size"])-1);
         mut["gene_name_2"] = mut["gene_name"];
         mut["gene_product_2"] = mut["gene_product"];
-        mut._fields.erase("gene_name");
-        mut._fields.erase("gene_product");
+        mut.erase("gene_name");
+        mut.erase("gene_product");
       } break;
         
       case AMP:{
@@ -1850,7 +1850,7 @@ void cReferenceSequences::annotate_mutations(genome_diff& gd, bool only_muts)
         side_1[SEQ_ID] = mut["side_1_seq_id"];
         annotate_1_mutation(side_1, from_string<int32_t>(mut["side_1_position"]), from_string<int32_t>(mut["side_1_position"]), true);
         //copy over entries with prefix
-        for(diff_entry::map_t::iterator it=side_1._fields.begin(); it!=side_1._fields.end(); it++)
+        for(diff_entry_map_t::iterator it=side_1.begin(); it!=side_1.end(); it++)
         {
           mut["_side_1"+ it->first] = it->second;
         }
@@ -1859,7 +1859,7 @@ void cReferenceSequences::annotate_mutations(genome_diff& gd, bool only_muts)
         side_2[SEQ_ID] = mut["side_2_seq_id"];
         annotate_1_mutation(side_2, from_string<int32_t>(mut["side_2_position"]), from_string<int32_t>(mut["side_2_position"]), true);
         //copy over entries with prefix
-        for(diff_entry::map_t::iterator it=side_2._fields.begin(); it!=side_2._fields.end(); it++)
+        for(diff_entry_map_t::iterator it=side_2.begin(); it!=side_2.end(); it++)
         {
           mut["_side_2"+ it->first] = it->second;
         }
@@ -2076,7 +2076,7 @@ void cReferenceSequences::polymorphism_statistics(Settings& settings, Summary& s
     {
       //#print Dumper($mut);
       mut[FREQUENCY] = "1";
-      mut._fields.erase(REJECT);
+      mut.erase(REJECT);
 
       // FIX -- need to re-evaluate whether it would have been accepted as a normal mutation
       // This is NOT the right quality being used here. Need a separate quality for consensus call and polymorphism call!
