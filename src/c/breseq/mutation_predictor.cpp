@@ -529,12 +529,12 @@ namespace breseq {
         if (verbose) 
         {
           cout << "Sorted: == J1 ==" << endl;
-          for(map<string,string>::iterator it=j1._fields.begin(); it!=j1._fields.end(); it++)
+          for(map<string,string>::iterator it=j1.begin(); it!=j1.end(); it++)
           {
             cout << it->first << " = " << it->second << endl; 
           }
           cout << "Sorted: == J2 ==" << endl;
-          for(map<string,string>::iterator it=j2._fields.begin(); it!=j2._fields.end(); it++)
+          for(map<string,string>::iterator it=j2.begin(); it!=j2.end(); it++)
           {
             cout << it->first << " = " << it->second << endl; 
           }
@@ -857,8 +857,22 @@ namespace breseq {
 				if (uc1_strand)
 				{
 					if (verbose) cout << "reverse right and left" << endl;
-					swap(mut["_ins_start"], mut["_ins_end"]);
-					swap(mut["_del_start"], mut["_del_end"]);
+
+          // @JEB can't seem to get swap() to work here.
+          
+          swap(mut["_ins_start"], mut["_ins_end"]);
+          swap(mut["_del_start"], mut["_del_end"]);
+          /*
+          diff_entry_value_t temp;
+          
+          temp = mut["_ins_start"];
+          mut["_ins_start"] = mut["_ins_end"];
+          mut["_ins_end"] = temp;
+          
+          temp = mut["_del_start"];
+          mut["_del_start"] = mut["_del_end"];
+          mut["_del_end"] = temp;
+           */
 				}
 
 				// only transfer the hidden _keys to normal keys that will be printed if they are different from 0
@@ -875,19 +889,19 @@ namespace breseq {
         if (verbose)
         {
           cout << "== J1 ==" << endl << j1 << endl;
-          for(map<string,string>::iterator it=j1._fields.begin(); it!=j1._fields.end(); it++)
+          for(map<string,string>::iterator it=j1.begin(); it!=j1.end(); it++)
           {
             cout << it->first << " = " << it->second << endl; 
           }
           
           cout << "== J2 ==" << endl;
-          for(map<string,string>::iterator it=j2._fields.begin(); it!=j2._fields.end(); it++)
+          for(map<string,string>::iterator it=j2.begin(); it!=j2.end(); it++)
           {
             cout << it->first << " = " << it->second << endl; 
           }
           
           cout << "== Mut ==" << endl;
-          for(map<string,string>::iterator it=mut._fields.begin(); it!=mut._fields.end(); it++)
+          for(map<string,string>::iterator it=mut.begin(); it!=mut.end(); it++)
           {
             cout << it->first << " = " << it->second << endl; 
           }
@@ -1180,7 +1194,7 @@ namespace breseq {
 			{
         mut._type = INS;
 				// unused fields
-				mut._fields.erase("ref_seq");
+				mut.erase("ref_seq");
 			}
 			// deletion
 			else if (mut["new_seq"].size() == 0)
@@ -1189,29 +1203,29 @@ namespace breseq {
 				mut["size"] = s(n(mut["end"]) - n(mut["start"]) + 1);
 
 				// unused fields
-				mut._fields.erase("new_seq");
-				mut._fields.erase("ref_seq");
+				mut.erase("new_seq");
+				mut.erase("ref_seq");
 			}
 			// block substitution
 			else if ((mut["ref_seq"].size() > 1) || (mut["new_seq"].size() > 1))
 			{
         mut._type = SUB;
 				mut["size"] = s(mut["ref_seq"].size());
-				mut._fields.erase("ref_seq");
+				mut.erase("ref_seq");
 			}
 			//snp
 			else
 			{
-				mut._fields.erase("ref_seq");
+				mut.erase("ref_seq");
         mut._type = SNP;
 			}
 
 			// we don't need these fields
-			if (mut["frequency"] == "1") mut._fields.erase("frequency");
-			mut._fields.erase("start");
-			mut._fields.erase("end");
-			mut._fields.erase("insert_start");
-			mut._fields.erase("insert_end");
+			if (mut["frequency"] == "1") mut.erase("frequency");
+			mut.erase("start");
+			mut.erase("end");
+			mut.erase("insert_start");
+			mut.erase("insert_end");
 
 			gd.add(mut);
 		}

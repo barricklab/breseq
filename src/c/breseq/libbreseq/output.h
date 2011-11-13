@@ -228,10 +228,14 @@ string decode_reject_reason(const string & reject);
  *-----------------------------------------------------------------------------*/
 struct Evidence_Files
 {
-  struct Evidence_Item:diff_entry
+  class Evidence_Item : public diff_entry
   {
+  public:
+    Evidence_Item(diff_entry_map_t& _fields, diff_entry_ptr _item, diff_entry_ptr _parent_item)
+    : diff_entry(_fields), item(_item), parent_item(_parent_item) {};
+    
+    diff_entry_ptr item;
   	diff_entry_ptr parent_item;
-  	diff_entry_ptr item;
   };
 
   Evidence_Files(const Settings& settings, genome_diff& gd);
@@ -242,7 +246,7 @@ struct Evidence_Files
   
     string html_evidence_file_name(Evidence_Item& evidence_item);
     void add_evidence(const string& file_name, diff_entry_ptr item,
-                      diff_entry_ptr parent_item, map<string,string> fields);
+                      diff_entry_ptr parent_item, map<string,string>& fields);
     string file_name(Evidence_Item& evidence_item);
     void html_evidence_file(const Settings& settings, genome_diff& gd, Evidence_Item& item);
 

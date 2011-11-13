@@ -275,7 +275,7 @@ void html_marginal_predictions(const string& file_name, const Settings& settings
    if (jc.size()) {
      //Sort by score, not by position (the default order)...
      jc.sort(diff_entry::by_scores(
-       make_list<diff_entry::key_t>("pos_hash_score")("total_non_overlap_reads"))); 
+       make_list<diff_entry_key_t>("pos_hash_score")("total_non_overlap_reads"))); 
     
      HTML << "<p>" << endl;
      HTML << html_new_junction_table_string(jc, false, "Marginal new junction evidence...", relative_path);
@@ -711,10 +711,10 @@ string formatted_mutation_annotation(const diff_entry& mut)
   stringstream ss;
 
   // additional formatting for some variables
-  if((mut.entry_exists("snp_type")) && (mut["snp_type"] != "intergenic") &&
-     (mut["snp_type"] != "noncoding") && (mut["snp_type"] != "pseudogene"))
+  if((mut.entry_exists("snp_type")) && (mut.get("snp_type") != "intergenic") &&
+     (mut.get("snp_type") != "noncoding") && (mut.get("snp_type") != "pseudogene"))
   {    
-    ss << mut["aa_ref_seq"] << mut["aa_position"] << mut["aa_new_seq"];
+    ss << mut.get("aa_ref_seq") << mut.get("aa_position") << mut.get("aa_new_seq");
 
     string codon_ref_seq = to_underline_red_codon(mut, "codon_ref_seq");
     string codon_new_seq = to_underline_red_codon(mut, "codon_new_seq");
@@ -723,7 +723,7 @@ string formatted_mutation_annotation(const diff_entry& mut)
   }
   else // mut[SNP_TYPE] == "NC"
   {
-    ss << nonbreaking(mut[GENE_POSITION]); 
+    ss << nonbreaking(mut.get(GENE_POSITION)); 
   }
   return ss.str(); 
 }
@@ -735,16 +735,16 @@ string to_underline_red_codon(const diff_entry& mut, const string& codon_key)
 {
   if (!mut.entry_exists(codon_key) || 
       !mut.entry_exists("codon_position") ||
-      mut["codon_position"] == "") {
+      mut.get("codon_position") == "") {
     return "";
   }
 
   stringstream ss; //!< codon_string
   
-  string codon_ref_seq = mut[codon_key];
+  string codon_ref_seq = mut.get(codon_key);
   for (size_t i = 0; i < codon_ref_seq.size(); i++) {
 
-    if (i == from_string(mut["codon_position"])) {
+    if (i == from_string(mut.get("codon_position"))) {
       ss << font("class=\"mutation_in_codon\"", codon_ref_seq.substr(i,1));
     }
     else 
@@ -1288,9 +1288,11 @@ Evidence_Files::Evidence_Files(const Settings& settings, genome_diff& gd)
   string junction_bam_file_name = settings.junction_bam_file_name;
   string junction_fasta_file_name = settings.candidate_junction_fasta_file_name;
 
+  
   // We make alignments of two regions for deletions: upstream and downstream edges.
   diff_entry_list items_MC = gd.show_list(make_list<gd_entry_type>(MC));
   //cerr << "Number of MC evidence items: " << items_MC.size() << endl;
+
   
   for (diff_entry_list::iterator itr = items_MC.begin(); itr != items_MC.end(); itr ++) 
   {  
@@ -1335,6 +1337,8 @@ Evidence_Files::Evidence_Files(const Settings& settings, genome_diff& gd)
                 (PLOT, (*item)[_COVERAGE_PLOT_FILE_NAME])); // filled by draw_coverage
     
   } // mc_item list
+  
+  
   
   diff_entry_list items_SNP_INS_DEL_SUB = gd.show_list(make_list<gd_entry_type>(SNP)(INS)(DEL)(SUB));
   //cerr << "Number of SNP_INS_DEL_SUB evidence items: " << items_SNP_INS_DEL_SUB.size() << endl;
@@ -1387,7 +1391,7 @@ Evidence_Files::Evidence_Files(const Settings& settings, genome_diff& gd)
                  (PREFIX, to_string((*item)._type)));
 
 
-    /* Add evidence to RA items as well */
+    // Add evidence to RA items as well
     for (diff_entry_list::iterator itr = mutation_evidence_list.begin(); itr != mutation_evidence_list.end(); itr ++) 
     {  
       diff_entry& evidence_item = **itr;
@@ -1396,7 +1400,9 @@ Evidence_Files::Evidence_Files(const Settings& settings, genome_diff& gd)
     }
   }
   
-
+  
+  
+  
   // Still create files for RA evidence that was not good enough to predict a mutation from
   diff_entry_list items_RA = gd.filter_used_as_evidence(gd.show_list(make_list<gd_entry_type>(RA)));
   //cerr << "Number of RA evidence items: " << items_RA.size() << endl;
@@ -1421,6 +1427,7 @@ Evidence_Files::Evidence_Files(const Settings& settings, genome_diff& gd)
   // This additional information is used for the complex reference line.
   // Note that it is completely determined by the original candidate junction sequence 
   // positions and overlap: alignment_pos and alignment_overlap.
+  
   
   diff_entry_list items_JC = gd.show_list(make_list<gd_entry_type>(JC));
   //cerr << "Number of JC evidence items: " << items_JC.size() << endl;
@@ -1464,10 +1471,11 @@ Evidence_Files::Evidence_Files(const Settings& settings, genome_diff& gd)
     juncInfo.sides[0].position = from_string<int32_t>((*item)[SIDE_1_POSITION]);
     juncInfo.sides[1].position = from_string<int32_t>((*item)[SIDE_2_POSITION]);
     
+    
     add_evidence(_NEW_JUNCTION_EVIDENCE_FILE_NAME,
                   item,
                   parent_item,
-                  make_map<string,string>
+                  make_map<diff_entry_key_t,diff_entry_value_t>
                  (BAM_PATH, junction_bam_file_name)
                  (FASTA_PATH, junction_fasta_file_name)
                  (SEQ_ID, (*item)["key"])
@@ -1477,7 +1485,7 @@ Evidence_Files::Evidence_Files(const Settings& settings, genome_diff& gd)
                  (ALIGNMENT_EMPTY_CHANGE_LINE, "1")
                  (CORRECTED_KEY, juncInfo.junction_key())
                  );
-
+    
     // this is the flagship file that we show first when clicking on evidence from a mutation...
     (*item)[_EVIDENCE_FILE_NAME] = (*item)[_NEW_JUNCTION_EVIDENCE_FILE_NAME];
     string side_1_key_str = "JC_SIDE_1_" + (*item)[SIDE_2_SEQ_ID] + "_" + (*item)[SIDE_2_POSITION] + "_" + (*item)[SIDE_2_POSITION];
@@ -1506,15 +1514,15 @@ Evidence_Files::Evidence_Files(const Settings& settings, genome_diff& gd)
                  (PREFIX, side_2_key_str)
                  );
   }
-
+  
   // now create evidence files
   create_path(settings.evidence_path);
   //cerr << "Total number of evidence items: " << evidence_list.size() << endl;
-
+  
   for (vector<Evidence_Item>::iterator itr = evidence_list.begin(); itr != evidence_list.end(); itr ++) 
   {  
     Evidence_Item& e = (*itr);
-
+    
     if (settings.verbose) {
       cerr << "Creating evidence file: " + e[FILE_NAME] << endl;   
     }
@@ -1558,12 +1566,9 @@ string Evidence_Files::html_evidence_file_name(Evidence_Item& evidence_item)
   
   
 void Evidence_Files::add_evidence(const string& evidence_file_name_key, diff_entry_ptr item,
-                                  diff_entry_ptr parent_item, map<string,string> fields)
+                                  diff_entry_ptr parent_item, diff_entry_map_t& fields)
 {
-  Evidence_Item evidence_item;
-  evidence_item._fields = fields;
-  evidence_item.item = item;
-  evidence_item.parent_item = parent_item;
+  Evidence_Item evidence_item(fields, item, parent_item);
   evidence_item[FILE_NAME] = html_evidence_file_name(evidence_item);
   
   // this is added to the actual genome diff entry so that we know where to link
@@ -1641,7 +1646,6 @@ Evidence_Files::html_evidence_file (
     HTML << html_genome_diff_item_table_string(settings, gd, this_evidence_list);
     HTML << "<p>"; 
   }
-
   
   if (item.entry_exists(PLOT) && !item[PLOT].empty())
     HTML << div(ALIGN_CENTER, img(item[PLOT]));

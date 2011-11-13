@@ -164,14 +164,17 @@ struct formatted_double {
  For convenience, there are also factory methods on genome_diff that create diff
  entries that have been pre-populated according to their type.
  */
-struct diff_entry {
   
-  typedef string key_t; //!< Diff entry keys.
-  typedef string value_t; //!< Diff entry values.
-  typedef map<key_t, value_t> map_t; //!< Diff entry key-value map.
-  
+typedef string diff_entry_key_t; //!< Diff entry keys.
+typedef string diff_entry_value_t; //!< Diff entry values.
+typedef map<diff_entry_key_t, diff_entry_value_t> diff_entry_map_t; //!< Diff entry key-value map.
+
+class diff_entry : public diff_entry_map_t {
+
+public: 
   //! Constructor.
   diff_entry(const gd_entry_type type);
+  diff_entry(diff_entry_map_t& de) : diff_entry_map_t(de) {};
   diff_entry();
   
   //! Copy constructor
@@ -179,22 +182,16 @@ struct diff_entry {
 
   //! Destructor.
   virtual ~diff_entry() { }
-  
-  //! Ease-of-use accessor for setting fields on this entry.
-  value_t& operator[](const key_t& k)
-  { 
-    return _fields[k]; 
-  }
-  value_t operator[](const key_t& k) const
-  { 
-    map_t::const_iterator it = _fields.find(k);
-    assert(it != _fields.end());
-    return it->second; 
-  }
 
   //! Return if a given key value exists in _fields
-  bool entry_exists(const key_t& k) const { return (_fields.count(k) > 0); }
-
+  bool entry_exists(const diff_entry_key_t& k) const { return (count(k) > 0); }
+  
+  //! Const accessor
+  diff_entry_value_t get(const diff_entry_key_t key) const
+  {
+    return this->find(key)->second;
+  }
+    
   //! Return if this diff entry is a mutation
   bool is_mutation() const;
 
@@ -222,7 +219,7 @@ struct diff_entry {
   struct rejected;
 
 
-  diff_entry& operator()(const key_t& key, const value_t& value) {
+  diff_entry& operator()(const diff_entry_key_t& key, const diff_entry_value_t& value) {
   	(*this)[key] = value;
   	return *this;
   }
@@ -236,7 +233,7 @@ struct diff_entry {
   gd_entry_type _type;
   string _id;
   vector<string> _evidence; 
-  map_t _fields; //!< Additional information about this diff entry. Look at 
+  
 };
 
 void add_reject_reason(diff_entry& de, const string &reason);
@@ -314,6 +311,9 @@ public:
   //! Merge GenomeDiff information using gd_new as potential new info.
   void merge(genome_diff& gd_new, bool unique=true, bool verbose=false);
 
+  //! fast merge, doesn't compare entries, but does renumber
+  static genome_diff fast_merge(const genome_diff& gd1, const genome_diff& gd2);
+  
   //! Read a genome diff from a file.
   void read(const string& filename);
   
@@ -331,7 +331,8 @@ public:
   
   //! Retrieve diff_entrys that match given type(s) 
   diff_entry_list list(const vector<gd_entry_type>& types = vector<gd_entry_type>());
-  //diff_entry_list list() {return _entry_list;}
+  
+  const diff_entry_list list() const { return _entry_list; }
   
   //! retrieve diff_entrys that match given type(s) and do not have 'no_show' set
   diff_entry_list show_list(const vector<gd_entry_type>& types = vector<gd_entry_type>());
@@ -386,7 +387,7 @@ protected:
 struct diff_entry::field_exists : public unary_function <diff_entry_ptr, bool>
 {
   //! Constructor
-  explicit field_exists (const diff_entry::key_t& field_key)
+  explicit field_exists (const diff_entry_key_t& field_key)
     : m_field_key(field_key) {}
   
   //! Predicate
@@ -394,7 +395,7 @@ struct diff_entry::field_exists : public unary_function <diff_entry_ptr, bool>
     const {return (p_diff_entry->entry_exists(m_field_key));}
 
   protected:
-    diff_entry::key_t m_field_key;
+    diff_entry_key_t m_field_key;
 };
 
 //! Functor. Wraps diff_entry.entry_exists() for use in STL algorithms.
@@ -403,26 +404,28 @@ struct diff_entry::field_exists : public unary_function <diff_entry_ptr, bool>
 struct diff_entry::fields_exist : public unary_function <diff_entry_ptr, bool> 
 {
   //! Constructor
-  explicit fields_exist (const vector<diff_entry::key_t>& field_keys)
+  explicit fields_exist (const vector<diff_entry_key_t>& field_keys)
     : m_field_keys(field_keys) {}
   
   //! Predicate
   virtual bool operator() (const diff_entry_ptr& p_diff_entry) const
   {
-    for (vector<diff_entry::key_t>::const_iterator itr = m_field_keys.begin();
+    for (vector<diff_entry_key_t>::const_iterator itr = m_field_keys.begin();
          itr != m_field_keys.end(); itr++) {
-      genome_diff::key_t field_key(*itr);
-      if (p_diff_entry->entry_exists(field_key)) 
+      diff_entry_key_t field_key(*itr);
+      if (p_diff_entry->entry_exists(field_key)) {
         continue;
-      else 
+      }
+      else { 
         return false;
+      }
     }
     
     // diff_entry contains all field_keys
     return true;
   }
   protected:
-    vector<diff_entry::key_t> m_field_keys;
+    vector<diff_entry_key_t> m_field_keys;
 };
 
 //! Functor. Sorts diff_entrys in decending order depending on given fields that
@@ -432,13 +435,13 @@ struct diff_entry::by_scores : public binary_function
 {
 
   //! Constructor
-  explicit by_scores (const vector<key_t>& field_keys)
+  explicit by_scores (const vector<diff_entry_key_t>& field_keys)
     : m_field_keys(field_keys) {}
   
   //! Predicate
   virtual bool operator() (const diff_entry_ptr& a, const diff_entry_ptr& b) const 
   {
-    for (vector<key_t>::const_iterator itr = m_field_keys.begin(); itr != m_field_keys.end(); itr++) {
+    for (vector<diff_entry_key_t>::const_iterator itr = m_field_keys.begin(); itr != m_field_keys.end(); itr++) {
       string key(*itr);
 
       if (from_string<uint32_t>((*a)[key]) == from_string<uint32_t>((*b)[key]))
@@ -450,7 +453,7 @@ struct diff_entry::by_scores : public binary_function
   }
   
   protected:
-    vector<key_t> m_field_keys;
+    vector<diff_entry_key_t> m_field_keys;
 };
 
 

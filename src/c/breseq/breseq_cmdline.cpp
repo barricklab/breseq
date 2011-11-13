@@ -577,10 +577,10 @@ int do_identify_mutations(int argc, char* argv[]) {
  Analyze lengths of homopolymer repeats in mixed samples.
  
  */
-int do_contingency_loci(int argc, char* argv[]) {
+int do_tabulate_contingency_loci(int argc, char* argv[]) {
 	
 	// setup and parse configuration options:
-	AnyOption options("Usage: breseq CONTINGENCY_LOCI --bam <sequences.bam> --fasta <reference.fasta> --output <path> --loci <loci.txt> --strict");
+	AnyOption options("Usage: breseq TABULATE_CL --bam <sequences.bam> --fasta <reference.fasta> --output <path> --loci <loci.txt> --strict");
 	options
   ("help,h", "produce this help message", TAKES_NO_ARGUMENT)
   ("bam,b", "bam file containing sequences to be aligned")
@@ -621,6 +621,56 @@ int do_contingency_loci(int argc, char* argv[]) {
 	return 0;
 }
 
+
+/*! Graph Contingency Loci
+ 
+ Combines output of tabulate contingency loci across difference genomes, 
+ and uses R to produce bar plots from this combined file
+ 
+ */
+int do_graph_contingency_loci(int argc, char* argv[]) {
+	
+	// setup and parse configuration options:
+	AnyOption options("Usage: breseq GRAPH_CL --bam <sequences.bam> --fasta <reference.fasta> --output <path> --loci <loci.txt> --strict");
+	options
+  ("help,h", "produce this help message", TAKES_NO_ARGUMENT)
+  ("output,o", "output file")
+  ("loci,l", "Contingency loci coordinates" )
+  ("strict,s", "exclude non-perfect matches in surrounding 5 bases", TAKES_NO_ARGUMENT)
+	.processCommandArgs(argc, argv);
+  
+	// make sure that the config options are good:
+	if(options.count("help")
+		 || !options.count("bam")
+		 || !options.count("fasta")
+		 || !options.count("output")
+		 ) {
+		options.printUsage();
+		return -1;
+	}                       
+  
+	// attempt to calculate error calibrations:
+	try {
+    
+    vector<string> v = options.getRemainingArgs();
+    
+    string loci_file = "";
+    if (options.count("loci")) loci_file = options["loci"];
+    
+    analyze_contingency_loci(
+                             options["bam"],
+                             options["fasta"],
+                             options["output"],
+                             loci_file,
+                             options.count("strict")
+                             );
+	} catch(...) {
+		// failed; 
+		return -1;
+	}
+	
+	return 0;
+}
 
 
 /* Candidate Junctions
@@ -798,6 +848,7 @@ int do_identify_candidate_junctions(int argc, char* argv[]) {
   
   return 0;
 }
+
 
 
 int do_convert_gvf( int argc, char* argv[]){
@@ -1747,9 +1798,10 @@ int breseq_default_action(int argc, char* argv[])
 		create_path(settings.evidence_path);
 		genome_diff jc_gd(settings.jc_genome_diff_file_name);
 		genome_diff ra_mc_gd(settings.ra_mc_genome_diff_file_name);
-		genome_diff evidence_gd(jc_gd, ra_mc_gd);
+        
+    genome_diff merged_genome_diff;
+    genome_diff evidence_gd = genome_diff::fast_merge(jc_gd, ra_mc_gd);    
 		evidence_gd.write(settings.evidence_genome_diff_file_name);
-
 
 		// predict mutations from evidence in the GenomeDiff
 		cerr << "Predicting mutations from evidence..." << endl;
@@ -1819,7 +1871,7 @@ int breseq_default_action(int argc, char* argv[])
         it++;
     }
     
-    jc.sort(diff_entry::by_scores(make_list<diff_entry::key_t>("pos_hash_score")("total_non_overlap_reads")));
+    jc.sort(diff_entry::by_scores(make_list<diff_entry_key_t>("pos_hash_score")("total_non_overlap_reads")));
 		it = jc.begin();
 		for (uint32_t i = 0; i < jc.size(); i++)
 		{
@@ -1902,8 +1954,10 @@ int main(int argc, char* argv[]) {
 		return do_calculate_trims(argc_new, argv_new);
 	} else if (command == "CONVERT_GENBANK") {
 		return do_convert_genbank(argc_new, argv_new);
-	} else if (command == "CONTINGENCY_LOCI") {
-		return do_contingency_loci(argc_new, argv_new);
+	} else if (command == "TABULATE_CL") {
+		return do_tabulate_contingency_loci(argc_new, argv_new);
+	} else if (command == "GRAPH_CL") {
+		return do_graph_contingency_loci(argc_new, argv_new);
 	} else if (command == "ERROR_COUNT") {
 		return do_error_count(argc_new, argv_new);
 	} else if (command == "IDENTIFY_MUTATIONS") {

@@ -264,27 +264,25 @@ void coverage_output::at_target_end(const uint32_t tid) {
   char* refseq = get_refseq(tid); // reference sequence for this target
   uint32_t pos = target_length(tid)+1;
   
-  // catches this position
-  for (uint32_t j=m_last_position_1+1; j<pos; j++) {
-    if (j>=3) {
-      std::string read_begin_s;
-      {
+  if (m_read_begin_output.is_open()) {
+    
+    // catches this position
+    for (uint32_t j=m_last_position_1+1; j<pos; j++) {
+      if (j>=3) {
+        std::string read_begin_s;
         for (int i=1; i<=3; i++) {
           read_begin_s += complement_base_char(reference_base_char_1(tid, j-i+1));
         }
+        m_ref_begin_bot_bins[read_begin_s]++;    
       }
-      m_ref_begin_bot_bins[read_begin_s]++;    
+      if (j<target_length(tid)-3) {
+        std::string read_begin_s;
+        for (int i=1; i<=3; i++) {
+          read_begin_s += reference_base_char_1(tid, j+i-1);
+        }        
+        m_ref_begin_top_bins[read_begin_s]++;    
+      }
     }
-    if (j<target_length(tid)-3) {
-      std::string read_begin_s;
-      for (int i=1; i<=3; i++) {
-        read_begin_s += reference_base_char_1(tid, j+i-1);
-      }        
-      m_ref_begin_top_bins[read_begin_s]++;    
-    }
-  }
-  
-  if (m_read_begin_output.is_open()) {
     
     m_read_begin_output << "base_1\tbase_2\tbase_3\tread_top\tread_bot\tref_top\tref_bot" << std::endl;
     for (int b1=0; b1<base_list_size-1; b1++) {
