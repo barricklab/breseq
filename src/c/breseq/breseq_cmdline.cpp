@@ -1302,8 +1302,7 @@ int breseq_default_action(int argc, char* argv[])
                                                                   summary, 
                                                                   ref_seq_info,
                                                                   settings.coverage_junction_plot_file_name, 
-                                                                  settings.coverage_junction_distribution_file_name,
-                                                                  settings.coverage_junction_pos_hash_p_value_file_name
+                                                                  settings.coverage_junction_distribution_file_name
                                                                   );
 
       // Note that storing from unique_coverage and reloading in preprocess_coverage is by design
@@ -1659,8 +1658,7 @@ int breseq_default_action(int argc, char* argv[])
                                                                   summary, 
                                                                   ref_seq_info,
                                                                   settings.unique_only_coverage_plot_file_name, 
-                                                                  settings.unique_only_coverage_distribution_file_name,
-                                                                  ""
+                                                                  settings.unique_only_coverage_distribution_file_name
                                                                   );
 
     //Coverage distribution user option --deletion-coverage-propagation-cutoff

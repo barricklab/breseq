@@ -246,7 +246,6 @@ namespace breseq
     
 		// Scoring section to choose which ones from list to take
 		uint32_t minimum_candidate_junction_pos_hash_score;
-		uint32_t minimum_candidate_junction_min_overlap_score;
 		uint32_t maximum_junction_sequence_insertion_length;
     uint32_t maximum_junction_sequence_overlap_length;
 		uint32_t minimum_candidate_junctions;
@@ -255,7 +254,6 @@ namespace breseq
     //// Alignment Resolution ////
 		bool add_split_junction_sides;
     double junction_pos_hash_neg_log10_p_value_cutoff;
-    bool use_r_junction_p_value_table_check;
     
     //// MutationIdentification ////
 
@@ -318,7 +316,6 @@ namespace breseq
 		string coverage_junction_summary_file_name;
     string coverage_junction_error_count_summary_file_name;
 		string coverage_junction_done_file_name;
-    string coverage_junction_pos_hash_p_value_file_name;
 		string candidate_junction_summary_file_name;
 		string candidate_junction_done_file_name;
 		string candidate_junction_hash_file_name;

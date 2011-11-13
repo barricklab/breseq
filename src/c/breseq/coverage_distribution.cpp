@@ -34,13 +34,11 @@ namespace breseq {
                                            Settings& settings, 
                                            string distribution_file_name, 
                                            string plot_file, 
-                                           string pos_hash_p_value_cutoff_file,
                                            double deletion_propagation_pr_cutoff, 
                                            double junction_coverage_pr_cutoff, 
                                            double junction_accept_pr_cutoff, 
                                            double junction_keep_pr_cutoff, 
-                                           double junction_max_score,
-                                           double chance_per_pos_strand_no_read_start
+                                           double junction_max_score
                                            )
 	{
     pid_t pid = getpid();
@@ -53,13 +51,6 @@ namespace breseq {
 		command += " junction_accept_pr_cutoff=" + to_string<double>(junction_accept_pr_cutoff);
 		command += " junction_keep_pr_cutoff=" + to_string<double>(junction_keep_pr_cutoff);
 		command += " junction_max_score=" + to_string<double>(junction_max_score);
-
-    // Optionally,  
-    if (settings.use_r_junction_p_value_table_check) {      
-      command += " pos_hash_p_value_cutoff_file=" + pos_hash_p_value_cutoff_file;
-      command += " chance_per_pos_strand_no_read_start=" + to_string<double>(chance_per_pos_strand_no_read_start);
-    }
-    
     
 		SYSTEM(command);
 
@@ -96,8 +87,7 @@ namespace breseq {
                                                                   cReferenceSequences& ref_seq_info, 
                                                                   string seq_id, 
                                                                   string plot_key, 
-                                                                  string distribution_file_name, 
-                                                                  string pos_hash_p_value_cutoff_file_name
+                                                                  string distribution_file_name
                                                                   )
 	{
 		//initialize summary information
@@ -135,21 +125,16 @@ namespace breseq {
     double junction_accept_pr_cutoff = 0.01;
 		double junction_keep_pr_cutoff = 0.01 / sqrt(sequence_length);
 		int32_t junction_max_score = int(2 * summary.sequence_conversion.avg_read_length);
-
-    double no_pos_hash_per_position_pr = summary.preprocess_error_count[seq_id].no_pos_hash_per_position_pr;
-    if (pos_hash_p_value_cutoff_file_name == "") no_pos_hash_per_position_pr = -1;
     
 		CoverageDistribution dist;
 		vector<string> lines = dist.fit(settings, 
                                     unique_only_coverage_distribution_file_name, 
                                     unique_only_coverage_plot_file_name,
-                                    pos_hash_p_value_cutoff_file_name,
                                     deletion_propagation_pr_cutoff, 
                                     junction_coverage_pr_cutoff, 
                                     junction_accept_pr_cutoff, 
                                     junction_keep_pr_cutoff, 
-                                    junction_max_score,
-                                    no_pos_hash_per_position_pr
+                                    junction_max_score
                                     );
 
 		// First two lines are negative binomial parameters.
@@ -195,23 +180,18 @@ namespace breseq {
                                                                    Summary& summary, 
                                                                    cReferenceSequences& ref_seq_info, 
                                                                    string plot_file_name, 
-                                                                   string distribution_file_name,
-                                                                   string pos_hash_p_value_cutoff_file_name
+                                                                   string distribution_file_name
                                                                    )
   {
 		for (uint32_t i = 0; i < ref_seq_info.size(); i++) {
-      
-      string& seq_id = ref_seq_info[i].m_seq_id;
-      string this_pos_hash_p_value_cutoff_file_name = Settings::file_name(pos_hash_p_value_cutoff_file_name, "@", seq_id);
-    
+          
 			analyze_unique_coverage_distribution(
                                            settings, 
                                            summary, 
                                            ref_seq_info, 
-                                           ref_seq_info[i].m_seq_id , 
+                                           ref_seq_info[i].m_seq_id, 
                                            plot_file_name, 
-                                           distribution_file_name, 
-                                           this_pos_hash_p_value_cutoff_file_name
+                                           distribution_file_name
                                            );
     }
 	}
