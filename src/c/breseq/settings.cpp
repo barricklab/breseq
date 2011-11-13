@@ -335,23 +335,17 @@ namespace breseq
 		this->maximum_junction_sequence_insertion_length = 20;  // Ignore junctions with negative overlap (unique inserted sequence between reference)
 		this->maximum_junction_sequence_overlap_length = 20;    // Ignore junctions with positive overlap (overlap of reference on each side)
 
-    this->minimum_candidate_junctions = 10; // Minimum number of candidate junctions to keep
-		this->maximum_candidate_junctions = 5000; // Maximum number of candidate junctions to keep
+    this->minimum_candidate_junctions = 10;           // Minimum number of candidate junctions to keep
+		this->maximum_candidate_junctions = 5000;         // Maximum number of candidate junctions to keep
 		this->maximum_candidate_junction_length_factor = 0.1; // Only keep CJ cumulative lengths adding up to this factor times the total reference size
 
-    
-		// Scoring section to choose which ones from list to take
-		this->minimum_candidate_junction_pos_hash_score = 2;    // Require at least this many unique start coordinate/strand reads to accept a CJ
-                                                            // OFF by default, because a fixed number are taken
-		this->minimum_candidate_junction_min_overlap_score = 0; // Require at least this many unique start coordinate/strand reads to accept a CJ
-                                                            // OFF by default, because a fixed number are taken
-    
-    
+    this->minimum_candidate_junction_pos_hash_score = 2;    // Require at least this many unique start coordinate/strand reads to accept a CJ
+    // OFF by default, because a fixed number are taken  
+      
     //// Alignment Resolution ////
     this->add_split_junction_sides = true;    // Add the sides of passed junctions to the SAM file?
     this->junction_pos_hash_neg_log10_p_value_cutoff = 3;
-    this->use_r_junction_p_value_table_check = false;
-    
+        
     //// MutationIdentification ////
 		this->mutation_log10_e_value_cutoff = 2; // log10 of evidence required for SNP calls
     
@@ -458,7 +452,6 @@ namespace breseq
 		this->coverage_junction_plot_file_name = this->candidate_junction_path + "/@.coverage.pdf";
 		this->coverage_junction_summary_file_name = this->candidate_junction_path + "/coverage.summary.bin";
     this->coverage_junction_error_count_summary_file_name = this->candidate_junction_path + "/error_count.summary.bin";
-    this->coverage_junction_pos_hash_p_value_file_name = this->candidate_junction_path + "/@.pos_hash_p_value.tab";
 		this->coverage_junction_done_file_name = this->candidate_junction_path + "/coverage_junction_alignment.done";
 
 		this->candidate_junction_summary_file_name = this->candidate_junction_path + "/candidate_junction_summary.bin";

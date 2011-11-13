@@ -162,29 +162,12 @@ void resolve_alignments(
                         ) 
 {    
 	bool verbose = false;
-
-  // @JEB eventually deprecate this
-  map<string,pos_hash_p_value_table> p_value_table_map;
-  if (settings.use_r_junction_p_value_table_check) {      
-
-    for(vector<cAnnotatedSequence>::iterator it = ref_seq_info.begin(); it != ref_seq_info.end(); it++) {
-      const string& seq_id = it->m_seq_id;
-      string coverage_junction_pos_hash_p_value_file_name = Settings::file_name(settings.coverage_junction_pos_hash_p_value_file_name, 
-                                                                                "@", seq_id);
-      pos_hash_p_value_table p_value_table(coverage_junction_pos_hash_p_value_file_name);
-      p_value_table_map[seq_id] = p_value_table;
-    }
-  }
-  
-  //@JEB removed
-  //calculate_cutoffs(settings, summary, ref_seq_info);
   
   // local variables for convenience
   map<string,int32_t>& distance_cutoffs = summary.alignment_resolution.distance_cutoffs;
   storable_map<string, storable_vector<int32_t> >& pos_hash_cutoffs = summary.alignment_resolution.pos_hash_cutoffs;
   int32_t avg_read_length = round(summary.sequence_conversion.avg_read_length);
 
-  
   // Load the reference sequence trims, for writing resolved alignments
   SequenceTrimsList trims_list;
   read_trims(trims_list, ref_seq_info, settings.reference_trim_file_name);
@@ -310,6 +293,7 @@ void resolve_alignments(
     }
 /*    
  // Immediately reject and resolve junctions that have no overlap matches??
+ // @JEB needs testing...
 
     if (test_info.total_non_overlap_reads > 0) {
       junction_test_info_list.push_back(test_info);
@@ -374,20 +358,12 @@ void resolve_alignments(
     
     // One can actually have a passing E-value score with a pos_hash score of zero under some circumstances...
     failed = failed || (junction_test_info.pos_hash_score == 0);
+    
+    // Check that it met the minimum pos hash score criterion
+    failed = failed || (junction_test_info.pos_hash_score < settings.minimum_candidate_junction_pos_hash_score);
 
     int32_t possible_overlap_positions = avg_read_length - 1 - abs(junction_info.alignment_overlap);
     ASSERT(possible_overlap_positions > 0, "Possible overlap positions <= 0");
-    
-    /* @JEB Deprecate...
-    uint32_t pos_hash_score_cutoff_1, pos_hash_score_cutoff_2;
-    int32_t distance_score_cutoff_1, distance_score_cutoff_2;
-    
-      pos_hash_score_cutoff_1 = pos_hash_cutoffs[junction_info.sides[0].seq_id][possible_overlap_positions];
-      pos_hash_score_cutoff_2 = pos_hash_cutoffs[junction_info.sides[1].seq_id][possible_overlap_positions];
-      
-      distance_score_cutoff_1 = possible_overlap_positions - distance_cutoffs[junction_info.sides[0].seq_id];
-      distance_score_cutoff_2 = possible_overlap_positions - distance_cutoffs[junction_info.sides[1].seq_id];
-    */
     
     // table is by overlap, then pos hash score
     double neg_log10_p_value_1 = pos_hash_p_value_calculator.probability(junction_info.sides[0].seq_id, junction_test_info.pos_hash_score, abs(junction_info.alignment_overlap));
@@ -932,7 +908,7 @@ void _write_reference_matches(const Settings& settings, cReferenceSequences& ref
 	reference_tam.write_alignments((int32_t)fastq_file_index, reference_alignments, &trims, &ref_seq_info, true);
 }
   
-/*! returns whether it has non overlap alignment
+/*! Calculates various statistics about reads overlapping a junction
  */
 void score_junction(
                     const Settings& settings, 
@@ -989,7 +965,7 @@ void score_junction(
 	map<bool,int32_t> max_min_right_per_strand = make_map<bool,int32_t>(true,0)(false,0);
 	map<bool,int32_t> count_per_strand = make_map<bool,int32_t>(true,0)(false,0);
 	uint32_t total_non_overlap_reads = 0;
-	map<int32_t,bool> pos_hash[2];
+	map<int32_t,bool> pos_hash;
   uint32_t pos_hash_count(0);
   
 	// basic information about the junction
@@ -1010,9 +986,11 @@ void score_junction(
 	{
 		JunctionMatchPtr& item = items[i];
     
+    if (verbose) cout << "  " << item->junction_alignments.front()->read_name() << endl;
+    
 		//! Do not count reads that map the reference equally well toward the score.
 		if (item->mapping_quality_difference < floor(static_cast<double>((summary.sequence_conversion.avg_read_length) / 30.0))) {
-      if (verbose) cout << "  Degenerate:" << item->junction_alignments.front()->read_name() << endl;
+      if (verbose) cout << "    X Degenerate" << endl;
       continue; 
     }
     
@@ -1049,7 +1027,21 @@ void score_junction(
 		int32_t this_right = reference_end_1 - flanking_left - abs(alignment_overlap);
     
     // doesn't span 
-    if ((this_right <= 0) || (this_left <= 0)) continue;
+    if ((this_right <= 0) || (this_left <= 0)) {
+      if (verbose) cout << "    X Does not span junction" << endl;
+     continue; 
+    }
+    
+    ////
+    // CHECK that alignment starts at the first base of the query
+    // alternately, we could offset the reference position by as many bases as are 
+    // unaligned, but this would be a bit error-prone and not as simple.
+    ////
+
+    if (a->query_start_1() != 1) {
+      if (verbose) cout << "    X First read base does not match" << endl;
+     continue; 
+    }
     
     ////
     // COUNT reads that overlap both sides toward the pos hash score and other statistics
@@ -1061,16 +1053,18 @@ void score_junction(
 		count_per_strand[rev_key]++;
     
     // Note that reference here is the junction's sequence, not the reference genome sequence!
-    int32_t begin_read_coord = a->reference_start_1();
+    uint32_t stranded_reference_start, stranded_reference_end;
+    a->reference_stranded_bounds_1(stranded_reference_start, stranded_reference_end);
     
     if (verbose)
-			cout << "  " << item->junction_alignments.front()->read_name() << ' ' << static_cast<int32_t>(rev_key) << ' ' << begin_read_coord << endl;
+			cout << "  " << item->junction_alignments.front()->read_name() << ' ' << static_cast<int32_t>(rev_key) << ' ' << stranded_reference_start << endl;
     
-    if (!pos_hash[rev_key].count(begin_read_coord))
+    if (!pos_hash.count(stranded_reference_start))
     {
-      pos_hash[rev_key][begin_read_coord] = true;
+      pos_hash[stranded_reference_start] = true;
       pos_hash_count++;
     }
+    if (verbose) cout << "    Y pos_hash: " << stranded_reference_start << endl;
     
     // Update:
     // Max_Min = the maximum of the minimum length match sides
@@ -1144,7 +1138,7 @@ void score_junction(
         if (!found)
         {
           redundant[best_side_index] = true;
-          if (verbose) cout << "Marking side " << best_side_index << " as redundant." << endl;
+          //if (verbose) cout << "Marking side " << best_side_index << " as redundant." << endl;
         }
       }
     }
