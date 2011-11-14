@@ -852,7 +852,7 @@ int do_identify_candidate_junctions(int argc, char* argv[]) {
 
 
 int do_convert_gvf( int argc, char* argv[]){
-  AnyOption options("Usage: GD2GVF --gd <genomediff.gd> --output <gvf.gvf>"); 
+  AnyOption options("Usage: breseq GD2GVF --gd <genomediff.gd> --output <gvf.gvf>"); 
 
   options
     ("help,h", "produce this help message", TAKES_NO_ARGUMENT)
@@ -899,7 +899,7 @@ int do_convert_gd( int argc, char* argv[])
 
 int do_mutate(int argc, char *argv[])
 {
-  AnyOption options("Usage: APPLY -g <file.gd> -r <reference>");
+  AnyOption options("Usage: breseq APPLY -g <file.gd> -r <reference>");
   options("genomediff,g", "genome diff file");
   options("reference,r",".gbk/.gff3/.fasta/.bull reference sequence file");
   options("fasta,f","output FASTA file");
@@ -909,7 +909,7 @@ int do_mutate(int argc, char *argv[])
   
   options.addUsage("");
   options.addUsage("Input a single GenomeDiff, and as many reference files");
-  options.addUsage("as you like.  Using the GenomeDiff, we will apply all");
+  options.addUsage("as you like.  Using the GenomeDiff, this will apply all");
   options.addUsage("the mutations to the reference sequences, output is to");
   options.addUsage("a single file that includes all the references.");
   
@@ -949,7 +949,7 @@ int do_mutate(int argc, char *argv[])
 
 int do_subtract(int argc, char *argv[])
 {
-  AnyOption options("Usage: SUBTRACT -1 <file.gd> -2 <file.gd> -o <output.gd>");
+  AnyOption options("Usage: breseq SUBTRACT -1 <file.gd> -2 <file.gd> -o <output.gd>");
   options("input1,1","input GD file 1");
   options("input2,2","input GD file 2");
   options("output,o","output GD file");
@@ -989,7 +989,7 @@ int do_subtract(int argc, char *argv[])
 
 int do_merge(int argc, char *argv[])
 {
-  AnyOption options("Usage: MERGE -g <file1.gd file2.gd file3.gd ...> -o <output.gd>");
+  AnyOption options("Usage: breseq MERGE -g <file1.gd file2.gd file3.gd ...> -o <output.gd>");
   options("genomediff,g","input GD files");
   options("output,o","output GD file");
   options("unique,u","Unique Entries Only (Flag)", TAKES_NO_ARGUMENT);
@@ -1041,7 +1041,7 @@ int do_merge(int argc, char *argv[])
 
 int do_not_evidence(int argc, char *argv[])
 {
-  AnyOption options("Usage: NOT_EVIDENCE -g <genomediff.gd> -o <output.gd>");
+  AnyOption options("Usage: breseq NOT_EVIDENCE -g <genomediff.gd> -o <output.gd>");
   options("genomediff,g","input GD files");
   options("output,o","output GD file");
   options("verbose,v","Verbose Mode (Flag)", TAKES_NO_ARGUMENT);
