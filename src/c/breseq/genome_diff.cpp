@@ -1490,6 +1490,7 @@ cReferenceSequences genome_diff::apply_to_sequences(cReferenceSequences& ref_seq
         
         if(mut.entry_exists("del_start")) iDelStart = from_string<uint32_t>(mut["del_start"]);
         if(mut.entry_exists("del_end"))   iDelEnd = from_string<uint32_t>(mut["del_end"]);
+        ASSERT((iDelStart >= 0) && (iDelEnd >= 0), (to_string(mut._type) + " " + mut._id) + " - NEGATIVE DELETION");
 
         // @JEB: correct here to look for where the repeat is in the original ref_seq_info.
         // This saves us from possible looking at a shifted location...
@@ -1519,13 +1520,12 @@ cReferenceSequences genome_diff::apply_to_sequences(cReferenceSequences& ref_seq
         // we have inserted any insertions.
         new_seq_string = duplicate_sequence + new_seq_string;        
         
-        // Insert our newly minted sequence.  Take any deletions that may have occured
-        // at the start in mind.
-        new_ref_seq_info.insert_sequence_1(mut[SEQ_ID], position-1-iDelStart, new_seq_string, (to_string(mut._type) + " " + mut._id), verbose);
+        // Insert our newly minted sequence.
+        new_ref_seq_info.insert_sequence_1(mut[SEQ_ID], position-1, new_seq_string, (to_string(mut._type) + " " + mut._id), verbose);
         
         // We've repeated the sequence, now it's time to repeat all the features
         // inside of and including the repeat region.
-        new_ref_seq_info.repeat_feature_1(mut[SEQ_ID], position-iDelStart+iInsStart+duplicate_sequence.size(), ref_seq_info, mut["repeat_name"], from_string<int16_t>(mut["strand"]), verbose);
+        new_ref_seq_info.repeat_feature_1(mut[SEQ_ID], position+iInsStart+duplicate_sequence.size(), iDelStart, iDelEnd, ref_seq_info, mut["repeat_name"], from_string<int16_t>(mut["strand"]), verbose);
           
         if (verbose)
         {

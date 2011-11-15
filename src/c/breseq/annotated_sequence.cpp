@@ -233,20 +233,20 @@ namespace breseq {
   //
   //  TODO: Needs to check to be sure that it is getting a "typical" copy 
   //  (not one that has an insertion in it or a non-consensus sequence) 
-  void cAnnotatedSequence::repeat_feature_1(int32_t pos, cReferenceSequences& ref_seq_info, const string &repeat_name, int8_t strand, bool verbose)
+  void cAnnotatedSequence::repeat_feature_1(int32_t pos, int32_t start_del, int32_t end_del, cReferenceSequences& ref_seq_info, const string &repeat_name, int8_t strand, bool verbose)
   {
-    // This sorting should be completely unnecessary. To be
-    // safe, we sort here only because the following code
-    // assumes that these lists are in order from least to greatest.
-    m_features.sort();
-    m_genes.sort();
-    m_repeats.sort();
-    
     // Go through all the reference sequences in ref_seq_info
     for (vector<cAnnotatedSequence>::iterator itr_seq = ref_seq_info.begin(); itr_seq != ref_seq_info.end(); itr_seq++)
     {
       cAnnotatedSequence& this_seq = *itr_seq;
       cSequenceFeatureList& repeats = this_seq.m_repeats;
+      
+      // This sorting should be completely unnecessary. To be
+      // safe, we sort here only because the following code
+      // assumes that these lists are in order from least to greatest.
+      this_seq.m_features.sort();
+      this_seq.m_genes.sort();
+      this_seq.m_repeats.sort();
       
       // Go through the repeats of the sequence
       for (cSequenceFeatureList::iterator itr_rep = repeats.begin(); itr_rep != repeats.end(); itr_rep++)
@@ -273,19 +273,31 @@ namespace breseq {
               cSequenceFeature& feat_new = *fp;              
               feat_new.m_gff_attributes = feat.m_gff_attributes;              
               
-              // Depending on the strand of the mutation and the strand of the
-              // repeat, we juggle the starts and ends of here.
-              if(rep.m_strand != strand)
-              {
-                feat_new.m_end = pos - (feat.m_start - rep.m_end);
-                feat_new.m_start = feat_new.m_end - (feat.m_end - feat.m_start);
+              // Depending on the strand of the mutation,
+              // we juggle the starts and ends here.
+              if(strand < 0)
+              {                
+                feat_new.m_start = pos + (rep.m_end - feat.m_end) - start_del;  //Set start to position plus the difference betwen the repeat's end, and this feature's end
+                if(start_del && feat_new.m_start < pos)  {  //If the feature start got shifted below the repeat start, set the start to the pos and flag it as pseudo
+                  feat_new.m_start = pos;
+                  feat_new.flag_pseudo();  }
+                feat_new.m_end = feat_new.m_start + (feat.m_end - feat.m_start);  //Set end to start plus feature length
+                if(end_del && (pos + (rep.m_end - rep.m_start)) < (feat_new.m_end + end_del))  {  //Do we have an end_del? Does this feature end in an area that got deleted?
+                  feat_new.m_end = (pos + (rep.m_end - rep.m_start));
+                  feat_new.flag_pseudo();  }
                 feat_new.m_strand = -feat.m_strand;
                 feat_list_new.push_front(fp);
               }
               else
               {
-                feat_new.m_start = pos + (feat.m_start - rep.m_start);
-                feat_new.m_end = feat_new.m_start + (feat.m_end - feat.m_start);
+                feat_new.m_start = pos + (feat.m_start - rep.m_start) - start_del;  //Set start to position plus the difference between the repeat feature's start, and this feature's start
+                if(start_del && feat_new.m_start < pos)  {  //If the feature start got shifted below the repeat start, set the start to the pos and flag it as pseudo
+                  feat_new.m_start = pos;
+                  feat_new.flag_pseudo();  }
+                feat_new.m_end = feat_new.m_start + (feat.m_end - feat.m_start);  //Set end to start plus feature length
+                if(end_del && (pos + (rep.m_end - rep.m_start)) < (feat_new.m_end + end_del))  {  //Do we have an end_del? Does this feature end in an area that got deleted?
+                  feat_new.m_end = (pos + (rep.m_end - rep.m_start));
+                  feat_new.flag_pseudo();  }
                 feat_list_new.push_back(fp);
               }
               

@@ -110,7 +110,7 @@ namespace breseq {
       void flag_pseudo(bool verbose=false)
       {
         //If this feature is already pseudo or a region, do nothing.
-        if(m_pseudo || (*this)["type"] == "region" || (*this)["type"] == "source")
+        if(m_pseudo || (*this)["type"] == "region" || (*this)["type"] == "source" || (*this)["type"] == "repeat_region")
           return;
         
         //Notify the user of the action
@@ -200,7 +200,7 @@ namespace breseq {
       void insert_sequence_1(int32_t pos_1, const string &insertion_seq, string mut_type="", bool verbose=false);
     
       // Repeat Feature at Position
-      void repeat_feature_1(int32_t pos, cReferenceSequences& ref_seq_info, const string &repeat_name, int8_t strand, bool verbose=false);
+      void repeat_feature_1(int32_t pos, int32_t start_del, int32_t end_del, cReferenceSequences& ref_seq_info, const string &repeat_name, int8_t strand, bool verbose=false);
       
       // Find Specific Feature
       // Given a cSequenceFeatureList feat_list, iterate through it until
@@ -390,9 +390,9 @@ namespace breseq {
       (*this)[seq_id].insert_sequence_1(pos, insertion_seq, mut_type, verbose);
     }
     
-    void repeat_feature_1(const string& seq_id, int32_t pos, cReferenceSequences& ref_seq_info, const string &repeat_name, int8_t strand, bool verbose=false)
+    void repeat_feature_1(const string& seq_id, int32_t pos, int32_t start_del, int32_t end_del, cReferenceSequences& ref_seq_info, const string &repeat_name, int8_t strand, bool verbose=false)
     {
-      (*this)[seq_id].repeat_feature_1(pos, ref_seq_info, repeat_name, strand, verbose);
+      (*this)[seq_id].repeat_feature_1(pos, start_del, end_del, ref_seq_info, repeat_name, strand, verbose);
     }
 
     uint32_t get_sequence_length(const string& seq_id)
