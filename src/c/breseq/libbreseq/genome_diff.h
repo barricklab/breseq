@@ -226,17 +226,6 @@ public:
 
   bool operator== (const diff_entry& de);
 
-  diff_entry& operator=(const diff_entry &de)
-  {
-    this->_type = de._type;
-    this->_id   = de._id;
-    this->_evidence = de._evidence;
-
-    (diff_entry_map_t)(*this) = (diff_entry_map_t)(de);
-
-    return *this;
-  }
-
   //! Clone this entry.
   //virtual diff_entry* clone() const = 0;
   
