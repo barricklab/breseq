@@ -221,9 +221,9 @@ public:
 
   diff_entry& operator()(const diff_entry_key_t& key, const diff_entry_value_t& value) {
   	(*this)[key] = value;
-  	return *this;
+    return *this;
   }
-  
+
   bool operator== (const diff_entry& de);
 
   //! Clone this entry.
@@ -235,6 +235,7 @@ public:
   vector<string> _evidence; 
   
 };
+
 
 void add_reject_reason(diff_entry& de, const string &reason);
 
@@ -313,6 +314,11 @@ public:
 
   //! fast merge, doesn't compare entries, but does renumber
   static genome_diff fast_merge(const genome_diff& gd1, const genome_diff& gd2);
+
+  //! Intersection
+  static genome_diff intersection(const genome_diff& gd1, const genome_diff& gd2);
+  //! compare
+  static genome_diff compare_genome_diff_files(const genome_diff &control, const genome_diff &test);
   
   //! Read a genome diff from a file.
   void read(const string& filename);

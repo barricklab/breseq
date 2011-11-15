@@ -53,6 +53,8 @@ LICENSE AND COPYRIGHT
 #include <utility>
 #include <vector>
 #include <functional>
+#include <set>
+#include <iterator>
 
 // Library specific headers
 #include <bam.h>
