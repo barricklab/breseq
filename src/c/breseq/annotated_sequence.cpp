@@ -443,7 +443,18 @@ namespace breseq {
               
               //We've already loaded the sequence and we just tried to load a GENBANK?
             case GENBANK:{
-              ERROR(file_name + "\nANOTHER FILE HAS ALREADY LOADED THE SEQUENCE FOR: " + i->first);
+              ifstream gbk_in(file_name.c_str());
+              ASSERT(in.good(), "Could not open GenBank file: " +file_name);
+              string line;
+              while (!gbk_in.eof() && getline(gbk_in,line))
+              {
+                if(line.find("ORIGIN") != string::npos)
+                {
+                  getline(gbk_in,line);
+                  if(GetWord(line) != "//")  {
+                    ERROR(file_name + "\nANOTHER FILE HAS ALREADY LOADED THE SEQUENCE FOR: " + i->first);  }
+                }
+              }
             }break;
               
               //We've already loaded the sequence and we just tried to load a FASTA?
@@ -497,6 +508,16 @@ namespace breseq {
       cAnnotatedSequence& as = *itr;
       if (!as.get_sequence_length()) {
         ss << "No sequence loaded for: " << as.m_seq_id << endl;
+        Error = true;
+      }
+      if ((uint32_t)as.m_length != as.get_sequence_length())  {
+        ss << "FEATURES AND SEQUENCE DON'T MATCH: " << as.m_seq_id << endl;
+        ss << "LENGTH:\t" << (uint32_t)as.m_length << endl;
+        ss << "\tVS:\t" << as.get_sequence_length() << endl;
+        ss << "LIKELY CAUSE:" << endl;
+        ss << "Multiple files loaded referring to the same sequence. Make" << endl;
+        ss << "sure that any features loaded describe the sequence you" << endl;
+        ss << "actually loaded.";
         Error = true;
       }
     }
@@ -964,8 +985,6 @@ void cReferenceSequences::ReadGenBank(const string& in_file_name) {
   ifstream in(in_file_name.c_str(), ios_base::in);
   ASSERT(!in.fail(), "Could not open GenBank file: " + in_file_name);
 
-  uint32_t on_seq_index = this->size();
-
   while (ReadGenBankFileHeader(in)) {
     
     cAnnotatedSequence& s = this->back();
@@ -977,7 +996,7 @@ void cReferenceSequences::ReadGenBank(const string& in_file_name) {
     f->m_start = 1;
     f->m_end = s.m_length;
     
-    if (s.m_is_circular) 
+    if (s.m_is_circular)
       f->m_gff_attributes["Is_circular"].push_back("true");
     else
       f->m_gff_attributes["Is_circular"].push_back("false");
@@ -986,9 +1005,7 @@ void cReferenceSequences::ReadGenBank(const string& in_file_name) {
     s.feature_push_back(f);
     
     ReadGenBankFileSequenceFeatures(in, s);
-    ReadGenBankFileSequence(in, s);
-    this->set_seq_id_to_index(s.m_seq_id, on_seq_index++);
-    
+    ReadGenBankFileSequence(in, s);    
   }
 }
 
