@@ -419,11 +419,8 @@ genome_diff genome_diff::fast_merge(const genome_diff& gd1, const genome_diff& g
 {
   genome_diff gd = gd1;
   
-  //cout << gd2.list().size() << endl;
   diff_entry_list gd_list = gd2.list();
   for(diff_entry_list::const_iterator it=gd_list.begin(); it!= gd_list.end(); it++) {
-    //diff_entry de = **(gd_list.begin());
-    //cout << de << endl;
     gd.add(**it);
   }
   return gd;

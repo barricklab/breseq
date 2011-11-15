@@ -19,6 +19,9 @@ LICENSE AND COPYRIGHT
 
 #include "libbreseq/calculate_trims.h"
 
+#include "libbreseq/annotated_sequence.h"
+#include "libbreseq/alignment.h"
+
 using namespace std;
 
 namespace breseq {
@@ -177,6 +180,38 @@ void calculate_trims( const string& in_fasta, const string& in_output_path) {
   
   bam_header_destroy(bam_header);
 }
+  
+  
+Trims get_alignment_trims(const alignment_wrapper& a, const SequenceTrimsList& trims)
+{
+  bool verbose = false;
+  
+  // which reference sequence?
+  uint32_t tid = a.reference_target_id();
+  
+  Trims t;
+  t.L= trims[tid].left_trim_0(a.reference_start_0());
+  t.R = trims[tid].right_trim_0(a.reference_end_0());
+  
+  t.L += a.query_start_0();
+  t.R += a.read_length() - a.query_end_1();
+  
+  //  cerr << a.read_name() << endl;
+  //  cerr << "start: " << a.reference_start_1() << " end: " << a.reference_end_1() << endl;
+  //  cerr << "left: " << t.L << " right: " << t.R << endl;
+  
+  return t;
+}
+
+void read_trims(SequenceTrimsList& trims, const cReferenceSequences& ref_seqs, const string &in_trims_file_name ) 
+{
+  trims.resize(ref_seqs.size());
+  for(uint32_t i = 0; i < ref_seqs.size(); i++) {
+    string this_file_name = Settings::file_name(in_trims_file_name, "@", ref_seqs[i].m_seq_id);
+    trims[i].ReadFile(this_file_name, ref_seqs[i].m_length);
+  }
+}
+
 
 } // breseq
 
