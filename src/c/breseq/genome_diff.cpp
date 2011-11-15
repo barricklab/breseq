@@ -1490,8 +1490,6 @@ cReferenceSequences genome_diff::apply_to_sequences(cReferenceSequences& ref_seq
         
         if(mut.entry_exists("del_start")) iDelStart = from_string<uint32_t>(mut["del_start"]);
         if(mut.entry_exists("del_end"))   iDelEnd = from_string<uint32_t>(mut["del_end"]);
-        if(from_string<int16_t>(mut["strand"]) > 0)
-          swap(iDelStart,iDelEnd);
 
         // @JEB: correct here to look for where the repeat is in the original ref_seq_info.
         // This saves us from possible looking at a shifted location...
@@ -1502,6 +1500,10 @@ cReferenceSequences genome_diff::apply_to_sequences(cReferenceSequences& ref_seq
         // It will eventually contain the repeat string, insertions
         // and the duplicate_sequence.
         new_seq_string = rep_string;
+        
+        // Do we have deletes?  Go ahead and delete them from the repeat.
+        if(iDelStart)new_seq_string.replace(0,iDelStart,"");
+        if(iDelEnd)new_seq_string.resize(new_seq_string.size() - iDelEnd);
         
         // The position of a MOB is the first position that is duplicated
         // Inserting at the position means we have to copy the duplication
@@ -1515,11 +1517,7 @@ cReferenceSequences genome_diff::apply_to_sequences(cReferenceSequences& ref_seq
         
         // Add on the duplicated sequence.  This happens AFTER
         // we have inserted any insertions.
-        new_seq_string = duplicate_sequence + new_seq_string;
-        
-        // Do we have deletes?  Go ahead and do that now.
-        if(iDelStart)new_ref_seq_info.replace_sequence_1(mut[SEQ_ID], position-iDelStart, position-1, "");
-        if(iDelEnd)new_ref_seq_info.replace_sequence_1(mut[SEQ_ID], position-iDelStart, position-1-iDelStart+iDelEnd, "");
+        new_seq_string = duplicate_sequence + new_seq_string;        
         
         // Insert our newly minted sequence.  Take any deletions that may have occured
         // at the start in mind.
