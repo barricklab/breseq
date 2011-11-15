@@ -1672,6 +1672,122 @@ int32_t diff_entry::mutation_size_change(cReferenceSequences& ref_seq_info)
   }
 }
 
+genome_diff genome_diff::compare_genome_diff_files(const genome_diff &control, const genome_diff &test)
+{
+  bool verbose = false;
+
+  genome_diff control_gd = control;
+  genome_diff test_gd = test;
+  genome_diff new_gd; //ret val
+
+  const diff_entry_list &control_mutations = control_gd.mutation_list();
+  const diff_entry_list &test_mutations = test_gd.mutation_list();
+
+  set<diff_entry> control_diff_mutations_set;
+  set<diff_entry> test_diff_mutations_set;
+
+  //! Step: Strip counted_ptr<> for STL useage, set<> is more efficient at comparison.
+  for (diff_entry_list::const_iterator it = control_mutations.begin();
+       it != control_mutations.end(); it++) {
+    control_diff_mutations_set.insert(**it);
+  }
+  for (diff_entry_list::const_iterator it = test_mutations.begin();
+       it != test_mutations.end(); it++) {
+    test_diff_mutations_set.insert(**it);
+  }
+
+
+  //! Step: True positive mutations
+  set<diff_entry> true_positive_mutations_set;
+  set_intersection(control_diff_mutations_set.begin(), control_diff_mutations_set.end(),
+                   test_diff_mutations_set.begin(), test_diff_mutations_set.end(),
+                   inserter(true_positive_mutations_set, true_positive_mutations_set.begin()));
+  if (verbose) cout << "#TP: " << true_positive_mutations_set.size() << endl;
+
+  //Find difference and then determine if false-positive or false-negative
+  set<diff_entry> difference_mutations_set;
+  set_difference(control_diff_mutations_set.begin(), control_diff_mutations_set.end(),
+                   test_diff_mutations_set.begin(), test_diff_mutations_set.end(),
+                   inserter(difference_mutations_set, difference_mutations_set.begin()));
+  //! Step: False Negative
+  set<diff_entry> false_negative_mutations_set;
+  set_intersection(difference_mutations_set.begin(), difference_mutations_set.end(),
+                   control_diff_mutations_set.begin(), control_diff_mutations_set.end(),
+                   inserter(false_negative_mutations_set, false_negative_mutations_set.begin()));
+  if (verbose) cout << "#FN: " << false_negative_mutations_set.size() << endl;
+
+  //! Step: False positive
+  set<diff_entry> false_positive_mutations_set;
+  set_intersection(difference_mutations_set.begin(), difference_mutations_set.end(),
+                   test_diff_mutations_set.begin(), test_diff_mutations_set.end(),
+                   inserter(false_positive_mutations_set, false_positive_mutations_set.begin()));
+  if (verbose) cout << "#FP: " << false_positive_mutations_set.size() << endl;
+
+  //! Step: Add validation=<TP/FP/FN> tags to new_gd.
+  //True positive
+  for (set<diff_entry>::iterator it = true_positive_mutations_set.begin();
+       it != true_positive_mutations_set.end(); it++) {
+    diff_entry de = *it;
+    de["validation"] = "TP";
+    new_gd.add(de);
+  }
+
+  //False negative
+  for (set<diff_entry>::iterator it = false_negative_mutations_set.begin();
+       it != false_negative_mutations_set.end(); it++) {
+    diff_entry de = *it;
+    de["validation"] = "FN";
+    new_gd.add(de);
+  }
+
+   //False positive
+  for (set<diff_entry>::iterator it = false_positive_mutations_set.begin();
+       it != false_positive_mutations_set.end(); it++) {
+    diff_entry de = *it;
+    de["validation"] = "FP";
+    new_gd.add(de);
+  }
+
+  return new_gd;
+}
+
+genome_diff genome_diff::intersection(const genome_diff &gd1, const genome_diff &gd2)
+{
+  genome_diff this_gd1 = gd1;
+  genome_diff this_gd2 = gd2;
+
+  const diff_entry_list& gd1_mutations = this_gd1.mutation_list();
+  const diff_entry_list& gd2_mutations = this_gd2.mutation_list();
+  genome_diff new_gd; //ret_val
+
+  set<diff_entry> gd1_mutations_set;
+  set<diff_entry> gd2_mutations_set;
+
+  //! Step: Strip counted_ptr<> for STL useage, set<> is more efficient at comparison.
+  for (diff_entry_list::const_iterator it = gd1_mutations.begin();
+       it != gd1_mutations.end(); it++) {
+    gd1_mutations_set.insert(**it);
+  }
+  for (diff_entry_list::const_iterator it = gd2_mutations.begin();
+       it != gd2_mutations.end(); it++) {
+    gd2_mutations_set.insert(**it);
+  }
+
+  //! Step: Find intersecting diff entries
+  set<diff_entry> intersecting_mutations;
+  set_intersection(gd1_mutations_set.begin(), gd1_mutations_set.end(),
+                   gd2_mutations_set.begin(), gd1_mutations_set.end(),
+                   inserter(intersecting_mutations, intersecting_mutations.begin()));
+
+  //! Step: Add intersecting mutations to new_gd
+  for(set<diff_entry>::iterator it = intersecting_mutations.begin();
+      it != intersecting_mutations.end(); it++) {
+    new_gd.add(*it);
+  }
+
+  return new_gd;
+}
+
 
 }//namespace bresesq
 
