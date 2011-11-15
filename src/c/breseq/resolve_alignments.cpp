@@ -355,6 +355,7 @@ void resolve_alignments(
     
     // Test the best-scoring junction.
     bool failed = false;  
+    bool record = true;
     
     // One can actually have a passing E-value score with a pos_hash score of zero under some circumstances...
     failed = failed || (junction_test_info.pos_hash_score == 0);
@@ -362,6 +363,10 @@ void resolve_alignments(
     // Check that it met the minimum pos hash score criterion
     failed = failed || (junction_test_info.pos_hash_score < settings.minimum_candidate_junction_pos_hash_score);
 
+    // We don't even record junctions in the genome diff if they don't meet the minimum_candidate_junction_pos_hash_score 
+    // criterion, or if they just have no matches
+    record = !failed;
+    
     int32_t possible_overlap_positions = avg_read_length - 1 - abs(junction_info.alignment_overlap);
     ASSERT(possible_overlap_positions > 0, "Possible overlap positions <= 0");
     
@@ -415,7 +420,7 @@ void resolve_alignments(
     //@JEB: still need to resolve ones with no overlap reads to give their repeat matches to the reference.
     //ASSERT(failed || (junction_test_info.total_non_overlap_reads > 0), "Junction passed with no non-overlap reads.");
 
-    
+    // Resolve junction no matter what
     resolve_junction(
                      settings,
                      summary,
@@ -430,10 +435,13 @@ void resolve_alignments(
                      junction_test_info.total_non_overlap_reads > 0
                      ); 
     
-    if (!failed) 
-      passed_junction_test_info_list.push_back(junction_test_info);
-    else
-      rejected_junction_test_info_list.push_back(junction_test_info);
+    // Record only some junctions 
+    if (record) {
+      if (!failed) 
+        passed_junction_test_info_list.push_back(junction_test_info);
+      else
+        rejected_junction_test_info_list.push_back(junction_test_info);
+    }
     
     junction_test_info_list.pop_back();
     
@@ -479,7 +487,7 @@ void resolve_alignments(
 				// Write out match corresponding to this part to SAM file
 				// By trimming in the candidate junctions sequence, rather than on each half,
 				// this is done properly.
-				Trims trims = _trim_ambiguous_ends(a, junction_trims_list);
+				Trims trims = get_alignment_trims(a, junction_trims_list);
         
 				resolved_reference_tam.write_moved_alignment(
 					a,
@@ -514,86 +522,6 @@ void resolve_alignments(
   // Write the genome diff file
 	gd.write(settings.jc_genome_diff_file_name);
 }
-  
-
-  
-/*! Passes back calculated values as part of summary
- */
-/*
-void calculate_cutoffs(const Settings& settings, Summary& summary, cReferenceSequences& ref_seq_info)
-{
-  bool verbose = false;
-  
-  // distance from read end that must be achieved to pass threshold for different overlap values
-  // int32_t max_read_length = summary.sequence_conversion.max_read_length;
-  int32_t avg_read_length = round(summary.sequence_conversion.avg_read_length);
-  if (verbose) cout << "Average read length: " << avg_read_length << endl;
-  
-  map<string,int32_t> distance_cutoffs;
-  storable_map<string, storable_vector<int32_t> > pos_hash_cutoffs;
-  
-  for(vector<cAnnotatedSequence>::iterator it = ref_seq_info.begin(); it != ref_seq_info.end(); it++) {
-    const string& seq_id = it->m_seq_id;
-    
-    uint32_t sequence_length = ref_seq_info[seq_id].m_length;
-    
-    double distance_pr_cutoff = sqrt(settings.junction_accept_pr / static_cast<double>(sequence_length));
-    double pos_hash_pr_cutoff = settings.junction_accept_pr;
-    //double pos_hash_pr_cutoff = sqrt(settings.junction_accept_pr / static_cast<double>(sequence_length));
-    
-    double pr_no_coverage_position_strand = summary.error_count[seq_id].no_pos_hash_per_position_pr;    
-    if (verbose) cout << pr_no_coverage_position_strand << endl;
-    if (verbose) cout << "Probability of read starting at position: " << seq_id << " " << (static_cast<double>(1.0)-pr_no_coverage_position_strand) << endl;
-      
-    if (verbose) cout << "deletion_coverage_propagation_cutoff " << summary.preprocess_coverage[seq_id].deletion_coverage_propagation_cutoff << endl;
-    if (verbose) cout << "nbinom_mean_parameter " << summary.preprocess_coverage[seq_id].nbinom_mean_parameter << endl;
-    
-    double pr_coverage_position_strand = (static_cast<double>(1.0)-pr_no_coverage_position_strand);
-    
-    
-    double junction_coverage_cutoff = summary.preprocess_coverage[seq_id].junction_coverage_cutoff;
-    if (verbose) cout << "Junction coverage cutoff: " << seq_id << " " << junction_coverage_cutoff << endl;
-    
-    double average = summary.preprocess_coverage[seq_id].average;
-    if (verbose) cout << "Average coverage: " << seq_id << " " << average << endl;
-    
-    double adjusted_pr_no_coverage_position_strand = -1;
-    if (pr_no_coverage_position_strand > 0) {
-      adjusted_pr_no_coverage_position_strand = exp((junction_coverage_cutoff / average) * log(pr_no_coverage_position_strand));
-    }
-    pr_no_coverage_position_strand = adjusted_pr_no_coverage_position_strand;
-    if (verbose) cout << "Adjusted coverage cutoff: " << seq_id << " " << adjusted_pr_no_coverage_position_strand << endl;
-    
-    for(int32_t i = 0; i <= summary.sequence_conversion.avg_read_length-1; i++) {
-      Coverage& cov = summary.preprocess_coverage[seq_id];
-      
-      // pr_no_coverage_position_strand can be -1 if the fit failed, assign a value of zero for this case
-      pos_hash_cutoffs[seq_id].push_back( 
-                                         (pr_no_coverage_position_strand > 0) &&  (pr_no_coverage_position_strand < 1)
-                                         ? qbinomial(
-                                                     pos_hash_pr_cutoff,  
-                                                     (2*i), 
-                                                     1-pr_no_coverage_position_strand 
-                                                     )
-                                         : 0
-                                         );
-      
-      if (verbose) cout << "Pos hash cutoffs: " << seq_id << " " << i << " " << pos_hash_cutoffs[seq_id][i] << endl;
-      
-    }
-    
-    distance_cutoffs[seq_id] = (pr_no_coverage_position_strand > 0) &&  (pr_no_coverage_position_strand < 1)
-    ? qmissing(distance_pr_cutoff, pr_no_coverage_position_strand)
-    : 0;
-    if (verbose) cout << "Distance cutoff: " << seq_id << " " << distance_cutoffs[seq_id] << endl;
-    
-  }
-
-  // return values
-  summary.alignment_resolution.pos_hash_cutoffs = pos_hash_cutoffs;
-  summary.alignment_resolution.distance_cutoffs = distance_cutoffs;
-}
-*/
     
 void load_junction_alignments(
                               const Settings& settings, 
@@ -901,7 +829,7 @@ void _write_reference_matches(const Settings& settings, cReferenceSequences& ref
 
   for(alignment_list::iterator it=reference_alignments.begin(); it!=reference_alignments.end(); it++)
   {
-    Trims t = _trim_ambiguous_ends(**it, trims_list);
+    Trims t = get_alignment_trims(**it, trims_list);
 		trims.push_back(t);
   }
   
@@ -1544,38 +1472,7 @@ diff_entry junction_to_diff_entry(
 	/// because they will be in REDUNDANTLY matched sides of junctions
 	return item;
 }
-
   
-Trims _trim_ambiguous_ends(const alignment_wrapper& a, const SequenceTrimsList& trims)
-{
-	bool verbose = false;
-  
-	// which reference sequence?
-	uint32_t tid = a.reference_target_id();
-  
-  Trims t;
-  t.L= trims[tid].left_trim_0(a.reference_start_0());
-  t.R = trims[tid].right_trim_0(a.reference_end_0());
-
-  t.L += a.query_start_0();
-  t.R += a.read_length() - a.query_end_1();
-
-//  cerr << a.read_name() << endl;
-//  cerr << "start: " << a.reference_start_1() << " end: " << a.reference_end_1() << endl;
-//  cerr << "left: " << t.L << " right: " << t.R << endl;
-
-  return t;
-}
-  
-void read_trims(SequenceTrimsList& trims, const cReferenceSequences& ref_seqs, const string &in_trims_file_name ) 
-{
-  trims.resize(ref_seqs.size());
-  for(uint32_t i = 0; i < ref_seqs.size(); i++) {
-    string this_file_name = Settings::file_name(in_trims_file_name, "@", ref_seqs[i].m_seq_id);
-    trims[i].ReadFile(this_file_name, ref_seqs[i].m_length);
-  }
-}
-
 
 //sort junction ids based on size of vector contained in map
 vector<string> get_sorted_junction_ids(
