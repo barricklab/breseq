@@ -24,6 +24,10 @@ LICENSE AND COPYRIGHT
 using namespace std;
 
 namespace breseq {
+  
+  // pre defs
+  class alignment_wrapper;
+  class cReferenceSequences;
 
   void calculate_trims( const string& in_fasta, const string& in_output_path);
   void calculate_trims_1( const string& in_fasta, const string& in_output_path);
@@ -106,6 +110,9 @@ namespace breseq {
   
   typedef vector<SequenceTrims> SequenceTrimsList;
   
+  Trims get_alignment_trims(const alignment_wrapper& a, const SequenceTrimsList& trims);
+  void read_trims(SequenceTrimsList& trims, const cReferenceSequences& ref_seqs, const string &in_trims_file_name);
+
   
 } // breseq
 

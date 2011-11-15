@@ -880,7 +880,7 @@ sub intersection
 {
 	my ($list) = @_;
 	
-	my $union_gd = GenomeDiff::union($list);
+	my $union_gd = GenomeDiff::merge(@$list);
 	
 	my $new_gd = GenomeDiff->new();
 	$new_gd->{'SAMPLE'}->{intersection } = join ",", map {$_->{SAMPLE}->{strain}} @$list;
@@ -889,7 +889,7 @@ sub intersection
 	{
 		foreach my $gd (@$list)
 		{
-			next SNP if (!$gd->has_item($test_item));
+			next SNP if (!$gd->has_mutation($test_item));
 		}
 		push @{$new_gd->{list}}, $test_item;
 	}

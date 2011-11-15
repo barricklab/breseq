@@ -100,7 +100,7 @@ if ($command eq 'FILTER') {
 } elsif ("\U$command" eq 'UNION') {
 	do_merge();
 } elsif ("\U$command" eq 'INTERSECTION') {
-	do_intersecton();
+	do_intersection();
 } elsif ("\U$command" eq 'SUBTRACT') {
 	do_subtract();
 } elsif ("\U$command" eq 'GENE_TABLE') {
