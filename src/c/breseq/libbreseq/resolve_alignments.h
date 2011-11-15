@@ -159,13 +159,6 @@ namespace breseq {
                           const bool junction_prediction,
                           cReadFiles &read_files
                           );
-  /*
-  void calculate_cutoffs(
-                         const Settings& settings, 
-                         Summary& summary, 
-                         cReferenceSequences& ref_seq_info
-                         );
-  */
   
   void load_junction_alignments(
                                 const Settings& settings, 
@@ -209,21 +202,6 @@ namespace breseq {
                         bool failed,
                         bool has_non_overlap_alignment
                         );
-  
-	bool _test_junction(
-                      const Settings& settings, 
-                      Summary& summary, 
-                      const string& junction_seq_id, 
-                      UniqueJunctionMatchMap& matched_junction_ref, 
-                      RepeatJunctionMatchMap& degenerate_matches_ref, 
-                      JunctionTestInfoMap& junction_test_info_ref, 
-                      cReferenceSequences& ref_seq_info, 
-                      const SequenceTrimsList& trims_list, tam_file& reference_tam, 
-                      tam_file& junction_tam, bool& has_non_overlap_alignment
-                      );
-
-	Trims _trim_ambiguous_ends(const alignment_wrapper& a, const SequenceTrimsList& trim_list);
-  void read_trims(SequenceTrimsList& trims, const cReferenceSequences& ref_seqs, const string &in_trims_file_name ); 
 
 	void _write_reference_matches(
                                 const Settings& settings, 
