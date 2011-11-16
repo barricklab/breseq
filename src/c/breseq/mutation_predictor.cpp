@@ -966,7 +966,7 @@ namespace breseq {
 				int32_t size = side_2_position - side_1_position + 1;
         
         // @JEB TODO: Large duplications are likely spurious... need to x-ref with coverage differences.
-        if (abs(size) > avg_read_length / 3.0) continue;
+        if (abs(size) > avg_read_length) continue;
         
 				if (size < 0) // this is a deletion!
         {

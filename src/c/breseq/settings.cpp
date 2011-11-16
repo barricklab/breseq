@@ -347,7 +347,7 @@ namespace breseq
     this->junction_pos_hash_neg_log10_p_value_cutoff = 3;
         
     //// MutationIdentification ////
-		this->mutation_log10_e_value_cutoff = 2; // log10 of evidence required for SNP calls
+		this->mutation_log10_e_value_cutoff = 10; // log10 of evidence required for SNP calls
     
     this->polymorphism_prediction = false;          // perform polymorphism prediction
     this->strict_polymorphism_prediction = false;   // perform polymorphism predictin with strict requirements
