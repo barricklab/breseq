@@ -117,7 +117,7 @@ namespace breseq {
         if(verbose){cout << "PSEUDO\t" << (*this)["type"] << "\t" << m_gff_attributes["ID"];}
         
         m_pseudo = true;
-        m_gff_attributes["Note"].push_back("Pseudogene");
+        m_gff_attributes["Pseudo"].push_back("true");
         if((*this)["type"] == "gene"){(*this)["type"] = "pseudogene";if(verbose){cout << "\tto\t" << (*this)["type"];}}
         
         //Notify the user of the action (cont.)

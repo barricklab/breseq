@@ -831,11 +831,8 @@ namespace breseq {
       //! Case 2: Multiple values for given key, split by ","
         feature.m_gff_attributes[key] = split(value, ",");
         // unescape special characters after splitting
-        // If feature contains a note marking this as pseudo, set the flag.
-        for (uint32_t i=0; i<feature.m_gff_attributes[key].size(); i++)
-        {
+        for (uint32_t i=0; i<feature.m_gff_attributes[key].size(); i++)  {
           feature.m_gff_attributes[key][i] = GFF3UnescapeString(feature.m_gff_attributes[key][i]);
-          if(feature.m_gff_attributes[key][i] == "Pseudogene")feature.m_pseudo = true;
         }
       }
             
@@ -848,6 +845,9 @@ namespace breseq {
 
       if (feature.m_gff_attributes.count("Name"))
         feature["name"] = join(feature.m_gff_attributes["Name"], ",");
+      
+      if (feature.m_gff_attributes.count("Pseudo"))
+        feature.m_pseudo = from_string<bool>(feature.m_gff_attributes["Pseudo"][0]);
       
     
 //! Step 4: Determine if sequence already exists (find or create if not found)
@@ -1300,7 +1300,7 @@ void cReferenceSequences::ReadGenBankFileSequenceFeatures(std::ifstream& in, cAn
     if (feature.SafeGet("product") != "") // Need special case for pseudo
     {
       feature.m_gff_attributes["Note"] = make_list<string>(feature["product"]);
-      if(feature.m_pseudo)feature.m_gff_attributes["Note"].push_back("Pseudogene");
+      if(feature.m_pseudo)feature.m_gff_attributes["Pseudo"].push_back("true");
     }
     if (feature.SafeGet("accession") != "")
       feature.m_gff_attributes["Alias"] = make_list<string>(feature["accession"]);
