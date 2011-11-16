@@ -1464,13 +1464,12 @@ Evidence_Files::Evidence_Files(const Settings& settings, genome_diff& gd)
     // through the run so we know what we're referencing.  Because we derive values
     // from the name (like here), sometimes those values won't match the new resolved
     // values for each side.  This is a dirty fix so that the evidence files
-    // will be operating with the correct positions for each side. @MDS
+    // will be operating with the correct positions for each side.  Search @MDS0001
+    // to find out where we finally access this modified information.
     JunctionInfo juncInfo((*item)["key"]);
-    juncInfo.sides[0].redundant = (from_string<int32_t>((*item)[SIDE_1_POSITION]) != juncInfo.sides[0].position);
-    juncInfo.sides[1].redundant = (from_string<int32_t>((*item)[SIDE_2_POSITION]) != juncInfo.sides[1].position);
+    juncInfo.sides[0].redundant = from_string<int32_t>((*item)[SIDE_1_OVERLAP]);
     juncInfo.sides[0].position = from_string<int32_t>((*item)[SIDE_1_POSITION]);
-    juncInfo.sides[1].position = from_string<int32_t>((*item)[SIDE_2_POSITION]);
-    
+    juncInfo.sides[1].position = from_string<int32_t>((*item)[SIDE_2_POSITION]); 
     
     add_evidence(_NEW_JUNCTION_EVIDENCE_FILE_NAME,
                   item,

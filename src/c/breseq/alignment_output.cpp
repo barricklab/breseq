@@ -87,26 +87,18 @@ void alignment_output::create_alignment ( const string& region, const string& co
     // Notice that strands are 0/1 and we need them as -1/+1 in the code
 
     int32_t overlap_offset = from_string<int32_t>(split_corrected[6]);
-    int32_t positive_overlap_offset = (overlap_offset > 0) ? overlap_offset : 0;
+    int32_t positive_overlap_offset = (overlap_offset > 0) ? from_string<int32_t>(split_corrected[10]) : 0;
     
     Aligned_Reference aligned_reference_1, aligned_reference_2;
     aligned_reference_1.ghost_strand = from_string<int16_t>(split_corrected[2]) == 1 ? +1 : -1; // don't do int8_t here, returns wrong value
     aligned_reference_2.ghost_strand = from_string<int16_t>(split_corrected[5]) == 1 ? +1 : -1; // don't do int8_t here, returns wrong value    
     
-    // This is absolutely horrible.  Sure, maybe it works...
-    // Here we're essentially checking to see which side is redundant,
-    // and shifting the truncation using the overlap.  However, if the
-    // sides share the overlap, then we sort of just... this. @MDS
-    //
-    // TODO: Only tested with limited data, and split overlaps.  Can
-    // overlaps favor one side more than another?
-    if(from_string<int32_t>(split_corrected[10]) && from_string<int32_t>(split_corrected[11]))
-      aligned_reference_1.truncate_end = from_string<uint32_t>(split_corrected[8]) + abs(from_string<int32_t>(split_corrected[1]) - from_string<int32_t>(split_region[1]));
-    else if(from_string<int32_t>(split_corrected[10]))
-      aligned_reference_1.truncate_end = from_string<uint32_t>(split_corrected[8]);
-    else
-      aligned_reference_1.truncate_end = from_string<uint32_t>(split_corrected[8]) + positive_overlap_offset;
-    
+    // We are currently using the data structure for junction
+    // key information to generate the alignments.  The corrected
+    // key that we pass in has SIDE_1_OVERLAP information in
+    // the value[10] position.  Search @MDS0001 to find where
+    // this is happening.
+    aligned_reference_1.truncate_end = from_string<uint32_t>(split_corrected[8]) + positive_overlap_offset;    
     aligned_reference_1.ghost_end = from_string<uint32_t>(split_corrected[1]);
     aligned_reference_2.ghost_start = from_string<uint32_t>(split_corrected[4]);    
     aligned_reference_2.truncate_start = aligned_reference_1.truncate_end + 1 + split_region[7].size();
