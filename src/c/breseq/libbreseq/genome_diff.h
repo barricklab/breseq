@@ -218,9 +218,8 @@ public:
   struct frequency_less_than_two_or_no_show;
   struct rejected;
 
-
   diff_entry& operator()(const diff_entry_key_t& key, const diff_entry_value_t& value) {
-  	(*this)[key] = value;
+    this->insert(pair<string,string>(key, value));
     return *this;
   }
 
@@ -271,9 +270,9 @@ typedef list<diff_entry_ptr> diff_entry_list; //!< Type for a list of diff entri
 
 
 
-//! Sort routine
-bool diff_entry_sort(const diff_entry_ptr& a, const diff_entry_ptr& b);
-
+//! Sort routines
+bool diff_entry_ptr_sort(const diff_entry_ptr& a, const diff_entry_ptr& b);
+bool diff_entry_sort(const diff_entry &a, const diff_entry &b);
 
 /*! Genome diff class.
  
@@ -315,11 +314,9 @@ public:
   //! fast merge, doesn't compare entries, but does renumber
   static genome_diff fast_merge(const genome_diff& gd1, const genome_diff& gd2);
 
-  //! Intersection
-  static genome_diff intersection(const genome_diff& gd1, const genome_diff& gd2);
   //! compare
   static genome_diff compare_genome_diff_files(const genome_diff &control, const genome_diff &test);
-  
+
   //! Read a genome diff from a file.
   void read(const string& filename);
   
