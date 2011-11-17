@@ -105,6 +105,9 @@ void alignment_output::create_alignment ( const string& region, const string& co
     
     aligned_reference_1.ghost_seq_id = split_region[0];    
     aligned_reference_2.ghost_seq_id = split_region[3];
+    
+    aligned_reference_1.overlap = (overlap_offset > 0) ? (overlap_offset-from_string<int32_t>(split_corrected[10])) : 0;
+    aligned_reference_2.overlap = positive_overlap_offset;
  
     // common settings
     aligned_reference_1.target_id = target_id;
@@ -242,7 +245,7 @@ void alignment_output::create_alignment ( const string& region, const string& co
 
       uint32_t pos = aligned_reference.start - ref_extend_left;
         
-      // create the string to add to the right side
+      // create the string to add to the left side
       while ( pos < aligned_reference.start )
       {
         
@@ -601,20 +604,26 @@ void alignment_output::Alignment_Output_Pileup::pileup_callback ( const pileup& 
 
   for ( uint32_t index = 0; index < aligned_references.size(); index ++ )
   {    
-    Aligned_Reference& aligned_reference ( aligned_references[index] );	
-    
+    Aligned_Reference& aligned_reference ( aligned_references[index] );    
     
     char my_ref_base = ref_base;
+    char my_ref_qual = char(255);
     
     if ( ( (aligned_reference.truncate_start != 0) && (reference_pos_1 < aligned_reference.truncate_start) )
       || ( (aligned_reference.truncate_end != 0)  && (reference_pos_1 > aligned_reference.truncate_end) ) )
     {
       my_ref_base = '.';
-    }
-    
+      
+      if((aligned_reference.truncate_start != 0) && !(reference_pos_1+aligned_reference.overlap < aligned_reference.truncate_start))  {
+        my_ref_base = ref_base;
+        my_ref_qual = char(253);  } // Quality score '253' handled @MDS0002
+      if((aligned_reference.truncate_end != 0)  && !(reference_pos_1-aligned_reference.overlap > aligned_reference.truncate_end))  {
+        my_ref_base = ref_base;
+        my_ref_qual = char(253);  } // Quality score '253' handled @MDS0002
+    }    
     
     aligned_reference.aligned_bases += my_ref_base;
-    aligned_reference.aligned_quals += char(255);
+    aligned_reference.aligned_quals += my_ref_qual;
 
     aligned_reference.aligned_bases += repeat_char('.', max_indel);
     aligned_reference.aligned_quals += repeat_char(char(255), max_indel);
@@ -786,6 +795,7 @@ void alignment_output::set_quality_range(const uint32_t quality_score_cutoff)
 string alignment_output::create_header_string()
 {
     map<char, vector<string> > base_color_hash;
+    // Black
     base_color_hash['G'].push_back ( "rgb(255,255,0)" );
     base_color_hash['G'].push_back ( "rgb(230,230,230)" );
     base_color_hash['G'].push_back ( "rgb(210,210,210)" );
@@ -793,13 +803,15 @@ string alignment_output::create_header_string()
     base_color_hash['G'].push_back ( "rgb(70,70,70)" );
     base_color_hash['G'].push_back ( "rgb(0,0,0)" );
 
+    // Blue
     base_color_hash['C'].push_back ( "rgb(255,255,0)" );
     base_color_hash['C'].push_back ( "rgb(160,160,255)" );
     base_color_hash['C'].push_back ( "rgb(120,120,255)" );
     base_color_hash['C'].push_back ( "rgb(60,60,255)" );
-    base_color_hash['C'].push_back ( "rgb(0,0,255)" );
+    base_color_hash['C'].push_back ( "rgb(20,20,255)" );
     base_color_hash['C'].push_back ( "rgb(0,0,150)" );
 
+    // Red
     base_color_hash['A'].push_back ( "rgb(255,255,0)" );
     base_color_hash['A'].push_back ( "rgb(255,210,210)" );
     base_color_hash['A'].push_back ( "rgb(255,180,180)" );
@@ -807,6 +819,7 @@ string alignment_output::create_header_string()
     base_color_hash['A'].push_back ( "rgb(255,20,20)" );
     base_color_hash['A'].push_back ( "rgb(200,0,0)" );
 
+    // Green
     base_color_hash['T'].push_back ( "rgb(255,255,0)" );
     base_color_hash['T'].push_back ( "rgb(210,255,210)" );
     base_color_hash['T'].push_back ( "rgb(180,255,180)" );
@@ -824,7 +837,6 @@ string alignment_output::create_header_string()
     string header_style_string;
     header_style_string += ".NC {color: rgb(0,0,0); background-color: rgb(255,255,255)}\n";
     header_style_string += ".UN {color: rgb(120,120,120); background-color: rgb(255,255,255)}\n";
-
   
     for ( map<char, vector<string> >::iterator itr = base_color_hash.begin(); itr != base_color_hash.end(); itr++ )
     {
@@ -837,11 +849,12 @@ string alignment_output::create_header_string()
             }
             else
             {
-                header_style_string += "."+to_string ( ( *itr ).first) + to_string(index) + "{color: rgb(120,120,120); background-color:"
+                header_style_string += "." + to_string ( ( *itr ).first) + to_string(index) + "{color: rgb(120,120,120); background-color:"
                                        + ( *itr ).second[index] + "}\n";
             }
         }
     }
+  
     no_color_index = base_color_hash['G'].size()-1;
     return header_style_string;
 }
@@ -859,7 +872,7 @@ string alignment_output::html_alignment_line(const alignment_output::Alignment_B
     {
       cout << a.aligned_bases << endl;
       cout << a.aligned_quals << endl;
-      cerr << "unequal aligned base and aligned quals" <<endl;
+      cerr << "unequal aligned base and aligned quals" << endl;
     }
   }   
   string last_color = "";
@@ -880,8 +893,8 @@ string alignment_output::html_alignment_line(const alignment_output::Alignment_B
     {
       if ( (q == 255) || (!use_quality_range) )
       {
-        if (b == " ")
-          color = "NC";   
+        if (b == " " || q == 253) //@MDS0002 - If we see '253', and we're clearly not using qualities for this line
+          color = "NC";
         else
           color = to_upper(to_string(b)) + to_string<uint32_t>(no_color_index);
       }
