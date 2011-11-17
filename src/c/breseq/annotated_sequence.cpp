@@ -1493,8 +1493,6 @@ void cReferenceSequences::find_nearby_genes(
                                             Gene& next_gene
                                             )
 {
-  //#	print "$pos_1, $pos_2\n";
-
   for (cSequenceFeatureList::iterator it = gene_list.begin(); it != gene_list.end(); ++it)
   {
     cSequenceFeature& test_gene_feat = **it;
@@ -1507,7 +1505,6 @@ void cReferenceSequences::find_nearby_genes(
        && (test_gene.start <= pos_2) && (test_gene.end >= pos_2) )
     {
       within_genes.push_back(test_gene);
-      //#	print "^ $test_gene->{name}\n";
     }
     else if ( (test_gene.start <= pos_1) && (test_gene.end >= pos_1) )
     {
@@ -1520,7 +1517,6 @@ void cReferenceSequences::find_nearby_genes(
     else if ( (test_gene.start >= pos_1) && (test_gene.end <= pos_2) )
     {
       between_genes.push_back(test_gene);
-      //#	print ">< $test_gene->{name}\n";
     }
     // We've passed the changes, so it is in the previous intergenic space
     if (test_gene.start > pos_2)
@@ -1529,10 +1525,6 @@ void cReferenceSequences::find_nearby_genes(
       break;
     }
   }
-
-  //#	print "$prev_gene->{name} || $next_gene->{name}\n";
-
-  //return ($prev_gene, $next_gene, \@within_genes, \@between_genes, \@inside_left_genes, \@inside_right_genes);
 }
 
 map<string,char> cReferenceSequences::translation_table_11 = make_map<string,char>
@@ -1637,6 +1629,7 @@ void cReferenceSequences::annotate_1_mutation(diff_entry& mut, uint32_t start, u
   mut["gene_name"] = "";
   mut["gene_position"] = "";
   mut["gene_product"] = "";
+  mut["gene_product_short"] = "";
   mut["gene_list"] = ""; //#affected genes
 
   string seq_id = mut["seq_id"];
@@ -1794,18 +1787,32 @@ void cReferenceSequences::annotate_1_mutation(diff_entry& mut, uint32_t start, u
     vector<string> gene_name_list;
     for (vector<Gene>::iterator it=inside_left_genes.begin(); it != inside_left_genes.end(); it++)
     {
-      gene_name_list.push_back("<i>[" + it->name + "]</i>");
+      gene_name_list.push_back("[" + it->name + "]");
     }
     for (vector<Gene>::iterator it=between_genes.begin(); it != between_genes.end(); it++)
     {
-      gene_name_list.push_back("<i>" + it->name + "</i>");
+      gene_name_list.push_back(it->name);
     }
     for (vector<Gene>::iterator it=inside_right_genes.begin(); it != inside_right_genes.end(); it++)
     {
-      gene_name_list.push_back("<i>[" + it->name + "]</i>");
+      gene_name_list.push_back("[" + it->name + "]");
     }
 
-    mut["gene_product"] = join (gene_name_list, ", ");
+    mut["gene_product"] += join(gene_name_list, ", ");
+    if(gene_list.size() > 25)  //@MDS - This number here will condense the number of genes listed.  Change to show how many appear in HTML.
+      mut["gene_product"] =
+        "<i title=\"" + mut["gene_product"] + "\">" +
+        to_string(gene_list.size()) +
+        " genes</i> <div id=\"gene_hide\" class=\"hidden\">"
+        + mut["gene_product"]
+        + "</div> <input type=\"button\" onclick=\"unhide('gene_hide')\" value=\"Toggle Genes\" />";
+    
+    // Add <i> tags after we're done with special text above.
+    mut["gene_product"] = "<i>" + mut["gene_product"];
+    mut["gene_product"] += "</i>";    
+    
+    // Non-Button Toggle - Replace <input>
+    // <a href=\"javascript:unhide('gene_hide');\">Toggle Genes</a>
 
     if (gene_name_list.size() == 1)
       mut["gene_name"] = gene_name_list[0];

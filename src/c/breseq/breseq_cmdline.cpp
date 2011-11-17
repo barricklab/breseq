@@ -1092,11 +1092,12 @@ int breseq_default_action(int argc, char* argv[])
 	if (settings.do_step(settings.sequence_conversion_done_file_name, "Read and reference sequence file input"))
 	{
 		Summary::SequenceConversion s;
+    cReferenceSequences conv_ref_seq_info;
     
     // Load all of the reference sequences and convert to FASTA and GFF3
-    ref_seq_info.LoadFiles(settings.reference_file_names);
-    ref_seq_info.WriteFASTA(settings.reference_fasta_file_name);
-    ref_seq_info.WriteGFF(settings.reference_gff3_file_name);
+    conv_ref_seq_info.LoadFiles(settings.reference_file_names);
+    conv_ref_seq_info.WriteFASTA(settings.reference_fasta_file_name);
+    conv_ref_seq_info.WriteGFF(settings.reference_gff3_file_name);
 
     //Check the FASTQ format and collect some information about the input read files at the same time
 		cerr << "  Analyzing fastq read files..." << endl;
