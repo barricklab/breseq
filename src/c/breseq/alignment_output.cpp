@@ -169,7 +169,7 @@ void alignment_output::create_alignment ( const string& region, const string& co
   }  
 
   // Build the alignment with the pileup
-  m_alignment_output_pileup.do_pileup ( region );
+  m_alignment_output_pileup.do_pileup( region );
 
   // do_pileup populates the following
   m_aligned_reads = m_alignment_output_pileup.aligned_reads;
@@ -397,32 +397,35 @@ string alignment_output::html_alignment ( const string& region, const string& co
   std::sort(sorted_keys.begin(),sorted_keys.end(),alignment_output::sort_by_aligned_bases_length);
   
   
-  output += "<style>";
+  output += "\n<style>\n";
   output += create_header_string();
-  output += "</style>";
-  output += "<table style=\"background-color: rgb(255,255,255)\">";
-  output += "<tr><td style=\"font-size:10pt\">";    
+  output += "</style>\n";
+  output += "<table style=\"background-color: rgb(255,255,255)\">\n";
+  output += "<tr>\n<td style=\"font-size:10pt\">";    
   
-  for (uint32_t index = 0; index < m_aligned_references.size(); index++)
-  {
-    output += html_alignment_line( m_aligned_references[index] , true ,false) + "<BR>";
-  }
+  output += "\n\n<!-- Reference Begin -->";  
+  for (uint32_t index = 0; index < m_aligned_references.size(); index++)  {
+    output += html_alignment_line( m_aligned_references[index] , true ,false) + "<BR>";  }
+  output += "\n<!-- Reference End -->\n";
+  
   output += html_alignment_line( m_aligned_annotation, false, false ) + "<BR>";
 
-  for (Sorted_Keys::iterator itr_key = sorted_keys.begin(); itr_key != sorted_keys.end(); itr_key ++)
-  {
-    output += html_alignment_line( m_aligned_reads[itr_key->seq_id], true, true) + "<BR>";
-  }
+  output += "\n\n<!-- Reads Begin -->";
+  for (Sorted_Keys::iterator itr_key = sorted_keys.begin(); itr_key != sorted_keys.end(); itr_key ++)  {
+    output += html_alignment_line( m_aligned_reads[itr_key->seq_id], true, true) + "<BR>";  }
+  output += "\n<!-- Reads End -->\n";
+  
   output += html_alignment_line( m_aligned_annotation, false, false)  + "<BR>"; 
   
-  for (uint32_t index = 0; index < m_aligned_references.size(); index++)
-  {
-    output += html_alignment_line( m_aligned_references[index], true, false) + "<BR>";
-  }
+  output += "\n\n<!-- Reference Begin -->";
+  for (uint32_t index = 0; index < m_aligned_references.size(); index++)  {
+    output += html_alignment_line( m_aligned_references[index], true, false) + "<BR>";  }
+  output += "\n<!-- Reference End -->\n\n";
+  
   output += "<BR>";
 
   // create legend information
-  output += "<CODE>Base quality scores:&nbsp</CODE>";
+  output += "\n<CODE>Base quality scores:&nbsp</CODE>";
   Alignment_Base temp_a;
   temp_a.aligned_bases = "ATCG";
   temp_a.aligned_quals = repeat_char('\0', 4);
@@ -441,7 +444,7 @@ string alignment_output::html_alignment ( const string& region, const string& co
     output += html_alignment_line(temp_a, false, true);
   }
   
-  output += "</TABLE></TR></TD>";
+  output += "</td>\n</tr>\n</table>\n";
   return output;
 }
 
@@ -631,8 +634,7 @@ void alignment_output::Alignment_Output_Pileup::pileup_callback ( const pileup& 
     
   // ##also update any positions of interest for gaps
   for ( uint32_t insert_count = 0; insert_count <= static_cast<uint32_t>(max_indel); insert_count++ )
-  {      
-    
+  {
     if (   ((m_insert_start <= insert_count) && (insert_count <= m_insert_end) && (reference_pos_1 == start_1) && (reference_pos_1 == end_1))
 				|| ((m_insert_start <= insert_count) && (reference_pos_1 == start_1) && (reference_pos_1 != end_1)) 
         || ((m_insert_end >= insert_count) && (reference_pos_1 == end_1) && (reference_pos_1 != start_1))
@@ -645,7 +647,6 @@ void alignment_output::Alignment_Output_Pileup::pileup_callback ( const pileup& 
       aligned_annotation.aligned_bases += ' ';
     }
   }
-
 }
 //END create_alignment()
 
@@ -864,7 +865,7 @@ string alignment_output::create_header_string()
 string alignment_output::html_alignment_line(const alignment_output::Alignment_Base& a, const bool coords, const bool use_quality_range)
 {
   string output;
-  output += "<CODE>";
+  output += "\n<CODE>\n";
 
   if (!a.aligned_quals.empty())
   {
@@ -942,7 +943,7 @@ string alignment_output::html_alignment_line(const alignment_output::Alignment_B
     }
     output += "&nbsp;&nbsp;" + seq_id;
   }   
-  output += "</CODE>";
+  output += "\n</CODE>\n";
   
   return output;
 }
@@ -955,7 +956,3 @@ string alignment_output::html_alignment_strand(const int8_t &strand)
 }
 
 } // namespace breseq
-
-
-
-
