@@ -115,12 +115,15 @@ string nonbreaking(const string& input)
 /*-----------------------------------------------------------------------------
  *  HTML Utility for Encoding HTML
  *-----------------------------------------------------------------------------*/
-string htmlize (const string& input) 
+string htmlize(const string& input) 
 {
   string retval = input;
     
   /* substitute nonbreaking en dash */
   retval = substitute(retval, "–", "&#8211;");
+  
+  /* substitute nonbreaking hyphen */
+  retval = substitute(retval, "-", "&#8209;");
 
   return retval;
 }
@@ -143,15 +146,35 @@ string header_style_string()
   ss << ".new_junction_header_row {background-color: rgb(0,0,155);}"       << endl;
   ss << ".alternate_table_row_0 {background-color: rgb(255,255,255);}"     << endl;
   ss << ".alternate_table_row_1 {background-color: rgb(230,230,245);}"     << endl;
-  ss << ".gray_table_row {background-color: rgb(230,230,245);}"           << endl;
+  ss << ".gray_table_row {background-color: rgb(230,230,245);}"            << endl;
   ss << ".polymorphism_table_row {background-color: rgb(160,255,160);}"    << endl;
   ss << ".highlight_table_row {background-color: rgb(192,255,255);}"       << endl;
   ss << ".reject_table_row {background-color: rgb(255,200,165);}"          << endl;
   ss << ".information_table_row {background-color: rgb(200,255,255);}"     << endl;
   ss << ".junction_repeat {background-color: rgb(255,165,0)}"              << endl;
-  ss << ".junction_gene {}" << endl;
+  ss << ".junction_gene {}"                                                << endl;
+  ss << ".hidden { display: none; }"                                       << endl;
+  ss << ".unhidden { display: block; }"                                    << endl;
   
 return ss.str();
+}
+  
+/*-----------------------------------------------------------------------------
+ *  Javascript to include inside the head.
+ *-----------------------------------------------------------------------------*/
+string javascript_string() 
+{
+  stringstream ss;
+  ss << "<script type=\"text/javascript\">"                                     << endl;
+  ss << "\tfunction unhide(divID) {"                                            << endl;
+  ss << "\t\tvar item = document.getElementById(divID);"                        << endl;
+  ss << "\t\tif (item) {"                                                       << endl;
+  ss << "\t\t\titem.className=(item.className=='hidden')?'unhidden':'hidden';"  << endl;
+  ss << "\t\t}"                                                                 << endl;
+  ss << "\t}"                                                                   << endl;
+  ss << "</script>"                                                             << endl;
+  
+  return ss.str();
 }
 
 
@@ -307,6 +330,7 @@ string html_header (const string& title, const Settings& settings)
   ss << header_style_string() << endl;
   ss << "</style>" << endl;
   ss << "<meta http-equiv=\"Content-Type\" content=\"text/html; charset=iso-8859-1\" />" << endl;
+  ss << javascript_string() << endl;
   ss << "</head>" << endl;
   ss << "<body>" << endl;
   return ss.str();
@@ -2010,7 +2034,7 @@ void Html_Mutation_Table_String::Item_Lines()
     string cell_mutation;
     string cell_mutation_annotation = nonbreaking(formatted_mutation_annotation(mut));
     string cell_gene_name = i(nonbreaking(mut[GENE_NAME]));
-    string cell_gene_product = htmlize(mut["gene_product"]);
+    string cell_gene_product = htmlize(mut[GENE_PRODUCT]);
 
     // build 'mutation' column = description of the genetic change    
     switch (mut._type)
