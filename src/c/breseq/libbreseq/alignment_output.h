@@ -80,15 +80,16 @@ namespace breseq
     struct Aligned_Reference : Alignment_Base
     {
       Aligned_Reference() 
-         : reference_length(0)
-         , reference_name("")  
-         , truncate_start(0)
-         , truncate_end(0)
-         , target_id(-1)
-         , ghost_strand(0)
-         , ghost_start(0)
-         , ghost_end(0)
-         , ghost_seq_id("")
+        : reference_length(0)
+        , reference_name("")  
+        , truncate_start(0)
+        , truncate_end(0)
+        , target_id(-1)
+        , ghost_strand(0)
+        , ghost_start(0)
+        , ghost_end(0)
+        , ghost_seq_id("")
+        , overlap(0)
          {}
          
       uint32_t reference_length;
@@ -98,6 +99,7 @@ namespace breseq
       int8_t ghost_strand;
       uint32_t ghost_start, ghost_end;
       string ghost_seq_id;
+      uint32_t overlap;
     };
     
     struct Aligned_Annotation: Alignment_Base
