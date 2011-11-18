@@ -1030,6 +1030,8 @@ void GDtoGVF( const string &gdfile, const string &gvffile, bool snv_only){
 
     else if( features[i][0].compare("AMP") == 0 )
     {
+      WARN("Input file contains AMP features that are currently not converted to GVF");
+      /* @JEB TODO This code seg faults. Broken 2011-11-17.
       int x, y; 
       gvf[2] = "insertion";
       stringstream ss;
@@ -1040,6 +1042,7 @@ void GDtoGVF( const string &gdfile, const string &gvffile, bool snv_only){
       for( int i=0; i < (atoi(features[i][6].c_str())-1)*atoi(features[i][5].c_str()); i++ ){
         gvf[8].append("N");
       }
+      */
     }
     else if( features[i][0].compare("INV") == 0 ){
       gvf[2] = "inversion";

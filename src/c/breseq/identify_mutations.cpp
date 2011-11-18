@@ -611,6 +611,7 @@ void identify_mutations_pileup::pileup_callback(const pileup& p) {
       }
       
 			mut[POLYMORPHISM_QUALITY] = formatted_double(ppred.log10_e_value, kMutationQualityPrecision).to_string();
+      
 			if (ppred.log10_e_value < _polymorphism_cutoff ) {
         add_reject_reason(mut, "EVALUE");
       } 
