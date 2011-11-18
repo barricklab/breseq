@@ -1069,6 +1069,122 @@ int do_not_evidence(int argc, char *argv[])
   return 0;
 }
 
+int do_compare(int argc, char *argv[])
+{
+  AnyOption options("Usage: breseq COMPARE -c <control.gd> -t <test.gd> -o <output.gd>");
+  options("control,c", "control genome diff file, mutations within are assumed to be accurate");
+  options("test,t",    "test genome diff file, mutations not been checked for accuracy");
+  options("output,o",  "output compared genome diff file name");
+  options.processCommandArgs(argc, argv);
+
+  options.addUsage("Usage: breseq COMPARE -c <control.gd> -t <test.gd> -o <output.gd>");
+
+  if (!options.count("control") ||
+      !options.count("test")    ||
+      !options.count("output")) {
+    options.printUsage();
+    return -1;
+  }
+
+  genome_diff control_gd(options["control"]);
+  genome_diff test_gd(options["test"]);
+
+  genome_diff compare_gd = genome_diff::compare_genome_diff_files(control_gd, test_gd);
+
+  compare_gd.write(options["output"]);
+
+
+  return 0;
+}
+
+int do_intersection(int argc, char *argv[])
+{
+  AnyOption options("Usage: breseq INTERSECT -o <output.gd> <file1.gd file2.gd file3.gd ...>");
+  options("output,o", "output intersection mutations to this file");
+  options.processCommandArgs(argc, argv);
+  options.addUsage("Usage: breseq INTERSECT -o <output.gd> -g <file1.gd file2.gd file3.gd ...>");
+
+  typedef vector<string> string_vector_t;
+  string_vector_t gd_file_names;
+  //Get GD Files
+  for (int32_t i = 0; i < options.getArgc() ; i++) {
+    const string &file_name = options.getArgv(i);
+    gd_file_names.push_back(file_name);
+  }
+
+  if (!options.count("output") ||
+      gd_file_names.size() < 2) {
+    printf("\n");
+    printf("ERROR!\n");
+    printf("Ouput:%s\n", options["output"].c_str());
+    printf("GenomeDiff file count: %i\n", gd_file_names.size());
+    printf("\n");
+    options.printUsage();
+    return -1;
+  }
+
+  genome_diff first_gd(*gd_file_names.begin());
+  const diff_entry_list &first_mutations = first_gd.mutation_list();
+
+  //Strip counted_ptr
+  typedef set<diff_entry> diff_entry_set_t;
+  diff_entry_set_t first_mutations_set;
+  for (diff_entry_list::const_iterator it = first_mutations.begin();
+       it != first_mutations.end(); it++) {
+    first_mutations_set.insert(**it);
+  }
+
+  /*! Step: Compare to other genome diffs and reassign first_mutations_set when applicable.
+    Stop when there is no intersection or we run out of file_names
+  */
+  string_vector_t::const_iterator it_file_name = gd_file_names.begin();
+  advance(it_file_name,1);
+  while(it_file_name != gd_file_names.end()) {
+
+    genome_diff second_gd(*it_file_name);
+    const diff_entry_list &second_mutations = second_gd.mutation_list();
+
+    //Strip counted_ptr
+    diff_entry_set_t second_mutations_set;
+    for (diff_entry_list::const_iterator it = second_mutations.begin();
+         it != second_mutations.end(); it++) {
+      second_mutations_set.insert(**it);
+    }
+
+    //Find intersection
+    diff_entry_set_t intersecting_mutations_set;
+    set_intersection(first_mutations_set.begin(), first_mutations_set.end(),
+                     second_mutations_set.begin(), second_mutations_set.end(),
+                     inserter(intersecting_mutations_set, intersecting_mutations_set.begin()));
+
+    if (intersecting_mutations_set.empty()) {
+      printf("No intersecting mutations were found across the current file: %s\n",
+             it_file_name->c_str());
+      return -1;
+    }
+
+
+    first_mutations_set = intersecting_mutations_set;
+
+    it_file_name++;
+  }
+
+  printf("Found %i intersecting mutations across files: %s.\n",
+         first_mutations_set.size(), join(gd_file_names, ", ").c_str());
+
+  genome_diff intersecting_gd;
+
+  for (diff_entry_set_t::iterator it = first_mutations_set.begin();
+       it != first_mutations_set.end(); it++) {
+    //diff_entry de = *it;
+    intersecting_gd.add(*it);
+  }
+
+  intersecting_gd.write(options["output"]);
+
+	return 0;
+}
+
 int breseq_default_action(int argc, char* argv[])
 {  
   
@@ -1983,6 +2099,10 @@ int main(int argc, char* argv[]) {
     return do_merge(argc_new, argv_new);    
   } else if (command == "NOT_EVIDENCE") {
     return do_not_evidence(argc_new, argv_new);
+  } else if (command == "COMPARE") {
+    return do_compare(argc_new, argv_new);
+  } else if (command == "INTERSECT") {
+    return do_intersection(argc_new, argv_new);
   } else {
     // Not a sub-command. Use original argument list.
     return breseq_default_action(argc, argv);
