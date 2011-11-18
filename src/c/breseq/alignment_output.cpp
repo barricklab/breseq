@@ -57,6 +57,8 @@ void alignment_output::create_alignment ( const string& region, const string& co
   uint32_t target_id, start_pos, end_pos;
   m_alignment_output_pileup.parse_region(region, target_id, start_pos, end_pos);
   
+  bool bNegOverlap = false;
+  
   // Check for special reference lines that are junctions...
   size_t end_match = region.find_first_of(':');
   vector<string> split_region = split(region.substr(0,end_match), junction_name_separator);
@@ -88,6 +90,9 @@ void alignment_output::create_alignment ( const string& region, const string& co
 
     int32_t overlap_offset = from_string<int32_t>(split_corrected[6]);
     int32_t positive_overlap_offset = (overlap_offset > 0) ? from_string<int32_t>(split_corrected[10]) : 0;
+    
+    if(overlap_offset < 0)
+      bNegOverlap = true;
     
     Aligned_Reference aligned_reference_1, aligned_reference_2;
     aligned_reference_1.ghost_strand = from_string<int16_t>(split_corrected[2]) == 1 ? +1 : -1; // don't do int8_t here, returns wrong value
@@ -175,9 +180,11 @@ void alignment_output::create_alignment ( const string& region, const string& co
   m_aligned_reads = m_alignment_output_pileup.aligned_reads;
   m_aligned_references = m_alignment_output_pileup.aligned_references;
   m_aligned_annotation = m_alignment_output_pileup.aligned_annotation;
+  
+  if(!bNegOverlap)
+    m_aligned_annotation.aligned_bases = substitute(m_alignment_output_pileup.aligned_annotation.aligned_bases, "|" ," ");
    
   // now add the unaligned portions of each
-
   int32_t max_extend_left = 0;
   int32_t max_extend_right = 0;
   for ( Aligned_Reads::iterator itr_read = m_aligned_reads.begin(); itr_read != m_aligned_reads.end(); itr_read++ )
@@ -364,7 +371,7 @@ void alignment_output::create_alignment ( const string& region, const string& co
   }
 } //End create alignment
 
-string alignment_output::html_alignment ( const string& region, const string& corrected )
+string alignment_output::html_alignment( const string& region, const string& corrected )
 {
 
   // this sets object values (not re-usable currently)
@@ -449,7 +456,7 @@ string alignment_output::html_alignment ( const string& region, const string& co
 }
 
 /*! Called for each position.*/
-void alignment_output::Alignment_Output_Pileup::pileup_callback ( const pileup& p )
+void alignment_output::Alignment_Output_Pileup::pileup_callback( const pileup& p )
 {
   uint32_t& start_1( m_start_position_1 );
   uint32_t& end_1( m_end_position_1 );
