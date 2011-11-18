@@ -1162,7 +1162,7 @@ string html_new_junction_table_string(diff_entry_list& list_ref, bool show_rejec
       }
       ss << td("rowspan=\"2\" align=\"center\"", c["overlap"]) << endl;
       ss << td("rowspan=\"2\" align=\"center\"", c["total_non_overlap_reads"]) << endl;
-      ss << td("rowspan=\"2\" align=\"center\"", c["pos_hash_score"] + " (" + c["max_left"] + "/" + c["max_right"] + ")") << endl;
+      ss << td("rowspan=\"2\" align=\"center\"", c["neg_log10_pos_hash_p_value"] + " (" + c["max_left"] + "/" + c["max_right"] + ")") << endl;
       ss << td("align=\"center\" class=\"" + annotate_key + "\"", 
               nonbreaking(c["_" + key + GENE_POSITION])) << endl;
       ss << td("align=\"center\" class=\"" + annotate_key + "\"", 

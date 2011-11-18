@@ -186,7 +186,9 @@ namespace breseq
     
     options.addUsage("");
 		options.addUsage("Utility Command Usage: breseq [command] options ...");
-    options.addUsage("  Recognized commands: APPLY, BAM2ALN, BAM2COV, CONVERT_FASTQ, ERROR_COUNT");
+    options.addUsage("  Breseq Pipeline Commands: BAM2ALN, BAM2COV, CONVERT_FASTQ, ERROR_COUNT");
+    options.addUsage("  Breseq Post-Run Commands: APPLY/MUTATE");
+    options.addUsage("  Genome Diff Commands: COMPARE, INTERSECT, NOT_EVIDENCE, SUBTRACT, UNION");
     options.addUsage("  For help using a utility command, type: breseq [command] ");
     
     // make sure that the other config options are good:
@@ -265,21 +267,20 @@ namespace breseq
   
   void Settings::command_line_run_header()
   {
-    cerr << "===============================================================================" << endl;
-    cerr << PACKAGE_STRING << "      " << PACKAGE_URL << endl;
-    cerr << endl;
-    cerr << "Authors: Barrick JE, Borges JJ, Knoester DB, Colburn GR, Meyer AG" << endl;
-    cerr << "Contact: " << PACKAGE_BUGREPORT << endl;
-    cerr << endl;
-    cerr << PACKAGE_NAME << " is free software; you can redistribute it and/or modify it under the " << endl;
-    cerr << "terms the GNU General Public License as published by the Free Software" << endl;
-    cerr << "Foundation; either version 1, or (at your option) any later version." << endl;
-    cerr << endl;
-    cerr << "Copyright (c) 2008-2010 Michigan State University" << endl;
-    cerr << "Copyright (c) 2011      The University of Texas at Austin" << endl;
-    cerr << "===============================================================================" << endl;
+    fprintf(stderr, "===============================================================================\n");
+    fprintf(stderr, "%s      %s\n", PACKAGE_STRING, PACKAGE_URL);
+    fprintf(stderr, "\n");
+    fprintf(stderr, "Authors: Barrick JE, Borges JJ, Knoester DB, Colburn GR, Meyer AG\n");
+    fprintf(stderr, "Contact: %s\n", PACKAGE_BUGREPORT);
+    fprintf(stderr, "\n");
+    fprintf(stderr, "%s is free software; you can redistribute it and/or modify it under the\n", PACKAGE_NAME);
+    fprintf(stderr, "terms the GNU General Public License as published by the Free Software \n");
+    fprintf(stderr, "Foundation; either version 1, or (at your option) any later version.\n");
+    fprintf(stderr, "\n");
+    fprintf(stderr, "Copyright (c) 2008-2010 Michigan State University\n");
+    fprintf(stderr, "Copyright (c) 2011      The University of Texas at Austin\n");
+    fprintf(stderr, "===============================================================================\n");
   }
-
 
 	void Settings::pre_option_initialize(int argc, char* argv[])
 	{    
@@ -575,16 +576,8 @@ namespace breseq
       this->installed["path"] = pPath;
     }
     
-    // breseq C++ and SAMtools executables - look in the local bin path only
-    // @JEB this won't be necessary once C++ conversion is complete
-
-		string test_command = "which " + this->bin_path + "/cbreseq";
-		this->installed["cbreseq"] = SYSTEM_CAPTURE(test_command, true);
-		
-    test_command = "which " + this->bin_path + "/cbam2aln";
-		this->installed["cbam2aln"] = SYSTEM_CAPTURE(test_command, true);
-
-    test_command = "which " + this->bin_path + "/samtools";
+    // SAMtools executables - look in the local bin path only
+    string test_command = "which " + this->bin_path + "/samtools";
 		this->installed["samtools"] = SYSTEM_CAPTURE(test_command, true);
     
     // override with environment variable
@@ -653,7 +646,6 @@ namespace breseq
 
 	void Settings::check_installed()
 	{
-   
     // Developer's Note
     //
     // If you are running things through a debugger (like in XCode), your $PATH may need to be
