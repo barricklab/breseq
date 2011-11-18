@@ -1798,23 +1798,36 @@ void cReferenceSequences::annotate_1_mutation(diff_entry& mut, uint32_t start, u
       gene_name_list.push_back("[" + it->name + "]");
     }
     
+    // We ended up calling this function a lot.
+    string sJoinedGeneList = join(gene_name_list, ", ");
+    
     mut["gene_product"] = "<i>";
-    mut["gene_product"] += join(gene_name_list, ", ");
+    mut["gene_product"] += sJoinedGeneList;
     mut["gene_product"] += "</i>";
     mut["gene_product_hide"] = mut["gene_product"];
     
     // @MDS0004 - This number here will condense the number of genes listed.
     // Change to show how many appear in HTML. This is a javascript call.
-    if(gene_list.size() > 15)
-      mut["gene_product_hide"] =
-        "<i title=\"" + join(gene_name_list, ", ") + "\">" +
-        to_string(gene_list.size()) +
-        " genes</i> <div id=\"gene_hide_" + to_string(mut._type) + "_" + mut._id + "\" class=\"hidden\">"
-        + mut["gene_product"]
-        + "</div> <input type=\"button\" onclick=\"unhide('gene_hide_" + to_string(mut._type) + "_" + mut._id + "')\" value=\"Toggle Genes\" />";        
-    
+    //
     // Non-Button Toggle - Replace <input>
-    // <a href=\"javascript:unhide('gene_hide');\">Toggle Genes</a>
+    // <a href=\"javascript:hideTog('" + sID + "');\">Toggle Genes</a>
+    if(gene_list.size() > 15)
+    {
+      string sID = "gene_hide_" + to_string(mut._type) + "_" + mut._id;
+      string sButtonID = sID + "_button";
+      mut["gene_product_hide"] =
+        "<i title=\"" + sJoinedGeneList + "\"><b>" +
+        to_string(gene_list.size()) +
+        " genes</b> <noscript>Javascript Disabled: All genes shown.<br></noscript></i>"
+        + "<noscript>" + mut["gene_product"] + "</noscript>"
+        + "<div id=\"" + sID + "\" class=\"hidden\">"
+        + mut["gene_product"] + "</div>"
+        + "<input id=\"" + sButtonID + "\" type=\"button\" onclick=\"hideTog('" + sID + "');showTog('" + sButtonID + "')\" value=\"Show\" />";
+      mut["gene_product"] = "<i>";
+      mut["gene_product"] += "<b>" + to_string(gene_list.size()) + " genes</b><BR>";
+      mut["gene_product"] += sJoinedGeneList;
+      mut["gene_product"] += "</i>";
+    }
 
     if (gene_name_list.size() == 1)
       mut["gene_name"] = gene_name_list[0];
