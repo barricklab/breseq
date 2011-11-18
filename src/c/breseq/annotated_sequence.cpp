@@ -2049,7 +2049,7 @@ void cReferenceSequences::polymorphism_statistics(Settings& settings, Summary& s
     }
 
     // Evalue cutoff again (in case we are only running this part)
-    if (from_string<double>(mut["polymorphism_quality"]) < settings.polymorphism_log10_e_value_cutoff)
+    if (double_from_string(mut[POLYMORPHISM_QUALITY]) < settings.polymorphism_log10_e_value_cutoff)
       add_reject_reason(mut, "EVALUE");
 
     // Frequency cutoff
@@ -2108,7 +2108,7 @@ void cReferenceSequences::polymorphism_statistics(Settings& settings, Summary& s
 
     if (
         mut.number_reject_reasons() > 0
-        && (from_string<double>(mut[POLYMORPHISM_QUALITY]) > settings.mutation_log10_e_value_cutoff)
+        && (double_from_string(mut[POLYMORPHISM_QUALITY]) > settings.mutation_log10_e_value_cutoff)
         && (from_string<double>(mut[FREQUENCY]) > 0.5)
         )
     {
@@ -2118,7 +2118,7 @@ void cReferenceSequences::polymorphism_statistics(Settings& settings, Summary& s
 
       // FIX -- need to re-evaluate whether it would have been accepted as a normal mutation
       // This is NOT the right quality being used here. Need a separate quality for consensus call and polymorphism call!
-      if (from_string<double>(mut[POLYMORPHISM_QUALITY]) < settings.mutation_log10_e_value_cutoff)
+      if (double_from_string(mut[POLYMORPHISM_QUALITY]) < settings.mutation_log10_e_value_cutoff)
         add_reject_reason(mut, "EVALUE");
     }
 
