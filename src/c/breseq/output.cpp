@@ -22,6 +22,7 @@ const char* GENES="genes";
 const char* GENE_NAME="gene_name";
 const char* GENE_POSITION="gene_position";
 const char* GENE_PRODUCT="gene_product";
+const char* GENE_PRODUCT_HIDE="gene_product_hide";
 const char* GHOST_END="ghost_end";
 const char* GHOST_SEQ_ID_END="ghost_seq_id_end";
 const char* GHOST_SEQ_ID_START="ghost_seq_id_start";
@@ -1161,7 +1162,7 @@ string html_new_junction_table_string(diff_entry_list& list_ref, bool show_rejec
       }
       ss << td("rowspan=\"2\" align=\"center\"", c["overlap"]) << endl;
       ss << td("rowspan=\"2\" align=\"center\"", c["total_non_overlap_reads"]) << endl;
-      ss << td("rowspan=\"2\" align=\"center\"", c["pos_hash_score"] + " (" + c["max_left"] + "/" + c["max_right"] + ")") << endl;
+      ss << td("rowspan=\"2\" align=\"center\"", c["neg_log10_pos_hash_p_value"] + " (" + c["max_left"] + "/" + c["max_right"] + ")") << endl;
       ss << td("align=\"center\" class=\"" + annotate_key + "\"", 
               nonbreaking(c["_" + key + GENE_POSITION])) << endl;
       ss << td("align=\"center\" class=\"" + annotate_key + "\"", 
@@ -1204,7 +1205,7 @@ string html_new_junction_table_string(diff_entry_list& list_ref, bool show_rejec
               htmlize(c["_" + key + GENE_PRODUCT])) << endl;
     } //end hiding data for side 2
     
-  ss << "</tr>" << endl;
+  ss << "</tr>\n" << endl;
 
   if (show_reject_reason && c.entry_exists("reject")) {
     genome_diff gd;
@@ -2035,6 +2036,12 @@ void Html_Mutation_Table_String::Item_Lines()
     string cell_mutation_annotation = nonbreaking(formatted_mutation_annotation(mut));
     string cell_gene_name = i(nonbreaking(mut[GENE_NAME]));
     string cell_gene_product = htmlize(mut[GENE_PRODUCT]);
+    
+    // @MDS0004 - If the product contains more than a set number of genes
+    // replace the name with the one that hides it with javascript.
+    if(mut.count(GENE_PRODUCT_HIDE))
+      if(mut[GENE_PRODUCT_HIDE].size() > 0)
+        cell_gene_product = htmlize(mut[GENE_PRODUCT_HIDE]);
 
     // build 'mutation' column = description of the genetic change    
     switch (mut._type)

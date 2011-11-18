@@ -497,7 +497,7 @@ namespace breseq {
 		iss >> boolalpha >> t;
 		return t;
 	}
-
+  
 	inline string to_upper(const string& input)
 	{
 		string str = input;
@@ -510,6 +510,30 @@ namespace breseq {
       string str = input;
       transform(str.begin(), str.end(),str.begin(), ::tolower);
       return str;
+  }
+  
+  
+  //! special handling of NA and INF, compatible with C++ limits and R representations
+  inline double double_from_string(const string& input)
+  {
+    string compare_string = to_upper(input);
+    if ((compare_string == "NA") || (compare_string == "#NA") || (compare_string == "NAN"))
+      return numeric_limits<double>::quiet_NaN();
+    if (compare_string == "INF")
+      return numeric_limits<double>::infinity();
+    
+    return from_string<double>(input);
+  }
+  
+  inline string double_to_string(double input)
+  {
+    if (isnan(input))
+      return "NA";
+    
+    if (isinf(input))
+      return "inf";
+    
+    return to_string<double>(input);
   }
 
   inline string reverse_string(const string &in_string)
