@@ -167,12 +167,18 @@ string javascript_string()
 {
   stringstream ss;
   ss << "<script type=\"text/javascript\">"                                     << endl;
-  ss << "\tfunction unhide(divID) {"                                            << endl;
-  ss << "\t\tvar item = document.getElementById(divID);"                        << endl;
-  ss << "\t\tif (item) {"                                                       << endl;
-  ss << "\t\t\titem.className=(item.className=='hidden')?'unhidden':'hidden';"  << endl;
-  ss << "\t\t}"                                                                 << endl;
-  ss << "\t}"                                                                   << endl;
+  ss << "  function hideTog(divID) {"                                           << endl;
+  ss << "    var item = document.getElementById(divID);"                        << endl;
+  ss << "    if (item) {"                                                       << endl;
+  ss << "      item.className=(item.className=='hidden')?'unhidden':'hidden';"  << endl;
+  ss << "    }"                                                                 << endl;
+  ss << "  }"                                                                   << endl;
+  ss << "  function showTog(butID) {"                                           << endl;
+  ss << "    var button = document.getElementById(butID);"                      << endl;
+  ss << "    if (button) {"                                                     << endl;
+  ss << "      button.value=(button.value=='Show')?'Hide':'Show';"              << endl;
+  ss << "    }"                                                                 << endl;
+  ss << "  }"                                                                   << endl;
   ss << "</script>"                                                             << endl;
   
   return ss.str();
@@ -1851,7 +1857,7 @@ void Html_Mutation_Table_String::Header_Line()
   string header_text = ((list_ref.size() > 1) ? "Predicted mutations" : "Predicted mutation");
 
   // There are three possibilities for the frequency column(s)
-  // (1) We don't want it at all. (Single genome no poly prediction)   
+  // (1) We don't want it at all. (Single genome no poly prediction)
   vector<string> freq_header_list;
 
   if (gd_name_list_ref.size() > 0) {
