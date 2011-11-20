@@ -243,7 +243,8 @@ sub annotate_1_mutation
 	$mut->{gene_name} = "";
 	$mut->{gene_position} = "";
 	$mut->{gene_product} = "";
-	@{$mut->{gene_list}} = (); #affected genes
+	undef $mut->{gene_list};
+	@{$mut->{gene_list}} = (); #affected genee
 
 	my $seq_id = $mut->{seq_id};
 		

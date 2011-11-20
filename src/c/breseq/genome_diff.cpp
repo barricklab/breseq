@@ -1790,7 +1790,7 @@ genome_diff genome_diff::compare_genome_diff_files(const genome_diff &control, c
   const size_t &num_false_positive = false_positive_mutations_set.size();
 
   printf("#=TP|FN|FP	%i|%i|%i \t for %s versus %s \n",
-         num_true_positive, num_false_negative, num_false_positive,
+         static_cast<int>(num_true_positive), static_cast<int>(num_false_negative), static_cast<int>(num_false_positive),
          control_gd._default_filename.c_str(), test_gd._default_filename.c_str());
 
   //! Step: Add validation=<TP/FP/FN> tags to new_gd.
