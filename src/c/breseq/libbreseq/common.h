@@ -527,6 +527,8 @@ namespace breseq {
   
   inline string double_to_string(double input)
   {
+    cout << numeric_limits<double>::infinity();
+    
     if (isnan(input))
       return "NA";
     
