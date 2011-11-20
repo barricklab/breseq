@@ -1117,7 +1117,7 @@ int do_intersection(int argc, char *argv[])
     printf("\n");
     printf("ERROR!\n");
     printf("Ouput:%s\n", options["output"].c_str());
-    printf("GenomeDiff file count: %i\n", gd_file_names.size());
+    printf("GenomeDiff file count: %i\n", static_cast<int>(gd_file_names.size()));
     printf("\n");
     options.printUsage();
     return -1;
@@ -1170,7 +1170,7 @@ int do_intersection(int argc, char *argv[])
   }
 
   printf("Found %i intersecting mutations across files: %s.\n",
-         first_mutations_set.size(), join(gd_file_names, ", ").c_str());
+         static_cast<int>(first_mutations_set.size()), join(gd_file_names, ", ").c_str());
 
   genome_diff intersecting_gd;
 
@@ -1183,6 +1183,40 @@ int do_intersection(int argc, char *argv[])
   intersecting_gd.write(options["output"]);
 
 	return 0;
+}
+
+int do_annotate(int argc, char* argv[])
+{
+  AnyOption options("Usage: breseq ANNOTATE -r reference.gbk  -i input.gd -o annotated.gd");
+  
+  options
+  ("help,h", "produce advanced help message", TAKES_NO_ARGUMENT)
+  // convert to basing everything off the main output path, so we don't have to set so many options
+  ("input,i", "path to input genome diff (REQUIRED)")
+  ("output,o", "path to output genome diff with added mutation data (REQUIRED)")
+  ("reference,r", "reference sequence in GenBank flatfile format (REQUIRED)")
+  ;
+  options.processCommandArgs(argc, argv);
+
+  
+  if ( !options.count("input")
+    || !options.count("output")
+    || !options.count("reference")
+      ) {
+    options.printUsage();
+    return -1;
+  }
+  
+  genome_diff gd(options["input"]);
+  
+  vector<string> reference_file_names = from_string<vector<string> >(options["reference"]);
+  cReferenceSequences ref_seq_info;
+  ref_seq_info.LoadFiles(reference_file_names);
+  ref_seq_info.annotate_mutations(gd);
+  
+  gd.write(options["output"]);
+  
+  return 0;
 }
 
 int breseq_default_action(int argc, char* argv[])
@@ -2103,6 +2137,8 @@ int main(int argc, char* argv[]) {
     return do_compare(argc_new, argv_new);
   } else if (command == "INTERSECT") {
     return do_intersection(argc_new, argv_new);
+  } else if (command == "ANNOTATE") {
+    return do_annotate(argc_new, argv_new);
   } else {
     // Not a sub-command. Use original argument list.
     return breseq_default_action(argc, argv);
