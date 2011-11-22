@@ -1099,10 +1099,9 @@ int do_compare(int argc, char *argv[])
 
 int do_intersection(int argc, char *argv[])
 {
-  AnyOption options("Usage: breseq INTERSECT -o <output.gd> <file1.gd file2.gd file3.gd ...>");
+  AnyOption options("Usage: breseq INTERSECTION -o <output.gd> <file1.gd file2.gd file3.gd ...>");
   options("output,o", "output intersection mutations to this file");
   options.processCommandArgs(argc, argv);
-  options.addUsage("Usage: breseq INTERSECT -o <output.gd> -g <file1.gd file2.gd file3.gd ...>");
 
   typedef vector<string> string_vector_t;
   string_vector_t gd_file_names;
@@ -1195,6 +1194,7 @@ int do_annotate(int argc, char* argv[])
   ("input,i", "path to input genome diff (REQUIRED)")
   ("output,o", "path to output genome diff with added mutation data (REQUIRED)")
   ("reference,r", "reference sequence in GenBank flatfile format (REQUIRED)")
+  ("ignore-pseudogenes", "treats pseudogenes as normal genes for callings AA changes", TAKES_NO_ARGUMENT)
   ;
   options.processCommandArgs(argc, argv);
 
@@ -1212,7 +1212,7 @@ int do_annotate(int argc, char* argv[])
   vector<string> reference_file_names = from_string<vector<string> >(options["reference"]);
   cReferenceSequences ref_seq_info;
   ref_seq_info.LoadFiles(reference_file_names);
-  ref_seq_info.annotate_mutations(gd);
+  ref_seq_info.annotate_mutations(gd, false, options.count("ignore-pseudogenes"));
   
   gd.write(options["output"]);
   
@@ -2135,7 +2135,7 @@ int main(int argc, char* argv[]) {
     return do_not_evidence(argc_new, argv_new);
   } else if (command == "COMPARE") {
     return do_compare(argc_new, argv_new);
-  } else if (command == "INTERSECT") {
+  } else if (command == "INTERSECTION") {
     return do_intersection(argc_new, argv_new);
   } else if (command == "ANNOTATE") {
     return do_annotate(argc_new, argv_new);

@@ -303,6 +303,8 @@ void genome_diff::subtract(genome_diff& gd_ref, bool verbose)
     //The current entry we're looking at
     diff_entry& entry = **it;
     
+    //if (verbose) cout << entry << endl;
+    
     //Is the entry a mutation?
     if(entry.is_mutation())
     {
@@ -312,14 +314,16 @@ void genome_diff::subtract(genome_diff& gd_ref, bool verbose)
         //The current entry we're looking at
         diff_entry& entry_ref = **it_ref;
         
+        //if (verbose) cout << "  " << entry_ref << endl;
+        
         //Does the current entry match any of the reference entries?
         if(entry == entry_ref)
         {
           //Notify the user of the action.
           if(verbose){cout << "REMOVE\t" << to_string(entry._type) << "\t" << entry._id << endl;}
           _entry_list.erase(it);
-          it--;
-        }            
+          break; // Done comparing to this mutaion.
+        }
       }
     }        
   }

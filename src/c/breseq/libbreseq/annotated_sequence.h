@@ -440,8 +440,8 @@ namespace breseq {
                                   vector<Gene>& inside_right_genes,
                                   Gene& prev_gene, 
                                   Gene& next_gene);
-    void annotate_1_mutation(diff_entry& mut, uint32_t start, uint32_t end, bool repeat_override = false);
-    void annotate_mutations(genome_diff& gd, bool only_muts = false);
+    void annotate_1_mutation(diff_entry& mut, uint32_t start, uint32_t end, bool repeat_override = false, bool ignore_pseudogenes = false);
+    void annotate_mutations(genome_diff& gd, bool only_muts = false, bool ignore_pseudogenes = false);
     void polymorphism_statistics(Settings& settings, Summary& summary);
     string repeat_family_sequence(const string& repeat_name, int8_t strand);
 
