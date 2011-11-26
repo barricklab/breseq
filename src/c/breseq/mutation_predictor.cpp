@@ -107,14 +107,16 @@ namespace breseq {
 
     //@JEB This could be replaced by passing summary
     if (avg_read_length == 0.0) avg_read_length = max_read_length;
-
+    
 		///
 		//  Preprocessing of JC evidence
 		///
-
-		// For all that follows, we need information about repeat_regions overlapping the sides of junctions
+    
+    // For all that follows, we need information about repeat_regions overlapping the sides of junctions
     vector<gd_entry_type> jc_types = make_list<gd_entry_type>(JC);
 		diff_entry_list jc = gd.list(jc_types);
+    // Don't count rejected ones at all, this can be relaxed, but it makes MOB 
+    // prediction much more complicated and prone to errors.
     
     const int32_t max_distance_to_repeat = 50;
 
@@ -195,24 +197,16 @@ namespace breseq {
       j["_unique_interval_strand"] = j[j["_unique_interval"] + "_strand"];
     }
     
-    // Don't count rejected ones, this can be relaxed, but it makes MOB prediction much more complicated and prone to errors.
-		/*for(diff_entry_list::iterator jc_it = jc.begin(); jc_it != jc.end(); jc_it++)
-    {
-      diff_entry& de = **jc_it;
-			if (de.entry_exists("reject"))
-      {
-				jc.erase(jc_it);
-        jc_it--;
-      }
-		}*/
+    // Now, remove rejected from the list after annotating them.
     jc.remove_if(diff_entry::field_exists("reject"));
-    
-    vector<gd_entry_type> mc_types = make_list<gd_entry_type>(MC);
-		diff_entry_list mc = gd.list(mc_types);
 
 		///
 		// evidence MC + JC => DEL mutation
 		///
+    
+    vector<gd_entry_type> mc_types = make_list<gd_entry_type>(MC);
+		diff_entry_list mc = gd.list(mc_types);
+    mc.remove_if(diff_entry::field_exists("reject"));
 
 		// DEL prediction:
 		// (1) there is a junction that exactly crosses the deletion boundary deletion
@@ -1062,7 +1056,7 @@ namespace breseq {
 		///
 		// Read Alignments => SNP, DEL, INS, SUB
 		///
-
+    
     vector<gd_entry_type> ra_types = make_list<gd_entry_type>(RA);
     diff_entry_list ra = gd.list(ra_types);
 
@@ -1115,6 +1109,9 @@ namespace breseq {
 
 			}
 		}
+    
+    // Don't use rejected evidence
+    ra.remove_if(diff_entry::field_exists("reject"));
 
 		ra.sort(MutationPredictor::sort_by_pos);
 

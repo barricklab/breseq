@@ -57,13 +57,17 @@ void alignment_output::create_alignment ( const string& region, const string& co
   uint32_t target_id, start_pos, end_pos;
   m_alignment_output_pileup.parse_region(region, target_id, start_pos, end_pos);
   
-  bool bNegOverlap = false;
   
   // Check for special reference lines that are junctions...
+  bool bJunctionAlignment = false;    // is this a junction alignment
+  bool bDrawAnnotationLine = true;    // draw the | annotation line pointing to region?
+  
   size_t end_match = region.find_first_of(':');
   vector<string> split_region = split(region.substr(0,end_match), junction_name_separator);
   if (split_region.size() == 12)
   {
+    bJunctionAlignment = true;
+    
     vector<string> split_corrected = split(corrected.substr(0,end_match), junction_name_separator);
     
     // This how the region name was constructed:
@@ -91,8 +95,9 @@ void alignment_output::create_alignment ( const string& region, const string& co
     int32_t overlap_offset = from_string<int32_t>(split_corrected[6]);
     int32_t positive_overlap_offset = (overlap_offset > 0) ? from_string<int32_t>(split_corrected[10]) : 0;
     
-    if(overlap_offset < 0)
-      bNegOverlap = true;
+    // No need to draw annotation in this case.
+    if(overlap_offset >= 0)
+      bDrawAnnotationLine = false;
     
     Aligned_Reference aligned_reference_1, aligned_reference_2;
     aligned_reference_1.ghost_strand = from_string<int16_t>(split_corrected[2]) == 1 ? +1 : -1; // don't do int8_t here, returns wrong value
@@ -181,7 +186,7 @@ void alignment_output::create_alignment ( const string& region, const string& co
   m_aligned_references = m_alignment_output_pileup.aligned_references;
   m_aligned_annotation = m_alignment_output_pileup.aligned_annotation;
   
-  if(!bNegOverlap)
+  if(!bDrawAnnotationLine)
     m_aligned_annotation.aligned_bases = substitute(m_alignment_output_pileup.aligned_annotation.aligned_bases, "|" ," ");
    
   // now add the unaligned portions of each
