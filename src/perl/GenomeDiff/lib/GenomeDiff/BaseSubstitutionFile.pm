@@ -191,7 +191,7 @@ sub new
 	##Record proteins
 	my $prev_gene;
 	FEATURE: foreach my $f (@feature_list) 
-	{
+	{		
 		## figure out position
 		my @Location_List = $f->location->each_Location();
 
@@ -261,6 +261,7 @@ sub new
 			%aa_to_codons = %{$nss->{aa_to_codons}};
 			%codon_position_mutation_synonymous = %{$nss->{codon_position_mutation_synonymous}};
 
+			#print Dumper(%codon_position_mutation_synonymous);
 			#print STDERR Dumper(%codon_num_synonymous_changes);
 			#print STDERR Dumper(%codon_synonymous_changes, %codon_nonsynonymous_changes, %codon_to_aa, %aa_to_codons);
 
@@ -364,7 +365,7 @@ sub new
 					next TO_NT if ($from_nt eq $to_nt);
 					#print STDERR "$genome_position $codon_index $gene_position $from_nt-$to_nt" . "\n";
 
-					if (!$codon_position_mutation_synonymous{$codon . "_" . $codon_position . "_" . $from_nt . "_" . $to_nt}) {							
+					if (!$codon_position_mutation_synonymous{$codon . "_" . $codon_position . "_" . $from_nt . "_" . $to_nt}) {	
 							$nt_change_is_nonsynonymous[$genome_position * 6 + $bp_change_to_index->{"$from_nt-$to_nt"} ] = 1;
 						}
 				}		
@@ -519,7 +520,7 @@ sub read
 	my $input_file = $options{input_file};
 	defined ($input_file) or die "Undefined input_file.";
 	
-	open IN, "$input_file";
+	open IN, "<$input_file" or die "Could'd open file $input_file";
 	$self->{packed_data} = '';
 	while (<IN>) {
 		$self->{packed_data} .= $_;
@@ -726,13 +727,13 @@ sub pos_info_1
 	my $offset = 3*$is_GC;
 	@{$pos_info->{bp_mutations}} = @bp_change_label_list[$offset..$offset+2];
 	
-#	print +(length $self->{packed_data}) . "\n";
+	#print "Length of packed data: " . +(length $self->{packed_data}) . "\n";
 	
 	my $encoded_char = substr $self->{packed_data}, $pos, 1;
 	my ($nt_type_1, $nt_type_2, @is_nonsynonymous) =
 	      split( //, unpack( 'b8', $encoded_char ) );
 	
-#	print "$nt_type_1, $nt_type_2, @is_nonsynonymous\n";
+	#print "$nt_type_1, $nt_type_2, @is_nonsynonymous\n";
 	
 	$pos_info->{nt_type} = $nt_type_1 + 2*$nt_type_2;
 	

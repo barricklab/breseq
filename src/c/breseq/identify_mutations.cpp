@@ -27,6 +27,7 @@ namespace breseq {
 
 /*! Convenience wrapper around the identify_mutations_pileup class.
  */
+  
 void identify_mutations(
 								const string& bam,
 								const string& fasta,
@@ -534,18 +535,20 @@ void identify_mutations_pileup::pileup_callback(const pileup& p) {
       
 		}				
 		
-		
-		
 		//###
 		//## UNKNOWN UNKNOWN UNKNOWN
 		//###				
-		//		if ($insert_count == 0)
 		if(insert_count == 0) {
 			update_unknown_intervals(position, p.target(), base_predicted, this_position_unique_only_coverage);
 		}
+    
+    //###
+		//## Does any RA evidence pass tests?
+		//###	
 		
 		//## evaluate whether to call an actual mutation!				
-		//### skip if there is not enough evidence for a call or if it agrees with the reference
+		//### skip if there is not enough evidence (ref base is more likely)
+    //  The e_value_call threshold is whether there is more evidence for the change than the reference
 		if(isnan(e_value_call) || (e_value_call < -_log10_ref_length)) {
 			continue;
 		}
@@ -553,18 +556,17 @@ void identify_mutations_pileup::pileup_callback(const pileup& p) {
 		//cerr << e_value_call << endl;
 		
 		//## mutation and polymorphism are exclusive predictions.
-    
-    // ----> potential problem 
-		bool mutation_predicted = !polymorphism_predicted && (best_base_char != ref_base_char);
+    bool mutation_predicted = !polymorphism_predicted && (best_base_char != ref_base_char);
 				
 		//## bail if it's just the reference base and we aren't interested in polymorphisms...
 		if(!mutation_predicted && !polymorphism_predicted) {
 			continue; // goes to next insert count...
 		}
     		
-		//cerr << position << " " << e_value_call << " " << mutation_predicted << " " << polymorphism_predicted << " " << base2char(best_base) << " " << base2char(ref_base) << endl;
-
-    //## Create new base mutation for genome diff
+    //###
+		//## Create new RA evidence mutation for genome diff
+		//###		
+    
     diff_entry mut(RA);
     
 		//## Fields common to consensus mutations and polymorphisms

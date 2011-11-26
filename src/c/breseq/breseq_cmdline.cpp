@@ -1099,10 +1099,9 @@ int do_compare(int argc, char *argv[])
 
 int do_intersection(int argc, char *argv[])
 {
-  AnyOption options("Usage: breseq INTERSECT -o <output.gd> <file1.gd file2.gd file3.gd ...>");
+  AnyOption options("Usage: breseq INTERSECTION -o <output.gd> <file1.gd file2.gd file3.gd ...>");
   options("output,o", "output intersection mutations to this file");
   options.processCommandArgs(argc, argv);
-  options.addUsage("Usage: breseq INTERSECT -o <output.gd> -g <file1.gd file2.gd file3.gd ...>");
 
   typedef vector<string> string_vector_t;
   string_vector_t gd_file_names;
@@ -1195,6 +1194,7 @@ int do_annotate(int argc, char* argv[])
   ("input,i", "path to input genome diff (REQUIRED)")
   ("output,o", "path to output genome diff with added mutation data (REQUIRED)")
   ("reference,r", "reference sequence in GenBank flatfile format (REQUIRED)")
+  ("ignore-pseudogenes", "treats pseudogenes as normal genes for callings AA changes", TAKES_NO_ARGUMENT)
   ;
   options.processCommandArgs(argc, argv);
 
@@ -1212,7 +1212,7 @@ int do_annotate(int argc, char* argv[])
   vector<string> reference_file_names = from_string<vector<string> >(options["reference"]);
   cReferenceSequences ref_seq_info;
   ref_seq_info.LoadFiles(reference_file_names);
-  ref_seq_info.annotate_mutations(gd);
+  ref_seq_info.annotate_mutations(gd, false, options.count("ignore-pseudogenes"));
   
   gd.write(options["output"]);
   
@@ -1986,13 +1986,17 @@ int breseq_default_action(int argc, char* argv[])
     ra.remove_if(diff_entry::frequency_less_than_two_or_no_show());
     ra.sort(diff_entry::by_scores(make_list<string>("quality"))); 
 
-		list<counted_ptr<diff_entry> >::iterator it;
-
-		it = ra.begin();
-		for (uint32_t i = 0; i < ra.size(); i++)
+    uint32_t i=0;
+    for(diff_entry_list::iterator item = ra.begin(); item != ra.end(); item++)
 		{
-			if (i++ >= settings.max_rejected_polymorphisms_to_show)
-				(**(it++))[NO_SHOW] = "1";
+      diff_entry& ra_item = **item;
+      if (!ra_item.entry_exists(FREQUENCY)) continue;
+      
+      if ( from_string<double>(ra_item[FREQUENCY]) != 0.0 ) continue;
+      if ( from_string<double>(ra_item[FREQUENCY]) != 1.0 ) continue;
+        
+      if (i++ > settings.max_rejected_polymorphisms_to_show)
+        ra_item[NO_SHOW] = "1";
 		}
 
 		// require a certain amount of coverage
@@ -2012,7 +2016,7 @@ int breseq_default_action(int argc, char* argv[])
     
 		diff_entry_list jc = gd.filter_used_as_evidence(gd.list(jc_types));
 	  
-    for (it = jc.begin(); it != jc.end(); )
+    for (diff_entry_list::iterator it = jc.begin(); it != jc.end(); )
     {
       if (((*it)->number_reject_reasons() == 0))
         it = jc.erase(it);
@@ -2020,13 +2024,13 @@ int breseq_default_action(int argc, char* argv[])
         it++;
     }
     
-    jc.sort(diff_entry::by_scores(make_list<diff_entry_key_t>("pos_hash_score")("total_non_overlap_reads")));
-		it = jc.begin();
-		for (uint32_t i = 0; i < jc.size(); i++)
+    jc.sort(diff_entry::by_scores(make_list<diff_entry_key_t>("pos_hash_score")("total_non_overlap_reads")));    
+
+    i = 0;
+    for (diff_entry_list::iterator it = jc.begin(); it != jc.end(); it++ )
 		{
-			if (i >= settings.max_rejected_junctions_to_show)
+			if (i++ >= settings.max_rejected_junctions_to_show)
 				(**it)["no_show"] = "1";
-      it++;
 		}
 
 
@@ -2135,7 +2139,7 @@ int main(int argc, char* argv[]) {
     return do_not_evidence(argc_new, argv_new);
   } else if (command == "COMPARE") {
     return do_compare(argc_new, argv_new);
-  } else if (command == "INTERSECT") {
+  } else if (command == "INTERSECTION") {
     return do_intersection(argc_new, argv_new);
   } else if (command == "ANNOTATE") {
     return do_annotate(argc_new, argv_new);

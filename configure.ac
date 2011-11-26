@@ -58,7 +58,7 @@ AC_CHECK_FUNCS([bzero gethostbyaddr gethostbyname memmove memset pow select sock
 AC_SEARCH_LIBS([wclear], [curses ncurses], [],
    [AC_MSG_ERROR(["lib(n)curses is required."])])
 
-AC_SEARCH_LIBS([deflateSetHeader], [z], [], [AC_MSG_ERROR(["libz >=1.2.1.2 is required."])])
+AC_SEARCH_LIBS([deflateSetHeader], [z], [], [AC_MSG_ERROR(["libz >=1.2.2.1 is required."])])
 AC_SEARCH_LIBS([acosf], [m], [], [AC_MSG_ERROR(["libm is required."])])
 
 AC_SUBST([LIBBCF], [extern/samtools-0.1.15/bcftools])

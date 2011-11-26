@@ -1614,7 +1614,7 @@ char cReferenceSequences::translate(string seq)
   return (translation_table_11.count(seq) == 0) ? '?' : translation_table_11[seq];
 }
 
-void cReferenceSequences::annotate_1_mutation(diff_entry& mut, uint32_t start, uint32_t end, bool repeat_override)
+void cReferenceSequences::annotate_1_mutation(diff_entry& mut, uint32_t start, uint32_t end, bool repeat_override, bool ignore_pseudogenes)
 {
   // this could be moved to the object
   string intergenic_seperator = "/";
@@ -1730,7 +1730,7 @@ void cReferenceSequences::annotate_1_mutation(diff_entry& mut, uint32_t start, u
     string gene_nt_size = to_string(gene.end - gene.start + 1);
 
     // ...but the gene is a pseudogene or not a protein coding gene
-    if (gene.pseudogene)
+    if (!ignore_pseudogenes && gene.pseudogene)
     {
       mut["snp_type"] = "pseudogene";
       mut["gene_position"] = "pseudogene (" + mut["gene_position"] + "/" + gene_nt_size + " nt)";
@@ -1836,7 +1836,7 @@ void cReferenceSequences::annotate_1_mutation(diff_entry& mut, uint32_t start, u
   }
 }
 
-void cReferenceSequences::annotate_mutations(genome_diff& gd, bool only_muts)
+void cReferenceSequences::annotate_mutations(genome_diff& gd, bool only_muts, bool ignore_pseudogenes)
 {
   //keep track of other mutations that affect SNPs
   //because we may double-hit a codon
@@ -1858,7 +1858,7 @@ void cReferenceSequences::annotate_mutations(genome_diff& gd, bool only_muts)
     {
       case SNP:{
         mut["_ref_seq"] = get_sequence_1(mut["seq_id"], from_string<uint32_t>(mut["position"]), from_string<int32_t>(mut["position"]));
-        annotate_1_mutation(mut, from_string<int32_t>(mut["position"]), from_string<int32_t>(mut["position"]));
+        annotate_1_mutation(mut, from_string<int32_t>(mut["position"]), from_string<int32_t>(mut["position"]), false, ignore_pseudogenes);
       } break;
         
       case SUB:{
