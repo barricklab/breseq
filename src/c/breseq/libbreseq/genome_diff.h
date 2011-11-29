@@ -219,7 +219,7 @@ public:
   struct rejected;
 
   diff_entry& operator()(const diff_entry_key_t& key, const diff_entry_value_t& value) {
-    this->insert(pair<string,string>(key, value));
+    (*this)[key] = value;
     return *this;
   }
 

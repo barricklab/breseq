@@ -583,10 +583,6 @@ namespace breseq
     string test_command = "which " + this->bin_path + "/samtools";
 		this->installed["samtools"] = SYSTEM_CAPTURE(test_command, true);
     
-    // override with environment variable
-    if (getenv("SAMTOOLSPATH"))
-      this->installed["samtools"] = getenv("SAMTOOLSPATH"); 
-    
 		// search first for ssaha2 in the same location as breseq    
     test_command = "which " + this->bin_path + "/ssaha2";
 		this->installed["SSAHA2"] = SYSTEM_CAPTURE(test_command, true);
