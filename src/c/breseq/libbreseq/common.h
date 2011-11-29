@@ -21,9 +21,6 @@ LICENSE AND COPYRIGHT
 
 // System headers
 
-// Autoconf header
-#include <config.h>
-
 // C
 #include <assert.h>
 #include <libgen.h>
