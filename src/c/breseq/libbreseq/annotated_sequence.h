@@ -411,14 +411,14 @@ namespace breseq {
     // This is a duplicate of a function in pileup.h for when
     // we don't have a BAM available.
     void parse_region(const string& region, uint32_t& target_id, uint32_t& start_pos_1, uint32_t& end_pos_1)
-    {
-      
-      vector<string> split_region = split_on_any(region, ":-");
-      ASSERT(split_region.size() == 3, "Unrecognized region: " + region + "\n(Expected seq_id:start-end)");
+    {      
+      vector<string> split_region = split(region, ":");
+      vector<string> split_positions = split(split_region[1], "-");
+      ASSERT(split_region.size()+split_positions.size()-1 == 3, "Unrecognized region: " + region + "\n(Expected seq_id:start-end)");
 
       target_id = seq_id_to_index(split_region[0]);
-      start_pos_1 = from_string<uint32_t>(split_region[1]);
-      end_pos_1 = from_string<uint32_t>(split_region[2]);
+      start_pos_1 = from_string<uint32_t>(split_positions[0]);
+      end_pos_1 = from_string<uint32_t>(split_positions[1]);
     }
 
 
