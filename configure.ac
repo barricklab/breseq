@@ -65,6 +65,20 @@ AC_SUBST([LIBBCF], [extern/samtools-0.1.15/bcftools])
 AC_SUBST([LIBBAM], [extern/samtools-0.1.15])
 AC_SUBST([BRESEQ], [src/c/breseq])
 
+AC_CHECK_FILE([.hg/branchheads.cache], 
+	AC_SUBST(HG_REVISION_STRING, [`eval head -n 1 .hg/branchheads.cache | sed 's/^\(.\{12\}\).*/\1/'`]), 
+	AC_SUBST(HG_REVISION_STRING, [RELEASE])
+	)
+	
+AC_CHECK_FILE([.hg/branchheads.cache], 
+	AC_SUBST(HG_REVISION_PREFIX, "revision "), 
+	AC_SUBST(HG_REVISION_PREFIX, [])
+	)
+
+
+AC_DEFINE_UNQUOTED([HG_REVISION], ["${HG_REVISION_PREFIX}${HG_REVISION_STRING}"], [Defining HG repository version])
+
+
 AC_CONFIG_FILES([
     extern/samtools-0.1.15/bcftools/Makefile
     extern/samtools-0.1.15/Makefile
