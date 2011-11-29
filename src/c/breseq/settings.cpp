@@ -16,6 +16,9 @@ LICENSE AND COPYRIGHT
 
  *****************************************************************************/
 
+// Autoconf header
+#include <config.h>
+
 #include "libbreseq/settings.h"
 
 #include "libbreseq/anyoption.h"
