@@ -268,7 +268,7 @@ namespace breseq
   void Settings::command_line_run_header()
   {
     fprintf(stderr, "===============================================================================\n");
-    fprintf(stderr, "%s      %s\n", PACKAGE_STRING, PACKAGE_URL);
+    fprintf(stderr, "%s  %s   %s\n", PACKAGE_STRING, HG_REVISION, PACKAGE_URL);
     fprintf(stderr, "\n");
     fprintf(stderr, "Authors: Barrick JE, Borges JJ, Knoester DB, Colburn GR, Meyer AG\n");
     fprintf(stderr, "Contact: %s\n", PACKAGE_BUGREPORT);
@@ -287,6 +287,9 @@ namespace breseq
     // Constants
     this->byline = "<b><i>breseq</i></b>&nbsp;&nbsp;version ";
     this->byline += PACKAGE_VERSION;
+    this->byline += "&nbsp;&nbsp;";
+    this->byline += HG_REVISION;
+
     this->website = PACKAGE_URL;
     
 		// Set up default values for options
