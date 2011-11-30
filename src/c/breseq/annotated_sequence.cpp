@@ -51,9 +51,15 @@ namespace breseq {
     //Notify what mutation is being worked on
     if(verbose)cout << "** " << mut_type << " **" << endl;
     
+    // We will be erasing inside the it loop.  This is to keep
+    // track of whether or not we should iterate to the next element.
+    bool it_iterate = true;
+    
     //Iterate through all the features
-    for (list<cSequenceFeaturePtr>::iterator it = m_features.begin(); it != m_features.end(); it++)
+    for (list<cSequenceFeaturePtr>::iterator it = m_features.begin(); it != m_features.end(); )
     {
+      it_iterate = true;
+      
       //The current feature we're looking at
       cSequenceFeature& feat = **it;
       
@@ -71,11 +77,10 @@ namespace breseq {
         if(find_feature(m_repeats, feat, repeat_it)){m_repeats.erase(repeat_it);}
         
         //Remove the current feature
-        m_features.erase(it);
+        it = m_features.erase(it);
         
-        //We just removed the current feauture, so the list size has
-        //decreased by 1.  Iterate back by one.
-        it--;
+        //We just removed the current feauture, do not iterate.
+        it_iterate = false;
         
         //Notify the user of the action
         if(verbose){cout << "REMOVED\t" << feat["type"] << "\t" << feat.m_gff_attributes["ID"] << " " << feat.m_gff_attributes["Name"] << endl;}
@@ -157,6 +162,9 @@ namespace breseq {
           //if(feat["type"] != "region" && feat["type"] != "source" && !feat.m_gff_attributes.count("Mutation from " + mut_type))feat.m_gff_attributes["Note"].push_back("Mutation from " + mut_type);
         }
       }
+      
+      // Iterate it ONLY if we haven't erased something.
+      if(it_iterate)it++;
     }
   }
   

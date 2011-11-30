@@ -294,7 +294,7 @@ public:
   genome_diff(const string& filename);
 
   //! Constructor that replaces ::merge(1,2) function
-  genome_diff(genome_diff& merge1, genome_diff& merge2, bool unique=true, bool verbose=false);
+  genome_diff(genome_diff& merge1, genome_diff& merge2, bool unique=true, bool new_id=true, bool verbose=false);
 
   //! Destructor.
   ~genome_diff() { }
@@ -303,13 +303,13 @@ public:
   uint32_t new_unique_id();
   
   //! Add evidence to this genome diff.
-  void add(const diff_entry& item);
+  void add(const diff_entry& item, bool lowest_unique=false);
   
   //! Subtract mutations using gd_ref as reference.
   void subtract(genome_diff& gd_ref, bool verbose=false);
   
   //! Merge GenomeDiff information using gd_new as potential new info.
-  void merge(genome_diff& gd_new, bool unique=true, bool verbose=false);
+  void merge(genome_diff& gd_new, bool unique=true, bool new_id=false, bool verbose=false);
 
   //! fast merge, doesn't compare entries, but does renumber
   static genome_diff fast_merge(const genome_diff& gd1, const genome_diff& gd2);
