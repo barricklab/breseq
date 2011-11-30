@@ -27,9 +27,12 @@ sim_fastq_data_t* cSimulatedFastqFactory::createFromSequence(const string &seque
     //This position is position 1.
     it_base = sequence.begin();
 
-    //Grab a random position based on the sequence length
-    //minus the desired read length.  Position is 0 based.
-    sample_pos = rand() % (sequence_length - (mReadLength - 1));
+    //Grab a random position based on the sequence length.
+    //Potential reads outside the sequence length are forced inside.
+    sample_pos = rand() % (sequence_length + (mReadLength - 1));
+    sample_pos = max(sample_pos, mReadLength - 1);
+    sample_pos = min(sample_pos, (uint32_t)(sequence_length));
+    sample_pos -= (mReadLength - 1);
     
     //Advance the iterator to the position we generated.
     advance(it_base, sample_pos);
