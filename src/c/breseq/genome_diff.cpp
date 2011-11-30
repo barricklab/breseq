@@ -128,7 +128,7 @@ bool diff_entry::is_validation() const
 }
   
   
-//Comparing IDs here will currently break genome_diff::merge and genome_diff::subract
+//Comparing IDs here will currently break genome_diff::merge and genome_diff::subtract
 bool diff_entry::operator==(const diff_entry& de)
 {
   //! Case: Easy if not same type
@@ -254,11 +254,11 @@ genome_diff::genome_diff(const string& filename)
 
 /*! Merge Constructor.
  */
-genome_diff::genome_diff(genome_diff& merge1, genome_diff& merge2, bool unique, bool verbose)
+genome_diff::genome_diff(genome_diff& merge1, genome_diff& merge2, bool unique, bool new_id, bool verbose)
  : _unique_id_counter(0)
 {
-  this->merge(merge1, unique, verbose);
-  this->merge(merge2, unique, verbose);
+  this->merge(merge1, unique, new_id, verbose);
+  this->merge(merge2, unique, new_id, verbose);
 }
   
 uint32_t genome_diff::new_unique_id() 
@@ -269,37 +269,42 @@ uint32_t genome_diff::new_unique_id()
   {
     assigned_id++;
   }
-  return assigned_id; 
+  return assigned_id;
 }
 
 /*! Add evidence to this genome diff.
  */
-void genome_diff::add(const diff_entry& item) {
+void genome_diff::add(const diff_entry& item, bool lowest_unique) {
 
   // allocating counted_ptr takes care of disposal
   diff_entry* diff_entry_copy = new diff_entry(item); 
   diff_entry_ptr added_item(diff_entry_copy);
   _entry_list.push_back(added_item);
-    
-  if ((added_item->_id.size() == 0) || unique_id_used.count(from_string<uint32_t>(added_item->_id)))
-  {
-    uint32_t new_id = new_unique_id();
-    added_item->_id = to_string(new_id); 
-    unique_id_used[new_id] = true;
+  
+  uint32_t new_id = 0;    
+  
+  if ((added_item->_id.size() == 0) || lowest_unique || unique_id_used.count(from_string<uint32_t>(added_item->_id)))  {
+    new_id = new_unique_id();
+    added_item->_id = to_string(new_id);
   }
-  else
-  {
-    uint32_t new_id = from_string<uint32_t>(added_item->_id);
-    unique_id_used[new_id] = true;
+  else  {
+    new_id = from_string<uint32_t>(added_item->_id);
   }  
+  
+  unique_id_used[new_id] = true;
 }
 
 //! Subtract mutations using gd_ref as reference.
 void genome_diff::subtract(genome_diff& gd_ref, bool verbose)
 {
+  // We will be erasing inside the it loop.  This is to keep
+  // track of whether or not we should iterate to the next element.
+  bool it_iterate = true;
+  
   //Iterate through all the entries
-  for (diff_entry_list::iterator it = _entry_list.begin(); it != _entry_list.end(); it++)
+  for (diff_entry_list::iterator it = _entry_list.begin(); it != _entry_list.end(); )
   {
+    it_iterate = true;
     //The current entry we're looking at
     diff_entry& entry = **it;
     
@@ -324,12 +329,16 @@ void genome_diff::subtract(genome_diff& gd_ref, bool verbose)
         {
           //Notify the user of the action.
           if(verbose){cout << "REMOVE\t" << to_string(entry._type) << "\t" << entry._id << endl;}
-          _entry_list.erase(it);
-          //it--;
+          it = _entry_list.erase(it);
+          //We just removed the current feauture, do not iterate.
+          it_iterate = false;
           break; // Done comparing to this mutaion.
         }
       }
-    }        
+    }
+    
+    // Iterate it ONLY if we haven't erased something.
+    if(it_iterate)it++;
   }
 }
 
@@ -339,7 +348,10 @@ void genome_diff::subtract(genome_diff& gd_ref, bool verbose)
 //
 //  bool unique:  TRUE will NOT merge entries that match existing entries.
 //                FALSE WILL merge entries that match existing entries.
-void genome_diff::merge(genome_diff& gd_new, bool unique, bool verbose)
+//
+//  bool new_id:  TRUE will give assign all new entries with the lowest available ID.
+//                FALSE will allow all entries to retain their IDs if they are unique.
+void genome_diff::merge(genome_diff& gd_new, bool unique, bool new_id, bool verbose)
 {
   uint32_t old_unique_ids = unique_id_used.size();
   
@@ -360,19 +372,19 @@ void genome_diff::merge(genome_diff& gd_new, bool unique, bool verbose)
       if(entry == entry_new)
       {
         //Existing matching entry found, this is not new
-        bool new_entry = false;
+        new_entry = false;
         break;
       }
     }
     
     //We definately have a new entry
     if(new_entry)
-    {
-      //Notify user of new entry
-      if(verbose)cout << "\tNEW ENTRY\t" << entry_new._id << "\t" << gd_new._default_filename << endl;
-      
+    {      
       //Add the new entry to the existing list
-      add(entry_new);        
+      add(entry_new, new_id);
+      
+      //Notify user of new entry
+      if(verbose)cout << "\tNEW ENTRY\t" << entry_new._id << " >> " << _entry_list.back()->_id << "\t" << gd_new._default_filename << endl;
     }
   }
   
@@ -387,7 +399,7 @@ void genome_diff::merge(genome_diff& gd_new, bool unique, bool verbose)
     if(from_string<uint32_t>((**it)._id) > old_unique_ids && (**it).is_mutation())
     {                
       //For every piece of evidence this entry has
-      for(uint32_t iter = 0; iter < (**it)._evidence.size(); iter++)
+      for(int32_t iter = 0; iter < (int32_t)(**it)._evidence.size(); iter++)
       {
         bool found_match = false;
         
@@ -404,7 +416,7 @@ void genome_diff::merge(genome_diff& gd_new, bool unique, bool verbose)
               if((**it_cur) == (**it_new))
               {
                 //Notify user of the update
-                if(verbose)cout << "\tEVIDENCE  \t" << (**it)._evidence[iter] << ">>" << (**it_cur)._id << endl;
+                if(verbose)cout << "\tID: " << (**it)._id  << "\tEVIDENCE\t" << (**it)._evidence[iter] << " >> " << (**it_cur)._id << endl;
                 
                 //Change the evidence ID to it's new ID in the new updated list
                 (**it)._evidence[iter] = (**it_cur)._id;
@@ -414,6 +426,16 @@ void genome_diff::merge(genome_diff& gd_new, bool unique, bool verbose)
             }
           }
         }
+        
+        // If we've gone through all the lists, and can't find the evidence
+        // then remove the evidence entry completely, as it matches to nothing.
+        if(!found_match)
+        {
+          //Notify user of the update
+          if(verbose)cout << "\tID: " << (**it)._id  << "\tEVIDENCE  \t" << (**it)._evidence[iter] << " >> REMOVED" << endl;
+          
+          (**it)._evidence.erase((**it)._evidence.begin() + iter--);
+        }        
       }
     }
   }
@@ -726,19 +748,30 @@ void genome_diff::filter_not_used_as_evidence(bool verbose)
     }
   }
   
+  // We will be erasing inside the it loop.  This is to keep
+  // track of whether or not we should iterate to the next element.
+  bool it_iterate = true;
+  
   //Iterate through all entries
-  for (diff_entry_list::iterator it = _entry_list.begin(); it != _entry_list.end(); it++)
+  for (diff_entry_list::iterator it = _entry_list.begin(); it != _entry_list.end(); )
   {
+    bool it_iterate = true;
+    
     //Is this ID in our map of used_evidence?
     if(!(used_evidence.count((**it)._id)) && (**it).is_evidence())
     {
       //Inform the user
       if(verbose){cout << "NOT USED AS EVIDENCE: " << (**it)._id << endl;}
       
-      //Remove this entry from the list, and iterate down one.
-      _entry_list.erase(it);
-      it--;
+      //Remove this entry from the list.
+      it = _entry_list.erase(it);
+      
+      //We just removed the current feauture, do not iterate.
+      it_iterate = false;
     }
+    
+    // Iterate it ONLY if we haven't erased something.
+    if(it_iterate)it++;
   }
 }
   
