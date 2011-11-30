@@ -993,7 +993,8 @@ int do_merge(int argc, char *argv[])
   AnyOption options("Usage: breseq MERGE -g <file1.gd file2.gd file3.gd ...> -o <output.gd>");
   options("genomediff,g","input GD files");
   options("output,o","output GD file");
-  options("unique,u","Unique Entries Only (Flag)", TAKES_NO_ARGUMENT);
+  options("unique,u","Unique Entries Only (Flag)", TAKES_NO_ARGUMENT);  
+  options("id,i","Reorder IDs (Flag)", TAKES_NO_ARGUMENT);
   options("verbose,v","Verbose Mode (Flag)", TAKES_NO_ARGUMENT);
   options.processCommandArgs(argc, argv);
   
@@ -1025,14 +1026,14 @@ int do_merge(int argc, char *argv[])
   for(uint32_t i = 1; i < gd_list.size(); i++)
   {
     genome_diff gd2(gd_list[i]);
-    gd1.merge(gd2, options.count("unique"), options.count("verbose"));
+    gd1.merge(gd2, options.count("unique"), options.count("id"), options.count("verbose"));
   }
   
   //Treat EVERY extra argument passed as another GD file.
   for(int32_t i = 0; i < options.getArgc() ; i++)
   {
     genome_diff gd2(options.getArgv(i));
-    gd1.merge(gd2, options.count("unique"), options.count("verbose"));
+    gd1.merge(gd2, options.count("unique"), options.count("id"), options.count("verbose"));
   }
   
   gd1.write(options["output"]);
@@ -1045,6 +1046,7 @@ int do_not_evidence(int argc, char *argv[])
   AnyOption options("Usage: breseq NOT_EVIDENCE -g <genomediff.gd> -o <output.gd>");
   options("genomediff,g","input GD files");
   options("output,o","output GD file");
+  options("id,i","Reorder IDs (Flag)", TAKES_NO_ARGUMENT);
   options("verbose,v","Verbose Mode (Flag)", TAKES_NO_ARGUMENT);
   options.processCommandArgs(argc, argv);
   
@@ -1065,7 +1067,17 @@ int do_not_evidence(int argc, char *argv[])
   
   gd1.filter_not_used_as_evidence(options.count("verbose"));
   
-  if(options.count("output")){gd1.write(options["output"]);}
+  if(options.count("output"))
+  {
+    if(options.count("id"))
+    {
+      genome_diff gd2;
+      gd2.merge(gd1, true, true);
+      gd2.write(options["output"]);
+    }
+    else  {
+      gd1.write(options["output"]);  }
+  }
   
   return 0;
 }
@@ -1198,7 +1210,6 @@ int do_annotate(int argc, char* argv[])
   ("ignore-pseudogenes", "treats pseudogenes as normal genes for callings AA changes", TAKES_NO_ARGUMENT)
   ;
   options.processCommandArgs(argc, argv);
-
   
   if ( !options.count("input")
     || !options.count("output")
@@ -1228,12 +1239,19 @@ int do_simulate_read(int argc, char *argv[])
   ("help,h", "Produce usage.", TAKES_NO_ARGUMENT)
   ("genome_diff,g", "Genome diff file.")
   ("reference,r", "Reference file for input.")
-  ("coverage,c", "Average coverage value to simulate.")
+  ("coverage,c", "Average coverage value to simulate.", static_cast<uint32_t>(10))
   ("output,o", "Output fastq file name.")
   ("verbose,v", "Verbose mode.", TAKES_NO_ARGUMENT)
   ;
-
   options.processCommandArgs(argc, argv);
+  
+  if ( !options.count("genome_diff")
+      || !options.count("reference")
+      || !options.count("output")
+      ) {
+    options.printUsage();
+    return -1;
+  }
 
   cReferenceSequences ref_seq_info;
   ref_seq_info.LoadFile(options["reference"]);
@@ -1246,7 +1264,7 @@ int do_simulate_read(int argc, char *argv[])
   sim_fastq_factory_t sim_fastq_factory;
 
   sim_fastq_data_t *sim_fastq_data;
-  sim_fastq_data = sim_fastq_factory.createFromSequence(fasta_sequence.m_sequence, 10);
+  sim_fastq_data = sim_fastq_factory.createFromSequence(fasta_sequence.m_sequence, from_string<uint32_t>(options["output"]));
 
   cSimulatedFastqFile sim_fastq_file(options["output"]);
   sim_fastq_file.write(*sim_fastq_data);
@@ -2052,6 +2070,7 @@ int breseq_default_action(int argc, char* argv[])
     
 		diff_entry_list jc = gd.filter_used_as_evidence(gd.list(jc_types));
 	  
+    // This is the correct way to erase from a list! @MDS
     for (diff_entry_list::iterator it = jc.begin(); it != jc.end(); )
     {
       if (((*it)->number_reject_reasons() == 0))

@@ -248,13 +248,21 @@ namespace breseq {
 			///
 			// (1) there is a junction that exactly crosses the deletion boundary 
 			///
+      
+      // We will be erasing inside the jc_it loop.  This is to keep
+      // track of whether or not we should iterate to the next element.
+      bool jc_it_iterator = true;
 
-			for(diff_entry_list::iterator jc_it = jc.begin(); jc_it != jc.end(); jc_it++) //JC
+			for(diff_entry_list::iterator jc_it = jc.begin(); jc_it != jc.end(); ) //JC
 			{
 				diff_entry& jc_item = **jc_it;
+        jc_it_iterator = true;
 
-				if (jc_item["side_1_seq_id"] != mut["seq_id"] || jc_item["side_2_seq_id"] != mut["seq_id"])
-					continue;
+				if (jc_item["side_1_seq_id"] != mut["seq_id"] || jc_item["side_2_seq_id"] != mut["seq_id"])  {
+          // Iterate it ONLY if we haven't erased something
+          if(jc_it_iterator)jc_it++;  
+          continue;  }
+					
         
 				// We always know that the lower coordinate part of the junction is first, hence these
 				// assumptions about the strands hold.
@@ -292,12 +300,14 @@ namespace breseq {
                       
 					mut._evidence.push_back(jc_item._id);
 					jc_it = jc.erase(jc_it); // iterator is now past the erased element
-          jc_it--;                 // and must be moved back since loop moved it forward
+          jc_it_iterator = false; //We just removed the current jc, do not iterate.
 					gd.add(mut);
           if (verbose)
             cout << "**** Junction precisely matching deletion boundary found ****\n";
-					continue;
 				}
+        
+        // Iterate it ONLY if we haven't erased something
+        if(jc_it_iterator)jc_it++;
 			}
 
       cSequenceFeature* r1_pointer = within_repeat(mut["seq_id"], n(mut["position"]));
@@ -366,7 +376,6 @@ namespace breseq {
 			  ? n(mut["position"]) + n(mut["size"])
 			  : n(mut["position"]) - 1;
 
-			bool ok_were_good = false;
 			for(diff_entry_list::iterator jc_it = jc.begin(); jc_it != jc.end(); jc_it++) //JUNCTION
 			{
 				diff_entry& j = **jc_it;
@@ -432,16 +441,14 @@ namespace breseq {
 				// OK, we're good!
 				mut["mediated"] = r["name"];
 				mut._evidence.push_back(j._id);
-				jc_it = jc.erase(jc_it);
+				jc.erase(jc_it);
 				gd.add(mut);
-				ok_were_good = true;
         
         if (verbose)
           cout << "**** Junction with repeat element corresponding to deletion boundaries found ****\n";
 
         break; // done looking at jc_items
 			}
-			if (ok_were_good) continue;  // to next mc_item
 		}
 
 
@@ -852,10 +859,9 @@ namespace breseq {
 				{
 					if (verbose) cout << "reverse right and left" << endl;
 
-          // @JEB can't seem to get swap() to work here.
-          
+          // @JEB can't seem to get swap() to work here.          
           swap(mut["_ins_start"], mut["_ins_end"]);
-          swap(mut["_del_start"], mut["_del_end"]);
+          swap(mut["_del_start"], mut["_del_end"]);          
           /*
           diff_entry_value_t temp;
           

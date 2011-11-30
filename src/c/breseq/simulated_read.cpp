@@ -59,7 +59,7 @@ void cSimulatedFastqFile::write(const cSimulatedFastqFactory::cSimulatedFastqDat
   buffer[35] = '\n';
 
   const uint32_t &num_reads = sim_fastq_data.m_num_N_bases / 36;
-  for (int i = 0; i < num_reads; i++) {
+  for (uint32_t i = 0; i < num_reads; i++) {
     (*this) <<  "@READ-" << ++current_line << endl;
 
     ss_sequence.read(buffer, 35);
