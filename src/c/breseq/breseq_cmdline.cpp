@@ -37,6 +37,7 @@ LICENSE AND COPYRIGHT
 #include "libbreseq/contingency_loci.h"
 #include "libbreseq/mutation_predictor.h"
 #include "libbreseq/output.h"
+#include "libbreseq/simulated_read.h"
 
 
 using namespace breseq;
@@ -1219,6 +1220,41 @@ int do_annotate(int argc, char* argv[])
   return 0;
 }
 
+int do_simulate_read(int argc, char *argv[])
+{
+  AnyOption options("Usage: breseq SIMULATE-READ -g <genome diff> -r <reference file> -c <average coverage> -o <output file>");
+
+  options
+  ("help,h", "Produce usage.", TAKES_NO_ARGUMENT)
+  ("genome_diff,g", "Genome diff file.")
+  ("reference,r", "Reference file for input.")
+  ("coverage,c", "Average coverage value to simulate.")
+  ("output,o", "Output fastq file name.")
+  ("verbose,v", "Verbose mode.", TAKES_NO_ARGUMENT)
+  ;
+
+  options.processCommandArgs(argc, argv);
+
+  cReferenceSequences ref_seq_info;
+  ref_seq_info.LoadFile(options["reference"]);
+
+  cReferenceSequences new_ref_seq_info =
+      genome_diff(options["genome_diff"]).apply_to_sequences(ref_seq_info, options.count("verbose"));
+
+  const cFastaSequence &fasta_sequence = new_ref_seq_info.front().m_fasta_sequence;
+
+  sim_fastq_factory_t sim_fastq_factory;
+
+  sim_fastq_data_t *sim_fastq_data;
+  sim_fastq_data = sim_fastq_factory.createFromSequence(fasta_sequence.m_sequence, 10);
+
+  cSimulatedFastqFile sim_fastq_file(options["output"]);
+  sim_fastq_file.write(*sim_fastq_data);
+
+  return 0;
+}
+
+
 int breseq_default_action(int argc, char* argv[])
 {  
   
@@ -2143,6 +2179,8 @@ int main(int argc, char* argv[]) {
     return do_intersection(argc_new, argv_new);
   } else if (command == "ANNOTATE") {
     return do_annotate(argc_new, argv_new);
+  } else if (command == "SIMULATE-READ") {
+    return do_simulate_read(argc_new, argv_new);
   } else {
     // Not a sub-command. Use original argument list.
     return breseq_default_action(argc, argv);
