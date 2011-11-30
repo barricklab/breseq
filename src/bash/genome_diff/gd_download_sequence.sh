@@ -1,26 +1,30 @@
 #!/bin/bash
-cat << "Usage"
 
------------------------------------------------------------------------------
-This script is used to download the necessary reference and read sequences 
-given a genome diff with the proper #=REFSEQ and #=READSEQ tags in the header. 
-The script then parses a $KEY:$VALUE from the header to determine where that 
-sequence should be downloaded from.
+_usage_download_sequences() {
+cat << EOF
+    DOWNLOAD -u <user name> -p <password> -o <output dir> < file1.gd file2.gd file3.gd ... >
+EOF
+}
 
-Usage: ./gd_download_sequence.sh -u <user name> -p <password> -o <output dir> < file1.gd file2.gd file3.gd ... >"
-Example: ./gd_download_sequence.sh -o 02_Downloads $(ls 01_Data/*.gd)"
-Example: ./gd_download_sequence.sh -o downloads -u john -p "12)34" RJW1129.gd
+#-----------------------------------------------------------------------------
+#   This script is used to download the necessary reference and read sequences 
+# given a genome diff with the proper #=REFSEQ and #=READSEQ tags in the header. 
+# The script then parses a $KEY:$VALUE from the header to determine where that 
+# sequence should be downloaded from.
+# 
+# Usage: ./gd_download_sequence.sh -u <user name> -p <password> -o <output dir> < file1.gd file2.gd file3.gd ... >"
+#   Example: ./gd_download_sequence.sh -o 02_Downloads $(ls 01_Data/*.gd)"
+#   Example: ./gd_download_sequence.sh -o downloads -u john -p "12)34" RJW1129.gd
+# 
+# *** You may need to quote the pass word if non common character are used.
+# 
+#   The user name and password options are used for downloading sequences from 
+# ftp://backup.barricklab.org, you may store your user name and password in 
+# the respective $DCAMP_BACKUP_USER and $DCAMP_BACKUP_PASSWORD environmental 
+# variables. If no output directory is set then the default will be the 
+# current working directory.
+#-----------------------------------------------------------------------------
 
-*** You may need to quote the pass word if non common character are used.
-
-The user name and password options are used for downloading sequences from 
-ftp://backup.barricklab.org, you may store your user name and password in 
-the respective $DCAMP_BACKUP_USER and $DCAMP_BACKUP_PASSWORD environmental 
-variables. If no output directory is set then the default will be the 
-current working directory.
------------------------------------------------------------------------------
-
-Usage
 #-----------------------------------------------------------------------------
 # GLOBAL VARIABLES  
 #-----------------------------------------------------------------------------
@@ -206,8 +210,11 @@ _file_exists() {
 }
 
 
-main() {
-  declare -a args=("$@")
+_do_download_sequences() {
+  local OUTPUT_DIR=$(pwd)
+  local USER_NAME=$DCAMP_BACKUP_USER
+  local PASS_WORD=$DCAMP_BACKUP_PASSWORD
+  local -a args=("$@")
 
   #Check for user input
   while getopts "ho:u:p:" option; do
@@ -222,11 +229,11 @@ main() {
         PASS_WORD=$OPTARG
         ;;
       h)
-        echo ERROR! No input provided.
         exit -1
         ;;
     esac
   done
+  shift $(($OPTIND - 1))
 
   if $VERBOSE
   then
@@ -244,10 +251,7 @@ main() {
   fi
 
   #The other arguments are genome_diffs
-  last_non_option_index=$[ $OPTIND - 1 ]
-  arg_size=$[ ${#args[*]} - 1 ]
-
-  for i in $(seq $last_non_option_index $arg_size); do  
+  for i in $*; do  
     parse_genome_diff ${args[$i]}
   done                                                  
   
@@ -255,4 +259,4 @@ main() {
   exit 0
 }
 
-main $@
+_do_download_sequences $@
