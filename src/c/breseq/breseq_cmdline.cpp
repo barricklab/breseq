@@ -1236,19 +1236,38 @@ int do_simulate_read(int argc, char *argv[])
   AnyOption options("Usage: breseq SIMULATE-READ -g <genome diff> -r <reference file> -c <average coverage> -o <output file>");
 
   options
-  ("help,h", "Produce usage.", TAKES_NO_ARGUMENT)
   ("genome_diff,g", "Genome diff file.")
   ("reference,r", "Reference file for input.")
   ("coverage,c", "Average coverage value to simulate.", static_cast<uint32_t>(10))
+  ("length,l", "Read length to simulate.", static_cast<uint32_t>(36))
   ("output,o", "Output fastq file name.")
-  ("verbose,v", "Verbose mode.", TAKES_NO_ARGUMENT)
+  ("verbose,v", "Verbose Mode (Flag)", TAKES_NO_ARGUMENT)
   ;
   options.processCommandArgs(argc, argv);
   
-  if ( !options.count("genome_diff")
-      || !options.count("reference")
-      || !options.count("output")
-      ) {
+  options.addUsage("");
+  options.addUsage("Takes a GenomeDiff file and applies the mutations to the reference.");
+  options.addUsage("Then using the applied reference, it simulates reads based on it.");
+  options.addUsage("Output is a .fastq that if run normally against the reference");
+  options.addUsage("should produce the same GenomeDiff file you entered.");
+  
+  if (!options.count("genome_diff")) {
+    options.addUsage("");
+    options.addUsage("You must supply the --genome_diff option for input.");
+    options.printUsage();
+    return -1;
+  }
+  
+  if (!options.count("reference")) {
+    options.addUsage("");
+    options.addUsage("You must supply the --reference option for input.");
+    options.printUsage();
+    return -1;
+  }
+  
+  if (!options.count("output")) {
+    options.addUsage("");
+    options.addUsage("You must supply the --output option for output.");
     options.printUsage();
     return -1;
   }
@@ -1261,13 +1280,13 @@ int do_simulate_read(int argc, char *argv[])
 
   const cFastaSequence &fasta_sequence = new_ref_seq_info.front().m_fasta_sequence;
 
-  sim_fastq_factory_t sim_fastq_factory;
+  sim_fastq_factory_t sim_fastq_factory(from_string<uint32_t>(options["length"]));
 
   sim_fastq_data_t *sim_fastq_data;
-  sim_fastq_data = sim_fastq_factory.createFromSequence(fasta_sequence.m_sequence, from_string<uint32_t>(options["output"]));
+  sim_fastq_data = sim_fastq_factory.createFromSequence(fasta_sequence.m_sequence, from_string<uint32_t>(options["coverage"]));
 
   cSimulatedFastqFile sim_fastq_file(options["output"]);
-  sim_fastq_file.write(*sim_fastq_data);
+  sim_fastq_file.write(*sim_fastq_data, from_string<uint32_t>(options["length"]));
 
   return 0;
 }
