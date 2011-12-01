@@ -497,7 +497,10 @@ namespace breseq {
       sprintf(fs.m_name, "READ-%i", ++current_line);
 
       //Sequence
-      const size_t &start_pos = rand() % (ref_sequence_size - read_size );
+      size_t start_pos = rand() % (ref_sequence_size + read_size - 1);
+      start_pos  = max(start_pos, read_size - 1);
+      start_pos  = min(start_pos, ref_sequence_size - 1);
+      start_pos -= (read_size - 1);
       fs.m_sequence = ref_sequence.substr(start_pos, read_size);
 
       //Quality scores
@@ -505,12 +508,9 @@ namespace breseq {
       for (size_t j = 0; j < read_size; j++) {
         fs.m_qualities[j] = pd.getSample(MIN_QUALITY_SCORE, MAX_QUALITY_SCORE);
       }
-
     }
 
-
     return ret_val;
-
   }
   
 
