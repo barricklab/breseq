@@ -46,7 +46,6 @@ libbreseq_la_SOURCES = \
 	pileup.cpp \
 	resolve_alignments.cpp \
 	settings.cpp \
-	simulated_read.cpp \
 	libbreseq/alignment.h \
 	libbreseq/alignment_output.h \
 	libbreseq/annotated_sequence.h \
@@ -69,8 +68,7 @@ libbreseq_la_SOURCES = \
 	libbreseq/pileup.h \
 	libbreseq/resolve_alignments.h \
 	libbreseq/settings.h \
-	libbreseq/storable.h \
-  libbreseq/simulated_read.h	
+	libbreseq/storable.h 
 	
 libbreseq_la_LIBADD = $(top_srcdir)/$(LIBBAM)/libbam.la
 
