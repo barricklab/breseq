@@ -49,9 +49,6 @@
 		70B69E071369E2440001B750 /* libbam.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 70B69E051369E2440001B750 /* libbam.a */; };
 		70B9320F1394008200885753 /* settings.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 70B9320E1394008200885753 /* settings.cpp */; };
 		70D789D413C3CEB70036BEAB /* output.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 70D789D313C3CEB70036BEAB /* output.cpp */; };
-		E279874B1485BECC00AEC1C4 /* simulated_read.cpp in Sources */ = {isa = PBXBuildFile; fileRef = E279874A1485BECC00AEC1C4 /* simulated_read.cpp */; };
-		E279874C1485BECC00AEC1C4 /* simulated_read.cpp in Sources */ = {isa = PBXBuildFile; fileRef = E279874A1485BECC00AEC1C4 /* simulated_read.cpp */; };
-		E279874F1485BEED00AEC1C4 /* simulated_read.h in Headers */ = {isa = PBXBuildFile; fileRef = E279874E1485BEED00AEC1C4 /* simulated_read.h */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -158,8 +155,6 @@
 		70CB7224140FEB6400D578EB /* settings.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = settings.h; sourceTree = "<group>"; };
 		70CB7225140FEB6400D578EB /* storable.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = storable.h; sourceTree = "<group>"; };
 		70D789D313C3CEB70036BEAB /* output.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = output.cpp; path = breseq/output.cpp; sourceTree = SOURCE_ROOT; };
-		E279874A1485BECC00AEC1C4 /* simulated_read.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = simulated_read.cpp; path = breseq/simulated_read.cpp; sourceTree = SOURCE_ROOT; };
-		E279874E1485BEED00AEC1C4 /* simulated_read.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = simulated_read.h; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -240,7 +235,6 @@
 				7087728C12BC169C000F9B57 /* pileup_base.cpp */,
 				708D62431390B1D5007FF13C /* resolve_alignments.cpp */,
 				70B9320E1394008200885753 /* settings.cpp */,
-				E279874A1485BECC00AEC1C4 /* simulated_read.cpp */,
 			);
 			name = breseq;
 			path = "breseq-1.0";
@@ -294,7 +288,6 @@
 				70CB7222140FEB6400D578EB /* pileup_base.h */,
 				70CB7223140FEB6400D578EB /* resolve_alignments.h */,
 				70CB7224140FEB6400D578EB /* settings.h */,
-				E279874E1485BEED00AEC1C4 /* simulated_read.h */,
 				70CB7225140FEB6400D578EB /* storable.h */,
 			);
 			name = libbreseq;
@@ -308,7 +301,6 @@
 			isa = PBXHeadersBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				E279874F1485BEED00AEC1C4 /* simulated_read.h in Headers */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -402,7 +394,6 @@
 			buildActionMask = 2147483647;
 			files = (
 				70B69DE61369B8700001B750 /* breseq_cmdline.cpp in Sources */,
-				E279874C1485BECC00AEC1C4 /* simulated_read.cpp in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -431,7 +422,6 @@
 				7084E56713CFD471005B57D1 /* mutation_predictor.cpp in Sources */,
 				70367D2113EB232C000787CC /* coverage_distribution.cpp in Sources */,
 				7092FAF2140AC70200DDECA2 /* coverage_output.cpp in Sources */,
-				E279874B1485BECC00AEC1C4 /* simulated_read.cpp in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
