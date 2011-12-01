@@ -498,7 +498,7 @@ namespace breseq {
 
       //Sequence
       size_t start_pos = rand() % (ref_sequence_size + read_size - 1);
-      start_pos  = max(start_pos, read_size - 1);
+      start_pos  = max(start_pos, (size_t)(read_size - 1));
       start_pos  = min(start_pos, ref_sequence_size - 1);
       start_pos -= (read_size - 1);
       fs.m_sequence = ref_sequence.substr(start_pos, read_size);
