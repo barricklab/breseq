@@ -1272,21 +1272,36 @@ int do_simulate_read(int argc, char *argv[])
     return -1;
   }
 
+  //! Step: Load reference sequence file.
   cReferenceSequences ref_seq_info;
-  ref_seq_info.LoadFile(options["reference"]);
+  const string &ref_file_name = options["reference"];
+  ref_seq_info.LoadFile(ref_file_name);
 
-  cReferenceSequences new_ref_seq_info =
-      genome_diff(options["genome_diff"]).apply_to_sequences(ref_seq_info, options.count("verbose"));
+
+  //! Step: Apply genome diff mutations to reference sequence.
+  const string &gd_file_name = options["genome_diff"];
+  bool verbose = options.count("verbose");
+  genome_diff gd(gd_file_name);
+
+  cReferenceSequences new_ref_seq_info = gd.apply_to_sequences(ref_seq_info, verbose);
 
   const cFastaSequence &fasta_sequence = new_ref_seq_info.front().m_fasta_sequence;
 
-  sim_fastq_factory_t sim_fastq_factory(from_string<uint32_t>(options["length"]));
+  //! Step: Create simulated read sequence.
+  sim_fastq_factory_t sim_fastq_factory;
 
-  sim_fastq_data_t *sim_fastq_data;
-  sim_fastq_data = sim_fastq_factory.createFromSequence(fasta_sequence.m_sequence, from_string<uint32_t>(options["coverage"]));
+  //Parameters to create simulated read.
+  const string &sequence = fasta_sequence.m_sequence;
+  const uint32_t average_coverage = from_string<uint32_t>(options["coverage"]);
+  const uint32_t read_length = from_string<uint32_t>(options["length"]);
 
-  cSimulatedFastqFile sim_fastq_file(options["output"]);
-  sim_fastq_file.write(*sim_fastq_data, from_string<uint32_t>(options["length"]));
+	sim_fastq_data_t *sim_fastq_data;
+	sim_fastq_data = sim_fastq_factory.createFromSequence(sequence, average_coverage, read_length);
+
+	//! Step: Write simulated read sequence to fastq file.
+	const string &fastq_file_name = options["output"];
+	cSimulatedFastqFile sim_fastq_file(fastq_file_name);
+	sim_fastq_file.write(*sim_fastq_data);
 
   return 0;
 }

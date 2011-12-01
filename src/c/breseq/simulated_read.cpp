@@ -3,80 +3,85 @@
 
 namespace breseq {
 
-sim_fastq_data_t* cSimulatedFastqFactory::createFromSequence(const string &sequence, const uint32_t &average_coverage)
+sim_fastq_data_t* cSimulatedFastqFactory::createFromSequence(const string &ref_sequence, const uint32_t &average_coverage, const uint32_t &read_size)
 {
   cSimulatedFastqData *sim_fastq_data = new cSimulatedFastqData;
+  sim_fastq_data->m_read_size = read_size;
 
-  const size_t &sequence_length = sequence.length();
-  uint32_t n_samples = ceil((sequence_length) / mReadLength) * average_coverage;
-  sim_fastq_data->m_sequence.resize(n_samples * mReadLength);
-  sim_fastq_data->m_num_N_bases = n_samples * mReadLength;
+  const size_t ref_sequence_length = ref_sequence.length();
+  const uint32_t num_samples = ceil((ref_sequence_length) / read_size) * average_coverage;
+  sim_fastq_data->m_sequence.reserve(num_samples * read_size);
+  sim_fastq_data->m_num_N_bases = num_samples * read_size;
 
   // Initialize randomness
-  srand(time(NULL));
+  const uint32_t &seed_value = time(NULL);
+  srand(seed_value);
 
-  string::const_iterator it_base;
-  string::iterator it_sim = sim_fastq_data->m_sequence.begin();
+  sim_fastq_data->m_name = "SIMULATED-READ";
 
-  uint32_t sample_pos;
+  sprintf(sim_fastq_data->m_name_plus, "SIMULATED-READ SEED:%u", seed_value);
 
-  //As long as n_samples is greater than 0, continue.
+  //As long as i is greater than 0, continue.
   //After running the loop '--' will subtract 1.
-  while (n_samples-- > 0) {
-    //String iterator is set to the first position.
-    //This position is position 1.
-    it_base = sequence.begin();
-
+  size_t i = num_samples;
+  while (i --> 0) {
     //Grab a random position based on the sequence length.
     //Potential reads outside the sequence length are forced inside.
-    sample_pos = rand() % (sequence_length + (mReadLength - 1));
-    sample_pos = max(sample_pos, mReadLength - 1);
-    sample_pos = min(sample_pos, (uint32_t)(sequence_length));
-    sample_pos -= (mReadLength - 1);
-    
-    //Advance the iterator to the position we generated.
-    advance(it_base, sample_pos);
-
-    copy(it_base, it_base + (mReadLength - 1), it_sim);
-    advance(it_sim, (mReadLength - 1));
+    const size_t &start_pos = rand() % (ref_sequence_length - read_size );
+    const string &segment = ref_sequence.substr(start_pos, read_size);
+    sim_fastq_data->m_sequence.append(segment);
   }
   this->simulateQualityScores(sim_fastq_data);
 
   return sim_fastq_data;
 }
 
-void cSimulatedFastqFactory::simulateQualityScores(cSimulatedFastqData *sim_fastq_data)
+void cSimulatedFastqFactory::simulateQualityScores(sim_fastq_data_t *sim_fastq_data)
 {
-  const size_t &length = sim_fastq_data->m_sequence.length();
-  sim_fastq_data->m_qualities.resize(length);
-  sim_fastq_data->m_qualities.assign(length, '#');
+   const uint32_t QUALITY_SCORE_OFFSET  = 33;
+   const uint32_t MIN_QUALITY_SCORE  		= 0  + QUALITY_SCORE_OFFSET;
+   const uint32_t MEAN_QUALITY_SCORE 		= 30 + QUALITY_SCORE_OFFSET;
+   const uint32_t MAX_QUALITY_SCORE  		= 40 + QUALITY_SCORE_OFFSET;
+
+   const size_t &length = sim_fastq_data->m_sequence.length();
+   sim_fastq_data->m_qualities.resize(length);
+
+   //! Step: Assign quality scores to each base
+   cPoissonDistribution pd(MEAN_QUALITY_SCORE);
+   int i = length;
+   while (i-->0) {
+    const char &score = char(pd.getSample(MIN_QUALITY_SCORE, MAX_QUALITY_SCORE));
+    sim_fastq_data->m_qualities[i] = score;
+   }
+   cout << endl;
 }
 
-void cSimulatedFastqFile::write(const cSimulatedFastqFactory::cSimulatedFastqData &sim_fastq_data, uint32_t uReadLength)
+void cSimulatedFastqFile::write(const sim_fastq_data_t  &sim_fastq_data)
 {
+  const uint32_t& read_size = sim_fastq_data.m_read_size;
+
   ASSERT(sim_fastq_data.m_sequence.size() == sim_fastq_data.m_qualities.size(), "Error!");
-  ASSERT(sim_fastq_data.m_num_N_bases % uReadLength == 0, "Error!");
+  ASSERT(sim_fastq_data.m_num_N_bases % read_size == 0, "Error!");
   ASSERT(this->is_open(), "Error!");
 
   istringstream ss_sequence(sim_fastq_data.m_sequence);
   istringstream ss_qualities(sim_fastq_data.m_qualities);
 
   uint32_t current_line = 0;
+  char *buffer = new char[read_size];
 
-  char *buffer = new char[uReadLength];
-  buffer[(uReadLength - 1)] = '\n';
+	const size_t &num_reads =  sim_fastq_data.m_sequence.size() / read_size;
+	size_t i = num_reads;
+	while (i-->0) {
+		fprintf(*this, "@%s-%u\n", sim_fastq_data.m_name.c_str(), ++current_line);
 
-  const uint32_t &num_reads = sim_fastq_data.m_num_N_bases / uReadLength;
-  for (uint32_t i = 0; i < num_reads; i++) {
-    (*this) <<  "@READ-" << ++current_line << endl;
+    ss_sequence.get(buffer, read_size);
+    fprintf(*this, "%s\n", buffer);
 
-    ss_sequence.read(buffer, (uReadLength - 1));
-    ofstream::write(buffer, uReadLength);
+    fprintf(*this, "+%s\n", sim_fastq_data.m_name_plus.c_str());
 
-    ofstream::write("+\n", 2);
-
-    ss_qualities.read(buffer, (uReadLength - 1));
-    ofstream::write(buffer, uReadLength);
+    ss_qualities.get(buffer, read_size);
+    fprintf(*this, "%s\n", buffer);
   }
 
   delete[] buffer;
