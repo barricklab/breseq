@@ -1238,7 +1238,8 @@ int do_simulate_read(int argc, char *argv[])
   ("reference,r", "Reference file for input.")
   ("coverage,c", "Average coverage value to simulate.", static_cast<uint32_t>(10))
   ("length,l", "Read length to simulate.", static_cast<uint32_t>(36))
-  ("output,o", "Output fastq file name.")
+  ("output,o", "Output fastq file name.")  
+  ("gff3,3", "Output Applied GFF3 File. (Flag)", TAKES_NO_ARGUMENT)
   ("verbose,v", "Verbose Mode (Flag)", TAKES_NO_ARGUMENT)
   ;
   options.processCommandArgs(argc, argv);
@@ -1281,7 +1282,10 @@ int do_simulate_read(int argc, char *argv[])
   bool verbose = options.count("verbose");
   genome_diff gd(gd_file_name);
 
-  cReferenceSequences new_ref_seq_info = gd.apply_to_sequences(ref_seq_info, verbose);
+  cReferenceSequences new_ref_seq_info = gd.apply_to_sequences(ref_seq_info, verbose);  
+  
+  //! Write applied GFF3 file if requested.
+  if(options.count("gff3"))new_ref_seq_info.WriteGFF(options["output"] + ".gff3", options.count("verbose"));
 
   const cFastaSequence &fasta_sequence = new_ref_seq_info.front().m_fasta_sequence;
 
