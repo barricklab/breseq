@@ -151,7 +151,7 @@ bool diff_entry::operator==(const diff_entry& de)
 
 /*! Marshal this diff entry into an ordered list of fields.
  */
-void diff_entry::marshal(field_list_t& s) {
+void diff_entry::marshal(field_list_t& s) const {
   s.push_back(to_string(_type));
 	s.push_back(_id);
   
@@ -237,7 +237,7 @@ uint32_t number_reject_reasons(diff_entry& de) {
 
 /*! Output operator for a diff entry.
  */
-ostream& operator<<(ostream& out, diff_entry& de) {
+ostream& operator<<(ostream& out, const diff_entry& de) {
 	field_list_t fields;
 	de.marshal(fields);
 	out << join(fields, "\t");

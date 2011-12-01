@@ -66,15 +66,20 @@ AC_SUBST([LIBBAM], [extern/samtools-0.1.15])
 AC_SUBST([BRESEQ], [src/c/breseq])
 
 AC_CHECK_FILE([.hg/branchheads.cache], 
-	AC_SUBST(HG_REVISION_STRING, [`eval head -n 1 .hg/branchheads.cache | sed 's/^\(.\{12\}\).*/\1/'`]), 
-	AC_SUBST(HG_REVISION_STRING, [RELEASE])
-	)
-	
-AC_CHECK_FILE([.hg/branchheads.cache], 
-	AC_SUBST(HG_REVISION_PREFIX, "revision "), 
-	AC_SUBST(HG_REVISION_PREFIX, [])
-	)
+	AC_SUBST(HG_REVISION_STRING, [`eval head -n 1 .hg/branchheads.cache | sed 's/^\(.\{12\}\).*/\1/'`]),
+	[ AC_CHECK_FILE([.hg/cache/branchheads], 
+		AC_SUBST(HG_REVISION_STRING, [`eval head -n 1 .hg/cache/branchheads | sed 's/^\(.\{12\}\).*/\1/'`]), 
+		AC_SUBST(HG_REVISION_STRING, [RELEASE])
+	) ]
+)
 
+AC_CHECK_FILE([.hg/branchheads.cache], 
+	AC_SUBST(HG_REVISION_PREFIX, "revision "),
+	[ AC_CHECK_FILE([.hg/cache/branchheads], 
+		AC_SUBST(HG_REVISION_PREFIX, "revision "), 
+		AC_SUBST(HG_REVISION_PREFIX, [])
+	) ]
+)
 
 AC_DEFINE_UNQUOTED([HG_REVISION], ["${HG_REVISION_PREFIX}${HG_REVISION_STRING}"], [Defining HG repository version])
 
