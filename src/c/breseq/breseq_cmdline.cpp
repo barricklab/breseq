@@ -37,8 +37,6 @@ LICENSE AND COPYRIGHT
 #include "libbreseq/contingency_loci.h"
 #include "libbreseq/mutation_predictor.h"
 #include "libbreseq/output.h"
-#include "libbreseq/simulated_read.h"
-
 
 using namespace breseq;
 using namespace std;
@@ -1288,20 +1286,20 @@ int do_simulate_read(int argc, char *argv[])
   const cFastaSequence &fasta_sequence = new_ref_seq_info.front().m_fasta_sequence;
 
   //! Step: Create simulated read sequence.
-  sim_fastq_factory_t sim_fastq_factory;
-
   //Parameters to create simulated read.
   const string &sequence = fasta_sequence.m_sequence;
   const uint32_t average_coverage = from_string<uint32_t>(options["coverage"]);
   const uint32_t read_length = from_string<uint32_t>(options["length"]);
 
-	sim_fastq_data_t *sim_fastq_data;
-	sim_fastq_data = sim_fastq_factory.createFromSequence(sequence, average_coverage, read_length);
+  const cFastqSequenceVector &fsv = cFastqSequenceVector::createFromSequence(sequence, average_coverage, read_length);
 
-	//! Step: Write simulated read sequence to fastq file.
-	const string &fastq_file_name = options["output"];
-	cSimulatedFastqFile sim_fastq_file(fastq_file_name);
-	sim_fastq_file.write(*sim_fastq_data);
+  //! Step: Write simulated reads to file.
+  cFastqFile ff(options["output"], ios_base::out);
+
+  const size_t &fsv_size = fsv.size();
+  for (size_t i = 0; i < fsv_size; i++) {
+    ff.write_sequence(fsv[i]);
+  }
 
   return 0;
 }
