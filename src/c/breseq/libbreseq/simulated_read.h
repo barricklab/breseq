@@ -9,19 +9,18 @@ namespace breseq {
 class cSimulatedFastqFactory
 {
 public:
-  struct cSimulatedFastqData : public cFastqSequence{};
+	struct cSimulatedFastqData : public cFastqSequence
+	{
+		uint32_t m_read_size;
+	};
 
   //Constructors
-  cSimulatedFastqFactory() : mReadLength(36){}
-  cSimulatedFastqFactory(uint32_t uReadLength)  {
-    mReadLength = uReadLength;  }
+  cSimulatedFastqFactory(){}
 
-  cSimulatedFastqData* createFromSequence(const string &sequence, const uint32_t &average_coverage);
+  cSimulatedFastqData* createFromSequence(const string &sequence, const uint32_t &average_coverage, const uint32_t &read_size);
 
 private:
   void simulateQualityScores(cSimulatedFastqData *sim_fastq_data);
-  
-  uint32_t mReadLength;
 };
 
 typedef cSimulatedFastqFactory sim_fastq_factory_t;
@@ -33,7 +32,7 @@ class cSimulatedFastqFile : public ofstream
     cSimulatedFastqFile(const string &file_name)
       : ofstream(file_name.c_str()) {}
 
-    void write(const sim_fastq_data_t &sim_fastq_data, uint32_t uReadLength);
+    void write(const sim_fastq_data_t &sim_fastq_data);
 };
 
 } //end namespace breseq
