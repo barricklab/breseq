@@ -9,11 +9,15 @@ namespace breseq {
 class cSimulatedFastqFactory
 {
 public:
-  struct cSimulatedFastqData : public cFastqSequence{};
+	struct cSimulatedFastqData : public cFastqSequence
+	{
+		uint32_t m_read_size;
+	};
 
+  //Constructors
   cSimulatedFastqFactory(){}
 
-  cSimulatedFastqData* createFromSequence(const string &sequence, const uint32_t &average_coverage);
+  cSimulatedFastqData* createFromSequence(const string &sequence, const uint32_t &average_coverage, const uint32_t &read_size);
 
 private:
   void simulateQualityScores(cSimulatedFastqData *sim_fastq_data);

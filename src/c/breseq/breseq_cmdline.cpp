@@ -1236,38 +1236,72 @@ int do_simulate_read(int argc, char *argv[])
   AnyOption options("Usage: breseq SIMULATE-READ -g <genome diff> -r <reference file> -c <average coverage> -o <output file>");
 
   options
-  ("help,h", "Produce usage.", TAKES_NO_ARGUMENT)
   ("genome_diff,g", "Genome diff file.")
   ("reference,r", "Reference file for input.")
   ("coverage,c", "Average coverage value to simulate.", static_cast<uint32_t>(10))
+  ("length,l", "Read length to simulate.", static_cast<uint32_t>(36))
   ("output,o", "Output fastq file name.")
-  ("verbose,v", "Verbose mode.", TAKES_NO_ARGUMENT)
+  ("verbose,v", "Verbose Mode (Flag)", TAKES_NO_ARGUMENT)
   ;
   options.processCommandArgs(argc, argv);
   
-  if ( !options.count("genome_diff")
-      || !options.count("reference")
-      || !options.count("output")
-      ) {
+  options.addUsage("");
+  options.addUsage("Takes a GenomeDiff file and applies the mutations to the reference.");
+  options.addUsage("Then using the applied reference, it simulates reads based on it.");
+  options.addUsage("Output is a .fastq that if run normally against the reference");
+  options.addUsage("should produce the same GenomeDiff file you entered.");
+  
+  if (!options.count("genome_diff")) {
+    options.addUsage("");
+    options.addUsage("You must supply the --genome_diff option for input.");
+    options.printUsage();
+    return -1;
+  }
+  
+  if (!options.count("reference")) {
+    options.addUsage("");
+    options.addUsage("You must supply the --reference option for input.");
+    options.printUsage();
+    return -1;
+  }
+  
+  if (!options.count("output")) {
+    options.addUsage("");
+    options.addUsage("You must supply the --output option for output.");
     options.printUsage();
     return -1;
   }
 
+  //! Step: Load reference sequence file.
   cReferenceSequences ref_seq_info;
-  ref_seq_info.LoadFile(options["reference"]);
+  const string &ref_file_name = options["reference"];
+  ref_seq_info.LoadFile(ref_file_name);
 
-  cReferenceSequences new_ref_seq_info =
-      genome_diff(options["genome_diff"]).apply_to_sequences(ref_seq_info, options.count("verbose"));
+
+  //! Step: Apply genome diff mutations to reference sequence.
+  const string &gd_file_name = options["genome_diff"];
+  bool verbose = options.count("verbose");
+  genome_diff gd(gd_file_name);
+
+  cReferenceSequences new_ref_seq_info = gd.apply_to_sequences(ref_seq_info, verbose);
 
   const cFastaSequence &fasta_sequence = new_ref_seq_info.front().m_fasta_sequence;
 
+  //! Step: Create simulated read sequence.
   sim_fastq_factory_t sim_fastq_factory;
 
-  sim_fastq_data_t *sim_fastq_data;
-  sim_fastq_data = sim_fastq_factory.createFromSequence(fasta_sequence.m_sequence, from_string<uint32_t>(options["output"]));
+  //Parameters to create simulated read.
+  const string &sequence = fasta_sequence.m_sequence;
+  const uint32_t average_coverage = from_string<uint32_t>(options["coverage"]);
+  const uint32_t read_length = from_string<uint32_t>(options["length"]);
 
-  cSimulatedFastqFile sim_fastq_file(options["output"]);
-  sim_fastq_file.write(*sim_fastq_data);
+	sim_fastq_data_t *sim_fastq_data;
+	sim_fastq_data = sim_fastq_factory.createFromSequence(sequence, average_coverage, read_length);
+
+	//! Step: Write simulated read sequence to fastq file.
+	const string &fastq_file_name = options["output"];
+	cSimulatedFastqFile sim_fastq_file(fastq_file_name);
+	sim_fastq_file.write(*sim_fastq_data);
 
   return 0;
 }

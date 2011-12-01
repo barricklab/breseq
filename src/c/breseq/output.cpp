@@ -740,17 +740,15 @@ string html_genome_diff_item_table_string(const Settings& settings, genome_diff&
 string formatted_mutation_annotation(const diff_entry& mut)
 {
   stringstream ss;
-
+  
   // additional formatting for some variables
   if((mut.entry_exists("snp_type")) && (mut.get("snp_type") != "intergenic") &&
      (mut.get("snp_type") != "noncoding") && (mut.get("snp_type") != "pseudogene"))
   {    
     ss << mut.get("aa_ref_seq") << mut.get("aa_position") << mut.get("aa_new_seq");
-
     string codon_ref_seq = to_underline_red_codon(mut, "codon_ref_seq");
     string codon_new_seq = to_underline_red_codon(mut, "codon_new_seq");
-    
-    ss << "&nbsp;" << codon_ref_seq << "&rarr;" << codon_new_seq << "&nbsp;";  
+    ss << "&nbsp;(" << codon_ref_seq << "&rarr;" << codon_new_seq << ")&nbsp;";  
   }
   else // mut[SNP_TYPE] == "NC"
   {
@@ -773,9 +771,10 @@ string to_underline_red_codon(const diff_entry& mut, const string& codon_key)
   stringstream ss; //!< codon_string
   
   string codon_ref_seq = mut.get(codon_key);
+  // codon_position is 1-indexed
+  uint32_t codon_position = from_string<int32_t>(mut.get("codon_position"));
   for (size_t i = 0; i < codon_ref_seq.size(); i++) {
-
-    if (i == from_string(mut.get("codon_position"))) {
+    if (i+1 == codon_position) {
       ss << font("class=\"mutation_in_codon\"", codon_ref_seq.substr(i,1));
     }
     else 
@@ -911,7 +910,7 @@ string html_read_alignment_table_string(diff_entry_list& list_ref, bool show_rej
     string total_cov = to_string(from_string<uint32_t>(top_cov) + 
                                  from_string<uint32_t>(bot_cov));
     ss << td(ALIGN_CENTER, total_cov);// "Cov" Column
-    ss << td(ALIGN_CENTER, nonbreaking(formatted_mutation_annotation(c))); //"Annotation" Column
+    ss << td(ALIGN_CENTER, formatted_mutation_annotation(c)); //"Annotation" Column DON'T call nonbreaking on the whole thing
     ss << td(ALIGN_CENTER, i(nonbreaking(c[GENE_NAME])));
     ss << td(ALIGN_LEFT, htmlize(c[GENE_PRODUCT]));
     ss << "</tr>" << endl;
@@ -2039,7 +2038,7 @@ void Html_Mutation_Table_String::Item_Lines()
     string cell_seq_id = nonbreaking(mut[SEQ_ID]);
     string cell_position = commify(mut[POSITION]);
     string cell_mutation;
-    string cell_mutation_annotation = nonbreaking(formatted_mutation_annotation(mut));
+    string cell_mutation_annotation = formatted_mutation_annotation(mut); // Do NOT make nonbreaking
     string cell_gene_name = i(nonbreaking(mut[GENE_NAME]));
     string cell_gene_product = htmlize(mut[GENE_PRODUCT]);
     

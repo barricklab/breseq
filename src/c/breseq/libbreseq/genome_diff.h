@@ -202,7 +202,7 @@ public:
   bool is_validation() const;
 
   //! Marshal this diff entry into an ordered list of fields.
-  virtual void marshal(field_list_t& s);
+  virtual void marshal(field_list_t& s) const;
 
   //! Returns values for diff_entry["reject"]
   vector<string> get_reject_reasons();
@@ -245,7 +245,7 @@ void GDtoGVF( const string& gdfile, const string& gvffile, bool snv_only = false
 void VCFtoGD( const string& vcffile, const string& gfffile );
 
 //! Output operator for a diff entry.
-ostream& operator<<(ostream& out, diff_entry& de);
+ostream& operator<<(ostream& out, const diff_entry& de);
 
 //! Genome Diff Sorting
 //! For sorting by a number, then by fields to break ties

@@ -25,6 +25,7 @@ LICENSE AND COPYRIGHT
 #include <assert.h>
 #include <libgen.h>
 #include <limits.h>
+#include <stdarg.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -839,8 +840,80 @@ namespace breseq {
     return path;
   }
 
+inline int32_t fprintf(ostream &os, const char *format,...) {
+  int32_t ret_val;
+  char buffer[3200];
+
+  va_list p_args;
+
+  const size_t &size = sizeof(buffer) - 1;
+  va_start(p_args, format);
+  ret_val = vsnprintf(buffer, size, format, p_args);
+  va_end(p_args);
+
+  buffer[size] = '\0';
+
+  os.write(buffer, string(buffer).size());
+
+  return ret_val;
+}
+
+inline int32_t sprintf(string &value, const char *format,...) {
+  int32_t ret_val;
+  char buffer[3200];
+
+  va_list p_args;
+
+  const size_t &size = sizeof(buffer) - 1;
+  va_start(p_args, format);
+  ret_val = vsnprintf(buffer, size, format, p_args);
+  va_end(p_args);
+
+  buffer[size] = '\0';
+
+  value = buffer;
+
+  return ret_val;
+}
 
 
+class cPoissonDistribution
+{
+public:
+  cPoissonDistribution(const int32_t &lambda)
+    : m_exp_neg_lambda(exp(-1 * lambda))
+  {
+    srand(time(NULL));
+  }
+
+  inline uint32_t getSample(const uint32_t &min = 0, const uint32_t &max = UINT_MAX)
+  {
+    uint32_t k = 0;
+    float p = 1;
+    double u;
+    do {
+      k++;
+
+      u = rand() / double(RAND_MAX);
+      p = p * u;
+
+    }while(p > m_exp_neg_lambda);
+
+    uint32_t ret_val = --k;
+
+    if (ret_val > max) {
+      ret_val = max;
+    }
+    else if (ret_val < min) {
+      ret_val = min;
+    }
+
+    return ret_val;
+  }
+
+private:
+        float m_exp_neg_lambda;
+};
 } // breseq
 
 #endif
