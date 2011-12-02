@@ -50,7 +50,13 @@ namespace breseq {
       string m_name_plus; //+NAME
       string m_qualities; //quality score characters
       uint32_t m_num_N_bases; // number of N bases, used for filtering
-   }; 
+   };
+
+  class cFastqSequenceVector : public vector<cFastqSequence>
+  {
+    public:
+      static cFastqSequenceVector createFromSequence(const string &ref_sequence, const uint32_t &average_coverage, const uint32_t &read_size);
+  };
   
   /*! Quality score conversion class.
    */
