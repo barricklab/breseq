@@ -1287,7 +1287,7 @@ int do_simulate_read(int argc, char *argv[])
 
   //! Step: Create simulated read sequence.
   //Parameters to create simulated read.
-  const string &sequence = fasta_sequence.m_sequence;
+  const cSequence &sequence = fasta_sequence.m_sequence;
   const uint32_t average_coverage = from_string<uint32_t>(options["coverage"]);
   const uint32_t read_length = from_string<uint32_t>(options["length"]);
 
@@ -1300,7 +1300,6 @@ int do_simulate_read(int argc, char *argv[])
   for (size_t i = 0; i < fsv_size; i++) {
     ff.write_sequence(fsv[i]);
   }
-
   return 0;
 }
 

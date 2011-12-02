@@ -469,7 +469,7 @@ namespace breseq {
     (*this) << sequence.m_qualities << std::endl;
   }
 
-  cFastqSequenceVector cFastqSequenceVector::createFromSequence(const string &ref_sequence, const uint32_t &average_coverage, const uint32_t &read_size)
+  cFastqSequenceVector cFastqSequenceVector::createFromSequence(const cSequence &ref_sequence, const uint32_t &average_coverage, const uint32_t &read_size)
   {
     //! Step: Initialize ret_val.
     const size_t &ref_sequence_size = ref_sequence.size();
@@ -497,11 +497,16 @@ namespace breseq {
       sprintf(fs.m_name, "READ-%i", ++current_line);
 
       //Sequence
-      size_t start_pos = rand() % (ref_sequence_size + read_size - 1);
-      start_pos  = max(start_pos, read_size - 1);
-      start_pos  = min(start_pos, ref_sequence_size - 1);
-      start_pos -= (read_size - 1);
-      fs.m_sequence = ref_sequence.substr(start_pos, read_size);
+      size_t start_pos = rand() % ref_sequence_size;
+      fs.m_sequence = ref_sequence.circular_substr(start_pos, read_size);
+
+      // 50/50 Chance the read is a -/+ strand.
+      if ((rand() % 100) <50) {
+        fs.m_sequence =
+            reverse_complement(ref_sequence.circular_substr(start_pos, read_size));
+      } else {
+        fs.m_sequence = ref_sequence.circular_substr(start_pos, read_size);
+      }
 
       //Quality scores
       fs.m_qualities.resize(read_size);
