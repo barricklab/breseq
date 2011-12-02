@@ -468,6 +468,50 @@ namespace breseq {
     (*this) << '+' << sequence.m_name_plus << std::endl;
     (*this) << sequence.m_qualities << std::endl;
   }
+
+  cFastqSequenceVector cFastqSequenceVector::createFromSequence(const string &ref_sequence, const uint32_t &average_coverage, const uint32_t &read_size)
+  {
+    //! Step: Initialize ret_val.
+    const size_t &ref_sequence_size = ref_sequence.size();
+    const size_t &num_reads = ceil(ref_sequence_size / read_size) * average_coverage;
+    cFastqSequenceVector ret_val;
+    ret_val.resize(num_reads);
+
+    //! Step: Initialize distribution to get quality score samples from.
+    const uint32_t QUALITY_SCORE_OFFSET  = 33;
+    const uint32_t MIN_QUALITY_SCORE  		= 0  + QUALITY_SCORE_OFFSET;
+    const uint32_t MEAN_QUALITY_SCORE 		= 30 + QUALITY_SCORE_OFFSET;
+    const uint32_t MAX_QUALITY_SCORE  		= 40 + QUALITY_SCORE_OFFSET;
+    cPoissonDistribution pd(MEAN_QUALITY_SCORE);
+
+
+    //! Step: Initialize seed value for randomly selecting position in ref_sequence.
+    const uint32_t &seed_value = time(NULL);
+    srand(seed_value);
+
+    //! Step: Iterate through ret_val and assign name, sequence and quality scores.
+    size_t current_line = 0;
+    for (size_t i = 0; i < num_reads; i++) {
+      cFastqSequence &fs = ret_val[i];
+      //Name
+      sprintf(fs.m_name, "READ-%i", ++current_line);
+
+      //Sequence
+      const size_t &start_pos = rand() % (ref_sequence_size - read_size );
+      fs.m_sequence = ref_sequence.substr(start_pos, read_size);
+
+      //Quality scores
+      fs.m_qualities.resize(read_size);
+      for (size_t j = 0; j < read_size; j++) {
+        fs.m_qualities[j] = pd.getSample(MIN_QUALITY_SCORE, MAX_QUALITY_SCORE);
+      }
+
+    }
+
+
+    return ret_val;
+
+  }
   
 
 // Reverse complement and also uppercase
