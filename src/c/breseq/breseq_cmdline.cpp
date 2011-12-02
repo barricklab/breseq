@@ -1295,15 +1295,18 @@ int do_simulate_read(int argc, char *argv[])
   const uint32_t average_coverage = from_string<uint32_t>(options["coverage"]);
   const uint32_t read_length = from_string<uint32_t>(options["length"]);
 
-  const cFastqSequenceVector &fsv = cFastqSequenceVector::createFromSequence(sequence, average_coverage, read_length);
+  const cFastqSequenceVector &fsv = cFastqSequenceVector::createFromSequence(sequence, average_coverage, read_length, verbose);
 
   //! Step: Write simulated reads to file.
+  if(verbose){cout << "Writing FASTQ\n" << "\t" << options["output"] << endl;}
   cFastqFile ff(options["output"], ios_base::out);
 
   const size_t &fsv_size = fsv.size();
   for (size_t i = 0; i < fsv_size; i++) {
     ff.write_sequence(fsv[i]);
+    if(verbose && !(i % 10000) && i){cout << "\tREAD: " << i << endl;}
   }
+  if(verbose){cout << "\t**FASTQ Complete**" << endl;}
   return 0;
 }
 
