@@ -469,8 +469,7 @@ namespace breseq {
     (*this) << sequence.m_qualities << std::endl;
   }
 
-  cFastqSequenceVector cFastqSequenceVector::createFromSequence(const string &ref_sequence, const uint32_t &average_coverage, const uint32_t &read_size)
-  {
+  cFastqSequenceVector cFastqSequenceVector::createFromSequence(const cSequence &ref_sequence, const uint32_t &average_coverage, const uint32_t &read_size, bool verbose)  {
     //! Step: Initialize ret_val.
     const size_t &ref_sequence_size = ref_sequence.size();
     const size_t &num_reads = ceil(ref_sequence_size / read_size) * average_coverage;
@@ -488,6 +487,8 @@ namespace breseq {
     //! Step: Initialize seed value for randomly selecting position in ref_sequence.
     const uint32_t &seed_value = time(NULL);
     srand(seed_value);
+    
+    if(verbose){cout << "CREATING " << num_reads << " READS" << endl;}
 
     //! Step: Iterate through ret_val and assign name, sequence and quality scores.
     size_t current_line = 0;
@@ -495,22 +496,31 @@ namespace breseq {
       cFastqSequence &fs = ret_val[i];
       //Name
       sprintf(fs.m_name, "READ-%i", ++current_line);
+      
+      if(verbose && !(i % 10000) && i){cout << "\tREAD: " << i << endl;}
 
       //Sequence
-      const size_t &start_pos = rand() % (ref_sequence_size - read_size );
-      fs.m_sequence = ref_sequence.substr(start_pos, read_size);
+      size_t start_pos = rand() % ref_sequence_size;
+      fs.m_sequence = ref_sequence.circular_substr(start_pos, read_size);
+
+      // 50/50 Chance the read is a -/+ strand.
+      if ((rand() % 100) <50) {
+        fs.m_sequence =
+            reverse_complement(ref_sequence.circular_substr(start_pos, read_size));
+      } else {
+        fs.m_sequence = ref_sequence.circular_substr(start_pos, read_size);
+      }
 
       //Quality scores
       fs.m_qualities.resize(read_size);
       for (size_t j = 0; j < read_size; j++) {
         fs.m_qualities[j] = pd.getSample(MIN_QUALITY_SCORE, MAX_QUALITY_SCORE);
       }
-
     }
-
+    
+    if(verbose){cout << "\t**READS Complete**" << endl;}
 
     return ret_val;
-
   }
   
 

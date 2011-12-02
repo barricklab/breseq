@@ -21,6 +21,7 @@ LICENSE AND COPYRIGHT
 
 #include "common.h"
 #include "settings.h"
+#include "fasta.h"
 
 using namespace std;
 
@@ -55,7 +56,7 @@ namespace breseq {
   class cFastqSequenceVector : public vector<cFastqSequence>
   {
     public:
-      static cFastqSequenceVector createFromSequence(const string &ref_sequence, const uint32_t &average_coverage, const uint32_t &read_size);
+      static cFastqSequenceVector createFromSequence(const cSequence &ref_sequence, const uint32_t &average_coverage, const uint32_t &read_size, bool verbose=false);
   };
   
   /*! Quality score conversion class.
