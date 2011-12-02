@@ -1238,7 +1238,8 @@ int do_simulate_read(int argc, char *argv[])
   ("reference,r", "Reference file for input.")
   ("coverage,c", "Average coverage value to simulate.", static_cast<uint32_t>(10))
   ("length,l", "Read length to simulate.", static_cast<uint32_t>(36))
-  ("output,o", "Output fastq file name.")
+  ("output,o", "Output fastq file name.")  
+  ("gff3,3", "Output Applied GFF3 File. (Flag)", TAKES_NO_ARGUMENT)
   ("verbose,v", "Verbose Mode (Flag)", TAKES_NO_ARGUMENT)
   ;
   options.processCommandArgs(argc, argv);
@@ -1281,26 +1282,31 @@ int do_simulate_read(int argc, char *argv[])
   bool verbose = options.count("verbose");
   genome_diff gd(gd_file_name);
 
-  cReferenceSequences new_ref_seq_info = gd.apply_to_sequences(ref_seq_info, verbose);
+  cReferenceSequences new_ref_seq_info = gd.apply_to_sequences(ref_seq_info, verbose);  
+  
+  //! Write applied GFF3 file if requested.
+  if(options.count("gff3"))new_ref_seq_info.WriteGFF(options["output"] + ".gff3", options.count("verbose"));
 
   const cFastaSequence &fasta_sequence = new_ref_seq_info.front().m_fasta_sequence;
 
   //! Step: Create simulated read sequence.
   //Parameters to create simulated read.
-  const string &sequence = fasta_sequence.m_sequence;
+  const cSequence &sequence = fasta_sequence.m_sequence;
   const uint32_t average_coverage = from_string<uint32_t>(options["coverage"]);
   const uint32_t read_length = from_string<uint32_t>(options["length"]);
 
-  const cFastqSequenceVector &fsv = cFastqSequenceVector::createFromSequence(sequence, average_coverage, read_length);
+  const cFastqSequenceVector &fsv = cFastqSequenceVector::createFromSequence(sequence, average_coverage, read_length, verbose);
 
   //! Step: Write simulated reads to file.
+  if(verbose){cout << "Writing FASTQ\n" << "\t" << options["output"] << endl;}
   cFastqFile ff(options["output"], ios_base::out);
 
   const size_t &fsv_size = fsv.size();
   for (size_t i = 0; i < fsv_size; i++) {
     ff.write_sequence(fsv[i]);
+    if(verbose && !(i % 10000) && i){cout << "\tREAD: " << i << endl;}
   }
-
+  if(verbose){cout << "\t**FASTQ Complete**" << endl;}
   return 0;
 }
 
