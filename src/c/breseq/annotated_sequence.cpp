@@ -429,6 +429,9 @@ namespace breseq {
       default:
         WARN("Could not load the reference file: " +file_name);
     }
+      
+    // To upper the most recently loaded sequence.
+    to_upper((this->back()).m_fasta_sequence.m_sequence);
     
     //Here we check to see we haven't loaded some of the same information again.
     for(str_uint::iterator i = old_load.begin(); i != old_load.end(); i++)
