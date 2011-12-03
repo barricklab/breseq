@@ -36,8 +36,8 @@ namespace breseq {
   {
   public:
     string seq_id;
-    int32_t position;
-    int32_t strand;
+    int32_t position;   // 1-indexed
+    int32_t strand;     // -1 or +1 (DEPRECATED: Use of 0 instead of -1)
     int32_t redundant;
     
     // Extended properties for resolve_alignments.cpp

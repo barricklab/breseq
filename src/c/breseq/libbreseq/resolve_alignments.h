@@ -49,6 +49,7 @@ namespace breseq {
     uint32_t coverage_plus;
     uint32_t total_non_overlap_reads;
     uint32_t pos_hash_score;
+    uint32_t max_pos_hash_score;
     bool redundant_1;
     bool redundant_2;
     string junction_id;
@@ -223,6 +224,7 @@ namespace breseq {
                                     cReferenceSequences& ref_seq_info, 
                                     JunctionTestInfo& test_info
                                     );
+
 
 }
 

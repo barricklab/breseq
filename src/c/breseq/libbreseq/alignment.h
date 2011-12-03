@@ -167,7 +167,12 @@ class alignment_wrapper {
     //! This means End can be < Start.
     std::pair<uint32_t,uint32_t> query_stranded_bounds_1() const;
     void query_stranded_bounds_1(uint32_t& start, uint32_t& end) const;
-
+  
+    uint32_t query_stranded_start_1()
+      { return query_stranded_bounds_1().first; }
+    uint32_t query_stranded_end_1()
+      { return query_stranded_bounds_1().second; }  
+  
     //! Starting coordinates of the aligned part of the read.
     //  Methods available for 0-indexed and 1-indexed coordinates.
     uint32_t query_start_0() const { return query_start_1()-1; };
