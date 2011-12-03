@@ -189,9 +189,9 @@ namespace breseq
     
     options.addUsage("");
 		options.addUsage("Utility Command Usage: breseq [command] options ...");
-    options.addUsage("  Breseq Pipeline Commands: BAM2ALN, BAM2COV, CONVERT_FASTQ, ERROR_COUNT");
-    options.addUsage("  Breseq Post-Run Commands: APPLY/MUTATE");
-    options.addUsage("  Genome Diff Commands: COMPARE, INTERSECT, NOT_EVIDENCE, SUBTRACT, UNION");
+    options.addUsage("  Breseq Pipeline Commands: CONVERT_FASTQ, ERROR_COUNT");
+    options.addUsage("  Breseq Post-Run Commands: BAM2ALN, BAM2COV");
+    options.addUsage("  Genome Diff Commands: APPLY, COMPARE, INTERSECT, NOT_EVIDENCE, SUBTRACT, UNION");
     options.addUsage("  For help using a utility command, type: breseq [command] ");
     
     // make sure that the other config options are good:

@@ -177,8 +177,8 @@ namespace breseq
     //! Constructor.
     alignment_output ( string bam, string fasta, uint32_t in_maximum_to_align = 0, const uint32_t quality_score_cutoff = 0 );
     //! Output an HTML alignment.
-    string html_alignment ( const string& region, const string& corrected=NULL );
-    void create_alignment ( const string& region, const string& corrected=NULL );
+    string html_alignment ( const string& region, const string& corrected="" );
+    void create_alignment ( const string& region, const string& corrected="" );
     void set_quality_range(const uint32_t quality_score_cutoff = 0);
   private:
     uint32_t no_color_index;
