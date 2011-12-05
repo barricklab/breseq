@@ -53,10 +53,23 @@ namespace breseq {
       uint32_t m_num_N_bases; // number of N bases, used for filtering
    };
 
+  namespace FastqSimulationUtilities {
+    extern map<uint32_t, uint32_t> qscore_cumulative_probability_table;
+    extern map<char, string> random_insertion_base_options;
+    char getRandomQualityScore(void);
+    char getRandomInsertedBase(const char not_this_base);
+    bool isRandomInsertion(void);
+    bool isRandomDeletion(void);
+  }
+
   class cFastqSequenceVector : public vector<cFastqSequence>
   {
     public:
-      static cFastqSequenceVector createFromSequence(const cSequence &ref_sequence, const uint32_t &average_coverage, const uint32_t &read_size, bool verbose=false);
+      static cFastqSequenceVector simulateFromSequence(const cSequence &ref_sequence,
+                                                       const uint32_t &average_coverage,
+                                                       const uint32_t &read_size,
+                                                       bool verbose=false);
+    private:
   };
   
   /*! Quality score conversion class.

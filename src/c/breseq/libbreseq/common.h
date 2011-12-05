@@ -842,7 +842,7 @@ namespace breseq {
 
 inline int32_t fprintf(ostream &os, const char *format,...) {
   int32_t ret_val;
-  char buffer[3200];
+  char buffer[32000];
 
   va_list p_args;
 
@@ -860,7 +860,7 @@ inline int32_t fprintf(ostream &os, const char *format,...) {
 
 inline int32_t sprintf(string &value, const char *format,...) {
   int32_t ret_val;
-  char buffer[3200];
+  char buffer[32000];
 
   va_list p_args;
 
@@ -914,6 +914,8 @@ public:
 private:
         float m_exp_neg_lambda;
 };
+
+
 } // breseq
 
 #endif

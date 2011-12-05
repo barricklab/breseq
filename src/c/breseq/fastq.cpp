@@ -463,60 +463,301 @@ namespace breseq {
   }
 
   void cFastqFile::write_sequence(const cFastqSequence &sequence) {
-    (*this) << '@' << sequence.m_name << std::endl;
-    (*this) << sequence.m_sequence << std::endl;
-    (*this) << '+' << sequence.m_name_plus << std::endl;
-    (*this) << sequence.m_qualities << std::endl;
+    fprintf(*this, "@%s\n", sequence.m_name.c_str()     );
+    fprintf(*this, "%s\n" , sequence.m_sequence.c_str() );
+    fprintf(*this, "+%s\n", sequence.m_name_plus.c_str());
+    fprintf(*this, "%s\n" , sequence.m_qualities.c_str());
   }
 
-  cFastqSequenceVector cFastqSequenceVector::createFromSequence(const cSequence &ref_sequence, const uint32_t &average_coverage, const uint32_t &read_size, bool verbose)  {
-    //! Step: Initialize ret_val.
-    const size_t &ref_sequence_size = ref_sequence.size();
-    const size_t &num_reads = ceil(ref_sequence_size / read_size) * average_coverage;
+  /*!
+    qscore_cumulative_probability_table
+
+    Achieved by:
+
+      Step: Gather frequencies of scores in the following DCAMP read files:
+        SRR014475.fastq
+        SRR014476.fastq
+        SRR014477.fastq
+        SRR014478.fastq
+        SRR014479.fastq
+        SRR014480.fastq
+        SRR014481.fastq
+        SRR014482.fastq
+        SRR014483.fastq
+        SRR014484.fastq
+        SRR014485.fastq
+
+      NOTE: The scores are in the Sanger format and represent a Phred quality
+      score from 0 to 93 using ASCII 33 to 126.
+      (http://en.wikipedia.org/wiki/FASTQ_format)
+
+      Step: Normalize each frequency to 1 by dividing each score's frequency by
+      the sum of all frequencies that occured.
+
+      Step: Calculate the cumulative probability for each score.
+
+      Step: Multiply each probability by 100,000.
+
+      ***@GRC: Multiplied by 100,000 to achieve precision to the 100,000th
+      decimal place. Wasn't sure if C's rand() function would be able to roll
+      between 0 and 1 by increment an of .00001 so opted for this method.
+    */
+
+  map<uint32_t, uint32_t>
+  FastqSimulationUtilities::qscore_cumulative_probability_table =
+  make_map<uint32_t, uint32_t>
+    (33, 57)
+    (34, 96)
+    (35, 214)
+    (36, 475)
+    (37, 985)
+    (38, 1501)
+    (39, 1759)
+    (40, 2017)
+    (41, 2275)
+    (42, 2532)
+    (43, 27931)
+    (44, 28185)
+    (45, 28439)
+    (46, 28693)
+    (47, 28946)
+    (48, 29201)
+    (49, 29457)
+    (50, 29714)
+    (51, 29971)
+    (52, 30230)
+    (53, 30491)
+    (54, 30753)
+    (55, 31016)
+    (56, 31280)
+    (57, 31545)
+    (58, 31809)
+    (59, 32074)
+    (60, 32337)
+    (61, 32600)
+    (62, 32861)
+    (63, 33121)
+    (64, 58268)
+    (65, 65171)
+    (66, 65422)
+    (67, 69288)
+    (68, 69533)
+    (69, 69775)
+    (70, 70013)
+    (71, 81668)
+    (72, 81899)
+    (73, 96356)
+    (78, 96412)
+    (84, 100000);
+
+  map<char, string> FastqSimulationUtilities::random_insertion_base_options =
+  make_map<char, string>
+    ('A', "TCG")
+    ('T', "ACG")
+    ('C', "ATG")
+    ('G', "ATC");
+
+  char FastqSimulationUtilities::getRandomQualityScore(void)
+  {
+    //Roll between 0 and 99,999.
+    uint32_t random_die = rand() % 100000;
+
+    map<uint32_t, uint32_t>::const_iterator it =
+        qscore_cumulative_probability_table.begin();
+
+    //Iteterate through until random probability is greater then a cumulative
+    //probability in the table.
+    while (random_die >= it->second) {
+      it++;
+    }
+    //Found it! Return as a character.
+    return char(it->first);
+  }
+
+  char FastqSimulationUtilities::getRandomInsertedBase(const char not_this_base)
+  {
+    ASSERT(random_insertion_base_options.count(not_this_base), "Error!");
+
+    return random_insertion_base_options[not_this_base][rand() % 3];
+  }
+
+  bool FastqSimulationUtilities::isRandomInsertion(void)
+  {
+    uint32_t insertion_probability = 10000;
+
+    //Roll between 0 and deletion_probability.
+    return (1 == (rand() % insertion_probability));
+  }
+
+  bool FastqSimulationUtilities::isRandomDeletion(void)
+  {
+    uint32_t deletion_probability = 10000;
+
+    //Roll between 0 and deletion_probability.
+    return (1 == (rand() % deletion_probability));
+  }
+
+  cFastqSequenceVector
+  cFastqSequenceVector::simulateFromSequence(const cSequence &ref_sequence,
+                                             const uint32_t &average_coverage,
+                                             const uint32_t &read_size,
+                                             bool verbose)
+  {
+    //! Step: Initialize return value.
+    const size_t ref_sequence_size = ref_sequence.size();
+    const size_t num_reads =
+        ceil(ref_sequence_size / read_size) * average_coverage;
+
     cFastqSequenceVector ret_val;
     ret_val.resize(num_reads);
 
-    //! Step: Initialize distribution to get quality score samples from.
-    const uint32_t QUALITY_SCORE_OFFSET  = 33;
-    const uint32_t MIN_QUALITY_SCORE  		= 0  + QUALITY_SCORE_OFFSET;
-    const uint32_t MEAN_QUALITY_SCORE 		= 30 + QUALITY_SCORE_OFFSET;
-    const uint32_t MAX_QUALITY_SCORE  		= 40 + QUALITY_SCORE_OFFSET;
-    cPoissonDistribution pd(MEAN_QUALITY_SCORE);
-
-
     //! Step: Initialize seed value for randomly selecting position in ref_sequence.
-    const uint32_t &seed_value = time(NULL);
+    /*Note: Don't initialize seed with time(NULL) in a loop as time() is
+      returned in seconds and we will not get random values as there are many
+      iterations in a loop that can occur in one second. */
+    const uint32_t seed_value = time(NULL);
     srand(seed_value);
-    
-    if(verbose){cout << "CREATING " << num_reads << " READS" << endl;}
 
-    //! Step: Iterate through ret_val and assign name, sequence and quality scores.
+    //! Step: Iterate through ret_val to assign name, sequence and quality scores.
+    if(verbose){cout << "CREATING " << num_reads << " READS" << endl;}
     size_t current_line = 0;
+
+    //Begin assigning simulated reads.
     for (size_t i = 0; i < num_reads; i++) {
-      cFastqSequence &fs = ret_val[i];
-      //Name
-      sprintf(fs.m_name, "READ-%i", ++current_line);
+      cFastqSequence *fs = &ret_val[i];
+
+      //Assign name.
+      sprintf(fs->m_name, "READ-%i", ++current_line);
       
       if(verbose && !(i % 10000) && i){cout << "\tREAD: " << i << endl;}
 
-      //Sequence
+      /*! Algorithm in use:
+
+          1) Grab 2 x read_size segment from a random location in the reference
+            sequence. Randomly determine if this simulated read should be a
+            positive or negative strand and assign the segment accordingly.
+
+            ***Note: We treat the sequence circularly such that if we index
+            bases from past the end of the sequence we will instead start
+            indexing them from the front.
+
+            ***Note: Grab 2x read_size for easier access to the following bases
+            when deletions occur and for the impossible chance that each base
+            is a deletion.
+
+          2) Iterate through this segment.
+
+          3) At each index/base determine if insertion(INS), deletion(DEL) or
+            normal.
+
+             If INS  : Assign a random base other then the one given in segment.
+             If DEL  : Continue on to next base in segment.
+             Normal  : Assign base given in segment.
+
+          4) Assign the base a random quality score which is determine by the
+            qscore_cumulative_probability_table.
+      */
+
+      //Initializations for verbose parameters.
+      bool is_negative_strand = false;
+      cSequence verbose_deletions (read_size, ' ');
+      cSequence verbose_insertions(read_size, ' ');
+      //End verbose parameters.
+
+
+      //! Algorithm Step 1:
       size_t start_pos = rand() % ref_sequence_size;
-      fs.m_sequence = ref_sequence.circular_substr(start_pos, read_size);
-
-      // 50/50 Chance the read is a -/+ strand.
-      if ((rand() % 100) <50) {
-        fs.m_sequence =
-            reverse_complement(ref_sequence.circular_substr(start_pos, read_size));
-      } else {
-        fs.m_sequence = ref_sequence.circular_substr(start_pos, read_size);
+      cSequence ref_segment = ref_sequence.circularSubStr(start_pos, 2 * read_size);
+      // 50% Chance the read is a negative strand.
+      if ((rand() % 100) < 50) {
+        is_negative_strand = true;
+        ref_segment = reverse_complement(ref_segment);
       }
 
-      //Quality scores
-      fs.m_qualities.resize(read_size);
-      for (size_t j = 0; j < read_size; j++) {
-        fs.m_qualities[j] = pd.getSample(MIN_QUALITY_SCORE, MAX_QUALITY_SCORE);
-      }
-    }
+      //! Algorithm Step 2:
+      //Initializations for iterating through bases.
+      fs->m_sequence.resize(read_size);
+      fs->m_qualities.resize(read_size);
+      //Index for bases in the simulated read.
+      size_t index_to_assign = 0;
+      //Index for bases in the reference segment.
+      size_t index_in_ref_segment = 0;
+
+      //Begin assigning bases to simulated read.
+      while (index_to_assign < read_size) {
+
+      //! Algorithm Step 3:
+        //! DEL base.
+        if (FastqSimulationUtilities::isRandomDeletion()) {
+         //For verbose.
+          verbose_deletions[index_in_ref_segment] =
+              ref_segment[index_in_ref_segment];
+          //Continue to next index/base in reference segment.
+          ++index_in_ref_segment;
+          continue;
+        }
+        //! INS base.
+        else if (FastqSimulationUtilities::isRandomInsertion()) {
+          //We want a random base other than this one.
+          char not_this_base = ref_segment[index_in_ref_segment];
+          char new_random_base =
+              FastqSimulationUtilities::getRandomInsertedBase(not_this_base);
+
+          fs->m_sequence[index_to_assign] = new_random_base;
+          //For verbose.
+          verbose_insertions[index_in_ref_segment] = new_random_base;
+        }
+        //! Normal base.
+        else {
+          fs->m_sequence[index_to_assign] = ref_segment[index_in_ref_segment];
+        }
+
+        //! Algorithm Step 4:
+        fs->m_qualities[index_to_assign] =
+            FastqSimulationUtilities::getRandomQualityScore();
+
+        /*We have successfully added a new simulated base and quality score to
+         the read, increment and continue to the next iteration. */
+        ++index_to_assign;
+        ++index_in_ref_segment;
+      } //End assigning bases to simulated read.
+
+      //! Step: Verbose output.
+      if (verbose) {
+        if (!verbose_deletions.isBlank() || !verbose_insertions.isBlank()) {
+          printf("\tVerbose output for simulated read    :  %s\n",
+                 fs->m_name.c_str());
+
+          const string &original =
+              ref_sequence.circularSubStr(start_pos, 2 * read_size);
+          printf("\tReference Segment(2 x Read Size)     :  %s\n",
+                 original.c_str());
+
+          if (is_negative_strand) {
+            printf("\tSimulated negative strand            :  %s\n",
+                   ref_segment.c_str());
+          }
+
+          if (!verbose_deletions.isBlank()) {
+            printf("\tSimulated deletions                  :  %s\n",
+                   verbose_deletions.c_str());
+          }
+
+          if (!verbose_insertions.isBlank()) {
+            printf("\tSimulated insertions                 :  %s\n",
+                   verbose_insertions.c_str());
+          }
+
+          printf("\tFinal simulated read sequence        :  %s\n",
+                   fs->m_sequence.c_str());
+          printf("\tFinal simulated read quality scores  :  %s\n",
+                   fs->m_qualities.c_str());
+          printf("\n");
+        }
+      }//End verbose output.
+
+
+    }//End assigning simulated reads.
     
     if(verbose){cout << "\t**READS Complete**" << endl;}
 
