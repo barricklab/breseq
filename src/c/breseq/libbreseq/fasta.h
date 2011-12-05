@@ -34,14 +34,18 @@ namespace breseq {
   class cSequence : public string
   {
     public:
+      //! Constructors
       cSequence() : string() {}
       cSequence(const string& value) : string(value) {}
+      cSequence(size_t n, const char c) : string(n, c) {}
+
+      //! Public Methods
       inline void operator=(const string &value)
       {
         this->assign(value);
       }
 
-      inline string circular_substr(const size_t &start_pos, const size_t &n_pos) const
+      inline string circularSubStr(const size_t &start_pos, const size_t &n_pos) const
       {
         const size_t  &this_size = this->size();
         const size_t  &max_pos   = start_pos + n_pos;
@@ -56,6 +60,18 @@ namespace breseq {
         }
 
         return ret_val;
+      }
+
+      inline bool isBlank(void)
+      {
+        size_t size = this->size();
+        for (int i = 0; i < size; i++) {
+          if ((*this)[i] != ' ') {
+            return false;
+          }
+        }
+
+        return true;
       }
   };
 
