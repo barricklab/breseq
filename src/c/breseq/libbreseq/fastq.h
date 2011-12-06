@@ -55,11 +55,14 @@ namespace breseq {
 
   namespace FastqSimulationUtilities {
     extern map<uint32_t, uint32_t> qscore_cumulative_probability_table;
-    extern map<char, string> random_insertion_base_options;
+    extern map<char, string> random_snp_base_options;
+    extern char random_insertion_base_options[];
     char getRandomQualityScore(void);
-    char getRandomInsertedBase(const char not_this_base);
-    bool isRandomInsertion(void);
+    char getRandomSNPBase(const char not_this_base);
+    char getRandomInsertionBase(void);
+    bool isRandomSNP(void);
     bool isRandomDeletion(void);
+    bool isRandomInsertion(void);
   }
 
   class cFastqSequenceVector : public vector<cFastqSequence>
