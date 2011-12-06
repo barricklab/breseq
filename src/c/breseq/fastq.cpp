@@ -582,21 +582,21 @@ namespace breseq {
   {
     ASSERT(random_snp_base_options.count(not_this_base), "Error!");
 
-    //Roll between 0 and 3.
+    //Roll from 0 to 2.
     return random_snp_base_options[not_this_base][rand() % 3];
   }
 
   char FastqSimulationUtilities::getRandomInsertionBase(void)
   {
-    //Roll between 0 and 3.
-    return random_insertion_base_options[rand() % 3];
+    //Roll from 0 to 3.
+    return random_insertion_base_options[rand() % 4];
   }
 
   bool FastqSimulationUtilities::isRandomSNP(void)
   {
     const uint32_t snp_probability = 1000;//10E-3
 
-    //Roll between 0 and snp_probability.
+    //Roll from 0 to snp_probability.
     return (1 == (rand() % snp_probability));
   }
 
@@ -604,7 +604,7 @@ namespace breseq {
   {
     const uint32_t deletion_probability = 100000;//10E-5
 
-    //Roll between 0 and deletion_probability.
+    //Roll from 0 to deletion_probability.
     return (1 == (rand() % deletion_probability));
   }
 
@@ -613,7 +613,7 @@ namespace breseq {
     const uint32_t insertion_probability = 100000;//10E-5
 
 
-    //Roll between 0 and insertion_probability.
+    //Roll from 0 to insertion_probability.
     return (1 == (rand() % insertion_probability));
   }
 
