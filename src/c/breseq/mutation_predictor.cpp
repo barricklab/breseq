@@ -47,7 +47,7 @@ namespace breseq {
 		return repeat;
 	}
 
-	bool MutationPredictor::sort_by_hybrid(const counted_ptr<diff_entry>& a, const counted_ptr<diff_entry>& b)
+	bool MutationPredictor::sort_by_hybrid(const counted_ptr<cDiffEntry>& a, const counted_ptr<cDiffEntry>& b)
 	{
     int32_t a_pos = n(a->entry_exists("_side_1_is") ? (*a)["side_2_position"] : (*a)["side_1_position"]);
 		int32_t b_pos = n(b->entry_exists("_side_1_is") ? (*b)["side_2_position"] : (*b)["side_1_position"]);
@@ -70,7 +70,7 @@ namespace breseq {
     return (n((*a)["pos_hash_score"]) > n((*b)["pos_hash_score"]));
   }
 
-	bool MutationPredictor::sort_by_reject_score(const counted_ptr<diff_entry>& a, const counted_ptr<diff_entry>& b)
+	bool MutationPredictor::sort_by_reject_score(const counted_ptr<cDiffEntry>& a, const counted_ptr<cDiffEntry>& b)
 	{
 		uint32_t a_reject_order = a->number_reject_reasons();
 		uint32_t b_reject_order = b->number_reject_reasons();
@@ -84,7 +84,7 @@ namespace breseq {
 
 	// look at SNPs and small indels predicted by read alignments.
 	// be sure they are sorted by position
-	bool MutationPredictor::sort_by_pos(const counted_ptr<diff_entry>& a, const counted_ptr<diff_entry>& b)
+	bool MutationPredictor::sort_by_pos(const counted_ptr<cDiffEntry>& a, const counted_ptr<cDiffEntry>& b)
 	{
 		return (
 			((*a)["seq_id"] != (*b)["seq_id"]) ? ((*a)["seq_id"] < (*b)["seq_id"]) :
@@ -100,7 +100,7 @@ namespace breseq {
 	 Returns :
 
 	*/
-	void MutationPredictor::predict(Settings& settings, genome_diff& gd, uint32_t max_read_length, double avg_read_length)
+	void MutationPredictor::predict(Settings& settings, cGenomeDiff& gd, uint32_t max_read_length, double avg_read_length)
 	{
 		(void)settings; //TODO; unused?
     bool verbose = false; // for debugging
@@ -114,15 +114,15 @@ namespace breseq {
     
     // For all that follows, we need information about repeat_regions overlapping the sides of junctions
     vector<gd_entry_type> jc_types = make_list<gd_entry_type>(JC);
-		diff_entry_list jc = gd.list(jc_types);
+		diff_entry_list_t jc = gd.list(jc_types);
     // Don't count rejected ones at all, this can be relaxed, but it makes MOB 
     // prediction much more complicated and prone to errors.
     
     const int32_t max_distance_to_repeat = 50;
 
-		for (diff_entry_list::iterator jc_it=jc.begin(); jc_it!=jc.end(); jc_it++)
+		for (diff_entry_list_t::iterator jc_it=jc.begin(); jc_it!=jc.end(); jc_it++)
 		{
-			diff_entry& j = **jc_it;
+			cDiffEntry& j = **jc_it;
       
 			j["_side_1_read_side"] = "-1";
 			j["_side_2_read_side"] = "1";
@@ -198,24 +198,24 @@ namespace breseq {
     }
     
     // Now, remove rejected from the list after annotating them.
-    jc.remove_if(diff_entry::field_exists("reject"));
+    jc.remove_if(cDiffEntry::field_exists("reject"));
 
 		///
 		// evidence MC + JC => DEL mutation
 		///
     
     vector<gd_entry_type> mc_types = make_list<gd_entry_type>(MC);
-		diff_entry_list mc = gd.list(mc_types);
-    mc.remove_if(diff_entry::field_exists("reject"));
+		diff_entry_list_t mc = gd.list(mc_types);
+    mc.remove_if(cDiffEntry::field_exists("reject"));
 
 		// DEL prediction:
 		// (1) there is a junction that exactly crosses the deletion boundary deletion
 		// (2) there is is no junction, but both ends of the deletion are in repeat sequences
 		// (3) there is a junction between unique sequence and a repeat element
 
-    for(diff_entry_list::iterator mc_it = mc.begin(); mc_it != mc.end(); mc_it++)
+    for(diff_entry_list_t::iterator mc_it = mc.begin(); mc_it != mc.end(); mc_it++)
     {
-      diff_entry& mc_item = **mc_it;
+      cDiffEntry& mc_item = **mc_it;
       
       if (verbose)
         cout << mc_item << endl;
@@ -224,7 +224,7 @@ namespace breseq {
 			  continue;
 
 			// set up generic deletion item
-			diff_entry mut;
+			cDiffEntry mut;
       mut._type = DEL;
 			mut._evidence = make_list<string>(mc_item._id);
 			mut
@@ -253,9 +253,9 @@ namespace breseq {
       // track of whether or not we should iterate to the next element.
       bool jc_it_iterator = true;
 
-			for(diff_entry_list::iterator jc_it = jc.begin(); jc_it != jc.end(); ) //JC
+			for(diff_entry_list_t::iterator jc_it = jc.begin(); jc_it != jc.end(); ) //JC
 			{
-				diff_entry& jc_item = **jc_it;
+				cDiffEntry& jc_item = **jc_it;
         jc_it_iterator = true;
 
 				if (jc_item["side_1_seq_id"] != mut["seq_id"] || jc_item["side_2_seq_id"] != mut["seq_id"])  {
@@ -376,9 +376,9 @@ namespace breseq {
 			  ? n(mut["position"]) + n(mut["size"])
 			  : n(mut["position"]) - 1;
 
-			for(diff_entry_list::iterator jc_it = jc.begin(); jc_it != jc.end(); jc_it++) //JUNCTION
+			for(diff_entry_list_t::iterator jc_it = jc.begin(); jc_it != jc.end(); jc_it++) //JUNCTION
 			{
-				diff_entry& j = **jc_it;
+				cDiffEntry& j = **jc_it;
         
         if (verbose)
           cout << j << endl;
@@ -456,9 +456,9 @@ namespace breseq {
 		// evidence JC + JC = MOB mutation
 		///
 
-		for(diff_entry_list::iterator it = jc.begin(); it != jc.end(); it++) //JC
+		for(diff_entry_list_t::iterator it = jc.begin(); it != jc.end(); it++) //JC
 		{
-			diff_entry& j = **it;
+			cDiffEntry& j = **it;
 		
 			// Junction isn't near an IS. Move on.
 			if (!j.entry_exists("_is_interval")) continue;
@@ -488,19 +488,19 @@ namespace breseq {
 
 		jc.sort(MutationPredictor::sort_by_hybrid);
 
-    for(diff_entry_list::iterator jc1_it = jc.begin(); jc1_it != jc.end(); jc1_it++) //JC1
+    for(diff_entry_list_t::iterator jc1_it = jc.begin(); jc1_it != jc.end(); jc1_it++) //JC1
 		{
-			diff_entry& j1 = **jc1_it;
+			cDiffEntry& j1 = **jc1_it;
       
 			// Compile a list of the next possibilities within a certain length of bases
-      vector<diff_entry_ptr> j2_list;
-			vector<diff_entry_list::iterator> it_delete_list_2;
+      vector<diff_entry_ptr_t> j2_list;
+			vector<diff_entry_list_t::iterator> it_delete_list_2;
       
       // start looking at the next JC entry
-      diff_entry_list::iterator jc2_it = jc1_it;
+      diff_entry_list_t::iterator jc2_it = jc1_it;
       for(jc2_it++ ; jc2_it != jc.end(); jc2_it++) //JC2
 			{
-				diff_entry& j2 = **jc2_it;
+				cDiffEntry& j2 = **jc2_it;
         
 				// must be close together in real coords
 				if ( (j1[j1["_unique_interval"] + "_seq_id"] != j2[j2["_unique_interval"] + "_seq_id"])
@@ -525,7 +525,7 @@ namespace breseq {
 			// because sometimes a failed junction will be in between the successful junctions
       for(size_t i=0; i<j2_list.size(); i++)
 			{
-				diff_entry& j2 = *(j2_list[i]);
+				cDiffEntry& j2 = *(j2_list[i]);
 
         if (verbose) 
         {
@@ -560,7 +560,7 @@ namespace breseq {
 				jc.erase(it_delete_list_2[i]);
 
 				// Create the mutation, with evidence
-				diff_entry mut;
+				cDiffEntry mut;
         mut._type = MOB;
 				mut._evidence.push_back(j1._id);
 				mut._evidence.push_back(j2._id);
@@ -915,9 +915,9 @@ namespace breseq {
 		///
 		// evidence JC => INS, SUB, AMP mutations
 		///
-    for(diff_entry_list::iterator jc_it = jc.begin(); jc_it != jc.end(); jc_it++) //JC
+    for(diff_entry_list_t::iterator jc_it = jc.begin(); jc_it != jc.end(); jc_it++) //JC
 		{
-			diff_entry& j = **jc_it;
+			cDiffEntry& j = **jc_it;
 
       //cout << j["side_1_seq_id"] << " " << j["side_2_seq_id"] << endl;
       //cout << j["side_1_strand"] << " " << j["side_2_strand"] << endl;
@@ -970,7 +970,7 @@ namespace breseq {
         
 				if (size < 0) // this is a deletion!
         {
-          diff_entry mut;
+          cDiffEntry mut;
           mut._type = DEL;
           mut
           ("seq_id", seq_id)
@@ -982,7 +982,7 @@ namespace breseq {
         } 
         else // this is an amplification.		
         {		
-          diff_entry mut;		
+          cDiffEntry mut;		
           mut._type = AMP;		
           mut		
           ("seq_id", seq_id)		
@@ -1008,7 +1008,7 @@ namespace breseq {
 					);
 				}
 
-				diff_entry mut;
+				cDiffEntry mut;
         mut._type = SUB;
 				mut
 					("seq_id", seq_id)
@@ -1032,7 +1032,7 @@ namespace breseq {
         
         if (j["unique_read_sequence"] == dup_check_seq)
         {
-          diff_entry mut;
+          cDiffEntry mut;
           mut._type = AMP;
           mut
           ("seq_id", seq_id)
@@ -1045,7 +1045,7 @@ namespace breseq {
         }
         else
         {
-          diff_entry mut;
+          cDiffEntry mut;
           mut._type = INS;
           mut
             ("seq_id", seq_id)
@@ -1064,7 +1064,7 @@ namespace breseq {
 		///
     
     vector<gd_entry_type> ra_types = make_list<gd_entry_type>(RA);
-    diff_entry_list ra = gd.list(ra_types);
+    diff_entry_list_t ra = gd.list(ra_types);
 
 		///
 		// Ignore RA that overlap DEL or MC
@@ -1074,18 +1074,18 @@ namespace breseq {
 		{
       vector<gd_entry_type> del_types = make_list<gd_entry_type>(DEL);
       vector<gd_entry_type> mc_types = make_list<gd_entry_type>(MC);
-			diff_entry_list del = gd.list(del_types);
-      diff_entry_list mc = gd.list(mc_types);
+			diff_entry_list_t del = gd.list(del_types);
+      diff_entry_list_t mc = gd.list(mc_types);
 
-      for(diff_entry_list::iterator ra_it = ra.begin(); ra_it != ra.end(); ra_it++) //RA
+      for(diff_entry_list_t::iterator ra_it = ra.begin(); ra_it != ra.end(); ra_it++) //RA
       {
-        diff_entry& ra_item = **ra_it;
+        cDiffEntry& ra_item = **ra_it;
 
 				bool next_ra = false;
         
-        for(diff_entry_list::iterator del_it = del.begin(); del_it != del.end(); del_it++) //DEL
+        for(diff_entry_list_t::iterator del_it = del.begin(); del_it != del.end(); del_it++) //DEL
         {
-          diff_entry& del_item = **del_it;
+          cDiffEntry& del_item = **del_it;
 
 					if (ra_item["seq_id"] != del_item["seq_id"])
 						continue;
@@ -1100,9 +1100,9 @@ namespace breseq {
 				}
 				if (next_ra) continue;
 
-        for(diff_entry_list::iterator mc_it = mc.begin(); mc_it != mc.end(); mc_it++) //MC
+        for(diff_entry_list_t::iterator mc_it = mc.begin(); mc_it != mc.end(); mc_it++) //MC
         {
-          diff_entry& mc_item = **mc_it;
+          cDiffEntry& mc_item = **mc_it;
 
 					if (ra_item["seq_id"] != mc_item["seq_id"]) continue;
 
@@ -1117,7 +1117,7 @@ namespace breseq {
 		}
     
     // Don't use rejected evidence
-    ra.remove_if(diff_entry::field_exists("reject"));
+    ra.remove_if(cDiffEntry::field_exists("reject"));
 
 		ra.sort(MutationPredictor::sort_by_pos);
 
@@ -1127,13 +1127,13 @@ namespace breseq {
 		///
 
 		bool first_time = true;
-		diff_entry mut;
-		vector<diff_entry> muts;
+		cDiffEntry mut;
+		vector<cDiffEntry> muts;
 
     
-    for(diff_entry_list::iterator ra_it = ra.begin(); ra_it != ra.end(); ra_it++) //RA
+    for(diff_entry_list_t::iterator ra_it = ra.begin(); ra_it != ra.end(); ra_it++) //RA
     {
-      diff_entry& item = **ra_it;
+      cDiffEntry& item = **ra_it;
 
 			if ( item.entry_exists("reject") || item.entry_exists("deleted"))
 			  continue;
@@ -1156,7 +1156,7 @@ namespace breseq {
 			{
 				if (!first_time) muts.push_back(mut);
 				first_time = false;
-				diff_entry new_mut;
+				cDiffEntry new_mut;
 				new_mut._evidence = make_list<string>(item._id);
 				new_mut
 					("seq_id", item["seq_id"])

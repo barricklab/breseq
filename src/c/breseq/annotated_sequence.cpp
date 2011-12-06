@@ -1625,7 +1625,7 @@ char cReferenceSequences::translate(string seq)
   return (translation_table_11.count(seq) == 0) ? '?' : translation_table_11[seq];
 }
 
-void cReferenceSequences::annotate_1_mutation(diff_entry& mut, uint32_t start, uint32_t end, bool repeat_override, bool ignore_pseudogenes)
+void cReferenceSequences::annotate_1_mutation(cDiffEntry& mut, uint32_t start, uint32_t end, bool repeat_override, bool ignore_pseudogenes)
 {
   // this could be moved to the object
   string intergenic_seperator = "/";
@@ -1847,7 +1847,7 @@ void cReferenceSequences::annotate_1_mutation(diff_entry& mut, uint32_t start, u
   }
 }
 
-void cReferenceSequences::annotate_mutations(genome_diff& gd, bool only_muts, bool ignore_pseudogenes)
+void cReferenceSequences::annotate_mutations(cGenomeDiff& gd, bool only_muts, bool ignore_pseudogenes)
 {
   //keep track of other mutations that affect SNPs
   //because we may double-hit a codon
@@ -1858,10 +1858,10 @@ void cReferenceSequences::annotate_mutations(genome_diff& gd, bool only_muts, bo
   // so that the codon will be correctly updated with all changes and we can notify the
   // changes that their SNP_type is not really SNP, but multiple hit SNP.
 
-  diff_entry_list muts = gd.show_list();
-  for (diff_entry_list::iterator it=muts.begin(); it!=muts.end(); it++)
+  diff_entry_list_t muts = gd.show_list();
+  for (diff_entry_list_t::iterator it=muts.begin(); it!=muts.end(); it++)
   {
-    diff_entry& mut= **it;
+    cDiffEntry& mut= **it;
 
     if (only_muts && !(mut.is_mutation())) continue;
 
@@ -1908,7 +1908,7 @@ void cReferenceSequences::annotate_mutations(genome_diff& gd, bool only_muts, bo
       } break;
         
       case JC:{
-        diff_entry side_1;
+        cDiffEntry side_1;
         side_1[SEQ_ID] = mut["side_1_seq_id"];
         annotate_1_mutation(side_1, from_string<int32_t>(mut["side_1_position"]), from_string<int32_t>(mut["side_1_position"]), true);
         //copy over entries with prefix
@@ -1917,7 +1917,7 @@ void cReferenceSequences::annotate_mutations(genome_diff& gd, bool only_muts, bo
           mut["_side_1"+ it->first] = it->second;
         }
         
-        diff_entry side_2;
+        cDiffEntry side_2;
         side_2[SEQ_ID] = mut["side_2_seq_id"];
         annotate_1_mutation(side_2, from_string<int32_t>(mut["side_2_position"]), from_string<int32_t>(mut["side_2_position"]), true);
         //copy over entries with prefix
@@ -2022,8 +2022,8 @@ void cReferenceSequences::polymorphism_statistics(Settings& settings, Summary& s
   string polymorphism_statistics_output_file_name = settings.polymorphism_statistics_output_file_name;
 
   /// Load the older GenomeDiff and add new fields
-  string ra_mc_genome_diff_file_name = settings.ra_mc_genome_diff_file_name;
-  genome_diff gd(ra_mc_genome_diff_file_name);
+  string ra_mc_cGenomeDiff_file_name = settings.ra_mc_cGenomeDiff_file_name;
+  cGenomeDiff gd(ra_mc_cGenomeDiff_file_name);
 
   string polymorphism_statistics_r_script_file_name = settings.polymorphism_statistics_r_script_file_name;
   string polymorphism_statistics_r_script_log_file_name = settings.polymorphism_statistics_r_script_log_file_name;
@@ -2040,12 +2040,12 @@ void cReferenceSequences::polymorphism_statistics(Settings& settings, Summary& s
   //chomp $header;
   vector<string> header_list = split(header, "\t");
 
-  genome_diff new_gd;
+  cGenomeDiff new_gd;
 
-  diff_entry_list muts = gd.evidence_list();
-  for (diff_entry_list::iterator it=muts.begin(); it!=muts.end(); it++)
+  diff_entry_list_t muts = gd.evidence_list();
+  for (diff_entry_list_t::iterator it=muts.begin(); it!=muts.end(); it++)
   {
-    diff_entry& mut= **it;
+    cDiffEntry& mut= **it;
 
     // lines only exist for RA evidence
     if (mut._type != RA)
@@ -2154,8 +2154,8 @@ void cReferenceSequences::polymorphism_statistics(Settings& settings, Summary& s
   ROUT.close();
 
   /// Write out the file which now has much more data
-  string polymorphism_statistics_ra_mc_genome_diff_file_name = settings.polymorphism_statistics_ra_mc_genome_diff_file_name;
-  new_gd.write(polymorphism_statistics_ra_mc_genome_diff_file_name);
+  string polymorphism_statistics_ra_mc_cGenomeDiff_file_name = settings.polymorphism_statistics_ra_mc_cGenomeDiff_file_name;
+  new_gd.write(polymorphism_statistics_ra_mc_cGenomeDiff_file_name);
 
 }
 

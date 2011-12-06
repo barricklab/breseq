@@ -567,7 +567,7 @@ void identify_mutations_pileup::pileup_callback(const pileup& p) {
 		//## Create new RA evidence mutation for genome diff
 		//###		
     
-    diff_entry mut(RA);
+    cDiffEntry mut(RA);
     
 		//## Fields common to consensus mutations and polymorphisms
 		mut[SEQ_ID] = p.target_name();
@@ -726,7 +726,7 @@ void identify_mutations_pileup::at_target_end(const uint32_t tid) {
   // if the propagation cutoff is zero then the coverage distribution failed
   if (_this_deletion_propagation_cutoff < 0.0)
   {
-    diff_entry del(MC);
+    cDiffEntry del(MC);
     del[SEQ_ID] = target_name(tid);
     
     del[START] = to_string<uint32_t>(1);
@@ -828,7 +828,7 @@ void identify_mutations_pileup::check_deletion_completion(uint32_t position, uin
       if (_last_deletion_redundant_end_position == UNDEFINED_UINT32) _last_deletion_redundant_end_position = _last_deletion_end_position;
       if (_last_deletion_redundant_start_position == UNDEFINED_UINT32) _last_deletion_redundant_start_position = _last_deletion_start_position;
 
-      diff_entry del(MC);
+      cDiffEntry del(MC);
 			del[SEQ_ID] = target_name(seq_id);
 			del[START] = to_string<uint32_t>(_last_deletion_start_position);
 			del[END] = to_string<uint32_t>(_last_deletion_end_position);
@@ -885,7 +885,7 @@ void identify_mutations_pileup::update_unknown_intervals(uint32_t position, uint
 			
 		//#end interval where we were unable to call mutations
 		if(_last_start_unknown_interval != UNDEFINED_UINT32) {
-      diff_entry new_interval(UN);
+      cDiffEntry new_interval(UN);
 			new_interval[SEQ_ID] = target_name(seq_id);
 			new_interval[START] = to_string<uint32_t>(_last_start_unknown_interval);
 			new_interval[END] = to_string<uint32_t>(position - 1);

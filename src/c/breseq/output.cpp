@@ -187,7 +187,7 @@ string javascript_string()
 
 
 void html_index(const string& file_name, const Settings& settings, Summary& summary,
-                cReferenceSequences& ref_seq_info, genome_diff& gd)
+                cReferenceSequences& ref_seq_info, cGenomeDiff& gd)
 {
   (void)summary; //TODO: unused?
   
@@ -207,7 +207,7 @@ void html_index(const string& file_name, const Settings& settings, Summary& summ
 // #   ## Mutation predictions
 // #   ###
   HTML << "<!--Mutation Predictions -->" << endl;
-  diff_entry_list muts = gd.show_list(make_list<gd_entry_type>(SNP)(INS)(DEL)(SUB)(MOB)(AMP));
+  diff_entry_list_t muts = gd.show_list(make_list<gd_entry_type>(SNP)(INS)(DEL)(SUB)(MOB)(AMP));
   
   string relative_path = settings.local_evidence_path;
   
@@ -230,22 +230,22 @@ void html_index(const string& file_name, const Settings& settings, Summary& summ
 // #   ## Unassigned evidence
 // #   ###
   
-  diff_entry_list mc = gd.filter_used_as_evidence(gd.show_list(make_list<gd_entry_type>(MC)));
-  mc.remove_if(diff_entry::rejected()); 
+  diff_entry_list_t mc = gd.filter_used_as_evidence(gd.show_list(make_list<gd_entry_type>(MC)));
+  mc.remove_if(cDiffEntry::rejected()); 
 
   if (mc.size() > 0) {
     HTML << "<p>" << html_missing_coverage_table_string(mc, false, "Unassigned missing coverage evidence", relative_path);
   }
 
-  diff_entry_list jc = gd.filter_used_as_evidence(gd.show_list(make_list<gd_entry_type>(JC)));
-  jc.remove_if(diff_entry::rejected()); 
+  diff_entry_list_t jc = gd.filter_used_as_evidence(gd.show_list(make_list<gd_entry_type>(JC)));
+  jc.remove_if(cDiffEntry::rejected()); 
 
   //Don't show junctions for circular chromosomes
   if (settings.hide_circular_genome_junctions) {
-    jc.remove_if(diff_entry::field_exists("circular_chromosome")); 
+    jc.remove_if(cDiffEntry::field_exists("circular_chromosome")); 
   }
    
-  diff_entry_list jcu = jc;
+  diff_entry_list_t jcu = jc;
   if (jcu.size() > 0) {
     HTML << "<p>" << endl;
     HTML << html_new_junction_table_string(jcu, false, "Unassigned new junction evidence...", relative_path);
@@ -260,7 +260,7 @@ void html_index(const string& file_name, const Settings& settings, Summary& summ
 
 
 void html_marginal_predictions(const string& file_name, const Settings& settings,Summary& summary,
-                               cReferenceSequences& ref_seq_info, genome_diff& gd)
+                               cReferenceSequences& ref_seq_info, cGenomeDiff& gd)
 {
   (void)summary; //TODO: unused?
   
@@ -292,7 +292,7 @@ void html_marginal_predictions(const string& file_name, const Settings& settings
   // ###
   // ## Marginal evidence
   // ###
-  diff_entry_list ra = gd.filter_used_as_evidence(gd.show_list(make_list<gd_entry_type>(RA)));
+  diff_entry_list_t ra = gd.filter_used_as_evidence(gd.show_list(make_list<gd_entry_type>(RA)));
   
   if (ra.size() > 0) {
     HTML << "<p>" << endl;
@@ -300,11 +300,11 @@ void html_marginal_predictions(const string& file_name, const Settings& settings
       relative_path) << endl;
   }
   
-    diff_entry_list jc = gd.filter_used_as_evidence(gd.show_list(make_list<gd_entry_type>(JC)));
-    jc.remove_if(not1(diff_entry::field_exists("reject")));
+    diff_entry_list_t jc = gd.filter_used_as_evidence(gd.show_list(make_list<gd_entry_type>(JC)));
+    jc.remove_if(not1(cDiffEntry::field_exists("reject")));
    if (jc.size()) {
      //Sort by score, not by position (the default order)...
-     jc.sort(diff_entry::by_scores(
+     jc.sort(cDiffEntry::by_scores(
        make_list<diff_entry_key_t>("pos_hash_score")("total_non_overlap_reads"))); 
     
      HTML << "<p>" << endl;
@@ -345,7 +345,7 @@ string html_header (const string& title, const Settings& settings)
 
 
 
-void html_compare(Settings& settings,const string &file_name, const string &title, genome_diff& gd,
+void html_compare(Settings& settings,const string &file_name, const string &title, cGenomeDiff& gd,
                   bool one_ref_seq, vector<string>& gd_name_list_ref, Options& options)
 {
   // Create stream and confirm it's open
@@ -365,14 +365,14 @@ void html_compare(Settings& settings,const string &file_name, const string &titl
   HTML << "</style>" << endl;
   HTML << "</head>" << endl;
   
-  diff_entry_list muts = gd.mutation_list();
+  diff_entry_list_t muts = gd.mutation_list();
 
   HTML << Html_Mutation_Table_String(settings, gd, muts, gd_name_list_ref, options, false, one_ref_seq, "");
   HTML << "</html>";
   HTML.close();
 }
 
-void html_compare_polymorphisms(Settings& settings, const string& file_name, const string& title, diff_entry_list& list_ref)
+void html_compare_polymorphisms(Settings& settings, const string& file_name, const string& title, diff_entry_list_t& list_ref)
 {
   (void)settings; //TODO: unused?
 
@@ -696,7 +696,7 @@ string breseq_header_string(const Settings& settings)
   ss << " | " << endl;
   ss << a(Settings::relative_path(settings.summary_html_file_name, settings.output_path), "summary statistics");
   ss << " | " << endl;
-  ss << a(Settings::relative_path(settings.final_genome_diff_file_name, settings.output_path), "genome diff");
+  ss << a(Settings::relative_path(settings.final_cGenomeDiff_file_name, settings.output_path), "genome diff");
   ss << " | " << endl;
   ss << a(Settings::relative_path(settings.log_file_name, settings.output_path), "command line log");
   ss << endl;
@@ -705,11 +705,11 @@ string breseq_header_string(const Settings& settings)
 }
 
 
-string html_genome_diff_item_table_string(const Settings& settings, genome_diff& gd, diff_entry_list& list_ref)
+string html_cGenomeDiff_item_table_string(const Settings& settings, cGenomeDiff& gd, diff_entry_list_t& list_ref)
 {
   if(list_ref.empty()) return "";
 
-  diff_entry& first_item = *list_ref.front();
+  cDiffEntry& first_item = *list_ref.front();
   //mutation
   if(first_item.is_mutation())
   {
@@ -737,7 +737,7 @@ string html_genome_diff_item_table_string(const Settings& settings, genome_diff&
 /*-----------------------------------------------------------------------------
  *  FORMATTED_MUTATION_ANNOTATION
  *-----------------------------------------------------------------------------*/
-string formatted_mutation_annotation(const diff_entry& mut)
+string formatted_mutation_annotation(const cDiffEntry& mut)
 {
   stringstream ss;
   
@@ -760,7 +760,7 @@ string formatted_mutation_annotation(const diff_entry& mut)
 /*-----------------------------------------------------------------------------
  *  Helper function for formatted_mutation_annotation
  *-----------------------------------------------------------------------------*/
-string to_underline_red_codon(const diff_entry& mut, const string& codon_key)
+string to_underline_red_codon(const cDiffEntry& mut, const string& codon_key)
 {
   if (!mut.entry_exists(codon_key) || 
       !mut.entry_exists("codon_position") ||
@@ -785,7 +785,7 @@ string to_underline_red_codon(const diff_entry& mut, const string& codon_key)
   return ss.str();
 }
 
-string html_read_alignment_table_string(diff_entry_list& list_ref, bool show_reject_reason, const string& title, const string& relative_link)
+string html_read_alignment_table_string(diff_entry_list_t& list_ref, bool show_reject_reason, const string& title, const string& relative_link)
 {
   stringstream ss; //!< Main build object for function
   stringstream ssf; //!< Used for formatting strings
@@ -827,9 +827,9 @@ string html_read_alignment_table_string(diff_entry_list& list_ref, bool show_rej
   ss << "</tr>" << endl;
   
   //Loop through list_ref to build table rows
-  for (diff_entry_list::iterator itr = list_ref.begin();
+  for (diff_entry_list_t::iterator itr = list_ref.begin();
        itr != list_ref.end(); itr ++) {  
-    diff_entry& c = **itr;
+    cDiffEntry& c = **itr;
     
     bool is_polymorphism = false;
     if (c.entry_exists(FREQUENCY) && (from_string<double>(c[FREQUENCY]) != 1.0)) {
@@ -973,7 +973,7 @@ string html_read_alignment_table_string(diff_entry_list& list_ref, bool show_rej
   return ss.str();
 }
 
-string html_missing_coverage_table_string(diff_entry_list& list_ref, bool show_reject_reason, const string& title, const string& relative_link)
+string html_missing_coverage_table_string(diff_entry_list_t& list_ref, bool show_reject_reason, const string& title, const string& relative_link)
 {
   ASSERT(list_ref.front().get(), "No items in table");
   
@@ -1015,9 +1015,9 @@ string html_missing_coverage_table_string(diff_entry_list& list_ref, bool show_r
   ss << th("width=\"100%\"", "description") << endl;
   ss << "</tr>" << endl;
 
-  for (diff_entry_list::iterator itr = list_ref.begin(); itr != list_ref.end(); itr ++) 
+  for (diff_entry_list_t::iterator itr = list_ref.begin(); itr != list_ref.end(); itr ++) 
   {  
-    diff_entry& c =  **itr;
+    cDiffEntry& c =  **itr;
 
     ss << "<tr>" << endl;
     if (link) 
@@ -1087,10 +1087,10 @@ string html_missing_coverage_table_string(diff_entry_list& list_ref, bool show_r
   return ss.str();
 }
 
-string html_new_junction_table_string(diff_entry_list& list_ref, bool show_reject_reason, const string& title, const string& relative_link)
+string html_new_junction_table_string(diff_entry_list_t& list_ref, bool show_reject_reason, const string& title, const string& relative_link)
 {
   stringstream ss; //!<< Main Build Object for Function
-  diff_entry& test_item = *list_ref.front();
+  cDiffEntry& test_item = *list_ref.front();
 
   bool link = (test_item.entry_exists(_SIDE_1_EVIDENCE_FILE_NAME) &&
                test_item.entry_exists(_SIDE_2_EVIDENCE_FILE_NAME) &&
@@ -1134,9 +1134,9 @@ string html_new_junction_table_string(diff_entry_list& list_ref, bool show_rejec
 // #   ## the rows in this table are linked (same background color for every two)
   uint32_t row_bg_color_index = 0; 
    
-  for (diff_entry_list::iterator itr = list_ref.begin(); itr != list_ref.end(); itr ++) 
+  for (diff_entry_list_t::iterator itr = list_ref.begin(); itr != list_ref.end(); itr ++) 
   {  
-    diff_entry& c = **itr;
+    cDiffEntry& c = **itr;
 // #     ##############
 // #     ### Side 1 ###
 // #     ##############
@@ -1221,7 +1221,7 @@ string html_new_junction_table_string(diff_entry_list& list_ref, bool show_rejec
   ss << "</tr>\n" << endl;
 
   if (show_reject_reason && c.entry_exists("reject")) {
-    genome_diff gd;
+    cGenomeDiff gd;
 
     vector<string> reject_reasons = c.get_reject_reasons();
     
@@ -1316,7 +1316,7 @@ string decode_reject_reason(const string& reject)
  *  Description:  
  * =====================================================================================
  */
-Evidence_Files::Evidence_Files(const Settings& settings, genome_diff& gd)
+Evidence_Files::Evidence_Files(const Settings& settings, cGenomeDiff& gd)
 {  
   // Fasta and BAM files for making alignments.
   string reference_bam_file_name = settings.reference_bam_file_name;
@@ -1328,15 +1328,15 @@ Evidence_Files::Evidence_Files(const Settings& settings, genome_diff& gd)
 
   
   // We make alignments of two regions for deletions: upstream and downstream edges.
-  diff_entry_list items_MC = gd.show_list(make_list<gd_entry_type>(MC));
+  diff_entry_list_t items_MC = gd.show_list(make_list<gd_entry_type>(MC));
   //cerr << "Number of MC evidence items: " << items_MC.size() << endl;
 
   
-  for (diff_entry_list::iterator itr = items_MC.begin(); itr != items_MC.end(); itr ++) 
+  for (diff_entry_list_t::iterator itr = items_MC.begin(); itr != items_MC.end(); itr ++) 
   {  
-    diff_entry_ptr item(*itr);
+    diff_entry_ptr_t item(*itr);
      
-    diff_entry_ptr parent_item(gd.parent(*item));
+    diff_entry_ptr_t parent_item(gd.parent(*item));
     if (parent_item.get() == NULL)
       parent_item = *itr;
 
@@ -1378,13 +1378,13 @@ Evidence_Files::Evidence_Files(const Settings& settings, genome_diff& gd)
   
   
   
-  diff_entry_list items_SNP_INS_DEL_SUB = gd.show_list(make_list<gd_entry_type>(SNP)(INS)(DEL)(SUB));
+  diff_entry_list_t items_SNP_INS_DEL_SUB = gd.show_list(make_list<gd_entry_type>(SNP)(INS)(DEL)(SUB));
   //cerr << "Number of SNP_INS_DEL_SUB evidence items: " << items_SNP_INS_DEL_SUB.size() << endl;
 
-  for (diff_entry_list::iterator itr = items_SNP_INS_DEL_SUB.begin(); itr != items_SNP_INS_DEL_SUB.end(); itr ++) 
+  for (diff_entry_list_t::iterator itr = items_SNP_INS_DEL_SUB.begin(); itr != items_SNP_INS_DEL_SUB.end(); itr ++) 
   {  
-    diff_entry_ptr item = *itr;
-    diff_entry_list mutation_evidence_list = gd.mutation_evidence_list(*item);
+    diff_entry_ptr_t item = *itr;
+    diff_entry_list_t mutation_evidence_list = gd.mutation_evidence_list(*item);
 
     // #this reconstructs the proper columns to draw
     uint32_t start = from_string<uint32_t>((*item)[POSITION]);
@@ -1400,9 +1400,9 @@ Evidence_Files::Evidence_Files(const Settings& settings, genome_diff& gd)
     else if (item->_type == DEL) 
     {
       bool has_ra_evidence = false;
-      for (diff_entry_list::iterator itr = mutation_evidence_list.begin(); itr != mutation_evidence_list.end(); itr ++) 
+      for (diff_entry_list_t::iterator itr = mutation_evidence_list.begin(); itr != mutation_evidence_list.end(); itr ++) 
       {  
-        diff_entry& evidence_item = **itr;
+        cDiffEntry& evidence_item = **itr;
         if (evidence_item._type == RA) has_ra_evidence = true;
       }
       if(!has_ra_evidence) continue;  
@@ -1430,9 +1430,9 @@ Evidence_Files::Evidence_Files(const Settings& settings, genome_diff& gd)
 
 
     // Add evidence to RA items as well
-    for (diff_entry_list::iterator itr = mutation_evidence_list.begin(); itr != mutation_evidence_list.end(); itr ++) 
+    for (diff_entry_list_t::iterator itr = mutation_evidence_list.begin(); itr != mutation_evidence_list.end(); itr ++) 
     {  
-      diff_entry& evidence_item = **itr;
+      cDiffEntry& evidence_item = **itr;
       if (evidence_item._type != RA) continue;
       evidence_item[_EVIDENCE_FILE_NAME] = (*item)[_EVIDENCE_FILE_NAME];  
     }
@@ -1442,12 +1442,12 @@ Evidence_Files::Evidence_Files(const Settings& settings, genome_diff& gd)
   
   
   // Still create files for RA evidence that was not good enough to predict a mutation from
-  diff_entry_list items_RA = gd.filter_used_as_evidence(gd.show_list(make_list<gd_entry_type>(RA)));
+  diff_entry_list_t items_RA = gd.filter_used_as_evidence(gd.show_list(make_list<gd_entry_type>(RA)));
   //cerr << "Number of RA evidence items: " << items_RA.size() << endl;
 
-  for (diff_entry_list::iterator itr = items_RA.begin(); itr != items_RA.end(); itr ++) 
+  for (diff_entry_list_t::iterator itr = items_RA.begin(); itr != items_RA.end(); itr ++) 
   {  
-    diff_entry_ptr item = *itr;
+    diff_entry_ptr_t item = *itr;
 
     add_evidence(_EVIDENCE_FILE_NAME,
                  item,
@@ -1467,14 +1467,14 @@ Evidence_Files::Evidence_Files(const Settings& settings, genome_diff& gd)
   // positions and overlap: alignment_pos and alignment_overlap.
   
   
-  diff_entry_list items_JC = gd.show_list(make_list<gd_entry_type>(JC));
+  diff_entry_list_t items_JC = gd.show_list(make_list<gd_entry_type>(JC));
   //cerr << "Number of JC evidence items: " << items_JC.size() << endl;
 
-  for (diff_entry_list::iterator itr = items_JC.begin(); itr != items_JC.end(); itr ++) 
+  for (diff_entry_list_t::iterator itr = items_JC.begin(); itr != items_JC.end(); itr ++) 
   {  
-    diff_entry_ptr item = *itr;
+    diff_entry_ptr_t item = *itr;
 
-    diff_entry_ptr parent_item(gd.parent(*item));
+    diff_entry_ptr_t parent_item(gd.parent(*item));
     if (parent_item.get() == NULL)
       parent_item = *itr;
 
@@ -1602,8 +1602,8 @@ string Evidence_Files::html_evidence_file_name(Evidence_Item& evidence_item)
 }
   
   
-void Evidence_Files::add_evidence(const string& evidence_file_name_key, diff_entry_ptr item,
-                                  diff_entry_ptr parent_item, diff_entry_map_t& fields)
+void Evidence_Files::add_evidence(const string& evidence_file_name_key, diff_entry_ptr_t item,
+                                  diff_entry_ptr_t parent_item, diff_entry_map_t& fields)
 {
   Evidence_Item evidence_item(fields, item, parent_item);
   evidence_item[FILE_NAME] = html_evidence_file_name(evidence_item);
@@ -1642,7 +1642,7 @@ string Evidence_Files::file_name(Evidence_Item& evidence_item)
 void 
 Evidence_Files::html_evidence_file (
                     const Settings& settings, 
-                    genome_diff& gd, 
+                    cGenomeDiff& gd, 
                     Evidence_Item& item
                    )
 {  
@@ -1662,25 +1662,25 @@ Evidence_Files::html_evidence_file (
   // print a table for the main item
   // followed by auxiliary tables for each piece of evidence
 
-  diff_entry_ptr parent_item = item.parent_item;
-  diff_entry_list parent_list;
+  diff_entry_ptr_t parent_item = item.parent_item;
+  diff_entry_list_t parent_list;
   parent_list.push_back(parent_item);
-  HTML << html_genome_diff_item_table_string(settings, gd, parent_list);
+  HTML << html_cGenomeDiff_item_table_string(settings, gd, parent_list);
   HTML << "<p>";
   
-  diff_entry_list evidence_list = gd.mutation_evidence_list(*parent_item);
+  diff_entry_list_t evidence_list = gd.mutation_evidence_list(*parent_item);
 
   vector<gd_entry_type> types = make_list<gd_entry_type>(RA)(MC)(JC);
   
   for (vector<gd_entry_type>::iterator itr = types.begin(); itr != types.end(); itr ++)
   {  
     const gd_entry_type type = *itr;
-    diff_entry_list this_evidence_list = evidence_list;
-    this_evidence_list.remove_if(diff_entry::is_not_type(type));   
+    diff_entry_list_t this_evidence_list = evidence_list;
+    this_evidence_list.remove_if(cDiffEntry::is_not_type(type));   
     
     if(this_evidence_list.empty()) continue;
 
-    HTML << html_genome_diff_item_table_string(settings, gd, this_evidence_list);
+    HTML << html_cGenomeDiff_item_table_string(settings, gd, this_evidence_list);
     HTML << "<p>"; 
   }
   
@@ -1731,7 +1731,7 @@ Evidence_Files::html_evidence_file (
  *  //End Create_Evidence_Files
  *-----------------------------------------------------------------------------*/
 
-void draw_coverage(Settings& settings, cReferenceSequences& ref_seq_info, genome_diff& gd)
+void draw_coverage(Settings& settings, cReferenceSequences& ref_seq_info, cGenomeDiff& gd)
 {  
   coverage_output co(
                      settings.reference_bam_file_name, 
@@ -1757,10 +1757,10 @@ void draw_coverage(Settings& settings, cReferenceSequences& ref_seq_info, genome
   
   // Zoom-in plots of individual deletions
   vector<gd_entry_type> mc_types = make_list<gd_entry_type>(MC);
-	diff_entry_list mc = gd.show_list(mc_types);
-  for (diff_entry_list::iterator it=mc.begin(); it!=mc.end(); it++)
+	diff_entry_list_t mc = gd.show_list(mc_types);
+  for (diff_entry_list_t::iterator it=mc.begin(); it!=mc.end(); it++)
   {
-    diff_entry_ptr& item = *it;
+    diff_entry_ptr_t& item = *it;
     uint32_t start = from_string<uint32_t>((*item)[START]);
     uint32_t end = from_string<uint32_t>((*item)[END]);
     uint32_t size = end - start + 1;
@@ -1788,8 +1788,8 @@ void draw_coverage(Settings& settings, cReferenceSequences& ref_seq_info, genome
  */
 Html_Mutation_Table_String::Html_Mutation_Table_String(
                                                        const Settings& settings,
-                                                       genome_diff& gd,
-                                                       diff_entry_list& list_ref,
+                                                       cGenomeDiff& gd,
+                                                       diff_entry_list_t& list_ref,
                                                        vector<string>& gd_name_list_ref,
                                                        Options& options,
                                                        bool legend_row, 
@@ -1816,8 +1816,8 @@ Html_Mutation_Table_String::Html_Mutation_Table_String(
 
 Html_Mutation_Table_String::Html_Mutation_Table_String(
                                                        const Settings& settings,
-                                                       genome_diff& gd,
-                                                       diff_entry_list& list_ref,
+                                                       cGenomeDiff& gd,
+                                                       diff_entry_list_t& list_ref,
   			                                               const string& relative_path, 
                                                        bool legend_row, 
                                                        bool one_ref_seq
@@ -1985,8 +1985,8 @@ void Html_Mutation_Table_String::Item_Lines()
 
   stringstream ss; 
   ss << "<!-- Item Lines -->" << endl;
-  for (diff_entry_list::iterator itr = list_ref.begin(); itr != list_ref.end(); itr ++) { 
-    diff_entry& mut = (**itr);
+  for (diff_entry_list_t::iterator itr = list_ref.begin(); itr != list_ref.end(); itr ++) { 
+    cDiffEntry& mut = (**itr);
     if ((row_num != 0) && (options.repeat_header != 0) && (row_num % options.repeat_header == 0))
     {
       Header_Line();
@@ -1998,10 +1998,10 @@ void Html_Mutation_Table_String::Item_Lines()
     if (!settings.no_evidence) {
       bool already_added_RA = false;
        
-      diff_entry_list mutation_evidence_list = gd.mutation_evidence_list(mut);
+      diff_entry_list_t mutation_evidence_list = gd.mutation_evidence_list(mut);
       
-      for (diff_entry_list::iterator evitr = mutation_evidence_list.begin(); evitr != mutation_evidence_list.end(); evitr ++) {  
-        diff_entry& evidence_item = **evitr;
+      for (diff_entry_list_t::iterator evitr = mutation_evidence_list.begin(); evitr != mutation_evidence_list.end(); evitr ++) {  
+        cDiffEntry& evidence_item = **evitr;
 
         if (evidence_item._type == RA) {
           if (already_added_RA) 

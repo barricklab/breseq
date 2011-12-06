@@ -219,7 +219,7 @@ namespace breseq {
                                          );
 
   
-  diff_entry junction_to_diff_entry(
+  cDiffEntry junction_to_cDiffEntry(
                                     const string& key, 
                                     cReferenceSequences& ref_seq_info, 
                                     JunctionTestInfo& test_info
