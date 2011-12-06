@@ -39,7 +39,7 @@ int main(int argc, char* argv[]) {
 	("fasta,f", po::value<string>(), "FASTA file of reference sequence")
 	("readfiles,r", po::value<vector<string> >(), "names of readfiles (no extension)")
 	("error_dir,e", po::value<string>(), "Directory containing error rates files")
-	("genome_diff,g", po::value<string>(), "Genome diff file")
+	("cGenomeDiff,g", po::value<string>(), "Genome diff file")
 	("output,o", po::value<string>(), "output directory")
 	("coverage_dir", po::value<string>(), "directory for coverage files")
 	("mutation_cutoff,c", po::value<double>()->default_value(2.0), "mutation cutoff (log10 e-value)")
@@ -57,13 +57,13 @@ int main(int argc, char* argv[]) {
 		 || !options.count("bam")
 		 || !options.count("fasta")
 		 || !options.count("error_dir")
-		 || !options.count("genome_diff")
+		 || !options.count("cGenomeDiff")
 		 || !options.count("output")
 		 || !options.count("readfiles")
 		 || !options.count("coverage_dir")
 		 || !options.count("deletion_propagation_cutoff")     
 		 ) {
-		cout << "Usage: identify_mutations --bam <sequences.bam> --fasta <reference.fasta> --error_dir <path> --genome_diff <path> --output <path> --readfiles <filename> --coverage_dir <dirname> [--minimum-quality-score 3]" << endl;
+		cout << "Usage: identify_mutations --bam <sequences.bam> --fasta <reference.fasta> --error_dir <path> --cGenomeDiff <path> --output <path> --readfiles <filename> --coverage_dir <dirname> [--minimum-quality-score 3]" << endl;
 		cout << cmdline_options << endl;
 		return -1;
 	}                       
@@ -73,7 +73,7 @@ int main(int argc, char* argv[]) {
 		breseq::identify_mutations(options["bam"].as<string>(),
 															 options["fasta"].as<string>(),
 															 options["error_dir"].as<string>(),
-															 options["genome_diff"].as<string>(),
+															 options["cGenomeDiff"].as<string>(),
 															 options["output"].as<string>(),
 															 options["readfiles"].as<vector<string> >(),
 															 options["coverage_dir"].as<string>(),

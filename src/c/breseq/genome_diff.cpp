@@ -50,7 +50,7 @@ const char* ERROR="error";
 
 
 map<gd_entry_type, vector<string> > line_specification = make_map<gd_entry_type, vector<string> >
-//! seq_id and positions are already parameters in diff_entry
+//! seq_id and positions are already parameters in cDiffEntry
 //## mutations
 (SNP,make_list<string> ("seq_id")("position")("new_seq"))
 (SUB,make_list<string> ("seq_id")("position")("size")("new_seq"))
@@ -95,41 +95,41 @@ static const char* s_field_order[] = {
 
 /*! Constructor.
  */
-diff_entry::diff_entry(const gd_entry_type type)
+cDiffEntry::cDiffEntry(const gd_entry_type type)
 : _type(type)
 , _id("")
 , _evidence()
 {
 }
 
-diff_entry::diff_entry()
+cDiffEntry::cDiffEntry()
 : _type(TYPE_UNKOWN)
 , _id("")
 , _evidence()
 {
 }
 
-bool diff_entry::is_mutation() const
+bool cDiffEntry::is_mutation() const
 {
   const size_t size = sizeof(gd_entry_mutation_types) / sizeof(gd_entry_mutation_types[0]);
   return std::count(gd_entry_mutation_types, gd_entry_mutation_types + size, this->_type);
 }
 
-bool diff_entry::is_evidence() const
+bool cDiffEntry::is_evidence() const
 {
   const size_t size = sizeof(gd_entry_evidence_types) / sizeof(gd_entry_evidence_types[0]);
   return std::count(gd_entry_evidence_types, gd_entry_evidence_types + size, this->_type);
 }
 
-bool diff_entry::is_validation() const
+bool cDiffEntry::is_validation() const
 {
   const size_t size = sizeof(gd_entry_validation_types) / sizeof(gd_entry_validation_types[0]);
   return std::count(gd_entry_validation_types, gd_entry_validation_types + size, this->_type);
 }
   
   
-//Comparing IDs here will currently break genome_diff::merge and genome_diff::subtract
-bool diff_entry::operator==(const diff_entry& de)
+//Comparing IDs here will currently break cGenomeDiff::merge and cGenomeDiff::subtract
+bool cDiffEntry::operator==(const cDiffEntry& de)
 {
   //! Case: Easy if not same type
   if (this->_type != de._type) {
@@ -151,14 +151,14 @@ bool diff_entry::operator==(const diff_entry& de)
 
 /*! Marshal this diff entry into an ordered list of fields.
  */
-void diff_entry::marshal(field_list_t& s) const {
+void cDiffEntry::marshal(field_list_t& s) const {
   s.push_back(to_string(_type));
 	s.push_back(_id);
   
   s.push_back(join(_evidence, ","));
 
 	// deep copy all fields:
-	diff_entry cp= *this;
+  cDiffEntry cp= *this;
 
 	// marshal specified fields in-order, removing them from the copy after they've 
 	// been printed:
@@ -167,7 +167,7 @@ void diff_entry::marshal(field_list_t& s) const {
 
   for (vector<string>::iterator it=f.begin(); it != f.end(); it++)
   {
-		diff_entry_map_t::iterator iter=cp.find(*it);
+    diff_entry_map_t::iterator iter=cp.find(*it);
     
     ASSERT(iter != cp.end(), "Did not find required field '" + *it + "' to write in entry id " + _id + " of type '" + to_string(_type) + "'.");
     
@@ -177,7 +177,7 @@ void diff_entry::marshal(field_list_t& s) const {
 	}
 	
 	// marshal whatever's left, unless it's an empty field or _begins with an underscore
-	for(diff_entry_map_t::iterator i=cp.begin(); i!=cp.end(); ++i) {
+  for(diff_entry_map_t::iterator i=cp.begin(); i!=cp.end(); ++i) {
     
     assert(i->first.size());
     if (i->first.substr(0,1) == "_") continue;
@@ -189,7 +189,7 @@ void diff_entry::marshal(field_list_t& s) const {
   }
 }
   
-vector<string> diff_entry::get_reject_reasons()
+vector<string> cDiffEntry::get_reject_reasons()
 {
   vector<string> return_value;
   if (this->entry_exists("reject")) {
@@ -198,7 +198,7 @@ vector<string> diff_entry::get_reject_reasons()
   return return_value;
 }
 
-size_t diff_entry::number_reject_reasons()
+size_t cDiffEntry::number_reject_reasons()
 {
   if(this->entry_exists(REJECT))
   {
@@ -209,7 +209,7 @@ size_t diff_entry::number_reject_reasons()
   
 /*! Add reject reason to diff entry.
  */
-void add_reject_reason(diff_entry& de, const string &reason) {
+void add_reject_reason(cDiffEntry& de, const string &reason) {
 
   if (de.find(REJECT) == de.end()) {
       de[REJECT] = reason;
@@ -223,7 +223,7 @@ void add_reject_reason(diff_entry& de, const string &reason) {
 
 }
 
-uint32_t number_reject_reasons(diff_entry& de) {
+uint32_t number_reject_reasons(cDiffEntry& de) {
 
 	if (!de.entry_exists(REJECT) || de[REJECT].size() == 0)
 		return 0;
@@ -237,7 +237,7 @@ uint32_t number_reject_reasons(diff_entry& de) {
 
 /*! Output operator for a diff entry.
  */
-ostream& operator<<(ostream& out, const diff_entry& de) {
+ostream& operator<<(ostream& out, const cDiffEntry& de) {
 	field_list_t fields;
 	de.marshal(fields);
 	out << join(fields, "\t");
@@ -245,7 +245,7 @@ ostream& operator<<(ostream& out, const diff_entry& de) {
 }
 /*! Constructor.
  */
-genome_diff::genome_diff(const string& filename)
+cGenomeDiff::cGenomeDiff(const string& filename)
  : _default_filename(filename)
  , _unique_id_counter(0) 
 {
@@ -254,14 +254,14 @@ genome_diff::genome_diff(const string& filename)
 
 /*! Merge Constructor.
  */
-genome_diff::genome_diff(genome_diff& merge1, genome_diff& merge2, bool unique, bool new_id, bool verbose)
+cGenomeDiff::cGenomeDiff(cGenomeDiff& merge1, cGenomeDiff& merge2, bool unique, bool new_id, bool verbose)
  : _unique_id_counter(0)
 {
   this->merge(merge1, unique, new_id, verbose);
   this->merge(merge2, unique, new_id, verbose);
 }
   
-uint32_t genome_diff::new_unique_id() 
+uint32_t cGenomeDiff::new_unique_id()
 { 
   uint32_t assigned_id = ++_unique_id_counter;
   
@@ -274,11 +274,11 @@ uint32_t genome_diff::new_unique_id()
 
 /*! Add evidence to this genome diff.
  */
-void genome_diff::add(const diff_entry& item, bool lowest_unique) {
+void cGenomeDiff::add(const cDiffEntry& item, bool lowest_unique) {
 
   // allocating counted_ptr takes care of disposal
-  diff_entry* diff_entry_copy = new diff_entry(item); 
-  diff_entry_ptr added_item(diff_entry_copy);
+  cDiffEntry* cDiffEntry_copy = new cDiffEntry(item);
+  diff_entry_ptr_t added_item(cDiffEntry_copy);
   _entry_list.push_back(added_item);
   
   uint32_t new_id = 0;    
@@ -295,18 +295,18 @@ void genome_diff::add(const diff_entry& item, bool lowest_unique) {
 }
 
 //! Subtract mutations using gd_ref as reference.
-void genome_diff::subtract(genome_diff& gd_ref, bool verbose)
+void cGenomeDiff::subtract(cGenomeDiff& gd_ref, bool verbose)
 {
   // We will be erasing inside the it loop.  This is to keep
   // track of whether or not we should iterate to the next element.
   bool it_iterate = true;
   
   //Iterate through all the entries
-  for (diff_entry_list::iterator it = _entry_list.begin(); it != _entry_list.end(); )
+  for (diff_entry_list_t::iterator it = _entry_list.begin(); it != _entry_list.end(); )
   {
     it_iterate = true;
     //The current entry we're looking at
-    diff_entry& entry = **it;
+    cDiffEntry& entry = **it;
     
     //if (verbose) cout << entry << endl;
     
@@ -314,10 +314,10 @@ void genome_diff::subtract(genome_diff& gd_ref, bool verbose)
     if(entry.is_mutation())
     {
       //Iterate through all the entries we're checking against.
-      for (diff_entry_list::iterator it_ref = gd_ref._entry_list.begin(); it_ref != gd_ref._entry_list.end(); it_ref++)
+      for (diff_entry_list_t::iterator it_ref = gd_ref._entry_list.begin(); it_ref != gd_ref._entry_list.end(); it_ref++)
       {
         //The current entry we're looking at
-        diff_entry& entry_ref = **it_ref;
+        cDiffEntry& entry_ref = **it_ref;
         
         if(!entry_ref.is_mutation())
           continue;
@@ -351,22 +351,22 @@ void genome_diff::subtract(genome_diff& gd_ref, bool verbose)
 //
 //  bool new_id:  TRUE will give assign all new entries with the lowest available ID.
 //                FALSE will allow all entries to retain their IDs if they are unique.
-void genome_diff::merge(genome_diff& gd_new, bool unique, bool new_id, bool verbose)
+void cGenomeDiff::merge(cGenomeDiff& gd_new, bool unique, bool new_id, bool verbose)
 {
   uint32_t old_unique_ids = unique_id_used.size();
   
   //Iterate through all the potential new entries
-  for (diff_entry_list::iterator it_new = gd_new._entry_list.begin(); it_new != gd_new._entry_list.end(); it_new++)
+  for (diff_entry_list_t::iterator it_new = gd_new._entry_list.begin(); it_new != gd_new._entry_list.end(); it_new++)
   {
     //The current potential new entry we're looking at
-    diff_entry& entry_new = **it_new;
+    cDiffEntry& entry_new = **it_new;
     bool new_entry = true;
     
     //Iterate through all the entries in the current list.
-    for (diff_entry_list::iterator it_cur = _entry_list.begin(); it_cur != _entry_list.end() && unique; it_cur++)
+    for (diff_entry_list_t::iterator it_cur = _entry_list.begin(); it_cur != _entry_list.end() && unique; it_cur++)
     {
       //The current entry we're looking at
-      diff_entry& entry = **it_cur;
+      cDiffEntry& entry = **it_cur;
       
       //Does the new entry match the current entry?
       if(entry == entry_new)
@@ -390,7 +390,7 @@ void genome_diff::merge(genome_diff& gd_new, bool unique, bool new_id, bool verb
   
   //Iterate through all the entries in the new list.
   //This is where we update the evidence IDs for mutations.
-  for (diff_entry_list::iterator it = _entry_list.begin(); it != _entry_list.end(); it++)
+  for (diff_entry_list_t::iterator it = _entry_list.begin(); it != _entry_list.end(); it++)
   {
     // @JEB: optimization: we don't need to do this for evidence items.
     if ( (*it)->is_evidence() ) continue;
@@ -404,13 +404,13 @@ void genome_diff::merge(genome_diff& gd_new, bool unique, bool new_id, bool verb
         bool found_match = false;
         
         //Iterate through all the potential new entries
-        for (diff_entry_list::iterator it_new = gd_new._entry_list.begin(); it_new != gd_new._entry_list.end(); it_new++)
+        for (diff_entry_list_t::iterator it_new = gd_new._entry_list.begin(); it_new != gd_new._entry_list.end(); it_new++)
         {            
           //Does this evidence ID match an ID in the old list?
           if((**it)._evidence[iter] == (**it_new)._id && !found_match)
           {
             //Iterate through all the current entries
-            for (diff_entry_list::iterator it_cur =_entry_list.begin(); it_cur != _entry_list.end(); it_cur++)
+            for (diff_entry_list_t::iterator it_cur =_entry_list.begin(); it_cur != _entry_list.end(); it_cur++)
             {
               //Does the new entry match the current entry?
               if((**it_cur) == (**it_new))
@@ -445,12 +445,12 @@ void genome_diff::merge(genome_diff& gd_new, bool unique, bool new_id, bool verb
   
 }
   
-genome_diff genome_diff::fast_merge(const genome_diff& gd1, const genome_diff& gd2)
+cGenomeDiff cGenomeDiff::fast_merge(const cGenomeDiff& gd1, const cGenomeDiff& gd2)
 {
-  genome_diff gd = gd1;
+  cGenomeDiff gd = gd1;
   
-  diff_entry_list gd_list = gd2.list();
-  for(diff_entry_list::const_iterator it=gd_list.begin(); it!= gd_list.end(); it++) {
+  diff_entry_list_t gd_list = gd2.list();
+  for(diff_entry_list_t::const_iterator it=gd_list.begin(); it!= gd_list.end(); it++) {
     gd.add(**it);
   }
   return gd;
@@ -460,7 +460,7 @@ genome_diff genome_diff::fast_merge(const genome_diff& gd1, const genome_diff& g
   _entry_list
  */
 
-void genome_diff::read(const string& filename) {
+void cGenomeDiff::read(const string& filename) {
   ifstream IN(filename.c_str());
   ASSERT(IN.good(), "Could not open file for reading: " + filename);
 
@@ -561,7 +561,7 @@ void genome_diff::read(const string& filename) {
 }
 
 
-map<gd_entry_type, sort_fields_item> diff_entry_sort_fields = make_map<gd_entry_type, sort_fields_item>
+map<gd_entry_type, sort_fields_item> cDiffEntry_sort_fields = make_map<gd_entry_type, sort_fields_item>
   (SNP, sort_fields_item(1, SEQ_ID, POSITION))
   (SUB, sort_fields_item(1, SEQ_ID, POSITION))
   (DEL, sort_fields_item(1, SEQ_ID, POSITION))
@@ -594,13 +594,13 @@ map<gd_entry_type, uint8_t> sort_order = make_map<gd_entry_type, uint8_t>
 
 /*! Write this genome diff to a file.
  */
-bool diff_entry_ptr_sort(const diff_entry_ptr& a, const diff_entry_ptr& b) {
+bool diff_entry_ptr_sort(const diff_entry_ptr_t& a, const diff_entry_ptr_t& b) {
 
   gd_entry_type a_type = a->_type;
   gd_entry_type b_type = b->_type;
 
-  sort_fields_item a_sort_fields = diff_entry_sort_fields[a_type];
-  sort_fields_item b_sort_fields = diff_entry_sort_fields[b_type];
+  sort_fields_item a_sort_fields = cDiffEntry_sort_fields[a_type];
+  sort_fields_item b_sort_fields = cDiffEntry_sort_fields[b_type];
   
   
   if (a_sort_fields._f1 < b_sort_fields._f1) {
@@ -649,15 +649,15 @@ bool diff_entry_ptr_sort(const diff_entry_ptr& a, const diff_entry_ptr& b) {
   return false;
 }
 
-bool diff_entry_sort(const diff_entry &_a, const diff_entry &_b) {
-  diff_entry a =_a;
-  diff_entry b = _b;
+bool diff_entry_sort(const cDiffEntry &_a, const cDiffEntry &_b) {
+  cDiffEntry a =_a;
+  cDiffEntry b = _b;
 
   gd_entry_type a_type = a._type;
   gd_entry_type b_type = b._type;
 
-  sort_fields_item a_sort_fields = diff_entry_sort_fields[a_type];
-  sort_fields_item b_sort_fields = diff_entry_sort_fields[b_type];
+  sort_fields_item a_sort_fields = cDiffEntry_sort_fields[a_type];
+  sort_fields_item b_sort_fields = cDiffEntry_sort_fields[b_type];
 
 
   if (a_sort_fields._f1 < b_sort_fields._f1) {
@@ -708,7 +708,7 @@ bool diff_entry_sort(const diff_entry &_a, const diff_entry &_b) {
 
 /*! Write this genome diff to a file.
  */
-void genome_diff::write(const string& filename) {
+void cGenomeDiff::write(const string& filename) {
 	ofstream ofs(filename.c_str());
   ofs << "#=GENOME_DIFF 1.0" << endl;
   //! Place any extra data gathered in breseq pipeline in header
@@ -724,21 +724,21 @@ void genome_diff::write(const string& filename) {
   // sort
   _entry_list.sort(diff_entry_ptr_sort);
   
-	for(diff_entry_list::iterator i=_entry_list.begin(); i!=_entry_list.end(); ++i) {
+  for(diff_entry_list_t::iterator i=_entry_list.begin(); i!=_entry_list.end(); ++i) {
 		ofs << (**i) << endl;
 	}
 	ofs.close();
 }
   
 //! Removes all GD entries that aren't used as evidence.
-void genome_diff::filter_not_used_as_evidence(bool verbose)
+void cGenomeDiff::filter_not_used_as_evidence(bool verbose)
 {
   // Yes, I know the bool is useless.
   map<string,bool> used_evidence;
   
-  diff_entry_list muts = this->mutation_list();  
+  diff_entry_list_t muts = this->mutation_list();
   //Iterate through all mutations
-  for (diff_entry_list::iterator it = muts.begin(); it != muts.end(); it++)
+  for (diff_entry_list_t::iterator it = muts.begin(); it != muts.end(); it++)
   {    
     //For every piece of evidence this entry has
     for(uint32_t iter = 0; iter < (**it)._evidence.size(); iter++)
@@ -753,7 +753,7 @@ void genome_diff::filter_not_used_as_evidence(bool verbose)
   bool it_iterate = true;
   
   //Iterate through all entries
-  for (diff_entry_list::iterator it = _entry_list.begin(); it != _entry_list.end(); )
+  for (diff_entry_list_t::iterator it = _entry_list.begin(); it != _entry_list.end(); )
   {
     bool it_iterate = true;
     
@@ -775,14 +775,14 @@ void genome_diff::filter_not_used_as_evidence(bool verbose)
   }
 }
   
-//! Call to assure that every entry in a genome_diff
+//! Call to assure that every entry in a cGenomeDiff
 //  has the same SEQ_ID as the ref_seq_info.
 //  This will also try and check entry positions and
 //  sizes against the length of the ref_seq_info.
-bool genome_diff::is_valid(cReferenceSequences& ref_seq_info, bool verbose)
+bool cGenomeDiff::is_valid(cReferenceSequences& ref_seq_info, bool verbose)
 {  
-  //Go through every diff_entry for this genome_diff
-  for (diff_entry_list::iterator entry = _entry_list.begin(); entry != _entry_list.end(); entry++)
+  //Go through every cDiffEntry for this cGenomeDiff
+  for (diff_entry_list_t::iterator entry = _entry_list.begin(); entry != _entry_list.end(); entry++)
   {    
     //Grab the information based on type for this entry
     const list_t spec = line_specification[(**(entry))._type];
@@ -906,7 +906,7 @@ bool genome_diff::is_valid(cReferenceSequences& ref_seq_info, bool verbose)
 }
 
 
-void genome_diff::add_breseq_data(const key_t &key, const string& value)
+void cGenomeDiff::add_breseq_data(const key_t &key, const string& value)
 {
   this->metadata.breseq_data.insert(pair<string,string>(key, value));
 }
@@ -1220,36 +1220,36 @@ void VCFtoGD( const string& vcffile, const string& gdfile ){
     output.close();
 }
 
-/*! Given a list of types, search and return the diff_entry's within diff_entry_list whose 
+/*! Given a list of types, search and return the cDiffEntry's within diff_entry_list_t whose 
  * _type parameter matches one of those within input types. 
  */ 
-diff_entry_list genome_diff::list(const vector<gd_entry_type>& types)
+diff_entry_list_t cGenomeDiff::list(const vector<gd_entry_type>& types)
 {
   // default is to have to types
   if (types.size() == 0)
     return _entry_list;
   
-  diff_entry_list return_list;
+  diff_entry_list_t return_list;
   
-  for (diff_entry_list::iterator itr_diff_entry = _entry_list.begin(); 
-       itr_diff_entry != _entry_list.end(); itr_diff_entry++)
+  for (diff_entry_list_t::iterator itr_cDiffEntry = _entry_list.begin();
+       itr_cDiffEntry != _entry_list.end(); itr_cDiffEntry++)
     {
       for (vector<gd_entry_type>::const_iterator requested_type = types.begin();
            requested_type != types.end(); requested_type++)
       {
-        if((*itr_diff_entry)->_type == *requested_type)
-          return_list.push_back(*itr_diff_entry);
+        if((*itr_cDiffEntry)->_type == *requested_type)
+          return_list.push_back(*itr_cDiffEntry);
       }
     }
   
   return return_list;
 }
   
-diff_entry_list genome_diff::show_list(const vector<gd_entry_type>& types)
+diff_entry_list_t cGenomeDiff::show_list(const vector<gd_entry_type>& types)
 {
-  diff_entry_list ret_list = list(types);
-  ret_list.remove_if(diff_entry::fields_exist(make_list<diff_entry_key_t>("deleted")));
-  ret_list.remove_if(diff_entry::fields_exist(make_list<diff_entry_key_t>("no_show")));  
+  diff_entry_list_t ret_list = list(types);
+  ret_list.remove_if(cDiffEntry::fields_exist(make_list<diff_entry_key_t>("deleted")));
+  ret_list.remove_if(cDiffEntry::fields_exist(make_list<diff_entry_key_t>("no_show")));
   return ret_list;
 }
 
@@ -1257,13 +1257,13 @@ diff_entry_list genome_diff::show_list(const vector<gd_entry_type>& types)
  * returns entries NOT used as evidence by other entries. 
  *
  *-----------------------------------------------------------------------------*/
-diff_entry_list genome_diff::filter_used_as_evidence(const diff_entry_list& input)
+diff_entry_list_t cGenomeDiff::filter_used_as_evidence(const diff_entry_list_t& input)
 {
   // first we make a map with everything used as evidence by any entry in the entire genome diff
   map<string,bool> used_as_evidence;
-  for (diff_entry_list::const_iterator it = _entry_list.begin(); it != _entry_list.end(); it++) 
+  for (diff_entry_list_t::const_iterator it = _entry_list.begin(); it != _entry_list.end(); it++)
   {
-    const diff_entry_ptr& de = *it;
+    const diff_entry_ptr_t& de = *it;
     for (vector<string>::const_iterator ev_it = de->_evidence.begin(); ev_it != de->_evidence.end(); ev_it++) 
     {  
       used_as_evidence[*ev_it] = true;
@@ -1271,10 +1271,10 @@ diff_entry_list genome_diff::filter_used_as_evidence(const diff_entry_list& inpu
   }
   
   // then construct a list of all items in input with ids not in this map
-  diff_entry_list return_list;
-  for (diff_entry_list::const_iterator it = input.begin(); it != input.end(); it++) 
+  diff_entry_list_t return_list;
+  for (diff_entry_list_t::const_iterator it = input.begin(); it != input.end(); it++)
   {
-    const diff_entry_ptr& de = *it;
+    const diff_entry_ptr_t& de = *it;
     if ( !used_as_evidence.count(de->_id) )
       return_list.push_back(de);
   }
@@ -1283,12 +1283,12 @@ diff_entry_list genome_diff::filter_used_as_evidence(const diff_entry_list& inpu
 }
 
 
-diff_entry genome_diff::_line_to_item(const string& line)
+cDiffEntry cGenomeDiff::_line_to_item(const string& line)
 {  
   list_t line_list = split(line, "\t");
   ASSERT(line_list.size() > 0, "Attempt to create genome diff entry from empty line.");
 
-  diff_entry item;
+  cDiffEntry item;
   item._type = to_type(shift<string>(line_list));
   item._id = shift<string>(line_list);
   string evidence_string = shift<string>(line_list);
@@ -1341,13 +1341,13 @@ diff_entry genome_diff::_line_to_item(const string& line)
 }
 
 // return items with types that are 3 characters long
-diff_entry_list genome_diff::mutation_list()
+diff_entry_list_t cGenomeDiff::mutation_list()
 {
-  diff_entry_list mut_list;
+  diff_entry_list_t mut_list;
 
-   for(diff_entry_list::iterator itr = _entry_list.begin();
+   for(diff_entry_list_t::iterator itr = _entry_list.begin();
        itr != _entry_list.end(); itr ++) {
-     diff_entry& item = **itr;
+     cDiffEntry& item = **itr;
      if(item.is_mutation()) {
        mut_list.push_back(*itr);
      }
@@ -1357,13 +1357,13 @@ diff_entry_list genome_diff::mutation_list()
 }
 
 // return items with types that are 2 characters long
-diff_entry_list genome_diff::evidence_list()
+diff_entry_list_t cGenomeDiff::evidence_list()
 {
-  diff_entry_list mut_list;
+  diff_entry_list_t mut_list;
   
-  for(diff_entry_list::iterator itr = _entry_list.begin();
+  for(diff_entry_list_t::iterator itr = _entry_list.begin();
       itr != _entry_list.end(); itr ++) {
-    diff_entry& item = **itr;
+    cDiffEntry& item = **itr;
     if(item.is_evidence()) {
       mut_list.push_back(*itr);
     }
@@ -1373,21 +1373,21 @@ diff_entry_list genome_diff::evidence_list()
 }
 
 
-/*! Return all diff_entrys within _entry_list whose _id matches one
+/*! Return all cDiffEntrys within _entry_list whose _id matches one
  * of those within input's item._evidence
  */ 
-diff_entry_list genome_diff::mutation_evidence_list(const diff_entry& item)
+diff_entry_list_t cGenomeDiff::mutation_evidence_list(const cDiffEntry& item)
 {
-  diff_entry_list return_list;
+  diff_entry_list_t return_list;
   
   //return diff_entries with matching evidence
   for (vector<string>::const_iterator itr_i = item._evidence.begin(); itr_i != item._evidence.end(); itr_i ++) 
   {  
     const string& evidence = *itr_i;
     
-    for (diff_entry_list::iterator itr_j = _entry_list.begin(); itr_j != _entry_list.end(); itr_j ++) 
+    for (diff_entry_list_t::iterator itr_j = _entry_list.begin(); itr_j != _entry_list.end(); itr_j ++)
     {  
-      diff_entry& entry = **itr_j;
+      cDiffEntry& entry = **itr_j;
     
       if (entry._id == evidence)
         return_list.push_back(*itr_j);
@@ -1396,22 +1396,22 @@ diff_entry_list genome_diff::mutation_evidence_list(const diff_entry& item)
   return return_list;
 }
 
-diff_entry_ptr genome_diff::parent(const diff_entry& item)
+diff_entry_ptr_t cGenomeDiff::parent(const cDiffEntry& item)
 {
-  for(diff_entry_list::iterator itr_test_item = _entry_list.begin();
+  for(diff_entry_list_t::iterator itr_test_item = _entry_list.begin();
       itr_test_item != _entry_list.end(); itr_test_item ++) { 
-    diff_entry& test_item = **itr_test_item;
+    cDiffEntry& test_item = **itr_test_item;
     for(vector<string>::iterator itr = test_item._evidence.begin();
         itr != test_item._evidence.end(); itr ++) { 
       string& test_evidence_id = (*itr);
       if(test_evidence_id == item._id)      
-        return diff_entry_ptr(*itr_test_item);
+        return diff_entry_ptr_t(*itr_test_item);
     }
   }
-  return diff_entry_ptr(NULL);
+  return diff_entry_ptr_t(NULL);
 }
 
-bool genome_diff::mutation_unknown(diff_entry mut)
+bool cGenomeDiff::mutation_unknown(cDiffEntry mut)
 {
   
   if (mut._type == SNP) {
@@ -1450,7 +1450,7 @@ bool genome_diff::mutation_unknown(diff_entry mut)
   return false;
 }
 
-void genome_diff::add_reject_reasons(diff_entry item, const string& reject)
+void cGenomeDiff::add_reject_reasons(cDiffEntry item, const string& reject)
 {
   if (item.entry_exists(REJECT))
     item[REJECT] += ",";
@@ -1459,13 +1459,13 @@ void genome_diff::add_reject_reasons(diff_entry item, const string& reject)
 }
 
 bool 
-genome_diff::interval_un(const uint32_t& start,const uint32_t& end)
+cGenomeDiff::interval_un(const uint32_t& start,const uint32_t& end)
 {
-  diff_entry_list un_list = list(make_list<gd_entry_type>(UN));
+  diff_entry_list_t un_list = list(make_list<gd_entry_type>(UN));
 
-  for (diff_entry_list::iterator itr = un_list.begin();
+  for (diff_entry_list_t::iterator itr = un_list.begin();
        itr != un_list.end(); itr++) {
-    diff_entry un(**itr);
+    cDiffEntry un(**itr);
 
     if (start >= from_string<uint32_t>(un[START]) &&
         end <= from_string<uint32_t>(un[END])) {
@@ -1475,17 +1475,17 @@ genome_diff::interval_un(const uint32_t& start,const uint32_t& end)
   return false;
 }
 
-cReferenceSequences genome_diff::apply_to_sequences(cReferenceSequences& ref_seq_info, bool verbose)
+cReferenceSequences cGenomeDiff::apply_to_sequences(cReferenceSequences& ref_seq_info, bool verbose)
 {
   // copy the reference sequence info
   cReferenceSequences new_ref_seq_info(ref_seq_info);
     
   uint32_t count_SNP = 0, count_SUB = 0, count_INS = 0, count_DEL = 0, count_AMP = 0, count_INV = 0, count_MOB = 0, count_CON = 0;
 
-  diff_entry_list mutation_list = this->mutation_list();
-  for (diff_entry_list::iterator itr_mut = mutation_list.begin(); itr_mut != mutation_list.end(); itr_mut++) 
+  diff_entry_list_t mutation_list = this->mutation_list();
+  for (diff_entry_list_t::iterator itr_mut = mutation_list.begin(); itr_mut != mutation_list.end(); itr_mut++)
   {
-    diff_entry& mut(**itr_mut);
+    cDiffEntry& mut(**itr_mut);
     uint32_t position = from_string<uint32_t>(mut[POSITION]);
         
     switch (mut._type) 
@@ -1698,7 +1698,7 @@ cReferenceSequences genome_diff::apply_to_sequences(cReferenceSequences& ref_seq
 }
 
 
-void genome_diff::shift_positions(diff_entry &item, cReferenceSequences& ref_seq_info, bool verbose)
+void cGenomeDiff::shift_positions(cDiffEntry &item, cReferenceSequences& ref_seq_info, bool verbose)
 {  
   int32_t delta = item.mutation_size_change(ref_seq_info);
   if (verbose)
@@ -1709,9 +1709,9 @@ void genome_diff::shift_positions(diff_entry &item, cReferenceSequences& ref_seq
   uint32_t offset = from_string<uint32_t>(item[POSITION]);
   bool inversion = false;
 
-  diff_entry_list muts = this->mutation_list();
-  for (diff_entry_list::iterator itr = muts.begin(); itr != muts.end(); itr++) {
-    diff_entry& mut = **itr;
+  diff_entry_list_t muts = this->mutation_list();
+  for (diff_entry_list_t::iterator itr = muts.begin(); itr != muts.end(); itr++) {
+    cDiffEntry& mut = **itr;
 
     if (inversion) {
       WARN("shift_positions cannot handle inversions yet!");
@@ -1726,7 +1726,7 @@ void genome_diff::shift_positions(diff_entry &item, cReferenceSequences& ref_seq
 
 //>! Return the
   
-int32_t diff_entry::mutation_size_change(cReferenceSequences& ref_seq_info)
+int32_t cDiffEntry::mutation_size_change(cReferenceSequences& ref_seq_info)
 {  
   switch (this->_type) {
     case SNP: return 0; break;
@@ -1766,61 +1766,61 @@ int32_t diff_entry::mutation_size_change(cReferenceSequences& ref_seq_info)
   }
 }
 
-genome_diff genome_diff::compare_genome_diff_files(const genome_diff &control, const genome_diff &test)
+cGenomeDiff cGenomeDiff::compare_cGenomeDiff_files(const cGenomeDiff &control, const cGenomeDiff &test)
 {
-  genome_diff control_gd = control;
-  genome_diff test_gd = test;
-  genome_diff new_gd; //ret val
+  cGenomeDiff control_gd = control;
+  cGenomeDiff test_gd = test;
+  cGenomeDiff new_gd; //ret val
 
-  const diff_entry_list &control_mutations = control_gd.mutation_list();
-  const diff_entry_list &test_mutations = test_gd.mutation_list();
+  const diff_entry_list_t &control_mutations = control_gd.mutation_list();
+  const diff_entry_list_t &test_mutations = test_gd.mutation_list();
 
-  typedef set<diff_entry> diff_entry_set_t;
-  diff_entry_set_t control_diff_mutations_set;
-  diff_entry_set_t test_diff_mutations_set;
+  typedef set<cDiffEntry> cDiffEntry_set_t;
+  cDiffEntry_set_t control_diff_mutations_set;
+  cDiffEntry_set_t test_diff_mutations_set;
 
   //! Step: Strip counted_ptr<> for STL use.
-  for (diff_entry_list::const_iterator it = control_mutations.begin();
+  for (diff_entry_list_t::const_iterator it = control_mutations.begin();
        it != control_mutations.end(); it++) {
     control_diff_mutations_set.insert(**it);
   }
-  for (diff_entry_list::const_iterator it = test_mutations.begin();
+  for (diff_entry_list_t::const_iterator it = test_mutations.begin();
        it != test_mutations.end(); it++) {
     test_diff_mutations_set.insert(**it);
   }
 
   //! Step: True positive mutations
-  diff_entry_set_t true_positive_mutations_set;
+  cDiffEntry_set_t true_positive_mutations_set;
   set_intersection(control_diff_mutations_set.begin(), control_diff_mutations_set.end(),
                    test_diff_mutations_set.begin(), test_diff_mutations_set.end(),
                    inserter(true_positive_mutations_set, true_positive_mutations_set.begin()));
 
   //Remove true_positives from previous sets
-  for (diff_entry_set_t::const_iterator it = true_positive_mutations_set.begin();
+  for (cDiffEntry_set_t::const_iterator it = true_positive_mutations_set.begin();
        it != true_positive_mutations_set.end(); it++) {
     control_diff_mutations_set.erase(*it);
     test_diff_mutations_set.erase(*it);
   }
 
   //Find difference and then determine if false-positive or false-negative
-  diff_entry_set_t difference_mutations_set;
+  cDiffEntry_set_t difference_mutations_set;
   set_difference(control_diff_mutations_set.begin(), control_diff_mutations_set.end(),
                    test_diff_mutations_set.begin(), test_diff_mutations_set.end(),
                    inserter(difference_mutations_set, difference_mutations_set.begin()));
 
   //! Step: False Negative
-  diff_entry_set_t false_negative_mutations_set;
+  cDiffEntry_set_t false_negative_mutations_set;
   set_intersection(difference_mutations_set.begin(), difference_mutations_set.end(),
                    control_diff_mutations_set.begin(), control_diff_mutations_set.end(),
                    inserter(false_negative_mutations_set, false_negative_mutations_set.begin()));
   //Remove false negatives from test set
-  for (diff_entry_set_t::const_iterator it = true_positive_mutations_set.begin();
+  for (cDiffEntry_set_t::const_iterator it = true_positive_mutations_set.begin();
        it != true_positive_mutations_set.end(); it++) {
     test_diff_mutations_set.erase(*it);
   }
 
   //! Step: False positive
-  diff_entry_set_t false_positive_mutations_set;
+  cDiffEntry_set_t false_positive_mutations_set;
   set_intersection(difference_mutations_set.begin(), difference_mutations_set.end(),
                    test_diff_mutations_set.begin(), test_diff_mutations_set.end(),
                    inserter(false_positive_mutations_set, false_positive_mutations_set.begin()));
@@ -1836,25 +1836,25 @@ genome_diff genome_diff::compare_genome_diff_files(const genome_diff &control, c
 
   //! Step: Add validation=<TP/FP/FN> tags to new_gd.
   //True positive
-  for (diff_entry_set_t::iterator it = true_positive_mutations_set.begin();
+  for (cDiffEntry_set_t::iterator it = true_positive_mutations_set.begin();
        it != true_positive_mutations_set.end(); it++) {
-    diff_entry de = *it;
+    cDiffEntry de = *it;
     de.insert(pair<string,string>("validation", "TP"));
     new_gd.add(de);
   }
 
   //False negative
-  for (diff_entry_set_t::iterator it = false_negative_mutations_set.begin();
+  for (cDiffEntry_set_t::iterator it = false_negative_mutations_set.begin();
        it != false_negative_mutations_set.end(); it++) {
-    diff_entry de = *it;
+    cDiffEntry de = *it;
     de.insert(pair<string,string>("validation", "FN"));
     new_gd.add(de);
   }
 
    //False positive
-  for (diff_entry_set_t::iterator it = false_positive_mutations_set.begin();
+  for (cDiffEntry_set_t::iterator it = false_positive_mutations_set.begin();
        it != false_positive_mutations_set.end(); it++) {
-    diff_entry de = *it;
+    cDiffEntry de = *it;
     de.insert(pair<string,string>("validation", "FP"));
     new_gd.add(de);
   }

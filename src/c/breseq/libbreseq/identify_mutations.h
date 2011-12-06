@@ -227,7 +227,7 @@ namespace breseq {
 		
     //! Settings passed at command line
 		error_count_results _ecr; //!< Error count results.
-		genome_diff _gd; //!< Genome diff.
+		cGenomeDiff _gd; //!< Genome diff.
     string _gd_file; //!< file name for Genome diff
     uint8_t _min_qual_score; //!< minimum quality score to count base for RA
     vector<double> _deletion_seed_cutoffs; //!< Coverage below which deletions are cutoff.

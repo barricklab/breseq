@@ -226,7 +226,7 @@ void resolve_alignments(
 	//##	Output files
 	//####
 
-	genome_diff gd;
+	cGenomeDiff gd;
     
   tam_file resolved_reference_tam(settings.resolved_reference_sam_file_name, settings.reference_fasta_file_name, ios::out);
   tam_file resolved_junction_tam(settings.resolved_junction_sam_file_name, settings.candidate_junction_fasta_file_name, ios::out);
@@ -430,7 +430,7 @@ void resolve_alignments(
     JunctionTestInfo& junction_test_info = *it;
 		string key = junction_test_info.junction_id;
 		if (verbose) cout << key << endl;
-		diff_entry item = junction_to_diff_entry(key, ref_seq_info, junction_test_info);
+		cDiffEntry item = junction_to_cDiffEntry(key, ref_seq_info, junction_test_info);
 		gd.add(item);
 
 		// save the score in the distribution
@@ -483,7 +483,7 @@ void resolve_alignments(
   {
     JunctionTestInfo& junction_test_info = *it;
 		string key = junction_test_info.junction_id;
-		diff_entry item = junction_to_diff_entry(key, ref_seq_info, junction_test_info);
+		cDiffEntry item = junction_to_cDiffEntry(key, ref_seq_info, junction_test_info);
 		add_reject_reason(item, "NJ");
 		gd.add(item);
 	}
@@ -493,7 +493,7 @@ void resolve_alignments(
 	summary.alignment_resolution.accepted_pos_hash_score_distribution = accepted_pos_hash_score_distribution;
 
   // Write the genome diff file
-	gd.write(settings.jc_genome_diff_file_name);
+	gd.write(settings.jc_cGenomeDiff_file_name);
 }
     
 void load_junction_alignments(
@@ -1269,7 +1269,7 @@ void resolve_junction(
 
 }
 
-diff_entry junction_to_diff_entry(
+cDiffEntry junction_to_cDiffEntry(
                                          const string& key, 
                                          cReferenceSequences& ref_seq_info, 
                                          JunctionTestInfo& test_info
@@ -1414,7 +1414,7 @@ diff_entry junction_to_diff_entry(
 	}
 
 	// flatten things to only what we want to keep
-  diff_entry item(JC);
+  cDiffEntry item(JC);
 	item
 		("side_1_seq_id", jc.sides[0].seq_id)
 		("side_1_position", to_string(jc.sides[0].position))

@@ -350,7 +350,7 @@ int do_convert_genbank(int argc, char* argv[]) {
 int do_calculate_trims(int argc, char* argv[]) {
 	
 	// setup and parse configuration options:
-	AnyOption options("Usage: breseq CALCULATE_TRIMS --bam <sequences.bam> --fasta <reference.fasta> --error_dir <path> --genome_diff <path> --output <path> --readfile <filename> --coverage_dir <dirname> [--minimum-quality-score 3]");
+	AnyOption options("Usage: breseq CALCULATE_TRIMS --bam <sequences.bam> --fasta <reference.fasta> --error_dir <path> --cGenomeDiff <path> --output <path> --readfile <filename> --coverage_dir <dirname> [--minimum-quality-score 3]");
 	options
 		("help,h", "produce this help message", TAKES_NO_ARGUMENT)
 		("fasta,f", "FASTA file of reference sequence")
@@ -414,7 +414,7 @@ int do_predict_mutations(int argc, char* argv[]) {
         
     MutationPredictor mp(ref_seq_info);
     
-    genome_diff gd( settings.evidence_genome_diff_file_name );
+    cGenomeDiff gd( settings.evidence_cGenomeDiff_file_name );
     
     mp.predict(
                settings,
@@ -422,7 +422,7 @@ int do_predict_mutations(int argc, char* argv[]) {
                from_string<uint32_t>(options["maximum-read-length"])
                );
     
-    gd.write(settings.final_genome_diff_file_name);
+    gd.write(settings.final_cGenomeDiff_file_name);
     
   } catch(...) {
 		// failed; 
@@ -504,7 +504,7 @@ int do_error_count(int argc, char* argv[]) {
 int do_identify_mutations(int argc, char* argv[]) {
 	
 	// setup and parse configuration options:
-	AnyOption options("Usage: breseq IDENTIFY_MUTATIONS --bam <sequences.bam> --fasta <reference.fasta> --error_dir <path> --genome_diff <path> --output <path> --readfile <filename> --coverage_dir <dirname>");
+	AnyOption options("Usage: breseq IDENTIFY_MUTATIONS --bam <sequences.bam> --fasta <reference.fasta> --error_dir <path> --cGenomeDiff <path> --output <path> --readfile <filename> --coverage_dir <dirname>");
 	options
 		("help,h", "produce this help message", TAKES_NO_ARGUMENT)
 		("bam,b", "bam file containing sequences to be aligned")
@@ -512,7 +512,7 @@ int do_identify_mutations(int argc, char* argv[]) {
 		("readfile,r", "names of readfile (no extension)")
 		("error_dir,e", "Directory containing error rates files")
 		("error_table", "Error rates files", "")
-		("genome_diff,g", "Genome diff file")
+		("cGenomeDiff,g", "Genome diff file")
 		("output,o", "output directory")
 		("coverage_dir", "directory for coverage files", "")
 		("mutation_cutoff,c", "mutation cutoff (log10 e-value)", 2.0L)
@@ -531,7 +531,7 @@ int do_identify_mutations(int argc, char* argv[]) {
 		 || !options.count("bam")
 		 || !options.count("fasta")
 		 || !options.count("error_dir")
-		 || !options.count("genome_diff")
+		 || !options.count("cGenomeDiff")
 		 || !options.count("output")
 		 || !options.count("readfile")
 		 || !options.count("coverage_dir")
@@ -548,7 +548,7 @@ int do_identify_mutations(int argc, char* argv[]) {
                          options["bam"],
                          options["fasta"],
                          options["error_dir"],
-                         options["genome_diff"],
+                         options["cGenomeDiff"],
                          options["output"],
                          split(options["readfile"], "\n"),
                          options["coverage_dir"],
@@ -928,7 +928,7 @@ int do_mutate(int argc, char *argv[])
     return -1;
   }  
   
-  genome_diff gd(options["genomediff"]);  
+  cGenomeDiff gd(options["genomediff"]);
   cReferenceSequences ref_seq_info;  
   ref_seq_info.LoadFiles(from_string<vector<string> >(options["reference"]));
   
@@ -976,8 +976,8 @@ int do_subtract(int argc, char *argv[])
     return -1;
   }
   
-  genome_diff gd1(options["input1"]);
-  genome_diff gd2(options["input2"]);
+  cGenomeDiff gd1(options["input1"]);
+  cGenomeDiff gd2(options["input2"]);
   
   gd1.subtract(gd2, options.count("verbose"));
   
@@ -1018,19 +1018,19 @@ int do_merge(int argc, char *argv[])
   }
   
   vector<string> gd_list = from_string<vector<string> >(options["genomediff"]);  
-  genome_diff gd1(gd_list[0]);
+  cGenomeDiff gd1(gd_list[0]);
   
   //Load all the GD files that were input with -g.
   for(uint32_t i = 1; i < gd_list.size(); i++)
   {
-    genome_diff gd2(gd_list[i]);
+    cGenomeDiff gd2(gd_list[i]);
     gd1.merge(gd2, options.count("unique"), options.count("id"), options.count("verbose"));
   }
   
   //Treat EVERY extra argument passed as another GD file.
   for(int32_t i = 0; i < options.getArgc() ; i++)
   {
-    genome_diff gd2(options.getArgv(i));
+    cGenomeDiff gd2(options.getArgv(i));
     gd1.merge(gd2, options.count("unique"), options.count("id"), options.count("verbose"));
   }
   
@@ -1061,7 +1061,7 @@ int do_not_evidence(int argc, char *argv[])
     return -1;
   }
   
-  genome_diff gd1(options["genomediff"]);
+  cGenomeDiff gd1(options["genomediff"]);
   
   gd1.filter_not_used_as_evidence(options.count("verbose"));
   
@@ -1069,7 +1069,7 @@ int do_not_evidence(int argc, char *argv[])
   {
     if(options.count("id"))
     {
-      genome_diff gd2;
+      cGenomeDiff gd2;
       gd2.merge(gd1, true, true);
       gd2.write(options["output"]);
     }
@@ -1097,10 +1097,10 @@ int do_compare(int argc, char *argv[])
     return -1;
   }
 
-  genome_diff control_gd(options["control"]);
-  genome_diff test_gd(options["test"]);
+  cGenomeDiff control_gd(options["control"]);
+  cGenomeDiff test_gd(options["test"]);
 
-  genome_diff compare_gd = genome_diff::compare_genome_diff_files(control_gd, test_gd);
+  cGenomeDiff compare_gd = cGenomeDiff::compare_cGenomeDiff_files(control_gd, test_gd);
 
   compare_gd.write(options["output"]);
 
@@ -1133,13 +1133,13 @@ int do_intersection(int argc, char *argv[])
     return -1;
   }
 
-  genome_diff first_gd(*gd_file_names.begin());
-  const diff_entry_list &first_mutations = first_gd.mutation_list();
+  cGenomeDiff first_gd(*gd_file_names.begin());
+  const diff_entry_list_t &first_mutations = first_gd.mutation_list();
 
   //Strip counted_ptr
-  typedef set<diff_entry> diff_entry_set_t;
-  diff_entry_set_t first_mutations_set;
-  for (diff_entry_list::const_iterator it = first_mutations.begin();
+  typedef set<cDiffEntry> cDiffEntry_set_t;
+  cDiffEntry_set_t first_mutations_set;
+  for (diff_entry_list_t::const_iterator it = first_mutations.begin();
        it != first_mutations.end(); it++) {
     first_mutations_set.insert(**it);
   }
@@ -1151,18 +1151,18 @@ int do_intersection(int argc, char *argv[])
   advance(it_file_name,1);
   while(it_file_name != gd_file_names.end()) {
 
-    genome_diff second_gd(*it_file_name);
-    const diff_entry_list &second_mutations = second_gd.mutation_list();
+    cGenomeDiff second_gd(*it_file_name);
+    const diff_entry_list_t &second_mutations = second_gd.mutation_list();
 
     //Strip counted_ptr
-    diff_entry_set_t second_mutations_set;
-    for (diff_entry_list::const_iterator it = second_mutations.begin();
+    cDiffEntry_set_t second_mutations_set;
+    for (diff_entry_list_t::const_iterator it = second_mutations.begin();
          it != second_mutations.end(); it++) {
       second_mutations_set.insert(**it);
     }
 
     //Find intersection
-    diff_entry_set_t intersecting_mutations_set;
+    cDiffEntry_set_t intersecting_mutations_set;
     set_intersection(first_mutations_set.begin(), first_mutations_set.end(),
                      second_mutations_set.begin(), second_mutations_set.end(),
                      inserter(intersecting_mutations_set, intersecting_mutations_set.begin()));
@@ -1182,11 +1182,11 @@ int do_intersection(int argc, char *argv[])
   printf("Found %i intersecting mutations across files: %s.\n",
          static_cast<int>(first_mutations_set.size()), join(gd_file_names, ", ").c_str());
 
-  genome_diff intersecting_gd;
+  cGenomeDiff intersecting_gd;
 
-  for (diff_entry_set_t::iterator it = first_mutations_set.begin();
+  for (cDiffEntry_set_t::iterator it = first_mutations_set.begin();
        it != first_mutations_set.end(); it++) {
-    //diff_entry de = *it;
+    //cDiffEntry de = *it;
     intersecting_gd.add(*it);
   }
 
@@ -1217,7 +1217,7 @@ int do_annotate(int argc, char* argv[])
     return -1;
   }
   
-  genome_diff gd(options["input"]);
+  cGenomeDiff gd(options["input"]);
   
   vector<string> reference_file_names = from_string<vector<string> >(options["reference"]);
   cReferenceSequences ref_seq_info;
@@ -1234,7 +1234,7 @@ int do_simulate_read(int argc, char *argv[])
   AnyOption options("Usage: breseq SIMULATE-READ -g <genome diff> -r <reference file> -c <average coverage> -o <output file>");
 
   options
-  ("genome_diff,g", "Genome diff file.")
+  ("cGenomeDiff,g", "Genome diff file.")
   ("reference,r", "Reference file for input.")
   ("coverage,c", "Average coverage value to simulate.", static_cast<uint32_t>(10))
   ("length,l", "Read length to simulate.", static_cast<uint32_t>(36))
@@ -1250,9 +1250,9 @@ int do_simulate_read(int argc, char *argv[])
   options.addUsage("Output is a .fastq that if run normally against the reference");
   options.addUsage("should produce the same GenomeDiff file you entered.");
   
-  if (!options.count("genome_diff")) {
+  if (!options.count("cGenomeDiff")) {
     options.addUsage("");
-    options.addUsage("You must supply the --genome_diff option for input.");
+    options.addUsage("You must supply the --cGenomeDiff option for input.");
     options.printUsage();
     return -1;
   }
@@ -1278,9 +1278,9 @@ int do_simulate_read(int argc, char *argv[])
 
 
   //! Step: Apply genome diff mutations to reference sequence.
-  const string &gd_file_name = options["genome_diff"];
+  const string &gd_file_name = options["cGenomeDiff"];
   bool verbose = options.count("verbose");
-  genome_diff gd(gd_file_name);
+  cGenomeDiff gd(gd_file_name);
 
   cReferenceSequences new_ref_seq_info = gd.apply_to_sequences(ref_seq_info, verbose);  
   
@@ -1978,7 +1978,7 @@ int breseq_default_action(int argc, char* argv[])
 			string error_dir = dirname(coverage_fn) + "/";
 			string this_predicted_mutation_file_name = settings.file_name(settings.predicted_mutation_file_name, "@", "");
 			string output_dir = dirname(this_predicted_mutation_file_name) + "/";
-			string ra_mc_genome_diff_file_name = settings.ra_mc_genome_diff_file_name;
+			string ra_mc_cGenomeDiff_file_name = settings.ra_mc_cGenomeDiff_file_name;
 			string coverage_tab_file_name = settings.file_name(settings.complete_coverage_text_file_name, "@", "");
 			string coverage_dir = dirname(coverage_tab_file_name) + "/";
 
@@ -1995,7 +1995,7 @@ int breseq_default_action(int argc, char* argv[])
 				reference_bam_file_name,
 				reference_fasta_file_name,
 				error_dir,
-				ra_mc_genome_diff_file_name,
+				ra_mc_cGenomeDiff_file_name,
 				output_dir,
 				settings.read_file_names,
 				coverage_dir,
@@ -2024,7 +2024,7 @@ int breseq_default_action(int argc, char* argv[])
 
 	//rewire which GenomeDiff we get data from if we have the elaborated polymorphism_statistics version
 	 if (settings.polymorphism_prediction)
-		settings.ra_mc_genome_diff_file_name = settings.polymorphism_statistics_ra_mc_genome_diff_file_name;
+		settings.ra_mc_cGenomeDiff_file_name = settings.polymorphism_statistics_ra_mc_cGenomeDiff_file_name;
 
   create_path(settings.evidence_path); //need output for plots
 
@@ -2032,24 +2032,24 @@ int breseq_default_action(int argc, char* argv[])
 	{
 		///
 		// Output Genome Diff File
-		//sub genome_diff_output {}
+		//sub cGenomeDiff_output {}
 		///
 		cerr << "Creating merged genome diff evidence file..." << endl;
 
 		// merge all of the evidence GenomeDiff files into one...
 		create_path(settings.evidence_path);
-		genome_diff jc_gd(settings.jc_genome_diff_file_name);
-		genome_diff ra_mc_gd(settings.ra_mc_genome_diff_file_name);
+    cGenomeDiff jc_gd(settings.jc_cGenomeDiff_file_name);
+    cGenomeDiff ra_mc_gd(settings.ra_mc_cGenomeDiff_file_name);
         
-    genome_diff merged_genome_diff;
-    genome_diff evidence_gd = genome_diff::fast_merge(jc_gd, ra_mc_gd);    
-		evidence_gd.write(settings.evidence_genome_diff_file_name);
+    cGenomeDiff merged_cGenomeDiff;
+    cGenomeDiff evidence_gd = cGenomeDiff::fast_merge(jc_gd, ra_mc_gd);
+		evidence_gd.write(settings.evidence_cGenomeDiff_file_name);
 
 		// predict mutations from evidence in the GenomeDiff
 		cerr << "Predicting mutations from evidence..." << endl;
 
 		MutationPredictor mp(ref_seq_info);
-		genome_diff mpgd(settings.evidence_genome_diff_file_name);
+    cGenomeDiff mpgd(settings.evidence_cGenomeDiff_file_name);
     mp.predict(settings, mpgd, summary.sequence_conversion.max_read_length, summary.sequence_conversion.avg_read_length);
 
     // Add addition values from breseq pipleline to genome diff here.
@@ -2063,26 +2063,26 @@ int breseq_default_action(int argc, char* argv[])
 
     }
 
-    mpgd.write(settings.final_genome_diff_file_name);
+    mpgd.write(settings.final_cGenomeDiff_file_name);
 
 
-		genome_diff gd(settings.final_genome_diff_file_name);
-		//#unlink $evidence_genome_diff_file_name;
+    cGenomeDiff gd(settings.final_cGenomeDiff_file_name);
+		//#unlink $evidence_cGenomeDiff_file_name;
 
 		//
 		// Mark lowest RA evidence items as no-show, or we may be drawing way too many alignments
 		//
 
     vector<gd_entry_type> ra_types = make_list<gd_entry_type>(RA);
-		list<counted_ptr<diff_entry> > ra = gd.filter_used_as_evidence(gd.list(ra_types));
+    list<counted_ptr<cDiffEntry> > ra = gd.filter_used_as_evidence(gd.list(ra_types));
 
-    ra.remove_if(diff_entry::frequency_less_than_two_or_no_show());
-    ra.sort(diff_entry::by_scores(make_list<string>("quality"))); 
+    ra.remove_if(cDiffEntry::frequency_less_than_two_or_no_show());
+    ra.sort(cDiffEntry::by_scores(make_list<string>("quality")));
 
     uint32_t i=0;
-    for(diff_entry_list::iterator item = ra.begin(); item != ra.end(); item++)
+    for(diff_entry_list_t::iterator item = ra.begin(); item != ra.end(); item++)
 		{
-      diff_entry& ra_item = **item;
+      cDiffEntry& ra_item = **item;
       if (!ra_item.entry_exists(FREQUENCY)) continue;
       
       if ( from_string<double>(ra_item[FREQUENCY]) != 0.0 ) continue;
@@ -2093,8 +2093,8 @@ int breseq_default_action(int argc, char* argv[])
 		}
 
 		// require a certain amount of coverage
-		diff_entry_list new_ra = gd.filter_used_as_evidence(gd.list(ra_types));
-		for (diff_entry_list::iterator item = new_ra.begin(); item != new_ra.end(); item++)
+    diff_entry_list_t new_ra = gd.filter_used_as_evidence(gd.list(ra_types));
+    for (diff_entry_list_t::iterator item = new_ra.begin(); item != new_ra.end(); item++)
 		{
 			vector<string> top_bot = split((**item)["tot_cov"], "/");
 			uint32_t top = from_string<int32_t>(top_bot[0]);
@@ -2107,10 +2107,10 @@ int breseq_default_action(int argc, char* argv[])
 		//
     vector<gd_entry_type> jc_types = make_list<gd_entry_type>(JC);
     
-		diff_entry_list jc = gd.filter_used_as_evidence(gd.list(jc_types));
+    diff_entry_list_t jc = gd.filter_used_as_evidence(gd.list(jc_types));
 	  
     // This is the correct way to erase from a list! @MDS
-    for (diff_entry_list::iterator it = jc.begin(); it != jc.end(); )
+    for (diff_entry_list_t::iterator it = jc.begin(); it != jc.end(); )
     {
       if (((*it)->number_reject_reasons() == 0))
         it = jc.erase(it);
@@ -2118,10 +2118,10 @@ int breseq_default_action(int argc, char* argv[])
         it++;
     }
     
-    jc.sort(diff_entry::by_scores(make_list<diff_entry_key_t>("pos_hash_score")("total_non_overlap_reads")));    
+    jc.sort(cDiffEntry::by_scores(make_list<diff_entry_key_t>("pos_hash_score")("total_non_overlap_reads")));
 
     i = 0;
-    for (diff_entry_list::iterator it = jc.begin(); it != jc.end(); it++ )
+    for (diff_entry_list_t::iterator it = jc.begin(); it != jc.end(); it++ )
 		{
 			if (i++ >= settings.max_rejected_junctions_to_show)
 				(**it)["no_show"] = "1";

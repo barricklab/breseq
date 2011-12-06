@@ -138,12 +138,12 @@ extern const char* ALIGN_LEFT;
  * HTML FILES 
  *-----------------------------------------------------------------------------*/
 void html_index(const string& file_name, const Settings& settings, Summary& summary,
-                cReferenceSequences& ref_seq_info, genome_diff& gd);
+                cReferenceSequences& ref_seq_info, cGenomeDiff& gd);
 void html_marginal_predictions(const string& file_name, const Settings& settings, Summary& summary,
-                               cReferenceSequences& ref_seq_info, genome_diff& gd);
+                               cReferenceSequences& ref_seq_info, cGenomeDiff& gd);
 void html_statistics(const string& file_name, const Settings& settings, Summary& summary, cReferenceSequences& ref_seq_info);
 void html_compare(const Settings& settings,const string &file_name, const string &title, 
-                  genome_diff& gd, bool one_ref_seq, vector<string>& gd_name_list_ref, Options& options); 
+                  cGenomeDiff& gd, bool one_ref_seq, vector<string>& gd_name_list_ref, Options& options); 
 void html_compare_polymorphisms(const Settings& settings, const string& file_name, const string& title,
                                 vector<string>& list_ref);
 /*-----------------------------------------------------------------------------
@@ -155,8 +155,8 @@ struct Html_Mutation_Table_String : public string
     //!Constructors
     Html_Mutation_Table_String(
                                const Settings& settings,
-                               genome_diff& gd,
-                               diff_entry_list& list_ref,
+                               cGenomeDiff& gd,
+                               diff_entry_list_t& list_ref,
   			                       vector<string>& gd_name_list_ref,
                                Options& options,
                                bool legend_row = false, 
@@ -166,8 +166,8 @@ struct Html_Mutation_Table_String : public string
     
     Html_Mutation_Table_String(
                                const Settings& settings,
-                               genome_diff& gd,
-                               diff_entry_list& list_ref,
+                               cGenomeDiff& gd,
+                               diff_entry_list_t& list_ref,
   			                       const string& relative_path = "", 
                                bool legend_row = false, 
                                bool one_ref_seq = false
@@ -185,8 +185,8 @@ struct Html_Mutation_Table_String : public string
 
     //!Parameters
     Settings settings;
-    genome_diff gd;
-    diff_entry_list list_ref;
+    cGenomeDiff gd;
+    diff_entry_list_t list_ref;
     bool legend_row;
     bool one_ref_seq;
     vector<string> gd_name_list_ref; 
@@ -196,31 +196,31 @@ struct Html_Mutation_Table_String : public string
 
 
 string html_missing_coverage_table_string
-  (diff_entry_list& list_ref, 
+  (diff_entry_list_t& list_ref,
    bool show_reject_reason,
    const string& title = "Missing coverage evidence...",
    const string& relative_link="");
 
 string html_read_alignment_table_string  
-  (diff_entry_list& list_ref, 
+  (diff_entry_list_t& list_ref,
    bool show_reject_reason,
    const string& title = "Read alignment evidence...",
    const string& relative_link = "");
 
 string html_new_junction_table_string
-  (diff_entry_list& jc,
+  (diff_entry_list_t& jc,
    bool show_reject_reason,
    const string& title= "New junction evidence",
    const string& relative_link = "");
 
-string html_genome_diff_item_table_string(const Settings& settings, genome_diff& gd, 
-                                        diff_entry_list& list_ref);
+string html_cGenomeDiff_item_table_string(const Settings& settings, cGenomeDiff& gd, 
+                                        diff_entry_list_t& list_ref);
 string html_deletion_coverage_values_table_string(const Settings& settings, cReferenceSequences& ref_seq_info, Summary& summary);
 /*-----------------------------------------------------------------------------
  * Helper Functions For Tables 
  *-----------------------------------------------------------------------------*/
-string formatted_mutation_annotation(const diff_entry& mut);
-string to_underline_red_codon(const diff_entry& mut,const string& codon_key);
+string formatted_mutation_annotation(const cDiffEntry& mut);
+string to_underline_red_codon(const cDiffEntry& mut,const string& codon_key);
 string decode_reject_reason(const string & reject);
 
 /*-----------------------------------------------------------------------------
@@ -228,27 +228,27 @@ string decode_reject_reason(const string & reject);
  *-----------------------------------------------------------------------------*/
 struct Evidence_Files
 {
-  class Evidence_Item : public diff_entry
+  class Evidence_Item : public cDiffEntry
   {
   public:
-    Evidence_Item(diff_entry_map_t& _fields, diff_entry_ptr _item, diff_entry_ptr _parent_item)
-    : diff_entry(_fields), item(_item), parent_item(_parent_item) {};
+    Evidence_Item(diff_entry_map_t& _fields, diff_entry_ptr_t _item, diff_entry_ptr_t _parent_item)
+    : cDiffEntry(_fields), item(_item), parent_item(_parent_item) {};
     
-    diff_entry_ptr item;
-  	diff_entry_ptr parent_item;
+    diff_entry_ptr_t item;
+    diff_entry_ptr_t parent_item;
   };
 
-  Evidence_Files(const Settings& settings, genome_diff& gd);
+  Evidence_Files(const Settings& settings, cGenomeDiff& gd);
   
   vector<Evidence_Item> evidence_list;
   
   private:
   
     string html_evidence_file_name(Evidence_Item& evidence_item);
-    void add_evidence(const string& file_name, diff_entry_ptr item,
-                      diff_entry_ptr parent_item, map<string,string>& fields);
+    void add_evidence(const string& file_name, diff_entry_ptr_t item,
+                      diff_entry_ptr_t parent_item, map<string,string>& fields);
     string file_name(Evidence_Item& evidence_item);
-    void html_evidence_file(const Settings& settings, genome_diff& gd, Evidence_Item& item);
+    void html_evidence_file(const Settings& settings, cGenomeDiff& gd, Evidence_Item& item);
 
 };
 
@@ -257,7 +257,7 @@ struct Evidence_Files
  *-----------------------------------------------------------------------------*/
 
 // sub draw_coverage
-void draw_coverage(Settings& settings, cReferenceSequences& ref_seq_info, genome_diff& gd);
+void draw_coverage(Settings& settings, cReferenceSequences& ref_seq_info, cGenomeDiff& gd);
 
 
 }// end output namespace 
