@@ -175,6 +175,9 @@ public:
   //! Marshal this diff entry into an ordered list of fields.
   virtual void marshal(field_list_t& s) const;
 
+  //! Serialize this diff entry into a string for output.
+  virtual string to_string(void) const;
+
   //! Returns values for cDiffEntry["reject"]
   vector<string> get_reject_reasons();
 
@@ -335,6 +338,9 @@ public:
   //! Metadata kept in .gd files
   struct Metadata
   {
+    Metadata() : version("1.0"), author("Barrick JE"), write_header(false) {}
+
+    bool write_header;
     string run_id;
     string version; 
     string author;
