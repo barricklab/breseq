@@ -414,7 +414,7 @@ int do_predict_mutations(int argc, char* argv[]) {
         
     MutationPredictor mp(ref_seq_info);
     
-    cGenomeDiff gd( settings.evidence_cGenomeDiff_file_name );
+    cGenomeDiff gd( settings.evidence_genome_diff_file_name );
     
     mp.predict(
                settings,
@@ -422,7 +422,7 @@ int do_predict_mutations(int argc, char* argv[]) {
                from_string<uint32_t>(options["maximum-read-length"])
                );
     
-    gd.write(settings.final_cGenomeDiff_file_name);
+    gd.write(settings.final_genome_diff_file_name);
     
   } catch(...) {
 		// failed; 
@@ -1100,7 +1100,7 @@ int do_compare(int argc, char *argv[])
   cGenomeDiff control_gd(options["control"]);
   cGenomeDiff test_gd(options["test"]);
 
-  cGenomeDiff compare_gd = cGenomeDiff::compare_cGenomeDiff_files(control_gd, test_gd);
+  cGenomeDiff compare_gd = cGenomeDiff::compare_genome_diff_files(control_gd, test_gd);
 
   compare_gd.write(options["output"]);
 
@@ -1137,8 +1137,8 @@ int do_intersection(int argc, char *argv[])
   const diff_entry_list_t &first_mutations = first_gd.mutation_list();
 
   //Strip counted_ptr
-  typedef set<cDiffEntry> cDiffEntry_set_t;
-  cDiffEntry_set_t first_mutations_set;
+  typedef set<cDiffEntry> diff_entry_set_t;
+  diff_entry_set_t first_mutations_set;
   for (diff_entry_list_t::const_iterator it = first_mutations.begin();
        it != first_mutations.end(); it++) {
     first_mutations_set.insert(**it);
@@ -1155,14 +1155,14 @@ int do_intersection(int argc, char *argv[])
     const diff_entry_list_t &second_mutations = second_gd.mutation_list();
 
     //Strip counted_ptr
-    cDiffEntry_set_t second_mutations_set;
+    diff_entry_set_t second_mutations_set;
     for (diff_entry_list_t::const_iterator it = second_mutations.begin();
          it != second_mutations.end(); it++) {
       second_mutations_set.insert(**it);
     }
 
     //Find intersection
-    cDiffEntry_set_t intersecting_mutations_set;
+    diff_entry_set_t intersecting_mutations_set;
     set_intersection(first_mutations_set.begin(), first_mutations_set.end(),
                      second_mutations_set.begin(), second_mutations_set.end(),
                      inserter(intersecting_mutations_set, intersecting_mutations_set.begin()));
@@ -1184,7 +1184,7 @@ int do_intersection(int argc, char *argv[])
 
   cGenomeDiff intersecting_gd;
 
-  for (cDiffEntry_set_t::iterator it = first_mutations_set.begin();
+  for (diff_entry_set_t::iterator it = first_mutations_set.begin();
        it != first_mutations_set.end(); it++) {
     //cDiffEntry de = *it;
     intersecting_gd.add(*it);
@@ -1296,7 +1296,7 @@ int do_simulate_read(int argc, char *argv[])
   const uint32_t read_length = from_string<uint32_t>(options["length"]);
 
   const cFastqSequenceVector &fsv =
-      cFastqSequenceVector::simulateFromSequence(sequence, average_coverage, read_length, verbose);
+      cFastqSequenceVector::simulate_from_sequence(sequence, average_coverage, read_length, verbose);
 
   //! Step: Write simulated reads to file.
   if(verbose){cout << "Writing FASTQ\n" << "\t" << options["output"] << endl;}
@@ -1978,7 +1978,7 @@ int breseq_default_action(int argc, char* argv[])
 			string error_dir = dirname(coverage_fn) + "/";
 			string this_predicted_mutation_file_name = settings.file_name(settings.predicted_mutation_file_name, "@", "");
 			string output_dir = dirname(this_predicted_mutation_file_name) + "/";
-			string ra_mc_cGenomeDiff_file_name = settings.ra_mc_cGenomeDiff_file_name;
+			string ra_mc_genome_diff_file_name = settings.ra_mc_genome_diff_file_name;
 			string coverage_tab_file_name = settings.file_name(settings.complete_coverage_text_file_name, "@", "");
 			string coverage_dir = dirname(coverage_tab_file_name) + "/";
 
@@ -1995,7 +1995,7 @@ int breseq_default_action(int argc, char* argv[])
 				reference_bam_file_name,
 				reference_fasta_file_name,
 				error_dir,
-				ra_mc_cGenomeDiff_file_name,
+				ra_mc_genome_diff_file_name,
 				output_dir,
 				settings.read_file_names,
 				coverage_dir,
@@ -2024,7 +2024,7 @@ int breseq_default_action(int argc, char* argv[])
 
 	//rewire which GenomeDiff we get data from if we have the elaborated polymorphism_statistics version
 	 if (settings.polymorphism_prediction)
-		settings.ra_mc_cGenomeDiff_file_name = settings.polymorphism_statistics_ra_mc_cGenomeDiff_file_name;
+		settings.ra_mc_genome_diff_file_name = settings.polymorphism_statistics_ra_mc_genome_diff_file_name;
 
   create_path(settings.evidence_path); //need output for plots
 
@@ -2032,24 +2032,24 @@ int breseq_default_action(int argc, char* argv[])
 	{
 		///
 		// Output Genome Diff File
-		//sub cGenomeDiff_output {}
+		//sub genome_diff_output {}
 		///
 		cerr << "Creating merged genome diff evidence file..." << endl;
 
 		// merge all of the evidence GenomeDiff files into one...
 		create_path(settings.evidence_path);
-    cGenomeDiff jc_gd(settings.jc_cGenomeDiff_file_name);
-    cGenomeDiff ra_mc_gd(settings.ra_mc_cGenomeDiff_file_name);
+    cGenomeDiff jc_gd(settings.jc_genome_diff_file_name);
+    cGenomeDiff ra_mc_gd(settings.ra_mc_genome_diff_file_name);
         
-    cGenomeDiff merged_cGenomeDiff;
+    cGenomeDiff merged_genome_diff;
     cGenomeDiff evidence_gd = cGenomeDiff::fast_merge(jc_gd, ra_mc_gd);
-		evidence_gd.write(settings.evidence_cGenomeDiff_file_name);
+		evidence_gd.write(settings.evidence_genome_diff_file_name);
 
 		// predict mutations from evidence in the GenomeDiff
 		cerr << "Predicting mutations from evidence..." << endl;
 
 		MutationPredictor mp(ref_seq_info);
-    cGenomeDiff mpgd(settings.evidence_cGenomeDiff_file_name);
+    cGenomeDiff mpgd(settings.evidence_genome_diff_file_name);
     mp.predict(settings, mpgd, summary.sequence_conversion.max_read_length, summary.sequence_conversion.avg_read_length);
 
     // Add addition values from breseq pipleline to genome diff here.
@@ -2063,11 +2063,11 @@ int breseq_default_action(int argc, char* argv[])
 
     }
 
-    mpgd.write(settings.final_cGenomeDiff_file_name);
+    mpgd.write(settings.final_genome_diff_file_name);
 
 
-    cGenomeDiff gd(settings.final_cGenomeDiff_file_name);
-		//#unlink $evidence_cGenomeDiff_file_name;
+    cGenomeDiff gd(settings.final_genome_diff_file_name);
+		//#unlink $evidence_genome_diff_file_name;
 
 		//
 		// Mark lowest RA evidence items as no-show, or we may be drawing way too many alignments

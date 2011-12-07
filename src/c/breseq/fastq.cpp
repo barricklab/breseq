@@ -560,7 +560,7 @@ namespace breseq {
   char FastqSimulationUtilities::random_insertion_base_options[] =
   {'A', 'C', 'T', 'G'};
 
-  char FastqSimulationUtilities::getRandomQualityScore(void)
+  char FastqSimulationUtilities::get_random_quality_score(void)
   {
     //Roll between 0 and 99,999.
     uint32_t random_die = rand() % 100000;
@@ -578,7 +578,7 @@ namespace breseq {
     return char(it->first);
   }
 
-  char FastqSimulationUtilities::getRandomSNPBase(const char not_this_base)
+  char FastqSimulationUtilities::get_random_snp_base(const char not_this_base)
   {
     ASSERT(random_snp_base_options.count(not_this_base), "Error!");
 
@@ -586,13 +586,13 @@ namespace breseq {
     return random_snp_base_options[not_this_base][rand() % 3];
   }
 
-  char FastqSimulationUtilities::getRandomInsertionBase(void)
+  char FastqSimulationUtilities::get_random_insertion_base(void)
   {
     //Roll from 0 to 3.
     return random_insertion_base_options[rand() % 4];
   }
 
-  bool FastqSimulationUtilities::isRandomSNP(void)
+  bool FastqSimulationUtilities::is_random_snp(void)
   {
     const uint32_t snp_probability = 1000;//10E-3
 
@@ -600,7 +600,7 @@ namespace breseq {
     return (1 == (rand() % snp_probability));
   }
 
-  bool FastqSimulationUtilities::isRandomDeletion(void)
+  bool FastqSimulationUtilities::is_random_deletion(void)
   {
     const uint32_t deletion_probability = 100000;//10E-5
 
@@ -608,7 +608,7 @@ namespace breseq {
     return (1 == (rand() % deletion_probability));
   }
 
-  bool FastqSimulationUtilities::isRandomInsertion(void)
+  bool FastqSimulationUtilities::is_random_insertion(void)
   {
     const uint32_t insertion_probability = 100000;//10E-5
 
@@ -618,7 +618,7 @@ namespace breseq {
   }
 
   cFastqSequenceVector
-  cFastqSequenceVector::simulateFromSequence(const cSequence &ref_sequence,
+  cFastqSequenceVector::simulate_from_sequence(const cSequence &ref_sequence,
                                              const uint32_t &average_coverage,
                                              const uint32_t &read_size,
                                              bool verbose)
@@ -690,7 +690,7 @@ namespace breseq {
       //! Algorithm Step 1:
       size_t start_pos = rand() % ref_sequence_size;
       cSequence ref_segment =
-          ref_sequence.circularSubStr(start_pos, 2 * read_size);
+          ref_sequence.circular_substr(start_pos, 2 * read_size);
 
       // 50% Chance the read is a negative strand.
       if ((rand() % 100) < 50) {
@@ -714,18 +714,18 @@ namespace breseq {
       //! Algorithm Step 3:
 
         //! SNP base.
-        if (FastqSimulationUtilities::isRandomSNP()) {
+        if (FastqSimulationUtilities::is_random_snp()) {
           //We want a random base other than this one.
           char not_this_base = ref_segment[index_in_ref_segment];
           char new_random_base =
-              FastqSimulationUtilities::getRandomSNPBase(not_this_base);
+              FastqSimulationUtilities::get_random_snp_base(not_this_base);
 
           //Assign base.
           fs->m_sequence[index_to_assign] = new_random_base;
 
           //Assign quality score.
           fs->m_qualities[index_to_assign] =
-              FastqSimulationUtilities::getRandomQualityScore();
+              FastqSimulationUtilities::get_random_quality_score();
 
           //For verbose.
           verbose_snps[index_in_ref_segment] = new_random_base;
@@ -737,7 +737,7 @@ namespace breseq {
           continue;
         }
         //! DEL base.
-        else if (FastqSimulationUtilities::isRandomDeletion()) {
+        else if (FastqSimulationUtilities::is_random_deletion()) {
          //For verbose.
           verbose_deletions[index_in_ref_segment] =
               ref_segment[index_in_ref_segment];
@@ -746,16 +746,16 @@ namespace breseq {
           continue;
         }
         //! INS base.
-        else if (FastqSimulationUtilities::isRandomInsertion()) {
+        else if (FastqSimulationUtilities::is_random_insertion()) {
           char base_to_insert =
-              FastqSimulationUtilities::getRandomInsertionBase();
+              FastqSimulationUtilities::get_random_insertion_base();
 
           //Assign base.
           fs->m_sequence[index_to_assign] = base_to_insert;
 
           //Assign quality score.
           fs->m_qualities[index_to_assign] =
-              FastqSimulationUtilities::getRandomQualityScore();
+              FastqSimulationUtilities::get_random_quality_score();
 
           //For verbose
           verbose_insertions[index_in_ref_segment] = base_to_insert;
@@ -772,7 +772,7 @@ namespace breseq {
 
           //Assign quality score.
           fs->m_qualities[index_to_assign] =
-            FastqSimulationUtilities::getRandomQualityScore();
+            FastqSimulationUtilities::get_random_quality_score();
 
            /*Increment both index_to_assign and index_in_ref_segment and
           continue to next iteration. */
@@ -784,14 +784,14 @@ namespace breseq {
 
       //! Step: Verbose output.
       if (verbose) {
-        if (!verbose_snps.isBlank()      ||
-            !verbose_deletions.isBlank() ||
-            !verbose_insertions.isBlank()) {
+        if (!verbose_snps.is_blank()      ||
+            !verbose_deletions.is_blank() ||
+            !verbose_insertions.is_blank()) {
           printf("\tVerbose output for simulated read    :  %s\n",
                  fs->m_name.c_str());
 
           const string &original =
-              ref_sequence.circularSubStr(start_pos, 2 * read_size);
+              ref_sequence.circular_substr(start_pos, 2 * read_size);
           printf("\tReference Segment(2 x Read Size)     :  %s\n",
                  original.c_str());
 
@@ -800,17 +800,17 @@ namespace breseq {
                    ref_segment.c_str());
           }
 
-          if (!verbose_snps.isBlank()) {
+          if (!verbose_snps.is_blank()) {
             printf("\tSimulated SNP                        :  %s\n",
                    verbose_snps.c_str());
           }
 
-          if (!verbose_deletions.isBlank()) {
+          if (!verbose_deletions.is_blank()) {
             printf("\tSimulated DEL                        :  %s\n",
                    verbose_deletions.c_str());
           }
 
-          if (!verbose_insertions.isBlank()) {
+          if (!verbose_insertions.is_blank()) {
             printf("\tSimulated INS                        :  %s\n",
                    verbose_insertions.c_str());
           }

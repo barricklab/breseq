@@ -371,8 +371,8 @@ uint32_t cGenomeDiff::new_unique_id()
 void cGenomeDiff::add(const cDiffEntry& item, bool lowest_unique) {
 
   // allocating counted_ptr takes care of disposal
-  cDiffEntry* cDiffEntry_copy = new cDiffEntry(item);
-  diff_entry_ptr_t added_item(cDiffEntry_copy);
+  cDiffEntry* diff_entry_copy = new cDiffEntry(item);
+  diff_entry_ptr_t added_item(diff_entry_copy);
   _entry_list.push_back(added_item);
   
   uint32_t new_id = 0;    
@@ -620,7 +620,7 @@ void cGenomeDiff::read(const string& filename) {
 }
 
 
-map<gd_entry_type, sort_fields_item> cDiffEntry_sort_fields = make_map<gd_entry_type, sort_fields_item>
+map<gd_entry_type, sort_fields_item> diff_entry_sort_fields = make_map<gd_entry_type, sort_fields_item>
   (SNP, sort_fields_item(1, SEQ_ID, POSITION))
   (SUB, sort_fields_item(1, SEQ_ID, POSITION))
   (DEL, sort_fields_item(1, SEQ_ID, POSITION))
@@ -658,8 +658,8 @@ bool diff_entry_ptr_sort(const diff_entry_ptr_t& a, const diff_entry_ptr_t& b) {
   gd_entry_type a_type = a->_type;
   gd_entry_type b_type = b->_type;
 
-  sort_fields_item a_sort_fields = cDiffEntry_sort_fields[a_type];
-  sort_fields_item b_sort_fields = cDiffEntry_sort_fields[b_type];
+  sort_fields_item a_sort_fields = diff_entry_sort_fields[a_type];
+  sort_fields_item b_sort_fields = diff_entry_sort_fields[b_type];
   
   
   if (a_sort_fields._f1 < b_sort_fields._f1) {
@@ -715,8 +715,8 @@ bool diff_entry_sort(const cDiffEntry &_a, const cDiffEntry &_b) {
   gd_entry_type a_type = a._type;
   gd_entry_type b_type = b._type;
 
-  sort_fields_item a_sort_fields = cDiffEntry_sort_fields[a_type];
-  sort_fields_item b_sort_fields = cDiffEntry_sort_fields[b_type];
+  sort_fields_item a_sort_fields = diff_entry_sort_fields[a_type];
+  sort_fields_item b_sort_fields = diff_entry_sort_fields[b_type];
 
 
   if (a_sort_fields._f1 < b_sort_fields._f1) {
@@ -1290,14 +1290,14 @@ diff_entry_list_t cGenomeDiff::list(const vector<gd_entry_type>& types)
   
   diff_entry_list_t return_list;
   
-  for (diff_entry_list_t::iterator itr_cDiffEntry = _entry_list.begin();
-       itr_cDiffEntry != _entry_list.end(); itr_cDiffEntry++)
+  for (diff_entry_list_t::iterator itr_diff_entry = _entry_list.begin();
+       itr_diff_entry != _entry_list.end(); itr_diff_entry++)
     {
       for (vector<gd_entry_type>::const_iterator requested_type = types.begin();
            requested_type != types.end(); requested_type++)
       {
-        if((*itr_cDiffEntry)->_type == *requested_type)
-          return_list.push_back(*itr_cDiffEntry);
+        if((*itr_diff_entry)->_type == *requested_type)
+          return_list.push_back(*itr_diff_entry);
       }
     }
   
@@ -1768,7 +1768,7 @@ int32_t cDiffEntry::mutation_size_change(cReferenceSequences& ref_seq_info)
   }
 }
 
-cGenomeDiff cGenomeDiff::compare_cGenomeDiff_files(const cGenomeDiff &control, const cGenomeDiff &test)
+cGenomeDiff cGenomeDiff::compare_genome_diff_files(const cGenomeDiff &control, const cGenomeDiff &test)
 {
   cGenomeDiff control_gd = control;
   cGenomeDiff test_gd = test;
@@ -1777,9 +1777,9 @@ cGenomeDiff cGenomeDiff::compare_cGenomeDiff_files(const cGenomeDiff &control, c
   const diff_entry_list_t &control_mutations = control_gd.mutation_list();
   const diff_entry_list_t &test_mutations = test_gd.mutation_list();
 
-  typedef set<cDiffEntry> cDiffEntry_set_t;
-  cDiffEntry_set_t control_diff_mutations_set;
-  cDiffEntry_set_t test_diff_mutations_set;
+  typedef set<cDiffEntry> diff_entry_set_t;
+  diff_entry_set_t control_diff_mutations_set;
+  diff_entry_set_t test_diff_mutations_set;
 
   //! Step: Strip counted_ptr<> for STL use.
   for (diff_entry_list_t::const_iterator it = control_mutations.begin();
@@ -1792,37 +1792,37 @@ cGenomeDiff cGenomeDiff::compare_cGenomeDiff_files(const cGenomeDiff &control, c
   }
 
   //! Step: True positive mutations
-  cDiffEntry_set_t true_positive_mutations_set;
+  diff_entry_set_t true_positive_mutations_set;
   set_intersection(control_diff_mutations_set.begin(), control_diff_mutations_set.end(),
                    test_diff_mutations_set.begin(), test_diff_mutations_set.end(),
                    inserter(true_positive_mutations_set, true_positive_mutations_set.begin()));
 
   //Remove true_positives from previous sets
-  for (cDiffEntry_set_t::const_iterator it = true_positive_mutations_set.begin();
+  for (diff_entry_set_t::const_iterator it = true_positive_mutations_set.begin();
        it != true_positive_mutations_set.end(); it++) {
     control_diff_mutations_set.erase(*it);
     test_diff_mutations_set.erase(*it);
   }
 
   //Find difference and then determine if false-positive or false-negative
-  cDiffEntry_set_t difference_mutations_set;
+  diff_entry_set_t difference_mutations_set;
   set_difference(control_diff_mutations_set.begin(), control_diff_mutations_set.end(),
                    test_diff_mutations_set.begin(), test_diff_mutations_set.end(),
                    inserter(difference_mutations_set, difference_mutations_set.begin()));
 
   //! Step: False Negative
-  cDiffEntry_set_t false_negative_mutations_set;
+  diff_entry_set_t false_negative_mutations_set;
   set_intersection(difference_mutations_set.begin(), difference_mutations_set.end(),
                    control_diff_mutations_set.begin(), control_diff_mutations_set.end(),
                    inserter(false_negative_mutations_set, false_negative_mutations_set.begin()));
   //Remove false negatives from test set
-  for (cDiffEntry_set_t::const_iterator it = true_positive_mutations_set.begin();
+  for (diff_entry_set_t::const_iterator it = true_positive_mutations_set.begin();
        it != true_positive_mutations_set.end(); it++) {
     test_diff_mutations_set.erase(*it);
   }
 
   //! Step: False positive
-  cDiffEntry_set_t false_positive_mutations_set;
+  diff_entry_set_t false_positive_mutations_set;
   set_intersection(difference_mutations_set.begin(), difference_mutations_set.end(),
                    test_diff_mutations_set.begin(), test_diff_mutations_set.end(),
                    inserter(false_positive_mutations_set, false_positive_mutations_set.begin()));
@@ -1838,7 +1838,7 @@ cGenomeDiff cGenomeDiff::compare_cGenomeDiff_files(const cGenomeDiff &control, c
 
   //! Step: Add validation=<TP/FP/FN> tags to new_gd.
   //True positive
-  for (cDiffEntry_set_t::iterator it = true_positive_mutations_set.begin();
+  for (diff_entry_set_t::iterator it = true_positive_mutations_set.begin();
        it != true_positive_mutations_set.end(); it++) {
     cDiffEntry de = *it;
     de.insert(pair<string,string>("validation", "TP"));
@@ -1846,7 +1846,7 @@ cGenomeDiff cGenomeDiff::compare_cGenomeDiff_files(const cGenomeDiff &control, c
   }
 
   //False negative
-  for (cDiffEntry_set_t::iterator it = false_negative_mutations_set.begin();
+  for (diff_entry_set_t::iterator it = false_negative_mutations_set.begin();
        it != false_negative_mutations_set.end(); it++) {
     cDiffEntry de = *it;
     de.insert(pair<string,string>("validation", "FN"));
@@ -1854,7 +1854,7 @@ cGenomeDiff cGenomeDiff::compare_cGenomeDiff_files(const cGenomeDiff &control, c
   }
 
    //False positive
-  for (cDiffEntry_set_t::iterator it = false_positive_mutations_set.begin();
+  for (diff_entry_set_t::iterator it = false_positive_mutations_set.begin();
        it != false_positive_mutations_set.end(); it++) {
     cDiffEntry de = *it;
     de.insert(pair<string,string>("validation", "FP"));

@@ -696,7 +696,7 @@ string breseq_header_string(const Settings& settings)
   ss << " | " << endl;
   ss << a(Settings::relative_path(settings.summary_html_file_name, settings.output_path), "summary statistics");
   ss << " | " << endl;
-  ss << a(Settings::relative_path(settings.final_cGenomeDiff_file_name, settings.output_path), "genome diff");
+  ss << a(Settings::relative_path(settings.final_genome_diff_file_name, settings.output_path), "genome diff");
   ss << " | " << endl;
   ss << a(Settings::relative_path(settings.log_file_name, settings.output_path), "command line log");
   ss << endl;
@@ -705,7 +705,7 @@ string breseq_header_string(const Settings& settings)
 }
 
 
-string html_cGenomeDiff_item_table_string(const Settings& settings, cGenomeDiff& gd, diff_entry_list_t& list_ref)
+string html_genome_diff_item_table_string(const Settings& settings, cGenomeDiff& gd, diff_entry_list_t& list_ref)
 {
   if(list_ref.empty()) return "";
 
@@ -1665,7 +1665,7 @@ Evidence_Files::html_evidence_file (
   diff_entry_ptr_t parent_item = item.parent_item;
   diff_entry_list_t parent_list;
   parent_list.push_back(parent_item);
-  HTML << html_cGenomeDiff_item_table_string(settings, gd, parent_list);
+  HTML << html_genome_diff_item_table_string(settings, gd, parent_list);
   HTML << "<p>";
   
   diff_entry_list_t evidence_list = gd.mutation_evidence_list(*parent_item);
@@ -1680,7 +1680,7 @@ Evidence_Files::html_evidence_file (
     
     if(this_evidence_list.empty()) continue;
 
-    HTML << html_cGenomeDiff_item_table_string(settings, gd, this_evidence_list);
+    HTML << html_genome_diff_item_table_string(settings, gd, this_evidence_list);
     HTML << "<p>"; 
   }
   
