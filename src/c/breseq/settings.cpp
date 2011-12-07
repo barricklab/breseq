@@ -480,7 +480,7 @@ namespace breseq
 		this->resolved_junction_sam_file_name = this->alignment_correction_path + "/junction.sam";
 		this->alignment_resolution_summary_file_name = this->alignment_correction_path + "/summary.bin";
 		this->alignment_correction_done_file_name = this->alignment_correction_path + "/alignment_resolution.done";
-		this->jc_cGenomeDiff_file_name = this->alignment_correction_path + "/jc_evidence.gd";
+		this->jc_genome_diff_file_name = this->alignment_correction_path + "/jc_evidence.gd";
 
 		////// index BAM //////
 		this->bam_path = "06_bam";
@@ -511,7 +511,7 @@ namespace breseq
 		this->mutation_identification_path = "08_mutation_identification";
 		if (this->base_output_path.size() > 0) this->mutation_identification_path = this->base_output_path + "/" + this->mutation_identification_path;
 		this->predicted_mutation_file_name = this->mutation_identification_path + "/@.predicted_mutations.bin";
-		this->ra_mc_cGenomeDiff_file_name = this->mutation_identification_path + "/ra_mc_evidence.gd";
+		this->ra_mc_genome_diff_file_name = this->mutation_identification_path + "/ra_mc_evidence.gd";
 		this->complete_mutations_text_file_name = this->mutation_identification_path + "/@.mutations.tab";
 		this->complete_coverage_text_file_name = this->mutation_identification_path + "/@.coverage.tab";
 		this->mutation_identification_done_file_name = this->mutation_identification_path + "/mutation_identification.done";
@@ -521,7 +521,7 @@ namespace breseq
 		this->polymorphism_statistics_output_file_name = this->mutation_identification_path + "/polymorphism_statistics_output.tab";
 		this->polymorphism_statistics_r_script_file_name = this->program_data_path + "/polymorphism_statistics.r";
 		this->polymorphism_statistics_r_script_log_file_name = this->mutation_identification_path + "/polymorphism_statistics_output.log";
-		this->polymorphism_statistics_ra_mc_cGenomeDiff_file_name = this->mutation_identification_path + "/ra_mc_evidence_polymorphism_statistics.gd";
+		this->polymorphism_statistics_ra_mc_genome_diff_file_name = this->mutation_identification_path + "/ra_mc_evidence_polymorphism_statistics.gd";
 		this->polymorphism_statistics_done_file_name = this->mutation_identification_path + "/polymorphism_statistics.done";
 
 		////// data //////
@@ -545,10 +545,10 @@ namespace breseq
 		this->index_html_file_name = this->output_path + "/index.html";
 		this->summary_html_file_name = this->output_path + "/summary.html";
 		this->marginal_html_file_name = this->output_path + "/marginal.html";
-		this->final_cGenomeDiff_file_name = this->output_path + "/output.gd";
+		this->final_genome_diff_file_name = this->output_path + "/output.gd";
 		this->local_evidence_path = "evidence";
 		this->evidence_path = this->output_path + "/" + this->local_evidence_path;
-		this->evidence_cGenomeDiff_file_name = this->evidence_path + "/evidence.gd";
+		this->evidence_genome_diff_file_name = this->evidence_path + "/evidence.gd";
 		this->local_coverage_plot_path = "evidence";
 		this->coverage_plot_path = this->output_path + "/" + this->local_coverage_plot_path;
 		this->overview_coverage_plot_file_name = this->coverage_plot_path + "/@.overview.png";

@@ -213,7 +213,7 @@ string html_new_junction_table_string
    const string& title= "New junction evidence",
    const string& relative_link = "");
 
-string html_cGenomeDiff_item_table_string(const Settings& settings, cGenomeDiff& gd, 
+string html_genome_diff_item_table_string(const Settings& settings, cGenomeDiff& gd, 
                                         diff_entry_list_t& list_ref);
 string html_deletion_coverage_values_table_string(const Settings& settings, cReferenceSequences& ref_seq_info, Summary& summary);
 /*-----------------------------------------------------------------------------

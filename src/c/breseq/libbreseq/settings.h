@@ -206,7 +206,7 @@ namespace breseq
 		string candidate_junction_path;
 		string candidate_junction_fasta_file_name;
 		string candidate_junction_faidx_file_name;
-		string jc_cGenomeDiff_file_name;
+		string jc_genome_diff_file_name;
 		string preprocess_junction_best_sam_file_name;
 		string preprocess_junction_split_sam_file_name;
 
@@ -225,8 +225,8 @@ namespace breseq
 
 		string local_evidence_path;
 		string evidence_path;
-		string evidence_cGenomeDiff_file_name;
-		string final_cGenomeDiff_file_name;
+		string evidence_genome_diff_file_name;
+		string final_genome_diff_file_name;
 
     
     //// Read Alignment ////
@@ -350,7 +350,7 @@ namespace breseq
 		////// mutation identification //////
 		string mutation_identification_path;
 		string predicted_mutation_file_name;
-		string ra_mc_cGenomeDiff_file_name;
+		string ra_mc_genome_diff_file_name;
 		string complete_mutations_text_file_name;
 		string complete_coverage_text_file_name;
 		string mutation_identification_done_file_name;
@@ -361,7 +361,7 @@ namespace breseq
 		string polymorphism_statistics_output_file_name;
 		string polymorphism_statistics_r_script_file_name;
 		string polymorphism_statistics_r_script_log_file_name;
-		string polymorphism_statistics_ra_mc_cGenomeDiff_file_name;
+		string polymorphism_statistics_ra_mc_genome_diff_file_name;
 		string polymorphism_statistics_done_file_name;
 
 		string output_done_file_name;

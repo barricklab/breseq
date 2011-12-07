@@ -2022,8 +2022,8 @@ void cReferenceSequences::polymorphism_statistics(Settings& settings, Summary& s
   string polymorphism_statistics_output_file_name = settings.polymorphism_statistics_output_file_name;
 
   /// Load the older GenomeDiff and add new fields
-  string ra_mc_cGenomeDiff_file_name = settings.ra_mc_cGenomeDiff_file_name;
-  cGenomeDiff gd(ra_mc_cGenomeDiff_file_name);
+  string ra_mc_genome_diff_file_name = settings.ra_mc_genome_diff_file_name;
+  cGenomeDiff gd(ra_mc_genome_diff_file_name);
 
   string polymorphism_statistics_r_script_file_name = settings.polymorphism_statistics_r_script_file_name;
   string polymorphism_statistics_r_script_log_file_name = settings.polymorphism_statistics_r_script_log_file_name;
@@ -2154,8 +2154,8 @@ void cReferenceSequences::polymorphism_statistics(Settings& settings, Summary& s
   ROUT.close();
 
   /// Write out the file which now has much more data
-  string polymorphism_statistics_ra_mc_cGenomeDiff_file_name = settings.polymorphism_statistics_ra_mc_cGenomeDiff_file_name;
-  new_gd.write(polymorphism_statistics_ra_mc_cGenomeDiff_file_name);
+  string polymorphism_statistics_ra_mc_genome_diff_file_name = settings.polymorphism_statistics_ra_mc_genome_diff_file_name;
+  new_gd.write(polymorphism_statistics_ra_mc_genome_diff_file_name);
 
 }
 

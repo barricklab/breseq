@@ -45,13 +45,13 @@ namespace breseq {
         this->assign(value);
       }
 
-      inline string circularSubStr(const size_t &start_pos, const size_t &n_pos) const
+      inline string circular_substr(const size_t &start_pos, const size_t &n_pos) const
       {
-        const size_t  &this_size = this->size();
-        const size_t  &max_pos   = start_pos + n_pos;
-        const int32_t &size_diff = this_size - max_pos;
+        const size_t  this_size = this->size();
+        const size_t  max_pos   = start_pos + n_pos;
+        const int32_t size_diff = this_size - max_pos;
 
-        string ret_val;
+        string ret_val = "";
         if (size_diff >= 0 ) {
           ret_val = this->substr(start_pos, n_pos);
         } else {
@@ -62,10 +62,10 @@ namespace breseq {
         return ret_val;
       }
 
-      inline bool isBlank(void)
+      inline bool is_blank(void)
       {
         size_t size = this->size();
-        for (int i = 0; i < size; i++) {
+        for (size_t i = 0; i < size; i++) {
           if ((*this)[i] != ' ') {
             return false;
           }

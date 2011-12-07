@@ -286,7 +286,7 @@ public:
   static cGenomeDiff fast_merge(const cGenomeDiff& gd1, const cGenomeDiff& gd2);
 
   //! compare
-  static cGenomeDiff compare_cGenomeDiff_files(const cGenomeDiff &control, const cGenomeDiff &test);
+  static cGenomeDiff compare_genome_diff_files(const cGenomeDiff &control, const cGenomeDiff &test);
 
   //! Read a genome diff from a file.
   void read(const string& filename);
@@ -362,8 +362,8 @@ struct cDiffEntry::field_exists : public unary_function <diff_entry_ptr_t, bool>
     : m_field_key(field_key) {}
   
   //! Predicate
-  virtual bool operator() (const diff_entry_ptr_t& p_cDiffEntry)
-    const {return (p_cDiffEntry->entry_exists(m_field_key));}
+  virtual bool operator() (const diff_entry_ptr_t& p_diff_entry)
+    const {return (p_diff_entry->entry_exists(m_field_key));}
 
   protected:
     diff_entry_key_t m_field_key;
@@ -379,12 +379,12 @@ struct cDiffEntry::fields_exist : public unary_function <diff_entry_ptr_t, bool>
     : m_field_keys(field_keys) {}
   
   //! Predicate
-  virtual bool operator() (const diff_entry_ptr_t& p_cDiffEntry) const
+  virtual bool operator() (const diff_entry_ptr_t& p_diff_entry) const
   {
     for (vector<diff_entry_key_t>::const_iterator itr = m_field_keys.begin();
          itr != m_field_keys.end(); itr++) {
       diff_entry_key_t field_key(*itr);
-      if (p_cDiffEntry->entry_exists(field_key)) {
+      if (p_diff_entry->entry_exists(field_key)) {
         continue;
       }
       else { 
