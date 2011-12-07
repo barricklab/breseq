@@ -277,7 +277,7 @@ namespace breseq {
 	void CandidateJunctions::identify_candidate_junctions(const Settings& settings, Summary& summary, const cReferenceSequences& ref_seq_info)
 	{
 		(void)summary; // TODO: save statistics
-    bool verbose = true;
+    bool verbose = false;
     
 		// hash by junction sequence
 		SequenceToKeyToJunctionCandidateMap candidate_junctions;
