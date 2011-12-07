@@ -1680,7 +1680,7 @@ cReferenceSequences cGenomeDiff::apply_to_sequences(cReferenceSequences& ref_seq
         ASSERT((iDelStart >= 0) && (iDelEnd >= 0), (to_string(mut._type) + " " + mut._id) + " - NEGATIVE DELETION");
 
         // @JEB: correct here to look for where the repeat is in the original ref_seq_info.
-        // This saves us from possible looking at a shifted location...
+        // This saves us from possibly looking at a shifted location...
         string rep_string = ref_seq_info.repeat_family_sequence(mut["repeat_name"], from_string<int16_t>(mut["strand"]));
         mut["repeat_size"] = to_string(rep_string.length()); // saving this for shifting
         
