@@ -851,7 +851,7 @@ int do_identify_candidate_junctions(int argc, char* argv[]) {
 
 
 int do_convert_gvf( int argc, char* argv[]){
-  AnyOption options("Usage: breseq GD2GVF --gd <genomediff.gd> --output <gvf.gvf>"); 
+  AnyOption options("Usage: breseq GD2GVF --input <input.gd> --output <output.gvf>"); 
 
   options
     ("help,h", "produce this help message", TAKES_NO_ARGUMENT)
@@ -1205,7 +1205,7 @@ int do_annotate(int argc, char* argv[])
   ("input,i", "path to input genome diff (REQUIRED)")
   ("output,o", "path to output genome diff with added mutation data (REQUIRED)")
   ("reference,r", "reference sequence in GenBank flatfile format (REQUIRED)")
-  ("ignore-pseudogenes", "treats pseudogenes as normal genes for callings AA changes", TAKES_NO_ARGUMENT)
+  ("ignore-pseudogenes", "treats pseudogenes as normal genes for calling AA changes", TAKES_NO_ARGUMENT)
   ;
   options.processCommandArgs(argc, argv);
   
@@ -1223,7 +1223,6 @@ int do_annotate(int argc, char* argv[])
   cReferenceSequences ref_seq_info;
   ref_seq_info.LoadFiles(reference_file_names);
   ref_seq_info.annotate_mutations(gd, false, options.count("ignore-pseudogenes"));
-  
   gd.write(options["output"]);
   
   return 0;

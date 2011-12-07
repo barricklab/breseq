@@ -340,10 +340,10 @@ public:
   {
     Metadata() : version("1.0"), author("Barrick JE"), write_header(false) {}
 
-    bool write_header;
     string run_id;
     string version; 
     string author;
+    bool write_header;
     vector<string> ref_seqs;
     vector<string> read_seqs;
     map<string,string> breseq_data; // Use this to write values from pipeline to gd

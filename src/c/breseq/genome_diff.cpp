@@ -174,7 +174,7 @@ cDiffEntry::cDiffEntry(const string &line)
   /*! Step: Get line specifications and assign them. */
   const string_vector_t &diff_entry_specs = line_specification[de->_type];
   const size_t diff_entry_specs_size = diff_entry_specs.size();
-  for (int i = 0; i < diff_entry_specs_size; i++) {
+  for (size_t i = 0; i < diff_entry_specs_size; i++) {
      const diff_entry_key_t &key = diff_entry_specs[i];
      diff_entry_value_t value = "";
      getline(ss_line, value, '\t');
@@ -1031,7 +1031,11 @@ void cGenomeDiff::add_breseq_data(const key_t &key, const string& value)
 
 // Convert GD file to GVF file
 void GDtoGVF( const string &gdfile, const string &gvffile, bool snv_only){
-    
+  
+  cGenomeDiff gd_object(gdfile);
+  diff_entry_list_t diff_entry_list = gd_object.list();
+  diff_entry_list_t::iterator it = diff_entry_list.begin();
+  
   // Stores the features
   vector< vector<string> > features;
   vector< vector<string> > featuresGVF;
@@ -1084,8 +1088,12 @@ void GDtoGVF( const string &gdfile, const string &gvffile, bool snv_only){
   // gvf[7]: Phase
   // gvf[8]: Attributes    
 
-  for( size_t i=0; i<features.size(); i++ )
+  for( size_t i=0; i<features.size() ; i++ )
   {
+    if (it == diff_entry_list.end()) break;
+    cDiffEntry& de = **it;
+    it++;
+    
     vector<string> gvf(9,"");
 
     for( int j=5; j<8; j++ ){
@@ -1117,7 +1125,9 @@ void GDtoGVF( const string &gdfile, const string &gvffile, bool snv_only){
       
       gvf[6] = "+";
       
-      gvf[8].append(";Reference_seq=").append( evidence[5] );
+      if (evidence.size() > 0) {
+        gvf[8].append(";Reference_seq=").append( evidence[5] );
+      }
       
       for( size_t j=0; j<evidence.size(); j++ ){
         string s = evidence[j];
@@ -1142,6 +1152,24 @@ void GDtoGVF( const string &gdfile, const string &gvffile, bool snv_only){
       for( size_t j=0; j<features[i].size(); j++ ){
         if( features[i][j].size()>10 && features[i][j].substr(0,10).compare("frequency=") == 0){
           gvf[8].append(";Variant_freq=").append( features[i][j].substr(10,features[i][j].size()-10 ) );
+        }
+      }
+      
+      if (de.entry_exists("snp_type")) {
+        if (de["snp_type"] == "nonsynonymous") {
+          gvf[8].append(";Variant_effect=non_synonymous_codon");
+        }
+        else if (de["snp_type"] == "synonymous") {
+          gvf[8].append(";Variant_effect=synonymous_codon");
+        }
+        else if (de["snp_type"] == "intergenic") {
+          gvf[8].append(";Variant_effect=intergenic_variant");
+        }
+        else if (de["snp_type"] == "RNA") {
+          gvf[8].append(";Variant_effect=nc_transcript_variant");
+        }
+        else if (de["snp_type"] == "pseudogene") {
+          ERROR("Mutation annotated as pseudogene encountered. Not clear how to annotate.");
         }
       }
     }
