@@ -113,7 +113,7 @@ cDiffEntry::cDiffEntry()
 {
 }
 
-cDiffEntry::cDiffEntry(const string& line)
+cDiffEntry::cDiffEntry(const string &line)
   : _type(TYPE_UNKOWN)
   ,_id("")
   ,_evidence()
@@ -136,9 +136,16 @@ cDiffEntry::cDiffEntry(const string& line)
     }
   }
 
-  ASSERT(de->_type != TYPE_UNKOWN, "Error!")
-  /*Error: Could not determine type, check that gd_entry_type and lookup table
-   are identical in size and order. */
+  /*Check that the type is set. If there is an error confirm that gd_entry_type
+   and the lookup table are identical in size and order and contain this type.*/
+  if (de->_type == TYPE_UNKOWN) {
+    string message = "";
+    sprintf(message,
+            "cDiffEntry::cDiffEntry(%s): Could not determine type.",
+            line.c_str()
+            );
+    ERROR(message);
+  }
 
   //! Step: Get the id.
   getline(ss_line, de->_id, '\t');
@@ -179,6 +186,13 @@ cDiffEntry::cDiffEntry(const string& line)
     string key_value_pair = "";
     getline(ss_line, key_value_pair, '\t');
     if (key_value_pair.empty()) {
+      //Not enough of a reason to exit, could be from user input.
+      string message = "";
+      sprintf(message,
+              "cDiffEntry::cDiffEntry(%s): Empty field found.",
+              line.c_str()
+              );
+      WARN(message);
       break;
     }
 
@@ -191,9 +205,15 @@ cDiffEntry::cDiffEntry(const string& line)
       }
     }
 
-    ASSERT(equal_sign_pos, "Error!");
-    /*Error: The given segment is not a key=value pair? Is line_specification
-     up to date for this specific mutation? */
+    //Confirm this is a key=value field.
+    if (!equal_sign_pos) {
+      string message = "";
+      sprintf(message,
+              "cDiffEntry::cDiffEntry(%s): Field %s is not a key=value pair.",
+              line.c_str(), key_value_pair.c_str()
+              );
+      ERROR(message);
+    }
 
     const string &key   = key_value_pair.substr(0, equal_sign_pos);
     const string &value = key_value_pair.substr(equal_sign_pos + 1,
@@ -246,7 +266,7 @@ bool cDiffEntry::operator==(const cDiffEntry& de)
 /*! Marshal this diff entry into an ordered list of fields.
  */
 void cDiffEntry::marshal(field_list_t& s) const {
-  s.push_back(to_string(_type));
+  s.push_back(gd_entry_type_lookup_table[_type]);
 	s.push_back(_id);
   
   s.push_back(join(_evidence, ","));
@@ -263,7 +283,7 @@ void cDiffEntry::marshal(field_list_t& s) const {
   {
     diff_entry_map_t::iterator iter=cp.find(*it);
     
-    ASSERT(iter != cp.end(), "Did not find required field '" + *it + "' to write in entry id " + _id + " of type '" + to_string(_type) + "'.");
+    ASSERT(iter != cp.end(), "Did not find required field '" + *it + "' to write in entry id " + _id + " of type '" + gd_entry_type_lookup_table[_type] + "'.");
     
     s.push_back(iter->second);
     cp.erase(iter);
@@ -328,6 +348,13 @@ uint32_t number_reject_reasons(cDiffEntry& de) {
 	return reason_count;
 }
 
+string cDiffEntry::to_string(void) const
+{
+  field_list_t fields;
+  marshal(fields);
+
+  return join(fields, "\t");
+}
 
 /*! Output operator for a diff entry.
  */
@@ -564,16 +591,10 @@ void cGenomeDiff::read(const string& filename) {
   //#=AUTHOR    Barrick JE
   //#=REFSEQ    Genbank:NC_012967.1
   //#=READSEQ   SRA:SRR066595
+
+  /*#=GENOME_DIFF version must be initialized for this file to be recognized
+   as a genome diff file. */
   metadata.version = "";
-  string version_tag = "";
-  getline(in, version_tag, ' ');
-  getline(in, metadata.version, '\n');
-
-  ASSERT(version_tag == "#=GENOME_DIFF" ||
-         !metadata.version.empty(), "Error!");
-  /*Error: Are you sure this file is a genome diff file? It is expected that
-    all genome diff files have a #=GENOME_DIFF XX tag on the first line. */
-
   while(in.peek() == 35) { //35 is ASCII of '#'.
     string key = "";
     getline(in, key, ' ');
@@ -583,30 +604,52 @@ void cGenomeDiff::read(const string& filename) {
       in.ignore();
     }
 
-    if (key == "#=AUTHOR") {
-      getline(in, metadata.author, '\n');
+    //Evaluate key.
+    if (key == "#=GENOME_DIFF") {
+      getline(in, metadata.version);
+    }
+    else if (key == "#=AUTHOR") {
+      getline(in, metadata.author);
     }
     else if (key == "#=REFSEQ") {
       metadata.ref_seqs.resize(metadata.ref_seqs.size() + 1);
-      getline(in, metadata.ref_seqs.back(), '\n');
+      getline(in, metadata.ref_seqs.back());
     }
     else if (key == "#=READSEQ") {
       metadata.read_seqs.resize(metadata.read_seqs.size() + 1);
-      getline(in, metadata.read_seqs.back(), '\n');
+      getline(in, metadata.read_seqs.back());
     }
     else if (key.substr(0, 2) == "#=") {
       key.erase(0,2);
-      getline(in, metadata.breseq_data[key], '\n');
+      getline(in, metadata.breseq_data[key]);
     }
     else {
-      //Don't know what to do with this header line.
+      string value = "";
+      getline(in, value);
+      string message = "";
+      sprintf(
+              message,
+              "cGenomeDiff:read(%s): Header line: %s %s not recognized.",
+              filename.c_str(), key.c_str(), value.c_str()
+             );
+      WARN(message);
     }
+  }
+
+  //Check that #=GENOME_DIFF is found and that this is indeed a genome diff file.
+  if (metadata.version.empty()) {
+    string message = "";
+    sprintf(message,
+            "cGenomeDiff:read(%s): No #=GENOME_DIFF XX header line in this file.",
+            filename.c_str()
+            );
+    ERROR(message);
   }
 
   //! Step: Handle the diff entries.
   while (in.good()) {
     string line = "";
-    getline(in, line, '\n');
+    getline(in, line);
     //Ignore commented out or blank lines.
     if (line.empty() || line[0] == '#' || line[0] == ' ') {
       continue;
@@ -768,15 +811,30 @@ bool diff_entry_sort(const cDiffEntry &_a, const cDiffEntry &_b) {
 /*! Write this genome diff to a file.
  */
 void cGenomeDiff::write(const string& filename) {
-	ofstream ofs(filename.c_str());
-  ofs << "#=GENOME_DIFF 1.0" << endl;
-  //! Place any extra data gathered in breseq pipeline in header
-  if (!this->metadata.breseq_data.empty()) {
-    for (map<key_t,string>::iterator it = metadata.breseq_data.begin();
-         it != metadata.breseq_data.end(); it ++) {
-      const key_t& key = it->first;
-      const string& value = it->second;
-      ofs << "#" << key << "=" << value << endl;
+  ofstream os(filename.c_str());
+
+  //! Step: Header lines.
+  /*Always write version tag. It's how we identify it as a genome diff file
+   in cGenomeDiff::read(). */
+  fprintf(os, "#=GENOME_DIFF %s\n", metadata.version.c_str());
+
+  /*If adding additionaly header lines is requested (usually for the final
+    genome diff file in breseq's pipeline) then add them here. */
+  if (metadata.write_header) {
+    fprintf(os, "#=AUTHOR    %s\n", metadata.author.c_str());
+
+    for (size_t i = 0; i < metadata.ref_seqs.size(); i++) {
+      fprintf(os, "#=REFSEQ    %s\n", metadata.ref_seqs[i].c_str());
+    }
+
+    for (size_t i = 0; i < metadata.read_seqs.size(); i++) {
+      fprintf(os, "#=READSEQ   %s\n", metadata.read_seqs[i].c_str());
+    }
+    if (!metadata.breseq_data.empty()) {
+      for (map<key_t,string>::iterator it = metadata.breseq_data.begin();
+           it != metadata.breseq_data.end(); it ++) {
+        fprintf(os, "#=%s %s\n", it->first.c_str(), it->second.c_str());
+      }
     }
   }
   
@@ -784,9 +842,9 @@ void cGenomeDiff::write(const string& filename) {
   _entry_list.sort(diff_entry_ptr_sort);
   
   for(diff_entry_list_t::iterator i=_entry_list.begin(); i!=_entry_list.end(); ++i) {
-		ofs << (**i) << endl;
+    os << (**i) << endl;
 	}
-	ofs.close();
+  os.close();
 }
   
 //! Removes all GD entries that aren't used as evidence.

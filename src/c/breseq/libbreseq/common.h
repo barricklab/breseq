@@ -854,6 +854,39 @@ inline int32_t sprintf(string &value, const char *format,...) {
 }
 
 
+//@GRC depreciate if/when a cReferenceFile class is made.
+inline string reference_file_base_name(const string &file_name) {
+  string base_name = "";
+  base_name = file_name;
+  // Remove parent directories.
+  size_t pos = base_name.rfind("/");
+  if (pos != string::npos) {
+    base_name.erase(0, pos + 1);
+  }
+  // Eliminate .gbk, .gff3 or .fasta suffix.
+  pos = base_name.rfind(".gbk");
+  size_t base_name_size = base_name.size();
+  if ((pos != string::npos) && (pos = base_name_size - 4))
+  {
+    base_name.erase(pos);
+  }
+
+  pos = base_name.rfind(".gff3");
+  if ((pos != string::npos) && (pos = base_name_size - 5))
+  {
+    base_name.erase(pos);
+  }
+
+  pos = base_name.rfind(".fasta");
+  if ((pos != string::npos) && (pos = base_name_size - 6))
+  {
+    base_name.erase(pos);
+  }
+
+  return base_name;
+}
+
+
 
 } // breseq
 

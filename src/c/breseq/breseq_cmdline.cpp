@@ -2052,15 +2052,28 @@ int breseq_default_action(int argc, char* argv[])
     cGenomeDiff mpgd(settings.evidence_genome_diff_file_name);
     mp.predict(settings, mpgd, summary.sequence_conversion.max_read_length, summary.sequence_conversion.avg_read_length);
 
-    // Add addition values from breseq pipleline to genome diff here.
+    //This is our final genome diff file. Add header info here.
+    mpgd.metadata.write_header = false;//@GRC update expected.gds in tests.
+
+    //#=REFSEQ header lines.
+    mpgd.metadata.ref_seqs.resize(settings.reference_file_names.size());
+    for (size_t i = 0; i < settings.reference_file_names.size(); i++) {
+      mpgd.metadata.ref_seqs[i] =
+          reference_file_base_name(settings.reference_file_names[i]);
+    }
+
+    //#=READSEQ header lines.
+    mpgd.metadata.read_seqs.resize(settings.read_files.size());
+    for (size_t i = 0; i < settings.read_files.size(); i++) {
+      mpgd.metadata.read_seqs[i] = settings.read_files[i].base_name();
+    }
+
+    // Add additional header lines if needed.
     if (settings.values_to_gd){
        for (storable_map<string, Coverage>::iterator it = summary.unique_coverage.begin();
             it != summary.unique_coverage.end(); it ++) {
-         const string& seq_id = it->first;
-//         mpgd.add_breseq_data("junction_accept_score_cutoff:" + seq_id,
-//                              to_string(summary.unique_coverage[seq_id].junction_accept_score_cutoff));
+         //Usually needed for gathering breseq data.
        }
-
     }
 
     mpgd.write(settings.final_genome_diff_file_name);
