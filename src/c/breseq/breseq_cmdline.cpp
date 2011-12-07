@@ -2073,11 +2073,11 @@ int breseq_default_action(int argc, char* argv[])
 		// Mark lowest RA evidence items as no-show, or we may be drawing way too many alignments
 		//
 
-    vector<gd_entry_type> ra_types = make_list<gd_entry_type>(RA);
+    vector<gd_entry_type> ra_types = make_vector<gd_entry_type>(RA);
     list<counted_ptr<cDiffEntry> > ra = gd.filter_used_as_evidence(gd.list(ra_types));
 
     ra.remove_if(cDiffEntry::frequency_less_than_two_or_no_show());
-    ra.sort(cDiffEntry::by_scores(make_list<string>("quality")));
+    ra.sort(cDiffEntry::by_scores(make_vector<string>("quality")));
 
     uint32_t i=0;
     for(diff_entry_list_t::iterator item = ra.begin(); item != ra.end(); item++)
@@ -2105,7 +2105,7 @@ int breseq_default_action(int argc, char* argv[])
 		//
 		// Mark lowest scoring reject junctions as no-show
 		//
-    vector<gd_entry_type> jc_types = make_list<gd_entry_type>(JC);
+    vector<gd_entry_type> jc_types = make_vector<gd_entry_type>(JC);
     
     diff_entry_list_t jc = gd.filter_used_as_evidence(gd.list(jc_types));
 	  
@@ -2118,7 +2118,7 @@ int breseq_default_action(int argc, char* argv[])
         it++;
     }
     
-    jc.sort(cDiffEntry::by_scores(make_list<diff_entry_key_t>("pos_hash_score")("total_non_overlap_reads")));
+    jc.sort(cDiffEntry::by_scores(make_vector<diff_entry_key_t>("pos_hash_score")("total_non_overlap_reads")));
 
     i = 0;
     for (diff_entry_list_t::iterator it = jc.begin(); it != jc.end(); it++ )
@@ -2239,7 +2239,8 @@ int main(int argc, char* argv[]) {
     return do_annotate(argc_new, argv_new);
   } else if (command == "SIMULATE-READ") {
     return do_simulate_read(argc_new, argv_new);
-  } else {
+  }
+  else {
     // Not a sub-command. Use original argument list.
     return breseq_default_action(argc, argv);
   }

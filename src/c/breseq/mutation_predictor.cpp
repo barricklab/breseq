@@ -113,7 +113,7 @@ namespace breseq {
 		///
     
     // For all that follows, we need information about repeat_regions overlapping the sides of junctions
-    vector<gd_entry_type> jc_types = make_list<gd_entry_type>(JC);
+    vector<gd_entry_type> jc_types = make_vector<gd_entry_type>(JC);
 		diff_entry_list_t jc = gd.list(jc_types);
     // Don't count rejected ones at all, this can be relaxed, but it makes MOB 
     // prediction much more complicated and prone to errors.
@@ -204,7 +204,7 @@ namespace breseq {
 		// evidence MC + JC => DEL mutation
 		///
     
-    vector<gd_entry_type> mc_types = make_list<gd_entry_type>(MC);
+    vector<gd_entry_type> mc_types = make_vector<gd_entry_type>(MC);
 		diff_entry_list_t mc = gd.list(mc_types);
     mc.remove_if(cDiffEntry::field_exists("reject"));
 
@@ -226,7 +226,7 @@ namespace breseq {
 			// set up generic deletion item
 			cDiffEntry mut;
       mut._type = DEL;
-			mut._evidence = make_list<string>(mc_item._id);
+      mut._evidence = make_vector<string>(mc_item._id);
 			mut
 				("seq_id", mc_item["seq_id"])
 				("position", mc_item["start"])
@@ -977,7 +977,7 @@ namespace breseq {
           ("position", s(position+1))
           ("size", s(-size))         // note adjustment due to +1 above
           ;
-          mut._evidence = make_list<string>(j._id);
+          mut._evidence = make_vector<string>(j._id);
           gd.add(mut);
         } 
         else // this is an amplification.		
@@ -990,7 +990,7 @@ namespace breseq {
           ("size", s(size))		
           ("new_copy_number", "2")		
           ;		
-          mut._evidence = make_list<string>(j._id);		
+          mut._evidence = make_vector<string>(j._id);
           gd.add(mut);		
         }
       }
@@ -1016,7 +1016,7 @@ namespace breseq {
 					("size", s(n(j["side_1_position"]) - n(j["side_2_position"]) + 1))
 					("new_seq", new_seq)
 				;
-				mut._evidence = make_list<string>(j._id);
+        mut._evidence = make_vector<string>(j._id);
 
 				gd.add(mut);
 			}
@@ -1040,7 +1040,7 @@ namespace breseq {
           ("size", s(j["unique_read_sequence"].size()))
           ("new_copy_number", "2")
           ;
-          mut._evidence = make_list<string>(j._id);
+          mut._evidence = make_vector<string>(j._id);
           gd.add(mut);
         }
         else
@@ -1052,7 +1052,7 @@ namespace breseq {
             ("position", s(position))
             ("new_seq", j["unique_read_sequence"])
           ;
-          mut._evidence = make_list<string>(j._id);
+          mut._evidence = make_vector<string>(j._id);
           gd.add(mut);
         }
 			}
@@ -1063,7 +1063,7 @@ namespace breseq {
 		// Read Alignments => SNP, DEL, INS, SUB
 		///
     
-    vector<gd_entry_type> ra_types = make_list<gd_entry_type>(RA);
+    vector<gd_entry_type> ra_types = make_vector<gd_entry_type>(RA);
     diff_entry_list_t ra = gd.list(ra_types);
 
 		///
@@ -1072,8 +1072,8 @@ namespace breseq {
 		///
 
 		{
-      vector<gd_entry_type> del_types = make_list<gd_entry_type>(DEL);
-      vector<gd_entry_type> mc_types = make_list<gd_entry_type>(MC);
+      vector<gd_entry_type> del_types = make_vector<gd_entry_type>(DEL);
+      vector<gd_entry_type> mc_types = make_vector<gd_entry_type>(MC);
 			diff_entry_list_t del = gd.list(del_types);
       diff_entry_list_t mc = gd.list(mc_types);
 
@@ -1157,7 +1157,7 @@ namespace breseq {
 				if (!first_time) muts.push_back(mut);
 				first_time = false;
 				cDiffEntry new_mut;
-				new_mut._evidence = make_list<string>(item._id);
+        new_mut._evidence = make_vector<string>(item._id);
 				new_mut
 					("seq_id", item["seq_id"])
 					("position", item["position"])

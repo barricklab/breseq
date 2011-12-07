@@ -733,7 +733,7 @@ void tam_file::write_split_alignment(uint32_t min_indel_split_len, const alignme
 
 			//#print "Q: $qstart to " . ($qpos-1) . "\n";
 
-			vector<string> ll = make_list<string>
+      vector<string> ll = make_vector<string>
 				(a.read_name())
 				(to_string(a.flag()))
 				(to_string(this->bam_header->target_name[a.reference_target_id()]))
@@ -1133,7 +1133,7 @@ void tam_file::write_moved_alignment(
 	//// Create the TAM line and print
 	////
 
-	vector<string> ll = make_list<string>
+  vector<string> ll = make_vector<string>
 		(a.read_name() + "-M" + to_string(junction_side))
 		(to_string(fix_flags(a.flag())))
 		(seq_id)

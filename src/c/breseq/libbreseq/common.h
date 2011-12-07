@@ -269,11 +269,11 @@ namespace breseq {
 		}
 	};
 
-	template <typename T> struct make_list : public vector<T>
+  template <typename T> struct make_vector : public vector<T>
 	{
 	public:
-	    make_list(const T& t) { (*this)(t); }
-	    make_list& operator()(const T& t) {
+      make_vector(const T& t) { (*this)(t); }
+      make_vector& operator()(const T& t) {
 	        this->push_back(t);
 	        return *this;
 	    }
@@ -523,18 +523,6 @@ namespace breseq {
     return from_string<double>(input);
   }
   
-  inline string double_to_string(double input)
-  {
-    cout << numeric_limits<double>::infinity();
-    
-    if (isnan(input))
-      return "NA";
-    
-    if (isinf(input))
-      return "inf";
-    
-    return to_string<double>(input);
-  }
 
   inline string reverse_string(const string &in_string)
   {
@@ -579,17 +567,6 @@ namespace breseq {
 		else
 			distribution_hash_ref[score]++;
 	}
-  
-  ///! Returns first element, then removes it from container.
-  template <typename T> inline T shift(vector<T>& input)
-  {
-    assert(!input.empty());
-    class vector<T>::iterator first = input.begin();
-    T retval = (*first);
-    input.erase(first);
-    
-    return retval;
-  }
   
   // Return the path of the file without the trailing forward-slash
   inline string dirname(string file_name)
@@ -876,44 +853,6 @@ inline int32_t sprintf(string &value, const char *format,...) {
   return ret_val;
 }
 
-
-class cPoissonDistribution
-{
-public:
-  cPoissonDistribution(const int32_t &lambda)
-    : m_exp_neg_lambda(exp(-1 * lambda))
-  {
-    srand(time(NULL));
-  }
-
-  inline uint32_t getSample(const uint32_t &min = 0, const uint32_t &max = UINT_MAX)
-  {
-    uint32_t k = 0;
-    float p = 1;
-    double u;
-    do {
-      k++;
-
-      u = rand() / double(RAND_MAX);
-      p = p * u;
-
-    }while(p > m_exp_neg_lambda);
-
-    uint32_t ret_val = --k;
-
-    if (ret_val > max) {
-      ret_val = max;
-    }
-    else if (ret_val < min) {
-      ret_val = min;
-    }
-
-    return ret_val;
-  }
-
-private:
-        float m_exp_neg_lambda;
-};
 
 
 } // breseq

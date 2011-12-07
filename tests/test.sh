@@ -5,7 +5,6 @@
 #
 # $1 == test action
 # $2 == testdir
-
 # load the common testing tools (relative to this script):
 TESTDIR=`dirname ${BASH_SOURCE}`
 . ${TESTDIR}/common.sh
@@ -14,6 +13,9 @@ TESTDIR=`dirname ${BASH_SOURCE}`
 if [[ ($# -ne 2) || (! -d $2) ]]; then
     do_usage
 fi
+
+#For measuring elapsed time of 'make test'
+start_timer=$(date '+%s') 
 
 # if $2/${TESTEXEC} exists, then we're running a single test.  otherwise,
 # we're running a batch of tests.
@@ -29,3 +31,11 @@ else
 		fi
 	done
 fi
+
+#For measuring elapsed time of 'make test'
+end_timer=$(date '+%s') 
+elapsed_time=$((end_timer - start_timer))
+seconds=$((elapsed_time % 60))
+minutes=$(((elapsed_time / 60) % 60))
+
+printf "Elapsed time for 'make test': %02d:%02d\n" $minutes $seconds
