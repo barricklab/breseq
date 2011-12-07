@@ -52,31 +52,35 @@ const char* ERROR="error";
 map<gd_entry_type, vector<string> > line_specification = make_map<gd_entry_type, vector<string> >
 //! seq_id and positions are already parameters in cDiffEntry
 //## mutations
-(SNP,make_list<string> ("seq_id")("position")("new_seq"))
-(SUB,make_list<string> ("seq_id")("position")("size")("new_seq"))
-(DEL,make_list<string> ("seq_id")("position")("size"))
-(INS,make_list<string> ("seq_id")("position")("new_seq"))
-(MOB,make_list<string> ("seq_id")("position")("repeat_name")("strand")("duplication_size"))
-(INV,make_list<string> ("seq_id")("position")("size"))
-(AMP,make_list<string> ("seq_id")("position")("size")("new_copy_number"))
-(CON,make_list<string> ("seq_id")("position")("size")("region"))
+(SNP,make_vector<string> ("seq_id")("position")("new_seq"))
+(SUB,make_vector<string> ("seq_id")("position")("size")("new_seq"))
+(DEL,make_vector<string> ("seq_id")("position")("size"))
+(INS,make_vector<string> ("seq_id")("position")("new_seq"))
+(MOB,make_vector<string> ("seq_id")("position")("repeat_name")("strand")("duplication_size"))
+(INV,make_vector<string> ("seq_id")("position")("size"))
+(AMP,make_vector<string> ("seq_id")("position")("size")("new_copy_number"))
+(CON,make_vector<string> ("seq_id")("position")("size")("region"))
 
 //## evidence
-(RA,make_list<string> ("seq_id")("position")("insert_position")("ref_base")("new_base"))
-(MC,make_list<string> ("seq_id")("start")("end")("start_range")("end_range"))
-(JC,make_list<string> ("side_1_seq_id")("side_1_position")("side_1_strand")("side_2_seq_id")("side_2_position")("side_2_strand")("overlap"))
-(UN,make_list<string> ("seq_id")("start")("end"))
+(RA,make_vector<string> ("seq_id")("position")("insert_position")("ref_base")("new_base"))
+(MC,make_vector<string> ("seq_id")("start")("end")("start_range")("end_range"))
+(JC,make_vector<string> ("side_1_seq_id")("side_1_position")("side_1_strand")("side_2_seq_id")("side_2_position")("side_2_strand")("overlap"))
+(UN,make_vector<string> ("seq_id")("start")("end"))
 
 //## validation
-(CURA,make_list<string> ("expert"))
-(FPOS,make_list<string> ("expert"))
-(PHYL,make_list<string> ("gd"))
-(TSEQ,make_list<string> ("seq_id")("primer_1_start")("primer_1_end")("primer_2_start")("primer_2_end"))
-(PFLP,make_list<string> ("seq_id")("primer_1_start")("primer_1_end")("primer_2_start")("primer_2_end"))
-(RFLP,make_list<string> ("seq_id")("primer_1_start")("primer_1_end")("primer_2_start")("primer_2_end"))
-(PFGE,make_list<string> ("seq_id")("enzyme"))
+(CURA,make_vector<string> ("expert"))
+(FPOS,make_vector<string> ("expert"))
+(PHYL,make_vector<string> ("gd"))
+(TSEQ,make_vector<string> ("seq_id")("primer_1_start")("primer_1_end")("primer_2_start")("primer_2_end"))
+(PFLP,make_vector<string> ("seq_id")("primer_1_start")("primer_1_end")("primer_2_start")("primer_2_end"))
+(RFLP,make_vector<string> ("seq_id")("primer_1_start")("primer_1_end")("primer_2_start")("primer_2_end"))
+(PFGE,make_vector<string> ("seq_id")("enzyme"))
   
 ; // end line specifications
+
+
+const vector<string>gd_entry_type_lookup_table =
+make_vector<string>("TYPE_UNKOWN")("SNP")("SUB")("DEL")("INS")("MOB")("AMP")("INV")("CON")("RA")("MC")("JC")("UN")("CURA")("FPOS")("PHYL")("TSEQ")("PFLP")("RFLP")("PFGE");
 
 
 // Field order.
@@ -109,22 +113,112 @@ cDiffEntry::cDiffEntry()
 {
 }
 
+cDiffEntry::cDiffEntry(const string& line)
+  : _type(TYPE_UNKOWN)
+  ,_id("")
+  ,_evidence()
+{
+  cDiffEntry *de = this;
+
+  stringstream ss_line(line);
+  typedef vector<string> string_vector_t;
+
+  //! Step: Get the type. (Convert from string to enumeration.)
+  string type = "";
+  getline(ss_line, type, '\t');
+
+  //Find the string value in the lookup table and cast index to enumeration.
+  const size_t lookup_table_size = gd_entry_type_lookup_table.size();
+  for (size_t i = 0; i < lookup_table_size; i++) {
+    if (type == gd_entry_type_lookup_table[i]) {
+      de->_type = (gd_entry_type) i;
+      break;
+    }
+  }
+
+  ASSERT(de->_type != TYPE_UNKOWN, "Error!")
+  /*Error: Could not determine type, check that gd_entry_type and lookup table
+   are identical in size and order. */
+
+  //! Step: Get the id.
+  getline(ss_line, de->_id, '\t');
+
+  /*! Step: If this diff entry is a mutation we need to get it's supporting
+  evidence. */
+  if (de->is_mutation()) {
+    string evidence = "";
+    getline(ss_line, evidence, '\t');
+
+    string_vector_t evidence_vector = split(evidence, ",");
+
+    const size_t evidence_vector_size = evidence_vector.size();
+    de->_evidence.resize(evidence_vector_size);
+
+    for (size_t i = 0; i < evidence_vector_size; i++) {
+      de->_evidence[i] = evidence_vector[i];
+    }
+
+  } else {
+    /*Evidence and validation diff entry types do not have evidence parameters
+    so we discard this segment from the stream and continue on. */
+    ss_line.ignore(254,'\t');
+  }
+
+  /*! Step: Get line specifications and assign them. */
+  const string_vector_t &diff_entry_specs = line_specification[de->_type];
+  const size_t diff_entry_specs_size = diff_entry_specs.size();
+  for (int i = 0; i < diff_entry_specs_size; i++) {
+     const diff_entry_key_t &key = diff_entry_specs[i];
+     diff_entry_value_t value = "";
+     getline(ss_line, value, '\t');
+     de->insert(pair<diff_entry_key_t, diff_entry_value_t>(key, value));
+  }
+
+  /*! Step: Get the rest of the fields.*/
+  while (ss_line.good()) {
+    string key_value_pair = "";
+    getline(ss_line, key_value_pair, '\t');
+    if (key_value_pair.empty()) {
+      break;
+    }
+
+    size_t equal_sign_pos = 0;
+    const size_t key_value_pair_size = key_value_pair.size();
+    for (size_t i = 0; i < key_value_pair_size; i++) {
+      if (key_value_pair[i] == '=') {
+        equal_sign_pos = i;
+        break;
+      }
+    }
+
+    ASSERT(equal_sign_pos, "Error!");
+    /*Error: The given segment is not a key=value pair? Is line_specification
+     up to date for this specific mutation? */
+
+    const string &key   = key_value_pair.substr(0, equal_sign_pos);
+    const string &value = key_value_pair.substr(equal_sign_pos + 1,
+                                                key_value_pair_size);
+
+    de->insert(pair<string, string>(key, value));
+  }
+  //All done!
+  return;
+
+}
+
 bool cDiffEntry::is_mutation() const
 {
-  const size_t size = sizeof(gd_entry_mutation_types) / sizeof(gd_entry_mutation_types[0]);
-  return std::count(gd_entry_mutation_types, gd_entry_mutation_types + size, this->_type);
+  return gd_entry_type_lookup_table[_type].size() == 3;
 }
 
 bool cDiffEntry::is_evidence() const
 {
-  const size_t size = sizeof(gd_entry_evidence_types) / sizeof(gd_entry_evidence_types[0]);
-  return std::count(gd_entry_evidence_types, gd_entry_evidence_types + size, this->_type);
+  return gd_entry_type_lookup_table[_type].size() == 2;
 }
 
 bool cDiffEntry::is_validation() const
 {
-  const size_t size = sizeof(gd_entry_validation_types) / sizeof(gd_entry_validation_types[0]);
-  return std::count(gd_entry_validation_types, gd_entry_validation_types + size, this->_type);
+  return gd_entry_type_lookup_table[_type].size() == 4;
 }
   
   
@@ -461,103 +555,68 @@ cGenomeDiff cGenomeDiff::fast_merge(const cGenomeDiff& gd1, const cGenomeDiff& g
  */
 
 void cGenomeDiff::read(const string& filename) {
-  ifstream IN(filename.c_str());
-  ASSERT(IN.good(), "Could not open file for reading: " + filename);
+  ifstream in(filename.c_str());
+  ASSERT(in.good(), "Could not open file for reading: " + filename);
 
-  ::list<string> lines;
-  string line;
-  
-  if(IN.is_open()) {
-    while(IN.good()) {
-      getline(IN,line);
-      lines.push_back(line);
-    }
-    IN.close();
-  }
-  //Can't find version in first line
-  if(lines.front().find("#=GENOME_DIFF") == string::npos)
-  {
-    cerr << "Could not match version line in file" << endl;
-    assert(false);
-  }
-  
-  //strip paths and .gd off of filename to obtain run_id
-  //EX: a filename of 
-  //RS0001_Woods2011/RJW1129.gd
-  //or
-  //RJW1129.gd
-  //becomes RJW1129
-  size_t run_id_end = filename.find(".gd");
-  if(size_t run_id_begin = filename.find_last_of("\\") == string::npos) {
-    metadata.run_id = filename.substr(0, run_id_end);
-  } else {
-    metadata.run_id = filename.substr(run_id_begin, run_id_end);
-  }
- 
-  // Check for and read in metadata
+  //! Step: Handle header parameters.
+  //Example header:
   //#=GENOME_DIFF 1.0
-  //#=AUTHOR    Barrick JE 
+  //#=AUTHOR    Barrick JE
   //#=REFSEQ    Genbank:NC_012967.1
   //#=READSEQ   SRA:SRR066595
-  while (lines.front().find_first_of("#") == 0)
-  {
-    string line = lines.front();
-  
-    //#=GENOME_DIFF 1.0
-    if (line.find("#=GENOME_DIFF") != string::npos) {
-      vector<string> version_split = split(line, " ");
-      metadata.version = version_split.back();
+  metadata.version = "";
+  string version_tag = "";
+  getline(in, version_tag, ' ');
+  getline(in, metadata.version, '\n');
+
+  ASSERT(version_tag == "#=GENOME_DIFF" ||
+         !metadata.version.empty(), "Error!");
+  /*Error: Are you sure this file is a genome diff file? It is expected that
+    all genome diff files have a #=GENOME_DIFF XX tag on the first line. */
+
+  while(in.peek() == 35) { //35 is ASCII of '#'.
+    string key = "";
+    getline(in, key, ' ');
+
+    //Discard whitespace between key and value.
+    while (in.peek() == 32) { //32 is ASCII of ' '
+      in.ignore();
     }
 
-    //#=AUTHOR    Barrick JE 
-    if (line.find("#=AUTHOR") != string::npos) {
-      size_t author_begins = line.find_first_not_of(" ", 8);
-      size_t author_ends = line.length();
-      metadata.author = line.substr(author_begins, author_ends);
+    if (key == "#=AUTHOR") {
+      getline(in, metadata.author, '\n');
     }
-
-    //#=REFSEQ    Genbank:NC_012967.1
-    if (line.find("#=REFSEQ") != string::npos) {
-      vector<string> ref_seq_split = split(line, ":");
-      metadata.ref_seq = ref_seq_split.back(); 
+    else if (key == "#=REFSEQ") {
+      metadata.ref_seqs.resize(metadata.ref_seqs.size() + 1);
+      getline(in, metadata.ref_seqs.back(), '\n');
     }
-
-    //#=READSEQ   SRA:SRR066595 
-    if (line.find("#=READSEQ") != string::npos) {
-      vector<string> read_seq_split = split(line, ":");
-      metadata.read_seq.push_back(read_seq_split.back());
+    else if (key == "#=READSEQ") {
+      metadata.read_seqs.resize(metadata.read_seqs.size() + 1);
+      getline(in, metadata.read_seqs.back(), '\n');
     }
-
-    lines.pop_front();
+    else if (key.substr(0, 2) == "#=") {
+      key.erase(0,2);
+      getline(in, metadata.breseq_data[key], '\n');
+    }
+    else {
+      //Don't know what to do with this header line.
+    }
   }
-  
-  
-  while(!lines.empty())
-  {    
-    string line = lines.front();
-    //Check that line isn't empty
-    if (line.empty()) {
-      lines.erase(lines.begin());
+
+  //! Step: Handle the diff entries.
+  while (in.good()) {
+    string line = "";
+    getline(in, line, '\n');
+    //Ignore commented out or blank lines.
+    if (line.empty() || line[0] == '#' || line[0] == ' ') {
       continue;
+    } else {
+      add(cDiffEntry(line));
     }
-    //Remove lines containing evidence
-//    string type = split(line, "\t").front();
-//   if(type.length() > 3) {
-//      lines.erase(lines.begin());
-//      continue;
-//    }
-      
-    // # $self->add($self->_line_to_item($l));
-    add(_line_to_item(line));
-    
-    lines.pop_front();
   }
 
-  // match common fields - type id pid seqid
-		
-  // match type-specific fields
-
- 	
+  //All done!
+  return;
 }
 
 
@@ -1248,8 +1307,8 @@ diff_entry_list_t cGenomeDiff::list(const vector<gd_entry_type>& types)
 diff_entry_list_t cGenomeDiff::show_list(const vector<gd_entry_type>& types)
 {
   diff_entry_list_t ret_list = list(types);
-  ret_list.remove_if(cDiffEntry::fields_exist(make_list<diff_entry_key_t>("deleted")));
-  ret_list.remove_if(cDiffEntry::fields_exist(make_list<diff_entry_key_t>("no_show")));
+  ret_list.remove_if(cDiffEntry::fields_exist(make_vector<diff_entry_key_t>("deleted")));
+  ret_list.remove_if(cDiffEntry::fields_exist(make_vector<diff_entry_key_t>("no_show")));
   return ret_list;
 }
 
@@ -1282,63 +1341,6 @@ diff_entry_list_t cGenomeDiff::filter_used_as_evidence(const diff_entry_list_t& 
   return return_list;
 }
 
-
-cDiffEntry cGenomeDiff::_line_to_item(const string& line)
-{  
-  list_t line_list = split(line, "\t");
-  ASSERT(line_list.size() > 0, "Attempt to create genome diff entry from empty line.");
-
-  cDiffEntry item;
-  item._type = to_type(shift<string>(line_list));
-  item._id = shift<string>(line_list);
-  string evidence_string = shift<string>(line_list);
-  item._evidence = split(evidence_string, ",");
-
-  // make sure it is a recognized type
-  const list_t spec = line_specification[item._type];
-  ASSERT(!spec.empty(), "Type '" + to_string(item._type) + "' is not recognized for line:\n" + line );
-  
-  for(size_t i = 0; i < spec.size(); i++)
-  {
-    string key = spec[i];
-    
-    ASSERT(line_list.size() > 0, "Number of required items is less than expected for type '" 
-           + to_string(item._type) + "' line:\n" + line + "\nExpected items: type,id,parent_id," + to_string(spec)
-           + "\nCheck whether you have used spaces rather than tabs to separate items.");
-    
-    string next = shift<string>(line_list);
-
-    ASSERT(next.find("=") == string::npos,
-            "Unexpected key=value pair '" + next + "' encountered for required item '" + key 
-            + "' in type '" + to_string(item._type) + "' line:\n" + line);
-    
-    item[key] = next;
-  }
-
-
-  for(list_t::iterator itr = line_list.begin();
-      itr != line_list.end(); itr ++)
-  {
-    string key_value_pair(*itr); 
-    if(key_value_pair.empty()) continue;
-    //assert(regex_m("=",key_value_pair));
-    assert(key_value_pair.find("=") != string::npos); 
-    vector<string> matched = split(key_value_pair,"=");
-
-    if(matched.empty())
-    {
-      cerr << "Not a key value pair" << key_value_pair <<  endl << line;
-      assert(false);
-      continue;
-    }
-    assert(matched.size()==2);
-    string item_key = matched[0];
-    string item_value = matched[1]; 
-    item[item_key] = item_value;
-  }
-  
- return item;
-}
 
 // return items with types that are 3 characters long
 diff_entry_list_t cGenomeDiff::mutation_list()
@@ -1461,7 +1463,7 @@ void cGenomeDiff::add_reject_reasons(cDiffEntry item, const string& reject)
 bool 
 cGenomeDiff::interval_un(const uint32_t& start,const uint32_t& end)
 {
-  diff_entry_list_t un_list = list(make_list<gd_entry_type>(UN));
+  diff_entry_list_t un_list = list(make_vector<gd_entry_type>(UN));
 
   for (diff_entry_list_t::iterator itr = un_list.begin();
        itr != un_list.end(); itr++) {

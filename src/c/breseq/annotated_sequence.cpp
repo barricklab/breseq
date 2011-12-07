@@ -1307,16 +1307,16 @@ void cReferenceSequences::ReadGenBankFileSequenceFeatures(std::ifstream& in, cAn
     // transfer to GFF
     feature["phase"] = "0";
     if (feature.SafeGet("locus_tag") != "")
-      feature.m_gff_attributes["ID"] = make_list<string>(feature["locus_tag"]);
+      feature.m_gff_attributes["ID"] = make_vector<string>(feature["locus_tag"]);
     if (feature.SafeGet("product") != "") // Need special case for pseudo
     {
-      feature.m_gff_attributes["Note"] = make_list<string>(feature["product"]);
+      feature.m_gff_attributes["Note"] = make_vector<string>(feature["product"]);
       if(feature.m_pseudo)feature.m_gff_attributes["Pseudo"].push_back("true");
     }
     if (feature.SafeGet("accession") != "")
-      feature.m_gff_attributes["Alias"] = make_list<string>(feature["accession"]);
+      feature.m_gff_attributes["Alias"] = make_vector<string>(feature["accession"]);
     if (feature.SafeGet("name") != "")
-      feature.m_gff_attributes["Name"] = make_list<string>(feature["name"]);
+      feature.m_gff_attributes["Name"] = make_vector<string>(feature["name"]);
     
     // add an extra copy of the feature if it crosses the origin of a circular chromosome
     if (feature.m_end < feature.m_start) {

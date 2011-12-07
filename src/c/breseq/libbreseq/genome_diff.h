@@ -62,9 +62,7 @@ extern const char* _SIDE_KEY_JC;
 
 // Types of diff entries:
 enum gd_entry_type {TYPE_UNKOWN, SNP, SUB, DEL, INS, MOB, AMP, INV, CON, RA, MC, JC, UN, CURA, FPOS, PHYL, TSEQ, PFLP, RFLP, PFGE};
-const gd_entry_type gd_entry_mutation_types[] = {SNP, SUB, DEL, INS, MOB, AMP, INV, CON};
-const gd_entry_type gd_entry_evidence_types[] = {RA, MC, JC, UN};
-const gd_entry_type gd_entry_validation_types[] = {CURA, FPOS, PHYL, TSEQ, PFLP, RFLP, PFGE};
+extern const vector<string> gd_entry_type_lookup_table;
   
 inline string to_string(const gd_entry_type type)
 {
@@ -86,41 +84,13 @@ inline string to_string(const gd_entry_type type)
     case CURA: return "CURA";
     case FPOS: return "FPOS";
     case PHYL: return "PHYL";
-    case TSEQ: return "TSEQ";  
-    case PFLP: return "PFLP";  
-    case RFLP: return "RFLP";  
-    case PFGE: return "PFGE";  
+    case TSEQ: return "TSEQ";
+    case PFLP: return "PFLP";
+    case RFLP: return "RFLP";
+    case PFGE: return "PFGE";
       
     default: return "?";
   }
-}
-
-//@JEB - would be more efficient with a map
-inline gd_entry_type to_type(const string& type)
-{
-  if (type == "SNP") return SNP;
-  if (type == "SUB") return SUB;
-  if (type == "DEL") return DEL;
-  if (type == "INS") return INS;
-  if (type == "MOB") return MOB;
-  if (type == "AMP") return AMP;
-  if (type == "INV") return INV;
-  if (type == "CON") return CON;
-  
-  if (type == "RA") return RA;
-  if (type == "MC") return MC;
-  if (type == "JC") return JC;
-  if (type == "UN") return UN;
-  
-  if (type == "CURA") return CURA;
-  if (type == "FPOS") return FPOS;
-  if (type == "PHYL") return PHYL;
-  if (type == "TSEQ") return TSEQ;
-  if (type == "PFLP") return PFLP;
-  if (type == "RFLP") return RFLP;
-  if (type == "PFGE") return PFGE;
-
-  return TYPE_UNKOWN;
 }
 
 enum Strand {POS_STRAND = 1, NEG_STRAND = -1};
@@ -174,6 +144,7 @@ class cDiffEntry : public diff_entry_map_t {
 public: 
   //! Constructor.
   cDiffEntry(const gd_entry_type type);
+  cDiffEntry(const string &line); //For deserialization from gd file.
   cDiffEntry(diff_entry_map_t& de) : diff_entry_map_t(de) {};
   cDiffEntry();
   
@@ -340,9 +311,6 @@ public:
   //! retrieve cDiffEntrys that match given type(s) and do not have 'no_show' set
   diff_entry_list_t show_list(const vector<gd_entry_type>& types = vector<gd_entry_type>());
   
-  //! Converts a cGenomeDiff(.gd) file's line to a cDiffEntry
-  cDiffEntry _line_to_item(const string& line);
-
   //! Returns _entry_list with matching item._evidence
   diff_entry_list_t mutation_evidence_list(const cDiffEntry& item);
 
@@ -370,8 +338,8 @@ public:
     string run_id;
     string version; 
     string author;
-    string ref_seq;
-    vector<string> read_seq;
+    vector<string> ref_seqs;
+    vector<string> read_seqs;
     map<string,string> breseq_data; // Use this to write values from pipeline to gd
   };
 
