@@ -1310,6 +1310,81 @@ int do_simulate_read(int argc, char *argv[])
   return 0;
 }
 
+int do_subsequence(int argc, char *argv[])
+{
+  AnyOption options("Usage: breseq SUBSEQUENCE -s <reference sequence> -o <output.fasta> -p <REL606:50-100>");
+  options("sequence,s",".gbk/.gff3/.fasta reference sequence file");
+  options("output,o","output FASTA file");  
+  options("position,p","Sequence ID:Start-End");
+  options("reverse,r","Reverse Complement (Flag)", TAKES_NO_ARGUMENT);
+  options("verbose,v","Verbose Mode (Flag)", TAKES_NO_ARGUMENT);
+  options.processCommandArgs(argc, argv);
+  
+  options.addUsage("");
+  options.addUsage("Takes a reference sequence and outputs to FASTA a subset");
+  options.addUsage("of the sequence.  Using '0' as the End position will set");  
+  options.addUsage("it to the length of the relevant sequence.");
+  
+  if (!options.count("sequence")) {
+    options.addUsage("");
+    options.addUsage("You must supply the --sequence option for input.");
+    options.printUsage();
+    return -1;
+  }
+  
+  if (!options.count("position")) {
+    options.addUsage("");
+    options.addUsage("You must supply the --position option for input.");
+    options.printUsage();
+    return -1;
+  }
+  
+  if (!options.count("output")) {
+    options.addUsage("");
+    options.addUsage("You must supply the --output option for output.");
+    options.printUsage();
+    return -1;
+  }
+  
+  uint32_t replace_target_id, replace_start, replace_end;
+  
+  cReferenceSequences ref_seq_info;  
+  ref_seq_info.LoadFiles(from_string<vector<string> >(options["sequence"]));  
+  
+  ref_seq_info.parse_region(options["position"], replace_target_id, replace_start, replace_end);
+  
+  bool reverse = options.count("reverse");
+  bool verbose = options.count("verbose");
+  
+  if(!replace_end)replace_end = ref_seq_info[replace_target_id].m_length;
+  
+  if(verbose)
+  {
+    cout << "SEQ_ID:\t\t" << ref_seq_info[replace_target_id].m_seq_id << endl;
+    cout << "SEQ_INDEX:\t" << replace_target_id << endl;
+    cout << "START:\t\t" << replace_start << endl;
+    cout << "END:\t\t" << replace_end << endl;
+  }
+  
+  CHECK(replace_start <= replace_end,
+        "START:\t" + to_string(replace_start) + "\n" +
+        "END:\t" + to_string(replace_end) + "\n" +
+        "START greater than END.");
+  
+  ASSERT((uint32_t)ref_seq_info[replace_target_id].m_length >= replace_start && (uint32_t)ref_seq_info[replace_target_id].m_length >= replace_end,
+         "START:\t" + to_string(replace_start) + "\n" +
+         "END:\t" + to_string(replace_end) + "\n" +
+         "SIZE:\t" + to_string(ref_seq_info[replace_target_id].m_length) + "\n" +
+         "Neither Start or End can be greater than the size of " + ref_seq_info[replace_target_id].m_seq_id + ".");
+  
+  ref_seq_info[replace_target_id].m_fasta_sequence.m_name = (split(options["output"], "."))[0];
+  ref_seq_info[replace_target_id].m_fasta_sequence.m_sequence = ref_seq_info[replace_target_id].m_fasta_sequence.m_sequence.substr(replace_start -1, (replace_end - replace_start) + 1);
+  if(reverse)ref_seq_info[replace_target_id].m_fasta_sequence.m_sequence = reverse_complement(ref_seq_info[replace_target_id].m_fasta_sequence.m_sequence);
+  
+  ref_seq_info.WriteFASTA(options["output"], verbose);
+  
+  return 0;
+}
 
 int breseq_default_action(int argc, char* argv[])
 {  
@@ -2250,7 +2325,9 @@ int main(int argc, char* argv[]) {
   } else if (command == "ANNOTATE") {
     return do_annotate(argc_new, argv_new);
   } else if (command == "SIMULATE-READ") {
-    return do_simulate_read(argc_new, argv_new);
+    return do_simulate_read(argc_new, argv_new);    
+  } else if ((command == "SUBSEQUENCE") || (command == "SUB")) {
+    return do_subsequence(argc_new, argv_new);
   }
   else {
     // Not a sub-command. Use original argument list.
