@@ -437,6 +437,10 @@ namespace breseq {
 					int32_t move_dist = (n(mut["position"]) + n(mut["size"]) - 1) - (r.m_start - 1);
 					mut["size"] = s(n(mut["size"]) - move_dist);
 				}
+        
+      // Don't predict zero length deletions!
+        if (n(mut["size"]) == 0)
+          continue;
 
 				// OK, we're good!
 				mut["mediated"] = r["name"];
