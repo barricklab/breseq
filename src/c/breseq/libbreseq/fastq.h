@@ -58,11 +58,11 @@ namespace breseq {
     extern map<char, string> random_snp_base_options;
     extern char random_insertion_base_options[];
     char get_random_quality_score(void);
-    char get_random_snp_base(const char not_this_base);
+    char get_random_error_base(const char not_this_base);
     char get_random_insertion_base(void);
-    bool is_random_snp(void);
-    bool is_random_deletion(void);
-    bool is_random_insertion(void);
+    bool is_random_error_base(char ascii_qscore);
+    bool is_random_deletion_base(void);
+    bool is_random_insertion_base(void);
   }
 
   class cFastqSequenceVector : public vector<cFastqSequence>
