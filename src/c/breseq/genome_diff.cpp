@@ -624,19 +624,20 @@ void cGenomeDiff::read(const string& filename) {
       getline(in, metadata.breseq_data[key]);
     }
     else {
+      //Warn if unkown header lines are encountered.
       string value = "";
       getline(in, value);
       string message = "";
-      sprintf(
-              message,
-              "cGenomeDiff:read(%s): Header line: %s %s not recognized.",
+      sprintf(message,
+              "cGenomeDiff:read(%s): Header line: %s %s is not recognized.",
               filename.c_str(), key.c_str(), value.c_str()
              );
       WARN(message);
     }
   }
 
-  //Check that #=GENOME_DIFF is found and that this is indeed a genome diff file.
+  /*Error if #=GENOME_DIFF is not found. Genome diff files are required to have
+   this header line. */
   if (metadata.version.empty()) {
     string message = "";
     sprintf(message,
@@ -650,9 +651,14 @@ void cGenomeDiff::read(const string& filename) {
   while (in.good()) {
     string line = "";
     getline(in, line);
-    //Ignore commented out or blank lines.
+    //Warn if commented out or a possibly blank line is encountered.
     if (line.empty() || line[0] == '#' || line[0] == ' ') {
-      continue;
+      string message = "";
+      sprintf(message,
+              "cGenomeDiff:read(%s): Discarding line : %s",
+              filename.c_str(), line.c_str()
+             );
+      WARN(message);
     } else {
       add(cDiffEntry(line));
     }
@@ -842,7 +848,7 @@ void cGenomeDiff::write(const string& filename) {
   _entry_list.sort(diff_entry_ptr_sort);
   
   for(diff_entry_list_t::iterator i=_entry_list.begin(); i!=_entry_list.end(); ++i) {
-    os << (**i) << endl;
+    fprintf(os, "%s\n", (**i).to_string().c_str());
 	}
   os.close();
 }

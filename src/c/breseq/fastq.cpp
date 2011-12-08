@@ -578,7 +578,7 @@ namespace breseq {
     return char(it->first);
   }
 
-  char FastqSimulationUtilities::get_random_snp_base(const char not_this_base)
+  char FastqSimulationUtilities::get_random_error_base(const char not_this_base)
   {
     ASSERT(random_snp_base_options.count(not_this_base), "Error!");
 
@@ -589,30 +589,32 @@ namespace breseq {
   char FastqSimulationUtilities::get_random_insertion_base(void)
   {
     //Roll from 0 to 3.
-    return random_insertion_base_options[rand() % 4];
+    return base_char_list[rand() % 4];
   }
 
-  bool FastqSimulationUtilities::is_random_snp(void)
+  //Return if this particular base is an error given a quality score.
+  bool FastqSimulationUtilities::is_random_error_base(char ascii_qscore)
   {
-    const uint32_t snp_probability = 1000;//10E-3
+    const int32_t qscore = int32_t(ascii_qscore) - 33;
 
-    //Roll from 0 to snp_probability.
-    return (1 == (rand() % snp_probability));
+    double p_value = pow(10, -qscore/10.0);
+
+    //We want precision to the 100,000th decimal place.
+    uint32_t p_value_max = p_value * 100000;
+
+    return (rand() % 100000 <= p_value_max);
   }
 
-  bool FastqSimulationUtilities::is_random_deletion(void)
+  const uint32_t deletion_probability = 100000;//10E-5
+  bool FastqSimulationUtilities::is_random_deletion_base(void)
   {
-    const uint32_t deletion_probability = 100000;//10E-5
-
     //Roll from 0 to deletion_probability.
     return (1 == (rand() % deletion_probability));
   }
 
-  bool FastqSimulationUtilities::is_random_insertion(void)
+  const uint32_t insertion_probability = 100000;//10E-5
+  bool FastqSimulationUtilities::is_random_insertion_base(void)
   {
-    const uint32_t insertion_probability = 100000;//10E-5
-
-
     //Roll from 0 to insertion_probability.
     return (1 == (rand() % insertion_probability));
   }
@@ -668,11 +670,12 @@ namespace breseq {
           2) Iterate through this segment.
 
           3) At each index/base determine if insertion(INS), deletion(DEL),
-            single nucleotide polymorphism(SNP) or normal.
+            if it's a possible error due to quality score or if the base is
+            normal.
 
-             If SNP  : Assign a random base other than the one given in segment.
              If DEL  : Continue on to next base in segment.
              If INS  : Randomly insert one of the four possible bases.
+             If Error: Assign random base other then the one given.
              Normal  : Assign base given in segment.
 
             Assign the base a random quality score which is determine by the
@@ -681,7 +684,7 @@ namespace breseq {
 
       //Initializations for verbose parameters.
       bool is_negative_strand = false;
-      cSequence verbose_snps(read_size, ' ');
+      cSequence verbose_errors(read_size, ' ');
       cSequence verbose_deletions (read_size, ' ');
       cSequence verbose_insertions(read_size, ' ');
       //End verbose parameters.
@@ -713,31 +716,8 @@ namespace breseq {
       while (index_to_assign < read_size) {
       //! Algorithm Step 3:
 
-        //! SNP base.
-        if (FastqSimulationUtilities::is_random_snp()) {
-          //We want a random base other than this one.
-          char not_this_base = ref_segment[index_in_ref_segment];
-          char new_random_base =
-              FastqSimulationUtilities::get_random_snp_base(not_this_base);
-
-          //Assign base.
-          fs->m_sequence[index_to_assign] = new_random_base;
-
-          //Assign quality score.
-          fs->m_qualities[index_to_assign] =
-              FastqSimulationUtilities::get_random_quality_score();
-
-          //For verbose.
-          verbose_snps[index_in_ref_segment] = new_random_base;
-
-          /*Increment both index_to_assign and index_in_ref_segment and
-          continue to next iteration. */
-          ++index_to_assign;
-          ++index_in_ref_segment;
-          continue;
-        }
         //! DEL base.
-        else if (FastqSimulationUtilities::is_random_deletion()) {
+        if (FastqSimulationUtilities::is_random_deletion_base()) {
          //For verbose.
           verbose_deletions[index_in_ref_segment] =
               ref_segment[index_in_ref_segment];
@@ -746,7 +726,7 @@ namespace breseq {
           continue;
         }
         //! INS base.
-        else if (FastqSimulationUtilities::is_random_insertion()) {
+        else if (FastqSimulationUtilities::is_random_insertion_base()) {
           char base_to_insert =
               FastqSimulationUtilities::get_random_insertion_base();
 
@@ -765,26 +745,46 @@ namespace breseq {
           ++index_to_assign;
           continue;
         }
-        //! Normal base.
+        //! Determine if error or normal base.
         else {
-          //Assign base.
-          fs->m_sequence[index_to_assign] = ref_segment[index_in_ref_segment];
+          char quality_score =
+              FastqSimulationUtilities::get_random_quality_score();
 
-          //Assign quality score.
-          fs->m_qualities[index_to_assign] =
-            FastqSimulationUtilities::get_random_quality_score();
+          //! Error base.
+          if (FastqSimulationUtilities::is_random_error_base(quality_score)) {
+            /*Since an error occured we want to assign a base different from
+             the one given. */
+            char not_this_base = ref_segment[index_in_ref_segment];
 
-           /*Increment both index_to_assign and index_in_ref_segment and
+            //Assign different base.
+            char new_base =
+                FastqSimulationUtilities::get_random_error_base(not_this_base);
+            fs->m_sequence[index_to_assign] = new_base;
+
+            //Assing quality score.
+            fs->m_qualities[index_to_assign] = quality_score;
+
+            //For verbose.
+            verbose_errors[index_to_assign] = new_base;
+          }
+          //! Normal base.
+          else {
+            //Assign base.
+            fs->m_sequence[index_to_assign] = ref_segment[index_in_ref_segment];
+
+            //Assign quality score.
+            fs->m_qualities[index_to_assign] = quality_score;
+          }
+          /*Increment both index_to_assign and index_in_ref_segment and
           continue to next iteration. */
           ++index_to_assign;
           ++index_in_ref_segment;
-          continue;
         }
       } //End assigning bases to simulated read.
 
       //! Step: Verbose output.
       if (verbose) {
-        if (!verbose_snps.is_blank()      ||
+        if (!verbose_errors.is_blank()      ||
             !verbose_deletions.is_blank() ||
             !verbose_insertions.is_blank()) {
           printf("\tVerbose output for simulated read    :  %s\n",
@@ -800,9 +800,9 @@ namespace breseq {
                    ref_segment.c_str());
           }
 
-          if (!verbose_snps.is_blank()) {
-            printf("\tSimulated SNP                        :  %s\n",
-                   verbose_snps.c_str());
+          if (!verbose_errors.is_blank()) {
+            printf("\tSimulated errors                     :  %s\n",
+                   verbose_errors.c_str());
           }
 
           if (!verbose_deletions.is_blank()) {
