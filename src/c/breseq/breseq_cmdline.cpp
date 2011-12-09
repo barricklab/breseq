@@ -929,14 +929,17 @@ int do_mutate(int argc, char *argv[])
   }  
   
   cGenomeDiff gd(options["genomediff"]);
-  cReferenceSequences ref_seq_info;  
+  cReferenceSequences ref_seq_info;
+  cReferenceSequences new_ref_seq_info;
   ref_seq_info.LoadFiles(from_string<vector<string> >(options["reference"]));
+  new_ref_seq_info.LoadFiles(from_string<vector<string> >(options["reference"]));
   
   //Check to see if every item in the loaded .gd is
   // applicable to the reference file.
   ASSERT(gd.is_valid(ref_seq_info, options.count("verbose")), "Reference file and GenomeDiff file don't match.");
   
-  cReferenceSequences new_ref_seq_info = gd.apply_to_sequences(ref_seq_info, options.count("verbose"));
+  
+  gd.apply_to_sequences(ref_seq_info, new_ref_seq_info, options.count("verbose"));
   
   if (options.count("fasta"))
     new_ref_seq_info.WriteFASTA(options["fasta"], options.count("verbose"));
@@ -1272,8 +1275,10 @@ int do_simulate_read(int argc, char *argv[])
 
   //! Step: Load reference sequence file.
   cReferenceSequences ref_seq_info;
+  cReferenceSequences new_ref_seq_info;
   const string &ref_file_name = options["reference"];
   ref_seq_info.LoadFile(ref_file_name);
+  new_ref_seq_info.LoadFile(ref_file_name);
 
 
   //! Step: Apply genome diff mutations to reference sequence.
@@ -1281,7 +1286,7 @@ int do_simulate_read(int argc, char *argv[])
   bool verbose = options.count("verbose");
   cGenomeDiff gd(gd_file_name);
 
-  cReferenceSequences new_ref_seq_info = gd.apply_to_sequences(ref_seq_info, verbose);  
+  gd.apply_to_sequences(ref_seq_info, new_ref_seq_info, verbose);  
   
   //! Write applied GFF3 file if requested.
   if(options.count("gff3"))new_ref_seq_info.WriteGFF(options["output"] + ".gff3", options.count("verbose"));
