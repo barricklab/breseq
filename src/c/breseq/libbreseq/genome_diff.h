@@ -328,7 +328,7 @@ public:
   bool mutation_unknown(cDiffEntry mut);
   bool interval_un (const uint32_t& start, const uint32_t& end);
 
-  cReferenceSequences apply_to_sequences(cReferenceSequences &ref_seq_info, bool verbose=false);
+  void apply_to_sequences(cReferenceSequences &ref_seq_info, cReferenceSequences& new_ref_seq_info, bool verbose=false);
   void shift_positions(cDiffEntry& item, cReferenceSequences& ref_seq_info, bool verbose=false);
 
   void strcopy(char* arg1, const char* arg2);
