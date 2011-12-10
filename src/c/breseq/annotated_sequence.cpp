@@ -265,7 +265,7 @@ namespace breseq {
       for (cSequenceFeatureList::iterator itr_rep = repeats.begin(); itr_rep != repeats.end(); itr_rep++) {
         cSequenceFeature& rep = **itr_rep;
         
-        if(uSmallest > (uint32_t)(rep.m_end - rep.m_start + 1))uSmallest = (uint32_t)(rep.m_end - rep.m_start + 1);
+        if(rep.SafeGet("name") == repeat_name && (uSmallest > (uint32_t)(rep.m_end - rep.m_start + 1)))uSmallest = (uint32_t)(rep.m_end - rep.m_start + 1);
       }
       
       // Go through the repeats of the sequence
@@ -1460,7 +1460,7 @@ string cReferenceSequences::repeat_family_sequence(const string &repeat_name, in
     for (itr_rep = repeats.begin(); itr_rep != repeats.end(); itr_rep++) {
       cSequenceFeature& rep = **itr_rep;
       
-      if(uSmallest > (uint32_t)(rep.m_end - rep.m_start + 1))uSmallest = (uint32_t)(rep.m_end - rep.m_start + 1);
+      if(rep.SafeGet("name") == repeat_name && (uSmallest > (uint32_t)(rep.m_end - rep.m_start + 1)))uSmallest = (uint32_t)(rep.m_end - rep.m_start + 1);
     }
     
     for (itr_rep = repeats.begin(); itr_rep != repeats.end(); itr_rep++) {
