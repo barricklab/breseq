@@ -256,13 +256,26 @@ namespace breseq {
       this_seq.m_genes.sort();
       this_seq.m_repeats.sort();
       
+      // For storing how small the smallest repeat is.
+      uint32_t uSmallest = this_seq.m_length;
+      
+      // Go through the repeats of the sequence
+      // We will be determining the smallest version
+      // of the repeat here.
+      for (cSequenceFeatureList::iterator itr_rep = repeats.begin(); itr_rep != repeats.end(); itr_rep++) {
+        cSequenceFeature& rep = **itr_rep;
+        
+        if(rep.SafeGet("name") == repeat_name && (uSmallest > (uint32_t)(rep.m_end - rep.m_start + 1)))uSmallest = (uint32_t)(rep.m_end - rep.m_start + 1);
+      }
+      
       // Go through the repeats of the sequence
       for (cSequenceFeatureList::iterator itr_rep = repeats.begin(); itr_rep != repeats.end(); itr_rep++)
       {
         cSequenceFeature& rep = **itr_rep;
         
         // Is this the repeat we're looking for?
-        if (rep.SafeGet("name") == repeat_name)
+        // Is it the smallest version?
+        if (rep.SafeGet("name") == repeat_name && uSmallest == (uint32_t)(rep.m_end - rep.m_start + 1))
         {      
           cSequenceFeatureList& features = this_seq.m_features;
           cSequenceFeatureList feat_list_new;        
@@ -1434,17 +1447,26 @@ void cReferenceSequences::ReadBull(const string& file_name) {
 string cReferenceSequences::repeat_family_sequence(const string &repeat_name, int8_t strand)
 {
   vector<cAnnotatedSequence>::iterator itr_seq;
-
+  
   // loop through all reference sequences
   for (itr_seq = this->begin(); itr_seq != this->end(); itr_seq++) {
     cAnnotatedSequence& this_seq = *itr_seq;
     cSequenceFeatureList& repeats = this_seq.m_repeats;
 
     cSequenceFeatureList::iterator itr_rep;
+    
+    uint32_t uSmallest = this_seq.m_length;
+    
     for (itr_rep = repeats.begin(); itr_rep != repeats.end(); itr_rep++) {
       cSequenceFeature& rep = **itr_rep;
-
-      if (rep.SafeGet("name") == repeat_name) {
+      
+      if(rep.SafeGet("name") == repeat_name && (uSmallest > (uint32_t)(rep.m_end - rep.m_start + 1)))uSmallest = (uint32_t)(rep.m_end - rep.m_start + 1);
+    }
+    
+    for (itr_rep = repeats.begin(); itr_rep != repeats.end(); itr_rep++) {
+      cSequenceFeature& rep = **itr_rep;
+      
+      if (rep.SafeGet("name") == repeat_name && uSmallest == (uint32_t)(rep.m_end - rep.m_start + 1)) {
         string repeat_seq = this_seq.get_sequence_1(rep.m_start, rep.m_end);
         if (strand != rep.m_strand)
           repeat_seq = reverse_complement(repeat_seq);

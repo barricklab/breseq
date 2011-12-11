@@ -603,7 +603,7 @@ namespace breseq {
     //We want precision to the 100,000th decimal place.
     uint32_t p_value_max = p_value * 100000;
 
-    return (rand() % 100000 <= p_value_max);
+    return ((uint32_t)(rand() % 100000) <= p_value_max);
   }
 
   const uint32_t deletion_probability = 100000;//10E-5
