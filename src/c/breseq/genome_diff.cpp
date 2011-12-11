@@ -689,9 +689,9 @@ bool cDiffEntry::is_normalized_to_sequence(const cAnnotatedSequence &sequence,
   const pos_1_t pos_1 = strtoul((*this)["position"].c_str(), NULL, 0);
   assert(pos_1);
 
-  /*! Step: Type specific normilizations. For some, the initial parameters given
-    can be normalized, for others can't be normalized and aren't a valid
-    mutation for the given reference sequence. */
+  /*! Step: Type specific normalizations. For some, the initial parameters given
+    can be altered to be normalized, for others the parameters can't be altered
+    and the mutation is not valid for the given reference sequence. */
   switch (_type)
   {
   case DEL:
