@@ -1759,11 +1759,13 @@ cGenomeDiff::interval_un(const uint32_t& start,const uint32_t& end)
   return false;
 }
 
-cReferenceSequences cGenomeDiff::apply_to_sequences(cReferenceSequences& ref_seq_info, bool verbose)
-{
-  // copy the reference sequence info
-  cReferenceSequences new_ref_seq_info(ref_seq_info);
-    
+// This function will use the current GD and apply it to the new_ref_seq_info.
+// When calling this function make SURE that you load ref_seq_info and
+// new_ref_seq_info seperately.
+//
+//  TODO: Write a deep copy constructor for cReferenceSequences 
+void cGenomeDiff::apply_to_sequences(cReferenceSequences& ref_seq_info, cReferenceSequences& new_ref_seq_info, bool verbose)
+{    
   uint32_t count_SNP = 0, count_SUB = 0, count_INS = 0, count_DEL = 0, count_AMP = 0, count_INV = 0, count_MOB = 0, count_CON = 0;
 
   diff_entry_list_t mutation_list = this->mutation_list();
@@ -1977,8 +1979,6 @@ cReferenceSequences cGenomeDiff::apply_to_sequences(cReferenceSequences& ref_seq
   for (vector<cAnnotatedSequence>::iterator it_as = new_ref_seq_info.begin(); it_as < new_ref_seq_info.end(); it_as++) {
     if(!it_as->m_length){new_ref_seq_info.erase(it_as);it_as--;}
   }
-  
-  return new_ref_seq_info;
 }
 
 
