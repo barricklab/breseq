@@ -28,7 +28,6 @@ LICENSE AND COPYRIGHT
 #include "libbreseq/anyoption.h"
 #include "libbreseq/settings.h"
 
-using namespace std;
 
 namespace breseq {
 	
@@ -191,6 +190,32 @@ namespace breseq {
         ASSERT(start_1 <= end_1, "start (" + to_string(start_1) + ") not less than or equal to end (" + to_string(end_1) + ")");
         //if(start_1 > end_1)return "";
         return m_fasta_sequence.m_sequence.substr(start_1-1, end_1-start_1+1);
+      }
+
+      string get_circular_sequence_1(const size_t start_1, const size_t size) const
+      {
+        const size_t start_0 = start_1 - 1;
+        const size_t max_pos = start_0 + size;
+
+        const string &sequence = m_fasta_sequence.m_sequence;
+        const size_t seq_size = sequence.size();
+        const int32_t size_diff = seq_size - max_pos;
+
+        string ret_val("");
+        ret_val.reserve(size);
+        if (size_diff >= 0) {
+          ret_val = sequence.substr(start_0, size);
+        } else {
+          ret_val.append(sequence.substr(start_0, seq_size + size_diff));
+          ret_val.append(sequence.substr(0, abs(size_diff)));
+        }
+
+        return ret_val;
+      }
+
+      size_t get_sequence_size(void) const
+      {
+        return m_fasta_sequence.m_sequence.size();
       }
 
       // Replace Sequence with Input

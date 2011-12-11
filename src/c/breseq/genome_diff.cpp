@@ -581,7 +581,7 @@ cGenomeDiff cGenomeDiff::fast_merge(const cGenomeDiff& gd1, const cGenomeDiff& g
   _entry_list
  */
 
-void cGenomeDiff::read(const string& filename) {
+void cGenomeDiff::read(const string& filename, const bool fast_read) {
   ifstream in(filename.c_str());
   ASSERT(in.good(), "Could not open file for reading: " + filename);
 
@@ -596,37 +596,44 @@ void cGenomeDiff::read(const string& filename) {
    as a genome diff file. */
   metadata.version = "";
   while(in.peek() == 35) { //35 is ASCII of '#'.
+    in.get();
+    if (in.peek() != 61) { //61 is ASCII of '='.
+      in.unget();
+      break;
+    } else {
+      in.unget();
+    }
+
     string key = "";
-    getline(in, key, ' ');
+    std::getline(in, key, ' ');
 
     //Discard whitespace between key and value.
-    while (in.peek() == 32) { //32 is ASCII of ' '
+    while (in.peek() == 32) { //32 is ASCII of ' '.
       in.ignore();
     }
 
     //Evaluate key.
     if (key == "#=GENOME_DIFF") {
-      getline(in, metadata.version);
+      std::getline(in, metadata.version);
     }
     else if (key == "#=AUTHOR") {
-      getline(in, metadata.author);
+      std::getline(in, metadata.author);
     }
     else if (key == "#=REFSEQ") {
       metadata.ref_seqs.resize(metadata.ref_seqs.size() + 1);
-      getline(in, metadata.ref_seqs.back());
+      std::getline(in, metadata.ref_seqs.back());
     }
     else if (key == "#=READSEQ") {
       metadata.read_seqs.resize(metadata.read_seqs.size() + 1);
-      getline(in, metadata.read_seqs.back());
+      std::getline(in, metadata.read_seqs.back());
     }
     else if (key.substr(0, 2) == "#=") {
-      key.erase(0,2);
-      getline(in, metadata.breseq_data[key]);
+      std::getline(in, metadata.breseq_data[key.substr(2)]);
     }
     else {
       //Warn if unkown header lines are encountered.
       string value = "";
-      getline(in, value);
+      std::getline(in, value);
       string message = "";
       sprintf(message,
               "cGenomeDiff:read(%s): Header line: %s %s is not recognized.",
@@ -650,36 +657,207 @@ void cGenomeDiff::read(const string& filename) {
   //! Step: Handle the diff entries.
   while (in.good()) {
     string line = "";
-    getline(in, line);
+    std::getline(in, line);
     //Warn if commented out or a possibly blank line is encountered.
-    if (line.empty() || line[0] == '#' || line[0] == ' ') {
-      size_t line_size = line.size();
-      //Handle blank lines.
-      bool line_is_blank = true;
-      for (size_t i = 0; i < line_size; i++) {
-        if (line[i] != ' ') {
-          line_is_blank = false;
-        }
-      }
-      if (line_is_blank) {
-        continue;
-      }
-      //Handle commented lines.
-      string message = "";
-      sprintf(message,
-              "cGenomeDiff:read(%s): Discarding line : %s",
-              filename.c_str(), line.c_str()
-             );
-      WARN(message);
-    } else {
-      add(cDiffEntry(line));
+    if (line.empty()) {
+      continue;
+    } else if (line[0] == '#') {
+       printf("\tcGenomeDiff:read(%s): Discarding line : %s",
+       filename.c_str(), line.c_str());
+       continue;
+    } else if (line.find_first_not_of(' ') == string::npos) {
+       continue;
     }
+
+    add(cDiffEntry(line));
   }
 
-  //All done!
   return;
 }
 
+bool cDiffEntry::is_normalized_to_sequence(const cAnnotatedSequence &sequence,
+                                           const bool verbose)
+{
+  //! Step: Initialize parameters.
+  //Only diff entries applicable to this sequence can be considered.
+  assert(entry_exists("seq_id") || (*this)["seq_id"] == sequence.m_seq_id);
+  assert(entry_exists("position"));
+  bool is_normalized = false;//! Return value.
+
+  //Sequences should be viewed as having index + one offset.
+  typedef size_t pos_1_t;
+  const pos_1_t pos_1 = strtoul((*this)["position"].c_str(), NULL, 0);
+  assert(pos_1);
+
+  /*! Step: Type specific normilizations. For some, the initial parameters given
+    can be normalized, for others can't be normalized and aren't a valid
+    mutation for the given reference sequence. */
+  switch (_type)
+  {
+  case DEL:
+  {
+    assert(entry_exists("size"));
+
+    //! Step: Initialize parameters.
+    typedef string sequence_t;
+    typedef sequence_t::const_iterator base_itr_t;
+    typedef pair<base_itr_t, base_itr_t> base_pair_t;
+    const size_t n = strtoul((*this)["size"].c_str(), NULL, 0);
+    assert(n);
+
+    /*! Step: Attempt to normalize the start position by iterating through new
+    start positions. */
+    pos_1_t i = pos_1;
+    for(;;++i) {
+      const sequence_t &first =
+          sequence.get_circular_sequence_1(i, n);
+      assert(first.size());
+
+      const sequence_t &second =
+          sequence.get_circular_sequence_1(i + n, n);
+      assert(second.size());
+
+      const base_pair_t &base_pair =
+          mismatch(first.begin(), first.end(), second.begin());
+
+      if (base_pair.first != first.end()) {
+        i += (base_pair.first - first.begin());
+        break;
+      }
+    }
+
+    //! Step: Determine if the start pos needed to be normilized.
+    bool is_new_position = pos_1 != i;
+    if (is_new_position) {
+      sprintf((*this)["position"], "%u", i);
+      sprintf((*this)["normalized"], "position_%u_to_%u", pos_1, i);
+    } else {
+      sprintf((*this)["normalized"], "is_valid");
+    }
+
+    is_normalized = true;
+  } break;
+
+  case INS:
+  {
+    assert(entry_exists("new_seq"));
+
+    //! Step: Initialize parameters.
+    typedef string new_sequence_t;
+    const new_sequence_t &first = (*this)["new_seq"];
+    const size_t n = first.size();
+    assert(n);
+
+    /*! Step: Attempt to normalize the start position by iterating through new
+    start positions. */
+    pos_1_t i = pos_1;
+    for(;;i += n) {
+      const new_sequence_t &second = sequence.get_circular_sequence_1(i, n);
+      assert(second.size());
+
+      if (first == second) {
+        break;
+      }
+    }
+
+    //! Step: Determine if the start pos needed to be normilized.
+    bool is_new_position = pos_1 != i;
+    if (is_new_position) {
+      sprintf((*this)["position"], "%u", i);
+      sprintf((*this)["normalized"], "position_%u_to_%u", pos_1, i);
+    } else {
+      sprintf((*this)["normalized"], "is_valid");
+    }
+
+    is_normalized = true;
+  } break;
+
+  case SNP:
+  {
+    assert(entry_exists("new_seq"));
+    assert((*this)["new_seq"].size() == 1);
+
+    //! Step: Initialize parameters.
+    const base_char first = (*this)["new_seq"][0];
+
+    //! Step: Compare bases.
+    const base_char second = sequence.get_circular_sequence_1(pos_1, 1)[0];
+
+    //! Step: If bases are not equal then it's not a valid snp.
+    bool is_base_not_equal = (first != second);
+    if (is_base_not_equal) {
+      sprintf((*this)["normalized"], "is_valid");
+    } else {
+      sprintf((*this)["normalized"], "is_not_valid");
+    }
+
+    is_normalized = is_base_not_equal;
+  } break;
+
+  case SUB:
+  {
+    assert(entry_exists("size"));
+    assert(entry_exists("new_seq"));
+
+   //! Step: Initialize parameters.
+    typedef string new_sequence_t;
+    const size_t n =  strtoul((*this)["size"].c_str(), NULL, 0);
+    assert(n );
+    const new_sequence_t  &first = (*this)["new_seq"];
+    assert(first.size());
+
+    is_normalized = false;
+  } break;
+
+  case MOB:
+  {
+    return false;//TODO
+    assert(entry_exists("repeat_name"));
+    assert(entry_exists("strand"));
+    assert(entry_exists("duplication_size"));
+
+    is_normalized = false;
+  } break;
+
+  case INV:
+  {
+    return false;//TODO
+    assert(entry_exists("size"));
+    const size_t n =  strtoul((*this)["size"].c_str(), NULL, 0);
+    assert(n);
+
+    is_normalized = false;
+  } break;
+
+  case AMP:
+  {
+    return false; //TODO
+    assert(entry_exists("size"));
+    assert(entry_exists("new_copy_number"));
+
+    is_normalized = false;
+  } break;
+
+  case CON:
+  {
+    return false;//TODO
+    assert(entry_exists("size"));
+    assert(entry_exists("region"));
+
+    is_normalized = false;
+  } break;
+
+  default: is_normalized = false;
+  }//End switch.
+
+
+  //! Step: Verbose output.
+  if (verbose) {
+    printf("\t%s\n", to_string().c_str());
+  }
+
+  return is_normalized;
+}
 
 map<gd_entry_type, sort_fields_item> diff_entry_sort_fields = make_map<gd_entry_type, sort_fields_item>
   (SNP, sort_fields_item(1, SEQ_ID, POSITION))

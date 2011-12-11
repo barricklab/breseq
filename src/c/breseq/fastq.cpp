@@ -16,6 +16,7 @@
  *****************************************************************************/
 
 #include "libbreseq/fastq.h"
+#include "libbreseq/annotated_sequence.h"
 
 using namespace std;
 
@@ -620,13 +621,13 @@ namespace breseq {
   }
 
   cFastqSequenceVector
-  cFastqSequenceVector::simulate_from_sequence(const cSequence &ref_sequence,
-                                             const uint32_t &average_coverage,
-                                             const uint32_t &read_size,
-                                             bool verbose)
+  cFastqSequenceVector::simulate_from_sequence(const cAnnotatedSequence &ref_sequence,
+                                               const uint32_t &average_coverage,
+                                               const uint32_t &read_size,
+                                               const bool verbose)
   {
     //! Step: Initialize return value.
-    const size_t ref_sequence_size = ref_sequence.size();
+    const size_t ref_sequence_size = ref_sequence.get_sequence_size();
     const size_t num_reads =
         ceil(ref_sequence_size / read_size) * average_coverage;
 
@@ -684,16 +685,16 @@ namespace breseq {
 
       //Initializations for verbose parameters.
       bool is_negative_strand = false;
-      cSequence verbose_errors(read_size, ' ');
-      cSequence verbose_deletions (read_size, ' ');
-      cSequence verbose_insertions(read_size, ' ');
+      string verbose_errors(read_size, ' ');
+      string verbose_deletions (read_size, ' ');
+      string verbose_insertions(read_size, ' ');
       //End verbose parameters.
 
 
       //! Algorithm Step 1:
-      size_t start_pos = rand() % ref_sequence_size;
-      cSequence ref_segment =
-          ref_sequence.circular_substr(start_pos, 2 * read_size);
+      size_t start_1 = rand() % ref_sequence_size + 1; // index_1 offset.
+      string ref_segment =
+          ref_sequence.get_circular_sequence_1(start_1, 2 * read_size);
 
       // 50% Chance the read is a negative strand.
       if ((rand() % 100) < 50) {
@@ -784,14 +785,13 @@ namespace breseq {
 
       //! Step: Verbose output.
       if (verbose) {
-        if (!verbose_errors.is_blank()      ||
-            !verbose_deletions.is_blank() ||
-            !verbose_insertions.is_blank()) {
+        if (verbose_deletions.find_first_not_of(' ')  != string::npos ||
+            verbose_insertions.find_first_not_of(' ') != string::npos ) {
           printf("\tVerbose output for simulated read    :  %s\n",
                  fs->m_name.c_str());
 
           const string &original =
-              ref_sequence.circular_substr(start_pos, 2 * read_size);
+              ref_sequence.get_circular_sequence_1(start_1, 2 * read_size);
           printf("\tReference Segment(2 x Read Size)     :  %s\n",
                  original.c_str());
 
@@ -800,17 +800,17 @@ namespace breseq {
                    ref_segment.c_str());
           }
 
-          if (!verbose_errors.is_blank()) {
+          if (verbose_errors.find_first_not_of(' ')     != string::npos) {
             printf("\tSimulated errors                     :  %s\n",
                    verbose_errors.c_str());
           }
 
-          if (!verbose_deletions.is_blank()) {
+          if (verbose_deletions.find_first_not_of(' ')  != string::npos) {
             printf("\tSimulated DEL                        :  %s\n",
                    verbose_deletions.c_str());
           }
 
-          if (!verbose_insertions.is_blank()) {
+          if (verbose_insertions.find_first_not_of(' ') != string::npos) {
             printf("\tSimulated INS                        :  %s\n",
                    verbose_insertions.c_str());
           }

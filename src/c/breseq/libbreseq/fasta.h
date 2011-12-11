@@ -31,56 +31,14 @@ namespace breseq {
   
   /*! Sequence class.
    */
-  class cSequence : public string
-  {
-    public:
-      //! Constructors
-      cSequence() : string() {}
-      cSequence(const string& value) : string(value) {}
-      cSequence(size_t n, const char c) : string(n, c) {}
 
-      //! Public Methods
-      inline void operator=(const string &value)
-      {
-        this->assign(value);
-      }
-
-      inline string circular_substr(const size_t &start_pos, const size_t &n_pos) const
-      {
-        const size_t  this_size = this->size();
-        const size_t  max_pos   = start_pos + n_pos;
-        const int32_t size_diff = this_size - max_pos;
-
-        string ret_val = "";
-        if (size_diff >= 0 ) {
-          ret_val = this->substr(start_pos, n_pos);
-        } else {
-          ret_val.append(this->substr(start_pos, this_size + size_diff));
-          ret_val.append(this->substr(0, abs(size_diff)));
-        }
-
-        return ret_val;
-      }
-
-      inline bool is_blank(void)
-      {
-        size_t size = this->size();
-        for (size_t i = 0; i < size; i++) {
-          if ((*this)[i] != ' ') {
-            return false;
-          }
-        }
-
-        return true;
-      }
-  };
 
    
   struct cFastaSequence {
     public:
       string m_name;          //>NAME DESCRIPTION 
       string m_description;   //
-      cSequence m_sequence;      //sequence ...
+      string m_sequence;      //sequence ...
    }; 
   
 

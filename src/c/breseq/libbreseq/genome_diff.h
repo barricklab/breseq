@@ -24,6 +24,8 @@ LICENSE AND COPYRIGHT
 
 namespace breseq {
 
+class cAnnotatedSequence;
+
 // Common keywords used for diff entries:
 extern const char* TYPE;
 extern const char* ID;
@@ -66,31 +68,7 @@ extern const vector<string> gd_entry_type_lookup_table;
   
 inline string to_string(const gd_entry_type type)
 {
-  switch(type) {
-    case SNP: return "SNP";
-    case SUB: return "SUB";
-    case DEL: return "DEL";
-    case INS: return "INS";
-    case MOB: return "MOB";
-    case AMP: return "AMP";
-    case INV: return "INV";
-    case CON: return "CON";
-      
-    case RA: return "RA";
-    case MC: return "MC";
-    case JC: return "JC";
-    case UN: return "UN";
-      
-    case CURA: return "CURA";
-    case FPOS: return "FPOS";
-    case PHYL: return "PHYL";
-    case TSEQ: return "TSEQ";
-    case PFLP: return "PFLP";
-    case RFLP: return "RFLP";
-    case PFGE: return "PFGE";
-      
-    default: return "?";
-  }
+  return gd_entry_type_lookup_table[type];
 }
 
 enum Strand {POS_STRAND = 1, NEG_STRAND = -1};
@@ -178,6 +156,10 @@ public:
   //! Serialize this diff entry into a string for output.
   virtual string to_string(void) const;
 
+  //! Check if mutation can be normalized to reference, change if it can.
+  bool is_normalized_to_sequence(const cAnnotatedSequence &sequence,
+                                 const bool verbose = true);
+
   //! Returns values for cDiffEntry["reject"]
   vector<string> get_reject_reasons();
 
@@ -240,7 +222,7 @@ struct sort_fields_item {
 };
   
 typedef counted_ptr<cDiffEntry> diff_entry_ptr_t;
-typedef list<diff_entry_ptr_t> diff_entry_list_t; //!< Type for a list of diff entries.a
+typedef list<diff_entry_ptr_t> diff_entry_list_t; //!< Type for a list of diff entries.
 
 
 
@@ -255,7 +237,8 @@ bool diff_entry_sort(const cDiffEntry &a, const cDiffEntry &b);
  //  		columns, then an arbitrary number of columns of more detailed data in a key=value format.
  
  */
-class cGenomeDiff {
+class cGenomeDiff
+{
 public:
 
   typedef string key_t; 
@@ -263,7 +246,7 @@ public:
   
   //! Constructor.
   cGenomeDiff() : _unique_id_counter(0) { }
-  
+
   //! Constructor that sets a default filename.
   cGenomeDiff(const string& filename);
 
@@ -292,7 +275,7 @@ public:
   static cGenomeDiff compare_genome_diff_files(const cGenomeDiff &control, const cGenomeDiff &test);
 
   //! Read a genome diff from a file.
-  void read(const string& filename);
+  void read(const string& filename, const bool fast_read = false);
   
   //! Write the genome diff to a file.
   void write(const string& filename);
@@ -347,10 +330,8 @@ public:
     vector<string> ref_seqs;
     vector<string> read_seqs;
     map<string,string> breseq_data; // Use this to write values from pipeline to gd
-  };
+  } metadata;
 
-  Metadata metadata;
-  
 
 protected:  	
   const string _default_filename; //!< Default filename for this diff.

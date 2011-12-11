@@ -23,7 +23,6 @@ LICENSE AND COPYRIGHT
 #include "common.h"
 #include "storable.h"
 
-using namespace std;
 
 namespace breseq
 {

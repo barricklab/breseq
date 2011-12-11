@@ -886,8 +886,6 @@ inline string reference_file_base_name(const string &file_name) {
   return base_name;
 }
 
-
-
 } // breseq
 
 #endif

@@ -1233,7 +1233,7 @@ int do_simulate_read(int argc, char *argv[])
   AnyOption options("Usage: breseq SIMULATE-READ -g <genome diff> -r <reference file> -c <average coverage> -o <output file>");
 
   options
-  ("cGenomeDiff,g", "Genome diff file.")
+  ("genome_diff,g", "Genome diff file.")
   ("reference,r", "Reference file for input.")
   ("coverage,c", "Average coverage value to simulate.", static_cast<uint32_t>(10))
   ("length,l", "Read length to simulate.", static_cast<uint32_t>(36))
@@ -1244,14 +1244,14 @@ int do_simulate_read(int argc, char *argv[])
   options.processCommandArgs(argc, argv);
   
   options.addUsage("");
-  options.addUsage("Takes a GenomeDiff file and applies the mutations to the reference.");
+  options.addUsage("Takes a genome diff file and applies the mutations to the reference.");
   options.addUsage("Then using the applied reference, it simulates reads based on it.");
   options.addUsage("Output is a .fastq that if run normally against the reference");
   options.addUsage("should produce the same GenomeDiff file you entered.");
   
-  if (!options.count("cGenomeDiff")) {
+  if (!options.count("genome_diff")) {
     options.addUsage("");
-    options.addUsage("You must supply the --cGenomeDiff option for input.");
+    options.addUsage("You must supply the --genome_diff option for input.");
     options.printUsage();
     return -1;
   }
@@ -1277,7 +1277,7 @@ int do_simulate_read(int argc, char *argv[])
 
 
   //! Step: Apply genome diff mutations to reference sequence.
-  const string &gd_file_name = options["cGenomeDiff"];
+  const string &gd_file_name = options["genome_diff"];
   bool verbose = options.count("verbose");
   cGenomeDiff gd(gd_file_name);
 
@@ -1286,11 +1286,10 @@ int do_simulate_read(int argc, char *argv[])
   //! Write applied GFF3 file if requested.
   if(options.count("gff3"))new_ref_seq_info.WriteGFF(options["output"] + ".gff3", options.count("verbose"));
 
-  const cFastaSequence &fasta_sequence = new_ref_seq_info.front().m_fasta_sequence;
+  const cAnnotatedSequence &sequence = new_ref_seq_info[0];
 
   //! Step: Create simulated read sequence.
   //Parameters to create simulated read.
-  const cSequence &sequence = fasta_sequence.m_sequence;
   const uint32_t average_coverage = from_string<uint32_t>(options["coverage"]);
   const uint32_t read_length = from_string<uint32_t>(options["length"]);
 
@@ -1307,6 +1306,84 @@ int do_simulate_read(int argc, char *argv[])
     if(verbose && !(i % 10000) && i){cout << "\tREAD: " << i << endl;}
   }
   if(verbose){cout << "\t**FASTQ Complete**" << endl;}
+  return 0;
+}
+
+
+int do_normalize_gd(int argc, char* argv[])
+{
+  AnyOption options("Useage: breseq NORMALIZE-GD -g <input.gd> -r <reference> -o <output.gd>");
+
+  options
+  ("genome_diff,g", "Input genome diff file.")
+  ("reference,r"  , "Input reference file.")
+  ("output,o"     , "Output normalized genome diff file.")
+  ("verbose,v"    , "Verbose Mode (Flag)", TAKES_NO_ARGUMENT);
+
+  options.processCommandArgs(argc, argv);
+  options.addUsage("");
+  options.addUsage("Takes a genome diff file to be normalized.");
+  options.addUsage("Then normalizes the diff entries to the reference.");
+  options.addUsage("Outputs a normalized genome diff file.");
+
+
+  if (!options.count("genome_diff")) {
+    options.addUsage("");
+    options.addUsage("You must supply the --genome_diff option for input.");
+    options.printUsage();
+    return -1;
+  }
+
+  if (!options.count("reference")) {
+    options.addUsage("");
+    options.addUsage("You must supply the --reference option for input.");
+    options.printUsage();
+    return -1;
+  }
+
+  if (!options.count("output")) {
+    options.addUsage("");
+    options.addUsage("You must supply the --output option for output.");
+    options.printUsage();
+    return -1;
+  }
+
+  bool verbose = options.count("verbose");
+
+  //! Step: Load reference sequence file.
+  cReferenceSequences ref_seq_info;
+  const string &ref_file_name = options["reference"];
+  ref_seq_info.LoadFile(ref_file_name);
+
+  //! Step: Get reference sequence.
+  //Parameters to create simulated read.
+  const cAnnotatedSequence &sequence = ref_seq_info.front();
+
+  //! Step: Get mutations.
+  cGenomeDiff gd(options["genome_diff"]);
+  diff_entry_list_t muts = gd.list();
+
+  //! Step:
+  fprintf(cout, "\n**Normalizing Genome diff file: %s to reference file: %s \n\n",
+          options["genome_diff"].c_str(), options["reference"].c_str());
+
+  ofstream os(options["output"].c_str());
+  fprintf(os, "#=GENOME_DIFF 1.0\n");
+  for (diff_entry_list_t::iterator it = muts.begin();
+       it != muts.end(); it++) {
+    cDiffEntry *mut = &(**it);
+
+    if (mut->is_normalized_to_sequence(sequence, verbose)) {
+      //Diff entry was either already normalized or was normalized.
+      fprintf(os, "%s\n", mut->to_string().c_str());
+    } else {
+      //Could not normalize this diff entry, write to file commented out.
+      fprintf(os, "#%s\n", mut->to_string().c_str());
+    }
+  }
+
+  fprintf(cout,"\n**Normilization completed.\n\n");
+
   return 0;
 }
 
@@ -2251,6 +2328,8 @@ int main(int argc, char* argv[]) {
     return do_annotate(argc_new, argv_new);
   } else if (command == "SIMULATE-READ") {
     return do_simulate_read(argc_new, argv_new);
+  } else if (command == "NORMALIZE-GD") {
+    return do_normalize_gd(argc_new, argv_new);
   }
   else {
     // Not a sub-command. Use original argument list.

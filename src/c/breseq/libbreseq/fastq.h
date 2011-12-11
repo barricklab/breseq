@@ -20,13 +20,11 @@ LICENSE AND COPYRIGHT
 #define _BRESEQ_FASTQ_H_
 
 #include "common.h"
-#include "settings.h"
-#include "fasta.h"
-
-using namespace std;
 
 namespace breseq {
-	
+
+class cAnnotatedSequence;
+
 	/*! Interface for loading and manipulating files in FASTQ format.
    */
   
@@ -68,10 +66,10 @@ namespace breseq {
   class cFastqSequenceVector : public vector<cFastqSequence>
   {
     public:
-      static cFastqSequenceVector simulate_from_sequence(const cSequence &ref_sequence,
+      static cFastqSequenceVector simulate_from_sequence(const cAnnotatedSequence &ref_sequence,
                                                          const uint32_t &average_coverage,
                                                          const uint32_t &read_size,
-                                                         bool verbose=false);
+                                                         const bool verbose=false);
     private:
   };
   
