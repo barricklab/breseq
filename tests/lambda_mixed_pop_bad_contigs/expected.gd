@@ -1,4 +1,9 @@
-#=GENOME_DIFF 1.0
+#=GENOME_DIFF	1.0
+#=AUTHOR	Barrick JE
+#=REFSEQ	tests/lambda_mixed_pop_bad_contigs/../data/lambda/lambda.gbk
+#=REFSEQ	tests/lambda_mixed_pop_bad_contigs/../data/lambda/other.gbk
+#=REFSEQ	tests/lambda_mixed_pop_bad_contigs/../data/REL606/REL606.fragment.gbk
+#=READSEQ	tests/lambda_mixed_pop_bad_contigs/../data/lambda/lambda_mixed_population.fastq
 DEL	48	45	AF322221	1	687
 DEL	51	3	NC_001416	139	1
 INS	52	4	NC_001416	14266	G

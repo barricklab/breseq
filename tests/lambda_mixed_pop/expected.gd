@@ -1,4 +1,7 @@
-#=GENOME_DIFF 1.0
+#=GENOME_DIFF	1.0
+#=AUTHOR	Barrick JE
+#=REFSEQ	tests/lambda_mixed_pop/../data/lambda/lambda.gbk
+#=READSEQ	tests/lambda_mixed_pop/../data/lambda/lambda_mixed_population.fastq
 DEL	51	3	NC_001416	139	1
 INS	52	4	NC_001416	14266	G
 SNP	53	5	NC_001416	20661	G

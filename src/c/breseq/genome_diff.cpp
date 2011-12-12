@@ -581,7 +581,7 @@ cGenomeDiff cGenomeDiff::fast_merge(const cGenomeDiff& gd1, const cGenomeDiff& g
   _entry_list
  */
 
-void cGenomeDiff::read(const string& filename, const bool fast_read) {
+void cGenomeDiff::read(const string& filename) {
   ifstream in(filename.c_str());
   ASSERT(in.good(), "Could not open file for reading: " + filename);
 
@@ -605,7 +605,7 @@ void cGenomeDiff::read(const string& filename, const bool fast_read) {
     }
 
     string key = "";
-    std::getline(in, key, ' ');
+    std::getline(in, key, '\t');
 
     //Discard whitespace between key and value.
     while (in.peek() == 32) { //32 is ASCII of ' '.
@@ -1012,25 +1012,21 @@ void cGenomeDiff::write(const string& filename) {
   //! Step: Header lines.
   /*Always write version tag. It's how we identify it as a genome diff file
    in cGenomeDiff::read(). */
-  fprintf(os, "#=GENOME_DIFF %s\n", metadata.version.c_str());
+  fprintf(os, "#=GENOME_DIFF\t%s\n", metadata.version.c_str());
+  
+  fprintf(os, "#=AUTHOR\t%s\n", metadata.author.c_str());
 
-  /*If adding additionaly header lines is requested (usually for the final
-    genome diff file in breseq's pipeline) then add them here. */
-  if (metadata.write_header) {
-    fprintf(os, "#=AUTHOR    %s\n", metadata.author.c_str());
+  for (size_t i = 0; i < metadata.ref_seqs.size(); i++) {
+    fprintf(os, "#=REFSEQ\t%s\n", metadata.ref_seqs[i].c_str());
+  }
 
-    for (size_t i = 0; i < metadata.ref_seqs.size(); i++) {
-      fprintf(os, "#=REFSEQ    %s\n", metadata.ref_seqs[i].c_str());
-    }
-
-    for (size_t i = 0; i < metadata.read_seqs.size(); i++) {
-      fprintf(os, "#=READSEQ   %s\n", metadata.read_seqs[i].c_str());
-    }
-    if (!metadata.breseq_data.empty()) {
-      for (map<key_t,string>::iterator it = metadata.breseq_data.begin();
-           it != metadata.breseq_data.end(); it ++) {
-        fprintf(os, "#=%s %s\n", it->first.c_str(), it->second.c_str());
-      }
+  for (size_t i = 0; i < metadata.read_seqs.size(); i++) {
+    fprintf(os, "#=READSEQ\t%s\n", metadata.read_seqs[i].c_str());
+  }
+  if (!metadata.breseq_data.empty()) {
+    for (map<key_t,string>::iterator it = metadata.breseq_data.begin();
+         it != metadata.breseq_data.end(); it ++) {
+      fprintf(os, "#=%s\t%s\n", it->first.c_str(), it->second.c_str());
     }
   }
   

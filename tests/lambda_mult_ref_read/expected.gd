@@ -1,4 +1,15 @@
-#=GENOME_DIFF 1.0
+#=GENOME_DIFF	1.0
+#=AUTHOR	Barrick JE
+#=REFSEQ	tests/lambda_mult_ref_read/../data/lambda/lambda.1.gbk
+#=REFSEQ	tests/lambda_mult_ref_read/../data/lambda/lambda.2.gbk
+#=REFSEQ	tests/lambda_mult_ref_read/../data/lambda/lambda.3.gbk
+#=REFSEQ	tests/lambda_mult_ref_read/../data/lambda/lambda.4.gbk
+#=REFSEQ	tests/lambda_mult_ref_read/../data/lambda/lambda.5.gbk
+#=READSEQ	tests/lambda_mult_ref_read/../data/lambda/lambda_mixed_population.1.fastq
+#=READSEQ	tests/lambda_mult_ref_read/../data/lambda/lambda_mixed_population.2.fastq
+#=READSEQ	tests/lambda_mult_ref_read/../data/lambda/lambda_mixed_population.3.fastq
+#=READSEQ	tests/lambda_mult_ref_read/../data/lambda/lambda_mixed_population.4.fastq
+#=READSEQ	tests/lambda_mult_ref_read/../data/lambda/lambda_mixed_population.5.fastq
 DEL	54	7	NC_001416-0	139	1
 INS	55	8	NC_001416-1	4566	G
 SNP	56	9	NC_001416-2	1261	G

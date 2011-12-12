@@ -937,8 +937,7 @@ int do_mutate(int argc, char *argv[])
   //Check to see if every item in the loaded .gd is
   // applicable to the reference file.
   ASSERT(gd.is_valid(ref_seq_info, options.count("verbose")), "Reference file and GenomeDiff file don't match.");
-
-
+  
   gd.apply_to_sequences(ref_seq_info, new_ref_seq_info, options.count("verbose"));
 
   if (options.count("fasta"))
@@ -2210,20 +2209,16 @@ int breseq_default_action(int argc, char* argv[])
     cGenomeDiff mpgd(settings.evidence_genome_diff_file_name);
     mp.predict(settings, mpgd, summary.sequence_conversion.max_read_length, summary.sequence_conversion.avg_read_length);
 
-    //This is our final genome diff file. Add header info here.
-    mpgd.metadata.write_header = false;//@GRC update expected.gds in tests.
-
     //#=REFSEQ header lines.
     mpgd.metadata.ref_seqs.resize(settings.reference_file_names.size());
     for (size_t i = 0; i < settings.reference_file_names.size(); i++) {
-      mpgd.metadata.ref_seqs[i] =
-          reference_file_base_name(settings.reference_file_names[i]);
+      mpgd.metadata.ref_seqs[i] = settings.reference_file_names[i];
     }
 
     //#=READSEQ header lines.
     mpgd.metadata.read_seqs.resize(settings.read_files.size());
     for (size_t i = 0; i < settings.read_files.size(); i++) {
-      mpgd.metadata.read_seqs[i] = settings.read_files[i].base_name();
+      mpgd.metadata.read_seqs[i] = settings.read_files[i].file_name();
     }
 
     // Add additional header lines if needed.

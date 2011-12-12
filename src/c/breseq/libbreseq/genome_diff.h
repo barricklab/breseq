@@ -275,7 +275,7 @@ public:
   static cGenomeDiff compare_genome_diff_files(const cGenomeDiff &control, const cGenomeDiff &test);
 
   //! Read a genome diff from a file.
-  void read(const string& filename, const bool fast_read = false);
+  void read(const string& filename);
   
   //! Write the genome diff to a file.
   void write(const string& filename);
@@ -321,12 +321,11 @@ public:
   //! Metadata kept in .gd files
   struct Metadata
   {
-    Metadata() : version("1.0"), author("Barrick JE"), write_header(false) {}
+    Metadata() : version("1.0"), author("Barrick JE") {}
 
     string run_id;
     string version; 
     string author;
-    bool write_header;
     vector<string> ref_seqs;
     vector<string> read_seqs;
     map<string,string> breseq_data; // Use this to write values from pipeline to gd

@@ -76,14 +76,14 @@ namespace breseq {
         if(find_feature(m_genes, feat, gene_it)){m_genes.erase(gene_it);}
         if(find_feature(m_repeats, feat, repeat_it)){m_repeats.erase(repeat_it);}
         
+        //Notify the user of the action
+        if(verbose){cout << "REMOVED\t" << feat["type"] << "\t" << feat.m_gff_attributes["ID"] << " " << feat.m_gff_attributes["Name"] << endl;}
+        
         //Remove the current feature
         it = m_features.erase(it);
         
         //We just removed the current feauture, do not iterate.
         it_iterate = false;
-        
-        //Notify the user of the action
-        if(verbose){cout << "REMOVED\t" << feat["type"] << "\t" << feat.m_gff_attributes["ID"] << " " << feat.m_gff_attributes["Name"] << endl;}
       }
       
       //Does the feature end after the replacement starts?
