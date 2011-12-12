@@ -1,5 +1,5 @@
 #=GENOME_DIFF	1.0
-#=AUTHOR	Barrick JE
+#=AUTHOR	0.16
 #=REFSEQ	tests/REL606_fragment_is_mediated_dels/../data/REL606/REL606.fragment.gbk
 #=READSEQ	tests/REL606_fragment_is_mediated_dels/../data/REL606/REL606.fragment.3.fastq
 DEL	14	5,1	REL606-5	10535	15342	mediated=IS1

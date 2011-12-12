@@ -1,5 +1,5 @@
 #=GENOME_DIFF	1.0
-#=AUTHOR	Barrick JE
+#=AUTHOR	0.16
 #=REFSEQ	tests/lambda_mixed_pop_bad_contigs/../data/lambda/lambda.gbk
 #=REFSEQ	tests/lambda_mixed_pop_bad_contigs/../data/lambda/other.gbk
 #=REFSEQ	tests/lambda_mixed_pop_bad_contigs/../data/REL606/REL606.fragment.gbk

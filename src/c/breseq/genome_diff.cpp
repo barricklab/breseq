@@ -603,42 +603,41 @@ void cGenomeDiff::read(const string& filename) {
     } else {
       in.unget();
     }
-
-    string key = "";
-    std::getline(in, key, '\t');
-
-    //Discard whitespace between key and value.
-    while (in.peek() == 32) { //32 is ASCII of ' '.
-      in.ignore();
-    }
-
+    
+    string whole_line = "";
+    string second_half = "";
+    
+    getline(in, whole_line);
+    
+    vector<string> split_line = split_on_whitespace(whole_line);
+    
+    if(split_line.size() > 1)second_half = split_line[1];
+    for(size_t j = 2; j < split_line.size(); j++)  {
+      second_half += " " + split_line[j];  }    
+    
     //Evaluate key.
-    if (key == "#=GENOME_DIFF") {
-      std::getline(in, metadata.version);
+    if (split_line[0] == "#=GENOME_DIFF" && split_line.size() > 1) {
+      metadata.version = second_half;
     }
-    else if (key == "#=AUTHOR") {
-      std::getline(in, metadata.author);
+    else if (split_line[0] == "#=AUTHOR" && split_line.size() > 1) {
+      metadata.author = second_half;
     }
-    else if (key == "#=REFSEQ") {
+    else if (split_line[0] == "#=REFSEQ" && split_line.size() > 1) {
       metadata.ref_seqs.resize(metadata.ref_seqs.size() + 1);
-      std::getline(in, metadata.ref_seqs.back());
+      metadata.ref_seqs.back() = second_half;
     }
-    else if (key == "#=READSEQ") {
+    else if (split_line[0] == "#=READSEQ" && split_line.size() > 1) {
       metadata.read_seqs.resize(metadata.read_seqs.size() + 1);
-      std::getline(in, metadata.read_seqs.back());
+      metadata.read_seqs.back() = second_half;
     }
-    else if (key.substr(0, 2) == "#=") {
-      std::getline(in, metadata.breseq_data[key.substr(2)]);
-    }
+    else if (split_line[0].substr(0, 2) == "#=") {continue;}
     else {
       //Warn if unkown header lines are encountered.
-      string value = "";
-      std::getline(in, value);
       string message = "";
       sprintf(message,
-              "cGenomeDiff:read(%s): Header line: %s %s is not recognized.",
-              filename.c_str(), key.c_str(), value.c_str()
-             );
+              "cGenomeDiff:read(%s): Header line: %s is not recognized.",
+              filename.c_str(), whole_line.c_str()
+              );
       WARN(message);
     }
   }
