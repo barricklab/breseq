@@ -1,4 +1,7 @@
-#=GENOME_DIFF 1.0
+#=GENOME_DIFF	1.0
+#=AUTHOR	Barrick JE
+#=REFSEQ	tests/lambda_polymorphism_ignore_low_quality/../data/lambda/lambda.gbk
+#=READSEQ	tests/lambda_polymorphism_ignore_low_quality/../data/lambda/lambda_mixed_population.fastq
 SNP	98	3	NC_001416	54	A	frequency=0.1050
 SNP	99	4	NC_001416	73	G	frequency=0.0910
 SNP	100	5	NC_001416	102	C	frequency=0.0710
