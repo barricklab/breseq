@@ -1,5 +1,5 @@
 #=GENOME_DIFF	1.0
-#=AUTHOR	0.16
+#=AUTHOR	
 #=REFSEQ	tests/REL606_fragment_deletion_between_is/../data/REL606/REL606.fragment.gbk
 #=READSEQ	tests/REL606_fragment_deletion_between_is/../data/REL606/REL606.fragment.2.fastq
 DEL	8	6	REL606-5	10535	21535	between=IS1

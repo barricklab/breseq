@@ -1384,14 +1384,14 @@ int do_normalize_gd(int argc, char* argv[])
 int do_runfile(int argc, char *argv[])
 {
   stringstream ss;
-  ss << "Useage: breseq RUNFILE -e <exe> -d <downloads dir> -o <output path for pipeline> -r <runfile name> -g <genome diff data dir>\n";
-  ss << "Useage: breseq RUNFILE -e <exe> -d <downloads dir> -o <output path for pipeline> -r <runfile name> <file1.gd file2.gd file3.gd ...>";
+  ss << "Useage: breseq RUNFILE -e <executable> -d <downloads dir> -o <output path for pipeline> -r <runfile name> -g <genome diff data dir>\n";
+  ss << "Useage: breseq RUNFILE -e <executable> -d <downloads dir> -o <output path for pipeline> -r <runfile name> <file1.gd file2.gd file3.gd ...>";
   AnyOption options(ss.str());
-  options("exe,e",           "Executable program to run, add options here.", "breseq");
-  options("downloads_dir,d", "Download directory where necessary read and reference files are stored.", "");
-  options("output_dir,o",    "The output directory to write to the runfile.", "");
-  options("runfile,r",       "The name of the run file to be output.", "RUNFILE.txt");
-  options("data_dir,g",      "The directory to searched for genome diff files.");
+  options("executable,e",    "Executable program to run, add extra options here.", "breseq");
+  options("downloads_dir,d", "Downloads directory where read and reference files are located.", "");
+  options("output_dir,o",    "Output directory for commands within the runfile.", "");
+  options("runfile,r",       "Name of the run file to be output.", "RUNFILE.txt");
+  options("data_dir,g",      "Directory to searched for genome diff files.");
   options.processCommandArgs(argc, argv);
 
   if (!options.getArgc() && !options.count("data_dir")) {
@@ -1403,6 +1403,8 @@ int do_runfile(int argc, char *argv[])
     return -1;
   }
 
+  /*! Step: Gather genome diff file names from either user input or a given
+   directory to search. */
   vector<string> file_names;
   if (options.count("data_dir")) {
     char *data_dir = strdup(options["data_dir"].c_str());
@@ -1420,22 +1422,34 @@ int do_runfile(int argc, char *argv[])
       file_names[i] = options.getArgv(i);
     }
   }
+  assert(file_names.size());
 
-  const char *exe = options["exe"].c_str();
-  const char *downloads_dir = options["downloads_dir"].c_str();
-  const char *output_dir = options["output_dir"].c_str();
+  const char *exe = options["executable"].c_str();
+
+  char *downloads_dir = strdup(options["downloads_dir"].c_str());
+  if (downloads_dir[strlen(downloads_dir) - 1] == '/') {
+    downloads_dir[strlen(downloads_dir) - 1] = '\0';
+  }
+  char *output_dir = strdup(options["output_dir"].c_str());
+  if (output_dir[strlen(output_dir) - 1] == '/') {
+    output_dir[strlen(output_dir) - 1] = '\0';
+  }
+
+  //! Step: Read every gd file to gather header line info.
   ofstream out(options["runfile"].c_str());
-
   const size_t n = file_names.size();
   for (size_t i = i; i < n; i++) {
     cGenomeDiff gd(file_names[i]);
+
+    //Unique output directory name is parsed from the base name of the file.
     char this_output_dir[1000];
-    if (options.count("output_dir")) {
+    if (!options["output_dir"].empty()) {
       sprintf(this_output_dir, "-o %s/%s", output_dir, gd.metadata.run_name.c_str());
     } else {
       sprintf(this_output_dir, "-o %s", gd.metadata.run_name.c_str());
     }
 
+    //Build reference commands.
     vector<string> refs = gd.metadata.ref_seqs;
     for (size_t j = 0; j < refs.size(); j++) {
       string *ref = &refs[j];
@@ -1445,13 +1459,14 @@ int do_runfile(int argc, char *argv[])
       if (ref->find(".gbk") == string::npos) {
         ref->append(".gbk");
       }
-      if (options.count("data")) {
+      if (!options["downloads_dir"].empty()) {
         sprintf(*ref, "-r %s/%s", downloads_dir, refs[j].c_str());
       } else {
         sprintf(*ref, "-r %s", refs[j].c_str());
       }
     }
 
+    //Build read commands.
     vector<string> reads = gd.metadata.read_seqs;
     for (size_t j = 0; j < reads.size(); j++) {
       string *read = &reads[j];
@@ -1467,15 +1482,16 @@ int do_runfile(int argc, char *argv[])
         read->append(".fastq");
       }
 
-      if (options.count("downloads_dir")) {
+      if (!options["downloads_dir"].empty()) {
         sprintf(*read, "%s/%s", downloads_dir, reads[j].c_str());
       } else {
         sprintf(*read, "%s", reads[j].c_str());
       }
     }
 
-    printf("%s %s %s %s\n", exe, this_output_dir, join(refs, " ").c_str(), join(reads, " ").c_str());
-    fprintf(out, "%s %s %s %s\n", exe, this_output_dir, join(refs, " ").c_str(), join(reads, " ").c_str());
+    //Output the command line to runfile.
+    cout << exe << " " << this_output_dir << " " << join(refs, " ") << " " << join(reads, " ") << endl;
+    out << exe << " " << this_output_dir << " " << join(refs, " ") << " " << join(reads, " ") << endl;
   }
 
   return 0;
