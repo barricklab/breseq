@@ -225,7 +225,7 @@ namespace breseq {
       void insert_sequence_1(int32_t pos_1, const string &insertion_seq, string mut_type="", bool verbose=false);
     
       // Repeat Feature at Position
-      void repeat_feature_1(int32_t pos, int32_t start_del, int32_t end_del, cReferenceSequences& ref_seq_info, const string &repeat_name, int8_t strand, bool verbose=false);
+      void repeat_feature_1(int32_t pos, int32_t start_del, int32_t end_del, cReferenceSequences& ref_seq_info, const string &repeat_name, int8_t strand, int32_t region_pos, bool verbose=false);
       
       // Find Specific Feature
       // Given a cSequenceFeatureList feat_list, iterate through it until
@@ -415,9 +415,9 @@ namespace breseq {
       (*this)[seq_id].insert_sequence_1(pos, insertion_seq, mut_type, verbose);
     }
     
-    void repeat_feature_1(const string& seq_id, int32_t pos, int32_t start_del, int32_t end_del, cReferenceSequences& ref_seq_info, const string &repeat_name, int8_t strand, bool verbose=false)
+    void repeat_feature_1(const string& seq_id, int32_t pos, int32_t start_del, int32_t end_del, cReferenceSequences& ref_seq_info, const string &repeat_name, int8_t strand, int32_t region_pos, bool verbose=false)
     {
-      (*this)[seq_id].repeat_feature_1(pos, start_del, end_del, ref_seq_info, repeat_name, strand, verbose);
+      (*this)[seq_id].repeat_feature_1(pos, start_del, end_del, ref_seq_info, repeat_name, strand, region_pos, verbose);
     }
 
     uint32_t get_sequence_length(const string& seq_id)
@@ -468,7 +468,7 @@ namespace breseq {
     void annotate_1_mutation(cDiffEntry& mut, uint32_t start, uint32_t end, bool repeat_override = false, bool ignore_pseudogenes = false);
     void annotate_mutations(cGenomeDiff& gd, bool only_muts = false, bool ignore_pseudogenes = false);
     void polymorphism_statistics(Settings& settings, Summary& summary);
-    string repeat_family_sequence(const string& repeat_name, int8_t strand);
+    string repeat_family_sequence(const string& repeat_name, int8_t strand, int32_t region_pos);
 
     static string GFF3EscapeString(const string& s)
     {
