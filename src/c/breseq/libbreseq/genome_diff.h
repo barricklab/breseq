@@ -20,8 +20,6 @@ LICENSE AND COPYRIGHT
 #define _BRESEQ_GENOME_DIFF_H_
 
 #include "common.h"
-#include "config.h"
-
 
 namespace breseq {
 
@@ -326,7 +324,7 @@ public:
   //! Metadata kept in .gd files
   struct Metadata
   {
-    Metadata() : version("1.0"), author(PACKAGE_VERSION) {}
+    Metadata() : version("1.0") {}
 
     string run_name;
     string version; 
