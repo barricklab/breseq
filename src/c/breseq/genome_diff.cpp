@@ -626,12 +626,9 @@ void cGenomeDiff::read(const string& filename) {
     else if (split_line[0].substr(0, 2) == "#=") {continue;}
     else {
       //Warn if unkown header lines are encountered.
-      string message = "";
-      sprintf(message,
-              "cGenomeDiff:read(%s): Header line: %s is not recognized.",
-              filename.c_str(), whole_line.c_str()
-              );
-      WARN(message);
+      printf("cGenomeDiff:read(%s): Header line: %s is not recognized.",
+             filename.c_str(), whole_line.c_str()
+             );
     }
   }
 
@@ -646,7 +643,11 @@ void cGenomeDiff::read(const string& filename) {
     ERROR(message);
   }
 
-  metadata.run_name =  filename.substr(0, filename.find(".gd"));
+  string *run_name = &metadata.run_name;
+  *run_name = filename.substr(0, filename.find(".gd"));
+  if (run_name->find('/') !=  string::npos) {
+    run_name->erase(0, run_name->find_last_of('/') + 1);
+  }
 
   //! Step: Handle the diff entries.
   while (in.good()) {
