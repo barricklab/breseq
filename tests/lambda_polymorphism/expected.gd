@@ -1,5 +1,5 @@
 #=GENOME_DIFF	1.0
-#=AUTHOR	0.16
+#=AUTHOR	
 #=REFSEQ	tests/lambda_polymorphism/../data/lambda/lambda.gbk
 #=READSEQ	tests/lambda_polymorphism/../data/lambda/lambda_mixed_population.fastq
 SNP	102	3	NC_001416	54	A	frequency=0.0930
