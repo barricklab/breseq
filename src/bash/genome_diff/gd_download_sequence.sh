@@ -251,8 +251,8 @@ _do_download_sequences() {
   fi
 
   #The other arguments are genome_diffs
-  for i in $*; do  
-    parse_genome_diff ${args[$i]}
+  for i in $*; do 
+    parse_genome_diff $i
   done                                                  
   
 
