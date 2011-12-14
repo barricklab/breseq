@@ -653,6 +653,8 @@ void cGenomeDiff::read(const string& filename) {
     ERROR(message);
   }
 
+  metadata.run_name =  filename.substr(0, filename.find(".gd"));
+
   //! Step: Handle the diff entries.
   while (in.good()) {
     string line = "";
@@ -661,7 +663,7 @@ void cGenomeDiff::read(const string& filename) {
     if (line.empty()) {
       continue;
     } else if (line[0] == '#') {
-       printf("\tcGenomeDiff:read(%s): Discarding line : %s",
+       printf("\tcGenomeDiff:read(%s): Discarding line : %s\n",
        filename.c_str(), line.c_str());
        continue;
     } else if (line.find_first_not_of(' ') == string::npos) {
@@ -674,14 +676,12 @@ void cGenomeDiff::read(const string& filename) {
   return;
 }
 
-bool cDiffEntry::is_normalized_to_sequence(const cAnnotatedSequence &sequence,
-                                           const bool verbose)
+void cDiffEntry::normalize_to_sequence(const cAnnotatedSequence &sequence)
 {
   //! Step: Initialize parameters.
-  //Only diff entries applicable to this sequence can be considered.
-  assert(entry_exists("seq_id") || (*this)["seq_id"] == sequence.m_seq_id);
-  assert(entry_exists("position"));
-  bool is_normalized = false;//! Return value.
+  //Only diff entries applicable to de sequence can be considered.
+  assert(this->entry_exists("seq_id") || (*this)["seq_id"] == sequence.m_seq_id);
+  assert(this->entry_exists("position"));
 
   //Sequences should be viewed as having index + one offset.
   typedef size_t pos_1_t;
@@ -691,11 +691,11 @@ bool cDiffEntry::is_normalized_to_sequence(const cAnnotatedSequence &sequence,
   /*! Step: Type specific normalizations. For some, the initial parameters given
     can be altered to be normalized, for others the parameters can't be altered
     and the mutation is not valid for the given reference sequence. */
-  switch (_type)
+  switch (this->_type)
   {
   case DEL:
   {
-    assert(entry_exists("size"));
+    assert(this->entry_exists("size"));
 
     //! Step: Initialize parameters.
     typedef string sequence_t;
@@ -729,21 +729,17 @@ bool cDiffEntry::is_normalized_to_sequence(const cAnnotatedSequence &sequence,
     bool is_new_position = pos_1 != i;
     if (is_new_position) {
       sprintf((*this)["position"], "%u", i);
-      sprintf((*this)["normalized"], "position_%u_to_%u", pos_1, i);
-    } else {
-      sprintf((*this)["normalized"], "is_valid");
+      sprintf((*this)["norm_pos"], "%u_to_%u", pos_1, i);
     }
-
-    is_normalized = true;
   } break;
 
   case INS:
   {
-    assert(entry_exists("new_seq"));
+    assert(this->entry_exists("new_seq"));
 
     //! Step: Initialize parameters.
-    typedef string new_sequence_t;
-    const new_sequence_t &first = (*this)["new_seq"];
+    typedef string sequence_t;
+    const string first = (*this)["new_seq"];
     const size_t n = first.size();
     assert(n);
 
@@ -751,29 +747,25 @@ bool cDiffEntry::is_normalized_to_sequence(const cAnnotatedSequence &sequence,
     start positions. */
     pos_1_t i = pos_1;
     for(;;i += n) {
-      const new_sequence_t &second = sequence.get_circular_sequence_1(i, n);
+      const string second = sequence.get_circular_sequence_1(i + 1, n);
       assert(second.size());
 
-      if (first == second) {
+      if (first != second) {
         break;
       }
     }
 
-    //! Step: Determine if the start pos needed to be normilized.
+    //! Step: Determine if the start pos neethisd to be normilized.
     bool is_new_position = pos_1 != i;
     if (is_new_position) {
       sprintf((*this)["position"], "%u", i);
-      sprintf((*this)["normalized"], "position_%u_to_%u", pos_1, i);
-    } else {
-      sprintf((*this)["normalized"], "is_valid");
+      sprintf((*this)["norm_pos"], "%u_to_%u", pos_1, i);
     }
-
-    is_normalized = true;
   } break;
 
   case SNP:
   {
-    assert(entry_exists("new_seq"));
+    assert(this->entry_exists("new_seq"));
     assert((*this)["new_seq"].size() == 1);
 
     //! Step: Initialize parameters.
@@ -784,78 +776,74 @@ bool cDiffEntry::is_normalized_to_sequence(const cAnnotatedSequence &sequence,
 
     //! Step: If bases are not equal then it's not a valid snp.
     bool is_base_not_equal = (first != second);
-    if (is_base_not_equal) {
-      sprintf((*this)["normalized"], "is_valid");
-    } else {
-      sprintf((*this)["normalized"], "is_not_valid");
+    if (!is_base_not_equal) {
+      sprintf((*this)["norm"], "is_not_valid");
     }
-
-    is_normalized = is_base_not_equal;
   } break;
 
   case SUB:
   {
-    assert(entry_exists("size"));
-    assert(entry_exists("new_seq"));
+    assert(this->entry_exists("size"));
+    assert(this->entry_exists("new_seq"));
 
    //! Step: Initialize parameters.
-    typedef string new_sequence_t;
-    const size_t n =  strtoul((*this)["size"].c_str(), NULL, 0);
-    assert(n );
-    const new_sequence_t  &first = (*this)["new_seq"];
+    const size_t n = strtoul((*this)["size"].c_str(), NULL, 0);
+    assert(n);
+    const string first = (*this)["new_seq"];
     assert(first.size());
 
-    is_normalized = false;
+    const string second = sequence.get_circular_sequence_1(pos_1, n);
+    const string third = sequence.get_circular_sequence_1(pos_1 + n, 1);
+
+    if (first.find_first_of(second) != string::npos &&
+        first.find_first_of(third) != string::npos ) {
+      sprintf((*this)["norm"], "is_not_valid");
+    }
   } break;
 
   case MOB:
   {
-    return false;//TODO
-    assert(entry_exists("repeat_name"));
-    assert(entry_exists("strand"));
-    assert(entry_exists("duplication_size"));
-
-    is_normalized = false;
+    assert(this->entry_exists("repeat_name"));
+    assert(this->entry_exists("strand"));
+    assert(this->entry_exists("duplication_size"));
   } break;
 
   case INV:
   {
-    return false;//TODO
-    assert(entry_exists("size"));
+    assert(this->entry_exists("size"));
     const size_t n =  strtoul((*this)["size"].c_str(), NULL, 0);
     assert(n);
-
-    is_normalized = false;
   } break;
 
   case AMP:
   {
-    return false; //TODO
-    assert(entry_exists("size"));
-    assert(entry_exists("new_copy_number"));
-
-    is_normalized = false;
+    assert(this->entry_exists("size"));
+    assert(this->entry_exists("new_copy_number"));
   } break;
 
   case CON:
   {
-    return false;//TODO
-    assert(entry_exists("size"));
-    assert(entry_exists("region"));
-
-    is_normalized = false;
+    assert(this->entry_exists("size"));
+    assert(this->entry_exists("region"));
   } break;
 
-  default: is_normalized = false;
   }//End switch.
 
 
-  //! Step: Verbose output.
-  if (verbose) {
-    printf("\t%s\n", to_string().c_str());
+  return;
+}
+
+
+
+void cGenomeDiff::normalize_to_sequence(cReferenceSequences &ref)
+{
+  diff_entry_list_t muts = this->mutation_list();
+  for (diff_entry_list_t::iterator it = muts.begin();
+       it != muts.end(); it++) {
+    cDiffEntry &mut = **it;
+    mut.normalize_to_sequence(ref[mut["seq_id"]]);
   }
 
-  return is_normalized;
 }
 
 map<gd_entry_type, sort_fields_item> diff_entry_sort_fields = make_map<gd_entry_type, sort_fields_item>
@@ -2043,6 +2031,42 @@ int32_t cDiffEntry::mutation_size_change(cReferenceSequences& ref_seq_info)
       ASSERT(false, "Unable to calculate mutation size change.");
       return UNDEFINED_INT32;
   }
+}
+
+cGenomeDiff cGenomeDiff::intersect(const cGenomeDiff &_gd1, const cGenomeDiff &_gd2)
+{
+  cGenomeDiff gd1 = _gd1;
+  cGenomeDiff gd2 = _gd2;
+
+  const diff_entry_list_t &muts_1 = gd1.mutation_list();
+  const diff_entry_list_t &muts_2 = gd2.mutation_list();
+
+  typedef set<cDiffEntry> diff_entry_set_t;
+  diff_entry_set_t first;
+  diff_entry_set_t second;
+
+  //! Step: Strip counted_ptr<> for STL use.
+  for (diff_entry_list_t::const_iterator it = muts_1.begin();
+       it != muts_1.end(); it++) {
+    first.insert(**it);
+  }
+  for (diff_entry_list_t::const_iterator it = muts_2.begin();
+       it != muts_2.end(); it++) {
+    second.insert(**it);
+  }
+
+  diff_entry_set_t third;
+  set_intersection(first.begin(), first.end(),
+                   second.begin(), second.end(),
+                   inserter(third, third.begin()));
+
+  cGenomeDiff gd;
+  for (diff_entry_set_t::const_iterator i = third.begin();
+       i != third.end(); i++){
+    gd.add(*i);
+  }
+
+  return gd;
 }
 
 cGenomeDiff cGenomeDiff::compare_genome_diff_files(const cGenomeDiff &control, const cGenomeDiff &test)

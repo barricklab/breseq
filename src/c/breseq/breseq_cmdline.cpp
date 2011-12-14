@@ -1281,7 +1281,7 @@ int do_simulate_read(int argc, char *argv[])
 
 
   //! Step: Apply genome diff mutations to reference sequence.
-  const string &gd_file_name = options["cGenomeDiff"];
+  const string &gd_file_name = options["genome_diff"];
   bool verbose = options.count("verbose");
   cGenomeDiff gd(gd_file_name);
 
@@ -1317,7 +1317,6 @@ int do_simulate_read(int argc, char *argv[])
 int do_normalize_gd(int argc, char* argv[])
 {
   AnyOption options("Useage: breseq NORMALIZE-GD -g <input.gd> -r <reference> -o <output.gd>");
-
   options
   ("genome_diff,g", "Input genome diff file.")
   ("reference,r"  , "Input reference file.")
@@ -1354,39 +1353,103 @@ int do_normalize_gd(int argc, char* argv[])
 
   bool verbose = options.count("verbose");
 
-  //! Step: Load reference sequence file.
-  cReferenceSequences ref_seq_info;
-  const string &ref_file_name = options["reference"];
-  ref_seq_info.LoadFile(ref_file_name);
+  vector<string> rfns = from_string<vector<string> >(options["reference"]);
+  cReferenceSequences rs;
+  rs.LoadFiles(rfns);
 
-  //! Step: Get reference sequence.
-  //Parameters to create simulated read.
-  const cAnnotatedSequence &sequence = ref_seq_info.front();
-
-  //! Step: Get mutations.
   cGenomeDiff gd(options["genome_diff"]);
-  diff_entry_list_t muts = gd.list();
 
-  //! Step:
-  fprintf(cout, "\n**Normalizing Genome diff file: %s to reference file: %s \n\n",
-          options["genome_diff"].c_str(), options["reference"].c_str());
+  printf("\n++Normalizing genome diff file: %s to reference file: %s \n\n",
+          options["genome_diff"].c_str(), join(rfns,",").c_str());
 
-  ofstream os(options["output"].c_str());
-  fprintf(os, "#=GENOME_DIFF 1.0\n");
-  for (diff_entry_list_t::iterator it = muts.begin();
-       it != muts.end(); it++) {
-    cDiffEntry *mut = &(**it);
+  gd.normalize_to_sequence(rs);
+  const diff_entry_list_t &muts = gd.mutation_list();
 
-    if (mut->is_normalized_to_sequence(sequence, verbose)) {
-      //Diff entry was either already normalized or was normalized.
-      fprintf(os, "%s\n", mut->to_string().c_str());
+  ofstream out(options["output"].c_str());
+  fprintf(out, "#=GENOME_DIFF 1.0\n");
+  for (diff_entry_list_t::const_iterator i = muts.begin();
+       i != muts.end(); i++) {
+    if ((**i).entry_exists("norm") && (**i)["norm"] == "is_not_valid"){
+      fprintf(out, "#%s\n", (**i).to_string().c_str());
+      printf("\tINVALID_MUTATION:%s\n",(**i).to_string().c_str());
     } else {
-      //Could not normalize this diff entry, write to file commented out.
-      fprintf(os, "#%s\n", mut->to_string().c_str());
+      fprintf(out, "%s\n", (**i).to_string().c_str());
     }
   }
+  printf("\n++Normilization completed.\n\n");
 
-  fprintf(cout,"\n**Normilization completed.\n\n");
+  return 0;
+}
+
+int do_runfile(int argc, char *argv[])
+{
+  AnyOption options("Useage: breseq RUNFILE -e <exe> -d <data dir> -o <output path for pipeline> -r <output runfile name> <file1.gd file2.gd file3.gd ...>");
+  options("executable,e", "Executable program to run, add options here.");
+  options("data,d",       "Data directory where necessary read and reference files are stored.");
+  options("output_dir,o", "The output directory to write to the runfile.");
+  options("runfile,r",   "The name of the run file to be output.");
+  options.processCommandArgs(argc, argv);
+
+  if (!options.getArgc()) {
+    options.addUsage("You must input genome diff files.");
+    options.addUsage("Example:");
+    options.addUsage("\t breseq RUNFILE -e breseq -d 02_Downloads -o 03_Output/breseq -r RUNFILE.txt $(ls 01_Data/*gd)");
+    options.printUsage();
+    return -1;
+  }
+
+  const string exe = options.count("executable") ? options["executable"] : "breseq";
+  ofstream out(options.count("runfile") ? options["runfile"].c_str() : "RUNFILE.txt");
+
+  size_t n = options.getArgc();
+  for (size_t i = i; i < n; i++) {
+    cGenomeDiff gd(options.getArgv(i));
+    string outs("");
+    if (options.count("output_dir")) {
+      sprintf(outs, " -o %s/%s", options["output_dir"].c_str(), gd.metadata.run_name.c_str());
+    } else {
+      sprintf(outs, " -o %s", gd.metadata.run_name.c_str());
+    }
+
+    vector<string> refs = gd.metadata.ref_seqs;
+    for (size_t j = 0; j < refs.size(); j++) {
+      if (refs[j].find_last_of(":/") != string::npos) {
+        refs[j].erase(0, refs[j].find_last_of(":/") + 1);
+      }
+      if (refs[j].find(".gbk") == string::npos) {
+        refs[j].append(".gbk");
+      }
+      if (options.count("data")) {
+        sprintf(refs[j], "-r %s/%s", options["data"].c_str(), refs[j].c_str());
+      } else {
+        sprintf(refs[j], "-r %s", refs[j].c_str());
+      }
+    }
+
+    vector<string> reads = gd.metadata.read_seqs;
+    for (size_t j = 0; j < reads.size(); j++) {
+      if (reads[j].find_last_of(":/") != string::npos) {
+        reads[j].erase(0, reads[j].find_last_of(":/") + 1);
+      }
+
+      if (reads[j].find(".fastq") == string::npos) {
+        reads[j].append(".fastq");
+      }
+      if (reads[j].find(".fastq.gz") != string::npos) {
+        reads[j].erase(reads[j].find(".fastq.gz"));
+        reads[j].append(".fastq");
+      }
+
+      if (options.count("data")) {
+        sprintf(reads[j], "%s/%s", options["data"].c_str(), reads[j].c_str());
+      } else {
+        sprintf(reads[j], "%s", reads[j].c_str());
+      }
+    }
+
+    printf("%s %s %s %s\n", exe.c_str(), outs.c_str(), join(refs, " ").c_str(), join(reads, " ").c_str());
+    fprintf(out, "%s %s %s %s\n", exe.c_str(), outs.c_str(), join(refs, " ").c_str(), join(reads, " ").c_str());
+  }
 
   return 0;
 }
@@ -1466,8 +1529,6 @@ int do_subsequence(int argc, char *argv[])
   
   return 0;
 }
-
-
 
 int breseq_default_action(int argc, char* argv[])
 {  
@@ -2409,6 +2470,8 @@ int main(int argc, char* argv[]) {
     return do_normalize_gd(argc_new, argv_new);
   } else if ((command == "SUBSEQUENCE") || (command == "SUB")) {
     return do_subsequence(argc_new, argv_new);
+  } else if (command == "RUNFILE") {
+    return do_runfile(argc_new, argv_new);
   }
   else {
     // Not a sub-command. Use original argument list.

@@ -26,6 +26,8 @@ LICENSE AND COPYRIGHT
 namespace breseq {
 
 class cAnnotatedSequence;
+class cDiffEntry;
+class cGenomeDiff;
 
 // Common keywords used for diff entries:
 extern const char* TYPE;
@@ -157,12 +159,11 @@ public:
   //! Serialize this diff entry into a string for output.
   virtual string to_string(void) const;
 
-  //! Check if mutation can be normalized to reference, change if it can.
-  bool is_normalized_to_sequence(const cAnnotatedSequence &sequence,
-                                 const bool verbose = true);
-
   //! Returns values for cDiffEntry["reject"]
   vector<string> get_reject_reasons();
+
+
+  void normalize_to_sequence(const cAnnotatedSequence &seq);
 
   size_t number_reject_reasons();
   int32_t mutation_size_change(cReferenceSequences& ref_seq_info);
@@ -191,7 +192,8 @@ public:
   vector<string> _evidence; 
   
 };
-
+typedef counted_ptr<cDiffEntry> diff_entry_ptr_t;
+typedef list<diff_entry_ptr_t> diff_entry_list_t; //!< Type for a list of diff entries.
 
 void add_reject_reason(cDiffEntry& de, const string &reason);
 
@@ -222,8 +224,6 @@ struct sort_fields_item {
   string _f3;
 };
   
-typedef counted_ptr<cDiffEntry> diff_entry_ptr_t;
-typedef list<diff_entry_ptr_t> diff_entry_list_t; //!< Type for a list of diff entries.
 
 
 
@@ -275,6 +275,8 @@ public:
   //! compare
   static cGenomeDiff compare_genome_diff_files(const cGenomeDiff &control, const cGenomeDiff &test);
 
+  static cGenomeDiff intersect(const cGenomeDiff &gd1, const cGenomeDiff &gd2);
+
   //! Read a genome diff from a file.
   void read(const string& filename);
   
@@ -305,6 +307,8 @@ public:
   diff_entry_list_t evidence_list();
 
   diff_entry_ptr_t parent(const cDiffEntry& item);
+
+  void normalize_to_sequence(cReferenceSequences &ref_seq);
     
   //Additional functions that need? adding from GenomeDiff.gm
   void add_reject_reasons(cDiffEntry item, const string& reason);
@@ -324,7 +328,7 @@ public:
   {
     Metadata() : version("1.0"), author(PACKAGE_VERSION) {}
 
-    string run_id;
+    string run_name;
     string version; 
     string author;
     vector<string> ref_seqs;
@@ -462,6 +466,8 @@ struct cDiffEntry::rejected:public unary_function<diff_entry_ptr_t,bool>
   }
 
 };
+
+
 
 }
 #endif
