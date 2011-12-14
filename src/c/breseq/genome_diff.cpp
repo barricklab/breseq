@@ -1866,15 +1866,18 @@ void cGenomeDiff::apply_to_sequences(cReferenceSequences& ref_seq_info, cReferen
         int32_t iDelStart = 0;
         int32_t iDelEnd = 0;
         int32_t iInsStart = 0;
-        int32_t iInsEnd = 0;
+        int32_t iInsEnd = 0;        
+        int32_t uRPos = -1;
         
         if(mut.entry_exists("del_start")) iDelStart = from_string<uint32_t>(mut["del_start"]);
         if(mut.entry_exists("del_end"))   iDelEnd = from_string<uint32_t>(mut["del_end"]);
         ASSERT((iDelStart >= 0) && (iDelEnd >= 0), (to_string(mut._type) + " " + mut._id) + " - NEGATIVE DELETION");
+        
+        if(mut.entry_exists("repeat_pos"))uRPos = from_string<uint32_t>(mut["repeat_pos"]);
 
         // @JEB: correct here to look for where the repeat is in the original ref_seq_info.
         // This saves us from possibly looking at a shifted location...
-        string rep_string = ref_seq_info.repeat_family_sequence(mut["repeat_name"], from_string<int16_t>(mut["strand"]));
+        string rep_string = ref_seq_info.repeat_family_sequence(mut["repeat_name"], from_string<int16_t>(mut["strand"]), uRPos);
         mut["repeat_size"] = to_string(rep_string.length()); // saving this for shifting
         
         // This is the string we're going to pass to be inserted.
@@ -1905,7 +1908,7 @@ void cGenomeDiff::apply_to_sequences(cReferenceSequences& ref_seq_info, cReferen
         
         // We've repeated the sequence, now it's time to repeat all the features
         // inside of and including the repeat region.
-        new_ref_seq_info.repeat_feature_1(mut[SEQ_ID], position+iInsStart+duplicate_sequence.size(), iDelStart, iDelEnd, ref_seq_info, mut["repeat_name"], from_string<int16_t>(mut["strand"]), verbose);
+        new_ref_seq_info.repeat_feature_1(mut[SEQ_ID], position+iInsStart+duplicate_sequence.size(), iDelStart, iDelEnd, ref_seq_info, mut["repeat_name"], from_string<int16_t>(mut["strand"]), uRPos, verbose);
           
         if (verbose)
         {

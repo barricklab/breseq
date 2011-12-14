@@ -1281,7 +1281,7 @@ int do_simulate_read(int argc, char *argv[])
 
 
   //! Step: Apply genome diff mutations to reference sequence.
-  const string &gd_file_name = options["cGenomeDiff"];
+  const string &gd_file_name = options["genome_diff"];
   bool verbose = options.count("verbose");
   cGenomeDiff gd(gd_file_name);
 

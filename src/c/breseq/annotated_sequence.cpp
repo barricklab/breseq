@@ -241,7 +241,7 @@ namespace breseq {
   //
   //  TODO: Needs to check to be sure that it is getting a "typical" copy 
   //  (not one that has an insertion in it or a non-consensus sequence) 
-  void cAnnotatedSequence::repeat_feature_1(int32_t pos, int32_t start_del, int32_t end_del, cReferenceSequences& ref_seq_info, const string &repeat_name, int8_t strand, bool verbose)
+  void cAnnotatedSequence::repeat_feature_1(int32_t pos, int32_t start_del, int32_t end_del, cReferenceSequences& ref_seq_info, const string &repeat_name, int8_t strand, int32_t region_pos, bool verbose)
   {
     // Go through all the reference sequences in ref_seq_info
     for (vector<cAnnotatedSequence>::iterator itr_seq = ref_seq_info.begin(); itr_seq != ref_seq_info.end(); itr_seq++)
@@ -275,7 +275,7 @@ namespace breseq {
         
         // Is this the repeat we're looking for?
         // Is it the smallest version?
-        if (rep.SafeGet("name") == repeat_name && uSmallest == (uint32_t)(rep.m_end - rep.m_start + 1))
+        if (rep.SafeGet("name") == repeat_name && ((region_pos < 0 && uSmallest == (uint32_t)(rep.m_end - rep.m_start + 1)) || region_pos == rep.m_start))
         {      
           cSequenceFeatureList& features = this_seq.m_features;
           cSequenceFeatureList feat_list_new;        
@@ -358,7 +358,7 @@ namespace breseq {
       }
     }
     
-    ASSERT(false, "Unknown repeat type: " + repeat_name);
+    ASSERT(false, "Unknown Repeat\n\tType:\t" + repeat_name + "\n\tPos:\t" + to_string(region_pos));
   }
   
   // Load a complete collection of files and verify that sufficient information was loaded
@@ -1444,7 +1444,7 @@ void cReferenceSequences::ReadBull(const string& file_name) {
  *  TODO: Needs to check to be sure that it is getting a "typical" copy 
  *  (not one that has an insertion in it or a non-consensus sequence) 
  */
-string cReferenceSequences::repeat_family_sequence(const string &repeat_name, int8_t strand)
+string cReferenceSequences::repeat_family_sequence(const string &repeat_name, int8_t strand, int32_t region_pos)
 {
   vector<cAnnotatedSequence>::iterator itr_seq;
   
@@ -1466,7 +1466,7 @@ string cReferenceSequences::repeat_family_sequence(const string &repeat_name, in
     for (itr_rep = repeats.begin(); itr_rep != repeats.end(); itr_rep++) {
       cSequenceFeature& rep = **itr_rep;
       
-      if (rep.SafeGet("name") == repeat_name && uSmallest == (uint32_t)(rep.m_end - rep.m_start + 1)) {
+      if (rep.SafeGet("name") == repeat_name && ((region_pos < 0 && uSmallest == (uint32_t)(rep.m_end - rep.m_start + 1)) || region_pos == rep.m_start)) {
         string repeat_seq = this_seq.get_sequence_1(rep.m_start, rep.m_end);
         if (strand != rep.m_strand)
           repeat_seq = reverse_complement(repeat_seq);
@@ -1475,7 +1475,7 @@ string cReferenceSequences::repeat_family_sequence(const string &repeat_name, in
     }
   }
 
-  ASSERT(false, "Unknown repeat type: " + repeat_name);
+  ASSERT(false, "Unknown Repeat\n\tType:\t" + repeat_name + "\n\tPos:\t" + to_string(region_pos));
   return "";
 }
 
