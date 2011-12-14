@@ -1,5 +1,5 @@
 #=GENOME_DIFF	1.0
-#=AUTHOR	0.16
+#=AUTHOR	
 #=REFSEQ	tests/lambda_mult_ref_read/../data/lambda/lambda.1.gbk
 #=REFSEQ	tests/lambda_mult_ref_read/../data/lambda/lambda.2.gbk
 #=REFSEQ	tests/lambda_mult_ref_read/../data/lambda/lambda.3.gbk

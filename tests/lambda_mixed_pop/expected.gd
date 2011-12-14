@@ -1,5 +1,5 @@
 #=GENOME_DIFF	1.0
-#=AUTHOR	0.16
+#=AUTHOR	
 #=REFSEQ	tests/lambda_mixed_pop/../data/lambda/lambda.gbk
 #=READSEQ	tests/lambda_mixed_pop/../data/lambda/lambda_mixed_population.fastq
 DEL	51	3	NC_001416	139	1
