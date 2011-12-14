@@ -186,14 +186,7 @@ cDiffEntry::cDiffEntry(const string &line)
     string key_value_pair = "";
     getline(ss_line, key_value_pair, '\t');
     if (key_value_pair.empty()) {
-      //Not enough of a reason to exit, could be from user input.
-      string message = "";
-      sprintf(message,
-              "cDiffEntry::cDiffEntry(%s): Empty field found.",
-              line.c_str()
-              );
-      WARN(message);
-      break;
+      continue;
     }
 
     size_t equal_sign_pos = 0;
