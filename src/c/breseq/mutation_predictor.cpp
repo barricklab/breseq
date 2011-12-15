@@ -1216,6 +1216,19 @@ namespace breseq {
 			// block substitution
 			else if ((mut["ref_seq"].size() > 1) || (mut["new_seq"].size() > 1))
 			{
+        // This loop will go through the RA evidence for this SUB, and find the lowest
+        // RA that has a ref_base of A,C,T, or G.        
+        int32_t iRefPos = -1;
+        for(diff_entry_list_t::iterator ra_it = ra.begin(); ra_it != ra.end(); ra_it++)
+        {
+          cDiffEntry& ra_evid = **ra_it;
+          
+          if((find(mut._evidence.begin(), mut._evidence.end(), ra_evid._id) != mut._evidence.end()) && (iRefPos < 0 || iRefPos > from_string<int32_t>(ra_evid["position"])) && ra_evid["ref_base"] != ".")
+            iRefPos = from_string<int32_t>(ra_evid["position"]);
+        }
+        
+        if(iRefPos > -1)mut["position"] = to_string(iRefPos);
+        
         mut._type = SUB;
 				mut["size"] = s(mut["ref_seq"].size());
 				mut.erase("ref_seq");
