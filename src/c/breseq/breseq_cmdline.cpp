@@ -1383,72 +1383,115 @@ int do_normalize_gd(int argc, char* argv[])
 
 int do_runfile(int argc, char *argv[])
 {
-  AnyOption options("Useage: breseq RUNFILE -e <exe> -d <data dir> -o <output path for pipeline> -r <output runfile name> <file1.gd file2.gd file3.gd ...>");
-  options("executable,e", "Executable program to run, add options here.");
-  options("data,d",       "Data directory where necessary read and reference files are stored.");
-  options("output_dir,o", "The output directory to write to the runfile.");
-  options("runfile,r",   "The name of the run file to be output.");
+  stringstream ss;
+  ss << "Useage: breseq RUNFILE -e <executable> -d <downloads dir> -o <output path for pipeline> -r <runfile name> -g <genome diff data dir>\n";
+  ss << "Useage: breseq RUNFILE -e <executable> -d <downloads dir> -o <output path for pipeline> -r <runfile name> <file1.gd file2.gd file3.gd ...>";
+  AnyOption options(ss.str());
+  options("executable,e",    "Executable program to run, add extra options here.", "breseq");
+  options("downloads_dir,d", "Downloads directory where read and reference files are located.", "");
+  options("output_dir,o",    "Output directory for commands within the runfile.", "");
+  options("runfile,r",       "Name of the run file to be output.", "RUNFILE.txt");
+  options("data_dir,g",      "Directory to searched for genome diff files.");
   options.processCommandArgs(argc, argv);
 
-  if (!options.getArgc()) {
-    options.addUsage("You must input genome diff files.");
-    options.addUsage("Example:");
-    options.addUsage("\t breseq RUNFILE -e breseq -d 02_Downloads -o 03_Output/breseq -r RUNFILE.txt $(ls 01_Data/*gd)");
+  if (!options.getArgc() && !options.count("data_dir")) {
+    options.addUsage("You must input genome diff files or a directory to search for genome diff files.");
+    options.addUsage("Examples:");
+    options.addUsage("\t breseq RUNFILE -e breseq -d 02_Downloads -o 03_Output/breseq -r RUNFILE.txt -g 01_Data");
+    options.addUsage("\t breseq RUNFILE -e breseq -d 02_Downloads -o 03_Output/breseq -r RUNFILE.txt 1B4.gd GRC2000.gd");
     options.printUsage();
     return -1;
   }
 
-  const string exe = options.count("executable") ? options["executable"] : "breseq";
-  ofstream out(options.count("runfile") ? options["runfile"].c_str() : "RUNFILE.txt");
+  /*! Step: Gather genome diff file names from either user input or a given
+   directory to search. */
+  vector<string> file_names;
+  if (options.count("data_dir")) {
+    char *data_dir = strdup(options["data_dir"].c_str());
+    const size_t n = strlen(data_dir);
+    if (data_dir[n - 1] == '/') {
+      data_dir[n - 1] = '\0';
+    }
+    string command("");
+    sprintf(command, "ls %s/*gd", data_dir);
+    file_names = split(SYSTEM_CAPTURE(command, true), "\n");
+  } else {
+    const size_t n = options.getArgc();
+    file_names.resize(n);
+    for (size_t i = 0; i < n; i++) {
+      file_names[i] = options.getArgv(i);
+    }
+  }
+  assert(file_names.size());
 
-  size_t n = options.getArgc();
+  const char *exe = options["executable"].c_str();
+
+  char *downloads_dir = strdup(options["downloads_dir"].c_str());
+  if (downloads_dir[strlen(downloads_dir) - 1] == '/') {
+    downloads_dir[strlen(downloads_dir) - 1] = '\0';
+  }
+  char *output_dir = strdup(options["output_dir"].c_str());
+  if (output_dir[strlen(output_dir) - 1] == '/') {
+    output_dir[strlen(output_dir) - 1] = '\0';
+  }
+
+  //! Step: Read every gd file to gather header line info.
+  ofstream out(options["runfile"].c_str());
+  const size_t n = file_names.size();
   for (size_t i = i; i < n; i++) {
-    cGenomeDiff gd(options.getArgv(i));
-    string outs("");
-    if (options.count("output_dir")) {
-      sprintf(outs, " -o %s/%s", options["output_dir"].c_str(), gd.metadata.run_name.c_str());
+    cGenomeDiff gd(file_names[i]);
+
+    //Unique output directory name is parsed from the base name of the file.
+    char this_output_dir[1000];
+    if (!options["output_dir"].empty()) {
+      sprintf(this_output_dir, "-o %s/%s", output_dir, gd.metadata.run_name.c_str());
     } else {
-      sprintf(outs, " -o %s", gd.metadata.run_name.c_str());
+      sprintf(this_output_dir, "-o %s", gd.metadata.run_name.c_str());
     }
 
+    //Build reference commands.
     vector<string> refs = gd.metadata.ref_seqs;
     for (size_t j = 0; j < refs.size(); j++) {
-      if (refs[j].find_last_of(":/") != string::npos) {
-        refs[j].erase(0, refs[j].find_last_of(":/") + 1);
+      string *ref = &refs[j];
+      if (ref->find_last_of(":/") != string::npos) {
+        ref->erase(0, ref->find_last_of(":/") + 1);
       }
-      if (refs[j].find(".gbk") == string::npos) {
-        refs[j].append(".gbk");
+      if (ref->find(".gbk") == string::npos) {
+        ref->append(".gbk");
       }
-      if (options.count("data")) {
-        sprintf(refs[j], "-r %s/%s", options["data"].c_str(), refs[j].c_str());
+      if (!options["downloads_dir"].empty()) {
+        sprintf(*ref, "-r %s/%s", downloads_dir, refs[j].c_str());
       } else {
-        sprintf(refs[j], "-r %s", refs[j].c_str());
+        sprintf(*ref, "-r %s", refs[j].c_str());
       }
     }
 
+    //Build read commands.
     vector<string> reads = gd.metadata.read_seqs;
     for (size_t j = 0; j < reads.size(); j++) {
-      if (reads[j].find_last_of(":/") != string::npos) {
-        reads[j].erase(0, reads[j].find_last_of(":/") + 1);
+      string *read = &reads[j];
+      if (read->find_last_of(":/") != string::npos) {
+        read->erase(0, reads[j].find_last_of(":/") + 1);
       }
 
-      if (reads[j].find(".fastq") == string::npos) {
-        reads[j].append(".fastq");
+      if (read->find(".fastq") == string::npos) {
+        read->append(".fastq");
       }
-      if (reads[j].find(".fastq.gz") != string::npos) {
-        reads[j].erase(reads[j].find(".fastq.gz"));
-        reads[j].append(".fastq");
+      if (read->find(".fastq.gz") != string::npos) {
+        read->erase(reads[j].find(".fastq.gz"));
+        read->append(".fastq");
       }
 
-      if (options.count("data")) {
-        sprintf(reads[j], "%s/%s", options["data"].c_str(), reads[j].c_str());
+      if (!options["downloads_dir"].empty()) {
+        sprintf(*read, "%s/%s", downloads_dir, reads[j].c_str());
       } else {
-        sprintf(reads[j], "%s", reads[j].c_str());
+        sprintf(*read, "%s", reads[j].c_str());
       }
     }
 
-    printf("%s %s %s %s\n", exe.c_str(), outs.c_str(), join(refs, " ").c_str(), join(reads, " ").c_str());
-    fprintf(out, "%s %s %s %s\n", exe.c_str(), outs.c_str(), join(refs, " ").c_str(), join(reads, " ").c_str());
+    //Output the command line to runfile.
+    cout << exe << " " << this_output_dir << " " << join(refs, " ") << " " << join(reads, " ") << endl;
+    out << exe << " " << this_output_dir << " " << join(refs, " ") << " " << join(reads, " ") << endl;
   }
 
   return 0;
