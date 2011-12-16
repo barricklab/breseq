@@ -1384,21 +1384,31 @@ int do_normalize_gd(int argc, char* argv[])
 int do_runfile(int argc, char *argv[])
 {
   stringstream ss;
-  ss << "Useage: breseq RUNFILE -e <executable> -d <downloads dir> -o <output path for pipeline> -r <runfile name> -g <genome diff data dir>\n";
-  ss << "Useage: breseq RUNFILE -e <executable> -d <downloads dir> -o <output path for pipeline> -r <runfile name> <file1.gd file2.gd file3.gd ...>";
+  ss << "Usage: breseq RUNFILE -e <executable> -d <downloads dir> -o <output dir> -l <error log dir> -r <runfile name> -g <genome diff data dir>\n";
+  ss << "Usage: breseq RUNFILE -e <executable> -d <downloads dir> -o <output dir> -l <error log dir> -r <runfile name> <file1.gd file2.gd file3.gd ...>";
   AnyOption options(ss.str());
-  options("executable,e",    "Executable program to run, add extra options here.", "breseq");
-  options("downloads_dir,d", "Downloads directory where read and reference files are located.", "");
-  options("output_dir,o",    "Output directory for commands within the runfile.", "");
-  options("runfile,r",       "Name of the run file to be output.", "RUNFILE.txt");
-  options("data_dir,g",      "Directory to searched for genome diff files.");
+  options("executable,e",     "Executable program to run, add extra options here.", "breseq");
+  options("downloads_dir,d",  "Downloads directory where read and reference files are located.", "");
+  options("output_dir,o",     "Output directory for commands within the runfile.", "");
+  options("runfile,r",        "Name of the run file to be output.", "RUNFILE.txt");
+  options("data_dir,g",       "Directory to searched for genome diff files.", "");
+  options("error_log_dir,l",  "Directory for error log file that captures the executable's stdout and sterr.", "");
+  options.addUsage("\n");
+  options.addUsage("***Reminder: Create the error log directory before running TACC job.");
+  options.addUsage("\n");
+  options.addUsage("Examples:");
+  options.addUsage("\t Command: breseq runfile -o 1B4_Mutated -l 1B4_Mutated_Errors 1B4.gd");
+  options.addUsage("\t   Output: breseq -o 1B4_Mutated -r NC_012660.1.gbk SRR172993.fastq >& 1B4_Mutated_Errors/1B4.errors.txt");
+  options.addUsage("\n");
+  options.addUsage("\t Command: breseq runfile -d 02_Downloads -l 04_Errors -g 01_Data");
+  options.addUsage("\t   Output: breseq -o 1B4 -r 02_Downloads/NC_012660.1.gbk 02_Downloads/SRR172993.fastq >& 04_Errors/1B4.errors.txt");
+  options.addUsage("\t   Output: breseq -o ZDB111 -r 02_Downloads/REL606.5.gbk 02_Downloads/SRR098039.fastq >& 04_Errors/ZDB111.errors.txt");
   options.processCommandArgs(argc, argv);
 
+
   if (!options.getArgc() && !options.count("data_dir")) {
-    options.addUsage("You must input genome diff files or a directory to search for genome diff files.");
-    options.addUsage("Examples:");
-    options.addUsage("\t breseq RUNFILE -e breseq -d 02_Downloads -o 03_Output/breseq -r RUNFILE.txt -g 01_Data");
-    options.addUsage("\t breseq RUNFILE -e breseq -d 02_Downloads -o 03_Output/breseq -r RUNFILE.txt 1B4.gd GRC2000.gd");
+  options.addUsage("");
+    options.addUsage("Error: You must input genome diff files or a directory to search for genome diff files.");
     options.printUsage();
     return -1;
   }
@@ -1436,17 +1446,18 @@ int do_runfile(int argc, char *argv[])
   }
 
   //! Step: Read every gd file to gather header line info.
-  ofstream out(options["runfile"].c_str());
+  ofstream run_file(options["runfile"].c_str());
   const size_t n = file_names.size();
   for (size_t i = i; i < n; i++) {
     cGenomeDiff gd(file_names[i]);
 
     //Unique output directory name is parsed from the base name of the file.
     char this_output_dir[1000];
-    if (!options["output_dir"].empty()) {
-      sprintf(this_output_dir, "-o %s/%s", output_dir, gd.metadata.run_name.c_str());
+    const char *run_name = gd.metadata.run_name.c_str();
+    if (options.count("output_dir")) {
+      sprintf(this_output_dir, "-o %s", output_dir);
     } else {
-      sprintf(this_output_dir, "-o %s", gd.metadata.run_name.c_str());
+      sprintf(this_output_dir, "-o %s", run_name);
     }
 
     //Build reference commands.
@@ -1459,7 +1470,7 @@ int do_runfile(int argc, char *argv[])
       if (ref->find(".gbk") == string::npos) {
         ref->append(".gbk");
       }
-      if (!options["downloads_dir"].empty()) {
+      if (options.count("downloads_dir")) {
         sprintf(*ref, "-r %s/%s", downloads_dir, refs[j].c_str());
       } else {
         sprintf(*ref, "-r %s", refs[j].c_str());
@@ -1482,16 +1493,38 @@ int do_runfile(int argc, char *argv[])
         read->append(".fastq");
       }
 
-      if (!options["downloads_dir"].empty()) {
+      if (options.count("downloads_dir")) {
         sprintf(*read, "%s/%s", downloads_dir, reads[j].c_str());
       } else {
         sprintf(*read, "%s", reads[j].c_str());
       }
     }
 
-    //Output the command line to runfile.
-    cout << exe << " " << this_output_dir << " " << join(refs, " ") << " " << join(reads, " ") << endl;
-    out << exe << " " << this_output_dir << " " << join(refs, " ") << " " << join(reads, " ") << endl;
+    //Error log file option.
+    string error_log_path = "";
+    {
+      const char *path = options["error_log_dir"].c_str();
+
+      if (options.count("error_log_dir")) {
+        sprintf(error_log_path, ">& %s/%s.errors.txt", path, run_name);
+      } else {
+        sprintf(error_log_path, ">& %s.errors.txt", run_name);
+      }
+    }
+
+    //Build run file line.
+    vector<string> run_file_line_args;
+    run_file_line_args.push_back(exe);
+    run_file_line_args.push_back(this_output_dir);
+    run_file_line_args.push_back(join(refs, " "));
+    run_file_line_args.push_back(join(reads, " "));
+    if (error_log_path.size()) {
+      run_file_line_args.push_back(error_log_path);
+    }
+
+    const string &run_file_line = join(run_file_line_args, " ");
+    printf("%s\n", run_file_line.c_str());
+    fprintf(run_file, "%s\n", run_file_line.c_str());
   }
 
   return 0;
