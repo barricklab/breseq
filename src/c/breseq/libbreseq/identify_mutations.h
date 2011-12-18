@@ -38,10 +38,8 @@ namespace breseq {
 	 */
 	void identify_mutations(const string& bam,
 													const string& fasta,
-													const string& error_dir,
 													const string& gd_file,
 													const string& output_dir,
-													const vector<string>& readfiles,
 													const string& coverage_dir,
                           const vector<double>& deletion_propagation_cutoff,
                           const vector<double>& deletion_seed_cutoff,
@@ -183,10 +181,8 @@ namespace breseq {
 		identify_mutations_pileup(
                               const string& bam,
 															const string& fasta,
-															const string& error_dir,
 															const string& gd_file,
 															const string& output_dir,
-															const vector<string>& readfiles,
 															const string& coverage_dir,
                               const vector<double>& deletion_propagation_cutoff,
                               const vector<double>& deletion_seed_cutoffs,
@@ -226,7 +222,6 @@ namespace breseq {
     double calculate_two_base_model_log10_likelihood (base_char best_base_char, base_char second_best_base_char, const vector<polymorphism_data>& pdata, double best_base_freq);
 		
     //! Settings passed at command line
-		error_count_results _ecr; //!< Error count results.
 		cGenomeDiff _gd; //!< Genome diff.
     string _gd_file; //!< file name for Genome diff
     uint8_t _min_qual_score; //!< minimum quality score to count base for RA
@@ -303,7 +298,6 @@ namespace breseq {
       bool _normalized; 
       
       uint8_t _ploidy;
-      error_count_results* _base_error_model;
   };
   
   
