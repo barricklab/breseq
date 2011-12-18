@@ -821,8 +821,10 @@ void cDiffEntry::normalize_to_sequence(const cAnnotatedSequence &sequence)
     assert(this->entry_exists("region"));
   } break;
 
+  default:
+    break;
+      
   }//End switch.
-
 
   return;
 }

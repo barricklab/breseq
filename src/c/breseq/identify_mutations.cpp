@@ -139,12 +139,8 @@ identify_mutations_pileup::identify_mutations_pileup(
   // are we printing detailed coverage information?
   _print_coverage_data = (coverage_dir != "");
   
-  // use new error
-  m_use_cErrorTable = false;
-  if (error_table_file.length() > 0) {
-    m_use_cErrorTable = true;
-    m_error_table.read_log10_prob_table(error_table_file);
-  }
+  // load the error table file
+  m_error_table.read_log10_prob_table(error_table_file);
   
   if (_print_per_position_file) {
     string filename(_output_dir);
@@ -319,95 +315,28 @@ void identify_mutations_pileup::pileup_callback(const pileup& p) {
 			//##### deal with base calls
       //cerr << "POSITION:" << position << endl;
       
-      if (m_use_cErrorTable) {
       
-        covariate_values_t cv; 
+      covariate_values_t cv; 
 
-        bool is_ok = m_error_table.alignment_position_to_covariates(*i, insert_count, cv);
-        //cv.obs_base is still not a char here...
-        
-        if (is_ok)  {
-        
-          if (cv.quality() < _min_qual_score) {
-            //cout << cv.quality()  << endl;
-            continue;
-          }
-  
-          //## this is the coverage for SNP counts, tabulate AFTER skipping trimmed reads
-          ++pos_info[baseindex2char(cv.obs_base())].unique_trimmed_cov[1+strand];
-          
-          //##### this is for polymorphism prediction and making strings
-          pdata.push_back(polymorphism_data(baseindex2char(cv.obs_base()),cv.quality(),i->strand(),cv.read_set(), cv));
-          
-          //cerr << " " << cv.obs_base() << " " << (char)ref_base << endl;
-
-          snp.update(cv, strand == 1, m_error_table);
-        }
-      }
-      else {        
-        
-        //## These are the start and end coordinates of the aligned part of the read
-        //			my ($q_start, $q_end) = Breseq::Shared::alignment_query_start_end($a, {no_reverse=>1});
-        uint32_t q_start,q_end;
-        i->query_bounds_1(q_start, q_end); // @dk: 1-indexed!
-        
-        uint8_t quality=0;
-        
-        //## Deletion in read relative to reference...
-        //## Quality is of the NEXT base in the read, and check that it is not an N
-        //## Note: This is for a deletion when $insert_count == 0 and against an insertion when $insert_count > 0
-
-        if (indel == -1)
-        {			
-          int32_t mqpos = i->query_position_0() + 1 - i->reversed(); 
-          base_bam check_base_bam = i->read_base_bam_0(mqpos);
-          if (_base_bam_is_N(check_base_bam)) continue;
-          quality = i->read_base_quality_0(mqpos);
-        }
-
-        //## Substitution in read relative to reference...
-        //## Quality is of the current base in the read, we have ALREADY checked that it is not an N					
-        else if (insert_count == 0)
-        {
-          quality = i->read_base_quality_0(i->query_position_0());
-        }
-        
-        //## Insertion in read relative to reference...
-        //## Quality is of the NEXT base in the read, and check that it is not an N
-        //## Note that it is possible this read base may be a '.' (supporting the non-insert call)
-        else //if (insert_count > 0) 
-        {		
-          int32_t max_offset = insert_count;
-          if (indel < max_offset) max_offset = indel;
-          uint32_t mqpos = i->query_position_0() + max_offset + 1 - i->reversed(); 
-                  
-          //## Check bounds: it's possible to go past the end of the read because
-          //## this is the last base of this read, but other reads have inserted bases
-        
-          if (mqpos >= q_end) continue;
-          //next ALIGNMENT if ($mqpos > $q_end);
-        
-          base_bam check_base_bam = i->read_base_bam_0(mqpos);
-          if (_base_bam_is_N(check_base_bam)) continue;
-          
-          quality = i->read_base_quality_0(mqpos);
-        }
-
-        //## We may want to ignore all bases below a certain quality when calling mutations and polymorphisms
-        //## This is the check for whether the base fails; it should be after coverage counting
-       if (quality < _min_qual_score) {
-  //        cerr << position << " " << (unsigned int)quality << " " << endl;
+      bool is_ok = m_error_table.alignment_position_to_covariates(*i, insert_count, cv);
+      //cv.obs_base is still not a char here...
+      
+      if (is_ok)  {
+      
+        if (cv.quality() < _min_qual_score) {
+          //cout << cv.quality()  << endl;
           continue;
         }
-        
-        
+
         //## this is the coverage for SNP counts, tabulate AFTER skipping trimmed reads
-        ++pos_info[basebam2char(read_base_bam)].unique_trimmed_cov[1+strand];
+        ++pos_info[baseindex2char(cv.obs_base())].unique_trimmed_cov[1+strand];
         
         //##### this is for polymorphism prediction and making strings
-        pdata.push_back(polymorphism_data(basebam2char(read_base_bam),quality,strand,fastq_file_index));
+        pdata.push_back(polymorphism_data(baseindex2char(cv.obs_base()),cv.quality(),i->strand(),cv.read_set(), cv));
+        
+        //cerr << " " << cv.obs_base() << " " << (char)ref_base << endl;
 
-        snp.update(read_base_bam, quality, strand == 1, fastq_file_index, _ecr);
+        snp.update(cv, strand == 1, m_error_table);
       }
 		} // end for-each read
 		
@@ -905,28 +834,17 @@ polymorphism_prediction identify_mutations_pileup::predict_polymorphism (base_ch
   for(vector<polymorphism_data>::iterator it=pdata.begin(); it<pdata.end(); ++it) {
   
     double log10_correct_pr;
-    if (m_use_cErrorTable) {
-      covariate_values_t this_cv = it->_cv;
+
+    covariate_values_t this_cv = it->_cv;
       
-      if(it->_strand == 1) {
-        this_cv.ref_base() = basechar2index(best_base_char);
-      } else {
-        this_cv.ref_base() = basechar2index(complement_base_char(best_base_char)); 
-        this_cv.obs_base() = complement_base_index(this_cv.obs_base());
-      }
-      log10_correct_pr = m_error_table.get_log10_prob(this_cv);
+    if(it->_strand == 1) {
+      this_cv.ref_base() = basechar2index(best_base_char);
     } else {
-      string base_key;
-      if(it->_strand == 1) {
-        base_key += best_base_char;
-        base_key += it->_base_char;
-      } else {
-        base_key += complement_base_char(best_base_char); 
-        base_key += complement_base_char(it->_base_char);
-      }
-      log10_correct_pr = _ecr.log10_correct_rates(it->_fastq_file_index, it->_quality, base_key);
+      this_cv.ref_base() = basechar2index(complement_base_char(best_base_char)); 
+      this_cv.obs_base() = complement_base_index(this_cv.obs_base());
     }
-    
+    log10_correct_pr = m_error_table.get_log10_prob(this_cv);
+       
     log10_likelihood_of_one_base_model  += log10_correct_pr;
   }
 
@@ -1023,47 +941,27 @@ double identify_mutations_pileup::calculate_two_base_model_log10_likelihood (bas
     //## the first value is pr_base, second is pr_not_base
     double best_base_log10pr;
     double second_best_base_log10pr;
-    if (m_use_cErrorTable) {
-      covariate_values_t this_cv = it->_cv;
-      
-      if (it->_strand == -1) {
-        this_cv.obs_base() = complement_base_index(this_cv.obs_base());
-      }
-      
-      if(it->_strand == 1) {
-        this_cv.ref_base() = basechar2index(best_base_char);
-      } else {
-        this_cv.ref_base() = basechar2index(complement_base_char(best_base_char));
-      }
-      best_base_log10pr = m_error_table.get_log10_prob(this_cv);
-      
-      if(it->_strand == 1) {
-        this_cv.ref_base() = basechar2index(second_best_base_char);
-      } else {
-        this_cv.ref_base() = basechar2index(complement_base_char(second_best_base_char));
-      }
-      second_best_base_log10pr = m_error_table.get_log10_prob(this_cv);
-
-    } else {
     
-      string best_base_key;
-      string second_best_base_key;
-      
-      if(it->_strand == 1) {
-        best_base_key += best_base_char;
-        best_base_key += it->_base_char;
-        second_best_base_key += second_best_base_char;
-        second_best_base_key += it->_base_char;
-      } else {
-        best_base_key += complement_base_char(best_base_char); 
-        best_base_key += complement_base_char(it->_base_char);
-        second_best_base_key += complement_base_char(second_best_base_char);
-        second_best_base_key += complement_base_char(it->_base_char);
-      }
-      best_base_log10pr = _ecr.log10_correct_rates(it->_fastq_file_index, it->_quality, best_base_key);
-      second_best_base_log10pr = _ecr.log10_correct_rates(it->_fastq_file_index, it->_quality, second_best_base_key);
+    covariate_values_t this_cv = it->_cv;
+    
+    if (it->_strand == -1) {
+      this_cv.obs_base() = complement_base_index(this_cv.obs_base());
     }
     
+    if(it->_strand == 1) {
+      this_cv.ref_base() = basechar2index(best_base_char);
+    } else {
+      this_cv.ref_base() = basechar2index(complement_base_char(best_base_char));
+    }
+    best_base_log10pr = m_error_table.get_log10_prob(this_cv);
+    
+    if(it->_strand == 1) {
+      this_cv.ref_base() = basechar2index(second_best_base_char);
+    } else {
+      this_cv.ref_base() = basechar2index(complement_base_char(second_best_base_char));
+    }
+    second_best_base_log10pr = m_error_table.get_log10_prob(this_cv);
+
     //debug output
     //cerr << "Base in Read: " << it->base << " Read Strand: " << it->strand << endl;
     //cerr << "Best Base: " << best_base << " Key: " << best_base_key << " Chance of Observing: " << pow(10,best_base_log10pr) << endl;
@@ -1096,27 +994,6 @@ cDiscreteSNPCaller::cDiscreteSNPCaller(uint8_t ploidy)
     _log10_probabilities.push_back(_log10_prior_probability);
   }
   _normalized = false;
-}
-
-// obs_base is a BAM style base when input
-void cDiscreteSNPCaller::update(base_bam obs_base_bam, uint8_t obs_quality, bool obs_top_strand, int32_t fastq_file_index, error_count_results &ecr)
-{  
-  //update probabilities give observation using Bayes rule
-  for (int i=0; i<base_list_size; i++) {
-    string base_key;
-    if (obs_top_strand) {
-      base_key += base_char_list[i]; 
-      base_key += basebam2char(obs_base_bam);    
-    } else {
-      base_key += complement_base_char(base_char_list[i]); 
-      base_key += basebam2char(complement_base_bam(obs_base_bam));
-    }
-    _log10_probabilities[i] += ecr.log10_correct_rates(fastq_file_index, obs_quality, base_key);
-    
-    //cerr << "  " << fastq_file_index << " " << base_key << " " << (int)obs_quality << " " << ecr.log10_correct_rates(fastq_file_index, obs_quality, base_key) << endl;
-  }
-  _normalized = false;
-  _observations++;
 }
 
 void cDiscreteSNPCaller::update(const covariate_values_t& cv, bool obs_top_strand, cErrorTable& et) {
