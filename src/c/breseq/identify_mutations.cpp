@@ -31,10 +31,8 @@ namespace breseq {
 void identify_mutations(
 								const string& bam,
 								const string& fasta,
-								const string& error_dir,
 								const string& gd_file,
 								const string& output_dir,
-								const vector<string>& readfiles,
 								const string& coverage_dir,
                 const vector<double>& deletion_propagation_cutoff,
                 const vector<double>& deletion_seed_cutoffs,
@@ -52,10 +50,8 @@ void identify_mutations(
 	identify_mutations_pileup imp(
 								bam,
 								fasta,
-								error_dir,
 								gd_file,
 								output_dir,
-								readfiles,
 								coverage_dir,
                 deletion_propagation_cutoff,
                 deletion_seed_cutoffs,
@@ -77,10 +73,8 @@ void identify_mutations(
 identify_mutations_pileup::identify_mutations_pileup(
 															const string& bam,
 															const string& fasta,
-															const string& error_dir,
 															const string& gd_file,
 															const string& output_dir,
-															const vector<string>& readfiles,
 															const string& coverage_dir,
                               const vector<double>& deletion_propagation_cutoffs,
                               const vector<double>& deletion_seed_cutoffs,
@@ -94,7 +88,6 @@ identify_mutations_pileup::identify_mutations_pileup(
 															bool print_per_position_file
                                                             )
 : pileup_base(bam, fasta)
-, _ecr(error_dir, readfiles)
 , _gd()
 , _gd_file(gd_file)
 , _min_qual_score(min_qual_score)

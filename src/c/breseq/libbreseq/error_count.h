@@ -82,7 +82,7 @@ namespace breseq {
       };
     
       uint32_t& operator[](uint32_t i) { return m_covariates[i]; };
-      const uint32_t operator[](uint32_t i) const { return m_covariates[i]; };
+      uint32_t operator[](uint32_t i) const { return m_covariates[i]; };
 
       uint32_t& read_set() {return (*this)[k_read_set]; };
       uint32_t& ref_base() {return (*this)[k_ref_base]; };
@@ -207,19 +207,19 @@ namespace breseq {
 			 i is the number of reads that do not indicate a deletion at p
 			 x is the number of positions that have no redundancies
 			 */
-			std::vector<int> unique_only_coverage;
+			vector<int> unique_only_coverage;
 		};
 		
 		
 		//! Constructor.
 		error_count_pileup(Summary& _summary,
-                       const std::string& bam, 
-                       const std::string& fasta,
+                       const string& bam, 
+                       const string& fasta,
                        const string& output_dir,
                        bool do_coverage, 
                        bool do_errors, 
                        uint8_t min_qual_score, 
-                       const std::string& covariates
+                       const string& covariates
                        );
 		
 		//! Destructor.
@@ -247,35 +247,6 @@ namespace breseq {
     cErrorTable m_error_table;
     ofstream m_per_position_file;
 	};
-	
-
-  /*! New handler for creating
-	 */
-	class error_count_results {
-	public:
-		typedef std::map<std::string,std::pair<double,double> > base_error_t; // basepair -> (error,correct) rates
-		typedef std::map<uint8_t,base_error_t> error_map_t;
-		typedef std::vector<error_map_t> fastq_error_map_t;
-		
-		//! Constructor.
-		error_count_results(const std::string& input_dir, const std::vector<std::string>& readfiles);
-		
-		//! Return the correct rate for the given base pair, quality, and FASTQ file index.
-		double log10_correct_rates(int32_t fastq_file_index, uint8_t quality, const std::string& base_key);
-		double correct_rates(int32_t fastq_file_index, uint8_t quality, const std::string& base_key);
-
-		//! Return the error rate for the given base pair, quality, and FASTQ file index.
-		double log10_error_rates(int32_t fastq_file_index, uint8_t quality, const std::string& base_key);
-
-		//! Return the pair of (error,correct) rates.
-		const std::pair<double,double>& log10_rates(int32_t fastq_file_index, uint8_t quality, const std::string& base_key);
-		
-	protected:
-		fastq_error_map_t _log10_error_rates; //!< fastq_file_index -> quality -> error rate map.
-		fastq_error_map_t _error_rates; //!< fastq_file_index -> quality -> error rate map.
-
-	};
-  
   
 	
 } // breseq

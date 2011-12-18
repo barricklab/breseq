@@ -547,10 +547,8 @@ int do_identify_mutations(int argc, char* argv[]) {
 		identify_mutations(
                          options["bam"],
                          options["fasta"],
-                         options["error_dir"],
                          options["cGenomeDiff"],
                          options["output"],
-                         split(options["readfile"], "\n"),
                          options["coverage_dir"],
                          from_string<vector<double> >(options["deletion_propagation_cutoff"]),
                          from_string<vector<double> >(options["deletion_seed_cutoff"]),
@@ -2288,10 +2286,8 @@ int breseq_default_action(int argc, char* argv[])
 			identify_mutations(
 				reference_bam_file_name,
 				reference_fasta_file_name,
-				error_dir,
 				ra_mc_genome_diff_file_name,
 				output_dir,
-				settings.read_file_names,
 				coverage_dir,
         deletion_propagation_cutoffs,
         deletion_seed_cutoffs,
