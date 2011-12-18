@@ -244,7 +244,6 @@ namespace breseq {
 		double _log10_ref_length; //!< log10 of the total reference sequence.
     
     //! Flag to use new error model...
-    bool m_use_cErrorTable;
     cErrorTable m_error_table;
     
 		vector<sequence_info> _seq_info; //!< information about each sequence.
@@ -293,7 +292,6 @@ namespace breseq {
         
       virtual ~cDiscreteSNPCaller() {};
       
-      void update(base_bam obs_base_bam, uint8_t obs_quality, bool obs_top_strand, int32_t fastq_file_index, error_count_results &ecr);
       void update(const covariate_values_t& cv, bool obs_top_strand, cErrorTable& et);
       vector<double> get_log10_probabilities() { return _log10_probabilities; };
       pair<uint8_t,double> get_prediction();
