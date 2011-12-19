@@ -106,8 +106,8 @@ int do_bam2aln(int argc, char* argv[]) {
   return 0;
 }
 
-/*! bam2aln
- Draw HTML alignment from BAM
+/*! bam2cov
+ Draw HTML coverage from BAM
  */
 int do_bam2cov(int argc, char* argv[]) {
   // setup and parse configuration options:
@@ -1530,11 +1530,11 @@ int do_runfile(int argc, char *argv[])
 
 int do_subsequence(int argc, char *argv[])
 {
-  AnyOption options("Usage: breseq SUBSEQUENCE -s <reference sequence> -o <output.fasta> -p <REL606:50-100>");
-  options("sequence,s",".gbk/.gff3/.fasta reference sequence file");
+  AnyOption options("Usage: breseq SUBSEQUENCE -r <reference> -o <output.fasta> -p <REL606:50-100>");
+  options("reference,r",".gbk/.gff3/.fasta reference sequence file", "data/reference.fasta");
   options("output,o","output FASTA file");  
   options("position,p","Sequence ID:Start-End");
-  options("reverse,r","Reverse Complement (Flag)", TAKES_NO_ARGUMENT);
+  options("complement,c","Reverse Complement (Flag)", TAKES_NO_ARGUMENT);
   options("verbose,v","Verbose Mode (Flag)", TAKES_NO_ARGUMENT);
   options.processCommandArgs(argc, argv);
   
@@ -1543,63 +1543,86 @@ int do_subsequence(int argc, char *argv[])
   options.addUsage("of the sequence.  Using '0' as the End position will set");  
   options.addUsage("it to the length of the relevant sequence.");
   
-  if (!options.count("sequence")) {
+  if(!file_exists(options["reference"].c_str()))  {
     options.addUsage("");
-    options.addUsage("You must supply the --sequence option for input.");
+    options.addUsage("You must supply a valid --reference option for input.");
+    options.addUsage("Could not find:");
+    options.addUsage(options["reference"].c_str());
     options.printUsage();
-    return -1;
+    return -1;    
+  }
+   
+  vector<string> region_list;  
+  
+  bool reverse = options.count("complement");
+  bool verbose = options.count("verbose") || !options.count("output");
+  
+  if (options.count("position"))  {
+    region_list = from_string<vector<string> >(options["position"]);  }
+  
+  // Also take positions off the command line
+  for (int32_t i = 0; i < options.getArgc(); i++)
+  {
+    string position = options.getArgv(i);
+    region_list.push_back(position);
   }
   
-  if (!options.count("position")) {
+  if (!region_list.size()) {
     options.addUsage("");
     options.addUsage("You must supply the --position option for input.");
     options.printUsage();
     return -1;
   }
   
-  if (!options.count("output")) {
-    options.addUsage("");
-    options.addUsage("You must supply the --output option for output.");
-    options.printUsage();
-    return -1;
+  cReferenceSequences ref_seq_info, new_seq_info;
+  ref_seq_info.LoadFiles(from_string<vector<string> >(options["reference"]));
+  
+  for(uint32_t j = 0; j < region_list.size(); j++)
+  {    
+    uint32_t replace_target_id, replace_start, replace_end;
+    string seq_name = "";
+    
+    ref_seq_info.parse_region(region_list[j], replace_target_id, replace_start, replace_end);
+    
+    if(!replace_end)  {
+      replace_end = ref_seq_info[replace_target_id].m_length;  }
+    
+    if(verbose)
+    {
+      cout << "SEQ_ID:\t\t" << ref_seq_info[replace_target_id].m_seq_id << endl;
+      cout << "SEQ_INDEX:\t" << replace_target_id << endl;
+      cout << "START:\t\t" << replace_start << endl;
+      cout << "END:\t\t" << replace_end << endl;
+    }
+    
+    CHECK(replace_start <= replace_end,
+          "START:\t" + to_string(replace_start) + "\n" +
+          "END:\t" + to_string(replace_end) + "\n" +
+          "START greater than END.");
+    
+    ASSERT((uint32_t)ref_seq_info[replace_target_id].m_length >= replace_start && (uint32_t)ref_seq_info[replace_target_id].m_length >= replace_end,
+           "START:\t" + to_string(replace_start) + "\n" +
+           "END:\t" + to_string(replace_end) + "\n" +
+           "SIZE:\t" + to_string(ref_seq_info[replace_target_id].m_length) + "\n" +
+           "Neither Start or End can be greater than the size of " + ref_seq_info[replace_target_id].m_seq_id + ".");
+    
+    seq_name = ref_seq_info[replace_target_id].m_seq_id + ":" + to_string(replace_start) + "-" + to_string(replace_end);
+    
+    new_seq_info.add_new_seq(seq_name);
+    cAnnotatedSequence& new_seq = new_seq_info[seq_name];
+    new_seq.m_fasta_sequence = ref_seq_info[replace_target_id].m_fasta_sequence;    
+    new_seq.m_fasta_sequence.m_name = seq_name;
+    new_seq.m_fasta_sequence.m_sequence = ref_seq_info[replace_target_id].m_fasta_sequence.m_sequence.substr(replace_start -1, (replace_end - replace_start) + 1);
+    if(reverse)new_seq.m_fasta_sequence.m_sequence = reverse_complement(ref_seq_info[replace_target_id].m_fasta_sequence.m_sequence);
+    new_seq.m_seq_id = seq_name;
+    new_seq.m_length = new_seq.m_fasta_sequence.m_sequence.size();
+    
+    if(verbose)  {
+      cout << new_seq.m_fasta_sequence.m_sequence << endl;  }
   }
   
-  uint32_t replace_target_id, replace_start, replace_end;
-  
-  cReferenceSequences ref_seq_info;  
-  ref_seq_info.LoadFiles(from_string<vector<string> >(options["sequence"]));  
-  
-  ref_seq_info.parse_region(options["position"], replace_target_id, replace_start, replace_end);
-  
-  bool reverse = options.count("reverse");
-  bool verbose = options.count("verbose");
-  
-  if(!replace_end)replace_end = ref_seq_info[replace_target_id].m_length;
-  
-  if(verbose)
-  {
-    cout << "SEQ_ID:\t\t" << ref_seq_info[replace_target_id].m_seq_id << endl;
-    cout << "SEQ_INDEX:\t" << replace_target_id << endl;
-    cout << "START:\t\t" << replace_start << endl;
-    cout << "END:\t\t" << replace_end << endl;
-  }
-  
-  CHECK(replace_start <= replace_end,
-        "START:\t" + to_string(replace_start) + "\n" +
-        "END:\t" + to_string(replace_end) + "\n" +
-        "START greater than END.");
-  
-  ASSERT((uint32_t)ref_seq_info[replace_target_id].m_length >= replace_start && (uint32_t)ref_seq_info[replace_target_id].m_length >= replace_end,
-         "START:\t" + to_string(replace_start) + "\n" +
-         "END:\t" + to_string(replace_end) + "\n" +
-         "SIZE:\t" + to_string(ref_seq_info[replace_target_id].m_length) + "\n" +
-         "Neither Start or End can be greater than the size of " + ref_seq_info[replace_target_id].m_seq_id + ".");
-  
-  ref_seq_info[replace_target_id].m_fasta_sequence.m_name = (split(options["output"], "."))[0];
-  ref_seq_info[replace_target_id].m_fasta_sequence.m_sequence = ref_seq_info[replace_target_id].m_fasta_sequence.m_sequence.substr(replace_start -1, (replace_end - replace_start) + 1);
-  if(reverse)ref_seq_info[replace_target_id].m_fasta_sequence.m_sequence = reverse_complement(ref_seq_info[replace_target_id].m_fasta_sequence.m_sequence);
-  
-  ref_seq_info.WriteFASTA(options["output"], verbose);
+  if(options.count("output"))  {
+    new_seq_info.WriteFASTA(options["output"], verbose);  }  
   
   return 0;
 }
