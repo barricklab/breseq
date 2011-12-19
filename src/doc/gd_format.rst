@@ -93,7 +93,7 @@ SUB: Multiple base substitution mutation
 
 5. **position** *<uint32>*
 
-   position in reference sequence fragment.
+   position of the first replaced nucleotide in reference sequence fragment.
 
 6. **size** *<uint32>*
 
@@ -129,7 +129,7 @@ INS: Insertion mutation
 
 5. **position** *<uint32>*
 
-   position in reference sequence fragment.
+   position in reference sequence fragment, after which the INS is placed.
 
 6. **new_seq** *<string>*
 
