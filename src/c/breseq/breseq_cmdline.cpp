@@ -46,7 +46,8 @@ using namespace std;
  Draw HTML alignment from BAM
  */
 int do_bam2aln(int argc, char* argv[]) {
-    // setup and parse configuration options:
+  
+  // setup and parse configuration options:
 	AnyOption options("Usage: bam2aln --bam=<reference.bam> --fasta=<reference.fasta> --region=<accession:start-end> --output=<output.html> [--max-reads=1000]");
 	options
   ("help,h", "produce this help message", TAKES_NO_ARGUMENT)
@@ -515,79 +516,6 @@ int do_error_count(int argc, char* argv[]) {
 }
 
 
-/*! Identify mutations
- 
- Identify read-alignment and missing coverage mutations by going through
- the pileup of reads at each position in the reference genome.
- 
- */
-int do_identify_mutations(int argc, char* argv[]) {
-	
-	// setup and parse configuration options:
-	AnyOption options("Usage: breseq IDENTIFY_MUTATIONS --bam <sequences.bam> --fasta <reference.fasta> --error_dir <path> --cGenomeDiff <path> --output <path> --readfile <filename> --coverage_dir <dirname>");
-	options
-		("help,h", "produce this help message", TAKES_NO_ARGUMENT)
-		("bam,b", "bam file containing sequences to be aligned")
-		("fasta,f", "FASTA file of reference sequence")
-		("readfile,r", "names of readfile (no extension)")
-		("error_dir,e", "Directory containing error rates files")
-		("error_table", "Error rates files", "")
-		("cGenomeDiff,g", "Genome diff file")
-		("output,o", "output directory")
-		("coverage_dir", "directory for coverage files", "")
-		("mutation_cutoff,c", "mutation cutoff (log10 e-value)", 2.0L)
-    ("deletion_propagation_cutoff,u", "number after which to cutoff deletions")
-    ("deletion_seed_cutoff", "value below which to cutoff deletions", 0)
-		("minimum_quality_score", "ignore base quality scores lower than this", 0)
-		("predict_deletions,d", "whether to predict deletions", TAKES_NO_ARGUMENT)
-		("predict_polymorphisms,p", "whether to predict polymorphisms", TAKES_NO_ARGUMENT)
-		("polymorphism_cutoff", "polymorphism cutoff (log10 e-value)", 2.0L)
-		("polymorphism_frequency_cutoff", "ignore polymorphism predictions below this frequency", 0.0L)
-		("per_position_file", "print out verbose per position file", TAKES_NO_ARGUMENT)
-	.processCommandArgs(argc, argv);
-
-	// make sure that the config options are good:
-	if(options.count("help")
-		 || !options.count("bam")
-		 || !options.count("fasta")
-		 || !options.count("error_dir")
-		 || !options.count("cGenomeDiff")
-		 || !options.count("output")
-		 || !options.count("readfile")
-		 || !options.count("coverage_dir")
-		 || !options.count("deletion_propagation_cutoff") 
-     
-		 ) {
-		options.printUsage();
-		return -1;
-	}                       
-  
-	// attempt to calculate error calibrations:
-	try {
-		identify_mutations(
-                         options["bam"],
-                         options["fasta"],
-                         options["cGenomeDiff"],
-                         options["output"],
-                         options["coverage_dir"],
-                         from_string<vector<double> >(options["deletion_propagation_cutoff"]),
-                         from_string<vector<double> >(options["deletion_seed_cutoff"]),
-                         from_string<double>(options["mutation_cutoff"]),
-                         options.count("predict_deletions"),
-                         options.count("predict_polymorphisms"),
-                         from_string<int>(options["minimum_quality_score"]),
-                         from_string<double>(options["polymorphism_cutoff"]),
-                         from_string<double>(options["polymorphism_frequency_cutoff"]),
-                         options["error_table"],
-                         options.count("per_position_file")
-                         );
-	} catch(...) {
-		// failed; 
-		return -1;
-	}
-	
-	return 0;
-}
 
 /*! Contingency Loci
  
@@ -687,93 +615,6 @@ int do_graph_contingency_loci(int argc, char* argv[]) {
 	}
 	
 	return 0;
-}
-
-
-/* Candidate Junctions
- 
- Perform an analysis of aligned reads to predict the best possible new candidate junctions.
- 
- */
-
-int do_preprocess_alignments(int argc, char* argv[]) {
-
-	// setup and parse configuration options:
-	AnyOption options("Usage: breseq_utils PREPROCESS_ALIGNMENTS --fasta=reference.fasta --sam=reference.sam --output=output.fasta");
-	options
-		("help,h", "produce this help message", TAKES_NO_ARGUMENT)
-		("data-path", "path of data")
-		("reference-alignment-path", "path where input alignment")
-		("candidate-junction-path", "path where candidate junction files will be created")
-		("read-file,r", "FASTQ read files (multiple allowed, comma-separated) ")
-
-		("min-indel-split-length", "split indels this long in matches", 3)
-		("max-read-mismatches", "ignore reads with more than this number of mismatches", int32_t(-1))
-		("require-complete-match", "require the complete read to match (both end bases", TAKES_NO_ARGUMENT)
-		("required-match-length", "require this length of sequence -- on the read -- to match", static_cast<uint32_t>(28))
-		("candidate-junction-read-limit", "limit handled reads to this many", -1)
-    .processCommandArgs(argc, argv);
-
-	// make sure that the config options are good:
-	if(options.count("help")
-		 || !options.count("data-path")
-     || !options.count("reference-alignment-path")
-     || !options.count("candidate-junction-path")
-     || !options.count("read-file")
-		 ) {
-		options.printUsage();
-		return -1;
-	}
-
-	try {
-    
-  Summary summary;
-    
-  // Set the things we need...
-	Settings settings;
-     
-  settings.read_files.Init(from_string<vector<string> >(options["read-file"]));
- 
-	settings.candidate_junction_fasta_file_name = options["candidate-junction-path"];
-  settings.candidate_junction_fasta_file_name += "/candidate_junctions.fasta";
-	settings.candidate_junction_faidx_file_name = settings.candidate_junction_fasta_file_name + ".fai";
-    
-	settings.candidate_junction_sam_file_name = options["candidate-junction-path"];
-  settings.candidate_junction_sam_file_name += "/#.candidate_junction.sam";
-        
-	settings.preprocess_junction_split_sam_file_name = options["candidate-junction-path"];
-  settings.preprocess_junction_split_sam_file_name += "/#.split.sam";
-    
-	settings.preprocess_junction_best_sam_file_name = options["candidate-junction-path"];
-  settings.preprocess_junction_best_sam_file_name += "/best.sam";
-    
-	settings.reference_fasta_file_name = options["data-path"] + "/reference.fasta";
-  settings.reference_faidx_file_name = settings.reference_fasta_file_name + ".fai";
-    
-	settings.reference_sam_file_name = options["reference-alignment-path"];
-  settings.reference_sam_file_name += "/#.reference.sam";
-    
-  settings.max_read_mismatches = from_string<int32_t>(options["max-read-mismatches"]);
-	settings.candidate_junction_read_limit = from_string<int32_t>(options["candidate-junction-read-limit"]);
-
-  // settings controlling which alignments are used
-  settings.require_complete_match = options.count("require-complete-match");
-  settings.require_match_length = from_string<int32_t>(options["require-match-length"]);
-  settings.require_match_fraction = from_string<int32_t>(options["require-match-fraction"]);
-    
-  settings.preprocess_junction_min_indel_split_length = from_string<int32_t>(options["min-indel-split-length"]);
- 
-	cReferenceSequences ref_seqs;
-	ref_seqs.ReadFASTA(settings.reference_fasta_file_name);
-
-	PreprocessAlignments::preprocess_alignments(settings, summary, ref_seqs);
-
-  } catch(...) {
-		// failed;
-		return -1;
-	}
-
-  return 0;
 }
 
 
@@ -1983,7 +1824,7 @@ int breseq_default_action(int argc, char* argv[])
 	//
 	if (settings.do_step(settings.alignment_correction_done_file_name, "Resolving alignments with candidate junctions"))
 	{
-		create_path(settings.alignment_correction_path);
+		create_path(settings.alignment_resolution_path);
     
 		// should be one coverage cutoff value for each reference sequence
 		//vector<double> coverage_cutoffs;
@@ -2223,12 +2064,11 @@ int breseq_default_action(int argc, char* argv[])
 
 	//
 	// Calculate error rates
-	//sub error_rates {}
 	//
 
 	create_path(settings.output_path); //need output for plots
   create_path(settings.output_calibration_path);
-
+  
 	if (settings.do_step(settings.error_rates_done_file_name, "Re-calibrating base error rates"))
 	{
 		if (!settings.no_deletion_prediction)
@@ -2297,7 +2137,6 @@ int breseq_default_action(int argc, char* argv[])
 
 	//
 	// Make predictions of point mutations, small indels, and large deletions
-	//sub mutation_prediction {}
 	//
 
 	if (!settings.no_mutation_prediction)
@@ -2311,8 +2150,7 @@ int breseq_default_action(int argc, char* argv[])
 
 			string coverage_fn = settings.file_name(settings.unique_only_coverage_distribution_file_name, "@", "");
 			string error_dir = dirname(coverage_fn) + "/";
-			string this_predicted_mutation_file_name = settings.file_name(settings.predicted_mutation_file_name, "@", "");
-			string output_dir = dirname(this_predicted_mutation_file_name) + "/";
+			string output_dir = settings.mutation_identification_path;
 			string ra_mc_genome_diff_file_name = settings.ra_mc_genome_diff_file_name;
 			string coverage_tab_file_name = settings.file_name(settings.complete_coverage_text_file_name, "@", "");
 			string coverage_dir = dirname(coverage_tab_file_name) + "/";
@@ -2327,6 +2165,8 @@ int breseq_default_action(int argc, char* argv[])
       }
 
 			identify_mutations(
+        settings,
+        summary,
 				reference_bam_file_name,
 				reference_fasta_file_name,
 				ra_mc_genome_diff_file_name,
@@ -2365,7 +2205,6 @@ int breseq_default_action(int argc, char* argv[])
 	{
 		///
 		// Output Genome Diff File
-		//sub genome_diff_output {}
 		///
 		cerr << "Creating merged genome diff evidence file..." << endl;
 
@@ -2398,7 +2237,7 @@ int breseq_default_action(int argc, char* argv[])
     }
 
     // Add additional header lines if needed.
-    if (settings.values_to_gd){
+    if (settings.add_metadata_to_gd){
        for (storable_map<string, Coverage>::iterator it = summary.unique_coverage.begin();
             it != summary.unique_coverage.end(); it ++) {
          //Usually needed for gathering breseq data.
@@ -2549,10 +2388,6 @@ int main(int argc, char* argv[]) {
 		return do_graph_contingency_loci(argc_new, argv_new);
 	} else if (command == "ERROR_COUNT") {
 		return do_error_count(argc_new, argv_new);
-	} else if (command == "IDENTIFY_MUTATIONS") {
-		return do_identify_mutations(argc_new, argv_new);
-	} else if (command == "PREPROCESS_ALIGNMENTS") {
-		return do_preprocess_alignments(argc_new, argv_new);
 	} else if (command == "IDENTIFY_CANDIDATE_JUNCTIONS") {
 		return do_identify_candidate_junctions(argc_new, argv_new);
   } else if (command == "PREDICT_MUTATIONS") {

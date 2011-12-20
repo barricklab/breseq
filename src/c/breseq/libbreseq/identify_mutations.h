@@ -36,7 +36,10 @@ namespace breseq {
 	 \param output_dir is the directory in which output files will be placed.
 	 \param readfiles is a list of read files that were used to build the bam (do not include filename extension)
 	 */
-	void identify_mutations(const string& bam,
+	void identify_mutations(
+                          const Settings& settings,
+                          const Summary& summary,
+                          const string& bam,
 													const string& fasta,
 													const string& gd_file,
 													const string& output_dir,
@@ -146,10 +149,53 @@ namespace breseq {
     double log10_e_value;
 	};	
 	
-  
-	/*! Error-counting class.
+  /*! cDiscreteSNPCaller
 	 
-	 This class is used by the above identify_mutations() function in order to count errors.
+	 This class is used to predict SNPs in a single-genome sample.
+   
+	 */
+  
+  struct cSNPCall {
+    
+    cSNPCall() 
+    : genotype("N")
+    , score(numeric_limits<double>::quiet_NaN())
+    {}
+    
+    string genotype;
+    double score;
+  };
+  
+  class cDiscreteSNPCaller {
+  public:
+    cDiscreteSNPCaller(
+                       const string& type, 
+                       uint32_t reference_length
+                       );
+    
+    virtual ~cDiscreteSNPCaller() {};
+
+    void add_genotype(const string& genotype, double probability);
+    void reset(uint8_t ref_base_index);
+    void update(const covariate_values_t& cv, bool obs_top_strand, cErrorTable& et);
+    void print();
+    
+    cSNPCall get_prediction();
+    
+    vector<double> get_genotype_log10_probabilities() { return _genotype_probability; }
+    
+  protected:
+    uint32_t _observations;      
+    string _type;
+    vector<double> _genotype_prior;
+    vector<double> _genotype_probability;
+    vector<vector<base_index> > _genotype_vector;  // holds all possible genotypes as lists of bases
+    uint32_t _best_genotype_index;
+  };
+  
+  
+	/*! identify_mutations_pileup
+	 
 	 */
 	class identify_mutations_pileup : public breseq::pileup_base {
 	public:
@@ -179,6 +225,8 @@ namespace breseq {
 		
 		//! Constructor.
 		identify_mutations_pileup(
+                              const Settings& settings,
+                              const Summary& summary,
                               const string& bam,
 															const string& fasta,
 															const string& gd_file,
@@ -238,8 +286,9 @@ namespace breseq {
     //! Settings calculated during initialization
 		double _log10_ref_length; //!< log10 of the total reference sequence.
     
-    //! Flag to use new error model...
-    cErrorTable m_error_table;
+    //! Initialized once per pileup
+    cErrorTable _error_table;
+    cDiscreteSNPCaller _snp_caller;
     
 		vector<sequence_info> _seq_info; //!< information about each sequence.
 		fastq_map_t error_hash; //!< fastq_file_index -> quality map.
@@ -275,30 +324,7 @@ namespace breseq {
 	};
 
   
-  /*! cDiscreteSNPCaller
-	 
-	 This class is used to predicting SNPs in a single-genome sample.
-   
-	 */
-  
-  class cDiscreteSNPCaller {
-  	public:
-      cDiscreteSNPCaller(uint8_t ploidy);
-        
-      virtual ~cDiscreteSNPCaller() {};
-      
-      void update(const covariate_values_t& cv, bool obs_top_strand, cErrorTable& et);
-      vector<double> get_log10_probabilities() { return _log10_probabilities; };
-      pair<uint8_t,double> get_prediction();
-      
-    protected:
-      uint32_t _observations;
-      vector<double> _log10_priors;
-      vector<double> _log10_probabilities;
-      bool _normalized; 
-      
-      uint8_t _ploidy;
-  };
+
   
   
 } // breseq namespace

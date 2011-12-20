@@ -518,7 +518,6 @@ void cErrorTable::read_log10_prob_table(const string& filename) {
   }           
 }
 
-
 /*  cErrorTable::write_log10_prob_table()
 
     Print out a table of covariates and counts.
@@ -885,6 +884,20 @@ void cErrorTable::counts_to_log10_prob() {
       - log10((double)sum_error_table.m_count_table[j]+smoothing_factor*m_covariate_max[k_obs_base]);    
   }
 }
+  
+/*  cErrorTable::log10_prob_to_prob()
+ 
+ Change log10 table to probability table 
+ */
+void cErrorTable::log10_prob_to_prob() {
+  
+  ASSERT(m_log10_prob_table.size() > 0, "No values loaded into log10 prob table.");
+  m_prob_table.resize(m_log10_prob_table.size(), 0.0);
+  for (uint32_t i=0; i< m_log10_prob_table.size(); i++) {
+    m_prob_table[i] = pow(10, m_log10_prob_table[i]);    
+  }  
+  
+}
 
 /*  cErrorTable::alignment_position_to_covariates()
 
@@ -958,6 +971,15 @@ double cErrorTable::get_log10_prob(covariate_values_t& cv) {
 
   assert(i < m_log10_prob_table.size());
   return m_log10_prob_table[i];
+}
+  
+double cErrorTable::get_prob(covariate_values_t& cv) {
+  
+  assert(m_prob_table.size() > 0);
+  uint32_t i = covariates_to_index(cv);
+  
+  assert(i < m_prob_table.size());
+  return m_prob_table[i];
 }
 
 

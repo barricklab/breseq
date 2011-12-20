@@ -1559,10 +1559,7 @@ Evidence_Files::Evidence_Files(const Settings& settings, cGenomeDiff& gd)
   for (vector<Evidence_Item>::iterator itr = evidence_list.begin(); itr != evidence_list.end(); itr ++) 
   {  
     Evidence_Item& e = (*itr);
-    
-    if (settings.verbose) {
-      cerr << "Creating evidence file: " + e[FILE_NAME] << endl;   
-    }
+    //cerr << "Creating evidence file: " + e[FILE_NAME] << endl;   
     html_evidence_file(settings, gd, e);
   }
 }

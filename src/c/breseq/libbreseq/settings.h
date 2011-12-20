@@ -167,68 +167,50 @@ namespace breseq
 	struct Settings
 	{
 	public:
-		// Set up defaults here
-		Settings(const string& _base_output_path = "");
     
-    // Constructor for default action
-    Settings(int argc, char* argv[]);
+    ////////////////////
+    //! Data
+    ////////////////////
     
-    static void command_line_run_header();
-    
-    //////////////////////////////////
-    ////    Settings Variables    ////
-    //////////////////////////////////
-    
-    //// Global Settings ////
-    string full_command_line;
-		string arguments;
-		string run_name;
-    string print_run_name; 
     string byline;
 		string website;
     
-    //// File Paths ////
+    //! Done file tracking
+    map<string,string> done_key_messages;
+		vector<ExecutionTime> execution_times;
     
-    // Paths populated from location of executable
-		string bin_path;                  // absolute path to where this binary resides
-    string program_data_path;         // path to where R scripts and images reside
-		map<string, string> installed;    // hash of paths to programs that we call
+    //! Read files
+    cReadFiles read_files;
     
-		// Paths populated relative to output_path
-    string output_path;  // only command line option
-		string sequence_conversion_path;
-		string reference_trim_file_name;
-		string reference_alignment_path;
-		string reference_sam_file_name;
-		string reference_fasta_file_name;
-
-		string candidate_junction_path;
-		string candidate_junction_fasta_file_name;
-		string candidate_junction_faidx_file_name;
-		string jc_genome_diff_file_name;
-		string preprocess_junction_best_sam_file_name;
-		string preprocess_junction_split_sam_file_name;
-
-		string data_path;
-
-		string candidate_junction_alignment_path;
-		string candidate_junction_sam_file_name;
-
-		string alignment_correction_path;
-		string resolved_reference_sam_file_name;
-		string resolved_junction_sam_file_name;
-
-		string reference_features_file_name;
-
-		string unmatched_read_file_name;
-
-		string local_evidence_path;
-		string evidence_path;
-		string evidence_genome_diff_file_name;
-		string final_genome_diff_file_name;
-
+    ////////////////////
+    //! Settings
+    ////////////////////
     
-    //// Read Alignment ////
+    //! Settings: Global Settings
+    string full_command_line;
+		string arguments;
+    bool verbose;
+		string run_name;
+    string print_run_name; 
+    
+    //! Settings: Global Workflow and Output
+    string base_output_path; // main output directory containing all files
+    vector<string> read_file_names;
+    vector<string> reference_file_names;
+    
+		uint32_t alignment_read_limit;
+    uint32_t maximum_reads_to_align;
+		uint32_t candidate_junction_read_limit;
+    uint32_t resolve_alignment_read_limit;
+    
+    bool junction_prediction; // whether to perform junction prediction step
+		bool no_mutation_prediction;
+		bool no_deletion_prediction;
+		bool no_alignment_generation;
+		bool no_unmatched_reads;
+    bool keep_all_intermediates;
+
+    //! Settings: Read Alignment and Candidate Junction Alignment
     uint32_t ssaha2_seed_length;
     uint32_t ssaha2_skip_length;
     
@@ -236,77 +218,91 @@ namespace breseq
 		uint32_t require_match_length;
 		double   require_match_fraction;
     int32_t  max_read_mismatches;
+
+    bool smalt;                 // currently UNUSED
+		uint32_t max_smalt_diff;    // currently UNUSED
+    
+    //! Settings: Candidate Junctions
     uint32_t preprocess_junction_min_indel_split_length;
 
-    //// Identify CandidateJunctions ////
-    // Scoring to decide which pairs of alignments to the same read to consider
-		uint32_t required_both_unique_length_per_side;
-		uint32_t required_one_unique_length_per_side;
+		uint32_t required_both_unique_length_per_side;  // generally UNUSED
+		uint32_t required_one_unique_length_per_side;   // generally UNUSED
     
-		// Scoring section to choose which ones from list to take
-		uint32_t minimum_candidate_junction_pos_hash_score;
+		uint32_t minimum_candidate_junction_pos_hash_score;   // generally UNUSED
 		uint32_t maximum_junction_sequence_insertion_length;
     uint32_t maximum_junction_sequence_overlap_length;
 		uint32_t minimum_candidate_junctions;
 		uint32_t maximum_candidate_junctions;
+    double maximum_candidate_junction_length_factor;  
+      // maximum length of CJ is this times ref sequence length
     
-    //// Alignment Resolution ////
+    //! Settings: Alignment Resolution
 		bool add_split_junction_sides;
     double junction_pos_hash_neg_log10_p_value_cutoff;
     
-    //// MutationIdentification ////
-
-    
-    //// Global Workflow ////
-    bool junction_prediction; // whether to perform junction prediction step
-		uint32_t alignment_read_limit;
-		uint32_t candidate_junction_read_limit;
-    uint32_t resolve_alignment_read_limit;
-
-    bool unmatched_reads;
-		bool no_unmatched_reads;
-    
-    
-    /// !---> options need to be put in order...
-		double maximum_candidate_junction_length_factor;
-
-		string error_model_method;
+    //! Settings: Mutation Identification
     uint32_t base_quality_cutoff;
-
-    //Coverage distribution options
+    uint32_t maximum_read_mismatches;    
     double deletion_coverage_propagation_cutoff;
     double deletion_coverage_seed_cutoff;
-
-		bool smalt;
-		uint32_t max_smalt_diff;
-
-		bool keep_all_intermediates;
-
-		bool no_mutation_prediction;
-		bool no_deletion_prediction;
-		bool no_alignment_generation;
-		float mutation_log10_e_value_cutoff;
-		float polymorphism_log10_e_value_cutoff;
-		float polymorphism_bias_p_value_cutoff;
-		float polymorphism_frequency_cutoff;
+    double mutation_log10_e_value_cutoff;
+    
+    bool polymorphism_prediction;
+    double polymorphism_log10_e_value_cutoff;      // defaults to 
+		double polymorphism_bias_p_value_cutoff;       // 0 means do not test for bias
+		double polymorphism_frequency_cutoff;          
 		uint32_t polymorphism_coverage_both_strands;
 		uint32_t polymorphism_reject_homopolymer_length;
 		bool no_indel_polymorphisms;
-		uint32_t max_rejected_polymorphisms_to_show;
+    
+    //! Settings: Output
+    uint32_t max_rejected_polymorphisms_to_show;
 		uint32_t max_rejected_junctions_to_show;
+		bool hide_circular_genome_junctions;
+		bool lenski_format;
+		bool no_evidence;
+		bool shade_frequencies;
+		bool no_header;
+    
+    //! Settings: Experimental
+    bool add_metadata_to_gd; // @GRC added in for gathering/analyzing breseq values
 
-		bool strict_polymorphism_prediction;
-		uint32_t maximum_read_mismatches;
 
-		string base_output_path;	// main path containing all output
+    ////////////////////
+    //! File Paths
+    ////////////////////
+    
+    //! Paths populated from location of executable
+		string bin_path;                  // absolute path to where this binary resides
+    string program_data_path;         // path to where R scripts and images reside
+		map<string, string> installed;    // hash of paths to programs that we call
+    
+    //! Paths: Sequence conversion
+    string sequence_conversion_path;
+    string sequence_conversion_done_file_name;
 
+    string reference_fasta_file_name;
 		string converted_fastq_file_name;
 		string unwanted_fasta_file_name;
 		string sequence_conversion_summary_file_name;
-		string sequence_conversion_done_file_name;
+    string reference_trim_file_name;
+    
+    //! Paths: Read alignment
+		string reference_alignment_path;
+    string reference_alignment_done_file_name;
+    
 		string reference_hash_file_name;
-		string reference_alignment_done_file_name;
-		string preprocess_junction_done_file_name;
+		string reference_sam_file_name;
+    
+    //! Paths: Junction Prediction
+    string candidate_junction_path;
+    string preprocess_junction_done_file_name;
+    string coverage_junction_done_file_name;
+    string candidate_junction_done_file_name;
+    
+    string preprocess_junction_best_sam_file_name;
+		string preprocess_junction_split_sam_file_name;
+    
 		string coverage_junction_best_bam_unsorted_file_name;
 		string coverage_junction_best_bam_file_name;
 		string coverage_junction_best_bam_prefix;
@@ -314,30 +310,44 @@ namespace breseq
 		string coverage_junction_plot_file_name;
 		string coverage_junction_summary_file_name;
     string coverage_junction_error_count_summary_file_name;
-		string coverage_junction_done_file_name;
+
+    string candidate_junction_fasta_file_name;
+    string candidate_junction_faidx_file_name;
 		string candidate_junction_summary_file_name;
-		string candidate_junction_done_file_name;
-		string candidate_junction_hash_file_name;
-		string candidate_junction_alignment_done_file_name;
-		string alignment_resolution_summary_file_name;
+    
+    //! Paths: Junction Alignment
+    string candidate_junction_alignment_path;
+    string candidate_junction_alignment_done_file_name;
+    
+    string candidate_junction_hash_file_name;
+		string candidate_junction_sam_file_name;
+    
+    //! Paths: Alignment Resolution
+    string alignment_resolution_path;
 		string alignment_correction_done_file_name;
+    
+		string resolved_reference_sam_file_name;
+		string resolved_junction_sam_file_name;
+		string reference_features_file_name;
+		string alignment_resolution_summary_file_name;
+    string jc_genome_diff_file_name;
+    
+    //! Paths: BAM conversion
 		string bam_path;
+    string bam_done_file_name;
+
 		string reference_bam_unsorted_file_name;
 		string junction_bam_unsorted_file_name;
 		string junction_bam_prefix;
 		string junction_bam_file_name;
-		string bam_done_file_name;
-		string reference_bam_prefix;
-		string reference_bam_file_name;
-		string reference_faidx_file_name;
-		string reference_gff3_file_name;
 
-		////// error rates and coverage distribution //////
+		//! Paths: Error Calibration
 		string error_calibration_path;
-		string error_counts_file_name;
-		string error_rates_file_name;
 		string error_counts_done_file_name;
 		string error_rates_done_file_name;
+    
+		string error_counts_file_name;
+		string error_rates_file_name;
 		string coverage_file_name;
 		string unique_only_coverage_distribution_file_name;
 		string error_rates_summary_file_name;
@@ -346,29 +356,37 @@ namespace breseq
 		string plot_error_rates_fit_r_script_file_name;
 		string plot_error_rates_r_script_log_file_name;
 
-		////// mutation identification //////
+		//! Paths: Mutation Identification
 		string mutation_identification_path;
-		string predicted_mutation_file_name;
-		string ra_mc_genome_diff_file_name;
+		string mutation_identification_done_file_name;
+		string polymorphism_statistics_done_file_name;
+    
 		string complete_mutations_text_file_name;
 		string complete_coverage_text_file_name;
-		string mutation_identification_done_file_name;
 		string cnv_coverage_tab_file_name;
 		string genome_error_counts_file_name;
-		string polymorphism_statistics_input_file_name;
+    string ra_mc_genome_diff_file_name;
 
+    string polymorphism_statistics_input_file_name;
 		string polymorphism_statistics_output_file_name;
 		string polymorphism_statistics_r_script_file_name;
 		string polymorphism_statistics_r_script_log_file_name;
 		string polymorphism_statistics_ra_mc_genome_diff_file_name;
-		string polymorphism_statistics_done_file_name;
-
+    
+    //! Paths: Output
+    string output_path;
 		string output_done_file_name;
+    string final_genome_diff_file_name;
+
 		string log_file_name;
 		string index_html_file_name;
 		string summary_html_file_name;
 		string marginal_html_file_name;
 
+    string local_evidence_path;
+		string evidence_path;
+    string evidence_genome_diff_file_name;
+    
 		string local_coverage_plot_path;
 		string coverage_plot_path;
     string coverage_plot_r_script_file_name;
@@ -376,43 +394,35 @@ namespace breseq
 		string output_calibration_path;
 		string unique_only_coverage_plot_file_name;
 		string error_rates_plot_file_name;
-
-    // for alignment output
-    uint32_t maximum_reads_to_align;
     
-		// text output files, to be replaced...
-		string settings_text_file_name;
-		string summary_text_file_name;
-		string tiled_coverage_text_file_name;
-
 		string breseq_small_graphic_from_file_name;
 		string breseq_small_graphic_to_file_name;
-
+    
+    //! Paths: Data
+    string data_path;
+		string reference_bam_prefix;
+		string reference_bam_file_name;
+		string reference_faidx_file_name;
+		string reference_gff3_file_name;
+    string unmatched_read_file_name;
+    
+    //! Paths: Experimental and unused
 		string long_pairs_file_name;
 
-		//uint32_t max_read_length;
-
-
-    bool values_to_gd; // @JEB @GRC added in for gathering/analyzing breseq values
     
-		cReadFiles read_files;
-		vector<string> read_file_names;
-    vector<string> reference_file_names;
+    ////////////////////
+    //! Methods
+    ////////////////////
     
-		bool hide_circular_genome_junctions;
-		bool polymorphism_prediction;
-		bool lenski_format;
-		bool no_evidence;
-		bool shade_frequencies;
-		bool no_header;
-    bool verbose;
-
-    map<string,string> done_key_messages;
-		vector<ExecutionTime> execution_times;
+    // Set up defaults here
+		Settings(const string& _base_output_path = "");
     
-    //End of settings needed for HTML outputs
-
-		// Utility function to substitute specific details into a generic file name
+    // Constructor for default action
+    Settings(int argc, char* argv[]);
+    
+    static void command_line_run_header();
+    
+		//! Utility function to substitute specific details into a generic file name
 		static string file_name(const string& file_name_key, const string& substitute, const string& with)
 		{
 			string s(file_name_key);
@@ -429,7 +439,7 @@ namespace breseq
 			return s;
 		}
     
-		// Utility function to get relative path from two file locations for making HTML files
+		//! Utility function to get relative path from two file locations for making HTML files
     static string relative_path(const string& full_path, const string& base_path) 
     {
       string s(full_path);

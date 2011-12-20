@@ -112,8 +112,11 @@ namespace breseq {
       static const char m_sep;   //* separator between entries within a line in files
       static const string covariate_names[];
       
-      std::vector<double> m_count_table;
-      std::vector<double> m_log10_prob_table;
+      // there are three different ways errors can be in memory
+      // not all may be used by any one error table
+      vector<double> m_count_table;
+      vector<double> m_log10_prob_table;
+      vector<double> m_prob_table;
    
     public:
 
@@ -164,6 +167,7 @@ namespace breseq {
       void count_alignment_position(const pileup_wrapper& i, const pileup& p);
       void count_covariate(const covariate_values_t& cv);
       void counts_to_log10_prob();
+      void log10_prob_to_prob();
    
       void clear() 
       { 
@@ -179,6 +183,8 @@ namespace breseq {
       //* accessors
       double get_log10_prob(covariate_values_t& cv);
    
+      double get_prob(covariate_values_t& cv);
+
       
     protected:
       covariates_used_t         m_covariate_used;         // list of covariates that are used by table

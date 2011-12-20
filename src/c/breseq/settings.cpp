@@ -59,6 +59,7 @@ namespace breseq
 				rf.m_base_name.erase(pos);
 			}
 			
+      /*
       // @JEB - this shouldn't be necessary? - it actually causes some problems.
       // Fix when we move to all C++ TODO
       //- trailing .converted
@@ -67,7 +68,7 @@ namespace breseq
 			{
 				rf.m_base_name.erase(pos);
 			}
-      
+      */
       // set up the map for converting base names to fastq file names to be used
       // check to see whether this is a duplicate
       ASSERT(read_file_to_fastq_file_name_map[rf.m_base_name].size() == 0, 
@@ -90,7 +91,7 @@ namespace breseq
     return read_file_to_fastq_file_name_map[base_name];
   }
   
-  // Set up defaults and build paths
+  // Set up defaults and build paths without command-line arguments
   Settings::Settings(const string& _base_output_path)
   {
     // things work fine if this is empty ""
@@ -111,8 +112,6 @@ namespace breseq
     if (slash_pos != string::npos) this->bin_path.erase(slash_pos);
 
 /* FULL LIST OF PERL ARGS - Don't need to port all
-    'help|?' => \$help, 'man' => \$man,
-		'verbose|v' => \$self->{verbose},
 ## Options for turning various analysis chunks off or on
 		'no-junction-prediction' => \$self->{no_junction_prediction},
 		'no-mismatch-prediction' => \$self->{no_mutation_prediction},
@@ -142,7 +141,6 @@ namespace breseq
 		'require-max-mismatches=s' => \$self->{require_max_mismatches},
 		'do-not-trim-ambiguous-ends' => \$self->{do_not_trim_ambiguous_ends},
 		'base-quality-cutoff|b=s' => \$self->{base_quality_cutoff},
-		'error-model-method=s' => \$self->{error_model_method},
 ## Options for polymorphism analysis
 		'polymorphism-prediction' => \$self->{polymorphism_prediction},		
 		'polymorphism-log10-e-value-cutoff=s' => \$self->{polymorphism_log10_e_value_cutoff},
@@ -154,14 +152,6 @@ namespace breseq
 ## Options for candidate junction identification	
 		'maximum-candidate-junctions=s' => \$self->{maximum_candidate_junctions},
 ## Options for using deprecated and slow Perl methods		
-		'perl-error-count' => \$self->{perl_error_count},
-		'perl-identify-mutations' => \$self->{perl_identify_mutations},
-		'perl-calc-trims' => \$self->{perl_calc_trims},
-		'strict-polymorphism-prediction' => \$self->{strict_polymorphism_prediction},
-		'perl-preprocess-alignments' => \$self->{perl_preprocess_alignments},
-		'perl-identify-candidate-junctions' => \$self->{perl_identify_candidate_junctions},
-		'perl-bam2aln' => \$self->{perl_bam2aln},
-		'perl-alignment-correction' => \$self->{perl_alignment_correction},
 		'smalt' => \$self->{smalt},
 */
     
@@ -184,7 +174,6 @@ namespace breseq
     ("require-match-fraction", "only consider alignments that cover this fraction of a read", "0.9")
     ("values-to-gd","",TAKES_NO_ARGUMENT, ADVANCED_OPTION) // @JEB @GRC added in for gathering/analyzing breseq values
     ("verbose,v","",TAKES_NO_ARGUMENT)
-
     .processCommandArgs(argc, argv);
     
     options.addUsage("");
@@ -219,19 +208,17 @@ namespace breseq
       exit(-1);		
     }
 
-    if (options.count("values-to-gd")) {
-      this->values_to_gd = true;
-    }
-
-    this->verbose = options.count("verbose");
+    //Please put options in the same order as the header file
     
-    this->base_output_path = options["output"];
+    this->verbose = options.count("verbose");
     this->run_name = options["name"];
+
+    this->base_output_path = options["output"];
     this->polymorphism_prediction = options.count("polymorphism-prediction");
     
     this->base_quality_cutoff = from_string<uint32_t>(options["base-quality-cutoff"]);
 
-    //Coverage distribtuion options
+    //Coverage distributuion options
     if (options.count("deletion-coverage-propagation-cutoff"))
       this->deletion_coverage_propagation_cutoff = from_string<double>(options["deletion-coverage-propagation-cutoff"]);
     if (options.count("deletion-coverage-seed-cutoff"))
@@ -259,6 +246,9 @@ namespace breseq
     
     //// Other options ////
     this->junction_prediction = !options.count("no-junction-prediction");
+    
+    this->add_metadata_to_gd = options.count("values-to-gd");
+
     
 		this->post_option_initialize();
     
@@ -309,7 +299,6 @@ namespace breseq
     
 		this->run_name = "";
     this->print_run_name = ""; 
-		this->error_model_method = "EMPIRICAL";
     this->base_quality_cutoff = 3; // avoids problem with Illumina assigning 2 to bad ends of reads!
 
     //Coverage distribution options
@@ -357,7 +346,6 @@ namespace breseq
 		this->mutation_log10_e_value_cutoff = 10; // log10 of evidence required for SNP calls
     
     this->polymorphism_prediction = false;          // perform polymorphism prediction
-    this->strict_polymorphism_prediction = false;   // perform polymorphism predictin with strict requirements
     
 		this->polymorphism_log10_e_value_cutoff = 2;
 		this->polymorphism_bias_p_value_cutoff = 0.05;
@@ -377,7 +365,7 @@ namespace breseq
 		this->shade_frequencies = false;
 		this->no_header = false;
     this->verbose = false;
-    this->values_to_gd = false;
+    this->add_metadata_to_gd = false;
     
     //// Global Workflow ////
     this->polymorphism_prediction = false; // predict polymorphisms
@@ -385,7 +373,6 @@ namespace breseq
 		this->no_mutation_prediction = false;  // don't perform read mismatch/indel prediction steps
 		this->no_deletion_prediction = false; // don't perform deletion prediction steps
 		this->no_alignment_generation = false; // don't generate alignments
-    this->unmatched_reads = true;
     this->no_unmatched_reads = false;
     this->keep_all_intermediates = false;
   
@@ -403,28 +390,12 @@ namespace breseq
     
     if (getenv("PROGRAMDATAPATH"))
       this->program_data_path = getenv("PROGRAMDATAPATH");  
-
-		//neaten up some settings for later string comparisons
-		this->error_model_method = to_upper(this->error_model_method);
-    
-		//on by default
-		this->unmatched_reads = (this->no_unmatched_reads) ? 0 : 1;
-
-		// block option
-		if (this->strict_polymorphism_prediction)
-		{
-			this->polymorphism_prediction = true;
-			this->maximum_read_mismatches = 1;
-			this->require_complete_match = true;
-			this->no_indel_polymorphisms = 1;
-			this->polymorphism_log10_e_value_cutoff = 5;
-		}
     
 		// problems if there are spaces b/c shell removes quotes before we know about them
 		// thus require run names to only use underscores (but when printing output, remove).
     this->print_run_name = substitute(this->run_name, "_", " ");
 
-		////////  SETUP FILE NAMES  ////////
+		////////  SET UP FILE NAMES  ////////
 		//// '#' replaced with read fastq name
 		//// '@' replaced by seq_id of reference sequence
 
@@ -474,13 +445,13 @@ namespace breseq
 		this->candidate_junction_alignment_done_file_name = this->candidate_junction_alignment_path + "/candidate_junction_alignment.done";
 
 		////// alignment correction //////
-		this->alignment_correction_path = "05_alignment_correction";
-		if (this->base_output_path.size() > 0) this->alignment_correction_path = this->base_output_path + "/" + this->alignment_correction_path;
-		this->resolved_reference_sam_file_name = this->alignment_correction_path + "/reference.sam";
-		this->resolved_junction_sam_file_name = this->alignment_correction_path + "/junction.sam";
-		this->alignment_resolution_summary_file_name = this->alignment_correction_path + "/summary.bin";
-		this->alignment_correction_done_file_name = this->alignment_correction_path + "/alignment_resolution.done";
-		this->jc_genome_diff_file_name = this->alignment_correction_path + "/jc_evidence.gd";
+		this->alignment_resolution_path = "05_alignment_correction";
+		if (this->base_output_path.size() > 0) this->alignment_resolution_path = this->base_output_path + "/" + this->alignment_resolution_path;
+		this->resolved_reference_sam_file_name = this->alignment_resolution_path + "/reference.sam";
+		this->resolved_junction_sam_file_name = this->alignment_resolution_path + "/junction.sam";
+		this->alignment_resolution_summary_file_name = this->alignment_resolution_path + "/summary.bin";
+		this->alignment_correction_done_file_name = this->alignment_resolution_path + "/alignment_resolution.done";
+		this->jc_genome_diff_file_name = this->alignment_resolution_path + "/jc_evidence.gd";
 
 		////// index BAM //////
 		this->bam_path = "06_bam";
@@ -510,7 +481,6 @@ namespace breseq
 		////// mutation identification //////
 		this->mutation_identification_path = "08_mutation_identification";
 		if (this->base_output_path.size() > 0) this->mutation_identification_path = this->base_output_path + "/" + this->mutation_identification_path;
-		this->predicted_mutation_file_name = this->mutation_identification_path + "/@.predicted_mutations.bin";
 		this->ra_mc_genome_diff_file_name = this->mutation_identification_path + "/ra_mc_evidence.gd";
 		this->complete_mutations_text_file_name = this->mutation_identification_path + "/@.mutations.tab";
 		this->complete_coverage_text_file_name = this->mutation_identification_path + "/@.coverage.tab";
@@ -555,16 +525,9 @@ namespace breseq
 		this->output_calibration_path = this->output_path + "/calibration";
 		this->unique_only_coverage_plot_file_name = this->output_calibration_path + "/@.unique_coverage.pdf";
 		this->error_rates_plot_file_name = this->output_calibration_path + "/#.error_rates.pdf";
-    this->coverage_plot_r_script_file_name = this->program_data_path + "/plot_coverage.r";
-    
-		// text output files, to be replaced...
-		this->settings_text_file_name = this->output_path + "/settings.tab";
-		this->summary_text_file_name = this->output_path + "/summary.tab";
-		this->tiled_coverage_text_file_name = this->output_path + "/@.tiled_coverage.tab";
-
+    this->coverage_plot_r_script_file_name = this->program_data_path + "/plot_coverage.r";    
 		this->breseq_small_graphic_from_file_name = this->program_data_path + "/breseq_small.png";
 		this->breseq_small_graphic_to_file_name = this->output_path + "/" + this->local_evidence_path + "/breseq_small.png";
-
 		this->long_pairs_file_name = this->output_path + "/long_pairs.tab";
 
 		this->init_installed();
