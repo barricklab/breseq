@@ -53,17 +53,14 @@ int do_bam2aln(int argc, char* argv[]) {
   ("bam,b", "bam file containing sequences to be aligned", "data/reference.bam")
 	("fasta,f", "FASTA file of reference sequence", "data/reference.fasta")
   ("output,o", "output to file [region.html]")
-  ("region,r", "region to print (accession:start-end)", "")
+  ("region,r", "region to print (accession:start-end)")
   ("max-reads,n", "maximum number of reads to show in alignment", 200)
   ("quality-score-cutoff,c", "quality score cutoff", 0)
   ("stdout", "write output to stdout", TAKES_NO_ARGUMENT)
-  .processCommandArgs(argc, argv);
-  
-  
+  .processCommandArgs(argc, argv);  
   
 	// make sure that the config options are good:
 	if(options.count("help")
-		 || !options.count("region")
      || !file_exists(options["fasta"].c_str())
      || !file_exists(options["bam"].c_str()) )
   {
@@ -71,36 +68,59 @@ int do_bam2aln(int argc, char* argv[]) {
 		return -1;
 	}
   
-  // generate alignment!
-  alignment_output ao(
-                      options["bam"],
-                      options["fasta"],
-                      from_string<uint32_t>(options["max-reads"]),
-                      from_string<uint32_t>(options["quality-score-cutoff"])
-                      );
+  vector<string> region_list;
+  if (options.count("region"))
+    region_list= from_string<vector<string> >(options["region"]);
   
-  string html_output = ao.html_alignment(options["region"]);
-  //cout << html_output << endl;
+  // Also take regions off the command line
+  for (int32_t i = 0; i < options.getArgc(); i++)
+  {
+    string region = options.getArgv(i);
+    region_list.push_back(region);
+  }  
   
-  if (options.count("stdout"))
+  if (!region_list.size()) {
+    options.addUsage("");
+    options.addUsage("You must supply the --region option for input.");
+    options.printUsage();
+    return -1;
+  }  
+  
+  for(uint32_t j = 0; j < region_list.size(); j++)
   {
-    cout << html_output << endl;
-  }
-  else
-  {
-    ///Write to html file
-    string file_name = options["region"] + ".html";
-    if (options.count("output")) {
-      file_name = options["output"];
-    }
+    // Generate Alignment!
+    alignment_output ao(
+                        options["bam"],
+                        options["fasta"],
+                        from_string<uint32_t>(options["max-reads"]),
+                        from_string<uint32_t>(options["quality-score-cutoff"])
+                        );
     
-    ofstream myfile (file_name.c_str());
-    if (myfile.is_open())
+    string html_output = ao.html_alignment(region_list[j]);
+    
+    if (options.count("stdout"))
     {
-      myfile << html_output;
-      myfile.close();
+      cout << html_output << endl;
     }
-    else cerr << "Unable to open file";
+    else
+    {
+      ///Write to html file
+      string file_name = region_list[j] + ".html";
+      if (options.count("output"))
+      {
+        file_name = options["output"];
+        if(region_list.size() > 1)  {
+          file_name = (split(options["output"], "."))[0] + "_" + region_list[j] + ".html";  }
+      }
+      
+      ofstream myfile (file_name.c_str());
+      if (myfile.is_open())
+      {
+        myfile << html_output;
+        myfile.close();
+      }
+      else cerr << "Unable to open file";
+    }
   }
     
   return 0;
@@ -1395,12 +1415,12 @@ int do_runfile(int argc, char *argv[])
   options.addUsage("***Reminder: Create the error log directory before running TACC job.");
   options.addUsage("\n");
   options.addUsage("Examples:");
-  options.addUsage("\t Command: breseq runfile -o 1B4_Mutated -l 1B4_Mutated_Errors 1B4.gd");
-  options.addUsage("\t   Output: breseq -o 1B4_Mutated -r NC_012660.1.gbk SRR172993.fastq >& 1B4_Mutated_Errors/1B4.errors.txt");
+  options.addUsage("\tCommand: breseq runfile -o 1B4_Mutated -l 1B4_Mutated_Errors 1B4.gd");
+  options.addUsage("\t  Output: breseq -o 1B4_Mutated -r NC_012660.1.gbk SRR172993.fastq >& 1B4_Mutated_Errors/1B4.errors.txt");
   options.addUsage("\n");
-  options.addUsage("\t Command: breseq runfile -d 02_Downloads -l 04_Errors -g 01_Data");
-  options.addUsage("\t   Output: breseq -o 1B4 -r 02_Downloads/NC_012660.1.gbk 02_Downloads/SRR172993.fastq >& 04_Errors/1B4.errors.txt");
-  options.addUsage("\t   Output: breseq -o ZDB111 -r 02_Downloads/REL606.5.gbk 02_Downloads/SRR098039.fastq >& 04_Errors/ZDB111.errors.txt");
+  options.addUsage("\tCommand: breseq runfile -d 02_Downloads -l 04_Errors -g 01_Data");
+  options.addUsage("\t  Output: breseq -o 1B4 -r 02_Downloads/NC_012660.1.gbk 02_Downloads/SRR172993.fastq >& 04_Errors/1B4.errors.txt");
+  options.addUsage("\t  Output: breseq -o ZDB111 -r 02_Downloads/REL606.5.gbk 02_Downloads/SRR098039.fastq >& 04_Errors/ZDB111.errors.txt");
   options.processCommandArgs(argc, argv);
 
 
