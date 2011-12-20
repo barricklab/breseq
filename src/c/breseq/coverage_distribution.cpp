@@ -195,5 +195,249 @@ namespace breseq {
                                            );
     }
 	}
+  
+  void CoverageDistribution::tile(
+                                  string in_file_name,
+                                  string out_file_name,
+                                  uint32_t tile_size
+                                  )
+  {
+    //The index is the marker of the current tile.
+    //It is always a multiple of tile_size
+    uint32_t tile_index;
+    
+    //The next three variables are for taking running sums and averaging.
+    uint32_t tile_count;
+    double tile_sum;
+    double average;
+    
+    //position and coverage are taken from the file.
+    uint32_t position;
+    double coverage;
+    
+    ifstream in_file;
+    ofstream out_file;
+    
+    in_file.open ( in_file_name.c_str() );
+    out_file.open ( out_file_name.c_str() );
+    
+    tile_index = 0;
+    tile_count = 0;
+    tile_sum = 0;
+    
+    while ( in_file >> position >> coverage )
+    {
+      //Check if the current position is in the current tile.
+      //If it is, add the coverage to the sum and increment the count.
+      //If it isn't, write the last tile and set up the variables for the new tile
+      if ( position < tile_index + tile_size )
+      {
+        tile_sum += coverage;
+        tile_count++;
+      }
+      
+      else
+      {
+        average = tile_sum / tile_count;
+        
+        out_file << tile_index << "\t" << average << "\n";
+        
+        //Set tile_index to position rounded down to the nearest multiple
+        //of tile_size
+        tile_index = position / tile_size * tile_size;
+        
+        tile_count = 1;
+        tile_sum = coverage;
+      }
+    }
+    average = tile_sum / tile_count;
+    
+    out_file << tile_index << "\t" << average << "\n";
+    
+    in_file.close();
+    out_file.close();
+  }
+  
+  void CoverageDistribution::find_segments(
+                                          string in_file_name,
+                                          string out_file_name
+                                          )
+  {
+    //a search entry represents a range of positions in the file that will be
+    //examined. start and end are inclusive.
+    //search entries are referencing the index in the file, not position
+    pair<uint32_t, uint32_t> next_search;
+    pair<uint32_t, uint32_t> current_search;
+    
+    //this holds all search entries
+    vector< pair<uint32_t, uint32_t> > searching;
+    
+    //used to populate saved_sums
+    double running_sum;
+    
+    //a saved_sum entry represents the sum of all coverage up to a position.
+    //saved_sums are first calculated then accessed later.
+    map<uint32_t, double> saved_sums;
+    
+    //ordered_sums holds the order that saved_sums was populated.
+    vector<uint32_t> ordered_sums;
+    
+    //position and coverage are taken from the file.
+    uint32_t position;
+    double coverage;
+    
+    //p_i and p_j represent the position of the indeces of i and j in the later
+    //nested for-loops
+    uint32_t p_i;
+    uint32_t p_j;
+    
+    //best_i and best_j define the ranges that scored the best in an iteration
+    //these represent indeces, not positions.
+    uint32_t best_i;
+    uint32_t best_j;
+    
+    //number of entries in the input file
+    uint32_t count;
+    
+    //highest position value in the input file
+    int32_t n;
+    
+    //Si, Sj and Sn define sums of the ranges of 0 to i, 0 to j and 0 to n.
+    //i and j are defined later in loo
+    double Si;
+    double Sj;
+    double Sn;
+    
+    //the z value as per the CBS algorithm is the score of a given range.
+    double z;
+    //to easier see the z calculation z1 and z2 are used.
+    double z1;
+    double z2;
+    
+    //best_z is the highest Z value found in an iteration.
+    double best_z;
+    
+    ifstream in_file;
+    ofstream out_file;
+    
+    in_file.open ( in_file_name.c_str() );
+    out_file.open ( out_file_name.c_str() );
+    
+    //First, populate saved_sums and ordered_positions.
+    //and get length
+    count = 0;
+    running_sum = 0;
+    while ( in_file >> position >> coverage )
+    {
+      running_sum += coverage;
+      saved_sums[position] = running_sum;
+      ordered_sums.push_back( position );
+      count++;
+    }
+    
+    //the value of position is now the highest position value.
+    n = position;
+    Sn = running_sum;
+    
+    //The first search entry goes from 0 to count - 1 since search entries are
+    //inclusive
+    current_search.first = 0;
+    current_search.second = count - 1;
+    searching.push_back ( current_search );
+    
+    //now calculate z for each range inside of current_search
+    //repeat until there are no more search entries.
+    while ( searching.size() > 0 )
+    {
+      current_search.first = searching.back().first;
+      current_search.second = searching.back().second;
+      
+      searching.pop_back();
+      
+      best_z = 0;
+      
+      //i and j are inclusive boundaries so <= is used in the comparison.
+      
+      for ( int32_t i = current_search.first; i <= current_search.second; i++ )
+      {
+        p_i = ordered_sums[i];
+        Si = saved_sums[ ordered_sums[i] ];
+        for ( int32_t j = i + 1; j <= current_search.second; j++ )
+        {
+          p_j = ordered_sums[j];
+          Sj = saved_sums[ ordered_sums[j] ];
+          
+          z1 = ((Sj - Si) / (p_j - p_i)) - ((Sn - Sj + Si) / (n - p_j + p_i));
+          z2 = sqrt((1.0 / (p_j - p_i)) + (1.0 / (n - p_j + p_i)));
+          z =  z1 / z2;
+          
+          if ( abs(z) > best_z )
+          {
+            best_z = abs(z);
+            best_i = i;
+            best_j = j;
+          } 
+        }
+      }
+      
+      //update searching for next iteration.
+      //if current_search only spanned one index, only write its indeces
+      //and do not update searching.
+      //if current_search spans multiple indeces, write the best i and j range
+      //and update for the next iteration.
+      
+      if ( current_search.first == current_search.second )
+      {
+        out_file << ordered_sums[current_search.first] << "\t"
+        << ordered_sums[current_search.second] << endl;
+      }
+      else
+      {
+        //writing.
+        //if the best range takes the second element, include the first by
+        //decrementing best_i
+        if ( best_i == current_search.first )
+        {
+          best_i -= 1;
+        }
+        
+        out_file << ordered_sums[best_i + 1] << "\t"
+        << ordered_sums[best_j] << endl;
+        
+        
+        //setting up next_searches
+        
+        //if best_i doesn't include the first element, add the range before
+        //best_i
+        if ( best_i != current_search.first - 1 )
+        {
+          next_search.first = current_search.first;
+          next_search.second = best_i;
+          searching.push_back( next_search );
+        }
+        
+        //if best_j doesn't include the last element, add the range after
+        //best_j
+        if ( best_j != current_search.second )
+        {
+          next_search.first = best_j + 1;
+          next_search.second = current_search.second;
+          searching.push_back( next_search );
+        }
+      }
+    }
+    
+    in_file.close();
+    out_file.close();
+  }
+  
+  //void CoverageDistribution::smooth_segments(
+  //                                            string in_file_name,
+  //                                            string range_file_name,
+  //                                            string out_file_name,
+  //                                            )
+  //{
+  //  
+  //}
 
 } // namespace breseq
