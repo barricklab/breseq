@@ -1519,7 +1519,7 @@ int breseq_default_action(int argc, char* argv[])
     conv_ref_seq_info.WriteGFF(settings.reference_gff3_file_name);
 
     //Check the FASTQ format and collect some information about the input read files at the same time
-		cerr << "  Analyzing fastq read files..." << endl;
+		cerr << "  Analyzing FASTQ read files..." << endl;
 		uint32_t overall_max_read_length = UNDEFINED_UINT32;
 		uint32_t overall_max_qual = 0;
 
@@ -2175,8 +2175,6 @@ int breseq_default_action(int argc, char* argv[])
         deletion_propagation_cutoffs,
         deletion_seed_cutoffs,
 				settings.mutation_log10_e_value_cutoff, // mutation_cutoff
-				!settings.no_deletion_prediction,
-				settings.polymorphism_prediction,
 				settings.base_quality_cutoff, // minimum_quality_score
 				settings.polymorphism_log10_e_value_cutoff, // polymorphism_cutoff
 				settings.polymorphism_frequency_cutoff, //polymorphism_frequency_cutoff
@@ -2244,70 +2242,14 @@ int breseq_default_action(int argc, char* argv[])
        }
     }
 
+    // Write and reload 
     mpgd.write(settings.final_genome_diff_file_name);
-
-
     cGenomeDiff gd(settings.final_genome_diff_file_name);
-		//#unlink $evidence_genome_diff_file_name;
 
-		//
-		// Mark lowest RA evidence items as no-show, or we may be drawing way too many alignments
-		//
-
-    vector<gd_entry_type> ra_types = make_vector<gd_entry_type>(RA);
-    list<counted_ptr<cDiffEntry> > ra = gd.filter_used_as_evidence(gd.list(ra_types));
-
-    ra.remove_if(cDiffEntry::frequency_less_than_two_or_no_show());
-    ra.sort(cDiffEntry::by_scores(make_vector<string>("quality")));
-
-    uint32_t i=0;
-    for(diff_entry_list_t::iterator item = ra.begin(); item != ra.end(); item++)
-		{
-      cDiffEntry& ra_item = **item;
-      if (!ra_item.entry_exists(FREQUENCY)) continue;
-      
-      if ( from_string<double>(ra_item[FREQUENCY]) != 0.0 ) continue;
-      if ( from_string<double>(ra_item[FREQUENCY]) != 1.0 ) continue;
-        
-      if (i++ > settings.max_rejected_polymorphisms_to_show)
-        ra_item[NO_SHOW] = "1";
-		}
-
-		// require a certain amount of coverage
-    diff_entry_list_t new_ra = gd.filter_used_as_evidence(gd.list(ra_types));
-    for (diff_entry_list_t::iterator item = new_ra.begin(); item != new_ra.end(); item++)
-		{
-			vector<string> top_bot = split((**item)["tot_cov"], "/");
-			uint32_t top = from_string<int32_t>(top_bot[0]);
-			uint32_t bot = from_string<int32_t>(top_bot[1]);
-			if (top + bot <= 2) (**item)["no_show"] = "1";
-		}
-		
-		//
-		// Mark lowest scoring reject junctions as no-show
-		//
-    vector<gd_entry_type> jc_types = make_vector<gd_entry_type>(JC);
-    
-    diff_entry_list_t jc = gd.filter_used_as_evidence(gd.list(jc_types));
-	  
-    // This is the correct way to erase from a list! @MDS
-    for (diff_entry_list_t::iterator it = jc.begin(); it != jc.end(); )
-    {
-      if (((*it)->number_reject_reasons() == 0))
-        it = jc.erase(it);
-      else
-        it++;
-    }
-    
-    jc.sort(cDiffEntry::by_scores(make_vector<diff_entry_key_t>("pos_hash_score")("total_non_overlap_reads")));
-
-    i = 0;
-    for (diff_entry_list_t::iterator it = jc.begin(); it != jc.end(); it++ )
-		{
-			if (i++ >= settings.max_rejected_junctions_to_show)
-				(**it)["no_show"] = "1";
-		}
-
+    //
+    // Mark marginal items as no_show to prevent further processing
+    //
+    output::mark_gd_entries_no_show(settings, gd);
 
     //
 		// Annotate mutations

@@ -139,6 +139,8 @@ extern const char* ALIGN_LEFT;
  *-----------------------------------------------------------------------------*/
 void html_index(const string& file_name, const Settings& settings, Summary& summary,
                 cReferenceSequences& ref_seq_info, cGenomeDiff& gd);
+void mark_gd_entries_no_show(const Settings& settings, cGenomeDiff& gd);
+  
 void html_marginal_predictions(const string& file_name, const Settings& settings, Summary& summary,
                                cReferenceSequences& ref_seq_info, cGenomeDiff& gd);
 void html_statistics(const string& file_name, const Settings& settings, Summary& summary, cReferenceSequences& ref_seq_info);

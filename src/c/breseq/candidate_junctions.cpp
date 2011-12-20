@@ -398,36 +398,6 @@ namespace breseq {
       //cout << count << "/" << junction_candidate_list.size() << endl;
     }
 
-  /*
-		////
-		// Calculate pos_hash score for each candidate junction now that we have the complete list of read match support
-		////
-    
-    
-		for (SequenceToKeyToJunctionCandidateMap::iterator outer_it = candidate_junctions.begin(); outer_it != candidate_junctions.end(); outer_it++)
-		{
-      if (verbose) cout << "Sequence: " << outer_it->first << endl;
-
-			for (KeyToJunctionCandidateMap::iterator it = (*outer_it).second.begin(); it != (*outer_it).second.end(); it++)
-			{
-				string junction_id = (*it).first;
-				JunctionCandidate& cj = *((*it).second);
-        
-        // prints out
-				if (verbose)
-				{
-					cout << ">>>" << junction_id << endl;
-          cout << "  Pos Hash Score: " << cj.pos_hash_score() << endl;
-          // this prints out the entire read_begin_hash
-          for (map<uint32_t,uint32_t>::iterator rhbit=cj.read_begin_hash.begin(); rhbit != cj.read_begin_hash.end(); rhbit++)
-          {
-            cout << "   " << rhbit->first << " " << rhbit->second << endl;
-          }
-          
-				}
-			}
-		}
-  */  
 		////
 		//  Combine hash into a list, retaining only one item (the best pos_hash score) for each unique sequence 
     //  (and also its reverse complement)
@@ -440,7 +410,7 @@ namespace breseq {
 		map<string, int32_t> handled_seq;
 		map<string, JunctionCandidate> ids_to_print;
         
-		// Not sorted like in perl script to get reproducible ordering, because map is pre-sorted by CandidateJunction::Sorter
+		// Map is pre-sorted by CandidateJunction::Sorter
 		for (list<JunctionCandidatePtr>::iterator it = junction_candidate_list.begin(); it != junction_candidate_list.end(); ++it)
 		{
       JunctionCandidatePtr& jcp = *it;

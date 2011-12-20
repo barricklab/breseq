@@ -39,8 +39,6 @@ void identify_mutations(
                 const vector<double>& deletion_propagation_cutoff,
                 const vector<double>& deletion_seed_cutoffs,
 								double mutation_cutoff,
-								bool predict_deletions,
-								bool predict_polymorphisms,
 								uint8_t min_qual_score,
 								double polymorphism_cutoff,
 								double polymorphism_frequency_cutoff,
@@ -60,8 +58,6 @@ void identify_mutations(
                 deletion_propagation_cutoff,
                 deletion_seed_cutoffs,
 								mutation_cutoff,
-								predict_deletions,
-								predict_polymorphisms,
 								min_qual_score,
 								polymorphism_cutoff,
 								polymorphism_frequency_cutoff,
@@ -70,6 +66,8 @@ void identify_mutations(
 							);
 	imp.do_pileup();
 }
+
+  
 
 
 /*! Constructor.
@@ -85,8 +83,6 @@ identify_mutations_pileup::identify_mutations_pileup(
                               const vector<double>& deletion_propagation_cutoffs,
                               const vector<double>& deletion_seed_cutoffs,
 															double mutation_cutoff,
-															bool predict_deletions,
-															bool predict_polymorphisms,
 															uint8_t min_qual_score,
 															double polymorphism_cutoff,
 															double polymorphism_frequency_cutoff,
@@ -94,14 +90,13 @@ identify_mutations_pileup::identify_mutations_pileup(
 															bool print_per_position_file
                                                             )
 : pileup_base(bam, fasta)
+, _settings(settings)
 , _gd()
 , _gd_file(gd_file)
 , _min_qual_score(min_qual_score)
 , _deletion_seed_cutoffs(deletion_seed_cutoffs)
 , _deletion_propagation_cutoffs(deletion_propagation_cutoffs)
 , _mutation_cutoff(mutation_cutoff)
-, _predict_deletions(predict_deletions)
-, _predict_polymorphisms(predict_polymorphisms)
 , _polymorphism_cutoff(polymorphism_cutoff)
 , _polymorphism_frequency_cutoff(polymorphism_frequency_cutoff)
 , _coverage_dir(coverage_dir)
@@ -201,7 +196,7 @@ void identify_mutations_pileup::pileup_callback(const pileup& p) {
 	}	
   
   // temporary file for debugging polymorphism prediction
-  if(_predict_polymorphisms && !_polymorphism_r_input_file.is_open()) {
+  if(_settings.polymorphism_prediction && !_polymorphism_r_input_file.is_open()) {
 		string filename(_output_dir);
 		filename += "/polymorphism_statistics_input.tab";
 		_polymorphism_r_input_file.open(filename.c_str());
@@ -356,13 +351,6 @@ void identify_mutations_pileup::pileup_callback(const pileup& p) {
 		//#we are trying to find the base with the most support
     cSNPCall snp_call = _snp_caller.get_prediction();
     
-    /* DEBUG code
-    if (ref_base_char == 'N')
-    {
-      cout << "test" << endl;
-    }
-     */
-    
     base_char best_base_char;
     double e_value_call;
     
@@ -375,24 +363,21 @@ void identify_mutations_pileup::pileup_callback(const pileup& p) {
       e_value_call = snp_call.score;
     }
     
-    
     //Do we predict a base at this position?
     bool base_predicted=false;
     if(e_value_call >= _mutation_cutoff) {
       base_predicted = true;
     }
     
-    if (verbose)
-      cout << position << " e:" << e_value_call << " b:" << base_predicted << endl;
-
 		int total_cov[3]={0,0,0}; // triple, same as above
     
-    // Don't need to print, but is nice for debug
+    //// BEGIN Pring per-position output file
 		ostringstream line;
 		if (_print_per_position_file) {
       line << position << " " << insert_count << " " << ref_base_char << " " << e_value_call;
 		}
     
+    //// Summing coverage here should be moved to where coverage is updated?
 		for(size_t j=0; j<base_list_size; ++j) {
 			double top_cov = pos_info[base_char_list[j]].unique_trimmed_cov[2];
 			double bot_cov = pos_info[base_char_list[j]].unique_trimmed_cov[0];
@@ -407,18 +392,14 @@ void identify_mutations_pileup::pileup_callback(const pileup& p) {
     if (_print_per_position_file) {
       _per_position_file << line.str() << endl;
 		}
+    //// END Per-position output file
 		
 		//###
 		//## DELETION DELETION DELETION
 		//###
 		
-    
-		//#update information on deletions
-		if(insert_count == 0) {
-			if(_predict_deletions) {
+    if(!_settings.no_deletion_prediction && (insert_count == 0))
 				check_deletion_completion(position, p.target(), this_position_coverage, e_value_call);
-			}
-		}
 		
 		//###
 		//## POLYMORPHISM POLYMORPHISM POLYMORPHISM
@@ -428,50 +409,70 @@ void identify_mutations_pileup::pileup_callback(const pileup& p) {
     polymorphism_prediction ppred;
     base_char second_best_base_char;
 
-		if(_predict_polymorphisms) {
+		if(_settings.polymorphism_prediction || _settings.mixed_base_prediction) {
         
-        // Find the bases with the highest and second highest coverage
-        // We only predict polymorphisms involving these
-        base_index best_base_index;
-        int best_base_coverage = 0;
-        base_index second_best_base_index;
-        int second_best_base_coverage = 0;
+      // Find the bases with the highest and second highest coverage
+      // We only predict polymorphisms involving these
+      base_index best_base_index;
+      int best_base_coverage = 0;
+      base_index second_best_base_index;
+      int second_best_base_coverage = 0;
+
+      vector<double> snp_probs = _snp_caller.get_genotype_log10_probabilities();
+              
+      for (uint8_t i=0; i<base_list_size; i++) {
+        base_char this_base_char = base_char_list[i];
+        base_index this_base_index = i;
+        int this_base_coverage = pos_info[this_base_char].unique_trimmed_cov[0] + pos_info[this_base_char].unique_trimmed_cov[2];
         
-        vector<double> snp_probs = _snp_caller.get_genotype_log10_probabilities();
-                
-        for (uint8_t i=0; i<base_list_size; i++) {
-          base_char this_base_char = base_char_list[i];
-          base_index this_base_index = i;
-          int this_base_coverage = pos_info[this_base_char].unique_trimmed_cov[0] + pos_info[this_base_char].unique_trimmed_cov[2];
-          
-          // if better coverage or tied in coverage and better probability
-          if ((this_base_coverage > best_base_coverage) ||
-            ((this_base_coverage == best_base_coverage) && (snp_probs[this_base_index] > snp_probs[best_base_index]))) {
-            second_best_base_index = best_base_index;
-            second_best_base_coverage = best_base_coverage;
-            best_base_index = this_base_index;
-            best_base_coverage = this_base_coverage;
-          }
-          else if ((this_base_coverage > second_best_base_coverage) 
-            || ((this_base_coverage == second_best_base_coverage) && (snp_probs[this_base_index] > snp_probs[second_best_base_index]))) {
-            second_best_base_index = this_base_index;
-            second_best_base_coverage = this_base_coverage;
-          }
+        // if better coverage or tied in coverage and better probability
+        if ((this_base_coverage > best_base_coverage) ||
+          ((this_base_coverage == best_base_coverage) && (snp_probs[this_base_index] > snp_probs[best_base_index]))) {
+          second_best_base_index = best_base_index;
+          second_best_base_coverage = best_base_coverage;
+          best_base_index = this_base_index;
+          best_base_coverage = this_base_coverage;
+        }
+        else if ((this_base_coverage > second_best_base_coverage) 
+          || ((this_base_coverage == second_best_base_coverage) && (snp_probs[this_base_index] > snp_probs[second_best_base_index]))) {
+          second_best_base_index = this_base_index;
+          second_best_base_coverage = this_base_coverage;
+        }
+      }
+
+      // Only try mixed SNP model if there is coverage for more than one base!
+      if (second_best_base_coverage) {
+        best_base_char = base_char_list[best_base_index];
+        second_best_base_char = base_char_list[second_best_base_index];
+
+        // tries all frequencies of the best two
+        if (_settings.polymorphism_prediction) {
+          ppred = predict_polymorphism(best_base_char, second_best_base_char, pdata);
         }
         
-        // Only try mixed SNP model if there is coverage for more than one base!
-        if (second_best_base_coverage) {
-          best_base_char = base_char_list[best_base_index];
-          second_best_base_char = base_char_list[second_best_base_index];
+        // tries only the raw ML frequency of the best two
+        else if (_settings.mixed_base_prediction) {
+          ppred = predict_mixed_base(best_base_char, second_best_base_char, pdata);
+        }
+        
+        // We are requiring the polymorphism model to be a certain amount better
+        // than the single base model here.
+        ppred.log10_e_value = -(log(ppred.p_value)/log(10)) - _log10_ref_length;
 
-          ppred = predict_polymorphism(best_base_char, second_best_base_char, pdata);
-          ppred.log10_e_value = -(log(ppred.p_value)/log(10)) - _log10_ref_length;
-   
-          if (ppred.log10_e_value >= 0.0) {
+        // in polymorphism mode accept if it is better
+        if (_settings.polymorphism_prediction) {
+          if (ppred.log10_e_value >= 0.0) 
             polymorphism_predicted = 1;
-          }
-          //cerr << ppred.frequency << " " << ppred.log10_base_likelihood << " " << ppred.p_value << endl;
-        }		
+        }
+        
+        // have higher cutoff if we are in consensus mode
+        else if (_settings.mixed_base_prediction) {
+          if (ppred.log10_e_value >= _settings.polymorphism_log10_e_value_cutoff)
+            polymorphism_predicted = 1;
+        }
+        
+        //cerr << ppred.frequency << " " << ppred.log10_base_likelihood << " " << ppred.p_value << endl;
+      }		
       
 		}				
 		
@@ -527,12 +528,8 @@ void identify_mutations_pileup::pileup_callback(const pileup& p) {
         add_reject_reason(mut, "EVALUE");
 			}
     }
-    //## Specific initilizations for polymorphisms
+    //## Specific initializations for polymorphisms
     else if (polymorphism_predicted) {
- 
-      
-/// PROBLEM: We need to more robustly deal with cases of polymorphisms where neither of the two bases 
-///          involved is the reference base; Solve by adding two lines to genome diff?
                 
 			//# the frequency returned is the probability of the FIRST base
 			//# we want to quote the probability of the second base (the change from the reference).      
@@ -557,83 +554,70 @@ void identify_mutations_pileup::pileup_callback(const pileup& p) {
 			if (ppred.log10_e_value < _polymorphism_cutoff ) {
         add_reject_reason(mut, "EVALUE");
       } 
-
- /// <--- PROBLEM     
       
-      // Need to create lists of all quality scores for and against base for R output  
-      
-      if (ref_base_char != second_best_base_char) {
-        _polymorphism_r_input_file 
-          << p.target_name() << "\t"
-          << position << "\t"
-          << insert_count << "\t"
-          << ref_base_char << "\t"
-          << best_base_char << "\t"
-          << second_best_base_char << "\t"
-          << ppred.frequency << "\t"
-          << ppred.log10_base_likelihood << "\t"
-          << (0.1 * round(ppred.log10_e_value*10)) << "\t"
-          << pos_info[best_base_char].unique_trimmed_cov[2] << "\t"
-          << pos_info[best_base_char].unique_trimmed_cov[0] << "\t"
-          << pos_info[second_best_base_char].unique_trimmed_cov[2] << "\t"
-          << pos_info[second_best_base_char].unique_trimmed_cov[0] << "\t"
-        ;    
-      } else {
-        _polymorphism_r_input_file 
-          << p.target_name() << "\t"
-          << position << "\t"
-          << insert_count << "\t"
-          << ref_base_char << "\t"
-          << second_best_base_char << "\t"
-          << best_base_char << "\t"
-          << (1-ppred.frequency) << "\t"
-          << ppred.log10_base_likelihood << "\t"
-          << (0.1 * round(ppred.log10_e_value*10)) << "\t"
-          << pos_info[second_best_base_char].unique_trimmed_cov[2] << "\t"
-          << pos_info[second_best_base_char].unique_trimmed_cov[0] << "\t"
-          << pos_info[best_base_char].unique_trimmed_cov[2] << "\t"
-          << pos_info[best_base_char].unique_trimmed_cov[0] << "\t"
-        ;    
+      if ( (ppred.frequency < _polymorphism_frequency_cutoff) || (ppred.frequency > 1 -_polymorphism_frequency_cutoff) ) {
+        add_reject_reason(mut, "POLYMORPHISM_FREQUENCY_CUTOFF");
       }
-
+            
+      // Add line to R input file
+      // @JEB TODO: deprecate going to R here
+      // and in the main PIPELINE. We can now do
+      // Fisher's exact test in C++ and the KS
+      // test is probably not necessary
       
-      string best_base_qualities;
-      string second_best_base_qualities;
+      if (_settings.polymorphism_prediction) {
+        
+        _polymorphism_r_input_file 
+          << p.target_name() << "\t"
+          << position << "\t"
+          << insert_count << "\t"
+          << ref_base_char << "\t"
+          << best_base_char << "\t"
+          << second_best_base_char << "\t"
+          << ((ref_base_char != second_best_base_char) ? ppred.frequency : (1-ppred.frequency)) << "\t"
+          << ppred.log10_base_likelihood << "\t"
+          << (0.1 * round(ppred.log10_e_value*10)) << "\t"
+          << pos_info[best_base_char].unique_trimmed_cov[2] << "\t"
+          << pos_info[best_base_char].unique_trimmed_cov[0] << "\t"
+          << pos_info[second_best_base_char].unique_trimmed_cov[2] << "\t"
+          << pos_info[second_best_base_char].unique_trimmed_cov[0] << "\t"
+        ;    
+        
+        
+        string best_base_qualities;
+        string second_best_base_qualities;
 
-      for(vector<polymorphism_data>::iterator it=pdata.begin(); it<pdata.end(); ++it) {
-                
-        if (it->_base_char == best_base_char) {
-          if (best_base_qualities.length() > 0) {
-            best_base_qualities += ",";
+        for(vector<polymorphism_data>::iterator it=pdata.begin(); it<pdata.end(); ++it) {
+                  
+          if (it->_base_char == best_base_char) {
+            if (best_base_qualities.length() > 0) {
+              best_base_qualities += ",";
+            }
+            stringstream convert_quality;
+            convert_quality << (unsigned int)it->_quality;
+            best_base_qualities += convert_quality.str();
           }
-          stringstream convert_quality;
-          convert_quality << (unsigned int)it->_quality;
-          best_base_qualities += convert_quality.str();
+          
+          if (it->_base_char == second_best_base_char) {
+            if (second_best_base_qualities.length() > 0) {
+              second_best_base_qualities += ",";
+            }
+            stringstream convert_quality;
+            convert_quality << (unsigned int)it->_quality;
+            second_best_base_qualities += convert_quality.str();
+          }
         }
         
-        if (it->_base_char == second_best_base_char) {
-          if (second_best_base_qualities.length() > 0) {
-            second_best_base_qualities += ",";
-          }
-          stringstream convert_quality;
-          convert_quality << (unsigned int)it->_quality;
-          second_best_base_qualities += convert_quality.str();
+        if (ref_base_char != second_best_base_char) {
+          _polymorphism_r_input_file << best_base_qualities << "\t";
+          _polymorphism_r_input_file << second_best_base_qualities << "\t";
+        } else {
+          _polymorphism_r_input_file << second_best_base_qualities << "\t";
+          _polymorphism_r_input_file << best_base_qualities << "\t";
         }
-      }
-      
-      if (ref_base_char != second_best_base_char) {
-        _polymorphism_r_input_file << best_base_qualities << "\t";
-        _polymorphism_r_input_file << second_best_base_qualities << "\t";
-      } else {
-        _polymorphism_r_input_file << second_best_base_qualities << "\t";
-        _polymorphism_r_input_file << best_base_qualities << "\t";
-      }
-      
-      _polymorphism_r_input_file << endl;
-			
-      if ( (ppred.frequency < _polymorphism_frequency_cutoff) || (ppred.frequency > 1 -_polymorphism_frequency_cutoff) ) {
-        add_reject_reason(mut, "FREQ");
-      }
+        
+        _polymorphism_r_input_file << endl;
+			}
 		}
     
 		//## More fields common to consensus mutations and polymorphisms
@@ -835,10 +819,12 @@ void identify_mutations_pileup::update_unknown_intervals(uint32_t position, uint
 		}
 	}
 }
+  
+  
 
 /*! Predict the significance of putative polymorphisms.
  */
-polymorphism_prediction identify_mutations_pileup::predict_polymorphism (base_char best_base_char, base_char second_best_base_char, vector<polymorphism_data>& pdata ) {
+polymorphism_prediction identify_mutations_pileup::predict_polymorphism(base_char best_base_char, base_char second_best_base_char, vector<polymorphism_data>& pdata ) {
     
   //#calculate the likelihood of observed reads given this position is 100% the best base  
 	double log10_likelihood_of_one_base_model = 0;
@@ -866,14 +852,15 @@ polymorphism_prediction identify_mutations_pileup::predict_polymorphism (base_ch
   
   for(vector<polymorphism_data>::iterator it=pdata.begin(); it<pdata.end(); ++it) {
   
-  		if (it->_base_char == best_base_char) {
-        best_base_qualities.push_back(it->_quality);
-        best_base_strand_hash[it->_strand]++;
-      }
-      else if (it->_base_char == second_best_base_char) {
-        second_best_base_qualities.push_back(it->_quality);
-        second_best_base_strand_hash[it->_strand]++;
-      }
+    int8_t zp_strand = (it->_strand == +1) ? 1 : 0;
+    if (it->_base_char == best_base_char) {
+      best_base_qualities.push_back(it->_quality);
+      best_base_strand_hash[zp_strand]++;
+    }
+    else if (it->_base_char == second_best_base_char) {
+      second_best_base_qualities.push_back(it->_quality);
+      second_best_base_strand_hash[zp_strand]++;
+    }
   }
   
   
@@ -913,6 +900,89 @@ polymorphism_prediction identify_mutations_pileup::predict_polymorphism (base_ch
 		
 	return p;
 }
+  
+/*! Predict the significance of putative polymorphisms.
+ */
+polymorphism_prediction identify_mutations_pileup::predict_mixed_base(base_char best_base_char, base_char second_best_base_char, vector<polymorphism_data>& pdata ) {
+  
+  //#calculate the likelihood of observed reads given this position is 100% the best base  
+  double log10_likelihood_of_one_base_model = 0;
+  for(vector<polymorphism_data>::iterator it=pdata.begin(); it<pdata.end(); ++it) {
+    
+    double log10_correct_pr;
+    
+    covariate_values_t this_cv = it->_cv;
+    
+    if(it->_strand == 1) {
+      this_cv.ref_base() = basechar2index(best_base_char);
+    } else {
+      this_cv.ref_base() = basechar2index(complement_base_char(best_base_char)); 
+      this_cv.obs_base() = complement_base_index(this_cv.obs_base());
+    }
+    log10_correct_pr = _error_table.get_log10_prob(this_cv);
+    
+    log10_likelihood_of_one_base_model  += log10_correct_pr;
+  }
+  
+  vector<uint8_t> best_base_qualities;
+  vector<uint8_t> second_best_base_qualities;
+  uint32_t best_base_strand_hash[] = {0, 0};
+  uint32_t second_best_base_strand_hash[] = {0, 0};
+  
+  for(vector<polymorphism_data>::iterator it=pdata.begin(); it<pdata.end(); ++it) {
+    
+    int8_t zp_strand = (it->_strand == +1) ? 1 : 0;
+
+    if (it->_base_char == best_base_char) {
+      best_base_qualities.push_back(it->_quality);
+      best_base_strand_hash[zp_strand]++;
+    }
+    else if (it->_base_char == second_best_base_char) {
+      second_best_base_qualities.push_back(it->_quality);
+      second_best_base_strand_hash[zp_strand]++;
+    }
+  }
+  
+  
+  
+  // Unlike full polymorphism prediction, we test just the raw frequency of the two bases
+  // and do not check for bias later.
+  pair<double,double> best_two_base_model = best_two_base_model_log10_likelihood(best_base_char, second_best_base_char, pdata);
+  
+  double max_likelihood_fr_first_base = static_cast<double>(best_base_strand_hash[0] + best_base_strand_hash[1]) 
+    / static_cast<double>(best_base_strand_hash[0] + best_base_strand_hash[1] + second_best_base_strand_hash[0] + second_best_base_strand_hash[1]);
+  
+  double log10_likelihood_of_two_base_model = calculate_two_base_model_log10_likelihood(
+                                                                                        best_base_char, 
+                                                                                        second_best_base_char, 
+                                                                                        pdata, 
+                                                                                        max_likelihood_fr_first_base
+                                                                                        );
+  
+  //## Likelihood ratio test
+  double log10_likelihood_difference = log10_likelihood_of_one_base_model - log10_likelihood_of_two_base_model;
+  
+  //debug output 
+  /*
+   cerr  << "ML Best Base Fraction: " << max_likelihood_fr_first_base << endl;
+   cerr  << " Log10 Likelihood (one base model): " << log10_likelihood_of_one_base_model << endl;
+   cerr  << " Log10 Likelihood (two base model): " << log10_likelihood_of_two_base_model << endl;
+   cerr  << " Log10 Likelihood (different): " << log10_likelihood_difference << endl;
+   */
+  
+  long double p_value = 1;
+  if (max_likelihood_fr_first_base != 1.0) {
+    double likelihood_ratio_test_value = -2*log(10)*log10_likelihood_difference;
+    
+    p_value = pchisq(1.0L, likelihood_ratio_test_value);
+    //cerr << "likelihood_ratio_test_value: " << likelihood_ratio_test_value << " p-value: " << p_value << endl;
+  }
+  
+  polymorphism_prediction p(max_likelihood_fr_first_base, log10_likelihood_of_one_base_model - log10_likelihood_of_two_base_model, p_value);
+  
+  return p;
+}
+  
 
 
 /*! Find the best fraction for the best base at a polymorphic site.
@@ -942,7 +1012,12 @@ pair<double,double> identify_mutations_pileup::best_two_base_model_log10_likelih
 
 /*! Calculate the likelihood of a mixture model of two bases leading to the observed read bases.
  */
-double identify_mutations_pileup::calculate_two_base_model_log10_likelihood (base_char best_base_char, base_char second_best_base_char, const vector<polymorphism_data>& pdata, double best_base_freq)
+double identify_mutations_pileup::calculate_two_base_model_log10_likelihood(
+                                                                            base_char best_base_char, 
+                                                                            base_char second_best_base_char, 
+                                                                            const vector<polymorphism_data>& pdata, 
+                                                                            double best_base_freq
+                                                                            )
 {
 	double log10_likelihood = 0;	
 	

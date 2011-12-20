@@ -171,7 +171,7 @@ public:
   struct is_not_type;
   struct field_exists;
   struct fields_exist;
-  struct frequency_less_than_two_or_no_show;
+  struct no_show;
   struct rejected;
 
   cDiffEntry& operator()(const diff_entry_key_t& key, const diff_entry_value_t& value) {
@@ -447,11 +447,11 @@ protected:
   gd_entry_type m_type;
 };
 
-struct cDiffEntry::frequency_less_than_two_or_no_show:public unary_function<diff_entry_ptr_t, bool>
+struct cDiffEntry::no_show:public unary_function<diff_entry_ptr_t, bool>
 {
   virtual bool operator() (const diff_entry_ptr_t& cDiffEntry) const
   {
-    return ((*cDiffEntry)["frequency"] == "0" || (*cDiffEntry)["frequency"] == "1" || (*cDiffEntry).entry_exists("no_show"));
+    return cDiffEntry->entry_exists("no_show");
   }
 };
 
