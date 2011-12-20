@@ -212,9 +212,15 @@ namespace breseq
     
     this->verbose = options.count("verbose");
     this->run_name = options["name"];
-
     this->base_output_path = options["output"];
+    
     this->polymorphism_prediction = options.count("polymorphism-prediction");
+    if (this->polymorphism_prediction) {
+      
+      // different default value
+      this->polymorphism_frequency_cutoff = 0; // cut off if < X or > 1-X
+      this->mixed_base_prediction = false;
+    } 
     
     this->base_quality_cutoff = from_string<uint32_t>(options["base-quality-cutoff"]);
 
@@ -260,10 +266,10 @@ namespace breseq
   
   void Settings::command_line_run_header()
   {
-    fprintf(stderr, "===============================================================================\n");
+    fprintf(stderr, "====================================================================================\n");
     fprintf(stderr, "%s  %s   %s\n", PACKAGE_STRING, HG_REVISION, PACKAGE_URL);
     fprintf(stderr, "\n");
-    fprintf(stderr, "Authors: Barrick JE, Borges JJ, Knoester DB, Colburn GR, Meyer AG\n");
+    fprintf(stderr, "Authors: Barrick JE, Borges JJ, Colburn GR, Knoester DB, Meyer AG, Reba A, Strand MD\n");
     fprintf(stderr, "Contact: %s\n", PACKAGE_BUGREPORT);
     fprintf(stderr, "\n");
     fprintf(stderr, "%s is free software; you can redistribute it and/or modify it under the\n", PACKAGE_NAME);
@@ -272,7 +278,7 @@ namespace breseq
     fprintf(stderr, "\n");
     fprintf(stderr, "Copyright (c) 2008-2010 Michigan State University\n");
     fprintf(stderr, "Copyright (c) 2011      The University of Texas at Austin\n");
-    fprintf(stderr, "===============================================================================\n");
+    fprintf(stderr, "====================================================================================\n");
   }
 
 	void Settings::pre_option_initialize(int argc, char* argv[])
@@ -343,15 +349,17 @@ namespace breseq
     this->junction_pos_hash_neg_log10_p_value_cutoff = 3;
         
     //// MutationIdentification ////
+    
+    this->polymorphism_prediction = false;       // perform polymorphism prediction
+    this->mixed_base_prediction = true;          // perform mixed base prediction
+    
+    // these are the defaults for mixed_base_prediction mode
 		this->mutation_log10_e_value_cutoff = 10; // log10 of evidence required for SNP calls
-    
-    this->polymorphism_prediction = false;          // perform polymorphism prediction
-    
-		this->polymorphism_log10_e_value_cutoff = 2;
+    this->polymorphism_log10_e_value_cutoff = this->mutation_log10_e_value_cutoff;
 		this->polymorphism_bias_p_value_cutoff = 0.05;
-		this->polymorphism_frequency_cutoff = 0; // cut off if < X or > 1-X
+		this->polymorphism_frequency_cutoff = 0.1; // cut off if < X or > 1-X
 		this->polymorphism_coverage_both_strands = 0; // require this much coverage on each strand
-		this->no_indel_polymorphisms = 0;
+		this->no_indel_polymorphisms = false;
     
 		//// Output ////
 		this->max_rejected_polymorphisms_to_show = 20;
@@ -368,7 +376,6 @@ namespace breseq
     this->add_metadata_to_gd = false;
     
     //// Global Workflow ////
-    this->polymorphism_prediction = false; // predict polymorphisms
     this->junction_prediction = true; // perform junction prediction steps
 		this->no_mutation_prediction = false;  // don't perform read mismatch/indel prediction steps
 		this->no_deletion_prediction = false; // don't perform deletion prediction steps

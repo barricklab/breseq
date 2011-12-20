@@ -241,15 +241,21 @@ namespace breseq
     double junction_pos_hash_neg_log10_p_value_cutoff;
     
     //! Settings: Mutation Identification
-    uint32_t base_quality_cutoff;
-    uint32_t maximum_read_mismatches;    
+    
+    uint32_t base_quality_cutoff;       // ignore bases below this cutoff for RA evidence (still counted for deletions?)
+    uint32_t maximum_read_mismatches;   // ignore reads with this more than this number of mismatches (I+D+MM)
+    
     double deletion_coverage_propagation_cutoff;
     double deletion_coverage_seed_cutoff;
-    double mutation_log10_e_value_cutoff;
     
+    
+    // These are mutually exclusive settings (polymorphism prediction overrides mixed_base_prediction)
     bool polymorphism_prediction;
-    double polymorphism_log10_e_value_cutoff;      // defaults to 
-		double polymorphism_bias_p_value_cutoff;       // 0 means do not test for bias
+    bool mixed_base_prediction;         // predict not only consensus genotype calls, but test mixed states between them
+
+    double mutation_log10_e_value_cutoff;
+    double polymorphism_log10_e_value_cutoff;      // defaults to mutation_log10_e_value_cutoff
+		double polymorphism_bias_p_value_cutoff;       
 		double polymorphism_frequency_cutoff;          
 		uint32_t polymorphism_coverage_both_strands;
 		uint32_t polymorphism_reject_homopolymer_length;

@@ -226,9 +226,16 @@ void html_index(const string& file_name, const Settings& settings, Summary& summ
   HTML << "<p>" << endl;
   HTML << Html_Mutation_Table_String(settings, gd, muts, relative_path, false, one_ref_seq) << endl;
 
-// #   ###
-// #   ## Unassigned evidence
-// #   ###
+  //////
+  // Unassigned evidence
+  //////
+  
+  diff_entry_list_t ra = gd.filter_used_as_evidence(gd.show_list(make_vector<gd_entry_type>(RA)));
+  ra.remove_if(cDiffEntry::rejected()); 
+  
+  if (ra.size() > 0) {
+    HTML << "<p>" << html_read_alignment_table_string(ra, false, "Unassigned read alignment evidence", relative_path);
+  }
   
   diff_entry_list_t mc = gd.filter_used_as_evidence(gd.show_list(make_vector<gd_entry_type>(MC)));
   mc.remove_if(cDiffEntry::rejected()); 
@@ -251,14 +258,80 @@ void html_index(const string& file_name, const Settings& settings, Summary& summ
     HTML << html_new_junction_table_string(jcu, false, "Unassigned new junction evidence...", relative_path);
   }
   
-  HTML << "<p>" << a(Settings::relative_path(settings.marginal_html_file_name, settings.output_path), "Marginal predictions");
-
   HTML << html_footer();
   HTML.close();
 }
 
 
+void mark_gd_entries_no_show(const Settings& settings, cGenomeDiff& gd)
+{
+  /////
+  // RA evidence
+  //////
+  
+  vector<gd_entry_type> ra_types = make_vector<gd_entry_type>(RA);
+  list<counted_ptr<cDiffEntry> > ra = gd.filter_used_as_evidence(gd.list(ra_types));
+  ra.remove_if(not1(cDiffEntry::field_exists("reject")));
+  ra.sort(cDiffEntry::by_scores(make_vector<string>("quality")));
+  
+  // Filtering for polymorphism predictions
 
+  /* @JEB expeirmenting with removal
+  // Require a certain amount of coverage for the variant
+  diff_entry_list_t new_ra = gd.filter_used_as_evidence(gd.list(ra_types));
+  for (diff_entry_list_t::iterator item = new_ra.begin(); item != new_ra.end(); item++)
+  {
+    vector<string> top_bot = split((**item)["tot_cov"], "/");
+    uint32_t top = from_string<int32_t>(top_bot[0]);
+    uint32_t bot = from_string<int32_t>(top_bot[1]);
+    if (top + bot <= 2) (**item)["no_show"] = "1";
+  }
+  ra.remove_if(cDiffEntry::no_show());
+  */
+  
+  // We mark polymorphism entries above some limit as no_show 
+  // to prevent creating too many alignments.
+  uint32_t i=0;
+  for(diff_entry_list_t::iterator item = ra.begin(); item != ra.end(); item++)
+  {
+    cDiffEntry& ra_item = **item;
+    if (!ra_item.entry_exists(FREQUENCY)) continue;
+    if ( from_string<double>(ra_item[FREQUENCY]) == 1.0 ) continue;
+    
+    if (i++ > settings.max_rejected_polymorphisms_to_show)
+      ra_item[NO_SHOW] = "1";
+  }
+  
+  
+  /////
+  // JC evidence
+  //////
+  
+  vector<gd_entry_type> jc_types = make_vector<gd_entry_type>(JC);
+  
+  diff_entry_list_t jc = gd.filter_used_as_evidence(gd.list(jc_types));
+  
+  // This is the correct way to erase from a list! @MDS
+  for (diff_entry_list_t::iterator it = jc.begin(); it != jc.end(); )
+  {
+    if (((*it)->number_reject_reasons() == 0))
+      it = jc.erase(it);
+    else
+      it++;
+  }
+  
+  jc.sort(cDiffEntry::by_scores(make_vector<diff_entry_key_t>("pos_hash_score")("total_non_overlap_reads")));
+  
+  i = 0;
+  for (diff_entry_list_t::iterator it = jc.begin(); it != jc.end(); it++ )
+  {
+    if (i++ >= settings.max_rejected_junctions_to_show)
+      (**it)["no_show"] = "1";
+  }
+
+
+}
+  
 void html_marginal_predictions(const string& file_name, const Settings& settings,Summary& summary,
                                cReferenceSequences& ref_seq_info, cGenomeDiff& gd)
 {
@@ -292,24 +365,30 @@ void html_marginal_predictions(const string& file_name, const Settings& settings
   // ###
   // ## Marginal evidence
   // ###
-  diff_entry_list_t ra = gd.filter_used_as_evidence(gd.show_list(make_vector<gd_entry_type>(RA)));
   
+  // RA evidence
+  
+  vector<gd_entry_type> ra_types = make_vector<gd_entry_type>(RA);
+  list<counted_ptr<cDiffEntry> > ra = gd.filter_used_as_evidence(gd.show_list(ra_types));
+  ra.remove_if(not1(cDiffEntry::field_exists("reject")));
+  ra.sort(cDiffEntry::by_scores(make_vector<string>("quality")));
+    
   if (ra.size() > 0) {
     HTML << "<p>" << endl;
-    HTML << html_read_alignment_table_string(ra, false, "Marginal read alignment evidence...",
-      relative_path) << endl;
+    HTML << html_read_alignment_table_string(ra, false, "Marginal read alignment evidence...", relative_path) << endl;
   }
   
-    diff_entry_list_t jc = gd.filter_used_as_evidence(gd.show_list(make_vector<gd_entry_type>(JC)));
-    jc.remove_if(not1(cDiffEntry::field_exists("reject")));
-   if (jc.size()) {
-     //Sort by score, not by position (the default order)...
-     jc.sort(cDiffEntry::by_scores(
-       make_vector<diff_entry_key_t>("pos_hash_score")("total_non_overlap_reads")));
-    
-     HTML << "<p>" << endl;
-     HTML << html_new_junction_table_string(jc, false, "Marginal new junction evidence...", relative_path);
-   }
+  vector<gd_entry_type> jc_types = make_vector<gd_entry_type>(JC);
+  diff_entry_list_t jc = gd.filter_used_as_evidence(gd.show_list(jc_types));
+  jc.remove_if(not1(cDiffEntry::field_exists("reject")));
+  if (jc.size()) {
+    //Sort by score, not by position (the default order)...
+    jc.sort(cDiffEntry::by_scores(
+     make_vector<diff_entry_key_t>("pos_hash_score")("total_non_overlap_reads")));
+
+    HTML << "<p>" << endl;
+    HTML << html_new_junction_table_string(jc, false, "Marginal new junction evidence...", relative_path);
+  }
 
   HTML << html_footer();
   HTML.close();
@@ -694,6 +773,8 @@ string breseq_header_string(const Settings& settings)
   ss << "<br>";
   ss << a(Settings::relative_path(settings.index_html_file_name, settings.output_path), "mutation predictions"); 
   ss << " | " << endl;
+  ss << a(Settings::relative_path(settings.marginal_html_file_name, settings.output_path), "marginal predictions"); 
+  ss << " | " << endl;
   ss << a(Settings::relative_path(settings.summary_html_file_name, settings.output_path), "summary statistics");
   ss << " | " << endl;
   ss << a(Settings::relative_path(settings.final_genome_diff_file_name, settings.output_path), "genome diff");
@@ -874,8 +955,8 @@ string html_read_alignment_table_string(diff_entry_list_t& list_ref, bool show_r
 
     if (is_polymorphism) {
       // display extra score data for polymorphisms...
-      string log_fisher = "999";
-      string log_ks = "999";
+      string log_fisher = "";
+      string log_ks = "";
          
       if (c.entry_exists(FISHER_STRAND_P_VALUE) &&
           from_string<double>(c[FISHER_STRAND_P_VALUE]) > 0 )
@@ -885,15 +966,14 @@ string html_read_alignment_table_string(diff_entry_list_t& list_ref, bool show_r
           from_string<double>(c[KS_QUALITY_P_VALUE]) > 0 ) 
         log_ks = to_string(log(from_string<double>(c[KS_QUALITY_P_VALUE]))/log(10));
 
-      ssf.precision(1);
-      ssf << fixed << c["polymorphism_quality"] << " " <<
-                      log_fisher << " " <<
-                      log_ks;
+      ssf << fixed << setprecision(1);
+      ssf << from_string<double>(c["polymorphism_quality"]);
+      if (log_fisher != "") ssf << " " << log_fisher;
+      if (log_ks != "") ssf << " " << log_ks;
       ss << td(ALIGN_RIGHT, nonbreaking(ssf.str()));
       //Clear formated string stream
       ssf.str("");
       ssf.clear();
-
     }
 
     else {

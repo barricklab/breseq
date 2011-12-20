@@ -1139,12 +1139,16 @@ namespace breseq {
     {
       cDiffEntry& item = **ra_it;
 
+      // Sometimes a SNP might be called in a deleted area because the end was wrong,
+			// but it was corrected using a junction. (This catches this case.)
 			if ( item.entry_exists("reject") || item.entry_exists("deleted"))
 			  continue;
 
-			// Sometimes a SNP might be called in a deleted area because the end was wrong,
-			// but it was corrected using a junction. (This catches this case.)
-
+      // If we are predicting mixed bases and not polymorphisms, then don't create
+      // mutations for mixed frequency predictions (leave them as unassigned RA evidence)
+      if (settings.mixed_base_prediction && (item["frequency"] != "1"))
+        continue;
+      
 			bool same = false;
 			if (!first_time)
 			{

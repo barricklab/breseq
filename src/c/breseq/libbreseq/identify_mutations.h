@@ -36,6 +36,7 @@ namespace breseq {
 	 \param output_dir is the directory in which output files will be placed.
 	 \param readfiles is a list of read files that were used to build the bam (do not include filename extension)
 	 */
+  
 	void identify_mutations(
                           const Settings& settings,
                           const Summary& summary,
@@ -47,8 +48,6 @@ namespace breseq {
                           const vector<double>& deletion_propagation_cutoff,
                           const vector<double>& deletion_seed_cutoff,
 													double mutation_cutoff,
-													bool predict_deletions,
-													bool predict_polymorphisms,
                           uint8_t min_qual_score,
                           double polymorphism_cutoff,
                           double polymorphism_frequency_cutoff,
@@ -235,8 +234,6 @@ namespace breseq {
                               const vector<double>& deletion_propagation_cutoff,
                               const vector<double>& deletion_seed_cutoffs,
 															double mutation_cutoff,
-															bool predict_deletions,
-															bool predict_polymorphisms,
                               uint8_t min_qual_score,
                               double polymorphism_cutoff,
                               double polymorphism_frequency_cutoff,
@@ -263,6 +260,9 @@ namespace breseq {
 		//! Predict whether there is a significant polymorphism.
     polymorphism_prediction predict_polymorphism (base_char best_base_char, base_char second_best_base_char, vector<polymorphism_data>& pdata );
 
+    //! Predict whether there is a mixed base.
+    polymorphism_prediction predict_mixed_base(base_char best_base_char, base_char second_best_base_char, vector<polymorphism_data>& pdata );
+    
 		//! Find best mixture of two bases and likelihood of producing observed read bases.
     pair<double,double> best_two_base_model_log10_likelihood(base_char best_base_char, base_char second_best_base_char, vector<polymorphism_data>& pdata);
 
@@ -270,14 +270,13 @@ namespace breseq {
     double calculate_two_base_model_log10_likelihood (base_char best_base_char, base_char second_best_base_char, const vector<polymorphism_data>& pdata, double best_base_freq);
 		
     //! Settings passed at command line
+    const Settings& _settings;
 		cGenomeDiff _gd; //!< Genome diff.
     string _gd_file; //!< file name for Genome diff
     uint8_t _min_qual_score; //!< minimum quality score to count base for RA
     vector<double> _deletion_seed_cutoffs; //!< Coverage below which deletions are cutoff.
     vector<double> _deletion_propagation_cutoffs; //!< Coverage above which deletions are cutoff.
 		double _mutation_cutoff; //!< log10 e-value cutoff value for mutation predictions.
-		bool _predict_deletions; //!< Whether to predict mutations.
-		bool _predict_polymorphisms; //!< Whether to predict polymorphisms.
     double _polymorphism_cutoff; //!< log10 e-value cutoff for predicted polymorphisms.
     double _polymorphism_frequency_cutoff; //!< Frequency cutoff for predicted polymorphisms.
 		const string _coverage_dir; //!< Directory in which to store coverage data.
