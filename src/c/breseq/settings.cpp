@@ -515,7 +515,6 @@ namespace breseq
 		this->complete_mutations_text_file_name = this->mutation_identification_path + "/@.mutations.tab";
 		this->complete_coverage_text_file_name = this->mutation_identification_path + "/@.coverage.tab";
 		this->mutation_identification_done_file_name = this->mutation_identification_path + "/mutation_identification.done";
-		this->cnv_coverage_tab_file_name = this->mutation_identification_path + "/@.cnv_coverage.tab";
 		this->genome_error_counts_file_name = this->mutation_identification_path + "/error_counts.tab";
 		this->polymorphism_statistics_input_file_name = this->mutation_identification_path + "/polymorphism_statistics_input.tab";
 		this->polymorphism_statistics_output_file_name = this->mutation_identification_path + "/polymorphism_statistics_output.tab";
@@ -523,6 +522,13 @@ namespace breseq
 		this->polymorphism_statistics_r_script_log_file_name = this->mutation_identification_path + "/polymorphism_statistics_output.log";
 		this->polymorphism_statistics_ra_mc_genome_diff_file_name = this->mutation_identification_path + "/ra_mc_evidence_polymorphism_statistics.gd";
 		this->polymorphism_statistics_done_file_name = this->mutation_identification_path + "/polymorphism_statistics.done";
+
+
+		this->copy_number_variation_path = "09_copy_number_variation";
+    if (this->base_output_path.size() > 0) this->copy_number_variation_path = this->base_output_path + "/" + this->copy_number_variation_path;
+    this->tiled_complete_coverage_text_file_name = this->copy_number_variation_path + "/@.tiled.tab";
+    this->ranges_text_file_name = this->copy_number_variation_path + "/@.ranges.tab";
+    this->smoothed_ranges_text_file_name = this->copy_number_variation_path + "/@.smoothed_ranges.tab";
 
 		////// data //////
 		// things in this location are needed for running post-processing steps
