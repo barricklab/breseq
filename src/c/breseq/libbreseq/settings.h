@@ -369,9 +369,14 @@ namespace breseq
     
 		string complete_mutations_text_file_name;
 		string complete_coverage_text_file_name;
-		string cnv_coverage_tab_file_name;
 		string genome_error_counts_file_name;
     string ra_mc_genome_diff_file_name;
+    
+    //copy_number_variation
+    string copy_number_variation_path;
+    string tiled_complete_coverage_text_file_name;
+    string ranges_text_file_name;
+    string smoothed_ranges_text_file_name;
 
     string polymorphism_statistics_input_file_name;
 		string polymorphism_statistics_output_file_name;
