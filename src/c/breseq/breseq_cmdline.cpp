@@ -1418,6 +1418,243 @@ int do_copy_number_variation(int argc, char *argv[])
   return 0;
 }
 
+int do_download(int argc, char *argv[])
+{
+  stringstream ss;
+  ss << "Useage: breseq DOWNLOAD -l <user:password> -d <download_dir> -g <genome_diff_dir>\n";
+  ss << "Useage: breseq DOWNLOAD -l <user:password> -d <download_dir> <file1.gd file2.gd file3.gd ...>\n";
+
+  AnyOption options(ss.str());
+  options("login,l",           "Login user:password information for private server access.", "");
+  options("download_dir,d",    "Output directory to download file to.", "02_Downloads");
+  options("genome_diff_dir,g", "Directory to searched for genome diff files.", "01_Data");
+  options.processCommandArgs(argc, argv);
+
+  if (!options.getArgc() && options["genome_diff_dir"].empty()) {
+    options.addUsage("\nYou must input genome diff files or a directory to search for genome diff files.");
+    options.addUsage("Examples:");
+    options.addUsage("\t breseq DOWNLOAD -l john:1234 -d downloads -g data");
+    options.addUsage("\t breseq DOWNLOAD -l john:1234 -d downloads 1B4.gd GRC2000.gd");
+    options.printUsage();
+    return -1;
+  }
+
+  printf("\n++Starting download.\n");
+
+  //! Step: Initialized user parameters.
+  const bool private_access = options.count("login");
+  string user = "";
+  string password = "";
+  if (private_access) {
+    const string &login = options["login"];
+
+    size_t pos = login.find_first_of(':');
+    assert (pos != string::npos);
+
+    user = login.substr(0, pos);
+    password = login.substr(pos + 1);
+    printf("Private access enabled, user:%s password:%s\n", user.c_str(), password.c_str());
+  }
+
+  string download_dir = options["download_dir"];
+  download_dir[download_dir.size() - 1] == '/' ?
+        download_dir.erase(download_dir.size() - 1) : download_dir;
+  create_path(download_dir);
+
+  string genome_diff_dir = options["genome_diff_dir"];
+  genome_diff_dir[genome_diff_dir.size() - 1] == '/' ?
+        genome_diff_dir.erase(genome_diff_dir.size() - 1) : genome_diff_dir;
+  create_path(genome_diff_dir);
+
+  //! Step: Define currently used genome diff header tags.
+  //These header keys determine which URL to download from.
+  enum {
+    GENBANK,
+    SRA,
+    BARRICK_PUBLIC,
+    BARRICK_PRIVATE
+  };
+
+  map<string, int32_t> key_lookup
+      = make_map<string, int32_t>
+      ("Genbank"            , GENBANK)
+      ("SRA"                , SRA)
+      ("BarrickLab-Public"  , BARRICK_PUBLIC)
+      ("BarrickLab-Private" , BARRICK_PRIVATE);
+
+  //Map the keys to a C-style format string that represents the URL.
+  map<int32_t, string> key_url_format
+      = make_map<int32_t, string>
+      (GENBANK,        "http://www.ncbi.nlm.nih.gov/sviewer/?db=nuccore&val=%s&report=gbwithparts&retmode=text")
+      (SRA,            "ftp://ftp.sra.ebi.ac.uk/vol1/fastq/%s/%s/%s.fastq.gz")
+      (BARRICK_PUBLIC, "http://barricklab.org/%s")
+      (BARRICK_PRIVATE,"ftp://" + user + ":" + password + "@backup.barricklab.org/%s");
+
+  //Map the keys to a C-style format string that represents the download file's to-be-downloaded/local file path.
+  map<int32_t, string>key_file_path_format
+      = make_map<int32_t, string>
+      (GENBANK,         download_dir + "/%s.gbk")
+      (SRA,             download_dir + "/%s.fastq.gz")
+      (BARRICK_PUBLIC,  download_dir + "/%s")
+      (BARRICK_PRIVATE, download_dir + "/%s");
+
+
+  //! Step: Collect genome diff file names from either user directory or file input.
+  list<string> file_names;
+  if (!options.getArgc()) {
+    printf("Searching directory %s for genome diff files.\n", genome_diff_dir.c_str());
+    string cmd = "";
+    sprintf(cmd, "ls %s/*gd", genome_diff_dir.c_str());
+    vector<string> temp = split(SYSTEM_CAPTURE(cmd, true), "\n");
+    file_names = list<string>(temp.begin(), temp.end());
+  } else {
+    printf("User input genome diff files.\n");
+    const size_t n = options.getArgc();
+    for (size_t i = 0; i < n; i++) {
+      file_names.push_back(options.getArgv(i));
+    }
+  }
+  copy(file_names.begin(), file_names.end(), ostream_iterator<string>(cout, "\n"));
+  assert(file_names.size());
+
+  //! Step: Parse given download directory to avoid re-downloading files.
+  set<string> downloaded;//Used to filter files that have already been downloaded.
+  {
+    string cmd = "";
+    sprintf(cmd, "ls %s", download_dir.c_str());
+    vector<string> files = split(SYSTEM_CAPTURE(cmd, true), "\n");
+    for (int i = 0; i < files.size(); i++) {
+      string &file = files[i];
+      downloaded.insert(download_dir + "/" + file);
+      //Check that it doesn't exist as a compressed file.
+      if (file.find(".gz") != file.size() - 3) {
+        downloaded.insert(download_dir + "/" + file.append(".gz"));
+      }
+    }
+  }
+
+  //! Step: Begin parsing the genome diff files to collect key:value pairs.
+  list<pair<string, string> > key_values;
+  set<string> values; //Used to filter duplicate values.
+  for(;file_names.size(); file_names.pop_front()) {
+    cGenomeDiff gd(file_names.front());
+
+    const vector<string> &refs = gd.metadata.ref_seqs;
+    for (size_t i = 0; i < refs.size(); i++) {
+      const string &ref = refs[i];
+      const size_t pos = ref.find_first_of(':');
+      if (pos == string::npos) {
+        continue;
+      }
+      const string &key = ref.substr(0, pos);
+      const string &value = ref.substr(pos + 1);
+      if (!values.count(value)) {
+        key_values.push_back(pair<string, string>(key, value));
+        values.insert(value);
+        downloaded.insert(value);
+      }
+    }
+
+    const vector<string> &reads = gd.metadata.read_seqs;
+    for (int i = 0; i < reads.size(); i++) {
+      const string &read = reads[i];
+      const size_t pos = read.find_first_of(':');
+      if (pos == string::npos) {
+        continue;
+      }
+      const string &key = read.substr(0, pos);
+      const string &value = read.substr(pos + 1);
+      if (!values.count(value)) {
+        key_values.push_back(pair<string, string>(key, value));
+        values.insert(value);
+        downloaded.insert(value);
+      }
+    }
+  }
+  assert (key_values.size());
+
+  //! Step: Build url and file paths depending on given key.
+  list<pair<string, string> > url_file_paths;
+  for (;key_values.size(); key_values.pop_front()) {
+    assert(key_lookup.count(key_values.front().first));
+    const int32_t key =  key_lookup[key_values.front().first];
+    const string value = key_values.front().second;
+
+    const char *url_format       = key_url_format[key].c_str();
+    const char *file_path_format = key_file_path_format[key].c_str();
+
+    string url = "";
+    string file_path = "";
+
+    switch (key)
+    {
+    case GENBANK:
+    {
+      sprintf(url, url_format, value.c_str());
+      sprintf(file_path, file_path_format, value.c_str());
+
+    } break;
+
+    case SRA:
+    {
+      const char *first  = value.substr(0,6).c_str();
+      const char *second = value.substr(0,9).c_str();
+      const char *third  = value.c_str();
+      sprintf(url, url_format, first, second, third);
+      sprintf(file_path, file_path_format, third);
+    } break;
+
+    case BARRICK_PUBLIC:
+    {
+      sprintf(url, url_format, value.c_str());
+      sprintf(file_path, file_path_format, value.c_str());
+    } break;
+
+    case BARRICK_PRIVATE:
+    {
+      if(!private_access) continue;
+      sprintf(url, url_format, value.c_str());
+      sprintf(file_path, file_path_format, value.c_str());
+    } break;
+
+    default: break;
+    }//End switch.
+
+    assert(url.size() || file_path.size());
+
+    url_file_paths.push_back(pair<string, string>(url, file_path));
+  }
+
+  //! Step: Create wget commands to download files.
+  list<string> gunzippers;//Collect compressed files.
+  for (;url_file_paths.size(); url_file_paths.pop_front()) {
+    const string &url = url_file_paths.front().first;
+    const string &file_path = url_file_paths.front().second;
+    if (downloaded.count(file_path)) {
+      printf("File:%s already exists in directory %s.\n", file_path.c_str(), download_dir.c_str());
+      continue;
+    } else {
+      string cmd = "";
+      sprintf(cmd, "wget -O %s %s", file_path.c_str(), url.c_str());
+      SYSTEM(cmd);
+    }
+    if (file_path.find(".gz") == file_path.size() - 3) {
+      gunzippers.push_back(file_path);
+    }
+  }
+
+  //! Step: Uncompress files that need it.
+  for (;gunzippers.size(); gunzippers.pop_front()) {
+    const string &file_path = gunzippers.front();
+    string cmd = "";
+    sprintf(cmd, "gunzip %s", file_path.c_str());
+    SYSTEM(cmd);
+  }
+
+  return 0;
+}
+
+
 int do_subsequence(int argc, char *argv[])
 {
   AnyOption options("Usage: breseq SUBSEQUENCE -r <reference> -o <output.fasta> -p <REL606:50-100>");
@@ -2395,6 +2632,8 @@ int main(int argc, char* argv[]) {
     return do_runfile(argc_new, argv_new);
   } else if (command == "CNV") {
     return do_copy_number_variation(argc_new, argv_new);
+  } else if (command == "DOWNLOAD") {
+    return do_download(argc_new, argv_new);
   }
   else {
     // Not a sub-command. Use original argument list.
