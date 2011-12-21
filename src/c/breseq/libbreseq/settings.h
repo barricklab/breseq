@@ -207,6 +207,7 @@ namespace breseq
 		bool no_mutation_prediction;
 		bool no_deletion_prediction;
 		bool no_alignment_generation;
+		bool do_copy_number_variation;
 		bool no_unmatched_reads;
     bool keep_all_intermediates;
 
@@ -374,9 +375,11 @@ namespace breseq
     
     //copy_number_variation
     string copy_number_variation_path;
+    string copy_number_variation_done_file_name;
     string tiled_complete_coverage_text_file_name;
     string ranges_text_file_name;
     string smoothed_ranges_text_file_name;
+    
 
     string polymorphism_statistics_input_file_name;
 		string polymorphism_statistics_output_file_name;

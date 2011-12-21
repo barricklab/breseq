@@ -174,6 +174,7 @@ namespace breseq
     ("require-match-fraction", "only consider alignments that cover this fraction of a read", "0.9")
     ("values-to-gd","",TAKES_NO_ARGUMENT, ADVANCED_OPTION) // @JEB @GRC added in for gathering/analyzing breseq values
     ("verbose,v","",TAKES_NO_ARGUMENT)
+
     .processCommandArgs(argc, argv);
     
     options.addUsage("");
@@ -221,6 +222,7 @@ namespace breseq
       this->polymorphism_frequency_cutoff = 0; // cut off if < X or > 1-X
       this->mixed_base_prediction = false;
     } 
+    this->do_copy_number_variation = options.count("cnv");
     
     this->base_quality_cutoff = from_string<uint32_t>(options["base-quality-cutoff"]);
 
@@ -379,6 +381,7 @@ namespace breseq
     this->junction_prediction = true; // perform junction prediction steps
 		this->no_mutation_prediction = false;  // don't perform read mismatch/indel prediction steps
 		this->no_deletion_prediction = false; // don't perform deletion prediction steps
+		this->do_copy_number_variation = false;
 		this->no_alignment_generation = false; // don't generate alignments
     this->no_unmatched_reads = false;
     this->keep_all_intermediates = false;
@@ -503,6 +506,7 @@ namespace breseq
 
 		this->copy_number_variation_path = "09_copy_number_variation";
     if (this->base_output_path.size() > 0) this->copy_number_variation_path = this->base_output_path + "/" + this->copy_number_variation_path;
+    this->copy_number_variation_done_file_name = this->copy_number_variation_path + "/copy_number_variation.done";
     this->tiled_complete_coverage_text_file_name = this->copy_number_variation_path + "/@.tiled.tab";
     this->ranges_text_file_name = this->copy_number_variation_path + "/@.ranges.tab";
     this->smoothed_ranges_text_file_name = this->copy_number_variation_path + "/@.smoothed_ranges.tab";

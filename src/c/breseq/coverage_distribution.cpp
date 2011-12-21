@@ -206,14 +206,17 @@ namespace breseq {
     //It is always a multiple of tile_size
     uint32_t tile_index;
     
-    //The next three variables are for taking running sums and averaging.
-    uint32_t tile_count;
+    //these are for taking running sums and averaging.
     double tile_sum;
     double average;
     
     //position and coverage are taken from the file.
     uint32_t position;
     double coverage;
+    double sum_coverage;
+
+    //skip is used to ignore values in the input file.
+    string skip;
     
     ifstream in_file;
     ofstream out_file;
@@ -221,24 +224,48 @@ namespace breseq {
     in_file.open ( in_file_name.c_str() );
     out_file.open ( out_file_name.c_str() );
     
-    tile_index = 0;
-    tile_count = 0;
-    tile_sum = 0;
+    //skipping the first line in the input file.
+    getline(in_file, skip);
     
-    while ( in_file >> position >> coverage )
+    out_file << "position\tcoverage\n";
+
+    tile_index = 0;
+    tile_sum = 0;
+
+    while ( in_file >> coverage )
     {
+      sum_coverage = coverage;
+      
+      //taking all coverage and summing it.
+      for ( uint8_t i = 0; i < 3; i++ )
+      {
+        in_file >> coverage;
+        sum_coverage += coverage;
+      }
+      
+      //skipping next 2 numbers;
+      in_file >> coverage;
+      in_file >> coverage;
+      
+      //the next value in the line isn't used.
+      in_file >> skip;
+      
+      //last is position
+      in_file >> position;
+      
+      coverage = sum_coverage;
+      
       //Check if the current position is in the current tile.
       //If it is, add the coverage to the sum and increment the count.
       //If it isn't, write the last tile and set up the variables for the new tile
       if ( position < tile_index + tile_size )
       {
         tile_sum += coverage;
-        tile_count++;
       }
       
       else
       {
-        average = tile_sum / tile_count;
+        average = tile_sum / tile_size;
         
         out_file << tile_index << "\t" << average << "\n";
         
@@ -246,13 +273,17 @@ namespace breseq {
         //of tile_size
         tile_index = position / tile_size * tile_size;
         
-        tile_count = 1;
         tile_sum = coverage;
       }
+      
     }
-    average = tile_sum / tile_count;
     
-    out_file << tile_index << "\t" << average << "\n";
+    if ( position % tile_size == tile_size - 1 )
+    {
+      average = tile_sum / tile_size;
+      
+      out_file << tile_index << "\t" << average << "\n";
+    }
     
     in_file.close();
     out_file.close();
@@ -263,7 +294,7 @@ namespace breseq {
                                           string out_file_name
                                           )
   {
-    //a search entry represents a range of positions in the file that will be
+    //a search entry represents a segment of positions in the file that will be
     //examined. start and end are inclusive.
     //search entries are referencing the index in the file, not position
     pair<uint32_t, uint32_t> next_search;
@@ -291,7 +322,7 @@ namespace breseq {
     uint32_t p_i;
     uint32_t p_j;
     
-    //best_i and best_j define the ranges that scored the best in an iteration
+    //best_i and best_j define the segments that scored the best in an iteration
     //these represent indeces, not positions.
     uint32_t best_i;
     uint32_t best_j;
@@ -302,13 +333,13 @@ namespace breseq {
     //highest position value in the input file
     int32_t n;
     
-    //Si, Sj and Sn define sums of the ranges of 0 to i, 0 to j and 0 to n.
+    //Si, Sj and Sn define sums of the segments of 0 to i, 0 to j and 0 to n.
     //i and j are defined later in loo
     double Si;
     double Sj;
     double Sn;
     
-    //the z value as per the CBS algorithm is the score of a given range.
+    //the z value as per the CBS algorithm is the score of a given segment.
     double z;
     //to easier see the z calculation z1 and z2 are used.
     double z1;
@@ -317,11 +348,18 @@ namespace breseq {
     //best_z is the highest Z value found in an iteration.
     double best_z;
     
+    //to skip the header
+    string skip;
+    
     ifstream in_file;
     ofstream out_file;
     
     in_file.open ( in_file_name.c_str() );
     out_file.open ( out_file_name.c_str() );
+    
+    getline(in_file, skip);
+    
+    out_file << "Start_Position\tEnd_Position\tZ_Score\n";
     
     //First, populate saved_sums and ordered_positions.
     //and get length
@@ -345,7 +383,7 @@ namespace breseq {
     current_search.second = count - 1;
     searching.push_back ( current_search );
     
-    //now calculate z for each range inside of current_search
+    //now calculate z for each segment inside of current_search
     //repeat until there are no more search entries.
     while ( searching.size() > 0 )
     {
@@ -383,31 +421,34 @@ namespace breseq {
       //update searching for next iteration.
       //if current_search only spanned one index, only write its indeces
       //and do not update searching.
-      //if current_search spans multiple indeces, write the best i and j range
+      //if current_search spans multiple indeces, write the best i and j segment
       //and update for the next iteration.
       
       if ( current_search.first == current_search.second )
       {
         out_file << ordered_sums[current_search.first] << "\t"
-        << ordered_sums[current_search.second] << endl;
+        << ordered_sums[current_search.second] << "\t" 
+        << best_z << endl;
       }
       else
       {
         //writing.
-        //if the best range takes the second element, include the first by
+        //if the best segment takes the second element, include the first by
         //decrementing best_i
+        
         if ( best_i == current_search.first )
         {
           best_i -= 1;
         }
         
         out_file << ordered_sums[best_i + 1] << "\t"
-        << ordered_sums[best_j] << endl;
+                 << ordered_sums[best_j] << "\t"
+                 << best_z <<  endl;
         
         
         //setting up next_searches
         
-        //if best_i doesn't include the first element, add the range before
+        //if best_i doesn't include the first element, add the segment before
         //best_i
         if ( best_i != current_search.first - 1 )
         {
@@ -416,7 +457,7 @@ namespace breseq {
           searching.push_back( next_search );
         }
         
-        //if best_j doesn't include the last element, add the range after
+        //if best_j doesn't include the last element, add the segment after
         //best_j
         if ( best_j != current_search.second )
         {
@@ -431,13 +472,128 @@ namespace breseq {
     out_file.close();
   }
   
-  //void CoverageDistribution::smooth_segments(
-  //                                            string in_file_name,
-  //                                            string range_file_name,
-  //                                            string out_file_name,
-  //                                            )
-  //{
-  //  
-  //}
+  void CoverageDistribution::smooth_segments(
+                                              string tile_file_name,
+                                              string segment_file_name,
+                                              string out_file_name
+                                              )
+  {
+    //used for finding the mean of a segment in the tile file.
+    double segment_sum;
+    double segment_mean;
+    uint32_t num_tiles;
+    
+    //keeps track of a segment's bounds.
+    uint32_t position_start;
+    uint32_t position_end;
+    
+    //keeps track of an entry in the tile file.
+    uint32_t tile_position;
+    double tile_coverage;
+    
+    //used for finding the mean of the tile file.
+    double tile_sum;
+    double tile_mean;
+    
+    //holds the value a segment's coverage will be changed to.
+    double new_segment_mean;
+    
+    //used for easily accessing the tile file.
+    pair<uint32_t, double> tile_entry;
+    vector< pair<uint32_t, double> > tile_data;
+    
+    //used for skipping lines.
+    string skip;
+    
+    ifstream tile_file;
+    ifstream segment_file;
+    ofstream out_file;
+    
+    tile_file.open ( tile_file_name.c_str() );
+    segment_file.open ( segment_file_name.c_str() );
+    out_file.open ( out_file_name.c_str() );
+    
+    out_file << "Position\tSmooth_Coverage\n";
+    
+    getline(tile_file, skip);
+    
+    //get mean of tile file's coverage and populate the tile_data vector
+    tile_mean = 0;
+    num_tiles = 0;
+    while ( tile_file >> tile_position >> tile_coverage )
+    {
+      tile_mean += tile_coverage;
+      
+      tile_entry.first = tile_position;
+      tile_entry.second = tile_coverage;
+      tile_data.push_back( tile_entry );
+    }
+    num_tiles = tile_position / 500;
+    tile_mean /= num_tiles;
+    
+    //go through each entry in the segment file.
+    getline(segment_file, skip);
+    while ( segment_file >> position_start >> position_end >> skip )
+    {
+      segment_sum = 0;
+      num_tiles = 0;
+      //get the mean of the segment in the tile file.
+      //search through tile_data and find the segment.
+      for ( uint32_t i = 0; i < tile_data.size(); i++ )
+      {
+        tile_entry = tile_data[i];
+        
+        if ( position_start <= tile_entry.first &&
+             position_end >= tile_entry.first )
+        {
+          segment_sum += tile_entry.second;
+          num_tiles++;
+        }
+        
+        else if ( tile_entry.first > position_end )
+        {
+          break;
+        }
+        
+      }
+      segment_mean = segment_sum / num_tiles;
+      
+      //calculate the new value of the segment by taking the mean of the
+      //segment divided by the mean of the tile data.
+      new_segment_mean = segment_mean / tile_mean;
+      
+      //this rounding method doesn't handle negative values
+      //fortunately, there's no such thing as negative coverage
+      new_segment_mean = floor(new_segment_mean + .5);
+      
+      //set the new value of the coverage for this segment to this value.
+      for ( uint32_t i = 0; i < tile_data.size(); i++ )
+      {
+        tile_entry = tile_data[i];
+        
+        if ( position_start <= tile_entry.first &&
+             position_end >= tile_entry.first )
+        {
+          tile_data[i].second = new_segment_mean;
+        }
+        
+        else if ( tile_entry.first > position_end )
+        {
+          break;
+        }
+      }
+    }
+    
+    //write new data.
+    for ( uint32_t i = 0; i < tile_data.size(); i++ )
+    {
+      tile_entry = tile_data[i];
+      out_file << tile_entry.first << "\t" << tile_entry.second << endl;
+    }
+    
+    tile_file.close();
+    segment_file.close();
+    out_file.close();
+  }
 
 } // namespace breseq
