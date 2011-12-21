@@ -1410,8 +1410,8 @@ int do_copy_number_variation(int argc, char *argv[])
     string this_ranges_text_file_name = settings.file_name(settings.ranges_text_file_name, "@", seq.m_seq_id);
     CoverageDistribution::find_segments(this_tiled_complete_coverage_text_file_name, this_ranges_text_file_name);
     
-    //string this_smoothed_ranges_text_file_name = settings.file_name(settings.smoothed_ranges_text_file_name, "@", seq.m_seq_id);
-    //CoverageDistribution::smooth_segments(this_tiled_complete_coverage_text_file_name, this_ranges_text_file_name, this_smoothed_ranges_text_file_name);
+    string this_smoothed_ranges_text_file_name = settings.file_name(settings.smoothed_ranges_text_file_name, "@", seq.m_seq_id);
+    CoverageDistribution::smooth_segments(this_tiled_complete_coverage_text_file_name, this_ranges_text_file_name, this_smoothed_ranges_text_file_name);
     
    }
   
@@ -2476,6 +2476,56 @@ int breseq_default_action(int argc, char* argv[])
 	 if (settings.polymorphism_prediction)
 		settings.ra_mc_genome_diff_file_name = settings.polymorphism_statistics_ra_mc_genome_diff_file_name;
 
+   
+   
+   if (settings.do_copy_number_variation){
+     if (settings.do_step(settings.copy_number_variation_done_file_name, "Copy number variation"))
+     {
+       string reference_fasta_file_name = settings.reference_fasta_file_name;
+       string reference_bam_file_name = settings.reference_bam_file_name;
+ 
+       string coverage_fn = settings.file_name(settings.unique_only_coverage_distribution_file_name, "@", "");
+       string error_dir = dirname(coverage_fn) + "/";
+       string output_dir = settings.mutation_identification_path;
+       string ra_mc_genome_diff_file_name = settings.ra_mc_genome_diff_file_name;
+       string coverage_tab_file_name = settings.file_name(settings.complete_coverage_text_file_name, "@", "");
+       string coverage_dir = dirname(coverage_tab_file_name) + "/";
+ 
+       // It is important that these are in consistent order with the fasta file!!
+       vector<double> deletion_propagation_cutoffs;
+       vector<double> deletion_seed_cutoffs;
+       for (uint32_t i = 0; i < ref_seq_info.size(); i++) {
+         deletion_propagation_cutoffs.push_back(summary.unique_coverage[ref_seq_info[i].m_seq_id].deletion_coverage_propagation_cutoff);
+         deletion_seed_cutoffs.push_back(summary.unique_coverage[ref_seq_info[i].m_seq_id].deletion_coverage_seed_cutoff);
+         //cout << ref_seq_info[i].m_seq_id << " " << to_string(deletion_propagation_cutoffs.back()) << " " << to_string(deletion_seed_cutoffs.back()) << endl;
+       }
+ 
+       identify_mutations(
+         settings,
+         summary,
+         reference_bam_file_name,
+         reference_fasta_file_name,
+         ra_mc_genome_diff_file_name,
+         output_dir,
+         coverage_dir,
+         deletion_propagation_cutoffs,
+         deletion_seed_cutoffs,
+         settings.mutation_log10_e_value_cutoff, // mutation_cutoff
+         settings.base_quality_cutoff, // minimum_quality_score
+         settings.polymorphism_log10_e_value_cutoff, // polymorphism_cutoff
+         settings.polymorphism_frequency_cutoff, //polymorphism_frequency_cutoff
+         error_dir + "/error_rates.tab",
+         false //per_position_file
+       );
+ 
+       settings.done_step(settings.copy_number_variation_done_file_name);
+     }
+     
+   }
+   
+   
+   
+   
   create_path(settings.evidence_path); //need output for plots
 
 	if (settings.do_step(settings.output_done_file_name, "Output"))
