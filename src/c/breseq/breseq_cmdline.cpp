@@ -1247,11 +1247,11 @@ int do_runfile(int argc, char *argv[])
   ss << "Usage: breseq RUNFILE -e <executable> -d <downloads dir> -o <output dir> -l <error log dir> -r <runfile name> <file1.gd file2.gd file3.gd ...>";
   AnyOption options(ss.str());
   options("executable,e",     "Executable program to run, add extra options here.", "breseq");
-  options("downloads_dir,d",  "Downloads directory where read and reference files are located.", "");
-  options("output_dir,o",     "Output directory for commands within the runfile.", "");
-  options("runfile,r",        "Name of the run file to be output.", "RUNFILE.txt");
-  options("data_dir,g",       "Directory to searched for genome diff files.", "");
-  options("error_log_dir,l",  "Directory for error log file that captures the executable's stdout and sterr.", "");
+  options("downloads_dir,d",  "Downloads directory where read and reference files are located.", "02_Downloads");
+  options("output_dir,o",     "Output directory for commands within the runfile.", "03_Output");
+  options("runfile,r",        "Name of the run file to be output.", "commands");
+  options("data_dir,g",       "Directory to searched for genome diff files.", "01_Data");
+  options("error_log_dir,l",  "Directory for error log file that captures the executable's stdout and sterr.", "04_Logs");
   options.addUsage("\n");
   options.addUsage("***Reminder: Create the error log directory before running TACC job.");
   options.addUsage("\n");
@@ -1314,7 +1314,7 @@ int do_runfile(int argc, char *argv[])
     char this_output_dir[1000];
     const char *run_name = gd.metadata.run_name.c_str();
     if (options.count("output_dir")) {
-      sprintf(this_output_dir, "-o %s", output_dir);
+      sprintf(this_output_dir, "-o %s/%s", output_dir, run_name);
     } else {
       sprintf(this_output_dir, "-o %s", run_name);
     }
