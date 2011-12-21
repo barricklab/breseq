@@ -173,6 +173,7 @@ namespace breseq
     ("require-match-length", "only consider alignments that cover this many bases of a read", "0")
     ("require-match-fraction", "only consider alignments that cover this fraction of a read", "0.9")
     ("values-to-gd","",TAKES_NO_ARGUMENT, ADVANCED_OPTION) // @JEB @GRC added in for gathering/analyzing breseq values
+    ("cnv","do experimental copy number variation prediction",TAKES_NO_ARGUMENT, ADVANCED_OPTION)
     ("verbose,v","",TAKES_NO_ARGUMENT)
 
     .processCommandArgs(argc, argv);
