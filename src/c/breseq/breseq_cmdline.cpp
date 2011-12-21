@@ -1639,26 +1639,36 @@ int do_download(int argc, char *argv[])
   }
 
   //! Step: Create wget commands to download files.
-  list<string> gunzippers;//Collect compressed files.
+  list<string> gzip_files;//Collect compressed files.
   for (;url_file_paths.size(); url_file_paths.pop_front()) {
     const string &url = url_file_paths.front().first;
     const string &file_path = url_file_paths.front().second;
+    bool is_gzipped = (file_path.rfind(".gz") == file_path.size() - 3);
+    if (is_gzipped) {
+      //Check to see if the file was already downloaded and gunzipped.
+      const string &gunzip_file_path = file_path.substr(0, file_path.rfind(".gz"));
+      if (file_exists(gunzip_file_path.c_str()) && !file_empty(gunzip_file_path.c_str())) {
+        printf("File:%s already exists in directory %s.\n", gunzip_file_path.c_str(), download_dir.c_str());
+        continue;
+      } else {
+        gzip_files.push_back(file_path);
+      }
+    }
+
     if (file_exists(file_path.c_str()) && !file_empty(file_path.c_str())) {
       printf("File:%s already exists in directory %s.\n", file_path.c_str(), download_dir.c_str());
       continue;
-    } else {
-      string cmd = "";
-      sprintf(cmd, "wget -O %s %s", file_path.c_str(), url.c_str());
-      SYSTEM(cmd);
     }
-    if (file_path.find(".gz") == file_path.size() - 3) {
-      gunzippers.push_back(file_path);
-    }
+
+    string cmd = "";
+    sprintf(cmd, "wget -O %s %s", file_path.c_str(), url.c_str());
+    SYSTEM(cmd);
+
   }
 
   //! Step: Uncompress files that need it.
-  for (;gunzippers.size(); gunzippers.pop_front()) {
-    const string &file_path = gunzippers.front();
+  for (;gzip_files.size(); gzip_files.pop_front()) {
+    const string &file_path = gzip_files.front();
     string cmd = "";
     sprintf(cmd, "gunzip %s", file_path.c_str());
     SYSTEM(cmd);
