@@ -307,7 +307,7 @@ Line specification:
 Essentially this is evidence of missing coverage between two positions in the ranges [start, start+start_range] [end-end_range, end].
 
 
-NJ: New junction evidence
+JC: New junction evidence (junction candidate)
 """""""""""""""""""""""""
 
 4. **side_1_seq_id** *<string>*
