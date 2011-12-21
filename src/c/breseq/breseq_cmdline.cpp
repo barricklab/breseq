@@ -1175,7 +1175,7 @@ int do_simulate_read(int argc, char *argv[])
 
 int do_normalize_gd(int argc, char* argv[])
 {
-  AnyOption options("Useage: breseq NORMALIZE-GD -g <input.gd> -r <reference> -o <output.gd>");
+  AnyOption options("Usage: breseq NORMALIZE-GD -g <input.gd> -r <reference> -o <output.gd>");
   options
   ("genome_diff,g", "Input genome diff file.")
   ("reference,r"  , "Input reference file.")
@@ -1904,6 +1904,31 @@ int do_convert_exact_match(int argc, char *argv[])
   {
     out << (*k).first << "\t" << (*k).second << endl;
   }
+  
+  return 0;
+}
+
+int do_rand_muts(int argc, char *argv[])
+{
+  AnyOption options("Usage: breseq CONVERT_EXACT_MATCH");
+  options("exclude,e","input file");
+  options("type,t","output file");
+  options("number,n","output file");
+  options("length,l","output file");
+  options("reference,r","output file");
+  options("seq,s","output file");  
+  options("output,o","output file");
+  options("verbose,v","Verbose Mode (Flag)", TAKES_NO_ARGUMENT);
+  options.processCommandArgs(argc, argv);
+  
+  
+  cReferenceSequences ref_seq_info;
+  ref_seq_info.LoadFiles(from_string<vector<string> >(options["reference"]));
+  
+  cGenomeDiff gd1;
+  gd1.random_mutations(options["exclude"], options["type"], from_string<uint32_t>(options["number"]), from_string<uint32_t>(options["length"]), ref_seq_info[0]);
+  
+  gd1.write(options["output"]);
   
   return 0;
 }
@@ -2816,6 +2841,8 @@ int main(int argc, char* argv[]) {
     return do_download(argc_new, argv_new);
   } else if ((command == "CONVERT_EXACT_MATCH") || (command == "CEV")) {
     return do_convert_exact_match(argc_new, argv_new);
+  } else if ((command == "RANDOM_MUTATIONS") || (command == "RAND_MUTS")) {
+    return do_rand_muts(argc_new, argv_new);
   }
   else {
     // Not a sub-command. Use original argument list.

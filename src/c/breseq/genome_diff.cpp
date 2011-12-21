@@ -1196,7 +1196,172 @@ bool cGenomeDiff::is_valid(cReferenceSequences& ref_seq_info, bool verbose)
   
   return true;
 }
-
+  
+//! Call to generate random mutations.
+void cGenomeDiff::random_mutations(const string& exclusion_file, const string& type, uint32_t number, uint32_t read_length, const cAnnotatedSequence& ref_seq_info, bool verbose)
+{
+  map<uint32_t, uint32_t> match_list;
+  
+  if(exclusion_file.size())
+  {
+    ifstream in(exclusion_file.c_str());
+    ASSERT(in.good(), "Could not open reference file: " + exclusion_file);
+    
+    string line;
+    
+    // Grab 2 lines.  The file we'll be dealing with has a single header line
+    // followed by the column names.  This will drop that info.
+    getline(in, line);
+    getline(in, line);
+    
+    while (!in.eof() && getline(in,line))
+    {
+      RemoveLeadingTrailingWhitespace(line);
+      vector<string> cols = split_on_whitespace(line);
+      
+      bool complement = (cols[1].find("r") != string::npos);
+      if(complement)  {
+        cols[1].resize(cols[1].size() - 1);  }
+      
+      ASSERT(cols.size() == 3, "Column size is incorrect");
+      
+      uint32_t start1 = from_string<uint32_t>(cols[0]);
+      uint32_t start2 = from_string<uint32_t>(cols[1]);
+      uint32_t match_size = from_string<uint32_t>(cols[2]);
+      
+      if(complement)
+      {
+        start2 = start2 - (match_size - 1);
+      }
+      
+      if(match_list.count(start1))
+      {
+        if(match_list[start1] < match_size)  {
+          match_list[start1] = match_size;  }
+      }
+      else
+      {
+        match_list[start1] = match_size;
+      }
+      
+      if(match_list.count(start2))
+      {
+        if(match_list[start2] < match_size)  {
+          match_list[start2] = match_size;  }
+      }
+      else
+      {
+        match_list[start2] = match_size;
+      }
+    }
+    
+    in.close();
+    
+    // Go through everything in the list and combine entries
+    // that overlap the same area.
+    for(map<uint32_t, uint32_t>::iterator i = match_list.begin(); i != match_list.end();)
+    {
+      bool no_loop = true;
+      uint32_t end_pos = (*i).first + (*i).second;
+      uint32_t& uSize = (*i).second;
+      
+      for(map<uint32_t, uint32_t>::iterator j = ++i; j != match_list.end() && ((*j).first - 1) <= end_pos;)
+      {
+        uint32_t pot_end_pos = (*j).first + (*j).second;
+        if(pot_end_pos > end_pos)
+        {
+          uSize += pot_end_pos - end_pos;
+          end_pos = pot_end_pos;
+        }
+        
+        map<uint32_t, uint32_t>::iterator j_temp = j;
+        j_temp++;
+        match_list.erase(j);      
+        j = j_temp;
+        i = j;
+        no_loop = false;
+      }
+      
+      if(no_loop)  {
+        i++;  }
+    }
+  }
+  
+  vector<string> type_options = split_on_any(type, ":-");
+  gd_entry_type mut_type;
+  int32_t uBuffer = (read_length * 2) + 1;
+  set<uint32_t> used_positions;
+  
+  const uint32_t seed_value = time(NULL);
+  srand(seed_value);
+  
+  //Find the string value in the lookup table and cast index to enumeration.
+  const size_t lookup_table_size = gd_entry_type_lookup_table.size();
+  for (size_t i = 0; i < lookup_table_size; i++) {
+    if (type_options[0] == gd_entry_type_lookup_table[i]) {
+      mut_type = (gd_entry_type) i;
+      break;
+    }
+  }
+  
+  switch(mut_type)
+  {
+    case SNP :
+    {
+      for(uint32_t i = 0; i < number; i++)
+      {
+        uint32_t rand_pos = rand() % ref_seq_info.get_sequence_size();
+        bool bRedo = false;
+        
+        for(map<uint32_t, uint32_t>::iterator j = match_list.begin(); j != match_list.end(); j++)
+        {
+          if(rand_pos >= (*j).first && rand_pos < ((*j).first + (*j).second))  {
+            bRedo = true;
+            break;  }
+        }
+        
+        for(set<uint32_t>::iterator k = used_positions.begin(); k != used_positions.end(); k++)
+        {
+          if(abs(static_cast<int32_t>((*k) - rand_pos)) < uBuffer)  {
+            bRedo = true;
+            break;  }
+        }
+        
+        if(bRedo)  {
+          i--;
+          continue;  }
+        
+        used_positions.insert(rand_pos);
+        
+        cDiffEntry new_item;        
+        new_item._type = mut_type;
+        new_item["seq_id"] = ref_seq_info.m_seq_id;
+        new_item["position"] = to_string(rand_pos);
+        new_item["new_seq"] = FastqSimulationUtilities::get_random_error_base(ref_seq_info.m_fasta_sequence.m_sequence.at(rand_pos - 1));
+        
+        add(new_item);
+      }      
+    }  break;
+      
+    case DEL :
+    {
+      
+    }  break;
+      
+    case INS :
+    {
+      
+    }  break;
+      
+    case MOB :
+    {
+      
+    }  break;
+      
+    default:
+      ERROR("MUTATION TYPE NOT HANDLED: " + type_options[0]);
+  }  
+}
 
 void cGenomeDiff::add_breseq_data(const key_t &key, const string& value)
 {
