@@ -866,7 +866,7 @@ string to_underline_red_codon(const cDiffEntry& mut, const string& codon_key)
   return ss.str();
 }
 
-string html_read_alignment_table_string(diff_entry_list_t& list_ref, bool show_reject_reason, const string& title, const string& relative_link)
+string html_read_alignment_table_string(diff_entry_list_t& list_ref, bool show_details, const string& title, const string& relative_link)
 {
   stringstream ss; //!< Main build object for function
   stringstream ssf; //!< Used for formatting strings
@@ -995,7 +995,7 @@ string html_read_alignment_table_string(diff_entry_list_t& list_ref, bool show_r
     ss << td(ALIGN_LEFT, htmlize(c[GENE_PRODUCT]));
     ss << "</tr>" << endl;
 
-    if (show_reject_reason) 
+    if (show_details) 
     {
       vector<string> reject_reasons = c.get_reject_reasons();
       for (vector<string>::iterator itr = reject_reasons.begin(); itr != reject_reasons.end(); itr ++) 
@@ -1005,6 +1005,14 @@ string html_read_alignment_table_string(diff_entry_list_t& list_ref, bool show_r
                 td("colspan=\"" + to_string(total_cols) + "\"",
                    "Rejected: " + decode_reject_reason(reject)));
       }
+      
+      // Show information about the strands supporting the change
+      ss << tr("class=\"information_table_row\"", 
+               td("colspan=\"" + to_string(total_cols) + "\"",
+                  "Reads supporting (aligned to +/- strand):&nbsp;&nbsp;" +
+                  b("new") + " base " + "(" + c[NEW_COV] + ")" + ":&nbsp;&nbsp;" +
+                  b("ref") + " base " + "(" + c[REF_COV] + ")" + ":&nbsp;&nbsp;" +
+                  b("total") + " (" + c[TOT_COV] + ")")); 
     
       /* Fisher Strand Test */
       if (c.entry_exists("fisher_strand_p_value")) 
@@ -1019,41 +1027,35 @@ string html_read_alignment_table_string(diff_entry_list_t& list_ref, bool show_r
 
         ss << tr("class=\"information_table_row\"", 
                  td("colspan=\"" + to_string(total_cols) + "\"",
-                    "Strands of reads supporting (+/-):&nbsp;&nbsp;" +
-                    b("new") + " base " + "(" + c[NEW_COV] + ")" + ":&nbsp;&nbsp;" +
-                    b("ref") + " base " + "(" + c[REF_COV] + ")" + ":&nbsp;&nbsp;" +
-                    b("total") + " (" + c[TOT_COV] + ")")); 
-        ss << tr("class=\"information_table_row\"", 
-                 td("colspan=\"" + to_string(total_cols) + "\"",
                     "Fisher's exact test strand distribution" +
                     i("p") + "-value = " +fisher_strand_p_value));
       } //end fisher_strand_p_value
 
       /* Kolmogorov-Smirnov Test */
       if (c.entry_exists("ks_quality_p_value")) {
-      ssf.precision(2);
-      ssf << scientific << (c.entry_exists(KS_QUALITY_P_VALUE) ? 
-        from_string<float>(c["ks_quality_p_value"]) :
-        0);
-      string ks_quality_p_value = ssf.str();
-      
-      //Clear formated string stream
-      ssf.str("");
-      ssf.clear();
+        ssf.precision(2);
+        ssf << scientific << (c.entry_exists(KS_QUALITY_P_VALUE) ? 
+          from_string<float>(c["ks_quality_p_value"]) :
+          0);
+        string ks_quality_p_value = ssf.str();
+        
+        //Clear formated string stream
+        ssf.str("");
+        ssf.clear();
 
-      ss << tr("class=\"information_table_row\"", 
-               td("colspan=\"" + to_string(total_cols) + "\"",
-                  " Kolmogorov-Smirnov test that lower quality scores support polymorphism than reference " +
-                  i("p") + "-value = " +ks_quality_p_value));
+        ss << tr("class=\"information_table_row\"", 
+                 td("colspan=\"" + to_string(total_cols) + "\"",
+                    " Kolmogorov-Smirnov test that lower quality scores support polymorphism than reference " +
+                    i("p") + "-value = " +ks_quality_p_value));
       } //end ks_quality_p_value
-    } // end show_reject_reason
+    } // end show_details
   } // end list_ref loop
 
   ss << "</table>" << endl;
   return ss.str();
 }
 
-string html_missing_coverage_table_string(diff_entry_list_t& list_ref, bool show_reject_reason, const string& title, const string& relative_link)
+string html_missing_coverage_table_string(diff_entry_list_t& list_ref, bool show_details, const string& title, const string& relative_link)
 {
   ASSERT(list_ref.front().get(), "No items in table");
   
@@ -1151,7 +1153,7 @@ string html_missing_coverage_table_string(diff_entry_list_t& list_ref, bool show
     ss << td(ALIGN_LEFT, htmlize(c[GENE_PRODUCT])) << endl;
     ss << "</tr>" << endl;
 
-    if (show_reject_reason && c.entry_exists(REJECT)) 
+    if (show_details && c.entry_exists(REJECT)) 
     {
       vector<string> reject_reasons = c.get_reject_reasons();
       for (vector<string>::iterator itr = reject_reasons.begin(); itr != reject_reasons.end(); itr ++) 
@@ -1167,7 +1169,7 @@ string html_missing_coverage_table_string(diff_entry_list_t& list_ref, bool show
   return ss.str();
 }
 
-string html_new_junction_table_string(diff_entry_list_t& list_ref, bool show_reject_reason, const string& title, const string& relative_link)
+string html_new_junction_table_string(diff_entry_list_t& list_ref, bool show_details, const string& title, const string& relative_link)
 {
   stringstream ss; //!<< Main Build Object for Function
   cDiffEntry& test_item = *list_ref.front();
@@ -1300,7 +1302,7 @@ string html_new_junction_table_string(diff_entry_list_t& list_ref, bool show_rej
     
   ss << "</tr>\n" << endl;
 
-  if (show_reject_reason && c.entry_exists("reject")) {
+  if (show_details && c.entry_exists("reject")) {
     cGenomeDiff gd;
 
     vector<string> reject_reasons = c.get_reject_reasons();
