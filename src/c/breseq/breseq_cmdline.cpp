@@ -1421,13 +1421,14 @@ int do_copy_number_variation(int argc, char *argv[])
 int do_download(int argc, char *argv[])
 {
   stringstream ss;
-  ss << "Useage: breseq DOWNLOAD -l <user:password> -d <download_dir> -g <genome_diff_dir>\n";
-  ss << "Useage: breseq DOWNLOAD -l <user:password> -d <download_dir> <file1.gd file2.gd file3.gd ...>\n";
+  ss << "Usage: breseq DOWNLOAD -l <user:password> -d <download_dir> -g <genome_diff_dir>\n";
+  ss << "Usage: breseq DOWNLOAD -l <user:password> -d <download_dir> <file1.gd file2.gd file3.gd ...>\n";
 
   AnyOption options(ss.str());
   options("login,l",           "Login user:password information for private server access.", "");
   options("download_dir,d",    "Output directory to download file to.", "02_Downloads");
   options("genome_diff_dir,g", "Directory to searched for genome diff files.", "01_Data");
+  
   options.processCommandArgs(argc, argv);
 
   if (!options.getArgc() && options["genome_diff_dir"].empty()) {
@@ -1457,13 +1458,13 @@ int do_download(int argc, char *argv[])
   }
 
   string download_dir = options["download_dir"];
-  download_dir[download_dir.size() - 1] == '/' ?
-        download_dir.erase(download_dir.size() - 1) : download_dir;
+  if (download_dir[download_dir.size() - 1] == '/') 
+    download_dir.erase(download_dir.size() - 1);
   create_path(download_dir);
 
   string genome_diff_dir = options["genome_diff_dir"];
-  genome_diff_dir[genome_diff_dir.size() - 1] == '/' ?
-        genome_diff_dir.erase(genome_diff_dir.size() - 1) : genome_diff_dir;
+  if (genome_diff_dir[genome_diff_dir.size() - 1] == '/') 
+    genome_diff_dir.erase(genome_diff_dir.size() - 1);
   create_path(genome_diff_dir);
 
   //! Step: Define currently used genome diff header tags.
@@ -1488,7 +1489,10 @@ int do_download(int argc, char *argv[])
       (GENBANK,        "http://www.ncbi.nlm.nih.gov/sviewer/?db=nuccore&val=%s&report=gbwithparts&retmode=text")
       (SRA,            "ftp://ftp.sra.ebi.ac.uk/vol1/fastq/%s/%s/%s.fastq.gz")
       (BARRICK_PUBLIC, "http://barricklab.org/%s")
-      (BARRICK_PRIVATE,"ftp://" + user + ":" + password + "@backup.barricklab.org/%s");
+      (BARRICK_PRIVATE,"ftp://" + user + ":" + password + "@barricklab.org//community/%s");
+    // the double slash is not a typo
+    //(BARRICK_PRIVATE,"ftp://" + user + ":" + password + "@backup.barricklab.org/%s"); //@JEB temporary change
+
 
   //Map the keys to a C-style format string that represents the download file's to-be-downloaded/local file path.
   map<int32_t, string>key_file_path_format
@@ -1523,7 +1527,7 @@ int do_download(int argc, char *argv[])
     string cmd = "";
     sprintf(cmd, "ls %s", download_dir.c_str());
     vector<string> files = split(SYSTEM_CAPTURE(cmd, true), "\n");
-    for (int i = 0; i < files.size(); i++) {
+    for (size_t i = 0; i < files.size(); i++) {
       string &file = files[i];
       downloaded.insert(download_dir + "/" + file);
       //Check that it doesn't exist as a compressed file.
@@ -1556,7 +1560,7 @@ int do_download(int argc, char *argv[])
     }
 
     const vector<string> &reads = gd.metadata.read_seqs;
-    for (int i = 0; i < reads.size(); i++) {
+    for (size_t i = 0; i < reads.size(); i++) {
       const string &read = reads[i];
       const size_t pos = read.find_first_of(':');
       if (pos == string::npos) {
@@ -1576,10 +1580,19 @@ int do_download(int argc, char *argv[])
   //! Step: Build url and file paths depending on given key.
   list<pair<string, string> > url_file_paths;
   for (;key_values.size(); key_values.pop_front()) {
-    assert(key_lookup.count(key_values.front().first));
+    ASSERT(key_lookup.count(key_values.front().first), "Could not find key: " + key_values.front().first );
     const int32_t key =  key_lookup[key_values.front().first];
     const string value = key_values.front().second;
 
+    // strip path from filename
+    string filename = value;
+    size_t pos = filename.find_last_of('/');
+    if (pos == string::npos) 
+      pos = 0;
+    else
+      pos++;
+    filename.erase(0, pos);
+    
     const char *url_format       = key_url_format[key].c_str();
     const char *file_path_format = key_file_path_format[key].c_str();
 
@@ -1591,7 +1604,7 @@ int do_download(int argc, char *argv[])
     case GENBANK:
     {
       sprintf(url, url_format, value.c_str());
-      sprintf(file_path, file_path_format, value.c_str());
+      sprintf(file_path, file_path_format, filename.c_str());
 
     } break;
 
@@ -1601,20 +1614,20 @@ int do_download(int argc, char *argv[])
       const char *second = value.substr(0,9).c_str();
       const char *third  = value.c_str();
       sprintf(url, url_format, first, second, third);
-      sprintf(file_path, file_path_format, third);
+      sprintf(file_path, file_path_format, filename.c_str());
     } break;
 
     case BARRICK_PUBLIC:
     {
       sprintf(url, url_format, value.c_str());
-      sprintf(file_path, file_path_format, value.c_str());
+      sprintf(file_path, file_path_format, filename.c_str());
     } break;
 
     case BARRICK_PRIVATE:
     {
       if(!private_access) continue;
       sprintf(url, url_format, value.c_str());
-      sprintf(file_path, file_path_format, value.c_str());
+      sprintf(file_path, file_path_format, filename.c_str());
     } break;
 
     default: break;
@@ -1630,7 +1643,7 @@ int do_download(int argc, char *argv[])
   for (;url_file_paths.size(); url_file_paths.pop_front()) {
     const string &url = url_file_paths.front().first;
     const string &file_path = url_file_paths.front().second;
-    if (downloaded.count(file_path)) {
+    if (file_exists(file_path.c_str()) && !file_empty(file_path.c_str())) {
       printf("File:%s already exists in directory %s.\n", file_path.c_str(), download_dir.c_str());
       continue;
     } else {
