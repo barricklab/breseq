@@ -1753,7 +1753,7 @@ int do_subsequence(int argc, char *argv[])
     new_seq.m_fasta_sequence = ref_seq_info[replace_target_id].m_fasta_sequence;    
     new_seq.m_fasta_sequence.m_name = seq_name;
     new_seq.m_fasta_sequence.m_sequence = ref_seq_info[replace_target_id].m_fasta_sequence.m_sequence.substr(replace_start -1, (replace_end - replace_start) + 1);
-    if(reverse)new_seq.m_fasta_sequence.m_sequence = reverse_complement(ref_seq_info[replace_target_id].m_fasta_sequence.m_sequence);
+    if(reverse)new_seq.m_fasta_sequence.m_sequence = reverse_complement(new_seq.m_fasta_sequence.m_sequence);
     new_seq.m_seq_id = seq_name;
     new_seq.m_length = new_seq.m_fasta_sequence.m_sequence.size();
     
@@ -1763,6 +1763,137 @@ int do_subsequence(int argc, char *argv[])
   
   if(options.count("output"))  {
     new_seq_info.WriteFASTA(options["output"], verbose);  }  
+  
+  return 0;
+}
+
+int do_convert_exact_match(int argc, char *argv[])
+{
+  AnyOption options("Usage: breseq CONVERT_EXACT_MATCH");
+  options("input,i","input file");
+  options("output,o","output file");
+  options("verbose,v","Verbose Mode (Flag)", TAKES_NO_ARGUMENT);
+  options.processCommandArgs(argc, argv);
+  
+  options.addUsage("");
+  options.addUsage("Takes an input file with Start1, Start2, and Size columns");  
+  options.addUsage("that delineate exact matches and sorts them.  Output is to"); 
+  options.addUsage("tab delimmited file with no header info.");
+  
+  if (!options.count("input")) {
+    options.addUsage("");
+    options.addUsage("You must supply the --input option for input.");
+    options.printUsage();
+    return -1;
+  }
+  
+  if (!options.count("output")) {
+    options.addUsage("");
+    options.addUsage("You must supply the --output option for output.");
+    options.printUsage();
+    return -1;
+  }
+  
+  if (!file_exists(options["input"].c_str())) {
+    options.addUsage("");
+    options.addUsage("File selected for --input does not exist.");
+    options.printUsage();
+    return -1;
+  }
+  
+  ifstream in(options["input"].c_str());
+  ASSERT(in.good(), "Could not open reference file: " + options["input"]);
+  
+  string line;
+  
+  // Grab 2 lines.  The file we'll be dealing with has a single header line
+  // followed by the column names.  This will drop that info.
+  getline(in, line);
+  getline(in, line);
+  
+  map<uint32_t, uint32_t> match_list;
+  
+  while (!in.eof() && getline(in,line))
+  {
+    RemoveLeadingTrailingWhitespace(line);
+    vector<string> cols = split_on_whitespace(line);
+    
+    bool complement = (cols[1].find("r") != string::npos);
+    if(complement)  {
+      cols[1].resize(cols[1].size() - 1);  }
+    
+    ASSERT(cols.size() == 3, "Column size is incorrect");
+    
+    uint32_t start1 = from_string<uint32_t>(cols[0]);
+    uint32_t start2 = from_string<uint32_t>(cols[1]);
+    uint32_t match_size = from_string<uint32_t>(cols[2]);
+    
+    if(complement)
+    {
+      start2 = start2 - (match_size - 1);
+    }
+    
+    if(match_list.count(start1))
+    {
+      if(match_list[start1] < match_size)  {
+        match_list[start1] = match_size;  }
+    }
+    else
+    {
+      match_list[start1] = match_size;
+    }
+    
+    if(match_list.count(start2))
+    {
+      if(match_list[start2] < match_size)  {
+        match_list[start2] = match_size;  }
+    }
+    else
+    {
+      match_list[start2] = match_size;
+    }
+  }
+  
+  in.close();
+  
+  // Go through everything in the list and combine entries
+  // that overlap the same area.
+  for(map<uint32_t, uint32_t>::iterator i = match_list.begin(); i != match_list.end();)
+  {
+    bool no_loop = true;
+    uint32_t end_pos = (*i).first + (*i).second;
+    uint32_t& uSize = (*i).second;
+    
+    for(map<uint32_t, uint32_t>::iterator j = ++i; j != match_list.end() && ((*j).first - 1) <= end_pos;)
+    {
+      uint32_t pot_end_pos = (*j).first + (*j).second;
+      if(pot_end_pos > end_pos)
+      {
+        uSize += pot_end_pos - end_pos;
+        end_pos = pot_end_pos;
+      }
+      
+      map<uint32_t, uint32_t>::iterator j_temp = j;
+      j_temp++;
+      match_list.erase(j);      
+      j = j_temp;
+      i = j;
+      no_loop = false;
+    }
+    
+    if(no_loop)  {
+      i++;  }
+  }
+  
+  // Everything has been read in, and combined where necessary.
+  // Now is the time for output.
+  ofstream out(options["output"].c_str());
+  ASSERT(!out.fail(), "Failed to open/create " + options["output"]);
+  
+  for(map<uint32_t, uint32_t>::iterator k = match_list.begin(); k != match_list.end(); k++)
+  {
+    out << (*k).first << "\t" << (*k).second << endl;
+  }
   
   return 0;
 }
@@ -2697,6 +2828,8 @@ int main(int argc, char* argv[]) {
     return do_copy_number_variation(argc_new, argv_new);
   } else if (command == "DOWNLOAD") {
     return do_download(argc_new, argv_new);
+  } else if ((command == "CONVERT_EXACT_MATCH") || (command == "CEV")) {
+    return do_convert_exact_match(argc_new, argv_new);
   }
   else {
     // Not a sub-command. Use original argument list.
