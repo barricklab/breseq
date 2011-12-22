@@ -1270,11 +1270,11 @@ int do_runfile(int argc, char *argv[])
   ss << "Usage: breseq RUNFILE -e <executable> -d <downloads dir> -o <output dir> -l <error log dir> -r <runfile name> <file1.gd file2.gd file3.gd ...>";
   AnyOption options(ss.str());
   options("executable,e",     "Executable program to run, add extra options here.", "breseq");
+  options("data_dir,g",       "Directory to searched for genome diff files.", "01_Data");
   options("downloads_dir,d",  "Downloads directory where read and reference files are located.", "02_Downloads");
   options("output_dir,o",     "Output directory for commands within the runfile.", "03_Output");
+  options("log_dir,l",  "Directory for error log file that captures the executable's stdout and sterr.", "04_Logs");
   options("runfile,r",        "Name of the run file to be output.", "commands");
-  options("data_dir,g",       "Directory to searched for genome diff files.", "01_Data");
-  options("error_log_dir,l",  "Directory for error log file that captures the executable's stdout and sterr.", "04_Logs");
   options.addUsage("\n");
   options.addUsage("***Reminder: Create the error log directory before running TACC job.");
   options.addUsage("\n");
@@ -1287,21 +1287,13 @@ int do_runfile(int argc, char *argv[])
   options.addUsage("\t  Output: breseq -o ZDB111 -r 02_Downloads/REL606.5.gbk 02_Downloads/SRR098039.fastq >& 04_Errors/ZDB111.errors.txt");
   options.processCommandArgs(argc, argv);
   
-  if(argc == 1)  {
-    options.printUsage();
-    return -1;  }
-
-  if (!options.getArgc() && !options.count("data_dir")) {
-  options.addUsage("");
-    options.addUsage("Error: You must input genome diff files or a directory to search for genome diff files.");
-    options.printUsage();
-    return -1;
-  }
 
   /*! Step: Gather genome diff file names from either user input or a given
    directory to search. */
   vector<string> file_names;
-  if (options.count("data_dir")) {
+  
+  // Default behavior is to always look in data_dir 
+  if (options["data_dir"] != "") {
     char *data_dir = strdup(options["data_dir"].c_str());
     const size_t n = strlen(data_dir);
     if (data_dir[n - 1] == '/') {
@@ -1310,7 +1302,10 @@ int do_runfile(int argc, char *argv[])
     string command("");
     sprintf(command, "ls %s/*gd", data_dir);
     file_names = split(SYSTEM_CAPTURE(command, true), "\n");
-  } else {
+  }
+  
+  // Add any additional arguments
+  if (options.getArgc()) {
     const size_t n = options.getArgc();
     file_names.resize(n);
     for (size_t i = 0; i < n; i++) {
@@ -1339,8 +1334,9 @@ int do_runfile(int argc, char *argv[])
     //Unique output directory name is parsed from the base name of the file.
     char this_output_dir[1000];
     const char *run_name = gd.metadata.run_name.c_str();
-    if (options.count("output_dir")) {
-      sprintf(this_output_dir, "-o %s/%s", output_dir, run_name);
+    
+    if (options["output_dir"] != "") {
+      sprintf(this_output_dir, "-o %s/%s", options["output_dir"].c_str(), run_name);
     } else {
       sprintf(this_output_dir, "-o %s", run_name);
     }
@@ -1355,7 +1351,7 @@ int do_runfile(int argc, char *argv[])
       if (ref->find(".gbk") == string::npos) {
         ref->append(".gbk");
       }
-      if (options.count("downloads_dir")) {
+      if (options["downloads_dir"] != "") {
         sprintf(*ref, "-r %s/%s", downloads_dir, refs[j].c_str());
       } else {
         sprintf(*ref, "-r %s", refs[j].c_str());
@@ -1378,7 +1374,7 @@ int do_runfile(int argc, char *argv[])
         read->append(".fastq");
       }
 
-      if (options.count("downloads_dir")) {
+      if (options["downloads_dir"] != "") {
         sprintf(*read, "%s/%s", downloads_dir, reads[j].c_str());
       } else {
         sprintf(*read, "%s", reads[j].c_str());
@@ -1386,14 +1382,15 @@ int do_runfile(int argc, char *argv[])
     }
 
     //Error log file option.
-    string error_log_path = "";
+    string log_path = "";
     {
-      const char *path = options["error_log_dir"].c_str();
+      const char *path = options["log_dir"].c_str();
 
-      if (options.count("error_log_dir")) {
-        sprintf(error_log_path, ">& %s/%s.errors.txt", path, run_name);
+      if (options["log_dir"] != "") {
+        create_path(path);
+        sprintf(log_path, ">& %s/%s.errors.txt", path, run_name);
       } else {
-        sprintf(error_log_path, ">& %s.errors.txt", run_name);
+        sprintf(log_path, ">& %s.errors.txt", run_name);
       }
     }
 
@@ -1403,8 +1400,8 @@ int do_runfile(int argc, char *argv[])
     run_file_line_args.push_back(this_output_dir);
     run_file_line_args.push_back(join(refs, " "));
     run_file_line_args.push_back(join(reads, " "));
-    if (error_log_path.size()) {
-      run_file_line_args.push_back(error_log_path);
+    if (log_path.size()) {
+      run_file_line_args.push_back(log_path);
     }
 
     const string &run_file_line = join(run_file_line_args, " ");
@@ -1532,20 +1529,27 @@ int do_download(int argc, char *argv[])
   //! Step: Collect genome diff file names from either user directory or file input.
   list<string> file_names;
   if (!options.getArgc()) {
-    printf("Searching directory %s for genome diff files.\n", genome_diff_dir.c_str());
+    cerr << "Searching directory " << genome_diff_dir << " for genome diff files." << endl;
     string cmd = "";
     sprintf(cmd, "ls %s/*gd", genome_diff_dir.c_str());
     vector<string> temp = split(SYSTEM_CAPTURE(cmd, true), "\n");
-    file_names = list<string>(temp.begin(), temp.end());
-  } else {
-    printf("User input genome diff files.\n");
+    for (size_t i = 0; i < temp.size(); i++) {
+      cerr << "  " << temp[i] << endl;
+      file_names.push_back(temp[i]);
+    }
+    cerr << endl;
+  }
+  
+  if (options.getArgc()) {
+    cerr << "Processing user input genome diff files." << endl;
     const size_t n = options.getArgc();
     for (size_t i = 0; i < n; i++) {
+      cerr << "  " << options.getArgv(i) << endl;
       file_names.push_back(options.getArgv(i));
     }
+    cerr << endl;
   }
-  copy(file_names.begin(), file_names.end(), ostream_iterator<string>(cout, "\n"));
-  assert(file_names.size());
+  ASSERT(file_names.size() != 0, "No genome diff files found to process.");
 
   //! Step: Parse given download directory to avoid re-downloading files.
   set<string> downloaded;//Used to filter files that have already been downloaded.
@@ -1555,10 +1559,12 @@ int do_download(int argc, char *argv[])
     vector<string> files = split(SYSTEM_CAPTURE(cmd, true), "\n");
     for (size_t i = 0; i < files.size(); i++) {
       string &file = files[i];
-      downloaded.insert(download_dir + "/" + file);
-      //Check that it doesn't exist as a compressed file.
-      if (file.find(".gz") != file.size() - 3) {
-        downloaded.insert(download_dir + "/" + file.append(".gz"));
+      string file_path = download_dir + "/" + file; 
+      
+      // Mark both the file and any compressed versions as complete
+      if (!file_empty(file_path.c_str())) {
+        downloaded.insert(file_path);
+        downloaded.insert(file_path + ".gz");
       }
     }
   }
@@ -1667,29 +1673,30 @@ int do_download(int argc, char *argv[])
   //! Step: Create wget commands to download files.
   list<string> gzip_files;//Collect compressed files.
   for (;url_file_paths.size(); url_file_paths.pop_front()) {
+
     const string &url = url_file_paths.front().first;
     const string &file_path = url_file_paths.front().second;
-    bool is_gzipped = (file_path.rfind(".gz") == file_path.size() - 3);
-    if (is_gzipped) {
-      //Check to see if the file was already downloaded and gunzipped.
-      const string &gunzip_file_path = file_path.substr(0, file_path.rfind(".gz"));
-      if (file_exists(gunzip_file_path.c_str()) && !file_empty(gunzip_file_path.c_str())) {
-        printf("File:%s already exists in directory %s.\n", gunzip_file_path.c_str(), download_dir.c_str());
-        continue;
-      } else {
-        gzip_files.push_back(file_path);
+    
+    if ( downloaded.count(file_path) ) {
+      printf("File:%s already downloaded in directory %s.\n", file_path.c_str(), download_dir.c_str());
+
+      bool is_gzipped = (file_path.rfind(".gz") == file_path.size() - 3);
+      if (is_gzipped) {
+        //Check to see if the file was already downloaded and gunzipped.
+        const string &gunzip_file_path = file_path.substr(0, file_path.rfind(".gz"));
+        if (!file_exists(gunzip_file_path.c_str()) || file_empty(gunzip_file_path.c_str())) {
+          gzip_files.push_back(file_path);
+        }
       }
+    } else {
+      string cmd = "";
+      sprintf(cmd, "wget -O %s %s", file_path.c_str(), url.c_str());
+      cerr << endl;
+      SYSTEM(cmd);
+
+      if (file_path.find_last_of(".gz") == file_path.size() - 3)
+        gzip_files.push_back(file_path);
     }
-
-    if (file_exists(file_path.c_str()) && !file_empty(file_path.c_str())) {
-      printf("File:%s already exists in directory %s.\n", file_path.c_str(), download_dir.c_str());
-      continue;
-    }
-
-    string cmd = "";
-    sprintf(cmd, "wget -O %s %s", file_path.c_str(), url.c_str());
-    SYSTEM(cmd);
-
   }
 
   //! Step: Uncompress files that need it.
