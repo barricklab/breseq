@@ -1295,6 +1295,8 @@ void cGenomeDiff::random_mutations(const string& exclusion_file, const string& t
   vector<string> type_options = split_on_any(type, ":-");
   gd_entry_type mut_type;
   int32_t uBuffer = (read_length * 2) + 1;
+  uint32_t max_attempts = ref_seq_info.get_sequence_size() / read_length;
+  uint32_t uAttempts = 0;
   
   const uint32_t seed_value = time(NULL);
   srand(seed_value);
@@ -1314,8 +1316,9 @@ void cGenomeDiff::random_mutations(const string& exclusion_file, const string& t
     {      
       set<uint32_t> used_positions;
       
-      for(uint32_t i = 0; i < number; i++)
+      for(uint32_t i = 0; i < number && uAttempts < max_attempts; i++)
       {
+        uAttempts++;
         uint32_t rand_pos = (rand() % ref_seq_info.get_sequence_size()) + 1;
         bool bRedo = false;
         
@@ -1325,6 +1328,10 @@ void cGenomeDiff::random_mutations(const string& exclusion_file, const string& t
             bRedo = true;
             break;  }
         }
+        
+        if(bRedo)  {
+          i--;
+          continue;  }
         
         for(set<uint32_t>::iterator k = used_positions.begin(); k != used_positions.end(); k++)
         {
@@ -1337,15 +1344,23 @@ void cGenomeDiff::random_mutations(const string& exclusion_file, const string& t
           i--;
           continue;  }
         
-        used_positions.insert(rand_pos);
-        
         cDiffEntry new_item;        
         new_item._type = mut_type;
         new_item["seq_id"] = ref_seq_info.m_seq_id;
         new_item["position"] = to_string(rand_pos);
-        new_item["new_seq"] = FastqSimulationUtilities::get_random_error_base(ref_seq_info.m_fasta_sequence.m_sequence.at(rand_pos - 1));
+        new_item["new_seq"] = FastqSimulationUtilities::get_random_error_base(ref_seq_info.m_fasta_sequence.m_sequence.at(rand_pos - 1));        
+        
+        uAttempts = 0;
+        
+        new_item.normalize_to_sequence(ref_seq_info);
+        if(from_string<uint32_t>(new_item["position"]) != rand_pos)  {
+          i--;
+          continue;  }
+        
+        used_positions.insert(rand_pos);
         
         add(new_item);
+        uAttempts = 0;
       }      
     }  break;
       
@@ -1358,10 +1373,10 @@ void cGenomeDiff::random_mutations(const string& exclusion_file, const string& t
       switch(type_options.size())
       {
         case 1:  {
-          opt_2 = 1;
         }  break;
           
         case 2:  {
+          opt_1 = from_string<uint32_t>(type_options[1]);
           opt_2 = from_string<uint32_t>(type_options[1]);
         }  break;
           
@@ -1374,12 +1389,14 @@ void cGenomeDiff::random_mutations(const string& exclusion_file, const string& t
           ERROR("CANNOT PARSE: " + type);
       }
       
-      for(uint32_t i = 0; i < number; i++)
+      for(uint32_t i = 0; i < number && uAttempts < max_attempts; i++)
       {
+        uAttempts++;
+        
         uint32_t del_size = (i % (opt_2 - (opt_1-1))) + opt_1;
-        uint32_t rand_pos = (rand() % ref_seq_info.get_sequence_size()) + 1;
         if(opt_2 - opt_1 >= number)  {
           del_size = (rand() % number) + opt_1;  }
+        uint32_t rand_pos = (rand() % (ref_seq_info.get_sequence_size() - del_size)) + 1;
         bool bRedo = false;
         
         for(map<uint32_t, uint32_t>::iterator j = match_list.begin(); j != match_list.end(); j++)
@@ -1390,6 +1407,10 @@ void cGenomeDiff::random_mutations(const string& exclusion_file, const string& t
             bRedo = true;
             break;  }
         }
+        
+        if(bRedo)  {
+          i--;
+          continue;  }
         
         for(map<uint32_t, uint32_t>::iterator k = used_positions.begin(); k != used_positions.end(); k++)
         {
@@ -1409,18 +1430,20 @@ void cGenomeDiff::random_mutations(const string& exclusion_file, const string& t
           i--;
           continue;  }
         
-        used_positions[rand_pos] = del_size;
-        
         cDiffEntry new_item;        
         new_item._type = mut_type;
         new_item["seq_id"] = ref_seq_info.m_seq_id;
         new_item["position"] = to_string(rand_pos);        
-        new_item["size"] = to_string(del_size);
+        new_item["size"] = to_string(del_size);        
+        
+        uAttempts = 0;
         
         new_item.normalize_to_sequence(ref_seq_info);
         if(from_string<uint32_t>(new_item["position"]) != rand_pos)  {
           i--;
           continue;  }
+        
+        used_positions[rand_pos] = del_size;
         
         add(new_item);
       }
@@ -1428,17 +1451,98 @@ void cGenomeDiff::random_mutations(const string& exclusion_file, const string& t
       
     case INS :
     {
+      uint32_t opt_1 = 1;
+      uint32_t opt_2 = 1;      
+      set<uint32_t> used_positions;
       
+      switch(type_options.size())
+      {
+        case 1:  {
+        }  break;
+          
+        case 2:  {
+          opt_1 = from_string<uint32_t>(type_options[1]);
+          opt_2 = from_string<uint32_t>(type_options[1]);
+        }  break;
+          
+        case 3:  {
+          opt_1 = from_string<uint32_t>(type_options[1]);
+          opt_2 = from_string<uint32_t>(type_options[2]);
+        }  break;
+          
+        default:      
+          ERROR("CANNOT PARSE: " + type);
+      }
+      
+      for(uint32_t i = 0; i < number && uAttempts < max_attempts; i++)
+      {
+        uAttempts++;
+        
+        uint32_t ins_size = (i % (opt_2 - (opt_1-1))) + opt_1;
+        if(opt_2 - opt_1 >= number)  {
+          ins_size = (rand() % number) + opt_1;  }
+        uint32_t rand_pos = (rand() % (ref_seq_info.get_sequence_size() - ins_size)) + 1;
+        bool bRedo = false;
+        
+        for(map<uint32_t, uint32_t>::iterator j = match_list.begin(); j != match_list.end(); j++)
+        {
+          if(rand_pos >= (*j).first && rand_pos < ((*j).first + (*j).second))  {
+            bRedo = true;
+            break;  }
+        }
+        
+        if(bRedo)  {
+          i--;
+          continue;  }
+        
+        for(set<uint32_t>::iterator k = used_positions.begin(); k != used_positions.end(); k++)
+        {
+          if(abs(static_cast<int32_t>((*k) - rand_pos)) < uBuffer)  {
+            bRedo = true;
+            break;  }
+        }
+        
+        if(bRedo)  {
+          i--;
+          continue;  }
+        
+        cDiffEntry new_item;        
+        new_item._type = mut_type;
+        new_item["seq_id"] = ref_seq_info.m_seq_id;
+        new_item["position"] = to_string(rand_pos);      
+        
+        string ins_seq = "";        
+        for(uint32_t ij = 0; ij < ins_size; ij++)  {
+          ins_seq += FastqSimulationUtilities::get_random_insertion_base();  }
+        
+        new_item["new_seq"] = ins_seq;
+        
+        uAttempts = 0;
+        
+        new_item.normalize_to_sequence(ref_seq_info);
+        if((from_string<uint32_t>(new_item["position"]) != rand_pos) || new_item["new_seq"] != ins_seq)  {
+          i--;
+          continue;  }        
+        
+        used_positions.insert(rand_pos);
+        
+        add(new_item);
+      }
     }  break;
       
     case MOB :
-    {
-      
+    {      
+      ERROR("THE BRESEQENSTEIN MUTATION GENERATOR DOES NOT YET HANDLE MOBS\nESPECIALLY IF THEY HAVE TORCHES AND PITCHFORKS");
     }  break;
       
     default:
       ERROR("MUTATION TYPE NOT HANDLED: " + type_options[0]);
-  }  
+  }
+  
+  CHECK(max_attempts != uAttempts, "Forced to halt mutation generation.\nAttempted " +
+        to_string(uAttempts) + " times to generate last mutation.\n" + 
+        "It's likely that it is no longer possible to add new mutations.");
+  
 }
 
 void cGenomeDiff::add_breseq_data(const key_t &key, const string& value)
