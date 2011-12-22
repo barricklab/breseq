@@ -1822,7 +1822,8 @@ int do_rand_muts(int argc, char *argv[])
   
   options.addUsage("");
   options.addUsage("Using -reference, this command will generate a --number of");
-  options.addUsage("mutations, and space them based on the supplied --length.");
+  options.addUsage("mutations, and space them based on the supplied --length.");  
+  options.addUsage("Not supplying --seq will use the first sequence in the reference.");
   options.addUsage("");
   options.addUsage("Required fields are -r, -o, and -t.");
   options.addUsage("Valid types: SNP, INS, DEL");
