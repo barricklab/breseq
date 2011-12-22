@@ -1200,8 +1200,11 @@ bool cGenomeDiff::is_valid(cReferenceSequences& ref_seq_info, bool verbose)
 //! Call to generate random mutations.
 void cGenomeDiff::random_mutations(const string& exclusion_file, const string& type, uint32_t number, uint32_t read_length, const cAnnotatedSequence& ref_seq_info, bool verbose)
 {
+  // If we have an exclusion_file to load, we will save
+  // the info in this map.
   map<uint32_t, uint32_t> match_list;
   
+  // Don't try and load the exlusion file if they didn't provide one.
   if(exclusion_file.size())
   {
     ifstream in(exclusion_file.c_str());
@@ -1219,6 +1222,8 @@ void cGenomeDiff::random_mutations(const string& exclusion_file, const string& t
       RemoveLeadingTrailingWhitespace(line);
       vector<string> cols = split_on_whitespace(line);
       
+      // If we find the letter 'r' in the second colummn
+      // we know that it's a reverse complement match.
       bool complement = (cols[1].find("r") != string::npos);
       if(complement)  {
         cols[1].resize(cols[1].size() - 1);  }
@@ -1285,12 +1290,11 @@ void cGenomeDiff::random_mutations(const string& exclusion_file, const string& t
       if(no_loop)  {
         i++;  }
     }
-  }
+  } // Done loading exclusion file.
   
   vector<string> type_options = split_on_any(type, ":-");
   gd_entry_type mut_type;
   int32_t uBuffer = (read_length * 2) + 1;
-  set<uint32_t> used_positions;
   
   const uint32_t seed_value = time(NULL);
   srand(seed_value);
@@ -1307,10 +1311,12 @@ void cGenomeDiff::random_mutations(const string& exclusion_file, const string& t
   switch(mut_type)
   {
     case SNP :
-    {
+    {      
+      set<uint32_t> used_positions;
+      
       for(uint32_t i = 0; i < number; i++)
       {
-        uint32_t rand_pos = rand() % ref_seq_info.get_sequence_size();
+        uint32_t rand_pos = (rand() % ref_seq_info.get_sequence_size()) + 1;
         bool bRedo = false;
         
         for(map<uint32_t, uint32_t>::iterator j = match_list.begin(); j != match_list.end(); j++)
@@ -1345,7 +1351,79 @@ void cGenomeDiff::random_mutations(const string& exclusion_file, const string& t
       
     case DEL :
     {
+      uint32_t opt_1 = 1;
+      uint32_t opt_2 = 1;      
+      map<uint32_t, uint32_t> used_positions;
       
+      switch(type_options.size())
+      {
+        case 1:  {
+          opt_2 = 1;
+        }  break;
+          
+        case 2:  {
+          opt_2 = from_string<uint32_t>(type_options[1]);
+        }  break;
+          
+        case 3:  {
+          opt_1 = from_string<uint32_t>(type_options[1]);
+          opt_2 = from_string<uint32_t>(type_options[2]);
+        }  break;
+          
+        default:      
+          ERROR("CANNOT PARSE: " + type);
+      }
+      
+      for(uint32_t i = 0; i < number; i++)
+      {
+        uint32_t del_size = (i % (opt_2 - (opt_1-1))) + opt_1;
+        uint32_t rand_pos = (rand() % ref_seq_info.get_sequence_size()) + 1;
+        if(opt_2 - opt_1 >= number)  {
+          del_size = (rand() % number) + opt_1;  }
+        bool bRedo = false;
+        
+        for(map<uint32_t, uint32_t>::iterator j = match_list.begin(); j != match_list.end(); j++)
+        {
+          if((rand_pos >= (*j).first && rand_pos < ((*j).first + (*j).second)) ||
+             (rand_pos+del_size-1 >= (*j).first && rand_pos+del_size-1 < ((*j).first + (*j).second)) ||
+             (rand_pos <= (*j).first && rand_pos+del_size-1 >= ((*j).first + (*j).second)))  {
+            bRedo = true;
+            break;  }
+        }
+        
+        for(map<uint32_t, uint32_t>::iterator k = used_positions.begin(); k != used_positions.end(); k++)
+        {
+          if((rand_pos >= (*k).first && rand_pos < ((*k).first + (*k).second)) ||
+             (rand_pos+del_size-1 >= (*k).first && rand_pos+del_size-1 < ((*k).first + (*k).second)) ||
+             (rand_pos <= (*k).first && rand_pos+del_size-1 >= ((*k).first + (*k).second)))  {
+            bRedo = true;
+            break;  }
+          
+          if((abs(static_cast<int32_t>((*k).first - rand_pos)) < uBuffer) ||
+             (abs(static_cast<int32_t>((*k).first+(*k).second-1 - rand_pos)) < uBuffer))  {
+            bRedo = true;
+            break;  }
+        }
+        
+        if(bRedo)  {
+          i--;
+          continue;  }
+        
+        used_positions[rand_pos] = del_size;
+        
+        cDiffEntry new_item;        
+        new_item._type = mut_type;
+        new_item["seq_id"] = ref_seq_info.m_seq_id;
+        new_item["position"] = to_string(rand_pos);        
+        new_item["size"] = to_string(del_size);
+        
+        new_item.normalize_to_sequence(ref_seq_info);
+        if(from_string<uint32_t>(new_item["position"]) != rand_pos)  {
+          i--;
+          continue;  }
+        
+        add(new_item);
+      }
     }  break;
       
     case INS :
