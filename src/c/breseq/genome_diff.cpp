@@ -1208,7 +1208,7 @@ void cGenomeDiff::random_mutations(const string& exclusion_file, const string& t
   if(exclusion_file.size())
   {
     ifstream in(exclusion_file.c_str());
-    ASSERT(in.good(), "Could not open reference file: " + exclusion_file);
+    ASSERT(in.good(), "Could not open exclusion file: " + exclusion_file);
     
     string line;
     

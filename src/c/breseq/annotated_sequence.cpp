@@ -537,12 +537,20 @@ namespace breseq {
       if ((uint32_t)as.m_length != as.get_sequence_length())  {
         ss << "FEATURES AND SEQUENCE DON'T MATCH: " << as.m_seq_id << endl;
         ss << "LENGTH:\t" << (uint32_t)as.m_length << endl;
-        ss << "\tVS:\t" << as.get_sequence_length() << endl;
+        ss << "\tVS:\t" << as.get_sequence_length() << " (Sequence Length)" << endl;
+        Error = true;
+      }
+      if(!as.get_sequence_length())  {        
+        ss << "LIKELY CAUSE:" << endl;
+        ss << "Loaded sequence is of 0 length.  Make sure that the reference" << endl;
+        ss << "you are loading actually contains a sequence.  Specifically, " << endl;
+        ss << "make sure you don't have a GBK with no sequence and only features.";
+      }
+      else  {        
         ss << "LIKELY CAUSE:" << endl;
         ss << "Multiple files loaded referring to the same sequence. Make" << endl;
         ss << "sure that any features loaded describe the sequence you" << endl;
         ss << "actually loaded.";
-        Error = true;
       }
     }
     if (Error) ERROR(ss.str());
