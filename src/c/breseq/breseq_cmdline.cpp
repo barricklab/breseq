@@ -771,6 +771,10 @@ int do_mutate(int argc, char *argv[])
   options.addUsage("the mutations to the reference sequences, output is to");
   options.addUsage("a single file that includes all the references.");
   
+  if(argc == 1)  {
+    options.printUsage();
+    return -1;  }
+  
   if (!options.count("genomediff") ||
       !options.count("reference")) {
     options.addUsage("");
@@ -821,6 +825,10 @@ int do_subtract(int argc, char *argv[])
   options.addUsage("Mutations that appear in BOTH will be subtracted from");
   options.addUsage("--input1 and results will output to a new file specified.");
   
+  if(argc == 1)  {
+    options.printUsage();
+    return -1;  }
+  
   if (!options.count("input1") ||
       !options.count("input2")) {
     options.addUsage("");
@@ -863,6 +871,10 @@ int do_merge(int argc, char *argv[])
   options.addUsage("Unique IDs will remain unique across files, any IDs that");
   options.addUsage("aren't unique will get new ones.  Mutations that use those");
   options.addUsage("IDs will be properly updated to acknowledge the change.");
+  
+  if(argc == 1)  {
+    options.printUsage();
+    return -1;  }
   
   if (!options.count("genomediff")) {
     options.addUsage("");
@@ -914,6 +926,10 @@ int do_not_evidence(int argc, char *argv[])
   options.addUsage("are NOT used as evidence by a mutation.  Outputs to a new");
   options.addUsage("GenomeDiff file if specified.  If no output is specified,");
   options.addUsage("verbose will still inform what evidence isn't being used.");
+  
+  if(argc == 1)  {
+    options.printUsage();
+    return -1;  }
   
   if (!options.count("genomediff")) {
     options.addUsage("");
@@ -1110,6 +1126,10 @@ int do_simulate_read(int argc, char *argv[])
   options.addUsage("Output is a .fastq that if run normally against the reference");
   options.addUsage("should produce the same GenomeDiff file you entered.");
   
+  if(argc == 1)  {
+    options.printUsage();
+    return -1;  }
+  
   if (!options.count("genome_diff")) {
     options.addUsage("");
     options.addUsage("You must supply the --genome_diff option for input.");
@@ -1187,7 +1207,10 @@ int do_normalize_gd(int argc, char* argv[])
   options.addUsage("Takes a genome diff file to be normalized.");
   options.addUsage("Then normalizes the diff entries to the reference.");
   options.addUsage("Outputs a normalized genome diff file.");
-
+  
+  if(argc == 1)  {
+    options.printUsage();
+    return -1;  }
 
   if (!options.count("genome_diff")) {
     options.addUsage("");
@@ -1263,7 +1286,10 @@ int do_runfile(int argc, char *argv[])
   options.addUsage("\t  Output: breseq -o 1B4 -r 02_Downloads/NC_012660.1.gbk 02_Downloads/SRR172993.fastq >& 04_Errors/1B4.errors.txt");
   options.addUsage("\t  Output: breseq -o ZDB111 -r 02_Downloads/REL606.5.gbk 02_Downloads/SRR098039.fastq >& 04_Errors/ZDB111.errors.txt");
   options.processCommandArgs(argc, argv);
-
+  
+  if(argc == 1)  {
+    options.printUsage();
+    return -1;  }
 
   if (!options.getArgc() && !options.count("data_dir")) {
   options.addUsage("");
@@ -1693,6 +1719,10 @@ int do_subsequence(int argc, char *argv[])
   options.addUsage("of the sequence.  Using '0' as the End position will set");  
   options.addUsage("it to the length of the relevant sequence.");
   
+  if(argc == 1)  {
+    options.printUsage();
+    return -1;  }
+  
   if(!file_exists(options["reference"].c_str()))  {
     options.addUsage("");
     options.addUsage("You must supply a valid --reference option for input.");
@@ -1789,6 +1819,10 @@ int do_convert_exact_match(int argc, char *argv[])
   options.addUsage("Takes an input file with Start1, Start2, and Size columns");  
   options.addUsage("that delineate exact matches and sorts them.  Output is to"); 
   options.addUsage("tab delimmited file with no header info.");
+  
+  if(argc == 1)  {
+    options.printUsage();
+    return -1;  }
   
   if (!options.count("input")) {
     options.addUsage("");
@@ -1910,23 +1944,68 @@ int do_convert_exact_match(int argc, char *argv[])
 
 int do_rand_muts(int argc, char *argv[])
 {
-  AnyOption options("Usage: breseq CONVERT_EXACT_MATCH");
-  options("exclude,e","input file");
-  options("type,t","output file");
-  options("number,n","output file");
-  options("length,l","output file");
-  options("reference,r","output file");
-  options("seq,s","output file");  
-  options("output,o","output file");
+  AnyOption options("Usage: breseq RANDOM_MUTATIONS -r <reference> -o <output.gd> -t <type>");  
+  options("reference,r","Reference file");  
+  options("output,o","Output file");
+  options("type,t","Type of mutation to generate");
+  options("exclude,e","Exclusion file");
+  options("number,n","Number of mutations to generate", static_cast<uint32_t>(1000));
+  options("length,l","Length of reads (used to space mutations)", static_cast<uint32_t>(50));
+  options("seq,s","Sequence to use from reference");
   options("verbose,v","Verbose Mode (Flag)", TAKES_NO_ARGUMENT);
   options.processCommandArgs(argc, argv);
   
+  options.addUsage("");
+  options.addUsage("Using -reference, this command will generate a --number of");
+  options.addUsage("mutations, and space them based on the supplied --length.");
+  options.addUsage("");
+  options.addUsage("Required fields are -r, -o, and -t.");
+  options.addUsage("Valid types: SNP, INS, DEL, MOB");
+  options.addUsage("INS:1-10 will generate insertions of size 1 to 10.");
+  options.addUsage("DEL:1-10 will generate deletions of size 1 to 10.");
+  
+  if(argc == 1)  {
+    options.printUsage();
+    return -1;  }
+  
+  if (!options.count("reference") || !file_exists(options["reference"].c_str())) {
+    options.addUsage("");
+    options.addUsage("You must supply the --reference option for input.");
+    options.addUsage("If you feel you've received this message in error, please");
+    options.addUsage("check to see that the file exists.");
+    options.printUsage();
+    return -1;
+  }
+  
+  if (!options.count("output")) {
+    options.addUsage("");
+    options.addUsage("You must supply the --output option for output.");
+    options.printUsage();
+    return -1;
+  }
+  
+  if (!options.count("type")) {
+    options.addUsage("");
+    options.addUsage("You must supply the --type option so that we can choose");
+    options.addUsage("which mutation to generate.");
+    options.printUsage();
+    return -1;
+  }
   
   cReferenceSequences ref_seq_info;
   ref_seq_info.LoadFiles(from_string<vector<string> >(options["reference"]));
   
+  string exclusion_file = "";
+  if(options.count("exclude"))  {
+    options["exclude"];  }
+  
+  int ref_seq_id = 0;
+  if(options.count("seq"))  {
+    ref_seq_id = ref_seq_info.seq_id_to_index(options["seq"]);
+  }
+  
   cGenomeDiff gd1;
-  gd1.random_mutations(options["exclude"], options["type"], from_string<uint32_t>(options["number"]), from_string<uint32_t>(options["length"]), ref_seq_info[0]);
+  gd1.random_mutations(options["exclude"], options["type"], from_string<uint32_t>(options["number"]), from_string<uint32_t>(options["length"]), ref_seq_info[ref_seq_id]);
   
   gd1.write(options["output"]);
   
