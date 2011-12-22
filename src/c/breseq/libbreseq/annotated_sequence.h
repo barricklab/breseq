@@ -194,11 +194,16 @@ namespace breseq {
 
       string get_circular_sequence_1(const size_t start_1, const size_t size) const
       {
-        const size_t start_0 = start_1 - 1;
-        const size_t max_pos = start_0 + size;
-
         const string &sequence = m_fasta_sequence.m_sequence;
         const size_t seq_size = sequence.size();
+        
+        uint32_t uRealStart_1 = start_1;
+        if(start_1 > seq_size)  {
+          uRealStart_1 = start_1 - seq_size;  }
+        
+        const size_t start_0 = uRealStart_1 - 1;
+        const size_t max_pos = start_0 + size;
+        
         const int32_t size_diff = seq_size - max_pos;
 
         string ret_val("");
