@@ -650,6 +650,7 @@ sub html_mutation_table_string
 			$freq = 1 if (!defined $freq);
 			return 'H' if ($freq eq 'H');
 			return '?' if ($freq eq '?');
+			return "&Delta;" if ($freq eq 'D');
 			return '' if ($freq == 0);
 			my $frequency_string;
 			if ($freq == 1) {

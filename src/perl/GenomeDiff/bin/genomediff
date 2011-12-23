@@ -607,6 +607,10 @@ sub _compile_compare_gd
 				}
 				shift @$mut_list;
 			}
+			elsif ($gd->mutation_deleted($next_mut))
+			{
+				$this_freq = 'D';
+			}
 			elsif ($gd->mutation_unknown($next_mut))
 			{
 				$this_freq = '?';
