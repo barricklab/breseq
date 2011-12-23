@@ -1105,6 +1105,18 @@ sub interval_un
 	return 0;
 }
 
+sub interval_del
+{
+	my ($gd, $start, $end) = @_;
+
+	my @del_list = $gd->list('DEL');	
+	DEL: foreach my $del (@del_list) 
+	{					
+		return 1 if ( ($start >= $del->{position}) && ($end <= $del->{position} + $del->{size} - 1) );
+	}
+	return 0;
+}
+
 sub mutation_evidence_list
 {
 	my ($self, $item) = @_;	
@@ -1155,6 +1167,46 @@ sub mutation_unknown
 	if ($mut->{type} eq 'SUB')
 	{
 		return $self->interval_un($mut->{position}, $mut->{position}+$mut->{size}-1);
+	}
+	
+	return 0;
+}
+
+sub mutation_deleted
+{
+	my ($self, $mut) = @_;
+
+	if ($mut->{type} eq 'SNP')
+	{
+		return $self->interval_del($mut->{position}, $mut->{position});
+	}
+	
+	## should be updated to new unknown that includes linkage
+	if ($mut->{type} eq 'INS')
+	{
+		return $self->interval_del($mut->{position}, $mut->{position}+1);
+	}
+
+	if ($mut->{type} eq 'DEL')
+	{
+
+#doesn't work b/c evidence list may not be correct here
+		## only call unknowns if all support is RA
+#		my $only_ra_evidence = 1;
+#		foreach my $ev ($self->mutation_evidence_list($mut))
+#		{
+#			print Dumper($ev);
+#			$only_ra_evidence &&= $ev->{type} eq 'RA';
+#		}
+#		print Dumper($mut);
+#		print "Only RA evidence? $only_ra_evidence\n";		
+#		return 0 if (!$only_ra_evidence);
+		return $self->interval_del($mut->{position}, $mut->{position}+$mut->{size}-1);
+	}
+	
+	if ($mut->{type} eq 'SUB')
+	{
+		return $self->interval_del($mut->{position}, $mut->{position}+$mut->{size}-1);
 	}
 	
 	return 0;
