@@ -657,11 +657,10 @@ void cGenomeDiff::read(const string& filename) {
     if (line.empty()) {
       continue;
     } else if (line[0] == '#') {
-       printf("\tcGenomeDiff:read(%s): Discarding line : %s\n",
-       filename.c_str(), line.c_str());
-       continue;
+      //printf("Discarding Genome Diff comment file:%s line:\n%s\n", filename.c_str(), line.c_str());
+      continue;
     } else if (line.find_first_not_of(' ') == string::npos) {
-       continue;
+      continue;
     }
 
     add(cDiffEntry(line));
@@ -2320,14 +2319,33 @@ void cGenomeDiff::shift_positions(cDiffEntry &item, cReferenceSequences& ref_seq
     WARN("Size change not defined for mutation.");
 
   uint32_t offset = from_string<uint32_t>(item[POSITION]);
-  bool inversion = false;
-
+  
+  // Only offset if past the duplicated part of a MOB (allows putting a mutation in the first copy)
+  if (item._type == MOB) {
+    offset += from_string<uint32_t>(item["duplication_size"]);
+  }
+  
+  // @JEB TODO: Need manual support for putting mutations within a newly inserted mutation (nesting)
+  
+  // This could get tricky for mutations that overlap boundaries of other mutations
+  // we should check for this and throw an error if it occurs.
+    
+  if (item.entry_exists("in_mutation")) {
+    
+    ERROR("'in_mut' key not implemented");
+    
+  } else if (item.entry_exists("in_copy")) {
+    
+    ERROR("Expected 'in_mut' key since 'in_copy' key exists for item" + item.to_string());
+  }
+  
+  
   diff_entry_list_t muts = this->mutation_list();
   for (diff_entry_list_t::iterator itr = muts.begin(); itr != muts.end(); itr++) {
     cDiffEntry& mut = **itr;
-
-    if (inversion) {
-      WARN("shift_positions cannot handle inversions yet!");
+    
+    if (mut._type == INV) {
+      ERROR("shift_positions cannot handle inversions yet!");
     } else {
       uint32_t position = from_string<uint32_t>(mut[POSITION]);
       if (item[SEQ_ID] == mut[SEQ_ID] && position > offset)
