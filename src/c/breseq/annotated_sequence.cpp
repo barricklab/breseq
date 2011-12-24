@@ -1986,7 +1986,6 @@ void cReferenceSequences::polymorphism_statistics(Settings& settings, Summary& s
   //
   string coverage_fn = settings.file_name(settings.unique_only_coverage_distribution_file_name, "@", "");
   string outputdir = dirname(coverage_fn) + "/";
-  //chomp $outputdir; $outputdir .= "/";
   string count_file_name = outputdir + "error_counts.tab";
 
   ifstream COUNT(count_file_name.c_str());
@@ -2019,9 +2018,6 @@ void cReferenceSequences::polymorphism_statistics(Settings& settings, Summary& s
   ASSERT( (quality_column != UNDEFINED_UINT32) && (count_column != UNDEFINED_UINT32),
           "'quality' and 'count' columns not found in file: " + count_file_name);
 
-
-  ////#print "$count_column $quality_column\n";
-
   vector<uint32_t> quality_count_list(covariate_max[k_quality]);
   string line;
   while (COUNT.good())
@@ -2042,8 +2038,7 @@ void cReferenceSequences::polymorphism_statistics(Settings& settings, Summary& s
   for (uint32_t i = 1; i < quality_count_list.size(); i++)
   {
     uint32_t val = 0;
-    //if (is_defined(quality_count_list[i]))
-      val = quality_count_list[i];
+    val = quality_count_list[i];
     GEC << val << endl;
   }
   GEC.close();
@@ -2067,7 +2062,6 @@ void cReferenceSequences::polymorphism_statistics(Settings& settings, Summary& s
   assert(ROUT.is_open()); // or die "Could not find file: $polymorphism_statistics_output_file_name";
   string header;
   getline(ROUT, header);
-  //chomp $header;
   vector<string> header_list = split(header, "\t");
 
   cGenomeDiff new_gd;
@@ -2093,7 +2087,6 @@ void cReferenceSequences::polymorphism_statistics(Settings& settings, Summary& s
 
     string line;
     getline(ROUT, line);
-    //chomp $header;
     vector<string> line_list = split(line, "\t");
 
     for (uint32_t j = 0; j < header_list.size(); j++)
@@ -2131,8 +2124,8 @@ void cReferenceSequences::polymorphism_statistics(Settings& settings, Summary& s
     if (from_string<double>(mut["fisher_strand_p_value"]) < settings.polymorphism_bias_p_value_cutoff)
       add_reject_reason(mut, "FISHER_STRAND_P_VALUE");
 
-    ////// Optionally, ignore if in a homopolymer stretch
-    if (settings.polymorphism_reject_homopolymer_length != UNDEFINED_UINT32)
+    ////// Optionally, ignore if in a homopolymer stretch longer than this
+    if (settings.polymorphism_reject_homopolymer_length)
     {
       uint32_t test_length = 20;
       string seq_id = mut["seq_id"];
@@ -2140,9 +2133,6 @@ void cReferenceSequences::polymorphism_statistics(Settings& settings, Summary& s
       uint32_t start_pos = end_pos - test_length + 1;
       if (start_pos < 1) start_pos = 1;
       string bases = this->get_sequence_1(seq_id, start_pos, end_pos);
-
-      //#print Dumper($mut);
-      //#print "$bases\n";
 
       uint32_t same_base_length = 0;
       string first_base = bases.substr(end_pos - start_pos, 1);
@@ -2153,7 +2143,6 @@ void cReferenceSequences::polymorphism_statistics(Settings& settings, Summary& s
         same_base_length++;
       }
 
-      //#print "$same_base_length\n";
       if (same_base_length >= settings.polymorphism_reject_homopolymer_length)
       {
         add_reject_reason(mut, "HOMOPOLYMER_STRETCH");
@@ -2166,7 +2155,6 @@ void cReferenceSequences::polymorphism_statistics(Settings& settings, Summary& s
         && (from_string<double>(mut[FREQUENCY]) > 0.5)
         )
     {
-      //#print Dumper($mut);
       mut[FREQUENCY] = "1";
       mut.erase(REJECT);
 
@@ -2178,7 +2166,6 @@ void cReferenceSequences::polymorphism_statistics(Settings& settings, Summary& s
 
     new_gd.add(mut);
 
-    // END EXPERIMENTAL
   }
 
   ROUT.close();
@@ -2269,7 +2256,6 @@ uint32_t alignment_mismatches(const alignment_wrapper& a, const cReferenceSequen
     }
   }
 
-  //#	print $a->qname . "\n$mismatches\n$cigar_string\n$ref_string\n$read_string\n" if ($mismatches);
   return mismatches;
 }
 

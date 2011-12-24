@@ -163,7 +163,12 @@ int do_bam2cov(int argc, char* argv[]) {
 		return -1;
 	}
   
-  ASSERT(options.count("plot") || options.count("table"), "Must specify either --plot or --table.");
+  if (!options.count("plot") && !options.count("table")) {
+    options.addUsage("");
+    options.addUsage("Must specify either --plot or --table option.");
+		options.printUsage();
+		return -1;
+  }
 
   vector<string> region_list;
   if (options.count("region"))
@@ -182,7 +187,7 @@ int do_bam2cov(int argc, char* argv[]) {
   
   if (tiling_mode && (region_list.size() > 0))
   {
-    WARN("Tiling mode activated. Ignoring " + to_string(region_list.size()) + "regions that were specified.");
+    WARN("Tiling mode activated. Ignoring " + to_string(region_list.size()) + " regions that were specified.");
     region_list.clear();
   }
   
@@ -2067,7 +2072,7 @@ int breseq_default_action(int argc, char* argv[])
 	// 03_candidate_junctions
 	// * Identify candidate junctions from split read alignments
 	//
-	if (settings.junction_prediction)
+	if (!settings.no_junction_prediction)
 	{
 		create_path(settings.candidate_junction_path);
 
@@ -2232,7 +2237,7 @@ int breseq_default_action(int argc, char* argv[])
 		//}
     //assert(coverage_cutoffs.size() == ref_seq_info.size());
 
-    bool junction_prediction = settings.junction_prediction;
+    bool junction_prediction = !settings.no_junction_prediction;
     if (junction_prediction && file_empty(settings.candidate_junction_fasta_file_name.c_str())) junction_prediction = false;
     
 		resolve_alignments(
@@ -2272,7 +2277,7 @@ int breseq_default_action(int argc, char* argv[])
 
     // only run samtools if we are predicting junctions and there were results in the sam file
     // first part of conditional really not necessary @JEB
-		if (settings.junction_prediction && !file_empty(resolved_junction_sam_file_name.c_str()))
+		if (!file_empty(resolved_junction_sam_file_name.c_str()))
 		{
 			command = samtools + " import " + candidate_junction_faidx_file_name + " " + resolved_junction_sam_file_name + " " + junction_bam_unsorted_file_name;
 			SYSTEM(command);
