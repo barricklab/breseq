@@ -323,13 +323,6 @@ void resolve_alignments(
 	///
 	// Candidate junctions with unique matches
 	///
-  
-  // @JEB Better algorithm:
-  //  Score every junction and sort
-  //  Accept top match...
-  //  (Optional: rescore every junction, for lost degenerate matches, and sort)
-  //  Accept next top match...
-  // To implement this, we need to add a separate score function.
 
 	//sort junction ids based on size of vector
   junction_test_info_list.sort();

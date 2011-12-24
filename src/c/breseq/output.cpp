@@ -607,7 +607,7 @@ void html_statistics(const string &file_name, const Settings& settings, Summary&
   // Junction prediction information
   ////
   
-  if (settings.junction_prediction)
+  if (!settings.no_junction_prediction)
   {
     HTML << h2("Junction Prediction Information") << endl;
     HTML << "<p>" << endl;
@@ -2010,44 +2010,42 @@ void Html_Mutation_Table_String::Header_Line()
     }
   } else {
     total_cols = 5 + freq_header_list.size();
-    if (!one_ref_seq) {
-    total_cols += 1;
-    }
-    if (!settings.no_evidence) {
+    if (!one_ref_seq)
       total_cols += 1;
-    }
+
+    if (!settings.no_evidence)
+      total_cols += 1;
+
 
     ss <<  "<tr>" << endl;
-   if (!settings.no_evidence) {
-     ss << th("evidence") << endl;
-   } 
-   if(!one_ref_seq) {
-     ss << th(nonbreaking("seq id")) << endl;
-   }
+    if (!settings.no_evidence)
+      ss << th("evidence") << endl;
 
-   ss << th("position") << endl;
-   ss << th("mutation") << endl;
+    if(!one_ref_seq)
+      ss << th(nonbreaking("seq id")) << endl;
 
-   if(freq_header_list.size() > 0) {
-     for (vector<string>::iterator itr = freq_header_list.begin() ;
+    ss << th("position") << endl;
+    ss << th("mutation") << endl;
+
+    if(freq_header_list.size() > 0) {
+      for (vector<string>::iterator itr = freq_header_list.begin() ;
           itr != freq_header_list.end() ; itr++) {
-       string& freq_header_item = *itr;
-       ss << th(freq_header_item) << endl;  
-     }
-   }
+        string& freq_header_item = *itr;
+        ss << th(freq_header_item) << endl;  
+      }
+    }
  
-   ss << th("annotation") << endl;
-   ss << th("gene") << endl;
-   ss << th("width=\"100%\"","description") << endl;
-   ss << "</tr>" << endl; 
+    ss << th("annotation") << endl;
+    ss << th("gene") << endl;
+    ss << th("width=\"100%\"","description") << endl;
+    ss << "</tr>" << endl; 
   }
 
-  if(!settings.no_header) {
-        (*this) += tr(th("colspan=\"" + to_string(total_cols) + "\" align=\"left\" class=\"mutation_header_row\"", header_text));
-  }
+  if(header_text != "")
+    (*this) += tr(th("colspan=\"" + to_string(total_cols) + "\" align=\"left\" class=\"mutation_header_row\"", header_text));
 
- ss << endl;
- (*this) += ss.str(); 
+  ss << endl;
+  (*this) += ss.str(); 
 }
 //===============================================================================
 //       CLASS: Html_Mutation_Table_String

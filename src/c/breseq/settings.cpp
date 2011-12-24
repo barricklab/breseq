@@ -106,54 +106,12 @@ namespace breseq
   {
     this->pre_option_initialize(argc, argv);
     
-    // we need the path to the executable to locate scripts and our own installed versions of binaries
+    // We need the path to the executable to locate scripts and our own installed versions of binaries
+    // --> get this before parsing the options
     this->bin_path = getExecPath(argv[0]);
     size_t slash_pos = this->bin_path.rfind("/");
     if (slash_pos != string::npos) this->bin_path.erase(slash_pos);
 
-/* FULL LIST OF PERL ARGS - Don't need to port all
-## Options for turning various analysis chunks off or on
-		'no-junction-prediction' => \$self->{no_junction_prediction},
-		'no-mismatch-prediction' => \$self->{no_mutation_prediction},
-		'no-deletion-prediction' => \$self->{no_deletion_prediction},
-		'no-alignment-generation' => \$self->{no_alignment_generation},
-		'no-unmatched-reads' => \$self->{no_unmatched_reads},
-		'copy-number-variation' => \$self->{copy_number_variation},
-## Options for only using part of the data		
-		'read-limit|l=s' => \$self->{read_limit},
-		'candidate-junction-read-limit=s' => \$self->{candidate_junction_read_limit},
-		'alignment-read-limit=s' => \$self->{alignment_read_limit},		
-## Options for input
-		'name|n=s' => \$self->{run_name},	
-		'output-path|o=s' => \$self->{base_output_path},	
-		'reference-sequence|r=s' => \@{$self->{reference_genbank_file_names}},
-		'junction-sequence|j=s' => \@{$self->{junction_only_reference_genbank_file_names}},	
-## Options for output			
-		'keep-all-intermediates' => \$self->{keep_all_intermediates},
-		'shade-frequencies' => \$self->{shade_frequencies},
-		'max-rejected-polymorphisms-to-show=s' => \$self->{max_rejected_polymorphisms_to_show},
-		'max-rejected-junctions-to-show=s' => \$self->{max_rejected_junctions_to_show},	
-## Options for read aligment
-		'maximum-mismatches|m=s' => \$self->{maximum_read_mismatches},	
-		'required-match-length=s' => \$self->{required_match_length},
-## Options for snp error analysis
-		'require-no-indel-match' => \$self->{require_no_indel_match},
-		'require-max-mismatches=s' => \$self->{require_max_mismatches},
-		'do-not-trim-ambiguous-ends' => \$self->{do_not_trim_ambiguous_ends},
-		'base-quality-cutoff|b=s' => \$self->{base_quality_cutoff},
-## Options for polymorphism analysis
-		'polymorphism-prediction' => \$self->{polymorphism_prediction},		
-		'polymorphism-log10-e-value-cutoff=s' => \$self->{polymorphism_log10_e_value_cutoff},
-		'polymorphism-frequency-cutoff=s' =>  \$self->{polymorphism_frequency_cutoff},	
-		'polymorphism-p-value-cutoff=s' => \$self->{polymorphism_bias_p_value_cutoff},
-		'polymorphism-coverage-both-strands=s' => \$self->{polymorphism_coverage_both_strands},	
-		'polymorphism-reject-homopolymer-length=s' => \$self->{polymorphism_reject_homopolymer_length},
-		'no-indel-polymorphisms' => \$self->{no_indel_polymorphisms},	
-## Options for candidate junction identification	
-		'maximum-candidate-junctions=s' => \$self->{maximum_candidate_junctions},
-## Options for using deprecated and slow Perl methods		
-		'smalt' => \$self->{smalt},
-*/
     
     // setup and parse configuration options:
     AnyOption options("Usage: breseq -r reference.gbk reads1.fastq [reads2.fastq, reads3.fastq...]");
@@ -167,8 +125,8 @@ namespace breseq
     ("no-junction-prediction,j", "do not predict new sequence junctions", TAKES_NO_ARGUMENT)
     ("polymorphism-prediction,p", "predict polymorphic mutations", TAKES_NO_ARGUMENT)
     ("base-quality-cutoff,b", "ignore bases with quality scores lower than this value", "3")
-    ("deletion-coverage-propagation-cutoff,u","value for coverage above which deletions are cutoff")
-    ("deletion-coverage-seed-cutoff,s","value for coverage below which deletions are cutoff")
+    ("deletion-coverage-propagation-cutoff,u","value for coverage above which deletions are cutoff", 0)
+    ("deletion-coverage-seed-cutoff,s","value for coverage below which deletions are cutoff", 0)
     ("require-complete-match", "only consider alignments that extend from end to end of a read", TAKES_NO_ARGUMENT)
     ("require-match-length", "only consider alignments that cover this many bases of a read", "0")
     ("require-match-fraction", "only consider alignments that cover this fraction of a read", "0.9")
@@ -192,15 +150,11 @@ namespace breseq
       exit(-1);
     }
     
-    // Reference sequence provided?
-		if (options.count("reference") == 0)
-		{
-      options.addUsage("");
-      options.addUsage("No reference sequences provided (-r).");
-      options.printUsage();
-      exit(-1);
-		}
+    //! Settings: Global Workflow and Output
     
+    this->base_output_path = options["output"];
+
+    // Remaining command line items are read files
     // Read sequence file provided?
 		if (options.getArgc() == 0)
 		{
@@ -209,12 +163,44 @@ namespace breseq
       options.printUsage();
       exit(-1);		
     }
-
-    //Please put options in the same order as the header file
+    for (int32_t i = 0; i < options.getArgc(); i++)
+    {
+      string read_file_name = options.getArgv(i);
+      this->read_file_names.push_back(read_file_name);
+    }
+    this->read_files.Init(read_file_names);
+    
+    // Reference sequence provided?
+		if (options.count("reference") == 0)
+		{
+      options.addUsage("");
+      options.addUsage("No reference sequences provided (-r).");
+      options.printUsage();
+      exit(-1);
+		}
+    this->reference_file_names = from_string<vector<string> >(options["reference"]);
+    
+    this->run_name = options["name"];
+    
+    this->no_junction_prediction = options.count("no-junction-prediction");
+    this->do_copy_number_variation = options.count("cnv");
     
     this->verbose = options.count("verbose");
-    this->run_name = options["name"];
-    this->base_output_path = options["output"];
+    
+    //! Settings: Read Alignment and Candidate Junction Read Alignment
+
+    this->require_complete_match = (options.count("require-complete-match") > 0);
+    this->require_match_length = from_string<uint32_t>(options["require-match-length"]);
+    this->require_match_fraction = from_string<double>(options["require-match-fraction"]);
+
+    //! Settings: Mutation Identification
+    
+    this->base_quality_cutoff = from_string<uint32_t>(options["base-quality-cutoff"]);
+
+    this->deletion_coverage_propagation_cutoff = from_string<double>(options["deletion-coverage-propagation-cutoff"]);
+    ASSERT(this->deletion_coverage_propagation_cutoff >= 0, "Argument --deletion-coverage-propagation-cutoff must be > 0")
+    this->deletion_coverage_seed_cutoff = from_string<double>(options["deletion-coverage-seed-cutoff"]);
+    ASSERT(this->deletion_coverage_propagation_cutoff >= 0, "Argument --deletion-coverage-seed-cutoff must be > 0")
     
     this->polymorphism_prediction = options.count("polymorphism-prediction");
     if (this->polymorphism_prediction) {
@@ -223,39 +209,9 @@ namespace breseq
       this->polymorphism_frequency_cutoff = 0; // cut off if < X or > 1-X
       this->mixed_base_prediction = false;
     } 
-    this->do_copy_number_variation = options.count("cnv");
-    
-    this->base_quality_cutoff = from_string<uint32_t>(options["base-quality-cutoff"]);
+ 
+    //! Settings: Experimental
 
-    //Coverage distributuion options
-    if (options.count("deletion-coverage-propagation-cutoff"))
-      this->deletion_coverage_propagation_cutoff = from_string<double>(options["deletion-coverage-propagation-cutoff"]);
-    if (options.count("deletion-coverage-seed-cutoff"))
-      this->deletion_coverage_seed_cutoff = from_string<double>(options["deletion-coverage-seed-cutoff"]);
-
-    assert(this->deletion_coverage_propagation_cutoff >= 0);
-    assert(this->deletion_coverage_seed_cutoff >= 0);
-
-    // Alignment options    
-    this->require_complete_match = (options.count("require-complete-match") > 0);
-    this->require_match_length = from_string<uint32_t>(options["require-match-length"]);
-    this->require_match_fraction = from_string<double>(options["require-match-fraction"]);
-
-    //// GENBANK REFERENCE FILES ////
-    this->reference_file_names = from_string<vector<string> >(options["reference"]);
-    
-    //// FASTQ READ FILES ////
-    // Remaining command line items are read files
-    for (int32_t i = 0; i < options.getArgc(); i++)
-    {
-      string read_file_name = options.getArgv(i);
-      this->read_file_names.push_back(read_file_name);
-    }
-    this->read_files.Init(read_file_names);
-    
-    //// Other options ////
-    this->junction_prediction = !options.count("no-junction-prediction");
-    
     this->add_metadata_to_gd = options.count("values-to-gd");
 
     
@@ -286,7 +242,10 @@ namespace breseq
 
 	void Settings::pre_option_initialize(int argc, char* argv[])
 	{    
-    // Constants
+    ////////////////////
+    //! Data
+    ////////////////////
+    
     this->byline = "<b><i>breseq</i></b>&nbsp;&nbsp;version ";
     this->byline += PACKAGE_VERSION;
     this->byline += "&nbsp;&nbsp;";
@@ -294,9 +253,9 @@ namespace breseq
 
     this->website = PACKAGE_URL;
     
-		// Set up default values for options
-    this->bin_path = ".";
-    
+    // Settings
+    // Initialize all variables that do not have default initializers (non-strings mostly) 
+
     this->arguments = "";
     if (argc > 0) this->full_command_line = argv[0];
     for(int i=1; i<argc; i++)
@@ -305,135 +264,139 @@ namespace breseq
       this->arguments += argv[i];
     }
     this->full_command_line += " " + this->arguments;
+   
+    ////////////////////
+    //! Settings
+    ////////////////////
     
-		this->run_name = "";
-    this->print_run_name = ""; 
-    this->base_quality_cutoff = 3; // avoids problem with Illumina assigning 2 to bad ends of reads!
-
-    //Coverage distribution options
-    this->deletion_coverage_propagation_cutoff = 0;
-    this->deletion_coverage_seed_cutoff = 0;
-
-    //// Read Alignment ////
+    //! Settings: Global Workflow and Output
     
-    // SSAHA2 options
+    //! Options that control which parts of the pipeline to execute
+    this->no_junction_prediction = false;
+		this->no_mutation_prediction = false;
+		this->no_deletion_prediction = false;
+    this->no_alignment_generation = false;
+		this->do_copy_number_variation = false;
+    
+    //! DEBUG options
+    this->verbose = false;
+		this->alignment_read_limit = 0;         
+		this->resolve_alignment_read_limit = 0; 
+    this->candidate_junction_read_limit = 0;
+    this->no_unmatched_reads = false;
+    this->keep_all_intermediates = false;
+
+    //! Settings: Read Alignment and Candidate Junction Read Alignment
     this->ssaha2_seed_length = 13;
     this->ssaha2_skip_length = 1;
-
     this->require_complete_match = false;
-    this->require_match_length = 0;           // Match must span this many bases in query to count as a match
-    this->require_match_fraction = 0.9;       // Match must span this fraction of bases in query to count as a match
-    
-    this->max_read_mismatches = -1;            // Read alignments with more than this number of mismatches are not counted; -1 = OFF
-		this->preprocess_junction_min_indel_split_length = 3; // Split the SAM entries on indels of this many bp or more before identifying CJ
+    this->require_match_length = 0;         
+    this->require_match_fraction = 0.9;
+    this->maximum_read_mismatches = -1;
 
-    //// Identify CandidateJunctions ////
-    
-		// Scoring to decide which pairs of alignments to the same read to consider
-		this->required_both_unique_length_per_side = 5; //this->ssaha2_seed_length;  
-    ASSERT(this->required_both_unique_length_per_side <= this->ssaha2_seed_length,
-           "--required-both-unique-length-per-side " + to_string(this->required_both_unique_length_per_side) + " must be less than or equal to --ssaha2-seed-length [" + to_string(this->ssaha2_seed_length) + "].");
-                                                      // Require both of the pair of matches supporting a junction to have this
-                                                      // much of their matches unique in the reference sequence.
-		this->required_one_unique_length_per_side = this->ssaha2_seed_length;    // Require at least one of the pair of matches supporting a junction to have this
-                                                      // much of its match that is unique in the reference sequence.
-		this->maximum_junction_sequence_insertion_length = 20;  // Ignore junctions with negative overlap (unique inserted sequence between reference)
-		this->maximum_junction_sequence_overlap_length = 20;    // Ignore junctions with positive overlap (overlap of reference on each side)
+    this->smalt = false;
+    this->max_smalt_diff = 0;
 
-    this->minimum_candidate_junctions = 10;           // Minimum number of candidate junctions to keep
-		this->maximum_candidate_junctions = 5000;         // Maximum number of candidate junctions to keep
-		this->maximum_candidate_junction_length_factor = 0.1; // Only keep CJ cumulative lengths adding up to this factor times the total reference size
+    //! Settings: Candidate Junction Prediction
+		this->preprocess_junction_min_indel_split_length = 3;
+		this->required_both_unique_length_per_side = 5;
+		this->required_one_unique_length_per_side = this->ssaha2_seed_length;  
+    this->minimum_candidate_junction_pos_hash_score = 2;
+    this->maximum_junction_sequence_insertion_length = 20;
+    this->maximum_junction_sequence_overlap_length = 20;
+    this->minimum_candidate_junctions = 10;
+		this->maximum_candidate_junctions = 5000;
+		this->maximum_candidate_junction_length_factor = 0.1;
 
-    this->minimum_candidate_junction_pos_hash_score = 2;    // Require at least this many unique start coordinate/strand reads to accept a CJ
-    // OFF by default, because a fixed number are taken  
-      
-    //// Alignment Resolution ////
-    this->add_split_junction_sides = true;    // Add the sides of passed junctions to the SAM file?
+    //! Settings: Alignment Resolution
+    this->add_split_junction_sides = true;
     this->junction_pos_hash_neg_log10_p_value_cutoff = 3;
-        
-    //// MutationIdentification ////
+
+    //! Settings: Mutation Identification
+    this->base_quality_cutoff = 3;
+    this->deletion_coverage_propagation_cutoff = 0;
+    this->deletion_coverage_seed_cutoff = 0;
+    this->polymorphism_prediction = false;
+    this->mixed_base_prediction = true;
     
-    this->polymorphism_prediction = false;       // perform polymorphism prediction
-    this->mixed_base_prediction = true;          // perform mixed base prediction
-    
-    // these are the defaults for mixed_base_prediction mode
-		this->mutation_log10_e_value_cutoff = 10; // log10 of evidence required for SNP calls
+		this->mutation_log10_e_value_cutoff = 10;
     this->polymorphism_log10_e_value_cutoff = this->mutation_log10_e_value_cutoff;
 		this->polymorphism_bias_p_value_cutoff = 0.05;
-		this->polymorphism_frequency_cutoff = 0.1; // cut off if < X or > 1-X
-		this->polymorphism_coverage_both_strands = 0; // require this much coverage on each strand
+		this->polymorphism_frequency_cutoff = 0.1;
+		this->polymorphism_coverage_both_strands = 0;
+    this->polymorphism_reject_homopolymer_length = 0;
 		this->no_indel_polymorphisms = false;
     
-		//// Output ////
+    //! Settings: Output
+    this->maximum_reads_to_align = 100;
 		this->max_rejected_polymorphisms_to_show = 20;
 		this->max_rejected_junctions_to_show = 10;
 		this->hide_circular_genome_junctions = true;
-    this->polymorphism_reject_homopolymer_length = UNDEFINED_UINT32;
-    this->maximum_reads_to_align = 200;
     
 		this->lenski_format = false;
 		this->no_evidence = false;
 		this->shade_frequencies = false;
-		this->no_header = false;
-    this->verbose = false;
     this->add_metadata_to_gd = false;
     
-    //// Global Workflow ////
-    this->junction_prediction = true; // perform junction prediction steps
-		this->no_mutation_prediction = false;  // don't perform read mismatch/indel prediction steps
-		this->no_deletion_prediction = false; // don't perform deletion prediction steps
-		this->do_copy_number_variation = false;
-		this->no_alignment_generation = false; // don't generate alignments
-    this->no_unmatched_reads = false;
-    this->keep_all_intermediates = false;
-  
-    //// Options for testing
-		this->alignment_read_limit = 0;           // only go through this many reads when creating alignments
-		this->resolve_alignment_read_limit = 0;          // only go through this many reads when correcting alignments
-    this->candidate_junction_read_limit = 0;  // only go through this many reads when correcting alignments
-    this->smalt = false;    // experimental use of smalt aligner
+    ////////////////////
+    //! File Paths
+    ////////////////////
+    
+    this->bin_path = ".";
+    
+    //ASSERT(this->required_both_unique_length_per_side <= this->ssaha2_seed_length,
+    //       "--required-both-unique-length-per-side " + to_string(this->required_both_unique_length_per_side) + " must be less than or equal to --ssaha2-seed-length [" + to_string(this->ssaha2_seed_length) + "].");
 	}
 
 	void Settings::post_option_initialize()
 	{     
-    // DATADIR is a preprocessor directive set by Automake or the IDE (XCode)
-		this->program_data_path = DATADIR; 
+    this->init_installed();
     
-    if (getenv("PROGRAMDATAPATH"))
-      this->program_data_path = getenv("PROGRAMDATAPATH");  
+    // DATADIR is a preprocessor directive set by Automake in config.h
+		this->program_data_path = DATADIR; 
+        
+    ////////////////////
+    //! Settings
+    ////////////////////
     
 		// problems if there are spaces b/c shell removes quotes before we know about them
 		// thus require run names to only use underscores (but when printing output, remove).
     this->print_run_name = substitute(this->run_name, "_", " ");
-
-		////////  SET UP FILE NAMES  ////////
-		//// '#' replaced with read fastq name
+    
+    ////////////////////
+    //! File Paths
+    ////////////////////
+    
+		//// '#' replaced with read file name
 		//// '@' replaced by seq_id of reference sequence
 
-		////// sequence conversion //////
+    //! Paths: Sequence conversion
 		this->sequence_conversion_path = "01_sequence_conversion";
 		if (this->base_output_path.size() > 0) this->sequence_conversion_path = this->base_output_path + "/" + this->sequence_conversion_path;
+		this->sequence_conversion_done_file_name = this->sequence_conversion_path + "/sequence_conversion.done";
+
 		this->converted_fastq_file_name = this->sequence_conversion_path + "/#.converted.fastq";
 		this->unwanted_fasta_file_name = this->sequence_conversion_path + "/unwanted.fasta";
 		this->reference_trim_file_name = this->sequence_conversion_path + "/@.trims";
 		this->sequence_conversion_summary_file_name = this->sequence_conversion_path + "/summary.bin";
-		this->sequence_conversion_done_file_name = this->sequence_conversion_path + "/sequence_conversion.done";
 
-		////// reference //////
+    //! Paths: Read alignment
 		this->reference_alignment_path = "02_reference_alignment";
 		if (this->base_output_path.size() > 0) this->reference_alignment_path = this->base_output_path + "/" + this->reference_alignment_path;
-		this->reference_hash_file_name = this->reference_alignment_path + "/reference";
-		this->reference_sam_file_name = this->reference_alignment_path + "/#.reference.sam";
 		this->reference_alignment_done_file_name = this->reference_alignment_path + "/alignment.done";
 
-		////// candidate junction //////
+		this->reference_hash_file_name = this->reference_alignment_path + "/reference";
+		this->reference_sam_file_name = this->reference_alignment_path + "/#.reference.sam";
+
+    //! Paths: Junction Prediction
 		this->candidate_junction_path = "03_candidate_junctions";
 		if (this->base_output_path.size() > 0) this->candidate_junction_path = this->base_output_path + "/" + this->candidate_junction_path;
 
+		this->preprocess_junction_done_file_name = this->candidate_junction_path + "/preprocess_junction_alignment.done";
 		this->preprocess_junction_best_sam_file_name = this->candidate_junction_path + "/best.sam";
 		this->preprocess_junction_split_sam_file_name = this->candidate_junction_path + "/#.split.sam";
-		this->preprocess_junction_done_file_name = this->candidate_junction_path + "/preprocess_junction_alignment.done";
     
+    this->coverage_junction_done_file_name = this->candidate_junction_path + "/coverage_junction_alignment.done";
 		this->coverage_junction_best_bam_unsorted_file_name = this->candidate_junction_path + "/best.unsorted.bam";
 		this->coverage_junction_best_bam_file_name = this->candidate_junction_path + "/best.bam";
 		this->coverage_junction_best_bam_prefix = this->candidate_junction_path + "/best";
@@ -441,46 +404,48 @@ namespace breseq
 		this->coverage_junction_plot_file_name = this->candidate_junction_path + "/@.coverage.pdf";
 		this->coverage_junction_summary_file_name = this->candidate_junction_path + "/coverage.summary.bin";
     this->coverage_junction_error_count_summary_file_name = this->candidate_junction_path + "/error_count.summary.bin";
-		this->coverage_junction_done_file_name = this->candidate_junction_path + "/coverage_junction_alignment.done";
 
+    this->candidate_junction_done_file_name = this->candidate_junction_path + "/candidate_junction.done";
 		this->candidate_junction_summary_file_name = this->candidate_junction_path + "/candidate_junction_summary.bin";
 		this->candidate_junction_fasta_file_name = this->candidate_junction_path + "/candidate_junction.fasta";
 		this->candidate_junction_faidx_file_name = this->candidate_junction_path + "/candidate_junction.fasta.fai";
-		this->candidate_junction_done_file_name = this->candidate_junction_path + "/candidate_junction.done";
 
-		////// candidate junction alignment //////
+    //! Paths: Junction Alignment
 		this->candidate_junction_alignment_path = "04_candidate_junction_alignment";
 		if (this->base_output_path.size() > 0) this->candidate_junction_alignment_path = this->base_output_path + "/" + this->candidate_junction_alignment_path;
-		this->candidate_junction_hash_file_name = this->candidate_junction_alignment_path + "/candidate_junction";
-		this->candidate_junction_sam_file_name = this->candidate_junction_alignment_path + "/#.candidate_junction.sam";
 		this->candidate_junction_alignment_done_file_name = this->candidate_junction_alignment_path + "/candidate_junction_alignment.done";
 
-		////// alignment correction //////
+		this->candidate_junction_hash_file_name = this->candidate_junction_alignment_path + "/candidate_junction";
+		this->candidate_junction_sam_file_name = this->candidate_junction_alignment_path + "/#.candidate_junction.sam";
+
+    //! Paths: Alignment Resolution
 		this->alignment_resolution_path = "05_alignment_correction";
 		if (this->base_output_path.size() > 0) this->alignment_resolution_path = this->base_output_path + "/" + this->alignment_resolution_path;
+		this->alignment_correction_done_file_name = this->alignment_resolution_path + "/alignment_resolution.done";
+
 		this->resolved_reference_sam_file_name = this->alignment_resolution_path + "/reference.sam";
 		this->resolved_junction_sam_file_name = this->alignment_resolution_path + "/junction.sam";
 		this->alignment_resolution_summary_file_name = this->alignment_resolution_path + "/summary.bin";
-		this->alignment_correction_done_file_name = this->alignment_resolution_path + "/alignment_resolution.done";
 		this->jc_genome_diff_file_name = this->alignment_resolution_path + "/jc_evidence.gd";
 
-		////// index BAM //////
+    //! Paths: BAM conversion
 		this->bam_path = "06_bam";
 		if (this->base_output_path.size() > 0) this->bam_path = this->base_output_path + "/" + this->bam_path;
+		this->bam_done_file_name = this->bam_path + "/bam.done";
+
 		this->reference_bam_unsorted_file_name = this->bam_path + "/reference.unsorted.bam";
 		this->junction_bam_unsorted_file_name = this->bam_path + "/junction.unsorted.bam";
 		this->junction_bam_prefix = this->bam_path + "/junction";
 		this->junction_bam_file_name = this->bam_path + "/junction.bam";
-		this->bam_done_file_name = this->bam_path + "/bam.done";
 
-		////// error rates and coverage distribution //////
+		//! Paths: Error Calibration
 		this->error_calibration_path = "07_error_calibration";
 		if (this->base_output_path.size() > 0) this->error_calibration_path = this->base_output_path + "/" + this->error_calibration_path;
 		this->error_counts_file_name = this->error_calibration_path + "/#.error_counts.tab";
-		//FOR TESTING: this->complex_error_counts_file_name = "this->error_calibration_path///.complex_error_counts.tab";
+		this->error_rates_done_file_name = this->error_calibration_path + "/error_rates.done";
+
 		this->error_rates_file_name = this->error_calibration_path + "/#.error_rates.tab";
 		this->error_counts_done_file_name = this->error_calibration_path + "/error_counts.done";
-		this->error_rates_done_file_name = this->error_calibration_path + "/error_rates.done";
 		this->coverage_file_name = this->error_calibration_path + "/@.coverage.tab";
 		this->unique_only_coverage_distribution_file_name = this->error_calibration_path + "/@.unique_only_coverage_distribution.tab";
 		this->error_rates_summary_file_name = this->error_calibration_path + "/summary.bin";
@@ -489,67 +454,74 @@ namespace breseq
 		this->plot_error_rates_fit_r_script_file_name = this->error_calibration_path + "/fit.#.r_script";
 		this->plot_error_rates_r_script_log_file_name = this->error_calibration_path + "/#.plot_error_rate.log";
 
-		////// mutation identification //////
+		//! Paths: Mutation Identification
 		this->mutation_identification_path = "08_mutation_identification";
 		if (this->base_output_path.size() > 0) this->mutation_identification_path = this->base_output_path + "/" + this->mutation_identification_path;
-		this->ra_mc_genome_diff_file_name = this->mutation_identification_path + "/ra_mc_evidence.gd";
+
+    this->mutation_identification_done_file_name = this->mutation_identification_path + "/mutation_identification.done";
 		this->complete_mutations_text_file_name = this->mutation_identification_path + "/@.mutations.tab";
 		this->complete_coverage_text_file_name = this->mutation_identification_path + "/@.coverage.tab";
-		this->mutation_identification_done_file_name = this->mutation_identification_path + "/mutation_identification.done";
 		this->genome_error_counts_file_name = this->mutation_identification_path + "/error_counts.tab";
+		this->ra_mc_genome_diff_file_name = this->mutation_identification_path + "/ra_mc_evidence.gd";
+
+    this->polymorphism_statistics_done_file_name = this->mutation_identification_path + "/polymorphism_statistics.done";
 		this->polymorphism_statistics_input_file_name = this->mutation_identification_path + "/polymorphism_statistics_input.tab";
 		this->polymorphism_statistics_output_file_name = this->mutation_identification_path + "/polymorphism_statistics_output.tab";
 		this->polymorphism_statistics_r_script_file_name = this->program_data_path + "/polymorphism_statistics.r";
 		this->polymorphism_statistics_r_script_log_file_name = this->mutation_identification_path + "/polymorphism_statistics_output.log";
 		this->polymorphism_statistics_ra_mc_genome_diff_file_name = this->mutation_identification_path + "/ra_mc_evidence_polymorphism_statistics.gd";
-		this->polymorphism_statistics_done_file_name = this->mutation_identification_path + "/polymorphism_statistics.done";
 
-
+    //! Paths: Copy Number Variation
 		this->copy_number_variation_path = "09_copy_number_variation";
     if (this->base_output_path.size() > 0) this->copy_number_variation_path = this->base_output_path + "/" + this->copy_number_variation_path;
     this->copy_number_variation_done_file_name = this->copy_number_variation_path + "/copy_number_variation.done";
+    
     this->tiled_complete_coverage_text_file_name = this->copy_number_variation_path + "/@.tiled.tab";
     this->ranges_text_file_name = this->copy_number_variation_path + "/@.ranges.tab";
     this->smoothed_ranges_text_file_name = this->copy_number_variation_path + "/@.smoothed_ranges.tab";
 
-		////// data //////
-		// things in this location are needed for running post-processing steps
-		this->data_path = "data";
-		if (this->base_output_path.size() > 0) this->data_path = this->base_output_path + "/" + this->data_path;
-		this->reference_bam_prefix = this->data_path + "/reference";
-		this->reference_bam_file_name = this->data_path + "/reference.bam";
-		this->reference_fasta_file_name = this->data_path + "/reference.fasta";
-		this->reference_faidx_file_name = this->data_path + "/reference.fasta.fai";
-		this->reference_features_file_name = this->data_path + "/reference.features.tab";
-		this->reference_gff3_file_name = this->data_path + "/reference.gff3";
-		this->unmatched_read_file_name = this->data_path + "/#.unmatched.fastq";
-
-		////// output //////
-		// things in this location are part of the user-readable output
+    //! Paths: Output
 		this->output_path = "output";
 		if (this->base_output_path.size() > 0) this->output_path = this->base_output_path + "/" + this->output_path;
 		this->output_done_file_name = this->output_path + "/output.done";
+
 		this->log_file_name = this->output_path + "/log.txt";
 		this->index_html_file_name = this->output_path + "/index.html";
 		this->summary_html_file_name = this->output_path + "/summary.html";
 		this->marginal_html_file_name = this->output_path + "/marginal.html";
-		this->final_genome_diff_file_name = this->output_path + "/output.gd";
+
 		this->local_evidence_path = "evidence";
 		this->evidence_path = this->output_path + "/" + this->local_evidence_path;
 		this->evidence_genome_diff_file_name = this->evidence_path + "/evidence.gd";
+		this->final_genome_diff_file_name = this->output_path + "/output.gd";
+
 		this->local_coverage_plot_path = "evidence";
 		this->coverage_plot_path = this->output_path + "/" + this->local_coverage_plot_path;
+    this->coverage_plot_r_script_file_name = this->program_data_path + "/plot_coverage.r";    
 		this->overview_coverage_plot_file_name = this->coverage_plot_path + "/@.overview.png";
+
 		this->output_calibration_path = this->output_path + "/calibration";
 		this->unique_only_coverage_plot_file_name = this->output_calibration_path + "/@.unique_coverage.pdf";
 		this->error_rates_plot_file_name = this->output_calibration_path + "/#.error_rates.pdf";
-    this->coverage_plot_r_script_file_name = this->program_data_path + "/plot_coverage.r";    
+
 		this->breseq_small_graphic_from_file_name = this->program_data_path + "/breseq_small.png";
 		this->breseq_small_graphic_to_file_name = this->output_path + "/" + this->local_evidence_path + "/breseq_small.png";
-		this->long_pairs_file_name = this->output_path + "/long_pairs.tab";
+    
+    //! Paths: Data
+		this->data_path = "data";
+		if (this->base_output_path.size() > 0) this->data_path = this->base_output_path + "/" + this->data_path;
 
-		this->init_installed();
-	}
+		this->reference_bam_prefix = this->data_path + "/reference";
+		this->reference_bam_file_name = this->data_path + "/reference.bam";
+		this->reference_fasta_file_name = this->data_path + "/reference.fasta";
+		this->reference_faidx_file_name = this->data_path + "/reference.fasta.fai";
+		this->reference_gff3_file_name = this->data_path + "/reference.gff3";
+		this->unmatched_read_file_name = this->data_path + "/#.unmatched.fastq";
+
+    //! Paths: Experimental
+    this->long_pairs_file_name = this->output_path + "/long_pairs.tab";
+
+  }
 
 	void Settings::init_installed()
 	{

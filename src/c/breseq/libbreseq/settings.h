@@ -174,6 +174,8 @@ namespace breseq
     
     string byline;
 		string website;
+    string full_command_line;
+		string arguments;
     
     //! Done file tracking
     map<string,string> done_key_messages;
@@ -186,93 +188,101 @@ namespace breseq
     //! Settings
     ////////////////////
     
-    //! Settings: Global Settings
-    string full_command_line;
-		string arguments;
-    bool verbose;
-		string run_name;
-    string print_run_name; 
-    
     //! Settings: Global Workflow and Output
-    string base_output_path; // main output directory containing all files
-    vector<string> read_file_names;
-    vector<string> reference_file_names;
+    string base_output_path;              // Default = cwd COMMAND-LINE OPTION
+    vector<string> read_file_names;       // REQUIRED COMMAND-LINE OPTION
+    vector<string> reference_file_names;  // REQUIRED COMMAND-LINE OPTION
+    string run_name;          // Default = <none> COMMAND-LINE OPTION
+    string print_run_name;    // run_name with '_' replaced by ' '
     
-		uint32_t alignment_read_limit;
-    uint32_t maximum_reads_to_align;
-		uint32_t candidate_junction_read_limit;
-    uint32_t resolve_alignment_read_limit;
-    
-    bool junction_prediction; // whether to perform junction prediction step
-		bool no_mutation_prediction;
-		bool no_deletion_prediction;
-		bool no_alignment_generation;
-		bool do_copy_number_variation;
-		bool no_unmatched_reads;
-    bool keep_all_intermediates;
+    //! Options that control which parts of the pipeline to execute
+    bool no_junction_prediction;      // Default = false COMMAND-LINE OPTION
+		bool no_mutation_prediction;      // Default = false
+		bool no_deletion_prediction;      // Default = false
+		bool no_alignment_generation;     // Default = false
+		bool do_copy_number_variation;    // Default = false COMMAND-LINE OPTION
 
-    //! Settings: Read Alignment and Candidate Junction Alignment
-    uint32_t ssaha2_seed_length;
-    uint32_t ssaha2_skip_length;
+    //! DEBUG options
     
-		bool     require_complete_match;
-		uint32_t require_match_length;
-		double   require_match_fraction;
-    int32_t  max_read_mismatches;
+    // verbose level
+    uint32_t verbose;                         // Default = 0 (OFF) COMMAND-LINE OPTION
+		uint32_t alignment_read_limit;            // Default = 0 (OFF)
+		uint32_t candidate_junction_read_limit;   // Default = 0 (OFF)
+    uint32_t resolve_alignment_read_limit;    // Default = 0 (OFF)
+    //! Output unmatched read file?
+		bool no_unmatched_reads;                  // Default = false
+    //! Don't delete intermediate files
+    bool keep_all_intermediates;              // Default = false
 
-    bool smalt;                 // currently UNUSED
-		uint32_t max_smalt_diff;    // currently UNUSED
+    //! Settings: Read Alignment and Candidate Junction Read Alignment
+    uint32_t ssaha2_seed_length;  // Default = 13
+    uint32_t ssaha2_skip_length;  // Default = 1 (i.e. no skipping)
     
-    //! Settings: Candidate Junctions
-    uint32_t preprocess_junction_min_indel_split_length;
+    //! reads are never included in the BAM alignment file if they fail these guards
+		bool     require_complete_match;  // Default = false   COMMAND-LINE OPTION
+		uint32_t require_match_length;    // Default = 0 (OFF) COMMAND-LINE OPTION
+		double   require_match_fraction;  // Default = 0.9     COMMAND-LINE OPTION
+    //! ignore reads with this many or more mismatches (I+D+MM)
+    int32_t  maximum_read_mismatches;     // Default = -1 (OFF)
 
-		uint32_t required_both_unique_length_per_side;  // generally UNUSED
-		uint32_t required_one_unique_length_per_side;   // generally UNUSED
+    bool smalt;                       // Unused
+		uint32_t max_smalt_diff;          // Unused
     
-		uint32_t minimum_candidate_junction_pos_hash_score;   // generally UNUSED
-		uint32_t maximum_junction_sequence_insertion_length;
-    uint32_t maximum_junction_sequence_overlap_length;
-		uint32_t minimum_candidate_junctions;
-		uint32_t maximum_candidate_junctions;
-    double maximum_candidate_junction_length_factor;  
-      // maximum length of CJ is this times ref sequence length
+    //! Settings: Candidate Junction Prediction
+    uint32_t preprocess_junction_min_indel_split_length;  // Default = 3
+		uint32_t required_both_unique_length_per_side;        // Default = 5
+		uint32_t required_one_unique_length_per_side;         // Default = ssaha2_seed_length = 13
+    
+    // Which candidate junctions do we test?
+		uint32_t minimum_candidate_junction_pos_hash_score;   // Default = 2
+		uint32_t maximum_junction_sequence_insertion_length;  // Default = 20
+    uint32_t maximum_junction_sequence_overlap_length;    // Default = 20
+		uint32_t minimum_candidate_junctions;                 // Default = 10
+		uint32_t maximum_candidate_junctions;                 // Default = 5000
+    double maximum_candidate_junction_length_factor;      // Default = 0.1
     
     //! Settings: Alignment Resolution
-		bool add_split_junction_sides;
-    double junction_pos_hash_neg_log10_p_value_cutoff;
+		bool add_split_junction_sides;                        // Default = true (possibly remove this option)  
+    double junction_pos_hash_neg_log10_p_value_cutoff;    // Default = 3
     
     //! Settings: Mutation Identification
     
-    uint32_t base_quality_cutoff;       // ignore bases below this cutoff for RA evidence (still counted for deletions?)
-    uint32_t maximum_read_mismatches;   // ignore reads with this more than this number of mismatches (I+D+MM)
+    //! ignore bases below this cutoff for RA evidence (still counted for deletions?)
+    uint32_t base_quality_cutoff;                         // Default 3 COMMAND-LINE OPTION
+        
+    //! treated as read numbers if integers >= 1.0 and percentages of average coverage if > 0.0 and < 1.0
+    double deletion_coverage_propagation_cutoff;          // Default = calculated COMMAND-LINE OPTION
+    double deletion_coverage_seed_cutoff;                 // Default = 0;         COMMAND-LINE OPTION
     
-    double deletion_coverage_propagation_cutoff;
-    double deletion_coverage_seed_cutoff;
-    
-    
-    // These are mutually exclusive settings (polymorphism prediction overrides mixed_base_prediction)
-    bool polymorphism_prediction;
-    bool mixed_base_prediction;         // predict not only consensus genotype calls, but test mixed states between them
+    //! These are mutually exclusive settings (polymorphism prediction overrides mixed_base_prediction)
+    bool polymorphism_prediction;                         // Default = false COMMAND-LINE OPTION
+    //! Predict not only consensus genotype calls, but test mixed states between them.
+    bool mixed_base_prediction;                           // Default = true
 
-    double mutation_log10_e_value_cutoff;
-    double polymorphism_log10_e_value_cutoff;      // defaults to mutation_log10_e_value_cutoff
-		double polymorphism_bias_p_value_cutoff;       
-		double polymorphism_frequency_cutoff;          
-		uint32_t polymorphism_coverage_both_strands;
-		uint32_t polymorphism_reject_homopolymer_length;
-		bool no_indel_polymorphisms;
+    double mutation_log10_e_value_cutoff;                 // Default = 10
+    double polymorphism_log10_e_value_cutoff;             // Default = mutation_log10_e_value_cutoff = 10
+		double polymorphism_bias_p_value_cutoff;              // Default = 0.05
+		double polymorphism_frequency_cutoff;                 // Default = 0.1 for mixed base | 0.0 for polymorphism
+		uint32_t polymorphism_coverage_both_strands;          // Default = 1
+		uint32_t polymorphism_reject_homopolymer_length;      // Default = 0 (OFF)
+		bool no_indel_polymorphisms;                          // Default = false
     
     //! Settings: Output
-    uint32_t max_rejected_polymorphisms_to_show;
-		uint32_t max_rejected_junctions_to_show;
-		bool hide_circular_genome_junctions;
-		bool lenski_format;
-		bool no_evidence;
-		bool shade_frequencies;
-		bool no_header;
+    uint32_t maximum_reads_to_align;                      // Default = 100
+    uint32_t max_rejected_polymorphisms_to_show;          // Default = 20
+		uint32_t max_rejected_junctions_to_show;              // Default = 10
+		bool hide_circular_genome_junctions;                  // Default = true (remove as option?)
+    //! special output for Blount paper - not implemented in C++!
+		bool lenski_format;                                   // Default = false (not implemented!)
+    //! don't create any HTML evidence files
+		bool no_evidence;                                     // Default = false (rarely used)
+    //! show blue boxes rather than precentages in predictions
+		bool shade_frequencies;                               // Default = false
     
     //! Settings: Experimental
-    bool add_metadata_to_gd; // @GRC added in for gathering/analyzing breseq values
+    
+    //! @GRC added in for gathering/analyzing breseq values
+    bool add_metadata_to_gd;                              // Default = false COMMAND-LINE OPTION
 
 
     ////////////////////
@@ -288,11 +298,10 @@ namespace breseq
     string sequence_conversion_path;
     string sequence_conversion_done_file_name;
 
-    string reference_fasta_file_name;
 		string converted_fastq_file_name;
 		string unwanted_fasta_file_name;
-		string sequence_conversion_summary_file_name;
     string reference_trim_file_name;
+		string sequence_conversion_summary_file_name;
     
     //! Paths: Read alignment
 		string reference_alignment_path;
@@ -303,13 +312,12 @@ namespace breseq
     
     //! Paths: Junction Prediction
     string candidate_junction_path;
-    string preprocess_junction_done_file_name;
-    string coverage_junction_done_file_name;
-    string candidate_junction_done_file_name;
     
+    string preprocess_junction_done_file_name;
     string preprocess_junction_best_sam_file_name;
 		string preprocess_junction_split_sam_file_name;
     
+    string candidate_junction_done_file_name;
 		string coverage_junction_best_bam_unsorted_file_name;
 		string coverage_junction_best_bam_file_name;
 		string coverage_junction_best_bam_prefix;
@@ -318,6 +326,7 @@ namespace breseq
 		string coverage_junction_summary_file_name;
     string coverage_junction_error_count_summary_file_name;
 
+    string coverage_junction_done_file_name;
     string candidate_junction_fasta_file_name;
     string candidate_junction_faidx_file_name;
 		string candidate_junction_summary_file_name;
@@ -335,7 +344,6 @@ namespace breseq
     
 		string resolved_reference_sam_file_name;
 		string resolved_junction_sam_file_name;
-		string reference_features_file_name;
 		string alignment_resolution_summary_file_name;
     string jc_genome_diff_file_name;
     
@@ -365,32 +373,31 @@ namespace breseq
 
 		//! Paths: Mutation Identification
 		string mutation_identification_path;
-		string mutation_identification_done_file_name;
-		string polymorphism_statistics_done_file_name;
     
+		string mutation_identification_done_file_name;    
 		string complete_mutations_text_file_name;
 		string complete_coverage_text_file_name;
 		string genome_error_counts_file_name;
     string ra_mc_genome_diff_file_name;
     
-    //copy_number_variation
-    string copy_number_variation_path;
-    string copy_number_variation_done_file_name;
-    string tiled_complete_coverage_text_file_name;
-    string ranges_text_file_name;
-    string smoothed_ranges_text_file_name;
-    
-
+    string polymorphism_statistics_done_file_name;
     string polymorphism_statistics_input_file_name;
 		string polymorphism_statistics_output_file_name;
 		string polymorphism_statistics_r_script_file_name;
 		string polymorphism_statistics_r_script_log_file_name;
 		string polymorphism_statistics_ra_mc_genome_diff_file_name;
     
+		//! Paths: Copy Number Variation
+    string copy_number_variation_path;
+    string copy_number_variation_done_file_name;
+    
+    string tiled_complete_coverage_text_file_name;
+    string ranges_text_file_name;
+    string smoothed_ranges_text_file_name;
+    
     //! Paths: Output
     string output_path;
 		string output_done_file_name;
-    string final_genome_diff_file_name;
 
 		string log_file_name;
 		string index_html_file_name;
@@ -400,11 +407,13 @@ namespace breseq
     string local_evidence_path;
 		string evidence_path;
     string evidence_genome_diff_file_name;
-    
+    string final_genome_diff_file_name;
+
 		string local_coverage_plot_path;
 		string coverage_plot_path;
     string coverage_plot_r_script_file_name;
 		string overview_coverage_plot_file_name;
+    
 		string output_calibration_path;
 		string unique_only_coverage_plot_file_name;
 		string error_rates_plot_file_name;
@@ -414,13 +423,15 @@ namespace breseq
     
     //! Paths: Data
     string data_path;
+    
 		string reference_bam_prefix;
 		string reference_bam_file_name;
+    string reference_fasta_file_name;
 		string reference_faidx_file_name;
 		string reference_gff3_file_name;
     string unmatched_read_file_name;
     
-    //! Paths: Experimental and unused
+    //! Paths: Experimental
 		string long_pairs_file_name;
 
     

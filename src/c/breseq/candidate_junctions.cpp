@@ -140,10 +140,10 @@ namespace breseq {
       if (!a.beginning_to_end_match())
         return false; 
     }
-    if (settings.max_read_mismatches >= 0)
+    if (settings.maximum_read_mismatches >= 0)
     {
       int32_t mismatches = alignment_mismatches(a, ref_seq_info);
-      if (mismatches > settings.max_read_mismatches)
+      if (mismatches > settings.maximum_read_mismatches)
         return false; 
     }
     
