@@ -62,7 +62,7 @@ void coverage_output::plot(const string& region, const string& output_file_name,
   command += " in_file=" + tmp_coverage;
   command += " out_file=" + _output_file_name;
   command += " pdf_output=";
-  command += ((m_output_format=="PDF") ? "1" : "0");
+  command += ((m_output_format=="pdf") ? "1" : "0");
   command += " total_only=";
   command += ((m_total_only) ? "1" : "0");
   command += " window_start=" + to_string(start_pos);
