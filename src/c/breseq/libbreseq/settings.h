@@ -266,6 +266,10 @@ namespace breseq
 		uint32_t polymorphism_coverage_both_strands;          // Default = 1
 		uint32_t polymorphism_reject_homopolymer_length;      // Default = 0 (OFF)
 		bool no_indel_polymorphisms;                          // Default = false
+		
+		//! Settings: Copy Number Variation
+    uint32_t copy_number_variation_tile_size;
+    bool ignore_redundant_coverage;
     
     //! Settings: Output
     uint32_t maximum_reads_to_align;                      // Default = 100

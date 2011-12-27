@@ -63,46 +63,48 @@ namespace breseq {
                                                       string distribution_file_name
                                                       );
     
-                //Tiling is taking a coverage file and grouping entries
-                //together in sets of a specified constant in order to produce a condensed
-                //file. A constant of 500 will take all entries with positions:
-                //0-499, 500-999, 1000-1499...
-                //and average the values in each section to produce a file like so:
-                //0       a
-                //500     b
-                //1000    c
-                //Where a, b, and c are the average of all values in the second column
-                //in their corresponding section.
-                //Written by Aaron Reba
-                static void tile (
-                                  string in_file_name,
-                                  string out_file_name,
-                                  uint32_t tile_size
-                                  );
+    //Tiling is taking a coverage file and grouping entries
+    //together in sets of a specified constant in order to produce a condensed
+    //file. A constant of 500 will take all entries with positions:
+    //0-499, 500-999, 1000-1499...
+    //and average the values in each section to produce a file like so:
+    //0       a
+    //500     b
+    //1000    c
+    //Where a, b, and c are the average of all values in the second column
+    //in their corresponding section.
+    //Written by Aaron Reba
+    static void tile (
+                      bool ignore_redundant_coverage,
+                      string in_file_name,
+                      string out_file_name,
+                      uint32_t tile_size
+                      );
 
-                //Given a coverage file, this will perform the circular binary
-                //segmentation algorithm on the file. This separates the positions of the
-                //file into distinct ranges.
-                //The produced file might look like so:
-                //0 10
-                //12 30
-                //11 11
-                //This function also accepts files created by coverage_distribution::tile()
-                //Written by Aaron Reba
-                static void find_segments (
-                                           string in_file_name,
-                                           string out_file_name
-                                           );
+    //Given a coverage file, this will perform the circular binary
+    //segmentation algorithm on the file. This separates the positions of the
+    //file into distinct ranges.
+    //The produced file might look like so:
+    //0 10
+    //12 30
+    //11 11
+    //This function also accepts files created by coverage_distribution::tile()
+    //Written by Aaron Reba
+    static void find_segments (
+                               string in_file_name,
+                               string out_file_name
+                               );
 
-                //Given a coverage file and a range file produced from
-                //coverage_distribution::find_segments, this will smooth the coverage inside
-                //the ranges to the mean of the range rounded to the nearest integer.
-                //Written by Aaron Reba
-                static void smooth_segments (
-                                            string tile_file_name,
-                                            string segment_file_name,
-                                            string out_file_name
-                                            );
+    //Given a coverage file and a range file produced from
+    //coverage_distribution::find_segments, this will smooth the coverage inside
+    //the ranges to the mean of the range rounded to the nearest integer.
+    //Written by Aaron Reba
+    static void smooth_segments (
+                                double summary_average,
+                                string tile_file_name,
+                                string segment_file_name,
+                                string out_file_name
+                                );
 
 	}; // class CoverageDistribution
 
