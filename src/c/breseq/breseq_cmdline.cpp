@@ -1417,6 +1417,7 @@ int do_runfile(int argc, char *argv[])
   return 0;
 }
 
+
 int do_copy_number_variation(int argc, char *argv[])
 {
 	Settings settings(argc, argv);
@@ -1424,6 +1425,11 @@ int do_copy_number_variation(int argc, char *argv[])
   //(re)load the reference sequences from our converted files
   cReferenceSequences ref_seq_info;
   ref_seq_info.ReadGFF(settings.reference_gff3_file_name);
+  
+  Summary summary;
+  summary.unique_coverage.retrieve(settings.error_rates_summary_file_name);
+  
+  CandidateJunctions::identify_candidate_junctions(settings, summary, ref_seq_info);
   
   //create directory
   create_path( settings.copy_number_variation_path );
@@ -1433,13 +1439,13 @@ int do_copy_number_variation(int argc, char *argv[])
     cAnnotatedSequence& seq = *it;
     string this_complete_coverage_text_file_name = settings.file_name(settings.complete_coverage_text_file_name, "@", seq.m_seq_id);
     string this_tiled_complete_coverage_text_file_name = settings.file_name(settings.tiled_complete_coverage_text_file_name, "@", seq.m_seq_id);
-    CoverageDistribution::tile(this_complete_coverage_text_file_name, this_tiled_complete_coverage_text_file_name, 500);
+    CoverageDistribution::tile(settings.ignore_redundant_coverage, this_complete_coverage_text_file_name, this_tiled_complete_coverage_text_file_name, settings.copy_number_variation_tile_size);
     
     string this_ranges_text_file_name = settings.file_name(settings.ranges_text_file_name, "@", seq.m_seq_id);
     CoverageDistribution::find_segments(this_tiled_complete_coverage_text_file_name, this_ranges_text_file_name);
     
     string this_smoothed_ranges_text_file_name = settings.file_name(settings.smoothed_ranges_text_file_name, "@", seq.m_seq_id);
-    CoverageDistribution::smooth_segments(this_tiled_complete_coverage_text_file_name, this_ranges_text_file_name, this_smoothed_ranges_text_file_name);
+    CoverageDistribution::smooth_segments(summary.unique_coverage[seq.m_seq_id].average, this_tiled_complete_coverage_text_file_name, this_ranges_text_file_name, this_smoothed_ranges_text_file_name);
     
    }
   
@@ -2612,13 +2618,13 @@ int breseq_default_action(int argc, char* argv[])
         cAnnotatedSequence& seq = *it;
         string this_complete_coverage_text_file_name = settings.file_name(settings.complete_coverage_text_file_name, "@", seq.m_seq_id);
         string this_tiled_complete_coverage_text_file_name = settings.file_name(settings.tiled_complete_coverage_text_file_name, "@", seq.m_seq_id);
-        CoverageDistribution::tile(this_complete_coverage_text_file_name, this_tiled_complete_coverage_text_file_name, 500);
+        CoverageDistribution::tile(settings.ignore_redundant_coverage, this_complete_coverage_text_file_name, this_tiled_complete_coverage_text_file_name, settings.copy_number_variation_tile_size);
        
         string this_ranges_text_file_name = settings.file_name(settings.ranges_text_file_name, "@", seq.m_seq_id);
         CoverageDistribution::find_segments(this_tiled_complete_coverage_text_file_name, this_ranges_text_file_name);
        
         string this_smoothed_ranges_text_file_name = settings.file_name(settings.smoothed_ranges_text_file_name, "@", seq.m_seq_id);
-        CoverageDistribution::smooth_segments(this_tiled_complete_coverage_text_file_name, this_ranges_text_file_name, this_smoothed_ranges_text_file_name);
+        CoverageDistribution::smooth_segments(summary.unique_coverage[seq.m_seq_id].average, this_tiled_complete_coverage_text_file_name, this_ranges_text_file_name, this_smoothed_ranges_text_file_name);
       } 
       settings.done_step(settings.copy_number_variation_done_file_name);
     }

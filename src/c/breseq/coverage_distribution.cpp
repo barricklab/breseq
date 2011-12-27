@@ -30,7 +30,7 @@ namespace breseq {
     @return vector<string> Each line contains a parameter set by R
     !*/
 
-	vector<string> CoverageDistribution::fit(
+  vector<string> CoverageDistribution::fit(
                                            Settings& settings, 
                                            string distribution_file_name, 
                                            string plot_file, 
@@ -40,36 +40,36 @@ namespace breseq {
                                            double junction_keep_pr_cutoff, 
                                            double junction_max_score
                                            )
-	{
+  {
     pid_t pid = getpid();
-		string log_file_name = distribution_file_name + ".r.log";
-		string command = "R --vanilla < " + settings.program_data_path + "/coverage_distribution.r" + " > " + log_file_name;
-		command += " distribution_file=" + distribution_file_name;
-		command += " plot_file=" + plot_file;
-		command += " deletion_propagation_pr_cutoff=" + to_string<double>(deletion_propagation_pr_cutoff);
-		command += " junction_coverage_pr_cutoff=" + to_string<double>(junction_coverage_pr_cutoff);
-		command += " junction_accept_pr_cutoff=" + to_string<double>(junction_accept_pr_cutoff);
-		command += " junction_keep_pr_cutoff=" + to_string<double>(junction_keep_pr_cutoff);
-		command += " junction_max_score=" + to_string<double>(junction_max_score);
+    string log_file_name = distribution_file_name + ".r.log";
+    string command = "R --vanilla < " + settings.program_data_path + "/coverage_distribution.r" + " > " + log_file_name;
+    command += " distribution_file=" + distribution_file_name;
+    command += " plot_file=" + plot_file;
+    command += " deletion_propagation_pr_cutoff=" + to_string<double>(deletion_propagation_pr_cutoff);
+    command += " junction_coverage_pr_cutoff=" + to_string<double>(junction_coverage_pr_cutoff);
+    command += " junction_accept_pr_cutoff=" + to_string<double>(junction_accept_pr_cutoff);
+    command += " junction_keep_pr_cutoff=" + to_string<double>(junction_keep_pr_cutoff);
+    command += " junction_max_score=" + to_string<double>(junction_max_score);
     
-		SYSTEM(command);
+    SYSTEM(command);
 
-		ifstream ROUT(log_file_name.c_str());
-		string line;
-		vector<string> lines;
-		while (getline(ROUT, line))
+    ifstream ROUT(log_file_name.c_str());
+    string line;
+    vector<string> lines;
+    while (getline(ROUT, line))
     {
       size_t pos = line.find("[1]");
-			if (pos == 0)
+      if (pos == 0)
       {
-				lines.push_back(line.substr(pos+3));
+        lines.push_back(line.substr(pos+3));
       }
     }
     ROUT.close();
-//		remove(log_file_name.c_str());
+//    remove(log_file_name.c_str());
 
-		return(lines);
-	}
+    return(lines);
+  }
 
   // helper functions
   /*! analyze_unique_coverage_distribution
@@ -81,7 +81,7 @@ namespace breseq {
     @param ref_seq_info
     !*/
 
-	void CoverageDistribution::analyze_unique_coverage_distribution(
+  void CoverageDistribution::analyze_unique_coverage_distribution(
                                                                   Settings& settings, 
                                                                   Summary& summary, 
                                                                   cReferenceSequences& ref_seq_info, 
@@ -89,45 +89,45 @@ namespace breseq {
                                                                   string plot_key, 
                                                                   string distribution_file_name
                                                                   )
-	{
-		//initialize summary information
-		summary.unique_coverage[seq_id].nbinom_size_parameter = NAN;
-		summary.unique_coverage[seq_id].nbinom_mean_parameter = NAN;
-		summary.unique_coverage[seq_id].nbinom_prob_parameter = NAN;
-		summary.unique_coverage[seq_id].average = 1.0;
-		summary.unique_coverage[seq_id].variance = NAN;
-		summary.unique_coverage[seq_id].dispersion = NAN;
+  {
+    //initialize summary information
+    summary.unique_coverage[seq_id].nbinom_size_parameter = NAN;
+    summary.unique_coverage[seq_id].nbinom_mean_parameter = NAN;
+    summary.unique_coverage[seq_id].nbinom_prob_parameter = NAN;
+    summary.unique_coverage[seq_id].average = 1.0;
+    summary.unique_coverage[seq_id].variance = NAN;
+    summary.unique_coverage[seq_id].dispersion = NAN;
     summary.unique_coverage[seq_id].deletion_coverage_propagation_cutoff = 5.0;
     summary.unique_coverage[seq_id].deletion_coverage_seed_cutoff = 0;
 
-		string unique_only_coverage_plot_file_name = settings.file_name(plot_key, "@", seq_id);
-		string unique_only_coverage_distribution_file_name = settings.file_name(distribution_file_name, "@", seq_id);
+    string unique_only_coverage_plot_file_name = settings.file_name(plot_key, "@", seq_id);
+    string unique_only_coverage_distribution_file_name = settings.file_name(distribution_file_name, "@", seq_id);
 
-		// Define various coverage thresholds...
-		uint32_t sequence_length = ref_seq_info[ref_seq_info.seq_id_to_index(seq_id)].m_length;
+    // Define various coverage thresholds...
+    uint32_t sequence_length = ref_seq_info[ref_seq_info.seq_id_to_index(seq_id)].m_length;
 
-		/// DELETION PROPAGATION CUTOFF
-		// One-tailed test p=0.05, Bonferroni correction
-		//# my del_propagation_pr_cutoff = 0.05 / sequence_length;
+    /// DELETION PROPAGATION CUTOFF
+    // One-tailed test p=0.05, Bonferroni correction
+    //# my del_propagation_pr_cutoff = 0.05 / sequence_length;
 
-		// One-tailed test p=0.01, no Bonferroni correction
-		//#my del_propagation_pr_cutoff = 0.01;
+    // One-tailed test p=0.01, no Bonferroni correction
+    //#my del_propagation_pr_cutoff = 0.01;
 
-		// We really want somewhere between these two, try this...
-		double deletion_propagation_pr_cutoff = 0.05 / sqrt(sequence_length);
+    // We really want somewhere between these two, try this...
+    double deletion_propagation_pr_cutoff = 0.05 / sqrt(sequence_length);
 
-		/// NEW JUNCTION COVERAGE CUTOFFS
-		// Arbitrary value that seems to work....
+    /// NEW JUNCTION COVERAGE CUTOFFS
+    // Arbitrary value that seems to work....
     //double junction_coverage_pr_cutoff =  sqrt(settings.junction_accept_pr / static_cast<double>(sequence_length));
     double junction_coverage_pr_cutoff = 0.01;
     
-		// We really want somewhere between these two, try this...
+    // We really want somewhere between these two, try this...
     double junction_accept_pr_cutoff = 0.01;
-		double junction_keep_pr_cutoff = 0.01 / sqrt(sequence_length);
-		int32_t junction_max_score = int(2 * summary.sequence_conversion.avg_read_length);
+    double junction_keep_pr_cutoff = 0.01 / sqrt(sequence_length);
+    int32_t junction_max_score = int(2 * summary.sequence_conversion.avg_read_length);
     
-		CoverageDistribution dist;
-		vector<string> lines = dist.fit(settings, 
+    CoverageDistribution dist;
+    vector<string> lines = dist.fit(settings, 
                                     unique_only_coverage_distribution_file_name, 
                                     unique_only_coverage_plot_file_name,
                                     deletion_propagation_pr_cutoff, 
@@ -137,24 +137,24 @@ namespace breseq {
                                     junction_max_score
                                     );
 
-		// First two lines are negative binomial parameters.
-		// Next three lines are average, standard deviation, and index of overdispersion
+    // First two lines are negative binomial parameters.
+    // Next three lines are average, standard deviation, and index of overdispersion
 
-		// Put these into summary
-		summary.unique_coverage[seq_id].nbinom_size_parameter = from_string<double>(lines[0]);
-		summary.unique_coverage[seq_id].nbinom_mean_parameter = from_string<double>(lines[1]);
-		// Calculated by formula, prob = size/(size + mu)
-		summary.unique_coverage[seq_id].nbinom_prob_parameter = summary.unique_coverage[seq_id].nbinom_size_parameter / (summary.unique_coverage[seq_id].nbinom_mean_parameter + summary.unique_coverage[seq_id].nbinom_size_parameter);
-		summary.unique_coverage[seq_id].average = from_string<double>(lines[2]);
-		summary.unique_coverage[seq_id].variance = from_string<double>(lines[3]);
-		summary.unique_coverage[seq_id].dispersion = from_string<double>(lines[4]);
+    // Put these into summary
+    summary.unique_coverage[seq_id].nbinom_size_parameter = from_string<double>(lines[0]);
+    summary.unique_coverage[seq_id].nbinom_mean_parameter = from_string<double>(lines[1]);
+    // Calculated by formula, prob = size/(size + mu)
+    summary.unique_coverage[seq_id].nbinom_prob_parameter = summary.unique_coverage[seq_id].nbinom_size_parameter / (summary.unique_coverage[seq_id].nbinom_mean_parameter + summary.unique_coverage[seq_id].nbinom_size_parameter);
+    summary.unique_coverage[seq_id].average = from_string<double>(lines[2]);
+    summary.unique_coverage[seq_id].variance = from_string<double>(lines[3]);
+    summary.unique_coverage[seq_id].dispersion = from_string<double>(lines[4]);
 
     summary.unique_coverage[seq_id].deletion_coverage_propagation_cutoff = from_string<double>(lines[5]);
     summary.unique_coverage[seq_id].junction_coverage_cutoff = from_string<double>(lines[6]);
-		
+    
     // deprecated statistics
     //summary.unique_coverage[seq_id].junction_accept_score_cutoff = from_string<double>(lines[7]);
-		//summary.unique_coverage[seq_id].junction_keep_score_cutoff = from_string<double>(lines[8]);
+    //summary.unique_coverage[seq_id].junction_keep_score_cutoff = from_string<double>(lines[8]);
         
     bool verbose = false;
     if (verbose)
@@ -173,9 +173,9 @@ namespace breseq {
       //cout << "pr_no_coverage_position_strand " << summary.unique_coverage[seq_id].pr_no_coverage_position_strand << endl;
 
     }
-	}
+  }
 
-	void CoverageDistribution::analyze_unique_coverage_distributions(
+  void CoverageDistribution::analyze_unique_coverage_distributions(
                                                                    Settings& settings, 
                                                                    Summary& summary, 
                                                                    cReferenceSequences& ref_seq_info, 
@@ -183,9 +183,9 @@ namespace breseq {
                                                                    string distribution_file_name
                                                                    )
   {
-		for (uint32_t i = 0; i < ref_seq_info.size(); i++) {
+    for (uint32_t i = 0; i < ref_seq_info.size(); i++) {
           
-			analyze_unique_coverage_distribution(
+      analyze_unique_coverage_distribution(
                                            settings, 
                                            summary, 
                                            ref_seq_info, 
@@ -194,9 +194,10 @@ namespace breseq {
                                            distribution_file_name
                                            );
     }
-	}
+  }
   
   void CoverageDistribution::tile(
+                                  bool ignore_redundant_coverage,
                                   string in_file_name,
                                   string out_file_name,
                                   uint32_t tile_size
@@ -214,8 +215,21 @@ namespace breseq {
     uint32_t position;
     double coverage;
     double sum_coverage;
+    
+    //used for checking if there is any redundant coverage
+    double redundant1;
+    double redundant2;
+    double redundant3;
+    double redundant4;
+    
+    //if ignoring redundant coverage is enabled, this will disable writing the
+    //tile
+    bool do_write;
+    
+    //used to make sure the very last position is not written twice.
+    uint32_t last_position;
 
-    //skip is used to ignore values in the input file.
+    //used to ignore values in the input file.
     string skip;
     
     ifstream in_file;
@@ -227,25 +241,24 @@ namespace breseq {
     //skipping the first line in the input file.
     getline(in_file, skip);
     
-    out_file << "position\tcoverage\n";
-
+    out_file << "position\tcoverage\t" << tile_size << "\n";
+    
+    out_file << "0\t0\n";
+    
     tile_index = 0;
     tile_sum = 0;
-
+    
+    do_write = true;
+    
     while ( in_file >> coverage )
     {
       sum_coverage = coverage;
       
-      //taking all coverage and summing it.
-      for ( uint8_t i = 0; i < 3; i++ )
-      {
-        in_file >> coverage;
-        sum_coverage += coverage;
-      }
+      in_file >> coverage;
+      sum_coverage += coverage;
       
-      //skipping next 2 numbers;
-      in_file >> coverage;
-      in_file >> coverage;
+      //next 4 are redundant values;
+      in_file >> redundant1 >> redundant2 >> redundant3 >> redundant4;
       
       //the next value in the line isn't used.
       in_file >> skip;
@@ -257,28 +270,46 @@ namespace breseq {
       
       //Check if the current position is in the current tile.
       //If it is, add the coverage to the sum and increment the count.
-      //If it isn't, write the last tile and set up the variables for the new tile
-      if ( position < tile_index + tile_size )
+      //If it isn't, write the last tile and set up the variables for the new 
+      //tile
+      if ( position <= tile_index + tile_size )
       {
         tile_sum += coverage;
       }
-      
       else
       {
-        average = tile_sum / tile_size;
-        
-        out_file << tile_index << "\t" << average << "\n";
-        
+        if ( do_write )
+        {
+          average = tile_sum / tile_size;
+          
+          out_file << tile_index + tile_size << "\t" << average << "\n";
+        }
         //Set tile_index to position rounded down to the nearest multiple
         //of tile_size
         tile_index = position / tile_size * tile_size;
         
         tile_sum = coverage;
+        
+        last_position = position;
+        
+        do_write = true;
+      }
+      
+      if ( ignore_redundant_coverage )
+      {
+        if ( redundant1 != 0 || 
+             redundant2 != 0 ||
+             redundant3 != 0 ||
+             redundant4 != 0 )
+        {
+          //skip this tile.
+          do_write = false;
+        }
       }
       
     }
     
-    if ( position % tile_size == tile_size - 1 )
+    if ( position % tile_size == 0 && position != last_position )
     {
       average = tile_sum / tile_size;
       
@@ -341,7 +372,7 @@ namespace breseq {
     
     //the z value as per the CBS algorithm is the score of a given segment.
     double z;
-    //to easier see the z calculation z1 and z2 are used.
+    //to easily see the z calculation z1 and z2 are used.
     double z1;
     double z2;
     
@@ -365,21 +396,23 @@ namespace breseq {
     //and get length
     count = 0;
     running_sum = 0;
+    
     while ( in_file >> position >> coverage )
     {
       running_sum += coverage;
       saved_sums[position] = running_sum;
       ordered_sums.push_back( position );
       count++;
+      
     }
     
     //the value of position is now the highest position value.
     n = position;
     Sn = running_sum;
     
-    //The first search entry goes from 0 to count - 1 since search entries are
-    //inclusive
-    current_search.first = 0;
+    //The first search entry goes from 1 to count - 1
+    //0 isn only used as a place holder.
+    current_search.first = 1;
     current_search.second = count - 1;
     searching.push_back ( current_search );
     
@@ -396,7 +429,7 @@ namespace breseq {
       
       //i and j are inclusive boundaries so <= is used in the comparison.
       
-      for ( int32_t i = current_search.first; i <= current_search.second; i++ )
+      for ( int32_t i = current_search.first - 1; i <= current_search.second; i++ )
       {
         p_i = ordered_sums[i];
         Si = saved_sums[ ordered_sums[i] ];
@@ -428,18 +461,11 @@ namespace breseq {
       {
         out_file << ordered_sums[current_search.first] << "\t"
         << ordered_sums[current_search.second] << "\t" 
-        << best_z << endl;
+        << "0" << endl;
       }
       else
       {
         //writing.
-        //if the best segment takes the second element, include the first by
-        //decrementing best_i
-        
-        if ( best_i == current_search.first )
-        {
-          best_i -= 1;
-        }
         
         out_file << ordered_sums[best_i + 1] << "\t"
                  << ordered_sums[best_j] << "\t"
@@ -450,20 +476,24 @@ namespace breseq {
         
         //if best_i doesn't include the first element, add the segment before
         //best_i
-        if ( best_i != current_search.first - 1 )
+        if ( best_i + 1 != current_search.first )
         {
+          
           next_search.first = current_search.first;
           next_search.second = best_i;
           searching.push_back( next_search );
+          
         }
         
         //if best_j doesn't include the last element, add the segment after
         //best_j
         if ( best_j != current_search.second )
         {
+          
           next_search.first = best_j + 1;
           next_search.second = current_search.second;
           searching.push_back( next_search );
+          
         }
       }
     }
@@ -473,11 +503,13 @@ namespace breseq {
   }
   
   void CoverageDistribution::smooth_segments(
+                                              double summary_average,
                                               string tile_file_name,
                                               string segment_file_name,
                                               string out_file_name
                                               )
   {
+    
     //used for finding the mean of a segment in the tile file.
     double segment_sum;
     double segment_mean;
@@ -491,16 +523,15 @@ namespace breseq {
     uint32_t tile_position;
     double tile_coverage;
     
-    //used for finding the mean of the tile file.
-    double tile_sum;
-    double tile_mean;
-    
     //holds the value a segment's coverage will be changed to.
     double new_segment_mean;
     
     //used for easily accessing the tile file.
     pair<uint32_t, double> tile_entry;
     vector< pair<uint32_t, double> > tile_data;
+    
+    //initial parameter.
+    uint32_t tile_size;
     
     //used for skipping lines.
     string skip;
@@ -515,21 +546,17 @@ namespace breseq {
     
     out_file << "Position\tSmooth_Coverage\n";
     
-    getline(tile_file, skip);
+    tile_file >> skip >> skip >> tile_size;
     
-    //get mean of tile file's coverage and populate the tile_data vector
-    tile_mean = 0;
+    //populate the tile_data vector
     num_tiles = 0;
     while ( tile_file >> tile_position >> tile_coverage )
     {
-      tile_mean += tile_coverage;
-      
       tile_entry.first = tile_position;
       tile_entry.second = tile_coverage;
       tile_data.push_back( tile_entry );
     }
     num_tiles = tile_position / 500;
-    tile_mean /= num_tiles;
     
     //go through each entry in the segment file.
     getline(segment_file, skip);
@@ -560,7 +587,7 @@ namespace breseq {
       
       //calculate the new value of the segment by taking the mean of the
       //segment divided by the mean of the tile data.
-      new_segment_mean = segment_mean / tile_mean;
+      new_segment_mean = segment_mean / summary_average;
       
       //this rounding method doesn't handle negative values
       //fortunately, there's no such thing as negative coverage

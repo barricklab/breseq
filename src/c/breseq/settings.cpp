@@ -125,13 +125,16 @@ namespace breseq
     ("no-junction-prediction,j", "do not predict new sequence junctions", TAKES_NO_ARGUMENT)
     ("polymorphism-prediction,p", "predict polymorphic mutations", TAKES_NO_ARGUMENT)
     ("base-quality-cutoff,b", "ignore bases with quality scores lower than this value", "3")
-    ("deletion-coverage-propagation-cutoff,u","value for coverage above which deletions are cutoff", 0)
+    ("deletion-coverage-propagation-cutoff,u","value for coverage above which deletions are cutoff")
     ("deletion-coverage-seed-cutoff,s","value for coverage below which deletions are cutoff", 0)
     ("require-complete-match", "only consider alignments that extend from end to end of a read", TAKES_NO_ARGUMENT)
     ("require-match-length", "only consider alignments that cover this many bases of a read", "0")
     ("require-match-fraction", "only consider alignments that cover this fraction of a read", "0.9")
     ("values-to-gd","",TAKES_NO_ARGUMENT, ADVANCED_OPTION) // @JEB @GRC added in for gathering/analyzing breseq values
     ("cnv","do experimental copy number variation prediction",TAKES_NO_ARGUMENT, ADVANCED_OPTION)
+    ("cnv-tile-size", "tile size for copy number variation prediction", 500, ADVANCED_OPTION)
+    ("cnv-ignore-redundant", "only consider non-redundant coverage when using cnv", TAKES_NO_ARGUMENT, ADVANCED_OPTION)
+        
     ("verbose,v","",TAKES_NO_ARGUMENT)
 
     .processCommandArgs(argc, argv);
@@ -143,7 +146,7 @@ namespace breseq
     options.addUsage("  Genome Diff Commands: APPLY, COMPARE, INTERSECT, NOT_EVIDENCE, SUBTRACT, UNION");
     options.addUsage("  For help using a utility command, type: breseq [command] ");
     
-    // make sure that the other config options are good:
+    // make sure that the other csettings settonfig options are good:
     if (options.count("help"))
     {
       options.printAdvanced();
@@ -184,6 +187,8 @@ namespace breseq
     
     this->no_junction_prediction = options.count("no-junction-prediction");
     this->do_copy_number_variation = options.count("cnv");
+    this->copy_number_variation_tile_size = from_string<uint32_t>(options["cnv-tile-size"]);
+    this->ignore_redundant_coverage = options.count("cnv-ignore-redundant");
     
     this->verbose = options.count("verbose");
     
