@@ -64,7 +64,7 @@ extern const char* _SIDE_KEY_JC;
 
 
 // Types of diff entries:
-enum gd_entry_type {TYPE_UNKOWN, SNP, SUB, DEL, INS, MOB, AMP, INV, CON, RA, MC, JC, UN, CURA, FPOS, PHYL, TSEQ, PFLP, RFLP, PFGE};
+enum gd_entry_type {UNKNOWN, SNP, SUB, DEL, INS, MOB, AMP, INV, CON, RA, MC, JC, CN, UN, CURA, FPOS, PHYL, TSEQ, PFLP, RFLP, PFGE};
 extern const vector<string> gd_entry_type_lookup_table;
   
 inline string to_string(const gd_entry_type type)

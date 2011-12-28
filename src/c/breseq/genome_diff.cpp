@@ -65,6 +65,7 @@ map<gd_entry_type, vector<string> > line_specification = make_map<gd_entry_type,
 (RA,make_vector<string> ("seq_id")("position")("insert_position")("ref_base")("new_base"))
 (MC,make_vector<string> ("seq_id")("start")("end")("start_range")("end_range"))
 (JC,make_vector<string> ("side_1_seq_id")("side_1_position")("side_1_strand")("side_2_seq_id")("side_2_position")("side_2_strand")("overlap"))
+(CN,make_vector<string> ("seq_id")("start")("end")("copy_number"))
 (UN,make_vector<string> ("seq_id")("start")("end"))
 
 //## validation
@@ -80,7 +81,7 @@ map<gd_entry_type, vector<string> > line_specification = make_map<gd_entry_type,
 
 
 const vector<string>gd_entry_type_lookup_table =
-make_vector<string>("TYPE_UNKOWN")("SNP")("SUB")("DEL")("INS")("MOB")("AMP")("INV")("CON")("RA")("MC")("JC")("UN")("CURA")("FPOS")("PHYL")("TSEQ")("PFLP")("RFLP")("PFGE");
+make_vector<string>("UNKNOWN")("SNP")("SUB")("DEL")("INS")("MOB")("AMP")("INV")("CON")("RA")("MC")("JC")("CN")("UN")("CURA")("FPOS")("PHYL")("TSEQ")("PFLP")("RFLP")("PFGE");
 
 
 // Field order.
@@ -107,14 +108,14 @@ cDiffEntry::cDiffEntry(const gd_entry_type type)
 }
 
 cDiffEntry::cDiffEntry()
-: _type(TYPE_UNKOWN)
+: _type(UNKNOWN)
 , _id("")
 , _evidence()
 {
 }
 
 cDiffEntry::cDiffEntry(const string &line)
-  : _type(TYPE_UNKOWN)
+  : _type(UNKNOWN)
   ,_id("")
   ,_evidence()
 {
@@ -138,7 +139,7 @@ cDiffEntry::cDiffEntry(const string &line)
 
   /*Check that the type is set. If there is an error confirm that gd_entry_type
    and the lookup table are identical in size and order and contain this type.*/
-  if (de->_type == TYPE_UNKOWN) {
+  if (de->_type == UNKNOWN) {
     string message = "";
     sprintf(message,
             "cDiffEntry::cDiffEntry(%s): Could not determine type.",
@@ -851,9 +852,10 @@ map<gd_entry_type, sort_fields_item> diff_entry_sort_fields = make_map<gd_entry_
   (INV, sort_fields_item(1, SEQ_ID, POSITION))
   (CON, sort_fields_item(1, SEQ_ID, POSITION))
   (RA,  sort_fields_item(2, SEQ_ID, POSITION))
-  (MC,  sort_fields_item(2, SEQ_ID, START))
-  (JC,  sort_fields_item(2, "side_1_seq_id", "side_1_position"))
-  (UN,  sort_fields_item(3, SEQ_ID, START))
+  (MC,  sort_fields_item(3, SEQ_ID, START))
+  (JC,  sort_fields_item(4, "side_1_seq_id", "side_1_position"))
+  (CN,  sort_fields_item(5, SEQ_ID, START))
+  (UN,  sort_fields_item(6, SEQ_ID, START))
 ;
 
 map<gd_entry_type, uint8_t> sort_order = make_map<gd_entry_type, uint8_t>
@@ -868,7 +870,8 @@ map<gd_entry_type, uint8_t> sort_order = make_map<gd_entry_type, uint8_t>
   (RA,  9)
   (MC,  10)
   (JC,  11)
-  (UN,  12)
+  (CN,  12)  
+  (UN,  13)
 ;
 
 
@@ -1199,6 +1202,7 @@ bool cGenomeDiff::is_valid(cReferenceSequences& ref_seq_info, bool verbose)
 //! Call to generate random mutations.
 void cGenomeDiff::random_mutations(const string& exclusion_file, const string& type, uint32_t number, uint32_t read_length, const cAnnotatedSequence& ref_seq_info, bool verbose)
 {
+  (void)verbose;
   // If we have an exclusion_file to load, we will save
   // the info in this map.
   map<uint32_t, uint32_t> match_list;
