@@ -109,6 +109,8 @@ extern const char* ALIGN_LEFT;
     {return start_tr(attributes) + input + "</tr>";}
   inline string start_table(const string& attributes)
     {return "<table " + attributes + ">";}
+  inline string end_table()
+    {return "</table>";}
   //! Wraps input in <font></font> tags
   inline string font(const string& attributes, const string& input) 
     {return "<font " + attributes + ">" + input + "</font>";}
@@ -197,23 +199,33 @@ struct Html_Mutation_Table_String : public string
 };
 
 
-string html_missing_coverage_table_string
-  (diff_entry_list_t& list_ref,
-   bool show_details,
-   const string& title = "Missing coverage evidence...",
-   const string& relative_link="");
+string html_missing_coverage_table_string(
+                                          diff_entry_list_t& list_ref,
+                                          bool show_details,
+                                          const string& title = "Missing coverage evidence...",
+                                          const string& relative_link=""
+                                          );
 
-string html_read_alignment_table_string  
-  (diff_entry_list_t& list_ref,
-   bool show_details,
-   const string& title = "Read alignment evidence...",
-   const string& relative_link = "");
+string html_read_alignment_table_string(
+                                        diff_entry_list_t& list_ref,
+                                        bool show_details,
+                                        const string& title = "Read alignment evidence...",
+                                        const string& relative_link = ""
+                                        );
 
-string html_new_junction_table_string
-  (diff_entry_list_t& jc,
-   bool show_details,
-   const string& title= "New junction evidence",
-   const string& relative_link = "");
+string html_new_junction_table_string(diff_entry_list_t& jc,
+                                      bool show_details,
+                                      const string& title = "New junction evidence",
+                                      const string& relative_link = ""
+                                      );
+  
+string html_copy_number_table_string(
+                                     diff_entry_list_t& list_ref, 
+                                     bool show_details, 
+                                     const string& title = "Copy number evidence", 
+                                     const string& relative_link = ""
+                                     );
+
 
 string html_genome_diff_item_table_string(const Settings& settings, cGenomeDiff& gd, 
                                         diff_entry_list_t& list_ref);

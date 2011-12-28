@@ -607,9 +607,9 @@ namespace breseq {
         item[SEQ_ID] = seq_id;
         item[START] = to_string<uint32_t>(position_start);
         item[END] = to_string<uint32_t>(position_end);
-        item["copy_number"] = to_string<double>(new_segment_mean);
-        item["mean_coverage"] = to_string<double>(segment_mean);
         item["tile_size"] = to_string<double>(settings.copy_number_variation_tile_size);
+        item["copy_number"] = to_string<double>(new_segment_mean);
+        item["relative_coverage"] = to_string<double>(segment_mean / summary_average);
         gd.add(item);
       }
       

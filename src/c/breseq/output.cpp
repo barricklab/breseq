@@ -145,6 +145,7 @@ string header_style_string()
   ss << ".read_alignment_header_row {background-color: rgb(255,0,0);}"     << endl;
   ss << ".missing_coverage_header_row {background-color: rgb(0,100,100);}" << endl;
   ss << ".new_junction_header_row {background-color: rgb(0,0,155);}"       << endl;
+  ss << ".copy_number_header_row {background-color: rgb(255,255,0);}"      << endl;
   ss << ".alternate_table_row_0 {background-color: rgb(255,255,255);}"     << endl;
   ss << ".alternate_table_row_1 {background-color: rgb(230,230,245);}"     << endl;
   ss << ".gray_table_row {background-color: rgb(230,230,245);}"            << endl;
@@ -229,6 +230,13 @@ void html_index(const string& file_name, const Settings& settings, Summary& summ
   //////
   // Unassigned evidence
   //////
+
+  diff_entry_list_t cn = gd.filter_used_as_evidence(gd.show_list(make_vector<gd_entry_type>(CN)));
+  cn.remove_if(cDiffEntry::rejected()); 
+  
+  if (cn.size() > 0) {
+    HTML << "<p>" << html_copy_number_table_string(cn, false, "Unassigned copy number evidence", relative_path);
+  }
   
   diff_entry_list_t ra = gd.filter_used_as_evidence(gd.show_list(make_vector<gd_entry_type>(RA)));
   ra.remove_if(cDiffEntry::rejected()); 
@@ -811,6 +819,10 @@ string html_genome_diff_item_table_string(const Settings& settings, cGenomeDiff&
     {
       return html_new_junction_table_string(list_ref,false);
     }
+    else if(first_item._type == CN)
+    {
+      return html_copy_number_table_string(list_ref,false);
+    }
   }  
   return "";
 }
@@ -1323,6 +1335,86 @@ string html_new_junction_table_string(diff_entry_list_t& list_ref, bool show_det
   ss << "</table>" << endl;
   return ss.str();
 }
+  
+string html_copy_number_table_string(diff_entry_list_t& list_ref, bool show_details, const string& title, const string& relative_link)
+{
+  stringstream ss; //!<< Main Build Object for Function
+  cDiffEntry& test_item = *list_ref.front();
+  
+  bool link = test_item.entry_exists(_EVIDENCE_FILE_NAME);
+  
+  ss << start_table("border=\"0\" cellspacing=\"1\" cellpadding=\"3\"") << endl;
+  size_t total_cols = link ? 9 : 8;
+  
+  if (title != "") {
+    ss << tr(th("colspan=\"" + to_string(total_cols) + "\" align=\"left\" class=\"copy_number_header_row\"", title)) << endl;
+  }
+  // #   #####################
+  // #   #### HEADER LINE ####
+  // #   #####################
+  ss << "<tr>" << endl;
+  
+  if (link) {
+    ss << th("&nbsp;") << endl;
+  }
+  ss << th("seq&nbsp;id") << endl;
+  ss << th("start") << endl;
+  ss << th("end") << endl;
+  ss << th("tile&nbsp;size") << endl;
+  ss << th("copy&nbsp;number") << endl;
+  ss << th("rel&nbsp;coverage") << endl;
+  ss << th("gene") << endl;
+  ss << th("width=\"100%\"","product") << endl;
+  ss << "</tr>" << endl;
+  ss << endl;
+  // #   ####################
+  // #   #### ITEM LINES ####
+  // #   ####################
+  
+  for (diff_entry_list_t::iterator itr = list_ref.begin(); itr != list_ref.end(); itr ++) 
+  {  
+    cDiffEntry& c = **itr;
+    
+    ss << start_tr("class=\"normal_table_row\"") << endl;
+    
+    if (link)
+      ss << td(a(relative_link + c[_EVIDENCE_FILE_NAME], "*" )) << endl;
+    
+    ss << td(ALIGN_LEFT, nonbreaking(c[SEQ_ID])) << endl;
+    ss << td(ALIGN_LEFT, nonbreaking(c[START])) << endl;
+    ss << td(ALIGN_LEFT, nonbreaking(c[END])) << endl;
+
+    ss << td(ALIGN_CENTER, nonbreaking(c["tile_size"])) << endl;
+    ss << td(ALIGN_CENTER, nonbreaking(c["copy_number"])) << endl;
+    
+    stringstream num; 
+    num << fixed << setprecision(2) << from_string<double>(c["relative_coverage"]);
+    ss << td(ALIGN_CENTER, num.str()) << endl;
+    
+    ss << td(ALIGN_CENTER, i(nonbreaking(c[GENE_NAME])));
+    ss << td(ALIGN_LEFT, htmlize(c[GENE_PRODUCT]));
+    
+    
+    if (show_details && c.entry_exists("reject")) {
+      cGenomeDiff gd;
+      
+      vector<string> reject_reasons = c.get_reject_reasons();
+      
+      for (vector<string>::iterator itr = reject_reasons.begin();
+           itr != reject_reasons.end(); itr++) {
+        string& reject(*itr);
+        
+        ss << tr("class=\"reject_table_row\"",
+                 td("colspan=\"" + to_string(total_cols) + "\"",
+                    "Rejected: " + decode_reject_reason(reject))) << endl;
+      }
+    }
+  }// End list_ref Loop
+  
+  ss << end_table() << endl;
+  return ss.str();
+}
+
 
 string decode_reject_reason(const string& reject)
 {
@@ -1634,6 +1726,28 @@ Evidence_Files::Evidence_Files(const Settings& settings, cGenomeDiff& gd)
                  );
   }
   
+  // Copy number evidence
+  diff_entry_list_t items_CN = gd.filter_used_as_evidence(gd.show_list(make_vector<gd_entry_type>(CN)));
+  
+  for (diff_entry_list_t::iterator itr = items_CN.begin(); itr != items_CN.end(); itr ++) 
+  {  
+    diff_entry_ptr_t item = *itr;
+    
+    add_evidence(_EVIDENCE_FILE_NAME,
+                 item,
+                 item,
+                 make_map<string,string>
+                 (BAM_PATH, reference_bam_file_name)
+                 (FASTA_PATH, reference_fasta_file_name)
+                 (PREFIX, "CN_PLOT")
+                 (SEQ_ID, (*item)[SEQ_ID])            
+                 (START, (*item)[START])
+                 (END,  (*item)[END])
+                 (PLOT, (*item)[_COVERAGE_PLOT_FILE_NAME])); // filled by draw_coverage
+
+  }
+
+  
   // now create evidence files
   create_path(settings.evidence_path);
   //cerr << "Total number of evidence items: " << evidence_list.size() << endl;
@@ -1834,8 +1948,8 @@ void draw_coverage(Settings& settings, cReferenceSequences& ref_seq_info, cGenom
     co.plot(region, this_complete_coverage_text_file_name);
    }
   
-  // Zoom-in plots of individual deletions
-  vector<gd_entry_type> mc_types = make_vector<gd_entry_type>(MC);
+  // Zoom-in plots of individual deletions and copy number variation
+  vector<gd_entry_type> mc_types = make_vector<gd_entry_type>(MC)(CN);
 	diff_entry_list_t mc = gd.show_list(mc_types);
   for (diff_entry_list_t::iterator it=mc.begin(); it!=mc.end(); it++)
   {
