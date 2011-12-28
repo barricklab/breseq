@@ -560,15 +560,12 @@ void cGenomeDiff::merge(cGenomeDiff& gd_new, bool unique, bool new_id, bool verb
   
 }
   
-cGenomeDiff cGenomeDiff::fast_merge(const cGenomeDiff& gd1, const cGenomeDiff& gd2)
-{
-  cGenomeDiff gd = gd1;
-  
-  diff_entry_list_t gd_list = gd2.list();
+void cGenomeDiff::fast_merge(const cGenomeDiff& gd)
+{  
+  diff_entry_list_t gd_list = gd.list();
   for(diff_entry_list_t::const_iterator it=gd_list.begin(); it!= gd_list.end(); it++) {
-    gd.add(**it);
+    this->add(**it);
   }
-  return gd;
 }
 
 /*! Read a genome diff(.gd) from the given file to class member

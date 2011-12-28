@@ -268,8 +268,8 @@ public:
   void merge(cGenomeDiff& gd_new, bool unique=true, bool new_id=false, bool verbose=false);
 
   //! fast merge, doesn't compare entries, but does renumber
-  static cGenomeDiff fast_merge(const cGenomeDiff& gd1, const cGenomeDiff& gd2);
-
+  void fast_merge(const cGenomeDiff& gd);
+  
   //! compare
   static cGenomeDiff compare_genome_diff_files(const cGenomeDiff &control, const cGenomeDiff &test);
 

@@ -2664,8 +2664,19 @@ int breseq_default_action(int argc, char* argv[])
     cGenomeDiff jc_gd(settings.jc_genome_diff_file_name);
     cGenomeDiff ra_mc_gd(settings.ra_mc_genome_diff_file_name);
         
-    cGenomeDiff merged_genome_diff;
-    cGenomeDiff evidence_gd = cGenomeDiff::fast_merge(jc_gd, ra_mc_gd);
+    cGenomeDiff evidence_gd;
+    evidence_gd.fast_merge(jc_gd);
+    evidence_gd.fast_merge(ra_mc_gd);
+    
+    // there is a copy number genome diff for each sequence separately
+    if (settings.do_copy_number_variation) {
+      for (cReferenceSequences::iterator it = ref_seq_info.begin(); it != ref_seq_info.end(); ++it) {
+        cAnnotatedSequence& seq = *it;
+        string this_copy_number_variation_cn_genome_diff_file_name = settings.file_name(settings.copy_number_variation_cn_genome_diff_file_name, "@", seq.m_seq_id);
+        cGenomeDiff cn_gd(this_copy_number_variation_cn_genome_diff_file_name);
+        evidence_gd.fast_merge(cn_gd);
+      }
+    }
 		evidence_gd.write(settings.evidence_genome_diff_file_name);
 
 		// predict mutations from evidence in the GenomeDiff
