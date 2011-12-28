@@ -59,16 +59,6 @@ namespace breseq
 				rf.m_base_name.erase(pos);
 			}
 			
-      /*
-      // @JEB - this shouldn't be necessary? - it actually causes some problems.
-      // Fix when we move to all C++ TODO
-      //- trailing .converted
-			pos = rf.m_base_name.rfind(".converted");
-      if ((pos != string::npos) && (pos = rf.m_base_name.size() - 10))
-			{
-				rf.m_base_name.erase(pos);
-			}
-      */
       // set up the map for converting base names to fastq file names to be used
       // check to see whether this is a duplicate
       ASSERT(read_file_to_fastq_file_name_map[rf.m_base_name].size() == 0, 
@@ -125,8 +115,8 @@ namespace breseq
     ("no-junction-prediction,j", "do not predict new sequence junctions", TAKES_NO_ARGUMENT)
     ("polymorphism-prediction,p", "predict polymorphic mutations", TAKES_NO_ARGUMENT)
     ("base-quality-cutoff,b", "ignore bases with quality scores lower than this value", 3)
-    ("deletion-coverage-propagation-cutoff,u","value for coverage above which deletions are cutoff", 0)
-    ("deletion-coverage-seed-cutoff,s","value for coverage below which deletions are cutoff", 0)
+    ("deletion-coverage-propagation-cutoff,u","value for coverage above which deletions are cutoff. 0 = calculated from coverage distribution", 0)
+    ("deletion-coverage-seed-cutoff,s","value for coverage below which deletions are seeded", 0)
     ("require-complete-match", "only consider alignments that extend from end to end of a read", TAKES_NO_ARGUMENT)
     ("require-match-length", "only consider alignments that cover this many bases of a read", 0)
     ("require-match-fraction", "only consider alignments that cover this fraction of a read", 0.9)
@@ -484,7 +474,8 @@ namespace breseq
     this->tiled_complete_coverage_text_file_name = this->copy_number_variation_path + "/@.tiled.tab";
     this->ranges_text_file_name = this->copy_number_variation_path + "/@.ranges.tab";
     this->smoothed_ranges_text_file_name = this->copy_number_variation_path + "/@.smoothed_ranges.tab";
-
+    this->copy_number_variation_cn_genome_diff_file_name = this->copy_number_variation_path + "/@.cn_evidence.gd";
+    
     //! Paths: Output
 		this->output_path = "output";
 		if (this->base_output_path.size() > 0) this->output_path = this->base_output_path + "/" + this->output_path;

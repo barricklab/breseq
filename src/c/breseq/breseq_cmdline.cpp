@@ -1445,7 +1445,16 @@ int do_copy_number_variation(int argc, char *argv[])
     CoverageDistribution::find_segments(this_tiled_complete_coverage_text_file_name, this_ranges_text_file_name);
     
     string this_smoothed_ranges_text_file_name = settings.file_name(settings.smoothed_ranges_text_file_name, "@", seq.m_seq_id);
-    CoverageDistribution::smooth_segments(summary.unique_coverage[seq.m_seq_id].average, this_tiled_complete_coverage_text_file_name, this_ranges_text_file_name, this_smoothed_ranges_text_file_name);
+    string this_copy_number_variation_cn_genome_diff_file_name = settings.file_name(settings.copy_number_variation_cn_genome_diff_file_name, "@", seq.m_seq_id);
+    CoverageDistribution::smooth_segments(
+                                          settings,
+                                          seq.m_seq_id,
+                                          summary.unique_coverage[seq.m_seq_id].average, 
+                                          this_tiled_complete_coverage_text_file_name, 
+                                          this_ranges_text_file_name, 
+                                          this_smoothed_ranges_text_file_name,
+                                          this_copy_number_variation_cn_genome_diff_file_name
+                                          );
     
    }
   
@@ -2624,7 +2633,17 @@ int breseq_default_action(int argc, char* argv[])
         CoverageDistribution::find_segments(this_tiled_complete_coverage_text_file_name, this_ranges_text_file_name);
        
         string this_smoothed_ranges_text_file_name = settings.file_name(settings.smoothed_ranges_text_file_name, "@", seq.m_seq_id);
-        CoverageDistribution::smooth_segments(summary.unique_coverage[seq.m_seq_id].average, this_tiled_complete_coverage_text_file_name, this_ranges_text_file_name, this_smoothed_ranges_text_file_name);
+        string this_copy_number_variation_cn_genome_diff_file_name = settings.file_name(settings.copy_number_variation_cn_genome_diff_file_name, "@", seq.m_seq_id);
+
+        CoverageDistribution::smooth_segments(
+                                              settings,
+                                              seq.m_seq_id,
+                                              summary.unique_coverage[seq.m_seq_id].average, 
+                                              this_tiled_complete_coverage_text_file_name, 
+                                              this_ranges_text_file_name, 
+                                              this_smoothed_ranges_text_file_name,
+                                              this_copy_number_variation_cn_genome_diff_file_name
+                                              );
       } 
       settings.done_step(settings.copy_number_variation_done_file_name);
     }

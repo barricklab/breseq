@@ -100,10 +100,13 @@ namespace breseq {
     //the ranges to the mean of the range rounded to the nearest integer.
     //Written by Aaron Reba
     static void smooth_segments (
+                                const Settings& settings,
+                                const string& seq_id,
                                 double summary_average,
                                 string tile_file_name,
                                 string segment_file_name,
-                                string out_file_name
+                                string out_file_name,
+                                string gd_file_name
                                 );
 
 	}; // class CoverageDistribution

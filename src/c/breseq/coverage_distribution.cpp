@@ -19,6 +19,8 @@ LICENSE AND COPYRIGHT
 
 #include "libbreseq/coverage_distribution.h"
 
+#include "libbreseq/genome_diff.h"
+
 using namespace std;
 
 namespace breseq {
@@ -429,11 +431,11 @@ namespace breseq {
       
       //i and j are inclusive boundaries so <= is used in the comparison.
       
-      for ( int32_t i = current_search.first - 1; i <= current_search.second; i++ )
+      for ( uint32_t i = current_search.first - 1; i <= current_search.second; i++ )
       {
         p_i = ordered_sums[i];
         Si = saved_sums[ ordered_sums[i] ];
-        for ( int32_t j = i + 1; j <= current_search.second; j++ )
+        for ( uint32_t j = i + 1; j <= current_search.second; j++ )
         {
           p_j = ordered_sums[j];
           Sj = saved_sums[ ordered_sums[j] ];
@@ -503,12 +505,17 @@ namespace breseq {
   }
   
   void CoverageDistribution::smooth_segments(
+                                              const Settings& settings,
+                                              const string& seq_id,
                                               double summary_average,
                                               string tile_file_name,
                                               string segment_file_name,
-                                              string out_file_name
+                                              string out_file_name,
+                                              string gd_file_name
                                               )
   {
+    
+    cGenomeDiff gd;
     
     //used for finding the mean of a segment in the tile file.
     double segment_sum;
@@ -593,6 +600,20 @@ namespace breseq {
       //fortunately, there's no such thing as negative coverage
       new_segment_mean = floor(new_segment_mean + .5);
       
+      // @JEB create the genome diff evidence entry if mean is not one
+      
+      if (new_segment_mean != 1.0) {
+        cDiffEntry item(CN);
+        item[SEQ_ID] = seq_id;
+        item[START] = to_string<uint32_t>(position_start);
+        item[END] = to_string<uint32_t>(position_end);
+        item["copy_number"] = to_string<double>(new_segment_mean);
+        item["mean_coverage"] = to_string<double>(segment_mean);
+        item["tile_size"] = to_string<double>(settings.copy_number_variation_tile_size);
+        gd.add(item);
+      }
+      
+      
       //set the new value of the coverage for this segment to this value.
       for ( uint32_t i = 0; i < tile_data.size(); i++ )
       {
@@ -621,6 +642,9 @@ namespace breseq {
     tile_file.close();
     segment_file.close();
     out_file.close();
+    
+    gd.write(gd_file_name);
   }
 
+  
 } // namespace breseq
