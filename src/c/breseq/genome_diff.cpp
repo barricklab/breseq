@@ -853,6 +853,14 @@ map<gd_entry_type, sort_fields_item> diff_entry_sort_fields = make_map<gd_entry_
   (JC,  sort_fields_item(4, "side_1_seq_id", "side_1_position"))
   (CN,  sort_fields_item(5, SEQ_ID, START))
   (UN,  sort_fields_item(6, SEQ_ID, START))
+  (CURA, sort_fields_item(7, "expert", "expert"))
+  (FPOS, sort_fields_item(7, "expert", "expert"))
+  (PHYL, sort_fields_item(7, "gd", "gd"))
+  (TSEQ, sort_fields_item(7, "seq_id", "primer_1_start"))
+  (PFLP, sort_fields_item(7, "seq_id", "primer_1_start"))
+  (RFLP, sort_fields_item(7, "seq_id", "primer_1_start"))
+  (PFGE, sort_fields_item(7, "seq_id", "enzyme"))
+
 ;
 
 map<gd_entry_type, uint8_t> sort_order = make_map<gd_entry_type, uint8_t>
@@ -869,6 +877,13 @@ map<gd_entry_type, uint8_t> sort_order = make_map<gd_entry_type, uint8_t>
   (JC,  11)
   (CN,  12)  
   (UN,  13)
+  (CURA, 14)
+  (FPOS, 15)
+  (PHYL, 16)
+  (TSEQ, 17)
+  (PFLP, 18)
+  (RFLP, 19)
+  (PFGE, 20)
 ;
 
 
