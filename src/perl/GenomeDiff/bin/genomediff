@@ -798,6 +798,7 @@ sub do_count
 
 	## how many repeat columns
 	my $mob_name_hash;
+	my $con_name_hash;
 	foreach my $gd_file_name (@gd_file_name_list)
 	{
 		print "$gd_file_name\n";
@@ -811,6 +812,10 @@ sub do_count
 		{
 			$mob_name_hash->{$mut->{repeat_name}} = 1;
 		}
+		foreach my $mut ($gd->list('CON'))
+		{
+			$con_name_hash->{$mut->{mediated}} = 1 if ($mut->{mediated});
+		}
 		foreach my $mut ($gd->list('DEL'))
 		{
 			$mob_name_hash->{$mut->{mediated}} = 1 if ($mut->{mediated});
@@ -818,6 +823,8 @@ sub do_count
 		
 	}
 	my @mod_name_list = sort keys %$mob_name_hash;
+	my @con_name_list = sort keys %$con_name_hash;
+	
 	
 	my $main_seq_id = $ref_seq_info->{seq_ids}->[0];
 	my $main_seq_length = length $ref_seq_info->{ref_strings}->{$main_seq_id};
@@ -833,7 +840,7 @@ sub do_count
 	}
 	
 	##not by base change
-	my @snp_types = ( 'nonsynonymous', 'synonymous', 'RNA', 'pseudogene', 'intergenic');
+	my @snp_types = ( 'nonsynonymous', 'synonymous', 'noncoding', 'pseudogene', 'intergenic');
 	
 	open OUT, ">$output" or die "Count not open file: $output";
 	
@@ -844,7 +851,11 @@ sub do_count
 		'small_indel',
 		'large_del',
 		'deleted', 
-		@mod_name_list, 
+		'amplification',
+		'mobile_element',
+		@mod_name_list,
+		'gene_conversion',
+		@con_name_list,
 		'called_bp', 
 		'total_bp',
 	);
@@ -945,10 +956,22 @@ sub do_count
 				}
 			}
 			
+			if ($mut->{type} eq 'CON')
+			{
+				$count->{con}->{$mut->{mediated}}++ if ($mut->{mediated});
+				$count->{gene_conversion}++;
+			}
+			
 			if ($mut->{type} eq 'MOB')
 			{
 				$count->{mob}->{$mut->{repeat_name}}++;
+				$count->{mobile_elements}++;
 			}			
+			
+			if ($mut->{type} eq 'AMP')
+			{
+				$count->{amp}++;
+			}
 		}
 		
 		##statistics for UN
@@ -979,7 +1002,11 @@ sub do_count
 			$count->{small_indel},
 			$count->{large_del}, 
 			$total_deleted, 
+			$count->{amp}, 
+			$count->{mobile_elements},
 			map({$count->{mob}->{$_}} @mod_name_list), 
+			$count->{gene_conversion},
+			map({$count->{con}->{$_}} @con_name_list), 
 			$called_bp, 
 			$total_bp
 		);

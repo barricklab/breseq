@@ -70,14 +70,14 @@
 			<key>caret</key>
 			<dict>
 				<key>column</key>
-				<integer>25</integer>
+				<integer>3</integer>
 				<key>line</key>
-				<integer>592</integer>
+				<integer>860</integer>
 			</dict>
 			<key>firstVisibleColumn</key>
 			<integer>0</integer>
 			<key>firstVisibleLine</key>
-			<integer>582</integer>
+			<integer>832</integer>
 		</dict>
 		<key>GenomeDiff/bin/tree_utils</key>
 		<dict>
@@ -112,14 +112,14 @@
 			<key>caret</key>
 			<dict>
 				<key>column</key>
-				<integer>1</integer>
+				<integer>0</integer>
 				<key>line</key>
-				<integer>734</integer>
+				<integer>642</integer>
 			</dict>
 			<key>firstVisibleColumn</key>
 			<integer>0</integer>
 			<key>firstVisibleLine</key>
-			<integer>713</integer>
+			<integer>638</integer>
 		</dict>
 		<key>GenomeDiff/lib/GenomeDiff/Output.pm</key>
 		<dict>
@@ -170,14 +170,30 @@
 			<key>caret</key>
 			<dict>
 				<key>column</key>
-				<integer>27</integer>
+				<integer>20</integer>
 				<key>line</key>
-				<integer>244</integer>
+				<integer>401</integer>
 			</dict>
+			<key>columnSelection</key>
+			<false/>
 			<key>firstVisibleColumn</key>
 			<integer>0</integer>
 			<key>firstVisibleLine</key>
-			<integer>220</integer>
+			<integer>380</integer>
+			<key>selectFrom</key>
+			<dict>
+				<key>column</key>
+				<integer>12</integer>
+				<key>line</key>
+				<integer>401</integer>
+			</dict>
+			<key>selectTo</key>
+			<dict>
+				<key>column</key>
+				<integer>20</integer>
+				<key>line</key>
+				<integer>401</integer>
+			</dict>
 		</dict>
 		<key>GenomeDiff/lib/GenomeDiff/SynonymousNonsynonymous.pm</key>
 		<dict>
@@ -210,6 +226,6 @@
 	<key>showFileHierarchyDrawer</key>
 	<true/>
 	<key>windowFrame</key>
-	<string>{{289, 76}, {915, 735}}</string>
+	<string>{{318, 143}, {915, 735}}</string>
 </dict>
 </plist>

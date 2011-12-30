@@ -609,7 +609,9 @@ namespace breseq {
         item[END] = to_string<uint32_t>(position_end);
         item["tile_size"] = to_string<double>(settings.copy_number_variation_tile_size);
         item["copy_number"] = to_string<double>(new_segment_mean);
-        item["relative_coverage"] = to_string<double>(segment_mean / summary_average);
+        stringstream num;
+        num << fixed << setprecision(2) << (segment_mean / summary_average);
+        item["relative_coverage"] = num.str();
         gd.add(item);
       }
       
