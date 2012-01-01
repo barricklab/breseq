@@ -1454,37 +1454,46 @@ void cReferenceSequences::ReadBull(const string& file_name) {
  */
 string cReferenceSequences::repeat_family_sequence(const string &repeat_name, int8_t strand, int32_t region_pos)
 {
-  vector<cAnnotatedSequence>::iterator itr_seq;
+  counted_ptr<cSequenceFeature> picked_rep(NULL);
+  cAnnotatedSequence* picked_seq(NULL);
   
   // loop through all reference sequences
-  for (itr_seq = this->begin(); itr_seq != this->end(); itr_seq++) {
+  for (vector<cAnnotatedSequence>::iterator itr_seq = this->begin(); itr_seq != this->end(); itr_seq++) {
     cAnnotatedSequence& this_seq = *itr_seq;
     cSequenceFeatureList& repeats = this_seq.m_repeats;
 
-    cSequenceFeatureList::iterator itr_rep;
-    
     uint32_t uSmallest = this_seq.m_length;
     
-    for (itr_rep = repeats.begin(); itr_rep != repeats.end(); itr_rep++) {
+    for (cSequenceFeatureList::iterator itr_rep = repeats.begin(); itr_rep != repeats.end(); itr_rep++) {
       cSequenceFeature& rep = **itr_rep;
       
-      if(rep.SafeGet("name") == repeat_name && (uSmallest > (uint32_t)(rep.m_end - rep.m_start + 1)))uSmallest = (uint32_t)(rep.m_end - rep.m_start + 1);
-    }
-    
-    for (itr_rep = repeats.begin(); itr_rep != repeats.end(); itr_rep++) {
-      cSequenceFeature& rep = **itr_rep;
+      if(rep.SafeGet("name") != repeat_name)
+        continue;
       
-      if (rep.SafeGet("name") == repeat_name && ((region_pos < 0 && uSmallest == (uint32_t)(rep.m_end - rep.m_start + 1)) || region_pos == rep.m_start)) {
-        string repeat_seq = this_seq.get_sequence_1(rep.m_start, rep.m_end);
-        if (strand != rep.m_strand)
-          repeat_seq = reverse_complement(repeat_seq);
-        return repeat_seq;
+      if (region_pos == rep.m_start) {
+        picked_seq = &this_seq;
+        picked_rep = *itr_rep;
+        break;
+      }
+      
+      if (uSmallest > static_cast<uint32_t>(rep.m_end - rep.m_start + 1)) {
+        uSmallest = static_cast<uint32_t>(rep.m_end - rep.m_start + 1);
+        picked_seq = &this_seq;
+        picked_rep = *itr_rep;
       }
     }
   }
+    
+  if (region_pos != -1)
+    ASSERT(picked_rep.get() != NULL, "No valid " + repeat_name + " repeat element found for position " + to_string(region_pos));
 
-  ASSERT(false, "Unknown Repeat\n\tType:\t" + repeat_name + "\n\tPos:\t" + to_string(region_pos));
-  return "";
+  ASSERT(picked_rep.get() != NULL, "No valid " + repeat_name + " found.");
+    
+  string repeat_seq = picked_seq->get_sequence_1(picked_rep->m_start, picked_rep->m_end);
+  if (strand != picked_rep->m_strand)
+    repeat_seq = reverse_complement(repeat_seq);
+  
+  return repeat_seq;  
 }
 
 /*! Find the closest edge of a repeat in the specified direction within the specified distance
