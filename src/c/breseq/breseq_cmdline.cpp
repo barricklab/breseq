@@ -1482,6 +1482,41 @@ int do_copy_number_variation(int argc, char *argv[])
   return 0;
 }
 
+int do_periodicity(int argc, char *argv[])
+{
+	Settings settings(argc, argv);
+  
+  //(re)load the reference sequences from our converted files
+  cReferenceSequences ref_seq_info;
+  ref_seq_info.ReadGFF(settings.reference_gff3_file_name);
+  
+  Summary summary;
+  summary.unique_coverage.retrieve(settings.error_rates_summary_file_name);
+  
+  CandidateJunctions::identify_candidate_junctions(settings, summary, ref_seq_info);
+  
+  //create directory
+  create_path( settings.copy_number_variation_path );
+  
+  for (cReferenceSequences::iterator it = ref_seq_info.begin(); it != ref_seq_info.end(); ++it)
+  {
+    cAnnotatedSequence& seq = *it;
+    string this_complete_coverage_text_file_name = settings.file_name(settings.complete_coverage_text_file_name, "@", seq.m_seq_id);
+    string this_periodicity_complete_coverage_text_file_name = settings.file_name(settings.periodicity_table_file_name, "@", seq.m_seq_id);
+    CoverageDistribution::calculate_periodicity(
+          this_complete_coverage_text_file_name, 
+          this_periodicity_complete_coverage_text_file_name,
+          settings.periodicity_method,
+          settings.periodicity_start,
+          settings.periodicity_end,
+          settings.periodicity_step
+          );
+    
+   }
+  
+  return 0;
+}
+
 int do_download(int argc, char *argv[])
 {
   stringstream ss;
@@ -2671,7 +2706,29 @@ int breseq_default_action(int argc, char* argv[])
       settings.done_step(settings.copy_number_variation_done_file_name);
     }
   }
-   
+  
+  if (settings.do_periodicity){
+    create_path (settings.copy_number_variation_path);
+      
+    if (settings.do_step(settings.periodicity_done_file_name, "Periodicity")){
+      for (cReferenceSequences::iterator it = ref_seq_info.begin(); it != ref_seq_info.end(); ++it){
+        cAnnotatedSequence& seq = *it;
+        
+        string this_complete_coverage_text_file_name = settings.file_name(settings.complete_coverage_text_file_name, "@", seq.m_seq_id);
+        string this_period_complete_coverage_text_file_name = settings.file_name(settings.periodicity_table_file_name, "@", seq.m_seq_id);
+        
+        CoverageDistribution::calculate_periodicity(
+              this_complete_coverage_text_file_name,
+              this_period_complete_coverage_text_file_name,
+              settings.periodicity_method,
+              settings.periodicity_start,
+              settings.periodicity_end,
+              settings.periodicity_step
+              );
+      }
+      settings.done_step(settings.periodicity_done_file_name);
+    }
+  }
    
   create_path(settings.evidence_path); //need output for plots
 
@@ -2853,6 +2910,8 @@ int main(int argc, char* argv[]) {
     return do_runfile(argc_new, argv_new);
   } else if (command == "CNV") {
     return do_copy_number_variation(argc_new, argv_new);
+  } else if (command == "PERIODICITY"){
+    return do_periodicity(argc_new, argv_new);
   } else if (command == "DOWNLOAD") {
     return do_download(argc_new, argv_new);
   } else if ((command == "RANDOM_MUTATIONS") || (command == "RAND_MUTS")) {

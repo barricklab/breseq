@@ -201,6 +201,7 @@ namespace breseq
 		bool no_deletion_prediction;      // Default = false
 		bool no_alignment_generation;     // Default = false
 		bool do_copy_number_variation;    // Default = false COMMAND-LINE OPTION
+		bool do_periodicity;							// Default = false COMMAND-LINE OPTION
 
     //! DEBUG options
     
@@ -270,6 +271,10 @@ namespace breseq
 		//! Settings: Copy Number Variation
     uint32_t copy_number_variation_tile_size;
     bool ignore_redundant_coverage;
+    uint32_t periodicity_method;
+    uint32_t periodicity_start;
+    uint32_t periodicity_end;
+    uint32_t periodicity_step;
     
     //! Settings: Output
     uint32_t maximum_reads_to_align;                      // Default = 100
@@ -399,6 +404,9 @@ namespace breseq
     string ranges_text_file_name;
     string smoothed_ranges_text_file_name;
     string copy_number_variation_cn_genome_diff_file_name;
+    
+    string periodicity_table_file_name;
+    string periodicity_done_file_name;
     
     //! Paths: Output
     string output_path;

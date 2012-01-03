@@ -648,5 +648,169 @@ namespace breseq {
     gd.write(gd_file_name);
   }
 
+  void CoverageDistribution::calculate_periodicity (
+                                    string coverage_file_name,
+                                    string period_file_name,
+                                    uint32_t method,
+                                    uint32_t start_range,
+                                    uint32_t end_range,
+                                    uint32_t step
+                                    ){
+    
+    //used for indexing the coverage_file's values.
+    stringstream line_stream;
+    string line;
+    
+    string column_title;
+    uint8_t current_column;
+    uint8_t column_count;
+    
+    uint8_t unique_top_column;
+    uint8_t unique_bot_column;
+    uint8_t redundant_top_column;
+    uint8_t redundant_bot_column;
+    
+    int32_t unique_top;
+    int32_t unique_bot;
+    int32_t redundant_top;
+    int32_t redundant_bot;
+    
+    //used to ignore values.
+    string skip;
+    
+    ifstream coverage_file;
+    ofstream period_file;
+    
+    //used for holding file data
+    vector<int32_t> unique_top_vector;
+    vector<int32_t> unique_bot_vector;
+    vector<int32_t> redundant_top_vector;
+    vector<int32_t> redundant_bot_vector;
+    
+    //used to hold values for operations
+    vector<int32_t> offset_range;
+    vector<int32_t> top_vector;
+    vector<int32_t> bot_vector;
+    vector<int32_t> offset_bot_vector;
+    int32_t bot_value;
+    int32_t offset_sum;
+    
+    //reserve vector space
+    unique_top_vector.reserve(4700000);
+    unique_bot_vector.reserve(4700000);
+    redundant_top_vector.reserve(4700000);
+    redundant_bot_vector.reserve(4700000);
+    
+    coverage_file.open( coverage_file_name.c_str() );
+    period_file.open( period_file_name.c_str() );
+    
+    //populate offset_range
+    for (uint32_t i = start_range; i <= end_range; i += step){
+      offset_range.push_back(i);
+    }
+    
+    //parse header line so that each line can be correctly indexed.
+    getline(coverage_file, line);
+    line_stream.str(line);
+    
+    column_count = 0;
+    while (getline(line_stream, column_title, '\t')){
+      if (column_title == "unique_top_cov"){
+        unique_top_column = column_count;
+      }
+      else if (column_title == "unique_bot_cov"){
+        unique_bot_column = column_count;
+      }
+      else if (column_title == "redundant_top_cov"){
+        redundant_top_column = column_count;
+      }
+      else if (column_title == "redundant_bot_cov"){
+        redundant_bot_column = column_count;
+      }
+      
+      column_count++;
+    }
+    
+    //read the entire file and store it in the 4 coverage vectors
+    line_stream.clear();
+    while ( getline(coverage_file, line) ){
+      
+      if (line == ""){
+        break;
+      }
+      
+      line_stream.clear();
+      line_stream.str(line);
+      
+      for (current_column = 0; current_column < column_count; current_column++){
+        if (current_column == unique_top_column){
+          line_stream >> unique_top;
+        }
+        else if (current_column == unique_bot_column){
+          line_stream >> unique_bot;
+        }
+        else if (current_column == redundant_top_column){
+          line_stream >> redundant_top;
+        }
+        else if (current_column == redundant_bot_column){
+          line_stream >> redundant_bot;
+        }
+        else {
+          line_stream >> skip;
+        }
+      }
+      
+      unique_top_vector.push_back(unique_top);
+      unique_bot_vector.push_back(unique_bot);
+      redundant_top_vector.push_back(redundant_top);
+      redundant_bot_vector.push_back(redundant_bot);
+      
+    }
+    
+    //set up template top and bot vectors for calculations
+    if ( method == 1 ){
+      top_vector = unique_top_vector;
+      bot_vector = unique_bot_vector;
+    }
+    else if ( method == 2 ){
+      top_vector = unique_top_vector;
+      bot_vector = unique_top_vector;
+      
+      for ( uint32_t i = 0; i < unique_top_vector.size(); i++ ){
+        top_vector[i] += redundant_top_vector[i];
+        bot_vector[i] += redundant_bot_vector[i];
+      }
+    }
+    
+    //go through each offset and find the offset sum
+    for ( uint32_t i = 0; i < offset_range.size(); i++ ){
+      //cout << offset_range[i] << "\r";
+      //cout.flush();
+      
+      //set up bottom vector for this offset
+      offset_bot_vector = bot_vector;
+      
+      for ( uint32_t j = 0; j < offset_range[i]; j++ ){
+        bot_value = offset_bot_vector[0];
+        offset_bot_vector.erase(offset_bot_vector.begin());
+        offset_bot_vector.push_back( bot_value );
+      }
+      
+      //finding sum
+      
+      offset_sum = 0;
+      
+      for (uint32_t j = 0; j < top_vector.size(); j++ ){
+        //ignoring spots where there is 0 coverage in either the top or bottom
+        if (top_vector[j] == 0 || offset_bot_vector[j] == 0 ) continue;
+        offset_sum += ((top_vector[j] - offset_bot_vector[j]) * (top_vector[j] - offset_bot_vector[j]));
+      }
+      
+      period_file << offset_range[i] << "\t" << offset_sum << endl;
+    }
+    //cout << endl;
+    coverage_file.close();
+    period_file.close();
+  }
   
 } // namespace breseq
