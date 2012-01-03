@@ -618,6 +618,8 @@ namespace breseq {
     /* the easiest case: we are in linux */
     if (readlink ("/proc/self/exe", path, dest_len) != -1)
     {
+      size_t len = readlink ("/proc/self/exe", path, dest_len);
+      path[len] = '\0';
       dirname (path);
       return path;
     }
