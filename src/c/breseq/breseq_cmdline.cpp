@@ -1468,9 +1468,9 @@ int do_download(int argc, char *argv[])
   ss << "Usage: breseq DOWNLOAD -l <user:password> -d <download_dir> <file1.gd file2.gd file3.gd ...>\n";
 
   AnyOption options(ss.str());
-  options("login,l",           "Login user:password information for private server access.", "");
+  options("login,l",           "Login user:password information for private server access.", "01_Data");
   options("download_dir,d",    "Output directory to download file to.", "02_Downloads");
-  options("genome_diff_dir,g", "Directory to searched for genome diff files.", "01_Data");
+  options("genome_diff_dir,g", "Directory to searched for genome diff files.");
   
   options.processCommandArgs(argc, argv);
 
@@ -1551,7 +1551,9 @@ int do_download(int argc, char *argv[])
   if (!options.getArgc()) {
     cerr << "Searching directory " << genome_diff_dir << " for genome diff files." << endl;
     string cmd = "";
-    sprintf(cmd, "ls %s/*gd", genome_diff_dir.c_str());
+    if (genome_diff_dir[genome_diff_dir.size()-1] != '/')
+      genome_diff_dir += "/";
+    sprintf(cmd, "ls %s/*.gd", genome_diff_dir.c_str());
     vector<string> temp = split(SYSTEM_CAPTURE(cmd, true), "\n");
     for (size_t i = 0; i < temp.size(); i++) {
       cerr << "  " << temp[i] << endl;
@@ -1677,7 +1679,7 @@ int do_download(int argc, char *argv[])
 
     case BARRICK_PRIVATE:
     {
-      if(!private_access) continue;
+      ASSERT(private_access, "Provide the login option (-l user:password) to access private files.");
       sprintf(url, url_format, value.c_str());
       sprintf(file_path, file_path_format, filename.c_str());
     } break;
