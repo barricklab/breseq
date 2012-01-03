@@ -1319,7 +1319,7 @@ int do_runfile(int argc, char *argv[])
   }
   
   if (file_names.size() == 0) {
-    cerr << "No input genomediff files provided.";
+    options.addUsage("\nERROR: You must input genome diff files or a directory to search for genome diff files.");
     options.printUsage();
     return -1;
   }
@@ -1360,12 +1360,21 @@ int do_runfile(int argc, char *argv[])
     vector<string> refs = gd.metadata.ref_seqs;
     for (size_t j = 0; j < refs.size(); j++) {
       string *ref = &refs[j];
+      
+      bool append_gbk = ref->substr(0, 8) == "Genbank:";
+      
       if (ref->find_last_of(":/") != string::npos) {
         ref->erase(0, ref->find_last_of(":/") + 1);
       }
-      if (ref->find(".gbk") == string::npos) {
+      
+      if (append_gbk && (ref->find(".gbk") == string::npos)) {
         ref->append(".gbk");
       }
+      
+      if (ref->substr(ref->size()-3, 3) == ".gz") {
+        ref->erase(ref->size()-3);
+      }
+          
       if (options["downloads_dir"] != "") {
         sprintf(*ref, "-r %s/%s", downloads_dir, refs[j].c_str());
       } else {
@@ -1377,16 +1386,19 @@ int do_runfile(int argc, char *argv[])
     vector<string> reads = gd.metadata.read_seqs;
     for (size_t j = 0; j < reads.size(); j++) {
       string *read = &reads[j];
+      
+      bool append_fastq = read->substr(0, 4) == "SRA:";
+      
       if (read->find_last_of(":/") != string::npos) {
         read->erase(0, reads[j].find_last_of(":/") + 1);
       }
 
-      if (read->find(".fastq") == string::npos) {
+      if (append_fastq && (read->find(".fastq") == string::npos)) {
         read->append(".fastq");
       }
-      if (read->find(".fastq.gz") != string::npos) {
-        read->erase(reads[j].find(".fastq.gz"));
-        read->append(".fastq");
+      
+      if (read->substr(read->size()-3, 3) == ".gz") {
+        read->erase(read->size()-3);
       }
 
       if (options["downloads_dir"] != "") {
@@ -1477,21 +1489,16 @@ int do_download(int argc, char *argv[])
   ss << "Usage: breseq DOWNLOAD -l <user:password> -d <download_dir> <file1.gd file2.gd file3.gd ...>\n";
 
   AnyOption options(ss.str());
-  options("login,l",           "Login user:password information for private server access.", "01_Data");
+  options("login,l",           "Login user:password information for private server access.");
   options("download_dir,d",    "Output directory to download file to.", "02_Downloads");
-  options("genome_diff_dir,g", "Directory to searched for genome diff files.");
+  options("genome_diff_dir,g", "Directory to searched for genome diff files.", "01_Data");
   
   options.processCommandArgs(argc, argv);
-
-  if (!options.getArgc() && options["genome_diff_dir"].empty()) {
-    options.addUsage("\nYou must input genome diff files or a directory to search for genome diff files.");
-    options.addUsage("Examples:");
-    options.addUsage("\t breseq DOWNLOAD -l john:1234 -d downloads -g data");
-    options.addUsage("\t breseq DOWNLOAD -l john:1234 -d downloads 1B4.gd GRC2000.gd");
-    options.printUsage();
-    return -1;
-  }
-
+  
+  options.addUsage("\nExamples:");
+  options.addUsage("  breseq DOWNLOAD -l john:1234 -d downloads -g data");
+  options.addUsage("  breseq DOWNLOAD -l john:1234 -d downloads 1B4.gd GRC2000.gd");
+  
   printf("\n++Starting download.\n");
 
   //! Step: Initialized user parameters.
@@ -1517,7 +1524,6 @@ int do_download(int argc, char *argv[])
   string genome_diff_dir = options["genome_diff_dir"];
   if (genome_diff_dir[genome_diff_dir.size() - 1] == '/') 
     genome_diff_dir.erase(genome_diff_dir.size() - 1);
-  create_path(genome_diff_dir);
 
   //! Step: Define currently used genome diff header tags.
   //These header keys determine which URL to download from.
@@ -1569,6 +1575,12 @@ int do_download(int argc, char *argv[])
       file_names.push_back(temp[i]);
     }
     cerr << endl;
+  }
+  
+  if (file_names.size() == 0) {
+    options.addUsage("\nERROR: You must input genome diff files or a directory to search for genome diff files.");
+    options.printUsage();
+    return -1;
   }
   
   if (options.getArgc()) {
@@ -1711,7 +1723,7 @@ int do_download(int argc, char *argv[])
     if ( downloaded.count(file_path) ) {
       printf("File:%s already downloaded in directory %s.\n", file_path.c_str(), download_dir.c_str());
 
-      bool is_gzipped = (file_path.rfind(".gz") == file_path.size() - 3);
+      bool is_gzipped = (file_path.substr(file_path.size() - 3, 3) == ".gz");
       if (is_gzipped) {
         //Check to see if the file was already downloaded and gunzipped.
         const string &gunzip_file_path = file_path.substr(0, file_path.rfind(".gz"));
