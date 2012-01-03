@@ -212,7 +212,7 @@ int do_bam2cov(int argc, char* argv[]) {
   {
     int32_t tile_size = from_string<int32_t>(options["tile-size"]);
     int32_t tile_overlap = from_string<int32_t>(options["tile-overlap"]);
-    tile_overlap = floor( static_cast<double>(tile_overlap) / 2.0);
+    tile_overlap = static_cast<int32_t>(floor( static_cast<double>(tile_overlap) / 2.0));
 
     for(uint32_t target_id=0; target_id < co.num_targets(); target_id++)
     {
@@ -1305,7 +1305,7 @@ int do_runfile(int argc, char *argv[])
       data_dir[n - 1] = '\0';
     }
     string command("");
-    sprintf(command, "ls %s/*gd", data_dir);
+    sprintf(command, "ls %s/*.gd", data_dir);
     file_names = split(SYSTEM_CAPTURE(command, true), "\n");
   }
   
@@ -1317,8 +1317,16 @@ int do_runfile(int argc, char *argv[])
       file_names[i] = options.getArgv(i);
     }
   }
-  assert(file_names.size());
+  
+  if (file_names.size() == 0) {
+    cerr << "No input genomediff files provided.";
+    options.printUsage();
+    return -1;
+  }
 
+  if (options["log_dir"] != "")
+    create_path(options["log_dir"].c_str());
+  
   const char *exe = options["executable"].c_str();
 
   char *downloads_dir = strdup(options["downloads_dir"].c_str());
@@ -1332,8 +1340,10 @@ int do_runfile(int argc, char *argv[])
 
   //! Step: Read every gd file to gather header line info.
   ofstream run_file(options["runfile"].c_str());
+  ASSERT(run_file.good(), "Error opening file: " + options["runfile"]);
   const size_t n = file_names.size();
-  for (size_t i = i; i < n; i++) {
+  for (size_t i = 0; i < n; i++) {
+    cout << "Processing " << file_names[i] << endl;
     cGenomeDiff gd(file_names[i]);
 
     //Unique output directory name is parsed from the base name of the file.
@@ -1392,7 +1402,6 @@ int do_runfile(int argc, char *argv[])
       const char *path = options["log_dir"].c_str();
 
       if (options["log_dir"] != "") {
-        create_path(path);
         sprintf(log_path, ">& %s/%s.errors.txt", path, run_name);
       } else {
         sprintf(log_path, ">& %s.errors.txt", run_name);
