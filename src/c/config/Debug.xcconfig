@@ -1,0 +1,5 @@
+#include "Shared.xcconfig"
+
+WARNING_CFLAGS=-Wall -Wextra -Wno-unused-variable
+ARCHS=$(NATIVE_ARCH)
+GCC_OPTIMIZATION_LEVEL=0
