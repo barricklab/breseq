@@ -145,7 +145,7 @@ string header_style_string()
   ss << ".read_alignment_header_row {background-color: rgb(255,0,0);}"     << endl;
   ss << ".missing_coverage_header_row {background-color: rgb(0,100,100);}" << endl;
   ss << ".new_junction_header_row {background-color: rgb(0,0,155);}"       << endl;
-  ss << ".copy_number_header_row {background-color: rgb(255,255,0);}"      << endl;
+  ss << ".copy_number_header_row {background-color: rgb(153,102,0);}"      << endl;
   ss << ".alternate_table_row_0 {background-color: rgb(255,255,255);}"     << endl;
   ss << ".alternate_table_row_1 {background-color: rgb(230,230,245);}"     << endl;
   ss << ".gray_table_row {background-color: rgb(230,230,245);}"            << endl;
