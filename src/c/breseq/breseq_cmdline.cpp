@@ -1601,8 +1601,8 @@ int do_download(int argc, char *argv[])
   if (!options.getArgc()) {
     cerr << "Searching directory " << genome_diff_dir << " for genome diff files." << endl;
     string cmd = "";
-    if (genome_diff_dir[genome_diff_dir.size()-1] != '/')
-      genome_diff_dir += "/";
+    if (genome_diff_dir[genome_diff_dir.size()-1] == '/')
+      genome_diff_dir.erase(genome_diff_dir.size()-1);
     sprintf(cmd, "ls %s/*.gd", genome_diff_dir.c_str());
     vector<string> temp = split(SYSTEM_CAPTURE(cmd, true), "\n");
     for (size_t i = 0; i < temp.size(); i++) {
@@ -1772,7 +1772,7 @@ int do_download(int argc, char *argv[])
       cerr << endl;
       SYSTEM(cmd);
 
-      if (file_path.find_last_of(".gz") == file_path.size() - 3)
+      if (file_path.substr(file_path.size() - 3, 3) == ".gz")
         gzip_files.push_back(file_path);
     }
   }
