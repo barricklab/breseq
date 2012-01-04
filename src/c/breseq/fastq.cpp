@@ -435,11 +435,13 @@ namespace breseq {
           
           if (sequence.m_sequence.size() == line.size()) {
             sequence.m_qualities = line;
+          } else if (line.find_first_not_of(" 0123456789\t") != string::npos) { 
+            ERROR("FASTQ QUALITY line length does not match SEQUENCE length.\nFile: " + m_file_name + " Line: " + to_string(m_current_line));
           } else {
             m_needs_conversion = true;
             vector<string> numerical_qualities(split(line, " "));
             if( sequence.m_sequence.size() != numerical_qualities.size() ) {
-              fprintf(stderr, "FASTQ sequence record has different SEQUENCE and QUALITY lengths.\nFile %s\nLine: %d\n", m_file_name.c_str(), m_current_line);
+              fprintf(stderr, "FASTQ sequence record has different SEQUENCE and numerical QUALITY lengths.\nFile %s\nLine: %d\n", m_file_name.c_str(), m_current_line);
               exit(-1);
             }
             
