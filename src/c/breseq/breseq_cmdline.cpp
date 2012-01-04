@@ -1519,270 +1519,151 @@ int do_periodicity(int argc, char *argv[])
 
 int do_download(int argc, char *argv[])
 {
-  stringstream ss;
-  ss << "Usage: breseq DOWNLOAD -l <user:password> -d <download_dir> -g <genome_diff_dir>\n";
-  ss << "Usage: breseq DOWNLOAD -l <user:password> -d <download_dir> <file1.gd file2.gd file3.gd ...>\n";
+    stringstream ss;
+    ss << "Usage: breseq DOWNLOAD -l <user:password> -d <download_dir> -g <genome_diff_dir>\n";
+    ss << "Usage: breseq DOWNLOAD -l <user:password> -d <download_dir> <file1.gd file2.gd file3.gd ...>\n";
 
-  AnyOption options(ss.str());
-  options("login,l",           "Login user:password information for private server access.");
-  options("download_dir,d",    "Output directory to download file to.", "02_Downloads");
-  options("genome_diff_dir,g", "Directory to searched for genome diff files.", "01_Data");
-  
-  options.processCommandArgs(argc, argv);
-  
-  options.addUsage("\nExamples:");
-  options.addUsage("  breseq DOWNLOAD -l john:1234 -d downloads -g data");
-  options.addUsage("  breseq DOWNLOAD -l john:1234 -d downloads 1B4.gd GRC2000.gd");
-  
-  printf("\n++Starting download.\n");
+    AnyOption options(ss.str());
+    options("login,l",           "Login user:password information for private server access.");
+    options("download_dir,d",    "Output directory to download file to.", "02_Downloads");
+    options("genome_diff_dir,g", "Directory to searched for genome diff files.", "01_Data");
+    options("test"           ,   "Don't download files but test urls.", TAKES_NO_ARGUMENT);
 
-  //! Step: Initialized user parameters.
-  const bool private_access = options.count("login");
-  string user = "";
-  string password = "";
-  if (private_access) {
-    const string &login = options["login"];
+    options.processCommandArgs(argc, argv);
 
-    size_t pos = login.find_first_of(':');
-    assert (pos != string::npos);
+    options.addUsage("\nExamples:");
+    options.addUsage("  breseq DOWNLOAD -l john:1234 -d downloads -g data");
+    options.addUsage("  breseq DOWNLOAD -l john:1234 -d downloads 1B4.gd GRC2000.gd");
 
-    user = login.substr(0, pos);
-    password = login.substr(pos + 1);
-    printf("Private access enabled, user:%s password:%s\n", user.c_str(), password.c_str());
+    //! Step: Confirm genome diff files have been input.
+    list<string> file_names;
+    if (options.count("genome_diff_dir")) {
+      string genome_diff_dir = cString(options["genome_diff_dir"]).trim_ends_of('/');
+      string cmd = "";
+      sprintf(cmd, "ls %s/*.gd", genome_diff_dir.c_str());
+      SYSTEM_CAPTURE(back_inserter(file_names), cmd, true);
+    } else {
+      const size_t n = options.getArgc();
+      for (size_t i = 0; i < n; ++i)
+      file_names.push_back(options.getArgv(i));
   }
 
-  string download_dir = options["download_dir"];
-  if (download_dir[download_dir.size() - 1] == '/') 
-    download_dir.erase(download_dir.size() - 1);
-  create_path(download_dir);
-
-  string genome_diff_dir = options["genome_diff_dir"];
-  if (genome_diff_dir[genome_diff_dir.size() - 1] == '/') 
-    genome_diff_dir.erase(genome_diff_dir.size() - 1);
-
-  //! Step: Define currently used genome diff header tags.
-  //These header keys determine which URL to download from.
-  enum {
-    GENBANK,
-    SRA,
-    BARRICK_PUBLIC,
-    BARRICK_PRIVATE
-  };
-
-  map<string, int32_t> key_lookup
-      = make_map<string, int32_t>
-      ("Genbank"            , GENBANK)
-      ("SRA"                , SRA)
-      ("BarrickLab-Public"  , BARRICK_PUBLIC)
-      ("BarrickLab-Private" , BARRICK_PRIVATE);
-
-  //Map the keys to a C-style format string that represents the URL.
-  map<int32_t, string> key_url_format
-      = make_map<int32_t, string>
-      (GENBANK,        "http://www.ncbi.nlm.nih.gov/sviewer/?db=nuccore&val=%s&report=gbwithparts&retmode=text")
-      (SRA,            "ftp://ftp.sra.ebi.ac.uk/vol1/fastq/%s/%s/%s.fastq.gz")
-      (BARRICK_PUBLIC, "http://barricklab.org/%s")
-      (BARRICK_PRIVATE,"ftp://" + user + ":" + password + "@barricklab.org//community/%s");
-    // the double slash is not a typo
-    //(BARRICK_PRIVATE,"ftp://" + user + ":" + password + "@backup.barricklab.org/%s"); //@JEB temporary change
-
-
-  //Map the keys to a C-style format string that represents the download file's to-be-downloaded/local file path.
-  map<int32_t, string>key_file_path_format
-      = make_map<int32_t, string>
-      (GENBANK,         download_dir + "/%s.gbk")
-      (SRA,             download_dir + "/%s.fastq.gz")
-      (BARRICK_PUBLIC,  download_dir + "/%s")
-      (BARRICK_PRIVATE, download_dir + "/%s");
-
-
-  //! Step: Collect genome diff file names from either user directory or file input.
-  list<string> file_names;
-  if (!options.getArgc()) {
-    cerr << "Searching directory " << genome_diff_dir << " for genome diff files." << endl;
-    string cmd = "";
-    if (genome_diff_dir[genome_diff_dir.size()-1] == '/')
-      genome_diff_dir.erase(genome_diff_dir.size()-1);
-    sprintf(cmd, "ls %s/*.gd", genome_diff_dir.c_str());
-    vector<string> temp = split(SYSTEM_CAPTURE(cmd, true), "\n");
-    for (size_t i = 0; i < temp.size(); i++) {
-      cerr << "  " << temp[i] << endl;
-      file_names.push_back(temp[i]);
-    }
-    cerr << endl;
-  }
-  
-  if (file_names.size() == 0) {
+  if (file_names.empty()) {
     options.addUsage("\nERROR: You must input genome diff files or a directory to search for genome diff files.");
     options.printUsage();
     return -1;
   }
-  
-  if (options.getArgc()) {
-    cerr << "Processing user input genome diff files." << endl;
-    const size_t n = options.getArgc();
-    for (size_t i = 0; i < n; i++) {
-      cerr << "  " << options.getArgv(i) << endl;
-      file_names.push_back(options.getArgv(i));
-    }
-    cerr << endl;
-  }
-  ASSERT(file_names.size() != 0, "No genome diff files found to process.");
 
-  //! Step: Parse given download directory to avoid re-downloading files.
-  set<string> downloaded;//Used to filter files that have already been downloaded.
-  {
-    string cmd = "";
-    sprintf(cmd, "ls %s", download_dir.c_str());
-    vector<string> files = split(SYSTEM_CAPTURE(cmd, true), "\n");
-    for (size_t i = 0; i < files.size(); i++) {
-      string &file = files[i];
-      string file_path = download_dir + "/" + file; 
-      
-      // Mark both the file and any compressed versions as complete
-      if (!file_empty(file_path.c_str())) {
-        downloaded.insert(file_path);
-        downloaded.insert(file_path + ".gz");
-      }
-    }
+  printf("\n++Starting download.\n");
+
+  string download_dir = cString(options["download_dir"]).trim_ends_of('/');
+  if (!options.count("test")) {
+    create_path(download_dir);
   }
 
-  //! Step: Begin parsing the genome diff files to collect key:value pairs.
-  list<pair<string, string> > key_values;
-  set<string> values; //Used to filter duplicate values.
-  for(;file_names.size(); file_names.pop_front()) {
+  //! Step: Create lookup table to store c_style format strings for urls and file paths.
+  map<string, map<string, string> > lookup_table;
+  //Url formats.
+    lookup_table["Genbank"]
+        ["url_format"] = "http://www.ncbi.nlm.nih.gov/sviewer/?db=nuccore&val=%s&report=gbwithparts&retmode=text";
+    lookup_table["SRA"]
+        ["url_format"] = "ftp://ftp.sra.ebi.ac.uk/vol1/fastq/%s/%s/%s.fastq.gz";
+    lookup_table["BarrickLab-Public"]
+        ["url_format"] = "http://barricklab.org/%s";
+    lookup_table["BarrickLab-Private"]
+        ["url_format"] = options.count("login") ? "ftp://" + options["login"] + "@barricklab.org//community/%s" : "";
+
+  //File path formats.
+    lookup_table["Genbank"]
+        ["file_path_format"] = download_dir + "/%s.gbk";
+    lookup_table["SRA"]
+        ["file_path_format"] = download_dir + "/%s.fastq.gz";
+    lookup_table["BarrickLab-Public"]
+        ["file_path_format"] = download_dir + "/%s";
+    lookup_table["BarrickLab-Private"]
+        ["file_path_format"] = download_dir + "/%s";
+
+  for (;file_names.size(); file_names.pop_front()) {
     cGenomeDiff gd(file_names.front());
-
-    const vector<string> &refs = gd.metadata.ref_seqs;
-    for (size_t i = 0; i < refs.size(); i++) {
-      const string &ref = refs[i];
-      const size_t pos = ref.find_first_of(':');
-      if (pos == string::npos) {
-        continue;
-      }
-      const string &key = ref.substr(0, pos);
-      const string &value = ref.substr(pos + 1);
-      if (!values.count(value)) {
-        key_values.push_back(pair<string, string>(key, value));
-        values.insert(value);
-        downloaded.insert(value);
-      }
-    }
-
+    const vector<string> &refs  = gd.metadata.ref_seqs;
     const vector<string> &reads = gd.metadata.read_seqs;
-    for (size_t i = 0; i < reads.size(); i++) {
-      const string &read = reads[i];
-      const size_t pos = read.find_first_of(':');
-      if (pos == string::npos) {
-        continue;
+
+    list<string> seqs;
+    copy(refs.begin(), refs.end(), back_inserter(seqs));
+    copy(reads.begin(), reads.end(), back_inserter(seqs));
+
+    for (;seqs.size(); seqs.pop_front()) {
+      const string &seq = seqs.front();
+      if (seq.find(':') == string::npos) continue;
+
+      const string &key = seq.substr(0, seq.find_first_of(':'));
+      const string &value = seq.substr(seq.find_first_of(':') + 1);
+      assert(key.size());
+      assert(value.size());
+
+      ASSERT(lookup_table.count(key), "ERROR: Key: " + key +
+             " not recognized in file: " + file_names.front());
+
+      //! Step: Get file path and check if it has already been downloaded or is empty.
+      const string &base_name = value.substr(value.find_last_of('/') + 1);
+      string file_path = "";
+      sprintf(file_path, lookup_table[key]["file_path_format"].c_str(), base_name.c_str());
+      assert(file_path.size());
+
+      bool is_downloaded = false;
+      bool is_gzip = false;
+      if (ifstream(file_path.c_str()).good() && !file_empty(file_path.c_str())) {
+        is_downloaded = true;
       }
-      const string &key = read.substr(0, pos);
-      const string &value = read.substr(pos + 1);
-      if (!values.count(value)) {
-        key_values.push_back(pair<string, string>(key, value));
-        values.insert(value);
-        downloaded.insert(value);
-      }
-    }
-  }
-  assert (key_values.size());
-
-  //! Step: Build url and file paths depending on given key.
-  list<pair<string, string> > url_file_paths;
-  for (;key_values.size(); key_values.pop_front()) {
-    ASSERT(key_lookup.count(key_values.front().first), "Could not find key: " + key_values.front().first );
-    const int32_t key =  key_lookup[key_values.front().first];
-    const string value = key_values.front().second;
-
-    // strip path from filename
-    string filename = value;
-    size_t pos = filename.find_last_of('/');
-    if (pos == string::npos) 
-      pos = 0;
-    else
-      pos++;
-    filename.erase(0, pos);
-    
-    const char *url_format       = key_url_format[key].c_str();
-    const char *file_path_format = key_file_path_format[key].c_str();
-
-    string url = "";
-    string file_path = "";
-
-    switch (key)
-    {
-    case GENBANK:
-    {
-      sprintf(url, url_format, value.c_str());
-      sprintf(file_path, file_path_format, filename.c_str());
-
-    } break;
-
-    case SRA:
-    {
-      const char *first  = value.substr(0,6).c_str();
-      const char *second = value.substr(0,9).c_str();
-      const char *third  = value.c_str();
-      sprintf(url, url_format, first, second, third);
-      sprintf(file_path, file_path_format, filename.c_str());
-    } break;
-
-    case BARRICK_PUBLIC:
-    {
-      sprintf(url, url_format, value.c_str());
-      sprintf(file_path, file_path_format, filename.c_str());
-    } break;
-
-    case BARRICK_PRIVATE:
-    {
-      ASSERT(private_access, "Provide the login option (-l user:password) to access private files.");
-      sprintf(url, url_format, value.c_str());
-      sprintf(file_path, file_path_format, filename.c_str());
-    } break;
-
-    default: break;
-    }//End switch.
-
-    assert(url.size() || file_path.size());
-
-    url_file_paths.push_back(pair<string, string>(url, file_path));
-  }
-
-  //! Step: Create wget commands to download files.
-  list<string> gzip_files;//Collect compressed files.
-  for (;url_file_paths.size(); url_file_paths.pop_front()) {
-
-    const string &url = url_file_paths.front().first;
-    const string &file_path = url_file_paths.front().second;
-    
-    if ( downloaded.count(file_path) ) {
-      printf("File:%s already downloaded in directory %s.\n", file_path.c_str(), download_dir.c_str());
-
-      bool is_gzipped = (file_path.substr(file_path.size() - 3, 3) == ".gz");
-      if (is_gzipped) {
-        //Check to see if the file was already downloaded and gunzipped.
-        const string &gunzip_file_path = file_path.substr(0, file_path.rfind(".gz"));
-        if (!file_exists(gunzip_file_path.c_str()) || file_empty(gunzip_file_path.c_str())) {
-          gzip_files.push_back(file_path);
+      else if (cString(file_path).ends_with(".gz")) {
+        const string &gunzip_path = cString(file_path).remove_ending(".gz");
+        is_gzip = true;
+        if (ifstream(gunzip_path.c_str()).good() && !file_empty(gunzip_path.c_str())) {
+         is_downloaded = true;
+         file_path = gunzip_path;
         }
       }
-    } else {
+
+      if (is_downloaded) {
+        printf("File:%s already downloaded in directory %s.\n",
+               file_path.c_str(), download_dir.c_str());
+        continue;
+      }
+
+      //! Step: Get url and download, gunzip if necessary.
+      string url = "";
+      const char *url_format = lookup_table[key]["url_format"].c_str();
+      if (key == "Genbank") {
+        sprintf(url, url_format, value.c_str());
+      }
+      else if (key == "SRA") {
+        const string &first  = value.substr(0,6), second = value.substr(0,9), third  = value;
+        sprintf(url, url_format, first.c_str(), second.c_str(), third.c_str());
+      }
+      else if (key == "BarrickLab-Public") {
+        sprintf(url, url_format, value.c_str());
+      }
+      else if (key == "BarrickLab-Private") {
+        ASSERT(options.count("login"), "Provide the login option (-l user:password) to access private files.");
+        sprintf(url, url_format, value.c_str());
+      }
       string cmd = "";
-      sprintf(cmd, "wget -O %s %s", file_path.c_str(), url.c_str());
-      cerr << endl;
+      if (options.count("test")) {
+        sprintf(cmd, "wget --spider %s", url.c_str());
+      } else {
+        sprintf(cmd, "wget -O %s %s", file_path.c_str(), url.c_str());
+      }
       SYSTEM(cmd);
 
-      if (file_path.substr(file_path.size() - 3, 3) == ".gz")
-        gzip_files.push_back(file_path);
+      if (is_gzip) {
+        sprintf(cmd, "gunzip %s", file_path.c_str());
+        if (options.count("test"))
+          cout << cmd << endl;
+        else
+          SYSTEM(cmd);
+      }
     }
-  }
 
-  //! Step: Uncompress files that need it.
-  for (;gzip_files.size(); gzip_files.pop_front()) {
-    const string &file_path = gzip_files.front();
-    string cmd = "";
-    sprintf(cmd, "gunzip %s", file_path.c_str());
-    SYSTEM(cmd);
   }
 
   return 0;

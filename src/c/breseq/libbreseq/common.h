@@ -857,6 +857,61 @@ inline int32_t sprintf(string &value, const char *format,...) {
   return ret_val;
 }
 
+//! TODO refractor orginal SYSTEM_CAPTURE to be used with this.
+template<typename T> inline void SYSTEM_CAPTURE(T out_itr, string command, bool silent = false)
+{
+  if (!silent) cout << "[system] " << command << endl;
+
+  // Open the command for reading.
+  string piped_command = command + " 2>&1";
+  FILE *fp = popen(piped_command.c_str(), "r");
+  assert(fp != NULL);
+
+  // Read the output a line at a time
+  char str[1035];
+  while (fgets(str, sizeof (str) - 1, fp) != NULL)
+  {
+    const char *pch = strchr(str, '\n');
+    if (pch != NULL) {
+      str[pch-str] = '\0';
+    }
+    *out_itr++ = str;
+  }
+  // Close
+  pclose(fp);
+}
+
+class cString : public string
+{
+  public:
+    template<class T> cString(const T &val) : string(val) {}
+    bool ends_with(const string &suffix);
+    string remove_ending(const string &suffix);
+    string trim_ends_of(const char val);
+};
+
+inline bool cString::ends_with(const string &suffix)
+{
+  if (this->size() < suffix.size()) {
+    return false;
+  } else {
+    return this->substr(this->size() - suffix.size(), suffix.size()) == suffix;
+  }
+}
+
+inline string cString::remove_ending(const string &suffix)
+{
+  if (this->ends_with(suffix))
+    this->erase(this->size() - suffix.size());
+  return *this;
+}
+
+inline string cString::trim_ends_of(const char val)
+{
+  for (size_t i = 0; (*this)[i] == val; this->erase(i++, 1))
+  for (size_t i = this->size() - 1; (*this)[i] == val; this->erase(i--));
+  return *this;
+}
 } // breseq
 
 #endif
