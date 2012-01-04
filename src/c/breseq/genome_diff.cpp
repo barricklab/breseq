@@ -746,7 +746,7 @@ void cDiffEntry::normalize_to_sequence(const cAnnotatedSequence &sequence)
       }
     }
 
-    //! Step: Determine if the start pos neethisd to be normilized.
+    //! Step: Determine if the start pos needs to be normilized.
     bool is_new_position = pos_1 != i;
     if (is_new_position) {
       sprintf((*this)["position"], "%u", i);
@@ -1214,7 +1214,6 @@ bool cGenomeDiff::is_valid(cReferenceSequences& ref_seq_info, bool verbose)
 //! Call to generate random mutations.
 void cGenomeDiff::random_mutations(const string& exclusion_file, const string& type, uint32_t number, uint32_t read_length, const cAnnotatedSequence& ref_seq_info, bool verbose)
 {
-  (void)verbose;
   // If we have an exclusion_file to load, we will save
   // the info in this map.
   map<uint32_t, uint32_t> match_list;
@@ -1310,7 +1309,7 @@ void cGenomeDiff::random_mutations(const string& exclusion_file, const string& t
   vector<string> type_options = split_on_any(type, ":-");
   gd_entry_type mut_type;
   int32_t uBuffer = (read_length * 2) + 1;
-  uint32_t max_attempts = ref_seq_info.get_sequence_size() / read_length;
+  uint32_t max_attempts = (ref_seq_info.get_sequence_size() / read_length) * 2;
   uint32_t uAttempts = 0;
   
   const uint32_t seed_value = time(NULL);
@@ -1323,6 +1322,11 @@ void cGenomeDiff::random_mutations(const string& exclusion_file, const string& t
       mut_type = (gd_entry_type) i;
       break;
     }
+  }
+  
+  if(verbose)  {
+    CHECK(number < 30000, "Number of requested mutations is large.\nAttempting this many mutations could take awhile.");
+    cout << "Generating " << number << " " << type_options[0] << " mutations." << endl;
   }
   
   switch(mut_type)
@@ -1375,7 +1379,6 @@ void cGenomeDiff::random_mutations(const string& exclusion_file, const string& t
         used_positions.insert(rand_pos);
         
         add(new_item);
-        uAttempts = 0;
       }      
     }  break;
       
@@ -1403,6 +1406,9 @@ void cGenomeDiff::random_mutations(const string& exclusion_file, const string& t
         default:      
           ERROR("CANNOT PARSE: " + type);
       }
+      
+      if(verbose)  {
+        cout << "SIZE RANGE: " << opt_1 <<  " - " << opt_2 << endl;  }
       
       for(uint32_t i = 0; i < number && uAttempts < max_attempts; i++)
       {
@@ -1489,6 +1495,9 @@ void cGenomeDiff::random_mutations(const string& exclusion_file, const string& t
           ERROR("CANNOT PARSE: " + type);
       }
       
+      if(verbose)  {
+        cout << "SIZE RANGE: " << opt_1 <<  " - " << opt_2 << endl;  }
+      
       for(uint32_t i = 0; i < number && uAttempts < max_attempts; i++)
       {
         uAttempts++;
@@ -1555,8 +1564,8 @@ void cGenomeDiff::random_mutations(const string& exclusion_file, const string& t
   }
   
   CHECK(max_attempts != uAttempts, "Forced to halt mutation generation.\nAttempted " +
-        to_string(uAttempts) + " times to generate last mutation.\n" + 
-        "It's likely that it is no longer possible to add new mutations.");
+        to_string(uAttempts) + " times to generate another mutation.\n" + 
+        "It's likely that it's no longer possible to add new mutations.");
   
 }
 
