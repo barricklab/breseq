@@ -857,7 +857,7 @@ inline int32_t sprintf(string &value, const char *format,...) {
   return ret_val;
 }
 
-//! TODO refractor orginal SYSTEM_CAPTURE to be used with this.
+//! TODO refractor orginal SYSTEM_CAPTURE to be used with this?
 template<typename T> inline void SYSTEM_CAPTURE(T out_itr, string command, bool silent = false)
 {
   if (!silent) cout << "[system] " << command << endl;
