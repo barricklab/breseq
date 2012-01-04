@@ -1519,33 +1519,33 @@ int do_periodicity(int argc, char *argv[])
 
 int do_download(int argc, char *argv[])
 {
-    stringstream ss;
-    ss << "Usage: breseq DOWNLOAD -l <user:password> -d <download_dir> -g <genome_diff_dir>\n";
-    ss << "Usage: breseq DOWNLOAD -l <user:password> -d <download_dir> <file1.gd file2.gd file3.gd ...>\n";
+  stringstream ss;
+  ss << "Usage: breseq DOWNLOAD -l <user:password> -d <download_dir> -g <genome_diff_dir>\n";
+  ss << "Usage: breseq DOWNLOAD -l <user:password> -d <download_dir> <file1.gd file2.gd file3.gd ...>\n";
 
-    AnyOption options(ss.str());
-    options("login,l",           "Login user:password information for private server access.");
-    options("download_dir,d",    "Output directory to download file to.", "02_Downloads");
-    options("genome_diff_dir,g", "Directory to searched for genome diff files.", "01_Data");
-    options("test"           ,   "Don't download files but test urls.", TAKES_NO_ARGUMENT);
+  AnyOption options(ss.str());
+  options("login,l",           "Login user:password information for private server access.");
+  options("download_dir,d",    "Output directory to download file to.", "02_Downloads");
+  options("genome_diff_dir,g", "Directory to searched for genome diff files.", "01_Data");
+  options("test"           ,   "Don't download files but test urls.", TAKES_NO_ARGUMENT);
 
-    options.processCommandArgs(argc, argv);
+  options.processCommandArgs(argc, argv);
 
-    options.addUsage("\nExamples:");
-    options.addUsage("  breseq DOWNLOAD -l john:1234 -d downloads -g data");
-    options.addUsage("  breseq DOWNLOAD -l john:1234 -d downloads 1B4.gd GRC2000.gd");
+  options.addUsage("\nExamples:");
+  options.addUsage("  breseq DOWNLOAD -l john:1234 -d downloads -g data");
+  options.addUsage("  breseq DOWNLOAD -l john:1234 -d downloads 1B4.gd GRC2000.gd");
 
-    //! Step: Confirm genome diff files have been input.
-    list<string> file_names;
-    if (options.count("genome_diff_dir")) {
-      string genome_diff_dir = cString(options["genome_diff_dir"]).trim_ends_of('/');
-      string cmd = "";
-      sprintf(cmd, "ls %s/*.gd", genome_diff_dir.c_str());
-      SYSTEM_CAPTURE(back_inserter(file_names), cmd, true);
-    } else {
-      const size_t n = options.getArgc();
-      for (size_t i = 0; i < n; ++i)
-      file_names.push_back(options.getArgv(i));
+  //! Step: Confirm genome diff files have been input.
+  list<string> file_names;
+  if (options.getArgc()) {
+    const size_t n = options.getArgc();
+    for (size_t i = 0; i < n; ++i)
+    file_names.push_back(options.getArgv(i));
+  } else {
+    string genome_diff_dir = cString(options["genome_diff_dir"]).trim_ends_of('/');
+    string cmd = "";
+    sprintf(cmd, "ls %s/*.gd", genome_diff_dir.c_str());
+    SYSTEM_CAPTURE(back_inserter(file_names), cmd, true);
   }
 
   if (file_names.empty()) {
