@@ -1956,7 +1956,7 @@ int do_rand_muts(int argc, char *argv[])
   }
   
   cGenomeDiff gd1;
-  gd1.random_mutations(options["exclude"], options["type"], from_string<uint32_t>(options["number"]), from_string<uint32_t>(options["length"]), ref_seq_info[ref_seq_id]);
+  gd1.random_mutations(options["exclude"], options["type"], from_string<uint32_t>(options["number"]), from_string<uint32_t>(options["length"]), ref_seq_info[ref_seq_id], options.count("verbose"));
   
   gd1.write(options["output"]);
   

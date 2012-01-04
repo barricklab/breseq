@@ -421,6 +421,19 @@ namespace breseq {
     switch (file_type) {
       case GENBANK:
       {
+        /*ifstream gbk_in(file_name.c_str());
+        ASSERT(in.good(), "Could not open GenBank file: " +file_name);
+        string line;
+        while (!gbk_in.eof() && getline(gbk_in,line))
+        {
+          if(line.find("ORIGIN") != string::npos)
+          {
+            getline(gbk_in,line);
+            if(GetWord(line) == "//")  {
+              ERROR(file_name + "\nANOTHER FILE HAS ALREADY LOADED THE SEQUENCE FOR: " + i->first);  }
+          }
+        }*/
+        
         ReadGenBank(file_name);
       }break;
         
@@ -1476,7 +1489,7 @@ string cReferenceSequences::repeat_family_sequence(const string &repeat_name, in
         break;
       }
       
-      if (uSmallest > static_cast<uint32_t>(rep.m_end - rep.m_start + 1)) {
+      if (region_pos < 0 && uSmallest > static_cast<uint32_t>(rep.m_end - rep.m_start + 1)) {
         uSmallest = static_cast<uint32_t>(rep.m_end - rep.m_start + 1);
         picked_seq = &this_seq;
         picked_rep = *itr_rep;
