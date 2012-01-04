@@ -421,18 +421,17 @@ namespace breseq {
     switch (file_type) {
       case GENBANK:
       {
-        /*ifstream gbk_in(file_name.c_str());
+        ifstream gbk_in(file_name.c_str());
         ASSERT(in.good(), "Could not open GenBank file: " +file_name);
         string line;
+        bool eof_found = false;
         while (!gbk_in.eof() && getline(gbk_in,line))
         {
-          if(line.find("ORIGIN") != string::npos)
-          {
-            getline(gbk_in,line);
-            if(GetWord(line) == "//")  {
-              ERROR(file_name + "\nANOTHER FILE HAS ALREADY LOADED THE SEQUENCE FOR: " + i->first);  }
-          }
-        }*/
+          if(GetWord(line) == "//")  {
+            eof_found = true;  }
+        }
+        
+        ASSERT(eof_found, file_name + "\nTHIS GENBANK FILE APPEARS TO BE INCOMPLETE.\nMAKE SURE YOU DOWNLOADED THE ENTIRE FILE.\nFILE NEEDS TO END WITH '//'.");
         
         ReadGenBank(file_name);
       }break;
