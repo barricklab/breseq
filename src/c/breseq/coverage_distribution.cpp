@@ -790,7 +790,7 @@ namespace breseq {
       //set up bottom vector for this offset
       offset_bot_vector = bot_vector;
       
-      for ( uint32_t j = 0; j < offset_range[i]; j++ ){
+      for ( int32_t j = 0; j < offset_range[i]; j++ ){
         bot_value = offset_bot_vector[0];
         offset_bot_vector.erase(offset_bot_vector.begin());
         offset_bot_vector.push_back( bot_value );
