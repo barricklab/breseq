@@ -881,16 +881,38 @@ template<typename T> inline void SYSTEM_CAPTURE(T out_itr, string command, bool 
   pclose(fp);
 }
 
+//! TODO refractor SYSTEM with do_assert parameter, get rid of WGET and GUNZIP.
+inline int WGET(const string &url, const string &file_path, bool test = false)
+{
+  string cmd = "";
+  if (test)
+    sprintf(cmd, "wget --spider %s", url.c_str());
+  else
+    sprintf(cmd, "wget -O %s %s",file_path.c_str(), url.c_str());
+  return ::system(cmd.c_str());
+}
+
+inline int GUNZIP(const string &file_path)
+{
+  string cmd = "gunzip " + file_path;
+  return ::system(cmd.c_str());
+}
 class cString : public string
 {
   public:
     template<class T> cString(const T &val) : string(val) {}
-    bool ends_with(const string &suffix);
+
+    bool ends_with(const string &suffix) const;
     string remove_ending(const string &suffix);
     string trim_ends_of(const char val);
+    bool is_key_value_pair(const char split_chr) const;
+    string get_key(const char split_chr) const;
+    string get_value(const char split_chr) const;
+    string get_basename(void) const; //Remove path.
+
 };
 
-inline bool cString::ends_with(const string &suffix)
+inline bool cString::ends_with(const string &suffix) const
 {
   if (this->size() < suffix.size()) {
     return false;
@@ -911,6 +933,30 @@ inline string cString::trim_ends_of(const char val)
   for (size_t i = 0; (*this)[i] == val; this->erase(i++, 1))
   for (size_t i = this->size() - 1; (*this)[i] == val; this->erase(i--));
   return *this;
+}
+
+inline bool cString::is_key_value_pair(const char split_chr) const
+{
+  return count(this->begin(), this->end(), split_chr) == 1;
+}
+
+inline string cString::get_key(const char split_chr) const
+{
+  return this->substr(0, this->find(split_chr));
+}
+
+inline string cString::get_value(const char split_chr) const
+{
+  return this->substr(this->rfind(split_chr) + 1);
+}
+
+inline string cString::get_basename() const
+{
+  const size_t pos = this->rfind('/');
+  if (pos == string::npos)
+    return *this;
+  else
+    return this->substr(pos + 1);
 }
 } // breseq
 

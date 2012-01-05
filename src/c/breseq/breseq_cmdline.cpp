@@ -1583,8 +1583,14 @@ int do_download(int argc, char *argv[])
     lookup_table["BarrickLab-Private"]
         ["file_path_format"] = download_dir + "/%s";
 
+  /*! Wrather than crash; gather [gd_file_name][reason] = error_value.
+      and output at the end of the function. */
+  map<string, map<string, string> > error_report;
+
   for (;file_names.size(); file_names.pop_front()) {
-    cGenomeDiff gd(file_names.front());
+    const string &file_name = file_names.front();
+    cout << "Parsing file: " << file_name << endl;
+    cGenomeDiff gd(file_name);
     const vector<string> &refs  = gd.metadata.ref_seqs;
     const vector<string> &reads = gd.metadata.read_seqs;
 
@@ -1593,31 +1599,38 @@ int do_download(int argc, char *argv[])
     copy(reads.begin(), reads.end(), back_inserter(seqs));
 
     for (;seqs.size(); seqs.pop_front()) {
-      const string &seq = seqs.front();
-      if (seq.find(':') == string::npos) continue;
+      const cString &seq = seqs.front();
+      if (!seq.is_key_value_pair(':')) {
+        error_report[file_name]["NOT_KEY_VALUE_PAIR"] = seq;
+        continue;
+      }
 
-      const string &key = seq.substr(0, seq.find_first_of(':'));
-      const string &value = seq.substr(seq.find_first_of(':') + 1);
+      const string &key = seq.get_key(':');
+      const string &value = cString(seq.get_value(':')).trim_ends_of('/');
       assert(key.size());
       assert(value.size());
 
-      ASSERT(lookup_table.count(key), "ERROR: Key: " + key +
-             " not recognized in file: " + file_names.front());
+      if (!lookup_table.count(key)) {
+        error_report[file_name]["INVALID_KEY"] = key;
+        continue;
+      }
 
       //! Step: Get file path and check if it has already been downloaded or is empty.
-      const string &base_name = value.substr(value.find_last_of('/') + 1);
+      const string &base_name = cString(value).get_basename();
       string file_path = "";
       sprintf(file_path, lookup_table[key]["file_path_format"].c_str(), base_name.c_str());
       assert(file_path.size());
 
-      bool is_downloaded = false;
-      bool is_gzip = false;
-      if (ifstream(file_path.c_str()).good() && !file_empty(file_path.c_str())) {
-        is_downloaded = true;
-      }
-      else if (cString(file_path).ends_with(".gz")) {
-        const string &gunzip_path = cString(file_path).remove_ending(".gz");
-        is_gzip = true;
+      bool is_downloaded =
+          ifstream(file_path.c_str()).good() && !file_empty(file_path.c_str());
+
+      bool is_gzip =
+          cString(file_path).ends_with(".gz");
+
+      const string &gunzip_path = is_gzip ?
+          cString(file_path).remove_ending(".gz") : "";
+
+      if (is_gzip) {
         if (ifstream(gunzip_path.c_str()).good() && !file_empty(gunzip_path.c_str())) {
          is_downloaded = true;
          file_path = gunzip_path;
@@ -1647,24 +1660,59 @@ int do_download(int argc, char *argv[])
         ASSERT(options.count("login"), "Provide the login option (-l user:password) to access private files.");
         sprintf(url, url_format, value.c_str());
       }
-      string cmd = "";
-      if (options.count("test")) {
-        sprintf(cmd, "wget --spider %s", url.c_str());
-      } else {
-        sprintf(cmd, "wget -O %s %s", file_path.c_str(), url.c_str());
-      }
-      SYSTEM(cmd);
 
-      if (is_gzip) {
+      const bool is_url_error = WGET(url, file_path, options.count("test")) != 0;
+      if (is_url_error) {
+        error_report[file_name]["INVALID_URL"]  = url;
+        continue;
+      }
+
+      if (is_gzip && !is_url_error) {
+        string cmd = "";
         sprintf(cmd, "gunzip %s", file_path.c_str());
-        if (options.count("test"))
+        if (options.count("test")) {
           cout << cmd << endl;
-        else
-          SYSTEM(cmd);
+        } else {
+          const bool is_gunzip_error = GUNZIP(file_path.c_str()) != 0;
+          if (is_gunzip_error) {
+            error_report[file_name]["CORRUPT_GZIP_FILE"] = file_path;
+          } else {
+            file_path = gunzip_path;
+          }
+        }
+      }
+
+      /*! Step: Confirm files are in proper format (mainly want to check that we haven't
+      just downloaded an html error page.) */
+      ifstream in(file_path.c_str());
+      string first_line = "";
+      std::getline(in, first_line);
+      if (cString(file_path).ends_with(".gbk")) {
+        if (first_line.find("LOCUS") != 0) {
+          error_report[file_name]["CORRUPT_DOWNLOAD"] = file_path;
+        }
+      }
+      else if(cString(file_path).ends_with(".fastq")) {
+        if (first_line[0] != '@') {
+          error_report[file_name]["CORRUPT_DOWNLOAD"] = file_path;
+        }
+      }
+    }//End sequences loop.
+  }//End genome diff file_names loop.
+
+  //! Step: Output error_report.
+  if (error_report.size()) {
+    printf("\nERROR: The following problems were encountered:\n");
+    map<string, map<string, string> >::const_iterator i = error_report.begin();
+    for (;i != error_report.end(); ++i) {
+      cout << endl << "Genome diff file: " << i->first << endl;
+      map<string, string>::const_iterator j = i->second.begin();
+      for (;j != i->second.end(); ++j) {
+        printf("\t[%s]: %s\n", j->first.c_str(), j->second.c_str());
       }
     }
-
   }
+
 
   return 0;
 }
