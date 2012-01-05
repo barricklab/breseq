@@ -798,7 +798,7 @@ namespace breseq {
 		return s;
 	}
   
-  inline void SYSTEM(string command, bool silent = false, bool ignore_errors = false)
+  inline int SYSTEM(string command, bool silent = false, bool ignore_errors = false)
   {
     if (!silent) cerr << "[system] " << command << endl;
     int return_value = system(command.c_str());
@@ -812,7 +812,7 @@ namespace breseq {
     {
       ASSERT(return_value == 0, error_message);
     }
-    
+    return return_value;
   }
   
   inline string remove_file(string path)
@@ -881,22 +881,6 @@ template<typename T> inline void SYSTEM_CAPTURE(T out_itr, string command, bool 
   pclose(fp);
 }
 
-//! TODO refractor SYSTEM with do_assert parameter, get rid of WGET and GUNZIP.
-inline int WGET(const string &url, const string &file_path, bool test = false)
-{
-  string cmd = "";
-  if (test)
-    sprintf(cmd, "wget --spider %s", url.c_str());
-  else
-    sprintf(cmd, "wget -O %s %s",file_path.c_str(), url.c_str());
-  return ::system(cmd.c_str());
-}
-
-inline int GUNZIP(const string &file_path)
-{
-  string cmd = "gunzip " + file_path;
-  return ::system(cmd.c_str());
-}
 class cString : public string
 {
   public:

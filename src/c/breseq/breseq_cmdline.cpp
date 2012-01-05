@@ -1527,7 +1527,7 @@ int do_download(int argc, char *argv[])
   options("login,l",           "Login user:password information for private server access.");
   options("download_dir,d",    "Output directory to download file to.", "02_Downloads");
   options("genome_diff_dir,g", "Directory to searched for genome diff files.", "01_Data");
-  options("test"           ,   "Don't download files but test urls.", TAKES_NO_ARGUMENT);
+  options("test"           ,   "Test urls in genome diff files, doesn't download the file.", TAKES_NO_ARGUMENT);
 
   options.processCommandArgs(argc, argv);
 
@@ -1589,7 +1589,7 @@ int do_download(int argc, char *argv[])
 
   for (;file_names.size(); file_names.pop_front()) {
     const string &file_name = file_names.front();
-    cout << "Parsing file: " << file_name << endl;
+    cout << endl << "Parsing file: " << file_name << endl;
     cGenomeDiff gd(file_name);
     const vector<string> &refs  = gd.metadata.ref_seqs;
     const vector<string> &reads = gd.metadata.read_seqs;
@@ -1640,7 +1640,7 @@ int do_download(int argc, char *argv[])
       if (is_downloaded) {
         printf("File:%s already downloaded in directory %s.\n",
                file_path.c_str(), download_dir.c_str());
-        continue;
+        if (!options.count("test")) continue;
       }
 
       //! Step: Get url and download, gunzip if necessary.
@@ -1661,19 +1661,25 @@ int do_download(int argc, char *argv[])
         sprintf(url, url_format, value.c_str());
       }
 
-      const bool is_url_error = WGET(url, file_path, options.count("test")) != 0;
+      string wget_cmd = "";
+      if (options.count("test"))
+        sprintf(wget_cmd, "wget --spider %s", url.c_str());
+      else
+        sprintf(wget_cmd, "wget -O %s %s",file_path.c_str(), url.c_str());
+
+      const bool is_url_error = SYSTEM(wget_cmd, false, true) != 0;
       if (is_url_error) {
         error_report[file_name]["INVALID_URL"]  = url;
         continue;
       }
 
       if (is_gzip && !is_url_error) {
-        string cmd = "";
-        sprintf(cmd, "gunzip %s", file_path.c_str());
+        string gunzip_cmd = "";
+        sprintf(gunzip_cmd, "gunzip %s", file_path.c_str());
         if (options.count("test")) {
-          cout << cmd << endl;
+          cout << gunzip_cmd << endl;
         } else {
-          const bool is_gunzip_error = GUNZIP(file_path.c_str()) != 0;
+          const bool is_gunzip_error = SYSTEM(gunzip_cmd, false, true) != 0;
           if (is_gunzip_error) {
             error_report[file_name]["CORRUPT_GZIP_FILE"] = file_path;
           } else {
@@ -1684,17 +1690,19 @@ int do_download(int argc, char *argv[])
 
       /*! Step: Confirm files are in proper format (mainly want to check that we haven't
       just downloaded an html error page.) */
-      ifstream in(file_path.c_str());
-      string first_line = "";
-      std::getline(in, first_line);
-      if (cString(file_path).ends_with(".gbk")) {
-        if (first_line.find("LOCUS") != 0) {
-          error_report[file_name]["CORRUPT_DOWNLOAD"] = file_path;
+      if (!options.count("test")) {
+        ifstream in(file_path.c_str());
+        string first_line = "";
+        std::getline(in, first_line);
+        if (cString(file_path).ends_with(".gbk")) {
+          if (first_line.find("LOCUS") != 0) {
+            error_report[file_name]["NOT_GBK_FILE"] = file_path;
+          }
         }
-      }
-      else if(cString(file_path).ends_with(".fastq")) {
-        if (first_line[0] != '@') {
-          error_report[file_name]["CORRUPT_DOWNLOAD"] = file_path;
+        else if(cString(file_path).ends_with(".fastq")) {
+          if (first_line[0] != '@') {
+            error_report[file_name]["NOT_FASTQ_FILE"] = file_path;
+          }
         }
       }
     }//End sequences loop.
@@ -1702,7 +1710,7 @@ int do_download(int argc, char *argv[])
 
   //! Step: Output error_report.
   if (error_report.size()) {
-    printf("\nERROR: The following problems were encountered:\n");
+    printf("\n\nERROR: The following problems were encountered:\n");
     map<string, map<string, string> >::const_iterator i = error_report.begin();
     for (;i != error_report.end(); ++i) {
       cout << endl << "Genome diff file: " << i->first << endl;
