@@ -145,7 +145,8 @@ cDiffEntry::cDiffEntry(const string &line)
             "cDiffEntry::cDiffEntry(%s): Could not determine type.",
             line.c_str()
             );
-    ERROR(message);
+    WARN(message);
+    return;
   }
 
   //! Step: Get the id.
@@ -206,7 +207,8 @@ cDiffEntry::cDiffEntry(const string &line)
               "cDiffEntry::cDiffEntry(%s): Field %s is not a key=value pair.",
               line.c_str(), key_value_pair.c_str()
               );
-      ERROR(message);
+      WARN(message);
+      return;
     }
 
     const string &key   = key_value_pair.substr(0, equal_sign_pos);
@@ -660,8 +662,9 @@ void cGenomeDiff::read(const string& filename) {
     } else if (line.find_first_not_of(' ') == string::npos) {
       continue;
     }
+    const cDiffEntry de(line);
+    if (de._type != UNKNOWN) add(cDiffEntry(line));
 
-    add(cDiffEntry(line));
   }
 
   return;
