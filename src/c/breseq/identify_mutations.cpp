@@ -558,7 +558,23 @@ void identify_mutations_pileup::pileup_callback(const pileup& p) {
       if ( (ppred.frequency < _polymorphism_frequency_cutoff) || (ppred.frequency > 1 -_polymorphism_frequency_cutoff) ) {
         add_reject_reason(mut, "POLYMORPHISM_FREQUENCY_CUTOFF");
       }
-            
+      
+      /* Need to have a way to evaluate both polymorphism call and consensus and switch frequency back
+         if polymorphism falls down...
+       
+      int* ref_cov = pos_info[from_string<base_char>(mut[REF_BASE])].unique_trimmed_cov;      
+      int* new_cov = pos_info[from_string<base_char>(mut[NEW_BASE])].unique_trimmed_cov;
+      
+      if (  (ref_cov[2] < _settings.polymorphism_minimum_new_coverage_each_strand)
+         || (ref_cov[0] < _settings.polymorphism_minimum_new_coverage_each_strand) 
+         || (new_cov[2] < _settings.polymorphism_minimum_new_coverage_each_strand) 
+         || (new_cov[0] < _settings.polymorphism_minimum_new_coverage_each_strand) 
+          ) {
+        add_reject_reason(mut, "POLYMORPHISM_STRAND");
+      }
+      */
+      
+        
       // Add line to R input file
       // @JEB TODO: deprecate going to R here
       // and in the main PIPELINE. We can now do
@@ -619,7 +635,7 @@ void identify_mutations_pileup::pileup_callback(const pileup& p) {
         _polymorphism_r_input_file << endl;
 			}
 		}
-    
+        
 		//## More fields common to consensus mutations and polymorphisms
 		//## ...now that ref_base and new_base are defined
 		int* ref_cov = pos_info[from_string<base_char>(mut[REF_BASE])].unique_trimmed_cov;

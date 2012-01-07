@@ -316,6 +316,7 @@ namespace breseq
     this->minimum_candidate_junctions = 10;
 		this->maximum_candidate_junctions = 5000;
 		this->maximum_candidate_junction_length_factor = 0.1;
+    this->penalize_negative_junction_overlap = true;
 
     //! Settings: Alignment Resolution
     this->add_split_junction_sides = true;
@@ -332,7 +333,7 @@ namespace breseq
     this->polymorphism_log10_e_value_cutoff = this->mutation_log10_e_value_cutoff;
 		this->polymorphism_bias_p_value_cutoff = 0.05;
 		this->polymorphism_frequency_cutoff = 0.1;
-		this->polymorphism_coverage_both_strands = 0;
+		this->polymorphism_minimum_new_coverage_each_strand = 0;
     this->polymorphism_reject_homopolymer_length = 0;
 		this->no_indel_polymorphisms = false;
     
