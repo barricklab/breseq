@@ -241,6 +241,7 @@ namespace breseq
 		uint32_t minimum_candidate_junctions;                 // Default = 10
 		uint32_t maximum_candidate_junctions;                 // Default = 5000
     double maximum_candidate_junction_length_factor;      // Default = 0.1
+    bool penalize_negative_junction_overlap;              // Manually set. True for experimental treatment.
     
     //! Settings: Alignment Resolution
 		bool add_split_junction_sides;                        // Default = true (possibly remove this option)  
@@ -260,13 +261,13 @@ namespace breseq
     //! Predict not only consensus genotype calls, but test mixed states between them.
     bool mixed_base_prediction;                           // Default = true
 
-    double mutation_log10_e_value_cutoff;                 // Default = 10
-    double polymorphism_log10_e_value_cutoff;             // Default = mutation_log10_e_value_cutoff = 10
-		double polymorphism_bias_p_value_cutoff;              // Default = 0.05
-		double polymorphism_frequency_cutoff;                 // Default = 0.1 for mixed base | 0.0 for polymorphism
-		uint32_t polymorphism_coverage_both_strands;          // Default = 1
-		uint32_t polymorphism_reject_homopolymer_length;      // Default = 0 (OFF)
-		bool no_indel_polymorphisms;                          // Default = false
+    double mutation_log10_e_value_cutoff;                   // Default = 10
+    double polymorphism_log10_e_value_cutoff;               // Default = mutation_log10_e_value_cutoff = 10
+		double polymorphism_bias_p_value_cutoff;                // Default = 0.05
+		double polymorphism_frequency_cutoff;                   // Default = 0.1 for mixed base | 0.0 for polymorphism
+		int32_t polymorphism_minimum_new_coverage_each_strand; // Default = 1
+		uint32_t polymorphism_reject_homopolymer_length;        // Default = 0 (OFF)
+		bool no_indel_polymorphisms;                            // Default = false
 		
 		//! Settings: Copy Number Variation
     uint32_t copy_number_variation_tile_size;

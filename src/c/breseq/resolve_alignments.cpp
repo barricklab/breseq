@@ -609,7 +609,9 @@ void load_junction_alignments(
             it++; 
         }
         
-        best_junction_score = eligible_read_alignments(settings, junction_ref_seq_info, this_junction_alignments);
+        // this score is the number of matches
+        best_junction_score = eligible_read_alignments(settings, junction_ref_seq_info, this_junction_alignments, settings.penalize_negative_junction_overlap);
+        
         
         if (verbose)
           cerr << " Best junction score: " << best_junction_score << endl;

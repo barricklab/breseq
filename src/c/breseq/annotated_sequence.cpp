@@ -2130,12 +2130,14 @@ void cReferenceSequences::polymorphism_statistics(Settings& settings, Summary& s
       add_reject_reason(mut, "POLYMORPHISM_FREQUENCY_CUTOFF");
 
     // Minimum coverage on both strands
-    double polymorphism_coverage_limit_both_bases = settings.polymorphism_coverage_both_strands;
+    double polymorphism_coverage_limit_both_bases = settings.polymorphism_minimum_new_coverage_each_strand;
     bool passed = true;
     vector<string> top_bot = split(mut["ref_cov"], "/");
     double top = from_string<double>(top_bot[0]);
     double bot = from_string<double>(top_bot[1]);
     passed = passed && (top >= polymorphism_coverage_limit_both_bases);
+    passed = passed && (bot >= polymorphism_coverage_limit_both_bases);
+
     top_bot = split(mut["new_cov"], "/");
     top = from_string<double>(top_bot[0]);
     bot = from_string<double>(top_bot[1]);

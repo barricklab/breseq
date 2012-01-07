@@ -41,7 +41,7 @@ namespace breseq {
   /*! Filter a list of alignments to only those that are eligible for mapping
    */
   
- uint32_t eligible_read_alignments(const Settings& settings, const cReferenceSequences& ref_seq_info, alignment_list& alignments)
+ uint32_t eligible_read_alignments(const Settings& settings, const cReferenceSequences& ref_seq_info, alignment_list& alignments, bool junction_mode)
   {
     bool verbose = false;
     
@@ -77,6 +77,14 @@ namespace breseq {
     {  
       bam_alignment* ap = it->get(); // we are saving the pointer value as the map key
       uint32_t i = alignment_mismatches(*ap, ref_seq_info);
+      
+      // add in read only bases (negative overlap) as mismatches
+      if (junction_mode) {
+        JunctionInfo junction_info( ref_seq_info[ap->reference_target_id()].m_seq_id );
+        if (junction_info.alignment_overlap < 0)
+          i -= junction_info.alignment_overlap;
+      }
+      
       mismatch_map[ap] = static_cast<double>(i);
     }
     

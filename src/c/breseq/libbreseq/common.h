@@ -914,8 +914,8 @@ inline string cString::remove_ending(const string &suffix)
 
 inline string cString::trim_ends_of(const char val)
 {
-  for (size_t i = 0; (*this)[i] == val; this->erase(i++, 1))
-  for (size_t i = this->size() - 1; (*this)[i] == val; this->erase(i--));
+  for (size_t i = 0; (*this)[i] == val; this->erase(i++, 1)) {}
+  for (size_t i = this->size() - 1; (*this)[i] == val; this->erase(i--)) {}
   return *this;
 }
 
