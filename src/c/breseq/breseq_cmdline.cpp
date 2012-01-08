@@ -138,7 +138,7 @@ int do_bam2cov(int argc, char* argv[]) {
   // required options
   ("bam,b", "bam file containing sequences to be aligned", "data/reference.bam")
 	("fasta,f", "FASTA file of reference sequence", "data/reference.fasta")
-  ("output,o", "base name of output file. region appended if multiple output files")
+  ("output,o", "base name of output file. Region (seq_id:start-end) appended if there are multiple output files. Defaults to seq_id:start-end for single regions.")
   // which regions to create files for
   ("region,r", "region to print (accession:start-end)", "")
   ("tile-size", "size of tiles")
@@ -150,10 +150,13 @@ int do_bam2cov(int argc, char* argv[]) {
 //  ("read_start_output,r", "file name for table file binned by read start bases (DEFAULT: OFF)")
 //  ("gc_output,g", "create additional table file binned by GC content of reads (DEFAULT: OFF)")
   // options controlling information that is output
-  ("total-only,1", "only plot/tabulate total coverage, not per strand", TAKES_NO_ARGUMENT)
+  ("total-only,1", "only plot/tabulate total coverage, not per strand coverage", TAKES_NO_ARGUMENT)
   ("resolution", "rough number of positions to output coverage information for in interval (0=ALL)", 600)
   .processCommandArgs(argc, argv);
   
+  options.addUsage("");
+  options.addUsage("If you do not specify the --plot or --table option, then the program defaults to --plot only mode.");
+
   // make sure that the required config options are good:
 	if(options.count("help")
      || !file_exists(options["fasta"].c_str())
@@ -163,12 +166,8 @@ int do_bam2cov(int argc, char* argv[]) {
 		return -1;
 	}
   
-  if (!options.count("plot") && !options.count("table")) {
-    options.addUsage("");
-    options.addUsage("Must specify either --plot or --table option.");
-		options.printUsage();
-		return -1;
-  }
+  // Default is to draw plot, but you can specify both --table and --plot to make both
+  bool draw_plot =  options.count("plot") || !options.count("table");
 
   vector<string> region_list;
   if (options.count("region"))
@@ -250,13 +249,15 @@ int do_bam2cov(int argc, char* argv[]) {
     
     string file_name = options["output"];
     if ((region_list.size() > 0) || (file_name == ""))  file_name += *it;
-    cout << "Coverage for region: " << *it << endl;
     
-    if (options.count("table"))
+    if (options.count("table")) {
+      cout << "Tabulating coverage for region: " << *it << endl;
       co.table(*it, file_name + ".tab", from_string<uint32_t>(options["resolution"]));
-    
-    if (options.count("plot"))
+    }
+    if (draw_plot) {
+      cout << "Plotting coverage for region: " << *it << endl;
       co.plot(*it, file_name + "." + to_lower(options["plot-format"]) , from_string<uint32_t>(options["resolution"]));
+    }
   }
   
   return 0;

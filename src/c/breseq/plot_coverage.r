@@ -94,9 +94,14 @@ layout(matrix(c(1,2), 2, 1, byrow = TRUE), heights=c(5,0.65))
 
 plot(0:10, 0:10, type="n", lty="solid", ylim=c(0, maxy), xlim=c(start_pos, end_pos), lwd=2, xaxs="i", yaxs="i", xlab="Coordinate in Reference Genome", ylab="Read Coverage Depth")
 
-#### Need to add back the option to gray out the ends!
 rect(start_pos, 0, window_start, maxy, col="grey85", lty=0)
 rect(window_end+1, 0, end_pos, maxy, col="grey85", lty=0)
+
+##grand total
+if (total_only ==1)
+{
+  lines(X$position, X$redundant_top_cov + X$redundant_bot_cov + X$unique_top_cov + X$unique_bot_cov, type="s", col="green", lty="solid", lwd=4)
+}
 
 lines(X$position, X$redundant_tot_cov, type="s", col="red", lty="solid", lwd=1.5 )
 if (total_only == 0)
@@ -112,6 +117,8 @@ if (total_only == 0)
 	lines(X$position, X$unique_bot_cov, type="s", col="purple", lty="solid", lwd=0.7)
 }
 
+
+
 ## draw a legend
 par(mar=c(0.5,3,0.1,0.5));
 barplot(0,0, axes=FALSE)
@@ -119,7 +126,7 @@ barplot(0,0, axes=FALSE)
 if (total_only == 0) {
 	legend( "bottom" , cex=0.75, c("unique total", "unique top", "unique bottom ", "repeat total", "repeat top","repeat bottom"), pch=-1, horiz=T, col="black", fill=c("blue", "cyan", "purple", "red", "yellow", "orange"), bty="n")
 } else {
-	legend( "bottom" , cex=0.85, c("unique total", "repeat total"), pch=-1, horiz=T, col="black", fill=c("blue", "red"), bty="n")
+	legend( "bottom" , cex=0.85, c("total", "unique total", "repeat total"), pch=-1, horiz=T, col="black", fill=c("green", "blue", "red"), bty="n")
 }
 
 
