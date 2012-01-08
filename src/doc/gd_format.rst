@@ -307,7 +307,7 @@ Line specification:
 Essentially this is evidence of missing coverage between two positions in the ranges [start, start+start_range] [end-end_range, end].
 
 
-JC: New junction evidence (junction candidate)
+JC: New junction evidence
 """""""""""""""""""""""""
 
 4. **side_1_seq_id** *<string>*
@@ -495,5 +495,13 @@ Line specification:
 
   Restriction enzyme used to digest genomic DNA and observe fragments.
 
+NOTE: Note
+""""""""""""""""""""""""""""""""""""""
 
+Generic container for a note about a mutation prediction
 
+Line specification:
+
+4. **note** *<string>*
+
+   Free text note.

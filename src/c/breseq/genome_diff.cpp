@@ -76,12 +76,14 @@ map<gd_entry_type, vector<string> > line_specification = make_map<gd_entry_type,
 (PFLP,make_vector<string> ("seq_id")("primer_1_start")("primer_1_end")("primer_2_start")("primer_2_end"))
 (RFLP,make_vector<string> ("seq_id")("primer_1_start")("primer_1_end")("primer_2_start")("primer_2_end"))
 (PFGE,make_vector<string> ("seq_id")("enzyme"))
+(NOTE,make_vector<string> ("note"))
+
   
 ; // end line specifications
 
 
 const vector<string>gd_entry_type_lookup_table =
-make_vector<string>("UNKNOWN")("SNP")("SUB")("DEL")("INS")("MOB")("AMP")("INV")("CON")("RA")("MC")("JC")("CN")("UN")("CURA")("FPOS")("PHYL")("TSEQ")("PFLP")("RFLP")("PFGE");
+  make_vector<string>("UNKNOWN")("SNP")("SUB")("DEL")("INS")("MOB")("AMP")("INV")("CON")("RA")("MC")("JC")("CN")("UN")("CURA")("FPOS")("PHYL")("TSEQ")("PFLP")("RFLP")("PFGE")("NOTE");
 
 
 // Field order.
@@ -842,6 +844,8 @@ void cGenomeDiff::normalize_to_sequence(cReferenceSequences &ref)
 
 }
 
+  
+// All fields must be assigned in this table and be required fields of the gd entries.
 map<gd_entry_type, sort_fields_item> diff_entry_sort_fields = make_map<gd_entry_type, sort_fields_item>
   (SNP, sort_fields_item(1, SEQ_ID, POSITION))
   (SUB, sort_fields_item(1, SEQ_ID, POSITION))
@@ -863,7 +867,7 @@ map<gd_entry_type, sort_fields_item> diff_entry_sort_fields = make_map<gd_entry_
   (PFLP, sort_fields_item(7, "seq_id", "primer_1_start"))
   (RFLP, sort_fields_item(7, "seq_id", "primer_1_start"))
   (PFGE, sort_fields_item(7, "seq_id", "enzyme"))
-
+  (NOTE, sort_fields_item(7, "note", "note"))
 ;
 
 map<gd_entry_type, uint8_t> sort_order = make_map<gd_entry_type, uint8_t>
@@ -887,6 +891,7 @@ map<gd_entry_type, uint8_t> sort_order = make_map<gd_entry_type, uint8_t>
   (PFLP, 18)
   (RFLP, 19)
   (PFGE, 20)
+  (NOTE, 20)
 ;
 
 
