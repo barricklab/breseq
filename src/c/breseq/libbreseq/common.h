@@ -857,6 +857,11 @@ inline int32_t sprintf(string &value, const char *format,...) {
   return ret_val;
 }
 
+//! TODO Combine these into one function that uses a template
+//  Tried but couldn't get it to compile.
+inline bool map_comp_str_uint_second(const pair<string,uint32_t> i, const pair<string,uint32_t> j) { return i.second < j.second; }
+inline bool map_comp_uint_uint_second(const pair<uint32_t,uint32_t> i, const pair<uint32_t,uint32_t> j) { return i.second < j.second; }
+
 //! TODO refractor orginal SYSTEM_CAPTURE to be used with this?
 template<typename T> inline void SYSTEM_CAPTURE(T out_itr, string command, bool silent = false)
 {
