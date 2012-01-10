@@ -256,26 +256,15 @@ namespace breseq {
       this_seq.m_genes.sort();
       this_seq.m_repeats.sort();
       
-      // For storing how small the smallest repeat is.
-      uint32_t uSmallest = this_seq.m_length;
-      
-      // Go through the repeats of the sequence
-      // We will be determining the smallest version
-      // of the repeat here.
-      for (cSequenceFeatureList::iterator itr_rep = repeats.begin(); itr_rep != repeats.end(); itr_rep++) {
-        cSequenceFeature& rep = **itr_rep;
-        
-        if(rep.SafeGet("name") == repeat_name && (uSmallest > (uint32_t)(rep.m_end - rep.m_start + 1)))uSmallest = (uint32_t)(rep.m_end - rep.m_start + 1);
-      }
-      
       // Go through the repeats of the sequence
       for (cSequenceFeatureList::iterator itr_rep = repeats.begin(); itr_rep != repeats.end(); itr_rep++)
       {
         cSequenceFeature& rep = **itr_rep;
         
+        string rep_fam_seq = ref_seq_info.repeat_family_sequence(repeat_name, strand, region_pos);
+        
         // Is this the repeat we're looking for?
-        // Is it the smallest version?
-        if (rep.SafeGet("name") == repeat_name && ((region_pos < 0 && uSmallest == (uint32_t)(rep.m_end - rep.m_start + 1)) || region_pos == rep.m_start))
+        if (rep.SafeGet("name") == repeat_name && region_pos == rep.m_start)
         {      
           cSequenceFeatureList& features = this_seq.m_features;
           cSequenceFeatureList feat_list_new;        
@@ -1463,18 +1452,55 @@ void cReferenceSequences::ReadBull(const string& file_name) {
  *
  *  TODO: Needs to check to be sure that it is getting a "typical" copy 
  *  (not one that has an insertion in it or a non-consensus sequence) 
- */
-string cReferenceSequences::repeat_family_sequence(const string &repeat_name, int8_t strand, int32_t region_pos)
-{
+ */  
+string cReferenceSequences::repeat_family_sequence(const string &repeat_name, int8_t strand, int32_t &region_pos)
+{  
   counted_ptr<cSequenceFeature> picked_rep(NULL);
   cAnnotatedSequence* picked_seq(NULL);
   
-  // loop through all reference sequences
+  map<string, uint32_t> repeat_sequence_count;
+  map<string, uint32_t> repeat_sequence_pos;  
+  map<uint32_t, uint32_t> repeat_size_count;  
+  map<uint32_t, uint32_t> repeat_size_pos;
+  
+  // Loop through all reference sequences
   for (vector<cAnnotatedSequence>::iterator itr_seq = this->begin(); itr_seq != this->end(); itr_seq++) {
     cAnnotatedSequence& this_seq = *itr_seq;
     cSequenceFeatureList& repeats = this_seq.m_repeats;
-
-    uint32_t uSmallest = this_seq.m_length;
+    
+    for (cSequenceFeatureList::iterator itr_rep = repeats.begin(); itr_rep != repeats.end(); itr_rep++) {
+      cSequenceFeature& rep = **itr_rep;
+      
+      if(rep.SafeGet("name") != repeat_name)
+        continue;
+      
+      // Stores all the sequences that match so we can compare them.
+      if (region_pos < 0) {
+        string adjSeq = this_seq.get_sequence_1(rep.m_start, rep.m_end);
+        if (strand != rep.m_strand)
+          adjSeq = reverse_complement(adjSeq);
+        
+        repeat_size_count[rep.m_end - rep.m_start + 1]++;        
+        repeat_size_pos[rep.m_end - rep.m_start + 1] = rep.m_start;
+        repeat_sequence_count[adjSeq]++;
+        repeat_sequence_pos[adjSeq] = rep.m_start;  }
+    }
+  }
+  
+  // This will set the region_pos to whichever sequence has the most number of copies.
+  // If number of copies is not greater than 1, we will use the most common size instead.
+  if(region_pos < 0)
+  {    
+    if (max_element(repeat_sequence_count.begin(), repeat_sequence_count.end(), map_comp_str_uint_second)->second > 1) {
+      region_pos = repeat_sequence_pos[max_element(repeat_sequence_count.begin(), repeat_sequence_count.end(), map_comp_str_uint_second)->first];  }
+    else  {
+      region_pos = repeat_size_pos[max_element(repeat_size_count.begin(), repeat_size_count.end(), map_comp_uint_uint_second)->first];  }
+  }
+  
+  // Loop through all reference sequences
+  for (vector<cAnnotatedSequence>::iterator itr_seq = this->begin(); itr_seq != this->end(); itr_seq++) {
+    cAnnotatedSequence& this_seq = *itr_seq;
+    cSequenceFeatureList& repeats = this_seq.m_repeats;
     
     for (cSequenceFeatureList::iterator itr_rep = repeats.begin(); itr_rep != repeats.end(); itr_rep++) {
       cSequenceFeature& rep = **itr_rep;
@@ -1486,12 +1512,6 @@ string cReferenceSequences::repeat_family_sequence(const string &repeat_name, in
         picked_seq = &this_seq;
         picked_rep = *itr_rep;
         break;
-      }
-      
-      if (region_pos < 0 && uSmallest > static_cast<uint32_t>(rep.m_end - rep.m_start + 1)) {
-        uSmallest = static_cast<uint32_t>(rep.m_end - rep.m_start + 1);
-        picked_seq = &this_seq;
-        picked_rep = *itr_rep;
       }
     }
   }
