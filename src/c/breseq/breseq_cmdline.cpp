@@ -1282,6 +1282,8 @@ int do_runfile(int argc, char *argv[])
   options("log_dir,l",        "Directory for error log file that captures the executable's stdout and sterr.", "04_Logs");
   options("runfile,r",        "Name of the run file to be output.", "commands");
   options("dcamp",            "Alter pipeline's output path to include executable name",TAKES_NO_ARGUMENT);
+  options("lonestar",         "Create launcher.sge file for lonestar.");
+  options("ranger",           "Create launcher.sge file for ranger.");
   options.addUsage("\n");
   options.addUsage("***Reminder: Create the error log directory before running TACC job.");
   options.addUsage("\n");
@@ -1294,10 +1296,6 @@ int do_runfile(int argc, char *argv[])
   options.addUsage("\t  Output: breseq -o ZDB111 -r 02_Downloads/REL606.5.gbk 02_Downloads/SRR098039.fastq >& 04_Errors/ZDB111.errors.txt");
   options.processCommandArgs(argc, argv);
 
-  options.addUsage("\nExamples:");
-  options.addUsage("  breseq DOWNLOAD -l john:1234 -d downloads -g data");
-  options.addUsage("  breseq DOWNLOAD -l john:1234 -d downloads 1B4.gd GRC2000.gd");
-
   //! Step: Confirm genome diff files have been input.
   list<string> file_names;
   if (options.getArgc()) {
@@ -1305,11 +1303,11 @@ int do_runfile(int argc, char *argv[])
     for (size_t i = 0; i < n; ++i)
     file_names.push_back(options.getArgv(i));
   } else {
-    const string &genome_diff_dir =
-        cString(options["data_dir"]).trim_ends_of('/');
-    const string &cmd =
-        cString("ls %s/*.gd", genome_diff_dir.c_str());
-    SYSTEM_CAPTURE(back_inserter(file_names), cmd, true);
+    const string &data_dir = cString(options["data_dir"]).trim_ends_of('/');
+    if (ifstream(data_dir.c_str()).good()) {
+      const string &cmd = cString("ls %s/*.gd", data_dir.c_str());
+      SYSTEM_CAPTURE(back_inserter(file_names), cmd, true);
+    }
   }
 
   if (file_names.empty()) {
@@ -1352,7 +1350,8 @@ int do_runfile(int argc, char *argv[])
         logs_dir + "/" + pretty_exe + "/%s.log.txt" :
         logs_dir + "/%s.log.txt";
 
-  ofstream out(options["runfile"].c_str());
+  ofstream rout(options["runfile"].c_str());
+  size_t n_cmds = 0;
   for (;file_names.size(); file_names.pop_front()) {
     const string &file_name = file_names.front();
     cout << endl << "Parsing file: " << file_name << endl;
@@ -1408,7 +1407,39 @@ int do_runfile(int argc, char *argv[])
 
     //! Step: Output to file.
     cout << ss.str() << endl;
-    out << ss.str() << endl;
+    rout << ss.str() << endl;
+    ++n_cmds;
+  }
+
+  //! Step: Create launcher.sge.
+  /*TODO:
+    1) Figure out way to determine if user is on Ranger or Lonestar and assign
+    appropriate tasks per node. Then change lonestar command to tacc.
+    2) Approximate total runtime. (based on cmd line with largest files?)
+    */
+  if (options.count("lonestar")) {
+    /*Note: For lonestar we are under the current assumption that a 4way 12 will
+      run 3 breseq jobs. On Ranger a 16way 16 will run 16 breseq jobs.*/
+    const size_t tasks = 4;
+    const size_t nodes = ceil(n_cmds / 3) * 12;
+    const string &pwd = SYSTEM_CAPTURE("pwd", true);
+    ofstream lout("launcher.sge");
+    fprintf(lout, "#$ -N %s\n", pretty_exe.c_str());
+    fprintf(lout, "#$ -pe %uway %u\n", tasks, nodes);
+    fprintf(lout, "#$ -q normal\n");
+    fprintf(lout, "#$ -o %s.o$JOB_ID\n", pretty_exe.c_str());
+    fprintf(lout, "#$ -l h_rt=14:00:00\n");
+    fprintf(lout, "#$ -V\n");
+    fprintf(lout, "#$ -cwd\n");
+    fprintf(lout, "#$ -M %s\n", options["lonestar"].c_str());
+    fprintf(lout, "#$ -m be\n");
+    fprintf(lout, "#$ -A breseq\n");
+    fprintf(lout, "module load launcher\n");
+    fprintf(lout, "setenv EXECUTABLE     $TACC_LAUNCHER_DIR/init_launcher\n");
+    fprintf(lout, "setenv CONTROL_FILE   commands\n");
+    fprintf(lout, "setenv WORKDIR        %s\n", pwd.c_str());
+    lout.close();
+    SYSTEM("chmod +x launcher.sge", true);
   }
 
   return 0;
@@ -1518,10 +1549,11 @@ int do_download(int argc, char *argv[])
     for (size_t i = 0; i < n; ++i)
     file_names.push_back(options.getArgv(i));
   } else {
-    string genome_diff_dir = cString(options["genome_diff_dir"]).trim_ends_of('/');
-    string cmd = "";
-    sprintf(cmd, "ls %s/*.gd", genome_diff_dir.c_str());
-    SYSTEM_CAPTURE(back_inserter(file_names), cmd, true);
+    const string &data_dir = cString(options["genome_diff_dir"]).trim_ends_of('/');
+    if (ifstream(data_dir.c_str()).good()) {
+      const string cmd = cString("ls %s/*.gd", data_dir.c_str());
+      SYSTEM_CAPTURE(back_inserter(file_names), cmd, true);
+    }
   }
 
   if (file_names.empty()) {
@@ -1635,11 +1667,9 @@ int do_download(int argc, char *argv[])
         sprintf(url, url_format, value.c_str());
       }
 
-      string wget_cmd = "";
-      if (options.count("test"))
-        sprintf(wget_cmd, "wget --spider %s", url.c_str());
-      else
-        sprintf(wget_cmd, "wget -O %s %s",file_path.c_str(), url.c_str());
+      string wget_cmd = options.count("test") ?
+            cString("wget --spider %s", url.c_str()) :
+            cString("wget -O %s %s",file_path.c_str(), url.c_str());
 
       const bool is_url_error = SYSTEM(wget_cmd, false, true) != 0;
       if (is_url_error) {
