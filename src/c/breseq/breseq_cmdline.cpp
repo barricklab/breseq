@@ -1279,8 +1279,9 @@ int do_runfile(int argc, char *argv[])
   options("data_dir,g",       "Directory to searched for genome diff files.", "01_Data");
   options("downloads_dir,d",  "Downloads directory where read and reference files are located.", "02_Downloads");
   options("output_dir,o",     "Output directory for commands within the runfile.", "03_Output");
-  options("log_dir,l",  "Directory for error log file that captures the executable's stdout and sterr.", "04_Logs");
+  options("log_dir,l",        "Directory for error log file that captures the executable's stdout and sterr.", "04_Logs");
   options("runfile,r",        "Name of the run file to be output.", "commands");
+  options("dcamp",            "Alter pipeline's output path to include executable name",TAKES_NO_ARGUMENT);
   options.addUsage("\n");
   options.addUsage("***Reminder: Create the error log directory before running TACC job.");
   options.addUsage("\n");
@@ -1292,148 +1293,122 @@ int do_runfile(int argc, char *argv[])
   options.addUsage("\t  Output: breseq -o 1B4 -r 02_Downloads/NC_012660.1.gbk 02_Downloads/SRR172993.fastq >& 04_Errors/1B4.errors.txt");
   options.addUsage("\t  Output: breseq -o ZDB111 -r 02_Downloads/REL606.5.gbk 02_Downloads/SRR098039.fastq >& 04_Errors/ZDB111.errors.txt");
   options.processCommandArgs(argc, argv);
-  
 
-  /*! Step: Gather genome diff file names from either user input or a given
-   directory to search. */
-  vector<string> file_names;
-  
-  // Default behavior is to always look in data_dir 
-  if (options["data_dir"] != "") {
-    char *data_dir = strdup(options["data_dir"].c_str());
-    const size_t n = strlen(data_dir);
-    if (data_dir[n - 1] == '/') {
-      data_dir[n - 1] = '\0';
-    }
-    string command("");
-    sprintf(command, "ls %s/*.gd", data_dir);
-    file_names = split(SYSTEM_CAPTURE(command, true), "\n");
-  }
-  
-  // Add any additional arguments
+  options.addUsage("\nExamples:");
+  options.addUsage("  breseq DOWNLOAD -l john:1234 -d downloads -g data");
+  options.addUsage("  breseq DOWNLOAD -l john:1234 -d downloads 1B4.gd GRC2000.gd");
+
+  //! Step: Confirm genome diff files have been input.
+  list<string> file_names;
   if (options.getArgc()) {
     const size_t n = options.getArgc();
-    file_names.resize(n);
-    for (size_t i = 0; i < n; i++) {
-      file_names[i] = options.getArgv(i);
-    }
+    for (size_t i = 0; i < n; ++i)
+    file_names.push_back(options.getArgv(i));
+  } else {
+    const string &genome_diff_dir =
+        cString(options["data_dir"]).trim_ends_of('/');
+    const string &cmd =
+        cString("ls %s/*.gd", genome_diff_dir.c_str());
+    SYSTEM_CAPTURE(back_inserter(file_names), cmd, true);
   }
-  
-  if (file_names.size() == 0) {
+
+  if (file_names.empty()) {
     options.addUsage("\nERROR: You must input genome diff files or a directory to search for genome diff files.");
     options.printUsage();
     return -1;
   }
 
-  if (options["log_dir"] != "")
-    create_path(options["log_dir"].c_str());
-  
-  const char *exe = options["executable"].c_str();
+  const string &downloads_dir =
+      cString(options["downloads_dir"]).trim_ends_of('/');
+  const string &logs_dir =
+      cString(options["log_dir"]).trim_ends_of('/');
+  const string &output_dir =
+      cString(options["output_dir"]).trim_ends_of('/');
 
-  char *downloads_dir = strdup(options["downloads_dir"].c_str());
-  if (downloads_dir[strlen(downloads_dir) - 1] == '/') {
-    downloads_dir[strlen(downloads_dir) - 1] = '\0';
-  }
-  char *output_dir = strdup(options["output_dir"].c_str());
-  if (output_dir[strlen(output_dir) - 1] == '/') {
-    output_dir[strlen(output_dir) - 1] = '\0';
-  }
+  create_path(logs_dir.c_str());
 
-  //! Step: Read every gd file to gather header line info.
-  ofstream run_file(options["runfile"].c_str());
-  ASSERT(run_file.good(), "Error opening file: " + options["runfile"]);
-  const size_t n = file_names.size();
-  for (size_t i = 0; i < n; i++) {
-    cout << "Processing " << file_names[i] << endl;
-    cGenomeDiff gd(file_names[i]);
+  map<string, map<string, string> > lookup_table;
+  //Paths where .gbk and .fastq files are located.
+  lookup_table["Genbank"]
+      ["download_path_format"] = downloads_dir + "/%s.gbk";
+  lookup_table["SRA"]
+      ["download_path_format"] = downloads_dir + "/%s.fastq";
+  lookup_table["BarrickLab-Public"]
+      ["download_path_format"] = downloads_dir + "/%s";
+  lookup_table["BarrickLab-Private"]
+      ["download_path_format"] = downloads_dir + "/%s";
 
-    //Unique output directory name is parsed from the base name of the file.
-    char this_output_dir[1000];
-    const char *run_name = gd.metadata.run_name.c_str();
-    
-    if (options["output_dir"] != "") {
-      sprintf(this_output_dir, "-o %s/%s", options["output_dir"].c_str(), run_name);
-    } else {
-      sprintf(this_output_dir, "-o %s", run_name);
-    }
+  const string &exe = options["executable"];
+  cString pretty_exe = cString(exe).get_base_name();
+  pretty_exe.trim_ends_of('/');
+  pretty_exe.trim_ends_of('.');
+  pretty_exe.remove_ending(pretty_exe.get_file_extension());
 
-    //Build reference commands.
-    vector<string> refs = gd.metadata.ref_seqs;
-    for (size_t j = 0; j < refs.size(); j++) {
-      string *ref = &refs[j];
-      
-      bool append_gbk = ref->substr(0, 8) == "Genbank:";
-      
-      if (ref->find_last_of(":/") != string::npos) {
-        ref->erase(0, ref->find_last_of(":/") + 1);
+  const string &output_path_format = options.count("dcamp") ?
+        output_dir + "/" + pretty_exe + "/%s" :
+        output_dir + "/%s";
+
+  const string &log_path_format = options.count("dcamp") ?
+        logs_dir + "/" + pretty_exe + "/%s.log.txt" :
+        logs_dir + "/%s.log.txt";
+
+  ofstream out(options["runfile"].c_str());
+  for (;file_names.size(); file_names.pop_front()) {
+    const string &file_name = file_names.front();
+    cout << endl << "Parsing file: " << file_name << endl;
+    cGenomeDiff gd(file_name);
+    const vector<string> &refs  = gd.metadata.ref_seqs;
+    const vector<string> &reads = gd.metadata.read_seqs;
+
+    list<string> seq_kv_pairs;
+    copy(refs.begin(), refs.end(), back_inserter(seq_kv_pairs));
+    copy(reads.begin(), reads.end(), back_inserter(seq_kv_pairs));
+    assert(seq_kv_pairs.size());
+
+    //! Step: Begin building command line.
+    stringstream ss;
+
+    //! Part 1: Executable.
+    ss << exe;
+
+    //! Part 2: Pipeline's output path.
+    ss << " -o " << cString(output_path_format.c_str(), gd.metadata.run_name.c_str());
+
+    size_t n_refs = refs.size();
+    for (;seq_kv_pairs.size(); seq_kv_pairs.pop_front()) {
+      const cKeyValuePair seq_kvp(seq_kv_pairs.front(), ':');
+      if (!seq_kvp.check()) {
+        WARN("File: " + file_name + " has invalid key-value-pair: " + seq_kvp);
+        continue;
       }
-      
-      if (append_gbk && (ref->find(".gbk") == string::npos)) {
-        ref->append(".gbk");
+
+      const string &key = seq_kvp.get_key();
+      const string &value = cString(seq_kvp.get_value()).trim_ends_of('/');
+      const string &base_name = cString(value).get_base_name();
+
+      if (!lookup_table.count(key)) {
+        WARN("File: " + file_name + " has invalid key: " + key);
+        continue;
       }
-      
-      if (ref->substr(ref->size()-3, 3) == ".gz") {
-        ref->erase(ref->size()-3);
-      }
-          
-      if (options["downloads_dir"] != "") {
-        sprintf(*ref, "-r %s/%s", downloads_dir, refs[j].c_str());
+      cString download_path(lookup_table[key]["download_path_format"].c_str(),
+                            base_name.c_str());
+
+      //! Part 3: Reference argument path(s).
+      if (n_refs) {
+        ss << " -r " << download_path;
+        n_refs--;
       } else {
-        sprintf(*ref, "-r %s", refs[j].c_str());
+      //! Part 4: Read arguemnt path(s).
+        if (download_path.ends_with(".gz")) download_path.remove_ending(".gz");
+        ss << " " << download_path;
       }
     }
+    //! Part 5: Error log path.
+    ss << " >& " << cString(log_path_format.c_str(), gd.metadata.run_name.c_str());
 
-    //Build read commands.
-    vector<string> reads = gd.metadata.read_seqs;
-    for (size_t j = 0; j < reads.size(); j++) {
-      string *read = &reads[j];
-      
-      bool append_fastq = read->substr(0, 4) == "SRA:";
-      
-      if (read->find_last_of(":/") != string::npos) {
-        read->erase(0, reads[j].find_last_of(":/") + 1);
-      }
-
-      if (append_fastq && (read->find(".fastq") == string::npos)) {
-        read->append(".fastq");
-      }
-      
-      if (read->substr(read->size()-3, 3) == ".gz") {
-        read->erase(read->size()-3);
-      }
-
-      if (options["downloads_dir"] != "") {
-        sprintf(*read, "%s/%s", downloads_dir, reads[j].c_str());
-      } else {
-        sprintf(*read, "%s", reads[j].c_str());
-      }
-    }
-
-    //Error log file option.
-    string log_path = "";
-    {
-      const char *path = options["log_dir"].c_str();
-
-      if (options["log_dir"] != "") {
-        sprintf(log_path, ">& %s/%s.errors.txt", path, run_name);
-      } else {
-        sprintf(log_path, ">& %s.errors.txt", run_name);
-      }
-    }
-
-    //Build run file line.
-    vector<string> run_file_line_args;
-    run_file_line_args.push_back(exe);
-    run_file_line_args.push_back(this_output_dir);
-    run_file_line_args.push_back(join(refs, " "));
-    run_file_line_args.push_back(join(reads, " "));
-    if (log_path.size()) {
-      run_file_line_args.push_back(log_path);
-    }
-
-    const string &run_file_line = join(run_file_line_args, " ");
-    printf("%s\n", run_file_line.c_str());
-    fprintf(run_file, "%s\n", run_file_line.c_str());
+    //! Step: Output to file.
+    cout << ss.str() << endl;
+    out << ss.str() << endl;
   }
 
   return 0;
@@ -1595,21 +1570,19 @@ int do_download(int argc, char *argv[])
     const vector<string> &refs  = gd.metadata.ref_seqs;
     const vector<string> &reads = gd.metadata.read_seqs;
 
-    list<string> seqs;
-    copy(refs.begin(), refs.end(), back_inserter(seqs));
-    copy(reads.begin(), reads.end(), back_inserter(seqs));
+    list<string> seqs_kv_pairs;
+    copy(refs.begin(), refs.end(), back_inserter(seqs_kv_pairs));
+    copy(reads.begin(), reads.end(), back_inserter(seqs_kv_pairs));
 
-    for (;seqs.size(); seqs.pop_front()) {
-      const cString &seq = seqs.front();
-      if (!seq.is_key_value_pair(':')) {
-        error_report[file_name]["NOT_KEY_VALUE_PAIR"] = seq;
+    for (;seqs_kv_pairs.size(); seqs_kv_pairs.pop_front()) {
+      const cKeyValuePair seq_kvp(seqs_kv_pairs.front(), ':');
+      if (!seq_kvp.check()) {
+        error_report[file_name]["NOT_KEY_VALUE_PAIR"] = seq_kvp;
         continue;
       }
 
-      const string &key = seq.get_key(':');
-      const string &value = cString(seq.get_value(':')).trim_ends_of('/');
-      assert(key.size());
-      assert(value.size());
+      const string &key = seq_kvp.get_key();
+      const string &value = cString(seq_kvp.get_value()).trim_ends_of('/');
 
       if (!lookup_table.count(key)) {
         error_report[file_name]["INVALID_KEY"] = key;
@@ -1617,7 +1590,7 @@ int do_download(int argc, char *argv[])
       }
 
       //! Step: Get file path and check if it has already been downloaded or is empty.
-      const string &base_name = cString(value).get_basename();
+      const string &base_name = cString(value).get_base_name();
       string file_path = "";
       sprintf(file_path, lookup_table[key]["file_path_format"].c_str(), base_name.c_str());
       assert(file_path.size());
@@ -2850,7 +2823,7 @@ int main(int argc, char* argv[]) {
     return do_copy_number_variation(argc_new, argv_new);
   } else if (command == "PERIODICITY"){
     return do_periodicity(argc_new, argv_new);
-  } else if (command == "DOWNLOAD") {
+  } else if (command == "DOWNLOAD" || command == "DOWNLOADS") {
     return do_download(argc_new, argv_new);
   } else if ((command == "RANDOM_MUTATIONS") || (command == "RAND_MUTS")) {
     return do_rand_muts(argc_new, argv_new);
