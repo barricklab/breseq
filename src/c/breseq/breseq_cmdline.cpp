@@ -1282,8 +1282,7 @@ int do_runfile(int argc, char *argv[])
   options("log_dir,l",        "Directory for error log file that captures the executable's stdout and sterr.", "04_Logs");
   options("runfile,r",        "Name of the run file to be output.", "commands");
   options("dcamp",            "Alter pipeline's output path to include executable name",TAKES_NO_ARGUMENT);
-  options("lonestar",         "Create launcher.sge file for lonestar.");
-  options("ranger",           "Create launcher.sge file for ranger.");
+  options("lonestar",         "Create launcher.sge file for lonestar, take email address as argument.");
   options.addUsage("\n");
   options.addUsage("***Reminder: Create the error log directory before running TACC job.");
   options.addUsage("\n");
@@ -1318,12 +1317,6 @@ int do_runfile(int argc, char *argv[])
 
   const string &downloads_dir =
       cString(options["downloads_dir"]).trim_ends_of('/');
-  const string &logs_dir =
-      cString(options["log_dir"]).trim_ends_of('/');
-  const string &output_dir =
-      cString(options["output_dir"]).trim_ends_of('/');
-
-  create_path(logs_dir.c_str());
 
   map<string, map<string, string> > lookup_table;
   //Paths where .gbk and .fastq files are located.
@@ -1336,21 +1329,31 @@ int do_runfile(int argc, char *argv[])
   lookup_table["BarrickLab-Private"]
       ["download_path_format"] = downloads_dir + "/%s";
 
+
   const string &exe = options["executable"];
   cString pretty_exe = cString(exe).get_base_name();
   pretty_exe.trim_ends_of('/');
   pretty_exe.trim_ends_of('.');
   pretty_exe.remove_ending(pretty_exe.get_file_extension());
 
-  const string &output_path_format = options.count("dcamp") ?
-        output_dir + "/" + pretty_exe + "/%s" :
-        output_dir + "/%s";
+  const string &log_dir = options.count("dcamp") ?
+        cString(options["log_dir"]).trim_ends_of('/') + "/" + pretty_exe :
+        cString(options["log_dir"]).trim_ends_of('/');
+  create_path(log_dir.c_str());
 
-  const string &log_path_format = options.count("dcamp") ?
-        logs_dir + "/" + pretty_exe + "/%s.log.txt" :
-        logs_dir + "/%s.log.txt";
+  const string &output_dir = options.count("dcamp") ?
+        cString(options["output_dir"]).trim_ends_of('/') + "/" + pretty_exe :
+        cString(options["output_dir"]).trim_ends_of('/');
 
-  ofstream rout(options["runfile"].c_str());
+  const string &output_path_format = output_dir + "/%s";
+
+  const string &log_path_format = log_dir + "/%s.log.txt";
+
+  const string &rname = options.count("dcamp") ?
+        options["runfile"] + "_" + pretty_exe :
+        options["runfile"];
+
+  ofstream rout(rname.c_str());
   size_t n_cmds = 0;
   for (;file_names.size(); file_names.pop_front()) {
     const string &file_name = file_names.front();
@@ -1417,13 +1420,18 @@ int do_runfile(int argc, char *argv[])
     appropriate tasks per node. Then change lonestar command to tacc.
     2) Approximate total runtime. (based on cmd line with largest files?)
     */
-  if (options.count("lonestar")) {
+  if (options.count("lonestar") || options.count("dcamp")) {
     /*Note: For lonestar we are under the current assumption that a 4way 12 will
       run 3 breseq jobs. On Ranger a 16way 16 will run 16 breseq jobs.*/
     const size_t tasks = 4;
     const size_t nodes = ceil(n_cmds / 3) * 12;
     const string &pwd = SYSTEM_CAPTURE("pwd", true);
-    ofstream lout("launcher.sge");
+
+    const string &lname = options.count("dcamp") ?
+          "launcher_" + pretty_exe + ".sge" :
+          "launcher.sge";
+
+    ofstream lout(lname.c_str());
     fprintf(lout, "#$ -N %s\n", pretty_exe.c_str());
     fprintf(lout, "#$ -pe %uway %u\n", tasks, nodes);
     fprintf(lout, "#$ -q normal\n");
@@ -1436,10 +1444,10 @@ int do_runfile(int argc, char *argv[])
     fprintf(lout, "#$ -A breseq\n");
     fprintf(lout, "module load launcher\n");
     fprintf(lout, "setenv EXECUTABLE     $TACC_LAUNCHER_DIR/init_launcher\n");
-    fprintf(lout, "setenv CONTROL_FILE   commands\n");
+    fprintf(lout, "setenv CONTROL_FILE   %s\n", rname.c_str());
     fprintf(lout, "setenv WORKDIR        %s\n", pwd.c_str());
     lout.close();
-    SYSTEM("chmod +x launcher.sge", true);
+    SYSTEM("chmod +x " + lname, true);
   }
 
   return 0;
