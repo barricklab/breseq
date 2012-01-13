@@ -785,8 +785,8 @@ namespace breseq {
   bool
 	AnyOption::isOptUsed( const string option )
 	{
-		for( int i = 0 ; i < option_counter ; i++ )
-			if( options[i].compare(option) == 0 )
+		for( int i = 0 ; i < argc ; i++ )
+			if( substitute(argv[i], "-", "") == option )
 				return true;
     
 		return false;
@@ -815,8 +815,8 @@ namespace breseq {
   bool
 	AnyOption::isOptUsed( char option )
 	{
-		for( int i = 0 ; i < optchar_counter ; i++ )
-			if( optionchars[i] == option )
+		for( int i = 0 ; i < argc ; i++ )
+			if( substitute(argv[i], "-", "") == &option )
 				return true;
     
 		return false;
