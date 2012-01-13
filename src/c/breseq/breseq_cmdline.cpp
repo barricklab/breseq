@@ -1432,6 +1432,7 @@ int do_runfile(int argc, char *argv[])
           "launcher.sge";
 
     ofstream lout(lname.c_str());
+    fprintf(lout, "#!/bin/csh\n");
     fprintf(lout, "#$ -N %s\n", pretty_exe.c_str());
     fprintf(lout, "#$ -pe %uway %u\n", tasks, nodes);
     fprintf(lout, "#$ -q normal\n");
