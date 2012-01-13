@@ -144,6 +144,12 @@ namespace breseq {
 		bool  getFlag( const string option );
 		string* getValue( char _optchar );
 		bool  getFlag( char _optchar );
+    
+    /*
+     * is this option used in the command line at all
+     */
+		bool  isOptUsed( const string option );
+    bool  isOptUsed( char _optchar );
 
 		/*
 		 * Print Usage
