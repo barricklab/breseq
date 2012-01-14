@@ -924,6 +924,7 @@ class cString : public string
     template<class T> cString(const T &val) : string(val) {}
     cString(const char *format,...);
 
+    bool   starts_with(const string &prefix) const;
     bool   ends_with(const string &suffix) const;
     string remove_ending(const string &suffix);
     string trim_ends_of(const char val);
@@ -948,6 +949,15 @@ inline cString::cString(const char *format,...)
 
   *this = buffer;
   assert(this->size());
+}
+
+inline bool cString::starts_with(const string &prefix) const
+{
+  if (this->find(prefix) == 0) {
+    return true;
+  } else {
+    return false;
+  }
 }
 
 inline bool cString::ends_with(const string &suffix) const
