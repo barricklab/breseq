@@ -1268,6 +1268,10 @@ void cReferenceSequences::ReadGenBankFileSequenceFeatures(std::ifstream& in, cAn
       //if (it->SafeGet("mobile_element") == "") continue;
 
       feature["name"] = "repeat_region";
+      
+      // Give the repeat region a name if NOTHING else can be found
+      if (feature.SafeGet("note") != "")
+        feature["name"] = feature.SafeGet("note");
 
       // E. coli case:
       if (feature.SafeGet("mobile_element") != "")
@@ -1293,10 +1297,6 @@ void cReferenceSequences::ReadGenBankFileSequenceFeatures(std::ifstream& in, cAn
       // S. cerevisiae case
       if (feature.SafeGet("rpt_family") != "")
         feature["name"] = feature["rpt_family"];
-      
-      // Give the repeat region a name if NOTHING else can be found
-      if (feature.SafeGet("note") != "")
-        feature["name"] = feature.SafeGet("note");
 
       //std::cerr << (*it).SafeGet("mobile_element") << " " << (*it).SafeGet("name") << std::endl;
 
