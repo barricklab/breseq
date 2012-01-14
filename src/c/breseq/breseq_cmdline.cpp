@@ -1282,7 +1282,7 @@ int do_runfile(int argc, char *argv[])
   options("log_dir,l",        "Directory for error log file that captures the executable's stdout and sterr.", "04_Logs");
   options("runfile,r",        "Name of the run file to be output.", "commands");
   options("dcamp",            "Alter pipeline's output path to include executable name",TAKES_NO_ARGUMENT);
-  options("lonestar",         "Create launcher.sge file for lonestar, take email address as argument.");
+  options("tacc",             "Create launcher.sge file for Lonestar or Ranger, can take email address as an argument.");
   options.addUsage("\n");
   options.addUsage("***Reminder: Create the error log directory before running TACC job.");
   options.addUsage("\n");
@@ -1416,15 +1416,22 @@ int do_runfile(int argc, char *argv[])
 
   //! Step: Create launcher.sge.
   /*TODO:
-    1) Figure out way to determine if user is on Ranger or Lonestar and assign
-    appropriate tasks per node. Then change lonestar command to tacc.
-    2) Approximate total runtime. (based on cmd line with largest files?)
+    1) Approximate total runtime. (based on cmd line with largest files?)
     */
-  if (options.count("lonestar") || options.count("dcamp")) {
+  if (options.isOptUsed("tacc") || options.count("dcamp")) {
     /*Note: For lonestar we are under the current assumption that a 4way 12 will
       run 3 breseq jobs. On Ranger a 16way 16 will run 16 breseq jobs.*/
-    const size_t tasks = 4;
-    const size_t nodes = ceil(n_cmds / 3) * 12;
+    /*TODO Sloppy:
+        Ranger:   '/share/home/$NUM/$USER'
+        Lonestar: '/home1/$NUM/$USER'
+    */
+    size_t tasks = 0, nodes = 0;
+    enum { RANGER = true, LONESTAR = false };
+    switch (cString(SYSTEM_CAPTURE("echo $HOME")).starts_with("/share")) {
+      case RANGER:   tasks = 16, nodes = ceil(n_cmds / 16) * 16; break;
+      case LONESTAR: tasks = 4, nodes = ceil(n_cmds / 3) * 12; break;
+    }
+
     const string &pwd = SYSTEM_CAPTURE("pwd", true);
 
     const string &lname = options.count("dcamp") ?
@@ -1440,7 +1447,11 @@ int do_runfile(int argc, char *argv[])
     fprintf(lout, "#$ -l h_rt=14:00:00\n");
     fprintf(lout, "#$ -V\n");
     fprintf(lout, "#$ -cwd\n");
-    fprintf(lout, "#$ -M %s\n", options["lonestar"].c_str());
+
+    if (options.count("lonestar")) {
+      fprintf(lout, "#$ -M %s\n", options["lonestar"].c_str());
+    }
+
     fprintf(lout, "#$ -m be\n");
     fprintf(lout, "#$ -A breseq\n");
     fprintf(lout, "module load launcher\n");
