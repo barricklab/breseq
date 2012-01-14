@@ -1426,11 +1426,19 @@ int do_runfile(int argc, char *argv[])
         Lonestar: '/home1/$NUM/$USER'
     */
     size_t tasks = 0, nodes = 0;
-    enum { RANGER = true, LONESTAR = false };
-    switch (cString(SYSTEM_CAPTURE("echo $HOME")).starts_with("/share")) {
-      case RANGER:   tasks = 16, nodes = ceil(n_cmds / 16) * 16; break;
-      case LONESTAR: tasks = 4, nodes = ceil(n_cmds / 3) * 12; break;
+    const cString &home_path = SYSTEM_CAPTURE("echo $HOME");
+    // RANGER
+    if (home_path.starts_with("/share")) {
+      tasks = 16, nodes = ceil(n_cmds / 16) * 16;
     }
+    // Default to LONESTAR
+    else {
+      if (!home_path.starts_with("/home1/")) {
+        WARN("TACC system not determined, defaulting to Lonestar.");
+      }
+      tasks = 4, nodes = ceil(n_cmds / 3) * 12;
+    }
+    assert(tasks || nodes);
 
     const string &pwd = SYSTEM_CAPTURE("pwd", true);
 
@@ -1439,6 +1447,7 @@ int do_runfile(int argc, char *argv[])
           "launcher.sge";
 
     ofstream lout(lname.c_str());
+    // #$ Parameters.
     fprintf(lout, "#!/bin/csh\n");
     fprintf(lout, "#$ -N %s\n", pretty_exe.c_str());
     fprintf(lout, "#$ -pe %uway %u\n", tasks, nodes);
@@ -1448,16 +1457,25 @@ int do_runfile(int argc, char *argv[])
     fprintf(lout, "#$ -V\n");
     fprintf(lout, "#$ -cwd\n");
 
-    if (options.count("lonestar")) {
+    if (options.count("tacc")) {
       fprintf(lout, "#$ -M %s\n", options["lonestar"].c_str());
     }
 
     fprintf(lout, "#$ -m be\n");
     fprintf(lout, "#$ -A breseq\n");
+    fprintf(lout, "\n");
+
+    // Set environmental variables.
     fprintf(lout, "module load launcher\n");
     fprintf(lout, "setenv EXECUTABLE     $TACC_LAUNCHER_DIR/init_launcher\n");
     fprintf(lout, "setenv CONTROL_FILE   %s\n", rname.c_str());
     fprintf(lout, "setenv WORKDIR        %s\n", pwd.c_str());
+    fprintf(lout, "\n");
+
+    // Job submission.
+    fprintf(lout, "cd $WORKDIR/\n");
+    fprintf(lout, "$TACC_LAUNCHER_DIR/paramrun $EXECUTABLE $CONTROL_FILE\n");
+
     lout.close();
     SYSTEM("chmod +x " + lname, true);
   }
