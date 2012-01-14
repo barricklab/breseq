@@ -1220,7 +1220,7 @@ bool cGenomeDiff::is_valid(cReferenceSequences& ref_seq_info, bool verbose)
 }
   
 //! Call to generate random mutations.
-void cGenomeDiff::random_mutations(const string& exclusion_file, const string& type, uint32_t number, uint32_t read_length, const cAnnotatedSequence& ref_seq_info, bool verbose)
+void cGenomeDiff::random_mutations(const string& exclusion_file, const string& type, uint32_t number, uint32_t read_length, cAnnotatedSequence& ref_seq_info, bool verbose)
 {
   // If we have an exclusion_file to load, we will save
   // the info in this map.
@@ -1564,14 +1564,18 @@ void cGenomeDiff::random_mutations(const string& exclusion_file, const string& t
       
     case MOB :
     {      
-      ERROR("THE BRESEQENSTEIN MUTATION GENERATOR DOES NOT YET HANDLE MOBS\nESPECIALLY IF THEY HAVE TORCHES AND PITCHFORKS");
+      //ERROR("THE BRESEQENSTEIN MUTATION GENERATOR DOES NOT YET HANDLE MOBS\nESPECIALLY IF THEY HAVE TORCHES AND PITCHFORKS");
       
-      uint32_t opt_1 = 1;
-      uint32_t opt_2 = 1;
+      uint32_t opt_1 = 0;
+      uint32_t opt_2 = 0;
+      uint32_t repeats = 0;
       set<uint32_t> used_positions;
       map<uint32_t,string> ins_elements;
-      for (cSequenceFeature::iterator it_rep = ref_seq_info.m_repeats.list::begin(); it_rep != ref_seq_info.m_repeats.end(); ++it_rep)
+      
+      for (cSequenceFeatureList::iterator it_rep = ref_seq_info.m_repeats.begin(); it_rep != ref_seq_info.m_repeats.end(); it_rep++)
       {
+        ins_elements[repeats] = (*it_rep)->SafeGet("name");
+        repeats++;
       }
       
       switch(type_options.size())
@@ -1603,7 +1607,9 @@ void cGenomeDiff::random_mutations(const string& exclusion_file, const string& t
         uint32_t rep_size = (i % (opt_2 - (opt_1-1))) + opt_1;
         if(opt_2 - opt_1 >= number)  {
           rep_size = (rand() % number) + opt_1;  }
+        uint32_t ins_fam = rand() % (ins_elements.size());
         uint32_t rand_pos = (rand() % (ref_seq_info.get_sequence_size())) + 1;
+        int32_t new_strand = ((rand() % 2) > 0) ? 1 : -1;
         bool bRedo = false;
         
         for(map<uint32_t, uint32_t>::iterator j = match_list.begin(); j != match_list.end(); j++)
@@ -1632,13 +1638,13 @@ void cGenomeDiff::random_mutations(const string& exclusion_file, const string& t
         new_item._type = mut_type;
         new_item["seq_id"] = ref_seq_info.m_seq_id;
         new_item["position"] = to_string(rand_pos);
+        new_item["repeat_name"] = ins_elements[ins_fam];        
+        new_item["strand"] = to_string(new_strand);        
+        new_item["duplication_size"] = to_string(rep_size);
         
         uAttempts = 0;
         
         new_item.normalize_to_sequence(ref_seq_info);
-        if((from_string<uint32_t>(new_item["position"]) != rand_pos) || new_item["new_seq"] != ins_seq)  {
-          i--;
-          continue;  }        
         
         used_positions.insert(rand_pos);
         
