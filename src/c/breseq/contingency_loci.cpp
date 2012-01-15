@@ -30,21 +30,23 @@ namespace breseq {
 void analyze_contingency_loci(
                               const string& bam,
                               const string& fasta,
+                              const vector<string>& ref_seq_file_names,
                               const string& output,
                               const string& loci,
                               int strict
                               ) {
   
-  // do the mutation identification:
-  cReferenceSequences ref_seqs;
-  ref_seqs.ReadFASTA(fasta);
+  cout << "Loading reference sequences..." << endl;
   
-  cout << "Finding repeats...\n";
+  cReferenceSequences ref_seq_info;
+  ref_seq_info.LoadFiles(ref_seq_file_names);
+
+  cout << "Finding repeats..." << endl;
   homopolymer_repeat_list hr;
-  identify_homopolymer_repeats(hr, ref_seqs);  
+  identify_homopolymer_repeats(hr, ref_seq_info);  
   contingency_loci_pileup clp(bam,fasta, loci, strict);
   
-  cout << "Analyzing alignments...\n";
+  cout << "Analyzing alignments..." << endl;
   // For each repeat
   for( size_t i=0; i<hr.size(); i++ ){
     
@@ -60,7 +62,7 @@ void analyze_contingency_loci(
   }
       
   // Output the histograms
-  clp.printStats( output );
+  clp.printStats( output, ref_seq_info );
   
 }
 
@@ -80,7 +82,7 @@ void identify_homopolymer_repeats(homopolymer_repeat_list& hr, const cReferenceS
         rnumber++;
       }
       else{
-        if( rnumber >= 8 ){
+        if( (base != 'N') && (rnumber >= 8) ){
           homopolymer_repeat r;
           r.seq_id = ref_seqs[i].m_fasta_sequence.m_name;
           r.start = j+1-rnumber;
@@ -370,94 +372,90 @@ void contingency_loci_pileup::fetch_callback(const alignment_wrapper& a) {
   }
 }
 
-void contingency_loci_pileup::printStats(const string& output){
+void contingency_loci_pileup::printStats(const string& output, cReferenceSequences& ref_seq_info)
+{
   ofstream out(output.c_str());
   ASSERT(!out.fail(), "Could not open output file: " + output); 
-  
-  int mindiff = 0;
-  int maxdiff = 0;
-  
-  /*
-   //Finds the max and min diff with respect to the length of the original repeat
-   for( size_t i=0; i<repeats.size(); i++ ){
-   vector<string> bounds = split( split( repeats[i].region, ":" )[1], "-" );
-   int length = atoi( bounds[1].c_str() ) - atoi( bounds[0].c_str() );
-   //out << repeats[i].region << ":" << length << " ";
-   //cout << length << "\n";
-   
-   int diff = (repeats[i].freqs.size()+1)-length;
-   if( diff > maxdiff ){
-   maxdiff = diff;
-   }
-   
-   //Finds the greatest del
-   for( size_t j=0; j<repeats[i].freqs.size(); j++ ){
-   if( repeats[i].freqs[j] != 0 ){
-   if( static_cast<int32_t>(j)-length < mindiff ){
-   mindiff = j-length;
-   }
-   break;
-   }
-   }
-   
-   }
-   
-   //cout << mindiff << ":" << maxdiff << "\n";
-   //getchar();
-   
-   for( size_t i=0; i<repeats.size(); i++ ){
-   vector<string> bounds = split( split( repeats[i].region, ":" )[1], "-" );
-   int length = atoi( bounds[1].c_str() ) - atoi( bounds[0].c_str() );
-   for( size_t j=mindiff+length; j<repeats[i].freqs.size(); j++ ){
-   out << repeats[i].freqs[j] << " ";
-   }
-   for( size_t j=0; j<length+maxdiff-repeats[i].freqs.size(); j++ ){
-   out << 0 << " ";
-   }
-   out << bounds[0];
-   out << "\n";
-   
-   }
-   out << mindiff << " " << maxdiff;
-   
-   */
+
+  //Finds the maximum encountered
   size_t maxsize = 0;
-  //Finds the max size of freqs
   for( size_t i=0; i<repeats.size(); i++ ){
     if( maxsize < repeats[i].freqs.size() ){
       maxsize = repeats[i].freqs.size();
     }
   }
   
-  for( size_t i=0; i<repeats.size(); i++ ){
+  //
+  // Create header
+  //
+  
+  vector<string> header_list;
+  for( size_t i=1; i<=maxsize; i++ ){
+    header_list.push_back(to_string(i) + "-bp");
+  }
+  
+  // if we are in locus mode
+  if( indices.size() )
+    header_list.push_back("locus");
+    
+  header_list.push_back("seq_id");
+  header_list.push_back("start");
+  header_list.push_back("end");
+  header_list.push_back("repeat_base");
+  header_list.push_back("gene_position");
+  header_list.push_back("gene");
+  header_list.push_back("gene_product");
+  
+  out << join(header_list, "\t") << endl;
+     
+  //
+  // Line for each repeat
+  //
+  
+  for( size_t i=0; i<repeats.size(); i++ ) {
+    
+    vector<string> line_list;
+    
     vector<string> description_list = split_on_any(repeats[i].region, ":-");
-    cout << description_list[3] << endl;
-    for( size_t j=0; j<repeats[i].freqs.size(); j++ ){
-      out << repeats[i].freqs[j] << " ";
-    }
-    for( size_t j=0; j<maxsize-repeats[i].freqs.size(); j++ ){
-      out << 0 << " ";
-    }
+    
+    cout << i << " " << repeats[i].region << endl;
+    
+    // all of the base count columns
+    for( size_t j=0; j<maxsize; j++ )
+      line_list.push_back( (j<repeats[i].freqs.size()) ? to_string<uint32_t>(floor(repeats[i].freqs[j])) : "0");
     
     // Checks if it is a contingency loci. If so, prints out the name of the locus
-    bool locus = false;
-    for( size_t j=0; j<indices.size(); j++ ){
-      if( atoi( description_list[1].c_str() ) == indices[j] ){
-        locus = true;
-        out << names[j];
+    for( size_t j=0; j<indices.size(); j++ ) {
+      if( atoi( description_list[1].c_str() ) == indices[j] ) {
+        line_list.push_back(names[j]);
         break;
       }
     }
-    // If it's not, then it prints the coordinate
-    if( !locus ){
-      out << join(description_list, "\t");
-    }
-    out << "\n";
+    
+    line_list.push_back(description_list[0]);
+    line_list.push_back(description_list[1]);
+    line_list.push_back(description_list[2]);
+    line_list.push_back(description_list[3]);
+
+    
+    cDiffEntry de(SUB);
+    de[SEQ_ID] = description_list[0];
+    de[POSITION] = description_list[1];
+    de["size"] = to_string(from_string<int32_t>(description_list[2]) - from_string<int32_t>(description_list[1]) + 1);
+    de["new_seq"] = "A"; // Dummy value - not used
+    ref_seq_info.annotate_1_mutation(de, from_string<int32_t>(de[POSITION]), from_string<int32_t>(de[POSITION]) + from_string<int32_t>(de["size"]) - 1);
+    
+    line_list.push_back(de["gene_strand"] + " " + de["gene_position"]);
+    line_list.push_back(de["gene_name"]);
+    line_list.push_back(de["gene_product"]);
+
+    out << join(line_list, "\t") << endl;
   }
   out.close();
 }
 
-void contingency_loci_pileup::readIndices( vector<int>& indices, vector<string>&  names, const string& loci){
+void contingency_loci_pileup::readIndices( vector<int>& indices, vector<string>&  names, const string& loci)
+{
   
   if (loci == "") return;
   

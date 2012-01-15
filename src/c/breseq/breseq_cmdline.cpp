@@ -531,21 +531,19 @@ int do_error_count(int argc, char* argv[]) {
 int do_tabulate_contingency_loci(int argc, char* argv[]) {
 	
 	// setup and parse configuration options:
-	AnyOption options("Usage: breseq TABULATE_CL --bam <sequences.bam> --fasta <reference.fasta> --output <path> --loci <loci.txt> --strict");
+	AnyOption options("Usage: breseq TABULATE_CL --bam <sequences.bam> --fasta <reference.fasta> --reference <reference.gff> --output <path> [--loci <loci.txt> --strict]");
 	options
   ("help,h", "produce this help message", TAKES_NO_ARGUMENT)
-  ("bam,b", "bam file containing sequences to be aligned")
-  ("fasta,f", "FASTA file of reference sequence")
-  ("output,o", "output file")
-  ("loci,l", "Contingency loci coordinates" )
+  ("bam,b", "bam file containing sequences to be aligned", "data/reference.bam")
+  ("fasta,f", "FASTA file of reference sequence", "data/reference.fasta")
+  ("reference,r","reference sequence file with annotation", "data/reference.gff3")
+  ("output,o", "output file", "contingency_loci.tab")
+  ("loci,l", "Contingency loci coordinates", "")
   ("strict,s", "exclude non-perfect matches in surrounding 5 bases", TAKES_NO_ARGUMENT)
 	.processCommandArgs(argc, argv);
   
 	// make sure that the config options are good:
 	if(options.count("help")
-		 || !options.count("bam")
-		 || !options.count("fasta")
-		 || !options.count("output")
 		 ) {
 		options.printUsage();
 		return -1;
@@ -554,14 +552,12 @@ int do_tabulate_contingency_loci(int argc, char* argv[]) {
 	// attempt to calculate error calibrations:
 	try {
     
-    string loci_file = "";
-    if (options.count("loci")) loci_file = options["loci"];
-    
     analyze_contingency_loci(
                              options["bam"],
                              options["fasta"],
+                             from_string<vector<string> >(options["reference"]),
                              options["output"],
-                             loci_file,
+                             options["loci"],
                              options.count("strict")
                              );
 	} catch(...) {
@@ -571,58 +567,6 @@ int do_tabulate_contingency_loci(int argc, char* argv[]) {
 	
 	return 0;
 }
-
-
-/*! Graph Contingency Loci
- 
- Combines output of tabulate contingency loci across difference genomes, 
- and uses R to produce bar plots from this combined file
- 
- */
-int do_graph_contingency_loci(int argc, char* argv[]) {
-	
-	// setup and parse configuration options:
-	AnyOption options("Usage: breseq GRAPH_CL --bam <sequences.bam> --fasta <reference.fasta> --output <path> --loci <loci.txt> --strict");
-	options
-  ("help,h", "produce this help message", TAKES_NO_ARGUMENT)
-  ("output,o", "output file")
-  ("loci,l", "Contingency loci coordinates" )
-  ("strict,s", "exclude non-perfect matches in surrounding 5 bases", TAKES_NO_ARGUMENT)
-	.processCommandArgs(argc, argv);
-  
-	// make sure that the config options are good:
-	if(options.count("help")
-		 || !options.count("bam")
-		 || !options.count("fasta")
-		 || !options.count("output")
-		 ) {
-		options.printUsage();
-		return -1;
-	}                       
-  
-	// attempt to calculate error calibrations:
-	try {
-    
-    vector<string> v = options.getRemainingArgs();
-    
-    string loci_file = "";
-    if (options.count("loci")) loci_file = options["loci"];
-    
-    analyze_contingency_loci(
-                             options["bam"],
-                             options["fasta"],
-                             options["output"],
-                             loci_file,
-                             options.count("strict")
-                             );
-	} catch(...) {
-		// failed; 
-		return -1;
-	}
-	
-	return 0;
-}
-
 
 
 int do_identify_candidate_junctions(int argc, char* argv[]) {
@@ -2808,8 +2752,6 @@ int main(int argc, char* argv[]) {
 		return do_convert_genbank(argc_new, argv_new);
 	} else if (command == "TABULATE_CL") {
 		return do_tabulate_contingency_loci(argc_new, argv_new);
-	} else if (command == "GRAPH_CL") {
-		return do_graph_contingency_loci(argc_new, argv_new);
 	} else if (command == "ERROR_COUNT") {
 		return do_error_count(argc_new, argv_new);
 	} else if (command == "IDENTIFY_CANDIDATE_JUNCTIONS") {

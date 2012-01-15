@@ -34,6 +34,7 @@ namespace breseq {
 
 	void analyze_contingency_loci(const string& bam,
                                 const string& fasta,
+                                const vector<string>& ref_seq_file_names,
                                 const string& output,
                                 const string& loci,
                                 int strict
@@ -95,40 +96,24 @@ namespace breseq {
 		//! Called for each alignment.
 		virtual void fetch_callback(const alignment_wrapper& a);
     
-    void printStats(const string& output);
+    void printStats(const string& output, cReferenceSequences& ref_seq_info);
     
     void readIndices( vector<int>& indices, vector<string>&  names, const string& loci);
         
         
 	protected:
-        // These are used to store information for each run of analyze_contingency_locus
-        vector<repeat_stats> repeats;
-        homopolymer_repeat current_region;
-        string fastaf;
-        tam_file tf;
-        int strict;
-        
-        //const string& bamf;
-        //const string& fastaf;
-        
-        
-        //Unnecessary stuff:
-        vector<int> indices;
-        vector<string> names;
-        
-
-    // Add variables that keep track of distribution while fetch_callback is called....
-        
-        
-
+    // These are used to store information for each run of analyze_contingency_locus
+    vector<repeat_stats> repeats;
+    homopolymer_repeat current_region;
+    string fastaf;
+    tam_file tf;
+    int strict;
+    
+    vector<int> indices;
+    vector<string> names;
 	};  
     
-
-    
-    
-    //
-    
-    void writeTAM( const string& tam_file_name, const string& fasta, contingency_loci_pileup clp, alignment_list al );
+  void writeTAM( const string& tam_file_name, const string& fasta, contingency_loci_pileup clp, alignment_list al );
 
   
 } // breseq namespace

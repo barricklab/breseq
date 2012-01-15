@@ -1810,7 +1810,9 @@ void cReferenceSequences::annotate_1_mutation(cDiffEntry& mut, uint32_t start, u
     }
 
     string gene_nt_size = to_string(gene.end - gene.start + 1);
-
+    string gene_strand_char = (gene.strand == +1) ? ">" : "<"; 
+    mut["gene_strand"] = gene_strand_char;
+    
     // ...but the gene is a pseudogene or not a protein coding gene
     if (!ignore_pseudogenes && gene.pseudogene)
     {

@@ -371,7 +371,7 @@ void identify_mutations_pileup::pileup_callback(const pileup& p) {
     
 		int total_cov[3]={0,0,0}; // triple, same as above
     
-    //// BEGIN Pring per-position output file
+    //// BEGIN Print per-position output file
 		ostringstream line;
 		if (_print_per_position_file) {
       line << position << " " << insert_count << " " << ref_base_char << " " << e_value_call;
@@ -439,7 +439,9 @@ void identify_mutations_pileup::pileup_callback(const pileup& p) {
           second_best_base_coverage = this_base_coverage;
         }
       }
-
+      
+      int this_base_coverage = min(pos_info[best_base_char].unique_trimmed_cov[0], pos_info[best_base_char].unique_trimmed_cov[2]);
+      
       // Only try mixed SNP model if there is coverage for more than one base!
       if (second_best_base_coverage) {
         best_base_char = base_char_list[best_base_index];
@@ -493,9 +495,7 @@ void identify_mutations_pileup::pileup_callback(const pileup& p) {
 		if(isnan(e_value_call) || (e_value_call < -_log10_ref_length)) {
 			continue;
 		}
-    
-		//cerr << e_value_call << endl;
-		
+    		
 		//## mutation and polymorphism are exclusive predictions.
     bool mutation_predicted = !polymorphism_predicted && (best_base_char != ref_base_char);
 				
