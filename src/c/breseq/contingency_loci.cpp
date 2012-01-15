@@ -121,10 +121,10 @@ contingency_loci_pileup::contingency_loci_pileup(
 : pileup_base(bam, fasta), strict(s)
 
 {
-  cout << "Filename: " << split( bam, "." )[0].append(".tam") << "\n";
   cout << "Reading indices...\n";
   readIndices(indices, names ,loci);
   
+  //cout << "Filename: " << split( bam, "." )[0].append(".tam") << "\n";
   //tf.open_write( split( bam, "." )[0].append(".tam"), fasta );
   set_print_progress(true);
 }
@@ -400,9 +400,9 @@ void contingency_loci_pileup::printStats(const string& output, cReferenceSequenc
     de["new_seq"] = "A"; // Dummy value - not used
     ref_seq_info.annotate_1_mutation(de, from_string<int32_t>(de[POSITION]), from_string<int32_t>(de[POSITION]) + from_string<int32_t>(de["size"]) - 1);
     
-    line_list.push_back(de["gene_strand"] + " " + de["gene_position"]);
-    line_list.push_back(de["gene_name"]);
-    line_list.push_back(de["gene_product"]);
+    line_list.push_back("\"" + de["gene_strand"] + " " + de["gene_position"] + "\"");
+    line_list.push_back("\"" + de["gene_name"] + "\"");
+    line_list.push_back("\"" + de["gene_product"] + "\"");
 
     out << join(line_list, "\t") << endl;
   }
