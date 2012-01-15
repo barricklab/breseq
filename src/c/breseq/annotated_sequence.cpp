@@ -1268,6 +1268,10 @@ void cReferenceSequences::ReadGenBankFileSequenceFeatures(std::ifstream& in, cAn
       //if (it->SafeGet("mobile_element") == "") continue;
 
       feature["name"] = "repeat_region";
+      
+      // Give the repeat region a name if NOTHING else can be found
+      if (feature.SafeGet("note") != "")
+        feature["name"] = feature.SafeGet("note");
 
       // E. coli case:
       if (feature.SafeGet("mobile_element") != "")
@@ -1293,10 +1297,6 @@ void cReferenceSequences::ReadGenBankFileSequenceFeatures(std::ifstream& in, cAn
       // S. cerevisiae case
       if (feature.SafeGet("rpt_family") != "")
         feature["name"] = feature["rpt_family"];
-      
-      // Give the repeat region a name if NOTHING else can be found
-      if (feature.SafeGet("note") != "")
-        feature["name"] = feature.SafeGet("note");
 
       //std::cerr << (*it).SafeGet("mobile_element") << " " << (*it).SafeGet("name") << std::endl;
 
@@ -1491,10 +1491,10 @@ string cReferenceSequences::repeat_family_sequence(const string &repeat_name, in
   // If number of copies is not greater than 1, we will use the most common size instead.
   if(region_pos < 0)
   {    
-    if (max_element(repeat_sequence_count.begin(), repeat_sequence_count.end(), map_comp_str_uint_second)->second > 1) {
-      region_pos = repeat_sequence_pos[max_element(repeat_sequence_count.begin(), repeat_sequence_count.end(), map_comp_str_uint_second)->first];  }
+    if (max_element(repeat_sequence_count.begin(), repeat_sequence_count.end(), map_comp_second<string, uint32_t>)->second > 1) {
+      region_pos = repeat_sequence_pos[max_element(repeat_sequence_count.begin(), repeat_sequence_count.end(), map_comp_second<string, uint32_t>)->first];  }
     else  {
-      region_pos = repeat_size_pos[max_element(repeat_size_count.begin(), repeat_size_count.end(), map_comp_uint_uint_second)->first];  }
+      region_pos = repeat_size_pos[max_element(repeat_size_count.begin(), repeat_size_count.end(), map_comp_second<uint32_t, uint32_t>)->first];  }
   }
   
   // Loop through all reference sequences

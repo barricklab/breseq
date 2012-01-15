@@ -781,6 +781,16 @@ namespace breseq {
 
 		return false;
 	}
+  
+  bool
+	AnyOption::isOptUsed( const string option )
+	{
+		for( int i = 0 ; i < argc ; i++ )
+			if( substitute(argv[i], "-", "") == option )
+				return true;
+    
+		return false;
+	}
 
 	string*
 	AnyOption::getValue( char option )
@@ -799,6 +809,16 @@ namespace breseq {
 			if( optionchars[i] == option )
 				return findFlag( optcharindex[i] );
 
+		return false;
+	}
+  
+  bool
+	AnyOption::isOptUsed( char option )
+	{
+		for( int i = 0 ; i < argc ; i++ )
+			if( substitute(argv[i], "-", "") == &option )
+				return true;
+    
 		return false;
 	}
 
