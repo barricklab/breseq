@@ -36,33 +36,36 @@ LICENSE AND COPYRIGHT
 #include <sys/types.h>
 
 // C++
-#include <algorithm>
-#include <cerrno>
-#include <cmath>
-#include <fstream>
-#include <iomanip>
-#include <iostream>
-#include <limits>
+// Containers
 #include <list>
 #include <map>
-#include <memory>
-#include <sstream>
-#include <string>
-#include <utility>
-#include <vector>
-#include <functional>
 #include <set>
+#include <vector>
+#include <string>
+// Streams
+#include <fstream>
+#include <sstream>
+#include <algorithm>
+#include <iostream>
+#include <iomanip>
+// Other
+#include <cerrno>
+#include <cmath>
+#include <limits>
+#include <memory>
+#include <utility>
+#include <functional>
 #include <iterator>
 
-// Library specific headers
-#include <bam.h>
-#include <sam.h>
-#include <faidx.h>
 
 // Breseq
 #include "libbreseq/settings.h"
 
 // Begin breseq specific --->
+// Library specific headers
+#include <bam.h>
+#include <sam.h>
+#include <faidx.h>
 
 #define _base_bam_is_A(x) (x == 0x01)
 #define _base_bam_is_C(x) (x == 0x02)
@@ -857,10 +860,8 @@ inline int32_t sprintf(string &value, const char *format,...) {
   return ret_val;
 }
 
-//! TODO Combine these into one function that uses a template
-//  Tried but couldn't get it to compile.
-inline bool map_comp_str_uint_second(const pair<string,uint32_t> i, const pair<string,uint32_t> j) { return i.second < j.second; }
-inline bool map_comp_uint_uint_second(const pair<uint32_t,uint32_t> i, const pair<uint32_t,uint32_t> j) { return i.second < j.second; }
+template <typename T, typename U>
+inline bool map_comp_second(const pair<T, U> & lhs, const pair<T, U> &rhs) { return lhs.second < rhs.second;}
 
 //! TODO refractor orginal SYSTEM_CAPTURE to be used with this?
 template<typename T> inline void SYSTEM_CAPTURE(T out_itr, string command, bool silent = false)
@@ -886,20 +887,78 @@ template<typename T> inline void SYSTEM_CAPTURE(T out_itr, string command, bool 
   pclose(fp);
 }
 
+class cKeyValuePair : public string
+{
+  public:
+    cKeyValuePair(const string &line, const char split_chr);
+
+    bool   check(void)     const;
+    string get_key(void)   const;
+    string get_value(void) const;
+
+  private:
+    char   _split_chr;
+    string _key;
+    string _value;
+};
+
+inline cKeyValuePair::cKeyValuePair(const string &line, const char split_chr)
+  : string(line)
+  , _split_chr(split_chr)
+  , _key(line.substr(0, line.find(split_chr)))
+  , _value(line.substr(line.find(split_chr) + 1))
+{}
+
+inline bool cKeyValuePair::check(void) const
+{ return count(this->begin(), this->end(), _split_chr) == 1 && _key.size() && _value.size(); }
+
+inline string cKeyValuePair::get_key() const
+{ return _key; }
+
+inline string cKeyValuePair::get_value() const
+{ return _value; }
+
 class cString : public string
 {
   public:
     template<class T> cString(const T &val) : string(val) {}
+    cString(const char *format,...);
 
-    bool ends_with(const string &suffix) const;
+    bool   starts_with(const string &prefix) const;
+    bool   ends_with(const string &suffix) const;
     string remove_ending(const string &suffix);
     string trim_ends_of(const char val);
-    bool is_key_value_pair(const char split_chr) const;
-    string get_key(const char split_chr) const;
-    string get_value(const char split_chr) const;
-    string get_basename(void) const; //Remove path.
+
+    string get_base_name(void) const;
+    string get_file_extension(void) const;
 
 };
+
+inline cString::cString(const char *format,...)
+{
+  char buffer[32000];
+
+  va_list p_args;
+
+  const size_t &size = sizeof(buffer) - 1;
+  va_start(p_args, format);
+  vsnprintf(buffer, size, format, p_args);
+  va_end(p_args);
+
+  buffer[size] = '\0';
+
+  *this = buffer;
+  assert(this->size());
+}
+
+inline bool cString::starts_with(const string &prefix) const
+{
+  if (this->find(prefix) == 0) {
+    return true;
+  } else {
+    return false;
+  }
+}
 
 inline bool cString::ends_with(const string &suffix) const
 {
@@ -924,28 +983,24 @@ inline string cString::trim_ends_of(const char val)
   return *this;
 }
 
-inline bool cString::is_key_value_pair(const char split_chr) const
-{
-  return count(this->begin(), this->end(), split_chr) == 1;
-}
-
-inline string cString::get_key(const char split_chr) const
-{
-  return this->substr(0, this->find(split_chr));
-}
-
-inline string cString::get_value(const char split_chr) const
-{
-  return this->substr(this->rfind(split_chr) + 1);
-}
-
-inline string cString::get_basename() const
+//! Returns file name and extension, removes any directory path beforehand.
+inline string cString::get_base_name() const
 {
   const size_t pos = this->rfind('/');
   if (pos == string::npos)
     return *this;
   else
     return this->substr(pos + 1);
+}
+
+inline string cString::get_file_extension() const
+{
+  const size_t n = this->rfind('.');
+  if (n != string::npos) {
+    return this->substr(n);
+  } else {
+    return "";
+  }
 }
 } // breseq
 
