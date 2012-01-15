@@ -44,10 +44,6 @@ namespace breseq {
 	
   // Structure to hold information about repeats
 	struct homopolymer_repeat {
-        /*
-		homopolymer_repeat() {
-			bzero(this,sizeof(homopolymer_repeat));
-		}*/
 		
         string    seq_id;
         uint32_t  start;
@@ -105,8 +101,7 @@ namespace breseq {
     // These are used to store information for each run of analyze_contingency_locus
     vector<repeat_stats> repeats;
     homopolymer_repeat current_region;
-    string fastaf;
-    tam_file tf;
+    //tam_file tf;
     int strict;
     
     vector<int> indices;
