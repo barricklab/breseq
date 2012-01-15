@@ -380,7 +380,7 @@ void contingency_loci_pileup::printStats(const string& output, cReferenceSequenc
       line_list.push_back( (j<repeats[i].freqs.size()) ? to_string<int32_t>(static_cast<int32_t>(repeats[i].freqs[j])) : "0");
     
     // Checks if it is a contingency loci. If so, prints out the name of the locus
-    for( size_t j=0; j<indices.size(); j++ ) {
+    for( size_t j=1; j<=indices.size(); j++ ) {
       if( atoi( description_list[1].c_str() ) == indices[j] ) {
         line_list.push_back(names[j]);
         break;
