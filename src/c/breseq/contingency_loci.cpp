@@ -407,8 +407,8 @@ void contingency_loci_pileup::printStats(const string& output, cReferenceSequenc
   //
   
   vector<string> header_list;
-  for( size_t i=0; i<maxsize; i++ ){
-    header_list.push_back(to_string(i+1) + "-bp");
+  for( size_t j=1; j<maxsize; j++ ) {
+    header_list.push_back(to_string(j) + "-bp");
   }
   
   // if we are in locus mode
