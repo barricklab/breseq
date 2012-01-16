@@ -167,17 +167,10 @@ void contingency_loci_pileup::analyze_contingency_locus(const string& region) {
   //printf( "Freqs.size(): %i\n", repeats.back().freqs.size() );
   for( size_t i=0; i<repeats.back().freqs.size(); i++ ){
     //printf( "%f ", repeats.back().freqs[i] );
-    if( histogram.size() < static_cast<size_t>(repeats.back().freqs[i]+1) ){
-      histogram.resize( static_cast<size_t>(repeats.back().freqs[i]+1) );
-      histogram[ repeats.back().freqs[i] ] = 1;
-      count++;
+    if( histogram.size() < static_cast<size_t>(repeats.back().freqs[i])+1 ){
+      histogram.resize( static_cast<size_t>(repeats.back().freqs[i])+1 );
     }
-    
-    else{
-      //printf( "%f ", repeats.back().freqs[i] );
-      histogram[ int(repeats.back().freqs[i]) ]++;
-      count++;
-    }
+    histogram[ int(repeats.back().freqs[i]) ]++;
   }
   //Normalizes it
   /*
@@ -394,128 +387,6 @@ void contingency_loci_pileup::fetch_callback(const alignment_wrapper& a) {
     }
   }
     
-//
-//  string aligned_ref;
-//  string aligned_read;
-//  vector<uint32_t> ref_pos_1_list;
-//  uint32_t on_ref_pos_1 = a.reference_start_1();
-//  uint32_t on_read_pos_1 = 1;
-//  for( size_t i=0; i<cigar_pair.size(); i++ ) {
-//    char op = cigar_pair[i].first;
-//    uint16_t len = cigar_pair[i].second;
-//    
-//    if( op == 'S' ){
-//    
-//      for (uint32_t j=0; j<len; j++) {
-//        on_read_pos_1 += 1;
-//      }
-//      
-//    } else if( op == 'M' ) {
-//      
-//      for (uint32_t j=0; j<len; j++) {
-//        ref_pos_1_list.push_back(on_ref_pos_1);
-//        aligned_ref += ref_sequence[on_ref_pos_1-1];
-//        aligned_read += read_sequence[on_read_pos_1-1];
-//        on_read_pos_1 += 1;
-//        on_ref_pos_1 += 1;
-//      }
-//
-//    }
-//    
-//    // insertion wrt ref
-//    else if( op == 'I' ) {
-//      
-//      for (uint32_t j=0; j<len; j++) {
-//        ref_pos_1_list.push_back(0);
-//        aligned_ref += ".";
-//        aligned_read += read_sequence[on_read_pos_1-1];
-//        on_read_pos_1 += 1;
-//      }
-//      
-//    }
-//    
-//    // deletion wrt ref
-//    else if( cigar_pair[i].first == 'D' ) {
-//      
-//      for (uint32_t j=0; j<len; j++) {
-//        ref_pos_1_list.push_back(on_ref_pos_1);
-//        aligned_ref += ref_sequence[on_ref_pos_1-1];
-//        aligned_read += ".";
-//        on_ref_pos_1 += 1;
-//      }
-//      
-//    }
-//    else
-//    {
-//      ERROR("Unknown CIGAR operation.");
-//    }
-//      
-//  }
-//
-//  // Now we check the guards
-//  bool passed = true;
-//  uint32_t this_repeat_length = 0;
-//  
-//  int32_t start_repeat_index_0 = -1;
-//  int32_t end_repeat_index_0 = -1;
-//  
-//  // 1) Get the length of the repeat and make sure it is all the repeat nucleotide
-//  bool finished_repeat = false;
-//  bool started_repeat = false;
-//  for(uint32_t i=0; i< ref_pos_1_list.size(); i++) {
-//    
-//    if (!started_repeat && (ref_pos_1_list[i] >= current_region.start)) {
-//      started_repeat = true;
-//      start_repeat_index_0 = i;
-//    }
-//    if (started_repeat && !finished_repeat && (ref_pos_1_list[i] > current_region.start + current_region.length - 1)) {
-//      finished_repeat = true;
-//      end_repeat_index_0 = i-1;
-//    }
-//     
-//    if (started_repeat && !finished_repeat) {
-//      this_repeat_length++;
-//      if (aligned_read[i] != current_region.base) passed = false;
-//    }
-//  }
-//  
-//  if (!finished_repeat) end_repeat_index_0 = ref_pos_1_list.size()-1;
-//  
-//  // 2) make sure N bases before the repeat match exactly
-//  
-//  int32_t i = start_repeat_index_0-1;
-//  while ( i>=0 && (aligned_read[i] == aligned_ref[i]) ) i--;
-//  int32_t matched_before=start_repeat_index_0 - i - 1;
-//  passed = passed && (matched_before >= 5);
-//  
-//  // 3) make sure the N bases after the repeat match exactly
-//
-//  i = end_repeat_index_0+1;
-//  while ( i < static_cast<int32_t>(ref_pos_1_list.size()) && (aligned_read[i] == aligned_ref[i]) ) i++;
-//  int32_t matched_after = i - end_repeat_index_0 - 1;
-//  passed = passed && (matched_after >= 5);
-// 
-//  /*
-//  cerr << start_repeat_index_0 << " " << end_repeat_index_0 << endl;
-//  cerr << matched_before << " " << matched_after << endl;
-//  cerr << aligned_ref << endl;
-//  cerr << aligned_read << endl;
-//  
-//  if (passed)
-//    cerr << " passed " << this_repeat_length << endl;
-//  */
-//  
-//  
-//  if (passed)
-//    repeats.back().freqs.push_back(this_repeat_length);
-//  
-//  /* OLD DEBUG CODE
-//  alignment_list as;
-//  bam_alignment* b = new bam_alignment( a  );
-//  counted_ptr<bam_alignment> bp(b);
-//  as.push_back(bp);
-//  tf.write_alignments( 1, as, NULL );
-//  */
 }
 
 void contingency_loci_pileup::printStats(const string& output, cReferenceSequences& ref_seq_info)
@@ -536,8 +407,8 @@ void contingency_loci_pileup::printStats(const string& output, cReferenceSequenc
   //
   
   vector<string> header_list;
-  for( size_t i=1; i<=maxsize; i++ ){
-    header_list.push_back(to_string(i) + "-bp");
+  for( size_t i=0; i<maxsize; i++ ){
+    header_list.push_back(to_string(i+1) + "-bp");
   }
   
   // if we are in locus mode
@@ -567,7 +438,7 @@ void contingency_loci_pileup::printStats(const string& output, cReferenceSequenc
     cout << i << " " << repeats[i].region << endl;
     
     // all of the base count columns
-    for( size_t j=0; j<maxsize; j++ )
+    for( size_t j=1; j<maxsize; j++ )
       line_list.push_back( (j<repeats[i].freqs.size()) ? to_string<int32_t>(static_cast<int32_t>(repeats[i].freqs[j])) : "0");
     
     // Checks if it is a contingency loci. If so, prints out the name of the locus
