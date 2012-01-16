@@ -132,7 +132,10 @@ contingency_loci_pileup::contingency_loci_pileup(
 // The string "region" must have fields separated by ':', where the first field is the name of the genome, the second field is the range of coordinates spanned by the region, and the third field is the base that is repeated. EG: "NC_012660:456-466:T"
 void contingency_loci_pileup::analyze_contingency_locus(const string& region) {
   
+  //cout << "========================" << endl;
   //cout << region << "\n";
+  //cout << "========================" << endl;
+
   vector<string> r = split( region, ":");
   vector<string> coords = split( r[1], "-" );
   
@@ -190,6 +193,7 @@ void contingency_loci_pileup::analyze_contingency_locus(const string& region) {
  */ 
 void contingency_loci_pileup::fetch_callback(const alignment_wrapper& a) {
   
+  bool verbose = false;
   vector<pair<char,uint16_t> > cigar_pair = a.cigar_pair_array();
   int dist_to_first_match = 0;
   
@@ -200,131 +204,318 @@ void contingency_loci_pileup::fetch_callback(const alignment_wrapper& a) {
 
   // unwrap the whole alignment into a couple of strings with a vector of the reference positions
   // this code is very much like alignment_output
+
   
   string read_sequence = a.read_char_sequence();
+  int32_t read_length = a.read_length();
+  
   const char* ref_sequence = get_refseq(a.reference_target_id());
+  int32_t ref_length = target_length(a.reference_target_id());
 
-  string aligned_ref;
-  string aligned_read;
-  vector<uint32_t> ref_pos_1_list;
-  uint32_t on_ref_pos_1 = a.reference_start_1();
-  uint32_t on_read_pos_1 = 1;
-  for( size_t i=0; i<cigar_pair.size(); i++ ) {
-    char op = cigar_pair[i].first;
-    uint16_t len = cigar_pair[i].second;
+  // decide which side is better anchored with longer match
+  uint32_t u_ref_start_1, u_ref_end_1;
+  a.reference_bounds_1(u_ref_start_1, u_ref_end_1);
+  int32_t ref_start_1 = static_cast<int32_t>(u_ref_start_1);
+  int32_t ref_end_1 = static_cast<int32_t>(u_ref_end_1);
+  
+  int32_t homopolymer_start_1 = current_region.start;
+  int32_t homopolymer_end_1 = current_region.start + current_region.length -1;
+  
+  //if (a.read_name() == "1:1841572")
+  //  cout << "test";
+  
+  // there is more length at the start of the read or at the end?
+  if ( homopolymer_start_1 - ref_start_1 > ref_end_1 - homopolymer_end_1 )
+  {
     
-    if( op == 'S' ){
+    int32_t on_ref_pos_1 = a.reference_start_1();
+    int32_t on_read_pos_1 = 1;
     
-      for (uint32_t j=0; j<len; j++) {
-        on_read_pos_1 += 1;
+    // First we parse through to the part of the read at the left boundary of the repeat
+    for( size_t i=0; i<cigar_pair.size(); i++ ) {
+      char op = cigar_pair[i].first;
+      uint16_t len = cigar_pair[i].second;
+      
+      if( op == 'S' )
+        on_read_pos_1 += len;
+    
+      else if( op == 'M' ) {
+        on_read_pos_1 += len;
+        on_ref_pos_1 += len;  
       }
       
-    } else if( op == 'M' ) {
+      // insertion wrt ref
+      else if( op == 'I' ) 
+        on_read_pos_1 += len;
       
-      for (uint32_t j=0; j<len; j++) {
-        ref_pos_1_list.push_back(on_ref_pos_1);
-        aligned_ref += ref_sequence[on_ref_pos_1-1];
-        aligned_read += read_sequence[on_read_pos_1-1];
-        on_read_pos_1 += 1;
-        on_ref_pos_1 += 1;
+      // deletion wrt ref
+      else if( op == 'D' )
+        on_ref_pos_1 += len;        
+      else
+        ERROR("Unknown CIGAR operation."); 
+      
+      if (on_ref_pos_1 >= homopolymer_start_1) 
+      {
+        // back up to right position
+        on_read_pos_1 -= on_ref_pos_1 - homopolymer_start_1;
+        on_ref_pos_1 = homopolymer_start_1;        
+        break;
       }
-
     }
     
-    // insertion wrt ref
-    else if( op == 'I' ) {
-      
-      for (uint32_t j=0; j<len; j++) {
-        ref_pos_1_list.push_back(0);
-        aligned_ref += ".";
-        aligned_read += read_sequence[on_read_pos_1-1];
-        on_read_pos_1 += 1;
-      }
-      
-    }
+    if (verbose) cout << a.read_name() << endl;
     
-    // deletion wrt ref
-    else if( cigar_pair[i].first == 'D' ) {
-      
-      for (uint32_t j=0; j<len; j++) {
-        ref_pos_1_list.push_back(on_ref_pos_1);
-        aligned_ref += ref_sequence[on_ref_pos_1-1];
-        aligned_read += ".";
-        on_ref_pos_1 += 1;
-      }
-      
-    }
-    else
-    {
-      ERROR("Unknown CIGAR operation.");
-    }
-      
-  }
-
-  // Now we check the guards
-  bool passed = true;
-  uint32_t this_repeat_length = 0;
-  
-  int32_t start_repeat_index_0 = -1;
-  int32_t end_repeat_index_0 = -1;
-  
-  // 1) Get the length of the repeat and make sure it is all the repeat nucleotide
-  bool finished_repeat = false;
-  bool started_repeat = false;
-  for(uint32_t i=0; i< ref_pos_1_list.size(); i++) {
+    // Now find the length of the homopolymer repeat
+    int32_t on_read_check_i = on_read_pos_1;
+    int32_t on_ref_check_i = on_ref_pos_1;
+    int32_t homopolymer_length = 0;
     
-    if (!started_repeat && (ref_pos_1_list[i] >= current_region.start)) {
-      started_repeat = true;
-      start_repeat_index_0 = i;
+    if (verbose) cout << on_read_check_i << " " << on_ref_check_i << endl;
+    if (verbose) cout << read_sequence[on_read_check_i-1] << endl;
+    
+    while( (on_read_check_i < static_cast<int32_t>(read_sequence.size())) 
+          && (read_sequence[on_read_check_i-1] == current_region.base) ) {
+      homopolymer_length++;
+      on_read_check_i++;
     }
-    if (started_repeat && !finished_repeat && (ref_pos_1_list[i] > current_region.start + current_region.length - 1)) {
-      finished_repeat = true;
-      end_repeat_index_0 = i-1;
-    }
-     
-    if (started_repeat && !finished_repeat) {
-      this_repeat_length++;
-      if (aligned_read[i] != current_region.base) passed = false;
-    }
-  }
-  
-  if (!finished_repeat) end_repeat_index_0 = ref_pos_1_list.size()-1;
-  
-  // 2) make sure N bases before the repeat match exactly
-  
-  int32_t i = start_repeat_index_0-1;
-  while ( i>=0 && (aligned_read[i] == aligned_ref[i]) ) i--;
-  int32_t matched_before=start_repeat_index_0 - i - 1;
-  passed = passed && (matched_before >= 5);
-  
-  // 3) make sure the N bases after the repeat match exactly
-
-  i = end_repeat_index_0+1;
-  while ( i < static_cast<int32_t>(ref_pos_1_list.size()) && (aligned_read[i] == aligned_ref[i]) ) i++;
-  int32_t matched_after = i - end_repeat_index_0 - 1;
-  passed = passed && (matched_after >= 5);
  
-  /*
-  cerr << start_repeat_index_0 << " " << end_repeat_index_0 << endl;
-  cerr << matched_before << " " << matched_after << endl;
-  cerr << aligned_ref << endl;
-  cerr << aligned_read << endl;
-  
-  if (passed)
-    cerr << " passed " << this_repeat_length << endl;
-  */
-  
-  
-  if (passed)
-    repeats.back().freqs.push_back(this_repeat_length);
-  
-  /* OLD DEBUG CODE
-  alignment_list as;
-  bam_alignment* b = new bam_alignment( a  );
-  counted_ptr<bam_alignment> bp(b);
-  as.push_back(bp);
-  tf.write_alignments( 1, as, NULL );
-  */
+    while( (on_ref_check_i <= ref_length)
+          && (ref_sequence[on_ref_check_i-1] == current_region.base) ) {
+      on_ref_check_i++;
+    }
+
+    int32_t matched_right = 0;
+    while( (on_ref_check_i <= ref_length) && (on_read_check_i <= read_length) 
+          && (read_sequence[on_read_check_i-1] == ref_sequence[on_ref_check_i-1]) ) {
+      matched_right++;
+      on_read_check_i++;
+      on_ref_check_i++;
+    }
+    
+    on_read_check_i = on_read_pos_1-1;
+    on_ref_check_i = on_ref_pos_1-1;
+    
+    int32_t matched_left = 0;
+    while( (on_ref_check_i > 0) && (on_read_check_i > 0) 
+          && (read_sequence[on_read_check_i-1] == ref_sequence[on_ref_check_i-1]) ) {
+      matched_left++;
+      on_read_check_i--;
+      on_ref_check_i--;
+    }
+    
+    if (verbose) cout << matched_left << "|" << homopolymer_length << "|" << matched_right << endl;
+    
+    if ((matched_left >= 5) && (matched_right >= 5)) {
+      if (verbose) cout << "passed" << endl;
+      repeats.back().freqs.push_back(homopolymer_length);
+    }
+  } else {
+    
+    int32_t on_ref_pos_1 = a.reference_end_1();
+    int32_t on_read_pos_1 = a.read_length();
+    
+    // First we parse through to the part of the read at the left boundary of the repeat
+    for(int32_t i=cigar_pair.size()-1; i>=0; i-- ) {
+      char op = cigar_pair[i].first;
+      uint16_t len = cigar_pair[i].second;
+      
+      if( op == 'S' )
+        on_read_pos_1 -= len;
+      
+      else if( op == 'M' ) {
+        on_read_pos_1 -= len;
+        on_ref_pos_1 -= len;  
+      }
+      
+      // insertion wrt ref
+      else if( op == 'I' ) 
+        on_read_pos_1 -= len;
+      
+      // deletion wrt ref
+      else if( op == 'D' )
+        on_ref_pos_1 -= len;        
+      else
+        ERROR("Unknown CIGAR operation."); 
+      
+      if (on_ref_pos_1 <= homopolymer_end_1) 
+      {
+        // back up to right position
+        on_read_pos_1 += homopolymer_end_1 - on_ref_pos_1;
+        on_ref_pos_1 = homopolymer_end_1;        
+        break;
+      }
+    }
+    
+    if (verbose) cout << a.read_name() << endl;
+    
+    // Now find the length of the homopolymer repeat
+    int32_t on_read_check_i = on_read_pos_1;
+    int32_t on_ref_check_i = on_ref_pos_1;
+    int32_t homopolymer_length = 0;
+    
+    if (verbose) cout << on_read_check_i << " " << on_ref_check_i << endl;
+    if (verbose) cout << read_sequence[on_read_check_i-1] << endl;
+    
+    while( (on_read_check_i > 0) 
+          && (read_sequence[on_read_check_i-1] == current_region.base) ) {
+      homopolymer_length++;
+      on_read_check_i--;
+    }
+    
+    while( (on_ref_check_i > 0)
+          && (ref_sequence[on_ref_check_i-1] == current_region.base) ) {
+      on_ref_check_i--;
+    }
+    
+    uint32_t matched_left = 0;
+    while( (on_ref_check_i > 0) && (on_read_check_i > 0) 
+          && (read_sequence[on_read_check_i-1] == ref_sequence[on_ref_check_i-1]) ) {
+      matched_left++;
+      on_read_check_i--;
+      on_ref_check_i--;
+    }
+    
+    on_read_check_i = on_read_pos_1+1;
+    on_ref_check_i = on_ref_pos_1+1;
+    
+    uint32_t matched_right = 0;
+    while( (on_ref_check_i <= ref_length) && (on_read_check_i <= read_length) 
+          && (read_sequence[on_read_check_i-1] == ref_sequence[on_ref_check_i-1]) ) {
+      matched_right++;
+      on_read_check_i++;
+      on_ref_check_i++;
+    }
+    
+    if (verbose) cout << "rev|" << matched_left << "|" << homopolymer_length << "|" << matched_right << endl;
+    
+    if ((matched_left >= 5) && (matched_right >= 5)) {
+      if (verbose) cout << "passed" << endl;
+      repeats.back().freqs.push_back(homopolymer_length);
+    }
+  }
+    
+//
+//  string aligned_ref;
+//  string aligned_read;
+//  vector<uint32_t> ref_pos_1_list;
+//  uint32_t on_ref_pos_1 = a.reference_start_1();
+//  uint32_t on_read_pos_1 = 1;
+//  for( size_t i=0; i<cigar_pair.size(); i++ ) {
+//    char op = cigar_pair[i].first;
+//    uint16_t len = cigar_pair[i].second;
+//    
+//    if( op == 'S' ){
+//    
+//      for (uint32_t j=0; j<len; j++) {
+//        on_read_pos_1 += 1;
+//      }
+//      
+//    } else if( op == 'M' ) {
+//      
+//      for (uint32_t j=0; j<len; j++) {
+//        ref_pos_1_list.push_back(on_ref_pos_1);
+//        aligned_ref += ref_sequence[on_ref_pos_1-1];
+//        aligned_read += read_sequence[on_read_pos_1-1];
+//        on_read_pos_1 += 1;
+//        on_ref_pos_1 += 1;
+//      }
+//
+//    }
+//    
+//    // insertion wrt ref
+//    else if( op == 'I' ) {
+//      
+//      for (uint32_t j=0; j<len; j++) {
+//        ref_pos_1_list.push_back(0);
+//        aligned_ref += ".";
+//        aligned_read += read_sequence[on_read_pos_1-1];
+//        on_read_pos_1 += 1;
+//      }
+//      
+//    }
+//    
+//    // deletion wrt ref
+//    else if( cigar_pair[i].first == 'D' ) {
+//      
+//      for (uint32_t j=0; j<len; j++) {
+//        ref_pos_1_list.push_back(on_ref_pos_1);
+//        aligned_ref += ref_sequence[on_ref_pos_1-1];
+//        aligned_read += ".";
+//        on_ref_pos_1 += 1;
+//      }
+//      
+//    }
+//    else
+//    {
+//      ERROR("Unknown CIGAR operation.");
+//    }
+//      
+//  }
+//
+//  // Now we check the guards
+//  bool passed = true;
+//  uint32_t this_repeat_length = 0;
+//  
+//  int32_t start_repeat_index_0 = -1;
+//  int32_t end_repeat_index_0 = -1;
+//  
+//  // 1) Get the length of the repeat and make sure it is all the repeat nucleotide
+//  bool finished_repeat = false;
+//  bool started_repeat = false;
+//  for(uint32_t i=0; i< ref_pos_1_list.size(); i++) {
+//    
+//    if (!started_repeat && (ref_pos_1_list[i] >= current_region.start)) {
+//      started_repeat = true;
+//      start_repeat_index_0 = i;
+//    }
+//    if (started_repeat && !finished_repeat && (ref_pos_1_list[i] > current_region.start + current_region.length - 1)) {
+//      finished_repeat = true;
+//      end_repeat_index_0 = i-1;
+//    }
+//     
+//    if (started_repeat && !finished_repeat) {
+//      this_repeat_length++;
+//      if (aligned_read[i] != current_region.base) passed = false;
+//    }
+//  }
+//  
+//  if (!finished_repeat) end_repeat_index_0 = ref_pos_1_list.size()-1;
+//  
+//  // 2) make sure N bases before the repeat match exactly
+//  
+//  int32_t i = start_repeat_index_0-1;
+//  while ( i>=0 && (aligned_read[i] == aligned_ref[i]) ) i--;
+//  int32_t matched_before=start_repeat_index_0 - i - 1;
+//  passed = passed && (matched_before >= 5);
+//  
+//  // 3) make sure the N bases after the repeat match exactly
+//
+//  i = end_repeat_index_0+1;
+//  while ( i < static_cast<int32_t>(ref_pos_1_list.size()) && (aligned_read[i] == aligned_ref[i]) ) i++;
+//  int32_t matched_after = i - end_repeat_index_0 - 1;
+//  passed = passed && (matched_after >= 5);
+// 
+//  /*
+//  cerr << start_repeat_index_0 << " " << end_repeat_index_0 << endl;
+//  cerr << matched_before << " " << matched_after << endl;
+//  cerr << aligned_ref << endl;
+//  cerr << aligned_read << endl;
+//  
+//  if (passed)
+//    cerr << " passed " << this_repeat_length << endl;
+//  */
+//  
+//  
+//  if (passed)
+//    repeats.back().freqs.push_back(this_repeat_length);
+//  
+//  /* OLD DEBUG CODE
+//  alignment_list as;
+//  bam_alignment* b = new bam_alignment( a  );
+//  counted_ptr<bam_alignment> bp(b);
+//  as.push_back(bp);
+//  tf.write_alignments( 1, as, NULL );
+//  */
 }
 
 void contingency_loci_pileup::printStats(const string& output, cReferenceSequences& ref_seq_info)
