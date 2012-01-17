@@ -1285,9 +1285,9 @@ void cReferenceSequences::ReadGenBankFileSequenceFeatures(std::ifstream& in, cAn
           name.erase(pos,pos+19);
 
         // remove suffix if "IS(\d)}
-        pos = name.find("IS");
+        pos = name.find_first_of("0123456789");
         if (pos != -1) {
-          int found = name.find_first_not_of("0123456789", 3);
+          int found = name.find_first_not_of("0123456789", pos);
           if (found != -1) {
             name.erase(found, name.length());
           }
@@ -1475,7 +1475,8 @@ string cReferenceSequences::repeat_family_sequence(const string &repeat_name, in
         continue;
       
       // Stores all the sequences that match so we can compare them.
-      if (region_pos < 0) {
+      if (region_pos < 0)
+      {
         string adjSeq = this_seq.get_sequence_1(rep.m_start, rep.m_end);
         if (strand != rep.m_strand)
           adjSeq = reverse_complement(adjSeq);
@@ -1483,13 +1484,14 @@ string cReferenceSequences::repeat_family_sequence(const string &repeat_name, in
         repeat_size_count[rep.m_end - rep.m_start + 1]++;        
         repeat_size_pos[rep.m_end - rep.m_start + 1] = rep.m_start;
         repeat_sequence_count[adjSeq]++;
-        repeat_sequence_pos[adjSeq] = rep.m_start;  }
+        repeat_sequence_pos[adjSeq] = rep.m_start;
+      }
     }
   }
   
   // This will set the region_pos to whichever sequence has the most number of copies.
   // If number of copies is not greater than 1, we will use the most common size instead.
-  if(region_pos < 0)
+  if((region_pos < 0) && (repeat_sequence_count.size()))
   {    
     if (max_element(repeat_sequence_count.begin(), repeat_sequence_count.end(), map_comp_second<string, uint32_t>)->second > 1) {
       region_pos = repeat_sequence_pos[max_element(repeat_sequence_count.begin(), repeat_sequence_count.end(), map_comp_second<string, uint32_t>)->first];  }

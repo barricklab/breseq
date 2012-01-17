@@ -2311,21 +2311,25 @@ void cGenomeDiff::apply_to_sequences(cReferenceSequences& ref_seq_info, cReferen
         
         count_MOB++;
         string new_seq_string = "";
+        string rep_string = "";
+        string duplicate_sequence = "";
         int32_t iDelStart = 0;
         int32_t iDelEnd = 0;
         int32_t iInsStart = 0;
         int32_t iInsEnd = 0;        
+        int32_t iDupLen = 0;
         int32_t uRPos = -1;
         
         if(mut.entry_exists("del_start")) iDelStart = from_string<uint32_t>(mut["del_start"]);
         if(mut.entry_exists("del_end"))   iDelEnd = from_string<uint32_t>(mut["del_end"]);
         ASSERT((iDelStart >= 0) && (iDelEnd >= 0), (to_string(mut._type) + " " + mut._id) + " - NEGATIVE DELETION");
         
-        if(mut.entry_exists("repeat_pos"))uRPos = from_string<uint32_t>(mut["repeat_pos"]);
+        if(mut.entry_exists("repeat_pos"))uRPos = from_string<uint32_t>(mut["repeat_pos"]);        
+        if(mut.entry_exists("duplication_size"))iDupLen = from_string<uint32_t>(mut["duplication_size"]);
 
         // @JEB: correct here to look for where the repeat is in the original ref_seq_info.
         // This saves us from possibly looking at a shifted location...
-        string rep_string = ref_seq_info.repeat_family_sequence(mut["repeat_name"], from_string<int16_t>(mut["strand"]), uRPos);
+        rep_string = ref_seq_info.repeat_family_sequence(mut["repeat_name"], from_string<int16_t>(mut["strand"]), uRPos);
         mut["repeat_size"] = to_string(rep_string.length()); // saving this for shifting
         
         // This is the string we're going to pass to be inserted.
@@ -2340,7 +2344,7 @@ void cGenomeDiff::apply_to_sequences(cReferenceSequences& ref_seq_info, cReferen
         // The position of a MOB is the first position that is duplicated
         // Inserting at the position means we have to copy the duplication
         // in FRONT OF the repeat sequence
-        string duplicate_sequence = new_ref_seq_info.get_sequence_1(mut[SEQ_ID], position, position + (from_string<uint32_t>(mut["duplication_size"]) - 1));
+        if(iDupLen)duplicate_sequence = new_ref_seq_info.get_sequence_1(mut[SEQ_ID], position, position + (from_string<uint32_t>(mut["duplication_size"]) - 1));
         
         // If there are any inserts, put them in front of or behind the
         // repeat sequence.
