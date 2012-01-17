@@ -1462,6 +1462,9 @@ string cReferenceSequences::repeat_family_sequence(const string &repeat_name, in
   map<string, uint32_t> repeat_sequence_pos;  
   map<uint32_t, uint32_t> repeat_size_count;  
   map<uint32_t, uint32_t> repeat_size_pos;
+  map<uint32_t, string> loaded_elements_positions;
+  set<string> loaded_elements;
+  uint32_t largest_name = 0;
   
   // Loop through all reference sequences
   for (vector<cAnnotatedSequence>::iterator itr_seq = this->begin(); itr_seq != this->end(); itr_seq++) {
@@ -1470,6 +1473,12 @@ string cReferenceSequences::repeat_family_sequence(const string &repeat_name, in
     
     for (cSequenceFeatureList::iterator itr_rep = repeats.begin(); itr_rep != repeats.end(); itr_rep++) {
       cSequenceFeature& rep = **itr_rep;
+      
+      // This section is for error information later
+      loaded_elements.insert(rep.SafeGet("name"));
+      loaded_elements_positions[rep.m_start] = rep.SafeGet("name");
+      if(largest_name < rep.SafeGet("name").size())largest_name = rep.SafeGet("name").size();
+      // End error info
       
       if(rep.SafeGet("name") != repeat_name)
         continue;
@@ -1517,11 +1526,27 @@ string cReferenceSequences::repeat_family_sequence(const string &repeat_name, in
       }
     }
   }
+  
+  stringstream ssRepList;
+  ssRepList << "LOADED REPEAT ELEMENTS:";  
+  stringstream ssRepPos;
+  ssRepPos << "LOADED REPEAT ELEMENTS POSITIONS:";
+  
+  for(set<string>::iterator k = loaded_elements.begin(); k != loaded_elements.end(); k++)  {
+    ssRepList << "\n\t" << *k;  }
+  
+  for(map<uint32_t, string>::iterator jk = loaded_elements_positions.begin(); jk != loaded_elements_positions.end(); jk++) 
+  {
+    ssRepPos << "\n\t" << (*jk).second;
+    for(uint32_t ik = (*jk).second.size(); ik < largest_name; ik++)  {
+      ssRepPos << " ";  }    
+    ssRepPos << "\t" << to_string((*jk).first); 
+  }
     
   if (region_pos != -1)
-    ASSERT(picked_rep.get() != NULL, "No valid " + repeat_name + " repeat element found for position " + to_string(region_pos));
+    ASSERT(picked_rep.get() != NULL, "No valid " + repeat_name + " repeat element found for position " + to_string(region_pos) + "\n" + ssRepPos.str());
 
-  ASSERT(picked_rep.get() != NULL, "No valid " + repeat_name + " found.");
+  ASSERT(picked_rep.get() != NULL, "No valid " + repeat_name + " found.\n" + ssRepList.str());
     
   string repeat_seq = picked_seq->get_sequence_1(picked_rep->m_start, picked_rep->m_end);
   if (strand != picked_rep->m_strand)
