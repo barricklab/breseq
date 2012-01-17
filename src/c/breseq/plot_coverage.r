@@ -57,7 +57,14 @@ window_end = as.numeric(window_end);
 X<-read.table(in_file, sep="\t", header=T)
 X$unique_tot_cov = X$unique_bot_cov + X$unique_top_cov;
 X$redundant_tot_cov = X$redundant_bot_cov + X$redundant_top_cov;
+
 maxy=max(X$unique_tot_cov, X$redundant_tot_cov) + 5;
+
+if (total_only ==1)
+{
+  maxy = max(X$unique_tot_cov + X$redundant_tot_cov) + 5;
+}
+
 start_pos = X$position[1];
 end_pos = X$position[length(X$position)];
 
