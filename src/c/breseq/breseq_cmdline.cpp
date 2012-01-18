@@ -1385,7 +1385,7 @@ int do_runfile(int argc, char *argv[])
         Lonestar: '/home1/$NUM/$USER'
     */
     size_t tasks = 0, nodes = 0;
-    const cString &home_path = SYSTEM_CAPTURE("echo $HOME");
+    const cString &home_path = SYSTEM_CAPTURE("echo $HOME", true);
     // RANGER
     if (home_path.starts_with("/share")) {
       tasks = 16, nodes = ceil(n_cmds / 16) * 16;
@@ -2814,7 +2814,7 @@ int main(int argc, char* argv[]) {
 		return do_identify_candidate_junctions(argc_new, argv_new);
   } else if (command == "PREDICT_MUTATIONS") {
 		return do_predict_mutations(argc_new, argv_new);
-	} else if (command == "GD2GVF") {
+  } else if (command == "GD2GVF") {
     return do_convert_gvf(argc_new, argv_new);
   } else if (command == "VCF2GD") {
     return do_convert_gd( argc_new, argv_new);

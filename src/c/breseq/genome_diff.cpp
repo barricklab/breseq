@@ -2030,30 +2030,38 @@ cGenomeDiff cGenomeDiff::from_vcf(const string &file_name)
       const vector<string> &tokens = split(line, "\t");
 
       cDiffEntry de;
-      if (tokens[REF].size() > tokens[ALT].size()) {
+      const cString &rseq = tokens[REF], &aseq = tokens[ALT];
+      if (aseq.contains(',')) {
+        //! TODO: Classify these mutations, GATK doesn't predict these(?)
+//        de._type = SUB;
+//        de[SEQ_ID]   = tokens[CHROM];
+//        de[POSITION] = tokens[POS];
+//        de[SIZE]     = to_string(tokens[ALT].size());
+//        de[NEW_SEQ]  = tokens[ALT];
+        WARN("Can't classify line: " + line);
+        continue;
+      }
+      if (rseq.size() > aseq.size()) {
         de._type = DEL;
         de[SEQ_ID]   = tokens[CHROM];
         de[POSITION] = tokens[POS];
-        de[SIZE]     = to_string(tokens[REF].size());
+        de[SIZE]     = to_string(rseq.size() - aseq.size());
       }
-      else if (tokens[REF].size() > tokens[ALT].size()) {
+      else if (rseq.size() < aseq.size()) {
         de._type = INS;
         de[SEQ_ID]   = tokens[CHROM];
         de[POSITION] = tokens[POS];
-        de[NEW_SEQ]  = tokens[ALT];
+        de[NEW_SEQ]  = cString(aseq).remove_starting(rseq);
       }
-      else if (tokens[REF].size() == 1) {
+      else if (rseq.size() == 1) {
         de._type = SNP;
         de[SEQ_ID]   = tokens[CHROM];
         de[POSITION] = tokens[POS];
-        de[NEW_SEQ]  = tokens[ALT];
+        de[NEW_SEQ]  = aseq;
       }
       else {
-        de._type = SUB;
-        de[SEQ_ID]   = tokens[CHROM];
-        de[POSITION] = tokens[POS];
-        de[SIZE]     = to_string(tokens[ALT].size());
-        de[NEW_SEQ]  = tokens[ALT];
+        WARN("Can't classify line: " + line);
+        continue;
       }
 
       const vector<string> &info_tokens = split(tokens[INFO], ";");

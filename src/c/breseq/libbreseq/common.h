@@ -926,7 +926,9 @@ class cString : public string
 
     bool   starts_with(const string &prefix) const;
     bool   ends_with(const string &suffix) const;
+    bool   contains(const char chr)const;
     string remove_ending(const string &suffix);
+    string remove_starting(const string &prefix);
     string trim_ends_of(const char val);
 
     string get_base_name(void) const;
@@ -976,6 +978,13 @@ inline string cString::remove_ending(const string &suffix)
   return *this;
 }
 
+inline string cString::remove_starting(const string &prefix)
+{
+  if (this->starts_with(prefix))
+    this->erase(0, prefix.size());
+  return *this;
+}
+
 inline string cString::trim_ends_of(const char val)
 {
   for (size_t i = 0; (*this)[i] == val; this->erase(i++, 1)) {}
@@ -1002,6 +1011,12 @@ inline string cString::get_file_extension() const
     return "";
   }
 }
+
+inline bool cString::contains(const char chr) const
+{
+  return this->find(chr) != string::npos;
+}
+
 } // breseq
 
 #endif
