@@ -275,6 +275,8 @@ public:
 
   static cGenomeDiff intersect(const cGenomeDiff &gd1, const cGenomeDiff &gd2);
 
+  static cGenomeDiff from_vcf(const string &file_name);
+
   //! Read a genome diff from a file.
   void read(const string& filename);
   

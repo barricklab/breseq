@@ -686,21 +686,36 @@ int do_convert_gvf( int argc, char* argv[]){
 
 int do_convert_gd( int argc, char* argv[])
 {
-    AnyOption options("Usage: VCF2GD --vcf <vcf.vcf> --output <gd.gd>");
-    options("vcf,i","gd file to convert");
+    AnyOption options("Usage: VCF2GD --input <intput.vcf> --output <output.gd>");
+    options("input,i","gd file to convert");
     options("output,o","name of output file");
     options.processCommandArgs( argc,argv);
     
-    if( !options.count("vcf") || !options.count("output") ){
-        options.printUsage(); return -1;
+    if(!options.count("input") && !options.count("output")){
+      options.printUsage();
+      return -1;
+    }
+    if(!options.count("input")) {
+      options.printUsage();
+      return -1;
     }
     
-    try{
-        VCFtoGD( options["vcf"], options["output"] );
-    } 
-    catch(...){ 
-        return -1; // failed 
+    cGenomeDiff gd = cGenomeDiff::from_vcf(options["input"]);
+    diff_entry_list_t muts = gd.mutation_list();
+    gd.subtract(gd);
+    for (diff_entry_list_t::iterator it = muts.begin();
+         it != muts.end(); ++it) {
+      //! Comment out AF < 1.00 values for dcamp purposes.
+      if ((*it)->entry_exists("AF") && (**it)["AF"] != "1.00") {
+        (**it)["comment_out"] = "";
+      }
+      gd.add(**it);
     }
+    const string &file_name = options.count("output") ?
+          options["output"] :
+          cString(options["input"]).remove_ending("vcf") + "gd";
+
+    gd.write(file_name);
     
     return 0;
 }

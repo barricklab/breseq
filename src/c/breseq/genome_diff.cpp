@@ -1010,6 +1010,9 @@ bool diff_entry_sort(const cDiffEntry &_a, const cDiffEntry &_b) {
 }
 
 /*! Write this genome diff to a file.
+  NOTES:
+    1) If you want a diff entry to be commented out(prefix with '#') add the key
+    "comment_out" to the diff entry.
  */
 void cGenomeDiff::write(const string& filename) {
   ofstream os(filename.c_str());
@@ -1038,8 +1041,13 @@ void cGenomeDiff::write(const string& filename) {
   // sort
   _entry_list.sort(diff_entry_ptr_sort);
   
-  for(diff_entry_list_t::iterator i=_entry_list.begin(); i!=_entry_list.end(); ++i) {
-    fprintf(os, "%s\n", (**i).to_string().c_str());
+  for(diff_entry_list_t::iterator it=_entry_list.begin(); it!=_entry_list.end(); ++it) {
+    if (!(*it)->entry_exists("comment_out")) {
+      fprintf(os, "%s\n", (**it).to_string().c_str());
+    } else {
+      (*it)->erase("comment_out");
+      fprintf(os, "#%s\n", (**it).to_string().c_str());
+    }
 	}
   os.close();
 }
@@ -1954,7 +1962,7 @@ void VCFtoGD( const string& vcffile, const string& gdfile ){
     for( size_t i=0; i<featuresVCF.size(); i++ ){
         vector<string> gd(9,"");
         vector<string> ev(9,"");
-        
+
         // SeqID
         if( featuresVCF[i][3].size() > featuresVCF[i][4].size() ){
             gd[0] = "DEL";
@@ -2002,6 +2010,63 @@ void VCFtoGD( const string& vcffile, const string& gdfile ){
         output << "\n";
     }
     output.close();
+}
+
+
+cGenomeDiff cGenomeDiff::from_vcf(const string &file_name)
+{
+    //VCF Column order.
+    enum {CHROM = 0, POS, ID, REF, ALT, QUAL, FILTER, INFO};
+
+    ifstream in(file_name.c_str());
+    string line = "";
+
+    cGenomeDiff gd; //Return value.
+    while (!in.eof()) {
+      getline(in, line);
+      if (!in.good() || line.empty()) break;
+      //Discard header lines for now.
+      if (line[0] == '#') continue;
+      const vector<string> &tokens = split(line, "\t");
+
+      cDiffEntry de;
+      if (tokens[REF].size() > tokens[ALT].size()) {
+        de._type = DEL;
+        de[SEQ_ID]   = tokens[CHROM];
+        de[POSITION] = tokens[POS];
+        de[SIZE]     = to_string(tokens[REF].size());
+      }
+      else if (tokens[REF].size() > tokens[ALT].size()) {
+        de._type = INS;
+        de[SEQ_ID]   = tokens[CHROM];
+        de[POSITION] = tokens[POS];
+        de[NEW_SEQ]  = tokens[ALT];
+      }
+      else if (tokens[REF].size() == 1) {
+        de._type = SNP;
+        de[SEQ_ID]   = tokens[CHROM];
+        de[POSITION] = tokens[POS];
+        de[NEW_SEQ]  = tokens[ALT];
+      }
+      else {
+        de._type = SUB;
+        de[SEQ_ID]   = tokens[CHROM];
+        de[POSITION] = tokens[POS];
+        de[SIZE]     = to_string(tokens[ALT].size());
+        de[NEW_SEQ]  = tokens[ALT];
+      }
+
+      const vector<string> &info_tokens = split(tokens[INFO], ";");
+      //size_t n = info_tokens.size();
+      for (size_t i = 0, n = info_tokens.size(); i < n; ++i) {
+        cKeyValuePair kvp(info_tokens[i], '=');
+        de[kvp.get_key()] = kvp.get_value();
+      }
+
+      gd.add(de);
+    }
+
+    return gd;
 }
 
 /*! Given a list of types, search and return the cDiffEntry's within diff_entry_list_t whose 
