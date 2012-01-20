@@ -1011,7 +1011,11 @@ int do_post_run(int argc, char *argv[])
           const cString &name = cString(names.front()).trim_ends_of('/');
 
           const cString control_path(control_path_fmt.c_str(), name.c_str());
-          const cString test_path(test_path_fmt.c_str(), exe.c_str(), name.c_str(), name.c_str());
+
+          const cString test_path = (exe == "breseq") ?
+                cString(test_path_fmt.c_str(), exe.c_str(), name.c_str(), "output") :
+                cString(test_path_fmt.c_str(), exe.c_str(), name.c_str(), name.c_str());
+
           const cString log_path(log_path_fmt.c_str(),exe.c_str(), name.c_str());
 
           if (ifstream(control_path.c_str()).good()) {
