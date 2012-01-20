@@ -139,7 +139,8 @@ namespace breseq
 		options.addUsage("Utility Command Usage: breseq [command] options ...");
     options.addUsage("  Breseq Pipeline Commands: CONVERT_FASTQ, ERROR_COUNT");
     options.addUsage("  Breseq Post-Run Commands: BAM2ALN, BAM2COV");
-    options.addUsage("  Genome Diff Commands: APPLY, COMPARE, INTERSECT, NOT_EVIDENCE, SUBTRACT, UNION");
+    options.addUsage("  Genome Diff Commands: APPLY, INTERSECT, NOT_EVIDENCE, SUBTRACT, UNION, DOWNLOAD");
+    options.addUsage("  TACC Commands: RUNFILE, POST-RUN");
     options.addUsage("  For help using a utility command, type: breseq [command] ");
     
     // make sure that the other csettings settonfig options are good:
