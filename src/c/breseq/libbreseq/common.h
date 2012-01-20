@@ -923,16 +923,18 @@ class cString : public string
   public:
     template<class T> cString(const T &val) : string(val) {}
     cString(const char *format,...);
+    cString() : string ("") {}
 
     bool   starts_with(const string &prefix) const;
     bool   ends_with(const string &suffix) const;
-    bool   contains(const char chr)const;
-    string remove_ending(const string &suffix);
-    string remove_starting(const string &prefix);
-    string trim_ends_of(const char val);
+    bool   contains(const char chr)const
+    ;
+    cString remove_ending(const string &suffix);
+    cString remove_starting(const string &prefix);
+    cString trim_ends_of(const char val);
 
-    string get_base_name(void) const;
-    string get_file_extension(void) const;
+    cString get_base_name(void) const;
+    cString get_file_extension(void) const;
 
 };
 
@@ -971,21 +973,21 @@ inline bool cString::ends_with(const string &suffix) const
   }
 }
 
-inline string cString::remove_ending(const string &suffix)
+inline cString cString::remove_ending(const string &suffix)
 {
   if (this->ends_with(suffix))
     this->erase(this->size() - suffix.size());
   return *this;
 }
 
-inline string cString::remove_starting(const string &prefix)
+inline cString cString::remove_starting(const string &prefix)
 {
   if (this->starts_with(prefix))
     this->erase(0, prefix.size());
   return *this;
 }
 
-inline string cString::trim_ends_of(const char val)
+inline cString cString::trim_ends_of(const char val)
 {
   for (size_t i = 0; (*this)[i] == val; this->erase(i++, 1)) {}
   for (size_t i = this->size() - 1; (*this)[i] == val; this->erase(i--)) {}
@@ -993,7 +995,7 @@ inline string cString::trim_ends_of(const char val)
 }
 
 //! Returns file name and extension, removes any directory path beforehand.
-inline string cString::get_base_name() const
+inline cString cString::get_base_name() const
 {
   const size_t pos = this->rfind('/');
   if (pos == string::npos)
@@ -1002,7 +1004,7 @@ inline string cString::get_base_name() const
     return this->substr(pos + 1);
 }
 
-inline string cString::get_file_extension() const
+inline cString cString::get_file_extension() const
 {
   const size_t n = this->rfind('.');
   if (n != string::npos) {
