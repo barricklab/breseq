@@ -32,7 +32,7 @@ You will need administrator privileges to install |breseq| dependencies using th
 You should now get a message like this, telling you that the system can find your :program:`SSAHA2`: executable, if you type this command in the terminal:
 
 >>> which ssaha2
-/users/local/bin/ssaha2
+/usr/local/bin/ssaha2
 
 * :program:`R`: Download the installer package from http://www.r-project.org/.
 
