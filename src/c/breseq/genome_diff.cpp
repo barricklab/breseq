@@ -742,14 +742,36 @@ void cDiffEntry::normalize_to_sequence(const cAnnotatedSequence &sequence)
     /*! Step: Attempt to normalize the start position by iterating through new
     start positions. */
     pos_1_t i = pos_1;
-    for(;;i += n) {
-      const string second = sequence.get_circular_sequence_1(i + 1, n);
-      assert(second.size());
-
-      if (first != second) {
-        break;
+    
+    bool bAmp, bSnp;
+    bAmp = true;
+    bSnp = true;
+    
+    while(bAmp || bSnp)
+    {
+      bAmp = true;
+      bSnp = true;
+      
+      for(;;i += n)
+      {
+        const string second = sequence.get_circular_sequence_1(i + 1, n);
+        assert(second.size());
+        
+        if (first != second)  {
+          bAmp = false;
+          break;  }
       }
-    }
+      
+      for(;;i += 1)
+      {
+        const string second = sequence.get_circular_sequence_1(i + 1, n);
+        assert(second.size());
+        
+        if (first[0] != second[0])  {
+          bSnp = false;
+          break;  }
+      }
+    }    
 
     //! Step: Determine if the start pos needs to be normilized.
     bool is_new_position = pos_1 != i;
@@ -1650,7 +1672,18 @@ void cGenomeDiff::random_mutations(const string& exclusion_file, const string& t
         new_item["strand"] = to_string(new_strand);        
         new_item["duplication_size"] = to_string(rep_size);
         
+        cDiffEntry fake_item_ins;        
+        fake_item_ins._type = INS;
+        fake_item_ins["seq_id"] = ref_seq_info.m_seq_id;
+        fake_item_ins["position"] = to_string(rand_pos);
+        fake_item_ins["new_seq"] = ref_seq_info.get_sequence_1(rand_pos, rand_pos+rep_size-1);
+        
         uAttempts = 0;
+        
+        fake_item_ins.normalize_to_sequence(ref_seq_info);
+        if((from_string<uint32_t>(fake_item_ins["position"]) != rand_pos) || fake_item_ins["new_seq"] != ref_seq_info.get_sequence_1(rand_pos, rand_pos+rep_size-1))  {
+          i--;
+          continue;  }  
         
         new_item.normalize_to_sequence(ref_seq_info);
         
