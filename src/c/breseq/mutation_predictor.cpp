@@ -998,27 +998,21 @@ namespace breseq {
           gd.add(mut);		
         }
       }
-			// 'SUB'
+			// 'INS'
+      //  INS predicted here are aligned with missing unique_read_sequence info.
+      //  We need to grab it.
 			else if (n(j["side_1_position"]) >= n(j["side_2_position"]))
 			{
-				string ref_seq = "";
-				string new_seq = j["unique_read_sequence"];
-				if (n(j["side_1_position"]) >= n(j["side_2_position"])) //TODO: When would this be false?
-				{
-					new_seq = ref_seq_info.get_sequence_1 (
-						seq_id,
-						n(j["side_2_position"]),
-						n(j["side_1_position"])
-					);
-				}
+				string new_seq = j["unique_read_sequence"];        
+        string ref_seq = ref_seq_info.get_sequence_1(seq_id, n(j["side_2_position"]), n(j["side_1_position"]));
 
 				cDiffEntry mut;
-        mut._type = SUB;
+        mut._type = INS;
 				mut
 					("seq_id", seq_id)
 					("position", s(position))
 					("size", s(n(j["side_1_position"]) - n(j["side_2_position"]) + 1))
-					("new_seq", new_seq)
+					("new_seq", new_seq + ref_seq)
 				;
         mut._evidence = make_vector<string>(j._id);
 
