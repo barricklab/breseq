@@ -126,7 +126,8 @@ our $translation_table_11 = {
 sub bridge_translate
 {
 	my ($seq) = @_;
-	die if (!defined $translation_table_11->{$seq});
+	return $seq if (!$seq);
+	die "Could not translate: $seq" if (!defined $translation_table_11->{$seq});
 	return $translation_table_11->{$seq};
 }
 
