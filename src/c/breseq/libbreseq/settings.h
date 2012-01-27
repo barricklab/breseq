@@ -403,7 +403,9 @@ namespace breseq
     
     string tiled_complete_coverage_text_file_name;
     string ranges_text_file_name;
+    string cnv_history_text_file_name;
     string smoothed_ranges_text_file_name;
+    string final_cnv_text_file_name;
     string copy_number_variation_cn_genome_diff_file_name;
     
     string periodicity_table_file_name;

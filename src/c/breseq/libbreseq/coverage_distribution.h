@@ -93,7 +93,8 @@ namespace breseq {
     //Written by Aaron Reba
     static void find_segments (
                                string in_file_name,
-                               string out_file_name
+                               string out_file_name,
+                               string history_file_name
                                );
 
     //Given a coverage file and a range file produced from
@@ -107,6 +108,7 @@ namespace breseq {
                                 string tile_file_name,
                                 string segment_file_name,
                                 string out_file_name,
+                                string final_file_name,
                                 string gd_file_name
                                 );
     
