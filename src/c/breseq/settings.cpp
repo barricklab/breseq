@@ -489,7 +489,9 @@ namespace breseq
     
     this->tiled_complete_coverage_text_file_name = this->copy_number_variation_path + "/@.tiled.tab";
     this->ranges_text_file_name = this->copy_number_variation_path + "/@.ranges.tab";
+    this->cnv_history_text_file_name = this->copy_number_variation_path + "/@.history.tab";
     this->smoothed_ranges_text_file_name = this->copy_number_variation_path + "/@.smoothed_ranges.tab";
+    this->final_cnv_text_file_name = this->copy_number_variation_path + "/@.cnv_final.tab";
     this->copy_number_variation_cn_genome_diff_file_name = this->copy_number_variation_path + "/@.cn_evidence.gd";
     
     this->periodicity_done_file_name = this->copy_number_variation_path + "/@.periodicity.done";

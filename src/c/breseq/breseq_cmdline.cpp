@@ -1635,9 +1635,11 @@ int do_copy_number_variation(int argc, char *argv[])
     CoverageDistribution::tile(settings.ignore_redundant_coverage, this_complete_coverage_text_file_name, this_tiled_complete_coverage_text_file_name, settings.copy_number_variation_tile_size);
     
     string this_ranges_text_file_name = settings.file_name(settings.ranges_text_file_name, "@", seq.m_seq_id);
-    CoverageDistribution::find_segments(this_tiled_complete_coverage_text_file_name, this_ranges_text_file_name);
+    string this_cnv_history_text_file_name = settings.file_name(settings.cnv_history_text_file_name, "@", seq.m_seq_id);
+    CoverageDistribution::find_segments(this_tiled_complete_coverage_text_file_name, this_ranges_text_file_name, this_cnv_history_text_file_name);
     
     string this_smoothed_ranges_text_file_name = settings.file_name(settings.smoothed_ranges_text_file_name, "@", seq.m_seq_id);
+    string this_final_cnv_file_name = settings.file_name(settings.final_cnv_text_file_name, "@", seq.m_seq_id);
     string this_copy_number_variation_cn_genome_diff_file_name = settings.file_name(settings.copy_number_variation_cn_genome_diff_file_name, "@", seq.m_seq_id);
     CoverageDistribution::smooth_segments(
                                           settings,
@@ -1646,6 +1648,7 @@ int do_copy_number_variation(int argc, char *argv[])
                                           this_tiled_complete_coverage_text_file_name, 
                                           this_ranges_text_file_name, 
                                           this_smoothed_ranges_text_file_name,
+                                          this_final_cnv_file_name,
                                           this_copy_number_variation_cn_genome_diff_file_name
                                           );
     
@@ -2794,9 +2797,11 @@ int breseq_default_action(int argc, char* argv[])
         CoverageDistribution::tile(settings.ignore_redundant_coverage, this_complete_coverage_text_file_name, this_tiled_complete_coverage_text_file_name, settings.copy_number_variation_tile_size);
        
         string this_ranges_text_file_name = settings.file_name(settings.ranges_text_file_name, "@", seq.m_seq_id);
-        CoverageDistribution::find_segments(this_tiled_complete_coverage_text_file_name, this_ranges_text_file_name);
+        string this_cnv_history_text_file_name = settings.file_name(settings.cnv_history_text_file_name, "@", seq.m_seq_id);
+        CoverageDistribution::find_segments(this_tiled_complete_coverage_text_file_name, this_ranges_text_file_name, this_cnv_history_text_file_name);
        
         string this_smoothed_ranges_text_file_name = settings.file_name(settings.smoothed_ranges_text_file_name, "@", seq.m_seq_id);
+        string this_final_cnv_file_name = settings.file_name(settings.final_cnv_text_file_name, "@", seq.m_seq_id);
         string this_copy_number_variation_cn_genome_diff_file_name = settings.file_name(settings.copy_number_variation_cn_genome_diff_file_name, "@", seq.m_seq_id);
 
         CoverageDistribution::smooth_segments(
@@ -2806,6 +2811,7 @@ int breseq_default_action(int argc, char* argv[])
                                               this_tiled_complete_coverage_text_file_name, 
                                               this_ranges_text_file_name, 
                                               this_smoothed_ranges_text_file_name,
+                                              this_final_cnv_file_name,
                                               this_copy_number_variation_cn_genome_diff_file_name
                                               );
       } 
