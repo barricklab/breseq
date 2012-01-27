@@ -952,7 +952,10 @@ inline cString::cString(const char *format,...)
   buffer[size] = '\0';
 
   *this = buffer;
-  assert(this->size());
+  
+  // @JEB: why would we assert here? Empty strings should be allowed?
+  // Uncommented breaks DOWNLOAD command.
+  // assert(this->size());
 }
 
 inline bool cString::starts_with(const string &prefix) const

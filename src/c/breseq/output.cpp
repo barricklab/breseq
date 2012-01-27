@@ -1039,7 +1039,7 @@ string html_read_alignment_table_string(diff_entry_list_t& list_ref, bool show_d
 
         ss << tr("class=\"information_table_row\"", 
                  td("colspan=\"" + to_string(total_cols) + "\"",
-                    "Fisher's exact test strand distribution" +
+                    "Fisher's exact test strand distribution " +
                     i("p") + "-value = " +fisher_strand_p_value));
       } //end fisher_strand_p_value
 

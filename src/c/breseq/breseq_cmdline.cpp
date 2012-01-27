@@ -1744,7 +1744,7 @@ int do_download(int argc, char *argv[])
     lookup_table["BarrickLab-Public"]
         ["url_format"] = "http://barricklab.org/%s";
     lookup_table["BarrickLab-Private"]
-        ["url_format"] = options.count("login") ? "ftp://" + options["login"] + "@barricklab.org//community/%s" : "";
+        ["url_format"] = options.count("login") ? "ftp://" + options["login"] + "@backup.barricklab.org/%s" : "";
 
   //File path formats.
     lookup_table["Genbank"]
