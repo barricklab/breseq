@@ -863,10 +863,10 @@ namespace breseq {
       
       // @JEB create the genome diff evidence entry if mean is not one
       
-      if ((position_start != position_end) && (new_segment_mean != 1.0)) {
+      if (new_segment_mean != 1.0) {
         cDiffEntry item(CN);
         item[SEQ_ID] = seq_id;
-        item[START] = to_string<uint32_t>(position_start);
+        item[START] = to_string<uint32_t>(position_start - settings.copy_number_variation_tile_size + 1);
         item[END] = to_string<uint32_t>(position_end);
         item["tile_size"] = to_string<double>(settings.copy_number_variation_tile_size);
         item["copy_number"] = to_string<double>(new_segment_mean);
@@ -919,7 +919,49 @@ namespace breseq {
     out_file.close();
     final_file.close();
     
-    gd.write(gd_file_name);
+    // merge intervals
+    gd.sort();
+    diff_entry_list_t muts = gd.list();
+    diff_entry_ptr_t last_de(NULL);
+    cGenomeDiff gd_merged;
+
+    for(diff_entry_list_t::iterator it = muts.begin(); it != muts.end(); it++)
+    {
+      //cout << **it << endl;
+      
+      if (!last_de.get())
+        last_de = *it;
+      else {
+        diff_entry_ptr_t this_de = *it;
+        
+        if (  ( from_string<uint32_t>((*this_de)[START]) - 1 == from_string<uint32_t>((*last_de)[END]))
+          &&  ( (*this_de)["copy_number"] == (*last_de)["copy_number"] )
+          &&  ( (*this_de)[SEQ_ID] == (*last_de)[SEQ_ID] ) ) {
+          
+          (*last_de)[END] = (*this_de)[END];
+          
+          double length_last = from_string<uint32_t>((*last_de)[END]) - from_string<uint32_t>((*last_de)[START]) + 1;
+          double length_this = from_string<uint32_t>((*this_de)[END]) - from_string<uint32_t>((*this_de)[START]) + 1;
+          double rel_cov_last = from_string<double>((*last_de)["relative_coverage"]);
+          double rel_cov_this = from_string<double>((*this_de)["relative_coverage"]);
+          double new_rel_cov = (rel_cov_last * length_last + rel_cov_this * length_this) / (length_last + length_this);
+          
+          stringstream num;
+          num << fixed << setprecision(2) << (new_rel_cov);
+          (*last_de)["relative_coverage"] = num.str();
+        }
+        else {
+          gd_merged.add(*last_de);
+          last_de = this_de;
+        }
+      }
+    }
+    
+    if (last_de.get())
+      gd_merged.add(*last_de);
+    
+    
+    gd_merged.write(gd_file_name);
   }
 
   void CoverageDistribution::calculate_periodicity (
