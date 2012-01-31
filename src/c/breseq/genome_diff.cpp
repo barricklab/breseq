@@ -1061,7 +1061,7 @@ void cGenomeDiff::write(const string& filename) {
   }
   
   // sort
-  _entry_list.sort(diff_entry_ptr_sort);
+  this->sort();
   
   for(diff_entry_list_t::iterator it=_entry_list.begin(); it!=_entry_list.end(); ++it) {
     if (!(*it)->entry_exists("comment_out")) {

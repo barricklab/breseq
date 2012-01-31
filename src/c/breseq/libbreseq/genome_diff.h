@@ -270,6 +270,9 @@ public:
   //! fast merge, doesn't compare entries, but does renumber
   void fast_merge(const cGenomeDiff& gd);
   
+  //! sort
+  void sort() { _entry_list.sort(diff_entry_ptr_sort); }
+  
   //! compare
   static cGenomeDiff compare_genome_diff_files(const cGenomeDiff &control, const cGenomeDiff &test);
 
