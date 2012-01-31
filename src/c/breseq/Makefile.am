@@ -45,6 +45,7 @@ libbreseq_la_SOURCES = \
 	pileup_base.cpp \
 	pileup.cpp \
 	resolve_alignments.cpp \
+	rna_seq.cpp \
 	settings.cpp \
 	libbreseq/alignment.h \
 	libbreseq/alignment_output.h \
@@ -67,6 +68,7 @@ libbreseq_la_SOURCES = \
 	libbreseq/pileup_base.h \
 	libbreseq/pileup.h \
 	libbreseq/resolve_alignments.h \
+	libbreseq/rna_seq.h \
 	libbreseq/settings.h \
 	libbreseq/storable.h 
 	
