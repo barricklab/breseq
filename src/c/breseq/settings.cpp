@@ -328,7 +328,7 @@ namespace breseq
     this->deletion_coverage_propagation_cutoff = 0;
     this->deletion_coverage_seed_cutoff = 0;
     this->polymorphism_prediction = false;
-    this->mixed_base_prediction = true;
+    this->mixed_base_prediction = false;
     
 		this->mutation_log10_e_value_cutoff = 10;
     this->polymorphism_log10_e_value_cutoff = this->mutation_log10_e_value_cutoff;
