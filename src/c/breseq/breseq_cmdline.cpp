@@ -36,6 +36,7 @@ LICENSE AND COPYRIGHT
 #include "libbreseq/settings.h"
 #include "libbreseq/contingency_loci.h"
 #include "libbreseq/mutation_predictor.h"
+#include "libbreseq/rna_seq.h"
 #include "libbreseq/output.h"
 
 using namespace breseq;
@@ -2072,6 +2073,40 @@ int do_rand_muts(int argc, char *argv[])
   return 0;
 }
 
+int do_rna_seq(int argc, char *argv[])
+{
+  
+  AnyOption options("Usage: breseq RNASEQ -r <reference.gbk> -f <reference.fna> -o <output.tab>  [<input.sam.n> ...]");  
+  options.addUsage("Counts the number of reads in a text SAM file matching each gene in a reference genomes.");
+  options("reference,r","Genbank or GFF3 reference file");  
+  options("fasta,f","FASTA reference file");  
+  options("output,o","Output tab-delimited file");
+  options.processCommandArgs(argc, argv);
+  
+  // Also take regions off the command line
+  vector<string> sam_file_names;
+  for (int32_t i = 0; i < options.getArgc(); i++)
+  {
+    string sam_file_name = options.getArgv(i);
+    sam_file_names.push_back(sam_file_name);
+  }  
+  
+  // Check options
+  if ((sam_file_names.size() == 0) || !options.count("output") || !options.count("fasta") || !options.count("reference")) {
+    options.printUsage();
+    return -1;
+  }
+  
+  // Load the reference sequences
+  cReferenceSequences ref_seq_info;
+  ref_seq_info.LoadFiles(from_string<vector<string> >(options["reference"]));
+
+  //Do counting
+  RNASeq::tam_to_gene_counts(ref_seq_info, options["fasta"], sam_file_names, options["output"]);
+  
+  return 0;
+}
+
 int breseq_default_action(int argc, char* argv[])
 {  
   
@@ -3026,6 +3061,8 @@ int main(int argc, char* argv[]) {
     return do_download(argc_new, argv_new);
   } else if ((command == "RANDOM_MUTATIONS") || (command == "RAND_MUTS")) {
     return do_rand_muts(argc_new, argv_new);
+  } else if (command == "RNASEQ") {
+    return do_rna_seq(argc_new, argv_new);    
   }
   else {
     // Not a sub-command. Use original argument list.

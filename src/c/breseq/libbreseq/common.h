@@ -580,6 +580,17 @@ namespace breseq {
     return ((found != string::npos) ? file_name.substr(0, found) : "");
   }
   
+  // Returns the number of bases overlapping 
+  inline int32_t overlap_length(int32_t a1_start, int32_t a1_end, int32_t a2_start, int32_t a2_end)
+  {
+    // bigger start
+    int32_t intersection_start = max(a1_start, a2_start);
+    int32_t intersection_end = min(a1_end, a2_end);
+    int32_t intersection_length = intersection_end - intersection_start + 1;
+    
+    return max(0, intersection_length);
+  }
+  
   
   inline string create_path(string path)
   {

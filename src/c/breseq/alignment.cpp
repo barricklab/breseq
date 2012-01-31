@@ -536,6 +536,12 @@ void tam_file::open_read(const string& tam_file_name, const string& fasta_file_n
     cerr << "Could not open tam file: " << tam_file_name << endl;
     assert(input_tam);
   }
+  
+  // Read header from SAM file and discard (really should use it)
+  bam_header_t* bam_header_no_care = sam_header_read(input_tam);
+  if (bam_header_no_care) bam_header_destroy(bam_header_no_care);
+  
+  // but we keep a header
   bam_header = sam_header_read2(faidx_file_name.c_str()); // or die("Error reading reference fasta index file: $reference_faidx_file_name");
 }
 
