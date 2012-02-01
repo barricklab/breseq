@@ -1025,8 +1025,8 @@ namespace breseq {
 			{
         // Check to see if unique sequence matches sequence directly before
         size_t size = j["unique_read_sequence"].size();
-        size_t position = n(j["side_2_position"]) - size;
-        string dup_check_seq = ref_seq_info.get_sequence_1(j["side_1_seq_id"], position, position + size - 1);
+        size_t prev_position = n(j["side_2_position"]) - size;
+        string dup_check_seq = ref_seq_info.get_sequence_1(j["side_1_seq_id"], prev_position, prev_position + size - 1);
         
         if (j["unique_read_sequence"] == dup_check_seq)
         {

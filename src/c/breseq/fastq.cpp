@@ -565,8 +565,11 @@ namespace breseq {
 
   char FastqSimulationUtilities::get_random_quality_score(void)
   {
+    uint32_t reserved_offset = qscore_cumulative_probability_table[35];
+    
     //Roll between 0 and 99,999.
-    uint32_t random_die = rand() % 100000;
+    uint32_t random_die = rand() % 100000 - reserved_offset;
+    random_die += reserved_offset;
 
     map<uint32_t, uint32_t>::const_iterator it =
         qscore_cumulative_probability_table.begin();
