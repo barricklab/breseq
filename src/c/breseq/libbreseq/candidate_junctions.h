@@ -307,6 +307,7 @@ namespace breseq {
     int32_t a2_unique_end;    
     int32_t a2_unique_length;
 
+    int32_t end_to_end_length;
     int32_t union_length;
     int32_t intersection_length;
     
