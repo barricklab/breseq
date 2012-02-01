@@ -625,6 +625,10 @@ void cGenomeDiff::read(const string& filename) {
       metadata.read_seqs.resize(metadata.read_seqs.size() + 1);
       metadata.read_seqs.back() = second_half;
     }
+    else if (split_line[0] == "#=TITLE" && split_line.size() > 1) {
+      metadata.run_name = second_half;
+      replace(metadata.run_name.begin(), metadata.run_name.end(), ' ', '_');
+    }
     else if (split_line[0].substr(0, 2) == "#=") {continue;}
     else {
       //Warn if unkown header lines are encountered.
@@ -645,11 +649,15 @@ void cGenomeDiff::read(const string& filename) {
     ERROR(message);
   }
 
-  string *run_name = &metadata.run_name;
-  *run_name = filename.substr(0, filename.find(".gd"));
-  if (run_name->find('/') !=  string::npos) {
-    run_name->erase(0, run_name->find_last_of('/') + 1);
-  }
+	/*If the run_name/title is not set by a #=TITLE tag in the header info then
+		default to the name of the file. */
+	if (metadata.run_name.empty()) {
+		string *run_name = &metadata.run_name;
+			*run_name = filename.substr(0, filename.find(".gd"));
+			if (run_name->find('/') !=  string::npos) {
+				run_name->erase(0, run_name->find_last_of('/') + 1);
+			}
+	}
 
   //! Step: Handle the diff entries.
   while (in.good()) {
