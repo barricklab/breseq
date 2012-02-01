@@ -331,8 +331,8 @@ namespace breseq {
     //a search entry represents a segment of positions in the file that will be
     //examined. start and end are inclusive.
     //search entries are referencing the index in the file, not position
-    pair<uint32_t, uint32_t> next_search;
-    pair<uint32_t, uint32_t> current_search;
+    pair<int32_t, int32_t> next_search;
+    pair<int32_t, int32_t> current_search;
     
     //this holds all search entries
     vector< pair<uint32_t, uint32_t> > searching;
@@ -605,7 +605,7 @@ namespace breseq {
         //cout << "rand";
         check_position = ordered_sums[current_search.first  - 1] - position_downset;
         //cout << saved_sums[check_position] << " ";
-        for (int32_t j = 0; j < randomized_coverage.size(); j++)
+        for (size_t j = 0; j < randomized_coverage.size(); j++)
         {
           check_position = ordered_sums[current_search.first + j] - position_downset;
           previous_position = ordered_sums[current_search.first + j - 1] - position_downset;
@@ -689,7 +689,7 @@ namespace breseq {
       //cout << current_search.second << " " << best_j << endl;
       //cin.get();
       if ( (best_greater_than / 20.0) >= .95 &&
-           !(current_search.first == best_i + 1 && current_search.second == best_j)
+           !((current_search.first == best_i + 1) && (current_search.second == best_j))
          )
       {
         //cout << "add_segment\n";
