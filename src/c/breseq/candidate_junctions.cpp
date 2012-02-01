@@ -709,6 +709,10 @@ namespace breseq {
 	{    
 		bool verbose = false;
     
+    //if ( (ap.a1.read_name() == "1:907874") || (ap.a1.read_name() == "1:15230"))
+    //   verbose = true;
+    
+    
     // clear the return value
     returned_junction_candidate = JunctionCandidatePtr(NULL);
     
@@ -772,7 +776,7 @@ namespace breseq {
 		// positive if the middle sequence can match either side of the read
 		// negative if there is sequence in the read NOT matched on either side
 		int32_t overlap = -1 * (q2_start - q1_end - 1);
-
+    
 		//
 		// OVERLAP MISMATCH CORRECTION
 		//
@@ -807,8 +811,33 @@ namespace breseq {
 		}
 
 		// Adjust the overlap in cases where there is a mismatch within the overlap region
-		if (overlap > 0)
+    
+    // @JEB 2012-01-31 If the same reference bases are matched, this is also overlap for correction 
+    //                 purposes (the next code block), but we need to switch it back after that.
+    
+    
+    int32_t overlap_in_reference = 0;
+    
+    if (q1.strand() == q2.strand()) {
+      
+      if ((r2_start >=  r1_start) && (r2_start <=  r1_end)) {
+        if (q1.strand() == +1)
+          overlap_in_reference = r1_end - r2_start + 1;
+        else
+          overlap_in_reference = r2_end - r1_start + 1;      
+      }
+    }
+
+    if (verbose)
+      cout << "=== overlap in reference: " << overlap_in_reference << endl;
+    
+		if ((overlap > 0) || (overlap_in_reference > 0))
 		{
+      overlap = max(overlap, overlap_in_reference);
+      
+      if (verbose)
+        cout << "=== overlap: " << overlap << endl;
+      
 			int32_t q1_move, q2_move, r1_move, r2_move;
 			q1.num_matches_from_end(ref_seq_info, false, overlap, q1_move, r1_move);
 			q2.num_matches_from_end(ref_seq_info, true, overlap, q2_move, r2_move);
@@ -853,7 +882,17 @@ namespace breseq {
 			if (verbose)
 				cout << "=== overlap corrected for mismatches " << overlap << endl;
 		}
-    
+        
+    //Recalculate the overlap in the reference
+    if (q1.strand() == q2.strand()) {
+      
+      if ((r2_start >=  r1_start) && (r2_start <=  r1_end)) {
+        if (q1.strand() == +1)
+          overlap_in_reference = r1_end - r2_start + 1;
+        else
+          overlap_in_reference = r2_end - r1_start + 1;      
+      }
+    }
     
     // create hash coords AFTER overlap adjustment
 		int32_t hash_coord_1 = (hash_strand_1) ? r1_start : r1_end;
@@ -1235,7 +1274,7 @@ namespace breseq {
   : a1(_a1), a2(_a2), hash_coord(0)
     , a1_unique_start(0), a1_unique_end(0), a1_unique_length(0)
     , a2_unique_start(0), a2_unique_end(0), a2_unique_length(0)
-    , union_length(0), intersection_length(0)
+    , end_to_end_length(0), union_length(0), intersection_length(0)
     , pass(false)
   {
     calculate_union_and_unique();
@@ -1249,7 +1288,7 @@ namespace breseq {
   void AlignmentPair::calculate_union_and_unique()
   {
     bool verbose = false;
-   
+    
     uint32_t a1_start, a1_end;
     a1.query_stranded_bounds_1(a1_start, a1_end);
     
@@ -1278,8 +1317,9 @@ namespace breseq {
     
     int32_t union_start = a1_start;
 		int32_t union_end = a2_end;
+    this->end_to_end_length = union_end - union_start + 1;
     // Note: last term subtracts missing bases when the two alignments don't overlap in the middle
-		this->union_length = union_end - union_start + 1 - max(0, -intersection_length);
+		this->union_length = end_to_end_length- max(0, -intersection_length);
     
     a1_unique_start = a1_start;
     a1_unique_end = min(a2_start - 1, a1_end);
@@ -1329,13 +1369,13 @@ namespace breseq {
 			return false;
     
 		//// Test all of the normal criteria for counting a match to the reference
-		if (union_length < static_cast<int32_t>(settings.require_match_length))
+		if (end_to_end_length < static_cast<int32_t>(settings.require_match_length))
 			return false;
     
-    if (union_length < settings.require_match_fraction * static_cast<double>(a1.read_length()) )
+    if (end_to_end_length < settings.require_match_fraction * static_cast<double>(a1.read_length()) )
       return false;
     
-    if ((settings.require_complete_match) && (static_cast<uint32_t>(union_length) != a1.read_length())) 
+    if ((settings.require_complete_match) && (static_cast<uint32_t>(end_to_end_length) != a1.read_length())) 
         return false; 
 
     return true;

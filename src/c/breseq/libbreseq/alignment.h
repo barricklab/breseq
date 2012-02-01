@@ -383,7 +383,7 @@ public:
     This class stores the memory of the bam1_t.
     Thus, it is a copiable version of alignment_wrapper
  */  
-  class bam_alignment : public bam1_t, public alignment_wrapper
+class bam_alignment : public bam1_t, public alignment_wrapper
 {
 public:
   bam_alignment() : bam1_t(), alignment_wrapper(this)
