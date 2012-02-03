@@ -1450,8 +1450,6 @@ void cReferenceSequences::ReadBull(const string& file_name) {
 
 /*! Returns the nucleotide sequence of a typical copy of a repeat.
  *
- *  TODO: Needs to check to be sure that it is getting a "typical" copy 
- *  (not one that has an insertion in it or a non-consensus sequence) 
  */  
 string cReferenceSequences::repeat_family_sequence(const string &repeat_name, int8_t strand, int32_t &region_pos)
 {  

@@ -531,6 +531,10 @@ void tam_file::open_read(const string& tam_file_name, const string& fasta_file_n
   string faidx_file_name(fasta_file_name);
   faidx_file_name += ".fai";
   
+  // Alternately, we could automatically generate the index.
+  ASSERT(file_exists(faidx_file_name.c_str()), "FAI file for FASTA file does not exist: " + faidx_file_name 
+         + "\nTry running the command:\nsamtools faidx " + fasta_file_name);
+  
   input_tam = sam_open(tam_file_name.c_str());
   if (!input_tam) {
     cerr << "Could not open tam file: " << tam_file_name << endl;

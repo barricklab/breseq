@@ -57,7 +57,6 @@ LICENSE AND COPYRIGHT
 #include <functional>
 #include <iterator>
 
-
 // Breseq
 #include "libbreseq/settings.h"
 
@@ -82,122 +81,6 @@ using namespace std;
 
 namespace breseq {
 	
-  
-  // There are three ways to represent a base.
-  // We use typing to prevent coding errors when converting.
-  // 
-  // bam: SamTools representation, uses four bit codes 
-  //      A(0x1), C(0x2), G(0x4), T(0x8), N(0xf), .('.')
-  //      Note that we add '.' for convenience to this list.
-  typedef uint8_t base_bam;
-  
-  // char: Normal human-readable representation
-  //       'A', 'C', 'G', 'T', 'N', '.'
-  typedef char base_char;
-  
-  // index: Numbered starting at zero, used for array storage and lookups
-  //       A(0), C(1), G(2), T(3), .(4)  No 'N' bases allowed!
-  typedef uint8_t base_index;
-
-  /*! Definition of all single-base states that are considered */
-  static base_char base_char_list[] = {'A', 'C', 'G', 'T', '.'};
-  static const uint8_t base_list_size = 5;
-
-	/*! Reverse a base.
-	 */
-	inline base_bam complement_base_bam(base_bam base) {
-    // sam-style 4-bit field
-    switch(base) {
-      case 0x1: return 0x8;
-      case 0x2: return 0x4;
-      case 0x4: return 0x2;
-      case 0x8: return 0x1;        
-      case 0xf: return 0xf;
-      case '.': return '.';
-      default: assert(false);
-    }		
-	}
-  
-  inline base_char complement_base_char(base_char base ) {
-    switch(base) {
-      case 'A': return 'T';
-      case 'C': return 'G';
-      case 'G': return 'C';
-      case 'T': return 'A';
-      case '.': return '.';
-      case 'N': return 'N';
-      default: assert(false);
-    }
-  }
-    
-  inline base_index complement_base_index(base_index base) {
-    // ascii
-    switch(base) {
-      case 0: return 3;
-      case 1: return 2;
-      case 2: return 1;
-      case 3: return 0;
-      case 4: return 4;
-      default: assert(false);
-    }
-  }
-
-	
-	/*! Convert a base to an ASCII character.
-	 */
-	inline char basebam2char(base_bam base) {
-    // sam-style 4-bit field
-    switch(base) {
-      case 0x01: return 'A';
-      case 0x02: return 'C';
-      case 0x04: return 'G';
-      case 0x08: return 'T';
-      case '.': return '.';
-      case 0x0f: return 'N'; // might want to assert here 
-      default: assert(false);
-    }		
-	}
-
-  inline char baseindex2char(base_index base) {
-    switch(base) {
-      case 0: return 'A';
-      case 1: return 'C';
-      case 2: return 'G';
-      case 3: return 'T';        
-      case 4: return '.';
-      case 5: return 'N';
-      default: assert(false);
-    }
-  }
- 
- 	/*! Convert a base to an index
-	 */
-	inline char basebam2index(base_bam base) {
-    switch(base) {
-      case 0x1: return 0;
-      case 0x2: return 1;
-      case 0x4: return 2;
-      case 0x8: return 3;  
-      case '.': return 4;        
-      case 0xf: assert(false);
-      default: assert(false);
-    }			
-	}
-  
-  inline char basechar2index(base_char base) {
-    switch(base) {
-      case 'A': return 0;
-      case 'C': return 1;
-      case 'G': return 2;
-      case 'T': return 3;
-      case '.': return 4;
-      case 'N': return 5;
-      default: assert(false);
-    }
-  }
-
-
-  
   // These are our own local wrappers for common functions.
   
   inline void  my_assertion_handler(bool condition, const char *file, const char *base_file, int line, const string& message = "")
@@ -230,6 +113,126 @@ namespace breseq {
 #define WARN(message) { my_warning_handler( false,  __FILE__, __BASE_FILE__, __LINE__, message); }
 #define CHECK(condition, message) { my_warning_handler( condition,  __FILE__, __BASE_FILE__, __LINE__, message); }
   
+  // There are three ways to represent a base.
+  // We use typing to prevent coding errors when converting.
+  // 
+  // bam: SamTools representation, uses four bit codes 
+  //      A(0x1), C(0x2), G(0x4), T(0x8), N(0xf), .('.')
+  //      Note that we add '.' for convenience to this list.
+  typedef uint8_t base_bam;
+  
+  // char: Normal human-readable representation
+  //       'A', 'C', 'G', 'T', 'N', '.'
+  typedef char base_char;
+  
+  // index: Numbered starting at zero, used for array storage and lookups
+  //       A(0), C(1), G(2), T(3), .(4)  No 'N' bases allowed!
+  typedef uint8_t base_index;
+
+  /*! Definition of all single-base states that are considered */
+  static base_char base_char_list[] = {'A', 'C', 'G', 'T', '.'};
+  static const uint8_t base_list_size = 5;
+
+	/*! Reverse a base.
+	 */
+	inline base_bam complement_base_bam(base_bam base) {
+    // sam-style 4-bit field
+    switch(base) {
+      case 0x1: return 0x8;
+      case 0x2: return 0x4;
+      case 0x4: return 0x2;
+      case 0x8: return 0x1;        
+      case 0xf: return 0xf;
+      case '.': return '.';
+      default: ASSERT(false, "Unrecognized BAM base");
+    }		
+    return ' ';
+	}
+  
+  inline base_char complement_base_char(base_char base ) {
+    switch(base) {
+      case 'A': return 'T';
+      case 'C': return 'G';
+      case 'G': return 'C';
+      case 'T': return 'A';
+      case '.': return '.';
+      case 'N': return 'N';
+      default: ASSERT(false, "Unrecognized base char");
+    }
+    return ' ';
+  }
+    
+  inline base_index complement_base_index(base_index base) {
+    // ascii
+    switch(base) {
+      case 0: return 3;
+      case 1: return 2;
+      case 2: return 1;
+      case 3: return 0;
+      case 4: return 4;
+      default: ASSERT(false, "Unrecognized base index");
+    }
+    return 0;
+  }
+
+	
+	/*! Convert a base to an ASCII character.
+	 */
+	inline char basebam2char(base_bam base) {
+    // sam-style 4-bit field
+    switch(base) {
+      case 0x01: return 'A';
+      case 0x02: return 'C';
+      case 0x04: return 'G';
+      case 0x08: return 'T';
+      case '.': return '.';
+      case 0x0f: return 'N'; // might want to assert here 
+      default: ASSERT(false, "Unrecognized BAM base");
+    }		
+    return ' ';
+	}
+
+  inline char baseindex2char(base_index base) {
+    switch(base) {
+      case 0: return 'A';
+      case 1: return 'C';
+      case 2: return 'G';
+      case 3: return 'T';        
+      case 4: return '.';
+      case 5: return 'N';
+      default: ASSERT(false, "Unrecognized base index");
+    }
+    return ' ';
+  }
+ 
+ 	/*! Convert a base to an index
+	 */
+	inline char basebam2index(base_bam base) {
+    switch(base) {
+      case 0x1: return 0;
+      case 0x2: return 1;
+      case 0x4: return 2;
+      case 0x8: return 3;  
+      case '.': return 4;        
+      case 0xf: ASSERT(false, "BAM base not allowed: 0xf");
+      default: ASSERT(false, "Unrecognized BAM base");
+    }			
+    return 0;
+	}
+  
+  inline char basechar2index(base_char base) {
+    switch(base) {
+      case 'A': return 0;
+      case 'C': return 1;
+      case 'G': return 2;
+      case 'T': return 3;
+      case '.': return 4;
+      case 'N': return 5;
+      default: ASSERT(false, "Unrecognized base char");
+    }
+    return ' ';
+  }
+ 
   
   // Utility functions
   inline bool file_exists(const char *filename)
