@@ -322,7 +322,8 @@ namespace breseq {
     out_file.close();
   }
   
-  void CoverageDistribution::find_segments(
+  void CoverageDistribution::find_segments(const Settings& settings,
+                                           double summary_average,
                                           string in_file_name,
                                           string out_file_name,
                                           string history_file_name
@@ -344,7 +345,7 @@ namespace breseq {
     map<int32_t, double> saved_sums;
     
     //ordered_sums holds the order that saved_sums was populated.
-    vector<uint32_t> ordered_sums;
+    vector<int32_t> ordered_sums;
     
     //position and coverage are taken from the file.
     int32_t position;
@@ -379,6 +380,8 @@ namespace breseq {
     //the t value as per the CBS algorithm is the score of a given segment.
     double t;
     double best_t;
+    int32_t t_length;
+    int32_t best_t_length;
     
     //to easily see the t calculation these are used:
     double y;
@@ -391,13 +394,23 @@ namespace breseq {
     double best_d1;
     double best_d2;
     
+    int32_t randomizations;
+    
     double r_t;
     double r_best_t;
     
+    //extra useful data written
+    double mean_inside;
+    double mean_left;
+    double mean_right;
+    int32_t copy_inside;
+    int32_t copy_left;
+    int32_t copy_right;
+    
     //used for finding error
-    double inside_mean;
-    double outside_mean;
-    double mean_error;
+    //double inside_mean;
+    //double outside_mean;
+    //double mean_error;
     
     //used for randomizing a segment
     vector<double> randomized_coverage;
@@ -408,10 +421,13 @@ namespace breseq {
     
     //to skip the header
     string skip;
+    int32_t tile_size;
     
     ifstream in_file;
     ofstream out_file;
     ofstream history_file;
+    
+    randomizations = 100;
     
     srand(0);
     
@@ -419,10 +435,12 @@ namespace breseq {
     out_file.open ( out_file_name.c_str() );
     history_file.open ( history_file_name.c_str() );
     
-    getline(in_file, skip);
+    in_file >> skip >> skip >> tile_size;
     
-    out_file << "Start_Position\tEnd_Position\tT_Score\tGreater_Than\n";
-    history_file << "Start_Search\tEnd_Search\tStart_Position\tEnd_Position\tT_Score\tGreater_Than\n";
+    out_file << "Start_Position\tEnd_Position\tT_Score\tP_Value\n";
+    history_file << "Start_Search\tEnd_Search\tStart_Position\tEnd_Position\t"
+                 << "T_Score\tMean_Coverage_Inside\tMean_Coverage_Left\tMean_Coverage_Right\t"
+                 << "CN_Inside\tCN_Left\tCN_Right\tP_Value\n";
     
     //First, populate saved_sums and ordered_positions.
     //and get length
@@ -457,10 +475,23 @@ namespace breseq {
       if (current_search.first == current_search.second ||
           current_search.first + 1 == current_search.second)
       {
-        out_file << ordered_sums[current_search.first] << "\t"
+        out_file << ordered_sums[current_search.first] - tile_size + 1 << "\t"
                  << ordered_sums[current_search.second] << "\t"
                  << 0.0 << "\t"
-                 << 0.0 << endl;
+                 << 1.0 << endl;
+        history_file << ordered_sums[current_search.first] - tile_size + 1 << "\t"
+                     << ordered_sums[current_search.second] << "\t"
+                     << ordered_sums[current_search.first] - tile_size + 1 << "\t"
+                     << ordered_sums[current_search.second] << "\t"
+                     << 0.0 << "\t"
+                     << -1 << "\t"
+                     << -1 << "\t"
+                     << -1 << "\t"
+                     << -1 << "\t"
+                     << -1 << "\t"
+                     << -1 << "\t"
+                     << 1.0 << endl;
+        
         continue;
       }
       
@@ -496,7 +527,7 @@ namespace breseq {
       
       best_t = -1;
       best_greater_than = 0;
-      
+      best_t_length = 0;
       
       
       //i and j are inclusive boundaries so <= is used in the comparison.
@@ -544,6 +575,8 @@ namespace breseq {
           //t = (y - z) / (mean_error * sqrt( d1 + d2 ));
           t = (y - z) / sqrt( d1 + d2 );
           
+          t_length = j - i;
+          
           //cout << i << " " << j << endl;
           
           //cout << "c" << y << " " << z << endl;
@@ -551,8 +584,11 @@ namespace breseq {
           
           //cin.get();
           
-          if ( abs(t) > best_t )
+          if ( abs(t) > best_t ||
+               abs(t) == best_t && t_length > best_t_length )
           {
+            //keeping track of the best y, z, d1, and d2 was for
+            //early debugging
             best_t = abs(t);
             best_i = i;
             best_j = j;
@@ -560,20 +596,48 @@ namespace breseq {
             best_z = z;
             best_d1 = d1;
             best_d2 = d2;
+            best_t_length = t_length;
           }
         }
       }
-      cout << "population" << Sm << " " << m << endl;
-      cout << "best_initial " << best_i << " " << best_j << endl;
-      cout << "searched through " << current_search.first << " " << current_search.second << endl;
-      cout << "best_pos" << ordered_sums[best_i] << " " << ordered_sums[best_j] << endl;
-      cout << "best_cov" << saved_sums[ordered_sums[best_i]] << " " << saved_sums[ordered_sums[best_j]] << endl;
-      cout << "t" << best_t << endl;
+      p_i = ordered_sums[best_i] - position_downset;
+      Si = saved_sums[ p_i ];
+      p_j = ordered_sums[best_j] - position_downset;
+      Sj = saved_sums[ p_j ];
+      
+      //making useful information that will be written to the history file
+      if (best_i == current_search.first - 1){
+        mean_left = -1;
+        copy_left = -1;
+      }
+      else{
+        mean_left = Si / double(best_i);
+        copy_left = floor((mean_left / summary_average) + .5);
+      }
+      
+      mean_inside = (Sj - Si) / double(best_j - best_i);
+      copy_inside = floor((mean_inside / summary_average) + .5);
+      
+      if ( best_j == current_search.second ){
+        mean_right = -1;
+        copy_right = -1;
+      }
+      else{
+        mean_right = (Sm - Sj) / double(current_search.second - best_j);
+        copy_right = floor((mean_right / summary_average) + .5);
+      }
+      
+      //cout << "population" << Sm << " " << m << endl;
+      //cout << "best_initial " << best_i << " " << best_j << endl;
+      //cout << "searched through " << current_search.first << " " << current_search.second << endl;
+      //cout << "best_pos" << ordered_sums[best_i] << " " << ordered_sums[best_j] << endl;
+      //cout << "best_cov" << saved_sums[ordered_sums[best_i]] << " " << saved_sums[ordered_sums[best_j]] << endl;
+      //cout << "t" << best_t << endl;
       //cout << "calc  " << best_y << " " << best_z << " " << best_d1 << " " << best_d2 << endl;
       //cin.get();
       //examine the segment i + 1 to j further by randomizing its distribution and scoring it.
       //randomized_segment_scores.empty();
-      for ( int32_t examinations = 0; examinations < 20; examinations++ )
+      for ( int32_t examinations = 0; examinations < randomizations; examinations++ )
       {
         available_coverage.clear();
         randomized_coverage.clear();
@@ -667,7 +731,7 @@ namespace breseq {
           }
         }
         //cout << "b " << r_best_t << " " << best_t << " " << best_greater_than << endl;
-        //cout << "rcalc " << y << " " << z << " " << d1 << " " << d2 << endl;
+        //cout << "rcacout << "lol formatting" << 1 - (double)(best_greater_than) / randomizations << endl;lc " << y << " " << z << " " << d1 << " " << d2 << endl;
         //cin.get();
         //r_best_* variables have the best of this random segment.
         
@@ -683,12 +747,12 @@ namespace breseq {
       
       //if the range to be added is identical to the current search, don't add it
       //only write it.
-      cout << best_greater_than << endl;
+      //cout << best_greater_than << endl;
       //cout << best_greater_than / 10.0 << endl;
       //cout << current_search.first << " " << best_i + 1 << endl;
       //cout << current_search.second << " " << best_j << endl;
       //cin.get();
-      if ( (best_greater_than / 20.0) >= .95 &&
+      if ( (double)(best_greater_than) / randomizations >= .95 &&
            !((current_search.first == best_i + 1) && (current_search.second == best_j))
          )
       {
@@ -696,53 +760,65 @@ namespace breseq {
         next_search.first = best_i + 1;
         next_search.second = best_j;
         searching.push_back( next_search );
+        
+        //if best_i doesn't include the first element, add the segment before
+        //best_i
+        if ( best_i + 1 > current_search.first )
+        {
+          
+          next_search.first = current_search.first;
+          next_search.second = best_i;
+          searching.push_back( next_search );
+          
+        }
+        
+        //if best_j doesn't include the last element, add the segment after
+        //best_j
+        if ( best_j < current_search.second )
+        {
+          
+          next_search.first = best_j + 1;
+          next_search.second = current_search.second;
+          searching.push_back( next_search );
+          
+        }
+        
+        
+        history_file << ordered_sums[current_search.first] - tile_size + 1 << "\t" <<
+                        ordered_sums[current_search.second] << "\t" <<
+                        ordered_sums[best_i + 1] - tile_size + 1 << "\t" <<
+                        ordered_sums[best_j] << "\t" <<
+                        best_t << "\t" <<
+                        mean_inside << "\t" <<
+                        mean_left << "\t" <<
+                        mean_right << "\t" <<
+                        copy_inside << "\t" <<
+                        copy_left << "\t" <<
+                        copy_right << "\t" <<
+                        1 - (double)(best_greater_than) / randomizations << endl;
       }
       //otherwise, just write the segment.
       else
       {
-        out_file << ordered_sums[best_i + 1] << "\t"
-                 << ordered_sums[best_j] << "\t"
+        out_file << ordered_sums[current_search.first] - tile_size + 1 << "\t"
+                 << ordered_sums[current_search.second] << "\t"
                  << best_t << "\t"
-                 << best_greater_than / 20.0 << endl;
+                 << 1 - (double)(best_greater_than) / randomizations << endl;
+        history_file << ordered_sums[current_search.first] - tile_size + 1 << "\t" <<
+                        ordered_sums[current_search.second] << "\t" <<
+                        ordered_sums[best_i + 1] - tile_size + 1 << "\t" <<
+                        ordered_sums[best_j] << "\t" <<
+                        best_t << "\t" <<
+                        mean_inside << "\t" <<
+                        mean_left << "\t" <<
+                        mean_right << "\t" <<
+                        copy_inside << "\t" <<
+                        copy_left << "\t" <<
+                        copy_right << "\t" <<
+                        1 - (double)(best_greater_than) / randomizations << endl;
       }
       
-      //update searching for next iteration.
-      //if current_search spans multiple indeces, write the best i and j segment
-      //and update for the next iteration.
       
-        
-      //setting up next_searches
-      
-      
-      
-      //if best_i doesn't include the first element, add the segment before
-      //best_i
-      if ( best_i + 1 > current_search.first )
-      {
-        
-        next_search.first = current_search.first;
-        next_search.second = best_i;
-        searching.push_back( next_search );
-        
-      }
-      
-      //if best_j doesn't include the last element, add the segment after
-      //best_j
-      if ( best_j < current_search.second )
-      {
-        
-        next_search.first = best_j + 1;
-        next_search.second = current_search.second;
-        searching.push_back( next_search );
-        
-      }
-      
-      history_file << ordered_sums[current_search.first] << "\t" <<
-                      ordered_sums[current_search.second] << "\t" <<
-                      ordered_sums[best_i + 1] << "\t" <<
-                      ordered_sums[best_j] << "\t" <<
-                      best_t << "\t" <<
-                      best_greater_than / 20.0 << endl;
     }
     
     in_file.close();

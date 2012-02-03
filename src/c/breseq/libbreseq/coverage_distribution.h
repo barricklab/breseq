@@ -91,7 +91,8 @@ namespace breseq {
     //11 11
     //This function also accepts files created by coverage_distribution::tile()
     //Written by Aaron Reba
-    static void find_segments (
+    static void find_segments (const Settings& settings,
+                               double summary_average,
                                string in_file_name,
                                string out_file_name,
                                string history_file_name
@@ -101,8 +102,7 @@ namespace breseq {
     //coverage_distribution::find_segments, this will smooth the coverage inside
     //the ranges to the mean of the range rounded to the nearest integer.
     //Written by Aaron Reba
-    static void smooth_segments (
-                                const Settings& settings,
+    static void smooth_segments (const Settings& settings,
                                 const string& seq_id,
                                 double summary_average,
                                 string tile_file_name,
