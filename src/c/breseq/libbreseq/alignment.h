@@ -147,9 +147,6 @@ class alignment_wrapper {
     //! Retrieve the index of the read file that contained this alignment.
     uint32_t fastq_file_index() const;
     
-    //! Has this alignment been trimmed?
-    bool is_trimmed() const;
-    
     //! Return number of locations on left of sequence to be trimmed
     uint32_t trim_left() const;
     //! Return number of locations on right of sequence to be trimmed
@@ -344,14 +341,14 @@ public:
     // is our query position in the left-side trimmed region?
     uint8_t *auxl = bam_aux_get(_a,"XL");
     if(auxl) {
-      if((query_position_1()) <= (uint32_t)bam_aux2i(auxl)) {
+      if(query_position_1() <= static_cast<uint32_t>(bam_aux2i(auxl))) {
         return true;
       }
     }	
     // is our query position in the right-side trimmed region?
     uint8_t *auxr = bam_aux_get(_a,"XR");
     if(auxr) {
-      if((read_length()-(query_position_1())) <= (uint32_t)bam_aux2i(auxr)) {
+      if(read_length()-query_position_1()+1 <= static_cast<uint32_t>(bam_aux2i(auxr))) {
         return true;
       }
     }

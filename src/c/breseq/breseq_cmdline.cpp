@@ -55,7 +55,7 @@ int do_bam2aln(int argc, char* argv[]) {
   ("bam,b", "bam file containing sequences to be aligned", "data/reference.bam")
 	("fasta,f", "FASTA file of reference sequence", "data/reference.fasta")
   ("output,o", "output to file [region.html]")
-  ("region,r", "region to print (accession:start-end)")
+  ("region,r", "region to print (accession:start-end), may also be provided as unnamed arguments at the end of the command line.")
   ("max-reads,n", "maximum number of reads to show in alignment", 200)
   ("quality-score-cutoff,c", "quality score cutoff", 0)
   ("stdout", "write output to stdout", TAKES_NO_ARGUMENT)
@@ -141,7 +141,7 @@ int do_bam2cov(int argc, char* argv[]) {
 	("fasta,f", "FASTA file of reference sequence", "data/reference.fasta")
   ("output,o", "base name of output file. Region (seq_id:start-end) appended if there are multiple output files. Defaults to seq_id:start-end for single regions.")
   // which regions to create files for
-  ("region,r", "region to print (accession:start-end)", "")
+  ("region,r", "region to print (accession:start-end), may also be provided as unnamed arguments at the end of the command line", "")
   ("tile-size", "size of tiles")
   ("tile-overlap", "overlap between tiles (1/2 on each side)")
   // options controlling what files are output
