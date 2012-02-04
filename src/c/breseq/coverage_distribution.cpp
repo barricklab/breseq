@@ -329,6 +329,7 @@ namespace breseq {
                                           string history_file_name
                                           )
   {
+    (void)settings;
     //a search entry represents a segment of positions in the file that will be
     //examined. start and end are inclusive.
     //search entries are referencing the index in the file, not position
@@ -836,7 +837,7 @@ namespace breseq {
                                               string gd_file_name
                                               )
   {
-    cout << "sum_avg" << summary_average << endl;
+    //cout << "sum_avg" << summary_average << endl;
     cGenomeDiff gd;
     
     //used for finding the mean of a segment in the tile file.
@@ -942,7 +943,7 @@ namespace breseq {
       if (new_segment_mean != 1.0) {
         cDiffEntry item(CN);
         item[SEQ_ID] = seq_id;
-        item[START] = to_string<uint32_t>(position_start - settings.copy_number_variation_tile_size + 1);
+        item[START] = to_string<uint32_t>(position_start);
         item[END] = to_string<uint32_t>(position_end);
         item["tile_size"] = to_string<double>(settings.copy_number_variation_tile_size);
         item["copy_number"] = to_string<double>(new_segment_mean);
@@ -1039,6 +1040,7 @@ namespace breseq {
     
     gd_merged.write(gd_file_name);
   }
+
 
   void CoverageDistribution::calculate_periodicity (
                                     string coverage_file_name,
