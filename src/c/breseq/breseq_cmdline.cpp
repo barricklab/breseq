@@ -877,7 +877,32 @@ int do_merge(int argc, char *argv[])
   
   return 0;
 }
+int do_compare_genome_diffs(int argc, char *argv[])
+{
+  AnyOption options("Usage: breseq COMPARE-GD -c <control.gd> -t <test.gd> -o <output.gd>");
+  options("control,c", "control genome diff file, mutations within are assumed to be accurate");
+  options("test,t",    "test genome diff file, mutations not been checked for accuracy");
+  options("output,o",  "output compared genome diff file name");
+  options.processCommandArgs(argc, argv);
 
+
+  if (!options.count("control") ||
+      !options.count("test")    ||
+      !options.count("output")) {
+    options.printUsage();
+    return -1;
+  }
+
+  cGenomeDiff control_gd(options["control"]);
+  cGenomeDiff test_gd(options["test"]);
+
+  cGenomeDiff compare_gd = cGenomeDiff::compare_genome_diff_files(control_gd, test_gd);
+
+  compare_gd.write(options["output"]);
+
+
+  return 0;
+}
 int do_not_evidence(int argc, char *argv[])
 {
   AnyOption options("Usage: breseq NOT_EVIDENCE -g <genomediff.gd> -o <output.gd>");
@@ -923,201 +948,6 @@ int do_not_evidence(int argc, char *argv[])
   return 0;
 }
 
-int do_post_run(int argc, char *argv[])
-{
-    AnyOption options("Usage: breseq POST-RUN -d <01_Data> -o <03_Output> -l <04_Logs> -r <05_Results>");
-    options("data_dir,d",    "*.gd files with varified mutations.", "01_Data");
-    options("output_dir,o",  "Output of mutation prediction pipelines.", "03_Output");
-    options("logs_dir,l",    "*.log.txt stdout/stderr of mutation prediction pipelines.", "04_Logs");
-    options("results_dir,r", "Folder to be created containing various results.", "05_Results");
-    options("dcamp"        , "Alters input/output file paths to contain the pipeline's name.", TAKES_NO_ARGUMENT);
-    options.processCommandArgs(argc, argv);
-
-    const cString &data_dir    = cString(options["data_dir"]).trim_ends_of('/');
-    const cString &output_dir  = cString(options["output_dir"]).trim_ends_of('/');
-    const cString &logs_dir    = cString(options["logs_dir"]).trim_ends_of('/');
-    const cString &results_dir = cString(options["results_dir"]).trim_ends_of('/');
-
-    if (!ifstream(data_dir.c_str()).good()   ||
-        !ifstream(output_dir.c_str()).good() ||
-        !ifstream(logs_dir.c_str()).good()) {
-      options.printUsage();
-      return -1;
-    }
-
-    /* Table layout:
-     Dcamp:
-        key    -> key   -> key     -> value
-        $EXE   -> $NAME -> control -> 01_Data/$NAME.gd
-                        -> test    -> 03_Output/$EXE/$NAME/output/output.gd
-                        -> log     -> 04_Logs/$EXE/$NAME.log.txt
-     Breseq only:
-        key    -> key   -> key     -> value
-        breseq -> $NAME -> control -> 01_Data/$NAME.gd
-                        -> test    -> 03_Output/$NAME/output/output.gd
-                        -> log     -> 04_Logs/$NAME.log.txt
-      */
-
-    typedef map<cString, map<cString, map<cString, cString> > > exe_table_t;
-    exe_table_t table;
-
-    list<cString> ls_output_dir;
-    cString cmd("ls %s", output_dir.c_str());
-    SYSTEM_CAPTURE(back_inserter(ls_output_dir), cmd, true);
-    assert(ls_output_dir.size());
-
-    const cString &control_path_fmt = data_dir + "/%s.gd";
-
-    const cString &test_path_fmt = options.count("dcamp") ?
-          output_dir + "/%s/%s/output/%s.gd" :
-          output_dir + "/%s/output/output.gd";
-
-    const cString &log_path_fmt = options.count("dcamp") ?
-          logs_dir + "/%s/%s.log.txt" :
-          logs_dir + "/%s.log.txt" ;
-
-    if (!options.count("dcamp")) {
-      list<cString> &names = ls_output_dir;
-      for (;names.size(); names.pop_front()) {
-        const cString &name = cString(names.front()).trim_ends_of('/');
-        const cString &exe = "breseq";
-
-        const cString control_path(control_path_fmt.c_str(), name.c_str());
-        const cString test_path(test_path_fmt.c_str(), name.c_str());
-        const cString log_path(log_path_fmt.c_str(), name.c_str());
-
-        if (ifstream(control_path.c_str()).good()) {
-          table[exe][name]["control"] = control_path;
-        }
-
-        if (ifstream(test_path.c_str()).good()) {
-          table[exe][name]["test"] = test_path;
-        }
-
-        if (ifstream(log_path.c_str()).good()) {
-          table[exe][name]["log"] = log_path;
-        }
-      }//End ls_output_dir loop.
-    } else {
-      list<cString> &exes = ls_output_dir;
-      for (;exes.size(); exes.pop_front()) {
-        const cString &exe = cString(exes.front()).trim_ends_of('/');
-
-        cmd = cString("ls %s/%s", output_dir.c_str(), exe.c_str());
-        list<cString> names;
-        SYSTEM_CAPTURE(back_inserter(names), cmd, true);
-        assert(names.size());
-
-        for (;names.size(); names.pop_front()) {
-          const cString &name = cString(names.front()).trim_ends_of('/');
-
-          const cString control_path(control_path_fmt.c_str(), name.c_str());
-
-          const cString test_path = (exe == "breseq") ?
-                cString(test_path_fmt.c_str(), exe.c_str(), name.c_str(), "output") :
-                cString(test_path_fmt.c_str(), exe.c_str(), name.c_str(), name.c_str());
-
-          const cString log_path(log_path_fmt.c_str(),exe.c_str(), name.c_str());
-
-          if (ifstream(control_path.c_str()).good()) {
-            table[exe][name]["control"] = control_path;
-          }
-
-          if (ifstream(test_path.c_str()).good()) {
-            table[exe][name]["test"] = test_path;
-          }
-
-          if (ifstream(log_path.c_str()).good()) {
-            table[exe][name]["log"] = log_path;
-          }
-
-        }//End names loop.
-      }//End ls_output_dir loop.
-    }
-    assert(table.size());
-
-    /*
-    Results dir layout:
-     Breseq only:
-     04_Results -> output  -> $NAME.gd
-                -> compare -> $NAME.comp.gd
-                -> logs    -> $NAME.log.txt or $NAME.error.txt
-
-     Dcamp:
-     04_Results -> output  -> $EXE/$NAME.gd
-                -> compare -> $EXE/$NAME.comp.gd
-                -> logs    -> $EXE/$NAME.log.txt or $NAME.error.txt
-    */
-
-    typedef map<cString, map<cString, cString> >  name_table_t;
-
-    for (exe_table_t::iterator it_exe = table.begin();
-         it_exe != table.end(); ++it_exe) {
-      const cString &exe = it_exe->first;
-
-      const cString &results_output_dir = options.count("dcamp") ?
-            results_dir + "/output/" + exe :
-            results_dir + "/output" ;
-      create_path(results_output_dir);
-
-      const cString &results_compare_dir = options.count("dcamp") ?
-            results_dir + "/compare/" + exe :
-            results_dir + "/compare" ;
-      create_path(results_compare_dir);
-
-      const cString &results_log_dir= options.count("dcamp") ?
-          results_dir + "/logs/" + exe:
-          results_dir + "/logs" ;
-      create_path(results_log_dir);
-
-      for (name_table_t::iterator it_name = table[exe].begin();
-           it_name != table[exe].end(); ++it_name) {
-        const cString &name = it_name->first;
-
-        if (table[exe][name].count("control") &&
-            table[exe][name].count("test")) {
-          const cString &compare_path =
-              cString("%s/%s.comp.gd", results_compare_dir.c_str(), name.c_str());
-          cGenomeDiff control_gd(table[exe][name]["control"]);
-          if (control_gd.mutation_list().size()) {
-            cGenomeDiff test_gd(table[exe][name]["test"]);
-
-            cGenomeDiff::
-              compare_genome_diff_files(control_gd, test_gd).write(compare_path);
-          } else {
-            WARN(
-                  cString("File [%s] not created; There are no mutations available in [%s].",
-                          compare_path.c_str(), table[exe][name]["control"].c_str())
-                 );
-          }
-        }
-
-        if (table[exe][name].count("test")) {
-          const cString &output_path =
-              cString("%s/%s.gd", results_output_dir.c_str(), name.c_str());
-          copy_file(table[exe][name]["test"], output_path);
-        }
-
-        if (table[exe][name].count("log")) {
-          const bool is_error = !table[exe][name].count("test");
-          const cString &log_path =  is_error?
-                cString("%s/%s.error_log.txt", results_log_dir.c_str(), name.c_str()) :
-                cString("%s/%s.log.txt", results_log_dir.c_str(), name.c_str()) ;
-          if (is_error) {
-            WARN(
-                  cString("Pipeline [%s] did not complete the run of [%s]. Check [%s] to determine why.",
-                          exe.c_str(), name.c_str(), log_path.c_str())
-                );
-          }
-          copy_file(table[exe][name]["log"], log_path);
-        }
-
-      }//End inner table loop.
-    }//End outer table loop.
-
-
-  return 0;
-}
 
 int do_intersection(int argc, char *argv[])
 {
@@ -1528,7 +1358,7 @@ int do_runfile(int argc, char *argv[])
         ss << " -r " << download_path;
         n_refs--;
       } else {
-      //! Part 4: Read arguemnt path(s).
+      //! Part 4: Read arguement path(s).
         if (download_path.ends_with(".gz")) download_path.remove_ending(".gz");
         ss << " " << download_path;
       }
@@ -3045,10 +2875,10 @@ int main(int argc, char* argv[]) {
     return do_subtract(argc_new, argv_new);    
   } else if (command == "UNION" || command == "MERGE") {
     return do_merge(argc_new, argv_new);    
+  } else if (command == "COMPARE-GD") {
+    return do_compare_genome_diffs(argc_new, argv_new);
   } else if (command == "NOT_EVIDENCE") {
     return do_not_evidence(argc_new, argv_new);
-  } else if (command == "POST-RUN") {
-    return do_post_run(argc_new, argv_new);
   } else if (command == "INTERSECTION") {
     return do_intersection(argc_new, argv_new);
   } else if (command == "ANNOTATE") {
