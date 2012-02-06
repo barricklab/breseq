@@ -2142,7 +2142,8 @@ diff_entry_list_t cGenomeDiff::list(const vector<gd_entry_type>& types)
   
   return return_list;
 }
-  
+
+
 diff_entry_list_t cGenomeDiff::show_list(const vector<gd_entry_type>& types)
 {
   diff_entry_list_t ret_list = list(types);
@@ -2668,103 +2669,74 @@ cGenomeDiff cGenomeDiff::intersect(const cGenomeDiff &_gd1, const cGenomeDiff &_
 
   return gd;
 }
-
 cGenomeDiff cGenomeDiff::compare_genome_diff_files(const cGenomeDiff &control, const cGenomeDiff &test)
 {
   cGenomeDiff control_gd = control;
   cGenomeDiff test_gd = test;
   cGenomeDiff new_gd; //ret val
 
-  const diff_entry_list_t &control_mutations = control_gd.mutation_list();
-  const diff_entry_list_t &test_mutations = test_gd.mutation_list();
+  cGenomeDiff fp_gd = test_gd;
+  fp_gd.subtract(control_gd);
 
-  typedef set<cDiffEntry> diff_entry_set_t;
-  diff_entry_set_t control_diff_mutations_set;
-  diff_entry_set_t test_diff_mutations_set;
+  cGenomeDiff fn_gd = control_gd;
+  fn_gd.subtract(test_gd);
 
-  //! Step: Strip counted_ptr<> for STL use.
-  for (diff_entry_list_t::const_iterator it = control_mutations.begin();
-       it != control_mutations.end(); it++) {
-    control_diff_mutations_set.insert(**it);
-  }
-  for (diff_entry_list_t::const_iterator it = test_mutations.begin();
-       it != test_mutations.end(); it++) {
-    test_diff_mutations_set.insert(**it);
-  }
+  cGenomeDiff tp_gd = test;
+  tp_gd.subtract(fp_gd);
+  tp_gd.subtract(fn_gd);
 
-  //! Step: True positive mutations
-  diff_entry_set_t true_positive_mutations_set;
-  set_intersection(control_diff_mutations_set.begin(), control_diff_mutations_set.end(),
-                   test_diff_mutations_set.begin(), test_diff_mutations_set.end(),
-                   inserter(true_positive_mutations_set, true_positive_mutations_set.begin()));
 
-  //Remove true_positives from previous sets
-  for (diff_entry_set_t::const_iterator it = true_positive_mutations_set.begin();
-       it != true_positive_mutations_set.end(); it++) {
-    control_diff_mutations_set.erase(*it);
-    test_diff_mutations_set.erase(*it);
-  }
+  const diff_entry_list_t &true_positive_mutations  = tp_gd.mutation_list();
+  const diff_entry_list_t &false_negative_mutations = fn_gd.mutation_list();
+  const diff_entry_list_t &false_positive_mutations = fp_gd.mutation_list();
 
-  //Find difference and then determine if false-positive or false-negative
-  diff_entry_set_t difference_mutations_set;
-  set_difference(control_diff_mutations_set.begin(), control_diff_mutations_set.end(),
-                   test_diff_mutations_set.begin(), test_diff_mutations_set.end(),
-                   inserter(difference_mutations_set, difference_mutations_set.begin()));
+  //! Step: Display results;
+  const size_t num_true_positive  = true_positive_mutations.size();
+  const size_t num_false_negative = false_negative_mutations.size();
+  const size_t num_false_positive = false_positive_mutations.size();
 
-  //! Step: False Negative
-  diff_entry_set_t false_negative_mutations_set;
-  set_intersection(difference_mutations_set.begin(), difference_mutations_set.end(),
-                   control_diff_mutations_set.begin(), control_diff_mutations_set.end(),
-                   inserter(false_negative_mutations_set, false_negative_mutations_set.begin()));
-  //Remove false negatives from test set
-  for (diff_entry_set_t::const_iterator it = true_positive_mutations_set.begin();
-       it != true_positive_mutations_set.end(); it++) {
-    test_diff_mutations_set.erase(*it);
-  }
+  string validation_str = "";
+  sprintf(validation_str, "%i|%i|%i",
+          static_cast<int>(num_true_positive),
+          static_cast<int>(num_false_negative),
+          static_cast<int>(num_false_positive));
+  new_gd.add_breseq_data("TP|FN|FP", validation_str);
 
-  //! Step: False positive
-  diff_entry_set_t false_positive_mutations_set;
-  set_intersection(difference_mutations_set.begin(), difference_mutations_set.end(),
-                   test_diff_mutations_set.begin(), test_diff_mutations_set.end(),
-                   inserter(false_positive_mutations_set, false_positive_mutations_set.begin()));
-
-//! Step: Display results;
-  const size_t &num_true_positive = true_positive_mutations_set.size();
-  const size_t &num_false_negative = false_negative_mutations_set.size();
-  const size_t &num_false_positive = false_positive_mutations_set.size();
-
-  printf("#=TP|FN|FP	%i|%i|%i \t for %s versus %s \n",
-         static_cast<int>(num_true_positive), static_cast<int>(num_false_negative), static_cast<int>(num_false_positive),
-         control_gd._default_filename.c_str(), test_gd._default_filename.c_str());
+  printf("#=TP|FN|FP	%s \t for %s versus %s \n",
+         validation_str.c_str(),
+         control_gd._default_filename.c_str(),
+         test_gd._default_filename.c_str());
 
   //! Step: Add validation=<TP/FP/FN> tags to new_gd.
   //True positive
-  for (diff_entry_set_t::iterator it = true_positive_mutations_set.begin();
-       it != true_positive_mutations_set.end(); it++) {
-    cDiffEntry de = *it;
+  for (diff_entry_list_t::const_iterator it = true_positive_mutations.begin();
+       it != true_positive_mutations.end(); it++) {
+    cDiffEntry de = **it;
     de.insert(pair<string,string>("validation", "TP"));
+    de._evidence.clear();
     new_gd.add(de);
   }
 
   //False negative
-  for (diff_entry_set_t::iterator it = false_negative_mutations_set.begin();
-       it != false_negative_mutations_set.end(); it++) {
-    cDiffEntry de = *it;
+  for (diff_entry_list_t::const_iterator it = false_negative_mutations.begin();
+       it != false_negative_mutations.end(); it++) {
+    cDiffEntry de = **it;
     de.insert(pair<string,string>("validation", "FN"));
+    de._evidence.clear();
     new_gd.add(de);
   }
 
    //False positive
-  for (diff_entry_set_t::iterator it = false_positive_mutations_set.begin();
-       it != false_positive_mutations_set.end(); it++) {
-    cDiffEntry de = *it;
+  for (diff_entry_list_t::const_iterator it = false_positive_mutations.begin();
+       it != false_positive_mutations.end(); it++) {
+    cDiffEntry de = **it;
     de.insert(pair<string,string>("validation", "FP"));
+    de._evidence.clear();
     new_gd.add(de);
   }
 
   return new_gd;
 }
-
 
 }//namespace bresesq
 
