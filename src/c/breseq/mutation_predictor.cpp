@@ -1011,11 +1011,30 @@ namespace breseq {
 				mut
 					("seq_id", seq_id)
 					("position", s(position))
-					("size", s(n(j["side_1_position"]) - n(j["side_2_position"]) + 1))
 					("new_seq", new_seq + ref_seq)
 				;
         mut._evidence = make_vector<string>(j._id);
 
+				gd.add(mut);
+			}
+      // 'INS'
+      //  INS predicted here are aligned with missing unique_read_sequence info.
+      //  Further the unique read sequence is aligned on the reverse strand.
+      //  We need to grab it, proper like.
+			else if (n(j["side_1_position"]) + 1 < n(j["side_2_position"]))
+			{
+				string new_seq = (n(j["side_2_strand"]) < 0) ? reverse_complement(j["unique_read_sequence"]) : j["unique_read_sequence"];
+        string ref_seq = ref_seq_info.get_sequence_1(seq_id, n(j["side_1_position"]), n(j["side_2_position"]));
+        
+				cDiffEntry mut;
+        mut._type = INS;
+				mut
+        ("seq_id", seq_id)
+        ("position", j["side_2_position"])
+        ("new_seq", new_seq + ref_seq)
+				;
+        mut._evidence = make_vector<string>(j._id);
+        
 				gd.add(mut);
 			}
 			// "INS" || "AMP"
