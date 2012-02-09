@@ -690,6 +690,8 @@ int do_convert_gd( int argc, char* argv[])
     AnyOption options("Usage: VCF2GD --input <intput.vcf> --output <output.gd>");
     options("input,i","gd file to convert");
     options("output,o","name of output file");
+    options("AF-100", "Allow only AF1 and AF values of 1.00.", TAKES_NO_ARGUMENT);
+    options("AF-099", "Allow any AF1 and AF values < 1.00.", TAKES_NO_ARGUMENT);
     options.processCommandArgs( argc,argv);
     
     if(!options.count("input") && !options.count("output")){
@@ -703,20 +705,41 @@ int do_convert_gd( int argc, char* argv[])
     
     cGenomeDiff gd = cGenomeDiff::from_vcf(options["input"]);
     diff_entry_list_t muts = gd.mutation_list();
-    gd.subtract(gd);
+
+    cGenomeDiff new_gd;
     for (diff_entry_list_t::iterator it = muts.begin();
          it != muts.end(); ++it) {
-      //! Comment out AF < 1.00 values for dcamp purposes.
-      if ((*it)->entry_exists("AF") && (**it)["AF"] != "1.00") {
-        (**it)["comment_out"] = "";
+      cDiffEntry &de = **it;
+
+      if (options.count("AF-100") || options.count("AF-099")) {   
+        double value = 0;
+        //From Gatk.
+        if (de.entry_exists("AF")) {
+          value = from_string<double>(de["AF"]);
+        }
+        //From Samtools.
+        else if (de.entry_exists("AF1")) {
+          value = from_string<double>(de["AF1"]);
+        }
+        //Not all vcf mutations have this attribute? 
+        else {
+          break;
+        }
+        assert(value);
+
+        //Comment out entries.
+        //May want to do some rounding here.
+        if (options.count("AF-100") && value  < 1.00) de["comment_out"] = "True";
+        if (options.count("AF-099") && value == 1.00) de["comment_out"] = "True";
       }
-      gd.add(**it);
+
+      new_gd.add(de);
     }
     const string &file_name = options.count("output") ?
           options["output"] :
           cString(options["input"]).remove_ending("vcf") + "gd";
 
-    gd.write(file_name);
+    new_gd.write(file_name);
     
     return 0;
 }
