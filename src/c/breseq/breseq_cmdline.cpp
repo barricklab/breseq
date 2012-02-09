@@ -729,8 +729,8 @@ int do_convert_gd( int argc, char* argv[])
 
         //Comment out entries.
         //May want to do some rounding here.
-        if (options.count("AF-100") && value  < 1.00) de["comment_out"] = "True";
-        if (options.count("AF-099") && value == 1.00) de["comment_out"] = "True";
+        if (options.count("AF-100") && value != 1) de["comment_out"] = "True";
+        if (options.count("AF-099") && value == 1) de["comment_out"] = "True";
       }
 
       new_gd.add(de);
