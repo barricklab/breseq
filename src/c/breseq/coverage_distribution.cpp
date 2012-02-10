@@ -380,7 +380,11 @@ namespace breseq {
     
     //the t value as per the CBS algorithm is the score of a given segment.
     double t;
+    double t_left;
+    double t_right;
     double best_t;
+    double best_t_left;
+    double best_t_right;
     int32_t t_length;
     int32_t best_t_length;
     
@@ -390,14 +394,13 @@ namespace breseq {
     double d1;
     double d2;
     
-    double best_y;
-    double best_z;
-    double best_d1;
-    double best_d2;
-    
     int32_t randomizations;
     
+    double r_t_left;
+    double r_t_right;
     double r_t;
+    double r_best_left;
+    double r_best_right;
     double r_best_t;
     
     //extra useful data written
@@ -419,6 +422,8 @@ namespace breseq {
     list<int32_t> available_coverage;
     int32_t random_index;
     uint32_t best_greater_than;
+    uint32_t left_greater_than;
+    uint32_t right_greater_than;
     
     //to skip the header
     string skip;
@@ -440,8 +445,10 @@ namespace breseq {
     
     out_file << "Start_Position\tEnd_Position\tT_Score\tP_Value\n";
     history_file << "Start_Search\tEnd_Search\tStart_Position\tEnd_Position\t"
+                 << "Start_Segment\tEnd_Segment\t"
                  << "T_Score\tMean_Coverage_Inside\tMean_Coverage_Left\tMean_Coverage_Right\t"
-                 << "CN_Inside\tCN_Left\tCN_Right\tP_Value\n";
+                 << "CN_Inside\tCN_Left\tCN_Right\t"
+                 << "P_Value_Inside\tP_Value_Left\tP_Value_Right\n";
     
     //First, populate saved_sums and ordered_positions.
     //and get length
@@ -527,7 +534,11 @@ namespace breseq {
       
       
       best_t = -1;
+      best_t_left = -1;
+      best_t_right = -1;
       best_greater_than = 0;
+      left_greater_than = 0;
+      right_greater_than = 0;
       best_t_length = 0;
       
       
@@ -569,35 +580,33 @@ namespace breseq {
           
           y = (Sj - Si) / (p_j - p_i);
           z = (Sm - Sj + Si) / (m - p_j + p_i);
-          
           d1 = (1.0 / (p_j - p_i));
           d2 = (1.0 / (m - p_j + p_i));
-          
-          //t = (y - z) / (mean_error * sqrt( d1 + d2 ));
           t = (y - z) / sqrt( d1 + d2 );
           
           t_length = j - i;
           
-          //cout << i << " " << j << endl;
-          
-          //cout << "c" << y << " " << z << endl;
-          //cout << "D" << d1 << " " << d2 << endl;
-          
-          //cin.get();
-          
           if ( abs(t) > best_t ||
                abs(t) == best_t && t_length > best_t_length )
           {
-            //keeping track of the best y, z, d1, and d2 was for
-            //early debugging
             best_t = abs(t);
             best_i = i;
             best_j = j;
-            best_y = y;
-            best_z = z;
-            best_d1 = d1;
-            best_d2 = d2;
             best_t_length = t_length;
+            
+            y = Si / p_i;
+            z = (Sm - Si) / ( m - p_i );
+            d1 = 1.0 / p_i;
+            d2 = 1.0 / (m - p_i);
+            t_left = (y - z) / sqrt ( d1 + d2 );
+            best_t_left = abs(t_left);
+            
+            y = Sj / p_j;
+            z = (Sm - Sj) / ( m - p_j );
+            d1 = 1.0 / p_j;
+            d2 = 1.0 / (m - p_j);
+            t_right = (y - z) / sqrt ( d1 + d2 );
+            best_t_right = abs(t_right);
           }
         }
       }
@@ -682,6 +691,8 @@ namespace breseq {
         //the positions in place.
         
         r_best_t = -1;
+        r_best_left = -1;
+        r_best_right = -1;
         
         //find the t score of this new segment of coverage.
         for ( int32_t i = current_search.first - 1; i < current_search.second; i++ )
@@ -714,21 +725,46 @@ namespace breseq {
             p_j = ordered_sums[j] - position_downset;
             Sj = saved_sums[ p_j ];
             
+            //calculating t score of middle segment.
+            
             y = (Sj - Si) / (p_j - p_i);
             z = (Sm - Sj + Si) / (m - p_j + p_i);
-            
             d1 = 1.0 / (p_j - p_i);
             d2 = 1.0 / (m - p_j + p_i);
-            
-            //r_t = (y - z) / (sqrt( d1 + d2 ) * mean_error );
             r_t = (y - z) / sqrt( d1 + d2 );
+            r_t = abs(r_t);
             
-            if ( abs(r_t) > r_best_t )
+            y = Si / p_i;
+            z = (Sm - Si) / ( m - p_i );
+            d1 = 1.0 / p_i;
+            d2 = 1.0 / (m - p_i);
+            t_left = (y - z) / sqrt ( d1 + d2 );
+            r_t_left = abs(t_left);
+            
+            y = Sj / p_j;
+            z = (Sm - Sj) / ( m - p_j );
+            d1 = 1.0 / p_j;
+            d2 = 1.0 / (m - p_j);
+            t_right = (y - z) / sqrt ( d1 + d2 );
+            r_t_right = abs(t_right);
+            
+            if ( r_t > r_best_t )
             {
               r_best_t = abs(r_t);
+            }
+            
+            if ( r_t_left > r_best_left )
+            {
+              r_best_left = r_t_left;
               r_best_i = i;
+            }
+            
+            if ( r_t_right > r_best_right )
+            {
+              r_best_right = r_t_right;
               r_best_j = j;
-            } 
+            }
+            
           }
         }
         //cout << "b " << r_best_t << " " << best_t << " " << best_greater_than << endl;
@@ -741,6 +777,13 @@ namespace breseq {
           best_greater_than++;
         }
         
+        if ( best_t_left > r_best_left ){
+          left_greater_than++;
+        }
+        
+        if ( best_t_right > r_best_right ){
+          right_greater_than++;
+        }
       }
       //cout << "best" << best_greater_than << endl;
       //if 95% of the t scores of the randomized coverage are less than
@@ -757,46 +800,131 @@ namespace breseq {
            !((current_search.first == best_i + 1) && (current_search.second == best_j))
          )
       {
-        //cout << "add_segment\n";
-        next_search.first = best_i + 1;
-        next_search.second = best_j;
-        searching.push_back( next_search );
-        
-        //if best_i doesn't include the first element, add the segment before
-        //best_i
-        if ( best_i + 1 > current_search.first )
-        {
-          
-          next_search.first = current_search.first;
-          next_search.second = best_i;
+        if ( (double) (left_greater_than) / randomizations >= .95 &&
+             (double) (right_greater_than) / randomizations >= .95){
+          //cout << "add_segment\n";
+          next_search.first = best_i + 1;
+          next_search.second = best_j;
           searching.push_back( next_search );
           
+          history_file << ordered_sums[current_search.first] - tile_size + 1 << "\t" <<
+                          ordered_sums[current_search.second] << "\t" <<
+                          ordered_sums[best_i + 1] - tile_size + 1 << "\t" <<
+                          ordered_sums[best_j] << "\t" <<
+                          ordered_sums[next_search.first] - tile_size + 1 << "\t" <<
+                          ordered_sums[next_search.second] << "\t" <<
+                          best_t << "\t" <<
+                          mean_inside << "\t" <<
+                          mean_left << "\t" <<
+                          mean_right << "\t" <<
+                          copy_inside << "\t" <<
+                          copy_left << "\t" <<
+                          copy_right << "\t" <<
+                          1 - (double)(best_greater_than) / randomizations <<  "\t" <<
+                          1 - (double)(left_greater_than) / randomizations <<  "\t" <<
+                          1 - (double)(right_greater_than) / randomizations << endl;
+          
+          //if best_i doesn't include the first element, add the segment before
+          //best_i
+          if ( best_i + 1 > current_search.first )
+          {
+            
+            next_search.first = current_search.first;
+            next_search.second = best_i;
+            searching.push_back( next_search );
+            
+          }
+          
+          //if best_j doesn't include the last element, add the segment after
+          //best_j
+          if ( best_j < current_search.second )
+          {
+            
+            next_search.first = best_j + 1;
+            next_search.second = current_search.second;
+            searching.push_back( next_search );
+            
+          }
         }
         
-        //if best_j doesn't include the last element, add the segment after
-        //best_j
-        if ( best_j < current_search.second )
-        {
-          
-          next_search.first = best_j + 1;
+        else if ((double) (left_greater_than) / randomizations >= .95){
+          next_search.first = best_i + 1;
           next_search.second = current_search.second;
           searching.push_back( next_search );
           
+          history_file << ordered_sums[current_search.first] - tile_size + 1 << "\t" <<
+                          ordered_sums[current_search.second] << "\t" <<
+                          ordered_sums[best_i + 1] - tile_size + 1 << "\t" <<
+                          ordered_sums[best_j] << "\t" <<
+                          ordered_sums[next_search.first] - tile_size + 1 << "\t" <<
+                          ordered_sums[next_search.second] << "\t" <<
+                          best_t << "\t" <<
+                          mean_inside << "\t" <<
+                          mean_left << "\t" <<
+                          mean_right << "\t" <<
+                          copy_inside << "\t" <<
+                          copy_left << "\t" <<
+                          copy_right << "\t" <<
+                          1 - (double)(best_greater_than) / randomizations <<  "\t" <<
+                          1 - (double)(left_greater_than) / randomizations <<  "\t" <<
+                          1 - (double)(right_greater_than) / randomizations << endl;
+          
+          if ( best_i > current_search.first )
+          {
+            next_search.first = current_search.first;
+            next_search.second = best_i;
+            searching.push_back( next_search );
+          }
         }
         
+        else if ((double) (right_greater_than) / randomizations >= .95){
+          next_search.first = current_search.first;
+          next_search.second = best_j;
+          searching.push_back( next_search );
+          
+          history_file << ordered_sums[current_search.first] - tile_size + 1 << "\t" <<
+                          ordered_sums[current_search.second] << "\t" <<
+                          ordered_sums[best_i + 1] - tile_size + 1 << "\t" <<
+                          ordered_sums[best_j] << "\t" <<
+                          ordered_sums[next_search.first] - tile_size + 1 << "\t" <<
+                          ordered_sums[next_search.second] << "\t" <<
+                          best_t << "\t" <<
+                          mean_inside << "\t" <<
+                          mean_left << "\t" <<
+                          mean_right << "\t" <<
+                          copy_inside << "\t" <<
+                          copy_left << "\t" <<
+                          copy_right << "\t" <<
+                          1 - (double)(best_greater_than) / randomizations <<  "\t" <<
+                          1 - (double)(left_greater_than) / randomizations <<  "\t" <<
+                          1 - (double)(right_greater_than) / randomizations << endl;
+          
+          if ( best_j + 1 < current_search.second )
+          {
+            next_search.first = best_j + 1;
+            next_search.second = current_search.second;
+            searching.push_back( next_search );
+          }
+        }
         
-        history_file << ordered_sums[current_search.first] - tile_size + 1 << "\t" <<
-                        ordered_sums[current_search.second] << "\t" <<
-                        ordered_sums[best_i + 1] - tile_size + 1 << "\t" <<
-                        ordered_sums[best_j] << "\t" <<
-                        best_t << "\t" <<
-                        mean_inside << "\t" <<
-                        mean_left << "\t" <<
-                        mean_right << "\t" <<
-                        copy_inside << "\t" <<
-                        copy_left << "\t" <<
-                        copy_right << "\t" <<
-                        1 - (double)(best_greater_than) / randomizations << endl;
+        else{
+          history_file << ordered_sums[current_search.first] - tile_size + 1 << "\t" <<
+                          ordered_sums[current_search.second] << "\t" <<
+                          ordered_sums[best_i + 1] - tile_size + 1 << "\t" <<
+                          ordered_sums[best_j] << "\t" <<
+                          -1 << "\t" <<
+                          -1 << "\t" <<
+                          best_t << "\t" <<
+                          mean_inside << "\t" <<
+                          mean_left << "\t" <<
+                          mean_right << "\t" <<
+                          copy_inside << "\t" <<
+                          copy_left << "\t" <<
+                          copy_right << "\t" <<
+                          1 - (double)(best_greater_than) / randomizations <<  "\t" <<
+                          1 - (double)(left_greater_than) / randomizations <<  "\t" <<
+                          1 - (double)(right_greater_than) / randomizations << endl;
+        }
       }
       //otherwise, just write the segment.
       else
@@ -809,6 +937,8 @@ namespace breseq {
                         ordered_sums[current_search.second] << "\t" <<
                         ordered_sums[best_i + 1] - tile_size + 1 << "\t" <<
                         ordered_sums[best_j] << "\t" <<
+                        -1 << "\t" <<
+                        -1 << "\t" <<
                         best_t << "\t" <<
                         mean_inside << "\t" <<
                         mean_left << "\t" <<
@@ -816,7 +946,9 @@ namespace breseq {
                         copy_inside << "\t" <<
                         copy_left << "\t" <<
                         copy_right << "\t" <<
-                        1 - (double)(best_greater_than) / randomizations << endl;
+                        1 - (double)(best_greater_than) / randomizations <<  "\t" <<
+                        1 - (double)(left_greater_than) / randomizations <<  "\t" <<
+                        1 - (double)(right_greater_than) / randomizations << endl;
       }
       
       
