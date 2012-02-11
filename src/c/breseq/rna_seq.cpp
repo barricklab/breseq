@@ -32,7 +32,7 @@ string good_gene_name(const string& gene, const string& product) {
   return ggn;
 }
   
-void RNASeq::tam_to_gene_counts(cReferenceSequences& ref_seq_info, const string& fasta_file_name, const vector<string>& tam_files, const string& out_tab_file_name)
+void RNASeq::tam_to_gene_counts(cReferenceSequences& ref_seq_info, const string& fasta_file_name, const vector<string>& tam_files, const string& out_tab_file_name, bool verbose)
 {
   int32_t num_datasets = tam_files.size();
   
@@ -50,7 +50,7 @@ void RNASeq::tam_to_gene_counts(cReferenceSequences& ref_seq_info, const string&
     }
   }
   
-  size_t i=0;
+  size_t i = 0;
   for(vector<string>::const_iterator tfi=tam_files.begin(); tfi != tam_files.end(); ++tfi) {
     cout << "SAM File: " << *tfi << endl;
     
@@ -64,16 +64,38 @@ void RNASeq::tam_to_gene_counts(cReferenceSequences& ref_seq_info, const string&
     alignment_list al;
     
     cSequenceFeaturePtr best_gene(NULL);
-    
+    size_t pre_file_total = 0;
+
     while(tf.read_alignments(al)) {
+      
+      bam_alignment* a = al.front().get();
+
+      
+      pre_file_total++;
+      if (pre_file_total % 100000 == 0) 
+        cout << "  Aligned reads processed: " << pre_file_total << endl;
+      
+      if (verbose) {
+        cout << " >" << a->read_name() << endl;
+        cout << "  " << a->reference_target_id() << ":" << a->reference_start_1() << "-" << a->reference_end_1() 
+          << "(" << a->strand() << ")" << endl;
+      }
+      
+      
       // Ignore multiple alignments
       if (al.size() != 1) {
+        if (verbose)
+          cout << "  Multiple alignments (not counted)"<< endl;
+        
         num_multiple_mapped++;
         continue;
       }
-      bam_alignment* a = al.front().get();
       
       if (a->unmapped()) {
+        
+        if (verbose)
+          cout << "  Unmapped (not counted)"<< endl;
+
         num_unmapped++; 
         continue;
       }
@@ -100,6 +122,14 @@ void RNASeq::tam_to_gene_counts(cReferenceSequences& ref_seq_info, const string&
       
       if (best_gene.get()) {
         Gene g(*best_gene);
+        
+        if (verbose)
+          cout << "  Best gene: " << g.name << " " << g.product << " " << best_gene->m_start << "-" << best_gene->m_end 
+            << "(" << static_cast<int32_t>(best_gene->m_strand) << ")" << endl;
+        
+
+        // because we print tab-delimited, they can really screw up our columns
+        string safe_gene_name = substitute(g.name, "\t", " ");
         string ggn = good_gene_name(g.name, g.product);
         gene_counts[ggn][i]++;
         
@@ -107,6 +137,9 @@ void RNASeq::tam_to_gene_counts(cReferenceSequences& ref_seq_info, const string&
         num_in_genes++;
       }
       else {
+        if (verbose)
+          cout << "  Not in gene (not counted)"<< endl;
+        
         num_not_in_genes++;
       }
     }

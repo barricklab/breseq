@@ -1915,6 +1915,7 @@ int do_rna_seq(int argc, char *argv[])
   options("reference,r","Genbank or GFF3 reference file");  
   options("fasta,f","FASTA reference file");  
   options("output,o","Output tab-delimited file");
+  options("verbose,v","Verbose output", TAKES_NO_ARGUMENT);
   options.processCommandArgs(argc, argv);
   
   // Also take regions off the command line
@@ -1936,7 +1937,7 @@ int do_rna_seq(int argc, char *argv[])
   ref_seq_info.LoadFiles(from_string<vector<string> >(options["reference"]));
 
   //Do counting
-  RNASeq::tam_to_gene_counts(ref_seq_info, options["fasta"], sam_file_names, options["output"]);
+  RNASeq::tam_to_gene_counts(ref_seq_info, options["fasta"], sam_file_names, options["output"], options.count("verbose"));
   
   return 0;
 }

@@ -32,7 +32,7 @@ namespace breseq {
 	{
 	public:
 
-    static void tam_to_gene_counts(cReferenceSequences& ref_seq_info, const string& fasta_file_name, const vector<string>& tam_files, const string& out_tab_file);
+    static void tam_to_gene_counts(cReferenceSequences& ref_seq_info, const string& fasta_file_name, const vector<string>& tam_files, const string& out_tab_file, bool verbose = false);
     
 	}; // class RNASeq
 
