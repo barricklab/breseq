@@ -698,7 +698,10 @@ void cDiffEntry::normalize_to_sequence(const cAnnotatedSequence &sequence)
   //Sequences should be viewed as having index + one offset.
   typedef size_t pos_1_t;
   const pos_1_t pos_1 = strtoul((*this)["position"].c_str(), NULL, 0);
-  assert(pos_1);
+  if (!pos_1) {
+    this->insert(pair<string, string>("comment_out", "True"));
+    return;
+  }
 
   /*! Step: Type specific normalizations. For some, the initial parameters given
     can be altered to be normalized, for others the parameters can't be altered
@@ -714,7 +717,11 @@ void cDiffEntry::normalize_to_sequence(const cAnnotatedSequence &sequence)
     typedef sequence_t::const_iterator base_itr_t;
     typedef pair<base_itr_t, base_itr_t> base_pair_t;
     const size_t n = strtoul((*this)["size"].c_str(), NULL, 0);
-    assert(n);
+
+    if (!n) {
+      this->insert(pair<string, string>("comment_out", "True"));
+      return;
+    }
 
     /*! Step: Attempt to normalize the start position by iterating through new
     start positions. */
