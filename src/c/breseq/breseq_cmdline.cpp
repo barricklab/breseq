@@ -1561,9 +1561,10 @@ int do_download(int argc, char *argv[])
 
   AnyOption options(ss.str());
   options("login,l",           "Login user:password information for private server access.");
-  options("download_dir,d",    "Output directory to download file to.", "02_Downloads");
-  options("genome_diff_dir,g", "Directory to searched for genome diff files.", "01_Data");
+  options("download-dir,d",    "Output directory to download file to.", "02_Downloads");
+  options("genome-diff-dir,g", "Directory to searched for genome diff files.", "01_Data");
   options("test"           ,   "Test urls in genome diff files, doesn't download the file.", TAKES_NO_ARGUMENT);
+  options("reference-only",    "Only downloads the reference sequence files for this file.", TAKES_NO_ARGUMENT);
 
   options.processCommandArgs(argc, argv);
 
@@ -1578,7 +1579,7 @@ int do_download(int argc, char *argv[])
     for (size_t i = 0; i < n; ++i)
     file_names.push_back(options.getArgv(i));
   } else {
-    const string &data_dir = cString(options["genome_diff_dir"]).trim_ends_of('/');
+    const string &data_dir = cString(options["genome-diff-dir"]).trim_ends_of('/');
     if (ifstream(data_dir.c_str()).good()) {
       const string cmd = cString("ls %s/*.gd", data_dir.c_str());
       SYSTEM_CAPTURE(back_inserter(file_names), cmd, true);
@@ -1593,7 +1594,7 @@ int do_download(int argc, char *argv[])
 
   printf("\n++Starting download.\n");
 
-  string download_dir = cString(options["download_dir"]).trim_ends_of('/');
+  string download_dir = cString(options["download-dir"]).trim_ends_of('/');
   if (!options.count("test")) {
     create_path(download_dir);
   }
@@ -1633,7 +1634,9 @@ int do_download(int argc, char *argv[])
 
     list<string> seqs_kv_pairs;
     copy(refs.begin(), refs.end(), back_inserter(seqs_kv_pairs));
-    copy(reads.begin(), reads.end(), back_inserter(seqs_kv_pairs));
+    if (!options.count("reference-only")) {
+      copy(reads.begin(), reads.end(), back_inserter(seqs_kv_pairs));
+    }
 
     for (;seqs_kv_pairs.size(); seqs_kv_pairs.pop_front()) {
       const cKeyValuePair seq_kvp(seqs_kv_pairs.front(), ':');
