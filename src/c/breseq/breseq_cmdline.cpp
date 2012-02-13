@@ -1234,17 +1234,20 @@ int do_normalize_gd(int argc, char* argv[])
   gd.normalize_to_sequence(rs);
   const diff_entry_list_t &muts = gd.mutation_list();
 
-  ofstream out(options["output"].c_str());
-  fprintf(out, "#=GENOME_DIFF 1.0\n");
-  for (diff_entry_list_t::const_iterator i = muts.begin();
-       i != muts.end(); i++) {
-    if ((**i).entry_exists("norm") && (**i)["norm"] == "is_not_valid"){
-      fprintf(out, "#%s\n", (**i).to_string().c_str());
-      printf("\tINVALID_MUTATION:%s\n",(**i).to_string().c_str());
-    } else {
-      fprintf(out, "%s\n", (**i).to_string().c_str());
-    }
+  cGenomeDiff new_gd;
+  for (diff_entry_list_t::const_iterator it = muts.begin();
+       it != muts.end(); it++) {
+    cDiffEntry de = **it;
+
+    if (de.entry_exists("norm") && de["norm"] == "is_not_valid"){
+      printf("\tINVALID_MUTATION:%s\n", de.to_string().c_str());
+      de["comment_out"] = "True";
+    } 
+    
+    new_gd.add(de);
   }
+  new_gd.write(options["output"]);
+
   printf("\n++Normilization completed.\n\n");
 
   return 0;
