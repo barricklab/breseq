@@ -423,6 +423,8 @@ sub do_compare
 	my $ignore_ambiguous;
 	my $phylip_for_mix;
 	my $settings;
+	my $dcamp;
+
 	$settings->{no_evidence} = 1;
 	$settings->{no_header} = 1;
 	
@@ -436,6 +438,7 @@ sub do_compare
 		'--ignore-ambiguous' => \$ignore_ambiguous,
 		'shade-frequencies' => \$settings->{shade_frequencies},	
 		'lenski-format' => 	\$settings->{lenski_format},							
+		'--dcamp' => \$dcamp,
 		
 	) or pod2usage(2);
 
@@ -445,7 +448,7 @@ sub do_compare
 	pod2usage(1) if (scalar @ARGV == 0);
 	
 	my @gd_file_name_list = @ARGV;	
-	my ($gd_name_list_ref, $composite_gd, $one_ref_seq) = _compile_compare_gd(\@reference_genbank_file_names, \@gd_file_name_list);
+	my ($gd_name_list_ref, $composite_gd, $one_ref_seq) = _compile_compare_gd(\@reference_genbank_file_names, \@gd_file_name_list, $dcamp);
 
 	##
 	# Annotate mutations
@@ -456,7 +459,7 @@ sub do_compare
 
 	##
 	# Input file for PHYLIP (dnapars program)
-	##
+	##	
 	if ($phylip_input_file)
 	{
 		my @mutations = $composite_gd->mutation_list;
@@ -545,7 +548,7 @@ sub do_compare
 
 sub _compile_compare_gd
 {
-	my ($reference_genbank_file_names_ref, $gd_file_name_list_ref) = @_;
+	my ($reference_genbank_file_names_ref, $gd_file_name_list_ref, $dcamp) = @_;
 	
 	## load information about reference sequences from GenBank files
 	my $ref_seq_info = load_ref_seq_info($reference_genbank_file_names_ref);
@@ -559,8 +562,25 @@ sub _compile_compare_gd
 		print "$gd_file_name\n";
 		
 		my $gd_name = $gd_file_name;
-		$gd_name =~ s/^.+\///;		
-		$gd_name =~ s/\.[^.]+$//;		
+		#Dcamp: Rename gd_file_names to output pipeline name.
+		if ($dcamp) 
+		{
+			if ($gd_name =~ m/^*\/(.*)\/.*\/.*$/)
+			{
+			  $gd_name = ucfirst($1);
+				print $gd_name;
+			}
+			else
+			{
+		  	die "Paths are not recognized for option dcamp";
+			}
+
+		}
+		else
+		{
+			$gd_name =~ s/^.+\///;		
+			$gd_name =~ s/\.[^.]+$//;		
+		}
 		push @gd_name_list, $gd_name;
 		
 		my $gd = GenomeDiff->new({in=>$gd_file_name});
