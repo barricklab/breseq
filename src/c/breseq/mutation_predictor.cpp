@@ -1213,12 +1213,23 @@ namespace breseq {
 		for (uint32_t i = 0; i < muts.size(); i++)
 		{
 			mut = muts[i];
-			// insertion
+			// insertion and amplifiction
 			if (mut["ref_seq"].size() == 0)
 			{
         mut._type = INS;
 				// unused fields
 				mut.erase("ref_seq");
+        
+        // Check to see if unique sequence matches sequence directly before
+        string dup_check_seq = ref_seq_info.get_circular_sequence_1(mut["seq_id"], n(mut["position"]) - (mut["new_seq"].size() - 1), mut["new_seq"].size());
+        
+        if((mut["new_seq"] == dup_check_seq) && (mut["new_seq"].size() > 1))
+        {
+          mut._type = AMP;
+          mut["size"] = s(mut["new_seq"].size());          
+          mut["new_copy_number"] = "2";
+          mut.erase("new_seq");
+        }        
 			}
 			// deletion
 			else if (mut["new_seq"].size() == 0)

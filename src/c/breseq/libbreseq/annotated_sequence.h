@@ -409,6 +409,16 @@ namespace breseq {
       // TODO: Handle circular genomes
       return (*this)[tid].get_sequence_1(start_1, end_1);
     }
+    
+    string get_circular_sequence_1(const string& seq_id, const size_t start_1, const size_t size)
+    {
+      return (*this)[seq_id].get_circular_sequence_1(start_1, size);
+    }
+    
+    string get_circular_sequence_1(uint32_t tid, const size_t start_1, const size_t size) const
+    {
+      return (*this)[tid].get_circular_sequence_1(start_1, size);
+    }
 
     void replace_sequence_1(const string& seq_id, int32_t start_1, int32_t end_1, const string& replacement_seq, string mut_type="", bool verbose=false)
     {

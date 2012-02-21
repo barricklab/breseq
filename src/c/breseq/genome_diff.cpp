@@ -794,13 +794,21 @@ void cDiffEntry::normalize_to_sequence(const cAnnotatedSequence &sequence)
           bSnp = false;
           break;  }
       }
-    }    
+    }
 
     //! Step: Determine if the start pos needs to be normilized.
     bool is_new_position = pos_1 != i;
     if (is_new_position) {
       sprintf((*this)["position"], "%u", i);
       sprintf((*this)["norm_pos"], "%u_to_%u", pos_1, i);
+    }
+    
+    //! Step: Determine if this is actually an AMP.
+    if ((sequence.get_circular_sequence_1(i - (n - 1), n) == first)  && (n > 1)) {
+      this->_type = AMP;
+      sprintf((*this)["size"], "%u", n);
+      sprintf((*this)["new_copy_number"], "2");
+      sprintf((*this)["orig_type"], "INS");
     }
   } break;
 
@@ -1605,9 +1613,9 @@ void cGenomeDiff::random_mutations(const string& exclusion_file, const string& t
         uAttempts = 0;
         
         new_item.normalize_to_sequence(ref_seq_info);
-        if((from_string<uint32_t>(new_item["position"]) != rand_pos) || new_item["new_seq"] != ins_seq)  {
+        if((from_string<uint32_t>(new_item["position"]) != rand_pos) || (new_item["new_seq"] != ins_seq) || (new_item._type != mut_type))  {
           i--;
-          continue;  }        
+          continue;  }
         
         used_positions.insert(rand_pos);
         
@@ -1704,9 +1712,9 @@ void cGenomeDiff::random_mutations(const string& exclusion_file, const string& t
         uAttempts = 0;
         
         fake_item_ins.normalize_to_sequence(ref_seq_info);
-        if((from_string<uint32_t>(fake_item_ins["position"]) != rand_pos) || fake_item_ins["new_seq"] != ref_seq_info.get_sequence_1(rand_pos, rand_pos+rep_size-1))  {
+        if((from_string<uint32_t>(fake_item_ins["position"]) != rand_pos) || (fake_item_ins["new_seq"] != ref_seq_info.get_sequence_1(rand_pos, rand_pos+rep_size-1)) || (fake_item_ins._type != INS))  {
           i--;
-          continue;  }  
+          continue;  }
         
         new_item.normalize_to_sequence(ref_seq_info);
         
