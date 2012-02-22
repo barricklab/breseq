@@ -599,7 +599,9 @@ sub read
 			push @{$self->{metadata_lines}}, $l;
 			
 		} elsif ($l =~ m/^\s+#=(.+)/) {
-		} else {
+		} elsif ($l =~ m/^#=AUTHOR\s*$/) {
+		} 
+		else {
 			$self->add($self->_line_to_item($l));
 		}
 	}
