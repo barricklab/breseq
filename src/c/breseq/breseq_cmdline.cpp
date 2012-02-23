@@ -1267,6 +1267,7 @@ int do_runfile(int argc, char *argv[])
   options("runfile,r",        "Name of the run file to be output.", "commands");
   options("dcamp",            "Alter pipeline's output path to include executable name",TAKES_NO_ARGUMENT);
   options("tacc",             "Create launcher.sge file for Lonestar or Ranger, can take email address as an argument.");
+  options("aln",              "Pass alignment files from breseq's pipeline as an argument.", TAKES_NO_ARGUMENT);
   options.addUsage("\n");
   options.addUsage("***Reminder: Create the error log directory before running TACC job.");
   options.addUsage("\n");
@@ -1385,9 +1386,14 @@ int do_runfile(int argc, char *argv[])
         n_refs--;
       } else {
       //! Part 4: Read arguement path(s).
-        if (download_path.ends_with(".gz")) download_path.remove_ending(".gz");
-        ss << " " << download_path;
+    if (!options.count("aln")) {
+          if (download_path.ends_with(".gz")) download_path.remove_ending(".gz");
+          ss << " " << download_path;
+        }
       }
+    }
+    if (options.count("aln")) {
+      ss << " -a " << options["output_dir"] << "/breseq/" << gd.metadata.run_name << "/03_candidate_junctions/best.sam";
     }
     //! Part 5: Error log path.
     ss << " >& " << cString(log_path_format.c_str(), gd.metadata.run_name.c_str());
