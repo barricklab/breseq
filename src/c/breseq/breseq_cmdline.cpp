@@ -1316,10 +1316,8 @@ int do_runfile(int argc, char *argv[])
 
 
   const string &exe = options["executable"];
-  cString pretty_exe = cString(exe).get_base_name();
-  pretty_exe.trim_ends_of('/');
-  pretty_exe.trim_ends_of('.');
-  pretty_exe.remove_ending(pretty_exe.get_file_extension());
+  vector<string> key_value = split_on_whitespace(exe);
+  cString pretty_exe = key_value.size() == 1 ? key_value[0] : key_value[1];
 
   const string &log_dir = options.count("dcamp") ?
         cString(options["log_dir"]).trim_ends_of('/') + "/" + pretty_exe :
