@@ -1252,7 +1252,122 @@ int do_normalize_gd(int argc, char* argv[])
 
   return 0;
 }
+int do_filter_gd(int argc, char* argv[]) {
+  AnyOption options("Usage: breseq filter-gd -g <input.gd> -o <output.gd> -m <mutation type> <filters>");
+  options("genome_diff,g", "Genome diff file to be filtered.");
+  options("output_gd,o", "Filter genome diff file.");
+  options("mut_type,m", "Only consider this mutation type for filtering.");
+  options.processCommandArgs(argc, argv);
 
+  if (!options.count("genome_diff")) {
+    options.addUsage("");
+    options.addUsage("You must supply an input genome diff file to filter with option -g");
+    options.printUsage();
+    return -1;
+  }
+
+  if (!options.getArgc()) {
+    options.addUsage("");
+    options.addUsage("You must supply filter arguments.");
+    options.printUsage();
+    return -1;
+  }
+
+  // Use original file as output if argument is not passed.
+  if (!options.count("output_gd")) {
+    options["output_gd"] = options["genome_diff"];
+  }
+
+  list<string> filters;
+  for(size_t i = 0; i < options.getArgc(); ++i) {
+    filters.push_back(options.getArgv(i));
+  }
+  assert(filters.size());
+
+  cGenomeDiff gd(options["genome_diff"]);
+
+  diff_entry_list_t muts;
+  if (!options.count("mut_type")) {
+    muts = gd.mutation_list();
+  }
+  else {
+    vector<string> mut_strs= from_string<vector<string> >(options["mut_type"]);
+    assert (mut_strs.size());
+    vector<gd_entry_type> mut_types;
+    for (size_t i = 0; i < mut_strs.size(); ++i) {
+      for (size_t j = 0; j < gd_entry_type_lookup_table.size(); ++j) {
+        if (gd_entry_type_lookup_table[j] == mut_strs[i]) {
+          mut_types.push_back((gd_entry_type)j);
+          break;
+        }
+      }
+    }
+    muts = gd.list(mut_types);
+  }
+  assert(muts.size());
+
+  cGenomeDiff output_gd;
+  const vector<string> evals = make_vector<string>("==")("!=")("<=")(">=")("<")(">");
+  for (diff_entry_list_t::iterator it = muts.begin(); it != muts.end(); ++it) {
+    cDiffEntry mut = **it;
+
+    vector<string> reasons;
+    for (list<string>:: const_iterator jt = filters.begin(); jt != filters.end(); ++jt) {
+      bool is_filtered = false;
+      // Parse filter string.
+      string filter = *jt;
+      for (size_t i = 0; i < filter.size(); ++i) {
+        if (filter[i] == ' ') {
+          filter.erase(i,1);
+        }
+      }
+      string key   = "";
+      size_t eval  = string::npos;
+      string value = "";
+      for (size_t i = 0; i < evals.size(); ++i) {
+        if (filter.find(evals[i]) != string::npos) {
+          size_t pos = filter.find(evals[i]);
+          eval = i;
+          string segment = filter;
+          segment.erase(pos, evals[i].size());
+          key = segment.substr(0, pos);
+          value = segment.substr(pos);
+          break;
+        }
+      }
+      assert(eval != string::npos);
+      assert(key.size());
+      assert(value.size());
+
+      if (mut.count(key)) {
+        if (value.find_first_of("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ") == string::npos) {
+          switch(eval)
+          {
+            case 0: if (from_string<float>(mut[key]) == from_string<float>(value)) is_filtered = true; break;
+            case 1: if (from_string<float>(mut[key]) != from_string<float>(value)) is_filtered = true; break;
+            case 2: if (from_string<float>(mut[key]) <= from_string<float>(value)) is_filtered = true; break;
+            case 3: if (from_string<float>(mut[key]) >= from_string<float>(value)) is_filtered = true; break;
+            case 4: if (from_string<float>(mut[key]) <  from_string<float>(value)) is_filtered = true; break;
+            case 5: if (from_string<float>(mut[key]) >  from_string<float>(value)) is_filtered = true; break;
+          };
+
+          if (is_filtered) {
+            reasons.resize(reasons.size() + 1);
+            sprintf(reasons.back(), "%s %s %s", key.c_str(), evals[eval].c_str(), value.c_str());
+          }
+        }
+      }
+    }
+    if (reasons.size()) {
+      printf("Filtered[%s]: %s\n", join(reasons, ", ").c_str(), mut.to_string().c_str());
+      mut["zfiltered"] = join(reasons, ", ");
+      mut["comment_out"] = "true";
+    }
+    output_gd.add(mut);
+  }
+  output_gd.write(options["output_gd"]);
+  return 0;
+}
 int do_runfile(int argc, char *argv[])
 {
   stringstream ss;
@@ -2902,7 +3017,7 @@ int main(int argc, char* argv[]) {
   } else if (command == "BAM2ALN") {
     return do_bam2aln( argc_new, argv_new);  
   } else if (command == "BAM2COV") {
-    return do_bam2cov( argc_new, argv_new);    
+    return do_bam2cov( argc_new, argv_new);
   } else if ((command == "APPLY") || (command == "MUTATE")) {
     return do_mutate(argc_new, argv_new);    
   } else if (command == "SUBTRACT") {
@@ -2921,6 +3036,8 @@ int main(int argc, char* argv[]) {
     return do_simulate_read(argc_new, argv_new);
   } else if (command == "NORMALIZE-GD") {
     return do_normalize_gd(argc_new, argv_new);
+  } else if (command == "FILTER-GD") {
+    return do_filter_gd(argc_new, argv_new);
   } else if ((command == "SUBSEQUENCE") || (command == "SUB")) {
     return do_subsequence(argc_new, argv_new);
   } else if (command == "RUNFILE") {
