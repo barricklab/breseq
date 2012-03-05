@@ -690,8 +690,6 @@ int do_convert_gd( int argc, char* argv[])
     AnyOption options("Usage: VCF2GD --input <intput.vcf> --output <output.gd>");
     options("input,i","gd file to convert");
     options("output,o","name of output file");
-    options("AF-100", "Allow only AF1 and AF values of 1.00.", TAKES_NO_ARGUMENT);
-    options("AF-099", "Allow any AF1 and AF values < 1.00.", TAKES_NO_ARGUMENT);
     options.processCommandArgs( argc,argv);
     
     if(!options.count("input") && !options.count("output")){
@@ -704,43 +702,12 @@ int do_convert_gd( int argc, char* argv[])
     }
     
     cGenomeDiff gd = cGenomeDiff::from_vcf(options["input"]);
-    diff_entry_list_t muts = gd.mutation_list();
-
-    cGenomeDiff new_gd;
-    for (diff_entry_list_t::iterator it = muts.begin();
-         it != muts.end(); ++it) {
-      cDiffEntry &de = **it;
-
-      if (options.count("AF-100") || options.count("AF-099")) {   
-        double value = 0;
-        //From Gatk.
-        if (de.entry_exists("AF")) {
-          value = from_string<double>(de["AF"]);
-        }
-        //From Samtools.
-        else if (de.entry_exists("AF1")) {
-          value = from_string<double>(de["AF1"]);
-        }
-        //Not all vcf mutations have this attribute? 
-        else {
-          break;
-        }
-        assert(value);
-
-        //Comment out entries.
-        //May want to do some rounding here.
-        if (options.count("AF-100") && value != 1) de["comment_out"] = "True";
-        if (options.count("AF-099") && value == 1) de["comment_out"] = "True";
-      }
-
-      new_gd.add(de);
-    }
     const string &file_name = options.count("output") ?
           options["output"] :
           cString(options["input"]).remove_ending("vcf") + "gd";
 
-    new_gd.write(file_name);
-    
+    gd.write(file_name);
+
     return 0;
 }
 
@@ -1304,7 +1271,10 @@ int do_filter_gd(int argc, char* argv[]) {
     }
     muts = gd.list(mut_types);
   }
-  assert(muts.size());
+  if (!muts.size()) {
+    printf("No mutations found.\n");
+    return 0;
+  }
 
   cGenomeDiff output_gd;
   const vector<string> evals = make_vector<string>("==")("!=")("<=")(">=")("<")(">");
@@ -1375,14 +1345,20 @@ int do_runfile(int argc, char *argv[])
   ss << "Usage: breseq RUNFILE -e <executable> -d <downloads dir> -o <output dir> -l <error log dir> -r <runfile name> <file1.gd file2.gd file3.gd ...>";
   AnyOption options(ss.str());
   options("executable,e",     "Executable program to run, add extra options here.", "breseq");
+  options("options",          "Options to be passed to the executable.");
+
   options("data_dir,g",       "Directory to searched for genome diff files.", "01_Data");
   options("downloads_dir,d",  "Downloads directory where read and reference files are located.", "02_Downloads");
   options("output_dir,o",     "Output directory for commands within the runfile.", "03_Output");
   options("log_dir,l",        "Directory for error log file that captures the executable's stdout and sterr.", "04_Logs");
   options("runfile,r",        "Name of the run file to be output.", "commands");
-  options("dcamp",            "Alter pipeline's output path to include executable name",TAKES_NO_ARGUMENT);
-  options("tacc",             "Create launcher.sge file for Lonestar or Ranger, can take email address as an argument.");
+  options("launcher",         "Name of the launcher script run on TACC", "launcher");
+
+  options("job",              "Job name. Alters output paths to include this directory.");
+  options("email",            "Email address to be added to launcher script. Informs you when a job starts and finishes.");
+
   options("aln",              "Pass alignment files from breseq's pipeline as an argument.", TAKES_NO_ARGUMENT);
+
   options.addUsage("\n");
   options.addUsage("***Reminder: Create the error log directory before running TACC job.");
   options.addUsage("\n");
@@ -1429,29 +1405,26 @@ int do_runfile(int argc, char *argv[])
   lookup_table["BarrickLab-Private"]
       ["download_path_format"] = downloads_dir + "/%s";
 
-
   const string &exe = options["executable"];
-  vector<string> key_value = split_on_whitespace(exe);
-  cString pretty_exe = key_value.size() == 1 ? key_value[0] : key_value[1];
 
-  const string &log_dir = options.count("dcamp") ?
-        cString(options["log_dir"]).trim_ends_of('/') + "/" + pretty_exe :
-        cString(options["log_dir"]).trim_ends_of('/');
+  string job           = "";
+  string log_dir       = cString(options["log_dir"]).trim_ends_of('/');
+  string output_dir    = cString(options["output_dir"]).trim_ends_of('/');
+  string runfile_path  = cString(options["runfile"]).trim_ends_of('/');
+  string launcher_path = cString(options["launcher"]).trim_ends_of('/');
+
+  if (options.count("job")) {
+    job = options["job"];
+    log_dir       += "/" + job;
+    output_dir    += "/" + job;
+    runfile_path  += "_" + job;
+    launcher_path += "_" + job;
+  }
   create_path(log_dir.c_str());
-
-  const string &output_dir = options.count("dcamp") ?
-        cString(options["output_dir"]).trim_ends_of('/') + "/" + pretty_exe :
-        cString(options["output_dir"]).trim_ends_of('/');
-
-  const string &output_path_format = output_dir + "/%s";
 
   const string &log_path_format = log_dir + "/%s.log.txt";
 
-  const string &rname = options.count("dcamp") ?
-        options["runfile"] + "_" + pretty_exe :
-        options["runfile"];
-
-  ofstream rout(rname.c_str());
+  ofstream runfile(runfile_path.c_str());
   size_t n_cmds = 0;
   for (;file_names.size(); file_names.pop_front()) {
     const string &file_name = file_names.front();
@@ -1468,11 +1441,15 @@ int do_runfile(int argc, char *argv[])
     //! Step: Begin building command line.
     stringstream ss;
 
-    //! Part 1: Executable.
+    //! Part 1: Executable and options to pass to it if given by user.
     ss << exe;
 
+    if (options.count("options")) {
+      ss << " " << options["options"];
+    }
+
     //! Part 2: Pipeline's output path.
-    ss << " -o " << cString(output_path_format.c_str(), gd.metadata.run_name.c_str());
+    ss << " -o " << output_dir + "/" + gd.metadata.run_name;
 
     size_t n_refs = refs.size();
     for (;seq_kv_pairs.size(); seq_kv_pairs.pop_front()) {
@@ -1499,7 +1476,7 @@ int do_runfile(int argc, char *argv[])
         n_refs--;
       } else {
       //! Part 4: Read arguement path(s).
-    if (!options.count("aln")) {
+        if (!options.count("aln")) {
           if (download_path.ends_with(".gz")) download_path.remove_ending(".gz");
           ss << " " << download_path;
         }
@@ -1513,21 +1490,16 @@ int do_runfile(int argc, char *argv[])
 
     //! Step: Output to file.
     cout << ss.str() << endl;
-    rout << ss.str() << endl;
+    runfile << ss.str() << endl;
     ++n_cmds;
   }
 
   //! Step: Create launcher.sge.
-  /*TODO:
-    1) Approximate total runtime. (based on cmd line with largest files?)
-    */
-  if (options.isOptUsed("tacc") || options.count("dcamp")) {
+  if (options.count("job")) {
     /*Note: For lonestar we are under the current assumption that a 4way 12 will
       run 3 breseq jobs. On Ranger a 16way 16 will run 16 breseq jobs.*/
-    /*TODO Sloppy:
-        Ranger:   '/share/home/$NUM/$USER'
-        Lonestar: '/home1/$NUM/$USER'
-    */
+    //Ranger:   '/share/home/$NUM/$USER'
+    //Lonestar: '/home1/$NUM/$USER'
     size_t tasks = 0, nodes = 0;
     const cString &home_path = SYSTEM_CAPTURE("echo $HOME", true);
     // RANGER
@@ -1545,42 +1517,38 @@ int do_runfile(int argc, char *argv[])
 
     const string &pwd = SYSTEM_CAPTURE("pwd", true);
 
-    const string &lname = options.count("dcamp") ?
-          "launcher_" + pretty_exe + ".sge" :
-          "launcher.sge";
-
-    ofstream lout(lname.c_str());
+    ofstream launcher(launcher_path.c_str());
     // #$ Parameters.
-    fprintf(lout, "#!/bin/csh\n");
-    fprintf(lout, "#$ -N %s\n", pretty_exe.c_str());
-    fprintf(lout, "#$ -pe %uway %u\n", tasks, nodes);
-    fprintf(lout, "#$ -q normal\n");
-    fprintf(lout, "#$ -o %s.o$JOB_ID\n", pretty_exe.c_str());
-    fprintf(lout, "#$ -l h_rt=14:00:00\n");
-    fprintf(lout, "#$ -V\n");
-    fprintf(lout, "#$ -cwd\n");
+    fprintf(launcher, "#!/bin/csh\n");
+    fprintf(launcher, "#$ -N %s\n", job.c_str());
+    fprintf(launcher, "#$ -pe %uway %u\n", tasks, nodes);
+    fprintf(launcher, "#$ -q normal\n");
+    fprintf(launcher, "#$ -o %s.o$JOB_ID\n", job.c_str());
+    fprintf(launcher, "#$ -l h_rt=14:00:00\n");
+    fprintf(launcher, "#$ -V\n");
+    fprintf(launcher, "#$ -cwd\n");
 
-    if (options.count("tacc")) {
-      fprintf(lout, "#$ -M %s\n", options["lonestar"].c_str());
+    if (options.count("email")) {
+      fprintf(launcher, "#$ -M %s\n", options["email"].c_str());
     }
 
-    fprintf(lout, "#$ -m be\n");
-    fprintf(lout, "#$ -A breseq\n");
-    fprintf(lout, "\n");
+    fprintf(launcher, "#$ -m be\n");
+    fprintf(launcher, "#$ -A breseq\n");
+    fprintf(launcher, "\n");
 
     // Set environmental variables.
-    fprintf(lout, "module load launcher\n");
-    fprintf(lout, "setenv EXECUTABLE     $TACC_LAUNCHER_DIR/init_launcher\n");
-    fprintf(lout, "setenv CONTROL_FILE   %s\n", rname.c_str());
-    fprintf(lout, "setenv WORKDIR        %s\n", pwd.c_str());
-    fprintf(lout, "\n");
+    fprintf(launcher, "module load launcher\n");
+    fprintf(launcher, "setenv EXECUTABLE     $TACC_LAUNCHER_DIR/init_launcher\n");
+    fprintf(launcher, "setenv CONTROL_FILE   %s\n", runfile_path.c_str());
+    fprintf(launcher, "setenv WORKDIR        %s\n", pwd.c_str());
+    fprintf(launcher, "\n");
 
     // Job submission.
-    fprintf(lout, "cd $WORKDIR/\n");
-    fprintf(lout, "$TACC_LAUNCHER_DIR/paramrun $EXECUTABLE $CONTROL_FILE\n");
+    fprintf(launcher, "cd $WORKDIR/\n");
+    fprintf(launcher, "$TACC_LAUNCHER_DIR/paramrun $EXECUTABLE $CONTROL_FILE\n");
 
-    lout.close();
-    SYSTEM("chmod +x " + lname, true);
+    launcher.close();
+    SYSTEM("chmod +x " + launcher_path, true);
   }
 
   return 0;
