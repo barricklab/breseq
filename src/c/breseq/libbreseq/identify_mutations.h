@@ -55,22 +55,29 @@ namespace breseq {
                           bool print_per_position_file
                           );
 	
-	
-	/*! Position information struct.
+  
+  /*! Position base information struct.
 	 
-	 Note: The "triples" in this struct are to be indexed via the strand, which is
+   Used for recording observations of bases on different strands.
+   
+   Note: The "triples" in this struct are to be indexed via the strand, which is
 	 either +1 or -1.  As a result, use 1-based indexing, e.g.: unique_cov[1+strand].
 	 */
-	struct position_info {
-		//! Constructor.
-		position_info() {
-			bzero(this,sizeof(position_info));
-		}
-		
-		int unique_cov[3];
-		int unique_trimmed_cov[3];
-		int mutation_cov[3];
-	};
+  
+  
+  struct position_base_info : map<base_char, vector<uint32_t> > {
+    
+    position_base_info() {
+      vector<uint32_t> t;
+      t.resize(3,0);
+      for(size_t j=0; j<base_list_size; ++j) {
+        insert(make_pair(base_char_list[j],t));
+      }
+      // extra consideration of 'N' necessary
+      insert(make_pair('N',t));
+    }
+    
+  };
 	
 	
 	/*! Position coverage struct.

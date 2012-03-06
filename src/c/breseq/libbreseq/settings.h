@@ -260,6 +260,9 @@ namespace breseq
     bool polymorphism_prediction;                         // Default = false COMMAND-LINE OPTION
     //! Predict not only consensus genotype calls, but test mixed states between them.
     bool mixed_base_prediction;                           // Default = true
+    
+    //! Verbose output of bases encountered at each position
+    bool mutation_identification_per_position_file;
 
     double mutation_log10_e_value_cutoff;                   // Default = 10
     double polymorphism_log10_e_value_cutoff;               // Default = mutation_log10_e_value_cutoff = 10

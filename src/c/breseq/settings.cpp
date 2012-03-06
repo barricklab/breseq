@@ -124,6 +124,7 @@ namespace breseq
     ("cnv","do experimental copy number variation prediction",TAKES_NO_ARGUMENT, ADVANCED_OPTION)
     ("cnv-tile-size", "tile size for copy number variation prediction", 500, ADVANCED_OPTION)
     ("cnv-ignore-redundant", "only consider non-redundant coverage when using cnv", TAKES_NO_ARGUMENT, ADVANCED_OPTION)
+    ("per-position-file", "create additional file of per-position aligned bases", TAKES_NO_ARGUMENT, ADVANCED_OPTION)
     
     ("periodicity", "finding sum of differences squared of a coverage file", TAKES_NO_ARGUMENT, ADVANCED_OPTION)
     ("periodicity-method", "which method to use for periodicity", 1, ADVANCED_OPTION)
@@ -203,7 +204,6 @@ namespace breseq
     this->require_match_fraction = from_string<double>(options["require-match-fraction"]);
 
     //! Settings: Mutation Identification
-    
     this->base_quality_cutoff = from_string<uint32_t>(options["base-quality-cutoff"]);
 
     this->deletion_coverage_propagation_cutoff = from_string<double>(options["deletion-coverage-propagation-cutoff"]);
@@ -218,6 +218,9 @@ namespace breseq
       this->polymorphism_frequency_cutoff = 0; // cut off if < X or > 1-X
       this->mixed_base_prediction = false;
     } 
+    
+    this->mutation_identification_per_position_file = options.count("per-position-file");
+
  
     //! Settings: Experimental
 
