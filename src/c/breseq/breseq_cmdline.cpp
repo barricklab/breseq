@@ -2058,6 +2058,15 @@ int do_rna_seq(int argc, char *argv[])
   return 0;
 }
 
+int do_ref_aln()
+{
+  SYSTEM("samtools view -bt data/reference.fasta.fai 02_reference_alignment/*.sam > data/ref_aln.bam");
+  SYSTEM("samtools sort data/ref_aln.bam data/ref_aln.sorted");
+  SYSTEM("samtools index data/ref_aln.sorted.bam");
+  
+  return 0;
+}
+
 int breseq_default_action(int argc, char* argv[])
 {  
   
@@ -3019,7 +3028,9 @@ int main(int argc, char* argv[]) {
   } else if ((command == "RANDOM_MUTATIONS") || (command == "RAND_MUTS")) {
     return do_rand_muts(argc_new, argv_new);
   } else if (command == "RNASEQ") {
-    return do_rna_seq(argc_new, argv_new);    
+    return do_rna_seq(argc_new, argv_new);  
+  } else if (command == "REFALN") {
+    return do_ref_aln();  
   }
   else {
     // Not a sub-command. Use original argument list.
