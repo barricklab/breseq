@@ -230,10 +230,8 @@ void identify_mutations_pileup::pileup_callback(const pileup& p) {
 		}
 		
 		//## zero out the info about this position
-		map<uint8_t,position_info> pos_info;
-		for(size_t j=0; j<base_list_size; ++j) {
-			pos_info.insert(make_pair(base_char_list[j],position_info()));
-		}
+		position_base_info pos_info;
+    position_base_info redundant_pos_info;
 		
 		//## keep track of coverage for deletion prediction
 		position_coverage this_position_coverage;
@@ -265,7 +263,7 @@ void identify_mutations_pileup::pileup_callback(const pileup& p) {
         read_base_bam = i->read_base_bam_0(i->query_position_0() + insert_count);
       }
             
-      //##don't use bases without qualities!!
+      //## don't use bases without qualities!!
       if(_base_bam_is_N(read_base_bam)) continue;
       
       //## gather information about the aligned base
@@ -273,15 +271,6 @@ void identify_mutations_pileup::pileup_callback(const pileup& p) {
       int32_t fastq_file_index = i->fastq_file_index();
       int strand = i->strand();
       bool trimmed = i->is_trimmed();
-            
-      //### Optionally, only count reads that completely match
-      //			my $complete_match = 1;
-      //			if ($settings->{require_complete_match})
-      //			{
-      //				$complete_match = ($q_start == 1) && ($q_end == $a->l_qseq);
-      //				next if (!$complete_match);
-      //			}
-      //### End complete match condition
       
       //##### update coverage if this is not a deletion in read relative to reference
       //### note that we count trimmed reads here, but not when looking for short indel mutations...	
@@ -289,13 +278,11 @@ void identify_mutations_pileup::pileup_callback(const pileup& p) {
       if(redundancy == 1) {
         //## keep track of unique coverage	
         ++this_position_coverage.unique[1+strand];
-        ++pos_info[basebam2char(read_base_bam)].unique_cov[1+strand];
         
         //## we don't continue to consider further insertions relative
         //## to the reference unless uniquely aligned reads have them 
-        if(indel > insert_count) {
+        if(indel > insert_count)
           next_insert_count_exists = true;
-        }
         
       } else {		
         //## mark that this position has some non-unique coverage
@@ -303,6 +290,9 @@ void identify_mutations_pileup::pileup_callback(const pileup& p) {
         //## keep track of redundant coverage
         this_position_coverage.redundant[1+strand] += 1.0/redundancy;
         ++this_position_coverage.raw_redundant[1+strand];
+        
+        if (!trimmed) 
+          ++redundant_pos_info[basebam2char(read_base_bam)][1+strand];
       }
       
       //## don't use information from trimmed or redundant reads
@@ -329,7 +319,7 @@ void identify_mutations_pileup::pileup_callback(const pileup& p) {
         }
 
         //## this is the coverage for SNP counts, tabulate AFTER skipping trimmed reads
-        ++pos_info[baseindex2char(cv.obs_base())].unique_trimmed_cov[1+strand];
+        ++pos_info[baseindex2char(cv.obs_base())][1+strand];
         
         //##### this is for polymorphism prediction and making strings
         pdata.push_back(polymorphism_data(baseindex2char(cv.obs_base()),cv.quality(),i->strand(),cv.read_set(), cv));
@@ -377,14 +367,33 @@ void identify_mutations_pileup::pileup_callback(const pileup& p) {
       line << position << " " << insert_count << " " << ref_base_char << " " << e_value_call;
 		}
     
-    //// Summing coverage here should be moved to where coverage is updated?
-		for(size_t j=0; j<base_list_size; ++j) {
-			double top_cov = pos_info[base_char_list[j]].unique_trimmed_cov[2];
-			double bot_cov = pos_info[base_char_list[j]].unique_trimmed_cov[0];
+    for(size_t j=0; j<base_list_size; ++j) {
+			double top_cov = pos_info[base_char_list[j]][2];
+			double bot_cov = pos_info[base_char_list[j]][0];
 			total_cov[2] += (int)round(top_cov);
 			total_cov[0] += (int)round(bot_cov);
-      if (_print_per_position_file) {
-        line << " " << base_char_list[j] << " (" << bot_cov << "/" << top_cov << ")";
+    }
+    
+    //// Summing coverage here should be moved to where coverage is updated?
+    
+    if (_print_per_position_file) {
+       
+      // Print unique bases
+      for(size_t j=0; j<base_list_size; ++j) {
+        double top_cov = pos_info[base_char_list[j]][2];
+        double bot_cov = pos_info[base_char_list[j]][0];
+        if (_print_per_position_file) {
+          line << " " << base_char_list[j] << " (" << bot_cov << "/" << top_cov << ")";
+        }
+      }
+    
+      // Print redundant bases
+      for(size_t j=0; j<base_list_size; ++j) {
+        double top_cov = redundant_pos_info[base_char_list[j]][2];
+        double bot_cov = redundant_pos_info[base_char_list[j]][0];
+        if (_print_per_position_file) {
+          line << " r" << base_char_list[j] << " (" << bot_cov << "/" << top_cov << ")";
+        }
       }
     }
     
@@ -423,7 +432,7 @@ void identify_mutations_pileup::pileup_callback(const pileup& p) {
       for (uint8_t i=0; i<base_list_size; i++) {
         base_char this_base_char = base_char_list[i];
         base_index this_base_index = i;
-        int this_base_coverage = pos_info[this_base_char].unique_trimmed_cov[0] + pos_info[this_base_char].unique_trimmed_cov[2];
+        int this_base_coverage = pos_info[this_base_char][0] + pos_info[this_base_char][2];
         
         // if better coverage or tied in coverage and better probability
         if ((this_base_coverage > best_base_coverage) ||
@@ -440,7 +449,7 @@ void identify_mutations_pileup::pileup_callback(const pileup& p) {
         }
       }
       
-      int this_base_coverage = min(pos_info[best_base_char].unique_trimmed_cov[0], pos_info[best_base_char].unique_trimmed_cov[2]);
+      int this_base_coverage = min(pos_info[best_base_char][0], pos_info[best_base_char][2]);
       
       // Only try mixed SNP model if there is coverage for more than one base!
       if (second_best_base_coverage) {
@@ -593,10 +602,10 @@ void identify_mutations_pileup::pileup_callback(const pileup& p) {
           << ((ref_base_char != second_best_base_char) ? ppred.frequency : (1-ppred.frequency)) << "\t"
           << ppred.log10_base_likelihood << "\t"
           << (0.1 * round(ppred.log10_e_value*10)) << "\t"
-          << pos_info[best_base_char].unique_trimmed_cov[2] << "\t"
-          << pos_info[best_base_char].unique_trimmed_cov[0] << "\t"
-          << pos_info[second_best_base_char].unique_trimmed_cov[2] << "\t"
-          << pos_info[second_best_base_char].unique_trimmed_cov[0] << "\t"
+          << pos_info[best_base_char][2] << "\t"
+          << pos_info[best_base_char][0] << "\t"
+          << pos_info[second_best_base_char][2] << "\t"
+          << pos_info[second_best_base_char][0] << "\t"
         ;    
         
         
@@ -638,11 +647,11 @@ void identify_mutations_pileup::pileup_callback(const pileup& p) {
         
 		//## More fields common to consensus mutations and polymorphisms
 		//## ...now that ref_base and new_base are defined
-		int* ref_cov = pos_info[from_string<base_char>(mut[REF_BASE])].unique_trimmed_cov;
-		mut[REF_COV] = to_string(make_pair(ref_cov[2], ref_cov[0]));
+		vector<uint32_t>& ref_cov = pos_info[from_string<base_char>(mut[REF_BASE])];
+		mut[REF_COV] = to_string(make_pair(static_cast<int>(ref_cov[2]), static_cast<int>(ref_cov[0])));
 		
-		int* new_cov = pos_info[from_string<base_char>(mut[NEW_BASE])].unique_trimmed_cov;
-		mut[NEW_COV] = to_string(make_pair(new_cov[2], new_cov[0]));
+		vector<uint32_t>& new_cov = pos_info[from_string<base_char>(mut[NEW_BASE])];
+		mut[NEW_COV] = to_string(make_pair(static_cast<int>(new_cov[2]), static_cast<int>(new_cov[0])));
 		
 		mut[TOT_COV] = to_string(make_pair(total_cov[2], total_cov[0]));
 		
