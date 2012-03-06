@@ -1021,9 +1021,9 @@ namespace breseq {
       //  INS predicted here are aligned with missing unique_read_sequence info.
       //  Further the unique read sequence is aligned on the reverse strand.
       //  We need to grab it, proper like.
-			else if (n(j["side_1_position"]) + 1 < n(j["side_2_position"]))
+			else if ((n(j["side_2_strand"]) < 0) && (n(j["side_1_position"]) <= n(j["side_2_position"])))
 			{
-				string new_seq = (n(j["side_2_strand"]) < 0) ? reverse_complement(j["unique_read_sequence"]) : j["unique_read_sequence"];
+				string new_seq = reverse_complement(j["unique_read_sequence"]);
         string ref_seq = ref_seq_info.get_sequence_1(seq_id, n(j["side_1_position"]), n(j["side_2_position"]));
         
 				cDiffEntry mut;
