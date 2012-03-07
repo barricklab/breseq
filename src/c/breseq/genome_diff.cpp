@@ -2108,7 +2108,7 @@ cGenomeDiff cGenomeDiff::from_vcf(const string &file_name)
       if (rseq.size() > aseq.size()) {
         de._type = DEL;
         de[SEQ_ID]   = tokens[CHROM];
-        de[POSITION] = to_string(from_string<uint32_t>(tokens[POS]) + 1);
+        de[POSITION] = to_string(from_string<uint32_t>(tokens[POS]) + aseq.size());
         de[SIZE]     = to_string(rseq.size() - aseq.size());
       }
       else if (rseq.size() < aseq.size()) {
