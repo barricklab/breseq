@@ -1281,7 +1281,7 @@ bool cGenomeDiff::is_valid(cReferenceSequences& ref_seq_info, bool verbose)
 }
   
 //! Call to generate random mutations.
-void cGenomeDiff::random_mutations(const string& exclusion_file, const string& type, uint32_t number, uint32_t read_length, cAnnotatedSequence& ref_seq_info, bool verbose)
+void cGenomeDiff::random_mutations(const string& exclusion_file, const string& type, uint32_t number, uint32_t read_length, cAnnotatedSequence& ref_seq_info, uint32_t rand_seed, bool verbose)
 {
   // If we have an exclusion_file to load, we will save
   // the info in this map.
@@ -1381,8 +1381,9 @@ void cGenomeDiff::random_mutations(const string& exclusion_file, const string& t
   uint32_t max_attempts = (ref_seq_info.get_sequence_size() / read_length) * 2;
   uint32_t uAttempts = 0;
   
-  const uint32_t seed_value = time(NULL);
+  const uint32_t seed_value = rand_seed;
   srand(seed_value);
+  metadata.author = "RANDOM GENERATOR SEED - " + to_string(seed_value);
   
   //Find the string value in the lookup table and cast index to enumeration.
   const size_t lookup_table_size = gd_entry_type_lookup_table.size();

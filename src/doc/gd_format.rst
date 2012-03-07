@@ -101,7 +101,7 @@ SUB: Multiple base substitution mutation
 
 7. **new_seq** *<string>*
 
-   new base at position
+   new bases at position
 
 
 DEL: Deletion mutation
@@ -117,7 +117,7 @@ DEL: Deletion mutation
 
 6. **size** *<uint32>*
 
-   number of bases deleted in reference
+   number of bases deleted in reference, including reference position.
 
 
 INS: Insertion mutation
@@ -133,7 +133,7 @@ INS: Insertion mutation
 
 6. **new_seq** *<string>*
 
-   new base inserted *after* the specified rference position
+   new base inserted *after* the specified reference position
 
 MOB: Mobile element insertion mutation
 """"""""""""""""""""""""""""""""""""""
