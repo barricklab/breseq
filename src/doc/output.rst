@@ -156,12 +156,14 @@ Column descriptions:
 	Identifiers for the reference sequences involved in the new junction.
 `position`
 	Positions in the reference sequence of the two sides of the new junction. Each position has an equals sign (=) before or after it that represents how the junction was constructed. The reference sequence approaches that coordinate from the side with the equals sign. The displayed coordinates are juxtaposed with each other to make the new junction.
-`overlap`
-    If positive, the number of bp in the junction that could map to either side in the reference sequence. Generally, positive overlap has been resolved to zero by assigning these base pairs to one side of the junction. If negative, the number of bp that are unique to reads mapping across the junction and represent insertions relative to the reference sequence.
+.. `overlap`
+  If positive, the number of bp in the junction that could map to either side in the reference sequence. Generally, positive overlap has been resolved to zero by assigning these base pairs to one side of the junction. If negative, the number of bp that are unique to reads mapping across the junction and represent insertions relative to the reference sequence.
 `reads`
     The total number of reads that map to this junction.
 `score`
     The position-hash score for the junction in **<bold angle brackets>** and the minimum-overlap score on the next line.
+`NFPL`
+  ***TODO*** 
 `annotation, gene, product`
 	Description of the effects of this change on each side of the junction. The format of these columns is the same as in :ref:`mutation-display`.
 
