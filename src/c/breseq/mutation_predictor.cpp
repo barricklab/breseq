@@ -599,17 +599,21 @@ namespace breseq {
 				mut["_del_start"] = "0";
 				mut["_del_end"] = "0";
 
-				// sometimes the ends of the IS are not quite flush
+        uint32_t start_1 = 0, end_1 = 0, pos_1 = 0;
+
+        // sometimes the ends of the IS are not quite flush
 				string j1_not_flush_seq = "";
 				if (n(j1[j1["_is_interval"] + "_strand"]) == -1)
 				{
 					mut["_gap_left"] = s(n(j1[j1["_is_interval"] + "_position"]) - n(j1["_" + j1["_is_interval"] + "_is_end"]));
 					if (n(mut["_gap_left"]) > 0)
-					{
+          {
+            start_1 = n(j1["_" + j1["_is_interval"] + "_is_end"]) + 1;
+            end_1   = n(j1[j1["_is_interval"] + "_position"]);
 						j1_not_flush_seq = ref_seq_info.get_sequence_1 (
-							j1[j1["_is_interval"] + "_seq_id"],
-							n(j1["_" + j1["_is_interval"] + "_is_end"]) + 1,
-							n(j1[j1["_is_interval"] + "_position"])
+              j1[j1["_is_interval"] + "_seq_id"],
+              start_1,
+              end_1
 						);
 					}
 				}
@@ -618,10 +622,12 @@ namespace breseq {
 					mut["_gap_left"] = s(n(j1["_" + j1["_is_interval"] + "_is_start"]) - n(j1[j1["_is_interval"] + "_position"]));          
 					if (n(mut["_gap_left"]) > 0)
 					{
-						j1_not_flush_seq = ref_seq_info.get_sequence_1 (
-							j1[j1["_is_interval"] + "_seq_id"],
-							n(j1[j1["_is_interval"] + "_position"]),
-							n(j1["_" + j1["_is_interval"] + "_is_start"]) - 1
+            start_1 = n(j1[j1["_is_interval"] + "_position"]);
+            end_1   = n(j1["_" + j1["_is_interval"] + "_is_start"]) - 1;
+            j1_not_flush_seq = ref_seq_info.get_sequence_1 (
+              j1[j1["_is_interval"] + "_seq_id"],
+              start_1,
+              end_1
 						);
 					}
 				}
@@ -657,10 +663,12 @@ namespace breseq {
 					mut["_gap_right"] = s(n(j2[j2["_is_interval"] + "_position"]) - n(j2["_" + j2["_is_interval"] + "_is_end"]));
 					if (n(mut["_gap_right"]) > 0)
 					{
-						j2_not_flush_seq = ref_seq_info.get_sequence_1 (
-							j1[j2["_is_interval"] + "_seq_id"],
-							n(j2["_" + j2["_is_interval"] + "_is_end"]) + 1,
-							n(j2[j2["_is_interval"] + "_position"])
+            start_1 = n(j2["_" + j2["_is_interval"] + "_is_end"]) + 1;
+            end_1   = n(j2[j2["_is_interval"] + "_position"]);
+            j2_not_flush_seq = ref_seq_info.get_sequence_1 (
+              j1[j2["_is_interval"] + "_seq_id"],
+              start_1,
+              end_1
 						);
 					}
 				}
@@ -669,10 +677,12 @@ namespace breseq {
 					mut["_gap_right"] = s(n(j2["_" + j2["_is_interval"] + "_is_start"]) - n(j2[j2["_is_interval"] + "_position"]));          
 					if (n(mut["_gap_right"]) > 0)
 					{
-						j2_not_flush_seq = ref_seq_info.get_sequence_1 (
-							j1[j2["_is_interval"] + "_seq_id"],
-							n(j2[j2["_is_interval"] + "_position"]),
-							n(j2["_" + j2["_is_interval"] + "_is_start"]) - 1
+            start_1 = n(j2[j2["_is_interval"] + "_position"]);
+            end_1   = n(j2["_" + j2["_is_interval"] + "_is_start"]) - 1;
+            j2_not_flush_seq = ref_seq_info.get_sequence_1 (
+              j1[j2["_is_interval"] + "_seq_id"],
+              start_1,
+              end_1
 						);
 					}
 				}
@@ -745,56 +755,71 @@ namespace breseq {
 					cout << "J2 IS overlap length: " << j2_is_overlap_length << endl;
 				}
 
-				string j1_is_seq_matched = "";
+        pos_1 = n(j1[j1["_is_interval"] + "_position"]);
+        string j1_is_seq_matched = "";
 				if (n(j1[j1["_is_interval"] + "_strand"]) == -1)
-				{
+        {
+          start_1 = pos_1 - j1_is_overlap_length - 1;
+          end_1   = pos_1 - j1_not_flush_length;
 					j1_is_seq_matched = ref_seq_info.get_sequence_1 (
-						j1[j1["_is_interval"] + "_seq_id"],
-						n(j1[j1["_is_interval"] + "_position"]) - (j1_is_overlap_length - 1),
-						n(j1[j1["_is_interval"] + "_position"]) - j1_not_flush_length
+            j1[j1["_is_interval"] + "_seq_id"],
+            start_1,
+            end_1
 					);
 					j1_is_seq_matched = reverse_complement(j1_is_seq_matched);
 				}
 				else
 				{          
-					j1_is_seq_matched = ref_seq_info.get_sequence_1 (
-						j1[j1["_is_interval"] + "_seq_id"],
-						n(j1[j1["_is_interval"] + "_position"]) + j1_not_flush_length,
-						n(j1[j1["_is_interval"] + "_position"]) + (j1_is_overlap_length - 1)
+          start_1 = pos_1 + j1_not_flush_length;
+          end_1   = pos_1 + j1_is_overlap_length - 1;
+          j1_is_seq_matched = ref_seq_info.get_sequence_1 (
+            j1[j1["_is_interval"] + "_seq_id"],
+            start_1,
+            end_1
 					);
 				}
 
-				string j2_is_seq_matched = "";
+
+        pos_1 = n(j2[j2["_is_interval"] + "_position"]);
+        string j2_is_seq_matched = "";
 				if (n(j2[j2["_is_interval"] + "_strand"]) == -1)
 				{
-					j2_is_seq_matched = ref_seq_info.get_sequence_1 (
-						j2[j2["_is_interval"] + "_seq_id"],
-						n(j2[j2["_is_interval"] + "_position"]) - (j2_is_overlap_length - 1),
-						n(j2[j2["_is_interval"] + "_position"]) - j2_not_flush_length
-					);
+          start_1 = pos_1 - j2_is_overlap_length - 1;
+          end_1   = pos_1 - j2_not_flush_length;
+          j2_is_seq_matched = ref_seq_info.get_sequence_1 (
+            j2[j2["_is_interval"] + "_seq_id"],
+            start_1,
+            end_1
+          );
 					j2_is_seq_matched = reverse_complement(j2_is_seq_matched);
 				}
 				else
 				{
-					j2_is_seq_matched = ref_seq_info.get_sequence_1 (
-						j2[j2["_is_interval"] + "_seq_id"],
-						n(j2[j2["_is_interval"] + "_position"]) + j2_not_flush_length,
-						n(j2[j2["_is_interval"] + "_position"]) + (j2_is_overlap_length - 1)
+          start_1 = pos_1 + j2_not_flush_length;
+          end_1   = pos_1 + j2_is_overlap_length - 1;
+          j2_is_seq_matched = ref_seq_info.get_sequence_1 (
+            j2[j2["_is_interval"] + "_seq_id"],
+            start_1,
+            end_1
 					);
 				}
 
-				// what are the actual sequences of this length at the end of the IS elements?
-
+        // what are the actual sequences of this length at the end of the IS elements?
+        start_1 = n(j1["_" + j1["_is_interval"] + "_is_start"]);
+        end_1   = start_1 + j1_is_overlap_length - 1;
 				string j1_left_is_sequence = ref_seq_info.get_sequence_1 (
-					j1[j1["_is_interval"] + "_seq_id"],
-					n(j1["_" + j1["_is_interval"] + "_is_start"]),
-					n(j1["_" + j1["_is_interval"] + "_is_start"]) + (j1_is_overlap_length - 1)
+          j1[j1["_is_interval"] + "_seq_id"],
+          start_1,
+          end_1
 				);
 
-				string j1_right_is_sequence = ref_seq_info.get_sequence_1 (
-					j1[j1["_is_interval"] + "_seq_id"],
-					n(j1["_" + j1["_is_interval"] + "_is_end"]) - (j1_is_overlap_length - 1),
-					n(j1["_" + j1["_is_interval"] + "_is_end"])
+
+        end_1   = n(j1["_" + j1["_is_interval"] + "_is_end"]);
+        start_1 = end_1 - j1_is_overlap_length - 1;
+        string j1_right_is_sequence = ref_seq_info.get_sequence_1 (
+          j1[j1["_is_interval"] + "_seq_id"],
+          start_1,
+          end_1
 				);
 				j1_right_is_sequence = reverse_complement(j1_right_is_sequence);
 
@@ -806,16 +831,20 @@ namespace breseq {
 				// believe the direction if the sequences are different
 				bool j1_is_ambiguous = (j1_left_is_sequence == j1_right_is_sequence);
 
-				string j2_left_is_sequence = ref_seq_info.get_sequence_1 (
-					j2[j2["_is_interval"] + "_seq_id"],
-					n(j2["_" + j2["_is_interval"] + "_is_start"]),
-					n(j2["_" + j2["_is_interval"] + "_is_start"]) + (j2_is_overlap_length - 1)
+        start_1 = n(j2["_" + j2["_is_interval"] + "_is_start"]);
+        end_1   = start_1 +j2_is_overlap_length - 1;
+        string j2_left_is_sequence = ref_seq_info.get_sequence_1 (
+          j2[j2["_is_interval"] + "_seq_id"],
+          start_1,
+          end_1
 				);
 
-				string j2_right_is_sequence = ref_seq_info.get_sequence_1 (
-					j2[j2["_is_interval"] + "_seq_id"],
-					n(j2["_" + j2["_is_interval"] + "_is_end"]) - (j2_is_overlap_length - 1),
-					n(j2["_" + j2["_is_interval"] + "_is_end"])
+        end_1   = n(j2["_" + j2["_is_interval"] + "_is_end"]);
+        start_1 = end_1 - j2_is_overlap_length - 1;
+        string j2_right_is_sequence = ref_seq_info.get_sequence_1 (
+          j2[j2["_is_interval"] + "_seq_id"],
+          start_1,
+          end_1
 				);
 				j2_right_is_sequence = reverse_complement(j2_right_is_sequence);
 
