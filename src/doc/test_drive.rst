@@ -13,7 +13,7 @@ Reference sequence
 
 |breseq| needs the reference sequence in Genbank format. In this example, the reference sequence is *Escherichia coli* B strain REL606. The Genbank (Refseq) accession number is: **NC_012967** . You can search for this sequence at http://www.ncbi.nlm.nih.gov/ or follow this `direct link <http://www.ncbi.nlm.nih.gov/nuccore/NC_012967>`_.
 
-Once the sequence is displayed, you will want to select "Show sequence" from the Display options on the right then click update view. Finally, use the send menu to choose "Complete Record" and Destination: "File" and "Genbank (Full)". It should start downloading a dfile called "sequence.gb". Rename this to **NC_012967.gbk** after it downloads.
+Once the sequence is displayed, you will want to select "Show sequence" from the Display options on the right then click update view. Finally, use the send menu to choose "Complete Record" and Destination: "File" and "Genbank (Full)". It should start downloading a file called "sequence.gb". Rename this to **NC_012967.gbk** after it downloads.
 
 Read files
 ++++++++++++++

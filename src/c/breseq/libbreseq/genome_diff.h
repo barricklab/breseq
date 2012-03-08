@@ -293,7 +293,7 @@ public:
   bool is_valid(cReferenceSequences& ref_seq_info, bool verbose=false);
   
   //! Call to generate random mutations.
-  void random_mutations(const string& exclusion_file, const string& type, uint32_t number, uint32_t read_length, cAnnotatedSequence& ref_seq_info, bool verbose=false);
+  void random_mutations(const string& exclusion_file, const string& type, uint32_t number, uint32_t read_length, cAnnotatedSequence& ref_seq_info, uint32_t rand_seed, bool verbose=false);
   
   //! Remove items used as evidence by any mutations out of input list
   diff_entry_list_t filter_used_as_evidence(const diff_entry_list_t& list);

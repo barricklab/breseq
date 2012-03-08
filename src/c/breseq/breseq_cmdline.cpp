@@ -1961,7 +1961,8 @@ int do_rand_muts(int argc, char *argv[])
   options("exclude,e","Exclusion file");
   options("number,n","Number of mutations to generate", static_cast<uint32_t>(1000));
   options("length,l","Length of reads (used to space mutations)", static_cast<uint32_t>(50));
-  options("seq,s","Sequence to use from reference");
+  options("seq,s","Sequence to use from reference");  
+  options("rand,a","Seed for the random number generator");
   options("verbose,v","Verbose Mode (Flag)", TAKES_NO_ARGUMENT);
   options.processCommandArgs(argc, argv);
   
@@ -1971,7 +1972,7 @@ int do_rand_muts(int argc, char *argv[])
   options.addUsage("Not supplying --seq will use the first sequence in the reference.");
   options.addUsage("");
   options.addUsage("Required fields are -r, -o, and -t.");
-  options.addUsage("Valid types: SNP, INS, DEL");
+  options.addUsage("Valid types: SNP, INS, DEL, MOB");
   options.addUsage("INS:1-10 will generate insertions of size 1 to 10.");
   options.addUsage("DEL:1-10 will generate deletions of size 1 to 10.");
   
@@ -2006,17 +2007,19 @@ int do_rand_muts(int argc, char *argv[])
   cReferenceSequences ref_seq_info;
   ref_seq_info.LoadFiles(from_string<vector<string> >(options["reference"]));
   
-  string exclusion_file = "";
   if(options.count("exclude"))  {
     options["exclude"];  }
   
   int ref_seq_id = 0;
   if(options.count("seq"))  {
-    ref_seq_id = ref_seq_info.seq_id_to_index(options["seq"]);
-  }
+    ref_seq_id = ref_seq_info.seq_id_to_index(options["seq"]);  }
+  
+  uint32_t seed = time(NULL);
+  if(options.count("rand"))  {
+    seed = from_string<uint32_t>(options["rand"]);  }
   
   cGenomeDiff gd1;
-  gd1.random_mutations(options["exclude"], options["type"], from_string<uint32_t>(options["number"]), from_string<uint32_t>(options["length"]), ref_seq_info[ref_seq_id], options.count("verbose"));
+  gd1.random_mutations(options["exclude"], options["type"], from_string<uint32_t>(options["number"]), from_string<uint32_t>(options["length"]), ref_seq_info[ref_seq_id], seed, options.count("verbose"));
   
   gd1.write(options["output"]);
   
