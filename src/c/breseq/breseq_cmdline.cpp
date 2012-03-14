@@ -1067,10 +1067,12 @@ int do_simulate_read(int argc, char *argv[])
   ("genome_diff,g", "Genome diff file.")
   ("reference,r", "Reference file for input.")
   ("coverage,c", "Average coverage value to simulate.", static_cast<uint32_t>(10))
-  ("length,l", "Read length to simulate.", static_cast<uint32_t>(36))
-  ("output,o", "Output fastq file name.")  
-  ("gff3,3", "Output Applied GFF3 File. (Flag)", TAKES_NO_ARGUMENT)
-  ("verbose,v", "Verbose Mode (Flag)", TAKES_NO_ARGUMENT)
+  ("length,l",   "Read length to simulate.", static_cast<uint32_t>(36))
+  ("output,o",   "Output fastq file name.")
+  ("gff3,3",     "Output Applied GFF3 File. (Flag)", TAKES_NO_ARGUMENT)
+  ("verbose,v",  "Verbose Mode (Flag)", TAKES_NO_ARGUMENT)
+  ("pair-ended", "Will create two pair ended read files *_1.fastq, *_2.fastq.", TAKES_NO_ARGUMENT)
+  ("gap-size",   "Gap size to use for pair ended reads.", static_cast<uint32_t>(100))
   ;
   options.processCommandArgs(argc, argv);
   
@@ -1104,6 +1106,9 @@ int do_simulate_read(int argc, char *argv[])
     options.printUsage();
     return -1;
   }
+  const bool verbose = options.count("verbose");
+  const bool pair_ended = options.count("pair-ended");
+  const uint32_t gap_size = from_string<uint32_t>(options["gap-size"]);
 
 //! Step: Load reference sequence file.
   cReferenceSequences ref_seq_info;
@@ -1115,7 +1120,6 @@ int do_simulate_read(int argc, char *argv[])
 
   //! Step: Apply genome diff mutations to reference sequence.
   const string &gd_file_name = options["genome_diff"];
-  bool verbose = options.count("verbose");
   cGenomeDiff gd(gd_file_name);
 
   gd.apply_to_sequences(ref_seq_info, new_ref_seq_info, verbose);
@@ -1130,17 +1134,44 @@ int do_simulate_read(int argc, char *argv[])
   const uint32_t average_coverage = from_string<uint32_t>(options["coverage"]);
   const uint32_t read_length = from_string<uint32_t>(options["length"]);
 
+  if (pair_ended) {
   const cFastqSequenceVector &fsv =
-      cFastqSequenceVector::simulate_from_sequence(sequence, average_coverage, read_length, verbose);
+      cFastqSequenceVector::simulate_from_sequence(sequence,
+                                                   average_coverage,
+                                                   read_length,
+                                                   pair_ended,
+                                                   gap_size,
+                                                   verbose);
+    cString output(options["output"]);
+    const string ext  = output.get_file_extension();
+    output.remove_ending(ext);
+    cFastqFile ff1(output + "_1" + ext, ios_base::out);
+    cFastqFile ff2(output + "_2" + ext, ios_base::out);
+    const size_t n = fsv.size() / 2;
 
-  //! Step: Write simulated reads to file.
-  if(verbose){cout << "Writing FASTQ\n" << "\t" << options["output"] << endl;}
-  cFastqFile ff(options["output"], ios_base::out);
+    for (size_t i = 0; i < n; ++i) {
+      ff1.write_sequence(fsv[i]);
+      ff2.write_sequence(fsv[i + n]);
+      if(verbose && !(i % 10000) && i){cout << "\tREAD: " << i << endl;}
+    }
 
-  const size_t &fsv_size = fsv.size();
-  for (size_t i = 0; i < fsv_size; i++) {
-    ff.write_sequence(fsv[i]);
-    if(verbose && !(i % 10000) && i){cout << "\tREAD: " << i << endl;}
+  }
+  else {
+    const cFastqSequenceVector &fsv =
+        cFastqSequenceVector::simulate_from_sequence(sequence,
+                                                     average_coverage,
+                                                     read_length,
+                                                     verbose);
+
+    //! Step: Write simulated reads to file.
+    if(verbose){cout << "Writing FASTQ\n" << "\t" << options["output"] << endl;}
+    cFastqFile ff(options["output"], ios_base::out);
+
+    const size_t &fsv_size = fsv.size();
+    for (size_t i = 0; i < fsv_size; i++) {
+      ff.write_sequence(fsv[i]);
+      if(verbose && !(i % 10000) && i){cout << "\tREAD: " << i << endl;}
+    }
   }
   if(verbose){cout << "\t**FASTQ Complete**" << endl;}
   return 0;
