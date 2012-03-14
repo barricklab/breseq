@@ -44,12 +44,13 @@ class cAnnotatedSequence;
    
   struct cFastqSequence {
     public:
-      string m_name;      //@NAME
-      string m_sequence;  //sequence
-      string m_name_plus; //+NAME
-      string m_qualities; //quality score characters
+      string   m_name;        //@NAME
+      string   m_sequence;    //sequence
+      string   m_name_plus;   //+NAME
+      string   m_qualities;   //quality score characters
       uint32_t m_num_N_bases; // number of N bases, used for filtering
    };
+
 
   namespace FastqSimulationUtilities {
     extern map<uint32_t, uint32_t> qscore_cumulative_probability_table;
@@ -63,14 +64,21 @@ class cAnnotatedSequence;
     bool is_random_insertion_base(void);
   }
 
-  class cFastqSequenceVector : public vector<cFastqSequence>
+  struct cSimFastqSequence: public cFastqSequence {
+      int8_t   m_strand;
+      uint32_t m_start_1;
+  };
+
+  class cFastqSequenceVector : public vector<cSimFastqSequence>
   {
     public:
       static cFastqSequenceVector simulate_from_sequence(const cAnnotatedSequence &ref_sequence,
                                                          const uint32_t &average_coverage,
                                                          const uint32_t &read_size,
-                                                         const bool verbose=false);
-    private:
+                                                         const bool pair_ended = false,
+                                                         const uint32_t gap_size = 0,
+                                                         const bool verbose = false);
+
   };
   
   /*! Quality score conversion class.

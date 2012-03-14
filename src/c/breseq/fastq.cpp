@@ -629,12 +629,16 @@ namespace breseq {
   cFastqSequenceVector::simulate_from_sequence(const cAnnotatedSequence &ref_sequence,
                                                const uint32_t &average_coverage,
                                                const uint32_t &read_size,
+                                               const bool pair_ended,
+                                               const uint32_t gap_size,
                                                const bool verbose)
   {
     //! Step: Initialize return value.
     const size_t ref_sequence_size = ref_sequence.get_sequence_size();
-    const size_t num_reads =
-        ceil(ref_sequence_size / read_size) * average_coverage;
+    size_t num_reads = ceil(ref_sequence_size / read_size) * average_coverage;
+    if (pair_ended) {
+      num_reads = ceil(num_reads / 2);
+    }
 
     cFastqSequenceVector ret_val;
     ret_val.resize(num_reads);
@@ -652,7 +656,7 @@ namespace breseq {
 
     //Begin assigning simulated reads.
     for (size_t i = 0; i < num_reads; i++) {
-      cFastqSequence *fs = &ret_val[i];
+      cSimFastqSequence *fs = &ret_val[i];
 
       //Assign name.
       sprintf(fs->m_name, "READ-%i", ++current_line);
@@ -689,7 +693,6 @@ namespace breseq {
       */
 
       //Initializations for verbose parameters.
-      bool is_negative_strand = false;
       string verbose_errors(read_size, ' ');
       string verbose_deletions (read_size, ' ');
       string verbose_insertions(read_size, ' ');
@@ -697,13 +700,14 @@ namespace breseq {
 
 
       //! Algorithm Step 1:
-      size_t start_1 = rand() % ref_sequence_size + 1; // index_1 offset.
+      fs->m_start_1 = rand() % ref_sequence_size + 1; // index_1 offset.
       string ref_segment =
-          ref_sequence.get_circular_sequence_1(start_1, 2 * read_size);
+          ref_sequence.get_circular_sequence_1(fs->m_start_1, 2 * read_size);
 
       // 50% Chance the read is a negative strand.
+      fs->m_strand = 1;
       if ((rand() % 100) < 50) {
-        is_negative_strand = true;
+        fs->m_strand = -1;
         ref_segment = reverse_complement(ref_segment);
       }
 
@@ -796,11 +800,11 @@ namespace breseq {
                  fs->m_name.c_str());
 
           const string &original =
-              ref_sequence.get_circular_sequence_1(start_1, 2 * read_size);
+              ref_sequence.get_circular_sequence_1(fs->m_start_1, 2 * read_size);
           printf("\tReference Segment(2 x Read Size)     :  %s\n",
                  original.c_str());
 
-          if (is_negative_strand) {
+          if (fs->m_strand == -1) {
             printf("\tSimulated negative strand            :  %s\n",
                    ref_segment.c_str());
           }
@@ -828,14 +832,58 @@ namespace breseq {
         }
       }//End verbose output.
 
-
     }//End assigning simulated reads.
+
+    if (pair_ended) {
+      /*
+             pair_#          gap_size        pair_#
+                        |---------------|
+        --------------->                 <---------------
+        ^ start_1                        ^ start_1
+       */
+
+      ret_val.resize(num_reads * 2);
+
+      for (uint32_t i = 0; i < num_reads; ++i) {
+        cSimFastqSequence *p1 = &ret_val[i];
+        cSimFastqSequence *p2 = &ret_val[i + num_reads];
+
+        //! Step: Assign values from pair 1 to pair 2.
+        p2->m_name = p1->m_name;
+        p2->m_name_plus = p1->m_name_plus;
+        p1->m_name += "/1";
+        p2->m_name += "/2";
+        p2->m_start_1 = p1->m_start_1; //Will shift position later.
+        p2->m_sequence.resize(read_size);
+        p2->m_qualities.resize(read_size);
+
+        //! Step: Determine the shifted start position and sequence.
+        if (p1->m_strand == 1) {
+          p2->m_start_1 += read_size + gap_size;
+          p2->m_sequence =
+            ref_sequence.get_circular_sequence_1(p2->m_start_1, read_size);
+
+          p2->m_sequence = reverse_complement(p2->m_sequence);
+        }
+        else
+        if (p1->m_strand == -1) {
+          p2->m_start_1 -= read_size - gap_size;
+          p2->m_sequence =
+            ref_sequence.get_circular_sequence_1(p2->m_start_1, read_size);
+        }
+
+        //! Step: Assign random quality scores to pair 2.
+        for (uint32_t k = 0; k < read_size; ++k) {
+          p2->m_qualities[k] = FastqSimulationUtilities::get_random_quality_score();
+        }
+
+      }// End pair ended loop.
+    }// End pair ended.
     
     if(verbose){cout << "\t**READS Complete**" << endl;}
 
     return ret_val;
   }
-  
 
 // Reverse complement and also uppercase
 // Convert most characters to 'N'. Might want to give errors on non-printable characters
