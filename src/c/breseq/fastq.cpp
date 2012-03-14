@@ -835,11 +835,37 @@ namespace breseq {
     }//End assigning simulated reads.
 
     if (pair_ended) {
-      /*
-             pair_#          gap_size        pair_#
+      /*!
+        Simulate pair-ended reads:
+          Assume the reads created above are the first half, pair_1, we now loop
+        through these reads and create the second half, pair_2. The creation of
+        pair_2 has dependencies on pair_1's start_1 position and strand; and also
+        the gap_size argument passed to this function.
+
+
+        Case: pair_1 is positive strand.
+
+             pair_1          gap_size        pair_2
                         |---------------|
         --------------->                 <---------------
-        ^ start_1                        ^ start_1
+        ^ start_1
+        ---------------------------------|
+                                         ^ shifted_start_1
+
+        ***shifted_start_1 = start_1 + read_size + gap_size
+        ***pair_2 in negative strand.
+
+
+        Case: pair_1 is negative strand.
+             pair_2          gap_size        pair_1
+                        |---------------|
+        --------------->                 <---------------
+                                         ^ start_1
+        |---------------------------------
+        ^ shifted_start_1
+
+        ***shifted_start_1 = start_1 - gap_size - read_size
+        ***pair_2 is positive strand.
        */
 
       ret_val.resize(num_reads * 2);
@@ -859,6 +885,7 @@ namespace breseq {
 
         //! Step: Determine the shifted start position and sequence.
         if (p1->m_strand == 1) {
+          p2->m_strand = -1;
           p2->m_start_1 += read_size + gap_size;
           p2->m_sequence =
             ref_sequence.get_circular_sequence_1(p2->m_start_1, read_size);
@@ -867,7 +894,8 @@ namespace breseq {
         }
         else
         if (p1->m_strand == -1) {
-          p2->m_start_1 -= read_size - gap_size;
+          p2->m_strand = 1;
+          p2->m_start_1 -= gap_size - read_size;
           p2->m_sequence =
             ref_sequence.get_circular_sequence_1(p2->m_start_1, read_size);
         }
@@ -876,6 +904,8 @@ namespace breseq {
         for (uint32_t k = 0; k < read_size; ++k) {
           p2->m_qualities[k] = FastqSimulationUtilities::get_random_quality_score();
         }
+
+
 
       }// End pair ended loop.
     }// End pair ended.
