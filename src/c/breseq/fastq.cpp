@@ -835,6 +835,7 @@ namespace breseq {
     }//End assigning simulated reads.
 
     if (pair_ended) {
+      printf("***Creating paired reads.\n");
       /*!
         Simulate pair-ended reads:
           Assume the reads created above are the first half, pair_1, we now loop
@@ -857,6 +858,7 @@ namespace breseq {
 
 
         Case: pair_1 is negative strand.
+
              pair_2          gap_size        pair_1
                         |---------------|
         --------------->                 <---------------
@@ -865,6 +867,25 @@ namespace breseq {
         ^ shifted_start_1
 
         ***shifted_start_1 = start_1 - gap_size - read_size
+        ***pair_2 is positive strand.
+
+
+        Edge cases: pair_1 is negative strand and near beginning of reference.
+
+             pair_2          gap_size        pair_1
+                        |---------------|
+        --------------->        X        <---------------
+         beginning of reference ^        ^ start_1
+
+             pair_2          gap_size        pair_1
+                        |---------------|
+        -----X--------->                 <---------------
+             ^ beginning of reference    ^ start_1
+
+        |---------------------------------
+        ^ shifted_start_1
+
+        ***shifted_start_1 = ref_sequence_size + start_1 - gap_size - read_size
         ***pair_2 is positive strand.
        */
 
@@ -877,35 +898,70 @@ namespace breseq {
         //! Step: Assign values from pair 1 to pair 2.
         p2->m_name = p1->m_name;
         p2->m_name_plus = p1->m_name_plus;
+
         p1->m_name += "/1";
         p2->m_name += "/2";
+
         p2->m_start_1 = p1->m_start_1; //Will shift position later.
+
         p2->m_sequence.resize(read_size);
         p2->m_qualities.resize(read_size);
 
         //! Step: Determine the shifted start position and sequence.
+        uint32_t shift_distance = read_size + gap_size;
         if (p1->m_strand == 1) {
           p2->m_strand = -1;
-          p2->m_start_1 += read_size + gap_size;
+
+          p2->m_start_1 += shift_distance;
+
           p2->m_sequence =
-            ref_sequence.get_circular_sequence_1(p2->m_start_1, read_size);
+              ref_sequence.get_circular_sequence_1(p2->m_start_1, read_size);
 
           p2->m_sequence = reverse_complement(p2->m_sequence);
         }
         else
         if (p1->m_strand == -1) {
           p2->m_strand = 1;
-          p2->m_start_1 -= gap_size - read_size;
+
+          /* Edge cases where start_1 is too close to the beginning of the
+            sequence and we must start from the end of the sequence. */
+          if (shift_distance > p2->m_start_1) {
+            p2->m_start_1 += ref_sequence_size;
+          }
+          p2->m_start_1 -= shift_distance;
+
           p2->m_sequence =
-            ref_sequence.get_circular_sequence_1(p2->m_start_1, read_size);
+              ref_sequence.get_circular_sequence_1(p2->m_start_1, read_size);
         }
 
         //! Step: Assign random quality scores to pair 2.
         for (uint32_t k = 0; k < read_size; ++k) {
-          p2->m_qualities[k] = FastqSimulationUtilities::get_random_quality_score();
+          p2->m_qualities[k] =
+              FastqSimulationUtilities::get_random_quality_score();
         }
 
+        if (verbose) {
+            bool is_first = (i == 0);
+            bool is_last  = (i == (num_reads - 1));
+            bool is_other = !(i % (num_reads / 5));
 
+            if (is_first || is_last || is_other) {
+              printf("READ-%i\n", i);
+              printf("\tPAIR 1:\n");
+              printf("\t\t[start_1]:%i\n", p1->m_start_1);
+              printf("\t\t[strand]:%i\n", p1->m_strand);
+              printf("\t\t[sequence]:\t%s\n", p1->m_sequence.c_str());
+              printf("\t\t[qualities]:\t%s\n", p1->m_qualities.c_str());
+              printf("\n");
+
+              printf("\tPAIR 2:\n");
+              printf("\t\t[start_1]:%i\n", p2->m_start_1);
+              printf("\t\t[strand]:%i\n", p2->m_strand);
+              printf("\t\t[sequence]:\t%s\n", p2->m_sequence.c_str());
+              printf("\t\t[qualities]:\t%s\n", p2->m_qualities.c_str());
+              printf("\n");
+            }
+        }
 
       }// End pair ended loop.
     }// End pair ended.
