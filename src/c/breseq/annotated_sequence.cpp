@@ -541,11 +541,12 @@ namespace breseq {
         ss << "\tVS:\t" << as.get_sequence_length() << " (Sequence Length)" << endl;
         Error = true;
       }
-      if(!as.get_sequence_length())  {        
+      if(!as.get_sequence_length())  {
         ss << "LIKELY CAUSE:" << endl;
-        ss << "Loaded sequence is of 0 length.  Make sure that the reference" << endl;
-        ss << "you are loading actually contains a sequence.  Specifically, " << endl;
-        ss << "make sure you don't have a GBK with no sequence and only features.";
+        ss << "No nucleotide sequence loaded for " << as.m_seq_id <<  endl;
+        ss << "\nMake sure that the reference you are loading contains a sequence." << endl;
+        ss << "If loading a Genbank file, make sure it has the associated sequence" << endl;
+        ss << "or load the sequence as a seperate FASTA file.";
       }
       else  {        
         ss << "LIKELY CAUSE:" << endl;
