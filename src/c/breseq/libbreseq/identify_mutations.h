@@ -235,7 +235,6 @@ namespace breseq {
                               const Summary& summary,
                               const string& bam,
 															const string& fasta,
-															const string& gd_file,
 															const string& output_dir,
 															const string& coverage_dir,
                               const vector<double>& deletion_propagation_cutoff,
@@ -257,6 +256,11 @@ namespace breseq {
 		//! Called at the end of the pileup.
 		virtual void at_target_end(const uint32_t tid);
 		
+    //! Write the genome diff
+    void write_gd(const string& filename)
+      { _gd.write(filename); }
+    
+    
 	protected:
 		//! Helper method to track deletions.
 		void check_deletion_completion(uint32_t position, uint32_t seq_id, const position_coverage& this_position_coverage, double e_value_call);
@@ -279,7 +283,6 @@ namespace breseq {
     //! Settings passed at command line
     const Settings& _settings;
 		cGenomeDiff _gd; //!< Genome diff.
-    string _gd_file; //!< file name for Genome diff
     uint8_t _min_qual_score; //!< minimum quality score to count base for RA
     vector<double> _deletion_seed_cutoffs; //!< Coverage below which deletions are cutoff.
     vector<double> _deletion_propagation_cutoffs; //!< Coverage above which deletions are cutoff.

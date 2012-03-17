@@ -52,7 +52,6 @@ void identify_mutations(
                 summary,
 								bam,
 								fasta,
-								gd_file,
 								output_dir,
 								coverage_dir,
                 deletion_propagation_cutoff,
@@ -65,6 +64,7 @@ void identify_mutations(
 								print_per_position_file
 							);
 	imp.do_pileup();
+  imp.write_gd(gd_file);
 }
 
   
@@ -77,7 +77,6 @@ identify_mutations_pileup::identify_mutations_pileup(
                               const Summary& summary,
 															const string& bam,
 															const string& fasta,
-															const string& gd_file,
 															const string& output_dir,
 															const string& coverage_dir,
                               const vector<double>& deletion_propagation_cutoffs,
@@ -92,7 +91,6 @@ identify_mutations_pileup::identify_mutations_pileup(
 : pileup_base(bam, fasta)
 , _settings(settings)
 , _gd()
-, _gd_file(gd_file)
 , _min_qual_score(min_qual_score)
 , _deletion_seed_cutoffs(deletion_seed_cutoffs)
 , _deletion_propagation_cutoffs(deletion_propagation_cutoffs)
@@ -110,7 +108,7 @@ identify_mutations_pileup::identify_mutations_pileup(
 , _print_per_position_file(print_per_position_file)
 {
 	
-  // remvoe once used
+  // remove once used
   (void)settings;
   
   set_print_progress(true);
@@ -690,14 +688,6 @@ void identify_mutations_pileup::at_target_end(const uint32_t tid) {
 
     _gd.add(del);
   }
-    
-  // write genome diff file
-	_gd.write(_gd_file);
-  
-  // close open files
-	_coverage_data.close();
-  _polymorphism_r_input_file.close();
-
 }
 
 

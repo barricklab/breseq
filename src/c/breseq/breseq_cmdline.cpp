@@ -1277,7 +1277,7 @@ int do_filter_gd(int argc, char* argv[]) {
   }
 
   list<string> filters;
-  for(size_t i = 0; i < options.getArgc(); ++i) {
+  for(int32_t i = 0; i < options.getArgc(); ++i) {
     filters.push_back(options.getArgv(i));
   }
   assert(filters.size());
