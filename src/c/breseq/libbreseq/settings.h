@@ -220,7 +220,6 @@ namespace breseq
     uint32_t ssaha2_skip_length;  // Default = 1 (i.e. no skipping)
     
     //! reads are never included in the BAM alignment file if they fail these guards
-		bool     require_complete_match;  // Default = false   COMMAND-LINE OPTION
 		uint32_t require_match_length;    // Default = 0 (OFF) COMMAND-LINE OPTION
 		double   require_match_fraction;  // Default = 0.9     COMMAND-LINE OPTION
     //! ignore reads with this many or more mismatches (I+D+MM)

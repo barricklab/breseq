@@ -49,12 +49,12 @@ using namespace std;
 int do_bam2aln(int argc, char* argv[]) {
   
   // setup and parse configuration options:
-	AnyOption options("Usage: bam2aln --bam=<reference.bam> --fasta=<reference.fasta> --region=<accession:start-end> --output=<output.html> [--max-reads=1000]");
+	AnyOption options("Usage: breseq BAM2ALN [--bam=reference.bam --fasta=reference.fasta --region=accession:start-end --output=alignment.html --max-reads=200] accession:start-end");
 	options
   ("help,h", "produce this help message", TAKES_NO_ARGUMENT)
   ("bam,b", "bam file containing sequences to be aligned", "data/reference.bam")
 	("fasta,f", "FASTA file of reference sequence", "data/reference.fasta")
-  ("output,o", "output to file [region.html]")
+  ("output,o", "output to file [region.html]", "alignment.html")
   ("region,r", "region to print (accession:start-end), may also be provided as unnamed arguments at the end of the command line.")
   ("max-reads,n", "maximum number of reads to show in alignment", 200)
   ("quality-score-cutoff,c", "quality score cutoff", 0)
@@ -361,42 +361,6 @@ int do_convert_genbank(int argc, char* argv[]) {
                     options["features"],
                     options["gff3"]
                     );
-  } catch(...) {
-		// failed; 
-		return -1;
-	}
-	
-	return 0;
-}
-
-/*! Calculate Trims
- 
- Calculate how much to ignore on the end of reads due to ambiguous alignments
- of those bases.
- 
- */
-int do_calculate_trims(int argc, char* argv[]) {
-	
-	// setup and parse configuration options:
-	AnyOption options("Usage: breseq CALCULATE_TRIMS --bam <sequences.bam> --fasta <reference.fasta> --error_dir <path> --cGenomeDiff <path> --output <path> --readfile <filename> --coverage_dir <dirname> [--minimum-quality-score 3]");
-	options
-		("help,h", "produce this help message", TAKES_NO_ARGUMENT)
-		("fasta,f", "FASTA file of reference sequence")
-		("output,o", "output directory")
-	.processCommandArgs(argc, argv);
-	
-	// make sure that the config options are good:
-	if(options.count("help")
-		 || !options.count("fasta")
-		 || !options.count("output")
-		 ) {
-		options.printUsage();
-		return -1;
-	}                       
-  
-	// attempt to calculate error calibrations:
-	try {
-		calculate_trims(options["fasta"],options["output"]);
   } catch(...) {
 		// failed; 
 		return -1;
@@ -3007,64 +2971,77 @@ int main(int argc, char* argv[]) {
 
 	// Pass the command to the proper handler
 	command = to_upper(command);
-  if (command == "CONVERT_FASTQ") {
+  
+  // Sequence Utility Commands:
+  if (command == "CONVERT-FASTQ") {
 		return do_convert_fastq(argc_new, argv_new);
-	} else if (command == "CALCULATE_TRIMS") {
-		return do_calculate_trims(argc_new, argv_new);
-	} else if (command == "CONVERT_GENBANK") {
+	} else if (command == "CONVERT-GENBANK") {
 		return do_convert_genbank(argc_new, argv_new);
-	} else if (command == "TABULATE_CL") {
-		return do_tabulate_contingency_loci(argc_new, argv_new);
-	} else if (command == "ERROR_COUNT") {
-		return do_error_count(argc_new, argv_new);
-	} else if (command == "IDENTIFY_CANDIDATE_JUNCTIONS") {
-		return do_identify_candidate_junctions(argc_new, argv_new);
-  } else if (command == "PREDICT_MUTATIONS") {
-		return do_predict_mutations(argc_new, argv_new);
-  } else if (command == "GD2GVF") {
-    return do_convert_gvf(argc_new, argv_new);
-  } else if (command == "VCF2GD") {
-    return do_convert_gd( argc_new, argv_new);
+  } else if ((command == "SUBSEQUENCE") || (command == "GET-SEQUENCE")) {
+    return do_subsequence(argc_new, argv_new);
+    
+  // Breseq Post-Run Commands:
   } else if (command == "BAM2ALN") {
     return do_bam2aln( argc_new, argv_new);  
   } else if (command == "BAM2COV") {
     return do_bam2cov( argc_new, argv_new);
-  } else if ((command == "APPLY") || (command == "MUTATE")) {
+    
+  // Genome Diff Commands:
+  } else if ((command == "GD-APPLY")) {
     return do_mutate(argc_new, argv_new);    
-  } else if (command == "SUBTRACT") {
+  } else if (command == "GD-SUBTRACT") {
     return do_subtract(argc_new, argv_new);    
-  } else if (command == "UNION" || command == "MERGE") {
+  } else if (command == "GD-UNION" || command == "GD-MERGE") {
     return do_merge(argc_new, argv_new);    
-  } else if (command == "COMPARE-GD") {
+  } else if (command == "GD-COMPARE") {
     return do_compare_genome_diffs(argc_new, argv_new);
-  } else if (command == "NOT_EVIDENCE") {
+  } else if (command == "GD-NOT-EVIDENCE") {
     return do_not_evidence(argc_new, argv_new);
-  } else if (command == "INTERSECTION") {
+  } else if (command == "GD-INTERSECTION" || command == "GD-INTERSECT") {
     return do_intersection(argc_new, argv_new);
-  } else if (command == "ANNOTATE") {
+  } else if (command == "GD-ANNOTATE") {
     return do_annotate(argc_new, argv_new);
-  } else if (command == "SIMULATE-READ") {
-    return do_simulate_read(argc_new, argv_new);
-  } else if (command == "NORMALIZE-GD") {
+  } else if (command == "GD-NORMALIZE") {
     return do_normalize_gd(argc_new, argv_new);
-  } else if (command == "FILTER-GD") {
+  } else if (command == "GD-FILTER") {
     return do_filter_gd(argc_new, argv_new);
-  } else if ((command == "SUBSEQUENCE") || (command == "SUB")) {
-    return do_subsequence(argc_new, argv_new);
-  } else if (command == "RUNFILE") {
-    return do_runfile(argc_new, argv_new);
-  } else if (command == "CNV") {
-    return do_copy_number_variation(argc_new, argv_new);
-  } else if (command == "PERIODICITY"){
-    return do_periodicity(argc_new, argv_new);
+    
+  // Genome Diff Conversion:
+  } else if (command == "GD2GVF") {
+    return do_convert_gvf(argc_new, argv_new);
+  } else if (command == "VCF2GD") {
+    return do_convert_gd( argc_new, argv_new);
+    
+  // Pipeline Utility Commands:
   } else if (command == "DOWNLOAD" || command == "DOWNLOADS") {
     return do_download(argc_new, argv_new);
+  } else if (command == "RUNFILE") {
+    return do_runfile(argc_new, argv_new);
+    
+  // Experimental and Development Commands:
+  //
+  // None of these commands are documented for use by others. 
+  // They may change without warning.
+  } else if (command == "SIMULATE-READ") {
+    return do_simulate_read(argc_new, argv_new);
   } else if ((command == "RANDOM_MUTATIONS") || (command == "RAND_MUTS")) {
     return do_rand_muts(argc_new, argv_new);
   } else if (command == "RNASEQ") {
     return do_rna_seq(argc_new, argv_new);  
   } else if (command == "REFALN") {
     return do_ref_aln();  
+  } else if (command == "CNV") {
+    return do_copy_number_variation(argc_new, argv_new);
+  } else if (command == "PERIODICITY"){
+    return do_periodicity(argc_new, argv_new);
+  } else if (command == "TABULATE_CL") {
+    return do_tabulate_contingency_loci(argc_new, argv_new);
+  } else if (command == "ERROR_COUNT") {
+    return do_error_count(argc_new, argv_new);
+  } else if (command == "IDENTIFY_CANDIDATE_JUNCTIONS") {
+    return do_identify_candidate_junctions(argc_new, argv_new);
+  } else if (command == "PREDICT_MUTATIONS") {
+    return do_predict_mutations(argc_new, argv_new);
   }
   else {
     // Not a sub-command. Use original argument list.

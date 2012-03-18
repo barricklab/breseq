@@ -115,11 +115,10 @@ namespace breseq
     ("no-junction-prediction,j", "do not predict new sequence junctions", TAKES_NO_ARGUMENT)
     ("polymorphism-prediction,p", "predict polymorphic mutations", TAKES_NO_ARGUMENT)
     ("base-quality-cutoff,b", "ignore bases with quality scores lower than this value", 3)
-    ("deletion-coverage-propagation-cutoff,u","value for coverage above which deletions are cutoff. 0 = calculated from coverage distribution", 0)
-    ("deletion-coverage-seed-cutoff,s","value for coverage below which deletions are seeded", 0)
-    ("require-complete-match", "only consider alignments that extend from end to end of a read", TAKES_NO_ARGUMENT)
     ("require-match-length", "only consider alignments that cover this many bases of a read", 0)
     ("require-match-fraction", "only consider alignments that cover this fraction of a read", 0.9)
+    ("deletion-coverage-propagation-cutoff,u","value for coverage above which deletions are cutoff. 0 = calculated from coverage distribution", 0, ADVANCED_OPTION)
+    ("deletion-coverage-seed-cutoff,s","value for coverage below which deletions are seeded", 0, ADVANCED_OPTION)
     ("values-to-gd","",TAKES_NO_ARGUMENT, ADVANCED_OPTION) // @JEB @GRC added in for gathering/analyzing breseq values
     ("cnv","do experimental copy number variation prediction",TAKES_NO_ARGUMENT, ADVANCED_OPTION)
     ("cnv-tile-size", "tile size for copy number variation prediction", 500, ADVANCED_OPTION)
@@ -138,13 +137,16 @@ namespace breseq
     
     options.addUsage("");
 		options.addUsage("Utility Command Usage: breseq [command] options ...");
-    options.addUsage("  Breseq Pipeline Commands: CONVERT_FASTQ, ERROR_COUNT");
+    options.addUsage("  Sequence Utility Commands: CONVERT-READ, CONVERT-REFERENCE, GET-SEQUENCE");
     options.addUsage("  Breseq Post-Run Commands: BAM2ALN, BAM2COV");
-    options.addUsage("  Genome Diff Commands: APPLY, INTERSECT, NOT_EVIDENCE, SUBTRACT, UNION, DOWNLOAD");
-    options.addUsage("  TACC Commands: RUNFILE, POST-RUN");
-    options.addUsage("  For help using a utility command, type: breseq [command] ");
+    options.addUsage("  Genome Diff Commands: GD-APPLY, GD-ANNOTATE, GD-COMPARE, GD-NOT-EVIDENCE,");
+    options.addUsage("                        GD-UNION, GD-INTERSECTION, GD-SUBTRACT, GD-FILTER, GD-NORMALIZE");
+    options.addUsage("  Genome Diff Conversion: GD2GVF, VCF2GD");
+    options.addUsage("  TACC Pipeline Commands: DOWNLOAD, RUNFILE");
+    options.addUsage("");
+    options.addUsage("For help using a utility command, type: breseq [command] ");
     
-    // make sure that the other csettings settonfig options are good:
+    // make sure that the other config options are good:
     if (options.count("help"))
     {
       options.printAdvanced();
@@ -199,7 +201,6 @@ namespace breseq
     
     //! Settings: Read Alignment and Candidate Junction Read Alignment
 
-    this->require_complete_match = (options.count("require-complete-match") > 0);
     this->require_match_length = from_string<uint32_t>(options["require-match-length"]);
     this->require_match_fraction = from_string<double>(options["require-match-fraction"]);
 
@@ -302,7 +303,6 @@ namespace breseq
     //! Settings: Read Alignment and Candidate Junction Read Alignment
     this->ssaha2_seed_length = 13;
     this->ssaha2_skip_length = 1;
-    this->require_complete_match = false;
     this->require_match_length = 0;         
     this->require_match_fraction = 0.9;
     this->maximum_read_mismatches = -1;
