@@ -253,6 +253,8 @@ namespace breseq {
 		//! Called for each alignment.
 		virtual void pileup_callback(const pileup& p);
 		
+    virtual void at_target_start(const uint32_t tid);
+    
 		//! Called at the end of the pileup.
 		virtual void at_target_end(const uint32_t tid);
 		

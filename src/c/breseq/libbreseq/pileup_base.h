@@ -121,7 +121,7 @@ class pileup_base {
     };
   
     //! Called before pileup starts a target.
-    virtual void at_target_start(uint32_t tid) { (void)tid; }
+    virtual void at_target_start(const uint32_t tid) { (void)tid; }
   
     //! Called after the pileup completed a target.
     virtual void at_target_end(const uint32_t tid) { (void)tid; }

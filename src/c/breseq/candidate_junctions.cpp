@@ -143,11 +143,6 @@ namespace breseq {
     if (a.query_match_length() < settings.require_match_fraction * static_cast<double>(a.read_length()) )
       return false;
     
-    if (settings.require_complete_match)
-    {
-      if (!a.beginning_to_end_match())
-        return false; 
-    }
     if (settings.maximum_read_mismatches >= 0)
     {
       int32_t mismatches = alignment_mismatches(a, ref_seq_info);
@@ -1374,9 +1369,6 @@ namespace breseq {
     
     if (end_to_end_length < settings.require_match_fraction * static_cast<double>(a1.read_length()) )
       return false;
-    
-    if ((settings.require_complete_match) && (static_cast<uint32_t>(end_to_end_length) != a1.read_length())) 
-        return false; 
 
     return true;
   }

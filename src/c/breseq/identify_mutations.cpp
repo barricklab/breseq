@@ -181,43 +181,6 @@ void identify_mutations_pileup::pileup_callback(const pileup& p) {
 	int insert_count=-1;
 	bool next_insert_count_exists=true;
 	
-	// check to see if we already opened the coverage file:
-	if(_print_coverage_data && !_coverage_data.is_open()) {
-		//		open COV, ">$coverage_tab_file_name" if (defined $coverage_tab_file_name);
-		//		print COV join("\t", 'unique_top_cov', 'unique_bot_cov', 'redundant_top_cov', 'redundant_bot_cov', 'raw_redundant_top_cov', 'raw_redundant_bot_cov', 'e_value', 'position') . "\n";
-		string filename(_coverage_dir);
-		filename += p.target_name();
-		filename += ".coverage.tab";
-		_coverage_data.open(filename.c_str());
-    ASSERT(!_coverage_data.fail(), "Could not open output file:" + filename);
-		_coverage_data << "unique_top_cov" << "\t" << "unique_bot_cov" << "\t" << "redundant_top_cov" << "\t" << "redundant_bot_cov" << "\t" << "raw_redundant_top_cov" << "\t" << "raw_redundant_bot_cov" << "\t" << "e_value" << "\t" << "position" << endl;
-	}	
-  
-  // temporary file for debugging polymorphism prediction
-  if(_settings.polymorphism_prediction && !_polymorphism_r_input_file.is_open()) {
-		string filename(_output_dir);
-		filename += "/polymorphism_statistics_input.tab";
-		_polymorphism_r_input_file.open(filename.c_str());
-    ASSERT(!_polymorphism_r_input_file.fail(), "Could not open output file:" + filename);
-		_polymorphism_r_input_file 
-      << "seq_id" << "\t"
-      << "position" << "\t" 
-      << "insert_position" << "\t" 
-      << "ref_base" << "\t" 
-      << "best_base" << "\t" 
-      << "second_best_base" << "\t" 
-      << "frequency" << "\t"
-      << "log10_base_likelihood" << "\t"
-      << "E-value" << "\t"
-      << "ref_top_strand" << "\t" 
-      << "ref_bot_strand" << "\t" 
-      << "new_top_strand" << "\t" 
-      << "new_bot_strand" << "\t"
-      << "best_quals" << "\t"
-      << "second_best_quals" << "\t"
-      << endl;
-  }
-	
 	while(next_insert_count_exists) {
 		++insert_count; // we're doing this here because the perl version uses a while-continue.
     next_insert_count_exists = false;
@@ -657,9 +620,53 @@ void identify_mutations_pileup::pileup_callback(const pileup& p) {
 	}
 }
 
+/*! Called at the beginning of a reference sequence fragment
+    Open per-reference files
+*/
 
-
-/*! Called at the end of the pileup.
+void identify_mutations_pileup::at_target_start(const uint32_t tid)
+{
+    
+  // Open per-reference coverage file:
+	if(_print_coverage_data) {
+		string filename(_coverage_dir);
+		filename += target_name(tid);
+		filename += ".coverage.tab";
+		_coverage_data.open(filename.c_str());
+    ASSERT(!_coverage_data.fail(), "Could not open output file:" + filename);
+		_coverage_data << "unique_top_cov" << "\t" << "unique_bot_cov" << "\t" << "redundant_top_cov" << "\t" << "redundant_bot_cov" << "\t" << "raw_redundant_top_cov" << "\t" << "raw_redundant_bot_cov" << "\t" << "e_value" << "\t" << "position" << endl;
+	}	
+  
+  // Polymorphism file used as input to R
+  // Only one file for all reference sequences
+  if(_settings.polymorphism_prediction && !_polymorphism_r_input_file.is_open()) {
+		string filename(_output_dir);
+		filename += "/polymorphism_statistics_input.tab";
+		_polymorphism_r_input_file.open(filename.c_str());
+    ASSERT(!_polymorphism_r_input_file.fail(), "Could not open output file:" + filename);
+		_polymorphism_r_input_file 
+    << "seq_id" << "\t"
+    << "position" << "\t" 
+    << "insert_position" << "\t" 
+    << "ref_base" << "\t" 
+    << "best_base" << "\t" 
+    << "second_best_base" << "\t" 
+    << "frequency" << "\t"
+    << "log10_base_likelihood" << "\t"
+    << "E-value" << "\t"
+    << "ref_top_strand" << "\t" 
+    << "ref_bot_strand" << "\t" 
+    << "new_top_strand" << "\t" 
+    << "new_bot_strand" << "\t"
+    << "best_quals" << "\t"
+    << "second_best_quals" << "\t"
+    << endl;
+  }
+  
+}
+  
+/*! Called at the end of a reference sequence fragment
+    Close per-reference files
  */
 void identify_mutations_pileup::at_target_end(const uint32_t tid) {
 
@@ -688,6 +695,10 @@ void identify_mutations_pileup::at_target_end(const uint32_t tid) {
 
     _gd.add(del);
   }
+  
+  // Close per-reference coverage file:
+	if(_print_coverage_data)
+		_coverage_data.close();
 }
 
 
