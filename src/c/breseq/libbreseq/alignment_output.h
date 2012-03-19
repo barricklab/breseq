@@ -45,6 +45,7 @@ namespace breseq
         , aligned_bases("")
         , aligned_quals("")
         , strand(0)
+        , is_redundant(false)
         , show_strand(true)
         {}
       
@@ -54,6 +55,7 @@ namespace breseq
       string aligned_bases;
       string aligned_quals;
       int8_t strand;
+      bool is_redundant;
       bool show_strand;
       
     };
@@ -143,7 +145,11 @@ namespace breseq
     {
     public:
       //! Constructor.
-      Alignment_Output_Pileup ( const string& bam, const string& fasta );
+      Alignment_Output_Pileup ( 
+                               const string& bam, 
+                               const string& fasta, 
+                               const bool show_ambiguously_mapped 
+                               );
       //! Destructor.
       virtual ~Alignment_Output_Pileup();
       //! Called for each genome position.
@@ -151,6 +157,7 @@ namespace breseq
       //! Called for each aligned read.
       virtual void fetch_callback ( const alignment_wrapper& a );
       
+      bool _show_ambiguously_mapped;
       Aligned_Reads aligned_reads;
       Aligned_References aligned_references;
       Aligned_Annotation aligned_annotation;
@@ -171,11 +178,18 @@ namespace breseq
     uint32_t m_quality_score_cutoff;
     string m_error_message;
     uint32_t m_maximum_to_align;
+    bool m_show_ambiguously_mapped;
 
     
   public:
     //! Constructor.
-    alignment_output ( string bam, string fasta, uint32_t in_maximum_to_align = 0, const uint32_t quality_score_cutoff = 0 );
+    alignment_output ( 
+                      string bam, 
+                      string fasta, 
+                      uint32_t in_maximum_to_align = 0, 
+                      const uint32_t quality_score_cutoff = 0,
+                      const bool show_ambiguously_mapped = false
+                      );
     //! Output an HTML alignment.
     string html_alignment ( const string& region, const string& corrected="" );
     void create_alignment ( const string& region, const string& corrected="" );

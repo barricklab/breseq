@@ -1517,5 +1517,19 @@ vector<string> get_sorted_junction_ids(
   return sorted_junction_ids;
 }
   
+void  assign_junction_read_counts(
+                                  const Settings& settings,
+                                  const cGenomeDiff& gd
+                                  )
+{
+  
+  // Fetch all the junction reads supporting
+  // Remove those not overlapping junction
+  
+  // Fetch all the reference reads supporting
+  // Remove those not overlapping junction
+  
+}
+  
 } // namespace breseq
 

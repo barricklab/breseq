@@ -1212,7 +1212,7 @@ string html_new_junction_table_string(diff_entry_list_t& list_ref, bool show_det
         //th("overlap")       << endl <<
         th("reads")       << endl <<
         th("score")       << endl <<
-        th("NFPL")   << endl <<
+        th("skew")   << endl <<
         th("annotation")  << endl <<
         th("gene")        << endl;
   

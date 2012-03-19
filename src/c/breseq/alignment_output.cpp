@@ -26,8 +26,13 @@ namespace breseq
 bool verbose = false; //TODO Options
 bool text = false; //TODO Options
 
-alignment_output::Alignment_Output_Pileup::Alignment_Output_Pileup ( const string& bam, const string& fasta )
+alignment_output::Alignment_Output_Pileup::Alignment_Output_Pileup ( 
+                                                                    const string& bam, 
+                                                                    const string& fasta, 
+                                                                    const bool show_ambiguously_mapped 
+                                                                    )
         : pileup_base ( bam, fasta )
+        , _show_ambiguously_mapped(show_ambiguously_mapped)
         , unique_start ( 0 )
         , unique_end ( 0 )
         , total_reads ( 0 )
@@ -37,12 +42,17 @@ alignment_output::Alignment_Output_Pileup::Alignment_Output_Pileup ( const strin
 
 alignment_output::Alignment_Output_Pileup::~Alignment_Output_Pileup() {}
 
-alignment_output::alignment_output ( string bam, string fasta, uint32_t maximum_to_align, const uint32_t quality_score_cutoff )
-        : m_alignment_output_pileup ( bam, fasta )
+alignment_output::alignment_output ( string bam, 
+                                    string fasta, 
+                                    uint32_t maximum_to_align, 
+                                    const uint32_t quality_score_cutoff,
+                                    const bool show_ambiguously_mapped
+                                    )
+        : m_alignment_output_pileup ( bam, fasta, show_ambiguously_mapped )
         , m_aligned_reads ( m_alignment_output_pileup.aligned_reads )
         , m_quality_score_cutoff ( quality_score_cutoff )
         , m_maximum_to_align ( maximum_to_align )
-
+        , m_show_ambiguously_mapped ( show_ambiguously_mapped )
 {
   // zero is the default if no arg provided, make a reasonable value
   if (m_maximum_to_align == 0)
@@ -456,6 +466,10 @@ string alignment_output::html_alignment( const string& region, const string& cor
     output += html_alignment_line(temp_a, false, true);
   }
   
+  if (m_show_ambiguously_mapped) {
+    output += "<br><br><code><font class=\"AM\">Reads mapping to repeats with multiple best matches in reference.</font></code>";
+  }
+  
   output += "</td>\n</tr>\n</table>\n";
   return output;
 }
@@ -631,10 +645,12 @@ void alignment_output::Alignment_Output_Pileup::pileup_callback( const pileup& p
       
       if((aligned_reference.truncate_start != 0) && !(reference_pos_1+aligned_reference.overlap < aligned_reference.truncate_start))  {
         my_ref_base = ref_base;
-        my_ref_qual = char(253);  } // Quality score '253' handled @MDS0002
+        my_ref_qual = char(253);  
+      } // Quality score '253' handled @MDS0002
       if((aligned_reference.truncate_end != 0)  && !(reference_pos_1-aligned_reference.overlap > aligned_reference.truncate_end))  {
         my_ref_base = ref_base;
-        my_ref_qual = char(253);  } // Quality score '253' handled @MDS0002
+        my_ref_qual = char(253);  
+      } // Quality score '253' handled @MDS0002
     }    
     
     aligned_reference.aligned_bases += my_ref_base;
@@ -666,7 +682,7 @@ void alignment_output::Alignment_Output_Pileup::pileup_callback( const pileup& p
 void alignment_output::Alignment_Output_Pileup::fetch_callback ( const alignment_wrapper& a )
 {
   // we only keep track of unique alignments 
-  if ( a.is_redundant() ) return;
+  if ( !_show_ambiguously_mapped && a.is_redundant() ) return;
   
   total_reads++;
   
@@ -677,6 +693,7 @@ void alignment_output::Alignment_Output_Pileup::fetch_callback ( const alignment
   aligned_read.length = a.read_length();
   aligned_read.read_sequence = a.read_char_sequence();
   aligned_read.qual_sequence = a.read_base_quality_bam_string();
+  aligned_read.is_redundant = a.is_redundant();
   
   aligned_reads[aligned_read.seq_id] = aligned_read;
   
@@ -850,6 +867,8 @@ string alignment_output::create_header_string()
     string header_style_string;
     header_style_string += ".NC {color: rgb(0,0,0); background-color: rgb(255,255,255)}\n";
     header_style_string += ".UN {color: rgb(120,120,120); background-color: rgb(255,255,255)}\n";
+    header_style_string += ".AM {color: rgb(0,0,0); background-color: rgb(210,210,210)}\n"; // ambiguously mapped
+
   
     for ( map<char, vector<string> >::iterator itr = base_color_hash.begin(); itr != base_color_hash.end(); itr++ )
     {
@@ -953,7 +972,17 @@ string alignment_output::html_alignment_line(const alignment_output::Alignment_B
       seq_id += "&#8209;";
       seq_id += to_string<uint32_t>(a.end);   
     }
-    output += "&nbsp;&nbsp;" + seq_id;
+    
+    output += "&nbsp;&nbsp;";
+    
+    if ( a.is_redundant )
+      output += "<font class=\"AM\">";
+    
+    output += seq_id;
+    
+    if ( a.is_redundant )
+      output += "</font>"; 
+
   }   
   output += "\n</CODE>\n";
   

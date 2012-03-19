@@ -57,6 +57,7 @@ int do_bam2aln(int argc, char* argv[]) {
   ("output,o", "output to file [region.html]", "alignment.html")
   ("region,r", "region to print (accession:start-end), may also be provided as unnamed arguments at the end of the command line.")
   ("max-reads,n", "maximum number of reads to show in alignment", 200)
+  ("repeat", "show reads with multiple best matches in reference", TAKES_NO_ARGUMENT)
   ("quality-score-cutoff,c", "quality score cutoff", 0)
   ("stdout", "write output to stdout", TAKES_NO_ARGUMENT)
   .processCommandArgs(argc, argv);  
@@ -95,7 +96,8 @@ int do_bam2aln(int argc, char* argv[]) {
                         options["bam"],
                         options["fasta"],
                         from_string<uint32_t>(options["max-reads"]),
-                        from_string<uint32_t>(options["quality-score-cutoff"])
+                        from_string<uint32_t>(options["quality-score-cutoff"]),
+                        options.count("repeat")
                         );
     
     string html_output = ao.html_alignment(region_list[j]);
@@ -2056,6 +2058,29 @@ int do_rna_seq(int argc, char *argv[])
   return 0;
 }
 
+int do_junction_polymorphism(int argc, char *argv[])
+{
+  AnyOption options("Usage: breseq JUNCTION-POLYMORPHISM -g input.gd [ -o output.gd ]");  
+  options.addUsage("Counts the number of reads supporting a new junction versus supporting the reference junction.");
+  options("genome-diff,g","Input Genome Diff file");  
+  options("output,o","Output Genome Diff file", "output.gd");
+  options("verbose,v","Verbose output", TAKES_NO_ARGUMENT);
+  options.processCommandArgs(argc, argv);
+  
+  // Check options
+  if ( !options.count("genome-diff") ) {
+    options.printUsage();
+    return -1;
+  }
+  
+  cGenomeDiff gd(options["genome-diff"]);
+  
+  Settings settings;
+  assign_junction_read_counts(settings, gd);
+  
+  return 0;
+}
+
 int do_ref_aln()
 {
   SYSTEM("samtools view -bt data/reference.fasta.fai 02_reference_alignment/*.sam > data/ref_aln.bam");
@@ -3042,6 +3067,8 @@ int main(int argc, char* argv[]) {
     return do_identify_candidate_junctions(argc_new, argv_new);
   } else if (command == "PREDICT_MUTATIONS") {
     return do_predict_mutations(argc_new, argv_new);
+  } else if (command == "JUNCTION-POLYMORPHISM") {
+    return do_junction_polymorphism(argc_new, argv_new);
   }
   else {
     // Not a sub-command. Use original argument list.

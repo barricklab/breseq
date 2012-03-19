@@ -246,7 +246,7 @@ public:
   //! Constructor.
   cGenomeDiff() : _unique_id_counter(0) { }
 
-  //! Constructor that sets a default filename.
+  //! Constructor from file
   cGenomeDiff(const string& filename);
 
   //! Constructor that replaces ::merge(1,2) function
