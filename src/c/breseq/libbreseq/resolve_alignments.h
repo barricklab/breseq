@@ -225,6 +225,11 @@ namespace breseq {
                                     JunctionTestInfo& test_info
                                     );
 
+  void  assign_junction_read_counts(
+                                    const Settings& settings,
+                                    const cGenomeDiff& gd
+                                    );
+
 
 }
 
