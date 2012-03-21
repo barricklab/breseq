@@ -23,6 +23,78 @@ LICENSE AND COPYRIGHT
 #include "libbreseq/annotated_sequence.h"
 
 using namespace breseq;
+int do_intersection (int argc, char* argv[]);
+int do_mutate       (int argc, char* argv[]);
+int do_subtract     (int argc, char* argv[]);
+int do_merge        (int argc, char* argv[]);
+int do_compare      (int argc, char* argv[]);
+int do_convert_gvf  (int argc, char* argv[]);
+int do_convert_gd   (int argc, char* argv[]);
+int do_not_evidence (int argc, char* argv[]);
+int do_annotate     (int argc, char* argv[]);
+int do_normalize_gd (int argc, char* argv[]);
+int do_filter_gd    (int argc, char* argv[]);
+
+
+
+
+int main(int argc, char* argv[]) {
+	//Extract the sub-command argument.
+	string command;
+	char* argv_new[argc];
+	int argc_new = argc - 1;
+
+  //Print out our generic header.
+  Settings::command_line_run_header();
+  
+	if (argc > 1) {
+
+		command = argv[1];
+		argv_new[0] = argv[0];
+		for (int32_t i = 1; i < argc; i++)
+			argv_new[i] = argv[i + 1];
+
+	} else {
+    //TODO for genome diff // Gives default usage in this case.
+    return -1; 
+	}
+
+	//Pass the command to the proper handler.
+	command = to_upper(command);
+
+  // Genome Diff Commands:
+  if (command == "APPLY") {
+    return do_mutate(argc_new, argv_new);    
+  } else if (command == "COMPARE") {
+    return do_compare(argc_new, argv_new);
+  } else if (command == "NOT-EVIDENCE") {
+    return do_not_evidence(argc_new, argv_new);
+  } else if (command == "ANNOTATE") {
+    return do_annotate(argc_new, argv_new);
+  } else if (command == "NORMALIZE") {
+    return do_normalize_gd(argc_new, argv_new);
+  } else if (command == "FILTER") {
+    return do_filter_gd(argc_new, argv_new);
+
+  } else if (command == "INTERSECT") {
+    return do_intersection(argc_new, argv_new);
+  } else if (command == "SUBTRACT") {
+    return do_subtract(argc_new, argv_new);    
+  } else if (command == "MERGE") {
+    return do_merge(argc_new, argv_new);    
+
+  } else if (command == "GD2GVF") {
+    return do_convert_gvf(argc_new, argv_new);
+  } else if (command == "VCF2GD") {
+    return do_convert_gd( argc_new, argv_new);
+  }
+
+  return 0;
+
+}
+
+
+
 
 int do_intersection(int argc, char *argv[])
 {
@@ -214,11 +286,11 @@ int do_subtract(int argc, char *argv[])
 int do_merge(int argc, char *argv[])
 {
   AnyOption options("MERGE -g <file1.gd file2.gd file3.gd ...> -o <output.gd>");
-  options("genomediff,g","input GD files");
-  options("output,o","output GD file");
-  options("unique,u","Unique Entries Only (Flag)", TAKES_NO_ARGUMENT);  
-  options("id,i","Reorder IDs (Flag)", TAKES_NO_ARGUMENT);
-  options("verbose,v","Verbose Mode (Flag)", TAKES_NO_ARGUMENT);
+  options("output,o",     "Output GD file");
+  options("unique,u",     "Unique Entries Only (Flag)", TAKES_NO_ARGUMENT);  
+  options("id,i",         "Reorder IDs (Flag)", TAKES_NO_ARGUMENT);
+  options("verbose,v",    "Verbose Mode (Flag)", TAKES_NO_ARGUMENT);
+  options("weights",      "Add weights value to GD entries (Flag)", TAKES_NO_ARGUMENT);
   options.processCommandArgs(argc, argv);
   
   options.addUsage("");
@@ -232,9 +304,9 @@ int do_merge(int argc, char *argv[])
     options.printUsage();
     return -1;  }
   
-  if (!options.count("genomediff")) {
+  if (!options.getArgc()) {
     options.addUsage("");
-    options.addUsage("You must supply the --genomediff option for input.");
+    options.addUsage("No input provided.");
     options.printUsage();
     return -1;
   }
@@ -245,23 +317,51 @@ int do_merge(int argc, char *argv[])
     options.printUsage();
     return -1;
   }
+
+  const bool verbose = options.count("verbose");
   
-  vector<string> gd_list = from_string<vector<string> >(options["genomediff"]);  
-  cGenomeDiff gd1(gd_list[0]);
+  cGenomeDiff gd1(options.getArgv(0));
   
   //Load all the GD files that were input with -g.
-  for(uint32_t i = 1; i < gd_list.size(); i++)
-  {
-    cGenomeDiff gd2(gd_list[i]);
-    gd1.merge(gd2, options.count("unique"), options.count("id"), options.count("verbose"));
-  }
-  
-  //Treat EVERY extra argument passed as another GD file.
-  for(int32_t i = 0; i < options.getArgc() ; i++)
+  for(uint32_t i = 1; i < options.getArgc(); i++)
   {
     cGenomeDiff gd2(options.getArgv(i));
     gd1.merge(gd2, options.count("unique"), options.count("id"), options.count("verbose"));
   }
+
+
+  if (options.count("weights")) {
+    diff_entry_list_t muts = gd1.mutation_list();
+    map<cDiffEntry, vector<diff_entry_ptr_t> > weights_table;
+
+    for (diff_entry_list_t::iterator it = muts.begin(); 
+         it != muts.end(); ++it) {
+      cDiffEntry mut = **it;
+      weights_table[mut].push_back(*it);
+    }
+
+    for (map<cDiffEntry, vector<diff_entry_ptr_t> >::iterator it = weights_table.begin();
+         it != weights_table.end(); ++it) {
+      float weight = 1.0f / static_cast<float>(it->second.size());
+      
+      for (uint32_t i  = 0; i < it->second.size(); ++i) {
+        (*it->second[i])["weight"] = to_string(weight);
+      }
+
+      if (verbose) {
+        cout << "\t\t[frequency]: " << it->second.size() << "\t" << "[entry]: " << it->first << endl;
+        cout << "\tMatches with:" << endl;
+        for (uint32_t i  = 0; i < it->second.size(); ++i) {
+          cout << "\t\t[entry]: " << (*it->second[i]) << endl;
+        }
+        cout << endl;
+        cout << endl;
+      }
+
+    }
+  }
+
+
   
   gd1.write(options["output"]);
   
@@ -616,61 +716,4 @@ int do_filter_gd(int argc, char* argv[]) {
   return 0;
 }
 
-int main(int argc, char* argv[]) {
-	//Extract the sub-command argument.
-	string command;
-	char* argv_new[argc];
-	int argc_new = argc - 1;
-
-  //Print out our generic header.
-  Settings::command_line_run_header();
-  
-	if (argc > 1) {
-
-		command = argv[1];
-		argv_new[0] = argv[0];
-		for (int32_t i = 1; i < argc; i++)
-			argv_new[i] = argv[i + 1];
-
-	} else {
-    //TODO for genome diff // Gives default usage in this case.
-    return -1; 
-	}
-
-	//Pass the command to the proper handler.
-	command = to_upper(command);
-
-  // Genome Diff Commands:
-  if (command == "APPLY") {
-    return do_mutate(argc_new, argv_new);    
-  } else if (command == "COMPARE") {
-    return do_compare(argc_new, argv_new);
-  } else if (command == "NOT-EVIDENCE") {
-    return do_not_evidence(argc_new, argv_new);
-  } else if (command == "ANNOTATE") {
-    return do_annotate(argc_new, argv_new);
-  } else if (command == "NORMALIZE") {
-    return do_normalize_gd(argc_new, argv_new);
-  } else if (command == "FILTER") {
-    return do_filter_gd(argc_new, argv_new);
-
-  } else if (command == "INTERSECT") {
-    return do_intersection(argc_new, argv_new);
-  } else if (command == "SUBTRACT") {
-    return do_subtract(argc_new, argv_new);    
-  } else if (command == "MERGE") {
-    return do_merge(argc_new, argv_new);    
-
-  // Conversions.
-  } else if (command == "GD2GVF") {
-    return do_convert_gvf(argc_new, argv_new);
-  } else if (command == "VCF2GD") {
-    return do_convert_gd( argc_new, argv_new);
-  }
-
-
-
-  return 0;
-
-}
 

@@ -45,6 +45,7 @@ MANIFEST.SKIP
 #Makefile.PL
 
 ## This is user/architecture specific
+tags
 user-config.jam
 
 syntax: regexp
