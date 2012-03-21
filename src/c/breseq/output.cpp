@@ -47,17 +47,12 @@ const char* _EVIDENCE_FILE_NAME="_evidence_file_name";
 const char* _NEW_JUNCTION_EVIDENCE_FILE_NAME="_new_junction_evidence_file_name";
 const char* _SIDE_1_EVIDENCE_FILE_NAME="_side_1_evidence_file_name";
 const char* _SIDE_2_EVIDENCE_FILE_NAME="_side_2_evidence_file_name";
-//For JC
 const char* SIDE_1_OVERLAP="side_1_overlap";
-const char* SIDE_1_POSITION="side_1_position";
-const char* SIDE_1_SEQ_ID="side_1_seq_id";
-const char* SIDE_1_STRAND="side_1_strand";
-const char* SIDE_2_POSITION="side_2_position";
-const char* SIDE_2_SEQ_ID="side_2_seq_id";
-const char* SIDE_2_STRAND="side_2_strand";
-const char* SIDE_1_JC="side_1_jc";
-const char* SIDE_2_JC="side_2_jc";
-const char* CORRECTED_KEY="coorected_key";
+const char* CORRECTED_KEY="corrected_key";
+const char* SIDE_1_READ_COUNT="side_1_read_count";
+const char* SIDE_2_READ_COUNT="side_2_read_count";
+const char* NEW_JUNCTION_READ_COUNT="new_junction_read_count";
+  
 namespace output
 {
 

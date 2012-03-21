@@ -47,7 +47,14 @@ const char* REF_COV="ref_cov";
 const char* NEW_COV="new_cov";
 const char* TOT_COV="tot_cov";
 const char* ERROR="error";
-
+  
+//For JC
+const char* SIDE_1_SEQ_ID = "side_1_seq_id";
+const char* SIDE_1_POSITION = "side_1_position";
+const char* SIDE_1_STRAND = "side_1_strand";
+const char* SIDE_2_SEQ_ID = "side_2_seq_id";
+const char* SIDE_2_POSITION = "side_2_position";
+const char* SIDE_2_STRAND = "side_2_strand";
 
 map<gd_entry_type, vector<string> > line_specification = make_map<gd_entry_type, vector<string> >
 //! seq_id and positions are already parameters in cDiffEntry

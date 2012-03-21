@@ -2072,12 +2072,11 @@ int do_junction_polymorphism(int argc, char *argv[])
     options.printUsage();
     return -1;
   }
-  
-  cGenomeDiff gd(options["genome-diff"]);
-  
+
   Settings settings;
+  cGenomeDiff gd(options["genome-diff"]);
   assign_junction_read_counts(settings, gd);
-  
+  gd.write(options["output"]);
   return 0;
 }
 

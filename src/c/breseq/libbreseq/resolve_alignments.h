@@ -25,6 +25,7 @@ LICENSE AND COPYRIGHT
 #include "genome_diff.h"
 #include "calculate_trims.h"
 #include "candidate_junctions.h"
+#include "pileup_base.h"
 
 
 using namespace std;
@@ -227,9 +228,25 @@ namespace breseq {
 
   void  assign_junction_read_counts(
                                     const Settings& settings,
-                                    const cGenomeDiff& gd
+                                    cGenomeDiff& gd
                                     );
 
+  
+  // Pileup class for fetching reads that align across from start to end
+  class junction_read_counter : pileup_base {
+  public:
+    junction_read_counter(const string& bam, const string& fasta)
+      : pileup_base(bam, fasta) {};
+    
+    uint32_t count(const string& seq_id, const uint32_t start, const uint32_t end);
+    
+    virtual void fetch_callback ( const alignment_wrapper& a );
+    
+  protected:
+    uint32_t _count;
+    uint32_t _start;
+    uint32_t _end;
+  };
 
 }
 

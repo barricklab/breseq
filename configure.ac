@@ -70,7 +70,7 @@ AC_CHECK_FILE([.hg/branchheads.cache],
 	AC_SUBST(HG_REVISION_STRING, [`eval head -n 1 .hg/branchheads.cache | sed 's/^\(.\{12\}\).*/\1/'`]),
 	[ AC_CHECK_FILE([.hg/cache/branchheads], 
 		AC_SUBST(HG_REVISION_STRING, [`eval head -n 1 .hg/cache/branchheads | sed 's/^\(.\{12\}\).*/\1/'`]), 
-		AC_SUBST(HG_REVISION_STRING, [RELEASE])
+		AC_SUBST(HG_REVISION_STRING, [])
 	) ]
 )
 
