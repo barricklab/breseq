@@ -2074,6 +2074,7 @@ int do_junction_polymorphism(int argc, char *argv[])
   }
 
   Settings settings;
+  settings.verbose = options.count("verbose");
   cGenomeDiff gd(options["genome-diff"]);
   assign_junction_read_counts(settings, gd);
   gd.write(options["output"]);

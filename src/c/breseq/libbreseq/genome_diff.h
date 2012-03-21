@@ -57,9 +57,12 @@ extern const char* ERROR;
 extern const char* SIDE_1_SEQ_ID;
 extern const char* SIDE_1_POSITION;
 extern const char* SIDE_1_STRAND;
+extern const char* SIDE_1_REDUNDANT;
+
 extern const char* SIDE_2_SEQ_ID;
 extern const char* SIDE_2_POSITION;
 extern const char* SIDE_2_STRAND;
+extern const char* SIDE_2_REDUNDANT;
 
 
 // Types of diff entries:
