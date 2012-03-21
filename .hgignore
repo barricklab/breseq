@@ -1,0 +1,92 @@
+syntax: glob
+
+.DS_Store
+.cproject
+.project
+*.o
+*.a
+*.gz
+*.tar
+*.tgz
+*.tab
+*.txt
+*.out
+*.html
+*.tab
+*.swp
+*.tmproj
+
+## These are for autoconf/automake/libtool
+*.deps
+*stamp-h1
+*.la
+*.lai
+*.lo
+*.orig
+*.libs
+aux_build
+autom4te.cache
+config.log
+config.status
+libtool
+aclocal.m4
+Makefile.in
+configure
+
+autoscan.log
+configure.scan
+
+## These are for Perl modules in general
+_build
+blib
+MYMETA.yml
+MYMETA.json
+MANIFEST.SKIP
+#Makefile.PL
+
+## This is user/architecture specific
+user-config.jam
+
+syntax: regexp
+
+Makefile$
+
+^breseq
+
+^tests/.+/output
+^tests/.+/0
+^tests/.+/data
+^tests/test.config
+
+^src/c/breseq/breseq/
+^src/c/breseq/breseq$
+^src/c/breseq/gdtools$
+
+^package
+
+## samtools
+samtools$
+^extern/samtools-.*/misc
+^extern/samtools-.*/bcftools/bcftools
+^extern/samtools-.*/razip$
+
+## Perl GenomeDiff
+^src/perl/GenomeDiff/Build$
+^src/perl/GenomeDiff/GenomeDiff-
+^src/perl/GenomeDiff/META.yml
+
+## For Xcode
+
+^src/c/build
+xcworkspace
+xcuserdata
+xcshareddata
+xcscheme
+
+#.breseq.xcodeproj/project.xcworkspace/xcuserdata.+$
+#.xcodeproj/xcuserdata.+$
+
+## For Various IDEs
+^nbproject/.+$
+^Debug/.+$
+^Release/.+$
