@@ -24,6 +24,7 @@ LICENSE AND COPYRIGHT
 #include "libbreseq/alignment.h"
 #include "libbreseq/annotated_sequence.h"
 #include "libbreseq/chisquare.h"
+#include "libbreseq/output.h"
 
 using namespace std;
 
@@ -1519,17 +1520,68 @@ vector<string> get_sorted_junction_ids(
   
 void  assign_junction_read_counts(
                                   const Settings& settings,
-                                  const cGenomeDiff& gd
+                                  cGenomeDiff& gd
                                   )
 {
+ 
+  junction_read_counter reference_jrc(settings.reference_bam_file_name, settings.reference_fasta_file_name);
+  junction_read_counter junction_jrc(settings.junction_bam_file_name, settings.candidate_junction_fasta_file_name);
   
   // Fetch all the junction reads supporting
-  // Remove those not overlapping junction
-  
-  // Fetch all the reference reads supporting
-  // Remove those not overlapping junction
-  
+  diff_entry_list_t jc = gd.list(make_vector<gd_entry_type>(JC));
+  for (diff_entry_list_t::iterator it = jc.begin(); it != jc.end(); it++)
+  {
+    cDiffEntry& de = **it;
+    int32_t start, end;
+    
+    // New side 1
+    start = from_string<uint32_t>(de[SIDE_1_POSITION]);
+    if (from_string<int32_t>(de[SIDE_1_STRAND]) == +1)
+      start--;
+    end = start + 1;
+    de[SIDE_1_READ_COUNT] = to_string(reference_jrc.count(de[SIDE_1_SEQ_ID], start, end));
+    
+    // New side 2
+    start = from_string<uint32_t>(de[SIDE_2_POSITION]);
+    if (from_string<int32_t>(de[SIDE_2_STRAND]) == +1)
+      start--;
+    end = start + 1;
+    de[SIDE_2_READ_COUNT] = to_string(reference_jrc.count(de[SIDE_2_SEQ_ID], start, end));
+    
+    // New Junction
+    start = from_string<uint32_t>(de["flanking_left"]);
+    end = start + abs(from_string<int32_t>(de[ALIGNMENT_OVERLAP]));
+    de[NEW_JUNCTION_READ_COUNT] = to_string(junction_jrc.count(de["key"], start, end));
+  }
+
 }
+
+uint32_t junction_read_counter::count(const string& seq_id, const uint32_t start, const uint32_t end)
+{
+  _count = 0;
+  _start = start;
+  _end = end;
+  
+  string region = seq_id + ":" + to_string(start) + "-" + to_string(start);
+  do_fetch(region);
+  
+  cout << seq_id << ":" << start << "-" << end << endl;
+  cout << _count << endl;
+  
+  return _count;
+}
+  
+void junction_read_counter::fetch_callback ( const alignment_wrapper& a )
+{
+  // The target_id will always be right.
+  // Just check to be sure the start and end of the alignment go across the desired start and end.
+  uint32_t q_start, q_end;
+  a.reference_bounds_1(q_start, q_end);
+
+  if ((q_start <= _start) && (q_end >= _end))
+    _count++;
+}
+  
   
 } // namespace breseq
 

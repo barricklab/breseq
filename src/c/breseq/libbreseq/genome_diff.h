@@ -54,13 +54,12 @@ extern const char* TOT_COV;
 extern const char* ERROR;
 
 //For JC
-extern const char* _SIDE_1_SEQ_ID;
-extern const char* _SIDE_1_POSITION;
-extern const char* _SIDE_1_STRAND;
-extern const char* _SIDE_2_SEQ_ID;
-extern const char* _SIDE_2_POSITION;
-extern const char* _SIDE_2_STRAND;
-extern const char* _SIDE_KEY_JC;
+extern const char* SIDE_1_SEQ_ID;
+extern const char* SIDE_1_POSITION;
+extern const char* SIDE_1_STRAND;
+extern const char* SIDE_2_SEQ_ID;
+extern const char* SIDE_2_POSITION;
+extern const char* SIDE_2_STRAND;
 
 
 // Types of diff entries:

@@ -16,7 +16,8 @@ struct Options {
 };
 
 /*-----------------------------------------------------------------------------
- *  Diff_Entry Keywords 
+ *  Diff_Entry Keywords - Specific to breseq output! 
+ *  Others are defined in genome_diff.*
  *-----------------------------------------------------------------------------*/
 extern const char* ALIGNMENT_EMPTY_CHANGE_LINE;
 extern const char* ALIGNMENT_OVERLAP;
@@ -54,18 +55,12 @@ extern const char* _EVIDENCE_FILE_NAME;
 extern const char* _NEW_JUNCTION_EVIDENCE_FILE_NAME;
 extern const char* _SIDE_1_EVIDENCE_FILE_NAME; 
 extern const char* _SIDE_2_EVIDENCE_FILE_NAME;
-// For JC
 extern const char* SIDE_1_OVERLAP;
-extern const char* SIDE_1_POSITION;
-extern const char* SIDE_1_SEQ_ID;
-extern const char* SIDE_1_STRAND;
-extern const char* SIDE_2_POSITION;
-extern const char* SIDE_2_SEQ_ID;
-extern const char* SIDE_2_STRAND;
 extern const char* SIDE_1_JC;
 extern const char* SIDE_2_JC;
-
-
+extern const char* SIDE_1_READ_COUNT;
+extern const char* SIDE_2_READ_COUNT;
+extern const char* NEW_JUNCTION_READ_COUNT;
 
 namespace output
 {
