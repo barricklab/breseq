@@ -58,9 +58,6 @@ extern const char* _SIDE_2_EVIDENCE_FILE_NAME;
 extern const char* SIDE_1_OVERLAP;
 extern const char* SIDE_1_JC;
 extern const char* SIDE_2_JC;
-extern const char* SIDE_1_READ_COUNT;
-extern const char* SIDE_2_READ_COUNT;
-extern const char* NEW_JUNCTION_READ_COUNT;
 
 namespace output
 {
