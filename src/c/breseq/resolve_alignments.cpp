@@ -80,7 +80,7 @@ uint32_t qmissing (double tail_value, double pr_missing)
   
 PosHashProbabilityTable::PosHashProbabilityTable(Summary& summary)
 {
-  average_read_length = summary.sequence_conversion.avg_read_length;
+  average_read_length = round(summary.sequence_conversion.avg_read_length);
   for (map<string,Coverage>::iterator it=summary.preprocess_coverage.begin();
        it != summary.preprocess_coverage.end(); it++) {
     
@@ -117,7 +117,7 @@ double PosHashProbabilityTable::probability(string& seq_id, uint32_t pos_hash_sc
   
   
   // Calculate this entry in the table -- 
-  uint32_t max_coverage = 10*p.average_coverage;
+  uint32_t max_coverage = round(10*p.average_coverage);
         
   double pr = 0;
   
@@ -1524,9 +1524,12 @@ void  assign_junction_read_counts(
                                   )
 {
  
-  junction_read_counter reference_jrc(settings.reference_bam_file_name, settings.reference_fasta_file_name);
-  junction_read_counter junction_jrc(settings.junction_bam_file_name, settings.candidate_junction_fasta_file_name);
-  
+  junction_read_counter reference_jrc(settings.reference_bam_file_name, settings.reference_fasta_file_name, settings.verbose);
+  junction_read_counter junction_jrc(settings.junction_bam_file_name, settings.candidate_junction_fasta_file_name, settings.verbose);
+
+  map<string,bool> empty_read_names;
+  map<string,bool> junction_read_names;
+
   // Fetch all the junction reads supporting
   diff_entry_list_t jc = gd.list(make_vector<gd_entry_type>(JC));
   for (diff_entry_list_t::iterator it = jc.begin(); it != jc.end(); it++)
@@ -1534,40 +1537,58 @@ void  assign_junction_read_counts(
     cDiffEntry& de = **it;
     int32_t start, end;
     
-    // New side 1
-    start = from_string<uint32_t>(de[SIDE_1_POSITION]);
-    if (from_string<int32_t>(de[SIDE_1_STRAND]) == +1)
-      start--;
-    end = start + 1;
-    de[SIDE_1_READ_COUNT] = to_string(reference_jrc.count(de[SIDE_1_SEQ_ID], start, end));
-    
-    // New side 2
-    start = from_string<uint32_t>(de[SIDE_2_POSITION]);
-    if (from_string<int32_t>(de[SIDE_2_STRAND]) == +1)
-      start--;
-    end = start + 1;
-    de[SIDE_2_READ_COUNT] = to_string(reference_jrc.count(de[SIDE_2_SEQ_ID], start, end));
-    
     // New Junction
     start = from_string<uint32_t>(de["flanking_left"]);
-    end = start + abs(from_string<int32_t>(de[ALIGNMENT_OVERLAP]));
-    de[NEW_JUNCTION_READ_COUNT] = to_string(junction_jrc.count(de["key"], start, end));
+    end = start + abs(from_string<int32_t>(de[ALIGNMENT_OVERLAP])) + 1;
+    de[NEW_JUNCTION_READ_COUNT] = to_string(junction_jrc.count(de["key"], start, end, junction_read_names));
+    
+    // New side 1
+    if ( de[SIDE_1_REDUNDANT] != "1") {
+      start = from_string<uint32_t>(de[SIDE_1_POSITION]);
+      if (from_string<int32_t>(de[SIDE_1_STRAND]) == +1)
+        start--;
+      end = start + 1;
+      empty_read_names.clear();
+      de[SIDE_1_READ_COUNT] = to_string(reference_jrc.count(de[SIDE_1_SEQ_ID], start, end, empty_read_names));
+    } else {
+      de[SIDE_1_READ_COUNT] = "redundant";
+    }
+      
+    // New side 2
+    if ( de[SIDE_2_REDUNDANT] != "1") {
+
+      start = from_string<uint32_t>(de[SIDE_2_POSITION]);
+      if (from_string<int32_t>(de[SIDE_2_STRAND]) == +1)
+        start--;
+      end = start + 1;
+      empty_read_names.clear();
+      de[SIDE_2_READ_COUNT] = to_string(reference_jrc.count(de[SIDE_2_SEQ_ID], start, end, empty_read_names));
+    } else {
+      de[SIDE_2_READ_COUNT] = "redundant";
+    }
   }
 
 }
 
-uint32_t junction_read_counter::count(const string& seq_id, const uint32_t start, const uint32_t end)
+uint32_t junction_read_counter::count(const string& seq_id, const uint32_t start, const uint32_t end, map<string,bool> read_names)
 {
+  _ignore_read_names = read_names;
+  _counted_read_names.clear();
+  
+  
   _count = 0;
   _start = start;
   _end = end;
   
   string region = seq_id + ":" + to_string(start) + "-" + to_string(start);
+  if (_verbose) cout << seq_id << ":" << start << "-" << end << endl;
+  
   do_fetch(region);
   
-  cout << seq_id << ":" << start << "-" << end << endl;
-  cout << _count << endl;
+  if (_verbose) cout << "COUNT: " << _count << endl;
+
   
+  read_names = _counted_read_names;
   return _count;
 }
   
@@ -1575,11 +1596,40 @@ void junction_read_counter::fetch_callback ( const alignment_wrapper& a )
 {
   // The target_id will always be right.
   // Just check to be sure the start and end of the alignment go across the desired start and end.
+  
+  if (_verbose) cout << "  " << a.read_name();
+  
+  // read is to be ignored
+  if (_ignore_read_names.count(a.read_name())
+      || _ignore_read_names.count(a.read_name() + "-M1")
+      || _ignore_read_names.count(a.read_name() + "-M2")
+      ) {
+    if (_verbose) cout << "  IGNORED" << endl;
+    return;
+  }
+  
+  // Don't count redundant
+  if (a.redundancy() > 1) {
+    if (_verbose) cout << "  REDUNDANT" << endl;
+    return;
+  }
+  
   uint32_t q_start, q_end;
   a.reference_bounds_1(q_start, q_end);
 
-  if ((q_start <= _start) && (q_end >= _end))
+  if (_verbose) cout << "  " << q_start << "-" << q_end << "  " << _start << "-" << _end;
+  
+  if ((q_start <= _start) && (q_end >= _end)) {
+    if (_verbose) cout << "  COUNTED";
     _count++;
+  } else {
+    if (_verbose) cout << "  NO OVERLAP";
+  }
+    
+  // record that we counted this read
+  _counted_read_names[a.read_name()] = true;
+  
+  if (_verbose) cout << endl;
 }
   
   

@@ -235,10 +235,10 @@ namespace breseq {
   // Pileup class for fetching reads that align across from start to end
   class junction_read_counter : pileup_base {
   public:
-    junction_read_counter(const string& bam, const string& fasta)
-      : pileup_base(bam, fasta) {};
+    junction_read_counter(const string& bam, const string& fasta, bool verbose)
+      : pileup_base(bam, fasta), _verbose(verbose) {};
     
-    uint32_t count(const string& seq_id, const uint32_t start, const uint32_t end);
+    uint32_t count(const string& seq_id, const uint32_t start, const uint32_t end, map<string,bool> read_names);
     
     virtual void fetch_callback ( const alignment_wrapper& a );
     
@@ -246,6 +246,8 @@ namespace breseq {
     uint32_t _count;
     uint32_t _start;
     uint32_t _end;
+    map<string,bool> _ignore_read_names, _counted_read_names;
+    bool _verbose;
   };
 
 }
