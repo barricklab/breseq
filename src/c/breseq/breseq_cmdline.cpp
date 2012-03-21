@@ -372,64 +372,6 @@ int do_convert_genbank(int argc, char* argv[]) {
 }
 
 
-/*!  Predict Mutations
- 
- Predict mutations from evidence in a genome diff file.
- 
- */
-
-int do_predict_mutations(int argc, char* argv[]) {
-	
-	// setup and parse configuration options:
-	AnyOption options("Usage: breseq PREDICT_MUTATIONS ... ");
-	options
-  ("help,h", "produce this help message", TAKES_NO_ARGUMENT)
-  // convert to basing everything off the main output path, so we don't have to set so many options
-  ("path", "path to breseq output")
-  ("maximum-read-length,m", "number of flanking bases in candidate junctions")
-	.processCommandArgs(argc, argv);
-  
-	// make sure that the config options are good:
-	if(options.count("help")
-     || !options.count("path")
-		 || !options.count("maximum-read-length")
-		 ) {
-		options.printUsage();
-		return -1;
-	}                       
-  
-	try {
-    
-    Settings settings(options["path"]);
-            
-    // Load the reference sequence info
-    cReferenceSequences ref_seq_info;
-    ref_seq_info.LoadFile(settings.reference_gff3_file_name);
-        
-    MutationPredictor mp(ref_seq_info);
-    
-    cGenomeDiff gd( settings.evidence_genome_diff_file_name );
-    
-    mp.predict(
-               settings,
-               gd,
-               from_string<uint32_t>(options["maximum-read-length"])
-               );
-    
-    gd.write(settings.final_genome_diff_file_name);
-    
-  } catch(...) {
-		// failed; 
-    
-		return -1;
-	}
-	
-	return 0;
-}
-
-
-
-
 /*! Error Count
  
 Calculate error calibrations from FASTA and BAM reference files.
@@ -2876,6 +2818,9 @@ int breseq_default_action(int argc, char* argv[])
 		// merge all of the evidence GenomeDiff files into one...
 		create_path(settings.evidence_path);
     cGenomeDiff jc_gd(settings.jc_genome_diff_file_name);
+    // Add read count information to the JC entries
+    assign_junction_read_counts(settings, jc_gd);
+    
     cGenomeDiff ra_mc_gd(settings.ra_mc_genome_diff_file_name);
         
     cGenomeDiff evidence_gd;
@@ -2898,7 +2843,7 @@ int breseq_default_action(int argc, char* argv[])
 
 		MutationPredictor mp(ref_seq_info);
     cGenomeDiff mpgd(settings.evidence_genome_diff_file_name);
-    mp.predict(settings, mpgd, summary.sequence_conversion.max_read_length, summary.sequence_conversion.avg_read_length);
+    mp.predict(settings, summary, mpgd);
 
     //#=REFSEQ header lines.
     mpgd.metadata.ref_seqs.resize(settings.reference_file_names.size());
@@ -3065,8 +3010,6 @@ int main(int argc, char* argv[]) {
     return do_error_count(argc_new, argv_new);
   } else if (command == "IDENTIFY_CANDIDATE_JUNCTIONS") {
     return do_identify_candidate_junctions(argc_new, argv_new);
-  } else if (command == "PREDICT_MUTATIONS") {
-    return do_predict_mutations(argc_new, argv_new);
   } else if (command == "JUNCTION-POLYMORPHISM") {
     return do_junction_polymorphism(argc_new, argv_new);
   }
