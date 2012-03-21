@@ -66,7 +66,9 @@ extern const char* SIDE_2_REDUNDANT;
 
 
 // Types of diff entries:
-enum gd_entry_type {UNKNOWN, SNP, SUB, DEL, INS, MOB, AMP, INV, CON, RA, MC, JC, CN, UN, CURA, FPOS, PHYL, TSEQ, PFLP, RFLP, PFGE, NOTE};
+enum gd_entry_type {UNKNOWN, SNP, SUB, DEL, INS, MOB, AMP, INV, CON, RA,
+                    MC, JC, CN, UN, CURA, FPOS, PHYL, TSEQ, PFLP, RFLP, PFGE, NOTE};
+
 extern const vector<string> gd_entry_type_lookup_table;
   
 inline string to_string(const gd_entry_type type)
