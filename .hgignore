@@ -60,6 +60,7 @@ Makefile$
 
 ^src/c/breseq/breseq/
 ^src/c/breseq/breseq$
+^src/c/breseq/gdtools$
 
 ^package
 

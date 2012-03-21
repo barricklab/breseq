@@ -74,8 +74,9 @@ libbreseq_la_SOURCES = \
 	
 libbreseq_la_LIBADD = $(top_srcdir)/$(LIBBAM)/libbam.la
 
-bin_PROGRAMS = breseq 
+bin_PROGRAMS = breseq gdtools 
 breseq_SOURCES = breseq_cmdline.cpp
+gdtools_SOURCES = gdtools_cmdline.cpp
 
 EXTRA_DIST = \
 	breseq.png \
