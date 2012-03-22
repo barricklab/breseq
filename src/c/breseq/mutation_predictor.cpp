@@ -19,6 +19,9 @@ LICENSE AND COPYRIGHT
 
 #include "libbreseq/mutation_predictor.h"
 
+#include "libbreseq/output.h"
+
+
 using namespace std;
 
 namespace breseq {
@@ -100,13 +103,13 @@ namespace breseq {
 	 Returns :
 
 	*/
-	void MutationPredictor::predict(Settings& settings, cGenomeDiff& gd, uint32_t max_read_length, double avg_read_length)
+	void MutationPredictor::predict(Settings& settings, Summary& summary, cGenomeDiff& gd)
 	{
 		(void)settings; //TODO; unused?
     bool verbose = false; // for debugging
 
-    //@JEB This could be replaced by passing summary
-    if (avg_read_length == 0.0) avg_read_length = max_read_length;
+    int32_t avg_read_length = summary.sequence_conversion.avg_read_length;
+    int32_t max_read_length = summary.sequence_conversion.max_read_length;
     
 		///
 		//  Preprocessing of JC evidence
@@ -118,6 +121,27 @@ namespace breseq {
     // Don't count rejected ones at all, this can be relaxed, but it makes MOB 
     // prediction much more complicated and prone to errors.
     
+    // This sections just normalizes read counts to the average coverage of the correct sequence fragment
+    for (diff_entry_list_t::iterator jc_it=jc.begin(); jc_it!=jc.end(); jc_it++) {
+      cDiffEntry& j = **jc_it;
+      
+      if (j[SIDE_1_READ_COUNT] == "NA")
+        j[SIDE_1_COVERAGE] = "NA";
+      else
+        j[SIDE_1_COVERAGE] = to_string<double>(from_string<double>(j[SIDE_1_READ_COUNT]) / summary.unique_coverage[j[SIDE_1_SEQ_ID]].average);
+       
+      if (j[SIDE_2_READ_COUNT] == "NA")
+        j[SIDE_2_COVERAGE] = "NA";
+      else
+        j[SIDE_2_COVERAGE] = to_string<double>(from_string<double>(j[SIDE_2_READ_COUNT]) / summary.unique_coverage[j[SIDE_2_SEQ_ID]].average);
+
+      //corrects for overlap making it less likely for a read to span
+      double overlap_correction = (summary.sequence_conversion.avg_read_length - abs(from_string<double>(j["alignment_overlap"]))) / summary.sequence_conversion.avg_read_length;
+      double new_junction_average_read_count = (summary.unique_coverage[j[SIDE_1_SEQ_ID]].average + summary.unique_coverage[j[SIDE_2_SEQ_ID]].average) / 2;
+      
+      j[NEW_JUNCTION_COVERAGE] = to_string<double>(from_string<double>(j[NEW_JUNCTION_READ_COUNT]) / new_junction_average_read_count / overlap_correction);
+    }
+      
     const int32_t max_distance_to_repeat = 50;
 
 		for (diff_entry_list_t::iterator jc_it=jc.begin(); jc_it!=jc.end(); jc_it++)
