@@ -49,9 +49,6 @@ const char* _SIDE_1_EVIDENCE_FILE_NAME="_side_1_evidence_file_name";
 const char* _SIDE_2_EVIDENCE_FILE_NAME="_side_2_evidence_file_name";
 const char* SIDE_1_OVERLAP="side_1_overlap";
 const char* CORRECTED_KEY="corrected_key";
-const char* SIDE_1_READ_COUNT="side_1_read_count";
-const char* SIDE_2_READ_COUNT="side_2_read_count";
-const char* NEW_JUNCTION_READ_COUNT="new_junction_read_count";
   
 namespace output
 {
@@ -907,9 +904,9 @@ string html_read_alignment_table_string(diff_entry_list_t& list_ref, bool show_d
   ss << th("change")     << endl <<
         th("freq")       << endl <<
         th("score")      << endl <<
-        th("cov")        << endl <<
+        th("reads")      << endl <<
         th("annotation") << endl <<
-        th("genes")       << endl;
+        th("genes")      << endl;
   
   ss << th("width=\"100%\"", "product") << endl;
   ss << "</tr>" << endl;
@@ -1097,8 +1094,8 @@ string html_missing_coverage_table_string(diff_entry_list_t& list_ref, bool show
         th("start")       << endl <<
         th("end")         << endl <<
         th("size")        << endl <<
-        th("&larr;cov")   << endl <<
-        th("cov&rarr;")   << endl <<
+        th("&larr;reads")   << endl <<
+        th("reads&rarr;")   << endl <<
         th("gene")        << endl;
   
   ss << th("width=\"100%\"", "description") << endl;
@@ -1175,7 +1172,19 @@ string html_missing_coverage_table_string(diff_entry_list_t& list_ref, bool show
   ss << "</table>" << endl;
   return ss.str();
 }
+  
+// helper function
 
+string string_to_fixed_digit_string(string s)
+{
+  if (s == "NA")
+    return "NA";
+  double value = from_string<double>(s);
+  stringstream ss;
+  ss << fixed << setprecision(2) << value;
+  return ss.str();
+}
+  
 string html_new_junction_table_string(diff_entry_list_t& list_ref, bool show_details, const string& title, const string& relative_link)
 {
   stringstream ss; //!<< Main Build Object for Function
@@ -1186,7 +1195,7 @@ string html_new_junction_table_string(diff_entry_list_t& list_ref, bool show_det
                test_item.entry_exists(_NEW_JUNCTION_EVIDENCE_FILE_NAME));
 
   ss << start_table("border=\"0\" cellspacing=\"1\" cellpadding=\"3\"") << endl;
-  size_t total_cols = link ? 10 : 8;
+  size_t total_cols = link ? 11 : 9;
   
   if (title != "") {
     ss << tr(th("colspan=\"" + to_string(total_cols) + "\" align=\"left\" class=\"new_junction_header_row\"", title)) << endl;
@@ -1203,11 +1212,10 @@ string html_new_junction_table_string(diff_entry_list_t& list_ref, bool show_det
   }
   ss << th("seq&nbsp;id") << endl <<
         th("position")    << endl <<
-        //no longer print overlap
-        //th("overlap")       << endl <<
-        th("reads")       << endl <<
+        th("reads&nbsp;(cov)") << endl <<
+        th("reads&nbsp;(cov)") << endl <<
         th("score")       << endl <<
-        th("skew")   << endl <<
+        th("skew")        << endl <<
         th("annotation")  << endl <<
         th("gene")        << endl;
   
@@ -1222,7 +1230,7 @@ string html_new_junction_table_string(diff_entry_list_t& list_ref, bool show_det
 // #   
 // #   ## the rows in this table are linked (same background color for every two)
   uint32_t row_bg_color_index = 0; 
-   
+  
   for (diff_entry_list_t::iterator itr = list_ref.begin(); itr != list_ref.end(); itr ++) 
   {  
     cDiffEntry& c = **itr;
@@ -1257,11 +1265,18 @@ string html_new_junction_table_string(diff_entry_list_t& list_ref, bool show_det
                 "=&nbsp;" + c[key + "_position"]);
       }
       
+      ss << td("align=\"center\" class=\"" + annotate_key +"\"",
+                c[key + "_read_count"] + " (" + string_to_fixed_digit_string(c[key + "_coverage"]) + ")" );
+      
+      
       //no longer print overlap
       //ss << td("rowspan=\"2\" align=\"center\"", c["overlap"]) << endl;
-      ss << td("rowspan=\"2\" align=\"center\"", c["total_non_overlap_reads"]) << endl;
-      ss << td("rowspan=\"2\" align=\"center\"", c["pos_hash_score"] + "/" +  c["max_pos_hash_score"]) << endl;
-      ss << td("rowspan=\"2\" align=\"center\"", c["neg_log10_pos_hash_p_value"]) << endl;
+      ss << td("rowspan=\"2\" align=\"center\"", 
+               c["new_junction_read_count"] + " (" + string_to_fixed_digit_string(c["new_junction_coverage"]) + ")" ) << endl;
+      ss << td("rowspan=\"2\" align=\"center\"", 
+               c["pos_hash_score"] + "/" +  c["max_pos_hash_score"]) << endl;
+      ss << td("rowspan=\"2\" align=\"center\"", 
+               c["neg_log10_pos_hash_p_value"]) << endl;
                 
                 
                //" (" + c["max_left"] + "/" + c["max_right"] + ")") << endl;
@@ -1299,6 +1314,10 @@ string html_new_junction_table_string(diff_entry_list_t& list_ref, bool show_det
         ss << td("align=\"center\" class=\"" + annotate_key +"\"",
                 "=&nbsp;" + c[key + "_position"]) << endl;
       } 
+      
+      ss << td("align=\"center\" class=\"" + annotate_key +"\"",
+               c[key + "_read_count"] + " (" + string_to_fixed_digit_string(c[key + "_coverage"]) + ")" );
+      
       ss << td("align=\"center\" class=\"" + annotate_key + "\"",
               nonbreaking(c["_" + key + GENE_POSITION])) << endl;
       ss << td("align=\"center\" class=\"" + annotate_key + "\"",

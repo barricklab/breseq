@@ -485,7 +485,7 @@ void resolve_alignments(
   // Save summary statistics
 	summary.alignment_resolution.observed_pos_hash_score_distribution = observed_pos_hash_score_distribution;
 	summary.alignment_resolution.accepted_pos_hash_score_distribution = accepted_pos_hash_score_distribution;
-
+  
   // Write the genome diff file
 	gd.write(settings.jc_genome_diff_file_name);
 }
@@ -1551,7 +1551,7 @@ void  assign_junction_read_counts(
       empty_read_names.clear();
       de[SIDE_1_READ_COUNT] = to_string(reference_jrc.count(de[SIDE_1_SEQ_ID], start, end, empty_read_names));
     } else {
-      de[SIDE_1_READ_COUNT] = "redundant";
+      de[SIDE_1_READ_COUNT] = "NA";
     }
       
     // New side 2
@@ -1564,7 +1564,7 @@ void  assign_junction_read_counts(
       empty_read_names.clear();
       de[SIDE_2_READ_COUNT] = to_string(reference_jrc.count(de[SIDE_2_SEQ_ID], start, end, empty_read_names));
     } else {
-      de[SIDE_2_READ_COUNT] = "redundant";
+      de[SIDE_2_READ_COUNT] = "NA";
     }
   }
 
