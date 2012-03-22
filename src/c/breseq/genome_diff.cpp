@@ -59,7 +59,14 @@ const char* SIDE_2_POSITION = "side_2_position";
 const char* SIDE_2_STRAND = "side_2_strand";
 const char* SIDE_2_REDUNDANT = "side_2_redundant";
 
+const char* SIDE_1_READ_COUNT="side_1_read_count";
+const char* SIDE_2_READ_COUNT="side_2_read_count";
+const char* NEW_JUNCTION_READ_COUNT="new_junction_read_count";
 
+const char* SIDE_1_COVERAGE = "side_1_coverage";
+const char* SIDE_2_COVERAGE = "side_2_coverage";
+const char* NEW_JUNCTION_COVERAGE = "new_junction_coverage";
+  
 map<gd_entry_type, vector<string> > line_specification = make_map<gd_entry_type, vector<string> >
 //! seq_id and positions are already parameters in cDiffEntry
 //## mutations

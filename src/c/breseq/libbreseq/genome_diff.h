@@ -63,7 +63,14 @@ extern const char* SIDE_2_SEQ_ID;
 extern const char* SIDE_2_POSITION;
 extern const char* SIDE_2_STRAND;
 extern const char* SIDE_2_REDUNDANT;
-
+  
+extern const char* SIDE_1_READ_COUNT;
+extern const char* SIDE_2_READ_COUNT;
+extern const char* NEW_JUNCTION_READ_COUNT;
+  
+extern const char* SIDE_1_COVERAGE;
+extern const char* SIDE_2_COVERAGE;
+extern const char* NEW_JUNCTION_COVERAGE;
 
 // Types of diff entries:
 enum gd_entry_type {UNKNOWN, SNP, SUB, DEL, INS, MOB, AMP, INV, CON, RA,
