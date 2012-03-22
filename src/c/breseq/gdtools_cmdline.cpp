@@ -34,6 +34,7 @@ int do_not_evidence (int argc, char* argv[]);
 int do_annotate     (int argc, char* argv[]);
 int do_normalize_gd (int argc, char* argv[]);
 int do_filter_gd    (int argc, char* argv[]);
+int do_weights      (int argc, char* argv[]);
 
 
 
@@ -82,7 +83,8 @@ int main(int argc, char* argv[]) {
     return do_subtract(argc_new, argv_new);    
   } else if (command == "MERGE") {
     return do_merge(argc_new, argv_new);    
-
+  } else if (command == "WEIGHTS") {
+    return do_weights(argc_new, argv_new);
   } else if (command == "GD2GVF") {
     return do_convert_gvf(argc_new, argv_new);
   } else if (command == "VCF2GD") {
@@ -285,12 +287,11 @@ int do_subtract(int argc, char *argv[])
 
 int do_merge(int argc, char *argv[])
 {
-  AnyOption options("MERGE -g <file1.gd file2.gd file3.gd ...> -o <output.gd>");
+  AnyOption options("MERGE -o <output.gd> <file1.gd file2.gd file3.gd ...>");
   options("output,o",     "Output GD file");
   options("unique,u",     "Unique Entries Only (Flag)", TAKES_NO_ARGUMENT);  
   options("id,i",         "Reorder IDs (Flag)", TAKES_NO_ARGUMENT);
   options("verbose,v",    "Verbose Mode (Flag)", TAKES_NO_ARGUMENT);
-  options("weights",      "Add weights value to GD entries (Flag)", TAKES_NO_ARGUMENT);
   options.processCommandArgs(argc, argv);
   
   options.addUsage("");
@@ -322,51 +323,88 @@ int do_merge(int argc, char *argv[])
   
   cGenomeDiff gd1(options.getArgv(0));
   
-  //Load all the GD files that were input with -g.
+  //Load all the GD files that were input.
   for(uint32_t i = 1; i < options.getArgc(); i++)
   {
     cGenomeDiff gd2(options.getArgv(i));
     gd1.merge(gd2, options.count("unique"), options.count("id"), options.count("verbose"));
   }
-
-
-  if (options.count("weights")) {
-    diff_entry_list_t muts = gd1.mutation_list();
-    map<cDiffEntry, vector<diff_entry_ptr_t> > weights_table;
-
-    for (diff_entry_list_t::iterator it = muts.begin(); 
-         it != muts.end(); ++it) {
-      cDiffEntry mut = **it;
-      weights_table[mut].push_back(*it);
-    }
-
-    for (map<cDiffEntry, vector<diff_entry_ptr_t> >::iterator it = weights_table.begin();
-         it != weights_table.end(); ++it) {
-      float weight = 1.0f / static_cast<float>(it->second.size());
-      
-      for (uint32_t i  = 0; i < it->second.size(); ++i) {
-        (*it->second[i])["weight"] = to_string(weight);
-      }
-
-      if (verbose) {
-        cout << "\t\t[frequency]: " << it->second.size() << "\t" << "[entry]: " << it->first << endl;
-        cout << "\tMatches with:" << endl;
-        for (uint32_t i  = 0; i < it->second.size(); ++i) {
-          cout << "\t\t[entry]: " << (*it->second[i]) << endl;
-        }
-        cout << endl;
-        cout << endl;
-      }
-
-    }
-  }
-
-
   
   gd1.write(options["output"]);
   
   return 0;
 }
+
+int do_weights(int argc, char* argv[])
+{
+  AnyOption options("WEIGHTS -o <output.gd> <file1.gd file2.gd file3.gd ...>");
+  options("output,o",    "Output GD file");
+  options("verbose,v",   "Verbose mode (Flag)", TAKES_NO_ARGUMENT);
+  options.processCommandArgs(argc, argv);
+
+
+  if (!options.getArgc()) {
+    options.addUsage("");
+    options.addUsage("No input provided.");
+    options.printUsage();
+    return -1;
+  }
+
+  if (!options.count("output")) {
+    options.addUsage("");
+    options.addUsage("You must supply the --output option for output.");
+    options.printUsage();
+    return -1;
+  }
+
+  const bool verbose = options.count("verbose");
+
+  cGenomeDiff gd1(options.getArgv(0));
+
+  //Load all the GD files that were input.
+  for(uint32_t i = 1; i < options.getArgc(); i++)
+  {
+    cGenomeDiff gd2(options.getArgv(i));
+    gd1.fast_merge(gd2);
+  }
+
+  //Store entries as keys and pointers to matching entries.
+  diff_entry_list_t muts = gd1.mutation_list();
+  map<cDiffEntry, vector<diff_entry_ptr_t> > weights_table;
+
+  for (diff_entry_list_t::iterator it = muts.begin(); 
+       it != muts.end(); ++it) {
+    cDiffEntry mut = **it;
+    weights_table[mut].push_back(*it);
+  }
+
+  //Given the number of pointers, determine frequency and add 'weight' field to entries.
+  for (map<cDiffEntry, vector<diff_entry_ptr_t> >::iterator it = weights_table.begin();
+       it != weights_table.end(); ++it) {
+    float weight = 1.0f / static_cast<float>(it->second.size());
+    
+    for (uint32_t i  = 0; i < it->second.size(); ++i) {
+      (*it->second[i])["weight"] = to_string(weight);
+    }
+
+    if (verbose) {
+      cout << "\tEntry: " << it->first << endl;
+      cout << "\tMatches with:" << endl;
+      for (uint32_t i  = 0; i < it->second.size(); ++i) {
+        cout << "\t\t[entry]: " << (*it->second[i]) << endl;
+      }
+      cout << endl;
+      cout << endl;
+    }
+
+  }
+  
+  gd1.write(options["output"]);
+
+  return 0;
+}
+
+
 int do_compare(int argc, char *argv[])
 {
   AnyOption options("COMPARE-GD -c <control.gd> -t <test.gd> -o <output.gd>");
