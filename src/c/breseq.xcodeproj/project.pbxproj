@@ -50,6 +50,10 @@
 		70B69E071369E2440001B750 /* libbam.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 70B69E051369E2440001B750 /* libbam.a */; };
 		70B9320F1394008200885753 /* settings.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 70B9320E1394008200885753 /* settings.cpp */; };
 		70D789D413C3CEB70036BEAB /* output.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 70D789D313C3CEB70036BEAB /* output.cpp */; };
+		70E92F14151AB74200F86F2D /* libbreseq.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 708FA5DA132578BE00864C40 /* libbreseq.a */; };
+		70E92F15151AB74200F86F2D /* libbam.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 70B69E051369E2440001B750 /* libbam.a */; };
+		70E92F17151AB74200F86F2D /* samtools in CopyFiles */ = {isa = PBXBuildFile; fileRef = 70436D5A13FF7675006448FB /* samtools */; };
+		70E92F22151AB8AF00F86F2D /* gdtools_cmdline.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 70E92F21151AB8AF00F86F2D /* gdtools_cmdline.cpp */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -81,6 +85,13 @@
 			remoteGlobalIDString = 42B6EDB811C69CC70075F8A3;
 			remoteInfo = identify_mutations;
 		};
+		70E92F10151AB74200F86F2D /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 421ACEB71170DB9600C2EB85 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 42BA690B1189B7FD000B00B1;
+			remoteInfo = breseq;
+		};
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXCopyFilesBuildPhase section */
@@ -91,6 +102,16 @@
 			dstSubfolderSpec = 16;
 			files = (
 				70436D5B13FF7675006448FB /* samtools in CopyFiles */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		70E92F16151AB74200F86F2D /* CopyFiles */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 12;
+			dstPath = "";
+			dstSubfolderSpec = 16;
+			files = (
+				70E92F17151AB74200F86F2D /* samtools in CopyFiles */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -158,6 +179,10 @@
 		70CB7224140FEB6400D578EB /* settings.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = settings.h; sourceTree = "<group>"; };
 		70CB7225140FEB6400D578EB /* storable.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = storable.h; sourceTree = "<group>"; };
 		70D789D313C3CEB70036BEAB /* output.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = output.cpp; path = breseq/output.cpp; sourceTree = SOURCE_ROOT; };
+		70E92F07151AB71D00F86F2D /* main.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = main.c; sourceTree = "<group>"; };
+		70E92F09151AB71D00F86F2D /* gdtools.1 */ = {isa = PBXFileReference; lastKnownFileType = text.man; path = gdtools.1; sourceTree = "<group>"; };
+		70E92F1B151AB74200F86F2D /* gdtools */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = gdtools; sourceTree = BUILT_PRODUCTS_DIR; };
+		70E92F21151AB8AF00F86F2D /* gdtools_cmdline.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = gdtools_cmdline.cpp; path = breseq/gdtools_cmdline.cpp; sourceTree = SOURCE_ROOT; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -179,6 +204,15 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		70E92F13151AB74200F86F2D /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				70E92F14151AB74200F86F2D /* libbreseq.a in Frameworks */,
+				70E92F15151AB74200F86F2D /* libbam.a in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
@@ -191,6 +225,7 @@
 				4247E77F1268E175006A6D78 /* breseq */,
 				421ACF5F1170E06300C2EB85 /* lib */,
 				70436D5613FF6D5C006448FB /* copied  */,
+				70E92F06151AB71D00F86F2D /* gdtools */,
 				421ACF301170DF1800C2EB85 /* Products */,
 			);
 			sourceTree = "<group>";
@@ -200,6 +235,7 @@
 			children = (
 				708FA5D6132578BE00864C40 /* breseq */,
 				708FA5DA132578BE00864C40 /* libbreseq.a */,
+				70E92F1B151AB74200F86F2D /* gdtools */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -230,6 +266,7 @@
 				7087728912BC169C000F9B57 /* error_count.cpp */,
 				70B4AEAF1391F72200B9638D /* fasta.cpp */,
 				702EABF613421A8400103019 /* fastq.cpp */,
+				70E92F21151AB8AF00F86F2D /* gdtools_cmdline.cpp */,
 				7087728A12BC169C000F9B57 /* genome_diff.cpp */,
 				7087728B12BC169C000F9B57 /* identify_mutations.cpp */,
 				7084E56613CFD471005B57D1 /* mutation_predictor.cpp */,
@@ -299,6 +336,15 @@
 			path = breseq/libbreseq;
 			sourceTree = "<group>";
 		};
+		70E92F06151AB71D00F86F2D /* gdtools */ = {
+			isa = PBXGroup;
+			children = (
+				70E92F07151AB71D00F86F2D /* main.c */,
+				70E92F09151AB71D00F86F2D /* gdtools.1 */,
+			);
+			path = gdtools;
+			sourceTree = "<group>";
+		};
 /* End PBXGroup section */
 
 /* Begin PBXHeadersBuildPhase section */
@@ -365,6 +411,24 @@
 			productReference = 708FA5DA132578BE00864C40 /* libbreseq.a */;
 			productType = "com.apple.product-type.library.static";
 		};
+		70E92F0E151AB74200F86F2D /* gdtools */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 70E92F18151AB74200F86F2D /* Build configuration list for PBXNativeTarget "gdtools" */;
+			buildPhases = (
+				70E92F11151AB74200F86F2D /* Sources */,
+				70E92F13151AB74200F86F2D /* Frameworks */,
+				70E92F16151AB74200F86F2D /* CopyFiles */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				70E92F0F151AB74200F86F2D /* PBXTargetDependency */,
+			);
+			name = gdtools;
+			productName = error_count;
+			productReference = 70E92F1B151AB74200F86F2D /* gdtools */;
+			productType = "com.apple.product-type.tool";
+		};
 /* End PBXNativeTarget section */
 
 /* Begin PBXProject section */
@@ -389,6 +453,7 @@
 				7056AE0014511F5D00890AB0 /* samtools */,
 				42BA690B1189B7FD000B00B1 /* breseq */,
 				42B6EDB811C69CC70075F8A3 /* breseq_cmdline */,
+				70E92F0E151AB74200F86F2D /* gdtools */,
 			);
 		};
 /* End PBXProject section */
@@ -431,6 +496,14 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		70E92F11151AB74200F86F2D /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				70E92F22151AB8AF00F86F2D /* gdtools_cmdline.cpp in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXSourcesBuildPhase section */
 
 /* Begin PBXTargetDependency section */
@@ -453,6 +526,11 @@
 			isa = PBXTargetDependency;
 			target = 42B6EDB811C69CC70075F8A3 /* breseq_cmdline */;
 			targetProxy = 708FA5D4132578BD00864C40 /* PBXContainerItemProxy */;
+		};
+		70E92F0F151AB74200F86F2D /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 42BA690B1189B7FD000B00B1 /* breseq */;
+			targetProxy = 70E92F10151AB74200F86F2D /* PBXContainerItemProxy */;
 		};
 /* End PBXTargetDependency section */
 
@@ -640,6 +718,58 @@
 			};
 			name = Release;
 		};
+		70E92F19151AB74200F86F2D /* Debug */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = 70B69E091369E51E0001B750 /* Debug.xcconfig */;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ARCHS = "$(NATIVE_ARCH_ACTUAL)";
+				COPY_PHASE_STRIP = NO;
+				CPPFLAGS = "$(CPPFLAGS) -DDATADIR=\"../etc\"";
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_ENABLE_FIX_AND_CONTINUE = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_WARN_ABOUT_POINTER_SIGNEDNESS = YES;
+				HEADER_SEARCH_PATHS = "$(value)";
+				HEADER_SEARCH_PATHS_QUOTED_FOR_TARGET_1 = "";
+				HEADER_SEARCH_PATHS_QUOTED_FOR_TARGET_2 = "";
+				INSTALL_PATH = /usr/local/bin;
+				LIBRARY_SEARCH_PATHS = "$(value)";
+				LIBRARY_SEARCH_PATHS_QUOTED_FOR_TARGET_1 = "";
+				LIBRARY_SEARCH_PATHS_QUOTED_FOR_TARGET_2 = "";
+				ONLY_ACTIVE_ARCH = YES;
+				PREBINDING = NO;
+				PRODUCT_NAME = gdtools;
+				USER_HEADER_SEARCH_PATHS = "";
+			};
+			name = Debug;
+		};
+		70E92F1A151AB74200F86F2D /* Release */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = 70B69E0A1369E51E0001B750 /* Release.xcconfig */;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ARCHS = "$(NATIVE_ARCH_ACTUAL)";
+				COPY_PHASE_STRIP = YES;
+				CPPFLAGS = "$(CPPFLAGS) -DDATADIR=\"../etc\"";
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				GCC_ENABLE_FIX_AND_CONTINUE = NO;
+				GCC_MODEL_TUNING = G5;
+				HEADER_SEARCH_PATHS = "$(value)";
+				HEADER_SEARCH_PATHS_QUOTED_FOR_TARGET_1 = "";
+				HEADER_SEARCH_PATHS_QUOTED_FOR_TARGET_2 = "";
+				INSTALL_PATH = /usr/local/bin;
+				LIBRARY_SEARCH_PATHS = "$(value)";
+				LIBRARY_SEARCH_PATHS_QUOTED_FOR_TARGET_1 = "";
+				LIBRARY_SEARCH_PATHS_QUOTED_FOR_TARGET_2 = "";
+				ONLY_ACTIVE_ARCH = NO;
+				PREBINDING = NO;
+				PRODUCT_NAME = gdtools;
+				USER_HEADER_SEARCH_PATHS = "";
+				ZERO_LINK = NO;
+			};
+			name = Release;
+		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
@@ -684,6 +814,15 @@
 			buildConfigurations = (
 				7056AE0214511F5D00890AB0 /* Debug */,
 				7056AE0314511F5D00890AB0 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		70E92F18151AB74200F86F2D /* Build configuration list for PBXNativeTarget "gdtools" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				70E92F19151AB74200F86F2D /* Debug */,
+				70E92F1A151AB74200F86F2D /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
