@@ -139,9 +139,6 @@ namespace breseq
 		options.addUsage("Utility Command Usage: breseq [command] options ...");
     options.addUsage("  Sequence Utility Commands: CONVERT-READ, CONVERT-REFERENCE, GET-SEQUENCE");
     options.addUsage("  Breseq Post-Run Commands: BAM2ALN, BAM2COV");
-    options.addUsage("  Genome Diff Commands: GD-APPLY, GD-ANNOTATE, GD-COMPARE, GD-NOT-EVIDENCE,");
-    options.addUsage("                        GD-UNION, GD-INTERSECTION, GD-SUBTRACT, GD-FILTER, GD-NORMALIZE");
-    options.addUsage("  Genome Diff Conversion: GD2GVF, VCF2GD");
     options.addUsage("  TACC Pipeline Commands: DOWNLOAD, RUNFILE");
     options.addUsage("");
     options.addUsage("For help using a utility command, type: breseq [command] ");

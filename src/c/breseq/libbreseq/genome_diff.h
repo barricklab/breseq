@@ -73,7 +73,7 @@ extern const char* SIDE_2_COVERAGE;
 extern const char* NEW_JUNCTION_COVERAGE;
 
 // Types of diff entries:
-enum gd_entry_type {UNKNOWN, SNP, SUB, DEL, INS, MOB, AMP, INV, CON, RA,
+enum gd_entry_type {UNKNOWN = 0, SNP, SUB, DEL, INS, MOB, AMP, INV, CON, RA,
                     MC, JC, CN, UN, CURA, FPOS, PHYL, TSEQ, PFLP, RFLP, PFGE, NOTE};
 
 extern const vector<string> gd_entry_type_lookup_table;
@@ -274,8 +274,12 @@ public:
   
   //! Subtract mutations using gd_ref as reference.
   void subtract(cGenomeDiff& gd_ref, bool verbose=false);
+
+  void intersect(cGenomeDiff& gd_ref, bool verbose=false);
+  
   
   //! Merge GenomeDiff information using gd_new as potential new info.
+
   void merge(cGenomeDiff& gd_new, bool unique=true, bool new_id=false, bool verbose=false);
 
   //! fast merge, doesn't compare entries, but does renumber
@@ -283,11 +287,11 @@ public:
   
   //! sort
   void sort() { _entry_list.sort(diff_entry_ptr_sort); }
+  void unique();
   
   //! compare
   static cGenomeDiff compare_genome_diff_files(const cGenomeDiff &control, const cGenomeDiff &test);
 
-  static cGenomeDiff intersect(const cGenomeDiff &gd1, const cGenomeDiff &gd2);
 
   static cGenomeDiff from_vcf(const string &file_name);
 
@@ -323,7 +327,7 @@ public:
   diff_entry_list_t mutation_list();
   diff_entry_list_t evidence_list();
 
-  diff_entry_ptr_t parent(const cDiffEntry& item);
+  diff_entry_ptr_t parent(const cDiffEntry& evidence);
 
   void normalize_to_sequence(cReferenceSequences &ref_seq);
     
