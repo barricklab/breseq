@@ -129,6 +129,8 @@ typedef string diff_entry_key_t; //!< Diff entry keys.
 typedef string diff_entry_value_t; //!< Diff entry values.
 typedef map<diff_entry_key_t, diff_entry_value_t> diff_entry_map_t; //!< Diff entry key-value map.
 
+typedef counted_ptr<cDiffEntry> diff_entry_ptr_t;
+
 class cDiffEntry : public diff_entry_map_t {
 
 public: 
@@ -171,6 +173,8 @@ public:
   //! Returns values for cDiffEntry["reject"]
   vector<string> get_reject_reasons();
 
+  //const cDiffEntry& operator= (diff_entry_ptr_t ptr) const { return *ptr; }
+
 
   void normalize_to_sequence(const cAnnotatedSequence &seq);
 
@@ -201,7 +205,6 @@ public:
   vector<string> _evidence; 
   
 };
-typedef counted_ptr<cDiffEntry> diff_entry_ptr_t;
 typedef list<diff_entry_ptr_t> diff_entry_list_t; //!< Type for a list of diff entries.
 
 void add_reject_reason(cDiffEntry& de, const string &reason);
@@ -273,10 +276,11 @@ public:
   void add(const cDiffEntry& item, bool lowest_unique=false);
   
   //! Subtract mutations using gd_ref as reference.
-  void subtract(cGenomeDiff& gd_ref, bool verbose=false);
+  void set_subtract(cGenomeDiff& gd_ref, bool verbose=false);
 
-  void intersect(cGenomeDiff& gd_ref, bool verbose=false);
+  void set_intersect(cGenomeDiff& gd_ref, bool verbose=false);
   
+  void set_union(cGenomeDiff& gd_ref, bool verbose=false);
   
   //! Merge GenomeDiff information using gd_new as potential new info.
 
@@ -289,8 +293,10 @@ public:
   void sort() { _entry_list.sort(diff_entry_ptr_sort); }
   void unique();
   
-  //! compare
-  static cGenomeDiff compare_genome_diff_files(const cGenomeDiff &control, const cGenomeDiff &test);
+
+  void compare(cGenomeDiff& gd, bool verbose);
+
+  void assign_unique_ids(void);
 
 
   static cGenomeDiff from_vcf(const string &file_name);
@@ -326,6 +332,7 @@ public:
 
   diff_entry_list_t mutation_list();
   diff_entry_list_t evidence_list();
+  diff_entry_list_t validation_list();
 
   diff_entry_ptr_t parent(const cDiffEntry& evidence);
 

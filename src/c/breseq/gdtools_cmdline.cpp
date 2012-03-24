@@ -35,6 +35,7 @@ int do_annotate     (int argc, char* argv[]);
 int do_normalize_gd (int argc, char* argv[]);
 int do_filter_gd    (int argc, char* argv[]);
 int do_weights      (int argc, char* argv[]);
+int do_union        (int argc, char* argv[]);
 
 
 int main(int argc, char* argv[]) {
@@ -44,8 +45,8 @@ int main(int argc, char* argv[]) {
 	int argc_new = argc - 1;
 
   //Print out our generic header.
-  Settings::command_line_run_header();/
-                                      /
+  Settings::command_line_run_header();
+                                      
 	if (argc > 1) {
 
 		command = argv[1];
@@ -66,9 +67,9 @@ int main(int argc, char* argv[]) {
     return do_mutate(argc_new, argv_new);    
   } else if (command == "COMPARE") {
     return do_compare(argc_new, argv_new);
-  } else if (command == "NOT-EVIDENCE") {
+  } else if (command == "NOT-EVIDENCE") {        //TODO merge with FILTER
     return do_not_evidence(argc_new, argv_new);
-  } else if (command == "ANNOTATE") {
+  } else if (command == "ANNOTATE") {            //TODO add command for genomdiff.pm::do_compare()
     return do_annotate(argc_new, argv_new);
   } else if (command == "NORMALIZE") {
     return do_normalize_gd(argc_new, argv_new);
@@ -77,15 +78,17 @@ int main(int argc, char* argv[]) {
 
   } else if (command == "INTERSECT") {
     return do_intersection(argc_new, argv_new);
+  } else if (command == "UNION") {
+    return do_union(argc_new, argv_new);
   } else if (command == "SUBTRACT") {
     return do_subtract(argc_new, argv_new);    
   } else if (command == "MERGE") {
     return do_merge(argc_new, argv_new);    
   } else if (command == "WEIGHTS") {
     return do_weights(argc_new, argv_new);
-  } else if (command == "GD2GVF") {
+  } else if (command == "GD2GVF") {             //TODO merge into CONVERT
     return do_convert_gvf(argc_new, argv_new);
-  } else if (command == "VCF2GD") {
+  } else if (command == "VCF2GD") {             //TODO merge into CONVERT
     return do_convert_gd( argc_new, argv_new);
   }
 
@@ -125,8 +128,50 @@ int do_intersection(int argc, char *argv[])
 
   for(uint32_t i = 1; i < options.getArgc(); ++i) {
     cGenomeDiff gd2(options.getArgv(i));
-    gd1.intersect(gd2, options.count("verbose"));
+    gd1.set_intersect(gd2, options.count("verbose"));
   }
+
+  gd1.write(options["output"]);
+
+  return 0;
+}
+
+int do_union(int argc, char *argv[])
+{
+  AnyOption options("UNION -o <output.gd> <input1.gd input2.gd ...>");
+  options("output,o",  "output GD file name");
+  options("verbose,v", "verbose mode", TAKES_NO_ARGUMENT);
+  options.processCommandArgs(argc, argv);
+
+  if (!options.count("output")) {
+    options.addUsage("");
+    options.addUsage("No output provided.");
+    options.printUsage();
+    return -1;
+  }  
+
+  if (!options.getArgc()) {
+    options.addUsage("");
+    options.addUsage("No additional files provided.");
+    options.printUsage();
+    return -1;
+  }
+
+  if (options.getArgc() < 2) {
+    options.addUsage("");
+    options.addUsage("Not enough additional files provided.");
+    options.printUsage();
+    return -1;
+  }
+
+  cGenomeDiff gd1(options.getArgv(0));
+
+  for(uint32_t i = 1; i < options.getArgc(); ++i) {
+    cGenomeDiff gd2(options.getArgv(i));
+    gd1.set_union(gd2, options.count("verbose"));
+  }
+
+  gd1.assign_unique_ids();
 
   gd1.write(options["output"]);
 
@@ -201,10 +246,10 @@ int do_mutate(int argc, char *argv[])
 
 int do_subtract(int argc, char *argv[])
 {
-  AnyOption options("SUBTRACT -i <input.gd> -o <output.gd> <input1.gd input2.gd ...>");
+  AnyOption options("SUBTRACT -o <output.gd> <input1.gd input2.gd ...>");
   options("input,i",   "input GD file");
   options("output,o",  "output GD file");
-  options("verbose,v", "Verbose Mode (Flag)", TAKES_NO_ARGUMENT);
+  options("verbose,v", "verbose mode", TAKES_NO_ARGUMENT);
   options.processCommandArgs(argc, argv);
   
   options.addUsage("");
@@ -239,21 +284,21 @@ int do_subtract(int argc, char *argv[])
 
   for (uint32_t i = 0; i < options.getArgc(); ++i) {
     cGenomeDiff gd2(options.getArgv(i));
-    gd1.subtract(gd2, verbose);
+    gd1.set_subtract(gd2, verbose);
   }
   
-  gd.write(options["output"]);
+  gd1.write(options["output"]);
   
   return 0;
 }
 
 int do_merge(int argc, char *argv[])
 {
-  AnyOption options("MERGE -o <output.gd> <input1.gd input2.gd input3.gd ...>");
-  options("output,o",     "Output GD file");
-  options("unique,u",     "Unique Entries Only (Flag)", TAKES_NO_ARGUMENT);  
-  options("id,i",         "Reorder IDs (Flag)", TAKES_NO_ARGUMENT);
-  options("verbose,v",    "Verbose Mode (Flag)", TAKES_NO_ARGUMENT);
+  AnyOption options("MERGE -o <output.gd> <input1.gd input2.gd ...>");
+  options("output,o",     "output GD file");
+  options("unique,u",     "unique entries only", takes_no_argument);  
+  options("id,i",         "reorder IDs", TAKES_NO_ARGUMENT);
+  options("verbose,v",    "verbose mode", TAKES_NO_ARGUMENT);
   options.processCommandArgs(argc, argv);
   
   options.addUsage("");
@@ -299,9 +344,9 @@ int do_merge(int argc, char *argv[])
 
 int do_weights(int argc, char* argv[])
 {
-  AnyOption options("WEIGHTS -o <output.gd> <file1.gd file2.gd file3.gd ...>");
-  options("output,o",    "Output GD file");
-  options("verbose,v",   "Verbose mode (Flag)", TAKES_NO_ARGUMENT);
+  AnyOption options("WEIGHTS -o <output.gd> <input1.gd input2.gd ...>");
+  options("output,o",    "output GD file");
+  options("verbose,v",   "verbose mode", TAKES_NO_ARGUMENT);
   options.processCommandArgs(argc, argv);
 
   if (!options.count("output")) {
@@ -369,19 +414,20 @@ int do_weights(int argc, char* argv[])
 
 int do_compare(int argc, char *argv[])
 {
-  AnyOption options("COMPARE -i <input.gd> -o <output.gd> <file1.gd file2.gd file3.gd ...>");
-  options("input,i",   "input GD file");
+  AnyOption options("COMPARE -o <output.gd> <control.gd> <test.gd>");
   options("output,o",  "output GD file");
-  options("verbose,v", "verbose mode (Flag)", TAKES_NO_ARGUMENT);
+  options("verbose,v", "verbose mode", TAKES_NO_ARGUMENT);
   options.processCommandArgs(argc, argv);
 
   options.addUsage("");
   options.addUsage("   Given a control input GD file with valid mutations, compare each additional");
   options.addUsage("test GD file's mutations and determine if the mutations are true-postivie,");
   options.addUsage("false-negative or false-positive, where:");
+  options.addUsage("");
   options.addUsage("       TP, true-positive  : mutation exists in both control and test GD files.");
   options.addUsage("       FN, false-negative : mutation exists in the control GD file but not in the test GD files.");
   options.addUsage("       FP, false-positive : mutation exists in one of the test GD files but not in the control GD file.");
+  options.addUsage("");
   options.addUsage("The control and test GD files are merged into the given output GD file, for each");
   options.addUsage("mutation a 'compare' field will be added with a TP, FN, FP value. ");
 
@@ -399,25 +445,24 @@ int do_compare(int argc, char *argv[])
     return -1;
   }
 
-  if (!options.getArgc()) {
+  if (!options.getArgc() || (options.getArgc() < 2)) {
     options.addUsage("");
-    options.addUsage("No additional input provided.");
+    if (!options.getArgc())    options.addUsage("No additional input provided.");
+    if (options.getArgc() < 2) options.addUsage("Two input files needed.");
     options.printUsage();
     return -1;
   }
 
 
-  cGenomeDiff control_gd(options["control"]);
-  cGenomeDiff test_gd(options.getArgv(0));
-  for (uint32_t i = 1; i < options.getArgc(); ++i) {
-    cGenomeDiff gd(options.getArgv(i));
-    test_gd.merge(gd, false, false, options.count("verbose"));
-  }
 
-  cGenomeDiff compare_gd = cGenomeDiff::compare_genome_diff_files(control_gd, test_gd);
+  cGenomeDiff gd1(options.getArgv(0));
+  cGenomeDiff gd2(options.getArgv(1));
 
-  compare_gd.write(options["output"]);
+  gd1.compare(gd2, options.count("verbose"));
 
+  gd1.assign_unique_ids();
+
+  gd1.write(options["output"]);
 
   return 0;
 }
