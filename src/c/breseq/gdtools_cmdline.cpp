@@ -34,8 +34,8 @@ int do_not_evidence (int argc, char* argv[]);
 int do_annotate     (int argc, char* argv[]);
 int do_normalize_gd (int argc, char* argv[]);
 int do_filter_gd    (int argc, char* argv[]);
-
-
+int do_weights      (int argc, char* argv[]);
+int do_union        (int argc, char* argv[]);
 
 
 int main(int argc, char* argv[]) {
@@ -46,7 +46,7 @@ int main(int argc, char* argv[]) {
 
   //Print out our generic header.
   Settings::command_line_run_header();
-  
+                                      
 	if (argc > 1) {
 
 		command = argv[1];
@@ -67,9 +67,9 @@ int main(int argc, char* argv[]) {
     return do_mutate(argc_new, argv_new);    
   } else if (command == "COMPARE") {
     return do_compare(argc_new, argv_new);
-  } else if (command == "NOT-EVIDENCE") {
+  } else if (command == "NOT-EVIDENCE") {        //TODO merge with FILTER
     return do_not_evidence(argc_new, argv_new);
-  } else if (command == "ANNOTATE") {
+  } else if (command == "ANNOTATE") {            //TODO add command for genomdiff.pm::do_compare()
     return do_annotate(argc_new, argv_new);
   } else if (command == "NORMALIZE") {
     return do_normalize_gd(argc_new, argv_new);
@@ -78,14 +78,17 @@ int main(int argc, char* argv[]) {
 
   } else if (command == "INTERSECT") {
     return do_intersection(argc_new, argv_new);
+  } else if (command == "UNION") {
+    return do_union(argc_new, argv_new);
   } else if (command == "SUBTRACT") {
     return do_subtract(argc_new, argv_new);    
   } else if (command == "MERGE") {
     return do_merge(argc_new, argv_new);    
-
-  } else if (command == "GD2GVF") {
+  } else if (command == "WEIGHTS") {
+    return do_weights(argc_new, argv_new);
+  } else if (command == "GD2GVF") {             //TODO merge into CONVERT
     return do_convert_gvf(argc_new, argv_new);
-  } else if (command == "VCF2GD") {
+  } else if (command == "VCF2GD") {             //TODO merge into CONVERT
     return do_convert_gd( argc_new, argv_new);
   }
 
@@ -93,104 +96,95 @@ int main(int argc, char* argv[]) {
 
 }
 
-
-
-
 int do_intersection(int argc, char *argv[])
 {
-  AnyOption options("INTERSECT -o <output.gd> <file1.gd file2.gd file3.gd ...>");
-  options("output,o", "output intersection mutations to this file");
+  AnyOption options("INTERSECT -o <output.gd> <input1.gd input2.gd ...>");
+  options("output,o",  "output GD file name");
+  options("verbose,v", "verbose mode", TAKES_NO_ARGUMENT);
   options.processCommandArgs(argc, argv);
 
-  typedef vector<string> string_vector_t;
-  string_vector_t gd_file_names;
-  //Get GD Files
-  for (int32_t i = 0; i < options.getArgc() ; i++) {
-    const string &file_name = options.getArgv(i);
-    gd_file_names.push_back(file_name);
-  }
+  if (!options.count("output")) {
+    options.addUsage("");
+    options.addUsage("No output provided.");
+    options.printUsage();
+    return -1;
+  }  
 
-  if (!options.count("output") ||
-      gd_file_names.size() < 2) {
-    printf("\n");
-    printf("ERROR!\n");
-    printf("Ouput:%s\n", options["output"].c_str());
-    printf("GenomeDiff file count: %i\n", static_cast<int>(gd_file_names.size()));
-    printf("\n");
+  if (!options.getArgc()) {
+    options.addUsage("");
+    options.addUsage("No additional files provided.");
     options.printUsage();
     return -1;
   }
 
-  cGenomeDiff first_gd(*gd_file_names.begin());
-  const diff_entry_list_t &first_mutations = first_gd.mutation_list();
-
-  //Strip counted_ptr
-  typedef set<cDiffEntry> diff_entry_set_t;
-  diff_entry_set_t first_mutations_set;
-  for (diff_entry_list_t::const_iterator it = first_mutations.begin();
-       it != first_mutations.end(); it++) {
-    first_mutations_set.insert(**it);
+  if (options.getArgc() < 2) {
+    options.addUsage("");
+    options.addUsage("Not enough additional files provided.");
+    options.printUsage();
+    return -1;
   }
 
-  /*! Step: Compare to other genome diffs and reassign first_mutations_set when applicable.
-    Stop when there is no intersection or we run out of file_names
-  */
-  string_vector_t::const_iterator it_file_name = gd_file_names.begin();
-  advance(it_file_name,1);
-  while(it_file_name != gd_file_names.end()) {
+  cGenomeDiff gd1(options.getArgv(0));
 
-    cGenomeDiff second_gd(*it_file_name);
-    const diff_entry_list_t &second_mutations = second_gd.mutation_list();
-
-    //Strip counted_ptr
-    diff_entry_set_t second_mutations_set;
-    for (diff_entry_list_t::const_iterator it = second_mutations.begin();
-         it != second_mutations.end(); it++) {
-      second_mutations_set.insert(**it);
-    }
-
-    //Find intersection
-    diff_entry_set_t intersecting_mutations_set;
-    set_intersection(first_mutations_set.begin(), first_mutations_set.end(),
-                     second_mutations_set.begin(), second_mutations_set.end(),
-                     inserter(intersecting_mutations_set, intersecting_mutations_set.begin()));
-
-    if (intersecting_mutations_set.empty()) {
-      printf("No intersecting mutations were found across the current file: %s\n",
-             it_file_name->c_str());
-      return -1;
-    }
-
-
-    first_mutations_set = intersecting_mutations_set;
-
-    it_file_name++;
+  for(uint32_t i = 1; i < options.getArgc(); ++i) {
+    cGenomeDiff gd2(options.getArgv(i));
+    gd1.set_intersect(gd2, options.count("verbose"));
   }
 
-  printf("Found %i intersecting mutations across files: %s.\n",
-         static_cast<int>(first_mutations_set.size()), join(gd_file_names, ", ").c_str());
+  gd1.write(options["output"]);
 
-  cGenomeDiff intersecting_gd;
+  return 0;
+}
 
-  for (diff_entry_set_t::iterator it = first_mutations_set.begin();
-       it != first_mutations_set.end(); it++) {
-    //cDiffEntry de = *it;
-    intersecting_gd.add(*it);
+int do_union(int argc, char *argv[])
+{
+  AnyOption options("UNION -o <output.gd> <input1.gd input2.gd ...>");
+  options("output,o",  "output GD file name");
+  options("verbose,v", "verbose mode", TAKES_NO_ARGUMENT);
+  options.processCommandArgs(argc, argv);
+
+  if (!options.count("output")) {
+    options.addUsage("");
+    options.addUsage("No output provided.");
+    options.printUsage();
+    return -1;
+  }  
+
+  if (!options.getArgc()) {
+    options.addUsage("");
+    options.addUsage("No additional files provided.");
+    options.printUsage();
+    return -1;
   }
 
-  intersecting_gd.write(options["output"]);
+  if (options.getArgc() < 2) {
+    options.addUsage("");
+    options.addUsage("Not enough additional files provided.");
+    options.printUsage();
+    return -1;
+  }
 
-	return 0;
+  cGenomeDiff gd1(options.getArgv(0));
+
+  for(uint32_t i = 1; i < options.getArgc(); ++i) {
+    cGenomeDiff gd2(options.getArgv(i));
+    gd1.set_union(gd2, options.count("verbose"));
+  }
+
+  gd1.assign_unique_ids();
+
+  gd1.write(options["output"]);
+
+  return 0;
 }
 
 int do_mutate(int argc, char *argv[])
 {
-  AnyOption options("APPLY -g <file.gd> -r <reference>");
-  options("genomediff,g", "genome diff file");
-  options("reference,r",".gbk/.gff3/.fasta/.bull reference sequence file");
-  options("fasta,f","output FASTA file");
-  options("gff3,3","output GFF3 file");
-  options("verbose,v","Verbose Mode (Flag)", TAKES_NO_ARGUMENT);
+  AnyOption options("APPLY -o <output> -f <fasta/gff3> -r <reference> <input.gd>");
+  options("output,o",    "output file");
+  options("format,f",    "output file's format(Options: fasta, gff3)");
+  options("reference,r", ".gbk/.gff3/.fasta/.bull reference sequence file");
+  options("verbose,v",   "Verbose Mode (Flag)", TAKES_NO_ARGUMENT);
   options.processCommandArgs(argc, argv);
   
   options.addUsage("");
@@ -199,53 +193,63 @@ int do_mutate(int argc, char *argv[])
   options.addUsage("the mutations to the reference sequences, output is to");
   options.addUsage("a single file that includes all the references.");
   
-  if(argc == 1)  {
-    options.printUsage();
-    return -1;  }
-  
-  if (!options.count("genomediff") ||
-      !options.count("reference")) {
+  if (!options.count("output")) {
     options.addUsage("");
-    options.addUsage("You must supply BOTH the --genomediff and --reference");
-    options.addUsage("options for input.");
-    options.printUsage();
-    return -1;
-  }
-  
-  if (!options.count("gff3") && !options.count("fasta")) {
-    options.addUsage("");
-    options.addUsage("You must supply at least one of the --fasta or --gff3 options for output.");
+    options.addUsage("No output provided.");
     options.printUsage();
     return -1;
   }  
-  
-  cGenomeDiff gd(options["genomediff"]);
+
+  if (!options.count("format")) {
+    options.addUsage("");
+    options.addUsage("No format provided.");
+    options.printUsage();
+    return -1;
+  } else {
+    options["format"] = to_upper(options["format"]);
+  }
+
+  if (options["format"] != "FASTA" || options["format"] != "GFF3") {
+    options.addUsage("");
+    options.addUsage("No option for provided format.");
+    options.printUsage();
+    return -1;
+  }
+
+  if (!options.getArgc()) {
+    options.addUsage("");
+    options.addUsage("No additional files provided.");
+    options.printUsage();
+    return -1;
+  }
+
   cReferenceSequences ref_seq_info;
   cReferenceSequences new_ref_seq_info;
   ref_seq_info.LoadFiles(from_string<vector<string> >(options["reference"]));
   new_ref_seq_info.LoadFiles(from_string<vector<string> >(options["reference"]));
 
-  //Check to see if every item in the loaded .gd is
-  // applicable to the reference file.
+  cGenomeDiff gd(options.getArgv(0));
+  //Check to see if every item in the loaded .gd is applicable to the reference file.
   ASSERT(gd.is_valid(ref_seq_info, options.count("verbose")), "Reference file and GenomeDiff file don't match.");
-  
   gd.apply_to_sequences(ref_seq_info, new_ref_seq_info, options.count("verbose"));
 
-  if (options.count("fasta"))
+  if (options["format"] == "FASTA") {
     new_ref_seq_info.WriteFASTA(options["fasta"], options.count("verbose"));
-  if (options.count("gff3"))
+  }
+  else
+  if (options["format"] == "GFF3") {
     new_ref_seq_info.WriteGFF(options["gff3"], options.count("verbose"));
+  }
 
   return 0;
 }
 
 int do_subtract(int argc, char *argv[])
 {
-  AnyOption options("SUBTRACT -1 <file.gd> -2 <file.gd> -o <output.gd>");
-  options("input1,1","input GD file 1");
-  options("input2,2","input GD file 2");
-  options("output,o","output GD file");
-  options("verbose,v","Verbose Mode (Flag)", TAKES_NO_ARGUMENT);
+  AnyOption options("SUBTRACT -o <output.gd> <input1.gd input2.gd ...>");
+  options("input,i",   "input GD file");
+  options("output,o",  "output GD file");
+  options("verbose,v", "verbose mode", TAKES_NO_ARGUMENT);
   options.processCommandArgs(argc, argv);
   
   options.addUsage("");
@@ -253,30 +257,35 @@ int do_subtract(int argc, char *argv[])
   options.addUsage("Mutations that appear in BOTH will be subtracted from");
   options.addUsage("--input1 and results will output to a new file specified.");
   
-  if(argc == 1)  {
-    options.printUsage();
-    return -1;  }
-  
-  if (!options.count("input1") ||
-      !options.count("input2")) {
+  if (!options.count("input")) {
     options.addUsage("");
-    options.addUsage("You must supply BOTH the --input1 and --input2 options");
-    options.addUsage("for input.");
+    options.addUsage("No input provided.");
     options.printUsage();
     return -1;
   }
-  
+
   if (!options.count("output")) {
     options.addUsage("");
-    options.addUsage("You must supply the --output option for output.");
+    options.addUsage("No output provided.");
     options.printUsage();
     return -1;
   }
-  
-  cGenomeDiff gd1(options["input1"]);
-  cGenomeDiff gd2(options["input2"]);
-  
-  gd1.subtract(gd2, options.count("verbose"));
+
+  if (!options.getArgc()) {
+    options.addUsage("");
+    options.addUsage("No additional files provided.");
+    options.printUsage();
+    return -1;
+  }
+
+  const bool verbose = options.count("verbose");
+
+  cGenomeDiff gd1(options["input"]);
+
+  for (uint32_t i = 0; i < options.getArgc(); ++i) {
+    cGenomeDiff gd2(options.getArgv(i));
+    gd1.set_subtract(gd2, verbose);
+  }
   
   gd1.write(options["output"]);
   
@@ -285,12 +294,11 @@ int do_subtract(int argc, char *argv[])
 
 int do_merge(int argc, char *argv[])
 {
-  AnyOption options("MERGE -g <file1.gd file2.gd file3.gd ...> -o <output.gd>");
-  options("output,o",     "Output GD file");
-  options("unique,u",     "Unique Entries Only (Flag)", TAKES_NO_ARGUMENT);  
-  options("id,i",         "Reorder IDs (Flag)", TAKES_NO_ARGUMENT);
-  options("verbose,v",    "Verbose Mode (Flag)", TAKES_NO_ARGUMENT);
-  options("weights",      "Add weights value to GD entries (Flag)", TAKES_NO_ARGUMENT);
+  AnyOption options("MERGE -o <output.gd> <input1.gd input2.gd ...>");
+  options("output,o",     "output GD file");
+  options("unique,u",     "unique entries only", takes_no_argument);  
+  options("id,i",         "reorder IDs", TAKES_NO_ARGUMENT);
+  options("verbose,v",    "verbose mode", TAKES_NO_ARGUMENT);
   options.processCommandArgs(argc, argv);
   
   options.addUsage("");
@@ -313,7 +321,7 @@ int do_merge(int argc, char *argv[])
   
   if (!options.count("output")) {
     options.addUsage("");
-    options.addUsage("You must supply the --output option for output.");
+    options.addUsage("no output provided.");
     options.printUsage();
     return -1;
   }
@@ -322,74 +330,139 @@ int do_merge(int argc, char *argv[])
   
   cGenomeDiff gd1(options.getArgv(0));
   
-  //Load all the GD files that were input with -g.
+  //Load all the GD files that were input.
   for(uint32_t i = 1; i < options.getArgc(); i++)
   {
     cGenomeDiff gd2(options.getArgv(i));
     gd1.merge(gd2, options.count("unique"), options.count("id"), options.count("verbose"));
   }
-
-
-  if (options.count("weights")) {
-    diff_entry_list_t muts = gd1.mutation_list();
-    map<cDiffEntry, vector<diff_entry_ptr_t> > weights_table;
-
-    for (diff_entry_list_t::iterator it = muts.begin(); 
-         it != muts.end(); ++it) {
-      cDiffEntry mut = **it;
-      weights_table[mut].push_back(*it);
-    }
-
-    for (map<cDiffEntry, vector<diff_entry_ptr_t> >::iterator it = weights_table.begin();
-         it != weights_table.end(); ++it) {
-      float weight = 1.0f / static_cast<float>(it->second.size());
-      
-      for (uint32_t i  = 0; i < it->second.size(); ++i) {
-        (*it->second[i])["weight"] = to_string(weight);
-      }
-
-      if (verbose) {
-        cout << "\t\t[frequency]: " << it->second.size() << "\t" << "[entry]: " << it->first << endl;
-        cout << "\tMatches with:" << endl;
-        for (uint32_t i  = 0; i < it->second.size(); ++i) {
-          cout << "\t\t[entry]: " << (*it->second[i]) << endl;
-        }
-        cout << endl;
-        cout << endl;
-      }
-
-    }
-  }
-
-
   
   gd1.write(options["output"]);
   
   return 0;
 }
-int do_compare(int argc, char *argv[])
+
+int do_weights(int argc, char* argv[])
 {
-  AnyOption options("COMPARE-GD -c <control.gd> -t <test.gd> -o <output.gd>");
-  options("control,c", "control genome diff file, mutations within are assumed to be accurate");
-  options("test,t",    "test genome diff file, mutations not been checked for accuracy");
-  options("output,o",  "output compared genome diff file name");
+  AnyOption options("WEIGHTS -o <output.gd> <input1.gd input2.gd ...>");
+  options("output,o",    "output GD file");
+  options("verbose,v",   "verbose mode", TAKES_NO_ARGUMENT);
   options.processCommandArgs(argc, argv);
 
-
-  if (!options.count("control") ||
-      !options.count("test")    ||
-      !options.count("output")) {
+  if (!options.count("output")) {
+    options.addUsage("");
+    options.addUsage("No output provided.");
     options.printUsage();
     return -1;
   }
 
-  cGenomeDiff control_gd(options["control"]);
-  cGenomeDiff test_gd(options["test"]);
+  if (!options.getArgc()) {
+    options.addUsage("");
+    options.addUsage("No additional input provided.");
+    options.printUsage();
+    return -1;
+  }
 
-  cGenomeDiff compare_gd = cGenomeDiff::compare_genome_diff_files(control_gd, test_gd);
 
-  compare_gd.write(options["output"]);
+  const bool verbose = options.count("verbose");
 
+  cGenomeDiff gd1(options.getArgv(0));
+
+  //Load all the GD files that were input.
+  for(uint32_t i = 1; i < options.getArgc(); i++)
+  {
+    cGenomeDiff gd2(options.getArgv(i));
+    gd1.fast_merge(gd2);
+  }
+
+  //Store entries as keys and pointers to matching entries.
+  diff_entry_list_t muts = gd1.mutation_list();
+  map<cDiffEntry, vector<diff_entry_ptr_t> > weights_table;
+
+  for (diff_entry_list_t::iterator it = muts.begin(); 
+       it != muts.end(); ++it) {
+    cDiffEntry mut = **it;
+    weights_table[mut].push_back(*it);
+  }
+
+  //Given the number of pointers, determine frequency and add 'weight' field to entries.
+  for (map<cDiffEntry, vector<diff_entry_ptr_t> >::iterator it = weights_table.begin();
+       it != weights_table.end(); ++it) {
+    float weight = 1.0f / static_cast<float>(it->second.size());
+    
+    for (uint32_t i  = 0; i < it->second.size(); ++i) {
+      (*it->second[i])["weight"] = to_string(weight);
+    }
+
+    if (verbose) {
+      cout << "\tEntry: " << it->first << endl;
+      cout << "\tMatches with:" << endl;
+      for (uint32_t i  = 0; i < it->second.size(); ++i) {
+        cout << "\t\t[entry]: " << (*it->second[i]) << endl;
+      }
+      cout << endl;
+      cout << endl;
+    }
+
+  }
+  
+  gd1.write(options["output"]);
+
+  return 0;
+}
+
+
+int do_compare(int argc, char *argv[])
+{
+  AnyOption options("COMPARE -o <output.gd> <control.gd> <test.gd>");
+  options("output,o",  "output GD file");
+  options("verbose,v", "verbose mode", TAKES_NO_ARGUMENT);
+  options.processCommandArgs(argc, argv);
+
+  options.addUsage("");
+  options.addUsage("   Given a control input GD file with valid mutations, compare each additional");
+  options.addUsage("test GD file's mutations and determine if the mutations are true-postivie,");
+  options.addUsage("false-negative or false-positive, where:");
+  options.addUsage("");
+  options.addUsage("       TP, true-positive  : mutation exists in both control and test GD files.");
+  options.addUsage("       FN, false-negative : mutation exists in the control GD file but not in the test GD files.");
+  options.addUsage("       FP, false-positive : mutation exists in one of the test GD files but not in the control GD file.");
+  options.addUsage("");
+  options.addUsage("The control and test GD files are merged into the given output GD file, for each");
+  options.addUsage("mutation a 'compare' field will be added with a TP, FN, FP value. ");
+
+  if (!options.count("input")) {
+    options.addUsage("");
+    options.addUsage("No input provided.");
+    options.printUsage();
+    return -1;
+  }
+
+  if (!options.count("output")) {
+    options.addUsage("");
+    options.addUsage("No output provided.");
+    options.printUsage();
+    return -1;
+  }
+
+  if (!options.getArgc() || (options.getArgc() < 2)) {
+    options.addUsage("");
+    if (!options.getArgc())    options.addUsage("No additional input provided.");
+    if (options.getArgc() < 2) options.addUsage("Two input files needed.");
+    options.printUsage();
+    return -1;
+  }
+
+
+
+  cGenomeDiff gd1(options.getArgv(0));
+  cGenomeDiff gd2(options.getArgv(1));
+
+  gd1.compare(gd2, options.count("verbose"));
+
+  gd1.assign_unique_ids();
+
+  gd1.write(options["output"]);
 
   return 0;
 }
@@ -492,21 +565,19 @@ int do_not_evidence(int argc, char *argv[])
 
 int do_annotate(int argc, char* argv[])
 {
-  AnyOption options("ANNOTATE -r reference.gbk  -i input.gd -o annotated.gd");
+  AnyOption options("ANNOTATE -o <output.gd> -r <reference.gbk> <input.gd >");
   
   options
   ("help,h", "produce advanced help message", TAKES_NO_ARGUMENT)
   // convert to basing everything off the main output path, so we don't have to set so many options
-  ("input,i", "path to input genome diff (REQUIRED)")
   ("output,o", "path to output genome diff with added mutation data (REQUIRED)")
   ("reference,r", "reference sequence in GenBank flatfile format (REQUIRED)")
   ("ignore-pseudogenes", "treats pseudogenes as normal genes for calling AA changes", TAKES_NO_ARGUMENT)
   ;
   options.processCommandArgs(argc, argv);
   
-  if ( !options.count("input")
-    || !options.count("output")
-    || !options.count("reference")
+  if (!options.count("output")
+    ||!options.count("reference")
       ) {
     options.printUsage();
     return -1;
@@ -525,11 +596,10 @@ int do_annotate(int argc, char* argv[])
 
 int do_normalize_gd(int argc, char* argv[])
 {
-  AnyOption options("NORMALIZE-GD -g <input.gd> -r <reference> -o <output.gd>");
+  AnyOption options("NORMALIZE-GD -o <output.gd> -r <reference> <input1.gd input2.gd input3.gd ...>");
   options
-  ("genome_diff,g", "Input genome diff file.")
-  ("reference,r"  , "Input reference file.")
-  ("output,o"     , "Output normalized genome diff file.")
+  ("output,o"     , "output GD file.")
+  ("reference,r"  , "input reference file.")
   ("verbose,v"    , "Verbose Mode (Flag)", TAKES_NO_ARGUMENT);
 
   options.processCommandArgs(argc, argv);
@@ -537,21 +607,24 @@ int do_normalize_gd(int argc, char* argv[])
   options.addUsage("Takes a genome diff file to be normalized.");
   options.addUsage("Then normalizes the diff entries to the reference.");
   options.addUsage("Outputs a normalized genome diff file.");
-  
-  if(argc == 1)  {
-    options.printUsage();
-    return -1;  }
 
-  if (!options.count("genome_diff")) {
+  if (!options.count("output")) {
     options.addUsage("");
-    options.addUsage("You must supply the --genome_diff option for input.");
+    options.addUsage("No output provided.");
     options.printUsage();
     return -1;
   }
 
   if (!options.count("reference")) {
     options.addUsage("");
-    options.addUsage("You must supply the --reference option for input.");
+    options.addUsage("No reference provided.");
+    options.printUsage();
+    return -1;
+  }
+
+  if (!options.getArgc()) {
+    options.addUsage("");
+    options.addUsage("No additional input provided.");
     options.printUsage();
     return -1;
   }
@@ -569,41 +642,37 @@ int do_normalize_gd(int argc, char* argv[])
   cReferenceSequences rs;
   rs.LoadFiles(rfns);
 
-  cGenomeDiff gd(options["genome_diff"]);
-
-  printf("\n++Normalizing genome diff file: %s to reference file: %s \n\n",
-          options["genome_diff"].c_str(), join(rfns,",").c_str());
+  cGenomeDiff gd(options.getArgv(0));
+  for (uint32_t i = 1; i < options.getArgc(); ++i) {
+    cGenomeDiff temp_gd(options.getArgv(i));
+    gd.merge(temp_gd, false, false, options.count("verbose"));
+  }
 
   gd.normalize_to_sequence(rs);
-  const diff_entry_list_t &muts = gd.mutation_list();
+  diff_entry_list_t muts = gd.mutation_list();
 
-  cGenomeDiff new_gd;
-  for (diff_entry_list_t::const_iterator it = muts.begin();
+  for (diff_entry_list_t::iterator it = muts.begin();
        it != muts.end(); it++) {
-    cDiffEntry de = **it;
-
-    if (de.entry_exists("norm") && de["norm"] == "is_not_valid"){
-      printf("\tINVALID_MUTATION:%s\n", de.to_string().c_str());
-      de["comment_out"] = "True";
+    diff_entry_ptr_t mut = *it;
+    if (mut->entry_exists("norm") && (*mut)["norm"] == "is_not_valid"){
+      printf("\tINVALID_MUTATION:%s\n", mut->to_string().c_str());
+      (*mut)["comment_out"] = "True";
     } 
     
-    new_gd.add(de);
   }
-  new_gd.write(options["output"]);
-
-  printf("\n++Normilization completed.\n\n");
+  gd.write(options["output"]);
 
   return 0;
 }
 
 int do_filter_gd(int argc, char* argv[]) {
-  AnyOption options("FILTER -g <input.gd> -o <output.gd> -m <mutation type> <filters>");
-  options("genome_diff,g", "Genome diff file to be filtered.");
-  options("output_gd,o", "Filter genome diff file.");
+  AnyOption options("FILTER -i <input.gd> -o <output.gd> -m <mutation type> <filters>");
+  options("input,i", "Genome diff file to be filtered.");
+  options("output,o", "Filter genome diff file.");
   options("mut_type,m", "Only consider this mutation type for filtering.");
   options.processCommandArgs(argc, argv);
 
-  if (!options.count("genome_diff")) {
+  if (!options.count("input")) {
     options.addUsage("");
     options.addUsage("You must supply an input genome diff file to filter with option -g");
     options.printUsage();
@@ -618,8 +687,8 @@ int do_filter_gd(int argc, char* argv[]) {
   }
 
   // Use original file as output if argument is not passed.
-  if (!options.count("output_gd")) {
-    options["output_gd"] = options["genome_diff"];
+  if (!options.count("output")) {
+    options["output"] = options["input"];
   }
 
   list<string> filters;
@@ -628,7 +697,7 @@ int do_filter_gd(int argc, char* argv[]) {
   }
   assert(filters.size());
 
-  cGenomeDiff gd(options["genome_diff"]);
+  cGenomeDiff gd(options["input"]);
 
   diff_entry_list_t muts;
   if (!options.count("mut_type")) {
@@ -707,12 +776,12 @@ int do_filter_gd(int argc, char* argv[]) {
     }
     if (reasons.size()) {
       printf("Filtered[%s]: %s\n", join(reasons, ", ").c_str(), mut.to_string().c_str());
-      mut["zfiltered"] = join(reasons, ", ");
+      mut["filtered"] = join(reasons, ", ");
       mut["comment_out"] = "true";
     }
     output_gd.add(mut);
   }
-  output_gd.write(options["output_gd"]);
+  output_gd.write(options["output"]);
   return 0;
 }
 

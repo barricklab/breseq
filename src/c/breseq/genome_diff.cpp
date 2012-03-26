@@ -440,7 +440,7 @@ void cGenomeDiff::add(const cDiffEntry& item, bool lowest_unique) {
 }
 
 //! Subtract mutations using gd_ref as reference.
-void cGenomeDiff::subtract(cGenomeDiff& gd_ref, bool verbose)
+void cGenomeDiff::set_subtract(cGenomeDiff& gd_ref, bool verbose)
 {
   // We will be erasing inside the it loop.  This is to keep
   // track of whether or not we should iterate to the next element.
@@ -486,6 +486,7 @@ void cGenomeDiff::subtract(cGenomeDiff& gd_ref, bool verbose)
     if(it_iterate)it++;
   }
 }
+
 
 //! Merge GenomeDiff information using gd_new as potential new info.
 //  Evidence IDs that are not unique are given new IDs.  Mutations
@@ -589,7 +590,81 @@ void cGenomeDiff::merge(cGenomeDiff& gd_new, bool unique, bool new_id, bool verb
   if(verbose)cout << "\tMERGE DONE - " << gd_new._default_filename << endl;
   
 }
-  
+
+void cGenomeDiff::unique()
+{
+  //Filter entries.
+  set<cDiffEntry> seen;
+  //Store pointers to mutations.
+  map<string, vector<diff_entry_ptr_t> > keep_ids;
+  //Store ids of evidence to erase.
+  set<string> erase_ids;
+
+  this->sort();
+  diff_entry_list_t::iterator it = _entry_list.begin();
+  while (it != _entry_list.end()) {
+    if (!(**it).is_mutation()) break;
+
+    const vector<string>& ids = (**it)._evidence;
+    uint32_t n = ids.size();
+
+    //Is mutation unique?
+    //Case: true.
+    if (seen.insert(**it).second) { 
+      ++it;
+      for (uint32_t i = 0; i < n; keep_ids[ids[i++]].push_back(*it)) {}
+    } 
+    //Case: false.
+    else { 
+      it = _entry_list.erase(it);
+      for (uint32_t i = 0; i < n; erase_ids.insert(ids[i++])) {}
+    }
+  }
+
+  seen.clear(); //Re-use to filter the evidence.
+  while (it != _entry_list.end()) {
+    //Keep this evidence?
+    //Case: unkown.
+    if (keep_ids.count((**it)._id) && erase_ids.count((**it)._id)) {
+      //Is evidence unique?
+      //Case: true.
+      if (seen.insert(**it).second) {
+        ++it;
+      } 
+      //Case: false.
+      else {
+        it = _entry_list.erase(it);
+        //Update mutations that may of been using this id.
+        for (uint32_t i = 0; i < keep_ids[(**it)._id].size(); ++it) {
+          vector<string>* evidence = &(*keep_ids[(**it)._id][i])._evidence;
+          vector<string>::iterator jt = remove(evidence->begin(), evidence->end(), (**it)._id);
+          //evidence->erase(jt);
+        }
+      }
+    } 
+    //Case: false.
+    else if (!keep_ids.count((**it)._id) && erase_ids.count((**it)._id)) {
+      it = _entry_list.erase(it);
+    } 
+    //Case: false.
+    else if (!keep_ids.count((**it)._id) && !erase_ids.count((**it)._id)) {
+      stringstream ss;
+      ss << "\tRemoving [entry]:\t" << **it << endl;
+      ss << "\tfrom [file]:\t" << this->_default_filename << endl;
+      ss << "\tbecause no mutation referenced it's ID." << endl; 
+      WARN(ss.str());
+      it = _entry_list.erase(it);
+    }
+    
+    //Case: true.
+    else {
+      ++it;
+    }
+  }
+
+  return;
+}
+
 void cGenomeDiff::fast_merge(const cGenomeDiff& gd)
 {  
   diff_entry_list_t gd_list = gd.list();
@@ -2227,17 +2302,17 @@ diff_entry_list_t cGenomeDiff::filter_used_as_evidence(const diff_entry_list_t& 
 // return items with types that are 3 characters long
 diff_entry_list_t cGenomeDiff::mutation_list()
 {
-  diff_entry_list_t mut_list;
+  this->sort();
+  diff_entry_list_t::iterator it = _entry_list.begin();
+  while (it != _entry_list.end()) {
+    if (!(**it).is_mutation()) {
+      break;
+    } else {
+      ++it;
+    }
+  }
 
-   for(diff_entry_list_t::iterator itr = _entry_list.begin();
-       itr != _entry_list.end(); itr ++) {
-     cDiffEntry& item = **itr;
-     if(item.is_mutation()) {
-       mut_list.push_back(*itr);
-     }
-   }
-
-  return mut_list;
+  return diff_entry_list_t(_entry_list.begin(), it);
 }
 
 // return items with types that are 2 characters long
@@ -2254,6 +2329,22 @@ diff_entry_list_t cGenomeDiff::evidence_list()
   }
   
   return mut_list;
+}
+
+// return items with types that are 4 characters long
+diff_entry_list_t cGenomeDiff::validation_list()
+{
+  this->sort();
+  diff_entry_list_t::reverse_iterator it = _entry_list.rend();
+  while (it != _entry_list.rbegin()) {
+    if (!(**it).is_validation()) {
+      --it;
+      break;
+    } else {
+      ++it; 
+    }
+  }
+  return diff_entry_list_t(it.base(), _entry_list.end());
 }
 
 
@@ -2280,16 +2371,19 @@ diff_entry_list_t cGenomeDiff::mutation_evidence_list(const cDiffEntry& item)
   return return_list;
 }
 
-diff_entry_ptr_t cGenomeDiff::parent(const cDiffEntry& item)
+diff_entry_ptr_t cGenomeDiff::parent(const cDiffEntry& evidence)
 {
   for(diff_entry_list_t::iterator itr_test_item = _entry_list.begin();
       itr_test_item != _entry_list.end(); itr_test_item ++) { 
+
     cDiffEntry& test_item = **itr_test_item;
+
     for(vector<string>::iterator itr = test_item._evidence.begin();
         itr != test_item._evidence.end(); itr ++) { 
       string& test_evidence_id = (*itr);
-      if(test_evidence_id == item._id)      
+      if(test_evidence_id == evidence._id) {      
         return diff_entry_ptr_t(*itr_test_item);
+      }
     }
   }
   return diff_entry_ptr_t(NULL);
@@ -2676,108 +2770,176 @@ int32_t cDiffEntry::mutation_size_change(cReferenceSequences& ref_seq_info)
   }
 }
 
-cGenomeDiff cGenomeDiff::intersect(const cGenomeDiff &_gd1, const cGenomeDiff &_gd2)
+void cGenomeDiff::set_intersect(cGenomeDiff &gd, bool verbose)
 {
-  cGenomeDiff gd1 = _gd1;
-  cGenomeDiff gd2 = _gd2;
+  set<cDiffEntry> seen;
+  diff_entry_list_t muts = gd.mutation_list();
 
-  const diff_entry_list_t &muts_1 = gd1.mutation_list();
-  const diff_entry_list_t &muts_2 = gd2.mutation_list();
-
-  typedef set<cDiffEntry> diff_entry_set_t;
-  diff_entry_set_t first;
-  diff_entry_set_t second;
-
-  //! Step: Strip counted_ptr<> for STL use.
-  for (diff_entry_list_t::const_iterator it = muts_1.begin();
-       it != muts_1.end(); it++) {
-    first.insert(**it);
-  }
-  for (diff_entry_list_t::const_iterator it = muts_2.begin();
-       it != muts_2.end(); it++) {
-    second.insert(**it);
+  for (diff_entry_list_t::iterator it = muts.begin();
+       it != muts.end(); ++it) {
+    seen.insert(**it);
   }
 
-  diff_entry_set_t third;
-  set_intersection(first.begin(), first.end(),
-                   second.begin(), second.end(),
-                   inserter(third, third.begin()));
+  this->sort();
+  set<string> ids;
+  diff_entry_list_t::iterator it = _entry_list.begin();
+  //Handle mutations, store evidence id of deleted mutations
+  //to later delete.
+  while (it != _entry_list.end()) {
+    if (!(**it).is_mutation()) break;
 
-  cGenomeDiff gd;
-  for (diff_entry_set_t::const_iterator i = third.begin();
-       i != third.end(); i++){
-    gd.add(*i);
+    if (!seen.count(**it)) {
+      for (uint32_t i = 0; i < (**it)._evidence.size(); ++i) {
+        ids.insert((**it)._evidence[i]); 
+      }
+      it = _entry_list.erase(it);
+    } else {
+      ++it;
+    }
+  }
+  //Delete evidence that matches it.
+  while (it != _entry_list.end()) {
+    if (ids.count((**it)._id)) {
+      it = _entry_list.erase(it);
+    } else {
+      ++it;
+    }
   }
 
-  return gd;
+  return;
+
 }
-cGenomeDiff cGenomeDiff::compare_genome_diff_files(const cGenomeDiff &control, const cGenomeDiff &test)
+
+void cGenomeDiff::assign_unique_ids()
 {
-  cGenomeDiff control_gd = control;
-  cGenomeDiff test_gd = test;
-  cGenomeDiff new_gd; //ret val
+  this->sort();
 
-  cGenomeDiff fp_gd = test_gd;
-  fp_gd.subtract(control_gd);
+  //Handle mutations.
+  _unique_id_counter = 0;
 
-  cGenomeDiff fn_gd = control_gd;
-  fn_gd.subtract(test_gd);
+  map<string, vector<diff_entry_ptr_t> > id_table;
+  diff_entry_list_t::iterator it = _entry_list.begin();
+  while (it != _entry_list.end()) {
+    if (!(**it).is_mutation()) break;
+    (**it)._id = to_string(++_unique_id_counter);
 
-  cGenomeDiff tp_gd = test;
-  tp_gd.subtract(fp_gd);
-  tp_gd.subtract(fn_gd);
+    for (uint32_t i = 0; i < (**it)._evidence.size(); ++i) {
+      id_table[(**it)._evidence[i]].push_back(*it);
+    }
 
-
-  const diff_entry_list_t &true_positive_mutations  = tp_gd.mutation_list();
-  const diff_entry_list_t &false_negative_mutations = fn_gd.mutation_list();
-  const diff_entry_list_t &false_positive_mutations = fp_gd.mutation_list();
-
-  //! Step: Display results;
-  const size_t num_true_positive  = true_positive_mutations.size();
-  const size_t num_false_negative = false_negative_mutations.size();
-  const size_t num_false_positive = false_positive_mutations.size();
-
-  string validation_str = "";
-  sprintf(validation_str, "%i|%i|%i",
-          static_cast<int>(num_true_positive),
-          static_cast<int>(num_false_negative),
-          static_cast<int>(num_false_positive));
-  new_gd.add_breseq_data("TP|FN|FP", validation_str);
-
-  printf("#=TP|FN|FP	%s \t for %s versus %s \n",
-         validation_str.c_str(),
-         control_gd._default_filename.c_str(),
-         test_gd._default_filename.c_str());
-
-  //! Step: Add validation=<TP/FP/FN> tags to new_gd.
-  //True positive
-  for (diff_entry_list_t::const_iterator it = true_positive_mutations.begin();
-       it != true_positive_mutations.end(); it++) {
-    cDiffEntry de = **it;
-    de.insert(pair<string,string>("validation", "TP"));
-    de._evidence.clear();
-    new_gd.add(de);
+    ++it;
   }
 
-  //False negative
-  for (diff_entry_list_t::const_iterator it = false_negative_mutations.begin();
-       it != false_negative_mutations.end(); it++) {
-    cDiffEntry de = **it;
-    de.insert(pair<string,string>("validation", "FN"));
-    de._evidence.clear();
-    new_gd.add(de);
+  //Handle the rest.
+  while (it != _entry_list.end()) {
+    string new_id = to_string(++_unique_id_counter);
+
+    if (id_table.count((**it)._id)) {
+      for (uint32_t i = 0; i < id_table[(**it)._id].size(); ++i) {
+        vector<string>* evidence = &id_table[(**it)._id][i]->_evidence;
+        replace(evidence->begin(), evidence->end(), (**it)._id, new_id);
+      }
+    }
+
+    (**it)._id = new_id;
+    ++it;
+  }
+}
+
+void cGenomeDiff::set_union(cGenomeDiff& gd, bool verbose)
+{
+  this->merge(gd);
+  this->unique(); 
+}
+
+void cGenomeDiff::compare(cGenomeDiff& gd, bool verbose)
+{
+  diff_entry_list_t muts = this->mutation_list();
+  set<cDiffEntry> ctrl_muts;
+  for (diff_entry_list_t::iterator it = muts.begin();
+       it != muts.end(); ++it) {
+    ctrl_muts.insert(**it);
   }
 
-   //False positive
-  for (diff_entry_list_t::const_iterator it = false_positive_mutations.begin();
-       it != false_positive_mutations.end(); it++) {
-    cDiffEntry de = **it;
-    de.insert(pair<string,string>("validation", "FP"));
-    de._evidence.clear();
-    new_gd.add(de);
+  muts = gd.mutation_list();
+  set<cDiffEntry> test_muts;
+  for (diff_entry_list_t::iterator it = muts.begin();
+       it != muts.end(); ++it) {
+    test_muts.insert(**it);
   }
 
-  return new_gd;
+  if (verbose) {
+    printf("\tComparing %u control mutations versus %u test mutations.\n\n",
+         ctrl_muts.size(), test_muts.size());
+  }
+
+  this->set_union(gd, verbose);
+
+  uint32_t n_tp = 0, n_fn = 0, n_fp = 0;
+
+  //Handle mutations and gather evidence ids.
+  //Evidence id to TP, FN, FP value.
+  map<string, string> id_table; 
+  diff_entry_list_t::iterator it = _entry_list.begin();
+  while (it != _entry_list.end()) {
+    if (!(**it).is_mutation()) break;
+
+    assert(ctrl_muts.count(**it) || test_muts.count(**it));
+
+    string key = "";
+    if (ctrl_muts.count(**it) && test_muts.count(**it)) {
+      key = "TP";
+      ++n_tp;
+    }
+    else if (ctrl_muts.count(**it) && !test_muts.count(**it)) {
+      key = "FN";
+      ++n_fn;
+    }
+    else if (!ctrl_muts.count(**it) && test_muts.count(**it)) {
+      key = "FP";
+      ++n_fp;
+    } 
+
+    vector<string>* evidence = &(**it)._evidence;
+    for (uint32_t i = 0; i < evidence->size(); ++i) {
+      id_table[(*evidence)[i]] = key;
+    }
+
+    if (verbose) {
+      string temp = "";
+      if (key == "TP") temp = "[True  Positive]:\t";
+      if (key == "FN") temp = "[False Negative]:\t";
+      if (key == "FP") temp = "[False Positive]:\t";
+      if (key == "")   temp = "[ERROR]         :\t";
+      cout << "\t\t"<< temp << **it << endl;
+    }
+
+    (**it)["compare"] = key;
+    ++it;
+  }
+
+  if (verbose) {
+    printf("\tUpdating mutation's evidence.\n"); 
+  }
+
+  //Handle the rest.
+  while (it != _entry_list.end()) {
+    (**it)["compare"] = id_table[(**it)._id];
+    ++it;
+  }
+
+
+  //Add TP|FN|FP header info.
+  string value = "";
+  sprintf(value, "%u|%u|%u", n_tp, n_fn, n_fp);
+  this->add_breseq_data("TP|FN|FP", value);
+
+  printf("\t\t#=TP|FN|FP	%s \t for %s versus %s \n",
+         value.c_str(),
+         this->_default_filename.c_str(),
+         gd._default_filename.c_str());
+
+  return;
 }
 
 }//namespace bresesq
