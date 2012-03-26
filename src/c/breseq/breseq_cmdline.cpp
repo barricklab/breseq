@@ -91,6 +91,9 @@ int do_bam2aln(int argc, char* argv[]) {
   
   for(uint32_t j = 0; j < region_list.size(); j++)
   {
+    // clean commas
+    region_list[j] = substitute(region_list[j], ",", "");
+    
     // Generate Alignment!
     alignment_output ao(
                         options["bam"],
@@ -249,6 +252,9 @@ int do_bam2cov(int argc, char* argv[]) {
 //      co.read_begin_output_file_name(options["read_start_output"]);
 //    if (options.count("gc_output"))
 //      co.gc_output_file_name(options["gc_output"]);
+    
+    // clean commas
+    *it = substitute(*it, ",", "");
     
     string file_name = options["output"];
     if ((region_list.size() > 0) || (file_name == ""))  file_name += *it;
@@ -2135,7 +2141,6 @@ int breseq_default_action(int argc, char* argv[])
         deletion_propagation_cutoffs,
         deletion_seed_cutoffs,
 				settings.mutation_log10_e_value_cutoff, // mutation_cutoff
-				settings.base_quality_cutoff, // minimum_quality_score
 				settings.polymorphism_log10_e_value_cutoff, // polymorphism_cutoff
 				settings.polymorphism_frequency_cutoff, //polymorphism_frequency_cutoff
 				error_dir + "/error_rates.tab",

@@ -1570,7 +1570,7 @@ void  assign_junction_read_counts(
 
 }
 
-uint32_t junction_read_counter::count(const string& seq_id, const uint32_t start, const uint32_t end, map<string,bool> read_names)
+uint32_t junction_read_counter::count(const string& seq_id, const uint32_t start, const uint32_t end, map<string,bool>& read_names)
 {
   _ignore_read_names = read_names;
   _counted_read_names.clear();

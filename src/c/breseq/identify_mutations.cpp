@@ -39,7 +39,6 @@ void identify_mutations(
                 const vector<double>& deletion_propagation_cutoff,
                 const vector<double>& deletion_seed_cutoffs,
 								double mutation_cutoff,
-								uint8_t min_qual_score,
 								double polymorphism_cutoff,
 								double polymorphism_frequency_cutoff,
 								const string& error_table_file,
@@ -57,7 +56,6 @@ void identify_mutations(
                 deletion_propagation_cutoff,
                 deletion_seed_cutoffs,
 								mutation_cutoff,
-								min_qual_score,
 								polymorphism_cutoff,
 								polymorphism_frequency_cutoff,
 								error_table_file,
@@ -82,7 +80,6 @@ identify_mutations_pileup::identify_mutations_pileup(
                               const vector<double>& deletion_propagation_cutoffs,
                               const vector<double>& deletion_seed_cutoffs,
 															double mutation_cutoff,
-															uint8_t min_qual_score,
 															double polymorphism_cutoff,
 															double polymorphism_frequency_cutoff,
 															const string& error_table_file,
@@ -91,7 +88,6 @@ identify_mutations_pileup::identify_mutations_pileup(
 : pileup_base(bam, fasta)
 , _settings(settings)
 , _gd()
-, _min_qual_score(min_qual_score)
 , _deletion_seed_cutoffs(deletion_seed_cutoffs)
 , _deletion_propagation_cutoffs(deletion_propagation_cutoffs)
 , _mutation_cutoff(mutation_cutoff)
@@ -274,7 +270,7 @@ void identify_mutations_pileup::pileup_callback(const pileup& p) {
       
       if (is_ok)  {
       
-        if (cv.quality() < _min_qual_score) {
+        if (cv.quality() < _settings.base_quality_cutoff) {
           //cout << cv.quality()  << endl;
           continue;
         }

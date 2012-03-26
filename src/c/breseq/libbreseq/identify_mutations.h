@@ -48,7 +48,6 @@ namespace breseq {
                           const vector<double>& deletion_propagation_cutoff,
                           const vector<double>& deletion_seed_cutoff,
 													double mutation_cutoff,
-                          uint8_t min_qual_score,
                           double polymorphism_cutoff,
                           double polymorphism_frequency_cutoff,
                           const string& error_table_file,
@@ -240,7 +239,6 @@ namespace breseq {
                               const vector<double>& deletion_propagation_cutoff,
                               const vector<double>& deletion_seed_cutoffs,
 															double mutation_cutoff,
-                              uint8_t min_qual_score,
                               double polymorphism_cutoff,
                               double polymorphism_frequency_cutoff,
                               const string& error_table_file,
@@ -285,7 +283,6 @@ namespace breseq {
     //! Settings passed at command line
     const Settings& _settings;
 		cGenomeDiff _gd; //!< Genome diff.
-    uint8_t _min_qual_score; //!< minimum quality score to count base for RA
     vector<double> _deletion_seed_cutoffs; //!< Coverage below which deletions are cutoff.
     vector<double> _deletion_propagation_cutoffs; //!< Coverage above which deletions are cutoff.
 		double _mutation_cutoff; //!< log10 e-value cutoff value for mutation predictions.
