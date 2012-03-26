@@ -296,7 +296,7 @@ int do_merge(int argc, char *argv[])
 {
   AnyOption options("MERGE -o <output.gd> <input1.gd input2.gd ...>");
   options("output,o",     "output GD file");
-  options("unique,u",     "unique entries only", takes_no_argument);  
+  options("unique,u",     "unique entries only", TAKES_NO_ARGUMENT);  
   options("id,i",         "reorder IDs", TAKES_NO_ARGUMENT);
   options("verbose,v",    "verbose mode", TAKES_NO_ARGUMENT);
   options.processCommandArgs(argc, argv);
