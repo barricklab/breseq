@@ -238,7 +238,13 @@ namespace breseq {
     junction_read_counter(const string& bam, const string& fasta, bool verbose)
       : pileup_base(bam, fasta), _verbose(verbose) {};
     
-    uint32_t count(const string& seq_id, const uint32_t start, const uint32_t end, map<string,bool>& read_names);
+    uint32_t count(
+                   const string& seq_id, 
+                   const uint32_t start, 
+                   const uint32_t end, 
+                   const map<string,bool> ignore_read_names, 
+                   map<string,bool>& counted_read_names
+                   );
     
     virtual void fetch_callback ( const alignment_wrapper& a );
     

@@ -1540,7 +1540,7 @@ void  assign_junction_read_counts(
     // New Junction
     start = from_string<uint32_t>(de["flanking_left"]);
     end = start + abs(from_string<int32_t>(de[ALIGNMENT_OVERLAP])) + 1;
-    de[NEW_JUNCTION_READ_COUNT] = to_string(junction_jrc.count(de["key"], start, end, junction_read_names));
+    de[NEW_JUNCTION_READ_COUNT] = to_string(junction_jrc.count(de["key"], start, end, empty_read_names, junction_read_names));
     
     // New side 1
     if ( de[SIDE_1_REDUNDANT] != "1") {
@@ -1549,7 +1549,7 @@ void  assign_junction_read_counts(
         start--;
       end = start + 1;
       empty_read_names.clear();
-      de[SIDE_1_READ_COUNT] = to_string(reference_jrc.count(de[SIDE_1_SEQ_ID], start, end, empty_read_names));
+      de[SIDE_1_READ_COUNT] = to_string(reference_jrc.count(de[SIDE_1_SEQ_ID], start, end, junction_read_names, empty_read_names));
     } else {
       de[SIDE_1_READ_COUNT] = "NA";
     }
@@ -1562,7 +1562,7 @@ void  assign_junction_read_counts(
         start--;
       end = start + 1;
       empty_read_names.clear();
-      de[SIDE_2_READ_COUNT] = to_string(reference_jrc.count(de[SIDE_2_SEQ_ID], start, end, empty_read_names));
+      de[SIDE_2_READ_COUNT] = to_string(reference_jrc.count(de[SIDE_2_SEQ_ID], start, end, junction_read_names, empty_read_names));
     } else {
       de[SIDE_2_READ_COUNT] = "NA";
     }
@@ -1570,9 +1570,15 @@ void  assign_junction_read_counts(
 
 }
 
-uint32_t junction_read_counter::count(const string& seq_id, const uint32_t start, const uint32_t end, map<string,bool>& read_names)
+uint32_t junction_read_counter::count(
+                                      const string& seq_id, 
+                                      const uint32_t start, 
+                                      const uint32_t end, 
+                                      const map<string,bool> ignore_read_names, 
+                                      map<string,bool>& counted_read_names
+                                      )
 {
-  _ignore_read_names = read_names;
+  _ignore_read_names = ignore_read_names;
   _counted_read_names.clear();
   
   
@@ -1588,7 +1594,7 @@ uint32_t junction_read_counter::count(const string& seq_id, const uint32_t start
   if (_verbose) cout << "COUNT: " << _count << endl;
 
   
-  read_names = _counted_read_names;
+  counted_read_names = _counted_read_names;
   return _count;
 }
   
