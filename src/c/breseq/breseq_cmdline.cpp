@@ -1618,7 +1618,7 @@ int breseq_default_action(int argc, char* argv[])
 
         //Check for SSAHA2 32-bit File Memory Error.
         uint32_t bytes = ifstream(reference_sam_file_name.c_str()).rdbuf()->in_avail();
-        ASSERT(bytes != 2147483647, "Encountered SSAHA2 32 bit version file memory limit.");
+        CHECK(bytes != 2147483647, "Encountered SSAHA2 32 bit version file memory limit.");
 			}
 		}
 
