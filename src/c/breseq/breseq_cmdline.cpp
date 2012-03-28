@@ -1615,6 +1615,10 @@ int breseq_default_action(int argc, char* argv[])
 					string command = smalt + " map -n 2 -d " + to_string(settings.max_smalt_diff) + " -f samsoft -o " + reference_sam_file_name + " " + reference_hash_file_name + " " + read_fastq_file; // -m 12
 					SYSTEM(command.c_str());
 				}
+
+        //Check for SSAHA2 32-bit File Memory Error.
+        uint32_t bytes = ifstream(reference_sam_file_name.c_str()).rdbuf()->in_avail();
+        ASSERT(bytes != 2147483647, "Encountered SSAHA2 32 bit version file memory limit.");
 			}
 		}
 
