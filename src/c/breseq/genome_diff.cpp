@@ -1161,6 +1161,9 @@ bool diff_entry_sort(const cDiffEntry &_a, const cDiffEntry &_b) {
     "comment_out" to the diff entry.
  */
 void cGenomeDiff::write(const string& filename) {
+  string basename = cString(filename).get_base_name();
+  string dir = cString(filename).remove_ending(basename);
+  create_path(dir);
   ofstream os(filename.c_str());
 
   //! Step: Header lines.
