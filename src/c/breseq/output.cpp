@@ -538,9 +538,9 @@ void html_statistics(const string &file_name, const Settings& settings, Summary&
                     th() << 
                     th("reference sequence") << 
                     th("length") <<
-                    th("coverage") <<
-                    th("nbinom mean") <<
-                    th("nbinom size") <<
+                    th(ALIGN_CENTER, "coverage") <<
+                    th(ALIGN_CENTER, "nbinom mean") <<
+                    th(ALIGN_CENTER, "nbinom size") <<
                     th(ALIGN_LEFT, "description") <<
           "</tr>" << endl;
              
@@ -575,12 +575,13 @@ void html_statistics(const string &file_name, const Settings& settings, Summary&
       HTML << td(nonbreaking("none aligned"));
     }
     
-    HTML << td(to_string(summary.unique_coverage[it->m_seq_id].average, 1));
-    HTML << td(to_string(summary.unique_coverage[it->m_seq_id].nbinom_mean_parameter, 1));
-    HTML << td(to_string(summary.unique_coverage[it->m_seq_id].nbinom_size_parameter, 1));
-
     HTML << td(it->m_seq_id);
     HTML << td(ALIGN_RIGHT, commify(to_string(it->m_length)));
+    
+    HTML << td(ALIGN_CENTER, to_string(summary.unique_coverage[it->m_seq_id].average, 1));
+    HTML << td(ALIGN_CENTER, to_string(summary.unique_coverage[it->m_seq_id].nbinom_mean_parameter, 1));
+    HTML << td(ALIGN_CENTER, to_string(summary.unique_coverage[it->m_seq_id].nbinom_size_parameter, 1));
+
     HTML << td(it->m_description);
     HTML << "</tr>";
   }  
@@ -605,6 +606,9 @@ void html_statistics(const string &file_name, const Settings& settings, Summary&
   HTML << td();
   HTML << td(b("total"));
   HTML << td(ALIGN_RIGHT, b(commify(to_string(total_length))) );
+  HTML << td();
+  HTML << td();
+  HTML << td();
   HTML << td();
   HTML << "</tr>" << endl;
   HTML << "</table>" << endl;
