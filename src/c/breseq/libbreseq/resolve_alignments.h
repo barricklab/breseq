@@ -32,6 +32,38 @@ using namespace std;
 
 namespace breseq {
 
+  class ResolveJunctionInfo : public JunctionInfo
+  {
+  public:
+    // Extended properties for resolve_alignments.cpp
+		string key;
+		int32_t overlap;
+		uint32_t unique_side;
+		uint32_t is_side;
+    uint32_t continuation_left;
+    uint32_t continuation_right;
+    
+    ResolveJunctionInfo() : JunctionInfo() {};
+    
+    ResolveJunctionInfo(const string& junction_name) : JunctionInfo(junction_name) 
+    {
+    }
+    
+    ResolveJunctionInfo(cReferenceSequences& ref_seq_info) 
+    : JunctionInfo()
+    {
+      overlap = 0;
+      unique_side = 0;
+      is_side = 0;
+      continuation_left = 0;
+      continuation_right = 0;
+      calculate_continuation(ref_seq_info);
+    }
+    
+    void calculate_continuation(cReferenceSequences& ref_seq_info);
+
+  };
+  
   class JunctionTestInfo {
   public:
     int32_t max_left;
@@ -171,13 +203,13 @@ namespace breseq {
                                 SequenceTrimsList& trims_list,
                                 map<string,uint32_t>& all_junction_ids,
                                 bool junction_prediction,
-                                const vector<JunctionInfo>& junction_info_list,
+                                const vector<ResolveJunctionInfo>& junction_info_list,
                                 UniqueJunctionMatchMap& unique_junction_match_map,
                                 RepeatJunctionMatchMap& repeat_junction_match_map,
                                 tam_file& resolved_reference_tam
                                 );
   
-  bool alignment_overlaps_junction(const vector<JunctionInfo>& junction_info_list, const alignment_wrapper& in_a);
+  bool alignment_overlaps_junction(const vector<ResolveJunctionInfo>& junction_info_list, const alignment_wrapper& in_a);
 
   
   void score_junction(
@@ -188,7 +220,7 @@ namespace breseq {
                       RepeatJunctionMatchMap& degenerate_matches_ref, 
                       tam_file& junction_tam,
                       JunctionTestInfo& junction_test_info, 
-                      vector<JunctionInfo>& junction_info_list
+                      vector<ResolveJunctionInfo>& junction_info_list
                       );
   
   void resolve_junction(

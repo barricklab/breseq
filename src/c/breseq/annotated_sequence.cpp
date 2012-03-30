@@ -2272,6 +2272,11 @@ void RemoveLeadingTrailingWhitespace(std::string &s) {
   s.erase(found+1,s.length());
 }
 
+  
+/*
+ Count the number of nonmatching bases in the alignment between the read and reference sequences
+   Unmatched (padded) bases at the end of a read count as mismatches.
+ */
 uint32_t alignment_mismatches(const alignment_wrapper& a, const cReferenceSequences& ref_seq_info)
 {
   bool verbose = false;

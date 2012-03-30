@@ -944,10 +944,10 @@ class UserOutput
     }
 
   private:
-    size_t        _n_shift;
-    size_t        _n_default;
-    bool          _is_shifted;
     string        _command;
+    size_t        _n_shift;
+    bool          _is_shifted;
+    size_t        _n_default;
 };
   
 

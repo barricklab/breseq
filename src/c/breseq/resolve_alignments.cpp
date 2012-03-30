@@ -30,6 +30,10 @@ using namespace std;
 
 namespace breseq {
     
+void ResolveJunctionInfo::calculate_continuation(cReferenceSequences& ref_seq_info)
+{
+  (void) ref_seq_info;
+}
   
 double combination (int32_t num, int32_t choose)
 {
@@ -204,7 +208,7 @@ void resolve_alignments(
 		junction_prediction = 0;
   }
     
-	vector<JunctionInfo> junction_info_list;
+	vector<ResolveJunctionInfo> junction_info_list;
     
 
   //## Preload all of the information about junctions
@@ -218,14 +222,14 @@ void resolve_alignments(
     junction_info_list.resize(junction_tam.bam_header->n_targets);
     
 		for (int i = 0; i < junction_tam.bam_header->n_targets; i++) {
-			junction_info_list[i] = JunctionInfo(junction_tam.bam_header->target_name[i]);
+			junction_info_list[i] = ResolveJunctionInfo(junction_tam.bam_header->target_name[i]);
 		}
     if (verbose) cout << "Number of candidate junctions: " << junction_info_list.size() << endl;
-	}
+  }
 
-	//####
-	//##	Output files
-	//####
+	// ####
+	// ## Output files
+	// ####
 
 	cGenomeDiff gd;
     
@@ -258,9 +262,9 @@ void resolve_alignments(
     cout << "Total junction ids: " << all_junction_ids.size() << endl;
   }
   
-	///
+	////
 	// Determine which junctions are real, prefer ones with most matches
-	///
+	////
   
 	list<JunctionTestInfo> junction_test_info_list; // scoring information about junctions
 	list<JunctionTestInfo> passed_junction_test_info_list;
@@ -499,7 +503,7 @@ void load_junction_alignments(
                               SequenceTrimsList& trims_list,
                               map<string,uint32_t>& all_junction_ids,
                               bool junction_prediction,
-                              const vector<JunctionInfo>& junction_info_list,
+                              const vector<ResolveJunctionInfo>& junction_info_list,
                               UniqueJunctionMatchMap& unique_junction_match_map,
                               RepeatJunctionMatchMap& repeat_junction_match_map,
                               tam_file& resolved_reference_tam
@@ -757,7 +761,7 @@ void load_junction_alignments(
  *  the entire junction (past overlapping or unique sequence) and thus
  *  can be used as real evidence for the junction.
  */
-bool alignment_overlaps_junction(const vector<JunctionInfo>& junction_info_list, const alignment_wrapper& a)
+bool alignment_overlaps_junction(const vector<ResolveJunctionInfo>& junction_info_list, const alignment_wrapper& a)
 {
   // unmapped reads don't overlap the junction
   if (a.unmapped()) return false;
@@ -815,7 +819,7 @@ void score_junction(
                     RepeatJunctionMatchMap& repeat_junction_match_map, 
                     tam_file& resolved_junction_tam, 
                     JunctionTestInfo& junction_test_info, 
-                    vector<JunctionInfo>& junction_info_list
+                    vector<ResolveJunctionInfo>& junction_info_list
                   )
 {
   // may not need these
@@ -1272,7 +1276,7 @@ cDiffEntry junction_to_diff_entry(
                                          )
 {
 	// split the key to an item with information about the junction
-	JunctionInfo jc(key);
+	ResolveJunctionInfo jc(key);
 
 	jc.key = key;
 
@@ -1340,18 +1344,6 @@ cDiffEntry junction_to_diff_entry(
 		}
 		jc.unique_side = 0;
 	}
-
-// @JEB TODO: Testing removal
-// both were IS! -- define as redundant here
-//	else if (jc.sides[0].is.name.size() > 0)
-//		jc.sides[0].redundant = true;
-//	else if (jc.sides[1].is.name.size() > 0)
-//		jc.sides[1].redundant = true;
-
-//  @JEB TODO: Testing removal
-// Carry over redundancy from degenerate matches
-//  if (test_info.redundant_1) jc.sides[0].redundant = true;
-//  if (test_info.redundant_2) jc.sides[1].redundant = true;
   
 	// By default, overlap is included on both sides of the junction (possibly changed below)
 	jc.sides[0].overlap = 0;
@@ -1408,8 +1400,8 @@ cDiffEntry junction_to_diff_entry(
 
 		// If both sides were redundant, no adjustment because we are not going to count coverage
 	}
-
-	// flatten things to only what we want to keep
+  
+	// Flatten things to only what we want to keep
   cDiffEntry item(JC);
 	item
 		("side_1_seq_id", jc.sides[0].seq_id)
@@ -1433,7 +1425,7 @@ cDiffEntry junction_to_diff_entry(
 		("unique_read_sequence", to_string(jc.unique_read_sequence))
 	;
   
-//	## may want to take only selected of these fields..
+  //	## may want to take only selected of these fields in the future.
   
   item
   ("max_left", to_string(test_info.max_left))
@@ -1531,6 +1523,9 @@ void  assign_junction_read_counts(
   map<string,bool> junction_read_names;
 
   // Fetch all the junction reads supporting
+  // Keep track of how well they match the reference versus the putative new junctions.
+  // right now this is in terms of mismatches (adding unmatched read bases as mismatches)
+  
   diff_entry_list_t jc = gd.list(make_vector<gd_entry_type>(JC));
   for (diff_entry_list_t::iterator it = jc.begin(); it != jc.end(); it++)
   {
@@ -1604,6 +1599,13 @@ void junction_read_counter::fetch_callback ( const alignment_wrapper& a )
   // Just check to be sure the start and end of the alignment go across the desired start and end.
   
   if (_verbose) cout << "  " << a.read_name();
+  
+  
+  // Store the scores in a hash that can be resolved to see whether the read would have gone to the junction
+  // or the reference . We can count. 
+  // For certain kinds of junctions, we need to know how far they are identical on the end to properly normalize the others for that overlap.
+  //_read_score_hash[a.read_name()] = alignment_mismatches(a, _ref_seq_info);
+
   
   // read is to be ignored
   if (_ignore_read_names.count(a.read_name())

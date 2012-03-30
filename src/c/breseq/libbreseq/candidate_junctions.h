@@ -83,21 +83,12 @@ namespace breseq {
 		int32_t flanking_left;
 		int32_t flanking_right;
     
-		// Extended properties for resolve_alignments.cpp
-		string key;
-		int32_t overlap;
-		uint32_t unique_side;
-		uint32_t is_side;
-    
     //! Create empty JunctionInfo
     JunctionInfo()
     {
       alignment_overlap = 0;
       flanking_left = 0;
       flanking_right = 0;
-      overlap = 0;
-      unique_side = 0;
-      is_side = 0;
     }
     
     //! Create a JunctionInfo from supplied parameters
@@ -110,10 +101,6 @@ namespace breseq {
       unique_read_sequence = _unique_read_sequence;
       flanking_left = _flanking_left;
       flanking_right = _flanking_right;
-      
-      overlap = 0;
-      unique_side = 0;
-      is_side = 0;
     }
     
     //! Deserializes JunctionInfo from a key string
@@ -136,7 +123,7 @@ namespace breseq {
                           from_string<int32_t>(s[9])
                           );
       *this = retval;
-      }
+    }
     
     
     // Serializes a JunctionInfo to a string
