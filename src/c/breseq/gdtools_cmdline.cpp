@@ -23,78 +23,37 @@ LICENSE AND COPYRIGHT
 #include "libbreseq/annotated_sequence.h"
 
 using namespace breseq;
-int do_intersection (int argc, char* argv[]);
-int do_mutate       (int argc, char* argv[]);
-int do_subtract     (int argc, char* argv[]);
-int do_merge        (int argc, char* argv[]);
-int do_compare      (int argc, char* argv[]);
-int do_convert_gvf  (int argc, char* argv[]);
-int do_convert_gd   (int argc, char* argv[]);
-int do_not_evidence (int argc, char* argv[]);
-int do_annotate     (int argc, char* argv[]);
-int do_normalize_gd (int argc, char* argv[]);
-int do_filter_gd    (int argc, char* argv[]);
-int do_weights      (int argc, char* argv[]);
-int do_union        (int argc, char* argv[]);
 
+int gdtools_usage()
+{
+  UserOutput uout(0);
+  uout("Usage: gdtools [COMMAND] [OPTIONS]");
+  uout("Manipulate Genome Diff (*.gd) files using the following commands.");
 
-int main(int argc, char* argv[]) {
-	//Extract the sub-command argument.
-	string command;
-	char* argv_new[argc];
-	int argc_new = argc - 1;
+  uout("General:");
+  uout << "apply                  apply mutations to a sequence" << endl;
+  uout << "compare                compare control versus test mutations" << endl;
+  uout << "not-evidence           remove evidence not used by any mutations" << endl;
+  uout << "annotate               get additional mutation information from sequence" << endl;
+  uout << "normalize              normalize mutations to a sequence" << endl;
+  uout << "filter                 remove mutations given filtering expressions" << endl;
+  uout << "merge                  combine multiple GD files" << endl;
 
-  //Print out our generic header.
-  Settings::command_line_run_header();
-                                      
-	if (argc > 1) {
+  uout("Format Conversions:");
+  uout << "gd2gvf                 GD to Genome Variant Format(GVF)" << endl;
+  uout << "vcf2gd                 Variant Call Format(VCF) to GD" << endl;
 
-		command = argv[1];
-		argv_new[0] = argv[0];
-		for (int32_t i = 1; i < argc; i++)
-			argv_new[i] = argv[i + 1];
+  uout("Set Operations:");
+  uout << "subtract               remove mutations" << endl;
+  uout << "intersect              locate equal mutations" << endl;
+  uout << "union                  combine mutations, removing duplicates" << endl;
 
-	} else {
-    //TODO for genome diff // Gives default usage in this case.
-    return -1; 
-	}
-
-	//Pass the command to the proper handler.
-	command = to_upper(command);
-
-  // Genome Diff Commands:
-  if (command == "APPLY") {
-    return do_mutate(argc_new, argv_new);    
-  } else if (command == "COMPARE") {
-    return do_compare(argc_new, argv_new);
-  } else if (command == "NOT-EVIDENCE") {        //TODO merge with FILTER
-    return do_not_evidence(argc_new, argv_new);
-  } else if (command == "ANNOTATE") {            //TODO add command for genomdiff.pm::do_compare()
-    return do_annotate(argc_new, argv_new);
-  } else if (command == "NORMALIZE") {
-    return do_normalize_gd(argc_new, argv_new);
-  } else if (command == "FILTER") {
-    return do_filter_gd(argc_new, argv_new);
-
-  } else if (command == "INTERSECT") {
-    return do_intersection(argc_new, argv_new);
-  } else if (command == "UNION") {
-    return do_union(argc_new, argv_new);
-  } else if (command == "SUBTRACT") {
-    return do_subtract(argc_new, argv_new);    
-  } else if (command == "MERGE") {
-    return do_merge(argc_new, argv_new);    
-  } else if (command == "WEIGHTS") {
-    return do_weights(argc_new, argv_new);
-  } else if (command == "GD2GVF") {             //TODO merge into CONVERT
-    return do_convert_gvf(argc_new, argv_new);
-  } else if (command == "VCF2GD") {             //TODO merge into CONVERT
-    return do_convert_gd( argc_new, argv_new);
-  }
+  uout("For help using a command, type: gdtools [COMMAND]");
+  uout << endl;
 
   return 0;
-
 }
+
 
 int do_intersection(int argc, char *argv[])
 {
@@ -102,6 +61,9 @@ int do_intersection(int argc, char *argv[])
   options("output,o",  "output GD file name");
   options("verbose,v", "verbose mode", TAKES_NO_ARGUMENT);
   options.processCommandArgs(argc, argv);
+
+  options.addUsage("");
+  options.addUsage("\tCreates a GD file of mutations and associated evidence that exists across all input GD files.");
 
   if (!options.count("output")) {
     options.addUsage("");
@@ -124,13 +86,18 @@ int do_intersection(int argc, char *argv[])
     return -1;
   }
 
+  UserOutput uout("INTERSECT");
+
+  uout("Reading input GD files") << options.getArgv(0) << endl;
   cGenomeDiff gd1(options.getArgv(0));
 
   for(uint32_t i = 1; i < options.getArgc(); ++i) {
+    uout << options.getArgv(i) << endl;
     cGenomeDiff gd2(options.getArgv(i));
     gd1.set_intersect(gd2, options.count("verbose"));
   }
 
+  uout("Writing output GD file", options["output"]);
   gd1.write(options["output"]);
 
   return 0;
@@ -143,6 +110,10 @@ int do_union(int argc, char *argv[])
   options("verbose,v", "verbose mode", TAKES_NO_ARGUMENT);
   options.processCommandArgs(argc, argv);
 
+  options.addUsage("");
+  options.addUsage("\tCreates a GD file of mutations and associated evidence that exist in each input GD file.");
+  options.addUsage("Duplicate mutations are merged into a single mutation.");
+
   if (!options.count("output")) {
     options.addUsage("");
     options.addUsage("No output provided.");
@@ -163,16 +134,21 @@ int do_union(int argc, char *argv[])
     options.printUsage();
     return -1;
   }
+  UserOutput uout("UNION");
 
+  uout("Reading input GD files") << options.getArgv(0) << endl;
   cGenomeDiff gd1(options.getArgv(0));
 
   for(uint32_t i = 1; i < options.getArgc(); ++i) {
+    uout << options.getArgv(0) << endl;
     cGenomeDiff gd2(options.getArgv(i));
     gd1.set_union(gd2, options.count("verbose"));
   }
 
+  uout("Assigning unique IDs");
   gd1.assign_unique_ids();
 
+  uout("Writing output GD file", options["output"]); 
   gd1.write(options["output"]);
 
   return 0;
@@ -223,21 +199,34 @@ int do_mutate(int argc, char *argv[])
     return -1;
   }
 
+  UserOutput uout("APPLY");
+
   cReferenceSequences ref_seq_info;
   cReferenceSequences new_ref_seq_info;
-  ref_seq_info.LoadFiles(from_string<vector<string> >(options["reference"]));
-  new_ref_seq_info.LoadFiles(from_string<vector<string> >(options["reference"]));
 
+  const vector<string>& ref_paths = from_string<vector<string> >(options["reference"]);
+  uout("Reading input reference files", ref_paths);
+  ref_seq_info.LoadFiles(ref_paths);
+  new_ref_seq_info.LoadFiles(ref_paths);
+
+
+  uout("Reading input GD file", options.getArgv(0));
   cGenomeDiff gd(options.getArgv(0));
+
+
   //Check to see if every item in the loaded .gd is applicable to the reference file.
   ASSERT(gd.is_valid(ref_seq_info, options.count("verbose")), "Reference file and GenomeDiff file don't match.");
   gd.apply_to_sequences(ref_seq_info, new_ref_seq_info, options.count("verbose"));
 
+  uout("Writing output file in " + options["format"] + " format");
+
   if (options["format"] == "FASTA") {
+    uout << options["fasta"] << endl;
     new_ref_seq_info.WriteFASTA(options["fasta"], options.count("verbose"));
   }
   else
   if (options["format"] == "GFF3") {
+    uout << options["gff3"] << endl;
     new_ref_seq_info.WriteGFF(options["gff3"], options.count("verbose"));
   }
 
@@ -246,24 +235,15 @@ int do_mutate(int argc, char *argv[])
 
 int do_subtract(int argc, char *argv[])
 {
-  AnyOption options("SUBTRACT -o <output.gd> <input1.gd input2.gd ...>");
+  AnyOption options("SUBTRACT -o <output.gd> <base.gd minus1.gd minus2.gd ...>");
   options("input,i",   "input GD file");
   options("output,o",  "output GD file");
   options("verbose,v", "verbose mode", TAKES_NO_ARGUMENT);
   options.processCommandArgs(argc, argv);
   
   options.addUsage("");
-  options.addUsage("Input two GenomeDiff files and compare mutations.");
-  options.addUsage("Mutations that appear in BOTH will be subtracted from");
-  options.addUsage("--input1 and results will output to a new file specified.");
+  options.addUsage("\tCreates a GD file of mutations from the base.gd after removing mutations present in additional minus#.gd GD files.");
   
-  if (!options.count("input")) {
-    options.addUsage("");
-    options.addUsage("No input provided.");
-    options.printUsage();
-    return -1;
-  }
-
   if (!options.count("output")) {
     options.addUsage("");
     options.addUsage("No output provided.");
@@ -271,22 +251,29 @@ int do_subtract(int argc, char *argv[])
     return -1;
   }
 
-  if (!options.getArgc()) {
+  if (options.getArgc() < 2) {
     options.addUsage("");
-    options.addUsage("No additional files provided.");
+    options.addUsage("Not enough input files provided.");
     options.printUsage();
     return -1;
   }
 
   const bool verbose = options.count("verbose");
 
-  cGenomeDiff gd1(options["input"]);
+  UserOutput uout("SUBTRACT");
 
-  for (uint32_t i = 0; i < options.getArgc(); ++i) {
+  uout("Starting with input GD file", options.getArgv(0));
+  cGenomeDiff gd1(options.getArgv(0));
+
+
+  uout("Subtracting mutations from files");
+  for (uint32_t i = 1; i < options.getArgc(); ++i) {
+    uout << options.getArgv(i) << endl;
     cGenomeDiff gd2(options.getArgv(i));
     gd1.set_subtract(gd2, verbose);
   }
   
+  uout("Writing output GD file", options["output"]);
   gd1.write(options["output"]);
   
   return 0;
@@ -327,16 +314,22 @@ int do_merge(int argc, char *argv[])
   }
 
   const bool verbose = options.count("verbose");
+
+  UserOutput uout("MERGE");
   
+  uout("Merging input GD files") << options.getArgv(0) << endl;
   cGenomeDiff gd1(options.getArgv(0));
-  
+
   //Load all the GD files that were input.
   for(uint32_t i = 1; i < options.getArgc(); i++)
   {
+    uout << options.getArgv(i) << endl;;
     cGenomeDiff gd2(options.getArgv(i));
     gd1.merge(gd2, options.count("unique"), options.count("id"), options.count("verbose"));
   }
   
+  uout("Writing output GD file", options["output"]);
+
   gd1.write(options["output"]);
   
   return 0;
@@ -348,6 +341,12 @@ int do_weights(int argc, char* argv[])
   options("output,o",    "output GD file");
   options("verbose,v",   "verbose mode", TAKES_NO_ARGUMENT);
   options.processCommandArgs(argc, argv);
+
+  options.addUsage("");
+  options.addUsage("\tCreates a GD file of mutations and associated evidence that exist in each input GD file.");
+  options.addUsage("Duplicate mutations are merged into a single mutation with a 'weight' field added to the");
+  options.addUsage("entry. The 'weight' field is the inverse of the frequency of that mutation occuring accross");
+  options.addUsage("all input GD files. Unique mutations will therefor have a 'weight' of 1");
 
   if (!options.count("output")) {
     options.addUsage("");
@@ -366,15 +365,22 @@ int do_weights(int argc, char* argv[])
 
   const bool verbose = options.count("verbose");
 
+  UserOutput uout("WEIGHTS");
+
+  uout("Readings input GD files"); 
+  uout << options.getArgv(0) << endl;
   cGenomeDiff gd1(options.getArgv(0));
 
   //Load all the GD files that were input.
   for(uint32_t i = 1; i < options.getArgc(); i++)
   {
+    uout << options.getArgv(i) << endl;
     cGenomeDiff gd2(options.getArgv(i));
     gd1.fast_merge(gd2);
   }
 
+
+  uout("Calculating weights");
   //Store entries as keys and pointers to matching entries.
   diff_entry_list_t muts = gd1.mutation_list();
   map<cDiffEntry, vector<diff_entry_ptr_t> > weights_table;
@@ -389,6 +395,7 @@ int do_weights(int argc, char* argv[])
   for (map<cDiffEntry, vector<diff_entry_ptr_t> >::iterator it = weights_table.begin();
        it != weights_table.end(); ++it) {
     float weight = 1.0f / static_cast<float>(it->second.size());
+    uout << weight << '\t' << it->first.to_spec() << endl;
     
     for (uint32_t i  = 0; i < it->second.size(); ++i) {
       (*it->second[i])["weight"] = to_string(weight);
@@ -406,6 +413,7 @@ int do_weights(int argc, char* argv[])
 
   }
   
+  uout("Writing output GD file", options["output"]);
   gd1.write(options["output"]);
 
   return 0;
@@ -431,13 +439,6 @@ int do_compare(int argc, char *argv[])
   options.addUsage("The control and test GD files are merged into the given output GD file, for each");
   options.addUsage("mutation a 'compare' field will be added with a TP, FN, FP value. ");
 
-  if (!options.count("input")) {
-    options.addUsage("");
-    options.addUsage("No input provided.");
-    options.printUsage();
-    return -1;
-  }
-
   if (!options.count("output")) {
     options.addUsage("");
     options.addUsage("No output provided.");
@@ -445,23 +446,29 @@ int do_compare(int argc, char *argv[])
     return -1;
   }
 
-  if (!options.getArgc() || (options.getArgc() < 2)) {
+  if (options.getArgc() < 2) {
     options.addUsage("");
-    if (!options.getArgc())    options.addUsage("No additional input provided.");
-    if (options.getArgc() < 2) options.addUsage("Two input files needed.");
+    options.addUsage("Not enough input file provided.");
     options.printUsage();
     return -1;
   }
 
+  UserOutput uout("COMPARE");
 
-
+  uout("Reading input GD files");
+  uout << "Control: " << options.getArgv(0) << endl;
   cGenomeDiff gd1(options.getArgv(0));
+  uout << "Test:    " << options.getArgv(1) << endl;
   cGenomeDiff gd2(options.getArgv(1));
 
+
+  uout("Comparing control vs test GD file");
   gd1.compare(gd2, options.count("verbose"));
 
+  uout("Assigning unique IDs");
   gd1.assign_unique_ids();
 
+  uout("Writing output GD file", options["output"]);
   gd1.write(options["output"]);
 
   return 0;
@@ -477,6 +484,9 @@ int do_convert_gvf( int argc, char* argv[]){
     ("snv-only", "only output SNV entries", TAKES_NO_ARGUMENT)
     ;
   options.processCommandArgs( argc,argv);
+
+  options.addUsage("");
+  options.addUsage("Creates a Genome Variant Format(GVF) file of mutations present in a input GD file.");
   
   if( !options.count("input") || !options.count("output") ){
       options.printUsage(); return -1;
@@ -498,6 +508,9 @@ int do_convert_gd( int argc, char* argv[])
   options("input,i","gd file to convert");
   options("output,o","name of output file");
   options.processCommandArgs( argc,argv);
+
+  options.addUsage("");
+  options.addUsage("Creates a GD file of mutations present in a input Variant Call Format(VCF) file.");
   
   if(!options.count("input") && !options.count("output")){
     options.printUsage();
@@ -583,12 +596,20 @@ int do_annotate(int argc, char* argv[])
     return -1;
   }
   
+  UserOutput uout("ANNOTATE");
+  uout("Reading input GD file", options["input"]);
   cGenomeDiff gd(options["input"]);
   
   vector<string> reference_file_names = from_string<vector<string> >(options["reference"]);
+
+  uout("Reading input reference sequence files") << reference_file_names << endl;
   cReferenceSequences ref_seq_info;
   ref_seq_info.LoadFiles(reference_file_names);
+
+  uout("Annotating mutations");
   ref_seq_info.annotate_mutations(gd, false, options.count("ignore-pseudogenes"));
+
+  uout("Writing output GD file", options["output"]);
   gd.write(options["output"]);
   
   return 0;
@@ -596,7 +617,7 @@ int do_annotate(int argc, char* argv[])
 
 int do_normalize_gd(int argc, char* argv[])
 {
-  AnyOption options("NORMALIZE-GD -o <output.gd> -r <reference> <input1.gd input2.gd input3.gd ...>");
+  AnyOption options("NORMALIZE -o <output.gd> -r <reference> <input1.gd input2.gd input3.gd ...>");
   options
   ("output,o"     , "output GD file.")
   ("reference,r"  , "input reference file.")
@@ -604,9 +625,7 @@ int do_normalize_gd(int argc, char* argv[])
 
   options.processCommandArgs(argc, argv);
   options.addUsage("");
-  options.addUsage("Takes a genome diff file to be normalized.");
-  options.addUsage("Then normalizes the diff entries to the reference.");
-  options.addUsage("Outputs a normalized genome diff file.");
+  options.addUsage("Creates a GD file of mutations that have been normalized to the input reference files.");
 
   if (!options.count("output")) {
     options.addUsage("");
@@ -638,16 +657,22 @@ int do_normalize_gd(int argc, char* argv[])
 
   bool verbose = options.count("verbose");
 
+  UserOutput uout("NORMALIZE");
+
   vector<string> rfns = from_string<vector<string> >(options["reference"]);
+  uout("Reading in reference sequence files") << rfns << endl;
   cReferenceSequences rs;
   rs.LoadFiles(rfns);
 
+  uout("Merging input GD files") <<  options.getArgv(0) << endl;
   cGenomeDiff gd(options.getArgv(0));
   for (uint32_t i = 1; i < options.getArgc(); ++i) {
+    uout << options.getArgv(i) << endl;
     cGenomeDiff temp_gd(options.getArgv(i));
     gd.merge(temp_gd, false, false, options.count("verbose"));
   }
 
+  uout("Normalizing mutations");
   gd.normalize_to_sequence(rs);
   diff_entry_list_t muts = gd.mutation_list();
 
@@ -655,11 +680,12 @@ int do_normalize_gd(int argc, char* argv[])
        it != muts.end(); it++) {
     diff_entry_ptr_t mut = *it;
     if (mut->entry_exists("norm") && (*mut)["norm"] == "is_not_valid"){
-      printf("\tINVALID_MUTATION:%s\n", mut->to_string().c_str());
+      uout << "INVALID_MUTATION\t" << **it << endl; 
       (*mut)["comment_out"] = "True";
     } 
-    
   }
+
+  uout("Writing output GD file", options["output"]);
   gd.write(options["output"]);
 
   return 0;
@@ -671,6 +697,9 @@ int do_filter_gd(int argc, char* argv[]) {
   options("output,o", "Filter genome diff file.");
   options("mut_type,m", "Only consider this mutation type for filtering.");
   options.processCommandArgs(argc, argv);
+
+  options.addUsage("");
+  options.addUsage("Creates a GD file of mutations that evaluate as false to the input filtering expressions.");
 
   if (!options.count("input")) {
     options.addUsage("");
@@ -690,6 +719,8 @@ int do_filter_gd(int argc, char* argv[]) {
   if (!options.count("output")) {
     options["output"] = options["input"];
   }
+
+  UserOutput uout("FILTER");
 
   list<string> filters;
   for(int32_t i = 0; i < options.getArgc(); ++i) {
@@ -781,8 +812,66 @@ int do_filter_gd(int argc, char* argv[]) {
     }
     output_gd.add(mut);
   }
+  uout("Writing output GD file", options["output"]);
   output_gd.write(options["output"]);
   return 0;
 }
 
+int main(int argc, char* argv[]) {
+	//Extract the sub-command argument.
+	string command;
+	char* argv_new[argc];
+	int argc_new = argc - 1;
+
+  //Print out our generic header.
+  Settings::command_line_run_header();
+                                      
+	if (argc > 1) {
+
+		command = argv[1];
+		argv_new[0] = argv[0];
+		for (int32_t i = 1; i < argc; i++)
+			argv_new[i] = argv[i + 1];
+
+	} else {
+    gdtools_usage();
+    return -1; 
+	}
+
+	//Pass the command to the proper handler.
+	command = to_upper(command);
+
+  // Genome Diff Commands:
+  if (command == "APPLY") {
+    return do_mutate(argc_new, argv_new);    
+  } else if (command == "COMPARE") {
+    return do_compare(argc_new, argv_new);
+  } else if (command == "NOT-EVIDENCE") {        //TODO merge with FILTER
+    return do_not_evidence(argc_new, argv_new);
+  } else if (command == "ANNOTATE") {            //TODO add command for genomdiff.pm::do_compare()
+    return do_annotate(argc_new, argv_new);
+  } else if (command == "NORMALIZE") {
+    return do_normalize_gd(argc_new, argv_new);
+  } else if (command == "FILTER") {
+    return do_filter_gd(argc_new, argv_new);
+
+  } else if (command == "INTERSECT") {
+    return do_intersection(argc_new, argv_new);
+  } else if (command == "UNION") {
+    return do_union(argc_new, argv_new);
+  } else if (command == "SUBTRACT") {
+    return do_subtract(argc_new, argv_new);    
+  } else if (command == "MERGE") {
+    return do_merge(argc_new, argv_new);    
+  } else if (command == "WEIGHTS") {
+    return do_weights(argc_new, argv_new);
+  } else if (command == "GD2GVF") {             
+    return do_convert_gvf(argc_new, argv_new);
+  } else if (command == "VCF2GD") {             
+    return do_convert_gd( argc_new, argv_new);
+  }
+
+  return 0;
+
+}
 

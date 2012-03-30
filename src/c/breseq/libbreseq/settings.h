@@ -865,7 +865,95 @@ namespace breseq
       preprocess_error_count.deserialize(f);
 		}
 	};
+
+class UserOutput
+{
+  public:
+    UserOutput(const string& command, size_t shift = 4)
+      : _command(command)
+      , _n_shift(shift)
+      , _is_shifted(false)
+      , _n_default(shift)
+    {
+      cerr << endl << "*** Begin " << _command << " ***" << endl;
+    }
+    
+    UserOutput(size_t shift = 4)
+      : _command("")
+      , _n_shift(shift)
+      , _is_shifted(false)
+      , _n_default(shift)
+    { }
+    
+    ~UserOutput()
+    {
+      if (_command.size()) {
+        cerr << endl << "*** End " << _command << " ***" << endl;
+      }
+    }
+
+    template<class T> UserOutput& operator<<(const T& value)
+    {
+      if (!_is_shifted) {
+        cerr << string(_n_shift, ' ');
+        _is_shifted = true;
+      }
+      cerr << value;
+      return *this;
+    }
+
+    UserOutput& operator<<(ostream& (*op_ptr)(ostream&))
+    {
+      //TODO find way to op_ptr == &std::endl.
+      if (!_is_shifted) {
+        _is_shifted = false; 
+      }
+
+      (*op_ptr)(cerr);
+      return *this;
+    }
+
+    UserOutput& operator()(const string& step, const string& value = "")
+    {
+      this->end_step();
+
+      cerr << endl << string(_n_shift, ' ') << step;
+      if (value.size()) {
+        cerr << ": " << value;
+        this->end_step();
+      } else {
+        _n_shift += 4;
+      } 
+      cerr << endl;
+      return *this;
+    }
+
+    template<class T> UserOutput& operator()(const string& step, const T& value)
+    {
+      this->end_step();
+
+      cerr << string(_n_shift, ' ') << step << ": " << value << endl;
+      this->end_step();
+
+      return *this;
+    }
+
+    void end_step(void)
+    {
+      _n_shift = _n_default;
+    }
+
+  private:
+    size_t        _n_shift;
+    size_t        _n_default;
+    bool          _is_shifted;
+    string        _command;
+};
   
+
+
+
+   
 } // breseq namespace
 
 #endif
