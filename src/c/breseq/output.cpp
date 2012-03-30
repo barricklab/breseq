@@ -536,7 +536,7 @@ void html_statistics(const string &file_name, const Settings& settings, Summary&
   HTML << "<table border=\"0\" cellspacing=\"1\" cellpadding=\"5\" >" << endl;
   HTML << "<tr>" << th() << 
                     th() << 
-                    th("reference sequence") << 
+                    th("seq id") << 
                     th("length") <<
                     th(ALIGN_CENTER, "coverage") <<
                     th(ALIGN_CENTER, "nbinom mean") <<
@@ -671,7 +671,7 @@ void html_statistics(const string &file_name, const Settings& settings, Summary&
   HTML << "<p>"  << endl;
   HTML << h2("Execution Times") << endl;
   HTML << start_table("width=\"100%\" border=\"1\" cellspacing=\"0\" cellpadding=\"3\"") << endl;
-  HTML << "<tr>" << th("Step") << th("Start") << th("End") << th("Elapsed") << "</tr>" << endl; 
+  HTML << "<tr>" << th("step") << th("start") << th("end") << th("elapsed") << "</tr>" << endl; 
   double total_time_elapsed = 0; 
 
   for (vector<ExecutionTime>::const_iterator itr = times.begin(); itr != times.end(); itr ++) {  
