@@ -174,6 +174,8 @@ public:
   vector<string> get_reject_reasons();
 
   //const cDiffEntry& operator= (diff_entry_ptr_t ptr) const { return *ptr; }
+  
+  cDiffEntry to_spec(void) const;
 
 
   void normalize_to_sequence(const cAnnotatedSequence &seq);

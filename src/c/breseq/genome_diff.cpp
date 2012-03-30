@@ -264,6 +264,22 @@ bool cDiffEntry::is_validation() const
 {
   return gd_entry_type_lookup_table[_type].size() == 4;
 }
+
+cDiffEntry cDiffEntry::to_spec() const
+{
+  cDiffEntry de(_type);
+
+  const vector<diff_entry_key_t>& specs = line_specification[_type];
+
+  for(vector<diff_entry_key_t>::const_iterator it = specs.begin(); it != specs.end(); it++) {
+    const diff_entry_key_t& spec(*it);
+    de[spec] = this->get(spec);
+  }
+
+  return de;
+
+
+}
   
   
 //Comparing IDs here will currently break cGenomeDiff::merge and cGenomeDiff::subtract
@@ -1165,6 +1181,7 @@ void cGenomeDiff::write(const string& filename) {
   string dir = cString(filename).remove_ending(basename);
   create_path(dir);
   ofstream os(filename.c_str());
+
 
   //! Step: Header lines.
   /*Always write version tag. It's how we identify it as a genome diff file
