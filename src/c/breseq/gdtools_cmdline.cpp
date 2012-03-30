@@ -47,13 +47,9 @@ int gdtools_usage()
   uout << "subtract               remove mutations" << endl;
   uout << "intersect              locate equal mutations" << endl;
   uout << "union                  combine mutations, removing duplicates" << endl;
-
-  uout("For help using a command, type: gdtools [COMMAND]");
-  uout << endl;
-
+  
   return 0;
 }
-
 
 int do_intersection(int argc, char *argv[])
 {
@@ -91,7 +87,7 @@ int do_intersection(int argc, char *argv[])
   uout("Reading input GD files") << options.getArgv(0) << endl;
   cGenomeDiff gd1(options.getArgv(0));
 
-  for(uint32_t i = 1; i < options.getArgc(); ++i) {
+  for(int32_t i = 1; i < options.getArgc(); ++i) {
     uout << options.getArgv(i) << endl;
     cGenomeDiff gd2(options.getArgv(i));
     gd1.set_intersect(gd2, options.count("verbose"));
@@ -139,7 +135,7 @@ int do_union(int argc, char *argv[])
   uout("Reading input GD files") << options.getArgv(0) << endl;
   cGenomeDiff gd1(options.getArgv(0));
 
-  for(uint32_t i = 1; i < options.getArgc(); ++i) {
+  for(int32_t i = 1; i < options.getArgc(); ++i) {
     uout << options.getArgv(0) << endl;
     cGenomeDiff gd2(options.getArgv(i));
     gd1.set_union(gd2, options.count("verbose"));
@@ -265,9 +261,8 @@ int do_subtract(int argc, char *argv[])
   uout("Starting with input GD file", options.getArgv(0));
   cGenomeDiff gd1(options.getArgv(0));
 
-
   uout("Subtracting mutations from files");
-  for (uint32_t i = 1; i < options.getArgc(); ++i) {
+  for (int32_t i = 1; i < options.getArgc(); ++i) {
     uout << options.getArgv(i) << endl;
     cGenomeDiff gd2(options.getArgv(i));
     gd1.set_subtract(gd2, verbose);
@@ -321,7 +316,7 @@ int do_merge(int argc, char *argv[])
   cGenomeDiff gd1(options.getArgv(0));
 
   //Load all the GD files that were input.
-  for(uint32_t i = 1; i < options.getArgc(); i++)
+  for(int32_t i = 1; i < options.getArgc(); i++)
   {
     uout << options.getArgv(i) << endl;;
     cGenomeDiff gd2(options.getArgv(i));
@@ -372,7 +367,7 @@ int do_weights(int argc, char* argv[])
   cGenomeDiff gd1(options.getArgv(0));
 
   //Load all the GD files that were input.
-  for(uint32_t i = 1; i < options.getArgc(); i++)
+  for(int32_t i = 1; i < options.getArgc(); i++)
   {
     uout << options.getArgv(i) << endl;
     cGenomeDiff gd2(options.getArgv(i));
@@ -593,14 +588,15 @@ int do_annotate(int argc, char* argv[])
   
   if (!options.count("output")
     ||!options.count("reference")
+    ||(options.getArgc() != 1)
       ) {
     options.printUsage();
     return -1;
   }
   
   UserOutput uout("ANNOTATE");
-  uout("Reading input GD file", options["input"]);
-  cGenomeDiff gd(options["input"]);
+  uout("Reading input GD file",options.getArgv(0));
+  cGenomeDiff gd(options.getArgv(0));
   
   vector<string> reference_file_names = from_string<vector<string> >(options["reference"]);
 
@@ -668,7 +664,8 @@ int do_normalize_gd(int argc, char* argv[])
 
   uout("Merging input GD files") <<  options.getArgv(0) << endl;
   cGenomeDiff gd(options.getArgv(0));
-  for (uint32_t i = 1; i < options.getArgc(); ++i) {
+
+  for (int32_t i = 1; i < options.getArgc(); ++i) {
     uout << options.getArgv(i) << endl;
     cGenomeDiff temp_gd(options.getArgv(i));
     gd.merge(temp_gd, false, false, options.count("verbose"));

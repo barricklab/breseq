@@ -538,6 +538,9 @@ void html_statistics(const string &file_name, const Settings& settings, Summary&
                     th() << 
                     th("reference sequence") << 
                     th("length") <<
+                    th("coverage") <<
+                    th("nbinom mean") <<
+                    th("nbinom size") <<
                     th(ALIGN_LEFT, "description") <<
           "</tr>" << endl;
              
@@ -572,7 +575,10 @@ void html_statistics(const string &file_name, const Settings& settings, Summary&
       HTML << td(nonbreaking("none aligned"));
     }
     
-    
+    HTML << td(to_string(summary.unique_coverage[it->m_seq_id].average, 1));
+    HTML << td(to_string(summary.unique_coverage[it->m_seq_id].nbinom_mean_parameter, 1));
+    HTML << td(to_string(summary.unique_coverage[it->m_seq_id].nbinom_size_parameter, 1));
+
     HTML << td(it->m_seq_id);
     HTML << td(ALIGN_RIGHT, commify(to_string(it->m_length)));
     HTML << td(it->m_description);

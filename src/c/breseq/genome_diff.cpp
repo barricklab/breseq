@@ -2792,6 +2792,8 @@ int32_t cDiffEntry::mutation_size_change(cReferenceSequences& ref_seq_info)
 
 void cGenomeDiff::set_intersect(cGenomeDiff &gd, bool verbose)
 {
+  (void)verbose; //unused
+
   set<cDiffEntry> seen;
   diff_entry_list_t muts = gd.mutation_list();
 
@@ -2868,12 +2870,14 @@ void cGenomeDiff::assign_unique_ids()
 
 void cGenomeDiff::set_union(cGenomeDiff& gd, bool verbose)
 {
+  (void)verbose; //unused
   this->merge(gd);
   this->unique(); 
 }
 
 void cGenomeDiff::compare(cGenomeDiff& gd, bool verbose)
 {
+  (void)verbose; //unused
   diff_entry_list_t muts = this->mutation_list();
   set<cDiffEntry> ctrl_muts;
   for (diff_entry_list_t::iterator it = muts.begin();
@@ -2890,7 +2894,7 @@ void cGenomeDiff::compare(cGenomeDiff& gd, bool verbose)
 
   if (verbose) {
     printf("\tComparing %u control mutations versus %u test mutations.\n\n",
-         ctrl_muts.size(), test_muts.size());
+         static_cast<unsigned int>(ctrl_muts.size()), static_cast<unsigned int>(test_muts.size()));
   }
 
   this->set_union(gd, verbose);
