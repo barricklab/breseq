@@ -905,7 +905,7 @@ class UserOutput
     UserOutput& operator<<(ostream& (*op_ptr)(ostream&))
     {
       //TODO find way to op_ptr == &std::endl.
-      if (!_is_shifted) {
+      if (_is_shifted) {
         _is_shifted = false; 
       }
 

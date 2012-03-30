@@ -412,6 +412,8 @@ int do_weights(int argc, char* argv[])
     }
 
   }
+  uout("Assigning unique IDs");
+  gd1.assign_unique_ids();
   
   uout("Writing output GD file", options["output"]);
   gd1.write(options["output"]);
