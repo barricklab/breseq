@@ -40,28 +40,16 @@ namespace breseq {
 		int32_t overlap;
 		uint32_t unique_side;
 		uint32_t is_side;
-    uint32_t continuation_left;
-    uint32_t continuation_right;
     
     ResolveJunctionInfo() : JunctionInfo() {};
     
-    ResolveJunctionInfo(const string& junction_name) : JunctionInfo(junction_name) 
+    ResolveJunctionInfo(const string& junction_name) 
+    : JunctionInfo(junction_name)
+    , key(junction_name)
+    , overlap(0)
+    , is_side(0)
     {
     }
-    
-    ResolveJunctionInfo(cReferenceSequences& ref_seq_info) 
-    : JunctionInfo()
-    {
-      overlap = 0;
-      unique_side = 0;
-      is_side = 0;
-      continuation_left = 0;
-      continuation_right = 0;
-      calculate_continuation(ref_seq_info);
-    }
-    
-    void calculate_continuation(cReferenceSequences& ref_seq_info);
-
   };
   
   class JunctionTestInfo {
@@ -87,6 +75,8 @@ namespace breseq {
     bool redundant_2;
     string junction_id;
     double neg_log10_pos_hash_p_value;
+    uint32_t continuation_left;
+    uint32_t continuation_right;
     
     bool operator <(const JunctionTestInfo& _in)
     {
@@ -186,6 +176,14 @@ namespace breseq {
     }
   };
   
+  void calculate_continuation(
+                              ResolveJunctionInfo& rji, 
+                              cReferenceSequences& ref_seq_info, 
+                              cReferenceSequences& junction_ref_seq_info, 
+                              uint32_t& continuation_left,
+                              uint32_t& continuation_right
+                              );
+  
   void resolve_alignments(
                           const Settings& settings,
                           Summary& summary,
@@ -220,7 +218,9 @@ namespace breseq {
                       RepeatJunctionMatchMap& degenerate_matches_ref, 
                       tam_file& junction_tam,
                       JunctionTestInfo& junction_test_info, 
-                      vector<ResolveJunctionInfo>& junction_info_list
+                      vector<ResolveJunctionInfo>& junction_info_list,
+                      cReferenceSequences& ref_seq_info, 
+                      cReferenceSequences& junction_ref_seq_info
                       );
   
   void resolve_junction(

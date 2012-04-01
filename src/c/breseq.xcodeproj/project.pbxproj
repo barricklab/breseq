@@ -375,9 +375,9 @@
 /* End PBXLegacyTarget section */
 
 /* Begin PBXNativeTarget section */
-		42B6EDB811C69CC70075F8A3 /* breseq_cmdline */ = {
+		42B6EDB811C69CC70075F8A3 /* breseq */ = {
 			isa = PBXNativeTarget;
-			buildConfigurationList = 42B6EDC511C69CC70075F8A3 /* Build configuration list for PBXNativeTarget "breseq_cmdline" */;
+			buildConfigurationList = 42B6EDC511C69CC70075F8A3 /* Build configuration list for PBXNativeTarget "breseq" */;
 			buildPhases = (
 				42B6EDBD11C69CC70075F8A3 /* Sources */,
 				42B6EDC011C69CC70075F8A3 /* Frameworks */,
@@ -388,14 +388,14 @@
 			dependencies = (
 				42B6EDBB11C69CC70075F8A3 /* PBXTargetDependency */,
 			);
-			name = breseq_cmdline;
+			name = breseq;
 			productName = error_count;
 			productReference = 708FA5D6132578BE00864C40 /* breseq */;
 			productType = "com.apple.product-type.tool";
 		};
-		42BA690B1189B7FD000B00B1 /* breseq */ = {
+		42BA690B1189B7FD000B00B1 /* libbreseq */ = {
 			isa = PBXNativeTarget;
-			buildConfigurationList = 42BA69191189B83D000B00B1 /* Build configuration list for PBXNativeTarget "breseq" */;
+			buildConfigurationList = 42BA69191189B83D000B00B1 /* Build configuration list for PBXNativeTarget "libbreseq" */;
 			buildPhases = (
 				42BA69081189B7FD000B00B1 /* Headers */,
 				42BA69091189B7FD000B00B1 /* Sources */,
@@ -406,7 +406,7 @@
 			dependencies = (
 				7056AE051451201100890AB0 /* PBXTargetDependency */,
 			);
-			name = breseq;
+			name = libbreseq;
 			productName = breseq;
 			productReference = 708FA5DA132578BE00864C40 /* libbreseq.a */;
 			productType = "com.apple.product-type.library.static";
@@ -451,8 +451,8 @@
 			targets = (
 				422D46201219DEFF003FD94D /* all */,
 				7056AE0014511F5D00890AB0 /* samtools */,
-				42BA690B1189B7FD000B00B1 /* breseq */,
-				42B6EDB811C69CC70075F8A3 /* breseq_cmdline */,
+				42BA690B1189B7FD000B00B1 /* libbreseq */,
+				42B6EDB811C69CC70075F8A3 /* breseq */,
 				70E92F0E151AB74200F86F2D /* gdtools */,
 			);
 		};
@@ -509,12 +509,12 @@
 /* Begin PBXTargetDependency section */
 		422D46241219DF08003FD94D /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
-			target = 42BA690B1189B7FD000B00B1 /* breseq */;
+			target = 42BA690B1189B7FD000B00B1 /* libbreseq */;
 			targetProxy = 422D46231219DF08003FD94D /* PBXContainerItemProxy */;
 		};
 		42B6EDBB11C69CC70075F8A3 /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
-			target = 42BA690B1189B7FD000B00B1 /* breseq */;
+			target = 42BA690B1189B7FD000B00B1 /* libbreseq */;
 			targetProxy = 42B6EDBC11C69CC70075F8A3 /* PBXContainerItemProxy */;
 		};
 		7056AE051451201100890AB0 /* PBXTargetDependency */ = {
@@ -524,12 +524,12 @@
 		};
 		708FA5D5132578BD00864C40 /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
-			target = 42B6EDB811C69CC70075F8A3 /* breseq_cmdline */;
+			target = 42B6EDB811C69CC70075F8A3 /* breseq */;
 			targetProxy = 708FA5D4132578BD00864C40 /* PBXContainerItemProxy */;
 		};
 		70E92F0F151AB74200F86F2D /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
-			target = 42BA690B1189B7FD000B00B1 /* breseq */;
+			target = 42BA690B1189B7FD000B00B1 /* libbreseq */;
 			targetProxy = 70E92F10151AB74200F86F2D /* PBXContainerItemProxy */;
 		};
 /* End PBXTargetDependency section */
@@ -791,7 +791,7 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
-		42B6EDC511C69CC70075F8A3 /* Build configuration list for PBXNativeTarget "breseq_cmdline" */ = {
+		42B6EDC511C69CC70075F8A3 /* Build configuration list for PBXNativeTarget "breseq" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				42B6EDC611C69CC70075F8A3 /* Debug */,
@@ -800,7 +800,7 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
-		42BA69191189B83D000B00B1 /* Build configuration list for PBXNativeTarget "breseq" */ = {
+		42BA69191189B83D000B00B1 /* Build configuration list for PBXNativeTarget "libbreseq" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				42BA690D1189B7FE000B00B1 /* Debug */,
