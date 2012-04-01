@@ -819,11 +819,11 @@ string html_genome_diff_item_table_string(const Settings& settings, cGenomeDiff&
     }
     else if(first_item._type == JC)
     {
-      return html_new_junction_table_string(list_ref,false);
+      return html_new_junction_table_string(list_ref,true);
     }
     else if(first_item._type == CN)
     {
-      return html_copy_number_table_string(list_ref,false);
+      return html_copy_number_table_string(list_ref,true);
     }
   }  
   return "";
@@ -1185,13 +1185,13 @@ string html_missing_coverage_table_string(diff_entry_list_t& list_ref, bool show
   
 // helper function
 
-string string_to_fixed_digit_string(string s)
+string string_to_fixed_digit_string(string s, uint32_t precision = 2)
 {
   if (s == "NA")
     return "NA";
   double value = from_string<double>(s);
   stringstream ss;
-  ss << fixed << setprecision(2) << value;
+  ss << fixed << setprecision(precision) << value;
   return ss.str();
 }
   
@@ -1276,13 +1276,13 @@ string html_new_junction_table_string(diff_entry_list_t& list_ref, bool show_det
       }
       
       ss << td("align=\"center\" class=\"" + annotate_key +"\"",
-                c[key + "_read_count"] + " (" + string_to_fixed_digit_string(c[key + "_coverage"]) + ")" );
+                c[key + "_read_count"] + " (" + string_to_fixed_digit_string(c[key + "_coverage"], 3) + ")" );
       
       
       //no longer print overlap
       //ss << td("rowspan=\"2\" align=\"center\"", c["overlap"]) << endl;
       ss << td("rowspan=\"2\" align=\"center\"", 
-               c["new_junction_read_count"] + " (" + string_to_fixed_digit_string(c["new_junction_coverage"]) + ")" ) << endl;
+               c["new_junction_read_count"] + " (" + string_to_fixed_digit_string(c["new_junction_coverage"], 3) + ")" ) << endl;
       ss << td("rowspan=\"2\" align=\"center\"", 
                c["pos_hash_score"] + "/" +  c["max_pos_hash_score"]) << endl;
       ss << td("rowspan=\"2\" align=\"center\"", 
@@ -1326,7 +1326,7 @@ string html_new_junction_table_string(diff_entry_list_t& list_ref, bool show_det
       } 
       
       ss << td("align=\"center\" class=\"" + annotate_key +"\"",
-               c[key + "_read_count"] + " (" + string_to_fixed_digit_string(c[key + "_coverage"]) + ")" );
+               c[key + "_read_count"] + " (" + string_to_fixed_digit_string(c[key + "_coverage"], 3) + ")" );
       
       ss << td("align=\"center\" class=\"" + annotate_key + "\"",
               nonbreaking(c["_" + key + GENE_POSITION])) << endl;
@@ -1338,6 +1338,11 @@ string html_new_junction_table_string(diff_entry_list_t& list_ref, bool show_det
     
   ss << "</tr>\n" << endl;
 
+  if (show_details) {
+    ss << tr(   td("colspan=\"" + to_string(total_cols) + "\"",
+                "Continuation Left: " + c["continuation_left"] + " Continuation Right:" + c["continuation_right"] )) << endl;
+  }
+    
   if (show_details && c.entry_exists("reject")) {
     cGenomeDiff gd;
 

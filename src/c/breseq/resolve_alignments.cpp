@@ -29,10 +29,110 @@ LICENSE AND COPYRIGHT
 using namespace std;
 
 namespace breseq {
-    
-void ResolveJunctionInfo::calculate_continuation(cReferenceSequences& ref_seq_info)
+
+// Continuation is how much matches the exact same past where the junction is
+void calculate_continuation(
+                            ResolveJunctionInfo& rji, 
+                            cReferenceSequences& ref_seq_info, 
+                            cReferenceSequences& junction_ref_seq_info, 
+                            uint32_t& continuation_left,
+                            uint32_t& continuation_right
+                            )
 {
-  (void) ref_seq_info;
+  bool verbose = false;
+  
+  // At this point we are an object that has been initialized with junction information
+  ASSERT(rji.sides[0].seq_id != "", "Uninitialized variable");
+  
+  //the first part of the junction
+  
+  int32_t left_compare_length = rji.flanking_left + max(rji.overlap, 0);
+  string left_junction_seq = junction_ref_seq_info.get_sequence_1(rji.key, 1, left_compare_length) + rji.unique_read_sequence;
+  
+  int32_t right_compare_length = rji.flanking_right + max(rji.overlap, 0);
+  int32_t junction_sequence_length = junction_ref_seq_info[rji.key].get_sequence_length();
+  string right_junction_seq = rji.unique_read_sequence + junction_ref_seq_info.get_sequence_1(rji.key, junction_sequence_length - right_compare_length + 1, junction_sequence_length);
+
+  if (verbose) {
+    cout << ">>>" << rji.key << endl;
+    cout << "LEFT | OVERLAP | RIGHT = " << left_compare_length << " " << rji.overlap << " " << right_compare_length << endl;
+    cout << "JUNCTION LEFT   :: " << left_junction_seq << endl;
+    cout << "JUNCTION RIGHT  :: " << right_junction_seq << endl;
+  }
+
+  // the same length of reference sequence extending past the matched part of the junction
+  string right_reference_seq;
+  int32_t seq_length_0 = ref_seq_info[rji.sides[0].seq_id].get_sequence_length();
+
+  if (rji.sides[0].strand == -1) {
+  
+    int32_t start_pos = min(seq_length_0, rji.sides[0].position + 1);
+    int32_t end_pos = min(seq_length_0, rji.sides[0].position  + right_compare_length);
+    
+    if (rji.sides[0].position + 1 <= seq_length_0) {
+      right_reference_seq = ref_seq_info.get_sequence_1(rji.sides[0].seq_id, start_pos, end_pos);
+    }
+  }  else if (rji.sides[0].strand == +1) {
+  
+    int32_t start_pos = max(1, rji.sides[0].position - left_compare_length);
+    int32_t end_pos = max(1, rji.sides[0].position - 1);
+    
+    if (rji.sides[0].position - 1 >= 1) {
+      right_reference_seq = ref_seq_info.get_sequence_1(rji.sides[0].seq_id, start_pos, end_pos);
+      right_reference_seq = reverse_complement(right_reference_seq);
+    }
+    
+  }
+  
+  string left_reference_seq;
+  int32_t seq_length_1 = ref_seq_info[rji.sides[1].seq_id].get_sequence_length();
+
+  if (rji.sides[1].strand == +1) {
+    
+    int32_t start_pos = max(1, rji.sides[1].position - right_compare_length);
+    int32_t end_pos = max(1, rji.sides[1].position - 1);
+    
+    if (rji.sides[1].position - 1 >= 1) {
+      left_reference_seq = ref_seq_info.get_sequence_1(rji.sides[1].seq_id, start_pos, end_pos);
+    }
+    
+  }  else if (rji.sides[1].strand == -1) {
+    
+    int32_t start_pos = min(seq_length_1, rji.sides[1].position + 1);
+    int32_t end_pos = min(seq_length_1, rji.sides[1].position + right_compare_length);
+    
+    if (rji.sides[1].position + 1 <= seq_length_1) {
+      left_reference_seq = ref_seq_info.get_sequence_1(rji.sides[1].seq_id, start_pos, end_pos);
+      left_reference_seq = reverse_complement(left_reference_seq);
+    }
+  }
+  
+  if (verbose) {
+    cout << "REFERENCE LEFT  :: " << left_reference_seq << endl;
+    cout << "REFERENCE RIGHT :: " << right_reference_seq << endl;
+  }
+  
+  // Compare left side going backwards
+  continuation_left = 0;
+  for (uint32_t i = 0; i < left_reference_seq.size() ; i++) {
+    if (left_reference_seq[left_reference_seq.size() - i - 1] != left_junction_seq[left_junction_seq.size() - i - 1] )
+      break;
+    continuation_left++;
+  }
+  
+  // Compare right side going forwards
+  continuation_right = 0;
+  for (uint32_t i = 0; i < right_reference_seq.size() ; i++) {
+    if (right_reference_seq[i] != right_junction_seq[i] )
+      break;
+    continuation_right++;
+  }
+  
+  if (verbose) {
+    cout << "CONTINUATION LEFT  :: " << continuation_left << endl;
+    cout << "CONTINUATION RIGHT :: " << continuation_right << endl;
+  }
+  
 }
   
 double combination (int32_t num, int32_t choose)
@@ -286,7 +386,9 @@ void resolve_alignments(
                    repeat_junction_match_map,
                    resolved_junction_tam,
                    junction_test_info,
-                   junction_info_list
+                   junction_info_list,
+                   ref_seq_info,
+                   junction_ref_seq_info
                    );
     junction_test_info_list.push_back(junction_test_info);
 
@@ -348,11 +450,13 @@ void resolve_alignments(
                    repeat_junction_match_map,
                    resolved_junction_tam,
                    junction_test_info,
-                   junction_info_list
+                   junction_info_list,
+                   ref_seq_info,
+                   junction_ref_seq_info
                    );
     
     
-    JunctionInfo junction_info(junction_id);
+    ResolveJunctionInfo junction_info(junction_id);
     
     // Test the best-scoring junction.
     bool failed = false;  
@@ -369,6 +473,7 @@ void resolve_alignments(
     record = !failed;
     
     // table is by overlap, then pos hash score
+    
     double neg_log10_p_value_1 = pos_hash_p_value_calculator.probability(junction_info.sides[0].seq_id, junction_test_info.pos_hash_score, junction_test_info.max_pos_hash_score);
     double neg_log10_p_value_2 = pos_hash_p_value_calculator.probability(junction_info.sides[1].seq_id, junction_test_info.pos_hash_score, junction_test_info.max_pos_hash_score);
     
@@ -819,7 +924,9 @@ void score_junction(
                     RepeatJunctionMatchMap& repeat_junction_match_map, 
                     tam_file& resolved_junction_tam, 
                     JunctionTestInfo& junction_test_info, 
-                    vector<ResolveJunctionInfo>& junction_info_list
+                    vector<ResolveJunctionInfo>& junction_info_list,
+                    cReferenceSequences& ref_seq_info,
+                    cReferenceSequences& junction_ref_seq_info
                   )
 {
   // may not need these
@@ -870,7 +977,7 @@ void score_junction(
   uint32_t pos_hash_count(0);
   
 	// basic information about the junction
-	JunctionInfo scj(junction_id);
+	ResolveJunctionInfo scj(junction_id);
 	int32_t alignment_overlap = scj.alignment_overlap;
 	int32_t flanking_left = scj.flanking_left;
     
@@ -999,7 +1106,7 @@ void score_junction(
   // needs to be marked as newly degenerate. Even through the whole junction sequences were
   // unique, no reads extended far enough to disambiguate between them
   
-  // @JEB: TODO broken... needs to construct a unique list of all junction_ids supported by all degenerate matches
+  // @JEB: TODO broken? needs to construct a unique list of all junction_ids supported by all degenerate matches
   
   bool redundant[2] = {false, false};
 
@@ -1021,10 +1128,10 @@ void score_junction(
     vector<uint32_t> repeat_junction_tid_list = get_keys(repeat_junction_tid_map);
     
     vector<uint32_t>::iterator it = repeat_junction_tid_list.begin();
-    JunctionInfo main = junction_info_list[*it];
+    ResolveJunctionInfo main = junction_info_list[*it];
     for (it++; it != repeat_junction_tid_list.end(); it++)
     {
-      JunctionInfo test = junction_info_list[*it]; // the junction key
+      ResolveJunctionInfo test = junction_info_list[*it]; // the junction key
       
       for (uint32_t best_side_index=0; best_side_index<=1; best_side_index++)
       {
@@ -1049,12 +1156,15 @@ void score_junction(
   // Calculate the maximum possible pos_hash_score
   ////
   
+  uint32_t continuation_left, continuation_right;
+  calculate_continuation(scj, ref_seq_info, junction_ref_seq_info, continuation_left, continuation_right);
+  
   uint32_t avg_read_length = round(summary.sequence_conversion.avg_read_length);
   
   // For  junctions the number of start sites where reads crossing the
   // new junction sequence could occur is reduced by overlap (positive or negative):
   int32_t overlap_positions_max_pos_hash_score_reduction = abs(scj.alignment_overlap);
-  uint32_t max_pos_hash_score = 2 * (avg_read_length - 1 - overlap_positions_max_pos_hash_score_reduction);
+  uint32_t max_pos_hash_score = 2 * (avg_read_length - 1 - overlap_positions_max_pos_hash_score_reduction - continuation_left - continuation_right);
   
   //@JEB Actually, this can happen if the read lengths vary, so we better not rule it out as an error.
   /*
@@ -1085,7 +1195,9 @@ void score_junction(
     redundant[0],
     redundant[1],
     junction_id,
-    999999999.99
+    999999999.99,
+    continuation_left,
+    continuation_right
 	};
   
   junction_test_info = this_junction_test_info;
@@ -1271,7 +1383,7 @@ void resolve_junction(
 
 cDiffEntry junction_to_diff_entry(
                                          const string& key, 
-                                         cReferenceSequences& ref_seq_info, 
+                                         cReferenceSequences& ref_seq_info,
                                          JunctionTestInfo& test_info
                                          )
 {
@@ -1422,7 +1534,7 @@ cDiffEntry junction_to_diff_entry(
 		("flanking_left", to_string(jc.flanking_left))
 		("flanking_right", to_string(jc.flanking_right))
 
-		("unique_read_sequence", to_string(jc.unique_read_sequence))
+    ("unique_read_sequence", to_string(jc.unique_read_sequence))
 	;
   
   //	## may want to take only selected of these fields in the future.
@@ -1446,6 +1558,8 @@ cDiffEntry junction_to_diff_entry(
   ("pos_hash_score", to_string(test_info.pos_hash_score))
   ("max_pos_hash_score", to_string(test_info.max_pos_hash_score))
   ("neg_log10_pos_hash_p_value", to_string(test_info.neg_log10_pos_hash_p_value))
+  ("continuation_left", to_string<uint32_t>(test_info.continuation_left))
+  ("continuation_right", to_string<uint32_t>(test_info.continuation_right))
   ;
 
 	/// Note: Other adjustments to overlap can happen at the later annotation stage
@@ -1532,17 +1646,27 @@ void  assign_junction_read_counts(
     cDiffEntry& de = **it;
     int32_t start, end;
     
+    uint32_t continuation_right = from_string<uint32_t>(de["continuation_right"]);
+    uint32_t continuation_left = from_string<uint32_t>(de["continuation_left"]);
+    
     // New Junction
-    start = from_string<uint32_t>(de["flanking_left"]);
-    end = start + abs(from_string<int32_t>(de[ALIGNMENT_OVERLAP])) + 1;
+    start = from_string<uint32_t>(de["flanking_left"]) - continuation_left;
+    end = start + abs(from_string<int32_t>(de[ALIGNMENT_OVERLAP])) + 1 + continuation_right;
     de[NEW_JUNCTION_READ_COUNT] = to_string(junction_jrc.count(de["key"], start, end, empty_read_names, junction_read_names));
     
     // New side 1
     if ( de[SIDE_1_REDUNDANT] != "1") {
+      int32_t side_1_strand = from_string<int32_t>(de[SIDE_1_STRAND]);
       start = from_string<uint32_t>(de[SIDE_1_POSITION]);
-      if (from_string<int32_t>(de[SIDE_1_STRAND]) == +1)
+      if (side_1_strand == +1) {
         start--;
-      end = start + 1;
+        end = start + 1;
+        end += continuation_right;
+      } else {
+        end = start + 1;
+        start -= continuation_left;
+      }
+      
       empty_read_names.clear();
       de[SIDE_1_READ_COUNT] = to_string(reference_jrc.count(de[SIDE_1_SEQ_ID], start, end, junction_read_names, empty_read_names));
     } else {
@@ -1552,10 +1676,17 @@ void  assign_junction_read_counts(
     // New side 2
     if ( de[SIDE_2_REDUNDANT] != "1") {
 
+      int32_t side_2_strand = from_string<int32_t>(de[SIDE_2_STRAND]);
+
       start = from_string<uint32_t>(de[SIDE_2_POSITION]);
-      if (from_string<int32_t>(de[SIDE_2_STRAND]) == +1)
+      if (side_2_strand == +1) {
         start--;
-      end = start + 1;
+        end = start + 1;
+        end += continuation_right;
+      } else {
+        end = start + 1;
+        start -= continuation_left;
+      }
       empty_read_names.clear();
       de[SIDE_2_READ_COUNT] = to_string(reference_jrc.count(de[SIDE_2_SEQ_ID], start, end, junction_read_names, empty_read_names));
     } else {
@@ -1613,6 +1744,9 @@ void junction_read_counter::fetch_callback ( const alignment_wrapper& a )
       || _ignore_read_names.count(a.read_name() + "-M2")
       ) {
     if (_verbose) cout << "  IGNORED" << endl;
+    
+    //ERROR("Read being counted twice for junction.");
+    //This sometimes happens despite 
     return;
   }
   
@@ -1628,16 +1762,15 @@ void junction_read_counter::fetch_callback ( const alignment_wrapper& a )
   if (_verbose) cout << "  " << q_start << "-" << q_end << "  " << _start << "-" << _end;
   
   if ((q_start <= _start) && (q_end >= _end)) {
-    if (_verbose) cout << "  COUNTED";
+    if (_verbose) cout << "  COUNTED" << endl;
     _count++;
   } else {
-    if (_verbose) cout << "  NO OVERLAP";
+    if (_verbose) cout << "  NO OVERLAP" << endl;
+    return;
   }
     
   // record that we counted this read
   _counted_read_names[a.read_name()] = true;
-  
-  if (_verbose) cout << endl;
 }
   
   

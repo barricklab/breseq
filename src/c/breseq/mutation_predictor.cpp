@@ -125,18 +125,22 @@ namespace breseq {
     for (diff_entry_list_t::iterator jc_it=jc.begin(); jc_it!=jc.end(); jc_it++) {
       cDiffEntry& j = **jc_it;
       
+      double side_1_correction = (summary.sequence_conversion.avg_read_length - 1 - abs(from_string<double>(j["alignment_overlap"])) - from_string<double>(j["continuation_left"])) / (summary.sequence_conversion.avg_read_length - 1);
+      
       if (j[SIDE_1_READ_COUNT] == "NA")
         j[SIDE_1_COVERAGE] = "NA";
       else
-        j[SIDE_1_COVERAGE] = to_string<double>(from_string<double>(j[SIDE_1_READ_COUNT]) / summary.unique_coverage[j[SIDE_1_SEQ_ID]].average);
+        j[SIDE_1_COVERAGE] = to_string<double>(from_string<double>(j[SIDE_1_READ_COUNT]) / summary.unique_coverage[j[SIDE_1_SEQ_ID]].average / side_1_correction);
        
+      double side_2_correction = (summary.sequence_conversion.avg_read_length - 1 - abs(from_string<double>(j["alignment_overlap"])) - from_string<double>(j["continuation_right"])) / (summary.sequence_conversion.avg_read_length - 1);
+
       if (j[SIDE_2_READ_COUNT] == "NA")
         j[SIDE_2_COVERAGE] = "NA";
       else
         j[SIDE_2_COVERAGE] = to_string<double>(from_string<double>(j[SIDE_2_READ_COUNT]) / summary.unique_coverage[j[SIDE_2_SEQ_ID]].average);
 
       //corrects for overlap making it less likely for a read to span
-      double overlap_correction = (summary.sequence_conversion.avg_read_length - abs(from_string<double>(j["alignment_overlap"]))) / summary.sequence_conversion.avg_read_length;
+      double overlap_correction = (summary.sequence_conversion.avg_read_length - 1 - abs(from_string<double>(j["alignment_overlap"])) - from_string<double>(j["continuation_left"]) - from_string<double>(j["continuation_right"])) / (summary.sequence_conversion.avg_read_length - 1);
       double new_junction_average_read_count = (summary.unique_coverage[j[SIDE_1_SEQ_ID]].average + summary.unique_coverage[j[SIDE_2_SEQ_ID]].average) / 2;
       
       j[NEW_JUNCTION_COVERAGE] = to_string<double>(from_string<double>(j[NEW_JUNCTION_READ_COUNT]) / new_junction_average_read_count / overlap_correction);
