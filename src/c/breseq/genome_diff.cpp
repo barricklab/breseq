@@ -181,11 +181,13 @@ cDiffEntry::cDiffEntry(const string &line)
     string_vector_t evidence_vector = split(evidence, ",");
 
     const size_t evidence_vector_size = evidence_vector.size();
-    de->_evidence.resize(evidence_vector_size);
+    if (evidence_vector_size) {
+      de->_evidence.resize(evidence_vector_size);
 
-    for (size_t i = 0; i < evidence_vector_size; i++) {
-      de->_evidence[i] = evidence_vector[i];
-    }
+      for (size_t i = 0; i < evidence_vector_size; i++) {
+        de->_evidence[i] = evidence_vector[i];
+      }
+    } 
 
   } else {
     /*Evidence and validation diff entry types do not have evidence parameters
@@ -435,7 +437,7 @@ uint32_t cGenomeDiff::new_unique_id()
 
 /*! Add evidence to this genome diff.
  */
-void cGenomeDiff::add(const cDiffEntry& item, bool lowest_unique) {
+uint32_t cGenomeDiff::add(const cDiffEntry& item, bool lowest_unique) {
 
   // allocating counted_ptr takes care of disposal
   cDiffEntry* diff_entry_copy = new cDiffEntry(item);
@@ -451,8 +453,10 @@ void cGenomeDiff::add(const cDiffEntry& item, bool lowest_unique) {
   else  {
     new_id = from_string<uint32_t>(added_item->_id);
   }  
-  
+
   unique_id_used[new_id] = true;
+
+  return new_id;
 }
 
 //! Subtract mutations using gd_ref as reference.
@@ -627,13 +631,17 @@ void cGenomeDiff::unique()
     //Is mutation unique?
     //Case: true.
     if (seen.insert(**it).second) { 
+      for (uint32_t i = 0; i < n; ++i) {
+        keep_ids[ids[i]].push_back(*it);
+      }
       ++it;
-      for (uint32_t i = 0; i < n; keep_ids[ids[i++]].push_back(*it)) {}
     } 
     //Case: false.
     else { 
+      for (uint32_t i = 0; i < n; ++i) {
+        erase_ids.insert(ids[i]);
+      }
       it = _entry_list.erase(it);
-      for (uint32_t i = 0; i < n; erase_ids.insert(ids[i++])) {}
     }
   }
 
@@ -653,7 +661,7 @@ void cGenomeDiff::unique()
         //Update mutations that may of been using this id.
         for (uint32_t i = 0; i < keep_ids[(**it)._id].size(); ++it) {
           vector<string>* evidence = &(*keep_ids[(**it)._id][i])._evidence;
-          vector<string>::iterator jt = remove(evidence->begin(), evidence->end(), (**it)._id);
+          vector<string>::iterator jt = std::remove(evidence->begin(), evidence->end(), (**it)._id);
           //evidence->erase(jt);
         }
       }
@@ -1219,6 +1227,48 @@ void cGenomeDiff::write(const string& filename) {
 	}
   os.close();
 }
+
+void cGenomeDiff::remove(cGenomeDiff::group group)
+{
+  this->sort();
+  diff_entry_list_t::iterator it1 = _entry_list.begin();
+  diff_entry_list_t::iterator it2 = _entry_list.begin();
+
+  //Mutations.
+  while (it2 != _entry_list.end()) {
+    if (!(**it2).is_mutation()) break;
+    ++it2;
+  }
+  if (group == cGenomeDiff::MUTATIONS) {
+    _entry_list.erase(it1, it2);
+    return;
+  }
+
+  //Evidence.
+  it1 = it2; 
+  while (it2 != _entry_list.end()) {
+    if (!(**it2).is_evidence()) break;
+    ++it2;
+  }
+  if (group == cGenomeDiff::EVIDENCE) {
+    _entry_list.erase(it1, it2);
+    return;
+  }
+
+  //Validation.
+  it1 = it2; 
+  while (it2 != _entry_list.end()) {
+    if (!(**it2).is_validation()) break;
+    ++it2;
+  }
+  if (group == cGenomeDiff::VALIDATION) {
+    _entry_list.erase(it1, it2);
+    return;
+  }
+
+  return;
+}
+
   
 //! Removes all GD entries that aren't used as evidence.
 void cGenomeDiff::filter_not_used_as_evidence(bool verbose)
@@ -2873,7 +2923,9 @@ void cGenomeDiff::assign_unique_ids()
 void cGenomeDiff::set_union(cGenomeDiff& gd, bool verbose)
 {
   (void)verbose; //unused
-  this->merge(gd);
+  this->fast_merge(gd);
+  this->remove(cGenomeDiff::EVIDENCE);
+  this->remove(cGenomeDiff::VALIDATION);
   this->unique(); 
 }
 
