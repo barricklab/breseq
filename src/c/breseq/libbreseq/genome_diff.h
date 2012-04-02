@@ -132,8 +132,8 @@ typedef map<diff_entry_key_t, diff_entry_value_t> diff_entry_map_t; //!< Diff en
 typedef counted_ptr<cDiffEntry> diff_entry_ptr_t;
 
 class cDiffEntry : public diff_entry_map_t {
-
 public: 
+
   //! Constructor.
   cDiffEntry(const gd_entry_type type);
   cDiffEntry(const string &line); //For deserialization from gd file.
@@ -254,6 +254,7 @@ bool diff_entry_sort(const cDiffEntry &a, const cDiffEntry &b);
  */
 class cGenomeDiff
 {
+  enum group { MUTATIONS = 0, EVIDENCE, VALIDATION }; 
 public:
 
   typedef string key_t; 
@@ -274,8 +275,8 @@ public:
   //! Retrieve a new diff entry id for this genome diff.
   uint32_t new_unique_id();
   
-  //! Add evidence to this genome diff.
-  void add(const cDiffEntry& item, bool lowest_unique=false);
+  //! Add evidence to this genome diff, return assigned ID.
+  uint32_t add(const cDiffEntry& item, bool lowest_unique=false);
   
   //! Subtract mutations using gd_ref as reference.
   void set_subtract(cGenomeDiff& gd_ref, bool verbose=false);
@@ -294,7 +295,6 @@ public:
   //! sort
   void sort() { _entry_list.sort(diff_entry_ptr_sort); }
   void unique();
-  
 
   void compare(cGenomeDiff& gd, bool verbose);
 
@@ -308,7 +308,10 @@ public:
   
   //! Write the genome diff to a file.
   void write(const string& filename);
-  
+
+  //! Remove mutations, evidence, validation.
+  void remove(cGenomeDiff::group group);
+
   //! Removes all GD entries that aren't used as evidence.
   void filter_not_used_as_evidence(bool verbose=false);
   
