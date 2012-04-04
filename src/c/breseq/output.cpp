@@ -22,7 +22,7 @@ const char* GENES="genes";
 const char* GENE_NAME="gene_name";
 const char* GENE_POSITION="gene_position";
 const char* GENE_PRODUCT="gene_product";
-const char* GENE_PRODUCT_HIDE="gene_product_hide";
+const char* GENE_PRODUCT_HIDE="_gene_product_hide";
 const char* GHOST_END="ghost_end";
 const char* GHOST_SEQ_ID_END="ghost_seq_id_end";
 const char* GHOST_SEQ_ID_START="ghost_seq_id_start";
@@ -2426,7 +2426,7 @@ void Html_Mutation_Table_String::Item_Lines()
       for (uint32_t j = 0; j < gd_name_list_ref.size(); j++){
         string base_name = gd_base_names[j];
         bool written = false;
-        for (int x = 0; x < mut_table[base_name].size(); x++){
+        for (size_t x = 0; x < mut_table[base_name].size(); x++){
           if (mut_table[base_name][x] == mut){
             ss << td(ALIGN_CENTER, "100%") << endl;
             written = true;
