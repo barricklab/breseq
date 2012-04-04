@@ -847,7 +847,9 @@ string formatted_mutation_annotation(const cDiffEntry& mut)
   }
   else // mut[SNP_TYPE] == "NC"
   {
-    ss << nonbreaking(mut.get(GENE_POSITION)); 
+    if(mut.entry_exists(GENE_POSITION)){
+      ss << nonbreaking(mut.get(GENE_POSITION));
+    }
   }
   return ss.str(); 
 }
@@ -2200,16 +2202,42 @@ void Html_Mutation_Table_String::Item_Lines()
 // #   ####################
 // #   #### ITEM LINES ####
 // #   ####################
-// # 
+// #
+
+  vector <string> gd_base_names;
+  //map<string, string> gd_base_names;
+  map<string, vector<cDiffEntry> > mut_table;
+  //if comparing multiple gds...
+  if (gd_name_list_ref.size() > 0){
+    for (uint32_t i = 0; i < gd_name_list_ref.size(); i++){
+      //compile gd info into a map
+      cGenomeDiff temp_gd(gd_name_list_ref[i]);
+      gd_base_names.push_back(temp_gd.metadata.run_name);
+      diff_entry_list_t muts = temp_gd.mutation_list();
+      for (diff_entry_list_t::iterator itr = muts.begin(); itr != muts.end(); itr++){
+        mut_table[temp_gd.metadata.run_name].push_back(**itr);
+      }
+    }
+  }
+
   size_t row_num = 0;
 
   stringstream ss; 
   ss << "<!-- Item Lines -->" << endl;
+  (*this) += ss.str();
+  ss.str("");
   for (diff_entry_list_t::iterator itr = list_ref.begin(); itr != list_ref.end(); itr ++) { 
     cDiffEntry& mut = (**itr);
-    if ((row_num != 0) && (options.repeat_header != 0) && (row_num % options.repeat_header == 0))
-    {
-      Header_Line();
+    if (gd_name_list_ref.size() > 0){
+      if ((row_num != 0) && (options.repeat_header != 0) && (row_num % 10 == 0)){
+        Header_Line();
+      }
+    }
+    else{
+      if ((row_num != 0) && (options.repeat_header != 0) && (row_num % options.repeat_header == 0))
+      {
+        Header_Line();
+      }
     }
     row_num++;
         
@@ -2390,8 +2418,29 @@ void Html_Mutation_Table_String::Item_Lines()
       ss << td(ALIGN_CENTER, cell_seq_id) << "<!-- Seq_Id -->" << endl;
     }
     ss << td(ALIGN_RIGHT, cell_position) << "<!-- Position -->" << endl;
-
+    
     ss << td(ALIGN_CENTER, cell_mutation) << "<!-- Cell Mutation -->" << endl;
+    
+    if (gd_name_list_ref.size() > 0){
+      //for each gd
+      for (uint32_t j = 0; j < gd_name_list_ref.size(); j++){
+        string base_name = gd_base_names[j];
+        bool written = false;
+        for (int x = 0; x < mut_table[base_name].size(); x++){
+          if (mut_table[base_name][x] == mut){
+            ss << td(ALIGN_CENTER, "100%") << endl;
+            written = true;
+            break;
+          }
+        }
+        if (! written){
+          ss << td(ALIGN_CENTER, "-") << endl;
+        }
+        
+      }
+      
+    } 
+    
     if (settings.lenski_format) {
       ss << "<!-- Lenski_Format -->" << endl;
       ss << td(ALIGN_CENTER, cell_mutation_annotation) << endl;
@@ -2414,6 +2463,10 @@ void Html_Mutation_Table_String::Item_Lines()
     ss << "</tr>" << endl;
     
     ss << "<!-- End Table Row -->" << endl;
+    
+    (*this) += ss.str();
+    ss.str("");
+    
   } //##### END TABLE ROW ####
   
   if (legend_row) {

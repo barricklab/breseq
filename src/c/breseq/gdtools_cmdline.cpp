@@ -21,8 +21,10 @@ LICENSE AND COPYRIGHT
 #include "libbreseq/anyoption.h"
 #include "libbreseq/genome_diff.h"
 #include "libbreseq/annotated_sequence.h"
+#include "libbreseq/output.h"
 
 using namespace breseq;
+using namespace output;
 
 int gdtools_usage()
 {
@@ -580,23 +582,101 @@ int do_annotate(int argc, char* argv[])
   options
   ("help,h", "produce advanced help message", TAKES_NO_ARGUMENT)
   // convert to basing everything off the main output path, so we don't have to set so many options
+  ("input,i", "path to input genome diff (REQUIRED)")
   ("output,o", "path to output genome diff with added mutation data (REQUIRED)")
   ("reference,r", "reference sequence in GenBank flatfile format (REQUIRED)")
   ("ignore-pseudogenes", "treats pseudogenes as normal genes for calling AA changes", TAKES_NO_ARGUMENT)
+  ("compare", "blah", TAKES_NO_ARGUMENT)
   ;
   options.processCommandArgs(argc, argv);
   
-  if (!options.count("output")
-    ||!options.count("reference")
-    ||(options.getArgc() != 1)
+    if (options.count("compare")){
+    if (!options.count("input") ||
+        !options.count("output") ||
+        !options.count("reference")){
+      options.printUsage();
+      return -1;
+    }
+    else{
+      Settings settings;
+      
+      Options gd_options;
+      
+      ofstream HTML;
+      HTML.open(options["output"].c_str());
+      if (!HTML.good()){
+        cerr << "Could not open " << options["output"] << " for writing." << endl;
+        return -1;
+      }
+      
+      vector<string> gd_path_names = from_string<vector<string> >(options["input"]);
+      
+      
+      vector<string> gd_base_names;
+      for (uint32_t i = 0; i < gd_path_names.size(); i++){
+        uint32_t last_slash_index = -1;
+        string path_name = gd_path_names[i];
+        for (uint32_t j = 0; j <path_name.size(); j++){
+          if (path_name[j] == '/'){
+            last_slash_index = j;
+          }
+        }
+        if (last_slash_index == -1){
+          gd_base_names.push_back(path_name);
+        }
+        else{
+          gd_base_names.push_back(path_name.substr(last_slash_index + 1));
+        }
+      }
+      
+      cGenomeDiff combined_gd;
+      for (uint32_t i = 0; i < gd_path_names.size(); i++){
+        cGenomeDiff single_gd(gd_path_names[i]);
+        combined_gd.merge(single_gd);
+      }
+      
+      combined_gd.sort();
+      
+      diff_entry_list_t muts = combined_gd.mutation_list();
+      
+      settings.reference_file_names = from_string<vector<string> >(options["reference"]);
+      settings.no_evidence = true;
+      gd_options.repeat_header = true;
+      
+      HTML << output::html_header("Mutation Comparison", settings);
+      
+      string table = output::Html_Mutation_Table_String(settings,
+                                         combined_gd,
+                                         muts,
+                                         gd_path_names,
+                                         gd_options);
+      
+      
+      HTML << table;
+      HTML.close();
+      
+    }
+    return 0;
+  }
+  
+  else if (!options.count("output")
+    || !options.count("reference")
       ) {
     options.printUsage();
     return -1;
   }
   
+  //if (!options.count("output")
+  //  ||!options.count("reference")
+  //  ||(options.getArgc() != 1)
+  //    ) {
+  //  options.printUsage();
+  //  return -1;
+  //}
+  
   UserOutput uout("ANNOTATE");
   uout("Reading input GD file",options.getArgv(0));
-  cGenomeDiff gd(options.getArgv(0));
+  cGenomeDiff gd(options["input"]);
   
   vector<string> reference_file_names = from_string<vector<string> >(options["reference"]);
 
