@@ -577,118 +577,111 @@ int do_not_evidence(int argc, char *argv[])
 
 int do_annotate(int argc, char* argv[])
 {
-  AnyOption options("ANNOTATE -o <output.gd> -r <reference.gbk> <input.gd >");
+  AnyOption options("ANNOTATE [-o annotated.* --html] -r reference.gbk input.1.gd [input.2.gd ... ]");
   
   options
   ("help,h", "produce advanced help message", TAKES_NO_ARGUMENT)
-  // convert to basing everything off the main output path, so we don't have to set so many options
-  ("input,i", "path to input genome diff (REQUIRED)")
-  ("output,o", "path to output genome diff with added mutation data (REQUIRED)")
+  ("output,o", "path to output file with added mutation data. (DEFAULT: annotated.gd OR annotated.html")
   ("reference,r", "reference sequence in GenBank flatfile format (REQUIRED)")
   ("ignore-pseudogenes", "treats pseudogenes as normal genes for calling AA changes", TAKES_NO_ARGUMENT)
-  ("compare", "blah", TAKES_NO_ARGUMENT)
+  ("html", "generate HTML output instead of GenomeDiff (REQUIRED)", TAKES_NO_ARGUMENT)
   ;
+  options.addUsage("");
+  options.addUsage("If multiple GenomeDiff input files are provided, then they are");
+  options.addUsage("merged and the frequencies from each file shown for each mutation.");
+
   options.processCommandArgs(argc, argv);
   
-    if (options.count("compare")){
-    if (!options.count("input") ||
-        !options.count("output") ||
-        !options.count("reference")){
-      options.printUsage();
-      return -1;
-    }
-    else{
-      Settings settings;
-      
-      Options gd_options;
-      
-      ofstream HTML;
-      HTML.open(options["output"].c_str());
-      if (!HTML.good()){
-        cerr << "Could not open " << options["output"] << " for writing." << endl;
-        return -1;
-      }
-      
-      vector<string> gd_path_names = from_string<vector<string> >(options["input"]);
-      
-      
-      vector<string> gd_base_names;
-      for (uint32_t i = 0; i < gd_path_names.size(); i++){
-        uint32_t last_slash_index = -1;
-        string path_name = gd_path_names[i];
-        for (uint32_t j = 0; j <path_name.size(); j++){
-          if (path_name[j] == '/'){
-            last_slash_index = j;
-          }
-        }
-        if (last_slash_index == -1){
-          gd_base_names.push_back(path_name);
-        }
-        else{
-          gd_base_names.push_back(path_name.substr(last_slash_index + 1));
-        }
-      }
-      
-      cGenomeDiff combined_gd;
-      for (uint32_t i = 0; i < gd_path_names.size(); i++){
-        cGenomeDiff single_gd(gd_path_names[i]);
-        combined_gd.merge(single_gd);
-      }
-      
-      combined_gd.sort();
-      
-      diff_entry_list_t muts = combined_gd.mutation_list();
-      
-      settings.reference_file_names = from_string<vector<string> >(options["reference"]);
-      settings.no_evidence = true;
-      gd_options.repeat_header = true;
-      
-      HTML << output::html_header("Mutation Comparison", settings);
-      
-      string table = output::Html_Mutation_Table_String(settings,
-                                         combined_gd,
-                                         muts,
-                                         gd_path_names,
-                                         gd_options);
-      
-      
-      HTML << table;
-      HTML.close();
-      
-    }
-    return 0;
+  UserOutput uout("ANNOTATE");
+  
+  bool html_output_mode = options.count("html");
+  string output_file_name;
+  if (options.count("output")) 
+    output_file_name = options["output"];
+  else
+    output_file_name = (html_output_mode) ? "annotated.html" : "annotated.gd";
+  
+  vector<string> gd_path_names;
+  for (int32_t i = 0; i < options.getArgc(); ++i) {
+    gd_path_names.push_back(options.getArgv(i));
   }
   
-  else if (!options.count("output")
-    || !options.count("reference")
-      ) {
+  if ( (gd_path_names.size() == 0) 
+    || !options.count("reference")){
     options.printUsage();
     return -1;
   }
   
-  //if (!options.count("output")
-  //  ||!options.count("reference")
-  //  ||(options.getArgc() != 1)
-  //    ) {
-  //  options.printUsage();
-  //  return -1;
-  //}
+  // more than one file was provided as input
+  bool compare_mode = (gd_path_names.size() > 1);
   
-  UserOutput uout("ANNOTATE");
-  uout("Reading input GD file",options.getArgv(0));
-  cGenomeDiff gd(options["input"]);
+  vector<string> gd_base_names;
+  for (uint32_t i = 0; i < gd_path_names.size(); i++){
+    size_t last_slash_index = string::npos;
+    string path_name = gd_path_names[i];
+    for (uint32_t j = 0; j <path_name.size(); j++){
+      if (path_name[j] == '/'){
+        last_slash_index = j;
+      }
+    }
+    if (last_slash_index == string::npos){
+      gd_base_names.push_back(path_name);
+    }
+    else{
+      gd_base_names.push_back(path_name.substr(last_slash_index + 1));
+    }
+  }
   
-  vector<string> reference_file_names = from_string<vector<string> >(options["reference"]);
+  cGenomeDiff gd;
+  for (uint32_t i = 0; i < gd_path_names.size(); i++){
+    uout("Reading input GD file",gd_path_names[i]);
+    cGenomeDiff single_gd(gd_path_names[i]);
+    gd.merge(single_gd);
+  }
+  gd.sort();
 
+  vector<string> reference_file_names = from_string<vector<string> >(options["reference"]);
   uout("Reading input reference sequence files") << reference_file_names << endl;
   cReferenceSequences ref_seq_info;
   ref_seq_info.LoadFiles(reference_file_names);
-
+    
   uout("Annotating mutations");
-  ref_seq_info.annotate_mutations(gd, false, options.count("ignore-pseudogenes"));
+  ref_seq_info.annotate_mutations(gd, true, options.count("ignore-pseudogenes"));
+    
+  if (html_output_mode) {
+    
+    uout("Writing output HTML file", output_file_name);
 
-  uout("Writing output GD file", options["output"]);
-  gd.write(options["output"]);
+    ofstream HTML;
+    HTML.open(output_file_name.c_str());
+    ASSERT(HTML.good(), "Could not open " + options["output"] + " for writing.");
+    
+    
+    Settings settings;
+    Options gd_options;
+    if (compare_mode)
+      gd_options.repeat_header = true;
+      
+    HTML << output::html_header("Mutation Comparison", settings);
+    
+    diff_entry_list_t muts = gd.mutation_list();
+
+    
+    string table = output::Html_Mutation_Table_String(
+                                                      settings,
+                                                      gd,
+                                                      muts,
+                                                      gd_path_names,
+                                                      gd_options
+                                                      );
+    
+    HTML << table;
+    HTML.close();
+
+  } else {
+    uout("Writing output GD file", options["output"]);
+    gd.write(output_file_name);
+  }
   
   return 0;
 }

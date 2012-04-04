@@ -1737,7 +1737,7 @@ void cReferenceSequences::annotate_1_mutation(cDiffEntry& mut, uint32_t start, u
   mut["gene_name"] = "";
   mut["gene_position"] = "";
   mut["gene_product"] = "";
-  mut["gene_product_hide"] = "";
+  mut["_gene_product_hide"] = "";
   mut["gene_list"] = ""; //#affected genes
 
   string seq_id = mut["seq_id"];
@@ -1911,10 +1911,8 @@ void cReferenceSequences::annotate_1_mutation(cDiffEntry& mut, uint32_t start, u
     // We ended up calling this function a lot.
     string sJoinedGeneList = join(gene_name_list, ", ");
     
-    mut["gene_product"] = "<i>";
     mut["gene_product"] += sJoinedGeneList;
-    mut["gene_product"] += "</i>";
-    mut["gene_product_hide"] = mut["gene_product"];
+    mut["_gene_product_hide"] = "<i>" + mut["gene_product"] + "</i>";
     
     // @MDS0004 - This number here will condense the number of genes listed.
     // Change to show how many appear in HTML. This is a javascript call.
@@ -1925,7 +1923,7 @@ void cReferenceSequences::annotate_1_mutation(cDiffEntry& mut, uint32_t start, u
     {
       string sID = "gene_hide_" + to_string(mut._type) + "_" + mut._id;
       string sButtonID = sID + "_button";
-      mut["gene_product_hide"] =
+      mut["_gene_product_hide"] =
         "<i title=\"" + sJoinedGeneList + "\"><b>" +
         to_string(gene_list.size()) +
         " genes</b> <noscript>Javascript Disabled: All genes shown.<br></noscript></i>"
