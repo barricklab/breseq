@@ -610,10 +610,13 @@ sub find_closest_repeat_region
 	return $is;
 }
 
+#return shortest example
+
 sub repeat_example
 {
 	my ($ref_seq_info, $repeat_name, $strand) = @_;
 	
+	my $return_repeat_seq;
 	foreach my $seq_id (sort keys %{$ref_seq_info->{repeat_lists}})
 	{
 		foreach my $rep (@{$ref_seq_info->{repeat_lists}->{$seq_id}})
@@ -622,12 +625,15 @@ sub repeat_example
 			{
 				my $repeat_seq = substr $ref_seq_info->{ref_strings}->{$seq_id}, $rep->{start} - 1, $rep->{end} - $rep->{start} + 1;
 				$repeat_seq = revcom($repeat_seq) if ($strand != $rep->{strand});
-				return $repeat_seq;
+				
+				$return_repeat_seq = $repeat_seq  if ((!defined $return_repeat_seq) || (length($return_repeat_seq) > length($repeat_seq)));
 			}
 		}
 	}	
 	
-	die "Unknown repeat type: $repeat_name";
+	die "Unknown repeat type: $repeat_name" if (!defined $return_repeat_seq);
+	
+	return $return_repeat_seq;
 }
 
 

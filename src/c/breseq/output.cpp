@@ -139,7 +139,7 @@ string header_style_string()
   ss << ".new_junction_header_row {background-color: rgb(0,0,155);}"       << endl;
   ss << ".copy_number_header_row {background-color: rgb(153,102,0);}"      << endl;
   ss << ".alternate_table_row_0 {background-color: rgb(255,255,255);}"     << endl;
-  ss << ".alternate_table_row_1 {background-color: rgb(230,230,245);}"     << endl;
+  ss << ".alternate_table_row_1 {background-color: rgb(235,235,235);}"     << endl;
   ss << ".gray_table_row {background-color: rgb(230,230,245);}"            << endl;
   ss << ".polymorphism_table_row {background-color: rgb(160,255,160);}"    << endl;
   ss << ".highlight_table_row {background-color: rgb(192,255,255);}"       << endl;
@@ -217,7 +217,10 @@ void html_index(const string& file_name, const Settings& settings, Summary& summ
 
   //Build Mutation Predictions table
   HTML << "<p>" << endl;
-  HTML << Html_Mutation_Table_String(settings, gd, muts, relative_path, false, one_ref_seq) << endl;
+  MutationTableOptions mt_options;
+  mt_options.relative_link = relative_path;
+  mt_options.one_ref_seq = one_ref_seq;
+  HTML << Html_Mutation_Table_String(settings, gd, muts, mt_options) << endl;
 
   //////
   // Unassigned evidence
@@ -424,8 +427,13 @@ string html_header (const string& title, const Settings& settings)
 
 
 
-void html_compare(Settings& settings,const string &file_name, const string &title, cGenomeDiff& gd,
-                  bool one_ref_seq, vector<string>& gd_name_list_ref, Options& options)
+void html_compare(
+                  const Settings& settings,
+                  const string &file_name, 
+                  const string &title, 
+                  cGenomeDiff& gd,
+                  MutationTableOptions& mt_options
+                  )
 {
   // Create stream and confirm it's open
   ofstream HTML(file_name.c_str());
@@ -435,44 +443,12 @@ void html_compare(Settings& settings,const string &file_name, const string &titl
     assert(HTML.good());
   }
 
-  //Build html head
-  HTML << "<html>" << endl;   
-  HTML << "<title>" << title << "</title>" << endl;
-  HTML << "<head>" << endl;
-  HTML << "<style type=\"text/css\">" << endl;
-  HTML << header_style_string() << endl;
-  HTML << "</style>" << endl;
-  HTML << "</head>" << endl;
+  diff_entry_list_t list_ref = gd.mutation_list();
   
-  diff_entry_list_t muts = gd.mutation_list();
-
-  HTML << Html_Mutation_Table_String(settings, gd, muts, gd_name_list_ref, options, false, one_ref_seq, "");
-  HTML << "</html>";
-  HTML.close();
-}
-
-void html_compare_polymorphisms(Settings& settings, const string& file_name, const string& title, diff_entry_list_t& list_ref)
-{
-  (void)settings; //TODO: unused?
-
-  // Create stream and confirm it's open
-  ofstream HTML(file_name.c_str());
-  
-  if(!HTML.good()) {
-    cerr << "Could not open file: " <<  file_name << endl;
-    assert(HTML.good());
-  }
-
   //Build html head
-  HTML << "<html>" << endl;
-  HTML << "<title>" << title << "</title>" << endl;
-  HTML << "<head>" << endl;
-  HTML << "<style type =\"text/css\">" << endl;
-  HTML << header_style_string() << endl;
-  HTML << "</style>" << endl;
-  HTML << "</head>" << endl;
-  HTML << html_read_alignment_table_string(list_ref, true); 
-  HTML << "</html>" << endl;
+  HTML << html_header(title, settings);
+  HTML << Html_Mutation_Table_String(settings, gd, list_ref, mt_options);
+  HTML << html_footer();
   HTML.close();
 }
   
@@ -804,7 +780,8 @@ string html_genome_diff_item_table_string(const Settings& settings, cGenomeDiff&
   //mutation
   if(first_item.is_mutation())
   {
-    return Html_Mutation_Table_String(settings, gd, list_ref); 
+    MutationTableOptions mt_options;
+    return Html_Mutation_Table_String(settings, gd, list_ref, mt_options); 
   }
   //evidence
   else
@@ -2014,59 +1991,18 @@ Html_Mutation_Table_String::Html_Mutation_Table_String(
                                                        const Settings& settings,
                                                        cGenomeDiff& gd,
                                                        diff_entry_list_t& list_ref,
-                                                       vector<string>& gd_name_list_ref,
-                                                       Options& options,
-                                                       bool legend_row, 
-                                                       bool one_ref_seq,
-                                                       const string& relative_link
+                                                       MutationTableOptions& options
                                                        )
   : string()
   , total_cols(0)
   , settings(settings)
   , gd(gd)
   , list_ref(list_ref)
-  , legend_row(legend_row)
-  , one_ref_seq(one_ref_seq)
-  , gd_name_list_ref(gd_name_list_ref)
   , options(options)
-  , relative_link(relative_link)
 {
   (*this) += "<!--Output Html_Mutation_Table_String-->\n";
   (*this) += "<table border=\"0\" cellspacing=\"1\" cellpadding=\"3\">\n";
   
-  this->Header_Line();
-  this->Item_Lines();
-}
-
-Html_Mutation_Table_String::Html_Mutation_Table_String(
-                                                       const Settings& settings,
-                                                       cGenomeDiff& gd,
-                                                       diff_entry_list_t& list_ref,
-  			                                               const string& relative_path, 
-                                                       bool legend_row, 
-                                                       bool one_ref_seq
-                                                       )
-  : string()
-  , total_cols(0)
-  , settings(settings)
-  , gd(gd)
-  , list_ref(list_ref)
-  , legend_row(legend_row)
-  , one_ref_seq(one_ref_seq)
-  , relative_link(relative_path)
-
-{
-
-
-  
-  (*this) += "<!--Output Html_Mutation_Table_String-->\n";
-  (*this) += "<table border=\"0\" cellspacing=\"1\" cellpadding=\"3\">\n";
-  vector<string> gd_name_list_ref;
-  this->gd_name_list_ref = gd_name_list_ref;
-  
-  Options options;
-  options.repeat_header = false;
-  this->options = options;
   
   this->Header_Line();
   this->Item_Lines();
@@ -2079,20 +2015,22 @@ Html_Mutation_Table_String::Html_Mutation_Table_String(
  * Description:  
  *--------------------------------------------------------------------------------------
  */
-void Html_Mutation_Table_String::Header_Line()
+void Html_Mutation_Table_String::Header_Line(bool print_main_header)
 {
   // #####################
   // #### HEADER LINE ####
   // #####################
-  stringstream ss; //<! Main Build Object for Function
+  
   string header_text = ((list_ref.size() > 1) ? "Predicted mutations" : "Predicted mutation");
+
+  stringstream ss; //<! Main Build Object for Function
 
   // There are three possibilities for the frequency column(s)
   // (1) We don't want it at all. (Single genome no poly prediction)
   vector<string> freq_header_list;
 
-  if (gd_name_list_ref.size() > 0) {
-    freq_header_list = gd_name_list_ref;
+  if (options.gd_name_list_ref.size() > 0) {
+    freq_header_list = options.gd_name_list_ref;
   } 
   else if(settings.polymorphism_prediction) {
     freq_header_list = make_vector<string>("freq");
@@ -2103,7 +2041,7 @@ void Html_Mutation_Table_String::Header_Line()
     size_t header_rows = header_list.size() - 1; //!< -1 is necessary for C++
 
     total_cols = 7 + freq_header_list.size() ;
-    if(!one_ref_seq) total_cols += 1; 
+    if(!options.one_ref_seq) total_cols += 1; 
     if(!settings.no_evidence) total_cols += 1;
 
     for (size_t i = 1; i <= header_rows; i++) {
@@ -2111,7 +2049,7 @@ void Html_Mutation_Table_String::Header_Line()
      ss << "<tr>" << endl;
       if(!settings.no_evidence)
         ss << th("evidence") << endl;
-      if(!one_ref_seq)
+      if(!options.one_ref_seq)
        ss << th(nonbreaking("seq id")) << endl;
 
       ss << th( (header_rows == i) ? "position" : "") << endl;
@@ -2155,7 +2093,7 @@ void Html_Mutation_Table_String::Header_Line()
     }
   } else {
     total_cols = 5 + freq_header_list.size();
-    if (!one_ref_seq)
+    if (!options.one_ref_seq)
       total_cols += 1;
 
     if (!settings.no_evidence)
@@ -2166,7 +2104,7 @@ void Html_Mutation_Table_String::Header_Line()
     if (!settings.no_evidence)
       ss << th("evidence") << endl;
 
-    if(!one_ref_seq)
+    if(!options.one_ref_seq)
       ss << th(nonbreaking("seq id")) << endl;
 
     ss << th("position") << endl;
@@ -2186,9 +2124,9 @@ void Html_Mutation_Table_String::Header_Line()
     ss << "</tr>" << endl; 
   }
 
-  if(header_text != "")
+  if(print_main_header && (header_text != ""))
     (*this) += tr(th("colspan=\"" + to_string(total_cols) + "\" align=\"left\" class=\"mutation_header_row\"", header_text));
-
+  
   ss << endl;
   (*this) += ss.str(); 
 }
@@ -2203,23 +2141,6 @@ void Html_Mutation_Table_String::Item_Lines()
 // #   #### ITEM LINES ####
 // #   ####################
 // #
-
-  vector <string> gd_base_names;
-  //map<string, string> gd_base_names;
-  map<string, vector<cDiffEntry> > mut_table;
-  //if comparing multiple gds...
-  if (gd_name_list_ref.size() > 0){
-    for (uint32_t i = 0; i < gd_name_list_ref.size(); i++){
-      //compile gd info into a map
-      cGenomeDiff temp_gd(gd_name_list_ref[i]);
-      gd_base_names.push_back(temp_gd.metadata.run_name);
-      diff_entry_list_t muts = temp_gd.mutation_list();
-      for (diff_entry_list_t::iterator itr = muts.begin(); itr != muts.end(); itr++){
-        mut_table[temp_gd.metadata.run_name].push_back(**itr);
-      }
-    }
-  }
-
   size_t row_num = 0;
 
   stringstream ss; 
@@ -2228,16 +2149,10 @@ void Html_Mutation_Table_String::Item_Lines()
   ss.str("");
   for (diff_entry_list_t::iterator itr = list_ref.begin(); itr != list_ref.end(); itr ++) { 
     cDiffEntry& mut = (**itr);
-    if (gd_name_list_ref.size() > 0){
-      if ((row_num != 0) && (options.repeat_header != 0) && (row_num % 10 == 0)){
-        Header_Line();
-      }
-    }
-    else{
-      if ((row_num != 0) && (options.repeat_header != 0) && (row_num % options.repeat_header == 0))
-      {
-        Header_Line();
-      }
+
+    if ((row_num != 0) && (options.repeat_header != 0) && (row_num % options.repeat_header == 0))
+    {
+      Header_Line(false); // don't print main header again
     }
     row_num++;
         
@@ -2264,19 +2179,24 @@ void Html_Mutation_Table_String::Item_Lines()
     }
   
     string row_class = "normal_table_row";
-
+    if (options.gd_name_list_ref.size() > 0) {
+      row_class = "alternate_table_row_" + to_string(row_num % 2);
+    }
+    
     // There are three possibilities for the frequency column(s)
     // (1) We don't want it at all. (Single genome no poly prediction)   
     vector<string> freq_list;
-    
-  //TODO @JEB 
-// #     # (2) We want multiple columns because we are comparing genomes.
-// #     if (defined $gd_name_list_ref) {
-// #       #"_freq_[name]" keys were made within GenomeDiff structure        
-// #       @freq_list = map { $mut->{"frequency_$_"} } @$gd_name_list_ref; 
-// #       $row_class = "alternate_table_row_" . ($row_num % 2);
-// #     }
    
+    // (2) We are in compare mode and need a column for each file
+    if (options.gd_name_list_ref.size() > 0) {
+      //for each gd
+      for (uint32_t j = 0; j < options.gd_name_list_ref.size(); j++) {
+        string base_name = options.gd_name_list_ref[j];
+        string key = "frequency_" + base_name;
+        freq_list.push_back(mut.count(key) ? mut[key] : "0");
+      }
+    }
+    
     // (3) We want a single column (polymorphism prediction)
     if (settings.polymorphism_prediction) {
       // polymorphisms get highlighted
@@ -2414,33 +2334,13 @@ void Html_Mutation_Table_String::Item_Lines()
     if (!settings.no_evidence) {
       ss << td(ALIGN_CENTER, evidence_string) << "<!-- Evidence -->" << endl;
     }
-    if (!one_ref_seq) {
+    if (!options.one_ref_seq) {
       ss << td(ALIGN_CENTER, cell_seq_id) << "<!-- Seq_Id -->" << endl;
     }
     ss << td(ALIGN_RIGHT, cell_position) << "<!-- Position -->" << endl;
     
     ss << td(ALIGN_CENTER, cell_mutation) << "<!-- Cell Mutation -->" << endl;
-    
-    if (gd_name_list_ref.size() > 0){
-      //for each gd
-      for (uint32_t j = 0; j < gd_name_list_ref.size(); j++){
-        string base_name = gd_base_names[j];
-        bool written = false;
-        for (size_t x = 0; x < mut_table[base_name].size(); x++){
-          if (mut_table[base_name][x] == mut){
-            ss << td(ALIGN_CENTER, "100%") << endl;
-            written = true;
-            break;
-          }
-        }
-        if (! written){
-          ss << td(ALIGN_CENTER, "-") << endl;
-        }
-        
-      }
-      
-    } 
-    
+          
     if (settings.lenski_format) {
       ss << "<!-- Lenski_Format -->" << endl;
       ss << td(ALIGN_CENTER, cell_mutation_annotation) << endl;
@@ -2469,7 +2369,7 @@ void Html_Mutation_Table_String::Item_Lines()
     
   } //##### END TABLE ROW ####
   
-  if (legend_row) {
+  if (options.legend_row) {
     ss << "<tr>" << endl;
     ss << td("colspan=\"" + to_string(total_cols) + "\"", 
                     b("Evidence codes: RA = read alignment, MC = missing coverage, JC = new junction"));
@@ -2487,16 +2387,22 @@ void Html_Mutation_Table_String::Item_Lines()
 //===============================================================================
 string Html_Mutation_Table_String::freq_to_string(const string& freq)
 {
-  if (freq == "H") {
+  if (freq == "?")
+    return "?";
+  
+  if (freq == "D")
+    return "&Delta;";
+  
+  if (freq == "H")
     return "H";
-  }
-  if (from_string<double>(freq) == 0.0) {
+
+  if (from_string<double>(freq) == 0.0)
     return "";
-  }
+
   stringstream ss;
-  if (from_string<double>(freq) == 1.0 || freq.empty()) {
+  if (from_string<double>(freq) == 1.0 || freq.empty())
     ss << "100%";
-  } 
+
   else {
     double conv_freq = from_string<double>(freq) * 100;
     ss.width(4);
@@ -2518,13 +2424,13 @@ string Html_Mutation_Table_String::freq_cols(vector<string> freq_list)
   for (vector<string>::iterator itr = freq_list.begin();
        itr != freq_list.end(); itr ++) {  
     string& freq = (*itr);
-    if (settings.shade_frequencies) {
+    if (options.shade_frequencies) {
       string bgcolor;
       if (freq == "1") {
        bgcolor = "Blue";
       }
       if (!bgcolor.empty()) {
-        ss << td("align=\"right\" bgcolor=\"" + bgcolor +"\"", "&nbsp;"); //TODO Check
+        ss << td("align=\"right\" bgcolor=\"" + bgcolor +"\"", "&nbsp;");
       } 
       else {
         ss << td(ALIGN_RIGHT,"&nbsp;");

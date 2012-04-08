@@ -266,6 +266,50 @@ bool cDiffEntry::is_validation() const
 {
   return gd_entry_type_lookup_table[_type].size() == 4;
 }
+  
+uint32_t cDiffEntry::get_start()
+{
+  switch (this->_type) {
+    case SNP:
+    case SUB:
+    case DEL:
+    case INS:
+    case MOB:
+    case INV:
+    case AMP:
+    case CON:
+      return from_string<uint32_t>((*this)[POSITION]);
+    case UN:
+      return from_string<uint32_t>((*this)[START]);
+    default:
+      ERROR("cDiffEntry::get_start not implemented for type: " + gd_entry_type_lookup_table[this->_type]);
+  }
+  return 0;
+}
+  
+uint32_t cDiffEntry::get_end()
+{
+  switch (this->_type) {
+    case SNP:
+      return from_string<uint32_t>((*this)[POSITION]);
+    case SUB:
+    case DEL:
+    case INV:
+    case AMP:
+    case CON:
+      return from_string<uint32_t>((*this)[POSITION]) + from_string<uint32_t>((*this)[SIZE]);
+    case INS:
+      return from_string<uint32_t>((*this)[POSITION]) + (*this)[NEW_SEQ].length();
+    case MOB:
+      return from_string<uint32_t>((*this)[POSITION]) + from_string<uint32_t>((*this)["duplication_size"]);
+    case UN:
+      return from_string<uint32_t>((*this)[END]);
+    default:
+      ERROR("cDiffEntry::get_end not implemented for type: " + gd_entry_type_lookup_table[this->_type]);
+  }
+  return 0;
+}
+
 
 cDiffEntry cDiffEntry::to_spec() const
 {
@@ -279,8 +323,6 @@ cDiffEntry cDiffEntry::to_spec() const
   }
 
   return de;
-
-
 }
   
   
@@ -2461,45 +2503,25 @@ diff_entry_ptr_t cGenomeDiff::parent(const cDiffEntry& evidence)
   return diff_entry_ptr_t(NULL);
 }
 
-bool cGenomeDiff::mutation_unknown(cDiffEntry mut)
+  
+// Helper functionf or mutation_unknown and mutation_deleted
+bool cGenomeDiff::mutation_in_entry_of_type(cDiffEntry mut, const gd_entry_type type)
 {
+  uint32_t start = mut.get_start();
+  uint32_t end = mut.get_end();
   
-  if (mut._type == SNP) {
-    return interval_un(from_string<uint32_t>(mut[POSITION]),
-                       from_string<uint32_t>(mut[POSITION]));
-  }
+  diff_entry_list_t check_list = list(make_vector<gd_entry_type>(type));
 
-  //Should be updated to new unknown that includes linkage
-  if (mut._type == INS) {
-    return interval_un(from_string<uint32_t>(mut[POSITION]),
-                       from_string<uint32_t>(mut[POSITION])) + 1;
+  for (diff_entry_list_t::iterator itr = check_list.begin(); itr != check_list.end(); itr++) {
+    
+    cDiffEntry de(**itr);
+    if ( (start >= de.get_start()) && (end <= de.get_end()) ) {
+      return true;
+    }
   }
-  if (mut._type == DEL) {
-
-//#doesn't work b/c evidence list may not be correct here
-//		## only call unknowns if all support is RA
-//#		my $only_ra_evidence = 1;
-//#		foreach my $ev ($self->mutation_evidence_list($mut))
-//#		{
-//#			print Dumper($ev);
-//#			$only_ra_evidence &&= $ev->{type} eq 'RA';
-//#		}
-//#		print Dumper($mut);
-//#		print "Only RA evidence? $only_ra_evidence\n";		
-//#		return 0 if (!$only_ra_evidence);
-		return interval_un(from_string<uint32_t>(mut[POSITION]),
-                       from_string<uint32_t>(mut[POSITION]) + from_string<uint32_t>(mut["size"]) - 1);
-	}
-	
-
-  if (mut._type == SUB) {
-    return interval_un(from_string<uint32_t>(mut[POSITION]),
-                       from_string<uint32_t>(mut[POSITION]) - 1);
-  }
-  
   return false;
 }
-
+  
 void cGenomeDiff::add_reject_reasons(cDiffEntry item, const string& reject)
 {
   if (item.entry_exists(REJECT))
@@ -2508,22 +2530,6 @@ void cGenomeDiff::add_reject_reasons(cDiffEntry item, const string& reject)
     item[REJECT] += reject;
 }
 
-bool 
-cGenomeDiff::interval_un(const uint32_t& start,const uint32_t& end)
-{
-  diff_entry_list_t un_list = list(make_vector<gd_entry_type>(UN));
-
-  for (diff_entry_list_t::iterator itr = un_list.begin();
-       itr != un_list.end(); itr++) {
-    cDiffEntry un(**itr);
-
-    if (start >= from_string<uint32_t>(un[START]) &&
-        end <= from_string<uint32_t>(un[END])) {
-      return true;
-    }
-  }
-  return false;
-}
 
 // This function will use the current GD and apply it to the new_ref_seq_info.
 // When calling this function make SURE that you load ref_seq_info and

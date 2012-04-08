@@ -163,6 +163,10 @@ public:
 
   //! Return if this diff entry is a validation
   bool is_validation() const;
+  
+  //! Common function for getting start or end of mutation or evidence
+  uint32_t get_start();
+  uint32_t get_end();
 
   //! Marshal this diff entry into an ordered list of fields.
   virtual void marshal(field_list_t& s) const;
@@ -314,20 +318,19 @@ public:
 
   //! Removes all GD entries that aren't used as evidence.
   void filter_not_used_as_evidence(bool verbose=false);
+
+  //! Remove items used as evidence by any mutations out of input list
+  diff_entry_list_t filter_used_as_evidence(const diff_entry_list_t& list);
   
-  //! Call to check if loaded info is matches supplied reference.
+  //! Call to check if loaded info seq_ids match supplied reference.
   bool is_valid(cReferenceSequences& ref_seq_info, bool verbose=false);
   
   //! Call to generate random mutations.
   void random_mutations(const string& exclusion_file, const string& type, uint32_t number, uint32_t read_length, cAnnotatedSequence& ref_seq_info, uint32_t rand_seed, bool verbose=false);
   
-  //! Remove items used as evidence by any mutations out of input list
-  diff_entry_list_t filter_used_as_evidence(const diff_entry_list_t& list);
-  
   //! Retrieve cDiffEntrys that match given type(s) 
-  diff_entry_list_t list(const vector<gd_entry_type>& types = vector<gd_entry_type>());
-  
   const diff_entry_list_t list() const { return _entry_list; }
+  diff_entry_list_t list(const vector<gd_entry_type>& types = vector<gd_entry_type>());
   
   //! retrieve cDiffEntrys that match given type(s) and do not have 'no_show' set
   diff_entry_list_t show_list(const vector<gd_entry_type>& types = vector<gd_entry_type>());
@@ -346,8 +349,10 @@ public:
   //Additional functions that need? adding from GenomeDiff.gm
   void add_reject_reasons(cDiffEntry item, const string& reason);
   size_t number_reject_reasons(cDiffEntry item);
-  bool mutation_unknown(cDiffEntry mut);
-  bool interval_un (const uint32_t& start, const uint32_t& end);
+  
+  bool mutation_in_entry_of_type(cDiffEntry mut, const gd_entry_type type);
+  bool mutation_unknown(cDiffEntry mut) { return mutation_in_entry_of_type(mut, UN); }
+  bool mutation_deleted(cDiffEntry mut) { return mutation_in_entry_of_type(mut, DEL); }
 
   void apply_to_sequences(cReferenceSequences &ref_seq_info, cReferenceSequences& new_ref_seq_info, bool verbose=false);
   void shift_positions(cDiffEntry& item, cReferenceSequences& ref_seq_info, bool verbose=false);
@@ -371,7 +376,7 @@ public:
 
 
 protected:  	
-  const string _default_filename; //!< Default filename for this diff.
+  string _default_filename; //!< Default filename for this diff.
   diff_entry_list_t _entry_list; //!< All diff entries.
   uint32_t _unique_id_counter; //!< Smallest available id.
   map<uint32_t,bool> unique_id_used;
