@@ -288,8 +288,6 @@ namespace breseq
 		bool lenski_format;                                   // Default = false (not implemented!)
     //! don't create any HTML evidence files
 		bool no_evidence;                                     // Default = false (rarely used)
-    //! show blue boxes rather than precentages in predictions
-		bool shade_frequencies;                               // Default = false
     
     //! Settings: Experimental
     

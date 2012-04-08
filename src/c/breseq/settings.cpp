@@ -346,7 +346,6 @@ namespace breseq
     
 		this->lenski_format = false;
 		this->no_evidence = false;
-		this->shade_frequencies = false;
     this->add_metadata_to_gd = false;
     
     ////////////////////

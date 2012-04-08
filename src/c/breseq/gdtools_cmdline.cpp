@@ -233,14 +233,13 @@ int do_mutate(int argc, char *argv[])
 
 int do_subtract(int argc, char *argv[])
 {
-  AnyOption options("SUBTRACT -o <output.gd> <base.gd minus1.gd minus2.gd ...>");
-  options("input,i",   "input GD file");
+  AnyOption options("SUBTRACT [-o output.gd] input.gd minus1.gd [minus2.gd ...]");
   options("output,o",  "output GD file");
   options("verbose,v", "verbose mode", TAKES_NO_ARGUMENT);
   options.processCommandArgs(argc, argv);
   
   options.addUsage("");
-  options.addUsage("\tCreates a GD file of mutations from the base.gd after removing mutations present in additional minus#.gd GD files.");
+  options.addUsage("Creates a GD file of mutations from the input.gd after removing mutations present in additional minus#.gd GD files.");
   
   if (!options.count("output")) {
     options.addUsage("");
@@ -616,29 +615,78 @@ int do_annotate(int argc, char* argv[])
   bool compare_mode = (gd_path_names.size() > 1);
   
   vector<string> gd_base_names;
-  for (uint32_t i = 0; i < gd_path_names.size(); i++){
-    size_t last_slash_index = string::npos;
-    string path_name = gd_path_names[i];
-    for (uint32_t j = 0; j <path_name.size(); j++){
-      if (path_name[j] == '/'){
-        last_slash_index = j;
-      }
-    }
-    if (last_slash_index == string::npos){
-      gd_base_names.push_back(path_name);
-    }
-    else{
-      gd_base_names.push_back(path_name.substr(last_slash_index + 1));
-    }
+  for (uint32_t i = 0; i < gd_path_names.size(); i++){    
+    cString s(gd_path_names[i]);
+    s = s.get_base_name_no_extension();
+    gd_base_names.push_back(s);
   }
   
+  // First use merge to produce a file with a line for each mutation
   cGenomeDiff gd;
+  vector<diff_entry_list_t> mut_lists;
+  vector<cGenomeDiff> gd_list;
+
   for (uint32_t i = 0; i < gd_path_names.size(); i++){
     uout("Reading input GD file",gd_path_names[i]);
     cGenomeDiff single_gd(gd_path_names[i]);
+    gd_list.push_back(single_gd);
+    mut_lists.push_back(single_gd.mutation_list());
     gd.merge(single_gd);
   }
   gd.sort();
+  
+  // Then add frequency columns for all genome diffs
+  if (compare_mode) {
+    
+    diff_entry_list_t de_list = gd.mutation_list();
+    bool found = false;
+    
+    for (diff_entry_list_t::iterator it = de_list.begin(); it != de_list.end(); it++) { 
+
+      diff_entry_ptr_t& this_mut = *it;
+    
+      // for each genome diff compared
+      for (uint32_t i=0; i<mut_lists.size(); i++) { 
+		
+        string freq_key = "frequency_" + gd_base_names[i];
+        (*this_mut)[freq_key] = "0";
+
+        diff_entry_list_t& mut_list = mut_lists[i];
+        if (mut_list.size() == 0) 
+          continue; 
+        
+        bool found = false;
+        
+        // for top mutation in this genomedff (they are sorted by position)
+        diff_entry_ptr_t check_mut;
+        check_mut = mut_list.front();        
+        
+        // we found the exact same mutation
+        if ( (check_mut.get() != NULL) && (*check_mut == *this_mut) ) {
+          
+          if (check_mut->count(FREQUENCY))
+            (*this_mut)[freq_key] = (*check_mut)[FREQUENCY];
+          else
+            (*this_mut)[freq_key] = "1";
+          
+          // remove the item
+          mut_list.pop_front();
+          continue;
+        }
+          
+        if (gd_list[i].mutation_deleted(*this_mut)) {
+          (*this_mut)[freq_key] = "D";
+          continue;
+        }
+        
+        if (gd_list[i].mutation_unknown(*this_mut)) {
+          (*this_mut)[freq_key] = "?";
+          continue;
+        }
+      }
+    }
+  }
+  
 
   vector<string> reference_file_names = from_string<vector<string> >(options["reference"]);
   uout("Reading input reference sequence files") << reference_file_names << endl;
@@ -651,35 +699,22 @@ int do_annotate(int argc, char* argv[])
   if (html_output_mode) {
     
     uout("Writing output HTML file", output_file_name);
-
-    ofstream HTML;
-    HTML.open(output_file_name.c_str());
-    ASSERT(HTML.good(), "Could not open " + options["output"] + " for writing.");
-    
     
     Settings settings;
-    Options gd_options;
+    // No evidence needs to be transferred to options and initialized correctly within breseq
+    settings.no_evidence = true;
+    
+    MutationTableOptions mt_options;
     if (compare_mode)
-      gd_options.repeat_header = true;
-      
-    HTML << output::html_header("Mutation Comparison", settings);
+      mt_options.repeat_header = true;
+    mt_options.one_ref_seq = ref_seq_info.size() == 1;
+    mt_options.gd_name_list_ref = gd_base_names;
+    mt_options.repeat_header = 10;
     
-    diff_entry_list_t muts = gd.mutation_list();
-
-    
-    string table = output::Html_Mutation_Table_String(
-                                                      settings,
-                                                      gd,
-                                                      muts,
-                                                      gd_path_names,
-                                                      gd_options
-                                                      );
-    
-    HTML << table;
-    HTML.close();
-
+    html_compare(settings, output_file_name, "Mutation Comparison", gd, mt_options);
+        
   } else {
-    uout("Writing output GD file", options["output"]);
+    uout("Writing output HTML file", options["output"]);
     gd.write(output_file_name);
   }
   

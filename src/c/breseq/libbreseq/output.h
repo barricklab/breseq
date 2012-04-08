@@ -9,13 +9,6 @@ namespace breseq
 {
 
 /*-----------------------------------------------------------------------------
- *  TEMPORARY STRUCTS, STILL NEED IMPLEMENTATION.
- *-----------------------------------------------------------------------------*/
-struct Options {
-  bool repeat_header;
-};
-
-/*-----------------------------------------------------------------------------
  *  Diff_Entry Keywords - Specific to breseq output! 
  *  Others are defined in genome_diff.*
  *-----------------------------------------------------------------------------*/
@@ -131,6 +124,25 @@ extern const char* ALIGN_LEFT;
 /*-----------------------------------------------------------------------------
  * HTML FILES 
  *-----------------------------------------------------------------------------*/
+// Convenience structure for passing many options
+struct MutationTableOptions {
+  
+  MutationTableOptions() 
+  : repeat_header(0)
+  , legend_row(false)
+  , one_ref_seq(false)
+  , shade_frequencies(false)
+  {}
+  
+  uint32_t repeat_header;
+  bool legend_row; 
+  bool one_ref_seq;
+  bool shade_frequencies;
+  vector<string> gd_name_list_ref;
+  string relative_link;
+  
+};
+  
 void html_index(const string& file_name, const Settings& settings, Summary& summary,
                 cReferenceSequences& ref_seq_info, cGenomeDiff& gd);
 void mark_gd_entries_no_show(const Settings& settings, cGenomeDiff& gd);
@@ -138,13 +150,21 @@ void mark_gd_entries_no_show(const Settings& settings, cGenomeDiff& gd);
 void html_marginal_predictions(const string& file_name, const Settings& settings, Summary& summary,
                                cReferenceSequences& ref_seq_info, cGenomeDiff& gd);
 void html_statistics(const string& file_name, const Settings& settings, Summary& summary, cReferenceSequences& ref_seq_info);
-void html_compare(const Settings& settings,const string &file_name, const string &title, 
-                  cGenomeDiff& gd, bool one_ref_seq, vector<string>& gd_name_list_ref, Options& options); 
-void html_compare_polymorphisms(const Settings& settings, const string& file_name, const string& title,
-                                vector<string>& list_ref);
+  
+void html_compare(
+                  const Settings& settings,
+                  const string &file_name, 
+                  const string &title, 
+                  cGenomeDiff& gd,
+                  MutationTableOptions& mt_options
+                  ); 
+  
 /*-----------------------------------------------------------------------------
  * HTML TABLE STRINGS
  *-----------------------------------------------------------------------------*/
+  
+
+  
 struct Html_Mutation_Table_String : public string
 {
   public:
@@ -153,26 +173,13 @@ struct Html_Mutation_Table_String : public string
                                const Settings& settings,
                                cGenomeDiff& gd,
                                diff_entry_list_t& list_ref,
-  			                       vector<string>& gd_name_list_ref,
-                               Options& options,
-                               bool legend_row = false, 
-                               bool one_ref_seq = false,
-  			                       const string& relative_link = "" 
-                               );
-    
-    Html_Mutation_Table_String(
-                               const Settings& settings,
-                               cGenomeDiff& gd,
-                               diff_entry_list_t& list_ref,
-  			                       const string& relative_path = "", 
-                               bool legend_row = false, 
-                               bool one_ref_seq = false
+                               MutationTableOptions& options
                                );
     
    
     //! Main Build Object
     //!Factory Methods
-    void Header_Line();
+    void Header_Line(bool print_main_header = true);
     void Item_Lines();
     //!Helper Functions
     string freq_to_string(const string& freq);//!< Used in Item_Lines()
@@ -183,10 +190,7 @@ struct Html_Mutation_Table_String : public string
     Settings settings;
     cGenomeDiff gd;
     diff_entry_list_t list_ref;
-    bool legend_row;
-    bool one_ref_seq;
-    vector<string> gd_name_list_ref; 
-    Options options;
+    MutationTableOptions options;
     string relative_link;
 };
 

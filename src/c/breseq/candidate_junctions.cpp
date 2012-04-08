@@ -724,12 +724,12 @@ namespace breseq {
 		// and the direction propagating from that position in the reference sequence.
 		// Prefer the lower coordinate side of the read for main hash.
 		//
-		// REL606__1__1__REL606__4629812__0__0
+		// REL606__1__1__REL606__4629812__-1__0
 		// means the junction sequence is 36-1 + 4629812-4629777 from the reference sequence
 		//
-		// On the LEFT side:  0 means this is highest coord of alignment, junction seq begins at lower coord
+		// On the LEFT side: -1 means this is highest coord of alignment, junction seq begins at lower coord
 		//                    1 means this is lowest coord of alignment, junction seq begins at higher coord
-		// On the RIGHT side: 0 means this is highest coord of alignment, junction seq continues to lower coord
+		// On the RIGHT side:-1 means this is highest coord of alignment, junction seq continues to lower coord
 		//                    1 means this is lowest coord of alignment, junction seq continues to higher coord
 
 		int32_t i = 0;

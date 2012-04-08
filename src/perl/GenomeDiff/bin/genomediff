@@ -870,7 +870,9 @@ sub do_count
 		@snp_types, 
 		'small_indel',
 		'large_del',
-		'deleted', 
+		'deleted_bp',
+		'inserted_bp', 
+		'repeat_inserted_bp',
 		'amplification',
 		'mobile_element',
 		@mod_name_list,
@@ -935,6 +937,9 @@ sub do_count
 		}
 		
 		my $total_deleted = 0;
+		my $total_inserted = 0;
+		my $total_repeat_inserted = 0;
+		
 		my $this_bs_counts = [];
 		foreach my $mut (@mut_list)
 		{
@@ -955,7 +960,7 @@ sub do_count
 				$total_deleted += $mut->{size};
 				$count->{mob}->{$mut->{mediated}}++ if ($mut->{mediated});
 				
-				if ($mut->{size} > 1000) 
+				if ($mut->{size} > 20) 
 				{
 					$count->{large_del}++;
 				}
@@ -967,10 +972,10 @@ sub do_count
 			
 			if ($mut->{type} eq 'INS')
 			{
-				$total_deleted += $mut->{size};
+				$total_inserted += $mut->{size};
 				$count->{mob}->{$mut->{mediated}}++ if ($mut->{mediated});
 				
-				if ($mut->{size} < 1000) 
+				if ($mut->{size} <= 20) 
 				{
 					$count->{small_indel}++;
 				}
@@ -978,19 +983,35 @@ sub do_count
 			
 			if ($mut->{type} eq 'CON')
 			{
+				#need calculation of size change here
 				$count->{con}->{$mut->{mediated}}++ if ($mut->{mediated});
 				$count->{gene_conversion}++;
 			}
 			
 			if ($mut->{type} eq 'MOB')
 			{
+				#this returns shortest example				
+				my $repeat_seq = GenomeDiff::ReferenceSequence::repeat_example($ref_seq_info, $mut->{repeat_name}, 1);
+				my $this_length = length($repeat_seq);
+				$total_inserted += $this_length;
+				$total_repeat_inserted += $this_length;
+				print "Repeat $mut->{repeat_name} $this_length bp\n";
+				
 				$count->{mob}->{$mut->{repeat_name}}++;
 				$count->{mobile_elements}++;
 			}			
 			
 			if ($mut->{type} eq 'AMP')
 			{
-				$count->{amp}++;
+				$total_inserted += $mut->{size};
+				if ($mut->{size} > 20)
+				{
+					$count->{amp}++;
+				}
+				else
+				{
+					$count->{small_indel}++;
+				}
 			}
 		}
 		
@@ -1019,13 +1040,15 @@ sub do_count
 			$gd_name, 
 			scalar(@mut_list),  
 			map({$count->{type}->{$_} } @snp_types),
-			$count->{small_indel},
-			$count->{large_del}, 
+			defined $count->{small_indel} ? $count->{small_indel} : "0",
+			defined $count->{large_del} ? $count->{large_del} : "0",
 			$total_deleted, 
-			$count->{amp}, 
-			$count->{mobile_elements},
+			$total_inserted, 
+			$total_repeat_inserted,
+			defined $count->{amp} ? $count->{amp} : "0",
+			defined $count->{mobile_elements} ? $count->{mobile_elements} : "0",
 			map({$count->{mob}->{$_}} @mod_name_list), 
-			$count->{gene_conversion},
+			defined $count->{gene_conversion} ? $count->{gene_conversion} : "0",
 			map({$count->{con}->{$_}} @con_name_list), 
 			$called_bp, 
 			$total_bp

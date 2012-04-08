@@ -947,8 +947,9 @@ class cString : public string
     cString remove_starting(const string &prefix);
     cString trim_ends_of(const char val);
 
-    cString get_base_name(void) const;
-    cString get_file_extension(void) const;
+    cString get_base_name() const;
+    cString get_base_name_no_extension() const;
+    cString get_file_extension() const;
 
 };
 
@@ -966,10 +967,6 @@ inline cString::cString(const char *format,...)
   buffer[size] = '\0';
 
   *this = buffer;
-  
-  // @JEB: why would we assert here? Empty strings should be allowed?
-  // Uncommented breaks DOWNLOAD command.
-  // assert(this->size());
 }
 
 inline bool cString::starts_with(const string &prefix) const
@@ -1019,6 +1016,17 @@ inline cString cString::get_base_name() const
     return *this;
   else
     return this->substr(pos + 1);
+}
+
+//! Returns file name with no extension, removes any directory path beforehand.
+inline cString cString::get_base_name_no_extension() const
+{
+  cString this_return = this->get_base_name();
+  const size_t pos = this->find('.');
+  if (pos == string::npos)
+    return *this;
+  else
+    return this->substr(0, pos);
 }
 
 inline cString cString::get_file_extension() const
