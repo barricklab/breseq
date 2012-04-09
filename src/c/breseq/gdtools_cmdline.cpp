@@ -739,31 +739,38 @@ int do_count(int argc, char* argv[])
   UserOutput uout("COUNT");
   
   string output_file_name = options["output"];
-
+  
   vector<string> gd_path_names;
   for (int32_t i = 0; i < options.getArgc(); ++i) {
     gd_path_names.push_back(options.getArgv(i));
   }
   
+  if ( (gd_path_names.size() == 0) 
+      || !options.count("reference")){
+    options.printUsage();
+    return -1;
+  }
+  
+  vector<string> reference_file_names = from_string<vector<string> >(options["reference"]);
+  uout("Reading input reference sequence files") << reference_file_names << endl;
+  cReferenceSequences ref_seq_info;
+  ref_seq_info.LoadFiles(reference_file_names);
+  //ref_seq_info.total_length();
+  
+  // Need to create base substitution file...
+  
+  for (uint32_t i=0; i<gd_path_names.size(); i++) {
+    cGenomeDiff gd(gd_path_names[i]);
+    uout(gd_path_names[i]);
+    uout("Annotating mutations");
+    ref_seq_info.annotate_mutations(gd, true, options.count("ignore-pseudogenes"));
+
+  }
+  
+  
   // Perl that needs to be ported.
   /*
-   my $base_substitution_file;
-   my @reference_genbank_file_names;
-   GetOptions(
-   'help|?' => \$help, 'man' => \$man,
-   ## Options for input and output files
-   'output|o=s' => \$output,	
-   'reference-sequence|r=s' => \@reference_genbank_file_names,
-   'base-substitution-file|s=s' => \$base_substitution_file,
-   ) or pod2usage(2);
-   
-   pod2usage(1) if $help;
-   pod2usage(-exitstatus => 0, -verbose => 2) if $man;
-   pod2usage(1) if (scalar @reference_genbank_file_names == 0);
-   pod2usage(1) if (scalar @ARGV == 0);
-   
-   my @gd_file_name_list = @ARGV;	
-   
+         
    ## load information about reference sequences from GenBank files
    my $ref_seq_info = load_ref_seq_info(\@reference_genbank_file_names);
    my $one_ref_seq = scalar keys %{$ref_seq_info->{gene_lists}} == 1;

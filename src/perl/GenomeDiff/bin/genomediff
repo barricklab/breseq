@@ -869,6 +869,7 @@ sub do_count
 		'total', 
 		@snp_types, 
 		'small_indel',
+		'substitution',
 		'large_del',
 		'deleted_bp',
 		'inserted_bp', 
@@ -939,6 +940,7 @@ sub do_count
 		my $total_deleted = 0;
 		my $total_inserted = 0;
 		my $total_repeat_inserted = 0;
+		my $small_size_cutoff = 50;
 		
 		my $this_bs_counts = [];
 		foreach my $mut (@mut_list)
@@ -960,7 +962,7 @@ sub do_count
 				$total_deleted += $mut->{size};
 				$count->{mob}->{$mut->{mediated}}++ if ($mut->{mediated});
 				
-				if ($mut->{size} > 20) 
+				if ($mut->{size} > $small_size_cutoff) 
 				{
 					$count->{large_del}++;
 				}
@@ -975,7 +977,7 @@ sub do_count
 				$total_inserted += $mut->{size};
 				$count->{mob}->{$mut->{mediated}}++ if ($mut->{mediated});
 				
-				if ($mut->{size} <= 20) 
+				if ($mut->{size} <= $small_size_cutoff) 
 				{
 					$count->{small_indel}++;
 				}
@@ -1004,9 +1006,21 @@ sub do_count
 			if ($mut->{type} eq 'AMP')
 			{
 				$total_inserted += $mut->{size};
-				if ($mut->{size} > 20)
+				if ($mut->{size} * ($mut->{new_copy_number}-1) > $small_size_cutoff)
 				{
 					$count->{amp}++;
+				}
+				else
+				{
+					$count->{small_indel}++;
+				}
+			}
+			
+			if ($mut->{type} eq 'SUB')
+			{
+				if ($mut->{size} > $small_size_cutoff)
+				{
+					$count->{sub}++;
 				}
 				else
 				{
@@ -1041,6 +1055,7 @@ sub do_count
 			scalar(@mut_list),  
 			map({$count->{type}->{$_} } @snp_types),
 			defined $count->{small_indel} ? $count->{small_indel} : "0",
+			defined $count->{sub} ? $count->{sub} : "0",
 			defined $count->{large_del} ? $count->{large_del} : "0",
 			$total_deleted, 
 			$total_inserted, 
