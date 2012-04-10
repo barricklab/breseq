@@ -714,7 +714,7 @@ int do_runfile(int argc, char *argv[])
   options("runfile,r",        "Name of the run file to be output.", "commands");
   options("launcher",         "Name of the launcher script run on TACC", "launcher");
 
-  options("job",              "Job name. Alters output paths to include this directory.");
+  options("job",              "Job name. Alters add suffix to runfile and launcher script.");
   options("email",            "Email address to be added to launcher script. Informs you when a job starts and finishes.");
 
   options("aln",              "Pass alignment files from breseq's pipeline as an argument.", TAKES_NO_ARGUMENT);
@@ -775,8 +775,6 @@ int do_runfile(int argc, char *argv[])
 
   if (options.count("job")) {
     job = options["job"];
-    log_dir       += "/" + job;
-    output_dir    += "/" + job;
     runfile_path  += "_" + job;
     launcher_path += "_" + job;
   }
@@ -854,62 +852,60 @@ int do_runfile(int argc, char *argv[])
     ++n_cmds;
   }
 
-  //! Step: Create launcher.sge.
-  if (options.count("job")) {
-    /*Note: For lonestar we are under the current assumption that a 4way 12 will
-      run 3 breseq jobs. On Ranger a 16way 16 will run 16 breseq jobs.*/
-    //Ranger:   '/share/home/$NUM/$USER'
-    //Lonestar: '/home1/$NUM/$USER'
-    size_t tasks = 0, nodes = 0;
-    const cString &home_path = SYSTEM_CAPTURE("echo $HOME", true);
-    // RANGER
-    if (home_path.starts_with("/share")) {
-      tasks = 16, nodes = ceil(n_cmds / 16) * 16;
-    }
-    // Default to LONESTAR
-    else {
-      if (!home_path.starts_with("/home1/")) {
-        WARN("TACC system not determined, defaulting to Lonestar.");
-      }
-      tasks = 4, nodes = ceil(n_cmds / 3) * 12;
-    }
-    assert(tasks || nodes);
-
-    const string &pwd = SYSTEM_CAPTURE("pwd", true);
-
-    ofstream launcher(launcher_path.c_str());
-    // #$ Parameters.
-    fprintf(launcher, "#!/bin/csh\n");
-    fprintf(launcher, "#$ -N %s\n", job.c_str());
-    fprintf(launcher, "#$ -pe %uway %u\n", tasks, nodes);
-    fprintf(launcher, "#$ -q normal\n");
-    fprintf(launcher, "#$ -o %s.o$JOB_ID\n", job.c_str());
-    fprintf(launcher, "#$ -l h_rt=14:00:00\n");
-    fprintf(launcher, "#$ -V\n");
-    fprintf(launcher, "#$ -cwd\n");
-
-    if (options.count("email")) {
-      fprintf(launcher, "#$ -M %s\n", options["email"].c_str());
-    }
-
-    fprintf(launcher, "#$ -m be\n");
-    fprintf(launcher, "#$ -A breseq\n");
-    fprintf(launcher, "\n");
-
-    // Set environmental variables.
-    fprintf(launcher, "module load launcher\n");
-    fprintf(launcher, "setenv EXECUTABLE     $TACC_LAUNCHER_DIR/init_launcher\n");
-    fprintf(launcher, "setenv CONTROL_FILE   %s\n", runfile_path.c_str());
-    fprintf(launcher, "setenv WORKDIR        %s\n", pwd.c_str());
-    fprintf(launcher, "\n");
-
-    // Job submission.
-    fprintf(launcher, "cd $WORKDIR/\n");
-    fprintf(launcher, "$TACC_LAUNCHER_DIR/paramrun $EXECUTABLE $CONTROL_FILE\n");
-
-    launcher.close();
-    SYSTEM("chmod +x " + launcher_path, true);
+  //! Step: Create launcher script.
+  /*Note: For lonestar we are under the current assumption that a 4way 12 will
+    run 3 breseq jobs. On Ranger a 16way 16 will run 16 breseq jobs.*/
+  //Ranger:   '/share/home/$NUM/$USER'
+  //Lonestar: '/home1/$NUM/$USER'
+  size_t tasks = 0, nodes = 0;
+  const cString &home_path = SYSTEM_CAPTURE("echo $HOME", true);
+  // RANGER
+  if (home_path.starts_with("/share")) {
+    tasks = 16, nodes = ceilf(static_cast<float>(n_cmds / 16.f)) * 16;
   }
+  // Default to LONESTAR
+  else {
+    if (!home_path.starts_with("/home1/")) {
+      WARN("TACC system not determined, defaulting to Lonestar.");
+    }
+    tasks = 4, nodes = ceilf(static_cast<float>(n_cmds) / 3.f) * 12;
+  }
+  assert(tasks || nodes);
+
+  const string &pwd = SYSTEM_CAPTURE("pwd", true);
+
+  ofstream launcher(launcher_path.c_str());
+  // #$ Parameters.
+  fprintf(launcher, "#!/bin/csh\n");
+  fprintf(launcher, "#$ -N %s\n", job.c_str());
+  fprintf(launcher, "#$ -pe %uway %u\n", tasks, nodes);
+  fprintf(launcher, "#$ -q normal\n");
+  fprintf(launcher, "#$ -o %s.o$JOB_ID\n", job.c_str());
+  fprintf(launcher, "#$ -l h_rt=14:00:00\n");
+  fprintf(launcher, "#$ -V\n");
+  fprintf(launcher, "#$ -cwd\n");
+
+  if (options.count("email")) {
+    fprintf(launcher, "#$ -M %s\n", options["email"].c_str());
+  }
+
+  fprintf(launcher, "#$ -m be\n");
+  fprintf(launcher, "#$ -A breseq\n");
+  fprintf(launcher, "\n");
+
+  // Set environmental variables.
+  fprintf(launcher, "module load launcher\n");
+  fprintf(launcher, "setenv EXECUTABLE     $TACC_LAUNCHER_DIR/init_launcher\n");
+  fprintf(launcher, "setenv CONTROL_FILE   %s\n", runfile_path.c_str());
+  fprintf(launcher, "setenv WORKDIR        %s\n", pwd.c_str());
+  fprintf(launcher, "\n");
+
+  // Job submission.
+  fprintf(launcher, "cd $WORKDIR/\n");
+  fprintf(launcher, "$TACC_LAUNCHER_DIR/paramrun $EXECUTABLE $CONTROL_FILE\n");
+
+  launcher.close();
+  SYSTEM("chmod +x " + launcher_path, true);
 
   return 0;
 }
