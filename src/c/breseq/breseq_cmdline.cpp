@@ -861,7 +861,7 @@ int do_runfile(int argc, char *argv[])
   const cString &home_path = SYSTEM_CAPTURE("echo $HOME", true);
   // RANGER
   if (home_path.starts_with("/share")) {
-    tasks = 16, nodes = ceilf(static_cast<float>(n_cmds / 16.f)) * 16;
+    tasks = 16, nodes = ceilf(static_cast<float>(n_cmds) / 16.f) * 16;
   }
   // Default to LONESTAR
   else {
