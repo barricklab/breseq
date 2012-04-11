@@ -191,7 +191,6 @@ struct Html_Mutation_Table_String : public string
     cGenomeDiff gd;
     diff_entry_list_t list_ref;
     MutationTableOptions options;
-    string relative_link;
 };
 
 

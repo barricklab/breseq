@@ -629,6 +629,9 @@ int do_annotate(int argc, char* argv[])
   for (uint32_t i = 0; i < gd_path_names.size(); i++){
     uout("Reading input GD file",gd_path_names[i]);
     cGenomeDiff single_gd(gd_path_names[i]);
+    //remove the evidence to speed up the merge
+    //single_gd.remove(cGenomeDiff::EVIDENCE);
+    //No, can't remove UN evidence!
     gd_list.push_back(single_gd);
     mut_lists.push_back(single_gd.mutation_list());
     gd.merge(single_gd);
