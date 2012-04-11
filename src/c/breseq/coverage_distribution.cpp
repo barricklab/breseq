@@ -852,11 +852,6 @@ namespace breseq {
           next_search.second = current_search.second;
           searching.push_back( next_search );
           
-          out_file << ordered_sums[best_j + 1] - tile_size + 1 << "\t"
-                   << ordered_sums[current_search.second] << "\t"
-                   << best_t << "\t"
-                   << 1 - (double)(best_greater_than) / randomizations << endl;
-          
           history_file << ordered_sums[current_search.first] - tile_size + 1 << "\t" <<
                           ordered_sums[current_search.second] << "\t" <<
                           ordered_sums[best_i + 1] - tile_size + 1 << "\t" <<
@@ -887,11 +882,6 @@ namespace breseq {
           next_search.second = best_j;
           searching.push_back( next_search );
           
-          out_file << ordered_sums[current_search.first] - tile_size + 1 << "\t"
-                   << ordered_sums[best_i] << "\t"
-                   << best_t << "\t"
-                   << 1 - (double)(best_greater_than) / randomizations << endl;
-          
           history_file << ordered_sums[current_search.first] - tile_size + 1 << "\t" <<
                           ordered_sums[current_search.second] << "\t" <<
                           ordered_sums[best_i + 1] - tile_size + 1 << "\t" <<
@@ -919,6 +909,14 @@ namespace breseq {
         
         else{
           out_file << ordered_sums[current_search.first] - tile_size + 1 << "\t"
+                   << ordered_sums[best_i] << "\t"
+                   << best_t << "\t"
+                   << 1 - (double)(best_greater_than) / randomizations << endl;
+          out_file << ordered_sums[best_i + 1] - tile_size + 1 << "\t"
+                   << ordered_sums[best_j] << "\t"
+                   << best_t << "\t"
+                   << 1 - (double)(best_greater_than) / randomizations << endl;
+          out_file << ordered_sums[best_j + 1] - tile_size + 1 << "\t"
                    << ordered_sums[current_search.second] << "\t"
                    << best_t << "\t"
                    << 1 - (double)(best_greater_than) / randomizations << endl;
