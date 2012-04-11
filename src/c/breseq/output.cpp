@@ -2174,7 +2174,7 @@ void Html_Mutation_Table_String::Item_Lines()
         }
         
         if (!evidence_string.empty()) evidence_string += "&nbsp;";
-        evidence_string += a(relative_link + evidence_item[_EVIDENCE_FILE_NAME], to_string(evidence_item._type));
+        evidence_string += a(options.relative_link + evidence_item[_EVIDENCE_FILE_NAME], to_string(evidence_item._type));
       }
     }
   

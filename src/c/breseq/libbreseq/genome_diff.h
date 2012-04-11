@@ -258,8 +258,9 @@ bool diff_entry_sort(const cDiffEntry &a, const cDiffEntry &b);
  */
 class cGenomeDiff
 {
-  enum group { MUTATIONS = 0, EVIDENCE, VALIDATION }; 
 public:
+
+  enum group { MUTATIONS = 0, EVIDENCE, VALIDATION }; 
 
   typedef string key_t; 
   typedef vector<string> list_t;
@@ -290,7 +291,6 @@ public:
   void set_union(cGenomeDiff& gd_ref, bool verbose=false);
   
   //! Merge GenomeDiff information using gd_new as potential new info.
-
   void merge(cGenomeDiff& gd_new, bool unique=true, bool new_id=false, bool verbose=false);
 
   //! fast merge, doesn't compare entries, but does renumber
