@@ -379,26 +379,29 @@ int do_weights(int argc, char* argv[])
   uout("Calculating weights");
   //Store entries as keys and pointers to matching entries.
   diff_entry_list_t muts = gd1.mutation_list();
-  map<cDiffEntry, vector<diff_entry_ptr_t> > weights_table;
+
+  bool (*comp_fn) (const diff_entry_ptr_t&, const diff_entry_ptr_t&) = diff_entry_ptr_sort;
+  typedef map<diff_entry_ptr_t, vector<diff_entry_ptr_t>, bool(*)(const diff_entry_ptr_t&, const diff_entry_ptr_t&)> diff_entry_map_t;
+
+  diff_entry_map_t weights_table(comp_fn);
 
   for (diff_entry_list_t::iterator it = muts.begin(); 
        it != muts.end(); ++it) {
-    cDiffEntry mut = **it;
-    weights_table[mut].push_back(*it);
+    weights_table[*it].push_back(*it);
   }
 
   //Given the number of pointers, determine frequency and add 'weight' field to entries.
-  for (map<cDiffEntry, vector<diff_entry_ptr_t> >::iterator it = weights_table.begin();
+  for (diff_entry_map_t::iterator it = weights_table.begin();
        it != weights_table.end(); ++it) {
     float weight = 1.0f / static_cast<float>(it->second.size());
-    uout << weight << '\t' << it->first.to_spec() << endl;
+    uout << weight << '\t' << it->first->to_spec() << endl;
     
     for (uint32_t i  = 0; i < it->second.size(); ++i) {
       (*it->second[i])["weight"] = to_string(weight);
     }
 
     if (verbose) {
-      cout << "\tEntry: " << it->first << endl;
+      cout << "\tEntry: " << *it->first << endl;
       cout << "\tMatches with:" << endl;
       for (uint32_t i  = 0; i < it->second.size(); ++i) {
         cout << "\t\t[entry]: " << (*it->second[i]) << endl;
