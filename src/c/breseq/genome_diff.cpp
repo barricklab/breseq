@@ -655,8 +655,10 @@ void cGenomeDiff::merge(cGenomeDiff& gd_new, bool unique, bool new_id, bool verb
 
 void cGenomeDiff::unique()
 {
+  bool (*comp_fn) (const diff_entry_ptr_t&, const diff_entry_ptr_t&) = diff_entry_ptr_sort;
+  typedef set<diff_entry_ptr_t, bool(*)(const diff_entry_ptr_t&, const diff_entry_ptr_t&)> diff_entry_set_t;
   //Filter entries.
-  set<cDiffEntry> seen;
+  diff_entry_set_t seen(comp_fn);
   //Store pointers to mutations.
   map<string, vector<diff_entry_ptr_t> > keep_ids;
   //Store ids of evidence to erase.
@@ -672,7 +674,7 @@ void cGenomeDiff::unique()
 
     //Is mutation unique?
     //Case: true.
-    if (seen.insert(**it).second) { 
+    if (seen.insert(*it).second) { 
       for (uint32_t i = 0; i < n; ++i) {
         keep_ids[ids[i]].push_back(*it);
       }
@@ -694,7 +696,7 @@ void cGenomeDiff::unique()
     if (keep_ids.count((**it)._id) && erase_ids.count((**it)._id)) {
       //Is evidence unique?
       //Case: true.
-      if (seen.insert(**it).second) {
+      if (seen.insert(*it).second) {
         ++it;
       } 
       //Case: false.
@@ -2938,19 +2940,17 @@ void cGenomeDiff::set_union(cGenomeDiff& gd, bool verbose)
 void cGenomeDiff::compare(cGenomeDiff& gd, bool verbose)
 {
   (void)verbose; //unused
+
+  bool (*comp_fn) (const diff_entry_ptr_t&, const diff_entry_ptr_t&) = diff_entry_ptr_sort;
+  typedef set<diff_entry_ptr_t, bool(*)(const diff_entry_ptr_t&, const diff_entry_ptr_t&)> diff_entry_set_t;
+
   diff_entry_list_t muts = this->mutation_list();
-  set<cDiffEntry> ctrl_muts;
-  for (diff_entry_list_t::iterator it = muts.begin();
-       it != muts.end(); ++it) {
-    ctrl_muts.insert(**it);
-  }
+  diff_entry_set_t ctrl_muts(comp_fn);
+  copy(muts.begin(), muts.end(), inserter(ctrl_muts, ctrl_muts.begin()));
 
   muts = gd.mutation_list();
-  set<cDiffEntry> test_muts;
-  for (diff_entry_list_t::iterator it = muts.begin();
-       it != muts.end(); ++it) {
-    test_muts.insert(**it);
-  }
+  diff_entry_set_t test_muts(comp_fn);
+  copy(muts.begin(), muts.end(), inserter(test_muts, test_muts.begin()));
 
   if (verbose) {
     printf("\tComparing %u control mutations versus %u test mutations.\n\n",
@@ -2968,18 +2968,18 @@ void cGenomeDiff::compare(cGenomeDiff& gd, bool verbose)
   while (it != _entry_list.end()) {
     if (!(**it).is_mutation()) break;
 
-    assert(ctrl_muts.count(**it) || test_muts.count(**it));
+    assert(ctrl_muts.count(*it) || test_muts.count(*it));
 
     string key = "";
-    if (ctrl_muts.count(**it) && test_muts.count(**it)) {
+    if (ctrl_muts.count(*it) && test_muts.count(*it)) {
       key = "TP";
       ++n_tp;
     }
-    else if (ctrl_muts.count(**it) && !test_muts.count(**it)) {
+    else if (ctrl_muts.count(*it) && !test_muts.count(*it)) {
       key = "FN";
       ++n_fn;
     }
-    else if (!ctrl_muts.count(**it) && test_muts.count(**it)) {
+    else if (!ctrl_muts.count(*it) && test_muts.count(*it)) {
       key = "FP";
       ++n_fp;
     } 
