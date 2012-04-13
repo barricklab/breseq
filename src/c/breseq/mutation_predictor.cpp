@@ -992,50 +992,49 @@ namespace breseq {
 				continue;
 
 			string seq_id = j["side_1_seq_id"];
-
+      int32_t side_1_position = n(j["side_1_position"]);
+      int32_t side_2_position = n(j["side_2_position"]);
+      
 			// We can assume that the lower coordinate will be first since this is NOT a deletion
 			// (which would be handled above)
       // By this point any positive overlap should have been resolved.
 			assert(n(j["overlap"]) <= 0);
       
 			// mutation will always be after this position
-			int32_t position = n(j["side_1_position"]);
-
 			// Special case of circular chromosome
-			if ( (j["side_1_position"] == "1") && ( n(j["side_2_position"]) == ref_seq_info[ref_seq_info.seq_id_to_index(j["side_2_seq_id"])].m_length ) )
+			if ( (side_1_position == 1) && ( side_2_position== ref_seq_info[ref_seq_info.seq_id_to_index(j["side_2_seq_id"])].m_length ) )
 			{
 				j["circular_chromosome"] = "1";
 				continue;
 			}
-			// protection against mistakes
-			if (n(j["side_2_position"]) - n(j["side_1_position"]) + 1 > 100000)
-				continue;
+      
+      // If we are predicting a very big insertion (longer than read length), 
+      // it is likely spurious. Require other evidence to convert to a mutation.
+      
+      // side_2_position will always be greater than or equal to size_i_position
+      ASSERT(side_2_position >= side_1_position, "Unexpected positions");
+      int32_t size = side_2_position - side_1_position + 1;
+      
+      // This implies a deletion, and not counting the endpoint nucleotides (hence -1 instead of +1)
+      // Note that this is a negative number!
+      if (n(j["side_1_strand"]) == -1 )
+        size = side_1_position - side_2_position + 1;
+      
+      // Insertion or deletion must be smaller than read length to be predicted
+      // by this evidence alone.
+      if (abs(size) > avg_read_length) 
+        continue;
 
 			// 'DEL' or 'AMP'
 			if (!j.entry_exists("unique_read_sequence"))
-			{
-        int32_t side_1_position = n(j["side_1_position"]);
-        int32_t side_2_position = n(j["side_2_position"]);
-        
-        if (n(j["side_1_strand"]) == -1)
-        {
-          int32_t t = side_1_position;
-          side_1_position = side_2_position;
-          side_2_position = t;
-        }
-
-				int32_t size = side_2_position - side_1_position + 1;
-        
-        // @JEB TODO: Large duplications are likely spurious... need to x-ref with coverage differences.
-        if (abs(size) > avg_read_length) continue;
-        
+			{        
 				if (size < 0) // this is a deletion!
         {
           cDiffEntry mut;
           mut._type = DEL;
           mut
           ("seq_id", seq_id)
-          ("position", s(position+1))
+          ("position", s(side_1_position+1))
           ("size", s(-size))         // note adjustment due to +1 above
           ;
           mut._evidence = make_vector<string>(j._id);
@@ -1047,7 +1046,7 @@ namespace breseq {
           mut._type = AMP;		
           mut		
           ("seq_id", seq_id)		
-          ("position", s(position))		
+          ("position", s(side_1_position))		
           ("size", s(size))		
           ("new_copy_number", "2")		
           ;		
@@ -1067,7 +1066,7 @@ namespace breseq {
         mut._type = INS;
 				mut
 					("seq_id", seq_id)
-					("position", s(position))
+					("position", s(side_1_position))
 					("new_seq", new_seq + ref_seq)
 				;
         mut._evidence = make_vector<string>(j._id);
@@ -1078,11 +1077,10 @@ namespace breseq {
       //  INS predicted here are aligned with missing unique_read_sequence info.
       //  Further the unique read sequence is aligned on the reverse strand.
       //  We need to grab it, proper like.
-			else if ((n(j["side_2_strand"]) < 0) && (n(j["side_1_position"]) <= n(j["side_2_position"])))
+			else if ((n(j["side_2_strand"])  < 0) && (n(j["side_1_position"]) <= n(j["side_2_position"])))
 			{
 				string new_seq = reverse_complement(j["unique_read_sequence"]);
         string ref_seq = ref_seq_info.get_sequence_1(seq_id, n(j["side_1_position"]), n(j["side_2_position"]));
-        
 				cDiffEntry mut;
         mut._type = INS;
 				mut
@@ -1123,7 +1121,7 @@ namespace breseq {
           mut._type = INS;
           mut
             ("seq_id", seq_id)
-            ("position", s(position))
+            ("position", s(side_1_position))
             ("new_seq", j["unique_read_sequence"])
           ;
           mut._evidence = make_vector<string>(j._id);

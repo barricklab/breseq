@@ -152,11 +152,11 @@ int do_union(int argc, char *argv[])
   return 0;
 }
 
-int do_mutate(int argc, char *argv[])
+int do_apply(int argc, char *argv[])
 {
   AnyOption options("APPLY -o <output> -f <fasta/gff3> -r <reference> <input.gd>");
   options("output,o",    "output file");
-  options("format,f",    "output file's format(Options: fasta, gff3)");
+  options("format,f",    "output file's format (Options: fasta, gff3)");
   options("reference,r", ".gbk/.gff3/.fasta/.bull reference sequence file");
   options("verbose,v",   "Verbose Mode (Flag)", TAKES_NO_ARGUMENT);
   options.processCommandArgs(argc, argv);
@@ -174,18 +174,19 @@ int do_mutate(int argc, char *argv[])
     return -1;
   }  
 
+  string format;
   if (!options.count("format")) {
     options.addUsage("");
     options.addUsage("No format provided.");
     options.printUsage();
     return -1;
   } else {
-    options["format"] = to_upper(options["format"]);
+    format = to_upper(options["format"]);
   }
 
-  if (options["format"] != "FASTA" || options["format"] != "GFF3") {
+  if ((format != "FASTA") && (format != "GFF3")) {
     options.addUsage("");
-    options.addUsage("No option for provided format.");
+    options.addUsage("Did not recognize format: " + options["format"]);
     options.printUsage();
     return -1;
   }
@@ -216,16 +217,15 @@ int do_mutate(int argc, char *argv[])
   ASSERT(gd.is_valid(ref_seq_info, options.count("verbose")), "Reference file and GenomeDiff file don't match.");
   gd.apply_to_sequences(ref_seq_info, new_ref_seq_info, options.count("verbose"));
 
-  uout("Writing output file in " + options["format"] + " format");
+  uout("Writing output file in " + format + " format");
 
-  if (options["format"] == "FASTA") {
+  if (format == "FASTA") {
     uout << options["fasta"] << endl;
-    new_ref_seq_info.WriteFASTA(options["fasta"], options.count("verbose"));
+    new_ref_seq_info.WriteFASTA(options["output"], options.count("verbose"));
   }
-  else
-  if (options["format"] == "GFF3") {
+  else if (format == "GFF3") {
     uout << options["gff3"] << endl;
-    new_ref_seq_info.WriteGFF(options["gff3"], options.count("verbose"));
+    new_ref_seq_info.WriteGFF(options["output"], options.count("verbose"));
   }
 
   return 0;
@@ -1281,7 +1281,7 @@ int main(int argc, char* argv[]) {
 
   // Genome Diff Commands:
   if (command == "APPLY") {
-    return do_mutate(argc_new, argv_new);    
+    return do_apply(argc_new, argv_new);    
   } else if (command == "COMPARE") {
     return do_compare(argc_new, argv_new);
   } else if (command == "NOT-EVIDENCE") {        //TODO merge with FILTER
