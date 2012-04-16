@@ -871,6 +871,33 @@ void cDiffEntry::normalize_to_sequence(const cAnnotatedSequence &sequence)
   {
   case DEL:
   {
+    /*     
+      +++EXAMPLE DEL: pos_1 = 1, size = 3
+
+      START:
+      Ref: ACTACTATCACACTAATACAATA
+           ^ pos_1
+      seq_1 = ACT
+      seq_2 = ACT
+      NOT VALID, ACT == ACT
+
+      NEXT(pos_1++):
+      Ref: ACTACTATCACACTAATACAATA
+            ^ pos_1
+      seq_1 = CTA
+      seq_2 = CTA
+      NOT VALID, CTA == CTA
+
+      NEXT(pos_1++):
+      Ref: ACTACTATCACACTAATACAATA
+             ^ pos_1
+      seq_1 = TAC
+      seq_2 = TAT
+                ^ first mismatch, normalize pos_1 to here.
+
+      THEREFOR: pos_1 = 8. 
+     */
+
     assert(this->entry_exists("size"));
 
     //! Step: Initialize parameters.
@@ -915,6 +942,52 @@ void cDiffEntry::normalize_to_sequence(const cAnnotatedSequence &sequence)
 
   case INS:
   {
+    /*
+      +++EXAMPLE INS: pos_1 = 1, new_seq = CAA
+
+      START:
+      Ref: ACTACTATCACACTAATACAATA
+           ^ pos_1
+      seq_1 = CAA
+      seq_2 = CTA
+              ^ match, could be predicted as a SNP, NOT VALID
+
+      NEXT(pos_1++):
+      Ref: ACTACTATCACACTAATACAATA
+            ^ pos_1
+      seq_1 = CAA
+      seq_2 = TAC
+              ^ mismatch, won't be predicted as a SNP, normalize pos_1 to here.
+
+      THEREFOR: pos_1 = 2.
+
+
+      +++EXAMPLE INS -> AMP: pos_1 = 1, new_seq = CTA
+
+      START:
+      Ref: ACTACTATCACACTAATACAATA
+           ^ pos_1
+      seq_1 = CTA
+      seq_2 = CTA
+      NOT VALID, CTA == CTA, possible AMP.
+
+      NEXT(pos_1 += 3):
+      Ref: ACTACTATCACACTAATACAATA
+              ^ pos_1
+      seq_1 = CTA
+      seq_2 = CTA
+      NOT VALID, CTA == CTA, possible AMP.
+
+      NEXT(pos_1 += 3):
+      Ref: ACTACTATCACACTAATACAATA
+                 ^ pos_1
+      seq_1 = CTA
+      seq_2 = TCA
+      VALID, Passes SNP check and will be evaluated as an AMP.
+      
+      THEREFOR: INS->AMP, pos_1 = 1, size = 3, new_copy_number = 2, orig_type = INS.
+
+     */
     assert(this->entry_exists("new_seq"));
 
     //! Step: Initialize parameters.
