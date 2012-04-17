@@ -1024,9 +1024,9 @@ inline cString cString::get_base_name_no_extension() const
   cString this_return = this->get_base_name();
   const size_t pos = this->find('.');
   if (pos == string::npos)
-    return *this;
+    return this_return;
   else
-    return this->substr(0, pos);
+    return this_return.substr(0, pos);
 }
 
 inline cString cString::get_file_extension() const
