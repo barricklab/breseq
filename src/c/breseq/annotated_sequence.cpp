@@ -1263,8 +1263,7 @@ void cReferenceSequences::ReadGenBankFileSequenceFeatures(std::ifstream& in, cAn
       feature["product"] = feature.SafeGet("note");
     }
 
-    if (feature["type"] == "repeat_region") {
-
+    if (feature["type"] == "repeat_region" || feature["type"] == "mobile_element") {
       // Don't add unnamed ones to the list...
       //if (it->SafeGet("mobile_element") == "") continue;
 
@@ -1275,9 +1274,16 @@ void cReferenceSequences::ReadGenBankFileSequenceFeatures(std::ifstream& in, cAn
         feature["name"] = feature.SafeGet("note");
 
       // E. coli case:
-      if (feature.SafeGet("mobile_element") != "")
+      if (feature.count("mobile_element") || 
+          feature.count("mobile_element_type"))
       {
-        feature["name"] = feature["mobile_element"];
+        if (feature.count("mobile_element")) {  
+          feature["name"] = feature["mobile_element"];
+        }
+        if (feature.count("mobile_element_type")) {
+          feature["name"] = feature["mobile_element_type"];
+        }
+
         string& name = feature["name"];
 
         // remove prefix
