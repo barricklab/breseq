@@ -1706,8 +1706,6 @@ char cReferenceSequences::translate_codon(string seq, uint32_t translation_table
   string& tt = cReferenceSequences::translation_tables[translation_table];
   ASSERT(tt.size() == 64, "Unknown translation table requested.");
   
-  cout << translation_table << endl;
-  
   return (cReferenceSequences::codon_to_aa_index.count(seq) == 0) 
     ? '?' 
     : tt[cReferenceSequences::codon_to_aa_index[seq]];
