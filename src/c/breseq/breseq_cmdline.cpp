@@ -2114,12 +2114,8 @@ int breseq_default_action(int argc, char* argv[])
 			string reference_fasta_file_name = settings.reference_fasta_file_name;
 			string reference_bam_file_name = settings.reference_bam_file_name;
 
-			string coverage_fn = settings.file_name(settings.unique_only_coverage_distribution_file_name, "@", "");
-			string error_dir = dirname(coverage_fn) + "/";
 			string output_dir = settings.mutation_identification_path;
 			string ra_mc_genome_diff_file_name = settings.ra_mc_genome_diff_file_name;
-			string coverage_tab_file_name = settings.file_name(settings.complete_coverage_text_file_name, "@", "");
-			string coverage_dir = dirname(coverage_tab_file_name) + "/";
 
 			// It is important that these are in consistent order with the fasta file!!
       vector<double> deletion_propagation_cutoffs;
@@ -2136,14 +2132,11 @@ int breseq_default_action(int argc, char* argv[])
 				reference_bam_file_name,
 				reference_fasta_file_name,
 				ra_mc_genome_diff_file_name,
-				output_dir,
-				coverage_dir,
         deletion_propagation_cutoffs,
         deletion_seed_cutoffs,
 				settings.mutation_log10_e_value_cutoff, // mutation_cutoff
 				settings.polymorphism_log10_e_value_cutoff, // polymorphism_cutoff
 				settings.polymorphism_frequency_cutoff, //polymorphism_frequency_cutoff
-				error_dir + "/error_rates.tab",
 				settings.mutation_identification_per_position_file //per_position_file
 			);
 

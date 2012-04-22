@@ -57,9 +57,6 @@ LICENSE AND COPYRIGHT
 #include <functional>
 #include <iterator>
 
-// Breseq
-#include "libbreseq/settings.h"
-
 // Begin breseq specific --->
 // Library specific headers
 #include <bam.h>

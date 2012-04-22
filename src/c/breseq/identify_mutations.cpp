@@ -34,14 +34,11 @@ void identify_mutations(
 								const string& bam,
 								const string& fasta,
 								const string& gd_file,
-								const string& output_dir,
-								const string& coverage_dir,
                 const vector<double>& deletion_propagation_cutoff,
                 const vector<double>& deletion_seed_cutoffs,
 								double mutation_cutoff,
 								double polymorphism_cutoff,
 								double polymorphism_frequency_cutoff,
-								const string& error_table_file,
 								bool print_per_position_file
  ) {
                                                                                             
@@ -51,14 +48,11 @@ void identify_mutations(
                 summary,
 								bam,
 								fasta,
-								output_dir,
-								coverage_dir,
                 deletion_propagation_cutoff,
                 deletion_seed_cutoffs,
 								mutation_cutoff,
 								polymorphism_cutoff,
 								polymorphism_frequency_cutoff,
-								error_table_file,
 								print_per_position_file
 							);
 	imp.do_pileup();
@@ -75,14 +69,11 @@ identify_mutations_pileup::identify_mutations_pileup(
                               const Summary& summary,
 															const string& bam,
 															const string& fasta,
-															const string& output_dir,
-															const string& coverage_dir,
                               const vector<double>& deletion_propagation_cutoffs,
                               const vector<double>& deletion_seed_cutoffs,
 															double mutation_cutoff,
 															double polymorphism_cutoff,
 															double polymorphism_frequency_cutoff,
-															const string& error_table_file,
 															bool print_per_position_file
                                                             )
 : pileup_base(bam, fasta)
@@ -93,11 +84,8 @@ identify_mutations_pileup::identify_mutations_pileup(
 , _mutation_cutoff(mutation_cutoff)
 , _polymorphism_cutoff(polymorphism_cutoff)
 , _polymorphism_frequency_cutoff(polymorphism_frequency_cutoff)
-, _coverage_dir(coverage_dir)
-, _output_dir(output_dir)
 , _log10_ref_length(0)
 , _snp_caller("haploid", summary.sequence_conversion.total_reference_sequence_length)
-, _on_deletion_seq_id(UNDEFINED_UINT32)
 , _this_deletion_reaches_seed_value(false)
 , _this_deletion_redundant_reached_zero(false)
 , _last_position_coverage_printed(0)
@@ -129,24 +117,17 @@ identify_mutations_pileup::identify_mutations_pileup(
 	_log10_ref_length = log10(_log10_ref_length);
   
   // are we printing detailed coverage information?
-  _print_coverage_data = (coverage_dir != "");
+  _print_coverage_data = true;
   
   // load the error table file and convert back to probabilities
-  _error_table.read_log10_prob_table(error_table_file);
+  _error_table.read_log10_prob_table(settings.error_rates_file_name);
   _error_table.log10_prob_to_prob();
   
   if (_print_per_position_file) {
-    string filename(_output_dir);
+    string filename(settings.mutation_identification_path);
 		filename += "/full_identify_mutation.out";
     _per_position_file.open(filename.c_str());
   }
-
-	_on_deletion_seq_id = UNDEFINED_UINT32;
-	_last_deletion_start_position = UNDEFINED_UINT32;
-	_last_deletion_end_position = UNDEFINED_UINT32;
-	_last_deletion_redundant_start_position = UNDEFINED_UINT32;
-	_last_deletion_redundant_end_position = UNDEFINED_UINT32;
-	_last_start_unknown_interval = UNDEFINED_UINT32;
   
 }
 
@@ -625,9 +606,7 @@ void identify_mutations_pileup::at_target_start(const uint32_t tid)
     
   // Open per-reference coverage file:
 	if(_print_coverage_data) {
-		string filename(_coverage_dir);
-		filename += target_name(tid);
-		filename += ".coverage.tab";
+		string filename = _settings.file_name(_settings.complete_mutations_text_file_name, "@", target_name(tid));
 		_coverage_data.open(filename.c_str());
     ASSERT(!_coverage_data.fail(), "Could not open output file:" + filename);
 		_coverage_data << "unique_top_cov" << "\t" << "unique_bot_cov" << "\t" << "redundant_top_cov" << "\t" << "redundant_bot_cov" << "\t" << "raw_redundant_top_cov" << "\t" << "raw_redundant_bot_cov" << "\t" << "e_value" << "\t" << "position" << endl;
@@ -636,8 +615,7 @@ void identify_mutations_pileup::at_target_start(const uint32_t tid)
   // Polymorphism file used as input to R
   // Only one file for all reference sequences
   if(_settings.polymorphism_prediction && !_polymorphism_r_input_file.is_open()) {
-		string filename(_output_dir);
-		filename += "/polymorphism_statistics_input.tab";
+		string filename = _settings.polymorphism_statistics_input_file_name;
 		_polymorphism_r_input_file.open(filename.c_str());
     ASSERT(!_polymorphism_r_input_file.fail(), "Could not open output file:" + filename);
 		_polymorphism_r_input_file 
@@ -659,6 +637,13 @@ void identify_mutations_pileup::at_target_start(const uint32_t tid)
     << endl;
   }
   
+  // Reset the Missing Coverage evidence variables
+  _last_deletion_start_position = UNDEFINED_UINT32;
+	_last_deletion_end_position = UNDEFINED_UINT32;
+	_last_deletion_redundant_start_position = UNDEFINED_UINT32;
+	_last_deletion_redundant_end_position = UNDEFINED_UINT32;
+	_last_start_unknown_interval = UNDEFINED_UINT32;
+  
 }
   
 /*! Called at the end of a reference sequence fragment
@@ -666,8 +651,7 @@ void identify_mutations_pileup::at_target_start(const uint32_t tid)
  */
 void identify_mutations_pileup::at_target_end(const uint32_t tid) {
 
-  // end "open" intervals
-
+  // end "open" Missing Coverahge and Unknown intervals
 	check_deletion_completion(target_length(tid)+1, tid, position_coverage(numeric_limits<double>::quiet_NaN()), numeric_limits<double>::quiet_NaN());
   update_unknown_intervals(target_length(tid)+1, tid, true, false);
 
@@ -702,7 +686,7 @@ void identify_mutations_pileup::at_target_end(const uint32_t tid) {
  
  Used at each pileup iteration and at the end.
  //## when called at the end of a fragment, the position is fragment_length+1
- //## and $this_position_coverage is undefined
+ //## and this_position_coverage is undefined
  
  @JEB This function expects 1-indexed positions!!!
  
@@ -712,9 +696,9 @@ void identify_mutations_pileup::check_deletion_completion(uint32_t position, uin
 	//cerr << position << " " << e_value_call << endl;
 	
   // special case = beginning of new seq_id
-  if (position == 1) _last_position_coverage = position_coverage(numeric_limits<double>::quiet_NaN());
+  if (position == 1) 
+    _last_position_coverage = position_coverage(numeric_limits<double>::quiet_NaN());
   
-	//## called with an undef $this_position_coverage at the end of the genome
   // print to optional output file
   if (!isnan(this_position_coverage.unique[1]) && _coverage_data.is_open()) {
     _coverage_data << this_position_coverage.unique[0] << "\t"
@@ -738,28 +722,8 @@ void identify_mutations_pileup::check_deletion_completion(uint32_t position, uin
   }
 		
   //##keep track of whether we've encountered the seed value
-  //		if ($this_position_coverage->{total} <= $deletion_seed_cutoff)
   if(!isnan(this_position_coverage.unique[1]) && (this_position_coverage.total <= _this_deletion_seed_cutoff)) {
     _this_deletion_reaches_seed_value = true;
-  }
-    
-  //## REDUNDANT COVERAGE
-  //## updated only if we are currently within a deletion
-  if (_last_deletion_start_position != UNDEFINED_UINT32) {
-    
-    if (this_position_coverage.redundant[1] == 0) {
-      _this_deletion_redundant_reached_zero = true;
-      _last_deletion_redundant_end_position = UNDEFINED_UINT32;
-    }
-    else if (this_position_coverage.redundant[1] > 0) {
-    //## if there is any redundant coverage remember the start (until we find zero redundant coverage)
-      if (!_this_deletion_redundant_reached_zero) {
-        _last_deletion_redundant_start_position = position;
-      }
-      else {
-        if (_last_deletion_redundant_end_position == UNDEFINED_UINT32) _last_deletion_redundant_end_position = position;
-      }
-    }
   }
 	
 	//## If we are in a deletion and rise back above the propagation cutoff OR we are at the end of this fragment (NAN),
@@ -771,8 +735,10 @@ void identify_mutations_pileup::check_deletion_completion(uint32_t position, uin
 		if(_this_deletion_reaches_seed_value) {
 
       _last_deletion_end_position = position-1;
-      if (_last_deletion_redundant_end_position == UNDEFINED_UINT32) _last_deletion_redundant_end_position = _last_deletion_end_position;
-      if (_last_deletion_redundant_start_position == UNDEFINED_UINT32) _last_deletion_redundant_start_position = _last_deletion_start_position;
+      if (_last_deletion_redundant_end_position == UNDEFINED_UINT32) 
+        _last_deletion_redundant_end_position = _last_deletion_end_position;
+      if (_last_deletion_redundant_start_position == UNDEFINED_UINT32) 
+        _last_deletion_redundant_start_position = _last_deletion_start_position;
 
       cDiffEntry del(MC);
 			del[SEQ_ID] = target_name(seq_id);
@@ -797,6 +763,25 @@ void identify_mutations_pileup::check_deletion_completion(uint32_t position, uin
 		_last_deletion_redundant_start_position = UNDEFINED_UINT32;
 		_last_deletion_redundant_end_position = UNDEFINED_UINT32;
 	}
+  
+  //## REDUNDANT COVERAGE
+  //## updated only if we are still within a deletion
+  if (_last_deletion_start_position != UNDEFINED_UINT32) {
+    
+    if (this_position_coverage.redundant[1] == 0) {
+      _this_deletion_redundant_reached_zero = true;
+      _last_deletion_redundant_end_position = UNDEFINED_UINT32;
+    }
+    else if (this_position_coverage.redundant[1] > 0) {
+      //## if there is any redundant coverage remember the start (until we find zero redundant coverage)
+      if (!_this_deletion_redundant_reached_zero) {
+        _last_deletion_redundant_start_position = position;
+      }
+      else if (_last_deletion_redundant_end_position == UNDEFINED_UINT32) {
+        _last_deletion_redundant_end_position = position;
+      }
+    }
+  }
 	
   
   _last_position_coverage = this_position_coverage;

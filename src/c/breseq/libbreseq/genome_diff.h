@@ -26,6 +26,7 @@ namespace breseq {
 class cAnnotatedSequence;
 class cDiffEntry;
 class cGenomeDiff;
+class cReferenceSequences;
 
 // Common keywords used for diff entries:
 extern const char* TYPE;

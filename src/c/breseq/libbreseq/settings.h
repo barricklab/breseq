@@ -464,18 +464,11 @@ namespace breseq
     static void command_line_run_header();
     
 		//! Utility function to substitute specific details into a generic file name
-		static string file_name(const string& file_name_key, const string& substitute, const string& with)
+		static string file_name(const string& _file_name_key, const string& _substitute, const string& _with)
 		{
-			string s(file_name_key);
-
-			if (substitute.size() > 0)
-			{
-				size_t pos = s.find(substitute);
-				if (pos != string::npos)
-				{
-					s.replace(pos, 1, with);
-				}
-			}
+			string s(_file_name_key);
+      if (_substitute.size())
+        s = substitute(s, _substitute, _with);
 
 			return s;
 		}
