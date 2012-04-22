@@ -1323,9 +1323,6 @@ void cReferenceSequences::ReadGenBankFileSequenceFeatures(std::ifstream& in, cAn
       if (feature.SafeGet("transl_table") != "")
         feature["transl_table"] = feature["transl_table"];
       
-      cout << "GenBank reader" << endl;
-      cout << feature["transl_table"]  << endl;
-      
       if ( (feature.SafeGet("name") == "") && (feature.SafeGet("locus_tag") != "") )
         feature["name"] = feature["locus_tag"];
 
