@@ -20,6 +20,7 @@ LICENSE AND COPYRIGHT
 #define _BRESEQ_FASTQ_H_
 
 #include "common.h"
+#include "settings.h"
 
 namespace breseq {
 

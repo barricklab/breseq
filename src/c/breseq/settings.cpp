@@ -454,7 +454,7 @@ namespace breseq
 		this->error_counts_file_name = this->error_calibration_path + "/#.error_counts.tab";
 		this->error_rates_done_file_name = this->error_calibration_path + "/error_rates.done";
 
-		this->error_rates_file_name = this->error_calibration_path + "/#.error_rates.tab";
+		this->error_rates_file_name = this->error_calibration_path + "/error_rates.tab";
 		this->error_counts_done_file_name = this->error_calibration_path + "/error_counts.done";
 		this->coverage_file_name = this->error_calibration_path + "/@.coverage.tab";
 		this->unique_only_coverage_distribution_file_name = this->error_calibration_path + "/@.unique_only_coverage_distribution.tab";

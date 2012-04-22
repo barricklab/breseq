@@ -783,6 +783,7 @@ namespace breseq {
 					cout << "J2 IS overlap length: " << j2_is_overlap_length << endl;
 				}
 
+        /*
         pos_1 = n(j1[j1["_is_interval"] + "_position"]);
         string j1_is_seq_matched = "";
 				if (n(j1[j1["_is_interval"] + "_strand"]) == -1)
@@ -806,7 +807,8 @@ namespace breseq {
             end_1
 					);
 				}
-
+        */
+        /*
 
         pos_1 = n(j2[j2["_is_interval"] + "_position"]);
         string j2_is_seq_matched = "";
@@ -831,6 +833,7 @@ namespace breseq {
             end_1
 					);
 				}
+         */
 
         // what are the actual sequences of this length at the end of the IS elements?
         start_1 = n(j1["_" + j1["_is_interval"] + "_is_start"]);
@@ -884,8 +887,8 @@ namespace breseq {
 					cout << "J2 LEFT : " << j2_left_is_sequence << endl;
 					cout << "J2 RIGHT: " << j2_right_is_sequence << endl;
 
-					cout << "J1 IS matched length " << j1_is_overlap_length << ": " << j1_is_seq_matched << endl;
-					cout << "J2 IS matched length " << j2_is_overlap_length << ": " << j2_is_seq_matched << endl;
+					//cout << "J1 IS matched length " << j1_is_overlap_length << ": " << j1_is_seq_matched << endl;
+					//cout << "J2 IS matched length " << j2_is_overlap_length << ": " << j2_is_seq_matched << endl;
 				}
 
 				// if the matched IS element sequences are the same then the direction is AMBIGUOUS

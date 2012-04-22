@@ -137,6 +137,7 @@ namespace breseq {
     int32_t end;
     bool strand;
     bool pseudogene; 
+    uint32_t translation_table;
     
     Gene() {};
     Gene(cSequenceFeature& src)
@@ -148,6 +149,9 @@ namespace breseq {
       end = src.m_end;
       strand = (src.m_strand >= 1);
       pseudogene = src.m_pseudo;
+      translation_table = 1;
+      if (src.count("transl_table")) 
+        translation_table = from_string<uint32_t>(src["transl_table"]);
     }
   };
 
@@ -269,7 +273,7 @@ namespace breseq {
           m_repeats.push_back(fp);
         }
         else if (((*fp)["type"] == "CDS") || ((*fp)["type"] == "tRNA") || ((*fp)["type"] == "rRNA") || ((*fp)["type"] == "RNA"))
-        {
+        { 
           m_genes.push_back(fp);
         }
       }
@@ -465,11 +469,13 @@ namespace breseq {
     map<string,int32_t> seq_order;
     map<string,string> trims;
     
-    static map<string,char> translation_table_11;
+    // Translation tables
+    static vector<string> translation_tables;
+    static map<string,uint16_t> codon_to_aa_index;
 
     static cSequenceFeaturePtr find_closest_repeat_region_boundary(int32_t position, cSequenceFeatureList& repeat_list, int32_t max_distance, int32_t direction);
     static cSequenceFeaturePtr get_overlapping_feature(cSequenceFeatureList& feature_list, int32_t pos);
-    static char translate(string seq);
+    static char translate_codon(string seq, uint32_t translation_table);
     static void find_nearby_genes(
                                   cSequenceFeatureList& gene_list, 
                                   int32_t pos_1, 

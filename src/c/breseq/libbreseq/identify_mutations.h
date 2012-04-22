@@ -43,14 +43,11 @@ namespace breseq {
                           const string& bam,
 													const string& fasta,
 													const string& gd_file,
-													const string& output_dir,
-													const string& coverage_dir,
                           const vector<double>& deletion_propagation_cutoff,
                           const vector<double>& deletion_seed_cutoff,
 													double mutation_cutoff,
                           double polymorphism_cutoff,
                           double polymorphism_frequency_cutoff,
-                          const string& error_table_file,
                           bool print_per_position_file
                           );
 	
@@ -234,14 +231,11 @@ namespace breseq {
                               const Summary& summary,
                               const string& bam,
 															const string& fasta,
-															const string& output_dir,
-															const string& coverage_dir,
                               const vector<double>& deletion_propagation_cutoff,
                               const vector<double>& deletion_seed_cutoffs,
 															double mutation_cutoff,
                               double polymorphism_cutoff,
                               double polymorphism_frequency_cutoff,
-                              const string& error_table_file,
                               bool print_per_position_file
                             );
 				
@@ -288,8 +282,6 @@ namespace breseq {
 		double _mutation_cutoff; //!< log10 e-value cutoff value for mutation predictions.
     double _polymorphism_cutoff; //!< log10 e-value cutoff for predicted polymorphisms.
     double _polymorphism_frequency_cutoff; //!< Frequency cutoff for predicted polymorphisms.
-		const string _coverage_dir; //!< Directory in which to store coverage data.
-    string _output_dir; //!< Directory containing output
 
     //! Settings calculated during initialization
 		double _log10_ref_length; //!< log10 of the total reference sequence.
@@ -310,7 +302,6 @@ namespace breseq {
 		ofstream _polymorphism_r_input_file;
 		
 		// these are state variables used by the deletion-prediction method.
-		uint32_t _on_deletion_seq_id;
     double _this_deletion_propagation_cutoff;
     double _this_deletion_seed_cutoff;
 		uint32_t _last_deletion_start_position;

@@ -883,6 +883,10 @@ namespace breseq {
       if (feature.m_gff_attributes.count("Pseudo"))
         feature.m_pseudo = from_string<bool>(feature.m_gff_attributes["Pseudo"][0]);
       
+      // Load translation table over to the gene
+      if (feature.m_gff_attributes.count("transl_table"))
+        feature["transl_table"] = feature.m_gff_attributes["transl_table"][0];
+
     
 //! Step 4: Determine if sequence already exists (find or create if not found)
       this->add_new_seq(seq_id);
@@ -1315,6 +1319,12 @@ void cReferenceSequences::ReadGenBankFileSequenceFeatures(std::ifstream& in, cAn
       // Add information
       if (feature.SafeGet("gene") != "")
         feature["name"] = feature["gene"];
+
+      if (feature.SafeGet("transl_table") != "")
+        feature["transl_table"] = feature["transl_table"];
+      
+      cout << "GenBank reader" << endl;
+      cout << feature["transl_table"]  << endl;
       
       if ( (feature.SafeGet("name") == "") && (feature.SafeGet("locus_tag") != "") )
         feature["name"] = feature["locus_tag"];
@@ -1346,6 +1356,10 @@ void cReferenceSequences::ReadGenBankFileSequenceFeatures(std::ifstream& in, cAn
       feature.m_gff_attributes["Alias"] = make_vector<string>(feature["accession"]);
     if (feature.SafeGet("name") != "")
       feature.m_gff_attributes["Name"] = make_vector<string>(feature["name"]);
+
+    if (feature.SafeGet("transl_table") != "")
+      feature.m_gff_attributes["transl_table"] = make_vector<string>(feature["transl_table"]);
+
     
     // add an extra copy of the feature if it crosses the origin of a circular chromosome
     if (feature.m_end < feature.m_start) {
@@ -1641,91 +1655,65 @@ void cReferenceSequences::find_nearby_genes(
   }
 }
 
-map<string,char> cReferenceSequences::translation_table_11 = make_map<string,char>
-  ("TTT", 'F')
-  ("TTC", 'F')
-  ("TTA", 'L')
-  ("TTG", 'L')
-
-  ("TCT", 'S')
-  ("TCC", 'S')
-  ("TCA", 'S')
-  ("TCG", 'S')
-
-  ("TAT", 'Y')
-  ("TAC", 'Y')
-  ("TAA", '*')
-  ("TAG", '*')
-
-  ("TGT", 'C')
-  ("TGC", 'C')
-  ("TGA", '*')
-  ("TGG", 'W')
-
-  ("CTT", 'L')
-  ("CTC", 'L')
-  ("CTA", 'L')
-  ("CTG", 'L')
-
-  ("CCT", 'P')
-  ("CCC", 'P')
-  ("CCA", 'P')
-  ("CCG", 'P')
-
-  ("CAT", 'H')
-  ("CAC", 'H')
-  ("CAA", 'Q')
-  ("CAG", 'Q')
-
-  ("CGT", 'R')
-  ("CGC", 'R')
-  ("CGA", 'R')
-  ("CGG", 'R')
-
-  ("ATT", 'I')
-  ("ATC", 'I')
-  ("ATA", 'I')
-  ("ATG", 'M')
-
-  ("ACT", 'T')
-  ("ACC", 'T')
-  ("ACA", 'T')
-  ("ACG", 'T')
-
-  ("AAT", 'N')
-  ("AAC", 'N')
-  ("AAA", 'K')
-  ("AAG", 'K')
-
-  ("AGT", 'S')
-  ("AGC", 'S')
-  ("AGA", 'R')
-  ("AGG", 'R')
-
-  ("GTT", 'V')
-  ("GTC", 'V')
-  ("GTA", 'V')
-  ("GTG", 'V')
-
-  ("GCT", 'A')
-  ("GCC", 'A')
-  ("GCA", 'A')
-  ("GCG", 'A')
-
-  ("GAT", 'D')
-  ("GAC", 'D')
-  ("GAA", 'E')
-  ("GAG", 'E')
-
-  ("GGT", 'G')
-  ("GGC", 'G')
-  ("GGA", 'G')
-  ("GGG", 'G')
+// Retrieved from http://www.ncbi.nlm.nih.gov/Taxonomy/Utils/wprintgc.cgi on 04-21-2012
+vector<string> cReferenceSequences::translation_tables = make_vector<string>
+  ("FFLLSSSSYY**CC*WLLLLPPPPHHQQRRRRIIIMTTTTNNKKSSRRVVVVAAAADDEEGGGG") // 1
+  ("FFLLSSSSYY**CCWWLLLLPPPPHHQQRRRRIIMMTTTTNNKKSS**VVVVAAAADDEEGGGG") // 2
+  ("FFLLSSSSYY**CCWWTTTTPPPPHHQQRRRRIIMMTTTTNNKKSSRRVVVVAAAADDEEGGGG") // 3
+  ("FFLLSSSSYY**CCWWLLLLPPPPHHQQRRRRIIIMTTTTNNKKSSRRVVVVAAAADDEEGGGG") // 4
+  ("FFLLSSSSYY**CCWWLLLLPPPPHHQQRRRRIIMMTTTTNNKKSSSSVVVVAAAADDEEGGGG") // 5
+  ("FFLLSSSSYYQQCC*WLLLLPPPPHHQQRRRRIIIMTTTTNNKKSSRRVVVVAAAADDEEGGGG") // 6
+  ("") // 7 deleted
+  ("") // 8 deleted
+  ("FFLLSSSSYY**CCWWLLLLPPPPHHQQRRRRIIIMTTTTNNNKSSSSVVVVAAAADDEEGGGG") // 9
+  ("FFLLSSSSYY**CCCWLLLLPPPPHHQQRRRRIIIMTTTTNNKKSSRRVVVVAAAADDEEGGGG") // 10
+  ("FFLLSSSSYY**CC*WLLLLPPPPHHQQRRRRIIIMTTTTNNKKSSRRVVVVAAAADDEEGGGG") // 11
+  ("FFLLSSSSYY**CC*WLLLSPPPPHHQQRRRRIIIMTTTTNNKKSSRRVVVVAAAADDEEGGGG") // 12
+  ("FFLLSSSSYY**CCWWLLLLPPPPHHQQRRRRIIMMTTTTNNKKSSGGVVVVAAAADDEEGGGG") // 13
+  ("FFLLSSSSYYY*CCWWLLLLPPPPHHQQRRRRIIIMTTTTNNNKSSSSVVVVAAAADDEEGGGG") // 14
+  ("FFLLSSSSYY*QCC*WLLLLPPPPHHQQRRRRIIIMTTTTNNKKSSRRVVVVAAAADDEEGGGG") // 15
+  ("FFLLSSSSYY*LCC*WLLLLPPPPHHQQRRRRIIIMTTTTNNKKSSRRVVVVAAAADDEEGGGG") // 16
+  ("") // 17 deleted
+  ("") // 18 deleted
+  ("") // 19 deleted
+  ("") // 20 deleted
+  ("FFLLSSSSYY**CCWWLLLLPPPPHHQQRRRRIIMMTTTTNNNKSSSSVVVVAAAADDEEGGGG") // 21
+  ("FFLLSS*SYY*LCC*WLLLLPPPPHHQQRRRRIIIMTTTTNNKKSSRRVVVVAAAADDEEGGGG") // 22
+  ("FF*LSSSSYY**CC*WLLLLPPPPHHQQRRRRIIIMTTTTNNKKSSRRVVVVAAAADDEEGGGG") // 23
+  ("FFLLSSSSYY**CCWWLLLLPPPPHHQQRRRRIIIMTTTTNNKKSSSKVVVVAAAADDEEGGGG") // 24
+;
+  
+map<string,uint16_t> cReferenceSequences::codon_to_aa_index = make_map<string,uint16_t>
+  ("TTT",  0)("TTC",  1)("TTA",  2)("TTG",  3)
+  ("TCT",  4)("TCC",  5)("TCA",  6)("TCG",  7)
+  ("TAT",  8)("TAC",  9)("TAA", 10)("TAG", 11)
+  ("TGT", 12)("TGC", 13)("TGA", 14)("TGG", 15)
+  ("CTT", 16)("CTC", 17)("CTA", 18)("CTG", 19)
+  ("CCT", 20)("CCC", 21)("CCA", 22)("CCG", 23)
+  ("CAT", 24)("CAC", 25)("CAA", 26)("CAG", 27)
+  ("CGT", 28)("CGC", 29)("CGA", 30)("CGG", 31)
+  ("ATT", 32)("ATC", 33)("ATA", 34)("ATG", 35)
+  ("ACT", 36)("ACC", 37)("ACA", 38)("ACG", 39)
+  ("AAT", 40)("AAC", 41)("AAA", 42)("AAG", 43)
+  ("AGT", 44)("AGC", 45)("AGA", 46)("AGG", 47)
+  ("GTT", 48)("GTC", 49)("GTA", 50)("GTG", 51)
+  ("GCT", 52)("GCC", 53)("GCA", 54)("GCG", 55)
+  ("GAT", 56)("GAC", 57)("GAA", 58)("GAG", 59)
+  ("GGT", 60)("GGC", 61)("GGA", 62)("GGG", 63)
 ;
 
-char cReferenceSequences::translate(string seq)
+char cReferenceSequences::translate_codon(string seq, uint32_t translation_table)
 {
-  return (translation_table_11.count(seq) == 0) ? '?' : translation_table_11[seq];
+  ASSERT(seq.size()==3, "Attempt to translate codon without three bases.");
+  ASSERT(translation_table < cReferenceSequences::translation_tables.size(), "Unknown translation table requested.");
+  string& tt = cReferenceSequences::translation_tables[translation_table];
+  ASSERT(tt.size() == 64, "Unknown translation table requested.");
+  
+  cout << translation_table << endl;
+  
+  return (cReferenceSequences::codon_to_aa_index.count(seq) == 0) 
+    ? '?' 
+    : tt[cReferenceSequences::codon_to_aa_index[seq]];
 }
 
 void cReferenceSequences::annotate_1_mutation(cDiffEntry& mut, uint32_t start, uint32_t end, bool repeat_override, bool ignore_pseudogenes)
@@ -1880,14 +1868,14 @@ void cReferenceSequences::annotate_1_mutation(cDiffEntry& mut, uint32_t start, u
       : reverse_complement(ref_string.substr(gene.end - 3 * from_string<uint32_t>(mut["aa_position"]), 3));
 
     mut["codon_ref_seq"] = codon_seq;
-    mut["aa_ref_seq"] = translate(mut["codon_ref_seq"]);
+    mut["aa_ref_seq"] = translate_codon(mut["codon_ref_seq"], gene.translation_table);
 
     mut["codon_new_seq"] = codon_seq;
     //#remember to revcom the change if gene is on opposite strand
     mut["codon_new_seq"][from_string<uint32_t>(mut["codon_position"]) - 1] = gene.strand ?
       mut["new_seq"][0]
       : reverse_complement(mut["new_seq"])[0];
-    mut["aa_new_seq"] =  translate(mut["codon_new_seq"]);
+    mut["aa_new_seq"] =  translate_codon(mut["codon_new_seq"], gene.translation_table);
 
     mut["snp_type"] = (mut["aa_ref_seq"] != mut["aa_new_seq"]) ? "nonsynonymous" : "synonymous";
   }
