@@ -29,6 +29,8 @@ using namespace std;
 namespace breseq
 {
 
+  string Settings::output_divider("====================================================================================");
+  
 	void cReadFiles::Init(const vector<string>& read_file_names)
 	{
 		//clear any existing info
@@ -104,34 +106,34 @@ namespace breseq
 
     
     // setup and parse configuration options:
-    AnyOption options("Usage: breseq -r reference.gbk reads1.fastq [reads2.fastq, reads3.fastq...]");
+    AnyOption options("Usage: breseq -r reference.gbk [-r reference2.gbk ...] reads1.fastq [reads2.fastq reads3.fastq ...]");
     
     options
-		("help,h", "produce advanced help message", TAKES_NO_ARGUMENT)
+		("help,h", "Produce help message showing advanced options", TAKES_NO_ARGUMENT)
 		// convert to basing everything off the main output path, so we don't have to set so many options
-		("output,o", "path to breseq output [current path]", ".")
-		("reference,r", "reference sequence in GenBank flatfile format (REQUIRED)")
-    ("name,n", "human-readable name of sample/run for output [empty]", "")
-    ("no-junction-prediction,j", "do not predict new sequence junctions", TAKES_NO_ARGUMENT)
-    ("polymorphism-prediction,p", "predict polymorphic mutations", TAKES_NO_ARGUMENT)
-    ("base-quality-cutoff,b", "ignore bases with quality scores lower than this value", 3)
-    ("require-match-length", "only consider alignments that cover this many bases of a read", 0)
-    ("require-match-fraction", "only consider alignments that cover this fraction of a read", 0.9)
-    ("deletion-coverage-propagation-cutoff,u","value for coverage above which deletions are cutoff. 0 = calculated from coverage distribution", 0, ADVANCED_OPTION)
-    ("deletion-coverage-seed-cutoff,s","value for coverage below which deletions are seeded", 0, ADVANCED_OPTION)
+		("output,o", "Path to breseq output", "current path")
+		("reference,r", "File containing reference sequences in GenBank, GFF3, or FASTA format. Option may be provided multiple times for multiple files. (REQUIRED)")
+    ("name,n", "Human-readable name of sample/run for output [empty]", "")
+    ("no-junction-prediction,j", "Do not predict new sequence junctions", TAKES_NO_ARGUMENT)
+    ("Polymorphism-prediction,p", "Predict polymorphic mutations", TAKES_NO_ARGUMENT)
+    ("base-quality-cutoff,b", "Ignore bases with quality scores lower than this value", 3)
+    ("require-match-length", "Only consider alignments that cover this many bases of a read", 0)
+    ("require-match-fraction", "Only consider alignments that cover this fraction of a read", 0.9)
+    ("deletion-coverage-propagation-cutoff,u","Value for coverage above which deletions are cutoff. 0 = calculated from coverage distribution", 0, ADVANCED_OPTION)
+    ("deletion-coverage-seed-cutoff,s","Value for coverage below which deletions are seeded", 0, ADVANCED_OPTION)
     ("values-to-gd","",TAKES_NO_ARGUMENT, ADVANCED_OPTION) // @JEB @GRC added in for gathering/analyzing breseq values
-    ("cnv","do experimental copy number variation prediction",TAKES_NO_ARGUMENT, ADVANCED_OPTION)
-    ("cnv-tile-size", "tile size for copy number variation prediction", 500, ADVANCED_OPTION)
-    ("cnv-ignore-redundant", "only consider non-redundant coverage when using cnv", TAKES_NO_ARGUMENT, ADVANCED_OPTION)
-    ("per-position-file", "create additional file of per-position aligned bases", TAKES_NO_ARGUMENT, ADVANCED_OPTION)
+    ("cnv","Do experimental copy number variation prediction",TAKES_NO_ARGUMENT, ADVANCED_OPTION)
+    ("cnv-tile-size", "Tile size for copy number variation prediction", 500, ADVANCED_OPTION)
+    ("cnv-ignore-redundant", "Only consider non-redundant coverage when using cnv", TAKES_NO_ARGUMENT, ADVANCED_OPTION)
+    ("per-position-file", "Create additional file of per-position aligned bases", TAKES_NO_ARGUMENT, ADVANCED_OPTION)
     
-    ("periodicity", "finding sum of differences squared of a coverage file", TAKES_NO_ARGUMENT, ADVANCED_OPTION)
-    ("periodicity-method", "which method to use for periodicity", 1, ADVANCED_OPTION)
-    ("periodicity-start", "start of offsets", 1, ADVANCED_OPTION)
-    ("periodicity-end", "end of offsets", 2, ADVANCED_OPTION)
-    ("periodicity-step", "increment of offsets", 1, ADVANCED_OPTION)
+    ("periodicity", "Finding sum of differences squared of a coverage file", TAKES_NO_ARGUMENT, ADVANCED_OPTION)
+    ("periodicity-method", "Which method to use for periodicity", 1, ADVANCED_OPTION)
+    ("periodicity-start", "Start of offsets", 1, ADVANCED_OPTION)
+    ("periodicity-end", "End of offsets", 2, ADVANCED_OPTION)
+    ("periodicity-step", "Increment of offsets", 1, ADVANCED_OPTION)
     
-    ("verbose,v","",TAKES_NO_ARGUMENT)
+    ("verbose,v","Produce verbose output",TAKES_NO_ARGUMENT)
 
     .processCommandArgs(argc, argv);
     
@@ -142,6 +144,8 @@ namespace breseq
     options.addUsage("  TACC Pipeline Commands: DOWNLOAD, RUNFILE");
     options.addUsage("");
     options.addUsage("For help using a utility command, type: breseq [command] ");
+    options.addUsage("");
+    options.addUsage(output_divider);
     
     // make sure that the other config options are good:
     if (options.count("help"))
@@ -153,7 +157,10 @@ namespace breseq
     //! Settings: Global Workflow and Output
     
     this->base_output_path = options["output"];
-
+    // Do this so the default printed can be pretty
+    if (this->base_output_path == "current directory")
+      this->base_output_path = ".";
+    
     // Remaining command line items are read files
     // Read sequence file provided?
 		if (options.getArgc() == 0)
@@ -235,7 +242,7 @@ namespace breseq
   
   void Settings::command_line_run_header()
   {
-    fprintf(stderr, "====================================================================================\n");
+    cout << output_divider << endl;
     fprintf(stderr, "%s  %s   %s\n", PACKAGE_STRING, HG_REVISION, PACKAGE_URL);
     fprintf(stderr, "\n");
     fprintf(stderr, "Authors: Barrick JE, Borges JJ, Colburn GR, Knoester DB, Meyer AG, Reba A, Strand MD\n");
@@ -247,7 +254,7 @@ namespace breseq
     fprintf(stderr, "\n");
     fprintf(stderr, "Copyright (c) 2008-2010 Michigan State University\n");
     fprintf(stderr, "Copyright (c) 2011      The University of Texas at Austin\n");
-    fprintf(stderr, "====================================================================================\n");
+    cout << output_divider << endl;
   }
 
 	void Settings::pre_option_initialize(int argc, char* argv[])
