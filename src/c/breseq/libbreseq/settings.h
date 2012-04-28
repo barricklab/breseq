@@ -166,6 +166,9 @@ namespace breseq
 
 	struct Settings
 	{
+    
+    static string output_divider;
+    
 	public:
     
     ////////////////////
