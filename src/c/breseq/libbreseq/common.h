@@ -698,6 +698,26 @@ namespace breseq {
     return path;
   }
   
+  template <typename T, typename U> vector<T> map_keys_to_list (const map<T,U>& the_map)
+  {
+    vector<T> return_list;
+    for (class map<T,U>::const_iterator it = the_map.begin(); it != the_map.end(); it++ )
+    {
+      return_list.push_back(it->first);
+    }
+    return return_list;
+  }
+  
+  template <typename T, typename U> vector<U> map_key_list_to_values (const map<T,U>& the_map, const vector<T> the_keys)
+  {
+    vector<U> return_list;
+    for (class vector<T>::const_iterator it = the_keys.begin(); it != the_keys.end(); it++ ) {
+      return_list.push_back(the_map[*it]);
+    }
+    return return_list;
+  }
+
+  
   template <typename T, typename U> inline void print_map(const map<T,U>& the_map)
   {
     for (class map<T,U>::const_iterator it = the_map.begin(); it != the_map.end(); it++ )

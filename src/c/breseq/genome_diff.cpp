@@ -3099,7 +3099,7 @@ void cGenomeDiff::compare(cGenomeDiff& gd, bool verbose)
   return;
 }
 
-}//namespace bresesq
 
+}//namespace bresesq
 
 

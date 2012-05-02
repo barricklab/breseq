@@ -34,7 +34,8 @@ namespace breseq {
 	/*! Interface for loading sequences and sequence features from GenBank files.
   */
   
-  
+  extern const vector<string> snp_types;
+    
 	/*! Sequence Feature class.
 	 */ 
 
@@ -490,7 +491,7 @@ namespace breseq {
     void annotate_mutations(cGenomeDiff& gd, bool only_muts = false, bool ignore_pseudogenes = false);
     void polymorphism_statistics(Settings& settings, Summary& summary);
     string repeat_family_sequence(const string& repeat_name, int8_t strand, int32_t& region_pos);
-
+    
     static string GFF3EscapeString(const string& s)
     {
       string escaped_s(s);
@@ -536,10 +537,23 @@ namespace breseq {
       else if (a.find(m_name) != string::npos && b.find(m_name) != string::npos) {
         return a < b;
       }
+       return false;
     }
 
     private:
       string m_name;
+  };
+  
+  //<! Class for annotating effects of base substitution mutations
+  //   that properly accounts for overlapping features.
+  class BaseSubstitutionEffects {    
+  public:
+    BaseSubstitutionEffects(cReferenceSequences& ref_seq_info)
+    { (void)ref_seq_info; }
+  
+  typedef vector<uint8_t[12]> SequenceBaseSubstitutionEffects;
+  map<string,SequenceBaseSubstitutionEffects> m_bse;
+    
   };
 
 } // breseq namespace
