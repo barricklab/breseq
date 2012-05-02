@@ -165,6 +165,9 @@ public:
   //! Return if this diff entry is a validation
   bool is_validation() const;
   
+  bool is_marked_deleted()
+  { return (this->entry_exists("deleted") && ((from_string<int32_t>((*this)["deleted"]) != 0))); }
+  
   //! Common function for getting start or end of mutation or evidence
   uint32_t get_start();
   uint32_t get_end();

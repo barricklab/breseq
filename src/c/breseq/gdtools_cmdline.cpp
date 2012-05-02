@@ -757,6 +757,9 @@ int do_count(int argc, char* argv[])
     return -1;
   }
   
+  // Could be a paramter > this is a "large" mutation, <= this is an "small" mutation
+  int32_t large_size_cutoff = 20;
+    
   vector<string> reference_file_names = from_string<vector<string> >(options["reference"]);
   uout("Reading input reference sequence files") << reference_file_names << endl;
   cReferenceSequences ref_seq_info;
@@ -764,96 +767,77 @@ int do_count(int argc, char* argv[])
   //ref_seq_info.total_length();
   
   // Need to create base substitution file...
+  //my $bsf;
+  //my $bs_totals;
+  //if ($base_substitution_file)
+  //{
+  //  $bsf = GenomeDiff::BaseSubstitutionFile->read(input_file => $base_substitution_file, nt_sequence => $ref_seq_info->{ref_strings}->{$main_seq_id});
+  //  $bs_totals = $bsf->totals;
+  //  print Dumper($bs_totals);
+  //}
   
+  // Load and annotate genome diffs
+  vector<cGenomeDiff> genome_diffs; 
+
   for (uint32_t i=0; i<gd_path_names.size(); i++) {
     cGenomeDiff gd(gd_path_names[i]);
     uout(gd_path_names[i]);
     uout("Annotating mutations");
     ref_seq_info.annotate_mutations(gd, true, options.count("ignore-pseudogenes"));
-
+    genome_diffs.push_back(gd);
   }
   
+  // Figure out the names of all "repeat" columns
+  map<string,bool> mob_name_hash;
+  map<string,bool> con_name_hash;
   
-  // Perl that needs to be ported.
-  /*
-         
-   ## load information about reference sequences from GenBank files
-   my $ref_seq_info = load_ref_seq_info(\@reference_genbank_file_names);
-   my $one_ref_seq = scalar keys %{$ref_seq_info->{gene_lists}} == 1;
-   
-   my $total_bp = 0;
-   
-   foreach my $seq_id (keys %{$ref_seq_info->{ref_strings}})
-   {
-   $total_bp += length $ref_seq_info->{ref_strings}->{$seq_id};
-   }
-   
-   ## how many repeat columns
-   my $mob_name_hash;
-   my $con_name_hash;
-   foreach my $gd_file_name (@gd_file_name_list)
-   {
-   print "$gd_file_name\n";
-   
-   my $gd_name = $gd_file_name;
-   $gd_name =~ s/^.+\///;		
-   $gd_name =~ s/\.[^.]+$//;		
-   
-   my $gd = GenomeDiff->new({in=>$gd_file_name});
-   foreach my $mut ($gd->list('MOB'))
-   {
-   $mob_name_hash->{$mut->{repeat_name}} = 1;
-   }
-   foreach my $mut ($gd->list('CON'))
-   {
-   $con_name_hash->{$mut->{mediated}} = 1 if ($mut->{mediated});
-   }
-   foreach my $mut ($gd->list('DEL'))
-   {
-   $mob_name_hash->{$mut->{mediated}} = 1 if ($mut->{mediated});
-   }
-   
-   }
-   my @mod_name_list = sort keys %$mob_name_hash;
-   my @con_name_list = sort keys %$con_name_hash;
-   
-   
-   my $main_seq_id = $ref_seq_info->{seq_ids}->[0];
-   my $main_seq_length = length $ref_seq_info->{ref_strings}->{$main_seq_id};
-   
-   
-   my $bsf;
-   my $bs_totals;
-   if ($base_substitution_file)
-   {
-   $bsf = GenomeDiff::BaseSubstitutionFile->read(input_file => $base_substitution_file, nt_sequence => $ref_seq_info->{ref_strings}->{$main_seq_id});
-   $bs_totals = $bsf->totals;
-   print Dumper($bs_totals);
-   }
-   
-   ##not by base change
-   my @snp_types = ( 'nonsynonymous', 'synonymous', 'noncoding', 'pseudogene', 'intergenic');
-   
-   open OUT, ">$output" or die "Count not open file: $output";
-   
-   my @column_headers = (
-   'strain', 
-   'total', 
-   @snp_types, 
-   'small_indel',
-   'large_del',
-   'deleted_bp',
-   'inserted_bp', 
-   'repeat_inserted_bp',
-   'amplification',
-   'mobile_element',
-   @mod_name_list,
-   'gene_conversion',
-   @con_name_list,
-   'called_bp', 
-   'total_bp',
-   );
-   
+  for (vector<cGenomeDiff>::iterator it=genome_diffs.begin(); it != genome_diffs.end(); ++it) {
+    cGenomeDiff &gd = *it;
+    cout << gd.metadata.run_name << endl;
+    
+    diff_entry_list_t muts = gd.mutation_list();
+    for (diff_entry_list_t::iterator it=muts.begin(); it != muts.end(); ++it) {
+      cDiffEntry& mut = **it;
+      if (mut._type == MOB) {
+        mob_name_hash[mut["repeat_name"]] = true;
+      }
+      if (mut._type == CON) {
+        if (mut.entry_exists("mediated"))
+            mob_name_hash[mut["mediated"]] = true;
+      }
+      if (mut._type == DEL) {
+        if (mut.entry_exists("mediated"))
+          mob_name_hash[mut["mediated"]] = true;
+      }
+    }
+  }
+  
+  vector<string> mob_name_list = map_keys_to_list(mob_name_hash);
+  sort(mob_name_list.begin(), mob_name_list.end());
+  vector<string> con_name_list = map_keys_to_list(con_name_hash);
+  sort(con_name_list.begin(), con_name_list.end());
+  
+  vector<string> column_headers;
+  column_headers.push_back("sample");
+  column_headers.push_back("total");
+  column_headers.insert(column_headers.end(),snp_types.begin(), snp_types.end());
+  column_headers.push_back("small_indel");
+  column_headers.push_back("large_del");
+  column_headers.push_back("deleted_bp");
+  column_headers.push_back("inserted_bp");
+  column_headers.push_back("repeat_inserted_bp");
+  column_headers.push_back("amplification");
+  column_headers.push_back("mobile_element");
+  column_headers.insert(column_headers.end(),mob_name_list.begin(), mob_name_list.end());
+  column_headers.push_back("gene_conversion");
+  column_headers.insert(column_headers.end(),con_name_list.begin(), con_name_list.end());
+  column_headers.push_back("called_bp");
+  column_headers.push_back("total_bp");
+  
+  ofstream output_file(output_file_name.c_str());
+  ASSERT(output_file.good(), "Error writing to file: " + output_file_name);
+  
+  /*    
    if ($base_substitution_file) {
    
    foreach my $snp_type (@GenomeDiff::BaseSubstitutionFile::bsf_snp_types) {
@@ -867,126 +851,123 @@ int do_count(int argc, char* argv[])
    }
    }
    }
+   */
+  
+  output_file << join(column_headers, ",") << endl;
    
-   print OUT join ("\t", @column_headers) . "\n";
-   
-   
-   ## count SNPs and examples of mobile element insertions
-   
-   my @gd_name_list;
-   my @gd_list; 
-   my @mut_lists; #altered during processing
-   foreach my $gd_file_name (@gd_file_name_list)
-   {
-   print "$gd_file_name\n";
-   
-   my $gd_name = $gd_file_name;
-   $gd_name =~ s/^.+\///;		
-   $gd_name =~ s/\.[^.]+$//;		
-   
-   my $gd = GenomeDiff->new({in=>$gd_file_name});
-   GenomeDiff::ReferenceSequence::annotate_mutations($ref_seq_info, $gd, 1);
-   
+  // Zero out counts
+  map<string,map<string,int32_t> > count;
+  
+  for(vector<string>::const_iterator snp_type = snp_types.begin(); snp_type != snp_types.end(); ++snp_type) {
+    count["type"][*snp_type] = 0;
+  }
+  for(vector<string>::const_iterator mob_name = mob_name_list.begin(); mob_name != mob_name_list.end(); ++mob_name) {
+    count["mob"][*mob_name] = 0;
+  }
+  
+  count["large_del"][""] = 0;
+  count["small_indel"][""] = 0;
+  count["large_ins"][""] = 0;
+  count["gene_conversion"][""] = 0;
+  count["mobile_elements"][""] = 0;
+
+  /*
    #deep copy sums
    my $this_bs_totals;
    if ($base_substitution_file) {
    $this_bs_totals = dclone($bs_totals);
    }
+   */
+  
+  int32_t total_deleted = 0;
+  int32_t total_inserted = 0;
+  int32_t total_repeat_inserted = 0;
+  int32_t total_bp = ref_seq_info.total_length();
+
+  for (vector<cGenomeDiff>::iterator it=genome_diffs.begin(); it != genome_diffs.end(); ++it) {
+    cGenomeDiff &gd = *it;
+    cout << gd.metadata.run_name << endl;
+    
+    //my $this_bs_counts = [];
+
+    diff_entry_list_t mut_list = gd.mutation_list();
+    for (diff_entry_list_t::iterator it=mut_list.begin(); it != mut_list.end(); ++it) {		
+      
+      cDiffEntry& mut = **it;
+      
+      if (mut.is_marked_deleted()) continue;
+          
+      //count SNPs and examples of mobile element insertions
+      if (mut._type == SNP) {
+        string base_change = mut[REF_BASE] + " " + mut[NEW_BASE];
+        //my $bp_change = $GenomeDiff::BaseSubstitutionFile::base_to_bp_change->{$base_change};	
+        //if ($base_substitution_file) {
+        //  $this_bs_counts = $bsf->add_bp_change_to_totals($this_bs_counts, $mut->{position}, $bp_change);					
+        //}
+        count["type"][mut["snp_type"]]++;
+      }
+ 
+      if (mut._type == DEL) {
+        total_deleted += from_string<int32_t>(mut[SIZE]);
+        
+        if (mut.entry_exists("mediated"))
+          count["mob"][mut["mediated"]]++;
+        
+        if (from_string<int32_t>(mut[SIZE]) > large_size_cutoff)
+          count["large_del"][""]++;
+        else
+          count["small_indel"][""]++;
+      }
+    
+      if (mut._type == INS) {
+        total_inserted += from_string<int32_t>(mut[SIZE]);
+
+        if (mut.entry_exists("mediated"))
+          count["mob"][mut["mediated"]]++;
+        
+        if (from_string<int32_t>(mut[SIZE]) <= large_size_cutoff)
+          count["large_ins"][""]++;
+        else
+          count["small_indel"][""]++;
+      }
+
+      if (mut._type == CON) {
+        // TODO: Need size change?
+        
+        if (mut.entry_exists("mediated"))
+          count["con"][mut["mediated"]]++;
+        count["gene_conversion"][""]++;
+      }
    
-   my @mut_list = $gd->mutation_list();
-   @mut_list = grep {!$_->{deleted}} @mut_list;
+      if (mut._type == MOB) {
+        int32_t rpos = -1;
+        string repeat_seq = ref_seq_info.repeat_family_sequence(mut["repeat_name"], 1, rpos);
+        
+        int32_t this_length = repeat_seq.size();
+        total_inserted += this_length;
+        total_repeat_inserted += this_length;
+        //print "Repeat $mut->{repeat_name} $this_length bp\n";
+        
+        count["mob"][mut["repeat_name"]]++;
+        count["mobile_elements"][""]++;
+
+      }
    
-   my $count;
+
    
+      if (mut._type == AMP) {
+        int32_t this_size = mut.mutation_size_change(ref_seq_info);
+        total_inserted += this_size;
+        
+        if (this_size > large_size_cutoff)
+          count["amp"][""]++;
+        else
+          count["small_indel"][""]++;
+      }
    
-   foreach my $st (@snp_types)
-   {
-   $count->{type}->{$st} = 0;
-   }
-   foreach my $mob_name (@mod_name_list)
-   {
-   $count->{mob}->{$mob_name} = 0;
-   }
-   
-   my $total_deleted = 0;
-   my $total_inserted = 0;
-   my $total_repeat_inserted = 0;
-   
-   my $this_bs_counts = [];
-   foreach my $mut (@mut_list)
-   {
-   if ($mut->{type} eq 'SNP')
-   {				
-   my $base_change = $mut->{_ref_seq} . "." . $mut->{new_seq};
-   my $bp_change = $GenomeDiff::BaseSubstitutionFile::base_to_bp_change->{$base_change};				
-   $count->{type}->{$mut->{snp_type}}++;				
-   
-   ## SCF snp count	
-   if ($base_substitution_file) {
-   $this_bs_counts = $bsf->add_bp_change_to_totals($this_bs_counts, $mut->{position}, $bp_change);					
-   }
-   }
-   
-   if ($mut->{type} eq 'DEL')
-   {
-   $total_deleted += $mut->{size};
-   $count->{mob}->{$mut->{mediated}}++ if ($mut->{mediated});
-   
-   if ($mut->{size} > 20) 
-   {
-   $count->{large_del}++;
-   }
-   else 
-   {
-   $count->{small_indel}++;
-   }
-   }
-   
-   if ($mut->{type} eq 'INS')
-   {
-   $total_inserted += $mut->{size};
-   $count->{mob}->{$mut->{mediated}}++ if ($mut->{mediated});
-   
-   if ($mut->{size} <= 20) 
-   {
-   $count->{small_indel}++;
-   }
-   }
-   
-   if ($mut->{type} eq 'CON')
-   {
-   #need calculation of size change here
-   $count->{con}->{$mut->{mediated}}++ if ($mut->{mediated});
-   $count->{gene_conversion}++;
-   }
-   
-   if ($mut->{type} eq 'MOB')
-   {
-   #this returns shortest example				
-   my $repeat_seq = GenomeDiff::ReferenceSequence::repeat_example($ref_seq_info, $mut->{repeat_name}, 1);
-   my $this_length = length($repeat_seq);
-   $total_inserted += $this_length;
-   $total_repeat_inserted += $this_length;
-   print "Repeat $mut->{repeat_name} $this_length bp\n";
-   
-   $count->{mob}->{$mut->{repeat_name}}++;
-   $count->{mobile_elements}++;
-   }			
-   
-   if ($mut->{type} eq 'AMP')
-   {
-   $total_inserted += $mut->{size};
-   if ($mut->{size} > 20)
-   {
-   $count->{amp}++;
-   }
-   else
-   {
-   $count->{small_indel}++;
-   }
-   }
-   }
-   
+      
+      int32_t un_bp = 0;
+      /*
    ##statistics for UN
    my $un_bp = 0; 
    foreach my $un ($gd->list('UN'))
@@ -1004,50 +985,57 @@ int do_count(int argc, char* argv[])
    }
    }
    
-   print Dumper($bs_totals);
-   
-   my $called_bp = $total_bp - $un_bp;
-   
-   my @this_columns = (
-   $gd_name, 
-   scalar(@mut_list),  
-   map({$count->{type}->{$_} } @snp_types),
-   defined $count->{small_indel} ? $count->{small_indel} : "0",
-   defined $count->{large_del} ? $count->{large_del} : "0",
-   $total_deleted, 
-   $total_inserted, 
-   $total_repeat_inserted,
-   defined $count->{amp} ? $count->{amp} : "0",
-   defined $count->{mobile_elements} ? $count->{mobile_elements} : "0",
-   map({$count->{mob}->{$_}} @mod_name_list), 
-   defined $count->{gene_conversion} ? $count->{gene_conversion} : "0",
-   map({$count->{con}->{$_}} @con_name_list), 
-   $called_bp, 
-   $total_bp
-   );
-   
-   
-   if ($base_substitution_file) {			
-   for (my $i = 0; $i < scalar @$this_bs_totals; $i++) {
-   foreach my $bp_change (@GenomeDiff::BaseSubstitutionFile::bp_change_label_list, 'TOTAL') {
-   push @this_columns, (defined $this_bs_totals->[$i]->{$bp_change}) ? $this_bs_totals->[$i]->{$bp_change} : '0';
-   }
-   }
-   
-   
-   for (my $i = 0; $i < scalar @$this_bs_counts; $i++) {
-   foreach my $bp_change (@GenomeDiff::BaseSubstitutionFile::bp_change_label_list, 'TOTAL') {
-   push @this_columns, (defined $this_bs_counts->[$i]->{$bp_change}) ? $this_bs_counts->[$i]->{$bp_change} : '0';
-   }
-   }
-   }
-   
-   print OUT join("\t", @this_columns) . "\n";
-   #print Dumper ($count);
-   }	
-   print "Done\n";
-   close OUT;
    */
+      
+      int32_t called_bp = total_bp - un_bp;
+   
+      vector<string> this_columns;
+      this_columns.push_back(gd.metadata.run_name);
+      this_columns.push_back(to_string(mut_list.size()));
+      
+      vector<int32_t> snp_type_counts = map_key_list_to_values(count["type"], snp_types);
+      this_columns.insert(this_columns.end(),snp_type_counts.begin(), snp_type_counts.end());
+
+      
+      this_columns.push_back(to_string(count["small_indel"][""]));
+      this_columns.push_back(to_string(count["large_del"][""]));
+
+      this_columns.push_back(to_string(count["total_deleted"][""]));
+      this_columns.push_back(to_string(count["total_inserted"][""]));
+      this_columns.push_back(to_string(count["total_repeat_inserted"][""]));
+      this_columns.push_back(to_string(count["amp"][""]));
+      this_columns.push_back(to_string(count["mobile_elements"][""]));
+
+      vector<int32_t> mob_type_counts = map_key_list_to_values(count["type"], mob_name_list);
+      this_columns.insert(this_columns.end(),mob_type_counts.begin(), mob_type_counts.end());
+      
+      this_columns.push_back(to_string(count["gene_conversion"][""]));
+      
+      vector<int32_t> con_type_counts = map_key_list_to_values(count["type"], con_name_list);
+      this_columns.insert(this_columns.end(),con_type_counts.begin(), con_type_counts.end());
+
+      this_columns.push_back(to_string(called_bp));
+      this_columns.push_back(to_string(total_bp));
+   
+     /*
+     if ($base_substitution_file) {			
+     for (my $i = 0; $i < scalar @$this_bs_totals; $i++) {
+     foreach my $bp_change (@GenomeDiff::BaseSubstitutionFile::bp_change_label_list, 'TOTAL') {
+     push @this_columns, (defined $this_bs_totals->[$i]->{$bp_change}) ? $this_bs_totals->[$i]->{$bp_change} : '0';
+     }
+     }
+     
+     
+     for (my $i = 0; $i < scalar @$this_bs_counts; $i++) {
+     foreach my $bp_change (@GenomeDiff::BaseSubstitutionFile::bp_change_label_list, 'TOTAL') {
+     push @this_columns, (defined $this_bs_counts->[$i]->{$bp_change}) ? $this_bs_counts->[$i]->{$bp_change} : '0';
+     }
+     }
+     }
+      */
+      output_file << join(this_columns, ",") << endl;
+    }
+  }	
   
   return 0;
 }

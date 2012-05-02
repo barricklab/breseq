@@ -3,7 +3,7 @@
 <plist version="1.0">
 <dict>
 	<key>currentDocument</key>
-	<string>GenomeDiff/MANIFEST</string>
+	<string>GenomeDiff/lib/GenomeDiff/BaseSubstitutionFile.pm</string>
 	<key>documents</key>
 	<array>
 		<dict>
@@ -93,6 +93,36 @@
 			<key>firstVisibleLine</key>
 			<integer>0</integer>
 		</dict>
+		<key>GenomeDiff/bin/genomediff</key>
+		<dict>
+			<key>caret</key>
+			<dict>
+				<key>column</key>
+				<integer>1</integer>
+				<key>line</key>
+				<integer>1092</integer>
+			</dict>
+			<key>columnSelection</key>
+			<false/>
+			<key>firstVisibleColumn</key>
+			<integer>0</integer>
+			<key>firstVisibleLine</key>
+			<integer>1068</integer>
+			<key>selectFrom</key>
+			<dict>
+				<key>column</key>
+				<integer>0</integer>
+				<key>line</key>
+				<integer>783</integer>
+			</dict>
+			<key>selectTo</key>
+			<dict>
+				<key>column</key>
+				<integer>1</integer>
+				<key>line</key>
+				<integer>1092</integer>
+			</dict>
+		</dict>
 		<key>GenomeDiff/bin/tree_utils</key>
 		<dict>
 			<key>caret</key>
@@ -112,14 +142,14 @@
 			<key>caret</key>
 			<dict>
 				<key>column</key>
-				<integer>0</integer>
+				<integer>74</integer>
 				<key>line</key>
-				<integer>642</integer>
+				<integer>727</integer>
 			</dict>
 			<key>firstVisibleColumn</key>
 			<integer>0</integer>
 			<key>firstVisibleLine</key>
-			<integer>638</integer>
+			<integer>710</integer>
 		</dict>
 		<key>GenomeDiff/lib/GenomeDiff/Output.pm</key>
 		<dict>
@@ -197,6 +227,7 @@
 	<key>openDocuments</key>
 	<array>
 		<string>GenomeDiff/MANIFEST</string>
+		<string>GenomeDiff/bin/genomediff</string>
 		<string>GenomeDiff/Build.PL</string>
 		<string>GenomeDiff/GenomeDiff-1.00/bin/genomediff</string>
 		<string>GenomeDiff/lib/GenomeDiff/Output.pm</string>
@@ -210,6 +241,6 @@
 	<key>showFileHierarchyDrawer</key>
 	<true/>
 	<key>windowFrame</key>
-	<string>{{248, 0}, {1022, 878}}</string>
+	<string>{{194, 486}, {1022, 878}}</string>
 </dict>
 </plist>
