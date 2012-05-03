@@ -111,7 +111,7 @@ namespace breseq
     options
 		("help,h", "Produce help message showing advanced options", TAKES_NO_ARGUMENT)
 		// convert to basing everything off the main output path, so we don't have to set so many options
-		("output,o", "Path to breseq output", "current path")
+		("output,o", "Path to breseq output", "current directory")
 		("reference,r", "File containing reference sequences in GenBank, GFF3, or FASTA format. Option may be provided multiple times for multiple files. (REQUIRED)")
     ("name,n", "Human-readable name of sample/run for output [empty]", "")
     ("no-junction-prediction,j", "Do not predict new sequence junctions", TAKES_NO_ARGUMENT)
